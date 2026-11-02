@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <title>潮汐釣魚村</title>
 <link rel="manifest" href="manifest.json">
@@ -46,6 +46,8 @@
 }
 html,body{height:100%;overflow:hidden}
 body{background:#8bd8e8;color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;padding-left:var(--gl);padding-right:var(--gr)}
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}
+button{touch-action:manipulation}
 #c{position:fixed;inset:0;width:100vw;height:100%;display:block;touch-action:none;outline:none}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
@@ -947,8 +949,17 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(PALETTE.sky);
 scene.fog = new THREE.Fog('#b7e5df', 45, 140);
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 220);
-function resize(){ const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+// 畫面大小用「版面」寬高，不用 innerWidth：iOS Safari 被放大時 innerWidth 會變小，畫面會變糊、標籤會跑掉
+function viewW(){ return document.documentElement.clientWidth || innerWidth; }
+function viewH(){ return (canvas && canvas.clientHeight) || document.documentElement.clientHeight || innerHeight; }
+function resize(){ const w = viewW(), h = viewH(); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
+// iOS：擋掉雙指放大與連點放大（Safari 不理會 user-scalable=no）；萬一已經被放大，畫面也會照版面大小重畫
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive:false });
+document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 320 && !(e.target && e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
+if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 
 const MODERN = parseInt(THREE.REVISION, 10) >= 155;
 scene.add(new THREE.HemisphereLight('#e7fbff', '#52725c', MODERN ? 1.55 : 1.05));
@@ -1895,7 +1906,7 @@ class Fisher {
     v.project(camera);
     if (v.z > 1 || d > 45){ this.tag.style.display = 'none'; return; }
     this.tag.style.display = '';
-    this.tag.style.transform = `translate(${(v.x*0.5+0.5)*innerWidth}px,${(-v.y*0.5+0.5)*innerHeight}px) translate(-50%,-100%)`;
+    this.tag.style.transform = `translate(${(v.x*0.5+0.5)*viewW()}px,${(-v.y*0.5+0.5)*viewH()}px) translate(-50%,-100%)`;
     this.tag.style.opacity = d > 30 ? String(clamp(1 - (d-30)/15, 0, 1)) : '1';
   }
 }
@@ -1913,7 +1924,7 @@ addEventListener('resize', () => setTimeout(measureTopBar, 150)); setTimeout(mea
 function placeLabelsUpdate(){
   for (const L of placeLabels){
     const d = camera.position.distanceTo(L.p); tmpV.copy(L.p).project(camera);
-    const sx = (tmpV.x*0.5+0.5)*innerWidth, sy = (-tmpV.y*0.5+0.5)*innerHeight;
+    const sx = (tmpV.x*0.5+0.5)*viewW(), sy = (-tmpV.y*0.5+0.5)*viewH();
     const atSpot = L.spot && Math.hypot(me.pos.x - L.spot.pos.x, me.pos.z - L.spot.pos.z) < 4;
     if (tmpV.z > 1 || d > 55 || atSpot || sy < topBarBottom + 26){ L.el.style.display = 'none'; continue; }
     L.el.style.display = ''; L.el.style.opacity = String(clamp(1.3 - d/55, 0.25, 1));
