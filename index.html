@@ -112,6 +112,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 /* action cluster */
 #actWrap{position:fixed;right:var(--gr);bottom:var(--gb);display:flex;flex-direction:column;align-items:flex-end;gap:12px}
 #emotes{display:flex;gap:8px}
+#actRow{display:flex;align-items:flex-end;gap:12px}
+#jumpBtn{width:64px;height:64px;border-radius:50%;font-family:var(--f-display);font-size:18px;display:grid;place-items:center;touch-action:none;margin-bottom:4px}
+#jumpBtn:active,#jumpBtn.down{transform:translateY(3px)}
+#jumpBtn[disabled]{opacity:.45}
 #emotes button{width:44px;height:44px;border-radius:50%;font-size:20px;display:grid;place-items:center}
 #act{width:112px;height:112px;border-radius:50%;background:var(--gold);color:var(--ink);font-family:var(--f-display);font-size:20px;box-shadow:0 6px 0 #d9a93a,0 10px 24px rgba(24,51,74,.25);border:4px solid #fff;transition:transform .08s,box-shadow .08s,background .2s;touch-action:none;line-height:1.15;padding:6px}
 #act small{display:block;font-family:var(--f-body);font-size:11px;color:var(--ink-soft);margin-top:2px}
@@ -245,6 +249,7 @@ body.touch #hint{bottom:auto;top:calc(var(--gt) + 64px);max-width:calc(100vw - 3
   #emotes{gap:6px}
   #emotes button{width:38px;height:38px;font-size:17px}
   #act{width:88px;height:88px;font-size:17px;border-width:3px}
+  #jumpBtn{width:54px;height:54px;font-size:16px}
   #act.idle{font-size:13px}
   #joy{width:150px;height:150px}
   #joy .knob{width:64px;height:64px;margin:-32px 0 0 -32px}
@@ -386,10 +391,10 @@ body.photo.nonames #labels{display:none}
     <button class="panel" data-emote="wow" aria-label="驚嘆">😮</button>
   </div>
   <button id="boatBtn" class="panel" hidden>上船</button>
-  <button id="act" class="idle" aria-label="釣魚動作">走到釣點</button>
+  <div id="actRow"><button id="jumpBtn" class="panel" aria-label="跳">跳</button><button id="act" class="idle" aria-label="釣魚動作">走到釣點</button></div>
 </div>
 
-<div id="hint" class="panel"><span id="hintTxt">WASD 移動 · 拖曳滑鼠轉視角 · 走進發光圈後按住空白鍵拋竿</span><button id="hintX">知道了</button></div>
+<div id="hint" class="panel"><span id="hintTxt">WASD 移動 · 拖曳滑鼠轉視角 · 空白鍵跳（在釣點則是拋竿）· 走進發光圈後按住空白鍵拋竿</span><button id="hintX">知道了</button></div>
 
 <div id="photoUI" hidden>
   <div class="ptop"><span class="phint" id="pHint">拖曳轉動視角・雙指縮放</span><button class="pchip" id="pSelfie">自拍</button><button class="pchip on" id="pNames">名字</button><button class="pchip" id="pExit">完成</button></div>
@@ -1019,7 +1024,10 @@ function castPoint(x, z, dx, dz, dist){
   const glass = new THREE.Mesh(new THREE.BoxGeometry(11, 3.2, 3.4), new THREE.MeshPhysicalMaterial({ color:'#b8f3f1', transparent:true, opacity:0.16, roughness:0.05, depthWrite:false }));
   tank.add(twater, glass);
   tankGroup = new THREE.Group(); tank.add(tankGroup);
-  addBoxCol(AX, AZ, 13, 8);
+  // 石台可以走上去，站到玻璃前面看魚；只有魚缸底座、後牆、柱子會擋
+  addDeck(AX, AZ, 13, 8, 0.4);
+  addBoxCol(AX, AZ - 0.8, 12.6, 4.6);
+  for (const x of [-6, 6]) addCircleCol(AX + x, AZ + 3.6, 0.3);
 
   // ---- 燈塔（北邊岬角）----
   const [LX, LZ] = LIGHTHOUSE;
@@ -1606,6 +1614,7 @@ class Fisher {
     const sw = Math.sin(this.walk) * Math.min(1, this.speed / 3) * 0.7;
     a.legL.rotation.x = sw; a.legR.rotation.x = -sw;
     if (this.sitting){ a.legL.rotation.x = a.legR.rotation.x = -1.45; }
+    else if (this.air > 0.05){ a.legL.rotation.x = -0.55; a.legR.rotation.x = 0.35; }
     a.g.rotation.y = this.rot;
     a.rod.visible = this.fishing;
     if (this.fishing){
@@ -1677,7 +1686,8 @@ const SFX = {
   bite(){ tone(880, 0.08, 'square', 0.06); setTimeout(() => tone(1100, 0.1, 'square', 0.06), 90); },
   catch(){ [523,659,784,1046].forEach((f,i) => setTimeout(() => tone(f, 0.22, 'triangle', 0.12), i*90)); },
   fail(){ tone(300, 0.35, 'sawtooth', 0.06, 120); },
-  chat(){ tone(1320, 0.06, 'sine', 0.05); }
+  chat(){ tone(1320, 0.06, 'sine', 0.05); },
+  jump(){ tone(420, 0.12, 'sine', 0.07, 760); }
 };
 function renderSoundIcon(){ $('#soundIco').innerHTML = soundOn ? '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9a4 4 0 0 1 0 6"/>' : '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>'; }
 renderSoundIcon();
@@ -1756,6 +1766,8 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyP' && $('#sheet').hidden && $('#catchCard').hidden){ enterPhoto(); return; }
   if (!$('#sheet').hidden || !$('#catchCard').hidden){ if (e.key === 'Escape'){ closeSheet(); closeCatch(); } if (e.key === 'Enter' && !$('#catchCard').hidden) closeCatch(); return; }
   keys[e.code] = true;
+  if (e.code === 'KeyJ' && !e.repeat){ jump(); return; }
+  if (e.code === 'Space' && !e.repeat && F.phase === 'idle' && !myBoat && nearestSpot().d > 1.7){ e.preventDefault(); jump(); return; }
   if (e.code === 'Space' || e.code === 'KeyF'){ e.preventDefault(); if (!e.repeat) actionDown(); }
   if (e.code === 'Enter'){ e.preventDefault(); $('#chatIn').focus(); }
   if (e.code === 'Digit1') emote('wave'); if (e.code === 'Digit2') emote('fish'); if (e.code === 'Digit3') emote('wow');
@@ -1974,19 +1986,37 @@ function updatePlayer(dt){
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); const rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix;
     const run = keys.ShiftLeft || keys.ShiftRight || L > 0.95;
-    speed = (run ? 6.2 : 4.2) * Math.min(1, L);
+    speed = (run ? 6.2 : 4.2) * Math.min(1, L) * (Jump.air > 0 ? 1.1 : 1);
     const nx = me.pos.x + mx / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     // 可以走上山坡，但太陡的崖爬不上去
-    const okStep = (ax, az, bx, bz) => { if (!walkable(bx, bz) || blocked(bx, bz, 0.35)) return false; if (deckAt(bx, bz)) return true; const dh = groundHeight(bx, bz) - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh / dl < 1.2; };
+    // 跳在空中時，只要腳比前面的地面高，就能跳上去
+    const okStep = (ax, az, bx, bz) => { if (!walkable(bx, bz) || blocked(bx, bz, 0.35)) return false; if (deckAt(bx, bz)) return true; const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh / dl < 1.2; };
     if (okStep(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx;
     if (okStep(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz;
     const target = Math.atan2(mx, mz);
     me.rot = lerpAngle(me.rot, target, 1 - Math.exp(-14 * dt));
   }
   me.speed += (speed - me.speed) * Math.min(1, dt * 12);
-  const gy = groundHeight(me.pos.x, me.pos.z); me.baseY += (gy - me.baseY) * Math.min(1, dt * 14);
+  const gy = groundHeight(me.pos.x, me.pos.z);
+  if (Math.abs(gy - Jump.gy) > 1.5 && Jump.air <= 0) Jump.gy = gy; else Jump.gy += (gy - Jump.gy) * Math.min(1, dt * 14);
+  if (Jump.vy !== 0 || Jump.air > 0){
+    Jump.vy -= 24 * dt; Jump.air += Jump.vy * dt;
+    if (Jump.air <= 0){ Jump.air = 0; Jump.vy = 0; Jump.land = 0.18; puff(me.pos.x, Jump.gy, me.pos.z); }
+  }
+  if (Jump.land > 0) Jump.land -= dt;
+  me.air = Jump.air; me.baseY = Jump.gy + Jump.air;
 }
+/* ---- 跳躍 ---- */
+const Jump = { vy:0, air:0, gy:0, land:0 };
+function canJump(){ return !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
+function jump(){
+  if (!canJump()) return;
+  ensureAudio();
+  Jump.gy = me.baseY; Jump.vy = 7.6; Jump.air = 0.001;
+  SFX.jump(); pushPresence(true);
+}
+function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
 function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 0) d += Math.PI*2; return a + (d - Math.PI) * k; }
 
 function updateCamera(dt){
@@ -2297,6 +2327,11 @@ function showCatch(f, w, res){
 }
 function closeCatch(){ if ($('#catchCard').hidden) return; $('#catchCard').hidden = true; uiBlocked = !$('#sheet').hidden; if (F.phase === 'result') F.phase = 'idle'; }
 $('#ccOk').addEventListener('click', closeCatch);
+(function(){ const j = $('#jumpBtn');
+  j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); j.classList.add('down'); jump(); });
+  const off = () => j.classList.remove('down'); j.addEventListener('pointerup', off); j.addEventListener('pointercancel', off); j.addEventListener('pointerleave', off);
+  j.addEventListener('contextmenu', e => e.preventDefault());
+})();
 (function(){ const a = $('#act');
   a.addEventListener('pointerdown', e => { e.preventDefault(); try { a.setPointerCapture(e.pointerId); } catch(_){} actionDown(); });
   const up = () => actionUp();
@@ -2712,6 +2747,7 @@ function frame(){
   for (const r of ripples){ if (r.t > 1.2){ r.m.visible = false; continue; } r.t += dt; const k = r.t / 1.2; r.m.scale.setScalar((1 + k*7) * r.big); r.m.material.opacity = (1 - k) * 0.8; }
   sun.position.set(me.pos.x + 18, 30, me.pos.z + 14); sun.target.position.set(me.pos.x, 0, me.pos.z);
   discover(t); updateBoatButton();
+  { const jb = $('#jumpBtn'), hide = !!myBoat || F.phase !== 'idle'; if (jb.hidden !== hide) jb.hidden = hide; }
   if (waterfall && Math.hypot(me.pos.x - waterfall.x, me.pos.z - waterfall.z) < 45){ if (Math.random() < dt * 10) FX.emit(waterfall.x + rand(-1, 1), 0.3, waterfall.z + rand(-0.5, 0.5), 1, '#ffffff', 0.9, 1.6, 0.7); if (Math.random() < dt * 1.5) ripple(waterfall.x + rand(-0.8, 0.8), waterfall.z + rand(-0.4, 0.4)); }
   fishTime.value = t; updateSeaLife(t); FX.update(dt); if (skyDome) skyDome.position.copy(camera.position); updateZones(t); watchFps(t);
   placeLabelsUpdate();
