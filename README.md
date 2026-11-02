@@ -30,6 +30,10 @@ icons/          App 圖示
 
 之後更新 `index.html` 再推上去，網站會自動跟著更新。
 
+## 素材
+
+魚的 3D 模型來自 Quaternius 的 Animated Fish Pack（CC0），詳見 `CREDITS.md`。
+
 ## 注意
 
 - **紀錄存在各自的瀏覽器裡**：魚缸、圖鑑存在玩家自己的瀏覽器。LINE、Messenger、Safari 是不同的瀏覽器，各自有一份
