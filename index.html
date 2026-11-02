@@ -136,10 +136,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 #chatSend:disabled{opacity:.4}
 
 /* joystick */
-#joy{position:fixed;left:var(--gl);bottom:var(--gb);width:128px;height:128px;border-radius:50%;background:rgba(255,255,255,.35);border:2px solid rgba(255,255,255,.7);touch-action:none;display:none}
-#joy .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 3px 10px rgba(24,51,74,.25)}
+/* 浮動搖桿：左半邊螢幕任何地方按下，搖桿就出現在手指底下 */
+#joyZone{position:fixed;left:0;top:calc(var(--gt) + 56px);bottom:0;width:46vw;touch-action:none;display:none}
+body.touch #joyZone{display:block}
+#joy{position:fixed;left:var(--gl);bottom:var(--gb);width:168px;height:168px;border-radius:50%;background:rgba(255,255,255,.32);border:3px solid rgba(255,255,255,.75);pointer-events:none;display:none;transition:opacity .2s}
+#joy .knob{position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 3px 10px rgba(24,51,74,.25)}
+#joy.active{background:rgba(255,255,255,.42);transition:none}
 body.touch #joy{display:block}
-body.touch #chat{bottom:calc(var(--gb) + 140px);width:min(300px,calc(100vw - 32px))}
+body.touch #chat{bottom:calc(var(--gb) + 184px);width:min(300px,calc(100vw - 32px))}
 body.touch #chatForm{display:none}
 body.touch.chatting #chatForm{display:flex}
 #chatToggle{display:none}
@@ -242,15 +246,15 @@ body.touch #hint{bottom:auto;top:calc(var(--gt) + 64px);max-width:calc(100vw - 3
   #emotes button{width:38px;height:38px;font-size:17px}
   #act{width:88px;height:88px;font-size:17px;border-width:3px}
   #act.idle{font-size:13px}
-  #joy{width:108px;height:108px}
-  #joy .knob{width:46px;height:46px;margin:-23px 0 0 -23px}
+  #joy{width:150px;height:150px}
+  #joy .knob{width:64px;height:64px;margin:-32px 0 0 -32px}
   #fishHud,#chargeHud{bottom:var(--gb);width:min(300px,calc(100vw - 300px));padding:8px 12px}
   #fishHud .hdr{font-size:14px;margin-bottom:2px}
   .barlbl{margin-top:4px}
   .bar{height:11px}
   #bigMsg{top:34%}
-  body.touch #chat{bottom:calc(var(--gb) + 118px);width:min(260px,calc(50vw - 60px))}
-  #log{max-height:calc(100vh - 290px);min-height:0}
+  body.touch #chat{bottom:calc(var(--gb) + 164px);width:min(260px,calc(50vw - 60px))}
+  #log{max-height:calc(100vh - 330px);min-height:0}
   #log .m{font-size:12px;padding:3px 8px}
   body.touch.chatting #chatForm{position:fixed;left:50%;top:var(--gt);transform:translateX(-50%);width:min(420px,calc(100vw - 32px));z-index:15}
   body.touch #hint{top:auto;bottom:var(--gb);max-width:calc(100vw - 300px);font-size:12px;padding:7px 10px}
@@ -318,6 +322,8 @@ body.touch #fsBtn.ok{display:flex}
   <div class="bar progress"><i id="pFill"></i></div>
 </div>
 
+<div id="joyZone" aria-hidden="true"></div>
+<div id="joy" aria-hidden="true"><div class="knob"></div></div>
 <div id="chat">
   <div id="log" aria-live="polite"></div>
   <form id="chatForm" class="panel" autocomplete="off">
@@ -325,7 +331,7 @@ body.touch #fsBtn.ok{display:flex}
     <button id="chatSend" type="submit">送出</button>
   </form>
 </div>
-<div id="joy" aria-hidden="true"><div class="knob"></div></div>
+
 
 <div id="actWrap">
   <div id="emotes">
@@ -1024,14 +1030,20 @@ const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, 4.5, 18); }, { passive:false });
 
-// joystick
+// joystick（浮動：按在左半邊哪裡，搖桿中心就在哪裡）
 (function(){
-  const el = $('#joy'), knob = $('.knob', el); let id = null, cx = 0, cy = 0;
-  el.addEventListener('pointerdown', e => { ensureAudio(); id = e.pointerId; el.setPointerCapture(id); const r = el.getBoundingClientRect(); cx = r.left + r.width/2; cy = r.top + r.height/2; move(e); });
-  el.addEventListener('pointermove', e => { if (e.pointerId === id) move(e); });
-  const end = e => { if (e.pointerId !== id) return; id = null; joy.x = joy.z = 0; knob.style.transform = ''; };
-  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
-  function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy), M = 46; if (L > M){ dx *= M/L; dy *= M/L; } knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / M; joy.z = dy / M; }
+  const zone = $('#joyZone'), el = $('#joy'), knob = $('.knob', el); let id = null, cx = 0, cy = 0, M = 60;
+  zone.addEventListener('pointerdown', e => {
+    if (id !== null) return; ensureAudio(); id = e.pointerId; try { zone.setPointerCapture(id); } catch(_){}
+    const R = el.offsetWidth / 2; M = R * 0.72;
+    cx = clamp(e.clientX, R + 4, innerWidth - R - 4); cy = clamp(e.clientY, R + 4, innerHeight - R - 4);
+    el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; el.style.bottom = 'auto'; el.classList.add('active');
+    move(e);
+  });
+  zone.addEventListener('pointermove', e => { if (e.pointerId === id) move(e); });
+  const end = e => { if (e.pointerId !== id) return; id = null; joy.x = joy.z = 0; knob.style.transform = ''; el.style.left = el.style.top = el.style.bottom = ''; el.classList.remove('active'); };
+  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
+  function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy); if (L > M){ dx *= M/L; dy *= M/L; } knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / M; joy.z = dy / M; }
 })();
 
 function nearestSpot(){ let best = null, bd = 1e9; for (const s of SPOTS){ const d = Math.hypot(me.pos.x - s.pos.x, me.pos.z - s.pos.z); if (d < bd){ bd = d; best = s; } } return { spot: best, d: bd }; }
