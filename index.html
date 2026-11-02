@@ -284,6 +284,30 @@ body.touch.portrait:not(.allowPortrait) #rotate{display:flex}
 #musicBtn.off{opacity:.45}
 #fsBtn{display:none}
 body.touch #fsBtn.ok{display:flex}
+/* ---- 拍照模式 ---- */
+body.photo #top, body.photo #chat, body.photo #actWrap, body.photo #joy, body.photo #joyZone, body.photo #spotCard, body.photo #fishHud, body.photo #chargeHud, body.photo #hint, body.photo #toasts, body.photo #tankPanel{display:none!important}
+body.photo.nonames #labels{display:none}
+#photoUI{position:fixed;inset:0;pointer-events:none;z-index:12}
+#photoUI .ptop{position:absolute;top:var(--gt);left:var(--gl);right:var(--gr);display:flex;align-items:center;gap:8px}
+#photoUI .phint{margin-right:auto;font-size:12px;color:#fff;background:rgba(24,51,74,.45);padding:5px 10px;border-radius:999px}
+#photoUI button{pointer-events:auto}
+.pchip{padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;background:rgba(246,252,251,.92);color:var(--ink);box-shadow:0 3px 10px rgba(24,51,74,.2)}
+.pchip.on{background:var(--ink);color:#fff}
+#pExit{background:var(--coral);color:#fff}
+#shutter{position:absolute;left:50%;bottom:var(--gb);transform:translateX(-50%);width:76px;height:76px;border-radius:50%;background:#fff;border:6px solid rgba(255,255,255,.55);box-shadow:0 0 0 3px rgba(24,51,74,.35),0 6px 18px rgba(24,51,74,.3)}
+#shutter:active{transform:translateX(-50%) scale(.92)}
+#photoUI .pleft{position:absolute;left:var(--gl);bottom:var(--gb);display:flex;gap:8px}
+#photoUI .pleft button{width:44px;height:44px;border-radius:50%;font-size:20px;display:grid;place-items:center;background:rgba(246,252,251,.92);box-shadow:0 3px 10px rgba(24,51,74,.2)}
+#photoUI .pright{position:absolute;right:var(--gr);bottom:var(--gb);display:flex;gap:8px}
+#flashFx{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:13}
+#flashFx.go{animation:flash .45s ease-out}
+@keyframes flash{0%{opacity:.9}100%{opacity:0}}
+#photoView{position:fixed;inset:0;z-index:25;display:grid;place-items:center;background:rgba(24,51,74,.55);padding-left:var(--gl);padding-right:var(--gr);padding-block:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 12px)}
+#photoView .card{background:var(--paper);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px;max-width:100%;max-height:100%;box-shadow:0 20px 50px rgba(24,51,74,.35)}
+#photoView img{display:block;max-width:min(860px,100%);max-height:calc(100vh - 140px);border-radius:10px;object-fit:contain}
+#photoView .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#photoView .row button{padding:10px 18px;border-radius:12px;font-weight:700;font-size:14px;background:var(--paper-2)}
+#photoView .row .main{background:var(--ink);color:#fff}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -303,6 +327,7 @@ body.touch #fsBtn.ok{display:flex}
     <button class="mbtn panel" data-tab="tank" aria-label="魚缸"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 12c1.5-1.5 3.5-1.5 5 0-1.5 1.5-3.5 1.5-5 0zM13 12l2-1.5v3z"/></svg><span>魚缸</span></button>
     <button class="mbtn panel" data-tab="people" aria-label="玩家"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a5 5 0 0 1 3.5 6"/></svg><span>玩家</span></button>
     <button class="mbtn panel" data-tab="style" aria-label="造型"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h18M6 15c0-4 2.7-7 6-7s6 3 6 7"/><path d="M12 8V5"/></svg><span>造型</span></button>
+    <button class="mbtn panel" id="photoBtn" aria-label="拍照"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>拍照</span></button>
     <button class="mbtn panel" id="fsBtn" aria-label="全螢幕"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="mbtn panel" id="musicBtn" aria-label="音樂開關"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
     <button class="mbtn panel" id="soundBtn" aria-label="音效開關"><svg id="soundIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg></button>
@@ -345,6 +370,18 @@ body.touch #fsBtn.ok{display:flex}
 
 <div id="hint" class="panel"><span id="hintTxt">WASD 移動 · 拖曳滑鼠轉視角 · 走進發光圈後按住空白鍵拋竿</span><button id="hintX">知道了</button></div>
 
+<div id="photoUI" hidden>
+  <div class="ptop"><span class="phint" id="pHint">拖曳轉動視角・雙指縮放</span><button class="pchip" id="pSelfie">自拍</button><button class="pchip on" id="pNames">名字</button><button class="pchip" id="pExit">完成</button></div>
+  <div class="pleft"><button data-pemote="wave" aria-label="揮手">👋</button><button data-pemote="fish" aria-label="炫耀">🐟</button><button data-pemote="wow" aria-label="驚嘆">😮</button></div>
+  <button id="shutter" aria-label="按快門"></button>
+</div>
+<div id="flashFx"></div>
+<div id="photoView" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-label="照片">
+    <img id="photoImg" alt="剛拍的照片">
+    <div class="row"><button class="main" id="pSave">存到手機</button><button id="pShare" hidden>分享</button><button id="pAgain">再拍一張</button></div>
+  </div>
+</div>
 <div id="catchCard" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="ccName">
     <canvas id="ccCanvas" width="440" height="280"></canvas>
@@ -1535,6 +1572,9 @@ let uiBlocked = false;
 
 addEventListener('keydown', e => {
   if (e.target && (e.target.tagName === 'INPUT')) { if (e.key === 'Escape') e.target.blur(); return; }
+  if (!$('#photoView').hidden){ if (e.key === 'Escape') closePhotoView(); return; }
+  if (Photo.on){ if (e.key === 'Escape' || e.code === 'KeyP') exitPhoto(); else if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat){ e.preventDefault(); takePhoto(); } else if (e.code === 'Digit1') emote('wave'); else if (e.code === 'Digit2') emote('fish'); else if (e.code === 'Digit3') emote('wow'); return; }
+  if (e.code === 'KeyP' && $('#sheet').hidden && $('#catchCard').hidden){ enterPhoto(); return; }
   if (!$('#sheet').hidden || !$('#catchCard').hidden){ if (e.key === 'Escape'){ closeSheet(); closeCatch(); } if (e.key === 'Enter' && !$('#catchCard').hidden) closeCatch(); return; }
   keys[e.code] = true;
   if (e.code === 'Space' || e.code === 'KeyF'){ e.preventDefault(); if (!e.repeat) actionDown(); }
@@ -1546,11 +1586,15 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; actionUp
 
 // camera drag
 let drag = null;
-canvas.addEventListener('pointerdown', e => { ensureAudio(); drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
-canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; cam.pitch = clamp(cam.pitch + dy * 0.004, 0.12, 1.15); });
+const pinch = new Map(); let pinchDist = 0;
+const camLimits = () => Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : { pmin: 0.12, pmax: 1.15, dmin: 4.5, dmax: 18 };
+canvas.addEventListener('pointerdown', e => { ensureAudio(); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); drag = null; } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
+canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const L = camLimits(); if (pinchDist > 0) cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); pinchDist = d; } });
+['pointerup', 'pointercancel'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
+canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
 const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
-canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, 4.5, 18); }, { passive:false });
+canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); }, { passive:false });
 
 // joystick（浮動：按在左半邊哪裡，搖桿中心就在哪裡）
 (function(){
@@ -1567,6 +1611,55 @@ canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam
   zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
   function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy); if (L > M){ dx *= M/L; dy *= M/L; } knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / M; joy.z = dy / M; }
 })();
+
+/* ================= 拍照模式 ================= */
+const Photo = { on: false, saved: null, names: true, url: null, blob: null };
+function enterPhoto(){
+  if (Photo.on) return; ensureAudio(); closeSheet();
+  Photo.on = true; Photo.saved = { ...cam }; uiBlocked = true; for (const k in keys) keys[k] = false; joy.x = joy.z = 0;
+  document.body.classList.add('photo'); document.body.classList.toggle('nonames', !Photo.names); $('#photoUI').hidden = false;
+}
+function exitPhoto(){
+  if (!Photo.on) return; Photo.on = false;
+  if (Photo.saved){ cam.dist = clamp(cam.dist, 4.5, 18); cam.pitch = clamp(cam.pitch, 0.12, 1.15); }
+  document.body.classList.remove('photo', 'nonames'); $('#photoUI').hidden = true; uiBlocked = !$('#sheet').hidden || !$('#catchCard').hidden;
+}
+function stamp(){ const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+function takePhoto(){
+  // 先畫一格，再立刻把畫面複製下來（不用保留繪圖緩衝，手機比較省）
+  renderer.render(scene, camera);
+  const src = renderer.domElement, W = src.width, H = src.height;
+  const out = document.createElement('canvas'); out.width = W; out.height = H; const ctx = out.getContext('2d');
+  ctx.drawImage(src, 0, 0);
+  // 右下角浮水印
+  const fs = Math.round(H * 0.032), pad = Math.round(H * 0.025), d = new Date();
+  ctx.font = `${fs}px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  const text = `潮汐釣魚村・${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+  ctx.fillStyle = 'rgba(24,51,74,.35)'; ctx.fillText(text, W - pad + 2, H - pad + 2); ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillText(text, W - pad, H - pad);
+  const fx = $('#flashFx'); fx.classList.remove('go'); void fx.offsetWidth; fx.classList.add('go');
+  if (soundOn && actx){ const t = actx.currentTime, b = actx.createBuffer(1, actx.sampleRate * 0.08, actx.sampleRate), dd = b.getChannelData(0); for (let i = 0; i < dd.length; i++) dd[i] = (Math.random() * 2 - 1) * (1 - i / dd.length); const n = actx.createBufferSource(), g = actx.createGain(); n.buffer = b; g.gain.value = 0.25; n.connect(g).connect(actx.destination); n.start(t); }
+  out.toBlob(blob => {
+    if (!blob) return; if (Photo.url) URL.revokeObjectURL(Photo.url);
+    Photo.blob = blob; Photo.url = URL.createObjectURL(blob); $('#photoImg').src = Photo.url;
+    const file = new File([blob], `潮汐釣魚村-${stamp()}.jpg`, { type: 'image/jpeg' }); Photo.file = file;
+    $('#pShare').hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
+    $('#photoView').hidden = false;
+  }, 'image/jpeg', 0.92);
+}
+function closePhotoView(){ $('#photoView').hidden = true; }
+$('#photoBtn').addEventListener('click', enterPhoto);
+$('#pExit').addEventListener('click', exitPhoto);
+$('#shutter').addEventListener('click', takePhoto);
+$('#pNames').addEventListener('click', () => { Photo.names = !Photo.names; $('#pNames').classList.toggle('on', Photo.names); document.body.classList.toggle('nonames', !Photo.names); });
+$('#pSelfie').addEventListener('click', () => {   // 在正前方和背後之間切換
+  const front = me.rot, back = me.rot + Math.PI, d = a => Math.abs(Math.atan2(Math.sin(a - cam.yaw), Math.cos(a - cam.yaw)));
+  cam.yaw = d(front) < d(back) ? back : front; if (cam.dist > 6) cam.dist = 4; cam.pitch = Math.min(cam.pitch, 0.35);
+});
+$$('#photoUI [data-pemote]').forEach(b => b.addEventListener('click', () => emote(b.dataset.pemote)));
+$('#pSave').addEventListener('click', () => { if (!Photo.url) return; const a = document.createElement('a'); a.href = Photo.url; a.download = Photo.file ? Photo.file.name : 'photo.jpg'; document.body.appendChild(a); a.click(); a.remove(); toast('照片已存到「下載」資料夾。'); });
+$('#pShare').addEventListener('click', async () => { try { await navigator.share({ files: [Photo.file], title: '潮汐釣魚村', text: '我在潮汐釣魚村拍的照片！' }); } catch(e){} });
+$('#pAgain').addEventListener('click', closePhotoView);
+$('#photoView').addEventListener('click', e => { if (e.target.id === 'photoView') closePhotoView(); });
 
 function nearestSpot(){ let best = null, bd = 1e9; for (const s of SPOTS){ const d = Math.hypot(me.pos.x - s.pos.x, me.pos.z - s.pos.z); if (d < bd){ bd = d; best = s; } } return { spot: best, d: bd }; }
 
@@ -1602,7 +1695,7 @@ function updateCamera(dt){
   const target = tmpV.set(me.pos.x, me.pos.y + 1.3, me.pos.z);
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
-  want.y = Math.max(want.y, 0.8);
+  want.y = Math.max(want.y, Photo.on ? 0.3 : 0.8);
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
   camera.lookAt(target);
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
