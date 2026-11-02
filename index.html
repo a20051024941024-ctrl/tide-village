@@ -1408,26 +1408,69 @@ function makeMarlin(scale){
   return fish;
 }
 
+// 人物：Q 版卡通比例（大頭、圓身體、圓手腳），衣服和帽子顏色照造型設定換色
+const AV_GEO = {};
+function avGeo(){
+  if (AV_GEO.head) return AV_GEO;
+  const G = AV_GEO;
+  G.head = new THREE.SphereGeometry(0.33, 22, 16);
+  G.hair = new THREE.SphereGeometry(0.348, 22, 14, 0, Math.PI * 2, 0, Math.PI * 0.56);
+  G.ear = new THREE.SphereGeometry(0.065, 10, 8);
+  G.eye = new THREE.SphereGeometry(0.046, 10, 8);
+  G.shine = new THREE.SphereGeometry(0.015, 6, 4);
+  G.blush = new THREE.CircleGeometry(0.055, 14);
+  G.smile = new THREE.TorusGeometry(0.045, 0.011, 5, 12, Math.PI);
+  G.torso = new THREE.CapsuleGeometry(0.25, 0.22, 6, 16);
+  G.belt = new THREE.CylinderGeometry(0.262, 0.262, 0.07, 18);
+  G.leg = new THREE.CapsuleGeometry(0.09, 0.2, 4, 10);
+  G.shoe = new THREE.SphereGeometry(0.11, 12, 8);
+  G.arm = new THREE.CapsuleGeometry(0.072, 0.24, 4, 10);
+  G.hand = new THREE.SphereGeometry(0.075, 10, 8);
+  G.brim = new THREE.CylinderGeometry(0.47, 0.47, 0.035, 28);
+  G.crown = new THREE.SphereGeometry(0.3, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+  G.band = new THREE.CylinderGeometry(0.302, 0.302, 0.06, 24);
+  return G;
+}
 function makeAvatar(shirt, hat){
-  const g = new THREE.Group();
+  const G = avGeo(), g = new THREE.Group();
   const skin = mat('#ffd9b8', 0.7), pants = mat('#2f4b63', 0.8), shirtM = mat(shirt, 0.75), hatM = mat(hat, 0.7), ink = mat(PALETTE.ink, 0.4);
-  function limb(w, h, d, m, x, y){ const p = new THREE.Group(); p.position.set(x, y, 0); const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.y = -h/2; me.castShadow = true; p.add(me); g.add(p); return p; }
-  const legL = limb(0.17, 0.46, 0.2, pants, -0.11, 0.46), legR = limb(0.17, 0.46, 0.2, pants, 0.11, 0.46);
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.56, 10), shirtM); body.position.y = 0.74; body.castShadow = true;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 16, 12), skin); head.position.y = 1.25; head.castShadow = true;
-  const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), ink); e1.position.set(-0.09, 1.29, 0.24); const e2 = e1.clone(); e2.position.x = 0.09;
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.04, 18), hatM); brim.position.y = 1.44; brim.castShadow = true;
-  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.2, 14), hatM); crown.position.y = 1.55;
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.255, 0.255, 0.05, 14), ink); band.position.y = 1.48;
-  g.add(body, head, e1, e2, brim, crown, band);
-  const armL = limb(0.12, 0.44, 0.13, shirtM, -0.36, 0.98), armR = limb(0.12, 0.44, 0.13, shirtM, 0.36, 0.98);
+  const hairM = mat('#5a3d2b', 0.8), shoeM = mat('#6b4a35', 0.7), white = new THREE.MeshBasicMaterial({ color:'#ffffff' });
+  const blushM = new THREE.MeshBasicMaterial({ color:'#ff9a8f', transparent:true, opacity:0.55, depthWrite:false });
+  const add = (geo, m, x, y, z, parent, shadow) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (shadow !== false) o.castShadow = true; (parent || g).add(o); return o; };
+  // 腳：圓圓的褲管＋鞋子
+  function leg(x){ const p = new THREE.Group(); p.position.set(x, 0.5, 0); g.add(p); add(G.leg, pants, 0, -0.2, 0, p); const sh = add(G.shoe, shoeM, 0, -0.43, 0.04, p); sh.scale.set(0.95, 0.6, 1.3); return p; }
+  const legL = leg(-0.12), legR = leg(0.12);
+  // 身體
+  const body = add(G.torso, shirtM, 0, 0.8, 0); body.scale.set(1, 1, 0.86);
+  const belt = add(G.belt, pants, 0, 0.56, 0); belt.scale.set(1, 1, 0.86);
+  // 頭：大大的頭、頭髮、耳朵、眼睛（會眨眼）、腮紅、微笑
+  const headG = new THREE.Group(); headG.position.y = 1.31; g.add(headG);
+  const head = add(G.head, skin, 0, 0, 0, headG); head.scale.set(1, 0.94, 0.96);
+  const hair = add(G.hair, hairM, 0, 0.01, -0.02, headG); hair.rotation.x = -0.42;
+  for (const sx of [-1, 1]) add(G.ear, skin, sx * 0.315, -0.02, -0.01, headG);
+  const eyes = [];
+  for (const sx of [-1, 1]){
+    const e = add(G.eye, ink, sx * 0.115, 0.0, 0.29, headG, false); e.scale.set(0.8, 1.15, 0.5); eyes.push(e);
+    add(G.shine, white, sx * 0.115 + 0.015, 0.025, 0.315, headG, false);
+    const bl = add(G.blush, blushM, sx * 0.19, -0.085, 0.262, headG, false); bl.rotation.y = sx * 0.62;
+  }
+  const smile = add(G.smile, ink, 0, -0.1, 0.305, headG, false); smile.rotation.z = Math.PI; smile.scale.set(1, 0.8, 1);
+  // 漁夫帽
+  const hatG = new THREE.Group(); hatG.position.set(0, 1.56, -0.02); hatG.rotation.x = -0.12; g.add(hatG);
+  add(G.brim, hatM, 0, 0, 0, hatG);
+  const crown = add(G.crown, hatM, 0, 0.0, 0, hatG); crown.scale.set(1, 0.72, 1);
+  add(G.band, ink, 0, 0.035, 0, hatG, false);
+  // 手：袖子＋圓圓的手
+  function arm(x){ const p = new THREE.Group(); p.position.set(x, 1.0, 0); g.add(p); add(G.arm, shirtM, 0, -0.18, 0, p); add(G.hand, skin, 0, -0.4, 0, p); p.rotation.z = Math.sign(x) * 0.08; return p; }
+  const armL = arm(-0.33), armR = arm(0.33);
+  // 釣竿（跟原本一樣掛在右手前方）
   const rod = new THREE.Group(); rod.position.set(0.36, 0.74, 0.37);
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.03, 2.3, 6), mat('#3b2a1e', 0.5)); pole.position.y = 1.15;
   const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 8), mat(PALETTE.coral)); grip.position.y = 0.05;
   const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), mat('#c9d6e3', 0.3, { metalness:0.6 })); reel.rotation.z = Math.PI/2; reel.position.set(0.06, 0.25, 0);
   const tip = new THREE.Object3D(); tip.position.y = 2.3;
   rod.add(pole, grip, reel, tip); rod.rotation.x = 0.95; rod.visible = false; g.add(rod);
-  return { g, legL, legR, armL, armR, rod, tip, shirtM, hatM };
+  return { g, legL, legR, armL, armR, rod, tip, shirtM, hatM, eyes, headG, blinkAt: Math.random() * 4 };
 }
 function makeBobber(){
   const g = new THREE.Group();
@@ -1719,8 +1762,9 @@ class Fisher {
   // 炫耀魚：把魚舉在頭上幾秒
   holdFish(f, w, secs){
     const a = this.av; if (this.held) a.g.remove(this.held.o);
-    const big = BIG_FISH.has(f.id), o = new THREE.Group(), m = fishModel(f, big ? 0.8 : 0.5);
-    const y = big ? 2.55 : 2.35; o.position.y = y; o.add(m); a.g.add(o);
+    // 像拍釣魚紀念照一樣，雙手把魚捧在胸前
+    const big = BIG_FISH.has(f.id), o = new THREE.Group(), m = fishModel(f, big ? 0.75 : 0.45);
+    const y = 0.98; o.position.set(0, y, 0.48); o.add(m); a.g.add(o);
     this.held = { o, y, until: now() + (secs || 6) };
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
@@ -1733,6 +1777,7 @@ class Fisher {
     if (this.sitting){ a.legL.rotation.x = a.legR.rotation.x = -1.45; }
     else if (this.air > 0.05){ a.legL.rotation.x = -0.55; a.legR.rotation.x = 0.35; }
     a.g.rotation.y = this.rot;
+    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * (this.speed < 0.3 ? 1 : 0); }
     a.rod.visible = this.fishing;
     if (this.fishing){
       a.armR.rotation.x = -1.0 - this.bend * 0.3; a.armL.rotation.x = -0.7 - this.bend*0.2;
@@ -1741,7 +1786,7 @@ class Fisher {
     if (this.held){
       const h = this.held;
       if (now() > h.until || this.fishing){ a.g.remove(h.o); this.held = null; }
-      else { a.armL.rotation.x = a.armR.rotation.x = -2.8; h.o.position.y = h.y + Math.sin(t * 4) * 0.05; h.o.rotation.z = Math.sin(t * 2.6) * 0.12; }
+      else { a.armL.rotation.x = a.armR.rotation.x = -1.3; h.o.position.y = h.y + Math.sin(t * 4) * 0.04; h.o.rotation.z = Math.sin(t * 2.6) * 0.1; }
     }
     a.g.position.y = this.baseY + Math.abs(Math.sin(this.walk)) * Math.min(1, this.speed/3) * 0.06;
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible; }
