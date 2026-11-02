@@ -230,7 +230,9 @@ body.touch #hint{bottom:auto;top:calc(var(--gt) + 64px);max-width:calc(100vw - 3
   .mbtn{padding:8px}
   .mbtn span{display:none}
   .mbtn svg{width:17px;height:17px}
-  #spotCard{top:var(--gt);padding:6px 12px;min-width:0}
+  #spotCard{top:calc(var(--gt) + 50px);padding:5px 12px;min-width:0;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 260px)}
+  #spotCard .fl{margin-top:0;flex-wrap:nowrap;overflow:hidden}
+  #spotCard .t{white-space:nowrap}
   #spotCard .t{font-size:15px}
   #spotCard .s{display:none}
   #spotCard .fl{margin-top:4px}
@@ -758,6 +760,45 @@ function makeFish(color, scale){
   return fish;
 }
 
+// 深藍旗魚：長嘴、高帆狀背鰭、新月尾，深藍背、銀白肚（頭朝 +x，和 makeFish 一樣）
+function makeMarlin(scale){
+  const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
+  const dark = mat('#1f3f8f', 0.35), belly = mat('#d6dee8', 0.3), finM = new THREE.MeshStandardMaterial({ color:'#1a3478', roughness:0.5, side:THREE.DoubleSide });
+  const top = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 8, 0, Math.PI*2, 0, Math.PI/2), dark);
+  const bot = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 8, 0, Math.PI*2, Math.PI/2, Math.PI/2), belly);
+  for (const b of [top, bot]) b.scale.set(2.05, 0.62, 0.5); // 球體上半深藍、下半銀白
+  // 側面淡藍條紋
+  const stripeM = mat('#8fb4e8', 0.4);
+  for (let i = 0; i < 5; i++){ const st = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.32, 0.43), stripeM); st.position.set(0.35 - i*0.2, 0.02, 0); st.scale.y = 1 - Math.abs(i - 1.5)*0.12; fish.add(st); }
+  // 長嘴
+  const bill = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.95, 8), mat('#2a3550', 0.4)); bill.rotation.z = -Math.PI/2; bill.position.set(1.28, -0.03, 0);
+  // 高高的帆狀背鰭
+  const sail = new THREE.Shape(); sail.moveTo(0.55, 0.12); sail.lineTo(0.38, 0.78); sail.quadraticCurveTo(0.2, 0.62, -0.05, 0.42); sail.quadraticCurveTo(-0.35, 0.3, -0.62, 0.14); sail.lineTo(0.55, 0.12);
+  const sailM = new THREE.Mesh(new THREE.ShapeGeometry(sail), finM);
+  // 胸鰭（左右各一，細長往後下方）
+  const pec = new THREE.Shape(); pec.moveTo(0, 0); pec.lineTo(-0.62, -0.32); pec.lineTo(-0.1, -0.06); pec.lineTo(0, 0);
+  const pecL = new THREE.Mesh(new THREE.ShapeGeometry(pec), finM); pecL.position.set(0.5, -0.12, 0.2); pecL.rotation.y = -0.35;
+  const pecR = pecL.clone(); pecR.position.z = -0.2; pecR.rotation.y = 0.35;
+  // 腹鰭與小背鰭
+  const small = new THREE.Shape(); small.moveTo(0, 0); small.lineTo(-0.22, -0.2); small.lineTo(-0.18, 0); small.lineTo(0, 0);
+  const anal = new THREE.Mesh(new THREE.ShapeGeometry(small), finM); anal.position.set(-0.35, -0.2, 0);
+  const dors2 = new THREE.Mesh(new THREE.ShapeGeometry(small), finM); dors2.position.set(-0.55, 0.13, 0); dors2.scale.y = -0.8;
+  // 新月形尾巴（可擺動）
+  const tail = new THREE.Group(); tail.position.x = -0.82;
+  const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.28, 8), dark); ped.rotation.z = Math.PI/2; ped.position.x = -0.08;
+  const cres = new THREE.Shape(); cres.moveTo(-0.2, 0); cres.quadraticCurveTo(-0.3, 0.3, -0.62, 0.62); cres.quadraticCurveTo(-0.42, 0.22, -0.4, 0); cres.quadraticCurveTo(-0.42, -0.22, -0.62, -0.58); cres.quadraticCurveTo(-0.3, -0.28, -0.2, 0);
+  const fin = new THREE.Mesh(new THREE.ShapeGeometry(cres), finM);
+  tail.add(ped, fin);
+  // 眼睛
+  const eyeW = mat('#ffffff', 0.3), eyeB = mat('#10203a', 0.2);
+  for (const z of [0.17, -0.17]){ const w = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), eyeW); w.position.set(0.66, 0.06, z); const b = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), eyeB); b.position.set(0.69, 0.06, z * 1.12); fish.add(w, b); }
+  fish.add(top, bot, bill, sailM, pecL, pecR, anal, dors2, tail);
+  fish.userData.tail = tail;
+  fish.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return fish;
+}
+function fishModel(f, scale){ return f.id === 'marlin' ? makeMarlin(scale) : makeFish(f.color, scale); }
+
 function makeAvatar(shirt, hat){
   const g = new THREE.Group();
   const skin = mat('#ffd9b8', 0.7), pants = mat('#2f4b63', 0.8), shirtM = mat(shirt, 0.75), hatM = mat(hat, 0.7), ink = mat(PALETTE.ink, 0.4);
@@ -866,14 +907,19 @@ const tmpV = new THREE.Vector3();
 
 /* ================= LABELS for places ================= */
 const placeLabels = [];
-for (const s of SPOTS){ const el = document.createElement('div'); el.className = 'lbl spot'; el.style.setProperty('--c', s.color); el.innerHTML = ''; el.textContent = s.label; const sm = document.createElement('small'); sm.textContent = '釣點'; el.appendChild(sm); labelsEl.appendChild(el); placeLabels.push({ el, p:new THREE.Vector3(s.pos.x, 2.1, s.pos.z) }); }
+for (const s of SPOTS){ const el = document.createElement('div'); el.className = 'lbl spot'; el.style.setProperty('--c', s.color); el.innerHTML = ''; el.textContent = s.label; const sm = document.createElement('small'); sm.textContent = '釣點'; el.appendChild(sm); labelsEl.appendChild(el); placeLabels.push({ el, p:new THREE.Vector3(s.pos.x, 2.1, s.pos.z), spot:s }); }
 for (const m of LANDMARKS){ const el = document.createElement('div'); el.className = 'lbl'; el.textContent = m.label; labelsEl.appendChild(el); placeLabels.push({ el, p:new THREE.Vector3(m.pos.x, m.id === 'lighthouse' ? 7.4 : m.id === 'aquarium' ? 3.2 : m.id === 'chat' ? 3.8 : 1.8, m.pos.z) }); }
+let topBarBottom = 60;
+function measureTopBar(){ const r = document.getElementById('top').getBoundingClientRect(); topBarBottom = r.bottom; }
+addEventListener('resize', () => setTimeout(measureTopBar, 150)); setTimeout(measureTopBar, 300);
 function placeLabelsUpdate(){
   for (const L of placeLabels){
     const d = camera.position.distanceTo(L.p); tmpV.copy(L.p).project(camera);
-    if (tmpV.z > 1 || d > 55){ L.el.style.display = 'none'; continue; }
+    const sx = (tmpV.x*0.5+0.5)*innerWidth, sy = (-tmpV.y*0.5+0.5)*innerHeight;
+    const atSpot = L.spot && Math.hypot(me.pos.x - L.spot.pos.x, me.pos.z - L.spot.pos.z) < 4;
+    if (tmpV.z > 1 || d > 55 || atSpot || sy < topBarBottom + 26){ L.el.style.display = 'none'; continue; }
     L.el.style.display = ''; L.el.style.opacity = String(clamp(1.3 - d/55, 0.25, 1));
-    L.el.style.transform = `translate(${(tmpV.x*0.5+0.5)*innerWidth}px,${(-tmpV.y*0.5+0.5)*innerHeight}px) translate(-50%,-100%)`;
+    L.el.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`;
   }
 }
 
@@ -1155,7 +1201,7 @@ function landFish(){
   F.phase = 'landing'; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2;
   const f = F.fish, w = F.weight;
   const from = me.bobPos.clone(); from.y = 0.1;
-  const fm = makeFish(f.color, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); fm.position.copy(from); scene.add(fm);
+  const fm = fishModel(f, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); fm.position.copy(from); scene.add(fm);
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
   jumpers.push({ m: fm, from, to, t: 0 });
   ripple(from.x, from.z, true); SFX.catch();
@@ -1194,7 +1240,8 @@ function recordCatch(f, w){
 }
 
 function shade(hex, amt){ const c = new THREE.Color(hex); if (amt < 0) c.lerp(new THREE.Color('#000'), -amt); else c.lerp(new THREE.Color('#fff'), amt); return '#' + c.getHexString(); }
-function drawFish(cv, color, known){
+function drawFish(cv, color, known, id){
+  if (id === 'marlin') return drawMarlin(cv, known);
   const ctx = cv.getContext('2d'), W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(W*0.52, H/2);
   const c = known ? color : '#b9c8cf';
   ctx.fillStyle = shade(c, -0.18); ctx.beginPath(); ctx.moveTo(-W*0.24, 0); ctx.lineTo(-W*0.44, -H*0.3); ctx.quadraticCurveTo(-W*0.38, 0, -W*0.44, H*0.3); ctx.closePath(); ctx.fill();
@@ -1205,7 +1252,27 @@ function drawFish(cv, color, known){
   else { ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `bold ${Math.round(H*0.34)}px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', 0, H*0.02); }
   ctx.restore();
 }
-function fishCanvas(f, known, w, h){ const cv = document.createElement('canvas'); cv.width = w*2; cv.height = h*2; drawFish(cv, f.color, known); return cv; }
+function fishCanvas(f, known, w, h){ const cv = document.createElement('canvas'); cv.width = w*2; cv.height = h*2; drawFish(cv, f.color, known, f.id); return cv; }
+function drawMarlin(cv, known){
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(W*0.5, H*0.55); ctx.scale(0.9, 0.9);
+  const dark = known ? '#1f3f8f' : '#a9bac4', fin = known ? '#1a3478' : '#9fb1bc', belly = known ? '#d6dee8' : '#c9d5db';
+  // 尾巴
+  ctx.fillStyle = fin; ctx.beginPath(); ctx.moveTo(-W*0.3, 0); ctx.quadraticCurveTo(-W*0.36, -H*0.18, -W*0.46, -H*0.36); ctx.quadraticCurveTo(-W*0.4, -H*0.1, -W*0.39, 0); ctx.quadraticCurveTo(-W*0.4, H*0.1, -W*0.46, H*0.34); ctx.quadraticCurveTo(-W*0.36, H*0.17, -W*0.3, 0); ctx.fill();
+  // 帆狀背鰭
+  ctx.beginPath(); ctx.moveTo(W*0.17, -H*0.08); ctx.lineTo(W*0.1, -H*0.44); ctx.quadraticCurveTo(W*0.02, -H*0.34, -W*0.06, -H*0.27); ctx.quadraticCurveTo(-W*0.16, -H*0.18, -W*0.24, -H*0.07); ctx.closePath(); ctx.fill();
+  // 身體：上深下淺
+  ctx.beginPath(); ctx.ellipse(-W*0.02, 0, W*0.29, H*0.15, 0, 0, Math.PI*2); ctx.save(); ctx.clip();
+  ctx.fillStyle = belly; ctx.fillRect(-W*0.4, -H*0.2, W*0.8, H*0.4); ctx.fillStyle = dark; ctx.fillRect(-W*0.4, -H*0.2, W*0.8, H*0.19);
+  if (known){ ctx.strokeStyle = 'rgba(143,180,232,.8)'; ctx.lineWidth = W*0.008; for (let i = 0; i < 6; i++){ const x = W*0.12 - i*W*0.06; ctx.beginPath(); ctx.moveTo(x, -H*0.12); ctx.lineTo(x - W*0.01, H*0.08); ctx.stroke(); } }
+  ctx.restore();
+  // 長嘴
+  ctx.fillStyle = known ? '#2a3550' : '#9fb1bc'; ctx.beginPath(); ctx.moveTo(W*0.24, -H*0.04); ctx.lineTo(W*0.52, H*0.0); ctx.lineTo(W*0.24, H*0.04); ctx.closePath(); ctx.fill();
+  // 胸鰭
+  ctx.fillStyle = fin; ctx.beginPath(); ctx.moveTo(W*0.13, H*0.06); ctx.lineTo(-W*0.08, H*0.3); ctx.lineTo(W*0.06, H*0.08); ctx.closePath(); ctx.fill();
+  if (known){ ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W*0.2, -H*0.03, H*0.05, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#10203a'; ctx.beginPath(); ctx.arc(W*0.207, -H*0.03, H*0.028, 0, Math.PI*2); ctx.fill(); }
+  else { ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `bold ${Math.round(H*0.3)}px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', -W*0.02, H*0.02); }
+  ctx.restore();
+}
 
 // in-world tank
 let tankFish = [];
@@ -1213,7 +1280,7 @@ function buildTank(){
   if (!tankGroup) return;
   for (const t of tankFish) tankGroup.remove(t.m); tankFish = [];
   rec.tank.slice(0, 12).forEach((x, i) => {
-    const f = FISH_BY_ID[x.f]; const m = makeFish(f.color, 0.26 + Math.min(0.14, Math.log(1 + x.w) * 0.05));
+    const f = FISH_BY_ID[x.f]; const m = fishModel(f, f.id === 'marlin' ? 0.36 : 0.26 + Math.min(0.14, Math.log(1 + x.w) * 0.05));
     tankGroup.add(m); tankFish.push({ m, ph: i*1.7 + Math.random(), sp: rand(0.35, 0.7), y: rand(-0.45, 0.55), rx: rand(1.1, 1.45), rz: rand(0.45, 0.65) });
   });
 }
@@ -1222,7 +1289,7 @@ function updateTank(t){ for (const f of tankFish){ const a = t*f.sp + f.ph; f.m.
 
 /* ================= CATCH CARD ================= */
 function showCatch(f, w, res){
-  drawFish($('#ccCanvas'), f.color, true);
+  drawFish($('#ccCanvas'), f.color, true, f.id);
   const b = $('#ccBadges'); b.textContent = '';
   const chip = document.createElement('span'); chip.className = 'chip r-' + f.rarity; chip.textContent = f.rarity + '・' + SPOT_BY_ID[f.spot].label; b.appendChild(chip);
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '圖鑑新登錄'; b.appendChild(x); }
