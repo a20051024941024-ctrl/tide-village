@@ -1646,6 +1646,7 @@ function buildNewEnvironment(){
 // 樹冠、蘆葦隨風輕輕擺動
 /* ---- 卡通植物的共用工具：頂點明暗漸層、InstancedMesh 專用的擺動 ---- */
 function vgrad(geo, y0, y1, lo, hi, noise, tint){
+  if (!geo) return new THREE.BufferGeometry();
   geo = geo.index ? geo.toNonIndexed() : geo;
   for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);
   const p = geo.attributes.position, col = new Float32Array(p.count * 3);
@@ -1657,7 +1658,10 @@ function vgrad(geo, y0, y1, lo, hi, noise, tint){
   }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); return geo;
 }
-function mergeParts(list){ return mergeGeometries(list.map(g => g.index ? g.toNonIndexed() : g), false); }
+function mergeParts(list){
+  const gs = list.map(g => { g = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); return g; });
+  return mergeGeometries(gs, false) || gs[0];   // 合併失敗時至少用第一個形狀，不讓整個遊戲壞掉
+}
 // 依每棵樹自己的位置錯開擺動，看起來不會整片同步
 function instSway(material, amp, y0, y1, key){
   material.onBeforeCompile = sh => {
