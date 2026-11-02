@@ -112,6 +112,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 /* action cluster */
 #actWrap{position:fixed;right:var(--gr);bottom:var(--gb);display:flex;flex-direction:column;align-items:flex-end;gap:12px}
 #emotes{display:flex;gap:8px}
+#showPick{position:fixed;right:var(--gr);bottom:calc(var(--gb) + 190px);width:min(300px,62vw);max-height:min(320px,calc(100vh - var(--gb) - 260px));min-height:120px;overflow:auto;padding:10px 10px 12px;z-index:30}
+.sphead{display:flex;align-items:center;justify-content:space-between;padding:0 4px 2px;font-family:var(--f-display)}
+.spx{width:30px;height:30px;border-radius:50%;background:transparent;font-size:14px;color:var(--ink-soft)}
+.spbtn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-top:6px;border-radius:12px;background:rgba(255,255,255,.75);text-align:left;font-size:14px;color:var(--ink)}
+.spbtn small{margin-left:auto;color:var(--ink-soft);font-size:12px}
+.spbtn:active{transform:translateY(1px)}
 #actRow{display:flex;align-items:flex-end;gap:12px}
 #jumpBtn{width:64px;height:64px;border-radius:50%;font-family:var(--f-display);font-size:18px;display:grid;place-items:center;touch-action:none;margin-bottom:4px}
 #jumpBtn:active,#jumpBtn.down{transform:translateY(3px)}
@@ -383,11 +389,12 @@ body.photo.nonames #labels{display:none}
 </div>
 
 
+<div id="showPick" class="panel" hidden><div class="sphead"><b>炫耀哪條魚？</b><button class="spx" aria-label="關閉">✕</button></div><div class="splist"></div></div>
 <div id="actWrap">
   <div id="emotes">
     <button class="panel" id="chatToggle" aria-label="聊天">💬</button>
     <button class="panel" data-emote="wave" aria-label="揮手">👋</button>
-    <button class="panel" data-emote="fish" aria-label="炫耀">🐟</button>
+    <button class="panel" id="showBtn" aria-label="炫耀魚">🐟</button>
     <button class="panel" data-emote="wow" aria-label="驚嘆">😮</button>
   </div>
   <button id="boatBtn" class="panel" hidden>上船</button>
@@ -1709,6 +1716,14 @@ class Fisher {
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubUntil = now() + (secs || 5); }
+  // 炫耀魚：把魚舉在頭上幾秒
+  holdFish(f, w, secs){
+    const a = this.av; if (this.held) a.g.remove(this.held.o);
+    const big = BIG_FISH.has(f.id), o = new THREE.Group(), m = fishModel(f, big ? 0.8 : 0.5);
+    const y = big ? 2.55 : 2.35; o.position.y = y; o.add(m); a.g.add(o);
+    this.held = { o, y, until: now() + (secs || 6) };
+    this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
+  }
   dispose(){ if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
   update(dt, t){
     const a = this.av;
@@ -1723,6 +1738,11 @@ class Fisher {
       a.armR.rotation.x = -1.0 - this.bend * 0.3; a.armL.rotation.x = -0.7 - this.bend*0.2;
       a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04;
     } else { a.armL.rotation.x = -sw * 0.8; a.armR.rotation.x = sw * 0.8; }
+    if (this.held){
+      const h = this.held;
+      if (now() > h.until || this.fishing){ a.g.remove(h.o); this.held = null; }
+      else { a.armL.rotation.x = a.armR.rotation.x = -2.8; h.o.position.y = h.y + Math.sin(t * 4) * 0.05; h.o.rotation.z = Math.sin(t * 2.6) * 0.12; }
+    }
     a.g.position.y = this.baseY + Math.abs(Math.sin(this.walk)) * Math.min(1, this.speed/3) * 0.06;
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible; }
     // bobber
@@ -1872,7 +1892,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space' && !e.repeat && F.phase === 'idle' && !myBoat && nearestSpot().d > 1.7){ e.preventDefault(); jump(); return; }
   if (e.code === 'Space' || e.code === 'KeyF'){ e.preventDefault(); if (!e.repeat) actionDown(); }
   if (e.code === 'Enter'){ e.preventDefault(); $('#chatIn').focus(); }
-  if (e.code === 'Digit1') emote('wave'); if (e.code === 'Digit2') emote('fish'); if (e.code === 'Digit3') emote('wow');
+  if (e.code === 'Digit1') emote('wave'); if (e.code === 'Digit2') openShowPick(); if (e.code === 'Digit3') emote('wow');
 });
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Space' || e.code === 'KeyF') actionUp(); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; actionUp(); });
@@ -2470,6 +2490,38 @@ let myEmote = null;
 function emote(k){ ensureAudio(); me.say(EMOTES[k], 'emote', 3); myEmote = { k, at: Date.now() }; pushPresence(true); }
 $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(b.dataset.emote)));
 
+/* ---- 炫耀魚：選一條釣過的魚，舉起來給大家看 ---- */
+let myShow = null;
+function fmtKg(w){ w = +w || 0; return (w >= 100 ? Math.round(w).toLocaleString() : w.toFixed(2)) + 'kg'; }
+function openShowPick(){
+  ensureAudio();
+  const pick = $('#showPick');
+  if (!pick.hidden){ pick.hidden = true; return; }
+  if (F.phase !== 'idle'){ toast('正在釣魚，先收竿再炫耀吧'); return; }
+  const ids = Object.keys(rec.best || {}).filter(id => FISH_BY_ID[id] && rec.best[id] > 0);
+  if (!ids.length){ toast('還沒有釣到魚，先去釣一條再來炫耀吧！'); return; }
+  ids.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b].rarity] - RARITY_ORDER[FISH_BY_ID[a].rarity] || rec.best[b] - rec.best[a]);
+  const list = pick.querySelector('.splist'); list.innerHTML = '';
+  for (const id of ids){
+    const f = FISH_BY_ID[id], b = el('button', 'spbtn');
+    b.innerHTML = `<span class="chip r-${f.rarity}">${f.rarity}</span><b>${esc(f.name)}</b><small>${fmtKg(rec.best[id])}</small>`;
+    b.addEventListener('click', () => { pick.hidden = true; showOff(id, rec.best[id]); });
+    list.appendChild(b);
+  }
+  pick.hidden = false;
+}
+function showOff(id, w){
+  const f = FISH_BY_ID[id]; if (!f) return;
+  me.holdFish(f, w, 6);
+  myShow = { f: id, w: +(+w).toFixed(2), at: Date.now() }; pushPresence(true);
+  const p = me.av.g.position; FX.emit(p.x, p.y + 2.5, p.z, f.rarity === '傳說' ? 40 : 18, f.rarity === '傳說' ? '#ffd36a' : '#9fe3ff', 1.2, 2.2, 1.0);
+  SFX.catch();
+  logMsg('', `你在炫耀 ${f.name} ${fmtKg(w)}`, true);
+}
+$('#showBtn').addEventListener('click', openShowPick);
+$('#showPick .spx').addEventListener('click', () => { $('#showPick').hidden = true; });
+canvas.addEventListener('pointerdown', () => { $('#showPick').hidden = true; });
+
 /* ================= SOCIAL (room / db / user) ================= */
 let room = null, db = null, user = null, myId = null, dbWritable = true;
 const peers = new Map(); // peer -> {fisher, by, target, rot, lastEmoteAt, pres}
@@ -2490,6 +2542,7 @@ function presenceObj(){
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
+  if (myShow && Date.now() - myShow.at < 6500) o.s = myShow;
   return o;
 }
 function pushPresence(force){
@@ -2532,6 +2585,11 @@ function applyPeer(pp){
     else p.fisher.bobPos.copy(nb);
     p.ph = fi.ph;
   } else { p.fisher.bobState = 'none'; p.fisher.flying = null; p.ph = null; }
+  if (pr.s && typeof pr.s === 'object' && FISH_BY_ID[pr.s.f] && pr.s.at !== p.lastShow){
+    p.lastShow = pr.s.at; const sf = FISH_BY_ID[pr.s.f], sw = clamp(+pr.s.w || 0, 0, 1e6);
+    p.fisher.holdFish(sf, sw, 6);
+    toast(`<b>${esc(peerName(p))}</b> 在炫耀 <span class="chip r-${sf.rarity}">${sf.rarity}</span> <b>${esc(sf.name)}</b> ${fmtKg(sw)}`);
+  }
   if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; p.fisher.say(EMOTES[pr.e.k], 'emote', 3); }
 }
 function updatePeers(dt, t){
