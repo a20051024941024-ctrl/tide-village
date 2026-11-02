@@ -800,7 +800,7 @@ function waterY(x, z, t){ return 0.12 + Math.sin(x*0.6 + t*1.3)*0.035 + Math.cos
   [[19.5,4],[21,13],[16.5,15],[20,18],[17,2],[21.2,7.5]].forEach(([x,z],i)=>{ const s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35+i%3*0.12, 0), glowM); s.position.set(x, 0.12, z); s.rotation.set(i, i*2, 0); scene.add(s); lanterns.push(s); });
   // river reeds
   const reedM = mat('#5f9e58', 0.9); addSway(reedM, 0.06, 0.0, 0.9);
-  for (let i = 0; i < 40; i++){ const r = new THREE.Mesh(new THREE.ConeGeometry(0.06, rand(0.6,1.1), 4), reedM); const z = rand(-24, 28); if (Math.abs(z-3) < 2.5) continue; r.position.set(-10.7 - Math.random()*0.8, 0.4, z); r.rotation.z = rand(-0.2,0.2); scene.add(r); }
+  if (CLASSIC) for (let i = 0; i < 40; i++){ const r = new THREE.Mesh(new THREE.ConeGeometry(0.06, rand(0.6,1.1), 4), reedM); const z = rand(-24, 28); if (Math.abs(z-3) < 2.5) continue; r.position.set(-10.7 - Math.random()*0.8, 0.4, z); r.rotation.z = rand(-0.2,0.2); scene.add(r); }
 
   // village
   function house(x, z, roofColor, width){
@@ -889,6 +889,7 @@ function waterY(x, z, t){ return 0.12 + Math.sin(x*0.6 + t*1.3)*0.035 + Math.cos
   while (n < N && guard++ < 5000){
     const x = rand(-34, 34), z = rand(-11, 34);
     if (inWater(x, z) || Math.hypot(x, z-4) < 7.4 || blocked(x, z, 0.3)) continue;
+    if (!CLASSIC && (inSand(x, z) || islandEdge(x, z) < 3.6)) continue;
     dummy.position.set(x, 0.14, z); dummy.rotation.set(rand(-0.2,0.2), rand(0,6), rand(-0.2,0.2)); dummy.scale.setScalar(rand(0.7,1.4)); dummy.updateMatrix();
     tufts.setMatrixAt(n, dummy.matrix); col.set(Math.random() < 0.08 ? (Math.random()<0.5 ? '#ffd36a' : '#f5a5d8') : (Math.random()<0.5 ? '#8fc46f' : '#a6d37d')); tufts.setColorAt(n, col); n++;
   }
@@ -1151,6 +1152,13 @@ function buildNewEnvironment(){
     const x = -60 + (i + 0.5) / S * 120, z = -60 + (j + 0.5) / S * 120, inf = terrainInfo(x, z), o = (j * S + i) * 4;
     data[o] = Math.round(clamp(-inf.h / 2, 0, 1) * 255); data[o+1] = inf.water ? 255 : 0; data[o+2] = inf.region * 120; data[o+3] = 255;
   }
+  { // 區域通道模糊約 2 公尺，讓河水和海水的顏色慢慢混在一起
+    const R = 6, tmp = new Float32Array(S * S);
+    for (let pass = 0; pass < 2; pass++){
+      for (let j = 0; j < S; j++) for (let i = 0; i < S; i++){ let sum = 0, cnt = 0; for (let k = -R; k <= R; k++){ const ii = pass ? i : Math.min(S - 1, Math.max(0, i + k)), jj = pass ? Math.min(S - 1, Math.max(0, j + k)) : j; sum += data[(jj * S + ii) * 4 + 2]; cnt++; } tmp[j * S + i] = sum / cnt; }
+      for (let q = 0; q < S * S; q++) data[q * 4 + 2] = Math.round(tmp[q]);
+    }
+  }
   const mask = new THREE.DataTexture(data, S, S, THREE.RGBAFormat);
   mask.magFilter = mask.minFilter = THREE.LinearFilter; mask.wrapS = mask.wrapT = THREE.ClampToEdgeWrapping; mask.needsUpdate = true;
   const sunDir = new THREE.Vector3(-34, 32, -48).normalize();
@@ -1185,7 +1193,7 @@ function buildNewEnvironment(){
         if (m.g < 0.2) discard;
         float edge = smoothstep(0.25, 0.7, m.g);
         float depth = m.r * 2.0;
-        vec3 surf = m.b < 0.25 ? cSea : (m.b < 0.7 ? cRiver : cCreek);
+        vec3 surf = mix(cSea, cRiver, smoothstep(0.08, 0.42, m.b)); surf = mix(surf, cCreek, smoothstep(0.55, 0.88, m.b));
         vec3 V = normalize(cameraPosition - vW);
         float far = smoothstep(25.0, 85.0, length(cameraPosition.xz - vW.xz));
         vec3 N = normalize(mix(waveN(vW.xz, uTime), vec3(0.0, 1.0, 0.0), far * 0.85));
@@ -1268,6 +1276,23 @@ function addFlora(){
   inst(new THREE.DodecahedronGeometry(0.4, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, flatShading: true }),
     scatter(Math.round(70 * dens), (x, z) => { const e = islandEdge(x, z), h = terrainH(x, z); return !deckAt(x, z) && !avoid(x, z) && !blocked(x, z, 0.5) && ((e > -2 && e < 4) || inSand(x, z) || (h < -0.15 && h > -0.9)) && Math.hypot(x, z - 4) > 8; }),
     ([x, z], d, col) => { const s = rand(0.5, 1.4); d.position.set(x, terrainH(x, z) + 0.08 * s, z); d.scale.set(s, s * rand(0.5, 0.8), s); d.rotation.set(rand(0, 1), rand(0, 6), 0); col.set(Math.random() < 0.5 ? '#b7b2a4' : '#9d998d'); });
+  // 蘆葦叢：長在岸邊（陸地邊緣或很淺的水），每叢 5 片細長葉子，會隨風擺
+  const bladeGeos = [];
+  for (let k = 0; k < 5; k++){ const g = new THREE.ConeGeometry(0.035, 1, 3); g.translate(0, 0.5, 0); g.rotateZ(rand(-0.25, 0.25)); g.rotateX(rand(-0.2, 0.2)); g.translate(rand(-0.12, 0.12), 0, rand(-0.12, 0.12)); g.scale(1, rand(0.6, 1), 1); bladeGeos.push(g.index ? g.toNonIndexed() : g); }
+  const reedGeo = mergeGeometries(bladeGeos.map(g => { for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); return g; }));
+  const reedMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85, side: THREE.DoubleSide });
+  reedMat.onBeforeCompile = sh => {
+    sh.uniforms.uT = fishTime;
+    sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float rp = float(gl_InstanceID) * 2.1;
+      transformed.x += sin(uT * 1.4 + rp) * 0.08 * position.y * position.y;
+      transformed.z += cos(uT * 1.1 + rp) * 0.05 * position.y * position.y;`);
+  };
+  reedMat.customProgramCacheKey = () => 'reeds';
+  const nearWater = (x, z) => [[1.1, 0], [-1.1, 0], [0, 1.1], [0, -1.1]].some(([dx, dz]) => !isLand(x + dx, z + dz));
+  if (reedGeo) inst(reedGeo, reedMat,
+    scatter(Math.round(90 * dens), (x, z) => { const h = terrainH(x, z); return Math.abs(x) < 34 && Math.abs(z) < 34 && z > -15 && h > -0.22 && (h < -0.02 || nearWater(x, z)) && !deckAt(x, z) && !avoid(x, z) && !blocked(x, z, 0.4); }),
+    ([x, z], d, col) => { d.position.set(x, Math.max(terrainH(x, z), -0.2), z); d.scale.setScalar(rand(0.6, 1.05)); d.rotation.set(0, rand(0, 6), 0); col.set(['#5f9e58', '#7aa85c', '#8fae5a'][Math.floor(Math.random() * 3)]); });
   // 水草（會隨水搖擺）
   const weedMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 });
   weedMat.onBeforeCompile = sh => {
