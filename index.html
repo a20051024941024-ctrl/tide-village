@@ -487,9 +487,23 @@ window.PJRoom = (function () {
 })();
 
 </script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-<script>if(!window.THREE)document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>')</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+} }
+</script>
 <script>
+// 15 秒內 3D 引擎還沒開始，就告訴玩家怎麼辦（通常是網路或 CDN 問題）
+setTimeout(function(){ if (!window.__gameStarted){ var d = document.createElement('div'); d.className = 'panel'; d.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;max-width:320px;text-align:center;z-index:99'; d.textContent = '遊戲載入太久了。請確認網路連線後重新整理；如果是在 LINE 或 Messenger 裡打開，改用 Chrome 開啟試試。'; document.body.appendChild(d); } }, 15000);
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+window.__gameStarted = true;
 (function(){
 'use strict';
 const $ = (s, r=document) => r.querySelector(s);
@@ -504,7 +518,6 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const now = () => performance.now() / 1000;
 
-if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div class="panel" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;max-width:300px;text-align:center">3D 引擎沒有載入成功，請重新整理頁面。</div>'); return; }
 
 /* ================= DATA (from world.ts) ================= */
 const PALETTE = { sky:'#8bd8e8', grass:'#77b86a', grassLight:'#a6d37d', sand:'#f2d69a', wood:'#8c5d3b', ink:'#18334a', river:'#4fc2cf', sea:'#2f89c7', creek:'#6bd6b0', coral:'#f17b6d', gold:'#ffd36a' };
@@ -614,10 +627,29 @@ function fishModel(f, scale){
   return makeFish(f.color, scale);
 }
 
+/* ================= QUALITY（畫質分級：低 / 中 / 高） ================= */
+// 中 = 原本手機的設定，高 = 原本電腦的設定；低是給較舊的 Android 手機
+const TIERS = {
+  low:  { label:'低', dpr:1.0, shadow:0,    tufts:0.25, waterEvery:2, aa:false },
+  mid:  { label:'中', dpr:1.5, shadow:1024, tufts:0.5,  waterEvery:1, aa:false },
+  high: { label:'高', dpr:2.0, shadow:2048, tufts:1.0,  waterEvery:1, aa:true  },
+};
+const Quality = {
+  setting: LS.get('tide.quality', 'auto'),   // 'auto' | 'low' | 'mid' | 'high'
+  tier: 'mid',
+  detect(){
+    if (!isTouch) return 'high';
+    const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
+    if (mem <= 3 || cores <= 4) return 'low';
+    return 'mid';
+  },
+};
+Quality.tier = Quality.setting === 'auto' ? Quality.detect() : (TIERS[Quality.setting] ? Quality.setting : 'mid');
+
 /* ================= RENDERER ================= */
 const canvas = $('#c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isTouch ? 1.6 : 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: TIERS[Quality.tier].aa, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, TIERS[Quality.tier].dpr));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -631,8 +663,9 @@ const MODERN = parseInt(THREE.REVISION, 10) >= 155;
 scene.add(new THREE.HemisphereLight('#e7fbff', '#52725c', MODERN ? 1.55 : 1.05));
 const sun = new THREE.DirectionalLight('#fff4d2', MODERN ? 2.2 : 1.25);
 sun.castShadow = true;
-const SM = isTouch ? 1024 : 2048;
+const SM = TIERS[Quality.tier].shadow || 1024;
 sun.shadow.mapSize.set(SM, SM);
+sun.castShadow = TIERS[Quality.tier].shadow > 0;
 Object.assign(sun.shadow.camera, { left:-30, right:30, top:30, bottom:-30, near:1, far:100 });
 sun.shadow.bias = -0.0008;
 sun.shadow.camera.updateProjectionMatrix();
@@ -789,7 +822,7 @@ function waterY(x, z, t){ return 0.12 + Math.sin(x*0.6 + t*1.3)*0.035 + Math.cos
 
   // grass tufts & flowers (instanced)
   const tuftGeo = new THREE.ConeGeometry(0.09, 0.32, 4); const tuftMat = mat('#ffffff', 0.9);
-  const N = isTouch ? 260 : 520; const tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, N);
+  const N = 520; const tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, N);
   const dummy = new THREE.Object3D(); const col = new THREE.Color(); let n = 0, guard = 0;
   while (n < N && guard++ < 5000){
     const x = rand(-34, 34), z = rand(-11, 34);
@@ -797,7 +830,7 @@ function waterY(x, z, t){ return 0.12 + Math.sin(x*0.6 + t*1.3)*0.035 + Math.cos
     dummy.position.set(x, 0.14, z); dummy.rotation.set(rand(-0.2,0.2), rand(0,6), rand(-0.2,0.2)); dummy.scale.setScalar(rand(0.7,1.4)); dummy.updateMatrix();
     tufts.setMatrixAt(n, dummy.matrix); col.set(Math.random() < 0.08 ? (Math.random()<0.5 ? '#ffd36a' : '#f5a5d8') : (Math.random()<0.5 ? '#8fc46f' : '#a6d37d')); tufts.setColorAt(n, col); n++;
   }
-  tufts.count = n; tufts.receiveShadow = true; scene.add(tufts);
+  tuftsMesh = tufts; tuftsTotal = n; tufts.count = Math.round(n * TIERS[Quality.tier].tufts); tufts.receiveShadow = true; scene.add(tufts);
 
   // clouds
   const cm = mat('#ffffff', 1, { flatShading:true, emissive:'#ffffff', emissiveIntensity:0.25 });
@@ -807,7 +840,62 @@ function waterY(x, z, t){ return 0.12 + Math.sin(x*0.6 + t*1.3)*0.035 + Math.cos
     g.position.set(rand(-60,60), rand(18,26), rand(-55,30)); scene.add(g); clouds.push({ g, v: rand(0.4,0.9) });
   }
 })();
-var tankGroup, lhLight;
+var tankGroup, lhLight, tuftsMesh = null, tuftsTotal = 0;
+
+function applyQuality(tier, why){
+  if (!TIERS[tier]) return; const T = TIERS[tier]; Quality.tier = tier;
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, T.dpr)); resize();
+  if (T.shadow > 0){
+    if (sun.shadow.mapSize.x !== T.shadow){ sun.shadow.mapSize.set(T.shadow, T.shadow); if (sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; } }
+    sun.castShadow = true;
+  } else sun.castShadow = false;
+  if (tuftsMesh) tuftsMesh.count = Math.round(tuftsTotal * T.tufts);
+  if (why === 'auto') toast(`畫面有點卡，已自動把畫質調成「${T.label}」。可以在「造型」分頁改回來。`);
+}
+// 自動模式：連續卡頓就降一級（每次降級後至少等 15 秒再判斷）
+const fpsMon = { frames: 0, since: 0, lastDrop: 0, startAt: 0 };
+function watchFps(t){
+  if (!fpsMon.startAt){ fpsMon.startAt = t; fpsMon.since = t; }
+  fpsMon.frames++;
+  if (t - fpsMon.since < 5) return;
+  const fps = fpsMon.frames / (t - fpsMon.since); fpsMon.frames = 0; fpsMon.since = t; Quality.fps = fps;
+  if (Quality.setting !== 'auto' || document.hidden || t - fpsMon.startAt < 10 || t - fpsMon.lastDrop < 15) return;
+  if (fps < 32 && Quality.tier !== 'low'){ fpsMon.lastDrop = t; applyQuality(Quality.tier === 'high' ? 'mid' : 'low', 'auto'); }
+}
+
+/* ---- 合併靜態物件：同一種材質的房子、碼頭、樹幹…合成一個網格，大幅減少手機的繪製次數 ---- */
+function batchStatic(){
+  if (/nomerge/.test(location.hash)) return;
+  try {
+    const skip = new Set();
+    animWater.forEach(w => skip.add(w.m)); lanterns.forEach(l => skip.add(l));
+    SPOTS.forEach(sp => sp.ring && skip.add(sp.ring)); schools.forEach(sc => skip.add(sc.g)); clouds.forEach(c => skip.add(c.g));
+    if (lhLight) skip.add(lhLight); if (tankGroup && tankGroup.parent) skip.add(tankGroup.parent);
+    scene.updateMatrixWorld(true);
+    const groups = new Map();
+    (function walk(o){
+      if (skip.has(o)) return;
+      if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !Array.isArray(o.material) && o.visible){
+        const m = o.material;
+        const key = [m.type, m.color && m.color.getHex(), m.emissive && m.emissive.getHex(), m.emissiveIntensity, m.roughness, m.metalness, m.transparent, m.opacity, m.side, m.flatShading, m.fog, o.castShadow, o.receiveShadow].join('|');
+        if (!groups.has(key)) groups.set(key, []); groups.get(key).push(o);
+      }
+      for (const c of o.children.slice()) walk(c);
+    })(scene);
+    let before = 0, after = 0;
+    for (const list of groups.values()){
+      before += list.length;
+      if (list.length < 2){ after += list.length; continue; }
+      const geos = list.map(o => { const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); g.applyMatrix4(o.matrixWorld); return g; });
+      const merged = mergeGeometries(geos, false); geos.forEach(g => g.dispose());
+      if (!merged){ after += list.length; continue; }
+      const mesh = new THREE.Mesh(merged, list[0].material); mesh.castShadow = list[0].castShadow; mesh.receiveShadow = list[0].receiveShadow; mesh.matrixAutoUpdate = false;
+      scene.add(mesh); for (const o of list) o.parent && o.parent.remove(o); after++;
+    }
+    Quality.batched = { before, after };
+  } catch(e){ console.warn('batchStatic skipped', e); }
+}
+batchStatic();
 
 function inWater(x, z){ for (const w of waters) if (x > w.x0 && x < w.x1 && z > w.z0 && z < w.z1) return true; return false; }
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
@@ -821,11 +909,51 @@ function blocked(x, z, r){
   return false;
 }
 
+/* ================= ASSETS（外部 3D 模型：載入、快取、失敗時用程式模型代替） ================= */
+// 之後換美術模型時，在這裡登記；檔案放在 models/ 資料夾（.glb）。目前還沒有外部模型。
+const ASSET_MANIFEST = {
+  // 例：player: { url: 'models/character.glb', scale: 1 },
+};
+const Assets = (() => {
+  const loader = new GLTFLoader(); try { loader.setMeshoptDecoder(MeshoptDecoder); } catch(e){}
+  const cache = new Map();
+  function load(url){
+    if (!cache.has(url)) cache.set(url, new Promise((res, rej) => loader.load(url, res, undefined, rej)).catch(e => { cache.delete(url); throw e; }));
+    return cache.get(url);
+  }
+  // 立刻回傳一個群組：先放程式模型（fallback），外部模型載好後再換上去
+  function model(name, fallback, onReady){
+    const holder = new THREE.Group(); const fb = fallback ? fallback() : null; if (fb) holder.add(fb);
+    const entry = ASSET_MANIFEST[name]; if (!entry) return holder;
+    load(entry.url).then(gltf => {
+      const m = SkeletonUtils.clone(gltf.scene); if (entry.scale) m.scale.setScalar(entry.scale);
+      m.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+      if (fb) holder.remove(fb); holder.add(m);
+      if (onReady) onReady(m, gltf);
+    }).catch(e => console.warn('model fallback:', name, e && e.message));
+    return holder;
+  }
+  return { load, model, has: name => !!ASSET_MANIFEST[name] };
+})();
+
+// 分區：玩家靠近某區才載入／顯示那一區的東西；離開後停止更新
+const Zones = [];
+function addZone(name, x, z, radius, onEnter, onLeave){ Zones.push({ name, x, z, radius, inside: false, onEnter, onLeave }); }
+let zoneCheckAt = 0;
+function updateZones(t){
+  if (t - zoneCheckAt < 0.5) return; zoneCheckAt = t;
+  for (const zn of Zones){
+    const inside = Math.hypot(me.pos.x - zn.x, me.pos.z - zn.z) < zn.radius;
+    if (inside !== zn.inside){ zn.inside = inside; const fn = inside ? zn.onEnter : zn.onLeave; if (fn) try { fn(); } catch(e){} }
+  }
+}
+
 /* ================= SEA LIFE（海裡游的風景，不能釣） ================= */
 const seaLife = [];
 function addSeaLife(id, scale, cx, cz, r, speed, mode, ph){ const m = fishModel(FISH_BY_ID[id], scale); scene.add(m); seaLife.push({ m, cx, cz, r, speed, mode, ph: ph || 0, prevUp: false }); }
 function updateSeaLife(t){
   for (const s of seaLife){
+    if (s.mode !== 'whale'){ const near = Math.hypot(me.pos.x - s.cx, me.pos.z - s.cz) < 48; s.m.visible = near; if (!near) continue; }
     const a = t * s.speed + s.ph, x = s.cx + Math.cos(a) * s.r, z = s.cz + Math.sin(a) * s.r;
     const vx = -Math.sin(a), vz = Math.cos(a); s.m.position.x = x; s.m.position.z = z; s.m.rotation.y = Math.atan2(-vz, vx);
     if (s.mode === 'jump'){
@@ -1715,6 +1843,12 @@ function renderTab(){
     inp.addEventListener('change', () => { nickname = inp.value.trim().slice(0, 16); LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); });
     f3.appendChild(inp); f3.appendChild(el('p', 'sub', '其他玩家會在你頭上看到這個名字。'));
     body.appendChild(f3);
+    const fq = el('div', 'field'); fq.appendChild(el('label', '', '畫質'));
+    const seg = el('div', 'seg');
+    [['auto','自動'],['low','低'],['mid','中'],['high','高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
+    fq.appendChild(seg);
+    fq.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」；「高」會開啟較清晰的陰影和更多花草。`));
+    body.appendChild(fq);
   } else if (curTab === 'help'){
     body.appendChild(el('p', 'sub', '走進任一個發光圈就能釣魚。每個釣點有 4 種魚，其中 1 種是傳說魚。'));
     const k = el('div', 'kbd');
@@ -1775,23 +1909,31 @@ $('#hintX').addEventListener('click', () => { $('#hint').hidden = true; LS.set('
 
 /* ================= LOOP ================= */
 let last = now(), frameNo = 0;
+// 開發用效能面板：網址後面加 #debug 才會出現
+const debugEl = /debug/.test(location.hash) ? Object.assign(document.createElement('div'), { className:'panel', id:'debugPanel' }) : null;
+if (debugEl){ debugEl.style.cssText = 'position:fixed;left:50%;bottom:8px;transform:translateX(-50%);padding:6px 10px;font:12px/1.4 ui-monospace,monospace;z-index:40;pointer-events:none;white-space:nowrap'; document.body.appendChild(debugEl); }
+function updateDebug(){
+  const i = renderer.info, b = Quality.batched;
+  debugEl.textContent = `FPS ${Quality.fps ? Quality.fps.toFixed(0) : '…'} · 繪製 ${i.render.calls} · 三角形 ${(i.render.triangles/1000).toFixed(1)}k · 畫質 ${TIERS[Quality.tier].label}${Quality.setting === 'auto' ? '(自動)' : ''} · 合併 ${b ? b.before + '→' + b.after : '關'}`;
+}
 camera.position.set(0, 5, 17);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); updateNpcs(dt, t); updateJumpers(dt, t); updateTank(t);
   // water
-  for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
-  for (const s of schools){ s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
+  if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
+  for (const s of schools){ s.g.visible = Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
   for (const l of lanterns) l.material.emissiveIntensity = 1.0 + Math.sin(t*2 + l.position.x) * 0.25;
   if (lhLight) lhLight.material.emissiveIntensity = 2.4 + Math.sin(t*1.5) * 1.2;
   for (const s of SPOTS) if (s.ring) s.ring.material.emissiveIntensity = 1.4 + Math.sin(t*3 + s.pos.x)*0.5;
   for (const c of clouds){ c.g.position.x += c.v * dt; if (c.g.position.x > 70) c.g.position.x = -70; }
   for (const r of ripples){ if (r.t > 1.2){ r.m.visible = false; continue; } r.t += dt; const k = r.t / 1.2; r.m.scale.setScalar((1 + k*7) * r.big); r.m.material.opacity = (1 - k) * 0.8; }
   sun.position.set(me.pos.x + 18, 30, me.pos.z + 14); sun.target.position.set(me.pos.x, 0, me.pos.z);
-  fishTime.value = t; updateSeaLife(t);
+  fishTime.value = t; updateSeaLife(t); updateZones(t); watchFps(t);
   placeLabelsUpdate();
   renderer.render(scene, camera);
+  if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
