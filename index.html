@@ -993,6 +993,55 @@ function makeBoatMesh(color){
   return g;
 }
 // 從某個位置朝某個方向，找離 dist 最近、夠深的水面點
+/* ---- 卡通樹：圓樹、松樹、白樺、村子裡的花樹和果樹（每種用 InstancedMesh 一次畫完） ---- */
+function buildTrees(trees, PX, PZ){
+  const hash = (k, n) => { const v = Math.sin(k * 9301.7 + n * 49.3) * 43758.5453; return v - Math.floor(v); };
+  const hiDet = Quality.tier === 'high' ? 2 : 1;
+  const blob = (r, x, y, z, sy, det) => { const g = new THREE.IcosahedronGeometry(r, det == null ? 1 : det); g.scale(1, sy || 0.88, 1); g.translate(x, y, z); return g; };
+  const trunkGeo = (r0, r1, h, flare, seg) => { const g = new THREE.CylinderGeometry(r0, r1, h, 9, seg || 4); g.translate(0, h / 2, 0); const p = g.attributes.position; for (let i = 0; i < p.count; i++){ const y = p.getY(i); if (y < 0.3){ const k = 1 + (0.3 - y) / 0.3 * flare; p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } } g.computeVertexNormals(); return g; };
+  // 幾何
+  const G = {
+    trunk: vgrad(trunkGeo(0.15, 0.24, 2.0, 0.45), 0, 2, 0.78, 1.05, 0.03),
+    round: vgrad(mergeParts([blob(1.05, 0, 2.4, 0, 0.88, hiDet), blob(0.78, 0.66, 2.08, 0.25), blob(0.8, -0.6, 2.12, -0.2), blob(0.72, 0.1, 3.0, -0.1), blob(0.62, -0.12, 2.0, 0.62), blob(0.58, 0.2, 2.15, -0.7)]), 1.3, 3.7, 0.66, 1.12, 0.035),
+    pineTrunk: vgrad(trunkGeo(0.11, 0.19, 1.7, 0.4), 0, 1.7, 0.75, 1.0, 0.03),
+    pine: vgrad(mergeParts([0, 1, 2, 3].map(j => { const g = new THREE.ConeGeometry(1.35 - j * 0.3, 1.25 - j * 0.07, 9, 1); g.rotateY(j * 0.6); g.translate(0, 1.55 + j * 0.68, 0); return g; })), 0.9, 4.4, 0.62, 1.1, 0.03),
+    birchTrunk: vgrad(trunkGeo(0.1, 0.14, 2.8, 0.25, 22), 0, 2.8, 0.95, 1.08, 0, (x, y, z) => { const a = Math.atan2(z, x), band = Math.sin(y * 9 + Math.sin(a * 2) * 0.8) > 0.8 && Math.sin(a * 3 + y * 2) > -0.2; return band ? [0.3, 0.28, 0.28] : [1, 1, 0.97]; }),
+    birch: vgrad(mergeParts([blob(0.82, 0, 3.0, 0, 1.3, hiDet), blob(0.55, 0.38, 2.45, 0.2, 1.1), blob(0.5, -0.32, 2.6, -0.22, 1.1)]), 1.9, 4.1, 0.7, 1.12, 0.035),
+    fruit: mergeParts([[0.85, 2.3, 0.6], [-0.7, 2.5, 0.55], [0.3, 2.0, 0.95], [-0.3, 3.1, 0.6], [0.95, 2.7, -0.3], [-0.95, 2.2, -0.35], [0.2, 3.3, -0.55], [0.6, 1.75, -0.5]].map(([x, y, z]) => { const g = new THREE.IcosahedronGeometry(0.11, 1); g.translate(x, y, z); return g; })),
+  };
+  const vm = (opts) => new THREE.MeshStandardMaterial(Object.assign({ color:'#ffffff', vertexColors:true, roughness:0.85 }, opts));
+  const M = { trunk: vm(), round: vm(), pine: vm({ flatShading:true }), birch: vm(), fruit: new THREE.MeshStandardMaterial({ color:'#ffffff', roughness:0.45, emissive:'#401010', emissiveIntensity:0.15 }) };
+  instSway(M.round, 0.07, 1.4, 3.6, 'round'); instSway(M.pine, 0.05, 1.4, 4.4, 'pine'); instSway(M.birch, 0.08, 1.9, 4.0, 'birch'); instSway(M.fruit, 0.07, 1.4, 3.6, 'round');
+  const C = (h) => new THREE.Color(h);
+  const kinds = { round:[], pine:[], birch:[] }, fruits = [];
+  for (const [x, z, k] of trees){
+    const village = Math.hypot(x - PX, z - PZ) < 28 && z < 15;
+    const nearHill = Math.hypot(x - MAP.hill.x, z - MAP.hill.z) < MAP.hill.R + 4;
+    const pine = (k < 0.33 && z > 10) || (nearHill && k < 0.5);
+    const birch = !pine && z > 15 && hash(k, 1) < 0.28;
+    const sc = 0.85 + k * 0.45, y = terrainH(x, z) - 0.05, ry = k * 6;
+    if (pine) kinds.pine.push({ x, y, z, sc, sy: 1.08, ry, crown: C(['#4f8f4f', '#5d9c55', '#4a8a5e'][Math.floor(hash(k, 4) * 3)]), trunk: C('#7a4f33') });
+    else if (birch) kinds.birch.push({ x, y, z, sc, sy: 1, ry, crown: C(['#b2d46a', '#a3cc64', '#c2db78'][Math.floor(hash(k, 5) * 3)]), trunk: C('#efeae0') });
+    else {
+      const blossom = village && hash(k, 2) < 0.3, fruit = village && !blossom && hash(k, 3) < 0.35;
+      const crown = blossom ? ['#f7b6c8', '#f4a3bb', '#fbcad8'][Math.floor(hash(k, 6) * 3)] : ['#8cc46a', '#7ab85e', '#9fd27a', '#76b35f'][Math.floor(hash(k, 7) * 4)];
+      const t = { x, y, z, sc, sy: 1, ry, crown: C(crown), trunk: C(blossom ? '#7b5440' : PALETTE.wood) };
+      kinds.round.push(t); if (fruit) fruits.push(Object.assign({}, t, { crown: C(hash(k, 8) < 0.6 ? '#ef5b4c' : '#ffb347') }));
+    }
+  }
+  const d = new THREE.Object3D();
+  const put = (geo, mat, list, colorKey, shadow) => {
+    if (!list.length) return;
+    const im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((t, i) => { d.position.set(t.x, t.y, t.z); d.rotation.set(0, t.ry, 0); d.scale.set(t.sc, t.sc * t.sy, t.sc); d.updateMatrix(); im.setMatrixAt(i, d.matrix); im.setColorAt(i, t[colorKey]); });
+    im.castShadow = shadow !== false; im.receiveShadow = true; scene.add(im); return im;
+  };
+  put(G.trunk, M.trunk, kinds.round, 'trunk'); put(G.round, M.round, kinds.round, 'crown');
+  put(G.pineTrunk, M.trunk, kinds.pine, 'trunk'); put(G.pine, M.pine, kinds.pine, 'crown');
+  put(G.birchTrunk, M.trunk, kinds.birch, 'trunk'); put(G.birch, M.birch, kinds.birch, 'crown');
+  put(G.fruit, M.fruit, fruits, 'crown', false);
+}
+
 function castPoint(x, z, dx, dz, dist){
   const ok = d => { const px = x + dx * d, pz = z + dz * d; const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz); };
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
@@ -1152,8 +1201,6 @@ function castPoint(x, z, dx, dz, dist){
   scene.add(box([0.9, 0.55, 0.04], PALETTE.coral, [HX + 2.47, hy + 2.7, HZ - 1]));
 
   // ---- 樹：南邊的森林、山丘，加上村子周圍零星幾棵 ----
-  const trunkM = mat(PALETTE.wood), crownM = mat(PALETTE.grassLight), crown2M = mat('#7fb562'), pineM = mat('#5d9c55', 0.85, { flatShading:true });
-  addSway(crownM, 0.07, 1.4, 3.4); addSway(crown2M, 0.07, 1.4, 3.4); addSway(pineM, 0.05, 1.6, 4.4);
   const nearThing = (x, z) => Math.hypot(x - PX, z - PZ) < 10 || Math.hypot(x - CX, z - CZ) < 4.5 || Math.hypot(x - AX, z - AZ) < 9 || Math.hypot(x - LX, z - LZ) < 4 || SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 4.5) || Math.hypot(x - HX, z - HZ) < 4 || BOAT_DOCKS.some(b => Math.hypot(x - b.x, z - b.z) < 4);
   const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 2.2 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
   const trees = [];
@@ -1166,17 +1213,7 @@ function castPoint(x, z, dx, dz, dist){
     if (!treeOK(x, z)) continue;
     trees.push([x, z, wr()]); addCircleCol(x, z, 0.5);
   }
-  for (const [x, z, k] of trees){
-    const s = 0.85 + k * 0.45, y = terrainH(x, z);
-    const t = new THREE.Group(); t.position.set(x, y, z); t.scale.setScalar(s); t.rotation.y = k * 6;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.8, 8), trunkM); trunk.position.y = 0.9; trunk.castShadow = true; t.add(trunk);
-    if (k < 0.33 && z > 10){   // 松樹
-      for (let j = 0; j < 3; j++){ const c = new THREE.Mesh(new THREE.ConeGeometry(1.25 - j * 0.32, 1.3, 7), pineM); c.position.y = 1.7 + j * 0.75; c.castShadow = true; t.add(c); }
-    } else {
-      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25, 1), k < 0.66 ? crownM : crown2M); crown.position.y = 2.15; crown.castShadow = true; t.add(crown);
-    }
-    scene.add(t);
-  }
+  buildTrees(trees, PX, PZ);
 
   // ---- 廣場周圍的燈 ----
   const lampM = () => new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:1.2 });
@@ -1607,6 +1644,34 @@ function buildNewEnvironment(){
 }
 
 // 樹冠、蘆葦隨風輕輕擺動
+/* ---- 卡通植物的共用工具：頂點明暗漸層、InstancedMesh 專用的擺動 ---- */
+function vgrad(geo, y0, y1, lo, hi, noise, tint){
+  geo = geo.index ? geo.toNonIndexed() : geo;
+  for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);
+  const p = geo.attributes.position, col = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++){
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), t = Math.min(1, Math.max(0, (y - y0) / (y1 - y0)));
+    let v = lo + (hi - lo) * t + (noise ? Math.sin(x * 7.1 + z * 5.3 + y * 3.7) * noise : 0);
+    const c = tint ? tint(x, y, z) : [1, 1, 1];
+    col[i*3] = v * c[0]; col[i*3+1] = v * c[1]; col[i*3+2] = v * c[2];
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); return geo;
+}
+function mergeParts(list){ return mergeGeometries(list.map(g => g.index ? g.toNonIndexed() : g), false); }
+// 依每棵樹自己的位置錯開擺動，看起來不會整片同步
+function instSway(material, amp, y0, y1, key){
+  material.onBeforeCompile = sh => {
+    sh.uniforms.uT = fishTime;
+    sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+      float sw = clamp((position.y - ${y0.toFixed(2)}) / ${(y1 - y0).toFixed(2)}, 0.0, 1.0);
+      float ph = instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.29;
+      transformed.x += sin(uT * 1.3 + ph) * ${amp.toFixed(3)} * sw;
+      transformed.z += cos(uT * 1.05 + ph * 1.3) * ${(amp * 0.6).toFixed(3)} * sw;
+      #endif`);
+  };
+  material.customProgramCacheKey = () => 'isway-' + key;
+}
 function addSway(material, amp, y0, y1){
   if (CLASSIC) return;
   material.onBeforeCompile = sh => {
@@ -1634,14 +1699,23 @@ function addFlora(){
     im.castShadow = !!shadow; im.receiveShadow = true; scene.add(im); return im;
   }
   // 灌木
-  inst(new THREE.IcosahedronGeometry(0.6, 1), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.9, flatShading: true }),
+  const bushGeo = vgrad(mergeParts([[0.56, 0, 0.04, 0, 1], [0.42, 0.42, -0.06, 0.1, 0], [0.42, -0.4, -0.05, -0.08, 0]].map(([r, x, y, z, det]) => { const g = new THREE.IcosahedronGeometry(r, det); g.scale(1, 0.85, 1); g.translate(x, y, z); return g; })), -0.4, 0.6, 0.68, 1.1, 0.04);
+  inst(bushGeo, new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.9 }),
     scatter(Math.round(220 * dens), (x, z) => grassOK(x, z, 0.8)),
     ([x, z], d, col) => { const s = rand(0.7, 1.3); d.position.set(x, terrainH(x, z) + 0.22 * s, z); d.scale.set(s, s * rand(0.6, 0.85), s * rand(0.8, 1.1)); d.rotation.set(0, rand(0, 6), 0); col.set(['#6fae5c', '#86c26a', '#5d9c55'][Math.floor(Math.random() * 3)]); },
     Quality.tier === 'high');
-  // 小花
-  inst(new THREE.IcosahedronGeometry(0.1, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.7 }),
-    scatter(Math.round(560 * dens), (x, z) => grassOK(x, z, 0.3)),
-    ([x, z], d, col) => { d.position.set(x, terrainH(x, z) + rand(0.12, 0.22), z); d.scale.setScalar(rand(0.8, 1.4)); col.set(['#ffd36a', '#f5a5d8', '#ffffff', '#f17b6d', '#b9a4ff'][Math.floor(Math.random() * 5)]); });
+  // 小花：五片花瓣（依顏色換色）＋黃色花心與綠色花莖
+  const flowerPts = scatter(Math.round(560 * dens), (x, z) => grassOK(x, z, 0.3)).map(([x, z]) => [x, z, rand(0.8, 1.4), Math.floor(Math.random() * 5), rand(0, 6)]);
+  const petalParts = [];
+  for (let k = 0; k < 5; k++){ const g = new THREE.CircleGeometry(0.055, 6); g.scale(1, 0.62, 1); g.translate(0, 0.05, 0); g.rotateX(-1.05); g.rotateY(k / 5 * Math.PI * 2); g.translate(0, 0.24, 0); petalParts.push(g); }
+  const petalGeo = mergeParts(petalParts); for (const k of Object.keys(petalGeo.attributes)) if (k !== 'position' && k !== 'normal') petalGeo.deleteAttribute(k);
+  const stemGeo = (() => { const c = new THREE.IcosahedronGeometry(0.034, 0); c.scale(1, 0.7, 1); c.translate(0, 0.25, 0); const st = new THREE.CylinderGeometry(0.011, 0.014, 0.24, 4, 1, true); st.translate(0, 0.12, 0);
+    return vgrad(mergeParts([c, st]), 0, 1, 1, 1, 0, (x, y) => y > 0.225 ? [1, 0.82, 0.35] : [0.36, 0.62, 0.3]); })();
+  const flowerPlace = ([x, z, s, ci, r], d) => { d.position.set(x, terrainH(x, z), z); d.scale.setScalar(s); d.rotation.set(0, r, 0); };
+  inst(petalGeo, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.7, side: THREE.DoubleSide }), flowerPts,
+    (p, d, col) => { flowerPlace(p, d); col.set(['#ffd36a', '#f5a5d8', '#ffffff', '#f17b6d', '#b9a4ff'][p[3]]); });
+  inst(stemGeo, new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.8 }), flowerPts,
+    (p, d, col) => { flowerPlace(p, d); col.set('#ffffff'); });
   // 石頭（海岸、沙灘、淺水）
   inst(new THREE.DodecahedronGeometry(0.4, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, flatShading: true }),
     scatter(Math.round(130 * dens), (x, z) => { const e = islandEdge(x, z), h = terrainH(x, z); return !deckAt(x, z) && !avoid(x, z) && !blocked(x, z, 0.5) && ((e > -2 && e < 4) || inSand(x, z) || (h < -0.15 && h > -0.9)) && Math.hypot(x - MAP.plaza[0], z - MAP.plaza[1]) > 8 && Math.abs(x) < 52 && Math.abs(z) < 56; }),
