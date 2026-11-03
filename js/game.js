@@ -2603,7 +2603,7 @@ function adoptRow(row){
   rec = rowToRec(row); LS.set('tide.rec', rec); buildTank(); renderCoins(); me.setRod(rec.rod); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌'];
+const CLOUD_ERR = ['還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
