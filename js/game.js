@@ -108,7 +108,7 @@ const FISH_STYLE = {
   moonbream:{ shape:'Fish2', c:{ Body:'#f2c14e', Front:'#fff0b8', Fins:'#e59a2f' } },
   kuhua:    { shape:'Fish1', c:{ Top:'#6fae9a', Bottom:'#e6f4ee', Fins:'#a8d8c4' } },
   ayu:      { shape:'Fish1', c:{ Top:'#8fae5a', Bottom:'#eef4dc', Fins:'#d8c46a' } },
-  goby:     { shape:'Fish3', c:{ Body:'#8a63e8', Stripes:'#e8dcff', Outline:'#2a1a4a' } },
+  goby:     { shape:'Goby', c:{ Top:'#7a54d8', Bottom:'#d9ccff', Fins:'#a98cf2', Spots:'#f1e6ff', Ring:'#f6f0ff', Eye:'#1d1430' }, glow:true },
   trout:    { shape:'Fish1', c:{ Top:'#9b5de5', Bottom:'#efe6ff', Fins:'#c084ff' }, glow:true },
   manta:    { shape:'Manta',   c:{ Top:'#2f4d6b', Bottom:'#e8eef3' }, move:'wing' },
   dolphin:  { shape:'Dolphin', c:{ Top:'#7f8fa3', Bottom:'#e6ecf2' }, move:'vert' },
@@ -142,6 +142,7 @@ function fishMat(id, part, color, glow, move, shape){
   const body = ['Top', 'Bottom', 'Body', 'Front', 'Stripes'].includes(part), scaly = body && /^Fish/.test(shape || '');
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
   if (glow && (part === 'Top' || part === 'Body')){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.35; }
+  if (shape === 'Goby' && part === 'Spots'){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.9; }
   m.onBeforeCompile = sh => {
     sh.uniforms.uFishT = fishTime;
     sh.vertexShader = 'uniform float uFishT;\nvarying vec3 vFishP;\n' + sh.vertexShader.replace('#include <begin_vertex>',

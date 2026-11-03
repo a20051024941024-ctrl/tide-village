@@ -104,6 +104,27 @@ const SEA_MESH = (() => {
         for (const x of [0.3, 0.05, -0.2]){ for (const a of [0.9, PI - 0.9, 0.35, PI - 0.35]) H.decal('Spots', x, a, 0.035, 0.06, 6, 0.006); }
         // 大眼睛（偏上）和嘴巴
         eyes(H, 0.43, 0.75, 0.045); H.decal('Eye', 0.64, 0.0, 0.012, 0.05, 6, 0.004); H.decal('Eye', 0.64, PI, 0.012, 0.05, 6, 0.004);
+      } }),    // 蝦虎：圓長身體、鈍頭、眼睛長在頭頂、兩片背鰭、圓尾巴、一顆顆發光的亮點
+    Goby: build({ x0:0.72, x1:-0.55, belly:0.2,
+      prof: u => { const r = u < 0.18 ? Math.pow(Math.sin(u / 0.18 * PI / 2), 0.5) : 1 - 0.55 * sm((u - 0.22) / 0.78); return [0.15 * r, 0.14 * r * (1 + 0.15 * Math.exp(-Math.pow((u - 0.12) / 0.08, 2))), -0.01]; },
+      extra(H){
+        // 第一背鰭（像小帆）＋第二背鰭（長長一條）
+        { const s = H.sec(0.18), t = s.y + s.h * 0.9; H.vfin('Fins', [[0.28, t], [0.08, t], [0.1, t + 0.14], [0.17, t + 0.2], [0.24, t + 0.15]]); }
+        { const s = H.sec(-0.12), t = s.y + s.h * 0.88; H.vfin('Fins', [[0.04, t + 0.02], [-0.42, t - 0.04], [-0.42, t + 0.05], [-0.3, t + 0.12], [0.0, t + 0.12]]); }
+        // 臀鰭
+        { const s = H.sec(-0.15), b = s.y - s.h * 0.88; H.vfin('Fins', [[0.0, b], [-0.4, b + 0.03], [-0.4, b - 0.05], [-0.28, b - 0.1], [-0.02, b - 0.09]]); }
+        // 圓尾鰭
+        const cl = [[-0.5, -0.01]]; for (let k = 0; k <= 8; k++){ const a = -PI / 2.2 + k / 8 * (PI / 1.1); cl.push([-0.52 - Math.cos(a) * 0.2, -0.01 + Math.sin(a) * 0.14]); } H.vfin('Fins', cl);
+        // 圓扇形胸鰭，和腹部的吸盤鰭
+        for (const m of [1, -1]){ const s = H.sec(0.34), y = s.y - s.h * 0.2, z = s.w * 0.9 * m; const P = [[0.38, y, z]]; for (let k = 0; k <= 6; k++){ const a = -1.0 + k / 6 * 2.0; P.push([0.34 - Math.cos(a) * 0.17, y + Math.sin(a) * 0.12, z + 0.05 * m * Math.cos(a)]); } H.plate('Fins', P); }
+        { const s = H.sec(0.3), y = s.y - s.h * 0.97; H.hfin('Fins', [[0.38, 0], [0.34, 0.06], [0.22, 0.07], [0.16, 0]], y, true); }
+        // 頭頂凸出的大眼睛（白色眼眶＋黑眼珠）
+        for (const z of [0.055, -0.055]){ const ex = 0.52, s = H.sec(ex), y = s.y + s.h * 0.82;
+          for (let k = 0; k < 8; k++){ const a0 = k / 8 * 2 * PI, a1 = (k + 1) / 8 * 2 * PI, R = 0.042; H.plate('Ring', [[ex, y + 0.04, z], [ex + Math.cos(a0) * R, y + 0.012, z + Math.sin(a0) * R], [ex + Math.cos(a1) * R, y + 0.012, z + Math.sin(a1) * R]]); }
+          for (let k = 0; k < 8; k++){ const a0 = k / 8 * 2 * PI, a1 = (k + 1) / 8 * 2 * PI, R = 0.024; H.plate('Eye', [[ex + 0.006, y + 0.046, z + 0.006 * Math.sign(z)], [ex + Math.cos(a0) * R, y + 0.036, z + Math.sin(a0) * R + 0.006 * Math.sign(z)], [ex + Math.cos(a1) * R, y + 0.036, z + Math.sin(a1) * R + 0.006 * Math.sign(z)]]); } }
+        // 發光亮點
+        for (let k = 0; k < 34; k++){ const x = 0.55 - H.rnd() * 1.0, a = 0.15 + H.rnd() * (PI - 0.3); H.decal('Spots', x, a, 0.014 + H.rnd() * 0.01, 0.014, 5, 0.005); }
+        H.decal('Eye', 0.71, 0.0, 0.01, 0.045, 6, 0.004); H.decal('Eye', 0.71, PI, 0.01, 0.045, 6, 0.004);
       } }),
   };
 })();
