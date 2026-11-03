@@ -2900,6 +2900,24 @@ function renderFerry(body){
     li.appendChild(el('span', 'dishic', '🍚')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${sp.where}・${CHUM_BY_ID[sp.type].name}`)); d.appendChild(el('div', 'sub2', pw >= 1 ? `🔥 效果最強！還剩 ${mins} 分鐘` : `發酵中 ${Math.round(pw * 100)}%・還剩 ${mins} 分鐘`)); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(sp.x, sp.z, `祕密窩點（${sp.where}）`)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
+  // 在地圖上點一個地方，阿海就載你去（可以去平常划不到的遠方海面，到了再自己打窩）
+  body.appendChild(el('div', 'dexhead', '🗺️ 在地圖上選地點'));
+  body.appendChild(el('p', 'sub', '點地圖上任何一片水，阿海就載你過去。藍色越深的地方越深、大魚越多。🤫 是你的祕密窩點，⚓ 是港口。'));
+  { const V = 92, S = 480, wrap = el('div', 'mapwrap'), cv = el('canvas', 'mapcv'); cv.width = cv.height = S; wrap.appendChild(cv); body.appendChild(wrap);
+    const ctx = cv.getContext('2d'), toPx = (x, z) => [(x + V) / (V * 2) * S, (z + V) / (V * 2) * S], inner = MAP_VIEW / V * S;
+    const grd = ctx.createRadialGradient(S / 2, S / 2, inner * 0.4, S / 2, S / 2, S * 0.72); grd.addColorStop(0, '#4f9fd0'); grd.addColorStop(1, '#16507e'); ctx.fillStyle = grd; ctx.fillRect(0, 0, S, S);
+    ctx.drawImage(getMapImage(), (S - inner) / 2, (S - inner) / 2, inner, inner);
+    ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
+    for (const sp of secretSpots){ const [x, y] = toPx(sp.x, sp.z); ctx.fillText('🤫', x, y + 7); }
+    { const [x, y] = toPx(28.5, -30.5); ctx.fillText('⚓', x, y + 7); }
+    const [mx, my] = toPx(me.pos.x, me.pos.z); ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+    cv.addEventListener('click', e => {
+      const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width * S) / S * V * 2 - V, z = ((e.clientY - r.top) / r.height * S) / S * V * 2 - V;
+      if (!waterAt(x, z)){ toast('那裡不是水面，點藍色的地方'); return; }
+      const c = cv.getContext('2d'), [px, py] = toPx(x, z); c.beginPath(); c.arc(px, py, 9, 0, Math.PI * 2); c.strokeStyle = '#ffd36a'; c.lineWidth = 4; c.stroke();
+      ferryTo(x, z, `${spotName(x, z)}（自選地點）`);
+    });
+  }
   body.appendChild(el('div', 'dexhead', '🌊 外海'));
   const u2 = el('ul', 'shoplist');
   for (const d0 of FERRY.dest){ const li = el('li'); li.appendChild(el('span', 'dishic', '🌊')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', d0.name)); d.appendChild(el('div', 'sub2', d0.desc)); li.appendChild(d);
@@ -4521,7 +4539,8 @@ function renderTab(){
       '先到釣具店的「魚餌」分頁買窩料：酒米窩料（淡水好用）、南極蝦窩料（海水好用）、黃金特製窩（哪裡都有效，傳說魚也會被吸引）。',
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到，維持 2～3 分鐘；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
       '「🤫 提前打」是祕密窩點：只有你自己知道（橘色浮標和地圖上的 🤫 只有你看得到）。窩料會慢慢發酵，10 分鐘後最強，可以維持 1 小時，最多 3 個。祕密窩點存在雲端，換手機登入也找得到。',
-      '港口的船夫阿海可以用小船載你到祕密窩點，或外海深處、燈塔外的礁岩、北邊外海。按「回港口」就會載你回來。',
+      '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
+      '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、北邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
