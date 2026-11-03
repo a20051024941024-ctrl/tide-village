@@ -2905,7 +2905,7 @@ function pushPresence(force){
 function setOnline(){
   const n = 1 + Array.from(peers.values()).length; const el = $('#online');
   el.classList.toggle('live', !!(room && room.connected()));
-  $('#onlineTxt').textContent = room ? (room.connected() ? (pjMode && room.code ? `房間 ${room.code}・` : '') + `${n} 人在村裡` : '連線中…') : '單人模式';
+  $('#onlineTxt').textContent = room ? (room.connected() ? (pjMode && room.code ? `房間 ${room.code}・` : room.isLobby ? `大廳 ${room.lobbyNo}・` : '') + `${n} 人在村裡` : '連線中…') : '單人模式';
   if (!$('#sheet').hidden && curTab === 'people') renderTab();
 }
 function isHex(s){ return typeof s === 'string' && /^#[0-9a-f]{6}$/i.test(s); }
@@ -2983,10 +2983,77 @@ function useRoom(r){
     clearInterval(roomTimer); roomTimer = setInterval(() => pushPresence(false), 120);
     pushPresence(true); setOnline();
 }
+/* ---- 公共大廳：用 Supabase Realtime，打開遊戲就會看到其他正在玩的人 ---- */
+// 和 PJRoom 一樣的介面（connected／on／onPeers／onConnection／presence／emit／leave），所以 useRoom() 不用改。
+// 位置用 broadcast 送（最多每秒 4 次、只有變動時才送）；presence 只拿來知道誰進來、誰離開。
+const LOBBY_MAX = 16, LOBBY_COUNT = 5;
+function SBRoom(sb, name, key, myName){
+  const R = { isLobby:true, code:null, lobbyNo:0 }; let ch = null, live = false, myPres = null, lastSent = '', flushT = 0, lastAt = 0;
+  const lis = {}, peerFns = [], connFns = [], pres = {};
+  const fire = (t, m) => (lis[t] || []).forEach(f => { try { f(m); } catch(e){} });
+  const firePeers = c => peerFns.forEach(f => { try { f(c); } catch(e){} });
+  const fireConn = () => connFns.forEach(f => { try { f(live); } catch(e){} });
+  const pp = id => ({ peer:id, isMe:false, kind:'viewer', presence: pres[id] || {}, by: (pres[id] && pres[id].u) || id, guest:false });
+  function send(force){
+    if (!live || !myPres) return; const t = performance.now();
+    if (!force && t - lastAt < 240){ if (!flushT) flushT = setTimeout(() => { flushT = 0; send(); }, 250); return; }
+    const sv = JSON.stringify(myPres); if (!force && sv === lastSent) return; lastSent = sv; lastAt = t;
+    ch.send({ type:'broadcast', event:'p', payload:{ id:key, p:myPres } }).catch(() => {});
+  }
+  R.connected = () => live;
+  R.on = (t, fn) => { (lis[t] = lis[t] || []).push(fn); return () => {}; };
+  R.onPeers = fn => { peerFns.push(fn); const j = Object.keys(pres).map(pp); if (j.length) setTimeout(() => fn({ joined:j, updated:[], left:[] }), 0); return () => {}; };   // 補上已經在大廳裡的人
+  R.onConnection = fn => { connFns.push(fn); return () => {}; };
+  R.presence = o => { myPres = o; send(); return Promise.resolve(); };
+  R.emit = (topic, data) => { if (!live) return Promise.reject({ code:'not_connected' }); ch.send({ type:'broadcast', event:'ev', payload:{ id:key, topic, data } }).catch(() => {}); fire(topic, { peer:key, data, sameTab:true }); return Promise.resolve(); };
+  R.leave = () => { live = false; clearTimeout(flushT); try { sb.removeChannel(ch); } catch(e){} fireConn(); };
+  R.size = () => { try { return Object.keys(ch.presenceState()).length; } catch(e){ return 1; } };
+  R.start = () => new Promise((res, rej) => {
+    ch = sb.channel(name, { config:{ broadcast:{ self:false, ack:false }, presence:{ key } } });
+    ch.on('broadcast', { event:'p' }, ({ payload }) => {
+      if (!payload || payload.id === key || !payload.p || typeof payload.p !== 'object') return;
+      const isNew = !pres[payload.id]; pres[payload.id] = payload.p;
+      firePeers(isNew ? { joined:[pp(payload.id)], updated:[], left:[] } : { joined:[], updated:[pp(payload.id)], left:[] });
+    });
+    ch.on('broadcast', { event:'ev' }, ({ payload }) => { if (!payload || payload.id === key || typeof payload.topic !== 'string') return; fire(payload.topic, { peer:payload.id, data:payload.data, sameTab:false }); });
+    // 有新的人進來：重送一次自己的狀態，對方才看得到站著不動的人
+    ch.on('presence', { event:'join' }, ({ key:k }) => { if (k !== key) setTimeout(() => send(true), 150 + Math.random() * 600); });
+    ch.on('presence', { event:'leave' }, ({ key:k }) => { if (pres[k]){ const x = pp(k); delete pres[k]; firePeers({ joined:[], updated:[], left:[x] }); } });
+    let done = false;
+    ch.subscribe(async st => {
+      if (st === 'SUBSCRIBED'){ live = true; fireConn(); try { await ch.track({ n: myName || '' }); } catch(e){} send(true); if (!done){ done = true; res(R); } }
+      else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED'){ const was = live; live = false; if (was) fireConn(); if (!done){ done = true; rej(new Error(st)); } }
+    });
+  });
+  return R;
+}
+let lobbyJoining = false;
+async function joinLobby(){
+  if (!Cloud.on || room || pjMode || lobbyJoining) return;
+  lobbyJoining = true;
+  try {
+    for (let i = 1; i <= LOBBY_COUNT; i++){
+      const r = SBRoom(Cloud.sb, 'tide-lobby-' + i, (Cloud.userId || 'x').slice(0, 8) + '-' + Math.random().toString(36).slice(2, 6), nickname);
+      try { await r.start(); } catch(e){ console.warn('lobby', e); break; }
+      await new Promise(res => setTimeout(res, 1200));   // 等一下，知道大廳裡有幾個人
+      if (room || pjMode){ r.leave(); break; }
+      if (r.size() <= LOBBY_MAX || i === LOBBY_COUNT){
+        r.lobbyNo = i; useRoom(r);
+        const n = r.size() - 1;
+        logMsg('系統', n > 0 ? `進入公共大廳 ${i}，現在有 ${n} 位釣客在村子裡。` : `進入公共大廳 ${i}。現在只有你，有人進來時你就會看到他。`, true);
+        break;
+      }
+      r.leave();
+    }
+  } finally { lobbyJoining = false; }
+}
+function leaveLobby(){ if (room && room.isLobby){ try { room.leave(); } catch(e){} clearInterval(roomTimer); clearPeers(); room = null; } }
+
 /* ---- 5 碼房間代碼（不在 Claude 網頁裡、或沒登入時用） ---- */
 function pjAvailable(){ return !!(window.PJRoom && PJRoom.available()) && !(window.claude && room && !pjMode); }
 function clearPeers(){ for (const p of peers.values()) p.fisher.dispose(); peers.clear(); }
 async function pjStart(mode, code){
+  leaveLobby();
   if (room && pjMode){ try { room.leave(); } catch(e){} }
   clearInterval(roomTimer); clearPeers(); room = null; pjMode = true; setOnline();
   $('#onlineTxt').textContent = mode === 'host' ? '開房中…' : '連線中…';
@@ -2997,12 +3064,12 @@ async function pjStart(mode, code){
     logMsg('系統', mode === 'host' ? `開好房間了，房間代碼 ${r.code}。把代碼或網址傳給朋友就能一起釣魚。` : `加入房間 ${r.code} 了！`, true);
     setOnline(); if (!$('#sheet').hidden && curTab === 'people') renderTab();
   } catch(err){
-    pjMode = false; room = null; setOnline();
+    pjMode = false; room = null; setOnline(); setTimeout(joinLobby, 500);
     const why = err && err.type === 'peer-unavailable' ? '找不到這個房間，請確認 5 個字母沒打錯、開房的人畫面還開著。' : err && err.type === 'timeout' ? '連不上房間，請再試一次。' : '連線服務暫時連不上，請稍後再試。';
     logMsg('系統', why, true); toast(esc(why));
   }
 }
-function pjLeave(){ if (room && pjMode){ try { room.leave(); } catch(e){} } clearInterval(roomTimer); clearPeers(); room = null; pjMode = false; try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} setOnline(); logMsg('系統', '你離開了房間，現在是單人模式。', true); }
+function pjLeave(){ setTimeout(joinLobby, 400); if (room && pjMode){ try { room.leave(); } catch(e){} } clearInterval(roomTimer); clearPeers(); room = null; pjMode = false; try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} setOnline(); logMsg('系統', '你離開了房間，現在是單人模式。', true); }
 function autoJoinCode(){ const m = /room=([A-Za-z]{5})/.exec(location.hash || ''); if (m && pjAvailable()) pjStart('join', m[1].toUpperCase()); }
 /* ================= CLOUD：Supabase 雲端存檔＋伺服器驗證 ================= */
 // 玩家資料由伺服器保管：釣到魚、賣魚、買東西都會送到伺服器檢查，結果以伺服器為準。
@@ -3088,6 +3155,7 @@ async function cloudInit(){
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
     loadBoard(); setInterval(loadBoard, 60000);
+    joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
     Cloud.status = 'error'; Cloud.err = String(e && e.message || e); console.warn('cloud off', Cloud.err);
@@ -3304,7 +3372,8 @@ function renderTab(){
     });
     body.appendChild(ul);
   } else if (curTab === 'people'){
-    if (room && !pjMode) body.appendChild(el('p', 'sub', '現在在村子裡的人。分享這個頁面的連結給朋友，就能一起釣魚、聊天。'));
+    if (room && room.isLobby){ body.appendChild(el('p', 'sub', `你在公共大廳 ${room.lobbyNo}：打開遊戲的人都會自動來這裡（每個大廳最多 ${LOBBY_MAX} 人，滿了會分到下一個）。想只跟朋友玩，可以開私人房間。`)); body.appendChild(pjBox()); }
+    else if (room && !pjMode) body.appendChild(el('p', 'sub', '現在在村子裡的人。分享這個頁面的連結給朋友，就能一起釣魚、聊天。'));
     else if (pjAvailable()) body.appendChild(pjBox());
     else body.appendChild(el('p', 'sub', '目前是單人模式。在 claude.ai 上開啟並分享這個頁面，朋友加入後就會出現在這裡。'));
     const ul = el('ul', 'people');
@@ -3358,7 +3427,7 @@ function pjBox(){
     row.append(share, leave); box.appendChild(row);
     return box;
   }
-  box.appendChild(el('p', 'sub', '目前是單人模式。開一個房間，或輸入朋友給的 5 個字母，就能一起釣魚、聊天。先到「造型」分頁取個暱稱，朋友才認得出你。'));
+  box.appendChild(el('p', 'sub', room && room.isLobby ? '私人房間：開一個房間，或輸入朋友給的 5 個字母，就會離開大廳、只跟朋友一起玩。' : '目前是單人模式。開一個房間，或輸入朋友給的 5 個字母，就能一起釣魚、聊天。先到「造型」分頁取個暱稱，朋友才認得出你。'));
   const host = el('button', 'pbtn', '開新房間'); host.style.marginTop = '0'; host.addEventListener('click', () => pjStart('host'));
   box.appendChild(host);
   const row = el('div', ''); row.style.cssText = 'display:flex;gap:8px;margin-top:12px';
