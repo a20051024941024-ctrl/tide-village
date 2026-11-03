@@ -54,6 +54,7 @@ supabase/016_dive.sql 潛水：潛水用品、水下圖鑑、貝殼和寶箱
 supabase/017_tourney.sql 定時釣魚大賽（每天 12:00、19:00、21:00，各 10 分鐘）
 supabase/018_friends.sql 好友與送禮
 supabase/019_levels.sql 等級獎勵
+supabase/020_fair_fishing.sql 公平釣魚：伺服器決定上鉤的魚（自動產生，見 tools/gen_fair_sql.py）
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

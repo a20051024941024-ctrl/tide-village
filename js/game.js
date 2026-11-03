@@ -2213,7 +2213,7 @@ function doCast(){
   F.buffAt = curBuff(); useBuffCast();
   // 用掉一個魚餌
   const bt = Rig.rig === 'lure' ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
-  if (bt){ cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
+  if (bt){ if (!Cloud.on) cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
   const dist = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1);
   const cp = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, dist);
   const to = new THREE.Vector3(cp[0] + rand(-0.3,0.3), 0.12, cp[1] + rand(-0.3,0.3));
@@ -2221,6 +2221,10 @@ function doCast(){
   me.bobPos.copy(to); me.bobState = 'fly';
   me.flying = { from, to, t:0, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } };
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
+  F.roll = null; F.rollWait = 0;
+  if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';
+    cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat })
+      .then(row => { if (F.castId !== id) return; F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w) } : 'fail'; }); }
   F.envB = envBonus(s.id);
   F.phase = 'waiting'; F.waitUntil = now() + (0.8 + rand(2.4, 6.5) - c * 0.8) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
   if (F.chumB) setTimeout(() => toast(`🍚 浮標落在${F.chumB.name}的窩點裡！`), 500);
@@ -2274,8 +2278,12 @@ function updateFishing(dt, t){
     me.bend *= 0.9;
     if (t > F.nibbleAt && t < F.waitUntil - 0.6){ me.dip = 0.35; ripple(me.bobPos.x, me.bobPos.z); F.nibbleAt = t + 0.9 + Math.random()*1.6; }
     me.dip *= Math.pow(0.02, dt);
-    if (t > F.waitUntil){
-      F.fish = pickFish(F.spot, F.castCharge); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), 1.7)).toFixed(2);
+    if (t > F.waitUntil && Cloud.on && F.roll === 'pending'){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); } }
+    else if (t > F.waitUntil && Cloud.on && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); }
+    else if (t > F.waitUntil){
+      // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
+      if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; }
+      else { F.fish = pickFish(F.spot, F.castCharge); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), 1.7)).toFixed(2); }
       rareBurst(); F.phase = 'bite'; F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15);
       me.say('!', 'alert', 1); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); pushPresence(true);
     }
@@ -2960,8 +2968,8 @@ function dailyTip(){
 // 釣魚的加成：給 doCast（等待時間）、pickFish（稀有／傳說／權重）、拉線（張力）用
 function envBonus(spotId){
   const W = WEATHERS[Env.wx], sea = SEA_SPOTS.has(spotId), T = sea ? TIDE_FX[Env.tide.st] : { bite:1, rare:1 };
-  const crew = crewNear();   // 船隊加成：附近每多一個人在船上，魚快一點上鉤、稀有魚多一點（最多 3 人）
-  return { bite: (W.bite || 1) * T.bite * (1 - 0.08 * crew), rare: (W.rare || 1) * T.rare * (1 + 0.06 * crew), legend: W.legendSea ? (sea ? W.legend : 1) : (W.legend || 1), tension: W.tension || 1, crew };
+  const crew = crewNear();   // 船隊加成：附近每多一個人在船上，魚快 8% 上鉤（最多 3 人）
+  return { bite: (W.bite || 1) * T.bite * (1 - 0.08 * crew), rare: (W.rare || 1) * T.rare, legend: W.legendSea ? (sea ? W.legend : 1) : (W.legend || 1), tension: W.tension || 1, crew };
 }
 const Env = { wx:'sunny', tide: tideNow(Date.now()), rain:null, flash:0, k:1, lastWx:null };
 function buildRain(){
@@ -3290,7 +3298,7 @@ function renderFerryBar(){
   let bar = $('#ferryBar'); if (!Ferry.on){ if (bar) bar.hidden = true; return; }
   if (!bar){ bar = document.createElement('div'); bar.id = 'ferryBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; bar.appendChild(el('span', '', `🚤 ${Ferry.label}`));
-  { const n = crewNear(); if (n || Party.joined.size) bar.appendChild(el('span', 'crew', `👥 船隊 ${Math.max(n, Party.joined.size) + 1} 人${n ? `・加成 ×${(1 + 0.06 * n).toFixed(2)}` : ''}`)); }
+  { const n = crewNear(); if (n || Party.joined.size) bar.appendChild(el('span', 'crew', `👥 船隊 ${Math.max(n, Party.joined.size) + 1} 人${n ? `・上鉤快 ${8 * n}%` : ''}`)); }
   const b = el('button', 'tbtn ghost', '回港口'); b.addEventListener('click', () => leaveFerry()); bar.appendChild(b);
 }
 function renderFerry(body){
@@ -3298,7 +3306,7 @@ function renderFerry(body){
   body.appendChild(el('p', 'sub', '「要去哪裡？我的船很快的！」到了以後可以在船上釣魚、也可以自己划，想回來按「回港口」就好。'));
   if (room && room.connected()){ const tb = el('label', 'teamtgl'), cb = el('input'); cb.type = 'checkbox'; cb.checked = Party.team; cb.addEventListener('change', () => { Party.team = cb.checked; });
     tb.append(cb, el('span', '', '👥 組隊出海：邀請大廳裡的人一起去（祕密窩點不會邀請，別人不會知道）')); body.appendChild(tb);
-    body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤、稀有魚多一點（最多 3 人）。')); }
+    body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。')); }
   { body.appendChild(el('div', 'dexhead', '🤿 潛水（進階）')); const ul = el('ul', 'shoplist'), li = el('li'); li.appendChild(el('span', 'dishic', '🪸'));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', '珊瑚礁潛水點')); d.appendChild(el('div', 'sub2', hasDive('dive_suit') ? `氧氣 ${diveO2()} 秒・有沉船、魚群、貝殼和寶箱` : '要先在商店的「🤿潛水」分頁買潛水裝備組')); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn' + (hasDive('dive_suit') ? '' : ' ghost'), '去潛水'); b.addEventListener('click', () => startDive()); a.appendChild(b); li.appendChild(a); ul.appendChild(li); body.appendChild(ul); }
@@ -4021,11 +4029,11 @@ function throwChum(type, secret){
 function chumAt(x, z){ let best = null; for (const zn of chumZones){ const d = Math.hypot(x - zn.x, z - zn.z); if (d < 3.2 && (!best || zn.until > best.until)) best = zn; } return best; }
 function chumBonus(zn, spotId, secret){
   if (secret){ const C = CHUM_BY_ID[secret.type], pw = secretPower(secret), sea = SEA_SPOTS.has(spotId), fit = C.fresh ? (sea ? 0.45 : 1) : C.sea ? (sea ? 1 : 0.5) : 1, k = pw * fit;
-    const b2 = { wait: 1 - (1 - C.wait * 0.85) * k, rare: 1 + (C.rare * 1.25 - 1) * k, legend: 1 + (C.legend * 1.35 - 1) * k, name: `祕密窩點（${Math.round(pw * 100)}%）` };
+    const b2 = { wait: 1 - (1 - C.wait * 0.85) * k, rare: 1 + (C.rare * 1.25 - 1) * k, legend: 1 + (C.legend * 1.35 - 1) * k, name: `祕密窩點（${Math.round(pw * 100)}%）`, src: 'secret:' + secret.id };
     const b1 = chumBonus(zn, spotId); return b1 && b1.rare > b2.rare ? b1 : b2; }
   if (!zn) return null; const C = CHUM_BY_ID[zn.type], left = clamp((zn.until - now()) / C.dur, 0, 1), sea = SEA_SPOTS.has(spotId);
   const fit = C.fresh ? (sea ? 0.45 : 1) : C.sea ? (sea ? 1 : 0.5) : 1, k = (0.45 + 0.55 * left) * fit;
-  return { wait: 1 - (1 - C.wait) * k, rare: 1 + (C.rare - 1) * k, legend: 1 + (C.legend - 1) * k, name: C.name };
+  return { wait: 1 - (1 - C.wait) * k, rare: 1 + (C.rare - 1) * k, legend: 1 + (C.legend - 1) * k, name: C.name, src: 'live:' + zn.type };
 }
 function renderChumPick(){
   let pk = $('#chumPick'); if (!pk){ pk = document.createElement('div'); pk.id = 'chumPick'; pk.className = 'panel'; pk.hidden = true; document.body.appendChild(pk); }
@@ -4865,7 +4873,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['這條魚對不上伺服器，請重新整理遊戲', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -5312,7 +5320,7 @@ function renderTab(){
       '「🤫 提前打」是祕密窩點：只有你自己知道（橘色浮標和地圖上的 🤫 只有你看得到）。窩料會慢慢發酵，10 分鐘後最強，可以維持 1 小時，最多 3 個。祕密窩點存在雲端，換手機登入也找得到。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、北邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
-      '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤、稀有魚多一點（最多 3 人）。',
+      '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。',
     ]);
     sec('💙 尺寸限制、放流、愛海點數', [
       '每種魚都有「建議尺寸」：比最輕的再重四分之一以上才算夠大。太小的魚釣到時會標「📏 未達尺寸」，帶走只能賣半價。',
@@ -5337,7 +5345,7 @@ function renderTab(){
       '海邊商店：把魚缸裡的魚賣掉，越稀有、越重越值錢。',
       '釣具店：釣竿（越好越不容易斷線、收線越快、稀有傳說機率越高）、魚餌（每拋一次用掉一個）、窩料。',
       '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情共 54 件，可以先試穿看看，大家都看得到你的打扮。',
-      '所有價格都由伺服器檢查，金幣不會亂跳。',
+      '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
     ]);
     sec('🍳 潮汐食堂（料理）', [
       '在食堂用魚缸裡的魚做料理，共 13 道。不同料理玩法不一樣：壽司類切魚、章魚燒翻面、燒烤和油炸控制火候、火鍋和麵記住下料順序。做得越好星星越多、越值錢。',
