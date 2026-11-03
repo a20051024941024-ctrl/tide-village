@@ -2401,7 +2401,7 @@ function updateFishing(dt, t){
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
-  if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
+  if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : l.kind === 'pearl' ? '撿珍珠' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
   else if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
     if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
@@ -3333,9 +3333,11 @@ function renderFerry(body){
   if (room && room.connected()){ const tb = el('label', 'teamtgl'), cb = el('input'); cb.type = 'checkbox'; cb.checked = Party.team; cb.addEventListener('change', () => { Party.team = cb.checked; });
     tb.append(cb, el('span', '', '👥 組隊出海：邀請大廳裡的人一起去（祕密窩點不會邀請，別人不會知道）')); body.appendChild(tb);
     body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。')); }
-  { body.appendChild(el('div', 'dexhead', '🤿 潛水（進階）')); const ul = el('ul', 'shoplist'), li = el('li'); li.appendChild(el('span', 'dishic', '🪸'));
-    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', '珊瑚礁潛水點')); d.appendChild(el('div', 'sub2', hasDive('dive_suit') ? `氧氣 ${diveO2()} 秒・有沉船、魚群、貝殼和寶箱` : '要先在商店的「🤿潛水」分頁買潛水裝備組')); li.appendChild(d);
-    const a = el('div', 'tacts'), b = el('button', 'tbtn' + (hasDive('dive_suit') ? '' : ' ghost'), '去潛水'); b.addEventListener('click', () => startDive()); a.appendChild(b); li.appendChild(a); ul.appendChild(li); body.appendChild(ul); }
+  { body.appendChild(el('div', 'dexhead', `🤿 潛水（進階）${hasDive('dive_suit') ? `・氧氣 ${diveO2()} 秒` : ''}`)); const ul = el('ul', 'shoplist');
+    for (const [k, S] of Object.entries(DIVE_SITES)){ const ok = diveSiteOk(k), li = el('li', ok ? '' : 'lock'); li.appendChild(el('span', 'dishic', S.icon));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', S.name)); d.appendChild(el('div', 'sub2', ok ? S.desc : `要先買：${S.need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`)); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn' + (ok ? '' : ' ghost'), '去潛水'); b.addEventListener('click', () => startDive(k)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+    body.appendChild(ul); }
   body.appendChild(el('div', 'dexhead', '🤫 你的祕密窩點'));
   const ul = el('ul', 'shoplist');
   if (!secretSpots.length) ul.appendChild(el('li', '', '還沒有祕密窩點。在水邊按「🍚 打窩」→「🤫 提前打」，就能做一個只有你知道的窩點。'));
@@ -3372,6 +3374,15 @@ function renderFerry(body){
 /* ================= DIVE：潛水（進階玩法：要先買潛水裝備，氧氣瓶可以升級）================= */
 // 水下場景蓋在外海的正下方（跟房子一樣，外面用一顆大球包起來，看不到上面的世界）
 const DIVE = { x:60, y:-70, z:-40, r:30, top:15 };
+// 三個潛水點：越深越需要好裝備，寶物也越多（伺服器 022_dive_sites.sql 一樣）
+const DIVE_SITES = {
+  reef:  { name:'珊瑚礁',   icon:'🪸', need:['dive_suit'], top:15, sky:['#5fc3e6', '#0b3557'], fog:'#1e7aa6', far:30, coral:70, kelp:46, rocks:26, shells:14, chests:[0.55], pearls:0, legendP:0.28, desc:'淺淺的珊瑚礁，有一艘小沉船、很多魚群。' },
+  wreck: { name:'沉船深海', icon:'⚓', need:['dive_suit', 'dive_tank3'], top:24, sky:['#2f7fb0', '#04182c'], fog:'#0f4a70', far:22, coral:24, kelp:18, rocks:34, shells:8, chests:[1, 0.7, 0.4], pearls:0, legendP:0.6, big:true, desc:'更深的海底躺著一艘大帆船，寶箱比較多、也比較值錢，大魚和傳說魚常在附近。要大型氧氣瓶。',
+    fish:['grouper', 'shark', 'hammer', 'barracuda', 'moonbream', 'kingcrab', 'lobster', 'tuna', 'octopus', 'turtle', 'manta', 'stingray', 'trevally', 'scorpion', 'mackerel', 'bonito'] },
+  cave:  { name:'海底洞穴', icon:'🕳️', need:['dive_suit', 'dive_tank4', 'dive_light'], top:18, sky:['#1a3550', '#02060c'], fog:'#12324c', far:22, coral:0, kelp:0, rocks:60, shells:4, chests:[0.8], pearls:7, legendP:0.55, cave:true, desc:'又暗又神祕的洞穴，有會發光的水晶和珍珠貝，住著深海的怪魚。要專業雙氧氣瓶和潛水燈。',
+    fish:['angler', 'jelly', 'lantern', 'oarfish', 'giantsquid', 'octopus', 'eel', 'moonbream', 'ika', 'squid', 'goby', 'kingcrab'] },
+};
+function diveSiteOk(k){ return DIVE_SITES[k].need.every(hasDive); }
 const DIVE_GEAR = [
   { id:'dive_suit',  name:'潛水裝備組',   icon:'🤿', price:1500, o2:60,  desc:'潛水衣、面鏡、蛙鞋和小氧氣瓶。有了它才能請船夫阿海帶你去潛水，氧氣 60 秒。' },
   { id:'dive_tank2', name:'中型氧氣瓶',   icon:'🫧', price:1200, o2:100, need:'dive_suit',  desc:'氧氣變成 100 秒。' },
@@ -3388,7 +3399,8 @@ function diveBed(x, z){
   const dx = x - DIVE.x, dz = z - DIVE.z, d = Math.hypot(dx, dz);
   return DIVE.y + Math.sin(dx * 0.21) * 0.45 + Math.cos(dz * 0.17 + dx * 0.05) * 0.55 + Math.sin((dx + dz) * 0.09) * 0.8 + Math.max(0, d - DIVE.r * 0.72) * 0.55;
 }
-let diveSp = null; function diveSpecies(){ return diveSp || (diveSp = FISH.filter(f => SEA_SPOTS.has(f.spot))); }
+let diveSp = null; function diveSpecies(){ return diveSp || (diveSp = FISH.filter(f => SEA_SPOTS.has(f.spot) || DIVE_SITES.cave.fish.includes(f.id))); }
+function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot)); }
 // 把很多小東西合併成少數幾個網格（手機比較順）
 function diveMerger(){
   const parts = new Map(), tmp = new THREE.Object3D();
@@ -3402,58 +3414,78 @@ function diveMerger(){
   };
 }
 function buildDive(){
+  const S = DIVE_SITES[Dive.site] || DIVE_SITES.reef; DIVE.top = S.top; Dive.crystals = [];
   const g = new THREE.Group(); g.name = 'dive'; scene.add(g); Dive.group = g;
   const X = DIVE.x, Y = DIVE.y, Z = DIVE.z, R = DIVE.r, M = diveMerger(), rnd = mulberry(Math.floor(Date.now() / 60000));
   const onBed = () => { const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * R * 0.92, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; return [x, diveBed(x, z), z]; };
   // 外面的大球（上亮下暗）和水面
-  { const sg = new THREE.SphereGeometry(R + 16, 28, 16), cs = [], p = sg.attributes.position, c1 = new THREE.Color('#5fc3e6'), c0 = new THREE.Color('#0b3557'), cc = new THREE.Color();
+  { const sg = new THREE.SphereGeometry(R + 16, 28, 16), cs = [], p = sg.attributes.position, c1 = new THREE.Color(S.sky[0]), c0 = new THREE.Color(S.sky[1]), cc = new THREE.Color();
     for (let i = 0; i < p.count; i++){ const k = clamp(p.getY(i) / (R + 16) * 0.5 + 0.5, 0, 1); cc.copy(c0).lerp(c1, Math.pow(k, 1.6)); cs.push(cc.r, cc.g, cc.b); }
     sg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3));
     const sp = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ vertexColors:true, side:THREE.BackSide, fog:false, depthWrite:false })); sp.position.set(X, Y + 4, Z); sp.renderOrder = -2; g.add(sp); }
   { const s = new THREE.Mesh(new THREE.PlaneGeometry((R + 16) * 2, (R + 16) * 2, 1, 1), new THREE.MeshBasicMaterial({ color:'#bff0ff', transparent:true, opacity:0.5, side:THREE.DoubleSide, fog:false, depthWrite:false }));
     s.rotation.x = Math.PI / 2; s.position.set(X, Y + DIVE.top, Z); g.add(s); Dive.surface = s; }
   // 海底沙地
-  { const pg = new THREE.PlaneGeometry(R * 2 + 24, R * 2 + 24, 56, 56); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], a = new THREE.Color('#e2d2a4'), b = new THREE.Color('#c7b384'), cc = new THREE.Color();
+  { const pg = new THREE.PlaneGeometry(R * 2 + 24, R * 2 + 24, 56, 56); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], a = new THREE.Color(S.cave ? '#5a5a62' : S.big ? '#b8a684' : '#e2d2a4'), b = new THREE.Color(S.cave ? '#3a3c46' : S.big ? '#8f8064' : '#c7b384'), cc = new THREE.Color();
     for (let i = 0; i < p.count; i++){ const x = p.getX(i) + X, z = p.getZ(i) + Z; p.setY(i, diveBed(x, z) - Y); cc.copy(a).lerp(b, 0.5 + 0.5 * Math.sin(x * 0.7) * Math.cos(z * 0.6)); cs.push(cc.r, cc.g, cc.b); }
     pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); pg.computeVertexNormals();
     const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed); }
   // 石頭
-  for (let i = 0; i < 26; i++){ const [x, y, z] = onBed(), s = 0.5 + rnd() * 1.8; M.add(new THREE.IcosahedronGeometry(s, 0), ['#7d7a72', '#6a6f72', '#8a8170'][i % 3], x, y + s * 0.2, z, rnd(), rnd() * 6, rnd(), 1, 0.55 + rnd() * 0.3, 1, 0.95); }
+  for (let i = 0; i < S.rocks; i++){ const [x, y, z] = onBed(), s = 0.5 + rnd() * 1.8 * (S.cave ? 1.6 : 1); M.add(new THREE.IcosahedronGeometry(s, 0), ['#7d7a72', '#6a6f72', '#8a8170'][i % 3], x, y + s * 0.2, z, rnd(), rnd() * 6, rnd(), 1, 0.55 + rnd() * 0.3, 1, 0.95); }
   // 珊瑚：樹枝、腦紋、扇形、管狀
   const CC = ['#ff6f61', '#ff9f43', '#f5a5d8', '#b48cff', '#ffd36a', '#ff7fa8', '#7fd6c4'];
-  for (let i = 0; i < 70; i++){ const [x, y, z] = onBed(), c = CC[Math.floor(rnd() * CC.length)], kind = i % 4, s = 0.6 + rnd() * 0.9;
+  for (let i = 0; i < S.coral; i++){ const [x, y, z] = onBed(), c = CC[Math.floor(rnd() * CC.length)], kind = i % 4, s = 0.6 + rnd() * 0.9;
     if (kind === 0){ for (let k = 0; k < 6; k++){ const a = k * 1.1 + rnd(), tl = 0.4 + rnd() * 0.5; M.add(new THREE.CylinderGeometry(0.035 * s, 0.07 * s, tl * s, 5), c, x + Math.cos(a) * 0.12 * s, y + tl * s * 0.45, z + Math.sin(a) * 0.12 * s, Math.sin(a) * 0.5, 0, Math.cos(a) * 0.5, 1, 1, 1, 0.6);
         M.add(new THREE.SphereGeometry(0.06 * s, 6, 4), c, x + Math.cos(a) * (0.12 + tl * 0.45) * s, y + tl * s * 0.9, z + Math.sin(a) * (0.12 + tl * 0.45) * s, 0, 0, 0, 1, 1, 1, 0.6); } }
     else if (kind === 1){ M.add(new THREE.SphereGeometry(0.45 * s, 12, 8), ['#c9d36a', '#9fd08a', '#e8b06a'][i % 3], x, y + 0.12 * s, z, 0, 0, 0, 1, 0.62, 1, 1); }
     else if (kind === 2){ const ry = rnd() * 3; M.add(new THREE.CircleGeometry(0.75 * s, 12, 0, Math.PI), c, x, y + 0.05, z, 0, ry, 0, 1, 1, 1, 0.7); M.add(new THREE.CircleGeometry(0.75 * s, 12, 0, Math.PI), c, x, y + 0.05, z, 0, ry + Math.PI, 0, 1, 1, 1, 0.7); }
     else { for (let k = 0; k < 5; k++){ const a = k * 1.25, h = 0.3 + rnd() * 0.5; M.add(new THREE.CylinderGeometry(0.07 * s, 0.08 * s, h * s, 7, 1, true), c, x + Math.cos(a) * 0.13 * s, y + h * s / 2, z + Math.sin(a) * 0.13 * s, 0, 0, 0, 1, 1, 1, 0.7); } } }
   // 海葵（會晃的觸手用小圓錐）
-  for (let i = 0; i < 18; i++){ const [x, y, z] = onBed(), c = ['#ff9fd0', '#ffd36a', '#a6f0d0'][i % 3]; for (let k = 0; k < 9; k++){ const a = k / 9 * Math.PI * 2; M.add(new THREE.ConeGeometry(0.035, 0.32, 4), c, x + Math.cos(a) * 0.12, y + 0.16, z + Math.sin(a) * 0.12, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4, 1, 1, 1, 0.5); } M.add(new THREE.CylinderGeometry(0.12, 0.15, 0.12, 9), '#c0587a', x, y + 0.04, z); }
+  for (let i = 0; i < (S.cave ? 0 : S.big ? 6 : 18); i++){ const [x, y, z] = onBed(), c = ['#ff9fd0', '#ffd36a', '#a6f0d0'][i % 3]; for (let k = 0; k < 9; k++){ const a = k / 9 * Math.PI * 2; M.add(new THREE.ConeGeometry(0.035, 0.32, 4), c, x + Math.cos(a) * 0.12, y + 0.16, z + Math.sin(a) * 0.12, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4, 1, 1, 1, 0.5); } M.add(new THREE.CylinderGeometry(0.12, 0.15, 0.12, 9), '#c0587a', x, y + 0.04, z); }
   // 沉船
-  { const sx = X + 11, sz = Z - 9, sy = diveBed(sx, sz), wood = '#6b4a35', dark = '#4a3424';
+  if (S.cave){   // 洞穴：四周的岩壁、頂上的岩石（中間有個洞透光）、會發光的水晶
+    for (let i = 0; i < 48; i++){ const a = i / 48 * Math.PI * 2 + rnd() * 0.1, r = R * (0.86 + rnd() * 0.12), x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, s = 3 + rnd() * 3.5;
+      M.add(new THREE.IcosahedronGeometry(s, 1), ['#3d3f4a', '#4a4b55', '#34363f'][i % 3], x, diveBed(x, z) + s * 0.6, z, rnd(), rnd() * 6, rnd(), 1, 1.6 + rnd() * 0.8, 1, 0.95); }
+    for (let i = 0; i < 30; i++){ const a = rnd() * Math.PI * 2, r = 7 + rnd() * R * 0.8, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, s = 3 + rnd() * 4; M.add(new THREE.IcosahedronGeometry(s, 1), '#2f3139', x, Y + DIVE.top + s * 0.3, z, rnd(), rnd() * 6, rnd(), 1, 0.7, 1, 0.95); }
+    for (let i = 0; i < 18; i++){ const a = rnd() * Math.PI * 2, r = R * (0.75 + rnd() * 0.12), x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, s = 1 + rnd() * 2;   // 鐘乳石
+      M.add(new THREE.ConeGeometry(0.4 * s, 2.2 * s, 6), '#4a4b55', x, Y + DIVE.top - 1.1 * s, z, Math.PI, 0, 0, 1, 1, 1, 0.9); }
+    const cryM = [mat('#7ef0ff', 0.2, { emissive:'#3fd8ff', emissiveIntensity:2.4, fog:false, transparent:true, opacity:0.9 }), mat('#d6a8ff', 0.2, { emissive:'#a56bff', emissiveIntensity:2.4, fog:false, transparent:true, opacity:0.9 })];
+    Dive.crystals = [];
+    for (let i = 0; i < 22; i++){ const [x, y, z] = onBed(), cg = new THREE.Group(); for (let k = 0; k < 4; k++){ const h = 0.4 + rnd() * 0.9, c = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), cryM[i % 2]); c.scale.set(1, h * 3, 1); c.position.set((rnd() - 0.5) * 0.4, h * 0.4, (rnd() - 0.5) * 0.4); c.rotation.set((rnd() - 0.5) * 0.6, rnd() * 3, (rnd() - 0.5) * 0.6); cg.add(c); }
+      cg.position.set(x, y, z); g.add(cg); Dive.crystals.push(cg); }
+    const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 4, DIVE.top + 2, 12, 1, true), new THREE.MeshBasicMaterial({ color:'#bfeaff', transparent:true, opacity:0.08, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
+    hole.position.set(X, Y + DIVE.top / 2, Z); g.add(hole);
+  }
+  if (!S.cave){ const W = S.big ? 2 : 1, sx = X + 11 * (S.big ? 0.6 : 1), sz = Z - 9 * (S.big ? 0.6 : 1), sy = diveBed(sx, sz), wood = S.big ? '#4f3a2c' : '#6b4a35', dark = '#3a2a1e';
+    if (S.big){ M.add(new THREE.BoxGeometry(5.2, 3.0, 16), wood, sx, sy + 1.0, sz, 0.12, 0.5, 0.42, 1, 1, 1, 0.95); M.add(new THREE.BoxGeometry(4.6, 0.2, 14.4), dark, sx + 0.5, sy + 2.55, sz - 0.2, 0.12, 0.5, 0.42, 1, 1, 1, 0.95);
+      M.add(new THREE.ConeGeometry(2.7, 4.4, 4), wood, sx + Math.sin(0.5) * 9.2, sy + 0.7, sz + Math.cos(0.5) * 9.2, Math.PI / 2, 0.5 + Math.PI / 4, 0, 1, 1, 0.7, 0.95);
+      for (const [mx, mz, h] of [[0.6, 0.4, 9], [-1.4, -4, 7]]){ M.add(new THREE.CylinderGeometry(0.2, 0.28, h, 7), dark, sx + mx, sy + h / 2 + 0.6, sz + mz, 0.45, 0, 0.6, 1, 1, 1, 0.9); M.add(new THREE.PlaneGeometry(3.2, 2.6), '#c9bfa6', sx + mx + 1.2, sy + h * 0.6, sz + mz + 0.6, 0.3, 0.9, 0.5, 1, 1, 1, 1); }
+      for (let k = 0; k < 7; k++) M.add(new THREE.TorusGeometry(0.3, 0.07, 6, 12), '#2a2a2a', sx - 1.9 + k * 0.1, sy + 1.6, sz - 5 + k * 1.6, 0, 0.5 + Math.PI / 2, 0.42, 1, 1, 1, 0.6);
+      for (let k = 0; k < 10; k++){ const a = rnd() * 6.28, r = 4 + rnd() * 6; M.add(new THREE.BoxGeometry(0.2 + rnd() * 1.5, 0.12, 0.3), wood, sx + Math.cos(a) * r, diveBed(sx + Math.cos(a) * r, sz + Math.sin(a) * r) + 0.06, sz + Math.sin(a) * r, 0, rnd() * 3, 0, 1, 1, 1, 0.95); }
+      Dive.wreck = { x: sx, z: sz }; } else {
     M.add(new THREE.BoxGeometry(2.6, 1.5, 8), wood, sx, sy + 0.5, sz, 0.08, 0.5, 0.32, 1, 1, 1, 0.95);
     M.add(new THREE.BoxGeometry(2.3, 0.12, 7.2), dark, sx + 0.25, sy + 1.28, sz - 0.1, 0.08, 0.5, 0.32, 1, 1, 1, 0.95);
     M.add(new THREE.ConeGeometry(1.35, 2.2, 4), wood, sx + Math.sin(0.5) * 4.6, sy + 0.35, sz + Math.cos(0.5) * 4.6, Math.PI / 2, 0.5 + Math.PI / 4, 0, 1, 1, 0.7, 0.95);
     M.add(new THREE.CylinderGeometry(0.12, 0.16, 5.5, 7), dark, sx + 0.6, sy + 3.2, sz + 0.4, 0.5, 0, 0.7, 1, 1, 1, 0.9);
     M.add(new THREE.BoxGeometry(2.2, 0.1, 0.1), dark, sx + 1.4, sy + 4.4, sz + 1.3, 0.5, 0.2, 0.7, 1, 1, 1, 0.9);
     for (let k = 0; k < 4; k++) M.add(new THREE.TorusGeometry(0.22, 0.05, 6, 12), '#3a3a3a', sx - 0.9 + k * 0.1, sy + 0.9, sz - 2.4 + k * 1.4, 0, 0.5 + Math.PI / 2, 0.32, 1, 1, 1, 0.6);
-    Dive.wreck = { x: sx, z: sz }; }
+    Dive.wreck = { x: sx, z: sz }; } } else Dive.wreck = { x: X, z: Z };
   M.build(g);
   // 海帶（InstancedMesh，會跟著水流晃）
   { const kg = new THREE.PlaneGeometry(0.34, 3.2, 1, 6); kg.translate(0, 1.6, 0); const p = kg.attributes.position; for (let i = 0; i < p.count; i++){ const yy = p.getY(i); p.setX(i, p.getX(i) * (1 - yy / 4) + Math.sin(yy * 1.6) * 0.12); } kg.computeVertexNormals();
-    const N = 46, im = new THREE.InstancedMesh(kg, mat('#4f9a54', 0.8, { side:THREE.DoubleSide }), N), list = [];
+    const N = Math.max(1, S.kelp), im = new THREE.InstancedMesh(kg, mat('#4f9a54', 0.8, { side:THREE.DoubleSide }), N), list = [];
     for (let i = 0; i < N; i++){ let x, z; if (i < 30){ const a = rnd() * Math.PI * 2, r = R * (0.55 + rnd() * 0.35); x = X + Math.cos(a) * r; z = Z + Math.sin(a) * r; } else { const c = Math.floor(i / 4) % 3; x = X - 10 + c * 6 + rnd() * 2; z = Z + 8 + rnd() * 3; }
       list.push({ x, y: diveBed(x, z), z, s: 0.8 + rnd() * 1.1, ry: rnd() * 3, ph: rnd() * 6 }); }
     im.frustumCulled = false; g.add(im); Dive.kelp = { im, list }; }
   // 光束
   Dive.shafts = [];
-  for (let i = 0; i < 7; i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
+  for (let i = 0; i < (S.cave ? 0 : S.big ? 4 : 7); i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
     const a = rnd() * Math.PI * 2, r = 6 + rnd() * R * 0.7; m.position.set(X + Math.cos(a) * r, Y + DIVE.top / 2 + 0.5, Z + Math.sin(a) * r); m.rotation.z = 0.18; m.rotation.y = rnd(); g.add(m); Dive.shafts.push(m); }
   // 泡泡（往上飄）
   { const N = 90, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ pos[i * 3] = X + (rnd() - 0.5) * R * 2; pos[i * 3 + 1] = Y + rnd() * DIVE.top; pos[i * 3 + 2] = Z + (rnd() - 0.5) * R * 2; }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const b = new THREE.Points(geo, new THREE.PointsMaterial({ color:'#e8fbff', size:0.12, transparent:true, opacity:0.7, depthWrite:false })); b.frustumCulled = false; g.add(b); Dive.bubbles = b; }
   // 魚群（同一種魚一起游）
-  const SP = diveSpecies(), inst = SP.filter(f => FISH_STYLE[f.id] && !BIG_FISH.has(f.id) && f.rarity === '常見');
+  const SP = siteSpecies(Dive.site || 'reef'), inst = SP.filter(f => FISH_STYLE[f.id] && !BIG_FISH.has(f.id) && f.rarity === '常見');
   Dive.schools = [];
   const nS = Math.min(5, inst.length); const pool = inst.slice().sort(() => rnd() - 0.5);
   for (let s = 0; s < nS; s++){ const f = pool[s], st = FISH_STYLE[f.id], n = 14 + Math.floor(rnd() * 10), ims = [];
@@ -3463,18 +3495,24 @@ function buildDive(){
   // 單獨游的魚（稀有魚比較多，傳說魚偶爾出現）
   Dive.fish = [];
   const solo = SP.filter(f => f.rarity !== '常見' || !FISH_STYLE[f.id]); const pickSolo = [];
-  for (const f of solo) if (rnd() < (f.rarity === '傳說' ? 0.28 : 0.75)) pickSolo.push(f);
+  for (const f of solo) if (rnd() < (f.rarity === '傳說' ? S.legendP : 0.75)) pickSolo.push(f);
   for (const f of pickSolo.slice(0, 9)){ let m; try { m = fishModel(f, BIG_FISH.has(f.id) ? 1.15 : 0.62); } catch(e){ continue; }
     const bottom = ['crab', 'flounder', 'stingray', 'octopus', 'lobster', 'seahorse'].includes(f.id) || /crab|lobster|octo/.test(f.id);
     const a = rnd() * Math.PI * 2, r = 4 + rnd() * R * 0.7; const o = { f, m, bottom, cx: X + Math.cos(a) * r * 0.5, cz: Z + Math.sin(a) * r * 0.5, rad: bottom ? 1.5 + rnd() * 2 : 5 + rnd() * 9, y: bottom ? 0.25 : 2 + rnd() * 8, sp: (bottom ? 0.08 : 0.06 + rnd() * 0.08) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * 6, pos: new THREE.Vector3() };
     g.add(m); Dive.fish.push(o); }
   // 貝殼和寶箱
   Dive.loot = [];
-  for (let i = 0; i < 14; i++){ const [x, y, z] = onBed(), sh = new THREE.Group(), c = ['#ffe3d3', '#f5c6a5', '#fff4e0', '#ffc1cc'][i % 4];
+  for (let i = 0; i < S.shells; i++){ const [x, y, z] = onBed(), sh = new THREE.Group(), c = ['#ffe3d3', '#f5c6a5', '#fff4e0', '#ffc1cc'][i % 4];
     const s1 = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.28, 9), mat(c, 0.4)); s1.rotation.z = Math.PI / 2.4; sh.add(s1);
     const s2 = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.05, 6, 10), mat(c, 0.4)); s2.position.x = -0.1; sh.add(s2);
     sh.position.set(x, y + 0.08, z); sh.rotation.y = rnd() * 6; g.add(sh); Dive.loot.push({ kind:'shell', x, y, z, m: sh }); }
-  if (rnd() < 0.55){ const near = rnd() < 0.6, x = near ? Dive.wreck.x - 2.5 : onBed()[0], z = near ? Dive.wreck.z + 2.8 : onBed()[2], y = diveBed(x, z), ch = new THREE.Group();
+  // 珍珠貝（洞穴）：打開的貝殼裡有一顆發光的珍珠
+  for (let i = 0; i < S.pearls; i++){ const [x, y, z] = onBed(), cl = new THREE.Group(), sm = mat('#c9b8d8', 0.4);
+    const lo = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), sm); lo.scale.y = 0.35; cl.add(lo);
+    const up = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), sm); up.scale.y = 0.35; up.position.set(0, 0.02, -0.2); up.rotation.x = -0.9; cl.add(up);
+    const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), mat('#ffffff', 0.15, { emissive:'#fff2d8', emissiveIntensity:0.9 })); pearl.position.y = 0.06; cl.add(pearl);
+    cl.position.set(x, y + 0.05, z); cl.rotation.y = rnd() * 6; g.add(cl); Dive.loot.push({ kind:'pearl', x, y, z, m: cl, pearl }); }
+  for (const pChest of S.chests) if (rnd() < pChest){ const near = rnd() < (S.big ? 0.85 : 0.6), x = near ? Dive.wreck.x - 2.5 * (S.big ? 1.6 : 1) + (rnd() - 0.5) * 4 : onBed()[0], z = near ? Dive.wreck.z + 2.8 * (S.big ? 1.6 : 1) + (rnd() - 0.5) * 4 : onBed()[2], y = diveBed(x, z), ch = new THREE.Group();
     ch.add(box([0.9, 0.5, 0.6], '#8c5d3b', [0, 0.25, 0])); const lid = new THREE.Group(); lid.position.set(0, 0.5, -0.3); lid.add(box([0.92, 0.22, 0.62], '#a8713f', [0, 0.11, 0.3])); ch.add(lid);
     for (const bx of [-0.3, 0.3]) ch.add(box([0.08, 0.74, 0.64], '#e8b730', [bx, 0.37, 0], mat('#e8b730', 0.3, { metalness:0.6 })));
     const glow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshBasicMaterial({ color:'#ffe27a', transparent:true, opacity:0.0 })); glow.position.y = 0.55; ch.add(glow);
@@ -3482,15 +3520,18 @@ function buildDive(){
   g.traverse(o => { if (o.isMesh || o.isInstancedMesh){ o.castShadow = false; o.receiveShadow = false; } });
 }
 function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function startDive(){
+function startDive(site){
+  site = DIVE_SITES[site] ? site : 'reef';
   if (Dive.on) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
+  if (!diveSiteOk(site)){ toast(`${DIVE_SITES[site].name}要先買：${DIVE_SITES[site].need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); return; }
+  Dive.site = site;
   closeSheet(); if (F.phase !== 'idle') cancelFishing(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
   setTimeout(() => {
     buildDive(); diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
     me.pos.x = DIVE.x - 4; me.pos.z = DIVE.z + DIVE.r * 0.45; me.baseY = DIVE.y + DIVE.top - 2.5; Jump.gy = me.baseY; Jump.air = 0; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.35; Dive.savedDist = cam.dist; cam.dist = 5.5;
     me.setSwim(true); renderDiveHud(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120);
-    flash(`🤿 下潛！氧氣 ${Dive.o2max} 秒`, 1.6);
+    flash(`${DIVE_SITES[site].icon} ${DIVE_SITES[site].name}・氧氣 ${Dive.o2max} 秒`, 1.6);
   }, 380);
 }
 function endDive(reason, instant){
@@ -3530,12 +3571,13 @@ function divePhoto(f){
   if (isNew){ rec.photos.push(f.id); saveRecLocal(); cloudCall('add_photo', { p_fish: f.id }); flash(`📸 拍到了${f.name}！水下圖鑑 ${rec.photos.length}/${diveSpecies().length}`, 1.8); }
   else flash(`📸 ${f.name}（已經拍過了）`, 1.2);
 }
+const LOOT_TXT = { chest:'🎁 寶箱裡有', shell:'🐚 撿到貝殼，賣了', pearl:'🦪 撿到珍珠，賣了' }, LOOT_FULL = { chest:'🎁 今天的寶箱開夠了（每天 6 個）', shell:'🐚 今天的貝殼撿夠了（每天 40 個）', pearl:'🦪 今天的珍珠撿夠了（每天 15 顆）' };
 async function grabLoot(l){
   l.got = true; SFX.catch();
-  if (l.kind === 'shell'){ l.m.visible = false; } else { l.open = now(); }
-  if (Cloud.on){ const before = rec.coins, row = await cloudCall('dive_loot', { p_kind: l.kind }); if (!row) return; const got = (Number(row.coins) || 0) - before;
-    flash(got > 0 ? `${l.kind === 'chest' ? '🎁 寶箱裡有' : '🐚 撿到貝殼，賣了'} 🪙${got}！` : l.kind === 'chest' ? '🎁 今天的寶箱開夠了（每天 3 個）' : '🐚 今天的貝殼撿夠了（每天 40 個）', 1.6); return; }
-  const got = l.kind === 'chest' ? 150 + Math.floor(Math.random() * 200) : 5 + Math.floor(Math.random() * 16); addCoins(got); flash(`${l.kind === 'chest' ? '🎁 寶箱裡有' : '🐚 撿到貝殼，賣了'} 🪙${got}！`, 1.6);
+  if (l.kind === 'shell'){ l.m.visible = false; } else if (l.kind === 'pearl'){ l.pearl.visible = false; } else { l.open = now(); }
+  if (Cloud.on){ const before = rec.coins, row = await cloudCall('dive_loot', { p_kind: l.kind, p_site: Dive.site || 'reef' }); if (!row) return; const got = (Number(row.coins) || 0) - before;
+    flash(got > 0 ? `${LOOT_TXT[l.kind]} 🪙${got}！` : LOOT_FULL[l.kind], 1.6); return; }
+  const got = l.kind === 'chest' ? (Dive.site === 'wreck' ? 300 : Dive.site === 'cave' ? 400 : 150) + Math.floor(Math.random() * 200) : l.kind === 'pearl' ? 80 + Math.floor(Math.random() * 81) : 5 + Math.floor(Math.random() * 16); addCoins(got); flash(`${LOOT_TXT[l.kind]} 🪙${got}！`, 1.6);
 }
 function updateDiveSwim(dt, ix, iz, L){
   if (Dive.ending) return;
@@ -3589,8 +3631,9 @@ function diveHideWorld(start){
 function diveShowWorld(){ for (const o of Dive.restore || []) o.visible = true; Dive.restore = null; }
 function diveEnvFx(){
   // 水下的顏色和霧
-  scene.fog.color.set(DayNight.period === 'night' && !hasDive('dive_light') ? '#06223a' : '#1e7aa6'); scene.fog.near = 2.5; scene.fog.far = hasDive('dive_light') || DayNight.period !== 'night' ? 30 : 16;
-  hemi.color.set('#9fe6ff'); hemi.groundColor.set('#2b6f8f'); hemi.intensity = Math.max(hemi.intensity, hasDive('dive_light') ? 1.0 : 0.45); sun.color.set('#d8f6ff');
+  const S = DIVE_SITES[Dive.site] || DIVE_SITES.reef, light = hasDive('dive_light'), dark = DayNight.period === 'night' && !light;
+  scene.fog.color.set(dark ? '#06223a' : S.fog); scene.fog.near = 2.5; scene.fog.far = dark ? 16 : S.far;
+  hemi.color.set(S.cave ? '#8fd8ff' : '#9fe6ff'); hemi.groundColor.set(S.cave ? '#1a2a3a' : '#2b6f8f'); hemi.intensity = Math.max(hemi.intensity * (S.big ? 0.8 : 1), light ? (S.cave ? 1.35 : 1.0) : 0.45); sun.color.set('#d8f6ff'); if (S.cave) sun.intensity *= 0.35; else if (S.big) sun.intensity *= 0.7;
 }
 function renderDiveHud(tick){
   let h = $('#diveHud');
@@ -5436,7 +5479,8 @@ function renderTab(){
       isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
       '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
       '靠近魚、讓牠在畫面中間時按「📷 拍照」，就會登錄進「水下圖鑑」（圖鑑分頁看得到數量）。傳說魚偶爾也會出現在水裡。',
-      '海底有貝殼（每天最多換 40 個的金幣）和寶箱（每天最多 3 個），沉船附近比較容易找到寶箱。',
+      '有三個潛水點（在阿海的選單選）：🪸 珊瑚礁（有潛水裝備就能去）、⚓ 沉船深海（要大型氧氣瓶，大帆船旁邊寶箱多又值錢，大魚和傳說魚常出沒）、🕳️ 海底洞穴（要專業雙氧氣瓶＋潛水燈，有發光水晶、珍珠貝和深海怪魚）。',
+      '海底有貝殼（每天最多 40 個）、寶箱（每天最多 6 個，越深越值錢）、洞穴裡的珍珠（每天最多 15 顆）。',
       '一起潛水的人在水裡看得到彼此。',
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
