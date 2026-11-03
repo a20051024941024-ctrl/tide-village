@@ -2947,7 +2947,8 @@ function dailyTip(){
 // 釣魚的加成：給 doCast（等待時間）、pickFish（稀有／傳說／權重）、拉線（張力）用
 function envBonus(spotId){
   const W = WEATHERS[Env.wx], sea = SEA_SPOTS.has(spotId), T = sea ? TIDE_FX[Env.tide.st] : { bite:1, rare:1 };
-  return { bite: (W.bite || 1) * T.bite, rare: (W.rare || 1) * T.rare, legend: W.legendSea ? (sea ? W.legend : 1) : (W.legend || 1), tension: W.tension || 1 };
+  const crew = crewNear();   // 船隊加成：附近每多一個人在船上，魚快一點上鉤、稀有魚多一點（最多 3 人）
+  return { bite: (W.bite || 1) * T.bite * (1 - 0.08 * crew), rare: (W.rare || 1) * T.rare * (1 + 0.06 * crew), legend: W.legendSea ? (sea ? W.legend : 1) : (W.legend || 1), tension: W.tension || 1, crew };
 }
 const Env = { wx:'sunny', tide: tideNow(Date.now()), rain:null, flash:0, k:1, lastWx:null };
 function buildRain(){
@@ -3093,6 +3094,31 @@ function renderFriends(body){
     ul.appendChild(li); }
   body.appendChild(ul);
 }
+/* ---- 組隊出海：跟大家一起搭阿海的船出去；附近有別人也在船上釣魚，大家都有「船隊加成」---- */
+var Party = { team:false, inv:null, lead:null, leadName:'', joined:new Map() };
+function crewNear(){ if (!myBoat) return 0; let n = 0; for (const p of peers.values()) if (p.pres && p.pres.bt && !p.isle && Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z) < 16) n++; return Math.min(3, n); }
+function sailInvite(x, z, label){ if (!room || !room.connected()) return; Party.lead = myIdOrMe(); Party.joined.clear(); room.emit('sail', { x:+x.toFixed(1), z:+z.toFixed(1), label: String(label).slice(0, 30), lid: myIdOrMe() }).catch(() => {}); ticker('🚤 你邀請大家一起出海了，有人加入會通知你'); }
+function onSail(msg){
+  if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const d = msg.data, p = peers.get(msg.peer); if (!p || !isFinite(+d.x) || !isFinite(+d.z) || !waterAt(+d.x, +d.z)) return;
+  const name = peerName(p); Party.inv = { x:+d.x, z:+d.z, label: clean(String(d.label || '外海').slice(0, 30)), lid: String(d.lid || ''), peer: msg.peer, name, until: Date.now() + 45000 }; renderSailInv();
+  ticker(`🚤 <b>${esc(name)}</b> 要出海去${esc(Party.inv.label)}，按上面的「一起去」加入船隊！`);
+}
+function onSailJoin(msg){ if (msg.sameTab || !msg.data || msg.data.lid !== myIdOrMe()) return; const p = peers.get(msg.peer); if (!p) return; Party.joined.set(msg.peer, peerName(p)); toast(`🚤 ${esc(peerName(p))} 加入你的船隊了！`); renderFerryBar(); }
+function joinSail(){
+  const v = Party.inv; Party.inv = null; renderSailInv(); if (!v || Date.now() > v.until) return; if (Dive.on) endDive('', true);
+  // 停在隊長旁邊（不會疊在一起）
+  const a = Math.random() * Math.PI * 2; let x = v.x + Math.cos(a) * 3.2, z = v.z + Math.sin(a) * 3.2; if (!waterAt(x, z)){ x = v.x; z = v.z; }
+  Party.lead = v.lid; Party.leadName = v.name; ferryTo(x, z, `${v.label}（${v.name} 的船隊）`);
+  if (room && room.connected()) room.emit('sailjoin', { lid: v.lid }).catch(() => {});
+}
+function renderSailInv(){
+  let b = $('#sailInv'); const v = Party.inv;
+  if (!v || Date.now() > v.until || (myBoat && Party.lead === v.lid)){ if (b) b.hidden = true; return; }
+  if (!b){ b = document.createElement('div'); b.id = 'sailInv'; b.className = 'panel'; document.body.appendChild(b); }
+  b.hidden = false; b.innerHTML = ''; b.appendChild(el('span', '', `🚤 ${v.name} 要出海去${v.label}`));
+  const y = el('button', 'tbtn', '一起去'); y.addEventListener('click', joinSail); const n = el('button', 'tbtn ghost', '不用'); n.addEventListener('click', () => { Party.inv = null; renderSailInv(); }); b.append(y, n);
+}
+setInterval(() => { if (Party.inv && Date.now() > Party.inv.until){ Party.inv = null; renderSailInv(); } }, 2000);
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
 // 渡船：港口的船夫阿海，可以載你到祕密窩點或外海
 const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'北邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
@@ -3101,6 +3127,7 @@ function updateFerry(){
   if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
   if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
+  if (Ferry.on && frameNo % 60 === 0){ const n = crewNear(); if (n !== Ferry.crewN){ Ferry.crewN = n; renderFerryBar(); } }
 }
 function ferryTo(x, z, label){
   closeSheet(); const b = boats.find(b => b.dock.id === 'harbor'); if (!b) return;
@@ -3109,22 +3136,26 @@ function ferryTo(x, z, label){
   if (myBoat) leaveFerry(true);
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.cast();
   setTimeout(() => { if (F.phase !== 'idle') cancelFishing(); const back = 2.4; b.m.position.set(px - back, WATER_LEVEL, pz); b.m.rotation.set(0, Math.PI / 2, 0); boardBoat(b); me.rot = Math.PI / 2; cam.yaw = me.rot + Math.PI;
-    Ferry.on = true; Ferry.label = label; renderFerryBar(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120); flash(`🚤 到了：${label}`, 1.4); }, 420);
+    Ferry.on = true; Ferry.label = label; renderFerryBar(); pushPresence(true); if (Party.team && !/祕密窩點|船隊/.test(label)) sailInvite(px, pz, label); setTimeout(() => fx.classList.remove('on'), 120); flash(`🚤 到了：${label}`, 1.4); }, 420);
 }
 function leaveFerry(silent){
   const b = myBoat; if (!b) return; if (F.phase !== 'idle') cancelFishing();
-  myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); Ferry.on = false; renderFerryBar();
+  myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); Ferry.on = false; Party.lead = null; Party.joined.clear(); renderFerryBar();
   if (!silent){ const h = TRAVEL.find(t => t.id === 'harbor'); travelTo(h || TRAVEL[0]); toast('🚤 阿海把你載回港口了'); }
 }
 function renderFerryBar(){
   let bar = $('#ferryBar'); if (!Ferry.on){ if (bar) bar.hidden = true; return; }
   if (!bar){ bar = document.createElement('div'); bar.id = 'ferryBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; bar.appendChild(el('span', '', `🚤 ${Ferry.label}`));
+  { const n = crewNear(); if (n || Party.joined.size) bar.appendChild(el('span', 'crew', `👥 船隊 ${Math.max(n, Party.joined.size) + 1} 人${n ? `・加成 ×${(1 + 0.06 * n).toFixed(2)}` : ''}`)); }
   const b = el('button', 'tbtn ghost', '回港口'); b.addEventListener('click', () => leaveFerry()); bar.appendChild(b);
 }
 function renderFerry(body){
   body.appendChild(el('div', 'shophead')).innerHTML = `<b>🚤 ${FERRY.name}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
   body.appendChild(el('p', 'sub', '「要去哪裡？我的船很快的！」到了以後可以在船上釣魚、也可以自己划，想回來按「回港口」就好。'));
+  if (room && room.connected()){ const tb = el('label', 'teamtgl'), cb = el('input'); cb.type = 'checkbox'; cb.checked = Party.team; cb.addEventListener('change', () => { Party.team = cb.checked; });
+    tb.append(cb, el('span', '', '👥 組隊出海：邀請大廳裡的人一起去（祕密窩點不會邀請，別人不會知道）')); body.appendChild(tb);
+    body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤、稀有魚多一點（最多 3 人）。')); }
   { body.appendChild(el('div', 'dexhead', '🤿 潛水（進階）')); const ul = el('ul', 'shoplist'), li = el('li'); li.appendChild(el('span', 'dishic', '🪸'));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', '珊瑚礁潛水點')); d.appendChild(el('div', 'sub2', hasDive('dive_suit') ? `氧氣 ${diveO2()} 秒・有沉船、魚群、貝殼和寶箱` : '要先在商店的「🤿潛水」分頁買潛水裝備組')); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn' + (hasDive('dive_suit') ? '' : ' ghost'), '去潛水'); b.addEventListener('click', () => startDive()); a.appendChild(b); li.appendChild(a); ul.appendChild(li); body.appendChild(ul); }
@@ -4560,6 +4591,7 @@ function useRoom(r){
       if (p) p.fisher.say(rc.icon, 'emote', 3);
     }, () => {});
     room.on('tag', onTagMsg, () => {});
+    room.on('sail', onSail, () => {}); room.on('sailjoin', onSailJoin, () => {});
     room.on('gift', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; if (msg.data.to === Cloud.userId) setTimeout(loadFriends, 800); }, () => {});
     room.on('chum', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const d = msg.data, p = peers.get(msg.peer); if (!CHUM_BY_ID[d.ty] || !isFinite(+d.x) || !isFinite(+d.z)) return;
       if (p && (p.isle || null) !== (onIsle ? onIsle.owner : null)) return; addChumZone(+d.x, +d.z, d.ty, msg.peer); if (p && Math.hypot(me.pos.x - d.x, me.pos.z - d.z) < 25) p.fisher.say('🍚', 'emote', 1.5); }, () => {});
@@ -5121,6 +5153,7 @@ function renderTab(){
       '「🤫 提前打」是祕密窩點：只有你自己知道（橘色浮標和地圖上的 🤫 只有你看得到）。窩料會慢慢發酵，10 分鐘後最強，可以維持 1 小時，最多 3 個。祕密窩點存在雲端，換手機登入也找得到。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、北邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
+      '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤、稀有魚多一點（最多 3 人）。',
     ]);
     sec('💙 尺寸限制、放流、愛海點數', [
       '每種魚都有「建議尺寸」：比最輕的再重四分之一以上才算夠大。太小的魚釣到時會標「📏 未達尺寸」，帶走只能賣半價。',
