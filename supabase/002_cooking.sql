@@ -5,7 +5,7 @@
 alter table public.players add column if not exists dishes jsonb not null default '[]'::jsonb;   -- [{"r":"saba","q":2,"t":毫秒}]
 alter table public.players add column if not exists last_cook_at timestamptz;
 alter table public.players add column if not exists cook_day date;                -- 今天是哪一天（台灣時間）
-alter table public.players add column if not exists cook_count integer not null default 0;   -- 今天做了幾道（每天最多 40 道，限制作弊能多賺的金幣）
+alter table public.players add column if not exists cook_count integer not null default 0;   -- 今天做了幾道（每天最多 150 道，限制作弊能多賺的金幣）
 
 -- 食譜：需要哪種魚（mori = 任意 3 條常見魚）、基本價格
 create or replace function public._recipe(p text, out fish text, out need integer, out value integer) language sql immutable as $$
@@ -29,7 +29,7 @@ begin
   if rc.value is null then raise exception '沒有這道料理'; end if;
   if coalesce(array_length(p_ts, 1), 0) <> rc.need or (select count(distinct x) from unnest(p_ts) x) <> rc.need then raise exception '食材不對'; end if;
   if pl.last_cook_at is not null and now() - pl.last_cook_at < interval '3 seconds' then raise exception '做太快了'; end if;
-  if pl.cook_day = (now() at time zone 'Asia/Taipei')::date and pl.cook_count >= 40 then raise exception '今天做太多了'; end if;
+  if pl.cook_day = (now() at time zone 'Asia/Taipei')::date and pl.cook_count >= 150 then raise exception '今天做太多了'; end if;
   select count(*) into ok from jsonb_array_elements(pl.tank) e join public.fish_species sp on sp.id = e->>'f'
    where (e->>'t')::bigint = any(p_ts) and not (pl.show @> jsonb_build_array(e->'t'))
      and (case when rc.fish = '*common' then sp.rarity = '常見' else sp.id = rc.fish end);
