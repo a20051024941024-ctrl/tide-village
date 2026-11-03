@@ -579,3 +579,13 @@ details.help li{margin:4px 0}
 .tipbox{display:flex;flex-direction:column;gap:4px;background:#fff7e0;border-radius:12px;padding:10px 12px;margin:6px 0 10px;font-size:13px;line-height:1.5;box-shadow:inset 0 0 0 2px #ffd36a}
 .tipbox b{font-family:var(--f-display);font-size:14px}
 @media (max-width:640px){ #wxChip{display:block;margin-left:0} }
+
+/* 放流、尺寸限制、愛海點數 */
+.badge.small{background:#e89a2c}
+#catchCard .ccbtns{display:flex;gap:8px;margin-top:14px}
+#catchCard .ccbtns .pbtn{flex:1;margin-top:0}
+#ccRel{background:#e6f3fb;color:var(--sea);box-shadow:inset 0 0 0 2px #9fd0ec}
+#ccRel.hot{background:var(--sea);color:#fff;box-shadow:none;animation:relPulse 1.4s ease-in-out infinite}
+@keyframes relPulse{50%{transform:scale(1.04)}}
+.lovepill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:#e6f3fb;color:var(--sea);font-weight:800;font-size:13px}
+@media (max-height:520px){ #catchCard .ccbtns{margin-top:8px} #catchCard .ccbtns .pbtn{padding:10px} }

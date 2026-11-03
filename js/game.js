@@ -1195,7 +1195,10 @@ const GEAR = [
   ['acc_none','沒有配件',0,'🙂'],['acc_scarf','紅圍巾',300,'🧣'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
   ['back_none','沒有背飾',0,'🙂'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
   ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
-].map(([id, name, price, icon]) => ({ id, slot: id.split('_')[0], name, price, icon }));
+  // 愛海商店：只能用放流得到的愛海點數換（第 5 欄是點數）
+  ['hat_turtle','海龜帽',0,'🐢',30],['top_ocean','海洋守護衫',0,'🌊',40],['acc_coral','珊瑚項鍊',0,'🪸',20],['back_fin','鯊魚背鰭',0,'🦈',60],
+].map(([id, name, price, icon, love]) => ({ id, slot: id.split('_')[0], name, price, icon, love: love || 0 }));
+function paidGear(it){ return !!it && (it.price > 0 || it.love > 0); }
 const GEAR_BY_ID = Object.fromEntries(GEAR.map(g => [g.id, g]));
 const GEAR_DEFAULT = { hat:'hat_sun', top:'top_tee', pants:'pants_jeans', shoes:'shoes_boots', socks:'socks_none', acc:'acc_none', back:'back_none', face:'face_normal' };
 function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; } return r; }
@@ -1215,6 +1218,15 @@ function applyGear(av, gear){
   for (const b of av.hatBase) b.visible = gear.hat === 'hat_sun';
   const H = av.hatG, HD = av.headG;
   switch (gear.hat){
+    case 'hat_turtle': { const sh = M('#4f9a54', 0.6), dk = M('#2f6b3a', 0.65), sk = M('#9fd08a', 0.7);
+      const d = mk(new THREE.SphereGeometry(0.34, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), sh, 0, -0.05, 0, H); d.scale.set(1, 0.78, 1.05);
+      const rim = mk(new THREE.TorusGeometry(0.335, 0.035, 6, 24), dk, 0, -0.05, 0, H); rim.rotation.x = Math.PI / 2; rim.scale.y = 1.05;
+      const top = mk(new THREE.CylinderGeometry(0.09, 0.1, 0.03, 6), dk, 0, 0.215, 0, H);
+      for (let i = 0; i < 6; i++){ const a = i / 6 * Math.PI * 2 + 0.52, el2 = 0.85; const x = Math.sin(el2) * 0.34 * Math.cos(a), z = Math.sin(el2) * 0.34 * Math.sin(a) * 1.05, y = -0.05 + Math.cos(el2) * 0.34 * 0.78;
+        const pl = mk(new THREE.CylinderGeometry(0.085, 0.095, 0.03, 6), dk, x, y, z, H); pl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(x, (y + 0.05) / 0.78, z / 1.05).normalize()); }
+      const hd = mk(new THREE.SphereGeometry(0.075, 10, 8), sk, 0, 0.0, 0.37, H); hd.scale.set(1, 0.8, 1.1);
+      for (const sx of [-1, 1]) mk(new THREE.SphereGeometry(0.014, 6, 4), ink, sx * 0.035, 0.02, 0.44, H);
+      break; }
     case 'hat_cap': { const c = mk(G.crown, hatC, 0, -0.02, 0, H); c.scale.set(1.02, 0.62, 1.02); const v = mk(new THREE.BoxGeometry(0.4, 0.03, 0.26), hatC, 0, -0.01, 0.33, H); v.rotation.x = 0.12; mk(new THREE.SphereGeometry(0.03, 8, 6), hatC, 0, 0.18, 0, H); break; }
     case 'hat_beanie': { const c = mk(new THREE.SphereGeometry(0.33, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), hatC, 0, -0.06, 0, H); c.scale.set(1, 0.95, 1); const rim = mk(new THREE.TorusGeometry(0.325, 0.045, 8, 22), white, 0, -0.04, 0, H); rim.rotation.x = Math.PI / 2; mk(new THREE.SphereGeometry(0.085, 10, 8), white, 0, 0.27, 0, H); break; }
     case 'hat_bucket': { mk(new THREE.CylinderGeometry(0.25, 0.31, 0.2, 18), hatC, 0, 0.09, 0, H); mk(new THREE.CylinderGeometry(0.31, 0.44, 0.06, 20), hatC, 0, -0.01, 0, H); mk(new THREE.CylinderGeometry(0.262, 0.262, 0.04, 18), ink, 0, 0.04, 0, H); break; }
@@ -1229,6 +1241,11 @@ function applyGear(av, gear){
   const band = (y, h, c) => { const o = mk(new THREE.CylinderGeometry(torsoR(y) + 0.012, torsoR(y) + 0.012, h, 18), c, 0, y, 0); o.scale.z = 0.88; return o; };
   const shell = (c, gap) => { const o = mk(new THREE.CylinderGeometry(0.272, 0.27, 0.44, 18, 1, true, gap, Math.PI * 2 - gap * 2), c, 0, 0.82, 0); o.material.side = THREE.DoubleSide; o.scale.z = 0.9; return o; };
   switch (gear.top){
+    case 'top_ocean': { const sea = M('#2f89c7', 0.6), foam = M('#ffffff', 0.6); band(0.64, 0.1, sea); band(0.71, 0.03, foam);
+      for (let i = 0; i < 10; i++){ const a = i / 10 * Math.PI * 2; const r = torsoR(0.735) + 0.012; mk(new THREE.SphereGeometry(0.03, 6, 4), foam, Math.sin(a) * r, 0.735, Math.cos(a) * r * 0.88); }
+      const fb = mk(new THREE.SphereGeometry(0.06, 10, 8), M('#ff9f43', 0.5), -0.02, 0.9, 0.235); fb.scale.set(1.4, 0.8, 0.35);
+      const ft = mk(new THREE.ConeGeometry(0.045, 0.07, 3), M('#ff9f43', 0.5), 0.085, 0.9, 0.232); ft.rotation.z = Math.PI / 2; ft.scale.z = 0.35;
+      mk(new THREE.SphereGeometry(0.01, 6, 4), ink, -0.07, 0.91, 0.258); break; }
     case 'top_stripe': { for (const y of [0.64, 0.76, 0.88, 1.0]) band(y, 0.045, white); const nk = mk(new THREE.ConeGeometry(0.07, 0.14, 3), M('#e8473a', 0.6), 0, 1.02, 0.2); nk.rotation.x = Math.PI; break; }
     case 'top_vest': { const or = M('#ff7a2a', 0.6); shell(or, 0.32); band(0.72, 0.035, M('#e9eef2', 0.3, { metalness:0.3 })); band(0.92, 0.035, M('#e9eef2', 0.3, { metalness:0.3 })); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.03, 0.05, 0.02), ink, sx * 0.05, 0.82, 0.245); break; }
     case 'top_hoodie': { const hd = mk(new THREE.SphereGeometry(0.21, 14, 10), av.shirtM, 0, 1.13, -0.17); hd.scale.set(1.25, 0.75, 0.85); mk(new THREE.BoxGeometry(0.24, 0.1, 0.03), av.shirtM, 0, 0.66, 0.225); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.015, 0.16, 0.015), white, sx * 0.06, 0.98, 0.235); break; }
@@ -1263,6 +1280,9 @@ function applyGear(av, gear){
   }
   // ---- 配件 ----
   switch (gear.acc){
+    case 'acc_coral': { const bead = M('#ffd9c7', 0.4); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.017, 6, 4), bead, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); }
+      const cr = M('#ff6f61', 0.5); const br = (x, y, len, rz) => { const c = mk(new THREE.CylinderGeometry(0.011, 0.016, len, 5), cr, x, y, 0.215); c.rotation.z = rz; mk(new THREE.SphereGeometry(0.016, 6, 4), cr, x - Math.sin(rz) * len / 2, y + Math.cos(rz) * len / 2, 0.215); };
+      br(0, 0.97, 0.09, 0); br(-0.025, 0.985, 0.07, 0.6); br(0.025, 0.99, 0.065, -0.55); br(-0.04, 1.01, 0.04, 1.1); break; }
     case 'acc_scarf': { const red = M('#e8473a', 0.75); const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), red, 0, 1.1, 0); r.rotation.x = Math.PI / 2; const tl = mk(new THREE.BoxGeometry(0.09, 0.24, 0.05), red, 0.1, 0.96, 0.2); tl.rotation.z = 0.25; for (const y of [0.9, 0.97]) mk(new THREE.BoxGeometry(0.095, 0.02, 0.055), white, 0.1 + (0.96 - y) * 0.25, y, 0.2); break; }
     case 'acc_bowtie': { const red = M('#c9302c', 0.5); for (const sx of [-1, 1]){ const c = mk(new THREE.ConeGeometry(0.05, 0.09, 4), red, sx * 0.05, 1.08, 0.2); c.rotation.z = sx * Math.PI / 2; } mk(new THREE.SphereGeometry(0.025, 8, 6), red, 0, 1.08, 0.21); break; }
     case 'acc_glasses': { const fr = M('#5a3a24', 0.4); for (const sx of [-1, 1]) mk(new THREE.TorusGeometry(0.062, 0.011, 6, 16), fr, sx * 0.115, 0.0, 0.31, HD); mk(new THREE.BoxGeometry(0.07, 0.012, 0.012), fr, 0, 0.01, 0.315, HD); break; }
@@ -1271,6 +1291,12 @@ function applyGear(av, gear){
   }
   // ---- 背飾 ----
   switch (gear.back){
+    case 'back_fin': { const gr = M('#7f95a6', 0.55), wh = M('#e9eef2', 0.6);
+      const sh = new THREE.Shape(); sh.moveTo(-0.2, 0); sh.quadraticCurveTo(-0.05, 0.12, 0.08, 0.46); sh.quadraticCurveTo(0.12, 0.2, 0.22, 0); sh.lineTo(-0.2, 0);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 0.05, bevelEnabled: true, bevelSize: 0.015, bevelThickness: 0.015, bevelSegments: 2, curveSegments: 10 }); g.translate(0, 0, -0.025);
+      const f = mk(g, gr, 0, 0.74, -0.3); f.rotation.y = Math.PI / 2; mk(new THREE.BoxGeometry(0.06, 0.05, 0.3), wh, 0, 0.74, -0.27);
+      f.scale.set(1.35, 1.35, 1);
+      av.gearAnim = (t, sp) => { f.rotation.z = Math.sin(t * (2 + sp)) * 0.08; }; break; }
     case 'back_bag': { const c = M('#f17b6d', 0.7); mk(new THREE.BoxGeometry(0.3, 0.32, 0.14), c, 0, 0.84, -0.27); mk(new THREE.BoxGeometry(0.31, 0.12, 0.15), M('#d8604f', 0.7), 0, 0.96, -0.27); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.04, 0.36, 0.03), c, sx * 0.1, 0.84, 0.2).rotation.x = 0.1; break; }
     case 'back_basket': { const w = M('#c99a5b', 0.85); mk(new THREE.CylinderGeometry(0.15, 0.12, 0.3, 12), w, 0, 0.82, -0.32); for (const y of [0.74, 0.84, 0.94]) mk(new THREE.TorusGeometry(0.14, 0.012, 4, 14), M('#9b6a42', 0.8), 0, y, -0.32).rotation.x = Math.PI / 2; const tail = mk(new THREE.ConeGeometry(0.06, 0.14, 4), M('#2f6fb5', 0.6), 0.04, 1.03, -0.32); tail.rotation.z = 0.4; break; }
     case 'back_cape': { const red = M('#c9302c', 0.65, { side:THREE.DoubleSide }); const c = mk(new THREE.PlaneGeometry(0.56, 0.8, 1, 4), red, 0, 0.72, -0.25); c.rotation.x = 0.12; mk(new THREE.TorusGeometry(0.16, 0.03, 6, 14), M('#e8b730', 0.3, { metalness:0.5 }), 0, 1.1, -0.02).rotation.x = Math.PI / 2;
@@ -3507,7 +3533,17 @@ const BAITS = [
   { id:'rainbow', name:'彩虹餌', price:900, pack:2, desc:'七種顏色一閃一閃，稀有 ×2.2、傳說 ×4。', rare:2.2, legend:4 },
 ];
 const SELL_BASE = { '常見':10, '稀有':60, '傳說':400 };
-function fishPrice(f, w){ const rel = clamp((w - f.min) / Math.max(0.01, f.max - f.min), 0, 1); return Math.round(SELL_BASE[f.rarity] * (1 + 1.5 * rel)); }
+function fishPrice(f, w){ const rel = clamp((w - f.min) / Math.max(0.01, f.max - f.min), 0, 1); return Math.round(SELL_BASE[f.rarity] * (1 + 1.5 * rel) * (undersized(f, w) ? 0.5 : 1)); }
+// 尺寸限制：比「最輕 + 四分之一範圍」還輕就是未達尺寸（賣半價，放流點數比較多）；跟伺服器 015_release.sql 一樣
+function sizeMin(f){ return f.min + 0.25 * (f.max - f.min); }
+function undersized(f, w){ return w < sizeMin(f); }
+function lovePts(f, w){ return Math.max(undersized(f, w) ? 3 : 0, { '常見':1, '稀有':3, '傳說':10 }[f.rarity] || 1); }
+// 放流一條魚：拿掉、加愛海點數
+function releaseLocal(x){
+  const f = FISH_BY_ID[x.f], p = lovePts(f, x.w);
+  rec.tank = rec.tank.filter(y => y.t !== x.t); if (rec.show) rec.show = rec.show.filter(t => t !== x.t);
+  rec.love = (rec.love || 0) + p; rec.released = (rec.released || 0) + 1; saveRecLocal(); buildTank(); return p;
+}
 function curRod(){ return RODS.find(r => r.id === rec.rod) || RODS[0]; }
 function curBait(){ const b = BAITS.find(b => b.id === rec.baitOn); return b && (rec.bait[b.id] || 0) > 0 ? b : null; }
 function renderCoins(){ const t = $('#coinTxt'); if (t) t.textContent = rec.coins.toLocaleString(); }
@@ -3560,7 +3596,7 @@ function avatarShot(gear, view, size){
 
 // ---- 服飾店：買、穿、試穿 ----
 const Wardrobe = { slot:'hat', trying:null, tryTimer:0 };
-function ownsGear(id){ const it = GEAR_BY_ID[id]; return !!it && (it.price === 0 || rec.owned.includes(id)); }
+function ownsGear(id){ const it = GEAR_BY_ID[id]; return !!it && (!paidGear(it) || rec.owned.includes(id)); }
 function wearGear(id){
   const it = GEAR_BY_ID[id]; if (!it || !ownsGear(id)) return;
   endTryOn(); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
@@ -3568,14 +3604,23 @@ function wearGear(id){
 }
 function buyGear(id){
   const it = GEAR_BY_ID[id]; if (!it || ownsGear(id)) return;
+  if (it.love) return redeemLove(id);
   if (rec.coins < it.price){ toast(`金幣不夠，還差 🪙${(it.price - rec.coins).toLocaleString()}`); return; }
   endTryOn(); rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); addCoins(-it.price); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
   cloudCall('buy_item', { p_item: id }); SFX.catch(); flash(`${it.icon} 買了${it.name}！`, 1.4); renderTab();
 }
+// 愛海商品：用放流得到的愛海點數換
+function redeemLove(id){
+  const it = GEAR_BY_ID[id]; if (!it || !it.love || ownsGear(id)) return;
+  if ((rec.love || 0) < it.love){ toast(`愛海點數不夠，還差 💙${it.love - (rec.love || 0)}。把魚放流就能得到點數！`); return; }
+  endTryOn(); rec.love -= it.love; rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
+  cloudCall('redeem_love', { p_item: id }); SFX.catch(); flash(`${it.icon} 換到了${it.name}！`, 1.4); renderTab();
+}
+const gearCost = it => it.love ? `💙 ${it.love}` : `🪙 ${it.price.toLocaleString()}`;
 // 試穿：只在上面的預覽圖換上（不會移動鏡頭，也不會讓別人看到）
 function tryOn(id){ const it = GEAR_BY_ID[id]; if (!it) return; Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: id }); Wardrobe.previewOf = id; renderTab(); }
 function endTryOn(){ Wardrobe.preview = null; Wardrobe.previewOf = null; }
-function renderWardrobe(body){
+function renderWardrobe(body, only){
   const pv = el('div', 'wprev'), img = el('img'); img.alt = '試穿預覽';
   const showG = cleanGear(Wardrobe.preview || rec.gear);
   try { img.src = avatarShot(showG, 'full', 256); } catch(e){}
@@ -3583,32 +3628,37 @@ function renderWardrobe(body){
   const pi = el('div', 'wpinfo');
   if (Wardrobe.preview){ const it = GEAR_BY_ID[Wardrobe.previewOf]; pi.appendChild(el('b', '', '試穿中')); pi.appendChild(el('span', '', it ? it.name : ''));
     const bk = el('button', 'tbtn ghost', '換回原本'); bk.addEventListener('click', () => { endTryOn(); renderTab(); }); pi.appendChild(bk);
-    if (it && !ownsGear(it.id)){ const b = el('button', 'tbtn', `買 🪙${it.price.toLocaleString()}`); b.addEventListener('click', () => buyGear(it.id)); pi.appendChild(b); } }
+    if (it && !ownsGear(it.id)){ const b = el('button', 'tbtn', `${it.love ? '換' : '買'} ${gearCost(it)}`); b.addEventListener('click', () => buyGear(it.id)); pi.appendChild(b); } }
   else { pi.appendChild(el('b', '', '現在的打扮')); pi.appendChild(el('span', 'sub', '按「試穿」先在這裡看看，買了就是你的，大家都看得到。')); }
   pv.appendChild(pi); body.appendChild(pv);
-  const seg = el('div', 'seg wseg');
+  if (!only){ const seg = el('div', 'seg wseg');
   for (const [k, l] of GEAR_SLOTS){ const b = el('button', '', l); b.setAttribute('aria-pressed', String(Wardrobe.slot === k)); b.addEventListener('click', () => { Wardrobe.slot = k; renderTab(); }); seg.appendChild(b); }
-  body.appendChild(seg);
+  body.appendChild(seg); }
   const ul = el('ul', 'shoplist cols');
-  for (const it of GEAR.filter(g => g.slot === Wardrobe.slot)){
+  for (const it of only ? GEAR.filter(only) : GEAR.filter(g => g.slot === Wardrobe.slot && !g.love)){
     const on = cleanGear(rec.gear)[it.slot] === it.id, own = ownsGear(it.id), li = el('li', on ? 'on' : '');
     { const ic = el('img', 'gearic'); ic.alt = it.name; try { ic.src = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){} li.appendChild(ic); }
-    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', it.name)); d.appendChild(el('div', 'sub2', on ? '穿著中' : own ? (it.price ? '已擁有' : '免費') : `🪙 ${it.price.toLocaleString()}`)); li.appendChild(d);
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', it.name)); d.appendChild(el('div', 'sub2', on ? '穿著中' : own ? (paidGear(it) ? '已擁有' : '免費') : gearCost(it))); li.appendChild(d);
     const acts = el('div', 'tacts');
     if (!on && own){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearGear(it.id)); acts.appendChild(b); }
     if (!own){ const t = el('button', 'tbtn ghost', '試穿'); t.addEventListener('click', () => tryOn(it.id)); acts.appendChild(t);
-      const b = el('button', 'tbtn' + (rec.coins < it.price ? ' ghost' : ''), '買'); b.addEventListener('click', () => buyGear(it.id)); acts.appendChild(b); }
+      const poor = it.love ? (rec.love || 0) < it.love : rec.coins < it.price;
+      const b = el('button', 'tbtn' + (poor ? ' ghost' : ''), it.love ? '換' : '買'); b.addEventListener('click', () => buyGear(it.id)); acts.appendChild(b); }
     li.appendChild(acts); ul.appendChild(li);
   }
   body.appendChild(ul);
 }
 function renderShop(body){
-  const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
   if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
   const seg = el('div', 'seg');
-  [['sell','賣魚'],['rod','釣竿'],['rig','釣法'],['bait','魚餌'],['wear','服飾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
+  [['sell','賣魚'],['rod','釣竿'],['rig','釣法'],['bait','魚餌'],['wear','服飾'],['love','💙愛海']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
   if (shopMode === 'wear'){ renderWardrobe(body); return; }
+  if (shopMode === 'love'){
+    const box = el('div', 'tipbox'); box.innerHTML = `<b>💙 愛海點數：${(rec.love || 0).toLocaleString()}</b><span>把魚放流（釣到時按「放流」，或在魚缸裡放流）就能得到點數：常見魚 1、稀有魚 3、傳說魚 10，<b>未達尺寸的小魚至少 3</b>。你總共放流了 ${rec.released || 0} 條。</span><span>這裡的東西只能用愛海點數換，金幣買不到。</span>`;
+    body.appendChild(box); renderWardrobe(body, g => g.love > 0); return;
+  }
   if (shopMode === 'rig'){
     body.appendChild(el('p', 'sub', '釣法和釣線都免費，可以隨時換。看你想釣什麼魚就換什麼。'));
     for (const [title, T, key] of [['🎯 釣法', RIGS, 'rig'], ['🧵 釣線', LINES, 'line']]){
@@ -3696,7 +3746,7 @@ function afterSell(got, n){
   logMsg('', `你賣了 ${n} 條魚，得到 ${got} 金幣`, true); renderTab();
 }
 
-function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
+function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0, love:0, released:0 }; }
 const SHOW_MAX = 100, KEEP_MAX = 200;
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || ++others <= KEEP_MAX); }
@@ -3710,10 +3760,10 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
-  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => GEAR_BY_ID[id] && GEAR_BY_ID[id].price > 0))];
-  { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (it.price > 0 && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id])))];
+  { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
-  e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
+  e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
   if (r.bait && typeof r.bait === 'object') for (const b of BAITS.concat(CHUMS)){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
@@ -3852,13 +3902,24 @@ function showCatch(f, w, res){
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '個人新紀錄'; b.appendChild(x); }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
   $('#ccName').textContent = f.name;
-  $('#ccW').innerHTML = w.toFixed(2) + '<small>kg</small>' + `<small class="ccp">・可賣 🪙${fishPrice(f, w)}</small>`;
-  $('#ccDesc').textContent = f.desc;
+  const small = undersized(f, w), lp = lovePts(f, w);
+  if (small){ const x = document.createElement('span'); x.className = 'badge small'; x.textContent = `📏 未達尺寸（${sizeMin(f).toFixed(2)}kg 以上）`; b.appendChild(x); }
+  $('#ccW').innerHTML = w.toFixed(2) + '<small>kg</small>' + `<small class="ccp">・可賣 🪙${fishPrice(f, w)}${small ? '（半價）' : ''}</small>`;
+  $('#ccDesc').textContent = small ? '這條還太小，放牠回去長大吧！放流可以得到比較多愛海點數，帶走只能賣半價。' : f.desc;
+  ccFish = f; const rb = $('#ccRel'); rb.innerHTML = `放流 💙+${lp}`; rb.classList.toggle('hot', small);
+  $('#ccOk').textContent = small ? '還是帶走' : '放進魚缸';
   $('#catchCard').hidden = false; uiBlocked = true;
   setTimeout(() => $('#ccOk').focus(), 50);
 }
+var ccFish = null;
+function releaseCaught(){
+  const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x) { closeCatch(); return; }
+  const p = releaseLocal(x); if (me.held) me.held.until = 0;
+  SFX.chat(); flash(`💙 ${f.name} 游回大海了！愛海點數 +${p}`, 1.6); cloudCall('release_catch', { p_fish: f.id }); closeCatch();
+}
 function closeCatch(){ if ($('#catchCard').hidden) return; $('#catchCard').hidden = true; uiBlocked = !$('#sheet').hidden; if (F.phase === 'result') F.phase = 'idle'; }
 $('#ccOk').addEventListener('click', closeCatch);
+$('#ccRel').addEventListener('click', releaseCaught);
 $('#chumBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const pk = $('#chumPick'); if (pk && !pk.hidden){ pk.hidden = true; return; } renderChumPick(); });
 (function(){ const j = $('#jumpBtn');
   j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); j.classList.add('down'); jump(); });
@@ -4240,7 +4301,7 @@ const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
 const Cloud = { sb:null, on:false, status:'connecting', err:'', userId:null, email:null, isAnon:true, queue:Promise.resolve(), pending:0, board:{ best:[], total:[], earned:[] }, ui:{ step:'idle', mode:'bind', email:'', busy:false, msg:'' } };
 function rowToRec(r){
   return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
-    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, updatedAt:Date.parse(r.updated_at) || Date.now() });
+    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, updatedAt:Date.parse(r.updated_at) || Date.now() });
 }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
@@ -4249,7 +4310,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -4573,11 +4634,10 @@ function renderTab(){
         else { if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先拿出一條再放。`); return; } rec.show.push(x.t); }
         saveRecLocal(); buildTank(); renderTab(); cloudCall('set_show', { p_show: rec.show.slice() });
       });
-      const rel = el('button', 'tbtn ghost', '放生');
+      const rel = el('button', 'tbtn ghost', `放流 💙${lovePts(f, x.w)}`);
       rel.addEventListener('click', () => {
-        if (rel.dataset.sure !== '1'){ rel.dataset.sure = '1'; rel.textContent = '確定放生？'; setTimeout(() => { if (rel.isConnected){ rel.dataset.sure = ''; rel.textContent = '放生'; } }, 2500); return; }
-        rec.tank = rec.tank.filter(y => y.t !== x.t); if (rec.show) rec.show = rec.show.filter(t => t !== x.t);
-        saveRecLocal(); buildTank(); renderTab(); toast(`${esc(f.name)} 游回大海了。`); cloudCall('release_fish', { p_ts: x.t });
+        if (rel.dataset.sure !== '1'){ rel.dataset.sure = '1'; rel.textContent = '確定放流？'; setTimeout(() => { if (rel.isConnected){ rel.dataset.sure = ''; rel.textContent = `放流 💙${lovePts(f, x.w)}`; } }, 2500); return; }
+        const p = releaseLocal(x); renderTab(); toast(`${esc(f.name)} 游回大海了 💙 愛海點數 +${p}`); cloudCall('release_fish', { p_ts: x.t });
       });
       acts.append(show, rel); li.appendChild(acts); ul.appendChild(li);
     });
@@ -4668,6 +4728,11 @@ function renderTab(){
       '「🤫 提前打」是祕密窩點：只有你自己知道（橘色浮標和地圖上的 🤫 只有你看得到）。窩料會慢慢發酵，10 分鐘後最強，可以維持 1 小時，最多 3 個。祕密窩點存在雲端，換手機登入也找得到。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、北邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
+    ]);
+    sec('💙 尺寸限制、放流、愛海點數', [
+      '每種魚都有「建議尺寸」：比最輕的再重四分之一以上才算夠大。太小的魚釣到時會標「📏 未達尺寸」，帶走只能賣半價。',
+      '釣到魚時可以按「放流」讓牠回到大海，魚缸裡的魚也可以放流。放流會得到愛海點數：常見魚 1、稀有魚 3、傳說魚 10，未達尺寸的小魚至少 3。',
+      '愛海點數在商店的「💙愛海」分頁換限定服飾（海龜帽、海洋守護衫、珊瑚項鍊、鯊魚背鰭），金幣買不到。',
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,

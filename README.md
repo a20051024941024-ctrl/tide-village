@@ -49,6 +49,7 @@ supabase/011_fish_batch4.sql 第四批新魚 11 種
 supabase/012_island_v2.sql 玩家島 2.0（自由擺放、按讚）
 supabase/013_chum.sql 打窩的窩料
 supabase/014_secret_chum.sql 祕密窩點存在雲端（只有自己讀得到）
+supabase/015_release.sql 尺寸限制、放流、愛海點數和愛海商店
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開
