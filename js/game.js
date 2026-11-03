@@ -5576,8 +5576,19 @@ async function goLandscape(){
   ensureAudio();
   try { if (!document.fullscreenElement){ await (fsEl.requestFullscreen ? fsEl.requestFullscreen({ navigationUI:'hide' }) : fsEl.webkitRequestFullscreen()); } } catch(e){}
   try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch(e){}
-  setTimeout(() => { if (portraitMQ.matches) toast('這個瀏覽器不能自動轉向，請手動把手機轉成橫向，或關掉螢幕旋轉鎖定。'); }, 700);
+  setTimeout(() => { if (portraitMQ.matches) rotHelp(); }, 700);
 }
+// Threads、IG、FB、LINE 裡面開的網頁（App 內建瀏覽器）不能全螢幕也不能自動轉向：直接說明怎麼辦
+const inApp = /Barcelona|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|Messenger|TikTok|musical_ly/i.test(navigator.userAgent), inAppName = /Barcelona/i.test(navigator.userAgent) ? 'Threads' : /Instagram/i.test(navigator.userAgent) ? 'Instagram' : /FBAN|FBAV|FB_IAB|Messenger/i.test(navigator.userAgent) ? 'Facebook' : /Line\//i.test(navigator.userAgent) ? 'LINE' : 'App';
+function rotHelp(){
+  const r = $('#rotate'); if (!r || r.querySelector('.rothelp')) return;
+  const box = document.createElement('div'); box.className = 'rothelp';
+  box.innerHTML = inApp ? `<b>你是在 ${inAppName} 裡面打開的，這裡不能自動轉向</b><span>① 點右上角「⋯」→「在瀏覽器中開啟」（用 Chrome 玩最順）<br>② 或是直接把手機轉成橫向（要先關掉手機的「螢幕旋轉鎖定」）</span>`
+    : `<b>這個瀏覽器不能自動轉向</b><span>請直接把手機轉成橫向。轉不過去的話，從手機上方往下滑，關掉「螢幕旋轉鎖定／自動旋轉」。</span>`;
+  const cp = document.createElement('button'); cp.textContent = '複製遊戲網址'; cp.addEventListener('click', async e => { e.stopPropagation(); const u = location.href.split('#')[0]; try { await navigator.clipboard.writeText(u); cp.textContent = '已複製，貼到 Chrome 開'; } catch(_){ prompt('複製這個網址，貼到 Chrome 打開：', u); } });
+  if (inApp) box.appendChild(cp); r.appendChild(box);
+}
+if (inApp && isTouch) setTimeout(() => { const r = $('#rotate'); if (r){ const h = r.querySelector('h2'), pp = r.querySelector('p'); if (h) h.textContent = '請把手機轉成橫向來玩'; if (pp) pp.textContent = '潮汐釣魚村是橫向遊戲，左手搖桿、右手拋竿最順手。'; } if (portraitMQ.matches) rotHelp(); }, 300);
 $('#rotFull').addEventListener('click', goLandscape);
 $('#rotate').addEventListener('click', e => { if (e.target.id !== 'rotSkip') goLandscape(); });
 $('#rotSkip').addEventListener('click', () => document.body.classList.add('allowPortrait'));

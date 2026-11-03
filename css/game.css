@@ -668,3 +668,7 @@ details.help li{margin:4px 0}
   #joy{width:130px;height:130px}
   #joy .knob{width:56px;height:56px;margin:-28px 0 0 -28px}
 }
+
+#rotate .rothelp{margin-top:14px;max-width:34ch;background:rgba(255,255,255,.16);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;text-align:left;font-size:14px;line-height:1.55}
+#rotate .rothelp b{font-size:15px}
+#rotate .rothelp button{align-self:flex-start;margin-top:4px;padding:8px 14px;border-radius:999px;background:#fff;color:var(--sea);font-weight:800}
