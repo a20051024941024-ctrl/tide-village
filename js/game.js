@@ -3119,6 +3119,78 @@ function renderSailInv(){
   const y = el('button', 'tbtn', '一起去'); y.addEventListener('click', joinSail); const n = el('button', 'tbtn ghost', '不用'); n.addEventListener('click', () => { Party.inv = null; renderSailInv(); }); b.append(y, n);
 }
 setInterval(() => { if (Party.inv && Date.now() > Party.inv.until){ Party.inv = null; renderSailInv(); } }, 2000);
+/* ---- 等級、稱號、成就：經驗值全部從伺服器記的紀錄算出來（釣到的魚、放流、水下照片），升級獎金由伺服器 019_levels.sql 發 ---- */
+const XP_RARITY = { '常見':10, '稀有':40, '傳說':250 };
+function calcXP(r){ r = r || rec; let x = 0; for (const [id, n] of Object.entries(r.count || {})){ const f = FISH_BY_ID[id]; if (f) x += (Number(n) || 0) * XP_RARITY[f.rarity]; } return x + (r.released || 0) * 5 + (r.photos || []).length * 30; }
+function lvNeed(L){ return 80 * (L - 1) + 20 * (L - 1) * (L - 2); }   // 到 Lv.L 需要的總經驗
+function lvOf(xp){ let L = 1; while (L < 99 && xp >= lvNeed(L + 1)) L++; return L; }
+const speciesN = () => Object.keys(rec.count || {}).filter(id => FISH_BY_ID[id]).length;
+const spotDone = id => FISH.filter(f => f.spot === id).every(f => rec.count[f.id]);
+const ACH = [
+  { id:'c1',    icon:'🎣', name:'第一條魚',     desc:'釣到第一條魚',              cur:() => rec.total, goal:1 },
+  { id:'c100',  icon:'🪣', name:'百條釣手',     desc:'總共釣到 100 條魚',         cur:() => rec.total, goal:100 },
+  { id:'c500',  icon:'🧺', name:'五百條',       desc:'總共釣到 500 條魚',         cur:() => rec.total, goal:500, title:'勤勞釣客' },
+  { id:'c2000', icon:'🏆', name:'兩千條',       desc:'總共釣到 2000 條魚',        cur:() => rec.total, goal:2000, title:'釣魚狂人' },
+  { id:'s10',   icon:'📗', name:'小小圖鑑',     desc:'圖鑑收集 10 種魚',          cur:speciesN, goal:10 },
+  { id:'s40',   icon:'📘', name:'圖鑑達人',     desc:'圖鑑收集 40 種魚',          cur:speciesN, goal:40 },
+  { id:'sAll',  icon:'📚', name:'圖鑑全收集',   desc:'所有魚都釣過',              cur:speciesN, goal:() => FISH.length, title:'圖鑑博士' },
+  { id:'l1',    icon:'🐉', name:'傳說的開始',   desc:'釣到第一條傳說魚',          cur:() => rec.legend, goal:1 },
+  { id:'l10',   icon:'👑', name:'傳說獵人',     desc:'釣到 10 條傳說魚',          cur:() => rec.legend, goal:10, title:'傳說獵人' },
+  { id:'w100',  icon:'🐋', name:'巨物',         desc:'釣到 100 公斤以上的魚',     cur:() => rec.bestW, goal:100, kg:true, title:'巨物殺手' },
+  { id:'e10k',  icon:'🪙', name:'小有積蓄',     desc:'總共賺到 10,000 金幣',      cur:() => rec.earned, goal:10000 },
+  { id:'e100k', icon:'💰', name:'村裡的富翁',   desc:'總共賺到 100,000 金幣',     cur:() => rec.earned, goal:100000, title:'漁村富翁' },
+  { id:'r10',   icon:'💙', name:'放流新手',     desc:'放流 10 條魚',              cur:() => rec.released || 0, goal:10 },
+  { id:'r100',  icon:'🌊', name:'大海守護者',   desc:'放流 100 條魚',             cur:() => rec.released || 0, goal:100, title:'大海守護者' },
+  { id:'dv',    icon:'🤿', name:'潛水員',       desc:'買潛水裝備組',              cur:() => hasDive('dive_suit') ? 1 : 0, goal:1 },
+  { id:'p10',   icon:'📸', name:'水下攝影',     desc:'水下圖鑑拍到 10 種魚',      cur:() => (rec.photos || []).length, goal:10 },
+  { id:'p25',   icon:'🎞️', name:'海洋攝影師',   desc:'水下圖鑑拍到 25 種魚',      cur:() => (rec.photos || []).length, goal:25, title:'海洋攝影師' },
+  { id:'is10',  icon:'🏝️', name:'小島主人',     desc:'小島上放 10 件東西',        cur:() => (rec.island && rec.island.items || []).length, goal:10 },
+  { id:'is40',  icon:'🏡', name:'夢想小島',     desc:'小島上放 40 件東西',        cur:() => (rec.island && rec.island.items || []).length, goal:40, title:'島主' },
+  { id:'g15',   icon:'👗', name:'愛打扮',       desc:'擁有 15 件服飾',            cur:() => (rec.owned || []).length, goal:15, title:'時尚釣客' },
+  { id:'f1',    icon:'🤝', name:'交到朋友',     desc:'互相加 1 位好友',           cur:() => Fr.list.filter(f => f.mutual).length, goal:1 },
+  { id:'f10',   icon:'🎉', name:'朋友很多',     desc:'互相加 10 位好友',          cur:() => Fr.list.filter(f => f.mutual).length, goal:10, title:'社交達人' },
+].concat(SPOTS.filter(sp => FISH.some(f => f.spot === sp.id)).map(sp => ({ id:'sp_' + sp.id, icon:'📍', name:`${sp.short}全收集`, desc:`${sp.label}的魚全部釣過`, cur:() => FISH.filter(f => f.spot === sp.id && rec.count[f.id]).length, goal:() => FISH.filter(f => f.spot === sp.id).length, title: sp.id === 'harbor' ? '外海霸主' : null })));
+const goalOf = a => typeof a.goal === 'function' ? a.goal() : a.goal;
+const achDone = a => a.cur() >= goalOf(a);
+const LV_TITLES = [[1, '新手釣客'], [5, '見習釣客'], [10, '熟練釣客'], [20, '資深釣客'], [30, '釣魚達人'], [50, '海之傳說']];
+function myTitles(){ const L = lvOf(calcXP()), out = LV_TITLES.filter(([l]) => L >= l).map(([l, n]) => ({ id:'lv' + l, name:n, how:`到 Lv.${l}` })); for (const a of ACH) if (a.title && achDone(a)) out.push({ id:'a_' + a.id, name:a.title, how:`成就「${a.name}」` }); return out; }
+const ALL_TITLES = new Set(LV_TITLES.map(([, n]) => n).concat(ACH.filter(a => a.title).map(a => a.title)));
+var Lv = { L:null, title: LS.get('tide.title', ''), seen: new Set(LS.get('tide.achSeen', [])), init: LS.get('tide.achInit', false) };
+function curTitle(){ return myTitles().some(t => t.name === Lv.title) ? Lv.title : ''; }
+function renderLvChip(){
+  let c = $('#lvChip'); if (!c){ c = document.createElement('span'); c.id = 'lvChip'; c.title = '等級和成就'; c.addEventListener('click', () => openSheet('ach')); const h1 = $('#brand h1'); if (h1) h1.appendChild(c); else return; }
+  const xp = calcXP(), L = lvOf(xp), k = L >= 99 ? 1 : (xp - lvNeed(L)) / (lvNeed(L + 1) - lvNeed(L)); const t = `⭐ Lv.${L}`; if (c._t !== t){ c.textContent = t; c._t = t; } c.style.setProperty('--k', (k * 100).toFixed(0) + '%');
+}
+async function claimLevels(){ if (!Cloud.on) return; const before = rec.coins, row = await cloudCall('claim_levels'); if (!row) return; const got = (Number(row.coins) || 0) - before; if (got > 0){ SFX.catch(); flash(`⭐ 升級獎勵 🪙${got.toLocaleString()}！`, 2); } }
+function lvTick(){
+  if (!rec) return; const L = lvOf(calcXP()); renderLvChip();
+  if (Lv.L != null && L > Lv.L){ flash(`🎉 升級了！Lv.${L}`, 2); SFX.catch(); ticker(`🎉 <b>你</b>升到 Lv.${L} 了！${LV_TITLES.some(([l]) => l === L) ? `得到稱號「${LV_TITLES.find(([l]) => l === L)[1]}」` : ''}`); if (room && room.connected()) room.emit('lvup', { L }).catch(() => {}); setTimeout(claimLevels, 1500); }
+  Lv.L = L;
+  // 成就
+  const done = ACH.filter(achDone).map(a => a.id);
+  if (!Lv.init){ Lv.init = true; for (const id of done) Lv.seen.add(id); LS.set('tide.achInit', true); LS.set('tide.achSeen', [...Lv.seen]); return; }
+  const fresh = done.filter(id => !Lv.seen.has(id));
+  if (fresh.length){ for (const id of fresh) Lv.seen.add(id); LS.set('tide.achSeen', [...Lv.seen]); const a = ACH.find(x => x.id === fresh[0]);
+    flash(`🏅 成就達成：${a.icon} ${a.name}`, 2); SFX.catch(); ticker(`🏅 成就達成：<b>${esc(a.name)}</b>${a.title ? `，得到稱號「${esc(a.title)}」` : ''}${fresh.length > 1 ? `（還有 ${fresh.length - 1} 個）` : ''}`); }
+}
+setInterval(lvTick, 2500);
+function renderAch(body){
+  const xp = calcXP(), L = lvOf(xp), nx = lvNeed(L + 1), k = L >= 99 ? 1 : (xp - lvNeed(L)) / (nx - lvNeed(L));
+  const hd = el('div', 'lvhead'); hd.innerHTML = `<b>⭐ Lv.${L}</b><div class="lvbar"><i style="width:${(k * 100).toFixed(1)}%"></i></div><span>${L >= 99 ? '已經滿級了！' : `經驗 ${xp.toLocaleString()} / ${nx.toLocaleString()}`}</span>`; body.appendChild(hd);
+  body.appendChild(el('p', 'sub', '經驗值：釣到常見魚 +10、稀有魚 +40、傳說魚 +250，放流 +5，水下照片每種 +30。每升一級都有金幣獎勵（Lv × 50），連上雲端時自動發。'));
+  body.appendChild(el('div', 'dexhead', '🏷️ 稱號（顯示在名字上面，大家都看得到）'));
+  const tl = el('div', 'titles'), cur = curTitle();
+  const none = el('button', 'tbtn' + (cur ? ' ghost' : ''), '不顯示'); none.addEventListener('click', () => { Lv.title = ''; LS.set('tide.title', ''); refreshMyName(); pushPresence(true); renderTab(); }); tl.appendChild(none);
+  for (const t of myTitles()){ const b = el('button', 'tbtn' + (cur === t.name ? '' : ' ghost'), t.name); b.title = t.how; b.addEventListener('click', () => { Lv.title = t.name; LS.set('tide.title', t.name); refreshMyName(); pushPresence(true); renderTab(); }); tl.appendChild(b); }
+  body.appendChild(tl);
+  const done = ACH.filter(achDone).length; body.appendChild(el('div', 'dexhead', `🏅 成就（${done} / ${ACH.length}）`));
+  const ul = el('ul', 'shoplist cols ach');
+  for (const a of ACH.slice().sort((x, y) => achDone(y) - achDone(x))){ const ok = achDone(a), g = goalOf(a), c = Math.min(a.cur(), g), li = el('li', ok ? 'on' : 'lock'); li.appendChild(el('span', 'dishic', ok ? a.icon : '🔒'));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', a.name)); d.appendChild(el('div', 'meta', a.desc + (a.title ? `・稱號「${a.title}」` : ''))); 
+    if (!ok){ const pb = el('div', 'achbar'); pb.innerHTML = `<i style="width:${(c / g * 100).toFixed(1)}%"></i><span>${a.kg ? c.toFixed(1) : Math.floor(c).toLocaleString()} / ${a.kg ? g : g.toLocaleString()}</span>`; d.appendChild(pb); }
+    li.appendChild(d); ul.appendChild(li); }
+  body.appendChild(ul);
+}
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
 // 渡船：港口的船夫阿海，可以載你到祕密窩點或外海
 const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'北邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
@@ -4494,6 +4566,7 @@ function presenceObj(){
   if (onIsle) o.is = onIsle.owner;
   if (House.on) o.hs = 1;
   if (Dive.on) o.dv = 1;
+  { let t = ''; try { t = curTitle(); } catch(e){} if (t) o.ti = t; }
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
@@ -4533,6 +4606,7 @@ function applyPeer(pp){
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
+  { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st;
   p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = !!pr.hs; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
@@ -4592,6 +4666,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {});
     room.on('sail', onSail, () => {}); room.on('sailjoin', onSailJoin, () => {});
+    room.on('lvup', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), L = Math.floor(+msg.data.L); if (!p || !(L > 1 && L < 100)) return; ticker(`🎉 <b>${esc(peerName(p))}</b> 升到 Lv.${L} 了！`); }, () => {});
     room.on('gift', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; if (msg.data.to === Cloud.userId) setTimeout(loadFriends, 800); }, () => {});
     room.on('chum', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const d = msg.data, p = peers.get(msg.peer); if (!CHUM_BY_ID[d.ty] || !isFinite(+d.x) || !isFinite(+d.z)) return;
       if (p && (p.isle || null) !== (onIsle ? onIsle.owner : null)) return; addChumZone(+d.x, +d.z, d.ty, msg.peer); if (p && Math.hypot(me.pos.x - d.x, me.pos.z - d.z) < 25) p.fisher.say('🍚', 'emote', 1.5); }, () => {});
@@ -4824,7 +4899,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
+    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
@@ -4916,7 +4991,7 @@ async function initSocial(){
     db.collection('records').orderBy('total', 'desc').limit(20).onSnapshot(s => { lb.total = s.docs.map(d => ({ id:d.id, ...normRec(d.data()) })); if (curTab === 'rank' && !$('#sheet').hidden) renderTab(); }, () => {});
   }
 }
-function refreshMyName(){ me.setName(nickname || (myId && profileNames[myId]) || '你'); }
+function refreshMyName(){ me.setName(nickname || (myId && profileNames[myId]) || '你'); if (me.nm){ let t = ''; try { t = curTitle(); } catch(e){} if (t) me.nm.dataset.title = t; else delete me.nm.dataset.title; } }
 let saving = false, saveAgain = false;
 async function saveRemote(){
   if (!db || !myId || !dbWritable) return;
@@ -5125,6 +5200,8 @@ function renderTab(){
     fq.appendChild(seg);
     fq.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」；「高」會開啟較清晰的陰影和更多花草。`));
     body.appendChild(fq);
+  } else if (curTab === 'ach'){
+    renderAch(body);
   } else if (curTab === 'help'){
     body.appendChild(el('p', 'sub', '歡迎來到潮汐釣魚村！下面是全部的玩法，點標題可以打開或收起來。'));
     const k = el('div', 'kbd');
@@ -5206,6 +5283,11 @@ function renderTab(){
       '鬼抓人：在「玩家」分頁發起，2 個人以上就能玩。被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。',
       '好友：在「玩家」分頁按「加好友」，或輸入朋友的 8 碼好友代碼。互相加好友以後可以送金幣（每天最多 1000）或魚缸裡的魚（每天 10 條），對方在玩家分頁打開禮物就會收到。也可以從好友名單去參觀他的水族館和小島。',
       '遇到不友善的人可以在「玩家」分頁封鎖或檢舉。聊天會自動過濾不雅字。',
+    ]);
+    sec('⭐ 等級、稱號、成就', [
+      '經驗值從你的紀錄算出來：釣到常見魚 +10、稀有魚 +40、傳說魚 +250，放流 +5，水下照片每種 +30。左上角的 ⭐ Lv 點一下就能看進度。',
+      '每升一級都有金幣獎勵（Lv × 50），由伺服器自動發。',
+      `成就有 ${ACH.length} 個（釣魚數量、圖鑑、傳說魚、巨物、賺錢、放流、潛水、小島、服飾、好友、每個釣點全收集）。有些成就和等級會給稱號，在「成就」分頁選一個，名字上面就會顯示，大家都看得到。`,
     ]);
     sec('☁️ 存檔、時間、其他', [
       '紀錄自動存在雲端。到「造型」分頁綁定 Email，換手機或換瀏覽器時就能接回同一份紀錄。',

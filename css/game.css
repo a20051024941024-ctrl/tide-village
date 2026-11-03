@@ -624,3 +624,17 @@ details.help li{margin:4px 0}
 #ferryBar .crew{font-size:12px;font-weight:800;color:var(--sea);background:#e6f3fb;border-radius:999px;padding:2px 8px}
 .teamtgl{display:flex;align-items:center;gap:8px;padding:10px 12px;margin:6px 0;border-radius:14px;background:#e6f3fb;font-size:14px;font-weight:700;cursor:pointer}
 .teamtgl input{width:20px;height:20px;accent-color:var(--sea)}
+
+/* 等級、稱號、成就 */
+#lvChip{display:inline-block;vertical-align:2px;margin-left:8px;font-family:var(--f-body);font-size:11px;letter-spacing:0;line-height:1.5;padding:0 8px;border-radius:999px;white-space:nowrap;cursor:pointer;color:#5a3d00;font-weight:800;background:linear-gradient(90deg,rgba(255,211,106,.75) var(--k,0%),rgba(255,211,106,.25) var(--k,0%))}
+.tag .nm[data-title]::before{content:attr(data-title);display:block;font-size:9.5px;font-weight:800;color:#ffe08a;line-height:1.1;text-align:center}
+.lvhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:#fff6db;margin-bottom:6px}
+.lvhead b{font-family:var(--f-display);font-size:22px;color:#8a5a00}
+.lvhead .lvbar{flex:1;min-width:120px;height:12px;border-radius:999px;background:rgba(138,90,0,.15);overflow:hidden}
+.lvhead .lvbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd36a,#ff9f43)}
+.lvhead span{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.titles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.ach li.lock{opacity:.72}
+.achbar{position:relative;height:14px;border-radius:999px;background:var(--paper-2);overflow:hidden;margin-top:4px}
+.achbar i{display:block;height:100%;background:#9fd0ec}
+.achbar span{position:absolute;inset:0;font-size:10px;line-height:14px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums}
