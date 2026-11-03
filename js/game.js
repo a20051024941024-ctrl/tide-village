@@ -1097,7 +1097,7 @@ function makeAvatar(shirt, hat){
   const blushM = new THREE.MeshBasicMaterial({ color:'#ff9a8f', transparent:true, opacity:0.55, depthWrite:false });
   const add = (geo, m, x, y, z, parent, shadow) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (shadow !== false) o.castShadow = true; (parent || g).add(o); return o; };
   // 腳：圓圓的褲管＋鞋子
-  function leg(x){ const p = new THREE.Group(); p.position.set(x, 0.5, 0); g.add(p); add(G.leg, pants, 0, -0.2, 0, p); const sh = add(G.shoe, shoeM, 0, -0.43, 0.04, p); sh.scale.set(0.95, 0.6, 1.3); return p; }
+  function leg(x){ const p = new THREE.Group(); p.position.set(x, 0.5, 0); g.add(p); p.userData.pants = add(G.leg, pants, 0, -0.2, 0, p); const sh = add(G.shoe, shoeM, 0, -0.43, 0.04, p); sh.scale.set(0.95, 0.6, 1.3); p.userData.shoe = sh; return p; }
   const legL = leg(-0.12), legR = leg(0.12);
   // 身體
   const body = add(G.torso, shirtM, 0, 0.8, 0); body.scale.set(1, 1, 0.86);
@@ -1107,18 +1107,18 @@ function makeAvatar(shirt, hat){
   const head = add(G.head, skin, 0, 0, 0, headG); head.scale.set(1, 0.94, 0.96);
   const hair = add(G.hair, hairM, 0, 0.01, -0.02, headG); hair.rotation.x = -0.42;
   for (const sx of [-1, 1]) add(G.ear, skin, sx * 0.315, -0.02, -0.01, headG);
-  const eyes = [];
+  const eyes = [], shines = [];
   for (const sx of [-1, 1]){
     const e = add(G.eye, ink, sx * 0.115, 0.0, 0.29, headG, false); e.scale.set(0.8, 1.15, 0.5); eyes.push(e);
-    add(G.shine, white, sx * 0.115 + 0.015, 0.025, 0.315, headG, false);
+    shines.push(add(G.shine, white, sx * 0.115 + 0.015, 0.025, 0.315, headG, false));
     const bl = add(G.blush, blushM, sx * 0.19, -0.085, 0.262, headG, false); bl.rotation.y = sx * 0.62;
   }
   const smile = add(G.smile, ink, 0, -0.1, 0.305, headG, false); smile.rotation.z = Math.PI; smile.scale.set(1, 0.8, 1);
   // 漁夫帽
   const hatG = new THREE.Group(); hatG.position.set(0, 1.56, -0.02); hatG.rotation.x = -0.12; g.add(hatG);
-  add(G.brim, hatM, 0, 0, 0, hatG);
-  const crown = add(G.crown, hatM, 0, 0.0, 0, hatG); crown.scale.set(1, 0.72, 1);
-  add(G.band, ink, 0, 0.035, 0, hatG, false);
+  const hatBase = [add(G.brim, hatM, 0, 0, 0, hatG)];
+  const crown = add(G.crown, hatM, 0, 0.0, 0, hatG); crown.scale.set(1, 0.72, 1); hatBase.push(crown);
+  hatBase.push(add(G.band, ink, 0, 0.035, 0, hatG, false));
   // 手：袖子＋圓圓的手
   function arm(x){ const p = new THREE.Group(); p.position.set(x, 1.0, 0); g.add(p); add(G.arm, shirtM, 0, -0.18, 0, p); add(G.hand, skin, 0, -0.4, 0, p); p.rotation.z = Math.sign(x) * 0.08; return p; }
   const armL = arm(-0.33), armR = arm(0.33);
@@ -1129,8 +1129,121 @@ function makeAvatar(shirt, hat){
   const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), mat('#c9d6e3', 0.3, { metalness:0.6 })); reel.rotation.z = Math.PI/2; reel.position.set(0.06, 0.25, 0);
   const tip = new THREE.Object3D(); tip.position.y = 2.3;
   rod.add(pole, grip, reel, tip); rod.rotation.x = 0.95; rod.visible = false; g.add(rod);
-  return { g, legL, legR, armL, armR, rod, tip, pole, shirtM, hatM, eyes, headG, blinkAt: Math.random() * 4 };
+  return { g, legL, legR, armL, armR, rod, tip, pole, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
 }
+/* ================= WARDROBE：服裝（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）================= */
+// 價格要跟 supabase/008_wardrobe.sql 的 _item_price 一樣；價格 0 的是預設，大家都有
+const GEAR_SLOTS = [['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
+const GEAR = [
+  ['hat_sun','草帽',0,'👒'],['hat_none','不戴帽子',0,'🙂'],['hat_cap','棒球帽',250,'🧢'],['hat_beanie','毛線帽',300,'🧶'],['hat_bucket','漁夫帽',350,'🎣'],['hat_cat','貓耳朵',600,'🐱'],['hat_chef','廚師帽',800,'👨‍🍳'],['hat_flower','花環',500,'🌼'],['hat_pirate','海盜帽',1500,'🏴‍☠️'],['hat_crown','皇冠',5000,'👑'],
+  ['top_tee','素 T',0,'👕'],['top_stripe','水手條紋衫',300,'⚓'],['top_apron','食堂圍裙',400,'🍳'],['top_vest','救生衣',500,'🦺'],['top_hoodie','連帽外套',700,'🧥'],['top_hawaii','夏威夷衫',800,'🌺'],['top_suit','帥氣西裝',2500,'🤵'],
+  ['pants_jeans','牛仔褲',0,'👖'],['pants_shorts','短褲',200,'🩳'],['pants_khaki','卡其褲',250,'🟫'],['pants_skirt','格紋裙',500,'👗'],['pants_overalls','吊帶褲',600,'🧑‍🌾'],['pants_rainbow','彩虹褲',1500,'🌈'],
+  ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
+  ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
+  ['acc_none','沒有配件',0,'🙂'],['acc_scarf','紅圍巾',300,'🧣'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
+  ['back_none','沒有背飾',0,'🙂'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
+  ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
+].map(([id, name, price, icon]) => ({ id, slot: id.split('_')[0], name, price, icon }));
+const GEAR_BY_ID = Object.fromEntries(GEAR.map(g => [g.id, g]));
+const GEAR_DEFAULT = { hat:'hat_sun', top:'top_tee', pants:'pants_jeans', shoes:'shoes_boots', socks:'socks_none', acc:'acc_none', back:'back_none', face:'face_normal' };
+function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; } return r; }
+const PANTS_COL = { pants_jeans:'#2f4b63', pants_shorts:'#3f6fa0', pants_khaki:'#c8a873', pants_skirt:'#b8443a', pants_overalls:'#4a78b0', pants_rainbow:'#f6f0e6' };
+const SHOE_COL = { shoes_boots:'#6b4a35', shoes_sandals:'#3fbf9d', shoes_sneakers:'#f4f4f4', shoes_rain:'#f6c83b', shoes_gold:'#e8b730' };
+const RAINBOW = ['#f05a4a', '#ff9f43', '#ffd36a', '#3fbf9d', '#2f89c7', '#9b7bff'];
+function heartShape(s){ const sh = new THREE.Shape(); sh.moveTo(0, -s * 0.9); sh.bezierCurveTo(-s * 1.4, -s * 0.1, -s * 0.9, s * 1.0, 0, s * 0.35); sh.bezierCurveTo(s * 0.9, s * 1.0, s * 1.4, -s * 0.1, 0, -s * 0.9); return sh; }
+function starShape(s){ const sh = new THREE.Shape(); for (let i = 0; i < 10; i++){ const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? s * 0.45 : s; const x = Math.cos(a) * r, y = Math.sin(a) * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); } return sh; }
+function applyGear(av, gear){
+  gear = cleanGear(gear);
+  for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
+  av.gearMeshes = []; av.gearAnim = null;
+  const G = avGeo(), M = (c, r, ex) => mat(c, r == null ? 0.7 : r, ex);
+  const mk = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.g).add(o); av.gearMeshes.push(o); return o; };
+  const hatC = av.hatM, ink = av.inkM, white = M('#ffffff', 0.6);
+  // ---- 帽子 ----
+  for (const b of av.hatBase) b.visible = gear.hat === 'hat_sun';
+  const H = av.hatG, HD = av.headG;
+  switch (gear.hat){
+    case 'hat_cap': { const c = mk(G.crown, hatC, 0, -0.02, 0, H); c.scale.set(1.02, 0.62, 1.02); const v = mk(new THREE.BoxGeometry(0.4, 0.03, 0.26), hatC, 0, -0.01, 0.33, H); v.rotation.x = 0.12; mk(new THREE.SphereGeometry(0.03, 8, 6), hatC, 0, 0.18, 0, H); break; }
+    case 'hat_beanie': { const c = mk(new THREE.SphereGeometry(0.33, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), hatC, 0, -0.06, 0, H); c.scale.set(1, 0.95, 1); const rim = mk(new THREE.TorusGeometry(0.325, 0.045, 8, 22), white, 0, -0.04, 0, H); rim.rotation.x = Math.PI / 2; mk(new THREE.SphereGeometry(0.085, 10, 8), white, 0, 0.27, 0, H); break; }
+    case 'hat_bucket': { mk(new THREE.CylinderGeometry(0.25, 0.31, 0.2, 18), hatC, 0, 0.09, 0, H); mk(new THREE.CylinderGeometry(0.31, 0.44, 0.06, 20), hatC, 0, -0.01, 0, H); mk(new THREE.CylinderGeometry(0.262, 0.262, 0.04, 18), ink, 0, 0.04, 0, H); break; }
+    case 'hat_chef': { mk(new THREE.CylinderGeometry(0.3, 0.3, 0.14, 18), white, 0, 0.04, 0, H); const t = mk(new THREE.SphereGeometry(0.34, 16, 12), white, 0, 0.32, 0, H); t.scale.set(1, 0.75, 1); for (const a of [0, 2.1, 4.2]) mk(new THREE.SphereGeometry(0.16, 10, 8), white, Math.cos(a) * 0.17, 0.42, Math.sin(a) * 0.17, H); break; }
+    case 'hat_cat': { const pink = M('#ffb3c7', 0.6); for (const sx of [-1, 1]){ const e = mk(new THREE.ConeGeometry(0.11, 0.22, 4), hatC, sx * 0.19, 0.3, 0, HD); e.rotation.z = -sx * 0.35; const i2 = mk(new THREE.ConeGeometry(0.06, 0.14, 4), pink, sx * 0.185, 0.29, 0.04, HD); i2.rotation.z = -sx * 0.35; } break; }
+    case 'hat_pirate': { const blk = M('#1d1d24', 0.7); const tr = mk(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 3), blk, 0, 0.0, 0, H); tr.rotation.y = Math.PI; const c = mk(new THREE.CylinderGeometry(0.22, 0.3, 0.24, 18), blk, 0, 0.12, 0, H); mk(new THREE.SphereGeometry(0.055, 10, 8), white, 0, 0.13, 0.27, H); mk(new THREE.BoxGeometry(0.12, 0.02, 0.02), white, 0, 0.07, 0.28, H); const gold = mk(new THREE.TorusGeometry(0.3, 0.012, 4, 3), M('#e8b730', 0.3, { metalness:0.6 }), 0, 0.03, 0, H); gold.rotation.x = Math.PI / 2; break; }
+    case 'hat_flower': { const ring = mk(new THREE.TorusGeometry(0.3, 0.03, 6, 22), M('#5d9c55', 0.8), 0, -0.02, 0, H); ring.rotation.x = Math.PI / 2; const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#b9a4ff']; for (let i = 0; i < 9; i++){ const a = i / 9 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.06, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.3, 0.0, Math.sin(a) * 0.3, H); } break; }
+    case 'hat_crown': { const gold = M('#f2c14e', 0.25, { metalness:0.7, emissive:'#7a5a10', emissiveIntensity:0.25 }); mk(new THREE.CylinderGeometry(0.22, 0.23, 0.12, 16, 1, true), gold, 0, 0.06, 0, H).material.side = THREE.DoubleSide; for (let i = 0; i < 5; i++){ const a = i / 5 * Math.PI * 2; mk(new THREE.ConeGeometry(0.05, 0.12, 4), gold, Math.sin(a) * 0.22, 0.17, Math.cos(a) * 0.22, H); mk(new THREE.SphereGeometry(0.025, 8, 6), M(['#e8473a', '#3fbf9d', '#2f89c7'][i % 3], 0.2), Math.sin(a) * 0.235, 0.06, Math.cos(a) * 0.235, H); } break; }
+  }
+  // ---- 衣服 ----
+  const torsoR = y => { const dy = Math.abs(y - 0.8); return dy <= 0.11 ? 0.25 : Math.sqrt(Math.max(0, 0.0625 - (dy - 0.11) * (dy - 0.11))); };
+  const band = (y, h, c) => { const o = mk(new THREE.CylinderGeometry(torsoR(y) + 0.012, torsoR(y) + 0.012, h, 18), c, 0, y, 0); o.scale.z = 0.88; return o; };
+  const shell = (c, gap) => { const o = mk(new THREE.CylinderGeometry(0.272, 0.27, 0.44, 18, 1, true, gap, Math.PI * 2 - gap * 2), c, 0, 0.82, 0); o.material.side = THREE.DoubleSide; o.scale.z = 0.9; return o; };
+  switch (gear.top){
+    case 'top_stripe': { for (const y of [0.64, 0.76, 0.88, 1.0]) band(y, 0.045, white); const nk = mk(new THREE.ConeGeometry(0.07, 0.14, 3), M('#e8473a', 0.6), 0, 1.02, 0.2); nk.rotation.x = Math.PI; break; }
+    case 'top_vest': { const or = M('#ff7a2a', 0.6); shell(or, 0.32); band(0.72, 0.035, M('#e9eef2', 0.3, { metalness:0.3 })); band(0.92, 0.035, M('#e9eef2', 0.3, { metalness:0.3 })); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.03, 0.05, 0.02), ink, sx * 0.05, 0.82, 0.245); break; }
+    case 'top_hoodie': { const hd = mk(new THREE.SphereGeometry(0.21, 14, 10), av.shirtM, 0, 1.13, -0.17); hd.scale.set(1.25, 0.75, 0.85); mk(new THREE.BoxGeometry(0.24, 0.1, 0.03), av.shirtM, 0, 0.66, 0.225); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.015, 0.16, 0.015), white, sx * 0.06, 0.98, 0.235); break; }
+    case 'top_hawaii': { const cs = ['#ffd36a', '#ffffff', '#f5a5d8', '#3fbf9d']; for (let i = 0; i < 18; i++){ const a = (i * 2.399) % (Math.PI * 2), y = 0.6 + ((i * 0.37) % 1) * 0.42, r = torsoR(y) + 0.005; mk(new THREE.IcosahedronGeometry(0.035, 0), M(cs[i % 4], 0.6), Math.sin(a) * r, y, Math.cos(a) * r * 0.88); } for (const sx of [-1, 1]){ const c = mk(new THREE.BoxGeometry(0.1, 0.02, 0.08), av.shirtM, sx * 0.07, 1.08, 0.17); c.rotation.z = sx * 0.4; } break; }
+    case 'top_apron': { mk(new THREE.BoxGeometry(0.34, 0.46, 0.02), white, 0, 0.72, 0.228); mk(new THREE.BoxGeometry(0.16, 0.08, 0.025), M('#f1e3c8', 0.7), 0, 0.68, 0.24); for (const sx of [-1, 1]){ const st = mk(new THREE.BoxGeometry(0.025, 0.2, 0.02), white, sx * 0.13, 1.02, 0.16); st.rotation.x = -0.5; } break; }
+    case 'top_suit': { const nv = M('#243447', 0.55); shell(nv, 0.42); mk(new THREE.BoxGeometry(0.12, 0.3, 0.02), white, 0, 0.88, 0.235); mk(new THREE.BoxGeometry(0.04, 0.22, 0.025), M('#c9302c', 0.5), 0, 0.86, 0.247); for (const y of [0.7, 0.8]) mk(new THREE.SphereGeometry(0.014, 6, 4), M('#e8b730', 0.3), 0.07, y, 0.24); break; }
+  }
+  // ---- 褲子 ----
+  av.pantsM.color.set(PANTS_COL[gear.pants] || PANTS_COL.pants_jeans);
+  const shorts = gear.pants === 'pants_shorts' || gear.pants === 'pants_skirt';
+  for (const L of [av.legL, av.legR]){
+    const pm = L.userData.pants; pm.scale.y = shorts ? 0.45 : 1; pm.position.y = shorts ? -0.1 : -0.2;
+    if (shorts) mk(new THREE.CylinderGeometry(0.062, 0.058, 0.26, 10), av.skinM, 0, -0.29, 0, L);
+    if (gear.pants === 'pants_rainbow') RAINBOW.forEach((c, i) => mk(new THREE.CylinderGeometry(0.094, 0.094, 0.05, 12), M(c, 0.7), 0, -0.06 - i * 0.055, 0, L));
+  }
+  if (gear.pants === 'pants_skirt'){ const sk = mk(new THREE.CylinderGeometry(0.26, 0.34, 0.24, 18), av.pantsM, 0, 0.47, 0); sk.scale.z = 0.9; for (const y of [0.41, 0.5]){ const b = mk(new THREE.CylinderGeometry(0.3 + (0.47 - y) * 0.3, 0.3 + (0.47 - y) * 0.3, 0.02, 18), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.9; } }
+  if (gear.pants === 'pants_overalls'){ mk(new THREE.BoxGeometry(0.3, 0.24, 0.03), av.pantsM, 0, 0.74, 0.225); for (const sx of [-1, 1]){ const st = mk(new THREE.BoxGeometry(0.04, 0.34, 0.03), av.pantsM, sx * 0.11, 0.95, 0.12); st.rotation.x = -0.55; mk(new THREE.SphereGeometry(0.022, 6, 4), M('#e8b730', 0.3), sx * 0.11, 0.84, 0.245); } }
+  // ---- 鞋子 ----
+  av.shoeM.color.set(SHOE_COL[gear.shoes] || SHOE_COL.shoes_boots); av.shoeM.metalness = gear.shoes === 'shoes_gold' ? 0.7 : 0.04; av.shoeM.roughness = gear.shoes === 'shoes_gold' ? 0.25 : 0.7;
+  for (const L of [av.legL, av.legR]){
+    const sh = L.userData.shoe; sh.scale.set(0.95, gear.shoes === 'shoes_sandals' ? 0.32 : 0.6, 1.3); sh.position.y = gear.shoes === 'shoes_sandals' ? -0.46 : -0.43;
+    if (gear.shoes === 'shoes_rain') mk(new THREE.CylinderGeometry(0.1, 0.105, 0.2, 12), av.shoeM, 0, -0.33, 0.01, L);
+    if (gear.shoes === 'shoes_sneakers'){ mk(new THREE.BoxGeometry(0.2, 0.03, 0.22), M('#e8473a', 0.6), 0, -0.45, 0.04, L); }
+    if (gear.shoes === 'shoes_sandals'){ mk(new THREE.SphereGeometry(0.075, 10, 8), av.skinM, 0, -0.42, 0.06, L).scale.set(1, 0.6, 1.4); }
+    // ---- 襪子 ----
+    if (gear.socks !== 'socks_none' && gear.shoes !== 'shoes_rain'){
+      const hgt = shorts ? 0.15 : 0.06, y0 = -0.36 + hgt / 2 - 0.01;
+      const cs = gear.socks === 'socks_white' ? ['#ffffff'] : gear.socks === 'socks_stripe' ? ['#ffffff', '#e8473a'] : RAINBOW;
+      const n = gear.socks === 'socks_white' ? 1 : shorts ? cs.length : Math.min(2, cs.length);
+      for (let i = 0; i < n; i++) mk(new THREE.CylinderGeometry(0.068, 0.068, hgt / n, 12), M(cs[i % cs.length], 0.7), 0, y0 + hgt / 2 - (i + 0.5) * hgt / n, 0, L);
+    }
+  }
+  // ---- 配件 ----
+  switch (gear.acc){
+    case 'acc_scarf': { const red = M('#e8473a', 0.75); const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), red, 0, 1.1, 0); r.rotation.x = Math.PI / 2; const tl = mk(new THREE.BoxGeometry(0.09, 0.24, 0.05), red, 0.1, 0.96, 0.2); tl.rotation.z = 0.25; for (const y of [0.9, 0.97]) mk(new THREE.BoxGeometry(0.095, 0.02, 0.055), white, 0.1 + (0.96 - y) * 0.25, y, 0.2); break; }
+    case 'acc_bowtie': { const red = M('#c9302c', 0.5); for (const sx of [-1, 1]){ const c = mk(new THREE.ConeGeometry(0.05, 0.09, 4), red, sx * 0.05, 1.08, 0.2); c.rotation.z = sx * Math.PI / 2; } mk(new THREE.SphereGeometry(0.025, 8, 6), red, 0, 1.08, 0.21); break; }
+    case 'acc_glasses': { const fr = M('#5a3a24', 0.4); for (const sx of [-1, 1]) mk(new THREE.TorusGeometry(0.062, 0.011, 6, 16), fr, sx * 0.115, 0.0, 0.31, HD); mk(new THREE.BoxGeometry(0.07, 0.012, 0.012), fr, 0, 0.01, 0.315, HD); break; }
+    case 'acc_shell': { const pearl = M('#fbf3ea', 0.3); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.018, 6, 4), pearl, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); } const sh2 = mk(new THREE.ConeGeometry(0.05, 0.07, 7), M('#f5a5d8', 0.4), 0, 0.98, 0.21); sh2.rotation.x = Math.PI; break; }
+    case 'acc_lei': { const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#ff9f43']; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.045, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.21, 1.06 - Math.max(0, Math.sin(a)) * 0.1, Math.sin(a) * 0.19); } break; }
+  }
+  // ---- 背飾 ----
+  switch (gear.back){
+    case 'back_bag': { const c = M('#f17b6d', 0.7); mk(new THREE.BoxGeometry(0.3, 0.32, 0.14), c, 0, 0.84, -0.27); mk(new THREE.BoxGeometry(0.31, 0.12, 0.15), M('#d8604f', 0.7), 0, 0.96, -0.27); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.04, 0.36, 0.03), c, sx * 0.1, 0.84, 0.2).rotation.x = 0.1; break; }
+    case 'back_basket': { const w = M('#c99a5b', 0.85); mk(new THREE.CylinderGeometry(0.15, 0.12, 0.3, 12), w, 0, 0.82, -0.32); for (const y of [0.74, 0.84, 0.94]) mk(new THREE.TorusGeometry(0.14, 0.012, 4, 14), M('#9b6a42', 0.8), 0, y, -0.32).rotation.x = Math.PI / 2; const tail = mk(new THREE.ConeGeometry(0.06, 0.14, 4), M('#2f6fb5', 0.6), 0.04, 1.03, -0.32); tail.rotation.z = 0.4; break; }
+    case 'back_cape': { const red = M('#c9302c', 0.65, { side:THREE.DoubleSide }); const c = mk(new THREE.PlaneGeometry(0.56, 0.8, 1, 4), red, 0, 0.72, -0.25); c.rotation.x = 0.12; mk(new THREE.TorusGeometry(0.16, 0.03, 6, 14), M('#e8b730', 0.3, { metalness:0.5 }), 0, 1.1, -0.02).rotation.x = Math.PI / 2;
+      av.gearAnim = (t, sp) => { c.rotation.x = 0.12 + Math.min(1, sp / 5) * 0.7 + Math.sin(t * 6) * 0.04 * (0.3 + sp / 5); }; break; }
+    case 'back_wings': { const wm = M('#ffffff', 0.5, { emissive:'#fff6d8', emissiveIntensity:0.25, side:THREE.DoubleSide }), ws = [];
+      for (const sx of [-1, 1]){ const pv = new THREE.Group(); pv.position.set(sx * 0.08, 0.95, -0.24); av.g.add(pv); av.gearMeshes.push(pv); for (let i = 0; i < 3; i++){ const f = new THREE.Mesh(new THREE.SphereGeometry(0.2 - i * 0.04, 10, 8), wm); f.scale.set(1, 0.42, 0.12); f.position.set(sx * (0.17 + i * 0.07), 0.05 - i * 0.09, 0); f.castShadow = true; pv.add(f); } ws.push([pv, sx]); }
+      av.gearAnim = t => { for (const [pv, sx] of ws) pv.rotation.y = sx * (0.45 + Math.sin(t * 3.2) * 0.25); }; break; }
+    case 'back_balloon': { const str = mk(new THREE.CylinderGeometry(0.004, 0.004, 1.2, 4), M('#ffffff', 0.5), 0.3, 1.55, -0.1); const bg = new THREE.Group(); bg.position.set(0.32, 2.2, -0.12); av.g.add(bg); av.gearMeshes.push(bg);
+      const pm = M('#ff8fb0', 0.35); const b = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), pm); b.scale.set(1.3, 0.9, 0.8); bg.add(b); const tl = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.2, 4), pm); tl.rotation.z = Math.PI / 2; tl.position.x = -0.3; bg.add(tl); const ey = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), ink); ey.position.set(0.15, 0.05, 0.14); bg.add(ey);
+      av.gearAnim = t => { bg.position.y = 2.2 + Math.sin(t * 1.7) * 0.05; bg.rotation.z = Math.sin(t * 1.3) * 0.15; str.rotation.z = Math.sin(t * 1.3) * 0.05; }; break; }
+  }
+  // ---- 表情 ----
+  const eyesOn = gear.face === 'face_normal' || gear.face === 'face_wink';
+  av.eyes.forEach((e, i) => e.visible = eyesOn && !(gear.face === 'face_wink' && i === 1)); av.shines.forEach((e, i) => e.visible = eyesOn && !(gear.face === 'face_wink' && i === 1));
+  const arcEye = (sx, flip) => { const a = mk(G.smile, ink, sx * 0.115, 0.0, 0.305, HD); a.scale.set(1.15, 1.15, 1); if (flip) a.rotation.z = Math.PI; return a; };
+  switch (gear.face){
+    case 'face_happy': arcEye(-1); arcEye(1); break;
+    case 'face_wink': arcEye(1); break;
+    case 'face_sleepy': for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.08, 0.014, 0.01), ink, sx * 0.115, -0.01, 0.312, HD); break;
+    case 'face_cool': { const blk = M('#141820', 0.25, { metalness:0.5 }); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.135, 0.075, 0.02), blk, sx * 0.115, 0.01, 0.31, HD); mk(new THREE.BoxGeometry(0.06, 0.015, 0.015), blk, 0, 0.03, 0.315, HD); break; }
+    case 'face_heart': { const hm = new THREE.MeshBasicMaterial({ color:'#ff4d6d' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(heartShape(0.055)), hm, sx * 0.115, 0.01, 0.318, HD); break; }
+    case 'face_star': { const sm = new THREE.MeshBasicMaterial({ color:'#ffc93c' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(starShape(0.065)), sm, sx * 0.115, 0.01, 0.318, HD); break; }
+  }
+}
+
 function makeBobber(){
   const g = new THREE.Group();
   const top = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8, 0, Math.PI*2, 0, Math.PI/2), mat('#e8473a', 0.4));
@@ -1459,6 +1572,7 @@ class Fisher {
     if (!CLASSIC){ this.blob = new THREE.Mesh(BLOB_GEO, BLOB_MAT); this.blob.renderOrder = 1; scene.add(this.blob); }
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
+  setGear(gear){ const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
   setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.av.pole.material.color.set(r.color); } }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubUntil = now() + (secs || 5); }
@@ -1480,6 +1594,7 @@ class Fisher {
     if (this.sitting){ a.legL.rotation.x = a.legR.rotation.x = -1.45; }
     else if (this.air > 0.05){ a.legL.rotation.x = -0.55; a.legR.rotation.x = 0.35; }
     a.g.rotation.y = this.rot;
+    if (a.gearAnim) a.gearAnim(t, this.speed || 0);
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * (this.speed < 0.3 ? 1 : 0); }
     a.rod.visible = this.fishing;
     if (this.fishing){
@@ -2654,11 +2769,52 @@ function nearShop(){
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
 function openShop(sh){ ensureAudio(); if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+// ---- 服飾店：買、穿、試穿 ----
+const Wardrobe = { slot:'hat', trying:null, tryTimer:0 };
+function ownsGear(id){ const it = GEAR_BY_ID[id]; return !!it && (it.price === 0 || rec.owned.includes(id)); }
+function wearGear(id){
+  const it = GEAR_BY_ID[id]; if (!it || !ownsGear(id)) return;
+  endTryOn(); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
+  cloudCall('set_gear', { p_gear: rec.gear }); renderTab();
+}
+function buyGear(id){
+  const it = GEAR_BY_ID[id]; if (!it || ownsGear(id)) return;
+  if (rec.coins < it.price){ toast(`金幣不夠，還差 🪙${(it.price - rec.coins).toLocaleString()}`); return; }
+  endTryOn(); rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); addCoins(-it.price); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
+  cloudCall('buy_item', { p_item: id }); SFX.catch(); flash(`${it.icon} 買了${it.name}！`, 1.4); renderTab();
+}
+function tryOn(id){
+  const it = GEAR_BY_ID[id]; if (!it) return;
+  Wardrobe.trying = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); me.setGear(Wardrobe.trying); pushPresence(true);
+  closeSheet(); cam.yaw = me.rot; cam.pitch = 0.12; cam.dist = Math.min(cam.dist, 4.2);   // 轉到正面看自己
+  flash(`試穿中：${it.icon} ${it.name}`, 1.6); clearTimeout(Wardrobe.tryTimer);
+  Wardrobe.tryTimer = setTimeout(() => { endTryOn(); toast('試穿結束，喜歡的話到服飾那裡買下來'); }, 6000);
+}
+function endTryOn(){ if (!Wardrobe.trying) return; clearTimeout(Wardrobe.tryTimer); Wardrobe.trying = null; me.setGear(rec.gear); pushPresence(true); }
+function renderWardrobe(body){
+  body.appendChild(el('p', 'sub', '買了就是你的，可以隨時換穿。按「試穿」可以先穿 6 秒看看。大家都看得到你的打扮！'));
+  const seg = el('div', 'seg wseg');
+  for (const [k, l] of GEAR_SLOTS){ const b = el('button', '', l); b.setAttribute('aria-pressed', String(Wardrobe.slot === k)); b.addEventListener('click', () => { Wardrobe.slot = k; renderTab(); }); seg.appendChild(b); }
+  body.appendChild(seg);
+  const ul = el('ul', 'shoplist cols');
+  for (const it of GEAR.filter(g => g.slot === Wardrobe.slot)){
+    const on = cleanGear(rec.gear)[it.slot] === it.id, own = ownsGear(it.id), li = el('li', on ? 'on' : '');
+    li.appendChild(el('span', 'dishic', it.icon));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', it.name)); d.appendChild(el('div', 'sub2', on ? '穿著中' : own ? (it.price ? '已擁有' : '免費') : `🪙 ${it.price.toLocaleString()}`)); li.appendChild(d);
+    const acts = el('div', 'tacts');
+    if (!on && own){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearGear(it.id)); acts.appendChild(b); }
+    if (!own){ const t = el('button', 'tbtn ghost', '試穿'); t.addEventListener('click', () => tryOn(it.id)); acts.appendChild(t);
+      const b = el('button', 'tbtn' + (rec.coins < it.price ? ' ghost' : ''), '買'); b.addEventListener('click', () => buyGear(it.id)); acts.appendChild(b); }
+    li.appendChild(acts); ul.appendChild(li);
+  }
+  body.appendChild(ul);
+}
 function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   const seg = el('div', 'seg');
-  [['sell','賣魚'],['rod','釣竿'],['bait','魚餌']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
+  [['sell','賣魚'],['rod','釣竿'],['bait','魚餌'],['wear','服飾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
+  if (shopMode === 'wear'){ renderWardrobe(body); return; }
   if (shopMode === 'sell'){
     const locked = new Set(rec.show || []);
     const list = rec.tank.filter(x => !locked.has(x.t)).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
@@ -2726,7 +2882,7 @@ function afterSell(got, n){
   logMsg('', `你賣了 ${n} 條魚，得到 ${got} 金幣`, true); renderTab();
 }
 
-function emptyRec(){ return { island:{ h:{}, d:{} }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
+function emptyRec(){ return { gear:{}, owned:[], island:{ h:{}, d:{} }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
 const SHOW_MAX = 100, KEEP_MAX = 200;
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || ++others <= KEEP_MAX); }
@@ -2740,6 +2896,8 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => GEAR_BY_ID[id] && GEAR_BY_ID[id].price > 0))];
+  { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (it.price > 0 && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
@@ -2749,7 +2907,7 @@ function normRec(r){
   return e;
 }
 let rec = normRec(LS.get('tide.rec', null));
-me.setRod(rec.rod); renderCoins(); setTimeout(renderBuff, 0);
+me.setRod(rec.rod); me.setGear(rec.gear); renderCoins(); setTimeout(renderBuff, 0);
 function recordCatch(f, w){
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
@@ -3051,6 +3209,7 @@ function presenceObj(){
   if (myId) o.u = myId;
   if (myBoat) o.bt = 1;
   if (mySeat) o.st = 1;
+  { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
@@ -3089,6 +3248,7 @@ function applyPeer(pp){
   if (pos){ p.target.set(clamp(+pos[0]||0, -90, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, -0.2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
+  p.fisher.setGear(cleanGear(pr.gr));
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   p.fisher.sitting = !!pr.bt || !!pr.st;
   p.isle = typeof pr.is === 'string' ? pr.is : null;   // 不在同一座島上的人看不到
@@ -3262,16 +3422,16 @@ const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
 const Cloud = { sb:null, on:false, status:'connecting', err:'', userId:null, email:null, isAnon:true, queue:Promise.resolve(), pending:0, board:{ best:[], total:[], earned:[] }, ui:{ step:'idle', mode:'bind', email:'', busy:false, msg:'' } };
 function rowToRec(r){
   return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
-    island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, updatedAt:Date.parse(r.updated_at) || Date.now() });
+    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, updatedAt:Date.parse(r.updated_at) || Date.now() });
 }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   rec = rowToRec(row); rec.island = cleanIsland(rec.island); LS.set('tide.rec', rec); buildTank();
-  if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); pushPresence(true);
+  if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西'];
+const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這個商品', '還沒有買這個', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -3644,6 +3804,7 @@ function renderTab(){
     const f2 = el('div', 'field'); f2.appendChild(el('label', '', '帽子顏色')); const s2 = el('div', 'swatches');
     HATS.forEach(c => { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', '帽子 ' + c); b.setAttribute('aria-pressed', String(look.hat === c)); b.addEventListener('click', () => { look.hat = c; saveLook(); renderTab(); }); s2.appendChild(b); });
     f2.appendChild(s2); body.appendChild(f2);
+    { const fw = el('div', 'field'); fw.appendChild(el('label', '', `👗 服裝（🪙 ${rec.coins.toLocaleString()}）`)); body.appendChild(fw); renderWardrobe(body); }
     const f3 = el('div', 'field'); const lab = el('label', '', '暱稱'); lab.htmlFor = 'nickIn'; f3.appendChild(lab);
     const inp = el('input', 'txt'); inp.id = 'nickIn'; inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳';
     inp.addEventListener('change', () => { nickname = clean(inp.value.trim().slice(0, 16)); inp.value = nickname; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); cloudProfile(); });
