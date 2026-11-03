@@ -95,6 +95,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 .rodsw{width:12px;height:42px;border-radius:6px;flex:none}
 .rodsw.bait0{background:#c8b48a}.rodsw.bait-glow{background:linear-gradient(#9fe3ff,#4fc2cf)}.rodsw.bait-gold{background:linear-gradient(#ffe48a,#e5a52f)}
 .tbtn.warn{background:var(--coral)}
+.cloudbox{background:rgba(255,211,106,.12);border-radius:12px;padding:10px 12px}
+.warnmsg{color:var(--coral)}
+.cloudbox .tankbar{flex-wrap:wrap;gap:8px}
 .tbtn[disabled]{opacity:.6}
 #online .dot{width:8px;height:8px;border-radius:50%;background:#9fb3bf}
 #online.live .dot{background:#38c172;box-shadow:0 0 0 3px rgba(56,193,114,.2)}
@@ -2408,7 +2411,7 @@ function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
   // 用掉一個魚餌
   const bt = curBait(); F.baitUsed = bt;
-  if (bt){ rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
+  if (bt){ cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
   const dist = 3 + c * 4.5;
   const cp = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, dist);
   const to = new THREE.Vector3(cp[0] + rand(-0.3,0.3), 0.12, cp[1] + rand(-0.3,0.3));
@@ -2551,11 +2554,13 @@ function curRod(){ return RODS.find(r => r.id === rec.rod) || RODS[0]; }
 function curBait(){ const b = BAITS.find(b => b.id === rec.baitOn); return b && (rec.bait[b.id] || 0) > 0 ? b : null; }
 function renderCoins(){ const t = $('#coinTxt'); if (t) t.textContent = rec.coins.toLocaleString(); }
 function addCoins(n){ rec.coins = Math.max(0, rec.coins + n); saveRecLocal(); renderCoins(); const c = $('#coins'); if (c){ c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); } }
-function sellFish(ts){
+function sellFish(ts, batch){
   const i = rec.tank.findIndex(x => x.t === ts); if (i < 0) return 0;
   const x = rec.tank[i], f = FISH_BY_ID[x.f], price = fishPrice(f, x.w);
   rec.tank.splice(i, 1); if (rec.show) rec.show = rec.show.filter(t => t !== ts);
-  rec.sold++; rec.earned += price; addCoins(price); return price;
+  rec.sold++; rec.earned += price; addCoins(price);
+  if (!batch) cloudCall('sell_fish', { p_ts: [ts] });
+  return price;
 }
 const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'海邊商店', mode:'sell' } ];
 function nearShop(){
@@ -2578,7 +2583,7 @@ function renderShop(body){
     const commons = list.filter(x => FISH_BY_ID[x.f].rarity === '常見'), csum = commons.reduce((a, x) => a + fishPrice(FISH_BY_ID[x.f], x.w), 0);
     if (commons.length){
       const all = el('button', 'tbtn' + (sellConfirm ? ' warn' : ''), sellConfirm ? `確定賣掉 ${commons.length} 條常見魚？` : `賣掉全部常見魚（${commons.length} 條，+${csum}）`);
-      all.addEventListener('click', () => { if (!sellConfirm){ sellConfirm = 1; renderTab(); return; } let got = 0; for (const x of commons) got += sellFish(x.t); sellConfirm = 0; afterSell(got, commons.length); });
+      all.addEventListener('click', () => { if (!sellConfirm){ sellConfirm = 1; renderTab(); return; } let got = 0; for (const x of commons) got += sellFish(x.t, true); cloudCall('sell_fish', { p_ts: commons.map(x => x.t) }); sellConfirm = 0; afterSell(got, commons.length); });
       const bar = el('div', 'tankbar'); bar.appendChild(all); body.appendChild(bar);
     }
     const ul = el('ul', 'shoplist cols');
@@ -2599,8 +2604,10 @@ function renderShop(body){
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name)); d.appendChild(el('div', 'meta', r.desc)); li.appendChild(d);
       const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '使用中' : owned ? '換上' : `買 🪙${r.price.toLocaleString()}`);
       b.disabled = using;
-      b.addEventListener('click', () => {
-        if (!owned){ if (rec.coins < r.price){ toast(`金幣不夠，還差 🪙${(r.price - rec.coins).toLocaleString()}`); return; } rec.rods.push(r.id); addCoins(-r.price); SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); }
+      b.addEventListener('click', async () => {
+        if (!owned && rec.coins < r.price){ toast(`金幣不夠，還差 🪙${(r.price - rec.coins).toLocaleString()}`); return; }
+        if (Cloud.on){ b.disabled = true; b.textContent = '處理中…'; const row = await cloudCall('buy_rod', { p_rod: r.id }); if (row && !owned){ SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); } renderTab(); return; }   // 由伺服器確認金幣
+        if (!owned){ rec.rods.push(r.id); addCoins(-r.price); SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); }
         rec.rod = r.id; saveRecLocal(); me.setRod(r.id); pushPresence(true); renderTab();
       });
       li.appendChild(b); ul.appendChild(li);
@@ -2611,16 +2618,19 @@ function renderShop(body){
     const ul = el('ul', 'shoplist');
     const none = el('li', !curBait() ? 'on' : ''); none.appendChild(el('span', 'rodsw bait0'));
     const d0 = el('div', 'tinfo'); d0.appendChild(el('div', 'n', '普通魚餌')); d0.appendChild(el('div', 'meta', '免費、用不完。')); none.appendChild(d0);
-    const b0 = el('button', 'tbtn' + (!curBait() ? ' ghost' : ''), !curBait() ? '使用中' : '換上'); b0.disabled = !curBait(); b0.addEventListener('click', () => { rec.baitOn = null; saveRecLocal(); renderTab(); }); none.appendChild(b0); ul.appendChild(none);
+    const b0 = el('button', 'tbtn' + (!curBait() ? ' ghost' : ''), !curBait() ? '使用中' : '換上'); b0.disabled = !curBait(); b0.addEventListener('click', () => { rec.baitOn = null; saveRecLocal(); renderTab(); cloudCall('set_bait', { p_bait: null }); }); none.appendChild(b0); ul.appendChild(none);
     for (const bt of BAITS){
       const n = rec.bait[bt.id] || 0, using = rec.baitOn === bt.id && n > 0, li = el('li', using ? 'on' : '');
       li.appendChild(el('span', 'rodsw bait-' + bt.id));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${bt.name}　×${n}`)); d.appendChild(el('div', 'meta', `${bt.desc} 一包 ${bt.pack} 個。`)); li.appendChild(d);
       const acts = el('div', 'tacts');
       const buy = el('button', 'tbtn', `買一包 🪙${bt.price}`);
-      buy.addEventListener('click', () => { if (rec.coins < bt.price){ toast(`金幣不夠，還差 🪙${bt.price - rec.coins}`); return; } rec.bait[bt.id] = n + bt.pack; if (!curBait()) rec.baitOn = bt.id; addCoins(-bt.price); SFX.chat(); renderTab(); });
+      buy.addEventListener('click', async () => {
+        if (rec.coins < bt.price){ toast(`金幣不夠，還差 🪙${bt.price - rec.coins}`); return; }
+        if (Cloud.on){ buy.disabled = true; buy.textContent = '處理中…'; const row = await cloudCall('buy_bait', { p_bait: bt.id }); if (row) SFX.chat(); renderTab(); return; }
+        rec.bait[bt.id] = n + bt.pack; if (!curBait()) rec.baitOn = bt.id; addCoins(-bt.price); SFX.chat(); renderTab(); });
       acts.appendChild(buy);
-      if (n > 0 && !using){ const u = el('button', 'tbtn ghost', '換上'); u.addEventListener('click', () => { rec.baitOn = bt.id; saveRecLocal(); renderTab(); }); acts.appendChild(u); }
+      if (n > 0 && !using){ const u = el('button', 'tbtn ghost', '換上'); u.addEventListener('click', () => { rec.baitOn = bt.id; saveRecLocal(); renderTab(); cloudCall('set_bait', { p_bait: bt.id }); }); acts.appendChild(u); }
       li.appendChild(acts); ul.appendChild(li);
     }
     body.appendChild(ul);
@@ -2662,6 +2672,7 @@ function recordCatch(f, w){
   rec.tank.unshift({ f: f.id, w, t: Date.now() }); trimTank();
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
+  cloudCall('record_catch', { p_fish: f.id, p_weight: w });
   return { isNew, isBest: isBest && !isNew };
 }
 
@@ -2993,6 +3004,150 @@ async function pjStart(mode, code){
 }
 function pjLeave(){ if (room && pjMode){ try { room.leave(); } catch(e){} } clearInterval(roomTimer); clearPeers(); room = null; pjMode = false; try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} setOnline(); logMsg('系統', '你離開了房間，現在是單人模式。', true); }
 function autoJoinCode(){ const m = /room=([A-Za-z]{5})/.exec(location.hash || ''); if (m && pjAvailable()) pjStart('join', m[1].toUpperCase()); }
+/* ================= CLOUD：Supabase 雲端存檔＋伺服器驗證 ================= */
+// 玩家資料由伺服器保管：釣到魚、賣魚、買東西都會送到伺服器檢查，結果以伺服器為準。
+// 這把 publishable key 本來就是要放在網頁上的；資料表只能透過 supabase/schema.sql 裡的函式修改。
+const SUPABASE_URL = 'https://mfaskrjcxofwkusrzkhb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
+const Cloud = { sb:null, on:false, status:'connecting', err:'', userId:null, email:null, isAnon:true, queue:Promise.resolve(), pending:0, board:{ best:[], total:[], earned:[] }, ui:{ step:'idle', mode:'bind', email:'', busy:false, msg:'' } };
+function rowToRec(r){
+  return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
+    coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, updatedAt:Date.parse(r.updated_at) || Date.now() });
+}
+function adoptRow(row){
+  if (!row || typeof row !== 'object') return;
+  rec = rowToRec(row); LS.set('tide.rec', rec); buildTank(); renderCoins(); me.setRod(rec.rod); pushPresence(true);
+  if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style'].includes(curTab) && !Cloud.ui.busy) renderTab();
+}
+const CLOUD_ERR = ['還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌'];
+// 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
+function cloudCall(fn, args){
+  if (!Cloud.on) return Promise.resolve(null);
+  Cloud.pending++;
+  const job = Cloud.queue.then(async () => {
+    let data = null, error = null;
+    try { ({ data, error } = await Cloud.sb.rpc(fn, args || {})); } catch(e){ error = e; }
+    Cloud.pending--;
+    if (error){
+      const m = String(error.message || error); const known = CLOUD_ERR.find(k => m.includes(k));
+      toast(known ? `伺服器：${esc(known)}` : '暫時連不上雲端，這個動作沒有存到。');
+      console.warn('cloud', fn, m);
+      if (Cloud.pending === 0) cloudRefresh();
+      return null;
+    }
+    if (Cloud.pending === 0) adoptRow(data);
+    if (fn === 'record_catch' || fn === 'sell_fish' || fn === 'set_profile'){ clearTimeout(Cloud.boardT); Cloud.boardT = setTimeout(loadBoard, 4000); }
+    return data;
+  });
+  Cloud.queue = job.catch(() => {});
+  return job;
+}
+async function cloudRefresh(){ try { const { data, error } = await Cloud.sb.rpc('ensure_player'); if (!error) adoptRow(data); } catch(e){} }
+function setCloudUser(u){ Cloud.userId = u.id; Cloud.email = u.email || (u.new_email || null); Cloud.isAnon = !!u.is_anonymous && !u.email; if (!myId) myId = u.id; }
+async function cloudLoad(allowImport){
+  let { data:row, error } = await Cloud.sb.rpc('ensure_player'); if (error) throw error;
+  if (allowImport && row && row.total === 0 && !row.imported && rec.total > 0){
+    const r2 = await Cloud.sb.rpc('import_local', { p: { best:rec.best, count:rec.count, tank:rec.tank, coins:rec.coins, rods:rec.rods, rod:rec.rod } });
+    if (!r2.error && r2.data){ row = r2.data; toast('已把這台裝置的紀錄存到雲端 ☁️'); }
+  }
+  adoptRow(row);
+  // 暱稱和造型以這台裝置的設定為準
+  if (row && (nickname && row.nickname !== nickname || row.shirt !== look.shirt || row.hat !== look.hat)) cloudProfile();
+}
+let profTimer = 0;
+function cloudProfile(){ if (!Cloud.on && !Cloud.sb) return; clearTimeout(profTimer); profTimer = setTimeout(() => { if (Cloud.sb) Cloud.sb.rpc('set_profile', { p_nick: nickname || '', p_shirt: look.shirt, p_hat: look.hat }).then(() => loadBoard()).catch(() => {}); }, 800); }
+async function loadBoard(){
+  if (!Cloud.sb) return;
+  const cols = 'id,nickname,best_w,best_fish,total,legend,fish_count,earned';
+  const q = (col) => Cloud.sb.from('players').select(cols).gt('total', 0).order(col, { ascending:false }).limit(20);
+  try {
+    const [a, b, c] = await Promise.all([q('best_w'), q('total'), q('earned')]);
+    const map = r => ({ id:r.id, name:r.nickname, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, total:r.total, legend:r.legend, count:r.fish_count || {}, earned:r.earned || 0 });
+    if (!a.error) Cloud.board.best = a.data.map(map); if (!b.error) Cloud.board.total = b.data.map(map); if (!c.error) Cloud.board.earned = c.data.map(map);
+    if (curTab === 'rank' && !$('#sheet').hidden) renderTab();
+  } catch(e){}
+}
+async function cloudInit(){
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm');
+    const sb = mod.createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storageKey:'tide.auth' } });
+    Cloud.sb = sb;
+    let { data:{ session } } = await sb.auth.getSession();
+    if (!session){
+      const { data, error } = await sb.auth.signInAnonymously();
+      if (error) throw new Error(/anonymous/i.test(error.message) ? '伺服器還沒開啟訪客登入' : error.message);
+      session = data.session;
+    }
+    setCloudUser(session.user);
+    sb.auth.onAuthStateChange((ev, ss) => { if (ss && ss.user) setCloudUser(ss.user); });
+    await cloudLoad(true);
+    Cloud.on = true; Cloud.status = 'on';
+    loadBoard(); setInterval(loadBoard, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && Cloud.on) cloudRefresh(); });
+  } catch(e){
+    Cloud.status = 'error'; Cloud.err = String(e && e.message || e); console.warn('cloud off', Cloud.err);
+  }
+  if (!$('#sheet').hidden && curTab === 'style') renderTab();
+}
+// ---- Email 驗證碼：綁定（保存這份紀錄）或在別的裝置登入 ----
+async function cloudSendCode(email, mode){
+  const sb = Cloud.sb;
+  if (mode === 'bind'){ const { error } = await sb.auth.updateUser({ email }); if (error) throw error; return; }
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } }); if (error) throw error;
+}
+async function cloudVerify(email, token, mode){
+  const { data, error } = await Cloud.sb.auth.verifyOtp({ email, token, type: mode === 'bind' ? 'email_change' : 'email' });
+  if (error) throw error;
+  if (data && data.user) setCloudUser(data.user);
+  if (mode === 'login'){ myId = Cloud.userId; await cloudLoad(false); loadBoard(); }
+}
+function cloudErrText(e){
+  const m = String(e && e.message || e);
+  if (/rate|security purposes|too many/i.test(m)) return '寄信太頻繁了，等一下再試。';
+  if (/expired|invalid/i.test(m)) return '驗證碼不對或已過期，請重新寄一次。';
+  if (/already.*registered|already been registered|exists/i.test(m)) return '這個 Email 已經綁定過別的紀錄了，請改用「我已經保存過，登入」。';
+  if (/signups not allowed|not found|user not found/i.test(m)) return '這個 Email 還沒有保存過紀錄。';
+  return '發生錯誤：' + m;
+}
+function renderCloudBox(body){
+  const box = el('div', 'field cloudbox'); box.appendChild(el('label', '', '雲端存檔'));
+  const U = Cloud.ui;
+  if (Cloud.status === 'connecting'){ box.appendChild(el('p', 'sub', '正在連線到雲端…')); body.appendChild(box); return; }
+  if (!Cloud.on){ box.appendChild(el('p', 'sub', `目前沒有連上雲端，紀錄只存在這個瀏覽器。${Cloud.err ? '（' + Cloud.err + '）' : ''}`)); body.appendChild(box); return; }
+  if (!Cloud.isAnon && Cloud.email){
+    box.appendChild(el('p', 'sub', `✅ 已保存到 ${Cloud.email}。換手機或換瀏覽器時，選「我已經保存過，登入」並輸入同一個 Email，就能用同一份紀錄。`));
+    body.appendChild(box); return;
+  }
+  if (U.step === 'idle'){
+    box.appendChild(el('p', 'sub', '你的紀錄已經存在雲端（訪客身分），但只認得這個瀏覽器。綁定 Email 之後，換手機、換瀏覽器（例如 LINE 和 Chrome）都能用同一份紀錄。'));
+    const row = el('div', 'tankbar');
+    const b1 = el('button', 'tbtn', '綁定 Email 保存紀錄'); b1.addEventListener('click', () => { U.step = 'email'; U.mode = 'bind'; U.msg = ''; renderTab(); });
+    const b2 = el('button', 'tbtn ghost', '我已經保存過，登入'); b2.addEventListener('click', () => { U.step = 'email'; U.mode = 'login'; U.msg = ''; renderTab(); });
+    row.appendChild(b1); row.appendChild(b2); box.appendChild(row);
+  } else {
+    box.appendChild(el('p', 'sub', U.mode === 'bind' ? '輸入你的 Email，我們會寄 6 位數驗證碼給你。' : '輸入之前保存紀錄用的 Email。登入後，這個瀏覽器會換成那份紀錄（目前這份訪客紀錄不會保留）。'));
+    const inp = el('input', 'txt'); inp.type = U.step === 'code' ? 'text' : 'email'; inp.inputMode = U.step === 'code' ? 'numeric' : 'email';
+    inp.placeholder = U.step === 'code' ? '6 位數驗證碼' : 'you@example.com'; inp.maxLength = U.step === 'code' ? 10 : 120; inp.value = U.step === 'code' ? '' : U.email; inp.autocomplete = U.step === 'code' ? 'one-time-code' : 'email';
+    box.appendChild(inp);
+    if (U.step === 'code') box.appendChild(el('p', 'sub', `驗證碼已寄到 ${U.email}，沒收到的話看一下垃圾郵件。`));
+    if (U.msg) box.appendChild(el('p', 'sub warnmsg', U.msg));
+    const row = el('div', 'tankbar');
+    const go = el('button', 'tbtn', U.busy ? '處理中…' : U.step === 'code' ? '確認' : '寄驗證碼'); go.disabled = U.busy;
+    go.addEventListener('click', async () => {
+      const v = inp.value.trim(); if (!v) return;
+      U.busy = true; U.msg = ''; renderTab();
+      try {
+        if (U.step === 'email'){ if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) throw new Error('Email 格式不對'); U.email = v; await cloudSendCode(v, U.mode); U.step = 'code'; }
+        else { await cloudVerify(U.email, v.replace(/\s/g, ''), U.mode); U.step = 'idle'; toast(U.mode === 'bind' ? '紀錄已經保存到你的 Email ✅' : '登入成功，已載入你的紀錄 ✅'); }
+      } catch(e){ U.msg = /格式/.test(e.message) ? e.message : cloudErrText(e); }
+      U.busy = false; renderTab();
+    });
+    const back = el('button', 'tbtn ghost', '取消'); back.addEventListener('click', () => { U.step = 'idle'; U.msg = ''; renderTab(); });
+    row.appendChild(go); row.appendChild(back); box.appendChild(row);
+  }
+  body.appendChild(box);
+}
+
 async function initSocial(){
   if (!window.claude || typeof window.claude.use !== 'function'){ autoJoinCode(); return; }
   const [r, d, u] = await Promise.all([ window.claude.use('room').catch(() => null), window.claude.use('db').catch(() => null), window.claude.use('user').catch(() => null) ]);
@@ -3078,24 +3233,27 @@ function renderTab(){
     }
   } else if (curTab === 'rank'){
     const seg = el('div', 'seg');
-    [['best','最大的魚'],['total','釣魚總數']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
+    [['best','最大的魚'],['total','釣魚總數']].concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
     body.appendChild(seg);
-    if (!db){ body.appendChild(el('p', 'sub', '排行榜會跟所有打開這個村子的人同步。目前沒有連上共享資料，下面只顯示你自己的紀錄。')); }
+    if (Cloud.on){ Object.assign(lb, Cloud.board); body.appendChild(el('p', 'sub', '全服排行榜：所有玩家的紀錄都經過伺服器檢查，每分鐘更新一次。')); }
+    else if (!db){ body.appendChild(el('p', 'sub', '排行榜會跟所有打開這個村子的人同步。目前沒有連上共享資料，下面只顯示你自己的紀錄。')); }
     else if (lbSlow){ body.appendChild(el('p', 'sub', '暫時連不上排行榜，資料可能不是最新的。')); }
-    let rows = (lbMode === 'best' ? lb.best : lb.total).filter(r => r.total > 0);
-    if (!db || (!rows.some(r => r.id === myId) && rec.total > 0)) rows = rows.concat([{ id: myId || 'me', ...rec, _me: true }]);
-    rows.sort((a, b) => lbMode === 'best' ? b.bestW - a.bestW : b.total - a.total);
+    const shared = db || Cloud.on;
+    let rows = (lbMode === 'best' ? lb.best : lbMode === 'earned' ? (lb.earned || []) : lb.total).filter(r => r.total > 0);
+    if (Cloud.on) rows = rows.map(r => r.id === myId ? Object.assign({}, r, rec, { name:r.name }) : r);   // 自己那一列用最新的資料
+    if (!shared || (!rows.some(r => r.id === myId) && rec.total > 0)) rows = rows.concat([{ id: myId || 'me', ...rec, _me: true }]);
+    rows.sort((a, b) => lbMode === 'best' ? b.bestW - a.bestW : lbMode === 'earned' ? (b.earned || 0) - (a.earned || 0) : b.total - a.total);
     if (!rows.length){ body.appendChild(el('div', 'empty', lbLoading ? '正在讀取排行榜…' : '還沒有人上榜。走到任何一個發光圈拋竿，成為村子裡第一個上榜的釣客吧！')); return; }
     const ul = el('ol', 'rank'); const ids = rows.map(r => r.id).filter(id => id && id !== 'me');
     rows.slice(0, 20).forEach((r, i) => {
       const isMe = r._me || r.id === myId; const li = el('li', isMe ? 'me' : '');
       li.appendChild(el('span', 'pos', String(i + 1)));
-      const who = el('span', 'who', isMe ? `${myDisplayName() === '你' ? '你' : myDisplayName() + '（你）'}` : (profileNames[r.id] || '釣客'));
+      const who = el('span', 'who', isMe ? `${myDisplayName() === '你' ? '你' : myDisplayName() + '（你）'}` : (r.name || profileNames[r.id] || '釣客'));
       who.dataset.id = r.id;
       const bf = r.bestFish && FISH_BY_ID[r.bestFish];
-      who.appendChild(el('small', '', lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${Object.keys(r.count).length} 種・傳說 ${r.legend} 條`));
+      who.appendChild(el('small', '', lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${Object.keys(r.count || {}).length} 種・傳說 ${r.legend || 0} 條`));
       li.appendChild(who);
-      li.appendChild(el('span', 'val', lbMode === 'best' ? r.bestW.toFixed(2) + ' kg' : r.total + ' 條'));
+      li.appendChild(el('span', 'val', lbMode === 'best' ? r.bestW.toFixed(2) + ' kg' : lbMode === 'earned' ? '🪙' + (r.earned || 0).toLocaleString() : r.total + ' 條'));
       ul.appendChild(li);
     });
     body.appendChild(ul);
@@ -3108,7 +3266,7 @@ function renderTab(){
       : `現在是自動模式：最新的 ${SHOW_MAX} 條魚會放進大水族館。按任何一條的「展示／展示中」，就會改成由你自己調整。`));
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
     const bar = el('div', 'tankbar');
-    if (picking){ const auto = el('button', 'tbtn ghost', '改回自動展示'); auto.addEventListener('click', () => { rec.show = []; saveRecLocal(); buildTank(); renderTab(); }); bar.appendChild(auto); }
+    if (picking){ const auto = el('button', 'tbtn ghost', '改回自動展示'); auto.addEventListener('click', () => { rec.show = []; saveRecLocal(); buildTank(); renderTab(); cloudCall('set_show', { p_show: [] }); }); bar.appendChild(auto); }
     const sortSel = el('div', 'seg');
     [['new','最新'],['big','最重'],['rare','最稀有']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((tankSort || 'new') === k)); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortSel.appendChild(b); });
     bar.appendChild(sortSel); body.appendChild(bar);
@@ -3128,13 +3286,13 @@ function renderTab(){
         const i = rec.show.indexOf(x.t);
         if (i >= 0) rec.show.splice(i, 1);
         else { if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先拿出一條再放。`); return; } rec.show.push(x.t); }
-        saveRecLocal(); buildTank(); renderTab();
+        saveRecLocal(); buildTank(); renderTab(); cloudCall('set_show', { p_show: rec.show.slice() });
       });
       const rel = el('button', 'tbtn ghost', '放生');
       rel.addEventListener('click', () => {
         if (rel.dataset.sure !== '1'){ rel.dataset.sure = '1'; rel.textContent = '確定放生？'; setTimeout(() => { if (rel.isConnected){ rel.dataset.sure = ''; rel.textContent = '放生'; } }, 2500); return; }
         rec.tank = rec.tank.filter(y => y.t !== x.t); if (rec.show) rec.show = rec.show.filter(t => t !== x.t);
-        saveRecLocal(); buildTank(); renderTab(); toast(`${esc(f.name)} 游回大海了。`);
+        saveRecLocal(); buildTank(); renderTab(); toast(`${esc(f.name)} 游回大海了。`); cloudCall('release_fish', { p_ts: x.t });
       });
       acts.append(show, rel); li.appendChild(acts); ul.appendChild(li);
     });
@@ -3153,6 +3311,7 @@ function renderTab(){
   } else if (curTab === 'map'){
     renderMap(body);
   } else if (curTab === 'style'){
+    renderCloudBox(body);
     const f1 = el('div', 'field'); f1.appendChild(el('label', '', '衣服顏色')); const s1 = el('div', 'swatches');
     SHIRTS.forEach(c => { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', '衣服 ' + c); b.setAttribute('aria-pressed', String(look.shirt === c)); b.addEventListener('click', () => { look.shirt = c; saveLook(); renderTab(); }); s1.appendChild(b); });
     f1.appendChild(s1); body.appendChild(f1);
@@ -3160,8 +3319,8 @@ function renderTab(){
     HATS.forEach(c => { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', '帽子 ' + c); b.setAttribute('aria-pressed', String(look.hat === c)); b.addEventListener('click', () => { look.hat = c; saveLook(); renderTab(); }); s2.appendChild(b); });
     f2.appendChild(s2); body.appendChild(f2);
     const f3 = el('div', 'field'); const lab = el('label', '', '暱稱'); lab.htmlFor = 'nickIn'; f3.appendChild(lab);
-    const inp = el('input', 'txt'); inp.id = 'nickIn'; inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '留空就用你的 claude.ai 名字';
-    inp.addEventListener('change', () => { nickname = inp.value.trim().slice(0, 16); LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); });
+    const inp = el('input', 'txt'); inp.id = 'nickIn'; inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳';
+    inp.addEventListener('change', () => { nickname = inp.value.trim().slice(0, 16); LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); cloudProfile(); });
     f3.appendChild(inp); f3.appendChild(el('p', 'sub', '其他玩家會在你頭上看到這個名字。'));
     body.appendChild(f3);
     const fq = el('div', 'field'); fq.appendChild(el('label', '', '畫質'));
@@ -3203,7 +3362,7 @@ function pjBox(){
   row.append(inp, go); box.appendChild(row);
   return box;
 }
-function saveLook(){ LS.set('tide.look', look); me.setLook(look.shirt, look.hat); pushPresence(true); }
+function saveLook(){ LS.set('tide.look', look); me.setLook(look.shirt, look.hat); pushPresence(true); cloudProfile(); }
 
 // landscape / fullscreen
 const portraitMQ = matchMedia('(orientation: portrait)');
@@ -3330,6 +3489,7 @@ function frame(){
 requestAnimationFrame(frame);
 logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋竿。', true);
 initSocial().catch(() => {});
+cloudInit();
 })();
 </script>
 
