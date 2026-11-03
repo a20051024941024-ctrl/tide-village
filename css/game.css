@@ -446,3 +446,39 @@ body.photo.nonames #labels{display:none}
 .seg.wseg{flex-wrap:wrap}
 .seg.wseg button{flex:1 1 auto;min-width:56px}
 .shoplist .sub2{font-size:12px;color:var(--ink-soft);margin-top:2px}
+
+/* 釣魚畫面（像歡樂釣王）：跟著魚的標記、傷害數字、下方張力條 */
+#fishMark{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none;z-index:6}
+#fishMark[hidden]{display:none}
+#fishMark .fm-hp{position:absolute;left:-30px;top:-66px;width:200px;height:16px;border-radius:4px;background:rgba(10,20,30,.55);overflow:hidden;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+#fishMark .fm-hp i{position:absolute;left:0;top:0;bottom:0;width:100%;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(0,0,0,.35) 9px 11px),linear-gradient(90deg,#f04a3a 0%,#ffb340 35%,#b8e04a 65%,#3fd07a 100%);background-size:auto,200px 100%;transition:width .15s}
+#fishMark .fm-ico{position:absolute;left:-24px;top:-24px;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:26px;box-shadow:0 0 0 4px #e8473a,0 4px 10px rgba(0,0,0,.3);animation:fmSpin 1.2s linear infinite}
+#fishMark.r-稀有 .fm-ico{box-shadow:0 0 0 4px #9b7bff,0 4px 10px rgba(0,0,0,.3)}
+#fishMark.r-傳說 .fm-ico{box-shadow:0 0 0 4px #ffb300,0 0 18px #ffd36a,0 4px 10px rgba(0,0,0,.3)}
+#fishMark.r-常見 .fm-ico{box-shadow:0 0 0 4px #3fbf9d,0 4px 10px rgba(0,0,0,.3)}
+#fishMark.hot .fm-ico{animation:fmShake .1s infinite}
+@keyframes fmSpin{0%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}100%{transform:rotate(-8deg)}}
+@keyframes fmShake{0%{transform:translate(2px,0)}50%{transform:translate(-2px,1px)}100%{transform:translate(0,-1px)}}
+#fishMark .fm-dist{position:absolute;left:-40px;top:30px;width:80px;text-align:center;color:#fff;font-weight:800;font-size:17px;font-style:italic;text-shadow:0 2px 4px rgba(0,0,0,.6)}
+#fishMark .fm-warn{position:absolute;left:-160px;top:-102px;width:320px;text-align:center;font-family:var(--f-display);font-size:24px;font-style:italic;font-weight:900;color:#ff4d3a;-webkit-text-stroke:1px #fff;text-shadow:0 2px 6px rgba(0,0,0,.5);opacity:0;transform:scale(.8);transition:opacity .15s,transform .15s}
+#fishMark .fm-warn.on{opacity:1;transform:scale(1);animation:warnPulse .4s ease-in-out infinite alternate}
+#fishMark .fm-warn.good{color:#3fd07a}
+@keyframes warnPulse{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+#dmgLayer{position:fixed;inset:0;pointer-events:none;z-index:7;overflow:hidden}
+#dmgLayer .dmg{position:absolute;font-family:var(--f-display);font-weight:900;font-style:italic;font-size:34px;color:#ff6a2a;-webkit-text-stroke:1.5px #5a1a0a;text-shadow:0 3px 0 #5a1a0a;animation:dmgUp .9s ease-out forwards}
+#dmgLayer .dmg.crit{color:#ffd23a;font-size:42px}
+@keyframes dmgUp{0%{opacity:0;transform:translateY(10px) scale(.6)}15%{opacity:1;transform:translateY(0) scale(1.15)}30%{transform:scale(1)}100%{opacity:0;transform:translateY(-46px)}}
+#fhDir{top:0;left:0;margin:0!important;transform:translate(-50%,-50%)}
+#fhDir b{font-size:46px;color:#ffd23a;-webkit-text-stroke:2px #5a3a0a}
+#fhDir span{font-size:22px;font-style:italic;font-weight:900;color:#ffd23a;-webkit-text-stroke:1px #5a3a0a}
+#tenBar{position:fixed;left:50%;bottom:calc(var(--gb) + 18px);transform:translateX(-50%);width:min(420px,calc(100vw - 340px));display:flex;align-items:center;gap:8px;pointer-events:none;z-index:6}
+#tenBar[hidden]{display:none}
+#tenBar .tb-lbl{font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);font-size:13px}
+#tenBar .tb-in{position:relative;flex:1;height:20px;border-radius:5px;background:rgba(10,20,30,.55);box-shadow:0 0 0 2px rgba(255,255,255,.6);overflow:hidden}
+#tenBar .tb-in i{position:absolute;left:0;top:0;bottom:0;width:30%;background:repeating-linear-gradient(90deg,transparent 0 18px,rgba(0,0,0,.4) 18px 21px),linear-gradient(90deg,#ffd23a,#ffb300);transition:width .08s}
+#tenBar .tb-red{position:absolute;right:0;top:0;bottom:0;width:20%;background:rgba(240,74,58,.35);border-left:2px solid #f04a3a}
+#tenBar.hot .tb-in i{background:repeating-linear-gradient(90deg,transparent 0 18px,rgba(0,0,0,.4) 18px 21px),linear-gradient(90deg,#ff7a3a,#f04a3a)}
+#tenBar.hot{animation:fmShake .1s infinite}
+#tenBar.low .tb-in i{background:repeating-linear-gradient(90deg,transparent 0 18px,rgba(0,0,0,.4) 18px 21px),linear-gradient(90deg,#9fc3dd,#7fb0d8)}
+body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!important}
+@media (max-height:500px){ #fishMark .fm-hp{width:160px;height:13px;top:-58px} #fishMark .fm-warn{font-size:20px;top:-90px} #dmgLayer .dmg{font-size:28px} #tenBar{bottom:calc(var(--gb) + 8px)} }

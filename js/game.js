@@ -2035,7 +2035,22 @@ function jump(){ if (mySeat){ standUp(); return; }
 function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
 function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 0) d += Math.PI*2; return a + (d - Math.PI) * k; }
 
+const reelCam = { k:0, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 function updateCamera(dt){
+  // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
+  const reelOn = F.phase === 'reeling' && !Photo.on;
+  reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4));
+  if (reelCam.k > 0.01){
+    const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, L = Math.hypot(bx, bz) || 1, dx = bx / L, dz = bz / L, rx = -dz, rz = dx;
+    const want = reelCam.pos.set(me.pos.x - dx * 1.5 + rx * 0.7, me.baseY + 1.5, me.pos.z - dz * 1.5 + rz * 0.7);
+    const look = reelCam.look.set(me.bobPos.x, 0.55, me.bobPos.z);
+    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.pos.y + 1.3, me.pos.z);
+    const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
+    camera.position.lerp(normal.lerp(want, reelCam.k), 1 - Math.exp(-8 * dt));
+    camera.lookAt(tg.lerp(look, reelCam.k));
+    if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
+    return;
+  }
   const target = tmpV.set(me.pos.x, me.pos.y + 1.3, me.pos.z);
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
@@ -2112,6 +2127,7 @@ function startReel(){
   me.say('!', 'alert', 0.6);
   $('#fhName').textContent = F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : '有魚上鉤了！';
   const rc = $('#fhRar'); rc.className = 'chip r-' + F.fish.rarity; rc.textContent = F.fish.rarity;
+  $('#fishMark').className = 'r-' + F.fish.rarity; $('#fmIco').textContent = BIG_FISH.has(F.fish.id) ? '🐋' : F.fish.rarity === '傳說' ? '🐉' : '🐟'; F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
   pushPresence(true);
 }
 function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; }
@@ -2141,7 +2157,7 @@ function updateFishing(dt, t){
     const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
     if (t > F.dirUntil){
       const nd = Math.random() < 0.3 ? 0 : (Math.random() < 0.5 ? -1 : 1);
-      if (nd !== F.dir && nd !== 0){ const d = $('#fhDir'); d.hidden = false; d.className = nd < 0 ? 'l' : 'r'; d.innerHTML = nd < 0 ? '<b>⬅</b><span>往左衝！<small>往右拉 ➡</small></span>' : '<span>往右衝！<small>⬅ 往左拉</small></span><b>➡</b>'; }
+      if (nd !== F.dir && nd !== 0){ const d = $('#fhDir'); d.hidden = false; d.className = nd < 0 ? 'l' : 'r'; d.innerHTML = nd < 0 ? '<span>往右拉</span><b>➡</b>' : '<b>⬅</b><span>往左拉</span>'; }
       else if (nd === 0) $('#fhDir').hidden = true;
       F.dir = nd; F.dirUntil = t + rand(1.3, 2.8) * (1.2 - p * 0.4);
     }
@@ -2179,13 +2195,31 @@ function updateFishing(dt, t){
     $('#fhDist').textContent = ((1 - clamp(F.P, 0, 1)) * F.maxDist + 0.5).toFixed(1) + ' m';
     $('#fhT').textContent = F.jump > 0 ? '🐟 跳起來了！快放開！' : T > 0.8 ? '線快斷了！放開！' : counter ? '👍 反方向拉，魚越來越累了' : wrong ? '⚠️ 方向拉錯了！' : T < 0.3 ? '太鬆了，按住拉' : F.S < 0.25 ? '魚沒力氣了，一口氣拉上來！' : '很好，保持在綠色';
     $('#fhT').className = 'fh-hint' + (F.jump > 0 || T > 0.8 || wrong ? ' warn' : counter ? ' good' : '');
+    // ---- 跟著魚走的標記：體力條、魚的圖示、距離；收線時跳出傷害數字 ----
+    { const v = tmpV.set(me.bobPos.x, 0.45, me.bobPos.z).project(camera), mk = $('#fishMark');
+      const sx = (v.x + 1) / 2 * viewW(), sy = (1 - v.y) / 2 * viewH(), sxC = clamp(sx, 90, viewW() - 90), syC = clamp(sy, 120, viewH() - 150);
+      mk.style.transform = `translate(${sxC.toFixed(0)}px, ${syC.toFixed(0)}px)`;
+      $('#fmHp').style.width = (F.S * 100).toFixed(1) + '%';
+      $('#fmDist').textContent = ((1 - clamp(F.P, 0, 1)) * F.maxDist + 0.5).toFixed(1) + 'm';
+      const warn = F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
+      const fw = $('#fmWarn'); if (fw.textContent !== warn) fw.textContent = warn; fw.className = 'fm-warn' + (warn ? ' on' : '') + (F.S < 0.25 && T <= 0.8 && !F.jump && !wrong ? ' good' : '');
+      const dir = $('#fhDir'); if (!dir.hidden){ dir.style.left = (sxC + (F.dir < 0 ? -110 : 110)) + 'px'; dir.style.top = (syC - 10) + 'px'; }
+      mk.classList.toggle('hot', T > 0.8);
+      // 傷害數字
+      F.dmgAcc = (F.dmgAcc || 0) + (F.S0 != null ? Math.max(0, F.S0 - F.S) : 0); F.S0 = F.S; F.dmgT = (F.dmgT || 0) + dt;
+      if (F.dmgT > 0.35 && F.dmgAcc > 0.004){ const hp = Math.round(800 + F.fish.power * 2200 + (BIG_FISH.has(F.fish.id) ? 3000 : 0)), n = Math.max(1, Math.round(F.dmgAcc * hp));
+        const d = document.createElement('div'); d.className = 'dmg' + (counter ? ' crit' : ''); d.textContent = '-' + n; d.style.left = (sxC + 40 + Math.random() * 40) + 'px'; d.style.top = (syC - 30 - Math.random() * 20) + 'px'; $('#dmgLayer').appendChild(d); setTimeout(() => d.remove(), 900);
+        F.dmgAcc = 0; F.dmgT = 0; }
+      // 下面的張力條
+      $('#tbFill').style.width = (T * 100).toFixed(1) + '%'; $('#tenBar').classList.toggle('hot', T > 0.8); $('#tenBar').classList.toggle('low', T < 0.3);
+    }
     if (F.T >= 1){ SFX.fail(); flash('線斷了！', 1.4); cancelFishing(); }
     else if (F.P <= 0){ SFX.fail(); flash('魚掙脫了', 1.4); cancelFishing(); }
     else if (F.P >= 1){ landFish(); }
   }
   // HUD + button
   $('#chargeHud').hidden = F.phase !== 'charging';
-  $('#fishHud').hidden = F.phase !== 'reeling'; $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
+  $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
   if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
