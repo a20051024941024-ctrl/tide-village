@@ -2523,7 +2523,7 @@ function landFish(){
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
   jumpers.push({ m: fm, from, to, t: 0 });
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
-  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); }, 900);
+  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, 900);
 }
 const jumpers = [];
 function updateJumpers(dt, t){
@@ -2976,8 +2976,8 @@ function useRoom(r){
     room.on('catch', msg => {
       if (msg.sameTab || !msg.data) return; const f = FISH_BY_ID[msg.data.f]; const w = Number(msg.data.w); if (!f || !(w > 0) || w > f.max + 0.01) return;
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
-      toast(`<b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${w.toFixed(2)}kg`);
-      if (p) p.fisher.say(f.rarity === '傳說' ? '🎉' : '🐟', 'emote', 3);
+      toast(`<b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
+      if (p){ p.fisher.holdFish(f, w, 5); if (f.rarity === '傳說') p.fisher.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); }   // 大家都看得到他捧著剛釣到的魚
     }, () => {});
     room.onConnection(() => setOnline(), () => {});
     clearInterval(roomTimer); roomTimer = setInterval(() => pushPresence(false), 120);
