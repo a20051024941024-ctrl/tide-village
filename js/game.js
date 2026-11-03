@@ -433,8 +433,10 @@ function buildTrees(trees, PX, PZ){
   put(G.fruit, M.fruit, fruits, 'crown', false);
 }
 
+// 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
+function waterAt(px, pz){ const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castPoint(x, z, dx, dz, dist){
-  const ok = d => { const px = x + dx * d, pz = z + dz * d; const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz); };
+  const ok = d => waterAt(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
   for (let k = 0.4; k < 8; k += 0.4){ if (dist - k > 1.2 && ok(dist - k)) return [x + dx * (dist - k), z + dz * (dist - k)]; if (ok(dist + k)) return [x + dx * (dist + k), z + dz * (dist + k)]; }
   return [x + dx * dist, z + dz * dist];
@@ -1743,9 +1745,8 @@ function leaveBoat(){
 }
 // 在船上拋竿：依所在的水域決定會釣到哪些魚
 function boatSpot(){
-  const i = terrainInfo(me.pos.x, me.pos.z);
-  const id = i.region === 1 ? 'river' : i.region === 2 ? 'creek' : i.region === 3 ? 'lake' : i.region === 4 ? 'pool' : (islandEdge(me.pos.x, me.pos.z) < -6 ? 'harbor' : 'sea');
-  return Object.assign({}, SPOT_BY_ID[id], { pos: me.pos.clone(), dir: new THREE.Vector2(Math.sin(me.rot), Math.cos(me.rot)) });
+  const id = waterSpotId(me.pos.x, me.pos.z);
+  return Object.assign({}, SPOT_BY_ID[id], { pos: me.pos.clone(), dir: new THREE.Vector2(Math.sin(me.rot), Math.cos(me.rot)), shore: true, legendBoost: 1 });
 }
 function updateBoat(dt, ix, iz, L, locked){
   let speed = 0; const t = now();
@@ -1836,6 +1837,25 @@ function renderMap(body){
   body.appendChild(list);
 }
 
+// 岸邊釣魚：不在發光圈裡也可以，只要面前（或旁邊）幾公尺內有水
+function waterSpotId(x, z){
+  if (Math.hypot(x - ISLE.x, z - ISLE.z) < 45) return 'isle';
+  const i = terrainInfo(x, z);
+  return i.region === 1 ? 'river' : i.region === 2 ? 'creek' : i.region === 3 ? 'lake' : i.region === 4 ? 'pool' : (islandEdge(x, z) < -6 ? 'harbor' : 'sea');
+}
+const Shore = { x:1e9, z:1e9, r:0, at:0, res:null };
+function shoreSpot(){
+  const t = performance.now();
+  if (Math.hypot(me.pos.x - Shore.x, me.pos.z - Shore.z) < 0.25 && Math.abs(lerpAngle(me.rot, Shore.r, 1) - me.rot) < 0.01 && t - Shore.at < 600) return Shore.res;
+  Shore.x = me.pos.x; Shore.z = me.pos.z; Shore.r = me.rot; Shore.at = t; Shore.res = null;
+  if (myBoat || mySeat) return null;
+  const dirs = [me.rot]; for (let k = 1; k <= 6; k++){ dirs.push(me.rot + k * 0.45); dirs.push(me.rot - k * 0.45); }
+  for (const a of dirs){ const dx = Math.sin(a), dz = Math.cos(a);
+    for (let d = 1.2; d <= 4.6; d += 0.55){ const px = me.pos.x + dx * d, pz = me.pos.z + dz * d;
+      if (waterAt(px, pz) && waterAt(px + dx * 1.5, pz + dz * 1.5)){ const id = waterSpotId(px, pz), base = SPOT_BY_ID[id];
+        Shore.res = Object.assign({}, base, { pos: me.pos.clone(), dir: new THREE.Vector2(dx, dz), shore: true, legendBoost: 1 }); return Shore.res; } } }
+  return null;
+}
 function nearestSpot(){ let best = null, bd = 1e9; for (const s of SPOTS){ const d = Math.hypot(me.pos.x - s.pos.x, me.pos.z - s.pos.z); if (d < bd){ bd = d; best = s; } } return { spot: best, d: bd }; }
 
 function updatePlayer(dt){
@@ -1922,7 +1942,7 @@ function actionDown(){
   const act = $('#act'); act.classList.add('down');
   if (F.phase === 'idle'){
     let spot;
-    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
+    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
   } else if (F.phase === 'waiting'){
@@ -1954,7 +1974,7 @@ function doCast(){
   SFX.cast(); pushPresence(true);
 }
 function cancelFishing(msg){
-  F.phase = 'idle'; F.hold = false; me.fishing = false; me.bobState = 'none'; me.flying = null; me.dip = 0; me.bend = 0;
+  reelCleanup(); F.phase = 'idle'; F.hold = false; me.fishing = false; me.bobState = 'none'; me.flying = null; me.dip = 0; me.bend = 0;
   if (msg && msg !== '收竿了') flash(msg);
   pushPresence(true);
 }
@@ -1963,17 +1983,23 @@ function pickFish(spot, charge){
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
   const fb = F.buffAt || null, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1), kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1);
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
-  const w = list.map(f => (f.w || 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl));
+  const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
+  const w = list.map(f => (f.w || 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
 }
 function startReel(){
   F.phase = 'reeling'; F.T = 0.35; F.P = 0.3; F.surge = 0; F.seed = Math.random()*10;
+  F.S = 1; F.dir = 0; F.dirUntil = now() + rand(1.2, 2.2); F.lat = 0; F.jump = 0; F.maxDist = 4 + (F.castCharge || 0) * 6 + (BIG_FISH.has(F.fish.id) ? 6 : 0);
+  if (F.leap){ scene.remove(F.leap); F.leap = null; }
+  try { F.leap = fishModel(F.fish, BIG_FISH.has(F.fish.id) ? 0.7 : 0.55); F.leap.visible = false; scene.add(F.leap); } catch(e){ F.leap = null; }
   me.say('!', 'alert', 0.6);
   $('#fhName').textContent = F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : '有魚上鉤了！';
+  const rc = $('#fhRar'); rc.className = 'chip r-' + F.fish.rarity; rc.textContent = F.fish.rarity;
   pushPresence(true);
 }
+function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; }
 function updateFishing(dt, t){
   const act = $('#act');
   if (F.phase === 'charging'){
@@ -1996,37 +2022,60 @@ function updateFishing(dt, t){
     if (t > F.biteUntil){ me.dip = 0; F.phase = 'waiting'; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash('魚跑掉了', 1); SFX.fail(); pushPresence(true); }
   }
   if (F.phase === 'reeling'){
-    const p = F.fish.power;
-    let pull = p * (0.55 + 0.45 * Math.sin(t*2.3 + F.seed) * Math.sin(t*0.7 + F.seed*2));
+    // 像一般釣魚遊戲：魚有體力，會往左右衝（往反方向拉最有效），稀有的魚會跳出水面（跳的時候要放開）
+    const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
+    if (t > F.dirUntil){
+      const nd = Math.random() < 0.3 ? 0 : (Math.random() < 0.5 ? -1 : 1);
+      if (nd !== F.dir && nd !== 0){ const d = $('#fhDir'); d.hidden = false; d.className = nd < 0 ? 'l' : 'r'; d.innerHTML = nd < 0 ? '<b>⬅</b><span>往左衝！<small>往右拉 ➡</small></span>' : '<span>往右衝！<small>⬅ 往左拉</small></span><b>➡</b>'; }
+      else if (nd === 0) $('#fhDir').hidden = true;
+      F.dir = nd; F.dirUntil = t + rand(1.3, 2.8) * (1.2 - p * 0.4);
+    }
+    if (F.jump > 0){
+      F.jump -= dt; const u = 1 - Math.max(0, F.jump) / 1.0, hgt = (big ? 2.6 : 1.5) * Math.sin(u * Math.PI);
+      if (F.leap){ F.leap.visible = F.jump > 0; F.leap.position.set(me.bobPos.x, 0.1 + hgt, me.bobPos.z); F.leap.rotation.set(0, Math.atan2(me.pos.x - me.bobPos.x, me.pos.z - me.bobPos.z) + Math.PI / 2, (0.5 - u) * 2.2); }
+      if (F.jump <= 0){ ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 16, '#e8f7ff', 1.2, 2.2, 0.9); $('#fhT').textContent = ''; }
+    } else if ((F.fish.rarity !== '常見' || big) && F.S > 0.15 && Math.random() < dt * 0.11 * p){
+      F.jump = 1.0; ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); camShake = Math.max(camShake, big ? 0.18 : 0.08);
+    }
+    let pull = p * (0.55 + 0.45 * Math.sin(t*2.3 + F.seed) * Math.sin(t*0.7 + F.seed*2)) * (0.35 + 0.65 * F.S);
     if (F.surge > 0){ F.surge -= dt; pull += 0.55 * p; } else if (Math.random() < dt * 0.3 * p){ F.surge = rand(0.4, 0.9); }
-    const inZone = F.T > 0.35 && F.T < 0.8;
-    const rod = curRod();
-    const fb = curBuff();
-    if (F.hold){ F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1); F.P += (0.26 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1); }
-    else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
+    let steer = 0; if (!uiBlocked){ steer = joy.x + ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0); } steer = clamp(steer, -1, 1);
+    const counter = F.dir !== 0 && steer * F.dir < -0.35, wrong = F.dir !== 0 && steer * F.dir > 0.35;
+    if (F.dir !== 0) pull += (counter ? -0.18 : wrong ? 0.45 : 0.22) * p;
+    const inZone = F.T > 0.3 && F.T < 0.8;
+    if (F.hold){
+      F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1);
+      F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S));
+    } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
+    F.S = Math.max(0, F.S - dt * (0.04 + (F.hold && inZone ? 0.09 : 0) + (counter ? 0.12 : 0)) / (0.6 + p * 0.8));
     me.bend = clamp(F.T, 0, 1); me.dip = 0.5 + pull*0.4; fxReel(dt);
-    // bobber drifts toward player with progress
-    const s = F.spot; const dist = 1.4 + (1 - F.P) * (2 + F.castCharge*4.5);
-    const tx = s.pos.x + s.dir.x*dist + Math.sin(t*3 + F.seed)*0.5*(1-F.P), tz = s.pos.z + s.dir.y*dist + Math.cos(t*2.4)*0.5*(1-F.P);
+    // 浮標：越收越近，魚往哪邊衝就往哪邊偏
+    F.lat += (F.dir * 1.8 * (counter ? 0.35 : 1) - F.lat) * Math.min(1, dt * 1.6);
+    const s = F.spot; const dist = 1.4 + (1 - F.P) * (2 + F.castCharge*4.5), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
+    const tx = s.pos.x + s.dir.x*dist + rx * F.lat + Math.sin(t*3 + F.seed)*0.4*(1-F.P), tz = s.pos.z + s.dir.y*dist + rz * F.lat + Math.cos(t*2.4)*0.4*(1-F.P);
     me.bobPos.x += (tx - me.bobPos.x) * Math.min(1, dt*3); me.bobPos.z += (tz - me.bobPos.z) * Math.min(1, dt*3);
-    if (Math.random() < dt * 4) ripple(me.bobPos.x, me.bobPos.z);
-    $('#tFill').style.width = (clamp(F.T,0,1)*100).toFixed(1) + '%';
-    $('#tBar').classList.toggle('hot', F.T > 0.8);
-    $('#fhT').textContent = F.T > 0.8 ? '線快斷了！放開！' : F.T < 0.35 ? '太鬆了，按住拉' : '很好，保持住';
-    $('#pFill').style.width = (clamp(F.P,0,1)*100).toFixed(1) + '%';
-    $('#fhP').textContent = Math.round(clamp(F.P,0,1)*100) + '%';
+    if (Math.random() < dt * (4 + Math.abs(F.dir) * 4)) ripple(me.bobPos.x, me.bobPos.z);
+    // 畫面
+    const T = clamp(F.T, 0, 1), arc = $('#tArc');
+    arc.style.strokeDashoffset = (339.3 * (1 - T)).toFixed(1); arc.style.stroke = T > 0.8 ? '#f05a4a' : T > 0.62 ? '#f3b33d' : T < 0.3 ? '#8fb7d6' : '#3fbf9d';
+    $('#tRing').classList.toggle('hot', T > 0.8);
+    $('#hpFill').style.width = (F.S * 100).toFixed(1) + '%';
+    $('#fhDist').textContent = ((1 - clamp(F.P, 0, 1)) * F.maxDist + 0.5).toFixed(1) + ' m';
+    $('#fhT').textContent = F.jump > 0 ? '🐟 跳起來了！快放開！' : T > 0.8 ? '線快斷了！放開！' : counter ? '👍 反方向拉，魚越來越累了' : wrong ? '⚠️ 方向拉錯了！' : T < 0.3 ? '太鬆了，按住拉' : F.S < 0.25 ? '魚沒力氣了，一口氣拉上來！' : '很好，保持在綠色';
+    $('#fhT').className = 'fh-hint' + (F.jump > 0 || T > 0.8 || wrong ? ' warn' : counter ? ' good' : '');
     if (F.T >= 1){ SFX.fail(); flash('線斷了！', 1.4); cancelFishing(); }
     else if (F.P <= 0){ SFX.fail(); flash('魚掙脫了', 1.4); cancelFishing(); }
     else if (F.P >= 1){ landFish(); }
   }
   // HUD + button
   $('#chargeHud').hidden = F.phase !== 'charging';
-  $('#fishHud').hidden = F.phase !== 'reeling';
+  $('#fishHud').hidden = F.phase !== 'reeling'; $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
   if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
-    if (near.d < 1.7){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : isTouch ? '按住蓄力' : '按住空白鍵'; }
+    const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
+    if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'; }
     else if (sh){ label = sh.label; sub = sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
     else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
@@ -2051,6 +2100,7 @@ function updateFishing(dt, t){
   card.hidden = !showCard;
 }
 function landFish(){
+  reelCleanup();
   F.phase = 'landing'; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2;
   const f = F.fish, w = F.weight;
   const from = me.bobPos.clone(); from.y = 0.1;
@@ -2570,11 +2620,17 @@ function finishCooking(){
 const RODS = [
   { id:'bamboo', name:'竹釣竿',     price:0,    color:'#3b2a1e', desc:'村裡人人都有的入門竿，輕巧好用。', tension:1, reel:1, rare:1, legend:1 },
   { id:'carbon', name:'碳纖維釣竿', price:400,  color:'#2f6fb5', desc:'線比較不容易繃斷、收線快一點，稀有魚機率 ×1.2。', tension:0.85, reel:1.12, rare:1.2, legend:1.1 },
+  { id:'lure',   name:'路亞輕竿',   price:1200, color:'#3fbf9d', desc:'輕巧好甩，收線快 30%，稀有魚機率 ×1.25。', tension:0.9, reel:1.3, rare:1.25, legend:1.15 },
   { id:'deep',   name:'深海巨物竿', price:2500, color:'#c9302c', desc:'對付大型魚的專用竿：拉力大減、收線更快，傳說魚機率 ×1.4。', tension:0.72, reel:1.22, rare:1.3, legend:1.4 },
+  { id:'moon',   name:'月光夜釣竿', price:5000, color:'#8a7bff', desc:'竿尖會發出淡淡月光，稀有魚機率 ×1.5、傳說魚 ×1.5。', tension:0.75, reel:1.2, rare:1.5, legend:1.5 },
+  { id:'king',   name:'黃金王者竿', price:12000, color:'#e8b730', desc:'村裡最強的釣竿：線幾乎不會斷、收線最快，傳說魚機率 ×1.9。', tension:0.6, reel:1.38, rare:1.45, legend:1.9 },
 ];
 const BAITS = [
+  { id:'worm', name:'蚯蚓',   price:20,  pack:10, desc:'最便宜的魚餌，稀有魚機率 ×1.25。', rare:1.25, legend:1 },
   { id:'glow', name:'亮光餌', price:60,  pack:5, desc:'會發光的小蝦，稀有魚機率 ×1.8。', rare:1.8, legend:1.2 },
+  { id:'squidbait', name:'小卷切片', price:150, pack:5, desc:'大魚最愛的味道，稀有 ×1.4、傳說 ×1.8。', rare:1.4, legend:1.8 },
   { id:'gold', name:'黃金餌', price:300, pack:3, desc:'傳說中的金色魚餌，傳說魚機率 ×3。', rare:1.3, legend:3 },
+  { id:'rainbow', name:'彩虹餌', price:900, pack:2, desc:'七種顏色一閃一閃，稀有 ×2.2、傳說 ×4。', rare:2.2, legend:4 },
 ];
 const SELL_BASE = { '常見':10, '稀有':60, '傳說':400 };
 function fishPrice(f, w){ const rel = clamp((w - f.min) / Math.max(0.01, f.max - f.min), 0, 1); return Math.round(SELL_BASE[f.rarity] * (1 + 1.5 * rel)); }
@@ -3103,7 +3159,7 @@ function useRoom(r){
     room.on('catch', msg => {
       if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const f = FISH_BY_ID[msg.data.f]; const w = Number(msg.data.w); if (!f || !(w > 0) || w > f.max + 0.01) return;
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
-      ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
+      if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
       if (p){ p.fisher.holdFish(f, w, 5); if (f.rarity === '傳說') p.fisher.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); }   // 大家都看得到他捧著剛釣到的魚
     }, () => {});
     room.onConnection(() => setOnline(), () => {});
@@ -3422,7 +3478,8 @@ async function saveRemote(){
   catch(e){ if (e && e.code === 'invalid_argument') dbWritable = false; }
   saving = false; if (saveAgain){ saveAgain = false; saveRemote(); }
 }
-function announceCatch(f, w, spot){ if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot }).catch(() => {}); logMsg('', `你釣到了 ${f.name} ${w.toFixed(2)}kg`, true); }
+function announceCatch(f, w, spot){ if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot }).catch(() => {});
+  if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>你</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);   /* 跑馬燈只報稀有和傳說，自己的也會出現 */ logMsg('', `你釣到了 ${f.name} ${w.toFixed(2)}kg`, true); }
 const lb = { best: [], total: [] }; let lbLoading = false, lbSlow = false, lbMode = 'best';
 
 /* ================= NPC villagers ================= */

@@ -404,3 +404,40 @@ body.photo.nonames #labels{display:none}
 #tagBar.isghost .tt{color:#ffd36a}
 .tag.ghost .nm{background:#6b3fd0}
 .tag.ghost .nm::before{content:'👻 '}
+
+/* 新的釣魚畫面：上方魚的體力、按鈕外圈的張力表、左右衝的箭頭 */
+#fishHud{top:calc(var(--gt) + 64px);bottom:auto;width:min(380px,calc(100vw - 32px));padding:10px 14px}
+#fishHud .fh-row{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-size:16px}
+#fishHud .fh-row b{flex:1}
+#fishHud #fhDist{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink-soft);font-size:15px}
+#fishHud .fh-hp{position:relative;height:16px;border-radius:999px;background:rgba(24,51,74,.12);overflow:hidden;margin:8px 0 6px}
+#fishHud .fh-hp i{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(90deg,#f05a4a,#ff9a6a);border-radius:999px;transition:width .12s}
+#fishHud .fh-hp span{position:absolute;left:10px;top:0;line-height:16px;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+#fishHud .fh-hint{font-size:13px;font-weight:600;color:var(--ink-soft);min-height:18px}
+#fishHud .fh-hint.warn{color:#d8402f}
+#fishHud .fh-hint.good{color:#2a9d7a}
+#actRow{position:relative}
+#tRing{position:absolute;right:-12px;bottom:-12px;width:136px;height:136px;pointer-events:none;opacity:0;transform:rotate(-90deg);transition:opacity .2s}
+#tRing.on{opacity:1}
+#tRing circle{fill:none;stroke-width:9}
+#tRing .bg{stroke:rgba(255,255,255,.55)}
+#tRing .danger{stroke:rgba(240,90,74,.35);stroke-dasharray:67.9 339.3;stroke-dashoffset:-271.4}
+#tRing .fg{stroke:#3fbf9d;stroke-linecap:round;stroke-dasharray:339.3;stroke-dashoffset:339.3;transition:stroke .15s}
+#tRing.hot{animation:ringShake .12s infinite}
+@keyframes ringShake{0%{transform:rotate(-90deg) translate(1px,0)}50%{transform:rotate(-90deg) translate(-1px,1px)}100%{transform:rotate(-90deg) translate(0,-1px)}}
+#fhDir{position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;pointer-events:none;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.45);font-family:var(--f-display);animation:dirPulse .6s ease-in-out infinite alternate;z-index:6}
+#fhDir[hidden]{display:none}
+#fhDir b{font-size:56px;line-height:1}
+#fhDir span{font-size:24px;display:flex;flex-direction:column;align-items:center}
+#fhDir small{font-size:15px;font-family:var(--f-body);font-weight:700;color:#ffe9a6}
+#fhDir.l{margin-left:-70px}
+#fhDir.r{margin-left:70px}
+@keyframes dirPulse{from{opacity:.75}to{opacity:1}}
+@media (max-height:500px){
+  #fishHud{top:calc(var(--gt) + 56px);width:min(330px,calc(100vw - 340px));padding:6px 12px}
+  #fishHud .fh-hp{height:13px;margin:5px 0 3px}
+  #fishHud .fh-hp span{line-height:13px}
+  #tRing{width:110px;height:110px;right:-11px;bottom:-11px}
+  #fhDir b{font-size:44px}
+  #fhDir span{font-size:20px}
+}

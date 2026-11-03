@@ -54,12 +54,11 @@
 
 <div id="chargeHud" class="panel" hidden><div class="t">蓄力中，放開拋竿</div><div class="bar"><i id="chargeFill"></i></div></div>
 <div id="fishHud" class="panel" hidden>
-  <div class="hdr"><span id="fhName">有魚上鉤了！</span><small id="fhHint">按住拉線，放開卸力</small></div>
-  <div class="barlbl"><span>線的拉力</span><span id="fhT">保持在綠色區</span></div>
-  <div class="bar tension" id="tBar"><span class="zone"></span><i id="tFill"></i></div>
-  <div class="barlbl"><span>收線進度</span><span id="fhP"></span></div>
-  <div class="bar progress"><i id="pFill"></i></div>
+  <div class="fh-row"><span id="fhRar" class="chip"></span><b id="fhName">有魚上鉤了！</b><span id="fhDist">0 m</span></div>
+  <div class="fh-hp"><i id="hpFill"></i><span>魚的體力</span></div>
+  <div class="fh-hint" id="fhT">按住拉線，放開卸力</div>
 </div>
+<div id="fhDir" hidden></div>
 
 <div id="joyZone" aria-hidden="true"></div>
 <div id="joy" aria-hidden="true"><div class="knob"></div></div>
@@ -81,10 +80,10 @@
     <button class="panel" data-emote="wow" aria-label="驚嘆">😮</button>
   </div>
   <button id="boatBtn" class="panel" hidden>上船</button>
-  <div id="actRow"><button id="jumpBtn" class="panel" aria-label="跳">跳</button><button id="act" class="idle" aria-label="釣魚動作">走到釣點</button></div>
+  <div id="actRow"><button id="jumpBtn" class="panel" aria-label="跳">跳</button><button id="act" class="idle" aria-label="釣魚動作">走到釣點</button><svg id="tRing" viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="54"/><circle class="danger" cx="60" cy="60" r="54"/><circle id="tArc" class="fg" cx="60" cy="60" r="54"/></svg></div>
 </div>
 
-<div id="hint" class="panel"><span id="hintTxt">WASD 移動 · 拖曳滑鼠轉視角 · 空白鍵跳（在釣點則是拋竿）· 走進發光圈後按住空白鍵拋竿</span><button id="hintX">知道了</button></div>
+<div id="hint" class="panel"><span id="hintTxt">WASD 移動 · 拖曳滑鼠轉視角 · 空白鍵跳（在水邊則是拋竿）· 走到水邊按住空白鍵拋竿，發光圈是好釣點</span><button id="hintX">知道了</button></div>
 
 <div id="photoUI" hidden>
   <div class="ptop"><span class="phint" id="pHint">拖曳轉動視角・雙指縮放</span><button class="pchip" id="pSelfie">自拍</button><button class="pchip on" id="pNames">名字</button><button class="pchip" id="pExit">完成</button></div>
