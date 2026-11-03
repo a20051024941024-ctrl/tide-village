@@ -640,3 +640,9 @@ details.help li{margin:4px 0}
 .achbar span{position:absolute;inset:0;font-size:10px;line-height:14px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums}
 
 .chip.season{background:#fff1d6;color:#a0521a;margin-left:4px}
+
+/* 可以轉的試穿預覽 */
+.pvbox{position:relative;flex:none;width:150px;display:flex;flex-direction:column;align-items:center}
+.pvcv{width:150px;height:170px;border-radius:10px;cursor:grab;touch-action:none}
+.pvcv:active{cursor:grabbing}
+.pvhint{font-size:11px;color:var(--ink-soft);margin-top:-4px}

@@ -4173,11 +4173,43 @@ const gearCost = it => it.love ? `💙 ${it.love}` : `🪙 ${it.price.toLocaleSt
 // 試穿：只在上面的預覽圖換上（不會移動鏡頭，也不會讓別人看到）
 function tryOn(id){ const it = GEAR_BY_ID[id]; if (!it) return; Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: id }); Wardrobe.previewOf = id; renderTab(); }
 function endTryOn(){ Wardrobe.preview = null; Wardrobe.previewOf = null; }
+// 試穿預覽：可以用手指轉的小 3D 畫面（另外一個小的繪圖器，不影響主畫面）
+const PV = { r:null, cv:null, sc:null, cam:null, av:null, key:'', yaw:0.45, drag:null, idleAt:0, raf:0, failed:false };
+function pvInit(){
+  if (PV.r) return true; if (PV.failed) return false;
+  try {
+    const cv = document.createElement('canvas'); cv.className = 'pvcv'; cv.setAttribute('aria-label', '試穿預覽，左右拖曳可以轉');
+    const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); r.setSize(150, 170, false);
+    r.outputColorSpace = renderer.outputColorSpace; r.toneMapping = renderer.toneMapping; r.toneMappingExposure = renderer.toneMappingExposure; r.setClearColor(0x000000, 0);
+    const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#c9b8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(2, 4, 3); sc.add(dl); const dl2 = new THREE.DirectionalLight('#ffffff', 0.9); dl2.position.set(-2, 2, -3); sc.add(dl2);
+    const cam = new THREE.PerspectiveCamera(30, 150 / 170, 0.05, 20); cam.position.set(0, 1.3, 5.0); cam.lookAt(0, 1.15, 0);
+    const av = makeAvatar(look.shirt, look.hat); sc.add(av.g);
+    cv.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); PV.drag = { x: e.clientX, yaw: PV.yaw }; try { cv.setPointerCapture(e.pointerId); } catch(_){} });
+    cv.addEventListener('pointermove', e => { if (!PV.drag) return; e.preventDefault(); PV.yaw = PV.drag.yaw + (e.clientX - PV.drag.x) * 0.014; });
+    const up = () => { if (PV.drag){ PV.drag = null; PV.idleAt = now() + 2.5; } };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('lostpointercapture', up);
+    cv.style.touchAction = 'none';
+    Object.assign(PV, { r, cv, sc, cam, av }); return true;
+  } catch(e){ PV.failed = true; return false; }
+}
+function pvShow(host, gear){
+  if (!pvInit()) return false;
+  PV.av.shirtM.color.set(look.shirt); PV.av.hatM.color.set(look.hat);
+  const k = JSON.stringify(gear); if (PV.key !== k){ applyGear(PV.av, gear); PV.key = k; }
+  host.appendChild(PV.cv); if (!PV.raf) PV.raf = requestAnimationFrame(pvLoop); return true;
+}
+function pvLoop(){
+  if (!PV.cv || !PV.cv.isConnected || $('#sheet').hidden){ PV.raf = 0; return; }
+  const t = now(); if (!PV.drag && t > PV.idleAt) PV.yaw += 0.01;
+  const a = PV.av; a.g.rotation.y = PV.yaw; if (a.gearAnim) a.gearAnim(t, 0);
+  if (a.eyes){ const bt = (t + a.blinkAt) % 4.2; a.eyes[0].scale.y = a.eyes[1].scale.y = bt < 0.12 ? 0.12 : 1.15; }
+  PV.r.render(PV.sc, PV.cam); PV.raf = requestAnimationFrame(pvLoop);
+}
 function renderWardrobe(body, only){
-  const pv = el('div', 'wprev'), img = el('img'); img.alt = '試穿預覽';
-  const showG = cleanGear(Wardrobe.preview || rec.gear);
-  try { img.src = avatarShot(showG, 'full', 256); } catch(e){}
-  pv.appendChild(img);
+  const pv = el('div', 'wprev'), showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'pvbox');
+  if (pvShow(box, showG)){ box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); if (Wardrobe.preview && Wardrobe.previewOf && GEAR_BY_ID[Wardrobe.previewOf] && GEAR_BY_ID[Wardrobe.previewOf].slot === 'back' && !PV.drag){ PV.yaw = Math.PI + 0.5; PV.idleAt = now() + 2.5; } }
+  else { const img = el('img'); img.alt = '試穿預覽'; try { img.src = avatarShot(showG, 'full', 256); } catch(e){} box.appendChild(img); }
+  pv.appendChild(box);
   const pi = el('div', 'wpinfo');
   if (Wardrobe.preview){ const it = GEAR_BY_ID[Wardrobe.previewOf]; pi.appendChild(el('b', '', '試穿中')); pi.appendChild(el('span', '', it ? it.name : ''));
     const bk = el('button', 'tbtn ghost', '換回原本'); bk.addEventListener('click', () => { endTryOn(); renderTab(); }); pi.appendChild(bk);
