@@ -54,11 +54,14 @@ const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 
 const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector2(x, z).normalize();
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
+// 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
+const ISLE = { x:150, z:0, r:15, y:0.32 };
 const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi'], legendBoost:1.4 },
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream'] },
+  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['mackerel','scorpion','moonbream','sunfish','dolphin'] },
   { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout'], legendBoost:1.8 },
 ];
@@ -83,7 +86,7 @@ const BOAT_DOCKS = [
 // 快速傳送點（站的位置與面向）
 const TRAVEL = [
   { id:'plaza', label:'潮汐廣場', x:4, z:9.6, rot:Math.PI, color:PALETTE.gold },
-  ...SPOTS.map(s => ({ id:s.id, label:s.label, x:s.pos.x, z:s.pos.z, rot:Math.atan2(s.dir.x, s.dir.y), color:s.color })),
+  ...SPOTS.filter(s => s.id !== 'isle').map(s => ({ id:s.id, label:s.label, x:s.pos.x, z:s.pos.z, rot:Math.atan2(s.dir.x, s.dir.y), color:s.color })),
   { id:'hill', label:'望海丘', x:-26, z:27, rot:-2.6, color:'#a6d37d' },
   { id:'lighthouse', label:'晴潮燈塔', x:LIGHTHOUSE[0] - 2.4, z:LIGHTHOUSE[1] + 3.2, rot:2.6, color:'#ffe5a4' },
 ];
@@ -101,7 +104,7 @@ const FISH_STYLE = {
   catfish:  { shape:'Fish1', c:{ Top:'#6b5a3a', Bottom:'#c8b48a', Fins:'#4f4230' } },
   koi:      { shape:'Fish1', c:{ Top:'#ff5a36', Bottom:'#fff3e8', Fins:'#ffb070' }, glow:true },
   mackerel: { shape:'Fish1', c:{ Top:'#2f6fb5', Bottom:'#dfe8f0', Fins:'#7fb0d8' } },
-  scorpion: { shape:'Fish3', c:{ Body:'#e07a45', Stripes:'#fff1dc', Outline:'#3a2418' } },
+  scorpion: { shape:'Scorpion', c:{ Top:'#c0603c', Bottom:'#efc49a', Fins:'#d0724a', Spots:'#6b2c1c', Eye:'#2a1a14' } },
   moonbream:{ shape:'Fish2', c:{ Body:'#f2c14e', Front:'#fff0b8', Fins:'#e59a2f' } },
   kuhua:    { shape:'Fish1', c:{ Top:'#6fae9a', Bottom:'#e6f4ee', Fins:'#a8d8c4' } },
   ayu:      { shape:'Fish1', c:{ Top:'#8fae5a', Bottom:'#eef4dc', Fins:'#d8c46a' } },
@@ -278,6 +281,7 @@ function terrainColor(x, z, info, out){
 /* ================= 新版環境（第 1 階段）：經典畫面可在「造型」分頁切回 ================= */
 const CLASSIC = false;   // 新地圖只有新版畫面
 let waterfall = null;
+var houseBuilder = null;
 let skyDome = null, waterSurface = null, sunDisc = null, windowGlass = null, tankWaterMat = null, cookStall = null, aquaVane = null, rainbow = null;
 
 /* ================= RENDERER ================= */
@@ -445,6 +449,7 @@ function castPoint(x, z, dx, dz, dist){
   deck(19.6, 21.8, 26.2, 28.6, 0.18);                   // 螢光溪的小平台
   deck(24, 29, 18.2, 19.8, 0.36, '#a8754a');            // 溪上的小木橋（通往東南森林）
   for (const z of [18.24, 19.76]) scene.add(box([5, 0.06, 0.06], '#6e4a2f', [26.5, 0.92, z]));
+  deck(ISLE.x - 1.4, ISLE.x + 1.4, ISLE.z + ISLE.r - 0.5, ISLE.z + 20.4, 0.36);   // 私人小島的碼頭
   // 港口的小船（裝飾）與漁網架
   for (const [x, z, r] of [[30.5, -37.5, 0.3], [35.5, -30.2, -0.2]]){ const b = makeBoatMesh('#f6e4bd'); b.position.set(x, WATER_LEVEL, z); b.rotation.y = r; scene.add(b); }
 
@@ -577,7 +582,9 @@ function castPoint(x, z, dx, dz, dist){
     scene.add(g);
     const c = Math.cos(rotY || 0), s = Math.sin(rotY || 0), ex = Math.abs(c) * width + Math.abs(s) * 2.5, ez = Math.abs(s) * width + Math.abs(c) * 2.5;
     addBoxCol(x, z, ex, ez);
+    return g;
   }
+  houseBuilder = house;   // 私人小島也用同一個木屋
   // 門都朝向廣場
   const faceTo = (x, z) => Math.atan2(PX - x, PZ - z);
   house(-9, 15, '#d896c3', 3.1, faceTo(-9, 15));
@@ -843,8 +850,9 @@ addFlora();
 
 function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of waters) if (x > w.x0 && x < w.x1 && z > w.z0 && z < w.z1) return true; return false; }
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
-function groundHeight(x, z){ const d = deckAt(x, z); return d ? d.y : Math.max(0, terrainH(x, z)); }
-function walkable(x, z){ if (deckAt(x, z)) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
+function isleH(x, z){ const d = Math.hypot(x - ISLE.x, z - ISLE.z); if (d > ISLE.r + 2.2) return null; return d <= ISLE.r ? ISLE.y : ISLE.y - (d - ISLE.r) / 2.2 * 0.3; }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); return Math.max(0, terrainH(x, z)); }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
 function blocked(x, z, r){
   for (const c of colliders){
     if (c.t === 'b'){ if (Math.abs(x - c.x) < c.hw + r && Math.abs(z - c.z) < c.hd + r) return true; }
@@ -1953,6 +1961,156 @@ function updateJumpers(dt, t){
 }
 
 /* ================= RECORDS / COLLECTION ================= */
+/* ================= ISLAND：私人小島（買房子、放裝飾、參觀別人的島）================= */
+// 價格和格子數跟伺服器 supabase/004_island.sql 一樣
+const HOUSES = {
+  cabin:  { name:'小木屋',   price:1500, roof:'#d896c3', w:3.0 },
+  beach:  { name:'海邊小屋', price:3000, roof:'#5fb6e3', w:3.6, awning:'#2f89c7' },
+  villa:  { name:'大別墅',   price:8000, roof:'#ec8b68', w:4.4, scale:1.3 },
+};
+const DECOS = {
+  flower: { name:'花圃',   price:200 },
+  bench:  { name:'長椅',   price:150 },
+  lamp:   { name:'路燈',   price:250 },
+  palm:   { name:'椰子樹', price:400 },
+  pond:   { name:'小魚池', price:1200 },
+  flag:   { name:'旗子',   price:300 },
+};
+const HOUSE_SLOTS = [[-6.5, -4.5], [6.5, -4.5], [0, -9]], DECO_SLOTS = [[-3, 3], [3, 3], [-8, 2], [8, 2], [-5, 9], [5, 9], [-10.5, -2], [10.5, -2], [0, 4.5], [-2, 10.5]];
+function cleanIsland(o){ const r = { h:{}, d:{} }; for (const [k, v] of Object.entries((o && o.h) || {})) if (HOUSES[v] && +k >= 0 && +k < HOUSE_SLOTS.length) r.h[+k] = v; for (const [k, v] of Object.entries((o && o.d) || {})) if (DECOS[v] && +k >= 0 && +k < DECO_SLOTS.length) r.d[+k] = v; return r; }
+var onIsle = null;            // { owner, name, layout } 現在在誰的島上
+let isleGroup = null, isleCols = [];
+function isleBase(){
+  // 島本體：草地圓台＋沙灘＋幾棵樹和石頭（只建一次）
+  const g = new THREE.Group(); g.position.set(ISLE.x, 0, ISLE.z); scene.add(g);
+  const sand = new THREE.Mesh(new THREE.CylinderGeometry(ISLE.r + 2.2, ISLE.r + 3.6, 0.8, 48), mat('#f2d69a', 0.95)); sand.position.y = ISLE.y - 0.72; sand.receiveShadow = true; g.add(sand);
+  const grass = new THREE.Mesh(new THREE.CylinderGeometry(ISLE.r, ISLE.r + 1.6, 0.5, 48), mat('#86c26a', 0.95)); grass.position.y = ISLE.y - 0.25; grass.receiveShadow = true; g.add(grass);
+  const path = new THREE.Mesh(new THREE.CircleGeometry(3.2, 28), mat('#dcbf7d')); path.rotation.x = -Math.PI / 2; path.position.y = ISLE.y + 0.01; path.receiveShadow = true; g.add(path);
+  const lane = box([1.6, 0.02, ISLE.r - 2], '#dcbf7d', [0, ISLE.y + 0.012, (ISLE.r + 2) / 2]); lane.castShadow = false; g.add(lane);
+  let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 7; i++){ const a = rr() * Math.PI * 2, r = ISLE.r + 0.6 + rr() * 1.2; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 + rr() * 0.4, 0), mat('#b7b2a4', 0.95, { flatShading:true })); rk.position.set(Math.cos(a) * r, ISLE.y - 0.25, Math.sin(a) * r); rk.castShadow = true; g.add(rk); }
+  // 歡迎牌
+  const post = box([0.14, 1.4, 0.14], PALETTE.wood, [1.6, ISLE.y + 0.7, ISLE.r - 1.2]); g.add(post);
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; isleSignCtx = cv.getContext('2d'); isleSignTex = new THREE.CanvasTexture(cv); isleSignTex.colorSpace = THREE.SRGBColorSpace;
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.6), new THREE.MeshBasicMaterial({ map: isleSignTex })); sign.position.set(1.6, ISLE.y + 1.35, ISLE.r - 1.1); g.add(sign);
+}
+let isleSignCtx = null, isleSignTex = null;
+function drawIsleSign(name){
+  if (!isleSignCtx) return; const c = isleSignCtx;
+  c.fillStyle = '#8c5d3b'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff4d6'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = 'bold 30px sans-serif'; c.fillText(String(name).slice(0, 8), 128, 34); c.font = '24px sans-serif'; c.fillText('的小島', 128, 70); isleSignTex.needsUpdate = true;
+}
+function decoMesh(type){
+  const g = new THREE.Group();
+  if (type === 'flower'){ g.add(box([1.6, 0.25, 1.0], '#8c5d3b', [0, 0.12, 0])); const cols = ['#f17b6d', '#ffd36a', '#f5a5d8', '#b9a4ff', '#ffffff'];
+    for (let i = 0; i < 10; i++){ const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), mat(cols[i % 5], 0.6)); f.position.set(-0.6 + (i % 5) * 0.3, 0.38, i < 5 ? -0.2 : 0.2); g.add(f); } }
+  else if (type === 'bench'){ g.add(box([1.8, 0.1, 0.5], PALETTE.wood, [0, 0.45, 0])); g.add(box([1.8, 0.45, 0.08], PALETTE.wood, [0, 0.72, -0.24])); for (const dx of [-0.75, 0.75]) g.add(box([0.1, 0.42, 0.42], '#6e4a2f', [dx, 0.22, 0])); }
+  else if (type === 'lamp'){ g.add(box([0.12, 2.2, 0.12], PALETTE.ink, [0, 1.1, 0])); const l = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:1.2 })); l.position.y = 2.3; g.add(l); g.userData.lamp = l; }
+  else if (type === 'palm'){ const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 3.2, 8), mat('#9b6a42')); tr.position.y = 1.6; tr.rotation.z = 0.12; tr.castShadow = true; g.add(tr);
+    for (let i = 0; i < 6; i++){ const lf = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.8, 4), mat('#5d9c55', 0.85, { flatShading:true })); lf.position.set(0.2, 3.1, 0); lf.rotation.set(0, i / 6 * Math.PI * 2, 1.25); lf.geometry.translate(0, 0.9, 0); lf.castShadow = true; g.add(lf); } }
+  else if (type === 'pond'){ const rim = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.18, 6, 24), mat('#b7b2a4', 0.9)); rim.rotation.x = Math.PI / 2; rim.position.y = 0.15; g.add(rim);
+    const w = new THREE.Mesh(new THREE.CircleGeometry(1.15, 24), mat('#4fc2cf', 0.2, { emissive:'#2f89c7', emissiveIntensity:0.2 })); w.rotation.x = -Math.PI / 2; w.position.y = 0.12; g.add(w);
+    for (let i = 0; i < 3; i++){ const f = fishModel(FISH_BY_ID[['koi', 'goby', 'kuhua'][i]], 0.22); f.position.set(Math.cos(i * 2.1) * 0.5, 0.06, Math.sin(i * 2.1) * 0.5); f.rotation.y = i * 2; g.add(f); g.userData.fish = (g.userData.fish || []).concat([f]); } }
+  else if (type === 'flag'){ g.add(box([0.08, 3, 0.08], '#e9e2cf', [0, 1.5, 0])); const fl = box([1.0, 0.6, 0.04], PALETTE.coral, [0.54, 2.6, 0]); g.add(fl); g.userData.flag = fl; }
+  return g;
+}
+const ISLE_DECO_R = { flower:0.9, bench:0.8, lamp:0.25, palm:0.4, pond:1.4, flag:0.2 };
+function buildIsle(layout, ownerName){
+  if (!isleSignCtx) isleBase();
+  if (isleGroup){ scene.remove(isleGroup); isleGroup.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
+  for (const c of isleCols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } isleCols = [];
+  isleGroup = new THREE.Group(); scene.add(isleGroup); drawIsleSign(ownerName || '我');
+  const L = cleanIsland(layout), n0 = colliders.length;
+  HOUSE_SLOTS.forEach(([sx, sz], i) => {
+    const x = ISLE.x + sx, z = ISLE.z + sz, type = L.h[i];
+    if (type && houseBuilder){
+      const H = HOUSES[type], g = houseBuilder(x, z, H.roof, H.w, Math.atan2(-sx, -sz), H.awning ? { awning:H.awning } : {});
+      if (g){ scene.remove(g); if (H.scale){ g.scale.setScalar(H.scale); const c = colliders[colliders.length - 1]; c.hw *= H.scale; c.hd *= H.scale; } isleGroup.add(g); }
+    } else {   // 空地：木樁圍起來的方塊
+      const lot = box([4.4, 0.03, 3.4], '#d7c290', [x, ISLE.y + 0.015, z]); lot.castShadow = false; lot.rotation.y = Math.atan2(-sx, -sz); isleGroup.add(lot);
+      for (const [cx, cz] of [[-2.2, -1.7], [2.2, -1.7], [-2.2, 1.7], [2.2, 1.7]]){ const a = Math.atan2(-sx, -sz), px = x + Math.cos(a) * cx + Math.sin(a) * cz, pz = z - Math.sin(a) * cx + Math.cos(a) * cz; isleGroup.add(box([0.12, 0.5, 0.12], PALETTE.wood, [px, ISLE.y + 0.25, pz])); }
+    }
+  });
+  DECO_SLOTS.forEach(([sx, sz], i) => { const type = L.d[i]; if (!type) return; const g = decoMesh(type); g.position.set(ISLE.x + sx, ISLE.y, ISLE.z + sz); g.rotation.y = Math.atan2(-sx, -sz) + Math.PI; isleGroup.add(g); addCircleCol(ISLE.x + sx, ISLE.z + sz, ISLE_DECO_R[type]); });
+  isleCols = colliders.slice(n0);
+  isleGroup.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+}
+function updateIsle(t){
+  if (!isleGroup) return;
+  isleGroup.children.forEach(g => { const u = g.userData; if (u.flag) u.flag.rotation.y = Math.sin(t * 2 + g.position.x) * 0.25; if (u.fish) u.fish.forEach((f, k) => { const a = t * 0.6 + k * 2.1; f.position.set(Math.cos(a) * 0.55, 0.06, Math.sin(a) * 0.55); f.rotation.y = -a; }); if (u.lamp) u.lamp.material.emissiveIntensity = 0.4 + DayNight.lamp * 1.6; });
+}
+function goIsle(owner, name, layout){
+  if (visiting) leaveVisit();
+  onIsle = { owner, name, layout, at: performance.now() }; buildIsle(layout, name);
+  travelTo({ id:'isle', label:'小島', x: ISLE.x, z: ISLE.z + 12.5, rot: Math.PI });
+  renderIsleBar(); pushPresence(true);
+  ticker(owner === myIdOrMe() ? '🏝️ 歡迎回到你的小島' : `🏝️ 來到 <b>${esc(name)}</b> 的小島`);
+}
+function myIdOrMe(){ return Cloud.userId || myId || 'me'; }
+function goMyIsle(){ goIsle(myIdOrMe(), myDisplayName() === '你' ? '我' : myDisplayName(), rec.island); }
+async function visitIsle(id, name){
+  if (!Cloud.sb){ toast('要連上雲端才能參觀別人的島'); return; }
+  try { const { data } = await Cloud.sb.from('players').select('nickname,island').eq('id', id).maybeSingle(); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); goIsle(id, data.nickname || name, data.island); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
+  catch(e){ toast('暫時連不上雲端'); }
+}
+function leaveIsle(){ if (!onIsle) return; onIsle = null; renderIsleBar(); travelTo(TRAVEL[0]); pushPresence(true); }
+// 從小島走回主島範圍外時（例如用地圖傳送）自動離開
+function checkIsle(){ if (onIsle && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 40){ onIsle = null; renderIsleBar(); pushPresence(true); } }
+function renderIsleBar(){
+  let bar = $('#isleBar');
+  if (!onIsle){ if (bar) bar.hidden = true; return; }
+  if (!bar){ bar = document.createElement('div'); bar.id = 'isleBar'; bar.className = 'panel'; document.body.appendChild(bar); }
+  bar.hidden = false; bar.innerHTML = ''; const mine = onIsle.owner === myIdOrMe();
+  bar.appendChild(el('span', '', mine ? '🏝️ 我的小島' : `🏝️ ${onIsle.name} 的小島`));
+  if (mine){ const b = el('button', 'tbtn', '建造'); b.addEventListener('click', () => openSheet('island')); bar.appendChild(b); }
+  const back = el('button', 'tbtn ghost', '回村子'); back.addEventListener('click', leaveIsle); bar.appendChild(back);
+}
+function buyBuild(kind, slot, type){
+  const T = kind === 'h' ? HOUSES : DECOS, it = T[type]; if (!it) return;
+  if (rec.coins < it.price){ toast(`金幣不夠，還差 🪙${(it.price - rec.coins).toLocaleString()}`); return; }
+  rec.island[kind][slot] = type; addCoins(-it.price); saveRecLocal();
+  if (onIsle && onIsle.owner === myIdOrMe()){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); }
+  cloudCall('buy_build', { p_kind: kind, p_slot: slot, p_type: type });
+  SFX.catch(); ticker(`🏗️ 你在小島上蓋好了 <b>${esc(it.name)}</b>！`); renderTab();
+}
+function sellBuild(kind, slot){
+  const T = kind === 'h' ? HOUSES : DECOS, type = rec.island[kind][slot]; if (!type) return; const back = Math.floor(T[type].price / 2);
+  delete rec.island[kind][slot]; addCoins(back); saveRecLocal();
+  if (onIsle && onIsle.owner === myIdOrMe()){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); }
+  cloudCall('remove_build', { p_kind: kind, p_slot: slot }); toast(`拆掉了 ${esc(T[type].name)}，退回 🪙${back}`); renderTab();
+}
+let islePick = null;   // { kind, slot }
+function renderIsland(body){
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🏝️ 我的小島</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  const mine = onIsle && onIsle.owner === myIdOrMe();
+  const bar = el('div', 'tankbar');
+  const go = el('button', 'tbtn', mine ? '你在小島上' : '前往我的小島'); go.disabled = mine; go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); bar.appendChild(go);
+  if (onIsle){ const bk = el('button', 'tbtn ghost', '回村子'); bk.addEventListener('click', () => { closeSheet(); leaveIsle(); }); bar.appendChild(bk); }
+  body.appendChild(bar);
+  body.appendChild(el('p', 'sub', '你的小島有 3 塊建地可以蓋房子、10 個位置可以放裝飾。蓋好之後別人可以從「玩家」分頁或排行榜來參觀。拆掉會退回一半的金幣。小島的碼頭也可以釣魚。'));
+  const section = (title, kind, slots, T) => {
+    body.appendChild(el('div', 'dexhead', title));
+    const ul = el('ul', 'shoplist cols');
+    slots.forEach((_, i) => {
+      const cur = rec.island[kind][i], li = el('li', cur ? 'on' : '');
+      li.appendChild(el('span', 'dishic', kind === 'h' ? (cur ? '🏠' : '🟫') : (cur ? { flower:'🌷', bench:'🪑', lamp:'💡', palm:'🌴', pond:'🐠', flag:'🚩' }[cur] : '·')));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${kind === 'h' ? '建地' : '位置'} ${i + 1}：${cur ? T[cur].name : '空的'}`)); li.appendChild(d);
+      const acts = el('div', 'tacts');
+      if (cur){ const b = el('button', 'tbtn ghost', `拆掉 +${Math.floor(T[cur].price / 2)}`); b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定拆掉？'; b.classList.add('warn'); return; } sellBuild(kind, i); }); acts.appendChild(b); }
+      else { const b = el('button', 'tbtn', kind === 'h' ? '蓋房子' : '放裝飾'); b.addEventListener('click', () => { islePick = { kind, slot:i }; renderTab(); }); acts.appendChild(b); }
+      li.appendChild(acts); ul.appendChild(li);
+      if (islePick && islePick.kind === kind && islePick.slot === i && !cur){
+        const pick = el('li', 'pickrow');
+        for (const [k, it] of Object.entries(T)){ const b = el('button', 'tbtn' + (rec.coins < it.price ? ' ghost' : ''), `${it.name} 🪙${it.price.toLocaleString()}`); b.addEventListener('click', () => { islePick = null; buyBuild(kind, i, k); }); pick.appendChild(b); }
+        const x = el('button', 'tbtn ghost', '取消'); x.addEventListener('click', () => { islePick = null; renderTab(); }); pick.appendChild(x); ul.appendChild(pick);
+      }
+    });
+    body.appendChild(ul);
+  };
+  section('🏠 房子', 'h', HOUSE_SLOTS, HOUSES);
+  section('🌷 裝飾', 'd', DECO_SLOTS, DECOS);
+}
+
 /* ================= COOKING：潮汐食堂（料理與壽司）================= */
 // 食譜和價格跟伺服器的 supabase/002_cooking.sql 一樣；伺服器會再檢查一次
 const RECIPES = {
@@ -2248,7 +2406,7 @@ function afterSell(got, n){
   logMsg('', `你賣了 ${n} 條魚，得到 ${got} 金幣`, true); renderTab();
 }
 
-function emptyRec(){ return { dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
+function emptyRec(){ return { island:{ h:{}, d:{} }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
 const SHOW_MAX = 100, KEEP_MAX = 200;
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || ++others <= KEEP_MAX); }
@@ -2261,6 +2419,7 @@ function normRec(r){
   if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX).map(x => ({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }));
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
+  if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
@@ -2571,6 +2730,7 @@ function presenceObj(){
   if (nickname) o.n = nickname;
   if (myId) o.u = myId;
   if (myBoat) o.bt = 1;
+  if (onIsle) o.is = onIsle.owner;
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
@@ -2605,11 +2765,12 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by;
-  if (pos){ p.target.set(clamp(+pos[0]||0, -90, 90), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, -0.2, 8); }
+  if (pos){ p.target.set(clamp(+pos[0]||0, -90, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, -0.2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   p.fisher.sitting = !!pr.bt;
+  p.isle = typeof pr.is === 'string' ? pr.is : null;   // 不在同一座島上的人看不到
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
@@ -2636,6 +2797,7 @@ function updatePeers(dt, t){
     f.speed += ((d > 0.05 ? Math.min(6, d*8) : 0) - f.speed) * Math.min(1, dt*8);
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
+    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null); if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
     f.dip = p.ph === 'bite' ? 0.9 + Math.sin(t*30)*0.1 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
@@ -2663,6 +2825,10 @@ function useRoom(r){
       if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const rc = RECIPES[msg.data.r]; if (!rc) return; const q = clamp(Math.round(Number(msg.data.q) || 1), 1, 3);
       const p = peers.get(msg.peer); ticker(`${rc.icon} <b>${esc(p ? peerName(p) : '有人')}</b> 做出了 ${'★'.repeat(q)} ${esc(rc.name)}`);
       if (p) p.fisher.say(rc.icon, 'emote', 3);
+    }, () => {});
+    room.on('isle', msg => {
+      if (msg.sameTab || !msg.data || msg.data.to !== myId || isBlockedPeer(msg.peer)) return;
+      const p = peers.get(msg.peer); ticker(`🏝️ <b>${esc(p ? peerName(p) : '有人')}</b> 來參觀你的小島了`);
     }, () => {});
     room.on('visit', msg => {
       if (msg.sameTab || !msg.data || msg.data.to !== myId || isBlockedPeer(msg.peer)) return;
@@ -2774,15 +2940,16 @@ const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
 const Cloud = { sb:null, on:false, status:'connecting', err:'', userId:null, email:null, isAnon:true, queue:Promise.resolve(), pending:0, board:{ best:[], total:[], earned:[] }, ui:{ step:'idle', mode:'bind', email:'', busy:false, msg:'' } };
 function rowToRec(r){
   return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
-    dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, updatedAt:Date.parse(r.updated_at) || Date.now() });
+    island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, updatedAt:Date.parse(r.updated_at) || Date.now() });
 }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
-  rec = rowToRec(row); LS.set('tide.rec', rec); buildTank(); renderCoins(); me.setRod(rec.rod); pushPresence(true);
-  if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style'].includes(curTab) && !Cloud.ui.busy) renderTab();
+  rec = rowToRec(row); rec.island = cleanIsland(rec.island); LS.set('tide.rec', rec); buildTank();
+  if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); pushPresence(true);
+  if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理'];
+const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -3022,6 +3189,7 @@ function renderTab(){
   const body = $('#sheetBody'); body.textContent = '';
   if (curTab === 'shop'){ renderShop(body); return; }
   if (curTab === 'cook'){ renderCook(body); return; }
+  if (curTab === 'island'){ renderIsland(body); return; }
   if (curTab === 'dex'){
     const got = FISH.filter(f => rec.count[f.id]).length;
     body.appendChild(el('p', 'sub', `已收集 ${got} / ${FISH.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。`));
@@ -3066,7 +3234,7 @@ function renderTab(){
       const bf = r.bestFish && FISH_BY_ID[r.bestFish];
       who.appendChild(el('small', '', lbMode === 'week' ? (i === 0 ? '👑 目前第一名' : '') : lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${Object.keys(r.count || {}).length} 種・傳說 ${r.legend || 0} 條`));
       li.appendChild(who);
-      if (Cloud.on && !isMe && r.id){ who.classList.add('canvisit'); who.title = '參觀水族館'; who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); }
+      if (Cloud.on && !isMe && r.id){ who.classList.add('canvisit'); who.title = '參觀水族館'; who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); const vi = el('button', 'tbtn ghost vbtn', '🏝️ 小島'); vi.addEventListener('click', e => { e.stopPropagation(); visitIsle(r.id, r.name); }); who.appendChild(vi); }
       li.appendChild(el('span', 'val', lbMode === 'week' ? (r.weekW || 0).toFixed(2) + ' kg' : lbMode === 'best' ? r.bestW.toFixed(2) + ' kg' : lbMode === 'earned' ? '🪙' + (r.earned || 0).toLocaleString() : r.total + ' 條'));
       ul.appendChild(li);
     });
@@ -3118,7 +3286,7 @@ function renderTab(){
     else body.appendChild(el('p', 'sub', '目前是單人模式。在 claude.ai 上開啟並分享這個頁面，朋友加入後就會出現在這裡。'));
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
-      if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); }
+      if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
           const box = el('div', 'rpbox'); box.appendChild(el('span', '', '檢舉原因：'));
           for (const r of ['罵人／不禮貌', '洗版', '取不雅的名字', '其他']){ const b = el('button', 'tbtn ghost vbtn', r); b.addEventListener('click', () => { reportPeer(peerId, name, r); box.remove(); }); box.appendChild(b); }
@@ -3305,7 +3473,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateJumpers(dt, t); updateTank(t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateIsle(t); checkIsle(); updateJumpers(dt, t); updateTank(t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){ s.g.visible = Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }

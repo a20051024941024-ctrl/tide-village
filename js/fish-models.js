@@ -85,7 +85,26 @@ const SEA_MESH = (() => {
         H.vfin('Fins', [[-0.58, 0.0], [-0.62, 0.05], [-0.82, 0.4], [-0.78, 0.36], [-0.72, 0.04], [-0.82, -0.2], [-0.62, -0.05]]);
         pec(H, 0.3, 0.26, 0.1, 0.12); eyes(H, 0.62, 0.05, 0.016);
         for (let k = 0; k < 46; k++){ const x = 0.62 - H.rnd() * 1.1, a = 0.25 + H.rnd() * (PI - 0.5); H.decal('Spots', x, a, 0.018 + H.rnd() * 0.01, 0.018, 4, 0.005); }
-        for (let k = 0; k < 4; k++){ const x = 0.48 - k * 0.04; H.decal('Gill', x, 0.05, 0.006, 0.045, 4); H.decal('Gill', x, PI - 0.05, 0.006, 0.045, 4); } } }),
+        for (let k = 0; k < 4; k++){ const x = 0.48 - k * 0.04; H.decal('Gill', x, 0.05, 0.006, 0.045, 4); H.decal('Gill', x, PI - 0.05, 0.006, 0.045, 4); } } }),    // 石狗公：大頭、側扁的高身體、背上一排硬刺、大扇形胸鰭、斑駁的花紋
+    Scorpion: build({ x0:0.66, x1:-0.5, belly:0.25,
+      prof: u => { const r = u < 0.24 ? Math.pow(Math.sin(u / 0.24 * PI / 2), 0.55) : 1 - 0.68 * sm((u - 0.28) / 0.72); return [0.2 * r * (1 - 0.25 * u), 0.27 * r, 0.02 * (1 - u)]; },
+      extra(H){
+        // 硬棘背鰭：每根刺一片尖三角，下面連著膜
+        for (let k = 0; k < 9; k++){ const x = 0.4 - k * 0.07, s = H.sec(x), top = s.y + s.h * 0.92, len = 0.17 + 0.05 * Math.sin(k / 8 * PI);
+          H.vfin('Fins', [[x + 0.035, top], [x - 0.04, top], [x - 0.012, top + len]]); H.vfin('Fins', [[x - 0.012, top + len * 0.45], [x - 0.04, top], [x - 0.07, top], [x - 0.07, top + len * 0.35]]); }
+        { const s = H.sec(-0.25); H.vfin('Fins', [[-0.22, s.y + s.h * 0.9], [-0.24, s.y + s.h + 0.14], [-0.3, s.y + s.h + 0.15], [-0.37, s.y + s.h + 0.1], [-0.4, s.y + s.h * 0.85]]); }
+        // 臀鰭
+        { const s = H.sec(-0.25); H.vfin('Fins', [[-0.16, s.y - s.h * 0.9], [-0.22, s.y - s.h - 0.12], [-0.33, s.y - s.h - 0.1], [-0.36, s.y - s.h * 0.85]]); }
+        // 圓尾鰭
+        const cl = [[-0.46, 0.02]]; for (let k = 0; k <= 8; k++){ const a = -PI / 2.3 + k / 8 * (PI / 1.15); cl.push([-0.48 - Math.cos(a) * 0.2, 0.02 + Math.sin(a) * 0.17]); } H.vfin('Fins', cl);
+        // 大胸鰭（往兩邊張開）
+        for (const m of [1, -1]){ const s = H.sec(0.2), y = s.y - s.h * 0.15, z = s.w * 0.85 * m; const P = [[0.24, y, z]]; for (let k = 0; k <= 6; k++){ const a = -0.9 + k / 6 * 1.6; P.push([0.2 - Math.cos(a) * 0.26, y + Math.sin(a) * 0.2, z + 0.1 * m * Math.cos(a)]); } H.plate('Fins', P); }
+        // 斑駁花紋 + 三道深色斑帶
+        for (let k = 0; k < 40; k++){ const x = 0.58 - H.rnd() * 0.95, a = H.rnd() * 2 * PI; H.decal('Spots', x, a, 0.02 + H.rnd() * 0.02, 0.02 + H.rnd() * 0.015, 5, 0.005); }
+        for (const x of [0.3, 0.05, -0.2]){ for (const a of [0.9, PI - 0.9, 0.35, PI - 0.35]) H.decal('Spots', x, a, 0.035, 0.06, 6, 0.006); }
+        // 大眼睛（偏上）和嘴巴
+        eyes(H, 0.43, 0.75, 0.045); H.decal('Eye', 0.64, 0.0, 0.012, 0.05, 6, 0.004); H.decal('Eye', 0.64, PI, 0.012, 0.05, 6, 0.004);
+      } }),
   };
 })();
 Object.assign(FISH_MESH, SEA_MESH);
