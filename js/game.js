@@ -3292,9 +3292,21 @@ function updateChum(dt, t){
 const ChumFly = { on:false };
 // ---- 提前打窩：祕密窩點（只有自己知道，存在這台裝置；效果慢慢醞釀，10 分鐘後最強，維持 1 小時）----
 const SECRET_GROW = 10 * 60 * 1000, SECRET_LIFE = 60 * 60 * 1000, SECRET_MAX = 3;
-let secretSpots = (LS.get('tide.secretChum', []) || []).filter(x => x && CHUM_BY_ID[x.type] && Date.now() - x.at < SECRET_LIFE).slice(0, SECRET_MAX);
+const secretSpots = (LS.get('tide.secretChum', []) || []).filter(x => x && CHUM_BY_ID[x.type] && Date.now() - x.at < SECRET_LIFE).slice(0, SECRET_MAX);
 const secretMarks = new Map();
-function saveSecrets(){ LS.set('tide.secretChum', secretSpots); }
+// 存在這台裝置＋雲端（雲端那張表只有自己讀得到），換手機登入也找得到
+let secretSyncT = 0, secretLoaded = null;
+function saveSecrets(){ LS.set('tide.secretChum', secretSpots); clearTimeout(secretSyncT); secretSyncT = setTimeout(() => { if (Cloud.on && Cloud.sb) Cloud.sb.rpc('set_secret_chum', { p_spots: secretSpots }).then(() => {}, () => {}); }, 600); }
+async function loadSecretsCloud(){
+  secretLoaded = Cloud.userId; try {
+    const { data, error } = await Cloud.sb.rpc('get_secret_chum'); if (error || !Array.isArray(data)) return;
+    const byId = new Map(); for (const x of data.concat(secretSpots)) if (x && CHUM_BY_ID[x.type] && Date.now() - x.at < SECRET_LIFE) byId.set(+x.id, Object.assign({}, x, { id:+x.id, x:+x.x, z:+x.z, at:+x.at }));
+    const merged = [...byId.values()].sort((a, b) => b.at - a.at).slice(0, SECRET_MAX);
+    for (const [id, g] of secretMarks){ if (!merged.some(m => m.id === id)){ scene.remove(g); secretMarks.delete(id); } }
+    secretSpots.length = 0; secretSpots.push(...merged); LS.set('tide.secretChum', secretSpots);
+    if (JSON.stringify(merged.map(m => m.id)) !== JSON.stringify(data.map(m => +m.id))) saveSecrets();
+  } catch(e){}
+}
 function secretPower(sp){ const age = Date.now() - sp.at; return age > SECRET_LIFE ? 0 : clamp(0.15 + 0.85 * age / SECRET_GROW, 0.15, 1); }
 function secretMark(sp){
   // 只有自己看得到的小浮標＋淡淡的窩
@@ -3305,6 +3317,7 @@ function secretMark(sp){
   g.userData = { bo, pt }; secretMarks.set(sp.id, g); return g;
 }
 function updateSecrets(t){
+  if (Cloud.on && Cloud.sb && secretLoaded !== Cloud.userId) loadSecretsCloud();
   for (let i = secretSpots.length - 1; i >= 0; i--){ const sp = secretSpots[i], pw = secretPower(sp);
     if (pw <= 0){ const g = secretMarks.get(sp.id); if (g) scene.remove(g); secretMarks.delete(sp.id); secretSpots.splice(i, 1); saveSecrets(); toast('🍚 有一個祕密窩點的窩料散掉了'); continue; }
     let g = secretMarks.get(sp.id); if (!g) g = secretMark(sp);
