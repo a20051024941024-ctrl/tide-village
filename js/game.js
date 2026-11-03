@@ -2163,13 +2163,16 @@ function cancelFishing(msg){
   if (msg && msg !== '收竿了') flash(msg);
   pushPresence(true);
 }
+const LEG_K = { harbor: 4.0, other: 0.75 };
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
   const fb = F.buffAt || null, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1), kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1);
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
-  const w = list.map(f => (f.w || 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring));
+  // 傳說魚：每個釣點的傳說魚加起來是固定的機率（不會因為種類多就特別常出現），外海比較高
+  const nLeg = list.filter(f => f.rarity === '傳說').length, legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
+  const w = list.map(f => (f.w || 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
