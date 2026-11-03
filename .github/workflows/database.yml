@@ -18,7 +18,16 @@ jobs:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           if [ -z "$DB_URL" ]; then echo "還沒設定 SUPABASE_DB_URL，略過"; exit 0; fi
+          # 檢查網址格式（只印帳號、主機、連接埠，密碼只檢查有沒有怪字元，不會印出來）
+          python3 - <<'PY'
+          import os, urllib.parse as u
+          raw = os.environ['DB_URL']; s = raw.strip(); r = u.urlsplit(s)
+          pw = r.password or ''
+          print('帳號:', r.username, '| 主機:', r.hostname, '| 連接埠:', r.port, '| 資料庫:', r.path)
+          print('密碼長度:', len(pw), '| 有方括號:', '[' in pw or ']' in pw, '| 有空白:', ' ' in pw, '| 網址前後有空白或換行:', raw != s, '| 有 % 編碼:', '%' in pw)
+          if r.username and '.' not in r.username: print('⚠️ 帳號應該是 postgres.mfaskrjcxofwkusrzkhb（pooler 一定要加專案代號）')
+          PY
           for f in supabase/schema.sql $(ls supabase/[0-9][0-9][0-9]_*.sql | sort); do
             echo "== 執行 $f"
-            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+            psql "$(echo "$DB_URL" | tr -d '\r\n' | sed 's/^ *//;s/ *$//')" -v ON_ERROR_STOP=1 -q -f "$f"
           done
