@@ -393,5 +393,14 @@ body.photo.nonames #labels{display:none}
 .shoplist li.pickrow .tbtn{flex:1 1 auto}
 
 /* 有新版本提醒 */
-#updBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 64px);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 16px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100vw - 32px);white-space:nowrap}
+#updBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 116px);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 16px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100vw - 32px);white-space:nowrap}
 #updBar[hidden]{display:none}
+
+/* 鬼抓人 */
+#tagBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 64px);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 16px;font-size:14px;font-weight:600;z-index:28;max-width:calc(100vw - 32px);white-space:nowrap}
+#tagBar[hidden]{display:none}
+#tagBar .tt{font-variant-numeric:tabular-nums;font-size:16px;color:var(--coral)}
+#tagBar.isghost{background:#3b2a5a;color:#fff}
+#tagBar.isghost .tt{color:#ffd36a}
+.tag.ghost .nm{background:#6b3fd0}
+.tag.ghost .nm::before{content:'👻 '}

@@ -1837,7 +1837,7 @@ function updatePlayer(dt){
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); const rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix;
     const run = keys.ShiftLeft || keys.ShiftRight || L > 0.95;
-    speed = (run ? 6.2 : 4.2) * Math.min(1, L) * (Jump.air > 0 ? 1.1 : 1);
+    speed = (run ? 6.2 : 4.2) * Math.min(1, L) * (Jump.air > 0 ? 1.1 : 1) * (iAmGhost() ? 1.08 : 1);   // 鬼跑快一點點
     const nx = me.pos.x + mx / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     // 可以走上山坡，但太陡的崖爬不上去
@@ -2226,6 +2226,116 @@ function initUpdateCheck(){
   setInterval(checkUpdate, 3 * 60 * 1000);
   setInterval(maybeShowUpdate, 4000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+}
+
+/* ================= TAG：鬼抓人（大廳或私人房間裡，2 人以上就能玩，純好玩不給金幣）================= */
+// 發起的人是「主持人」：收集報名、選鬼、每 4 秒廣播一次狀態（後來加入的人也能同步）
+const TAG_DUR = 180, TAG_RANGE = 1.3, TAG_IMMUNE = 3000;
+const Tag = { st:'idle', host:null, me:null, players:[], ghost:null, endAt:0, immune:null, immuneUntil:0, openUntil:0, lastSync:0, tagSent:0 };
+function tagReset(){ Object.assign(Tag, { st:'idle', host:null, players:[], ghost:null, endAt:0, immune:null, immuneUntil:0, openUntil:0 }); renderTagBar(); refreshGhostTags(); }
+function tagName(k){ if (k === Tag.me) return myDisplayName() === '你' ? '你' : myDisplayName(); const p = peers.get(k); return p ? peerName(p) : '釣客'; }
+function tagEmit(d){ if (room && room.connected()) room.emit('tag', d).catch(() => {}); }
+function iAmGhost(){ return Tag.st === 'run' && Tag.me && Tag.ghost === Tag.me; }
+function tagOpen(){
+  if (!room || !room.connected()){ toast('要在大廳或房間裡才能玩鬼抓人'); return; }
+  if (Tag.st !== 'idle'){ toast('已經有一局鬼抓人了'); return; }
+  tagEmit({ a:'open', ms: 60000 });
+}
+function tagJoin(){ if (Tag.st === 'lobby') tagEmit({ a:'join' }); }
+function tagLeave(){ if (Tag.st !== 'idle') tagEmit({ a:'leave' }); }
+function tagStart(){
+  if (Tag.st !== 'lobby' || Tag.host !== Tag.me) return;
+  const pl = Tag.players.filter(k => k === Tag.me || peers.has(k)); if (pl.length < 2){ toast('至少要 2 個人才能開始'); return; }
+  tagEmit({ a:'start', pl, g: pl[Math.floor(Math.random() * pl.length)], left: TAG_DUR * 1000 });
+}
+function onTagMsg(msg){
+  const d = msg && msg.data; if (!d || typeof d.a !== 'string') return;
+  if (msg.sameTab) Tag.me = msg.peer;   // 自己發出去的訊息會帶著自己的編號
+  const from = msg.peer, now = Date.now();
+  if (!msg.sameTab && isBlockedPeer(from)) return;
+  if (d.a === 'open'){
+    if (Tag.st !== 'idle') return;
+    Object.assign(Tag, { st:'lobby', host:from, players:[from], openUntil: now + clamp(+d.ms || 60000, 10000, 90000) });
+    ticker(msg.sameTab ? '👻 你發起了鬼抓人，等大家加入…' : `👻 <b>${esc(tagName(from))}</b> 發起了鬼抓人！按上面的「加入」一起玩`);
+  } else if (d.a === 'join'){
+    if (Tag.st === 'lobby' && !Tag.players.includes(from)){ Tag.players.push(from); if (!msg.sameTab) ticker(`👻 <b>${esc(tagName(from))}</b> 加入了鬼抓人`); }
+  } else if (d.a === 'leave'){
+    Tag.players = Tag.players.filter(k => k !== from);
+    if (from === Tag.host && Tag.st === 'lobby'){ ticker('👻 鬼抓人取消了'); tagReset(); return; }
+    if (Tag.st === 'run' && Tag.players.length < 2){ tagFinish('人數不夠，這局提早結束'); return; }
+    if (Tag.st === 'run' && from === Tag.ghost && Tag.host === Tag.me){ const g = Tag.players[Math.floor(Math.random() * Tag.players.length)]; tagEmit({ a:'sync', pl:Tag.players, g, left:Tag.endAt - now }); }
+  } else if (d.a === 'start' || d.a === 'sync'){
+    if (from !== Tag.host && Tag.host) return;   // 只聽主持人的
+    if (!Array.isArray(d.pl) || typeof d.g !== 'string') return;
+    const wasRun = Tag.st === 'run', oldGhost = Tag.ghost;
+    Object.assign(Tag, { st:'run', host:from, players:d.pl.filter(k => typeof k === 'string').slice(0, 20), ghost:d.g, endAt: now + clamp(+d.left || 0, 0, TAG_DUR * 1000) });
+    if (!wasRun){ SFX.bite(); flash(d.g === Tag.me ? '👻 你是鬼！去碰別人' : `👻 ${tagName(d.g)} 是鬼，快跑！`, 2); ticker(`👻 鬼抓人開始！第一個鬼是 <b>${esc(tagName(d.g))}</b>`); }
+    else if (oldGhost !== d.g) refreshGhostTags();
+    refreshGhostTags();
+  } else if (d.a === 'tag'){
+    if (Tag.st !== 'run' || from !== Tag.ghost || typeof d.to !== 'string' || !Tag.players.includes(d.to) || d.to === from) return;
+    if (Tag.immune === d.to && now < Tag.immuneUntil) return;
+    Tag.ghost = d.to; Tag.immune = from; Tag.immuneUntil = now + TAG_IMMUNE;
+    ticker(`👻 <b>${esc(tagName(from))}</b> 抓到了 <b>${esc(tagName(d.to))}</b>！`);
+    if (d.to === Tag.me){ SFX.bite(); flash('👻 被抓到了！換你當鬼', 1.6); camShake = Math.max(camShake, 0.15); }
+    else if (from === Tag.me) flash('抓到了！快跑 🏃', 1.2);
+    refreshGhostTags();
+  } else if (d.a === 'end'){
+    if (from === Tag.host && Tag.st === 'run') tagFinish();
+  }
+  renderTagBar(); if (!$('#sheet').hidden && curTab === 'people') renderTab();
+}
+function tagFinish(why){
+  const loser = Tag.ghost;
+  if (why) ticker('👻 ' + why);
+  else { ticker(`⏰ 鬼抓人結束！最後的鬼是 <b>${esc(tagName(loser))}</b> 😝`); flash(loser === Tag.me ? '時間到…你是最後的鬼 😝' : '時間到！你贏了 🎉', 2.2); if (loser !== Tag.me){ SFX.catch(); FX.emit(me.pos.x, 2, me.pos.z, 20, '#ffd36a', 1.2, 2.2, 1.0); } }
+  tagReset();
+}
+function refreshGhostTags(){
+  const g = Tag.st === 'run' ? Tag.ghost : null;
+  me.tag.classList.toggle('ghost', !!g && g === Tag.me);
+  for (const [k, p] of peers) p.fisher.tag.classList.toggle('ghost', !!g && g === k);
+}
+function tagTick(){
+  const now = Date.now();
+  if (Tag.st === 'lobby' && now > Tag.openUntil){ if (Tag.host === Tag.me && Tag.players.length >= 2) tagStart(); else if (Tag.host === Tag.me){ ticker('👻 沒有人加入，鬼抓人取消了'); tagEmit({ a:'leave' }); } else if (now > Tag.openUntil + 8000) tagReset(); }
+  if (Tag.st !== 'run') return;
+  if (!Tag.players.includes(Tag.me) && Tag.host !== Tag.me){ /* 沒參加的人只看 */ }
+  // 主持人：時間到就宣布結束；定期廣播狀態；鬼斷線就換人
+  if (Tag.host === Tag.me){
+    const alive = Tag.players.filter(k => k === Tag.me || peers.has(k));
+    if (alive.length !== Tag.players.length){ Tag.players = alive; if (alive.length < 2){ tagEmit({ a:'end' }); tagFinish('人數不夠，這局提早結束'); return; } if (!alive.includes(Tag.ghost)){ Tag.ghost = alive[Math.floor(Math.random() * alive.length)]; Tag.lastSync = 0; } }
+    if (now >= Tag.endAt){ tagEmit({ a:'end' }); return; }
+    if (now - Tag.lastSync > 4000){ Tag.lastSync = now; tagEmit({ a:'sync', pl:Tag.players, g:Tag.ghost, left:Tag.endAt - now }); }
+  } else if (now > Tag.endAt + 6000) tagFinish();   // 主持人不見了
+  // 我是鬼：碰到別人就抓
+  if (iAmGhost() && now - Tag.tagSent > 600){
+    for (const k of Tag.players){ if (k === Tag.me) continue; if (Tag.immune === k && now < Tag.immuneUntil) continue; const p = peers.get(k); if (!p || !p.fisher.av.g.visible) continue;
+      if (Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < TAG_RANGE){ Tag.tagSent = now; tagEmit({ a:'tag', to:k }); break; } }
+  }
+  renderTagBar(true);
+}
+function renderTagBar(timeOnly){
+  let bar = $('#tagBar');
+  if (Tag.st === 'idle'){ if (bar) bar.hidden = true; return; }
+  if (!bar){ bar = document.createElement('div'); bar.id = 'tagBar'; bar.className = 'panel'; document.body.appendChild(bar); }
+  bar.hidden = false;
+  const inGame = Tag.players.includes(Tag.me), now = Date.now();
+  if (timeOnly && Tag.st === 'run'){ const t = bar.querySelector('.tt'); if (t){ const s = Math.max(0, Math.ceil((Tag.endAt - now) / 1000)); t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; return; } }
+  if (timeOnly) return;
+  bar.innerHTML = ''; bar.classList.toggle('isghost', iAmGhost());
+  if (Tag.st === 'lobby'){
+    bar.appendChild(el('span', '', `👻 鬼抓人報名中（${Tag.players.length} 人）`));
+    if (!inGame){ const b = el('button', 'tbtn', '加入'); b.addEventListener('click', tagJoin); bar.appendChild(b); }
+    else { if (Tag.host === Tag.me){ const b = el('button', 'tbtn', '開始'); b.disabled = Tag.players.length < 2; b.addEventListener('click', tagStart); bar.appendChild(b); }
+      const x = el('button', 'tbtn ghost', Tag.host === Tag.me ? '取消' : '退出'); x.addEventListener('click', tagLeave); bar.appendChild(x); }
+  } else {
+    bar.appendChild(el('span', '', iAmGhost() ? '👻 你是鬼！去碰別人' : `👻 鬼：${tagName(Tag.ghost)}`));
+    bar.appendChild(el('b', 'tt', ''));
+    if (!inGame) bar.appendChild(el('small', '', '（觀戰中）'));
+    else { const x = el('button', 'tbtn ghost', '退出'); x.addEventListener('click', tagLeave); bar.appendChild(x); }
+    renderTagBar(true);
+  }
 }
 
 /* ================= COOKING：潮汐食堂（料理與壽司）================= */
@@ -2925,7 +3035,7 @@ function updatePeers(dt, t){
 
 let pjMode = false, roomTimer = null;
 function useRoom(r){
-  room = r;
+  room = r; tagReset();
     room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp);
       for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ p.fisher.dispose(); peers.delete(pp.peer); } }
       for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (p){ logMsg('', `${peerName(p)} 來到了村子`, true); ticker(`👋 <b>${esc(peerName(p))}</b> 來到了村子`); } }, 600); }
@@ -2944,6 +3054,7 @@ function useRoom(r){
       const p = peers.get(msg.peer); ticker(`${rc.icon} <b>${esc(p ? peerName(p) : '有人')}</b> 做出了 ${'★'.repeat(q)} ${esc(rc.name)}`);
       if (p) p.fisher.say(rc.icon, 'emote', 3);
     }, () => {});
+    room.on('tag', onTagMsg, () => {});
     room.on('isle', msg => {
       if (msg.sameTab || !msg.data || msg.data.to !== myId || isBlockedPeer(msg.peer)) return;
       const p = peers.get(msg.peer); ticker(`🏝️ <b>${esc(p ? peerName(p) : '有人')}</b> 來參觀你的小島了`);
@@ -3402,6 +3513,11 @@ function renderTab(){
     else if (room && !pjMode) body.appendChild(el('p', 'sub', '現在在村子裡的人。分享這個頁面的連結給朋友，就能一起釣魚、聊天。'));
     else if (pjAvailable()) body.appendChild(pjBox());
     else body.appendChild(el('p', 'sub', '目前是單人模式。在 claude.ai 上開啟並分享這個頁面，朋友加入後就會出現在這裡。'));
+    if (room && room.connected()){
+      const tb = el('div', 'tankbar'); const b = el('button', 'tbtn', Tag.st === 'idle' ? '👻 發起鬼抓人' : Tag.st === 'lobby' ? '👻 鬼抓人報名中' : '👻 鬼抓人進行中');
+      b.disabled = Tag.st !== 'idle'; b.addEventListener('click', () => { closeSheet(); tagOpen(); }); tb.appendChild(b);
+      tb.appendChild(el('small', 'sub', '2 人以上就能玩：被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。')); body.appendChild(tb);
+    }
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
@@ -3591,7 +3707,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateIsle(t); checkIsle(); updateJumpers(dt, t); updateTank(t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateIsle(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){ s.g.visible = Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
