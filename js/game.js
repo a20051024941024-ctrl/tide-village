@@ -437,6 +437,15 @@ function makeBoatMesh(color){
 }
 // 從某個位置朝某個方向，找離 dist 最近、夠深的水面點
 /* ---- 卡通樹：圓樹、松樹、白樺、村子裡的花樹和果樹（每種用 InstancedMesh 一次畫完） ---- */
+// ---- 季節：跟著現實（台灣）的月份。3～5 月春、6～8 月夏、9～11 月秋、12～2 月冬；網址加 #season=winter 可以預覽 ----
+var SEASONS = {
+  spring: { name:'春天', icon:'🌸', desc:'櫻花開了，溪裡的香魚、櫻花鉤吻鮭和櫻花蝦最多。', fish:['ayu', 'salmon', 'shrimp', 'squid', 'carp', 'flounder'] },
+  summer: { name:'夏天', icon:'🌻', desc:'海水變暖，鬼頭刀、鰹魚和熱帶魚都游過來了。',     fish:['mahi', 'bonito', 'parrot', 'butterfly', 'jelly', 'sunfish'] },
+  autumn: { name:'秋天', icon:'🍁', desc:'樹葉變紅了，秋天的鯖魚、螃蟹、墨魚最肥。',       fish:['mackerel', 'crab', 'cuttle', 'barracuda', 'catfish', 'eel'] },
+  winter: { name:'冬天', icon:'❄️', desc:'天氣變冷，馬頭魚、帝王蟹、魷魚和鮟鱇魚正是時候。', fish:['tilefish', 'kingcrab', 'ika', 'angler', 'crucian', 'grouper'] },
+};
+var SEASON = (() => { const h = (location.hash.match(/season=(\w+)/) || [])[1]; if (SEASONS[h]) return h; const m = new Date(Date.now() + 8 * 3600e3).getUTCMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; })();
+var SEASON_FISH = new Set(SEASONS[SEASON].fish);
 function buildTrees(trees, PX, PZ){
   const hash = (k, n) => { const v = Math.sin(k * 9301.7 + n * 49.3) * 43758.5453; return v - Math.floor(v); };
   const hiDet = Quality.tier === 'high' ? 2 : 1;
@@ -463,11 +472,15 @@ function buildTrees(trees, PX, PZ){
     const pine = (k < 0.33 && z > 10) || (nearHill && k < 0.5);
     const birch = !pine && z > 15 && hash(k, 1) < 0.28;
     const sc = 0.85 + k * 0.45, y = terrainH(x, z) - 0.05, ry = k * 6;
-    if (pine) kinds.pine.push({ x, y, z, sc, sy: 1.08, ry, crown: C(['#4f8f4f', '#5d9c55', '#4a8a5e'][Math.floor(hash(k, 4) * 3)]), trunk: C('#7a4f33') });
-    else if (birch) kinds.birch.push({ x, y, z, sc, sy: 1, ry, crown: C(['#b2d46a', '#a3cc64', '#c2db78'][Math.floor(hash(k, 5) * 3)]), trunk: C('#efeae0') });
+    const SP = SEASON === 'spring', AU = SEASON === 'autumn', WI = SEASON === 'winter';
+    if (pine) kinds.pine.push({ x, y, z, sc, sy: 1.08, ry, crown: C(WI ? ['#5b8f73', '#6c9a82', '#d9e6e4'][Math.floor(hash(k, 4) * 3)] : ['#4f8f4f', '#5d9c55', '#4a8a5e'][Math.floor(hash(k, 4) * 3)]), trunk: C('#7a4f33') });
+    else if (birch) kinds.birch.push({ x, y, z, sc, sy: 1, ry, crown: C(AU ? ['#f0c75a', '#e8b04a', '#f2d36e'][Math.floor(hash(k, 5) * 3)] : WI ? ['#c9c3a0', '#d6d0b0', '#bfc2a8'][Math.floor(hash(k, 5) * 3)] : ['#b2d46a', '#a3cc64', '#c2db78'][Math.floor(hash(k, 5) * 3)]), trunk: C('#efeae0') });
     else {
-      const blossom = village && hash(k, 2) < 0.3, fruit = village && !blossom && hash(k, 3) < 0.35;
-      const crown = blossom ? ['#f7b6c8', '#f4a3bb', '#fbcad8'][Math.floor(hash(k, 6) * 3)] : ['#8cc46a', '#7ab85e', '#9fd27a', '#76b35f'][Math.floor(hash(k, 7) * 4)];
+      const blossom = (village && hash(k, 2) < (SP ? 0.6 : 0.3)) || (SP && hash(k, 2) < 0.22), fruit = village && !blossom && hash(k, 3) < (AU ? 0.5 : 0.35);
+      const crown = blossom && !AU && !WI ? ['#f7b6c8', '#f4a3bb', '#fbcad8'][Math.floor(hash(k, 6) * 3)]
+        : AU ? ['#e0a14a', '#d9783c', '#c9573a', '#e8c15a', '#a7a95a'][Math.floor(hash(k, 7) * 5)]
+        : WI ? ['#8fae86', '#9db894', '#a9bfa3', '#c5d3c8'][Math.floor(hash(k, 7) * 4)]
+        : ['#8cc46a', '#7ab85e', '#9fd27a', '#76b35f'][Math.floor(hash(k, 7) * 4)];
       const t = { x, y, z, sc, sy: 1, ry, crown: C(crown), trunk: C(blossom ? '#7b5440' : PALETTE.wood) };
       kinds.round.push(t); if (fruit) fruits.push(Object.assign({}, t, { crown: C(hash(k, 8) < 0.6 ? '#ef5b4c' : '#ffb347') }));
     }
@@ -2228,7 +2241,7 @@ function pickFish(spot, charge){
   // 傳說魚：每個釣點的傳說魚加起來是固定的機率（不會因為種類多就特別常出現），外海比較高
   const nLeg = list.filter(f => f.rarity === '傳說').length, legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
   const rw = f => Rig.rig === 'lure' ? (LURE_FISH.has(f.id) ? 2.2 : 0.55) : Rig.rig === 'bottom' ? (BOTTOM_FISH.has(f.id) ? 2.2 : 0.65) : 1;
-  const w = list.map(f => (f.w || 1) * rw(f) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const w = list.map(f => (f.w || 1) * rw(f) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -2963,7 +2976,7 @@ function updateEnv(dt, t){
   const wx = (location.hash.match(/wx=(\w+)/) || [])[1]; Env.wx = WEATHERS[wx] ? wx : weatherAt(ms);
   const W = WEATHERS[Env.wx];
   if (Env.lastWx !== Env.wx){ if (Env.lastWx) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
-      const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { const W2 = WEATHERS[Env.wx]; toast(`${W2.icon} ${W2.name}：${W2.desc}<br>${Env.tide.icon} ${Env.tide.name}：海邊、外海、小島在漲潮時最好釣，乾潮時比較難。<br>🧔 ${esc(dailyTip().text)}`); }); }
+      const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { const W2 = WEATHERS[Env.wx]; toast(`${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}<br>${W2.icon} ${W2.name}：${W2.desc}<br>${Env.tide.icon} ${Env.tide.name}：海邊、外海、小島在漲潮時最好釣，乾潮時比較難。<br>🧔 ${esc(dailyTip().text)}`); }); }
     Env.lastWx = Env.wx; }
   // 畫面：光線變暗、下雨、起霧、打雷
   const dim = House.on ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
@@ -2976,7 +2989,8 @@ function updateEnv(dt, t){
     if (Math.random() < dt * 6) ripple(me.pos.x + (Math.random() - 0.5) * 16, me.pos.z + (Math.random() - 0.5) * 16); }
   if (W.storm && !House.on && !Dive.on){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
   if (Dive.on) diveEnvFx();
-  const chip = $('#wxChip'); if (chip){ const txt = `${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
+  updateSeasonFx(dt, t, rn > 0);
+  const chip = $('#wxChip'); if (chip){ const txt = `${SEASONS[SEASON].icon} ${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
 }
 
 /* ---- 定時釣魚大賽：每天台灣時間 12:00、19:00、21:00 各 10 分鐘，比總重量（伺服器 017_tourney.sql 算分、發獎）---- */
@@ -3190,6 +3204,63 @@ function renderAch(body){
     if (!ok){ const pb = el('div', 'achbar'); pb.innerHTML = `<i style="width:${(c / g * 100).toFixed(1)}%"></i><span>${a.kg ? c.toFixed(1) : Math.floor(c).toLocaleString()} / ${a.kg ? g : g.toLocaleString()}</span>`; d.appendChild(pb); }
     li.appendChild(d); ul.appendChild(li); }
   body.appendChild(ul);
+}
+/* ---- 季節的畫面：飄落的花瓣、落葉、雪花，夏天晚上有螢火蟲；廣場旁邊有季節裝飾 ---- */
+var SeasonFx = null;
+function buildSeasonFx(){
+  const S = { spring:{ c:'#ffc4d6', n:160, fall:0.55, size:0.22, sway:1.2 }, autumn:{ c:'#e8873a', n:140, fall:0.8, size:0.26, sway:1.4 }, winter:{ c:'#ffffff', n:260, fall:0.6, size:0.16, sway:0.5 }, summer:{ c:'#fff27a', n:70, fall:0, size:0.2, sway:0.6, glow:true } }[SEASON];
+  const N = S.n, pos = new Float32Array(N * 3), ph = new Float32Array(N);
+  for (let i = 0; i < N; i++){ pos[i * 3] = (Math.random() - 0.5) * 40; pos[i * 3 + 1] = Math.random() * 14; pos[i * 3 + 2] = (Math.random() - 0.5) * 40; ph[i] = Math.random() * 6.28; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d');
+  if (SEASON === 'spring'){ x.fillStyle = '#fff'; x.beginPath(); x.ellipse(16, 16, 13, 8, 0.6, 0, Math.PI * 2); x.fill(); }
+  else if (SEASON === 'autumn'){ x.fillStyle = '#fff'; x.beginPath(); for (let k = 0; k < 10; k++){ const a = k / 10 * Math.PI * 2, r = k % 2 ? 7 : 14; x.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r); } x.fill(); }
+  else { const gr = x.createRadialGradient(16, 16, 0, 16, 16, 15); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,.7)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32); }
+  const m = new THREE.PointsMaterial({ color:S.c, size:S.size, map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, opacity: S.glow ? 0.9 : 0.85, blending: S.glow ? THREE.AdditiveBlending : THREE.NormalBlending });
+  const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.userData.keep = true; scene.add(pts);
+  SeasonFx = { pts, S, ph };
+}
+function updateSeasonFx(dt, t, raining){
+  if (!SeasonFx) buildSeasonFx(); const F2 = SeasonFx, S = F2.S;
+  const show = !House.on && !Dive.on && !raining && !(S.glow && DayNight.lamp < 0.5) && Quality.tier !== 'low';
+  F2.pts.visible = show; if (!show) return;
+  F2.pts.position.set(Math.round(camera.position.x / 4) * 4, 0, Math.round(camera.position.z / 4) * 4);
+  if (frameNo % 2) return; const a = F2.pts.geometry.attributes.position.array, k = dt * 2;
+  for (let i = 0; i < a.length / 3; i++){ const o = i * 3, p = F2.ph[i];
+    if (S.glow){ a[o] += Math.sin(t * 0.7 + p) * k * 0.4; a[o + 1] = 0.6 + Math.abs(Math.sin(t * 0.5 + p)) * 2.2; a[o + 2] += Math.cos(t * 0.6 + p) * k * 0.4; continue; }
+    a[o + 1] -= S.fall * k * (0.7 + (i % 5) * 0.12); a[o] += Math.sin(t * S.sway + p) * k * 0.35 + k * 0.15; a[o + 2] += Math.cos(t * S.sway * 0.8 + p) * k * 0.25;
+    if (a[o + 1] < 0){ a[o + 1] = 12 + Math.random() * 2; a[o] = (Math.random() - 0.5) * 40; a[o + 2] = (Math.random() - 0.5) * 40; } }
+  if (S.glow) F2.pts.material.opacity = 0.6 + Math.sin(t * 3) * 0.3;
+  F2.pts.geometry.attributes.position.needsUpdate = true;
+}
+function addSeasonDeco(){
+  try {
+    const g = new THREE.Group(); scene.add(g); const at = (x, z) => { const [px, pz] = freeSpot(x, z); return [px, groundHeight(px, pz), pz]; };
+    const M = (c, r, ex) => mat(c, r == null ? 0.8 : r, ex), add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+    if (SEASON === 'winter'){ const [x, y, z] = at(-1.8, 10.5), w = M('#ffffff', 0.9);
+      add(new THREE.SphereGeometry(0.62, 16, 12), w, x, y + 0.55, z); add(new THREE.SphereGeometry(0.45, 16, 12), w, x, y + 1.38, z); add(new THREE.SphereGeometry(0.32, 14, 10), w, x, y + 1.98, z);
+      for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.045, 6, 4), M('#222', 0.4), x + sx * 0.11, y + 2.05, z + 0.28);
+      const n = add(new THREE.ConeGeometry(0.06, 0.3, 8), M('#ff8a2a', 0.6), x, y + 1.97, z + 0.42); n.rotation.x = Math.PI / 2;
+      const sc = add(new THREE.TorusGeometry(0.33, 0.07, 6, 16), M('#e8473a', 0.7), x, y + 1.7, z); sc.rotation.x = Math.PI / 2;
+      for (const sx of [-1, 1]){ const a = add(new THREE.CylinderGeometry(0.025, 0.03, 0.8, 5), M('#6b4a35'), x + sx * 0.62, y + 1.5, z); a.rotation.z = sx * 1.0; }
+      const hat = add(new THREE.CylinderGeometry(0.2, 0.22, 0.28, 12), M('#222', 0.5), x, y + 2.35, z); add(new THREE.CylinderGeometry(0.32, 0.32, 0.03, 14), M('#222', 0.5), x, y + 2.22, z);
+      addCircleCol(x, z, 0.7);
+      const [tx, ty, tz] = at(10.5, 9.5); add(new THREE.CylinderGeometry(0.12, 0.16, 0.6, 8), M('#6b4a35'), tx, ty + 0.3, tz);
+      [[1.1, 0.9], [0.85, 1.6], [0.6, 2.2], [0.35, 2.7]].forEach(([r, h]) => add(new THREE.ConeGeometry(r, 0.9, 10), M('#3f7f52', 0.8), tx, ty + h, tz));
+      add(new THREE.OctahedronGeometry(0.18), M('#ffd36a', 0.3, { emissive:'#ffb020', emissiveIntensity:0.8 }), tx, ty + 3.25, tz);
+      ['#e8473a', '#2f89c7', '#ffd36a', '#f5a5d8'].forEach((c, i) => { for (let k = 0; k < 4; k++){ const a = k * 1.57 + i * 0.4, h = 0.9 + i * 0.5, r = 1.05 - i * 0.22; add(new THREE.SphereGeometry(0.08, 8, 6), M(c, 0.3, { emissive:c, emissiveIntensity:0.4 }), tx + Math.cos(a) * r, ty + h, tz + Math.sin(a) * r); } });
+      addCircleCol(tx, tz, 1.1); }
+    else if (SEASON === 'autumn'){ for (const [px, pz, s] of [[-1.8, 10.5, 1], [-0.9, 11.2, 0.7], [10.5, 9.5, 1.2], [11.3, 8.8, 0.8]]){ const [x, y, z] = at(px, pz);
+        const pk = add(new THREE.SphereGeometry(0.38 * s, 14, 10), M('#ff8a2a', 0.6), x, y + 0.3 * s, z); pk.scale.y = 0.72; add(new THREE.CylinderGeometry(0.04 * s, 0.05 * s, 0.16 * s, 6), M('#5d7a3a'), x, y + 0.6 * s, z); addCircleCol(x, z, 0.4 * s); }
+      for (let i = 0; i < 26; i++){ const [x, y, z] = at(-1.4 + (i % 2 ? 12 : 0), 10.8 - (i % 2 ? 1.5 : 0)); const l = add(new THREE.IcosahedronGeometry(0.16, 0), M(['#e0a14a', '#d9783c', '#c9573a', '#e8c15a'][i % 4], 0.9), x + (Math.random() - 0.5) * 1.6, y + 0.05, z + (Math.random() - 0.5) * 1.6); l.scale.y = 0.25; } }
+    else if (SEASON === 'spring'){ for (const [px, pz] of [[-1.8, 10.5], [10.5, 9.5]]){ const [x, y, z] = at(px, pz); add(new THREE.BoxGeometry(1.4, 0.4, 0.6), M('#a8713f'), x, y + 0.2, z);
+        for (let i = 0; i < 9; i++){ const c = ['#f7b6c8', '#ffd36a', '#ffffff', '#b48cff', '#ff7fa8'][i % 5]; add(new THREE.CylinderGeometry(0.015, 0.015, 0.3, 4), M('#5d9c55'), x - 0.55 + i * 0.14, y + 0.55, z); add(new THREE.IcosahedronGeometry(0.08, 0), M(c, 0.6), x - 0.55 + i * 0.14, y + 0.72, z); }
+        addBoxCol(x, z, 1.5, 0.7); } }
+    else { const [x, y, z] = at(10.5, 9.5); add(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), M('#ffffff'), x, y + 1.1, z); const pr = add(new THREE.ConeGeometry(1.3, 0.5, 12), M('#f05a4a', 0.7), x, y + 2.25, z);
+      for (let i = 0; i < 6; i++){ const st = add(new THREE.ConeGeometry(1.31, 0.5, 12, 1, true, i * Math.PI / 3, Math.PI / 6), M('#ffffff', 0.7), x, y + 2.251, z); st.material.side = THREE.DoubleSide; }
+      const [bx, by, bz] = at(-1.8, 10.5); const ball = add(new THREE.SphereGeometry(0.3, 16, 12), M('#ffd36a', 0.5), bx, by + 0.3, bz); for (let i = 0; i < 3; i++){ const b = add(new THREE.SphereGeometry(0.302, 16, 12, i * 2.09, 0.7), M(['#e8473a', '#2f89c7', '#3fbf9d'][i], 0.5), bx, by + 0.3, bz); b.material.side = THREE.DoubleSide; }
+      addCircleCol(x, z, 0.3); }
+  } catch(e){ console.warn('season deco', e); }
 }
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
 // 渡船：港口的船夫阿海，可以載你到祕密窩點或外海
@@ -4124,7 +4195,7 @@ function renderWardrobe(body, only){
 }
 function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
-  if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
+  if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>${SEASONS[SEASON].icon} 現在是${SEASONS[SEASON].name}：當季魚有 ${SEASONS[SEASON].fish.map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}（比平常多一倍）。</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
   const seg = el('div', 'seg');
   [['sell','賣魚'],['rod','釣竿'],['rig','釣法'],['bait','魚餌'],['wear','服飾'],['dive','🤿潛水'],['love','💙愛海']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
@@ -5048,7 +5119,7 @@ function renderTab(){
       FISH.filter(f => f.spot === s.id).sort((a,b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]).forEach(f => {
         const known = !!rec.count[f.id]; const it = el('div', 'it' + (known ? '' : ' lock'));
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
-        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity));
+        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季'));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         g.appendChild(it);
@@ -5216,6 +5287,7 @@ function renderTab(){
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
       '潮汐（左上角）：大約 18 分鐘漲退一次。海邊、外海、小島在漲潮時最好釣，乾潮時比較難。',
+      `季節跟著現實的月份（台灣）：3～5 月春天 🌸、6～8 月夏天 🌻、9～11 月秋天 🍁、12～2 月冬天 ❄️。每季有 6 種「當季魚」比平常多一倍（圖鑑會標「當季」），樹的顏色、飄落的花瓣落葉雪花、廣場旁邊的裝飾也會跟著換。現在是${SEASONS[SEASON].name}。`,
       '釣具店老闆每天會給「今日情報」：說哪個釣點的哪種魚今天特別多（機率 2.5 倍）。',
       '魚上鉤後：上面是魚的體力和距離，下面是張力條。按住收線，張力太高（紅色）要放開，不然線會斷。',
       '魚往左衝時畫面會出現「往右拉 ➡」，把搖桿往反方向推，魚會累得更快。稀有魚會跳出水面，跳的時候要放開！',
@@ -5426,6 +5498,7 @@ function updateDayNight(t){
   if (DayNight.period !== DayNight._last){ if (DayNight._last) ticker(DayNight.period === 'night' ? '天黑了，<b>晚上</b>出沒的魚開始活動 🌙' : DayNight.period === 'twilight' ? (h < 12 ? '天快亮了，清晨的魚正活躍 🌅' : '黃昏了，有些魚只在這時候出現 🌇') : '天亮了 ☀️'); DayNight._last = DayNight.period; }
 }
 
+addSeasonDeco();
 camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
