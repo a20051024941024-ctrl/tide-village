@@ -4870,7 +4870,7 @@ function useRoom(r){
 const LOBBY_MAX = 16, LOBBY_COUNT = 5;
 function SBRoom(sb, name, key, myName){
   const R = { isLobby:true, code:null, lobbyNo:0 }; let ch = null, live = false, myPres = null, lastSent = '', flushT = 0, lastAt = 0;
-  const lis = {}, peerFns = [], connFns = [], pres = {};
+  const lis = {}, peerFns = [], connFns = [], pres = {}, seen = {};
   const fire = (t, m) => (lis[t] || []).forEach(f => { try { f(m); } catch(e){} });
   const firePeers = c => peerFns.forEach(f => { try { f(c); } catch(e){} });
   const fireConn = () => connFns.forEach(f => { try { f(live); } catch(e){} });
@@ -4887,19 +4887,23 @@ function SBRoom(sb, name, key, myName){
   R.onConnection = fn => { connFns.push(fn); return () => {}; };
   R.presence = o => { myPres = o; send(); return Promise.resolve(); };
   R.emit = (topic, data) => { if (!live) return Promise.reject({ code:'not_connected' }); ch.send({ type:'broadcast', event:'ev', payload:{ id:key, topic, data } }).catch(() => {}); fire(topic, { peer:key, data, sameTab:true }); return Promise.resolve(); };
-  R.leave = () => { live = false; clearTimeout(flushT); try { sb.removeChannel(ch); } catch(e){} fireConn(); };
+  R.leave = () => { live = false; clearTimeout(flushT); clearInterval(R._hb); try { sb.removeChannel(ch); } catch(e){} fireConn(); };
   R.size = () => { try { return Object.keys(ch.presenceState()).length; } catch(e){ return 1; } };
   R.start = () => new Promise((res, rej) => {
     ch = sb.channel(name, { config:{ broadcast:{ self:false, ack:false }, presence:{ key } } });
     ch.on('broadcast', { event:'p' }, ({ payload }) => {
       if (!payload || payload.id === key || !payload.p || typeof payload.p !== 'object') return;
-      const isNew = !pres[payload.id]; pres[payload.id] = payload.p;
+      const isNew = !pres[payload.id]; pres[payload.id] = payload.p; seen[payload.id] = Date.now();
       firePeers(isNew ? { joined:[pp(payload.id)], updated:[], left:[] } : { joined:[], updated:[pp(payload.id)], left:[] });
     });
     ch.on('broadcast', { event:'ev' }, ({ payload }) => { if (!payload || payload.id === key || typeof payload.topic !== 'string') return; fire(payload.topic, { peer:payload.id, data:payload.data, sameTab:false }); });
     // 有新的人進來：重送一次自己的狀態，對方才看得到站著不動的人
     ch.on('presence', { event:'join' }, ({ key:k }) => { if (k !== key) setTimeout(() => send(true), 150 + Math.random() * 600); });
-    ch.on('presence', { event:'leave' }, ({ key:k }) => { if (pres[k]){ const x = pp(k); delete pres[k]; firePeers({ joined:[], updated:[], left:[x] }); } });
+    const drop = k => { if (pres[k]){ const x = pp(k); delete pres[k]; delete seen[k]; firePeers({ joined:[], updated:[], left:[x] }); } };
+    ch.on('presence', { event:'leave' }, ({ key:k }) => drop(k));
+    // 心跳：每 12 秒送一次自己的狀態；超過 40 秒沒消息、或已經不在大廳名單裡的人就拿掉（下線、手機鎖螢幕、斷線都會消失）
+    R._hb = setInterval(() => { if (!live) return; send(true); const nowMs = Date.now(); let st = null; try { st = ch.presenceState(); } catch(e){}
+      for (const k of Object.keys(pres)){ const gone = nowMs - (seen[k] || 0) > 40000 || (st && Object.keys(st).length && !st[k] && nowMs - (seen[k] || 0) > 15000); if (gone) drop(k); } }, 12000);
     let done = false;
     ch.subscribe(async st => {
       if (st === 'SUBSCRIBED'){ live = true; fireConn(); try { await ch.track({ n: myName || '' }); } catch(e){} send(true); if (!done){ done = true; res(R); } }
@@ -4908,6 +4912,9 @@ function SBRoom(sb, name, key, myName){
   });
   return R;
 }
+// 關掉頁面時馬上離開大廳，別人那邊就不會留著你的角色
+addEventListener('pagehide', () => { try { if (room && room.isLobby) room.leave(); } catch(e){} });
+addEventListener('pageshow', e => { if (e.persisted && room && room.isLobby && !room.connected()){ for (const p of peers.values()) p.fisher.dispose(); peers.clear(); room = null; joinLobby(); } });
 let lobbyJoining = false;
 async function joinLobby(){
   if (!Cloud.on || room || pjMode || lobbyJoining) return;
