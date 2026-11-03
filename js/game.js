@@ -2157,7 +2157,8 @@ function doCast(){
   me.bobPos.copy(to); me.bobState = 'fly';
   me.flying = { from, to, t:0, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } };
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
-  F.phase = 'waiting'; F.waitUntil = now() + (0.8 + rand(2.4, 6.5) - c * 0.8) * (F.chumB ? F.chumB.wait : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
+  F.envB = envBonus(s.id);
+  F.phase = 'waiting'; F.waitUntil = now() + (0.8 + rand(2.4, 6.5) - c * 0.8) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite; F.nibbleAt = now() + 1.2 + Math.random()*1.5;
   if (F.chumB) setTimeout(() => toast(`🍚 浮標落在${F.chumB.name}的窩點裡！`), 500);
   SFX.cast(); pushPresence(true);
 }
@@ -2170,12 +2171,12 @@ const LEG_K = { harbor: 4.0, other: 0.75 };
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
-  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1), kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1);
+  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare, kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
   // 傳說魚：每個釣點的傳說魚加起來是固定的機率（不會因為種類多就特別常出現），外海比較高
   const nLeg = list.filter(f => f.rarity === '傳說').length, legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
-  const w = list.map(f => (f.w || 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const w = list.map(f => (f.w || 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -2256,7 +2257,7 @@ function updateFishing(dt, t){
       F.T += (0.55 - F.T) * Math.min(1, dt * 3); F.P -= 0.05 * dt; F.S = Math.max(0, F.S - dt * 0.01);
       $('#mashFx').style.setProperty('--m', (F.mashHits % 2).toString());
     } else if (F.hold){
-      F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1);
+      F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1);
       F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S));
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
@@ -2859,6 +2860,68 @@ function renderTagBar(timeOnly){
     else { const x = el('button', 'tbtn ghost', '退出'); x.addEventListener('click', tagLeave); bar.appendChild(x); }
     renderTagBar(true);
   }
+}
+
+
+/* ================= 天氣、潮汐、今日情報（全服同步：都用真實時間算，大家看到的一樣）================= */
+const WX_BLOCK = 9 * 60 * 1000, TIDE_PERIOD = 18 * 60 * 1000;
+const WEATHERS = {
+  sunny:  { name:'晴天',   icon:'☀️', w:45, desc:'天氣很好，一切正常。' },
+  cloudy: { name:'多雲',   icon:'⛅', w:25, desc:'雲多一點，稀有魚稍微多一些。', rare:1.05, light:0.82 },
+  rain:   { name:'下雨',   icon:'🌧️', w:15, desc:'下雨天魚比較好咬，雷魚、鯰魚、鰻魚、黑鱸特別多。', bite:0.8, rare:1.15, light:0.62, rain:700 },
+  fog:    { name:'起霧',   icon:'🌫️', w:8,  desc:'霧很濃，看不遠，但稀有魚比較多。', rare:1.25, light:0.75, fog:true },
+  storm:  { name:'暴風雨', icon:'⛈️', w:7,  desc:'外海和海邊的傳說魚多很多，但拉線比較吃力。', bite:0.9, rare:1.2, legend:1.6, legendSea:true, tension:1.12, light:0.42, rain:1400, storm:true },
+};
+const RAIN_FISH = new Set(['catfish', 'eel', 'snakehead', 'tilapia', 'bass', 'loach']);
+function hash32(str){ let h = 2166136261; for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function weatherAt(ms){
+  const b = Math.floor(ms / WX_BLOCK), r = hash32('wx' + b) % 100; let acc = 0;
+  for (const [k, v] of Object.entries(WEATHERS)){ acc += v.w; if (r < acc) return k; } return 'sunny';
+}
+function tideNow(ms){
+  const ph = (ms % TIDE_PERIOD) / TIDE_PERIOD, lv = Math.sin(ph * Math.PI * 2), d = Math.cos(ph * Math.PI * 2);
+  const st = lv > 0.8 ? 'high' : lv < -0.8 ? 'low' : d > 0 ? 'rising' : 'falling';
+  return { lv, st, name: { high:'滿潮', low:'乾潮', rising:'漲潮', falling:'退潮' }[st], icon: { high:'🌊', low:'🏖️', rising:'🌊↑', falling:'🌊↓' }[st] };
+}
+const TIDE_FX = { rising:{ bite:0.78, rare:1.15 }, high:{ bite:0.9, rare:1.05 }, falling:{ bite:1.0, rare:1.0 }, low:{ bite:1.25, rare:0.9 } };
+function taipeiDate(){ return new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); }
+function dailyTip(){
+  const d = taipeiDate(); if (dailyTip.c && dailyTip.c.d === d) return dailyTip.c;
+  const spots = SPOTS.filter(s => s.id !== 'isle'), h = hash32('tip' + d), sp = spots[h % spots.length];
+  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說'), f = pool[(h >>> 8) % pool.length];
+  return (dailyTip.c = { d, spot: sp.id, fish: f.id, text: `今天${sp.label}的「${f.name}」特別多！` });
+}
+// 釣魚的加成：給 doCast（等待時間）、pickFish（稀有／傳說／權重）、拉線（張力）用
+function envBonus(spotId){
+  const W = WEATHERS[Env.wx], sea = SEA_SPOTS.has(spotId), T = sea ? TIDE_FX[Env.tide.st] : { bite:1, rare:1 };
+  return { bite: (W.bite || 1) * T.bite, rare: (W.rare || 1) * T.rare, legend: W.legendSea ? (sea ? W.legend : 1) : (W.legend || 1), tension: W.tension || 1 };
+}
+const Env = { wx:'sunny', tide: tideNow(Date.now()), rain:null, flash:0, k:1, lastWx:null };
+function buildRain(){
+  const N = 1400, pos = new Float32Array(N * 6);
+  for (let i = 0; i < N; i++){ const x = (Math.random() - 0.5) * 40, y = Math.random() * 18, z = (Math.random() - 0.5) * 40; pos.set([x, y, z, x + 0.05, y - 0.55, z], i * 6); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.LineBasicMaterial({ color:'#cfe6f5', transparent:true, opacity:0.45, depthWrite:false });
+  const l = new THREE.LineSegments(g, m); l.frustumCulled = false; l.visible = false; scene.add(l); return l;
+}
+function updateEnv(dt, t){
+  const ms = Date.now(); Env.tide = tideNow(ms);
+  const wx = (location.hash.match(/wx=(\w+)/) || [])[1]; Env.wx = WEATHERS[wx] ? wx : weatherAt(ms);
+  const W = WEATHERS[Env.wx];
+  if (Env.lastWx !== Env.wx){ if (Env.lastWx) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
+      const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { const W2 = WEATHERS[Env.wx]; toast(`${W2.icon} ${W2.name}：${W2.desc}<br>${Env.tide.icon} ${Env.tide.name}：海邊、外海、小島在漲潮時最好釣，乾潮時比較難。<br>🧔 ${esc(dailyTip().text)}`); }); }
+    Env.lastWx = Env.wx; }
+  // 畫面：光線變暗、下雨、起霧、打雷
+  const dim = House.on ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
+  sun.intensity *= Env.k; hemi.intensity *= 0.55 + 0.45 * Env.k;
+  if (W.fog && !House.on){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
+  if (!Env.rain) Env.rain = buildRain();
+  const rn = House.on ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
+  if (rn > 0){ Env.rain.geometry.setDrawRange(0, rn * 2); Env.rain.position.set(camera.position.x, camera.position.y - 6, camera.position.z); const a = Env.rain.geometry.attributes.position.array, fall = dt * (W.storm ? 26 : 18);
+    for (let i = 0; i < rn; i++){ const o = i * 6; a[o + 1] -= fall; a[o + 4] -= fall; if (a[o + 1] < 0){ a[o + 1] += 18; a[o + 4] += 18; } if (W.storm){ a[o + 3] = a[o] + 0.25; } } Env.rain.geometry.attributes.position.needsUpdate = true;
+    if (Math.random() < dt * 6) ripple(me.pos.x + (Math.random() - 0.5) * 16, me.pos.z + (Math.random() - 0.5) * 16); }
+  if (W.storm && !House.on){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
+  const chip = $('#wxChip'); if (chip){ const txt = `${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
 }
 
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
@@ -3512,6 +3575,7 @@ function renderWardrobe(body){
 }
 function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
   const seg = el('div', 'seg');
   [['sell','賣魚'],['rod','釣竿'],['bait','魚餌'],['wear','服飾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
@@ -4549,6 +4613,9 @@ function renderTab(){
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
+      '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
+      '潮汐（左上角）：大約 18 分鐘漲退一次。海邊、外海、小島在漲潮時最好釣，乾潮時比較難。',
+      '釣具店老闆每天會給「今日情報」：說哪個釣點的哪種魚今天特別多（機率 2.5 倍）。',
       '魚上鉤後：上面是魚的體力和距離，下面是張力條。按住收線，張力太高（紅色）要放開，不然線會斷。',
       '魚往左衝時畫面會出現「往右拉 ➡」，把搖桿往反方向推，魚會累得更快。稀有魚會跳出水面，跳的時候要放開！',
       '大魚搏鬥：釣到大型魚或傳說魚時會出現「巨大魚影」和 Boss 血條，大魚會浮出水面、破水而出。血條快沒的時候出現「連打！」，狂按拉線把牠拉上來。',
@@ -4749,7 +4816,7 @@ function frame(){
     if (t > s.next){ s.on = !s.on; s.next = t + (s.on ? rand(18, 32) : rand(45, 110)); if (s.on){ const a = Math.random() * 6.28, r = Math.random() * 2.5, nx = s.home.x + Math.cos(a) * r, nz = s.home.z + Math.sin(a) * r; if (waterAt(nx, nz)){ s.g.position.x = nx; s.g.position.z = nz; } } }
     s.k += ((s.on ? 1 : 0) - s.k) * Math.min(1, dt * 0.8); s.g.position.y = s.home.y - (1 - s.k) * 1.2;
     s.g.visible = s.k > 0.03 && Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
-  updateDayNight(t);
+  updateDayNight(t); updateEnv(dt, t);
   for (const l of lanterns) l.material.emissiveIntensity = (0.6 + DayNight.lamp * 1.8) + Math.sin(t*2 + l.position.x) * 0.25;
   if (lhLight) lhLight.material.emissiveIntensity = (1.6 + DayNight.lamp * 2.4) + Math.sin(t*1.5) * 1.2;
   for (const s of SPOTS) if (s.ring) s.ring.material.emissiveIntensity = 1.4 + Math.sin(t*3 + s.pos.x)*0.5;
