@@ -2073,14 +2073,14 @@ function updateCamera(dt){
     const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, L = Math.hypot(bx, bz) || 1, dx = bx / L, dz = bz / L, rx = -dz, rz = dx;
     const want = reelCam.pos.set(me.pos.x - dx * 2.0 + rx * 1.25, me.baseY + 2.05, me.pos.z - dz * 2.0 + rz * 1.25);   // 右肩後上方，角色在畫面左下，不會擋住魚
     const look = reelCam.look.set(me.bobPos.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, me.bobPos.z);
-    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.pos.y + 1.3, me.pos.z);
+    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
     const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
     camera.position.lerp(normal.lerp(want, reelCam.k), 1 - Math.exp(-8 * dt));
     camera.lookAt(tg.lerp(look, reelCam.k));
     if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
     return;
   }
-  const target = tmpV.set(me.pos.x, me.pos.y + 1.3, me.pos.z);
+  const target = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);   // 用地面高度，不跟著走路的上下晃動（不然鏡頭會一直震）
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
   want.y = Math.max(want.y, Photo.on ? 0.3 : 0.8);
@@ -2236,7 +2236,10 @@ function updateFishing(dt, t){
     // 浮標：越收越近，魚往哪邊衝就往哪邊偏
     F.lat += (F.dir * 1.8 * (counter ? 0.35 : 1) - F.lat) * Math.min(1, dt * 1.6);
     const s = F.spot; const dist = 1.4 + (1 - F.P) * (2 + F.castCharge*4.5), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
-    const tx = s.pos.x + s.dir.x*dist + rx * F.lat + Math.sin(t*3 + F.seed)*0.4*(1-F.P), tz = s.pos.z + s.dir.y*dist + rz * F.lat + Math.cos(t*2.4)*0.4*(1-F.P);
+    let tx = s.pos.x + s.dir.x*dist + rx * F.lat + Math.sin(t*3 + F.seed)*0.4*(1-F.P), tz = s.pos.z + s.dir.y*dist + rz * F.lat + Math.cos(t*2.4)*0.4*(1-F.P);
+    // 浮標一定要在水裡：左右偏到岸上就不偏，太靠近岸邊就停在最近的水面（不會被拉到陸地上）
+    if (!waterAt(tx, tz)){ tx = s.pos.x + s.dir.x*dist; tz = s.pos.z + s.dir.y*dist; F.lat *= 0.5;
+      if (!waterAt(tx, tz)){ let ok = false; for (let k = 0.3; k < 6; k += 0.3){ const ax = s.pos.x + s.dir.x*(dist + k), az = s.pos.z + s.dir.y*(dist + k); if (waterAt(ax, az)){ tx = ax; tz = az; ok = true; break; } } if (!ok){ tx = me.bobPos.x; tz = me.bobPos.z; } } }
     me.bobPos.x += (tx - me.bobPos.x) * Math.min(1, dt*3); me.bobPos.z += (tz - me.bobPos.z) * Math.min(1, dt*3);
     if (Math.random() < dt * (4 + Math.abs(F.dir) * 4)) ripple(me.bobPos.x, me.bobPos.z);
     // 畫面
