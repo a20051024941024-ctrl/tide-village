@@ -1743,12 +1743,30 @@ class Fisher {
     if (v.z > 1 || d > 45){ this.tag.style.display = 'none'; return; }
     this.tag.style.display = '';
     this.tag.style.transform = `translate(${(v.x*0.5+0.5)*viewW()}px,${(-v.y*0.5+0.5)*viewH()}px) translate(-50%,-100%)`;
-    this.tag.style.opacity = d > 30 ? String(clamp(1 - (d-30)/15, 0, 1)) : '1';
+    // 自己的名字一直清楚；別人的名字：太遠會變淡，被房子或樹擋住也會變淡（每幾格才算一次）
+    if (this === me){ this.tag.style.opacity = '1'; return; }
+    if ((frameNo + (this._ofs || (this._ofs = 1 + Math.floor(Math.random() * 7)))) % 8 === 0) this._occ = tagOccluded(this.pos.x, this.pos.y + 1.95, this.pos.z);
+    const far = d > 18 ? clamp(1 - (d - 18) / 20, 0.12, 1) : 1, op = Math.min(far, this._occ ? 0.25 : 1);
+    if (Math.abs((this._op || 1) - op) > 0.02){ this._op = (this._op || 1) + (op - (this._op || 1)) * 0.35; this.tag.style.opacity = this._op.toFixed(2); }
   }
 }
 Fisher.prototype.baseY = 0;
 Fisher.prototype.bobState = 'none';
 const tmpV = new THREE.Vector3();
+// 鏡頭到某一點之間有沒有被房子（方形障礙物）或樹冠擋住：只用平面上的線段檢查，很便宜
+function tagOccluded(tx, ty, tz){
+  const ax = camera.position.x, ay = camera.position.y, az = camera.position.z, dx = tx - ax, dz = tz - az, L = Math.hypot(dx, dz); if (L < 1.5) return false;
+  if (House.on || Dive.on) return false;
+  for (const c of colliders){
+    if (c.t === 'b'){ if (c.hw < 0.9 && c.hd < 0.9) continue;
+      let t0 = 0.02, t1 = 0.95; for (const [o, dd, lo, hi] of [[ax, dx, c.x - c.hw, c.x + c.hw], [az, dz, c.z - c.hd, c.z + c.hd]]){ if (Math.abs(dd) < 1e-6){ if (o < lo || o > hi){ t0 = 2; break; } continue; } let a = (lo - o) / dd, b = (hi - o) / dd; if (a > b){ const q = a; a = b; b = q; } t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) break; }
+      if (t0 <= t1){ const hy = ay + (ty - ay) * t0; if (hy < groundHeight(ax + dx * t0, az + dz * t0) + 3.2) return true; } }
+    else if (c.t === 'c' && c.r >= 0.45 && c.r <= 0.6){   // 樹：樹冠比樹幹大很多
+      const t = clamp(((c.x - ax) * dx + (c.z - az) * dz) / (L * L), 0.02, 0.95), px = ax + dx * t - c.x, pz = az + dz * t - c.z;
+      if (px * px + pz * pz < 1.2){ const hy = ay + (ty - ay) * t, g = groundHeight(c.x, c.z); if (hy > g + 1.3 && hy < g + 3.8) return true; } }
+  }
+  return false;
+}
 
 /* ================= LABELS for places ================= */
 const placeLabels = [];
@@ -2571,7 +2589,7 @@ function goMyIsle(){ goIsle(myIdOrMe(), myDisplayName() === '你' ? '我' : myDi
 async function visitIsle(id, name){
   if (!Cloud.sb){ toast('要連上雲端才能參觀別人的島'); return; }
   if (id === myIdOrMe()){ closeSheet(); goMyIsle(); return; }
-  try { const { data } = await Cloud.sb.from('players').select('nickname,island,likes,tank,show').eq('id', id).maybeSingle(); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
+  try { const { data } = await Cloud.sb.from('players').select('nickname,island,likes,tank,show').eq('id', id).maybeSingle(); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
   catch(e){ toast('暫時連不上雲端'); }
 }
 function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL[0]); pushPresence(true); }
@@ -4868,6 +4886,21 @@ function visitLog(p, left){
   Visits.list = Visits.list.filter(x => nowMs - x.last < 7 * 86400e3).sort((a, b) => b.last - a.last).slice(0, 60); LS.set('tide.visits', Visits.list);
 }
 function agoText(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : m < 1440 ? `${Math.round(m / 60)} 小時前` : `${Math.round(m / 1440)} 天前`; }
+var CVisits = { list:null, at:0, loading:false };
+async function loadCloudVisits(){ if (!Cloud.on || CVisits.loading) return; CVisits.loading = true; try { const { data, error } = await Cloud.sb.rpc('get_visits'); if (!error && Array.isArray(data)){ const was = CVisits.list; CVisits.list = data; CVisits.at = Date.now();
+  const seenAt = LS.get('tide.visitSeen', 0), fresh = data.filter(v => Date.parse(v.at) > seenAt); if (!was && fresh.length) ticker(`👣 你不在的時候，有 ${new Set(fresh.map(v => v.id)).size} 個人來逛過你的小島或水族館（玩家分頁）`);
+  if (!$('#sheet').hidden && curTab === 'people') renderTab(); } } catch(e){} CVisits.loading = false; }
+function renderCloudVisits(body){
+  if (!Cloud.on) return; if (Date.now() - CVisits.at > 30000) loadCloudVisits();
+  const list = CVisits.list || []; body.appendChild(el('div', 'dexhead', `👣 誰來逛過你的小島、水族館（最近 14 天）`));
+  if (!list.length){ body.appendChild(el('p', 'sub', CVisits.list ? '還沒有人來逛過。把小島佈置得漂亮一點，別人在「逛別人的島」就比較容易看到你！' : '讀取中…')); return; }
+  const seenAt = LS.get('tide.visitSeen', 0), ul = el('ul', 'people');
+  for (const v of list.slice(0, 30)){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = Date.parse(v.at) > seenAt ? '#f17b6d' : '#c9d3da';
+    li.append(sw, el('span', '', `${v.kind === 'isle' ? '🏝️' : '🐠'} ${v.name || '釣客'}`), el('span', 'st', `${agoText(Date.parse(v.at))}逛了你的${v.kind === 'isle' ? '小島' : '水族館'}${v.n > 1 ? `（${v.n} 次）` : ''}`));
+    if (typeof isFriend === 'function' && !isFriend(v.id)){ const af = el('button', 'tbtn ghost vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(v.id, v.name); }); li.appendChild(af); }
+    const vi = el('button', 'tbtn ghost vbtn', '回訪小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(v.id, v.name); }); li.appendChild(vi); ul.appendChild(li); }
+  body.appendChild(ul); setTimeout(() => LS.set('tide.visitSeen', Date.now()), 1500);
+}
 function renderVisits(body){
   const online = onlineUids(), list = Visits.list.filter(v => v.u !== Cloud.userId);
   body.appendChild(el('div', 'dexhead', `🕒 最近來過村子的人（${list.length}）`));
@@ -4976,7 +5009,7 @@ async function visitAquarium(id, name){
     if (error || !data){ toast('找不到這位玩家的水族館'); return; }
     const r = normRec({ tank:data.tank, show:data.show });
     const set = new Set(r.show || []), list = set.size ? r.tank.filter(x => set.has(x.t)) : r.tank.slice(0, SHOW_MAX);
-    visiting = { id, name: data.nickname || name || '釣客', list };
+    visiting = { id, name: data.nickname || name || '釣客', list }; Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'aqua' }).then(() => {}, () => {});
     buildTank(); renderVisitBar();
     travelTo({ id:'aquarium', label:'水族館', x: AQUA[0] + 1.2, z: AQUA[1] + 6.2, rot: Math.PI });
     if (room && room.connected()) room.emit('visit', { to: id }).catch(() => {});
@@ -5048,7 +5081,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
+    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
@@ -5332,7 +5365,7 @@ function renderTab(){
       for (const [u, n] of bl){ const li = el('li'); li.append(el('span', '', n)); const b = el('button', 'tbtn ghost vbtn', '解除封鎖'); b.addEventListener('click', () => { unblock(u); renderTab(); }); li.appendChild(b); ub.appendChild(li); }
       body.appendChild(ub);
     }
-    renderVisits(body);
+    renderCloudVisits(body); renderVisits(body);
     body.appendChild(el('p', 'sub', '有人講話不禮貌，按「封鎖」後就看不到他的角色、聊天和動態（只對你自己有效）。'));
   } else if (curTab === 'map'){
     renderMap(body);
@@ -5444,6 +5477,7 @@ function renderTab(){
       '鬼抓人：在「玩家」分頁發起，2 個人以上就能玩。被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。',
       '好友：在「玩家」分頁按「加好友」，或輸入朋友的 8 碼好友代碼。互相加好友以後可以送金幣（每天最多 1000）或魚缸裡的魚（每天 10 條），對方在玩家分頁打開禮物就會收到。也可以從好友名單去參觀他的水族館和小島。',
       '遇到不友善的人可以在「玩家」分頁封鎖或檢舉。聊天會自動過濾不雅字。',
+      '「玩家」分頁有「誰來逛過你的小島、水族館」：就算你不在線上也會記在雲端（保留 14 天），可以按「回訪小島」去他的島。別人的名字被房子、樹擋住或離太遠時會變淡。',
       '「玩家」分頁最下面有「最近來過村子的人」：誰進過你在的大廳、什麼時候離開、來過幾次（記在這台裝置，保留 7 天），也可以直接加好友或參觀他的小島。',
     ]);
     sec('⭐ 等級、稱號、成就', [
