@@ -157,6 +157,33 @@ const SEA_MESH = (() => {
           H.plate('Fins', [[-0.12, cy + 0.02, cz], [-0.12, cy - 0.02, cz], [-0.12 - len, cy * 0.4 + wv, cz * 0.4]]); H.plate('Fins', [[-0.12, cy, cz + 0.02], [-0.12, cy, cz - 0.02], [-0.12 - len, cy * 0.4 + wv, cz * 0.4]]); }
         for (let k = 0; k < 30; k++){ const x = 0.7 - H.rnd() * 0.8, a = H.rnd() * 2 * PI; H.decal('Spots', x, a, 0.01, 0.01, 4, 0.004); }
         eyes(H, -0.08, 0.15, 0.03);
+      } }),    // 墨魚：扁扁的橢圓身體、兩側一整圈波浪狀的裙邊鰭、背上斑馬紋、綠色大眼睛、前面短短的腳
+    Cuttle: build({ x0:0.78, x1:-0.62, belly:0.1,
+      prof: u => { const arms = u < 0.16 ? 0.25 + 0.3 * (u / 0.16) : 0, neck = Math.exp(-Math.pow((u - 0.2) / 0.04, 2)), head = u < 0.3 ? 0.65 : 0;
+        let r = u < 0.16 ? arms : u < 0.3 ? 0.62 - 0.12 * neck : Math.pow(Math.sin(Math.min(1, (u - 0.3) / 0.25) * PI / 2), 0.5) * (u > 0.85 ? 1 - 0.6 * sm((u - 0.85) / 0.15) : 1);
+        r = Math.max(r, head * 0.5); return [0.2 * r, 0.13 * r, 0.01 * (1 - u)]; },
+      extra(H){
+        const L = [], R = []; for (let k = 0; k <= 14; k++){ const x = 0.3 - k / 14 * 0.9, s = H.sec(x), wv = 0.065 + 0.012 * Math.sin(k * 1.9); L.push([x, s.w * 0.92]); R.push([x, s.w + wv]); }
+        for (let k = 0; k < 14; k++) H.hfin('Fins', [[L[k][0], L[k][1]], [R[k][0], R[k][1]], [R[k + 1][0], R[k + 1][1]], [L[k + 1][0], L[k + 1][1]]], -0.005, true);
+        for (let k = 0; k < 16; k++){ const x = 0.26 - k * 0.052; for (const sd of [1, -1]){ H.decal('Spots', x, PI / 2 + sd * (0.35 + (k % 3) * 0.12), 0.011, 0.06, 4, 0.006); } }
+        for (let k = 0; k < 40; k++){ const x = 0.28 - H.rnd() * 0.85, a = 0.2 + H.rnd() * (PI - 0.4); H.decal('Ring', x, a, 0.007, 0.007, 4, 0.005); }
+        eyes(H, 0.42, 0.35, 0.042);
+        for (let k = 0; k < 6; k++){ const a = k / 6 * 2 * PI, cy = Math.sin(a) * 0.02, cz = Math.cos(a) * 0.03; H.plate('Fins', [[0.7, cy + 0.012, cz], [0.7, cy - 0.012, cz], [0.84, cy * 0.5 - 0.01, cz * 0.5]]); }
+        for (const z of [0.02, -0.02]) H.plate('Bottom', [[0.72, -0.01, z], [0.72, -0.03, z], [0.92, -0.06, z * 2.2]]);
+      } }),
+    // 章魚：圓圓的頭在前面，8 隻腳往後飄，腳尖捲起來，有吸盤
+    Octopus: build({ x0:0.72, x1:0.04, belly:0.3,
+      prof: u => { const r = u < 0.7 ? Math.pow(Math.sin(Math.min(1, u / 0.55) * PI / 2), 0.6) : 1 - 0.45 * sm((u - 0.7) / 0.3); return [0.21 * r, 0.23 * r, 0.03 * (1 - u)]; },
+      extra(H){
+        for (let k = 0; k < 8; k++){ const a = k / 8 * 2 * PI + 0.2, ca = Math.cos(a), sa = Math.sin(a), N = 9, len = 0.7 + (k % 3) * 0.06; let prev = null;
+          for (let q = 0; q <= N; q++){ const u = q / N, x = 0.08 - u * len, rad = 0.07 + 0.2 * Math.sin(u * PI * 0.8) + (u > 0.75 ? -0.18 * (u - 0.75) / 0.25 : 0), curl = u > 0.7 ? (u - 0.7) / 0.3 : 0;
+            const cx = x + curl * 0.12, cy = sa * rad + curl * 0.05 * sa, cz = ca * rad + curl * 0.05 * ca, wd = 0.045 * (1 - u * 0.8) + 0.008;
+            const cur = [[cx, cy + wd * ca, cz - wd * sa], [cx, cy - wd * ca, cz + wd * sa]];
+            if (prev){ H.plate('Top', [prev[0], cur[0], cur[1]]); H.plate('Top', [prev[0], cur[1], prev[1]]); H.plate('Bottom', [prev[0], cur[1], cur[0]]); H.plate('Bottom', [prev[0], prev[1], cur[1]]);
+              if (q % 2 === 0 && u < 0.9){ const sx = cx, sy = cy - sa * 0.012, sz = cz - ca * 0.012, r2 = wd * 0.55; H.plate('Ring', [[sx + r2, sy, sz], [sx - r2 * 0.5, sy + r2 * 0.8 * ca, sz - r2 * 0.8 * sa], [sx - r2 * 0.5, sy - r2 * 0.8 * ca, sz + r2 * 0.8 * sa]]); } }
+            prev = cur; } }
+        for (let k = 0; k < 24; k++){ const x = 0.66 - H.rnd() * 0.5, a = H.rnd() * 2 * PI; H.decal('Spots', x, a, 0.014 + H.rnd() * 0.01, 0.014, 5, 0.005); }
+        eyes(H, 0.2, 0.25, 0.04);
       } }),
   };
 })();

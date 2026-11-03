@@ -61,6 +61,11 @@ const FISH = [
   { id:'lantern', spot:'creek', time:'night', name:'螢光燈籠魚', rarity:'稀有', color:'#3fbf9d', min:0.2, max:0.9, power:0.55, desc:'身體會發出淡綠色的光，螢光溪晚上會這麼亮，有一半是牠們的功勞。' },
   { id:'clown',   spot:'isle',  name:'小丑魚', rarity:'常見', color:'#ff7a2a', min:0.05, max:0.25, power:0.32, desc:'住在小島碼頭下的海葵裡，橘白條紋很好認。只有小島釣得到。' },
   { id:'parrot',  spot:'isle',  time:'day', name:'彩虹鸚哥魚', rarity:'稀有', color:'#2fc6a6', min:0.8, max:4.0, power:0.6, desc:'嘴巴像鸚鵡，會啃珊瑚。每一條的顏色都不太一樣。只有小島釣得到。' },
+  // 頭足類：墨魚、章魚、魷魚
+  { id:'cuttle',  spot:'sea',   name:'斑馬墨魚', rarity:'稀有', color:'#8a5a4a', min:0.5, max:3.0, power:0.55, desc:'背上的斑馬紋會像波浪一樣流動。生氣的時候會噴出一大團墨汁。' },
+  { id:'octopus', spot:'harbor', time:'night', name:'紅石章魚', rarity:'稀有', color:'#d0553f', min:2.0, max:15, power:0.74, desc:'八隻腳上滿是吸盤，會緊緊抱住礁石不放。拉線的時候要有耐心。' },
+  { id:'ika',     spot:'harbor', time:'night', name:'劍尖魷魚', rarity:'常見', color:'#e88a6a', min:0.6, max:4.0, power:0.48, desc:'晚上成群浮到海面附近，被燈光一照，身體會變成粉紅色。' },
+  { id:'giantsquid', spot:'harbor', time:'night', name:'大王魷魚', rarity:'傳說', color:'#b8383a', min:120, max:500, power:0.99, w:0.25, desc:'傳說中住在最深海溝的巨大魷魚，眼睛比餐盤還大。很少有人見過牠。' },
 ];
 const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 
@@ -72,9 +77,9 @@ const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp'], legendBoost:1.4 },
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach'] },
-  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito'] },
-  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna'] },
+  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle'] },
+  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
@@ -133,6 +138,10 @@ const FISH_STYLE = {
   lantern:  { shape:'Fish1', c:{ Top:'#2fae8a', Bottom:'#bff7e2', Fins:'#7af0c0' }, glow:true },
   clown:    { shape:'Fish3', c:{ Body:'#ff7a2a', Stripes:'#ffffff', Outline:'#1a1a1a' } },
   parrot:   { shape:'Fish2', c:{ Body:'#2fc6a6', Front:'#ff9ad5', Fins:'#5f8cff' } },
+  cuttle:   { shape:'Cuttle', c:{ Top:'#a87560', Bottom:'#ecd9cc', Fins:'#d8bfae', Spots:'#f6ece4', Eye:'#2f7a6a', Ring:'#c9a890' } },
+  octopus:  { shape:'Octopus', c:{ Top:'#d0553f', Bottom:'#f1a48f', Fins:'#e06a52', Spots:'#fbe0d6', Eye:'#2a1a14', Ring:'#f7d07a' } },
+  ika:      { shape:'Squid', c:{ Top:'#e88a6a', Bottom:'#fbd8c8', Fins:'#f0a68a', Spots:'#b8463a', Eye:'#1d1414' } },
+  giantsquid:{ shape:'Squid', c:{ Top:'#b8383a', Bottom:'#e9a49a', Fins:'#c94a48', Spots:'#6e1a1e', Eye:'#ffd36a' }, glow:true },
   manta:    { shape:'Manta',   c:{ Top:'#2f4d6b', Bottom:'#e8eef3' }, move:'wing' },
   dolphin:  { shape:'Dolphin', c:{ Top:'#7f8fa3', Bottom:'#e6ecf2' }, move:'vert' },
   shark:    { shape:'Shark',   c:{ Top:'#3f5f78', Bottom:'#eef2f5' }, glow:true },
@@ -1391,7 +1400,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
+const BIG_FISH = new Set(['giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -2346,6 +2355,14 @@ const RECIPES = {
   ayu:    { name:'鹽烤香魚',   icon:'🍢', fish:'ayu',       need:1, value:30,  desc:'整條撒鹽烤到金黃，有西瓜般的香氣。' },
   suzuki: { name:'酥炸河鱸',   icon:'🍤', fish:'perch',     need:1, value:35,  desc:'翡翠河鱸裹粉油炸，外酥內嫩。' },
   mori:   { name:'綜合壽司拼盤', icon:'🍱', fish:'*common', need:3, value:120, desc:'任選 3 條常見魚，拼成一大盤。' },
+  tako:   { name:'章魚燒',     icon:'🐙', fish:'octopus',  need:1, value:110, desc:'紅石章魚切丁包進麵糊，外脆內軟，撒上滿滿柴魚片。' },
+  ikayaki:{ name:'烤魷魚串',   icon:'🦑', fish:'ika',      need:1, value:60,  desc:'劍尖魷魚刷上醬油烤到捲起來，夜市的味道。' },
+  sumi:   { name:'墨魚麵',     icon:'🍝', fish:'cuttle',   need:1, value:130, desc:'用墨魚自己的墨汁煮成黑黑的麵，吃完嘴巴也會黑黑的。' },
+  sanbei: { name:'三杯小卷',   icon:'🥘', fish:'squid',    need:2, value:55,  desc:'兩隻透光小卷加九層塔、麻油、醬油，香到隔壁都聞得到。' },
+  toro:   { name:'鮪魚大腹握壽司', icon:'🍣', fish:'tuna', need:1, value:900, desc:'黑鮪魚最肥的大腹，入口即化。整個村子最高級的一道。' },
+  unadon: { name:'鰻魚飯',     icon:'🍱', fish:'eel',      need:1, value:150, desc:'月影鰻刷上甜甜的醬汁，一層層鋪在白飯上。' },
+  fugu:   { name:'河豚火鍋',   icon:'🍲', fish:'puffer',   need:1, value:140, desc:'只有食堂老闆會處理的河豚，湯頭非常鮮甜。' },
+  tilapia:{ name:'紅燒吳郭魚', icon:'🐟', fish:'tilapia',  need:1, value:30,  desc:'家常的紅燒口味，配白飯剛剛好。' },
 };
 const STAR_K = [1, 1, 1.3, 1.6];
 // 吃料理的加成：接下來幾次拋竿有效（存在這台裝置）
@@ -2355,6 +2372,14 @@ const BUFFS = {
   ayu:    { txt:'線比較不容易斷',     casts:5,  tension:0.8 },
   suzuki: { txt:'收線快 20%',         casts:5,  reel:1.2 },
   mori:   { txt:'稀有、傳說魚 ×1.2',  casts:10, rare:1.2, legend:1.2 },
+  tako:   { txt:'傳說魚 ×1.3',        casts:6,  legend:1.3 },
+  ikayaki:{ txt:'稀有魚 ×1.4',        casts:5,  rare:1.4 },
+  sumi:   { txt:'線很難斷',           casts:5,  tension:0.75 },
+  sanbei: { txt:'收線快 30%',         casts:4,  reel:1.3 },
+  toro:   { txt:'稀有 ×1.3、傳說 ×1.6', casts:8, rare:1.3, legend:1.6 },
+  unadon: { txt:'收線快、線不易斷',   casts:6,  reel:1.25, tension:0.85 },
+  fugu:   { txt:'傳說魚 ×1.4',        casts:6,  legend:1.4 },
+  tilapia:{ txt:'稀有魚 ×1.15',       casts:6,  rare:1.15 },
 };
 let buff = LS.get('tide.buff', null);   // { r, left }
 function curBuff(){ return buff && BUFFS[buff.r] && buff.left > 0 ? Object.assign({ r:buff.r, left:buff.left }, BUFFS[buff.r]) : null; }
@@ -2400,7 +2425,7 @@ function renderCook(body){
       const { have } = pickIngredients(key), can = have >= rc.need, li = el('li', can ? '' : 'dim');
       li.appendChild(el('span', 'dishic', rc.icon));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', rc.name));
-      const need = rc.fish === '*common' ? `任意常見魚 ×3` : `${FISH_BY_ID[rc.fish].name} ×1`;
+      const need = rc.fish === '*common' ? `任意常見魚 ×${rc.need}` : `${FISH_BY_ID[rc.fish].name} ×${rc.need}`;
       d.appendChild(el('div', 'meta', `${need}・你有 ${have} 條・🪙${rc.value}～${Math.round(rc.value * 1.6)}`)); li.appendChild(d);
       const b = el('button', 'tbtn', can ? '開始做' : '食材不夠'); b.disabled = !can;
       b.addEventListener('click', () => startCooking(key)); li.appendChild(b); ul.appendChild(li);
@@ -2434,7 +2459,7 @@ function sellDishes(ts){
 // ---- 食堂客人：玩家在食堂附近時，NPC 客人會來坐下點餐，等一陣子沒吃到就離開 ----
 const CUST_NAMES = ['小芸', '阿凱', '美美', '大熊', '小葵', '阿嬤', '老王', '小樹', '安安', '阿哲'];
 const CUST_LOOK = [['#f5a5d8', '#ffffff'], ['#7db7d7', '#ffd36a'], ['#9fc7a8', '#f17b6d'], ['#f6a96b', '#3fbf9d'], ['#b9a4ff', '#f6f0dd']];
-const ORDER_W = { saba:3, ayu:3, suzuki:3, mori:2, tai:1 };
+const ORDER_W = { saba:3, ayu:3, suzuki:3, mori:2, tai:1, ikayaki:2, sanbei:2, tilapia:2, tako:1, sumi:1, unadon:1, fugu:1 };
 const customers = []; let custNext = 0;
 function stallSeat(i){ return cafeSeats[i]; }
 function pickOrder(){ const ks = Object.keys(ORDER_W), tot = ks.reduce((a, k) => a + ORDER_W[k], 0); let r = Math.random() * tot; for (const k of ks){ r -= ORDER_W[k]; if (r <= 0) return k; } return 'saba'; }
