@@ -50,6 +50,16 @@ const SEA_MESH = (() => {
         for (let k = 0; k < segs; k++){ const a = ring[k], b = ring[(k + 1) % segs]; const u = [a[0]-C[0], a[1]-C[1], a[2]-C[2]], v = [b[0]-C[0], b[1]-C[1], b[2]-C[2]]; const d = (u[1]*v[2]-u[2]*v[1]) * n[0] + (u[2]*v[0]-u[0]*v[2]) * n[1] + (u[0]*v[1]-u[1]*v[0]) * n[2]; if (d >= 0) put(part, C, a, b); else put(part, C, b, a); }
       },
       rnd,
+      // 沿著一串點做一根管子（海馬的身體、海龜的頭和腳、水母的觸手）
+      tube(part, pts, rad, n){ n = n || 6; let prev = null;
+        for (let i = 0; i < pts.length; i++){ const p = pts[i], q = pts[Math.min(pts.length - 1, i + 1)], o = pts[Math.max(0, i - 1)];
+          let tx = q[0] - o[0], ty = q[1] - o[1], tz = q[2] - o[2]; const tl = Math.hypot(tx, ty, tz) || 1; tx /= tl; ty /= tl; tz /= tl;
+          let ux = 0, uy = 0, uz = 1; if (Math.abs(tz) > 0.9){ ux = 1; uz = 0; }
+          let ax = ty * uz - tz * uy, ay = tz * ux - tx * uz, az = tx * uy - ty * ux; const al = Math.hypot(ax, ay, az) || 1; ax /= al; ay /= al; az /= al;
+          const bx = ty * az - tz * ay, by = tz * ax - tx * az, bz = tx * ay - ty * ax, r = typeof rad === 'function' ? rad(i / (pts.length - 1)) : rad;
+          const ring = []; for (let k = 0; k < n; k++){ const a = k / n * 2 * PI, c = Math.cos(a) * r, si = Math.sin(a) * r; ring.push([p[0] + ax * c + bx * si, p[1] + ay * c + by * si, p[2] + az * c + bz * si]); }
+          if (prev) for (let k = 0; k < n; k++){ const a0 = prev[k], a1 = prev[(k + 1) % n], b0 = ring[k], b1 = ring[(k + 1) % n]; put(part, a0, b0, b1); put(part, a0, b1, a1); put(part, a0, b1, b0); put(part, a0, a1, b1); }
+          prev = ring; } },
     };
     sp.extra && sp.extra(helpers);
     for (const k in out) out[k] = out[k].map(v => Math.round(v));
@@ -184,6 +194,40 @@ const SEA_MESH = (() => {
             prev = cur; } }
         for (let k = 0; k < 24; k++){ const x = 0.66 - H.rnd() * 0.5, a = H.rnd() * 2 * PI; H.decal('Spots', x, a, 0.014 + H.rnd() * 0.01, 0.014, 5, 0.005); }
         eyes(H, 0.2, 0.25, 0.04);
+      } }),    // 水母：圓圓的傘在前面，後面飄著長長的觸手和花邊口腕（會發光）
+    Jelly: build({ x0:0.42, x1:0.0, belly:0.5,
+      prof: u => { const r = Math.pow(Math.sin(Math.min(1, u / 0.92) * PI / 2), 0.55) * (u > 0.92 ? 1 - 0.1 * (u - 0.92) / 0.08 : 1); return [0.3 * r, 0.3 * r, 0]; },
+      part: (x, y, z, s) => (x < 0.06 ? 'Bottom' : 'Top'),
+      extra(H){
+        for (let k = 0; k < 10; k++){ const a = k / 10 * 2 * PI, cy = Math.sin(a) * 0.25, cz = Math.cos(a) * 0.25, pts = [];
+          for (let q = 0; q <= 8; q++){ const u = q / 8; pts.push([0.02 - u * (0.75 + (k % 3) * 0.12), cy * (1 - u * 0.4) + Math.sin(u * 7 + k) * 0.03, cz * (1 - u * 0.4) + Math.cos(u * 6 + k) * 0.03]); }
+          H.tube('Fins', pts, u => 0.012 * (1 - u * 0.7), 4); }
+        for (let k = 0; k < 4; k++){ const a = k / 4 * 2 * PI + 0.4, pts = []; for (let q = 0; q <= 7; q++){ const u = q / 7; pts.push([0.04 - u * 0.5, Math.sin(a) * 0.07 + Math.sin(u * 9) * 0.035, Math.cos(a) * 0.07 + Math.cos(u * 9) * 0.035]); } H.tube('Spots', pts, u => 0.035 * (1 - u * 0.6), 5); }
+        for (let k = 0; k < 12; k++){ const a = k / 12 * 2 * PI; H.decal('Ring', 0.22, a, 0.03, 0.015, 5, 0.006); }
+      } }),
+    // 海馬：捲捲的尾巴、彎彎的身體、長長的嘴（身體用管子做）
+    Seahorse: build({ x0:0.56, x1:0.28, belly:0.3,
+      prof: u => [0.035 + 0.035 * u, 0.04 + 0.05 * u, 0.55 + 0.03 * u],
+      extra(H){
+        const body = []; for (let q = 0; q <= 14; q++){ const u = q / 14; body.push([0.26 - Math.sin(u * 1.3) * 0.18 + u * 0.05, 0.55 - u * 0.75, 0]); }
+        H.tube('Top', body, u => 0.06 + 0.09 * Math.sin(Math.min(1, u * 1.6) * PI * 0.9) * (1 - u * 0.4), 8);
+        const tail = []; const t0 = body[body.length - 1]; for (let q = 0; q <= 14; q++){ const u = q / 14, a = u * PI * 1.6; tail.push([t0[0] + Math.sin(a) * 0.14 * (1 - u * 0.5), t0[1] - 0.05 - (1 - Math.cos(a)) * 0.1 * (1 - u * 0.3) + u * 0.12, 0]); }
+        H.tube('Top', tail, u => 0.035 * (1 - u * 0.8) + 0.006, 6);
+        H.vfin('Fins', [[0.12, 0.25], [0.04, 0.3], [0.02, 0.12], [0.1, 0.1]], -0.002);
+        for (let q = 1; q < 14; q += 2){ const p = body[q]; H.plate('Spots', [[p[0] - 0.03, p[1], 0.07], [p[0] + 0.03, p[1], 0.07], [p[0], p[1] + 0.015, 0.1]]); H.plate('Spots', [[p[0] - 0.03, p[1], -0.07], [p[0], p[1] + 0.015, -0.1], [p[0] + 0.03, p[1], -0.07]]); }
+        H.plate('Fins', [[0.3, 0.62, 0], [0.36, 0.72, 0.01], [0.4, 0.6, 0]]);
+        eyes(H, 0.33, 0.5, 0.022);
+      } }),
+    // 海龜：圓圓的殼、殼上的格紋、四隻划水的腳和小小的頭
+    Turtle: build({ x0:0.45, x1:-0.45, belly:0.25,
+      prof: u => { const r = Math.pow(Math.sin(u * PI), 0.5); return [0.34 * r, 0.17 * r, 0.02]; },
+      extra(H){
+        for (let k = 0; k < 13; k++){ const x = 0.3 - (k % 4) * 0.2 + (k > 7 ? 0.1 : 0), a = PI / 2 + (Math.floor(k / 4) - 1.5) * 0.55; H.decal('Spots', x, a, 0.07, 0.06, 6, 0.006); }
+        H.tube('Bottom', [[0.36, 0.0, 0], [0.48, 0.03, 0], [0.58, 0.05, 0], [0.62, 0.05, 0]], u => 0.07 - u * 0.015 + (u > 0.6 ? 0.02 : 0), 8);
+        for (const m of [1, -1]){
+          H.plate('Fins', [[0.22, -0.02, 0.28 * m], [0.1, -0.03, 0.3 * m], [0.02, -0.04, 0.62 * m]]); H.plate('Fins', [[0.22, -0.02, 0.28 * m], [0.02, -0.04, 0.62 * m], [0.1, -0.03, 0.3 * m]]);
+          H.plate('Fins', [[-0.25, -0.03, 0.22 * m], [-0.33, -0.03, 0.2 * m], [-0.42, -0.04, 0.36 * m]]); H.plate('Fins', [[-0.25, -0.03, 0.22 * m], [-0.42, -0.04, 0.36 * m], [-0.33, -0.03, 0.2 * m]]); }
+        for (const z of [0.04, -0.04]) H.plate('Eye', [[0.6, 0.075, z], [0.57, 0.08, z * 1.4], [0.57, 0.06, z * 1.4]]);
       } }),
   };
 })();

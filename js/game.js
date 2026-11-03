@@ -66,6 +66,21 @@ const FISH = [
   { id:'octopus', spot:'harbor', time:'night', name:'紅石章魚', rarity:'稀有', color:'#d0553f', min:2.0, max:15, power:0.74, desc:'八隻腳上滿是吸盤，會緊緊抱住礁石不放。拉線的時候要有耐心。' },
   { id:'ika',     spot:'harbor', time:'night', name:'劍尖魷魚', rarity:'常見', color:'#e88a6a', min:0.6, max:4.0, power:0.48, desc:'晚上成群浮到海面附近，被燈光一照，身體會變成粉紅色。' },
   { id:'giantsquid', spot:'harbor', time:'night', name:'大王魷魚', rarity:'傳說', color:'#b8383a', min:120, max:500, power:0.99, w:0.25, desc:'傳說中住在最深海溝的巨大魷魚，眼睛比餐盤還大。很少有人見過牠。' },
+  // 2026-11 第三批
+  { id:'snakehead', spot:'river', name:'黑斑雷魚', rarity:'稀有', color:'#3d4a2e', min:1.0, max:5.0, power:0.72, desc:'河岸草叢裡的霸王，會突然從水草裡衝出來咬餌。' },
+  { id:'bass',    spot:'lake',  name:'大口黑鱸', rarity:'常見', color:'#5f7f3e', min:0.4, max:2.5, power:0.45, desc:'嘴巴大大的，什麼都敢咬。是鏡湖最受歡迎的魚。' },
+  { id:'goldfish', spot:'lake', time:'day', name:'圓圓金魚', rarity:'常見', color:'#ff8a2a', min:0.05, max:0.3, power:0.25, desc:'不知道誰放進鏡湖的，現在已經生了一大群。' },
+  { id:'sturgeon', spot:'lake', time:'night', name:'鏡湖鱘龍', rarity:'傳說', color:'#7d8794', min:20, max:90, power:0.93, w:0.5, desc:'活了上百年的老魚，背上有一排像盔甲的骨板。' },
+  { id:'salmon',  spot:'pool',  name:'櫻花鉤吻鮭', rarity:'稀有', color:'#c98a9a', min:0.3, max:1.6, power:0.6, desc:'只住在最冰涼的山澗裡，身上有櫻花一樣的粉紅色斑點。' },
+  { id:'jelly',   spot:'sea',   time:'night', name:'月光水母', rarity:'稀有', color:'#bfe6ff', min:0.2, max:2.0, power:0.3, desc:'晚上會發出淡藍色的光，一群一群漂在海邊。不要用手摸！' },
+  { id:'flounder', spot:'sea',  name:'沙底比目魚', rarity:'常見', color:'#a88a62', min:0.3, max:2.0, power:0.4, desc:'兩隻眼睛長在同一邊，平平地躲在沙子裡。' },
+  { id:'grouper', spot:'sea',   name:'龍膽石斑', rarity:'傳說', color:'#6b5a3a', min:15, max:60, power:0.9, w:0.55, desc:'礁石洞裡的大老大，一口就能吞下一整條魚。' },
+  { id:'barracuda', spot:'harbor', time:'day', name:'銀刀梭子魚', rarity:'稀有', color:'#b7c3cf', min:2.0, max:12, power:0.7, desc:'像一把銀色的刀，游得飛快，牙齒很尖。' },
+  { id:'hammer',  spot:'harbor', name:'雙髻鯊', rarity:'傳說', color:'#5f7488', min:80, max:300, power:0.96, w:0.4, desc:'頭長得像一把槌子，兩邊的眼睛可以同時看到前後。' },
+  { id:'oarfish', spot:'harbor', time:'night', name:'皇帶魚', rarity:'傳說', color:'#d9dfe6', min:30, max:150, power:0.92, w:0.3, desc:'又長又扁的銀色大魚，頭上有紅色的冠。傳說牠出現時海會很平靜。' },
+  { id:'seahorse', spot:'isle', name:'小海馬', rarity:'稀有', color:'#f2a14a', min:0.02, max:0.1, power:0.22, desc:'用捲捲的尾巴抓著小島碼頭下的海草。是爸爸負責生寶寶喔。' },
+  { id:'lionfish', spot:'isle', name:'獅子魚', rarity:'稀有', color:'#d9453a', min:0.3, max:1.3, power:0.5, desc:'鰭像一把把打開的扇子，紅白條紋超漂亮，但刺有毒。' },
+  { id:'turtle',  spot:'isle', time:'day', name:'綠蠵龜', rarity:'傳說', color:'#5f8f5a', min:40, max:180, power:0.85, w:0.5, desc:'慢慢游到小島來曬太陽的海龜。拍完照記得放牠回大海。' },
 ];
 const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 
@@ -74,12 +89,12 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:15, y:0.32 };
 const SPOTS = [
-  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel'] },
-  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp'], legendBoost:1.4 },
-  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach'] },
-  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle'] },
-  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid'] },
+  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead'] },
+  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon'], legendBoost:1.4 },
+  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon'] },
+  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper'] },
+  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
@@ -142,6 +157,20 @@ const FISH_STYLE = {
   octopus:  { shape:'Octopus', c:{ Top:'#d0553f', Bottom:'#f1a48f', Fins:'#e06a52', Spots:'#fbe0d6', Eye:'#2a1a14', Ring:'#f7d07a' } },
   ika:      { shape:'Squid', c:{ Top:'#e88a6a', Bottom:'#fbd8c8', Fins:'#f0a68a', Spots:'#b8463a', Eye:'#1d1414' } },
   giantsquid:{ shape:'Squid', c:{ Top:'#b8383a', Bottom:'#e9a49a', Fins:'#c94a48', Spots:'#6e1a1e', Eye:'#ffd36a' }, glow:true },
+  snakehead:{ shape:'Fish1', c:{ Top:'#2f3a24', Bottom:'#a8a88a', Fins:'#4a5a34' } },
+  bass:     { shape:'Fish1', c:{ Top:'#4f6f30', Bottom:'#e3e8cf', Fins:'#7f9a50' } },
+  goldfish: { shape:'Fish2', c:{ Body:'#ff7a1a', Front:'#ffc070', Fins:'#ffb050' } },
+  sturgeon: { shape:'Eel',   c:{ Top:'#6d7784', Bottom:'#d9dde2', Fins:'#5a636e', Eye:'#1d2228' }, glow:true, move:'eel' },
+  salmon:   { shape:'Fish1', c:{ Top:'#9a6a7a', Bottom:'#f3dfe4', Fins:'#e59ab0' } },
+  jelly:    { shape:'Jelly', c:{ Top:'#bfe6ff', Bottom:'#e8f6ff', Fins:'#d6f0ff', Spots:'#f5c6ff', Ring:'#ffffff' }, glow:true, move:'vert' },
+  flounder: { shape:'Manta', c:{ Top:'#a88a62', Bottom:'#f1e8da' }, move:'wing' },
+  grouper:  { shape:'Fish2', c:{ Body:'#9a7d52', Front:'#d2b88a', Fins:'#7a6040' }, glow:true },
+  barracuda:{ shape:'Fish1', c:{ Top:'#7f8fa0', Bottom:'#eef2f5', Fins:'#c9d6e3' } },
+  hammer:   { shape:'Shark', c:{ Top:'#5f7488', Bottom:'#eef2f5' }, glow:true },
+  oarfish:  { shape:'Eel',   c:{ Top:'#d9dfe6', Bottom:'#f4f6f8', Fins:'#e0443a', Eye:'#1d2228' }, glow:true, move:'eel' },
+  seahorse: { shape:'Seahorse', c:{ Top:'#f2a14a', Bottom:'#ffd08a', Fins:'#ffe0b0', Spots:'#d97a2a', Eye:'#1d1a12' }, move:'vert' },
+  lionfish: { shape:'Scorpion', c:{ Top:'#d9453a', Bottom:'#fbe9e4', Fins:'#f6c2b8', Spots:'#ffffff', Eye:'#1d1414' } },
+  turtle:   { shape:'Turtle', c:{ Top:'#6b8f4a', Bottom:'#e8d8a8', Fins:'#8fae6a', Spots:'#4a6a30', Eye:'#1d1a12' }, glow:true, move:'wing' },
   manta:    { shape:'Manta',   c:{ Top:'#2f4d6b', Bottom:'#e8eef3' }, move:'wing' },
   dolphin:  { shape:'Dolphin', c:{ Top:'#7f8fa3', Bottom:'#e6ecf2' }, move:'vert' },
   shark:    { shape:'Shark',   c:{ Top:'#3f5f78', Bottom:'#eef2f5' }, glow:true },
@@ -1527,7 +1556,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
+const BIG_FISH = new Set(['sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
