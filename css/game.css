@@ -505,3 +505,38 @@ body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!impo
 .wpinfo{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .wpinfo b{font-family:var(--f-display);font-size:16px}
 .shoplist img.gearic{width:52px;height:52px;border-radius:10px;flex:none;background:#f3efe6}
+
+/* 料理小遊戲：章魚燒、燒烤、火鍋 */
+#cookGame .mini[hidden]{display:none}
+#cookGame .mini.m-flip{display:grid;grid-template-columns:repeat(3,72px);gap:10px;justify-content:center;margin:10px 0;padding:12px;border-radius:14px;background:#3b3b3b;box-shadow:inset 0 0 0 4px #2a2a2a}
+#cookGame .tball{--cook:0;width:72px;height:72px;border-radius:50%;border:0;position:relative;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.5),transparent 40%),color-mix(in srgb,#f3e9d2 calc((1 - var(--cook))*100%),#d9902f);box-shadow:inset 0 -6px 0 rgba(0,0,0,.15);transition:transform .08s;cursor:pointer}
+#cookGame .tball.ready{box-shadow:0 0 0 4px #ffd36a,0 0 16px #ffb300;transform:scale(1.06)}
+#cookGame .tball.burnt{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.25),transparent 40%),#5a3a1e}
+#cookGame .tball.done{transform:rotate(180deg) scale(.95);background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.4),transparent 40%),#c9802a}
+#cookGame .tball.done.x{background:#4a2e18}
+#cookGame .tball i{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:800;color:#fff;transform:rotate(180deg);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+#cookGame .tball.g i{color:#fff6c8}
+#cookGame .mini.m-grill,#cookGame .mini.m-fry{margin:12px 0}
+#cookGame .heat{position:relative;height:30px;border-radius:999px;background:linear-gradient(90deg,#8fc3e8,#ffd36a 50%,#f04a3a);box-shadow:inset 0 0 0 2px rgba(0,0,0,.15)}
+#cookGame .heat .hz{position:absolute;top:-4px;bottom:-4px;border-radius:8px;border:3px solid #3fbf9d;background:rgba(63,191,157,.25)}
+#cookGame .heat .hm{position:absolute;top:-8px;width:6px;height:46px;margin-left:-3px;border-radius:3px;background:#18334a;box-shadow:0 0 0 2px #fff}
+#cookGame .heat.ok .hz{border-color:#2ad07a;box-shadow:0 0 12px #2ad07a}
+#cookGame .heat.hot .hm{background:#d8402f}
+#cookGame .cookp{position:relative;height:16px;margin-top:12px;border-radius:999px;background:rgba(24,51,74,.12);overflow:hidden}
+#cookGame .cookp i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ffd36a,#e8963a)}
+#cookGame .cookp span{position:absolute;left:10px;top:0;line-height:16px;font-size:11px;font-weight:700;color:#5a3a1e}
+#cookGame .cutbtn.down{transform:translateY(3px);filter:brightness(.92)}
+#cookGame .mini.m-pot{margin:10px 0}
+#cookGame .seq{display:flex;gap:10px;justify-content:center;margin-bottom:12px}
+#cookGame .seq .si{width:52px;height:52px;border-radius:12px;background:#fff;display:grid;place-items:center;font-size:30px;box-shadow:0 0 0 2px #e8d8b8}
+#cookGame .seq .si.hid{background:#f3efe6;color:#b8a888;font-size:24px;font-weight:800}
+#cookGame .seq .si.ok{box-shadow:0 0 0 3px #3fbf9d}
+#cookGame .opts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+#cookGame .opts .oi{width:56px;height:56px;border-radius:50%;border:0;background:#fff7e6;font-size:30px;box-shadow:0 3px 0 #e0c89a;cursor:pointer}
+#cookGame .opts .oi.bad{background:#ffd6d0;animation:fmShake .1s 3}
+@media (max-height:500px){ #cookGame .mini.m-flip{grid-template-columns:repeat(6,52px);gap:8px;padding:8px} #cookGame .tball{width:52px;height:52px} #cookGame .tball i{font-size:11px} }
+
+/* NPC 任務 */
+.tag .nm.quest{background:#c98a2a}
+.shoplist.quests .qtxt{font-size:13px;line-height:1.4;margin-top:2px}
+.shoplist.quests li.hl{box-shadow:0 0 0 3px #ffd36a}

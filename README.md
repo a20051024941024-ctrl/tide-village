@@ -44,6 +44,7 @@ supabase/005_more_fish.sql 新增 11 種魚
 supabase/006_squid_recipes.sql 墨魚章魚魷魚＋8 道新料理
 supabase/007_shop_items.sql 釣具店新商品（釣竿、魚餌）
 supabase/009_fish_batch3.sql 第三批新魚 14 種
+supabase/010_quests.sql NPC 每日任務
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

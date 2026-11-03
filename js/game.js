@@ -2282,7 +2282,7 @@ function updateFishing(dt, t){
   if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
     if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'; }
-    else if (sh){ label = sh.label; sub = sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
     else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
@@ -2615,6 +2615,73 @@ function renderTagBar(timeOnly){
   }
 }
 
+/* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
+const QUEST_NPC = {
+  chief: { name:'村長 阿土伯', at:[7.2, 1.2], shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
+  wang:  { name:'漁夫 老王',   at:[29.5, -23.2], shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
+  mei:   { name:'食堂 美雲姨', at:[10.4, 11.2], shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
+};
+const questNpcs = []; let Quests = { list:null, at:0, loading:false }, questWho = null;
+function freeSpot(x, z){ for (let r = 0; r < 6; r += 0.5) for (let a = 0; a < 6.28; a += 0.6){ const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (walkable(px, pz) && !blocked(px, pz, 0.45) && !deckAt(px, pz)) return [px, pz]; } return [x, z]; }
+function initQuestNpcs(){
+  for (const [who, d] of Object.entries(QUEST_NPC)){
+    const [x, z] = freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, name:d.name, kind:'npc' });
+    f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.atan2(MAP.plaza[0] - x, MAP.plaza[1] - z); f.setGear(d.gear); f.nm.classList.add('quest');
+    questNpcs.push({ who, name:d.name, f });
+  }
+}
+function updateQuestNpcs(dt, t){
+  if (!questNpcs.length) initQuestNpcs();
+  for (const q of questNpcs){
+    const d = Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z);
+    if (d < 40){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
+    else q.f.tag.style.display = 'none';
+    const qs = Quests.list && Quests.list.find(x => x.who === q.who), mark = !Cloud.on ? '' : !qs ? '' : qs.done ? '✔️' : '❗';
+    if (q.mark !== mark){ q.mark = mark; if (mark) q.f.say(mark, mark === '❗' ? 'alert' : 'emote', 99999); else q.f.bub.hidden = true; }
+  }
+  if (Cloud.on && !Quests.loading && (!Quests.list || Date.now() - Quests.at > 10 * 60 * 1000)) loadQuests();
+}
+async function loadQuests(){
+  if (!Cloud.sb || !Cloud.on || Quests.loading) return; Quests.loading = true;
+  try { const { data, error } = await Cloud.sb.rpc('get_quests'); if (!error && Array.isArray(data)){ Quests.list = data; Quests.at = Date.now(); if (!$('#sheet').hidden && curTab === 'quest') renderTab(); } } catch(e){}
+  Quests.loading = false;
+}
+function questText(q){
+  if (q.kind === 'dish'){ const rc = RECIPES[q.target]; return `幫我做 ${q.n} 份 ${rc ? rc.icon + ' ' + rc.name : q.target}，客人一直點，我忙不過來了！`; }
+  const f = FISH_BY_ID[q.target], nm = f ? f.name : q.target;
+  return Number(q.minw) > 0 ? `我在找一條 ${Number(q.minw)} 公斤以上的「${nm}」，拜託你了！` : `可以幫我釣 ${q.n} 條「${nm}」嗎？我想煮一大鍋魚湯。`;
+}
+function questItems(q){
+  if (q.kind === 'dish') return rec.dishes.filter(d => d.r === q.target).sort((a, b) => a.q - b.q).slice(0, q.n);
+  const locked = new Set(rec.show || []);
+  return rec.tank.filter(x => !locked.has(x.t) && x.f === q.target && x.w >= Number(q.minw)).sort((a, b) => a.w - b.w).slice(0, q.n);
+}
+function completeQuest(q){
+  const items = questItems(q); if (items.length < q.n || q.done) return; const ts = items.map(x => x.t), set = new Set(ts);
+  if (q.kind === 'dish') rec.dishes = rec.dishes.filter(d => !set.has(d.t)); else { rec.tank = rec.tank.filter(x => !set.has(x.t)); buildTank(); }
+  rec.earned += q.reward; addCoins(q.reward); saveRecLocal(); q.done = true;
+  cloudCall('complete_quest', { p_idx: q.i, p_ts: ts }); setTimeout(loadQuests, 1500);
+  SFX.catch(); flash(`📜 任務完成！+${q.reward} 金幣`, 1.6); const npc = questNpcs.find(n => n.who === q.who); if (npc){ npc.f.say('謝謝你！😄', 'emote', 3); npc.mark = null; FX.emit(npc.f.pos.x, 2, npc.f.pos.z, 18, '#ffd36a', 1, 2, 1); }
+  renderTab();
+}
+function renderQuests(body){
+  body.appendChild(el('div', 'shophead')).innerHTML = `<b>📜 今天的任務</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
+  if (!Cloud.on){ body.appendChild(el('p', 'sub', '任務要連上雲端才能接，等一下再試試看。')); return; }
+  if (!Quests.list){ body.appendChild(el('p', 'sub', '讀取中…')); loadQuests(); return; }
+  body.appendChild(el('p', 'sub', '村子裡的人每天會有新的請求（台灣時間半夜 12 點換）。走到他們旁邊，或在這裡交付都可以。'));
+  const ul = el('ul', 'shoplist quests');
+  for (const q of Quests.list){
+    const npc = QUEST_NPC[q.who], li = el('li', (q.done ? 'on ' : '') + (questWho === q.who ? 'hl' : ''));
+    li.appendChild(el('span', 'dishic', q.who === 'chief' ? '👴' : q.who === 'wang' ? '🧔' : '👩‍🍳'));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', npc ? npc.name : q.who)); d.appendChild(el('div', 'qtxt', questText(q)));
+    const have = questItems(q).length; d.appendChild(el('div', 'sub2', q.done ? '✔️ 完成了' : `進度 ${Math.min(have, q.n)} / ${q.n}・獎勵 🪙${q.reward}`)); li.appendChild(d);
+    const acts = el('div', 'tacts');
+    if (!q.done){ const b = el('button', 'tbtn' + (have >= q.n ? '' : ' ghost'), have >= q.n ? '交付' : `還差 ${q.n - have}`); b.disabled = have < q.n; b.addEventListener('click', () => completeQuest(q)); acts.appendChild(b); }
+    li.appendChild(acts); ul.appendChild(li);
+  }
+  body.appendChild(ul);
+}
+
 /* ================= COOKING：潮汐食堂（料理與壽司）================= */
 // 食譜和價格跟伺服器的 supabase/002_cooking.sql 一樣；伺服器會再檢查一次
 const RECIPES = {
@@ -2773,22 +2840,88 @@ function serveCustomer(c){
 
 // ---- 切魚小遊戲：指針左右來回跑，在綠色區域按下「切！」，切 3 刀 ----
 const CookGame = { on:false };
+const COOK_MODE = { tako:'flip', ayu:'grill', ikayaki:'grill', unadon:'grill', tilapia:'grill', suzuki:'fry', fugu:'pot', sumi:'pot', sanbei:'pot' };
 function startCooking(key){
   const rc = RECIPES[key], { use } = pickIngredients(key); if (use.length < rc.need) return;
+  if (COOK_MODE[key]){ startMini(key, COOK_MODE[key], use); return; }
   closeSheet(); uiBlocked = true;
-  const G = Object.assign(CookGame, { on:true, key, use, cut:0, score:[], x:0, dir:1, speed:0.9, t0:performance.now(), zone:0.16 });
+  const G = Object.assign(CookGame, { on:true, key, use, cut:0, score:[], x:0, dir:1, speed:0.9, t0:performance.now(), zone:0.16, mode:'cut', q:null });
   let ov = $('#cookGame');
   if (!ov){
     ov = document.createElement('div'); ov.id = 'cookGame';
-    ov.innerHTML = '<div class="box panel"><div class="ct"></div><div class="cs"></div><div class="track"><span class="zone"></span><span class="mark"></span></div><div class="cuts"></div><button class="pbtn cutbtn">切！</button></div>';
+    ov.innerHTML = '<div class="box panel"><div class="ct"></div><div class="cs"></div><div class="mini" hidden></div><div class="track"><span class="zone"></span><span class="mark"></span></div><div class="cuts"></div><button class="pbtn cutbtn">切！</button></div>';
     document.body.appendChild(ov);
     ov.querySelector('.cutbtn').addEventListener('pointerdown', e => { e.preventDefault(); cookCut(); });
     addEventListener('keydown', e => { if (CookGame.on && (e.code === 'Space' || e.code === 'Enter')){ e.preventDefault(); e.stopPropagation(); cookCut(); } }, true);
   }
-  ov.hidden = false; ov.querySelector('.ct').textContent = `${rc.icon} ${rc.name}`;
+  ov.hidden = false; ov.querySelector('.mini').hidden = true; ov.querySelector('.track').hidden = false; ov.querySelector('.cuts').hidden = false; ov.querySelector('.ct').textContent = `${rc.icon} ${rc.name}`;
   ov.querySelector('.cs').textContent = `食材：${use.map(x => FISH_BY_ID[x.f].name).join('、')}。指針跑到中間的綠色區域時按「切！」`;
   ov.querySelector('.cutbtn').textContent = '切！'; ov.querySelector('.cutbtn').disabled = false;
   G.zoneW = G.zone; renderCuts(); requestAnimationFrame(cookTick);
+}
+// ---- 其他料理的玩法：章魚燒翻面、燒烤／油炸控火、火鍋照順序下料 ----
+function startMini(key, mode, use){
+  const rc = RECIPES[key]; closeSheet(); uiBlocked = true;
+  let ov;
+  if (!$('#cookGame')){ const d = document.createElement('div'); d.id = 'cookGame'; d.innerHTML = '<div class="box panel"><div class="ct"></div><div class="cs"></div><div class="mini" hidden></div><div class="track"><span class="zone"></span><span class="mark"></span></div><div class="cuts"></div><button class="pbtn cutbtn">切！</button></div>'; document.body.appendChild(d);
+    d.querySelector('.cutbtn').addEventListener('pointerdown', e => { e.preventDefault(); cookCut(); });
+    d.querySelector('.cutbtn').addEventListener('pointerup', e => { e.preventDefault(); if (CookGame.release) CookGame.release(); });
+    d.querySelector('.cutbtn').addEventListener('pointerleave', () => { if (CookGame.release) CookGame.release(); });
+    addEventListener('keydown', e => { if (CookGame.on && (e.code === 'Space' || e.code === 'Enter')){ e.preventDefault(); e.stopPropagation(); if (!e.repeat) cookCut(); } }, true);
+    addEventListener('keyup', e => { if (CookGame.on && (e.code === 'Space' || e.code === 'Enter') && CookGame.release) CookGame.release(); }, true); }
+  ov = $('#cookGame'); const btn = ov.querySelector('.cutbtn');
+  if (!ov.dataset.rel){ ov.dataset.rel = '1'; btn.addEventListener('pointerup', e => { if (CookGame.release) CookGame.release(); }); btn.addEventListener('pointerleave', () => { if (CookGame.release) CookGame.release(); }); addEventListener('keyup', e => { if (CookGame.on && (e.code === 'Space' || e.code === 'Enter') && CookGame.release) CookGame.release(); }, true); }
+  ov.hidden = false; ov.querySelector('.track').hidden = true; ov.querySelector('.cuts').hidden = true;
+  const mini = ov.querySelector('.mini'); mini.hidden = false; mini.innerHTML = ''; mini.className = 'mini m-' + mode;
+  ov.querySelector('.ct').textContent = `${rc.icon} ${rc.name}`; btn.disabled = false;
+  const G = Object.assign(CookGame, { on:true, key, use, mode, cut:0, score:[], q:null, press:null, release:null, last:0 });
+  const done = q => { G.q = q; G.cut = 3; G.press = G.release = null; finishCooking(); };
+  if (mode === 'flip'){
+    // 章魚燒：6 顆各自慢慢變熟，金黃色的時候點下去翻面
+    ov.querySelector('.cs').textContent = '每顆章魚燒會慢慢變成金黃色，金黃色的時候點它翻面！太早沒熟、太晚會焦。';
+    btn.textContent = '全部翻完就完成'; btn.disabled = true;
+    const balls = []; const now0 = performance.now();
+    for (let i = 0; i < 6; i++){ const b = el('button', 'tball'); b.innerHTML = '<i></i>'; mini.appendChild(b); const o = { b, ready: now0 + 1500 + i * 700 + Math.random() * 900, done:false }; balls.push(o);
+      b.addEventListener('pointerdown', e => { e.preventDefault(); if (o.done || !G.on) return; const dtv = (performance.now() - o.ready) / 1000; const sc = Math.abs(dtv) < 0.6 ? 2 : dtv > -1.0 && dtv < 1.1 ? 1 : 0; o.done = true; G.score.push(sc);
+        b.classList.add('done', sc === 2 ? 'g' : sc === 1 ? 'o' : 'x'); b.querySelector('i').textContent = sc === 2 ? '完美' : sc === 1 ? '還可以' : dtv < 0 ? '沒熟' : '焦了'; SFX.plop(); if (sc === 2) SFX.bite();
+        if (balls.every(x => x.done)){ const sum = G.score.reduce((a, c) => a + c, 0); setTimeout(() => done(sum >= 10 ? 3 : sum >= 6 ? 2 : 1), 450); } }); }
+    const tick = () => { if (!G.on || G.mode !== 'flip') return; const t = performance.now();
+      for (const o of balls){ if (o.done) continue; const k = (t - o.ready) / 1000; o.b.style.setProperty('--cook', clamp((k + 2.2) / 2.2, 0, 1).toFixed(3)); o.b.classList.toggle('ready', Math.abs(k) < 0.6); o.b.classList.toggle('burnt', k > 1.0);
+        if (k > 2.2){ o.done = true; G.score.push(0); o.b.classList.add('done', 'x'); o.b.querySelector('i').textContent = '焦了'; if (balls.every(x => x.done)){ const sum = G.score.reduce((a, c) => a + c, 0); setTimeout(() => done(sum >= 10 ? 3 : sum >= 6 ? 2 : 1), 450); } } }
+      requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  } else if (mode === 'grill' || mode === 'fry'){
+    // 燒烤／油炸：按住加火、放開降溫，讓指針一直待在會移動的綠色區
+    const fry = mode === 'fry';
+    ov.querySelector('.cs').textContent = fry ? '按住「加熱」讓油溫上升、放開會降溫。讓指針一直留在綠色區，炸得越久越金黃！' : '按住「搧火」讓炭火變旺、放開火會變小。讓指針一直留在綠色區，烤得剛剛好！';
+    btn.textContent = fry ? '🔥 按住加熱' : '🪭 按住搧火';
+    mini.innerHTML = `<div class="heat"><span class="hz"></span><span class="hm"></span></div><div class="cookp"><i></i><span>${fry ? '炸' : '烤'}熟程度</span></div>`;
+    let temp = 0.35, hold = false, zc = 0.5, inT = 0, tot = 0, prog = 0; const DUR = 7;
+    G.press = () => { hold = true; btn.classList.add('down'); }; G.release = () => { hold = false; btn.classList.remove('down'); };
+    const tick = () => { if (!G.on || (G.mode !== 'grill' && G.mode !== 'fry')) return; const t = performance.now(), dt = Math.min(0.05, (t - (G.last || t)) / 1000); G.last = t;
+      temp += (hold ? 0.55 : -0.42) * dt; temp = clamp(temp, 0, 1); tot += dt; zc = 0.5 + Math.sin(tot * 1.3) * 0.22 + Math.sin(tot * 2.9) * 0.06; const zw = 0.2;
+      const inZ = Math.abs(temp - zc) < zw / 2; if (inZ) inT += dt; prog = Math.min(1, tot / DUR);
+      mini.querySelector('.hz').style.left = ((zc - zw / 2) * 100) + '%'; mini.querySelector('.hz').style.width = (zw * 100) + '%'; mini.querySelector('.hm').style.left = (temp * 100) + '%';
+      mini.querySelector('.heat').classList.toggle('hot', !inZ && temp > zc); mini.querySelector('.heat').classList.toggle('ok', inZ);
+      mini.querySelector('.cookp i').style.width = (prog * 100) + '%';
+      if (Math.random() < dt * (inZ ? 10 : 3) && cookStall) FX.emit(cookStall.grill.x, cookStall.grill.y, cookStall.grill.z, 1, inZ ? '#ffb070' : '#888888', 0.3, 0.9, 0.6);
+      if (prog >= 1){ const r = inT / tot; done(r > 0.72 ? 3 : r > 0.45 ? 2 : 1); return; }
+      requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  } else if (mode === 'pot'){
+    // 火鍋／麵：先記住下料順序，再照順序點
+    const pool = { fugu:['🐡','🥬','🍄','🧅','🥕','🌽','🧄'], sumi:['🦑','🍝','🧄','🧈','🧂','🌿','🍅'], sanbei:['🦑','🌿','🧄','🫚','🥢','🌶️','🧅'] }[key] || ['🐟','🥬','🍄','🧅','🥕','🧄'];
+    const order = pool.slice().sort(() => Math.random() - 0.5).slice(0, 4), opts = pool.slice().sort(() => Math.random() - 0.5);
+    ov.querySelector('.cs').textContent = '記住下料的順序！等一下照同樣的順序點食材。'; btn.textContent = '記住了'; btn.disabled = true;
+    mini.innerHTML = '<div class="seq"></div><div class="opts"></div>'; const seq = mini.querySelector('.seq'), op = mini.querySelector('.opts');
+    order.forEach(e => { const sp = el('span', 'si', e); seq.appendChild(sp); });
+    let step = 0, miss = 0;
+    setTimeout(() => { if (!G.on) return; seq.querySelectorAll('.si').forEach(x => { x.textContent = '？'; x.classList.add('hid'); }); ov.querySelector('.cs').textContent = '照剛剛的順序點食材下鍋！'; btn.textContent = '下鍋中…';
+      opts.forEach(e => { const b = el('button', 'oi', e); op.appendChild(b); b.addEventListener('pointerdown', ev => { ev.preventDefault(); if (!G.on) return;
+        if (e === order[step]){ const sp = seq.children[step]; sp.textContent = e; sp.classList.remove('hid'); sp.classList.add('ok'); step++; SFX.plop(); if (cookStall) FX.emit(cookStall.grill.x, cookStall.grill.y, cookStall.grill.z, 4, '#fff4dc', 0.3, 1, 0.8);
+          if (step >= order.length) setTimeout(() => done(miss === 0 ? 3 : miss <= 2 ? 2 : 1), 400); }
+        else { miss++; b.classList.add('bad'); setTimeout(() => b.classList.remove('bad'), 300); SFX.fail(); } }); }); }, 2600);
+  }
 }
 function renderCuts(){ const G = CookGame; $('#cookGame .cuts').innerHTML = [0, 1, 2].map(i => `<span class="${i < G.score.length ? (G.score[i] >= 2 ? 'g' : G.score[i] >= 1 ? 'o' : 'x') : ''}">${i < G.score.length ? (G.score[i] >= 2 ? '完美' : G.score[i] >= 1 ? '不錯' : '歪了') : '🔪'}</span>`).join(''); }
 function cookTick(){
@@ -2801,6 +2934,7 @@ function cookTick(){
 }
 function cookCut(){
   const G = CookGame; if (!G.on || G.cut >= 3) return;
+  if (G.mode !== 'cut'){ if (G.press) G.press(); return; }
   const d = Math.abs(G.x - 0.5), s = d < G.zoneW / 2 ? 2 : d < G.zoneW ? 1 : 0;
   G.score.push(s); G.cut++; SFX.plop(); if (s === 2) SFX.bite();
   G.speed *= 1.35; G.zoneW *= 0.85; G.x = Math.random() < 0.5 ? 0.05 : 0.95; G.dir = G.x < 0.5 ? 1 : -1;
@@ -2808,7 +2942,7 @@ function cookCut(){
   if (G.cut >= 3) finishCooking();
 }
 function finishCooking(){
-  const G = CookGame, rc = RECIPES[G.key], sum = G.score.reduce((a, b) => a + b, 0), q = sum >= 6 ? 3 : sum >= 3 ? 2 : 1;
+  const G = CookGame, rc = RECIPES[G.key], sum = G.score.reduce((a, b) => a + b, 0), q = G.q != null ? G.q : sum >= 6 ? 3 : sum >= 3 ? 2 : 1;
   const set = new Set(G.use.map(x => x.t));
   rec.tank = rec.tank.filter(x => !set.has(x.t));
   const dish = { r:G.key, q, t:Date.now() }; rec.dishes.unshift(dish); rec.dishes = rec.dishes.slice(0, 100); saveRecLocal(); buildTank();
@@ -2855,11 +2989,12 @@ function sellFish(ts, batch){
 const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'海邊商店', mode:'sell' }, { id:'cook', label:'潮汐食堂', mode:'cook' } ];
 function nearShop(){
   if (myBoat) return null;
+  for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
   for (const sh of SHOPS){ const l = LANDMARKS.find(l => l.id === sh.id); if (l && Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) < 4.8) return sh; }
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 function avKit(){
@@ -3554,7 +3689,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這個商品', '還沒有買這個', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西'];
+const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -3796,6 +3931,7 @@ function renderTab(){
   if (curTab === 'shop'){ renderShop(body); return; }
   if (curTab === 'cook'){ renderCook(body); return; }
   if (curTab === 'island'){ renderIsland(body); return; }
+  if (curTab === 'quest'){ renderQuests(body); return; }
   if (curTab === 'dex'){
     const got = FISH.filter(f => rec.count[f.id]).length;
     body.appendChild(el('p', 'sub', `已收集 ${got} / ${FISH.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。`));
@@ -4085,7 +4221,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateIsle(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateIsle(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){ s.g.visible = Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
