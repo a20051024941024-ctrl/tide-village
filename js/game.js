@@ -3019,6 +3019,80 @@ function tourneyTick(){
   if (pill._t !== txt){ pill.textContent = txt; pill._t = txt; }
 }
 setInterval(tourneyTick, 1000);
+/* ---- 好友與送禮（伺服器 018_friends.sql；名單和禮物只有自己看得到）---- */
+var Fr = { list:[], req:[], gifts:[], at:0, giftTo:null, notified:'' };
+function friendCode(){ return (Cloud.userId || '').slice(0, 8); }
+function isFriend(uid){ return Fr.list.some(f => f.id === uid); }
+function onlineUids(){ const s = new Set(); for (const p of peers.values()) if (typeof p.pres.u === 'string') s.add(p.pres.u); return s; }
+async function frRpc(fn, args){
+  if (!Cloud.on || !Cloud.sb) return null;
+  try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error){ const m = String(error.message || error), k = CLOUD_ERR.find(x => m.includes(x)); toast(k ? `伺服器：${esc(k)}` : '暫時連不上雲端'); return null; } return data; } catch(e){ toast('暫時連不上雲端'); return null; }
+}
+function adoptFriends(d){
+  if (!d || typeof d !== 'object') return; Fr.list = Array.isArray(d.friends) ? d.friends : []; Fr.req = Array.isArray(d.requests) ? d.requests : []; Fr.gifts = Array.isArray(d.gifts) ? d.gifts : []; Fr.at = Date.now();
+  const key = Fr.gifts.map(g => g.id).join(',') + '|' + Fr.req.map(r => r.id).join(',');
+  if (key !== Fr.notified){ const newG = Fr.gifts.length && !Fr.notified.startsWith(Fr.gifts.map(g => g.id).join(',')); if (Fr.notified !== '' || Fr.gifts.length || Fr.req.length){ if (Fr.gifts.length && newG) ticker(`🎁 你有 ${Fr.gifts.length} 個禮物還沒打開（玩家分頁）`); else if (Fr.req.length) ticker(`👋 有 ${Fr.req.length} 個人想加你好友（玩家分頁）`); } Fr.notified = key; }
+  const dot = Fr.gifts.length + Fr.req.length; $$('[data-tab="people"]').forEach(b => b.classList.toggle('hasdot', dot > 0));
+  if (!$('#sheet').hidden && curTab === 'people') renderTab();
+}
+async function loadFriends(){ const d = await frRpc('get_friends'); if (d) adoptFriends(d); }
+async function addFriend(uid, name){ const d = await frRpc('add_friend', { p_uid: uid }); if (d){ adoptFriends(d); const f = Fr.list.find(x => x.id === uid); toast(f && f.mutual ? `🤝 你和 ${esc(name || '對方')} 成為好友了！` : `👋 已經送出好友邀請給 ${esc(name || '對方')}，對方也加你就是好友了`); } }
+async function openGift(g){
+  const before = rec.coins, row = await cloudCall('open_gift', { p_id: g.id }); if (!row) return;
+  SFX.catch(); const from = g.name || '朋友';
+  if (g.kind === 'coins') flash(`🎁 ${from} 送你 🪙${(Number(row.coins) || 0) - before}！`, 1.8);
+  else { const f = FISH_BY_ID[g.data && g.data.f]; flash(`🎁 ${from} 送你一條${f ? f.name : '魚'}${g.data && g.data.w ? ' ' + Number(g.data.w).toFixed(2) + 'kg' : ''}！`, 1.8); }
+  Fr.gifts = Fr.gifts.filter(x => x.id !== g.id); adoptFriends({ friends:Fr.list, requests:Fr.req, gifts:Fr.gifts });
+}
+async function sendGift(to, kind, val){
+  const args = { p_to: to.id, p_kind: kind, p_ts: kind === 'fish' ? val : null, p_amount: kind === 'coins' ? val : null };
+  const row = await cloudCall('send_gift', args); if (!row) return;
+  SFX.chat(); toast(`🎁 送出去了！${esc(to.name || '朋友')} 打開就會收到`); if (room && room.connected()) room.emit('gift', { to: to.id }).catch(() => {});
+  renderTab();
+}
+setInterval(() => { if (Cloud.on) loadFriends(); }, 60000);
+function renderFriends(body){
+  if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端以後就能加好友、互相送禮。')); return; }
+  if (Date.now() - Fr.at > 15000 && !Fr.loading){ Fr.loading = true; loadFriends().finally(() => { Fr.loading = false; }); }
+  // 送禮畫面
+  if (Fr.giftTo){ const to = Fr.giftTo;
+    const head = el('div', 'tankbar'); head.appendChild(el('b', '', `🎁 送禮給 ${to.name || '朋友'}`)); const bk = el('button', 'tbtn ghost', '返回'); bk.addEventListener('click', () => { Fr.giftTo = null; renderTab(); }); head.appendChild(bk); body.appendChild(head);
+    body.appendChild(el('p', 'sub', '金幣每天最多送 1000，魚每天最多送 10 條（展示中的魚不能送）。對方打開禮物就會收到。'));
+    body.appendChild(el('div', 'dexhead', `🪙 金幣（你有 ${rec.coins.toLocaleString()}）`)); const cb = el('div', 'tankbar');
+    for (const n of [50, 100, 300, 1000]){ const b = el('button', 'tbtn' + (rec.coins < n ? ' ghost' : ''), `送 🪙${n}`); b.disabled = rec.coins < n; b.addEventListener('click', () => { b.disabled = true; sendGift(to, 'coins', n); }); cb.appendChild(b); }
+    body.appendChild(cb);
+    body.appendChild(el('div', 'dexhead', '🐟 魚缸裡的魚')); const locked = new Set(rec.show || []);
+    const list = rec.tank.filter(x => !locked.has(x.t)).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w)).slice(0, 24);
+    if (!list.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以送的魚。'));
+    const ul = el('ul', 'shoplist cols');
+    for (const x of list){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(fishCanvas(f, true, 56, 36)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name)); d.appendChild(el('div', 'meta', `${fmtKg(x.w)}・${f.rarity}`)); li.appendChild(d);
+      const b = el('button', 'tbtn', '送這條'); b.addEventListener('click', () => { b.disabled = true; sendGift(to, 'fish', x.t); }); li.appendChild(b); ul.appendChild(li); }
+    body.appendChild(ul); return true;
+  }
+  const box = el('div', 'tipbox'); box.innerHTML = `<b>🤝 你的好友代碼：<span class="fcode">${esc(friendCode())}</span></b><span>把代碼給朋友，或在下面輸入朋友的代碼。在大廳裡的人也可以直接按「加好友」。互相加好友以後就能送禮。</span>`;
+  const row = el('div', 'fadd'), inp = el('input'); inp.placeholder = '輸入朋友的 8 碼代碼'; inp.maxLength = 8; inp.autocapitalize = 'off'; const go = el('button', 'tbtn', '加好友');
+  go.addEventListener('click', async () => { const c = inp.value.trim(); if (!/^[0-9a-fA-F]{8}$/.test(c)){ toast('好友代碼是 8 個英文或數字'); return; } go.disabled = true; const d = await frRpc('add_friend_code', { p_code: c }); go.disabled = false; if (d){ adoptFriends(d); inp.value = ''; toast('👋 已經送出好友邀請'); } });
+  row.append(inp, go); box.appendChild(row); body.appendChild(box);
+  if (Fr.gifts.length){ body.appendChild(el('div', 'dexhead', `🎁 收到的禮物（${Fr.gifts.length}）`)); const ul = el('ul', 'shoplist');
+    for (const g of Fr.gifts){ const li = el('li', 'on'), f = g.kind === 'fish' && FISH_BY_ID[g.data && g.data.f]; li.appendChild(el('span', 'dishic', g.kind === 'coins' ? '🪙' : '🐟'));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${g.name || '朋友'} 送的禮物`)); d.appendChild(el('div', 'meta', g.kind === 'coins' ? `金幣 ${g.data && g.data.amount}` : f ? `${f.name} ${Number(g.data.w).toFixed(2)}kg` : '一條魚')); li.appendChild(d);
+      const b = el('button', 'tbtn', '打開'); b.addEventListener('click', () => { b.disabled = true; openGift(g); }); li.appendChild(b); ul.appendChild(li); }
+    body.appendChild(ul); }
+  if (Fr.req.length){ body.appendChild(el('div', 'dexhead', `👋 想加你好友（${Fr.req.length}）`)); const ul = el('ul', 'people');
+    for (const r of Fr.req){ const li = el('li'); li.append(el('span', '', r.name || '釣客')); const a = el('button', 'tbtn vbtn', '加回去'); a.addEventListener('click', () => addFriend(r.id, r.name)); const n = el('button', 'tbtn ghost vbtn', '不要'); n.addEventListener('click', async () => { const d = await frRpc('remove_friend', { p_uid: r.id }); if (d) adoptFriends(d); }); li.append(a, n); ul.appendChild(li); }
+    body.appendChild(ul); }
+  body.appendChild(el('div', 'dexhead', `⭐ 好友（${Fr.list.filter(f => f.mutual).length}）`));
+  if (!Fr.list.length) body.appendChild(el('p', 'sub', '還沒有好友。'));
+  const on = onlineUids(), ul = el('ul', 'people');
+  for (const f of Fr.list.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || (b.mutual - a.mutual))){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
+    const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null;
+    li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在這個大廳' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
+    if (f.mutual){ const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
+    const v = el('button', 'tbtn ghost vbtn', '水族館'); v.addEventListener('click', () => visitAquarium(f.id, f.name)); const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(v, vi);
+    const rm = el('button', 'tbtn ghost vbtn bk', '刪除'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); li.appendChild(rm);
+    ul.appendChild(li); }
+  body.appendChild(ul);
+}
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
 // 渡船：港口的船夫阿海，可以載你到祕密窩點或外海
 const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'北邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
@@ -4486,6 +4560,7 @@ function useRoom(r){
       if (p) p.fisher.say(rc.icon, 'emote', 3);
     }, () => {});
     room.on('tag', onTagMsg, () => {});
+    room.on('gift', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; if (msg.data.to === Cloud.userId) setTimeout(loadFriends, 800); }, () => {});
     room.on('chum', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const d = msg.data, p = peers.get(msg.peer); if (!CHUM_BY_ID[d.ty] || !isFinite(+d.x) || !isFinite(+d.z)) return;
       if (p && (p.isle || null) !== (onIsle ? onIsle.owner : null)) return; addChumZone(+d.x, +d.z, d.ty, msg.peer); if (p && Math.hypot(me.pos.x - d.x, me.pos.z - d.z) < 25) p.fisher.say('🍚', 'emote', 1.5); }, () => {});
     room.on('isle', msg => {
@@ -4612,7 +4687,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -4717,7 +4792,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
+    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
@@ -4959,6 +5034,7 @@ function renderTab(){
     });
     body.appendChild(ul);
   } else if (curTab === 'people'){
+    if (Cloud.on){ if (renderFriends(body)) return; body.appendChild(el('div', 'dexhead', '🏘️ 現在在村子裡的人')); }
     if (room && room.isLobby){ body.appendChild(el('p', 'sub', `你在公共大廳 ${room.lobbyNo}：打開遊戲的人都會自動來這裡（每個大廳最多 ${LOBBY_MAX} 人，滿了會分到下一個）。想只跟朋友玩，可以開私人房間。`)); body.appendChild(pjBox()); }
     else if (room && !pjMode) body.appendChild(el('p', 'sub', '現在在村子裡的人。分享這個頁面的連結給朋友，就能一起釣魚、聊天。'));
     else if (pjAvailable()) body.appendChild(pjBox());
@@ -4970,6 +5046,7 @@ function renderTab(){
     }
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
+      if (uid && Cloud.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
           const box = el('div', 'rpbox'); box.appendChild(el('span', '', '檢舉原因：'));
@@ -5094,6 +5171,7 @@ function renderTab(){
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
       '跑馬燈會報出大家釣到的稀有魚和傳說魚，還有做出來的料理。',
       '鬼抓人：在「玩家」分頁發起，2 個人以上就能玩。被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。',
+      '好友：在「玩家」分頁按「加好友」，或輸入朋友的 8 碼好友代碼。互相加好友以後可以送金幣（每天最多 1000）或魚缸裡的魚（每天 10 條），對方在玩家分頁打開禮物就會收到。也可以從好友名單去參觀他的水族館和小島。',
       '遇到不友善的人可以在「玩家」分頁封鎖或檢舉。聊天會自動過濾不雅字。',
     ]);
     sec('☁️ 存檔、時間、其他', [

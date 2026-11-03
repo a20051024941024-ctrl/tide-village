@@ -610,3 +610,10 @@ details.help li{margin:4px 0}
 #tnyPill[hidden]{display:none}
 #tnyPill.live{background:linear-gradient(135deg,#ffd36a,#ff9f43);color:#4a2a00;animation:relPulse 2s ease-in-out infinite}
 @media (max-height:520px){ #tnyPill{top:calc(var(--gt) + 92px)} }
+
+/* 好友與送禮 */
+.fcode{font-family:var(--f-display);letter-spacing:.12em;color:var(--sea);user-select:all}
+.fadd{display:flex;gap:8px;margin-top:6px}
+.fadd input{flex:1;min-width:0;padding:8px 12px;border-radius:12px;border:2px solid var(--paper-2);background:#fff;font-size:15px;font-family:inherit}
+.hasdot{position:relative}
+.hasdot::after{content:'';position:absolute;top:4px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 2px #fff}
