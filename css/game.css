@@ -357,3 +357,22 @@ body.photo.nonames #labels{display:none}
 .tbtn{padding:7px 14px;border-radius:10px;background:var(--ink);color:#fff;font-size:13px;font-weight:700}
 .tbtn.ghost{background:var(--paper-2);color:var(--ink)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* 潮汐食堂 */
+.dishic{font-size:30px;width:40px;text-align:center;flex:none}
+.shoplist li.dim{opacity:.6}
+.stars{color:#e5a52f;letter-spacing:2px}
+#cookGame{position:fixed;inset:0;display:grid;place-items:center;background:rgba(24,51,74,.35);z-index:40;touch-action:none}
+#cookGame[hidden]{display:none}
+#cookGame .box{width:min(420px,calc(100vw - 32px));padding:18px 18px 20px;text-align:center}
+#cookGame .ct{font-family:var(--f-display);font-size:22px}
+#cookGame .cs{font-size:13px;color:var(--ink-soft);margin:6px 0 14px;min-height:2.6em}
+#cookGame .track{position:relative;height:26px;border-radius:13px;background:var(--paper-2);overflow:hidden}
+#cookGame .zone{position:absolute;top:0;bottom:0;background:rgba(90,168,143,.55)}
+#cookGame .mark{position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;border-radius:3px;background:var(--coral);box-shadow:0 0 0 2px #fff}
+#cookGame .cuts{display:flex;justify-content:center;gap:10px;margin:12px 0}
+#cookGame .cuts span{min-width:56px;padding:4px 8px;border-radius:999px;background:var(--paper-2);font-size:13px}
+#cookGame .cuts .g{background:rgba(90,168,143,.25);color:#2f7a63;font-weight:700}
+#cookGame .cuts .o{background:rgba(229,154,47,.2);color:#9a5f0c}
+#cookGame .cuts .x{background:rgba(241,123,109,.18);color:#b2463a}
+#cookGame .cutbtn{font-size:22px;padding:14px 0}
