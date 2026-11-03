@@ -249,6 +249,9 @@ body.touch #chatToggle{display:grid}
 .tank .meta{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 .people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .people .vbtn{margin-left:auto;padding:5px 10px;font-size:12px}
+.people .vbtn + .vbtn{margin-left:6px}
+.people .bk{color:var(--coral)}
+.people .bk.warn{color:#fff}
 .rank .canvisit{cursor:pointer}
 .rank .vlink{display:block;color:var(--sea)}
 #visitBar{position:fixed;left:16px;top:calc(var(--gt) + 100px);display:flex;align-items:center;gap:10px;padding:8px 10px 8px 16px;font-size:14px;z-index:7;max-width:calc(100vw - 32px)}
@@ -2855,7 +2858,11 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', 
 
 let chatAllowed = true;
 $('#chatForm').addEventListener('submit', async e => {
-  e.preventDefault(); const inp = $('#chatIn'); const text = inp.value.trim().slice(0, 120); if (!text) return;
+  e.preventDefault(); const inp = $('#chatIn'); const text = clean(inp.value.trim().slice(0, 120)); if (!text) return;
+  const nowT = performance.now(); myChatAt = myChatAt.filter(x => nowT - x < 6000);
+  if (myChatAt.length >= 4){ toast('說太快了，休息一下再說'); return; }
+  if (text === lastMyChat && myChatAt.length && nowT - myChatAt[myChatAt.length - 1] < 4000){ toast('同一句話不要一直重複喔'); return; }
+  myChatAt.push(nowT); lastMyChat = text;
   inp.value = '';
   if (room && room.connected() && chatAllowed){
     try { await room.emit('chat', { t: text }); }
@@ -2910,7 +2917,37 @@ async function resolveNames(ids){
   ids = ids.filter(Boolean); if (!user || !ids.length) return;
   try { const ps = await user.profiles(ids); for (const id of ids) if (ps[id]) profileNames[id] = ps[id].name || ''; } catch(e){}
 }
-function peerName(p){ const pr = p.pres || {}; if (typeof pr.n === 'string' && pr.n.trim()) return pr.n.trim().slice(0, 16); return (p.by && profileNames[p.by]) || '釣客'; }
+/* ================= SAFETY：不雅字過濾、封鎖玩家、防洗版 ================= */
+// 不雅字：中英文常見髒話，字中間夾空白或符號也抓得到；「幹嘛、樹幹」這類正常用法不算
+const BAD_WORDS = ['幹你','幹妳','幹您','幹拎','幹林','幹恁','操你','操妳','肏','靠北','靠杯','靠腰','機掰','機八','雞巴','雞掰','屌','他媽的','他媽','你媽','妳媽','你娘','婊子','賤人','賤貨','王八蛋','白癡','白痴','智障','腦殘','去死','垃圾人','三小','淦','fuck','fck','shit','bitch','asshole','dick','cunt','bastard','nigger','nigga','retard'];
+const BAD_OK = ['幹嘛','幹麼','幹什麼','能幹','幹部','幹活','樹幹','主幹','幹事','才幹','骨幹','苦幹','實幹','幹勁','精幹','軀幹','幹練'];
+const BAD_SEP = '[\\s\\x21-\\x2f\\x3a-\\x40\\x5b-\\x60\\x7b-\\x7e。，、！？～．·＿]{0,2}';   // 字中間只允許夾空白或標點
+const BAD_RE = new RegExp(BAD_WORDS.map(w => [...w].map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(BAD_SEP)).join('|') + '|幹', 'gi');   // 單獨的「幹」：正常用法已經先保護起來了
+let filterOn = LS.get('tide.filter', true);
+function clean(text){
+  if (!filterOn || !text) return text;
+  // 先把正常用法換成記號，過濾完再換回來
+  const keep = []; let t = String(text).replace(new RegExp(BAD_OK.join('|'), 'g'), m => { keep.push(m); return '\u0001' + (keep.length - 1) + '\u0002'; });
+  t = t.replace(BAD_RE, m => '＊'.repeat(Math.min(4, [...m.replace(new RegExp(BAD_SEP.slice(0, -5), 'g'), '')].length || 1)));
+  return t.replace(/\u0001(\d+)\u0002/g, (_, i) => keep[+i]);
+}
+// 封鎖：用玩家的雲端 id（沒有的話用連線 id），存在這台裝置
+let blockList = LS.get('tide.blocked', {});   // { uid: 名字 }
+const peerUid = new Map();                   // 連線 id → 玩家 id
+function uidOf(pp){ const pr = pp.presence || {}; return typeof pr.u === 'string' && pr.u ? pr.u : (pp.by || pp.peer); }
+function isBlockedPeer(peerId){ const u = peerUid.get(peerId); return !!(u && blockList[u]); }
+function blockPeer(peerId, name){
+  const u = peerUid.get(peerId) || peerId; blockList[u] = String(name || '釣客').slice(0, 16); LS.set('tide.blocked', blockList);
+  const p = peers.get(peerId); if (p){ p.fisher.dispose(); peers.delete(peerId); }
+  setOnline(); toast(`已封鎖 ${esc(blockList[u])}：你不會再看到他的角色、聊天和動態。`);
+}
+function unblock(u){ delete blockList[u]; LS.set('tide.blocked', blockList); toast('已解除封鎖，對方下次移動時就會出現。'); }
+// 防洗版：每個人 6 秒內最多 4 則，超過的不顯示
+const chatRate = new Map();
+function tooChatty(peerId){ const t = performance.now(), a = (chatRate.get(peerId) || []).filter(x => t - x < 6000); a.push(t); chatRate.set(peerId, a); return a.length > 4; }
+let myChatAt = [], lastMyChat = '';
+
+function peerName(p){ const pr = p.pres || {}; if (typeof pr.n === 'string' && pr.n.trim()) return clean(pr.n.trim().slice(0, 16)); return (p.by && profileNames[p.by]) || '釣客'; }
 function myDisplayName(){ return nickname || (myId && profileNames[myId]) || '你'; }
 
 let lastPres = '', lastPresAt = 0;
@@ -2940,6 +2977,8 @@ function setOnline(){
 function isHex(s){ return typeof s === 'string' && /^#[0-9a-f]{6}$/i.test(s); }
 function applyPeer(pp){
   if (pp.isMe || pp.kind !== 'viewer') return;
+  peerUid.set(pp.peer, uidOf(pp));
+  if (isBlockedPeer(pp.peer)){ const bp = peers.get(pp.peer); if (bp){ bp.fisher.dispose(); peers.delete(pp.peer); } return; }
   let p = peers.get(pp.peer); const pr = pp.presence || {};
   const pos = Array.isArray(pr.p) ? pr.p : null;
   if (!p){
@@ -2997,17 +3036,19 @@ function useRoom(r){
       for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (p){ logMsg('', `${peerName(p)} 來到了村子`, true); ticker(`👋 <b>${esc(peerName(p))}</b> 來到了村子`); } }, 600); }
       setOnline(); }, () => { room = null; setOnline(); });
     room.on('chat', msg => {
-      const text = msg && msg.data && typeof msg.data.t === 'string' ? msg.data.t.slice(0, 120) : ''; if (!text) return;
+      let text = msg && msg.data && typeof msg.data.t === 'string' ? msg.data.t.slice(0, 120) : ''; if (!text) return;
       if (msg.sameTab){ me.say(text); logMsg(myDisplayName() === '你' ? '你' : myDisplayName(), text); return; }
+      if (isBlockedPeer(msg.peer) || tooChatty(msg.peer)) return;
+      text = clean(text);
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '釣客';
       if (p) p.fisher.say(text); logMsg(name, text); SFX.chat();
     }, () => {});
     room.on('visit', msg => {
-      if (msg.sameTab || !msg.data || msg.data.to !== myId) return;
+      if (msg.sameTab || !msg.data || msg.data.to !== myId || isBlockedPeer(msg.peer)) return;
       const p = peers.get(msg.peer); ticker(`👀 <b>${esc(p ? peerName(p) : '有人')}</b> 正在參觀你的水族館`);
     }, () => {});
     room.on('catch', msg => {
-      if (msg.sameTab || !msg.data) return; const f = FISH_BY_ID[msg.data.f]; const w = Number(msg.data.w); if (!f || !(w > 0) || w > f.max + 0.01) return;
+      if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const f = FISH_BY_ID[msg.data.f]; const w = Number(msg.data.w); if (!f || !(w > 0) || w > f.max + 0.01) return;
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
       ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
       if (p){ p.fisher.holdFish(f, w, 5); if (f.rarity === '傳說') p.fisher.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); }   // 大家都看得到他捧著剛釣到的魚
@@ -3438,14 +3479,23 @@ function renderTab(){
     else if (pjAvailable()) body.appendChild(pjBox());
     else body.appendChild(el('p', 'sub', '目前是單人模式。在 claude.ai 上開啟並分享這個頁面，朋友加入後就會出現在這裡。'));
     const ul = el('ul', 'people');
-    const add = (name, color, st, isMe, uid) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
+    const add = (name, color, st, isMe, uid, peerId) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); }
+      if (peerId){ const bk = el('button', 'tbtn ghost vbtn bk', '封鎖'); bk.addEventListener('click', () => { if (bk.dataset.sure !== '1'){ bk.dataset.sure = '1'; bk.textContent = '確定封鎖？'; bk.classList.add('warn'); return; } blockPeer(peerId, name); renderTab(); }); li.appendChild(bk); }
       ul.appendChild(li); };
     const stOf = (ph, x, z) => { if (ph){ const s = SPOTS.reduce((a, b) => Math.hypot(x-a.pos.x, z-a.pos.z) < Math.hypot(x-b.pos.x, z-b.pos.z) ? a : b); return `在${s.short}釣魚中`; } return '散步中'; };
     add(myDisplayName() === '你' ? '你' : myDisplayName(), look.shirt, stOf(me.fishing, me.pos.x, me.pos.z), true);
-    for (const p of peers.values()) add(peerName(p) + (p.guest ? '・訪客' : ''), isHex(p.pres.sh) ? p.pres.sh : '#9fb3bf', stOf(!!p.pres.f, p.target.x, p.target.z), false, typeof p.pres.u === 'string' ? p.pres.u : null);
+    for (const p of peers.values()) add(peerName(p) + (p.guest ? '・訪客' : ''), isHex(p.pres.sh) ? p.pres.sh : '#9fb3bf', stOf(!!p.pres.f, p.target.x, p.target.z), false, typeof p.pres.u === 'string' ? p.pres.u : null, [...peers.entries()].find(([k, v]) => v === p)[0]);
     for (const n of npcs) add(n.nm.textContent, n.av.shirtM.color.getStyle(), '在岸邊釣魚（NPC）');
     body.appendChild(ul);
+    const bl = Object.entries(blockList);
+    if (bl.length){
+      const h = el('div', 'dexhead', `已封鎖（${bl.length}）`); body.appendChild(h);
+      const ub = el('ul', 'people');
+      for (const [u, n] of bl){ const li = el('li'); li.append(el('span', '', n)); const b = el('button', 'tbtn ghost vbtn', '解除封鎖'); b.addEventListener('click', () => { unblock(u); renderTab(); }); li.appendChild(b); ub.appendChild(li); }
+      body.appendChild(ub);
+    }
+    body.appendChild(el('p', 'sub', '有人講話不禮貌，按「封鎖」後就看不到他的角色、聊天和動態（只對你自己有效）。'));
   } else if (curTab === 'map'){
     renderMap(body);
   } else if (curTab === 'style'){
@@ -3458,9 +3508,13 @@ function renderTab(){
     f2.appendChild(s2); body.appendChild(f2);
     const f3 = el('div', 'field'); const lab = el('label', '', '暱稱'); lab.htmlFor = 'nickIn'; f3.appendChild(lab);
     const inp = el('input', 'txt'); inp.id = 'nickIn'; inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳';
-    inp.addEventListener('change', () => { nickname = inp.value.trim().slice(0, 16); LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); cloudProfile(); });
+    inp.addEventListener('change', () => { nickname = clean(inp.value.trim().slice(0, 16)); inp.value = nickname; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); cloudProfile(); });
     f3.appendChild(inp); f3.appendChild(el('p', 'sub', '其他玩家會在你頭上看到這個名字。'));
     body.appendChild(f3);
+    const ff = el('div', 'field'); ff.appendChild(el('label', '', '聊天'));
+    const fseg = el('div', 'seg');
+    [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); fseg.appendChild(b); });
+    ff.appendChild(fseg); ff.appendChild(el('p', 'sub', '開啟時，別人聊天和名字裡的髒話會變成＊＊。')); body.appendChild(ff);
     const fq = el('div', 'field'); fq.appendChild(el('label', '', '畫質'));
     const seg = el('div', 'seg');
     [['auto','自動'],['low','低'],['mid','中'],['high','高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
