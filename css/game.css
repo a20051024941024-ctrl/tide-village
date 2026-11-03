@@ -376,3 +376,12 @@ body.photo.nonames #labels{display:none}
 #cookGame .cuts .o{background:rgba(229,154,47,.2);color:#9a5f0c}
 #cookGame .cuts .x{background:rgba(241,123,109,.18);color:#b2463a}
 #cookGame .cutbtn{font-size:22px;padding:14px 0}
+
+/* 料理加成、客人點餐、檢舉 */
+#buffChip{margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(241,123,109,.18);color:#b2463a;white-space:nowrap}
+#buffChip[hidden]{display:none}
+.orders{background:rgba(255,211,106,.15);border-radius:12px;padding:10px 12px}
+.orow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.orow:first-of-type{border-top:0}
+.bub.order{background:#fff7e0;border-color:#f2c14e;font-weight:700}
+.rpbox{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 12px 10px;font-size:13px}

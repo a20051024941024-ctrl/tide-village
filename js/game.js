@@ -578,7 +578,7 @@ function castPoint(x, z, dx, dz, dist){
     // 板凳
     for (const sx of [-0.8, 0, 0.8]){ const st = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12), mat(PALETTE.wood)); st.position.set(sx, 0.55, 1.35); st.castShadow = true; g.add(st); g.add(box([0.06, 0.52, 0.06], '#6e4a2f', [sx, 0.27, 1.35])); }
     const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addBoxCol(KX + sn * 0.1, KZ + c * 0.1, Math.abs(c) * 3.2 + Math.abs(sn) * 2.0, Math.abs(sn) * 3.2 + Math.abs(c) * 2.0);
-    cookStall = { x: KX, z: KZ, grill: new THREE.Vector3(-0.85, 1.6, -0.45).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)) };
+    cookStall = { x: KX, z: KZ, rot: g.rotation.y, grill: new THREE.Vector3(-0.85, 1.6, -0.45).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)) };
   }
 
   // ---- 聊天亭 ----
@@ -1753,6 +1753,7 @@ function actionUp(){
 }
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
+  F.buffAt = curBuff(); useBuffCast();
   // 用掉一個魚餌
   const bt = curBait(); F.baitUsed = bt;
   if (bt){ cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
@@ -1773,7 +1774,7 @@ function cancelFishing(msg){
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
-  const kr = rod.rare * (bait ? bait.rare : 1), kl = rod.legend * (bait ? bait.legend : 1);
+  const fb = F.buffAt || null, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1), kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1);
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const w = list.map(f => (f.w || 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
@@ -1813,7 +1814,8 @@ function updateFishing(dt, t){
     if (F.surge > 0){ F.surge -= dt; pull += 0.55 * p; } else if (Math.random() < dt * 0.3 * p){ F.surge = rand(0.4, 0.9); }
     const inZone = F.T > 0.35 && F.T < 0.8;
     const rod = curRod();
-    if (F.hold){ F.T += (0.42 + pull*0.9) * dt * rod.tension; F.P += (0.26 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel; }
+    const fb = curBuff();
+    if (F.hold){ F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1); F.P += (0.26 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1); }
     else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
     me.bend = clamp(F.T, 0, 1); me.dip = 0.5 + pull*0.4; fxReel(dt);
@@ -1837,8 +1839,8 @@ function updateFishing(dt, t){
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
   if (F.phase === 'idle'){ const bt = curBait(); const sh = near.d >= 1.7 ? nearShop() : null;
-    if (near.d < 1.7){ label = '拋竿'; sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : isTouch ? '按住蓄力' : '按住空白鍵'; }
-    else if (sh){ label = sh.label; sub = sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? '做料理' : '買釣具'; cls = 'shop'; }
+    if (near.d < 1.7){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : isTouch ? '按住蓄力' : '按住空白鍵'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if (F.phase === 'waiting'){ label = '等待中'; sub = '點一下收竿'; cls = 'idle'; }
@@ -1891,6 +1893,27 @@ const RECIPES = {
   mori:   { name:'綜合壽司拼盤', icon:'🍱', fish:'*common', need:3, value:120, desc:'任選 3 條常見魚，拼成一大盤。' },
 };
 const STAR_K = [1, 1, 1.3, 1.6];
+// 吃料理的加成：接下來幾次拋竿有效（存在這台裝置）
+const BUFFS = {
+  saba:   { txt:'稀有魚 ×1.3',       casts:5,  rare:1.3 },
+  tai:    { txt:'傳說魚 ×1.5',       casts:5,  legend:1.5 },
+  ayu:    { txt:'線比較不容易斷',     casts:5,  tension:0.8 },
+  suzuki: { txt:'收線快 20%',         casts:5,  reel:1.2 },
+  mori:   { txt:'稀有、傳說魚 ×1.2',  casts:10, rare:1.2, legend:1.2 },
+};
+let buff = LS.get('tide.buff', null);   // { r, left }
+function curBuff(){ return buff && BUFFS[buff.r] && buff.left > 0 ? Object.assign({ r:buff.r, left:buff.left }, BUFFS[buff.r]) : null; }
+function eatDish(ts){
+  const d = rec.dishes.find(x => x.t === ts); if (!d) return; const rc = RECIPES[d.r], bf = BUFFS[d.r];
+  rec.dishes = rec.dishes.filter(x => x.t !== ts); saveRecLocal();
+  buff = { r:d.r, left: bf.casts + (d.q - 1) * 2 }; LS.set('tide.buff', buff); renderBuff();   // 星星越多，效果越久
+  cloudCall('eat_dish', { p_ts: ts });
+  me.say('😋', 'emote', 3); SFX.catch();
+  toast(`吃了 ${rc.icon} <b>${esc(rc.name)}</b>：接下來 ${buff.left} 次拋竿 ${esc(bf.txt)}`);
+  renderTab();
+}
+function useBuffCast(){ const b = curBuff(); if (!b) return; buff.left--; if (buff.left <= 0){ buff = null; toast('料理的加成用完了'); } LS.set('tide.buff', buff); renderBuff(); }
+function renderBuff(){ const c = $('#buffChip'); if (!c) return; const b = curBuff(); c.hidden = !b; if (b) c.textContent = `${RECIPES[b.r].icon}${b.left}`; c.title = b ? `${RECIPES[b.r].name}：${b.txt}（剩 ${b.left} 次）` : ''; }
 function dishPrice(d){ const rc = RECIPES[d.r]; return rc ? Math.round(rc.value * STAR_K[clamp(d.q, 1, 3)]) : 0; }
 // 挑食材：沒有展示、最便宜的那幾條（大魚留著）
 function pickIngredients(key){
@@ -1905,6 +1928,16 @@ function renderCook(body){
   const seg = el('div', 'seg');
   [['make', '做料理'], ['mine', `我的料理（${rec.dishes.length}）`]].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(cookMode === k)); b.addEventListener('click', () => { cookMode = k; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
+  const ws = waitingCustomers();
+  if (ws.length){
+    const box = el('div', 'field orders'); box.appendChild(el('label', '', '🔔 客人點餐（端給客人多賺 50%）'));
+    for (const c of ws){
+      const rc = RECIPES[c.order], have = rec.dishes.filter(d => d.r === c.order).length, row = el('div', 'orow');
+      row.appendChild(el('span', '', `${c.name} 想吃 ${rc.icon} ${rc.name}`));
+      const b = el('button', 'tbtn', have ? '端給他' : '還沒有這道'); b.disabled = !have; b.addEventListener('click', () => serveCustomer(c)); row.appendChild(b); box.appendChild(row);
+    }
+    body.appendChild(box);
+  }
   if (cookMode === 'make'){
     body.appendChild(el('p', 'sub', '用魚缸裡的魚做料理，賣給食堂比直接賣魚更值錢。切魚時抓準時機，星星越多越貴（★★★ ×1.6）。展示中的魚不會被拿來用。'));
     const ul = el('ul', 'shoplist cols');
@@ -1920,6 +1953,7 @@ function renderCook(body){
     body.appendChild(ul);
   } else {
     if (!rec.dishes.length){ body.appendChild(el('div', 'empty', '還沒有做好的料理。到「做料理」挑一道開始吧！')); return; }
+    body.appendChild(el('p', 'sub', '可以賣給食堂、端給點餐的客人（多賺 50%），或自己吃掉：接下來幾次拋竿有加成，星星越多效果越久。' + Object.entries(BUFFS).map(([k, b]) => `${RECIPES[k].icon}${b.txt}`).join('・')));
     const total = rec.dishes.reduce((a, d) => a + dishPrice(d), 0);
     const bar = el('div', 'tankbar'); const all = el('button', 'tbtn', `全部賣給食堂（+${total}）`);
     all.addEventListener('click', () => sellDishes(rec.dishes.map(d => d.t))); bar.appendChild(all); body.appendChild(bar);
@@ -1927,7 +1961,10 @@ function renderCook(body){
     for (const d of rec.dishes){
       const rc = RECIPES[d.r], li = el('li', ''); li.appendChild(el('span', 'dishic', rc.icon));
       const info = el('div', 'tinfo'); info.appendChild(el('div', 'n', rc.name)); info.appendChild(el('div', 'meta stars', '★'.repeat(d.q) + '☆'.repeat(3 - d.q))); li.appendChild(info);
-      const b = el('button', 'tbtn', `賣 🪙${dishPrice(d)}`); b.addEventListener('click', () => sellDishes([d.t])); li.appendChild(b); ul.appendChild(li);
+      const acts = el('div', 'tacts');
+      const b = el('button', 'tbtn', `賣 🪙${dishPrice(d)}`); b.addEventListener('click', () => sellDishes([d.t])); acts.appendChild(b);
+      const e = el('button', 'tbtn ghost', '吃掉'); e.title = `${BUFFS[d.r].txt}，${BUFFS[d.r].casts + (d.q - 1) * 2} 次拋竿`; e.addEventListener('click', () => eatDish(d.t)); acts.appendChild(e);
+      li.appendChild(acts); ul.appendChild(li);
     }
     body.appendChild(ul);
   }
@@ -1939,6 +1976,53 @@ function sellDishes(ts){
   SFX.catch(); flash(`+${got} 金幣`, 1.1); logMsg('', `你賣了 ${sold.length} 道料理，得到 ${got} 金幣`, true);
   cloudCall('sell_dish', { p_ts: ts }); renderTab();
 }
+// ---- 食堂客人：玩家在食堂附近時，NPC 客人會來坐下點餐，等一陣子沒吃到就離開 ----
+const CUST_NAMES = ['小芸', '阿凱', '美美', '大熊', '小葵', '阿嬤', '老王', '小樹', '安安', '阿哲'];
+const CUST_LOOK = [['#f5a5d8', '#ffffff'], ['#7db7d7', '#ffd36a'], ['#9fc7a8', '#f17b6d'], ['#f6a96b', '#3fbf9d'], ['#b9a4ff', '#f6f0dd']];
+const ORDER_W = { saba:3, ayu:3, suzuki:3, mori:2, tai:1 };
+const customers = []; let custNext = 0;
+function stallSeat(i){ const g = cookStall; const a = g.rot, lx = [-0.8, 0, 0.8][i], lz = 1.35; return { x: g.x + Math.cos(a) * lx + Math.sin(a) * lz, z: g.z - Math.sin(a) * lx + Math.cos(a) * lz, face: a + Math.PI }; }
+function pickOrder(){ const ks = Object.keys(ORDER_W), tot = ks.reduce((a, k) => a + ORDER_W[k], 0); let r = Math.random() * tot; for (const k of ks){ r -= ORDER_W[k]; if (r <= 0) return k; } return 'saba'; }
+function spawnCustomer(t){
+  const free = [0, 1, 2].filter(i => !customers.some(c => c.seat === i)); if (!free.length) return;
+  const seat = free[Math.floor(Math.random() * free.length)], st = stallSeat(seat);
+  const ang = Math.random() * Math.PI * 2, sx = st.x + Math.cos(ang) * 14, sz = st.z + Math.sin(ang) * 14;
+  if (!isLand(sx, sz)) return;
+  const name = CUST_NAMES[Math.floor(Math.random() * CUST_NAMES.length)], lk = CUST_LOOK[Math.floor(Math.random() * CUST_LOOK.length)];
+  const f = new Fisher({ shirt:lk[0], hat:lk[1], name:'客人・' + name, kind:'npc' }); f.pos.set(sx, 0, sz); f.baseY = groundHeight(sx, sz);
+  customers.push({ f, name, seat, st, order: pickOrder(), state:'in', until: t + 160, from:{ x:sx, z:sz } });
+}
+function updateCustomers(dt, t){
+  if (!cookStall) return;
+  const near = Math.hypot(me.pos.x - cookStall.x, me.pos.z - cookStall.z) < 32;
+  if (near && t > custNext){ custNext = t + rand(25, 50); if (customers.filter(c => c.state !== 'out').length < 2) spawnCustomer(t); }
+  for (let i = customers.length - 1; i >= 0; i--){
+    const c = customers[i], f = c.f, tgt = c.state === 'out' ? c.from : c.st;
+    const dx = tgt.x - f.pos.x, dz = tgt.z - f.pos.z, d = Math.hypot(dx, dz);
+    if (c.state === 'wait'){
+      f.speed = 0; f.rot = lerpAngle(f.rot, c.st.face, 1 - Math.exp(-6 * dt));
+      if (t > c.until){ c.state = 'out'; f.sitting = false; f.say('等太久了…下次再來 😢', '', 3); }
+    } else if (d > 0.15){
+      const sp = 2.6; f.pos.x += dx / d * Math.min(d, sp * dt); f.pos.z += dz / d * Math.min(d, sp * dt); f.speed = sp; f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 1 - Math.exp(-10 * dt));
+      f.baseY = groundHeight(f.pos.x, f.pos.z);
+    } else if (c.state === 'in'){
+      c.state = 'wait'; f.sitting = true; f.baseY = 0.12; const rc = RECIPES[c.order]; f.say(`想吃 ${rc.icon} ${rc.name}`, 'order', 9999); c.until = t + 150;
+      if (!c.told){ c.told = true; ticker(`🔔 潮汐食堂來了客人：<b>${esc(c.name)}</b> 想吃 ${rc.icon} ${esc(rc.name)}`); }
+    } else { f.dispose(); customers.splice(i, 1); continue; }
+    f.update(dt, t); f.placeTag();
+  }
+}
+function waitingCustomers(){ return customers.filter(c => c.state === 'wait'); }
+function serveCustomer(c){
+  const ds = rec.dishes.filter(d => d.r === c.order).sort((a, b) => b.q - a.q); if (!ds.length) return;
+  const d = ds[0], got = Math.round(dishPrice(d) * 1.5);
+  rec.dishes = rec.dishes.filter(x => x.t !== d.t); rec.earned += got; addCoins(got);
+  cloudCall('serve_dish', { p_ts: d.t, p_recipe: d.r });
+  c.state = 'out'; c.f.sitting = false; c.f.say(`好好吃！😋 謝謝你～ +${got}`, '', 4);
+  FX.emit(c.f.pos.x, 1.8, c.f.pos.z, 14, '#ff9ab0', 0.6, 1.4, 1.0); SFX.catch();
+  logMsg('', `${c.name} 吃了 ${RECIPES[d.r].name}，給你 ${got} 金幣`, true); renderTab();
+}
+
 // ---- 切魚小遊戲：指針左右來回跑，在綠色區域按下「切！」，切 3 刀 ----
 const CookGame = { on:false };
 function startCooking(key){
@@ -2116,7 +2200,7 @@ function normRec(r){
   return e;
 }
 let rec = normRec(LS.get('tide.rec', null));
-me.setRod(rec.rod); renderCoins();
+me.setRod(rec.rod); renderCoins(); setTimeout(renderBuff, 0);
 function recordCatch(f, w){
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
@@ -2245,6 +2329,7 @@ function showCatch(f, w, res){
   const chip = document.createElement('span'); chip.className = 'chip r-' + f.rarity; chip.textContent = f.rarity + '・' + SPOT_BY_ID[f.spot].label; b.appendChild(chip);
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '圖鑑新登錄'; b.appendChild(x); }
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '個人新紀錄'; b.appendChild(x); }
+  if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
   $('#ccName').textContent = f.name;
   $('#ccW').innerHTML = w.toFixed(2) + '<small>kg</small>' + `<small class="ccp">・可賣 🪙${fishPrice(f, w)}</small>`;
   $('#ccDesc').textContent = f.desc;
@@ -2302,6 +2387,7 @@ $('#chatForm').addEventListener('submit', async e => {
   if (text === lastMyChat && myChatAt.length && nowT - myChatAt[myChatAt.length - 1] < 4000){ toast('同一句話不要一直重複喔'); return; }
   myChatAt.push(nowT); lastMyChat = text;
   inp.value = '';
+  if (mutedUntil > Date.now()){ const d = new Date(mutedUntil); toast(`你被禁言到 ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}，其他人看不到你說的話。`); return; }
   if (room && room.connected() && chatAllowed){
     try { await room.emit('chat', { t: text }); }
     catch(err){ if (err && err.code === 'not_permitted'){ chatAllowed = false; logMsg('系統', '你目前是檢視者，聊天只有你自己看得到。', true); } me.say(text); logMsg('你', text); }
@@ -2373,7 +2459,28 @@ function clean(text){
 let blockList = LS.get('tide.blocked', {});   // { uid: 名字 }
 const peerUid = new Map();                   // 連線 id → 玩家 id
 function uidOf(pp){ const pr = pp.presence || {}; return typeof pr.u === 'string' && pr.u ? pr.u : (pp.by || pp.peer); }
-function isBlockedPeer(peerId){ const u = peerUid.get(peerId); return !!(u && blockList[u]); }
+function isBlockedPeer(peerId){ const u = peerUid.get(peerId); return !!(u && (blockList[u] || mutedSet.has(u))); }
+// 禁言：你在 Supabase 後台的 muted 表加人，所有玩家的遊戲都會把他藏起來
+let mutedSet = new Set(), mutedUntil = 0;
+async function loadMuted(){
+  if (!Cloud.sb) return;
+  try {
+    const { data, error } = await Cloud.sb.from('muted').select('user_id,until'); if (error || !Array.isArray(data)) return;
+    const nowT = Date.now(), act = data.filter(r => Date.parse(r.until) > nowT);
+    mutedSet = new Set(act.map(r => r.user_id)); const mine = act.find(r => r.user_id === Cloud.userId); mutedUntil = mine ? Date.parse(mine.until) : 0;
+    for (const [pid, p] of peers) if (isBlockedPeer(pid)){ p.fisher.dispose(); peers.delete(pid); }
+  } catch(e){}
+}
+// 檢舉：把對方最近說的話一起送給管理者
+const recentChat = new Map();
+async function reportPeer(peerId, name, reason){
+  const u = peerUid.get(peerId); if (!Cloud.on || !u){ toast('要連上雲端才能檢舉'); return; }
+  try {
+    const { error } = await Cloud.sb.rpc('report_player', { p_target: u, p_name: name, p_reason: reason, p_chat: (recentChat.get(peerId) || []).join('\n') });
+    if (error) toast(/太多/.test(error.message) ? '今天檢舉太多次了' : '檢舉沒有送出，等一下再試');
+    else toast('已送出檢舉，謝謝你。管理者會看過再處理；你也可以先封鎖他。');
+  } catch(e){ toast('檢舉沒有送出，等一下再試'); }
+}
 function blockPeer(peerId, name){
   const u = peerUid.get(peerId) || peerId; blockList[u] = String(name || '釣客').slice(0, 16); LS.set('tide.blocked', blockList);
   const p = peers.get(peerId); if (p){ p.fisher.dispose(); peers.delete(peerId); }
@@ -2479,6 +2586,7 @@ function useRoom(r){
       if (isBlockedPeer(msg.peer) || tooChatty(msg.peer)) return;
       text = clean(text);
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '釣客';
+      { const a = recentChat.get(msg.peer) || []; a.push(msg.data.t.slice(0, 120)); recentChat.set(msg.peer, a.slice(-5)); }
       if (p) p.fisher.say(text); logMsg(name, text); SFX.chat();
     }, () => {});
     room.on('cook', msg => {
@@ -2600,10 +2708,11 @@ function rowToRec(r){
 }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
+  Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   rec = rowToRec(row); LS.set('tide.rec', rec); buildTank(); renderCoins(); me.setRod(rec.rod); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理'];
+const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -2667,6 +2776,14 @@ async function cloudLoad(allowImport){
 }
 let profTimer = 0;
 function cloudProfile(){ if (!Cloud.on && !Cloud.sb) return; clearTimeout(profTimer); profTimer = setTimeout(() => { if (Cloud.sb) Cloud.sb.rpc('set_profile', { p_nick: nickname || '', p_shirt: look.shirt, p_hat: look.hat }).then(() => loadBoard()).catch(() => {}); }, 800); }
+async function loadContest(){
+  try {
+    const { data, error } = await Cloud.sb.rpc('current_contest'); if (error || !data) return;
+    const c = Array.isArray(data) ? data[0] : data; if (!c || !FISH_BY_ID[c.fish]) return;
+    const fresh = !Cloud.contest || Cloud.contest.week_id !== c.week_id; Cloud.contest = c;
+    if (fresh) setTimeout(() => ticker(`🏆 本週釣魚比賽：釣最重的 <b>${esc(FISH_BY_ID[c.fish].name)}</b>（${esc(SPOT_BY_ID[FISH_BY_ID[c.fish].spot].short)}），週一 00:00 結算！`), 4000);
+  } catch(e){}
+}
 async function loadBoard(){
   if (!Cloud.sb) return;
   const cols = 'id,nickname,best_w,best_fish,total,legend,fish_count,earned';
@@ -2675,6 +2792,8 @@ async function loadBoard(){
     const [a, b, c] = await Promise.all([q('best_w'), q('total'), q('earned')]);
     const map = r => ({ id:r.id, name:r.nickname, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, total:r.total, legend:r.legend, count:r.fish_count || {}, earned:r.earned || 0 });
     if (!a.error) Cloud.board.best = a.data.map(map); if (!b.error) Cloud.board.total = b.data.map(map); if (!c.error) Cloud.board.earned = c.data.map(map);
+    if (Cloud.contest){ const w = await Cloud.sb.from('players').select(cols + ',week_id,week_best_w').eq('week_id', Cloud.contest.week_id).gt('week_best_w', 0).order('week_best_w', { ascending:false }).limit(20);
+      if (!w.error) Cloud.board.week = w.data.filter(r => r.week_id === Cloud.contest.week_id).map(r => Object.assign(map(r), { weekW: Number(r.week_best_w) || 0 })); }
     if (curTab === 'rank' && !$('#sheet').hidden) renderTab();
   } catch(e){}
 }
@@ -2698,7 +2817,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    loadBoard(); setInterval(loadBoard, 60000);
+    await loadContest(); loadBoard(); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
@@ -2852,16 +2971,21 @@ function renderTab(){
     }
   } else if (curTab === 'rank'){
     const seg = el('div', 'seg');
-    [['best','最大的魚'],['total','釣魚總數']].concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
+    (Cloud.contest ? [['week','🏆本週比賽']] : []).concat([['best','最大的魚'],['total','釣魚總數']]).concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
     body.appendChild(seg);
-    if (Cloud.on){ Object.assign(lb, Cloud.board); body.appendChild(el('p', 'sub', '全服排行榜：所有玩家的紀錄都經過伺服器檢查，每分鐘更新一次。')); }
+    if (lbMode === 'week' && !Cloud.contest) lbMode = 'best';
+    if (Cloud.on && lbMode === 'week'){ Object.assign(lb, Cloud.board); const cf = FISH_BY_ID[Cloud.contest.fish], end = new Date(Cloud.contest.ends_at);
+      body.appendChild(el('p', 'sub', `本週目標：在${SPOT_BY_ID[cf.spot].label}釣最重的「${cf.name}」。比賽到 ${end.getMonth() + 1}/${end.getDate()}（週一）00:00 結束，之後換新的魚。`)); }
+    else if (Cloud.on){ Object.assign(lb, Cloud.board); body.appendChild(el('p', 'sub', '全服排行榜：所有玩家的紀錄都經過伺服器檢查，每分鐘更新一次。')); }
     else if (!db){ body.appendChild(el('p', 'sub', '排行榜會跟所有打開這個村子的人同步。目前沒有連上共享資料，下面只顯示你自己的紀錄。')); }
     else if (lbSlow){ body.appendChild(el('p', 'sub', '暫時連不上排行榜，資料可能不是最新的。')); }
     const shared = db || Cloud.on;
-    let rows = (lbMode === 'best' ? lb.best : lbMode === 'earned' ? (lb.earned || []) : lb.total).filter(r => r.total > 0);
+    let rows = (lbMode === 'best' ? lb.best : lbMode === 'earned' ? (lb.earned || []) : lbMode === 'week' ? (lb.week || []) : lb.total).filter(r => r.total > 0);
     if (Cloud.on) rows = rows.map(r => r.id === myId ? Object.assign({}, r, rec, { name:r.name }) : r);   // 自己那一列用最新的資料
-    if (!shared || (!rows.some(r => r.id === myId) && rec.total > 0)) rows = rows.concat([{ id: myId || 'me', ...rec, _me: true }]);
-    rows.sort((a, b) => lbMode === 'best' ? b.bestW - a.bestW : lbMode === 'earned' ? (b.earned || 0) - (a.earned || 0) : b.total - a.total);
+    if (lbMode === 'week'){ if (!rows.some(r => r.id === myId) && Cloud.myWeekW > 0) rows = rows.concat([{ id: myId, ...rec, weekW: Cloud.myWeekW, _me: true }]); rows = rows.map(r => r.id === myId ? Object.assign({}, r, { weekW: Math.max(r.weekW || 0, Cloud.myWeekW || 0) }) : r); }
+    else if (!shared || (!rows.some(r => r.id === myId) && rec.total > 0)) rows = rows.concat([{ id: myId || 'me', ...rec, _me: true }]);
+    rows.sort((a, b) => lbMode === 'week' ? (b.weekW || 0) - (a.weekW || 0) : lbMode === 'best' ? b.bestW - a.bestW : lbMode === 'earned' ? (b.earned || 0) - (a.earned || 0) : b.total - a.total);
+    if (!rows.length && lbMode === 'week'){ body.appendChild(el('div', 'empty', '這週還沒有人釣到比賽魚，快去搶第一！')); return; }
     if (!rows.length){ body.appendChild(el('div', 'empty', lbLoading ? '正在讀取排行榜…' : '還沒有人上榜。走到任何一個發光圈拋竿，成為村子裡第一個上榜的釣客吧！')); return; }
     const ul = el('ol', 'rank'); const ids = rows.map(r => r.id).filter(id => id && id !== 'me');
     rows.slice(0, 20).forEach((r, i) => {
@@ -2870,10 +2994,10 @@ function renderTab(){
       const who = el('span', 'who', isMe ? `${myDisplayName() === '你' ? '你' : myDisplayName() + '（你）'}` : (r.name || profileNames[r.id] || '釣客'));
       who.dataset.id = r.id;
       const bf = r.bestFish && FISH_BY_ID[r.bestFish];
-      who.appendChild(el('small', '', lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${Object.keys(r.count || {}).length} 種・傳說 ${r.legend || 0} 條`));
+      who.appendChild(el('small', '', lbMode === 'week' ? (i === 0 ? '👑 目前第一名' : '') : lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${Object.keys(r.count || {}).length} 種・傳說 ${r.legend || 0} 條`));
       li.appendChild(who);
       if (Cloud.on && !isMe && r.id){ who.classList.add('canvisit'); who.title = '參觀水族館'; who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); }
-      li.appendChild(el('span', 'val', lbMode === 'best' ? r.bestW.toFixed(2) + ' kg' : lbMode === 'earned' ? '🪙' + (r.earned || 0).toLocaleString() : r.total + ' 條'));
+      li.appendChild(el('span', 'val', lbMode === 'week' ? (r.weekW || 0).toFixed(2) + ' kg' : lbMode === 'best' ? r.bestW.toFixed(2) + ' kg' : lbMode === 'earned' ? '🪙' + (r.earned || 0).toLocaleString() : r.total + ' 條'));
       ul.appendChild(li);
     });
     body.appendChild(ul);
@@ -2925,6 +3049,10 @@ function renderTab(){
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); }
+      if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
+          const box = el('div', 'rpbox'); box.appendChild(el('span', '', '檢舉原因：'));
+          for (const r of ['罵人／不禮貌', '洗版', '取不雅的名字', '其他']){ const b = el('button', 'tbtn ghost vbtn', r); b.addEventListener('click', () => { reportPeer(peerId, name, r); box.remove(); }); box.appendChild(b); }
+          li.after(box); rp.disabled = true; }); li.appendChild(rp); }
       if (peerId){ const bk = el('button', 'tbtn ghost vbtn bk', '封鎖'); bk.addEventListener('click', () => { if (bk.dataset.sure !== '1'){ bk.dataset.sure = '1'; bk.textContent = '確定封鎖？'; bk.classList.add('warn'); return; } blockPeer(peerId, name); renderTab(); }); li.appendChild(bk); }
       ul.appendChild(li); };
     const stOf = (ph, x, z) => { if (ph){ const s = SPOTS.reduce((a, b) => Math.hypot(x-a.pos.x, z-a.pos.z) < Math.hypot(x-b.pos.x, z-b.pos.z) ? a : b); return `在${s.short}釣魚中`; } return '散步中'; };
@@ -3105,7 +3233,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateJumpers(dt, t); updateTank(t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateJumpers(dt, t); updateTank(t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){ s.g.visible = Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
