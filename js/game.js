@@ -2918,6 +2918,26 @@ function renderFerry(body){
       ferryTo(x, z, `${spotName(x, z)}（自選地點）`);
     });
   }
+  // 在地圖上自己選地點：點哪塊海面就載你去哪裡（到了再自己打窩）
+  body.appendChild(el('div', 'dexhead', '🗺️ 自己選地點'));
+  body.appendChild(el('p', 'sub', '在地圖上點一塊水面，阿海就載你過去。到了以後可以自己打窩、做一個新的祕密窩點。'));
+  const R = 88, S = 360, wrap = el('div', 'mapwrap ferrymap'), cv = el('canvas', 'mapcv'); cv.width = cv.height = S; wrap.appendChild(cv); body.appendChild(wrap);
+  const ctx = cv.getContext('2d'), toPx = (x, z) => [(x + R) / (R * 2) * S, (z + R) / (R * 2) * S], toW = (px, py) => [px / S * R * 2 - R, py / S * R * 2 - R];
+  const draw = pick => {
+    ctx.fillStyle = '#1f5981'; ctx.fillRect(0, 0, S, S);   // 地圖外面都是海（顏色跟地圖的深海一樣）
+    const [a0, b0] = toPx(-MAP_VIEW, -MAP_VIEW), [a1] = toPx(MAP_VIEW, MAP_VIEW); ctx.drawImage(getMapImage(), a0, b0, a1 - a0, a1 - a0);
+    ctx.textAlign = 'center'; ctx.font = '18px sans-serif';
+    const [hx, hy] = toPx(FERRY.at[0], FERRY.at[1]); ctx.fillText('🚤', hx, hy + 6);
+    for (const sp of secretSpots){ const [sx, sy] = toPx(sp.x, sp.z); ctx.fillText('🤫', sx, sy + 6); }
+    const [mx, my] = toPx(me.pos.x, me.pos.z); ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI * 2); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+    if (pick){ const [px, py] = toPx(pick[0], pick[1]); ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.setLineDash([4, 3]); ctx.lineWidth = 3; ctx.strokeStyle = pick[2] ? '#ffd36a' : '#f04a3a'; ctx.stroke(); ctx.setLineDash([]); }
+  };
+  draw(null);
+  const info = el('div', 'tankbar'), lbl = el('span', 'sub', '點地圖選一個地方'), go = el('button', 'tbtn', '載我去'); go.disabled = true; info.append(lbl, go); body.appendChild(info);
+  let pick = null;
+  cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(), [x, z] = toW((e.clientX - r.left) / r.width * S, (e.clientY - r.top) / r.height * S), ok = waterAt(x, z) && Math.hypot(x - ISLE.x, z - ISLE.z) > 40;
+    pick = [x, z, ok]; draw(pick); go.disabled = !ok; lbl.textContent = ok ? `選好了：${spotName(x, z)}（${x.toFixed(0)}, ${z.toFixed(0)}）` : '那裡不是水面，換一個地方'; });
+  go.addEventListener('click', () => { if (pick && pick[2]) ferryTo(pick[0], pick[1], `自選地點（${spotName(pick[0], pick[1])}）`); });
   body.appendChild(el('div', 'dexhead', '🌊 外海'));
   const u2 = el('ul', 'shoplist');
   for (const d0 of FERRY.dest){ const li = el('li'); li.appendChild(el('span', 'dishic', '🌊')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', d0.name)); d.appendChild(el('div', 'sub2', d0.desc)); li.appendChild(d);
