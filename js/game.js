@@ -89,8 +89,8 @@ const LANDMARKS = [
   { id:'plaza',      label:'潮汐廣場', pos:V3(4, 4),            color:PALETTE.gold, ly:1.8 },
   { id:'aquarium',   label:'水族館',   pos:V3(AQUA[0], AQUA[1]), color:PALETTE.coral, ly:6.8, mx:7.6, mz:4.6 },
   { id:'chat',       label:'聊天亭',   pos:V3(-3, 22),          color:'#f5a5d8', ly:3.8 },
-  { id:'tackle',     label:'釣具店',   pos:V3(-9, -3),          color:'#f6a96b', ly:4.4, mx:2.4, mz:2.8 },
-  { id:'shop',       label:'海邊商店', pos:V3(18, -1),          color:'#5fb6e3', ly:4.4, mx:-2.6, mz:2.8 },
+  { id:'tackle',     label:'釣具店',   pos:V3(-9, -3),          color:'#f6a96b', ly:5.5, mx:2.4, mz:2.8 },
+  { id:'shop',       label:'海邊商店', pos:V3(18, -1),          color:'#5fb6e3', ly:5.5, mx:-2.6, mz:2.8 },
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
   { id:'hill',       label:'望海丘',   pos:V3(-28, 25),         color:'#a6d37d', ly:2.6 },
@@ -610,6 +610,18 @@ function castPoint(x, z, dx, dz, dist){
       for (let i = 0; i < 6; i++){ const sc = new THREE.Mesh(new THREE.CircleGeometry(W / 12, 12, Math.PI, Math.PI), mat(i % 2 ? '#ffffff' : opts.awning, 0.8, { side:THREE.DoubleSide })); sc.position.set(-W / 2 + W / 12 + i * W / 6, 1.75, fz + 1.04); g.add(sc); }   // 遮雨棚前緣的波浪邊
       g.add(box([W * 0.8, 0.85, 0.5], PALETTE.wood, [0, 0.43, fz + 0.8])); g.add(box([W * 0.84, 0.08, 0.6], '#c79a6b', [0, 0.88, fz + 0.8]));
       g.add(box([1.7, 0.34, 0.07], opts.awning, [0, top - 0.25, fz + 0.09])); g.add(box([1.5, 0.22, 0.08], trim, [0, top - 0.25, fz + 0.1]));
+      if (opts.sign){   // 招牌上的字（畫布貼圖；有貼圖的東西不會被合併，字才不會不見）
+        const scv = document.createElement('canvas'); scv.width = 256; scv.height = 48; const sc = scv.getContext('2d');
+        sc.fillStyle = '#fffaf0'; sc.fillRect(0, 0, 256, 48); sc.fillStyle = opts.signInk || '#5a3a24'; sc.font = 'bold 34px sans-serif'; sc.textAlign = 'center'; sc.textBaseline = 'middle'; sc.fillText(opts.sign, 128, 26);
+        const stx = new THREE.CanvasTexture(scv); stx.colorSpace = THREE.SRGBColorSpace; stx.anisotropy = 4;
+        const sp = new THREE.Mesh(new THREE.PlaneGeometry(1.48, 0.28), new THREE.MeshBasicMaterial({ map: stx })); sp.position.set(0, top - 0.25, fz + 0.145); g.add(sp);
+        // 屋頂上再立一塊大招牌，遠遠就看得到
+        const bcv = document.createElement('canvas'); bcv.width = 320; bcv.height = 96; const bc = bcv.getContext('2d');
+        bc.fillStyle = opts.awning; bc.fillRect(0, 0, 320, 96); bc.fillStyle = '#fffaf0'; bc.fillRect(8, 8, 304, 80); bc.fillStyle = opts.awning; bc.font = 'bold 54px sans-serif'; bc.textAlign = 'center'; bc.textBaseline = 'middle'; bc.fillText((opts.signIcon || '') + opts.sign, 160, 52);
+        const btx = new THREE.CanvasTexture(bcv); btx.colorSpace = THREE.SRGBColorSpace; btx.anisotropy = 4;
+        const big = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.72), new THREE.MeshBasicMaterial({ map: btx, side: THREE.DoubleSide })); big.position.set(0, top + 1.75, fz - 0.6); g.add(big);
+        for (const sx of [-0.9, 0.9]) g.add(box([0.07, 1.1, 0.07], dark, [sx, top + 1.1, fz - 0.62]));
+      }
       g.add(box([0.5, 0.45, 0.5], '#b8865a', [W / 2 + 0.2, 0.22, fz + 0.4])); g.add(box([0.4, 0.35, 0.4], '#a8754a', [W / 2 + 0.25, 0.62, fz + 0.4]));
       const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.6, 12), mat('#9b6a42')); barrel.position.set(-W / 2 - 0.15, 0.3, fz + 0.5); barrel.castShadow = true; g.add(barrel);
       for (const yy of [0.12, 0.48]){ const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.02, 4, 16), mat('#4c4c4c', 0.5)); hoop.rotation.x = Math.PI / 2; hoop.position.set(-W / 2 - 0.15, yy, fz + 0.5); g.add(hoop); }
@@ -626,8 +638,8 @@ function castPoint(x, z, dx, dz, dist){
   house(16, 14, '#7db7d7', 3.6, faceTo(16, 14));
   house(-14, -9, '#ec8b68', 3.3, faceTo(-14, -9));
   house(22, 7, '#9fc7a8', 3.2, faceTo(22, 7));
-  house(-9, -3, '#f6a96b', 3.6, faceTo(-9, -3), { awning: '#f17b6d' });      // 釣具店
-  house(18, -1, '#5fb6e3', 3.8, faceTo(18, -1), { awning: '#2f89c7' });      // 海邊商店
+  house(-9, -3, '#f6a96b', 3.6, faceTo(-9, -3), { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店
+  house(18, -1, '#5fb6e3', 3.8, faceTo(18, -1), { awning: '#2f89c7', sign: '海邊商店', signIcon: '🐟' });      // 海邊商店
   // ---- 潮汐食堂：小吃攤（櫃台、紅白遮雨棚、招牌、燒烤爐、紙燈籠、壽司盤、板凳）----
   {
     const [KX, KZ] = [12.5, 8.5], g = new THREE.Group(); g.position.set(KX, 0, KZ); g.rotation.y = faceTo(KX, KZ); scene.add(g);
