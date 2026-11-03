@@ -1155,82 +1155,36 @@ function avGeo(){
   G.band = new THREE.CylinderGeometry(0.302, 0.302, 0.06, 24);
   return G;
 }
-// ---- 動物村民：每個人可以選一種動物和毛色（頭是 Q 版大頭；身體、衣服配件的位置跟以前一樣）----
-const HEAD_S = 1.24, HEAD_Y = 1.44;
-const ANIMALS = {
-  cat:    { name:'貓咪', icon:'🐱', fur:'#f6c48a' },
-  dog:    { name:'小狗', icon:'🐶', fur:'#e8c79a' },
-  bear:   { name:'小熊', icon:'🐻', fur:'#b07a4f' },
-  rabbit: { name:'兔子', icon:'🐰', fur:'#ffffff' },
-  fox:    { name:'狐狸', icon:'🦊', fur:'#e98a4b' },
-  panda:  { name:'熊貓', icon:'🐼', fur:'#ffffff' },
-};
-const FURS = ['#f6c48a', '#e8c79a', '#b07a4f', '#7a5236', '#ffffff', '#c9c4bd', '#8a8f99', '#3b3434', '#e98a4b', '#f5b8c8'];
-function cleanAnimal(k){ return ANIMALS[k] ? k : 'cat'; }
-// 嘴巴那一塊的顏色：毛色偏深就用奶油色
-function muzzleColor(fur){ const c = new THREE.Color(fur), l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11; return l < 0.55 ? '#f6e8d6' : '#' + c.clone().lerp(new THREE.Color('#ffffff'), 0.55).getHexString(); }
-function buildAnimal(av, kind, fur){
-  kind = cleanAnimal(kind); fur = /^#[0-9a-f]{6}$/i.test(fur || '') ? fur : ANIMALS[kind].fur;
-  if (av.spG){ av.spG.parent.remove(av.spG); av.spG.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
-  if (av.tailG){ av.tailG.parent.remove(av.tailG); av.tailG.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
-  av.kind = kind; av.fur = fur;
-  const panda = kind === 'panda', limb = panda ? '#2b2628' : fur;
-  av.furM.color.set(fur); av.furM.emissive.set(fur); av.skinM.color.set(limb); av.skinM.emissive.set(limb);
-  const muz = mat(kind === 'fox' ? '#fff6ec' : muzzleColor(fur), 0.75), dark = mat('#2b2628', 0.6), pink = mat('#ffb3c7', 0.6), F = av.furM;
-  const sp = new THREE.Group(); av.headG.add(sp); av.spG = sp;
-  const tl = new THREE.Group(); tl.position.set(0, 0.6, -0.24); av.g.add(tl); av.tailG = tl;
-  const add = (geo, m, x, y, z, p, sx, sy, sz) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (sx) o.scale.set(sx, sy, sz); o.castShadow = true; (p || sp).add(o); return o; };
-  // 嘴巴那一塊、鼻子
-  add(new THREE.SphereGeometry(0.12, 18, 12), muz, 0, -0.12, 0.25, sp, 1.4, 0.82, 0.8);
-  add(new THREE.SphereGeometry(0.04, 12, 8), kind === 'cat' || kind === 'rabbit' ? mat('#ff8fa3', 0.4) : mat('#2b2026', 0.3), 0, -0.07, 0.345, sp, 1.35, 0.9, 0.8);
-  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 4, 10, Math.PI), av.inkM); mouth.position.set(0, -0.14, 0.338); mouth.rotation.z = Math.PI; sp.add(mouth);
-  for (const s of [-1, 1]){
-    if (kind === 'cat'){ const e = add(new THREE.ConeGeometry(0.11, 0.2, 4), F, s * 0.2, 0.29, -0.01); e.rotation.set(0, Math.PI / 4, -s * 0.38); const ei = add(new THREE.ConeGeometry(0.06, 0.12, 4), pink, s * 0.198, 0.28, 0.03); ei.rotation.set(0, Math.PI / 4, -s * 0.38);
-      for (const k of [-1, 1]){ const w = add(new THREE.CylinderGeometry(0.004, 0.004, 0.16, 4), dark, s * 0.27, -0.1 + k * 0.025, 0.28); w.rotation.z = Math.PI / 2 + k * 0.15 * s; } }
-    else if (kind === 'dog'){ const e = add(new THREE.SphereGeometry(0.11, 14, 10), mat(new THREE.Color(fur).multiplyScalar(0.72).getStyle(), 0.75), s * 0.29, 0.06, -0.02, sp, 0.5, 1.25, 0.85); e.rotation.z = s * 0.35; }
-    else if (kind === 'bear' || kind === 'panda'){ add(new THREE.SphereGeometry(0.1, 14, 10), panda ? dark : F, s * 0.24, 0.26, -0.03, sp, 1, 1, 0.6); if (!panda) add(new THREE.SphereGeometry(0.055, 10, 8), muz, s * 0.24, 0.26, 0.01, sp, 1, 1, 0.5); }
-    else if (kind === 'rabbit'){ const e = add(new THREE.CapsuleGeometry(0.065, 0.3, 4, 10), F, s * 0.12, 0.47, -0.04); e.rotation.z = -s * 0.15; const ei = add(new THREE.CapsuleGeometry(0.032, 0.24, 4, 8), pink, s * 0.12, 0.47, 0.0); ei.rotation.z = -s * 0.15; }
-    else if (kind === 'fox'){ const e = add(new THREE.ConeGeometry(0.12, 0.26, 4), F, s * 0.2, 0.31, -0.02); e.rotation.set(0, Math.PI / 4, -s * 0.32); const tip = add(new THREE.ConeGeometry(0.05, 0.09, 4), dark, s * 0.25, 0.42, -0.02); tip.rotation.set(0, Math.PI / 4, -s * 0.32);
-      const ch = add(new THREE.SphereGeometry(0.1, 12, 8), muz, s * 0.2, -0.12, 0.2, sp, 1, 0.8, 0.7); }
-    if (panda){ const pt = add(new THREE.SphereGeometry(0.07, 14, 10), dark, s * 0.118, -0.005, 0.27, sp, 0.9, 1.15, 0.5); pt.rotation.z = s * 0.5; }
-  }
-  // 尾巴
-  if (kind === 'cat'){ const c = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.05, -0.18), new THREE.Vector3(0, 0.1, -0.3), new THREE.Vector3(0.04, 0.3, -0.32)]); add(new THREE.TubeGeometry(c, 14, 0.035, 6), F, 0, 0, 0, tl); }
-  else if (kind === 'dog'){ const t = add(new THREE.CapsuleGeometry(0.04, 0.16, 4, 8), F, 0, 0.08, -0.06, tl); t.rotation.x = -0.7; }
-  else if (kind === 'bear' || kind === 'panda'){ add(new THREE.SphereGeometry(0.06, 10, 8), panda ? dark : F, 0, -0.05, 0, tl); }
-  else if (kind === 'rabbit'){ add(new THREE.SphereGeometry(0.08, 12, 10), mat('#ffffff', 0.9), 0, -0.05, 0, tl); }
-  else if (kind === 'fox'){ const t = add(new THREE.SphereGeometry(0.12, 14, 10), F, 0, 0.02, -0.16, tl, 0.8, 0.8, 1.6); t.rotation.x = 0.6; const w = add(new THREE.SphereGeometry(0.07, 12, 8), muz, 0, 0.14, -0.33, tl, 0.9, 0.9, 1.2); w.rotation.x = 0.6; }
-  tl.traverse(o => { if (o.isMesh) o.castShadow = true; });
-}
-function makeAvatar(shirt, hat, kind, fur){
-  const G = avGeo(), g = new THREE.Group(); g.rotation.order = 'YXZ';
-  const skin = mat('#f6c48a', 0.7, { emissive:'#f6c48a', emissiveIntensity:0.12 }), furM = mat('#f6c48a', 0.72, { emissive:'#f6c48a', emissiveIntensity:0.12 });
-  const pants = mat('#2f4b63', 0.8), shirtM = mat(shirt, 0.75), hatM = mat(hat, 0.7), ink = mat('#231c22', 0.35);
-  const shoeM = mat('#6b4a35', 0.7), white = new THREE.MeshBasicMaterial({ color:'#ffffff' });
-  const blushM = new THREE.MeshBasicMaterial({ color:'#ff8f8a', transparent:true, opacity:0.5, depthWrite:false });
+function makeAvatar(shirt, hat){
+  const G = avGeo(), g = new THREE.Group();
+  const skin = mat('#ffd9b8', 0.7), pants = mat('#2f4b63', 0.8), shirtM = mat(shirt, 0.75), hatM = mat(hat, 0.7), ink = mat(PALETTE.ink, 0.4);
+  const hairM = mat('#5a3d2b', 0.8), shoeM = mat('#6b4a35', 0.7), white = new THREE.MeshBasicMaterial({ color:'#ffffff' });
+  const blushM = new THREE.MeshBasicMaterial({ color:'#ff9a8f', transparent:true, opacity:0.55, depthWrite:false });
   const add = (geo, m, x, y, z, parent, shadow) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (shadow !== false) o.castShadow = true; (parent || g).add(o); return o; };
   // 腳：圓圓的褲管＋鞋子
   function leg(x){ const p = new THREE.Group(); p.position.set(x, 0.5, 0); g.add(p); p.userData.pants = add(G.leg, pants, 0, -0.2, 0, p); const sh = add(G.shoe, shoeM, 0, -0.43, 0.04, p); sh.scale.set(0.95, 0.6, 1.3); p.userData.shoe = sh; return p; }
   const legL = leg(-0.12), legR = leg(0.12);
-  // 身體、脖子
-  const body = add(G.torso, shirtM, 0, 0.8, 0); body.scale.set(1.02, 1, 0.88);
+  // 身體
+  const body = add(G.torso, shirtM, 0, 0.8, 0); body.scale.set(1, 1, 0.86);
   const belt = add(G.belt, pants, 0, 0.56, 0); belt.scale.set(1, 1, 0.86);
-  add(new THREE.CylinderGeometry(0.085, 0.095, 0.12, 12), skin, 0, 1.15, 0);
-  // 頭：Q 版大頭、黑豆眼（會眨眼）、腮紅；耳朵、嘴巴、尾巴在 buildAnimal
-  const headG = new THREE.Group(); headG.position.y = HEAD_Y; headG.scale.setScalar(HEAD_S); g.add(headG);
-  const head = add(G.head, furM, 0, 0, 0, headG); head.scale.set(1.06, 0.95, 0.97);
+  // 頭：大大的頭、頭髮、耳朵、眼睛（會眨眼）、腮紅、微笑
+  const headG = new THREE.Group(); headG.position.y = 1.31; g.add(headG);
+  const head = add(G.head, skin, 0, 0, 0, headG); head.scale.set(1, 0.94, 0.96);
+  const hair = add(G.hair, hairM, 0, 0.01, -0.02, headG); hair.rotation.x = -0.42;
+  for (const sx of [-1, 1]) add(G.ear, skin, sx * 0.315, -0.02, -0.01, headG);
   const eyes = [], shines = [];
   for (const sx of [-1, 1]){
     const e = add(G.eye, ink, sx * 0.115, 0.0, 0.29, headG, false); e.scale.set(0.8, 1.15, 0.5); eyes.push(e);
-    shines.push(add(G.shine, white, sx * 0.115 + 0.016, 0.024, 0.318, headG, false));
-    const bl = add(G.blush, blushM, sx * 0.205, -0.075, 0.262, headG, false); bl.rotation.y = sx * 0.66;
+    shines.push(add(G.shine, white, sx * 0.115 + 0.015, 0.025, 0.315, headG, false));
+    const bl = add(G.blush, blushM, sx * 0.19, -0.085, 0.262, headG, false); bl.rotation.y = sx * 0.62;
   }
-  // 帽子：跟著頭一起放大
-  const hatG = new THREE.Group(); hatG.position.set(0, HEAD_Y + 0.25 * HEAD_S, -0.02 * HEAD_S); hatG.rotation.x = -0.12; hatG.scale.setScalar(HEAD_S); g.add(hatG);
+  const smile = add(G.smile, ink, 0, -0.1, 0.305, headG, false); smile.rotation.z = Math.PI; smile.scale.set(1, 0.8, 1);
+  // 漁夫帽
+  const hatG = new THREE.Group(); hatG.position.set(0, 1.56, -0.02); hatG.rotation.x = -0.12; g.add(hatG);
   const hatBase = [add(G.brim, hatM, 0, 0, 0, hatG)];
   const crown = add(G.crown, hatM, 0, 0.0, 0, hatG); crown.scale.set(1, 0.72, 1); hatBase.push(crown);
   hatBase.push(add(G.band, ink, 0, 0.035, 0, hatG, false));
-  // 手：袖子＋圓圓的手（毛色）
+  // 手：袖子＋圓圓的手
   function arm(x){ const p = new THREE.Group(); p.position.set(x, 1.0, 0); g.add(p); add(G.arm, shirtM, 0, -0.18, 0, p); add(G.hand, skin, 0, -0.4, 0, p); p.rotation.z = Math.sign(x) * 0.08; return p; }
   const armL = arm(-0.33), armR = arm(0.33);
   // 釣竿（跟原本一樣掛在右手前方）
@@ -1240,9 +1194,7 @@ function makeAvatar(shirt, hat, kind, fur){
   const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), mat('#c9d6e3', 0.3, { metalness:0.6 })); reel.rotation.z = Math.PI/2; reel.position.set(0.06, 0.25, 0);
   const tip = new THREE.Object3D(); tip.position.y = 2.3;
   rod.add(pole, grip, reel, tip); rod.rotation.x = 0.95; rod.visible = false; g.add(rod);
-  const av = { g, legL, legR, armL, armR, rod, tip, pole, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, furM, inkM: ink, body, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
-  buildAnimal(av, kind, fur);
-  return av;
+  return { g, legL, legR, armL, armR, rod, tip, pole, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
 }
 /* ================= WARDROBE：服裝（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）================= */
 // 價格要跟 supabase/008_wardrobe.sql 的 _item_price 一樣；價格 0 的是預設，大家都有
@@ -1698,7 +1650,7 @@ addSeaLife('beluga', 1.5, -46, -50, 6, 0.2, 'jump', 2.2);
 const labelsEl = $('#labels');
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat, opts.animal, opts.fur); scene.add(this.av.g);
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
     this.fishing = false; this.bobPos = new THREE.Vector3(); this.dip = 0; this.bend = 0; this.flying = null;
@@ -1710,7 +1662,7 @@ class Fisher {
     this.bubUntil = 0;
     if (!CLASSIC){ this.blob = new THREE.Mesh(BLOB_GEO, BLOB_MAT); this.blob.renderOrder = 1; scene.add(this.blob); }
   }
-  setLook(shirt, hat, animal, fur){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); if (animal && (animal !== this.av.kind || (fur && fur !== this.av.fur))) buildAnimal(this.av, animal, fur); }
+  setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
   setGear(gear){ const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
   setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.av.pole.material.color.set(r.color); } }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
@@ -1727,7 +1679,7 @@ class Fisher {
       const st = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.02, 6, 20), k); st.rotation.x = Math.PI / 2; st.position.y = 0.0; st.scale.set(1, 1.08, 1); mask.add(st);
       const sn = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6), mat('#f05a4a', 0.5)); sn.position.set(0.22, 0.15, 0.1); mask.add(sn);
       a.headG.add(mask); this.swimMesh = [tank, mask]; a.rod.visible = false; }
-    else { for (const m of this.swimMesh || []) if (m.parent) m.parent.remove(m); this.swimMesh = null; const g = a.g; g.rotation.x = 0; }
+    else { for (const m of this.swimMesh || []) if (m.parent) m.parent.remove(m); this.swimMesh = null; const g = a.g; g.rotation.x = 0; g.rotation.order = 'XYZ'; }
   }
   holdFish(f, w, secs){
     const a = this.av; if (this.held) a.g.remove(this.held.o);
@@ -1747,14 +1699,7 @@ class Fisher {
     else if (this.air > 0.05){ a.legL.rotation.x = -0.55; a.legR.rotation.x = 0.35; }
     a.g.rotation.y = this.rot;
     if (a.gearAnim) a.gearAnim(t, this.speed || 0);
-    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy;
-      // 待機：呼吸、頭輕輕歪、偶爾東張西望、尾巴搖；走路：身體往前傾、左右晃
-      const mv = Math.min(1, (this.speed || 0) / 3.5), idle = 1 - Math.min(1, (this.speed || 0) / 0.6);
-      a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.04 * idle + Math.sin(this.walk) * 0.05 * mv;
-      a.headG.rotation.y = (Math.sin(t * 0.37 + a.blinkAt * 3) > 0.75 ? Math.sin(t * 0.9 + a.blinkAt) * 0.35 : 0) * idle * (this.fishing ? 0.3 : 1);
-      a.headG.position.y = HEAD_Y + Math.sin(t * 2.2 + a.blinkAt) * 0.008 * idle; if (a.body) a.body.scale.y = 1 + Math.sin(t * 2.2 + a.blinkAt) * 0.018 * idle;
-      if (a.tailG) a.tailG.rotation.y = Math.sin(t * (2 + mv * 6) + a.blinkAt) * (0.25 + mv * 0.2);
-      if (!this.swim){ a.g.rotation.x = mv * 0.12; a.g.rotation.z = Math.sin(this.walk) * 0.045 * mv; } }
+    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * (this.speed < 0.3 ? 1 : 0); }
     a.rod.visible = this.fishing;
     if (this.fishing){
       a.armR.rotation.x = -1.0 - this.bend * 0.3; a.armL.rotation.x = -0.7 - this.bend*0.2;
@@ -1765,7 +1710,7 @@ class Fisher {
       if (now() > h.until || this.fishing){ a.g.remove(h.o); this.held = null; }
       else { a.armL.rotation.x = a.armR.rotation.x = -1.3; h.o.position.y = h.y + Math.sin(t * 4) * 0.04; h.o.rotation.z = Math.sin(t * 2.6) * 0.1; }
     }
-    a.g.position.y = this.baseY + Math.abs(Math.sin(this.walk)) * Math.min(1, this.speed/3) * 0.1;
+    a.g.position.y = this.baseY + Math.abs(Math.sin(this.walk)) * Math.min(1, this.speed/3) * 0.06;
     if (this.swim){ const mv = Math.min(1, this.speed / 2.5), want = this.swimPitch != null ? this.swimPitch : 0.3 + mv * 0.95; a.g.rotation.order = 'YXZ'; this.swimP = (this.swimP || 0) + (want - (this.swimP || 0)) * Math.min(1, dt * 4); a.g.rotation.x = this.swimP;
       const kick = Math.sin(t * (4 + mv * 6)) * (0.2 + mv * 0.25); a.legL.rotation.x = kick; a.legR.rotation.x = -kick; a.armL.rotation.x = a.armR.rotation.x = -0.5 - mv * 2.2 + Math.sin(t * 2) * 0.1; a.rod.visible = false;
       a.g.position.y = this.baseY + Math.sin(t * 1.6) * 0.05; }
@@ -1792,7 +1737,7 @@ class Fisher {
     if (!this.bub.hidden && now() > this.bubUntil) this.bub.hidden = true;
   }
   placeTag(){
-    const v = tmpV.set(this.pos.x, this.pos.y + 2.25, this.pos.z);
+    const v = tmpV.set(this.pos.x, this.pos.y + 1.95, this.pos.z);
     const d = camera.position.distanceTo(v);
     v.project(camera);
     if (v.z > 1 || d > 45){ this.tag.style.display = 'none'; return; }
@@ -1897,10 +1842,8 @@ document.addEventListener('visibilitychange', () => { if (!actx) return; if (doc
 
 /* ================= PLAYER ================= */
 const look = LS.get('tide.look', { shirt: SHIRTS[Math.floor(Math.random()*SHIRTS.length)], hat: HATS[0] });
-if (!ANIMALS[look.animal]){ const ks = Object.keys(ANIMALS); look.animal = ks[Math.floor(Math.random() * ks.length)]; look.fur = ANIMALS[look.animal].fur; LS.set('tide.look', look); }
-if (!/^#[0-9a-f]{6}$/i.test(look.fur || '')) look.fur = ANIMALS[look.animal].fur;
 let nickname = LS.get('tide.nick', '');
-const me = new Fisher({ shirt: look.shirt, hat: look.hat, animal: look.animal, fur: look.fur, name: '你', kind: 'me' });
+const me = new Fisher({ shirt: look.shirt, hat: look.hat, name: '你', kind: 'me' });
 me.pos.set(4, 0, 9.6); me.rot = Math.PI;
 const cam = { yaw: 0, pitch: 0.42, dist: 9 };
 
@@ -3340,7 +3283,7 @@ function addSeasonDeco(){
 const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'北邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
 let ferryNpc = null; const Ferry = { on:false };
 function updateFerry(){
-  if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', animal:'fox', fur:'#e98a4b', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
+  if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
   if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
   if (Ferry.on && frameNo % 60 === 0){ const n = crewNear(); if (n !== Ferry.crewN){ Ferry.crewN = n; renderFerryBar(); } }
@@ -3659,15 +3602,15 @@ function renderDiveShop(body){
   body.appendChild(ul);
 }
 const QUEST_NPC = {
-  chief: { name:'村長 阿土伯', at:[7.2, 1.2], shirt:'#8c5d3b', hat:'#f6f0dd', animal:'bear', fur:'#9a6a44', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
-  wang:  { name:'漁夫 老王',   at:[29.5, -23.2], shirt:'#2f6fb5', hat:'#ffd36a', animal:'dog', fur:'#c9c4bd', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
-  mei:   { name:'食堂 美雲姨', at:[10.4, 11.2], shirt:'#f5a5d8', hat:'#ffffff', animal:'cat', fur:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
+  chief: { name:'村長 阿土伯', at:[7.2, 1.2], shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
+  wang:  { name:'漁夫 老王',   at:[29.5, -23.2], shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
+  mei:   { name:'食堂 美雲姨', at:[10.4, 11.2], shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
 };
 const questNpcs = []; let Quests = { list:null, at:0, loading:false }, questWho = null;
 function freeSpot(x, z){ for (let r = 0; r < 6; r += 0.5) for (let a = 0; a < 6.28; a += 0.6){ const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (walkable(px, pz) && !blocked(px, pz, 0.45) && !deckAt(px, pz)) return [px, pz]; } return [x, z]; }
 function initQuestNpcs(){
   for (const [who, d] of Object.entries(QUEST_NPC)){
-    const [x, z] = freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, animal:d.animal, fur:d.fur, name:d.name, kind:'npc' });
+    const [x, z] = freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, name:d.name, kind:'npc' });
     f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.atan2(MAP.plaza[0] - x, MAP.plaza[1] - z); f.setGear(d.gear); f.nm.classList.add('quest');
     questNpcs.push({ who, name:d.name, f });
   }
@@ -3846,7 +3789,7 @@ function spawnCustomer(t){
   const ang = Math.random() * Math.PI * 2, sx = st.x + Math.cos(ang) * 14, sz = st.z + Math.sin(ang) * 14;
   if (!isLand(sx, sz)) return;
   const name = CUST_NAMES[Math.floor(Math.random() * CUST_NAMES.length)], lk = CUST_LOOK[Math.floor(Math.random() * CUST_LOOK.length)];
-  const ak = Object.keys(ANIMALS)[Math.floor(Math.random() * 6)], f = new Fisher({ shirt:lk[0], hat:lk[1], animal:ak, fur: Math.random() < 0.5 ? ANIMALS[ak].fur : FURS[Math.floor(Math.random() * FURS.length)], name:'客人・' + name, kind:'npc' }); f.pos.set(sx, 0, sz); f.baseY = groundHeight(sx, sz);
+  const f = new Fisher({ shirt:lk[0], hat:lk[1], name:'客人・' + name, kind:'npc' }); f.pos.set(sx, 0, sz); f.baseY = groundHeight(sx, sz);
   customers.push({ f, name, seat, st, order: pickOrder(), state:'in', until: t + 160, from:{ x:sx, z:sz } });
 }
 function updateCustomers(dt, t){
@@ -4190,14 +4133,14 @@ function avKit(){
   if (AvShot.kit) return AvShot.kit;
   const sc = new THREE.Scene();
   sc.add(new THREE.HemisphereLight('#ffffff', '#c9b8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(2, 4, 3); sc.add(dl);
-  const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20), av = makeAvatar(look.shirt, look.hat, look.animal, look.fur); sc.add(av.g); av.g.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20), av = makeAvatar(look.shirt, look.hat); sc.add(av.g); av.g.traverse(o => { if (o.isMesh) o.castShadow = false; });
   const rt = new THREE.WebGLRenderTarget(256, 256, { samples: 4 }); rt.texture.colorSpace = THREE.SRGBColorSpace;
   return (AvShot.kit = { sc, cam, av, rt, key:'' });
 }
-const SHOT_VIEW = { hat:[1.7, 2.3, 0.35], face:[1.45, 1.2, 0.15], acc:[1.2, 1.5, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[1.05, 3.8, 0.45] };
+const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1.3, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[0.95, 3.4, 0.45] };
 function avatarShot(gear, view, size){
-  const key = JSON.stringify([gear, view, size, look.shirt, look.hat, look.animal, look.fur]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
-  const K = avKit(); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat); if (K.av.kind !== look.animal || K.av.fur !== look.fur){ buildAnimal(K.av, look.animal, look.fur); K.av.g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
+  const key = JSON.stringify([gear, view, size, look.shirt, look.hat]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
+  const K = avKit(); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
   const gk = JSON.stringify(gear); if (K.key !== gk){ applyGear(K.av, gear); K.key = gk; }
   if (K.av.gearAnim) K.av.gearAnim(1.2, 0);
   const [ty, dist, yaw] = SHOT_VIEW[view] || SHOT_VIEW.full; K.cam.position.set(Math.sin(yaw) * dist, ty + 0.12, Math.cos(yaw) * dist); K.cam.lookAt(0, ty, 0);
@@ -4248,7 +4191,7 @@ function pvInit(){
     r.outputColorSpace = renderer.outputColorSpace; r.toneMapping = renderer.toneMapping; r.toneMappingExposure = renderer.toneMappingExposure; r.setClearColor(0x000000, 0);
     const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#c9b8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(2, 4, 3); sc.add(dl); const dl2 = new THREE.DirectionalLight('#ffffff', 0.9); dl2.position.set(-2, 2, -3); sc.add(dl2);
     const cam = new THREE.PerspectiveCamera(30, 150 / 170, 0.05, 20); cam.position.set(0, 1.3, 5.0); cam.lookAt(0, 1.15, 0);
-    const av = makeAvatar(look.shirt, look.hat, look.animal, look.fur); sc.add(av.g);
+    const av = makeAvatar(look.shirt, look.hat); sc.add(av.g);
     cv.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); PV.drag = { x: e.clientX, yaw: PV.yaw }; try { cv.setPointerCapture(e.pointerId); } catch(_){} });
     cv.addEventListener('pointermove', e => { if (!PV.drag) return; e.preventDefault(); PV.yaw = PV.drag.yaw + (e.clientX - PV.drag.x) * 0.014; });
     const up = () => { if (PV.drag){ PV.drag = null; PV.idleAt = now() + 2.5; } };
@@ -4259,7 +4202,7 @@ function pvInit(){
 }
 function pvShow(host, gear){
   if (!pvInit()) return false;
-  PV.av.shirtM.color.set(look.shirt); PV.av.hatM.color.set(look.hat); if (PV.av.kind !== look.animal || PV.av.fur !== look.fur) buildAnimal(PV.av, look.animal, look.fur);
+  PV.av.shirtM.color.set(look.shirt); PV.av.hatM.color.set(look.hat);
   const k = JSON.stringify(gear); if (PV.key !== k){ applyGear(PV.av, gear); PV.key = k; }
   host.appendChild(PV.cv); if (!PV.raf) PV.raf = requestAnimationFrame(pvLoop); return true;
 }
@@ -4733,7 +4676,7 @@ function myDisplayName(){ return nickname || (myId && profileNames[myId]) || '�
 
 let lastPres = '', lastPresAt = 0;
 function presenceObj(){
-  const o = { p:[+me.pos.x.toFixed(2), +me.pos.z.toFixed(2), +me.baseY.toFixed(2)], r:+me.rot.toFixed(2), sh:look.shirt, ht:look.hat, ak:look.animal, fu:look.fur };
+  const o = { p:[+me.pos.x.toFixed(2), +me.pos.z.toFixed(2), +me.baseY.toFixed(2)], r:+me.rot.toFixed(2), sh:look.shirt, ht:look.hat };
   if (nickname) o.n = nickname;
   if (myId) o.u = myId;
   if (myBoat) o.bt = 1;
@@ -4770,7 +4713,7 @@ function applyPeer(pp){
   const pos = Array.isArray(pr.p) ? pr.p : null;
   if (!p){
     if (!pos) return;
-    const f = new Fisher({ shirt: isHex(pr.sh) ? pr.sh : '#9fb3bf', hat: isHex(pr.ht) ? pr.ht : '#ffd36a', animal: ANIMALS[pr.ak] ? pr.ak : 'bear', fur: isHex(pr.fu) ? pr.fu : null, name:'' });
+    const f = new Fisher({ shirt: isHex(pr.sh) ? pr.sh : '#9fb3bf', hat: isHex(pr.ht) ? pr.ht : '#ffd36a', name:'' });
     f.pos.set(+pos[0]||0, 0, +pos[1]||0); f.rot = +pr.r || 0;
     p = { fisher: f, by: pp.by, target: new THREE.Vector3(+pos[0]||0, 0, +pos[1]||0), rot: +pr.r || 0, y:+pos[2]||0, lastEmote: 0, pres: pr, guest: pp.guest };
     peers.set(pp.peer, p);
@@ -4779,7 +4722,7 @@ function applyPeer(pp){
   p.pres = pr; p.by = pp.by;
   if (pos){ p.target.set(clamp(+pos[0]||0, -90, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
-  p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a', ANIMALS[pr.ak] ? pr.ak : 'bear', isHex(pr.fu) ? pr.fu : null);
+  p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
@@ -4921,7 +4864,7 @@ function visitLog(p, left){
   const uid = typeof p.pres.u === 'string' ? p.pres.u : (p.by || ''), name = peerName(p); if (!uid || name === '釣客' && !p.pres.n) return;
   const nowMs = Date.now(); let v = Visits.list.find(x => x.u === uid);
   if (!v){ v = { u: uid, n: name, first: nowMs, last: nowMs, times: 0, ak: p.pres.ak || '' }; Visits.list.unshift(v); }
-  v.n = name; v.ak = ANIMALS[p.pres.ak] ? p.pres.ak : v.ak; v.last = nowMs; if (!left){ v.times++; v.in = nowMs; } else v.out = nowMs;
+  v.n = name;  v.last = nowMs; if (!left){ v.times++; v.in = nowMs; } else v.out = nowMs;
   Visits.list = Visits.list.filter(x => nowMs - x.last < 7 * 86400e3).sort((a, b) => b.last - a.last).slice(0, 60); LS.set('tide.visits', Visits.list);
 }
 function agoText(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : m < 1440 ? `${Math.round(m / 60)} 小時前` : `${Math.round(m / 1440)} 天前`; }
@@ -4931,7 +4874,7 @@ function renderVisits(body){
   if (!list.length){ body.appendChild(el('p', 'sub', '還沒有紀錄。有人進到你在的大廳時，就會記在這裡（存在這台裝置，保留 7 天）。')); return; }
   const ul = el('ul', 'people');
   for (const v of list.slice(0, 30)){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = online.has(v.u) ? '#3fbf9d' : '#c9d3da';
-    li.append(sw, el('span', '', `${ANIMALS[v.ak] ? ANIMALS[v.ak].icon + ' ' : ''}${v.n}`), el('span', 'st', online.has(v.u) ? '現在在線上' : `${agoText(v.out || v.last)}離開・來過 ${v.times} 次`));
+    li.append(sw, el('span', '', `${v.n}`), el('span', 'st', online.has(v.u) ? '現在在線上' : `${agoText(v.out || v.last)}離開・來過 ${v.times} 次`));
     if (Cloud.on && typeof isFriend === 'function' && !isFriend(v.u)){ const af = el('button', 'tbtn ghost vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(v.u, v.n); }); li.appendChild(af); }
     if (Cloud.on){ const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(v.u, v.n); }); li.appendChild(vi); }
     ul.appendChild(li); }
@@ -5216,7 +5159,7 @@ const npcs = [
   { name:'阿潮・村民', shirt:'#7db7d7', hat:'#f6f0dd', x:1.1, z:-49.2, y:0.28, dir:new THREE.Vector2(0.15,-1).normalize() },
   { name:'小溪・村民', shirt:'#d896c3', hat:'#3fbf9d', x:-17.2, z:-2.4, y:0.28, dir:new THREE.Vector2(-1,0.1).normalize() },
   { name:'老港・漁夫', shirt:'#5b6b7a', hat:'#ffd36a', x:31.4, z:-34.4, y:0.3, dir:new THREE.Vector2(1,-0.1).normalize() },
-].map((n, i) => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, animal:['rabbit', 'cat', 'panda', 'dog'][i % 4], name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.lines = ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
+].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.lines = ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 function updateNpcs(dt, t){
   for (const n of npcs){
     if (t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z); if (Math.random() < 0.35 && camera.position.distanceTo(n.pos) < 25) n.say(n.lines[Math.floor(Math.random()*n.lines.length)], '', 4); n.next = t + rand(6, 15); }
@@ -5395,12 +5338,6 @@ function renderTab(){
     renderMap(body);
   } else if (curTab === 'style'){
     renderCloudBox(body);
-    { const fa = el('div', 'field'); fa.appendChild(el('label', '', '動物')); const sa = el('div', 'animals');
-      for (const [k, v] of Object.entries(ANIMALS)){ const b = el('button', 'anbtn', `${v.icon}<span>${v.name}</span>`); b.innerHTML = `${v.icon}<span>${v.name}</span>`; b.setAttribute('aria-pressed', String(look.animal === k)); b.addEventListener('click', () => { look.animal = k; look.fur = v.fur; saveLook(); renderTab(); }); sa.appendChild(b); }
-      fa.appendChild(sa); body.appendChild(fa);
-      const ff = el('div', 'field'); ff.appendChild(el('label', '', look.animal === 'panda' ? '毛色（熊貓的黑色部分不會變）' : '毛色')); const sf = el('div', 'swatches');
-      FURS.forEach(c => { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', '毛色 ' + c); b.setAttribute('aria-pressed', String(look.fur === c)); b.addEventListener('click', () => { look.fur = c; saveLook(); renderTab(); }); sf.appendChild(b); });
-      ff.appendChild(sf); body.appendChild(ff); }
     const f1 = el('div', 'field'); f1.appendChild(el('label', '', '衣服顏色')); const s1 = el('div', 'swatches');
     SHIRTS.forEach(c => { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', '衣服 ' + c); b.setAttribute('aria-pressed', String(look.shirt === c)); b.addEventListener('click', () => { look.shirt = c; saveLook(); renderTab(); }); s1.appendChild(b); });
     f1.appendChild(s1); body.appendChild(f1);
@@ -5515,7 +5452,6 @@ function renderTab(){
       `成就有 ${ACH.length} 個（釣魚數量、圖鑑、傳說魚、巨物、賺錢、放流、潛水、小島、服飾、好友、每個釣點全收集）。有些成就和等級會給稱號，在「成就」分頁選一個，名字上面就會顯示，大家都看得到。`,
     ]);
     sec('☁️ 存檔、時間、其他', [
-      '在「造型」分頁可以選你的動物（貓咪、小狗、小熊、兔子、狐狸、熊貓）和毛色，還有衣服、帽子的顏色；大家都看得到。試穿預覽可以用手指左右拖曳轉一圈。',
       '紀錄自動存在雲端。到「造型」分頁綁定 Email，換手機或換瀏覽器時就能接回同一份紀錄。',
       '遊戲裡的一天是現實 36 分鐘，大家看到的時間都一樣；晚上路燈、窗戶和燈塔會亮。',
       '右上角相機按鈕是拍照模式；畫質可以在「造型」分頁調整，舊手機選「低」會比較順。',
@@ -5548,7 +5484,7 @@ function pjBox(){
   row.append(inp, go); box.appendChild(row);
   return box;
 }
-function saveLook(){ LS.set('tide.look', look); me.setLook(look.shirt, look.hat, look.animal, look.fur); AvShot.cache.clear(); pushPresence(true); cloudProfile(); }
+function saveLook(){ LS.set('tide.look', look); me.setLook(look.shirt, look.hat); pushPresence(true); cloudProfile(); }
 
 // landscape / fullscreen
 const portraitMQ = matchMedia('(orientation: portrait)');
