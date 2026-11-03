@@ -2906,7 +2906,7 @@ function tagStart(){
 function onTagMsg(msg){
   const d = msg && msg.data; if (!d || typeof d.a !== 'string') return;
   if (msg.sameTab) Tag.me = msg.peer;   // 自己發出去的訊息會帶著自己的編號
-  const from = msg.peer, now = Date.now();
+  let from = msg.peer; const now = Date.now();
   if (!msg.sameTab && isBlockedPeer(from)) return;
   if (d.a === 'open'){
     if (Tag.st !== 'idle') return;
@@ -2928,8 +2928,15 @@ function onTagMsg(msg){
     else if (oldGhost !== d.g) refreshGhostTags();
     refreshGhostTags();
   } else if (d.a === 'tag'){
-    if (Tag.st !== 'run' || from !== Tag.ghost || typeof d.to !== 'string' || !Tag.players.includes(d.to) || d.to === from) return;
+    // 鬼說「抓到你了」：只有被抓的人自己確認（用他自己的真實位置和鬼送來的位置比），確認了才算，大家才換鬼
+    if (Tag.st !== 'run' || from !== Tag.ghost || d.to !== Tag.me || d.to === from) return;
     if (Tag.immune === d.to && now < Tag.immuneUntil) return;
+    if (!isFinite(+d.x) || !isFinite(+d.z) || Math.hypot(me.pos.x - +d.x, me.pos.z - +d.z) > TAG_RANGE + 0.6) return;   // 其實離很遠（網路延遲造成的隔空抓）
+    tagEmit({ a:'caught', by: from });
+  } else if (d.a === 'caught'){
+    if (Tag.st !== 'run' || d.by !== Tag.ghost || !Tag.players.includes(from) || from === d.by) return;
+    if (Tag.immune === from && now < Tag.immuneUntil) return;
+    d.to = from; from = d.by;
     Tag.ghost = d.to; Tag.immune = from; Tag.immuneUntil = now + TAG_IMMUNE;
     ticker(`👻 <b>${esc(tagName(from))}</b> 抓到了 <b>${esc(tagName(d.to))}</b>！`);
     if (d.to === Tag.me){ SFX.bite(); flash('👻 被抓到了！換你當鬼', 1.6); camShake = Math.max(camShake, 0.15); }
@@ -2966,7 +2973,8 @@ function tagTick(){
   // 我是鬼：碰到別人就抓
   if (iAmGhost() && now - Tag.tagSent > 600){
     for (const k of Tag.players){ if (k === Tag.me) continue; if (Tag.immune === k && now < Tag.immuneUntil) continue; const p = peers.get(k); if (!p || !p.fisher.av.g.visible) continue;
-      if (Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < TAG_RANGE){ Tag.tagSent = now; tagEmit({ a:'tag', to:k }); break; } }
+      // 用對方最新傳來的位置（不是畫面上慢慢跟過去的位置），而且畫面上也要真的碰到
+      if (Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z) < TAG_RANGE && Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < TAG_RANGE + 0.3){ Tag.tagSent = now; tagEmit({ a:'tag', to:k, x:+me.pos.x.toFixed(2), z:+me.pos.z.toFixed(2) }); break; } }
   }
   renderTagBar(true);
 }
