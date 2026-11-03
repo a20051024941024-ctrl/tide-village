@@ -3043,7 +3043,7 @@ function cloudCall(fn, args){
   return job;
 }
 async function cloudRefresh(){ try { const { data, error } = await Cloud.sb.rpc('ensure_player'); if (!error) adoptRow(data); } catch(e){} }
-function setCloudUser(u){ Cloud.userId = u.id; Cloud.email = u.email || (u.new_email || null); Cloud.isAnon = !!u.is_anonymous && !u.email; if (!myId) myId = u.id; }
+function setCloudUser(u){ const switched = Cloud.userId && Cloud.userId !== u.id; Cloud.userId = u.id; Cloud.email = u.email || null; Cloud.isAnon = !u.email; if (!myId || switched) myId = u.id; }
 async function cloudLoad(allowImport){
   let { data:row, error } = await Cloud.sb.rpc('ensure_player'); if (error) throw error;
   if (allowImport && row && row.total === 0 && !row.imported && rec.total > 0){
@@ -3070,42 +3070,49 @@ async function loadBoard(){
 async function cloudInit(){
   try {
     const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm');
-    const sb = mod.createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storageKey:'tide.auth' } });
+    const sb = mod.createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:'implicit', storageKey:'tide.auth' } });
     Cloud.sb = sb;
+    const fromLink = /access_token=|error_description=/.test(location.hash);
+    const linkErr = (location.hash.match(/error_description=([^&]+)/) || [])[1];
     let { data:{ session } } = await sb.auth.getSession();
+    if (fromLink){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} }
+    if (linkErr) toast('這個連結已經失效，請重新寄一次。');
+    else if (fromLink && session) setTimeout(() => toast(session.user.email ? `已用 ${esc(session.user.email)} 登入 ✅` : '已登入 ✅'), 1500);
     if (!session){
       const { data, error } = await sb.auth.signInAnonymously();
       if (error) throw new Error(/anonymous/i.test(error.message) ? '伺服器還沒開啟訪客登入' : error.message);
       session = data.session;
     }
     setCloudUser(session.user);
-    sb.auth.onAuthStateChange((ev, ss) => { if (ss && ss.user) setCloudUser(ss.user); });
+    sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
     loadBoard(); setInterval(loadBoard, 60000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && Cloud.on) cloudRefresh(); });
+    document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
     Cloud.status = 'error'; Cloud.err = String(e && e.message || e); console.warn('cloud off', Cloud.err);
   }
   if (!$('#sheet').hidden && curTab === 'style') renderTab();
 }
-// ---- Email 驗證碼：綁定（保存這份紀錄）或在別的裝置登入 ----
-async function cloudSendCode(email, mode){
+// ---- Email 連結：綁定（保存這份紀錄）或在別的裝置登入 ----
+// Supabase 免費方案不能改信件內容，所以用信裡的「Sign in／Confirm」連結（不用驗證碼）。
+const SITE_URL = location.origin + location.pathname;
+async function cloudSendLink(email, mode){
   const sb = Cloud.sb;
-  if (mode === 'bind'){ const { error } = await sb.auth.updateUser({ email }); if (error) throw error; return; }
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } }); if (error) throw error;
+  if (mode === 'bind'){ const { error } = await sb.auth.updateUser({ email }, { emailRedirectTo: SITE_URL }); if (error) throw error; return; }
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false, emailRedirectTo: SITE_URL } }); if (error) throw error;
 }
-async function cloudVerify(email, token, mode){
-  const { data, error } = await Cloud.sb.auth.verifyOtp({ email, token, type: mode === 'bind' ? 'email_change' : 'email' });
-  if (error) throw error;
-  if (data && data.user) setCloudUser(data.user);
-  if (mode === 'login'){ myId = Cloud.userId; await cloudLoad(false); loadBoard(); }
+// 綁定：信裡的連結在哪個瀏覽器打開都可以，這裡每幾秒問一次伺服器是否已經確認
+function watchBind(){
+  clearInterval(Cloud.bindTimer);
+  Cloud.bindTimer = setInterval(async () => {
+    try { const { data } = await Cloud.sb.auth.getUser(); if (data && data.user && data.user.email){ clearInterval(Cloud.bindTimer); setCloudUser(data.user); Cloud.ui.step = 'idle'; toast('紀錄已經保存到你的 Email ✅'); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){}
+  }, 4000);
 }
 function cloudErrText(e){
   const m = String(e && e.message || e);
-  if (/rate|security purposes|too many/i.test(m)) return '寄信太頻繁了，等一下再試。';
-  if (/expired|invalid/i.test(m)) return '驗證碼不對或已過期，請重新寄一次。';
-  if (/already.*registered|already been registered|exists/i.test(m)) return '這個 Email 已經綁定過別的紀錄了，請改用「我已經保存過，登入」。';
+  if (/rate|security purposes|too many|seconds/i.test(m)) return '寄信太頻繁了，等一下再試（免費方案每小時只能寄幾封）。';
+  if (/already.*registered|already been registered|exists/i.test(m)) return '這個 Email 已經保存過別的紀錄了，請改用「我已經保存過，登入」。';
   if (/signups not allowed|not found|user not found/i.test(m)) return '這個 Email 還沒有保存過紀錄。';
   return '發生錯誤：' + m;
 }
@@ -3124,22 +3131,21 @@ function renderCloudBox(body){
     const b1 = el('button', 'tbtn', '綁定 Email 保存紀錄'); b1.addEventListener('click', () => { U.step = 'email'; U.mode = 'bind'; U.msg = ''; renderTab(); });
     const b2 = el('button', 'tbtn ghost', '我已經保存過，登入'); b2.addEventListener('click', () => { U.step = 'email'; U.mode = 'login'; U.msg = ''; renderTab(); });
     row.appendChild(b1); row.appendChild(b2); box.appendChild(row);
+  } else if (U.step === 'sent'){
+    box.appendChild(el('p', 'sub', U.mode === 'bind'
+      ? `📧 確認信已寄到 ${U.email}。打開信，點裡面的確認連結（用哪支手機、哪個瀏覽器打開都可以），這裡會自動顯示「已保存」。沒收到的話看一下垃圾郵件。`
+      : `📧 登入信已寄到 ${U.email}。請用「你要玩遊戲的這個瀏覽器」打開信裡的「Sign in」連結，就會回到遊戲並載入你的紀錄。如果你在 LINE 裡玩，可以長按連結複製，貼到這裡的網址列。`));
+    const row = el('div', 'tankbar'); const back = el('button', 'tbtn ghost', '重新輸入'); back.addEventListener('click', () => { clearInterval(Cloud.bindTimer); U.step = 'email'; U.msg = ''; renderTab(); }); row.appendChild(back); box.appendChild(row);
   } else {
-    box.appendChild(el('p', 'sub', U.mode === 'bind' ? '輸入你的 Email，我們會寄 6 位數驗證碼給你。' : '輸入之前保存紀錄用的 Email。登入後，這個瀏覽器會換成那份紀錄（目前這份訪客紀錄不會保留）。'));
-    const inp = el('input', 'txt'); inp.type = U.step === 'code' ? 'text' : 'email'; inp.inputMode = U.step === 'code' ? 'numeric' : 'email';
-    inp.placeholder = U.step === 'code' ? '6 位數驗證碼' : 'you@example.com'; inp.maxLength = U.step === 'code' ? 10 : 120; inp.value = U.step === 'code' ? '' : U.email; inp.autocomplete = U.step === 'code' ? 'one-time-code' : 'email';
-    box.appendChild(inp);
-    if (U.step === 'code') box.appendChild(el('p', 'sub', `驗證碼已寄到 ${U.email}，沒收到的話看一下垃圾郵件。`));
+    box.appendChild(el('p', 'sub', U.mode === 'bind' ? '輸入你的 Email，我們會寄一封確認信給你。' : '輸入之前保存紀錄用的 Email，我們會寄登入連結給你。登入後，這個瀏覽器會換成那份紀錄（目前這份訪客紀錄不會保留）。'));
+    const inp = el('input', 'txt'); inp.type = 'email'; inp.inputMode = 'email'; inp.autocomplete = 'email'; inp.placeholder = 'you@example.com'; inp.maxLength = 120; inp.value = U.email; box.appendChild(inp);
     if (U.msg) box.appendChild(el('p', 'sub warnmsg', U.msg));
     const row = el('div', 'tankbar');
-    const go = el('button', 'tbtn', U.busy ? '處理中…' : U.step === 'code' ? '確認' : '寄驗證碼'); go.disabled = U.busy;
+    const go = el('button', 'tbtn', U.busy ? '寄送中…' : '寄出'); go.disabled = U.busy;
     go.addEventListener('click', async () => {
-      const v = inp.value.trim(); if (!v) return;
-      U.busy = true; U.msg = ''; renderTab();
-      try {
-        if (U.step === 'email'){ if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) throw new Error('Email 格式不對'); U.email = v; await cloudSendCode(v, U.mode); U.step = 'code'; }
-        else { await cloudVerify(U.email, v.replace(/\s/g, ''), U.mode); U.step = 'idle'; toast(U.mode === 'bind' ? '紀錄已經保存到你的 Email ✅' : '登入成功，已載入你的紀錄 ✅'); }
-      } catch(e){ U.msg = /格式/.test(e.message) ? e.message : cloudErrText(e); }
+      const v = inp.value.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){ U.msg = 'Email 格式不對'; renderTab(); return; }
+      U.busy = true; U.msg = ''; U.email = v; renderTab();
+      try { await cloudSendLink(v, U.mode); U.step = 'sent'; if (U.mode === 'bind') watchBind(); } catch(e){ U.msg = cloudErrText(e); }
       U.busy = false; renderTab();
     });
     const back = el('button', 'tbtn ghost', '取消'); back.addEventListener('click', () => { U.step = 'idle'; U.msg = ''; renderTab(); });
