@@ -278,7 +278,7 @@ function terrainColor(x, z, info, out){
 /* ================= 新版環境（第 1 階段）：經典畫面可在「造型」分頁切回 ================= */
 const CLASSIC = false;   // 新地圖只有新版畫面
 let waterfall = null;
-let skyDome = null, waterSurface = null, sunDisc = null, windowGlass = null, tankWaterMat = null, cookStall = null;
+let skyDome = null, waterSurface = null, sunDisc = null, windowGlass = null, tankWaterMat = null, cookStall = null, aquaVane = null, rainbow = null;
 
 /* ================= RENDERER ================= */
 const canvas = $('#c');
@@ -466,8 +466,41 @@ function castPoint(x, z, dx, dz, dist){
       }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
   });
-  const fall = new THREE.Mesh(new THREE.PlaneGeometry(2.6, fallLen, 1, 6), wfMat);
+  const fall = new THREE.Mesh(new THREE.PlaneGeometry(2.9, fallLen, 1, 6), wfMat);
   fall.position.set(fx, WATER_LEVEL + fallLen / 2, fz); fall.lookAt(fx + fd[0], WATER_LEVEL + fallLen / 2, fz + fd[1]); fall.userData.keep = true; scene.add(fall);
+  // 後面再一層較深、較慢的水，看起來比較厚
+  const wfBack = wfMat.clone(); wfBack.uniforms = { uT: { get value(){ return fishTime.value * 0.6 + 3.7; } } };
+  wfBack.fragmentShader = wfMat.fragmentShader.replace('vec3(0.62, 0.86, 0.95)', 'vec3(0.38, 0.68, 0.84)');
+  const fall2 = new THREE.Mesh(new THREE.PlaneGeometry(3.4, fallLen + 0.1, 1, 6), wfBack);
+  fall2.position.set(fx - fd[0] * 0.18, WATER_LEVEL + fallLen / 2, fz - fd[1] * 0.18); fall2.lookAt(fx + fd[0] * 2, WATER_LEVEL + fallLen / 2, fz + fd[1] * 2); fall2.renderOrder = -1; fall2.userData.keep = true; scene.add(fall2);
+  // 崖頂的小溪流向瀑布、崖邊的石唇
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 3.2, 1, 4), wfMat); top.rotation.x = -Math.PI / 2; const topG = new THREE.Group(); topG.add(top);
+  topG.position.set(fx - fd[0] * 1.7, fallTop - 0.02, fz - fd[1] * 1.7); topG.rotation.y = Math.atan2(fd[0], fd[1]); topG.userData.keep = true; scene.add(topG);
+  { // 自己的亂數，不影響地圖其他東西的位置
+    let sd = 99; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    const lat = [-fd[1], fd[0]], rockM2 = mat('#8f8b80', 0.95, { flatShading:true }), mossM = mat('#6f9a5a', 0.95, { flatShading:true });
+    const lip = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5, 0), rockM2); lip.scale.set(3.2, 0.5, 1.2); lip.position.set(fx - fd[0] * 0.25, fallTop - 0.25, fz - fd[1] * 0.25); lip.rotation.y = Math.atan2(lat[0], lat[1]); lip.castShadow = true; scene.add(lip);
+    for (const side of [-1, 1]) for (let k = 0; k < 6; k++){   // 瀑布兩側疊起來的岩壁
+      const h = 0.35 + k * 0.82, off = 1.75 + rr() * 0.5, sz = 0.55 + rr() * 0.45;
+      const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(sz, 0), k % 3 === 2 ? mossM : rockM2);
+      rk.position.set(fx + lat[0] * side * off - fd[0] * (0.2 + rr() * 0.6), Math.min(fallTop, h), fz + lat[1] * side * off - fd[1] * (0.2 + rr() * 0.6));
+      rk.scale.set(1, 0.75 + rr() * 0.4, 1); rk.rotation.set(rr() * 3, rr() * 3, 0); rk.castShadow = true; scene.add(rk);
+    }
+    // 潭裡的白色水花
+    const foamM = new THREE.ShaderMaterial({ uniforms:{ uT: fishTime }, transparent:true, depthWrite:false,
+      vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader:`uniform float uT; varying vec2 vUv; void main(){ vec2 p = vUv - 0.5; float r = length(p) * 2.0; float a = atan(p.y, p.x);
+        float ring = smoothstep(0.08, 0.0, abs(fract(r * 2.2 - uT * 0.8) - 0.5) - 0.32); float n = sin(a * 9.0 + uT * 3.0) * 0.5 + 0.5;
+        float alpha = (1.0 - smoothstep(0.55, 1.0, r)) * (0.35 + 0.45 * ring * n) * (1.0 - smoothstep(0.0, 0.15, r) * 0.0);
+        gl_FragColor = vec4(vec3(1.0), alpha * 0.85);
+        #include <colorspace_fragment>
+      }` });
+    const foam = new THREE.Mesh(new THREE.CircleGeometry(1.9, 28), foamM); foam.rotation.x = -Math.PI / 2; foam.position.set(fx + fd[0] * 0.9, WATER_LEVEL + 0.04, fz + fd[1] * 0.9); foam.userData.keep = true; scene.add(foam);
+    // 白天的小彩虹（瀑布前的水霧）
+    const rb = new THREE.Group(), cols = ['#ff6b6b', '#ffb347', '#ffe66d', '#7bd389', '#6ec6ff', '#9b8cff'];
+    cols.forEach((c, i) => { const arc = new THREE.Mesh(new THREE.TorusGeometry(2.6 + i * 0.13, 0.065, 4, 36, Math.PI), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:0.22, depthWrite:false, blending:THREE.AdditiveBlending, fog:false })); rb.add(arc); });
+    rb.position.set(fx + fd[0] * 1.6, WATER_LEVEL + 0.1, fz + fd[1] * 1.6); rb.rotation.y = Math.atan2(lat[0], lat[1]) + Math.PI / 2; rb.userData.keep = true; scene.add(rb); rainbow = rb;
+  }
   waterfall = { x: fx + fd[0] * 0.6, z: fz + fd[1] * 0.6 };
   const rockM = mat('#9d998d', 0.95, { flatShading: true });
   for (let i = 0; i < 9; i++){ const a = -1.2 + i * 0.3, r = 2.2 + wr() * 0.6; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55 + wr() * 0.5, 0), rockM); const rx = fx + Math.cos(a + Math.atan2(fd[1], fd[0]) + Math.PI / 2) * r * 0.9, rz = fz + Math.sin(a + Math.atan2(fd[1], fd[0]) + Math.PI / 2) * r * 0.9; rk.position.set(rx, Math.max(terrainH(rx, rz), -0.3) + 0.2, rz); rk.rotation.set(wr() * 3, wr() * 3, 0); rk.castShadow = true; scene.add(rk); }
@@ -597,12 +630,48 @@ function castPoint(x, z, dx, dz, dist){
   // ---- 水族館（大型玻璃魚缸，正面朝南）----
   const [AX, AZ] = AQUA;
   const aq = new THREE.Group(); aq.position.set(AX, 0, AZ); scene.add(aq);
+  // 外觀：石台＋台階、木頭櫃座、海洋壁畫後牆、金屬框玻璃、斜屋頂（瓦片、屋脊、山牆圓窗）、招牌、魚形風向標、燈籠、長椅、盆栽
   aq.add(box([13, 0.4, 8], '#d9cfb8', [0, 0.2, 0]));                       // 石台
+  aq.add(box([13.2, 0.08, 8.2], '#c4b89c', [0, 0.42, 0]));                 // 石台邊緣
+  aq.add(box([4.2, 0.27, 0.4], '#cfc4aa', [0, 0.135, 4.2])); aq.add(box([4.2, 0.13, 0.4], '#cfc4aa', [0, 0.065, 4.55]));   // 台階
   aq.add(box([12.4, 0.5, 4.2], PALETTE.wood, [0, 0.65, -0.6]));           // 魚缸底座
-  aq.add(box([12.4, 4.2, 0.3], '#f6e4bd', [0, 2.5, -2.9]));               // 後牆
-  for (const x of [-6, 6]) for (const z of [-2.9, 3.6]) aq.add(box([0.35, 4.6, 0.35], PALETTE.wood, [x, 2.5, z]));
-  const aroof = new THREE.Mesh(new THREE.ConeGeometry(8.6, 1.8, 4), mat(PALETTE.coral)); aroof.scale.set(1, 1, 0.62); aroof.rotation.y = Math.PI / 4; aroof.position.set(0, 5.6, 0.35); aroof.castShadow = true; aq.add(aroof);
-  aq.add(box([3.6, 0.7, 0.18], PALETTE.coral, [0, 4.6, 3.7]));             // 招牌
+  for (let i = 0; i < 6; i++) aq.add(box([1.7, 0.3, 0.05], '#7a4f33', [-5.1 + i * 2.04, 0.65, 1.52]));   // 底座的木板格
+  aq.add(box([12.5, 0.08, 0.1], '#c9a227', [0, 0.92, 1.52]));             // 金色飾條
+  aq.add(box([12.4, 4.2, 0.3], '#d8eef0', [0, 2.5, -2.9]));               // 後牆
+  for (const [y, c, h] of [[1.1, '#a9dde4', 0.5], [1.55, '#8fd0db', 0.3], [3.6, '#f6fbfb', 0.25]]) aq.add(box([12.2, h, 0.05], c, [0, y, -2.73]));   // 壁畫：海浪層次
+  for (const x of [-6, 6]) for (const z of [-2.9, 3.6]){ aq.add(box([0.38, 4.6, 0.38], PALETTE.wood, [x, 2.5, z])); aq.add(box([0.5, 0.25, 0.5], '#c4b89c', [x, 0.52, z])); }
+  // 玻璃的金屬框
+  const frameM = mat('#2f5f6b', 0.4, { metalness:0.5 });
+  for (const x of [-5.52, 5.52]) for (const z of [-2.3, 1.1]) aq.add(box([0.1, 3.3, 0.1], null, [x, 2.45, z - 0.6 + 0.6], frameM));
+  for (const y of [0.82, 4.1]) aq.add(box([11.15, 0.1, 0.1], null, [0, y, 1.1], frameM));
+  // 斜屋頂（屋脊沿著寬度方向，兩側是山牆）
+  { const W = 13.4, D = 7.3, cz = 0.35, top = 4.8, ang = 0.42, over = 0.45, rise = Math.tan(ang) * D / 2, run = D / 2 + over, L = run / Math.cos(ang), roofC = PALETTE.coral, roofD = '#' + new THREE.Color(roofC).multiplyScalar(0.8).getHexString();
+    for (const sz of [-1, 1]){
+      const slab = box([W, 0.16, L], roofC, [0, top + rise - Math.tan(ang) * run / 2 + 0.07, cz + sz * run / 2]); slab.rotation.x = sz * ang; aq.add(slab);
+      for (const f of [0.25, 0.5, 0.75]){ const st = box([W + 0.04, 0.05, 0.14], roofD, [0, top + rise - Math.tan(ang) * run * f + 0.17, cz + sz * run * f]); st.rotation.x = sz * ang; aq.add(st); }
+    }
+    aq.add(box([W + 0.1, 0.18, 0.26], roofD, [0, top + rise + 0.15, cz]));
+    const tri = new THREE.Shape(); tri.moveTo(-D / 2, 0); tri.lineTo(D / 2, 0); tri.lineTo(0, rise); tri.closePath();
+    const gable = new THREE.ExtrudeGeometry(tri, { depth:0.12, bevelEnabled:false }); gable.rotateY(Math.PI / 2); gable.translate(-0.06, top, cz);
+    for (const sx of [-1, 1]){ const m = new THREE.Mesh(gable, mat('#f6e4bd')); m.position.x = sx * 6.1; m.castShadow = true; aq.add(m);
+      const rw = new THREE.Mesh(new THREE.CircleGeometry(0.42, 18), mat('#9fdbe3', 0.25, { emissive:'#ffe3a0', emissiveIntensity:0.2 })); rw.position.set(sx * 6.18, top + rise * 0.4, cz); rw.rotation.y = sx * Math.PI / 2; aq.add(rw);
+      const rr = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.06, 6, 20), mat('#fffaf0')); rr.position.copy(rw.position); rr.rotation.y = sx * Math.PI / 2; aq.add(rr); }
+    // 屋脊上的魚形風向標
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 6), mat('#4c4c4c', 0.5)); pole.position.set(0, top + rise + 0.6, cz); aq.add(pole);
+    const vane = fishModel(FISH_BY_ID.koi, 0.55); vane.position.set(0, top + rise + 1.05, cz); vane.userData.keep = true; aq.add(vane); aquaVane = vane;
+  }
+  // 招牌（畫布寫字）
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 112; const c2 = cv.getContext('2d');
+    c2.fillStyle = '#1f6f8b'; c2.fillRect(0, 0, 512, 112); c2.strokeStyle = '#ffd36a'; c2.lineWidth = 6; c2.strokeRect(6, 6, 500, 100);
+    c2.fillStyle = '#ffd36a'; c2.beginPath(); c2.ellipse(78, 56, 30, 16, 0, 0, Math.PI * 2); c2.fill(); c2.beginPath(); c2.moveTo(46, 56); c2.lineTo(26, 40); c2.lineTo(26, 72); c2.fill();
+    c2.fillStyle = '#ffffff'; c2.font = 'bold 54px sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText('潮汐水族館', 290, 60);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 0.84), new THREE.MeshBasicMaterial({ map: tex })); sign.position.set(0, 4.35, 3.8); aq.add(sign); }
+  // 燈籠、長椅、盆栽
+  for (const x of [-6, 6]){ const lan = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), mat('#fff3c4', 0.5, { emissive:'#ffd36a', emissiveIntensity:1 })); lan.scale.y = 1.2; lan.position.set(AX + x * 0.93, 3.6, AZ + 3.85); scene.add(lan); lanterns.push(lan); }
+  for (const x of [-3.4, 3.4]){ aq.add(box([1.8, 0.1, 0.5], PALETTE.wood, [x, 0.85, 3.0])); aq.add(box([1.8, 0.45, 0.08], PALETTE.wood, [x, 1.1, 3.27])); for (const dx of [-0.75, 0.75]) aq.add(box([0.1, 0.42, 0.42], '#6e4a2f', [x + dx, 0.62, 3.0])); addBoxCol(AX + x, AZ + 3.1, 1.8, 0.55); }
+  for (const x of [-5.4, 5.4]){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.5, 10), mat('#c9744f')); pot.position.set(x, 0.65, 3.0); pot.castShadow = true; aq.add(pot);
+    const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), mat('#6fae5c', 0.9)); bush.position.set(x, 1.15, 3.0); bush.scale.y = 1.1; bush.castShadow = true; aq.add(bush); }
   // 魚缸本體（之後的魚會放在 tankGroup 裡）
   const tank = new THREE.Group(); tank.position.set(AX, 2.45, AZ - 0.6); scene.add(tank);
   tank.add(box([10.6, 0.25, 3.0], '#e8d9a8', [0, -1.4, 0]));               // 沙
@@ -747,7 +816,8 @@ function batchStatic(){
     scene.updateMatrixWorld(true);
     const groups = new Map();
     (function walk(o){
-      if (skip.has(o)) return;
+      if (skip.has(o) || (o.userData && o.userData.keep)) return;   // 會動的東西（風向標、彩虹、瀑布）不合併
+      if (o.material && o.material.map) return;   // 有貼圖的（招牌）不合併：合併會丟掉 uv，招牌的字會不見
       if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !Array.isArray(o.material) && o.visible){
         const m = o.material;
         const key = [m.type, m.color && m.color.getHex(), m.emissive && m.emissive.getHex(), m.emissiveIntensity, m.roughness, m.metalness, m.transparent, m.opacity, m.side, m.flatShading, m.fog, o.castShadow, o.receiveShadow].join('|');
@@ -3220,6 +3290,8 @@ function updateDayNight(t){
   stars.material.opacity = st * 0.9; stars.visible = st > 0.02; stars.position.copy(camera.position); stars.rotation.y = t * 0.004;
   if (windowGlass) windowGlass.emissiveIntensity = 0.18 + lamp * 1.1;
   if (tankWaterMat) tankWaterMat.emissiveIntensity = lamp * 0.55;   // 晚上水族館會亮
+  if (rainbow) rainbow.visible = DayNight.period === 'day';
+  if (aquaVane) aquaVane.rotation.y = Math.sin(t * 0.3) * 0.8 + Math.sin(t * 1.1) * 0.15;
   if (lhBeam){ lhBeam.visible = lamp > 0.3; lhBeam.material.opacity = lamp * 0.09; lhBeam.rotation.y = t * 0.7; }
   // 陰影跟著太陽／月亮的方向
   sun.position.set(me.pos.x + _sunDir.x * 40, _sunDir.y * 40, me.pos.z + _sunDir.z * 40); sun.target.position.set(me.pos.x, 0, me.pos.z);
