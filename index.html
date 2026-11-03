@@ -75,6 +75,26 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 #brand .mark{width:34px;height:34px;border-radius:10px;background:var(--sea);display:grid;place-items:center;flex:none}
 #brand h1{font-family:var(--f-display);font-size:18px;margin:0;line-height:1.1;font-weight:400;letter-spacing:.04em}
 #online{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);margin-top:2px}
+#coins{margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(255,211,106,.28);color:#8a5a00;white-space:nowrap}
+#coins b{font-weight:800}
+#coins.bump{animation:coinbump .5s ease}
+@keyframes coinbump{0%{transform:scale(1)}35%{transform:scale(1.25)}100%{transform:scale(1)}}
+#act.shop{background:#ffe7a6;color:var(--ink);font-size:17px}
+.shophead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-family:var(--f-display);font-size:18px}
+.coinpill{font-family:var(--f-body);font-size:14px;padding:4px 12px;border-radius:999px;background:rgba(255,211,106,.3);color:#8a5a00;font-weight:800}
+.shoplist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.shoplist li{display:flex;gap:12px;align-items:center;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.shoplist li.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,211,106,.45)}
+.shoplist .tinfo{flex:1;min-width:0}
+.shoplist.cols{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.shoplist canvas{width:64px;height:40px;flex:none}
+.shoplist .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shoplist li > .tbtn,.shoplist .tacts{flex:none}
+.shoplist .meta{white-space:normal}
+.rodsw{width:12px;height:42px;border-radius:6px;flex:none}
+.rodsw.bait0{background:#c8b48a}.rodsw.bait-glow{background:linear-gradient(#9fe3ff,#4fc2cf)}.rodsw.bait-gold{background:linear-gradient(#ffe48a,#e5a52f)}
+.tbtn.warn{background:var(--coral)}
+.tbtn[disabled]{opacity:.6}
 #online .dot{width:8px;height:8px;border-radius:50%;background:#9fb3bf}
 #online.live .dot{background:#38c172;box-shadow:0 0 0 3px rgba(56,193,114,.2)}
 #menu{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -351,7 +371,7 @@ body.photo.nonames #labels{display:none}
 <div id="top">
   <div id="brand" class="panel">
     <div class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3 16c2 1.6 4 1.6 6 0s4-1.6 6 0 4 1.6 6 0"/><path d="M15 3v8a3 3 0 1 1-3-3"/></svg></div>
-    <div><h1>潮汐釣魚村</h1><div id="online"><span class="dot"></span><span id="onlineTxt">單人模式</span></div></div>
+    <div><h1>潮汐釣魚村</h1><div id="online"><span class="dot"></span><span id="onlineTxt">單人模式</span><span id="coins" title="金幣">🪙 <b id="coinTxt">0</b></span></div></div>
   </div>
   <div id="menu">
     <button class="mbtn panel" data-tab="map" aria-label="地圖"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span>地圖</span></button>
@@ -1585,7 +1605,7 @@ function makeAvatar(shirt, hat){
   const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), mat('#c9d6e3', 0.3, { metalness:0.6 })); reel.rotation.z = Math.PI/2; reel.position.set(0.06, 0.25, 0);
   const tip = new THREE.Object3D(); tip.position.y = 2.3;
   rod.add(pole, grip, reel, tip); rod.rotation.x = 0.95; rod.visible = false; g.add(rod);
-  return { g, legL, legR, armL, armR, rod, tip, shirtM, hatM, eyes, headG, blinkAt: Math.random() * 4 };
+  return { g, legL, legR, armL, armR, rod, tip, pole, shirtM, hatM, eyes, headG, blinkAt: Math.random() * 4 };
 }
 function makeBobber(){
   const g = new THREE.Group();
@@ -1913,6 +1933,7 @@ class Fisher {
     if (!CLASSIC){ this.blob = new THREE.Mesh(BLOB_GEO, BLOB_MAT); this.blob.renderOrder = 1; scene.add(this.blob); }
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
+  setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.av.pole.material.color.set(r.color); } }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubUntil = now() + (secs || 5); }
   // 炫耀魚：把魚舉在頭上幾秒
@@ -2090,7 +2111,7 @@ addEventListener('keydown', e => {
   if (!$('#sheet').hidden || !$('#catchCard').hidden){ if (e.key === 'Escape'){ closeSheet(); closeCatch(); } if (e.key === 'Enter' && !$('#catchCard').hidden) closeCatch(); return; }
   keys[e.code] = true;
   if (e.code === 'KeyJ' && !e.repeat){ jump(); return; }
-  if (e.code === 'Space' && !e.repeat && F.phase === 'idle' && !myBoat && nearestSpot().d > 1.7){ e.preventDefault(); jump(); return; }
+  if (e.code === 'Space' && !e.repeat && F.phase === 'idle' && !myBoat && nearestSpot().d > 1.7 && !nearShop()){ e.preventDefault(); jump(); return; }
   if (e.code === 'Space' || e.code === 'KeyF'){ e.preventDefault(); if (!e.repeat) actionDown(); }
   if (e.code === 'Enter'){ e.preventDefault(); $('#chatIn').focus(); }
   if (e.code === 'Digit1') emote('wave'); if (e.code === 'Digit2') openShowPick(); if (e.code === 'Digit3') emote('wow');
@@ -2364,7 +2385,7 @@ function actionDown(){
   const act = $('#act'); act.classList.add('down');
   if (F.phase === 'idle'){
     let spot;
-    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); if (ns.d > 1.7) return; spot = ns.spot; }
+    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); if (ns.d > 1.7){ const sh = nearShop(); if (sh){ act.classList.remove('down'); openShop(sh); } return; } spot = ns.spot; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
   } else if (F.phase === 'waiting'){
@@ -2382,6 +2403,9 @@ function actionUp(){
 }
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
+  // 用掉一個魚餌
+  const bt = curBait(); F.baitUsed = bt;
+  if (bt){ rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
   const dist = 3 + c * 4.5;
   const cp = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, dist);
   const to = new THREE.Vector3(cp[0] + rand(-0.3,0.3), 0.12, cp[1] + rand(-0.3,0.3));
@@ -2398,7 +2422,9 @@ function cancelFishing(msg){
 }
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
-  const w = list.map(f => (f.w || 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1)));
+  const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
+  const kr = rod.rare * (bait ? bait.rare : 1), kl = rod.legend * (bait ? bait.legend : 1);
+  const w = list.map(f => (f.w || 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -2435,7 +2461,8 @@ function updateFishing(dt, t){
     let pull = p * (0.55 + 0.45 * Math.sin(t*2.3 + F.seed) * Math.sin(t*0.7 + F.seed*2));
     if (F.surge > 0){ F.surge -= dt; pull += 0.55 * p; } else if (Math.random() < dt * 0.3 * p){ F.surge = rand(0.4, 0.9); }
     const inZone = F.T > 0.35 && F.T < 0.8;
-    if (F.hold){ F.T += (0.42 + pull*0.9) * dt; F.P += (0.26 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt; }
+    const rod = curRod();
+    if (F.hold){ F.T += (0.42 + pull*0.9) * dt * rod.tension; F.P += (0.26 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel; }
     else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
     me.bend = clamp(F.T, 0, 1); me.dip = 0.5 + pull*0.4; fxReel(dt);
@@ -2458,7 +2485,10 @@ function updateFishing(dt, t){
   $('#fishHud').hidden = F.phase !== 'reeling';
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
-  if (F.phase === 'idle'){ if (near.d < 1.7){ label = '拋竿'; sub = isTouch ? '按住蓄力' : '按住空白鍵'; } else { label = '走到釣點'; cls = 'idle'; } }
+  if (F.phase === 'idle'){ const bt = curBait(); const sh = near.d >= 1.7 ? nearShop() : null;
+    if (near.d < 1.7){ label = '拋竿'; sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : isTouch ? '按住蓄力' : '按住空白鍵'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'sell' ? '賣魚' : '買釣具'; cls = 'shop'; }
+    else { label = '走到釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if (F.phase === 'waiting'){ label = '等待中'; sub = '點一下收竿'; cls = 'idle'; }
   else if (F.phase === 'bite'){ label = '提竿！'; cls = 'bite'; }
@@ -2500,7 +2530,105 @@ function updateJumpers(dt, t){
 }
 
 /* ================= RECORDS / COLLECTION ================= */
-function emptyRec(){ return { total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0 }; }
+/* ================= ECONOMY：金幣、賣魚、釣竿與魚餌 ================= */
+// 目前存在玩家自己的瀏覽器；之後接上伺服器時，賣魚和購買要改由伺服器驗證
+const RODS = [
+  { id:'bamboo', name:'竹釣竿',     price:0,    color:'#3b2a1e', desc:'村裡人人都有的入門竿，輕巧好用。', tension:1, reel:1, rare:1, legend:1 },
+  { id:'carbon', name:'碳纖維釣竿', price:400,  color:'#2f6fb5', desc:'線比較不容易繃斷、收線快一點，稀有魚機率 ×1.2。', tension:0.85, reel:1.12, rare:1.2, legend:1.1 },
+  { id:'deep',   name:'深海巨物竿', price:2500, color:'#c9302c', desc:'對付大型魚的專用竿：拉力大減、收線更快，傳說魚機率 ×1.4。', tension:0.72, reel:1.22, rare:1.3, legend:1.4 },
+];
+const BAITS = [
+  { id:'glow', name:'亮光餌', price:60,  pack:5, desc:'會發光的小蝦，稀有魚機率 ×1.8。', rare:1.8, legend:1.2 },
+  { id:'gold', name:'黃金餌', price:300, pack:3, desc:'傳說中的金色魚餌，傳說魚機率 ×3。', rare:1.3, legend:3 },
+];
+const SELL_BASE = { '常見':10, '稀有':60, '傳說':400 };
+function fishPrice(f, w){ const rel = clamp((w - f.min) / Math.max(0.01, f.max - f.min), 0, 1); return Math.round(SELL_BASE[f.rarity] * (1 + 1.5 * rel)); }
+function curRod(){ return RODS.find(r => r.id === rec.rod) || RODS[0]; }
+function curBait(){ const b = BAITS.find(b => b.id === rec.baitOn); return b && (rec.bait[b.id] || 0) > 0 ? b : null; }
+function renderCoins(){ const t = $('#coinTxt'); if (t) t.textContent = rec.coins.toLocaleString(); }
+function addCoins(n){ rec.coins = Math.max(0, rec.coins + n); saveRecLocal(); renderCoins(); const c = $('#coins'); if (c){ c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); } }
+function sellFish(ts){
+  const i = rec.tank.findIndex(x => x.t === ts); if (i < 0) return 0;
+  const x = rec.tank[i], f = FISH_BY_ID[x.f], price = fishPrice(f, x.w);
+  rec.tank.splice(i, 1); if (rec.show) rec.show = rec.show.filter(t => t !== ts);
+  rec.sold++; rec.earned += price; addCoins(price); return price;
+}
+const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'海邊商店', mode:'sell' } ];
+function nearShop(){
+  if (myBoat) return null;
+  for (const sh of SHOPS){ const l = LANDMARKS.find(l => l.id === sh.id); if (l && Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) < 4.8) return sh; }
+  return null;
+}
+let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
+function openShop(sh){ ensureAudio(); shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function renderShop(body){
+  const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  const seg = el('div', 'seg');
+  [['sell','賣魚'],['rod','釣竿'],['bait','魚餌']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
+  body.appendChild(seg);
+  if (shopMode === 'sell'){
+    const locked = new Set(rec.show || []);
+    const list = rec.tank.filter(x => !locked.has(x.t)).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
+    body.appendChild(el('p', 'sub', `魚缸裡的魚可以賣掉換金幣，越重越值錢。${locked.size ? `你挑去水族館展示的 ${locked.size} 條不會出現在這裡。` : ''}`));
+    if (!list.length){ body.appendChild(el('div', 'empty', '沒有可以賣的魚。去釣幾條再回來吧！')); return; }
+    const commons = list.filter(x => FISH_BY_ID[x.f].rarity === '常見'), csum = commons.reduce((a, x) => a + fishPrice(FISH_BY_ID[x.f], x.w), 0);
+    if (commons.length){
+      const all = el('button', 'tbtn' + (sellConfirm ? ' warn' : ''), sellConfirm ? `確定賣掉 ${commons.length} 條常見魚？` : `賣掉全部常見魚（${commons.length} 條，+${csum}）`);
+      all.addEventListener('click', () => { if (!sellConfirm){ sellConfirm = 1; renderTab(); return; } let got = 0; for (const x of commons) got += sellFish(x.t); sellConfirm = 0; afterSell(got, commons.length); });
+      const bar = el('div', 'tankbar'); bar.appendChild(all); body.appendChild(bar);
+    }
+    const ul = el('ul', 'shoplist cols');
+    for (const x of list){
+      const f = FISH_BY_ID[x.f], price = fishPrice(f, x.w), li = el('li', ''); li.appendChild(fishCanvas(f, true, 56, 36));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name)); d.appendChild(el('div', 'meta', `${fmtKg(x.w)}・${f.rarity}`)); li.appendChild(d);
+      const acts = el('div', 'tacts'), b = el('button', 'tbtn', `賣 🪙${price}`);
+      b.addEventListener('click', () => afterSell(sellFish(x.t), 1));
+      acts.appendChild(b); li.appendChild(acts); ul.appendChild(li);
+    }
+    body.appendChild(ul);
+  } else if (shopMode === 'rod'){
+    body.appendChild(el('p', 'sub', '換一支好竿子，拉線時比較不容易斷，也更容易遇到稀有魚。'));
+    const ul = el('ul', 'shoplist');
+    for (const r of RODS){
+      const owned = rec.rods.includes(r.id), using = rec.rod === r.id, li = el('li', using ? 'on' : '');
+      const sw = el('span', 'rodsw'); sw.style.background = r.color; li.appendChild(sw);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name)); d.appendChild(el('div', 'meta', r.desc)); li.appendChild(d);
+      const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '使用中' : owned ? '換上' : `買 🪙${r.price.toLocaleString()}`);
+      b.disabled = using;
+      b.addEventListener('click', () => {
+        if (!owned){ if (rec.coins < r.price){ toast(`金幣不夠，還差 🪙${(r.price - rec.coins).toLocaleString()}`); return; } rec.rods.push(r.id); addCoins(-r.price); SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); }
+        rec.rod = r.id; saveRecLocal(); me.setRod(r.id); pushPresence(true); renderTab();
+      });
+      li.appendChild(b); ul.appendChild(li);
+    }
+    body.appendChild(ul);
+  } else {
+    body.appendChild(el('p', 'sub', '選一種魚餌來用，每拋一次竿用掉一個。用完會自動換回普通魚餌（免費）。'));
+    const ul = el('ul', 'shoplist');
+    const none = el('li', !curBait() ? 'on' : ''); none.appendChild(el('span', 'rodsw bait0'));
+    const d0 = el('div', 'tinfo'); d0.appendChild(el('div', 'n', '普通魚餌')); d0.appendChild(el('div', 'meta', '免費、用不完。')); none.appendChild(d0);
+    const b0 = el('button', 'tbtn' + (!curBait() ? ' ghost' : ''), !curBait() ? '使用中' : '換上'); b0.disabled = !curBait(); b0.addEventListener('click', () => { rec.baitOn = null; saveRecLocal(); renderTab(); }); none.appendChild(b0); ul.appendChild(none);
+    for (const bt of BAITS){
+      const n = rec.bait[bt.id] || 0, using = rec.baitOn === bt.id && n > 0, li = el('li', using ? 'on' : '');
+      li.appendChild(el('span', 'rodsw bait-' + bt.id));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${bt.name}　×${n}`)); d.appendChild(el('div', 'meta', `${bt.desc} 一包 ${bt.pack} 個。`)); li.appendChild(d);
+      const acts = el('div', 'tacts');
+      const buy = el('button', 'tbtn', `買一包 🪙${bt.price}`);
+      buy.addEventListener('click', () => { if (rec.coins < bt.price){ toast(`金幣不夠，還差 🪙${bt.price - rec.coins}`); return; } rec.bait[bt.id] = n + bt.pack; if (!curBait()) rec.baitOn = bt.id; addCoins(-bt.price); SFX.chat(); renderTab(); });
+      acts.appendChild(buy);
+      if (n > 0 && !using){ const u = el('button', 'tbtn ghost', '換上'); u.addEventListener('click', () => { rec.baitOn = bt.id; saveRecLocal(); renderTab(); }); acts.appendChild(u); }
+      li.appendChild(acts); ul.appendChild(li);
+    }
+    body.appendChild(ul);
+  }
+}
+function afterSell(got, n){
+  if (!got) return;
+  buildTank(); SFX.catch(); flash(`+${got} 金幣`, 1.1);
+  logMsg('', `你賣了 ${n} 條魚，得到 ${got} 金幣`, true); renderTab();
+}
+
+function emptyRec(){ return { total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
 const SHOW_MAX = 100, KEEP_MAX = 200;
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || ++others <= KEEP_MAX); }
@@ -2512,9 +2640,16 @@ function normRec(r){
   for (const f of FISH){ if (r.best && Number(r.best[f.id]) > 0) e.best[f.id] = Number(r.best[f.id]); if (r.count && Number(r.count[f.id]) > 0) e.count[f.id] = Number(r.count[f.id]); }
   if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX).map(x => ({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }));
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
+  // 經濟（金幣、釣竿、魚餌）
+  e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
+  if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
+  e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
+  if (r.bait && typeof r.bait === 'object') for (const b of BAITS){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
+  e.baitOn = BAITS.some(b => b.id === r.baitOn) ? r.baitOn : null;
   return e;
 }
 let rec = normRec(LS.get('tide.rec', null));
+me.setRod(rec.rod); renderCoins();
 function recordCatch(f, w){
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
@@ -2643,7 +2778,7 @@ function showCatch(f, w, res){
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '圖鑑新登錄'; b.appendChild(x); }
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '個人新紀錄'; b.appendChild(x); }
   $('#ccName').textContent = f.name;
-  $('#ccW').innerHTML = w.toFixed(2) + '<small>kg</small>';
+  $('#ccW').innerHTML = w.toFixed(2) + '<small>kg</small>' + `<small class="ccp">・可賣 🪙${fishPrice(f, w)}</small>`;
   $('#ccDesc').textContent = f.desc;
   $('#catchCard').hidden = false; uiBlocked = true;
   setTimeout(() => $('#ccOk').focus(), 50);
@@ -2744,6 +2879,7 @@ function presenceObj(){
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
   if (myShow && Date.now() - myShow.at < 6500) o.s = myShow;
+  if (rec.rod !== 'bamboo') o.rd = rec.rod;
   return o;
 }
 function pushPresence(force){
@@ -2776,6 +2912,7 @@ function applyPeer(pp){
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   p.fisher.sitting = !!pr.bt;
+  p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
   const fi = pr.f && typeof pr.f === 'object' ? pr.f : null;
@@ -2905,17 +3042,19 @@ function updateNpcs(dt, t){
 
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
-function openSheet(tab){ curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
+function openSheet(tab){ sheetOpenedAt = performance.now(); curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
 function closeSheet(){ if ($('#sheet').hidden) return; $('#sheet').hidden = true; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab)));
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
 $('#closeSheet').addEventListener('click', closeSheet);
-$('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+let sheetOpenedAt = 0;   // 用按鈕打開選單的那一下，放開手指時的 click 不要把它關掉
+$('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet' && performance.now() - sheetOpenedAt > 450) closeSheet(); });
 
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function renderTab(){
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
   const body = $('#sheetBody'); body.textContent = '';
+  if (curTab === 'shop'){ renderShop(body); return; }
   if (curTab === 'dex'){
     const got = FISH.filter(f => rec.count[f.id]).length;
     body.appendChild(el('p', 'sub', `已收集 ${got} / ${FISH.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。`));
@@ -3031,6 +3170,7 @@ function renderTab(){
     const k = el('div', 'kbd');
     [['移動', isTouch ? '左下搖桿' : 'WASD / 方向鍵（Shift 跑步）'], ['轉視角', isTouch ? '在畫面上拖曳' : '拖曳滑鼠・滾輪縮放'], ['拋竿', '按住蓄力，放開拋出；拋越遠越容易遇到稀有魚'], ['提竿', '浮標猛沉、出現「!」時馬上按'], ['拉線', '按住收線、放開卸力，讓拉力停在綠色區'], ['聊天', isTouch ? '💬 按鈕' : 'Enter'], ['表情', isTouch ? '右下表情按鈕' : '1 / 2 / 3'], ['音樂', '右上角音符按鈕開關背景音樂（喇叭按鈕是音效）']].forEach(([a, b]) => { k.appendChild(el('kbd', '', a)); k.appendChild(el('span', '', b)); });
     body.appendChild(k);
+    body.appendChild(el('p', 'sub', '賺金幣：走到「海邊商店」把魚缸裡的魚賣掉，越重越值錢。到「釣具店」可以買更好的釣竿和魚餌：好竿子拉線時比較不容易斷，魚餌能提高稀有魚和傳說魚的機率。'));
     body.appendChild(el('p', 'sub', '魚的 3D 模型：Animated Fish Pack by Quaternius（CC0 授權，quaternius.com）。'));
   }
 }
