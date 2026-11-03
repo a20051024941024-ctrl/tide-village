@@ -4871,7 +4871,7 @@ function useRoom(r){
 /* ---- 公共大廳：用 Supabase Realtime，打開遊戲就會看到其他正在玩的人 ---- */
 // 和 PJRoom 一樣的介面（connected／on／onPeers／onConnection／presence／emit／leave），所以 useRoom() 不用改。
 // 位置用 broadcast 送（最多每秒 4 次、只有變動時才送）；presence 只拿來知道誰進來、誰離開。
-const LOBBY_MAX = 16, LOBBY_COUNT = 5;
+const LOBBY_MAX = 16, LOBBY_COUNT = 12;
 function SBRoom(sb, name, key, myName){
   const R = { isLobby:true, code:null, lobbyNo:0 }; let ch = null, live = false, myPres = null, lastSent = '', flushT = 0, lastAt = 0;
   const lis = {}, peerFns = [], connFns = [], pres = {}, seen = {};
@@ -4881,7 +4881,7 @@ function SBRoom(sb, name, key, myName){
   const pp = id => ({ peer:id, isMe:false, kind:'viewer', presence: pres[id] || {}, by: (pres[id] && pres[id].u) || id, guest:false });
   function send(force){
     if (!live || !myPres) return; const t = performance.now();
-    if (!force && t - lastAt < 240){ if (!flushT) flushT = setTimeout(() => { flushT = 0; send(); }, 250); return; }
+    if (!force && t - lastAt < 380){ if (!flushT) flushT = setTimeout(() => { flushT = 0; send(); }, 390); return; }   /* 每秒最多送 2～3 次，省雲端流量 */
     const sv = JSON.stringify(myPres); if (!force && sv === lastSent) return; lastSent = sv; lastAt = t;
     ch.send({ type:'broadcast', event:'p', payload:{ id:key, p:myPres } }).catch(() => {});
   }
