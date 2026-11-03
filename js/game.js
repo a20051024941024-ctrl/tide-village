@@ -1992,6 +1992,7 @@ function renderMap(body){
     const label = on ? tp.label : '？？？'; const w = ctx.measureText(label).width + 12;
     ctx.fillStyle = 'rgba(24,51,74,.8)'; ctx.fillRect(px - w / 2, py - 32, w, 20); ctx.fillStyle = '#fff'; ctx.fillText(label, px, py - 17);
   }
+  for (const sp of secretSpots){ const [sx, sy] = toPx(sp.x, sp.z); if (sx < 0 || sy < 0 || sx > S || sy > S) continue; ctx.font = '20px sans-serif'; ctx.fillText('🤫', sx, sy + 7); }   // 只有自己看得到的祕密窩點
   const [mx, my] = toPx(me.pos.x, me.pos.z);   // 你在這裡
   ctx.save(); ctx.translate(mx, my); ctx.rotate(-me.rot + Math.PI); ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 8); ctx.lineTo(0, 4); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
   cv.addEventListener('click', e => {
@@ -2155,7 +2156,9 @@ function doCast(){
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
   me.flying = { from, to, t:0, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } };
-  F.phase = 'waiting'; F.waitUntil = now() + 0.8 + rand(2.4, 6.5) - c * 0.8; F.nibbleAt = now() + 1.2 + Math.random()*1.5;
+  F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
+  F.phase = 'waiting'; F.waitUntil = now() + (0.8 + rand(2.4, 6.5) - c * 0.8) * (F.chumB ? F.chumB.wait : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
+  if (F.chumB) setTimeout(() => toast(`🍚 浮標落在${F.chumB.name}的窩點裡！`), 500);
   SFX.cast(); pushPresence(true);
 }
 function cancelFishing(msg){
@@ -2167,7 +2170,7 @@ const LEG_K = { harbor: 4.0, other: 0.75 };
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
-  const fb = F.buffAt || null, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1), kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1);
+  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1), kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1);
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
   // 傳說魚：每個釣點的傳說魚加起來是固定的機率（不會因為種類多就特別常出現），外海比較高
@@ -2302,13 +2305,14 @@ function updateFishing(dt, t){
   }
   // HUD + button
   $('#chargeHud').hidden = F.phase !== 'charging';
+  { const cb = $('#chumBtn'), show = !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
   if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
     if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'; }
-    else if (sh){ label = sh.label; sub = sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
@@ -2858,6 +2862,50 @@ function renderTagBar(timeOnly){
 }
 
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
+// 渡船：港口的船夫阿海，可以載你到祕密窩點或外海
+const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'北邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
+let ferryNpc = null; const Ferry = { on:false };
+function updateFerry(){
+  if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
+  if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
+  if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
+}
+function ferryTo(x, z, label){
+  closeSheet(); const b = boats.find(b => b.dock.id === 'harbor'); if (!b) return;
+  // 找附近夠深的水
+  let px = x, pz = z; if (!waterAt(px, pz)){ for (let r = 1; r < 12; r += 1){ let ok = false; for (let k = 0; k < 12; k++){ const a = k / 12 * Math.PI * 2, qx = x + Math.cos(a) * r, qz = z + Math.sin(a) * r; if (waterAt(qx, qz)){ px = qx; pz = qz; ok = true; break; } } if (ok) break; } }
+  if (myBoat) leaveFerry(true);
+  const fx = $('#fadeFx'); fx.classList.add('on'); SFX.cast();
+  setTimeout(() => { if (F.phase !== 'idle') cancelFishing(); const back = 2.4; b.m.position.set(px - back, WATER_LEVEL, pz); b.m.rotation.set(0, Math.PI / 2, 0); boardBoat(b); me.rot = Math.PI / 2; cam.yaw = me.rot + Math.PI;
+    Ferry.on = true; Ferry.label = label; renderFerryBar(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120); flash(`🚤 到了：${label}`, 1.4); }, 420);
+}
+function leaveFerry(silent){
+  const b = myBoat; if (!b) return; if (F.phase !== 'idle') cancelFishing();
+  myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); Ferry.on = false; renderFerryBar();
+  if (!silent){ const h = TRAVEL.find(t => t.id === 'harbor'); travelTo(h || TRAVEL[0]); toast('🚤 阿海把你載回港口了'); }
+}
+function renderFerryBar(){
+  let bar = $('#ferryBar'); if (!Ferry.on){ if (bar) bar.hidden = true; return; }
+  if (!bar){ bar = document.createElement('div'); bar.id = 'ferryBar'; bar.className = 'panel'; document.body.appendChild(bar); }
+  bar.hidden = false; bar.innerHTML = ''; bar.appendChild(el('span', '', `🚤 ${Ferry.label}`));
+  const b = el('button', 'tbtn ghost', '回港口'); b.addEventListener('click', () => leaveFerry()); bar.appendChild(b);
+}
+function renderFerry(body){
+  body.appendChild(el('div', 'shophead')).innerHTML = `<b>🚤 ${FERRY.name}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
+  body.appendChild(el('p', 'sub', '「要去哪裡？我的船很快的！」到了以後可以在船上釣魚、也可以自己划，想回來按「回港口」就好。'));
+  body.appendChild(el('div', 'dexhead', '🤫 你的祕密窩點'));
+  const ul = el('ul', 'shoplist');
+  if (!secretSpots.length) ul.appendChild(el('li', '', '還沒有祕密窩點。在水邊按「🍚 打窩」→「🤫 提前打」，就能做一個只有你知道的窩點。'));
+  for (const sp of secretSpots){ const pw = secretPower(sp), li = el('li'), mins = Math.max(0, Math.round((SECRET_LIFE - (Date.now() - sp.at)) / 60000));
+    li.appendChild(el('span', 'dishic', '🍚')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${sp.where}・${CHUM_BY_ID[sp.type].name}`)); d.appendChild(el('div', 'sub2', pw >= 1 ? `🔥 效果最強！還剩 ${mins} 分鐘` : `發酵中 ${Math.round(pw * 100)}%・還剩 ${mins} 分鐘`)); li.appendChild(d);
+    const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(sp.x, sp.z, `祕密窩點（${sp.where}）`)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+  body.appendChild(ul);
+  body.appendChild(el('div', 'dexhead', '🌊 外海'));
+  const u2 = el('ul', 'shoplist');
+  for (const d0 of FERRY.dest){ const li = el('li'); li.appendChild(el('span', 'dishic', '🌊')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', d0.name)); d.appendChild(el('div', 'sub2', d0.desc)); li.appendChild(d);
+    const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(d0.x, d0.z, d0.name)); a.appendChild(b); li.appendChild(a); u2.appendChild(li); }
+  body.appendChild(u2);
+}
 const QUEST_NPC = {
   chief: { name:'村長 阿土伯', at:[7.2, 1.2], shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
   wang:  { name:'漁夫 老王',   at:[29.5, -23.2], shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
@@ -3197,6 +3245,107 @@ function finishCooking(){
   setTimeout(() => { G.on = false; $('#cookGame').hidden = true; uiBlocked = false; cookMode = 'mine'; openSheet('cook'); }, 1500);
 }
 
+/* ================= 打窩：先把窩料丟到水裡，魚會聚過來（更快上鉤、稀有魚更多）================= */
+// 價格要跟 supabase/013_chum.sql 的 _bait_info 一樣
+const CHUMS = [
+  { id:'chum_rice',  name:'酒米窩料',   price:40,  pack:3, color:'#efe3b8', wait:0.6,  rare:1.15, legend:1.0, dur:120, fresh:true,  desc:'用酒泡過的米和粗糠，淡水魚最愛。在河、湖、溪效果比較好。' },
+  { id:'chum_krill', name:'南極蝦窩料', price:120, pack:3, color:'#f2a48a', wait:0.5,  rare:1.35, legend:1.15, dur:150, sea:true,   desc:'磨碎的南極蝦，海水魚聞到就會游過來。在海邊、外海、小島效果比較好。' },
+  { id:'chum_gold',  name:'黃金特製窩', price:500, pack:2, color:'#ffd36a', wait:0.45, rare:1.5,  legend:1.8, dur:180,              desc:'釣具店老闆的祕方，什麼水域都有效，連傳說魚都會被吸引過來。' },
+];
+const CHUM_BY_ID = Object.fromEntries(CHUMS.map(c => [c.id, c]));
+const SEA_SPOTS = new Set(['sea', 'harbor', 'isle']);
+const chumZones = []; let chumTex = null;
+function chumTexture(){
+  if (chumTex) return chumTex; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'), g = c.createRadialGradient(64, 64, 4, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,0.85)'); g.addColorStop(0.55, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 160; i++){ c.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.5})`; const a = Math.random() * 6.28, r = Math.random() * 56; c.fillRect(64 + Math.cos(a) * r, 64 + Math.sin(a) * r, 2, 2); }
+  chumTex = new THREE.CanvasTexture(cv); return chumTex;
+}
+function addChumZone(x, z, type, owner){
+  const C = CHUM_BY_ID[type]; if (!C) return null;
+  while (chumZones.length >= 6){ removeChumZone(chumZones[0]); }
+  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  const patch = new THREE.Mesh(new THREE.CircleGeometry(2.8, 32), new THREE.MeshBasicMaterial({ map: chumTexture(), color: C.color, transparent:true, opacity:0, depthWrite:false })); patch.rotation.x = -Math.PI / 2; patch.position.y = WATER_LEVEL + 0.035; patch.renderOrder = 2; g.add(patch);
+  const shadowM = new THREE.MeshBasicMaterial({ color:'#123048', transparent:true, opacity:0, depthWrite:false }), fish = [];
+  for (let i = 0; i < 6; i++){ const f = new THREE.Mesh(new THREE.CircleGeometry(0.2, 12), shadowM); f.scale.set(1.9 + Math.random(), 0.8, 1); f.rotation.x = -Math.PI / 2; f.position.y = WATER_LEVEL + 0.03; g.add(f); fish.push({ m:f, r: 0.6 + Math.random() * 1.6, a: Math.random() * 6.28, sp: (0.5 + Math.random() * 0.8) * (Math.random() < 0.5 ? -1 : 1) }); }
+  const zn = { x, z, type, owner, born: now(), until: now() + C.dur, g, patch, shadowM, fish };
+  chumZones.push(zn); ripple(x, z, true); FX.emit(x, 0.3, z, 18, C.color, 1.0, 2.0, 0.9); return zn;
+}
+function removeChumZone(zn){ const i = chumZones.indexOf(zn); if (i >= 0) chumZones.splice(i, 1); scene.remove(zn.g); }
+function updateChum(dt, t){
+  for (let i = chumZones.length - 1; i >= 0; i--){
+    const zn = chumZones[i], left = (zn.until - t) / CHUM_BY_ID[zn.type].dur, age = t - zn.born;
+    if (left <= 0){ removeChumZone(zn); continue; }
+    zn.patch.material.opacity = Math.min(1, age * 1.5) * (0.25 + 0.4 * left); zn.patch.rotation.z += dt * 0.05;
+    zn.shadowM.opacity = clamp((age - 2.5) / 4, 0, 1) * 0.45 * (0.4 + 0.6 * left);   // 過幾秒魚影才聚過來
+    for (const f of zn.fish){ f.a += f.sp * dt; f.m.position.x = Math.cos(f.a) * f.r; f.m.position.z = Math.sin(f.a) * f.r; f.m.rotation.z = -f.a + (f.sp > 0 ? -Math.PI / 2 : Math.PI / 2); }
+    if (Math.random() < dt * 2.5 && Math.hypot(camera.position.x - zn.x, camera.position.z - zn.z) < 40) FX.emit(zn.x + (Math.random() - 0.5) * 3, WATER_LEVEL + 0.05, zn.z + (Math.random() - 0.5) * 3, 1, CHUM_BY_ID[zn.type].color, 0.2, 0.8, 0.6);
+    if (Math.random() < dt * 0.8) ripple(zn.x + (Math.random() - 0.5) * 2.5, zn.z + (Math.random() - 0.5) * 2.5);
+  }
+  if (ChumFly.on){ ChumFly.t += dt / 0.6; const k = Math.min(1, ChumFly.t); ChumFly.m.position.lerpVectors(ChumFly.from, ChumFly.to, k); ChumFly.m.position.y += Math.sin(k * Math.PI) * 2.2;
+    if (k >= 1){ ChumFly.on = false; scene.remove(ChumFly.m); SFX.plop();
+      if (ChumFly.secret){ ripple(ChumFly.to.x, ChumFly.to.z, true); while (secretSpots.length >= SECRET_MAX){ const old = secretSpots.shift(); const g = secretMarks.get(old.id); if (g) scene.remove(g); secretMarks.delete(old.id); }
+        const sp = { id: Date.now(), x: +ChumFly.to.x.toFixed(2), z: +ChumFly.to.z.toFixed(2), type: ChumFly.type, at: Date.now(), where: spotName(ChumFly.to.x, ChumFly.to.z) }; secretSpots.push(sp); saveSecrets(); secretMark(sp);
+        toast(`🤫 祕密窩點做好了（${sp.where}）！窩料會慢慢發酵，大約 10 分鐘後效果最強。只有你看得到那顆橘色浮標。`); }
+      else { const zn = addChumZone(ChumFly.to.x, ChumFly.to.z, ChumFly.type, 'me'); if (zn) toast(`🍚 打好窩了！在這附近下竿，魚會比較快上鉤（${Math.round(CHUM_BY_ID[ChumFly.type].dur / 60)} 分鐘左右）`); } } }
+}
+const ChumFly = { on:false };
+// ---- 提前打窩：祕密窩點（只有自己知道，存在這台裝置；效果慢慢醞釀，10 分鐘後最強，維持 1 小時）----
+const SECRET_GROW = 10 * 60 * 1000, SECRET_LIFE = 60 * 60 * 1000, SECRET_MAX = 3;
+let secretSpots = (LS.get('tide.secretChum', []) || []).filter(x => x && CHUM_BY_ID[x.type] && Date.now() - x.at < SECRET_LIFE).slice(0, SECRET_MAX);
+const secretMarks = new Map();
+function saveSecrets(){ LS.set('tide.secretChum', secretSpots); }
+function secretPower(sp){ const age = Date.now() - sp.at; return age > SECRET_LIFE ? 0 : clamp(0.15 + 0.85 * age / SECRET_GROW, 0.15, 1); }
+function secretMark(sp){
+  // 只有自己看得到的小浮標＋淡淡的窩
+  const g = new THREE.Group(); g.position.set(sp.x, WATER_LEVEL, sp.z); scene.add(g);
+  const bo = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), mat('#ff7a2a', 0.4, { emissive:'#ff7a2a', emissiveIntensity:0.4 })); bo.position.y = 0.08; g.add(bo);
+  const st = box([0.03, 0.55, 0.03], '#333', [0, 0.35, 0]); g.add(st); const fl = box([0.26, 0.16, 0.01], '#ffd36a', [0.14, 0.55, 0]); g.add(fl);
+  const pt = new THREE.Mesh(new THREE.CircleGeometry(2.4, 28), new THREE.MeshBasicMaterial({ map: chumTexture(), color: CHUM_BY_ID[sp.type].color, transparent:true, opacity:0.18, depthWrite:false })); pt.rotation.x = -Math.PI / 2; pt.position.y = 0.03; g.add(pt);
+  g.userData = { bo, pt }; secretMarks.set(sp.id, g); return g;
+}
+function updateSecrets(t){
+  for (let i = secretSpots.length - 1; i >= 0; i--){ const sp = secretSpots[i], pw = secretPower(sp);
+    if (pw <= 0){ const g = secretMarks.get(sp.id); if (g) scene.remove(g); secretMarks.delete(sp.id); secretSpots.splice(i, 1); saveSecrets(); toast('🍚 有一個祕密窩點的窩料散掉了'); continue; }
+    let g = secretMarks.get(sp.id); if (!g) g = secretMark(sp);
+    const vis = !onIsle && !House.on; if (g.visible !== vis) g.visible = vis;
+    g.userData.bo.position.y = 0.08 + Math.sin(t * 2 + sp.x) * 0.04; g.userData.pt.material.opacity = 0.08 + 0.22 * pw; }
+}
+function secretAt(x, z){ let best = null; for (const sp of secretSpots){ if (Math.hypot(x - sp.x, z - sp.z) < 3.0 && (!best || secretPower(sp) > secretPower(best))) best = sp; } return best; }
+function spotName(x, z){ const id = waterSpotId(x, z), s = SPOT_BY_ID[id]; return s ? s.short : '水邊'; }
+function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || mySeat || House.on) return null; if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
+function myChums(){ return CHUMS.filter(c => (rec.bait[c.id] || 0) > 0); }
+function throwChum(type, secret){
+  const C = CHUM_BY_ID[type], sp = chumSpot(); if (!C || !sp){ toast('要在水邊才能打窩'); return; } if (!(rec.bait[type] > 0)){ toast(`沒有${C.name}了，到釣具店買`); return; }
+  const cp = castPoint(sp.pos.x, sp.pos.z, sp.dir.x, sp.dir.y, 4.5), to = new THREE.Vector3(cp[0], WATER_LEVEL, cp[1]), from = new THREE.Vector3(); me.av.armR.getWorldPosition(from);
+  me.rot = Math.atan2(sp.dir.x, sp.dir.y);
+  rec.bait[type]--; if (rec.bait[type] <= 0) delete rec.bait[type]; saveRecLocal(); cloudCall('use_bait', { p_bait: type });
+  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), mat(C.color, 0.8)); scene.add(m);
+  Object.assign(ChumFly, { on:true, t:0, from, to, m, type }); SFX.cast(); me.say('🍚', 'emote', 1.5);
+  ChumFly.secret = !!secret;
+  if (!secret && room && room.connected()) room.emit('chum', { x:+cp[0].toFixed(2), z:+cp[1].toFixed(2), ty:type }).catch(() => {});   // 祕密窩點不告訴別人
+  { const pk = $('#chumPick'); if (pk) pk.hidden = true; }
+}
+function chumAt(x, z){ let best = null; for (const zn of chumZones){ const d = Math.hypot(x - zn.x, z - zn.z); if (d < 3.2 && (!best || zn.until > best.until)) best = zn; } return best; }
+function chumBonus(zn, spotId, secret){
+  if (secret){ const C = CHUM_BY_ID[secret.type], pw = secretPower(secret), sea = SEA_SPOTS.has(spotId), fit = C.fresh ? (sea ? 0.45 : 1) : C.sea ? (sea ? 1 : 0.5) : 1, k = pw * fit;
+    const b2 = { wait: 1 - (1 - C.wait * 0.85) * k, rare: 1 + (C.rare * 1.25 - 1) * k, legend: 1 + (C.legend * 1.35 - 1) * k, name: `祕密窩點（${Math.round(pw * 100)}%）` };
+    const b1 = chumBonus(zn, spotId); return b1 && b1.rare > b2.rare ? b1 : b2; }
+  if (!zn) return null; const C = CHUM_BY_ID[zn.type], left = clamp((zn.until - now()) / C.dur, 0, 1), sea = SEA_SPOTS.has(spotId);
+  const fit = C.fresh ? (sea ? 0.45 : 1) : C.sea ? (sea ? 1 : 0.5) : 1, k = (0.45 + 0.55 * left) * fit;
+  return { wait: 1 - (1 - C.wait) * k, rare: 1 + (C.rare - 1) * k, legend: 1 + (C.legend - 1) * k, name: C.name };
+}
+function renderChumPick(){
+  let pk = $('#chumPick'); if (!pk){ pk = document.createElement('div'); pk.id = 'chumPick'; pk.className = 'panel'; pk.hidden = true; document.body.appendChild(pk); }
+  pk.innerHTML = ''; pk.appendChild(el('b', '', '🍚 要用哪一種窩料打窩？'));
+  for (const c of myChums()){ const row = el('div', 'cprow'); row.appendChild(el('span', 'cpn', `${c.name} ×${rec.bait[c.id]}`)); row.style.setProperty('--cc', c.color);
+    const b = el('button', 'tbtn', '現在打'); b.title = '馬上有效、大家看得到、2～3 分鐘'; b.addEventListener('click', () => throwChum(c.id, false)); row.appendChild(b);
+    const s2 = el('button', 'tbtn ghost', '🤫 提前打'); s2.title = '祕密窩點：只有你知道，10 分鐘後最強、維持 1 小時'; s2.addEventListener('click', () => throwChum(c.id, true)); row.appendChild(s2); pk.appendChild(row); }
+  pk.appendChild(el('small', 'sub', '「現在打」馬上有效、大家都看得到；「提前打」是祕密窩點，只有你知道，10 分鐘後最強、可以維持 1 小時（最多 3 個）。'));
+  const x = el('button', 'tbtn ghost', '取消'); x.addEventListener('click', () => { pk.hidden = true; }); pk.appendChild(x);
+  pk.hidden = false;
+}
+
 /* ================= ECONOMY：金幣、賣魚、釣竿與魚餌 ================= */
 // 目前存在玩家自己的瀏覽器；之後接上伺服器時，賣魚和購買要改由伺服器驗證
 const RODS = [
@@ -3232,11 +3381,12 @@ const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', lab
 function nearShop(){
   if (myBoat) return null;
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
+  if (ferryNpc && Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z) < 2.3) return { id:'ferry', label:FERRY.name, mode:'ferry' };
   for (const sh of SHOPS){ const l = LANDMARKS.find(l => l.id === sh.id); if (l && Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) < 4.8) return sh; }
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 function avKit(){
@@ -3374,6 +3524,16 @@ function renderShop(body){
       li.appendChild(acts); ul.appendChild(li);
     }
     body.appendChild(ul);
+    body.appendChild(el('div', 'dexhead', '🍚 打窩用的窩料')); body.appendChild(el('p', 'sub', '在水邊按「🍚 打窩」把窩料丟到水裡，過幾秒魚會聚過來。在窩點裡下竿，魚更快上鉤、稀有魚更多。效果會慢慢變弱，大廳裡的人也能來你的窩點一起釣。'));
+    const uc = el('ul', 'shoplist');
+    for (const c of CHUMS){ const n = rec.bait[c.id] || 0, li = el('li'); const sw = el('span', 'rodsw'); sw.style.background = c.color; li.appendChild(sw);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${c.name}　×${n}`)); d.appendChild(el('div', 'meta', `${c.desc} 一包 ${c.pack} 份。`)); li.appendChild(d);
+      const a = el('div', 'tacts'), buy = el('button', 'tbtn', `買一包 🪙${c.price}`);
+      buy.addEventListener('click', async () => { if (rec.coins < c.price){ toast(`金幣不夠，還差 🪙${c.price - rec.coins}`); return; }
+        if (Cloud.on){ buy.disabled = true; buy.textContent = '處理中…'; const row = await cloudCall('buy_bait', { p_bait: c.id }); if (row) SFX.chat(); renderTab(); return; }
+        rec.bait[c.id] = n + c.pack; addCoins(-c.price); saveRecLocal(); SFX.chat(); renderTab(); });
+      a.appendChild(buy); li.appendChild(a); uc.appendChild(li); }
+    body.appendChild(uc);
   }
 }
 function afterSell(got, n){
@@ -3402,7 +3562,7 @@ function normRec(r){
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
-  if (r.bait && typeof r.bait === 'object') for (const b of BAITS){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
+  if (r.bait && typeof r.bait === 'object') for (const b of BAITS.concat(CHUMS)){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
   e.baitOn = BAITS.some(b => b.id === r.baitOn) ? r.baitOn : null;
   return e;
 }
@@ -3545,6 +3705,7 @@ function showCatch(f, w, res){
 }
 function closeCatch(){ if ($('#catchCard').hidden) return; $('#catchCard').hidden = true; uiBlocked = !$('#sheet').hidden; if (F.phase === 'result') F.phase = 'idle'; }
 $('#ccOk').addEventListener('click', closeCatch);
+$('#chumBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const pk = $('#chumPick'); if (pk && !pk.hidden){ pk.hidden = true; return; } renderChumPick(); });
 (function(){ const j = $('#jumpBtn');
   j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); j.classList.add('down'); jump(); });
   const off = () => j.classList.remove('down'); j.addEventListener('pointerup', off); j.addEventListener('pointercancel', off); j.addEventListener('pointerleave', off);
@@ -3809,6 +3970,8 @@ function useRoom(r){
       if (p) p.fisher.say(rc.icon, 'emote', 3);
     }, () => {});
     room.on('tag', onTagMsg, () => {});
+    room.on('chum', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const d = msg.data, p = peers.get(msg.peer); if (!CHUM_BY_ID[d.ty] || !isFinite(+d.x) || !isFinite(+d.z)) return;
+      if (p && (p.isle || null) !== (onIsle ? onIsle.owner : null)) return; addChumZone(+d.x, +d.z, d.ty, msg.peer); if (p && Math.hypot(me.pos.x - d.x, me.pos.z - d.z) < 25) p.fisher.say('🍚', 'emote', 1.5); }, () => {});
     room.on('isle', msg => {
       if (msg.sameTab || !msg.data || msg.data.to !== myId || isBlockedPeer(msg.peer)) return;
       const p = peers.get(msg.peer); ticker(`🏝️ <b>${esc(p ? peerName(p) : '有人')}</b> 來參觀你的小島了`);
@@ -3932,7 +4095,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -4175,6 +4338,7 @@ function renderTab(){
   if (curTab === 'cook'){ renderCook(body); return; }
   if (curTab === 'island'){ renderIsland(body); return; }
   if (curTab === 'quest'){ renderQuests(body); return; }
+  if (curTab === 'ferry'){ renderFerry(body); return; }
   if (curTab === 'dex'){
     const got = FISH.filter(f => rec.count[f.id]).length;
     body.appendChild(el('p', 'sub', `已收集 ${got} / ${FISH.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。`));
@@ -4464,10 +4628,15 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateIsle(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
-  for (const s of schools){ s.g.visible = Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
+  for (const s of schools){
+    // 魚群不會一直待在同一個地方：偶爾游上來一陣子，然後潛下去（以後潛水可以看到牠們）
+    if (s.next == null){ s.on = Math.random() < 0.3; s.next = t + rand(5, 40); s.home = s.home || s.g.position.clone(); s.k = s.on ? 1 : 0; }
+    if (t > s.next){ s.on = !s.on; s.next = t + (s.on ? rand(18, 32) : rand(45, 110)); if (s.on){ const a = Math.random() * 6.28, r = Math.random() * 2.5, nx = s.home.x + Math.cos(a) * r, nz = s.home.z + Math.sin(a) * r; if (waterAt(nx, nz)){ s.g.position.x = nx; s.g.position.z = nz; } } }
+    s.k += ((s.on ? 1 : 0) - s.k) * Math.min(1, dt * 0.8); s.g.position.y = s.home.y - (1 - s.k) * 1.2;
+    s.g.visible = s.k > 0.03 && Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
   updateDayNight(t);
   for (const l of lanterns) l.material.emissiveIntensity = (0.6 + DayNight.lamp * 1.8) + Math.sin(t*2 + l.position.x) * 0.25;
   if (lhLight) lhLight.material.emissiveIntensity = (1.6 + DayNight.lamp * 2.4) + Math.sin(t*1.5) * 1.2;

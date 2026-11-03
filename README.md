@@ -47,6 +47,7 @@ supabase/009_fish_batch3.sql 第三批新魚 14 種
 supabase/010_quests.sql NPC 每日任務
 supabase/011_fish_batch4.sql 第四批新魚 11 種
 supabase/012_island_v2.sql 玩家島 2.0（自由擺放、按讚）
+supabase/013_chum.sql 打窩的窩料
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

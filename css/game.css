@@ -548,3 +548,19 @@ body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!impo
 #buildBar .bb-hint{font-weight:700;color:var(--ink)}
 #buildBar .bb-hint.bad{color:#d8402f}
 @media (max-height:500px){ #buildBar{bottom:calc(var(--gb) + 8px);max-width:calc(100vw - 420px)} }
+
+/* 打窩 */
+#chumBtn{width:64px;height:64px;border-radius:50%;font-size:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;align-self:flex-end;margin-right:8px}
+#chumBtn[hidden]{display:none}
+#chumBtn small{font-size:11px;font-weight:700;margin-top:2px}
+#chumPick{position:fixed;right:var(--gr);bottom:calc(var(--gb) + 140px);display:flex;flex-direction:column;gap:6px;padding:10px 12px;z-index:9;min-width:180px}
+#chumPick[hidden]{display:none}
+#chumPick .tbtn{box-shadow:inset 6px 0 0 var(--cc,#ffd36a)}
+@media (max-height:500px){ #chumBtn{width:52px;height:52px;font-size:20px} #chumPick{bottom:calc(var(--gb) + 110px)} }
+
+#chumPick{min-width:260px;max-width:calc(100vw - 32px)}
+#chumPick .cprow{display:flex;align-items:center;gap:6px;padding-left:8px;border-left:5px solid var(--cc,#ffd36a)}
+#chumPick .cpn{flex:1;font-weight:700;font-size:13px}
+#chumPick small.sub{font-size:11px;line-height:1.4;max-width:300px}
+#ferryBar{position:fixed;left:16px;top:calc(var(--gt) + 100px);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 16px;font-size:14px;z-index:7}
+#ferryBar[hidden]{display:none}
