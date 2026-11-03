@@ -540,3 +540,11 @@ body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!impo
 .tag .nm.quest{background:#c98a2a}
 .shoplist.quests .qtxt{font-size:13px;line-height:1.4;margin-top:2px}
 .shoplist.quests li.hl{box-shadow:0 0 0 3px #ffd36a}
+
+/* 玩家島 2.0：建造列 */
+#isleBar{flex-wrap:wrap;max-width:min(560px,calc(100vw - 32px))}
+#buildBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb) + 128px);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 14px;font-size:14px;z-index:8;max-width:calc(100vw - 32px);flex-wrap:wrap;justify-content:center}
+#buildBar[hidden]{display:none}
+#buildBar .bb-hint{font-weight:700;color:var(--ink)}
+#buildBar .bb-hint.bad{color:#d8402f}
+@media (max-height:500px){ #buildBar{bottom:calc(var(--gb) + 8px);max-width:calc(100vw - 420px)} }

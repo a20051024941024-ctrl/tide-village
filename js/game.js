@@ -99,13 +99,13 @@ const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector2(x, z).normalize();
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
-const ISLE = { x:150, z:0, r:15, y:0.32 };
+const ISLE = { x:150, z:0, r:24, y:0.32 };
 const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana'], legendBoost:1.4 },
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
-  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally'] },
+  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally'] },
   { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp'], legendBoost:1.8 },
 ];
@@ -538,7 +538,7 @@ function castPoint(x, z, dx, dz, dist){
   deck(19.6, 21.8, 26.2, 28.6, 0.18);                   // 螢光溪的小平台
   deck(24, 29, 18.2, 19.8, 0.36, '#a8754a');            // 溪上的小木橋（通往東南森林）
   for (const z of [18.24, 19.76]) scene.add(box([5, 0.06, 0.06], '#6e4a2f', [26.5, 0.92, z]));
-  deck(ISLE.x - 1.4, ISLE.x + 1.4, ISLE.z + ISLE.r - 0.5, ISLE.z + 20.4, 0.36);   // 私人小島的碼頭
+  deck(ISLE.x - 1.4, ISLE.x + 1.4, ISLE.z + ISLE.r - 0.5, ISLE.z + ISLE.r + 5.4, 0.36);   // 私人小島的碼頭
   // 港口的小船（裝飾）與漁網架
   for (const [x, z, r] of [[30.5, -37.5, 0.3], [35.5, -30.2, -0.2]]){ const b = makeBoatMesh('#f6e4bd'); b.position.set(x, WATER_LEVEL, z); b.rotation.y = r; scene.add(b); }
 
@@ -2006,7 +2006,7 @@ function renderMap(body){
 
 // 岸邊釣魚：不在發光圈裡也可以，只要面前（或旁邊）幾公尺內有水
 function waterSpotId(x, z){
-  if (Math.hypot(x - ISLE.x, z - ISLE.z) < 45) return 'isle';
+  if (Math.hypot(x - ISLE.x, z - ISLE.z) < 55) return 'isle';
   const i = terrainInfo(x, z);
   return i.region === 1 ? 'river' : i.region === 2 ? 'creek' : i.region === 3 ? 'lake' : i.region === 4 ? 'pool' : (islandEdge(x, z) < -6 ? 'harbor' : 'sea');
 }
@@ -2067,7 +2067,7 @@ function updatePlayer(dt){
   me.air = Jump.air; me.baseY = Jump.gy + Jump.air;
 }
 /* ---- 坐椅子：走到椅子旁邊按按鈕就能坐下，搖桿一動就站起來 ---- */
-function allChairs(){ return isleChairs.length ? CHAIRS.concat(isleChairs) : CHAIRS; }
+function allChairs(){ return CHAIRS.concat(isleChairs, CHAIRS_ROOM); }
 function nearChair(){
   let best = null, bd = 1.1;
   for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
@@ -2097,7 +2097,7 @@ function updateCamera(dt){
     const want = reelCam.pos.set(me.pos.x - dx * 2.0 + rx * 1.25, me.baseY + 2.05, me.pos.z - dz * 2.0 + rz * 1.25);   // 右肩後上方，角色在畫面左下，不會擋住魚
     const look = reelCam.look.set(me.bobPos.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, me.bobPos.z);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
-    const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
+    const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(House.on ? ROOM_Y + 0.8 : 0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
     camera.position.lerp(normal.lerp(want, reelCam.k), 1 - Math.exp(-8 * dt));
     camera.lookAt(tg.lerp(look, reelCam.k));
     if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
@@ -2106,7 +2106,7 @@ function updateCamera(dt){
   const target = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);   // 用地面高度，不跟著走路的上下晃動（不然鏡頭會一直震）
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
-  want.y = Math.max(want.y, Photo.on ? 0.3 : 0.8);
+  want.y = Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
   camera.lookAt(target);
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
@@ -2124,7 +2124,7 @@ function actionDown(){
   const act = $('#act'); act.classList.add('down');
   if (F.phase === 'idle'){
     let spot;
-    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
+    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
   } else if (F.phase === 'waiting'){
@@ -2309,6 +2309,8 @@ function updateFishing(dt, t){
     const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
     if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'; }
     else if (sh){ label = sh.label; sub = sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
+    else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
     else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
@@ -2354,154 +2356,368 @@ function updateJumpers(dt, t){
 }
 
 /* ================= RECORDS / COLLECTION ================= */
-/* ================= ISLAND：私人小島（買房子、放裝飾、參觀別人的島）================= */
-// 價格和格子數跟伺服器 supabase/004_island.sql 一樣
-const HOUSES = {
-  cabin:  { name:'小木屋',   price:1500, roof:'#d896c3', w:3.0 },
-  beach:  { name:'海邊小屋', price:3000, roof:'#5fb6e3', w:3.6, awning:'#2f89c7' },
-  villa:  { name:'大別墅',   price:8000, roof:'#ec8b68', w:4.4, scale:1.3 },
+/* ================= ISLAND 2.0：玩家島（自由擺放、房子可以進去、看得到別人的島、按讚）================= */
+// 價格、大小要跟伺服器 supabase/012_island_v2.sql 的 _isle_item 一樣
+const ISLE_ITEMS = {
+  cabin:   { name:'小木屋',   price:1500, rad:2.6, house:true, roof:'#d896c3', w:3.0 },
+  beach:   { name:'海邊小屋', price:3000, rad:2.9, house:true, roof:'#5fb6e3', w:3.6, awning:'#2f89c7' },
+  tea:     { name:'和風茶屋', price:5500, rad:3.0, house:true, roof:'#4a4f5a', w:3.4, wall:'#f1e6cf' },
+  villa:   { name:'大別墅',   price:8000, rad:3.6, house:true, roof:'#ec8b68', w:4.4, scale:1.3 },
+  flower:  { name:'花圃', price:200, rad:0.9 },   bench:  { name:'長椅', price:150, rad:0.9 },   lamp:   { name:'路燈', price:250, rad:0.35 },
+  palm:    { name:'椰子樹', price:400, rad:0.6 }, pond:   { name:'小魚池', price:1200, rad:1.5 }, flag:   { name:'旗子', price:300, rad:0.3 },
+  fence:   { name:'木圍籬', price:80, rad:0.9 },  tree:   { name:'圓圓樹', price:300, rad:1.1 }, rock:   { name:'石頭', price:100, rad:0.7 },
+  mailbox: { name:'信箱', price:200, rad:0.35 },  picnic: { name:'野餐桌', price:600, rad:1.4 }, parasol:{ name:'遮陽傘', price:350, rad:1.0 },
+  campfire:{ name:'營火', price:450, rad:0.8 },   statue: { name:'金魚雕像', price:2000, rad:0.9 }, swing: { name:'鞦韆', price:900, rad:1.3 },
+  bush:    { name:'小樹叢', price:120, rad:0.7 }, lantern:{ name:'石燈籠', price:180, rad:0.4 }, boat:  { name:'小木船', price:1500, rad:1.6 },
 };
-const DECOS = {
-  flower: { name:'花圃',   price:200 },
-  bench:  { name:'長椅',   price:150 },
-  lamp:   { name:'路燈',   price:250 },
-  palm:   { name:'椰子樹', price:400 },
-  pond:   { name:'小魚池', price:1200 },
-  flag:   { name:'旗子',   price:300 },
-};
-const HOUSE_SLOTS = [[-6.5, -4.5], [6.5, -4.5], [0, -9]], DECO_SLOTS = [[-3, 3], [3, 3], [-8, 2], [8, 2], [-5, 9], [5, 9], [-10.5, -2], [10.5, -2], [0, 4.5], [-2, 10.5]];
-function cleanIsland(o){ const r = { h:{}, d:{} }; for (const [k, v] of Object.entries((o && o.h) || {})) if (HOUSES[v] && +k >= 0 && +k < HOUSE_SLOTS.length) r.h[+k] = v; for (const [k, v] of Object.entries((o && o.d) || {})) if (DECOS[v] && +k >= 0 && +k < DECO_SLOTS.length) r.d[+k] = v; return r; }
-var onIsle = null;            // { owner, name, layout } 現在在誰的島上
-let isleGroup = null, isleCols = [], isleChairs = [];
-function isleBase(){
-  // 島本體：草地圓台＋沙灘＋幾棵樹和石頭（只建一次）
-  const g = new THREE.Group(); g.position.set(ISLE.x, 0, ISLE.z); scene.add(g);
-  const sand = new THREE.Mesh(new THREE.CylinderGeometry(ISLE.r + 2.2, ISLE.r + 3.6, 0.8, 48), mat('#f2d69a', 0.95)); sand.position.y = ISLE.y - 0.72; sand.receiveShadow = true; g.add(sand);
-  const grass = new THREE.Mesh(new THREE.CylinderGeometry(ISLE.r, ISLE.r + 1.6, 0.5, 48), mat('#86c26a', 0.95)); grass.position.y = ISLE.y - 0.25; grass.receiveShadow = true; g.add(grass);
-  const path = new THREE.Mesh(new THREE.CircleGeometry(3.2, 28), mat('#dcbf7d')); path.rotation.x = -Math.PI / 2; path.position.y = ISLE.y + 0.01; path.receiveShadow = true; g.add(path);
-  const lane = box([1.6, 0.02, ISLE.r - 2], '#dcbf7d', [0, ISLE.y + 0.012, (ISLE.r + 2) / 2]); lane.castShadow = false; g.add(lane);
-  let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 7; i++){ const a = rr() * Math.PI * 2, r = ISLE.r + 0.6 + rr() * 1.2; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 + rr() * 0.4, 0), mat('#b7b2a4', 0.95, { flatShading:true })); rk.position.set(Math.cos(a) * r, ISLE.y - 0.25, Math.sin(a) * r); rk.castShadow = true; g.add(rk); }
-  // 歡迎牌
-  const post = box([0.14, 1.4, 0.14], PALETTE.wood, [1.6, ISLE.y + 0.7, ISLE.r - 1.2]); g.add(post);
-  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; isleSignCtx = cv.getContext('2d'); isleSignTex = new THREE.CanvasTexture(cv); isleSignTex.colorSpace = THREE.SRGBColorSpace;
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.6), new THREE.MeshBasicMaterial({ map: isleSignTex })); sign.position.set(1.6, ISLE.y + 1.35, ISLE.r - 1.1); g.add(sign);
+const HOUSES = Object.fromEntries(Object.entries(ISLE_ITEMS).filter(([, v]) => v.house));
+const ISLE_MAX = 60, ISLE_HOUSE_MAX = 6;
+// 舊版（固定格子）的島轉成新版（跟伺服器的 _isle_upgrade 一樣）
+const OLD_HS = [[-6.5, -4.5], [6.5, -4.5], [0, -9]], OLD_DS = [[-3, 3], [3, 3], [-8, 2], [8, 2], [-5, 9], [5, 9], [-10.5, -2], [10.5, -2], [0, 4.5], [-2, 10.5]];
+function cleanIsland(o){
+  if (o && String(o.v) !== '2' && (o.h || o.d)){ const items = []; let n = 0;
+    for (const [k, v] of Object.entries(o.h || {})){ const p = OLD_HS[+k]; if (p && ISLE_ITEMS[v]) items.push({ id:++n, t:v, x:p[0], z:p[1], r:+Math.atan2(-p[0], -p[1]).toFixed(2) }); }
+    for (const [k, v] of Object.entries(o.d || {})){ const p = OLD_DS[+k]; if (p && ISLE_ITEMS[v]) items.push({ id:++n, t:v, x:p[0], z:p[1], r:+(Math.atan2(-p[0], -p[1]) + Math.PI).toFixed(2) }); }
+    o = { v:2, items }; }
+  const items = (o && Array.isArray(o.items) ? o.items : []).filter(it => it && ISLE_ITEMS[it.t] && isFinite(+it.x) && isFinite(+it.z)).slice(0, ISLE_MAX)
+    .map(it => ({ id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }));
+  return { v:2, items };
 }
+// 跟伺服器一樣的位置檢查
+function isleCheck(items, type, x, z, skipId){
+  const me = ISLE_ITEMS[type]; if (!me) return '沒有這種東西';
+  if (Math.hypot(x, z) > ISLE.r - me.rad * 0.6 - 0.6) return '放在島外面了';
+  if (Math.abs(x) < 1.4 + me.rad * 0.7 && z > 17) return '會擋住碼頭的路';
+  for (const o of items){ if (o.id === skipId) continue; const it = ISLE_ITEMS[o.t]; if (it && Math.hypot(o.x - x, o.z - z) < (it.rad + me.rad) * 0.8) return '跟別的東西疊在一起了'; }
+  return null;
+}
+var onIsle = null;            // { owner, name, layout, likes, tank, show } 現在在誰的島上
+let isleGroup = null, isleCols = [], isleChairs = [], isleDoors = [];
+// ---- 島本體（草地、沙灘、碼頭的路、石頭、歡迎牌）----
+function isleBaseMesh(g, R, withSign){
+  const sand = new THREE.Mesh(new THREE.CylinderGeometry(R + 2.2, R + 3.8, 0.8, 56), mat('#f2d69a', 0.95)); sand.position.y = ISLE.y - 0.72; sand.receiveShadow = true; g.add(sand);
+  const grass = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 1.6, 0.5, 56), mat('#86c26a', 0.95)); grass.position.y = ISLE.y - 0.25; grass.receiveShadow = true; g.add(grass);
+  const path = new THREE.Mesh(new THREE.CircleGeometry(3.2, 28), mat('#dcbf7d')); path.rotation.x = -Math.PI / 2; path.position.y = ISLE.y + 0.01; path.receiveShadow = true; g.add(path);
+  const lane = box([1.6, 0.02, R - 2], '#dcbf7d', [0, ISLE.y + 0.012, (R + 2) / 2]); lane.castShadow = false; g.add(lane);
+  let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 10; i++){ const a = rr() * Math.PI * 2, r = R + 0.6 + rr() * 1.4; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 + rr() * 0.5, 0), mat('#b7b2a4', 0.95, { flatShading:true })); rk.position.set(Math.cos(a) * r, ISLE.y - 0.25, Math.sin(a) * r); rk.castShadow = true; g.add(rk); }
+  if (withSign){
+    g.add(box([0.14, 1.4, 0.14], PALETTE.wood, [1.6, ISLE.y + 0.7, R - 1.2]));
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; isleSignCtx = cv.getContext('2d'); isleSignTex = new THREE.CanvasTexture(cv); isleSignTex.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.6), new THREE.MeshBasicMaterial({ map: isleSignTex })); sign.position.set(1.6, ISLE.y + 1.35, R - 1.1); g.add(sign);
+  }
+}
+function isleBase(){ const g = new THREE.Group(); g.position.set(ISLE.x, 0, ISLE.z); scene.add(g); isleBaseMesh(g, ISLE.r, true); }
 let isleSignCtx = null, isleSignTex = null;
 function drawIsleSign(name){
   if (!isleSignCtx) return; const c = isleSignCtx;
   c.fillStyle = '#8c5d3b'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff4d6'; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.font = 'bold 30px sans-serif'; c.fillText(String(name).slice(0, 8), 128, 34); c.font = '24px sans-serif'; c.fillText('的小島', 128, 70); isleSignTex.needsUpdate = true;
 }
-function decoMesh(type){
-  const g = new THREE.Group();
-  if (type === 'flower'){ g.add(box([1.6, 0.25, 1.0], '#8c5d3b', [0, 0.12, 0])); const cols = ['#f17b6d', '#ffd36a', '#f5a5d8', '#b9a4ff', '#ffffff'];
-    for (let i = 0; i < 10; i++){ const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), mat(cols[i % 5], 0.6)); f.position.set(-0.6 + (i % 5) * 0.3, 0.38, i < 5 ? -0.2 : 0.2); g.add(f); } }
-  else if (type === 'bench'){ g.add(box([1.8, 0.1, 0.5], PALETTE.wood, [0, 0.45, 0])); g.add(box([1.8, 0.45, 0.08], PALETTE.wood, [0, 0.72, -0.24])); for (const dx of [-0.75, 0.75]) g.add(box([0.1, 0.42, 0.42], '#6e4a2f', [dx, 0.22, 0])); }
-  else if (type === 'lamp'){ g.add(box([0.12, 2.2, 0.12], PALETTE.ink, [0, 1.1, 0])); const l = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:1.2 })); l.position.y = 2.3; g.add(l); g.userData.lamp = l; }
-  else if (type === 'palm'){ const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 3.2, 8), mat('#9b6a42')); tr.position.y = 1.6; tr.rotation.z = 0.12; tr.castShadow = true; g.add(tr);
-    for (let i = 0; i < 6; i++){ const lf = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.8, 4), mat('#5d9c55', 0.85, { flatShading:true })); lf.position.set(0.2, 3.1, 0); lf.rotation.set(0, i / 6 * Math.PI * 2, 1.25); lf.geometry.translate(0, 0.9, 0); lf.castShadow = true; g.add(lf); } }
-  else if (type === 'pond'){ const rim = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.18, 6, 24), mat('#b7b2a4', 0.9)); rim.rotation.x = Math.PI / 2; rim.position.y = 0.15; g.add(rim);
-    const w = new THREE.Mesh(new THREE.CircleGeometry(1.15, 24), mat('#4fc2cf', 0.2, { emissive:'#2f89c7', emissiveIntensity:0.2 })); w.rotation.x = -Math.PI / 2; w.position.y = 0.12; g.add(w);
-    for (let i = 0; i < 3; i++){ const f = fishModel(FISH_BY_ID[['koi', 'goby', 'kuhua'][i]], 0.22); f.position.set(Math.cos(i * 2.1) * 0.5, 0.06, Math.sin(i * 2.1) * 0.5); f.rotation.y = i * 2; g.add(f); g.userData.fish = (g.userData.fish || []).concat([f]); } }
-  else if (type === 'flag'){ g.add(box([0.08, 3, 0.08], '#e9e2cf', [0, 1.5, 0])); const fl = box([1.0, 0.6, 0.04], PALETTE.coral, [0.54, 2.6, 0]); g.add(fl); g.userData.flag = fl; }
+// ---- 每一種東西的 3D 模型（原點在地面中心，正面朝 +z）----
+function itemMesh(type, opts){
+  opts = opts || {}; const T = ISLE_ITEMS[type], g = new THREE.Group();
+  if (T.house){
+    if (!houseBuilder) return g; const n0 = colliders.length;
+    const h = houseBuilder(0, 0, T.roof, T.w, 0, Object.assign({}, T.awning ? { awning:T.awning } : {}, T.wall ? { wall:T.wall } : {}));
+    colliders.length = n0; scene.remove(h); h.position.set(0, 0, 0); if (T.scale) h.scale.setScalar(T.scale); g.add(h);
+    if (type === 'tea'){ for (const sx of [-1, 1]){ const ln = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), mat('#f6efe2', 0.6, { emissive:'#ffb070', emissiveIntensity:0.5 })); ln.scale.y = 1.3; ln.position.set(sx * 1.2, 1.9, 1.45); g.add(ln); g.userData.lamp = ln; } }
+    return g;
+  }
+  const B = (sz, c, p) => { const b = box(sz, c, p); g.add(b); return b; };
+  switch (type){
+    case 'flower': { B([1.6, 0.25, 1.0], '#8c5d3b', [0, 0.12, 0]); const cols = ['#f17b6d', '#ffd36a', '#f5a5d8', '#b9a4ff', '#ffffff']; for (let i = 0; i < 10; i++){ const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), mat(cols[i % 5], 0.6)); f.position.set(-0.6 + (i % 5) * 0.3, 0.38, i < 5 ? -0.2 : 0.2); g.add(f); } break; }
+    case 'bench': { B([1.8, 0.1, 0.5], PALETTE.wood, [0, 0.45, 0]); B([1.8, 0.45, 0.08], PALETTE.wood, [0, 0.72, -0.24]); for (const dx of [-0.75, 0.75]) B([0.1, 0.42, 0.42], '#6e4a2f', [dx, 0.22, 0]); break; }
+    case 'lamp': { B([0.12, 2.2, 0.12], PALETTE.ink, [0, 1.1, 0]); const l = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:1.2 })); l.position.y = 2.3; g.add(l); g.userData.lamp = l; break; }
+    case 'palm': { const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 3.2, 8), mat('#9b6a42')); tr.position.y = 1.6; tr.rotation.z = 0.12; tr.castShadow = true; g.add(tr);
+      for (let i = 0; i < 6; i++){ const lf = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.8, 4), mat('#5d9c55', 0.85, { flatShading:true })); lf.geometry.translate(0, 0.9, 0); lf.position.set(0.2, 3.1, 0); lf.rotation.set(0, i / 6 * Math.PI * 2, 1.25); lf.castShadow = true; g.add(lf); } break; }
+    case 'pond': { const rim = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.18, 6, 24), mat('#b7b2a4', 0.9)); rim.rotation.x = Math.PI / 2; rim.position.y = 0.15; g.add(rim);
+      const w = new THREE.Mesh(new THREE.CircleGeometry(1.15, 24), mat('#4fc2cf', 0.2, { emissive:'#2f89c7', emissiveIntensity:0.2 })); w.rotation.x = -Math.PI / 2; w.position.y = 0.12; g.add(w);
+      if (!opts.lite) for (let i = 0; i < 3; i++){ const f = fishModel(FISH_BY_ID[['koi', 'goby', 'kuhua'][i]], 0.22); f.position.set(Math.cos(i * 2.1) * 0.5, 0.06, Math.sin(i * 2.1) * 0.5); g.add(f); g.userData.fish = (g.userData.fish || []).concat([f]); } break; }
+    case 'flag': { B([0.08, 3, 0.08], '#e9e2cf', [0, 1.5, 0]); g.userData.flag = B([1.0, 0.6, 0.04], PALETTE.coral, [0.54, 2.6, 0]); break; }
+    case 'fence': { for (const x of [-0.85, 0, 0.85]) B([0.12, 0.8, 0.12], PALETTE.wood, [x, 0.4, 0]); for (const y of [0.32, 0.62]) B([1.82, 0.08, 0.06], '#c79a6b', [0, y, 0]); break; }
+    case 'tree': { const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 1.6, 8), mat('#8c5d3b')); tr.position.y = 0.8; tr.castShadow = true; g.add(tr);
+      for (const [x, y, z, r] of [[0, 2.0, 0, 0.95], [0.5, 1.7, 0.2, 0.65], [-0.45, 1.75, -0.15, 0.7], [0.1, 2.55, -0.1, 0.6]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), mat('#6fae52', 0.85, { flatShading:true })); b.position.set(x, y, z); b.castShadow = true; g.add(b); } break; }
+    case 'rock': { for (const [x, z, r] of [[0, 0, 0.55], [0.45, 0.25, 0.32], [-0.35, -0.2, 0.28]]){ const k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat('#a9a499', 0.95, { flatShading:true })); k.position.set(x, r * 0.7, z); k.castShadow = true; g.add(k); } break; }
+    case 'mailbox': { B([0.1, 1.0, 0.1], PALETTE.wood, [0, 0.5, 0]); B([0.36, 0.3, 0.5], '#2f89c7', [0, 1.12, 0]); B([0.04, 0.22, 0.12], '#e8473a', [0.2, 1.25, -0.1]); break; }
+    case 'picnic': { B([1.6, 0.08, 0.8], '#c79a6b', [0, 0.72, 0]); for (const sx of [-0.65, 0.65]) B([0.08, 0.7, 0.7], '#8c5d3b', [sx, 0.36, 0]); for (const sz of [-0.75, 0.75]){ B([1.6, 0.07, 0.3], '#c79a6b', [0, 0.42, sz]); for (const sx of [-0.65, 0.65]) B([0.07, 0.4, 0.07], '#8c5d3b', [sx, 0.2, sz]); } B([0.5, 0.02, 0.5], '#e8473a', [0, 0.77, 0]); break; }
+    case 'parasol': { B([0.06, 2.3, 0.06], '#f6efe2', [0, 1.15, 0]); const c = new THREE.Mesh(new THREE.ConeGeometry(1.2, 0.5, 8, 1, true), mat('#f17b6d', 0.75, { side:THREE.DoubleSide, flatShading:true })); c.position.y = 2.3; c.castShadow = true; g.add(c); const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.05, 16), mat('#ffffff', 0.6)); tb.position.y = 0.7; g.add(tb); B([0.08, 0.7, 0.08], '#4c4c4c', [0, 0.35, 0.0]); break; }
+    case 'campfire': { for (let i = 0; i < 5; i++){ const lg = box([0.12, 0.12, 0.8], '#6e4a2f', [0, 0.08, 0]); lg.rotation.y = i / 5 * Math.PI; g.add(lg); } for (let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2; const k = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15, 0), mat('#8a857a', 0.95)); k.position.set(Math.cos(a) * 0.5, 0.08, Math.sin(a) * 0.5); g.add(k); }
+      const fl = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.7, 6), new THREE.MeshStandardMaterial({ color:'#ffb040', emissive:'#ff7a1a', emissiveIntensity:1.6, transparent:true, opacity:0.9 })); fl.position.y = 0.45; g.add(fl); g.userData.fire = fl; break; }
+    case 'statue': { B([0.9, 0.5, 0.9], '#d8d2c4', [0, 0.25, 0]); B([0.7, 0.12, 0.7], '#c9c2b2', [0, 0.56, 0]); if (!opts.lite){ const f = fishModel(FISH_BY_ID.koi, 0.9); f.position.y = 1.15; f.rotation.z = 0.6; f.traverse(o => { if (o.isMesh){ o.material = mat('#f2c14e', 0.25, { metalness:0.75, emissive:'#7a5a10', emissiveIntensity:0.25 }); } }); g.add(f); } break; }
+    case 'swing': { for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const p = box([0.1, 2.3, 0.1], '#8c5d3b', [sx * 0.95, 1.1, sz * 0.35]); p.rotation.x = -sz * 0.15; g.add(p); } B([2.1, 0.12, 0.12], '#8c5d3b', [0, 2.2, 0]); const sw = new THREE.Group(); sw.position.y = 2.15; g.add(sw); for (const sx of [-0.3, 0.3]){ const r = box([0.03, 1.6, 0.03], '#e9e2cf', [sx, -0.8, 0]); sw.add(r); } sw.add(box([0.75, 0.06, 0.32], '#e8473a', [0, -1.62, 0])); g.userData.swing = sw; break; }
+    case 'bush': { for (const [x, z, r] of [[0, 0, 0.5], [0.4, 0.15, 0.35], [-0.35, 0.1, 0.38]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), mat('#5d9c55', 0.85, { flatShading:true })); b.position.set(x, r * 0.8, z); b.castShadow = true; g.add(b); } break; }
+    case 'lantern': { B([0.5, 0.15, 0.5], '#b7b2a4', [0, 0.08, 0]); B([0.18, 0.6, 0.18], '#b7b2a4', [0, 0.45, 0]); const lt = box([0.4, 0.32, 0.4], '#fff3c4', [0, 0.9, 0], new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:0.9 })); g.add(lt); g.userData.lamp = lt; const rf = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.25, 4), mat('#9a958a', 0.9)); rf.rotation.y = Math.PI / 4; rf.position.y = 1.2; g.add(rf); break; }
+    case 'boat': { const b = makeBoatMesh('#c98b55'); b.position.y = 0.15; b.rotation.z = 0.08; g.add(b); break; }
+  }
   return g;
 }
-const ISLE_DECO_R = { flower:0.9, bench:0.8, lamp:0.25, palm:0.4, pond:1.4, flag:0.2 };
+function itemDoor(it){ const T = ISLE_ITEMS[it.t], d = 1.25 * (T.scale || 1) + 0.7, c = Math.cos(it.r), s = Math.sin(it.r); return { x: ISLE.x + it.x + s * d, z: ISLE.z + it.z + c * d, face: it.r + Math.PI, it }; }
+function placeItemInGroup(group, it, withCols){
+  const T = ISLE_ITEMS[it.t], g = itemMesh(it.t, { lite: !withCols }); g.position.set(ISLE.x + it.x, ISLE.y, ISLE.z + it.z); g.rotation.y = it.r; g.userData.item = it; group.add(g);
+  if (!withCols) return g;
+  if (T.house){ const c = Math.cos(it.r), s = Math.sin(it.r), w = T.w * (T.scale || 1), d = 2.5 * (T.scale || 1); addBoxCol(ISLE.x + it.x, ISLE.z + it.z, Math.abs(c) * w + Math.abs(s) * d, Math.abs(s) * w + Math.abs(c) * d); isleDoors.push(itemDoor(it)); }
+  else if (it.t === 'bench' || it.t === 'picnic' || it.t === 'swing'){
+    const c = Math.cos(it.r), s = Math.sin(it.r), seat = (lx, lz, face) => isleChairs.push({ x: ISLE.x + it.x + c * lx + s * lz, z: ISLE.z + it.z - s * lx + c * lz, face: it.r + face, y: ISLE.y + (it.t === 'swing' ? 0.1 : 0.02), isle: true });
+    if (it.t === 'bench'){ seat(-0.45, 0.05, 0); seat(0.45, 0.05, 0); } else if (it.t === 'picnic'){ seat(-0.4, -0.78, 0); seat(0.4, -0.78, 0); seat(-0.4, 0.78, Math.PI); seat(0.4, 0.78, Math.PI); addCircleCol(ISLE.x + it.x, ISLE.z + it.z, 0.5); } else seat(0, 0, 0);
+  } else if (it.t === 'fence'){ const c = Math.cos(it.r), s = Math.sin(it.r); addBoxCol(ISLE.x + it.x, ISLE.z + it.z, Math.abs(c) * 1.9 + Math.abs(s) * 0.2, Math.abs(s) * 1.9 + Math.abs(c) * 0.2); }
+  else if (it.t !== 'flower') addCircleCol(ISLE.x + it.x, ISLE.z + it.z, T.rad * 0.7);
+  return g;
+}
 function buildIsle(layout, ownerName){
   if (!isleSignCtx) isleBase();
-  if (isleGroup){ scene.remove(isleGroup); isleGroup.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
+  if (isleGroup){ scene.remove(isleGroup); }
   for (const c of isleCols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } isleCols = [];
-  isleGroup = new THREE.Group(); scene.add(isleGroup); drawIsleSign(ownerName || '我'); if (mySeat && mySeat.isle) standUp(); isleChairs = [];
+  isleGroup = new THREE.Group(); scene.add(isleGroup); drawIsleSign(ownerName || '我'); if (mySeat && mySeat.isle) standUp(); isleChairs = []; isleDoors = [];
   const L = cleanIsland(layout), n0 = colliders.length;
-  HOUSE_SLOTS.forEach(([sx, sz], i) => {
-    const x = ISLE.x + sx, z = ISLE.z + sz, type = L.h[i];
-    if (type && houseBuilder){
-      const H = HOUSES[type], g = houseBuilder(x, z, H.roof, H.w, Math.atan2(-sx, -sz), H.awning ? { awning:H.awning } : {});
-      if (g){ scene.remove(g); if (H.scale){ g.scale.setScalar(H.scale); const c = colliders[colliders.length - 1]; c.hw *= H.scale; c.hd *= H.scale; } isleGroup.add(g); }
-    } else {   // 空地：木樁圍起來的方塊
-      const lot = box([4.4, 0.03, 3.4], '#d7c290', [x, ISLE.y + 0.015, z]); lot.castShadow = false; lot.rotation.y = Math.atan2(-sx, -sz); isleGroup.add(lot);
-      for (const [cx, cz] of [[-2.2, -1.7], [2.2, -1.7], [-2.2, 1.7], [2.2, 1.7]]){ const a = Math.atan2(-sx, -sz), px = x + Math.cos(a) * cx + Math.sin(a) * cz, pz = z - Math.sin(a) * cx + Math.cos(a) * cz; isleGroup.add(box([0.12, 0.5, 0.12], PALETTE.wood, [px, ISLE.y + 0.25, pz])); }
-    }
-  });
-  DECO_SLOTS.forEach(([sx, sz], i) => { const type = L.d[i]; if (!type) return; const g = decoMesh(type); g.position.set(ISLE.x + sx, ISLE.y, ISLE.z + sz); g.rotation.y = Math.atan2(-sx, -sz) + Math.PI; isleGroup.add(g); if (type === 'bench'){ const a = g.rotation.y; for (const o of [-0.45, 0.45]) isleChairs.push({ x: ISLE.x + sx + Math.cos(a) * o + Math.sin(a) * 0.05, z: ISLE.z + sz - Math.sin(a) * o + Math.cos(a) * 0.05, face: a, y: ISLE.y + 0.02, isle: true }); } else addCircleCol(ISLE.x + sx, ISLE.z + sz, ISLE_DECO_R[type]); });
+  for (const it of L.items) placeItemInGroup(isleGroup, it, true);
   isleCols = colliders.slice(n0);
   isleGroup.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
 }
 function updateIsle(t){
-  if (!isleGroup) return;
-  isleGroup.children.forEach(g => { const u = g.userData; if (u.flag) u.flag.rotation.y = Math.sin(t * 2 + g.position.x) * 0.25; if (u.fish) u.fish.forEach((f, k) => { const a = t * 0.6 + k * 2.1; f.position.set(Math.cos(a) * 0.55, 0.06, Math.sin(a) * 0.55); f.rotation.y = -a; }); if (u.lamp) u.lamp.material.emissiveIntensity = 0.4 + DayNight.lamp * 1.6; });
+  if (isleGroup) isleGroup.children.forEach(g => { const u = g.userData; if (u.flag) u.flag.rotation.y = Math.sin(t * 2 + g.position.x) * 0.25; if (u.fish) u.fish.forEach((f, k) => { const a = t * 0.6 + k * 2.1; f.position.set(Math.cos(a) * 0.55, 0.06, Math.sin(a) * 0.55); f.rotation.y = -a; });
+    if (u.lamp) u.lamp.material.emissiveIntensity = 0.4 + DayNight.lamp * 1.6; if (u.fire){ u.fire.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1); u.fire.rotation.y = t * 2; } if (u.swing) u.swing.rotation.x = Math.sin(t * 1.6 + g.position.x) * 0.25; });
+  updateBuild(); updateHouse(t);
 }
-function goIsle(owner, name, layout){
-  if (visiting) leaveVisit();
-  onIsle = { owner, name, layout, at: performance.now() }; buildIsle(layout, name);
-  travelTo({ id:'isle', label:'小島', x: ISLE.x, z: ISLE.z + 12.5, rot: Math.PI });
-  renderIsleBar(); pushPresence(true);
+// ---- 去島上／離開 ----
+function goIsle(owner, name, layout, extra){
+  if (visiting) leaveVisit(); if (House.on) exitHouse(true);
+  onIsle = Object.assign({ owner, name, layout, at: performance.now(), likes:0 }, extra || {}); buildIsle(layout, name);
+  travelTo({ id:'isle', label:'小島', x: ISLE.x, z: ISLE.z + ISLE.r - 4, rot: Math.PI });
+  renderIsleBar(); pushPresence(true); loadNeighbors();
   ticker(owner === myIdOrMe() ? '🏝️ 歡迎回到你的小島' : `🏝️ 來到 <b>${esc(name)}</b> 的小島`);
 }
 function myIdOrMe(){ return Cloud.userId || myId || 'me'; }
-function goMyIsle(){ goIsle(myIdOrMe(), myDisplayName() === '你' ? '我' : myDisplayName(), rec.island); }
+function goMyIsle(){ goIsle(myIdOrMe(), myDisplayName() === '你' ? '我' : myDisplayName(), rec.island, { likes: Cloud.myLikes || 0, tank: rec.tank, show: rec.show }); }
 async function visitIsle(id, name){
   if (!Cloud.sb){ toast('要連上雲端才能參觀別人的島'); return; }
-  try { const { data } = await Cloud.sb.from('players').select('nickname,island').eq('id', id).maybeSingle(); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); goIsle(id, data.nickname || name, data.island); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
+  if (id === myIdOrMe()){ closeSheet(); goMyIsle(); return; }
+  try { const { data } = await Cloud.sb.from('players').select('nickname,island,likes,tank,show').eq('id', id).maybeSingle(); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
   catch(e){ toast('暫時連不上雲端'); }
 }
-function leaveIsle(){ if (!onIsle) return; onIsle = null; renderIsleBar(); travelTo(TRAVEL[0]); pushPresence(true); }
-// 從小島走回主島範圍外時（例如用地圖傳送）自動離開
-function checkIsle(){ if (onIsle && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 40){ onIsle = null; renderIsleBar(); pushPresence(true); } }
+function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL[0]); pushPresence(true); }
+function checkIsle(){ if (onIsle && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 45){ stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
+async function likeIsle(){
+  if (!onIsle || onIsle.owner === myIdOrMe() || !Cloud.sb) return;
+  try { const { data, error } = await Cloud.sb.rpc('like_island', { p_owner: onIsle.owner }); if (error) throw error; onIsle.likes = data; onIsle.liked = true; SFX.catch(); flash('❤️ 按讚了！', 1.2); renderIsleBar(); }
+  catch(e){ toast('暫時沒辦法按讚'); }
+}
 function renderIsleBar(){
   let bar = $('#isleBar');
   if (!onIsle){ if (bar) bar.hidden = true; return; }
   if (!bar){ bar = document.createElement('div'); bar.id = 'isleBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; const mine = onIsle.owner === myIdOrMe();
-  bar.appendChild(el('span', '', mine ? '🏝️ 我的小島' : `🏝️ ${onIsle.name} 的小島`));
-  if (mine){ const b = el('button', 'tbtn', '建造'); b.addEventListener('click', () => openSheet('island')); bar.appendChild(b); }
+  bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}`));
+  if (mine){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (Build.on) stopBuild(); else { Build.on = true; renderBuildBar(); renderIsleBar(); } }); bar.appendChild(b);
+    const s = el('button', 'tbtn ghost', '🛒 買東西'); s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
+  else { const l = el('button', 'tbtn' + (onIsle.liked ? ' ghost' : ''), onIsle.liked ? '❤️ 已按讚' : '❤️ 按讚'); l.disabled = !!onIsle.liked; l.addEventListener('click', likeIsle); bar.appendChild(l); }
   const back = el('button', 'tbtn ghost', '回村子'); back.addEventListener('click', leaveIsle); bar.appendChild(back);
 }
-function buyBuild(kind, slot, type){
-  const T = kind === 'h' ? HOUSES : DECOS, it = T[type]; if (!it) return;
-  if (rec.coins < it.price){ toast(`金幣不夠，還差 🪙${(it.price - rec.coins).toLocaleString()}`); return; }
-  rec.island[kind][slot] = type; addCoins(-it.price); saveRecLocal();
-  if (onIsle && onIsle.owner === myIdOrMe()){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); }
-  cloudCall('buy_build', { p_kind: kind, p_slot: slot, p_type: type });
-  SFX.catch(); ticker(`🏗️ 你在小島上蓋好了 <b>${esc(it.name)}</b>！`); renderTab();
+// ---- 建造模式：拿著東西走來走去，放在想要的位置 ----
+const Build = { on:false, type:null, moveId:null, rot:0, ghost:null, x:0, z:0, err:null, sel:null };
+const ghostOk = new THREE.MeshStandardMaterial({ color:'#7fe0a8', transparent:true, opacity:0.55, emissive:'#3fbf7a', emissiveIntensity:0.6, depthWrite:false });
+const ghostBad = new THREE.MeshStandardMaterial({ color:'#ff8a7a', transparent:true, opacity:0.55, emissive:'#f04a3a', emissiveIntensity:0.6, depthWrite:false });
+function startPlace(type, moveId){
+  if (!onIsle || onIsle.owner !== myIdOrMe()){ goMyIsle(); setTimeout(() => startPlace(type, moveId), 900); return; }
+  closeSheet(); clearGhost(); Build.on = true; Build.type = type; Build.moveId = moveId || null;
+  const it = moveId ? rec.island.items.find(x => x.id === moveId) : null; Build.rot = it ? it.r : Math.round(((me.rot + Math.PI) % (Math.PI * 2)) / (Math.PI / 4)) * Math.PI / 4;
+  Build.ghost = itemMesh(type, { lite:true }); Build.ghost.traverse(o => { if (o.isMesh){ o.material = ghostOk; o.castShadow = false; } }); scene.add(Build.ghost);
+  if (moveId && isleGroup){ const g = isleGroup.children.find(c => c.userData.item && c.userData.item.id === moveId); if (g) g.visible = false; }
+  renderBuildBar(); renderIsleBar();
 }
-function sellBuild(kind, slot){
-  const T = kind === 'h' ? HOUSES : DECOS, type = rec.island[kind][slot]; if (!type) return; const back = Math.floor(T[type].price / 2);
-  delete rec.island[kind][slot]; addCoins(back); saveRecLocal();
-  if (onIsle && onIsle.owner === myIdOrMe()){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); }
-  cloudCall('remove_build', { p_kind: kind, p_slot: slot }); toast(`拆掉了 ${esc(T[type].name)}，退回 🪙${back}`); renderTab();
+function clearGhost(){ if (Build.ghost){ scene.remove(Build.ghost); Build.ghost = null; } if (Build.moveId && isleGroup) isleGroup.children.forEach(c => { c.visible = true; }); Build.type = null; Build.moveId = null; }
+function stopBuild(){ clearGhost(); Build.on = false; Build.sel = null; renderBuildBar(); if (onIsle) renderIsleBar(); }
+function updateBuild(){
+  if (!Build.on || !onIsle) return;
+  if (Build.ghost){
+    const T = ISLE_ITEMS[Build.type], d = T.rad + 1.4, fx = Math.sin(me.rot), fz = Math.cos(me.rot);
+    const lx = Math.round((me.pos.x + fx * d - ISLE.x) * 4) / 4, lz = Math.round((me.pos.z + fz * d - ISLE.z) * 4) / 4;
+    Build.x = lx; Build.z = lz; Build.err = isleCheck(rec.island.items, Build.type, lx, lz, Build.moveId || -1);
+    Build.ghost.position.set(ISLE.x + lx, ISLE.y + 0.02, ISLE.z + lz); Build.ghost.rotation.y = Build.rot;
+    const m = Build.err ? ghostBad : ghostOk; Build.ghost.traverse(o => { if (o.isMesh && o.material !== m) o.material = m; });
+    const hint = $('#bbHint'); if (hint){ const t = Build.err || `${T.name}：走路調整位置`; if (hint.textContent !== t) hint.textContent = t; hint.classList.toggle('bad', !!Build.err); }
+  } else {
+    // 沒拿東西時：選最靠近的東西，可以移動或拆掉
+    let best = null, bd = 2.6; for (const it of rec.island.items){ const dd = Math.hypot(me.pos.x - ISLE.x - it.x, me.pos.z - ISLE.z - it.z) - ISLE_ITEMS[it.t].rad * 0.6; if (dd < bd){ bd = dd; best = it; } }
+    if ((best && best.id) !== (Build.sel && Build.sel.id)){ Build.sel = best; renderBuildBar(); }
+  }
 }
-let islePick = null;   // { kind, slot }
+function renderBuildBar(){
+  let bar = $('#buildBar');
+  if (!Build.on){ if (bar) bar.hidden = true; return; }
+  if (!bar){ bar = document.createElement('div'); bar.id = 'buildBar'; bar.className = 'panel'; document.body.appendChild(bar); }
+  bar.hidden = false; bar.innerHTML = '';
+  if (Build.ghost){
+    const T = ISLE_ITEMS[Build.type];
+    bar.appendChild(el('span', 'bb-hint', '')).id = 'bbHint';
+    const r = el('button', 'tbtn ghost', '⟲ 轉向'); r.addEventListener('click', () => { Build.rot = (Build.rot + Math.PI / 4) % (Math.PI * 2); }); bar.appendChild(r);
+    const ok = el('button', 'tbtn', Build.moveId ? '✔ 放這裡' : `✔ 放這裡 🪙${T.price.toLocaleString()}`); ok.addEventListener('click', confirmPlace); bar.appendChild(ok);
+    const x = el('button', 'tbtn ghost', '✖'); x.addEventListener('click', () => { clearGhost(); renderBuildBar(); }); bar.appendChild(x);
+  } else if (Build.sel){
+    const T = ISLE_ITEMS[Build.sel.t]; bar.appendChild(el('span', 'bb-hint', `🔨 ${T.name}`));
+    const mv = el('button', 'tbtn', '移動'); mv.addEventListener('click', () => startPlace(Build.sel.t, Build.sel.id)); bar.appendChild(mv);
+    const rm = el('button', 'tbtn ghost', `拆掉 +${Math.floor(T.price / 2)}`); rm.addEventListener('click', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定拆掉？'; rm.classList.add('warn'); return; } removeIsleItem(Build.sel.id); }); bar.appendChild(rm);
+    const sh = el('button', 'tbtn ghost', '🛒'); sh.addEventListener('click', () => openSheet('island')); bar.appendChild(sh);
+  } else {
+    bar.appendChild(el('span', 'bb-hint', '🔨 建造模式：走到東西旁邊可以移動或拆掉'));
+    const sh = el('button', 'tbtn', '🛒 買東西'); sh.addEventListener('click', () => openSheet('island')); bar.appendChild(sh);
+  }
+}
+function confirmPlace(){
+  if (!Build.ghost) return; if (Build.err){ toast(Build.err); return; }
+  const T = ISLE_ITEMS[Build.type], items = rec.island.items, x = Build.x, z = Build.z, r = +Build.rot.toFixed(2);
+  if (Build.moveId){ const it = items.find(i => i.id === Build.moveId); if (!it) return; it.x = x; it.z = z; it.r = r; cloudCall('move_item', { p_id: it.id, p_x: x, p_z: z, p_r: r }); }
+  else {
+    if (items.length >= ISLE_MAX){ toast('島上已經放滿了'); return; }
+    if (T.house && items.filter(i => ISLE_ITEMS[i.t].house).length >= ISLE_HOUSE_MAX){ toast('房子最多 6 棟'); return; }
+    if (rec.coins < T.price){ toast(`金幣不夠，還差 🪙${(T.price - rec.coins).toLocaleString()}`); return; }
+    const id = items.reduce((m, i) => Math.max(m, i.id), 0) + 1; items.push({ id, t: Build.type, x, z, r }); addCoins(-T.price);
+    cloudCall('place_item', { p_type: Build.type, p_x: x, p_z: z, p_r: r }); ticker(`🏗️ 你在小島上放了 <b>${esc(T.name)}</b>！`);
+  }
+  saveRecLocal(); SFX.plop(); FX.emit(ISLE.x + x, 0.6, ISLE.z + z, 14, '#fff4dc', 0.6, 1.6, 0.9);
+  const keep = Build.moveId ? null : Build.type; clearGhost(); onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name);
+  if (keep && rec.coins >= T.price && !T.house) startPlace(keep); else renderBuildBar();   // 裝飾可以連續放
+}
+function removeIsleItem(id){
+  const items = rec.island.items, it = items.find(i => i.id === id); if (!it) return; const back = Math.floor(ISLE_ITEMS[it.t].price / 2);
+  rec.island.items = items.filter(i => i.id !== id); addCoins(back); saveRecLocal(); cloudCall('remove_item', { p_id: id });
+  toast(`拆掉了 ${ISLE_ITEMS[it.t].name}，退回 🪙${back}`); Build.sel = null; onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); renderBuildBar();
+}
+// ---- 房子裡面（在島的正下方蓋一間房間，從門口走進去）----
+const House = { on:false, group:null, cols:[], back:null, door:null, type:null, fish:[] };
+const ROOM_Y = -40;
+function nearDoor(){ if (!onIsle || House.on || Build.ghost) return null; let best = null, bd = 1.6; for (const d of isleDoors){ const dd = Math.hypot(me.pos.x - d.x, me.pos.z - d.z); if (dd < bd){ bd = dd; best = d; } } return best; }
+function nearExit(){ return House.on && Math.hypot(me.pos.x - House.door.x, me.pos.z - House.door.z) < 1.4 ? House.door : null; }
+function enterHouse(door){
+  if (House.on) return; stopBuild(); const T = ISLE_ITEMS[door.it.t], W = 9 * (T.scale ? 1.2 : 1), D = 7 * (T.scale ? 1.2 : 1), cx = ISLE.x, cz = ISLE.z, fy = ROOM_Y;
+  House.on = true; House.type = door.it.t; House.back = { x: door.x, z: door.z, rot: door.face }; House.fish = [];
+  const g = new THREE.Group(); scene.add(g); House.group = g; const n0 = colliders.length;
+  const warm = (c, r) => mat(c, r == null ? 0.85 : r, { emissive: c, emissiveIntensity: 0.12 });
+  const wallC = T.wall || (door.it.t === 'tea' ? '#efe3c8' : door.it.t === 'beach' ? '#e6f3f7' : '#f6e4bd');
+  const floor = box([W, 0.2, D], door.it.t === 'tea' ? '#c9b27a' : '#c99a6b', [cx, fy - 0.1, cz], warm(door.it.t === 'tea' ? '#c9b27a' : '#c99a6b', 0.9)); floor.castShadow = false; g.add(floor);
+  for (let i = 0; i < 8; i++){ const ln = box([0.03, 0.01, D], '#a87c52', [cx - W / 2 + (i + 1) * W / 9, fy + 0.005, cz]); ln.castShadow = false; g.add(ln); }
+  const room = new THREE.Mesh(new THREE.BoxGeometry(W, 3.2, D), warm(wallC, 0.9)); room.material.side = THREE.BackSide; room.position.set(cx, fy + 1.6, cz); g.add(room);   // 牆壁從裡面看（擋住鏡頭的那面會自動看不到）
+  const back = new THREE.Mesh(new THREE.BoxGeometry(60, 30, 60), new THREE.MeshBasicMaterial({ color:'#2a1e16', side:THREE.BackSide })); back.position.set(cx, fy + 5, cz); g.add(back);
+  addDeck(cx, cz, W - 0.2, D - 0.2, fy); House.deck = decks[decks.length - 1];
+  addBoxCol(cx, cz - D / 2 - 0.2, W + 1, 0.4); addBoxCol(cx, cz + D / 2 + 0.2, W + 1, 0.4); addBoxCol(cx - W / 2 - 0.2, cz, 0.4, D + 1); addBoxCol(cx + W / 2 + 0.2, cz, 0.4, D + 1);
+  // 窗戶（白天亮、晚上暗）、門
+  const winM = new THREE.MeshBasicMaterial({ color:'#bfe8ff' }); House.win = winM;
+  for (const wx of [-W / 4, W / 4]){ const wn = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.0), winM); wn.position.set(cx + wx, fy + 1.8, cz - D / 2 + 0.02); g.add(wn); g.add(box([1.5, 0.08, 0.08], '#8c5d3b', [cx + wx, fy + 1.8, cz - D / 2 + 0.05])); g.add(box([0.08, 1.1, 0.08], '#8c5d3b', [cx + wx, fy + 1.8, cz - D / 2 + 0.05])); }
+  const dr = box([1.1, 2.0, 0.08], '#8c5d3b', [cx, fy + 1.0, cz + D / 2 - 0.05]); g.add(dr); g.add(box([0.08, 0.08, 0.08], '#e8b730', [cx + 0.38, fy + 1.0, cz + D / 2 - 0.1]));
+  House.door = { x: cx, z: cz + D / 2 - 0.9 };
+  // 家具
+  const A = (sz, c, x, y, z) => { const b = box(sz, c, [cx + x, fy + y, cz + z], warm(c, 0.8)); g.add(b); return b; };
+  A([1.6, 0.4, 2.2], '#8c5d3b', -W / 2 + 1.1, 0.2, -D / 2 + 1.4); A([1.5, 0.22, 2.0], '#ffffff', -W / 2 + 1.1, 0.5, -D / 2 + 1.45); A([1.52, 0.12, 1.3], door.it.t === 'tea' ? '#5f7f9a' : '#f17b6d', -W / 2 + 1.1, 0.64, -D / 2 + 1.9); A([0.8, 0.16, 0.4], '#fff6e6', -W / 2 + 1.1, 0.68, -D / 2 + 0.6);
+  addBoxCol(cx - W / 2 + 1.1, cz - D / 2 + 1.4, 1.7, 2.3);
+  const rug = new THREE.Mesh(new THREE.CircleGeometry(1.6, 28), warm(door.it.t === 'tea' ? '#a8c09a' : '#e8a8b8', 0.9)); rug.rotation.x = -Math.PI / 2; rug.position.set(cx + 0.5, fy + 0.01, cz + 0.4); rug.receiveShadow = true; g.add(rug);
+  A([1.3, 0.08, 0.9], '#c79a6b', 0.5, 0.72, 0.4); for (const [lx, lz] of [[-0.55, -0.35], [0.55, -0.35], [-0.55, 0.35], [0.55, 0.35]]) A([0.08, 0.7, 0.08], '#8c5d3b', 0.5 + lx, 0.35, 0.4 + lz);
+  addCircleCol(cx + 0.5, cz + 0.4, 0.6);
+  for (const sz of [-1, 1]){ A([0.5, 0.06, 0.5], '#c98a5a', 0.5, 0.45, 0.4 + sz * 1.0); A([0.5, 0.5, 0.06], '#c98a5a', 0.5, 0.72, 0.4 + sz * 1.22); CHAIRS_ROOM.push({ x: cx + 0.5, z: cz + 0.4 + sz * 1.0, face: sz > 0 ? Math.PI : 0, y: fy + 0.02, room: true }); }
+  A([0.4, 2.2, 1.8], '#8c5d3b', W / 2 - 0.3, 1.1, -D / 2 + 1.4); const bc = ['#f17b6d', '#2f89c7', '#ffd36a', '#3fbf9d', '#9b7bff']; for (let r = 0; r < 4; r++) for (let k = 0; k < 6; k++) A([0.28, 0.32, 0.18], bc[(r + k) % 5], W / 2 - 0.42, 0.35 + r * 0.5, -D / 2 + 0.7 + k * 0.26);
+  addBoxCol(cx + W / 2 - 0.3, cz - D / 2 + 1.4, 0.5, 1.9);
+  A([1.4, 1.2, 0.5], '#b7b2a4', 0, 0.6, -D / 2 + 0.3); A([0.9, 0.6, 0.1], '#2a1a14', 0, 0.45, -D / 2 + 0.56); const fire = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 6), new THREE.MeshStandardMaterial({ color:'#ffb040', emissive:'#ff7a1a', emissiveIntensity:1.8 })); fire.position.set(cx, fy + 0.38, cz - D / 2 + 0.5); g.add(fire); House.fire = fire;
+  addBoxCol(cx, cz - D / 2 + 0.3, 1.5, 0.6);
+  // 小魚缸：裡面游著主人展示的魚
+  A([1.4, 0.7, 0.6], '#8c5d3b', W / 2 - 1.2, 0.35, D / 2 - 0.8);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.55), new THREE.MeshStandardMaterial({ color:'#9fe3ff', transparent:true, opacity:0.35, emissive:'#2f89c7', emissiveIntensity:0.3, depthWrite:false })); glass.position.set(cx + W / 2 - 1.2, fy + 1.1, cz + D / 2 - 0.8); g.add(glass);
+  addBoxCol(cx + W / 2 - 1.2, cz + D / 2 - 0.8, 1.5, 0.7);
+  const tank = (onIsle && onIsle.tank) || [], show = (onIsle && onIsle.show) || [], shown = tank.filter(x => show.includes(x.t) && FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 4);
+  const pick = shown.length ? shown : tank.filter(x => FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 3);
+  pick.forEach((x, i) => { try { const f = fishModel(FISH_BY_ID[x.f], 0.2); f.position.set(cx + W / 2 - 1.2, fy + 1.1, cz + D / 2 - 0.8); g.add(f); House.fish.push({ f, k: i * 1.7 }); } catch(e){} });
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.4, 10), warm('#c7643e')); pot.position.set(cx - W / 2 + 0.5, fy + 0.2, cz + D / 2 - 0.6); g.add(pot); const pl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 0), warm('#5d9c55')); pl.position.set(cx - W / 2 + 0.5, fy + 0.7, cz + D / 2 - 0.6); g.add(pl);
+  House.cols = colliders.slice(n0);
+  g.traverse(o => { if (o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
+  // 傳送進去
+  const fx = $('#fadeFx'); fx.classList.add('on');
+  setTimeout(() => { me.pos.x = cx; me.pos.z = cz + D / 2 - 1.4; me.baseY = fy; Jump.gy = fy; me.rot = Math.PI; cam.yaw = 0; cam.pitch = Math.max(cam.pitch, 0.6); House.savedDist = cam.dist; cam.dist = Math.min(cam.dist, 6.5); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260);
+  flash(`🏠 ${T.name}`, 1.0);
+}
+const CHAIRS_ROOM = [];
+function exitHouse(instant){
+  if (!House.on) return; const b = House.back;
+  const done = () => {
+    if (House.group) scene.remove(House.group); for (const c of House.cols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } House.cols = [];
+    const di = decks.indexOf(House.deck); if (di >= 0) decks.splice(di, 1); CHAIRS_ROOM.length = 0; if (mySeat && mySeat.room){ mySeat = null; me.sitting = false; }
+    House.on = false; House.group = null;
+    if (!instant){ me.pos.x = b.x; me.pos.z = b.z; me.baseY = groundHeight(b.x, b.z); Jump.gy = me.baseY; me.rot = b.rot; cam.yaw = b.rot + Math.PI; if (House.savedDist) cam.dist = House.savedDist; }
+    pushPresence(true);
+  };
+  if (instant){ done(); return; }
+  const fx = $('#fadeFx'); fx.classList.add('on'); setTimeout(() => { done(); setTimeout(() => fx.classList.remove('on'), 80); }, 260);
+}
+function updateHouse(t){
+  if (!House.on) return;
+  if (House.fire){ House.fire.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1); }
+  if (House.win) House.win.color.set(DayNight.lamp > 0.5 ? '#233a5c' : '#bfe8ff');
+  for (const o of House.fish){ const a = t * 0.8 + o.k; o.f.position.x = ISLE.x + (9 / 2 - 1.2) + Math.cos(a) * 0.45; o.f.position.z = ISLE.z + (7 / 2 - 0.8) + Math.sin(a * 1.3) * 0.12; o.f.rotation.y = Math.sin(a) > 0 ? Math.PI : 0; }
+}
+// ---- 海上看得到別人的島（最多 3 座，用讚數排序）----
+let neighborGroup = null, Neighbors = { list:null, at:0 };
+const NB_POS = [[-78, -30], [70, -48], [10, -92]];
+function clearNeighbors(){ if (neighborGroup){ scene.remove(neighborGroup); neighborGroup = null; } }
+async function fetchIslands(){
+  if (!Cloud.sb) return []; if (Neighbors.list && Date.now() - Neighbors.at < 3 * 60 * 1000) return Neighbors.list;
+  try { const { data } = await Cloud.sb.from('players').select('id,nickname,island,likes').order('likes', { ascending:false }).limit(30);
+    Neighbors.list = (data || []).filter(p => p.id !== myIdOrMe() && cleanIsland(p.island).items.length > 0).slice(0, 12); Neighbors.at = Date.now(); return Neighbors.list; } catch(e){ return []; }
+}
+async function loadNeighbors(){
+  clearNeighbors(); const list = await fetchIslands(); if (!onIsle) return;
+  const others = list.filter(p => p.id !== onIsle.owner).slice(0, 3); if (!others.length) return;
+  neighborGroup = new THREE.Group(); scene.add(neighborGroup);
+  others.forEach((p, i) => {
+    const [ox, oz] = NB_POS[i], g = new THREE.Group(); g.position.set(ox, 0, oz); neighborGroup.add(g);
+    const base = new THREE.Group(); base.position.set(ISLE.x, 0, ISLE.z); isleBaseMesh(base, ISLE.r, false); g.add(base);
+    const L = cleanIsland(p.island); for (const it of L.items.filter(it => ISLE_ITEMS[it.t].house).concat(L.items.filter(it => !ISLE_ITEMS[it.t].house).slice(0, 18))) placeItemInGroup(g, it, false);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = 'rgba(24,51,74,.82)'; c.beginPath(); c.roundRect ? c.roundRect(8, 16, 496, 96, 48) : c.rect(8, 16, 496, 96); c.fill();
+    c.fillStyle = '#fff'; c.font = 'bold 46px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(`${String(p.nickname || '釣客').slice(0, 8)} 的島 ❤️${p.likes || 0}`, 256, 66);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthWrite:false })); sp.scale.set(14, 3.5, 1); sp.position.set(ISLE.x, 11, ISLE.z); g.add(sp);
+  });
+  neighborGroup.traverse(o => { if (o.isMesh){ o.castShadow = false; } });
+}
+// ---- 小島分頁：商店（拿了就去擺）、逛別人的島 ----
+const ItemShot = { kit:null, cache:new Map() };
+function itemShot(type, size){
+  if (ItemShot.cache.has(type)) return ItemShot.cache.get(type);
+  if (!ItemShot.kit){ const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#b8c8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(3, 5, 4); sc.add(dl);
+    const rt = new THREE.WebGLRenderTarget(size, size, { samples:4 }); rt.texture.colorSpace = THREE.SRGBColorSpace; ItemShot.kit = { sc, cam: new THREE.PerspectiveCamera(32, 1, 0.05, 60), rt }; }
+  const K = ItemShot.kit, T = ISLE_ITEMS[type], g = itemMesh(type, { lite:true }); K.sc.add(g);
+  const r = T.house ? 3.4 * (T.scale || 1) : Math.max(1.1, T.rad * 1.4), h = T.house ? 2.2 : ['palm', 'tree', 'flag', 'swing', 'parasol', 'lamp'].includes(type) ? 1.4 : 0.5;
+  K.cam.position.set(r * 1.6, h + r * 0.9, r * 2.0); K.cam.lookAt(0, h, 0);
+  const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
+  renderer.setRenderTarget(K.rt); renderer.setClearColor('#eef6e8', 1); renderer.clear(); renderer.render(K.sc, K.cam);
+  const px = new Uint8Array(size * size * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, size, size, px); renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA); K.sc.remove(g);
+  const cv = document.createElement('canvas'); cv.width = cv.height = size; const c2 = cv.getContext('2d'), id = c2.createImageData(size, size);
+  for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
+  c2.putImageData(id, 0, 0); const url = cv.toDataURL(); ItemShot.cache.set(type, url); return url;
+}
+let isleTab = 'shop';
 function renderIsland(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>🏝️ 我的小島</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
-  const mine = onIsle && onIsle.owner === myIdOrMe();
-  const bar = el('div', 'tankbar');
+  const mine = onIsle && onIsle.owner === myIdOrMe(), bar = el('div', 'tankbar');
   const go = el('button', 'tbtn', mine ? '你在小島上' : '前往我的小島'); go.disabled = mine; go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); bar.appendChild(go);
   if (onIsle){ const bk = el('button', 'tbtn ghost', '回村子'); bk.addEventListener('click', () => { closeSheet(); leaveIsle(); }); bar.appendChild(bk); }
   body.appendChild(bar);
-  body.appendChild(el('p', 'sub', '你的小島有 3 塊建地可以蓋房子、10 個位置可以放裝飾。蓋好之後別人可以從「玩家」分頁或排行榜來參觀。拆掉會退回一半的金幣。小島的碼頭也可以釣魚。'));
-  const section = (title, kind, slots, T) => {
-    body.appendChild(el('div', 'dexhead', title));
-    const ul = el('ul', 'shoplist cols');
-    slots.forEach((_, i) => {
-      const cur = rec.island[kind][i], li = el('li', cur ? 'on' : '');
-      li.appendChild(el('span', 'dishic', kind === 'h' ? (cur ? '🏠' : '🟫') : (cur ? { flower:'🌷', bench:'🪑', lamp:'💡', palm:'🌴', pond:'🐠', flag:'🚩' }[cur] : '·')));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${kind === 'h' ? '建地' : '位置'} ${i + 1}：${cur ? T[cur].name : '空的'}`)); li.appendChild(d);
-      const acts = el('div', 'tacts');
-      if (cur){ const b = el('button', 'tbtn ghost', `拆掉 +${Math.floor(T[cur].price / 2)}`); b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定拆掉？'; b.classList.add('warn'); return; } sellBuild(kind, i); }); acts.appendChild(b); }
-      else { const b = el('button', 'tbtn', kind === 'h' ? '蓋房子' : '放裝飾'); b.addEventListener('click', () => { islePick = { kind, slot:i }; renderTab(); }); acts.appendChild(b); }
-      li.appendChild(acts); ul.appendChild(li);
-      if (islePick && islePick.kind === kind && islePick.slot === i && !cur){
-        const pick = el('li', 'pickrow');
-        for (const [k, it] of Object.entries(T)){ const b = el('button', 'tbtn' + (rec.coins < it.price ? ' ghost' : ''), `${it.name} 🪙${it.price.toLocaleString()}`); b.addEventListener('click', () => { islePick = null; buyBuild(kind, i, k); }); pick.appendChild(b); }
-        const x = el('button', 'tbtn ghost', '取消'); x.addEventListener('click', () => { islePick = null; renderTab(); }); pick.appendChild(x); ul.appendChild(pick);
-      }
-    });
+  const seg = el('div', 'seg'); [['shop', '🛒 買東西擺島上'], ['visit', '🌏 逛別人的島']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(isleTab === k)); b.addEventListener('click', () => { isleTab = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
+  if (isleTab === 'visit'){
+    body.appendChild(el('p', 'sub', '按讚數最多的島。去參觀時可以幫他按讚（每天每座島一次）。'));
+    const ul = el('ul', 'shoplist'); body.appendChild(ul);
+    if (!Cloud.on){ ul.appendChild(el('li', '', '要連上雲端才能逛別人的島')); return; }
+    fetchIslands().then(list => { ul.innerHTML = ''; if (!list.length){ ul.appendChild(el('li', '', '還沒有人布置小島，當第一個吧！')); return; }
+      for (const p of list){ const li = el('li'); li.appendChild(el('span', 'dishic', '🏝️')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.nickname || '釣客'} 的島`)); d.appendChild(el('div', 'sub2', `❤️ ${p.likes || 0}・${cleanIsland(p.island).items.length} 件東西`)); li.appendChild(d);
+        const a = el('div', 'tacts'), b = el('button', 'tbtn', '參觀'); b.addEventListener('click', () => visitIsle(p.id, p.nickname || '釣客')); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } });
+    return;
+  }
+  const items = rec.island.items, nh = items.filter(i => ISLE_ITEMS[i.t].house).length;
+  body.appendChild(el('p', 'sub', `島上有 ${items.length} / ${ISLE_MAX} 件東西、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。走到房子門口可以進去！拆掉退一半金幣。`));
+  for (const [title, filt] of [['🏠 房子', v => v.house], ['🌷 裝飾和家具', v => !v.house]]){
+    body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
+    for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([, v]) => filt(v))){
+      const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・島上 ${items.filter(i => i.t === k).length} 個`)); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'); b.addEventListener('click', () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
+    }
     body.appendChild(ul);
-  };
-  section('🏠 房子', 'h', HOUSE_SLOTS, HOUSES);
-  section('🌷 裝飾', 'd', DECO_SLOTS, DECOS);
+  }
 }
 
 /* ================= 有新版本時提醒（玩家自己按才重新整理，不會在拉魚時突然重開）================= */
@@ -3166,7 +3382,7 @@ function afterSell(got, n){
   logMsg('', `你賣了 ${n} 條魚，得到 ${got} 金幣`, true); renderTab();
 }
 
-function emptyRec(){ return { gear:{}, owned:[], island:{ h:{}, d:{} }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
+function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0 }; }
 const SHOW_MAX = 100, KEEP_MAX = 200;
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || ++others <= KEEP_MAX); }
@@ -3495,6 +3711,7 @@ function presenceObj(){
   if (mySeat) o.st = 1;
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
+  if (House.on) o.hs = 1;
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
@@ -3529,13 +3746,13 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by;
-  if (pos){ p.target.set(clamp(+pos[0]||0, -90, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, -0.2, 8); }
+  if (pos){ p.target.set(clamp(+pos[0]||0, -90, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, ROOM_Y - 1, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   p.fisher.sitting = !!pr.bt || !!pr.st;
-  p.isle = typeof pr.is === 'string' ? pr.is : null;   // 不在同一座島上的人看不到
+  p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = !!pr.hs;   // 不在同一座島上的人看不到
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
@@ -3562,7 +3779,7 @@ function updatePeers(dt, t){
     f.speed += ((d > 0.05 ? Math.min(6, d*8) : 0) - f.speed) * Math.min(1, dt*8);
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
-    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null); if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
+    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && !!p.inHouse === House.on; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
     f.dip = p.ph === 'bite' ? 0.9 + Math.sin(t*30)*0.1 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
@@ -3711,11 +3928,11 @@ function rowToRec(r){
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
-  rec = rowToRec(row); rec.island = cleanIsland(rec.island); LS.set('tide.rec', rec); buildTank();
+  rec = rowToRec(row); rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西'];
+const CLOUD_ERR = ['今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
