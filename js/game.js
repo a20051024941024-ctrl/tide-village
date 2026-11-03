@@ -2978,6 +2978,47 @@ function updateEnv(dt, t){
   const chip = $('#wxChip'); if (chip){ const txt = `${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
 }
 
+/* ---- 定時釣魚大賽：每天台灣時間 12:00、19:00、21:00 各 10 分鐘，比總重量（伺服器 017_tourney.sql 算分、發獎）---- */
+const TOURNEY = { hours:[12, 19, 21], mins:10, prize:[3000, 1500, 800], join:100 };
+var Tny = { on:false, id:null, myW:0, myN:0, board:[], boardId:null, boardAt:0, warnId:null };
+function tnyId(dayStart, h){ const d = new Date(dayStart + 8 * 3600e3 + h * 3600e3); return Number(`${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}${String(h).padStart(2, '0')}`); }
+function tourneyNow(ms){
+  ms = ms || Date.now(); const L = new Date(ms + 8 * 3600e3), day0 = Date.UTC(L.getUTCFullYear(), L.getUTCMonth(), L.getUTCDate()) - 8 * 3600e3, dur = TOURNEY.mins * 60e3;
+  if (/tny=on/.test(location.hash)){ const h = L.getUTCHours(), st = day0 + h * 3600e3; return { active:true, id:tnyId(day0, h), start:st, end:Math.max(ms + 5 * 60e3, st + dur), test:true }; }
+  for (let k = 0; k < 2; k++) for (const h of TOURNEY.hours){ const st = day0 + k * 86400e3 + h * 3600e3; if (ms < st + dur) return { active: ms >= st, id: tnyId(day0 + k * 86400e3, h), start: st, end: st + dur }; }
+  return { active:false, id:null, start:Infinity, end:Infinity };
+}
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+async function loadTnyBoard(id){
+  if (!Cloud.sb || !id) return; Tny.boardAt = Date.now();
+  try { const { data, error } = await Cloud.sb.from('players').select('id,nickname,tourney_id,tourney_w,tourney_n').eq('tourney_id', id).gt('tourney_w', 0).order('tourney_w', { ascending:false }).limit(10);
+    if (!error && data){ Tny.board = data.filter(r => Number(r.tourney_id) === id).map(r => ({ id:r.id, name:r.nickname, w:Number(r.tourney_w) || 0, n:r.tourney_n || 0 })); Tny.boardId = id; }
+    if (!$('#sheet').hidden && curTab === 'rank' && lbMode === 'tny') renderTab(); } catch(e){}
+}
+function tnyRank(){ const mine = Tny.myW; if (!(mine > 0)) return 0; return 1 + Tny.board.filter(r => r.id !== myId && r.w > mine).length; }
+async function claimTourney(){
+  if (!Cloud.on) return; const before = rec.coins, row = await cloudCall('claim_tourney'); if (!row) return;
+  const got = (Number(row.coins) || 0) - before; if (got <= 0) return;
+  const rk = TOURNEY.prize.indexOf(got); SFX.catch();
+  flash(rk >= 0 ? `🏆 釣魚大賽第 ${rk + 1} 名！獎金 🪙${got}` : `🎣 參加釣魚大賽的獎勵 🪙${got}`, 2.4);
+  ticker(rk >= 0 ? `🏆 <b>你</b> 在釣魚大賽拿到第 ${rk + 1} 名，獎金 🪙${got}！` : `🎣 謝謝參加釣魚大賽，送你 🪙${got}`);
+}
+function tourneyTick(){
+  const T = tourneyNow(), nowMs = Date.now();
+  if (T.active && !Tny.on){ Tny.on = true; Tny.id = T.id; Tny.test = !!T.test; if (Tny.myId !== T.id){ Tny.myW = 0; Tny.myN = 0; Tny.myId = T.id; } Tny.board = []; Tny.boardId = T.id;
+    flash('🏆 釣魚大賽開始！', 1.8); ticker(`🏆 <b>釣魚大賽開始了！</b>${TOURNEY.mins} 分鐘內釣到的魚，總重量最重的前三名有獎（🪙${TOURNEY.prize.join(' / ')}）`); loadTnyBoard(T.id); }
+  if (!T.active && Tny.on){ Tny.on = false; const id = Tny.id; ticker(`🏁 釣魚大賽結束了！${Tny.myN ? `你釣了 ${Tny.myN} 條、${Tny.myW.toFixed(2)}kg，` : ''}名次馬上公布`); setTimeout(() => { loadTnyBoard(id); claimTourney(); }, 25000 + Math.random() * 8000); }
+  if (!T.active && T.start - nowMs < 5 * 60e3 && Tny.warnId !== T.id){ Tny.warnId = T.id; ticker(`⏰ 釣魚大賽 ${Math.ceil((T.start - nowMs) / 60000)} 分鐘後開始，先找好釣點吧！`); }
+  if (Tny.on && Date.now() - Tny.boardAt > 20000) loadTnyBoard(Tny.id);
+  // 右上角的倒數
+  let pill = $('#tnyPill'); const soon = !T.active && T.start - nowMs < 15 * 60e3;
+  if (!T.active && !soon){ if (pill) pill.hidden = true; return; }
+  if (!pill){ pill = document.createElement('button'); pill.id = 'tnyPill'; pill.className = 'panel'; pill.addEventListener('click', () => { lbMode = 'tny'; openSheet('rank'); }); document.body.appendChild(pill); }
+  pill.hidden = false; pill.classList.toggle('live', T.active);
+  const txt = T.active ? `🏆 大賽 ${mmss(T.end - nowMs)}・${Tny.myW > 0 ? `${Tny.myW.toFixed(1)}kg 第 ${tnyRank()} 名` : Cloud.on ? '快去釣！' : '要連上雲端'}` : `🏆 大賽 ${mmss(T.start - nowMs)} 後開始`;
+  if (pill._t !== txt){ pill.textContent = txt; pill._t = txt; }
+}
+setInterval(tourneyTick, 1000);
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
 // 渡船：港口的船夫阿海，可以載你到祕密窩點或外海
 const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'北邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
@@ -4038,6 +4079,7 @@ function recordCatch(f, w){
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
   cloudCall('record_catch', { p_fish: f.id, p_weight: w });
+  if (Tny.on){ Tny.myW += w; Tny.myN++; }
   return { isNew, isBest: isBest && !isNew };
 }
 
@@ -4158,6 +4200,7 @@ function showCatch(f, w, res){
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '圖鑑新登錄'; b.appendChild(x); }
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '個人新紀錄'; b.appendChild(x); }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
+  if (Tny.on){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `⏱️ 大賽 +${w.toFixed(2)}kg`; b.appendChild(x); }
   $('#ccName').textContent = f.name;
   const small = undersized(f, w), lp = lovePts(f, w);
   if (small){ const x = document.createElement('span'); x.className = 'badge small'; x.textContent = `📏 未達尺寸（${sizeMin(f).toFixed(2)}kg 以上）`; b.appendChild(x); }
@@ -4564,6 +4607,7 @@ function rowToRec(r){
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
+  if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
   rec = rowToRec(row); rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
@@ -4673,7 +4717,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    await loadContest(); loadBoard(); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
+    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
@@ -4831,9 +4875,23 @@ function renderTab(){
     }
   } else if (curTab === 'rank'){
     const seg = el('div', 'seg');
-    (Cloud.contest ? [['week','🏆本週比賽']] : []).concat([['best','最大的魚'],['total','釣魚總數']]).concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
+    (Cloud.contest ? [['week','🏆本週比賽']] : []).concat(Cloud.on ? [['tny','⏱️定時大賽']] : []).concat([['best','最大的魚'],['total','釣魚總數']]).concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
     body.appendChild(seg);
     if (lbMode === 'week' && !Cloud.contest) lbMode = 'best';
+    if (lbMode === 'tny' && !Cloud.on) lbMode = 'best';
+    if (lbMode === 'tny'){
+      const T = tourneyNow(), st = new Date(T.start), hm = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      body.appendChild(el('p', 'sub', `每天台灣時間 ${TOURNEY.hours.map(h => h + ':00').join('、')} 開始，每場 ${TOURNEY.mins} 分鐘。比賽時間內釣到的魚全部加起來，總重量最重的前三名拿 🪙${TOURNEY.prize.join(' / ')}，有參加的人也有 🪙${TOURNEY.join}。結束後會自動發獎。`));
+      body.appendChild(el('div', 'tipbox')).innerHTML = T.active ? `<b>🏆 比賽進行中！還剩 ${mmss(T.end - Date.now())}</b><span>${Tny.myW > 0 ? `你目前 ${Tny.myN} 條・${Tny.myW.toFixed(2)}kg，第 ${tnyRank()} 名` : '你還沒釣到魚，快去拋竿！'}</span>` : `<b>⏰ 下一場：${st.getMonth() + 1}/${st.getDate()} ${hm(st)}</b><span>${Tny.boardId ? '下面是上一場的成績。' : '還沒有比賽紀錄。'}</span>`;
+      if (!Tny.boardId && !Tny.loadedPrev){ Tny.loadedPrev = true; const last = (() => { const ms = Date.now(); for (let back = 0; back < 48; back++){ const tt = tourneyNow(ms - back * 3600e3 - 11 * 60e3); if (tt.end <= ms) return tt.id; } return null; })(); if (last) loadTnyBoard(last); }
+      const rows = Tny.board.slice(); if (T.active && Tny.myW > 0 && !rows.some(r => r.id === myId)) rows.push({ id: myId, name: myDisplayName(), w: Tny.myW, n: Tny.myN });
+      rows.forEach(r => { if (r.id === myId && T.active) r.w = Math.max(r.w, Tny.myW); }); rows.sort((a, b) => b.w - a.w);
+      if (!rows.length){ body.appendChild(el('div', 'empty', T.active ? '還沒有人釣到魚，第一名是你的！' : '上一場還沒有成績。')); return; }
+      const ul = el('ol', 'rank'); rows.slice(0, 10).forEach((r, i) => { const isMe = r.id === myId, li = el('li', isMe ? 'me' : ''); li.appendChild(el('span', 'pos', i < 3 ? ['🥇', '🥈', '🥉'][i] : String(i + 1)));
+        const who = el('span', 'who', isMe ? `${myDisplayName() === '你' ? '你' : myDisplayName() + '（你）'}` : (r.name || '釣客')); who.appendChild(el('small', '', `${r.n} 條${i < 3 ? `・獎金 🪙${TOURNEY.prize[i]}` : ''}`)); li.appendChild(who);
+        li.appendChild(el('span', 'val', r.w.toFixed(2) + ' kg')); ul.appendChild(li); });
+      body.appendChild(ul); return;
+    }
     if (Cloud.on && lbMode === 'week'){ Object.assign(lb, Cloud.board); const cf = FISH_BY_ID[Cloud.contest.fish], end = new Date(Cloud.contest.ends_at);
       body.appendChild(el('p', 'sub', `本週目標：在${SPOT_BY_ID[cf.spot].label}釣最重的「${cf.name}」。比賽到 ${end.getMonth() + 1}/${end.getDate()}（週一）00:00 結束，之後換新的魚。`)); }
     else if (Cloud.on){ Object.assign(lb, Cloud.board); body.appendChild(el('p', 'sub', '全服排行榜：所有玩家的紀錄都經過伺服器檢查，每分鐘更新一次。')); }
@@ -5024,6 +5082,7 @@ function renderTab(){
     sec('🏆 每週比賽與排行榜', [
       '每週一半夜 12 點（台灣時間）換一種比賽魚，比誰釣到最重的那一條。排行榜第一個分頁就是本週比賽。',
       '排行榜還有最重的魚、總共釣到幾條、賺最多錢，是全服的。',
+      `⏱️ 定時釣魚大賽：每天台灣時間 ${TOURNEY.hours.map(h => h + ':00').join('、')} 開始，每場 ${TOURNEY.mins} 分鐘。比賽時間內釣到的魚總重量最重的前三名拿 🪙${TOURNEY.prize.join(' / ')}，有參加就有 🪙${TOURNEY.join}。開始前 15 分鐘右上角會倒數，點一下可以看即時排名。`,
     ]);
     sec('🏝️ 私人小島', [
       '選單的「小島」可以去自己的島。在「買東西擺島上」挑房子或家具，拿著半透明預覽走路調位置（綠色可以放、紅色不行），「⟲」轉方向、「✔」放下。',

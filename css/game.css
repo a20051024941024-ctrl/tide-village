@@ -604,3 +604,9 @@ details.help li{margin:4px 0}
 #diveDn.down{transform:translateY(3px)}
 @media (max-height:520px){ #diveDn{width:54px;height:54px;font-size:18px} #diveHud{top:calc(var(--gt) + 64px);padding:6px 8px 6px 12px} #diveHud .bar{width:90px} }
 #fadeFx.flashw{background:#fff;opacity:.85;transition:none}
+
+/* 定時釣魚大賽 */
+#tnyPill{position:fixed;right:16px;top:calc(var(--gt) + 100px);padding:7px 12px;font-size:13px;font-weight:800;z-index:7;color:var(--ink);font-variant-numeric:tabular-nums}
+#tnyPill[hidden]{display:none}
+#tnyPill.live{background:linear-gradient(135deg,#ffd36a,#ff9f43);color:#4a2a00;animation:relPulse 2s ease-in-out infinite}
+@media (max-height:520px){ #tnyPill{top:calc(var(--gt) + 92px)} }
