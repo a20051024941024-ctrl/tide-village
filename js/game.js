@@ -3177,7 +3177,7 @@ function renderLvChip(){
 }
 async function claimLevels(){ if (!Cloud.on) return; const before = rec.coins, row = await cloudCall('claim_levels'); if (!row) return; const got = (Number(row.coins) || 0) - before; if (got > 0){ SFX.catch(); flash(`⭐ 升級獎勵 🪙${got.toLocaleString()}！`, 2); } }
 function lvTick(){
-  if (!rec) return; const L = lvOf(calcXP()); renderLvChip();
+  if (!rec) return; const L = lvOf(calcXP()); renderLvChip(); { const t = curTitle(); if (t !== Lv.cur){ Lv.cur = t; refreshMyName(); pushPresence(true); } }
   if (Lv.L != null && L > Lv.L){ flash(`🎉 升級了！Lv.${L}`, 2); SFX.catch(); ticker(`🎉 <b>你</b>升到 Lv.${L} 了！${LV_TITLES.some(([l]) => l === L) ? `得到稱號「${LV_TITLES.find(([l]) => l === L)[1]}」` : ''}`); if (room && room.connected()) room.emit('lvup', { L }).catch(() => {}); setTimeout(claimLevels, 1500); }
   Lv.L = L;
   // 成就
@@ -3194,8 +3194,8 @@ function renderAch(body){
   body.appendChild(el('p', 'sub', '經驗值：釣到常見魚 +10、稀有魚 +40、傳說魚 +250，放流 +5，水下照片每種 +30。每升一級都有金幣獎勵（Lv × 50），連上雲端時自動發。'));
   body.appendChild(el('div', 'dexhead', '🏷️ 稱號（顯示在名字上面，大家都看得到）'));
   const tl = el('div', 'titles'), cur = curTitle();
-  const none = el('button', 'tbtn' + (cur ? ' ghost' : ''), '不顯示'); none.addEventListener('click', () => { Lv.title = ''; LS.set('tide.title', ''); refreshMyName(); pushPresence(true); renderTab(); }); tl.appendChild(none);
-  for (const t of myTitles()){ const b = el('button', 'tbtn' + (cur === t.name ? '' : ' ghost'), t.name); b.title = t.how; b.addEventListener('click', () => { Lv.title = t.name; LS.set('tide.title', t.name); refreshMyName(); pushPresence(true); renderTab(); }); tl.appendChild(b); }
+  const none = el('button', 'tbtn' + (cur ? ' ghost' : ''), '不顯示'); none.addEventListener('click', () => { Lv.title = ''; Lv.cur = ''; LS.set('tide.title', ''); refreshMyName(); pushPresence(true); renderTab(); }); tl.appendChild(none);
+  for (const t of myTitles()){ const b = el('button', 'tbtn' + (cur === t.name ? '' : ' ghost'), t.name); b.title = t.how; b.addEventListener('click', () => { Lv.title = t.name; Lv.cur = t.name; LS.set('tide.title', t.name); refreshMyName(); pushPresence(true); renderTab(); }); tl.appendChild(b); }
   body.appendChild(tl);
   const done = ACH.filter(achDone).length; body.appendChild(el('div', 'dexhead', `🏅 成就（${done} / ${ACH.length}）`));
   const ul = el('ul', 'shoplist cols ach');
@@ -4637,7 +4637,7 @@ function presenceObj(){
   if (onIsle) o.is = onIsle.owner;
   if (House.on) o.hs = 1;
   if (Dive.on) o.dv = 1;
-  { let t = ''; try { t = curTitle(); } catch(e){} if (t) o.ti = t; }
+  if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
@@ -5090,6 +5090,16 @@ function updateNpcs(dt, t){
   }
 }
 
+// 手機效能：畫質「低／中」時，離鏡頭太遠的 NPC 和客人先不畫（每個角色有 20～40 個零件，很吃效能）
+const AV_CULL = { low: 30, mid: 48 };
+function cullAvatars(){
+  const R = AV_CULL[Quality.tier]; if (!R) return; const cx = camera.position.x, cz = camera.position.z, R2 = R * R;
+  const far = f => { const dx = f.pos.x - cx, dz = f.pos.z - cz; return dx * dx + dz * dz > R2; };
+  const own = f => { const fr = far(f); if (fr && f.av.g.visible){ f.av.g.visible = false; f._culled = true; } else if (!fr && f._culled){ f.av.g.visible = true; f._culled = false; } if (f.blob) f.blob.visible = f.av.g.visible; };
+  for (const n of npcs) own(n); for (const c of customers) if (c.f) own(c.f);
+  for (const q of questNpcs) if (q.f.av.g.visible && far(q.f)){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; }
+  if (ferryNpc && ferryNpc.f.av.g.visible && far(ferryNpc.f)){ ferryNpc.f.av.g.visible = false; if (ferryNpc.f.blob) ferryNpc.f.blob.visible = false; }
+}
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ sheetOpenedAt = performance.now(); curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
@@ -5523,7 +5533,7 @@ function frame(){
   if (waterfall && Math.hypot(me.pos.x - waterfall.x, me.pos.z - waterfall.z) < 45){ if (Math.random() < dt * 10) FX.emit(waterfall.x + rand(-1, 1), 0.3, waterfall.z + rand(-0.5, 0.5), 1, '#ffffff', 0.9, 1.6, 0.7); if (Math.random() < dt * 1.5) ripple(waterfall.x + rand(-0.8, 0.8), waterfall.z + rand(-0.4, 0.4)); }
   fishTime.value = t; updateSeaLife(t); FX.update(dt); if (skyDome) skyDome.position.copy(camera.position); updateZones(t); watchFps(t);
   placeLabelsUpdate();
-  if (Dive.on) diveHideWorld();
+  if (Dive.on) diveHideWorld(); else cullAvatars();
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
