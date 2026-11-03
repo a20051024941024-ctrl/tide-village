@@ -75,6 +75,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 #brand .mark{width:34px;height:34px;border-radius:10px;background:var(--sea);display:grid;place-items:center;flex:none}
 #brand h1{font-family:var(--f-display);font-size:18px;margin:0;line-height:1.1;font-weight:400;letter-spacing:.04em}
 #online{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);margin-top:2px}
+#clock{margin-left:6px;white-space:nowrap}
 #coins{margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(255,211,106,.28);color:#8a5a00;white-space:nowrap}
 #coins b{font-weight:800}
 #coins.bump{animation:coinbump .5s ease}
@@ -371,7 +372,7 @@ body.photo.nonames #labels{display:none}
 <div id="top">
   <div id="brand" class="panel">
     <div class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3 16c2 1.6 4 1.6 6 0s4-1.6 6 0 4 1.6 6 0"/><path d="M15 3v8a3 3 0 1 1-3-3"/></svg></div>
-    <div><h1>潮汐釣魚村</h1><div id="online"><span class="dot"></span><span id="onlineTxt">單人模式</span><span id="coins" title="金幣">🪙 <b id="coinTxt">0</b></span></div></div>
+    <div><h1>潮汐釣魚村</h1><div id="online"><span class="dot"></span><span id="onlineTxt">單人模式</span><span id="clock"></span><span id="coins" title="金幣">🪙 <b id="coinTxt">0</b></span></div></div>
   </div>
   <div id="menu">
     <button class="mbtn panel" data-tab="map" aria-label="地圖"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span>地圖</span></button>
@@ -620,27 +621,27 @@ const FISH = [
   // river
   { id:'perch',  spot:'river', name:'翡翠河鱸', rarity:'常見', color:'#5de0bd', min:0.4, max:1.6, power:0.38, desc:'月灣河岸最常見的住民，綠色鱗片在水草間一閃一閃。' },
   { id:'crucian',spot:'lake', name:'銀鱗鯽',   rarity:'常見', color:'#c9d6e3', min:0.2, max:0.9, power:0.3,  desc:'成群在木橋下打轉，咬餌很快，適合新手練手感。' },
-  { id:'catfish',spot:'river', name:'竹影鯰',   rarity:'稀有', color:'#9c8657', min:1.5, max:5.5, power:0.66, desc:'白天躲在竹影下，鬍鬚很長，力氣比看起來大很多。' },
-  { id:'koi',    spot:'lake', name:'朱紅錦鯉', rarity:'傳說', color:'#ff6b4a', min:2.5, max:7.0, power:0.9,  desc:'傳說它每年只在滿月那週游到河灣。釣到的人會有一整年好運。' },
+  { id:'catfish',spot:'river', time:'night', name:'竹影鯰',   rarity:'稀有', color:'#9c8657', min:1.5, max:5.5, power:0.66, desc:'白天躲在竹影下，鬍鬚很長，力氣比看起來大很多。' },
+  { id:'koi',    spot:'lake', time:'twilight', name:'朱紅錦鯉', rarity:'傳說', color:'#ff6b4a', min:2.5, max:7.0, power:0.9,  desc:'傳說它每年只在滿月那週游到河灣。釣到的人會有一整年好運。' },
   // sea
-  { id:'mackerel',spot:'sea',  name:'沙灘小鯖', rarity:'常見', color:'#6fa8dc', min:0.3, max:1.2, power:0.4,  desc:'跟著浪花游來游去，背上有藍綠色的斑紋。' },
+  { id:'mackerel',spot:'sea', time:'day',  name:'沙灘小鯖', rarity:'常見', color:'#6fa8dc', min:0.3, max:1.2, power:0.4,  desc:'跟著浪花游來游去，背上有藍綠色的斑紋。' },
   { id:'scorpion',spot:'sea',  name:'條紋石狗公',rarity:'常見',color:'#e08f5b', min:0.3, max:1.4, power:0.42, desc:'喜歡貼著礁石，背鰭有刺，拿的時候要小心。' },
-  { id:'moonbream',spot:'sea', name:'月光鯛',   rarity:'稀有', color:'#ffd86d', min:1.0, max:3.8, power:0.64, desc:'鱗片會反射月光，晴潮燈塔一亮，牠們就會靠近岸邊。' },
+  { id:'moonbream',spot:'sea', time:'night', name:'月光鯛',   rarity:'稀有', color:'#ffd86d', min:1.0, max:3.8, power:0.64, desc:'鱗片會反射月光，晴潮燈塔一亮，牠們就會靠近岸邊。' },
   { id:'marlin', spot:'harbor',   name:'深藍旗魚', rarity:'傳說', color:'#2f5fd0', min:8.0, max:24.0,power:0.95, desc:'遠洋的王者，偶爾追著小魚游進海灣。拉線時要很有耐心。' },
   { id:'manta',   spot:'harbor',   name:'星紋魟魚', rarity:'稀有', color:'#2f4d6b', min:12, max:45,  power:0.72, desc:'像披風一樣在海面下滑行，背上的星紋只有晴天才看得到。' },
   { id:'dolphin', spot:'harbor',   name:'晴潮海豚', rarity:'稀有', color:'#7f8fa3', min:40, max:150, power:0.7,  w:0.7, desc:'喜歡追著船跑的聰明傢伙。合照之後牠會對你眨眨眼，再游回海裡。' },
   { id:'shark',   spot:'harbor',   name:'礁岩鯊',   rarity:'傳說', color:'#3f5f78', min:60, max:250, power:0.97, w:0.6, desc:'在燈塔下方的深水巡游。力氣非常大，拉線時千萬別硬拉。' },
   { id:'orca',    spot:'harbor',   name:'浪花虎鯨', rarity:'傳說', color:'#2b3138', min:1200, max:5500, power:0.98, w:0.3, desc:'黑白分明的海上獵手，常常成群在港口外繞圈。拉線時牠會突然轉向，要跟著放線。' },
   { id:'beluga',  spot:'harbor',   name:'月白白鯨', rarity:'稀有', color:'#e4ebf0', min:400, max:1500, power:0.76, w:0.45, desc:'圓圓的額頭軟軟的，看起來一直在對你笑。聽說牠會學海鷗叫。' },
-  { id:'sunfish', spot:'harbor',   name:'慵懶翻車魚', rarity:'稀有', color:'#8fa3b8', min:60, max:900, power:0.55, w:0.55, desc:'喜歡側躺在海面曬太陽，看起來很懶，其實是在等海鳥幫牠清潔身體。' },
-  { id:'sperm',   spot:'harbor',   name:'深潛抹香鯨', rarity:'傳說', color:'#6d7f96', min:3000, max:15000, power:1.0, w:0.18, desc:'方方的大頭可以潛到最深的海溝。能把牠拉上岸的人，手臂一定很有力。' },
-  { id:'whaleshark', spot:'harbor', name:'星斑鯨鯊', rarity:'傳說', color:'#7f8c99', min:2000, max:12000, power:0.96, w:0.22, desc:'世界上最大的魚，背上滿是白色星點。脾氣非常溫和，只吃小小的浮游生物。' },
+  { id:'sunfish', spot:'harbor', time:'day',   name:'慵懶翻車魚', rarity:'稀有', color:'#8fa3b8', min:60, max:900, power:0.55, w:0.55, desc:'喜歡側躺在海面曬太陽，看起來很懶，其實是在等海鳥幫牠清潔身體。' },
+  { id:'sperm',   spot:'harbor', time:'night',   name:'深潛抹香鯨', rarity:'傳說', color:'#6d7f96', min:3000, max:15000, power:1.0, w:0.18, desc:'方方的大頭可以潛到最深的海溝。能把牠拉上岸的人，手臂一定很有力。' },
+  { id:'whaleshark', spot:'harbor', time:'day', name:'星斑鯨鯊', rarity:'傳說', color:'#7f8c99', min:2000, max:12000, power:0.96, w:0.22, desc:'世界上最大的魚，背上滿是白色星點。脾氣非常溫和，只吃小小的浮游生物。' },
   { id:'whale',   spot:'harbor',   name:'座頭鯨',   rarity:'傳說', color:'#34395e', min:900, max:3000, power:1.0, w:0.25, desc:'偶爾會游進海灣唱歌。能釣上牠的人，整個村子都會記住你的名字。' },
   // creek
   { id:'kuhua',  spot:'pool', name:'清溪苦花', rarity:'常見', color:'#9fd8c4', min:0.2, max:0.8, power:0.34, desc:'只住在最乾淨的溪水裡，身上有一條淡淡的光帶。' },
-  { id:'ayu',    spot:'pool', name:'霧溪香魚', rarity:'常見', color:'#b8e0a0', min:0.1, max:0.6, power:0.32, desc:'聞起來有西瓜般的清香，是溪間居民的驕傲。' },
-  { id:'goby',   spot:'creek', name:'紫晶蝦虎', rarity:'稀有', color:'#9b7bff', min:0.1, max:0.5, power:0.58, desc:'在螢光石旁邊發出紫色微光，個頭小但很會掙扎。' },
-  { id:'trout',  spot:'creek', name:'星點溪鱒', rarity:'傳說', color:'#c084ff', min:1.2, max:4.5, power:0.88, desc:'身上的星點跟夜空一模一樣。據說是螢光溪的守護者。' },
+  { id:'ayu',    spot:'pool', time:'twilight', name:'霧溪香魚', rarity:'常見', color:'#b8e0a0', min:0.1, max:0.6, power:0.32, desc:'聞起來有西瓜般的清香，是溪間居民的驕傲。' },
+  { id:'goby',   spot:'creek', time:'night', name:'紫晶蝦虎', rarity:'稀有', color:'#9b7bff', min:0.1, max:0.5, power:0.58, desc:'在螢光石旁邊發出紫色微光，個頭小但很會掙扎。' },
+  { id:'trout',  spot:'creek', time:'night', name:'星點溪鱒', rarity:'傳說', color:'#c084ff', min:1.2, max:4.5, power:0.88, desc:'身上的星點跟夜空一模一樣。據說是螢光溪的守護者。' },
 ];
 const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 
@@ -957,7 +958,7 @@ function terrainColor(x, z, info, out){
 /* ================= 新版環境（第 1 階段）：經典畫面可在「造型」分頁切回 ================= */
 const CLASSIC = false;   // 新地圖只有新版畫面
 let waterfall = null;
-let skyDome = null, waterSurface = null;
+let skyDome = null, waterSurface = null, sunDisc = null, windowGlass = null;
 
 /* ================= RENDERER ================= */
 const canvas = $('#c');
@@ -982,7 +983,7 @@ document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastT
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 
 const MODERN = parseInt(THREE.REVISION, 10) >= 155;
-scene.add(new THREE.HemisphereLight('#e7fbff', '#52725c', MODERN ? 1.55 : 1.05));
+const hemi = new THREE.HemisphereLight('#e7fbff', '#52725c', MODERN ? 1.55 : 1.05); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff4d2', MODERN ? 2.2 : 1.25);
 sun.castShadow = true;
 const SM = TIERS[Quality.tier].shadow || 1024;
@@ -1084,7 +1085,7 @@ function castPoint(x, z, dx, dz, dist){
   const wr = (() => { let a = 20261103 >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
   const wrand = (a, b) => a + wr() * (b - a);
   // sun disc
-  const sd = new THREE.Mesh(new THREE.SphereGeometry(6, 24, 16), new THREE.MeshBasicMaterial({ color:'#ffe8ae', fog:false }));
+  const sd = new THREE.Mesh(new THREE.SphereGeometry(6, 24, 16), new THREE.MeshBasicMaterial({ color:'#ffe8ae', fog:false })); sunDisc = sd; sd.userData.keep = true;
   sd.position.set(-34, 32, -48); scene.add(sd);
   buildNewEnvironment();
   const [PX, PZ] = MAP.plaza;
@@ -1161,7 +1162,7 @@ function castPoint(x, z, dx, dz, dist){
   const reedM = mat('#5f9e58', 0.9);   // （保留給舊程式參考）
   // 溫馨木屋：石頭地基、灰泥牆加木框、斜屋頂（瓦片層次＋屋脊）、拱門、窗框和花台、煙囪
   const shade = (hex, k) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString();
-  const glassM = mat('#9fdbe3', 0.25, { emissive:'#ffe3a0', emissiveIntensity:0.18 });
+  const glassM = mat('#9fdbe3', 0.25, { emissive:'#ffe3a0', emissiveIntensity:0.18 }); windowGlass = glassM;
   function house(x, z, roofColor, width, rotY, opts){
     opts = opts || {};
     const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = rotY || 0;
@@ -1395,7 +1396,7 @@ function batchStatic(){
     const skip = new Set();
     animWater.forEach(w => skip.add(w.m)); lanterns.forEach(l => skip.add(l));
     SPOTS.forEach(sp => sp.ring && skip.add(sp.ring)); schools.forEach(sc => skip.add(sc.g)); clouds.forEach(c => skip.add(c.g));
-    if (lhLight) skip.add(lhLight); if (tankGroup && tankGroup.parent) skip.add(tankGroup.parent);
+    if (lhLight) skip.add(lhLight); if (sunDisc) skip.add(sunDisc); if (tankGroup && tankGroup.parent) skip.add(tankGroup.parent);
     scene.updateMatrixWorld(true);
     const groups = new Map();
     (function walk(o){
@@ -1673,6 +1674,7 @@ function buildNewEnvironment(){
       uSkyTop: { value: new THREE.Color('#6cc4ea') }, uSkyHor: { value: new THREE.Color('#d2f1f2') },
       cSea: { value: new THREE.Color(PALETTE.sea) }, cRiver: { value: new THREE.Color(PALETTE.river) }, cCreek: { value: new THREE.Color(PALETTE.creek) }, cLake: { value: new THREE.Color('#4fb3d6') }, cPool: { value: new THREE.Color('#7fd6ec') },
       cDeep: { value: new THREE.Color('#1c5d8c') }, uFoam: { value: Quality.tier === 'low' ? 0.6 : 1.0 },
+      uLight: { value: new THREE.Color(1, 1, 1) }, uGlint: { value: new THREE.Color(1.0, 0.96, 0.85) },
     }),
     vertexShader: `varying vec3 vW;
       #include <fog_pars_vertex>
@@ -1680,7 +1682,7 @@ function buildNewEnvironment(){
       #include <fog_vertex>
       }`,
     fragmentShader: `uniform sampler2D uMask; uniform float uTime; uniform vec3 uSun; uniform vec3 uSkyTop; uniform vec3 uSkyHor;
-      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam;
+      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint;
       varying vec3 vW;
       #include <common>
       #include <fog_pars_fragment>
@@ -1708,11 +1710,12 @@ function buildNewEnvironment(){
         vec3 col = mix(surf * 1.08, cDeep, smoothstep(0.35, 1.8, depth));
         col *= 0.82 + 0.25 * max(dot(N, uSun), 0.0);
         col = mix(col, sky, fres);
-        col += vec3(1.0, 0.96, 0.85) * pow(max(dot(R, uSun), 0.0), 180.0) * 1.6;
+        col *= uLight;
+        col += uGlint * pow(max(dot(R, uSun), 0.0), 180.0) * 1.6;
         float shore = 1.0 - smoothstep(0.08, 0.24, depth);
         float fn = sin(vW.x * 2.3 + uTime * 1.4 + sin(vW.z * 1.7)) * sin(vW.z * 2.1 - uTime * 1.1 + sin(vW.x * 1.3));
         float foam = shore * smoothstep(0.15, 0.75, fn * 0.5 + 0.5 + shore * 0.35) * uFoam;
-        col = mix(col, vec3(1.0), foam * 0.7);
+        col = mix(col, uLight, foam * 0.7);
         float alpha = mix(0.58, 0.93, smoothstep(0.1, 1.2, depth));
         gl_FragColor = vec4(col, max(alpha, foam * 0.8) * edge);
         #include <tonemapping_fragment>
@@ -2424,7 +2427,8 @@ function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
   const kr = rod.rare * (bait ? bait.rare : 1), kl = rod.legend * (bait ? bait.legend : 1);
-  const w = list.map(f => (f.w || 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl));
+  const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
+  const w = list.map(f => (f.w || 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -3067,6 +3071,7 @@ function renderTab(){
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
         it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
+        if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         g.appendChild(it);
       });
       body.appendChild(g);
@@ -3233,6 +3238,72 @@ function updateDebug(){
   const i = renderer.info, b = Quality.batched;
   debugEl.textContent = `FPS ${Quality.fps ? Quality.fps.toFixed(0) : '…'} · 繪製 ${i.render.calls} · 三角形 ${(i.render.triangles/1000).toFixed(1)}k · 畫質 ${TIERS[Quality.tier].label}${Quality.setting === 'auto' ? '(自動)' : ''} · 合併 ${b ? b.before + '→' + b.after : '關'}`;
 }
+/* ================= DAY / NIGHT：日夜循環 ================= */
+// 一天 = 現實 36 分鐘。用現實時間換算，所以同一時刻所有玩家看到的天色都一樣（不用連線同步）。
+// 網址加 #hour=21 可以固定時間（測試或拍照用）。
+const DAY_LEN = 36 * 60;
+const DAY_KEYS = [   // h：遊戲裡的幾點；顏色都是 sRGB
+  { h:0,    top:'#1b2a5a', hor:'#3d5288', low:'#2c3d6b', sun:'#a9bcff', si:0.55, hs:'#8494d8', hg:'#2b3550', hi:0.8,  lamp:1,   stars:1,   wl:'#5d6f9e', disc:'#eef2ff' },
+  { h:4.8,  top:'#1b2a5a', hor:'#3d5288', low:'#2c3d6b', sun:'#a9bcff', si:0.55, hs:'#8494d8', hg:'#2b3550', hi:0.8,  lamp:1,   stars:1,   wl:'#5d6f9e', disc:'#eef2ff' },
+  { h:6,    top:'#5f7cc0', hor:'#f6b892', low:'#d9aa9c', sun:'#ffb47e', si:1.2,  hs:'#ffd6bd', hg:'#5a5f5c', hi:1.15, lamp:0.4, stars:0.15, wl:'#d9c2c0', disc:'#ffcf8f' },
+  { h:7.5,  top:'#62bfe8', hor:'#d6f0ee', low:'#c3e6df', sun:'#fff1d8', si:2.0,  hs:'#e7fbff', hg:'#52725c', hi:1.45, lamp:0,   stars:0,   wl:'#ffffff', disc:'#ffe8ae' },
+  { h:16.3, top:'#62bfe8', hor:'#c6ecef', low:'#b7e5df', sun:'#fff4d2', si:2.2,  hs:'#e7fbff', hg:'#52725c', hi:1.55, lamp:0,   stars:0,   wl:'#ffffff', disc:'#ffe8ae' },
+  { h:18,   top:'#4b62ad', hor:'#ffaf78', low:'#e6a48c', sun:'#ff9c60', si:1.45, hs:'#ffcaa8', hg:'#4f4a52', hi:1.1,  lamp:0.7, stars:0.1, wl:'#e8b9a8', disc:'#ff9e5e' },
+  { h:19.6, top:'#1b2a5a', hor:'#3d5288', low:'#2c3d6b', sun:'#a9bcff', si:0.55, hs:'#8494d8', hg:'#2b3550', hi:0.8,  lamp:1,   stars:1,   wl:'#5d6f9e', disc:'#eef2ff' },
+  { h:24,   top:'#1b2a5a', hor:'#3d5288', low:'#2c3d6b', sun:'#a9bcff', si:0.55, hs:'#8494d8', hg:'#2b3550', hi:0.8,  lamp:1,   stars:1,   wl:'#5d6f9e', disc:'#eef2ff' },
+];
+const DayNight = { hour: 12, fixed: null, lamp: 0, period: 'day' };
+{ const m = location.hash.match(/hour=(\d+(?:\.\d+)?)/); if (m) DayNight.fixed = clamp(+m[1], 0, 23.99); }
+function gameHour(){ if (DayNight.fixed != null) return DayNight.fixed; const sec = (Date.now() / 1000) % DAY_LEN; return (sec / DAY_LEN * 24 + 8) % 24; }   // 新的一天從早上 8 點開始算
+// 時段：day 白天、twilight 清晨與黃昏、night 晚上（魚種會依時段出現）
+function periodOf(h){ return h >= 7.5 && h < 17 ? 'day' : (h >= 5 && h < 7.5) || (h >= 17 && h < 19.6) ? 'twilight' : 'night'; }
+const PERIOD_LABEL = { day:'☀️ 白天', twilight:'🌇 黃昏', night:'🌙 晚上' };
+const PERIOD_FISH = { day:'白天比較多', twilight:'清晨和黃昏比較多', night:'晚上比較多' };
+// 星星：只在晚上出現
+const stars = (() => {
+  const n = 420, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++){ const a = Math.random() * Math.PI * 2, y = 0.12 + Math.pow(Math.random(), 0.7) * 0.88, r = Math.sqrt(1 - y * y); pos[i*3] = Math.cos(a) * r * 175; pos[i*3+1] = y * 175; pos[i*3+2] = Math.sin(a) * r * 175; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.PointsMaterial({ color:'#ffffff', size:1.6, sizeAttenuation:true, transparent:true, opacity:0, depthWrite:false, fog:false });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = -9; scene.add(p); return p;
+})();
+// 燈塔晚上的旋轉光束
+const lhBeam = (() => {
+  if (!lhLight) return null;
+  const geo = new THREE.ConeGeometry(2.6, 30, 20, 1, true); geo.translate(0, -13, 0); geo.rotateZ(Math.PI / 2);
+  const m = new THREE.MeshBasicMaterial({ color:'#fff3c0', transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, fog:false });
+  const b = new THREE.Mesh(geo, m); const wp = new THREE.Vector3(); lhLight.getWorldPosition(wp); b.position.copy(wp); b.visible = false; scene.add(b); return b;
+})();
+const _cA = new THREE.Color(), _cB = new THREE.Color();
+function lerpKey(k0, k1, f, key, out){ _cA.set(k0[key]); _cB.set(k1[key]); return out.copy(_cA).lerp(_cB, f); }
+const _sunDir = new THREE.Vector3();
+function updateDayNight(t){
+  const h = gameHour(); DayNight.hour = h; DayNight.period = periodOf(h);
+  let i = 0; while (i < DAY_KEYS.length - 2 && h >= DAY_KEYS[i + 1].h) i++;
+  const k0 = DAY_KEYS[i], k1 = DAY_KEYS[i + 1], f = clamp((h - k0.h) / (k1.h - k0.h), 0, 1);
+  const num = key => k0[key] + (k1[key] - k0[key]) * f;
+  // 太陽（晚上換成月亮）的方向：白天從東邊升起、西邊落下
+  const dayK = clamp((h - 5.5) / 14.5, 0, 1), night = h < 5.5 || h >= 20;
+  let ang; if (!night) ang = dayK * Math.PI; else { const nh = h >= 20 ? h - 20 : h + 4; ang = clamp(nh / 9.5, 0, 1) * Math.PI; }
+  _sunDir.set(Math.cos(ang) * 0.8, Math.max(0.18, Math.sin(ang)) * 0.75, -0.55).normalize();
+  lerpKey(k0, k1, f, 'sun', sun.color); sun.intensity = num('si') * (MODERN ? 1 : 0.57);
+  lerpKey(k0, k1, f, 'hs', hemi.color); lerpKey(k0, k1, f, 'hg', hemi.groundColor); hemi.intensity = num('hi') * (MODERN ? 1 : 0.68);
+  lerpKey(k0, k1, f, 'low', scene.fog.color); lerpKey(k0, k1, f, 'top', scene.background);
+  if (skyDome){ const u = skyDome.material.uniforms; lerpKey(k0, k1, f, 'top', u.uTop.value); lerpKey(k0, k1, f, 'hor', u.uHor.value); lerpKey(k0, k1, f, 'low', u.uLow.value); lerpKey(k0, k1, f, 'disc', u.uSunCol.value); u.uSun.value.copy(_sunDir); }
+  if (waterSurface){ const u = waterSurface.material.uniforms; lerpKey(k0, k1, f, 'top', u.uSkyTop.value).lerp(_cB.set('#6cc4ea'), 0.25); lerpKey(k0, k1, f, 'hor', u.uSkyHor.value); lerpKey(k0, k1, f, 'wl', u.uLight.value); lerpKey(k0, k1, f, 'disc', u.uGlint.value); u.uSun.value.copy(_sunDir); }
+  if (sunDisc){ sunDisc.position.copy(camera.position).addScaledVector(_sunDir, 160); lerpKey(k0, k1, f, 'disc', sunDisc.material.color); sunDisc.scale.setScalar(night ? 0.7 : 1); }
+  const lamp = num('lamp'), st = num('stars'); DayNight.lamp = lamp;
+  stars.material.opacity = st * 0.9; stars.visible = st > 0.02; stars.position.copy(camera.position); stars.rotation.y = t * 0.004;
+  if (windowGlass) windowGlass.emissiveIntensity = 0.18 + lamp * 1.1;
+  if (lhBeam){ lhBeam.visible = lamp > 0.3; lhBeam.material.opacity = lamp * 0.09; lhBeam.rotation.y = t * 0.7; }
+  // 陰影跟著太陽／月亮的方向
+  sun.position.set(me.pos.x + _sunDir.x * 40, _sunDir.y * 40, me.pos.z + _sunDir.z * 40); sun.target.position.set(me.pos.x, 0, me.pos.z);
+  // 左上角的時間
+  const hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10, txt = `${DayNight.period === 'twilight' && h < 12 ? '🌅 清晨' : PERIOD_LABEL[DayNight.period]} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  const ck = $('#clock'); if (ck && ck._t !== txt){ ck.textContent = txt; ck._t = txt; }
+  if (DayNight.period !== DayNight._last){ if (DayNight._last) toast(DayNight.period === 'night' ? '天黑了，<b>晚上</b>出沒的魚開始活動 🌙' : DayNight.period === 'twilight' ? (h < 12 ? '天快亮了，清晨的魚正活躍 🌅' : '黃昏了，有些魚只在這時候出現 🌇') : '天亮了 ☀️'); DayNight._last = DayNight.period; }
+}
+
 camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
@@ -3241,12 +3312,12 @@ function frame(){
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){ s.g.visible = Math.hypot(me.pos.x - s.g.position.x, me.pos.z - s.g.position.z) < 40; if (!s.g.visible) continue; s.g.rotation.y += dt * 0.28; s.g.children.forEach((f, i) => { if (f.userData.tail) f.userData.tail.rotation.y = Math.sin(t*7 + i)*0.5; }); }
-  for (const l of lanterns) l.material.emissiveIntensity = 1.0 + Math.sin(t*2 + l.position.x) * 0.25;
-  if (lhLight) lhLight.material.emissiveIntensity = 2.4 + Math.sin(t*1.5) * 1.2;
+  updateDayNight(t);
+  for (const l of lanterns) l.material.emissiveIntensity = (0.6 + DayNight.lamp * 1.8) + Math.sin(t*2 + l.position.x) * 0.25;
+  if (lhLight) lhLight.material.emissiveIntensity = (1.6 + DayNight.lamp * 2.4) + Math.sin(t*1.5) * 1.2;
   for (const s of SPOTS) if (s.ring) s.ring.material.emissiveIntensity = 1.4 + Math.sin(t*3 + s.pos.x)*0.5;
   for (const c of clouds){ c.g.position.x += c.v * dt; if (c.g.position.x > 70) c.g.position.x = -70; }
   for (const r of ripples){ if (r.t > 1.2){ r.m.visible = false; continue; } r.t += dt; const k = r.t / 1.2; r.m.scale.setScalar((1 + k*7) * r.big); r.m.material.opacity = (1 - k) * 0.8; }
-  sun.position.set(me.pos.x + 18, 30, me.pos.z + 14); sun.target.position.set(me.pos.x, 0, me.pos.z);
   discover(t); updateBoatButton();
   { const jb = $('#jumpBtn'), hide = !!myBoat || F.phase !== 'idle'; if (jb.hidden !== hide) jb.hidden = hide; }
   if (waterfall && Math.hypot(me.pos.x - waterfall.x, me.pos.z - waterfall.z) < 45){ if (Math.random() < dt * 10) FX.emit(waterfall.x + rand(-1, 1), 0.3, waterfall.z + rand(-0.5, 0.5), 1, '#ffffff', 0.9, 1.6, 0.7); if (Math.random() < dt * 1.5) ripple(waterfall.x + rand(-0.8, 0.8), waterfall.z + rand(-0.4, 0.4)); }
