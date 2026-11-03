@@ -307,6 +307,7 @@ function terrainColor(x, z, info, out){
 const CLASSIC = false;   // 新地圖只有新版畫面
 let waterfall = null;
 var houseBuilder = null;
+var CHAIRS = [], cafeSeats = [], mySeat = null;   // 可以坐的椅子；cafeSeats 是食堂露台給客人坐的位置
 let skyDome = null, waterSurface = null, sunDisc = null, windowGlass = null, tankWaterMat = null, cookStall = null, aquaVane = null, rainbow = null;
 
 /* ================= RENDERER ================= */
@@ -643,6 +644,55 @@ function castPoint(x, z, dx, dz, dist){
     // 板凳
     for (const sx of [-0.8, 0, 0.8]){ const st = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12), mat(PALETTE.wood)); st.position.set(sx, 0.55, 1.35); st.castShadow = true; g.add(st); g.add(box([0.06, 0.52, 0.06], '#6e4a2f', [sx, 0.27, 1.35])); }
     const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addBoxCol(KX + sn * 0.1, KZ + c * 0.1, Math.abs(c) * 3.2 + Math.abs(sn) * 2.0, Math.abs(sn) * 3.2 + Math.abs(c) * 2.0);
+    // ---- 食堂露台：木地板、3 張圓桌＋6 張椅子、遮陽傘、串燈、盆栽、菜單看板（客人會坐這裡，玩家也可以坐）----
+    {
+      const PX0 = 17.2, PZ0 = 8.8, PW = 5.4, PD = 4.6; let top = 0;
+      for (let i = 0; i <= 6; i++) for (let j = 0; j <= 6; j++) top = Math.max(top, terrainH(PX0 - PW / 2 + i / 6 * PW, PZ0 - PD / 2 + j / 6 * PD));
+      const fy = Math.max(0.05, top) + 0.1; addDeck(PX0, PZ0, PW, PD, fy);
+      const pg = new THREE.Group(); pg.position.set(PX0, 0, PZ0); scene.add(pg);
+      const base = box([PW + 0.2, 0.5, PD + 0.2], '#8c5d3b', [0, fy - 0.27, 0]); pg.add(base);
+      for (let i = 0; i < 9; i++){ const pl = box([PW, 0.05, PD / 9 - 0.03], i % 2 ? '#d7a874' : '#cf9c66', [0, fy - 0.005, -PD / 2 + (i + 0.5) * PD / 9]); pl.castShadow = false; pg.add(pl); }
+      // 低矮的欄杆（靠房子那兩邊），留出入口
+      const rail = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(2, Math.round(L / 0.8)); for (let k = 0; k <= n; k++) pg.add(box([0.08, 0.55, 0.08], '#6e4a2f', [x0 + (x1 - x0) * k / n, fy + 0.27, z0 + (z1 - z0) * k / n])); const r = box([Math.abs(x1 - x0) + 0.08, 0.06, Math.abs(z1 - z0) + 0.08], '#8c5d3b', [(x0 + x1) / 2, fy + 0.55, (z0 + z1) / 2]); pg.add(r); };
+      rail(-PW / 2 + 0.05, PD / 2 - 0.05, PW / 2 - 0.05, PD / 2 - 0.05); rail(PW / 2 - 0.05, -PD / 2 + 0.05, PW / 2 - 0.05, PD / 2 - 0.05);
+      const parasolCols = [PALETTE.coral, '#3fbf9d', '#ffd36a'];
+      [[-1.35, -1.05], [1.15, -1.05], [-0.1, 1.05]].forEach(([tx, tz], ti) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.18, 0.72, 10), mat('#4c4c4c', 0.5)); leg.position.set(tx, fy + 0.36, tz); leg.castShadow = true; pg.add(leg);
+        const tt = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 18), mat('#f6efe2', 0.6)); tt.position.set(tx, fy + 0.74, tz); tt.castShadow = true; pg.add(tt);
+        const pole = box([0.05, 1.7, 0.05], '#f6efe2', [tx, fy + 1.6, tz]); pg.add(pole);
+        const cn = new THREE.Mesh(new THREE.ConeGeometry(1.15, 0.45, 8, 1, true), mat(parasolCols[ti], 0.75, { side:THREE.DoubleSide, flatShading:true })); cn.position.set(tx, fy + 2.48, tz); cn.castShadow = true; pg.add(cn);
+        const tip = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), mat('#ffffff')); tip.position.set(tx, fy + 2.73, tz); pg.add(tip);
+        // 桌上的小東西：花瓶和醬油瓶
+        pg.add(box([0.08, 0.16, 0.08], '#3a5f8f', [tx + 0.15, fy + 0.85, tz + 0.1])); const fl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0), mat(['#f17b6d', '#ffd36a', '#f5a5d8'][ti], 0.6)); fl.position.set(tx + 0.15, fy + 0.97, tz + 0.1); pg.add(fl);
+        pg.add(box([0.05, 0.12, 0.05], '#2a1a14', [tx - 0.14, fy + 0.83, tz - 0.08]));
+        addCircleCol(PX0 + tx, PZ0 + tz, 0.42);
+        for (const side of [-1, 1]){
+          const cx = tx + side * 0.82, cz = tz, ch = new THREE.Group(); ch.position.set(cx, fy, cz); ch.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2; pg.add(ch);
+          ch.add(box([0.46, 0.06, 0.44], '#c98a5a', [0, 0.45, 0])); ch.add(box([0.46, 0.5, 0.06], '#c98a5a', [0, 0.73, -0.21]));
+          for (const [lx, lz] of [[-0.19, -0.18], [0.19, -0.18], [-0.19, 0.18], [0.19, 0.18]]) ch.add(box([0.05, 0.45, 0.05], '#6e4a2f', [lx, 0.22, lz]));
+          const seat = { x: PX0 + cx, z: PZ0 + cz, face: Math.atan2(-side, 0), y: fy + 0.02, cafe: true };
+          CHAIRS.push(seat); cafeSeats.push(seat);
+        }
+      });
+      // 四角的柱子和串燈（晚上會亮）
+      const corners = [[-PW / 2 + 0.1, -PD / 2 + 0.1], [PW / 2 - 0.1, -PD / 2 + 0.1], [PW / 2 - 0.1, PD / 2 - 0.1], [-PW / 2 + 0.1, PD / 2 - 0.1]];
+      for (const [cx, cz] of corners) pg.add(box([0.1, 2.6, 0.1], '#6e4a2f', [cx, fy + 1.3, cz]));
+      const bulbM = mat('#fff3c4', 0.4, { emissive:'#ffd36a', emissiveIntensity:0.5 });
+      for (let k = 0; k < 4; k++){ const [ax, az] = corners[k], [bx, bz] = corners[(k + 1) % 4];
+        for (let q = 1; q < 8; q++){ const u = q / 8, b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), bulbM); b.position.set(ax + (bx - ax) * u, fy + 2.55 - Math.sin(u * Math.PI) * 0.35, az + (bz - az) * u); pg.add(b); } }
+      lanterns.push({ material: bulbM, isMesh:false, position:{ x:3 } });
+      // 盆栽
+      for (const [cx, cz] of [[-PW / 2 + 0.45, -PD / 2 + 0.45], [PW / 2 - 0.45, PD / 2 - 0.45]]){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.4, 10), mat('#c7643e')); pot.position.set(cx, fy + 0.2, cz); pot.castShadow = true; pg.add(pot); const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), mat('#5d9c55', 0.85, { flatShading:true })); bush.position.set(cx, fy + 0.6, cz); bush.castShadow = true; pg.add(bush); addCircleCol(PX0 + cx, PZ0 + cz, 0.3); }
+      // 菜單看板（畫布寫字）
+      { const cv2 = document.createElement('canvas'); cv2.width = 200; cv2.height = 256; const c2 = cv2.getContext('2d');
+        c2.fillStyle = '#2f3b36'; c2.fillRect(0, 0, 200, 256); c2.fillStyle = '#fff4d6'; c2.textAlign = 'center'; c2.font = 'bold 30px sans-serif'; c2.fillText('今日菜單', 100, 40);
+        c2.font = '21px sans-serif'; c2.textAlign = 'left'; ['🍣 鯖魚握壽司', '🍣 鯛魚握壽司', '🐟 鹽烤香魚', '🍤 酥炸河鱸', '🍱 壽司拼盤'].forEach((tline, i) => c2.fillText(tline, 16, 88 + i * 34));
+        const tx2 = new THREE.CanvasTexture(cv2); tx2.colorSpace = THREE.SRGBColorSpace;
+        const bd = new THREE.Group(); bd.position.set(-PW / 2 - 0.55, fy - 0.1, -0.3); bd.rotation.y = -Math.PI / 2 + 0.35; pg.add(bd);
+        bd.add(box([0.06, 1.3, 0.06], '#6e4a2f', [-0.36, 0.65, 0])); bd.add(box([0.06, 1.3, 0.06], '#6e4a2f', [0.36, 0.65, 0]));
+        bd.add(box([0.82, 1.0, 0.05], '#8c5d3b', [0, 1.05, -0.02]));
+        const face = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.92), new THREE.MeshBasicMaterial({ map: tx2 })); face.position.set(0, 1.05, 0.01); bd.add(face); }
+    }
     cookStall = { x: KX, z: KZ, rot: g.rotation.y, grill: new THREE.Vector3(-0.85, 1.6, -0.45).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)) };
   }
 
@@ -1777,6 +1827,10 @@ function updatePlayer(dt){
   const L = Math.hypot(ix, iz); if (L > 1){ ix /= L; iz /= L; }
   const locked = F.phase === 'bite' || F.phase === 'reeling' || F.phase === 'landing';
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
+  if (mySeat){
+    if (L > 0.08 && !locked) standUp();
+    else { me.pos.x = mySeat.x; me.pos.z = mySeat.z; me.rot = lerpAngle(me.rot, mySeat.face, 1 - Math.exp(-10 * dt)); me.speed = 0; me.baseY = mySeat.y; Jump.gy = mySeat.y; return; }
+  }
   let speed = 0;
   if (L > 0.08 && !locked){
     if (F.phase !== 'idle') cancelFishing('收竿了');
@@ -1804,10 +1858,19 @@ function updatePlayer(dt){
   if (Jump.land > 0) Jump.land -= dt;
   me.air = Jump.air; me.baseY = Jump.gy + Jump.air;
 }
+/* ---- 坐椅子：走到椅子旁邊按按鈕就能坐下，搖桿一動就站起來 ---- */
+function allChairs(){ return isleChairs.length ? CHAIRS.concat(isleChairs) : CHAIRS; }
+function nearChair(){
+  let best = null, bd = 1.1;
+  for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
+  return best;
+}
+function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.sitting = true; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; pushPresence(true); }
+function standUp(){ if (!mySeat) return; const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
 function canJump(){ return !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
-function jump(){
+function jump(){ if (mySeat){ standUp(); return; }
   if (!canJump()) return;
   ensureAudio();
   Jump.gy = me.baseY; Jump.vy = 7.6; Jump.air = 0.001;
@@ -1838,7 +1901,7 @@ function actionDown(){
   const act = $('#act'); act.classList.add('down');
   if (F.phase === 'idle'){
     let spot;
-    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); if (ns.d > 1.7){ const sh = nearShop(); if (sh){ act.classList.remove('down'); openShop(sh); } return; } spot = ns.spot; }
+    if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
   } else if (F.phase === 'waiting'){
@@ -1941,9 +2004,11 @@ function updateFishing(dt, t){
   $('#fishHud').hidden = F.phase !== 'reeling';
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
-  if (F.phase === 'idle'){ const bt = curBait(); const sh = near.d >= 1.7 ? nearShop() : null;
+  if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     if (near.d < 1.7){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : isTouch ? '按住蓄力' : '按住空白鍵'; }
     else if (sh){ label = sh.label; sub = sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
+    else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if (F.phase === 'waiting'){ label = '等待中'; sub = '點一下收竿'; cls = 'idle'; }
@@ -2004,7 +2069,7 @@ const DECOS = {
 const HOUSE_SLOTS = [[-6.5, -4.5], [6.5, -4.5], [0, -9]], DECO_SLOTS = [[-3, 3], [3, 3], [-8, 2], [8, 2], [-5, 9], [5, 9], [-10.5, -2], [10.5, -2], [0, 4.5], [-2, 10.5]];
 function cleanIsland(o){ const r = { h:{}, d:{} }; for (const [k, v] of Object.entries((o && o.h) || {})) if (HOUSES[v] && +k >= 0 && +k < HOUSE_SLOTS.length) r.h[+k] = v; for (const [k, v] of Object.entries((o && o.d) || {})) if (DECOS[v] && +k >= 0 && +k < DECO_SLOTS.length) r.d[+k] = v; return r; }
 var onIsle = null;            // { owner, name, layout } 現在在誰的島上
-let isleGroup = null, isleCols = [];
+let isleGroup = null, isleCols = [], isleChairs = [];
 function isleBase(){
   // 島本體：草地圓台＋沙灘＋幾棵樹和石頭（只建一次）
   const g = new THREE.Group(); g.position.set(ISLE.x, 0, ISLE.z); scene.add(g);
@@ -2044,7 +2109,7 @@ function buildIsle(layout, ownerName){
   if (!isleSignCtx) isleBase();
   if (isleGroup){ scene.remove(isleGroup); isleGroup.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
   for (const c of isleCols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } isleCols = [];
-  isleGroup = new THREE.Group(); scene.add(isleGroup); drawIsleSign(ownerName || '我');
+  isleGroup = new THREE.Group(); scene.add(isleGroup); drawIsleSign(ownerName || '我'); if (mySeat && mySeat.isle) standUp(); isleChairs = [];
   const L = cleanIsland(layout), n0 = colliders.length;
   HOUSE_SLOTS.forEach(([sx, sz], i) => {
     const x = ISLE.x + sx, z = ISLE.z + sz, type = L.h[i];
@@ -2056,7 +2121,7 @@ function buildIsle(layout, ownerName){
       for (const [cx, cz] of [[-2.2, -1.7], [2.2, -1.7], [-2.2, 1.7], [2.2, 1.7]]){ const a = Math.atan2(-sx, -sz), px = x + Math.cos(a) * cx + Math.sin(a) * cz, pz = z - Math.sin(a) * cx + Math.cos(a) * cz; isleGroup.add(box([0.12, 0.5, 0.12], PALETTE.wood, [px, ISLE.y + 0.25, pz])); }
     }
   });
-  DECO_SLOTS.forEach(([sx, sz], i) => { const type = L.d[i]; if (!type) return; const g = decoMesh(type); g.position.set(ISLE.x + sx, ISLE.y, ISLE.z + sz); g.rotation.y = Math.atan2(-sx, -sz) + Math.PI; isleGroup.add(g); addCircleCol(ISLE.x + sx, ISLE.z + sz, ISLE_DECO_R[type]); });
+  DECO_SLOTS.forEach(([sx, sz], i) => { const type = L.d[i]; if (!type) return; const g = decoMesh(type); g.position.set(ISLE.x + sx, ISLE.y, ISLE.z + sz); g.rotation.y = Math.atan2(-sx, -sz) + Math.PI; isleGroup.add(g); if (type === 'bench'){ const a = g.rotation.y; for (const o of [-0.45, 0.45]) isleChairs.push({ x: ISLE.x + sx + Math.cos(a) * o + Math.sin(a) * 0.05, z: ISLE.z + sz - Math.sin(a) * o + Math.cos(a) * 0.05, face: a, y: ISLE.y + 0.02, isle: true }); } else addCircleCol(ISLE.x + sx, ISLE.z + sz, ISLE_DECO_R[type]); });
   isleCols = colliders.slice(n0);
   isleGroup.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
 }
@@ -2261,10 +2326,10 @@ const CUST_NAMES = ['小芸', '阿凱', '美美', '大熊', '小葵', '阿嬤', 
 const CUST_LOOK = [['#f5a5d8', '#ffffff'], ['#7db7d7', '#ffd36a'], ['#9fc7a8', '#f17b6d'], ['#f6a96b', '#3fbf9d'], ['#b9a4ff', '#f6f0dd']];
 const ORDER_W = { saba:3, ayu:3, suzuki:3, mori:2, tai:1 };
 const customers = []; let custNext = 0;
-function stallSeat(i){ const g = cookStall; const a = g.rot, lx = [-0.8, 0, 0.8][i], lz = 1.35; return { x: g.x + Math.cos(a) * lx + Math.sin(a) * lz, z: g.z - Math.sin(a) * lx + Math.cos(a) * lz, face: a + Math.PI }; }
+function stallSeat(i){ return cafeSeats[i]; }
 function pickOrder(){ const ks = Object.keys(ORDER_W), tot = ks.reduce((a, k) => a + ORDER_W[k], 0); let r = Math.random() * tot; for (const k of ks){ r -= ORDER_W[k]; if (r <= 0) return k; } return 'saba'; }
 function spawnCustomer(t){
-  const free = [0, 1, 2].filter(i => !customers.some(c => c.seat === i)); if (!free.length) return;
+  const free = cafeSeats.map((_, i) => i).filter(i => !customers.some(c => c.seat === i) && cafeSeats[i] !== mySeat && !(i % 2 && customers.some(c => c.seat === i - 1)) && !(i % 2 === 0 && customers.some(c => c.seat === i + 1))); if (!free.length) return;   // 一桌只坐一位客人，泡泡才不會疊在一起
   const seat = free[Math.floor(Math.random() * free.length)], st = stallSeat(seat);
   const ang = Math.random() * Math.PI * 2, sx = st.x + Math.cos(ang) * 14, sz = st.z + Math.sin(ang) * 14;
   if (!isLand(sx, sz)) return;
@@ -2275,7 +2340,7 @@ function spawnCustomer(t){
 function updateCustomers(dt, t){
   if (!cookStall) return;
   const near = Math.hypot(me.pos.x - cookStall.x, me.pos.z - cookStall.z) < 32;
-  if (near && t > custNext){ custNext = t + rand(25, 50); if (customers.filter(c => c.state !== 'out').length < 2) spawnCustomer(t); }
+  if (near && t > custNext){ custNext = t + rand(25, 50); if (customers.filter(c => c.state !== 'out').length < 3) spawnCustomer(t); }
   for (let i = customers.length - 1; i >= 0; i--){
     const c = customers[i], f = c.f, tgt = c.state === 'out' ? c.from : c.st;
     const dx = tgt.x - f.pos.x, dz = tgt.z - f.pos.z, d = Math.hypot(dx, dz);
@@ -2286,7 +2351,7 @@ function updateCustomers(dt, t){
       const sp = 2.6; f.pos.x += dx / d * Math.min(d, sp * dt); f.pos.z += dz / d * Math.min(d, sp * dt); f.speed = sp; f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 1 - Math.exp(-10 * dt));
       f.baseY = groundHeight(f.pos.x, f.pos.z);
     } else if (c.state === 'in'){
-      c.state = 'wait'; f.sitting = true; f.baseY = 0.12; const rc = RECIPES[c.order]; f.say(`想吃 ${rc.icon} ${rc.name}`, 'order', 9999); c.until = t + 150;
+      c.state = 'wait'; f.sitting = true; f.baseY = c.st.y; f.pos.x = c.st.x; f.pos.z = c.st.z; const rc = RECIPES[c.order]; f.say(`想吃 ${rc.icon} ${rc.name}`, 'order', 9999); c.until = t + 150;
       if (!c.told){ c.told = true; ticker(`🔔 潮汐食堂來了客人：<b>${esc(c.name)}</b> 想吃 ${rc.icon} ${esc(rc.name)}`); }
     } else { f.dispose(); customers.splice(i, 1); continue; }
     f.update(dt, t); f.placeTag();
@@ -2782,6 +2847,7 @@ function presenceObj(){
   if (nickname) o.n = nickname;
   if (myId) o.u = myId;
   if (myBoat) o.bt = 1;
+  if (mySeat) o.st = 1;
   if (onIsle) o.is = onIsle.owner;
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
@@ -2821,7 +2887,7 @@ function applyPeer(pp){
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
-  p.fisher.sitting = !!pr.bt;
+  p.fisher.sitting = !!pr.bt || !!pr.st;
   p.isle = typeof pr.is === 'string' ? pr.is : null;   // 不在同一座島上的人看不到
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
@@ -2829,7 +2895,7 @@ function applyPeer(pp){
   const fi = pr.f && typeof pr.f === 'object' ? pr.f : null;
   p.fisher.fishing = !!fi;
   if (fi && Array.isArray(fi.b)){
-    const nb = new THREE.Vector3(clamp(+fi.b[0]||0,-36,36), 0.12, clamp(+fi.b[1]||0,-36,36));
+    const tx = p.target.x, tz = p.target.z, nb = new THREE.Vector3(clamp(+fi.b[0]||tx, tx - 30, tx + 30), 0.12, clamp(+fi.b[1]||tz, tz - 30, tz + 30));   // 浮標一定在這個人附近（以前限制在 ±36 公尺，船划到外海時線會拉得很長）
     if (p.fisher.bobState === 'none'){ const from = new THREE.Vector3(); p.fisher.av.tip.getWorldPosition(from); p.fisher.bobPos.copy(nb); p.fisher.bobState = 'fly'; p.fisher.flying = { from, to: nb.clone(), t:0, dur:0.6, h:1.8 }; }
     else p.fisher.bobPos.copy(nb);
     p.ph = fi.ph;
