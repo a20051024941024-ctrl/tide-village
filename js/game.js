@@ -5535,7 +5535,7 @@ function renderTab(){
       '右上角相機按鈕是拍照模式；畫質可以在「造型」分頁調整，舊手機選「低」會比較順。',
       '遊戲更新時畫面上方會出現「有新版本」，按「更新」就好，不會在你拉魚時突然重開。',
     ]);
-    body.appendChild(el('p', 'sub', '部分魚的 3D 模型：Animated Fish Pack by Quaternius（CC0 授權，quaternius.com）。其他模型都是程式畫的。'));
+    body.appendChild(el('p', 'sub', '© 2026 潮汐釣魚村作者，保留所有權利；未經同意禁止複製、修改或轉載。部分魚的 3D 模型：Animated Fish Pack by Quaternius（CC0 授權，quaternius.com）。'));
   }
 }
 function pjBox(){
