@@ -27,11 +27,15 @@
 ## 檔案
 
 ```
-index.html      遊戲本體（全部都在這一個檔案）
-manifest.json   讓手機可以「加到主畫面」
-sw.js           離線備份：網路不穩時也能打開
-icons/          App 圖示
-.nojekyll       讓 GitHub Pages 原樣提供檔案
+index.html          畫面骨架（按鈕、選單）
+css/game.css        畫面樣式
+js/game.js          遊戲主程式（世界、釣魚、商店、雲端、多人）
+js/fish-models.js   魚和海洋生物的 3D 模型資料
+js/peer-room.js     私人房間（PeerJS 手機互連）
+supabase/schema.sql 雲端資料庫設定（Supabase SQL Editor 執行）
+manifest.json       讓手機可以「加到主畫面」
+sw.js               離線備份：網路不穩時也能打開
+icons/              App 圖示
 ```
 
 ## 放上 GitHub Pages
