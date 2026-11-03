@@ -482,3 +482,26 @@ body.photo.nonames #labels{display:none}
 #tenBar.low .tb-in i{background:repeating-linear-gradient(90deg,transparent 0 18px,rgba(0,0,0,.4) 18px 21px),linear-gradient(90deg,#9fc3dd,#7fb0d8)}
 body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!important}
 @media (max-height:500px){ #fishMark .fm-hp{width:160px;height:13px;top:-58px} #fishMark .fm-warn{font-size:20px;top:-90px} #dmgLayer .dmg{font-size:28px} #tenBar{bottom:calc(var(--gb) + 8px)} }
+
+/* 大魚搏鬥 */
+#bossBar{position:fixed;left:50%;top:calc(var(--gt) + 62px);transform:translateX(-50%);width:min(520px,calc(100vw - 40px));pointer-events:none;z-index:7;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}
+#bossBar[hidden]{display:none}
+#bossBar .bb-top{display:flex;align-items:center;gap:8px;color:#fff;font-family:var(--f-display);font-size:18px;font-weight:900;font-style:italic;-webkit-text-stroke:1px #3a0a0a;margin-bottom:4px}
+#bossBar .bb-top b{flex:1;letter-spacing:1px}
+#bossBar .bb-hp{position:relative;height:22px;border-radius:6px;background:rgba(20,10,10,.65);box-shadow:0 0 0 3px #ffd36a;overflow:hidden}
+#bossBar.r-傳說 .bb-hp{box-shadow:0 0 0 3px #ffb300,0 0 18px #ffd36a}
+#bossBar .bb-hp i{position:absolute;left:0;top:0;bottom:0;width:100%;background:repeating-linear-gradient(90deg,transparent 0 22px,rgba(0,0,0,.35) 22px 25px),linear-gradient(180deg,#ff6a4a,#c9231a);transition:width .2s}
+#fishMark.boss .fm-hp{display:none}
+#fishMark.boss .fm-ico{width:60px;height:60px;left:-30px;top:-30px;font-size:34px}
+#mashFx{position:fixed;left:50%;top:58%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;z-index:8}
+#mashFx[hidden]{display:none}
+#mashFx b{font-family:var(--f-display);font-size:64px;font-style:italic;font-weight:900;color:#ffd23a;-webkit-text-stroke:3px #7a2a0a;text-shadow:0 6px 0 #7a2a0a;animation:mashPop .25s ease-in-out infinite alternate}
+#mashFx small{font-size:15px;font-weight:800;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.6)}
+@keyframes mashPop{from{transform:scale(.92) rotate(-3deg)}to{transform:scale(1.08) rotate(3deg)}}
+@media (max-height:500px){ #bossBar{top:calc(var(--gt) + 54px);width:min(420px,calc(100vw - 300px))} #bossBar .bb-hp{height:16px} #mashFx b{font-size:48px} }
+
+.wprev{display:flex;gap:12px;align-items:center;background:#f3efe6;border-radius:14px;padding:8px;margin:6px 0 10px}
+.wprev img{width:120px;height:120px;border-radius:10px;flex:none}
+.wpinfo{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.wpinfo b{font-family:var(--f-display);font-size:16px}
+.shoplist img.gearic{width:52px;height:52px;border-radius:10px;flex:none;background:#f3efe6}

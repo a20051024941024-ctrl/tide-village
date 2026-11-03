@@ -2071,8 +2071,8 @@ function updateCamera(dt){
   reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4));
   if (reelCam.k > 0.01){
     const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, L = Math.hypot(bx, bz) || 1, dx = bx / L, dz = bz / L, rx = -dz, rz = dx;
-    const want = reelCam.pos.set(me.pos.x - dx * 1.5 + rx * 0.7, me.baseY + 1.5, me.pos.z - dz * 1.5 + rz * 0.7);
-    const look = reelCam.look.set(me.bobPos.x, 0.55, me.bobPos.z);
+    const want = reelCam.pos.set(me.pos.x - dx * 2.0 + rx * 1.25, me.baseY + 2.05, me.pos.z - dz * 2.0 + rz * 1.25);   // 右肩後上方，角色在畫面左下，不會擋住魚
+    const look = reelCam.look.set(me.bobPos.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, me.bobPos.z);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.pos.y + 1.3, me.pos.z);
     const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
     camera.position.lerp(normal.lerp(want, reelCam.k), 1 - Math.exp(-8 * dt));
@@ -2109,6 +2109,9 @@ function actionDown(){
   } else if (F.phase === 'bite'){
     startReel(); F.hold = true;
   } else if (F.phase === 'reeling'){
+    if (F.mash){ F.P += 0.045; F.mashHits++; camShake = Math.max(camShake, 0.06);
+      const v = tmpV.set(me.bobPos.x, 0.45, me.bobPos.z).project(camera), d = document.createElement('div'); d.className = 'dmg crit'; d.textContent = '-' + Math.round(300 + Math.random() * 500); d.style.left = ((v.x + 1) / 2 * viewW() + Math.random() * 60 - 30) + 'px'; d.style.top = ((1 - v.y) / 2 * viewH() - 40) + 'px'; $('#dmgLayer').appendChild(d); setTimeout(() => d.remove(), 900);
+      return; }
     F.hold = true;
   }
 }
@@ -2152,14 +2155,19 @@ function startReel(){
   F.phase = 'reeling'; F.T = 0.35; F.P = 0.3; F.surge = 0; F.seed = Math.random()*10;
   F.S = 1; F.dir = 0; F.dirUntil = now() + rand(1.2, 2.2); F.lat = 0; F.jump = 0; F.maxDist = 4 + (F.castCharge || 0) * 6 + (BIG_FISH.has(F.fish.id) ? 6 : 0);
   if (F.leap){ scene.remove(F.leap); F.leap = null; }
-  try { F.leap = fishModel(F.fish, BIG_FISH.has(F.fish.id) ? 0.7 : 0.55); F.leap.visible = false; scene.add(F.leap); } catch(e){ F.leap = null; }
+  F.boss = BIG_FISH.has(F.fish.id) || F.fish.rarity === '傳說'; F.mash = false; F.mashHits = 0; F.surf = 0; F.surfT = now() + rand(1.2, 2.5);
+  F.bossScale = F.boss ? clamp(0.55 + Math.log10(Math.max(1, F.weight || 1)) * 0.6, 0.65, 3.4) : (BIG_FISH.has(F.fish.id) ? 0.7 : 0.55);
+  try { F.leap = fishModel(F.fish, F.bossScale); F.leap.visible = false; scene.add(F.leap); } catch(e){ F.leap = null; }
+  { const bb = $('#bossBar'); bb.hidden = !F.boss; if (F.boss){ bb.className = 'r-' + F.fish.rarity; $('#bbName').textContent = `？？？・${F.fish.rarity}`; $('#bbHp').style.width = '100%'; $('#bbPct').textContent = '100%';
+    flash('⚠️ 巨大魚影！', 1.8); camShake = Math.max(camShake, 0.35); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 36, '#e8f7ff', 1.8, 3.2, 1.1); } }
+  $('#mashFx').hidden = true;
   me.say('!', 'alert', 0.6);
   $('#fhName').textContent = F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : '有魚上鉤了！';
   const rc = $('#fhRar'); rc.className = 'chip r-' + F.fish.rarity; rc.textContent = F.fish.rarity;
   $('#fishMark').className = 'r-' + F.fish.rarity; $('#fmIco').textContent = BIG_FISH.has(F.fish.id) ? '🐋' : F.fish.rarity === '傳說' ? '🐉' : '🐟'; F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
   pushPresence(true);
 }
-function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; }
+function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = 55; camera.updateProjectionMatrix(); }
 function updateFishing(dt, t){
   const act = $('#act');
   if (F.phase === 'charging'){
@@ -2184,17 +2192,27 @@ function updateFishing(dt, t){
   if (F.phase === 'reeling'){
     // 像一般釣魚遊戲：魚有體力，會往左右衝（往反方向拉最有效），稀有的魚會跳出水面（跳的時候要放開）
     const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
-    if (t > F.dirUntil){
+    if (t > F.dirUntil && !F.mash){
       const nd = Math.random() < 0.3 ? 0 : (Math.random() < 0.5 ? -1 : 1);
       if (nd !== F.dir && nd !== 0){ const d = $('#fhDir'); d.hidden = false; d.className = nd < 0 ? 'l' : 'r'; d.innerHTML = nd < 0 ? '<span>往右拉</span><b>➡</b>' : '<b>⬅</b><span>往左拉</span>'; }
       else if (nd === 0) $('#fhDir').hidden = true;
       F.dir = nd; F.dirUntil = t + rand(1.3, 2.8) * (1.2 - p * 0.4);
     }
     if (F.jump > 0){
-      F.jump -= dt; const u = 1 - Math.max(0, F.jump) / 1.0, hgt = (big ? 2.6 : 1.5) * Math.sin(u * Math.PI);
+      const u0 = 1 - Math.max(0, F.jump) / 1.0; F.jump -= dt * (F.boss && u0 > 0.32 && u0 < 0.68 ? 0.35 : 1);   // 大魚跳到最高的時候畫面放慢
+      const u = 1 - Math.max(0, F.jump) / 1.0, hgt = (F.boss ? 1.3 + F.bossScale * 1.1 : big ? 2.6 : 1.5) * Math.sin(u * Math.PI);
       if (F.leap){ F.leap.visible = F.jump > 0; F.leap.position.set(me.bobPos.x, 0.1 + hgt, me.bobPos.z); F.leap.rotation.set(0, Math.atan2(me.pos.x - me.bobPos.x, me.pos.z - me.bobPos.z) + Math.PI / 2, (0.5 - u) * 2.2); }
-      if (F.jump <= 0){ ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 16, '#e8f7ff', 1.2, 2.2, 0.9); $('#fhT').textContent = ''; }
-    } else if ((F.fish.rarity !== '常見' || big) && F.S > 0.15 && Math.random() < dt * 0.11 * p){
+      if (F.jump <= 0){ ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, F.boss ? 48 : 16, '#e8f7ff', F.boss ? 2.2 : 1.2, F.boss ? 3.6 : 2.2, 0.9); if (F.boss){ camShake = Math.max(camShake, 0.45); SFX.plop(); ripple(me.bobPos.x + 0.8, me.bobPos.z, true); ripple(me.bobPos.x - 0.7, me.bobPos.z + 0.5, true); } $('#fhT').textContent = ''; }
+    } else if (F.boss && !F.mash && F.surf > 0){
+      // 大魚浮上水面翻身、拖出水痕
+      F.surf -= dt; const lr = Math.sign(F.lat || 1), hd = Math.atan2(me.pos.x - me.bobPos.x, me.pos.z - me.bobPos.z) + lr * Math.PI / 2;
+      if (F.leap){ F.leap.visible = F.surf > 0; F.leap.position.set(me.bobPos.x, -0.12 * F.bossScale + Math.sin(t * 5) * 0.04, me.bobPos.z); F.leap.rotation.set(0, hd + Math.PI / 2, Math.sin(t * 3) * 0.15); }
+      if (Math.random() < dt * 14) FX.emit(me.bobPos.x + (Math.random() - 0.5) * F.bossScale, 0.2, me.bobPos.z + (Math.random() - 0.5) * F.bossScale, 2, '#ffffff', 0.6, 1.4, 0.7);
+      if (Math.random() < dt * 6) ripple(me.bobPos.x + (Math.random() - 0.5) * F.bossScale, me.bobPos.z + (Math.random() - 0.5) * F.bossScale, true);
+      if (F.surf <= 0 && F.leap) F.leap.visible = false;
+    } else if (F.boss && !F.mash && t > F.surfT && F.S > 0.12){
+      F.surf = rand(1.4, 2.4); F.surfT = t + rand(3.5, 6.5); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.3, 2.4, 0.9);
+    } else if ((F.fish.rarity !== '常見' || big) && F.S > 0.15 && !F.mash && Math.random() < dt * (F.boss ? 0.16 : 0.11) * p){
       F.jump = 1.0; ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); camShake = Math.max(camShake, big ? 0.18 : 0.08);
     }
     let pull = p * (0.55 + 0.45 * Math.sin(t*2.3 + F.seed) * Math.sin(t*0.7 + F.seed*2)) * (0.35 + 0.65 * F.S);
@@ -2203,7 +2221,12 @@ function updateFishing(dt, t){
     const counter = F.dir !== 0 && steer * F.dir < -0.35, wrong = F.dir !== 0 && steer * F.dir > 0.35;
     if (F.dir !== 0) pull += (counter ? -0.18 : wrong ? 0.45 : 0.22) * p;
     const inZone = F.T > 0.3 && F.T < 0.8;
-    if (F.hold){
+    if (F.boss && !F.mash && F.S < 0.1){ F.mash = true; F.hold = false; $('#mashFx').hidden = false; SFX.bite(); F.dir = 0; $('#fhDir').hidden = true; if (F.leap) F.leap.visible = false; }
+    if (F.mash){
+      // 最後關頭：狂按按鈕把大魚拉上來（不會斷線，但魚會慢慢往回拉）
+      F.T += (0.55 - F.T) * Math.min(1, dt * 3); F.P -= 0.05 * dt; F.S = Math.max(0, F.S - dt * 0.01);
+      $('#mashFx').style.setProperty('--m', (F.mashHits % 2).toString());
+    } else if (F.hold){
       F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1);
       F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S));
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
@@ -2229,8 +2252,10 @@ function updateFishing(dt, t){
       const sx = (v.x + 1) / 2 * viewW(), sy = (1 - v.y) / 2 * viewH(), sxC = clamp(sx, 90, viewW() - 90), syC = clamp(sy, 120, viewH() - 150);
       mk.style.transform = `translate(${sxC.toFixed(0)}px, ${syC.toFixed(0)}px)`;
       $('#fmHp').style.width = (F.S * 100).toFixed(1) + '%';
+      if (F.boss){ $('#bbHp').style.width = (F.S * 100).toFixed(1) + '%'; $('#bbPct').textContent = Math.ceil(F.S * 100) + '%'; mk.classList.add('boss'); } else mk.classList.remove('boss');
+      { const want = F.boss && F.jump > 0 ? 44 : F.mash ? 50 : 55; if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
       $('#fmDist').textContent = ((1 - clamp(F.P, 0, 1)) * F.maxDist + 0.5).toFixed(1) + 'm';
-      const warn = F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
+      const warn = F.mash ? '' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
       const fw = $('#fmWarn'); if (fw.textContent !== warn) fw.textContent = warn; fw.className = 'fm-warn' + (warn ? ' on' : '') + (F.S < 0.25 && T <= 0.8 && !F.jump && !wrong ? ' good' : '');
       const dir = $('#fhDir'); if (!dir.hidden){ dir.style.left = (sxC + (F.dir < 0 ? -110 : 110)) + 'px'; dir.style.top = (syC - 10) + 'px'; }
       mk.classList.toggle('hot', T > 0.8);
@@ -2832,6 +2857,34 @@ function nearShop(){
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
 function openShop(sh){ ensureAudio(); if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+// ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
+const AvShot = { kit:null, cache:new Map() };
+function avKit(){
+  if (AvShot.kit) return AvShot.kit;
+  const sc = new THREE.Scene();
+  sc.add(new THREE.HemisphereLight('#ffffff', '#c9b8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(2, 4, 3); sc.add(dl);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20), av = makeAvatar(look.shirt, look.hat); sc.add(av.g); av.g.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  const rt = new THREE.WebGLRenderTarget(256, 256, { samples: 4 }); rt.texture.colorSpace = THREE.SRGBColorSpace;
+  return (AvShot.kit = { sc, cam, av, rt, key:'' });
+}
+const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1.3, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[0.95, 3.4, 0.45] };
+function avatarShot(gear, view, size){
+  const key = JSON.stringify([gear, view, size, look.shirt, look.hat]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
+  const K = avKit(); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
+  const gk = JSON.stringify(gear); if (K.key !== gk){ applyGear(K.av, gear); K.key = gk; }
+  if (K.av.gearAnim) K.av.gearAnim(1.2, 0);
+  const [ty, dist, yaw] = SHOT_VIEW[view] || SHOT_VIEW.full; K.cam.position.set(Math.sin(yaw) * dist, ty + 0.12, Math.cos(yaw) * dist); K.cam.lookAt(0, ty, 0);
+  if (K.rt.width !== size) K.rt.setSize(size, size);
+  const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
+  renderer.setRenderTarget(K.rt); renderer.setClearColor('#f3efe6', 1); renderer.clear(); renderer.render(K.sc, K.cam);
+  const px = new Uint8Array(size * size * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, size, size, px);
+  renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA);
+  const cv = document.createElement('canvas'); cv.width = cv.height = size; const c2 = cv.getContext('2d'), id = c2.createImageData(size, size);
+  for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);   // 上下顛倒
+  c2.putImageData(id, 0, 0); const url = cv.toDataURL();
+  if (AvShot.cache.size > 160) AvShot.cache.clear(); AvShot.cache.set(key, url); return url;
+}
+
 // ---- 服飾店：買、穿、試穿 ----
 const Wardrobe = { slot:'hat', trying:null, tryTimer:0 };
 function ownsGear(id){ const it = GEAR_BY_ID[id]; return !!it && (it.price === 0 || rec.owned.includes(id)); }
@@ -2846,23 +2899,27 @@ function buyGear(id){
   endTryOn(); rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); addCoins(-it.price); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
   cloudCall('buy_item', { p_item: id }); SFX.catch(); flash(`${it.icon} 買了${it.name}！`, 1.4); renderTab();
 }
-function tryOn(id){
-  const it = GEAR_BY_ID[id]; if (!it) return;
-  Wardrobe.trying = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); me.setGear(Wardrobe.trying); pushPresence(true);
-  closeSheet(); cam.yaw = me.rot; cam.pitch = 0.12; cam.dist = Math.min(cam.dist, 4.2);   // 轉到正面看自己
-  flash(`試穿中：${it.icon} ${it.name}`, 1.6); clearTimeout(Wardrobe.tryTimer);
-  Wardrobe.tryTimer = setTimeout(() => { endTryOn(); toast('試穿結束，喜歡的話到服飾那裡買下來'); }, 6000);
-}
-function endTryOn(){ if (!Wardrobe.trying) return; clearTimeout(Wardrobe.tryTimer); Wardrobe.trying = null; me.setGear(rec.gear); pushPresence(true); }
+// 試穿：只在上面的預覽圖換上（不會移動鏡頭，也不會讓別人看到）
+function tryOn(id){ const it = GEAR_BY_ID[id]; if (!it) return; Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: id }); Wardrobe.previewOf = id; renderTab(); }
+function endTryOn(){ Wardrobe.preview = null; Wardrobe.previewOf = null; }
 function renderWardrobe(body){
-  body.appendChild(el('p', 'sub', '買了就是你的，可以隨時換穿。按「試穿」可以先穿 6 秒看看。大家都看得到你的打扮！'));
+  const pv = el('div', 'wprev'), img = el('img'); img.alt = '試穿預覽';
+  const showG = cleanGear(Wardrobe.preview || rec.gear);
+  try { img.src = avatarShot(showG, 'full', 256); } catch(e){}
+  pv.appendChild(img);
+  const pi = el('div', 'wpinfo');
+  if (Wardrobe.preview){ const it = GEAR_BY_ID[Wardrobe.previewOf]; pi.appendChild(el('b', '', '試穿中')); pi.appendChild(el('span', '', it ? it.name : ''));
+    const bk = el('button', 'tbtn ghost', '換回原本'); bk.addEventListener('click', () => { endTryOn(); renderTab(); }); pi.appendChild(bk);
+    if (it && !ownsGear(it.id)){ const b = el('button', 'tbtn', `買 🪙${it.price.toLocaleString()}`); b.addEventListener('click', () => buyGear(it.id)); pi.appendChild(b); } }
+  else { pi.appendChild(el('b', '', '現在的打扮')); pi.appendChild(el('span', 'sub', '按「試穿」先在這裡看看，買了就是你的，大家都看得到。')); }
+  pv.appendChild(pi); body.appendChild(pv);
   const seg = el('div', 'seg wseg');
   for (const [k, l] of GEAR_SLOTS){ const b = el('button', '', l); b.setAttribute('aria-pressed', String(Wardrobe.slot === k)); b.addEventListener('click', () => { Wardrobe.slot = k; renderTab(); }); seg.appendChild(b); }
   body.appendChild(seg);
   const ul = el('ul', 'shoplist cols');
   for (const it of GEAR.filter(g => g.slot === Wardrobe.slot)){
     const on = cleanGear(rec.gear)[it.slot] === it.id, own = ownsGear(it.id), li = el('li', on ? 'on' : '');
-    li.appendChild(el('span', 'dishic', it.icon));
+    { const ic = el('img', 'gearic'); ic.alt = it.name; try { ic.src = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){} li.appendChild(ic); }
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', it.name)); d.appendChild(el('div', 'sub2', on ? '穿著中' : own ? (it.price ? '已擁有' : '免費') : `🪙 ${it.price.toLocaleString()}`)); li.appendChild(d);
     const acts = el('div', 'tacts');
     if (!on && own){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearGear(it.id)); acts.appendChild(b); }
