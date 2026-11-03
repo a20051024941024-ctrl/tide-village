@@ -4823,8 +4823,8 @@ let pjMode = false, roomTimer = null;
 function useRoom(r){
   room = r; tagReset();
     room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp);
-      for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ p.fisher.dispose(); peers.delete(pp.peer); } }
-      for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (p){ logMsg('', `${peerName(p)} 來到了村子`, true); ticker(`👋 <b>${esc(peerName(p))}</b> 來到了村子`); } }, 600); }
+      for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
+      for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (p){ visitLog(p); logMsg('', `${peerName(p)} 來到了村子`, true); ticker(`👋 <b>${esc(peerName(p))}</b> 來到了村子`); } }, 600); }
       setOnline(); }, () => { room = null; setOnline(); });
     room.on('chat', msg => {
       let text = msg && msg.data && typeof msg.data.t === 'string' ? msg.data.t.slice(0, 120) : ''; if (!text) return;
@@ -4915,6 +4915,29 @@ function SBRoom(sb, name, key, myName){
 // 關掉頁面時馬上離開大廳，別人那邊就不會留著你的角色
 addEventListener('pagehide', () => { try { if (room && room.isLobby) room.leave(); } catch(e){} });
 addEventListener('pageshow', e => { if (e.persisted && room && room.isLobby && !room.connected()){ for (const p of peers.values()) p.fisher.dispose(); peers.clear(); room = null; joinLobby(); } });
+// 來訪紀錄：誰來過村子（存在這台裝置，最多 60 筆、保留 7 天）
+const Visits = { list: LS.get('tide.visits', []) };
+function visitLog(p, left){
+  const uid = typeof p.pres.u === 'string' ? p.pres.u : (p.by || ''), name = peerName(p); if (!uid || name === '釣客' && !p.pres.n) return;
+  const nowMs = Date.now(); let v = Visits.list.find(x => x.u === uid);
+  if (!v){ v = { u: uid, n: name, first: nowMs, last: nowMs, times: 0, ak: p.pres.ak || '' }; Visits.list.unshift(v); }
+  v.n = name; v.ak = ANIMALS[p.pres.ak] ? p.pres.ak : v.ak; v.last = nowMs; if (!left){ v.times++; v.in = nowMs; } else v.out = nowMs;
+  Visits.list = Visits.list.filter(x => nowMs - x.last < 7 * 86400e3).sort((a, b) => b.last - a.last).slice(0, 60); LS.set('tide.visits', Visits.list);
+}
+function agoText(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : m < 1440 ? `${Math.round(m / 60)} 小時前` : `${Math.round(m / 1440)} 天前`; }
+function renderVisits(body){
+  const online = onlineUids(), list = Visits.list.filter(v => v.u !== Cloud.userId);
+  body.appendChild(el('div', 'dexhead', `🕒 最近來過村子的人（${list.length}）`));
+  if (!list.length){ body.appendChild(el('p', 'sub', '還沒有紀錄。有人進到你在的大廳時，就會記在這裡（存在這台裝置，保留 7 天）。')); return; }
+  const ul = el('ul', 'people');
+  for (const v of list.slice(0, 30)){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = online.has(v.u) ? '#3fbf9d' : '#c9d3da';
+    li.append(sw, el('span', '', `${ANIMALS[v.ak] ? ANIMALS[v.ak].icon + ' ' : ''}${v.n}`), el('span', 'st', online.has(v.u) ? '現在在線上' : `${agoText(v.out || v.last)}離開・來過 ${v.times} 次`));
+    if (Cloud.on && typeof isFriend === 'function' && !isFriend(v.u)){ const af = el('button', 'tbtn ghost vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(v.u, v.n); }); li.appendChild(af); }
+    if (Cloud.on){ const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(v.u, v.n); }); li.appendChild(vi); }
+    ul.appendChild(li); }
+  body.appendChild(ul);
+  const clr = el('button', 'tbtn ghost', '清除紀錄'); clr.addEventListener('click', () => { if (clr.dataset.sure !== '1'){ clr.dataset.sure = '1'; clr.textContent = '確定清除？'; return; } Visits.list = []; LS.set('tide.visits', []); renderTab(); }); body.appendChild(clr);
+}
 let lobbyJoining = false;
 async function joinLobby(){
   if (!Cloud.on || room || pjMode || lobbyJoining) return;
@@ -5366,6 +5389,7 @@ function renderTab(){
       for (const [u, n] of bl){ const li = el('li'); li.append(el('span', '', n)); const b = el('button', 'tbtn ghost vbtn', '解除封鎖'); b.addEventListener('click', () => { unblock(u); renderTab(); }); li.appendChild(b); ub.appendChild(li); }
       body.appendChild(ub);
     }
+    renderVisits(body);
     body.appendChild(el('p', 'sub', '有人講話不禮貌，按「封鎖」後就看不到他的角色、聊天和動態（只對你自己有效）。'));
   } else if (curTab === 'map'){
     renderMap(body);
@@ -5483,6 +5507,7 @@ function renderTab(){
       '鬼抓人：在「玩家」分頁發起，2 個人以上就能玩。被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。',
       '好友：在「玩家」分頁按「加好友」，或輸入朋友的 8 碼好友代碼。互相加好友以後可以送金幣（每天最多 1000）或魚缸裡的魚（每天 10 條），對方在玩家分頁打開禮物就會收到。也可以從好友名單去參觀他的水族館和小島。',
       '遇到不友善的人可以在「玩家」分頁封鎖或檢舉。聊天會自動過濾不雅字。',
+      '「玩家」分頁最下面有「最近來過村子的人」：誰進過你在的大廳、什麼時候離開、來過幾次（記在這台裝置，保留 7 天），也可以直接加好友或參觀他的小島。',
     ]);
     sec('⭐ 等級、稱號、成就', [
       '經驗值從你的紀錄算出來：釣到常見魚 +10、稀有魚 +40、傳說魚 +250，放流 +5，水下照片每種 +30。左上角的 ⭐ Lv 點一下就能看進度。',
