@@ -125,6 +125,38 @@ const SEA_MESH = (() => {
         // 發光亮點
         for (let k = 0; k < 34; k++){ const x = 0.55 - H.rnd() * 1.0, a = 0.15 + H.rnd() * (PI - 0.3); H.decal('Spots', x, a, 0.014 + H.rnd() * 0.01, 0.014, 5, 0.005); }
         H.decal('Eye', 0.71, 0.0, 0.01, 0.045, 6, 0.004); H.decal('Eye', 0.71, PI, 0.01, 0.045, 6, 0.004);
+      } }),    // 鰻魚／泥鰍：細長的身體，背鰭和臀鰭一路連到尾巴
+    Eel: build({ x0:0.8, x1:-0.8, belly:0.15,
+      prof: u => { const r = (u < 0.08 ? Math.pow(Math.sin(u / 0.08 * PI / 2), 0.6) : 1) * (1 - 0.75 * sm((u - 0.35) / 0.65)); return [0.065 * r, 0.075 * r, 0]; },
+      extra(H){
+        const top = [], bot = []; for (let k = 0; k <= 12; k++){ const x = 0.25 - k / 12 * 1.05, s = H.sec(x), fh = 0.035 + 0.01 * Math.sin(k / 12 * PI); top.push([x, s.y + s.h * 0.85, x, s.y + s.h + fh]); bot.push([x, s.y - s.h * 0.85, x, s.y - s.h - fh * 0.9]); }
+        for (const arr of [top, bot]) for (let k = 0; k < arr.length - 1; k++){ const a = arr[k], b = arr[k + 1]; H.vfin('Fins', [[a[0], a[1]], [a[2], a[3]], [b[2], b[3]], [b[0], b[1]]]); }
+        H.vfin('Fins', [[-0.78, 0], [-0.8, 0.05], [-0.88, 0.0], [-0.8, -0.05]]);
+        for (const m of [1, -1]){ const s = H.sec(0.6), y = s.y - s.h * 0.1, z = s.w * 0.9 * m; H.plate('Fins', [[0.62, y, z], [0.56, y + 0.04, z + 0.05 * m], [0.52, y, z + 0.06 * m], [0.55, y - 0.03, z + 0.04 * m]]); }
+        eyes(H, 0.72, 0.35, 0.016);
+      } }),
+    // 河豚：圓滾滾、全身小刺、大眼睛、小小的尾巴
+    Puffer: build({ x0:0.5, x1:-0.5, belly:0.1,
+      prof: u => { const r = u < 0.75 ? Math.pow(Math.sin(Math.min(1, u / 0.62) * PI / 2), 0.55) * (u > 0.62 ? 1 - 0.55 * sm((u - 0.62) / 0.13) : 1) : 0.45 - 0.25 * sm((u - 0.75) / 0.25); return [0.3 * r, 0.3 * r, 0]; },
+      extra(H){
+        for (let k = 0; k < 70; k++){ const x = 0.36 - H.rnd() * 0.6, a = H.rnd() * 2 * PI, s = H.sec(x), c = Math.cos(a), si = Math.sin(a);
+          const P = [x, s.y + si * s.h, c * s.w], L = 0.06, O = [x + 0.01, s.y + si * (s.h + L), c * (s.w + L)];
+          H.plate('Fins', [[P[0] + 0.018, P[1], P[2]], [P[0] - 0.018, P[1], P[2]], O]); H.plate('Fins', [[P[0], P[1] + 0.018 * c, P[2] - 0.018 * si], [P[0], P[1] - 0.018 * c, P[2] + 0.018 * si], O]); }
+        for (let k = 0; k < 22; k++){ const x = 0.3 - H.rnd() * 0.5, a = 0.35 + H.rnd() * (PI - 0.7); H.decal('Spots', x, a, 0.022, 0.022, 6, 0.006); }
+        const cl = [[-0.46, 0]]; for (let k = 0; k <= 6; k++){ const a = -PI / 2.6 + k / 6 * (PI / 1.3); cl.push([-0.48 - Math.cos(a) * 0.14, Math.sin(a) * 0.12]); } H.vfin('Fins', cl);
+        { const s = H.sec(-0.25); H.vfin('Fins', [[-0.22, s.y + s.h * 0.9], [-0.28, s.y + s.h + 0.07], [-0.34, s.y + s.h * 0.8]]); H.vfin('Fins', [[-0.22, s.y - s.h * 0.9], [-0.28, s.y - s.h - 0.07], [-0.34, s.y - s.h * 0.8]]); }
+        for (const m of [1, -1]){ const s = H.sec(0.12), y = s.y, z = s.w * 0.95 * m; H.plate('Fins', [[0.14, y, z], [0.06, y + 0.07, z + 0.03 * m], [0.03, y, z + 0.05 * m], [0.06, y - 0.06, z + 0.03 * m]]); }
+        eyes(H, 0.32, 0.45, 0.05); H.decal('Bottom', 0.5, 0.0, 0.02, 0.025, 6, 0.004); H.decal('Bottom', 0.5, PI, 0.02, 0.025, 6, 0.004);
+      } }),
+    // 小卷（魷魚）：尖尖的身體在前面，兩片菱形鰭，後面拖著 8 隻腳
+    Squid: build({ x0:0.78, x1:-0.15, belly:0.2,
+      prof: u => { const r = Math.pow(Math.sin(Math.min(1, u / 0.85) * PI / 2), 0.75) * (u > 0.88 ? 1 - 0.25 * sm((u - 0.88) / 0.12) : 1); return [0.13 * r, 0.13 * r, 0]; },
+      extra(H){
+        H.hfin('Fins', [[0.78, 0], [0.62, 0.2], [0.44, 0.13], [0.42, 0]], 0, true);
+        for (let k = 0; k < 8; k++){ const a = k / 8 * 2 * PI, cy = Math.sin(a) * 0.075, cz = Math.cos(a) * 0.075, len = k % 4 === 1 ? 0.75 : 0.52, wv = 0.02 * (k % 2 ? 1 : -1);
+          H.plate('Fins', [[-0.12, cy + 0.02, cz], [-0.12, cy - 0.02, cz], [-0.12 - len, cy * 0.4 + wv, cz * 0.4]]); H.plate('Fins', [[-0.12, cy, cz + 0.02], [-0.12, cy, cz - 0.02], [-0.12 - len, cy * 0.4 + wv, cz * 0.4]]); }
+        for (let k = 0; k < 30; k++){ const x = 0.7 - H.rnd() * 0.8, a = H.rnd() * 2 * PI; H.decal('Spots', x, a, 0.01, 0.01, 4, 0.004); }
+        eyes(H, -0.08, 0.15, 0.03);
       } }),
   };
 })();

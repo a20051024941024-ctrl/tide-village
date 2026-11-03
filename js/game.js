@@ -49,6 +49,18 @@ const FISH = [
   { id:'ayu',    spot:'pool', time:'twilight', name:'霧溪香魚', rarity:'常見', color:'#b8e0a0', min:0.1, max:0.6, power:0.32, desc:'聞起來有西瓜般的清香，是溪間居民的驕傲。' },
   { id:'goby',   spot:'creek', time:'night', name:'紫晶蝦虎', rarity:'稀有', color:'#9b7bff', min:0.1, max:0.5, power:0.58, desc:'在螢光石旁邊發出紫色微光，個頭小但很會掙扎。' },
   { id:'trout',  spot:'creek', time:'night', name:'星點溪鱒', rarity:'傳說', color:'#c084ff', min:1.2, max:4.5, power:0.88, desc:'身上的星點跟夜空一模一樣。據說是螢光溪的守護者。' },
+  // 2026-11 新魚
+  { id:'tilapia', spot:'river', name:'河口吳郭魚', rarity:'常見', color:'#7d8f78', min:0.3, max:1.5, power:0.36, desc:'什麼環境都能活，咬餌很積極，是河岸最好釣的魚之一。' },
+  { id:'eel',     spot:'river', time:'night', name:'月影鰻', rarity:'稀有', color:'#4a4f32', min:0.5, max:3.0, power:0.7, desc:'晚上才從石縫鑽出來，身體滑溜溜的，拉上岸還會一直扭。' },
+  { id:'carp',    spot:'lake',  name:'金鱗大鯉', rarity:'稀有', color:'#d39a36', min:1.5, max:8.0, power:0.68, desc:'鏡湖裡活了很久的大鯉魚，金色鱗片一片一片像銅板。' },
+  { id:'loach',   spot:'pool',  time:'twilight', name:'石縫泥鰍', rarity:'常見', color:'#7d6a4a', min:0.05, max:0.3, power:0.3, desc:'躲在潭底的石縫裡，抓在手上滑來滑去，很難拿穩。' },
+  { id:'puffer',  spot:'sea',   name:'圓滾河豚', rarity:'稀有', color:'#c9b06a', min:0.3, max:2.0, power:0.5, desc:'一緊張就鼓成一顆球，身上的刺全部豎起來。千萬不要拿去生吃！' },
+  { id:'squid',   spot:'sea',   time:'night', name:'透光小卷', rarity:'常見', color:'#f0b9a8', min:0.1, max:0.6, power:0.4, desc:'晚上會被碼頭的燈光吸引過來，身體幾乎是透明的。' },
+  { id:'bonito',  spot:'sea',   time:'day', name:'藍背鰹魚', rarity:'常見', color:'#2c4f80', min:0.8, max:3.0, power:0.5, desc:'成群在近海追小魚，游得很快，力氣比看起來大。' },
+  { id:'tuna',    spot:'harbor', name:'黑鮪魚', rarity:'傳說', color:'#1c2f4d', min:80, max:450, power:0.97, w:0.5, desc:'游得比船還快的遠洋魚，一條就能讓整個食堂忙上一整天。' },
+  { id:'lantern', spot:'creek', time:'night', name:'螢光燈籠魚', rarity:'稀有', color:'#3fbf9d', min:0.2, max:0.9, power:0.55, desc:'身體會發出淡綠色的光，螢光溪晚上會這麼亮，有一半是牠們的功勞。' },
+  { id:'clown',   spot:'isle',  name:'小丑魚', rarity:'常見', color:'#ff7a2a', min:0.05, max:0.25, power:0.32, desc:'住在小島碼頭下的海葵裡，橘白條紋很好認。只有小島釣得到。' },
+  { id:'parrot',  spot:'isle',  time:'day', name:'彩虹鸚哥魚', rarity:'稀有', color:'#2fc6a6', min:0.8, max:4.0, power:0.6, desc:'嘴巴像鸚鵡，會啃珊瑚。每一條的顏色都不太一樣。只有小島釣得到。' },
 ];
 const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 
@@ -57,13 +69,13 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:15, y:0.32 };
 const SPOTS = [
-  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi'] },
-  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi'], legendBoost:1.4 },
-  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout'] },
-  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream'] },
-  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['mackerel','scorpion','moonbream','sunfish','dolphin'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm'] },
-  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout'], legendBoost:1.8 },
+  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel'] },
+  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp'], legendBoost:1.4 },
+  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach'] },
+  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito'] },
+  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + 20.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna'] },
+  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [11, -14];
@@ -110,6 +122,17 @@ const FISH_STYLE = {
   ayu:      { shape:'Fish1', c:{ Top:'#8fae5a', Bottom:'#eef4dc', Fins:'#d8c46a' } },
   goby:     { shape:'Goby', c:{ Top:'#7a54d8', Bottom:'#d9ccff', Fins:'#a98cf2', Spots:'#f1e6ff', Ring:'#f6f0ff', Eye:'#1d1430' }, glow:true },
   trout:    { shape:'Fish1', c:{ Top:'#9b5de5', Bottom:'#efe6ff', Fins:'#c084ff' }, glow:true },
+  tilapia:  { shape:'Fish2', c:{ Body:'#7d8f78', Front:'#c9d4bf', Fins:'#5f7060' } },
+  eel:      { shape:'Eel',   c:{ Top:'#4a4f32', Bottom:'#c9c08a', Fins:'#6b6a3e', Eye:'#1d1f12' }, move:'eel' },
+  carp:     { shape:'Fish1', c:{ Top:'#c98a2a', Bottom:'#f3d68a', Fins:'#e0a84a' }, glow:true },
+  loach:    { shape:'Eel',   c:{ Top:'#7d6a4a', Bottom:'#d8c79e', Fins:'#9a8460', Eye:'#1d1a12' }, move:'eel' },
+  puffer:   { shape:'Puffer', c:{ Top:'#c9b06a', Bottom:'#f6efd8', Fins:'#d8a64a', Spots:'#5a4a2a', Eye:'#1d1a12' } },
+  squid:    { shape:'Squid', c:{ Top:'#f0b9a8', Bottom:'#fbe3da', Fins:'#f4c7b8', Spots:'#c4645a', Eye:'#2a1a1a' } },
+  bonito:   { shape:'Fish1', c:{ Top:'#2c4f80', Bottom:'#e8eef4', Fins:'#6f8fb8' } },
+  tuna:     { shape:'Fish1', c:{ Top:'#1c2f4d', Bottom:'#cfd8e2', Fins:'#e2c24a' }, glow:true },
+  lantern:  { shape:'Fish1', c:{ Top:'#2fae8a', Bottom:'#bff7e2', Fins:'#7af0c0' }, glow:true },
+  clown:    { shape:'Fish3', c:{ Body:'#ff7a2a', Stripes:'#ffffff', Outline:'#1a1a1a' } },
+  parrot:   { shape:'Fish2', c:{ Body:'#2fc6a6', Front:'#ff9ad5', Fins:'#5f8cff' } },
   manta:    { shape:'Manta',   c:{ Top:'#2f4d6b', Bottom:'#e8eef3' }, move:'wing' },
   dolphin:  { shape:'Dolphin', c:{ Top:'#7f8fa3', Bottom:'#e6ecf2' }, move:'vert' },
   shark:    { shape:'Shark',   c:{ Top:'#3f5f78', Bottom:'#eef2f5' }, glow:true },
@@ -133,6 +156,7 @@ const FISH_MOVES = {
   side: 'float wk = clamp((-position.x - 0.05) / 0.75, 0.0, 1.0);\n transformed.z += sin(uFishT * 9.0 + position.x * 5.0) * 0.12 * wk * wk;',
   vert: 'float wk = clamp((-position.x - 0.1) / 0.7, 0.0, 1.0);\n transformed.y += sin(uFishT * 4.0 + position.x * 3.0) * 0.1 * wk * wk;',
   flap: 'float wk = clamp((abs(position.y) - 0.45) / 0.5, 0.0, 1.0);\n transformed.z += sin(uFishT * 2.6) * 0.16 * wk * sign(position.y);',
+  eel:  'float wk = clamp((0.6 - position.x) / 1.3, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 7.0) * 0.07 * (0.25 + wk);',
   wing: 'float wk = clamp((abs(position.z) - 0.12) / 0.4, 0.0, 1.0);\n transformed.y += sin(uFishT * 3.0 - abs(position.z) * 2.0) * 0.13 * wk;',
 };
 function fishMat(id, part, color, glow, move, shape){
@@ -1317,7 +1341,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
+const BIG_FISH = new Set(['tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -2110,6 +2134,33 @@ function renderIsland(body){
   };
   section('🏠 房子', 'h', HOUSE_SLOTS, HOUSES);
   section('🌷 裝飾', 'd', DECO_SLOTS, DECOS);
+}
+
+/* ================= 有新版本時提醒（玩家自己按才重新整理，不會在拉魚時突然重開）================= */
+const Upd = { base:null, ready:false, shown:false, snooze:0 };
+async function checkUpdate(){
+  try {
+    const r = await fetch('sw.js?nocache=' + Date.now(), { cache:'no-store' }); if (!r.ok) return;
+    const m = (await r.text()).match(/VERSION = '([^']+)'/); if (!m) return;
+    if (!Upd.base){ Upd.base = m[1]; return; }
+    if (m[1] !== Upd.base) Upd.ready = true;
+  } catch(e){}
+}
+function maybeShowUpdate(){
+  if (!Upd.ready || Upd.shown || Date.now() < Upd.snooze) return;
+  if (F.phase !== 'idle' || (typeof CookGame !== 'undefined' && CookGame.on)) return;   // 正在釣魚或做料理時先不打擾
+  Upd.shown = true;
+  let bar = $('#updBar'); if (!bar){ bar = document.createElement('div'); bar.id = 'updBar'; bar.className = 'panel'; document.body.appendChild(bar); }
+  bar.hidden = false; bar.innerHTML = '';
+  bar.appendChild(el('span', '', '🆕 有新版本了！'));
+  const go = el('button', 'tbtn', '更新'); go.addEventListener('click', () => { go.disabled = true; go.textContent = '更新中…'; saveRecLocal(); setTimeout(() => location.reload(), 150); }); bar.appendChild(go);
+  const later = el('button', 'tbtn ghost', '等一下'); later.addEventListener('click', () => { bar.hidden = true; Upd.shown = false; Upd.snooze = Date.now() + 10 * 60 * 1000; }); bar.appendChild(later);
+}
+function initUpdateCheck(){
+  checkUpdate();
+  setInterval(checkUpdate, 3 * 60 * 1000);
+  setInterval(maybeShowUpdate, 4000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 }
 
 /* ================= COOKING：潮汐食堂（料理與壽司）================= */
@@ -3497,4 +3548,5 @@ requestAnimationFrame(frame);
 logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋竿。', true);
 initSocial().catch(() => {});
 cloudInit();
+initUpdateCheck();
 })();
