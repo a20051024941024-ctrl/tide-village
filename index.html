@@ -186,7 +186,11 @@ body.touch.chatting #chatForm{display:flex}
 body.touch #chatToggle{display:grid}
 
 /* toasts */
-#toasts{position:fixed;top:calc(var(--gt) + 64px);right:var(--gr);display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:min(320px,calc(100vw - 32px))}
+#ticker{position:fixed;left:0;right:0;top:calc(var(--gt) + 62px);height:34px;overflow:hidden;pointer-events:none;z-index:6}
+.tk{position:absolute;top:2px;left:0;white-space:nowrap;padding:5px 14px;border-radius:999px;background:rgba(24,51,74,.72);color:#fff;font-size:14px;box-shadow:0 4px 14px rgba(24,51,74,.2);will-change:transform}
+.tk b{color:#ffe08a}
+.tk .chip{font-size:11px;padding:1px 7px;margin:0 2px}
+#toasts{position:fixed;top:calc(var(--gt) + 102px);right:var(--gr);display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:min(320px,calc(100vw - 32px))}
 .toast{padding:9px 13px;font-size:13px;line-height:1.4;animation:tin .3s ease-out}
 .toast b{font-weight:700}
 .toast.out{opacity:0;transform:translateX(20px);transition:.4s}
@@ -276,7 +280,9 @@ body.touch #hint{bottom:auto;top:calc(var(--gt) + 64px);max-width:calc(100vw - 3
   #spotCard .t{font-size:15px}
   #spotCard .s{display:none}
   #spotCard .fl{margin-top:4px}
-  #toasts{top:calc(var(--gt) + 46px)}
+  #toasts{top:calc(var(--gt) + 82px)}
+  #ticker{top:calc(var(--gt) + 44px);height:30px}
+  .tk{font-size:13px;padding:4px 12px}
   #actWrap{gap:8px}
   #emotes{gap:6px}
   #emotes button{width:38px;height:38px;font-size:17px}
@@ -392,6 +398,7 @@ body.photo.nonames #labels{display:none}
 </div>
 
 <div id="spotCard" class="panel" hidden><div class="t"></div><div class="s"></div><div class="fl"></div></div>
+<div id="ticker" aria-live="polite"></div>
 <div id="toasts"></div>
 <div id="bigMsg" hidden></div>
 
@@ -2821,6 +2828,23 @@ function logMsg(name, text, sys){
   while (logEl.children.length > 30) logEl.firstChild.remove();
   setTimeout(() => d.classList.add('fade'), 14000);
 }
+// 跑馬燈：大家的動態（誰釣到什麼、誰在炫耀、天色變化）從右往左飄過去；排隊一則接一則，不會疊在一起
+const Ticker = { q:[], nextAt:0, busy:false, speed:110 };
+function ticker(html){
+  if (Ticker.q.length > 12) Ticker.q.shift();
+  Ticker.q.push(html); runTicker();
+}
+function runTicker(){
+  if (Ticker.busy || !Ticker.q.length) return;
+  const wait = Ticker.nextAt - performance.now();
+  if (wait > 0){ Ticker.busy = true; setTimeout(() => { Ticker.busy = false; runTicker(); }, wait); return; }
+  const box = $('#ticker'), d = document.createElement('div'); d.className = 'tk'; d.innerHTML = Ticker.q.shift(); box.appendChild(d);
+  const W = box.clientWidth || viewW(), w = d.offsetWidth, dist = W + w + 20, dur = dist / Ticker.speed * 1000;
+  const anim = d.animate([{ transform:`translateX(${W + 10}px)` }, { transform:`translateX(${-w - 10}px)` }], { duration: dur, easing:'linear' });
+  anim.onfinish = () => d.remove(); anim.oncancel = () => d.remove();
+  Ticker.nextAt = performance.now() + (w + 60) / Ticker.speed * 1000;   // 前一則完全進場、留一點空隙後，下一則才出發
+  if (Ticker.q.length) runTicker();
+}
 function toast(html){ const t = document.createElement('div'); t.className = 'toast panel'; t.innerHTML = html; $('#toasts').appendChild(t); setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 500); }, 5200); while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove(); }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
@@ -2941,7 +2965,7 @@ function applyPeer(pp){
   if (pr.s && typeof pr.s === 'object' && FISH_BY_ID[pr.s.f] && pr.s.at !== p.lastShow){
     p.lastShow = pr.s.at; const sf = FISH_BY_ID[pr.s.f], sw = clamp(+pr.s.w || 0, 0, 1e6);
     p.fisher.holdFish(sf, sw, 6);
-    toast(`<b>${esc(peerName(p))}</b> 在炫耀 <span class="chip r-${sf.rarity}">${sf.rarity}</span> <b>${esc(sf.name)}</b> ${fmtKg(sw)}`);
+    ticker(`🐟 <b>${esc(peerName(p))}</b> 在炫耀 <span class="chip r-${sf.rarity}">${sf.rarity}</span> <b>${esc(sf.name)}</b> ${fmtKg(sw)}`);
   }
   if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; p.fisher.say(EMOTES[pr.e.k], 'emote', 3); }
 }
@@ -2965,7 +2989,7 @@ function useRoom(r){
   room = r;
     room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp);
       for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ p.fisher.dispose(); peers.delete(pp.peer); } }
-      for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (p) logMsg('', `${peerName(p)} 來到了村子`, true); }, 600); }
+      for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (p){ logMsg('', `${peerName(p)} 來到了村子`, true); ticker(`👋 <b>${esc(peerName(p))}</b> 來到了村子`); } }, 600); }
       setOnline(); }, () => { room = null; setOnline(); });
     room.on('chat', msg => {
       const text = msg && msg.data && typeof msg.data.t === 'string' ? msg.data.t.slice(0, 120) : ''; if (!text) return;
@@ -2976,7 +3000,7 @@ function useRoom(r){
     room.on('catch', msg => {
       if (msg.sameTab || !msg.data) return; const f = FISH_BY_ID[msg.data.f]; const w = Number(msg.data.w); if (!f || !(w > 0) || w > f.max + 0.01) return;
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
-      toast(`<b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
+      ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
       if (p){ p.fisher.holdFish(f, w, 5); if (f.rarity === '傳說') p.fisher.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); }   // 大家都看得到他捧著剛釣到的魚
     }, () => {});
     room.onConnection(() => setOnline(), () => {});
@@ -3535,7 +3559,7 @@ function updateDayNight(t){
   // 左上角的時間
   const hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10, txt = `${DayNight.period === 'twilight' && h < 12 ? '🌅 清晨' : PERIOD_LABEL[DayNight.period]} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   const ck = $('#clock'); if (ck && ck._t !== txt){ ck.textContent = txt; ck._t = txt; }
-  if (DayNight.period !== DayNight._last){ if (DayNight._last) toast(DayNight.period === 'night' ? '天黑了，<b>晚上</b>出沒的魚開始活動 🌙' : DayNight.period === 'twilight' ? (h < 12 ? '天快亮了，清晨的魚正活躍 🌅' : '黃昏了，有些魚只在這時候出現 🌇') : '天亮了 ☀️'); DayNight._last = DayNight.period; }
+  if (DayNight.period !== DayNight._last){ if (DayNight._last) ticker(DayNight.period === 'night' ? '天黑了，<b>晚上</b>出沒的魚開始活動 🌙' : DayNight.period === 'twilight' ? (h < 12 ? '天快亮了，清晨的魚正活躍 🌅' : '黃昏了，有些魚只在這時候出現 🌇') : '天亮了 ☀️'); DayNight._last = DayNight.period; }
 }
 
 camera.position.set(4, 5, 18);
