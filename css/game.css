@@ -589,3 +589,18 @@ details.help li{margin:4px 0}
 @keyframes relPulse{50%{transform:scale(1.04)}}
 .lovepill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:#e6f3fb;color:var(--sea);font-weight:800;font-size:13px}
 @media (max-height:520px){ #catchCard .ccbtns{margin-top:8px} #catchCard .ccbtns .pbtn{padding:10px} }
+
+/* 潛水 */
+#diveHud{position:fixed;left:16px;top:calc(var(--gt) + 100px);display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px 8px 14px;font-size:13px;z-index:7;max-width:calc(100vw - 32px)}
+#diveHud[hidden]{display:none}
+#diveHud .o2{display:flex;align-items:center;gap:6px;font-weight:800;color:var(--sea)}
+#diveHud .bar{width:120px;height:10px;border-radius:999px;background:rgba(47,137,199,.18);overflow:hidden}
+#diveHud .bar i{display:block;height:100%;background:linear-gradient(90deg,#5fd0f0,#2f89c7);border-radius:999px;transition:width .2s linear}
+#diveHud .bar i.low{background:linear-gradient(90deg,#ff9a7a,#f05a4a);animation:relPulse .8s infinite}
+#diveHud .o2 b{font-variant-numeric:tabular-nums;min-width:44px;color:var(--ink)}
+#diveHud .dmeta{color:var(--ink-soft)}
+#diveDn{width:64px;height:64px;border-radius:50%;font-size:22px;display:grid;place-items:center;touch-action:none;margin-bottom:4px}
+#diveDn[hidden]{display:none}
+#diveDn.down{transform:translateY(3px)}
+@media (max-height:520px){ #diveDn{width:54px;height:54px;font-size:18px} #diveHud{top:calc(var(--gt) + 64px);padding:6px 8px 6px 12px} #diveHud .bar{width:90px} }
+#fadeFx.flashw{background:#fff;opacity:.85;transition:none}

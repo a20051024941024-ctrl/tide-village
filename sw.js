@@ -1,6 +1,6 @@
 // 潮汐釣魚村 service worker：讓「加到主畫面」可以安裝，網路不穩時也能打開遊戲。
 // 遊戲本身用「網路優先」：有網路就一定拿最新版，沒網路才用上次的備份。
-const VERSION = 'tide-v58';
+const VERSION = 'tide-v59';
 const SHELL = ['./', './index.html', './css/game.css', './js/game.js', './js/fish-models.js', './js/peer-room.js', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 const CDN = /^(https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\/)/;
 

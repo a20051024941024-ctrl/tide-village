@@ -1655,6 +1655,19 @@ class Fisher {
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubUntil = now() + (secs || 5); }
   // 炫耀魚：把魚舉在頭上幾秒
+  // 潛水：身體趴平、背氧氣瓶、戴面鏡
+  setSwim(on){
+    on = !!on; if (on === !!this.swim) return; this.swim = on; const a = this.av;
+    if (on){ const tank = new THREE.Group(), y = mat('#f6c83b', 0.4, { metalness:0.3 }), k = mat('#2b2f36', 0.5);
+      const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.46, 12), y); c1.position.set(0, 0.86, -0.3); tank.add(c1);
+      const c2 = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 6), y); c2.position.set(0, 1.09, -0.3); tank.add(c2);
+      const v = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 6), k); v.position.set(0, 1.2, -0.3); tank.add(v);
+      a.g.add(tank); const mask = new THREE.Group(); const gl = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.14, 0.05), mat('#9fe3ff', 0.1, { transparent:true, opacity:0.6, metalness:0.2 })); gl.position.set(0, 0.0, 0.31); mask.add(gl);
+      const st = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.02, 6, 20), k); st.rotation.x = Math.PI / 2; st.position.y = 0.0; st.scale.set(1, 1.08, 1); mask.add(st);
+      const sn = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6), mat('#f05a4a', 0.5)); sn.position.set(0.22, 0.15, 0.1); mask.add(sn);
+      a.headG.add(mask); this.swimMesh = [tank, mask]; a.rod.visible = false; }
+    else { for (const m of this.swimMesh || []) if (m.parent) m.parent.remove(m); this.swimMesh = null; const g = a.g; g.rotation.x = 0; g.rotation.order = 'XYZ'; }
+  }
   holdFish(f, w, secs){
     const a = this.av; if (this.held) a.g.remove(this.held.o);
     // 像拍釣魚紀念照一樣，雙手把魚捧在胸前
@@ -1685,7 +1698,10 @@ class Fisher {
       else { a.armL.rotation.x = a.armR.rotation.x = -1.3; h.o.position.y = h.y + Math.sin(t * 4) * 0.04; h.o.rotation.z = Math.sin(t * 2.6) * 0.1; }
     }
     a.g.position.y = this.baseY + Math.abs(Math.sin(this.walk)) * Math.min(1, this.speed/3) * 0.06;
-    if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible; }
+    if (this.swim){ const mv = Math.min(1, this.speed / 2.5), want = this.swimPitch != null ? this.swimPitch : 0.3 + mv * 0.95; a.g.rotation.order = 'YXZ'; this.swimP = (this.swimP || 0) + (want - (this.swimP || 0)) * Math.min(1, dt * 4); a.g.rotation.x = this.swimP;
+      const kick = Math.sin(t * (4 + mv * 6)) * (0.2 + mv * 0.25); a.legL.rotation.x = kick; a.legR.rotation.x = -kick; a.armL.rotation.x = a.armR.rotation.x = -0.5 - mv * 2.2 + Math.sin(t * 2) * 0.1; a.rod.visible = false;
+      a.g.position.y = this.baseY + Math.sin(t * 1.6) * 0.05; }
+    if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
     const showBob = this.fishing && this.bobState !== 'none';
     this.bob.visible = showBob; this.line.visible = showBob;
@@ -1829,6 +1845,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyP' && $('#sheet').hidden && $('#catchCard').hidden){ enterPhoto(); return; }
   if (!$('#sheet').hidden || !$('#catchCard').hidden){ if (e.key === 'Escape'){ closeSheet(); closeCatch(); } if (e.key === 'Enter' && !$('#catchCard').hidden) closeCatch(); return; }
   keys[e.code] = true;
+  if (Dive.on && e.code === 'Space'){ e.preventDefault(); return; }
   if (e.code === 'KeyJ' && !e.repeat){ jump(); return; }
   if (e.code === 'Space' && !e.repeat && F.phase === 'idle' && !myBoat && nearestSpot().d > 1.7 && !nearShop() && !shoreSpot() && !nearDoor() && !nearExit() && !nearChair()){ e.preventDefault(); jump(); return; }
   if (e.code === 'Space' || e.code === 'KeyF'){ e.preventDefault(); if (!e.repeat) actionDown(); }
@@ -1981,7 +1998,7 @@ function discover(t){
   }
 }
 function travelTo(tp){
-  closeSheet(); if (Photo.on) exitPhoto();
+  closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true);
   if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); }
   if (F.phase !== 'idle') cancelFishing();
   const fx = $('#fadeFx'); fx.classList.add('on');
@@ -2061,6 +2078,7 @@ function updatePlayer(dt){
   }
   const L = Math.hypot(ix, iz); if (L > 1){ ix /= L; iz /= L; }
   const locked = F.phase === 'bite' || F.phase === 'reeling' || F.phase === 'landing';
+  if (Dive.on){ updateDiveSwim(dt, ix, iz, L); return; }
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
   if (mySeat){
     if (L > 0.08 && !locked) standUp();
@@ -2104,7 +2122,7 @@ function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.sitting = tr
 function standUp(){ if (!mySeat) return; const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
-function canJump(){ return !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
+function canJump(){ return !Dive.on && !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
 function jump(){ if (mySeat){ standUp(); return; }
   if (!canJump()) return;
   ensureAudio();
@@ -2124,7 +2142,7 @@ function updateCamera(dt){
     const want = reelCam.pos.set(me.pos.x - dx * 2.0 + rx * 1.25, me.baseY + 2.05, me.pos.z - dz * 2.0 + rz * 1.25);   // 右肩後上方，角色在畫面左下，不會擋住魚
     const look = reelCam.look.set(me.bobPos.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, me.bobPos.z);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
-    const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(House.on ? ROOM_Y + 0.8 : 0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
+    const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(House.on ? ROOM_Y + 0.8 : Dive.on ? DIVE.y + 0.5 : 0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
     camera.position.lerp(normal.lerp(want, reelCam.k), 1 - Math.exp(-8 * dt));
     camera.lookAt(tg.lerp(look, reelCam.k));
     if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
@@ -2133,7 +2151,7 @@ function updateCamera(dt){
   const target = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);   // 用地面高度，不跟著走路的上下晃動（不然鏡頭會一直震）
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
-  want.y = Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
+  want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
   camera.lookAt(target);
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
@@ -2149,6 +2167,7 @@ function actionDown(){
   if (uiBlocked) return;
   ensureAudio();
   const act = $('#act'); act.classList.add('down');
+  if (Dive.on){ diveAction(); return; }
   if (F.phase === 'idle'){
     let spot;
     if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
@@ -2339,11 +2358,12 @@ function updateFishing(dt, t){
   }
   // HUD + button
   $('#chargeHud').hidden = F.phase !== 'charging';
-  { const cb = $('#chumBtn'), show = !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
+  { const cb = $('#chumBtn'), show = !Dive.on && !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
-  if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
+  if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
+  else if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
     if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
     else if (sh){ label = sh.label; sub = sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
@@ -2949,11 +2969,12 @@ function updateEnv(dt, t){
   sun.intensity *= Env.k; hemi.intensity *= 0.55 + 0.45 * Env.k;
   if (W.fog && !House.on){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
   if (!Env.rain) Env.rain = buildRain();
-  const rn = House.on ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
+  const rn = House.on || Dive.on ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
   if (rn > 0){ Env.rain.geometry.setDrawRange(0, rn * 2); Env.rain.position.set(camera.position.x, camera.position.y - 6, camera.position.z); const a = Env.rain.geometry.attributes.position.array, fall = dt * (W.storm ? 26 : 18);
     for (let i = 0; i < rn; i++){ const o = i * 6; a[o + 1] -= fall; a[o + 4] -= fall; if (a[o + 1] < 0){ a[o + 1] += 18; a[o + 4] += 18; } if (W.storm){ a[o + 3] = a[o] + 0.25; } } Env.rain.geometry.attributes.position.needsUpdate = true;
     if (Math.random() < dt * 6) ripple(me.pos.x + (Math.random() - 0.5) * 16, me.pos.z + (Math.random() - 0.5) * 16); }
-  if (W.storm && !House.on){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
+  if (W.storm && !House.on && !Dive.on){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
+  if (Dive.on) diveEnvFx();
   const chip = $('#wxChip'); if (chip){ const txt = `${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
 }
 
@@ -2989,6 +3010,9 @@ function renderFerryBar(){
 function renderFerry(body){
   body.appendChild(el('div', 'shophead')).innerHTML = `<b>🚤 ${FERRY.name}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
   body.appendChild(el('p', 'sub', '「要去哪裡？我的船很快的！」到了以後可以在船上釣魚、也可以自己划，想回來按「回港口」就好。'));
+  { body.appendChild(el('div', 'dexhead', '🤿 潛水（進階）')); const ul = el('ul', 'shoplist'), li = el('li'); li.appendChild(el('span', 'dishic', '🪸'));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', '珊瑚礁潛水點')); d.appendChild(el('div', 'sub2', hasDive('dive_suit') ? `氧氣 ${diveO2()} 秒・有沉船、魚群、貝殼和寶箱` : '要先在商店的「🤿潛水」分頁買潛水裝備組')); li.appendChild(d);
+    const a = el('div', 'tacts'), b = el('button', 'tbtn' + (hasDive('dive_suit') ? '' : ' ghost'), '去潛水'); b.addEventListener('click', () => startDive()); a.appendChild(b); li.appendChild(a); ul.appendChild(li); body.appendChild(ul); }
   body.appendChild(el('div', 'dexhead', '🤫 你的祕密窩點'));
   const ul = el('ul', 'shoplist');
   if (!secretSpots.length) ul.appendChild(el('li', '', '還沒有祕密窩點。在水邊按「🍚 打窩」→「🤫 提前打」，就能做一個只有你知道的窩點。'));
@@ -2996,24 +3020,6 @@ function renderFerry(body){
     li.appendChild(el('span', 'dishic', '🍚')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${sp.where}・${CHUM_BY_ID[sp.type].name}`)); d.appendChild(el('div', 'sub2', pw >= 1 ? `🔥 效果最強！還剩 ${mins} 分鐘` : `發酵中 ${Math.round(pw * 100)}%・還剩 ${mins} 分鐘`)); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(sp.x, sp.z, `祕密窩點（${sp.where}）`)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
-  // 在地圖上點一個地方，阿海就載你去（可以去平常划不到的遠方海面，到了再自己打窩）
-  body.appendChild(el('div', 'dexhead', '🗺️ 在地圖上選地點'));
-  body.appendChild(el('p', 'sub', '點地圖上任何一片水，阿海就載你過去。藍色越深的地方越深、大魚越多。🤫 是你的祕密窩點，⚓ 是港口。'));
-  { const V = 92, S = 480, wrap = el('div', 'mapwrap'), cv = el('canvas', 'mapcv'); cv.width = cv.height = S; wrap.appendChild(cv); body.appendChild(wrap);
-    const ctx = cv.getContext('2d'), toPx = (x, z) => [(x + V) / (V * 2) * S, (z + V) / (V * 2) * S], inner = MAP_VIEW / V * S;
-    const grd = ctx.createRadialGradient(S / 2, S / 2, inner * 0.4, S / 2, S / 2, S * 0.72); grd.addColorStop(0, '#4f9fd0'); grd.addColorStop(1, '#16507e'); ctx.fillStyle = grd; ctx.fillRect(0, 0, S, S);
-    ctx.drawImage(getMapImage(), (S - inner) / 2, (S - inner) / 2, inner, inner);
-    ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
-    for (const sp of secretSpots){ const [x, y] = toPx(sp.x, sp.z); ctx.fillText('🤫', x, y + 7); }
-    { const [x, y] = toPx(28.5, -30.5); ctx.fillText('⚓', x, y + 7); }
-    const [mx, my] = toPx(me.pos.x, me.pos.z); ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
-    cv.addEventListener('click', e => {
-      const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width * S) / S * V * 2 - V, z = ((e.clientY - r.top) / r.height * S) / S * V * 2 - V;
-      if (!waterAt(x, z)){ toast('那裡不是水面，點藍色的地方'); return; }
-      const c = cv.getContext('2d'), [px, py] = toPx(x, z); c.beginPath(); c.arc(px, py, 9, 0, Math.PI * 2); c.strokeStyle = '#ffd36a'; c.lineWidth = 4; c.stroke();
-      ferryTo(x, z, `${spotName(x, z)}（自選地點）`);
-    });
-  }
   // 在地圖上自己選地點：點哪塊海面就載你去哪裡（到了再自己打窩）
   body.appendChild(el('div', 'dexhead', '🗺️ 自己選地點'));
   body.appendChild(el('p', 'sub', '在地圖上點一塊水面，阿海就載你過去。到了以後可以自己打窩、做一個新的祕密窩點。'));
@@ -3039,6 +3045,256 @@ function renderFerry(body){
   for (const d0 of FERRY.dest){ const li = el('li'); li.appendChild(el('span', 'dishic', '🌊')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', d0.name)); d.appendChild(el('div', 'sub2', d0.desc)); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(d0.x, d0.z, d0.name)); a.appendChild(b); li.appendChild(a); u2.appendChild(li); }
   body.appendChild(u2);
+}
+/* ================= DIVE：潛水（進階玩法：要先買潛水裝備，氧氣瓶可以升級）================= */
+// 水下場景蓋在外海的正下方（跟房子一樣，外面用一顆大球包起來，看不到上面的世界）
+const DIVE = { x:60, y:-70, z:-40, r:30, top:15 };
+const DIVE_GEAR = [
+  { id:'dive_suit',  name:'潛水裝備組',   icon:'🤿', price:1500, o2:60,  desc:'潛水衣、面鏡、蛙鞋和小氧氣瓶。有了它才能請船夫阿海帶你去潛水，氧氣 60 秒。' },
+  { id:'dive_tank2', name:'中型氧氣瓶',   icon:'🫧', price:1200, o2:100, need:'dive_suit',  desc:'氧氣變成 100 秒。' },
+  { id:'dive_tank3', name:'大型氧氣瓶',   icon:'🫧', price:3000, o2:150, need:'dive_tank2', desc:'氧氣變成 150 秒。' },
+  { id:'dive_tank4', name:'專業雙氧氣瓶', icon:'🫧', price:7000, o2:220, need:'dive_tank3', desc:'氧氣變成 220 秒，可以慢慢逛整片珊瑚礁。' },
+  { id:'dive_fins',  name:'競速蛙鞋',     icon:'🦶', price:900,  need:'dive_suit', desc:'在水裡游得快 35%。' },
+  { id:'dive_light', name:'潛水燈',       icon:'🔦', price:600,  need:'dive_suit', desc:'晚上潛水也看得清楚。' },
+];
+const DIVE_BY_ID = Object.fromEntries(DIVE_GEAR.map(g => [g.id, g]));
+var Dive = { on:false, up:false, down:false, o2:0, o2max:60, group:null, fish:[], schools:[], loot:[], kelp:null, bubbles:null, shafts:[], seen:new Set(), back:null, warned:0 };
+function hasDive(id){ return (rec.dive || []).includes(id); }
+function diveO2(){ let o = 0; for (const g of DIVE_GEAR) if (g.o2 && hasDive(g.id)) o = Math.max(o, g.o2); return o; }
+function diveBed(x, z){
+  const dx = x - DIVE.x, dz = z - DIVE.z, d = Math.hypot(dx, dz);
+  return DIVE.y + Math.sin(dx * 0.21) * 0.45 + Math.cos(dz * 0.17 + dx * 0.05) * 0.55 + Math.sin((dx + dz) * 0.09) * 0.8 + Math.max(0, d - DIVE.r * 0.72) * 0.55;
+}
+let diveSp = null; function diveSpecies(){ return diveSp || (diveSp = FISH.filter(f => SEA_SPOTS.has(f.spot))); }
+// 把很多小東西合併成少數幾個網格（手機比較順）
+function diveMerger(){
+  const parts = new Map(), tmp = new THREE.Object3D();
+  return {
+    add(geo, color, x, y, z, rx, ry, rz, sx, sy, sz, rough){
+      tmp.position.set(x, y, z); tmp.rotation.set(rx || 0, ry || 0, rz || 0); tmp.scale.set(sx || 1, sy == null ? (sx || 1) : sy, sz == null ? (sx || 1) : sz); tmp.updateMatrix();
+      let g = geo.index ? geo.toNonIndexed() : geo.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
+      g.applyMatrix4(tmp.matrix); const key = color + '|' + (rough == null ? 0.8 : rough); if (!parts.has(key)) parts.set(key, []); parts.get(key).push(g); geo.dispose();
+    },
+    build(group){ for (const [key, gs] of parts){ const [c, r] = key.split('|'); const m = new THREE.Mesh(mergeGeometries(gs, false), mat(c, +r)); gs.forEach(g => g.dispose()); group.add(m); } }
+  };
+}
+function buildDive(){
+  const g = new THREE.Group(); g.name = 'dive'; scene.add(g); Dive.group = g;
+  const X = DIVE.x, Y = DIVE.y, Z = DIVE.z, R = DIVE.r, M = diveMerger(), rnd = mulberry(Math.floor(Date.now() / 60000));
+  const onBed = () => { const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * R * 0.92, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; return [x, diveBed(x, z), z]; };
+  // 外面的大球（上亮下暗）和水面
+  { const sg = new THREE.SphereGeometry(R + 16, 28, 16), cs = [], p = sg.attributes.position, c1 = new THREE.Color('#5fc3e6'), c0 = new THREE.Color('#0b3557'), cc = new THREE.Color();
+    for (let i = 0; i < p.count; i++){ const k = clamp(p.getY(i) / (R + 16) * 0.5 + 0.5, 0, 1); cc.copy(c0).lerp(c1, Math.pow(k, 1.6)); cs.push(cc.r, cc.g, cc.b); }
+    sg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3));
+    const sp = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ vertexColors:true, side:THREE.BackSide, fog:false, depthWrite:false })); sp.position.set(X, Y + 4, Z); sp.renderOrder = -2; g.add(sp); }
+  { const s = new THREE.Mesh(new THREE.PlaneGeometry((R + 16) * 2, (R + 16) * 2, 1, 1), new THREE.MeshBasicMaterial({ color:'#bff0ff', transparent:true, opacity:0.5, side:THREE.DoubleSide, fog:false, depthWrite:false }));
+    s.rotation.x = Math.PI / 2; s.position.set(X, Y + DIVE.top, Z); g.add(s); Dive.surface = s; }
+  // 海底沙地
+  { const pg = new THREE.PlaneGeometry(R * 2 + 24, R * 2 + 24, 56, 56); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], a = new THREE.Color('#e2d2a4'), b = new THREE.Color('#c7b384'), cc = new THREE.Color();
+    for (let i = 0; i < p.count; i++){ const x = p.getX(i) + X, z = p.getZ(i) + Z; p.setY(i, diveBed(x, z) - Y); cc.copy(a).lerp(b, 0.5 + 0.5 * Math.sin(x * 0.7) * Math.cos(z * 0.6)); cs.push(cc.r, cc.g, cc.b); }
+    pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); pg.computeVertexNormals();
+    const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed); }
+  // 石頭
+  for (let i = 0; i < 26; i++){ const [x, y, z] = onBed(), s = 0.5 + rnd() * 1.8; M.add(new THREE.IcosahedronGeometry(s, 0), ['#7d7a72', '#6a6f72', '#8a8170'][i % 3], x, y + s * 0.2, z, rnd(), rnd() * 6, rnd(), 1, 0.55 + rnd() * 0.3, 1, 0.95); }
+  // 珊瑚：樹枝、腦紋、扇形、管狀
+  const CC = ['#ff6f61', '#ff9f43', '#f5a5d8', '#b48cff', '#ffd36a', '#ff7fa8', '#7fd6c4'];
+  for (let i = 0; i < 70; i++){ const [x, y, z] = onBed(), c = CC[Math.floor(rnd() * CC.length)], kind = i % 4, s = 0.6 + rnd() * 0.9;
+    if (kind === 0){ for (let k = 0; k < 6; k++){ const a = k * 1.1 + rnd(), tl = 0.4 + rnd() * 0.5; M.add(new THREE.CylinderGeometry(0.035 * s, 0.07 * s, tl * s, 5), c, x + Math.cos(a) * 0.12 * s, y + tl * s * 0.45, z + Math.sin(a) * 0.12 * s, Math.sin(a) * 0.5, 0, Math.cos(a) * 0.5, 1, 1, 1, 0.6);
+        M.add(new THREE.SphereGeometry(0.06 * s, 6, 4), c, x + Math.cos(a) * (0.12 + tl * 0.45) * s, y + tl * s * 0.9, z + Math.sin(a) * (0.12 + tl * 0.45) * s, 0, 0, 0, 1, 1, 1, 0.6); } }
+    else if (kind === 1){ M.add(new THREE.SphereGeometry(0.45 * s, 12, 8), ['#c9d36a', '#9fd08a', '#e8b06a'][i % 3], x, y + 0.12 * s, z, 0, 0, 0, 1, 0.62, 1, 1); }
+    else if (kind === 2){ const ry = rnd() * 3; M.add(new THREE.CircleGeometry(0.75 * s, 12, 0, Math.PI), c, x, y + 0.05, z, 0, ry, 0, 1, 1, 1, 0.7); M.add(new THREE.CircleGeometry(0.75 * s, 12, 0, Math.PI), c, x, y + 0.05, z, 0, ry + Math.PI, 0, 1, 1, 1, 0.7); }
+    else { for (let k = 0; k < 5; k++){ const a = k * 1.25, h = 0.3 + rnd() * 0.5; M.add(new THREE.CylinderGeometry(0.07 * s, 0.08 * s, h * s, 7, 1, true), c, x + Math.cos(a) * 0.13 * s, y + h * s / 2, z + Math.sin(a) * 0.13 * s, 0, 0, 0, 1, 1, 1, 0.7); } } }
+  // 海葵（會晃的觸手用小圓錐）
+  for (let i = 0; i < 18; i++){ const [x, y, z] = onBed(), c = ['#ff9fd0', '#ffd36a', '#a6f0d0'][i % 3]; for (let k = 0; k < 9; k++){ const a = k / 9 * Math.PI * 2; M.add(new THREE.ConeGeometry(0.035, 0.32, 4), c, x + Math.cos(a) * 0.12, y + 0.16, z + Math.sin(a) * 0.12, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4, 1, 1, 1, 0.5); } M.add(new THREE.CylinderGeometry(0.12, 0.15, 0.12, 9), '#c0587a', x, y + 0.04, z); }
+  // 沉船
+  { const sx = X + 11, sz = Z - 9, sy = diveBed(sx, sz), wood = '#6b4a35', dark = '#4a3424';
+    M.add(new THREE.BoxGeometry(2.6, 1.5, 8), wood, sx, sy + 0.5, sz, 0.08, 0.5, 0.32, 1, 1, 1, 0.95);
+    M.add(new THREE.BoxGeometry(2.3, 0.12, 7.2), dark, sx + 0.25, sy + 1.28, sz - 0.1, 0.08, 0.5, 0.32, 1, 1, 1, 0.95);
+    M.add(new THREE.ConeGeometry(1.35, 2.2, 4), wood, sx + Math.sin(0.5) * 4.6, sy + 0.35, sz + Math.cos(0.5) * 4.6, Math.PI / 2, 0.5 + Math.PI / 4, 0, 1, 1, 0.7, 0.95);
+    M.add(new THREE.CylinderGeometry(0.12, 0.16, 5.5, 7), dark, sx + 0.6, sy + 3.2, sz + 0.4, 0.5, 0, 0.7, 1, 1, 1, 0.9);
+    M.add(new THREE.BoxGeometry(2.2, 0.1, 0.1), dark, sx + 1.4, sy + 4.4, sz + 1.3, 0.5, 0.2, 0.7, 1, 1, 1, 0.9);
+    for (let k = 0; k < 4; k++) M.add(new THREE.TorusGeometry(0.22, 0.05, 6, 12), '#3a3a3a', sx - 0.9 + k * 0.1, sy + 0.9, sz - 2.4 + k * 1.4, 0, 0.5 + Math.PI / 2, 0.32, 1, 1, 1, 0.6);
+    Dive.wreck = { x: sx, z: sz }; }
+  M.build(g);
+  // 海帶（InstancedMesh，會跟著水流晃）
+  { const kg = new THREE.PlaneGeometry(0.34, 3.2, 1, 6); kg.translate(0, 1.6, 0); const p = kg.attributes.position; for (let i = 0; i < p.count; i++){ const yy = p.getY(i); p.setX(i, p.getX(i) * (1 - yy / 4) + Math.sin(yy * 1.6) * 0.12); } kg.computeVertexNormals();
+    const N = 46, im = new THREE.InstancedMesh(kg, mat('#4f9a54', 0.8, { side:THREE.DoubleSide }), N), list = [];
+    for (let i = 0; i < N; i++){ let x, z; if (i < 30){ const a = rnd() * Math.PI * 2, r = R * (0.55 + rnd() * 0.35); x = X + Math.cos(a) * r; z = Z + Math.sin(a) * r; } else { const c = Math.floor(i / 4) % 3; x = X - 10 + c * 6 + rnd() * 2; z = Z + 8 + rnd() * 3; }
+      list.push({ x, y: diveBed(x, z), z, s: 0.8 + rnd() * 1.1, ry: rnd() * 3, ph: rnd() * 6 }); }
+    im.frustumCulled = false; g.add(im); Dive.kelp = { im, list }; }
+  // 光束
+  Dive.shafts = [];
+  for (let i = 0; i < 7; i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
+    const a = rnd() * Math.PI * 2, r = 6 + rnd() * R * 0.7; m.position.set(X + Math.cos(a) * r, Y + DIVE.top / 2 + 0.5, Z + Math.sin(a) * r); m.rotation.z = 0.18; m.rotation.y = rnd(); g.add(m); Dive.shafts.push(m); }
+  // 泡泡（往上飄）
+  { const N = 90, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ pos[i * 3] = X + (rnd() - 0.5) * R * 2; pos[i * 3 + 1] = Y + rnd() * DIVE.top; pos[i * 3 + 2] = Z + (rnd() - 0.5) * R * 2; }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const b = new THREE.Points(geo, new THREE.PointsMaterial({ color:'#e8fbff', size:0.12, transparent:true, opacity:0.7, depthWrite:false })); b.frustumCulled = false; g.add(b); Dive.bubbles = b; }
+  // 魚群（同一種魚一起游）
+  const SP = diveSpecies(), inst = SP.filter(f => FISH_STYLE[f.id] && !BIG_FISH.has(f.id) && f.rarity === '常見');
+  Dive.schools = [];
+  const nS = Math.min(5, inst.length); const pool = inst.slice().sort(() => rnd() - 0.5);
+  for (let s = 0; s < nS; s++){ const f = pool[s], st = FISH_STYLE[f.id], n = 14 + Math.floor(rnd() * 10), ims = [];
+    for (const part of Object.keys(FISH_MESH[st.shape])){ const im = new THREE.InstancedMesh(fishGeo(st.shape, part), fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape), n); im.frustumCulled = false; g.add(im); ims.push(im); }
+    const a = rnd() * Math.PI * 2, r = 6 + rnd() * (R * 0.55);
+    Dive.schools.push({ f, ims, n, zk: /^Fish/.test(st.shape) ? 1.5 : 1, cx: X + Math.cos(a) * r * 0.4, cz: Z + Math.sin(a) * r * 0.4, rad: 4 + rnd() * 7, y: 1.5 + rnd() * 6, sp: (0.08 + rnd() * 0.1) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * 6, off: Array.from({ length: n }, () => [rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 6]), pos: new THREE.Vector3() }); }
+  // 單獨游的魚（稀有魚比較多，傳說魚偶爾出現）
+  Dive.fish = [];
+  const solo = SP.filter(f => f.rarity !== '常見' || !FISH_STYLE[f.id]); const pickSolo = [];
+  for (const f of solo) if (rnd() < (f.rarity === '傳說' ? 0.28 : 0.75)) pickSolo.push(f);
+  for (const f of pickSolo.slice(0, 9)){ let m; try { m = fishModel(f, BIG_FISH.has(f.id) ? 1.15 : 0.62); } catch(e){ continue; }
+    const bottom = ['crab', 'flounder', 'stingray', 'octopus', 'lobster', 'seahorse'].includes(f.id) || /crab|lobster|octo/.test(f.id);
+    const a = rnd() * Math.PI * 2, r = 4 + rnd() * R * 0.7; const o = { f, m, bottom, cx: X + Math.cos(a) * r * 0.5, cz: Z + Math.sin(a) * r * 0.5, rad: bottom ? 1.5 + rnd() * 2 : 5 + rnd() * 9, y: bottom ? 0.25 : 2 + rnd() * 8, sp: (bottom ? 0.08 : 0.06 + rnd() * 0.08) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * 6, pos: new THREE.Vector3() };
+    g.add(m); Dive.fish.push(o); }
+  // 貝殼和寶箱
+  Dive.loot = [];
+  for (let i = 0; i < 14; i++){ const [x, y, z] = onBed(), sh = new THREE.Group(), c = ['#ffe3d3', '#f5c6a5', '#fff4e0', '#ffc1cc'][i % 4];
+    const s1 = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.28, 9), mat(c, 0.4)); s1.rotation.z = Math.PI / 2.4; sh.add(s1);
+    const s2 = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.05, 6, 10), mat(c, 0.4)); s2.position.x = -0.1; sh.add(s2);
+    sh.position.set(x, y + 0.08, z); sh.rotation.y = rnd() * 6; g.add(sh); Dive.loot.push({ kind:'shell', x, y, z, m: sh }); }
+  if (rnd() < 0.55){ const near = rnd() < 0.6, x = near ? Dive.wreck.x - 2.5 : onBed()[0], z = near ? Dive.wreck.z + 2.8 : onBed()[2], y = diveBed(x, z), ch = new THREE.Group();
+    ch.add(box([0.9, 0.5, 0.6], '#8c5d3b', [0, 0.25, 0])); const lid = new THREE.Group(); lid.position.set(0, 0.5, -0.3); lid.add(box([0.92, 0.22, 0.62], '#a8713f', [0, 0.11, 0.3])); ch.add(lid);
+    for (const bx of [-0.3, 0.3]) ch.add(box([0.08, 0.74, 0.64], '#e8b730', [bx, 0.37, 0], mat('#e8b730', 0.3, { metalness:0.6 })));
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshBasicMaterial({ color:'#ffe27a', transparent:true, opacity:0.0 })); glow.position.y = 0.55; ch.add(glow);
+    ch.position.set(x, y, z); ch.rotation.y = rnd() * 6; g.add(ch); Dive.loot.push({ kind:'chest', x, y, z, m: ch, lid, glow }); }
+  g.traverse(o => { if (o.isMesh || o.isInstancedMesh){ o.castShadow = false; o.receiveShadow = false; } });
+}
+function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function startDive(){
+  if (Dive.on) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
+  closeSheet(); if (F.phase !== 'idle') cancelFishing(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
+  const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
+  setTimeout(() => {
+    buildDive(); diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
+    me.pos.x = DIVE.x - 4; me.pos.z = DIVE.z + DIVE.r * 0.45; me.baseY = DIVE.y + DIVE.top - 2.5; Jump.gy = me.baseY; Jump.air = 0; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.35; Dive.savedDist = cam.dist; cam.dist = 5.5;
+    me.setSwim(true); renderDiveHud(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120);
+    flash(`🤿 下潛！氧氣 ${Dive.o2max} 秒`, 1.6);
+  }, 380);
+}
+function endDive(reason, instant){
+  if (!Dive.on || Dive.ending) return; Dive.ending = true; const fx = $('#fadeFx');
+  const done = () => {
+    Dive.ending = false;
+    Dive.on = false; Dive.up = Dive.down = false;
+    if (Dive.group){ Dive.group.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); scene.remove(Dive.group); Dive.group = null; }
+    Dive.fish = []; Dive.schools = []; Dive.loot = []; Dive.kelp = null; diveShowWorld();
+    me.setSwim(false); const [fx0, fz0] = freeSpot(FERRY.at[0] - 1.2, FERRY.at[1] + 0.8); me.pos.x = fx0; me.pos.z = fz0; me.baseY = groundHeight(fx0, fz0); Jump.gy = me.baseY; me.rot = -Math.PI / 2; cam.yaw = me.rot + Math.PI; if (Dive.savedDist) cam.dist = Dive.savedDist;
+    renderDiveHud(); pushPresence(true); if (!instant) setTimeout(() => fx.classList.remove('on'), 120);
+    const n = Dive.seen.size; if (!instant) toast(`${reason || '🤿 浮上水面了'}${n ? `　這次看到 ${n} 種魚` : ''}`);
+  };
+  if (instant){ done(); return; }
+  fx.classList.add('on'); setTimeout(done, 380);
+}
+function diveTargets(){
+  const out = []; for (const s of Dive.schools) out.push({ f: s.f, p: s.pos }); for (const o of Dive.fish) out.push({ f: o.f, p: o.pos }); return out;
+}
+// 鏡頭前面最近的魚
+function diveFacing(){
+  const fwd = tmpV2.set(0, 0, -1).applyQuaternion(camera.quaternion); let best = null, bd = 8;
+  for (const t of diveTargets()){ const dx = t.p.x - me.pos.x, dy = t.p.y - (me.baseY + 0.5), dz = t.p.z - me.pos.z, d = Math.hypot(dx, dy, dz); if (d > bd || d < 0.3) continue;
+    const cx = t.p.x - camera.position.x, cy = t.p.y - camera.position.y, cz = t.p.z - camera.position.z, cl = Math.hypot(cx, cy, cz) || 1; if ((cx * fwd.x + cy * fwd.y + cz * fwd.z) / cl < 0.72) continue; bd = d; best = t; }
+  return best;
+}
+const tmpV2 = new THREE.Vector3();
+function diveNearLoot(){ let best = null, bd = 1.8; for (const l of Dive.loot){ if (l.got) continue; const d = Math.hypot(me.pos.x - l.x, me.pos.z - l.z, (me.baseY - l.y) * 0.6); if (d < bd){ bd = d; best = l; } } return best; }
+function diveAction(){
+  const l = diveNearLoot(); if (l){ grabLoot(l); return; }
+  const t = diveFacing(); if (t){ divePhoto(t.f); return; }
+  toast('靠近魚按「📷 拍照」，靠近貝殼或寶箱可以撿起來');
+}
+function divePhoto(f){
+  rec.photos = rec.photos || []; const isNew = !rec.photos.includes(f.id);
+  const fl = $('#fadeFx'); fl.classList.add('flashw'); setTimeout(() => fl.classList.remove('flashw'), 160); SFX.chat();
+  if (isNew){ rec.photos.push(f.id); saveRecLocal(); cloudCall('add_photo', { p_fish: f.id }); flash(`📸 拍到了${f.name}！水下圖鑑 ${rec.photos.length}/${diveSpecies().length}`, 1.8); }
+  else flash(`📸 ${f.name}（已經拍過了）`, 1.2);
+}
+async function grabLoot(l){
+  l.got = true; SFX.catch();
+  if (l.kind === 'shell'){ l.m.visible = false; } else { l.open = now(); }
+  if (Cloud.on){ const before = rec.coins, row = await cloudCall('dive_loot', { p_kind: l.kind }); if (!row) return; const got = (Number(row.coins) || 0) - before;
+    flash(got > 0 ? `${l.kind === 'chest' ? '🎁 寶箱裡有' : '🐚 撿到貝殼，賣了'} 🪙${got}！` : l.kind === 'chest' ? '🎁 今天的寶箱開夠了（每天 3 個）' : '🐚 今天的貝殼撿夠了（每天 40 個）', 1.6); return; }
+  const got = l.kind === 'chest' ? 150 + Math.floor(Math.random() * 200) : 5 + Math.floor(Math.random() * 16); addCoins(got); flash(`${l.kind === 'chest' ? '🎁 寶箱裡有' : '🐚 撿到貝殼，賣了'} 🪙${got}！`, 1.6);
+}
+function updateDiveSwim(dt, ix, iz, L){
+  if (Dive.ending) return;
+  const fins = hasDive('dive_fins') ? 1.35 : 1;
+  let speed = 0;
+  if (L > 0.08){ const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw), mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, ml = Math.hypot(mx, mz) || 1;
+    speed = 3.1 * fins * Math.min(1, L); let nx = me.pos.x + mx / ml * speed * dt, nz = me.pos.z + mz / ml * speed * dt;
+    const d = Math.hypot(nx - DIVE.x, nz - DIVE.z); if (d > DIVE.r){ nx = DIVE.x + (nx - DIVE.x) / d * DIVE.r; nz = DIVE.z + (nz - DIVE.z) / d * DIVE.r; }
+    me.pos.x = nx; me.pos.z = nz; me.rot = lerpAngle(me.rot, Math.atan2(mx, mz), 1 - Math.exp(-6 * dt)); }
+  const up = (Dive.up || keys.Space || keys.KeyE) ? 1 : 0, dn = (Dive.down || keys.KeyC || keys.KeyQ) ? 1 : 0;
+  let y = me.baseY + (up - dn) * 2.4 * fins * dt - 0.08 * dt;
+  y = clamp(y, diveBed(me.pos.x, me.pos.z) + 0.25, DIVE.y + DIVE.top - 1.0); me.baseY = y; Jump.gy = y; Jump.air = 0;
+  me.speed += (Math.max(speed, (up || dn) ? 1.6 : 0) - me.speed) * Math.min(1, dt * 6); me.swimPitch = speed > 0.3 ? 1.25 : up ? 0.5 : 0.3;
+  if (up && y >= DIVE.y + DIVE.top - 1.05 && now() - Dive.startAt > 2){ Dive.surfHold = (Dive.surfHold || 0) + dt; if (Dive.surfHold > 0.8){ Dive.surfHold = 0; endDive(); } } else Dive.surfHold = 0;
+}
+function updateDive(dt, t){
+  if (!Dive.on || !Dive.group) return;
+  // 氧氣
+  if (Dive.ending) return; Dive.o2 -= dt; const o = Dive.o2;
+  if (o < 15 && Dive.warned < 1){ Dive.warned = 1; flash('⚠️ 氧氣只剩 15 秒，快上去！', 1.6); SFX.bite(); }
+  if (o <= 0 && !Dive.ending){ endDive('😮‍💨 氧氣用完了，自動浮上水面'); return; }
+  // 海帶
+  if (Dive.kelp && frameNo % 2 === 0){ const { im, list } = Dive.kelp; for (let i = 0; i < list.length; i++){ const k = list[i]; tankDummy.position.set(k.x, k.y, k.z); tankDummy.rotation.set(Math.sin(t * 0.9 + k.ph) * 0.12, k.ry, Math.cos(t * 0.7 + k.ph) * 0.1); tankDummy.scale.set(1, k.s, 1); tankDummy.updateMatrix(); im.setMatrixAt(i, tankDummy.matrix); } im.instanceMatrix.needsUpdate = true; }
+  // 魚群
+  for (const s of Dive.schools){ const a = t * s.sp + s.ph, cx = s.cx + Math.cos(a) * s.rad, cz = s.cz + Math.sin(a) * s.rad, cy = diveBed(cx, cz) + s.y + Math.sin(t * 0.3 + s.ph) * 0.8; s.pos.set(cx, cy, cz);
+    const hd = Math.atan2(-Math.cos(a) * Math.sign(s.sp), -Math.sin(a) * Math.sign(s.sp));
+    for (let i = 0; i < s.n; i++){ const q = s.off[i], w = t * 2 + q[3]; tankDummy.position.set(cx + q[0] * 1.6 + Math.sin(w) * 0.15, cy + q[1] * 0.7, cz + q[2] * 1.6 + Math.cos(w) * 0.15); tankDummy.rotation.set(0, hd + Math.sin(w * 0.7) * 0.15, 0); tankDummy.scale.set(0.55, 0.55, 0.55 * s.zk); tankDummy.updateMatrix(); for (const im of s.ims) im.setMatrixAt(i, tankDummy.matrix); }
+    for (const im of s.ims) im.instanceMatrix.needsUpdate = true;
+    // 靠太近會散開一點
+    const d = Math.hypot(me.pos.x - cx, me.pos.z - cz); if (d < 3) s.ph += dt * 0.25 * Math.sign(s.sp); }
+  for (const f of Dive.fish){ const a = t * f.sp + f.ph, x = f.cx + Math.cos(a) * f.rad, z = f.cz + Math.sin(a) * f.rad, y = diveBed(x, z) + f.y + (f.bottom ? 0 : Math.sin(t * 0.4 + f.ph) * 0.6); f.pos.set(x, y, z); f.m.position.copy(f.pos);
+    f.m.rotation.y = Math.atan2(-Math.cos(a) * Math.sign(f.sp), -Math.sin(a) * Math.sign(f.sp)); if (f.m.userData.tail) f.m.userData.tail.rotation.y = Math.sin(t * 6 + f.ph) * 0.35; }
+  // 看到的魚記下來
+  if (frameNo % 20 === 0) for (const tg of diveTargets()) if (Math.hypot(tg.p.x - me.pos.x, tg.p.y - me.baseY, tg.p.z - me.pos.z) < 9) Dive.seen.add(tg.f.id);
+  // 泡泡、光束、水面
+  if (Dive.bubbles){ const p = Dive.bubbles.geometry.attributes.position, a = p.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (0.6 + (i % 7) * 0.08); a[i] += Math.sin(t * 2 + i) * dt * 0.05; if (a[i + 1] > DIVE.y + DIVE.top) a[i + 1] = diveBed(a[i], a[i + 2]); } p.needsUpdate = true; }
+  if (Math.random() < dt * 3) { const a = Dive.bubbles.geometry.attributes.position.array, k = Math.floor(Math.random() * a.length / 3) * 3; a[k] = me.pos.x + (Math.random() - 0.5) * 0.3; a[k + 1] = me.baseY + 1.2; a[k + 2] = me.pos.z + (Math.random() - 0.5) * 0.3; }
+  Dive.shafts.forEach((m, i) => { m.material.opacity = (0.022 + 0.016 * Math.sin(t * 0.6 + i * 1.7)) * (DayNight.period === 'night' ? 0.3 : 1); });
+  if (Dive.surface) Dive.surface.material.opacity = 0.42 + Math.sin(t * 1.3) * 0.08;
+  for (const l of Dive.loot){ if (l.kind === 'shell' && !l.got){ l.m.position.y = l.y + 0.08 + Math.sin(t * 2 + l.x) * 0.02; }
+    if (l.kind === 'chest'){ const k = l.open ? clamp((now() - l.open) / 0.8, 0, 1) : 0; l.lid.rotation.x = -k * 1.6; l.glow.material.opacity = l.got ? 0 : 0.25 + Math.sin(t * 3) * 0.15; } }
+  renderDiveHud(true);
+}
+// 水下的時候把上面的世界整個藏起來（比較順，也不會從水裡看到陸地）
+function diveKeep(){ const k = new Set([Dive.group, me.av.g, me.bob, me.line, me.blob]); for (const p of peers.values()){ const f = p.fisher; k.add(f.av.g); k.add(f.bob); k.add(f.line); if (f.blob) k.add(f.blob); } return k; }
+function diveHideWorld(start){
+  const keep = diveKeep();
+  if (start){ Dive.restore = scene.children.filter(o => o.visible && !o.isLight && !keep.has(o)); }
+  for (const o of scene.children) if (o.visible && !o.isLight && !keep.has(o)) o.visible = false;
+}
+function diveShowWorld(){ for (const o of Dive.restore || []) o.visible = true; Dive.restore = null; }
+function diveEnvFx(){
+  // 水下的顏色和霧
+  scene.fog.color.set(DayNight.period === 'night' && !hasDive('dive_light') ? '#06223a' : '#1e7aa6'); scene.fog.near = 2.5; scene.fog.far = hasDive('dive_light') || DayNight.period !== 'night' ? 30 : 16;
+  hemi.color.set('#9fe6ff'); hemi.groundColor.set('#2b6f8f'); hemi.intensity = Math.max(hemi.intensity, hasDive('dive_light') ? 1.0 : 0.45); sun.color.set('#d8f6ff');
+}
+function renderDiveHud(tick){
+  let h = $('#diveHud');
+  if (!Dive.on){ if (h) h.hidden = true; const dn = $('#diveDn'); if (dn) dn.hidden = true; const jb = $('#jumpBtn'); if (jb && jb.dataset.dive){ jb.textContent = '跳'; delete jb.dataset.dive; } return; }
+  if (!h){ h = document.createElement('div'); h.id = 'diveHud'; h.className = 'panel'; h.innerHTML = '<div class="o2"><span>O₂</span><div class="bar"><i></i></div><b></b></div><div class="dmeta"></div><button class="tbtn ghost" id="diveUp">⬆ 上岸</button>'; document.body.appendChild(h);
+    h.querySelector('#diveUp').addEventListener('click', () => endDive()); }
+  if (!$('#diveDn')){ const b = document.createElement('button'); b.id = 'diveDn'; b.className = 'panel'; b.setAttribute('aria-label', '下潛'); b.textContent = '⬇'; $('#jumpBtn').before(b);
+    b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Dive.down = true; b.classList.add('down'); }); const off = () => { Dive.down = false; b.classList.remove('down'); }; b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); b.addEventListener('contextmenu', e => e.preventDefault()); }
+  const jb = $('#jumpBtn'); if (!jb.dataset.dive){ jb.dataset.dive = '1'; jb.textContent = '⬆'; }
+  h.hidden = false; $('#diveDn').hidden = false;
+  const k = clamp(Dive.o2 / Dive.o2max, 0, 1), bar = h.querySelector('.bar i'); bar.style.width = (k * 100).toFixed(1) + '%'; bar.className = k < 0.25 ? 'low' : '';
+  const s = Math.max(0, Math.ceil(Dive.o2)) + ' 秒'; const b = h.querySelector('.o2 b'); if (b.textContent !== s) b.textContent = s;
+  const depth = Math.max(0, DIVE.y + DIVE.top - me.baseY), meta = `深度 ${depth.toFixed(1)}m・看到 ${Dive.seen.size} 種・📸 ${(rec.photos || []).length}/${diveSpecies().length}`; const mm = h.querySelector('.dmeta'); if (mm.textContent !== meta) mm.textContent = meta;
+}
+// 潛水用品（商店「🤿潛水」分頁）
+function buyDive(id){
+  const g = DIVE_BY_ID[id]; if (!g || hasDive(id)) return; if (g.need && !hasDive(g.need)){ toast(`要先買「${DIVE_BY_ID[g.need].name}」`); return; }
+  if (rec.coins < g.price){ toast(`金幣不夠，還差 🪙${(g.price - rec.coins).toLocaleString()}`); return; }
+  rec.dive = (rec.dive || []).concat(id); addCoins(-g.price); saveRecLocal(); cloudCall('buy_dive', { p_item: id }); SFX.catch(); flash(`${g.icon} 買了${g.name}！`, 1.4); renderTab();
+}
+function renderDiveShop(body){
+  body.appendChild(el('p', 'sub', '潛水是進階玩法：買了潛水裝備組，就可以到港口找船夫阿海「🤿 去潛水」。水裡有珊瑚礁、沉船和魚群，可以拍照登錄「水下圖鑑」、撿貝殼和寶箱換金幣。氧氣用完會自動浮上來，升級氧氣瓶就能潛得更久。'));
+  const ul = el('ul', 'shoplist');
+  for (const g of DIVE_GEAR){ const own = hasDive(g.id), lock = g.need && !hasDive(g.need), li = el('li', own ? 'on' : ''); li.appendChild(el('span', 'dishic', g.icon));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', g.name)); d.appendChild(el('div', 'meta', g.desc + (lock ? `（要先買「${DIVE_BY_ID[g.need].name}」）` : ''))); li.appendChild(d);
+    const b = el('button', 'tbtn' + (own || lock ? ' ghost' : ''), own ? '已擁有' : `買 🪙${g.price.toLocaleString()}`); b.disabled = own || lock; b.addEventListener('click', () => buyDive(g.id)); li.appendChild(b); ul.appendChild(li); }
+  body.appendChild(ul);
 }
 const QUEST_NPC = {
   chief: { name:'村長 阿土伯', at:[7.2, 1.2], shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
@@ -3652,9 +3908,10 @@ function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
   if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
   const seg = el('div', 'seg');
-  [['sell','賣魚'],['rod','釣竿'],['rig','釣法'],['bait','魚餌'],['wear','服飾'],['love','💙愛海']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
+  [['sell','賣魚'],['rod','釣竿'],['rig','釣法'],['bait','魚餌'],['wear','服飾'],['dive','🤿潛水'],['love','💙愛海']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
   if (shopMode === 'wear'){ renderWardrobe(body); return; }
+  if (shopMode === 'dive'){ renderDiveShop(body); return; }
   if (shopMode === 'love'){
     const box = el('div', 'tipbox'); box.innerHTML = `<b>💙 愛海點數：${(rec.love || 0).toLocaleString()}</b><span>把魚放流（釣到時按「放流」，或在魚缸裡放流）就能得到點數：常見魚 1、稀有魚 3、傳說魚 10，<b>未達尺寸的小魚至少 3</b>。你總共放流了 ${rec.released || 0} 條。</span><span>這裡的東西只能用愛海點數換，金幣買不到。</span>`;
     body.appendChild(box); renderWardrobe(body, g => g.love > 0); return;
@@ -3746,7 +4003,7 @@ function afterSell(got, n){
   logMsg('', `你賣了 ${n} 條魚，得到 ${got} 金幣`, true); renderTab();
 }
 
-function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0, love:0, released:0 }; }
+function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0, love:0, released:0, dive:[], photos:[] }; }
 const SHOW_MAX = 100, KEEP_MAX = 200;
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || ++others <= KEEP_MAX); }
@@ -3763,7 +4020,7 @@ function normRec(r){
   if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id])))];
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
-  e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
+  e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
   if (r.bait && typeof r.bait === 'object') for (const b of BAITS.concat(CHUMS)){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
@@ -3922,8 +4179,8 @@ $('#ccOk').addEventListener('click', closeCatch);
 $('#ccRel').addEventListener('click', releaseCaught);
 $('#chumBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const pk = $('#chumPick'); if (pk && !pk.hidden){ pk.hidden = true; return; } renderChumPick(); });
 (function(){ const j = $('#jumpBtn');
-  j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); j.classList.add('down'); jump(); });
-  const off = () => j.classList.remove('down'); j.addEventListener('pointerup', off); j.addEventListener('pointercancel', off); j.addEventListener('pointerleave', off);
+  j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); j.classList.add('down'); if (Dive.on){ Dive.up = true; return; } jump(); });
+  const off = () => { j.classList.remove('down'); Dive.up = false; }; j.addEventListener('pointerup', off); j.addEventListener('pointercancel', off); j.addEventListener('pointerleave', off);
   j.addEventListener('contextmenu', e => e.preventDefault());
 })();
 (function(){ const a = $('#act');
@@ -4088,6 +4345,7 @@ function presenceObj(){
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
   if (House.on) o.hs = 1;
+  if (Dive.on) o.dv = 1;
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
@@ -4122,13 +4380,13 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by;
-  if (pos){ p.target.set(clamp(+pos[0]||0, -90, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, ROOM_Y - 1, 8); }
+  if (pos){ p.target.set(clamp(+pos[0]||0, -90, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -90, 90)); p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   p.fisher.sitting = !!pr.bt || !!pr.st;
-  p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = !!pr.hs;   // 不在同一座島上的人看不到
+  p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = !!pr.hs; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
@@ -4155,7 +4413,7 @@ function updatePeers(dt, t){
     f.speed += ((d > 0.05 ? Math.min(6, d*8) : 0) - f.speed) * Math.min(1, dt*8);
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
-    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && !!p.inHouse === House.on; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
+    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && !!p.inHouse === House.on && !!p.diving === Dive.on; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
     f.dip = p.ph === 'bite' ? 0.9 + Math.sin(t*30)*0.1 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
@@ -4301,7 +4559,7 @@ const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
 const Cloud = { sb:null, on:false, status:'connecting', err:'', userId:null, email:null, isAnon:true, queue:Promise.resolve(), pending:0, board:{ best:[], total:[], earned:[] }, ui:{ step:'idle', mode:'bind', email:'', busy:false, msg:'' } };
 function rowToRec(r){
   return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
-    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, updatedAt:Date.parse(r.updated_at) || Date.now() });
+    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, dive:r.dive, photos:r.photos, updatedAt:Date.parse(r.updated_at) || Date.now() });
 }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
@@ -4310,7 +4568,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -4556,7 +4814,7 @@ function renderTab(){
   if (curTab === 'ferry'){ renderFerry(body); return; }
   if (curTab === 'dex'){
     const got = FISH.filter(f => rec.count[f.id]).length;
-    body.appendChild(el('p', 'sub', `已收集 ${got} / ${FISH.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。`));
+    body.appendChild(el('p', 'sub', `已收集 ${got} / ${FISH.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
     for (const s of SPOTS){
       if (!FISH.some(f => f.spot === s.id)) continue;
       const h = el('div', 'dexhead', s.label); h.appendChild(el('small', '', s.subtitle)); body.appendChild(h);
@@ -4733,6 +4991,14 @@ function renderTab(){
       '每種魚都有「建議尺寸」：比最輕的再重四分之一以上才算夠大。太小的魚釣到時會標「📏 未達尺寸」，帶走只能賣半價。',
       '釣到魚時可以按「放流」讓牠回到大海，魚缸裡的魚也可以放流。放流會得到愛海點數：常見魚 1、稀有魚 3、傳說魚 10，未達尺寸的小魚至少 3。',
       '愛海點數在商店的「💙愛海」分頁換限定服飾（海龜帽、海洋守護衫、珊瑚項鍊、鯊魚背鰭），金幣買不到。',
+    ]);
+    sec('🤿 潛水（進階玩法）', [
+      '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。',
+      isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
+      '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
+      '靠近魚、讓牠在畫面中間時按「📷 拍照」，就會登錄進「水下圖鑑」（圖鑑分頁看得到數量）。傳說魚偶爾也會出現在水裡。',
+      '海底有貝殼（每天最多換 40 個的金幣）和寶箱（每天最多 3 個），沉船附近比較容易找到寶箱。',
+      '一起潛水的人在水裡看得到彼此。',
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
@@ -4912,7 +5178,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
@@ -4932,6 +5198,7 @@ function frame(){
   if (waterfall && Math.hypot(me.pos.x - waterfall.x, me.pos.z - waterfall.z) < 45){ if (Math.random() < dt * 10) FX.emit(waterfall.x + rand(-1, 1), 0.3, waterfall.z + rand(-0.5, 0.5), 1, '#ffffff', 0.9, 1.6, 0.7); if (Math.random() < dt * 1.5) ripple(waterfall.x + rand(-0.8, 0.8), waterfall.z + rand(-0.4, 0.4)); }
   fishTime.value = t; updateSeaLife(t); FX.update(dt); if (skyDome) skyDome.position.copy(camera.position); updateZones(t); watchFps(t);
   placeLabelsUpdate();
+  if (Dive.on) diveHideWorld();
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
