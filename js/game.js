@@ -2129,7 +2129,13 @@ function actionDown(){
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
   } else if (F.phase === 'waiting'){
-    cancelFishing('收竿了');
+    if (Rig.rig === 'lure' && me.bobState === 'water'){
+      // 路亞抽竿：假餌往回跳一下，魚比較快咬；拉到太近就收竿
+      const dx = me.pos.x - me.bobPos.x, dz = me.pos.z - me.bobPos.z, d = Math.hypot(dx, dz);
+      if (d < 2.2){ cancelFishing('收竿了'); return; }
+      me.bobPos.x += dx / d * 0.55; me.bobPos.z += dz / d * 0.55; if (!waterAt(me.bobPos.x, me.bobPos.z)){ cancelFishing('收竿了'); return; }
+      F.waitUntil -= 0.7; F.twitch = (F.twitch || 0) + 1; me.bend = 0.6; ripple(me.bobPos.x, me.bobPos.z); SFX.plop();
+    } else cancelFishing('收竿了');
   } else if (F.phase === 'bite'){
     startReel(); F.hold = true;
   } else if (F.phase === 'reeling'){
@@ -2148,9 +2154,9 @@ function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
   F.buffAt = curBuff(); useBuffCast();
   // 用掉一個魚餌
-  const bt = curBait(); F.baitUsed = bt;
+  const bt = Rig.rig === 'lure' ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
   if (bt){ cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
-  const dist = 3 + c * 4.5;
+  const dist = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1);
   const cp = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, dist);
   const to = new THREE.Vector3(cp[0] + rand(-0.3,0.3), 0.12, cp[1] + rand(-0.3,0.3));
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
@@ -2158,7 +2164,7 @@ function doCast(){
   me.flying = { from, to, t:0, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } };
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.envB = envBonus(s.id);
-  F.phase = 'waiting'; F.waitUntil = now() + (0.8 + rand(2.4, 6.5) - c * 0.8) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite; F.nibbleAt = now() + 1.2 + Math.random()*1.5;
+  F.phase = 'waiting'; F.waitUntil = now() + (0.8 + rand(2.4, 6.5) - c * 0.8) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
   if (F.chumB) setTimeout(() => toast(`🍚 浮標落在${F.chumB.name}的窩點裡！`), 500);
   SFX.cast(); pushPresence(true);
 }
@@ -2171,12 +2177,13 @@ const LEG_K = { harbor: 4.0, other: 0.75 };
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
-  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare, kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
+  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare * LINES[Rig.line].rare, kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
   // 傳說魚：每個釣點的傳說魚加起來是固定的機率（不會因為種類多就特別常出現），外海比較高
   const nLeg = list.filter(f => f.rarity === '傳說').length, legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
-  const w = list.map(f => (f.w || 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const rw = f => Rig.rig === 'lure' ? (LURE_FISH.has(f.id) ? 2.2 : 0.55) : Rig.rig === 'bottom' ? (BOTTOM_FISH.has(f.id) ? 2.2 : 0.65) : 1;
+  const w = list.map(f => (f.w || 1) * rw(f) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -2257,7 +2264,7 @@ function updateFishing(dt, t){
       F.T += (0.55 - F.T) * Math.min(1, dt * 3); F.P -= 0.05 * dt; F.S = Math.max(0, F.S - dt * 0.01);
       $('#mashFx').style.setProperty('--m', (F.mashHits % 2).toString());
     } else if (F.hold){
-      F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1);
+      F.T += (0.42 + pull*0.9) * dt * rod.tension * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
       F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S));
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
@@ -2312,7 +2319,7 @@ function updateFishing(dt, t){
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
   if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
-    if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = bt ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'; }
+    if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
     else if (sh){ label = sh.label; sub = sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
@@ -2320,7 +2327,7 @@ function updateFishing(dt, t){
     else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
-  else if (F.phase === 'waiting'){ label = '等待中'; sub = '點一下收竿'; cls = 'idle'; }
+  else if (F.phase === 'waiting'){ label = Rig.rig === 'lure' ? '抽竿' : '等待中'; sub = Rig.rig === 'lure' ? '點一下讓假餌動・搖桿收竿' : '點一下收竿'; cls = 'idle'; }
   else if (F.phase === 'bite'){ label = '提竿！'; cls = 'bite'; }
   else if (F.phase === 'reeling'){ label = '拉線'; sub = '按住 / 放開'; }
   else { label = '…'; cls = 'idle'; }
@@ -3462,6 +3469,28 @@ function renderChumPick(){
 
 /* ================= ECONOMY：金幣、賣魚、釣竿與魚餌 ================= */
 // 目前存在玩家自己的瀏覽器；之後接上伺服器時，賣魚和購買要改由伺服器驗證
+// ---- 釣法和釣線（免費，可以隨時換）----
+const RIGS = {
+  float:  { name:'浮標釣', icon:'🎈', desc:'最穩的釣法，什麼魚都釣得到。' },
+  lure:   { name:'路亞',   icon:'🎣', desc:'用假餌，不用魚餌、拋得更遠。等魚時點按鈕「抽竿」讓假餌動，掠食魚（黑鱸、雷魚、鯖魚、鰹魚、梭子魚、鬼頭刀、鮪魚、浪人鰺）特別多，其他魚比較少。' },
+  bottom: { name:'沉底釣', icon:'⚓', desc:'鉛錘沉到水底，等比較久，但底棲魚（鯰魚、鰻魚、比目魚、石狗公、螃蟹、龍蝦、石斑、鱘龍、章魚、鮟鱇）特別多。' },
+};
+const LINES = {
+  thin:   { name:'細線',   icon:'🧵', desc:'魚比較快咬，但線比較容易斷。', bite:0.8, tension:1.25, rare:1 },
+  normal: { name:'標準線', icon:'〰️', desc:'剛剛好。', bite:1, tension:1, rare:1 },
+  thick:  { name:'粗線',   icon:'🪢', desc:'線不容易斷，適合大魚，但魚比較少咬。', bite:1.25, tension:0.75, rare:0.92 },
+};
+const LURE_FISH = new Set(['bass', 'snakehead', 'mackerel', 'bonito', 'barracuda', 'mahi', 'tuna', 'trevally', 'marlin', 'perch', 'trout', 'salmon', 'arowana', 'shark', 'hammer', 'squid', 'ika']);
+const BOTTOM_FISH = new Set(['catfish', 'eel', 'flounder', 'scorpion', 'crab', 'kingcrab', 'lobster', 'stingray', 'grouper', 'sturgeon', 'loach', 'goby', 'octopus', 'angler', 'cuttle', 'shrimp', 'crucian', 'carp']);
+const Rig = Object.assign({ rig:'float', line:'normal' }, LS.get('tide.rig', {}));
+if (!RIGS[Rig.rig]) Rig.rig = 'float'; if (!LINES[Rig.line]) Rig.line = 'normal';
+function saveRig(){ LS.set('tide.rig', Rig); updateBobberLook(); }
+function updateBobberLook(){
+  const b = me && me.bob; if (!b) return; b.children.forEach(c => c.visible = Rig.rig === 'float');
+  if (!b.userData.lure){ const l = new THREE.Group(); const bd = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), mat('#ff7a2a', 0.3, { metalness:0.4 })); bd.scale.set(1.8, 0.8, 0.8); l.add(bd); const tl = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), mat('#ffd36a', 0.4)); tl.rotation.z = Math.PI / 2; tl.position.x = -0.18; l.add(tl); b.add(l); b.userData.lure = l;
+    const sk = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), mat('#6b6b6b', 0.4, { metalness:0.6 })); b.add(sk); b.userData.sinker = sk; }
+  b.userData.lure.visible = Rig.rig === 'lure'; b.userData.sinker.visible = Rig.rig === 'bottom'; b.userData.sinker.position.y = -0.12;
+}
 const RODS = [
   { id:'bamboo', name:'竹釣竿',     price:0,    color:'#3b2a1e', desc:'村裡人人都有的入門竿，輕巧好用。', tension:1, reel:1, rare:1, legend:1 },
   { id:'carbon', name:'碳纖維釣竿', price:400,  color:'#2f6fb5', desc:'線比較不容易繃斷、收線快一點，稀有魚機率 ×1.2。', tension:0.85, reel:1.12, rare:1.2, legend:1.1 },
@@ -3577,9 +3606,19 @@ function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
   const seg = el('div', 'seg');
-  [['sell','賣魚'],['rod','釣竿'],['bait','魚餌'],['wear','服飾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
+  [['sell','賣魚'],['rod','釣竿'],['rig','釣法'],['bait','魚餌'],['wear','服飾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
   if (shopMode === 'wear'){ renderWardrobe(body); return; }
+  if (shopMode === 'rig'){
+    body.appendChild(el('p', 'sub', '釣法和釣線都免費，可以隨時換。看你想釣什麼魚就換什麼。'));
+    for (const [title, T, key] of [['🎯 釣法', RIGS, 'rig'], ['🧵 釣線', LINES, 'line']]){
+      body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist');
+      for (const [k, v] of Object.entries(T)){ const on = Rig[key] === k, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', v.icon));
+        const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'meta', v.desc)); li.appendChild(d);
+        const b = el('button', 'tbtn' + (on ? ' ghost' : ''), on ? '使用中' : '換上'); b.disabled = on; b.addEventListener('click', () => { Rig[key] = k; saveRig(); SFX.chat(); renderTab(); }); li.appendChild(b); ul.appendChild(li); }
+      body.appendChild(ul); }
+    return;
+  }
   if (shopMode === 'sell'){
     const locked = new Set(rec.show || []);
     const list = rec.tank.filter(x => !locked.has(x.t)).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
@@ -3682,7 +3721,7 @@ function normRec(r){
   return e;
 }
 let rec = normRec(LS.get('tide.rec', null));
-me.setRod(rec.rod); me.setGear(rec.gear); renderCoins(); setTimeout(renderBuff, 0);
+me.setRod(rec.rod); me.setGear(rec.gear); updateBobberLook(); renderCoins(); setTimeout(renderBuff, 0);
 function recordCatch(f, w){
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
@@ -4621,6 +4660,7 @@ function renderTab(){
       '大魚搏鬥：釣到大型魚或傳說魚時會出現「巨大魚影」和 Boss 血條，大魚會浮出水面、破水而出。血條快沒的時候出現「連打！」，狂按拉線把牠拉上來。',
       '傳說魚很少見：港口外海大約 3%，其他地方不到 1%。好的釣竿、魚餌、窩料和料理加成都能提高機率。',
       '在港口和鏡湖可以「上船」，划到水上任何地方釣魚。',
+      '釣法（釣具店「釣法」分頁，免費隨時換）：浮標釣什麼都能釣；路亞不用魚餌、拋得遠，等魚時點按鈕「抽竿」讓假餌動，掠食魚特別多；沉底釣等比較久，但底棲魚（鯰魚、鰻魚、螃蟹、龍蝦、石斑…）特別多。釣線：細線咬口快但容易斷、粗線不容易斷但咬口少。',
     ], true);
     sec('🍚 打窩、祕密窩點、渡船', [
       '先到釣具店的「魚餌」分頁買窩料：酒米窩料（淡水好用）、南極蝦窩料（海水好用）、黃金特製窩（哪裡都有效，傳說魚也會被吸引）。',
