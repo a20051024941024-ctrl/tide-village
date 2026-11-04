@@ -4,9 +4,9 @@
 insert into public.fish_species (id, name, rarity, min_w, max_w) values ('shark_red_albino', '白化赤紅霸王鯊', '傳說', 15, 420)
 on conflict (id) do update set name = excluded.name, rarity = excluded.rarity, min_w = excluded.min_w, max_w = excluded.max_w;
 
--- 繁殖：跟 032 一樣，只是小鯊有 2% 是白化
+-- 繁殖：從上一次「生小鯊」或「有紅鯊被釣起來」算起每滿 7 天，每一對有一半機會生一隻；小鯊有 2% 是白化
 create or replace function public._rs_breed() returns void language plpgsql security definer set search_path = public as $$
-declare m public.red_shark_meta; lc timestamptz; ev timestamptz; nm integer; nf integer; nid integer;
+declare m public.red_shark_meta; lc timestamptz; ev timestamptz; nm integer; nf integer; nid integer; k integer;
 begin
   select * into m from public.red_shark_meta where id = 1 for update;
   if not found then return; end if;
@@ -15,10 +15,15 @@ begin
     ev := greatest(m.last_breed, coalesce(lc, m.last_breed));
     exit when ev + interval '7 days' > now();
     select count(*) filter (where sex = 'M'), count(*) filter (where sex = 'F') into nm, nf from public.red_sharks where status = 'sea';
-    if nm >= 1 and nf >= 1 and nm + nf < public._rs_cap() then
-      select coalesce(max(id), 0) + 1 into nid from public.red_sharks;
-      insert into public.red_sharks (id, sex, born_at, albino) values (nid, case when random() < 0.5 then 'M' else 'F' end, ev + interval '7 days', random() < 0.02);
-    end if;
+    -- 每一對（一公一母）每 7 天有一半機會生一隻；整個族群最多 _rs_cap() 隻
+    for k in 1..least(nm, nf) loop
+      exit when nm + nf >= public._rs_cap();
+      if random() < 0.5 then
+        select coalesce(max(id), 0) + 1 into nid from public.red_sharks;
+        insert into public.red_sharks (id, sex, born_at, albino) values (nid, case when random() < 0.5 then 'M' else 'F' end, ev + interval '7 days', random() < 0.02);
+        nm := nm + 1;   -- 只是用來算上限
+      end if;
+    end loop;
     m.last_breed := ev + interval '7 days';
     update public.red_shark_meta set last_breed = m.last_breed where id = 1;
   end loop;

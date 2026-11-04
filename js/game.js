@@ -5429,16 +5429,27 @@ const BROOD = new Set(['tilapia', 'tilapia_red']);
 function breedSeason(){ return SEASON === 'spring' || SEASON === 'summer'; }
 function sexIcon(x){ return x && x.s === 'M' ? '♂' : x && x.s === 'F' ? '♀' : ''; }
 // 水族館繁殖：展示中同一種魚的一公一母，每天一半機會生一條小魚（每天最多 3 條；伺服器 breed_tank 算）
-function tankPairs(){ const show = new Set(rec.show || []), c = {}; for (const x of rec.tank){ if (!show.has(x.t) || !TANK_BREED.has(x.f) || !x.s) continue; const k = c[x.f] || (c[x.f] = { M:0, F:0 }); k[x.s]++; } return Object.entries(c).map(([f, k]) => ({ f, M:k.M, F:k.F, pairs: Math.min(k.M, k.F) })); }
+// 變種也會繁殖（043）：V＝變種、C＝帶變種基因（g）、N＝一般；變種算原本那種，變種先跟變種配
+function breedBase(id){ const f = FISH_BY_ID[id]; return f && f.of && !f.rs ? f.of : id; }
+function geno(x){ return breedBase(x.f) !== x.f ? 'V:' + x.f : x.g ? 'C:' + x.g : 'N'; }
+function babyGeno(a, b){ const [ka, va] = a.split(':'), [kb, vb] = b.split(':'), r = Math.random(), h = () => Math.random() < 0.5;
+  if (ka === 'N' && kb === 'N') return 'N';
+  if (ka !== 'N' && kb !== 'N' && va === vb){ if (ka === 'V' && kb === 'V') return 'V:' + va; if (ka === 'V' || kb === 'V') return r < 0.5 ? 'V:' + va : 'C:' + va; return r < 0.25 ? 'V:' + va : r < 0.75 ? 'C:' + va : 'N'; }
+  if (ka === 'V' && (kb !== 'V' || r < 0.5)) return 'C:' + va; if (kb === 'V') return 'C:' + vb;
+  if (ka === 'C' && (kb === 'N' || r < 0.5)) return h() ? 'C:' + va : 'N'; return h() ? 'C:' + vb : 'N'; }
+function tankPairs(){ const show = new Set(rec.show || []), c = {}, pri = g => g[0] === 'V' ? 0 : g[0] === 'C' ? 1 : 2;
+  for (const x of rec.tank){ const b = breedBase(x.f); if (!show.has(x.t) || !TANK_BREED.has(b) || !x.s || x.rs) continue; const k = c[b] || (c[b] = { M:[], F:[] }); k[x.s].push(geno(x)); }
+  return Object.entries(c).map(([f, k]) => { const so = a => a.sort((p, q) => pri(p) - pri(q) || (p < q ? -1 : 1)); so(k.M); so(k.F); const pairs = Math.min(k.M.length, k.F.length);
+    return { f, M:k.M.length, F:k.F.length, pairs, list: Array.from({ length: pairs }, (_, i) => [k.M[i], k.F[i]]), vars: k.M.concat(k.F).filter(g => g[0] === 'V').length }; }); }
 async function breedTank(){
   if (Date.now() - (breedTank.at || 0) < 60000) return; breedTank.at = Date.now();
   let born = [];
   if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('breed_tank'); if (error || !data) return; born = data.born || []; breedTank.next = data.next || 0;
       if (born.length && Array.isArray(data.tank)){ rec.tank = normRec(Object.assign({}, rec, { tank: data.tank })).tank; saveRecLocal(); buildTank(); } } catch(e){ return; } }
   else { if (!rec.breedAt){ rec.breedAt = Date.now(); saveRecLocal(); return; } const days = Math.min(3, Math.floor((Date.now() - rec.breedAt) / 86400000)); if (days < 1) return;
-    for (let d = 0; d < days; d++) for (const p of tankPairs()) for (let k = 0; k < p.pairs && born.length < 3 * days; k++) if (Math.random() < 0.5){ const f = FISH_BY_ID[p.f]; born.push({ f: p.f, w: +f.min.toFixed(2), t: Date.now() + born.length, s: Math.random() < 0.5 ? 'M' : 'F', y: true }); }
+    for (let d = 0; d < days; d++) for (const p of tankPairs()) for (let k = 0; k < p.pairs && born.length < 3 * days; k++) if (Math.random() < 0.5){ const f = FISH_BY_ID[p.f], g = babyGeno(p.list[k][0], p.list[k][1]), v = g[0] === 'V' ? g.slice(2) : null; born.push(Object.assign({ f: v || p.f, w: +f.min.toFixed(2), t: Date.now() + born.length, s: Math.random() < 0.5 ? 'M' : 'F', y: true }, g[0] === 'C' ? { g: g.slice(2) } : {}, v ? { k: true } : {})); }
     rec.breedAt += days * 86400000; if (born.length){ rec.tank = born.concat(rec.tank); trimTank(); buildTank(); } saveRecLocal(); }
-  for (const x of born){ const f = FISH_BY_ID[x.f]; if (f) ticker(`🐣 水族館裡的<b>${esc(f.name)}</b>生小魚了！（${sexIcon(x)}）`); }
+  for (const x of born){ const f = FISH_BY_ID[x.f]; if (!f) continue; if (f.of) ticker(`✨ 水族館生出了變種小魚 <b>${esc(f.name)}</b>！（${sexIcon(x)}，自動收藏）`); else ticker(`🐣 水族館裡的<b>${esc(f.name)}</b>生小魚了！（${sexIcon(x)}${x.g && FISH_BY_ID[x.g] ? `・🧬 帶著${esc(FISH_BY_ID[x.g].name)}的基因` : ''}）`); }
   if (born.length && !$('#sheet').hidden && curTab === 'tank') renderTab();
 }
 function itemPrice(x){ const f = FISH_BY_ID[x.f]; return Math.round(fishPrice(f, x.w) * (x.y ? 0.25 : 1)); }   /* 水族館生的小魚只值四分之一 */
@@ -5744,7 +5755,7 @@ function normRec(r){
   e.breedAt = Number(r.breedAt) || 0;   /* 水族館繁殖上次算到哪 */
   e.total = Number(r.total) || 0; e.bestW = Number(r.bestW) || 0; e.bestFish = FISH_BY_ID[r.bestFish] ? r.bestFish : null; e.legend = Number(r.legend) || 0; e.updatedAt = Number(r.updatedAt) || 0;
   for (const f of FISH){ if (r.best && Number(r.best[f.id]) > 0) e.best[f.id] = Number(r.best[f.id]); if (r.count && Number(r.count[f.id]) > 0) e.count[f.id] = Number(r.count[f.id]); }
-  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
+  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}, typeof x.g === 'string' && FISH_BY_ID[x.g] ? { g:x.g } : {}));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
@@ -6886,7 +6897,7 @@ function renderTab(){
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
     breedTank();
     { const pairs = tankPairs(), tip = el('div', 'tipbox'); const ok = pairs.filter(p => p.pairs > 0), half = pairs.filter(p => !p.pairs);
-      tip.innerHTML = `<b>🐣 水族館繁殖</b><span>${ok.length ? '正在配對：' + ok.map(p => `${FISH_BY_ID[p.f].name}（♂${p.M} ♀${p.F}）`).join('、') + '。每天有機會生小魚（🍼），小魚賣的錢只有四分之一。' + (half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '') : half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '把同一種魚的一公一母放進水族館展示，就有機會生小魚。會生的有：金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。'}</span>`; body.appendChild(tip); }
+      tip.innerHTML = `<b>🐣 水族館繁殖</b><span>${ok.length ? '正在配對：' + ok.map(p => `${FISH_BY_ID[p.f].name}（♂${p.M} ♀${p.F}）`).join('、') + '。每天有機會生小魚（🍼），小魚賣的錢只有四分之一。' + (half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '') : half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '把同一種魚的一公一母放進水族館展示，就有機會生小魚。會生的有：金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。'}</span><br>✨ 變種也會生：同一種變種一公一母，小魚就是變種；變種配一般的，小魚會「🧬 帶著變種的基因」，帶基因的再配變種，一半會是變種；兩條帶同樣基因的配在一起，四分之一會是變種。`; body.appendChild(tip); }
     const bar = el('div', 'tankbar');
     const sortSel = el('div', 'seg');
     [['new','最新'],['big','最重'],['rare','最稀有'],['fav','⭐收藏']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((tankSort || 'new') === k)); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortSel.appendChild(b); });
@@ -6899,8 +6910,8 @@ function renderTab(){
     const ul = el('ul', 'tank');
     list.forEach(x => {
       const f = FISH_BY_ID[x.f]; const li = el('li' , shown.has(x.t) ? 'on' : ''); li.appendChild(fishCanvas(f, true, 56, 36));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${f.name} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
-      d.appendChild(el('div', 'meta', `${x.y ? '水族館出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${f.name} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.g ? ' 🧬' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
+      d.appendChild(el('div', 'meta', `${x.g && FISH_BY_ID[x.g] ? `帶著${FISH_BY_ID[x.g].name}的基因・` : ''}${x.y ? '水族館出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
       const acts = el('div', 'tacts');
       const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '展示中' : '展示'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
       show.addEventListener('click', () => {
@@ -7038,6 +7049,7 @@ function renderTab(){
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
+      '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 箱網養殖（參考澎湖的圓形箱網）：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
       '🪸 珊瑚礁群島（參考屏東小琉球、澎湖七美雙心石滬）：從村子往西邊走，過一座很長的跨海大橋就到了。島邊的礁岩用磯釣竿最好，有臭肚魚、白毛、黑毛、青嘴龍占，運氣好會遇到紅甘。島東邊有兩個用咾咕石疊成的愛心石滬：退潮的時候魚被困在裡面，咬得特別快；滿潮時魚都游出去了。',
@@ -7057,7 +7069,7 @@ function renderTab(){
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
       `廣場東邊的大水族館只放你自己選的魚（最多 ${SHOW_MAX} 條）：釣到時按「🏛️ 展示」，或在「魚缸」分頁按「展示」。展示中的魚不會被賣掉或拿去做菜。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
-      '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話大約每 7 天會生一隻小鯊（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
+      '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
       '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低，要釣到才會出現在圖鑑裡。',
       '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚捧起來炫耀給大家看。',
       '可以參觀別人的水族館（玩家分頁或排行榜點他的名字）。',
