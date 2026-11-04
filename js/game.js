@@ -2481,7 +2481,12 @@ function renderMap(body){
   for (const tp of TRAVEL){ const on = visited.has(tp.id); const b = el('button', 'tpbtn' + (on ? '' : ' lock'), on ? tp.label : '？？？（還沒去過）'); b.disabled = !on; b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
   body.appendChild(list);
   if (WS.length){ body.appendChild(el('div', 'dexhead', '🏘️ 村民現在在做什麼'));
-    const ul = el('ul', 'wlist'); for (const w of WS) ul.appendChild(el('li', '', `${w.icon} ${w.name}：${w.text}`)); body.appendChild(ul);
+    const ul = el('ul', 'wlist'); for (const w of WS){ const li = el('li', '', `${w.icon} ${w.name}：${w.text}`), m = (World.me || {})[w.id];
+      li.appendChild(el('span', 'wme', m && m.talks ? `跟你：${m.score >= 60 ? '好朋友' : m.score >= 25 ? '朋友' : '認識'}（聊過 ${m.talks} 次${m.gifts ? `、收過你 ${m.gifts} 份禮物` : ''}）` : '跟你：還不認識'));
+      const b = el('button', 'tbtn wgift', m && m.giftToday ? '今天送過了' : '🎁 送魚'); b.disabled = !!(m && m.giftToday);
+      b.addEventListener('click', () => { if (!worldNear(w.id)){ toast(`走到${w.name}旁邊才能送喔`); return; } World.giftTo = w.id; curTab = 'wgift'; renderTab(); }); li.appendChild(b); ul.appendChild(li); }
+    body.appendChild(ul);
+    const R = (World.rel || []).slice().sort((a, b) => b.score - a.score); if (R.length){ body.appendChild(el('div', 'dexhead', '🤝 村民之間的關係')); const ur = el('ul', 'wlist old'); for (const r of R) ur.appendChild(el('li', '', `${WORLD_WHO[r.a]} ↔ ${WORLD_WHO[r.b]}：${r.label}（${r.score}）`)); body.appendChild(ur); }
     const L = (World.log || []).slice(0, 8); if (L.length){ const ul2 = el('ul', 'wlist old'); for (const l of L){ const pl = (World.places && World.places[l.place]) || {}, d = new Date(l.at), hh = d.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Taipei' });
       ul2.appendChild(el('li', '', `${hh}　${WORLD_WHO[l.npc] || l.npc}${l.why ? '（' + l.why + '）' : ''}→ 去${pl.name || ''}${(WORLD_ACT[l.act] || ['', ''])[1]}`)); } body.appendChild(ul2); } }
   else if (Cloud.on && !World.rows) loadWorld();
@@ -5195,7 +5200,7 @@ function updateQuestNpcs(dt, t){
     else if (d < 40){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
     else q.f.tag.style.display = 'none';
     const qs = Quests.list && Quests.list.find(x => x.who === q.who), mark = !Cloud.on ? '' : !qs ? '' : qs.done ? '✔️' : '❗';
-    if (!wd && d < 7 && t > (q.talkAt || 0) && !(q.f.replyUntil > now())){ q.talkAt = t + rand(14, 24); const L = q.f.lines; if (L.length){ q.f.say(L[Math.floor(Math.random() * L.length)], '', 6); q.mark = null; q.talkUntil = now() + 6.2; } }   /* 走近會講話，講完再把 ❗ 放回去 */
+    if (!wd && d < 7 && t > (q.talkAt || 0) && !(q.f.replyUntil > now())){ q.talkAt = t + rand(14, 24); const L = q.f.lines; if (L.length){ const ML = q.f.wid && Math.random() < 0.3 ? worldMemLines(q.f) : []; q.f.say(ML.length ? ML[Math.floor(Math.random() * ML.length)] : L[Math.floor(Math.random() * L.length)], '', 6); q.mark = null; q.talkUntil = now() + 6.2; } }   /* 走近會講話，講完再把 ❗ 放回去 */
     else if (d > 14) q.talkAt = Math.min(q.talkAt || 0, t + 3);
     if (q.mark !== mark && !(q.talkUntil > now()) && !(q.f.replyUntil > now())){ q.mark = mark; if (mark) q.f.say(mark, mark === '❗' ? 'alert' : 'emote', 99999); else q.f.bub.hidden = true; }
   }
@@ -7393,10 +7398,10 @@ function npcReply(n, text){
 }
 function npcHear(text){
   let best = null, bd = 9; for (const n of npcs.concat(questNpcs.map(q => q.f))){ const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < bd){ bd = d; best = n; } }
-  if (!best) return; const r = npcReply(best, text); { const q = questNpcs.find(q => q.f === best); if (q){ q.mark = null; q.talkUntil = now() + 10; } } best.replyUntil = now() + 9;
+  if (!best) return; worldTalk(best); const r = npcReply(best, text); { const q = questNpcs.find(q => q.f === best); if (q){ q.mark = null; q.talkUntil = now() + 10; } } best.replyUntil = now() + 9;
   setTimeout(() => { best.say(r, '', 6); logMsg(best.nm.textContent || '村民', r); }, 900 + Math.random() * 600);
 }
-function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.shopNpc === 'fu'){ const a = fuLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
+function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.wid && r < 0.3){ const m = worldMemLines(n); if (m.length) return pick(m); } if (n.shopNpc === 'fu'){ const a = fuLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
 // 阿默：港口裡不會有紅鯊，所以他每一趟都開自己的紅色小船，繞著島到外海隨便一個地方釣（每一趟去哪裡大家看到的都一樣）
 // 每 7 分鐘一趟：從碼頭開到外海的環線 → 沿著環線繞到這次的釣點 → 釣魚 → 原路開回來 → 在碼頭休息一下。環線離岸邊 22 公尺，不會撞到紅樹林；不會經過往珊瑚礁群島的跨海大橋那一側
 const AMO = { dock:[35.6, -27.2], cycle:420, pier:50, speed:4.2, off:22 };
@@ -7459,13 +7464,13 @@ function updateNpcs(dt, t){
    伺服器每分鐘推進一次「世界時間」：5 位公共 NPC（村長、阿綾、阿木、阿福、老港）的肚子餓、累、想聊天、想玩，照個性和作息決定現在要做什麼、去哪裡、幾點出發、幾點到。
    手機只照伺服器的狀態畫：大家用同一張地圖算同一條路，所以不同房間、不同手機看到的村民都在同一個地方、做同一件事。
    沒連上雲端的時候，村民就跟以前一樣站在原本的位置（不會用假的資料假裝在動）。 */
-var World = { rows:null, places:null, log:[], at:0, busy:false, off:0, fails:0 };
+var World = { rows:null, places:null, log:[], rel:[], mem:[], me:{}, talkAt:{}, at:0, busy:false, off:0, fails:0 };
 var WORLD_WHO = { chief:'村長', ling:'阿綾', mu:'阿木', fu:'阿福', gang:'老港' };
 var WORLD_ACT = { sleep:['💤', '睡覺'], rest:['🏠', '在家休息'], work:['🛠️', '工作'], eat:['🍚', '吃飯'], chat:['💬', '聊天'], fish:['🎣', '釣魚'], stroll:['🚶', '散步'] };
 async function loadWorld(){
   if (World.busy || !Cloud.on || !Cloud.sb) return; World.busy = true; World.at = Date.now();
   try { const t0 = Date.now(), { data, error } = await Cloud.sb.rpc('npc_world'); if (error) throw error;
-    if (data && data.now){ World.off = Date.parse(data.now) + (Date.now() - t0) / 2 - Date.now(); if (data.places){ World.places = {}; for (const p of data.places) World.places[p.id] = p; } World.rows = {}; for (const r of data.npcs || []) World.rows[r.id] = r; World.log = data.log || []; World.fails = 0; } }
+    if (data && data.now){ World.off = Date.parse(data.now) + (Date.now() - t0) / 2 - Date.now(); if (data.places){ World.places = {}; for (const p of data.places) World.places[p.id] = p; } World.rows = {}; for (const r of data.npcs || []) World.rows[r.id] = r; World.log = data.log || []; World.rel = data.rel || []; World.mem = data.mem || []; World.me = data.me || {}; World.fails = 0; } }
   catch(e){ World.fails++; }
   World.busy = false;
 }
@@ -7553,12 +7558,39 @@ function worldDrive(n, dt, t){
     if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(Math.random() < 0.6 ? worldLine(n, wp) : npcLine(n), '', 5); n.talkAt = t + rand(16, 30); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
     // 一起聊天的人：偶爾互相講一句
     if (wp.r.act === 'chat' && !wp.walk && pd < 30 && t > (n.chatAt || 0)){ n.chatAt = t + rand(9, 20); const others = Object.values(World.rows).filter(o => o.id !== n.wid && o.place === wp.r.place && o.act === 'chat'); if (others.length && Math.random() < 0.7){ const o = others[Math.floor(Math.random() * others.length)], nm = WORLD_WHO[o.id] || '';
-      n.say([`${nm}，最近好嗎？`, `${nm}你看今天的海`, `聽說${nm}昨天釣到大魚`, '哈哈哈', '真的假的！', '今天的風好舒服'][Math.floor(Math.random() * 6)], '', 4); } }
+      const rl = worldRel(n.wid, o.id), lb = rl ? rl.label : '不熟', A = lb === '不合' ? ['哼', `${nm}，你又來了`, '我不想跟你說話'] : lb === '競爭對手' ? [`${nm}，今天釣得過我嗎？`, '這次我一定贏你', '哼，運氣好而已'] : lb === '家人' ? [`${nm}，晚餐回家吃嗎？`, '媽打電話來說想我們了', `${nm}，今天的魚很新鮮喔`] : lb === '好友' || lb === '朋友' || lb === '同事・朋友' ? [`${nm}，最近好嗎？`, `${nm}你看今天的海`, '哈哈哈，你太好笑了', '真的假的！', '下次一起去釣魚吧'] : [`${nm}……你好`, '今天天氣不錯呢', '嗯嗯'];
+      n.say(A[Math.floor(Math.random() * A.length)], '', 4); } }
   }
   if (n.fishing && mode === 'away'){ const st = n.st || 'wait'; if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z); n.next = t + rand(6, 15); } n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); }
   if (mode !== 'home') n.update(dt, t);
   n.placeTag(); return true;
 }
+// ---- 第三階段：記憶和關係變成台詞（全部照伺服器記得的事講） ----
+function worldRel(x, y){ return (World.rel || []).find(r => (r.a === x && r.b === y) || (r.a === y && r.b === x)); }
+function worldMemLines(n){
+  const id = n.wid, out = [], nm = myDisplayName && myDisplayName() !== '你' ? myDisplayName() : '', M = (World.mem || []).filter(m => m.npc === id), me = (World.me || {})[id];
+  if (me && me.talks > 0){ out.push(me.score >= 60 ? `${nm || '你'}！看到你真開心，我們是好朋友了吧` : me.score >= 25 ? `${nm || '你'}又來啦！我們已經聊過 ${me.talks} 次了` : `${nm ? nm + '，' : ''}我記得你，上次我們有聊天`); }
+  for (const m of M.filter(m => m.about === 'me')){ if (m.kind === 'gift') out.push(m.txt.replace(/^.*?送了我/, '謝謝你送我') + '，我好開心'); }
+  for (const m of M.filter(m => m.about !== 'me' && m.about !== 'player').slice(0, 4)){
+    if (m.kind === 'quarrel') out.push(`唉，我${m.txt}……`); else if (m.kind === 'fallout') out.push(`我${m.txt}，現在不太想看到他`); else if (m.kind === 'friend' || m.kind === 'bestie') out.push(`告訴你，我最近${m.txt}！`); else if (m.kind === 'weather') out.push(`之前${m.txt}`); }
+  const rels = (World.rel || []).filter(r => r.a === id || r.b === id).map(r => ({ o: r.a === id ? r.b : r.a, l: r.label, s: r.score })).sort((a, b) => b.s - a.s);
+  if (rels[0] && rels[0].s >= 30) out.push(`我跟${WORLD_WHO[rels[0].o]}是${rels[0].l === '家人' ? '一家人' : rels[0].l}，常常一起聊天`);
+  const riv = rels.find(r => r.l === '競爭對手' || r.l === '不合'); if (riv) out.push(riv.l === '不合' ? `${WORLD_WHO[riv.o]}？別跟我提他` : `${WORLD_WHO[riv.o]}那傢伙，釣魚一定贏不過我`);
+  return out;
+}
+// 跟村民說話：伺服器記得你跟他聊過幾次（每個村民 10 分鐘算一次）
+function worldTalk(n){ if (!n || !n.wid || !Cloud.on || !Cloud.sb) return; const k = n.wid; if (World.talkAt[k] && Date.now() - World.talkAt[k] < 10 * 60000) return; World.talkAt[k] = Date.now();
+  Cloud.sb.rpc('npc_talk', { p_npc: k }).then(({ data }) => { if (data && World.me){ World.me[k] = Object.assign({}, World.me[k], data); } }).catch(() => {}); }
+async function worldGift(k, t){ try { const { data, error } = await Cloud.sb.rpc('npc_gift', { p_npc: k, p_t: t }); if (error) throw error; adoptRow(data); buildTank(); SFX.catch(); flash(`🎁 ${WORLD_WHO[k]}收下了你的禮物！`, 1.6);
+    const n = npcs.concat(questNpcs.map(q => q.f)).find(f => f.wid === k); if (n) n.say('哇！謝謝你～我會好好珍惜的', 'emote', 4); World.at = 0; loadWorld(); } catch(e){ toast(cloudErrMsg(e)); } }
+function worldNear(k){ const n = npcs.concat(questNpcs.map(q => q.f)).find(f => f.wid === k); return n && !n.wHide && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 8; }
+function renderWorldGift(body){ const k = World.giftTo; body.appendChild(el('div', 'dexhead', `🎁 送一條魚給${WORLD_WHO[k] || ''}`));
+  body.appendChild(el('p', 'sub', '每個村民每天收一條。要野生的魚（收藏⭐、展示中、箱網養的、魚缸生的不行）。越稀有的魚，他會越開心、越記得你。'));
+  const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.fm && !x.y && !x.rs && !x.k && !(rec.show || []).includes(x.t)).sort((a, b) => b.w - a.w).slice(0, 60);
+  if (!cand.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以送的魚。'));
+  const ul = el('ul', 'shoplist cols'); for (const x of cand){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(el('span', 'dishic', '🐟')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name} ${fmtKg(x.w)}`)); d.appendChild(el('div', 'sub2', f.rarity)); li.appendChild(d);
+    li.addEventListener('click', () => { if (!worldNear(k)){ toast(`走到${WORLD_WHO[k]}旁邊才能送喔`); return; } closeSheet(); worldGift(k, x.t); }); ul.appendChild(li); }
+  body.appendChild(ul); const bk = el('button', 'tbtn ghost', '返回'); bk.addEventListener('click', () => { curTab = 'map'; renderTab(); }); body.appendChild(bk); }
 // 地圖、看板用：每個村民現在在做什麼
 function worldSummary(){ if (!World.rows || !World.places) return []; return Object.keys(WORLD_WHO).filter(k => World.rows[k]).map(k => { const wp = worldPose(k), r = World.rows[k], pl = World.places[r.place] || {}; return { id:k, name:WORLD_WHO[k], icon: wp && wp.walk ? '🚶' : (WORLD_ACT[r.act] || ['❔'])[0], text: wp && wp.walk ? `正在走去${pl.name || ''}（要${(WORLD_ACT[r.act] || ['', ''])[1]}）` : `在${pl.name || ''}${(WORLD_ACT[r.act] || ['', ''])[1]}`, x: wp ? wp.x : pl.x, z: wp ? wp.z : pl.z }; }); }
 
@@ -7586,6 +7618,7 @@ function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.c
 function renderTab(){
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
   const body = $('#sheetBody'); body.textContent = '';
+  if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'shop'){ renderShop(body); return; }
   if (curTab === 'cook'){ renderCook(body); return; }
   if (curTab === 'island'){ renderIsland(body); return; }

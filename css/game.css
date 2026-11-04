@@ -793,3 +793,6 @@ body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
 .wlist li{padding:2px 8px;border-radius:8px}
 .wlist li:nth-child(odd){background:rgba(47,137,199,.08)}
 .wlist.old{font-size:12px;color:#4a6378}
+.wlist li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.wlist .wme{font-size:11px;color:#6a7f90;flex:1 1 auto}
+.wlist .wgift{padding:3px 10px;font-size:12px}
