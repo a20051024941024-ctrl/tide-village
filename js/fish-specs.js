@@ -580,7 +580,7 @@ Object.assign(SPECS, {
   // 姥鯊（Cetorhinus maximus，2026-11-04）：世界第二大的魚。灰褐色、吻端尖尖往前凸、超大的嘴、
   // 五條幾乎繞頭一圈的超長鰓裂，背鰭高大呈三角形，尾巴像新月。張著大嘴慢慢游、濾食浮游生物。
   baskingshark: VAR('shark', { Top:'#5f5b52', Mid:'#77716a', Bottom:'#b4aea2', Accent:'#3c3832', Gill:'#2e2a25', Fins:'#57524a', Eye:'#15181c' }, {
-    bl:0.8, depth:0.2, wr:0.9, tm:0.3, nose:0.7, n:2.2, pat:[{ k:'band', t0:0.18, t1:0.85, y0:-0.45, y1:-0.15, part:'Mid' }, { k:'bars', bars: Array.from({ length: 5 }, (_, i) => [0.1 + i * 0.048, 0.1 + i * 0.048 + 0.014, -0.78 + i * 0.03, 0.74 - i * 0.05]), part:'Gill' }],
+    bl:0.8, depth:0.2, wr:0.9, tm:0.3, nose:0.7, n:2.2, ns:64, pat:[{ k:'band', t0:0.18, t1:0.85, y0:-0.45, y1:-0.15, part:'Mid' }, { k:'bars', bars: Array.from({ length: 5 }, (_, i) => [0.135 + i * 0.036, 0.135 + i * 0.036 + 0.016, -0.8 + i * 0.03, 0.76 - i * 0.05]), part:'Gill' }],
     dorsal:[{ s:0.36, e:0.52, h:0.8, shape:'tri', sweep:0.35 }, { s:0.76, e:0.79, h:0.18 }], anal:{ s:0.78, e:0.81, h:0.16 },
     caudal:{ type:'lunate', hk:2.0 } }, { move:'vert' }),
   // 大白鯊（Carcharodon carcharias）：背是石板灰、肚子雪白，兩種顏色在身體側面分得很清楚；

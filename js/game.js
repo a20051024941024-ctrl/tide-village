@@ -3198,7 +3198,8 @@ function rebuildHouseRoom(it){
   // 隔間牆（矮一點，鏡頭比較不會被擋住）和房門的門框
   const pw = warm(shade(wallC, -0.06), 0.9);
   for (const [ax, az, bx, bz] of lay.walls){ const L = Math.hypot(bx - ax, bz - az), along = Math.abs(bx - ax) > Math.abs(bz - az), mx = (ax + bx) / 2, mz = (az + bz) / 2;
-    const w = new THREE.Mesh(new THREE.BoxGeometry(along ? L : 0.14, 2.2, along ? 0.14 : L), pw); w.position.set(cx + mx, fy + 1.1, cz + mz); g.add(w); g.add(box([along ? L : 0.18, 0.08, along ? 0.18 : L], '#8c5d3b', [cx + mx, fy + 2.24, cz + mz]));
+    const wg = new THREE.BoxGeometry(along ? L : 0.14, 2.2, along ? 0.14 : L); { const uv = wg.attributes.uv, ps = wg.attributes.position; for (let k = 0; k < uv.count; k++) uv.setXY(k, (ps.getX(k) + ps.getZ(k)) / 1.6, (ps.getY(k) + 1.1) / 3.3); }   /* 跟外牆一樣：下面護牆板、上面壁紙 */
+    const w = new THREE.Mesh(wg, room.material.clone()); w.material.side = THREE.FrontSide; w.position.set(cx + mx, fy + 1.1, cz + mz); g.add(w); g.add(box([along ? L : 0.18, 0.08, along ? 0.18 : L], '#8c5d3b', [cx + mx, fy + 2.24, cz + mz]));
     addBoxCol(cx + mx, cz + mz, along ? L : 0.2, along ? 0.2 : L); }
   for (const [dx, dz] of lay.doors){ const along = lay.walls.some(w => Math.abs(w[1] - w[3]) < 0.01 && Math.abs(w[1] - dz) < 0.01); g.add(box([along ? 1.4 : 0.2, 0.18, along ? 0.2 : 1.4], '#8c5d3b', [cx + dx, fy + 2.1, cz + dz])); }
   // 窗戶、大門
