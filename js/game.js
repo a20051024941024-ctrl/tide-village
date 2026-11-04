@@ -1291,7 +1291,20 @@ function updateZones(t){
 
 /* ================= SEA LIFE（海裡游的風景，不能釣） ================= */
 const seaLife = [];
-function addSeaLife(id, scale, cx, cz, r, speed, mode, ph){ const m = fishModel(FISH_BY_ID[id], scale); scene.add(m); seaLife.push({ m, cx, cz, r, speed, mode, ph: ph || 0, prevUp: false }); }
+function addSeaLife(id, scale, cx, cz, r, speed, mode, ph){ const m = fishModel(FISH_BY_ID[id], scale); scene.add(m); const s = { id, m, cx, cz, r, speed, mode, ph: ph || 0, prevUp: false }; seaLife.push(s); seaGlbSwap(s); }
+/* 海豚、鬼蝠魟、鯨魚用 Quaternius「Animated Fish Pack」（CC0，跟遊戲原本魚的風格同一套）的骨架模型，有真正的游泳動作；載入失敗就繼續用原本的模型。網址加 #seaglb=0 可以關掉 */
+const SEA_GLB = { dolphin:{ file:'Dolphin', col:null }, manta:{ file:'Manta_ray', col:{ Top:'#2a2e34', Bottom:'#e8eaec' } }, whale:{ file:'Whale', col:{ Top:'#2e3440', Bottom:'#d8dce0' } } }, SEA_GLB_CACHE = {};
+function seaGlbSwap(s){ const G = SEA_GLB[s.id]; if (!G || /seaglb=0/.test(location.hash)) return;
+  (SEA_GLB_CACHE[G.file] = SEA_GLB_CACHE[G.file] || new GLTFLoader().loadAsync('models/sealife/' + G.file + '.glb')).then(gl => {
+    const inner = SkeletonUtils.clone(gl.scene), wrap = new THREE.Group(); inner.rotation.y = Math.PI / 2; wrap.add(inner);
+    inner.traverse(o => { if (o.isMesh){ o.frustumCulled = false; o.castShadow = false; if (G.col && G.col[o.material.name]){ o.material = o.material.clone(); o.material.color.set(G.col[o.material.name]); } } });
+    // 跟原本模型一樣長
+    // 骨架模型的實際大小要用「套上骨頭以後」的頂點算（模型本身的網格很大、骨架把它縮小）
+    wrap.updateMatrixWorld(true); const L1 = new THREE.Box3(); wrap.traverse(o => { if (o.isSkinnedMesh){ o.skeleton.update(); o.computeBoundingBox(); L1.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld)); } else if (o.isMesh){ L1.expandByObject(o); } });
+    const L0 = new THREE.Box3().setFromObject(s.m), a = L0.getSize(new THREE.Vector3()), b = L1.getSize(new THREE.Vector3()); wrap.scale.setScalar(Math.max(a.x, a.z) / Math.max(0.001, Math.max(b.x, b.z)));
+    const mixer = new THREE.AnimationMixer(inner); if (gl.animations[0]){ const ac = mixer.clipAction(gl.animations[0]); ac.play(); ac.time = Math.random() * ac.getClip().duration; }
+    wrap.position.copy(s.m.position); wrap.rotation.copy(s.m.rotation); wrap.visible = s.m.visible; scene.remove(s.m); scene.add(wrap); s.m = wrap; s.mixer = mixer;
+  }).catch(e => { console.warn('sea glb', e); }); }
 function updateSeaLife(t){
   for (const s of seaLife){
     // 偶爾才出現一次：每隔 1～2.5 分鐘出來一下（跳兩三下、滑過去、噴一口氣），其他時間躲在水裡
@@ -1300,6 +1313,7 @@ function updateSeaLife(t){
     const showing = t >= s.showAt && t <= s.showAt + s.dur;
     if (!showing){ s.m.visible = false; continue; }
     if (s.mode !== 'whale'){ const near = Math.hypot(me.pos.x - s.cx, me.pos.z - s.cz) < 60; s.m.visible = near; if (!near) continue; } else s.m.visible = true;
+    if (s.mixer) s.mixer.update(Math.min(0.1, t - (s.lastT || t)) * (s.mode === 'whale' ? 0.6 : 1)); s.lastT = t;
     const a = t * s.speed + s.ph, x = s.cx + Math.cos(a) * s.r, z = s.cz + Math.sin(a) * s.r;
     const vx = -Math.sin(a), vz = Math.cos(a); s.m.position.x = x; s.m.position.z = z; s.m.rotation.y = Math.atan2(-vz, vx);
     if (s.mode === 'jump'){
