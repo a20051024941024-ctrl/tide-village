@@ -73,6 +73,7 @@ supabase/033_rare_board.sql 排行榜「最稀有的魚」
 supabase/034_home.sql 家：房子格局、家具、室友／家人（一起住、一起蓋）
 supabase/035_mangrove.sql 紅樹林群島：開船去的釣點、退潮時徒手抓的泥灘（14 種新生物，烏魚、虱目魚搬過去）
 supabase/036_rod_types.sql 專用竿：手竿、遠投竿、磯釣竿的價格
+supabase/037_sex_breed.sql 公母、野外繁殖季、水族館繁殖
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開
