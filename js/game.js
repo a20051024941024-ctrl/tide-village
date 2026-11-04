@@ -225,6 +225,7 @@ const LANDMARKS = [
   { id:'shop',       label:'海邊商店', pos:V3(18, -1),          color:'#5fb6e3', ly:5.5, mx:-2.6, mz:2.8 },
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
   { id:'tailor',     label:'阿綾服裝店', pos:V3(-9, 15),        color:'#f5a5d8', ly:5.5, mx:2.6, mz:-2.2 },
+  { id:'mu',         label:'阿木木工坊', pos:V3(16, 14),        color:'#c79a6b', ly:5.5, mx:-2.6, mz:-2.2 },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
   { id:'hill',       label:'望海丘',   pos:V3(-28, 25),         color:'#a6d37d', ly:2.6 },
   { id:'beach',      label:'南方沙灘', pos:V3(40, -6),          color:'#f2d69a', ly:2.2 },
@@ -459,6 +460,7 @@ const MAP = {
 // 珊瑚礁群島（參考小琉球、澎湖）的位置，放在這裡是因為建地形、種樹的時候就要用到
 /* 阿綾服裝店：建房子的時候就要用到，所以放在這裡（var 才不會在宣告前用到出錯） */
 var Ling = { rack:null, list:null, at:0, busy:false, gearSet:'' };
+var Mu = { show:null, at:0, busy:false };
 var REEF = { x:0, z:86, r:10, y:0.42, bz0:43.6, bz1:76.8, bw:2.2, by:0.55, weir:[[13.6, 82.0, 0.13], [13.6, 87.6, 0.115]] };
 // 百年生態池（參考新竹湖口國小，前身大湖口公學校的生態池）：兩個圓圓的池子連在一起，中間有紅色拱橋
 const POND = { x:16.6, z:-36.4, lobes:[[13.0, -36.2, 4.2], [20.2, -36.6, 3.6]], bx:16.8, mound:[12.4, -36.6], hut:[8.0, -33.2], sign:[6.0, -38.6], trees:[[8.4, -41.6, 1.0], [24.2, -31.6, 0.9], [23.2, -41.4, 0.85]] };
@@ -566,6 +568,8 @@ const clouds = [];
 function mat(color, roughness=0.8, extra){ return new THREE.MeshStandardMaterial(Object.assign({ color, roughness, metalness:0.04 }, extra||{})); }
 function box(size, color, pos, material){ const m = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material || mat(color)); m.position.set(pos[0], pos[1], pos[2]); m.castShadow = true; m.receiveShadow = true; return m; }
 const addBoxCol = (x, z, w, d) => colliders.push({ t:'b', x, z, hw:w/2, hd:d/2 });
+/* 斜放的房子、攤子：照它真正的方向擋（原本用外框方塊，斜的東西四個角會多擋一大塊，走不過去） */
+const addOBoxCol = (x, z, w, d, rot) => { const c = Math.cos(rot), s = Math.sin(rot), hw = w / 2, hd = d / 2; colliders.push({ t:'o', x, z, hw, hd, c, s, bw: Math.abs(c) * hw + Math.abs(s) * hd, bd: Math.abs(s) * hw + Math.abs(c) * hd }); };
 const addCircleCol = (x, z, r) => colliders.push({ t:'c', x, z, r });
 function addDeck(x, z, w, d, y){ decks.push({ x0:x-w/2, x1:x+w/2, z0:z-d/2, z1:z+d/2, y }); }
 // 釣蝦場平台：中間留一個蝦池（四條木板圍起來）
@@ -855,8 +859,8 @@ function castPoint(x, z, dx, dz, dist){
       for (const yy of [0.12, 0.48]){ const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.02, 4, 16), mat('#4c4c4c', 0.5)); hoop.rotation.x = Math.PI / 2; hoop.position.set(-W / 2 - 0.15, yy, fz + 0.5); g.add(hoop); }
     }
     scene.add(g);
-    const c = Math.cos(rotY || 0), s = Math.sin(rotY || 0), ex = Math.abs(c) * width + Math.abs(s) * 2.5, ez = Math.abs(s) * width + Math.abs(c) * 2.5;
-    addBoxCol(x, z, ex, ez);
+    addOBoxCol(x, z, width + 0.3, 2.8, rotY || 0);
+    if (opts.awning){ const c = Math.cos(rotY || 0), s = Math.sin(rotY || 0), lz = 2.05; addOBoxCol(x + s * lz, z + c * lz, width * 0.84, 0.6, rotY || 0); }   /* 商店前面的櫃台 */
     return g;
   }
   houseBuilder = house;   // 私人小島也用同一個木屋
@@ -870,8 +874,11 @@ function castPoint(x, z, dx, dz, dist){
     Ling.rack = [-0.55, 0, 0.55].map((sx, i) => { const hg = box([0.03, 0.14, 0.03], mt, [sx, 1.6, 0]); rk.add(hg);
       const sh = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.5, 0.05), mat(['#f5a5d8', '#5fb6e3', '#ffd36a'][i], 0.8)); sh.position.set(sx, 1.25, 0); rk.add(sh);
       const sl = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.16, 0.05), sh.material); sl.position.set(sx, 1.42, 0); rk.add(sl); return { sh, sl }; });
-    addBoxCol(tg.position.x + Math.sin(tg.rotation.y) * 1.5 + Math.cos(tg.rotation.y) * 2.45, tg.position.z + Math.cos(tg.rotation.y) * 1.5 - Math.sin(tg.rotation.y) * 2.45, 1.0, 1.0); }
-  house(16, 14, '#7db7d7', 3.6, faceTo(16, 14));
+    addOBoxCol(tg.position.x + Math.sin(tg.rotation.y) * 1.5 + Math.cos(tg.rotation.y) * 2.45, tg.position.z + Math.cos(tg.rotation.y) * 1.5 - Math.sin(tg.rotation.y) * 2.45, 1.9, 0.5, tg.rotation.y); }
+  /* 阿木木工坊（2026-11-04）：原本的藍色民宅改成木工坊，門口左右兩邊各擺一件阿木最新做的家具 */
+  { const mg = house(16, 14, '#a0704a', 3.6, faceTo(16, 14), { awning: '#8c5d3b', sign: '阿木木工坊', signIcon: '🪑', signInk: '#5a3a24' });
+    Mu.show = [-2.55, 2.55].map(sx => { const slot = new THREE.Group(); slot.position.set(sx, 0, 1.4); mg.add(slot); slot.add(box([1.5, 0.08, 1.3], '#c9b38a', [0, 0.04, 0]));
+      const c = Math.cos(mg.rotation.y), sn = Math.sin(mg.rotation.y); addOBoxCol(mg.position.x + c * sx + sn * 1.4, mg.position.z - sn * sx + c * 1.4, 1.5, 1.3, mg.rotation.y); return { slot, id: 0, m: null }; }); }
   house(-14, -9, '#ec8b68', 3.3, faceTo(-14, -9));
   house(22, 7, '#9fc7a8', 3.2, faceTo(22, 7));
   house(-9, -3, '#f6a96b', 3.6, faceTo(-9, -3), { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店
@@ -903,7 +910,7 @@ function castPoint(x, z, dx, dz, dist){
       // 客人（和玩家）坐這三張板凳，面向櫃台
       const wp = new THREE.Vector3(sx, 0, 1.35).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)), fd = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y);
       const seat = { x: wp.x, z: wp.z, face: Math.atan2(fd.x, fd.z), y: terrainH(wp.x, wp.z) + 0.13, cafe: true }; CHAIRS.push(seat); cafeSeats.push(seat); }
-    const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addBoxCol(KX + sn * 0.1, KZ + c * 0.1, Math.abs(c) * 3.2 + Math.abs(sn) * 2.0, Math.abs(sn) * 3.2 + Math.abs(c) * 2.0);
+    const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addOBoxCol(KX + sn * 0.1, KZ + c * 0.1, 3.3, 2.0, g.rotation.y);
     cookStall = { x: KX, z: KZ, rot: g.rotation.y, grill: new THREE.Vector3(-0.85, 1.6, -0.45).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)) };
   }
 
@@ -1147,6 +1154,7 @@ function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.hypot(x - ISLE.
 function blocked(x, z, r){
   for (const c of colliders){
     if (c.t === 'b'){ if (Math.abs(x - c.x) < c.hw + r && Math.abs(z - c.z) < c.hd + r) return true; }
+    else if (c.t === 'o'){ const dx = x - c.x, dz = z - c.z; if (Math.abs(dx * c.c - dz * c.s) < c.hw + r && Math.abs(dx * c.s + dz * c.c) < c.hd + r) return true; }
     else if (Math.hypot(x - c.x, z - c.z) < c.r + r) return true;
   }
   return false;
@@ -2003,8 +2011,8 @@ function tagOccluded(tx, ty, tz){
   const ax = camera.position.x, ay = camera.position.y, az = camera.position.z, dx = tx - ax, dz = tz - az, L = Math.hypot(dx, dz); if (L < 1.5) return false;
   if (House.on || Dive.on) return false;
   for (const c of colliders){
-    if (c.t === 'b'){ if (c.hw < 0.9 && c.hd < 0.9) continue;
-      let t0 = 0.02, t1 = 0.95; for (const [o, dd, lo, hi] of [[ax, dx, c.x - c.hw, c.x + c.hw], [az, dz, c.z - c.hd, c.z + c.hd]]){ if (Math.abs(dd) < 1e-6){ if (o < lo || o > hi){ t0 = 2; break; } continue; } let a = (lo - o) / dd, b = (hi - o) / dd; if (a > b){ const q = a; a = b; b = q; } t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) break; }
+    if (c.t === 'b' || c.t === 'o'){ const hw = c.t === 'o' ? c.bw : c.hw, hd = c.t === 'o' ? c.bd : c.hd; if (hw < 0.9 && hd < 0.9) continue;
+      let t0 = 0.02, t1 = 0.95; for (const [o, dd, lo, hi] of [[ax, dx, c.x - hw, c.x + hw], [az, dz, c.z - hd, c.z + hd]]){ if (Math.abs(dd) < 1e-6){ if (o < lo || o > hi){ t0 = 2; break; } continue; } let a = (lo - o) / dd, b = (hi - o) / dd; if (a > b){ const q = a; a = b; b = q; } t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) break; }
       if (t0 <= t1){ const hy = ay + (ty - ay) * t0; if (hy < groundHeight(ax + dx * t0, az + dz * t0) + 3.2) return true; } }
     else if (c.t === 'c' && c.r >= 0.45 && c.r <= 0.6){   // 樹：樹冠比樹幹大很多
       const t = clamp(((c.x - ax) * dx + (c.z - az) * dz) / (L * L), 0.02, 0.95), px = ax + dx * t - c.x, pz = az + dz * t - c.z;
@@ -2792,7 +2800,7 @@ function updateFishing(dt, t){
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
@@ -3118,7 +3126,40 @@ const FURN = {
   fridge:{ name:'冰箱', price:800, rad:0.5, g:'kit' }, stove:{ name:'爐台', price:700, rad:0.5, g:'kit' }, sink:{ name:'流理台', price:500, rad:0.6, g:'kit' }, bath:{ name:'浴缸', price:1200, rad:1.0, g:'kit' }, toilet:{ name:'馬桶', price:400, rad:0.4, g:'kit' },
   plant:{ name:'盆栽', price:150, rad:0.4, g:'plant' }, bigplant:{ name:'大盆栽', price:300, rad:0.5, g:'plant' },
 };
-const FURN_GROUPS = [['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
+const FURN_GROUPS = [['mu', '🪵 阿木的作品'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
+// ---- 阿木的家具（052_mu.sql）：'fz<編號>'＝某一種家具＋自己的木頭顏色、布料顏色、花樣 ----
+const FZ = { map: new Map(), list: null, at: 0, busy: false, want: new Set(), timer: 0, tex: new Map() };
+function fzId(t){ const m = /^fz(\d{1,9})$/.exec(t || ''); return m ? +m[1] : 0; }
+function fzReg(d){ if (!d || !FURN[d.base] || FURN[d.base].dz) return; FZ.map.set(d.id, d); const B = FURN[d.base]; FURN['fz' + d.id] = { name: d.name, price: d.price, rad: B.rad, flat: B.flat, g: d.listed ? 'mu' : 'mu_old', base: d.base, dz: d }; }
+function fzWant(id){ if (!id || FZ.map.has(id)) return; let on = false; try { on = Cloud.on && !!Cloud.sb; } catch(e){ setTimeout(() => fzWant(id), 1500); return; } if (!on) return; FZ.want.add(id); clearTimeout(FZ.timer); FZ.timer = setTimeout(fzFetch, 250); }
+async function fzFetch(){ const ids = [...FZ.want].filter(id => !FZ.map.has(id)).slice(0, 60); FZ.want.clear(); if (!ids.length) return;
+  try { const { data } = await Cloud.sb.rpc('get_furn', { p_ids: ids }); for (const d of data || []) fzReg(d); for (const id of ids) if (!FZ.map.has(id)) FZ.map.set(id, null); } catch(e){ return; }
+  if (House.on && House.it) rebuildHouseRoom(House.it); }
+async function loadMu(){ if (FZ.busy || !Cloud.on || !Cloud.sb) return; FZ.busy = true; FZ.at = Date.now();
+  try { const { data } = await Cloud.sb.rpc('list_furn', { p_offset: 0 }); FZ.list = data || []; for (const d of FZ.list) fzReg(d); } catch(e){ FZ.list = FZ.list || []; }
+  FZ.busy = false; applyMuShow(); if (!$('#sheet').hidden && (curTab === 'mu' || curTab === 'furn')) renderTab(); }
+function fzTex(pat, col, base){ const k = pat + col + base; let t = FZ.tex.get(k); if (t) return t; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d');
+  c.fillStyle = col; c.fillRect(0, 0, 64, 64); const dk = shade(col, -0.22), lt = shade(col, 0.35);
+  if (pat === 'stripe'){ c.fillStyle = lt; for (let x = 0; x < 64; x += 16) c.fillRect(x, 0, 7, 64); }
+  else if (pat === 'check'){ c.fillStyle = lt; for (let y = 0; y < 64; y += 16) for (let x = (y / 16 % 2) * 16; x < 64; x += 32) c.fillRect(x, y, 16, 16); c.globalAlpha = 0.25; c.fillStyle = dk; for (let x = 0; x < 64; x += 16) c.fillRect(x + 7, 0, 2, 64); c.globalAlpha = 1; }
+  else if (pat === 'wave'){ c.strokeStyle = lt; c.lineWidth = 4; for (let y = 8; y < 64; y += 16){ c.beginPath(); for (let x = 0; x <= 64; x += 2) c.lineTo(x, y + Math.sin(x / 64 * Math.PI * 4) * 4); c.stroke(); } }
+  else if (pat === 'dots'){ c.fillStyle = lt; for (let y = 8; y < 64; y += 16) for (let x = (y / 16 % 2) * 8 + 8; x < 64; x += 16){ c.beginPath(); c.arc(x, y, 3.5, 0, 7); c.fill(); } }
+  else if (pat === 'grain'){ c.strokeStyle = dk; c.globalAlpha = 0.45; c.lineWidth = 1.5; for (let y = 4; y < 64; y += 6){ c.beginPath(); for (let x = 0; x <= 64; x += 4) c.lineTo(x, y + Math.sin(x / 9 + y) * 1.5); c.stroke(); } c.globalAlpha = 1; }
+  t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2); FZ.tex.set(k, t); return t; }
+// 阿木的家具：照原本那種家具的樣子，木頭換成他的木頭顏色、布的地方換成他的布料花樣；沒有布的家具（桌子、櫃子…）加一塊花布
+function fzMesh(d){
+  const g = furnMesh(d.base), W = new Set(['8c5d3b', 'c79a6b']), A = { bed:['f17b6d'], dbed:['5f8fd8'], sofa:['5f8f7a'], arm:['d87a5a'], rug:['e8a8b8'], chair:['c98a5a'] }, acc = new Set(A[d.base] || []);
+  const em = c => ({ emissive: c, emissiveIntensity: 0.1 });
+  const mainM = new THREE.MeshStandardMaterial(Object.assign({ color: '#ffffff', map: fzTex('grain', d.main, 1), roughness: 0.8 }, em('#000000'))), mainD = mat(shade(d.main, -0.18), 0.8, em(shade(d.main, -0.18)));
+  const accM = new THREE.MeshStandardMaterial({ color: '#ffffff', map: fzTex(d.pat === 'grain' ? 'plain' : d.pat, d.accent, 0), roughness: 0.85, emissive: '#ffffff', emissiveIntensity: 0.05 });
+  g.traverse(o => { if (!o.isMesh || !o.material || !o.material.color) return; const hx = o.material.color.getHexString(); if (W.has(hx)) o.material = hx === '8c5d3b' ? mainD : mainM; else if (acc.has(hx)) o.material = accM; });
+  const add = (sz, p) => { const b = box(sz, null, p, accM); b.castShadow = false; g.add(b); };
+  switch (d.base){ case 'table': add([1.34, 0.012, 0.38], [0, 0.765, 0]); break; case 'desk': add([0.62, 0.01, 0.36], [0, 0.785, 0.05]); break;
+    case 'shelf': add([1.7, 2.1, 0.02], [0, 1.1, -0.19]); break; case 'ward': for (const sx of [-0.33, 0.33]) add([0.58, 1.78, 0.02], [sx, 1.0, 0.31]); break;
+    case 'clock': add([0.32, 0.6, 0.02], [0, 0.6, 0.16]); break; case 'lamp': g.traverse(o => { if (o === g.userData.lamp){ o.material = o.material.clone(); o.material.color.set(shade(d.accent, 0.4)); o.material.emissive.set(d.accent); } }); break; }
+  return g;
+}
+function applyMuShow(){ const L = FZ.list || []; if (!Mu.show) return; Mu.show.forEach((s, i) => { const d = L[i]; if (!d || s.id === d.id) return; s.id = d.id; if (s.m) s.slot.remove(s.m); s.m = fzMesh(d); s.m.position.y = 0.08; s.m.rotation.y = i ? -0.5 : 0.5; const sc = d.base === 'dbed' || d.base === 'bed' || d.base === 'shelf' || d.base === 'ward' ? 0.62 : 0.8; s.m.scale.setScalar(sc); s.slot.add(s.m); }); }
 const FURN_DEF = [{ id:1, t:'bed', x:-3.4, z:-2.1, r:0 }, { id:2, t:'rug', x:0.5, z:0.4, r:0 }, { id:3, t:'table', x:0.5, z:0.4, r:0 }, { id:4, t:'chair', x:0.5, z:-0.6, r:0 }, { id:5, t:'chair', x:0.5, z:1.4, r:3.14 },
   { id:6, t:'shelf', x:4.2, z:-2.1, r:-1.57 }, { id:7, t:'fire', x:0, z:-3.2, r:0 }, { id:8, t:'tank', x:3.3, z:2.7, r:3.14 }, { id:9, t:'plant', x:-4, z:2.9, r:0 }];
 const HOME_ROLES = { mate:'室友', family:'家人', couple:'情侶' };
@@ -3136,10 +3177,11 @@ function furnCheck(lay, f, type, x, z, skip){
   for (const o of f){ if (o.id === skip) continue; const it = FURN[o.t]; if (!it || it.flat || me.flat) continue; if (Math.hypot(o.x - x, o.z - z) < (it.rad + me.rad) * 0.75) return '跟別的家具疊在一起了'; }
   return null;
 }
-function cleanFurn(f){ return Array.isArray(f) ? f.filter(x => x && FURN[x.t] && isFinite(+x.x) && isFinite(+x.z)).slice(0, 40).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
+function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x.t] && fzId(x.t)) fzWant(fzId(x.t)); return Array.isArray(f) ? f.filter(x => x && (FURN[x.t] || fzId(x.t)) && isFinite(+x.x) && isFinite(+x.z)).slice(0, 40).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
 
 // 家具的樣子（正面朝 +z，放在地板上）
 function furnMesh(t){
+  if (FURN[t] && FURN[t].dz) return fzMesh(FURN[t].dz);
   const g = new THREE.Group(), B = (sz, c, p, rough) => { const b = box(sz, c, p, mat(c, rough == null ? 0.8 : rough, { emissive:c, emissiveIntensity:0.1 })); g.add(b); return b; };
   const C = (rt, rb, h, c, p, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 12), mat(c, 0.7, { emissive:c, emissiveIntensity:0.1 })); m.position.set(p[0], p[1], p[2]); g.add(m); return m; };
   const wood = '#8c5d3b', lw = '#c79a6b';
@@ -3304,12 +3346,13 @@ function rebuildHouseRoom(it){
   House.door = { x: cx, z: cz + D / 2 - 0.9 };
   // 家具
   const tank = (onIsle && onIsle.tank) || [], show = (onIsle && onIsle.show) || [], shown = tank.filter(x => show.includes(x.t) && FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 4), pick = shown.length ? shown : tank.filter(x => FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 3);
-  for (const o of f){ const F0 = FURN[o.t]; if (!F0) continue; const m = furnMesh(o.t); m.position.set(cx + o.x, fy, cz + o.z); m.rotation.y = o.r; m.userData.furn = o; g.add(m); House.furnG.set(o.id, m);
+  for (const o of f){ const F0 = FURN[o.t]; if (!F0){ fzWant(fzId(o.t)); continue; } const m = furnMesh(o.t); m.position.set(cx + o.x, fy, cz + o.z); m.rotation.y = o.r; m.userData.furn = o; g.add(m); House.furnG.set(o.id, m);
     const c = Math.cos(o.r), s = Math.sin(o.r), at = (lx, lz) => ({ x: cx + o.x + c * lx + s * lz, z: cz + o.z - s * lx + c * lz });
     if (m.userData.fire) House.fires.push(m.userData.fire); if (m.userData.lamp) House.lamps.push(m.userData.lamp);
     if (m.userData.tank) pick.forEach((x, i) => { try { const fm = fishModel(FISH_BY_ID[x.f], 0.2); fm.position.set(cx + o.x, fy + 1.1, cz + o.z); g.add(fm); House.fish.push({ f: fm, k: i * 1.7, x: cx + o.x, z: cz + o.z, r: o.r }); } catch(e){} });
-    if (o.t === 'chair' || o.t === 'arm'){ const p = at(0, 0.02); CHAIRS_ROOM.push({ x: p.x, z: p.z, face: o.r, y: fy + 0.02, room: true }); continue; }
-    if (o.t === 'sofa'){ for (const lx of [-0.62, 0, 0.62]){ const p = at(lx, 0.05); CHAIRS_ROOM.push({ x: p.x, z: p.z, face: o.r, y: fy + 0.02, room: true }); } addBoxCol(cx + o.x, cz + o.z, Math.abs(c) * 1.6 + Math.abs(s) * 0.5, Math.abs(s) * 1.6 + Math.abs(c) * 0.5); continue; }
+    const bt = F0.base || o.t;
+    if (bt === 'chair' || bt === 'arm'){ const p = at(0, 0.02); CHAIRS_ROOM.push({ x: p.x, z: p.z, face: o.r, y: fy + 0.02, room: true }); continue; }
+    if (bt === 'sofa'){ for (const lx of [-0.62, 0, 0.62]){ const p = at(lx, 0.05); CHAIRS_ROOM.push({ x: p.x, z: p.z, face: o.r, y: fy + 0.02, room: true }); } addBoxCol(cx + o.x, cz + o.z, Math.abs(c) * 1.6 + Math.abs(s) * 0.5, Math.abs(s) * 1.6 + Math.abs(c) * 0.5); continue; }
     if (F0.bed){ const p = at(0.55 * (o.t === 'dbed' ? 1.4 : 1), 0.2); CHAIRS_ROOM.push({ x: p.x, z: p.z, face: o.r + Math.PI / 2, y: fy + 0.12, room: true, bed: o }); addCircleCol(cx + o.x, cz + o.z, 0.55);
       if (o.own){ const nm = roomName(o.own); const rm = lay.rooms.find(r => o.x > r.x0 && o.x < r.x1 && o.z > r.z0 && o.z < r.z1);
         if (rm && !rm._sign){ rm._sign = 1; const vert = Math.abs(rm.door[0]) > 0.01 && lay.walls.some(w => Math.abs(w[0] - w[2]) < 0.01 && Math.abs(w[0] - rm.door[0]) < 0.01); g.add(roomSign(`${nm}的房間`, cx + rm.door[0] + (vert ? (rm.x0 < rm.door[0] ? 0.09 : -0.09) * -1 : 0), fy + 2.45, cz + rm.door[1] + (vert ? 0 : 0.09), vert ? Math.PI / 2 : 0)); }
@@ -3412,8 +3455,9 @@ function renderFurnSheet(body){
     body.appendChild(ul); return;
   }
   body.appendChild(el('p', 'sub', `這棟房子有 ${f.length} / 40 件家具。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。收掉退一半金幣。床可以認領，房門上會掛你的名字。`));
-  for (const [gk, title] of FURN_GROUPS){ body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
-    for (const [k, v] of Object.entries(FURN).filter(([, v]) => v.g === gk)){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[k] || '📦'));
+  if (!FZ.list && Cloud.on) loadMu();
+  for (const [gk, title] of FURN_GROUPS){ if (gk === 'mu' && !Object.values(FURN).some(v => v.g === 'mu')) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
+    for (const [k, v] of Object.entries(FURN).filter(([, v]) => v.g === gk)){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・家裡 ${f.filter(x => x.t === k).length} 個`)); li.appendChild(d);
       const b = el('button', 'tbtn', '拿去擺'); b.disabled = rec.coins < v.price; b.addEventListener('click', () => startFurn(k)); const a = el('div', 'tacts'); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
@@ -5629,7 +5673,7 @@ function sellFish(ts, batch){
   if (!batch) cloudCall('sell_fish', { p_ts: [ts] });
   return price;
 }
-const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'海邊商店', mode:'sell' }, { id:'cook', label:'潮汐食堂', mode:'cook' }, { id:'tailor', label:'阿綾服裝店', mode:'tailor' } ];
+const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'海邊商店', mode:'sell' }, { id:'cook', label:'潮汐食堂', mode:'cook' }, { id:'tailor', label:'阿綾服裝店', mode:'tailor' }, { id:'mu', label:'阿木木工坊', mode:'mu' } ];
 function nearShop(){
   if (myBoat) return null;
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
@@ -5644,7 +5688,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 function avKit(){
@@ -7073,8 +7117,11 @@ const npcs = [
   // 阿綾：服裝店的設計師，站在店門口櫃台的旁邊；每天早上和傍晚會設計一件新衣服放到市集（050_ling.sql）
   (() => { const r = Math.atan2(4 + 9, 4 - 15), lz = 2.75, lx = -1.75; return { name:'阿綾・服裝設計師', shirt:'#f5a5d8', hat:'#8a3a6a', x:-9 + Math.sin(r) * lz + Math.cos(r) * lx, z:15 + Math.cos(r) * lz - Math.sin(r) * lx, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), tailor:true,
     lines:['歡迎光臨阿綾服裝店！店裡的衣服都是我自己畫的喔', '我每天早上和傍晚都會設計一件新衣服，記得常常來看', '你也可以自己設計衣服，在設計師市集賣給大家', '海浪、晚霞、小魚……村子裡到處都是靈感', '想要什麼顏色的衣服？我下次畫給你', '用自己的照片也可以變成衣服的圖案喔，在設計室試試看'] }; })(),
+  // 阿木：木工坊的家具木匠，站在門口左邊那件展示家具後面；每天早上 9 點、下午 5 點會做一件新家具放到店裡（052_mu.sql）
+  (() => { const r = Math.atan2(4 - 16, 4 - 14), lz = 0.55, lx = -2.55; return { name:'阿木・家具木匠', shirt:'#8a6a4a', hat:'#5a3d2b', x:16 + Math.sin(r) * lz + Math.cos(r) * lx, z:14 + Math.cos(r) * lz - Math.sin(r) * lx, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'mu',
+    lines:['歡迎來阿木木工坊！每一件家具都是我親手做的', '我每天早上和傍晚都會做一件新的，做過的都會留在店裡', '木頭要曬過、磨過，坐起來才舒服', '買了以後回家按「擺家具」，在「阿木的作品」裡面就找得到', '漂流木是我在南方沙灘撿的，每一塊紋路都不一樣'] }; })(),
   { name:'阿伯・老校工', shirt:'#c8b48a', hat:'#5a6a3a', x:21.6, z:-41.0, y:0.02, dir:new THREE.Vector2(-0.2, 1).normalize(), lines:['這個池子比我年紀還大，學校一百多年前就有了', '以前的學生下課都蹲在池邊看魚', '琵琶鼠魚是有人亂放生的，現在池子裡到處都是', '大肚魚是以前放來吃孑孓的', '紅色的拱橋走上去看魚最清楚', '看到垃圾就順手撿一下啦', '假山上的蕨類是老師們一棵一棵種的'] },
-].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.tailor = !!n.tailor; if (n.tailor){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
+].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.tailor = !!n.tailor; f.shopNpc = n.shopNpc || null; if (n.tailor || n.shopNpc){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 // ---- 阿綾：站在服裝店櫃台後面，看到人會轉過來；穿著自己最新設計的衣服，門口衣架掛著最新的三件上衣 ----
 async function loadLing(){
   if (Ling.busy || !Cloud.on || !Cloud.sb) return; Ling.busy = true; Ling.at = Date.now();
@@ -7092,6 +7139,31 @@ function applyLing(){
 function lingLines(){ const L = Ling.list || []; if (!L.length) return []; const d = L[0], out = [`我最新的作品是「${d.name}」，${d.price ? `🪙${d.price}` : '免費送'}，來看看吧！`];
   const hot = L.slice().sort((a, b) => b.sold - a.sold)[0]; if (hot && hot.sold > 0) out.push(`「${hot.name}」已經賣出 ${hot.sold} 件了，謝謝大家！`);
   out.push(`店裡現在有 ${L.length} 件我設計的東西，衣服都不會下架，走到櫃台前面就能逛`); return out; }
+function muLines(){ const L = FZ.list || [], out = []; if (L.length){ const d = L[0]; out.push(`${d.story}，叫做「${d.name}」，${d.price ? `🪙${d.price}` : '免費送'}，來看看吧！`); out.push(`店裡現在有 ${L.length} 件我做的家具，走到門口就能逛`); }
+  const mine = []; try { for (const it of (rec.island && rec.island.items) || []) for (const o of it.f || []){ const d = FZ.map.get(fzId(o.t)); if (d) mine.push(d); } } catch(e){}
+  if (mine.length){ const d = mine[Math.floor(Math.random() * mine.length)]; out.push(`謝謝你把我做的「${d.name}」擺在家裡！放得很好看`); if (mine.length >= 3) out.push(`你家已經有 ${mine.length} 件我的作品了，快變成阿木展示間了`); }
+  return out; }
+function updateMu(n, dt, t){
+  const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
+  if (d < 40 && Cloud.on && (!FZ.at || Date.now() - FZ.at > 10 * 60000)) loadMu();
+  if (d < 7) n.rot = lerpAngle(n.rot, Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z), 1 - Math.exp(-3 * dt));
+  if (d < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(npcLine(n), '', 6); n.talkAt = t + rand(18, 35); } else if (d > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
+  n.update(dt, t); n.placeTag();
+}
+// 阿木的店：每件家具的樣子、故事、價格；買了回家用「擺家具」擺
+function renderMuShop(body){
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🪑 阿木木工坊</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能逛阿木的店。')); return; }
+  body.appendChild(el('p', 'sub', '阿木每天早上 9 點、下午 5 點會做一件新家具，做過的都會一直留在店裡。想要的話，走進你小島上的房子，按「擺家具」→「🪵 阿木的作品」，擺下去的時候才付錢。'));
+  if (!FZ.list){ if (!FZ.busy) loadMu(); body.appendChild(el('div', 'empty', '載入中…')); return; }
+  if (!FZ.list.length){ body.appendChild(el('div', 'empty', '阿木還在做第一件家具，晚一點再來。')); return; }
+  const icons = { table:'🍽️', chair:'🪑', desk:'🖥️', shelf:'📚', ward:'🚪', sofa:'🛋️', arm:'💺', rug:'🟣', lamp:'💡', clock:'🕰️', bed:'🛏️', dbed:'🛏️' };
+  const ul = el('ul', 'shoplist');
+  for (const d of FZ.list){ const li = el('li'), sw = el('span', 'dishic', icons[d.base] || '🪑'); sw.style.cssText = `background:linear-gradient(135deg, ${d.main} 0 50%, ${d.accent} 50% 100%);border-radius:10px`; li.appendChild(sw);
+    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', d.name)); inf.appendChild(el('div', 'sub2', `${d.story}・${d.price ? '🪙' + d.price : '免費'}`)); li.appendChild(inf);
+    const a = el('div', 'tacts'), b = el('button', 'tbtn', House.on && canEditIsle() ? '拿去擺' : '回家擺'); b.addEventListener('click', () => { if (House.on && canEditIsle()){ closeSheet(); startFurn('fz' + d.id); } else toast('走進你小島上的房子，按「擺家具」→「🪵 阿木的作品」就能擺'); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+  body.appendChild(ul);
+}
 function updateLing(n, dt, t){
   const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
   if (d < 40 && Cloud.on && (!Ling.at || Date.now() - Ling.at > 10 * 60000)) loadLing();
@@ -7164,7 +7236,7 @@ function npcHear(text){
   if (!best) return; const r = npcReply(best, text); { const q = questNpcs.find(q => q.f === best); if (q){ q.mark = null; q.talkUntil = now() + 10; } } best.replyUntil = now() + 9;
   setTimeout(() => { best.say(r, '', 6); logMsg(best.nm.textContent || '村民', r); }, 900 + Math.random() * 600);
 }
-function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
+function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
 // 阿默：港口裡不會有紅鯊，所以他每一趟都開自己的紅色小船，繞著島到外海隨便一個地方釣（每一趟去哪裡大家看到的都一樣）
 // 每 7 分鐘一趟：從碼頭開到外海的環線 → 沿著環線繞到這次的釣點 → 釣魚 → 原路開回來 → 在碼頭休息一下。環線離岸邊 22 公尺，不會撞到紅樹林；不會經過往珊瑚礁群島的跨海大橋那一側
 const AMO = { dock:[35.6, -27.2], cycle:420, pier:50, speed:4.2, off:22 };
@@ -7200,6 +7272,7 @@ function updateAmo(n, dt, t){
 function updateNpcs(dt, t){
   for (const n of npcs){
     if (n.tailor){ updateLing(n, dt, t); continue; }
+    if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
     if (n.amo) updateAmo(n, dt, t);
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
     const st = n.st || 'wait';
@@ -7374,6 +7447,7 @@ function renderTab(){
     body.appendChild(ul);
   } else if (curTab === 'cage'){ renderCage(body);
   } else if (curTab === 'design'){ renderDesignEd(body);
+  } else if (curTab === 'mu'){ renderMuShop(body);
   } else if (curTab === 'market'){ renderMarket(body);
   } else if (curTab === 'people'){
     if (Cloud.on){ if (renderFriends(body)) return; body.appendChild(el('div', 'dexhead', '🏘️ 現在在村子裡的人')); }
