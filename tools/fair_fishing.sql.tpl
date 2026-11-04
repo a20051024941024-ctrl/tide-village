@@ -20,6 +20,7 @@ create table if not exists public.red_sharks (
   caught_by uuid, caught_name text, caught_w numeric(10,2), caught_at timestamptz
 );
 alter table public.red_sharks add column if not exists scars integer not null default 0;
+alter table public.red_sharks add column if not exists albino boolean not null default false;   -- 白化（042）：生小鯊時極少數會是白化
 alter table public.red_sharks enable row level security;
 revoke all on public.red_sharks from anon, authenticated;
 create index if not exists players_chum_idx on public.players (chum_type, chum_at desc);
@@ -153,7 +154,7 @@ begin
   -- 釣蝦場老闆的放生活動（027）：極小的機會碰到全伺服器只有一隻的特別蝦
   if p_spot = 'shrimp' then fid := public._sev_try(pl.id); if fid is not null and cfg->'fish' ? fid then pick := fid; end if; end if;
   -- 赤紅霸王鯊（032）：全伺服器的族群，隻數越多機率越高（還是非常低）
-  if p_spot = 'harbor' then rsh := public._rs_try(pl.id); if rsh.id is not null then pick := 'shark_red'; rs := rsh.id || ':' || rsh.sex || ':' || rsh.scars || (case when rsh.hooked_by is null then ':x' else '' end); end if; end if;
+  if p_spot = 'harbor' then rsh := public._rs_try(pl.id); if rsh.id is not null then pick := case when rsh.albino then 'shark_red_albino' else 'shark_red' end; rs := rsh.id || ':' || rsh.sex || ':' || rsh.scars || (case when rsh.hooked_by is null then ':x' else '' end); end if; end if;
   f := cfg->'fish'->pick;
   wild := season in ('spring', 'summer') and cfg->'wildBreed' ? pick;
   fw := round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), case when wild then 2.4 else 1.7 end))::numeric, 2);   -- 繁殖季小魚比較多
@@ -214,7 +215,7 @@ begin
   if now() - pl.cast_at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
   if pl.last_catch_at is not null and now() - pl.last_catch_at < interval '3 seconds' then raise exception '釣太快了'; end if;
   if p_fish in ('bluelobster') then perform public._sev_claim(pl.id, pl.nickname, p_fish, w); end if;   -- 放生活動的蝦只有一隻（027）
-  if p_fish = 'shark_red' then perform public._rs_claim(pl.id, pl.nickname, pl.cast_rs, w); end if;   -- 赤紅霸王鯊（032）
+  if p_fish in ('shark_red', 'shark_red_albino') then perform public._rs_claim(pl.id, pl.nickname, pl.cast_rs, w); end if;   -- 赤紅霸王鯊（032）
   select * into c from public.current_contest();
   update public.players set
     total      = total + 1,
@@ -223,7 +224,7 @@ begin
     fish_best  = case when coalesce((fish_best ->> p_fish)::numeric, 0) < w then jsonb_set(fish_best, array[p_fish], to_jsonb(w)) else fish_best end,
     best_fish  = case when w > best_w then p_fish else best_fish end,
     best_w     = greatest(best_w, w),
-    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when p_fish = 'shark_red' then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
+    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when p_fish in ('shark_red', 'shark_red_albino') then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
     week_best_w = case when p_fish <> c.fish then (case when week_id = c.week_id then week_best_w else 0 end)
                        when week_id = c.week_id then greatest(week_best_w, w) else w end,
     week_id    = case when p_fish = c.fish or week_id = c.week_id then c.week_id else week_id end,

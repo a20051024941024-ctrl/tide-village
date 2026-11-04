@@ -78,6 +78,7 @@ supabase/038_canal.sql 城市水圳（湖口）新魚、撈網、撿垃圾
 supabase/039_fav.sql 魚打星號收藏（不能賣、不會被擠掉，變種自動收藏）
 supabase/040_reef.sql 珊瑚礁群島（小琉球、澎湖石滬）新魚
 supabase/041_cage.sql 箱網養殖（放魚、每天餵、收成）
+supabase/042_rs_albino.sql 白化赤紅霸王鯊（紅鯊生小鯊時 2% 是白化）
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

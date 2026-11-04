@@ -576,6 +576,11 @@ Object.assign(SPECS, {
   amberjack_gold: VAR('amberjack', { Top:'#c89020', Mid:'#f0c040', Bottom:'#fbeab0', Accent:'#fff0a0', Fins:'#e0a830' }, {}, { glow:true }),
 });
 
+Object.assign(SPECS, {
+  // 白化赤紅霸王鯊：紅鯊繁殖時極少數會生出來的白化個體（粉白色、紅眼睛，背上的虎紋變成淡淡的粉紅）
+  shark_red_albino: VAR('shark_red', { Top:'#f2dcd6', Mid:'#f8e8e2', Bottom:'#fff6f2', Accent:'#e8b8b0', Gill:'#d89a94', Fins:'#ecc8c0', Stripes:'#e0a8a0', Eye:'#d0202a' }, {}, { glow:true }),
+});
+
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {

@@ -177,6 +177,7 @@ const FISH = [
   { id:'blackgirella_albino', spot:'reef', of:'blackgirella', name:'白化黑毛', rarity:'傳說', color:'#f6e6de', min:0.5, max:3.5, power:0.7, w:0.01, desc:'明明叫黑毛，卻全身粉白色、紅眼睛。' },
   { id:'lethrinus_red', spot:'reef', of:'lethrinus', name:'赤龍占', rarity:'稀有', color:'#e87a5a', min:1.0, max:8.0, power:0.72, w:0.015, desc:'身體偏紅的龍占，在藍色的礁盤裡特別顯眼。' },
   { id:'amberjack_gold', spot:'reef', of:'amberjack', name:'黃金紅甘', rarity:'傳說', color:'#f0c040', min:10, max:60, power:0.95, w:0.01, desc:'全身像黃金一樣的紅甘，傳說只在大潮的日子出現。' },
+  { id:'shark_red_albino', spot:'harbor', of:'shark', rs:true, name:'白化赤紅霸王鯊', rarity:'傳說', color:'#f8e8e2', min:15, max:420, power:0.99, desc:'赤紅霸王鯊生小鯊時極少數會出現的白化個體，全身粉白、眼睛是紅的。牠一樣是族群裡的一隻，會長大、會留下叉叉；被釣光一樣會絕種。不能賣，也不能送人。' },
   { id:'shark_red', spot:'harbor', of:'shark', rs:true, name:'赤紅霸王鯊', rarity:'傳說', color:'#c8161c', min:15, max:420, power:0.99, desc:'全身深紅、背上有黑色虎紋的礁岩鯊。整片海只有一小群，從一公一母開始，沒被釣走就會慢慢繁殖；全部被釣光就絕種了。不能賣，也不能送人。' },
   { id:'arowana_red', spot:'lake', of:'arowana', name:'紅龍魚', rarity:'傳說', color:'#d8302a', min:3.0, max:12, power:0.86, w:0.1, desc:'鱗片紅得像火一樣的紅龍，比金龍更稀有。' },
   // 老闆的放生活動：每天一段時間只放一隻，全伺服器只有一隻（不在一般的釣點清單裡，見 Sev）
@@ -1755,7 +1756,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['bullshark', 'sawfish', 'shark_red', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
+const BIG_FISH = new Set(['bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -2664,7 +2665,7 @@ function updateFishing(dt, t){
       // 下面的張力條
       $('#tbFill').style.width = (T * 100).toFixed(1) + '%'; $('#tenBar').classList.toggle('hot', T > 0.8); $('#tenBar').classList.toggle('low', T < 0.3);
     }
-    if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash('🦈 赤紅霸王鯊甩頭掙脫了！牠身上又多了一道叉叉', 2.4); cancelFishing(); }
+    if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`🦈 ${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
     else if (F.T >= 1){ SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
     else if (F.P <= 0){ SFX.fail(); flash('魚掙脫了', 1.4); cancelFishing(); }
     else if (F.P >= 1){ landFish(); }
@@ -6696,7 +6697,7 @@ async function rsPoll(){
   if (!Cloud.on || !Cloud.sb) return;
   try { const { data, error } = await Cloud.sb.rpc('get_red_shark'); if (error || !data) return; RS.n = Number(data.n) || 0;
     const l = data.last; if (l && l.at > RS.seenAt){ const fresh = Date.now() - l.at < 3600e3; RS.seenAt = l.at; LS.set('tide.rsSeen', l.at);
-      if (fresh && l.caught && !RS.mine.has(String(l.id))) ticker(`🦈 <b>${esc(l.name || '有人')}</b> 在外海釣到了 <b>赤紅霸王鯊</b>（${rsLabel(l.id + ':' + l.sex)}）${fmtKg(Number(l.w))}！${RS.n ? `海裡還剩 ${RS.n} 隻` : '海裡已經一隻都不剩了……'}`); } } catch(e){}
+      if (fresh && l.caught && !RS.mine.has(String(l.id))) ticker(`🦈 <b>${esc(l.name || '有人')}</b> 在外海釣到了 <b>${l.a ? '白化赤紅霸王鯊' : '赤紅霸王鯊'}</b>（${rsLabel(l.id + ':' + l.sex)}）${fmtKg(Number(l.w))}！${RS.n ? `海裡還剩 ${RS.n} 隻` : '海裡已經一隻都不剩了……'}`); } } catch(e){}
 }
 setInterval(rsPoll, 120000); setTimeout(rsPoll, 8000);
 function announceCatch(f, w, spot){ if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot }).catch(() => {});
