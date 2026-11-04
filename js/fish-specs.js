@@ -591,9 +591,9 @@ Object.assign(SPECS, {
     caudal:{ type:'lunate', hk:1.9 } }),
 });
 Object.assign(SPECS, {
-  // 變種（很稀有）：白化姥鯊（白中帶粉、淡色的眼睛）、黑化大白鯊（肚子也變深灰）
+  // 變種（很稀有）：白化姥鯊、白化大白鯊（白中帶粉、紅眼睛）。白化在好幾種鯊魚身上都有報告
   baskingshark_albino: VAR('baskingshark', { Top:'#ece4da', Mid:'#f2ece4', Bottom:'#fbf7f2', Accent:'#d8c8bc', Gill:'#c8a8a0', Fins:'#e6dcd0', Eye:'#c0303a' }, {}, { glow:true }),
-  greatwhite_dark: VAR('greatwhite', { Top:'#24282e', Mid:'#30353c', Bottom:'#4c525a', Accent:'#101214', Gill:'#1a1d21', Fins:'#1f2328' }, {}),
+  greatwhite_albino: VAR('greatwhite', { Top:'#eee6de', Mid:'#f4eee8', Bottom:'#fdfaf6', Accent:'#d8c4bc', Gill:'#d4aaa2', Fins:'#e8ded4', Eye:'#c0303a' }, {}, { glow:true }),
 });
 
 Object.assign(SPECS, {

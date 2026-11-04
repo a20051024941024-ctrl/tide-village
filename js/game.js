@@ -181,8 +181,8 @@ const FISH = [
   { id:'amberjack_gold', spot:'reef', of:'amberjack', name:'黃金紅甘', rarity:'傳說', color:'#f0c040', min:10, max:60, power:0.95, w:0.01, desc:'全身像黃金一樣的紅甘，傳說只在大潮的日子出現。' },
   { id:'baskingshark', spot:'harbor', name:'姥鯊', rarity:'傳說', color:'#6b665d', min:500, max:4000, power:0.95, w:0.18, desc:'世界第二大的魚，張著像山洞一樣的大嘴慢慢游，靠濾海水裡的浮游生物過活。鰓裂長得幾乎繞頭一圈，春天常常浮在水面晒太陽。' },
   { id:'greatwhite', spot:'harbor', name:'大白鯊', rarity:'傳說', color:'#6c7480', min:300, max:1500, power:0.99, w:0.2, desc:'背是石板灰、肚子雪白，一口三角形的鋸齒牙。會從深處往上衝撞獵物，力氣大到能把整條船拖著走，拉線一定要穩。' },
-  { id:'baskingshark_albino', spot:'harbor', of:'baskingshark', name:'白化姥鯊', rarity:'傳說', color:'#f2ece4', min:500, max:4000, power:0.95, w:0.008, desc:'全身白裡透粉、眼睛淡紅的姥鯊，世界上只有零星的目擊紀錄。' },
-  { id:'greatwhite_dark', spot:'harbor', of:'greatwhite', name:'黑化大白鯊', rarity:'傳說', color:'#30353c', min:300, max:1500, power:0.99, w:0.008, desc:'連肚子都變成深灰色的大白鯊，在深海裡幾乎看不見牠的影子。' },
+  { id:'baskingshark_albino', spot:'harbor', of:'baskingshark', name:'白化姥鯊', rarity:'傳說', color:'#f2ece4', min:500, max:4000, power:0.95, w:0.008, desc:'全身白裡透粉、眼睛淡紅的姥鯊。白化在好幾種鯊魚身上都出現過，但在姥鯊身上非常非常罕見。' },
+  { id:'greatwhite_albino', spot:'harbor', of:'greatwhite', name:'白化大白鯊', rarity:'傳說', color:'#f4eee8', min:300, max:1500, power:0.99, w:0.008, desc:'背上的灰色不見了，全身粉白、眼睛是紅的。白化在好幾種鯊魚身上都出現過，但大白鯊非常非常罕見。' },
   { id:'shark_red_albino', spot:'harbor', of:'shark', rs:true, name:'白化赤紅霸王鯊', rarity:'傳說', color:'#f8e8e2', min:15, max:420, power:0.99, desc:'赤紅霸王鯊生小鯊時極少數會出現的白化個體，全身粉白、眼睛是紅的。牠一樣是族群裡的一隻，會長大、會留下叉叉；被釣光一樣會絕種。不能賣，也不能送人。' },
   { id:'shark_red', spot:'harbor', of:'shark', rs:true, name:'赤紅霸王鯊', rarity:'傳說', color:'#c8161c', min:15, max:420, power:0.99, desc:'全身深紅、背上有黑色虎紋的礁岩鯊。整片海只有一小群，從一公一母開始，沒被釣走就會慢慢繁殖；全部被釣光就絕種了。不能賣，也不能送人。' },
   { id:'arowana_red', spot:'lake', of:'arowana', name:'紅龍魚', rarity:'傳說', color:'#d8302a', min:3.0, max:12, power:0.86, w:0.1, desc:'鱗片紅得像火一樣的紅龍，比金龍更稀有。' },
@@ -204,7 +204,7 @@ const SPOTS = [
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_dark'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林（參考新竹新豐紅毛港），漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
@@ -1756,7 +1756,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_dark']);
+const BIG_FISH = new Set(['bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_albino']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -2189,7 +2189,9 @@ function updateBoat(dt, ix, iz, L, locked){
 }
 $('#boatBtn').addEventListener('click', () => { ensureAudio(); if (myBoat) leaveBoat(); else { const b = nearBoat(); if (b) boardBoat(b); } });
 function boatDiveSite(){ if (!myBoat) return null; const w = waterSpotId(me.pos.x, me.pos.z); return w === 'harbor' ? 'offshore' : (w === 'reef' || w === 'weir') ? 'reef' : null; }
-$('#boatDive').addEventListener('click', () => { ensureAudio(); const ds = boatDiveSite(); if (ds) startDive(ds); });
+/* 舊的 index.html 還在瀏覽器快取裡時沒有這顆按鈕：自己補上，不然整個遊戲會開不起來 */
+(() => { let d = $('#boatDive'); if (!d){ const bb = $('#boatBtn'); d = document.createElement('button'); d.id = 'boatDive'; d.className = 'panel'; d.hidden = true; d.textContent = '🤿 下潛'; if (bb && bb.parentNode){ let row = bb.parentNode; if (row.id !== 'boatRow'){ row = document.createElement('div'); row.id = 'boatRow'; bb.parentNode.insertBefore(row, bb); row.appendChild(bb); } row.insertBefore(d, bb); } else document.body.appendChild(d); }
+  d.addEventListener('click', () => { ensureAudio(); const ds = boatDiveSite(); if (ds) startDive(ds); }); })();
 function updateBoatButton(){
   { const d = $('#boatDive'), show = !!(myBoat && !Ferry.on && F.phase === 'idle' && !Dive.on && boatDiveSite()); if (d.hidden === show) d.hidden = !show; }
   const btn = $('#boatBtn'); let label = '';
