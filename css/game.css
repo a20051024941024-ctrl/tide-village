@@ -632,7 +632,8 @@ details.help li{margin:4px 0}
 
 /* 等級、稱號、成就 */
 #lvChip{display:inline-block;vertical-align:2px;margin-left:8px;font-family:var(--f-body);font-size:11px;letter-spacing:0;line-height:1.5;padding:0 8px;border-radius:999px;white-space:nowrap;cursor:pointer;color:#5a3d00;font-weight:800;background:linear-gradient(90deg,rgba(255,211,106,.75) var(--k,0%),rgba(255,211,106,.25) var(--k,0%))}
-.tag .nm[data-title]::before{content:attr(data-title);display:block;font-size:9.5px;font-weight:800;color:#ffe08a;line-height:1.1;text-align:center}
+.tag .nm[data-title]{position:relative;margin-top:16px}
+.tag .nm[data-title]::before{content:attr(data-title);position:absolute;left:50%;bottom:100%;transform:translate(-50%,-3px);white-space:nowrap;padding:1px 8px;border-radius:999px;background:linear-gradient(180deg,#ffe9a8,#f2b84b);color:#5a3a00;font-size:11px;font-weight:800;line-height:1.35;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .lvhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:#fff6db;margin-bottom:6px}
 .lvhead b{font-family:var(--f-display);font-size:22px;color:#8a5a00}
 .lvhead .lvbar{flex:1;min-width:120px;height:12px;border-radius:999px;background:rgba(138,90,0,.15);overflow:hidden}
