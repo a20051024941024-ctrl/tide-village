@@ -625,6 +625,54 @@ Object.assign(SPECS, {
   sleepershark_albino: VAR('sleepershark', { Top:'#e8e0d8', Mid:'#efe8e2', Bottom:'#f8f4f0', Accent:'#d4c4bc', Gill:'#c8a8a0', Fins:'#e0d6cc', Eye:'#c0303a' }, {}, { glow:true }),
 });
 
+/* ---------------- 深海浮台（2026-11-05）：參考日本駿河灣的深海釣（深海魚、深海鯊） ---------------- */
+Object.assign(SPECS, {
+  // 青眼魚（メヒカリ，Chlorophthalmus）：銀灰色的小魚，一雙大大的綠色眼睛會反光
+  mehikari: VAR('sardine', { Top:'#5a6a7a', Mid:'#b8c4cc', Bottom:'#eef2f4', Fins:'#9aa8b0', EyeW:'#b8f0a0' }, { depth:0.18, dots:[], eye:EYE(0.09, 0.22, 0.15, { ring:true }) }),
+  // 鼠尾鱈（Coryphaenoides）：大頭、身體往後越來越細，尾巴像老鼠尾巴
+  rattail: VAR('cod', { Top:'#5a5048', Mid:'#7a7068', Bottom:'#a89a8a', Spots:'#4a4038', Fins:'#4a4038', Accent:'#a89a8a' }, { depth:0.24, tm:0.04 }),
+  // 赤鯥（ノドグロ，Doederleinia berycoides）：全身紅色，嘴巴裡面是黑的，眼睛很大
+  blackthroat: VAR('perch', { Top:'#c8402a', Mid:'#e86a4a', Bottom:'#f8d0c0', Fins:'#d84a3a', Accent:'#f8b0a0' }, { eye:EYE(0.1, 0.22, 0.13, { ring:true }) }),
+  // 水滴魚（Psychrolutes）：在深海裡其實是正常的魚形，拉上來以後鬆鬆垮垮、粉紅色
+  blobfish: VAR('puffer', { Top:'#e8a8a8', Mid:'#f0c0c0', Bottom:'#f8d8d8', Spots:'#d89090', Fins:'#e0a0a0', Accent:'#f0c0c0' }, { dots:[] }),
+  // 角高體金眼鯛（Anoplogaster）：黑黑的小魚，嘴巴裡有很長的尖牙
+  fangtooth: VAR('grouper', { Top:'#2a2a2e', Mid:'#34343a', Bottom:'#44444a', Spots:'#1a1a1e', Fins:'#2a2a2e', Accent:'#44444a', EyeW:'#8a8a90' }, {}),
+  // 歐氏尖吻鮫（ミツクリザメ，Mitsukurina owstoni）：粉紅色、鼻子又長又扁，像外星生物
+  goblinshark: VAR('shark', { Top:'#d8a0a0', Mid:'#e0b0b0', Bottom:'#f0d0d0', Accent:'#c89090', Gill:'#a87070', Fins:'#c89898', Eye:'#3a2a2a' }, { nose:1.5 }),
+  // 灰六鰓鯊（Hexanchus griseus）：住在深海的大鯊魚，鰓裂有 6 條，眼睛是綠色的
+  sixgill: VAR('sleepershark', { Top:'#5a5a52', Mid:'#6a6a60', Bottom:'#9a9a90', Gill:'#3a3a34', Eye:'#4a8a5a' }, { pat:[GILLS(0.16, 6)] }),
+});
+Object.assign(SPECS, {
+  mehikari_gold: VAR('mehikari', { Top:'#c8a030', Mid:'#f0d878', Bottom:'#fbf0c8', Fins:'#e8c860' }, {}, { glow:true }),
+  rattail_albino: VAR('rattail', { Top:'#e8e0d8', Mid:'#efe8e2', Bottom:'#f8f4f0', Spots:'#d8ccc4', Fins:'#e0d6cc' }, {}),
+  blackthroat_gold: VAR('blackthroat', { Top:'#e0a020', Mid:'#f0c850', Bottom:'#fbeab0', Fins:'#e8b030' }, {}, { glow:true }),
+  blobfish_albino: VAR('blobfish', { Top:'#f4f0ee', Mid:'#f8f4f2', Bottom:'#fcfaf8', Spots:'#e8e0dc', Fins:'#f0eae6' }, {}),
+  fangtooth_gold: VAR('fangtooth', { Top:'#a07820', Mid:'#c89830', Bottom:'#e8c860', Spots:'#806010', Fins:'#a07820' }, {}, { glow:true }),
+  goblinshark_albino: VAR('goblinshark', { Top:'#f4ecec', Mid:'#f8f0f0', Bottom:'#fcf8f8', Accent:'#e8d8d8', Gill:'#d8c0c0', Fins:'#f0e4e4', Eye:'#c0303a' }, {}, { glow:true }),
+  sixgill_albino: VAR('sixgill', { Top:'#ece8e0', Mid:'#f0ece6', Bottom:'#f8f6f2', Gill:'#d0c8c0', Eye:'#c0303a' }, {}, { glow:true }),
+});
+
+/* ---------------- 遠洋神秘島（2026-11-05）：參考厄瓜多的加拉巴哥群島（火山島、寒暖流交會） ---------------- */
+Object.assign(SPECS, {
+  // 克里奧鮨（Paranthias colonus）：橘紅色的魚，背上有一排白點，成群在礁岩邊游
+  creolefish: VAR('grunt', { Top:'#b8504a', Mid:'#d87060', Bottom:'#f0c0a8', Fins:'#c85048', Accent:'#f8e8e0' }, {}),
+  // 黃尾刺尾鯛（Prionurus laticlavius）：灰色的身體、尾巴根部是鮮黃色，成群在淺海吃藻類
+  razorsurgeon: VAR('bluetang', { Top:'#4a4e58', Mid:'#5a5e68', Bottom:'#7a7e88', Fins:'#3a3e48', Accent:'#f0d040', Tail:'#f0d040' }, {}),
+  // 角蝶魚（Zanclus cornutus）：黑白黃三色的寬條紋，背鰭拉成一條長長的絲
+  idol: VAR('butterfly', { Top:'#f0e040', Mid:'#f8f4e8', Bottom:'#f8f4e8', Stripes:'#18181c', Fins:'#18181c', Accent:'#f0e040' }, {}),
+  // 紅唇蝙蝠魚（Ogcocephalus darwini）：用胸鰭在海底「走路」，嘴唇是鮮紅色的
+  batfish: VAR('angler', { Top:'#8a7a60', Mid:'#a89470', Bottom:'#d8c8a8', Accent:'#e8302a', Fins:'#8a7a60', Lure:'#e8302a' }, {}),
+  // 加拉巴哥鯊（Carcharhinus galapagensis）：灰褐色、肚子白的大鯊魚，住在遠洋小島周圍
+  galapagosshark: VAR('shark', { Top:'#6a6a64', Mid:'#8a8a84', Bottom:'#e8e8e0', Fins:'#5a5a54' }, {}),
+});
+Object.assign(SPECS, {
+  creolefish_gold: VAR('creolefish', { Top:'#e0a020', Mid:'#f0c850', Bottom:'#fbeab0', Fins:'#e8b030' }, {}, { glow:true }),
+  razorsurgeon_albino: VAR('razorsurgeon', { Top:'#eceae6', Mid:'#f0eeea', Bottom:'#f8f6f4', Fins:'#e0dcd8' }, {}),
+  idol_gold: VAR('idol', { Top:'#f8d020', Mid:'#fbe890', Stripes:'#c89020', Fins:'#c89020' }, {}, { glow:true }),
+  batfish_albino: VAR('batfish', { Top:'#f0ebe4', Mid:'#f4f0ea', Bottom:'#faf8f4', Fins:'#ece6de' }, {}),
+  galapagosshark_albino: VAR('galapagosshark', { Top:'#ece8e2', Mid:'#f0ece6', Bottom:'#f8f6f2', Fins:'#e4e0d8', Eye:'#c0303a' }, {}, { glow:true }),
+});
+
 Object.assign(SPECS, {
   // 姥鯊（Cetorhinus maximus，2026-11-04）：世界第二大的魚。灰褐色、吻端尖尖往前凸、超大的嘴、
   // 五條幾乎繞頭一圈的超長鰓裂，背鰭高大呈三角形，尾巴像新月。張著大嘴慢慢游、濾食浮游生物。

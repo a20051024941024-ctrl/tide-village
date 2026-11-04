@@ -179,6 +179,31 @@ const FISH = [
   { id:'blackgirella_albino', spot:'reef', of:'blackgirella', name:'白化黑毛', rarity:'傳說', color:'#f6e6de', min:0.5, max:3.5, power:0.7, w:0.01, desc:'明明叫黑毛，卻全身粉白色、紅眼睛。' },
   { id:'lethrinus_red', spot:'reef', of:'lethrinus', name:'赤龍占', rarity:'稀有', color:'#e87a5a', min:1.0, max:8.0, power:0.72, w:0.015, desc:'身體偏紅的龍占，在藍色的礁盤裡特別顯眼。' },
   { id:'amberjack_gold', spot:'reef', of:'amberjack', name:'黃金紅甘', rarity:'傳說', color:'#f0c040', min:10, max:60, power:0.95, w:0.01, desc:'全身像黃金一樣的紅甘，傳說只在大潮的日子出現。' },
+  // ---- 深海浮台、遠洋神秘島 ----
+  { id:'mehikari', spot:'abyss', name:'青眼魚', rarity:'常見', color:'#9aa8b0', min:0.02, max:0.08, power:0.2, desc:'深海裡成群的銀色小魚，一雙大大的綠眼睛在燈光下會反光，炸起來很好吃。' },
+  { id:'rattail', spot:'abyss', name:'鼠尾鱈', rarity:'常見', color:'#7a7068', min:0.2, max:1.5, power:0.4, desc:'大大的頭、身體往後越來越細，尾巴尖尖的像老鼠尾巴，是深海海底最常見的魚之一。' },
+  { id:'blackthroat', spot:'abyss', name:'赤鯥', rarity:'稀有', color:'#e86a4a', min:0.2, max:1.0, power:0.45, desc:'全身紅通通、嘴巴裡面卻是黑色的，所以又叫黑喉。油脂很多，是很高級的魚。' },
+  { id:'blobfish', spot:'abyss', name:'水滴魚', rarity:'稀有', color:'#f0c0c0', min:0.5, max:2.5, power:0.25, desc:'在深海的高壓裡其實長得像一般的魚，被拉上來以後才會變得鬆鬆垮垮、像一團粉紅色的果凍。' },
+  { id:'fangtooth', spot:'abyss', name:'角高體金眼鯛', rarity:'稀有', color:'#34343a', min:0.03, max:0.12, power:0.3, desc:'黑黑的小魚，嘴巴裡長著和身體比起來超級長的尖牙，住在很深很暗的地方。' },
+  { id:'goblinshark', spot:'abyss', name:'歐氏尖吻鮫', rarity:'傳說', color:'#e0b0b0', min:40, max:200, power:0.9, w:0.2, desc:'粉紅色的深海鯊魚，鼻子又長又扁，咬東西的時候整個下巴會往前彈出去，像外星生物一樣。' },
+  { id:'sixgill', spot:'abyss', name:'灰六鰓鯊', rarity:'傳說', color:'#6a6a60', min:80, max:500, power:0.95, w:0.2, desc:'很古老的鯊魚，一般鯊魚有 5 條鰓裂，牠有 6 條。白天待在深海，晚上才往上游。' },
+  { id:'mehikari_gold', spot:'abyss', of:'mehikari', name:'金眼青眼魚', rarity:'稀有', color:'#f0d878', min:0.02, max:0.08, power:0.2, w:0.025, desc:'全身金黃色的青眼魚，眼睛還是綠的，好像一顆會游的寶石。' },
+  { id:'rattail_albino', spot:'abyss', of:'rattail', name:'白化鼠尾鱈', rarity:'稀有', color:'#efe8e2', min:0.2, max:1.5, power:0.4, w:0.02, desc:'全身白白的鼠尾鱈，在漆黑的深海裡特別顯眼。' },
+  { id:'blackthroat_gold', spot:'abyss', of:'blackthroat', name:'金赤鯥', rarity:'稀有', color:'#f0c850', min:0.2, max:1.0, power:0.45, w:0.02, desc:'紅色變成金色的赤鯥，漁夫說釣到會帶來好運。' },
+  { id:'blobfish_albino', spot:'abyss', of:'blobfish', name:'白化水滴魚', rarity:'稀有', color:'#f8f4f2', min:0.5, max:2.5, power:0.25, w:0.02, desc:'白白軟軟的水滴魚，看起來像一顆麻糬。' },
+  { id:'fangtooth_gold', spot:'abyss', of:'fangtooth', name:'金牙角高體金眼鯛', rarity:'稀有', color:'#c89830', min:0.03, max:0.12, power:0.3, w:0.02, desc:'全身金色的角高體金眼鯛，尖牙閃閃發亮。' },
+  { id:'goblinshark_albino', spot:'abyss', of:'goblinshark', name:'白化尖吻鮫', rarity:'傳說', color:'#f8f0f0', min:40, max:200, power:0.9, w:0.008, desc:'全身雪白的尖吻鮫，幾乎沒有人看過。' },
+  { id:'sixgill_albino', spot:'abyss', of:'sixgill', name:'白化六鰓鯊', rarity:'傳說', color:'#f0ece6', min:80, max:500, power:0.95, w:0.008, desc:'白色的六鰓鯊，眼睛是淡淡的紅色。' },
+  { id:'creolefish', spot:'mystic', name:'克里奧鮨', rarity:'常見', color:'#d87060', min:0.2, max:0.8, power:0.38, desc:'橘紅色的魚，背上有一排小白點，成群在火山岩旁邊游來游去。' },
+  { id:'razorsurgeon', spot:'mystic', name:'黃尾刺尾鯛', rarity:'常見', color:'#5a5e68', min:0.3, max:1.2, power:0.42, desc:'灰色的身體配上鮮黃色的尾巴根部，那裡有像刀片一樣的硬棘，成群在淺海吃藻類。' },
+  { id:'idol', spot:'mystic', name:'角蝶魚', rarity:'常見', color:'#f0e040', min:0.1, max:0.4, power:0.3, desc:'黑、白、黃三色的寬條紋，背鰭拉成一條長長的白絲，在礁岩間優雅地游。' },
+  { id:'batfish', spot:'mystic', name:'紅唇蝙蝠魚', rarity:'稀有', color:'#a89470', min:0.1, max:0.6, power:0.3, desc:'用胸鰭在海底一步一步「走路」，嘴唇是鮮紅色的，好像擦了口紅。只住在這片海域。' },
+  { id:'galapagosshark', spot:'mystic', name:'加拉巴哥鯊', rarity:'傳說', color:'#8a8a84', min:30, max:85, power:0.92, w:0.25, desc:'住在遠洋小島周圍的大鯊魚，好奇心很重，常常游過來看看船上在做什麼。' },
+  { id:'creolefish_gold', spot:'mystic', of:'creolefish', name:'金色克里奧鮨', rarity:'稀有', color:'#f0c850', min:0.2, max:0.8, power:0.38, w:0.025, desc:'全身金黃色的克里奧鮨。' },
+  { id:'razorsurgeon_albino', spot:'mystic', of:'razorsurgeon', name:'白化刺尾鯛', rarity:'稀有', color:'#f0eeea', min:0.3, max:1.2, power:0.42, w:0.02, desc:'灰色變成白色的刺尾鯛，只有尾巴還留著一點黃色。' },
+  { id:'idol_gold', spot:'mystic', of:'idol', name:'金色角蝶魚', rarity:'稀有', color:'#fbe890', min:0.1, max:0.4, power:0.3, w:0.02, desc:'黑色條紋變成金色的角蝶魚，閃閃發亮。' },
+  { id:'batfish_albino', spot:'mystic', of:'batfish', name:'白化蝙蝠魚', rarity:'稀有', color:'#f4f0ea', min:0.1, max:0.6, power:0.3, w:0.02, desc:'全身白色、只剩嘴唇還是紅的蝙蝠魚。' },
+  { id:'galapagosshark_albino', spot:'mystic', of:'galapagosshark', name:'白化加拉巴哥鯊', rarity:'傳說', color:'#f0ece6', min:30, max:85, power:0.92, w:0.008, desc:'全身白色的加拉巴哥鯊。' },
   // ---- 北方冰封群島：冰湖（冰洞釣）和流冰海岸 ----
   { id:'wakasagi', spot:'icelake', name:'公魚', rarity:'常見', color:'#c8d0c4', min:0.008, max:0.035, power:0.18, desc:'冬天湖面結冰以後，大家鑿一個小洞、用好幾根細細的鉤子一次釣好幾條的小魚，炸起來香香脆脆。' },
   { id:'shirauo', spot:'icelake', name:'白魚', rarity:'常見', color:'#eef2f0', min:0.004, max:0.02, power:0.15, desc:'身體幾乎透明的小魚，死掉以後才會變白，所以叫白魚。早春成群游到湖邊產卵。' },
@@ -219,6 +244,10 @@ const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
 const ICE = { x:-120, z:-72, w:30, d:22, y:0.45 };
 // 北方冰封群島（2026-11-05）：主島北邊（-x）的雪島，中間一座結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。坐港口阿海的船去
 const FROST = { x:-160, z:-10, r:22, y:0.36, lake:{ x:-156, z:-8, r:8.5, y:0.37 }, holes:[[-158.4, -9.6], [-153.6, -5.8], [-155.2, -11.6], [-159.6, -4.6], [-152.4, -9.8]], dock:[-139.2, -10] };
+// 深海浮台（2026-11-05）：遠洋上一座浮台；遠洋神秘島：火山島
+const ABYSS = { x:64, z:-145, w:12, d:8, y:0.55 };
+const MYST = { x:-60, z:162, r:16, y:0.5 };
+function mystH(x, z){ const d = Math.hypot(x - MYST.x, z - MYST.z); if (d > MYST.r + 2.2) return null; const bump = Math.max(0, 1 - d / (MYST.r * 0.55)) * 2.2; return d <= MYST.r ? MYST.y + bump : MYST.y - (d - MYST.r) / 2.2 * 0.6; }
 function frostHole(x, z, r){ for (const h of FROST.holes) if (Math.hypot(x - h[0], z - h[1]) < (r || 0.45)) return h; return null; }
 const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
@@ -231,6 +260,8 @@ const SPOTS = [
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
   { id:'canal', label:'百年生態池', short:'生態池', subtitle:'百年生態池：石頭砌的池邊、紅色拱橋、假山和睡蓮', pos:V3(13.0, -41.1), color:'#5aa070', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','guppy','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino','guppy_albino'] },
+  { id:'abyss', label:'深海浮台', short:'深海', subtitle:'遠洋上的浮台，底下是幾百公尺深的海溝，放長長的線下去釣', pos:V3(64.2, -148.4), color:'#1d3a6a', dir:V2(0, -1), late:true, fish:['mehikari','rattail','blackthroat','blobfish','fangtooth','goblinshark','sixgill','mehikari_gold','rattail_albino','blackthroat_gold','blobfish_albino','fangtooth_gold','goblinshark_albino','sixgill_albino'] },
+  { id:'mystic', label:'神秘島礁岩', short:'神秘島', subtitle:'遠洋火山島的黑色礁岩，寒流和暖流在這裡交會', pos:V3(-60, 178.6), color:'#3a8a7a', dir:V2(0, 1), late:true, fish:['creolefish','razorsurgeon','idol','batfish','galapagosshark','creolefish_gold','razorsurgeon_albino','idol_gold','batfish_albino','galapagosshark_albino'] },
   { id:'icelake', label:'冰湖冰洞', short:'冰湖', subtitle:'結冰的湖上鑿好的小洞，用手竿垂直放線下去', pos:V3(-157.2, -10.8), color:'#9fd8f0', dir:V2(-0.7, 0.7).normalize(), late:true, fish:['wakasagi','shirauo','dolly','himemasu','ito','wakasagi_gold','shirauo_gold','dolly_gold','himemasu_albino','ito_gold'] },
   { id:'icesea', label:'流冰海岸', short:'流冰', subtitle:'冰封群島北邊的海岸，流冰一塊一塊漂過來', pos:V3(-179.4, -10), color:'#5f9fc8', dir:V2(-1, 0), late:true, fish:['capelin','hokke','cod','sleepershark','capelin_gold','hokke_albino','cod_albino','sleepershark_albino'] },
   { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島，站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold'] },
@@ -273,6 +304,8 @@ const TRAVEL = [
   { id:'hill', label:'望海丘', x:-26, z:27, rot:-2.6, color:'#a6d37d' },
   { id:'lighthouse', label:'晴潮燈塔', x:LIGHTHOUSE[0] - 2.4, z:LIGHTHOUSE[1] + 3.2, rot:2.6, color:'#ffe5a4' },
   { id:'frostdock', label:'冰封群島碼頭', x:-141.2, z:-10, rot:-Math.PI / 2, color:'#bfe6f5' },
+  { id:'abyssdock', label:'深海浮台', x:64, z:-143.5, rot:Math.PI, color:'#1d3a6a' },
+  { id:'mystdock', label:'神秘島碼頭', x:-60, z:150.5, rot:0, color:'#3a8a7a' },
 ];
 const SHIRTS = ['#f17b6d','#2f89c7','#3fbf9d','#ffd36a','#9b7bff','#f5a5d8','#ff9f43','#5b6b7a'];
 const HATS = ['#ffd36a','#f6f0dd','#18334a','#f17b6d','#3fbf9d','#8c5d3b'];
@@ -693,7 +726,7 @@ function buildTrees(trees, PX, PZ){
 }
 
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
-function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
+function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castBlocked(x, z, px, pz){
   const L = Math.hypot(px - x, pz - z); if (L < 2.2) return false;
   let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
@@ -1206,8 +1239,8 @@ function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of wate
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
 function isleH(x, z){ const d = Math.hypot(x - ISLE.x, z - ISLE.z); if (d > ISLE.r + 2.2) return null; return d <= ISLE.r ? ISLE.y : ISLE.y - (d - ISLE.r) / 2.2 * 0.3; }
 function frostH(x, z){ const d = Math.hypot(x - FROST.x, z - FROST.z); if (d > FROST.r + 2.2) return null; if (Math.hypot(x - FROST.lake.x, z - FROST.lake.z) < FROST.lake.r) return FROST.lake.y; return d <= FROST.r ? FROST.y : FROST.y - (d - FROST.r) / 2.2 * 0.3; }
-function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z); if (fh !== null) return Math.max(0, fh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } return Math.max(0, terrainH(x, z)); }
-function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } return Math.max(0, terrainH(x, z)); }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
 function blocked(x, z, r){
   for (const c of colliders){
     if (c.t === 'b'){ if (Math.abs(x - c.x) < c.hw + r && Math.abs(z - c.z) < c.hd + r) return true; }
@@ -1875,7 +1908,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['sleepershark', 'sleepershark_albino', 'bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_albino']);
+const BIG_FISH = new Set(['goblinshark', 'goblinshark_albino', 'sixgill', 'sixgill_albino', 'galapagosshark', 'galapagosshark_albino', 'sleepershark', 'sleepershark_albino', 'bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_albino']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -2473,7 +2506,8 @@ const WORLD_REGIONS = [
   { label:'🌊 深海海域（坐船）', x:60, z:-36 },
   { label:'❄️ 北方冰封群島（找港口的阿海坐船）', edge:[0.5, 0.03] },
   { label:'🪸 珊瑚礁群島（走長橋過去）', edge:[0.13, 0.5] },
-  { label:'🐠 遠洋神秘島（坐船・準備中）', edge:[0.68, 0.97] },
+  { label:'🌋 遠洋神秘島（找港口的阿海坐船）', edge:[0.68, 0.97] },
+  { label:'🌌 深海浮台（找港口的阿海坐船）', edge:[0.97, 0.3] },
 ];   // 地圖顯示 -58..58 公尺
 function getMapImage(){
   if (mapImg) return mapImg;
@@ -2537,6 +2571,8 @@ function waterSpotId(x, z){
   if (inShrimpHall(x, z, 5)) return 'shrimp';
   if (Math.hypot(x - ISLE.x, z - ISLE.z) < 55) return 'isle';
   if (Math.hypot(x - FROST.x, z - FROST.z) < 50) return frostHole(x, z, 1) ? 'icelake' : 'icesea';
+  if (Math.hypot(x - ABYSS.x, z - ABYSS.z) < 40) return 'abyss';
+  if (Math.hypot(x - MYST.x, z - MYST.z) < 45) return 'mystic';
   const i = terrainInfo(x, z);
   if (!i.region && inMang(x, z)) return 'mangrove';
   if (!i.region && inReef(x, z)) return inWeir(x, z) ? 'weir' : 'reef';   /* 溪的出海口還是溪 */
@@ -3174,6 +3210,55 @@ function buildFrost(){
   { const N = 500, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ pos[i * 3] = (rr() - 0.5) * 40; pos[i * 3 + 1] = rr() * 14; pos[i * 3 + 2] = (rr() - 0.5) * 40; }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const p = new THREE.Points(geo, new THREE.PointsMaterial({ color:'#ffffff', size:0.09, transparent:true, opacity:0.9, depthWrite:false })); p.frustumCulled = false; scene.add(p); Frost.snow = p; }
   g.traverse(o => { if (o.isMesh){ o.castShadow = false; } });
+}
+// ---- 深海浮台、遠洋神秘島的樣子（走近才蓋）----
+const Far = { abyss:false, myst:false, jelly:null, glows:[] };
+function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group(); g.position.set(A.x, 0, A.z); scene.add(g);
+  addDeck(A.x, A.z, A.w, A.d, A.y); g.add(box([A.w, 0.3, A.d], '#5a6470', [0, A.y - 0.15, 0])); g.add(box([A.w - 0.3, 0.04, A.d - 0.3], '#8a7a62', [0, A.y + 0.01, 0]));
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]){ const fl = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 12), mat('#e8a040', 0.6)); fl.position.set(sx * (A.w / 2 - 0.8), 0, sz * (A.d / 2 - 0.8)); g.add(fl); }
+  for (let i = 0; i <= 12; i++){ const x = -A.w / 2 + i * A.w / 12; for (const z of [-A.d / 2, A.d / 2]) if (!(z > 0 && Math.abs(x) < 1.2)) g.add(box([0.06, 0.9, 0.06], '#c8ccd0', [x, A.y + 0.45, z])); }
+  for (const z of [-A.d / 2, A.d / 2]){ g.add(box([A.w, 0.06, 0.06], '#c8ccd0', [0, A.y + 0.9, z])); } for (const x of [-A.w / 2, A.w / 2]) g.add(box([0.06, 0.06, A.d], '#c8ccd0', [x, A.y + 0.9, 0]));
+  addBoxCol(A.x, A.z - A.d / 2 - 0.1, A.w, 0.2); addBoxCol(A.x - A.w / 2 - 0.1, A.z, 0.2, A.d); addBoxCol(A.x + A.w / 2 + 0.1, A.z, 0.2, A.d);
+  // 小小的觀測站、吊臂、燈
+  g.add(box([3, 2.4, 2.2], '#e8ecf0', [-3.6, A.y + 1.2, 1.8])); g.add(box([3.2, 0.2, 2.4], '#2f5a8a', [-3.6, A.y + 2.5, 1.8])); g.add(box([0.8, 1.6, 0.05], '#2f5a8a', [-3.6, A.y + 0.8, 0.68])); addBoxCol(A.x - 3.6, A.z + 1.8, 3, 2.2);
+  { const arm = new THREE.Group(); arm.position.set(4.2, A.y, 2.4); g.add(arm); arm.add(box([0.3, 3.2, 0.3], '#e8a040', [0, 1.6, 0])); const jib = box([0.2, 0.2, 3.2], '#e8a040', [0, 3.1, -1.4]); arm.add(jib); arm.add(box([0.03, 2.4, 0.03], '#333', [0, 1.9, -2.9])); addCircleCol(A.x + 4.2, A.z + 2.4, 0.35); }
+  for (const [x, z] of [[-5.6, -3.6], [5.6, -3.6], [5.6, 3.6]]){ g.add(box([0.1, 2.2, 0.1], '#7a8088', [x, A.y + 1.1, z])); const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color:'#ffe9a8' })); b.position.set(x, A.y + 2.25, z); g.add(b); Far.glows.push(b); }
+  // 很深的海：浮台底下一大片深藍色，裡面有發光的水母慢慢飄
+  { const deep = new THREE.Mesh(new THREE.CircleGeometry(60, 40), new THREE.MeshBasicMaterial({ color:'#06182e', transparent:true, opacity:0.55, depthWrite:false })); deep.rotation.x = -Math.PI / 2; deep.position.set(0, WATER_LEVEL - 0.25, 0); g.add(deep);
+    const N = 70, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const a = Math.random() * 6.28, r = 6 + Math.random() * 40; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = -0.6 - Math.random() * 1.5; pos[i * 3 + 2] = Math.sin(a) * r; }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color:'#7ef0ff', size:0.35, transparent:true, opacity:0.75, depthWrite:false })); g.add(pts); Far.jelly = pts; }
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#1d3a6a'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#e8f4fb'; c.font = 'bold 64px sans-serif'; c.textAlign = 'center'; c.fillText('🌌 深海浮台', 256, 88); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(-3.6, A.y + 3.1, 0.66); g.add(sp); }
+  g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
+function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.position.set(M.x, 0, M.z); scene.add(g); const R = M.r; let sd = 23; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  // 黑色火山岩的島：中間隆起一座小火山
+  { const base = new THREE.Mesh(new THREE.CylinderGeometry(R + 2.2, R + 3.6, 0.9, 48), mat('#3a3634', 0.95)); base.position.y = M.y - 0.7; g.add(base);
+    const pg = new THREE.CircleGeometry(R, 48, 0, Math.PI * 2); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position; for (let i = 0; i < p.count; i++){ const x = p.getX(i), z = p.getZ(i); p.setY(i, (mystH(M.x + x, M.z + z) || M.y)); } pg.computeVertexNormals();
+    const top = new THREE.Mesh(pg, mat('#6a6258', 0.95)); g.add(top);
+    const crater = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2.4, 0.6, 16, 1, true), mat('#2a2624', 0.95, { side: THREE.DoubleSide })); crater.position.y = M.y + 2.3; g.add(crater); addCircleCol(M.x, M.z, R * 0.32);
+    const sm = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 8), new THREE.MeshBasicMaterial({ color:'#d8d4cc', transparent:true, opacity:0.35, depthWrite:false })); sm.position.y = M.y + 3.6; g.add(sm); Far.smoke = sm; }
+  // 沙灘（南邊上岸的地方）、仙人掌、火山岩塊
+  { const sand = new THREE.Mesh(new THREE.CircleGeometry(5, 24, Math.PI * 1.15, Math.PI * 0.7), mat('#d8c8a0', 0.95)); sand.rotation.x = -Math.PI / 2; sand.position.set(0, M.y + 0.01, 0); sand.scale.set(2.6, 2.6, 1); g.add(sand); }
+  for (let i = 0; i < 14; i++){ const a = rr() * 6.28, r = R * (0.45 + rr() * 0.42), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.4 && Math.abs(x) < 6) continue; const cg = new THREE.Group(), cm = mat('#4f8a4a', 0.8), h = 1.2 + rr() * 1.4;
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, h, 8), cm); tr.position.y = h / 2; cg.add(tr); for (const sx of [-1, 1]) if (rr() < 0.8){ const ar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.7, 8), cm); ar.position.set(sx * 0.36, h * 0.55, 0); cg.add(ar); const el2 = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.5, 8), cm); el2.rotation.z = Math.PI / 2; el2.position.set(sx * 0.2, h * 0.38, 0); cg.add(el2); }
+    cg.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); g.add(cg); addCircleCol(M.x + x, M.z + z, 0.4); }
+  for (let i = 0; i < 22; i++){ const a = rr() * 6.28, r = R * (0.8 + rr() * 0.3), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 5) continue; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + rr() * 0.9, 0), mat('#2e2a28', 0.95, { flatShading:true })); rk.position.set(x, (mystH(M.x + x, M.z + z) || M.y) - 0.1, z); rk.rotation.set(rr(), rr() * 6, rr()); g.add(rk); }
+  // 海獅（躺在岩石上）、海鬣蜥、大象龜
+  for (const [x, z, ry] of [[9, 6, 0.6], [-8, 9, 2.2], [11, -2, -0.4]]){ const sl = new THREE.Group(), m2 = mat('#7a5a40', 0.6); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 4, 10), m2); b.rotation.z = Math.PI / 2; b.position.y = 0.34; sl.add(b); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), m2); hd.position.set(0.7, 0.62, 0); sl.add(hd);
+    for (const ez of [-0.09, 0.09]) sl.add(box([0.05, 0.05, 0.05], '#111', [0.9, 0.68, ez])); sl.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); sl.rotation.y = ry; g.add(sl); addCircleCol(M.x + x, M.z + z, 0.6); }
+  for (const [x, z, ry] of [[-4, -9, 0.3], [5, -10, 2.8], [-11, 2, 1.2]]){ const ig = new THREE.Group(), m3 = mat('#3a3a36', 0.7); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), m3); b.rotation.z = Math.PI / 2; b.position.y = 0.12; ig.add(b);
+    const tl = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.8, 6), m3); tl.rotation.z = Math.PI / 2; tl.position.set(-0.65, 0.1, 0); ig.add(tl); for (let k = 0; k < 6; k++) ig.add(box([0.03, 0.07, 0.03], '#8a3a30', [-0.25 + k * 0.1, 0.25, 0])); ig.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); ig.rotation.y = ry; g.add(ig); }
+  { const tt = new THREE.Group(), sh = new THREE.Mesh(new THREE.SphereGeometry(0.9, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('#5a5040', 0.8)); sh.scale.set(1.2, 0.8, 1); sh.position.y = 0.35; tt.add(sh); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat('#6a6050', 0.8)); hd.position.set(1.2, 0.45, 0); tt.add(hd);
+    tt.position.set(-3, mystH(M.x - 3, M.z + 4) || M.y, 4); tt.rotation.y = 0.8; g.add(tt); addCircleCol(M.x - 3, M.z + 4, 1.1); Far.tortoise = tt; }
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#3a6a5a'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#f4f0e0'; c.font = 'bold 60px sans-serif'; c.textAlign = 'center'; c.fillText('🌋 遠洋神秘島', 256, 86); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(3, M.y + 2.4, -10); sp.rotation.y = Math.PI; g.add(sp); for (const sx of [-1.4, 1.4]) g.add(box([0.14, 2.6, 0.14], '#5a4030', [3 + sx, M.y + 1.3, -10])); addCircleCol(M.x + 1.6, M.z - 10, 0.2); addCircleCol(M.x + 4.4, M.z - 10, 0.2); }
+  g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
+function updateFar(dt, t){
+  if (!Far.abyss && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 90) buildAbyss();
+  if (!Far.myst && Math.hypot(me.pos.x - MYST.x, me.pos.z - MYST.z) < 90) buildMyst();
+  if (Far.jelly && frameNo % 3 === 0 && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 70){ Far.jelly.position.y = Math.sin(t * 0.5) * 0.25; Far.jelly.material.opacity = 0.55 + Math.sin(t * 1.3) * 0.2; }
+  if (Far.smoke){ Far.smoke.position.y = MYST.y + 3.6 + (t * 0.3 % 2); Far.smoke.material.opacity = 0.35 * (1 - (t * 0.3 % 2) / 2); }
+  if (Far.tortoise && frameNo % 2 === 0) Far.tortoise.rotation.y = 0.8 + Math.sin(t * 0.1) * 0.6;
 }
 function updateFrost(dt, t){
   const d = Math.hypot(me.pos.x - FROST.x, me.pos.z - FROST.z); if (!Frost.built){ if (d < 90) buildFrost(); else return; }
@@ -5086,7 +5171,7 @@ function renderFerry(body){
     tb.append(cb, el('span', '', '👥 組隊出海：邀請大廳裡的人一起去（祕密窩點不會邀請，別人不會知道）')); body.appendChild(tb);
     body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。')); }
   { body.appendChild(el('div', 'dexhead', '⛴️ 海上的好地方')); const ul = el('ul', 'shoplist');
-    for (const [id, ic, nm, ds] of [['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。冰湖用手竿、海岸用遠投竿最好']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
+    for (const [id, ic, nm, ds] of [['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); travelTo(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
@@ -5167,7 +5252,7 @@ const Intel = { seenW: -1 };
 function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
 // 外海潛水偶爾遠遠看到一道紅色影子：赤紅霸王鯊還在（海裡沒有了就不會出現）
 function offshoreDiveFish(){ const l = offshoreFish(); if (RS.n > 0 && Math.random() < 0.15) l.push('shark_red'); return l; }
-function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice/.test(f.spot) && !f.rs); }   /* 紅鯊不會在一般潛點出現 */
+function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice|^abyss|^mystic/.test(f.spot) && !f.rs); }   /* 紅鯊不會在一般潛點出現 */
 // 把很多小東西合併成少數幾個網格（手機比較順）
 function diveMerger(){
   const parts = new Map(), tmp = new THREE.Object3D();
@@ -5839,7 +5924,7 @@ const CHUMS = [
   { id:'chum_gold',  name:'黃金特製窩', price:500, pack:2, color:'#ffd36a', wait:0.45, rare:1.5,  legend:1.8, dur:180,              desc:'釣具店老闆的祕方，什麼水域都有效，連傳說魚都會被吸引過來。' },
 ];
 const CHUM_BY_ID = Object.fromEntries(CHUMS.map(c => [c.id, c]));
-const SEA_SPOTS = new Set(['sea', 'harbor', 'isle', 'mangrove', 'mudflat', 'reef', 'weir', 'icesea']);
+const SEA_SPOTS = new Set(['sea', 'harbor', 'isle', 'mangrove', 'mudflat', 'reef', 'weir', 'icesea', 'abyss', 'mystic']);
 const chumZones = []; let chumTex = null;
 function chumTexture(){
   if (chumTex) return chumTex; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'), g = c.createRadialGradient(64, 64, 4, 64, 64, 64);
@@ -5994,7 +6079,7 @@ const RODS = [
   { id:'iso_pro', type:'iso', name:'黑鯛磯釣竿', price:4500, color:'#5a1e1e', desc:'釣黑鯛高手用的磯釣竿，竿身很韌，稀有魚機率 ×1.4。', tension:0.7, reel:1.2, rare:1.4, legend:1.2 },
 ];
 // 竿種：甩竿哪裡都可以；手竿、遠投竿、磯釣竿在對的釣點比較好用（伺服器 fair_fishing.sql.tpl 也一樣算）
-const ROD_TYPES = { cast:{ name:'甩竿', icon:'🎣', fit:null }, pole:{ name:'手竿', icon:'🎋', fit:['river', 'lake', 'pool', 'creek', 'canal', 'weir', 'icelake'] }, surf:{ name:'遠投竿', icon:'🏖️', fit:['sea', 'icesea'] }, iso:{ name:'磯釣竿', icon:'🪨', fit:['harbor', 'isle', 'reef'] } };
+const ROD_TYPES = { cast:{ name:'甩竿', icon:'🎣', fit:null }, pole:{ name:'手竿', icon:'🎋', fit:['river', 'lake', 'pool', 'creek', 'canal', 'weir', 'icelake'] }, surf:{ name:'遠投竿', icon:'🏖️', fit:['sea', 'icesea', 'abyss'] }, iso:{ name:'磯釣竿', icon:'🪨', fit:['harbor', 'isle', 'reef'] } };
 const ROD_FIT = { good:{ rare:1.15, bite:0.85 }, bad:{ rare:0.85, bite:1.2 } };
 function rodType(r){ return (r && r.type) || 'cast'; }
 // ---- 公母和繁殖（037）----
@@ -8535,7 +8620,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
