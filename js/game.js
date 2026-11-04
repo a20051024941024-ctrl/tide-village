@@ -422,6 +422,7 @@ const WATER_LEVEL = 0.11;
 const MAP_HALF = 75;                       // 地形網格與水面遮罩涵蓋 -75..75
 function wobble(a, b){ return Math.sin(a * 0.37 + b) * 0.6 + Math.sin(a * 0.83 + b * 2.3) * 0.3 + Math.sin(a * 0.17 + b * 0.7) * 0.4; }
 function smooth01(t){ t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
+function lerp(a, b, k){ return a + (b - a) * k; }
 // 島的輪廓（極座標）：西北海灣（河口）、北邊燈塔岬角、東北港灣
 function islandR(t){
   let r = 47 + (Math.sin(3 * t + 1.1) * 0.6 + Math.sin(7 * t + 2.3) * 0.3 + Math.sin(5 * t + 0.7) * 0.4 + Math.sin(11 * t + 0.2) * 0.2) * 3.2;   // 週期性，接縫不會斷開
@@ -1282,6 +1283,8 @@ function avGeo(){
   G.torso = new THREE.CapsuleGeometry(0.25, 0.22, 6, 16);
   G.belt = new THREE.CylinderGeometry(0.262, 0.262, 0.07, 18);
   G.leg = new THREE.CapsuleGeometry(0.09, 0.2, 4, 10);
+  G.thigh = new THREE.CapsuleGeometry(0.09, 0.12, 4, 10);
+  G.shin = new THREE.CapsuleGeometry(0.086, 0.07, 4, 10);
   G.shoe = new THREE.SphereGeometry(0.11, 12, 8);
   G.arm = new THREE.CapsuleGeometry(0.072, 0.24, 4, 10);
   G.hand = new THREE.SphereGeometry(0.075, 10, 8);
@@ -1297,7 +1300,11 @@ function makeAvatar(shirt, hat){
   const blushM = new THREE.MeshBasicMaterial({ color:'#ff9a8f', transparent:true, opacity:0.55, depthWrite:false });
   const add = (geo, m, x, y, z, parent, shadow) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (shadow !== false) o.castShadow = true; (parent || g).add(o); return o; };
   // 腳：圓圓的褲管＋鞋子
-  function leg(x){ const p = new THREE.Group(); p.position.set(x, 0.5, 0); g.add(p); p.userData.pants = add(G.leg, pants, 0, -0.2, 0, p); const sh = add(G.shoe, shoeM, 0, -0.43, 0.04, p); sh.scale.set(0.95, 0.6, 1.3); p.userData.shoe = sh; return p; }
+  /* 腿（2026-11-04 動畫改版）：髖關節（腿）→ 膝蓋（shin，離髖 0.22）→ 腳踝（foot，離髖 0.40）；外觀跟原本一樣，只是多了兩個可以彎的地方 */
+  function leg(x){ const p = new THREE.Group(); p.position.set(x, 0.5, 0); g.add(p); p.userData.pants = add(G.thigh, pants, 0, -0.1, 0, p);
+    const shin = new THREE.Group(); shin.position.y = -0.22; p.add(shin); p.userData.shin = shin; p.userData.pants2 = add(G.shin, pants, 0, -0.08, 0, shin);
+    const foot = new THREE.Group(); foot.position.y = -0.18; shin.add(foot); p.userData.foot = foot;
+    const sh = add(G.shoe, shoeM, 0, -0.03, 0.04, foot); sh.scale.set(0.95, 0.6, 1.3); p.userData.shoe = sh; return p; }
   const legL = leg(-0.12), legR = leg(0.12);
   // 身體
   const body = add(G.torso, shirtM, 0, 0.8, 0); body.scale.set(1, 1, 0.86);
@@ -1389,7 +1396,8 @@ function applyGear(av, gear){
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
   av.gearMeshes = []; av.gearAnim = null;
   const G = avGeo(), M = (c, r, ex) => mat(c, r == null ? 0.7 : r, ex);
-  const mk = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.g).add(o); av.gearMeshes.push(o); return o; };
+  const mk = (geo, m, x, y, z, parent) => { if (parent && parent.userData.foot && y < -0.395){ parent = parent.userData.foot; y += 0.40; } else if (parent && parent.userData.shin && y < -0.22){ parent = parent.userData.shin; y += 0.22; }   /* 膝蓋以下的東西跟著小腿、腳踝以下跟著腳 */
+    const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.g).add(o); av.gearMeshes.push(o); return o; };
   const hatC = av.hatM, ink = av.inkM, white = M('#ffffff', 0.6);
   if (av.hairM) applyLook(av, gear, mk);
   // ---- 帽子 ----
@@ -1435,7 +1443,7 @@ function applyGear(av, gear){
   av.pantsM.color.set(PANTS_COL[gear.pants] || PANTS_COL.pants_jeans);
   const shorts = gear.pants === 'pants_shorts' || gear.pants === 'pants_skirt';
   for (const L of [av.legL, av.legR]){
-    const pm = L.userData.pants; pm.scale.y = shorts ? 0.45 : 1; pm.position.y = shorts ? -0.1 : -0.2;
+    const pm = L.userData.pants; pm.scale.y = shorts ? 0.6 : 1; pm.position.y = shorts ? -0.06 : -0.1; if (L.userData.pants2) L.userData.pants2.visible = !shorts;
     if (shorts) mk(new THREE.CylinderGeometry(0.062, 0.058, 0.26, 10), av.skinM, 0, -0.29, 0, L);
     if (gear.pants === 'pants_rainbow') RAINBOW.forEach((c, i) => mk(new THREE.CylinderGeometry(0.094, 0.094, 0.05, 12), M(c, 0.7), 0, -0.06 - i * 0.055, 0, L));
   }
@@ -1444,7 +1452,7 @@ function applyGear(av, gear){
   // ---- 鞋子 ----
   av.shoeM.color.set(SHOE_COL[gear.shoes] || SHOE_COL.shoes_boots); av.shoeM.metalness = gear.shoes === 'shoes_gold' ? 0.7 : 0.04; av.shoeM.roughness = gear.shoes === 'shoes_gold' ? 0.25 : 0.7;
   for (const L of [av.legL, av.legR]){
-    const sh = L.userData.shoe; sh.scale.set(0.95, gear.shoes === 'shoes_sandals' ? 0.32 : 0.6, 1.3); sh.position.y = gear.shoes === 'shoes_sandals' ? -0.46 : -0.43;
+    const sh = L.userData.shoe; sh.scale.set(0.95, gear.shoes === 'shoes_sandals' ? 0.32 : 0.6, 1.3); sh.position.y = gear.shoes === 'shoes_sandals' ? -0.06 : -0.03;
     if (gear.shoes === 'shoes_rain') mk(new THREE.CylinderGeometry(0.1, 0.105, 0.2, 12), av.shoeM, 0, -0.33, 0.01, L);
     if (gear.shoes === 'shoes_sneakers'){ mk(new THREE.BoxGeometry(0.2, 0.03, 0.22), M('#e8473a', 0.6), 0, -0.45, 0.04, L); }
     if (gear.shoes === 'shoes_sandals'){ mk(new THREE.SphereGeometry(0.075, 10, 8), av.skinM, 0, -0.42, 0.06, L).scale.set(1, 0.6, 1.4); }
@@ -1831,6 +1839,21 @@ addSeaLife('beluga', 1.5, -46, -50, 6, 0.2, 'jump', 2.2);
 
 /* ================= FISHER ================= */
 const labelsEl = $('#labels');
+/* 走路動畫的「地面類型」：之後的海洋環境都從這裡調（st 步幅、kn 抬腳、bob 上下起伏、arm 手張開、lean 前傾）
+   ground 一般地面、sand 沙灘（步伐小一點、陷一點）、wade 淺水／泥灘（抬高腳、手張開保持平衡）、boat 船上（身體抵消搖晃）；游泳和潛水用 Fisher.swim */
+const GAIT_SURF = {
+  ground: { st:1, kn:1, bob:1, arm:0, lean:0 },
+  sand:   { st:0.86, kn:1.15, bob:1.3, arm:0.03, lean:0.02 },
+  wade:   { st:0.7, kn:1.9, bob:1.1, arm:0.32, lean:0.06 },
+  boat:   { st:0.8, kn:1.1, bob:0.6, arm:0.12, lean:0 },
+};
+function surfaceAt(x, z){
+  if (typeof Mang !== 'undefined' && Mang.onMud) return 'wade';
+  if (myBoat) return 'boat';
+  const e = islandEdge(x, z); if (e > -0.5 && e < 2.6) return 'sand';
+  if (Math.hypot((x - 40) / 1.0, (z + 6) / 1.6) < 9) return 'sand';
+  return 'ground';
+}
 class Fisher {
   constructor(opts){
     this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g);
@@ -1874,33 +1897,67 @@ class Fisher {
   }
   dispose(){ if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
   update(dt, t){
-    const a = this.av;
-    this.walk += dt * this.speed * 2.2;
-    const sw = Math.sin(this.walk) * Math.min(1, this.speed / 3) * 0.7;
-    a.legL.rotation.x = sw; a.legR.rotation.x = -sw;
-    if (this.sitting){ a.legL.rotation.x = a.legR.rotation.x = -1.45; }
-    else if (this.air > 0.05){ a.legL.rotation.x = -0.55; a.legR.rotation.x = 0.35; }
-    a.g.rotation.y = this.rot;
-    if (a.gearAnim) a.gearAnim(t, this.speed || 0);
-    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * (this.speed < 0.3 ? 1 : 0); }
+    const a = this.av; dt = Math.min(dt, 0.1);
+    // ===== 走路動畫（2026-11-04 改版）：Idle／Walk／Run／Sprint 依速度平滑混合；腳步照「實際走了多遠」前進，減少滑步 =====
+    if (this === me && (frameNo % 10 === 0)) this.surf = surfaceAt(this.pos.x, this.pos.z);
+    const S = GAIT_SURF[this.surf] || GAIT_SURF.ground;
+    const prevSp = this.aspd || 0; this.aspd = prevSp + ((this.speed || 0) - prevSp) * Math.min(1, dt * 8); const v = this.aspd;
+    const w = smooth01(v / 1.2), r = clamp((v - 4.4) / 1.6, 0, 1), sp = clamp((v - 6.4) / 1.0, 0, 1);
+    const Lc = (lerp(1.5, 2.35, r) + sp * 0.35) * lerp(0.62, 1, clamp(v / 3.2, 0, 1)) * S.st;   /* 走兩步的距離 */
+    if (w > 0.15) this.walk += v * dt / Lc * Math.PI * 2;
+    else { const tgt = Math.round(this.walk / Math.PI) * Math.PI, d = tgt - this.walk; this.walk += Math.sign(d) * Math.min(Math.abs(d), dt * 7); }   /* 停下來：把腳收回來站好 */
+    this.walk %= Math.PI * 4;
+    const ph = this.walk, sL = Math.sin(ph), cL = Math.cos(ph);
+    // 加速、減速時身體前後傾；轉彎時往內側傾
+    { const acc = (v - prevSp) / Math.max(dt, 1e-3); this.accL = (this.accL || 0) + (clamp(acc * 0.02, -0.12, 0.14) - (this.accL || 0)) * Math.min(1, dt * 6); }
+    { const pr = this.prevRot == null ? this.rot : this.prevRot; let dr = this.rot - pr; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); this.prevRot = this.rot;
+      this.bank = (this.bank || 0) + (clamp(-dr / Math.max(dt, 1e-3) * v * 0.012, -0.2, 0.2) - (this.bank || 0)) * Math.min(1, dt * 6); }
+    const A = lerp(0.42, 0.72, r) * w, K = lerp(0.65, 1.35, r) * w * S.kn;
+    const P = this.pose || (this.pose = { lL:0, lR:0, kL:0, kR:0, fL:0, fR:0, aL:0, aR:0, zL:-0.08, zR:0.08, tw:0, pit:0, rol:0, bob:0, hy:0, br:1 });
+    const T = { lL: sL * A, lR: -sL * A, kL: Math.max(0, -cL) * K, kR: Math.max(0, cL) * K, aL: -sL * lerp(0.55, 0.95, r) * w - r * 0.35, aR: sL * lerp(0.55, 0.95, r) * w - r * 0.35,
+      zL: -0.08 - (r * 0.12 + S.arm), zR: 0.08 + (r * 0.12 + S.arm), tw: sL * 0.09 * w, pit: (0.03 + 0.09 * r + 0.06 * sp + S.lean) * w + this.accL, rol: this.bank,
+      bob: (0.5 + 0.5 * Math.cos(ph * 2)) * lerp(0.035, 0.075, r) * w * S.bob, hy: 0, br: 1 };
+    T.fL = -(T.lL + T.kL) * 0.75 + Math.max(0, sL) * 0.35 * w; T.fR = -(T.lR + T.kR) * 0.75 + Math.max(0, -sL) * 0.35 * w;   /* 腳掌：著地時平貼地面、往後推時腳尖踮起來 */
+    // Idle：呼吸、手輕輕晃、偶爾左右看
+    const idle = 1 - w; if (idle > 0.01){ T.br = 1 + Math.sin(t * 2.1 + a.blinkAt) * 0.012 * idle; T.aL += Math.sin(t * 1.1 + a.blinkAt) * 0.04 * idle; T.aR -= Math.sin(t * 1.1 + a.blinkAt) * 0.04 * idle;
+      T.hy = Math.sin(t * 0.31 + a.blinkAt * 3) * Math.max(0, Math.sin(t * 0.13 + a.blinkAt)) * 0.45 * idle; }
+    T.hy += -T.tw * 0.8 - this.bank * 0.6;   /* 頭穩住、轉彎時先看過去 */
+    // 船上：身體反過來抵消搖晃（之後在船上站著時用）
+    if (this.surf === 'boat' && this.boatRoll != null) T.rol -= this.boatRoll * 0.6;
+    // ---- 特殊姿勢（目標姿勢，下面再平滑過去，不會瞬間跳動）----
+    if (this.sitting){ T.lL = T.lR = -1.45; T.kL = T.kR = 1.35; T.fL = T.fR = 0.1; T.pit = 0; T.bob = 0; T.tw = 0; T.rol = 0; }
+    else if (this.air > 0.05){ T.lL = -0.55; T.lR = 0.35; T.kL = 0.9; T.kR = 0.5; T.fL = 0.2; T.fR = 0.3; T.bob = 0; T.aL = T.aR = -0.6; T.zL = -0.35; T.zR = 0.35; }
+    else if (this === me && Jump.land > 0){ const k = Jump.land / 0.18; T.lL = T.lR = -0.35 * k; T.kL = T.kR = 0.75 * k; T.fL = T.fR = -0.4 * k; T.bob -= 0.08 * k; }   /* 落地：膝蓋微彎緩衝 */
     a.rod.visible = this.fishing;
     if (this.fishing){
       // 甩竿動畫：蓄力時把竿子往後舉到肩膀上（windup），放開時用力往前甩（castT），竿尖甩過頭再回來
       const CS = CAST_STYLE[this.rodType || 'cast'] || CAST_STYLE.cast; let pz = -(this.windup || 0) * CS.w;
       if (this.castT >= 0){ this.castT += dt; const k = this.castT / 0.5; if (k >= 1) this.castT = -1; else pz = k < 0.4 ? (-1 + (k / 0.4) * 2.25) * (k < 0.2 ? CS.w : CS.f) : (1.25 - ((k - 0.4) / 0.6) * 1.25) * CS.f; }
-      const back = Math.max(0, -pz), fwd = Math.max(0, pz); a.armR.rotation.z = CS.raise && back > 0 ? -back * CS.raise * 0.4 : 0;   /* 遠投：手舉高一點 */
-      a.armR.rotation.x = -1.0 - this.bend * 0.3 - back * 0.55 + fwd * 0.3; a.armL.rotation.x = -0.7 - this.bend * 0.2 - back * 0.4 + fwd * 0.2;   /* 手不要舉太高：主要是竿子往後倒 */
+      const back = Math.max(0, -pz), fwd = Math.max(0, pz); T.zR = CS.raise && back > 0 ? -back * CS.raise * 0.4 : 0;   /* 遠投：手舉高一點 */
+      T.aR = -1.0 - this.bend * 0.3 - back * 0.55 + fwd * 0.3; T.aL = -0.7 - this.bend * 0.2 - back * 0.4 + fwd * 0.2; T.zL = 0.08 * 0;   /* 手不要舉太高：主要是竿子往後倒 */
+      T.tw = -back * 0.12 + fwd * 0.08; T.pit += fwd * 0.06 - back * 0.03;
       a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.1 + fwd * 0.5;
-    } else { a.armL.rotation.x = -sw * 0.8; a.armR.rotation.x = sw * 0.8; }
+      this.castSnap = this.castT >= 0 || (this.windup || 0) > 0;
+    } else this.castSnap = false;
     if (this.held){
       const h = this.held;
       if (now() > h.until || this.fishing){ a.g.remove(h.o); this.held = null; }
-      else { a.armL.rotation.x = a.armR.rotation.x = -1.3; h.o.position.y = h.y + Math.sin(t * 4) * 0.04; h.o.rotation.z = Math.sin(t * 2.6) * 0.1; }
+      else { T.aL = T.aR = -1.3; T.zL = -0.05; T.zR = 0.05; h.o.position.y = h.y + Math.sin(t * 4) * 0.04; h.o.rotation.z = Math.sin(t * 2.6) * 0.1; }
     }
-    a.g.position.y = this.baseY + Math.abs(Math.sin(this.walk)) * Math.min(1, this.speed/3) * 0.06;
-    if (this.swim){ const mv = Math.min(1, this.speed / 2.5), want = this.swimPitch != null ? this.swimPitch : 0.3 + mv * 0.95; a.g.rotation.order = 'YXZ'; this.swimP = (this.swimP || 0) + (want - (this.swimP || 0)) * Math.min(1, dt * 4); a.g.rotation.x = this.swimP;
-      const kick = Math.sin(t * (4 + mv * 6)) * (0.2 + mv * 0.25); a.legL.rotation.x = kick; a.legR.rotation.x = -kick; a.armL.rotation.x = a.armR.rotation.x = -0.5 - mv * 2.2 + Math.sin(t * 2) * 0.1; a.rod.visible = false;
-      a.g.position.y = this.baseY + Math.sin(t * 1.6) * 0.05; }
+    if (this.swim){ const mv = Math.min(1, this.speed / 2.5), want = this.swimPitch != null ? this.swimPitch : 0.3 + mv * 0.95; this.swimP = (this.swimP || 0) + (want - (this.swimP || 0)) * Math.min(1, dt * 4);
+      const kick = Math.sin(t * (4 + mv * 6)) * (0.2 + mv * 0.25); T.lL = kick; T.lR = -kick; T.kL = 0.25 + Math.max(0, kick) * 0.6; T.kR = 0.25 + Math.max(0, -kick) * 0.6; T.fL = T.fR = 0.6;   /* 蛙鞋往後伸直 */
+      T.aL = T.aR = -0.5 - mv * 2.2 + Math.sin(t * 2) * 0.1; T.zL = -0.1; T.zR = 0.1; T.tw = 0; T.pit = this.swimP; T.rol = Math.sin(t * 1.3) * 0.05; T.bob = Math.sin(t * 1.6) * 0.05; T.hy = 0; a.rod.visible = false; }
+    // ---- 平滑套用：每個關節往目標姿勢靠過去（甩竿要很快，其他稍微柔一點）----
+    const kk = this.castSnap ? 1 : 1 - Math.exp(-dt * (this.swim ? 8 : 22));
+    for (const k in T) P[k] += (T[k] - P[k]) * kk;
+    a.legL.rotation.x = P.lL; a.legR.rotation.x = P.lR; a.legL.userData.shin.rotation.x = P.kL; a.legR.userData.shin.rotation.x = P.kR; a.legL.userData.foot.rotation.x = P.fL; a.legR.userData.foot.rotation.x = P.fR;
+    a.armL.rotation.x = P.aL; a.armR.rotation.x = P.aR; a.armL.rotation.z = P.zL; a.armR.rotation.z = P.zR;
+    { const c = Math.cos(P.tw), s2 = Math.sin(P.tw); a.body.rotation.y = P.tw; a.armL.position.set(-0.33 * c, 1.0, 0.33 * s2); a.armR.position.set(0.33 * c, 1.0, -0.33 * s2); }
+    a.body.scale.y = P.br;
+    a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = P.pit; a.g.rotation.z = P.rol;
+    a.g.position.y = this.baseY + P.bob;
+    if (a.gearAnim) a.gearAnim(t, this.speed || 0);
+    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
     const showBob = this.fishing && this.bobState !== 'none';
@@ -5703,7 +5760,7 @@ const DESIGN_SLOTS = [['top', '上衣'], ['pants', '褲子'], ['hat', '帽子'],
 function applyDesigns(av, gear){
   const t = designId(gear.top), p = designId(gear.pants), h = designId(gear.hat), sh = designId(gear.shoes), bk = designId(gear.back), ac = designId(gear.acc);
   av.body.material = (t && designMat(t)) || av.shirtM;
-  const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]) if (L.userData.pants) L.userData.pants.material = pm;
+  const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]){ if (L.userData.pants) L.userData.pants.material = pm; if (L.userData.pants2) L.userData.pants2.material = pm; }
   // 帽子：用草帽的形狀，整頂換成你的圖案
   for (const b of av.hatBase){ if (!b.userData.m0) b.userData.m0 = b.material; const hm = h && designMat(h); if (h) b.visible = true; b.material = hm && b !== av.hatBase[2] ? hm : b.userData.m0; }
   // 鞋子
