@@ -543,11 +543,11 @@ body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!impo
 
 /* 玩家島 2.0：建造列 */
 #isleBar{flex-wrap:wrap;max-width:min(560px,calc(100vw - 32px))}
-#buildBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb) + 128px);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 14px;font-size:14px;z-index:8;max-width:calc(100vw - 32px);flex-wrap:wrap;justify-content:center}
-#buildBar[hidden]{display:none}
-#buildBar .bb-hint{font-weight:700;color:var(--ink)}
-#buildBar .bb-hint.bad{color:#d8402f}
-@media (max-height:500px){ #buildBar{bottom:calc(var(--gb) + 8px);max-width:calc(100vw - 420px)} }
+#buildBar,#furnBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb) + 128px);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 14px;font-size:14px;z-index:8;max-width:calc(100vw - 32px);flex-wrap:wrap;justify-content:center}
+#buildBar[hidden],#furnBar[hidden]{display:none}
+#buildBar .bb-hint,#furnBar .bb-hint{font-weight:700;color:var(--ink)}
+#buildBar .bb-hint.bad,#furnBar .bb-hint.bad{color:#d8402f}
+@media (max-height:500px){ #buildBar,#furnBar{bottom:calc(var(--gb) + 8px);max-width:calc(100vw - 420px)} }
 
 /* 打窩 */
 #chumBtn{width:64px;height:64px;border-radius:50%;font-size:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;align-self:flex-end;margin-right:8px}
@@ -766,3 +766,4 @@ body.ui2.touch #chatForm{display:none}
 body.ui2.touch.chatting #chatForm{display:flex}
 body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
 .rank li.rk4{grid-template-columns:30px 56px 1fr auto}.rank li .rkfish{width:56px;height:36px}
+.chipline{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.chipline .chip{border:1px solid var(--line);background:#fff;cursor:pointer;font:inherit;font-size:13px;padding:5px 10px}.chipline .chip.on{background:var(--coral);color:#fff;border-color:var(--coral)}
