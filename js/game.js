@@ -5937,7 +5937,11 @@ async function breedTank(){
   for (const x of born){ const f = FISH_BY_ID[x.f]; if (!f) continue; if (f.of) ticker(`✨ 水族館生出了變種小魚 <b>${esc(f.name)}</b>！（${sexIcon(x)}，自動收藏）`); else ticker(`🐣 水族館裡的<b>${esc(fishNameOf(x))}</b>出生了！（${sexIcon(x)}${x.g && FISH_BY_ID[x.g] ? `・🧬 帶著${esc(FISH_BY_ID[x.g].name)}的基因` : ''}）`); }
   if (born.length && !$('#sheet').hidden && curTab === 'tank') renderTab();
 }
-function itemPrice(x){ const f = FISH_BY_ID[x.f]; return Math.round(fishPrice(f, x.w) * (x.y ? 0.25 : 1)); }   /* 水族館生的小魚只值四分之一 */
+// 公共魚市行情（063_economy.sql）：海邊商店收魚的價錢 × 行情（0.6～1.6 倍，跟伺服器同一份）
+var ECON = { m:{}, at:0, busy:false };
+async function loadEcon(){ if (ECON.busy || !Cloud.on || !Cloud.sb) return; ECON.busy = true; ECON.at = Date.now(); try { const { data } = await Cloud.sb.rpc('econ_prices'); if (data) ECON.m = data; } catch(e){} ECON.busy = false; if (!$('#sheet').hidden && curTab === 'shop' && shopMode === 'sell') renderTab(); }
+function econMult(id){ const e = Cloud.on && ECON.m[id]; return e ? +e.m || 1 : 1; }
+function itemPrice(x){ const f = FISH_BY_ID[x.f]; return Math.round(fishPrice(f, x.w) * (x.y ? 0.25 : 1) * econMult(x.f)); }   /* 水族館生的小魚只值四分之一 */
 function rodFit(spotId, r){ const T = ROD_TYPES[rodType(r || curRod())]; if (!T.fit || !spotId || spotId === 'shrimp' || spotId === 'mudflat') return null; return T.fit.includes(spotId) ? 'good' : 'bad'; }
 const BAITS = [
   { id:'worm', name:'蚯蚓',   price:20,  pack:10, desc:'最便宜的魚餌，稀有魚機率 ×1.25。', rare:1.25, legend:1 },
@@ -6345,6 +6349,9 @@ function renderShop(body){
     return;
   }
   if (shopMode === 'sell'){
+    if (Cloud.on && (!ECON.at || Date.now() - ECON.at > 5 * 60000)) loadEcon();
+    { const E = Object.entries(ECON.m || {}).filter(([id]) => FISH_BY_ID[id] && !FISH_BY_ID[id].of).sort((a, b) => b[1].m - a[1].m); if (Cloud.on && E.length){ const hi = E.filter(e => e[1].m >= 1.08).slice(0, 3), lo = E.filter(e => e[1].m <= 0.92).slice(-3);
+      const box = el('p', 'sub'); box.textContent = `📈 今日行情：${hi.length ? hi.map(([id, e]) => `${FISH_BY_ID[id].name} ×${(+e.m).toFixed(2)}`).join('、') + ' 比較缺貨，收得比較貴' : '大部分的魚價錢都正常'}${lo.length ? `；${lo.map(([id, e]) => `${FISH_BY_ID[id].name} ×${(+e.m).toFixed(2)}`).join('、')} 最近太多人賣，價錢比較低` : ''}。村民釣的魚也會賣給商店，食堂每小時會用掉一些。`; body.appendChild(box); } }
     const locked = new Set(rec.show || []);
     const favN = rec.tank.filter(x => x.k).length, list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
     body.appendChild(el('p', 'sub', `${favN ? `⭐ 收藏的 ${favN} 條不會出現在這裡，也不會被賣掉。` : '在魚缸分頁按 ☆ 可以收藏魚，收藏的魚不會被賣掉。'}魚缸裡的魚可以賣掉換金幣，越重越值錢。${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
