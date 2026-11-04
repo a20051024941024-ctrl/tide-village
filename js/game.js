@@ -3722,13 +3722,40 @@ function renderHomeTab(body){
   const rs = el('div', 'seg'); Object.entries(HOME_ROLES).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((mine.role || 'mate') === k)); b.addEventListener('click', () => homeRpc('set_home_title', { p_role: k, p_title: mine.title || null })); rs.appendChild(b); }); body.appendChild(rs);
   const ts = el('div', 'chipline'); for (const t of HOME_TITLES){ const b = el('button', 'chip' + (mine.title === t ? ' on' : ''), t); b.addEventListener('click', () => homeRpc('set_home_title', { p_role: mine.role || 'family', p_title: mine.title === t ? null : t })); ts.appendChild(b); }
   const cus = el('button', 'chip', '✏️ 自己取'); cus.addEventListener('click', () => { const v = prompt('稱呼（最多 6 個字）', mine.title || ''); if (v != null) homeRpc('set_home_title', { p_role: mine.role || 'family', p_title: clean(v).slice(0, 6) || null }); }); ts.appendChild(cus); body.appendChild(ts);
-  // 邀請好友
-  if (amOwner){ body.appendChild(el('div', 'dexhead', '📨 邀請好友搬進來')); const fl = (Fr.list || []).filter(f => f.mutual && !people.some(p => p.id === f.id));
+  renderIslePerms(body, meId);
+  // 邀請好友（島主、共同島主、管理成員都可以）
+  if (amOwner || IsleP.me === 'co' || IsleP.me === 'admin'){ body.appendChild(el('div', 'dexhead', '📨 邀請好友搬進來')); const fl = (Fr.list || []).filter(f => f.mutual && !people.some(p => p.id === f.id));
     if (people.length >= Home.cap) body.appendChild(el('div', 'empty', '家裡已經住滿了。'));
     else if (!fl.length) body.appendChild(el('div', 'empty', '要先在「玩家」分頁互相加好友，才能邀請他搬進來。'));
     else { const u2 = el('ul', 'shoplist'); for (const f of fl){ const sent = Home.sent.includes(f.id), li = el('li'); li.appendChild(el('span', 'dishic', '🙂')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name || '釣客')); d.appendChild(el('div', 'sub2', sent ? '已經寄出邀請，等他回覆' : '互相加好友')); li.appendChild(d);
         const a = el('div', 'tacts'), b = el('button', 'tbtn' + (sent ? ' ghost' : ''), sent ? '收回' : '邀請'); b.addEventListener('click', () => sent ? homeRpc('kick_home', { p_member: f.id }) : homeRpc('invite_home', { p_member: f.id }).then(d => d && toast(`📨 邀請寄給 ${esc(f.name || '朋友')} 了`))); a.appendChild(b); li.appendChild(a); u2.appendChild(li); }
       body.appendChild(u2); } }
+}
+// ---- 共同島嶼的權限、公共儲物箱（062_isle_roles.sql）----
+var IsleP = { me:null, people:[], store:null, at:0, busy:false };
+const PERM_NAME = { owner:'👑 創建者', co:'🤝 共同島主', admin:'🛠️ 管理成員', member:'🙂 一般成員' }, PERM_RANK = { owner:4, co:3, admin:2, member:1 };
+async function loadIsleP(){ if (IsleP.busy || !Cloud.on) return; IsleP.busy = true; IsleP.at = Date.now();
+  try { const [a, b] = await Promise.all([Cloud.sb.rpc('isle_people'), Cloud.sb.rpc('isle_storage')]); if (a.data){ IsleP.me = a.data.me; IsleP.people = a.data.people || []; } IsleP.store = b.data || []; } catch(e){}
+  IsleP.busy = false; if (!$('#sheet').hidden && curTab === 'island') renderTab(); }
+async function isleCall(fn, args, msg){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; if (data && data.tank) { adoptRow(data); buildTank(); } if (msg) flash(msg, 1.4); } catch(e){ toast(cloudErrMsg(e)); } IsleP.at = 0; Home.at = 0; loadIsleP(); }
+function renderIslePerms(body, meId){
+  if (!IsleP.at || Date.now() - IsleP.at > 20000) loadIsleP();
+  const my = PERM_RANK[IsleP.me] || 0;
+  body.appendChild(el('div', 'dexhead', '🔑 成員權限')); body.appendChild(el('p', 'sub', '創建者什麼都能做；共同島主可以蓋、拆、邀請、請人搬走、設定管理成員；管理成員可以蓋、拆、邀請、請一般成員搬走、拿儲物箱的魚；一般成員可以一起蓋、擺家具、放魚進儲物箱，只能拿回自己放的。別人來參觀是訪客，只能看。'));
+  const ul = el('ul', 'shoplist'); for (const p of IsleP.people){ const isMe = p.id === meId, li = el('li', isMe ? 'on' : ''); li.appendChild(el('span', 'dishic', (PERM_NAME[p.perm] || '🙂').split(' ')[0]));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', (p.name || '釣客') + (isMe ? '（你）' : ''))); d.appendChild(el('div', 'sub2', (PERM_NAME[p.perm] || '').split(' ')[1] || '')); li.appendChild(d);
+    const a = el('div', 'tacts'), th = PERM_RANK[p.perm] || 0;
+    if (!isMe && th < 4 && (my === 4 || (my === 3 && th < 3))){ for (const k of my === 4 ? ['co', 'admin', 'member'] : ['admin', 'member']){ if (k === p.perm) continue; const b = el('button', 'tbtn ghost vbtn', (PERM_NAME[k] || '').split(' ')[1]); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_set_perm', { p_member: p.id, p_perm: k }, '🔑 權限改好了'); }); a.appendChild(b); } }
+    if (!isMe && my >= 2 && my > th){ const k = el('button', 'tbtn ghost vbtn', '請他搬走'); k.addEventListener('click', () => { if (k.dataset.sure !== '1'){ k.dataset.sure = '1'; k.textContent = '確定？'; return; } k.disabled = true; isleCall('kick_home', { p_member: p.id }, '已經請他搬走了'); }); a.appendChild(k); }
+    li.appendChild(a); ul.appendChild(li); }
+  body.appendChild(ul);
+  // 公共儲物箱
+  body.appendChild(el('div', 'dexhead', `📦 公共儲物箱（${(IsleP.store || []).length} / 60）`)); body.appendChild(el('p', 'sub', '島上大家共用，跟自己的魚缸分開。放進去的魚誰都看得到，誰放的、誰拿的都有紀錄。'));
+  const S = IsleP.store || []; if (S.length){ const u2 = el('ul', 'shoplist cols'); for (const x of S){ const f = FISH_BY_ID[x.item.f], li = el('li'); li.appendChild(el('span', 'dishic', '🐟')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f ? f.name : x.item.f} ${fmtKg(+x.item.w)}`)); d.appendChild(el('div', 'sub2', `${x.by} 放的`)); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn ghost vbtn', '拿出來'); b.disabled = !(my >= 2 || x.mine); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_withdraw', { p_id: x.id }, '🐟 放回你的魚缸了'); }); a.appendChild(b); li.appendChild(a); u2.appendChild(li); } body.appendChild(u2); }
+  else body.appendChild(el('div', 'empty', '儲物箱是空的。'));
+  if (IsleP.me){ const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.rs && !(rec.show || []).includes(x.t)).slice(0, 30); if (cand.length){ const sel = el('select'); sel.style.cssText = 'font-size:14px;padding:6px;border-radius:10px;max-width:220px'; for (const x of cand){ const o = el('option', '', `${FISH_BY_ID[x.f].name} ${fmtKg(x.w)}`); o.value = x.t; sel.appendChild(o); }
+    const bar = el('div', 'tankbar'), b = el('button', 'tbtn', '放進儲物箱'); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_deposit', { p_t: +sel.value }, '📦 放進公共儲物箱了'); }); bar.append(sel, b); body.appendChild(bar); } }
 }
 // ===== 紅樹林（本島東岸、螢光溪出海口；2026-11-04）=====
 // 四座小島接在岸邊、用木棧道連起來，東邊有一條碼頭。退潮時島邊的泥灘會露出來，可以走下去慢慢靠近、徒手抓彈塗魚和招潮蟹。
