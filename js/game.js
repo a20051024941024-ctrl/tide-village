@@ -1272,7 +1272,10 @@ function avGeo(){
   G.head = new THREE.SphereGeometry(0.33, 22, 16);
   G.hair = new THREE.SphereGeometry(0.348, 22, 14, 0, Math.PI * 2, 0, Math.PI * 0.56);
   G.ear = new THREE.SphereGeometry(0.065, 10, 8);
-  G.eye = new THREE.SphereGeometry(0.046, 10, 8);
+  G.eye = new THREE.SphereGeometry(0.056, 14, 10);
+  G.pupil = new THREE.SphereGeometry(0.03, 10, 8);
+  G.lash = new THREE.TorusGeometry(0.056, 0.008, 4, 14, Math.PI);
+  G.brow = new THREE.CapsuleGeometry(0.012, 0.06, 3, 6);
   G.shine = new THREE.SphereGeometry(0.015, 6, 4);
   G.blush = new THREE.CircleGeometry(0.055, 14);
   G.smile = new THREE.TorusGeometry(0.045, 0.011, 5, 12, Math.PI);
@@ -1304,10 +1307,14 @@ function makeAvatar(shirt, hat){
   const head = add(G.head, skin, 0, 0, 0, headG); head.scale.set(1, 0.94, 0.96);
   const hair = add(G.hair, hairM, 0, 0.01, -0.02, headG); hair.rotation.x = -0.42;
   for (const sx of [-1, 1]) add(G.ear, skin, sx * 0.315, -0.02, -0.01, headG);
-  const eyes = [], shines = [];
+  /* 眼睛（2026-11-04 角色改版）：大大的彩色眼珠＋黑色瞳孔＋兩顆反光＋上眼線，眨眼時整組一起壓扁；眉毛跟頭髮同色 */
+  const eyes = [], shines = [], eyeM = mat('#3a2a20', 0.35), brows = [];
   for (const sx of [-1, 1]){
-    const e = add(G.eye, ink, sx * 0.115, 0.0, 0.29, headG, false); e.scale.set(0.8, 1.15, 0.5); eyes.push(e);
-    shines.push(add(G.shine, white, sx * 0.115 + 0.015, 0.025, 0.315, headG, false));
+    const e = new THREE.Group(); e.position.set(sx * 0.115, 0.0, 0.285); e.scale.set(0.82, 1.15, 0.5); headG.add(e); eyes.push(e);
+    add(G.eye, eyeM, 0, 0, 0, e, false); add(G.pupil, ink, 0, -0.008, 0.035, e, false);
+    shines.push(add(G.shine, white, sx * 0.016 + 0.006, 0.022, 0.058, e, false)); { const s2 = add(G.shine, white, -sx * 0.012, -0.026, 0.056, e, false); s2.scale.setScalar(0.6); }
+    const ls = add(G.lash, ink, 0, 0.004, 0.02, e, false); ls.scale.set(1.12, 1.05, 1);
+    const br = add(G.brow, hairM, sx * 0.118, 0.098, 0.296, headG, false); br.rotation.z = Math.PI / 2 + sx * 0.12; brows.push(br);
     const bl = add(G.blush, blushM, sx * 0.19, -0.085, 0.262, headG, false); bl.rotation.y = sx * 0.62;
   }
   const smile = add(G.smile, ink, 0, -0.1, 0.305, headG, false); smile.rotation.z = Math.PI; smile.scale.set(1, 0.8, 1);
@@ -1326,11 +1333,36 @@ function makeAvatar(shirt, hat){
   const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), mat('#c9d6e3', 0.3, { metalness:0.6 })); reel.rotation.z = Math.PI/2; reel.position.set(0.06, 0.25, 0);
   const tip = new THREE.Object3D(); tip.position.y = 2.3;
   rod.add(pole, grip, reel, tip); rod.rotation.x = 0.95; rod.visible = false; g.add(rod);
-  return { g, legL, legR, armL, armR, rod, tip, pole, reel, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
+  return { g, legL, legR, armL, armR, rod, tip, pole, reel, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, hairM, eyeM, hair, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
 }
 /* ================= WARDROBE：服裝（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）================= */
 // 價格要跟 supabase/008_wardrobe.sql 的 _item_price 一樣；價格 0 的是預設，大家都有
-const GEAR_SLOTS = [['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
+/* ---- 外觀（2026-11-04）：髮型、髮色、膚色、眼睛顏色，全部免費，存在 gear.look，例如 'h3c2s1e0' ---- */
+const LOOK_HAIR = ['短髮', '齊瀏海', '刺刺頭', '鮑伯頭', '長髮', '馬尾', '雙馬尾', '丸子頭', '捲髮', '飛機頭'];
+const LOOK_HC = ['#2a2422', '#5a3d2b', '#8a5a3a', '#d8a850', '#f0d890', '#c0482a', '#f2a0c0', '#4a7ad0', '#4aa070', '#8a6ad0', '#ecebe6'];
+const LOOK_SKIN = ['#ffe6d2', '#ffd9b8', '#f2c49a', '#d9a070', '#a8704a', '#74492f'];
+const LOOK_EYE = ['#3a2a20', '#7a4a28', '#2f6fb5', '#3a8a5a', '#8a5ac0', '#c0402a', '#3aa0b0'];
+const LOOK_DEFAULT = 'h0c1s1e0';
+function lookParse(v){ const m = /^h(\d{1,2})c(\d{1,2})s(\d)e(\d)$/.exec(v || ''); const r = m ? { h:+m[1], c:+m[2], s:+m[3], e:+m[4] } : { h:0, c:1, s:1, e:0 }; r.h = r.h < LOOK_HAIR.length ? r.h : 0; r.c = r.c < LOOK_HC.length ? r.c : 1; r.s = r.s < LOOK_SKIN.length ? r.s : 1; r.e = r.e < LOOK_EYE.length ? r.e : 0; return r; }
+function lookStr(L){ return `h${L.h}c${L.c}s${L.s}e${L.e}`; }
+function applyLook(av, gear, mk){
+  const L = lookParse(gear.look), HD = av.headG, hm = av.hairM, hatOn = gear.hat !== 'hat_none';
+  av.skinM.color.set(LOOK_SKIN[L.s]); hm.color.set(LOOK_HC[L.c]); if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
+  const sph = (r, x, y, z, sx, sy, sz) => { const o = mk(new THREE.SphereGeometry(r, 14, 10), hm, x, y, z, HD); o.scale.set(sx || 1, sy || 1, sz || 1); return o; };
+  const shell = (rt, rb, h, y, gap) => { const o = mk(new THREE.CylinderGeometry(rt, rb, h, 22, 1, true, gap, Math.PI * 2 - gap * 2), hm, 0, y, -0.01, HD); o.material = hm.clone(); o.material.side = THREE.DoubleSide; return o; };
+  switch (L.h){
+    case 1: { const f = mk(new THREE.SphereGeometry(0.352, 20, 6, -1.05, 2.1, Math.PI * 0.28, Math.PI * 0.145), hm, 0, 0.0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; break; }   /* 齊瀏海 */
+    case 2: if (!hatOn) for (let i = 0; i < 7; i++){ const a = i / 7 * Math.PI * 2, c = mk(new THREE.ConeGeometry(0.075, 0.2, 6), hm, Math.cos(a) * 0.17, 0.3, Math.sin(a) * 0.17 - 0.03, HD); c.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); } if (!hatOn) mk(new THREE.ConeGeometry(0.08, 0.22, 6), hm, 0, 0.37, -0.02, HD); break;
+    case 3: shell(0.352, 0.37, 0.3, -0.06, 0.95); break;   /* 鮑伯頭：到下巴 */
+    case 4: shell(0.352, 0.34, 0.62, -0.2, 1.05); { const b = sph(0.2, 0, -0.38, -0.2, 1.4, 0.9, 0.6); } break;   /* 長髮：到肩膀 */
+    case 5: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, 0.12, -0.34, HD); bd.rotation.x = 0.4; const t = mk(new THREE.CapsuleGeometry(0.075, 0.28, 4, 10), hm, 0, -0.08, -0.42, HD); t.rotation.x = -0.35; sph(0.08, 0, 0.12, -0.35); break; }   /* 馬尾 */
+    case 6: for (const sx of [-1, 1]){ sph(0.07, sx * 0.3, 0.12, -0.06); const t = mk(new THREE.CapsuleGeometry(0.065, 0.26, 4, 10), hm, sx * 0.39, -0.08, -0.08, HD); t.rotation.z = sx * 0.25; } break;   /* 雙馬尾 */
+    case 7: if (!hatOn) sph(0.13, 0, 0.36, -0.08); else sph(0.11, 0, 0.12, -0.36); break;   /* 丸子頭（戴帽子時改成在後腦勺） */
+    case 8: for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, y = 0.05 + (i % 2) * 0.12; sph(0.085, Math.cos(a) * 0.31, y, Math.sin(a) * 0.31 - 0.02); } break;   /* 捲髮 */
+    case 9: if (!hatOn) sph(0.16, 0, 0.27, 0.12, 1.3, 0.75, 1.4); break;   /* 飛機頭 */
+  }
+}
+const GEAR_SLOTS = [['look','外觀'],['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
 const GEAR = [
   ['hat_sun','草帽',0,'👒'],['hat_none','不戴帽子',0,'🙂'],['hat_cap','棒球帽',250,'🧢'],['hat_beanie','毛線帽',300,'🧶'],['hat_bucket','漁夫帽',350,'🎣'],['hat_cat','貓耳朵',600,'🐱'],['hat_chef','廚師帽',800,'👨‍🍳'],['hat_flower','花環',500,'🌼'],['hat_pirate','海盜帽',1500,'🏴‍☠️'],['hat_crown','皇冠',5000,'👑'],
   ['top_tee','素 T',0,'👕'],['top_stripe','水手條紋衫',300,'⚓'],['top_apron','食堂圍裙',400,'🍳'],['top_vest','救生衣',500,'🦺'],['top_hoodie','連帽外套',700,'🧥'],['top_hawaii','夏威夷衫',800,'🌺'],['top_suit','帥氣西裝',2500,'🤵'],
@@ -1345,8 +1377,8 @@ const GEAR = [
 ].map(([id, name, price, icon, love]) => ({ id, slot: id.split('_')[0], name, price, icon, love: love || 0 }));
 function paidGear(it){ return !!it && (it.price > 0 || it.love > 0); }
 const GEAR_BY_ID = Object.fromEntries(GEAR.map(g => [g.id, g]));
-const GEAR_DEFAULT = { hat:'hat_sun', top:'top_tee', pants:'pants_jeans', shoes:'shoes_boots', socks:'socks_none', acc:'acc_none', back:'back_none', face:'face_normal' };
-function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; else if (typeof v === 'string' && /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(v) && v.split('_')[0] === k) r[k] = v; } return r; }
+const GEAR_DEFAULT = { look:LOOK_DEFAULT, hat:'hat_sun', top:'top_tee', pants:'pants_jeans', shoes:'shoes_boots', socks:'socks_none', acc:'acc_none', back:'back_none', face:'face_normal' };
+function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ if (k === 'look'){ if (typeof v === 'string' && /^h\d{1,2}c\d{1,2}s\de\d$/.test(v)) r.look = lookStr(lookParse(v)); continue; } const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; else if (typeof v === 'string' && /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(v) && v.split('_')[0] === k) r[k] = v; } return r; }
 const PANTS_COL = { pants_jeans:'#2f4b63', pants_shorts:'#3f6fa0', pants_khaki:'#c8a873', pants_skirt:'#b8443a', pants_overalls:'#4a78b0', pants_rainbow:'#f6f0e6' };
 const SHOE_COL = { shoes_boots:'#6b4a35', shoes_sandals:'#3fbf9d', shoes_sneakers:'#f4f4f4', shoes_rain:'#f6c83b', shoes_gold:'#e8b730' };
 const RAINBOW = ['#f05a4a', '#ff9f43', '#ffd36a', '#3fbf9d', '#2f89c7', '#9b7bff'];
@@ -1359,6 +1391,7 @@ function applyGear(av, gear){
   const G = avGeo(), M = (c, r, ex) => mat(c, r == null ? 0.7 : r, ex);
   const mk = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.g).add(o); av.gearMeshes.push(o); return o; };
   const hatC = av.hatM, ink = av.inkM, white = M('#ffffff', 0.6);
+  if (av.hairM) applyLook(av, gear, mk);
   // ---- 帽子 ----
   for (const b of av.hatBase) b.visible = gear.hat === 'hat_sun';
   const H = av.hatG, HD = av.headG;
@@ -5821,6 +5854,22 @@ function renderPushBox(body){
   if (Push.sub){ const ul = el('ul', 'shoplist'); for (const [k, l] of PUSH_KINDS){ const on = !Push.prefs || Push.prefs[k] !== false, li = el('li', on ? 'on' : ''); li.appendChild(el('div', 'tinfo')).appendChild(el('div', 'n', l));
       const b = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); b.setAttribute('aria-pressed', String(on)); b.addEventListener('click', () => pushPref(k, !on)); li.appendChild(b); ul.appendChild(li); } body.appendChild(ul); }
 }
+// 外觀：髮型、髮色、膚色、眼睛顏色（免費，隨時可以換）
+function setLook(L){ rec.gear = Object.assign(cleanGear(rec.gear), { look: lookStr(L) }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); clearTimeout(setLook.t); setLook.t = setTimeout(() => cloudCall('set_gear', { p_gear: rec.gear }), 800); AvShot.cache.clear(); renderTab(); }
+function renderLookEd(body){
+  const g0 = cleanGear(rec.gear), L = lookParse(g0.look);
+  body.appendChild(el('p', 'sub', '外觀全部免費，隨時可以換。戴帽子的時候，頭頂上的頭髮（刺刺頭、飛機頭）會被帽子蓋住。'));
+  body.appendChild(el('div', 'dexhead', '💇 髮型'));
+  const hs = el('ul', 'shoplist cols');
+  LOOK_HAIR.forEach((nm, i) => { const li = el('li', L.h === i ? 'on' : ''), ic = el('img', 'gearic'); ic.alt = nm; try { ic.src = avatarShot(Object.assign({}, g0, { hat:'hat_none', look: lookStr(Object.assign({}, L, { h:i })) }), 'hat', 96); } catch(e){} li.appendChild(ic);
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', L.h === i ? '現在的髮型' : '免費')); li.appendChild(d);
+    if (L.h !== i){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '換'); b.addEventListener('click', () => setLook(Object.assign({}, L, { h:i }))); a.appendChild(b); li.appendChild(a); } hs.appendChild(li); });
+  body.appendChild(hs);
+  const row = (title, cols, key) => { body.appendChild(el('div', 'dexhead', title)); const r = el('div', ''); r.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px';
+    cols.forEach((c, i) => { const b = el('button', ''); b.setAttribute('aria-label', title + ' ' + (i + 1)); b.style.cssText = `width:34px;height:34px;border-radius:50%;background:${c};padding:0;border:${L[key] === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};box-shadow:${L[key] === i ? '0 0 0 2px #fff inset' : 'none'}`;
+      b.addEventListener('click', () => setLook(Object.assign({}, L, { [key]: i }))); r.appendChild(b); }); body.appendChild(r); };
+  row('🎨 髮色', LOOK_HC, 'c'); row('🙂 膚色', LOOK_SKIN, 's'); row('👀 眼睛顏色', LOOK_EYE, 'e');
+}
 function renderWardrobe(body, only){
   const pv = el('div', 'wprev'), showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'pvbox');
   if (pvShow(box, showG)){ box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); if (Wardrobe.preview && Wardrobe.previewOf && GEAR_BY_ID[Wardrobe.previewOf] && GEAR_BY_ID[Wardrobe.previewOf].slot === 'back' && !PV.drag){ PV.yaw = Math.PI + 0.5; PV.idleAt = now() + 2.5; } }
@@ -5835,6 +5884,7 @@ function renderWardrobe(body, only){
   if (!only){ const seg = el('div', 'seg wseg');
   for (const [k, l] of GEAR_SLOTS){ const b = el('button', '', l); b.setAttribute('aria-pressed', String(Wardrobe.slot === k)); b.addEventListener('click', () => { Wardrobe.slot = k; renderTab(); }); seg.appendChild(b); }
   body.appendChild(seg); }
+  if (!only && Wardrobe.slot === 'look'){ renderLookEd(body); return; }
   const ul = el('ul', 'shoplist cols');
   for (const it of only ? GEAR.filter(only) : GEAR.filter(g => g.slot === Wardrobe.slot && !g.love)){
     const on = cleanGear(rec.gear)[it.slot] === it.id, own = ownsGear(it.id), li = el('li', on ? 'on' : '');
