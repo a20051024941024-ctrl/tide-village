@@ -5701,6 +5701,47 @@ function renderMarket(body){
   body.appendChild(ul);
 }
 function confirmOnce(b){ if (b.dataset.sure === '1') return true; b.dataset.sure = '1'; const t = b.textContent; b.textContent = '確定？'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = t; } }, 2500); return false; }
+// ===== 推播通知（048、Edge Function tide-push）：遊戲關著時手機也會跳通知 =====
+const PUSH_KINDS = [['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島']];
+const Push = { busy:false, sub:null, prefs:null, checked:false, msg:'' };
+function pushOk(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function b64u(s){ const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+async function pushFn(body){ const { data, error } = await Cloud.sb.functions.invoke('tide-push', { body }); if (error) throw error; return data; }
+async function pushCheck(){ if (Push.checked || !pushOk() || !Cloud.on) return; Push.checked = true;
+  try { const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription(); Push.sub = s;
+    if (s){ const { data } = await Cloud.sb.from('push_subs').select('uid,prefs').eq('endpoint', s.endpoint).maybeSingle(); if (data) Push.prefs = data.prefs || {}; else await pushSave(s); }   /* 換帳號了：這支手機的訂閱改到現在的帳號 */
+  } catch(e){} if (!$('#sheet').hidden && curTab === 'style') renderTab(); }
+async function pushSave(s){
+  const row = { endpoint: s.endpoint, uid: Cloud.userId, sub: s.toJSON(), prefs: Push.prefs || {} };
+  let { error } = await Cloud.sb.from('push_subs').upsert(row);
+  if (error){ try { await s.unsubscribe(); } catch(e){} const reg = await navigator.serviceWorker.ready, { pub } = await pushFn({ action:'pub' }); const s2 = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(pub) }); Push.sub = s2; ({ error } = await Cloud.sb.from('push_subs').upsert(Object.assign(row, { endpoint: s2.endpoint, sub: s2.toJSON() }))); }   /* 這支手機以前是別的帳號訂的：重新訂一次 */
+  if (error) throw error; Push.prefs = row.prefs;
+}
+async function pushOn(){
+  if (!pushOk()){ Push.msg = '這個瀏覽器不支援通知。iPhone 要先用 Safari「分享 → 加入主畫面」，再從主畫面打開遊戲才能開通知。'; renderTab(); return; }
+  if (!Cloud.on){ Push.msg = '要先連上雲端（登入）才能開通知。'; renderTab(); return; }
+  Push.busy = true; Push.msg = ''; renderTab();
+  try { const perm = await Notification.requestPermission();
+    if (perm !== 'granted'){ Push.msg = '通知被擋住了：到瀏覽器的「網站設定 → 通知」把這個網站改成「允許」，再按一次開啟。'; Push.busy = false; renderTab(); return; }
+    const reg = await navigator.serviceWorker.ready, { pub } = await pushFn({ action:'pub' }); if (!pub) throw new Error('no key');
+    const s = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(pub) });
+    Push.sub = s; await pushSave(s); await pushFn({ action:'test' }); Push.msg = '✅ 通知開好了，等一下會收到一則測試通知。'; }
+  catch(e){ Push.msg = '通知還沒辦法開（伺服器那邊的通知程式可能還沒裝好），晚一點再試試看。'; console.warn('push', e); }
+  Push.busy = false; renderTab();
+}
+async function pushOff(){ Push.busy = true; renderTab(); try { const s = Push.sub; if (s){ await Cloud.sb.from('push_subs').delete().eq('endpoint', s.endpoint); await s.unsubscribe(); } } catch(e){} Push.sub = null; Push.prefs = null; Push.busy = false; Push.msg = '已經關掉通知了。'; renderTab(); }
+async function pushPref(k, on){ Push.prefs = Object.assign({}, Push.prefs || {}, { [k]: on }); renderTab(); try { await Cloud.sb.rpc('set_push_prefs', { p: Push.prefs }); } catch(e){} }
+function renderPushBox(body){
+  const f = el('div', 'field'); f.appendChild(el('label', '', '🔔 通知（遊戲關著的時候，手機也會跳通知）')); body.appendChild(f);
+  pushCheck();
+  const bar = el('div', 'tankbar');
+  if (Push.sub){ const b = el('button', 'tbtn ghost', '關閉通知'); b.disabled = Push.busy; b.addEventListener('click', pushOff); bar.appendChild(b); }
+  else { const b = el('button', 'tbtn', Push.busy ? '設定中…' : '開啟通知'); b.disabled = Push.busy; b.addEventListener('click', pushOn); bar.appendChild(b); }
+  body.appendChild(bar);
+  if (Push.msg) body.appendChild(el('p', 'sub', Push.msg));
+  if (Push.sub){ const ul = el('ul', 'shoplist'); for (const [k, l] of PUSH_KINDS){ const on = !Push.prefs || Push.prefs[k] !== false, li = el('li', on ? 'on' : ''); li.appendChild(el('div', 'tinfo')).appendChild(el('div', 'n', l));
+      const b = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); b.setAttribute('aria-pressed', String(on)); b.addEventListener('click', () => pushPref(k, !on)); li.appendChild(b); ul.appendChild(li); } body.appendChild(ul); }
+}
 function renderWardrobe(body, only){
   const pv = el('div', 'wprev'), showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'pvbox');
   if (pvShow(box, showG)){ box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); if (Wardrobe.preview && Wardrobe.previewOf && GEAR_BY_ID[Wardrobe.previewOf] && GEAR_BY_ID[Wardrobe.previewOf].slot === 'back' && !PV.drag){ PV.yaw = Math.PI + 0.5; PV.idleAt = now() + 2.5; } }
@@ -7156,6 +7197,7 @@ function renderTab(){
     renderMap(body);
   } else if (curTab === 'style'){
     renderCloudBox(body);
+    renderPushBox(body);
     const f1 = el('div', 'field'); f1.appendChild(el('label', '', '衣服顏色')); const s1 = el('div', 'swatches');
     SHIRTS.forEach(c => { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', '衣服 ' + c); b.setAttribute('aria-pressed', String(look.shirt === c)); b.addEventListener('click', () => { look.shirt = c; saveLook(); renderTab(); }); s1.appendChild(b); });
     f1.appendChild(s1); body.appendChild(f1);
