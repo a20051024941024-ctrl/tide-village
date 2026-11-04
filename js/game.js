@@ -4880,13 +4880,19 @@ const QUEST_NPC = {
   wang:  { name:'漁夫 老王',   at:[29.5, -23.2], shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
   mei:   { name:'食堂 美雲姨', at:[10.4, 11.2], shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
 };
+// 任務 NPC 走近時也會講話：村長多講新手教學，老王講釣法，美雲姨講料理
+const QUEST_TALK = {
+  chief: ['想改名字的話，去「造型」分頁就能換喔', '有些魚不在圖鑑裡喔，像變種，要親手釣到才會出現', '圖鑑裡黑黑的影子，就是你還沒釣過的魚', '按住「拋竿」蓄力，放開就拋出去，拋越遠越容易遇到大魚', '浮標整個沉下去就是魚咬了，趕快收線', '拉線的時候張力條快滿了就先放開一下，不然線會斷', '打開「地圖」，去過的地方都能直接傳送', '每天來找我、老王、美雲姨領任務，頭上有 ❗ 的就是還沒做完', '魚缸裡的魚按「展示」，就會放進廣場東邊的大水族館', '小島可以蓋自己的房子，還能邀請朋友一起住', '用 Email 綁定帳號，換手機紀錄也不會不見（在「造型」分頁）', '在聊天框說話，旁邊的村民會回你喔'],
+  wang: ['港口外海有大魚，用磯釣竿最好', '漲潮的時候海邊的魚咬得比較快', '暴風雨的時候外海傳說魚多很多', '船夫阿海可以載你出海，也可以帶你去潛水', '魚太小就放流吧，愛海點數比較多'],
+  mei: ['釣到的魚可以拿來食堂做料理，吃了釣魚會有加成', '客人頭上有 🔔 就是想點餐了，快來幫忙', '新鮮的魚最好吃，越大條越值錢'],
+};
 const questNpcs = []; let Quests = { list:null, at:0, loading:false }, questWho = null;
 function freeSpot(x, z){ for (let r = 0; r < 6; r += 0.5) for (let a = 0; a < 6.28; a += 0.6){ const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (walkable(px, pz) && !blocked(px, pz, 0.45) && !deckAt(px, pz)) return [px, pz]; } return [x, z]; }
 function initQuestNpcs(){
   for (const [who, d] of Object.entries(QUEST_NPC)){
     const [x, z] = freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, name:d.name, kind:'npc' });
     f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.atan2(MAP.plaza[0] - x, MAP.plaza[1] - z); f.setGear(d.gear); f.nm.classList.add('quest');
-    questNpcs.push({ who, name:d.name, f });
+    f.lines = QUEST_TALK[who] || []; questNpcs.push({ who, name:d.name, f });
   }
 }
 function updateQuestNpcs(dt, t){
@@ -4896,7 +4902,9 @@ function updateQuestNpcs(dt, t){
     if (d < 40){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
     else q.f.tag.style.display = 'none';
     const qs = Quests.list && Quests.list.find(x => x.who === q.who), mark = !Cloud.on ? '' : !qs ? '' : qs.done ? '✔️' : '❗';
-    if (q.mark !== mark){ q.mark = mark; if (mark) q.f.say(mark, mark === '❗' ? 'alert' : 'emote', 99999); else q.f.bub.hidden = true; }
+    if (d < 7 && t > (q.talkAt || 0) && !(q.f.replyUntil > now())){ q.talkAt = t + rand(14, 24); const L = q.f.lines; if (L.length){ q.f.say(L[Math.floor(Math.random() * L.length)], '', 6); q.mark = null; q.talkUntil = now() + 6.2; } }   /* 走近會講話，講完再把 ❗ 放回去 */
+    else if (d > 14) q.talkAt = Math.min(q.talkAt || 0, t + 3);
+    if (q.mark !== mark && !(q.talkUntil > now()) && !(q.f.replyUntil > now())){ q.mark = mark; if (mark) q.f.say(mark, mark === '❗' ? 'alert' : 'emote', 99999); else q.f.bub.hidden = true; }
   }
   if (Cloud.on && !Quests.loading && (!Quests.list || Date.now() - Quests.at > 10 * 60 * 1000)) loadQuests();
 }
@@ -6873,27 +6881,40 @@ function npcReply(n, text){
   return pick(['嗯嗯', '真的嗎？', '哈哈', '原來是這樣', ...(n.lines || []).slice(0, 3)]);
 }
 function npcHear(text){
-  let best = null, bd = 9; for (const n of npcs){ const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < bd){ bd = d; best = n; } }
-  if (!best) return; const r = npcReply(best, text); best.replyUntil = now() + 9;
+  let best = null, bd = 9; for (const n of npcs.concat(questNpcs.map(q => q.f))){ const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < bd){ bd = d; best = n; } }
+  if (!best) return; const r = npcReply(best, text); { const q = questNpcs.find(q => q.f === best); if (q){ q.mark = null; q.talkUntil = now() + 10; } } best.replyUntil = now() + 9;
   setTimeout(() => { best.say(r, '', 6); logMsg(best.nm.textContent || '村民', r); }, 900 + Math.random() * 600);
 }
 function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
-// 阿默：港口裡不會有紅鯊，所以他常常開自己的紅色小船到外海釣；每 6 分鐘一輪：開出去 → 在外海釣 3 分半 → 開回來 → 在碼頭整理一下（大家看到的時間一樣）
-const AMO = { dock:[35.6, -27.2], sea:[49.5, -33.5], cycle:360, out:230, sail:22 };
+// 阿默：港口裡不會有紅鯊，所以他每一趟都開自己的紅色小船，繞著島到外海隨便一個地方釣（每一趟去哪裡大家看到的都一樣）
+// 每 7 分鐘一趟：從碼頭開到外海的環線 → 沿著環線繞到這次的釣點 → 釣魚 → 原路開回來 → 在碼頭休息一下。環線離岸邊 22 公尺，不會撞到紅樹林；不會經過往珊瑚礁群島的跨海大橋那一側
+const AMO = { dock:[35.6, -27.2], cycle:420, pier:50, speed:4.2, off:22 };
+function amoRing(a){ const r = islandR(a) + AMO.off + 12 * Math.exp(-Math.pow((a - 0.4) / 0.4, 2)); return [Math.cos(a) * r, Math.sin(a) * r]; }   /* 紅樹林那一段繞遠一點 */
+function amoTrip(k){
+  if (amoTrip.k === k) return amoTrip.c;
+  const aD = Math.atan2(AMO.dock[1], AMO.dock[0]), bridge = Math.PI / 2, h = hash32('amo' + k);
+  let aT; for (let tries = 0; tries < 20; tries++){ aT = -Math.PI + ((h >>> (tries % 16)) % 1000) / 1000 * Math.PI * 2 + tries * 0.37; aT = Math.atan2(Math.sin(aT), Math.cos(aT)); if (Math.abs(aT - bridge) > 0.45 && Math.abs(aT - aD) > 0.3) break; }
+  // 往不會經過大橋的那個方向繞
+  let d = aT - aD; const crosses = (from, delta) => { for (let u = 0; u <= 1; u += 0.02){ const a = Math.atan2(Math.sin(from + delta * u), Math.cos(from + delta * u)); if (Math.abs(a - bridge) < 0.4) return true; } return false; };
+  if (crosses(aD, d)) d = d > 0 ? d - Math.PI * 2 : d + Math.PI * 2;
+  const pts = [AMO.dock.slice()], n = Math.max(2, Math.ceil(Math.abs(d) / 0.06)); for (let i = 0; i <= n; i++) pts.push(amoRing(aD + d * i / n));
+  const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  amoTrip.k = k; amoTrip.c = { pts, cum, len: cum[cum.length - 1], aT, sail: cum[cum.length - 1] / AMO.speed }; return amoTrip.c;
+}
+function amoAt(c, s){ s = clamp(s, 0, c.len); let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++; const a = c.pts[i - 1], b = c.pts[i], seg = c.cum[i] - c.cum[i - 1] || 1, u = (s - c.cum[i - 1]) / seg; return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
 function amoRecast(n, t){ const a = n.rot, dx = Math.sin(a), dz = Math.cos(a), cp = castPoint(n.pos.x, n.pos.z, dx, dz, 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
 function updateAmo(n, dt, t){
   if (!n.boat){ n.boat = makeBoatMesh('#c8161c'); scene.add(n.boat); n.home = n.pos.clone(); n.homeRot = n.rot; n.homeY = n.baseY; }
-  const ph = (Date.now() / 1000) % AMO.cycle, S = AMO.sail; let mode, k = 1;
-  if (ph < S){ mode = 'go'; k = ph / S; } else if (ph < AMO.out){ mode = 'sea'; } else if (ph < AMO.out + S){ mode = 'back'; k = 1 - (ph - AMO.out) / S; } else mode = 'pier';
-  const D = AMO.dock, E = AMO.sea;
-  if (mode === 'pier'){ n.boat.position.set(D[0], WATER_LEVEL, D[1]); n.boat.rotation.set(0, Math.PI / 2, 0);
-    if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; amoRecast(n, t); if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say('今天又沒遇到……明天再出海', '', 4); } }
-  else { const e = smooth01(k), x = D[0] + (E[0] - D[0]) * e, z = D[1] + (E[1] - D[1]) * e, bob = Math.sin(t * 1.6 + 1) * 0.04;
-    const hd = mode === 'sea' ? Math.atan2(1, -0.35) : Math.atan2(E[0] - D[0], E[1] - D[1]) + (mode === 'back' ? Math.PI : 0);
+  const T = Date.now() / 1000, k = Math.floor(T / AMO.cycle), ph = T - k * AMO.cycle, c = amoTrip(k), S = c.sail, fishEnd = AMO.cycle - AMO.pier - S;
+  let mode, s; if (ph < S){ mode = 'go'; s = ph * AMO.speed; } else if (ph < fishEnd){ mode = 'sea'; s = c.len; } else if (ph < fishEnd + S){ mode = 'back'; s = c.len - (ph - fishEnd) * AMO.speed; } else mode = 'pier';
+  if (mode === 'pier'){ n.boat.position.set(AMO.dock[0], WATER_LEVEL, AMO.dock[1]); n.boat.rotation.set(0, Math.PI / 2, 0);
+    if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; amoRecast(n, t); if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say('今天又沒遇到……下一趟換個地方', '', 4); } }
+  else { const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
+    const hd = mode === 'sea' ? out : hd0 + (mode === 'back' ? Math.PI : 0);
     n.boat.position.set(x, WATER_LEVEL + bob, z); n.boat.rotation.set(Math.sin(t * 1.1) * 0.02, hd, Math.sin(t * 1.3) * 0.03);
     n.pos.set(x, 0, z); n.baseY = WATER_LEVEL - 0.08 + bob; n.sitting = true; n.rot = hd;
-    if (mode !== 'sea'){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 3; n.holdT = 0; }
-    else if (n.amoMode !== 'sea'){ amoRecast(n, t); if (camera.position.distanceTo(n.pos) < 30) n.say('到外海了……紅鯊，我來了', '', 4); } }
+    if (mode !== 'sea'){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 3; }
+    else if (n.amoMode !== 'sea'){ amoRecast(n, t); if (camera.position.distanceTo(n.pos) < 30) n.say('今天來這裡試試看……紅鯊，我來了', '', 4); } }
   if (n.amoMode === 'pier' && mode === 'go' && camera.position.distanceTo(n.pos) < 25) n.say('我要開船出海了，港口裡不會有紅鯊的', '', 4);
   n.amoMode = mode;
 }
