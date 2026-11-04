@@ -9,6 +9,7 @@ alter table public.players add column if not exists buff_r     text;
 alter table public.players add column if not exists buff_left  integer not null default 0;
 alter table public.players add column if not exists chum_type  text;
 alter table public.players add column if not exists chum_at    timestamptz;
+alter table public.players add column if not exists shrimp_until timestamptz;   -- 釣蝦場買的時段到什麼時候（025）
 create index if not exists players_chum_idx on public.players (chum_type, chum_at desc);
 
 create or replace function public._fishcfg() returns jsonb language sql immutable as $cfg$ select '__CFG__'::jsonb $cfg$;
@@ -49,6 +50,7 @@ declare
 begin
   if sp is null then raise exception '沒有這個釣點'; end if;
   if pl.cast_at is not null and now() - pl.cast_at < interval '2.5 seconds' then raise exception '拋太快了'; end if;
+  if p_spot = 'shrimp' and coalesce(pl.shrimp_until, '-infinity') < now() then raise exception '要先買釣蝦時段'; end if;
   -- 魚餌（路亞不用魚餌）：伺服器扣掉一個
   if p_bait is not null and rig <> 'lure' and cfg->'baits' ? p_bait and coalesce((pl.bait ->> p_bait)::integer, 0) > 0 then
     bait := cfg->'baits'->p_bait; nb := (pl.bait ->> p_bait)::integer - 1;

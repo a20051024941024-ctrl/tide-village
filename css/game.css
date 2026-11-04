@@ -672,3 +672,9 @@ details.help li{margin:4px 0}
 #rotate .rothelp{margin-top:14px;max-width:34ch;background:rgba(255,255,255,.16);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;text-align:left;font-size:14px;line-height:1.55}
 #rotate .rothelp b{font-size:15px}
 #rotate .rothelp button{align-self:flex-start;margin-top:4px;padding:8px 14px;border-radius:999px;background:#fff;color:var(--sea);font-weight:800}
+/* 室內釣蝦場：右上角的時段、櫃台的小提示 */
+#shrimpChip{position:fixed;right:16px;top:calc(var(--gt) + 140px);padding:7px 12px;font-size:13px;font-weight:800;z-index:7;color:#4a2a00;background:linear-gradient(135deg,#ffe08a,#ffb04a);border:0;font-variant-numeric:tabular-nums;cursor:pointer}
+#shrimpChip[hidden]{display:none}
+#shrimpChip.none{background:#fff;color:#c0392b;animation:relPulse 2s ease-in-out infinite}
+.helpul{margin:6px 0 10px;padding-left:20px;font-size:13px;line-height:1.6;color:var(--ink)}
+.helpul li{margin:3px 0}
