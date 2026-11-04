@@ -3016,6 +3016,7 @@ const ISLE_ITEMS = {
   beach:   { name:'海邊小屋', price:3000, rad:2.9, house:true, roof:'#5fb6e3', w:3.6, awning:'#2f89c7' },
   tea:     { name:'和風茶屋', price:5500, rad:3.0, house:true, roof:'#4a4f5a', w:3.4, wall:'#f1e6cf' },
   villa:   { name:'大別墅',   price:8000, rad:3.6, house:true, roof:'#ec8b68', w:4.4, scale:1.3 },
+  mansion: { name:'大宅（自己設計格局）', price:12000, rad:4.6, house:true, roof:'#5a6f8a', w:4.4, scale:1.7, wall:'#f4efe4' },
   flower:  { name:'花圃', price:200, rad:0.9 },   bench:  { name:'長椅', price:150, rad:0.9 },   lamp:   { name:'路燈', price:250, rad:0.35 },
   palm:    { name:'椰子樹', price:400, rad:0.6 }, pond:   { name:'小魚池', price:1200, rad:1.5 }, flag:   { name:'旗子', price:300, rad:0.3 },
   fence:   { name:'木圍籬', price:80, rad:0.9 },  tree:   { name:'圓圓樹', price:300, rad:1.1 }, rock:   { name:'石頭', price:100, rad:0.7 },
@@ -3033,7 +3034,7 @@ function cleanIsland(o){
     for (const [k, v] of Object.entries(o.d || {})){ const p = OLD_DS[+k]; if (p && ISLE_ITEMS[v]) items.push({ id:++n, t:v, x:p[0], z:p[1], r:+(Math.atan2(-p[0], -p[1]) + Math.PI).toFixed(2) }); }
     o = { v:2, items }; }
   const items = (o && Array.isArray(o.items) ? o.items : []).filter(it => it && ISLE_ITEMS[it.t] && isFinite(+it.x) && isFinite(+it.z)).slice(0, ISLE_MAX)
-    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; } return o; });   /* 房子的格局、家具（034） */
+    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; if (it.t === 'mansion'){ o.lay = 'custom'; if (it.cl && typeof it.cl === 'object') o.cl = it.cl; if (!o.f) o.f = []; } } return o; });   /* 房子的格局、家具（034） */
   return { v:2, items };
 }
 // 跟伺服器一樣的位置檢查
@@ -3395,7 +3396,18 @@ const FURN_DEF = [{ id:1, t:'bed', x:-3.4, z:-2.1, r:0 }, { id:2, t:'rug', x:0.5
   { id:6, t:'shelf', x:4.2, z:-2.1, r:-1.57 }, { id:7, t:'fire', x:0, z:-3.2, r:0 }, { id:8, t:'tank', x:3.3, z:2.7, r:3.14 }, { id:9, t:'plant', x:-4, z:2.9, r:0 }];
 const HOME_ROLES = { mate:'室友', family:'家人', couple:'情侶' };
 const HOME_TITLES = ['爸爸', '媽媽', '哥哥', '姊姊', '弟弟', '妹妹', '爺爺', '奶奶', '老公', '老婆', '寶貝', '房東'];
-function houseLay(it){ return LAYOUTS[it && it.lay] || LAYOUTS.open; }
+// 大宅（064_mansion.sql）：格局是玩家自己畫的（1 公尺的格子；房子 18×12，中心在 0,0）
+const CL_CACHE = new WeakMap();
+function houseLay(it){
+  if (it && it.t === 'mansion'){ const c = it.cl || {}, k = JSON.stringify(c), old = CL_CACHE.get(it); if (old && old.k === k) return old.lay;
+    const lay = { name:'自己設計', price:0, W:18, D:12, custom:true, walls:[...(c.walls || []), ...(c.wins || [])], doors:c.doors || [], wins:c.wins || [], owins:c.owins || [], fl:c.fl || '0'.repeat(216), wp:c.wp || '0'.repeat(216), rooms:[] }; CL_CACHE.set(it, { k, lay }); return lay; }
+  return LAYOUTS[it && it.lay] || LAYOUTS.open; }
+const CL_FLOOR = [['木地板', '#c99a6b'], ['藍色地毯', '#a8c8e8'], ['白磁磚', '#eef2ee'], ['格子磁磚', '#e8d4a8'], ['粉紅地毯', '#f2c4d8'], ['深色木頭', '#7a5638']];
+const CL_WALL = [['米白', '#f4ead6'], ['天空藍', '#cfe6f4'], ['淡粉紅', '#f8dce6'], ['薄荷綠', '#dcefd8'], ['海軍藍', '#3a4a5e']];
+function clFloorTex(i){ const [, col] = CL_FLOOR[i] || CL_FLOOR[0]; return roomTex('clf' + i, 64, 64, (c, w, h) => { c.fillStyle = col; c.fillRect(0, 0, w, h);
+  if (i === 0 || i === 5){ c.fillStyle = shade(col, -0.18); for (let y = 0; y < h; y += 16) c.fillRect(0, y, w, 2); for (let y = 0; y < h; y += 16) c.fillRect(((y / 16) % 2) * 32 + 10, y, 2, 16); }
+  else if (i === 2 || i === 3){ c.fillStyle = i === 3 ? '#d8b878' : '#d4dcd8'; if (i === 3){ for (let y = 0; y < h; y += 16) for (let x = (y / 16 % 2) * 16; x < w; x += 32) c.fillRect(x, y, 16, 16); } c.fillStyle = shade(col, -0.15); for (let k = 0; k < w; k += 32){ c.fillRect(k, 0, 1, h); c.fillRect(0, k, w, 1); } }
+  else { c.fillStyle = shade(col, 0.08); for (let k = 0; k < 40; k++) c.fillRect((k * 37) % w, (k * 53) % h, 2, 2); } }); }
 function houseFurn(it){ return it && Array.isArray(it.f) ? it.f : FURN_DEF.map(x => Object.assign({}, x)); }
 function segD(px, pz, ax, az, bx, bz){ const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz, t = L ? clamp(((px - ax) * dx + (pz - az) * dz) / L, 0, 1) : 0; return Math.hypot(px - (ax + dx * t), pz - (az + dz * t)); }
 // 跟伺服器的 _furn_check 一樣
@@ -3491,6 +3503,7 @@ function afterHomeOp(L){
 function localHomeOp(op, p){
   const items = rec.island.items, cost = n => { if (rec.coins < n) return `金幣不夠，還差 🪙${(n - rec.coins).toLocaleString()}`; addCoins(-n); return null; };
   if (op === 'place'){ const T = ISLE_ITEMS[p.t], e = isleCheck(items, p.t, p.x, p.z, -1); if (e) return e; if (items.length >= ISLE_MAX) return '島上已經放滿了'; if (T.house && items.filter(i => ISLE_ITEMS[i.t].house).length >= ISLE_HOUSE_MAX) return '房子最多 6 棟'; const c = cost(T.price); if (c) return c; items.push({ id: items.reduce((m, i) => Math.max(m, i.id), 0) + 1, t:p.t, x:p.x, z:p.z, r:p.r }); }
+  else if (op === 'design'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以自己設計格局'; it.cl = Object.assign({ owins: (p.cl.wins || []).filter(w => w[0] === w[2] ? Math.abs(w[0]) === 9 : Math.abs(w[1]) === 6) }, p.cl, { wins: (p.cl.wins || []).filter(w => !(w[0] === w[2] ? Math.abs(w[0]) === 9 : Math.abs(w[1]) === 6)) }); it.lay = 'custom'; }
   else if (op === 'move'){ const it = items.find(i => i.id === p.id); if (!it) return '找不到這個東西'; const e = isleCheck(items, it.t, p.x, p.z, it.id); if (e) return e; Object.assign(it, { x:p.x, z:p.z, r:p.r }); }
   else if (op === 'remove'){ const it = items.find(i => i.id === p.id); if (!it) return '找不到這個東西'; let back = Math.floor(ISLE_ITEMS[it.t].price / 2); if (it.f) back += it.f.reduce((a, x) => a + Math.floor(FURN[x.t].price / 2), 0); if (it.lay) back += Math.floor(houseLay(it).price / 2); rec.island.items = items.filter(i => i !== it); addCoins(back); }
   else { const h = items.find(i => i.id === p.house); if (!h) return '找不到這棟房子'; const f = houseFurn(h), lay = houseLay(h);
@@ -3523,6 +3536,25 @@ function clearHouseRoom(){
   if (House.group) scene.remove(House.group); for (const c of House.cols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } House.cols = [];
   const di = decks.indexOf(House.deck); if (di >= 0) decks.splice(di, 1); CHAIRS_ROOM.length = 0; if (mySeat && mySeat.room){ mySeat = null; me.sitting = false; }
   House.group = null; House.fish = []; House.fires = []; House.lamps = []; House.furnG = new Map();
+}
+// 大宅的地板（每一格照房間的地板）、壁紙（每一面牆照旁邊那一格的房間）、窗戶
+function clDecorate(g, lay, cx, cz, fy){
+  const W = 18, D = 12, cell = (x, z) => (z + 6) * 18 + (x + 9), byF = {}, byW = {};
+  for (let z = -6; z < 6; z++) for (let x = -9; x < 9; x++){ const i = +lay.fl[cell(x, z)] || 0; (byF[i] = byF[i] || []).push([x, z]); }
+  for (const [i, cs] of Object.entries(byF)){ const gs = cs.map(([x, z]) => { const pg = new THREE.PlaneGeometry(1, 1); pg.rotateX(-Math.PI / 2); pg.translate(x + 0.5, 0, z + 0.5); return pg; }); const m = new THREE.Mesh(mergeGeometries(gs), new THREE.MeshStandardMaterial({ map: clFloorTex(+i), roughness: 0.85, emissive: '#ffffff', emissiveMap: clFloorTex(+i), emissiveIntensity: 0.2 })); m.position.set(cx, fy + 0.004, cz); g.add(m); }
+  // 壁紙：每一面牆（外牆、自己畫的牆、窗戶）兩邊各貼一片，顏色照那一邊的房間
+  const panel = (x0, z0, x1, z1, side, h, wpI) => { const vert = x0 === x1, pg = new THREE.PlaneGeometry(1, h * 0.62); if (vert) pg.rotateY(side > 0 ? Math.PI / 2 : -Math.PI / 2); else if (side < 0) pg.rotateY(Math.PI);
+    pg.translate((x0 + x1) / 2 + (vert ? side * 0.08 : 0), h * 0.69, (z0 + z1) / 2 + (vert ? 0 : side * 0.08)); (byW[wpI] = byW[wpI] || []).push(pg); };
+  const sideCell = (x0, z0, x1, z1, side) => x0 === x1 ? [side > 0 ? x0 : x0 - 1, Math.min(z0, z1)] : [Math.min(x0, x1), side > 0 ? z0 : z0 - 1];
+  const inner = [...lay.walls]; for (const w of inner) for (const sd of [-1, 1]){ const [x, z] = sideCell(w[0], w[1], w[2], w[3], sd); if (x < -9 || x >= 9 || z < -6 || z >= 6) continue; panel(w[0], w[1], w[2], w[3], sd, 2.2, +lay.wp[cell(x, z)] || 0); }
+  for (let x = -9; x < 9; x++){ panel(x, -6, x + 1, -6, 1, 3.2, +lay.wp[cell(x, -6)] || 0); }
+  for (let z = -6; z < 6; z++){ panel(-9, z, -9, z + 1, 1, 3.2, +lay.wp[cell(-9, z)] || 0); panel(9, z, 9, z + 1, -1, 3.2, +lay.wp[cell(8, z)] || 0); }
+  for (const [i, gs] of Object.entries(byW)){ const col = (CL_WALL[+i] || CL_WALL[0])[1]; const m = new THREE.Mesh(mergeGeometries(gs), mat(col, 0.9, { emissive: col, emissiveIntensity: 0.15 })); m.position.set(cx, fy, cz); g.add(m); }
+  // 窗戶：自己畫的牆上的窗戶、外牆的窗戶
+  const glass = new THREE.MeshBasicMaterial({ color:'#bfe6f8', transparent:true, opacity:0.75 });
+  for (const w of [...lay.wins, ...lay.owins]){ const vert = w[0] === w[2], mx = (w[0] + w[2]) / 2, mz = (w[1] + w[3]) / 2, outer = Math.abs(mx) === 9 || Math.abs(mz) === 6;
+    const gm = new THREE.Mesh(new THREE.BoxGeometry(vert ? 0.17 : 0.7, 0.8, vert ? 0.7 : 0.17), glass); gm.position.set(cx + mx + (outer && vert ? -Math.sign(mx) * 0.1 : 0), fy + 1.5, cz + mz + (outer && !vert ? -Math.sign(mz) * 0.1 : 0)); g.add(gm);
+    g.add(box([vert ? 0.2 : 0.86, 0.07, vert ? 0.86 : 0.2], '#8c5d3b', [cx + gm.position.x - cx, fy + 1.92, cz + gm.position.z - cz])); g.add(box([vert ? 0.2 : 0.86, 0.07, vert ? 0.86 : 0.2], '#8c5d3b', [cx + gm.position.x - cx, fy + 1.08, cz + gm.position.z - cz])); }
 }
 function rebuildHouseRoom(it){
   clearHouseRoom(); clearFurnGhost();
@@ -3565,7 +3597,8 @@ function rebuildHouseRoom(it){
     const wg = new THREE.BoxGeometry(along ? L : 0.14, 2.2, along ? 0.14 : L); { const uv = wg.attributes.uv, ps = wg.attributes.position; for (let k = 0; k < uv.count; k++) uv.setXY(k, (ps.getX(k) + ps.getZ(k)) / 1.6, (ps.getY(k) + 1.1) / 3.3); }   /* 跟外牆一樣：下面護牆板、上面壁紙 */
     const w = new THREE.Mesh(wg, room.material.clone()); w.material.side = THREE.FrontSide; w.position.set(cx + mx, fy + 1.1, cz + mz); g.add(w); g.add(box([along ? L : 0.18, 0.08, along ? 0.18 : L], '#8c5d3b', [cx + mx, fy + 2.24, cz + mz]));
     addBoxCol(cx + mx, cz + mz, along ? L : 0.2, along ? 0.2 : L); }
-  for (const [dx, dz] of lay.doors){ const along = lay.walls.some(w => Math.abs(w[1] - w[3]) < 0.01 && Math.abs(w[1] - dz) < 0.01); g.add(box([along ? 1.4 : 0.2, 0.18, along ? 0.2 : 1.4], '#8c5d3b', [cx + dx, fy + 2.1, cz + dz])); }
+  if (lay.custom) clDecorate(g, lay, cx, cz, fy);
+  for (const [dx, dz] of lay.doors){ const along = lay.custom ? Math.abs(dx - Math.round(dx)) > 0.01 : lay.walls.some(w => Math.abs(w[1] - w[3]) < 0.01 && Math.abs(w[1] - dz) < 0.01); g.add(box([along ? 1.4 : 0.2, 0.18, along ? 0.2 : 1.4], '#8c5d3b', [cx + dx, fy + 2.1, cz + dz])); }
   // 窗戶、大門
   const winM = new THREE.MeshBasicMaterial({ color:'#ffffff', map: roomTex('winday', 64, 48, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#8fd0f0'); gr.addColorStop(1, '#d9f1fb'); c.fillStyle = gr; c.fillRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(16, 30, 6, 0, 7); c.arc(24, 28, 8, 0, 7); c.arc(32, 31, 5, 0, 7); c.fill(); }) }); House.win = winM;
   House.winTx = [winM.map, roomTex('winnight', 64, 48, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0f1a33'); gr.addColorStop(1, '#2a3d66'); c.fillStyle = gr; c.fillRect(0, 0, w, h); c.fillStyle = '#fff6d0'; c.beginPath(); c.arc(46, 14, 6, 0, 7); c.fill(); c.fillStyle = '#ffffff'; for (const [x, y] of [[8, 8], [20, 18], [30, 6], [14, 32], [52, 34], [38, 24]]) c.fillRect(x, y, 1.5, 1.5); })];
@@ -3671,12 +3704,60 @@ async function confirmFurn(){
   if (!ok) return; SFX.plop(); FX.emit(ISLE.x + p.x, ROOM_Y + 0.6, ISLE.z + p.z, 12, '#fff4dc', 0.5, 1.4, 0.8);
   if (!moving && rec.coins >= T.price && !T.bed) startFurn(type); else { FB.on = true; renderFurnBar(); }
 }
+// ---- 大宅的格局編輯器：俯視的格子圖，用手指畫牆、門、窗，或幫房間上色 ----
+var CLE = null;
+function clOpen(it){ const c = JSON.parse(JSON.stringify(it.cl || {})); CLE = { it, tool:'wall', fl:1, wp:1, walls:c.walls || [], doors:c.doors || [], wins:[...(c.wins || []), ...(c.owins || [])], flS:(c.fl || '0'.repeat(216)).split(''), wpS:(c.wp || '0'.repeat(216)).split(''), busy:false }; curTab = 'cldesign'; if ($('#sheet').hidden) openSheet('cldesign'); else renderTab(); }
+const CL_PX = 22;
+function clKey(e){ return e.map(v => +(+v).toFixed(1)).join(','); }
+function clHas(list, e){ const k = clKey(e), k2 = clKey([e[2], e[3], e[0], e[1]]); return list.findIndex(x => clKey(x) === k || clKey(x) === k2); }
+function clDoorAt(e){ return [(e[0] + e[2]) / 2, (e[1] + e[3]) / 2]; }
+function clEdgeAt(px, pz){   // 點到哪一條格線（房子座標）
+  const fx = px - Math.floor(px), fz = pz - Math.floor(pz), dx = Math.min(fx, 1 - fx), dz = Math.min(fz, 1 - fz);
+  if (dx < dz){ const x = Math.round(px), z = Math.floor(pz); return [x, z, x, z + 1]; } const z = Math.round(pz), x = Math.floor(px); return [x, z, x + 1, z]; }
+function clBlocked(x0, z0, x1, z1){ const e = [x0, z0, x1, z1]; if (x0 === x1 ? Math.abs(x0) === 9 : Math.abs(z0) === 6) return true; return clHas(CLE.walls, e) >= 0 || clHas(CLE.wins, e) >= 0 || CLE.doors.some(d => clKey(d) === clKey(clDoorAt(e))); }
+function clFill(x, z){ const seen = new Set(), st = [[x, z]]; while (st.length){ const [cx, cz] = st.pop(), k = cx + ',' + cz; if (seen.has(k) || cx < -9 || cx >= 9 || cz < -6 || cz >= 6) continue; seen.add(k); const i = (cz + 6) * 18 + (cx + 9); CLE.flS[i] = String(CLE.fl); CLE.wpS[i] = String(CLE.wp);
+    if (!clBlocked(cx + 1, cz, cx + 1, cz + 1)) st.push([cx + 1, cz]); if (!clBlocked(cx, cz, cx, cz + 1)) st.push([cx - 1, cz]); if (!clBlocked(cx, cz + 1, cx + 1, cz + 1)) st.push([cx, cz + 1]); if (!clBlocked(cx, cz, cx + 1, cz)) st.push([cx, cz - 1]); } }
+function clApply(e){ const T = CLE.tool, outer = e[0] === e[2] ? Math.abs(e[0]) === 9 : Math.abs(e[1]) === 6, dk = clKey(clDoorAt(e));
+  const rm = () => { let i; if ((i = clHas(CLE.walls, e)) >= 0) CLE.walls.splice(i, 1); if ((i = clHas(CLE.wins, e)) >= 0) CLE.wins.splice(i, 1); CLE.doors = CLE.doors.filter(d => clKey(d) !== dk); };
+  if (T === 'erase'){ rm(); return; }
+  if (outer && T !== 'win') return; rm();
+  if (T === 'wall') CLE.walls.push(e); else if (T === 'win') CLE.wins.push(e); else if (T === 'door' && !outer) CLE.doors.push(clDoorAt(e)); }
+function clDraw(cv){ const c = cv.getContext('2d'), P = CL_PX, O = 10; c.clearRect(0, 0, cv.width, cv.height);
+  for (let z = -6; z < 6; z++) for (let x = -9; x < 9; x++){ const i = (z + 6) * 18 + (x + 9); c.fillStyle = CL_FLOOR[+CLE.flS[i]][1]; c.fillRect(O + (x + 9) * P, O + (z + 6) * P, P, P); c.fillStyle = CL_WALL[+CLE.wpS[i]][1]; c.fillRect(O + (x + 9) * P + P - 6, O + (z + 6) * P + 2, 4, 4); c.strokeStyle = 'rgba(0,0,0,0.08)'; c.strokeRect(O + (x + 9) * P, O + (z + 6) * P, P, P); }
+  const line = (e, col, w) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.beginPath(); c.moveTo(O + (e[0] + 9) * P, O + (e[1] + 6) * P); c.lineTo(O + (e[2] + 9) * P, O + (e[3] + 6) * P); c.stroke(); };
+  line([-9, -6, 9, -6], '#5a3d2b', 6); line([-9, -6, -9, 6], '#5a3d2b', 6); line([9, -6, 9, 6], '#5a3d2b', 6); line([-9, 6, -1, 6], '#5a3d2b', 6); line([1, 6, 9, 6], '#5a3d2b', 6); line([-1, 6, 1, 6], '#e8473a', 6);
+  for (const e of CLE.walls) line(e, '#5a3d2b', 5); for (const e of CLE.wins) line(e, '#5fb6e3', 5);
+  for (const d of CLE.doors){ c.fillStyle = '#ffd36a'; const vert = Math.abs(d[0] - Math.round(d[0])) < 0.01; c.fillRect(O + (d[0] + 9) * P - (vert ? 3 : P / 2), O + (d[1] + 6) * P - (vert ? P / 2 : 3), vert ? 6 : P, vert ? P : 6); } }
+function renderClDesign(body){
+  const E = CLE; if (!E){ curTab = 'furn'; renderTab(); return; }
+  body.appendChild(el('div', 'shophead')).innerHTML = '<b>📐 設計大宅的格局</b>';
+  body.appendChild(el('p', 'sub', '在格子上點或拖：畫牆、放門（只能放在裡面的牆線上）、放窗戶（外牆也可以）。選「房間上色」再點一個房間，整個房間換成選好的地板和壁紙（門也會把房間隔開）。紅色是大門。'));
+  const tools = el('div', 'seg'); [['wall', '🧱 牆'], ['door', '🚪 門'], ['win', '🪟 窗'], ['erase', '🧽 擦掉'], ['paint', '🎨 房間上色']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.tool === k)); b.addEventListener('click', () => { E.tool = k; renderTab(); }); tools.appendChild(b); }); body.appendChild(tools);
+  if (E.tool === 'paint'){ const r1 = el('div', 'chipline'); CL_FLOOR.forEach(([n, col], i) => { const b = el('button', 'chip' + (E.fl === i ? ' on' : ''), n); b.style.borderLeft = `14px solid ${col}`; b.addEventListener('click', () => { E.fl = i; renderTab(); }); r1.appendChild(b); }); body.appendChild(el('div', 'sub2', '地板')); body.appendChild(r1);
+    const r2 = el('div', 'chipline'); CL_WALL.forEach(([n, col], i) => { const b = el('button', 'chip' + (E.wp === i ? ' on' : ''), n); b.style.borderLeft = `14px solid ${col}`; b.addEventListener('click', () => { E.wp = i; renderTab(); }); r2.appendChild(b); }); body.appendChild(el('div', 'sub2', '壁紙')); body.appendChild(r2); }
+  const cv = el('canvas', 'clcv'); cv.width = 18 * CL_PX + 20; cv.height = 12 * CL_PX + 20; cv.style.cssText = 'width:100%;max-width:416px;touch-action:none;border-radius:12px;background:#fff;display:block;margin:6px auto'; body.appendChild(cv); clDraw(cv);
+  const toH = ev => { const r = cv.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * cv.width, y = (ev.clientY - r.top) / r.height * cv.height; return [(x - 10) / CL_PX - 9, (y - 10) / CL_PX - 6]; };
+  let drag = false, last = '';
+  const act = ev => { const [hx, hz] = toH(ev); if (hx < -9.4 || hx > 9.4 || hz < -6.4 || hz > 6.4) return;
+    if (E.tool === 'paint'){ clFill(Math.max(-9, Math.min(8, Math.floor(hx))), Math.max(-6, Math.min(5, Math.floor(hz)))); clDraw(cv); return; }
+    const e = clEdgeAt(hx, hz), k = clKey(e); if (k === last) return; last = k; clApply(e); clDraw(cv); };
+  cv.addEventListener('pointerdown', ev => { ev.preventDefault(); drag = true; last = ''; try { cv.setPointerCapture(ev.pointerId); } catch(_){} act(ev); });
+  cv.addEventListener('pointermove', ev => { if (drag && E.tool !== 'paint') act(ev); }); cv.addEventListener('pointerup', () => { drag = false; }); cv.addEventListener('pointercancel', () => { drag = false; });
+  const bar = el('div', 'tankbar'), ok = el('button', 'tbtn', '💾 儲存格局'), clr = el('button', 'tbtn ghost', '全部清掉'), bk = el('button', 'tbtn ghost', '取消');
+  ok.addEventListener('click', async () => { if (E.busy) return; E.busy = true; ok.disabled = true;
+    const cl = { walls: E.walls, doors: E.doors, wins: E.wins, fl: E.flS.join(''), wp: E.wpS.join('') }; const okk = await homeOp('design', { house: E.it.id, cl });
+    E.busy = false; if (okk){ SFX.catch(); flash('🏠 格局改好了！放不下的家具已經收起來、退錢了', 1.8); CLE = null; closeSheet(); const it = isleItems().find(x => x.id === E.it.id); if (it && House.on) rebuildHouseRoom(it); } else ok.disabled = false; });
+  clr.addEventListener('click', () => { if (clr.dataset.sure !== '1'){ clr.dataset.sure = '1'; clr.textContent = '確定清掉？'; return; } E.walls = []; E.doors = []; E.wins = []; E.flS = '0'.repeat(216).split(''); E.wpS = '0'.repeat(216).split(''); renderTab(); });
+  bk.addEventListener('click', () => { CLE = null; curTab = 'furn'; renderTab(); }); bar.append(ok, clr, bk); body.appendChild(bar);
+  body.appendChild(el('p', 'sub', `牆 ${E.walls.length} 段・門 ${E.doors.length} 個・窗 ${E.wins.length} 個（最多：牆＋窗 300、門 40）`));
+}
 let furnSheet = 'buy';
 function renderFurnSheet(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>🛋️ 家具</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!House.on || !House.it){ body.appendChild(el('div', 'empty', '走進小島上的房子裡才能擺家具。')); return; }
   const seg = el('div', 'seg'); [['buy', '🛒 買家具'], ['lay', '🏠 換格局']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(furnSheet === k)); b.addEventListener('click', () => { furnSheet = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
   const it = House.it, cur = houseLay(it), f = houseFurn(it);
+  if (furnSheet === 'lay' && it.t === 'mansion'){ body.appendChild(el('p', 'sub', '大宅的格局是你自己畫的：畫牆、放門窗、每個房間選地板和壁紙。')); const b = el('button', 'tbtn', '📐 設計格局'); b.addEventListener('click', () => { if (!canEditIsle()){ toast('只有住在這座島的人可以改'); return; } clOpen(it); }); body.appendChild(b); return; }
   if (furnSheet === 'lay'){
     body.appendChild(el('p', 'sub', '換大一點的格局只要補差價；換小的退一半。放不下的家具會自動收起來，全額退錢。'));
     const ul = el('ul', 'shoplist'); for (const [k, L] of Object.entries(LAYOUTS)){ const on = (it.lay || 'open') === k, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ['🏠', '🏡', '🏘️', '🏰'][Object.keys(LAYOUTS).indexOf(k)]));
@@ -7936,6 +8017,7 @@ function renderTab(){
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
   const body = $('#sheetBody'); body.textContent = '';
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
+  if (curTab === 'cldesign'){ renderClDesign(body); return; }
   if (curTab === 'shop'){ renderShop(body); return; }
   if (curTab === 'cook'){ renderCook(body); return; }
   if (curTab === 'island'){ renderIsland(body); return; }
