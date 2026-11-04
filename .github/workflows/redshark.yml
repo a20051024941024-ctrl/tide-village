@@ -1,0 +1,21 @@
+# 赤紅霸王鯊族群紀錄：每 3 小時看一次海裡還有幾隻、有沒有生小鯊（只讀資料，順便讓繁殖照時間算到現在）
+# 結果印在這個工作的紀錄裡（最後一行 RS_REPORT），給站長看；不會公告給玩家
+name: 紅鯊族群紀錄
+on:
+  schedule:
+    - cron: '23 */3 * * *'
+  workflow_dispatch: {}
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 安裝 psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: 查紅鯊族群
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then echo "還沒設定 SUPABASE_DB_URL，略過"; exit 0; fi
+          U="$(echo "$DB_URL" | tr -d '\r\n' | sed 's/^ *//;s/ *$//')"
+          psql "$U" -v ON_ERROR_STOP=1 -qAt -c "select public._rs_breed();" > /dev/null
+          echo "RS_REPORT $(psql "$U" -v ON_ERROR_STOP=1 -qAt -c "select json_build_object('at', now(), 'sea', count(*) filter (where status = 'sea'), 'all', count(*), 'sharks', json_agg(json_build_object('id', id, 'sex', sex, 'albino', albino, 'status', status, 'born', born_at, 'scars', scars, 'by', caught_name) order by id)) from public.red_sharks")"
