@@ -711,3 +711,41 @@ html,body{position:fixed;inset:0;width:100%;overscroll-behavior:none}
   #ferryBar,#visitBar,#isleBar,#diveHud{top:calc(var(--gt) + 142px)}
   #toasts{top:calc(var(--gt) + 142px)}
 }
+
+/* ================= 新介面（ui2）：彩色圓形大圖示、左上角頭像、聊天列在下面中間 ================= */
+body.ui2 #menu{display:grid;grid-template-columns:repeat(4,auto);gap:4px 10px;justify-content:end;align-content:start}
+body.ui2 .mbtn{background:transparent;box-shadow:none;border:0;padding:0;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.ui2 .mbtn[data-tab]{display:flex;flex-direction:column;align-items:center;gap:2px;width:58px}
+body.ui2 .mbtn[data-tab] svg{width:24px;height:24px;padding:12px;border-radius:50%;color:#fff;background:var(--ic,#3fa0d0);box-shadow:0 0 0 3px #fff,0 4px 0 3px rgba(24,51,74,.22),inset 0 -6px 0 rgba(0,0,0,.12);box-sizing:content-box}
+body.ui2 .mbtn[data-tab] span{display:block!important;font-size:12px;font-weight:900;color:#fff;letter-spacing:.5px;text-shadow:0 1px 0 #18334a,0 0 3px rgba(24,51,74,.9),1px 0 0 #18334a,-1px 0 0 #18334a,0 -1px 0 #18334a}
+body.ui2 .mbtn[data-tab]:active svg{transform:translateY(2px);box-shadow:0 0 0 3px #fff,0 2px 0 3px rgba(24,51,74,.22),inset 0 -6px 0 rgba(0,0,0,.12)}
+body.ui2 .mbtn[data-tab="map"]{--ic:linear-gradient(160deg,#4fc3d9,#2a8fb8)}
+body.ui2 .mbtn[data-tab="dex"]{--ic:linear-gradient(160deg,#6aa8ff,#3a6fd8)}
+body.ui2 .mbtn[data-tab="rank"]{--ic:linear-gradient(160deg,#ffd36a,#f0a020)}
+body.ui2 .mbtn[data-tab="tank"]{--ic:linear-gradient(160deg,#5fd8c0,#1fa890)}
+body.ui2 .mbtn[data-tab="bag"]{--ic:linear-gradient(160deg,#ff9a7a,#e8583a)}
+body.ui2 .mbtn[data-tab="island"]{--ic:linear-gradient(160deg,#9ad86a,#4fa838)}
+body.ui2 .mbtn[data-tab="people"]{--ic:linear-gradient(160deg,#c59aff,#8a5ae0)}
+body.ui2 .mbtn[data-tab="style"]{--ic:linear-gradient(160deg,#ff9ad0,#e8589a)}
+/* 拍照、全螢幕、音樂、音效：小小的白色圓按鈕，排在最上面 */
+body.ui2 #photoBtn,body.ui2 #fsBtn,body.ui2 #musicBtn,body.ui2 #soundBtn{order:-1;justify-self:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 2px 6px rgba(24,51,74,.2);display:grid;place-items:center;margin-bottom:4px}
+body.ui2 #photoBtn svg,body.ui2 #fsBtn svg,body.ui2 #musicBtn svg,body.ui2 #soundBtn svg{width:18px;height:18px}
+/* 紅點提醒 */
+body.ui2 .mbtn[data-tab]{position:relative}
+body.ui2 .mbtn .rdot{position:absolute;top:-2px;right:4px;width:16px;height:16px;border-radius:50%;background:#ff4a3a;color:#fff;font-size:11px;font-weight:900;line-height:16px;text-align:center;box-shadow:0 0 0 2px #fff}
+/* 左上角：頭像 + 名字 + 等級 */
+body.ui2 #brand{border-radius:999px 22px 22px 999px;padding:6px 14px 6px 6px}
+body.ui2 #brand .mark{width:52px;height:52px;border-radius:50%;padding:0;overflow:hidden;background:linear-gradient(160deg,#bfe8f6,#7cc6e2);box-shadow:0 0 0 3px #fff,0 0 0 5px #2a8fb8}
+body.ui2 #brand .mark img{width:100%;height:100%;object-fit:cover;display:block}
+body.ui2 #brand h1{font-size:15px}
+/* 聊天列：手機上放在下面中間 */
+body.ui2.touch #chatForm{display:flex;position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);width:min(360px,calc(100vw - 470px));min-width:200px;border-radius:999px;padding:4px 4px 4px 14px;z-index:8;pointer-events:auto}
+body.ui2.touch #chatForm input{font-size:13px}
+body.ui2.touch #chat{bottom:calc(var(--gb) + 52px);left:calc(50% - min(180px, calc(50vw - 235px)));width:min(360px,calc(100vw - 470px));min-width:200px;align-items:center;transform:none}
+body.ui2.touch #log .m{align-self:center}
+@media (orientation:landscape) and (max-height:540px){
+  body.ui2 .mbtn[data-tab]{width:50px} body.ui2 .mbtn[data-tab] svg{width:20px;height:20px;padding:10px} body.ui2 .mbtn[data-tab] span{font-size:11px}
+  body.ui2 #brand .mark{width:42px;height:42px}
+  body.ui2 #photoBtn,body.ui2 #fsBtn,body.ui2 #musicBtn,body.ui2 #soundBtn{width:30px;height:30px}
+  body.ui2 #spotCard{top:calc(var(--gt) + 66px);max-width:calc(100vw - 520px)} body.ui2 #ticker{top:calc(var(--gt) + 102px);left:0;right:300px}
+}

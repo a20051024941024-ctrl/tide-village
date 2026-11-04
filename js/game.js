@@ -2373,6 +2373,12 @@ function actionUp(){
   if (F.phase === 'charging') doCast();
   else if (F.phase === 'reeling') F.hold = false;
 }
+// 等魚的時間跟現實一樣有快有慢：大多 3～8 秒，偶爾一丟下去就咬，偶爾要等很久；清晨和黃昏魚口比較好（漲退潮、天氣在 envBonus 裡）
+function biteWait(c){
+  const r = Math.random(); let w = r < 0.14 ? rand(0.9, 2.2) : r < 0.74 ? rand(2.5, 7.5) : r < 0.94 ? rand(7.5, 14) : rand(14, 24);
+  const per = periodOf(gameHour()); w *= per === 'twilight' ? 0.75 : per === 'day' ? 1.08 : 1;
+  return Math.max(0.8, w - c * 0.8);
+}
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
   F.buffAt = curBuff(); useBuffCast();
@@ -2392,7 +2398,7 @@ function doCast(){
     cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat })
       .then(row => { if (F.castId !== id) return; F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w) } : 'fail'; }); }
   F.envB = envBonus(s.id);
-  F.phase = 'waiting'; F.waitUntil = now() + (0.8 + rand(2.4, 6.5) - c * 0.8) * (s.id === 'shrimp' ? 0.75 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
+  F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (s.id === 'shrimp' ? 0.75 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
   if (F.chumB) setTimeout(() => toast(`🍚 浮標落在${F.chumB.name}的窩點裡！`), 500);
   SFX.cast(); pushPresence(true);
 }
@@ -5027,6 +5033,20 @@ function updateTank(t){
   for (const im of touched) im.instanceMatrix.needsUpdate = true;
 }
 
+/* ================= 新介面（ui2）：先用 #ui2 預覽，確定後再改成預設 ================= */
+const UI2 = /ui2/.test(location.hash) || LS.get('tide.ui2', false);
+if (UI2) document.body.classList.add('ui2');
+function ui2Tick(){
+  if (!UI2) return;
+  // 左上角的頭像：用自己的角色拍一張大頭照
+  try { const mk = $('#brand .mark'); if (mk){ const src = avatarShot(cleanGear(rec.gear), 'face', 96); if (src && mk._src !== src){ mk._src = src; mk.innerHTML = ''; const im = document.createElement('img'); im.src = src; im.alt = ''; mk.appendChild(im); } } } catch(e){}
+  { const h = $('#brand h1'); const nm = nickname || '潮汐釣魚村'; if (h && h._nm !== nm){ h._nm = nm; h.textContent = nm; } }   // 左上角顯示自己的名字
+  // 紅點：有禮物或好友邀請、有任務可以交
+  const dot = (tab, n) => { const b = $(`#menu .mbtn[data-tab="${tab}"]`); if (!b) return; let d = $('.rdot', b); if (!n){ if (d) d.remove(); return; } if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); };
+  dot('people', (Fr.gifts || []).length + (Fr.req || []).length);
+}
+setInterval(ui2Tick, 2000); setTimeout(ui2Tick, 1200);
+
 /* ================= 包包：身上帶的東西（釣竿、魚餌、窩料、料理、潛水用品、蝦竿…）================= */
 function renderBag(body){
   const sec = (title, sub) => { const h = el('div', 'dexhead', title); if (sub) h.appendChild(el('small', '', sub)); body.appendChild(h); const ul = el('ul', 'shoplist bag'); body.appendChild(ul); return ul; };
@@ -5976,6 +5996,7 @@ function renderTab(){
       '潮汐（左上角）：大約 18 分鐘漲退一次。海邊、外海、小島在漲潮時最好釣，乾潮時比較難。',
       `季節跟著現實的月份（台灣）：3～5 月春天 🌸、6～8 月夏天 🌻、9～11 月秋天 🍁、12～2 月冬天 ❄️。每季有 6 種「當季魚」比平常多一倍（圖鑑會標「當季」），樹的顏色、飄落的花瓣落葉雪花、廣場旁邊的裝飾也會跟著換。現在是${SEASONS[SEASON].name}。`,
       '釣具店老闆每天會給「今日情報」：說哪個釣點的哪種魚今天特別多（機率 2.5 倍）。',
+      '魚上鉤的快慢跟現實一樣有快有慢：大多幾秒鐘，偶爾一丟下去就咬，偶爾要等很久。清晨和黃昏「魚口」最好；海邊乾潮時咬得快、漲潮時慢一點但稀有魚多；下雨天也比較好釣。',
       '等魚的時候，可以看到魚從旁邊游過來試探、咬餌（大型魚除外）。釣過的魚看得到顏色，上鉤時也會直接說是什麼魚；沒釣過的只看得到黑影。',
       '魚上鉤後：上面是魚的體力和距離，下面是張力條。按住收線，張力太高（紅色）要放開，不然線會斷。',
       '魚往左衝時畫面會出現「往右拉 ➡」，把搖桿往反方向推，魚會累得更快。稀有魚會跳出水面，跳的時候要放開！',
