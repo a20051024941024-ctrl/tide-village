@@ -3168,7 +3168,7 @@ function buildIsle(layout, ownerName){
 // ---- 北方冰封群島的樣子（第一次走近才蓋，手機比較省）：雪島、結冰的湖和冰洞、冰釣帳篷、雪松、雪屋、雪人、流冰、海豹、一直下的小雪 ----
 const Frost = { built:false, snow:null, floes:[], seals:[] };
 function buildFrost(){
-  Frost.built = true; const F0 = FROST, g = new THREE.Group(); g.position.set(F0.x, 0, F0.z); scene.add(g); const R = F0.r, L = F0.lake, lx = L.x - F0.x, lz = L.z - F0.z;
+  Frost.built = true; const F0 = FROST, g = new THREE.Group(); g.position.set(F0.x, 0, F0.z); scene.add(g); Frost.g = g; const R = F0.r, L = F0.lake, lx = L.x - F0.x, lz = L.z - F0.z;
   let sd = 11; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   { const sh = new THREE.Mesh(new THREE.CylinderGeometry(R + 2.2, R + 3.8, 0.8, 56), mat('#d8e4ec', 0.9)); sh.position.y = F0.y - 0.72; g.add(sh); }
   { const shape = new THREE.Shape(); shape.absarc(0, 0, R, 0, Math.PI * 2, false); const hole = new THREE.Path(); hole.absarc(lx, -lz, L.r, 0, Math.PI * 2, true); shape.holes.push(hole);   /* 雪地中間挖一個湖 */
@@ -3213,7 +3213,7 @@ function buildFrost(){
 }
 // ---- 深海浮台、遠洋神秘島的樣子（走近才蓋）----
 const Far = { abyss:false, myst:false, jelly:null, glows:[] };
-function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group(); g.position.set(A.x, 0, A.z); scene.add(g);
+function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group(); g.position.set(A.x, 0, A.z); scene.add(g); Far.ag = g;
   addDeck(A.x, A.z, A.w, A.d, A.y); g.add(box([A.w, 0.3, A.d], '#5a6470', [0, A.y - 0.15, 0])); g.add(box([A.w - 0.3, 0.04, A.d - 0.3], '#8a7a62', [0, A.y + 0.01, 0]));
   for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]){ const fl = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 12), mat('#e8a040', 0.6)); fl.position.set(sx * (A.w / 2 - 0.8), 0, sz * (A.d / 2 - 0.8)); g.add(fl); }
   for (let i = 0; i <= 12; i++){ const x = -A.w / 2 + i * A.w / 12; for (const z of [-A.d / 2, A.d / 2]) if (!(z > 0 && Math.abs(x) < 1.2)) g.add(box([0.06, 0.9, 0.06], '#c8ccd0', [x, A.y + 0.45, z])); }
@@ -3230,7 +3230,7 @@ function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group();
   { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#1d3a6a'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#e8f4fb'; c.font = 'bold 64px sans-serif'; c.textAlign = 'center'; c.fillText('🌌 深海浮台', 256, 88); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
     const sp = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(-3.6, A.y + 3.1, 0.66); g.add(sp); }
   g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
-function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.position.set(M.x, 0, M.z); scene.add(g); const R = M.r; let sd = 23; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.position.set(M.x, 0, M.z); scene.add(g); Far.mg = g; const R = M.r; let sd = 23; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   // 黑色火山岩的島：中間隆起一座小火山
   { const base = new THREE.Mesh(new THREE.CylinderGeometry(R + 2.2, R + 3.6, 0.9, 48), mat('#3a3634', 0.95)); base.position.y = M.y - 0.7; g.add(base);
     const pg = new THREE.CircleGeometry(R, 48, 0, Math.PI * 2); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position; for (let i = 0; i < p.count; i++){ const x = p.getX(i), z = p.getZ(i); p.setY(i, (mystH(M.x + x, M.z + z) || M.y)); } pg.computeVertexNormals();
@@ -3254,6 +3254,8 @@ function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.
     const sp = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(3, M.y + 2.4, -10); sp.rotation.y = Math.PI; g.add(sp); for (const sx of [-1.4, 1.4]) g.add(box([0.14, 2.6, 0.14], '#5a4030', [3 + sx, M.y + 1.3, -10])); addCircleCol(M.x + 1.6, M.z - 10, 0.2); addCircleCol(M.x + 4.4, M.z - 10, 0.2); }
   g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
 function updateFar(dt, t){
+  if (frameNo % 30 === 0){ const vis = (G, x, z, R) => { if (G) G.visible = Math.hypot(camera.position.x - x, camera.position.z - z) < R; };   /* 手機效能：離很遠的區域先不畫（走近再出現） */
+    vis(Frost.g, FROST.x, FROST.z, 130); vis(Far.ag, ABYSS.x, ABYSS.z, 120); vis(Far.mg, MYST.x, MYST.z, 130); }
   if (!Far.abyss && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 90) buildAbyss();
   if (!Far.myst && Math.hypot(me.pos.x - MYST.x, me.pos.z - MYST.z) < 90) buildMyst();
   if (Far.jelly && frameNo % 3 === 0 && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 70){ Far.jelly.position.y = Math.sin(t * 0.5) * 0.25; Far.jelly.material.opacity = 0.55 + Math.sin(t * 1.3) * 0.2; }
@@ -8052,6 +8054,7 @@ function worldTag(n, wp){ const ic = wp ? (wp.walk ? '🚶' : (WORLD_ACT[wp.r.ac
 // 每一幀：回傳 true 表示這一幀已經處理完（走路中、在家、不在工作的地方），false 表示「在原本的位置做原本的事」，讓原本的程式接手
 function worldDrive(n, dt, t){
   if (!n.wid) return false;
+  { const fd = Math.hypot(camera.position.x - n.pos.x, camera.position.z - n.pos.z); if (fd > 70 && n.wMode && n.wMode !== 'post'){ n.wSkip = (n.wSkip || 0) + dt; if (frameNo % 6) return true; dt = n.wSkip; n.wSkip = 0; } }   /* 遠的村民 6 幀才算一次 */
   if (Cloud.on && (!World.at || Date.now() - World.at > (World.fails ? 90000 : 30000))) loadWorld();
   const wp = Cloud.on ? worldPose(n.wid) : null;
   if (!n.post) n.post = { x:n.pos.x, z:n.pos.z, y:n.baseY, rot:n.rot, fishing:n.fishing, bob:n.bobPos.clone() };
