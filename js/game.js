@@ -7082,7 +7082,7 @@ function renderTab(){
     const stOf = (ph, x, z) => { if (ph){ const s = SPOTS.reduce((a, b) => Math.hypot(x-a.pos.x, z-a.pos.z) < Math.hypot(x-b.pos.x, z-b.pos.z) ? a : b); return `在${s.short}釣魚中`; } return '散步中'; };
     add(myDisplayName() === '你' ? '你' : myDisplayName(), look.shirt, stOf(me.fishing, me.pos.x, me.pos.z), true);
     for (const p of peers.values()) add(peerName(p) + (p.guest ? '・訪客' : ''), isHex(p.pres.sh) ? p.pres.sh : '#9fb3bf', stOf(!!p.pres.f, p.target.x, p.target.z), false, typeof p.pres.u === 'string' ? p.pres.u : null, [...peers.entries()].find(([k, v]) => v === p)[0]);
-    for (const n of npcs) add(n.nm.textContent, n.av.shirtM.color.getStyle(), '在岸邊釣魚（NPC）');
+    /* NPC 不列在玩家清單裡（這裡只放真人） */
     body.appendChild(ul);
     const bl = Object.entries(blockList);
     if (bl.length){
