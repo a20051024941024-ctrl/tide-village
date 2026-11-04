@@ -5969,6 +5969,8 @@ let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
 function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
+// 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
+function avKidify(av){ if (!KID.ok || av.kid || av.kidFail) return false; try { const pf = { av, gearKey:'', setGear(g){ applyGear(av, g || {}); } }; kidUpgrade(pf); if (av.kid){ const A = av.kid.acts; for (const k in A) A[k].setEffectiveWeight(k === 'idle' ? 1 : 0); av.kid.mixer.update(0.016); return true; } } catch(e){ av.kidFail = true; } return false; }
 function avKit(){
   if (AvShot.kit) return AvShot.kit;
   const sc = new THREE.Scene();
@@ -5980,7 +5982,7 @@ function avKit(){
 const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1.3, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[0.95, 3.4, 0.45] };
 function avatarShot(gear, view, size){
   const key = JSON.stringify([gear, view, size, look.shirt, look.hat]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
-  const K = avKit(); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
+  const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
   const gk = JSON.stringify(gear); if (K.key !== gk){ applyGear(K.av, gear); K.key = gk; }
   if (K.av.gearAnim) K.av.gearAnim(1.2, 0);
   const [ty, dist, yaw] = SHOT_VIEW[view] || SHOT_VIEW.full; K.cam.position.set(Math.sin(yaw) * dist, ty + 0.12, Math.cos(yaw) * dist); K.cam.lookAt(0, ty, 0);
@@ -6042,7 +6044,7 @@ function pvInit(){
 }
 function pvShow(host, gear){
   if (!pvInit()) return false;
-  PV.av.shirtM.color.set(look.shirt); PV.av.hatM.color.set(look.hat);
+  if (avKidify(PV.av)) PV.key = ''; PV.av.shirtM.color.set(look.shirt); PV.av.hatM.color.set(look.hat);
   const k = JSON.stringify(gear); if (PV.key !== k){ applyGear(PV.av, gear); PV.key = k; }
   host.appendChild(PV.cv); if (!PV.raf) PV.raf = requestAnimationFrame(pvLoop); return true;
 }
