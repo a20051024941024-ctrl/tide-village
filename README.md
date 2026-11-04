@@ -58,7 +58,7 @@ supabase/020_fair_fishing.sql 公平釣魚：伺服器決定上鉤的魚（自�
 supabase/021_visits.sql 雲端來訪紀錄（誰逛過你的小島、水族館）
 supabase/022_dive_sites.sql 三個潛水點、珍珠
 supabase/023_indexes.sql 逛島列表索引
-supabase/024_fish_batch5.sql 第五批新魚（外海常見魚、釣蝦場、企鵝冰原）和鹽烤泰國蝦
+supabase/024_fish_batch5.sql 第五批新魚（外海常見魚、釣蝦場）和鹽烤泰國蝦
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開
