@@ -37,12 +37,12 @@ const FISH = [
   { id:'scorpion',spot:'sea',  name:'條紋石狗公',rarity:'常見',color:'#e08f5b', min:0.3, max:1.4, power:0.42, desc:'喜歡貼著礁石，背鰭有刺，拿的時候要小心。' },
   { id:'moonbream',spot:'sea', time:'night', name:'月光鯛',   rarity:'稀有', color:'#ffd86d', min:1.0, max:3.8, power:0.64, desc:'鱗片會反射月光，晴潮燈塔一亮，牠們就會靠近岸邊。' },
   { id:'marlin', spot:'harbor',   name:'深藍旗魚', rarity:'傳說', color:'#2f5fd0', min:8.0, max:24.0,power:0.95, desc:'遠洋的王者，偶爾追著小魚游進海灣。拉線時要很有耐心。' },
-  { id:'manta',   spot:'harbor',   name:'星紋魟魚', rarity:'稀有', color:'#2f4d6b', min:12, max:45,  power:0.72, desc:'像披風一樣在海面下滑行，背上的星紋只有晴天才看得到。' },
-  { id:'dolphin', spot:'harbor',   name:'晴潮海豚', rarity:'稀有', color:'#7f8fa3', min:40, max:150, power:0.7,  w:0.7, desc:'喜歡追著船跑的聰明傢伙。合照之後牠會對你眨眨眼，再游回海裡。' },
+  { id:'manta',   spot:'harbor',   name:'星紋魟魚', rarity:'稀有', color:'#2f4d6b', min:12, max:45,  w:0.35, power:0.72, desc:'像披風一樣在海面下滑行，背上的星紋只有晴天才看得到。' },
+  { id:'dolphin', spot:'harbor',   name:'晴潮海豚', rarity:'稀有', color:'#7f8fa3', min:40, max:150, power:0.7,  w:0.35, desc:'喜歡追著船跑的聰明傢伙。合照之後牠會對你眨眨眼，再游回海裡。' },
   { id:'shark',   spot:'harbor',   name:'礁岩鯊',   rarity:'傳說', color:'#3f5f78', min:60, max:250, power:0.97, w:0.6, desc:'在燈塔下方的深水巡游。力氣非常大，拉線時千萬別硬拉。' },
   { id:'orca',    spot:'harbor',   name:'浪花虎鯨', rarity:'傳說', color:'#2b3138', min:1200, max:5500, power:0.98, w:0.3, desc:'黑白分明的海上獵手，常常成群在港口外繞圈。拉線時牠會突然轉向，要跟著放線。' },
-  { id:'beluga',  spot:'harbor',   name:'月白白鯨', rarity:'稀有', color:'#e4ebf0', min:400, max:1500, power:0.76, w:0.45, desc:'圓圓的額頭軟軟的，看起來一直在對你笑。聽說牠會學海鷗叫。' },
-  { id:'sunfish', spot:'harbor', time:'day',   name:'慵懶翻車魚', rarity:'稀有', color:'#8fa3b8', min:60, max:900, power:0.55, w:0.55, desc:'喜歡側躺在海面曬太陽，看起來很懶，其實是在等海鳥幫牠清潔身體。' },
+  { id:'beluga',  spot:'harbor',   name:'月白白鯨', rarity:'稀有', color:'#e4ebf0', min:400, max:1500, power:0.76, w:0.25, desc:'圓圓的額頭軟軟的，看起來一直在對你笑。聽說牠會學海鷗叫。' },
+  { id:'sunfish', spot:'harbor', time:'day',   name:'慵懶翻車魚', rarity:'稀有', color:'#8fa3b8', min:60, max:900, power:0.55, w:0.3, desc:'喜歡側躺在海面曬太陽，看起來很懶，其實是在等海鳥幫牠清潔身體。' },
   { id:'sperm',   spot:'harbor', time:'night',   name:'深潛抹香鯨', rarity:'傳說', color:'#6d7f96', min:3000, max:15000, power:1.0, w:0.18, desc:'方方的大頭可以潛到最深的海溝。能把牠拉上岸的人，手臂一定很有力。' },
   { id:'whaleshark', spot:'harbor', time:'day', name:'星斑鯨鯊', rarity:'傳說', color:'#7f8c99', min:2000, max:12000, power:0.96, w:0.22, desc:'世界上最大的魚，背上滿是白色星點。脾氣非常溫和，只吃小小的浮游生物。' },
   { id:'whale',   spot:'harbor',   name:'座頭鯨',   rarity:'傳說', color:'#34395e', min:900, max:3000, power:1.0, w:0.25, desc:'偶爾會游進海灣唱歌。能釣上牠的人，整個村子都會記住你的名字。' },
@@ -106,6 +106,22 @@ const FISH = [
   { id:'mullet',    spot:'sea',  name:'烏魚',       rarity:'常見', color:'#6f7a80', min:0.5, max:2.5, power:0.42, desc:'冬天會成群游過海峽，烏魚子就是牠的魚卵。' },
   { id:'zacco',     spot:'river', name:'溪哥',      rarity:'常見', color:'#7fb0c8', min:0.03, max:0.12, power:0.22, desc:'公的身上有漂亮的粉藍色條紋，河邊最常看到的小魚。' },
   { id:'bighead',   spot:'lake', name:'大頭鰱',     rarity:'常見', color:'#8f9aa0', min:1.0, max:10, power:0.5, desc:'頭特別大，在湖裡慢慢地游，砂鍋魚頭就是用牠做的。' },
+  // 第六批：更多常見的小魚，把大魚和稀有魚的機率壓下來
+  { id:'pomfret', spot:'harbor', name:'白鯧', rarity:'常見', color:'#c9d1d8', min:0.2, max:0.8, power:0.3, w:1.3, desc:'扁扁圓圓像一面銀色的鏡子，沒有腹鰭，過年的餐桌上一定有牠。' },
+  { id:'grunt', spot:'harbor', name:'黃雞魚', rarity:'常見', color:'#b59a6a', min:0.15, max:0.6, power:0.35, w:1.2, desc:'三線磯鱸，被拉起來的時候會「咕咕」叫，所以叫雞魚。' },
+  { id:'roundscad', spot:'harbor', name:'四破', rarity:'常見', color:'#6f97a8', min:0.08, max:0.3, power:0.3, w:1.4, desc:'藍圓鰺，台灣漁港最常見的小魚之一，煎得酥酥的很下飯。' },
+  { id:'anchovy', spot:'harbor', name:'丁香魚', rarity:'常見', color:'#9fb8c8', min:0.01, max:0.03, power:0.12, w:1.4, desc:'小小一條、身體中間有一條銀線，常常一大群一起游。' },
+  { id:'filefish', spot:'harbor', name:'剝皮魚', rarity:'常見', color:'#7d8f88', min:0.15, max:0.5, power:0.3, w:1.2, desc:'頭上有一根硬刺，皮很粗，要剝掉皮才能吃。' },
+  { id:'threadfin', spot:'harbor', name:'金線魚', rarity:'常見', color:'#e88a9a', min:0.15, max:0.5, power:0.3, w:1.2, desc:'粉紅色的身體上有幾條金黃色的線，尾巴上端拖著一根長絲。' },
+  { id:'sergeant', spot:'isle', name:'五帶豆娘魚', rarity:'常見', color:'#e8d870', min:0.05, max:0.2, power:0.22, w:1.4, desc:'黃色的背、五條黑色的直紋，在珊瑚礁上成群游來游去。' },
+  { id:'rabbitfish', spot:'isle', name:'臭肚魚', rarity:'常見', color:'#9a8a5a', min:0.15, max:0.6, power:0.3, w:1.3, desc:'嘴巴小小的愛啃海藻，鰭上的硬刺有毒，拿的時候要小心。' },
+  { id:'bluetang', spot:'isle', name:'藍倒吊', rarity:'常見', color:'#2f6fd0', min:0.1, max:0.4, power:0.3, w:1.2, desc:'寶藍色的身體、黃色的尾巴，尾柄兩邊各有一把小刀。' },
+  { id:'moonwrasse', spot:'isle', name:'新月錦魚', rarity:'常見', color:'#3fbf8a', min:0.1, max:0.35, power:0.28, w:1.3, desc:'綠色身體配上粉紅色的線條，尾巴像一彎黃色的月亮。' },
+  { id:'acro', spot:'river', name:'台灣石賓', rarity:'常見', color:'#a89a5a', min:0.1, max:0.5, power:0.35, w:1.3, desc:'身上有六七條黑色的直條紋，喜歡在湍急的溪水裡。' },
+  { id:'pseudorasbora', spot:'river', name:'羅漢魚', rarity:'常見', color:'#a8b0a0', min:0.01, max:0.03, power:0.12, w:1.4, desc:'小小的、身體中間有一條黑線，河邊的水草裡到處都是。' },
+  { id:'hillstream', spot:'pool', name:'台灣間爬岩鰍', rarity:'常見', color:'#8a7a50', min:0.01, max:0.03, power:0.15, w:1.3, desc:'扁扁的身體和大大的胸鰭像吸盤，可以緊緊貼在瀑布旁的石頭上。' },
+  { id:'candidia', spot:'pool', name:'台灣鬚鱲', rarity:'常見', color:'#6f8f9a', min:0.01, max:0.05, power:0.18, w:1.3, desc:'身體側邊有一條深色的帶子，公魚到了春天鰭會變紅。' },
+  { id:'medaka', spot:'creek', name:'青鱂魚', rarity:'常見', color:'#c8c8a8', min:0.01, max:0.02, power:0.1, w:1.3, desc:'眼睛大大的小魚，台灣原生的「大肚魚」，喜歡住在乾淨的小水溝。' },
   // 釣蝦場（浮標要自己看：輕輕點一下是在試探，整個沉下去才是吃餌）
   { id:'prawn',     spot:'shrimp', name:'泰國蝦',     rarity:'常見', color:'#5f8fb0', min:0.06, max:0.22, power:0.22, w:1.6, desc:'釣蝦場的主角，長長的藍色大鉗子。撒鹽烤到紅通通最好吃。' },
   { id:'whiteshrimp', spot:'shrimp', name:'白蝦',     rarity:'常見', color:'#d8dde0', min:0.03, max:0.09, power:0.15, desc:'小小的、半透明的白蝦，很容易上鉤。' },
@@ -126,14 +142,14 @@ const ISLE = { x:150, z:0, r:24, y:0.32 };
 const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
 const ICE = { x:-120, z:-72, w:30, d:22, y:0.45 };
 const SPOTS = [
-  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco'] },
+  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead'], legendBoost:1.4 },
-  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon'] },
+  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray','milkfish','mullet'] },
-  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail'] },
+  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn'] },
-  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp'], legendBoost:1.8 },
+  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [11, -14];
@@ -1131,7 +1147,12 @@ const seaLife = [];
 function addSeaLife(id, scale, cx, cz, r, speed, mode, ph){ const m = fishModel(FISH_BY_ID[id], scale); scene.add(m); seaLife.push({ m, cx, cz, r, speed, mode, ph: ph || 0, prevUp: false }); }
 function updateSeaLife(t){
   for (const s of seaLife){
-    if (s.mode !== 'whale'){ const near = Math.hypot(me.pos.x - s.cx, me.pos.z - s.cz) < 60; s.m.visible = near; if (!near) continue; }
+    // 偶爾才出現一次：每隔 1～2.5 分鐘出來一下（跳兩三下、滑過去、噴一口氣），其他時間躲在水裡
+    if (s.showAt == null){ s.showAt = t + 15 + Math.random() * 60; s.dur = s.mode === 'jump' ? 9 : s.mode === 'whale' ? 18 : 14; }
+    if (t > s.showAt + s.dur){ s.showAt = t + 60 + Math.random() * 90; }
+    const showing = t >= s.showAt && t <= s.showAt + s.dur;
+    if (!showing){ s.m.visible = false; continue; }
+    if (s.mode !== 'whale'){ const near = Math.hypot(me.pos.x - s.cx, me.pos.z - s.cz) < 60; s.m.visible = near; if (!near) continue; } else s.m.visible = true;
     const a = t * s.speed + s.ph, x = s.cx + Math.cos(a) * s.r, z = s.cz + Math.sin(a) * s.r;
     const vx = -Math.sin(a), vz = Math.cos(a); s.m.position.x = x; s.m.position.z = z; s.m.rotation.y = Math.atan2(-vz, vx);
     if (s.mode === 'jump'){
@@ -1139,7 +1160,7 @@ function updateSeaLife(t){
       s.m.position.y = -0.35 + Math.sin(h * Math.PI / 2) * 1.5; s.m.rotation.z = up ? Math.cos(t * 1.1 + s.ph * 3) * 1.2 : 0;
       if (up !== s.prevUp){ ripple(x, z, true); s.prevUp = up; }
     } else if (s.mode === 'glide'){ s.m.position.y = CLASSIC ? -0.02 : -0.12; s.m.rotation.z = Math.sin(t * 0.7) * 0.08; }
-    else if (s.mode === 'whale'){ s.m.position.y = -1.3 + Math.max(0, Math.sin(t * 0.18 + s.ph)) * 1.1; }
+    else if (s.mode === 'whale'){ s.m.position.y = -1.3 + Math.sin(Math.min(1, (t - s.showAt) / s.dur) * Math.PI) * 1.1; }
   }
 }
 
@@ -2403,18 +2424,20 @@ function updateBiteFish(dt, t){
   if (BiteFish.id !== f.id){
     if (BiteFish.m) scene.remove(BiteFish.m);
     const w = F.roll && F.roll.f ? F.roll.w : (f.min + f.max) / 2, m = fishModel(f, clamp(0.42 + Math.log(1 + w) * 0.3, 0.42, 0.9));
-    if (!rec.count[f.id]){ BiteFish.shadowM = BiteFish.shadowM || new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0.55, depthWrite:false }); m.traverse(o => { if (o.isMesh) o.material = BiteFish.shadowM; }); }
-    else m.traverse(o => { if (o.isMesh){ o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.82; o.material.depthWrite = false; } });
-    m.traverse(o => { if (o.isMesh){ o.castShadow = false; o.renderOrder = 3; } });
-    scene.add(m); BiteFish.m = m; BiteFish.id = f.id; BiteFish.ang = Math.random() * Math.PI * 2; BiteFish.k = 0; m.position.set(me.bobPos.x + Math.cos(BiteFish.ang) * 2.4, WATER_LEVEL - 0.06, me.bobPos.z + Math.sin(BiteFish.ang) * 2.4);
+    const mats = []; if (!rec.count[f.id]){ const sm = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0, depthWrite:false }); mats.push([sm, 0.5]); m.traverse(o => { if (o.isMesh) o.material = sm; }); }
+    else m.traverse(o => { if (o.isMesh){ o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0; o.material.depthWrite = false; mats.push([o.material, 0.75]); } });
+    m.traverse(o => { if (o.isMesh){ o.castShadow = false; o.renderOrder = -1; } });   /* 先畫魚、再畫水面：看起來在水裡 */
+    m.visible = false; scene.add(m); BiteFish.m = m; BiteFish.mats = mats; BiteFish.id = f.id; BiteFish.ang = Math.random() * Math.PI * 2; BiteFish.k = 0; BiteFish.fade = 0; BiteFish.showAt = t + rand(1.2, 3.5);   /* 等一下才游過來，不會一丟下去就出現 */ m.position.set(me.bobPos.x + Math.cos(BiteFish.ang) * 2.4, WATER_LEVEL - 0.06, me.bobPos.z + Math.sin(BiteFish.ang) * 2.4);
   }
   const m = BiteFish.m, b = me.bobPos, nib = F.lastNib && t - F.lastNib < 0.35, bite = F.phase === 'bite';
+  if (t < BiteFish.showAt && !bite) return; if (!m.visible){ m.visible = true; }
+  BiteFish.fade = Math.min(1, BiteFish.fade + dt * 0.6); for (const [mt, op] of BiteFish.mats) mt.opacity = op * BiteFish.fade;   // 從深處慢慢浮現
   // 慢慢靠近：一開始在 2.2 公尺外繞圈，越等越近；試探時衝過來碰一下；咬下去時頭頂著浮標
   BiteFish.k = Math.min(1, BiteFish.k + dt * 0.25); BiteFish.ang += dt * (bite ? 0 : 0.5);
   const r = bite ? 0.12 : nib ? 0.25 : 1.7 + (0.7 - 1.7) * BiteFish.k;
   const tx = b.x + Math.cos(BiteFish.ang) * r, tz = b.z + Math.sin(BiteFish.ang) * r;
   m.position.x += (tx - m.position.x) * Math.min(1, dt * (nib || bite ? 8 : 2)); m.position.z += (tz - m.position.z) * Math.min(1, dt * (nib || bite ? 8 : 2));
-  m.position.y = (F.spot && F.spot.id === 'shrimp' ? WATER_LEVEL - 0.12 : WATER_LEVEL - 0.06) + (bite ? Math.sin(t * 20) * 0.02 : 0);
+  m.position.y = (F.spot && F.spot.id === 'shrimp' ? WATER_LEVEL - 0.14 : WATER_LEVEL - 0.22 - (1 - BiteFish.fade) * 0.4) + (bite ? Math.sin(t * 20) * 0.02 : 0);
   m.rotation.y = Math.atan2(-(b.z - m.position.z), b.x - m.position.x) + (bite ? Math.sin(t * 18) * 0.25 : Math.sin(t * 3) * 0.1);
 }
 function updateFishing(dt, t){
@@ -3500,7 +3523,10 @@ function buildShrimpFront(){
   B(1.4, 2.2, 0.08, mat('#3a4a58', 0.5), 0, 1.1, 1.52); B(1.2, 0.9, 0.06, mat('#9fd8f0', 0.2, { emissive:'#5fb6e3', emissiveIntensity:0.3 }), 0, 1.5, 1.57);
   for (const x of [-2.2, 2.2]) B(1.4, 1.0, 0.06, mat('#9fd8f0', 0.2, { emissive:'#5fb6e3', emissiveIntensity:0.3 }), x, 1.7, 1.52);
   const sg = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.0), new THREE.MeshBasicMaterial({ map: signTex('🦐 釣蝦場', '#e8473a', '#fff7e0') })); sg.position.set(0, 4.05, 1.18); g.add(sg); B(4.4, 1.15, 0.12, mat('#3a3a3a', 0.6), 0, 4.05, 1.1);   /* 招牌立在屋頂上，不會被遮雨棚擋住 */
-  const pr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.4), new THREE.MeshBasicMaterial({ map: signTex('時段計費', '#2f3b36', '#ffd36a', 256, 300) })); pr.position.set(2.6, 1.0, 1.56); g.add(pr);
+  { const cv = document.createElement('canvas'); cv.width = 384; cv.height = 256; const c = cv.getContext('2d'); c.fillStyle = '#2f3b36'; c.fillRect(0, 0, 384, 256); c.strokeStyle = '#ffd36a'; c.lineWidth = 8; c.strokeRect(8, 8, 368, 240);
+    c.fillStyle = '#ffd36a'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = 'bold 64px sans-serif'; c.fillText('時段計費', 192, 82); c.fillStyle = '#ffffff'; c.font = 'bold 38px sans-serif'; c.fillText('30分 🪙200', 192, 160); c.fillText('60分 🪙350', 192, 208);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;   /* 價目板：兩行字，不會被切掉 */
+    const pr = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.0), new THREE.MeshBasicMaterial({ map: tx })); pr.position.set(2.25, 1.55, 1.58); g.add(pr); }
   addBoxCol(X, Z - 0.6, 6.4, 4.2);
 }
 function buildShrimpHall(){
@@ -4822,7 +4848,7 @@ function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishe
 const SHOW_MAX = 100, KEEP_MAX = 200;
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || ++others <= KEEP_MAX); }
-function shownFish(){ if (visiting) return visiting.list; if (rec.show && rec.show.length){ const set = new Set(rec.show); return rec.tank.filter(x => set.has(x.t)); } return rec.tank.slice(0, SHOW_MAX); }
+function shownFish(){ if (visiting) return visiting.list; const set = new Set(rec.show || []); return rec.tank.filter(x => set.has(x.t)); }   /* 只放玩家自己選的魚（不再自動展示最新的魚） */
 function saveRecLocal(){ rec.updatedAt = Date.now(); LS.set('tide.rec', rec); }
 function normRec(r){
   const e = emptyRec(); if (!r || typeof r !== 'object') return e;
@@ -4925,6 +4951,8 @@ function drawMarlin(cv, known){
 // in-world tank
 // 水族館最多 100 條魚：同一種魚的同一個部位用一個 InstancedMesh 一次畫完，手機才撐得住
 let tankInst = [];      // 這次建出來的 InstancedMesh／一般模型，重建時要拿掉
+// 水族館裡住在底下的：螃蟹、龍蝦、蝦子、章魚、比目魚、魟魚…會貼著沙子慢慢爬，不會在水中間游
+const TANK_BOTTOM = new Set(['crab', 'kingcrab', 'lobster', 'bluelobster', 'crayfish', 'prawn', 'blueclaw', 'goldprawn', 'whiteshrimp', 'tigerprawn', 'octopus', 'flounder', 'stingray', 'hillstream', 'loach', 'angler', 'catfish']);
 function buildTank(){
   if (!tankGroup) return;
   for (const m of tankInst){ tankGroup.remove(m); if (m.isInstancedMesh) m.dispose(); } tankInst = []; tankFish = [];
@@ -4934,6 +4962,7 @@ function buildTank(){
     const f = FISH_BY_ID[x.f]; const big = BIG_FISH.has(f.id);
     const fish = { f, scale: big ? 0.46 : 0.3 + Math.min(0.18, Math.log(1 + x.w) * 0.06), zk: FISH_STYLE[f.id] && /^Fish/.test(FISH_STYLE[f.id].shape) ? 1.5 : 1,
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
+    if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
     tankFish.push(fish);
     if (!FISH_STYLE[f.id]){ fish.m = fishModel(f, fish.scale); tankGroup.add(fish.m); tankInst.push(fish.m); return; }   // 旗魚：專屬模型
     if (!bySpecies.has(f.id)) bySpecies.set(f.id, []); bySpecies.get(f.id).push(fish);
@@ -4962,7 +4991,7 @@ function updateTank(t){
     const a = t * fish.sp + fish.ph, b = t * fish.sp * 0.7 + fish.ph2;
     const x = fish.cx + Math.sin(a) * fish.ax, z = Math.cos(b) * fish.az;
     const vx = Math.cos(a) * fish.ax * fish.sp, vz = -Math.sin(b) * fish.az * fish.sp * 0.7;
-    const y = fish.y + Math.sin(a * 1.3) * 0.12, ry = Math.atan2(-vz, vx);
+    const y = fish.bottom ? fish.y : fish.y + Math.sin(a * 1.3) * 0.12, ry = Math.atan2(-vz, vx);
     if (fish.m){ fish.m.position.set(x, y, z); fish.m.rotation.y = ry; if (fish.m.userData.tail) fish.m.userData.tail.rotation.y = Math.sin(t * 8 + fish.ph) * 0.4; continue; }
     tankDummy.position.set(x, y, z); tankDummy.rotation.set(0, ry, 0); tankDummy.scale.set(fish.scale, fish.scale, fish.scale * fish.zk); tankDummy.updateMatrix();
     for (const [im, k] of fish.slots){ im.setMatrixAt(k, tankDummy.matrix); touched.add(im); }
@@ -4998,6 +5027,10 @@ function releaseCaught(){
 function closeCatch(){ if ($('#catchCard').hidden) return; $('#catchCard').hidden = true; uiBlocked = !$('#sheet').hidden; if (F.phase === 'result') F.phase = 'idle'; }
 $('#ccOk').addEventListener('click', closeCatch);
 $('#ccRel').addEventListener('click', releaseCaught);
+$('#ccShow').addEventListener('click', () => {   // 釣到時直接選「放進水族館展示」
+  const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x){ closeCatch(); return; }
+  rec.show = (rec.show || []).filter(t => t !== x.t); if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先到魚缸拿出一條`); return; }
+  rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); ticker(`🏛️ <b>${esc(f.name)}</b> 放進廣場的水族館展示了`); closeCatch(); });
 $('#chumBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const pk = $('#chumPick'); if (pk && !pk.hidden){ pk.hidden = true; return; } renderChumPick(); });
 (function(){ const j = $('#jumpBtn');
   j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); j.classList.add('down'); if (Dive.on){ Dive.up = true; return; } jump(); });
@@ -5481,7 +5514,7 @@ async function visitAquarium(id, name){
     const { data, error } = await Cloud.sb.from('players').select('nickname,tank,show').eq('id', id).maybeSingle();
     if (error || !data){ toast('找不到這位玩家的水族館'); return; }
     const r = normRec({ tank:data.tank, show:data.show });
-    const set = new Set(r.show || []), list = set.size ? r.tank.filter(x => set.has(x.t)) : r.tank.slice(0, SHOW_MAX);
+    const set = new Set(r.show || []), list = r.tank.filter(x => set.has(x.t));
     visiting = { id, name: data.nickname || name || '釣客', list }; Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'aqua' }).then(() => {}, () => {});
     buildTank(); renderVisitBar();
     travelTo({ id:'aquarium', label:'水族館', x: AQUA[0] + 1.2, z: AQUA[1] + 6.2, rot: Math.PI });
@@ -5772,13 +5805,11 @@ function renderTab(){
     const missing = ids.filter(id => !(id in profileNames));
     if (missing.length) resolveNames(missing).then(() => { if (curTab === 'rank' && !$('#sheet').hidden) $$('.rank .who', body).forEach(w => { const id = w.dataset.id; if (id !== myId && profileNames[id]) w.firstChild.textContent = profileNames[id]; }); });
   } else if (curTab === 'tank'){
-    const picking = rec.show && rec.show.length > 0;
-    body.appendChild(el('p', 'sub', picking
-      ? `你選了 ${rec.show.length} / ${SHOW_MAX} 條魚放進廣場北邊的大水族館。點「展示」可以放進去或拿出來，「放生」會把這條魚從魚缸移走。`
-      : `現在是自動模式：最新的 ${SHOW_MAX} 條魚會放進大水族館。按任何一條的「展示／展示中」，就會改成由你自己調整。`));
+    const nShow = (rec.show || []).length;
+    body.appendChild(el('p', 'sub', nShow ? `你選了 ${nShow} / ${SHOW_MAX} 條魚放進廣場北邊的大水族館。點「展示」可以放進去或拿出來，「放流」會把這條魚放回大自然。`
+      : `廣場北邊的大水族館現在是空的。想讓大家看到哪條魚，就按那條魚的「展示」（最多 ${SHOW_MAX} 條）。`));
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
     const bar = el('div', 'tankbar');
-    if (picking){ const auto = el('button', 'tbtn ghost', '改回自動展示'); auto.addEventListener('click', () => { rec.show = []; saveRecLocal(); buildTank(); renderTab(); cloudCall('set_show', { p_show: [] }); }); bar.appendChild(auto); }
     const sortSel = el('div', 'seg');
     [['new','最新'],['big','最重'],['rare','最稀有']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((tankSort || 'new') === k)); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortSel.appendChild(b); });
     bar.appendChild(sortSel); body.appendChild(bar);
@@ -5794,7 +5825,7 @@ function renderTab(){
       const acts = el('div', 'tacts');
       const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '展示中' : '展示'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
       show.addEventListener('click', () => {
-        if (!rec.show || !rec.show.length) rec.show = shownFish().map(y => y.t);   // 第一次自己挑：從目前展示的魚開始調整
+        if (!rec.show) rec.show = [];
         const i = rec.show.indexOf(x.t);
         if (i >= 0) rec.show.splice(i, 1);
         else { if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先拿出一條再放。`); return; } rec.show.push(x.t); }
@@ -5930,7 +5961,7 @@ function renderTab(){
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
-      `廣場北邊的大水族館最多可以展示 ${SHOW_MAX} 條，在「魚缸」分頁自己挑。展示中的魚不會被賣掉或拿去做菜。`,
+      `廣場北邊的大水族館只放你自己選的魚（最多 ${SHOW_MAX} 條）：釣到時按「🏛️ 展示」，或在「魚缸」分頁按「展示」。展示中的魚不會被賣掉或拿去做菜。`,
       '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚捧起來炫耀給大家看。',
       '可以參觀別人的水族館（玩家分頁或排行榜點他的名字）。',
     ]);

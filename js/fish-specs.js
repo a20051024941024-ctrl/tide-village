@@ -309,6 +309,69 @@ export const SPECS = {
       ...Array.from({ length:8 }, (_, i) => ({ k:'cone', sym:true, a:{ x:0.8, y:0.12 - i * 0.002, z:0.04 + i * 0.022 }, b:{ x:0.8, y:0.02, z:0.045 + i * 0.022 }, r:0.008, n:4, part:'Teeth' })),
       ...Array.from({ length:8 }, (_, i) => ({ k:'cone', sym:true, a:{ x:0.79, y:-0.16, z:0.04 + i * 0.022 }, b:{ x:0.8, y:-0.05, z:0.045 + i * 0.022 }, r:0.008, n:4, part:'Teeth' }))] } },
 
+  /* ---------------- 第六批：常見的小魚 ---------------- */
+  pomfret: { c:{ Top:'#aab4bc', Mid:'#d4dade', Bottom:'#eef1f3', Fins:'#b8c0c6', Eye:'#15181c' }, p:{
+    bl:0.78, depth:0.62, wr:0.3, tm:0.42, nose:0.45, ped:0.12, tailK:1.1, cs:0.3, pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.3, part:'Mid' }],
+    dorsal:{ s:0.4, e:0.85, h:0.35, shape:'tri', peak:0.1, back:0.2, sweep:0.6 }, anal:{ s:0.42, e:0.85, h:0.35, shape:'tri', peak:0.1, back:0.2, sweep:0.6 },
+    pect:{ t:0.3, y:-0.1, size:0.4, shape:'long' }, caudal:{ type:'forked', notch:0.2, hk:1.0, lo:1.25 }, eye:EYE(0.1, 0.15, 0.05) } },
+  grunt: { c:{ Top:'#6f6a48', Mid:'#b59a6a', Bottom:'#e8e0c8', Stripes:'#3e3a28', Fins:'#8a7a50', Eye:'#15181c', EyeW:'#e0d0a0' }, p:{
+    bl:0.8, depth:0.3, wr:0.5, tm:0.35, nose:0.75, ped:0.22, cs:0.25,
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, ...[0.55, 0.2, -0.15].map(y => ({ k:'line', t0:0.08, t1:1, y:[[0, y + 0.1], [1, y * 0.5]], w:0.05, part:'Stripes' }))],
+    dorsal:[{ s:0.3, e:0.55, h:0.4, shape:'spiny', back:0.6 }, { s:0.56, e:0.76, h:0.3, shape:'flat' }], anal:{ s:0.64, e:0.76, h:0.28 }, pect:{ t:0.27, y:-0.2, size:0.4 }, pelv:{ t:0.32, size:0.35 },
+    caudal:{ type:'forked', notch:0.5, hk:1.2 }, eye:EYE(0.1, 0.35, 0.09, { ring:true }) } },
+  roundscad: { c:{ Top:'#2f6a80', Mid:'#c6d2d8', Bottom:'#f2f4f4', Accent:'#1a1a1a', Stripes:'#a0aab4', Fins:'#7a8a96', Eye:'#15181c', EyeW:'#e8ecf0' }, p:{
+    bl:0.82, depth:0.22, wr:0.6, tm:0.38, nose:0.95, ped:0.08, cs:0.25, pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.25, part:'Mid' }, { k:'line', t0:0.6, t1:1, y:[[0, 0.05], [1, 0.05]], w:0.07, part:'Stripes' }, { k:'ell', t:0.17, y:0.35, rt:0.02, ry:0.12, part:'Accent' }],
+    dorsal:[{ s:0.3, e:0.44, h:0.4, shape:'spiny', back:0.4 }, { s:0.46, e:0.8, h:0.25, shape:'rampd', back:0.4 }], anal:{ s:0.56, e:0.8, h:0.22, shape:'rampd', back:0.4 }, finlets:{ n:1, s:0.86, e:0.88 },
+    pect:{ t:0.25, y:0.0, size:0.45, shape:'long' }, pelv:{ t:0.3, size:0.25 }, caudal:{ type:'forked', notch:0.25, hk:1.45 }, eye:EYE(0.09, 0.3, 0.12, { ring:true }) } },
+  anchovy: { c:{ Top:'#3a6a8a', Mid:'#d8e0e6', Bottom:'#f6f8f8', Stripes:'#e8f0f6', Fins:'#c8d4dc', Eye:'#15181c', EyeW:'#e8ecf0' }, p:{
+    bl:0.84, depth:0.17, wr:0.55, tm:0.4, nose:0.9, ped:0.15, cs:0.3, yc:[[0,0.15],[0.1,0],[1,0]], pat:[{ k:'band', t0:0, t1:1, y0:-0.6, y1:0.3, part:'Mid' }, { k:'line', t0:0.12, t1:1, y:[[0,0.05],[1,0.05]], w:0.1, part:'Stripes' }],
+    dorsal:{ s:0.45, e:0.55, h:0.4 }, anal:{ s:0.7, e:0.8, h:0.2 }, pect:{ t:0.2, y:-0.6, size:0.3 }, pelv:{ t:0.45, size:0.2 },
+    caudal:{ type:'forked', notch:0.3, hk:1.5 }, eye:EYE(0.08, 0.2, 0.13, { ring:true }) } },
+  filefish: { c:{ Top:'#6f8078', Mid:'#9aa8a0', Bottom:'#d8dcd4', Spots:'#5a6a62', Fins:'#3fa070', Eye:'#15181c', EyeW:'#d8e0c0' }, p:{
+    bl:0.82, depth:0.45, wr:0.3, tm:0.42, nose:1.1, ped:0.22, cs:0.2, yc:[[0,0.25],[0.2,0],[1,0]], pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.2, part:'Mid' }, { k:'spots', gt:0.1, gy:0.5, r:0.03, ar:5, t0:0.2, t1:0.9, y0:-0.4, y1:0.9, part:'Spots', fill:0.5 }],
+    dorsal:[{ s:0.18, e:0.2, h:0.7, shape:'tri', peak:0.5, sweep:0.3, back:0 }, { s:0.48, e:0.86, h:0.28, shape:'round' }], anal:{ s:0.5, e:0.86, h:0.26, shape:'round' },
+    pect:{ t:0.3, y:0.0, size:0.25, shape:'round' }, caudal:{ type:'truncate', hk:1.0 }, eye:EYE(0.18, 0.45, 0.07, { ring:true }) } },
+  threadfin: { c:{ Top:'#e07a8a', Mid:'#f0a8b0', Bottom:'#f8e4e0', Stripes:'#f2c840', Fins:'#f0b0b8', Fins2:'#f2c840', Eye:'#15181c', EyeW:'#f0d0d8' }, p:{
+    bl:0.8, depth:0.3, wr:0.45, tm:0.35, nose:0.8, ped:0.2, cs:0.3, pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }, ...[0.45, 0.15, -0.2].map(y => ({ k:'line', t0:0.12, t1:1, y:[[0, y], [1, y * 0.6]], w:0.045, part:'Stripes' }))],
+    dorsal:{ s:0.3, e:0.8, h:0.25, shape:'flat' }, anal:{ s:0.6, e:0.8, h:0.2, shape:'flat' }, pect:{ t:0.27, y:-0.2, size:0.45, shape:'long' }, pelv:{ t:0.3, size:0.35 },
+    caudal:{ type:'forked', notch:0.45, hk:1.2, part:'Fins2' }, eye:EYE(0.1, 0.35, 0.1, { ring:true }),
+    extra:[{ k:'limb', pts:[{ x:-0.62, y:0.2, z:0 }, { x:-0.85, y:0.3, z:0 }, { x:-1.0, y:0.33, z:0 }], r0:0.006, r1:0.002, n:3, part:'Fins2' }] } },
+  sergeant: { c:{ Top:'#e8d870', Bottom:'#f2f2ec', Mid:'#dce6d8', Stripes:'#1d1d1d', Fins:'#d8d8c8', Eye:'#15181c' }, p:{
+    bl:0.8, depth:0.5, wr:0.4, tm:0.4, nose:0.55, ped:0.25, cs:0.45, pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.45, part:'Mid' }, { k:'bars', bars:BARS(5, 0.22, 0.86, 0.06, -0.55, 1.1), part:'Stripes' }],
+    dorsal:[{ s:0.3, e:0.6, h:0.3, shape:'spiny', back:0.9 }, { s:0.6, e:0.8, h:0.35, shape:'round' }], anal:{ s:0.62, e:0.8, h:0.32, shape:'round' }, pect:{ t:0.3, y:-0.2, size:0.4 }, pelv:{ t:0.34, size:0.35 },
+    caudal:{ type:'forked', notch:0.5, hk:1.0 }, eye:EYE(0.12, 0.3, 0.08) } },
+  rabbitfish: { c:{ Top:'#7a6a40', Mid:'#9a8a5a', Bottom:'#d8d0b0', Spots:'#e0d8b8', Fins:'#8a7a50', Eye:'#15181c', EyeW:'#d8c880' }, p:{
+    bl:0.8, depth:0.4, wr:0.4, tm:0.4, nose:0.7, ped:0.2, cs:0.2, pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.2, part:'Mid' }], dots:{ n:30, t0:0.15, t1:0.9, y0:-0.5, y1:0.9, r:0.014, part:'Spots' },
+    dorsal:[{ s:0.25, e:0.62, h:0.3, shape:'spiny', back:0.9 }, { s:0.62, e:0.84, h:0.32, shape:'round' }], anal:{ s:0.5, e:0.84, h:0.28, shape:'spiny', back:0.9 }, pect:{ t:0.3, y:-0.1, size:0.4 }, pelv:{ t:0.35, size:0.35 },
+    caudal:{ type:'emarginate', hk:1.1 }, eye:EYE(0.13, 0.35, 0.08, { ring:true }) } },
+  bluetang: { c:{ Top:'#2a5ad8', Bottom:'#3a6ae0', Accent:'#121a2e', Fins:'#1f3a9a', Fins2:'#f2d23a', Eye:'#15181c' }, p:{
+    bl:0.8, depth:0.5, wr:0.35, tm:0.42, nose:0.5, ped:0.22, cs:-2,
+    pat:[{ k:'line', t0:0.14, t1:0.95, y:[[0.14, 0.55], [0.5, 0.65], [0.75, 0.2], [0.95, 0.1]], w:0.12, part:'Accent' }, { k:'ell', t:0.45, y:0.1, rt:0.12, ry:0.15, part:'Accent' }, { k:'band', t0:0.94, t1:1.01, y0:-2, y1:2, part:'Fins2' }],
+    dorsal:{ s:0.28, e:0.92, h:0.22, shape:'flat', part:'Accent' }, anal:{ s:0.55, e:0.92, h:0.2, shape:'flat', part:'Accent' }, pect:{ t:0.32, y:-0.1, size:0.45, part:'Fins2' }, pelv:{ t:0.36, size:0.3 },
+    caudal:{ type:'emarginate', hk:1.05, part:'Fins2' }, eye:EYE(0.13, 0.3, 0.08) } },
+  moonwrasse: { c:{ Top:'#2fa880', Bottom:'#4fc89a', Stripes:'#e870b0', Accent:'#4a8ae0', Fins:'#e870b0', Fins2:'#f2d23a', Eye:'#15181c' }, p:{
+    bl:0.8, depth:0.26, wr:0.45, tm:0.38, nose:0.7, ped:0.25, cs:-0.2, pat:[{ k:'bars', bars:BARS(14, 0.2, 0.95, 0.012, -0.8, 0.9), part:'Stripes' }, { k:'band', t0:0, t1:0.15, y0:-2, y1:2, part:'Accent' }, { k:'line', t0:0.0, t1:0.15, y:[[0, 0.1], [0.15, 0.3]], w:0.08, part:'Stripes' }],
+    dorsal:{ s:0.25, e:0.85, h:0.25, shape:'flat' }, anal:{ s:0.55, e:0.85, h:0.22, shape:'flat' }, pect:{ t:0.27, y:-0.1, size:0.45, part:'Accent' }, pelv:{ t:0.32, size:0.25 },
+    caudal:{ type:'lunate', hk:1.25, part:'Fins2' }, eye:EYE(0.08, 0.3, 0.08) } },
+  acro: { c:{ Top:'#6a6a3a', Mid:'#b8aa6a', Bottom:'#eee8cc', Stripes:'#2e2e1e', Fins:'#a89060', Eye:'#15181c', EyeW:'#e0d090' }, p:{
+    bl:0.8, depth:0.28, wr:0.55, tm:0.38, nose:0.75, ped:0.22, cs:0.3, pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }, { k:'bars', bars:BARS(6, 0.24, 0.88, 0.05, -0.4, 1.1), part:'Stripes' }],
+    dorsal:{ s:0.38, e:0.52, h:0.45, shape:'tri', peak:0.2 }, anal:{ s:0.7, e:0.78, h:0.28 }, pect:{ t:0.25, y:-0.55, size:0.4 }, pelv:{ t:0.45, size:0.3 }, caudal:{ type:'forked', notch:0.45, hk:1.3 }, eye:EYE(0.1, 0.3, 0.08, { ring:true }),
+    extra:[{ k:'limb', sym:true, pts:[{ t:0.02, yn:-0.4, z:0.02 }, { x:0.79, y:-0.06, z:0.05 }], r0:0.006, r1:0.003, part:'Fins' }] } },
+  pseudorasbora: { c:{ Top:'#7a8068', Mid:'#c0c4b4', Bottom:'#eeeee6', Stripes:'#2f3428', Fins:'#a8ac98', Eye:'#15181c', EyeW:'#e0e0d0' }, p:{
+    bl:0.82, depth:0.22, wr:0.55, tm:0.4, nose:0.85, ped:0.25, cs:0.3, yc:[[0,0.2],[0.1,0],[1,0]], pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }, { k:'line', t0:0.05, t1:1, y:[[0,0.1],[1,0.05]], w:0.08, part:'Stripes' }],
+    dorsal:{ s:0.4, e:0.52, h:0.4 }, anal:{ s:0.68, e:0.76, h:0.25 }, pect:{ t:0.22, y:-0.6, size:0.3 }, pelv:{ t:0.42, size:0.25 }, caudal:{ type:'forked', notch:0.45, hk:1.3 }, eye:EYE(0.08, 0.3, 0.1, { ring:true }) } },
+  hillstream: { c:{ Top:'#7a6a42', Bottom:'#e8dfc4', Spots:'#d8c070', Fins:'#8a7a50', Eye:'#15181c' }, p:{
+    bl:0.84, depth:0.11, wr:1.8, tm:0.25, nose:0.45, ped:0.35, tailK:0.8, n:2.2, cs:-0.1, wd:[[0,0.55],[0.2,1],[0.5,0.75],[1,0.35]], dots:{ n:24, t0:0.1, t1:0.9, y0:0.2, y1:0.95, r:0.02, part:'Spots' },
+    dorsal:{ s:0.42, e:0.55, h:0.6, shape:'round' }, anal:{ s:0.7, e:0.78, h:0.4, shape:'round' }, pect:{ t:0.16, y:-0.2, size:1.3, shape:'round', w:1.1, horiz:true, out:1.0, ang:0 }, pelv:{ t:0.45, size:1.0, shape:'round', w:1.0, horiz:true, out:1.0, ang:0 },
+    caudal:{ type:'emarginate', hk:1.6 }, eye:EYE(0.1, 0.75, 0.08, { pop:0.4 }) } },
+  candidia: { c:{ Top:'#4f6f7a', Mid:'#c0ccd0', Bottom:'#eef0ee', Stripes:'#1f2f3a', Fins:'#e07a5a', Eye:'#15181c', EyeW:'#e0e8ea' }, p:{
+    bl:0.82, depth:0.23, wr:0.5, tm:0.38, nose:0.8, ped:0.22, cs:0.3, pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }, { k:'line', t0:0.1, t1:1, y:[[0,0.12],[1,0.05]], w:0.13, part:'Stripes' }],
+    dorsal:{ s:0.42, e:0.54, h:0.45 }, anal:{ s:0.64, e:0.76, h:0.35 }, pect:{ t:0.24, y:-0.6, size:0.35 }, pelv:{ t:0.45, size:0.3 }, caudal:{ type:'forked', notch:0.45, hk:1.35 }, eye:EYE(0.09, 0.3, 0.09, { ring:true }),
+    extra:[{ k:'limb', sym:true, pts:[{ t:0.02, yn:-0.4, z:0.02 }, { x:0.8, y:-0.05, z:0.05 }], r0:0.005, r1:0.002, part:'Fins' }] } },
+  medaka: { c:{ Top:'#8a8a60', Mid:'#c8c8a8', Bottom:'#f0eee0', Fins:'#d8d4c0', Eye:'#15181c', EyeW:'#d0e8f0' }, p:{
+    bl:0.84, depth:0.22, wr:0.6, tm:0.45, nose:0.7, ped:0.35, tailK:0.9, cs:0.4, yc:[[0,0.2],[0.2,0],[1,0]], up:[[0,0.4],[0.15,0.7],[0.45,0.95],[0.6,1],[1,0.35]], pat:[{ k:'band', t0:0, t1:1, y0:-0.6, y1:0.4, part:'Mid' }],
+    dorsal:{ s:0.74, e:0.82, h:0.35, shape:'round' }, anal:{ s:0.52, e:0.85, h:0.3, shape:'flat' }, pect:{ t:0.22, y:0.2, size:0.35 }, pelv:{ t:0.42, size:0.25 }, caudal:{ type:'truncate', hk:1.1 }, eye:EYE(0.1, 0.45, 0.16, { ring:true }) } },
+
   /* ---------------- 魟魚、比目魚 ---------------- */
   manta: { c:{ Top:'#1c1f26', Bottom:'#f2f2ee', Accent:'#e9e9e4', Fins:'#14161b', Eye:'#15181c' }, move:'wing', view:[-0.4, 0.7], p:{
     bl:0.66, depth:0.12, wr:13, tm:0.3, nose:0.6, ped:0.08, cs:0.0, ns:44, nr:36, up:[[0,0.5],[0.2,1],[0.6,0.7],[1,0.2]], lo:[[0,0.4],[0.2,0.8],[0.6,0.5],[1,0.2]],
