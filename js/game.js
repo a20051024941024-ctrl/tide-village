@@ -190,7 +190,7 @@ const SPOTS = [
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林（參考新竹新豐紅毛港），漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
-  { id:'canal', label:'城市水圳', short:'水圳', subtitle:'村子東邊的水泥水圳（參考新竹湖口），站在高高的堤防路上往下釣，大魚要用撈網', pos:V3(16.5, -40.4), color:'#8a7a5a', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino'] },
+  { id:'canal', label:'城市水圳', short:'水圳', subtitle:'村子東邊的水泥水圳（參考新竹湖口），站在高高的堤防路上往下釣，大魚要用撈網', pos:V3(16.5, -41.3), color:'#8a7a5a', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','trout_golden'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
@@ -434,7 +434,12 @@ const MAP = {
   ],
 };
 // 城市水圳（參考新竹湖口）：村子東邊一條筆直的水泥水圳，從工廠區流到東海岸。兩邊是比水面高 2.5 公尺的堤防路，南岸靠海那段是可以走下去的低草岸
-const CANAL = { z:-38, half:1.7, x0:10.6, x1:27.5, y:2.6, rw:2.4, xr0:8.2, xn1:25.0, bankX:19.0 };
+const CANAL = { z:-38, half:2.6, x0:10.6, x1:27.5, y:2.6, rw:2.0, xr0:8.2, xn1:25.0, bankX:19.0 };
+// 堤防：路的外側是長草的斜坡（可以直接走上去），只有靠水那一面是水泥牆
+function canalLevee(x, z){ const C = CANAL; if (x < C.xr0 - 4 || x > C.xn1 + 4 || z < C.z - C.half - C.rw - 4 || z > C.z + C.half + C.rw + 4) return 0;
+  const rd = (x0, x1, z0, z1) => Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
+  const d = Math.min(rd(C.xr0, C.xn1, C.z - C.half - C.rw, C.z), rd(C.xr0, C.bankX, C.z, C.z + C.half + C.rw));
+  return C.y * smooth01(1 - d / 4.2) - (d > 0 ? 0.05 : 0); }
 function hillH(x, z){
   const h = MAP.hill, dx = x - h.x, dz = z - h.z, d = Math.hypot(dx, dz);
   if (d > h.R + 0.5) return 0;
@@ -449,6 +454,7 @@ function terrainInfo(x, z){
   const e = islandEdge(x, z);
   if (e < 2){ h = Math.max(-3, -(2 - e) * 0.32); if (h < -0.02) water = true; }
   else h = hillH(x, z);
+  if (!water && e > 0.5){ const lv = canalLevee(x, z); if (lv > h) h = lv; }
   const dig = (dist, max, slope, reg) => { if (dist > 0){ const dep = -Math.min(max, 0.08 + dist * slope); if (!water || dep < h){ h = Math.min(h, dep); region = reg; } water = true; } };
   // 湖（橢圓＋微彎岸線）
   const L = MAP.lake, lx = (x - L[0]) / L[2], lz = (z - L[1]) / L[3], ld = Math.hypot(lx, lz);
@@ -628,6 +634,9 @@ function buildTrees(trees, PX, PZ){
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
 function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castPoint(x, z, dx, dz, dist){
+  { const C = CANAL; if (x > C.xr0 - 1 && x < 22.5 && Math.abs(z - C.z) < C.half + C.rw + 1.5 && (Math.abs(dz) < 0.35 || Math.sign(C.z - z) === Math.sign(dz))){   /* 水圳很窄：浮標落在水圳中間，不會飛過對岸 */
+      const tt = Math.abs(dz) >= 0.35 ? Math.min((C.z - z) / dz, dist + 2) : dist; const px = clamp(x + dx * tt, C.x0 + 0.7, C.x1 + 6), pz = clamp(z + dz * tt, C.z - C.half + 0.6, C.z + C.half - 0.6);
+      if (waterAt(px, pz)) return [px, pz]; } }
   const ok = d => waterAt(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
   for (let k = 0.4; k < 8; k += 0.4){ if (dist - k > 1.2 && ok(dist - k)) return [x + dx * (dist - k), z + dz * (dist - k)]; if (ok(dist + k)) return [x + dx * (dist + k), z + dz * (dist + k)]; }
@@ -3396,8 +3405,8 @@ var Canal = { g:null, litter:[], next:0, fade:[] };
 function buildCanal(){
   const C = CANAL, g = new THREE.Group(); scene.add(g); Canal.g = g; let sd = 23; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const zN0 = C.z - C.half - C.rw, zN1 = C.z - C.half, zS0 = C.z + C.half, zS1 = C.z + C.half + C.rw;
-  const conc = mat('#aaa79c', 0.95), conc2 = mat('#9b988c', 0.95), asph = mat('#55575a', 0.9), stain = mat('#5e6050', 0.98), moss = mat('#5e7a3e', 0.98);
-  const rail = mat('#7c8c84', 0.5, { metalness:0.4 });
+  const conc = mat('#cdc6b5', 0.95), conc2 = mat('#bcb5a4', 0.95), asph = mat('#8c8a85', 0.9), stain = mat('#86826c', 0.98), moss = mat('#71904a', 0.98);
+  const rail = mat('#7f9c94', 0.5, { metalness:0.3 });
   // 堤防：一大塊水泥（上面是柏油路），水那一面有水痕和青苔
   const bank = (x0, x1, z0, z1, wz) => {
     const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
@@ -3414,17 +3423,6 @@ function buildCanal(){
   // 水圳頭的涵管（水從路底下流出來）
   { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.3, 16, 1, true), mat('#3a3a36', 0.9, { side:THREE.DoubleSide })); p.rotation.z = Math.PI / 2; p.position.set(C.x0 + 0.02, 0.25, C.z); g.add(p);
     const d = new THREE.Mesh(new THREE.CircleGeometry(0.52, 16), mat('#141412')); d.rotation.y = Math.PI / 2; d.position.set(C.x0 + 0.01, 0.25, C.z); g.add(d); }
-  // 樓梯：西邊（往村子的路）、南岸中間（往水族館）、南岸東邊（下到低草岸）
-  const stairs = (x, z, dx, dz, w) => { const g0 = Math.max(0, terrainH(x + dx * 4.2, z + dz * 4.2)), n = Math.ceil((C.y - g0) / 0.28), L = 0.42;
-    for (let k = 0; k < n; k++){ const y = C.y - (k + 1) * (C.y - g0) / (n + 0.4), cx = x + dx * (k + 0.5) * L, cz = z + dz * (k + 0.5) * L, sw = dx ? L : w, sd2 = dx ? w : L;
-      g.add(box([sw, Math.max(0.1, y + 0.4), sd2], '', [cx, (y - 0.4) / 2, cz], k % 2 ? conc : conc2)); addDeck(cx, cz, sw + 0.02, sd2 + 0.02, y); }
-    for (const s of [-1, 1]){ const ox = dz ? s * w / 2 : 0, oz = dx ? s * w / 2 : 0; const ln = n * L, a = Math.atan2(C.y - g0, ln);
-      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, Math.hypot(ln, C.y - g0), 6), rail); r.position.set(x + dx * ln / 2 + ox, (C.y + g0) / 2 + 0.85, z + dz * ln / 2 + oz);
-      r.rotation.set(dz ? -dz * (Math.PI / 2 - a) : 0, 0, dx ? dx * (Math.PI / 2 - a) : 0); g.add(r); }
-    return n * L; };
-  stairs(C.xr0, C.z, -1, 0, 1.6);
-  stairs(14, zS1, 0, 1, 1.5);
-  stairs(C.bankX, C.z + C.half + C.rw / 2, 1, 0, 1.5);
   // 欄杆和護欄：水那邊是鐵欄杆，外面是矮矮的水泥護欄；樓梯口留空
   const fence = (x0, x1, z, solid, gaps) => { const segs = []; let a = x0; for (const [g0, g1] of (gaps || []).sort((p, q) => p[0] - q[0])){ if (g0 > a) segs.push([a, g0]); a = Math.max(a, g1); } if (a < x1) segs.push([a, x1]);
     for (const [s0, s1] of segs){ const w = s1 - s0; if (w < 0.05) continue; addBoxCol((s0 + s1) / 2, z, w, 0.14);
@@ -3434,12 +3432,10 @@ function buildCanal(){
   const fenceZ = (z0, z1, x, solid, gaps) => { const segs = []; let a = z0; for (const [g0, g1] of (gaps || [])){ if (g0 > a) segs.push([a, g0]); a = Math.max(a, g1); } if (a < z1) segs.push([a, z1]);
     for (const [s0, s1] of segs){ const w = s1 - s0; if (w < 0.05) continue; addBoxCol(x, (s0 + s1) / 2, 0.14, w); g.add(box([0.14, 0.5, w], '', [x, C.y + 0.25, (s0 + s1) / 2], conc2)); } };
   fence(C.x0, C.xn1, zN1 + 0.08, false); fence(C.x0, C.bankX, zS0 - 0.08, false);
-  fence(C.xr0, C.xn1, zN0 + 0.08, true); fence(C.xr0, C.bankX, zS1 - 0.08, true, [[13.25, 14.75]]);
-  fenceZ(zN0, zS1, C.xr0 + 0.08, true, [[C.z - 0.8, C.z + 0.8]]); fenceZ(zS0, zS1, C.bankX - 0.08, true, [[C.z + C.half + C.rw / 2 - 0.75, C.z + C.half + C.rw / 2 + 0.75]]);
   fenceZ(zN0, zN1, C.xn1 - 0.08, false); fenceZ(zN1, zS0, C.x0 - 0.08, true);
   { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, C.rw, 6), rail); r.rotation.x = Math.PI / 2; r.position.set(C.xn1 - 0.08, C.y + 0.95, (zN0 + zN1) / 2); g.add(r); }
   // 混混的褐色水、看得到的石頭和水草
-  { const w = new THREE.Mesh(new THREE.PlaneGeometry(C.x1 - C.x0 + 2, C.half * 2), new THREE.MeshBasicMaterial({ color:'#6e5e3e', transparent:true, opacity:0.5, depthWrite:false })); w.rotation.x = -Math.PI / 2; w.position.set((C.x0 + C.x1) / 2 + 1, WATER_LEVEL + 0.02, C.z); w.renderOrder = 1; g.add(w); }
+  { const w = new THREE.Mesh(new THREE.PlaneGeometry(C.x1 - C.x0 + 2, C.half * 2), new THREE.MeshBasicMaterial({ color:'#7a6e4a', transparent:true, opacity:0.35, depthWrite:false })); w.rotation.x = -Math.PI / 2; w.position.set((C.x0 + C.x1) / 2 + 1, WATER_LEVEL + 0.02, C.z); w.renderOrder = 1; g.add(w); }
   for (let i = 0; i < 26; i++){ const x = C.x0 + 0.6 + rr() * (C.x1 - C.x0 - 2), z = C.z + (rr() - 0.5) * C.half * 1.7, r = 0.12 + rr() * 0.22; const k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat(['#6a6458', '#7a7466', '#55524a'][i % 3], 0.95, { flatShading:true })); k.position.set(x, Math.max(terrainH(x, z), -0.8) + r * 0.5, z); k.scale.y = 0.6; k.rotation.y = rr() * 3; g.add(k); }
   const grassM = mat('#6f8a3e', 0.95, { side:THREE.DoubleSide }), grass2 = mat('#8a9a4a', 0.95, { side:THREE.DoubleSide });
   const tuft = (x, z, y, n, h) => { for (let k = 0; k < n; k++){ const b = new THREE.Mesh(new THREE.PlaneGeometry(0.06, h * (0.6 + rr() * 0.6)), rr() < 0.5 ? grassM : grass2); b.position.set(x + (rr() - 0.5) * 0.3, y + h * 0.4, z + (rr() - 0.5) * 0.3); b.rotation.set((rr() - 0.5) * 0.5, rr() * 3, (rr() - 0.5) * 0.5); g.add(b); } };
@@ -3453,13 +3449,13 @@ function buildCanal(){
   const wireM = new THREE.LineBasicMaterial({ color:'#2a2a2a' });
   for (let i = 0; i < poles.length - 1; i++) for (const s of [-0.6, 0, 0.6]){ const [ax, az] = poles[i], [bx] = poles[i + 1], pts = []; for (let k = 0; k <= 10; k++){ const t = k / 10; pts.push(new THREE.Vector3(ax + (bx - ax) * t, C.y + 6.7 - Math.sin(t * Math.PI) * 0.45, az + s)); } g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireM)); }
   // 黃色的抽水管：路邊一台抽水機，管子翻過欄杆、沿著牆下到水裡
-  { const x = 17.6, yel = mat('#e8b820', 0.55), pz = zS0 + 0.55;
-    g.add(box([0.8, 0.6, 0.6], '#3a6a9a', [x + 0.9, C.y + 0.3, zS0 + 1.2])); g.add(box([0.3, 0.3, 0.3], '#2a2a2a', [x + 0.9, C.y + 0.75, zS0 + 1.2])); addBoxCol(x + 0.9, zS0 + 1.2, 0.8, 0.6);
+  { const x = 17.6, yel = mat('#e8b820', 0.55), pz = zS0 + 0.35;
+    g.add(box([0.8, 0.6, 0.6], '#3a6a9a', [x + 0.9, C.y + 0.3, zS0 + 0.75])); g.add(box([0.3, 0.3, 0.3], '#2a2a2a', [x + 0.9, C.y + 0.75, zS0 + 0.75])); addBoxCol(x + 0.9, zS0 + 0.75, 0.8, 0.6);
     const seg = (a, b, r) => { const v = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, v.length(), 10), yel); m.position.copy(a).addScaledVector(v, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.clone().normalize()); m.castShadow = true; g.add(m); };
     const P = (px, py, pz2) => new THREE.Vector3(px, py, pz2);
-    seg(P(x + 0.5, C.y + 0.3, zS0 + 1.2), P(x, C.y + 0.3, zS0 + 1.2), 0.11); seg(P(x, C.y + 0.3, zS0 + 1.2), P(x, C.y + 1.15, pz), 0.11); seg(P(x, C.y + 1.15, pz), P(x, C.y + 1.15, zS0 - 0.25), 0.11); seg(P(x, C.y + 1.15, zS0 - 0.25), P(x, WATER_LEVEL - 0.4, zS0 - 0.3), 0.11); }
+    seg(P(x + 0.5, C.y + 0.3, zS0 + 0.75), P(x, C.y + 0.3, zS0 + 0.75), 0.11); seg(P(x, C.y + 0.3, zS0 + 0.75), P(x, C.y + 1.15, pz), 0.11); seg(P(x, C.y + 1.15, pz), P(x, C.y + 1.15, zS0 - 0.25), 0.11); seg(P(x, C.y + 1.15, zS0 - 0.25), P(x, WATER_LEVEL - 0.4, zS0 - 0.3), 0.11); }
   // 老榕樹（南岸路邊，有很多氣根垂下來）
-  { const g0 = g; { var bg = new THREE.Group(); g0.add(bg); } const g = bg; const x = 11.2, z = zS1 + 2.6, y = groundHeight(x, z), bark = mat('#6a5e4e', 0.95), leaf = mat('#3e6a32', 0.9, { flatShading:true }), leaf2 = mat('#4e7a3a', 0.9, { flatShading:true });
+  { const g0 = g; { var bg = new THREE.Group(); g0.add(bg); } const g = bg; const x = 8.2, z = zS1 + 4.6, y = groundHeight(x, z), bark = mat('#6a5e4e', 0.95), leaf = mat('#3e6a32', 0.9, { flatShading:true }), leaf2 = mat('#4e7a3a', 0.9, { flatShading:true });
     const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.85, 4.2, 10), bark); tr.position.set(x, y + 2.1, z); tr.castShadow = true; g.add(tr); addCircleCol(x, z, 0.9);
     for (let i = 0; i < 7; i++){ const a = i / 7 * 6.28 + rr(), r = 1.2 + rr() * 1.3, b = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.32, 2.4, 6), bark); b.position.set(x + Math.cos(a) * r * 0.5, y + 4.2, z + Math.sin(a) * r * 0.5); b.rotation.set(Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9); g.add(b);
       const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3 + rr() * 0.6, 0), i % 2 ? leaf : leaf2); c.position.set(x + Math.cos(a) * r, y + 5.0 + rr() * 1.2, z + Math.sin(a) * r); c.scale.y = 0.65; c.castShadow = true; g.add(c);
@@ -3474,9 +3470,8 @@ function buildCanal(){
     g.add(box([0.06, h * 0.55, d * 0.4], '#5a6470', [x + w / 2 * (sign ? 1 : -1) + (sign ? 0.03 : -0.03), y + h * 0.28, z]));
     for (let k = 0; k < Math.floor(w / 2.2); k++) g.add(box([0.9, 0.5, 0.04], '#a8c8d8', [x - w / 2 + 1.1 + k * 2.2, y + h * 0.72, z + d / 2 + 0.02]));
     addBoxCol(x, z, w, d); Canal.fade.push({ g, b: new THREE.Box3().setFromObject(g) }); };
-  factory(17, zN0 - 1.9, 7, 3, 4.2, '#3a72b0', '#c8ccc8', '#b0b4b0', 0);
-  factory(19.5, zS1 + 3.3, 5, 3.4, 3.4, '#b04a3a', '#d0ccc0', '#b8b4a8', 1);
-  factory(10.4, zS1 + 6.2, 3.4, 4.2, 3.6, '#3a8a6a', '#c0c4c0', '#a8aca8', 1);
+  factory(13.6, zS1 + 6.2, 5, 3.4, 3.8, '#4a82c0', '#dcdcd6', '#c8c8c2', 0);
+  factory(19.6, zS1 + 6.0, 4.2, 3, 3.4, '#c06a52', '#e0dacc', '#ccc6b8', 1);
   // 路邊的機車、牌子
   { const x = 20.2, z = zN0 + 0.9; g.add(box([1.3, 0.35, 0.3], '#d84a3a', [x, C.y + 0.45, z])); for (const s of [-0.5, 0.5]){ const wh = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 6, 12), mat('#1a1a1a')); wh.position.set(x + s, C.y + 0.22, z); g.add(wh); } g.add(box([0.5, 0.12, 0.28], '#2a2a2a', [x - 0.15, C.y + 0.7, z])); addBoxCol(x, z, 1.4, 0.4); }
   { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = '#2f6a4a'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 40px sans-serif'; c.fillText('🏙️ 城市水圳', 128, 62);
@@ -6123,6 +6118,7 @@ function useRoom(r){
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
       if (f.rs){ setTimeout(rsPoll, 1500); }   /* 紅鯊的公告由伺服器紀錄發（每個大廳都看得到，不會重複） */
       else if (f.sev){ ticker(`🎉 <b>${esc(name)}</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`); if (Sev.ev && Sev.ev.fish === f.id){ Sev.ev.caught = name; Sev.told['got' + Sev.ev.id] = 1; } }
+      if (f.rarity !== '常見' && !f.rs) Talk.recent.unshift({ who: name, name: f.name, at: Date.now() });
       else if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
       if (p){ p.fisher.holdFish(f, w, 5); if (f.rarity === '傳說') p.fisher.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); }   // 大家都看得到他捧著剛釣到的魚
     }, () => {});
@@ -6521,14 +6517,50 @@ const npcs = [
   { name:'小溪・村民', shirt:'#d896c3', hat:'#3fbf9d', x:-19.4, z:-10.2, y:0.28, dir:new THREE.Vector2(-1,0.1).normalize() },
   { name:'老港・漁夫', shirt:'#5b6b7a', hat:'#ffd36a', x:31.4, z:-34.4, y:0.3, dir:new THREE.Vector2(1,-0.1).normalize() },
   { name:'阿蘭・紅樹林巡守員', shirt:'#4f7f44', hat:'#e8d8a8', x:65.6, z:10.55, y:0.62, dir:new THREE.Vector2(0.35, 1).normalize(), lines:['退潮的時候泥灘會露出來，可以下去抓彈塗魚喔', '走慢一點，招潮蟹很膽小的', '鋸鰩已經很少了，釣到記得放流', '漲潮的時候，烏魚和黑鯛會游進樹根裡', '晚上這裡會有螢火蟲'] },
+  { name:'阿伯・水圳釣客', shirt:'#c8b48a', hat:'#5a6a3a', x:12.6, z:-41.6, y:2.6, dir:new THREE.Vector2(0, 1), lines:['這條水圳以前很清，現在都是琵琶鼠魚', '用手竿就好，這裡不用拋遠', '大隻的塘蝨很重，沒撈網拉不上來', '晚上有魚虎在牆邊巡，很兇喔', '看到寶特瓶就順手撿一下啦', '想不用拔魚，就去南岸路尾巴下面的草岸', '大肚魚是以前放來吃孑孓的'] },
 ].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
+// ---- 村民聊天（2026-11-04）：玩家走近時偶爾講一句。有自己的話、玩法小提示，還有「現在正在發生的事」（天氣、潮汐、季節、活動、紅鯊）。說的內容都要跟遊戲真正的規則一樣 ----
+const NPC_TIPS = [
+  '按住拋竿可以蓄力，放開就拋出去',
+  '拉線的時候張力條快滿了就先鬆手，不然線會斷',
+  '手竿適合河、湖、溪、水圳；海邊用遠投竿；外海用磯釣竿',
+  '太小的魚放流，愛海點數比較多',
+  '愛海點數可以去商店換限定的衣服',
+  '水族館裡同一種魚一公一母，每天有機會生小魚',
+  '在高高的岸上釣大魚要有撈網，釣具店「釣法」那裡有賣',
+  '窩料丟下去，附近的魚會聚過來',
+  '去港口找船夫阿海，可以出海或去潛水',
+  '去過的地方，打開地圖就能直接傳送過去',
+  '釣蝦場要先跟老闆買時段才能釣',
+  '圖鑑裡還沒釣過的魚，都是黑黑的影子',
+  '變種的魚很少見，釣到才會出現在圖鑑裡',
+  '幫村民完成任務，可以拿到金幣',
+];
+function npcEventLines(n){
+  const L = [], W = WEATHERS[Env.wx], tip = dailyTip();
+  L.push(`現在${W.name}：${W.desc}`);
+  L.push(`聽釣具店老闆說，${tip.text}`);
+  if (Env.tide.st === 'low') L.push('退潮的時候海邊的魚比較不愛咬，不過紅樹林的泥灘會露出來，可以去抓彈塗魚');
+  if (Env.tide.st === 'rising') L.push('漲潮了！海邊的魚咬得比較快，稀有魚也多一點');
+  if (breedSeason()) L.push('現在是繁殖季，吳郭魚、鯽魚這些會自己生的魚特別多');
+  if (Env.wx === 'rain') L.push('下雨天雷魚、鯰魚、鰻魚特別愛吃');
+  if (Env.wx === 'storm') L.push('暴風雨的時候外海傳說魚多很多，但是拉線很吃力');
+  { const night = FISH.filter(f => f.time === 'night' && !f.of && SPOT_BY_ID[f.spot] && !SPOT_BY_ID[f.spot].hidden); if (night.length){ const f = night[Math.floor(Math.random() * night.length)]; L.push(`${f.name}只有晚上才會出來，在${SPOT_BY_ID[f.spot].short}`); } }
+  if (Sev.ev && !Sev.ev.caught && FISH_BY_ID[Sev.ev.fish]) L.push(`阿忠今天放了一條${FISH_BY_ID[Sev.ev.fish].name}，還沒有人釣到喔！`);
+  if (RS.n > 0 && Math.random() < 0.4) L.push(`聽說外海還有 ${RS.n} 隻赤紅霸王鯊…`);
+  if (Talk.recent.length && Date.now() - Talk.recent[0].at < 20 * 60000){ const r = Talk.recent[0]; L.push(`剛剛${r.who}釣到一條${r.name}，好厲害`); }
+  return L;
+}
+const Talk = { recent: [] };
+function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
 function updateNpcs(dt, t){
   for (const n of npcs){
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
     const st = n.st || 'wait';
     if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z);
       if (Math.random() < 0.4){ n.st = 'reel'; n.stT = t + rand(1.6, 3.2); }
-      else { if (Math.random() < 0.35 && camera.position.distanceTo(n.pos) < 25) n.say(n.lines[Math.floor(Math.random()*n.lines.length)], '', 4); n.next = t + rand(6, 15); } }
+      else n.next = t + rand(6, 15); }
+    { const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < 9 && t > (n.talkAt || 0) && n.st !== 'show' && !Dive.on && !House.on){ n.say(npcLine(n), '', 6); n.talkAt = t + rand(20, 40); } else if (d > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5); }   /* 走近才講話，講完隔一陣子再講 */
     if (st === 'reel'){ n.bend = 0.75 + Math.sin(t * 6) * 0.2; n.dip = 0.6 + Math.sin(t * 9) * 0.3; if (Math.random() < dt * 3) ripple(n.bobPos.x + (Math.random() - 0.5) * 0.6, n.bobPos.z + (Math.random() - 0.5) * 0.6);
       if (t > n.stT){ const sid = waterSpotId(n.bobPos.x, n.bobPos.z), pool = (SPOT_BY_ID[sid] || SPOT_BY_ID.sea).fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity === '常見' && !BIG_FISH.has(f.id));
         const f = pool[Math.floor(Math.random() * pool.length)]; ripple(n.bobPos.x, n.bobPos.z, true); n.fishing = false; n.bobState = 'none'; n.flying = null; n.dip = 0; n.bend = 0;
@@ -6807,8 +6839,8 @@ function renderTab(){
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
-      '🏙️ 城市水圳（參考新竹湖口的水圳）：在村子東邊、往東海灘的路旁邊。兩邊是比水面高兩三公尺的堤防路，從樓梯上去。這裡外來種很多：吳郭魚、琵琶鼠魚、食蚊魚（大肚魚），運氣好會遇到泰國鱧（魚虎）和很大的革胡子鯰。手竿最適合。',
-      '🥅 拔魚：站在堤防路這種很高的地方，魚上鉤以後要從水面整條拔上來。1 公斤以下的小魚直接拉；更大的魚沒有撈網硬拔線會斷（在釣具店「釣法」分頁買撈網）。南岸靠海那段有樓梯可以下到低低的草岸，在那裡釣就不用拔。',
+      '🏙️ 城市水圳（參考新竹湖口的水圳）：在村子東邊、往東海灘的路旁邊。兩邊是比水面高兩三公尺的堤防路，從旁邊的草坡走上去。這裡外來種很多：吳郭魚、琵琶鼠魚、食蚊魚（大肚魚），運氣好會遇到泰國鱧（魚虎）和很大的革胡子鯰。手竿最適合。',
+      '🥅 拔魚：站在堤防路這種很高的地方，魚上鉤以後要從水面整條拔上來。1 公斤以下的小魚直接拉；更大的魚沒有撈網硬拔線會斷（在釣具店「釣法」分頁買撈網）。南岸的路走到底，順著草坡下去就是低低的草岸，在那裡釣就不用拔。',
       '🧴 撿垃圾：水圳的路上和草岸常常有寶特瓶、塑膠袋、鋁罐，走過去按「撿起來」，每撿一個愛海點數 +1（一天最多 20 個）。',
       '🌿 紅樹林（參考新竹新豐紅毛港）：在本島南岸、南方沙灘再往南，從岸上走進去就到了（地圖下方深綠色那一片）。漲潮時魚會游進樹根之間，在紅樹林碼頭的發光圈或岸邊釣得到烏魚、虱目魚、金錢魚、黑鯛，運氣好還有尖吻鱸、鬥牛鯊、鋸鰩。退潮（乾潮）時島邊的泥灘會露出來，可以走下去：搖桿推一點點慢慢靠近彈塗魚或招潮蟹，再按「抓！」。跑太快會把牠們嚇跑，水漲回來要趕快回到島上。',
       '外海魚情：在外海的船上按「🤿 下潛看魚」，可以直接潛下去看這一帶現在有哪些魚。外海每 5 分鐘會有 3 種魚特別活躍（上鉤機率 ×2.5），浮上來之後跑馬燈會告訴你是哪幾種、還剩幾分鐘。',
