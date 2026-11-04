@@ -3528,7 +3528,7 @@ function updateMangrove(dt, t){
   for (const m of Mang.mud) m.position.y = Mang.mudY - 2.6;
   if (Mang.flies){ const op = DayNight.lamp > 0.5 ? 0.85 : 0; Mang.flies.material.opacity += (op - Mang.flies.material.opacity) * Math.min(1, dt * 0.8); if (Mang.flies.material.opacity > 0.02){ const p = Mang.flies.geometry.attributes.position, b = Mang.flies.userData.base; for (let i = 0; i < p.count; i++){ p.array[i * 3] = b[i * 3] + Math.sin(t * 0.7 + i) * 0.4; p.array[i * 3 + 1] = b[i * 3 + 1] + Math.sin(t * 1.3 + i * 2.1) * 0.25; p.array[i * 3 + 2] = b[i * 3 + 2] + Math.cos(t * 0.6 + i) * 0.4; } p.needsUpdate = true; Mang.flies.material.size = 0.12 + Math.sin(t * 4) * 0.04; } }
   // 漲潮了還站在泥灘上：被水推回島上
-  const e = mangE(me.pos.x, me.pos.z), onMud = e <= 0 && e > -MANG.mud && !deckAt(me.pos.x, me.pos.z) && !myBoat;
+  const e = mangE(me.pos.x, me.pos.z), onMud = e <= 0 && e > -MANG.mud && !deckAt(me.pos.x, me.pos.z) && !myBoat && !isLand(me.pos.x, me.pos.z);   /* 只有真的站在泥灘（原本是海）上才算；本島岸邊離小島很近，以前會被當成泥灘、漲潮時被「吸」到島上 */
   if (onMud && !mudOut()){ for (let k = 0; k < 40; k++){ const [ix, iz] = MANG.isl.reduce((b, s) => Math.hypot(me.pos.x - s[0], me.pos.z - s[1]) - s[2] < Math.hypot(me.pos.x - b[0], me.pos.z - b[1]) - b[2] ? s : b); const a = Math.atan2(me.pos.z - iz, me.pos.x - ix); me.pos.x -= Math.cos(a) * 0.15; me.pos.z -= Math.sin(a) * 0.15; if (mangE(me.pos.x, me.pos.z) > 0.3) break; } toast('🌊 漲潮了！泥灘被淹掉，趕快回到島上'); }
   if (onMud && !Mang.onMud && Date.now() - Mang.told > 60000){ Mang.told = Date.now(); toast('🦀 泥灘上的小動物很怕人，搖桿推一點點、慢慢靠近，再按「抓！」'); }
   Mang.onMud = onMud;
