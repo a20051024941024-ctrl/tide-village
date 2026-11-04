@@ -428,3 +428,24 @@ export const SPECS = {
   bluelobster: { gen:'shrimp', c:{ Top:'#2f6fe0', Bottom:'#9cc4ff', Stripes:'#2458c0', Fins:'#2a5cc0', Claw:'#2f6fe0', Eye:'#141418' }, move:'vert', glow:true, p:{
     len:0.62, cw:0.15, ch:0.15, cara:0.42, curl:0.12, rostrum:0.06, ant:0.75, legLen:0.26, scale:false, claw:{ leg:0, len:0.66, r:0.032, palm:2.3, finger:0.32 } } },
 };
+
+/* ---------------- 變種：同一種魚、長得不一樣（從原本那種魚的外形改顏色和一點點形狀） ---------------- */
+const VAR = (base, c, p, extra) => Object.assign({}, SPECS[base], extra || {}, { c: Object.assign({}, SPECS[base].c, c), p: Object.assign({}, SPECS[base].p, p) });
+Object.assign(SPECS, {
+  koi_sanke: VAR('koi', { Spots:'#151515' }, { dots:{ n:10, t0:0.15, t1:0.85, y0:0.3, y1:0.95, r:0.025, part:'Spots' } }),
+  koi_showa: VAR('koi', { Top:'#1a1a1a', Bottom:'#f2efe8', Accent:'#d8231c', Spots:'#f4f0ea', Fins:'#2a2a2a' }, { cs:0.1, dots:{ n:8, t0:0.2, t1:0.8, y0:0.0, y1:0.6, r:0.05, part:'Spots' } }),
+  koi_ogon: VAR('koi', { Top:'#f2c040', Bottom:'#f8d870', Accent:'#f6cc50', Fins:'#f0c048' }, {}, { glow:true }),
+  goldfish_ranchu: VAR('goldfish', { Top:'#ff5a1a', Bottom:'#ffd0a0', Accent:'#ff8a50', Fins:'#ff7a3a' }, { dorsal:[], up:[[0,0.4],[0.06,0.95],[0.15,1],[0.42,0.95],[0.7,0.75],[1,0.3]],
+    extra:[...SPECS.goldfish.p.extra, ...[0, 1, 2, 3, 4, 5].map(i => ({ k:'ellip', sym:i % 2 === 1, c:{ t:0.03 + (i % 3) * 0.035, yn:0.85 - Math.floor(i / 3) * 0.3, z:0.02 + (i % 2) * 0.04 }, r:[0.035, 0.035, 0.035], part:'Accent', seg:8, rings:5 }))] }),
+  goldfish_telescope: VAR('goldfish', { Top:'#1e1e22', Bottom:'#3a3a40', Accent:'#2a2a30', Fins:'#26262c', Eye:'#0a0a0a' }, { eye:{ t:0.12, y:0.25, r:0.16, pop:0.9 } }),
+  goldfish_pearl: VAR('goldfish', { Top:'#f8a060', Bottom:'#fff0e0', Accent:'#ffffff', Spots:'#fff4e8', Fins:'#f8b880' }, { depth:0.85, dots:{ n:50, t0:0.15, t1:0.85, y0:-0.8, y1:0.9, r:0.02, part:'Spots' } }),
+  clown_black: VAR('clown', { Top:'#1a1a1a', Bottom:'#2a2420', Fins:'#1f1a18', Accent:'#0a0a0a' }, {}),
+  catfish_albino: VAR('catfish', { Top:'#f0d8d0', Mid:'#f6e4de', Bottom:'#fff4f0', Spots:'#f8e8e4', Fins:'#ecccc4', Eye:'#d02a3a' }, {}),
+  trout_golden: VAR('trout', { Top:'#f0b830', Mid:'#f4cc50', Bottom:'#f8e8b0', Stripes:'#e8a828', Spots:'#e86a3a', Accent:'#f8d870', Fins:'#f0c040', Fins2:'#f0a838' },
+    { pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, { k:'line', t0:0.08, t1:1, y:[[0,0.05],[1,0.05]], w:0.1, part:'Spots' }], dots:[] }),
+  carp_mirror: VAR('carp', { Mid:'#b89048', Stripes:'#d8b060', Spots:'#e8c878' }, { pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.35, part:'Mid' }],
+    dots:[{ n:9, t0:0.2, t1:0.85, y0:0.8, y1:0.92, r:0.045, part:'Spots' }, { n:8, t0:0.2, t1:0.9, y0:-0.02, y1:0.05, r:0.04, part:'Spots', seed:3 }] }),
+  crayfish_blue: VAR('crayfish', { Top:'#2a5ec8', Bottom:'#6a9ae8', Stripes:'#1a3a8a', Fins:'#3a6ad0', Claw:'#2f6fe0' }, {}),
+  tilapia_red: VAR('tilapia', { Top:'#e8503a', Mid:'#ff7a5a', Bottom:'#ffc8b0', Stripes:'#e86a50', Fins:'#f06a50' }, {}),
+  arowana_red: VAR('arowana', { Top:'#8a2420', Mid:'#d8302a', Bottom:'#f06a50', Stripes:'#b8241e', Fins:'#a8201a' }, {}, { glow:true }),
+});

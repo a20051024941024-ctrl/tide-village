@@ -66,6 +66,7 @@ supabase/026_shrimp_rods.sql 釣蝦場的蝦竿（碳纖維 1200、職人手工 
 supabase/027_shrimp_event.sql 釣蝦場老闆的放生活動：每天 2 小時放一隻藍色龍蝦，全伺服器只有一隻；放生會回到池子
 supabase/028_shrimp_size.sql 釣蝦場的蝦變大一點、沒有尺寸限制
 supabase/029_fish_batch6.sql 第六批 15 種常見小魚，外海的大魚和魟魚變少
+supabase/030_variants.sql 變種：同一種魚、長得不一樣（錦鯉、金魚、小丑魚…），機率很低
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

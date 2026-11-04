@@ -129,6 +129,20 @@ const FISH = [
   { id:'crayfish',  spot:'shrimp', name:'小龍蝦',     rarity:'常見', color:'#c0402a', min:0.05, max:0.14, power:0.24, desc:'紅通通的小龍蝦，一被拉起來就會舉起大鉗子示威。' },
   { id:'blueclaw',  spot:'shrimp', name:'藍鉗泰國蝦', rarity:'稀有', color:'#2f6fd0', min:0.15, max:0.38,  power:0.32, desc:'鉗子是漂亮的寶藍色，又大又長，釣到可以炫耀一整天。' },
   { id:'goldprawn', spot:'shrimp', name:'金鉤蝦王',   rarity:'傳說', color:'#e8b730', min:0.35,  max:0.65, power:0.42, desc:'池子裡傳說中的蝦王，全身金黃色。老闆說十幾年才出現一次。' },
+  // 變種：同一種魚、長得不一樣（機率很低；沒釣到之前圖鑑看不到）
+  { id:'koi_sanke', spot:'lake', of:'koi', time:'twilight', name:'錦鯉・大正三色', rarity:'傳說', color:'#f4f0e8', min:2.5, max:7.0, power:0.9, w:0.3, desc:'白底配上紅色大斑，背上還點綴著黑色小斑，三種顏色的錦鯉。' },
+  { id:'koi_showa', spot:'lake', of:'koi', time:'twilight', name:'錦鯉・昭和三色', rarity:'傳說', color:'#1d1d1d', min:2.5, max:7.0, power:0.9, w:0.25, desc:'黑色底上有紅色和白色的花紋，看起來特別有氣勢。' },
+  { id:'koi_ogon', spot:'lake', of:'koi', time:'twilight', name:'錦鯉・黃金', rarity:'傳說', color:'#f2c040', min:2.5, max:7.0, power:0.9, w:0.2, desc:'全身閃著金屬光澤的黃金錦鯉，在水裡像一塊金子。' },
+  { id:'goldfish_ranchu', spot:'lake', of:'goldfish', time:'day', name:'獅子頭金魚', rarity:'稀有', color:'#ff6a2a', min:0.05, max:0.3, power:0.25, w:0.03, desc:'沒有背鰭、頭上長著一顆顆肉瘤，圓滾滾地慢慢游。' },
+  { id:'goldfish_telescope', spot:'lake', of:'goldfish', time:'day', name:'黑龍睛金魚', rarity:'稀有', color:'#1e1e22', min:0.05, max:0.3, power:0.25, w:0.03, desc:'全身黑色、兩顆眼睛凸出來像望遠鏡。' },
+  { id:'goldfish_pearl', spot:'lake', of:'goldfish', time:'day', name:'珍珠鱗金魚', rarity:'稀有', color:'#f8a060', min:0.05, max:0.3, power:0.25, w:0.03, desc:'圓得像一顆球，每一片鱗片都鼓起來像小珍珠。' },
+  { id:'clown_black', spot:'isle', of:'clown', name:'黑色小丑魚', rarity:'稀有', color:'#1d1d1d', min:0.05, max:0.25, power:0.32, w:0.03, desc:'少見的黑色小丑魚，黑底白條紋，酷到不行。' },
+  { id:'catfish_albino', spot:'river', of:'catfish', time:'night', name:'白化鯰魚', rarity:'稀有', color:'#f0d8d0', min:1.5, max:5.5, power:0.66, w:0.015, desc:'天生沒有色素的鯰魚，全身粉白色、眼睛紅紅的。' },
+  { id:'trout_golden', spot:'creek', of:'trout', time:'night', name:'黃金鱒', rarity:'傳說', color:'#f2c030', min:1.2, max:4.5, power:0.88, w:0.06, desc:'全身金黃色的鱒魚，身側有一條橘紅色的帶子，非常罕見。' },
+  { id:'carp_mirror', spot:'lake', of:'carp', name:'鏡鯉', rarity:'稀有', color:'#b88a3a', min:1.5, max:8.0, power:0.68, w:0.015, desc:'身上幾乎沒有鱗片，只有背上和身側長著幾片像鏡子一樣的大鱗。' },
+  { id:'crayfish_blue', spot:'shrimp', of:'crayfish', name:'藍色小龍蝦', rarity:'稀有', color:'#2f6fd0', min:0.05, max:0.14, power:0.24, w:0.015, desc:'基因突變的藍色小龍蝦，跟一般紅色的小龍蝦是同一種。' },
+  { id:'tilapia_red', spot:'river', of:'tilapia', name:'紅色吳郭魚', rarity:'稀有', color:'#ff6a4a', min:0.3, max:1.5, power:0.36, w:0.015, desc:'紅通通的吳郭魚，市場上叫「台灣鯛」。' },
+  { id:'arowana_red', spot:'lake', of:'arowana', name:'紅龍魚', rarity:'傳說', color:'#d8302a', min:3.0, max:12, power:0.86, w:0.1, desc:'鱗片紅得像火一樣的紅龍，比金龍更稀有。' },
   // 老闆的放生活動：每天一段時間只放一隻，全伺服器只有一隻（不在一般的釣點清單裡，見 Sev）
   { id:'bluelobster', spot:'shrimp', sev:true, name:'藍色龍蝦',   rarity:'傳說', color:'#2f6fe0', min:0.4,  max:1.2,  power:0.5,  desc:'大約兩百萬隻龍蝦才有一隻是藍色的，是基因讓殼裡的色素變成寶藍色。阿忠說這是他的壓箱寶。' },
 ];
@@ -142,14 +156,14 @@ const ISLE = { x:150, z:0, r:24, y:0.32 };
 const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
 const ICE = { x:-120, z:-72, w:30, d:22, y:0.45 };
 const SPOTS = [
-  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora'] },
-  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead'], legendBoost:1.4 },
-  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia'] },
+  { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
+  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red'], legendBoost:1.4 },
+  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray','milkfish','mullet'] },
-  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse'] },
+  { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black'] },
   { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin'] },
-  { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn'] },
-  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia'], legendBoost:1.8 },
+  { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
+  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','trout_golden'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [11, -14];
@@ -2395,7 +2409,7 @@ function pickFish(spot, charge){
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
   // 傳說魚：每個釣點的傳說魚加起來是固定的機率（不會因為種類多就特別常出現），外海比較高
-  const nLeg = list.filter(f => f.rarity === '傳說').length, legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
+  const nLeg = list.filter(f => f.rarity === '傳說' && !f.of).length,   /* 變種不算在傳說魚種類數裡 */ legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
   const rw = f => Rig.rig === 'lure' ? (LURE_FISH.has(f.id) ? 2.2 : 0.55) : Rig.rig === 'bottom' ? (BOTTOM_FISH.has(f.id) ? 2.2 : 0.65) : 1;
   const w = list.map(f => (f.w || 1) * rw(f) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
@@ -3159,7 +3173,7 @@ function taipeiDate(){ return new Date(Date.now() + 8 * 3600000).toISOString().s
 function dailyTip(){
   const d = taipeiDate(); if (dailyTip.c && dailyTip.c.d === d) return dailyTip.c;
   const spots = SPOTS.filter(s => s.id !== 'isle'), h = hash32('tip' + d), sp = spots[h % spots.length];
-  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說'), f = pool[(h >>> 8) % pool.length];
+  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說' && !f.of), f = pool[(h >>> 8) % pool.length];
   return (dailyTip.c = { d, spot: sp.id, fish: f.id, text: `今天${sp.label}的「${f.name}」特別多！` });
 }
 // 釣魚的加成：給 doCast（等待時間）、pickFish（稀有／傳說／權重）、拉線（張力）用
@@ -3230,10 +3244,10 @@ function tourneyTick(){
   if (!T.active && Tny.on){ Tny.on = false; const id = Tny.id; ticker(`🏁 釣魚大賽結束了！${Tny.myN ? `你釣了 ${Tny.myN} 條、${Tny.myW.toFixed(2)}kg，` : ''}名次馬上公布`); setTimeout(() => { loadTnyBoard(id); claimTourney(); }, 25000 + Math.random() * 8000); }
   if (!T.active && T.start - nowMs < 5 * 60e3 && Tny.warnId !== T.id){ Tny.warnId = T.id; ticker(`⏰ 釣魚大賽 ${Math.ceil((T.start - nowMs) / 60000)} 分鐘後開始，先找好釣點吧！`); }
   if (Tny.on && Date.now() - Tny.boardAt > 20000) loadTnyBoard(Tny.id);
-  // 右上角的倒數
+  // 大賽倒數（在左上角資訊列）
   let pill = $('#tnyPill'); const soon = !T.active && T.start - nowMs < 15 * 60e3;
   if (!T.active && !soon){ if (pill) pill.hidden = true; return; }
-  if (!pill){ pill = document.createElement('button'); pill.id = 'tnyPill'; pill.className = 'panel'; pill.addEventListener('click', () => { lbMode = 'tny'; openSheet('rank'); }); document.body.appendChild(pill); }
+  if (!pill){ pill = document.createElement('button'); pill.id = 'tnyPill'; pill.addEventListener('click', () => { lbMode = 'tny'; openSheet('rank'); }); ($('#online') || document.body).appendChild(pill); }   /* 放進左上角的資訊列，不再單獨一顆 */
   pill.hidden = false; pill.classList.toggle('live', T.active);
   const txt = T.active ? `🏆 大賽 ${mmss(T.end - nowMs)}・${Tny.myW > 0 ? `${Tny.myW.toFixed(1)}kg 第 ${tnyRank()} 名` : Cloud.on ? '快去釣！' : '要連上雲端'}` : `🏆 大賽 ${mmss(T.start - nowMs)} 後開始`;
   if (pill._t !== txt){ pill.textContent = txt; pill._t = txt; }
@@ -3352,7 +3366,7 @@ const ACH = [
   { id:'c2000', icon:'🏆', name:'兩千條',       desc:'總共釣到 2000 條魚',        cur:() => rec.total, goal:2000, title:'釣魚狂人' },
   { id:'s10',   icon:'📗', name:'小小圖鑑',     desc:'圖鑑收集 10 種魚',          cur:speciesN, goal:10 },
   { id:'s40',   icon:'📘', name:'圖鑑達人',     desc:'圖鑑收集 40 種魚',          cur:speciesN, goal:40 },
-  { id:'sAll',  icon:'📚', name:'圖鑑全收集',   desc:'所有魚都釣過',              cur:speciesN, goal:() => FISH.length, title:'圖鑑博士' },
+  { id:'sAll',  icon:'📚', name:'圖鑑全收集',   desc:'所有魚都釣過',              cur:() => FISH.filter(f => !f.of && rec.count[f.id]).length, goal:() => FISH.filter(f => !f.of).length, title:'圖鑑博士' },
   { id:'l1',    icon:'🐉', name:'傳說的開始',   desc:'釣到第一條傳說魚',          cur:() => rec.legend, goal:1 },
   { id:'l10',   icon:'👑', name:'傳說獵人',     desc:'釣到 10 條傳說魚',          cur:() => rec.legend, goal:10, title:'傳說獵人' },
   { id:'w100',  icon:'🐋', name:'巨物',         desc:'釣到 100 公斤以上的魚',     cur:() => rec.bestW, goal:100, kg:true, title:'巨物殺手' },
@@ -5046,6 +5060,7 @@ function showCatch(f, w, res){
   drawFish($('#ccCanvas'), f.color, true, f.id);
   const b = $('#ccBadges'); b.textContent = '';
   const chip = document.createElement('span'); chip.className = 'chip r-' + f.rarity; chip.textContent = f.rarity + '・' + SPOT_BY_ID[f.spot].label; b.appendChild(chip);
+  if (f.of){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `✨ 罕見變種（${FISH_BY_ID[f.of].name}）`; b.appendChild(x); if (res.isNew){ SFX.catch(); flash(`✨ 發現新的變種：${f.name}！`, 2.4); } }
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '圖鑑新登錄'; b.appendChild(x); }
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '個人新紀錄'; b.appendChild(x); }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
@@ -5781,17 +5796,17 @@ function renderTab(){
   if (curTab === 'ferry'){ renderFerry(body); return; }
   if (curTab === 'shrimp'){ renderShrimpDesk(body); return; }
   if (curTab === 'dex'){
-    const got = FISH.filter(f => rec.count[f.id]).length;
-    body.appendChild(el('p', 'sub', `已收集 ${got} / ${FISH.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
+    const base = FISH.filter(f => !f.of), got = base.filter(f => rec.count[f.id]).length, vgot = FISH.filter(f => f.of && rec.count[f.id]).length;   /* 變種不算在總數裡（不然就知道有幾種了） */
+    body.appendChild(el('p', 'sub', `已收集 ${got} / ${base.length} 種${vgot ? `・✨ 找到 ${vgot} 種變種` : ''}・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
     for (const s of SPOTS){
       if (!FISH.some(f => f.spot === s.id)) continue;
-      const sf = FISH.filter(f => f.spot === s.id), sg = sf.filter(f => rec.count[f.id]).length, sn = sf.reduce((a, f) => a + (rec.count[f.id] || 0), 0);
+      const sf = FISH.filter(f => f.spot === s.id && !f.of), sg = sf.filter(f => rec.count[f.id]).length, sn = sf.reduce((a, f) => a + (rec.count[f.id] || 0), 0);
       const h = el('div', 'dexhead', s.label); h.appendChild(el('span', 'dexcnt' + (sg === sf.length ? ' all' : ''), `${sg} / ${sf.length} 種${sn ? `・${sn} 條` : ''}${sg === sf.length ? ' ✨' : ''}`)); h.appendChild(el('small', '', s.subtitle)); body.appendChild(h);
       const g = el('div', 'dex');
-      FISH.filter(f => f.spot === s.id).sort((a,b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]).forEach(f => {
+      FISH.filter(f => f.spot === s.id && (!f.of || rec.count[f.id])).sort((a,b) => (a.of ? 1 : 0) - (b.of ? 1 : 0) || RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]).forEach(f => {   // 變種要釣到才會出現在圖鑑
         const known = !!rec.count[f.id]; const it = el('div', 'it' + (known ? '' : ' lock'));
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
-        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季'));
+        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', `✨ ${FISH_BY_ID[f.of].name}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季'));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         g.appendChild(it);
@@ -6006,6 +6021,7 @@ function renderTab(){
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
       `廣場北邊的大水族館只放你自己選的魚（最多 ${SHOW_MAX} 條）：釣到時按「🏛️ 展示」，或在「魚缸」分頁按「展示」。展示中的魚不會被賣掉或拿去做菜。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
+      '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低，要釣到才會出現在圖鑑裡。',
       '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚捧起來炫耀給大家看。',
       '可以參觀別人的水族館（玩家分頁或排行榜點他的名字）。',
     ]);

@@ -692,3 +692,15 @@ body.touch #log .m:nth-last-child(n+4){display:none}
 .bagwallet span{background:#f2f6f8;border-radius:999px;padding:6px 12px;font-size:13.5px}
 .bagmore{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px}
 .shoplist.bag li.empty{justify-content:center;color:#7a8a96;font-size:13px}
+.chip.var{background:linear-gradient(135deg,#f6e7ff,#ffe8f4);color:#8a3aa8}
+.dex .it.var{box-shadow:0 0 0 2px #e6c8ff inset}
+.badge.var{background:linear-gradient(135deg,#c084ff,#ff8ac8);color:#fff}
+/* 大賽倒數放進左上角資訊列 */
+#online #tnyPill{position:static;display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:0;background:#fff3d6;color:#6a4a00;font:inherit;font-weight:800;font-size:inherit;pointer-events:auto;cursor:pointer;z-index:auto}
+#online #tnyPill.live{background:linear-gradient(135deg,#ffd36a,#ff9f43);color:#4a2a00}
+#online #tnyPill[hidden]{display:none}
+/* 畫面不要被拖得左右移動 */
+html,body{position:fixed;inset:0;width:100%;overscroll-behavior:none}
+#top{overflow:hidden}
+#brand{pointer-events:auto}
+@media (orientation:landscape) and (max-height:540px){ #menu{gap:4px} .mbtn{padding:6px} .mbtn svg{width:16px;height:16px} }
