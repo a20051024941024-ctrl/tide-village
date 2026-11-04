@@ -223,7 +223,7 @@ begin
     fish_best  = case when coalesce((fish_best ->> p_fish)::numeric, 0) < w then jsonb_set(fish_best, array[p_fish], to_jsonb(w)) else fish_best end,
     best_fish  = case when w > best_w then p_fish else best_fish end,
     best_w     = greatest(best_w, w),
-    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when p_fish = 'shark_red' then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
+    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when p_fish = 'shark_red' then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
     week_best_w = case when p_fish <> c.fish then (case when week_id = c.week_id then week_best_w else 0 end)
                        when week_id = c.week_id then greatest(week_best_w, w) else w end,
     week_id    = case when p_fish = c.fish or week_id = c.week_id then c.week_id else week_id end,

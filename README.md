@@ -75,6 +75,7 @@ supabase/035_mangrove.sql 紅樹林群島：開船去的釣點、退潮時徒手
 supabase/036_rod_types.sql 專用竿：手竿、遠投竿、磯釣竿的價格
 supabase/037_sex_breed.sql 公母、野外繁殖季、水族館繁殖
 supabase/038_canal.sql 城市水圳（湖口）新魚、撈網、撿垃圾
+supabase/039_fav.sql 魚打星號收藏（不能賣、不會被擠掉，變種自動收藏）
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

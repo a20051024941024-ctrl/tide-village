@@ -3297,10 +3297,10 @@ function islePath(pts, wobA, wobB, k){ const s = new THREE.Shape(); for (let i =
 function buildMangrove(){
   const g = new THREE.Group(); scene.add(g); Mang.g = g; let sd = 11; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const ext = (shape, depth) => { const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled:false, curveSegments:4 }); geo.rotateX(-Math.PI / 2); return geo; };
-  const soil = mat('#7d7566', 0.95), grass = mat('#7f8a62', 0.95), mudM = mat('#8a8274', 0.55, { emissive:'#2a2620', emissiveIntensity:0.08 });   /* 紅毛港的泥灘是灰色的 */
+  const soil = mat('#9c9078', 0.95), grass = mat('#8fae6c', 0.95), mudM = mat('#a39880', 0.45, { emissive:'#3a3428', emissiveIntensity:0.06 });   /* 紅毛港的泥灘是灰色的 */
   MANG.isl.forEach(([ix, iz, r], i) => {
     const top = new THREE.Mesh(ext(islePath(r, i * 1.7, 0.5), 3.0), soil); top.position.set(ix, MANG.y - 3.0, iz); top.receiveShadow = true; g.add(top);
-    const gr = new THREE.Mesh(ext(islePath(r - 0.9, i * 1.7, 0.5), 0.04), grass); gr.position.set(ix, MANG.y, iz); gr.receiveShadow = true; g.add(gr);
+    const gr = new THREE.Mesh(ext(islePath(r - 0.35, i * 1.7, 0.5), 0.04), grass); gr.position.set(ix, MANG.y, iz); gr.receiveShadow = true; g.add(gr);
     const mud = new THREE.Mesh(ext(islePath(r + MANG.mud, i * 1.7 + 0.4, 0.7), 2.6), mudM); mud.position.set(ix, Mang.mudY - 2.6, iz); mud.receiveShadow = true; g.add(mud); Mang.mud.push(mud);
     // 泥灘上的小洞（招潮蟹、彈塗魚的家）
     for (let k = 0; k < 10; k++){ const a = rr() * Math.PI * 2, d = r + 0.6 + rr() * (MANG.mud - 1.1); const h = new THREE.Mesh(new THREE.CircleGeometry(0.07 + rr() * 0.05, 8), new THREE.MeshBasicMaterial({ color:'#4a463c' })); h.rotation.x = -Math.PI / 2; h.position.set(Math.cos(a) * d, 2.605, Math.sin(a) * d); mud.add(h); }
@@ -3312,14 +3312,14 @@ function buildMangrove(){
   MANG.isl.forEach(([ix, iz, r]) => { for (let gx = -r; gx <= r; gx += 0.95) for (let gz = -r; gz <= r; gz += 0.95){ const x = ix + gx + (rr() - 0.5) * 0.6, z = iz + gz + (rr() - 0.5) * 0.6, e = mangE(x, z);
     if (e < -0.2 || walks.some(w => segD(x, z, w[0], w[1], w[2], w[3]) < 1.35)) continue; if (clumps.some(c => Math.hypot(c[0] - x, c[1] - z) < 0.7)) continue; clumps.push([x, z, 0.75 + rr() * 0.55, e]); } });
   const leafCols = ['#6f8a5c', '#86a070', '#9cb486', '#b4c89a'];
-  const tLeaf = leafCols.map(c => new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), mat(c, 0.95, { flatShading:true, transparent:true }), clumps.length * 2)); Mang.leaves = tLeaf;
+  const tLeaf = leafCols.map(c => new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), mat(c, 0.95, { flatShading:true }), clumps.length * 2)); Mang.leaves = tLeaf; Mang.leafInst = tLeaf.map(() => []);
   const tStem = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.05, 1, 4), mat('#6e6252', 0.9), clumps.length * 3);
   const tProp = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.012, 1, 3), mat('#6a8a3a', 0.8), clumps.length * 2);   // 水筆仔的胎生苗
   const D = new THREE.Object3D(); const li = leafCols.map(() => 0); let si = 0, pi = 0;
   clumps.forEach(([x, z, s, e]) => { const base = MANG.y, H = 0.9 + s * 0.9;
     for (let k = 0; k < 3; k++){ D.position.set(x + (rr() - 0.5) * 0.4, base + H * 0.35, z + (rr() - 0.5) * 0.4); D.rotation.set((rr() - 0.5) * 0.5, 0, (rr() - 0.5) * 0.5); D.scale.set(1, H * 0.7, 1); D.updateMatrix(); tStem.setMatrixAt(si++, D.matrix); }
     for (let k = 0; k < 2; k++){ const c = Math.floor(rr() * (k ? leafCols.length : leafCols.length - 1)), m = tLeaf[c]; D.rotation.set(rr() * 0.4, rr() * 6, rr() * 0.4);
-      D.position.set(x + (rr() - 0.5) * 0.3, base + H * (k ? 0.95 : 0.72), z + (rr() - 0.5) * 0.3); const sc = s * (k ? 0.6 : 0.85); D.scale.set(sc * 1.1, sc * 0.55, sc * 1.1); D.updateMatrix(); m.setMatrixAt(li[c]++, D.matrix); }
+      D.position.set(x + (rr() - 0.5) * 0.3, base + H * (k ? 0.95 : 0.72), z + (rr() - 0.5) * 0.3); const sc = s * (k ? 0.6 : 0.85); D.scale.set(sc * 1.1, sc * 0.55, sc * 1.1); D.updateMatrix(); Mang.leafInst[c].push({ i: li[c], mx: D.matrix.clone(), p: D.position.clone(), r: sc * 1.1, hid: false }); m.setMatrixAt(li[c]++, D.matrix); }
     if (rr() < 0.6) for (let k = 0; k < 2; k++){ D.rotation.set((rr() - 0.5) * 0.2, 0, (rr() - 0.5) * 0.2); D.position.set(x + (rr() - 0.5) * s * 1.4, base + H * 0.55 - 0.12, z + (rr() - 0.5) * s * 1.4); D.scale.set(1, 0.28, 1); D.updateMatrix(); tProp.setMatrixAt(pi++, D.matrix); }
     if (e > 0.4 && !walks.some(w => segD(x, z, w[0], w[1], w[2], w[3]) < 1.9)) addCircleCol(x, z, 0.45 * s); });
   tLeaf.forEach((m, k) => { m.count = li[k]; }); tStem.count = si; tProp.count = pi;
@@ -3352,8 +3352,8 @@ function buildMangrove(){
   walk(53.8, 10, 56.6, 10); walk(50, 13.8, 50, 16.2); walk(53.8, 20, 56.2, 20); walk(63.4, 10, 68.6, 10);
   // 碼頭尾端的告示牌
   { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#6e4a2f'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#fff4d6'; c.fillRect(8, 8, 240, 112); c.fillStyle = '#3f6b3a'; c.textAlign = 'center';
-    c.font = 'bold 40px sans-serif'; c.fillText('紅樹林', 128, 56); c.font = '22px sans-serif'; c.fillStyle = '#5a3d2b'; c.fillText('退潮可以下泥灘抓', 128, 96);
-    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), new THREE.MeshBasicMaterial({ map: tx, side:THREE.DoubleSide })); sg.position.set(46.8, MANG.y + 1.4, 10.0); sg.rotation.y = -Math.PI / 2; g.add(sg);
+    c.font = 'bold 40px sans-serif'; c.fillText('紅樹林', 128, 56); c.font = '22px sans-serif'; c.fillStyle = '#5a3d2b'; c.fillText('退潮時可以下泥灘抓', 128, 96);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), new THREE.MeshBasicMaterial({ map: tx })); sg.position.set(46.8, MANG.y + 1.4, 10.0); sg.rotation.y = -Math.PI / 2; g.add(sg); { const bk = sg.clone(); bk.rotation.y += Math.PI; g.add(bk); }   /* 兩面都看得懂（以前背面是反的字） */
     const sp = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 0.1), post); sp.position.set(46.85, MANG.y + 0.7, 10.0); g.add(sp); }
   // 螢火蟲（晚上才亮）
   { const N = 70, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const [ix, iz, r] = MANG.isl[i % 4], a = rr() * Math.PI * 2, d = rr() * (r + 1.5); pos[i * 3] = ix + Math.cos(a) * d; pos[i * 3 + 1] = 0.8 + rr() * 2.4; pos[i * 3 + 2] = iz + Math.sin(a) * d; }
@@ -3396,7 +3396,7 @@ function buildBeach(){
   for (let i = 0; i < 9; i++){ const x = 45 + rr() * 3.5, z = -13 + rr() * 14; if (!isLand(x, z) && terrainH(x, z) < -0.6) continue; const r = 0.4 + rr() * 0.6, k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat('#6a665e', 0.98, { flatShading:true })); k.position.set(x, Math.max(gy(x, z), 0) + r * 0.3, z); k.rotation.set(rr() * 3, rr() * 3, 0); k.scale.y = 0.7; k.castShadow = true; g.add(k); if (isLand(x, z)) addCircleCol(x, z, r * 0.8); }
   // 牌子
   { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = '#2f89c7'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 40px sans-serif'; c.fillText('🏖️ 南方沙灘', 128, 62);
-    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshBasicMaterial({ map: tx, side:THREE.DoubleSide })); const x = 35, z = -6, y = gy(x, z); sg.position.set(x, y + 1.7, z); sg.rotation.y = Math.PI / 2; g.add(sg); for (const sz of [-0.8, 0.8]) g.add(box([0.08, 1.6, 0.08], '#8c5d3b', [x, y + 0.8, z + sz])); }
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshBasicMaterial({ map: tx })); const x = 35, z = -6, y = gy(x, z); sg.position.set(x, y + 1.7, z); sg.rotation.y = Math.PI / 2; g.add(sg); { const bk = sg.clone(); bk.rotation.y += Math.PI; g.add(bk); }   /* 兩面都看得懂（以前背面是反的字） */ for (const sz of [-0.8, 0.8]) g.add(box([0.08, 1.6, 0.08], '#8c5d3b', [x, y + 0.8, z + sz])); }
 }
 // ===== 城市水圳（參考新竹湖口的水圳；2026-11-04）=====
 // 湖口老街、工業區旁邊的水圳：兩邊是高高的水泥牆，路面比水面高兩三公尺、有欄杆；路邊是電線桿、黃色的抽水管、老榕樹、鐵皮工廠。
@@ -3475,7 +3475,7 @@ function buildCanal(){
   // 路邊的機車、牌子
   { const x = 20.2, z = zN0 + 0.9; g.add(box([1.3, 0.35, 0.3], '#d84a3a', [x, C.y + 0.45, z])); for (const s of [-0.5, 0.5]){ const wh = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 6, 12), mat('#1a1a1a')); wh.position.set(x + s, C.y + 0.22, z); g.add(wh); } g.add(box([0.5, 0.12, 0.28], '#2a2a2a', [x - 0.15, C.y + 0.7, z])); addBoxCol(x, z, 1.4, 0.4); }
   { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = '#2f6a4a'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 40px sans-serif'; c.fillText('🏙️ 城市水圳', 128, 62);
-    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshBasicMaterial({ map: tx, side:THREE.DoubleSide })); const x = C.xr0 - 4.8, z = C.z + 1.6, y = groundHeight(x, z); sg.position.set(x, y + 1.7, z); sg.rotation.y = Math.PI / 2; g.add(sg); for (const sz of [-0.8, 0.8]) g.add(box([0.08, 1.6, 0.08], '#8c5d3b', [x, y + 0.8, z + sz])); addBoxCol(x, z, 0.3, 1.8); }
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshBasicMaterial({ map: tx })); const x = C.xr0 - 4.8, z = C.z + 1.6, y = groundHeight(x, z); sg.position.set(x, y + 1.7, z); sg.rotation.y = Math.PI / 2; g.add(sg); { const bk = sg.clone(); bk.rotation.y += Math.PI; g.add(bk); }   /* 兩面都看得懂（以前背面是反的字） */ for (const sz of [-0.8, 0.8]) g.add(box([0.08, 1.6, 0.08], '#8c5d3b', [x, y + 0.8, z + sz])); addBoxCol(x, z, 0.3, 1.8); }
   // 釣點的發光圈
   { const sp = SPOT_BY_ID.canal, r = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.08, 8, 36), new THREE.MeshStandardMaterial({ color:sp.color, emissive:sp.color, emissiveIntensity:1.8, transparent:true, opacity:0.86 }));
     r.rotation.x = -Math.PI / 2; r.position.set(sp.pos.x, C.y + 0.08, sp.pos.z); g.add(r); sp.ring = r; }
@@ -3517,7 +3517,12 @@ function updateMangrove(dt, t){
   if (!Mang.g) return; const near = Math.hypot(me.pos.x - MANG.x, me.pos.z - MANG.z) < 90 && !onIsle && !House.on && !Dive.on; Mang.g.visible = near; if (!near) return;
   for (const b of Mang.birds || []){ const k = Math.max(0, Math.sin(t * 0.7 + b.position.x)) ; const dip = k > 0.97 ? (k - 0.97) / 0.03 : 0; b.userData.neck.forEach(o => { o.rotation.x = 0; }); b.userData.neck[1].position.y = 0.97 - dip * 0.35; b.userData.neck[2].position.y = 0.96 - dip * 0.38; }
   // 人走進紅樹林時，灌叢變半透明，才不會把人擋住
-  { const inside = Math.hypot(me.pos.x - MANG.x, me.pos.z - MANG.z) < 14, op = inside ? 0.55 : 1; for (const m of Mang.leaves || []){ const mt = m.material; mt.opacity += (op - mt.opacity) * Math.min(1, dt * 4); mt.depthWrite = mt.opacity > 0.95; } }
+  if (Mang.leafInst && t > (Mang.occAt || 0)){ Mang.occAt = t + 0.12;   /* 只把擋在鏡頭和自己中間的那幾叢樹葉藏起來（以前是整片變半透明，看起來很怪） */
+    const A = camera.position, B = new THREE.Vector3(me.pos.x, me.pos.y + 1.0, me.pos.z), AB = B.clone().sub(A), L2 = AB.lengthSq(), Z = new THREE.Matrix4().makeScale(0, 0, 0), tmp = new THREE.Vector3();
+    Mang.leafInst.forEach((arr, k) => { const m = Mang.leaves[k]; let dirty = false;
+      for (const o of arr){ const u = clamp(tmp.copy(o.p).sub(A).dot(AB) / (L2 || 1), 0, 1), d = tmp.copy(A).addScaledVector(AB, u).distanceTo(o.p), hide = (u > 0.02 && u < 0.97 && d < o.r + 0.55) || o.p.distanceTo(A) < o.r + 1.4;
+        if (hide !== o.hid){ o.hid = hide; m.setMatrixAt(o.i, hide ? Z : o.mx); dirty = true; } }
+      if (dirty) m.instanceMatrix.needsUpdate = true; }); }
   // 漲退潮：泥灘慢慢浮出水面／被淹沒
   const want = Env.tide.lv < -0.35 ? 0.16 + (-0.35 - Env.tide.lv) * 0.15 : -0.4 + (1 - Env.tide.lv) * 0.15 - 0.15; Mang.mudY += (want - Mang.mudY) * Math.min(1, dt * 0.5);
   for (const m of Mang.mud) m.position.y = Mang.mudY - 2.6;
@@ -3921,7 +3926,7 @@ function renderFriends(body){
     for (const n of [50, 100, 300, 1000]){ const b = el('button', 'tbtn' + (rec.coins < n ? ' ghost' : ''), `送 🪙${n}`); b.disabled = rec.coins < n; b.addEventListener('click', () => { b.disabled = true; sendGift(to, 'coins', n); }); cb.appendChild(b); }
     body.appendChild(cb);
     body.appendChild(el('div', 'dexhead', '🐟 魚缸裡的魚')); const locked = new Set(rec.show || []);
-    const list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w)).slice(0, 24);
+    const favN = rec.tank.filter(x => x.k).length, list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w)).slice(0, 24);
     if (!list.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以送的魚。'));
     const ul = el('ul', 'shoplist cols');
     for (const x of list){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(fishCanvas(f, true, 56, 36)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name)); d.appendChild(el('div', 'meta', `${fmtKg(x.w)}・${f.rarity}`)); li.appendChild(d);
@@ -5301,8 +5306,12 @@ function curRod(){ return RODS.find(r => r.id === rec.rod) || RODS[0]; }
 function curBait(){ const b = BAITS.find(b => b.id === rec.baitOn); return b && (rec.bait[b.id] || 0) > 0 ? b : null; }
 function renderCoins(){ const t = $('#coinTxt'); if (t) t.textContent = rec.coins.toLocaleString(); }
 function addCoins(n){ rec.coins = Math.max(0, rec.coins + n); saveRecLocal(); renderCoins(); const c = $('#coins'); if (c){ c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); } }
+function setFav(x, on){
+  if (on && rec.tank.filter(y => y.k).length >= FAV_MAX){ toast(`收藏最多 ${FAV_MAX} 條`); return false; }
+  if (on) x.k = true; else delete x.k; saveRecLocal(); cloudCall('set_fav', { p_ts: x.t, p_on: !!on }); return true;
+}
 function sellFish(ts, batch){
-  const i = rec.tank.findIndex(x => x.t === ts); if (i < 0 || FISH_BY_ID[rec.tank[i].f].rs) return 0;   /* 赤紅霸王鯊不能賣 */
+  const i = rec.tank.findIndex(x => x.t === ts); if (i < 0 || FISH_BY_ID[rec.tank[i].f].rs || rec.tank[i].k) return 0;   /* 收藏的魚不能賣 */   /* 赤紅霸王鯊不能賣 */
   const x = rec.tank[i], f = FISH_BY_ID[x.f], price = itemPrice(x);
   rec.tank.splice(i, 1); if (rec.show) rec.show = rec.show.filter(t => t !== ts);
   rec.sold++; rec.earned += price; addCoins(price);
@@ -5471,8 +5480,8 @@ function renderShop(body){
   if (shopMode === 'sell'){
     const locked = new Set(rec.show || []);
     const list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
-    body.appendChild(el('p', 'sub', `魚缸裡的魚可以賣掉換金幣，越重越值錢。${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
-    const shownList = rec.tank.filter(x => locked.has(x.t) && !FISH_BY_ID[x.f].rs).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
+    body.appendChild(el('p', 'sub', `${favN ? `⭐ 收藏的 ${favN} 條不會出現在這裡，也不會被賣掉。` : '在魚缸分頁按 ☆ 可以收藏魚，收藏的魚不會被賣掉。'}魚缸裡的魚可以賣掉換金幣，越重越值錢。${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
+    const shownList = rec.tank.filter(x => locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
     if (!list.length && !shownList.length){ body.appendChild(el('div', 'empty', '沒有可以賣的魚。去釣幾條再回來吧！')); return; }
     const commons = list.filter(x => FISH_BY_ID[x.f].rarity === '常見'), csum = commons.reduce((a, x) => a + itemPrice(x), 0);
     if (commons.length){
@@ -5556,9 +5565,9 @@ function afterSell(got, n){ if (got > 0) SFX.coin();
 }
 
 function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0, love:0, released:0, dive:[], photos:[] }; }
-const SHOW_MAX = 100, KEEP_MAX = 200;
+const SHOW_MAX = 100, KEEP_MAX = 200, FAV_MAX = 100;   /* FAV：打星號收藏的魚（不能賣、不會被擠掉；伺服器 039） */
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
-function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || x.rs || ++others <= KEEP_MAX); }   /* 赤紅霸王鯊不會被擠掉 */
+function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || x.rs || x.k || ++others <= KEEP_MAX); }   /* 赤紅霸王鯊不會被擠掉 */
 function shownFish(){ if (visiting) return visiting.list; const set = new Set(rec.show || []); return rec.tank.filter(x => set.has(x.t)); }   /* 只放玩家自己選的魚（不再自動展示最新的魚） */
 function saveRecLocal(){ rec.updatedAt = Date.now(); LS.set('tide.rec', rec); }
 function normRec(r){
@@ -5566,7 +5575,7 @@ function normRec(r){
   e.breedAt = Number(r.breedAt) || 0;   /* 水族館繁殖上次算到哪 */
   e.total = Number(r.total) || 0; e.bestW = Number(r.bestW) || 0; e.bestFish = FISH_BY_ID[r.bestFish] ? r.bestFish : null; e.legend = Number(r.legend) || 0; e.updatedAt = Number(r.updatedAt) || 0;
   for (const f of FISH){ if (r.best && Number(r.best[f.id]) > 0) e.best[f.id] = Number(r.best[f.id]); if (r.count && Number(r.count[f.id]) > 0) e.count[f.id] = Number(r.count[f.id]); }
-  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}));   /* rs：赤紅霸王鯊的編號、性別、叉叉 */
+  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}));   /* k：打星號收藏；rs：赤紅霸王鯊的編號、性別、叉叉 */
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
@@ -5581,13 +5590,14 @@ function normRec(r){
   return e;
 }
 let rec = normRec(LS.get('tide.rec', null));
+if (!LS.get('tide.favInit', 0)){ for (const x of rec.tank) if (FISH_BY_ID[x.f].of && rec.tank.filter(y => y.k).length < FAV_MAX) x.k = true; LS.set('tide.favInit', 1); LS.set('tide.rec', rec); }   /* 以前釣到的變種也自動收藏（只做一次；雲端由 039 做） */
 me.setRod(rec.rod); updateBobberLook(); me.setGear(rec.gear); updateBobberLook(); renderCoins(); setTimeout(renderBuff, 0);
 function recordCatch(f, w){
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
   if (f.rarity === '傳說') rec.legend++;
-  rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {})); trimTank();
+  rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
   cloudCall('record_catch', { p_fish: f.id, p_weight: w });
@@ -6707,16 +6717,17 @@ function renderTab(){
       tip.innerHTML = `<b>🐣 水族館繁殖</b><span>${ok.length ? '正在配對：' + ok.map(p => `${FISH_BY_ID[p.f].name}（♂${p.M} ♀${p.F}）`).join('、') + '。每天有機會生小魚（🍼），小魚賣的錢只有四分之一。' + (half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '') : half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '把同一種魚的一公一母放進水族館展示，就有機會生小魚。會生的有：金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。'}</span>`; body.appendChild(tip); }
     const bar = el('div', 'tankbar');
     const sortSel = el('div', 'seg');
-    [['new','最新'],['big','最重'],['rare','最稀有']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((tankSort || 'new') === k)); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortSel.appendChild(b); });
+    [['new','最新'],['big','最重'],['rare','最稀有'],['fav','⭐收藏']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((tankSort || 'new') === k)); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortSel.appendChild(b); });
     bar.appendChild(sortSel); body.appendChild(bar);
     const shown = new Set(shownFish().map(x => x.t));
     let list = rec.tank.slice();
+    if (tankSort === 'fav') list = list.filter(x => x.k);
     if (tankSort === 'big') list.sort((a, b) => b.w - a.w);
     else if (tankSort === 'rare') list.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity] || b.w - a.w);
     const ul = el('ul', 'tank');
     list.forEach(x => {
       const f = FISH_BY_ID[x.f]; const li = el('li' , shown.has(x.t) ? 'on' : ''); li.appendChild(fishCanvas(f, true, 56, 36));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name} ${sexIcon(x)}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${f.name} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
       d.appendChild(el('div', 'meta', `${x.y ? '水族館出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
       const acts = el('div', 'tacts');
       const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '展示中' : '展示'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
@@ -6732,7 +6743,10 @@ function renderTab(){
         if (rel.dataset.sure !== '1'){ rel.dataset.sure = '1'; rel.textContent = '確定放流？'; setTimeout(() => { if (rel.isConnected){ rel.dataset.sure = ''; rel.textContent = `放流 💙${lovePts(f, x.w)}`; } }, 2500); return; }
         const p = releaseLocal(x); renderTab(); toast(`${esc(f.name)} 游回大海了 💙 愛海點數 +${p}`); cloudCall('release_fish', { p_ts: x.t });
       });
-      acts.append(show, rel); li.appendChild(acts); ul.appendChild(li);
+      const star = el('button', 'tbtn' + (x.k ? '' : ' ghost'), x.k ? '⭐' : '☆'); star.title = x.k ? '取消收藏' : '收藏（不能賣）'; star.setAttribute('aria-pressed', String(!!x.k)); star.style.minWidth = '42px';
+      star.addEventListener('click', () => { if (setFav(x, !x.k)){ toast(x.k ? `⭐ 收藏了${esc(f.name)}，不會被賣掉` : `取消收藏${esc(f.name)}`); renderTab(); } });
+      if (x.k) rel.disabled = true, rel.title = '收藏中的魚要先取消收藏才能放流';
+      acts.append(star, show, rel); li.appendChild(acts); ul.appendChild(li);
     });
     body.appendChild(ul);
   } else if (curTab === 'people'){
