@@ -175,11 +175,11 @@ const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red'], legendBoost:1.4 },
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
-  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'北海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
+  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black'] },
   { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
-  { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'螢光溪出海口南邊的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
+  { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林（參考新竹新豐紅毛港），漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','trout_golden'], legendBoost:1.8 },
 ];
@@ -196,6 +196,7 @@ const LANDMARKS = [
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
   { id:'hill',       label:'望海丘',   pos:V3(-28, 25),         color:'#a6d37d', ly:2.6 },
+  { id:'beach',      label:'南方沙灘', pos:V3(40, -6),          color:'#f2d69a', ly:2.2 },
 ];
 // 小船停靠點
 const BOAT_DOCKS = [
@@ -962,7 +963,8 @@ function castPoint(x, z, dx, dz, dist){
     const forest = z > 15 || Math.hypot(x - MAP.hill.x, z - MAP.hill.z) < MAP.hill.R + 4;   // 森林和山丘密，其他地方稀疏
     if (!forest && wr() > 0.12) continue;
     if (!treeOK(x, z)) continue;
-    { const hd = Math.hypot(x - MAP.hill.x, z - MAP.hill.z); if (hd < 7 || (hd < MAP.hill.R + 2 && pathDist(x, z) < 3.4)) continue; }   /* 山頂留一塊空地、上山的路寬一點，走得過去 */
+    { const hd = Math.hypot(x - MAP.hill.x, z - MAP.hill.z); if (hd < 7 || (hd < MAP.hill.R + 2 && pathDist(x, z) < 3.4)) continue; }
+    if (Math.hypot((x - 40) / 1, (z + 6) / 1.5) < 11) continue;   /* 南方沙灘不長樹 */   /* 山頂留一塊空地、上山的路寬一點，走得過去 */
     trees.push([x, z, wr()]); addCircleCol(x, z, 0.38);
   }
   buildTrees(trees, PX, PZ);
@@ -2164,13 +2166,25 @@ function travelTo(tp){
   }, 280);
 }
 let mapImg = null;
-const MAP_VIEW = 66;   // 地圖顯示 -58..58 公尺
+const MAP_VIEW = 66;
+// 世界地圖的區域（2026-11-04，每一區都參考台灣或世界上真實的地方；edge＝在地圖外面，要坐船去，畫在邊上）
+const WORLD_REGIONS = [
+  { label:'🏝️ 潮汐釣魚村', x:6, z:6 },
+  { label:'🏔️ 山間湖泊與溪流', x:-30, z:4 },
+  { label:'🌲 森林河流', x:22, z:36 },
+  { label:'🏖️ 南方沙灘', x:42, z:-4 },
+  { label:'🌿 紅樹林', x:56, z:16 },
+  { label:'🌊 深海海域（坐船）', x:60, z:-36 },
+  { label:'❄️ 北方冰封群島（坐船・準備中）', edge:[0.5, 0.03] },
+  { label:'🪸 珊瑚礁群島（準備中）', edge:[0.13, 0.5] },
+  { label:'🐠 遠洋神秘島（坐船・準備中）', edge:[0.68, 0.97] },
+];   // 地圖顯示 -58..58 公尺
 function getMapImage(){
   if (mapImg) return mapImg;
   const N = 232, cv = document.createElement('canvas'); cv.width = cv.height = N; const ctx = cv.getContext('2d'), img = ctx.createImageData(N, N), c = [0, 0, 0];
   const wc = { 0: [47, 137, 199], 1: [79, 194, 207], 2: [107, 214, 176], 3: [79, 184, 212], 4: [127, 211, 234] };
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){
-    const x = -MAP_VIEW + (i + 0.5) / N * MAP_VIEW * 2, z = -MAP_VIEW + (j + 0.5) / N * MAP_VIEW * 2, info = terrainInfo(x, z), o = (j * N + i) * 4;
+    const z = MAP_VIEW - (i + 0.5) / N * MAP_VIEW * 2, x = -MAP_VIEW + (j + 0.5) / N * MAP_VIEW * 2, info = terrainInfo(x, z), o = (j * N + i) * 4;   /* 地圖上面是北（世界的 -x）、右邊是東（-z） */
     let r, g, b; const me2 = mangE(x, z);
     if (me2 > 0){ r = 63; g = 107; b = 58; } else if (me2 > -MANG.mud && info.water){ r = 110; g = 92; b = 66; }   /* 紅樹林、泥灘 */
     else if (info.water){ const w = wc[info.region], k = 1 - Math.min(0.35, -info.h * 0.18); r = w[0] * k; g = w[1] * k; b = w[2] * k; }
@@ -2183,7 +2197,7 @@ function renderMap(body){
   body.appendChild(el('p', 'sub', '走到新的地點就會解鎖。點地圖上的地點，或下面的按鈕，就能直接傳送過去。'));
   const wrap = el('div', 'mapwrap'); const cv = el('canvas', 'mapcv'); const S = 480; cv.width = cv.height = S; wrap.appendChild(cv); body.appendChild(wrap);
   const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.drawImage(getMapImage(), 0, 0, S, S);
-  const toPx = (x, z) => [(x + MAP_VIEW) / (MAP_VIEW * 2) * S, (z + MAP_VIEW) / (MAP_VIEW * 2) * S];
+  const toPx = (x, z) => [(-z + MAP_VIEW) / (MAP_VIEW * 2) * S, (x + MAP_VIEW) / (MAP_VIEW * 2) * S];   /* 上北下南、左西右東 */
   ctx.font = `bold 15px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center';
   for (const tp of TRAVEL){
     const [px, py] = toPx(tp.x, tp.z), on = visited.has(tp.id);
@@ -2191,9 +2205,14 @@ function renderMap(body){
     const label = on ? tp.label : '？？？'; const w = ctx.measureText(label).width + 12;
     ctx.fillStyle = 'rgba(24,51,74,.8)'; ctx.fillRect(px - w / 2, py - 32, w, 20); ctx.fillStyle = '#fff'; ctx.fillText(label, px, py - 17);
   }
+  // 各區域的名字（照真實地方設計的世界地圖）、地圖外面要坐船去的地方畫箭頭、指北針
+  { ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold 13px ${getComputedStyle(document.body).fontFamily}`;
+    const tag = (txt, px, py, bg) => { const w = ctx.measureText(txt).width + 12; ctx.fillStyle = bg || 'rgba(255,255,255,.82)'; ctx.fillRect(px - w / 2, py - 11, w, 20); ctx.fillStyle = bg ? '#fff' : '#18334a'; ctx.fillText(txt, px, py + 4); };
+    for (const R of WORLD_REGIONS){ const [px, py] = R.edge ? R.edge.map(v => v * S) : toPx(R.x, R.z); tag(R.label, clamp(px, 70, S - 70), clamp(py, 14, S - 12), R.edge ? 'rgba(24,51,74,.78)' : null); }
+    ctx.translate(S - 26, 30); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(6, 2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#18334a'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('北', 0, 13); ctx.restore(); }
   for (const sp of secretSpots){ const [sx, sy] = toPx(sp.x, sp.z); if (sx < 0 || sy < 0 || sx > S || sy > S) continue; ctx.font = '20px sans-serif'; ctx.fillText('🤫', sx, sy + 7); }   // 只有自己看得到的祕密窩點
   const [mx, my] = toPx(me.pos.x, me.pos.z);   // 你在這裡
-  ctx.save(); ctx.translate(mx, my); ctx.rotate(-me.rot + Math.PI); ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 8); ctx.lineTo(0, 4); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.translate(mx, my); ctx.rotate(Math.atan2(Math.cos(me.rot), -Math.sin(me.rot)) + Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 8); ctx.lineTo(0, 4); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
   cv.addEventListener('click', e => {
     const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * S, y = (e.clientY - r.top) / r.height * S;
     let best = null, bd = 30; for (const tp of TRAVEL){ const [px, py] = toPx(tp.x, tp.z), d = Math.hypot(px - x, py - y); if (d < bd){ bd = d; best = tp; } }
@@ -3296,6 +3315,25 @@ function buildMangrove(){
     Mang.critters.push({ kind, m, hx: ix + Math.cos(a) * d, hz: iz + Math.sin(a) * d, x: 0, z: 0, hide: 0, hop: rr() * 3, ph: rr() * 6, gone: 0 }); }
   Mang.critters.forEach(c => { c.x = c.hx; c.z = c.hz; });
 }
+// 南方沙灘（參考墾丁南灣）：白沙、遮陽傘、躺椅、救生員高台、一塊塊的珊瑚礁岩
+function buildBeach(){
+  const g = new THREE.Group(); scene.add(g); let sd = 5; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const gy = (x, z) => groundHeight(x, z);
+  const sand = new THREE.Mesh(new THREE.CircleGeometry(9, 32), mat('#f8ecc8', 0.95)); sand.rotation.x = -Math.PI / 2; sand.scale.set(1, 1.6, 1); sand.position.set(40, gy(40, -6) + 0.03, -6); sand.receiveShadow = true; g.add(sand);
+  [['#f17b6d', 37, -9], ['#3fbf9d', 41.5, -11], ['#ffd36a', 38.5, -2.5], ['#5fb6e3', 43, -5]].forEach(([c, x, z]) => { const y = gy(x, z);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), mat('#f6efe2')); pole.position.set(x, y + 1.1, z); pole.rotation.z = 0.12; g.add(pole);
+    const top = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.5, 10, 1, true), mat(c, 0.75, { side:THREE.DoubleSide, flatShading:true })); top.position.set(x + 0.13, y + 2.2, z); top.castShadow = true; g.add(top);
+    const towel = box([0.8, 0.02, 1.7], ['#ffffff', '#ffd36a', '#f5a5d8', '#7db7d7'][Math.floor(rr() * 4)], [x + 0.9, y + 0.02, z + 0.4]); towel.rotation.y = rr(); towel.castShadow = false; g.add(towel);
+    const ch = new THREE.Group(); ch.position.set(x - 0.9, y, z + 0.3); ch.rotation.y = rr() * 2; g.add(ch); ch.add(box([0.6, 0.06, 1.5], '#e9e2cf', [0, 0.32, 0])); const bk = box([0.6, 0.06, 0.6], '#e9e2cf', [0, 0.55, -0.68]); bk.rotation.x = -0.9; ch.add(bk); for (const sx of [-0.25, 0.25]) for (const sz of [-0.6, 0.6]) ch.add(box([0.04, 0.3, 0.04], '#c9c2b2', [sx, 0.15, sz]));
+    addCircleCol(x, z, 0.25); });
+  // 救生員高台
+  { const x = 44.5, z = -9, y = gy(x, z); for (const sx of [-0.45, 0.45]) for (const sz of [-0.45, 0.45]) g.add(box([0.1, 2.0, 0.1], '#e9e2cf', [x + sx, y + 1.0, z + sz])); g.add(box([1.1, 0.1, 1.1], '#e9e2cf', [x, y + 2.0, z])); g.add(box([1.1, 0.7, 0.08], '#e8473a', [x, y + 2.4, z - 0.55])); addBoxCol(x, z, 1.1, 1.1); }
+  // 珊瑚礁岩（墾丁海邊那種黑灰色、坑坑洞洞的石頭）
+  for (let i = 0; i < 9; i++){ const x = 45 + rr() * 3.5, z = -13 + rr() * 14; if (!isLand(x, z) && terrainH(x, z) < -0.6) continue; const r = 0.4 + rr() * 0.6, k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat('#6a665e', 0.98, { flatShading:true })); k.position.set(x, Math.max(gy(x, z), 0) + r * 0.3, z); k.rotation.set(rr() * 3, rr() * 3, 0); k.scale.y = 0.7; k.castShadow = true; g.add(k); if (isLand(x, z)) addCircleCol(x, z, r * 0.8); }
+  // 牌子
+  { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = '#2f89c7'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 40px sans-serif'; c.fillText('🏖️ 南方沙灘', 128, 62);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshBasicMaterial({ map: tx, side:THREE.DoubleSide })); const x = 35, z = -6, y = gy(x, z); sg.position.set(x, y + 1.7, z); sg.rotation.y = Math.PI / 2; g.add(sg); for (const sz of [-0.8, 0.8]) g.add(box([0.08, 1.6, 0.08], '#8c5d3b', [x, y + 0.8, z + sz])); }
+}
 function updateMangrove(dt, t){
   if (!Mang.g) return; const near = Math.hypot(me.pos.x - MANG.x, me.pos.z - MANG.z) < 90 && !onIsle && !House.on && !Dive.on; Mang.g.visible = near; if (!near) return;
   for (const b of Mang.birds || []){ const k = Math.max(0, Math.sin(t * 0.7 + b.position.x)) ; const dip = k > 0.97 ? (k - 0.97) / 0.03 : 0; b.userData.neck.forEach(o => { o.rotation.x = 0; }); b.userData.neck[1].position.y = 0.97 - dip * 0.35; b.userData.neck[2].position.y = 0.96 - dip * 0.38; }
@@ -4146,7 +4184,7 @@ function updateVenues(dt, t){
 }
 /* ================= QUESTS：NPC 每日任務（伺服器產生、伺服器檢查）================= */
 // 渡船：港口的船夫阿海，可以載你到祕密窩點或外海
-const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'北邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
+const FERRY = { name:'船夫 阿海', at:[27.2, -27.4], dest:[ { id:'deep', name:'外海深處', x:52, z:-46, desc:'大魚最多的深海，離岸很遠' }, { id:'lh', name:'燈塔外的礁岩', x:34, z:-58, desc:'燈塔照得到的地方，晚上月光鯛很多' }, { id:'north', name:'東邊外海', x:-6, z:-66, desc:'海邊再往外，常有成群的鯖魚' } ] };
 let ferryNpc = null; const Ferry = { on:false };
 function updateFerry(){
   if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
@@ -4203,10 +4241,10 @@ function renderFerry(body){
   body.appendChild(el('div', 'dexhead', '🗺️ 自己選地點'));
   body.appendChild(el('p', 'sub', '在地圖上點一塊水面，阿海就載你過去。到了以後可以自己打窩、做一個新的祕密窩點。'));
   const R = 88, S = 360, wrap = el('div', 'mapwrap ferrymap'), cv = el('canvas', 'mapcv'); cv.width = cv.height = S; wrap.appendChild(cv); body.appendChild(wrap);
-  const ctx = cv.getContext('2d'), toPx = (x, z) => [(x + R) / (R * 2) * S, (z + R) / (R * 2) * S], toW = (px, py) => [px / S * R * 2 - R, py / S * R * 2 - R];
+  const ctx = cv.getContext('2d'), toPx = (x, z) => [(-z + R) / (R * 2) * S, (x + R) / (R * 2) * S], toW = (px, py) => [py / S * R * 2 - R, R - px / S * R * 2];   /* 跟大地圖一樣：上北（-x）右東（-z） */
   const draw = pick => {
     ctx.fillStyle = '#1f5981'; ctx.fillRect(0, 0, S, S);   // 地圖外面都是海（顏色跟地圖的深海一樣）
-    const [a0, b0] = toPx(-MAP_VIEW, -MAP_VIEW), [a1] = toPx(MAP_VIEW, MAP_VIEW); ctx.drawImage(getMapImage(), a0, b0, a1 - a0, a1 - a0);
+    const [a0, b0] = toPx(-MAP_VIEW, MAP_VIEW), [a1] = toPx(MAP_VIEW, -MAP_VIEW); ctx.drawImage(getMapImage(), a0, b0, a1 - a0, a1 - a0);
     ctx.textAlign = 'center'; ctx.font = '18px sans-serif';
     const [hx, hy] = toPx(FERRY.at[0], FERRY.at[1]); ctx.fillText('🚤', hx, hy + 6);
     for (const sp of secretSpots){ const [sx, sy] = toPx(sp.x, sp.z); ctx.fillText('🤫', sx, sy + 6); }
@@ -6036,7 +6074,7 @@ function cloudCall(fn, args){
   Cloud.queue = job.catch(() => {});
   return job;
 }
-/* ---- 參觀別人的水族館：把廣場北邊的大水族館換成對方展示的魚 ---- */
+/* ---- 參觀別人的水族館：把廣場東邊的大水族館換成對方展示的魚 ---- */
 var visiting = null;   // { id, name, list }（用 var：水族館在這之前就會先建一次）
 async function visitAquarium(id, name){
   if (!Cloud.sb || !id){ toast('要連上雲端才能參觀別人的水族館'); return; }
@@ -6386,8 +6424,8 @@ function renderTab(){
   } else if (curTab === 'bag'){ renderBag(body);
   } else if (curTab === 'tank'){
     const nShow = (rec.show || []).length;
-    body.appendChild(el('p', 'sub', nShow ? `你選了 ${nShow} / ${SHOW_MAX} 條魚放進廣場北邊的大水族館。點「展示」可以放進去或拿出來，「放流」會把這條魚放回大自然。`
-      : `廣場北邊的大水族館現在是空的。想讓大家看到哪條魚，就按那條魚的「展示」（最多 ${SHOW_MAX} 條）。`));
+    body.appendChild(el('p', 'sub', nShow ? `你選了 ${nShow} / ${SHOW_MAX} 條魚放進廣場東邊的大水族館。點「展示」可以放進去或拿出來，「放流」會把這條魚放回大自然。`
+      : `廣場東邊的大水族館現在是空的。想讓大家看到哪條魚，就按那條魚的「展示」（最多 ${SHOW_MAX} 條）。`));
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
     const bar = el('div', 'tankbar');
     const sortSel = el('div', 'seg');
@@ -6508,7 +6546,7 @@ function renderTab(){
       '釣法（釣具店「釣法」分頁，免費隨時換）：浮標釣什麼都能釣；路亞不用魚餌、拋得遠，等魚時點按鈕「抽竿」讓假餌動，掠食魚特別多；沉底釣等比較久，但底棲魚（鯰魚、鰻魚、螃蟹、龍蝦、石斑…）特別多。釣線：細線咬口快但容易斷、粗線不容易斷但咬口少。',
     ], true);
     sec('🦐 室內釣蝦場', [
-      '在村子廣場北邊的街上，招牌寫「🦐 釣蝦場」，走到門口按按鈕就能進去。也可以從「地圖」傳送到門口。',
+      '在村子廣場東邊的街上，招牌寫「🦐 釣蝦場」，走到門口按按鈕就能進去。也可以從「地圖」傳送到門口。',
       '釣蝦是算時間的：先到門口左邊的櫃台跟老闆阿忠買時段（30 分鐘 🪙200、60 分鐘 🪙350，可以累加）。蝦竿和雞肝餌都附，不用自己帶。右上角會顯示還剩多久。',
       '池邊有編號的塑膠板凳，坐下來就能拋竿；站在池邊也可以釣。蝦竿很短，只能拋到前面一點點。',
       '櫃台也有賣蝦竿：碳纖維蝦竿（🪙1200）、職人手工蝦竿（🪙4000）。好的蝦竿浮標比較敏感，吃餌時可以反應的時間比較長，拉的時候也比較不會鬆鉗（不會改變釣到哪一種蝦的機率）。',
@@ -6523,7 +6561,7 @@ function renderTab(){
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到，維持 2～3 分鐘；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
       '「🤫 提前打」是祕密窩點：只有你自己知道（橘色浮標和地圖上的 🤫 只有你看得到）。窩料會慢慢發酵，10 分鐘後最強，可以維持 1 小時，最多 3 個。祕密窩點存在雲端，換手機登入也找得到。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
-      '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、北邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
+      '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、東邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
       '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。',
     ]);
     sec('💙 尺寸限制、放流、愛海點數', [
@@ -6534,7 +6572,7 @@ function renderTab(){
     sec('🤿 潛水（進階玩法）', [
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
-      '🌿 紅樹林：在本島東岸、螢光溪出海口的南邊，從岸上走木棧道就進得去（地圖上深綠色那一片）。漲潮時魚會游進樹根之間，在紅樹林碼頭的發光圈或岸邊釣得到烏魚、虱目魚、金錢魚、黑鯛，運氣好還有尖吻鱸、鬥牛鯊、鋸鰩。退潮（乾潮）時島邊的泥灘會露出來，可以走下去：搖桿推一點點慢慢靠近彈塗魚或招潮蟹，再按「抓！」。跑太快會把牠們嚇跑，水漲回來要趕快回到島上。',
+      '🌿 紅樹林（參考新竹新豐紅毛港）：在本島南岸、南方沙灘再往南，從岸上走進去就到了（地圖下方深綠色那一片）。漲潮時魚會游進樹根之間，在紅樹林碼頭的發光圈或岸邊釣得到烏魚、虱目魚、金錢魚、黑鯛，運氣好還有尖吻鱸、鬥牛鯊、鋸鰩。退潮（乾潮）時島邊的泥灘會露出來，可以走下去：搖桿推一點點慢慢靠近彈塗魚或招潮蟹，再按「抓！」。跑太快會把牠們嚇跑，水漲回來要趕快回到島上。',
       '外海魚情：在外海的船上按「🤿 下潛看魚」，可以直接潛下去看這一帶現在有哪些魚。外海每 5 分鐘會有 3 種魚特別活躍（上鉤機率 ×2.5），浮上來之後跑馬燈會告訴你是哪幾種、還剩幾分鐘。',
       isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
       '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
@@ -6545,7 +6583,7 @@ function renderTab(){
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
-      `廣場北邊的大水族館只放你自己選的魚（最多 ${SHOW_MAX} 條）：釣到時按「🏛️ 展示」，或在「魚缸」分頁按「展示」。展示中的魚不會被賣掉或拿去做菜。`,
+      `廣場東邊的大水族館只放你自己選的魚（最多 ${SHOW_MAX} 條）：釣到時按「🏛️ 展示」，或在「魚缸」分頁按「展示」。展示中的魚不會被賣掉或拿去做菜。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話大約每 7 天會生一隻小鯊（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
       '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低，要釣到才會出現在圖鑑裡。',
@@ -6716,10 +6754,10 @@ function updateDayNight(t){
   let i = 0; while (i < DAY_KEYS.length - 2 && h >= DAY_KEYS[i + 1].h) i++;
   const k0 = DAY_KEYS[i], k1 = DAY_KEYS[i + 1], f = clamp((h - k0.h) / (k1.h - k0.h), 0, 1);
   const num = key => k0[key] + (k1[key] - k0[key]) * f;
-  // 太陽（晚上換成月亮）的方向：白天從東邊升起、西邊落下
+  // 太陽（晚上換成月亮）的方向：白天從東邊升起、西邊落下（世界的東邊是 -z）
   const dayK = clamp((h - 5.5) / 14.5, 0, 1), night = h < 5.5 || h >= 20;
   let ang; if (!night) ang = dayK * Math.PI; else { const nh = h >= 20 ? h - 20 : h + 4; ang = clamp(nh / 9.5, 0, 1) * Math.PI; }
-  _sunDir.set(Math.cos(ang) * 0.8, Math.max(0.18, Math.sin(ang)) * 0.75, -0.55).normalize();
+  _sunDir.set(-0.55, Math.max(0.18, Math.sin(ang)) * 0.75, -Math.cos(ang) * 0.8).normalize();
   lerpKey(k0, k1, f, 'sun', sun.color); sun.intensity = num('si') * (MODERN ? 1 : 0.57);
   lerpKey(k0, k1, f, 'hs', hemi.color); lerpKey(k0, k1, f, 'hg', hemi.groundColor); hemi.intensity = num('hi') * (MODERN ? 1 : 0.68);
   lerpKey(k0, k1, f, 'low', scene.fog.color); lerpKey(k0, k1, f, 'top', scene.background);
@@ -6742,7 +6780,7 @@ function updateDayNight(t){
 }
 
 addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); }
-try { buildMangrove(); } catch(e){ console.warn('mangrove', e); }
+try { buildMangrove(); buildBeach(); } catch(e){ console.warn('mangrove', e); }
 camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
