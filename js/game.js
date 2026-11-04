@@ -2405,6 +2405,7 @@ function actionDown(){
    /* 紅樹林泥灘：徒手抓 */
     { const lt = nearLitter(); if (lt){ act.classList.remove('down'); pickLitter(lt); return; } }   /* 水圳：撿垃圾 */
     if (nearCage()){ act.classList.remove('down'); openSheet('cage'); return; }   /* 箱網 */
+    if (nearSnorkel()){ act.classList.remove('down'); startDive('reef', { x: me.pos.x, z: me.pos.z }); return; }   /* 珊瑚礁島：從沙灘下水浮潛 */
     let spot;
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
     else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
@@ -2681,6 +2682,7 @@ function updateFishing(dt, t){
     const ltN = !crN && nearLitter();
     if (crN){ label = '抓！'; sub = crN.kind === 'crab' ? '🦀 招潮蟹' : '🐟 彈塗魚'; cls = 'bite'; }
     else if (ltN){ label = '撿起來'; sub = `${ltN.T.icon} ${ltN.T.name}・💙+1`; cls = 'shop'; }
+    else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
     else if (sh){ label = sh.label; sub = sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
@@ -3610,6 +3612,9 @@ function buildReef(){
   { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = '#2f9ab0'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 38px sans-serif'; c.fillText('🪸 珊瑚礁群島', 128, 62);
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshBasicMaterial({ map: tx })); const x = R.x + 2.2, z = R.bz0 - 0.4, y = groundHeight(x, z); sg.position.set(x, y + 1.7, z); sg.rotation.y = Math.PI; g.add(sg); { const bk = sg.clone(); bk.rotation.y = 0; g.add(bk); } for (const sx of [-0.8, 0.8]) g.add(box([0.08, 1.6, 0.08], '#8c5d3b', [x + sx, y + 0.8, z])); addBoxCol(x, z, 1.8, 0.3); }
   buildCages();
+  // 浮潛下水點（小琉球最有名的就是浮潛看海龜）：島北邊的沙灘
+  { const x = REEF.x + 3.6, z = REEF.z - REEF.r + 1.6, y = groundHeight(x, z); const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = '#f0a030'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 40px sans-serif'; c.fillText('🤿 浮潛', 128, 62);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.45), new THREE.MeshBasicMaterial({ map: tx })); sg.position.set(x, y + 1.5, z); sg.rotation.y = Math.PI; g.add(sg); { const bk = sg.clone(); bk.rotation.y = 0; g.add(bk); } g.add(box([0.08, 1.4, 0.08], '#8c5d3b', [x, y + 0.7, z])); addCircleCol(x, z, 0.12); Reef.diveAt = [x, z]; }
   // 釣點的發光圈
   for (const id of ['reef', 'weir']){ const sp = SPOT_BY_ID[id], r = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.08, 8, 36), new THREE.MeshStandardMaterial({ color:sp.color, emissive:sp.color, emissiveIntensity:1.8, transparent:true, opacity:0.86 }));
     r.rotation.x = -Math.PI / 2; r.position.set(sp.pos.x, groundHeight(sp.pos.x, sp.pos.z) + 0.07, sp.pos.z); g.add(r); sp.ring = r; }
@@ -3637,6 +3642,7 @@ function buildCageFish(){
   (rec.cage || []).forEach((x, i) => { let m = null; try { m = fishModel(FISH_BY_ID[x.f], clamp(0.35 + Math.log(1 + x.w) * 0.22, 0.35, 1.1)); } catch(e){} if (!m) return; CageV.g.add(m); CageV.fish.push({ m, a: i / 6 * Math.PI * 2, r: 0.5 + (i % 3) * 0.35, y: -0.25 - (i % 2) * 0.35, sp: 0.4 + (i % 4) * 0.12, cx, cz }); });
 }
 function updateCages(dt, t){ for (const f of CageV.fish){ f.a += dt * f.sp; f.m.position.set(f.cx + Math.cos(f.a) * f.r, f.y + Math.sin(t * 2 + f.a) * 0.05, f.cz + Math.sin(f.a) * f.r); f.m.rotation.y = -f.a; } }
+function nearSnorkel(){ return !!(Reef.diveAt && !myBoat && !mySeat && F.phase === 'idle' && !Dive.on && Math.hypot(me.pos.x - Reef.diveAt[0], me.pos.z - Reef.diveAt[1]) < 1.8); }
 function nearCage(){ if (!CageV.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on) return false; return Math.hypot(me.pos.x - CAGE.pos[0][0], me.pos.z - CAGE.pos[0][1]) < CAGE.r + 1.6 && !!deckAt(me.pos.x, me.pos.z); }
 function cageGrowNext(x){ const f = FISH_BY_ID[x.f]; return Math.min(f.max, +(x.w + (f.max - x.w) * CAGE.k).toFixed(2)); }
 async function cageCall(fn, args, local){
@@ -4641,7 +4647,7 @@ const Intel = { seenW: -1 };
 function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
 // 外海潛水偶爾遠遠看到一道紅色影子：赤紅霸王鯊還在（海裡沒有了就不會出現）
 function offshoreDiveFish(){ const l = offshoreFish(); if (RS.n > 0 && Math.random() < 0.15) l.push('shark_red'); return l; }
-function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && f.spot !== 'ice'); }
+function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && f.spot !== 'ice' && !f.rs); }   /* 紅鯊不會在一般潛點出現 */
 // 把很多小東西合併成少數幾個網格（手機比較順）
 function diveMerger(){
   const parts = new Map(), tmp = new THREE.Object3D();
@@ -4737,7 +4743,7 @@ function buildDive(){
   // 單獨游的魚（稀有魚比較多，傳說魚偶爾出現）
   Dive.fish = [];
   const solo = SP.filter(f => f.rarity !== '常見' || !FISH_STYLE[f.id]); const pickSolo = [];
-  for (const f of solo) if (f.rs || rnd() < (f.rarity === '傳說' ? S.legendP : 0.75)) pickSolo.push(f);   /* 紅鯊只有在 offshoreDiveFish 抽中時才會在清單裡 */
+  for (const f of solo){ if (f.rs){ pickSolo.unshift(f); continue; } if (f.of){ if (rnd() < (f.w || 0.02) * 1.5) pickSolo.unshift(f); continue; } if (rnd() < (f.rarity === '傳說' ? S.legendP : 0.75)) pickSolo.push(f); }   /* 變種很少見：每次潛水大約 1～3% 會遇到一種 */   /* 紅鯊只有在 offshoreDiveFish 抽中時才會在清單裡 */
   for (const f of pickSolo.slice(0, 9)){ let m; try { m = fishModel(f, BIG_FISH.has(f.id) ? 1.15 : 0.62); } catch(e){ continue; }
     const bottom = ['crab', 'flounder', 'stingray', 'octopus', 'lobster', 'seahorse'].includes(f.id) || /crab|lobster|octo/.test(f.id);
     const a = rnd() * Math.PI * 2, r = 4 + rnd() * R * 0.7; const o = { f, m, bottom, cx: X + Math.cos(a) * r * 0.5, cz: Z + Math.sin(a) * r * 0.5, rad: bottom ? 1.5 + rnd() * 2 : 5 + rnd() * 9, y: bottom ? 0.25 : 2 + rnd() * 8, sp: (bottom ? 0.08 : 0.06 + rnd() * 0.08) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * 6, pos: new THREE.Vector3() };
@@ -4762,8 +4768,8 @@ function buildDive(){
   g.traverse(o => { if (o.isMesh || o.isInstancedMesh){ o.castShadow = false; o.receiveShadow = false; } });
 }
 function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function startDive(site){
-  site = DIVE_SITES[site] ? site : 'reef';
+function startDive(site, back){
+  site = DIVE_SITES[site] ? site : 'reef'; Dive.back = back || null;   /* back：從岸邊下水的話，浮上來回到這裡 */
   if (Dive.on) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
   if (!diveSiteOk(site)){ toast(`${DIVE_SITES[site].name}要先買：${DIVE_SITES[site].need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); return; }
   Dive.site = site; Dive.ret = site === 'offshore' && myBoat ? { x: me.pos.x, z: me.pos.z, label: '外海' } : null;
@@ -4784,7 +4790,7 @@ function endDive(reason, instant){
     Dive.on = false; Dive.up = Dive.down = false;
     if (Dive.group){ Dive.group.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); scene.remove(Dive.group); Dive.group = null; }
     Dive.fish = []; Dive.schools = []; Dive.loot = []; Dive.kelp = null; diveShowWorld();
-    me.setSwim(false); const [fx0, fz0] = freeSpot(FERRY.at[0] - 1.2, FERRY.at[1] + 0.8); me.pos.x = fx0; me.pos.z = fz0; me.baseY = groundHeight(fx0, fz0); Jump.gy = me.baseY; me.rot = -Math.PI / 2; cam.yaw = me.rot + Math.PI; if (Dive.savedDist) cam.dist = Dive.savedDist;
+    me.setSwim(false); const [fx0, fz0] = Dive.back ? [Dive.back.x, Dive.back.z] : freeSpot(FERRY.at[0] - 1.2, FERRY.at[1] + 0.8); Dive.back = null; me.pos.x = fx0; me.pos.z = fz0; me.baseY = groundHeight(fx0, fz0); Jump.gy = me.baseY; me.rot = -Math.PI / 2; cam.yaw = me.rot + Math.PI; if (Dive.savedDist) cam.dist = Dive.savedDist;
     renderDiveHud(); pushPresence(true); if (!instant) setTimeout(() => fx.classList.remove('on'), 120);
     const n = Dive.seen.size; if (!instant) toast(`${reason || '🤿 浮上水面了'}${n ? `　這次看到 ${n} 種魚` : ''}`);
     if (Dive.site === 'offshore' && Dive.ret){ const r = Dive.ret; Dive.ret = null; ferryTo(r.x, r.z, r.label); const it = intelAt(Date.now()); Intel.seenW = it.w; Intel.ids = it.ids;
@@ -7028,7 +7034,7 @@ function renderTab(){
       '愛海點數在商店的「💙愛海」分頁換限定服飾（海龜帽、海洋守護衫、珊瑚項鍊、鯊魚背鰭），金幣買不到。',
     ]);
     sec('🤿 潛水（進階玩法）', [
-      '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。',
+      '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
