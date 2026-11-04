@@ -206,11 +206,11 @@ const SPOTS = [
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black'] },
   { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
-  { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林（參考新竹新豐紅毛港），漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
+  { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
-  { id:'canal', label:'百年生態池', short:'生態池', subtitle:'參考新竹湖口國小（前身大湖口公學校）的百年生態池：石頭砌的池邊、紅色拱橋、假山和睡蓮', pos:V3(13.0, -41.1), color:'#5aa070', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','guppy','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino','guppy_albino'] },
-  { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島（參考小琉球、澎湖），站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold'] },
-  { id:'weir', label:'雙心石滬', short:'石滬', subtitle:'珊瑚礁島東邊用咾咕石疊成的愛心石滬（參考澎湖七美），退潮時魚被困在裡面、咬得特別快', pos:V3(11.0, 82.0), color:'#e86a8a', dir:V2(1, 0), late:true, fish:['rabbitfish','sergeant','butterfly','girella','octopus','puffer','rabbitfish_gold','girella_gold'] },
+  { id:'canal', label:'百年生態池', short:'生態池', subtitle:'百年生態池：石頭砌的池邊、紅色拱橋、假山和睡蓮', pos:V3(13.0, -41.1), color:'#5aa070', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','guppy','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino','guppy_albino'] },
+  { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島，站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold'] },
+  { id:'weir', label:'雙心石滬', short:'石滬', subtitle:'珊瑚礁島東邊用咾咕石疊成的愛心石滬，退潮時魚被困在裡面、咬得特別快', pos:V3(11.0, 82.0), color:'#e86a8a', dir:V2(1, 0), late:true, fish:['rabbitfish','sergeant','butterfly','girella','octopus','puffer','rabbitfish_gold','girella_gold'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','guppy','trout_golden'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
@@ -1326,21 +1326,22 @@ function makeAvatar(shirt, hat){
   const hairM = mat('#5a3d2b', 0.8), shoeM = mat('#6b4a35', 0.7), white = new THREE.MeshBasicMaterial({ color:'#ffffff' });
   const blushM = new THREE.MeshBasicMaterial({ color:'#ff9a8f', transparent:true, opacity:0.55, depthWrite:false });
   const add = (geo, m, x, y, z, parent, shadow) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (shadow !== false) o.castShadow = true; (parent || g).add(o); return o; };
+  const BODY = [];   /* 換成正式 3D 模型（tide_kid.glb）時要拿掉的程式身體 */
   // 腳：圓圓的褲管＋鞋子
   /* 腿（2026-11-04 動畫改版）：髖關節（腿）→ 膝蓋（shin，離髖 0.22）→ 腳踝（foot，離髖 0.40）；外觀跟原本一樣，只是多了兩個可以彎的地方 */
   function leg(x){ const p = new THREE.Group(); p.position.set(x, 0.5, 0); g.add(p); p.userData.pants = add(G.thigh, pants, 0, -0.1, 0, p);
     const shin = new THREE.Group(); shin.position.y = -0.22; p.add(shin); p.userData.shin = shin; p.userData.pants2 = add(G.shin, pants, 0, -0.08, 0, shin);
     const foot = new THREE.Group(); foot.position.y = -0.18; shin.add(foot); p.userData.foot = foot;
-    const sh = add(G.shoe, shoeM, 0, -0.03, 0.04, foot); sh.scale.set(0.95, 0.6, 1.3); p.userData.shoe = sh; return p; }
+    const sh = add(G.shoe, shoeM, 0, -0.03, 0.04, foot); sh.scale.set(0.95, 0.6, 1.3); p.userData.shoe = sh; BODY.push(p.userData.pants, p.userData.pants2, sh); return p; }
   const legL = leg(-0.12), legR = leg(0.12);
   // 身體
-  const body = add(G.torso, shirtM, 0, 0.8, 0); body.scale.set(1, 1, 0.86);
-  const belt = add(G.belt, pants, 0, 0.56, 0); belt.scale.set(1, 1, 0.86);
+  const body = add(G.torso, shirtM, 0, 0.8, 0); body.scale.set(1, 1, 0.86); BODY.push(body);
+  const belt = add(G.belt, pants, 0, 0.56, 0); belt.scale.set(1, 1, 0.86); BODY.push(belt);
   // 頭：大大的頭、頭髮、耳朵、眼睛（會眨眼）、腮紅、微笑
   const headG = new THREE.Group(); headG.position.y = 1.31; g.add(headG);
-  const head = add(G.head, skin, 0, 0, 0, headG); head.scale.set(1, 0.94, 0.96);
+  const head = add(G.head, skin, 0, 0, 0, headG); head.scale.set(1, 0.94, 0.96); BODY.push(head);
   const hair = add(G.hair, hairM, 0, 0.01, -0.02, headG); hair.rotation.x = -0.42;
-  for (const sx of [-1, 1]) add(G.ear, skin, sx * 0.315, -0.02, -0.01, headG);
+  for (const sx of [-1, 1]) BODY.push(add(G.ear, skin, sx * 0.315, -0.02, -0.01, headG));
   /* 眼睛（2026-11-04 角色改版）：大大的彩色眼珠＋黑色瞳孔＋兩顆反光＋上眼線，眨眼時整組一起壓扁；眉毛跟頭髮同色 */
   const eyes = [], shines = [], eyeM = mat('#3a2a20', 0.35), brows = [];
   for (const sx of [-1, 1]){
@@ -1358,7 +1359,7 @@ function makeAvatar(shirt, hat){
   const crown = add(G.crown, hatM, 0, 0.0, 0, hatG); crown.scale.set(1, 0.72, 1); hatBase.push(crown);
   hatBase.push(add(G.band, ink, 0, 0.035, 0, hatG, false));
   // 手：袖子＋圓圓的手
-  function arm(x){ const p = new THREE.Group(); p.position.set(x, 1.0, 0); g.add(p); add(G.arm, shirtM, 0, -0.18, 0, p); add(G.hand, skin, 0, -0.4, 0, p); p.rotation.z = Math.sign(x) * 0.08; return p; }
+  function arm(x){ const p = new THREE.Group(); p.position.set(x, 1.0, 0); g.add(p); BODY.push(add(G.arm, shirtM, 0, -0.18, 0, p), add(G.hand, skin, 0, -0.4, 0, p)); p.rotation.z = Math.sign(x) * 0.08; return p; }
   const armL = arm(-0.33), armR = arm(0.33);
   // 釣竿（跟原本一樣掛在右手前方）
   const rod = new THREE.Group(); rod.position.set(0.36, 0.74, 0.37);
@@ -1367,7 +1368,7 @@ function makeAvatar(shirt, hat){
   const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), mat('#c9d6e3', 0.3, { metalness:0.6 })); reel.rotation.z = Math.PI/2; reel.position.set(0.06, 0.25, 0);
   const tip = new THREE.Object3D(); tip.position.y = 2.3;
   rod.add(pole, grip, reel, tip); rod.rotation.x = 0.95; rod.visible = false; g.add(rod);
-  return { g, legL, legR, armL, armR, rod, tip, pole, reel, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, hairM, eyeM, hair, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
+  return { g, legL, legR, armL, armR, rod, tip, pole, reel, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, hairM, eyeM, hair, BODY, white, blushM, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
 }
 /* ================= WARDROBE：服裝（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）================= */
 // 價格要跟 supabase/008_wardrobe.sql 的 _item_price 一樣；價格 0 的是預設，大家都有
@@ -1424,7 +1425,7 @@ function applyGear(av, gear){
   av.gearMeshes = []; av.gearAnim = null;
   const G = avGeo(), M = (c, r, ex) => mat(c, r == null ? 0.7 : r, ex);
   const mk = (geo, m, x, y, z, parent) => { if (parent && parent.userData.foot && y < -0.395){ parent = parent.userData.foot; y += 0.40; } else if (parent && parent.userData.shin && y < -0.22){ parent = parent.userData.shin; y += 0.22; }   /* 膝蓋以下的東西跟著小腿、腳踝以下跟著腳 */
-    const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.g).add(o); av.gearMeshes.push(o); return o; };
+    const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.torsoG || av.g).add(o); av.gearMeshes.push(o); return o; };
   const hatC = av.hatM, ink = av.inkM, white = M('#ffffff', 0.6);
   if (av.hairM) applyLook(av, gear, mk);
   // ---- 帽子 ----
@@ -1881,9 +1882,69 @@ function surfaceAt(x, z){
   if (Math.hypot((x - 40) / 1.0, (z + 6) / 1.6) < 9) return 'sand';
   return 'ground';
 }
+/* ===================== 正式 3D 角色（2026-11-04）=====================
+   models/tide_kid.glb：本專案自己做的 Q 版角色（tools/character/build_character.js 產生），骨架和大部分動作是 KayKit Character Animations（CC0）。
+   模型載好以後，每個角色把程式做的身體換成這個模型：衣服顏色、髮色膚色、自己設計的圖案照樣能換；帽子、臉、髮型、配件黏在對應的骨頭上跟著動。
+   載入失敗（或網址加 #kid=0）就繼續用原本程式做的角色。 */
+const KID = { gltf: null, clips: null, ok: false, failed: false, wait: new Set() };
+(function loadKid(){
+  if (/kid=0/.test(location.hash)) return;
+  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
+    undefined, e => { KID.failed = true; KID.wait.clear(); console.warn('3D 角色載入失敗，繼續用程式角色', e); }); } catch(e){ KID.failed = true; }
+})();
+// 動作的原始移動速度（量過：腳往後推的速度），用來讓播放速度跟真正的移動速度一樣
+const KID_SPD = { walk: 0.68, run: 1.51, sprint: 1.43 };
+function kidUpgrade(f){
+  const a = f.av; if (a.kid || !KID.ok) return;
+  const m = SkeletonUtils.clone(KID.gltf.scene), prim = {}, B = {};
+  m.traverse(o => { if (o.isBone) B[o.name] = o; if (o.isMesh){ o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; prim[o.material.name] = o; } });
+  const mapM = { skin: a.skinM, shirt: a.shirtM, pants: a.pantsM, shoe: a.shoeM };
+  for (const k in prim){ if (mapM[k]) prim[k].material = mapM[k]; else prim[k].visible = false; }   /* 臉、頭髮用原本的（表情、髮型才換得了），身體用模型的 */
+  const keepRot = a.g.rotation.clone(), keepPos = a.g.position.clone(); a.g.rotation.set(0, 0, 0); a.g.position.set(0, 0, 0); a.g.add(m); m.updateMatrixWorld(true); a.g.updateMatrixWorld(true);
+  for (const o of a.BODY) if (o.parent) o.parent.remove(o);
+  // 掛點：頭、帽子 → 頭骨；腿 → 大腿／小腿／腳骨；上衣類配件 → 胸骨
+  B.head.attach(a.headG); B.head.attach(a.hatG);
+  for (const [L, s] of [[a.legL, 'r'], [a.legR, 'l']]){ const sx = s === 'l' ? 1 : -1; L.rotation.set(0, 0, 0); L.position.set(sx * 0.145, 0.441, 0); L.userData.shin.rotation.set(0, 0, 0); L.userData.shin.position.y = -0.193; L.userData.foot.rotation.set(0, 0, 0); L.userData.foot.position.y = -0.125;
+    a.g.updateMatrixWorld(true); B['upperleg' + s].attach(L); B['lowerleg' + s].attach(L.userData.shin); B['foot' + s].attach(L.userData.foot); }
+  a.torsoG = new THREE.Group(); a.g.add(a.torsoG); a.g.updateMatrixWorld(true); B.chest.attach(a.torsoG);
+  for (const o of [...a.gearMeshes]) if (o.parent === a.g) a.torsoG.attach(o);
+  a.armL.visible = a.armR.visible = false;
+  a.g.rotation.copy(keepRot); a.g.position.copy(keepPos);
+  const mixer = new THREE.AnimationMixer(m), acts = {};
+  for (const [nm, c] of Object.entries(KID.clips)){ const ac = mixer.clipAction(c); ac.enabled = true; ac.setEffectiveWeight(0); ac.play(); acts[nm] = ac; }
+  for (const nm of ['jump_land', 'fish_cast']){ if (acts[nm]){ acts[nm].setLoop(THREE.LoopOnce, 1); acts[nm].clampWhenFinished = true; } }
+  a.kid = { m, B, prim, mixer, acts, w: {}, handR: B.handr, v: new THREE.Vector3(), skipT: 0 };
+  a.body = prim.shirt || a.body;
+  if (f.gearKey){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); }
+}
+// 每一格：照角色現在在做什麼，決定每個動作的比重（平滑過去，不會瞬間跳），播放速度跟移動速度一樣
+function kidAnimate(f, dt, t){
+  const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
+  if (f.swim) W.dive = 1;
+  else if (f.sitting) W.sit = 1;
+  else if (f.air > 0.05) W.jump_air = 1;
+  else if (f.held) W.hold = 1;
+  else if (f.fishing){ if ((f.windup || 0) > 0.02 || f.castT >= 0) W.fish_cast = 1; else if ((f.bend || 0) > 0.45) W.fish_fight = 1; else if ((f.bend || 0) > 0.05) W.fish_reel = 1; else W.fish_idle = 1; }
+  else { const wk = smooth01((v - 0.2) / 0.8) * (1 - smooth01((v - 3.0) / 1.4)), rn = smooth01((v - 3.0) / 1.4) * (1 - smooth01((v - 5.2) / 0.9)), sp = smooth01((v - 5.2) / 0.9);
+    W.idle = 1 - smooth01((v - 0.1) / 0.5); if (wk > 0) W.walk = wk; if (rn > 0) W.run = rn; if (sp > 0) W.sprint = sp; }
+  if (f === me && Jump.land > 0 && !f.swim && !f.fishing){ W.jump_land = 1; for (const k of ['idle', 'walk', 'run', 'sprint']) if (W[k]) W[k] *= 0.3; }
+  const rate = 1 - Math.exp(-dt * 10);
+  for (const nm in K.acts){ const tgt = W[nm] || 0, cur = K.w[nm] || 0, nw = cur + (tgt - cur) * rate; K.w[nm] = nw < 0.002 && tgt === 0 ? 0 : nw; K.acts[nm].setEffectiveWeight(K.w[nm]); }
+  // 播放速度
+  const ac = K.acts; if (ac.walk) ac.walk.timeScale = clamp(v / KID_SPD.walk, 0.6, 2.4); if (ac.run) ac.run.timeScale = clamp(v / KID_SPD.run, 0.7, 2.6); if (ac.sprint) ac.sprint.timeScale = clamp(v / KID_SPD.sprint, 0.7, 2.8);
+  if (ac.dive) ac.dive.timeScale = 0.6 + Math.min(1, v / 2.5) * 0.9;
+  // 甩竿：蓄力時停在往後舉的那一格，放開時從那裡往前甩
+  if (ac.fish_cast){ const c = ac.fish_cast, d = c.getClip().duration;
+    if (f.castT >= 0){ if (!K.casting){ K.casting = true; c.reset(); c.time = d * 0.38; c.paused = false; c.timeScale = 1.8; } }
+    else if ((f.windup || 0) > 0.02){ K.casting = false; c.paused = true; c.time = d * 0.38 * Math.min(1, f.windup); }
+    else K.casting = false; }
+  if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
+  K.mixer.update(dt);
+}
 class Fisher {
   constructor(opts){
     this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g);
+    if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
     this.fishing = false; this.bobPos = new THREE.Vector3(); this.dip = 0; this.bend = 0; this.flying = null; this.windup = 0; this.castT = -1;
@@ -1922,7 +1983,7 @@ class Fisher {
     this.held = { o, y, until: now() + (secs || 6) };
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
-  dispose(){ if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
+  dispose(){ KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
   update(dt, t){
     const a = this.av; dt = Math.min(dt, 0.1);
     // ===== 走路動畫（2026-11-04 改版）：Idle／Walk／Run／Sprint 依速度平滑混合；腳步照「實際走了多遠」前進，減少滑步 =====
@@ -1977,12 +2038,21 @@ class Fisher {
     // ---- 平滑套用：每個關節往目標姿勢靠過去（甩竿要很快，其他稍微柔一點）----
     const kk = this.castSnap ? 1 : 1 - Math.exp(-dt * (this.swim ? 8 : 22));
     for (const k in T) P[k] += (T[k] - P[k]) * kk;
+    if (a.kid){
+      // 正式 3D 角色：手腳的動作由骨架動畫負責；整個人的前傾、轉彎傾斜、上下浮動照原本的算法（前傾少一點，動畫自己會前傾）
+      const far = this !== me && camera.position.distanceToSquared(this.pos) > 900; a.kid.skipT += dt;
+      if (!far || a.kid.skipT > 0.1){ kidAnimate(this, far ? a.kid.skipT : dt, t); a.kid.skipT = 0; }
+      a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = this.swim ? P.pit : P.pit * 0.35; a.g.rotation.z = P.rol * 0.8;
+      a.g.position.y = this.baseY + (this.swim ? P.bob : 0);
+      if (this.fishing){ a.g.updateMatrixWorld(true); a.kid.handR.getWorldPosition(a.kid.v); a.g.worldToLocal(a.kid.v); a.rod.position.copy(a.kid.v); }
+    } else {
     a.legL.rotation.x = P.lL; a.legR.rotation.x = P.lR; a.legL.userData.shin.rotation.x = P.kL; a.legR.userData.shin.rotation.x = P.kR; a.legL.userData.foot.rotation.x = P.fL; a.legR.userData.foot.rotation.x = P.fR;
     a.armL.rotation.x = P.aL; a.armR.rotation.x = P.aR; a.armL.rotation.z = P.zL; a.armR.rotation.z = P.zR;
     { const c = Math.cos(P.tw), s2 = Math.sin(P.tw); a.body.rotation.y = P.tw; a.armL.position.set(-0.33 * c, 1.0, 0.33 * s2); a.armR.position.set(0.33 * c, 1.0, -0.33 * s2); }
     a.body.scale.y = P.br;
     a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = P.pit; a.g.rotation.z = P.rol;
     a.g.position.y = this.baseY + P.bob;
+    }
     if (a.gearAnim) a.gearAnim(t, this.speed || 0);
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
@@ -3829,7 +3899,7 @@ function cageFeed(){ if (!(rec.cage || []).length){ toast('箱網裡還沒有魚
 function cageTake(x){ cageCall('cage_take', { p_ts: x.t }, () => { rec.cage = rec.cage.filter(y => y.t !== x.t); const b = Object.assign({}, x, { fm: true }); delete b.w0; delete b.at; rec.tank.unshift(b); trimTank(); return true; }).then(ok => ok && toast(`🎉 收成${esc(FISH_BY_ID[x.f].name)} ${fmtKg(x.w)}，放進魚缸了`)); }
 function renderCage(body){
   const list = rec.cage || [], fed = rec.cageFed === taipeiDate();
-  const tip = el('div', 'tipbox'); tip.innerHTML = `<b>🐟 箱網養殖（參考澎湖的圓形箱網）</b><span>把魚缸裡的魚放進來慢慢養大（最多 ${CAGE.max} 條）。每天可以餵一次飼料（🪙${CAGE.feed}），餵一次魚會長大「離最大重量還差的 ${Math.round(CAGE.k * 100)}%」，所以小魚長得快、快長到最大的時候長得慢。養大的魚收成後放回魚缸，可以賣比較多錢。可以養的魚：${[...FARM].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。</span>`; body.appendChild(tip);
+  const tip = el('div', 'tipbox'); tip.innerHTML = `<b>🐟 箱網養殖</b><span>把魚缸裡的魚放進來慢慢養大（最多 ${CAGE.max} 條）。每天可以餵一次飼料（🪙${CAGE.feed}），餵一次魚會長大「離最大重量還差的 ${Math.round(CAGE.k * 100)}%」，所以小魚長得快、快長到最大的時候長得慢。養大的魚收成後放回魚缸，可以賣比較多錢。可以養的魚：${[...FARM].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。</span>`; body.appendChild(tip);
   const bar = el('div', 'tankbar'), fb = el('button', 'tbtn' + (fed || !list.length ? ' ghost' : ''), fed ? '🍚 今天餵過了' : `🍚 餵飼料（🪙${CAGE.feed}）`); fb.disabled = fed || !list.length; fb.addEventListener('click', cageFeed); bar.appendChild(fb); body.appendChild(bar);
   body.appendChild(el('div', 'dexhead', `🐟 箱網裡（${list.length} / ${CAGE.max}）`));
   if (!list.length) body.appendChild(el('div', 'empty', '箱網是空的。從下面挑魚放進來吧！'));
@@ -5823,11 +5893,11 @@ const DESIGN_SLOTS = [['top', '上衣'], ['pants', '褲子'], ['hat', '帽子'],
 function applyDesigns(av, gear){
   const t = designId(gear.top), p = designId(gear.pants), h = designId(gear.hat), sh = designId(gear.shoes), bk = designId(gear.back), ac = designId(gear.acc);
   av.body.material = (t && designMat(t)) || av.shirtM;
-  const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]){ if (L.userData.pants) L.userData.pants.material = pm; if (L.userData.pants2) L.userData.pants2.material = pm; }
+  const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]){ if (L.userData.pants) L.userData.pants.material = pm; if (L.userData.pants2) L.userData.pants2.material = pm; } if (av.kid && av.kid.prim.pants) av.kid.prim.pants.material = pm;
   // 帽子：用草帽的形狀，整頂換成你的圖案
   for (const b of av.hatBase){ if (!b.userData.m0) b.userData.m0 = b.material; const hm = h && designMat(h); if (h) b.visible = true; b.material = hm && b !== av.hatBase[2] ? hm : b.userData.m0; }
   // 鞋子
-  const sm = (sh && designMat(sh)) || av.shoeM; for (const L of [av.legL, av.legR]) if (L.userData.shoe) L.userData.shoe.material = sm;
+  const sm = (sh && designMat(sh)) || av.shoeM; for (const L of [av.legL, av.legR]) if (L.userData.shoe) L.userData.shoe.material = sm; if (av.kid && av.kid.prim.shoe) av.kid.prim.shoe.material = sm;
   // 披風（背飾）：背後一塊布
   if (bk){ const m = designMat(bk); if (m){ const mm = m.clone(); mm.side = THREE.DoubleSide; const c = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.62, 1, 4), mm); c.position.set(0, 0.74, -0.25); c.rotation.set(0.12, Math.PI, 0); c.castShadow = true; av.g.add(c); av.gearMeshes.push(c); } }
   // 領巾（配件）：脖子一圈加前面一塊三角巾
@@ -7649,12 +7719,12 @@ function renderTab(){
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
-      '🐟 箱網養殖（參考澎湖的圓形箱網）：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
-      '🪸 珊瑚礁群島（參考屏東小琉球、澎湖七美雙心石滬）：從村子往西邊走，過一座很長的跨海大橋就到了。島邊的礁岩用磯釣竿最好，有臭肚魚、白毛、黑毛、青嘴龍占，運氣好會遇到紅甘。島東邊有兩個用咾咕石疊成的愛心石滬：退潮的時候魚被困在裡面，咬得特別快；滿潮時魚都游出去了。',
-      '🪷 百年生態池（參考新竹湖口國小，前身大湖口公學校的生態池）：在村子東邊、往東海灘的路旁邊。兩個圓圓的池子中間有紅色拱橋，池子裡有假山和睡蓮。有吳郭魚、琵琶鼠魚、食蚊魚（大肚魚），運氣好會遇到泰國鱧（魚虎）和很大的革胡子鯰。手竿最適合。',
+      '🐟 箱網養殖：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
+      '🪸 珊瑚礁群島：從村子往西邊走，過一座很長的跨海大橋就到了。島邊的礁岩用磯釣竿最好，有臭肚魚、白毛、黑毛、青嘴龍占，運氣好會遇到紅甘。島東邊有兩個用咾咕石疊成的愛心石滬：退潮的時候魚被困在裡面，咬得特別快；滿潮時魚都游出去了。',
+      '🪷 百年生態池：在村子東邊、往東海灘的路旁邊。兩個圓圓的池子中間有紅色拱橋，池子裡有假山和睡蓮。有吳郭魚、琵琶鼠魚、食蚊魚（大肚魚），運氣好會遇到泰國鱧（魚虎）和很大的革胡子鯰。手竿最適合。',
       '🥅 撈網：站在比水面高很多的地方（例如高高的岸壁）釣到 1.5 公斤以上的魚，要用撈網撈上來，不然硬拔線會斷（在釣具店「🧰工具」分頁買，買了會自動用）。',
       '🧴 撿垃圾：生態池旁邊常常有寶特瓶、塑膠袋、鋁罐，走過去按「撿起來」，每撿一個愛海點數 +1（一天最多 20 個）。',
-      '🌿 紅樹林（參考新竹新豐紅毛港）：在本島南岸、南方沙灘再往南，從岸上走進去就到了（地圖下方深綠色那一片）。漲潮時魚會游進樹根之間，在紅樹林碼頭的發光圈或岸邊釣得到烏魚、虱目魚、金錢魚、黑鯛，運氣好還有尖吻鱸、鬥牛鯊、鋸鰩。退潮（乾潮）時島邊的泥灘會露出來，可以走下去：搖桿推一點點慢慢靠近彈塗魚或招潮蟹，再按「抓！」。跑太快會把牠們嚇跑，水漲回來要趕快回到島上。',
+      '🌿 紅樹林：在本島南岸、南方沙灘再往南，從岸上走進去就到了（地圖下方深綠色那一片）。漲潮時魚會游進樹根之間，在紅樹林碼頭的發光圈或岸邊釣得到烏魚、虱目魚、金錢魚、黑鯛，運氣好還有尖吻鱸、鬥牛鯊、鋸鰩。退潮（乾潮）時島邊的泥灘會露出來，可以走下去：搖桿推一點點慢慢靠近彈塗魚或招潮蟹，再按「抓！」。跑太快會把牠們嚇跑，水漲回來要趕快回到島上。',
       '外海魚情：在外海的船上按「🤿 下潛看魚」，可以直接潛下去看這一帶現在有哪些魚。外海每 5 分鐘會有 3 種魚特別活躍（上鉤機率 ×2.5），浮上來之後跑馬燈會告訴你是哪幾種、還剩幾分鐘。',
       isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
       '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
