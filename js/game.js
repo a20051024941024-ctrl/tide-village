@@ -1889,7 +1889,7 @@ function surfaceAt(x, z){
 const KID = { gltf: null, clips: null, ok: false, failed: false, wait: new Set() };
 (function loadKid(){
   if (/kid=0/.test(location.hash)) return;
-  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
+  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
     undefined, e => { KID.failed = true; KID.wait.clear(); console.warn('3D 角色載入失敗，繼續用程式角色', e); }); } catch(e){ KID.failed = true; }
 })();
 // 動作的原始移動速度（量過：腳往後推的速度），用來讓播放速度跟真正的移動速度一樣
@@ -1923,15 +1923,15 @@ function kidAnimate(f, dt, t){
   if (f.swim) W.dive = 1;
   else if (f.sitting) W.sit = 1;
   else if (f.air > 0.05) W.jump_air = 1;
-  else if (f.held) W.hold = 1;
   else if (f.fishing){ if ((f.windup || 0) > 0.02 || f.castT >= 0) W.fish_cast = 1; else if ((f.bend || 0) > 0.45) W.fish_fight = 1; else if ((f.bend || 0) > 0.05) W.fish_reel = 1; else W.fish_idle = 1; }
-  else { const wk = smooth01((v - 0.2) / 0.8) * (1 - smooth01((v - 3.0) / 1.4)), rn = smooth01((v - 3.0) / 1.4) * (1 - smooth01((v - 5.2) / 0.9)), sp = smooth01((v - 5.2) / 0.9);
-    W.idle = 1 - smooth01((v - 0.1) / 0.5); if (wk > 0) W.walk = wk; if (rn > 0) W.run = rn; if (sp > 0) W.sprint = sp; }
+  else { const wk = smooth01((v - 0.2) / 0.8) * (1 - smooth01((v - 2.4) / 1.2)), rn = smooth01((v - 2.4) / 1.2) * (1 - smooth01((v - 4.3) / 0.6)), sp = smooth01((v - 4.3) / 0.6);   /* 走 3.8 用跑步動作、推到底 5.0 用衝刺動作 */
+    W.idle = 1 - smooth01((v - 0.1) / 0.5); if (wk > 0) W.walk = wk; if (rn > 0) W.run = rn; if (sp > 0) W.sprint = sp;
+    if (f.held) W.hold_arms = 5; }   /* 上半身捧著魚的比重大很多，手幾乎都是捧魚的樣子 */
   if (f === me && Jump.land > 0 && !f.swim && !f.fishing){ W.jump_land = 1; for (const k of ['idle', 'walk', 'run', 'sprint']) if (W[k]) W[k] *= 0.3; }
   const rate = 1 - Math.exp(-dt * 10);
   for (const nm in K.acts){ const tgt = W[nm] || 0, cur = K.w[nm] || 0, nw = cur + (tgt - cur) * rate; K.w[nm] = nw < 0.002 && tgt === 0 ? 0 : nw; K.acts[nm].setEffectiveWeight(K.w[nm]); }
   // 播放速度
-  const ac = K.acts; if (ac.walk) ac.walk.timeScale = clamp(v / KID_SPD.walk, 0.6, 2.4); if (ac.run) ac.run.timeScale = clamp(v / KID_SPD.run, 0.7, 2.6); if (ac.sprint) ac.sprint.timeScale = clamp(v / KID_SPD.sprint, 0.7, 2.8);
+  const ac = K.acts; if (ac.walk) ac.walk.timeScale = clamp(v / KID_SPD.walk, 0.6, 2.4); if (ac.run) ac.run.timeScale = clamp(v / KID_SPD.run, 0.7, 3.0); if (ac.sprint) ac.sprint.timeScale = clamp(v / KID_SPD.sprint, 0.7, 3.2);
   if (ac.dive) ac.dive.timeScale = 0.6 + Math.min(1, v / 2.5) * 0.9;
   // 甩竿：蓄力時停在往後舉的那一格，放開時從那裡往前甩
   if (ac.fish_cast){ const c = ac.fish_cast, d = c.getClip().duration;
@@ -1979,7 +1979,7 @@ class Fisher {
     const a = this.av; if (this.held) a.g.remove(this.held.o);
     // 像拍釣魚紀念照一樣，雙手把魚捧在胸前
     const big = BIG_FISH.has(f.id), o = new THREE.Group(), m = fishModel(f, big ? 0.75 : 0.45);
-    const y = 0.98; o.position.set(0, y, 0.48); o.add(m); a.g.add(o);
+    const y = a.kid ? 0.8 : 0.98; o.position.set(0, y, a.kid ? 0.42 : 0.48); o.add(m); a.g.add(o);
     this.held = { o, y, until: now() + (secs || 6) };
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
@@ -2525,7 +2525,7 @@ function updatePlayer(dt){
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); const rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix;
     const run = keys.ShiftLeft || keys.ShiftRight || L > 0.95;
-    speed = (run ? 6.2 : 4.2) * Math.min(1, L) * (Jump.air > 0 ? 1.1 : 1) * (Mang.onMud ? 0.75 : 1) * (iAmGhost() ? 1.08 : 1);   // 鬼跑快一點點
+    speed = (run ? 5.0 : 3.8) * Math.min(1, L) * (Jump.air > 0 ? 1.1 : 1) * (Mang.onMud ? 0.75 : 1) * (iAmGhost() ? 1.08 : 1);   // 鬼跑快一點點
     const nx = me.pos.x + mx / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     // 可以走上山坡，但太陡的崖爬不上去
