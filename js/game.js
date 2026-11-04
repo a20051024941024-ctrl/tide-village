@@ -6836,7 +6836,7 @@ const npcs = [
   { name:'阿蘭・紅樹林巡守員', shirt:'#4f7f44', hat:'#e8d8a8', x:65.6, z:10.55, y:0.62, dir:new THREE.Vector2(0.35, 1).normalize(), lines:['退潮的時候泥灘會露出來，可以下去抓彈塗魚喔', '走慢一點，招潮蟹很膽小的', '鋸鰩已經很少了，釣到記得放流', '漲潮的時候，烏魚和黑鯛會游進樹根裡', '晚上這裡會有螢火蟲'] },
   // 阿默：一輩子的夢想就是釣到赤紅霸王鯊（紅鯊這個點子是使用者的朋友想出來的）
   { name:'阿默・追紅鯊的人', shirt:'#c8161c', hat:'#18334a', x:31.4, z:-26.1, y:0.3, dir:new THREE.Vector2(0.35, 1).normalize(), amo:true,
-    lines:['我從小就天天望著這片海', '小時候有一天，我看到一隻紅色的鯊魚浮出水面……從那天起，我就決定一定要釣到牠', '那天牠的背鰭劃過海面，紅得像夕陽一樣，我到現在都忘不了', '大人都說我看錯了，可是我知道牠真的在', '赤紅霸王鯊……我每天都在這裡等牠', '聽說牠背上有黑色的虎紋，眼睛是金色的', '牠的力氣大到會把竿子拉彎，我一定要親手感受一次', '有人說紅鯊只是傳說，我不信', '總有一天，跑馬燈上會出現我的名字', '我不會賣牠，也不會送人，釣到了我要好好看著牠', '如果你先釣到了……也要告訴我喔'],
+    lines:['我從小就天天望著這片海', '小時候有一天，我看到一隻紅色的鯊魚浮出水面……從那天起，我就決定一定要釣到牠', '那天牠的背鰭劃過海面，紅得像夕陽一樣，我到現在都忘不了', '大人都說我看錯了，可是我知道牠真的在', '赤紅霸王鯊……我每天都在這裡等牠', '聽說牠背上有黑色的虎紋，眼睛是金色的', '牠的力氣大到會把竿子拉彎，我一定要親手感受一次', '有人說紅鯊只是傳說，我不信', '總有一天，跑馬燈上會出現我的名字', '我不會賣牠，也不會送人，釣到了我要好好看著牠', '如果你先釣到了……也要告訴我喔', '港口裡面不會有紅鯊，要開船到外海才有機會', '我的小船是紅色的，跟紅鯊一樣'],
     catchLines:['唉……又不是紅鯊', '這隻也很好，但我要的是紅色的', '還沒，還沒……', '今天的海好安靜，紅鯊在睡覺嗎'] },
   { name:'阿嬤・石滬人家', shirt:'#d8708a', hat:'#f4e8c8', x:9.6, z:83.6, y:0.42, dir:new THREE.Vector2(1, -0.2).normalize(), lines:['石滬是以前的人一顆一顆咾咕石疊起來的', '退潮的時候來，魚都被關在愛心裡面', '滿潮的時候魚都游出去了，要等', '臭肚魚背上的刺有毒，抓的時候小心', '菜宅的石牆是擋東北季風用的', '橋那邊的花瓶岩，是海浪慢慢磨出來的'] },
   { name:'阿伯・水圳釣客', shirt:'#c8b48a', hat:'#5a6a3a', x:12.6, z:-41.6, y:2.6, dir:new THREE.Vector2(0, 1), lines:['這條水圳以前很清，現在都是琵琶鼠魚', '用手竿就好，這裡不用拋遠', '大隻的塘蝨很重，沒撈網拉不上來', '晚上有魚虎在牆邊巡，很兇喔', '看到寶特瓶就順手撿一下啦', '想不用拔魚，就去南岸路尾巴下面的草岸', '大肚魚是以前放來吃孑孓的'] },
@@ -6882,8 +6882,28 @@ function amoLines(){ const L = [], mine = rec.tank.find(x => FISH_BY_ID[x.f] && 
   if (Env.wx === 'storm') L.push('暴風雨的晚上，紅鯊最愛出來，我才不回家');
   return L; }
 function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
+// 阿默：港口裡不會有紅鯊，所以他常常開自己的紅色小船到外海釣；每 6 分鐘一輪：開出去 → 在外海釣 3 分半 → 開回來 → 在碼頭整理一下（大家看到的時間一樣）
+const AMO = { dock:[35.6, -27.2], sea:[49.5, -33.5], cycle:360, out:230, sail:22 };
+function amoRecast(n, t){ const a = n.rot, dx = Math.sin(a), dz = Math.cos(a), cp = castPoint(n.pos.x, n.pos.z, dx, dz, 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
+function updateAmo(n, dt, t){
+  if (!n.boat){ n.boat = makeBoatMesh('#c8161c'); scene.add(n.boat); n.home = n.pos.clone(); n.homeRot = n.rot; n.homeY = n.baseY; }
+  const ph = (Date.now() / 1000) % AMO.cycle, S = AMO.sail; let mode, k = 1;
+  if (ph < S){ mode = 'go'; k = ph / S; } else if (ph < AMO.out){ mode = 'sea'; } else if (ph < AMO.out + S){ mode = 'back'; k = 1 - (ph - AMO.out) / S; } else mode = 'pier';
+  const D = AMO.dock, E = AMO.sea;
+  if (mode === 'pier'){ n.boat.position.set(D[0], WATER_LEVEL, D[1]); n.boat.rotation.set(0, Math.PI / 2, 0);
+    if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; amoRecast(n, t); if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say('今天又沒遇到……明天再出海', '', 4); } }
+  else { const e = smooth01(k), x = D[0] + (E[0] - D[0]) * e, z = D[1] + (E[1] - D[1]) * e, bob = Math.sin(t * 1.6 + 1) * 0.04;
+    const hd = mode === 'sea' ? Math.atan2(1, -0.35) : Math.atan2(E[0] - D[0], E[1] - D[1]) + (mode === 'back' ? Math.PI : 0);
+    n.boat.position.set(x, WATER_LEVEL + bob, z); n.boat.rotation.set(Math.sin(t * 1.1) * 0.02, hd, Math.sin(t * 1.3) * 0.03);
+    n.pos.set(x, 0, z); n.baseY = WATER_LEVEL - 0.08 + bob; n.sitting = true; n.rot = hd;
+    if (mode !== 'sea'){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 3; n.holdT = 0; }
+    else if (n.amoMode !== 'sea'){ amoRecast(n, t); if (camera.position.distanceTo(n.pos) < 30) n.say('到外海了……紅鯊，我來了', '', 4); } }
+  if (n.amoMode === 'pier' && mode === 'go' && camera.position.distanceTo(n.pos) < 25) n.say('我要開船出海了，港口裡不會有紅鯊的', '', 4);
+  n.amoMode = mode;
+}
 function updateNpcs(dt, t){
   for (const n of npcs){
+    if (n.amo) updateAmo(n, dt, t);
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
     const st = n.st || 'wait';
     if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z);
