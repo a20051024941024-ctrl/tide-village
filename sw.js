@@ -1,6 +1,6 @@
 // 潮汐釣魚村 service worker：讓「加到主畫面」可以安裝，網路不穩時也能打開遊戲。
 // 遊戲本身用「網路優先」：有網路就一定拿最新版，沒網路才用上次的備份。
-const VERSION = 'tide-v134';
+const VERSION = 'tide-v135';
 const SHELL = ['./', './index.html', './css/game.css', './js/game.js', './js/fish-models.js', './js/fish-gen.js', './js/fish-specs.js', './js/peer-room.js', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 const CDN = /^(https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\/)/;
 
@@ -16,7 +16,8 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.match(req).then(r => r || fetch(req).then(res => { if (res.ok){ const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })));
   } else if (url.origin === location.origin){
     // 自己網站的檔案：網路優先
-    e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res; }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
+    // cache:'no-cache'：每次都先問伺服器檔案有沒有變（沒變很快），不會拿到瀏覽器暫存的舊版、新舊檔案混在一起
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res; }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
   } else if (CDN.test(req.url)){
     // 3D 引擎、字型等固定版本的檔案：快取優先
     e.respondWith(caches.match(req).then(r => r || fetch(req).then(res => { if (res.ok || res.type === 'opaque'){ const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })));
