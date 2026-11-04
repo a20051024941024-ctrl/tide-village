@@ -6708,6 +6708,7 @@ async function rsPoll(){
   if (!Cloud.on || !Cloud.sb) return;
   try { const { data, error } = await Cloud.sb.rpc('get_red_shark'); if (error || !data) return; RS.n = Number(data.n) || 0;
     const l = data.last; if (l && l.at > RS.seenAt){ const fresh = Date.now() - l.at < 3600e3; RS.seenAt = l.at; LS.set('tide.rsSeen', l.at);
+      if (fresh && l.caught) Talk.recent.unshift({ who: l.name || '有人', name: l.a ? '白化赤紅霸王鯊' : '赤紅霸王鯊', at: l.at });
       if (fresh && l.caught && !RS.mine.has(String(l.id))) ticker(`🦈 <b>${esc(l.name || '有人')}</b> 在外海釣到了 <b>${l.a ? '白化赤紅霸王鯊' : '赤紅霸王鯊'}</b>（${rsLabel(l.id + ':' + l.sex)}）${fmtKg(Number(l.w))}！${RS.n ? `海裡還剩 ${RS.n} 隻` : '海裡已經一隻都不剩了……'}`); } } catch(e){}
 }
 setInterval(rsPoll, 120000); setTimeout(rsPoll, 8000);
@@ -6722,9 +6723,13 @@ const npcs = [
   { name:'小溪・村民', shirt:'#d896c3', hat:'#3fbf9d', x:-19.4, z:-10.2, y:0.28, dir:new THREE.Vector2(-1,0.1).normalize() },
   { name:'老港・漁夫', shirt:'#5b6b7a', hat:'#ffd36a', x:31.4, z:-34.4, y:0.3, dir:new THREE.Vector2(1,-0.1).normalize() },
   { name:'阿蘭・紅樹林巡守員', shirt:'#4f7f44', hat:'#e8d8a8', x:65.6, z:10.55, y:0.62, dir:new THREE.Vector2(0.35, 1).normalize(), lines:['退潮的時候泥灘會露出來，可以下去抓彈塗魚喔', '走慢一點，招潮蟹很膽小的', '鋸鰩已經很少了，釣到記得放流', '漲潮的時候，烏魚和黑鯛會游進樹根裡', '晚上這裡會有螢火蟲'] },
+  // 阿默：一輩子的夢想就是釣到赤紅霸王鯊（紅鯊這個點子就是使用者的朋友想出來的，他的夢想是在天天玩樂園釣到紅鯊）
+  { name:'阿默・追紅鯊的人', shirt:'#c8161c', hat:'#18334a', x:31.4, z:-26.1, y:0.3, dir:new THREE.Vector2(0.35, 1).normalize(), amo:true,
+    lines:['我從小在天天玩樂園釣魚，那時候就夢想有一天要釣到紅鯊', '赤紅霸王鯊……我每天都在這裡等牠', '聽說牠背上有黑色的虎紋，眼睛是金色的', '牠的力氣大到會把竿子拉彎，我一定要親手感受一次', '有人說紅鯊只是傳說，我不信', '總有一天，跑馬燈上會出現我的名字', '我不會賣牠，也不會送人，釣到了我要好好看著牠', '如果你先釣到了……也要告訴我喔'],
+    catchLines:['唉……又不是紅鯊', '這隻也很好，但我要的是紅色的', '還沒，還沒……', '今天的海好安靜，紅鯊在睡覺嗎'] },
   { name:'阿嬤・石滬人家', shirt:'#d8708a', hat:'#f4e8c8', x:9.6, z:83.6, y:0.42, dir:new THREE.Vector2(1, -0.2).normalize(), lines:['石滬是以前的人一顆一顆咾咕石疊起來的', '退潮的時候來，魚都被關在愛心裡面', '滿潮的時候魚都游出去了，要等', '臭肚魚背上的刺有毒，抓的時候小心', '菜宅的石牆是擋東北季風用的', '橋那邊的花瓶岩，是海浪慢慢磨出來的'] },
   { name:'阿伯・水圳釣客', shirt:'#c8b48a', hat:'#5a6a3a', x:12.6, z:-41.6, y:2.6, dir:new THREE.Vector2(0, 1), lines:['這條水圳以前很清，現在都是琵琶鼠魚', '用手竿就好，這裡不用拋遠', '大隻的塘蝨很重，沒撈網拉不上來', '晚上有魚虎在牆邊巡，很兇喔', '看到寶特瓶就順手撿一下啦', '想不用拔魚，就去南岸路尾巴下面的草岸', '大肚魚是以前放來吃孑孓的'] },
-].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
+].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 // ---- 村民聊天（2026-11-04）：玩家走近時偶爾講一句。有自己的話、玩法小提示，還有「現在正在發生的事」（天氣、潮汐、季節、活動、紅鯊）。說的內容都要跟遊戲真正的規則一樣 ----
 const NPC_TIPS = [
   '按住拋竿可以蓄力，放開就拋出去',
@@ -6758,7 +6763,14 @@ function npcEventLines(n){
   return L;
 }
 const Talk = { recent: [] };
-function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
+function amoLines(){ const L = [], mine = rec.tank.find(x => FISH_BY_ID[x.f] && FISH_BY_ID[x.f].rs);   /* 阿默看現在紅鯊的狀況講話 */
+  if (mine){ const f = FISH_BY_ID[mine.f]; L.push(`你……你的魚缸裡有${f.name}？！讓我看一下好不好！`, `${f.name}${fmtKg(mine.w)}……你是我的偶像`, '恭喜你……我也要加油了'); }
+  if (RS.n === 0) L.push('海裡……一隻紅鯊都不剩了嗎……', '沒關係，我會等，說不定還有一隻躲在哪裡');
+  else if (RS.n > 0) L.push(`聽說海裡還有 ${RS.n} 隻紅鯊，其中一隻一定是在等我`, RS.n >= 4 ? '最近紅鯊好像變多了，機會來了！' : '紅鯊那麼少，每一次拋竿都要認真');
+  if (Talk.recent.some(r => /赤紅霸王鯊/.test(r.name) && Date.now() - r.at < 3600e3)) L.push('剛剛有人釣到紅鯊了！好羨慕……下一隻是我的');
+  if (Env.wx === 'storm') L.push('暴風雨的晚上，紅鯊最愛出來，我才不回家');
+  return L; }
+function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
 function updateNpcs(dt, t){
   for (const n of npcs){
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
@@ -6770,7 +6782,7 @@ function updateNpcs(dt, t){
     if (st === 'reel'){ n.bend = 0.75 + Math.sin(t * 6) * 0.2; n.dip = 0.6 + Math.sin(t * 9) * 0.3; if (Math.random() < dt * 3) ripple(n.bobPos.x + (Math.random() - 0.5) * 0.6, n.bobPos.z + (Math.random() - 0.5) * 0.6);
       if (t > n.stT){ const sid = waterSpotId(n.bobPos.x, n.bobPos.z), pool = (SPOT_BY_ID[sid] || SPOT_BY_ID.sea).fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity === '常見' && !BIG_FISH.has(f.id));
         const f = pool[Math.floor(Math.random() * pool.length)]; ripple(n.bobPos.x, n.bobPos.z, true); n.fishing = false; n.bobState = 'none'; n.flying = null; n.dip = 0; n.bend = 0;
-        if (f){ n.holdFish(f, +(f.min + (f.max - f.min) * Math.random() * 0.6).toFixed(2), 4); if (camera.position.distanceTo(n.pos) < 25 && Math.random() < 0.6) n.say(['釣到了！', `是${f.name}！`, '今天運氣不錯～', '嘿咻！'][Math.floor(Math.random() * 4)], '', 3); }
+        if (f){ n.holdFish(f, +(f.min + (f.max - f.min) * Math.random() * 0.6).toFixed(2), 4); if (camera.position.distanceTo(n.pos) < 25 && Math.random() < 0.6) n.say((n.catchLines || ['釣到了！', `是${f.name}！`, '今天運氣不錯～', '嘿咻！'])[Math.floor(Math.random() * (n.catchLines ? n.catchLines.length : 4))], '', 3); }
         n.st = 'show'; n.stT = t + 4.2; } }
     if (st === 'show' && t > n.stT){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; }
     if (st === 'windup'){ n.windup = Math.min(1, (n.windup || 0) + dt / 0.6);
