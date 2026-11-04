@@ -5033,8 +5033,8 @@ function updateTank(t){
   for (const im of touched) im.instanceMatrix.needsUpdate = true;
 }
 
-/* ================= 新介面（ui2）：先用 #ui2 預覽，確定後再改成預設 ================= */
-const UI2 = /ui2/.test(location.hash) || LS.get('tide.ui2', false);
+/* ================= 新介面（ui2）：彩色圓形大圖示、左上角頭像、聊天列在下面中間 ================= */
+const UI2 = !/ui1/.test(location.hash) && LS.get('tide.ui2', true);   /* 新介面（2026-11-04 使用者確認）；網址加 #ui1 可以看舊的 */
 if (UI2) document.body.classList.add('ui2');
 function ui2Tick(){
   if (!UI2) return;
