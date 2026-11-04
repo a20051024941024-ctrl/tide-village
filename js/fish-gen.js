@@ -87,7 +87,7 @@ export function genFish(p){
       const A = pt(t0, a0), B = pt(t0, a1), C = pt(t1, a1), D = pt(t1, a0);
       const tm = (t0 + t1) / 2, am = (a0 + a1) / 2, ynm = Math.sin(am), zm = Math.cos(am);
       const part = partAt(tm, Math.sign(ynm) * Math.pow(Math.abs(ynm), 2 / n), zm);
-      if (i === 0) M.tri(part, A, D, C); else M.quad(part, A, B, C, D);
+      if (i === 0) M.tri(part === 'Bottom' && !p.tipBelly ? 'Top' : part, A, D, C); else M.quad(part, A, B, C, D);   /* 吻端那一小圈用背的顏色，不然白色肚子在尖端會變成一圈鋸齒、看起來像牙齒 */
     }
   }
   if ((p.ped ?? 0.22) > 0.01){ // 尾柄的切口封起來
@@ -185,6 +185,19 @@ export function genFish(p){
       M.ellip('Eye', [X(t), y, z + s * r * (ey.pop ?? 0.15)], [r, r, r * 0.7], 8, 5);
       if (ey.hi) M.ellip('EyeW', [X(t) + r * 0.25, y + r * 0.35, z + s * r * 0.62], [r * 0.3, r * 0.3, r * 0.18], 6, 4);
     });
+  }
+  // 嘴巴（2026-11-04）：p.mouth = { type:'term'（吻端）|'sub'（頭下面，像鯊魚）|'sup'（往上翹，像龍魚）, t:嘴角往後到哪裡, y:嘴在吻端的高度, open:張嘴的大小, lip:嘴唇的顏色 }
+  const mo = p.mouth === false ? null : Object.assign({ type:'term', t:0.055, y:-0.1, open:0, th:1 }, p.mouth || {});
+  if (mo){
+    const S = (t, yn, s, out) => { const y = yc(t) + (yn > 0 ? hu(t) : hl(t)) * yn, z = wd(t) * Math.sqrt(Math.max(0, 1 - Math.pow(Math.min(1, Math.abs(yn)), n))) * s; const k = out ?? 1.06; return [X(t) + (t < 0.02 ? HD * 0.02 : 0), yc(t) + (y - yc(t)) * k, z * k]; };
+    const r0 = HD * 0.035 * mo.th, part = mo.part || 'Mouth';
+    M.mirror(s => { const pts = [];
+      if (mo.type === 'sub'){ const t0 = mo.t0 ?? 0.04; for (let k = 0; k <= 6; k++){ const u = k / 6; pts.push(S(t0 + (mo.t - t0) * Math.pow(u, 1.4), -0.97 + u * (0.97 + (mo.y ?? -0.55)), s)); } }
+      else { const yE = mo.type === 'sup' ? mo.y - 0.25 : mo.y - 0.12; for (let k = 0; k <= 6; k++){ const u = k / 6; pts.push(S(0.003 + mo.t * u, mo.y + (yE - mo.y) * u, s)); } }
+      M.limb(part, pts, r0, r0 * 0.6, 5);
+      if (mo.lip) M.limb(mo.lip, pts.map(q => [q[0] + HD * 0.01, q[1] + HD * 0.03, q[2] * 1.02]), r0 * 0.7, r0 * 0.4, 5);
+    });
+    if (mo.open){ const y = yc(0.02) + hl(0.02) * mo.y; M.ellip(part, [X(0) + HD * 0.015, y, 0], [HD * 0.04, HD * 0.1 * mo.open, wd(0.04) * 0.75 + HD * 0.04 * mo.open], 10, 6); }
   }
   // 其他零件：{k:'cone'|'tube'|'ellip'|'limb', ...}，座標可以用 t（沿身體）和 yn（上下）表示
   const P3 = q => Array.isArray(q) ? q : [q.x ?? X(q.t), q.y ?? (yc(q.t) + (q.yn > 0 ? hu(q.t) : hl(q.t)) * (q.yn ?? 0)) + (q.dy || 0), (q.z ?? 0)];

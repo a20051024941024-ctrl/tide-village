@@ -307,7 +307,7 @@ const FISH_STYLE = {
 for (const [id, S] of Object.entries(FISH_SPECS)){
   const shape = 'G_' + id; let cache = null;
   Object.defineProperty(FISH_MESH, shape, { configurable:true, enumerable:true, get(){ if (!cache){ const gen = FishGen[{ shrimp:'genShrimp', crab:'genCrab', squid:'genSquid', octo:'genOcto', jelly:'genJelly', turtle:'genTurtle', seahorse:'genSeahorse' }[S.gen] || 'genFish']; cache = gen(Quality.tier === 'low' ? Object.assign({ lod:true }, S.p) : S.p); } return cache; } });
-  FISH_STYLE[id] = { shape, c: S.c, move: S.move || 'side', glow: !!S.glow, glowParts: S.glowParts };
+  FISH_STYLE[id] = { shape, c: Object.assign({ Mouth:'#2a1a18' }, S.c), move: S.move || 'side', glow: !!S.glow, glowParts: S.glowParts };   /* 嘴巴預設深色 */
 }
 const fishTime = { value: 0 };           // 尾巴擺動用的共用時間
 const fishGeoCache = {}, fishMatCache = {};
@@ -3583,15 +3583,15 @@ function updateEnv(dt, t){
       const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { const W2 = WEATHERS[Env.wx]; toast(`${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}<br>${W2.icon} ${W2.name}：${W2.desc}<br>${Env.tide.icon} ${Env.tide.name}：海邊、外海、小島在漲潮時最好釣，乾潮時比較難。<br>🧔 ${esc(dailyTip().text)}`); }); }
     Env.lastWx = Env.wx; }
   // 畫面：光線變暗、下雨、起霧、打雷
-  const dim = House.on ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
+  const dim = House.on || inHall() ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
   sun.intensity *= Env.k; hemi.intensity *= 0.55 + 0.45 * Env.k;
-  if (W.fog && !House.on){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
+  if (W.fog && !House.on && !inHall()){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
   if (!Env.rain) Env.rain = buildRain();
-  const rn = House.on || Dive.on ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
+  const rn = House.on || Dive.on || inHall() ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
   if (rn > 0){ Env.rain.geometry.setDrawRange(0, rn * 2); Env.rain.position.set(camera.position.x, camera.position.y - 6, camera.position.z); const a = Env.rain.geometry.attributes.position.array, fall = dt * (W.storm ? 26 : 18);
     for (let i = 0; i < rn; i++){ const o = i * 6; a[o + 1] -= fall; a[o + 4] -= fall; if (a[o + 1] < 0){ a[o + 1] += 18; a[o + 4] += 18; } if (W.storm){ a[o + 3] = a[o] + 0.25; } } Env.rain.geometry.attributes.position.needsUpdate = true;
     if (Math.random() < dt * 6) ripple(me.pos.x + (Math.random() - 0.5) * 16, me.pos.z + (Math.random() - 0.5) * 16); }
-  if (W.storm && !House.on && !Dive.on){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
+  if (W.storm && !House.on && !Dive.on && !inHall()){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
   if (Dive.on) diveEnvFx();
   updateSeasonFx(dt, t, rn > 0);
   const chip = $('#wxChip'); if (chip){ const txt = `${SEASONS[SEASON].icon} ${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
@@ -4929,7 +4929,7 @@ function updateSecrets(t){
 }
 function secretAt(x, z){ let best = null; for (const sp of secretSpots){ if (Math.hypot(x - sp.x, z - sp.z) < 3.0 && (!best || secretPower(sp) > secretPower(best))) best = sp; } return best; }
 function spotName(x, z){ const id = waterSpotId(x, z), s = SPOT_BY_ID[id]; return s ? s.short : '水邊'; }
-function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || mySeat || House.on) return null; if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
+function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || mySeat || House.on || inHall()) return null;   /* 釣蝦場不能打窩 */ if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
 function myChums(){ return CHUMS.filter(c => (rec.bait[c.id] || 0) > 0); }
 function throwChum(type, secret){
   if (typeof inHall === 'function' && inHall()){ toast('🦐 釣蝦場不用打窩，老闆會定時放蝦進池子'); return; }
@@ -6229,7 +6229,8 @@ const npcs = [
   { name:'阿潮・村民', shirt:'#7db7d7', hat:'#f6f0dd', x:1.1, z:-49.2, y:0.28, dir:new THREE.Vector2(0.15,-1).normalize() },
   { name:'小溪・村民', shirt:'#d896c3', hat:'#3fbf9d', x:-19.4, z:-10.2, y:0.28, dir:new THREE.Vector2(-1,0.1).normalize() },
   { name:'老港・漁夫', shirt:'#5b6b7a', hat:'#ffd36a', x:31.4, z:-34.4, y:0.3, dir:new THREE.Vector2(1,-0.1).normalize() },
-].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.lines = ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
+  { name:'阿蘭・紅樹林巡守員', shirt:'#4f7f44', hat:'#e8d8a8', x:54.45, z:41.6, y:0.62, dir:new THREE.Vector2(-1,-0.35).normalize(), lines:['退潮的時候泥灘會露出來，可以下去抓彈塗魚喔', '走慢一點，招潮蟹很膽小的', '鋸鰩已經很少了，釣到記得放流', '漲潮的時候，烏魚和黑鯛會游進樹根裡', '晚上這裡會有螢火蟲'] },
+].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 function updateNpcs(dt, t){
   for (const n of npcs){
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去

@@ -520,3 +520,20 @@ Object.assign(SPECS, {
   fiddler_blue: VAR('fiddler', { Top:'#2a6ad8', Spots:'#8ac0f0', Fins:'#3a5a9a', Claw:'#f4f0e8' }, {}),
   arowana_red: VAR('arowana', { Top:'#8a2420', Mid:'#d8302a', Bottom:'#f06a50', Stripes:'#b8241e', Fins:'#a8201a' }, {}, { glow:true }),
 });
+
+// ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
+// t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
+const MOUTH = {
+  shark:{ type:'sub', t:0.13, y:-0.5, t0:0.05 }, hammer:{ type:'sub', t:0.1, y:-0.6, t0:0.05 }, bullshark:{ type:'sub', t:0.12, y:-0.5, t0:0.04 }, sawfish:{ type:'sub', t:0.12, y:-0.7, t0:0.08 },
+  sturgeon:{ type:'sub', t:0.1, y:-0.8, t0:0.07 }, whaleshark:{ t:0.06, y:-0.05, open:0.5 }, manta:false, stingray:false, flounder:{ t:0.05, y:0.1 },
+  arowana:{ type:'sup', t:0.1, y:0.2 }, angler:{ type:'sup', t:0.18, y:0.15, open:1.0 }, barramundi:{ type:'sup', t:0.09, y:-0.05 }, snakehead:{ t:0.1, y:-0.15 },
+  bass:{ t:0.1, y:-0.15 }, grouper:{ t:0.11, y:-0.15, open:0.3 }, scorpion:{ t:0.09, y:-0.1 }, lionfish:{ t:0.08, y:-0.1 }, mangsnapper:{ t:0.08, y:-0.15 }, perch:{ t:0.08, y:-0.15 },
+  barracuda:{ t:0.12, y:-0.05 }, catfish:{ t:0.07, y:-0.2, th:1.3 }, eel:{ t:0.06, y:-0.05 }, marlin:{ t:0.05, y:-0.3 }, tuna:{ t:0.06, y:-0.15 }, trevally:{ t:0.07, y:-0.15 },
+  scat:{ t:0.03, y:-0.1 }, butterfly:{ t:0.025, y:-0.05 }, bluetang:{ t:0.025, y:-0.1 }, clown:{ t:0.03, y:-0.1 }, goldfish:{ t:0.03, y:-0.1, lip:'Mid' }, koi:{ t:0.04, y:-0.2 }, carp:{ t:0.04, y:-0.25 },
+  puffer:{ t:0.025, y:-0.05, th:1.4 }, parrot:{ t:0.035, y:-0.1, th:1.6, part:'EyeW' }, sunfish:{ t:0.03, y:-0.05, open:0.4 }, milkfish:{ t:0.035, y:-0.15 }, mullet:{ t:0.035, y:-0.2 },
+  mudskipper:{ t:0.06, y:-0.35, th:1.2 }, bigskipper:{ t:0.06, y:-0.35, th:1.2 }, anchovy:{ type:'sub', t:0.09, y:-0.4, t0:0.02 }, loach:{ type:'sub', t:0.05, y:-0.6, t0:0.02 },
+  hillstream:{ type:'sub', t:0.06, y:-0.8, t0:0.05 }, salmon:{ t:0.08, y:-0.15 }, trout:{ t:0.08, y:-0.15 }, ayu:{ t:0.06, y:-0.2 }, tilapia:{ t:0.05, y:-0.1, lip:'Mid' }, bonito:{ t:0.06, y:-0.15 },
+  mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 }, dolphin:false, orca:false, beluga:false, sperm:false, whale:false,
+};
+for (const id of Object.keys(SPECS)){ const S = SPECS[id]; if (S.gen) continue; const m = id in MOUTH ? MOUTH[id] : MOUTH[id.split('_')[0]];
+  S.p = Object.assign({}, S.p, { mouth: m === false ? false : Object.assign({}, m || {}) }); S.c = Object.assign({ Mouth:'#2a1a18' }, S.c); }
