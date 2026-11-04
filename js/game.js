@@ -2389,7 +2389,7 @@ function updateCamera2(dt){
 const F = { phase:'idle', spot:null, charge:0, chargeT:0, waitUntil:0, nibbleAt:0, biteUntil:0, fish:null, weight:0, T:0.3, P:0.3, hold:false, surge:0, seed:0, castCharge:0 };
 const bigMsg = $('#bigMsg');
 let bigTimer = 0;
-function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bigMsg.classList.remove('pop'); void bigMsg.offsetWidth; bigMsg.classList.add('pop'); clearTimeout(bigTimer); bigTimer = setTimeout(() => bigMsg.hidden = true, (secs || 1.2) * 1000); }
+function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bigMsg.classList.toggle('long', [...String(text)].length > 9); document.body.classList.toggle('diving', !!(typeof Dive !== 'undefined' && Dive.on)); bigMsg.classList.remove('pop'); void bigMsg.offsetWidth; bigMsg.classList.add('pop'); clearTimeout(bigTimer); bigTimer = setTimeout(() => bigMsg.hidden = true, (secs || 1.2) * 1000); }
 
 function actionDown(){
   if (uiBlocked) return;
@@ -4708,7 +4708,7 @@ function buildDive(){
   Dive.fish = [];
   const solo = SP.filter(f => f.rarity !== '常見' || !FISH_STYLE[f.id]); const pickSolo = [];
   for (const f of solo){ if (f.rs){ pickSolo.unshift(f); continue; } if (f.of){ if (rnd() < (f.w || 0.02) * 1.5) pickSolo.unshift(f); continue; } if (rnd() < (f.rarity === '傳說' ? S.legendP : 0.75)) pickSolo.push(f); }   /* 變種很少見：每次潛水大約 1～3% 會遇到一種 */   /* 紅鯊只有在 offshoreDiveFish 抽中時才會在清單裡 */
-  for (const f of pickSolo.slice(0, 9)){ let m; try { m = fishModel(f, BIG_FISH.has(f.id) ? 1.15 : 0.62); } catch(e){ continue; }
+  for (const f of pickSolo.slice(0, 9)){ let m; try { m = fishModel(f, clamp(0.45 + Math.log10(1 + (f.min + f.max) / 2) * 0.95, 0.5, 7)); } catch(e){ continue; }   /* 照真實的大小：沙丁魚小小的、鯨魚很大 */
     const bottom = ['crab', 'flounder', 'stingray', 'octopus', 'lobster', 'seahorse'].includes(f.id) || /crab|lobster|octo/.test(f.id);
     const a = rnd() * Math.PI * 2, r = 4 + rnd() * R * 0.7; const o = { f, m, bottom, cx: X + Math.cos(a) * r * 0.5, cz: Z + Math.sin(a) * r * 0.5, rad: bottom ? 1.5 + rnd() * 2 : 5 + rnd() * 9, y: bottom ? 0.25 : 2 + rnd() * 8, sp: (bottom ? 0.08 : 0.06 + rnd() * 0.08) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * 6, pos: new THREE.Vector3() };
     g.add(m); Dive.fish.push(o); }

@@ -110,6 +110,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 #chargeHud .t{font-family:var(--f-display);font-size:15px;margin-bottom:6px}
 #chargeHud .bar i{background:linear-gradient(90deg,var(--mint),var(--gold),var(--coral))}
 #bigMsg{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);font-family:var(--f-display);font-size:clamp(30px,8vw,54px);color:#fff;text-shadow:0 3px 0 var(--ink),0 0 18px rgba(24,51,74,.5);pointer-events:none;white-space:nowrap;letter-spacing:.06em}
+#bigMsg.long{white-space:normal;text-align:center;width:max-content;max-width:min(78vw,760px);font-size:clamp(18px,3.6vw,30px);line-height:1.35;letter-spacing:.02em}   /* 長的字變小、會換行，不要擋住整個畫面 */
+body.diving #bigMsg{top:56%}   /* 潛水時上面有氧氣列，字往下放 */
 #bigMsg.pop{animation:pop .5s ease-out}
 @keyframes pop{0%{transform:translate(-50%,-50%) scale(.6);opacity:0}60%{transform:translate(-50%,-50%) scale(1.12);opacity:1}100%{transform:translate(-50%,-50%) scale(1)}}
 
@@ -767,3 +769,8 @@ body.ui2.touch.chatting #chatForm{display:flex}
 body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
 .rank li.rk4{grid-template-columns:30px 56px 1fr auto}.rank li .rkfish{width:56px;height:36px}
 .chipline{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.chipline .chip{border:1px solid var(--line);background:#fff;cursor:pointer;font:inherit;font-size:13px;padding:5px 10px}.chipline .chip.on{background:var(--coral);color:#fff;border-color:var(--coral)}
+
+/* 潛水的氧氣列放在下面中間，不擋住前面的魚 */
+#diveHud{top:auto !important;bottom:12px;left:50%;transform:translateX(-50%);max-width:none;flex-wrap:nowrap;white-space:nowrap;font-size:12px;gap:8px}
+#diveHud .bar{width:80px}
+@media (max-width:700px){ #diveHud{max-width:calc(100vw - 32px);bottom:auto !important;top:calc(var(--gt) + 64px) !important;left:16px;transform:none} }
