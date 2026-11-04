@@ -1,6 +1,6 @@
 -- 潮汐釣魚村：阿綾服裝店（可以重複執行）
 -- 阿綾是村子裡的服裝設計師 NPC，每天早上和傍晚會自己設計一件新衣服（或帽子、鞋子、披風、領巾）放到設計師市集。
--- 圖案是程式照「主題配色 × 花樣」畫出來的 16×16 格子，跟玩家自己設計的格式一模一樣；她最多同時上架 12 件，舊的會自己下架。
+-- 圖案是程式照「主題配色 × 花樣」畫出來的 16×16 格子，跟玩家自己設計的格式一模一樣；她的設計都不會下架（使用者 2026-11-04）。
 -- 她不是玩家：賣出去的錢不會進任何人的帳戶。
 
 create or replace function public._ling_id() returns uuid language sql immutable as $$ select 'a11e0000-0000-4000-8000-00000000a11e'::uuid $$;
@@ -51,9 +51,6 @@ begin
   price := (array[0, 120, 150, 200, 280, 350, 450])[1 + floor(random() * 7)::int];
   insert into public.designs (owner, owner_name, kind, name, px, price)
     values (public._ling_id(), '阿綾', k, themes[t] || pnames[pi] || (kname->>k), px, price) returning id into nid;
-  -- 最多同時上架 12 件，舊的下架（買過的人還是可以穿）
-  update public.designs set listed = false where owner = public._ling_id() and listed
-    and id not in (select id from public.designs where owner = public._ling_id() and listed order by id desc limit 12);
   return nid;
 end $$;
 revoke all on function public._ling_make() from public, anon, authenticated;
@@ -66,9 +63,12 @@ create or replace function public.list_designs(p_mode text, p_offset integer) re
                when p_mode = 'ling' then owner = public._ling_id() and listed and not hidden
                else listed and not hidden end
     order by case when p_mode = 'hot' then sold end desc nulls last, id desc
-    limit 30 offset greatest(0, coalesce(p_offset, 0))) d $$;
+    limit case when p_mode = 'ling' then 200 else 30 end offset greatest(0, coalesce(p_offset, 0))) d $$;
 revoke all on function public.list_designs(text, integer) from public, anon;
 grant execute on function public.list_designs(text, integer) to authenticated;
+
+-- 之前下架的放回來
+update public.designs set listed = true where owner = public._ling_id() and not listed and not hidden;
 
 -- 開店的時候先擺 6 件
 do $$ begin

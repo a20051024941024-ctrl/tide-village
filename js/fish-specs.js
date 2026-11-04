@@ -576,6 +576,55 @@ Object.assign(SPECS, {
   amberjack_gold: VAR('amberjack', { Top:'#c89020', Mid:'#f0c040', Bottom:'#fbeab0', Accent:'#fff0a0', Fins:'#e0a830' }, {}, { glow:true }),
 });
 
+/* ---------------- 冰封群島（2026-11-04）：參考北海道阿寒湖（冰上開洞釣公魚）和知床半島（流冰、鄂霍次克海）---------------- */
+Object.assign(SPECS, {
+  // 西太公魚（ワカサギ，Hypomesus nipponensis）：細長、半透明的銀色小魚，側線一條淡淡的銀帶，有小小的脂鰭
+  wakasagi: VAR('ayu', { Top:'#7a8a6a', Mid:'#d8dcd0', Bottom:'#f4f6f2', Accent:'#c8d8e4', Fins:'#d4d8cc', EyeW:'#e8ecf0' }, {
+    bl:0.84, depth:0.17, nose:0.85, pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.15, part:'Mid' }, { k:'line', t0:0.15, t1:0.98, y:[[0,0.08],[1,0.04]], w:0.08, part:'Accent' }],
+    dorsal:[{ s:0.42, e:0.52, h:0.45, shape:'tri', peak:0.25 }, { s:0.8, e:0.83, h:0.1, shape:'round' }], eye:EYE(0.085, 0.25, 0.11, { ring:true }) }),
+  // 姬鱒（ヒメマス，陸封型紅鮭 Oncorhynchus nerka）：背是藍綠色、身體銀亮，阿寒湖是原產地
+  himemasu: VAR('salmon', { Top:'#2f5a6a', Mid:'#c8d4d8', Bottom:'#f2f4f2', Spots:'#20303a', Fins:'#8aa0a8', Accent:'#c8d4d8' }, {
+    depth:0.26, pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.25, part:'Mid' }], dots:[{ n:10, t0:0.3, t1:0.9, y0:0.5, y1:0.85, r:0.01, part:'Spots' }] }),
+  // 白魚（シラウオ，Salangichthys microdon）：全身幾乎透明，看得到一點點骨頭，細細長長
+  shirauo: VAR('anchovy', { Top:'#e4ece8', Mid:'#eef4f2', Bottom:'#f8fbfa', Stripes:'#c8d8d4', Fins:'#e8eeec', EyeW:'#d8e4e8' }, { bl:0.88, depth:0.13, nose:1.1 }, { glow:true }),
+  // 遠東哲羅魚（イトウ，Parahucho perryi）：北海道的傳說大魚，身體長得像魚雷，背是橄欖褐色、滿是黑色小斑點，繁殖期尾巴和肚子會變紅
+  ito: VAR('trout', { Top:'#4a4a34', Mid:'#7a7858', Bottom:'#d8c8a8', Stripes:'#6a6a4a', Spots:'#1d1d18', Accent:'#2a2a20', Fins:'#5a5440', Fins2:'#b8604a' }, {
+    bl:0.86, depth:0.2, nose:1.0, pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.2, part:'Mid' }],
+    dots:[{ n:40, t0:0.08, t1:0.95, y0:-0.2, y1:0.9, r:0.011, part:'Spots' }, { n:16, t0:0.15, t1:0.9, y0:-0.4, y1:0.1, r:0.009, part:'Accent', seed:5 }] }),
+  // 毛鱗魚（カラフトシシャモ，Mallotus villosus）：背是橄欖綠、肚子銀白，鱗片很細
+  capelin: VAR('sardine', { Top:'#4a6a4a', Mid:'#c8d4c4', Bottom:'#f2f4ee', Fins:'#a8b8a0' }, { bl:0.84, depth:0.16, nose:0.95, dots:[] }),
+  // 太平洋鱈（マダラ，Gadus macrocephalus）：褐色底帶深色斑駁、白色側線、三個背鰭、下巴有一根鬚
+  cod: VAR('grouper', { Top:'#6a5a40', Mid:'#9a8a68', Bottom:'#ece6d8', Spots:'#4a3e2c', Fins:'#5e5038', Accent:'#ece6d8', EyeW:'#d8d0b0' }, {
+    depth:0.27, nose:0.75, pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.15, part:'Mid' }, { k:'spots', gt:0.08, gy:0.45, r:0.025, ar:6, t0:0.12, t1:0.95, y0:-0.2, y1:0.95, part:'Spots', fill:0.6 }, { k:'line', t0:0.2, t1:0.95, y:[[0,0.35],[0.5,0.25],[1,0.05]], w:0.04, part:'Accent' }],
+    dorsal:[{ s:0.3, e:0.42, h:0.42, shape:'round' }, { s:0.46, e:0.62, h:0.34, shape:'round' }, { s:0.66, e:0.82, h:0.3, shape:'round' }], anal:[{ s:0.48, e:0.62, h:0.28, shape:'round' }, { s:0.66, e:0.8, h:0.26, shape:'round' }],
+    caudal:{ type:'truncate', hk:1.2 } }),
+  // 花羔紅點鮭（オショロコマ，Salvelinus malma）：知床溪流裡的鮭魚，橄欖色的身體上有紅橘色小點
+  dolly: VAR('trout', { Top:'#4a5a3a', Mid:'#7a8a5a', Bottom:'#e8d0a8', Stripes:'#5a6a44', Spots:'#e8502a', Accent:'#e8d8a0', Fins:'#5a6a3a', Fins2:'#e8e0d0' }, {
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }], dots:[{ n:26, t0:0.15, t1:0.92, y0:-0.3, y1:0.6, r:0.014, part:'Spots' }, { n:18, t0:0.15, t1:0.9, y0:0.3, y1:0.9, r:0.012, part:'Accent', seed:9 }] }),
+  // 遠東多線魚（ホッケ，Pleurogrammus azonus）：灰褐色帶暗色橫紋，身體上有好幾條側線，尾巴分叉
+  hokke: VAR('mackerel', { Top:'#5a5a4a', Mid:'#a8a490', Bottom:'#eceae0', Stripes:'#3e3e32', Fins:'#8a8670' }, {
+    depth:0.24, nose:0.85, pat:[{ k:'band', t0:0, t1:1, y0:-0.4, y1:0.15, part:'Mid' }, ...Array.from({ length:6 }, (_, i) => ({ k:'ell', t:0.25 + i * 0.11, y:0.25, rt:0.03, ry:0.5, part:'Stripes' }))],
+    dorsal:[{ s:0.26, e:0.82, h:0.3, shape:'round' }], anal:{ s:0.52, e:0.82, h:0.25 }, finlets:null }),
+});
+Object.assign(SPECS, {
+  // 太平洋睡鯊（Somniosus pacificus）：住在冰冷深海的巨大鯊魚，動作很慢；深灰褐色、背鰭很小、沒有臀鰭，尾巴上下差不多長
+  sleepershark: VAR('shark', { Top:'#3e3a36', Mid:'#4a4642', Bottom:'#6a6660', Accent:'#2a2724', Gill:'#24211e', Fins:'#36322e', Eye:'#2a4a5a' }, {
+    bl:0.8, depth:0.22, wr:1.0, tm:0.32, nose:0.55, n:2.4, pat:[GILLS(0.16)],
+    dorsal:[{ s:0.42, e:0.5, h:0.25, shape:'round' }, { s:0.66, e:0.72, h:0.2, shape:'round' }], anal:null, caudal:{ type:'hetero', hk:1.3 } }),
+});
+Object.assign(SPECS, {
+  // 變種（很稀有）
+  wakasagi_gold: VAR('wakasagi', { Top:'#c8a030', Mid:'#f0d878', Bottom:'#fbf0c8', Accent:'#f8e8a0', Fins:'#e8c860' }, {}),
+  himemasu_albino: VAR('himemasu', { Top:'#f0e0dc', Mid:'#f6eeec', Bottom:'#fdf8f6', Spots:'#e8d0cc', Fins:'#f0e0dc', Eye:'#c0303a' }, {}, { glow:true }),
+  shirauo_gold: VAR('shirauo', { Top:'#f0d890', Mid:'#f8ecc0', Bottom:'#fdf6e0', Stripes:'#e8c870', Fins:'#f4e4b0' }, {}),
+  ito_gold: VAR('ito', { Top:'#b88a30', Mid:'#e0b860', Bottom:'#f4e4c0', Stripes:'#c89a40', Spots:'#7a5a20', Accent:'#a07830', Fins:'#c89a40' }, {}),
+  capelin_gold: VAR('capelin', { Top:'#c0a040', Mid:'#ecd890', Bottom:'#faf2d8', Fins:'#e0c870' }, {}),
+  cod_albino: VAR('cod', { Top:'#ece2d8', Mid:'#f4ece4', Bottom:'#fcf8f4', Spots:'#e0d0c4', Fins:'#e8dcd0', Eye:'#c0303a' }, {}, { glow:true }),
+  dolly_gold: VAR('dolly', { Top:'#b89838', Mid:'#e0c870', Bottom:'#f4e8c8', Stripes:'#c8a848', Spots:'#e8602a', Fins:'#c8a848' }, {}),
+  hokke_albino: VAR('hokke', { Top:'#ece6dc', Mid:'#f4f0e8', Bottom:'#fcfaf6', Stripes:'#e0d6c8', Fins:'#e8e0d4', Eye:'#c0303a' }, {}, { glow:true }),
+  sleepershark_albino: VAR('sleepershark', { Top:'#e8e0d8', Mid:'#efe8e2', Bottom:'#f8f4f0', Accent:'#d4c4bc', Gill:'#c8a8a0', Fins:'#e0d6cc', Eye:'#c0303a' }, {}, { glow:true }),
+});
+
 Object.assign(SPECS, {
   // 姥鯊（Cetorhinus maximus，2026-11-04）：世界第二大的魚。灰褐色、吻端尖尖往前凸、超大的嘴、
   // 五條幾乎繞頭一圈的超長鰓裂，背鰭高大呈三角形，尾巴像新月。張著大嘴慢慢游、濾食浮游生物。

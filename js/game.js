@@ -5554,7 +5554,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'tailor'){ Market.mode = 'ling'; Market.list = null; curTab = 'market'; openSheet('market'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 function avKit(){
@@ -5753,14 +5753,17 @@ function renderDesignEd(body){
 }
 // 設計師市集
 const Market = { mode:'new', kind:'top', list:null, at:0, busy:false };
-async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = true; try { const { data } = await Cloud.sb.rpc('list_designs', { p_mode: Market.mode, p_offset: 0 }); Market.list = data || []; for (const d of Market.list) Designs.map.set(d.id, d); } catch(e){ Market.list = []; } Market.busy = false; Market.at = Date.now(); if (!$('#sheet').hidden && curTab === 'market') renderTab(); }
-function renderMarket(body){
-  const head = el('div', 'shophead'); head.innerHTML = `<b>🛍️ 設計師市集</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = true; try { const { data } = await Cloud.sb.rpc('list_designs', { p_mode: Market.mode, p_offset: 0 }); Market.list = data || []; for (const d of Market.list) Designs.map.set(d.id, d); } catch(e){ Market.list = []; } Market.busy = false; Market.at = Date.now(); if (!$('#sheet').hidden && (curTab === 'market' || curTab === 'shop')) renderTab(); }
+function renderMarket(body, inShop){
+  if (!inShop){ const head = el('div', 'shophead'); head.innerHTML = `<b>🛍️ 設計師市集</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head); }
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能逛市集。')); return; }
+  if (inShop){ body.appendChild(el('p', 'sub', '👗 阿綾每天早上 10 點、傍晚 6 點左右會設計一件新的放到店裡。買了就是你的。'));
+    const go = el('button', 'tbtn ghost', '🛍️ 去設計師市集看大家的設計'); go.addEventListener('click', () => { Market.mode = 'new'; Market.list = null; curTab = 'market'; renderTab(); }); body.appendChild(go); }
+  if (!inShop){
   body.appendChild(el('p', 'sub', '大家自己設計的衣服、帽子、鞋子、披風和領巾。買了就是你的，九成的錢給設計的人（每個設計師一天最多從市集收 3000 金幣）。要錢的設計要先釣到 30 條魚才能買。'));
-  if (Market.mode === 'ling') body.appendChild(el('p', 'sub', '👗 阿綾服裝店：村子裡的設計師阿綾每天早上 10 點、傍晚 6 點左右會設計一件新的，最多同時賣 12 件。'));
+  if (Market.mode === 'ling') body.appendChild(el('p', 'sub', '👗 阿綾服裝店：村子裡的設計師阿綾每天早上 10 點、傍晚 6 點左右會設計一件新的，設計過的都會一直留在店裡。'));
   const seg = el('div', 'seg'); [['ling', '👗 阿綾的店'], ['new', '🆕 新上架'], ['hot', '🔥 最多人買'], ['mine', '🎨 我的設計']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Market.mode === k)); b.addEventListener('click', () => { Market.mode = k; Market.list = null; loadMarket(); renderTab(); }); seg.appendChild(b); });
-  const nb = el('button', '', '＋ 自己設計'); nb.addEventListener('click', () => { DesignEd.px = null; curTab = 'design'; renderTab(); }); seg.appendChild(nb); body.appendChild(seg);
+  const nb = el('button', '', '＋ 自己設計'); nb.addEventListener('click', () => { DesignEd.px = null; curTab = 'design'; renderTab(); }); seg.appendChild(nb); body.appendChild(seg); }
   if (!Market.list){ if (!Market.busy) loadMarket(); body.appendChild(el('div', 'empty', '載入中…')); return; }
   if (!Market.list.length){ body.appendChild(el('div', 'empty', Market.mode === 'mine' ? '你還沒有設計。按「＋ 自己設計」開始畫吧！' : '市集還沒有東西，來當第一個設計師吧！')); return; }
   const ul = el('ul', 'shoplist');
@@ -5850,10 +5853,13 @@ function renderWardrobe(body, only){
 function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
   if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>${SEASONS[SEASON].icon} 現在是${SEASONS[SEASON].name}：當季魚有 ${SEASONS[SEASON].fish.map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}（比平常多一倍）。</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
-  const seg = el('div', 'seg');
-  [['sell','賣魚'],['rod','釣竿'],['tool','🧰工具'],['rig','釣法'],['bait','魚餌'],['wear','服飾'],['dive','🤿潛水'],['love','💙愛海']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
+  const seg = el('div', 'seg'), tailor = shopName === '阿綾服裝店';
+  /* 衣服都搬到阿綾服裝店：店裡有原本的服飾，也有阿綾自己設計的 */
+  if (tailor && !['wear', 'ling'].includes(shopMode)) shopMode = 'wear'; if (!tailor && ['wear', 'ling'].includes(shopMode)) shopMode = 'sell';
+  (tailor ? [['wear', '👕 服飾'], ['ling', '👗 阿綾設計']] : [['sell','賣魚'],['rod','釣竿'],['tool','🧰工具'],['rig','釣法'],['bait','魚餌'],['dive','🤿潛水'],['love','💙愛海']]).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(shopMode === k)); b.addEventListener('click', () => { shopMode = k; sellConfirm = 0; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
   if (shopMode === 'wear'){ renderWardrobe(body); return; }
+  if (shopMode === 'ling'){ if (Market.mode !== 'ling'){ Market.mode = 'ling'; Market.list = null; } renderMarket(body, true); return; }
   if (shopMode === 'dive'){ renderDiveShop(body); return; }
   if (shopMode === 'love'){
     const box = el('div', 'tipbox'); box.innerHTML = `<b>💙 愛海點數：${(rec.love || 0).toLocaleString()}</b><span>把魚放流（釣到時按「放流」，或在魚缸裡放流）就能得到點數：常見魚 1、稀有魚 3、傳說魚 10，<b>未達尺寸的小魚至少 3</b>。你總共放流了 ${rec.released || 0} 條。</span><span>這裡的東西只能用愛海點數換，金幣買不到。</span>`;
@@ -6978,7 +6984,7 @@ function applyLing(){
 }
 function lingLines(){ const L = Ling.list || []; if (!L.length) return []; const d = L[0], out = [`我最新的作品是「${d.name}」，${d.price ? `🪙${d.price}` : '免費送'}，來看看吧！`];
   const hot = L.slice().sort((a, b) => b.sold - a.sold)[0]; if (hot && hot.sold > 0) out.push(`「${hot.name}」已經賣出 ${hot.sold} 件了，謝謝大家！`);
-  out.push(`店裡現在有 ${L.length} 件我設計的東西，走到櫃台前面就能逛`); return out; }
+  out.push(`店裡現在有 ${L.length} 件我設計的東西，衣服都不會下架，走到櫃台前面就能逛`); return out; }
 function updateLing(n, dt, t){
   const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
   if (d < 40 && Cloud.on && (!Ling.at || Date.now() - Ling.at > 10 * 60000)) loadLing();
