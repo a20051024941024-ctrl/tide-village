@@ -2468,6 +2468,8 @@ function renderMap(body){
     for (const R of WORLD_REGIONS){ const [px, py] = R.edge ? R.edge.map(v => v * S) : toPx(R.x, R.z); tag(R.label, clamp(px, 70, S - 70), clamp(py, 14, S - 12), R.edge ? 'rgba(24,51,74,.78)' : null); }
     ctx.translate(S - 26, 30); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(6, 2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#18334a'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('北', 0, 13); ctx.restore(); }
   for (const sp of secretSpots){ const [sx, sy] = toPx(sp.x, sp.z); if (sx < 0 || sy < 0 || sx > S || sy > S) continue; ctx.font = '20px sans-serif'; ctx.fillText('🤫', sx, sy + 7); }   // 只有自己看得到的祕密窩點
+  const WS = worldSummary();   // 村民現在在哪裡（伺服器的資料）
+  for (const w of WS){ const [px, py] = toPx(w.x, w.z); ctx.font = '16px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill(); ctx.fillText(w.icon, px, py + 6); ctx.font = `bold 11px ${getComputedStyle(document.body).fontFamily}`; ctx.fillStyle = '#18334a'; ctx.fillText(w.name, px, py + 23); }
   const [mx, my] = toPx(me.pos.x, me.pos.z);   // 你在這裡
   ctx.save(); ctx.translate(mx, my); ctx.rotate(Math.atan2(Math.cos(me.rot), -Math.sin(me.rot)) + Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 8); ctx.lineTo(0, 4); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
   cv.addEventListener('click', e => {
@@ -2478,6 +2480,11 @@ function renderMap(body){
   const list = el('div', 'tplist');
   for (const tp of TRAVEL){ const on = visited.has(tp.id); const b = el('button', 'tpbtn' + (on ? '' : ' lock'), on ? tp.label : '？？？（還沒去過）'); b.disabled = !on; b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
   body.appendChild(list);
+  if (WS.length){ body.appendChild(el('div', 'dexhead', '🏘️ 村民現在在做什麼'));
+    const ul = el('ul', 'wlist'); for (const w of WS) ul.appendChild(el('li', '', `${w.icon} ${w.name}：${w.text}`)); body.appendChild(ul);
+    const L = (World.log || []).slice(0, 8); if (L.length){ const ul2 = el('ul', 'wlist old'); for (const l of L){ const pl = (World.places && World.places[l.place]) || {}, d = new Date(l.at), hh = d.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Taipei' });
+      ul2.appendChild(el('li', '', `${hh}　${WORLD_WHO[l.npc] || l.npc}${l.why ? '（' + l.why + '）' : ''}→ 去${pl.name || ''}${(WORLD_ACT[l.act] || ['', ''])[1]}`)); } body.appendChild(ul2); } }
+  else if (Cloud.on && !World.rows) loadWorld();
 }
 
 // 岸邊釣魚：不在發光圈裡也可以，只要面前（或旁邊）幾公尺內有水
@@ -5176,17 +5183,19 @@ function initQuestNpcs(){
   for (const [who, d] of Object.entries(QUEST_NPC)){
     const [x, z] = freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, name:d.name, kind:'npc' });
     f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.atan2(MAP.plaza[0] - x, MAP.plaza[1] - z); f.setGear(d.gear); f.nm.classList.add('quest');
-    f.lines = QUEST_TALK[who] || []; questNpcs.push({ who, name:d.name, f });
+    f.lines = QUEST_TALK[who] || []; if (who === 'chief') f.wid = 'chief'; questNpcs.push({ who, name:d.name, f });
   }
 }
 function updateQuestNpcs(dt, t){
   if (!questNpcs.length) initQuestNpcs();
   for (const q of questNpcs){
     const d = Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z);
-    if (d < 40){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
+    const wd = worldDrive(q.f, dt, t);
+    if (wd){}
+    else if (d < 40){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
     else q.f.tag.style.display = 'none';
     const qs = Quests.list && Quests.list.find(x => x.who === q.who), mark = !Cloud.on ? '' : !qs ? '' : qs.done ? '✔️' : '❗';
-    if (d < 7 && t > (q.talkAt || 0) && !(q.f.replyUntil > now())){ q.talkAt = t + rand(14, 24); const L = q.f.lines; if (L.length){ q.f.say(L[Math.floor(Math.random() * L.length)], '', 6); q.mark = null; q.talkUntil = now() + 6.2; } }   /* 走近會講話，講完再把 ❗ 放回去 */
+    if (!wd && d < 7 && t > (q.talkAt || 0) && !(q.f.replyUntil > now())){ q.talkAt = t + rand(14, 24); const L = q.f.lines; if (L.length){ q.f.say(L[Math.floor(Math.random() * L.length)], '', 6); q.mark = null; q.talkUntil = now() + 6.2; } }   /* 走近會講話，講完再把 ❗ 放回去 */
     else if (d > 14) q.talkAt = Math.min(q.talkAt || 0, t + 3);
     if (q.mark !== mark && !(q.talkUntil > now()) && !(q.f.replyUntil > now())){ q.mark = mark; if (mark) q.f.say(mark, mark === '❗' ? 'alert' : 'emote', 99999); else q.f.bub.hidden = true; }
   }
@@ -7214,6 +7223,10 @@ const npcs = [
     lines:['來來來，今天的收購單貼在櫃台上囉！', '箱網養的和魚缸生的我不收，我只要海裡、河裡釣上來的', '前一天大家都釣很多的魚，我今天就不收了', '傍晚 6 點我會用今天收最多的魚做特餐，吃了釣魚有加成', '魚要新鮮！釣到了就快拿來'] }; })(),
   { name:'阿伯・老校工', shirt:'#c8b48a', hat:'#5a6a3a', x:21.6, z:-41.0, y:0.02, dir:new THREE.Vector2(-0.2, 1).normalize(), lines:['這個池子比我年紀還大，學校一百多年前就有了', '以前的學生下課都蹲在池邊看魚', '琵琶鼠魚是有人亂放生的，現在池子裡到處都是', '大肚魚是以前放來吃孑孓的', '紅色的拱橋走上去看魚最清楚', '看到垃圾就順手撿一下啦', '假山上的蕨類是老師們一棵一棵種的'] },
 ].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.tailor = !!n.tailor; f.shopNpc = n.shopNpc || null; if (n.tailor || n.shopNpc){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
+for (const n of npcs){ const nm = n.nm.textContent; n.wid = nm.startsWith('阿綾') ? 'ling' : nm.startsWith('阿木') ? 'mu' : nm.startsWith('阿福') ? 'fu' : nm.startsWith('老港') ? 'gang' : null; }
+// 老闆不在店裡的時候，店裡的東西照樣要更新（店一直都開著，可以自己逛）
+function worldShopLoad(n){ if (!Cloud.on || !n.post || Math.hypot(me.pos.x - n.post.x, me.pos.z - n.post.z) > 40) return;
+  if (n.tailor && (!Ling.at || Date.now() - Ling.at > 10 * 60000)) loadLing(); else if (n.shopNpc === 'mu' && (!FZ.at || Date.now() - FZ.at > 10 * 60000)) loadMu(); else if (n.shopNpc === 'fu' && (!Fu.at || Date.now() - Fu.at > 5 * 60000)) loadFu(); }
 // ---- 阿綾：站在服裝店櫃台後面，看到人會轉過來；穿著自己最新設計的衣服，門口衣架掛著最新的三件上衣 ----
 async function loadLing(){
   if (Ling.busy || !Cloud.on || !Cloud.sb) return; Ling.busy = true; Ling.at = Date.now();
@@ -7418,6 +7431,7 @@ function updateAmo(n, dt, t){
 }
 function updateNpcs(dt, t){
   for (const n of npcs){
+    if (worldDrive(n, dt, t)){ worldShopLoad(n); continue; }
     if (n.tailor){ updateLing(n, dt, t); continue; }
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
     if (n.shopNpc === 'fu'){ updateShopNpc(n, dt, t, () => (!Fu.at || Date.now() - Fu.at > 5 * 60000) && loadFu()); continue; }
@@ -7441,12 +7455,119 @@ function updateNpcs(dt, t){
   }
 }
 
+/* ================= 村民自己過日子（架構第二階段，054_world.sql）=================
+   伺服器每分鐘推進一次「世界時間」：5 位公共 NPC（村長、阿綾、阿木、阿福、老港）的肚子餓、累、想聊天、想玩，照個性和作息決定現在要做什麼、去哪裡、幾點出發、幾點到。
+   手機只照伺服器的狀態畫：大家用同一張地圖算同一條路，所以不同房間、不同手機看到的村民都在同一個地方、做同一件事。
+   沒連上雲端的時候，村民就跟以前一樣站在原本的位置（不會用假的資料假裝在動）。 */
+var World = { rows:null, places:null, log:[], at:0, busy:false, off:0, fails:0 };
+var WORLD_WHO = { chief:'村長', ling:'阿綾', mu:'阿木', fu:'阿福', gang:'老港' };
+var WORLD_ACT = { sleep:['💤', '睡覺'], rest:['🏠', '在家休息'], work:['🛠️', '工作'], eat:['🍚', '吃飯'], chat:['💬', '聊天'], fish:['🎣', '釣魚'], stroll:['🚶', '散步'] };
+async function loadWorld(){
+  if (World.busy || !Cloud.on || !Cloud.sb) return; World.busy = true; World.at = Date.now();
+  try { const t0 = Date.now(), { data, error } = await Cloud.sb.rpc('npc_world'); if (error) throw error;
+    if (data && data.now){ World.off = Date.parse(data.now) + (Date.now() - t0) / 2 - Date.now(); if (data.places){ World.places = {}; for (const p of data.places) World.places[p.id] = p; } World.rows = {}; for (const r of data.npcs || []) World.rows[r.id] = r; World.log = data.log || []; World.fails = 0; } }
+  catch(e){ World.fails++; }
+  World.busy = false;
+}
+function worldNow(){ return Date.now() + World.off; }
+// ---- 尋路：0.6 公尺一格，格子能不能走是照遊戲本來的 walkable／blocked 算（第一次用到才算、算過記住）。兩個地點之間的路算一次就記住 ----
+var NAV = { c:0.6, x0:-52, z0:-66, nx:190, nz:190, m:null, paths:new Map() };
+function navOk(i, j){
+  if (i < 0 || j < 0 || i >= NAV.nx || j >= NAV.nz) return false;
+  if (!NAV.m) NAV.m = new Int8Array(NAV.nx * NAV.nz); const k = j * NAV.nx + i; let v = NAV.m[k];
+  if (!v){ const x = NAV.x0 + (i + 0.5) * NAV.c, z = NAV.z0 + (j + 0.5) * NAV.c; v = walkable(x, z) && !blocked(x, z, 0.3) && groundHeight(x, z) < 6 ? 1 : 2; NAV.m[k] = v; }
+  return v === 1;
+}
+function navCell(x, z){ return [Math.floor((x - NAV.x0) / NAV.c), Math.floor((z - NAV.z0) / NAV.c)]; }
+function navNear(x, z){ const [i0, j0] = navCell(x, z); for (let r = 0; r < 8; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++){ if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue; if (navOk(i0 + di, j0 + dj)) return [i0 + di, j0 + dj]; } return null; }
+function navLine(ax, az, bx, bz){ const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / 0.25); for (let k = 1; k < n; k++){ const u = k / n, [i, j] = navCell(ax + (bx - ax) * u, az + (bz - az) * u); if (!navOk(i, j)) return false; } return true; }
+function navFind(ax, az, bx, bz){
+  const s = navNear(ax, az), g = navNear(bx, bz); if (!s || !g) return null;
+  const W = NAV.nx, key = (i, j) => j * W + i, gk = key(g[0], g[1]), h = (i, j) => Math.hypot(i - g[0], j - g[1]);
+  const G = new Map(), from = new Map(), heap = [[h(s[0], s[1]), s[0], s[1]]]; G.set(key(s[0], s[1]), 0);
+  const push = e => { heap.push(e); let i = heap.length - 1; while (i > 0){ const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length){ heap[0] = last; let i = 0; for (;;){ const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  let found = false, guard = 0;
+  while (heap.length && guard++ < 60000){ const [, i, j] = pop(), k = key(i, j); if (k === gk){ found = true; break; } const gc = G.get(k);
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++){ if (!di && !dj) continue; const ni = i + di, nj = j + dj; if (!navOk(ni, nj)) continue; if (di && dj && (!navOk(i + di, j) || !navOk(i, j + dj))) continue;
+      const nk = key(ni, nj), ng = gc + (di && dj ? 1.414 : 1); if (G.has(nk) && G.get(nk) <= ng) continue; G.set(nk, ng); from.set(nk, k); push([ng + h(ni, nj), ni, nj]); } }
+  if (!found) return null;
+  const cells = []; for (let k = gk; k != null; k = from.get(k)) cells.push([NAV.x0 + ((k % W) + 0.5) * NAV.c, NAV.z0 + (Math.floor(k / W) + 0.5) * NAV.c]); cells.reverse();
+  const pts = [[ax, az]]; let a = cells[0]; pts.push(a);   /* 拉直：看得到下一個轉角就直接走過去 */
+  for (let k = 1; k < cells.length; k++){ if (k === cells.length - 1 || !navLine(a[0], a[1], cells[k + 1][0], cells[k + 1][1])){ a = cells[k]; pts.push(a); } }
+  pts.push([bx, bz]); return pts;
+}
+function navPath(pa, pb){
+  const k = pa.id + '>' + pb.id; let c = NAV.paths.get(k); if (c) return c;
+  const pts = navFind(pa.x, pa.z, pb.x, pb.z) || [[pa.x, pa.z], [pb.x, pb.z]], cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  c = { pts, cum, len: cum[cum.length - 1] }; NAV.paths.set(k, c); return c;
+}
+function navAt(c, s){ s = clamp(s, 0, c.len); let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++; const a = c.pts[i - 1], b = c.pts[i], u = (s - c.cum[i - 1]) / ((c.cum[i] - c.cum[i - 1]) || 1); return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
+// 這個 NPC 現在應該在哪裡、在做什麼（純粹照伺服器的資料算，不會自己亂改）
+function worldPose(wid){
+  const r = World.rows && World.rows[wid], P = World.places; if (!r || !P || !P[r.place]) return null;
+  const T = worldNow(), to = P[r.place], fr = P[r.from] || to, dep = Date.parse(r.dep), arr = Date.parse(r.arr);
+  if (fr !== to && T < arr){ const c = navPath(fr, to), u = clamp((T - dep) / Math.max(1, arr - dep), 0, 1), [x, z, h] = navAt(c, u * c.len); return { walk:true, x, z, rot:h, v: c.len / Math.max(1, (arr - dep) / 1000), r, to }; }
+  // 到了：同一個地方有好幾個人的話，大家站開一點、面向彼此
+  const here = Object.values(World.rows).filter(o => o.place === r.place && (o.place === o.from || T >= Date.parse(o.arr))).map(o => o.id).sort(), n = here.length, k = Math.max(0, here.indexOf(wid));
+  let x = to.x, z = to.z, rot = to.r == null ? 0 : +to.r;
+  if (n > 1 && !to.solo){ const a = k / n * Math.PI * 2 + 0.6, rr = 0.75 + n * 0.12; x += Math.cos(a) * rr; z += Math.sin(a) * rr; rot = Math.atan2(to.x - x, to.z - z); }
+  return { walk:false, x, z, rot, v:0, r, to };
+}
+var WORLD_LINES = {
+  walk: { eat:['肚子好餓，去食堂吃飯', '今天中午吃什麼好呢'], sleep:['好睏……回家睡覺了', '晚安，明天見'], rest:['有點累，回家休息一下'], work:['要去上班了！', '工作的時間到了'], chat:['去找大家聊聊天', '好想跟人說說話'], fish:['去釣一下魚放鬆', '今天的魚應該很會咬'], stroll:['出去走走', '天氣不錯，散個步'] },
+  eat: ['美雲姨煮的魚湯最好喝了', '吃飽了才有力氣', '這道菜好香'], chat: ['今天村子好熱鬧', '你也來一起聊天嗎？'], fish: ['噓……魚快咬了', '今天換我來釣看看'], stroll: ['這裡的風好舒服', '散散步，心情會變好'], rest: ['在家裡休息一下'],
+};
+function worldLine(n, wp){ const pick = a => a[Math.floor(Math.random() * a.length)]; if (wp.walk) return pick(WORLD_LINES.walk[wp.r.act] || ['出門囉']); return pick(WORLD_LINES[wp.r.act] || ['嗯嗯']); }
+function worldTag(n, wp){ const ic = wp ? (wp.walk ? '🚶' : (WORLD_ACT[wp.r.act] || [''])[0]) : ''; if (n.nm.dataset.st !== ic){ if (ic) n.nm.dataset.st = ic; else delete n.nm.dataset.st; } }
+// 每一幀：回傳 true 表示這一幀已經處理完（走路中、在家、不在工作的地方），false 表示「在原本的位置做原本的事」，讓原本的程式接手
+function worldDrive(n, dt, t){
+  if (!n.wid) return false;
+  if (Cloud.on && (!World.at || Date.now() - World.at > (World.fails ? 90000 : 30000))) loadWorld();
+  const wp = Cloud.on ? worldPose(n.wid) : null;
+  if (!n.post) n.post = { x:n.pos.x, z:n.pos.z, y:n.baseY, rot:n.rot, fishing:n.fishing, bob:n.bobPos.clone() };
+  worldTag(n, wp);
+  if (!wp){ if (n.wMode){ n.wMode = null; n.wHide = false; n.pos.set(n.post.x, n.post.y, n.post.z); n.baseY = n.post.y; n.rot = n.post.rot; n.av.g.visible = true; } return false; }
+  const P = n.post, atPost = !wp.walk && Math.hypot(wp.x - P.x, wp.z - P.z) < 0.6 && (wp.r.act === 'work' || wp.r.act === 'fish' && n.post.fishing);
+  const mode = wp.walk ? 'walk' : atPost ? 'post' : (wp.r.act === 'sleep' || wp.r.act === 'rest') && wp.to.kind === 'home' ? 'home' : 'away';
+  const d = Math.hypot(n.pos.x - wp.x, n.pos.z - wp.z);
+  if (d > 12 || !n.wMode) n.pos.x = wp.x, n.pos.z = wp.z;   /* 剛載入、或差太多：直接放到正確的位置 */
+  else { const k = Math.min(1, dt * 6); n.pos.x += (wp.x - n.pos.x) * k; n.pos.z += (wp.z - n.pos.z) * k; }
+  if (mode !== n.wMode){
+    if (mode !== 'post'){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 3; n.sitting = false; }
+    if (mode === 'post'){ n.pos.set(P.x, P.y, P.z); n.baseY = P.y; n.rot = P.rot; if (P.fishing){ n.fishing = true; n.bobState = 'water'; n.bobPos.copy(P.bob); n.st = 'wait'; n.next = t + rand(3, 8); } }
+    else if (mode !== 'walk' && wp.to.fishDir != null){ const a = +wp.to.fishDir, cp = castPoint(wp.x, wp.z, Math.sin(a), Math.cos(a), 4.2); n.rot = a; n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = wp.r.act === 'fish'; n.bobState = n.fishing ? 'water' : 'none'; }
+    n.wHide = mode === 'home'; n.av.g.visible = !n.wHide; if (n.blob) n.blob.visible = !n.wHide; n._culled = false;
+    n.wMode = mode;
+  }
+  if (mode === 'post') return false;
+  if (mode !== 'home' && !n._culled) n.av.g.visible = !onIsle;
+  n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY;
+  if (mode === 'walk'){ n.rot = lerpAngle(n.rot, wp.rot, 1 - Math.exp(-8 * dt)); n.speed = wp.v; }
+  else { n.speed = 0; if (mode === 'away' && !n.fishing) n.rot = lerpAngle(n.rot, wp.rot, 1 - Math.exp(-3 * dt)); }
+  // 走近的時候講一句現在在做的事
+  const pd = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
+  if (mode !== 'home'){
+    if (pd < 7 && !wp.walk && !n.fishing) n.rot = lerpAngle(n.rot, Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z), 1 - Math.exp(-3 * dt));
+    if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(Math.random() < 0.6 ? worldLine(n, wp) : npcLine(n), '', 5); n.talkAt = t + rand(16, 30); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
+    // 一起聊天的人：偶爾互相講一句
+    if (wp.r.act === 'chat' && !wp.walk && pd < 30 && t > (n.chatAt || 0)){ n.chatAt = t + rand(9, 20); const others = Object.values(World.rows).filter(o => o.id !== n.wid && o.place === wp.r.place && o.act === 'chat'); if (others.length && Math.random() < 0.7){ const o = others[Math.floor(Math.random() * others.length)], nm = WORLD_WHO[o.id] || '';
+      n.say([`${nm}，最近好嗎？`, `${nm}你看今天的海`, `聽說${nm}昨天釣到大魚`, '哈哈哈', '真的假的！', '今天的風好舒服'][Math.floor(Math.random() * 6)], '', 4); } }
+  }
+  if (n.fishing && mode === 'away'){ const st = n.st || 'wait'; if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z); n.next = t + rand(6, 15); } n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); }
+  if (mode !== 'home') n.update(dt, t);
+  n.placeTag(); return true;
+}
+// 地圖、看板用：每個村民現在在做什麼
+function worldSummary(){ if (!World.rows || !World.places) return []; return Object.keys(WORLD_WHO).filter(k => World.rows[k]).map(k => { const wp = worldPose(k), r = World.rows[k], pl = World.places[r.place] || {}; return { id:k, name:WORLD_WHO[k], icon: wp && wp.walk ? '🚶' : (WORLD_ACT[r.act] || ['❔'])[0], text: wp && wp.walk ? `正在走去${pl.name || ''}（要${(WORLD_ACT[r.act] || ['', ''])[1]}）` : `在${pl.name || ''}${(WORLD_ACT[r.act] || ['', ''])[1]}`, x: wp ? wp.x : pl.x, z: wp ? wp.z : pl.z }; }); }
+
 // 手機效能：畫質「低／中」時，離鏡頭太遠的 NPC 和客人先不畫（每個角色有 20～40 個零件，很吃效能）
 const AV_CULL = { low: 30, mid: 48 };
 function cullAvatars(){
   const R = AV_CULL[Quality.tier]; if (!R) return; const cx = camera.position.x, cz = camera.position.z, R2 = R * R;
   const far = f => { const dx = f.pos.x - cx, dz = f.pos.z - cz; return dx * dx + dz * dz > R2; };
-  const own = f => { const fr = far(f); if (fr && f.av.g.visible){ f.av.g.visible = false; f._culled = true; } else if (!fr && f._culled){ f.av.g.visible = true; f._culled = false; } if (f.blob) f.blob.visible = f.av.g.visible; };
+  const own = f => { if (f.wHide){ f.av.g.visible = false; if (f.blob) f.blob.visible = false; return; } const fr = far(f); if (fr && f.av.g.visible){ f.av.g.visible = false; f._culled = true; } else if (!fr && f._culled){ f.av.g.visible = true; f._culled = false; } if (f.blob) f.blob.visible = f.av.g.visible; };
   for (const n of npcs) own(n); for (const c of customers) if (c.f) own(c.f);
   for (const q of questNpcs) if (q.f.av.g.visible && far(q.f)){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; }
   if (ferryNpc && ferryNpc.f.av.g.visible && far(ferryNpc.f)){ ferryNpc.f.av.g.visible = false; if (ferryNpc.f.blob) ferryNpc.f.blob.visible = false; }

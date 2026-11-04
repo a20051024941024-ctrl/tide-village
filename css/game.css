@@ -543,6 +543,7 @@ body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!impo
 
 /* NPC 任務 */
 .tag .nm.quest{background:#c98a2a}
+.tag .nm[data-st]::after{content:' ' attr(data-st)}
 .shoplist.quests .qtxt{font-size:13px;line-height:1.4;margin-top:2px}
 .shoplist.quests li.hl{box-shadow:0 0 0 3px #ffd36a}
 
@@ -786,3 +787,9 @@ body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
   #ferryBar,#isleBar,#visitBar{top:calc(var(--gt) + 64px);left:var(--gl,16px);font-size:12px;padding:3px 4px 3px 10px;max-width:44vw}
   #ferryBar .tbtn,#isleBar .tbtn,#visitBar .tbtn{padding:4px 9px;font-size:12px}
 }
+
+/* 村民現在在做什麼（地圖下面） */
+.wlist{list-style:none;margin:4px 0 10px;padding:0;font-size:13px;line-height:1.7;color:#18334a}
+.wlist li{padding:2px 8px;border-radius:8px}
+.wlist li:nth-child(odd){background:rgba(47,137,199,.08)}
+.wlist.old{font-size:12px;color:#4a6378}
