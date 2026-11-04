@@ -104,6 +104,7 @@ supabase/064_mansion.sql 自己設計的大宅（18×12）：1 公尺格子畫�
 supabase/065_isle_npc.sql 私人島嶼的幫手（架構第七階段）：白天在碼頭釣魚放進公共儲物箱、晚上睡覺，個性影響漁獲；離線一小時一小時補算（最多 24 小時），每小時排程
 supabase/066_ocean.sql 動態海洋生態（架構第八階段）：三個海域的水溫、海流、浮游生物每小時更新；魚類照水溫和月份洄游、浮游生物多時出現魚群、每週輪流保育一種稀有生物 3 天；roll_fish（020）直接乘上 ocean_eco
 supabase/067_far_seas.sql 深海浮台（青眼魚、鼠尾鱈、赤鯥、水滴魚、角高體金眼鯛、歐氏尖吻鮫、灰六鰓鯊）、遠洋神秘島（克里奧鮨、黃尾刺尾鯛、角蝶魚、紅唇蝙蝠魚、加拉巴哥鯊）和各自的變種
+supabase/068_kaykit_gear.sql KayKit Adventurers（CC0）的帽子、頭盔、短披風上架（_item_price 加上 7 件）
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

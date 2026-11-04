@@ -8,3 +8,4 @@
 - **玩家角色的 3D 模型**（`models/tide_kid.glb`）：本專案自行設計製作（`tools/character/build_character.js` 產生），游泳、潛水動作也是自己做的。
 - **角色動作**：[KayKit Character Animations](https://kaylousberg.itch.io/) by Kay Lousberg（www.kaylousberg.com）
   授權：CC0 1.0（公眾領域，可自由使用、修改）。使用 Rig_Medium 骨架和站立、走路、跑步、跳躍、釣魚、坐下、揮手等動作，授權全文在 `tools/character/kaykit/LICENSE.txt`。
+- **帽子、頭盔、短披風**（巫師帽、騎士頭盔、熊熊帽、四色短披風，models/kaykit_gear.glb）：從 [KayKit Character Pack: Adventurers 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) by Kay Lousberg（www.kaylousberg.com）取出，授權 CC0（包內 LICENSE.txt）。2026-11-05

@@ -1484,13 +1484,13 @@ function applyLook(av, gear, mk){
 }
 const GEAR_SLOTS = [['look','外觀'],['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
 const GEAR = [
-  ['hat_sun','草帽',0,'👒'],['hat_none','不戴帽子',0,'🙂'],['hat_cap','棒球帽',250,'🧢'],['hat_beanie','毛線帽',300,'🧶'],['hat_bucket','漁夫帽',350,'🎣'],['hat_cat','貓耳朵',600,'🐱'],['hat_chef','廚師帽',800,'👨‍🍳'],['hat_flower','花環',500,'🌼'],['hat_pirate','海盜帽',1500,'🏴‍☠️'],['hat_crown','皇冠',5000,'👑'],
+  ['hat_sun','草帽',0,'👒'],['hat_wizard','巫師帽',1200,'🧙'],['hat_knight','騎士頭盔',1800,'🛡️'],['hat_bear','熊熊帽',1000,'🐻'],['hat_none','不戴帽子',0,'🙂'],['hat_cap','棒球帽',250,'🧢'],['hat_beanie','毛線帽',300,'🧶'],['hat_bucket','漁夫帽',350,'🎣'],['hat_cat','貓耳朵',600,'🐱'],['hat_chef','廚師帽',800,'👨‍🍳'],['hat_flower','花環',500,'🌼'],['hat_pirate','海盜帽',1500,'🏴‍☠️'],['hat_crown','皇冠',5000,'👑'],
   ['top_tee','素 T',0,'👕'],['top_stripe','水手條紋衫',300,'⚓'],['top_apron','食堂圍裙',400,'🍳'],['top_vest','救生衣',500,'🦺'],['top_hoodie','連帽外套',700,'🧥'],['top_hawaii','夏威夷衫',800,'🌺'],['top_suit','帥氣西裝',2500,'🤵'],
   ['pants_jeans','牛仔褲',0,'👖'],['pants_shorts','短褲',200,'🩳'],['pants_khaki','卡其褲',250,'🟫'],['pants_skirt','格紋裙',500,'👗'],['pants_overalls','吊帶褲',600,'🧑‍🌾'],['pants_rainbow','彩虹褲',1500,'🌈'],
   ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
   ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
   ['acc_none','沒有配件',0,'🙂'],['acc_scarf','紅圍巾',300,'🧣'],['acc_scarf_black','黑圍巾',320,'⚫'],['acc_scarf_white','白圍巾',320,'⚪'],['acc_scarf_navy','深藍圍巾',350,'🔵'],['acc_scarf_pink','粉紅圍巾',350,'🩷'],['acc_scarf_yellow','芥末黃圍巾',350,'🟡'],['acc_scarf_green','森林綠圍巾',350,'🟢'],['acc_scarf_grey','灰色毛圍巾',380,'🩶'],['acc_scarf_brown','焦糖圍巾',380,'🟤'],['acc_scarf_plaid','紅黑格紋圍巾',500,'🟥'],['acc_scarf_stripe','藍白條紋圍巾',500,'🔷'],['acc_scarf_rainbow','彩虹圍巾',900,'🌈'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
-  ['back_none','沒有背飾',0,'🙂'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
+  ['back_none','沒有背飾',0,'🙂'],['back_kcape_m','紫紅短披風',900,'🟣'],['back_kcape_r','紅色短披風',900,'🔴'],['back_kcape_b','咖啡色短披風',800,'🟤'],['back_kcape_g','綠色短披風',900,'🟢'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
   ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
   // 愛海商店：只能用放流得到的愛海點數換（第 5 欄是點數）
   ['hat_turtle','海龜帽',0,'🐢',30],['top_ocean','海洋守護衫',0,'🌊',40],['acc_coral','珊瑚項鍊',0,'🪸',20],['back_fin','鯊魚背鰭',0,'🦈',60],
@@ -1504,6 +1504,23 @@ const SHOE_COL = { shoes_boots:'#6b4a35', shoes_sandals:'#3fbf9d', shoes_sneaker
 const RAINBOW = ['#f05a4a', '#ff9f43', '#ffd36a', '#3fbf9d', '#2f89c7', '#9b7bff'];
 function heartShape(s){ const sh = new THREE.Shape(); sh.moveTo(0, -s * 0.9); sh.bezierCurveTo(-s * 1.4, -s * 0.1, -s * 0.9, s * 1.0, 0, s * 0.35); sh.bezierCurveTo(s * 0.9, s * 1.0, s * 1.4, -s * 0.1, 0, -s * 0.9); return sh; }
 function starShape(s){ const sh = new THREE.Shape(); for (let i = 0; i < 10; i++){ const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? s * 0.45 : s; const x = Math.cos(a) * r, y = Math.sin(a) * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); } return sh; }
+// ---- KayKit Adventurers（CC0）的帽子、頭盔、披風：models/kaykit_gear.glb，每一件記著是掛在頭骨還是胸骨 ----
+// 3D 角色直接掛在對應的骨頭；舊的程式角色掛在頭／身體上。模型還沒載好就先等，載好再穿一次
+const GEAR3D = { ok:false, map:null, wait:new Set(), fit:{ hat_wizard:{ y:0.17, w:0.86 }, hat_knight:{ y:0.03, w:0.84, full:true }, hat_bear:{ y:0.16, w:0.82, full:true, z:-0.03 }, back_kcape_m:{ y:0, s:0.95 }, back_kcape_r:{ y:0, s:0.95 }, back_kcape_b:{ y:0, s:0.95 }, back_kcape_g:{ y:0, s:0.95 } } };
+new GLTFLoader().loadAsync('models/kaykit_gear.glb').then(g => { GEAR3D.map = {}; g.scene.traverse(o => { if (o.isMesh && GEAR3D.fit[o.name]){ o.castShadow = true; GEAR3D.map[o.name] = o; } }); GEAR3D.ok = true; for (const [av, gear] of [...GEAR3D.wait].map(x => [x, x.gear3dWant])) { try { applyGear(av, gear); } catch(e){} } GEAR3D.wait.clear(); }).catch(e => console.warn('gear3d', e));
+function gear3dApply(av, gear){ const ids = [gear.hat, gear.back].filter(id => GEAR3D.fit[id]); if (av.hair) av.hair.visible = true; if (!ids.length) return;
+  if (!GEAR3D.ok){ av.gear3dWant = gear; GEAR3D.wait.add(av); return; }
+  for (const id of ids){ const src = GEAR3D.map[id], F = GEAR3D.fit[id]; if (!src) continue;
+    if (id.startsWith('hat_')){
+      // 帽子、頭盔掛在頭上（頭的中心在原點、半徑大約 0.33）：照模型的大小自動對齊，戴得剛剛好
+      const m = new THREE.Mesh(src.geometry, src.material); m.quaternion.copy(src.quaternion); m.castShadow = true; const w = new THREE.Group(); w.add(m); w.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(w), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3()), k = F.w / Math.max(sz.x, sz.z);
+      m.position.set(-c.x, F.full ? -c.y : -b.min.y, -c.z); w.scale.setScalar(k); w.position.set(0, F.y, F.z || 0); av.headG.add(w); av.gearMeshes.push(w);
+      if (F.full){ if (av.hair) av.hair.visible = false; for (const o of av.gearMeshes) if (o.parent === av.headG && o !== w) o.visible = false; }   /* 頭盔、熊熊帽蓋住整顆頭：頭髮先藏起來 */
+    } else {
+      // 披風掛在胸骨（3D 角色）或身體上
+      const m = src.clone(); m.castShadow = true; m.position.multiplyScalar(F.s); m.scale.multiplyScalar(F.s);
+      if (av.kid){ av.kid.B.chest.add(m); av.gearMeshes.push(m); } else { const w = new THREE.Group(); w.add(m); w.position.set(0, 0.62, 0); (av.torsoG || av.g).add(w); av.gearMeshes.push(w); } } } }
 function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
@@ -1515,6 +1532,7 @@ function applyGear(av, gear){
   if (av.hairM) applyLook(av, gear, mk);
   // ---- 帽子 ----
   for (const b of av.hatBase) b.visible = gear.hat === 'hat_sun';
+  gear3dApply(av, gear);
   const H = av.hatG, HD = av.headG;
   switch (gear.hat){
     case 'hat_turtle': { const sh = M('#4f9a54', 0.6), dk = M('#2f6b3a', 0.65), sk = M('#9fd08a', 0.7);
