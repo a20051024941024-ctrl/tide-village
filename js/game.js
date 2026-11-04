@@ -3926,7 +3926,7 @@ function renderFriends(body){
     for (const n of [50, 100, 300, 1000]){ const b = el('button', 'tbtn' + (rec.coins < n ? ' ghost' : ''), `送 🪙${n}`); b.disabled = rec.coins < n; b.addEventListener('click', () => { b.disabled = true; sendGift(to, 'coins', n); }); cb.appendChild(b); }
     body.appendChild(cb);
     body.appendChild(el('div', 'dexhead', '🐟 魚缸裡的魚')); const locked = new Set(rec.show || []);
-    const favN = rec.tank.filter(x => x.k).length, list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w)).slice(0, 24);
+    const list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w)).slice(0, 24);
     if (!list.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以送的魚。'));
     const ul = el('ul', 'shoplist cols');
     for (const x of list){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(fishCanvas(f, true, 56, 36)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name)); d.appendChild(el('div', 'meta', `${fmtKg(x.w)}・${f.rarity}`)); li.appendChild(d);
@@ -5479,7 +5479,7 @@ function renderShop(body){
   }
   if (shopMode === 'sell'){
     const locked = new Set(rec.show || []);
-    const list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
+    const favN = rec.tank.filter(x => x.k).length, list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
     body.appendChild(el('p', 'sub', `${favN ? `⭐ 收藏的 ${favN} 條不會出現在這裡，也不會被賣掉。` : '在魚缸分頁按 ☆ 可以收藏魚，收藏的魚不會被賣掉。'}魚缸裡的魚可以賣掉換金幣，越重越值錢。${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
     const shownList = rec.tank.filter(x => locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
     if (!list.length && !shownList.length){ body.appendChild(el('div', 'empty', '沒有可以賣的魚。去釣幾條再回來吧！')); return; }
