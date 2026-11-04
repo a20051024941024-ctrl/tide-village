@@ -1804,7 +1804,7 @@ class Fisher {
     this.held = { o, y, until: now() + (secs || 6) };
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
-  dispose(){ if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
+  dispose(){ if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
   update(dt, t){
     const a = this.av;
     this.walk += dt * this.speed * 2.2;
@@ -2700,7 +2700,7 @@ function landFish(){
   const from = me.bobPos.clone(); from.y = 0.1;
   const fm = fishModel(f, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); fm.position.copy(from); scene.add(fm);
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
-  jumpers.push({ m: fm, from, to, t: 0 });
+  jumpers.push({ m: fm, from, to, t: 0, end: 0.92 });
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
   setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, 900);
 }
@@ -2711,7 +2711,7 @@ function updateJumpers(dt, t){
     const k = Math.min(1, j.t / 0.9);
     j.m.position.lerpVectors(j.from, j.to, k); j.m.position.y += Math.sin(k*Math.PI) * 1.6;
     j.m.rotation.z = Math.sin(t*14) * 0.4; j.m.rotation.y += dt * 4;
-    if (j.t > 2.6){ scene.remove(j.m); jumpers.splice(i, 1); }
+    if (j.t > (j.end || 2.6)){ scene.remove(j.m); jumpers.splice(i, 1); }   /* end：落到手上就收掉（手上會換成 holdFish 的魚） */
   }
 }
 
@@ -5994,7 +5994,7 @@ function presenceObj(){
   if (House.on) o.hs = House.it ? House.it.id : 1;   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
-  if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] };
+  if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
   if (myShow && Date.now() - myShow.at < 6500) o.s = myShow;
@@ -6046,8 +6046,9 @@ function applyPeer(pp){
     const tx = p.target.x, tz = p.target.z, nb = new THREE.Vector3(clamp(+fi.b[0]||tx, tx - 30, tx + 30), 0.12, clamp(+fi.b[1]||tz, tz - 30, tz + 30));   // 浮標一定在這個人附近（以前限制在 ±36 公尺，船划到外海時線會拉得很長）
     if (p.fisher.bobState === 'none'){ const from = new THREE.Vector3(); p.fisher.av.tip.getWorldPosition(from); p.fisher.bobPos.copy(nb); p.fisher.bobState = 'fly'; p.fisher.flying = { from, to: nb.clone(), t:0, dur:0.6, h:1.8 }; }
     else p.fisher.bobPos.copy(nb);
-    p.ph = fi.ph;
-  } else { p.fisher.bobState = 'none'; p.fisher.flying = null; p.ph = null; }
+    p.ph = fi.ph; p.lastBob = nb.clone(); p.lastBobAt = Date.now();
+    { const rf = fi.ph === 'reel' && typeof fi.fi === 'string' ? FISH_BY_ID[fi.fi] : null; if (rf && (!p.reelFish || p.reelFish.id !== rf.id) && camera.position.distanceTo(p.fisher.pos) < 30) p.fisher.say(`🎣 正在拉：${rf.name}`, 'emote', 4); p.reelFish = rf || null; }
+  } else { p.fisher.bobState = 'none'; p.fisher.flying = null; p.ph = null; p.reelFish = null; }
   if (pr.s && typeof pr.s === 'object' && FISH_BY_ID[pr.s.f] && pr.s.at !== p.lastShow){
     p.lastShow = pr.s.at; const sf = FISH_BY_ID[pr.s.f], sw = clamp(+pr.s.w || 0, 0, 1e6);
     p.fisher.holdFish(sf, sw, 6);
@@ -6067,6 +6068,12 @@ function updatePeers(dt, t){
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
     f.dip = p.ph === 'bite' ? 0.9 + Math.sin(t*30)*0.1 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
+    { const rf = p.ph === 'reel' && f.av.g.visible && camera.position.distanceTo(f.pos) < 35 ? p.reelFish : null;   /* 別人上鉤的魚在浮標那裡掙扎、偶爾跳出水面 */
+      if (rf && (!f.hookM || f.hookM.userData.id !== rf.id)){ if (f.hookM) scene.remove(f.hookM); let m = null; try { m = fishModel(rf, clamp(0.45 + Math.log(1 + (rf.min + rf.max) / 2) * 0.25, 0.45, 1.3)); } catch(e){} if (m){ m.userData.id = rf.id; scene.add(m); } f.hookM = m; f.hookJ = 0; }
+      if (!rf && f.hookM){ scene.remove(f.hookM); f.hookM = null; }
+      if (f.hookM){ const b = f.bobPos, m = f.hookM; if (f.hookJ <= 0 && Math.random() < dt * 0.35){ f.hookJ = 1; ripple(b.x, b.z, true); } f.hookJ = Math.max(0, f.hookJ - dt * 1.6);
+        const jy = Math.sin(f.hookJ * Math.PI) * 0.7; m.position.set(b.x + Math.sin(t * 3.1) * 0.25, WATER_LEVEL - 0.12 + jy + Math.sin(t * 9) * 0.03, b.z + Math.cos(t * 2.7) * 0.25); m.rotation.y = Math.atan2(f.pos.x - b.x, f.pos.z - b.z) - Math.PI / 2 + Math.sin(t * 6) * 0.5; m.rotation.z = Math.sin(t * 11) * 0.3 + (f.hookJ > 0 ? Math.sin(f.hookJ * 6) * 0.6 : 0);
+        if (Math.random() < dt * 3) ripple(b.x + (Math.random() - 0.5) * 0.5, b.z + (Math.random() - 0.5) * 0.5); } }
     f.update(dt, t); f.placeTag();
   }
 }
@@ -6120,7 +6127,13 @@ function useRoom(r){
       else if (f.sev){ ticker(`🎉 <b>${esc(name)}</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`); if (Sev.ev && Sev.ev.fish === f.id){ Sev.ev.caught = name; Sev.told['got' + Sev.ev.id] = 1; } }
       if (f.rarity !== '常見' && !f.rs) Talk.recent.unshift({ who: name, name: f.name, at: Date.now() });
       else if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
-      if (p){ p.fisher.holdFish(f, w, 5); if (f.rarity === '傳說') p.fisher.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); }   // 大家都看得到他捧著剛釣到的魚
+      if (p){ const pf = p.fisher, done = () => { pf.holdFish(f, w, 5); if (f.rarity === '傳說') pf.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); };
+        if (pf.hookM){ scene.remove(pf.hookM); pf.hookM = null; }
+        if (p.lastBob && Date.now() - (p.lastBobAt || 0) < 15000 && pf.av.g.visible && camera.position.distanceTo(pf.pos) < 35){   /* 看得到他把魚從水裡拉起來、甩到手上 */
+          let fm = null; try { fm = fishModel(f, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); } catch(e){}
+          if (fm){ const from = p.lastBob.clone(); from.y = 0.1; fm.position.copy(from); scene.add(fm); jumpers.push({ m: fm, from, to: new THREE.Vector3(pf.pos.x, pf.baseY + 2.2, pf.pos.z), t: 0, end: 0.92 }); ripple(from.x, from.z, true); pf.bend = 0.9; setTimeout(done, 900); }
+          else done(); }
+        else done(); }   // 大家都看得到他捧著剛釣到的魚
     }, () => {});
     room.onConnection(() => setOnline(), () => {});
     clearInterval(roomTimer); roomTimer = setInterval(() => pushPresence(false), 120);
