@@ -179,6 +179,25 @@ const FISH = [
   { id:'blackgirella_albino', spot:'reef', of:'blackgirella', name:'白化黑毛', rarity:'傳說', color:'#f6e6de', min:0.5, max:3.5, power:0.7, w:0.01, desc:'明明叫黑毛，卻全身粉白色、紅眼睛。' },
   { id:'lethrinus_red', spot:'reef', of:'lethrinus', name:'赤龍占', rarity:'稀有', color:'#e87a5a', min:1.0, max:8.0, power:0.72, w:0.015, desc:'身體偏紅的龍占，在藍色的礁盤裡特別顯眼。' },
   { id:'amberjack_gold', spot:'reef', of:'amberjack', name:'黃金紅甘', rarity:'傳說', color:'#f0c040', min:10, max:60, power:0.95, w:0.01, desc:'全身像黃金一樣的紅甘，傳說只在大潮的日子出現。' },
+  // ---- 北方冰封群島：冰湖（冰洞釣）和流冰海岸 ----
+  { id:'wakasagi', spot:'icelake', name:'公魚', rarity:'常見', color:'#c8d0c4', min:0.008, max:0.035, power:0.18, desc:'冬天湖面結冰以後，大家鑿一個小洞、用好幾根細細的鉤子一次釣好幾條的小魚，炸起來香香脆脆。' },
+  { id:'shirauo', spot:'icelake', name:'白魚', rarity:'常見', color:'#eef2f0', min:0.004, max:0.02, power:0.15, desc:'身體幾乎透明的小魚，死掉以後才會變白，所以叫白魚。早春成群游到湖邊產卵。' },
+  { id:'dolly', spot:'icelake', name:'花羔紅點鮭', rarity:'稀有', color:'#6f7a5a', min:0.15, max:1.4, power:0.5, desc:'住在冰冷乾淨的山湖和溪流裡，身上有紅色和白色的小圓點，像撒了糖粒一樣。' },
+  { id:'himemasu', spot:'icelake', name:'姬鱒', rarity:'稀有', color:'#7a9ab0', min:0.3, max:1.6, power:0.58, desc:'一輩子都住在湖裡的紅鮭，平常銀色，到了秋天要產卵時全身會變成紅色。' },
+  { id:'ito', spot:'icelake', name:'哲羅鮭', rarity:'傳說', color:'#5a5a48', min:4, max:35, power:0.92, w:0.25, desc:'日本最大的淡水魚，可以活二十年以上，連鳥和老鼠都吃，被叫做「幻之魚」，現在已經非常少了。' },
+  { id:'capelin', spot:'icesea', name:'毛鱗魚', rarity:'常見', color:'#9ab0a8', min:0.015, max:0.06, power:0.2, desc:'北方冷海裡成群結隊的小魚，是海鳥、鱈魚和鯨魚最重要的食物。母魚肚子裡滿滿都是卵。' },
+  { id:'hokke', spot:'icesea', name:'遠東多線魚', rarity:'常見', color:'#8a8670', min:0.2, max:1.2, power:0.42, desc:'北方很常見的魚，身上有好幾條側線。剖開曬一晚做成一夜干，烤起來油油的很下飯。' },
+  { id:'cod', spot:'icesea', name:'太平洋鱈', rarity:'常見', color:'#8a7a5a', min:0.8, max:9, power:0.6, desc:'大大的嘴巴、下巴有一根小鬍鬚，住在冰冷的海底。魚肉雪白，冬天煮鱈魚火鍋最好吃。' },
+  { id:'sleepershark', spot:'icesea', name:'太平洋睡鯊', rarity:'傳說', color:'#4a4a50', min:80, max:700, power:0.97, w:0.2, desc:'住在冰冷深海、游得很慢很慢的大鯊魚，好像一直在睡覺。這一類的鯊魚可以活好幾百年。' },
+  { id:'wakasagi_gold', spot:'icelake', of:'wakasagi', name:'金色公魚', rarity:'稀有', color:'#e8c860', min:0.008, max:0.035, power:0.18, w:0.025, desc:'全身金黃色的公魚，色素和一般的不一樣，冰洞裡一閃一閃的。' },
+  { id:'shirauo_gold', spot:'icelake', of:'shirauo', name:'金色白魚', rarity:'稀有', color:'#f4e4a0', min:0.004, max:0.02, power:0.15, w:0.025, desc:'透明的身體帶著淡淡的金色，很少很少見。' },
+  { id:'dolly_gold', spot:'icelake', of:'dolly', name:'黃金紅點鮭', rarity:'稀有', color:'#e8b040', min:0.15, max:1.4, power:0.5, w:0.02, desc:'身體變成金黃色的花羔紅點鮭，紅點還在，像金子上撒了紅寶石。' },
+  { id:'himemasu_albino', spot:'icelake', of:'himemasu', name:'白化姬鱒', rarity:'稀有', color:'#f4ecec', min:0.3, max:1.6, power:0.58, w:0.02, desc:'全身白白的、眼睛紅紅的姬鱒。' },
+  { id:'ito_gold', spot:'icelake', of:'ito', name:'黃金哲羅鮭', rarity:'傳說', color:'#d8a040', min:4, max:35, power:0.92, w:0.008, desc:'傳說中金色的「幻之魚」，連老漁夫一輩子都沒看過。' },
+  { id:'capelin_gold', spot:'icesea', of:'capelin', name:'金色毛鱗魚', rarity:'稀有', color:'#e8d070', min:0.015, max:0.06, power:0.2, w:0.025, desc:'一大群銀色毛鱗魚裡，偶爾會混著一條金色的。' },
+  { id:'hokke_albino', spot:'icesea', of:'hokke', name:'白化多線魚', rarity:'稀有', color:'#f0ece0', min:0.2, max:1.2, power:0.42, w:0.02, desc:'全身淡淡白色的遠東多線魚。' },
+  { id:'cod_albino', spot:'icesea', of:'cod', name:'白化鱈魚', rarity:'稀有', color:'#f2eee6', min:0.8, max:9, power:0.6, w:0.02, desc:'全身雪白的鱈魚，在冰冷的海底像一顆會游的雪球。' },
+  { id:'sleepershark_albino', spot:'icesea', of:'sleepershark', name:'白化睡鯊', rarity:'傳說', color:'#e8e4e0', min:80, max:700, power:0.97, w:0.008, desc:'全身白色的睡鯊，慢慢從深海浮上來，像一艘白色的潛水艇。' },
   { id:'baskingshark', spot:'harbor', name:'姥鯊', rarity:'傳說', color:'#6b665d', min:500, max:4000, power:0.95, w:0.18, desc:'世界第二大的魚，張著像山洞一樣的大嘴慢慢游，靠濾海水裡的浮游生物過活。鰓裂長得幾乎繞頭一圈，春天常常浮在水面晒太陽。' },
   { id:'greatwhite', spot:'harbor', name:'大白鯊', rarity:'傳說', color:'#6c7480', min:300, max:1500, power:0.99, w:0.2, desc:'背是石板灰、肚子雪白，一口三角形的鋸齒牙。會從深處往上衝撞獵物，力氣大到能把整條船拖著走，拉線一定要穩。' },
   { id:'baskingshark_albino', spot:'harbor', of:'baskingshark', name:'白化姥鯊', rarity:'傳說', color:'#f2ece4', min:500, max:4000, power:0.95, w:0.008, desc:'全身白裡透粉、眼睛淡紅的姥鯊。白化在好幾種鯊魚身上都出現過，但在姥鯊身上非常非常罕見。' },
@@ -198,6 +217,9 @@ const ISLE = { x:150, z:0, r:24, y:0.32 };
 // 海上的釣蝦場、企鵝冰原：在主島西邊的海上（用快速傳送或渡船去）
 const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
 const ICE = { x:-120, z:-72, w:30, d:22, y:0.45 };
+// 北方冰封群島（2026-11-05）：主島北邊（-x）的雪島，中間一座結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。坐港口阿海的船去
+const FROST = { x:-160, z:-10, r:22, y:0.36, lake:{ x:-156, z:-8, r:8.5, y:0.37 }, holes:[[-158.4, -9.6], [-153.6, -5.8], [-155.2, -11.6], [-159.6, -4.6], [-152.4, -9.8]], dock:[-139.2, -10] };
+function frostHole(x, z, r){ for (const h of FROST.holes) if (Math.hypot(x - h[0], z - h[1]) < (r || 0.45)) return h; return null; }
 const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red'], legendBoost:1.4 },
@@ -209,6 +231,8 @@ const SPOTS = [
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
   { id:'canal', label:'百年生態池', short:'生態池', subtitle:'百年生態池：石頭砌的池邊、紅色拱橋、假山和睡蓮', pos:V3(13.0, -41.1), color:'#5aa070', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','guppy','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino','guppy_albino'] },
+  { id:'icelake', label:'冰湖冰洞', short:'冰湖', subtitle:'結冰的湖上鑿好的小洞，用手竿垂直放線下去', pos:V3(-157.2, -10.8), color:'#9fd8f0', dir:V2(-0.7, 0.7).normalize(), late:true, fish:['wakasagi','shirauo','dolly','himemasu','ito','wakasagi_gold','shirauo_gold','dolly_gold','himemasu_albino','ito_gold'] },
+  { id:'icesea', label:'流冰海岸', short:'流冰', subtitle:'冰封群島北邊的海岸，流冰一塊一塊漂過來', pos:V3(-179.4, -10), color:'#5f9fc8', dir:V2(-1, 0), late:true, fish:['capelin','hokke','cod','sleepershark','capelin_gold','hokke_albino','cod_albino','sleepershark_albino'] },
   { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島，站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold'] },
   { id:'weir', label:'雙心石滬', short:'石滬', subtitle:'珊瑚礁島東邊用咾咕石疊成的愛心石滬，退潮時魚被困在裡面、咬得特別快', pos:V3(11.0, 82.0), color:'#e86a8a', dir:V2(1, 0), late:true, fish:['rabbitfish','sergeant','butterfly','girella','octopus','puffer','rabbitfish_gold','girella_gold'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','guppy','trout_golden'], legendBoost:1.8 },
@@ -246,6 +270,7 @@ const TRAVEL = [
   ...SPOTS.filter(s => s.id !== 'isle' && !s.hidden).map(s => s.id === 'shrimp' ? { id:s.id, label:'釣蝦場門口', x:-1, z:-6.4, rot:Math.PI, color:s.color } : ({ id:s.id, label:s.label, x:s.pos.x, z:s.pos.z, rot:Math.atan2(s.dir.x, s.dir.y), color:s.color })),   /* 釣蝦場在村子裡，傳送到門口（SHRIMP_DOOR 往外 2.6） */
   { id:'hill', label:'望海丘', x:-26, z:27, rot:-2.6, color:'#a6d37d' },
   { id:'lighthouse', label:'晴潮燈塔', x:LIGHTHOUSE[0] - 2.4, z:LIGHTHOUSE[1] + 3.2, rot:2.6, color:'#ffe5a4' },
+  { id:'frostdock', label:'冰封群島碼頭', x:-141.2, z:-10, rot:-Math.PI / 2, color:'#bfe6f5' },
 ];
 const SHIRTS = ['#f17b6d','#2f89c7','#3fbf9d','#ffd36a','#9b7bff','#f5a5d8','#ff9f43','#5b6b7a'];
 const HATS = ['#ffd36a','#f6f0dd','#18334a','#f17b6d','#3fbf9d','#8c5d3b'];
@@ -666,7 +691,7 @@ function buildTrees(trees, PX, PZ){
 }
 
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
-function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
+function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castBlocked(x, z, px, pz){
   const L = Math.hypot(px - x, pz - z); if (L < 2.2) return false;
   let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
@@ -1174,8 +1199,9 @@ addFlora();
 function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of waters) if (x > w.x0 && x < w.x1 && z > w.z0 && z < w.z1) return true; return false; }
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
 function isleH(x, z){ const d = Math.hypot(x - ISLE.x, z - ISLE.z); if (d > ISLE.r + 2.2) return null; return d <= ISLE.r ? ISLE.y : ISLE.y - (d - ISLE.r) / 2.2 * 0.3; }
-function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } return Math.max(0, terrainH(x, z)); }
-function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
+function frostH(x, z){ const d = Math.hypot(x - FROST.x, z - FROST.z); if (d > FROST.r + 2.2) return null; if (Math.hypot(x - FROST.lake.x, z - FROST.lake.z) < FROST.lake.r) return FROST.lake.y; return d <= FROST.r ? FROST.y : FROST.y - (d - FROST.r) / 2.2 * 0.3; }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z); if (fh !== null) return Math.max(0, fh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } return Math.max(0, terrainH(x, z)); }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
 function blocked(x, z, r){
   for (const c of colliders){
     if (c.t === 'b'){ if (Math.abs(x - c.x) < c.hw + r && Math.abs(z - c.z) < c.hd + r) return true; }
@@ -1843,7 +1869,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_albino']);
+const BIG_FISH = new Set(['sleepershark', 'sleepershark_albino', 'bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_albino']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -2439,7 +2465,7 @@ const WORLD_REGIONS = [
   { label:'🌿 紅樹林', x:56, z:16 },
   { label:'🪷 百年生態池', x:16.6, z:-36.4 },
   { label:'🌊 深海海域（坐船）', x:60, z:-36 },
-  { label:'❄️ 北方冰封群島（坐船・準備中）', edge:[0.5, 0.03] },
+  { label:'❄️ 北方冰封群島（找港口的阿海坐船）', edge:[0.5, 0.03] },
   { label:'🪸 珊瑚礁群島（走長橋過去）', edge:[0.13, 0.5] },
   { label:'🐠 遠洋神秘島（坐船・準備中）', edge:[0.68, 0.97] },
 ];   // 地圖顯示 -58..58 公尺
@@ -2503,6 +2529,7 @@ function renderMap(body){
 function waterSpotId(x, z){
   if (inShrimpHall(x, z, 5)) return 'shrimp';
   if (Math.hypot(x - ISLE.x, z - ISLE.z) < 55) return 'isle';
+  if (Math.hypot(x - FROST.x, z - FROST.z) < 50) return frostHole(x, z, 1) ? 'icelake' : 'icesea';
   const i = terrainInfo(x, z);
   if (!i.region && inMang(x, z)) return 'mangrove';
   if (!i.region && inReef(x, z)) return inWeir(x, z) ? 'weir' : 'reef';   /* 溪的出海口還是溪 */
@@ -2514,6 +2541,7 @@ function shoreSpot(){
   if (Math.hypot(me.pos.x - Shore.x, me.pos.z - Shore.z) < 0.25 && Math.abs(lerpAngle(me.rot, Shore.r, 1) - me.rot) < 0.01 && t - Shore.at < 600) return Shore.res;
   Shore.x = me.pos.x; Shore.z = me.pos.z; Shore.r = me.rot; Shore.at = t; Shore.res = null;
   if (myBoat || mySeat) return null;
+  { const h = Math.hypot(me.pos.x - FROST.lake.x, me.pos.z - FROST.lake.z) < FROST.lake.r + 1 && FROST.holes.find(h => Math.hypot(me.pos.x - h[0], me.pos.z - h[1]) < 2.2); if (h){ const dx = h[0] - me.pos.x, dz = h[1] - me.pos.z, L = Math.hypot(dx, dz) || 1; Shore.res = Object.assign({}, SPOT_BY_ID.icelake, { pos: me.pos.clone(), dir: new THREE.Vector2(dx / L, dz / L), shore: true, legendBoost: 1, hole: h }); return Shore.res; } }
   const dirs = [me.rot]; for (let k = 1; k <= 6; k++){ dirs.push(me.rot + k * 0.45); dirs.push(me.rot - k * 0.45); }
   for (const a of dirs){ const dx = Math.sin(a), dz = Math.cos(a);
     for (let d = 1.2; d <= 4.6; d += 0.55){ const px = me.pos.x + dx * d, pz = me.pos.z + dz * d;
@@ -2671,7 +2699,7 @@ function biteWait(c){
 }
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
-  if (s && s.id !== 'shrimp' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, d0);
+  if (s && s.id !== 'shrimp' && s.id !== 'icelake' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, d0);
     if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
   { const fit = rodFit(s && s.id); if (fit === 'bad' && !doCast.told[s.id]){ doCast.told[s.id] = 1; const best = Object.entries(ROD_TYPES).find(([, T]) => T.fit && T.fit.includes(s.id)); setTimeout(() => toast(`${ROD_TYPES[rodType(curRod())].name}在這裡不太好用${best ? `，${s.short}比較適合用${best[1].icon}${best[1].name}（包包裡可以換）` : '，換成甩竿試試'}`), 900); } }
   if (liftHeight() > LIFT_H && !hasNet() && !doCast.netTold){ doCast.netTold = 1; setTimeout(() => toast(`🥅 這裡比水面高很多：1.5 公斤以上的魚沒有撈網會拉不上來（釣具店「🧰工具」有賣）`), 400); }
@@ -2680,8 +2708,9 @@ function doCast(){
   const bt = Rig.rig === 'lure' ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
   if (bt){ if (!Cloud.on) cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
   const rt = rodType(curRod()), dist = s.id === 'shrimp' ? 1.4 + c * 1.6 : (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1);   /* 手竿拋不遠、遠投竿拋很遠 */   /* 蝦竿很短，拋近近的 */
-  const cp = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, dist);
-  const to = new THREE.Vector3(cp[0] + rand(-0.3,0.3), 0.12, cp[1] + rand(-0.3,0.3));
+  const hole = s.id === 'icelake' ? (s.hole || FROST.holes.slice().sort((a, b) => Math.hypot(me.pos.x - a[0], me.pos.z - a[1]) - Math.hypot(me.pos.x - b[0], me.pos.z - b[1]))[0]) : null;   /* 冰洞：直接放進洞裡 */
+  const cp = hole ? hole : castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, dist);
+  const to = new THREE.Vector3(cp[0] + (hole ? 0 : rand(-0.3,0.3)), 0.12, cp[1] + (hole ? 0 : rand(-0.3,0.3)));
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
   me.flying = { from, to, t:0, delay:0.17, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } }; me.windup = 0; me.castT = 0;
@@ -3091,6 +3120,58 @@ function buildIsle(layout, ownerName){
   for (const it of L.items) placeItemInGroup(isleGroup, it, true);
   isleCols = colliders.slice(n0);
   isleGroup.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+}
+// ---- 北方冰封群島的樣子（第一次走近才蓋，手機比較省）：雪島、結冰的湖和冰洞、冰釣帳篷、雪松、雪屋、雪人、流冰、海豹、一直下的小雪 ----
+const Frost = { built:false, snow:null, floes:[], seals:[] };
+function buildFrost(){
+  Frost.built = true; const F0 = FROST, g = new THREE.Group(); g.position.set(F0.x, 0, F0.z); scene.add(g); const R = F0.r, L = F0.lake, lx = L.x - F0.x, lz = L.z - F0.z;
+  let sd = 11; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  { const sh = new THREE.Mesh(new THREE.CylinderGeometry(R + 2.2, R + 3.8, 0.8, 56), mat('#d8e4ec', 0.9)); sh.position.y = F0.y - 0.72; g.add(sh); }
+  { const shape = new THREE.Shape(); shape.absarc(0, 0, R, 0, Math.PI * 2, false); const hole = new THREE.Path(); hole.absarc(lx, -lz, L.r, 0, Math.PI * 2, true); shape.holes.push(hole);   /* 雪地中間挖一個湖 */
+    const eg = new THREE.ExtrudeGeometry(shape, { depth: 0.5, bevelEnabled: false, curveSegments: 40 }); eg.rotateX(-Math.PI / 2); const top = new THREE.Mesh(eg, mat('#f6f9fc', 0.85)); top.position.y = F0.y - 0.5; top.receiveShadow = true; g.add(top);
+    const sk = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 1.6, 0.5, 56, 1, true), mat('#e8f0f6', 0.9)); sk.position.y = F0.y - 0.25; g.add(sk); }
+  // 結冰的湖：冰面上有幾個鑿好的洞（洞裡看得到水）
+  { const shape = new THREE.Shape(); shape.absarc(0, 0, L.r + 0.05, 0, Math.PI * 2, false); for (const h of F0.holes){ const p = new THREE.Path(); p.absarc(h[0] - L.x, -(h[1] - L.z), 0.42, 0, Math.PI * 2, true); shape.holes.push(p); }
+    const ig = new THREE.ExtrudeGeometry(shape, { depth: 0.06, bevelEnabled: false, curveSegments: 36 }); ig.rotateX(-Math.PI / 2); const ice = new THREE.Mesh(ig, new THREE.MeshStandardMaterial({ color:'#bfe3f2', roughness:0.18, metalness:0.05, transparent:true, opacity:0.92 })); ice.position.set(lx, L.y - 0.06, lz); ice.receiveShadow = true; g.add(ice);
+    const bank = new THREE.Mesh(new THREE.CylinderGeometry(L.r, L.r, 0.6, 40, 1, true), mat('#9fb8c8', 0.9, { side: THREE.BackSide })); bank.position.set(lx, L.y - 0.3, lz); g.add(bank);
+    for (let i = 0; i < 26; i++){ const a = rr() * 6.28, r = rr() * L.r * 0.9; const c = new THREE.Mesh(new THREE.CircleGeometry(0.3 + rr() * 0.9, 7), new THREE.MeshBasicMaterial({ color:'#e8f6fc', transparent:true, opacity:0.35 })); c.rotation.x = -Math.PI / 2; c.position.set(lx + Math.cos(a) * r, L.y + 0.005, lz + Math.sin(a) * r); if (!frostHole(F0.x + c.position.x, F0.z + c.position.z, 1)) g.add(c); }   /* 冰上的白色霜花 */
+    for (const h of F0.holes){ const hx = h[0] - F0.x, hz = h[1] - F0.z; const rim = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.07, 6, 18), mat('#e8f4fa', 0.5)); rim.rotation.x = Math.PI / 2; rim.position.set(hx, L.y, hz); g.add(rim);
+      for (let k = 0; k < 4; k++){ const a = rr() * 6.28; g.add(box([0.12 + rr() * 0.15, 0.06, 0.1 + rr() * 0.12], '#dff2fa', [hx + Math.cos(a) * 0.62, L.y + 0.03, hz + Math.sin(a) * 0.62])); } } }
+  // 冰釣帳篷（兩頂）、小板凳
+  for (const [i, h] of [[0, F0.holes[1]], [1, F0.holes[3]]]){ const tg = new THREE.Group(), c = ['#e8473a', '#2f89c7'][i]; const tent = new THREE.Mesh(new THREE.ConeGeometry(1.3, 1.9, 4, 1, true), mat(c, 0.8, { side: THREE.DoubleSide })); tent.position.y = 0.95; tent.rotation.y = Math.PI / 4; tg.add(tent);
+    tg.position.set(h[0] - F0.x + (i ? -1.6 : 1.6), L.y, h[1] - F0.z + 0.8); g.add(tg); addCircleCol(h[0] + (i ? -1.6 : 1.6), h[1] + 0.8, 0.9); }
+  // 雪松
+  const tree = (x, z, s) => { const tg = new THREE.Group(); tg.add(box([0.22 * s, 0.6 * s, 0.22 * s], '#5a4030', [0, 0.3 * s, 0])); for (let k = 0; k < 3; k++){ const c = new THREE.Mesh(new THREE.ConeGeometry((1.15 - k * 0.3) * s, 1.2 * s, 8), mat('#2f5a48', 0.9)); c.position.y = (0.9 + k * 0.7) * s; tg.add(c); const sn = new THREE.Mesh(new THREE.ConeGeometry((0.85 - k * 0.24) * s, 0.5 * s, 8), mat('#f6fafc', 0.8)); sn.position.y = (1.3 + k * 0.7) * s; tg.add(sn); }
+    tg.position.set(x, F0.y, z); g.add(tg); addCircleCol(F0.x + x, F0.z + z, 0.45 * s); };
+  for (let i = 0; i < 46; i++){ const a = rr() * Math.PI * 2, r = 4 + rr() * (R - 6), x = Math.cos(a) * r, z = Math.sin(a) * r; if (Math.hypot(x - lx, z - lz) < L.r + 2.2 || (x > 6 && Math.abs(z) < 3.2) || (x < -R + 7 && Math.abs(z) < 4)) continue; tree(x, z, 0.8 + rr() * 0.7); }
+  // 雪屋
+  { const ig = new THREE.Mesh(new THREE.SphereGeometry(1.7, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('#f2f8fc', 0.6)); ig.position.set(-6, F0.y, 8); g.add(ig); const en = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 12, 1, false, 0, Math.PI), mat('#eaf4fa', 0.6)); en.rotation.set(0, 0, Math.PI / 2); en.rotation.order = 'ZYX'; en.position.set(-6, F0.y, 9.8); en.rotation.y = Math.PI / 2; g.add(en);
+    const door = new THREE.Mesh(new THREE.CircleGeometry(0.45, 12, 0, Math.PI), mat('#2b3f5a', 0.9)); door.position.set(-6, F0.y + 0.01, 10.42); g.add(door); addCircleCol(F0.x - 6, F0.z + 8, 1.7); }
+  // 雪人
+  for (const [x, z, ry] of [[9, -6, 0.6], [3, 11, -0.4], [-10, -9, 2.4]]){ const sg = new THREE.Group(), w = mat('#fbfdff', 0.6); for (const [r, y] of [[0.45, 0.4], [0.33, 1.0], [0.24, 1.45]]){ const b = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 8), w); b.position.y = y; sg.add(b); }
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 6), mat('#ff8a30', 0.6)); nose.rotation.x = Math.PI / 2; nose.position.set(0, 1.47, 0.3); sg.add(nose); for (const ex of [-0.08, 0.08]) sg.add(box([0.04, 0.04, 0.02], '#18334a', [ex, 1.55, 0.22]));
+    sg.add(box([0.5, 0.08, 0.1], '#e8473a', [0, 1.22, 0.06])); sg.position.set(x, F0.y, z); sg.rotation.y = ry; g.add(sg); addCircleCol(F0.x + x, F0.z + z, 0.45); }
+  // 碼頭（東邊，阿海的船停在這裡）、招牌
+  { const x0 = F0.x + R - 0.6, x1 = F0.dock[0] + 6; addDeck((x0 + x1) / 2, F0.dock[1], x1 - x0, 2.6, 0.38); const dk = box([x1 - x0, 0.12, 2.6], '#8c6a4a', [(x0 + x1) / 2 - F0.x, 0.32, F0.dock[1] - F0.z]); g.add(dk);
+    for (let x = x0; x <= x1; x += 2) for (const sz of [-1.2, 1.2]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.2, 6), mat('#5a4030')); p.position.set(x - F0.x, -0.2, F0.dock[1] - F0.z + sz); g.add(p); }
+    const boat = makeBoatMesh('#2f89c7'); boat.position.set(x1 - 1.2 - F0.x, 0, F0.dock[1] - F0.z + 2.4); boat.rotation.y = Math.PI / 2; g.add(boat);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#2b4a6a'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#f6fafc'; c.fillRect(8, 8, 496, 112); c.fillStyle = '#2b4a6a'; c.font = 'bold 64px sans-serif'; c.textAlign = 'center'; c.fillText('❄ 北方冰封群島', 256, 88);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(R - 3, F0.y + 2.6, -3.4); sp.rotation.y = Math.PI / 2; g.add(sp);
+    for (const sz of [-1.5, 1.5]){ const po = box([0.16, 3, 0.16], '#5a4030', [R - 3, F0.y + 1.5, -3.4 + sz]); g.add(po); } addCircleCol(F0.x + R - 3, F0.z - 4.9, 0.2); addCircleCol(F0.x + R - 3, F0.z - 1.9, 0.2); }
+  // 北邊海岸外的流冰、躺在冰上的海豹
+  for (let i = 0; i < 34; i++){ const a = Math.PI + (rr() - 0.5) * 2.2, r = R + 4 + rr() * 16, s = 0.8 + rr() * 2.2; const fl = new THREE.Mesh(new THREE.CylinderGeometry(s, s * 1.08, 0.3, 6 + Math.floor(rr() * 3)), mat('#f2f8fc', 0.6)); fl.position.set(Math.cos(a) * r, WATER_LEVEL, Math.sin(a) * r); fl.rotation.y = rr() * 6; fl.scale.z = 0.6 + rr() * 0.5; g.add(fl); Frost.floes.push({ m: fl, ph: rr() * 6, s });
+    if (i % 9 === 3){ const se = new THREE.Group(), sm = mat('#7a7f86', 0.6); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 4, 10), sm); b.rotation.z = Math.PI / 2; b.position.y = 0.32; se.add(b); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), sm); hd.position.set(0.55, 0.45, 0); se.add(hd); for (const ez of [-0.08, 0.08]) se.add(box([0.04, 0.04, 0.04], '#111', [0.74, 0.5, ez]));
+      se.position.copy(fl.position); se.position.y += 0.1; se.rotation.y = rr() * 6; g.add(se); Frost.seals.push({ m: se, fl, ph: rr() * 6 }); } }
+  // 一直下的小雪（跟著鏡頭）
+  { const N = 500, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ pos[i * 3] = (rr() - 0.5) * 40; pos[i * 3 + 1] = rr() * 14; pos[i * 3 + 2] = (rr() - 0.5) * 40; }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const p = new THREE.Points(geo, new THREE.PointsMaterial({ color:'#ffffff', size:0.09, transparent:true, opacity:0.9, depthWrite:false })); p.frustumCulled = false; scene.add(p); Frost.snow = p; }
+  g.traverse(o => { if (o.isMesh){ o.castShadow = false; } });
+}
+function updateFrost(dt, t){
+  const d = Math.hypot(me.pos.x - FROST.x, me.pos.z - FROST.z); if (!Frost.built){ if (d < 90) buildFrost(); else return; }
+  const near = d < 70; if (Frost.snow){ Frost.snow.visible = near && !Dive.on && !House.on; if (Frost.snow.visible){ const a = Frost.snow.geometry.attributes.position, A = a.array; Frost.snow.position.set(camera.position.x, 0, camera.position.z);
+    for (let i = 0; i < A.length; i += 3){ A[i + 1] -= dt * (0.7 + (i % 5) * 0.12); A[i] += Math.sin(t + i) * dt * 0.15; if (A[i + 1] < 0) A[i + 1] = 14; } a.needsUpdate = true; } }
+  if (near && frameNo % 2 === 0){ for (const f of Frost.floes) f.m.position.y = WATER_LEVEL + Math.sin(t * 0.8 + f.ph) * 0.04; for (const s of Frost.seals){ s.m.position.y = s.fl.position.y + 0.1; } }
 }
 function updateIsle(t){
   if (isleGroup) isleGroup.children.forEach(g => { const u = g.userData; if (u.flag) u.flag.rotation.y = Math.sin(t * 2 + g.position.x) * 0.25; if (u.fish) u.fish.forEach((f, k) => { const a = t * 0.6 + k * 2.1; f.position.set(Math.cos(a) * 0.55, 0.06, Math.sin(a) * 0.55); f.rotation.y = -a; });
@@ -4863,7 +4944,7 @@ function renderFerry(body){
     tb.append(cb, el('span', '', '👥 組隊出海：邀請大廳裡的人一起去（祕密窩點不會邀請，別人不會知道）')); body.appendChild(tb);
     body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。')); }
   { body.appendChild(el('div', 'dexhead', '⛴️ 海上的好地方')); const ul = el('ul', 'shoplist');
-    for (const [id, ic, nm, ds] of []){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
+    for (const [id, ic, nm, ds] of [['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。冰湖用手竿、海岸用遠投竿最好']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); travelTo(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
@@ -4944,7 +5025,7 @@ const Intel = { seenW: -1 };
 function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
 // 外海潛水偶爾遠遠看到一道紅色影子：赤紅霸王鯊還在（海裡沒有了就不會出現）
 function offshoreDiveFish(){ const l = offshoreFish(); if (RS.n > 0 && Math.random() < 0.15) l.push('shark_red'); return l; }
-function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && f.spot !== 'ice' && !f.rs); }   /* 紅鯊不會在一般潛點出現 */
+function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice/.test(f.spot) && !f.rs); }   /* 紅鯊不會在一般潛點出現 */
 // 把很多小東西合併成少數幾個網格（手機比較順）
 function diveMerger(){
   const parts = new Map(), tmp = new THREE.Object3D();
@@ -5616,7 +5697,7 @@ const CHUMS = [
   { id:'chum_gold',  name:'黃金特製窩', price:500, pack:2, color:'#ffd36a', wait:0.45, rare:1.5,  legend:1.8, dur:180,              desc:'釣具店老闆的祕方，什麼水域都有效，連傳說魚都會被吸引過來。' },
 ];
 const CHUM_BY_ID = Object.fromEntries(CHUMS.map(c => [c.id, c]));
-const SEA_SPOTS = new Set(['sea', 'harbor', 'isle', 'mangrove', 'mudflat', 'reef', 'weir']);
+const SEA_SPOTS = new Set(['sea', 'harbor', 'isle', 'mangrove', 'mudflat', 'reef', 'weir', 'icesea']);
 const chumZones = []; let chumTex = null;
 function chumTexture(){
   if (chumTex) return chumTex; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'), g = c.createRadialGradient(64, 64, 4, 64, 64, 64);
@@ -5771,7 +5852,7 @@ const RODS = [
   { id:'iso_pro', type:'iso', name:'黑鯛磯釣竿', price:4500, color:'#5a1e1e', desc:'釣黑鯛高手用的磯釣竿，竿身很韌，稀有魚機率 ×1.4。', tension:0.7, reel:1.2, rare:1.4, legend:1.2 },
 ];
 // 竿種：甩竿哪裡都可以；手竿、遠投竿、磯釣竿在對的釣點比較好用（伺服器 fair_fishing.sql.tpl 也一樣算）
-const ROD_TYPES = { cast:{ name:'甩竿', icon:'🎣', fit:null }, pole:{ name:'手竿', icon:'🎋', fit:['river', 'lake', 'pool', 'creek', 'canal', 'weir'] }, surf:{ name:'遠投竿', icon:'🏖️', fit:['sea'] }, iso:{ name:'磯釣竿', icon:'🪨', fit:['harbor', 'isle', 'reef'] } };
+const ROD_TYPES = { cast:{ name:'甩竿', icon:'🎣', fit:null }, pole:{ name:'手竿', icon:'🎋', fit:['river', 'lake', 'pool', 'creek', 'canal', 'weir', 'icelake'] }, surf:{ name:'遠投竿', icon:'🏖️', fit:['sea', 'icesea'] }, iso:{ name:'磯釣竿', icon:'🪨', fit:['harbor', 'isle', 'reef'] } };
 const ROD_FIT = { good:{ rare:1.15, bite:0.85 }, bad:{ rare:0.85, bite:1.2 } };
 function rodType(r){ return (r && r.type) || 'cast'; }
 // ---- 公母和繁殖（037）----
@@ -8230,7 +8311,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateFrost(dt, t); updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
