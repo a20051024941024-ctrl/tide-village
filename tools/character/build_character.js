@@ -39,6 +39,7 @@ export async function buildCharacter(base){
     hair: new THREE.MeshStandardMaterial({ name:'hair', color:'#5a3d2b', roughness:0.8 }),
     shirt: new THREE.MeshStandardMaterial({ name:'shirt', color:'#f17b6d', roughness:0.75 }),
     pants: new THREE.MeshStandardMaterial({ name:'pants', color:'#2f4b63', roughness:0.8 }),
+    shin: new THREE.MeshStandardMaterial({ name:'shin', color:'#2f4b63', roughness:0.8 }),   // 小腿（穿短褲、裙子的時候遊戲換成皮膚）
     shoe: new THREE.MeshStandardMaterial({ name:'shoe', color:'#6b4a35', roughness:0.7 }),
     iris: new THREE.MeshStandardMaterial({ name:'iris', color:'#3a2a20', roughness:0.35 }),
     ink: new THREE.MeshStandardMaterial({ name:'ink', color:'#18334a', roughness:0.4 }),
@@ -84,7 +85,7 @@ export async function buildCharacter(base){
   for (const s of ['l', 'r']){
     const ul = P['upperleg' + s], ll = P['lowerleg' + s], ft = P['foot' + s], to = P['toes' + s];
     put(along(new THREE.CapsuleGeometry(0.098, Math.max(0.01, ul.distanceTo(ll) - 0.02), 4, 12), ul.clone().add(v3(0, 0.06, 0)), ll), M.pants, [['hips', P.hips, ul], ['upperleg' + s, ul, ll], ['lowerleg' + s, ll, ft]]);
-    put(along(new THREE.CapsuleGeometry(0.09, Math.max(0.01, ll.distanceTo(ft) - 0.03), 4, 12), ll, ft), M.pants, [['upperleg' + s, ul, ll], ['lowerleg' + s, ll, ft], ['foot' + s, ft, to]]);
+    put(along(new THREE.CapsuleGeometry(0.09, Math.max(0.01, ll.distanceTo(ft) - 0.03), 4, 12), ll, ft), M.shin, [['upperleg' + s, ul, ll], ['lowerleg' + s, ll, ft], ['foot' + s, ft, to]]);
     { const g = new THREE.SphereGeometry(0.11, 14, 10); g.scale(0.95, 0.6, 1.4); put(g, M.shoe, [['foot' + s, ft, to.clone().lerp(ft, 0.4)], ['toes' + s, to.clone().lerp(ft, 0.4), to]], at(ft.x, Math.max(0.065, ft.y - 0.07), (ft.z + to.z) / 2 + 0.01)); }
   }
 

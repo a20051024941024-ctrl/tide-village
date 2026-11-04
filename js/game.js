@@ -1476,9 +1476,10 @@ function applyGear(av, gear){
   // ---- 褲子 ----
   av.pantsM.color.set(PANTS_COL[gear.pants] || PANTS_COL.pants_jeans);
   const shorts = gear.pants === 'pants_shorts' || gear.pants === 'pants_skirt';
+  av.shortLegs = shorts; if (av.kid && av.kid.prim.shin) av.kid.prim.shin.material = shorts ? av.skinM : av.pantsM;   /* 3D 角色：短褲、裙子露出小腿 */
   for (const L of [av.legL, av.legR]){
     const pm = L.userData.pants; pm.scale.y = shorts ? 0.6 : 1; pm.position.y = shorts ? -0.06 : -0.1; if (L.userData.pants2) L.userData.pants2.visible = !shorts;
-    if (shorts) mk(new THREE.CylinderGeometry(0.062, 0.058, 0.26, 10), av.skinM, 0, -0.29, 0, L);
+    if (shorts && !av.kid) mk(new THREE.CylinderGeometry(0.062, 0.058, 0.26, 10), av.skinM, 0, -0.29, 0, L);
     if (gear.pants === 'pants_rainbow') RAINBOW.forEach((c, i) => mk(new THREE.CylinderGeometry(0.094, 0.094, 0.05, 12), M(c, 0.7), 0, -0.06 - i * 0.055, 0, L));
   }
   if (gear.pants === 'pants_skirt'){ const sk = mk(new THREE.CylinderGeometry(0.26, 0.34, 0.24, 18), av.pantsM, 0, 0.47, 0); sk.scale.z = 0.9; for (const y of [0.41, 0.5]){ const b = mk(new THREE.CylinderGeometry(0.3 + (0.47 - y) * 0.3, 0.3 + (0.47 - y) * 0.3, 0.02, 18), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.9; } }
@@ -1904,7 +1905,7 @@ function kidUpgrade(f){
   const a = f.av; if (a.kid || !KID.ok) return;
   const m = SkeletonUtils.clone(KID.gltf.scene), prim = {}, B = {};
   m.traverse(o => { if (o.isBone) B[o.name] = o; if (o.isMesh){ o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; prim[o.material.name] = o; } });
-  const mapM = { skin: a.skinM, shirt: a.shirtM, pants: a.pantsM, shoe: a.shoeM };
+  const mapM = { skin: a.skinM, shirt: a.shirtM, pants: a.pantsM, shin: a.pantsM, shoe: a.shoeM };
   for (const k in prim){ if (mapM[k]) prim[k].material = mapM[k]; else prim[k].visible = false; }   /* 臉、頭髮用原本的（表情、髮型才換得了），身體用模型的 */
   const keepRot = a.g.rotation.clone(), keepPos = a.g.position.clone(); a.g.rotation.set(0, 0, 0); a.g.position.set(0, 0, 0); a.g.add(m); m.updateMatrixWorld(true); a.g.updateMatrixWorld(true);
   for (const o of a.BODY) if (o.parent) o.parent.remove(o);
@@ -4909,7 +4910,7 @@ function renderFerry(body){
 const DIVE = { x:60, y:-70, z:-40, r:30, top:15 };
 // 三個潛水點：越深越需要好裝備，寶物也越多（伺服器 022_dive_sites.sql 一樣）
 const DIVE_SITES = {
-  reef:  { name:'珊瑚礁',   icon:'🪸', need:['dive_suit'], top:15, sky:['#5fc3e6', '#0b3557'], fog:'#1e7aa6', far:30, coral:70, kelp:46, rocks:26, shells:14, chests:[0.55], pearls:0, legendP:0.28, desc:'淺淺的珊瑚礁，有一艘小沉船、很多魚群。' },
+  reef:  { name:'珊瑚礁',   icon:'🪸', need:['dive_suit'], top:15, sky:['#8ee6f7', '#0b4a78'], fog:'#2a9cc8', far:34, coral:90, lush:true, kelp:46, rocks:26, shells:14, chests:[0.55], pearls:0, legendP:0.28, desc:'淺淺的珊瑚礁，有一艘小沉船、很多魚群。' },
   wreck: { name:'沉船深海', icon:'⚓', need:['dive_suit', 'dive_tank3'], top:24, sky:['#2f7fb0', '#04182c'], fog:'#0f4a70', far:22, coral:24, kelp:18, rocks:34, shells:8, chests:[1, 0.7, 0.4], pearls:0, legendP:0.6, big:true, desc:'更深的海底躺著一艘大帆船，寶箱比較多、也比較值錢，大魚和傳說魚常在附近。要大型氧氣瓶。',
     fish:['grouper', 'shark', 'hammer', 'barracuda', 'moonbream', 'kingcrab', 'lobster', 'tuna', 'octopus', 'turtle', 'manta', 'stingray', 'trevally', 'scorpion', 'mackerel', 'bonito'] },
   offshore: { name:'外海', icon:'🌊', need:['dive_suit'], top:20, sky:['#3f9fd0', '#05213a'], fog:'#145a85', far:26, coral:4, kelp:10, rocks:14, shells:0, chests:[], pearls:0, legendP:0, boat:true, desc:'從船上直接潛下去，看看這一帶現在有哪些魚特別多。', get fish(){ return offshoreDiveFish(); } },
@@ -4972,7 +4973,9 @@ function buildDive(){
   { const pg = new THREE.PlaneGeometry(R * 2 + 24, R * 2 + 24, 56, 56); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], a = new THREE.Color(S.cave ? '#5a5a62' : S.big ? '#b8a684' : '#e2d2a4'), b = new THREE.Color(S.cave ? '#3a3c46' : S.big ? '#8f8064' : '#c7b384'), cc = new THREE.Color();
     for (let i = 0; i < p.count; i++){ const x = p.getX(i) + X, z = p.getZ(i) + Z; p.setY(i, diveBed(x, z) - Y); cc.copy(a).lerp(b, 0.5 + 0.5 * Math.sin(x * 0.7) * Math.cos(z * 0.6)); cs.push(cc.r, cc.g, cc.b); }
     pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); pg.computeVertexNormals();
-    const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed); }
+    const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed);
+    Dive.caustic = null;
+    if (S.lush){ const cg = pg.clone(); cg.translate(0, 0.04, 0); const tx = causticTex(); tx.repeat.set(11, 11); const cm = new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ map: tx, transparent:true, opacity:0.2, blending:THREE.AdditiveBlending, depthWrite:false, fog:true })); cm.position.set(X, Y, Z); cm.renderOrder = 1; g.add(cm); Dive.caustic = cm; } }
   // 石頭
   Dive.rocks = [];
   for (let i = 0; i < S.rocks; i++){ const [x, y, z] = onBed(), s = 0.5 + rnd() * 1.8 * (S.cave ? 1.6 : 1); Dive.rocks.push([x, z, s, y + s * 0.95]); M.add(new THREE.IcosahedronGeometry(s, 0), ['#7d7a72', '#6a6f72', '#8a8170'][i % 3], x, y + s * 0.2, z, rnd(), rnd() * 6, rnd(), 1, 0.55 + rnd() * 0.3, 1, 0.95); }
@@ -4984,6 +4987,32 @@ function buildDive(){
     else if (kind === 1){ M.add(new THREE.SphereGeometry(0.45 * s, 12, 8), ['#c9d36a', '#9fd08a', '#e8b06a'][i % 3], x, y + 0.12 * s, z, 0, 0, 0, 1, 0.62, 1, 1); }
     else if (kind === 2){ const ry = rnd() * 3; M.add(new THREE.CircleGeometry(0.75 * s, 12, 0, Math.PI), c, x, y + 0.05, z, 0, ry, 0, 1, 1, 1, 0.7); M.add(new THREE.CircleGeometry(0.75 * s, 12, 0, Math.PI), c, x, y + 0.05, z, 0, ry + Math.PI, 0, 1, 1, 1, 0.7); }
     else { for (let k = 0; k < 5; k++){ const a = k * 1.25, h = 0.3 + rnd() * 0.5; M.add(new THREE.CylinderGeometry(0.07 * s, 0.08 * s, h * s, 7, 1, true), c, x + Math.cos(a) * 0.13 * s, y + h * s / 2, z + Math.sin(a) * 0.13 * s, 0, 0, 0, 1, 1, 1, 0.7); } } }
+  // ---- 珊瑚礁重做（2026-11-05，照使用者給的參考圖：滿滿的珊瑚、陽光、魚群）：一座一座長滿珊瑚的礁丘＋桌形、鹿角、軟珊瑚、大海扇、硨磲貝 ----
+  if (S.lush){
+    const PAL = ['#ff6f61', '#ff9f43', '#f5a5d8', '#b48cff', '#ffd36a', '#ff7fa8', '#7fd6c4', '#5fb6e3', '#e85d8a'];
+    const coral = (x, y, z, s, type, c) => {
+      if (type === 0){ for (let k = 0; k < 5; k++){ const a = k * 1.26 + rnd(), tl = 0.45 + rnd() * 0.4, bx = x + Math.cos(a) * 0.1 * s, bz = z + Math.sin(a) * 0.1 * s;   // 鹿角
+          M.add(new THREE.CylinderGeometry(0.03 * s, 0.06 * s, tl * s, 5), c, bx + Math.cos(a) * tl * 0.2 * s, y + tl * s * 0.45, bz + Math.sin(a) * tl * 0.2 * s, Math.sin(a) * 0.55, 0, Math.cos(a) * -0.55, 1, 1, 1, 0.6);
+          for (const d of [-0.5, 0.5]){ const ex = bx + Math.cos(a) * tl * 0.42 * s, ez = bz + Math.sin(a) * tl * 0.42 * s; M.add(new THREE.CylinderGeometry(0.022 * s, 0.035 * s, 0.32 * s, 4), c, ex + Math.cos(a + d) * 0.08 * s, y + tl * s * 0.9 + 0.1 * s, ez + Math.sin(a + d) * 0.08 * s, Math.sin(a + d) * 0.7, 0, Math.cos(a + d) * -0.7, 1, 1, 1, 0.6);
+            M.add(new THREE.SphereGeometry(0.035 * s, 5, 3), shade(c, 0.35), ex + Math.cos(a + d) * 0.17 * s, y + tl * s * 0.9 + 0.24 * s, ez + Math.sin(a + d) * 0.17 * s, 0, 0, 0, 1, 1, 1, 0.5); } } }
+      else if (type === 1){ M.add(new THREE.CylinderGeometry(0.08 * s, 0.12 * s, 0.45 * s, 6), shade(c, -0.25), x, y + 0.22 * s, z, 0, 0, 0, 1, 1, 1, 0.8);   // 桌形
+        M.add(new THREE.CylinderGeometry(0.85 * s, 0.7 * s, 0.09 * s, 14), c, x, y + 0.48 * s, z, (rnd() - 0.5) * 0.2, 0, (rnd() - 0.5) * 0.2, 1, 1, 1, 0.75); }
+      else if (type === 2){ for (let k = 0; k < 8; k++){ const a = rnd() * 6.28, r = rnd() * 0.25 * s; M.add(new THREE.SphereGeometry((0.09 + rnd() * 0.08) * s, 6, 4), k % 3 ? c : shade(c, 0.3), x + Math.cos(a) * r, y + (0.12 + rnd() * 0.25) * s, z + Math.sin(a) * r, 0, 0, 0, 1, 1, 1, 0.55); } }   // 軟珊瑚
+      else if (type === 3){ const ry = rnd() * 3, sc = 1.2 + rnd() * 0.6; for (const o of [0, Math.PI]) M.add(new THREE.CircleGeometry(0.75 * s * sc, 12, 0, Math.PI), c, x, y + 0.02, z, 0, ry + o, 0, 1, 1.25, 1, 0.7); }   // 大海扇
+      else if (type === 4){ M.add(new THREE.SphereGeometry(0.42 * s, 10, 7), ['#c9d36a', '#9fd08a', '#e8b06a', '#d8a8c8'][Math.floor(rnd() * 4)], x, y + 0.1 * s, z, 0, 0, 0, 1, 0.62, 1, 1); }   // 腦紋
+      else if (type === 5){ for (let k = 0; k < 6; k++){ const a = k * 1.05, h = 0.25 + rnd() * 0.45; M.add(new THREE.CylinderGeometry(0.06 * s, 0.07 * s, h * s, 6, 1, true), c, x + Math.cos(a) * 0.12 * s, y + h * s / 2, z + Math.sin(a) * 0.12 * s, 0, 0, 0, 1, 1, 1, 0.7); } }   // 管狀
+      else { const ry = rnd() * 6; M.add(new THREE.SphereGeometry(0.32 * s, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), '#d8cfc0', x, y + 0.14 * s, z, 0.2, ry, 0, 1, 0.55, 0.8, 0.5);   // 硨磲貝
+        M.add(new THREE.SphereGeometry(0.3 * s, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), '#d8cfc0', x, y + 0.18 * s, z, -0.5, ry, 0, 1, 0.35, 0.8, 0.5); M.add(new THREE.BoxGeometry(0.5 * s, 0.05 * s, 0.12 * s), ['#3f7fe0', '#2fb8a8', '#8a5fd8'][Math.floor(rnd() * 3)], x, y + 0.17 * s, z, 0, ry, 0, 1, 1, 1, 0.3); }
+    };
+    // 礁丘：每一座上面長滿珊瑚，魚會繞著游
+    for (let b = 0; b < 12; b++){ const a = b / 12 * Math.PI * 2 + rnd() * 0.4, r = R * (0.22 + rnd() * 0.6), bx = X + Math.cos(a) * r, bz = Z + Math.sin(a) * r, by = diveBed(bx, bz), bs = 1.3 + rnd() * 1.5;
+      M.add(new THREE.IcosahedronGeometry(bs, 1), ['#b08a8a', '#a8907a', '#9a8aa8', '#b8a080'][b % 4], bx, by + bs * 0.12, bz, 0, rnd() * 6, 0, 1.3, 0.62, 1.15, 0.95);
+      Dive.rocks.push([bx, bz, bs * 1.25, by + bs * 0.7]);
+      for (let k = 0; k < 20; k++){ const ca = rnd() * Math.PI * 2, cr = Math.sqrt(rnd()) * bs * 1.1, cx = bx + Math.cos(ca) * cr * 1.25, cz = bz + Math.sin(ca) * cr * 1.1, cy = by + bs * 0.12 + bs * 0.6 * Math.sqrt(Math.max(0, 1 - Math.pow(cr / (bs * 1.15), 2))) - 0.05;
+        coral(cx, cy, cz, 0.7 + rnd() * 0.7, Math.floor(rnd() * 7), PAL[Math.floor(rnd() * PAL.length)]); } }
+    // 礁丘之間也散著珊瑚
+    for (let i = 0; i < 70; i++){ const [x, y, z] = onBed(); coral(x, y, z, 0.6 + rnd() * 0.7, Math.floor(rnd() * 7), PAL[Math.floor(rnd() * PAL.length)]); }
+  }
   // 海葵（會晃的觸手用小圓錐）
   for (let i = 0; i < (S.cave ? 0 : S.big ? 6 : 18); i++){ const [x, y, z] = onBed(), c = ['#ff9fd0', '#ffd36a', '#a6f0d0'][i % 3]; for (let k = 0; k < 9; k++){ const a = k / 9 * Math.PI * 2; M.add(new THREE.ConeGeometry(0.035, 0.32, 4), c, x + Math.cos(a) * 0.12, y + 0.16, z + Math.sin(a) * 0.12, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4, 1, 1, 1, 0.5); } M.add(new THREE.CylinderGeometry(0.12, 0.15, 0.12, 9), '#c0587a', x, y + 0.04, z); }
   // 沉船
@@ -5023,7 +5052,8 @@ function buildDive(){
     im.frustumCulled = false; g.add(im); Dive.kelp = { im, list }; }
   // 光束
   Dive.shafts = [];
-  for (let i = 0; i < (S.cave ? 0 : S.big ? 4 : 7); i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
+  const rayTx = (() => { const cv = document.createElement('canvas'); cv.width = 4; cv.height = 64; const c = cv.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.6, '#8aa8b0'); gr.addColorStop(1, '#000000'); c.fillStyle = gr; c.fillRect(0, 0, 4, 64); return new THREE.CanvasTexture(cv); })();   /* 光束越往下越淡 */
+  for (let i = 0; i < (S.cave ? 0 : S.big ? 4 : S.lush ? 13 : 7); i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, S.lush ? 2.0 + rnd() * 1.4 : 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', map: rayTx, transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
     const a = rnd() * Math.PI * 2, r = 6 + rnd() * R * 0.7; m.position.set(X + Math.cos(a) * r, Y + DIVE.top / 2 + 0.5, Z + Math.sin(a) * r); m.rotation.z = 0.18; m.rotation.y = rnd(); g.add(m); Dive.shafts.push(m); }
   // 泡泡（往上飄）
   { const N = 90, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ pos[i * 3] = X + (rnd() - 0.5) * R * 2; pos[i * 3 + 1] = Y + rnd() * DIVE.top; pos[i * 3 + 2] = Z + (rnd() - 0.5) * R * 2; }
@@ -5031,11 +5061,15 @@ function buildDive(){
   // 魚群（同一種魚一起游）
   const SP = siteSpecies(Dive.site || 'reef'), inst = SP.filter(f => FISH_STYLE[f.id] && !BIG_FISH.has(f.id) && f.rarity === '常見');
   Dive.schools = [];
-  const nS = Math.min(5, inst.length); const pool = inst.slice().sort(() => rnd() - 0.5);
-  for (let s = 0; s < nS; s++){ const f = pool[s], st = FISH_STYLE[f.id], n = 14 + Math.floor(rnd() * 10), ims = [];
+  const lowQ = Quality.tier === 'low', nS = Math.min(S.lush ? 7 : 5, inst.length); const pool = inst.slice().sort(() => rnd() - 0.5);
+  for (let s = 0; s < nS; s++){ const f = pool[s], st = FISH_STYLE[f.id], n = S.lush ? Math.round((16 + Math.floor(rnd() * 9)) * (lowQ ? 0.7 : 1)) : 14 + Math.floor(rnd() * 10), ims = [];
     for (const part of Object.keys(FISH_MESH[st.shape])){ const im = new THREE.InstancedMesh(fishGeo(st.shape, part), fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape), n); im.frustumCulled = false; g.add(im); ims.push(im); }
     const a = rnd() * Math.PI * 2, r = 6 + rnd() * (R * 0.55);
     Dive.schools.push({ f, ims, n, zk: /^Fish/.test(st.shape) ? 1.5 : 1, cx: X + Math.cos(a) * r * 0.4, cz: Z + Math.sin(a) * r * 0.4, rad: 4 + rnd() * 7, y: 1.5 + rnd() * 6, sp: (0.08 + rnd() * 0.1) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * 6, off: Array.from({ length: n }, () => [rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 6]), pos: new THREE.Vector3() }); }
+  // 一大團銀色的小魚（餌球），繞著圈圈游
+  if (S.lush){ const small = inst.filter(f => f.max < 1.5).sort((a, b) => a.max - b.max)[0] || pool[0];
+    if (small){ const st = FISH_STYLE[small.id], n = lowQ ? 40 : 60, ims = []; for (const part of Object.keys(FISH_MESH[st.shape])){ const im = new THREE.InstancedMesh(fishGeo(st.shape, part), fishMat(small.id, part, st.c[part] || small.color, st.glow, st.move, st.shape), n); im.frustumCulled = false; g.add(im); ims.push(im); }
+      Dive.schools.push({ f: small, ims, n, ball: true, zk: 1, cx: X - 4, cz: Z + 3, rad: 3, y: 5, sp: 0.05, ph: 0, off: Array.from({ length: n }, () => [rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 6.28]), pos: new THREE.Vector3() }); } }
   // 單獨游的魚（稀有魚比較多，傳說魚偶爾出現）
   Dive.fish = [];
   const solo = SP.filter(f => f.rarity !== '常見' || !FISH_STYLE[f.id]); const pickSolo = [];
@@ -5063,6 +5097,13 @@ function buildDive(){
     ch.position.set(x, y, z); ch.rotation.y = rnd() * 6; g.add(ch); Dive.loot.push({ kind:'chest', x, y, z, m: ch, lid, glow }); }
   g.traverse(o => { if (o.isMesh || o.isInstancedMesh){ o.castShadow = false; o.receiveShadow = false; } });
 }
+// 海底的光紋（陽光穿過水面）：會接起來的格子圖，越靠近兩個點中間的地方越亮
+let CAUSTIC = null;
+function causticTex(){ if (CAUSTIC) return CAUSTIC; const N = 128, cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d'), im = c.createImageData(N, N), r = mulberry(7), P = [];
+  for (let i = 0; i < 26; i++) P.push([r() * N, r() * N]);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ let d1 = 1e9, d2 = 1e9; for (const [px, py] of P){ let dx = Math.abs(x - px), dy = Math.abs(y - py); dx = Math.min(dx, N - dx); dy = Math.min(dy, N - dy); const d = dx * dx + dy * dy; if (d < d1){ d2 = d1; d1 = d; } else if (d < d2) d2 = d; }
+    const e = Math.sqrt(d2) - Math.sqrt(d1), v = Math.max(0, 1 - e / 2.2), b = Math.round(255 * Math.pow(v, 2.2)), k = (y * N + x) * 4; im.data[k] = b * 0.85; im.data[k + 1] = b; im.data[k + 2] = b; im.data[k + 3] = 255; }
+  c.putImageData(im, 0, 0); CAUSTIC = new THREE.CanvasTexture(cv); CAUSTIC.wrapS = CAUSTIC.wrapT = THREE.RepeatWrapping; return CAUSTIC; }
 function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function startDive(site, back){
   site = DIVE_SITES[site] ? site : 'reef'; Dive.back = back || null;   /* back：從岸邊下水的話，浮上來回到這裡 */
@@ -5156,6 +5197,7 @@ function updateDive(dt, t){
   // 魚群
   for (const s of Dive.schools){ const a = t * s.sp + s.ph, cx = s.cx + Math.cos(a) * s.rad, cz = s.cz + Math.sin(a) * s.rad, cy = Math.max(diveBed(cx, cz) + s.y + Math.sin(t * 0.3 + s.ph) * 0.8, rockLift(cx, cz, 2.2)); s.pos.set(cx, cy, cz);
     const hd = Math.atan2(-Math.cos(a) * Math.sign(s.sp), -Math.sin(a) * Math.sign(s.sp));
+    if (s.ball){ for (let i = 0; i < s.n; i++){ const q = s.off[i], rr = 0.8 + Math.abs(q[0]) * 1.5, an = t * (0.7 + Math.abs(q[2]) * 0.4) + q[3]; tankDummy.position.set(cx + Math.cos(an) * rr, cy + q[1] * 1.3, cz + Math.sin(an) * rr); tankDummy.rotation.set(0, -an, 0); tankDummy.scale.set(0.45, 0.45, 0.45); tankDummy.updateMatrix(); for (const im of s.ims) im.setMatrixAt(i, tankDummy.matrix); } for (const im of s.ims) im.instanceMatrix.needsUpdate = true; continue; }
     for (let i = 0; i < s.n; i++){ const q = s.off[i], w = t * 2 + q[3]; tankDummy.position.set(cx + q[0] * 1.6 + Math.sin(w) * 0.15, cy + q[1] * 0.7, cz + q[2] * 1.6 + Math.cos(w) * 0.15); tankDummy.rotation.set(0, hd + Math.sin(w * 0.7) * 0.15, 0); tankDummy.scale.set(0.55, 0.55, 0.55 * s.zk); tankDummy.updateMatrix(); for (const im of s.ims) im.setMatrixAt(i, tankDummy.matrix); }
     for (const im of s.ims) im.instanceMatrix.needsUpdate = true;
     // 靠太近會散開一點
@@ -5167,7 +5209,8 @@ function updateDive(dt, t){
   // 泡泡、光束、水面
   if (Dive.bubbles){ const p = Dive.bubbles.geometry.attributes.position, a = p.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (0.6 + (i % 7) * 0.08); a[i] += Math.sin(t * 2 + i) * dt * 0.05; if (a[i + 1] > DIVE.y + DIVE.top) a[i + 1] = diveBed(a[i], a[i + 2]); } p.needsUpdate = true; }
   if (Math.random() < dt * 3) { const a = Dive.bubbles.geometry.attributes.position.array, k = Math.floor(Math.random() * a.length / 3) * 3; a[k] = me.pos.x + (Math.random() - 0.5) * 0.3; a[k + 1] = me.baseY + 1.2; a[k + 2] = me.pos.z + (Math.random() - 0.5) * 0.3; }
-  Dive.shafts.forEach((m, i) => { m.material.opacity = (0.022 + 0.016 * Math.sin(t * 0.6 + i * 1.7)) * (DayNight.period === 'night' ? 0.3 : 1); });
+  { const lush = (DIVE_SITES[Dive.site] || {}).lush; Dive.shafts.forEach((m, i) => { m.material.opacity = ((lush ? 0.05 : 0.022) + (lush ? 0.03 : 0.016) * Math.sin(t * 0.6 + i * 1.7)) * (DayNight.period === 'night' ? 0.3 : 1); if (lush) m.rotation.z = 0.18 + Math.sin(t * 0.25 + i) * 0.05; }); }
+  if (Dive.caustic){ const o = Dive.caustic.material.map.offset; o.x = (o.x + dt * 0.013) % 1; o.y = (o.y + dt * 0.008) % 1; Dive.caustic.material.opacity = (0.2 + Math.sin(t * 0.8) * 0.05) * (DayNight.period === 'night' ? 0.25 : 1); }
   if (Dive.surface) Dive.surface.material.opacity = 0.42 + Math.sin(t * 1.3) * 0.08;
   for (const l of Dive.loot){ if (l.kind === 'shell' && !l.got){ l.m.position.y = l.y + 0.08 + Math.sin(t * 2 + l.x) * 0.02; }
     if (l.kind === 'chest'){ const k = l.open ? clamp((now() - l.open) / 0.8, 0, 1) : 0; l.lid.rotation.x = -k * 1.6; l.glow.material.opacity = l.got ? 0 : 0.25 + Math.sin(t * 3) * 0.15; } }
@@ -5952,7 +5995,7 @@ const DESIGN_SLOTS = [['top', '上衣'], ['pants', '褲子'], ['hat', '帽子'],
 function applyDesigns(av, gear){
   const t = designId(gear.top), p = designId(gear.pants), h = designId(gear.hat), sh = designId(gear.shoes), bk = designId(gear.back), ac = designId(gear.acc);
   av.body.material = (t && designMat(t)) || av.shirtM;
-  const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]){ if (L.userData.pants) L.userData.pants.material = pm; if (L.userData.pants2) L.userData.pants2.material = pm; } if (av.kid && av.kid.prim.pants) av.kid.prim.pants.material = pm;
+  const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]){ if (L.userData.pants) L.userData.pants.material = pm; if (L.userData.pants2) L.userData.pants2.material = pm; } if (av.kid && av.kid.prim.pants) av.kid.prim.pants.material = pm; if (av.kid && av.kid.prim.shin) av.kid.prim.shin.material = av.shortLegs ? av.skinM : pm;
   // 帽子：用草帽的形狀，整頂換成你的圖案
   for (const b of av.hatBase){ if (!b.userData.m0) b.userData.m0 = b.material; const hm = h && designMat(h); if (h) b.visible = true; b.material = hm && b !== av.hatBase[2] ? hm : b.userData.m0; }
   // 鞋子
