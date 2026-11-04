@@ -1737,7 +1737,7 @@ class Fisher {
     this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
-    this.fishing = false; this.bobPos = new THREE.Vector3(); this.dip = 0; this.bend = 0; this.flying = null;
+    this.fishing = false; this.bobPos = new THREE.Vector3(); this.dip = 0; this.bend = 0; this.flying = null; this.windup = 0; this.castT = -1;
     this.tag = document.createElement('div'); this.tag.className = 'tag';
     this.bub = document.createElement('div'); this.bub.className = 'bub'; this.bub.hidden = true;
     this.nm = document.createElement('div'); this.nm.className = 'nm' + (opts.kind ? ' ' + opts.kind : '');
@@ -1786,8 +1786,12 @@ class Fisher {
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * (this.speed < 0.3 ? 1 : 0); }
     a.rod.visible = this.fishing;
     if (this.fishing){
-      a.armR.rotation.x = -1.0 - this.bend * 0.3; a.armL.rotation.x = -0.7 - this.bend*0.2;
-      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04;
+      // 甩竿動畫：蓄力時把竿子往後舉到肩膀上（windup），放開時用力往前甩（castT），竿尖甩過頭再回來
+      let pz = -(this.windup || 0);
+      if (this.castT >= 0){ this.castT += dt; const k = this.castT / 0.5; if (k >= 1) this.castT = -1; else pz = k < 0.4 ? -1 + (k / 0.4) * 2.25 : 1.25 - ((k - 0.4) / 0.6) * 1.25; }
+      const back = Math.max(0, -pz), fwd = Math.max(0, pz);
+      a.armR.rotation.x = -1.0 - this.bend * 0.3 - back * 1.5 + fwd * 0.35; a.armL.rotation.x = -0.7 - this.bend * 0.2 - back * 1.2 + fwd * 0.25;
+      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.6 + fwd * 0.55;
     } else { a.armL.rotation.x = -sw * 0.8; a.armR.rotation.x = sw * 0.8; }
     if (this.held){
       const h = this.held;
@@ -1803,7 +1807,8 @@ class Fisher {
     const showBob = this.fishing && this.bobState !== 'none';
     this.bob.visible = showBob; this.line.visible = showBob;
     if (showBob){
-      if (this.flying){
+      if (this.flying && this.flying.delay > 0){ this.flying.delay -= dt; this.av.tip.getWorldPosition(this.flying.from); this.bob.position.copy(this.flying.from); }   // 甩到一半浮標才飛出去
+      else if (this.flying){
         const f = this.flying; f.t += dt / f.dur; const k = Math.min(1, f.t);
         this.bob.position.lerpVectors(f.from, f.to, k); this.bob.position.y += Math.sin(k * Math.PI) * f.h;
         if (k >= 1){ this.flying = null; this.bobState = 'water'; ripple(f.to.x, f.to.z); if (f.done) f.done(); }
@@ -2365,7 +2370,7 @@ function doCast(){
   const to = new THREE.Vector3(cp[0] + rand(-0.3,0.3), 0.12, cp[1] + rand(-0.3,0.3));
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
-  me.flying = { from, to, t:0, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } };
+  me.flying = { from, to, t:0, delay:0.17, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } }; me.windup = 0; me.castT = 0;
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.roll = null; F.rollWait = 0; F.pre = null;
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
@@ -2378,7 +2383,7 @@ function doCast(){
   SFX.cast(); pushPresence(true);
 }
 function cancelFishing(msg){
-  reelCleanup(); F.phase = 'idle'; F.hold = false; me.fishing = false; me.bobState = 'none'; me.flying = null; me.dip = 0; me.bend = 0;
+  reelCleanup(); F.phase = 'idle'; F.hold = false; me.fishing = false; me.bobState = 'none'; me.flying = null; me.dip = 0; me.bend = 0; me.windup = 0; me.castT = -1;
   if (msg && msg !== '收竿了') flash(msg);
   pushPresence(true);
 }
@@ -2445,7 +2450,7 @@ function updateFishing(dt, t){
   if (F.phase === 'charging'){
     F.chargeT += dt; F.charge = 1 - Math.abs(((F.chargeT / 1.3) % 2) - 1);
     $('#chargeFill').style.width = (F.charge*100).toFixed(1) + '%';
-    me.bend = F.charge * 1.5;
+    me.bend = F.charge * 0.25; me.windup = Math.min(1, 0.35 + F.charge * 0.65);   /* 蓄力時竿子往後舉 */
   }
   if (F.phase === 'waiting' && !me.flying){
     me.bend *= 0.9;
