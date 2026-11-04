@@ -156,6 +156,12 @@
 // 15 秒內 3D 引擎還沒開始，就告訴玩家怎麼辦（通常是網路或 CDN 問題）
 setTimeout(function(){ if (!window.__gameStarted){ var d = document.createElement('div'); d.className = 'panel'; d.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;max-width:320px;text-align:center;z-index:99'; d.textContent = '遊戲載入太久了。請確認網路連線後重新整理；如果是在 LINE 或 Messenger 裡打開，改用 Chrome 開啟試試。'; document.body.appendChild(d); } }, 15000);
 </script>
+<script>
+// 遊戲出錯時把錯誤訊息顯示在畫面上（方便截圖回報）
+(function(){ var shown = 0; function show(m){ if (shown++ > 2) return; try { var d = document.getElementById('errBox'); if (!d){ d = document.createElement('div'); d.id = 'errBox'; d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);max-width:86vw;padding:14px 16px;background:#fff;color:#a3201a;border:2px solid #e8473a;border-radius:12px;font:13px/1.5 sans-serif;z-index:999;white-space:pre-wrap;word-break:break-all'; (document.body || document.documentElement).appendChild(d); d.textContent = '⚠️ 遊戲出錯了，請截圖給作者：\n'; } d.textContent += m + '\n'; } catch(e){} }
+  addEventListener('error', function(e){ show((e.message || '錯誤') + ' @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno); });
+  addEventListener('unhandledrejection', function(e){ var r = e.reason; if (r && /supabase|fetch|network|Load failed/i.test(String(r.message || r))) return; show('Promise: ' + String(r && (r.stack || r.message) || r).slice(0, 300)); }); })();
+</script>
 <script type="module" src="js/game.js"></script>
 
 <script>
