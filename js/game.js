@@ -3819,6 +3819,32 @@ async function loadIsleP(){ if (IsleP.busy || !Cloud.on) return; IsleP.busy = tr
   try { const [a, b] = await Promise.all([Cloud.sb.rpc('isle_people'), Cloud.sb.rpc('isle_storage')]); if (a.data){ IsleP.me = a.data.me; IsleP.people = a.data.people || []; } IsleP.store = b.data || []; } catch(e){}
   IsleP.busy = false; if (!$('#sheet').hidden && curTab === 'island') renderTab(); }
 async function isleCall(fn, args, msg){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; if (data && data.tank) { adoptRow(data); buildTank(); } if (msg) flash(msg, 1.4); } catch(e){ toast(cloudErrMsg(e)); } IsleP.at = 0; Home.at = 0; loadIsleP(); }
+// ---- 島上的幫手（065_isle_npc.sql）：白天在碼頭釣魚、釣到的放進公共儲物箱；大家都離線也照樣工作 ----
+var IsleH = { owner:null, list:null, at:0, busy:false, fishers:[], hireName:'', hireTrait:'hard' };
+const HELPER_TRAIT = { hard:'💪 勤勞', normal:'🙂 普通', sleepy:'😴 愛睡', chatty:'💬 愛聊天' };
+async function loadIsleH(owner){ if (IsleH.busy || !Cloud.on) return; IsleH.busy = true; IsleH.at = Date.now(); try { const { data } = await Cloud.sb.rpc('isle_helpers', { p_owner: owner || null }); IsleH.list = data || []; IsleH.owner = owner || null; } catch(e){} IsleH.busy = false; isleHelperSpawn(); if (!$('#sheet').hidden && curTab === 'island') renderTab(); }
+function isleHelperSpawn(){ for (const f of IsleH.fishers) f.dispose(); IsleH.fishers = []; if (!onIsle || !IsleH.list) return;
+  IsleH.list.forEach((h, i) => { const f = new Fisher({ shirt:['#3fbf9d', '#ff9f43'][i % 2], hat:'#f6f0dd', name:`${h.name}・島上的幫手`, kind:'npc' }); const x = ISLE.x + (i ? 0.9 : -0.9), z = ISLE.z + ISLE.r + 4.4;
+    f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = 0; f.helper = h; f.setGear({ hat:'hat_bucket', face: h.state === 'sleep' ? 'face_sleepy' : 'face_happy' }); f.sitting = true;
+    if (h.state === 'fish'){ f.fishing = true; f.bobState = 'water'; const cp = castPoint(x, z, 0, 1, 4); f.bobPos.set(cp[0], 0.12, cp[1]); f.next = now() + rand(4, 10); } else f.say('💤', 'emote', 99999);
+    f.lines = h.state === 'sleep' ? ['（呼呼大睡中…）'] : [...(h.log || []).slice(0, 3).map(l => l.txt), `我已經幫大家釣了 ${h.total} 條魚`, h.trait === 'chatty' ? '島上的大家都好親切～' : h.trait === 'hard' ? '再釣一條！' : '今天的海很平靜']; IsleH.fishers.push(f); }); }
+function updateIsleHelpers(dt, t){ if (!onIsle){ if (IsleH.fishers.length){ for (const f of IsleH.fishers) f.dispose(); IsleH.fishers = []; IsleH.list = null; } return; }
+  if (Cloud.on && (!IsleH.list || IsleH.owner !== onIsle.owner || Date.now() - IsleH.at > 10 * 60000)) loadIsleH(onIsle.owner);
+  for (const f of IsleH.fishers){ const d = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z);
+    if (f.fishing && t > f.next){ f.dip = 1; f.bend = 0.6; ripple(f.bobPos.x, f.bobPos.z); f.next = t + rand(6, 14); } f.dip = (f.dip || 0) * Math.pow(0.08, dt); f.bend = (f.bend || 0) * Math.pow(0.2, dt);
+    if (d < 7 && t > (f.talkAt || 0) && f.helper.state === 'fish'){ f.say(f.lines[Math.floor(Math.random() * f.lines.length)], '', 5); f.talkAt = t + rand(15, 28); }
+    if (d < 60){ f.update(dt, t); f.placeTag(); } else f.tag.style.display = 'none'; } }
+function renderIsleHelpers(body){
+  const my = PERM_RANK[IsleP.me] || 0, L = (IsleH.owner === null || !onIsle || onIsle.owner === myIdOrMe()) ? IsleH.list : null; if (!L && !IsleH.busy) loadIsleH(null);
+  body.appendChild(el('div', 'dexhead', '🧑‍🌾 島上的幫手（最多 2 個）')); body.appendChild(el('p', 'sub', '幫手白天（6～22 點）在島的碼頭釣魚，釣到的魚放進公共儲物箱；晚上睡覺。大家都離線的時候也照樣工作（最多補 24 小時），儲物箱滿了就會停下來。'));
+  const ul = el('ul', 'shoplist'); for (const h of L || []){ const li = el('li'); li.appendChild(el('span', 'dishic', h.state === 'sleep' ? '💤' : '🎣')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${h.name}・${HELPER_TRAIT[h.trait] || ''}`)); d.appendChild(el('div', 'sub2', `一共釣了 ${h.total} 條・${(h.log || [])[0] ? h.log[0].txt : ''}`)); li.appendChild(d);
+    if (my >= 3){ const a = el('div', 'tacts'), b = el('button', 'tbtn ghost vbtn', '請他離開'); b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; return; } b.disabled = true; Cloud.sb.rpc('isle_fire', { p_id: h.id }).then(() => { IsleH.at = 0; loadIsleH(null); }); }); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
+  body.appendChild(ul);
+  if (my >= 2 && (L || []).length < 2){ const row = el('div', 'tankbar'), inp = el('input'); inp.placeholder = '幫手的名字（1～8 個字）'; inp.maxLength = 8; inp.value = IsleH.hireName; inp.style.cssText = 'font-size:15px;padding:6px 8px;border-radius:10px;border:1px solid #c8d8e4;max-width:170px'; inp.addEventListener('input', () => { IsleH.hireName = inp.value; });
+    const tr = el('div', 'chipline'); for (const [k, l] of Object.entries(HELPER_TRAIT)){ const b = el('button', 'chip' + (IsleH.hireTrait === k ? ' on' : ''), l); b.addEventListener('click', () => { IsleH.hireTrait = k; renderTab(); }); tr.appendChild(b); }
+    const go = el('button', 'tbtn', '請幫手 🪙1500'); go.addEventListener('click', async () => { go.disabled = true; try { const { data, error } = await Cloud.sb.rpc('isle_hire', { p_name: inp.value, p_trait: IsleH.hireTrait }); if (error) throw error; adoptRow(data); flash(`🧑‍🌾 ${inp.value} 來島上幫忙了！`, 1.6); IsleH.hireName = ''; IsleH.at = 0; loadIsleH(null); } catch(e){ toast(cloudErrMsg(e)); go.disabled = false; } });
+    row.append(inp, go); body.appendChild(row); body.appendChild(tr); }
+}
 function renderIslePerms(body, meId){
   if (!IsleP.at || Date.now() - IsleP.at > 20000) loadIsleP();
   const my = PERM_RANK[IsleP.me] || 0;
@@ -3830,6 +3856,7 @@ function renderIslePerms(body, meId){
     if (!isMe && my >= 2 && my > th){ const k = el('button', 'tbtn ghost vbtn', '請他搬走'); k.addEventListener('click', () => { if (k.dataset.sure !== '1'){ k.dataset.sure = '1'; k.textContent = '確定？'; return; } k.disabled = true; isleCall('kick_home', { p_member: p.id }, '已經請他搬走了'); }); a.appendChild(k); }
     li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
+  renderIsleHelpers(body);
   // 公共儲物箱
   body.appendChild(el('div', 'dexhead', `📦 公共儲物箱（${(IsleP.store || []).length} / 60）`)); body.appendChild(el('p', 'sub', '島上大家共用，跟自己的魚缸分開。放進去的魚誰都看得到，誰放的、誰拿的都有紀錄。'));
   const S = IsleP.store || []; if (S.length){ const u2 = el('ul', 'shoplist cols'); for (const x of S){ const f = FISH_BY_ID[x.item.f], li = el('li'); li.appendChild(el('span', 'dishic', '🐟')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f ? f.name : x.item.f} ${fmtKg(+x.item.w)}`)); d.appendChild(el('div', 'sub2', `${x.by} 放的`)); li.appendChild(d);
@@ -8495,7 +8522,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateFrost(dt, t); updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
