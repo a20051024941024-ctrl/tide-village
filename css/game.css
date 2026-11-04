@@ -765,3 +765,4 @@ body.ui2.touch.infish:not(.chatting) #chatForm{display:none}
 body.ui2.touch #chatForm{display:none}
 body.ui2.touch.chatting #chatForm{display:flex}
 body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
+.rank li.rk4{grid-template-columns:30px 56px 1fr auto}.rank li .rkfish{width:56px;height:36px}

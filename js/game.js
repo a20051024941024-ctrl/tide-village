@@ -5817,6 +5817,7 @@ async function rsPoll(){
 setInterval(rsPoll, 120000); setTimeout(rsPoll, 8000);
 function announceCatch(f, w, spot){ if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot }).catch(() => {});
   if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>你</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);   /* 跑馬燈只報稀有和傳說，自己的也會出現 */ logMsg('', `你釣到了 ${f.name} ${w.toFixed(2)}kg`, true); }
+const Rare = { rows: null, at: 0 };
 const lb = { best: [], total: [] }; let lbLoading = false, lbSlow = false, lbMode = 'best';
 
 /* ================= NPC villagers ================= */
@@ -5883,10 +5884,22 @@ function renderTab(){
     }
   } else if (curTab === 'rank'){
     const seg = el('div', 'seg');
-    (Cloud.contest ? [['week','🏆本週比賽']] : []).concat(Cloud.on ? [['tny','⏱️定時大賽']] : []).concat([['best','最大的魚'],['total','釣魚總數']]).concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
+    (Cloud.contest ? [['week','🏆本週比賽']] : []).concat(Cloud.on ? [['tny','⏱️定時大賽']] : []).concat([['best','最大的魚']]).concat(Cloud.on ? [['rare','💎最稀有的魚']] : []).concat([['total','釣魚總數']]).concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
     body.appendChild(seg);
     if (lbMode === 'week' && !Cloud.contest) lbMode = 'best';
-    if (lbMode === 'tny' && !Cloud.on) lbMode = 'best';
+    if ((lbMode === 'tny' || lbMode === 'rare') && !Cloud.on) lbMode = 'best';
+    if (lbMode === 'rare'){   // 最稀有的魚：全服總共被釣到最少次的魚（伺服器 033_rare_board.sql）
+      body.appendChild(el('p', 'sub', '每個人釣過的魚裡面，全服被釣到最少次的那一種。越少人釣到的越稀有；同樣少的話，傳說 > 稀有 > 常見。'));
+      if (!Rare.at || Date.now() - Rare.at > 60000){ Rare.at = Date.now(); Cloud.sb.rpc('get_rare_board').then(({ data }) => { if (Array.isArray(data)){ Rare.rows = data; if (curTab === 'rank' && lbMode === 'rare' && !$('#sheet').hidden) renderTab(); } }, () => {}); }
+      const rows = Rare.rows || [];
+      if (!rows.length){ body.appendChild(el('div', 'empty', Rare.rows ? '還沒有人上榜。' : '正在讀取排行榜…')); return; }
+      const ul = el('ol', 'rank'); rows.slice(0, 20).forEach((r, i) => { const f = FISH_BY_ID[r.f]; if (!f) return; const isMe = r.id === myId, li = el('li', 'rk4' + (isMe ? ' me' : ''));
+        li.appendChild(el('span', 'pos', String(i + 1))); const known = rec.count[f.id] > 0; const cv = fishCanvas(f, known, 56, 36); cv.className = 'rkfish'; li.appendChild(cv);   /* 自己沒釣過的只看得到黑影（變種也不會被看光） */
+        const who = el('span', 'who', isMe ? `${myDisplayName() === '你' ? '你' : myDisplayName() + '（你）'}` : (r.name || '釣客')); who.appendChild(el('small', '', known ? `${f.name}・${f.rarity}${f.of ? '・✨變種' : ''}` : `？？？・${f.rarity}${f.of ? '・✨神秘變種' : ''}`));
+        if (!isMe && r.id){ who.classList.add('canvisit'); who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); }
+        li.appendChild(who); li.appendChild(el('span', 'val', r.n <= 1 ? '全服唯一' : `全服 ${r.n} 條`)); ul.appendChild(li); });
+      body.appendChild(ul); return;
+    }
     if (lbMode === 'tny'){
       const T = tourneyNow(), st = new Date(T.start), hm = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       body.appendChild(el('p', 'sub', `每天台灣時間 ${TOURNEY.hours.map(h => h + ':00').join('、')} 開始，每場 ${TOURNEY.mins} 分鐘。比賽時間內釣到的魚全部加起來，總重量最重的前三名拿 🪙${TOURNEY.prize.join(' / ')}，有參加的人也有 🪙${TOURNEY.join}。結束後會自動發獎。`));
