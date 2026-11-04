@@ -2418,7 +2418,8 @@ function pickFish(spot, charge){
   // 傳說魚：每個釣點的傳說魚加起來是固定的機率（不會因為種類多就特別常出現），外海比較高
   const nLeg = list.filter(f => f.rarity === '傳說' && !f.of).length,   /* 變種不算在傳說魚種類數裡 */ legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
   const rw = f => Rig.rig === 'lure' ? (LURE_FISH.has(f.id) ? 2.2 : 0.55) : Rig.rig === 'bottom' ? (BOTTOM_FISH.has(f.id) ? 2.2 : 0.65) : 1;
-  const w = list.map(f => (f.w || 1) * rw(f) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const intel = spot.id === 'harbor' ? intelAt(Date.now()).ids : null;
+  const w = list.map(f => (f.w || 1) * rw(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -3777,6 +3778,7 @@ function renderFerryBar(){
   if (!bar){ bar = document.createElement('div'); bar.id = 'ferryBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; bar.appendChild(el('span', '', `🚤 ${Ferry.label}`));
   { const n = crewNear(); if (n || Party.joined.size) bar.appendChild(el('span', 'crew', `👥 船隊 ${Math.max(n, Party.joined.size) + 1} 人${n ? `・上鉤快 ${8 * n}%` : ''}`)); }
+  if (hasDive('dive_suit') && waterSpotId(me.pos.x, me.pos.z) === 'harbor'){ const dv = el('button', 'tbtn', '🤿 下潛看魚'); dv.addEventListener('click', () => startDive('offshore')); bar.appendChild(dv); }
   const b = el('button', 'tbtn ghost', '回港口'); b.addEventListener('click', () => leaveFerry()); bar.appendChild(b);
 }
 function renderFerry(body){
@@ -3791,7 +3793,7 @@ function renderFerry(body){
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); travelTo(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
   { body.appendChild(el('div', 'dexhead', `🤿 潛水（進階）${hasDive('dive_suit') ? `・氧氣 ${diveO2()} 秒` : ''}`)); const ul = el('ul', 'shoplist');
-    for (const [k, S] of Object.entries(DIVE_SITES)){ const ok = diveSiteOk(k), li = el('li', ok ? '' : 'lock'); li.appendChild(el('span', 'dishic', S.icon));
+    for (const [k, S] of Object.entries(DIVE_SITES)){ if (S.boat) continue; const ok = diveSiteOk(k), li = el('li', ok ? '' : 'lock'); li.appendChild(el('span', 'dishic', S.icon));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', S.name)); d.appendChild(el('div', 'sub2', ok ? S.desc : `要先買：${S.need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn' + (ok ? '' : ' ghost'), '去潛水'); b.addEventListener('click', () => startDive(k)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
@@ -3836,6 +3838,7 @@ const DIVE_SITES = {
   reef:  { name:'珊瑚礁',   icon:'🪸', need:['dive_suit'], top:15, sky:['#5fc3e6', '#0b3557'], fog:'#1e7aa6', far:30, coral:70, kelp:46, rocks:26, shells:14, chests:[0.55], pearls:0, legendP:0.28, desc:'淺淺的珊瑚礁，有一艘小沉船、很多魚群。' },
   wreck: { name:'沉船深海', icon:'⚓', need:['dive_suit', 'dive_tank3'], top:24, sky:['#2f7fb0', '#04182c'], fog:'#0f4a70', far:22, coral:24, kelp:18, rocks:34, shells:8, chests:[1, 0.7, 0.4], pearls:0, legendP:0.6, big:true, desc:'更深的海底躺著一艘大帆船，寶箱比較多、也比較值錢，大魚和傳說魚常在附近。要大型氧氣瓶。',
     fish:['grouper', 'shark', 'hammer', 'barracuda', 'moonbream', 'kingcrab', 'lobster', 'tuna', 'octopus', 'turtle', 'manta', 'stingray', 'trevally', 'scorpion', 'mackerel', 'bonito'] },
+  offshore: { name:'外海', icon:'🌊', need:['dive_suit'], top:20, sky:['#3f9fd0', '#05213a'], fog:'#145a85', far:26, coral:4, kelp:10, rocks:14, shells:0, chests:[], pearls:0, legendP:0, boat:true, desc:'從船上直接潛下去，看看這一帶現在有哪些魚特別多。', get fish(){ return offshoreFish(); } },
   cave:  { name:'海底洞穴', icon:'🕳️', need:['dive_suit', 'dive_tank4', 'dive_light'], top:18, sky:['#1a3550', '#02060c'], fog:'#12324c', far:22, coral:0, kelp:0, rocks:60, shells:4, chests:[0.8], pearls:7, legendP:0.55, cave:true, desc:'又暗又神祕的洞穴，有會發光的水晶和珍珠貝，住著深海的怪魚。要專業雙氧氣瓶和潛水燈。',
     fish:['angler', 'jelly', 'lantern', 'oarfish', 'giantsquid', 'octopus', 'eel', 'moonbream', 'ika', 'squid', 'goby', 'kingcrab'] },
 };
@@ -3857,6 +3860,13 @@ function diveBed(x, z){
   return DIVE.y + Math.sin(dx * 0.21) * 0.45 + Math.cos(dz * 0.17 + dx * 0.05) * 0.55 + Math.sin((dx + dz) * 0.09) * 0.8 + Math.max(0, d - DIVE.r * 0.72) * 0.55;
 }
 let diveSp = null; function diveSpecies(){ return diveSp || (diveSp = FISH.filter(f => SEA_SPOTS.has(f.spot) || DIVE_SITES.cave.fish.includes(f.id))); }
+/* ---- 外海的魚情：每 5 分鐘換一次，這段時間有 3 種魚特別活躍（上鉤機率 ×2.5）。潛水下去就看得到是哪幾種 ----
+   伺服器（fair_fishing.sql.tpl）用一樣的雜湊算，傳說魚和變種不會出現在魚情裡 */
+const INTEL_WIN = 300000;
+function intelAt(ms){ const w = Math.floor(ms / INTEL_WIN), h = hash32('intel' + w), pool = SPOT_BY_ID.harbor.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說' && !f.of), n = pool.length;
+  return { w, end: (w + 1) * INTEL_WIN, ids: [...new Set([pool[h % n].id, pool[Math.floor(h / 256) % n].id, pool[Math.floor(h / 65536) % n].id])] }; }
+const Intel = { seenW: -1 };
+function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
 function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && f.spot !== 'ice'); }
 // 把很多小東西合併成少數幾個網格（手機比較順）
 function diveMerger(){
@@ -3982,7 +3992,8 @@ function startDive(site){
   site = DIVE_SITES[site] ? site : 'reef';
   if (Dive.on) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
   if (!diveSiteOk(site)){ toast(`${DIVE_SITES[site].name}要先買：${DIVE_SITES[site].need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); return; }
-  Dive.site = site;
+  Dive.site = site; Dive.ret = site === 'offshore' && myBoat ? { x: me.pos.x, z: me.pos.z, label: '外海' } : null;
+  if (site === 'offshore' && !Dive.ret){ toast('要在外海的船上才能從這裡潛水'); return; }
   closeSheet(); if (F.phase !== 'idle') cancelFishing(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
   setTimeout(() => {
@@ -4002,6 +4013,8 @@ function endDive(reason, instant){
     me.setSwim(false); const [fx0, fz0] = freeSpot(FERRY.at[0] - 1.2, FERRY.at[1] + 0.8); me.pos.x = fx0; me.pos.z = fz0; me.baseY = groundHeight(fx0, fz0); Jump.gy = me.baseY; me.rot = -Math.PI / 2; cam.yaw = me.rot + Math.PI; if (Dive.savedDist) cam.dist = Dive.savedDist;
     renderDiveHud(); pushPresence(true); if (!instant) setTimeout(() => fx.classList.remove('on'), 120);
     const n = Dive.seen.size; if (!instant) toast(`${reason || '🤿 浮上水面了'}${n ? `　這次看到 ${n} 種魚` : ''}`);
+    if (Dive.site === 'offshore' && Dive.ret){ const r = Dive.ret; Dive.ret = null; ferryTo(r.x, r.z, r.label); const it = intelAt(Date.now()); Intel.seenW = it.w; Intel.ids = it.ids;
+      setTimeout(() => { ticker(`🐟 外海魚情：<b>${it.ids.map(id => esc(FISH_BY_ID[id].name)).join('、')}</b> 正在這一帶活動，接下來 ${Math.max(1, Math.ceil((it.end - Date.now()) / 60000))} 分鐘比較容易上鉤`); }, 900); }
   };
   if (instant){ done(); return; }
   fx.classList.add('on'); setTimeout(done, 380);
@@ -6047,6 +6060,7 @@ function renderTab(){
     ]);
     sec('🤿 潛水（進階玩法）', [
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。',
+      '外海魚情：在外海的船上按「🤿 下潛看魚」，可以直接潛下去看這一帶現在有哪些魚。外海每 5 分鐘會有 3 種魚特別活躍（上鉤機率 ×2.5），浮上來之後跑馬燈會告訴你是哪幾種、還剩幾分鐘。',
       isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
       '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
       '靠近魚、讓牠在畫面中間時按「📷 拍照」，就會登錄進「水下圖鑑」（圖鑑分頁看得到數量）。傳說魚偶爾也會出現在水裡。',

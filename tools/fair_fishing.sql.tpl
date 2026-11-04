@@ -44,6 +44,7 @@ declare
   bait jsonb; bf jsonb; cb_r numeric := 1; cb_l numeric := 1; w jsonb; tide_st text; tr numeric := 1;
   sea boolean := p_spot = any(array(select jsonb_array_elements_text(cfg->'sea')));
   ring numeric := 1; lb numeric := 1; per text; gh numeric; tip_spot text; tip_fish text; hh bigint; pool text[];
+  ipool text[]; ih bigint; intel text[] := '{}';
   season text; mo integer; kr numeric; kl numeric; nleg integer; legk numeric; rainy boolean;
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
   c jsonb; ctype text; cat timestamptz; left_k numeric; fit numeric; k numeric; sc jsonb; age numeric; pw numeric; nb integer; fw numeric;
@@ -101,6 +102,12 @@ begin
   tip_spot := cfg->'tipSpots'->>(hh % jsonb_array_length(cfg->'tipSpots'))::integer;
   pool := array(select x from jsonb_array_elements_text(cfg->'spots'->tip_spot->'fish') with ordinality t(x, n) where cfg->'fish'->x->>'r' <> '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false) order by n);
   tip_fish := pool[1 + ((hh / 256) % cardinality(pool))::integer];
+  -- 外海的魚情（每 5 分鐘換 3 種活躍的魚，×2.5；跟 js/game.js 的 intelAt 一樣）
+  if p_spot = 'harbor' then
+    ipool := array(select x from jsonb_array_elements_text(cfg->'spots'->'harbor'->'fish') with ordinality t(x, n) where cfg->'fish'->x->>'r' <> '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false) order by n);
+    ih := public._fnv('intel' || floor(ms / 300000.0)::bigint::text);
+    intel := array[ipool[1 + (ih % cardinality(ipool))::integer], ipool[1 + ((ih / 256) % cardinality(ipool))::integer], ipool[1 + ((ih / 65536) % cardinality(ipool))::integer]];
+  end if;
   -- 季節
   mo := extract(month from now() at time zone 'Asia/Taipei');
   season := case when mo between 3 and 5 then 'spring' when mo between 6 and 8 then 'summer' when mo between 9 and 11 then 'autumn' else 'winter' end;
@@ -113,6 +120,7 @@ begin
     f := cfg->'fish'->fid; if f is null then continue; end if;
     wt := (f->>'w')::numeric
       * (case when rig = 'lure' then (case when cfg->'lure' ? fid then 2.2 else 0.55 end) when rig = 'bottom' then (case when cfg->'bottom' ? fid then 2.2 else 0.65 end) else 1 end)
+      * (case when fid = any(intel) then 2.5 else 1 end)
       * (case when tip_spot = p_spot and tip_fish = fid then 2.5 else 1 end)
       * (case when rainy and cfg->'rain' ? fid then 2 else 1 end)
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)

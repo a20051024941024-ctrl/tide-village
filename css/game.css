@@ -761,3 +761,7 @@ body.ui2 #log .m:not(.sys) b{color:#2a8fb8}
 body.ui2.touch #log .m:not(.sys){font-size:13px;max-width:min(360px,60vw)}
 body.ui2 #chatForm{box-shadow:0 0 0 2px #2a8fb8,0 4px 12px rgba(24,51,74,.2)}
 body.ui2.touch.infish:not(.chatting) #chatForm{display:none}
+/* 聊天列平常藏起來，按 💬 才出現（不要一直佔位置） */
+body.ui2.touch #chatForm{display:none}
+body.ui2.touch.chatting #chatForm{display:flex}
+body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
