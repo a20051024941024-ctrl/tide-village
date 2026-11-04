@@ -81,6 +81,7 @@ supabase/041_cage.sql 箱網養殖（放魚、每天餵、收成）
 supabase/042_rs_albino.sql 白化赤紅霸王鯊（紅鯊生小鯊時 2% 是白化）
 supabase/043_var_breed.sql 變種也會繁殖（隱性遺傳，帶基因 🧬）
 supabase/044_designs.sql 自己設計衣服褲子、設計師市集
+supabase/045_designs_all.sql 設計不設上限、帽子鞋子背飾配件也能設計
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開
