@@ -490,6 +490,35 @@ export const SPECS = {
     pect:{ t:0.2, y:-0.75, size:1.1, shape:'tri', ang:-0.25, out:0.9, w:0.55 }, pelv:{ t:0.45, size:0.5 }, caudal:{ type:'hetero', hk:1.3 }, eye:EYE(0.1, 0.4, 0.03),
     extra:[{ k:'ellip', c:{ x:0.62, y:0.0, z:0 }, r:[0.27, 0.02, 0.055], part:'Top', seg:10, rings:5 },
       ...Array.from({ length: 24 }, (_, i) => ({ k:'ellip', c:{ x:0.42 + (i >> 1) * 0.036, y:0, z:(i % 2 ? 1 : -1) * 0.06 }, r:[0.006, 0.008, 0.022], part:'Teeth', seg:5, rings:3 }))] } },
+  /* ---------------- 城市水圳（參考新竹湖口的水圳；2026-11-04）---------------- */
+  // 食蚊魚（大肚魚）Gambusia affinis：3～6 公分，灰綠半透明、嘴往上翹吃水面的孑孓，背鰭很後面、尾鰭圓；母魚肚子大、肚子後面有一塊黑色的「懷孕斑」
+  mosquitofish: { c:{ Top:'#7a7c5a', Mid:'#b8b898', Bottom:'#eeeadc', Spots:'#2a2a22', Accent:'#3a3a2a', Fins:'#c8c4a8', Eye:'#15181c', EyeW:'#d8e0d0' }, p:{
+    bl:0.8, depth:0.26, wr:0.58, tm:0.36, nose:0.6, ped:0.34, tailK:0.9, cs:0.25, yc:[[0,0.12],[0.2,0],[1,0]], up:[[0,0.35],[0.15,0.7],[0.4,0.95],[0.6,1],[1,0.4]], lo:[[0,0.3],[0.15,0.8],[0.35,1.15],[0.5,1.1],[0.7,0.7],[1,0.35]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.35, part:'Mid' }, { k:'ell', t:0.45, y:-0.45, rt:0.05, ry:0.25, part:'Accent' }], dots:{ n:10, t0:0.3, t1:0.95, y0:0.1, y1:0.7, r:0.012, part:'Spots' },
+    dorsal:{ s:0.6, e:0.7, h:0.38, shape:'round' }, anal:{ s:0.52, e:0.62, h:0.3, shape:'round' }, pect:{ t:0.22, y:0.0, size:0.35 }, pelv:{ t:0.4, size:0.22 },
+    caudal:{ type:'rounded', hk:1.15 }, eye:EYE(0.1, 0.4, 0.13, { ring:true }) } },
+  // 琵琶鼠魚（豹紋翼甲鯰）Pterygoplichthys pardalis：全身骨板、肚子扁平，嘴是吸盤在頭的下面，背鰭像一面大帆，深褐色帶豹紋；在台灣的水圳和河流裡大量繁殖的外來種
+  pleco: { c:{ Top:'#3a3024', Mid:'#5a4a36', Bottom:'#8a7a60', Spots:'#d8c8a0', Fins:'#4a3e2e', Accent:'#2a221a', Eye:'#15181c' }, move:'eel', p:{
+    bl:0.88, depth:0.15, wr:1.1, tm:0.24, nose:0.5, ped:0.18, n:2.0, cs:-0.1, yc:[[0,-0.15],[0.25,0],[1,0.05]], up:[[0,0.45],[0.1,0.85],[0.25,1],[0.5,0.8],[0.8,0.45],[1,0.22]], lo:[[0,0.25],[0.1,0.45],[0.3,0.5],[0.6,0.4],[1,0.2]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.3, y1:0.2, part:'Mid' }, { k:'wave', f:40, fy:14, t0:0.05, t1:0.98, y0:-0.3, y1:0.95, th:0.25, part:'Spots' }],
+    dorsal:{ s:0.24, e:0.52, h:0.75, shape:'round', back:0.2 }, anal:{ s:0.7, e:0.76, h:0.15 }, pect:{ t:0.18, y:-0.85, size:0.7, shape:'tri', ang:-0.3, out:0.9, w:0.45 }, pelv:{ t:0.45, size:0.45 },
+    caudal:{ type:'emarginate', hk:1.15, len:0.75 }, eye:EYE(0.08, 0.55, 0.06) } },
+  // 小盾鱧（泰國鱧、魚虎）Channa micropeltes：可以長到 1 公尺、20 公斤；大魚背上藍黑色、肚子白，眼睛後面有一條黑帶。很兇，在台灣是會吃光其他魚的外來種
+  giantsnake: { c:{ Top:'#1e2630', Mid:'#3e4a58', Bottom:'#eef0f0', Spots:'#9aa4b0', Accent:'#0e1216', Fins:'#26303a', Eye:'#c8402a', EyeW:'#e0a040' }, p:{
+    bl:0.86, depth:0.17, wr:0.78, tm:0.3, nose:0.65, ped:0.45, tailK:0.7, cs:0.25, n:2.2,
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.2, part:'Mid' }, { k:'spots', gt:0.09, gy:0.5, r:0.022, ar:5, t0:0.25, t1:0.95, y0:0.1, y1:0.6, part:'Spots', fill:0.55 }],
+    dorsal:{ s:0.25, e:0.98, h:0.28, shape:'flat', sweep:0.2 }, anal:{ s:0.5, e:0.98, h:0.26, shape:'flat', sweep:0.2 }, pect:{ t:0.2, y:-0.4, size:0.5, shape:'round' }, pelv:{ t:0.3, size:0.22, shape:'round' },
+    caudal:{ type:'rounded', hk:1.0 }, eye:EYE(0.07, 0.45, 0.075) } },
+  // 革胡子鯰（埃及塘蝨）Clarias gariepinus：身體長得像鰻、頭扁平又硬，四對長鬍鬚，背鰭和臀鰭一路長到尾巴；灰黑色帶斑駁。台灣水溝、水圳裡最大的鯰魚，可以超過 1 公尺
+  clarias: { c:{ Top:'#2e3230', Mid:'#5a605a', Bottom:'#d8d8cc', Spots:'#3a3e38', Fins:'#3a3e3a', Eye:'#15181c' }, move:'eel', p:{
+    bl:0.92, depth:0.14, wr:0.95, tm:0.2, nose:0.4, ped:0.08, n:2.4, cs:-0.15, up:[[0,0.4],[0.06,0.75],[0.18,1],[0.5,0.9],[0.85,0.55],[1,0.18]], lo:[[0,0.3],[0.08,0.7],[0.2,0.95],[0.5,0.9],[0.85,0.55],[1,0.18]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.25, y1:0.25, part:'Mid' }, { k:'spots', gt:0.07, gy:0.45, r:0.03, ar:3, t0:0.15, t1:0.95, y0:-0.2, y1:0.8, part:'Spots', fill:0.6 }],
+    dorsal:{ s:0.28, e:0.97, h:0.16, shape:'flat' }, anal:{ s:0.48, e:0.97, h:0.14, shape:'flat' }, pect:{ t:0.16, y:-0.55, size:0.4, shape:'round' }, pelv:{ t:0.42, size:0.22 },
+    caudal:{ type:'rounded', hk:0.95, len:0.6 }, eye:EYE(0.05, 0.4, 0.04),
+    extra:[{ k:'limb', sym:true, pts:[{ t:0.005, yn:0.25, z:0.03 }, { x:0.88, y:0.07, z:0.14 }, { x:0.74, y:0.03, z:0.3 }, { x:0.56, y:-0.04, z:0.36 }], r0:0.008, r1:0.003, part:'Fins' },
+           { k:'limb', sym:true, pts:[{ t:0.01, yn:0.45, z:0.02 }, { x:0.9, y:0.09, z:0.07 }, { x:0.82, y:0.12, z:0.12 }], r0:0.005, r1:0.002, part:'Fins' },
+           { k:'limb', sym:true, pts:[{ t:0.02, yn:-0.6, z:0.03 }, { x:0.8, y:-0.12, z:0.07 }, { x:0.7, y:-0.17, z:0.12 }], r0:0.006, r1:0.002, part:'Fins' },
+           { k:'limb', sym:true, pts:[{ t:0.03, yn:-0.75, z:0.015 }, { x:0.78, y:-0.13, z:0.03 }, { x:0.72, y:-0.18, z:0.05 }], r0:0.005, r1:0.002, part:'Fins' }] } },
 };
 
 /* ---------------- 變種：同一種魚、長得不一樣（從原本那種魚的外形改顏色和一點點形狀） ---------------- */
@@ -518,12 +547,18 @@ Object.assign(SPECS, {
   scat_red: VAR('scat', { Top:'#a8402a', Mid:'#e0703a', Bottom:'#f0c8a0', Fins:'#c8502e' }, {}),
   mudskipper_albino: VAR('mudskipper', { Top:'#f0d4c8', Mid:'#f6e2da', Bottom:'#fff4ee', Spots:'#e8c4b8', Fins:'#ecc8bc', Fins2:'#f0b0b0', Eye:'#d02a3a' }, {}),
   fiddler_blue: VAR('fiddler', { Top:'#2a6ad8', Spots:'#8ac0f0', Fins:'#3a5a9a', Claw:'#f4f0e8' }, {}),
+  // 城市水圳的變種（都是真的有的色型）
+  mosquitofish_gold: VAR('mosquitofish', { Top:'#e8a040', Mid:'#f4c060', Bottom:'#fbe8c0', Spots:'#c87020', Accent:'#b86020', Fins:'#f4c880' }, {}),
+  pleco_albino: VAR('pleco', { Top:'#f0d890', Mid:'#f6e4a8', Bottom:'#fff4d8', Spots:'#fff8e8', Fins:'#f0dca0', Accent:'#e8c880', Eye:'#d02a3a' }, {}),
+  giantsnake_red: VAR('giantsnake', { Top:'#c8401e', Mid:'#f07a30', Bottom:'#f8d8b0', Spots:'#f8a050', Accent:'#1a1210', Fins:'#d8602a' }, {}, { glow:true }),
+  clarias_albino: VAR('clarias', { Top:'#f0d8cc', Mid:'#f6e6dc', Bottom:'#fff6f0', Spots:'#ecd0c4', Fins:'#ecccc0', Eye:'#d02a3a' }, {}),
   arowana_red: VAR('arowana', { Top:'#8a2420', Mid:'#d8302a', Bottom:'#f06a50', Stripes:'#b8241e', Fins:'#a8201a' }, {}, { glow:true }),
 });
 
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {
+  mosquitofish:{ type:'sup', t:0.04, y:0.3 }, pleco:{ type:'sub', t:0.06, y:-0.85, t0:0.04 }, giantsnake:{ t:0.12, y:-0.15 }, clarias:{ t:0.06, y:-0.1, open:0.3 },
   shark:{ type:'sub', t:0.13, y:-0.5, t0:0.05 }, hammer:{ type:'sub', t:0.1, y:-0.6, t0:0.05 }, bullshark:{ type:'sub', t:0.12, y:-0.5, t0:0.04 }, sawfish:{ type:'sub', t:0.12, y:-0.7, t0:0.08 },
   sturgeon:{ type:'sub', t:0.1, y:-0.8, t0:0.07 }, whaleshark:{ t:0.06, y:-0.05, open:0.5 }, manta:false, stingray:false, flounder:{ t:0.05, y:0.1 },
   arowana:{ type:'sup', t:0.1, y:0.2 }, angler:{ type:'sup', t:0.18, y:0.15, open:1.0 }, barramundi:{ type:'sup', t:0.09, y:-0.05 }, snakehead:{ t:0.1, y:-0.15 },
