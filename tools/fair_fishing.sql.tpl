@@ -63,6 +63,8 @@ begin
   if sp is null then raise exception '沒有這個釣點'; end if;
   if pl.cast_at is not null and now() - pl.cast_at < interval '2.5 seconds' then raise exception '拋太快了'; end if;
   if p_spot = 'shrimp' and coalesce(pl.shrimp_until, '-infinity') < now() then raise exception '要先買釣蝦時段'; end if;
+  -- 紅樹林泥灘（035）：退潮、泥灘露出來的時候才能下去抓（跟 js/game.js 的 mudGrabOk 一樣：潮位 < -0.5）
+  if p_spot = 'mudflat' and sin((ms % (cfg->>'tidePeriod')::bigint)::numeric / (cfg->>'tidePeriod')::numeric * 2 * pi()) >= -0.5 then raise exception '泥灘現在被水淹著，退潮才能下去抓'; end if;
   -- 魚餌（路亞不用魚餌）：伺服器扣掉一個
   if p_bait is not null and rig <> 'lure' and cfg->'baits' ? p_bait and coalesce((pl.bait ->> p_bait)::integer, 0) > 0 then
     bait := cfg->'baits'->p_bait; nb := (pl.bait ->> p_bait)::integer - 1;
@@ -132,6 +134,7 @@ begin
     wt := (f->>'w')::numeric
       * (case when rig = 'lure' then (case when cfg->'lure' ? fid then 2.2 else 0.55 end) when rig = 'bottom' then (case when cfg->'bottom' ? fid then 2.2 else 0.65 end) else 1 end)
       * (case when fid = any(intel) then 2.5 else 1 end)
+      * (case when p_spot <> 'mudflat' then 1 when (rig = 'bottom') = (cfg->'bottom' ? fid) then 1 else 0 end)   -- 泥灘：抓招潮蟹（沉底）只會是蟹，抓彈塗魚只會是魚
       * (case when tip_spot = p_spot and tip_fish = fid then 2.5 else 1 end)
       * (case when rainy and cfg->'rain' ? fid then 2 else 1 end)
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)

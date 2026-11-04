@@ -427,6 +427,69 @@ export const SPECS = {
     len:0.6, cw:0.15, ch:0.16, curl:0.3, rostrum:0.18, rostUp:0.06, ant:1.3, ridge:true, claw:{ leg:1, len:0.95, r:0.026, palm:1.4, finger:0.24 } } },
   bluelobster: { gen:'shrimp', c:{ Top:'#2f6fe0', Bottom:'#9cc4ff', Stripes:'#2458c0', Fins:'#2a5cc0', Claw:'#2f6fe0', Eye:'#141418' }, move:'vert', glow:true, p:{
     len:0.62, cw:0.15, ch:0.15, cara:0.42, curl:0.12, rostrum:0.06, ant:0.75, legLen:0.26, scale:false, claw:{ leg:0, len:0.66, r:0.032, palm:2.3, finger:0.32 } } },
+  // ---- 紅樹林（2026-11-04，參考維基百科）----
+  // 金錢魚 Scatophagus argus：側扁、很高的身體，黃褐色帶不規則黑斑，頭和嘴小，最大約 30 公分
+  scat: { c:{ Top:'#8a7a3a', Mid:'#c8b45a', Bottom:'#e8dca0', Spots:'#1e1a10', Fins:'#a8963e', Eye:'#15181c', EyeW:'#e8d890' }, p:{
+    bl:0.75, depth:0.62, wr:0.32, tm:0.32, nose:0.55, ped:0.14, cs:0.2, up:[[0,0.25],[0.15,0.75],[0.4,1],[0.7,0.8],[1,0.2]], lo:[[0,0.3],[0.2,0.8],[0.5,1],[0.8,0.6],[1,0.2]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }], dots:{ n:34, t0:0.12, t1:0.85, y0:-0.6, y1:0.9, r:0.03, part:'Spots' },
+    dorsal:[{ s:0.3, e:0.55, h:0.4, shape:'spiny', back:0.6 }, { s:0.56, e:0.8, h:0.38, shape:'flat' }], anal:{ s:0.55, e:0.8, h:0.38 }, pect:{ t:0.26, y:-0.1, size:0.35 }, pelv:{ t:0.3, size:0.3 },
+    caudal:{ type:'truncate', hk:1.0 }, eye:EYE(0.1, 0.35, 0.09, { ring:true }) } },
+  // 花身鯻 Terapon jarbua：銀白色，身上有 3～4 條往後彎的黑色縱帶，尾鰭有黑色斜帶
+  terapon: { c:{ Top:'#7a8288', Mid:'#c8ccce', Bottom:'#f2f2f0', Stripes:'#22262a', Fins:'#a8acae', Eye:'#15181c', EyeW:'#e8e8e0' }, p:{
+    bl:0.8, depth:0.32, wr:0.5, tm:0.36, nose:0.7, ped:0.2, cs:0.25,
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, ...[0.6, 0.25, -0.1, -0.4].map(y => ({ k:'line', t0:0.1, t1:1, y:[[0, y + 0.18], [0.5, y + 0.05], [1, y * 0.4]], w:0.055, part:'Stripes' }))],
+    dorsal:[{ s:0.28, e:0.55, h:0.42, shape:'spiny', back:0.55 }, { s:0.55, e:0.72, h:0.3, shape:'flat' }], anal:{ s:0.64, e:0.75, h:0.28 }, pect:{ t:0.27, y:-0.2, size:0.38 }, pelv:{ t:0.32, size:0.32 },
+    caudal:{ type:'emarginate', hk:1.2 }, eye:EYE(0.1, 0.33, 0.09, { ring:true }) } },
+  // 黑鯛 Acanthopagrus schlegelii：灰黑色帶銀光的鯛，背鰭硬棘很強
+  blackbream: { c:{ Top:'#2e3236', Mid:'#7a8086', Bottom:'#d8dade', Fins:'#2a2e32', Eye:'#15181c', EyeW:'#d8dce0' }, p:{
+    bl:0.8, depth:0.42, wr:0.42, tm:0.35, nose:0.7, ped:0.18, cs:0.2, up:[[0,0.2],[0.12,0.62],[0.3,1],[0.6,0.72],[1,0.18]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }],
+    dorsal:[{ s:0.28, e:0.56, h:0.38, shape:'spiny', back:0.7 }, { s:0.56, e:0.76, h:0.28, shape:'flat' }], anal:{ s:0.64, e:0.76, h:0.26 }, pect:{ t:0.27, y:-0.15, size:0.45 }, pelv:{ t:0.3, size:0.32 },
+    caudal:{ type:'forked', notch:0.35, hk:1.3 }, eye:EYE(0.1, 0.35, 0.085, { ring:true }) } },
+  // 銀紋笛鯛（紅樹林笛鯛）Lutjanus argentimaculatus：紅銅色到褐色，年輕時臉上有藍線
+  mangsnapper: { c:{ Top:'#7a3a28', Mid:'#c06a48', Bottom:'#f0c8b0', Stripes:'#4ab0e0', Fins:'#a04a30', Eye:'#15181c', EyeW:'#e8c090' }, p:{
+    bl:0.82, depth:0.33, wr:0.5, tm:0.36, nose:0.85, ped:0.2, cs:0.25,
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, { k:'line', t0:0.02, t1:0.14, y:[[0, -0.15], [1, -0.25]], w:0.025, part:'Stripes' }],
+    dorsal:[{ s:0.28, e:0.52, h:0.42, shape:'spiny', back:0.6 }, { s:0.52, e:0.72, h:0.34, shape:'flat' }], anal:{ s:0.64, e:0.76, h:0.32 }, pect:{ t:0.27, y:-0.2, size:0.42 }, pelv:{ t:0.32, size:0.34 },
+    caudal:{ type:'emarginate', hk:1.25 }, eye:EYE(0.1, 0.35, 0.08, { ring:true }) } },
+  // 尖吻鱸（金目鱸）Lates calcarifer：銀色、頭部輪廓凹、嘴很大，眼睛在光下發出金紅色
+  barramundi: { c:{ Top:'#5a6a6a', Mid:'#c4cccc', Bottom:'#f2f4f2', Fins:'#8a9494', Eye:'#d8a040', EyeW:'#f0c060' }, p:{
+    bl:0.82, depth:0.3, wr:0.55, tm:0.38, nose:0.9, ped:0.24, cs:0.25, up:[[0,0.15],[0.08,0.35],[0.2,0.85],[0.38,1],[0.65,0.75],[1,0.3]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.3, part:'Mid' }],
+    dorsal:[{ s:0.3, e:0.5, h:0.45, shape:'spiny', back:0.5 }, { s:0.52, e:0.7, h:0.36 }], anal:{ s:0.64, e:0.75, h:0.32 }, pect:{ t:0.26, y:-0.25, size:0.4 }, pelv:{ t:0.32, size:0.34 },
+    caudal:{ type:'rounded', hk:1.1 }, eye:EYE(0.09, 0.4, 0.075, { ring:true }) } },
+  // 彈塗魚 Periophthalmus modestus：長條、眼睛長在頭頂突出來，胸鰭像手可以在泥上爬、跳，最大約 10 公分
+  mudskipper: { c:{ Top:'#6a5a44', Mid:'#9a8a6a', Bottom:'#d8ccb0', Spots:'#2a221a', Fins:'#7a6a50', Fins2:'#3a7ac8', Eye:'#15181c', EyeW:'#c8b890' }, p:{
+    bl:0.85, depth:0.2, wr:0.95, tm:0.4, nose:0.4, ped:0.28, n:1.8, cs:0.0, up:[[0,0.55],[0.1,0.9],[0.25,1],[0.6,0.7],[1,0.35]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.2, part:'Mid' }], dots:{ n:26, t0:0.15, t1:0.9, y0:0.0, y1:0.95, r:0.014, part:'Spots' },
+    dorsal:[{ s:0.35, e:0.48, h:0.55, shape:'round', part:'Fins2' }, { s:0.55, e:0.82, h:0.4, shape:'flat', part:'Fins2' }], anal:{ s:0.58, e:0.82, h:0.25 },
+    pect:{ t:0.24, y:-0.55, size:0.75, shape:'round', out:0.8 }, pelv:{ t:0.28, size:0.35 }, caudal:{ type:'rounded', hk:1.0 }, eye:EYE(0.06, 0.9, 0.13, { pop:0.9 }) } },
+  // 大彈塗魚 Boleophthalmus pectinirostris：比較大、身上有很多藍綠色的亮點，背鰭很高
+  bigskipper: { c:{ Top:'#4a5a48', Mid:'#7a8a6a', Bottom:'#d0d4bc', Spots:'#4ac8e8', Fins:'#5a6a50', Fins2:'#3ab0d8', Eye:'#15181c', EyeW:'#c8c8a0' }, p:{
+    bl:0.85, depth:0.2, wr:0.95, tm:0.4, nose:0.4, ped:0.26, n:1.8, cs:0.0, up:[[0,0.55],[0.1,0.9],[0.25,1],[0.6,0.7],[1,0.35]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.2, part:'Mid' }], dots:{ n:44, t0:0.1, t1:0.95, y0:-0.3, y1:0.95, r:0.016, part:'Spots' },
+    dorsal:[{ s:0.32, e:0.48, h:0.85, shape:'round', part:'Fins2' }, { s:0.55, e:0.85, h:0.45, shape:'flat', part:'Fins2' }], anal:{ s:0.58, e:0.84, h:0.28 },
+    pect:{ t:0.24, y:-0.55, size:0.75, shape:'round', out:0.8 }, pelv:{ t:0.28, size:0.35 }, caudal:{ type:'rounded', hk:1.05 }, eye:EYE(0.06, 0.9, 0.12, { pop:0.9 }) } },
+  // 弧邊招潮蟹 Tubuca arcuata：雄蟹一隻大螯特別大（橘紅色），用來揮動招潮
+  fiddler: { gen:'crab', c:{ Top:'#3a3a40', Bottom:'#d8ccb8', Spots:'#8a6a4a', Fins:'#6a5a4a', Claw:'#e8602a', Eye:'#141418' }, move:'vert', p:{
+    cd:0.24, cr:0.3, ch:0.11, pairs:4, span:0.55, legR:0.022, eyeH:0.16, spots:6, claw:{ size:0.45, right:3.4 },
+    shell:v => [v[0] * (v[0] > 0 ? 1.1 : 0.85), v[1], v[2] * (1 - Math.max(0, -v[0]) * 0.2)] } },
+  // 鋸緣青蟳（紅蟳）Scylla serrata：墨綠到褐色的大蟳，兩隻螯又大又有力
+  mudcrab: { gen:'crab', c:{ Top:'#3e4a2e', Bottom:'#e0d4b0', Spots:'#2a321e', Fins:'#4e5a36', Claw:'#5a6a3a', Eye:'#141418' }, move:'vert', p:{
+    cd:0.27, cr:0.36, ch:0.14, pairs:4, span:0.66, legR:0.03, eyeH:0.08, spots:4, claw:{ size:0.95, right:1.25 },
+    shell:v => [v[0] * (v[0] > 0 ? 1.05 : 0.9), v[1], v[2] * (1 - Math.max(0, -v[0]) * 0.1)] } },
+  // 鬥牛鯊 Carcharhinus leucas：灰色、壯碩、吻很短很鈍，會游進河口和紅樹林
+  bullshark: { c:{ Top:'#7a8288', Mid:'#9aa0a4', Bottom:'#f2f2ee', Accent:'#4a5056', Gill:'#5a6066', Fins:'#747c82', Eye:'#15181c' }, p:{
+    bl:0.8, depth:0.22, wr:0.85, tm:0.36, nose:0.6, ped:0.12, n:2.0, cs:-0.1, yc:[[0,0.15],[0.12,0],[1,0.15]], pat:[{ k:'band', t0:0.3, t1:0.8, y0:-0.35, y1:-0.1, part:'Mid' }, GILLS(0.17)],
+    dorsal:[{ s:0.3, e:0.45, h:0.7, shape:'falcate', sweep:0.45 }, { s:0.74, e:0.78, h:0.22 }], anal:{ s:0.76, e:0.8, h:0.2 },
+    pect:{ t:0.25, y:-0.7, size:1.2, shape:'tri', ang:-0.6, out:0.6, w:0.45 }, pelv:{ t:0.6, size:0.4 }, caudal:{ type:'hetero', hk:1.6 }, eye:EYE(0.08, 0.25, 0.035) } },
+  // 鋸鰩 Pristis pristis：像鯊魚的扁身體，前面有一支長長的、兩邊都是齒的吻；會進紅樹林和河口，極度瀕危
+  sawfish: { c:{ Top:'#9a8a5a', Mid:'#b0a070', Bottom:'#f0eee2', Accent:'#6a5e3e', Gill:'#7a6e4a', Fins:'#8a7a4e', Eye:'#15181c', Teeth:'#f4f0e0' }, p:{
+    bl:0.75, depth:0.13, wr:1.25, tm:0.36, nose:0.5, ped:0.12, n:2.0, cs:-0.05, yc:[[0,0.05],[0.12,0],[1,0.12]], pat:[{ k:'band', t0:0.2, t1:0.8, y0:-0.35, y1:-0.1, part:'Mid' }],
+    dorsal:[{ s:0.42, e:0.52, h:0.55, shape:'falcate', sweep:0.35 }, { s:0.68, e:0.75, h:0.45, shape:'falcate', sweep:0.35 }], anal:{ s:0.8, e:0.8, h:0 },
+    pect:{ t:0.2, y:-0.75, size:1.1, shape:'tri', ang:-0.25, out:0.9, w:0.55 }, pelv:{ t:0.45, size:0.5 }, caudal:{ type:'hetero', hk:1.3 }, eye:EYE(0.1, 0.4, 0.03),
+    extra:[{ k:'ellip', c:{ x:0.62, y:0.0, z:0 }, r:[0.27, 0.02, 0.055], part:'Top', seg:10, rings:5 },
+      ...Array.from({ length: 24 }, (_, i) => ({ k:'ellip', c:{ x:0.42 + (i >> 1) * 0.036, y:0, z:(i % 2 ? 1 : -1) * 0.06 }, r:[0.006, 0.008, 0.022], part:'Teeth', seg:5, rings:3 }))] } },
 };
 
 /* ---------------- 變種：同一種魚、長得不一樣（從原本那種魚的外形改顏色和一點點形狀） ---------------- */
@@ -452,5 +515,8 @@ Object.assign(SPECS, {
     depth:0.2, pat:[{ k:'band', t0:0.2, t1:0.85, y0:-0.4, y1:-0.05, part:'Mid' }, { k:'bars', bars:BARS(6, 0.25, 0.64, 0.032, 0.15, 1.2), part:'Stripes' }, GILLS(0.17)],
     dorsal:[{ s:0.31, e:0.47, h:0.95, shape:'falcate', sweep:0.7 }, { s:0.75, e:0.79, h:0.3 }, { s:0.39, e:0.425, h:0.98, shape:'falcate', sweep:0.75, part:'Accent', inset:0 }],
     pect:{ t:0.26, y:-0.7, size:1.25, shape:'tri', ang:-0.6, out:0.65, w:0.42 }, caudal:{ type:'hetero', hk:1.9 } }),
+  scat_red: VAR('scat', { Top:'#a8402a', Mid:'#e0703a', Bottom:'#f0c8a0', Fins:'#c8502e' }, {}),
+  mudskipper_albino: VAR('mudskipper', { Top:'#f0d4c8', Mid:'#f6e2da', Bottom:'#fff4ee', Spots:'#e8c4b8', Fins:'#ecc8bc', Fins2:'#f0b0b0', Eye:'#d02a3a' }, {}),
+  fiddler_blue: VAR('fiddler', { Top:'#2a6ad8', Spots:'#8ac0f0', Fins:'#3a5a9a', Claw:'#f4f0e8' }, {}),
   arowana_red: VAR('arowana', { Top:'#8a2420', Mid:'#d8302a', Bottom:'#f06a50', Stripes:'#b8241e', Fins:'#a8201a' }, {}, { glow:true }),
 });
