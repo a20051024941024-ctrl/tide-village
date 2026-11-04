@@ -796,3 +796,11 @@ body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
 .wlist li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
 .wlist .wme{font-size:11px;color:#6a7f90;flex:1 1 auto}
 .wlist .wgift{padding:3px 10px;font-size:12px}
+/* 潮汐村報 */
+.paper{background:#fbf6e9;border:1px solid #e2d6b8;border-radius:12px;padding:10px 12px;margin:8px 0;color:#2b2a26;font-family:inherit;box-shadow:inset 0 0 0 3px #fff}
+.paper .pmast{font-weight:900;font-size:18px;text-align:center;border-bottom:2px solid #2b2a26;padding-bottom:4px;margin-bottom:6px;letter-spacing:2px}
+.paper .pme{background:linear-gradient(180deg,#ffe9a8,#f2b84b);color:#5a3a00;border-radius:8px;padding:3px 8px;font-weight:800;font-size:13px;margin-bottom:6px;text-align:center}
+.paper .psec{padding:5px 0;border-bottom:1px dashed #d8cba8}.paper .psec:last-child{border-bottom:0}
+.paper .pt{font-weight:800;font-size:13px;color:#6a4a1a}.paper .px{font-size:13px;line-height:1.6}
+.paper .psec.big .px{font-size:15px;font-weight:700}
+.paper b.gold{color:#b77900;background:linear-gradient(180deg,transparent 55%,#ffe39a 55%);padding:0 2px}
