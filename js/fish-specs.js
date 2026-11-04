@@ -630,17 +630,17 @@ Object.assign(SPECS, {
   // 青眼魚（メヒカリ，Chlorophthalmus）：銀灰色的小魚，一雙大大的綠色眼睛會反光
   mehikari: VAR('sardine', { Top:'#5a6a7a', Mid:'#b8c4cc', Bottom:'#eef2f4', Fins:'#9aa8b0', EyeW:'#b8f0a0' }, { depth:0.18, dots:[], eye:EYE(0.09, 0.22, 0.15, { ring:true }) }),
   // 鼠尾鱈（Coryphaenoides）：大頭、身體往後越來越細，尾巴像老鼠尾巴
-  rattail: VAR('cod', { Top:'#5a5048', Mid:'#7a7068', Bottom:'#a89a8a', Spots:'#4a4038', Fins:'#4a4038', Accent:'#a89a8a' }, { depth:0.24, tm:0.04 }),
+  rattail: VAR('cod', { Top:'#6a6058', Mid:'#8a8076', Bottom:'#c8bcae', Spots:'#5a5048', Fins:'#5e544c', Accent:'#c8bcae', EyeW:'#c8d0d8' }, { depth:0.3, ped:0.02, tailK:0.3, up:[[0,0.45],[0.12,0.9],[0.25,1],[0.45,0.7],[0.75,0.3],[1,0.04]], lo:[[0,0.4],[0.15,0.9],[0.3,1],[0.5,0.6],[0.8,0.22],[1,0.04]], pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.2, part:'Mid' }], dorsal:[{ s:0.18, e:0.28, h:0.5, shape:'tri', peak:0.3 }, { s:0.32, e:0.98, h:0.07, shape:'flat' }], anal:{ s:0.3, e:0.98, h:0.07, shape:'flat' }, caudal:{ type:'rounded', hk:0.2, len:0.15 }, eye:EYE(0.12, 0.4, 0.11, { ring:true }) }),
   // 赤鯥（ノドグロ，Doederleinia berycoides）：全身紅色，嘴巴裡面是黑的，眼睛很大
-  blackthroat: VAR('perch', { Top:'#c8402a', Mid:'#e86a4a', Bottom:'#f8d0c0', Fins:'#d84a3a', Accent:'#f8b0a0' }, { eye:EYE(0.1, 0.22, 0.13, { ring:true }) }),
+  blackthroat: VAR('perch', { Top:'#d8483a', Mid:'#f07a62', Bottom:'#fbd8cc', Stripes:'#e05a48', Fins:'#e86050', Fins2:'#e86050', EyeW:'#e8e8e0' }, { pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.2, part:'Mid' }], eye:EYE(0.1, 0.3, 0.13, { ring:true }) }),
   // 水滴魚（Psychrolutes）：在深海裡其實是正常的魚形，拉上來以後鬆鬆垮垮、粉紅色
-  blobfish: VAR('puffer', { Top:'#e8a8a8', Mid:'#f0c0c0', Bottom:'#f8d8d8', Spots:'#d89090', Fins:'#e0a0a0', Accent:'#f0c0c0' }, { dots:[] }),
+  blobfish: VAR('puffer', { Top:'#e8a8a8', Mid:'#f0bcbc', Bottom:'#f8d4d4', Spots:'#e8a8a8', Accent:'#f0bcbc', Fins:'#e4a0a0', EyeW:'#f0d8d8', Nose:'#e89a9a' }, { depth:0.62, nose:0.2, pat:[], dots:null, caudal:{ type:'rounded', hk:0.5, len:0.45 }, dorsal:{ s:0.6, e:0.68, h:0.12, shape:'round' }, eye:EYE(0.2, 0.45, 0.05), extra:[{ k:'ellip', c:{ x:0.84, y:-0.12, z:0 }, r:[0.1, 0.12, 0.09], part:'Nose' }] }),
   // 角高體金眼鯛（Anoplogaster）：黑黑的小魚，嘴巴裡有很長的尖牙
-  fangtooth: VAR('grouper', { Top:'#2a2a2e', Mid:'#34343a', Bottom:'#44444a', Spots:'#1a1a1e', Fins:'#2a2a2e', Accent:'#44444a', EyeW:'#8a8a90' }, {}),
+  fangtooth: VAR('angler', { Top:'#7a5c50', Bottom:'#9a7c6c', Fins:'#6a4c40', Teeth:'#f6f2ea', Eye:'#1a1a1a', EyeW:'#a8a8b0' }, { depth:0.55, extra:[...[-1, 1].map(sz => ({ k:'cone', a:{ x:0.82, y:-0.17, z:sz * 0.05 }, b:{ x:0.9, y:0.16, z:sz * 0.05 }, r:0.028, n:5, part:'Teeth' })), ...[-1, 1].map(sz => ({ k:'cone', a:{ x:0.8, y:0.15, z:sz * 0.09 }, b:{ x:0.86, y:-0.08, z:sz * 0.09 }, r:0.022, n:5, part:'Teeth' }))], eye:EYE(0.2, 0.55, 0.04, { ring:true }) }),
   // 歐氏尖吻鮫（ミツクリザメ，Mitsukurina owstoni）：粉紅色、鼻子又長又扁，像外星生物
   goblinshark: VAR('shark', { Top:'#d8a0a0', Mid:'#e0b0b0', Bottom:'#f0d0d0', Accent:'#c89090', Gill:'#a87070', Fins:'#c89898', Eye:'#3a2a2a' }, { nose:1.5 }),
   // 灰六鰓鯊（Hexanchus griseus）：住在深海的大鯊魚，鰓裂有 6 條，眼睛是綠色的
-  sixgill: VAR('sleepershark', { Top:'#5a5a52', Mid:'#6a6a60', Bottom:'#9a9a90', Gill:'#3a3a34', Eye:'#4a8a5a' }, { pat:[GILLS(0.16, 6)] }),
+  sixgill: VAR('sleepershark', { Top:'#8e8a80', Mid:'#a6a298', Bottom:'#d0ccc2', Gill:'#4a4840', Fins:'#5e5a52', Eye:'#4a8a5a' }, { pat:[GILLS(0.16, 6)] }),
 });
 Object.assign(SPECS, {
   mehikari_gold: VAR('mehikari', { Top:'#c8a030', Mid:'#f0d878', Bottom:'#fbf0c8', Fins:'#e8c860' }, {}, { glow:true }),
@@ -655,15 +655,15 @@ Object.assign(SPECS, {
 /* ---------------- 遠洋神秘島（2026-11-05）：參考厄瓜多的加拉巴哥群島（火山島、寒暖流交會） ---------------- */
 Object.assign(SPECS, {
   // 克里奧鮨（Paranthias colonus）：橘紅色的魚，背上有一排白點，成群在礁岩邊游
-  creolefish: VAR('grunt', { Top:'#b8504a', Mid:'#d87060', Bottom:'#f0c0a8', Fins:'#c85048', Accent:'#f8e8e0' }, {}),
+  creolefish: VAR('grunt', { Top:'#c85a48', Mid:'#e88068', Bottom:'#f8c8b0', Stripes:'#e88068', Fins:'#d86048', Accent:'#ffffff' }, { pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, ...[0.36, 0.5, 0.64].map(t => ({ k:'ell', t, y:0.78, rt:0.025, ry:0.09, part:'Accent' }))] }),
   // 黃尾刺尾鯛（Prionurus laticlavius）：灰色的身體、尾巴根部是鮮黃色，成群在淺海吃藻類
-  razorsurgeon: VAR('bluetang', { Top:'#4a4e58', Mid:'#5a5e68', Bottom:'#7a7e88', Fins:'#3a3e48', Accent:'#f0d040', Tail:'#f0d040' }, {}),
+  razorsurgeon: VAR('bluetang', { Top:'#828690', Bottom:'#9a9ea6', Accent:'#60646c', Fins:'#747882', Fins2:'#f4d840' }, { pat:[{ k:'band', t0:0.86, t1:1.01, y0:-2, y1:2, part:'Fins2' }, ...[0.82, 0.86, 0.9].map(t => ({ k:'ell', t, y:0, rt:0.012, ry:0.06, part:'Accent' }))], pect:{ t:0.32, y:-0.1, size:0.45, part:'Fins' }, caudal:{ type:'emarginate', hk:1.05, part:'Fins' } }),
   // 角蝶魚（Zanclus cornutus）：黑白黃三色的寬條紋，背鰭拉成一條長長的絲
-  idol: VAR('butterfly', { Top:'#f0e040', Mid:'#f8f4e8', Bottom:'#f8f4e8', Stripes:'#18181c', Fins:'#18181c', Accent:'#f0e040' }, {}),
+  idol: VAR('butterfly', { Top:'#f6f6f0', Bottom:'#f8f6f0', Mid:'#f2d23a', Stripes:'#151515', Accent:'#151515', Fins:'#151515', Fil:'#f6f6f0' }, { pat:[{ k:'band', t0:0.14, t1:0.3, y0:-2, y1:2, part:'Accent' }, { k:'band', t0:0.55, t1:0.78, y0:-2, y1:2, part:'Accent' }, { k:'ell', t:0.86, y:0.2, rt:0.06, ry:0.35, part:'Mid' }, { k:'ell', t:0.06, y:-0.2, rt:0.03, ry:0.2, part:'Mid' }], extra:[{ k:'limb', pts:[{ t:0.4, yn:1.0, dy:0.1 }, { x:0.0, y:1.1, z:0 }, { x:-0.5, y:1.0, z:0 }], r0:0.012, r1:0.004, n:5, part:'Fil' }], caudal:{ type:'truncate', hk:0.6, len:0.8, part:'Accent' } }),
   // 紅唇蝙蝠魚（Ogcocephalus darwini）：用胸鰭在海底「走路」，嘴唇是鮮紅色的
-  batfish: VAR('angler', { Top:'#8a7a60', Mid:'#a89470', Bottom:'#d8c8a8', Accent:'#e8302a', Fins:'#8a7a60', Lure:'#e8302a' }, {}),
+  batfish: VAR('angler', { Top:'#9a8a6a', Bottom:'#e8dcc8', Fins:'#8a7a5a', Eye:'#15181c', EyeW:'#e8e0c8', Lip:'#e8302a' }, { depth:0.42, wr:1.25, extra:[{ k:'ellip', c:{ x:0.83, y:-0.02, z:0 }, r:[0.025, 0.035, 0.09], part:'Lip' }], eye:EYE(0.2, 0.55, 0.05, { ring:true }) }),
   // 加拉巴哥鯊（Carcharhinus galapagensis）：灰褐色、肚子白的大鯊魚，住在遠洋小島周圍
-  galapagosshark: VAR('shark', { Top:'#6a6a64', Mid:'#8a8a84', Bottom:'#e8e8e0', Fins:'#5a5a54' }, {}),
+  galapagosshark: VAR('shark', { Top:'#9a9488', Mid:'#b6b0a4', Bottom:'#f4f2ec', Fins:'#8a8478' }, {}),
 });
 Object.assign(SPECS, {
   creolefish_gold: VAR('creolefish', { Top:'#e0a020', Mid:'#f0c850', Bottom:'#fbeab0', Fins:'#e8b030' }, {}, { glow:true }),

@@ -247,7 +247,7 @@ const FROST = { x:-160, z:-10, r:22, y:0.36, lake:{ x:-156, z:-8, r:8.5, y:0.37 
 // 深海浮台（2026-11-05）：遠洋上一座浮台；遠洋神秘島：火山島
 const ABYSS = { x:64, z:-145, w:12, d:8, y:0.55 };
 const MYST = { x:-60, z:162, r:16, y:0.5 };
-function mystH(x, z){ const d = Math.hypot(x - MYST.x, z - MYST.z); if (d > MYST.r + 2.2) return null; const bump = Math.max(0, 1 - d / (MYST.r * 0.55)) * 2.2; return d <= MYST.r ? MYST.y + bump : MYST.y - (d - MYST.r) / 2.2 * 0.6; }
+function mystH(x, z){ const d = Math.hypot(x - MYST.x, z - MYST.z); if (d > MYST.r + 2.2) return null; const k = Math.max(0, 1 - d / (MYST.r * 0.5)), bump = Math.pow(k, 1.3) * 5 - (d < 1.6 ? (1.6 - d) * 0.9 : 0); return d <= MYST.r ? MYST.y + bump : MYST.y - (d - MYST.r) / 2.2 * 0.6; }   /* 中間一座小火山（頂上有火山口） */
 function frostHole(x, z, r){ for (const h of FROST.holes) if (Math.hypot(x - h[0], z - h[1]) < (r || 0.45)) return h; return null; }
 const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
@@ -3233,15 +3233,28 @@ function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group();
 function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.position.set(M.x, 0, M.z); scene.add(g); Far.mg = g; const R = M.r; let sd = 23; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   // 黑色火山岩的島：中間隆起一座小火山
   { const base = new THREE.Mesh(new THREE.CylinderGeometry(R + 2.2, R + 3.6, 0.9, 48), mat('#3a3634', 0.95)); base.position.y = M.y - 0.7; g.add(base);
-    const pg = new THREE.CircleGeometry(R, 48, 0, Math.PI * 2); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position; for (let i = 0; i < p.count; i++){ const x = p.getX(i), z = p.getZ(i); p.setY(i, (mystH(M.x + x, M.z + z) || M.y)); } pg.computeVertexNormals();
-    const top = new THREE.Mesh(pg, mat('#6a6258', 0.95)); g.add(top);
-    const crater = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2.4, 0.6, 16, 1, true), mat('#2a2624', 0.95, { side: THREE.DoubleSide })); crater.position.y = M.y + 2.3; g.add(crater); addCircleCol(M.x, M.z, R * 0.32);
-    const sm = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 8), new THREE.MeshBasicMaterial({ color:'#d8d4cc', transparent:true, opacity:0.35, depthWrite:false })); sm.position.y = M.y + 3.6; g.add(sm); Far.smoke = sm; }
+    const pg = new THREE.RingGeometry(0.02, R, 56, 28); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position; for (let i = 0; i < p.count; i++){ const x = p.getX(i), z = p.getZ(i); p.setY(i, (mystH(M.x + x, M.z + z) || M.y)); } pg.computeVertexNormals();
+    { const cs = [], c = new THREE.Color(); for (let i = 0; i < p.count; i++){ const d = Math.hypot(p.getX(i), p.getZ(i)), n = Math.sin(p.getX(i) * 1.3) * Math.cos(p.getZ(i) * 1.1) * 0.5 + 0.5;
+        if (d > R - 2.2) c.set('#3a3836'); else if (d < R * 0.32) c.set(n > 0.5 ? '#5a4a44' : '#4a3e3a'); else c.set(n > 0.45 ? '#7aa04a' : '#9ab858'); cs.push(c.r, c.g, c.b); }
+      pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); }   /* 黑沙岸邊、中間綠色的灌木地、山頂是火山岩 */
+    const top = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.95 })); g.add(top);
+    const lava = new THREE.Mesh(new THREE.CircleGeometry(0.9, 16), new THREE.MeshBasicMaterial({ color:'#ff6a2a' })); lava.rotation.x = -Math.PI / 2; lava.position.y = (mystH(M.x, M.z) || M.y) + 0.05; g.add(lava); Far.lava = lava;
+    addCircleCol(M.x, M.z, R * 0.3);
+    const sm = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 8), new THREE.MeshBasicMaterial({ color:'#d8d4cc', transparent:true, opacity:0.35, depthWrite:false })); sm.position.y = M.y + 4.6; g.add(sm); Far.smoke = sm; }
   // 沙灘（南邊上岸的地方）、仙人掌、火山岩塊
   { const sand = new THREE.Mesh(new THREE.CircleGeometry(5, 24, Math.PI * 1.15, Math.PI * 0.7), mat('#d8c8a0', 0.95)); sand.rotation.x = -Math.PI / 2; sand.position.set(0, M.y + 0.01, 0); sand.scale.set(2.6, 2.6, 1); g.add(sand); }
-  for (let i = 0; i < 14; i++){ const a = rr() * 6.28, r = R * (0.45 + rr() * 0.42), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.4 && Math.abs(x) < 6) continue; const cg = new THREE.Group(), cm = mat('#4f8a4a', 0.8), h = 1.2 + rr() * 1.4;
-    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, h, 8), cm); tr.position.y = h / 2; cg.add(tr); for (const sx of [-1, 1]) if (rr() < 0.8){ const ar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.7, 8), cm); ar.position.set(sx * 0.36, h * 0.55, 0); cg.add(ar); const el2 = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.5, 8), cm); el2.rotation.z = Math.PI / 2; el2.position.set(sx * 0.2, h * 0.38, 0); cg.add(el2); }
+  // 仙人掌樹（一片一片橢圓形的掌）、海邊的椰子樹、低矮的灌木
+  const pad = mat('#5f9a4a', 0.8), trunkM = mat('#8a7a5a', 0.9);
+  for (let i = 0; i < 12; i++){ const a = rr() * 6.28, r = R * (0.45 + rr() * 0.4), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.45 && Math.abs(x) < 7) continue; const cg = new THREE.Group(), h = 1.0 + rr() * 0.8;
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, h, 7), trunkM); tr.position.y = h / 2; cg.add(tr);
+    for (let k = 0; k < 7; k++){ const pd = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 6), pad); pd.scale.set(1, 1.3, 0.28); const aa = k * 0.9 + rr(); pd.position.set(Math.cos(aa) * (0.25 + rr() * 0.3), h + 0.2 + rr() * 0.7, Math.sin(aa) * (0.25 + rr() * 0.3)); pd.rotation.set(rr() - 0.5, aa, (rr() - 0.5) * 0.8); cg.add(pd);
+      if (rr() < 0.4){ const fl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), mat('#ffd040', 0.6)); fl.position.copy(pd.position); fl.position.y += 0.42; cg.add(fl); } }
     cg.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); g.add(cg); addCircleCol(M.x + x, M.z + z, 0.4); }
+  for (let i = 0; i < 9; i++){ const a = rr() * 6.28, r = R * (0.72 + rr() * 0.18), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 6) continue; const pg2 = new THREE.Group(), h = 3 + rr() * 1.5, lean = (rr() - 0.5) * 0.4;
+    for (let k = 0; k < 6; k++){ const sg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.17, h / 6, 7), trunkM); sg.position.set(lean * k * 0.3, h / 12 + k * h / 6, 0); pg2.add(sg); }
+    for (let k = 0; k < 7; k++){ const lf = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.8, 4), mat('#3f8a3a', 0.8)); lf.scale.z = 0.25; const aa = k / 7 * 6.28; lf.position.set(lean * 1.8 + Math.cos(aa) * 0.7, h - 0.1, Math.sin(aa) * 0.7); lf.rotation.set(Math.sin(aa) * 1.1, 0, -Math.cos(aa) * 1.1); pg2.add(lf); }
+    pg2.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); g.add(pg2); addCircleCol(M.x + x, M.z + z, 0.3); }
+  for (let i = 0; i < 20; i++){ const a = rr() * 6.28, r = R * (0.38 + rr() * 0.45), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.45 && Math.abs(x) < 6) continue; const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45 + rr() * 0.4, 0), mat(rr() < 0.5 ? '#6a9a40' : '#8ab050', 0.9, { flatShading:true })); b.scale.y = 0.6; b.position.set(x, (mystH(M.x + x, M.z + z) || M.y) + 0.15, z); g.add(b); }
   for (let i = 0; i < 22; i++){ const a = rr() * 6.28, r = R * (0.8 + rr() * 0.3), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 5) continue; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + rr() * 0.9, 0), mat('#2e2a28', 0.95, { flatShading:true })); rk.position.set(x, (mystH(M.x + x, M.z + z) || M.y) - 0.1, z); rk.rotation.set(rr(), rr() * 6, rr()); g.add(rk); }
   // 海獅（躺在岩石上）、海鬣蜥、大象龜
   for (const [x, z, ry] of [[9, 6, 0.6], [-8, 9, 2.2], [11, -2, -0.4]]){ const sl = new THREE.Group(), m2 = mat('#7a5a40', 0.6); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 4, 10), m2); b.rotation.z = Math.PI / 2; b.position.y = 0.34; sl.add(b); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), m2); hd.position.set(0.7, 0.62, 0); sl.add(hd);
@@ -3251,7 +3264,7 @@ function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.
   { const tt = new THREE.Group(), sh = new THREE.Mesh(new THREE.SphereGeometry(0.9, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('#5a5040', 0.8)); sh.scale.set(1.2, 0.8, 1); sh.position.y = 0.35; tt.add(sh); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat('#6a6050', 0.8)); hd.position.set(1.2, 0.45, 0); tt.add(hd);
     tt.position.set(-3, mystH(M.x - 3, M.z + 4) || M.y, 4); tt.rotation.y = 0.8; g.add(tt); addCircleCol(M.x - 3, M.z + 4, 1.1); Far.tortoise = tt; }
   { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#3a6a5a'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#f4f0e0'; c.font = 'bold 60px sans-serif'; c.textAlign = 'center'; c.fillText('🌋 遠洋神秘島', 256, 86); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
-    const sp = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(3, M.y + 2.4, -10); sp.rotation.y = Math.PI; g.add(sp); for (const sx of [-1.4, 1.4]) g.add(box([0.14, 2.6, 0.14], '#5a4030', [3 + sx, M.y + 1.3, -10])); addCircleCol(M.x + 1.6, M.z - 10, 0.2); addCircleCol(M.x + 4.4, M.z - 10, 0.2); }
+    const sp = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(7, M.y + 2.4, -11); sp.rotation.y = Math.PI - 0.5; g.add(sp); for (const sx of [-1.4, 1.4]) g.add(box([0.14, 2.6, 0.14], '#5a4030', [7 + sx * Math.cos(0.5), M.y + 1.3, -11 + sx * Math.sin(0.5)])); }
   g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
 function updateFar(dt, t){
   if (frameNo % 30 === 0){ const vis = (G, x, z, R) => { if (G) G.visible = Math.hypot(camera.position.x - x, camera.position.z - z) < R; };   /* 手機效能：離很遠的區域先不畫（走近再出現） */
@@ -3259,7 +3272,8 @@ function updateFar(dt, t){
   if (!Far.abyss && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 90) buildAbyss();
   if (!Far.myst && Math.hypot(me.pos.x - MYST.x, me.pos.z - MYST.z) < 90) buildMyst();
   if (Far.jelly && frameNo % 3 === 0 && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 70){ Far.jelly.position.y = Math.sin(t * 0.5) * 0.25; Far.jelly.material.opacity = 0.55 + Math.sin(t * 1.3) * 0.2; }
-  if (Far.smoke){ Far.smoke.position.y = MYST.y + 3.6 + (t * 0.3 % 2); Far.smoke.material.opacity = 0.35 * (1 - (t * 0.3 % 2) / 2); }
+  if (Far.lava) Far.lava.material.color.setHSL(0.05, 1, 0.5 + Math.sin(t * 2) * 0.08);
+  if (Far.smoke){ Far.smoke.position.y = MYST.y + 4.6 + (t * 0.3 % 2); Far.smoke.material.opacity = 0.35 * (1 - (t * 0.3 % 2) / 2); }
   if (Far.tortoise && frameNo % 2 === 0) Far.tortoise.rotation.y = 0.8 + Math.sin(t * 0.1) * 0.6;
 }
 function updateFrost(dt, t){
