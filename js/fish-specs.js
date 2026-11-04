@@ -577,6 +577,26 @@ Object.assign(SPECS, {
 });
 
 Object.assign(SPECS, {
+  // 姥鯊（Cetorhinus maximus，2026-11-04）：世界第二大的魚。灰褐色、吻端尖尖往前凸、超大的嘴、
+  // 五條幾乎繞頭一圈的超長鰓裂，背鰭高大呈三角形，尾巴像新月。張著大嘴慢慢游、濾食浮游生物。
+  baskingshark: VAR('shark', { Top:'#5f5b52', Mid:'#77716a', Bottom:'#b4aea2', Accent:'#3c3832', Gill:'#2e2a25', Fins:'#57524a', Eye:'#15181c' }, {
+    bl:0.8, depth:0.2, wr:0.9, tm:0.3, nose:0.7, n:2.2, pat:[{ k:'band', t0:0.18, t1:0.85, y0:-0.45, y1:-0.15, part:'Mid' }, { k:'bars', bars: Array.from({ length: 5 }, (_, i) => [0.1 + i * 0.048, 0.1 + i * 0.048 + 0.014, -0.78 + i * 0.03, 0.74 - i * 0.05]), part:'Gill' }],
+    dorsal:[{ s:0.36, e:0.52, h:0.8, shape:'tri', sweep:0.35 }, { s:0.76, e:0.79, h:0.18 }], anal:{ s:0.78, e:0.81, h:0.16 },
+    caudal:{ type:'lunate', hk:2.0 } }, { move:'vert' }),
+  // 大白鯊（Carcharodon carcharias）：背是石板灰、肚子雪白，兩種顏色在身體側面分得很清楚；
+  // 吻端圓錐形、黑眼睛、身體粗壯像魚雷，尾巴上下幾乎一樣長（新月形）。
+  greatwhite: VAR('shark', { Top:'#6c7480', Mid:'#7c848e', Bottom:'#fafaf6', Accent:'#2a2e33', Gill:'#4a5058', Fins:'#5f6772', Eye:'#050608' }, {
+    bl:0.8, depth:0.22, wr:0.85, tm:0.33, nose:0.9, n:2.0, pat:[{ k:'band', t0:0.05, t1:0.92, y0:-0.2, y1:-0.02, part:'Mid' }, GILLS(0.17)],
+    dorsal:[{ s:0.34, e:0.48, h:0.78, shape:'tri', sweep:0.4 }, { s:0.76, e:0.79, h:0.16 }], anal:{ s:0.78, e:0.8, h:0.14 },
+    caudal:{ type:'lunate', hk:1.9 } }),
+});
+Object.assign(SPECS, {
+  // 變種（很稀有）：白化姥鯊（白中帶粉、淡色的眼睛）、黑化大白鯊（肚子也變深灰）
+  baskingshark_albino: VAR('baskingshark', { Top:'#ece4da', Mid:'#f2ece4', Bottom:'#fbf7f2', Accent:'#d8c8bc', Gill:'#c8a8a0', Fins:'#e6dcd0', Eye:'#c0303a' }, {}, { glow:true }),
+  greatwhite_dark: VAR('greatwhite', { Top:'#24282e', Mid:'#30353c', Bottom:'#4c525a', Accent:'#101214', Gill:'#1a1d21', Fins:'#1f2328' }, {}),
+});
+
+Object.assign(SPECS, {
   // 白化赤紅霸王鯊：紅鯊繁殖時極少數會生出來的白化個體（粉白色、紅眼睛，背上的虎紋變成淡淡的粉紅）
   shark_red_albino: VAR('shark_red', { Top:'#f2dcd6', Mid:'#f8e8e2', Bottom:'#fff6f2', Accent:'#e8b8b0', Gill:'#d89a94', Fins:'#ecc8c0', Stripes:'#e0a8a0', Eye:'#d0202a' }, {}, { glow:true }),
 });
@@ -602,7 +622,7 @@ const MOUTH = {
   rabbitfish:{ t:0.025, y:-0.1 }, girella:{ t:0.03, y:-0.1 }, blackgirella:{ t:0.03, y:-0.1 }, lethrinus:{ t:0.06, y:-0.2 }, amberjack:{ t:0.08, y:-0.05 },
   mosquitofish:{ type:'sup', t:0.04, y:0.3 }, pleco:{ type:'sub', t:0.06, y:-0.85, t0:0.04 }, giantsnake:{ t:0.12, y:-0.15 }, clarias:{ t:0.06, y:-0.1, open:0.3 },
   shark:{ type:'sub', t:0.13, y:-0.5, t0:0.05 }, hammer:{ type:'sub', t:0.1, y:-0.6, t0:0.05 }, bullshark:{ type:'sub', t:0.12, y:-0.5, t0:0.04 }, sawfish:{ type:'sub', t:0.12, y:-0.7, t0:0.08 },
-  sturgeon:{ type:'sub', t:0.1, y:-0.8, t0:0.07 }, whaleshark:{ t:0.06, y:-0.05, open:0.5 }, manta:false, stingray:false, flounder:{ t:0.05, y:0.1 },
+  sturgeon:{ type:'sub', t:0.1, y:-0.8, t0:0.07 }, whaleshark:{ t:0.06, y:-0.05, open:0.5 }, baskingshark:{ type:'sub', t:0.16, y:-0.3, t0:0.035, open:0.9 }, greatwhite:{ type:'sub', t:0.13, y:-0.5, t0:0.05 }, manta:false, stingray:false, flounder:{ t:0.05, y:0.1 },
   arowana:{ type:'sup', t:0.1, y:0.2 }, angler:{ type:'sup', t:0.18, y:0.15, open:1.0 }, barramundi:{ type:'sup', t:0.09, y:-0.05 }, snakehead:{ t:0.1, y:-0.15 },
   bass:{ t:0.1, y:-0.15 }, grouper:{ t:0.11, y:-0.15, open:0.3 }, scorpion:{ t:0.09, y:-0.1 }, lionfish:{ t:0.08, y:-0.1 }, mangsnapper:{ t:0.08, y:-0.15 }, perch:{ t:0.08, y:-0.15 },
   barracuda:{ t:0.12, y:-0.05 }, catfish:{ t:0.07, y:-0.2, th:1.3 }, eel:{ t:0.06, y:-0.05 }, marlin:{ t:0.05, y:-0.3 }, tuna:{ t:0.06, y:-0.15 }, trevally:{ t:0.07, y:-0.15 },

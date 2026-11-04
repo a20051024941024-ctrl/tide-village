@@ -340,6 +340,9 @@ body.photo.nonames #labels{display:none}
 #photoView .row button{padding:10px 18px;border-radius:12px;font-weight:700;font-size:14px;background:var(--paper-2)}
 #photoView .row .main{background:var(--ink);color:#fff}
 /* ---- 小船按鈕、傳送淡出、地圖 ---- */
+#boatRow{display:flex;gap:8px;align-items:center}
+#boatDive{padding:10px 14px;border-radius:999px;font-family:var(--f-display);font-size:15px;background:#123f63;color:#fff;box-shadow:0 4px 0 #0b2a44,0 8px 18px rgba(24,51,74,.25)}
+#boatDive[hidden]{display:none}
 #boatBtn{padding:10px 18px;border-radius:999px;font-family:var(--f-display);font-size:16px;background:var(--sea);color:#fff;box-shadow:0 4px 0 #23699a,0 8px 18px rgba(24,51,74,.25)}
 #fadeFx{position:fixed;inset:0;background:#18334a;opacity:0;pointer-events:none;z-index:40;transition:opacity .25s}
 #fadeFx.on{opacity:1}
@@ -774,3 +777,11 @@ body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
 #diveHud{top:auto !important;bottom:12px;left:50%;transform:translateX(-50%);max-width:none;flex-wrap:nowrap;white-space:nowrap;font-size:12px;gap:8px}
 #diveHud .bar{width:80px}
 @media (max-width:700px){ #diveHud{max-width:calc(100vw - 32px);bottom:auto !important;top:calc(var(--gt) + 64px) !important;left:16px;transform:none} }
+
+/* 船上那條提示改小、靠左，不要擋到中間的釣魚訊息 */
+#ferryBar,#isleBar,#visitBar{gap:6px;padding:5px 6px 5px 12px;font-size:13px;max-width:46vw;flex-wrap:wrap}
+#ferryBar .tbtn,#isleBar .tbtn,#visitBar .tbtn{padding:5px 10px;font-size:13px}
+@media (orientation:landscape) and (max-height:540px){
+  #ferryBar,#isleBar,#visitBar{top:calc(var(--gt) + 64px);left:var(--gl,16px);font-size:12px;padding:3px 4px 3px 10px;max-width:44vw}
+  #ferryBar .tbtn,#isleBar .tbtn,#visitBar .tbtn{padding:4px 9px;font-size:12px}
+}

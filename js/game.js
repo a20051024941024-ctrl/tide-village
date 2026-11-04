@@ -179,6 +179,10 @@ const FISH = [
   { id:'blackgirella_albino', spot:'reef', of:'blackgirella', name:'白化黑毛', rarity:'傳說', color:'#f6e6de', min:0.5, max:3.5, power:0.7, w:0.01, desc:'明明叫黑毛，卻全身粉白色、紅眼睛。' },
   { id:'lethrinus_red', spot:'reef', of:'lethrinus', name:'赤龍占', rarity:'稀有', color:'#e87a5a', min:1.0, max:8.0, power:0.72, w:0.015, desc:'身體偏紅的龍占，在藍色的礁盤裡特別顯眼。' },
   { id:'amberjack_gold', spot:'reef', of:'amberjack', name:'黃金紅甘', rarity:'傳說', color:'#f0c040', min:10, max:60, power:0.95, w:0.01, desc:'全身像黃金一樣的紅甘，傳說只在大潮的日子出現。' },
+  { id:'baskingshark', spot:'harbor', name:'姥鯊', rarity:'傳說', color:'#6b665d', min:500, max:4000, power:0.95, w:0.18, desc:'世界第二大的魚，張著像山洞一樣的大嘴慢慢游，靠濾海水裡的浮游生物過活。鰓裂長得幾乎繞頭一圈，春天常常浮在水面晒太陽。' },
+  { id:'greatwhite', spot:'harbor', name:'大白鯊', rarity:'傳說', color:'#6c7480', min:300, max:1500, power:0.99, w:0.2, desc:'背是石板灰、肚子雪白，一口三角形的鋸齒牙。會從深處往上衝撞獵物，力氣大到能把整條船拖著走，拉線一定要穩。' },
+  { id:'baskingshark_albino', spot:'harbor', of:'baskingshark', name:'白化姥鯊', rarity:'傳說', color:'#f2ece4', min:500, max:4000, power:0.95, w:0.008, desc:'全身白裡透粉、眼睛淡紅的姥鯊，世界上只有零星的目擊紀錄。' },
+  { id:'greatwhite_dark', spot:'harbor', of:'greatwhite', name:'黑化大白鯊', rarity:'傳說', color:'#30353c', min:300, max:1500, power:0.99, w:0.008, desc:'連肚子都變成深灰色的大白鯊，在深海裡幾乎看不見牠的影子。' },
   { id:'shark_red_albino', spot:'harbor', of:'shark', rs:true, name:'白化赤紅霸王鯊', rarity:'傳說', color:'#f8e8e2', min:15, max:420, power:0.99, desc:'赤紅霸王鯊生小鯊時極少數會出現的白化個體，全身粉白、眼睛是紅的。牠一樣是族群裡的一隻，會長大、會留下叉叉；被釣光一樣會絕種。不能賣，也不能送人。' },
   { id:'shark_red', spot:'harbor', of:'shark', rs:true, name:'赤紅霸王鯊', rarity:'傳說', color:'#c8161c', min:15, max:420, power:0.99, desc:'全身深紅、背上有黑色虎紋的礁岩鯊。整片海只有一小群，從一公一母開始，沒被釣走就會慢慢繁殖；全部被釣光就絕種了。不能賣，也不能送人。' },
   { id:'arowana_red', spot:'lake', of:'arowana', name:'紅龍魚', rarity:'傳說', color:'#d8302a', min:3.0, max:12, power:0.86, w:0.1, desc:'鱗片紅得像火一樣的紅龍，比金龍更稀有。' },
@@ -200,7 +204,7 @@ const SPOTS = [
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_dark'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林（參考新竹新豐紅毛港），漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
@@ -1752,7 +1756,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark']);
+const BIG_FISH = new Set(['bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_dark']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -1778,6 +1782,7 @@ addSeaLife('orca', 2.2, 58, -48, 6, 0.3, 'jump', 1.3);
 addSeaLife('orca', 1.6, 58, -48, 6, 0.3, 'jump', 1.75);
 addSeaLife('sunfish', 1.4, -30, -58, 3, 0.08, 'glide', 0.4);
 addSeaLife('whaleshark', 4.5, 30, -62, 8, 0.07, 'glide', 3);
+addSeaLife('baskingshark', 3.2, 70, -20, 7, 0.06, 'glide', 4.2);
 addSeaLife('beluga', 1.5, -46, -50, 6, 0.2, 'jump', 2.2);
 
 /* ================= FISHER ================= */
@@ -2183,7 +2188,10 @@ function updateBoat(dt, ix, iz, L, locked){
   const oar = myBoat.m.userData.oars; if (oar){ const k = speed > 0.3 ? Math.sin(t * 6) * 0.6 : 0; oar[0].rotation.y = k; oar[1].rotation.y = -k; }
 }
 $('#boatBtn').addEventListener('click', () => { ensureAudio(); if (myBoat) leaveBoat(); else { const b = nearBoat(); if (b) boardBoat(b); } });
+function boatDiveSite(){ if (!myBoat) return null; const w = waterSpotId(me.pos.x, me.pos.z); return w === 'harbor' ? 'offshore' : (w === 'reef' || w === 'weir') ? 'reef' : null; }
+$('#boatDive').addEventListener('click', () => { ensureAudio(); const ds = boatDiveSite(); if (ds) startDive(ds); });
 function updateBoatButton(){
+  { const d = $('#boatDive'), show = !!(myBoat && !Ferry.on && F.phase === 'idle' && !Dive.on && boatDiveSite()); if (d.hidden === show) d.hidden = !show; }
   const btn = $('#boatBtn'); let label = '';
   if (myBoat){ if (F.phase === 'idle') label = '下船'; }
   else if (F.phase === 'idle' && nearBoat()) label = '上船';
@@ -3145,10 +3153,33 @@ function rebuildHouseRoom(it){
   House.it = it; const g = new THREE.Group(); scene.add(g); House.group = g; const n0 = colliders.length;
   const warm = (c, r) => mat(c, r == null ? 0.85 : r, { emissive: c, emissiveIntensity: 0.12 });
   const wallC = T.wall || (it.t === 'tea' ? '#efe3c8' : it.t === 'beach' ? '#e6f3f7' : '#f6e4bd'), floorC = it.t === 'tea' ? '#c9b27a' : '#c99a6b';
-  const floor = box([W, 0.2, D], floorC, [cx, fy - 0.1, cz], warm(floorC, 0.9)); floor.castShadow = false; g.add(floor);
-  for (let i = 0; i < Math.round(W) - 1; i++){ const ln = box([0.03, 0.01, D], '#a87c52', [cx - W / 2 + (i + 1) * W / Math.round(W), fy + 0.005, cz]); ln.castShadow = false; g.add(ln); }
-  const room = new THREE.Mesh(new THREE.BoxGeometry(W, 3.2, D), warm(wallC, 0.9)); room.material.side = THREE.BackSide; room.position.set(cx, fy + 1.6, cz); g.add(room);   // 牆壁從裡面看（擋住鏡頭的那面會自動看不到）
-  const back = new THREE.Mesh(new THREE.BoxGeometry(70, 30, 70), new THREE.MeshBasicMaterial({ color:'#2a1e16', side:THREE.BackSide })); back.position.set(cx, fy + 5, cz); g.add(back);
+  /* 地板：木頭地板的貼圖（不再用一條一條細線，手機上會閃成虛線）；比牆小一點點，邊緣才不會跟牆打架 */
+  const floorTx = roomTex('floor' + floorC, 256, 256, (c, w, h) => { c.fillStyle = floorC; c.fillRect(0, 0, w, h); const rows = 8;
+    for (let r = 0; r < rows; r++){ const y = r * h / rows, off = (r % 2) * w / 3; for (let k = -1; k < 3; k++){ const x = off + k * w / 1.5;
+      c.fillStyle = shade(floorC, ((r * 7 + k * 3) % 5 - 2) * 0.025); c.fillRect(x + 2, y + 2, w / 1.5 - 4, h / rows - 4); c.fillStyle = shade(floorC, -0.22); c.fillRect(x, y, 2, h / rows); }
+      c.fillStyle = shade(floorC, -0.2); c.fillRect(0, y, w, 2); } });
+  floorTx.repeat.set(W / 3, D / 3);
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(W - 0.04, 0.2, D - 0.04), new THREE.MeshStandardMaterial({ map: floorTx, roughness: 0.85, emissive: '#ffffff', emissiveMap: floorTx, emissiveIntensity: 0.22 })); floor.position.set(cx, fy - 0.1, cz); g.add(floor);
+  /* 牆：下半截木頭護牆板、上半截壁紙；盒子從裡面看，靠鏡頭那面會自動看不到（像娃娃屋） */
+  const wallTx = roomTex('wall' + wallC, 64, 256, (c, w, h) => { c.fillStyle = wallC; c.fillRect(0, 0, w, h);
+    c.fillStyle = shade(wallC, -0.05); for (let y = 0; y < h * 0.66; y += 16) for (let x = (y / 16 % 2) * 16; x < w; x += 32) c.fillRect(x + 6, y + 6, 4, 4);
+    const wy = h * 0.66; c.fillStyle = '#b07a4e'; c.fillRect(0, wy, w, h - wy); c.fillStyle = '#9a6840'; for (let x = 0; x < w; x += 32) c.fillRect(x, wy, 2, h - wy);
+    c.fillStyle = '#7a4e2e'; c.fillRect(0, wy - 4, w, 6); c.fillRect(0, h - 10, w, 10); });
+  wallTx.wrapT = THREE.ClampToEdgeWrapping;
+  const roomG = new THREE.BoxGeometry(W, 3.3, D); { const uv = roomG.attributes.uv, pos = roomG.attributes.position; for (let k = 0; k < uv.count; k++){ const x = pos.getX(k), z = pos.getZ(k), y = pos.getY(k); const side = Math.abs(Math.abs(x) - W / 2) < 1e-3 ? z : x; uv.setXY(k, side / 1.6, (y + 1.65) / 3.3); } }
+  wallTx.wrapS = THREE.RepeatWrapping;
+  const room = new THREE.Mesh(roomG, new THREE.MeshStandardMaterial({ map: wallTx, roughness: 0.9, side: THREE.BackSide, emissive: '#ffffff', emissiveMap: wallTx, emissiveIntensity: 0.2 })); room.position.set(cx, fy + 1.6, cz); g.add(room);
+  /* 外面：白天是淡淡的天空色、晚上是深藍，不要一片咖啡色 */
+  const back = new THREE.Mesh(new THREE.BoxGeometry(70, 30, 70), new THREE.MeshBasicMaterial({ color:'#a9d6e8', side:THREE.BackSide, fog:false })); back.position.set(cx, fy + 5, cz); g.add(back); House.bg = back.material;
+  /* 房子底下一圈草地和石頭地基，看起來是一棟放在島上的房子 */
+  { const lawn = new THREE.Mesh(new THREE.CircleGeometry(Math.max(W, D) * 0.95, 40), new THREE.MeshBasicMaterial({ color:'#7fb069', fog:false })); lawn.rotation.x = -Math.PI / 2; lawn.position.set(cx, fy - 0.32, cz); g.add(lawn); House.lawn = lawn.material;
+    g.add(box([W + 0.3, 0.3, D + 0.3], '#9a9284', [cx, fy - 0.2, cz])); }
+  /* 天花板的吊燈和燈光照在地上的一圈暖光 */
+  { const pool = new THREE.Mesh(new THREE.CircleGeometry(Math.min(W, D) * 0.48, 32), new THREE.MeshBasicMaterial({ map: roomTex('pool', 128, 128, (c, w) => { const gr = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(255,214,140,0.55)'); gr.addColorStop(1, 'rgba(255,214,140,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, w); }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    pool.rotation.x = -Math.PI / 2; pool.position.set(cx, fy + 0.02, cz); g.add(pool); House.pool = pool.material;
+    const cord = box([0.03, 0.9, 0.03], '#3a2a1e', [cx, fy + 2.75, cz]); g.add(cord);
+    const shadeM = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.34, 16, 1, true), new THREE.MeshStandardMaterial({ color:'#f3d9a4', emissive:'#ffcf7a', emissiveIntensity:0.6, side:THREE.DoubleSide })); shadeM.position.set(cx, fy + 2.2, cz); g.add(shadeM);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshBasicMaterial({ color:'#fff1c8' })); bulb.position.set(cx, fy + 2.04, cz); g.add(bulb); House.bulb = bulb.material; }
   addDeck(cx, cz, W - 0.2, D - 0.2, fy); House.deck = decks[decks.length - 1];
   addBoxCol(cx, cz - D / 2 - 0.2, W + 1, 0.4); addBoxCol(cx, cz + D / 2 + 0.2, W + 1, 0.4); addBoxCol(cx - W / 2 - 0.2, cz, 0.4, D + 1); addBoxCol(cx + W / 2 + 0.2, cz, 0.4, D + 1);
   // 隔間牆（矮一點，鏡頭比較不會被擋住）和房門的門框
@@ -3158,9 +3189,14 @@ function rebuildHouseRoom(it){
     addBoxCol(cx + mx, cz + mz, along ? L : 0.2, along ? 0.2 : L); }
   for (const [dx, dz] of lay.doors){ const along = lay.walls.some(w => Math.abs(w[1] - w[3]) < 0.01 && Math.abs(w[1] - dz) < 0.01); g.add(box([along ? 1.4 : 0.2, 0.18, along ? 0.2 : 1.4], '#8c5d3b', [cx + dx, fy + 2.1, cz + dz])); }
   // 窗戶、大門
-  const winM = new THREE.MeshBasicMaterial({ color:'#bfe8ff' }); House.win = winM;
+  const winM = new THREE.MeshBasicMaterial({ color:'#ffffff', map: roomTex('winday', 64, 48, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#8fd0f0'); gr.addColorStop(1, '#d9f1fb'); c.fillStyle = gr; c.fillRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(16, 30, 6, 0, 7); c.arc(24, 28, 8, 0, 7); c.arc(32, 31, 5, 0, 7); c.fill(); }) }); House.win = winM;
+  House.winTx = [winM.map, roomTex('winnight', 64, 48, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0f1a33'); gr.addColorStop(1, '#2a3d66'); c.fillStyle = gr; c.fillRect(0, 0, w, h); c.fillStyle = '#fff6d0'; c.beginPath(); c.arc(46, 14, 6, 0, 7); c.fill(); c.fillStyle = '#ffffff'; for (const [x, y] of [[8, 8], [20, 18], [30, 6], [14, 32], [52, 34], [38, 24]]) c.fillRect(x, y, 1.5, 1.5); })];
   for (const wx of W > 10 ? [-W / 3, 0, W / 3] : [-W / 4, W / 4]){ const wn = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.0), winM); wn.position.set(cx + wx, fy + 1.8, cz - D / 2 + 0.02); g.add(wn); g.add(box([1.5, 0.08, 0.08], '#8c5d3b', [cx + wx, fy + 1.8, cz - D / 2 + 0.05])); g.add(box([0.08, 1.1, 0.08], '#8c5d3b', [cx + wx, fy + 1.8, cz - D / 2 + 0.05])); }
-  g.add(box([1.1, 2.0, 0.08], '#8c5d3b', [cx, fy + 1.0, cz + D / 2 - 0.05])); g.add(box([0.08, 0.08, 0.08], '#e8b730', [cx + 0.38, fy + 1.0, cz + D / 2 - 0.1]));
+  /* 大門在靠鏡頭那面牆（會被切掉看不到），所以只放門口的地墊、門檻和出口箭頭，不會擋住人 */
+  g.add(box([1.4, 0.03, 0.8], '#6f8f5a', [cx, fy + 0.015, cz + D / 2 - 0.55])); g.add(box([1.2, 0.035, 0.6], '#8fb07a', [cx, fy + 0.02, cz + D / 2 - 0.55]));
+  g.add(box([1.5, 0.08, 0.12], '#7a4e2e', [cx, fy + 0.04, cz + D / 2 - 0.08]));
+  { const ar = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.45), new THREE.MeshBasicMaterial({ map: roomTex('exitar', 128, 80, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.moveTo(w / 2, h - 6); c.lineTo(w - 14, 30); c.lineTo(w / 2 + 16, 30); c.lineTo(w / 2 + 16, 4); c.lineTo(w / 2 - 16, 4); c.lineTo(w / 2 - 16, 30); c.lineTo(14, 30); c.closePath(); c.fill(); }), transparent: true, depthWrite: false }));
+    ar.rotation.x = -Math.PI / 2; ar.position.set(cx, fy + 0.045, cz + D / 2 - 0.55); g.add(ar); }
   House.door = { x: cx, z: cz + D / 2 - 0.9 };
   // 家具
   const tank = (onIsle && onIsle.tank) || [], show = (onIsle && onIsle.show) || [], shown = tank.filter(x => show.includes(x.t) && FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 4), pick = shown.length ? shown : tank.filter(x => FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 3);
@@ -3183,6 +3219,9 @@ function rebuildHouseRoom(it){
   g.traverse(o => { if (o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
 }
 const CHAIRS_ROOM = [];
+const _roomTx = new Map();
+function roomTex(key, w, h, draw){ let t = _roomTx.get(key); if (t) return t; const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
+  t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; _roomTx.set(key, t); return t; }
 function exitHouse(instant){
   if (!House.on) return; const b = House.back; stopFurn();
   const done = () => {
@@ -3197,7 +3236,8 @@ function updateHouse(t){
   if (!House.on) return;
   for (const fl of House.fires || []) fl.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1);
   for (const l of House.lamps || []) l.material.emissiveIntensity = 0.5 + DayNight.lamp * 1.2;
-  if (House.win) House.win.color.set(DayNight.lamp > 0.5 ? '#233a5c' : '#bfe8ff');
+  if (House.win && House.winTx){ const tx = House.winTx[DayNight.lamp > 0.5 ? 1 : 0]; if (House.win.map !== tx){ House.win.map = tx; House.win.needsUpdate = true; } }
+  if (House.bg){ const nt = DayNight.lamp > 0.5; House.bg.color.set(nt ? '#1b2440' : '#a9d6e8'); House.lawn.color.set(nt ? '#2f4a3a' : '#7fb069'); House.pool.opacity = nt ? 1 : 0.55; }
   for (const o of House.fish){ const a = t * 0.8 + o.k, c = Math.cos(o.r), s = Math.sin(o.r), lx = Math.cos(a) * 0.45, lz = Math.sin(a * 1.3) * 0.12; o.f.position.x = o.x + c * lx + s * lz; o.f.position.z = o.z - s * lx + c * lz; o.f.rotation.y = o.r + (Math.sin(a) > 0 ? Math.PI : 0); }
   updateFurn();
 }
@@ -4519,8 +4559,8 @@ function renderFerryBar(){
   let bar = $('#ferryBar'); if (!Ferry.on){ if (bar) bar.hidden = true; return; }
   if (!bar){ bar = document.createElement('div'); bar.id = 'ferryBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; bar.appendChild(el('span', '', `🚤 ${Ferry.label}`));
-  { const n = crewNear(); if (n || Party.joined.size) bar.appendChild(el('span', 'crew', `👥 船隊 ${Math.max(n, Party.joined.size) + 1} 人${n ? `・上鉤快 ${8 * n}%` : ''}`)); }
-  if (hasDive('dive_suit') && waterSpotId(me.pos.x, me.pos.z) === 'harbor'){ const dv = el('button', 'tbtn', '🤿 下潛看魚'); dv.addEventListener('click', () => startDive('offshore')); bar.appendChild(dv); }
+  { const n = crewNear(); if (n || Party.joined.size) bar.appendChild(el('span', 'crew', `👥${Math.max(n, Party.joined.size) + 1}${n ? `・+${8 * n}%` : ''}`)); }
+  { const ds = boatDiveSite(); if (ds && hasDive('dive_suit')){ const dv = el('button', 'tbtn', '🤿 下潛'); dv.addEventListener('click', () => startDive(ds)); bar.appendChild(dv); } }
   const b = el('button', 'tbtn ghost', '回港口'); b.addEventListener('click', () => leaveFerry()); bar.appendChild(b);
 }
 function renderFerry(body){
@@ -4736,9 +4776,11 @@ function startDive(site, back){
   site = DIVE_SITES[site] ? site : 'reef'; Dive.back = back || null;   /* back：從岸邊下水的話，浮上來回到這裡 */
   if (Dive.on) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
   if (!diveSiteOk(site)){ toast(`${DIVE_SITES[site].name}要先買：${DIVE_SITES[site].need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); return; }
-  Dive.site = site; Dive.ret = site === 'offshore' && myBoat ? { x: me.pos.x, z: me.pos.z, label: '外海' } : null;
-  if (site === 'offshore' && !Dive.ret){ toast('要在外海的船上才能從這裡潛水'); return; }
-  closeSheet(); if (F.phase !== 'idle') cancelFishing(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
+  Dive.site = site; Dive.ret = myBoat && Ferry.on ? { x: me.pos.x, z: me.pos.z, label: Ferry.label || '外海' } : null;
+  Dive.boat = myBoat && !Ferry.on ? myBoat : null;   /* 自己划的小船：船留在原地，浮上來直接回到船上 */
+  if (site === 'offshore' && !Dive.ret && !Dive.boat){ toast('要在外海的船上才能從這裡潛水'); return; }
+  closeSheet(); if (F.phase !== 'idle') cancelFishing(); if (mySeat) standUp();
+  if (Dive.boat){ Dive.back = { x: myBoat.m.position.x, z: myBoat.m.position.z }; myBoat = null; me.sitting = false; } else if (myBoat) leaveFerry(true);
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
   setTimeout(() => {
     buildDive(); diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
@@ -4757,7 +4799,9 @@ function endDive(reason, instant){
     me.setSwim(false); const [fx0, fz0] = Dive.back ? [Dive.back.x, Dive.back.z] : freeSpot(FERRY.at[0] - 1.2, FERRY.at[1] + 0.8); Dive.back = null; me.pos.x = fx0; me.pos.z = fz0; me.baseY = groundHeight(fx0, fz0); Jump.gy = me.baseY; me.rot = -Math.PI / 2; cam.yaw = me.rot + Math.PI; if (Dive.savedDist) cam.dist = Dive.savedDist;
     renderDiveHud(); pushPresence(true); if (!instant) setTimeout(() => fx.classList.remove('on'), 120);
     const n = Dive.seen.size; if (!instant) toast(`${reason || '🤿 浮上水面了'}${n ? `　這次看到 ${n} 種魚` : ''}`);
-    if (Dive.site === 'offshore' && Dive.ret){ const r = Dive.ret; Dive.ret = null; ferryTo(r.x, r.z, r.label); const it = intelAt(Date.now()); Intel.seenW = it.w; Intel.ids = it.ids;
+    if (Dive.boat){ const bt = Dive.boat; Dive.boat = null; myBoat = bt; me.pos.x = bt.m.position.x; me.pos.z = bt.m.position.z; me.rot = bt.m.rotation.y; me.sitting = true; cam.yaw = me.rot + Math.PI; pushPresence(true); }
+    const onBoat = !!(Dive.ret || myBoat); if (Dive.ret){ const r = Dive.ret; Dive.ret = null; ferryTo(r.x, r.z, r.label); }
+    if (Dive.site === 'offshore' && onBoat){ const it = intelAt(Date.now()); Intel.seenW = it.w; Intel.ids = it.ids;
       setTimeout(() => { ticker(`🐟 外海魚情：<b>${it.ids.map(id => esc(FISH_BY_ID[id].name)).join('、')}</b> 正在這一帶活動，接下來 ${Math.max(1, Math.ceil((it.end - Date.now()) / 60000))} 分鐘比較容易上鉤`); }, 900); }
   };
   if (instant){ done(); return; }
@@ -4806,7 +4850,8 @@ function updateDiveSwim(dt, ix, iz, L){
   let y = me.baseY + (up - dn) * 2.4 * fins * dt - 0.08 * dt;
   y = clamp(y, diveBed(me.pos.x, me.pos.z) + 0.25, DIVE.y + DIVE.top - 1.0); me.baseY = y; Jump.gy = y; Jump.air = 0;
   me.speed += (Math.max(speed, (up || dn) ? 1.6 : 0) - me.speed) * Math.min(1, dt * 6); me.swimPitch = speed > 0.3 ? 1.25 : up ? 0.5 : 0.3;
-  if (up && y >= DIVE.y + DIVE.top - 1.05 && now() - Dive.startAt > 2){ Dive.surfHold = (Dive.surfHold || 0) + dt; if (Dive.surfHold > 0.8){ Dive.surfHold = 0; endDive(); } } else Dive.surfHold = 0;
+  /* 游到水面附近：按著上浮一下下就上去；停在水面不動 1.5 秒也會自己浮出去 */
+  if (y >= DIVE.y + DIVE.top - 1.7 && !dn && now() - Dive.startAt > 2){ Dive.surfHold = (Dive.surfHold || 0) + dt * (up ? 2.5 : 1); if (Dive.surfHold > 1.5){ Dive.surfHold = 0; endDive(); } } else Dive.surfHold = 0;
 }
 function updateDive(dt, t){
   if (!Dive.on || !Dive.group) return;
@@ -4884,7 +4929,7 @@ const QUEST_NPC = {
 };
 // 任務 NPC 走近時也會講話：村長多講新手教學，老王講釣法，美雲姨講料理
 const QUEST_TALK = {
-  chief: ['想改名字的話，去「造型」分頁就能換喔', '有些魚不在圖鑑裡喔，像變種，要親手釣到才會出現', '圖鑑裡黑黑的影子，就是你還沒釣過的魚', '按住「拋竿」蓄力，放開就拋出去，拋越遠越容易遇到大魚', '浮標整個沉下去就是魚咬了，趕快收線', '拉線的時候張力條快滿了就先放開一下，不然線會斷', '打開「地圖」，去過的地方都能直接傳送', '每天來找我、老王、美雲姨領任務，頭上有 ❗ 的就是還沒做完', '魚缸裡的魚按「展示」，就會放進廣場東邊的大水族館', '小島可以蓋自己的房子，還能邀請朋友一起住', '用 Email 綁定帳號，換手機紀錄也不會不見（在「造型」分頁）', '在聊天框說話，旁邊的村民會回你喔'],
+  chief: ['這個村子才剛開始蓋，遊戲還一直在更新喔！遇到 Bug 或怪怪的地方，記得跟作者講一聲', '遊戲還在一點一點做，常常會有新東西，有 Bug 就告訴作者，大家一起把村子變更好', '想改名字的話，去「造型」分頁就能換喔', '有些魚不在圖鑑裡喔，像變種，要親手釣到才會出現', '圖鑑裡黑黑的影子，就是你還沒釣過的魚', '按住「拋竿」蓄力，放開就拋出去，拋越遠越容易遇到大魚', '浮標整個沉下去就是魚咬了，趕快收線', '拉線的時候張力條快滿了就先放開一下，不然線會斷', '打開「地圖」，去過的地方都能直接傳送', '每天來找我、老王、美雲姨領任務，頭上有 ❗ 的就是還沒做完', '魚缸裡的魚按「展示」，就會放進廣場東邊的大水族館', '小島可以蓋自己的房子，還能邀請朋友一起住', '用 Email 綁定帳號，換手機紀錄也不會不見（在「造型」分頁）', '在聊天框說話，旁邊的村民會回你喔'],
   wang: ['港口外海有大魚，用磯釣竿最好', '漲潮的時候海邊的魚咬得比較快', '暴風雨的時候外海傳說魚多很多', '船夫阿海可以載你出海，也可以帶你去潛水', '魚太小就放流吧，愛海點數比較多'],
   mei: ['釣到的魚可以拿來食堂做料理，吃了釣魚會有加成', '客人頭上有 🔔 就是想點餐了，快來幫忙', '新鮮的魚最好吃，越大條越值錢'],
 };
@@ -5641,6 +5686,14 @@ function renderMyDesigns(body, slot){
   body.appendChild(ul);
 }
 // 設計室
+function designFromImage(im, px, o){
+  const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d', { willReadFrequently: true });
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, sz = Math.min(w, h);   /* 從中間裁成正方形 */
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(im, (w - sz) / 2, (h - sz) / 2, sz, sz, 0, 0, 16, 16);
+  const d = g.getImageData(0, 0, 16, 16).data, pal = DESIGN_PAL.map(hx => [parseInt(hx.slice(1, 3), 16), parseInt(hx.slice(3, 5), 16), parseInt(hx.slice(5, 7), 16)]);
+  for (let i = 0; i < 256; i++){ const r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2], a = d[i * 4 + 3]; if (a < 100){ px[o + i] = 0; continue; }
+    let best = 0, bd = 1e9; pal.forEach(([pr, pg, pb], k) => { const rm = (r + pr) / 2, dr = r - pr, dg = gg - pg, db = b - pb, dd = (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db; if (dd < bd){ bd = dd; best = k; } }); px[o + i] = best; }
+}
 const DesignEd = { kind:'top', side:0, px:null, col:2, tool:'pen', name:'', price:100, busy:false };
 function renderDesignEd(body){
   const E = DesignEd, N = E.kind === 'top' ? 512 : 256; if (!E.px || E.px.length !== N) E.px = Array(N).fill(0);
@@ -5664,6 +5717,13 @@ function renderDesignEd(body){
   side.appendChild(pal);
   const tools = el('div', 'seg'); [['pen', '✏️ 畫筆'], ['fill', '🪣 填色'], ['erase', '🧽 橡皮擦']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.tool === k)); b.addEventListener('click', () => { E.tool = k; renderTab(); }); tools.appendChild(b); }); side.appendChild(tools);
   const clr = el('button', 'tbtn ghost', '全部清掉'); clr.addEventListener('click', () => { for (let i = 0; i < 256; i++) E.px[off() + i] = 0; draw(); }); side.appendChild(clr);
+  /* 用自己的圖片：在手機上把圖片縮成 16×16，每一格換成調色盤裡最接近的顏色（原圖不會上傳，只存格子的顏色） */
+  { const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true; const ib = el('button', 'tbtn', '🖼️ 用自己的圖片');
+    ib.addEventListener('click', () => fi.click());
+    fi.addEventListener('change', () => { const file = fi.files && fi.files[0]; fi.value = ''; if (!file) return; const url = URL.createObjectURL(file), im = new Image();
+      im.onload = () => { try { designFromImage(im, E.px, off()); draw(); drawPrev(); toast('🖼️ 圖片變成格子圖了，可以再用畫筆修一修'); } catch(e){ toast('這張圖片讀不出來，換一張試試'); } URL.revokeObjectURL(url); };
+      im.onerror = () => { URL.revokeObjectURL(url); toast('這張圖片讀不出來，換一張試試'); }; im.src = url; });
+    side.append(ib, fi); }
   const prev = el('img'); prev.alt = '預覽'; prev.style.cssText = 'width:120px;height:120px;border-radius:10px;background:#eef4f7'; side.appendChild(prev);
   const drawPrev = () => { const pxs = E.px.map(v => v.toString(16)).join(''); Designs.map.set(0, { id: 0, kind: E.kind, px: pxs }); for (const [k] of DESIGN_SLOTS) Designs.mats.delete('0:' + k); try { const g = Object.assign(cleanGear(rec.gear), { [E.kind]: E.kind + '_dz0' }); AvShot.cache.clear(); prev.src = avatarShot(g, E.side || E.kind === 'back' ? 'back' : E.kind === 'hat' ? 'hat' : E.kind === 'shoes' ? 'shoes' : 'full', 160); } catch(e){} };
   wrap.appendChild(side); body.appendChild(wrap); draw();
