@@ -11,6 +11,10 @@ alter table public.players add column if not exists chum_type  text;
 alter table public.players add column if not exists chum_at    timestamptz;
 alter table public.players add column if not exists shrimp_until timestamptz;   -- 釣蝦場買的時段到什麼時候（025）
 alter table public.players add column if not exists cast_rs text;
+alter table public.players add column if not exists cast_gp text;       -- 孔雀魚的基因（046）：「尾巴顏色兩個|尾巴形狀兩個」，例如 rb|do
+-- 野生孔雀魚的基因：顏色大多是灰（w），有時紅（r）、藍（b）、黃（y）；尾巴大多是圓尾（o），有時劍尾（s）、扇尾（d）。黑（k）、紫（p）只會從配種突變出來
+create or replace function public._gpy_wild() returns text language sql volatile as $$
+  select substr('wwwrby', 1 + floor(random() * 6)::int, 1) || substr('wwwrby', 1 + floor(random() * 6)::int, 1) || '|' || substr('ooosd', 1 + floor(random() * 5)::int, 1) || substr('ooosd', 1 + floor(random() * 5)::int, 1) $$;
 alter table public.players add column if not exists cast_sex text;      -- 這次碰到的魚是公（M）還是母（F）（037）
 alter table public.players add column if not exists cast_brood boolean; -- 母吳郭魚嘴裡含著小魚（037）   -- 赤紅霸王鯊（032）：這次碰到的那一隻
 -- 赤紅霸王鯊的族群（032 會放一開始的一公一母和其他函式；表要先建好，roll_fish 才編得過）
@@ -60,7 +64,7 @@ declare
   ipool text[]; ih bigint; intel text[] := '{}';
   season text; mo integer; kr numeric; kl numeric; nleg integer; legk numeric; rainy boolean;
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
-  rsh public.red_sharks; rs text; fitk numeric := 1; sx text; brood boolean := false; wild boolean := false;
+  rsh public.red_sharks; rs text; gpv text; fitk numeric := 1; sx text; brood boolean := false; wild boolean := false;
   c jsonb; ctype text; cat timestamptz; left_k numeric; fit numeric; k numeric; sc jsonb; age numeric; pw numeric; nb integer; fw numeric;
 begin
   if sp is null then raise exception '沒有這個釣點'; end if;
@@ -163,7 +167,8 @@ begin
   sx := case when rs is not null then rsh.sex when random() < 0.5 then 'M' else 'F' end;
   brood := sx = 'F' and season in ('spring', 'summer') and cfg->'brood' ? pick and random() < 0.3;
   if rs is not null then fw := public._rs_w(rsh); end if;
-  update public.players set cast_fish = pick, cast_w = fw, cast_rs = rs, cast_sex = sx, cast_brood = brood, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()
+  gpv := case when pick in ('guppy', 'guppy_albino') then public._gpy_wild() end;
+  update public.players set cast_fish = pick, cast_w = fw, cast_rs = rs, cast_sex = sx, cast_brood = brood, cast_gp = gpv, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()
   where id = pl.id returning * into pl;
   return pl;
 end $$;
@@ -225,14 +230,14 @@ begin
     fish_best  = case when coalesce((fish_best ->> p_fish)::numeric, 0) < w then jsonb_set(fish_best, array[p_fish], to_jsonb(w)) else fish_best end,
     best_fish  = case when w > best_w then p_fish else best_fish end,
     best_w     = greatest(best_w, w),
-    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when p_fish in ('shark_red', 'shark_red_albino') then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
+    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when pl.cast_gp is not null then jsonb_build_object('gp', pl.cast_gp) else '{}'::jsonb end || case when p_fish in ('shark_red', 'shark_red_albino') then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
     week_best_w = case when p_fish <> c.fish then (case when week_id = c.week_id then week_best_w else 0 end)
                        when week_id = c.week_id then greatest(week_best_w, w) else w end,
     week_id    = case when p_fish = c.fish or week_id = c.week_id then c.week_id else week_id end,
     tourney_w  = case when tid is null then tourney_w when tourney_id = tid then tourney_w + w else w end,
     tourney_n  = case when tid is null then tourney_n when tourney_id = tid then tourney_n + 1 else 1 end,
     tourney_id = coalesce(tid, tourney_id),
-    cast_fish  = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null,
+    cast_fish  = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null, cast_gp = null,
     last_catch_at = now(), updated_at = now()
   where id = pl.id returning * into pl;
   return pl;

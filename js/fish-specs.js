@@ -581,9 +581,24 @@ Object.assign(SPECS, {
   shark_red_albino: VAR('shark_red', { Top:'#f2dcd6', Mid:'#f8e8e2', Bottom:'#fff6f2', Accent:'#e8b8b0', Gill:'#d89a94', Fins:'#ecc8c0', Stripes:'#e0a8a0', Eye:'#d0202a' }, {}, { glow:true }),
 });
 
+/* ---------------- 孔雀魚（Poecilia reticulata；2026-11-04）：公魚尾巴又大又花，母魚灰灰的、尾巴小；玩家可以配種，尾巴顏色和形狀會遺傳 ----------------
+   尾巴（Tail）和背鰭（Tail2）的顏色在遊戲裡依每一條魚的基因換；這裡的顏色只是預設。gpy_s / gpy_o 是劍尾、圓尾的形狀（不是另一種魚） */
+const GPY = (caudal, dorsal) => ({ c:{ Top:'#7a8a7a', Mid:'#b8c0b0', Bottom:'#eeeee4', Tail:'#e8402a', Tail2:'#2f7ae8', Fins:'#c8d0c0', Eye:'#15181c', EyeW:'#e0e8e0' }, p:{
+  bl:0.66, depth:0.24, wr:0.55, tm:0.38, nose:0.6, ped:0.3, tailK:0.9, cs:0.3, yc:[[0,0.1],[0.2,0],[1,0]], up:[[0,0.4],[0.15,0.75],[0.4,1],[0.6,0.95],[1,0.45]], lo:[[0,0.35],[0.15,0.8],[0.35,1.1],[0.55,1],[0.8,0.6],[1,0.45]],
+  pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.35, part:'Mid' }, { k:'ell', t:0.72, y:0.2, rt:0.12, ry:0.5, part:'Tail2' }],
+  dorsal:dorsal, anal:{ s:0.55, e:0.66, h:0.28 }, pect:{ t:0.22, y:0.0, size:0.32 }, pelv:{ t:0.4, size:0.2 },
+  caudal:caudal, eye:EYE(0.1, 0.4, 0.13, { ring:true }) } });
+Object.assign(SPECS, {
+  guppy: GPY({ type:'truncate', hk:2.6, len:1.35, part:'Tail' }, { s:0.5, e:0.72, h:0.55, shape:'flat', sweep:0.5, part:'Tail2' }),   /* 三角扇尾 */
+  gpy_s: GPY({ type:'forked', notch:0.18, hk:1.7, len:1.45, part:'Tail' }, { s:0.52, e:0.66, h:0.4, part:'Tail2' }),                 /* 雙劍尾 */
+  gpy_o: GPY({ type:'rounded', hk:1.9, len:0.95, part:'Tail' }, { s:0.52, e:0.64, h:0.32, part:'Tail2' }),                           /* 圓尾（野生型） */
+});
+Object.assign(SPECS, { guppy_albino: VAR('guppy', { Top:'#f0dcc8', Mid:'#f8ece0', Bottom:'#fff8f0', Fins:'#f4e4d8', Eye:'#d02a3a' }, {}) });
+
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {
+  guppy:{ type:'sup', t:0.04, y:0.25 }, gpy:{ type:'sup', t:0.04, y:0.25 },
   rabbitfish:{ t:0.025, y:-0.1 }, girella:{ t:0.03, y:-0.1 }, blackgirella:{ t:0.03, y:-0.1 }, lethrinus:{ t:0.06, y:-0.2 }, amberjack:{ t:0.08, y:-0.05 },
   mosquitofish:{ type:'sup', t:0.04, y:0.3 }, pleco:{ type:'sub', t:0.06, y:-0.85, t0:0.04 }, giantsnake:{ t:0.12, y:-0.15 }, clarias:{ t:0.06, y:-0.1, open:0.3 },
   shark:{ type:'sub', t:0.13, y:-0.5, t0:0.05 }, hammer:{ type:'sub', t:0.1, y:-0.6, t0:0.05 }, bullshark:{ type:'sub', t:0.12, y:-0.5, t0:0.04 }, sawfish:{ type:'sub', t:0.12, y:-0.7, t0:0.08 },

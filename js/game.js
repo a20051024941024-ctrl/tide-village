@@ -162,6 +162,8 @@ const FISH = [
   { id:'pleco', spot:'canal', name:'琵琶鼠魚', rarity:'常見', color:'#5a4a36', min:0.2, max:1.2, power:0.4, desc:'全身硬硬的骨板，嘴巴是吸盤，背鰭像一面帆。從水族館跑出來的外來種，現在水溝、池塘裡到處都是。' },
   { id:'giantsnake', spot:'canal', name:'泰國鱧（魚虎）', rarity:'稀有', color:'#2e3a48', min:2.0, max:15, power:0.9, desc:'可以長到一公尺的大鱧魚，非常兇，會把池塘裡的魚吃光。咬到餌會往水草裡猛衝。' },
   { id:'clarias', spot:'canal', name:'革胡子鯰（埃及塘蝨）', rarity:'稀有', color:'#4a4e4a', min:3.0, max:20, power:0.92, w:0.6, desc:'水溝、池塘裡最大的鯰魚，頭又扁又硬、有四對長鬍鬚，晚上最會吃。' },
+  { id:'guppy', spot:'canal', name:'孔雀魚', rarity:'常見', color:'#e8602a', min:0.01, max:0.02, power:0.06, w:1.2, desc:'公魚的尾巴又大又花、顏色五彩繽紛，母魚灰灰的。放在水族館一公一母會生小魚，尾巴的顏色和形狀會遺傳，偶爾還會突變出黑色、紫色。' },
+  { id:'guppy_albino', spot:'canal', of:'guppy', name:'白化孔雀魚', rarity:'稀有', color:'#f4e0d0', min:0.01, max:0.02, power:0.06, w:0.02, desc:'身體淡粉色、紅眼睛的孔雀魚。白化是隱性的，兩條配在一起小魚才會是白化。' },
   { id:'mosquitofish_gold', spot:'canal', of:'mosquitofish', name:'金色大肚魚', rarity:'稀有', color:'#f4b050', min:0.002, max:0.01, power:0.08, w:0.02, desc:'身上沒有黑色素、整條金黃色的大肚魚，在魚群裡一眼就看得到。' },
   { id:'pleco_albino', spot:'canal', of:'pleco', name:'白化琵琶鼠', rarity:'稀有', color:'#f2dca0', min:0.2, max:1.2, power:0.4, w:0.015, desc:'淡黃色、紅眼睛的琵琶鼠魚，很少在野外看到。' },
   { id:'giantsnake_red', spot:'canal', of:'giantsnake', name:'火焰魚虎', rarity:'傳說', color:'#f07a30', min:2.0, max:15, power:0.9, w:0.01, desc:'泰國鱧小時候是橘紅色帶黑線的「火焰」，這條長大了還保留那個顏色，非常少見。' },
@@ -202,10 +204,10 @@ const SPOTS = [
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林（參考新竹新豐紅毛港），漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
-  { id:'canal', label:'百年生態池', short:'生態池', subtitle:'參考新竹湖口國小（前身大湖口公學校）的百年生態池：石頭砌的池邊、紅色拱橋、假山和睡蓮', pos:V3(13.0, -41.1), color:'#5aa070', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino'] },
+  { id:'canal', label:'百年生態池', short:'生態池', subtitle:'參考新竹湖口國小（前身大湖口公學校）的百年生態池：石頭砌的池邊、紅色拱橋、假山和睡蓮', pos:V3(13.0, -41.1), color:'#5aa070', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','guppy','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino','guppy_albino'] },
   { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島（參考小琉球、澎湖），站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold'] },
   { id:'weir', label:'雙心石滬', short:'石滬', subtitle:'珊瑚礁島東邊用咾咕石疊成的愛心石滬（參考澎湖七美），退潮時魚被困在裡面、咬得特別快', pos:V3(11.0, 82.0), color:'#e86a8a', dir:V2(1, 0), late:true, fish:['rabbitfish','sergeant','butterfly','girella','octopus','puffer','rabbitfish_gold','girella_gold'] },
-  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','trout_golden'], legendBoost:1.8 },
+  { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','guppy','trout_golden'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [11, -14];
@@ -2461,7 +2463,7 @@ function doCast(){
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
   if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';
     cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat })
-      .then(row => { if (F.castId !== id) return; F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood } : 'fail'; }); }
+      .then(row => { if (F.castId !== id) return; F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood, gp: row.cast_gp || null } : 'fail'; }); }
   F.envB = envBonus(s.id);
   F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('🐟 浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
   F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (F.nest ? 0.55 : 1) * (rodFit(s.id) ? ROD_FIT[rodFit(s.id)].bite : 1) * (s.id === 'shrimp' ? 0.75 : 1) * (s.id === 'mangrove' && Env.tide.lv < -0.35 ? 1.6 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
@@ -2563,8 +2565,8 @@ function updateFishing(dt, t){
     else if (t > F.waitUntil && Cloud.on && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); }
     else if (t > F.waitUntil){
       // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
-      if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; F.sex = F.roll.sex; F.brood = F.roll.brood; F.rsTag = F.roll.rs; F.rsEscAt = F.rsTag && rsInfo(F.rsTag).esc ? rand(0.45, 0.85) : 0; }
-      else { F.fish = F.pre || pickFish(F.spot, F.castCharge); const wild = breedSeason() && WILD_BREED.has(F.fish.id); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), wild ? 2.4 : 1.7)).toFixed(2); F.sex = Math.random() < 0.5 ? 'M' : 'F'; F.brood = F.sex === 'F' && wild && BROOD.has(F.fish.id) && Math.random() < 0.3; }
+      if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; F.sex = F.roll.sex; F.brood = F.roll.brood; F.gp = F.roll.gp; F.rsTag = F.roll.rs; F.rsEscAt = F.rsTag && rsInfo(F.rsTag).esc ? rand(0.45, 0.85) : 0; }
+      else { F.fish = F.pre || pickFish(F.spot, F.castCharge); const wild = breedSeason() && WILD_BREED.has(F.fish.id); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), wild ? 2.4 : 1.7)).toFixed(2); F.sex = Math.random() < 0.5 ? 'M' : 'F'; F.brood = F.sex === 'F' && wild && BROOD.has(F.fish.id) && Math.random() < 0.3; F.gp = isGuppy(F.fish.id) ? gpyWild() : null; }
       F.phase = 'bite'; F.biteAt = t; F.drift = 0;
       if (F.spot && F.spot.id === 'shrimp'){ F.biteUntil = t + (F.fish.rarity === '傳說' ? 1.5 : F.fish.rarity === '稀有' ? 1.7 : 1.9) + curSrod().win; ripple(me.bobPos.x, me.bobPos.z); }   // 釣蝦場：沒有「!」，浮標會慢慢沉下去
       else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say('!', 'alert', 1); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); }
@@ -5392,9 +5394,27 @@ const ROD_FIT = { good:{ rare:1.15, bite:0.85 }, bad:{ rare:0.85, bite:1.2 } };
 function rodType(r){ return (r && r.type) || 'cast'; }
 // ---- 公母和繁殖（037）----
 // 水族館裡會生的魚（真的養得起來、會在魚缸裡繁殖的）；野外會自己繁殖的魚（春夏比較多、小魚比較多）；嘴巴含卵的魚
-const TANK_BREED = new Set(['goldfish', 'koi', 'carp', 'crucian', 'tilapia', 'clown', 'medaka', 'prawn', 'crayfish', 'seahorse', 'loach', 'pseudorasbora']);
-const WILD_BREED = new Set(['tilapia', 'tilapia_red', 'crucian', 'pseudorasbora', 'medaka', 'mudskipper', 'fiddler', 'crayfish']);
+const TANK_BREED = new Set(['goldfish', 'koi', 'carp', 'crucian', 'tilapia', 'clown', 'medaka', 'prawn', 'crayfish', 'seahorse', 'loach', 'pseudorasbora', 'guppy']);
+const WILD_BREED = new Set(['tilapia', 'tilapia_red', 'crucian', 'pseudorasbora', 'medaka', 'mudskipper', 'fiddler', 'crayfish', 'guppy']);
 const BROOD = new Set(['tilapia', 'tilapia_red']);
+// ---- 孔雀魚（046）：每一條有自己的基因 gp＝「尾巴顏色兩個|尾巴形狀兩個」，顏色 w灰 r紅 b藍 y黃 k黑 p紫、形狀 d扇尾 s劍尾 o圓尾（扇尾＞劍尾＞圓尾）----
+const GPY_COL = { w:['#8a9a8a', '灰'], r:['#e8402a', '紅'], b:['#2f7ae8', '藍'], y:['#f2c230', '黃'], k:['#1d1d24', '黑'], p:['#9b5bd8', '紫'] };
+const GPY_TAIL = { d:['guppy', '扇尾'], s:['gpy_s', '劍尾'], o:['gpy_o', '圓尾'] };
+function isGuppy(id){ return id === 'guppy' || id === 'guppy_albino'; }
+function gpyParse(gp){ const m = /^([wrbykp]{2})\|([dso]{2})$/.exec(gp || ''); return m ? { c: m[1].split('').sort((a, b) => 'rbykpw'.indexOf(a) - 'rbykpw'.indexOf(b)), t: m[2] } : null; }
+function gpyTail(t){ return t.includes('d') ? 'd' : t.includes('s') ? 's' : 'o'; }
+function gpyLabel(x){ const g = gpyParse(x.gp); if (!g) return ''; const [a, b] = g.c; return (a === b ? GPY_COL[a][1] + '色' : GPY_COL[a][1] + GPY_COL[b][1]) + GPY_TAIL[gpyTail(g.t)][1]; }
+function fishNameOf(x){ const f = FISH_BY_ID[x.f]; return f && isGuppy(x.f) && gpyParse(x.gp) ? gpyLabel(x) + f.name : f ? f.name : ''; }
+function gpyWild(){ const c = 'wwwrby', t = 'ooosd', r = s => s[Math.floor(Math.random() * s.length)]; return r(c) + r(c) + '|' + r(t) + r(t); }
+function gpyBaby(a, b){ const A = gpyParse(a) || gpyParse('ww|oo'), B = gpyParse(b) || gpyParse('ww|oo'), h = s => s[Math.random() < 0.5 ? 0 : 1];
+  let c = [h(A.c), h(B.c)], t = [h(A.t), h(B.t)]; if (Math.random() < 0.04) c[Math.random() < 0.5 ? 0 : 1] = 'wrbykp'[Math.floor(Math.random() * 6)]; if (Math.random() < 0.03) t[Math.random() < 0.5 ? 0 : 1] = 'dso'[Math.floor(Math.random() * 3)]; return c.join('') + '|' + t.join(''); }
+// 每一種品系（顏色＋尾巴形狀＋公母＋白化）用自己的模型顏色；母魚顏色比較淡
+function gpyFish(x){ const base = FISH_BY_ID[x.f], g = base && isGuppy(x.f) ? gpyParse(x.gp) : null; if (!g) return base;
+  const tl = gpyTail(g.t), fem = x.s === 'F', alb = x.f === 'guppy_albino', key = `gpy~${g.c.join('')}${tl}${fem ? 'F' : 'M'}${alb ? 'a' : ''}`;
+  if (!FISH_STYLE[key]){ const B = FISH_STYLE[GPY_TAIL[tl][0]], c = Object.assign({}, B.c), lt = (h, k) => '#' + new THREE.Color(h).lerp(new THREE.Color('#c8ccc0'), k).getHexString();
+    if (alb) Object.assign(c, FISH_STYLE.guppy_albino.c); c.Tail = fem ? lt(GPY_COL[g.c[0]][0], 0.55) : GPY_COL[g.c[0]][0]; c.Tail2 = fem ? lt(GPY_COL[g.c[1]][0], 0.6) : GPY_COL[g.c[1]][0];
+    FISH_STYLE[key] = Object.assign({}, B, { c }); FISH_BY_ID[key] = Object.assign({}, base, { id: key, color: c.Tail }); }
+  return Object.assign({}, FISH_BY_ID[key], { name: fishNameOf(x) }); }
 function breedSeason(){ return SEASON === 'spring' || SEASON === 'summer'; }
 function sexIcon(x){ return x && x.s === 'M' ? '♂' : x && x.s === 'F' ? '♀' : ''; }
 // 水族館繁殖：展示中同一種魚的一公一母，每天一半機會生一條小魚（每天最多 3 條；伺服器 breed_tank 算）
@@ -5407,7 +5427,7 @@ function babyGeno(a, b){ const [ka, va] = a.split(':'), [kb, vb] = b.split(':'),
   if (ka === 'V' && (kb !== 'V' || r < 0.5)) return 'C:' + va; if (kb === 'V') return 'C:' + vb;
   if (ka === 'C' && (kb === 'N' || r < 0.5)) return h() ? 'C:' + va : 'N'; return h() ? 'C:' + vb : 'N'; }
 function tankPairs(){ const show = new Set(rec.show || []), c = {}, pri = g => g[0] === 'V' ? 0 : g[0] === 'C' ? 1 : 2;
-  for (const x of rec.tank){ const b = breedBase(x.f); if (!show.has(x.t) || !TANK_BREED.has(b) || !x.s || x.rs) continue; const k = c[b] || (c[b] = { M:[], F:[] }); k[x.s].push(geno(x)); }
+  for (const x of rec.tank){ const b = breedBase(x.f); if (!show.has(x.t) || !TANK_BREED.has(b) || !x.s || x.rs) continue; const k = c[b] || (c[b] = { M:[], F:[] }); k[x.s].push(geno(x) + '#' + (x.gp || '')); }
   return Object.entries(c).map(([f, k]) => { const so = a => a.sort((p, q) => pri(p) - pri(q) || (p < q ? -1 : 1)); so(k.M); so(k.F); const pairs = Math.min(k.M.length, k.F.length);
     return { f, M:k.M.length, F:k.F.length, pairs, list: Array.from({ length: pairs }, (_, i) => [k.M[i], k.F[i]]), vars: k.M.concat(k.F).filter(g => g[0] === 'V').length }; }); }
 async function breedTank(){
@@ -5416,9 +5436,9 @@ async function breedTank(){
   if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('breed_tank'); if (error || !data) return; born = data.born || []; breedTank.next = data.next || 0;
       if (born.length && Array.isArray(data.tank)){ rec.tank = normRec(Object.assign({}, rec, { tank: data.tank })).tank; saveRecLocal(); buildTank(); } } catch(e){ return; } }
   else { if (!rec.breedAt){ rec.breedAt = Date.now(); saveRecLocal(); return; } const days = Math.min(3, Math.floor((Date.now() - rec.breedAt) / 86400000)); if (days < 1) return;
-    for (let d = 0; d < days; d++) for (const p of tankPairs()) for (let k = 0; k < p.pairs && born.length < 3 * days; k++) if (Math.random() < 0.5){ const f = FISH_BY_ID[p.f], g = babyGeno(p.list[k][0], p.list[k][1]), v = g[0] === 'V' ? g.slice(2) : null; born.push(Object.assign({ f: v || p.f, w: +f.min.toFixed(2), t: Date.now() + born.length, s: Math.random() < 0.5 ? 'M' : 'F', y: true }, g[0] === 'C' ? { g: g.slice(2) } : {}, v ? { k: true } : {})); }
+    for (let d = 0; d < days; d++) for (const p of tankPairs()) for (let k = 0; k < p.pairs && born.length < 3 * days; k++) if (Math.random() < 0.5){ const f = FISH_BY_ID[p.f], [ga, pa] = p.list[k][0].split('#'), [gb, pb] = p.list[k][1].split('#'), g = babyGeno(ga, gb), v = g[0] === 'V' ? g.slice(2) : null; born.push(Object.assign({ f: v || p.f, w: +f.min.toFixed(2), t: Date.now() + born.length, s: Math.random() < 0.5 ? 'M' : 'F', y: true }, g[0] === 'C' ? { g: g.slice(2) } : {}, v ? { k: true } : {}, p.f === 'guppy' ? { gp: gpyBaby(pa, pb) } : {})); }
     rec.breedAt += days * 86400000; if (born.length){ rec.tank = born.concat(rec.tank); trimTank(); buildTank(); } saveRecLocal(); }
-  for (const x of born){ const f = FISH_BY_ID[x.f]; if (!f) continue; if (f.of) ticker(`✨ 水族館生出了變種小魚 <b>${esc(f.name)}</b>！（${sexIcon(x)}，自動收藏）`); else ticker(`🐣 水族館裡的<b>${esc(f.name)}</b>生小魚了！（${sexIcon(x)}${x.g && FISH_BY_ID[x.g] ? `・🧬 帶著${esc(FISH_BY_ID[x.g].name)}的基因` : ''}）`); }
+  for (const x of born){ const f = FISH_BY_ID[x.f]; if (!f) continue; if (f.of) ticker(`✨ 水族館生出了變種小魚 <b>${esc(f.name)}</b>！（${sexIcon(x)}，自動收藏）`); else ticker(`🐣 水族館裡的<b>${esc(fishNameOf(x))}</b>出生了！（${sexIcon(x)}${x.g && FISH_BY_ID[x.g] ? `・🧬 帶著${esc(FISH_BY_ID[x.g].name)}的基因` : ''}）`); }
   if (born.length && !$('#sheet').hidden && curTab === 'tank') renderTab();
 }
 function itemPrice(x){ const f = FISH_BY_ID[x.f]; return Math.round(fishPrice(f, x.w) * (x.y ? 0.25 : 1)); }   /* 水族館生的小魚只值四分之一 */
@@ -5844,7 +5864,7 @@ function normRec(r){
   e.breedAt = Number(r.breedAt) || 0;   /* 水族館繁殖上次算到哪 */
   e.total = Number(r.total) || 0; e.bestW = Number(r.bestW) || 0; e.bestFish = FISH_BY_ID[r.bestFish] ? r.bestFish : null; e.legend = Number(r.legend) || 0; e.updatedAt = Number(r.updatedAt) || 0;
   for (const f of FISH){ if (r.best && Number(r.best[f.id]) > 0) e.best[f.id] = Number(r.best[f.id]); if (r.count && Number(r.count[f.id]) > 0) e.count[f.id] = Number(r.count[f.id]); }
-  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}, typeof x.g === 'string' && FISH_BY_ID[x.g] ? { g:x.g } : {}));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
+  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}, typeof x.g === 'string' && FISH_BY_ID[x.g] ? { g:x.g } : {}, typeof x.gp === 'string' && /^[wrbykp]{2}\|[dso]{2}$/.test(x.gp) ? { gp:x.gp } : {}));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
@@ -5868,7 +5888,7 @@ function recordCatch(f, w){
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
   if (f.rarity === '傳說') rec.legend++;
-  rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
+  rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
   cloudCall('record_catch', { p_fish: f.id, p_weight: w });
@@ -5975,7 +5995,7 @@ function buildTank(){
   const list = shownFish();
   const bySpecies = new Map();
   list.forEach((x, i) => {
-    const f = FISH_BY_ID[x.f]; const big = BIG_FISH.has(f.id);
+    const f = gpyFish(x); const big = BIG_FISH.has(f.id);   /* 孔雀魚每個品系顏色不一樣 */
     const fish = { f, scale: tankScale(f, x.w), zk: FISH_STYLE[f.id] && /^Fish/.test(FISH_STYLE[f.id].shape) ? 1.5 : 1,
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
     if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
@@ -6066,7 +6086,8 @@ function renderBag(body){
 
 /* ================= CATCH CARD ================= */
 function showCatch(f, w, res){
-  drawFish($('#ccCanvas'), f.color, true, f.id);
+  const gx = isGuppy(f.id) && F.gp ? gpyFish({ f: f.id, gp: F.gp, s: F.sex }) : null;
+  drawFish($('#ccCanvas'), (gx || f).color, true, (gx || f).id);
   const b = $('#ccBadges'); b.textContent = '';
   const chip = document.createElement('span'); chip.className = 'chip r-' + f.rarity; chip.textContent = f.rarity + '・' + SPOT_BY_ID[f.spot].label; b.appendChild(chip);
   if (F.sex){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = F.sex === 'M' ? '♂ 公' : '♀ 母'; b.appendChild(x); }
@@ -6077,7 +6098,8 @@ function showCatch(f, w, res){
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '個人新紀錄'; b.appendChild(x); }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
   if (Tny.on){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `⏱️ 大賽 +${w.toFixed(2)}kg`; b.appendChild(x); }
-  $('#ccName').textContent = f.name;
+  $('#ccName').textContent = gx ? gx.name : f.name;
+  if (gx){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `🧬 ${gpyLabel({ gp: F.gp })}・可以配種`; b.appendChild(x); }
   const small = undersized(f, w), lp = lovePts(f, w);
   if (small){ const x = document.createElement('span'); x.className = 'badge small'; x.textContent = `📏 未達尺寸（${sizeMin(f).toFixed(2)}kg 以上）`; b.appendChild(x); }
   $('#ccW').innerHTML = w.toFixed(2) + '<small>kg</small>' + (f.rs ? `<small class="ccp">・不能賣</small>` : `<small class="ccp">・可賣 🪙${fishPrice(f, w)}${small ? '（半價）' : ''}</small>`);
@@ -7069,8 +7091,8 @@ function renderTab(){
     else if (tankSort === 'rare') list.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity] || b.w - a.w);
     const ul = el('ul', 'tank');
     list.forEach(x => {
-      const f = FISH_BY_ID[x.f]; const li = el('li' , shown.has(x.t) ? 'on' : ''); li.appendChild(fishCanvas(f, true, 56, 36));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${f.name} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.g ? ' 🧬' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
+      const f = FISH_BY_ID[x.f]; const li = el('li' , shown.has(x.t) ? 'on' : ''); li.appendChild(fishCanvas(gpyFish(x), true, 56, 36));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${fishNameOf(x)} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.g ? ' 🧬' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
       d.appendChild(el('div', 'meta', `${x.g && FISH_BY_ID[x.g] ? `帶著${FISH_BY_ID[x.g].name}的基因・` : ''}${x.y ? '水族館出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
       const acts = el('div', 'tacts');
       const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '展示中' : '展示'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
@@ -7212,6 +7234,7 @@ function renderTab(){
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
       '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」，最下面按「＋ 自己設計」，就能在 16×16 的格子上畫圖案（上衣有正面和背面），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
+      '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 箱網養殖（參考澎湖的圓形箱網）：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
