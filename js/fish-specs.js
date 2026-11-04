@@ -555,9 +555,31 @@ Object.assign(SPECS, {
   arowana_red: VAR('arowana', { Top:'#8a2420', Mid:'#d8302a', Bottom:'#f06a50', Stripes:'#b8241e', Fins:'#a8201a' }, {}, { glow:true }),
 });
 
+/* ---------------- 珊瑚礁群島（參考小琉球、澎湖石滬；2026-11-04）：外形從相近的魚改 ---------------- */
+Object.assign(SPECS, {
+  // 臭肚魚（褐籃子魚）Siganus fuscescens：側扁的橢圓形、小嘴，橄欖褐色帶很多淡色小點，背鰭硬棘有毒；石滬裡最常抓到的魚
+  rabbitfish: VAR('scat', { Top:'#5a5a3a', Mid:'#8a8a5e', Bottom:'#d8d4b8', Spots:'#e8e4c8', Fins:'#7a7a52', EyeW:'#d8d0a0' }, { depth:0.5, nose:0.6, dots:{ n:46, t0:0.1, t1:0.9, y0:-0.5, y1:0.9, r:0.016, part:'Spots' }, caudal:{ type:'emarginate', hk:1.15 } }),
+  // 白毛（瓜子鱲）Girella punctata：灰綠色、橢圓側扁、嘴很小，每片鱗中間有一個小黑點排成線；磯釣的人最愛的魚
+  girella: VAR('blackbream', { Top:'#4e5a52', Mid:'#8e9a90', Bottom:'#d6dcd4', Spots:'#2e3630', Fins:'#5a665e' }, { depth:0.44, nose:0.55, dots:{ n:40, t0:0.15, t1:0.88, y0:-0.4, y1:0.8, r:0.01, part:'Spots' }, caudal:{ type:'emarginate', hk:1.25 } }),
+  // 黑毛（黑瓜子鱲）Girella leonina：比白毛黑、比白毛大，鰓蓋邊緣黑黑的；力氣很大，會往礁石洞裡鑽
+  blackgirella: VAR('blackbream', { Top:'#1e2422', Mid:'#3a4240', Bottom:'#9aa29e', Fins:'#1a201e', EyeW:'#c8ccc8' }, { depth:0.46, nose:0.55, caudal:{ type:'emarginate', hk:1.3 } }),
+  // 青嘴龍占（正龍占）Lethrinus nebulosus：吻部長而尖、頭的輪廓斜斜的，黃灰色、鱗片上有藍色斑，臉頰有藍色線條
+  lethrinus: VAR('mangsnapper', { Top:'#8a7a4a', Mid:'#c8b88a', Bottom:'#f0e8d0', Stripes:'#3a8ad8', Fins:'#c8a85a', EyeW:'#e8d8a0' }, { depth:0.34, nose:1.05, pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, { k:'line', t0:0.02, t1:0.16, y:[[0, -0.05], [1, -0.2]], w:0.022, part:'Stripes' }, { k:'line', t0:0.03, t1:0.15, y:[[0, -0.35], [1, -0.45]], w:0.02, part:'Stripes' }], caudal:{ type:'forked', notch:0.3, hk:1.3 } }),
+  // 紅甘（杜氏鰤）Seriola dumerili：細長的紡錘形、背是琥珀橄欖色、肚子銀白，眼睛前後有一條深色的斜帶、身體中間一條琥珀色縱帶；深水礁區的大魚
+  amberjack: VAR('trevally', { Top:'#6a5a3a', Mid:'#c8b07a', Bottom:'#eeeae0', Accent:'#d8a040', Fins:'#8a7040', EyeW:'#e8d8a8' }, { depth:0.26, nose:0.6, tm:0.32, ped:0.1, pat:[{ k:'band', t0:0, t1:1, y0:-0.4, y1:0.15, part:'Mid' }, { k:'line', t0:0.1, t1:0.95, y:[[0, 0.02], [1, 0.0]], w:0.07, part:'Accent' }], dots:null, pect:{ t:0.27, y:-0.15, size:0.5, shape:'long', ang:-0.2, w:0.3 }, caudal:{ type:'forked', notch:0.2, hk:1.5 } }),
+});
+Object.assign(SPECS, {
+  rabbitfish_gold: VAR('rabbitfish', { Top:'#d8a830', Mid:'#f0c850', Bottom:'#fbe8b0', Spots:'#fff4d0', Fins:'#e8b840' }, {}),
+  girella_gold: VAR('girella', { Top:'#c8a040', Mid:'#e8c870', Bottom:'#f8ecc8', Spots:'#a88030', Fins:'#d8b058' }, {}),
+  blackgirella_albino: VAR('blackgirella', { Top:'#f0d8d0', Mid:'#f6e6de', Bottom:'#fff6f2', Fins:'#ecd0c8', Eye:'#d02a3a' }, {}),
+  lethrinus_red: VAR('lethrinus', { Top:'#b8402a', Mid:'#e87a5a', Bottom:'#f8d8c8', Fins:'#d8604a' }, {}),
+  amberjack_gold: VAR('amberjack', { Top:'#c89020', Mid:'#f0c040', Bottom:'#fbeab0', Accent:'#fff0a0', Fins:'#e0a830' }, {}, { glow:true }),
+});
+
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {
+  rabbitfish:{ t:0.025, y:-0.1 }, girella:{ t:0.03, y:-0.1 }, blackgirella:{ t:0.03, y:-0.1 }, lethrinus:{ t:0.06, y:-0.2 }, amberjack:{ t:0.08, y:-0.05 },
   mosquitofish:{ type:'sup', t:0.04, y:0.3 }, pleco:{ type:'sub', t:0.06, y:-0.85, t0:0.04 }, giantsnake:{ t:0.12, y:-0.15 }, clarias:{ t:0.06, y:-0.1, open:0.3 },
   shark:{ type:'sub', t:0.13, y:-0.5, t0:0.05 }, hammer:{ type:'sub', t:0.1, y:-0.6, t0:0.05 }, bullshark:{ type:'sub', t:0.12, y:-0.5, t0:0.04 }, sawfish:{ type:'sub', t:0.12, y:-0.7, t0:0.08 },
   sturgeon:{ type:'sub', t:0.1, y:-0.8, t0:0.07 }, whaleshark:{ t:0.06, y:-0.05, open:0.5 }, manta:false, stingray:false, flounder:{ t:0.05, y:0.1 },
