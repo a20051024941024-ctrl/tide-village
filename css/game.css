@@ -752,3 +752,12 @@ body.ui2.touch #log .m{align-self:center}
 body.ui2 #photoBtn span,body.ui2 #fsBtn span,body.ui2 #musicBtn span,body.ui2 #soundBtn span{display:none!important}
 body.ui2 #ticker{right:300px}
 body.ui2 #toasts{top:calc(var(--gt) + 190px)}
+#fishMark .fm-ico canvas.fmpic{width:40px;height:26px;display:block}
+#fishMark.boss .fm-ico canvas.fmpic{width:50px;height:32px}
+/* 聊天：打字時輸入框在鍵盤正上方（不要跑到畫面最上面）；聊天訊息更明顯 */
+body.ui2.touch.chatting #chatForm{top:auto;bottom:calc(var(--gb) + var(--kb, 0px));transform:translateX(-50%);width:min(460px,calc(100vw - 32px));z-index:20}
+body.ui2 #log .m:not(.sys){font-size:14px;background:rgba(255,255,255,.94);color:var(--ink);padding:5px 12px;border-radius:14px;box-shadow:0 2px 6px rgba(24,51,74,.18)}
+body.ui2 #log .m:not(.sys) b{color:#2a8fb8}
+body.ui2.touch #log .m:not(.sys){font-size:13px;max-width:min(360px,60vw)}
+body.ui2 #chatForm{box-shadow:0 0 0 2px #2a8fb8,0 4px 12px rgba(24,51,74,.2)}
+body.ui2.touch.infish:not(.chatting) #chatForm{display:none}

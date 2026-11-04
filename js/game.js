@@ -1805,8 +1805,8 @@ class Fisher {
       let pz = -(this.windup || 0);
       if (this.castT >= 0){ this.castT += dt; const k = this.castT / 0.5; if (k >= 1) this.castT = -1; else pz = k < 0.4 ? -1 + (k / 0.4) * 2.25 : 1.25 - ((k - 0.4) / 0.6) * 1.25; }
       const back = Math.max(0, -pz), fwd = Math.max(0, pz);
-      a.armR.rotation.x = -1.0 - this.bend * 0.3 - back * 1.5 + fwd * 0.35; a.armL.rotation.x = -0.7 - this.bend * 0.2 - back * 1.2 + fwd * 0.25;
-      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.6 + fwd * 0.55;
+      a.armR.rotation.x = -1.0 - this.bend * 0.3 - back * 0.55 + fwd * 0.3; a.armL.rotation.x = -0.7 - this.bend * 0.2 - back * 0.4 + fwd * 0.2;   /* 手不要舉太高：主要是竿子往後倒 */
+      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.1 + fwd * 0.5;
     } else { a.armL.rotation.x = -sw * 0.8; a.armR.rotation.x = sw * 0.8; }
     if (this.held){
       const h = this.held;
@@ -2437,15 +2437,15 @@ function startReel(){
   const shr = F.spot && F.spot.id === 'shrimp'; F.shr = shr;
   $('#fhName').textContent = rec.count[F.fish.id] ? `${F.fish.name}上鉤了！` : shr ? (F.fish.rarity === '傳說' ? '這隻蝦超有力！' : F.fish.rarity === '稀有' ? '好大的鉗子！' : '沒見過的蝦上鉤了！') : F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : '沒見過的魚上鉤了！';   /* 釣過的魚會直接說是什麼魚 */
   const rc = $('#fhRar'); rc.className = 'chip r-' + F.fish.rarity; rc.textContent = F.fish.rarity;
-  $('#fishMark').className = 'r-' + F.fish.rarity; $('#fmIco').textContent = shr ? (F.fish.id === 'crayfish' || F.fish.id === 'bluelobster' ? '🦞' : '🦐') : BIG_FISH.has(F.fish.id) ? '🐋' : F.fish.rarity === '傳說' ? '🐉' : '🐟'; F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
+  $('#fishMark').className = 'r-' + F.fish.rarity; { const ic = $('#fmIco'); ic.textContent = ''; const cv = fishCanvas(F.fish, !!rec.count[F.fish.id], 40, 26); cv.className = 'fmpic'; ic.appendChild(cv); }   /* 拉魚時顯示這條魚的樣子（沒釣過的只有黑影） */ F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
   pushPresence(true);
 }
 function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = 55; camera.updateProjectionMatrix(); }
 /* ---- 來吃餌的魚：等魚的時候看得到牠從旁邊游過來、試探、咬下去（大魚不顯示）。沒釣過的魚只看得到黑影 ---- */
 const BiteFish = { m:null, id:null, ang:0, k:0, shadowM:null };
-function biteFishOf(){ const f = F.roll && F.roll.f ? F.roll.f : F.pre; return f && !BIG_FISH.has(f.id) ? f : null; }
+function biteFishOf(){ if (F.phase === 'reeling') return F.fish; const f = F.roll && F.roll.f ? F.roll.f : F.pre; return f && !BIG_FISH.has(f.id) ? f : null; }
 function updateBiteFish(dt, t){
-  const on = (F.phase === 'waiting' || F.phase === 'bite') && me.bobState === 'water' && !me.flying && !Dive.on, f = on ? biteFishOf() : null;
+  const on = ((F.phase === 'waiting' || F.phase === 'bite') && me.bobState === 'water' && !me.flying || F.phase === 'reeling') && !Dive.on, f = on ? biteFishOf() : null;
   if (!f){ if (BiteFish.m){ scene.remove(BiteFish.m); BiteFish.m = null; BiteFish.id = null; } return; }
   if (BiteFish.id !== f.id){
     if (BiteFish.m) scene.remove(BiteFish.m);
@@ -2456,6 +2456,10 @@ function updateBiteFish(dt, t){
     m.visible = false; scene.add(m); BiteFish.m = m; BiteFish.mats = mats; BiteFish.id = f.id; BiteFish.ang = Math.random() * Math.PI * 2; BiteFish.k = 0; BiteFish.fade = 0; BiteFish.showAt = t + rand(1.2, 3.5);   /* 等一下才游過來，不會一丟下去就出現 */ m.position.set(me.bobPos.x + Math.cos(BiteFish.ang) * 2.4, WATER_LEVEL - 0.06, me.bobPos.z + Math.sin(BiteFish.ang) * 2.4);
   }
   const m = BiteFish.m, b = me.bobPos, nib = F.lastNib && t - F.lastNib < 0.35, bite = F.phase === 'bite';
+  if (F.phase === 'reeling'){   // 拉魚時：魚就在浮標底下掙扎，往外衝的方向擺頭
+    if (!m.visible) m.visible = true; BiteFish.fade = Math.min(1, BiteFish.fade + dt * 1.5); for (const [mt, op] of BiteFish.mats) mt.opacity = op * BiteFish.fade;
+    const dx = b.x - me.pos.x, dz = b.z - me.pos.z, ang = Math.atan2(-dz, dx), thr = Math.sin(t * 14) * 0.45 * (0.5 + (F.T || 0));
+    m.position.set(b.x + Math.cos(ang) * 0.25, WATER_LEVEL - 0.12 + Math.sin(t * 9) * 0.04 + (F.jump > 0 ? 0.3 : 0), b.z - Math.sin(ang) * 0.25); m.rotation.y = ang + thr; m.rotation.z = Math.sin(t * 11) * 0.25; return; }
   if (t < BiteFish.showAt && !bite) return; if (!m.visible){ m.visible = true; }
   BiteFish.fade = Math.min(1, BiteFish.fade + dt * 0.6); for (const [mt, op] of BiteFish.mats) mt.opacity = op * BiteFish.fade;   // 從深處慢慢浮現
   // 慢慢靠近：一開始在 2.2 公尺外繞圈，越等越近；試探時衝過來碰一下；咬下去時頭頂著浮標
@@ -2467,11 +2471,12 @@ function updateBiteFish(dt, t){
   m.rotation.y = Math.atan2(-(b.z - m.position.z), b.x - m.position.x) + (bite ? Math.sin(t * 18) * 0.25 : Math.sin(t * 3) * 0.1);
 }
 function updateFishing(dt, t){
+  { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
   const act = $('#act');
   if (F.phase === 'charging'){
     F.chargeT += dt; F.charge = 1 - Math.abs(((F.chargeT / 1.3) % 2) - 1);
     $('#chargeFill').style.width = (F.charge*100).toFixed(1) + '%';
-    me.bend = F.charge * 0.25; me.windup = Math.min(1, 0.35 + F.charge * 0.65);   /* 蓄力時竿子往後舉 */
+    me.bend = F.charge * 0.25; me.windup += (0.8 - me.windup) * Math.min(1, dt * 6);   /* 蓄力時竿子往後舉一次就停住（不會跟著力量條一直上下） */
   }
   if (F.phase === 'waiting' && !me.flying){
     me.bend *= 0.9;
@@ -4989,6 +4994,8 @@ function drawMarlin(cv, known){
 let tankInst = [];      // 這次建出來的 InstancedMesh／一般模型，重建時要拿掉
 // 水族館裡住在底下的：螃蟹、龍蝦、蝦子、章魚、比目魚、魟魚…會貼著沙子慢慢爬，不會在水中間游
 const TANK_BOTTOM = new Set(['crab', 'kingcrab', 'lobster', 'bluelobster', 'crayfish', 'prawn', 'blueclaw', 'goldprawn', 'whiteshrimp', 'tigerprawn', 'octopus', 'flounder', 'stingray', 'hillstream', 'loach', 'angler', 'catfish']);
+// 水族館裡魚的大小：不同種類照真實的大小差很多（壓縮過），同一種也會因為重量不同有大有小
+function tankScale(f, w){ const avg = (f.min + f.max) / 2, base = 0.2 + 0.13 * Math.log(1 + avg * 4), k = clamp(Math.cbrt(Math.max(0.0001, w) / avg), 0.7, 1.35); return clamp(base * k, 0.16, 1.2); }
 function buildTank(){
   if (!tankGroup) return;
   for (const m of tankInst){ tankGroup.remove(m); if (m.isInstancedMesh) m.dispose(); } tankInst = []; tankFish = [];
@@ -4996,7 +5003,7 @@ function buildTank(){
   const bySpecies = new Map();
   list.forEach((x, i) => {
     const f = FISH_BY_ID[x.f]; const big = BIG_FISH.has(f.id);
-    const fish = { f, scale: big ? 0.46 : 0.3 + Math.min(0.18, Math.log(1 + x.w) * 0.06), zk: FISH_STYLE[f.id] && /^Fish/.test(FISH_STYLE[f.id].shape) ? 1.5 : 1,
+    const fish = { f, scale: tankScale(f, x.w), zk: FISH_STYLE[f.id] && /^Fish/.test(FISH_STYLE[f.id].shape) ? 1.5 : 1,
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
     if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
     tankFish.push(fish);
@@ -5133,8 +5140,8 @@ function logMsg(name, text, sys){
   if (name){ const b = document.createElement('b'); b.textContent = name; d.appendChild(b); }
   d.appendChild(document.createTextNode(text)); logEl.appendChild(d);
   while (logEl.children.length > 30) logEl.firstChild.remove();
-  setTimeout(() => d.classList.add('fade'), sys ? 5000 : 9000);   /* 系統訊息 5 秒、聊天 9 秒就淡掉，不要一直擋畫面 */
-  setTimeout(() => d.classList.add('gone'), sys ? 5700 : 9700);
+  setTimeout(() => d.classList.add('fade'), sys ? 5000 : 14000);   /* 系統訊息 5 秒就淡掉；玩家說的話留久一點（14 秒） */
+  setTimeout(() => d.classList.add('gone'), sys ? 5700 : 14700);
 }
 // 跑馬燈：大家的動態（誰釣到什麼、誰在炫耀、天色變化）從右往左飄過去；排隊一則接一則，不會疊在一起
 const Ticker = { q:[], nextAt:0, busy:false, speed:110 };
@@ -5171,6 +5178,10 @@ $('#chatForm').addEventListener('submit', async e => {
   } else { me.say(text); logMsg('你', text + (room ? '' : '（單人模式）')); }
   if (isTouch){ inp.blur(); document.body.classList.remove('chatting'); }
 });
+// 手機鍵盤跳出來時，把聊天輸入框往上推到鍵盤上面
+if (window.visualViewport){ const kb = () => { const v = visualViewport, h = Math.max(0, innerHeight - (v.height + v.offsetTop)); document.documentElement.style.setProperty('--kb', (h > 60 ? h : 0) + 'px'); }; visualViewport.addEventListener('resize', kb); visualViewport.addEventListener('scroll', kb); }
+if (isTouch && $('#chatIn')) $('#chatIn').placeholder = '點這裡跟大家聊天…';
+if ($('#chatIn')){ $('#chatIn').addEventListener('focus', () => document.body.classList.add('chatting')); $('#chatIn').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('#chatIn')) document.body.classList.remove('chatting'); }, 150)); }
 $('#chatToggle').addEventListener('click', () => { document.body.classList.toggle('chatting'); if (document.body.classList.contains('chatting')) $('#chatIn').focus(); });
 $('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = false; });
 
