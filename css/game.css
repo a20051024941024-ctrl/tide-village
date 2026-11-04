@@ -678,3 +678,7 @@ details.help li{margin:4px 0}
 #shrimpChip.none{background:#fff;color:#c0392b;animation:relPulse 2s ease-in-out infinite}
 .helpul{margin:6px 0 10px;padding-left:20px;font-size:13px;line-height:1.6;color:var(--ink)}
 .helpul li{margin:3px 0}
+
+/* 手機：右下的拋竿按鈕和搖桿往上移一點，免得被瀏覽器下面的列遮住 */
+body.touch{--gb:calc(env(safe-area-inset-bottom, 0px) + 34px)}
+html,body{height:100dvh}

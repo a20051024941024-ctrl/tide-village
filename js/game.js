@@ -4245,7 +4245,7 @@ function updateCustomers(dt, t){
       f.baseY = groundHeight(f.pos.x, f.pos.z);
     } else if (c.state === 'in'){
       c.state = 'wait'; f.sitting = true; f.baseY = c.st.y; f.pos.x = c.st.x; f.pos.z = c.st.z; const rc = RECIPES[c.order]; f.say(`想吃 ${rc.icon} ${rc.name}`, 'order', 9999); c.until = t + 150;
-      if (!c.told){ c.told = true; ticker(`🔔 潮汐食堂來了客人：<b>${esc(c.name)}</b> 想吃 ${rc.icon} ${esc(rc.name)}`); }
+      if (!c.told){ c.told = true; }   /* 客人來了不用跑馬燈（使用者覺得太吵） */
     } else { f.dispose(); customers.splice(i, 1); continue; }
     f.update(dt, t); f.placeTag();
   }
@@ -4968,7 +4968,7 @@ var ccFish = null;
 function releaseCaught(){
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x) { closeCatch(); return; }
   const p = releaseLocal(x); if (me.held) me.held.until = 0;
-  SFX.chat(); flash(`💙 ${f.name} 游回大海了！愛海點數 +${p}`, 1.6); cloudCall('release_catch', { p_fish: f.id }); closeCatch();
+  SFX.chat(); ticker(`💙 <b>${esc(f.name)}</b> 游回大海了！愛海點數 +${p}`); cloudCall('release_catch', { p_fish: f.id }); closeCatch();
 }
 function closeCatch(){ if ($('#catchCard').hidden) return; $('#catchCard').hidden = true; uiBlocked = !$('#sheet').hidden; if (F.phase === 'result') F.phase = 'idle'; }
 $('#ccOk').addEventListener('click', closeCatch);
@@ -5219,12 +5219,17 @@ function updatePeers(dt, t){
   }
 }
 
-let pjMode = false, roomTimer = null;
+let pjMode = false, roomTimer = null, roomJoinAt = 0, roomGreeted = false; const seenPeers = new Map();   /* 剛進大廳時，本來就在的人不要報「來到了村子」 */
 function useRoom(r){
-  room = r; tagReset();
+  room = r; tagReset(); roomJoinAt = Date.now(); roomGreeted = false;
     room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp);
-      for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
-      for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (p){ visitLog(p); logMsg('', `${peerName(p)} 來到了村子`, true); ticker(`👋 <b>${esc(peerName(p))}</b> 來到了村子`); } }, 600); }
+      for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ seenPeers.set((p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, Date.now()); visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
+      for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (!p) return; visitLog(p);
+        const key = (p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, last = seenPeers.get(key); seenPeers.set(key, Date.now());
+        if (Date.now() - roomJoinAt < 6000) return;                  // 我剛進來：他們本來就在了
+        if (last && Date.now() - last < 3 * 60e3) return;             // 斷線一下又回來的，不重複報
+        logMsg('', `${peerName(p)} 來到了村子`, true); ticker(`👋 <b>${esc(peerName(p))}</b> 來到了村子`); }, 600); }
+      if (!roomGreeted && Date.now() - roomJoinAt < 6000){ roomGreeted = true; setTimeout(() => { const n = [...peers.values()].length; if (n > 0) ticker(`👋 村子裡已經有 <b>${n}</b> 個人在了，去打個招呼吧！`); }, 2500); }
       setOnline(); }, () => { room = null; setOnline(); });
     room.on('chat', msg => {
       let text = msg && msg.data && typeof msg.data.t === 'string' ? msg.data.t.slice(0, 120) : ''; if (!text) return;
@@ -5242,7 +5247,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {});
     room.on('sail', onSail, () => {}); room.on('sailjoin', onSailJoin, () => {});
-    room.on('lvup', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), L = Math.floor(+msg.data.L); if (!p || !(L > 1 && L < 100)) return; ticker(`🎉 <b>${esc(peerName(p))}</b> 升到 Lv.${L} 了！`); }, () => {});
+    room.on('lvup', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), L = Math.floor(+msg.data.L); if (!p || !(L > 1 && L < 100)) return; /* 別人升級不用跑馬燈 */ void 0; }, () => {});
     room.on('gift', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; if (msg.data.to === Cloud.userId) setTimeout(loadFriends, 800); }, () => {});
     room.on('chum', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const d = msg.data, p = peers.get(msg.peer); if (!CHUM_BY_ID[d.ty] || !isFinite(+d.x) || !isFinite(+d.z)) return;
       if (p && (p.isle || null) !== (onIsle ? onIsle.owner : null)) return; addChumZone(+d.x, +d.z, d.ty, msg.peer); if (p && Math.hypot(me.pos.x - d.x, me.pos.z - d.z) < 25) p.fisher.say('🍚', 'emote', 1.5); }, () => {});

@@ -40,12 +40,7 @@ export const SPECS = {
     pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.2, part:'Mid' }, { k:'ell', t:0.26, y:0.05, rt:0.04, ry:0.22, part:'Accent' }],
     dorsal:[{ s:0.36, e:0.5, h:0.6, shape:'tri', peak:0.25 }, { s:0.8, e:0.84, h:0.12, shape:'round' }], anal:{ s:0.68, e:0.8, h:0.3 },
     pect:{ t:0.25, y:-0.5, size:0.4 }, pelv:{ t:0.45, size:0.3 }, caudal:{ type:'forked', notch:0.4, hk:1.5 }, eye:EYE(0.09, 0.3, 0.08, { ring:true }) } },
-  goby: { c:{ Top:'#7a6a40', Mid:'#b49a5a', Bottom:'#e8dfc6', Stripes:'#4a3c22', Glow:'#a46cff', Fins:'#8a8070', Eye:'#15181c' }, p:{
-    bl:0.82, depth:0.18, wr:0.85, tm:0.2, nose:0.5, ped:0.4, tailK:0.8, cs:0.1, n:2.2, up:[[0,0.45],[0.1,0.85],[0.22,1],[0.6,0.8],[1,0.45]],
-    pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.1, part:'Mid' }, { k:'bars', bars:BARS(6, 0.28, 0.92, 0.05, -0.3, 0.6), part:'Stripes' }],
-    dots:{ n:16, t0:0.15, t1:0.9, y0:-0.2, y1:0.7, r:0.018, part:'Glow' },
-    dorsal:[{ s:0.3, e:0.42, h:0.55, shape:'round' }, { s:0.5, e:0.78, h:0.42, shape:'flat' }], anal:{ s:0.58, e:0.8, h:0.35, shape:'flat' },
-    pect:{ t:0.22, y:-0.3, size:0.55, shape:'round', w:0.8 }, pelv:{ t:0.26, size:0.3, shape:'round' }, caudal:{ type:'rounded', hk:1.0 }, eye:EYE(0.08, 0.7, 0.11, { pop:0.4 }) } },
+  // goby（紫晶蝦虎）：使用者比較喜歡原本會發紫光的模型，所以不重做，用 game.js 原本的 FISH_STYLE.goby
   trout: { c:{ Top:'#3f4e2c', Mid:'#75834a', Bottom:'#e07a40', Stripes:'#9aa868', Spots:'#d8283a', Accent:'#f2e2a0', Fins:'#5a6a3a', Fins2:'#d0583a', Eye:'#15181c', EyeW:'#e8d890' }, p:{
     bl:0.82, depth:0.24, wr:0.6, tm:0.38, nose:0.8, ped:0.25, cs:0.25,
     pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, { k:'wave', f:80, fy:14, t0:0.15, t1:0.95, y0:0.35, th:0.65, part:'Stripes' }],
