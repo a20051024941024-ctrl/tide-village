@@ -533,7 +533,8 @@ const MOUTH = {
   puffer:{ t:0.025, y:-0.05, th:1.4 }, parrot:{ t:0.035, y:-0.1, th:1.6, part:'EyeW' }, sunfish:{ t:0.03, y:-0.05, open:0.4 }, milkfish:{ t:0.035, y:-0.15 }, mullet:{ t:0.035, y:-0.2 },
   mudskipper:{ t:0.06, y:-0.35, th:1.2 }, bigskipper:{ t:0.06, y:-0.35, th:1.2 }, anchovy:{ type:'sub', t:0.09, y:-0.4, t0:0.02 }, loach:{ type:'sub', t:0.05, y:-0.6, t0:0.02 },
   hillstream:{ type:'sub', t:0.06, y:-0.8, t0:0.05 }, salmon:{ t:0.08, y:-0.15 }, trout:{ t:0.08, y:-0.15 }, ayu:{ t:0.06, y:-0.2 }, tilapia:{ t:0.05, y:-0.1, lip:'Mid' }, bonito:{ t:0.06, y:-0.15 },
-  mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 }, dolphin:false, orca:false, beluga:false, sperm:false, whale:false,
+  mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 },
+  dolphin:{ t:0.11, y:-0.3, th:1.1 }, orca:{ t:0.13, y:-0.3, th:1.2 }, beluga:{ t:0.08, y:-0.25 }, sperm:{ type:'sub', t:0.24, y:-0.65, t0:0.04, th:1.3 }, whale:{ t:0.2, y:-0.2, th:1.4 },
 };
 for (const id of Object.keys(SPECS)){ const S = SPECS[id]; if (S.gen) continue; const m = id in MOUTH ? MOUTH[id] : MOUTH[id.split('_')[0]];
   S.p = Object.assign({}, S.p, { mouth: m === false ? false : Object.assign({}, m || {}) }); S.c = Object.assign({ Mouth:'#2a1a18' }, S.c); }

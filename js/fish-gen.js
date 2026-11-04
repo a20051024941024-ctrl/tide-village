@@ -87,7 +87,8 @@ export function genFish(p){
       const A = pt(t0, a0), B = pt(t0, a1), C = pt(t1, a1), D = pt(t1, a0);
       const tm = (t0 + t1) / 2, am = (a0 + a1) / 2, ynm = Math.sin(am), zm = Math.cos(am);
       const part = partAt(tm, Math.sign(ynm) * Math.pow(Math.abs(ynm), 2 / n), zm);
-      if (i === 0) M.tri(part === 'Bottom' && !p.tipBelly ? 'Top' : part, A, D, C); else M.quad(part, A, B, C, D);   /* 吻端那一小圈用背的顏色，不然白色肚子在尖端會變成一圈鋸齒、看起來像牙齒 */
+      M.quad(part, A, B, C, D);
+      if (i === 0) M.tri(part, [X(0) + 0.0005, yc(0), 0], B, A);   /* 吻端封起來：有些魚的吻是鈍的（不是一個點），以前只畫一半，會露出一圈白色鋸齒的洞 */
     }
   }
   if ((p.ped ?? 0.22) > 0.01){ // 尾柄的切口封起來
