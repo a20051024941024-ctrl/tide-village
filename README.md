@@ -60,6 +60,8 @@ supabase/022_dive_sites.sql 三個潛水點、珍珠
 supabase/023_indexes.sql 逛島列表索引
 supabase/024_fish_batch5.sql 第五批新魚（外海常見魚、釣蝦場）和鹽烤泰國蝦
 supabase/025_shrimp.sql 室內釣蝦場：買時段（30 分鐘 200、60 分鐘 350），沒買不能釣蝦
+supabase/026_shrimp_rods.sql 釣蝦場的蝦竿（碳纖維 1200、職人手工 4000），只影響手感
+supabase/027_shrimp_event.sql 釣蝦場老闆的放生活動：每天 2 小時放一隻藍色龍蝦，全伺服器只有一隻；放生會回到池子
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

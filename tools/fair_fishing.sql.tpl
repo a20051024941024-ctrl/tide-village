@@ -123,6 +123,8 @@ begin
   if cardinality(ids) = 0 then raise exception '沒有這個釣點'; end if;
   r := random() * tot; pick := ids[1];
   for i in 1..cardinality(ids) loop r := r - wts[i]; if r <= 0 then pick := ids[i]; exit; end if; end loop;
+  -- 釣蝦場老闆的放生活動（027）：極小的機會碰到全伺服器只有一隻的特別蝦
+  if p_spot = 'shrimp' then fid := public._sev_try(pl.id); if fid is not null and cfg->'fish' ? fid then pick := fid; end if; end if;
   f := cfg->'fish'->pick;
   fw := round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), 1.7))::numeric, 2);
   update public.players set cast_fish = pick, cast_w = fw, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()
@@ -177,6 +179,7 @@ begin
   if now() - pl.cast_at < interval '1.5 seconds' then raise exception '釣太快了'; end if;
   if now() - pl.cast_at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
   if pl.last_catch_at is not null and now() - pl.last_catch_at < interval '3 seconds' then raise exception '釣太快了'; end if;
+  if p_fish in ('bluelobster') then perform public._sev_claim(pl.id, pl.nickname, p_fish, w); end if;   -- 放生活動的蝦只有一隻（027）
   select * into c from public.current_contest();
   update public.players set
     total      = total + 1,

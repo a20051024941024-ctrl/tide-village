@@ -111,6 +111,8 @@ const FISH = [
   { id:'crayfish',  spot:'shrimp', name:'小龍蝦',     rarity:'常見', color:'#c0402a', min:0.03, max:0.09, power:0.24, desc:'紅通通的小龍蝦，一被拉起來就會舉起大鉗子示威。' },
   { id:'blueclaw',  spot:'shrimp', name:'藍鉗泰國蝦', rarity:'稀有', color:'#2f6fd0', min:0.12, max:0.3,  power:0.32, desc:'鉗子是漂亮的寶藍色，又大又長，釣到可以炫耀一整天。' },
   { id:'goldprawn', spot:'shrimp', name:'金鉤蝦王',   rarity:'傳說', color:'#e8b730', min:0.3,  max:0.55, power:0.42, desc:'池子裡傳說中的蝦王，全身金黃色。老闆說十幾年才出現一次。' },
+  // 老闆的放生活動：每天一段時間只放一隻，全伺服器只有一隻（不在一般的釣點清單裡，見 Sev）
+  { id:'bluelobster', spot:'shrimp', sev:true, name:'藍色龍蝦',   rarity:'傳說', color:'#2f6fe0', min:0.4,  max:1.2,  power:0.5,  desc:'大約兩百萬隻龍蝦才有一隻是藍色的，是基因讓殼裡的色素變成寶藍色。阿忠說這是他的壓箱寶。' },
 ];
 const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 
@@ -231,6 +233,7 @@ const FISH_STYLE = {
   tigerprawn: { shape:'Shrimp', c:{ Top:'#4a5a3a', Bottom:'#c9c0a0', Fins:'#2a2f22', Eye:'#141418' }, move:'vert' },
   crayfish:   { shape:'Lobster', c:{ Top:'#c0402a', Bottom:'#f0a080', Fins:'#9a2a1a', Spots:'#7a1a10', Eye:'#141418' }, move:'vert' },
   blueclaw:   { shape:'Shrimp', c:{ Top:'#2f6fd0', Bottom:'#cfe0ff', Fins:'#1f4fb0', Eye:'#141418' }, move:'vert', glow:true },
+  bluelobster: { shape:'Lobster', c:{ Top:'#2f6fe0', Bottom:'#9cc4ff', Fins:'#2a5cc0', Spots:'#173f99', Eye:'#141418' }, move:'vert', glow:true },
   goldprawn:  { shape:'Shrimp', c:{ Top:'#e8b730', Bottom:'#fff0b8', Fins:'#d89a20', Eye:'#2a1a0a' }, move:'vert', glow:true },
   capelin:    { shape:'Fish1', c:{ Top:'#6f8fa8', Bottom:'#e8f0f4', Fins:'#a8c0d0' } },
   cod:        { shape:'Fish1', c:{ Top:'#7a8a6a', Bottom:'#ece6d2', Fins:'#5f6a50' } },
@@ -2373,9 +2376,10 @@ function startReel(){
     flash('⚠️ 巨大魚影！', 1.8); camShake = Math.max(camShake, 0.35); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 36, '#e8f7ff', 1.8, 3.2, 1.1); } }
   $('#mashFx').hidden = true;
   me.say('!', 'alert', 0.6);
-  $('#fhName').textContent = F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : '有魚上鉤了！';
+  const shr = F.spot && F.spot.id === 'shrimp'; F.shr = shr;
+  $('#fhName').textContent = shr ? (F.fish.rarity === '傳說' ? '這隻蝦超有力！' : F.fish.rarity === '稀有' ? '好大的鉗子！' : '有蝦上鉤了！') : F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : '有魚上鉤了！';
   const rc = $('#fhRar'); rc.className = 'chip r-' + F.fish.rarity; rc.textContent = F.fish.rarity;
-  $('#fishMark').className = 'r-' + F.fish.rarity; $('#fmIco').textContent = BIG_FISH.has(F.fish.id) ? '🐋' : F.fish.rarity === '傳說' ? '🐉' : '🐟'; F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
+  $('#fishMark').className = 'r-' + F.fish.rarity; $('#fmIco').textContent = shr ? (F.fish.id === 'crayfish' || F.fish.id === 'bluelobster' ? '🦞' : '🦐') : BIG_FISH.has(F.fish.id) ? '🐋' : F.fish.rarity === '傳說' ? '🐉' : '🐟'; F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
   pushPresence(true);
 }
 function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = 55; camera.updateProjectionMatrix(); }
@@ -2401,9 +2405,9 @@ function updateFishing(dt, t){
     else if (t > F.waitUntil){
       // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
       if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; }
-      else { F.fish = pickFish(F.spot, F.castCharge); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), 1.7)).toFixed(2); }
+      else { F.fish = pickFish(F.spot, F.castCharge); if (F.spot && F.spot.id === 'shrimp' && sevActive() && Math.random() < SEV_P) F.fish = FISH_BY_ID[Sev.ev.fish]; F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), 1.7)).toFixed(2); }
       F.phase = 'bite'; F.biteAt = t; F.drift = 0;
-      if (F.spot && F.spot.id === 'shrimp'){ F.biteUntil = t + (F.fish.rarity === '傳說' ? 1.5 : F.fish.rarity === '稀有' ? 1.7 : 1.9); ripple(me.bobPos.x, me.bobPos.z); }   // 釣蝦場：沒有「!」，浮標會慢慢沉下去
+      if (F.spot && F.spot.id === 'shrimp'){ F.biteUntil = t + (F.fish.rarity === '傳說' ? 1.5 : F.fish.rarity === '稀有' ? 1.7 : 1.9) + curSrod().win; ripple(me.bobPos.x, me.bobPos.z); }   // 釣蝦場：沒有「!」，浮標會慢慢沉下去
       else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say('!', 'alert', 1); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); }
       pushPresence(true);
     }
@@ -2452,7 +2456,7 @@ function updateFishing(dt, t){
       $('#mashFx').style.setProperty('--m', (F.mashHits % 2).toString());
     } else if (F.hold){
       F.reelT = (F.reelT || 0) + dt; if (F.reelT > 0.09){ F.reelT = 0; SFX.reel(); }
-      F.T += (0.42 + pull*0.9) * dt * (F.spot && F.spot.id === 'shrimp' ? 1.35 : rod.tension) * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
+      F.T += (0.42 + pull*0.9) * dt * (F.spot && F.spot.id === 'shrimp' ? curSrod().ten : rod.tension) * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
       F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S));
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
@@ -2473,7 +2477,7 @@ function updateFishing(dt, t){
     $('#tRing').classList.toggle('hot', T > 0.8);
     $('#hpFill').style.width = (F.S * 100).toFixed(1) + '%';
     $('#fhDist').textContent = ((1 - clamp(F.P, 0, 1)) * F.maxDist + 0.5).toFixed(1) + ' m';
-    $('#fhT').textContent = F.jump > 0 ? '🐟 跳起來了！快放開！' : T > 0.8 ? '線快斷了！放開！' : counter ? '👍 反方向拉，魚越來越累了' : wrong ? '⚠️ 方向拉錯了！' : T < 0.3 ? '太鬆了，按住拉' : F.S < 0.25 ? '魚沒力氣了，一口氣拉上來！' : '很好，保持在綠色';
+    $('#fhT').textContent = F.shr ? (T > 0.8 ? '太用力了，蝦子快鬆鉗了！放開！' : T < 0.3 ? '太鬆了，慢慢拉' : F.S < 0.25 ? '蝦子沒力氣了，拉上來！' : '很好，慢慢拉，保持在綠色') : F.jump > 0 ? '🐟 跳起來了！快放開！' : T > 0.8 ? '線快斷了！放開！' : counter ? '👍 反方向拉，魚越來越累了' : wrong ? '⚠️ 方向拉錯了！' : T < 0.3 ? '太鬆了，按住拉' : F.S < 0.25 ? '魚沒力氣了，一口氣拉上來！' : '很好，保持在綠色';
     $('#fhT').className = 'fh-hint' + (F.jump > 0 || T > 0.8 || wrong ? ' warn' : counter ? ' good' : '');
     // ---- 跟著魚走的標記：體力條、魚的圖示、距離；收線時跳出傷害數字 ----
     { const v = tmpV.set(me.bobPos.x, 0.45, me.bobPos.z).project(camera), mk = $('#fishMark');
@@ -2544,7 +2548,7 @@ function landFish(){
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
   jumpers.push({ m: fm, from, to, t: 0 });
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
-  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, 900);
+  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, 900);
 }
 const jumpers = [];
 function updateJumpers(dt, t){
@@ -3407,7 +3411,53 @@ const Venue = { penguins: [], snow: null, signs: [] };
 function signTex(text, bg, fg, w, h){ const cv = document.createElement('canvas'); cv.width = w || 512; cv.height = h || 128; const c = cv.getContext('2d'); c.fillStyle = bg; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = fg; c.font = `bold ${Math.round(cv.height * 0.55)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, cv.width / 2, cv.height / 2 + 4); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
 // 釣蝦場：室內的蝦池（實際位置在地圖外，從村子裡的釣蝦場門口走進去，跟房子一樣）
 const SHRIMP_DOOR = { x:-1, z:-9 };   // 村子裡的門口
-const SHRIMP_PRICE = [[30, 200], [60, 350]];   // [分鐘, 金幣]，跟伺服器 025_shrimp.sql 一樣
+const SHRIMP_PRICE = [[30, 200], [60, 350]];
+// 蝦竿（只在釣蝦場用）：好的蝦竿浮標比較敏感 → 吃餌時可以反應的時間比較長、拉的時候比較不會鬆鉗。不會改變釣到哪一種蝦的機率。
+// 價格要跟 supabase/026_shrimp_rods.sql 一樣
+const SHRIMP_RODS = [
+  { id:'srod_basic',  name:'基本蝦竿',     price:0,    win:0,   ten:1.35, color:'#d8c07a', desc:'買時段就附的玻璃纖維蝦竿，老闆說「堪用啦」。' },
+  { id:'srod_carbon', name:'碳纖維蝦竿',   price:1200, win:0.4, ten:1.15, color:'#2b2f36', desc:'又輕又硬，浮標動一下手上就有感覺。吃餌的反應時間 +0.4 秒，比較不會鬆鉗。' },
+  { id:'srod_master', name:'職人手工蝦竿', price:4000, win:0.8, ten:0.95, color:'#a2362a', desc:'老師傅一支一支手工做的竹節蝦竿。反應時間 +0.8 秒，拉蝦最穩。' },
+];
+/* ---- 老闆的放生活動：每天台灣時間 12～21 點之間的某個整點開始，2 小時，放一隻特別的蝦，全伺服器只有一隻 ----
+   伺服器（supabase/027_shrimp_event.sql）決定誰釣到；沒連線的時候用一樣的時間表在自己的遊戲裡玩 */
+const SEV_FISH = ['bluelobster'], SEV_P = 0.0015, SEV_HOURS = 2;
+const Sev = { ev:null, at:0, told:{}, busy:false };
+function twDay(ms){ const d = new Date(ms + 8 * 3600e3); return d.toISOString().slice(0, 10); }
+function sevPlan(day){ const h = hash32('sev' + day), hr = 12 + h % 10, [y, m, d] = day.split('-').map(Number), start = Date.UTC(y, m - 1, d, hr - 8); return { id: +day.replace(/-/g, ''), fish: SEV_FISH[Math.floor(h / 16) % SEV_FISH.length], start, end: start + SEV_HOURS * 3600e3, caught: null }; }
+function sevNext(){ const t = Date.now(), a = sevPlan(twDay(t)); return t < a.end ? a : sevPlan(twDay(t + 86400e3)); }
+function sevActive(){ const e = Sev.ev, t = Date.now(); return !!(e && !e.caught && t >= e.start && t < e.end); }
+async function sevRefresh(){
+  if (Sev.busy) return; Sev.busy = true;
+  try {
+    let e = sevNext();
+    if (Cloud.on && Cloud.sb){ const { data, error } = await Cloud.sb.rpc('get_shrimp_event'); if (!error && data && data.fish) e = { id: +data.id, fish: data.fish, start: Date.parse(data.start_at), end: Date.parse(data.end_at), caught: data.caught_name || null }; }
+    else if (rec.sevGot && rec.sevGot[e.id]) e.caught = '你';
+    const was = Sev.ev; Sev.ev = e; Sev.at = Date.now(); const f = FISH_BY_ID[e.fish];
+    if (sevActive() && !Sev.told['on' + e.id]){ Sev.told['on' + e.id] = 1; ticker(`🎉 釣蝦場老闆阿忠剛剛放了一隻 <span class="chip r-傳說">活動</span> <b>${esc(f.name)}</b> 進池子！全伺服器只有一隻，快去釣！`); }
+    if (!e.caught && was && was.id === e.id && was.caught && was.caught !== '你' && sevActive()) ticker(`💙 <b>${esc(FISH_BY_ID[e.fish].name)}</b> 被放回釣蝦場的池子了！還有機會釣到牠`);
+    if (e.caught && was && was.id === e.id && !was.caught && !Sev.told['got' + e.id]){ Sev.told['got' + e.id] = 1; if (e.caught !== '你') ticker(`🦐 今天的 <b>${esc(f.name)}</b> 已經被 <b>${esc(e.caught)}</b> 釣走了！明天再來碰碰運氣`); }
+  } finally { Sev.busy = false; }
+}
+setInterval(() => { if (rec) sevRefresh(); }, 60000); setTimeout(() => sevRefresh(), 5000);
+// 放生藍色龍蝦：活動還沒結束的話，牠會回到池子裡，大家又有機會釣到
+function sevReleased(f){
+  const e = Sev.ev; if (!e || e.fish !== f.id) return;
+  if (Date.now() < e.end){ e.caught = null; Sev.told['got' + e.id] = 0; if (rec.sevGot) delete rec.sevGot[e.id]; saveRecLocal(); ticker(`💙 <b>你</b>把 <b>${esc(f.name)}</b> 放回釣蝦場的池子了！大家又有機會釣到牠`); if (room && room.connected() && chatAllowed) room.emit('sevrel', { f: f.id }).catch(() => {}); }
+  else ticker(`💙 你把 <b>${esc(f.name)}</b> 交給阿忠，他會送去水族館給大家看`);
+}
+function sevCaughtByMe(f, w){
+  if (!f.sev || !Sev.ev) return; Sev.ev.caught = '你'; Sev.told['got' + Sev.ev.id] = 1; rec.sevGot = Object.assign({}, rec.sevGot, { [Sev.ev.id]: 1 }); saveRecLocal();
+  flash(`🎉 你釣到了今天唯一的${f.name}！`, 3); ticker(`🎉 <b>你</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`);
+}
+function curSrod(){ return SHRIMP_RODS.find(r => r.id === rec.srod && (r.price === 0 || (rec.srods || []).includes(r.id))) || SHRIMP_RODS[0]; }
+async function buyShrimpRod(id){
+  const r = SHRIMP_RODS.find(x => x.id === id); if (!r) return;
+  if ((rec.srods || []).includes(id) || r.price === 0){ rec.srod = id; saveRecLocal(); if (Cloud.on) cloudCall('set_shrimp_rod', { p_id: id }); SFX.click(); updateBobberLook(); renderTab(); return; }
+  if (rec.coins < r.price){ toast(`金幣不夠，還差 🪙${r.price - rec.coins}`); return; }
+  rec.srods = (rec.srods || []).concat(id); rec.srod = id; addCoins(-r.price); saveRecLocal(); if (Cloud.on) cloudCall('buy_shrimp_rod', { p_id: id });
+  SFX.coin(); flash(`🎣 買了${r.name}！`, 1.5); updateBobberLook(); renderTab();
+}   // [分鐘, 金幣]，跟伺服器 025_shrimp.sql 一樣
 function buildShrimpFront(){
   const g = new THREE.Group(), X = SHRIMP_DOOR.x, Z = SHRIMP_DOOR.z, y0 = groundHeight(X, Z); g.position.set(X, y0, Z); scene.add(g);
   const B = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
@@ -3479,7 +3529,7 @@ function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); 
 function enterShrimp(){
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true);
   setTimeout(() => { me.pos.x = Venue.exit.x; me.pos.z = Venue.exit.z - 2.4; me.baseY = SHRIMP.y; Jump.gy = SHRIMP.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.6; Venue.savedDist = cam.dist; cam.dist = Math.min(cam.dist, 6); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80);
-    flash('🦐 歡迎光臨釣蝦場！', 1.4); if (!shrimpLeft()) setTimeout(() => toast('先到左邊的櫃台跟老闆阿忠買時段，才可以釣蝦喔'), 1500); }, 260);
+    flash('🦐 歡迎光臨釣蝦場！', 1.4); sevRefresh(); if (!shrimpLeft()) setTimeout(() => toast('先到左邊的櫃台跟老闆阿忠買時段，才可以釣蝦喔'), 1500); }, 260);
 }
 function exitShrimp(){
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (mySeat) standUp(); if (F.phase !== 'idle') cancelFishing();
@@ -3499,6 +3549,19 @@ function renderShrimpDesk(body){
   for (const [m, pz] of SHRIMP_PRICE){ const li = el('li'); li.appendChild(el('span', 'dishic', '🎫')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${m} 分鐘`)); d.appendChild(el('div', 'meta', `🪙 ${pz}・附蝦竿和雞肝餌・可以免費烤蝦`)); li.appendChild(d);
     const b = el('button', 'tbtn' + (rec.coins < pz ? ' ghost' : ''), '買'); b.addEventListener('click', () => { b.disabled = true; buyShrimpTime(m); }); li.appendChild(b); ul.appendChild(li); }
   body.appendChild(ul);
+  { body.appendChild(el('div', 'dexhead', '🎉 老闆的放生活動')); const e = Sev.ev || sevNext(), f = FISH_BY_ID[e.fish], t = Date.now();
+    const hhmm = ms => new Date(ms + 8 * 3600e3).toISOString().slice(11, 16);
+    body.appendChild(el('p', 'sub', sevActive() ? `「嘿嘿，我剛剛偷偷放了一隻${f.name}進池子，全伺服器只有這一隻喔！」活動到 ${hhmm(e.end)}，每拋一次竿都有很小的機會碰到牠。`
+      : e.caught && t < e.end ? `今天的${f.name}已經被 ${e.caught} 釣走了。「明天我會再放別的，記得來！」`
+      : t < e.start ? `「${twDay(e.start) === twDay(t) ? '今天' : '明天'} ${hhmm(e.start)} 左右我會放一隻特別的蝦進池子，全伺服器只有一隻。」`
+      : `今天的活動結束了，${f.name}沒有人釣到，被阿忠撈回去了。明天再來！`)); }
+  body.appendChild(el('div', 'dexhead', '🎣 蝦竿（只在釣蝦場用）'));
+  { const ul2 = el('ul', 'shoplist'), cur = curSrod();
+    for (const r of SHRIMP_RODS){ const own = r.price === 0 || (rec.srods || []).includes(r.id), li = el('li', cur.id === r.id ? 'on' : ''); const ic = el('span', 'dishic', '🎣'); ic.style.color = r.color; li.appendChild(ic);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name + (cur.id === r.id ? '（使用中）' : ''))); d.appendChild(el('div', 'meta', (own ? '' : `🪙 ${r.price.toLocaleString()}・`) + r.desc)); li.appendChild(d);
+      if (cur.id !== r.id){ const b = el('button', 'tbtn' + (!own && rec.coins < r.price ? ' ghost' : ''), own ? '換上' : '買'); b.addEventListener('click', () => { b.disabled = true; buyShrimpRod(r.id); }); li.appendChild(b); }
+      ul2.appendChild(li); }
+    body.appendChild(ul2); }
   body.appendChild(el('div', 'dexhead', '🎣 阿忠教你釣蝦'));
   const tips = el('ul', 'helpul'); for (const t of ['坐在池邊的椅子上按「拋竿」，或站在池邊也可以。', '蝦子會先來試探：浮標輕輕點一下、抖一下，這時候不要拉！', '浮標「整個沉下去、往旁邊跑」才是真的吃餌，馬上提竿。', '拉的時候要慢慢拉，一直按住太用力，蝦子會鬆鉗掉回池子裡。', '三隻泰國蝦可以拿到右邊的烤爐，免費烤成鹽烤泰國蝦。']) tips.appendChild(el('li', '', t)); body.appendChild(tips);
 }
@@ -3564,7 +3627,7 @@ function updateAmbient(dt, t, nearI){
 function renderShrimpChip(ih){
   let c = $('#shrimpChip'); if (!ih){ if (c) c.hidden = true; return; }
   if (!c){ c = document.createElement('button'); c.id = 'shrimpChip'; c.className = 'panel'; c.addEventListener('click', () => openSheet('shrimp')); document.body.appendChild(c); }
-  c.hidden = false; const l = shrimpLeft(), txt = l ? `🎫 剩 ${mmss(l)}` : '🎫 還沒買時段'; if (c._t !== txt){ c.textContent = txt; c._t = txt; c.classList.toggle('none', !l); }
+  c.hidden = false; const l = shrimpLeft(), txt = (l ? `🎫 剩 ${mmss(l)}` : '🎫 還沒買時段') + (sevActive() ? `・🎉 池子裡有${FISH_BY_ID[Sev.ev.fish].name}` : ''); if (c._t !== txt){ c.textContent = txt; c._t = txt; c.classList.toggle('none', !l); }
 }
 function updateVenues(dt, t){
   const nearI = Venue.penguins.length > 0 && Math.hypot(me.pos.x - ICE.x, me.pos.z - ICE.z) < 70, nearS = Math.hypot(me.pos.x - SHRIMP.x, me.pos.z - SHRIMP.z) < 50; updateAmbient(dt, t, false);
@@ -4390,6 +4453,7 @@ function spotName(x, z){ const id = waterSpotId(x, z), s = SPOT_BY_ID[id]; retur
 function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || mySeat || House.on) return null; if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
 function myChums(){ return CHUMS.filter(c => (rec.bait[c.id] || 0) > 0); }
 function throwChum(type, secret){
+  if (typeof inHall === 'function' && inHall()){ toast('🦐 釣蝦場不用打窩，老闆會定時放蝦進池子'); return; }
   const C = CHUM_BY_ID[type], sp = chumSpot(); if (!C || !sp){ toast('要在水邊才能打窩'); return; } if (!(rec.bait[type] > 0)){ toast(`沒有${C.name}了，到釣具店買`); return; }
   const cp = castPoint(sp.pos.x, sp.pos.z, sp.dir.x, sp.dir.y, 4.5), to = new THREE.Vector3(cp[0], WATER_LEVEL, cp[1]), from = new THREE.Vector3(); me.av.armR.getWorldPosition(from);
   me.rot = Math.atan2(sp.dir.x, sp.dir.y);
@@ -4445,7 +4509,7 @@ function updateBobberLook(){
     const top2 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 6), mat('#ffe14a', 0.3, { emissive:'#ffd020', emissiveIntensity:0.6 })); top2.position.y = 0.27; st.add(top2); b.add(st); b.userData.stick = st; }
   b.children.forEach(c => c.visible = Rig.rig === 'float' && !hall); b.userData.stick.visible = hall && Rig.rig !== 'lure';
   // 蝦竿：短短的一支
-  const a = me.av; if (a && a.pole){ const k = hall ? 0.5 : 1; a.pole.scale.y = k; a.pole.position.y = 1.15 * k; a.tip.position.y = 2.3 * k; a.pole.material.color.set(hall ? '#d8c07a' : (RODS.find(r => r.id === rec.rod) || RODS[0]).color); }
+  const a = me.av; if (a && a.pole){ const k = hall ? 0.5 : 1; a.pole.scale.y = k; a.pole.position.y = 1.15 * k; a.tip.position.y = 2.3 * k; a.pole.material.color.set(hall ? curSrod().color : (RODS.find(r => r.id === rec.rod) || RODS[0]).color); }
   if (!b.userData.lure){ const l = new THREE.Group(); const bd = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), mat('#ff7a2a', 0.3, { metalness:0.4 })); bd.scale.set(1.8, 0.8, 0.8); l.add(bd); const tl = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), mat('#ffd36a', 0.4)); tl.rotation.z = Math.PI / 2; tl.position.x = -0.18; l.add(tl); b.add(l); b.userData.lure = l;
     const sk = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), mat('#6b6b6b', 0.4, { metalness:0.6 })); b.add(sk); b.userData.sinker = sk; }
   b.userData.lure.visible = Rig.rig === 'lure'; b.userData.sinker.visible = Rig.rig === 'bottom' && !hall; b.userData.sinker.position.y = -0.12;
@@ -4470,12 +4534,14 @@ function fishPrice(f, w){ const rel = clamp((w - f.min) / Math.max(0.01, f.max -
 // 尺寸限制：比「最輕 + 四分之一範圍」還輕就是未達尺寸（賣半價，放流點數比較多）；跟伺服器 015_release.sql 一樣
 function sizeMin(f){ return f.min + 0.25 * (f.max - f.min); }
 function undersized(f, w){ return w < sizeMin(f); }
-function lovePts(f, w){ return Math.max(undersized(f, w) ? 3 : 0, { '常見':1, '稀有':3, '傳說':10 }[f.rarity] || 1); }
+function lovePts(f, w){ if (f.sev) return 50; return Math.max(undersized(f, w) ? 3 : 0, { '常見':1, '稀有':3, '傳說':10 }[f.rarity] || 1); }
 // 放流一條魚：拿掉、加愛海點數
 function releaseLocal(x){
   const f = FISH_BY_ID[x.f], p = lovePts(f, x.w);
   rec.tank = rec.tank.filter(y => y.t !== x.t); if (rec.show) rec.show = rec.show.filter(t => t !== x.t);
-  rec.love = (rec.love || 0) + p; rec.released = (rec.released || 0) + 1; saveRecLocal(); buildTank(); return p;
+  rec.love = (rec.love || 0) + p; rec.released = (rec.released || 0) + 1; saveRecLocal(); buildTank();
+  if (f.sev) sevReleased(f);
+  return p;
 }
 function curRod(){ return RODS.find(r => r.id === rec.rod) || RODS[0]; }
 function curBait(){ const b = BAITS.find(b => b.id === rec.baitOn); return b && (rec.bait[b.id] || 0) > 0 ? b : null; }
@@ -4735,7 +4801,7 @@ function normRec(r){
   if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id])))];
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
-  e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
+  e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
   if (r.bait && typeof r.bait === 'object') for (const b of BAITS.concat(CHUMS)){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
@@ -5175,10 +5241,13 @@ function useRoom(r){
       if (msg.sameTab || !msg.data || msg.data.to !== myId || isBlockedPeer(msg.peer)) return;
       const p = peers.get(msg.peer); ticker(`👀 <b>${esc(p ? peerName(p) : '有人')}</b> 正在參觀你的水族館`);
     }, () => {});
+    room.on('sevrel', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const f = FISH_BY_ID[msg.data.f]; if (!f || !f.sev) return; const p = peers.get(msg.peer);
+      ticker(`💙 <b>${esc(p ? peerName(p) : '有人')}</b> 把 <b>${esc(f.name)}</b> 放回釣蝦場的池子了！大家又有機會釣到牠`); setTimeout(sevRefresh, 1500); }, () => {});
     room.on('catch', msg => {
       if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const f = FISH_BY_ID[msg.data.f]; const w = Number(msg.data.w); if (!f || !(w > 0) || w > f.max + 0.01) return;
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
-      if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
+      if (f.sev){ ticker(`🎉 <b>${esc(name)}</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`); if (Sev.ev && Sev.ev.fish === f.id){ Sev.ev.caught = name; Sev.told['got' + Sev.ev.id] = 1; } }
+      else if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
       if (p){ p.fisher.holdFish(f, w, 5); if (f.rarity === '傳說') p.fisher.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); }   // 大家都看得到他捧著剛釣到的魚
     }, () => {});
     room.onConnection(() => setOnline(), () => {});
@@ -5326,7 +5395,7 @@ const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
 const Cloud = { sb:null, on:false, status:'connecting', err:'', userId:null, email:null, isAnon:true, queue:Promise.resolve(), pending:0, board:{ best:[], total:[], earned:[] }, ui:{ step:'idle', mode:'bind', email:'', busy:false, msg:'' } };
 function rowToRec(r){
   return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
-    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, shrimpUntil: r.shrimp_until ? Date.parse(r.shrimp_until) : 0, dive:r.dive, photos:r.photos, updatedAt:Date.parse(r.updated_at) || Date.now() });
+    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, shrimpUntil: r.shrimp_until ? Date.parse(r.shrimp_until) : 0, srods: r.srods, srod: r.srod, dive:r.dive, photos:r.photos, updatedAt:Date.parse(r.updated_at) || Date.now() });
 }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
@@ -5336,7 +5405,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['這條魚對不上伺服器，請重新整理遊戲', '要先買釣蝦時段', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -5783,6 +5852,9 @@ function renderTab(){
       '在村子廣場北邊的街上，招牌寫「🦐 釣蝦場」，走到門口按按鈕就能進去。也可以從「地圖」傳送到門口。',
       '釣蝦是算時間的：先到門口左邊的櫃台跟老闆阿忠買時段（30 分鐘 🪙200、60 分鐘 🪙350，可以累加）。蝦竿和雞肝餌都附，不用自己帶。右上角會顯示還剩多久。',
       '池邊有編號的塑膠板凳，坐下來就能拋竿；站在池邊也可以釣。蝦竿很短，只能拋到前面一點點。',
+      '櫃台也有賣蝦竿：碳纖維蝦竿（🪙1200）、職人手工蝦竿（🪙4000）。好的蝦竿浮標比較敏感，吃餌時可以反應的時間比較長，拉的時候也比較不會鬆鉗（不會改變釣到哪一種蝦的機率）。',
+      '釣蝦場不用打窩：老闆會定時放蝦進池子，窩料在這裡不能用。拉蝦的時候，畫面上的圖示會變成 🦐。',
+      '老闆的放生活動：每天中午到晚上之間的某個時間，阿忠會放一隻藍色龍蝦進池子，持續 2 小時，全伺服器只有一隻。每拋一次竿只有大約 0.15% 的機會碰到，有人釣到活動就結束。釣到的人可以選擇放生：會得到 💙50 愛海點數，活動還沒結束的話牠會回到池子裡，其他人又有機會釣到。櫃台可以看到下一次大概什麼時候。',
       '釣蝦場：不會跳「!」提示，要自己看浮標。蝦子會先來試探，浮標只是輕輕點一下、抖一下，這時候拉會把蝦嚇跑；等浮標「整個沉下去、一直抖」再按提竿。太慢的話蝦子會把餌吃掉跑掉。',
       '拉蝦的時候要慢慢拉，一直按住太用力，蝦子會鬆鉗掉回池子裡。釣蝦場不會跟大魚搏鬥。',
       '有泰國蝦、白蝦、草蝦、小龍蝦、藍鉗泰國蝦，還有傳說中的金鉤蝦王。三隻泰國蝦可以拿到池邊的烤爐免費烤，也可以在食堂做「鹽烤泰國蝦」。',
