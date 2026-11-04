@@ -5434,6 +5434,7 @@ function buildDive(){
     const bottom = ['crab', 'flounder', 'stingray', 'octopus', 'lobster', 'seahorse'].includes(f.id) || /crab|lobster|octo/.test(f.id);
     const a = rnd() * Math.PI * 2, r = 4 + rnd() * R * 0.7; const o = { f, m, bottom, cx: X + Math.cos(a) * r * 0.5, cz: Z + Math.sin(a) * r * 0.5, rad: bottom ? 1.5 + rnd() * 2 : 5 + rnd() * 9, y: bottom ? 0.25 : 2 + rnd() * 8, sp: (bottom ? 0.08 : 0.06 + rnd() * 0.08) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * 6, pos: new THREE.Vector3() };
     g.add(m); Dive.fish.push(o); }
+  Dive.aiOn = false; try { faiDiveInit(); } catch(e){ console.warn('fishAI dive', e); Dive.aiOn = false; }   /* 魚的 AI；出錯的話用原本繞圈圈的游法 */
   // 貝殼和寶箱
   Dive.loot = [];
   for (let i = 0; i < S.shells; i++){ const [x, y, z] = onBed(), sh = new THREE.Group(), c = ['#ffe3d3', '#f5c6a5', '#fff4e0', '#ffc1cc'][i % 4];
@@ -5549,7 +5550,10 @@ function updateDive(dt, t){
   if (o < 15 && Dive.warned < 1){ Dive.warned = 1; flash('⚠️ 氧氣只剩 15 秒，快上去！', 1.6); SFX.bite(); }
   if (o <= 0 && !Dive.ending){ endDive('😮‍💨 氧氣用完了，自動浮上水面'); return; }
   // 海帶
-  if (Dive.kelp && frameNo % 2 === 0){ const { im, list } = Dive.kelp; for (let i = 0; i < list.length; i++){ const k = list[i]; tankDummy.position.set(k.x, k.y, k.z); tankDummy.rotation.set(Math.sin(t * 0.9 + k.ph) * 0.12, k.ry, Math.cos(t * 0.7 + k.ph) * 0.1); tankDummy.scale.set(1, k.s, 1); tankDummy.updateMatrix(); im.setMatrixAt(i, tankDummy.matrix); } im.instanceMatrix.needsUpdate = true; }
+  if (Dive.kelp && frameNo % 2 === 0){ const { im, list } = Dive.kelp, cur = faiCurrent(); for (let i = 0; i < list.length; i++){ const k = list[i]; tankDummy.position.set(k.x, k.y, k.z); tankDummy.rotation.set(Math.sin(t * 0.9 + k.ph) * 0.12 * (0.6 + cur.sp) + cur.lz, k.ry, Math.cos(t * 0.7 + k.ph) * 0.1 * (0.6 + cur.sp) - cur.lx); tankDummy.scale.set(1, k.s, 1); tankDummy.updateMatrix(); im.setMatrixAt(i, tankDummy.matrix); } im.instanceMatrix.needsUpdate = true; }
+  // 魚群、單獨的魚：海洋生態 AI（faiDiveUpdate）；出錯的話用原本繞圈圈的游法
+  if (Dive.aiOn){ try { faiDiveUpdate(dt, t); } catch(e){ console.warn('fishAI dive', e); Dive.aiOn = false; } }
+  if (!Dive.aiOn){
   // 魚群
   for (const s of Dive.schools){ const a = t * s.sp + s.ph, cx = s.cx + Math.cos(a) * s.rad, cz = s.cz + Math.sin(a) * s.rad, cy = Math.max(diveBed(cx, cz) + s.y + Math.sin(t * 0.3 + s.ph) * 0.8, rockLift(cx, cz, 2.2)); s.pos.set(cx, cy, cz);
     const hd = Math.atan2(-Math.cos(a) * Math.sign(s.sp), -Math.sin(a) * Math.sign(s.sp));
@@ -5560,6 +5564,7 @@ function updateDive(dt, t){
     const d = Math.hypot(me.pos.x - cx, me.pos.z - cz); if (d < 3) s.ph += dt * 0.25 * Math.sign(s.sp); }
   for (const f of Dive.fish){ const a = t * f.sp + f.ph, x = f.cx + Math.cos(a) * f.rad, z = f.cz + Math.sin(a) * f.rad, y0 = diveBed(x, z) + f.y + (f.bottom ? 0 : Math.sin(t * 0.4 + f.ph) * 0.6), y = Math.max(y0, rockLift(x, z, f.bottom ? 0.1 : 0.7)); f.pos.set(x, y, z); f.m.position.copy(f.pos);
     f.m.rotation.y = Math.atan2(-Math.cos(a) * Math.sign(f.sp), -Math.sin(a) * Math.sign(f.sp)); if (f.m.userData.tail) f.m.userData.tail.rotation.y = Math.sin(t * 6 + f.ph) * 0.35; }
+  }
   // 看到的魚記下來
   if (frameNo % 20 === 0) for (const tg of diveTargets()) if (Math.hypot(tg.p.x - me.pos.x, tg.p.y - me.baseY, tg.p.z - me.pos.z) < 9) Dive.seen.add(tg.f.id);
   // 泡泡、光束、水面
@@ -5589,7 +5594,7 @@ function diveEnvFx(){
 function renderDiveHud(tick){
   let h = $('#diveHud');
   if (!Dive.on){ if (h) h.hidden = true; const dn = $('#diveDn'); if (dn) dn.hidden = true; const jb = $('#jumpBtn'); if (jb && jb.dataset.dive){ jb.textContent = '跳'; delete jb.dataset.dive; } return; }
-  if (!h){ h = document.createElement('div'); h.id = 'diveHud'; h.className = 'panel'; h.innerHTML = '<div class="o2"><span>O₂</span><div class="bar"><i></i></div><b></b></div><div class="dmeta"></div><button class="tbtn ghost" id="diveUp">⬆ 上岸</button>'; document.body.appendChild(h);
+  if (!h){ h = document.createElement('div'); h.id = 'diveHud'; h.className = 'panel'; h.innerHTML = '<div class="o2"><span>O₂</span><div class="bar"><i></i></div><b></b></div><div class="dmeta"></div><button class="tbtn ghost" id="diveBait">🍞 撒餌</button><button class="tbtn ghost" id="diveUp">⬆ 上岸</button>'; h.querySelector('#diveBait').addEventListener('click', () => { try { faiDiveBait(); } catch(e){ console.warn(e); } }); document.body.appendChild(h);
     h.querySelector('#diveUp').addEventListener('click', () => endDive()); }
   if (!$('#diveDn')){ const b = document.createElement('button'); b.id = 'diveDn'; b.className = 'panel'; b.setAttribute('aria-label', '下潛'); b.textContent = '⬇'; $('#jumpBtn').before(b);
     b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Dive.down = true; b.classList.add('down'); }); const off = () => { Dive.down = false; b.classList.remove('down'); }; b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); b.addEventListener('contextmenu', e => e.preventDefault()); }
@@ -8662,6 +8667,221 @@ function updateDayNight(t){
   if (DayNight.period !== DayNight._last){ if (DayNight._last) ticker(DayNight.period === 'night' ? '天黑了，<b>晚上</b>出沒的魚開始活動 🌙' : DayNight.period === 'twilight' ? (h < 12 ? '天快亮了，清晨的魚正活躍 🌅' : '黃昏了，有些魚只在這時候出現 🌇') : '天亮了 ☀️'); DayNight._last = DayNight.period; }
 }
 
+/* ================= 海洋生態與魚類 AI（2026-11-05）=================
+   水裡的魚不再只是背景：每一條魚有自己的狀態（閒逛、覓食、被嚇跑、好奇靠近、被魚餌吸引、追獵物、咬餌），用「轉向力」慢慢轉彎、加速、減速。
+   小魚成群（boids：分開、對齊、靠攏，跟著帶頭的那一條），大魚單獨游；掠食魚會追比自己小很多的魚。
+   兩個地方都有：
+   1. 岸上看得到的水裡（本島、各個區域的海邊、河湖）：玩家附近的水裡會有魚游來游去，照釣點、時間、天氣、季節、海洋生態（洄游）決定是哪些魚；
+      拋竿以後，伺服器抽好的那條魚會真的游過來咬餌（跟原本的釣魚系統接在一起），浮標、窩料會把附近的魚吸過來。
+   2. 潛水：原本繞圈圈的魚群和單獨的魚都換成這套 AI，會避開海底、礁丘，可以撒魚餌，被追的魚會躲到岩石旁邊。
+   效能：魚的模型用物件池重複使用；離鏡頭遠的魚降低更新頻率、太遠就不畫；手機畫質越低，魚越少。 */
+const FAI = { agents:[], pool:new Map(), spawnAt:0, hooked:null, schools:[], obsAt:0, events:[], bait:null, baitCd:0 };
+const FAI_MAX = { low:5, mid:8, high:12 }, FAI_SCHOOL = { low:9, mid:12, high:16 };
+const FAI_SIL = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0.45, depthWrite:false });   /* 還沒釣過的魚：只看到黑黑的影子 */
+const FAI_CURIOUS = new Set(['butterfly', 'sergeant', 'idol', 'bluetang', 'turtle', 'clown', 'parrot', 'rabbitfish', 'razorsurgeon', 'creolefish', 'goldfish', 'koi', 'carp', 'tilapia', 'dolphin', 'moonwrasse', 'girella']);
+const FAI_STATE = { wander:'慢慢游著', flee:'被嚇跑了！', curious:'好奇地靠過來看你', bait:'被魚餌吸引過來了', hooked:'在咬你的餌…', chase:'正在追獵物！', forage:'在找東西吃', hide:'躲在岩石旁邊', circle:'在你附近繞圈圈', school:'成群游過去', eat:'吃得飽飽的' };
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YZX');
+function faiTraits(f){ if (f._fai) return f._fai; const id = f.of || f.id, size = (f.min + f.max) / 2;
+  const pred = LURE_FISH.has(id) || /shark|barracuda|grouper|tuna|marlin|trevally|amberjack|mahi|ito|sixgill|orca|snakehead|bass|arowana|lionfish/.test(id);
+  const bottom = BOTTOM_FISH.has(id) || /flounder|stingray|crab|lobster|octopus|goby|rattail|batfish|blobfish|catfish|loach|pleco|turbot|mudskipper|fiddler|shrimp|prawn|crayfish/.test(id);
+  return (f._fai = { size, pred, bottom, curious: FAI_CURIOUS.has(id), circle: /shark/.test(id), maxV: clamp(0.8 + Math.log10(1 + size) * 1.1, 0.6, 2.8), scale: clamp(0.3 + Math.log10(1 + size) * 0.62, 0.28, 2.6) }); }
+// ---- 物件池：同一種魚的模型用完放回去，下次直接拿來用 ----
+function faiTake(f, scale){ const sil = !rec.count[f.id], k = f.id + '|' + scale.toFixed(2) + (sil ? 's' : ''), P = FAI.pool.get(k); let m = P && P.pop(); if (!m){ m = fishModel(f, scale); m.userData.poolKey = k; m.traverse(o => { if (o.isMesh){ o.castShadow = false; o.frustumCulled = true; o.renderOrder = -1; if (sil) o.material = FAI_SIL; } }); } m.visible = true; return m; }
+function faiGive(m){ if (!m) return; if (m.parent) m.parent.remove(m); const k = m.userData.poolKey; if (!k) return; if (!FAI.pool.has(k)) FAI.pool.set(k, []); const P = FAI.pool.get(k); if (P.length < 4) P.push(m); }
+// ---- 岸上看得到的水：這裡多深、可不可以游 ----
+function faiDepth(x, z){ if (!waterAt(x, z)) return 0; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 2) return 0; if (inShrimpHall(x, z, 3)) return 0; return clamp(WATER_LEVEL - terrainH(x, z), 0, 8); }
+function faiSurfaceY(a, depth){ const d = Math.max(0.3, depth); return a.tr.bottom ? WATER_LEVEL - Math.min(0.75, d - 0.12) : WATER_LEVEL - clamp(d * 0.3, 0.2, 0.5); }   /* 不要太深，不然水面擋住就看不到了 */
+// 這個釣點現在比較可能出現哪些魚（時間、天氣、季節、海洋生態都算進去）
+function faiPick(spotId, depth){
+  const sp = SPOT_BY_ID[spotId]; if (!sp || !sp.fish) return null; const per = periodOf(gameHour()), eco = {}; for (const e of (Ocean.d && Ocean.d.eco) || []) if (e.spot === spotId) eco[e.fish] = +e.mult;
+  const rainy = WEATHERS[Env.wx] && WEATHERS[Env.wx].rain > 0, list = [], w = [];
+  for (const id of sp.fish){ const f = FISH_BY_ID[id]; if (!f || f.rs || f.of) continue; if (BIG_FISH.has(id) || (f.min + f.max) / 2 > 40) continue;   /* 鯨魚、大鯊魚這種大傢伙不會游到岸邊 */   /* 變種不會在岸邊游給你看（釣到才知道） */
+    let k = f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.18 : 0;
+    if (f.time && f.time !== per) k *= 0.12;   /* 白天的魚晚上很少出來，晚上的魚白天躲著 */
+    if (rainy && RAIN_FISH.has(id)) k *= 2; if (SEASON_FISH.has(id)) k *= 1.6; if (eco[id] != null) k *= eco[id]; if (k > 0){ list.push(f); w.push(k); } }
+  if (!list.length) return null; let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; } return list[0]; }
+// ---- 一條魚 ----
+function faiAgent(f, x, z, opt){ const tr = faiTraits(f), sc = opt && opt.scale || tr.scale, m = faiTake(f, sc); scene.add(m);
+  const a = { f, tr, m, pos: new THREE.Vector3(x, 0, z), vel: new THREE.Vector3((Math.random() - 0.5) * 0.4, 0, (Math.random() - 0.5) * 0.4), tgt: new THREE.Vector3(x, 0, z), home: new THREE.Vector3(x, 0, z), state:'wander', st:0, cd:0, lod:0, acc:0, id: Math.random(), depth: opt && opt.depth || faiDepth(x, z) };
+  a.pos.y = faiSurfaceY(a, a.depth); faiNewWander(a); FAI.agents.push(a); return a; }
+function faiFree(a){ faiGive(a.m); a.dead = true; }
+function faiNewWander(a){ for (let k = 0; k < 6; k++){ const ang = Math.random() * 6.283, r = 2 + Math.random() * 6, x = a.home.x + Math.cos(ang) * r, z = a.home.z + Math.sin(ang) * r; if (faiDepth(x, z) > 0.35){ a.tgt.set(x, 0, z); return; } } a.tgt.copy(a.home); }
+function faiSet(a, s, secs){ a.state = s; a.st = secs || 0; }
+// 轉向：慢慢轉過去、慢慢加速減速；碰到岸邊就轉開
+function faiSteer(a, dt, speed, tx, tz){
+  const dx = tx - a.pos.x, dz = tz - a.pos.z, d = Math.hypot(dx, dz) || 1, arrive = Math.min(1, d / 1.2);
+  const dvx = dx / d * speed * arrive - a.vel.x, dvz = dz / d * speed * arrive - a.vel.z, acc = a.tr.maxV * 2.2;
+  const dl = Math.hypot(dvx, dvz) || 1, k = Math.min(1, acc * dt / dl); a.vel.x += dvx * k; a.vel.z += dvz * k;
+  const nx = a.pos.x + a.vel.x * dt, nz = a.pos.z + a.vel.z * dt, dep = faiDepth(nx + a.vel.x * 0.4, nz + a.vel.z * 0.4);
+  if (dep < 0.35){ a.vel.multiplyScalar(-0.4); if (a.state === 'wander' || a.state === 'flee') faiNewWander(a); return d; }
+  a.pos.x = nx; a.pos.z = nz; a.depth += (dep - a.depth) * Math.min(1, dt * 2); return d; }
+function faiPlace(a, dt, t){ const ty = a.state === 'forage' ? WATER_LEVEL - Math.min(0.7, Math.max(0.3, a.depth) - 0.1) : faiSurfaceY(a, a.depth); a.pos.y += (ty - a.pos.y) * Math.min(1, dt * 1.5);
+  const sp = Math.hypot(a.vel.x, a.vel.z); a.m.position.copy(a.pos); if (sp > 0.02) a.m.rotation.y = lerpAngle(a.m.rotation.y, Math.atan2(-a.vel.z, a.vel.x), Math.min(1, dt * 6));
+  a.m.rotation.z = a.state === 'forage' ? -0.35 : Math.sin(t * 2 + a.id * 9) * 0.05; }
+// ---- 岸上看得到的水裡：每一幀 ----
+function updateFishAI(dt0, t){
+  if (Dive.on || House.on){ if (FAI.agents.length){ for (const a of FAI.agents) faiFree(a); FAI.agents = []; } faiSchoolsClear(); return; }
+  const max = FAI_MAX[Quality.tier] || 10, px = me.pos.x, pz = me.pos.z;
+  // 生出新的魚（玩家附近、看得到的水裡），離太遠的收回物件池
+  if (t > FAI.spawnAt){ FAI.spawnAt = t + 0.8;
+    for (const a of FAI.agents) if (Math.hypot(a.pos.x - px, a.pos.z - pz) > 32 || faiDepth(a.pos.x, a.pos.z) <= 0) faiFree(a);   /* 太遠、跑到岸上（不應該發生）就收回 */
+    FAI.agents = FAI.agents.filter(a => !a.dead);
+    if (FAI.agents.length < max) for (let k = 0; k < 4; k++){ const ang = Math.random() * 6.283, r = 7 + Math.random() * 16, x = px + Math.cos(ang) * r, z = pz + Math.sin(ang) * r, dep = faiDepth(x, z);
+      if (dep < 0.6) continue; const f = faiPick(waterSpotId(x, z), dep); if (f){ faiAgent(f, x, z, { depth: dep }); break; } }
+    faiSchoolSpawn(px, pz); }
+  // 拋竿以後：上鉤的那條魚由原本的 BiteFish 游過來咬（伺服器抽的魚）；附近的魚會被浮標吸引過去，咬到、拉魚、水花大的時候，旁邊的魚會嚇跑
+  const bob = me.bobState === 'water' && F.phase === 'waiting' && !Dive.on ? me.bobPos : null, splash = (F.phase === 'bite' || F.phase === 'reeling') && me.bobPos ? me.bobPos : null;
+  const pSpeed = me.speed || 0, jump = Jump.air > 0;
+  for (const a of FAI.agents){ if (a.dead) continue;
+    const dc = Math.hypot(a.pos.x - camera.position.x, a.pos.z - camera.position.z); let dt = dt0;
+    a.m.visible = dc < 40; a.acc += dt; if (dc > 24 && (frameNo + Math.floor(a.id * 7)) % 4) continue; dt = Math.min(0.2, a.acc); a.acc = 0;   /* 遠的魚 4 幀才算一次 */
+    const dP = Math.hypot(a.pos.x - px, a.pos.z - pz), V = a.tr.maxV; a.st -= dt; a.cd -= dt;
+    // 感知玩家：跑過來、跳、太靠近會被嚇跑；好奇的魚在玩家站著不動時會靠過來
+    if (splash && a.state !== 'flee' && Math.hypot(a.pos.x - splash.x, a.pos.z - splash.z) < 3.5){ faiSet(a, 'flee', 2); a.tgt.set(a.pos.x + (a.pos.x - splash.x) * 3, 0, a.pos.z + (a.pos.z - splash.z) * 3); }
+    if (a.state !== 'flee'){ const scare = a.tr.curious ? 1.4 : 3.2;
+      if (dP < scare && (pSpeed > 1.2 || jump || dP < 1.1)){ faiSet(a, 'flee', 1.6 + Math.random()); a.tgt.set(a.pos.x + (a.pos.x - px) / (dP || 1) * 7, 0, a.pos.z + (a.pos.z - pz) / (dP || 1) * 7); }
+      else if (a.tr.curious && a.state === 'wander' && dP < 7 && pSpeed < 0.2 && a.cd <= 0 && Math.random() < dt * 0.3){ faiSet(a, 'curious', 4 + Math.random() * 4); a.cd = 12; } }
+    // 浮標、窩料會吸引附近的魚
+    if (a.state === 'wander' && a.cd <= 0){ if (bob && Math.hypot(a.pos.x - bob.x, a.pos.z - bob.z) < 8 && Math.random() < dt * 0.5){ faiSet(a, 'bait', 5 + Math.random() * 5); a.cd = 10; }
+      else for (const zn of chumZones) if (zn.until > now() && Math.hypot(a.pos.x - zn.x, a.pos.z - zn.z) < 12){ faiSet(a, 'bait', 8); a.baitZ = zn; a.cd = 4; break; } }
+    // 掠食魚：偶爾追比自己小很多的魚
+    if (a.tr.pred && a.state === 'wander' && a.cd <= 0 && Math.random() < dt * 0.15){ const prey = FAI.agents.find(b => b !== a && !b.dead && b.tr.size < a.tr.size * 0.3 && Math.hypot(b.pos.x - a.pos.x, b.pos.z - a.pos.z) < 9); if (prey){ faiSet(a, 'chase', 5); a.prey = prey; a.cd = 25; } }
+    if (!a.tr.bottom && a.state === 'wander' && a.cd <= 0 && Math.random() < dt * 0.05){ faiSet(a, 'forage', 3 + Math.random() * 3); a.cd = 15; }
+    if (a.tr.bottom && a.state === 'wander' && Math.random() < dt * 0.1) faiSet(a, 'forage', 2 + Math.random() * 3);
+    // 狀態
+    switch (a.state){
+      case 'wander': if (faiSteer(a, dt, V * 0.45, a.tgt.x, a.tgt.z) < 0.6) faiNewWander(a); break;
+      case 'forage': faiSteer(a, dt, V * 0.12, a.pos.x + Math.cos(t + a.id) * 0.5, a.pos.z + Math.sin(t + a.id) * 0.5); if (a.st <= 0) faiSet(a, 'wander'); break;
+      case 'flee': faiSteer(a, dt, V * 1.9, a.tgt.x, a.tgt.z); if (a.st <= 0){ faiSet(a, 'wander'); a.home.copy(a.pos); faiNewWander(a); } break;
+      case 'curious': { const ang = Math.atan2(a.pos.z - pz, a.pos.x - px); faiSteer(a, dt, V * 0.4, px + Math.cos(ang) * 2.2, pz + Math.sin(ang) * 2.2); if (a.st <= 0) faiSet(a, 'wander'); break; }
+      case 'bait': { const c = a.baitZ && a.baitZ.until > now() ? a.baitZ : bob; if (!c){ faiSet(a, 'wander'); break; } const ang = t * 0.9 + a.id * 6; faiSteer(a, dt, V * 0.55, c.x + Math.cos(ang) * 1.1, c.z + Math.sin(ang) * 1.1); if (a.st <= 0){ a.baitZ = null; faiSet(a, 'wander'); } break; }
+      case 'chase': { const p = a.prey; if (!p || p.dead || a.st <= 0){ faiSet(a, 'wander'); break; } if (p.state !== 'flee'){ faiSet(p, 'flee', 3); p.tgt.set(p.pos.x + (p.pos.x - a.pos.x) * 3, 0, p.pos.z + (p.pos.z - a.pos.z) * 3); }
+        if (faiSteer(a, dt, V * 1.6, p.pos.x, p.pos.z) < 0.35 + a.tr.scale * 0.2){ faiFree(p); faiSet(a, 'eat', 6); faiEvent(a, `${a.f.name}吃掉了一條${p.f.name}`); ripple(p.pos.x, p.pos.z); } break; }
+      case 'eat': faiSteer(a, dt, V * 0.2, a.tgt.x, a.tgt.z); if (a.st <= 0) faiSet(a, 'wander'); break;
+    }
+    faiPlace(a, dt, t);
+  }
+  FAI.agents = FAI.agents.filter(a => !a.dead);
+  faiSchoolsUpdate(dt0, t, false);
+  faiObserve(t);
+}
+// ---- 小魚群（instanced）：boids ----
+function faiSchoolsClear(){ for (const s of FAI.schools){ for (const im of s.ims){ if (im.parent) im.parent.remove(im); } } FAI.schools = []; }
+function faiSchoolSpawn(px, pz){ FAI.schools = FAI.schools.filter(s => { const far = Math.hypot(s.lead.x - px, s.lead.z - pz) > 40; if (far) for (const im of s.ims) if (im.parent) im.parent.remove(im); return !far; });
+  if (FAI.schools.length >= (Quality.tier === 'low' ? 1 : 2)) return;
+  for (let k = 0; k < 3; k++){ const ang = Math.random() * 6.283, r = 10 + Math.random() * 14, x = px + Math.cos(ang) * r, z = pz + Math.sin(ang) * r, dep = faiDepth(x, z); if (dep < 1.0) continue;
+    const sid = waterSpotId(x, z), sp = SPOT_BY_ID[sid]; if (!sp) continue; const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && !f.of && f.rarity === '常見' && FISH_STYLE[f.id] && f.max < 3 && !BIG_FISH.has(f.id)); if (!pool.length) continue;
+    const f = pool[Math.floor(Math.random() * pool.length)], n = FAI_SCHOOL[Quality.tier] || 14; FAI.schools.push(faiMakeSchool(f, n, x, z, scene, { surface: true, scale: 0.42 })); return; } }
+function faiMakeSchool(f, n, x, z, parent, o){ const st = FISH_STYLE[f.id], ims = [];
+  for (const part of Object.keys(FISH_MESH[st.shape])){ const im = new THREE.InstancedMesh(fishGeo(st.shape, part), fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape), n); im.frustumCulled = false; parent.add(im); ims.push(im); }
+  const P = [], V = []; for (let i = 0; i < n; i++){ P.push(new THREE.Vector3(x + (Math.random() - 0.5) * 2, WATER_LEVEL - 0.3, z + (Math.random() - 0.5) * 2)); V.push(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)); }
+  return { f, n, ims, P, V, alive: new Array(n).fill(true), respawn: new Array(n).fill(0), lead: new THREE.Vector3(x, P[0].y, z), lv: new THREE.Vector3(0.6, 0, 0), tgt: new THREE.Vector3(x, P[0].y, z), zk: /^Fish/.test(st.shape) ? 1.5 : 1, surface: !!o.surface, scale: o.scale || 0.55, state:'school', st:0, pos: new THREE.Vector3(x, P[0].y, z) }; }
+// dive：海底高度、礁丘、天花板（水面）；岸上：水深
+function faiOk(s, x, y, z){ if (s.surface){ const d = faiDepth(x, z); return d > 0.7; } const R = DIVE.r * 0.95; return Math.hypot(x - DIVE.x, z - DIVE.z) < R; }
+function faiYRange(s, x, z){ if (s.surface){ const d = faiDepth(x, z); return [WATER_LEVEL - Math.min(0.5, d * 0.4), WATER_LEVEL - 0.18]; } const bed = Math.max(diveBed(x, z), rockLift(x, z, 0.4)) + 0.6; return [bed, DIVE.y + DIVE.top - 0.8]; }
+function faiSchoolsUpdate(dt, t, dive){
+  const L = dive ? Dive.schools.filter(s => s.P) : FAI.schools, threats = [];
+  threats.push({ x: me.pos.x, y: dive ? me.baseY + 0.8 : WATER_LEVEL, z: me.pos.z, r: dive ? 3 : 2.6, k: 1 });
+  const preds = dive ? Dive.fish.filter(o => o.ai && o.ai.state === 'chase') : FAI.agents.filter(a => a.tr.pred);
+  for (const p of preds){ const sc = (p.ai ? p.ai.tr : p.tr).scale; threats.push({ x: p.pos.x, y: p.pos.y, z: p.pos.z, r: 2.2 + sc * 0.4, k: 1.2, p, eat: 0.55 + Math.min(1.4, sc * 0.35) }); }
+  for (const s of L){
+    const dc = Math.hypot(s.lead.x - camera.position.x, s.lead.z - camera.position.z); if (dc > 45){ for (const im of s.ims) im.visible = false; continue; } for (const im of s.ims) im.visible = true;
+    if (dc > 25 && (frameNo % 3)) continue; const sdt = dc > 25 ? dt * 3 : dt;
+    // 帶頭的：慢慢在海域裡移動；被嚇到就整群一起轉開；被魚餌吸引就過去
+    s.st -= sdt; let speed = 0.9, bait = dive ? Dive.bait : null;
+    if (bait && bait.until > t && Math.hypot(bait.x - s.lead.x, bait.z - s.lead.z) < 14){ s.tgt.set(bait.x, bait.y, bait.z); s.state = 'bait'; speed = 1.1; }
+    else if (s.state === 'bait') s.state = 'school';
+    for (const th of threats){ const d = Math.hypot(s.lead.x - th.x, s.lead.z - th.z); if (d < th.r * 1.5){ s.tgt.set(s.lead.x + (s.lead.x - th.x) / (d || 1) * 8, s.lead.y, s.lead.z + (s.lead.z - th.z) / (d || 1) * 8); speed = 2.2; s.state = 'flee'; s.st = 1.5; } }
+    if (s.state !== 'bait' && (s.st <= 0 || Math.hypot(s.tgt.x - s.lead.x, s.tgt.z - s.lead.z) < 1.2)){ s.state = 'school'; s.st = 6 + Math.random() * 6;
+      const cur = Ocean.d && Ocean.d.state && Ocean.d.state.coast, drift = cur ? (+cur.dir) * Math.PI / 180 : 0;   /* 魚群順著海流慢慢移動 */
+      for (let k = 0; k < 6; k++){ const ang = drift + (Math.random() - 0.5) * 2.4, r = 3 + Math.random() * 7, x = s.lead.x + Math.sin(ang) * r, z = s.lead.z + Math.cos(ang) * r; if (faiOk(s, x, 0, z)){ const [y0, y1] = faiYRange(s, x, z); s.tgt.set(x, y0 + (y1 - y0) * (0.3 + Math.random() * 0.5), z); break; } } }
+    _v1.subVectors(s.tgt, s.lead); const dl = _v1.length() || 1; _v1.multiplyScalar(speed / dl).sub(s.lv).clampLength(0, 2.5 * sdt); s.lv.add(_v1);
+    const nx = s.lead.x + s.lv.x * sdt, nz = s.lead.z + s.lv.z * sdt; if (faiOk(s, nx, 0, nz)){ s.lead.x = nx; s.lead.z = nz; } else { s.lv.multiplyScalar(-0.5); s.st = 0; }
+    { const [y0, y1] = faiYRange(s, s.lead.x, s.lead.z); s.lead.y = clamp(s.lead.y + s.lv.y * sdt, y0, y1); }
+    // 每一條：靠攏帶頭的、跟大家分開、方向對齊；自己被嚇到就散開；被吃掉的過一陣子從帶頭的旁邊補回來
+    let cx = 0, cy = 0, cz = 0, cnt = 0;
+    for (let i = 0; i < s.n; i++){ if (!s.alive[i]){ if (t > s.respawn[i] && Math.hypot(s.lead.x - me.pos.x, s.lead.z - me.pos.z) > 10){ s.alive[i] = true; s.P[i].copy(s.lead); } else { tankDummy.scale.set(0, 0, 0); tankDummy.updateMatrix(); for (const im of s.ims) im.setMatrixAt(i, tankDummy.matrix); continue; } }
+      const p = s.P[i], v = s.V[i]; _v1.subVectors(s.lead, p).multiplyScalar(0.9);
+      for (let j = Math.max(0, i - 4); j < Math.min(s.n, i + 5); j++){ if (j === i || !s.alive[j]) continue; _v2.subVectors(p, s.P[j]); const d = _v2.length(); if (d < 0.45 && d > 0.001) _v1.addScaledVector(_v2, (0.45 - d) / d * 4); }
+      _v1.addScaledVector(s.lv, 0.6);
+      for (const th of threats){ _v2.set(p.x - th.x, (p.y - th.y) * 0.5, p.z - th.z); const d = _v2.length(); if (d < th.r){ _v1.addScaledVector(_v2, (th.r - d) / (d || 1) * 6 * th.k);
+        if (th.p && th.eat && d < th.eat && th.p.ai){ s.alive[i] = false; s.respawn[i] = t + 20; th.p.ai.state = 'eat'; th.p.ai.st = 5; faiEvent(th.p, `${th.p.f.name}吃掉了一條${s.f.name}`); } } }
+      v.addScaledVector(_v1, sdt * 2.2); const sp = v.length(), mx = s.state === 'flee' ? 3.2 : 1.6; if (sp > mx) v.multiplyScalar(mx / sp); if (sp < 0.35) v.multiplyScalar(0.35 / (sp || 1));
+      const nxp = p.x + v.x * sdt, nzp = p.z + v.z * sdt; if (faiOk(s, nxp, 0, nzp)){ p.x = nxp; p.z = nzp; } else { v.x *= -0.6; v.z *= -0.6; }
+      const [y0, y1] = faiYRange(s, p.x, p.z); p.y = clamp(p.y + v.y * sdt, y0, y1);
+      _e.set(0, Math.atan2(-v.z, v.x), clamp(v.y * 0.4, -0.5, 0.5)); tankDummy.position.copy(p); tankDummy.rotation.copy(_e); const ss = s.scale; tankDummy.scale.set(ss, ss, ss * s.zk); tankDummy.updateMatrix(); for (const im of s.ims) im.setMatrixAt(i, tankDummy.matrix);
+      cx += p.x; cy += p.y; cz += p.z; cnt++; }
+    for (const im of s.ims) im.instanceMatrix.needsUpdate = true;
+    if (cnt) s.pos.set(cx / cnt, cy / cnt, cz / cnt); }
+}
+// ---- 觀察：面前幾公尺內的魚，告訴你牠在做什麼 ----
+function faiEvent(a, text){ if (Math.hypot(a.pos.x - me.pos.x, a.pos.z - me.pos.z) < 14) FAI.events.push({ text, at: now() }); }
+function faiObserve(t){
+  if (t < FAI.obsAt) return; FAI.obsAt = t + 0.3; let el2 = $('#obsTip'); if (!el2){ el2 = document.createElement('div'); el2.id = 'obsTip'; document.body.appendChild(el2); }
+  const ev = FAI.events.shift(); if (ev && now() - ev.at < 3){ el2.textContent = '👀 ' + ev.text; el2.hidden = false; el2.dataset.until = now() + 2.5; return; }
+  if (+el2.dataset.until > now()) return;
+  const fx = Math.sin(me.rot), fz = Math.cos(me.rot), list = Dive.on ? Dive.fish.filter(o => o.ai).map(o => ({ f: o.f, pos: o.pos, state: o.ai.state })) : FAI.agents;
+  let best = null, bd = Dive.on ? 7 : 5.5; for (const a of list){ const dx = a.pos.x - me.pos.x, dz = a.pos.z - me.pos.z, d = Math.hypot(dx, dz); if (d < bd && (dx * fx + dz * fz) / (d || 1) > 0.3){ bd = d; best = a; } }
+  if (!best || F.phase === 'reeling' || !$('#sheet').hidden){ el2.hidden = true; return; }
+  el2.textContent = `🔍 ${rec.count[best.f.id] ? best.f.name : '沒看過的魚'}・${FAI_STATE[best.state] || ''}`; el2.hidden = false; }
+// ---- 潛水的魚：換成 AI ----
+function faiCurrent(){ const c = Ocean.d && Ocean.d.state && Ocean.d.state.coast, sp = c ? clamp(+c.spd || 0.3, 0.1, 1) : 0.3, a = c ? (+c.dir || 0) * Math.PI / 180 : 0.6; return { sp, lx: Math.cos(a) * sp * 0.12, lz: Math.sin(a) * sp * 0.12 }; }   /* 海流：海帶、海草往海流的方向倒一點 */
+function faiDiveInit(){ Dive.bait = null; Dive.baitFx = null;
+  for (const s of Dive.schools){ if (s.ball) continue; const n = s.n; s.P = []; s.V = []; s.alive = new Array(n).fill(true); s.respawn = new Array(n).fill(0); const y = diveBed(s.cx, s.cz) + s.y;
+    for (let i = 0; i < n; i++){ s.P.push(new THREE.Vector3(s.cx + s.off[i][0] * 1.6, y + s.off[i][1] * 0.7, s.cz + s.off[i][2] * 1.6)); s.V.push(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)); }
+    s.lead = new THREE.Vector3(s.cx, y, s.cz); s.lv = new THREE.Vector3(); s.tgt = s.lead.clone(); s.state = 'school'; s.st = 0; s.scale = 0.55; s.surface = false; }
+  for (const o of Dive.fish){ const tr = faiTraits(o.f); o.ai = { state:'wander', st:0, cd: Math.random() * 5, vel: new THREE.Vector3(), tgt: new THREE.Vector3(o.cx, diveBed(o.cx, o.cz) + o.y, o.cz), tr, id: Math.random(), prey:null };
+    o.pos.set(o.cx + Math.cos(o.ph) * o.rad, diveBed(o.cx, o.cz) + o.y, o.cz + Math.sin(o.ph) * o.rad); faiDiveWander(o); }
+  Dive.aiOn = true; }
+function faiDiveWander(o){ const A = o.ai; for (let k = 0; k < 6; k++){ const ang = Math.random() * 6.283, r = 3 + Math.random() * 8, x = o.cx + Math.cos(ang) * r, z = o.cz + Math.sin(ang) * r; if (Math.hypot(x - DIVE.x, z - DIVE.z) > DIVE.r * 0.9) continue;
+    const bed = Math.max(diveBed(x, z), rockLift(x, z, 0.3)); A.tgt.set(x, o.bottom ? bed + 0.3 : clamp(bed + 1 + Math.random() * 6, bed + 0.6, DIVE.y + DIVE.top - 1), z); return; } }
+function faiDiveUpdate(dt, t){
+  for (const s of Dive.schools){ if (!s.ball) continue; const a = t * s.sp + s.ph, cx = s.cx + Math.cos(a) * s.rad, cz = s.cz + Math.sin(a) * s.rad, cy = Math.max(diveBed(cx, cz) + s.y, rockLift(cx, cz, 2.2)); s.pos.set(cx, cy, cz);
+    for (let i = 0; i < s.n; i++){ const q = s.off[i], rr = 0.8 + Math.abs(q[0]) * 1.5, an = t * (0.7 + Math.abs(q[2]) * 0.4) + q[3]; tankDummy.position.set(cx + Math.cos(an) * rr, cy + q[1] * 1.3, cz + Math.sin(an) * rr); tankDummy.rotation.set(0, -an, 0); tankDummy.scale.set(0.45, 0.45, 0.45); tankDummy.updateMatrix(); for (const im of s.ims) im.setMatrixAt(i, tankDummy.matrix); } for (const im of s.ims) im.instanceMatrix.needsUpdate = true;
+    if (Math.hypot(me.pos.x - cx, me.pos.z - cz) < 3) s.ph += dt * 0.4; }   /* 餌球：一大團一起轉，靠太近會轉開 */
+  faiSchoolsUpdate(dt, t, true);
+  const py = me.baseY + 0.8, bait = Dive.bait && Dive.bait.until > t ? Dive.bait : null, pSpeed = me.speed || 0;
+  for (const o of Dive.fish){ const A = o.ai; if (!A) continue; const tr = A.tr, V = tr.maxV * 0.8; A.st -= dt; A.cd -= dt;
+    const dP = Math.hypot(o.pos.x - me.pos.x, o.pos.y - py, o.pos.z - me.pos.z);
+    if (A.state !== 'flee' && A.state !== 'hide' && A.state !== 'chase'){
+      if (!tr.circle && dP < (tr.curious ? 1.6 : 3.5) && (pSpeed > 1.5 || dP < 1.2)){ const rock = (Dive.rocks || []).find(r => Math.hypot(r[0] - o.pos.x, r[1] - o.pos.z) < 8);
+        if (rock && !tr.pred){ A.state = 'hide'; A.st = 4 + Math.random() * 3; const ang = Math.atan2(rock[1] - me.pos.z, rock[0] - me.pos.x); A.tgt.set(rock[0] + Math.cos(ang) * (rock[2] + 0.6), Math.max(diveBed(rock[0], rock[1]) + 0.5, Math.min(rock[3] - 0.3, o.pos.y)), rock[1] + Math.sin(ang) * (rock[2] + 0.6)); }
+        else { A.state = 'flee'; A.st = 2; A.tgt.set(o.pos.x + (o.pos.x - me.pos.x) * 3, o.pos.y + 1, o.pos.z + (o.pos.z - me.pos.z) * 3); } }
+      else if (tr.circle && dP < 9 && A.state !== 'circle' && A.cd <= 0){ A.state = 'circle'; A.st = 8; A.cd = 20; }
+      else if (tr.curious && dP < 8 && pSpeed < 0.3 && A.state === 'wander' && A.cd <= 0 && Math.random() < dt * 0.4){ A.state = 'curious'; A.st = 5; A.cd = 12; }
+      else if (bait && A.state !== 'bait' && Math.hypot(bait.x - o.pos.x, bait.z - o.pos.z) < 14 && Math.random() < dt * 1.5){ A.state = 'bait'; A.st = bait.until - t; }
+      else if (tr.pred && A.state === 'wander' && A.cd <= 0 && Math.random() < dt * 0.12){ const S = Dive.schools.filter(s => s.P && Math.hypot(s.lead.x - o.pos.x, s.lead.z - o.pos.z) < 15); if (S.length){ A.state = 'chase'; A.st = 6; A.cd = 30; A.prey = S[0]; } }
+      else if (A.state === 'wander' && A.cd <= 0 && Math.random() < dt * 0.08){ A.state = 'forage'; A.st = 3 + Math.random() * 3; A.cd = 10; } }
+    let speed = V * 0.45, tx = A.tgt.x, ty = A.tgt.y, tz = A.tgt.z;
+    switch (A.state){
+      case 'wander': if (Math.hypot(tx - o.pos.x, tz - o.pos.z) < 0.8) faiDiveWander(o); break;
+      case 'forage': { const bed = Math.max(diveBed(o.pos.x, o.pos.z), rockLift(o.pos.x, o.pos.z, 0.2)); tx = o.pos.x + Math.cos(t * 0.5 + A.id * 7) * 0.4; tz = o.pos.z + Math.sin(t * 0.5 + A.id * 7) * 0.4; ty = bed + 0.25; speed = V * 0.15; if (A.st <= 0){ A.state = 'wander'; faiDiveWander(o); } break; }
+      case 'flee': speed = V * 2; if (A.st <= 0){ A.state = 'wander'; faiDiveWander(o); } break;
+      case 'hide': speed = V * 1.2; if (A.st <= 0){ A.state = 'wander'; faiDiveWander(o); } break;
+      case 'curious': { const ang = Math.atan2(o.pos.z - me.pos.z, o.pos.x - me.pos.x); tx = me.pos.x + Math.cos(ang) * 1.8; tz = me.pos.z + Math.sin(ang) * 1.8; ty = py; speed = V * 0.4; if (A.st <= 0){ A.state = 'wander'; faiDiveWander(o); } break; }
+      case 'circle': { const ang = t * 0.35 + A.id * 6; tx = me.pos.x + Math.cos(ang) * 5; tz = me.pos.z + Math.sin(ang) * 5; ty = py + 0.5; speed = V * 0.5; if (A.st <= 0){ A.state = 'wander'; faiDiveWander(o); } break; }
+      case 'bait': { if (!bait){ A.state = 'wander'; faiDiveWander(o); break; } const ang = t * 0.8 + A.id * 6; tx = bait.x + Math.cos(ang) * 0.9; tz = bait.z + Math.sin(ang) * 0.9; ty = bait.y; speed = V * 0.7; break; }
+      case 'chase': { const s = A.prey; if (!s || A.st <= 0){ A.state = 'wander'; faiDiveWander(o); break; } tx = s.pos.x; ty = s.pos.y; tz = s.pos.z; speed = V * 1.7; break; }
+      case 'eat': speed = V * 0.15; if (A.st <= 0){ A.state = 'wander'; faiDiveWander(o); } break;
+    }
+    // 轉向＋避開海底、礁丘、水面、邊界
+    _v1.set(tx - o.pos.x, ty - o.pos.y, tz - o.pos.z); const d = _v1.length() || 1; _v1.multiplyScalar(speed * Math.min(1, d / 1.0) / d).sub(A.vel).clampLength(0, V * 2.4 * dt); A.vel.add(_v1);
+    o.pos.addScaledVector(A.vel, dt);
+    { const bed = Math.max(diveBed(o.pos.x, o.pos.z), rockLift(o.pos.x, o.pos.z, o.bottom ? 0.1 : 0.5)) + (o.bottom ? 0.15 : 0.35), top = DIVE.y + DIVE.top - 0.7; if (o.pos.y < bed){ o.pos.y = bed; A.vel.y = Math.abs(A.vel.y) * 0.3; } if (o.pos.y > top){ o.pos.y = top; A.vel.y = -Math.abs(A.vel.y) * 0.3; }
+      const R = Math.hypot(o.pos.x - DIVE.x, o.pos.z - DIVE.z); if (R > DIVE.r * 0.95){ o.pos.x = DIVE.x + (o.pos.x - DIVE.x) * DIVE.r * 0.95 / R; o.pos.z = DIVE.z + (o.pos.z - DIVE.z) * DIVE.r * 0.95 / R; A.vel.multiplyScalar(-0.5); faiDiveWander(o); } }
+    o.m.position.copy(o.pos); const hs = Math.hypot(A.vel.x, A.vel.z); if (hs > 0.03) o.m.rotation.y = lerpAngle(o.m.rotation.y, Math.atan2(-A.vel.z, A.vel.x), Math.min(1, dt * 5));
+    o.m.rotation.z = A.state === 'forage' ? -0.4 : clamp(Math.atan2(A.vel.y, hs + 0.01) * 0.6, -0.5, 0.5);
+    if (o.m.userData.tail) o.m.userData.tail.rotation.y = Math.sin(t * (6 + hs * 4) + o.ph) * 0.35; }
+  // 撒魚餌：一小團飼料慢慢往下沉
+  if (Dive.baitFx){ const b = Dive.bait; Dive.baitFx.visible = !!(b && b.until > t); if (Dive.baitFx.visible){ b.y = Math.max(diveBed(b.x, b.z) + 0.3, b.y - dt * 0.15); Dive.baitFx.position.set(b.x, b.y, b.z); Dive.baitFx.rotation.y += dt * 0.5; } }
+  faiObserve(t);
+}
+function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌還要 ${Math.ceil(FAI.baitCd - now())} 秒才能再撒`); return; } FAI.baitCd = now() + 12;
+  const x = me.pos.x + Math.sin(me.rot) * 1.6, z = me.pos.z + Math.cos(me.rot) * 1.6; Dive.bait = { x, y: me.baseY + 1, z, until: t + 18 };
+  if (!Dive.baitFx){ const g = new THREE.Group(); const m = mat('#e8c88a', 0.8); for (let i = 0; i < 18; i++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 4), m); b.position.set((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.6); g.add(b); } Dive.group.add(g); Dive.baitFx = g; }
+  flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
+
+
 addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
@@ -8669,7 +8889,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){

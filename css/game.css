@@ -804,3 +804,8 @@ body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
 .paper .pt{font-weight:800;font-size:13px;color:#6a4a1a}.paper .px{font-size:13px;line-height:1.6}
 .paper .psec.big .px{font-size:15px;font-weight:700}
 .paper b.gold{color:#b77900;background:linear-gradient(180deg,transparent 55%,#ffe39a 55%);padding:0 2px}
+
+/* 魚類 AI：看魚的時候，畫面下面小小一行告訴你牠在做什麼 */
+#obsTip{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 58px);transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:rgba(14,40,60,.72);color:#fff;font-size:13px;font-weight:700;pointer-events:none;z-index:6;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis}
+#obsTip[hidden]{display:none}
+body.infish #obsTip{display:none}
