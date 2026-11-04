@@ -467,7 +467,7 @@ function terrainInfo(x, z){
   if (e > -1.5) dig(MAP.creekHalf + wobble(z, 4.1) * 0.25 - lineDist(x, z, MAP.creek), 0.55, 0.45, 2);
   const C = MAP.creekPool; dig(C[2] - Math.hypot(x - C[0], z - C[1]), 0.7, 0.45, 2);
   // 水圳：水泥牆直直下去（南岸靠海那段是緩緩的草岸）
-  if (x > CANAL.x0 - 0.5 && x < CANAL.x1 + 3 && Math.abs(z - CANAL.z) < CANAL.half + 1){ const soft = x > CANAL.bankX && z > CANAL.z; dig(Math.min(CANAL.half - Math.abs(z - CANAL.z), x - CANAL.x0), 0.9, soft ? 0.5 : 3, 5); }
+  if (x > CANAL.x0 - 0.5 && x < CANAL.x1 + 3 && Math.abs(z - CANAL.z) < CANAL.half + 1){ const soft = x > CANAL.bankX && z > CANAL.z; if (!water || h > -0.9) dig(Math.min(CANAL.half - Math.abs(z - CANAL.z), x - CANAL.x0), 0.9, soft ? 0.5 : 3, 5); }   /* 出海口：海本來就比水圳深，就用海底（不會有一塊突然變淺） */
   if (!water && h < -0.02){ water = true; region = 0; }   // 島外的海
   return { h, water, region };
 }
@@ -633,6 +633,11 @@ function buildTrees(trees, PX, PZ){
 
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
 function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
+function castBlocked(x, z, px, pz){
+  const L = Math.hypot(px - x, pz - z); if (L < 2.2) return false;
+  let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
+  return false;
+}
 function castPoint(x, z, dx, dz, dist){
   { const C = CANAL; if (x > C.xr0 - 1 && x < 22.5 && Math.abs(z - C.z) < C.half + C.rw + 1.5 && (Math.abs(dz) < 0.35 || Math.sign(C.z - z) === Math.sign(dz))){   /* 水圳很窄：浮標落在水圳中間，不會飛過對岸 */
       const tt = Math.abs(dz) >= 0.35 ? Math.min((C.z - z) / dz, dist + 2) : dist; const px = clamp(x + dx * tt, C.x0 + 0.7, C.x1 + 6), pz = clamp(z + dz * tt, C.z - C.half + 0.6, C.z + C.half - 0.6);
@@ -2423,6 +2428,8 @@ function biteWait(c){
 }
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
+  if (s && s.id !== 'shrimp' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, d0);
+    if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
   { const fit = rodFit(s && s.id); if (fit === 'bad' && !doCast.told[s.id]){ doCast.told[s.id] = 1; const best = Object.entries(ROD_TYPES).find(([, T]) => T.fit && T.fit.includes(s.id)); setTimeout(() => toast(`${ROD_TYPES[rodType(curRod())].name}在這裡不太好用${best ? `，${s.short}比較適合用${best[1].icon}${best[1].name}（包包裡可以換）` : '，換成甩竿試試'}`), 900); } }
   F.buffAt = curBuff(); useBuffCast();
   // 用掉一個魚餌
@@ -3435,7 +3442,10 @@ function buildCanal(){
   fenceZ(zN0, zN1, C.xn1 - 0.08, false); fenceZ(zN1, zS0, C.x0 - 0.08, true);
   { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, C.rw, 6), rail); r.rotation.x = Math.PI / 2; r.position.set(C.xn1 - 0.08, C.y + 0.95, (zN0 + zN1) / 2); g.add(r); }
   // 混混的褐色水、看得到的石頭和水草
-  { const w = new THREE.Mesh(new THREE.PlaneGeometry(C.x1 - C.x0 + 2, C.half * 2), new THREE.MeshBasicMaterial({ color:'#7a6e4a', transparent:true, opacity:0.35, depthWrite:false })); w.rotation.x = -Math.PI / 2; w.position.set((C.x0 + C.x1) / 2 + 1, WATER_LEVEL + 0.02, C.z); w.renderOrder = 1; g.add(w); }
+  { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 32; const c = cv.getContext('2d'), gr = c.createLinearGradient(0, 0, 128, 0); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.62, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    const ge = c.createLinearGradient(0, 0, 0, 32); c.fillStyle = gr; c.fillRect(0, 0, 128, 32); c.globalCompositeOperation = 'destination-in'; ge.addColorStop(0, 'rgba(0,0,0,0.4)'); ge.addColorStop(0.2, 'rgba(0,0,0,1)'); ge.addColorStop(0.8, 'rgba(0,0,0,1)'); ge.addColorStop(1, 'rgba(0,0,0,0.4)'); c.fillStyle = ge; c.fillRect(0, 0, 128, 32);
+    const tx = new THREE.CanvasTexture(cv); const W = C.x1 - C.x0 + 1;   /* 混濁的水往出海口慢慢變淡，跟海水接起來 */
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(W, C.half * 2), new THREE.MeshBasicMaterial({ color:'#7a6e4a', map: tx, transparent:true, opacity:0.4, depthWrite:false })); w.rotation.x = -Math.PI / 2; w.position.set(C.x0 + W / 2, WATER_LEVEL + 0.02, C.z); w.renderOrder = 1; g.add(w); }
   for (let i = 0; i < 26; i++){ const x = C.x0 + 0.6 + rr() * (C.x1 - C.x0 - 2), z = C.z + (rr() - 0.5) * C.half * 1.7, r = 0.12 + rr() * 0.22; const k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat(['#6a6458', '#7a7466', '#55524a'][i % 3], 0.95, { flatShading:true })); k.position.set(x, Math.max(terrainH(x, z), -0.8) + r * 0.5, z); k.scale.y = 0.6; k.rotation.y = rr() * 3; g.add(k); }
   const grassM = mat('#6f8a3e', 0.95, { side:THREE.DoubleSide }), grass2 = mat('#8a9a4a', 0.95, { side:THREE.DoubleSide });
   const tuft = (x, z, y, n, h) => { for (let k = 0; k < n; k++){ const b = new THREE.Mesh(new THREE.PlaneGeometry(0.06, h * (0.6 + rr() * 0.6)), rr() < 0.5 ? grassM : grass2); b.position.set(x + (rr() - 0.5) * 0.3, y + h * 0.4, z + (rr() - 0.5) * 0.3); b.rotation.set((rr() - 0.5) * 0.5, rr() * 3, (rr() - 0.5) * 0.5); g.add(b); } };
@@ -3455,15 +3465,15 @@ function buildCanal(){
     const P = (px, py, pz2) => new THREE.Vector3(px, py, pz2);
     seg(P(x + 0.5, C.y + 0.3, zS0 + 0.75), P(x, C.y + 0.3, zS0 + 0.75), 0.11); seg(P(x, C.y + 0.3, zS0 + 0.75), P(x, C.y + 1.15, pz), 0.11); seg(P(x, C.y + 1.15, pz), P(x, C.y + 1.15, zS0 - 0.25), 0.11); seg(P(x, C.y + 1.15, zS0 - 0.25), P(x, WATER_LEVEL - 0.4, zS0 - 0.3), 0.11); }
   // 老榕樹（南岸路邊，有很多氣根垂下來）
-  { const g0 = g; { var bg = new THREE.Group(); g0.add(bg); } const g = bg; const x = 8.2, z = zS1 + 4.6, y = groundHeight(x, z), bark = mat('#6a5e4e', 0.95), leaf = mat('#3e6a32', 0.9, { flatShading:true }), leaf2 = mat('#4e7a3a', 0.9, { flatShading:true });
+  ((g) => { const x = 8.2, z = zS1 + 4.6, y = groundHeight(x, z), bark = mat('#6a5e4e', 0.95), leaf = mat('#3e6a32', 0.9, { flatShading:true }), leaf2 = mat('#4e7a3a', 0.9, { flatShading:true });
     const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.85, 4.2, 10), bark); tr.position.set(x, y + 2.1, z); tr.castShadow = true; g.add(tr); addCircleCol(x, z, 0.9);
     for (let i = 0; i < 7; i++){ const a = i / 7 * 6.28 + rr(), r = 1.2 + rr() * 1.3, b = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.32, 2.4, 6), bark); b.position.set(x + Math.cos(a) * r * 0.5, y + 4.2, z + Math.sin(a) * r * 0.5); b.rotation.set(Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9); g.add(b);
       const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3 + rr() * 0.6, 0), i % 2 ? leaf : leaf2); c.position.set(x + Math.cos(a) * r, y + 5.0 + rr() * 1.2, z + Math.sin(a) * r); c.scale.y = 0.65; c.castShadow = true; g.add(c);
       for (let k = 0; k < 3; k++){ const L = 1.5 + rr() * 2.5, ar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, L, 4), bark); ar.position.set(x + Math.cos(a) * r * (0.6 + rr() * 0.4) + (rr() - 0.5), y + 4.5 - L / 2, z + Math.sin(a) * r * (0.6 + rr() * 0.4) + (rr() - 0.5)); g.add(ar); } }
-    const top = new THREE.Mesh(new THREE.IcosahedronGeometry(2.4, 0), leaf); top.position.set(x, y + 6.2, z); top.scale.y = 0.6; top.castShadow = true; g.add(top); Canal.fade.push({ g, b: new THREE.Box3().setFromObject(g) }); }
+    const top = new THREE.Mesh(new THREE.IcosahedronGeometry(2.4, 0), leaf); top.position.set(x, y + 6.2, z); top.scale.y = 0.6; top.castShadow = true; g.add(top); Canal.fade.push({ g, b: new THREE.Box3().setFromObject(g) }); })((() => { const bg = new THREE.Group(); g.add(bg); return bg; })());
   // 鐵皮工廠（藍色鐵皮屋頂、灰白的浪板牆）
   const tinTex = (c1, c2) => { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 8; const c = cv.getContext('2d'); for (let i = 0; i < 16; i++){ c.fillStyle = i % 2 ? c1 : c2; c.fillRect(i * 4, 0, 4, 8); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
-  const factory = (x, z, w, d, h, roofC, wallA, wallB, sign) => { const g0 = g; { const fg = new THREE.Group(); g0.add(fg); var g = fg; } const y = groundHeight(x, z), wt = tinTex(wallA, wallB); wt.repeat.set(w * 1.5, 1);
+  const factory = (x, z, w, d, h, roofC, wallA, wallB, sign) => { const g = new THREE.Group(); Canal.g.add(g); const y = groundHeight(x, z), wt = tinTex(wallA, wallB); wt.repeat.set(w * 1.5, 1);
     const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ map: wt, roughness:0.7, metalness:0.2 })); wall.position.set(x, y + h / 2, z); wall.castShadow = true; wall.receiveShadow = true; g.add(wall);
     const rt = tinTex(roofC, '#2a4a6a'); rt.repeat.set(w * 1.5, 1);
     for (const s of [-1, 1]){ const r = new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, 0.08, d / 2 + 0.35), new THREE.MeshStandardMaterial({ map: rt, roughness:0.5, metalness:0.3 })); r.position.set(x, y + h + 0.35, z + s * d / 4); r.rotation.x = s * 0.28; r.castShadow = true; g.add(r); }
