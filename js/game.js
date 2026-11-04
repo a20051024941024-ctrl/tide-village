@@ -2203,11 +2203,12 @@ const WORLD_REGIONS = [
 function getMapImage(){
   if (mapImg) return mapImg;
   const N = 232, cv = document.createElement('canvas'); cv.width = cv.height = N; const ctx = cv.getContext('2d'), img = ctx.createImageData(N, N), c = [0, 0, 0];
-  const wc = { 0: [47, 137, 199], 1: [79, 194, 207], 2: [107, 214, 176], 3: [79, 184, 212], 4: [127, 211, 234] };
+  const wc = { 0: [47, 137, 199], 1: [79, 194, 207], 2: [107, 214, 176], 3: [79, 184, 212], 4: [127, 211, 234], 5: [122, 108, 78] };
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){
     const z = MAP_VIEW - (i + 0.5) / N * MAP_VIEW * 2, x = -MAP_VIEW + (j + 0.5) / N * MAP_VIEW * 2, info = terrainInfo(x, z), o = (j * N + i) * 4;   /* 地圖上面是北（世界的 -x）、右邊是東（-z） */
     let r, g, b; const me2 = mangE(x, z);
-    if (me2 > 0){ r = 63; g = 107; b = 58; } else if (me2 > -MANG.mud && info.water){ r = 110; g = 92; b = 66; }   /* 紅樹林、泥灘 */
+    const C = CANAL, onRoad = x > C.xr0 && ((Math.abs(z - C.z) > C.half && Math.abs(z - C.z) < C.half + C.rw && x < (z < C.z ? C.xn1 : C.bankX)) || (x < C.x0 && Math.abs(z - C.z) < C.half + C.rw));
+    if (onRoad){ r = 150; g = 148; b = 140; } else if (me2 > 0){ r = 63; g = 107; b = 58; } else if (me2 > -MANG.mud && info.water){ r = 110; g = 92; b = 66; }   /* 紅樹林、泥灘 */
     else if (info.water){ const w = wc[info.region], k = 1 - Math.min(0.35, -info.h * 0.18); r = w[0] * k; g = w[1] * k; b = w[2] * k; }
     else { terrainColor(x, z, info, c); const sh = info.h > 0.05 ? clamp(0.95 + (terrainH(x + 0.6, z - 0.6) - info.h) * 0.5, 0.8, 1.1) : 1; r = c[0] * 255 * sh; g = c[1] * 255 * sh; b = c[2] * 255 * sh; }
     img.data[o] = r; img.data[o+1] = g; img.data[o+2] = b; img.data[o+3] = 255;
