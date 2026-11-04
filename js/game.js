@@ -243,6 +243,7 @@ const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過�
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
 /* 潮汐商店街（2026-11-04 使用者：NPC 的店分開一點、整齊一點）：往珊瑚礁群島那條路的兩邊，一排一排的店，門口都朝著路 */
 var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:31, r:-Math.PI / 2 } };
+var Mkt = { tab:'new', list:null, mine:null, stats:null, at:0, busy:false, sell:null, fish:null };
 function lotAt(k, lx, lz){ const L = SHOPLOT[k], c = Math.cos(L.r), s = Math.sin(L.r); return [L.x + c * lx + s * lz, L.z - s * lx + c * lz]; }
 const LANDMARKS = [
   { id:'plaza',      label:'潮汐廣場', pos:V3(4, 4),            color:PALETTE.gold, ly:1.8 },
@@ -253,6 +254,7 @@ const LANDMARKS = [
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
   { id:'tailor',     label:'阿綾服裝店', pos:V3(SHOPLOT.ling.x, SHOPLOT.ling.z), color:'#f5a5d8', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'mu',         label:'阿木木工坊', pos:V3(SHOPLOT.mu.x, SHOPLOT.mu.z), color:'#c79a6b', ly:5.5, mx:-2.4, mz:2.6 },
+  { id:'market',     label:'釣客魚市', pos:V3(SHOPLOT.spare.x, SHOPLOT.spare.z), color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.6 },
   { id:'cai',        label:'阿彩畫廊', pos:V3(SHOPLOT.cai.x, SHOPLOT.cai.z), color:'#9b7bff', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'fu',         label:'阿福海產店', pos:V3(20.5, -25.5),   color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.4 },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
@@ -922,6 +924,10 @@ function castPoint(x, z, dx, dz, dist){
   { const cg = house(SHOPLOT.cai.x, SHOPLOT.cai.z, '#f1e3c8', 3.4, SHOPLOT.cai.r, { awning: '#9b7bff', sign: '阿彩畫廊', signIcon: '🎨', signInk: '#4a3a8a' });
     Cai.show = new THREE.Group(); Cai.show.position.set(-2.5, 0, 1.7); Cai.show.rotation.y = -0.35; Cai.show.scale.setScalar(1.3); cg.add(Cai.show); Cai.show.add(paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'mist', fish:null }));
     const c = Math.cos(cg.rotation.y), sn = Math.sin(cg.rotation.y); addOBoxCol(cg.position.x - c * 2.5 + sn * 1.7, cg.position.z + sn * 2.5 + c * 1.7, 1.1, 0.7, cg.rotation.y); }
+  /* 釣客魚市（2026-11-05）：商店街最後一間，玩家之間買賣魚；門口一排冰桶 */
+  { const mg = house(SHOPLOT.spare.x, SHOPLOT.spare.z, '#5fb6e3', 3.4, SHOPLOT.spare.r, { awning: '#2f89c7', sign: '釣客魚市', signIcon: '🐟', signInk: '#1d4a6a' });
+    for (const sx of [-2.6, -1.7]){ const b = new THREE.Group(); b.position.set(sx, 0, 1.6); mg.add(b); b.add(box([0.75, 0.55, 0.5], '#e8f4f8', [0, 0.28, 0])); b.add(box([0.78, 0.06, 0.53], '#2f89c7', [0, 0.57, 0])); }
+    const c = Math.cos(mg.rotation.y), sn = Math.sin(mg.rotation.y); addOBoxCol(mg.position.x - c * 2.15 + sn * 1.6, mg.position.z + sn * 2.15 + c * 1.6, 1.8, 0.6, mg.rotation.y); }
   house(-14, -9, '#ec8b68', 3.3, faceTo(-14, -9));
   house(22, 7, '#9fc7a8', 3.2, faceTo(22, 7));
   house(-9, -3, '#f6a96b', 3.6, faceTo(-9, -3), { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店
@@ -2937,7 +2943,7 @@ function updateFishing(dt, t){
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
@@ -5943,7 +5949,7 @@ function sellFish(ts, batch){
   if (!batch) cloudCall('sell_fish', { p_ts: [ts] });
   return price;
 }
-const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'海邊商店', mode:'sell' }, { id:'cook', label:'潮汐食堂', mode:'cook' }, { id:'tailor', label:'阿綾服裝店', mode:'tailor' }, { id:'mu', label:'阿木木工坊', mode:'mu' }, { id:'fu', label:'阿福海產店', mode:'fu' }, { id:'cai', label:'阿彩畫廊', mode:'cai' } ];
+const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'海邊商店', mode:'sell' }, { id:'cook', label:'潮汐食堂', mode:'cook' }, { id:'tailor', label:'阿綾服裝店', mode:'tailor' }, { id:'mu', label:'阿木木工坊', mode:'mu' }, { id:'fu', label:'阿福海產店', mode:'fu' }, { id:'cai', label:'阿彩畫廊', mode:'cai' }, { id:'market', label:'釣客魚市', mode:'market' } ];
 function nearShop(){
   if (myBoat) return null;
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
@@ -5960,7 +5966,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 function avKit(){
@@ -6187,7 +6193,7 @@ function renderMarket(body, inShop){
 }
 function confirmOnce(b){ if (b.dataset.sure === '1') return true; b.dataset.sure = '1'; const t = b.textContent; b.textContent = '確定？'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = t; } }, 2500); return false; }
 // ===== 推播通知（048、Edge Function tide-push）：遊戲關著時手機也會跳通知 =====
-const PUSH_KINDS = [['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚']];
+const PUSH_KINDS = [['market', '🐟 你在魚市的魚賣掉了'], ['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚']];
 const Push = { busy:false, sub:null, prefs:null, checked:false, msg:'' };
 function pushOk(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
 function b64u(s){ const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
@@ -7435,6 +7441,45 @@ function updateShopNpc(n, dt, t, load){
   if (d < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(npcLine(n), '', 6); n.talkAt = t + rand(18, 35); } else if (d > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
   n.update(dt, t); n.placeTag();
 }
+// ---- 釣客魚市（060_fishmarket.sql）：玩家之間買賣魚，伺服器保管、成交 ----
+async function loadMarket(){ if (Mkt.busy || !Cloud.on || !Cloud.sb) return; Mkt.busy = true; Mkt.at = Date.now();
+  try { const mode = Mkt.tab === 'mine' ? 'mine' : Mkt.tab === 'cheap' ? 'cheap' : 'new'; const [a, b] = await Promise.all([Cloud.sb.rpc('market_browse', { p_mode: mode, p_fish: Mkt.fish, p_offset: 0 }), Mkt.stats ? Promise.resolve({ data: Mkt.stats }) : Cloud.sb.rpc('market_stats')]);
+    if (mode === 'mine') Mkt.mine = a.data || []; else Mkt.list = a.data || []; Mkt.stats = b.data || {}; } catch(e){}
+  Mkt.busy = false; if (!$('#sheet').hidden && curTab === 'market') renderTab(); }
+function mktFishName(x){ const f = FISH_BY_ID[x.fish || x.f]; return (f ? f.name : (x.fish || x.f)) + (x.item && x.item.s ? (x.item.s === 'M' ? ' ♂' : ' ♀') : x.s ? (x.s === 'M' ? ' ♂' : ' ♀') : ''); }
+async function mktCall(fn, args, msg){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; adoptRow(data); buildTank(); SFX.catch(); flash(msg, 1.6); Mkt.stats = null; Mkt.sell = null; loadMarket(); } catch(e){ toast(cloudErrMsg(e)); loadMarket(); } }
+function renderMarketFish(body){
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🐟 釣客魚市</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能買賣魚。')); return; }
+  const seg = el('div', 'seg'); [['new', '🛒 最新'], ['cheap', '💰 最划算'], ['sell', '🏷️ 我要賣'], ['mine', '📦 我的攤位']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Mkt.tab === k)); b.addEventListener('click', () => { Mkt.tab = k; Mkt.sell = null; if (k !== 'sell') loadMarket(); renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
+  const S = Mkt.stats || {};
+  if (Mkt.tab === 'sell'){
+    if (Mkt.sell){ const x = Mkt.sell, f = FISH_BY_ID[x.f], base = Math.max(1, fishPrice(f, x.w)), lo = Math.max(5, Math.round(base * 0.5)), hi = Math.max(50, base * 5), st = S[x.f];
+      body.appendChild(el('div', 'dexhead', `把「${mktFishName(x)} ${fmtKg(x.w)}」擺上魚市`));
+      body.appendChild(el('p', 'sub', `海邊商店收購價 🪙${base}。你可以訂 🪙${lo}～${hi}。${st && st.avg ? `最近 7 天這種魚在魚市平均賣 🪙${st.avg}（賣掉 ${st.sold} 條）。` : ''}${st && st.open ? `現在魚市還擺著 ${st.open} 條。` : ''}賣掉以後你拿 95%。`));
+      const row = el('div', 'tankbar'), inp = el('input'); inp.type = 'number'; inp.min = lo; inp.max = hi; inp.value = Math.min(hi, Math.max(lo, (st && st.avg) || Math.round(base * 1.5))); inp.style.cssText = 'width:110px;font-size:16px;padding:6px 8px;border-radius:10px;border:1px solid #c8d8e4';
+      row.appendChild(inp); for (const k of [1, 1.5, 2, 3]){ const q = el('button', 'tbtn ghost', `×${k}`); q.addEventListener('click', () => { inp.value = Math.min(hi, Math.max(lo, Math.round(base * k))); }); row.appendChild(q); } body.appendChild(row);
+      const bar = el('div', 'tankbar'), ok = el('button', 'tbtn', '擺上去'), bk = el('button', 'tbtn ghost', '返回'); ok.addEventListener('click', () => { const v = Math.round(+inp.value); if (!(v >= lo && v <= hi)){ toast(`價錢要在 ${lo}～${hi} 之間`); return; } ok.disabled = true; mktCall('market_list', { p_t: x.t, p_price: v }, `🏷️ 擺上魚市了！🪙${v}`); });
+      bk.addEventListener('click', () => { Mkt.sell = null; renderTab(); }); bar.append(ok, bk); body.appendChild(bar); return; }
+    body.appendChild(el('p', 'sub', '選一條魚擺上魚市，自己訂價（收購價的 0.5～5 倍）。魚會先交給魚市保管，3 天沒賣掉會退回你的魚缸，也可以隨時收回來。每人最多同時擺 6 條。展示中的魚、紅鯊不能賣。'));
+    const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.rs && !(rec.show || []).includes(x.t)).sort((a, b) => (RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity]) || b.w - a.w).slice(0, 80);
+    if (!cand.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以賣的魚。'));
+    const ul = el('ul', 'shoplist cols'); for (const x of cand){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(el('span', 'dishic', x.k ? '⭐' : '🐟')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${mktFishName(x)} ${fmtKg(x.w)}`)); d.appendChild(el('div', 'sub2', `${f.rarity}・收購 🪙${fishPrice(f, x.w)}`)); li.appendChild(d); li.addEventListener('click', () => { Mkt.sell = x; renderTab(); }); ul.appendChild(li); }
+    body.appendChild(ul); return; }
+  const L = Mkt.tab === 'mine' ? Mkt.mine : Mkt.list; if (!L){ body.appendChild(el('div', 'empty', '載入中…')); return; }
+  if (Mkt.tab !== 'mine' && Mkt.fish){ const b = el('button', 'tbtn ghost', `只看：${(FISH_BY_ID[Mkt.fish] || {}).name || Mkt.fish} ✕`); b.addEventListener('click', () => { Mkt.fish = null; loadMarket(); }); body.appendChild(b); }
+  if (!L.length){ body.appendChild(el('div', 'empty', Mkt.tab === 'mine' ? '你還沒有擺魚。到「我要賣」選一條吧！' : '魚市現在沒有魚，你可以當第一個擺攤的人！')); return; }
+  const ul = el('ul', 'shoplist'); for (const m of L){ const f = FISH_BY_ID[m.fish], li = el('li', m.status === 'sold' ? 'on' : ''); li.appendChild(el('span', 'dishic', f && f.of ? '✨' : '🐟'));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${mktFishName(m)} ${fmtKg(+m.w)}・🪙${m.price}`)); const rel = m.price / Math.max(1, m.base);
+    d.appendChild(el('div', 'sub2', Mkt.tab === 'mine' ? (m.status === 'open' ? '擺著賣中' : m.status === 'sold' ? `✅ 賣掉了，拿到 🪙${Math.floor(m.price * 0.95)}` : m.status === 'expired' ? '3 天沒賣掉，已經退回魚缸' : '已經收回') : `${f ? f.rarity : ''}・賣家 ${m.seller}・收購價的 ${rel.toFixed(1)} 倍${S[m.fish] && S[m.fish].avg ? `・最近平均 🪙${S[m.fish].avg}` : ''}`)); li.appendChild(d);
+    const a = el('div', 'tacts');
+    if (Mkt.tab === 'mine'){ if (m.status === 'open'){ const b = el('button', 'tbtn ghost', '收回'); b.addEventListener('click', () => { b.disabled = true; mktCall('market_cancel', { p_id: m.id }, '📦 收回魚缸了'); }); a.appendChild(b); } }
+    else if (m.mine) a.appendChild(el('span', 'sub2', '你的'));
+    else { const b = el('button', 'tbtn', '買'); b.disabled = rec.coins < m.price; b.addEventListener('click', () => { b.disabled = true; mktCall('market_buy', { p_id: m.id }, `🐟 買到${mktFishName(m)}了！放進魚缸囉`); }); a.appendChild(b);
+      const s2 = el('button', 'tbtn ghost', '同種'); s2.addEventListener('click', () => { Mkt.fish = m.fish; loadMarket(); }); a.appendChild(s2); }
+    li.appendChild(a); ul.appendChild(li); }
+  body.appendChild(ul);
+}
 // ---- 阿報的《潮汐村報》（057_news.sql）：每天早上 7 點出報、留 7 天；上報的玩家名字是金色的 ----
 var News = { list:null, at:0, busy:false, pick:0 };
 async function loadNews(){ if (News.busy || !Cloud.on || !Cloud.sb) return; News.busy = true; News.at = Date.now();
@@ -7966,6 +8011,7 @@ function renderTab(){
   } else if (curTab === 'cage'){ renderCage(body);
   } else if (curTab === 'design'){ renderDesignEd(body);
   } else if (curTab === 'mu'){ renderMuShop(body);
+  } else if (curTab === 'market'){ renderMarketFish(body);
   } else if (curTab === 'cai'){ renderCaiShop(body);
   } else if (curTab === 'news'){ renderNews(body);
   } else if (curTab === 'gang'){ renderGangShop(body);
