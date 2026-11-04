@@ -5648,7 +5648,8 @@ function designMat(d){
   if (d.kind === 'top') tx.offset.x = 0.5;   /* 身體的貼圖接縫在正前方：轉半圈讓正面在中間 */
   m = new THREE.MeshStandardMaterial({ map: tx, roughness: 0.75, metalness: 0.02 }); Designs.mats.set(k, m); return m;
 }
-function queueDesign(id){ if (Designs.map.has(id) || !Cloud.on || !Cloud.sb) return; Designs.want.add(id); clearTimeout(Designs.timer); Designs.timer = setTimeout(fetchDesigns, 300); }
+/* 遊戲剛開始、雲端還沒準備好時（穿著自己設計的衣服進遊戲）先排著，等一下再抓 */
+function queueDesign(id){ if (Designs.map.has(id)) return; let on = false; try { on = Cloud.on && !!Cloud.sb; } catch(e){ setTimeout(() => queueDesign(id), 1500); return; } if (!on) return; Designs.want.add(id); clearTimeout(Designs.timer); Designs.timer = setTimeout(fetchDesigns, 300); }
 async function fetchDesigns(){ const ids = [...Designs.want].filter(id => !Designs.map.has(id)).slice(0, 40); Designs.want.clear(); if (!ids.length) return;
   try { const { data } = await Cloud.sb.rpc('get_designs', { p_ids: ids }); for (const d of data || []) Designs.map.set(d.id, d); for (const id of ids) if (!Designs.map.has(id)) Designs.map.set(id, { id, px: null }); } catch(e){ return; }
   Designs.ver++; refreshDesignAvatars(); }
