@@ -57,7 +57,7 @@ declare
   ipool text[]; ih bigint; intel text[] := '{}';
   season text; mo integer; kr numeric; kl numeric; nleg integer; legk numeric; rainy boolean;
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
-  rsh public.red_sharks; rs text;
+  rsh public.red_sharks; rs text; fitk numeric := 1;
   c jsonb; ctype text; cat timestamptz; left_k numeric; fit numeric; k numeric; sc jsonb; age numeric; pw numeric; nb integer; fw numeric;
 begin
   if sp is null then raise exception '沒有這個釣點'; end if;
@@ -124,7 +124,9 @@ begin
   -- 季節
   mo := extract(month from now() at time zone 'Asia/Taipei');
   season := case when mo between 3 and 5 then 'spring' when mo between 6 and 8 then 'summer' when mo between 9 and 11 then 'autumn' else 'winter' end;
-  kr := (rod->>'rare')::numeric * coalesce((bait->>'rare')::numeric, 1) * coalesce((bf->>'rare')::numeric, 1) * cb_r * (w->>'rare')::numeric * tr * (ln->>'rare')::numeric;
+  -- 專用竿（036）：手竿、遠投竿、磯釣竿用在對的釣點稀有魚 ×1.15，用錯 ×0.85；甩竿不變（跟 js/game.js 的 rodFit 一樣）
+  fitk := case when p_spot in ('shrimp', 'mudflat') or cfg->'rodFit'->coalesce(rod->>'type', 'cast') is null then 1 when cfg->'rodFit'->coalesce(rod->>'type', 'cast') ? p_spot then 1.15 else 0.85 end;
+  kr := fitk * (rod->>'rare')::numeric * coalesce((bait->>'rare')::numeric, 1) * coalesce((bf->>'rare')::numeric, 1) * cb_r * (w->>'rare')::numeric * tr * (ln->>'rare')::numeric;
   kl := (rod->>'legend')::numeric * coalesce((bait->>'legend')::numeric, 1) * coalesce((bf->>'legend')::numeric, 1) * cb_l
         * (case when (w->>'legendSea')::boolean then (case when sea then (w->>'legend')::numeric else 1 end) else (w->>'legend')::numeric end);
   select count(*) into nleg from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'r' = '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false);   -- 變種不算
