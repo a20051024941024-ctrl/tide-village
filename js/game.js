@@ -2519,6 +2519,7 @@ function renderMap(body){
   const list = el('div', 'tplist');
   for (const tp of TRAVEL){ const on = visited.has(tp.id); const b = el('button', 'tpbtn' + (on ? '' : ' lock'), on ? tp.label : '？？？（還沒去過）'); b.disabled = !on; b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
   body.appendChild(list);
+  renderOcean(body);
   if (WS.length){ body.appendChild(el('div', 'dexhead', '🏘️ 村民現在在做什麼'));
     const ul = el('ul', 'wlist'); for (const w of WS){ const li = el('li', '', `${w.icon} ${w.name}：${w.text}`), m = (World.me || {})[w.id];
       li.appendChild(el('span', 'wme', m && m.talks ? `跟你：${m.score >= 60 ? '好朋友' : m.score >= 25 ? '朋友' : '認識'}（聊過 ${m.talks} 次${m.gifts ? `、收過你 ${m.gifts} 份禮物` : ''}）` : '跟你：還不認識'));
@@ -7775,8 +7776,20 @@ const NPC_TIPS = [
   '變種的魚很少見，釣到才會出現在圖鑑裡',
   '幫村民完成任務，可以拿到金幣',
 ];
+// ---- 動態海洋生態（066_ocean.sql）：水溫、海流、魚類洄游、魚群、保育週（伺服器每小時更新，抽魚時直接算進去）----
+var Ocean = { d:null, at:0, busy:false };
+async function loadOcean(){ if (Ocean.busy || !Cloud.on || !Cloud.sb) return; Ocean.busy = true; Ocean.at = Date.now(); try { const { data } = await Cloud.sb.rpc('ocean_now'); if (data) Ocean.d = data; } catch(e){} Ocean.busy = false; if (!$('#sheet').hidden && curTab === 'map') renderTab(); }
+setInterval(() => { try { if (Cloud.on && (!Ocean.at || Date.now() - Ocean.at > 10 * 60000)) loadOcean(); } catch(e){} }, 20000);
+function oceanLines(){ const D = Ocean.d; if (!D) return []; const out = []; for (const e of D.eco || []){ const f = FISH_BY_ID[e.fish], sp = SPOT_BY_ID[e.spot]; if (!f || !sp) continue; out.push(e.kind === 'protect' ? `${e.label}` : `聽說${e.label}，去${sp.short}看看`); }
+  const c = D.state && D.state.coast; if (c) out.push(`今天海水 ${c.temp} 度${c.spd > 1 ? '，海流很強' : ''}`); return out; }
+function renderOcean(body){ const D = Ocean.d; if (!D){ if (Cloud.on) loadOcean(); return; } const S = D.state || {}, dir = d => ['北', '東北', '東', '東南', '南', '西南', '西', '西北'][Math.round(((+d % 360) + 360) % 360 / 45) % 8];
+  body.appendChild(el('div', 'dexhead', '🌊 海洋現況（每小時更新）')); const ul = el('ul', 'wlist');
+  for (const [k, nm] of [['coast', '本島沿海'], ['north', '冰封群島海岸'], ['fresh', '河湖溪流']]){ const s = S[k]; if (!s) continue; ul.appendChild(el('li', '', `${nm}：水溫 ${s.temp}°C・${k === 'fresh' ? '水流' : '海流'}往${dir(s.dir)} ${s.spd} 節・浮游生物 ${Math.round(s.pk * 100)}%`)); }
+  for (const e of D.eco || []){ const f = FISH_BY_ID[e.fish], sp = SPOT_BY_ID[e.spot]; if (!f || !sp) continue; ul.appendChild(el('li', '', `${e.kind === 'protect' ? '🛡️' : e.kind === 'school' ? '🐟' : '🧭'} ${sp.short}：${e.label}${e.kind === 'protect' ? '' : `（${f.name}比較多 ×${(+e.mult).toFixed(1)}）`}`)); }
+  body.appendChild(ul); }
 function npcEventLines(n){
   const L = [], W = WEATHERS[Env.wx], tip = dailyTip();
+  for (const x of oceanLines()) L.push(x);
   L.push(`現在${W.name}：${W.desc}`);
   L.push(`聽釣具店老闆說，${tip.text}`);
   if (Env.tide.st === 'low') L.push('退潮的時候海邊的魚比較不愛咬，不過紅樹林的泥灘會露出來，可以去抓彈塗魚');

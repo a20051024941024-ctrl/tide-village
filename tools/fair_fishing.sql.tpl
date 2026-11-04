@@ -62,6 +62,7 @@ declare
   sea boolean := p_spot = any(array(select jsonb_array_elements_text(cfg->'sea')));
   ring numeric := 1; lb numeric := 1; per text; gh numeric; tip_spot text; tip_fish text; hh bigint; pool text[];
   ipool text[]; ih bigint; intel text[] := '{}';
+  eco jsonb := '{}';   -- 海洋生態（066）：魚群洄游、群聚、保育
   season text; mo integer; kr numeric; kl numeric; nleg integer; legk numeric; rainy boolean;
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
   rsh public.red_sharks; rs text; gpv text; fitk numeric := 1; sx text; brood boolean := false; wild boolean := false;
@@ -138,11 +139,13 @@ begin
         * (case when (w->>'legendSea')::boolean then (case when sea then (w->>'legend')::numeric else 1 end) else (w->>'legend')::numeric end);
   select count(*) into nleg from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'r' = '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false);   -- 變種不算
   legk := (case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);
+  begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
     f := cfg->'fish'->fid; if f is null then continue; end if;
     wt := (f->>'w')::numeric
       * (case when rig = 'lure' then (case when cfg->'lure' ? fid then 2.2 else 0.55 end) when rig = 'bottom' then (case when cfg->'bottom' ? fid then 2.2 else 0.65 end) else 1 end)
       * (case when fid = any(intel) then 2.5 else 1 end)
+      * coalesce((eco->>fid)::numeric, 1)
       * (case when season in ('spring', 'summer') and cfg->'wildBreed' ? fid then 1.5 else 1 end)   -- 野外繁殖季（037）：春夏吳郭魚、鯽魚這些會自己生的魚比較多
       * (case when p_spot <> 'mudflat' then 1 when (rig = 'bottom') = (cfg->'bottom' ? fid) then 1 else 0 end)   -- 泥灘：抓招潮蟹（沉底）只會是蟹，抓彈塗魚只會是魚
       * (case when tip_spot = p_spot and tip_fish = fid then 2.5 else 1 end)
