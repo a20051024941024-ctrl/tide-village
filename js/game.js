@@ -824,57 +824,11 @@ function castPoint(x, z, dx, dz, dist){
     // 紙燈籠
     for (const sx of [-1.2, 1.2]){ const lan = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), mat('#e8473a', 0.6, { emissive:'#ff6a3a', emissiveIntensity:0.6 })); lan.scale.y = 1.25; lan.position.set(sx, 2.05, 1.05); g.add(lan); lanterns.push(lan); }
     // 板凳
-    for (const sx of [-0.8, 0, 0.8]){ const st = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12), mat(PALETTE.wood)); st.position.set(sx, 0.55, 1.35); st.castShadow = true; g.add(st); g.add(box([0.06, 0.52, 0.06], '#6e4a2f', [sx, 0.27, 1.35])); }
+    for (const sx of [-0.8, 0, 0.8]){ const st = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12), mat(PALETTE.wood)); st.position.set(sx, 0.55, 1.35); st.castShadow = true; g.add(st); g.add(box([0.06, 0.52, 0.06], '#6e4a2f', [sx, 0.27, 1.35])); 
+      // 客人（和玩家）坐這三張板凳，面向櫃台
+      const wp = new THREE.Vector3(sx, 0, 1.35).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)), fd = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y);
+      const seat = { x: wp.x, z: wp.z, face: Math.atan2(fd.x, fd.z), y: terrainH(wp.x, wp.z) + 0.13, cafe: true }; CHAIRS.push(seat); cafeSeats.push(seat); }
     const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addBoxCol(KX + sn * 0.1, KZ + c * 0.1, Math.abs(c) * 3.2 + Math.abs(sn) * 2.0, Math.abs(sn) * 3.2 + Math.abs(c) * 2.0);
-    // ---- 食堂露台：木地板、3 張圓桌＋6 張椅子、遮陽傘、串燈、盆栽、菜單看板（客人會坐這裡，玩家也可以坐）----
-    {
-      const PX0 = 17.2, PZ0 = 8.8, PW = 5.4, PD = 4.6; let top = 0;
-      for (let i = 0; i <= 6; i++) for (let j = 0; j <= 6; j++) top = Math.max(top, terrainH(PX0 - PW / 2 + i / 6 * PW, PZ0 - PD / 2 + j / 6 * PD));
-      const fy = Math.max(0.05, top) + 0.1; addDeck(PX0, PZ0, PW, PD, fy);
-      const pg = new THREE.Group(); pg.position.set(PX0, 0, PZ0); scene.add(pg);
-      const base = box([PW + 0.2, 0.5, PD + 0.2], '#8c5d3b', [0, fy - 0.27, 0]); pg.add(base);
-      for (let i = 0; i < 9; i++){ const pl = box([PW, 0.05, PD / 9 - 0.03], i % 2 ? '#d7a874' : '#cf9c66', [0, fy - 0.005, -PD / 2 + (i + 0.5) * PD / 9]); pl.castShadow = false; pg.add(pl); }
-      // 低矮的欄杆（靠房子那兩邊），留出入口
-      const rail = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(2, Math.round(L / 0.8)); for (let k = 0; k <= n; k++) pg.add(box([0.08, 0.55, 0.08], '#6e4a2f', [x0 + (x1 - x0) * k / n, fy + 0.27, z0 + (z1 - z0) * k / n])); const r = box([Math.abs(x1 - x0) + 0.08, 0.06, Math.abs(z1 - z0) + 0.08], '#8c5d3b', [(x0 + x1) / 2, fy + 0.55, (z0 + z1) / 2]); pg.add(r); };
-      rail(-PW / 2 + 0.05, PD / 2 - 0.05, PW / 2 - 0.05, PD / 2 - 0.05); rail(PW / 2 - 0.05, -PD / 2 + 0.05, PW / 2 - 0.05, PD / 2 - 0.05);
-      const parasolCols = [PALETTE.coral, '#3fbf9d', '#ffd36a'];
-      [[-1.35, -1.05], [1.15, -1.05], [-0.1, 1.05]].forEach(([tx, tz], ti) => {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.18, 0.72, 10), mat('#4c4c4c', 0.5)); leg.position.set(tx, fy + 0.36, tz); leg.castShadow = true; pg.add(leg);
-        const tt = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 18), mat('#f6efe2', 0.6)); tt.position.set(tx, fy + 0.74, tz); tt.castShadow = true; pg.add(tt);
-        const pole = box([0.05, 1.7, 0.05], '#f6efe2', [tx, fy + 1.6, tz]); pg.add(pole);
-        const cn = new THREE.Mesh(new THREE.ConeGeometry(1.15, 0.45, 8, 1, true), mat(parasolCols[ti], 0.75, { side:THREE.DoubleSide, flatShading:true })); cn.position.set(tx, fy + 2.48, tz); cn.castShadow = true; pg.add(cn);
-        const tip = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), mat('#ffffff')); tip.position.set(tx, fy + 2.73, tz); pg.add(tip);
-        // 桌上的小東西：花瓶和醬油瓶
-        pg.add(box([0.08, 0.16, 0.08], '#3a5f8f', [tx + 0.15, fy + 0.85, tz + 0.1])); const fl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0), mat(['#f17b6d', '#ffd36a', '#f5a5d8'][ti], 0.6)); fl.position.set(tx + 0.15, fy + 0.97, tz + 0.1); pg.add(fl);
-        pg.add(box([0.05, 0.12, 0.05], '#2a1a14', [tx - 0.14, fy + 0.83, tz - 0.08]));
-        addCircleCol(PX0 + tx, PZ0 + tz, 0.42);
-        for (const side of [-1, 1]){
-          const cx = tx + side * 0.82, cz = tz, ch = new THREE.Group(); ch.position.set(cx, fy, cz); ch.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2; pg.add(ch);
-          ch.add(box([0.46, 0.06, 0.44], '#c98a5a', [0, 0.45, 0])); ch.add(box([0.46, 0.5, 0.06], '#c98a5a', [0, 0.73, -0.21]));
-          for (const [lx, lz] of [[-0.19, -0.18], [0.19, -0.18], [-0.19, 0.18], [0.19, 0.18]]) ch.add(box([0.05, 0.45, 0.05], '#6e4a2f', [lx, 0.22, lz]));
-          const seat = { x: PX0 + cx, z: PZ0 + cz, face: Math.atan2(-side, 0), y: fy + 0.02, cafe: true };
-          CHAIRS.push(seat); cafeSeats.push(seat);
-        }
-      });
-      // 四角的柱子和串燈（晚上會亮）
-      const corners = [[-PW / 2 + 0.1, -PD / 2 + 0.1], [PW / 2 - 0.1, -PD / 2 + 0.1], [PW / 2 - 0.1, PD / 2 - 0.1], [-PW / 2 + 0.1, PD / 2 - 0.1]];
-      for (const [cx, cz] of corners) pg.add(box([0.1, 2.6, 0.1], '#6e4a2f', [cx, fy + 1.3, cz]));
-      const bulbM = mat('#fff3c4', 0.4, { emissive:'#ffd36a', emissiveIntensity:0.5 });
-      for (let k = 0; k < 4; k++){ const [ax, az] = corners[k], [bx, bz] = corners[(k + 1) % 4];
-        for (let q = 1; q < 8; q++){ const u = q / 8, b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), bulbM); b.position.set(ax + (bx - ax) * u, fy + 2.55 - Math.sin(u * Math.PI) * 0.35, az + (bz - az) * u); pg.add(b); } }
-      lanterns.push({ material: bulbM, isMesh:false, position:{ x:3 } });
-      // 盆栽
-      for (const [cx, cz] of [[-PW / 2 + 0.45, -PD / 2 + 0.45], [PW / 2 - 0.45, PD / 2 - 0.45]]){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.4, 10), mat('#c7643e')); pot.position.set(cx, fy + 0.2, cz); pot.castShadow = true; pg.add(pot); const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), mat('#5d9c55', 0.85, { flatShading:true })); bush.position.set(cx, fy + 0.6, cz); bush.castShadow = true; pg.add(bush); addCircleCol(PX0 + cx, PZ0 + cz, 0.3); }
-      // 菜單看板（畫布寫字）
-      { const cv2 = document.createElement('canvas'); cv2.width = 200; cv2.height = 256; const c2 = cv2.getContext('2d');
-        c2.fillStyle = '#2f3b36'; c2.fillRect(0, 0, 200, 256); c2.fillStyle = '#fff4d6'; c2.textAlign = 'center'; c2.font = 'bold 30px sans-serif'; c2.fillText('今日菜單', 100, 40);
-        c2.font = '21px sans-serif'; c2.textAlign = 'left'; ['🍣 鯖魚握壽司', '🍣 鯛魚握壽司', '🐟 鹽烤香魚', '🍤 酥炸河鱸', '🍱 壽司拼盤'].forEach((tline, i) => c2.fillText(tline, 16, 88 + i * 34));
-        const tx2 = new THREE.CanvasTexture(cv2); tx2.colorSpace = THREE.SRGBColorSpace;
-        const bd = new THREE.Group(); bd.position.set(-PW / 2 - 0.55, fy - 0.1, -0.3); bd.rotation.y = -Math.PI / 2 + 0.35; pg.add(bd);
-        bd.add(box([0.06, 1.3, 0.06], '#6e4a2f', [-0.36, 0.65, 0])); bd.add(box([0.06, 1.3, 0.06], '#6e4a2f', [0.36, 0.65, 0]));
-        bd.add(box([0.82, 1.0, 0.05], '#8c5d3b', [0, 1.05, -0.02]));
-        const face = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.92), new THREE.MeshBasicMaterial({ map: tx2 })); face.position.set(0, 1.05, 0.01); bd.add(face); }
-    }
     cookStall = { x: KX, z: KZ, rot: g.rotation.y, grill: new THREE.Vector3(-0.85, 1.6, -0.45).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)) };
   }
 
@@ -1304,7 +1258,7 @@ const GEAR = [
   ['pants_jeans','牛仔褲',0,'👖'],['pants_shorts','短褲',200,'🩳'],['pants_khaki','卡其褲',250,'🟫'],['pants_skirt','格紋裙',500,'👗'],['pants_overalls','吊帶褲',600,'🧑‍🌾'],['pants_rainbow','彩虹褲',1500,'🌈'],
   ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
   ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
-  ['acc_none','沒有配件',0,'🙂'],['acc_scarf','紅圍巾',300,'🧣'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
+  ['acc_none','沒有配件',0,'🙂'],['acc_scarf','紅圍巾',300,'🧣'],['acc_scarf_black','黑圍巾',320,'⚫'],['acc_scarf_white','白圍巾',320,'⚪'],['acc_scarf_navy','深藍圍巾',350,'🔵'],['acc_scarf_pink','粉紅圍巾',350,'🩷'],['acc_scarf_yellow','芥末黃圍巾',350,'🟡'],['acc_scarf_green','森林綠圍巾',350,'🟢'],['acc_scarf_grey','灰色毛圍巾',380,'🩶'],['acc_scarf_brown','焦糖圍巾',380,'🟤'],['acc_scarf_plaid','紅黑格紋圍巾',500,'🟥'],['acc_scarf_stripe','藍白條紋圍巾',500,'🔷'],['acc_scarf_rainbow','彩虹圍巾',900,'🌈'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
   ['back_none','沒有背飾',0,'🙂'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
   ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
   // 愛海商店：只能用放流得到的愛海點數換（第 5 欄是點數）
@@ -1395,6 +1349,17 @@ function applyGear(av, gear){
     case 'acc_coral': { const bead = M('#ffd9c7', 0.4); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.017, 6, 4), bead, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); }
       const cr = M('#ff6f61', 0.5); const br = (x, y, len, rz) => { const c = mk(new THREE.CylinderGeometry(0.011, 0.016, len, 5), cr, x, y, 0.215); c.rotation.z = rz; mk(new THREE.SphereGeometry(0.016, 6, 4), cr, x - Math.sin(rz) * len / 2, y + Math.cos(rz) * len / 2, 0.215); };
       br(0, 0.97, 0.09, 0); br(-0.025, 0.985, 0.07, 0.6); br(0.025, 0.99, 0.065, -0.55); br(-0.04, 1.01, 0.04, 1.1); break; }
+    case 'acc_scarf_black': case 'acc_scarf_white': case 'acc_scarf_navy': case 'acc_scarf_pink': case 'acc_scarf_yellow': case 'acc_scarf_green': case 'acc_scarf_grey': case 'acc_scarf_brown': case 'acc_scarf_plaid': case 'acc_scarf_stripe': case 'acc_scarf_rainbow': {
+      // 各種顏色的圍巾：脖子一圈＋兩條垂下來的尾巴；格紋、條紋、彩虹在圍巾上一條一條
+      const k = gear.acc.slice(10), [c0, c1] = ({black:['#2b2b30','#8a8a90'],white:['#f6f4ee','#c9c3b5'],navy:['#24406e','#e9e4d6'],pink:['#f5a5c8','#ffffff'],yellow:['#d9a62e','#5a3d2b'],green:['#3f7f5a','#e9e4d6'],grey:['#8f9196','#5c5e63'],brown:['#a8673a','#f2d6b0'],plaid:['#c0392b','#1e1e22'],stripe:['#ffffff','#2f6fb5'],rainbow:['#e8473a','']})[k], main = M(c0, 0.8);
+      const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), main, 0, 1.1, 0); r.rotation.x = Math.PI / 2;
+      const tl = mk(new THREE.BoxGeometry(0.09, 0.26, 0.05), main, 0.1, 0.95, 0.2); tl.rotation.z = 0.25;
+      const tl2 = mk(new THREE.BoxGeometry(0.08, 0.2, 0.045), main, 0.01, 0.97, 0.212); tl2.rotation.z = -0.12;
+      const pat = k === 'rainbow' || k === 'plaid' || k === 'stripe', bands = k === 'rainbow' ? RAINBOW.slice(1) : pat ? [c1, c1, c1, c1] : [c1, c1];
+      if (pat){ const ring = mk(new THREE.TorusGeometry(0.172, 0.057, 6, 18), M(k === 'rainbow' ? RAINBOW[4] : c1, 0.8), 0, 1.1, 0); ring.rotation.x = Math.PI / 2; ring.scale.set(1, 1, 0.22); }
+      bands.forEach((bc, i) => { const y = pat ? 1.05 - i * (0.24 / bands.length) : 0.86 + i * 0.04; const b = mk(new THREE.BoxGeometry(0.095, pat ? 0.03 : 0.018, 0.056), M(bc, 0.8), 0.1 + (0.95 - y) * 0.25, y, 0.2); b.rotation.z = 0.25; });
+      if (k === 'plaid') for (const dx of [-0.022, 0.022]){ const v = mk(new THREE.BoxGeometry(0.014, 0.26, 0.057), M(c1, 0.8), 0.1 + dx, 0.95, 0.2); v.rotation.z = 0.25; }
+      break; }
     case 'acc_scarf': { const red = M('#e8473a', 0.75); const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), red, 0, 1.1, 0); r.rotation.x = Math.PI / 2; const tl = mk(new THREE.BoxGeometry(0.09, 0.24, 0.05), red, 0.1, 0.96, 0.2); tl.rotation.z = 0.25; for (const y of [0.9, 0.97]) mk(new THREE.BoxGeometry(0.095, 0.02, 0.055), white, 0.1 + (0.96 - y) * 0.25, y, 0.2); break; }
     case 'acc_bowtie': { const red = M('#c9302c', 0.5); for (const sx of [-1, 1]){ const c = mk(new THREE.ConeGeometry(0.05, 0.09, 4), red, sx * 0.05, 1.08, 0.2); c.rotation.z = sx * Math.PI / 2; } mk(new THREE.SphereGeometry(0.025, 8, 6), red, 0, 1.08, 0.21); break; }
     case 'acc_glasses': { const fr = M('#5a3a24', 0.4); for (const sx of [-1, 1]) mk(new THREE.TorusGeometry(0.062, 0.011, 6, 16), fr, sx * 0.115, 0.0, 0.31, HD); mk(new THREE.BoxGeometry(0.07, 0.012, 0.012), fr, 0, 0.01, 0.315, HD); break; }
@@ -2622,8 +2587,8 @@ function updateFishing(dt, t){
   const showCard = near.d < 3.2 && F.phase !== 'reeling' && F.phase !== 'charging';
   if (showCard && card._s !== near.spot.id){
     card._s = near.spot.id; $('.t', card).textContent = near.spot.label; $('.s', card).textContent = near.spot.subtitle;
-    const fl = $('.fl', card); fl.textContent = '';
-    near.spot.fish.map(id => FISH_BY_ID[id]).forEach(f => { const c = document.createElement('span'); const known = rec.count[f.id] > 0; c.className = 'chip r-' + f.rarity; c.textContent = (known ? f.name : '？？？') + '・' + f.rarity; fl.appendChild(c); });
+    // 只顯示釣點名字；這裡有什麼魚到圖鑑看就好
+    $('.s', card).hidden = true; $('.fl', card).hidden = true;
   }
   if (!showCard) card._s = null;
   card.hidden = !showCard;
@@ -3482,9 +3447,9 @@ function addSeasonDeco(){
       add(new THREE.OctahedronGeometry(0.18), M('#ffd36a', 0.3, { emissive:'#ffb020', emissiveIntensity:0.8 }), tx, ty + 3.25, tz);
       ['#e8473a', '#2f89c7', '#ffd36a', '#f5a5d8'].forEach((c, i) => { for (let k = 0; k < 4; k++){ const a = k * 1.57 + i * 0.4, h = 0.9 + i * 0.5, r = 1.05 - i * 0.22; add(new THREE.SphereGeometry(0.08, 8, 6), M(c, 0.3, { emissive:c, emissiveIntensity:0.4 }), tx + Math.cos(a) * r, ty + h, tz + Math.sin(a) * r); } });
       addCircleCol(tx, tz, 1.1); }
-    else if (SEASON === 'autumn'){ for (const [px, pz, s] of [[-1.8, 10.5, 1], [-0.9, 11.2, 0.7], [10.5, 9.5, 1.2], [11.3, 8.8, 0.8]]){ const [x, y, z] = at(px, pz);
-        const pk = add(new THREE.SphereGeometry(0.38 * s, 14, 10), M('#ff8a2a', 0.6), x, y + 0.3 * s, z); pk.scale.y = 0.72; add(new THREE.CylinderGeometry(0.04 * s, 0.05 * s, 0.16 * s, 6), M('#5d7a3a'), x, y + 0.6 * s, z); addCircleCol(x, z, 0.4 * s); }
-      for (let i = 0; i < 26; i++){ const [x, y, z] = at(-1.4 + (i % 2 ? 12 : 0), 10.8 - (i % 2 ? 1.5 : 0)); const l = add(new THREE.IcosahedronGeometry(0.16, 0), M(['#e0a14a', '#d9783c', '#c9573a', '#e8c15a'][i % 4], 0.9), x + (Math.random() - 0.5) * 1.6, y + 0.05, z + (Math.random() - 0.5) * 1.6); l.scale.y = 0.25; } }
+    else if (SEASON === 'autumn'){ for (const [px, pz, s] of [[-1.8, 10.5, 1], [-0.9, 11.2, 0.7], [15.6, 9.4, 1.2], [16.4, 10.2, 0.8]]){ const [x, y, z] = at(px, pz);
+        const pk = add(new THREE.SphereGeometry(0.38 * s, 14, 10), M('#ff8a2a', 0.6), x, y + 0.3 * s, z); pk.scale.y = 0.72; add(new THREE.CylinderGeometry(0.04 * s, 0.05 * s, 0.16 * s, 6), M('#5d7a3a'), x, y + 0.6 * s, z); }   /* 南瓜不擋人，走得過去 */
+      for (let i = 0; i < 26; i++){ const [x, y, z] = at(-1.4 + (i % 2 ? 17.4 : 0), 10.8 - (i % 2 ? 1 : 0)); const l = add(new THREE.IcosahedronGeometry(0.16, 0), M(['#e0a14a', '#d9783c', '#c9573a', '#e8c15a'][i % 4], 0.9), x + (Math.random() - 0.5) * 1.6, y + 0.05, z + (Math.random() - 0.5) * 1.6); l.scale.y = 0.25; } }
     else if (SEASON === 'spring'){ for (const [px, pz] of [[-1.8, 10.5], [10.5, 9.5]]){ const [x, y, z] = at(px, pz); add(new THREE.BoxGeometry(1.4, 0.4, 0.6), M('#a8713f'), x, y + 0.2, z);
         for (let i = 0; i < 9; i++){ const c = ['#f7b6c8', '#ffd36a', '#ffffff', '#b48cff', '#ff7fa8'][i % 5]; add(new THREE.CylinderGeometry(0.015, 0.015, 0.3, 4), M('#5d9c55'), x - 0.55 + i * 0.14, y + 0.55, z); add(new THREE.IcosahedronGeometry(0.08, 0), M(c, 0.6), x - 0.55 + i * 0.14, y + 0.72, z); }
         addBoxCol(x, z, 1.5, 0.7); } }
@@ -4318,7 +4283,7 @@ const customers = []; let custNext = 0;
 function stallSeat(i){ return cafeSeats[i]; }
 function pickOrder(){ const ks = Object.keys(ORDER_W), tot = ks.reduce((a, k) => a + ORDER_W[k], 0); let r = Math.random() * tot; for (const k of ks){ r -= ORDER_W[k]; if (r <= 0) return k; } return 'saba'; }
 function spawnCustomer(t){
-  const free = cafeSeats.map((_, i) => i).filter(i => !customers.some(c => c.seat === i) && cafeSeats[i] !== mySeat && !(i % 2 && customers.some(c => c.seat === i - 1)) && !(i % 2 === 0 && customers.some(c => c.seat === i + 1))); if (!free.length) return;   // 一桌只坐一位客人，泡泡才不會疊在一起
+  const free = cafeSeats.map((_, i) => i).filter(i => !customers.some(c => c.seat === i) && cafeSeats[i] !== mySeat && !customers.some(c => Math.abs(c.seat - i) === 1)); if (!free.length) return;   // 一桌只坐一位客人，泡泡才不會疊在一起
   const seat = free[Math.floor(Math.random() * free.length)], st = stallSeat(seat);
   const ang = Math.random() * Math.PI * 2, sx = st.x + Math.cos(ang) * 14, sz = st.z + Math.sin(ang) * 14;
   if (!isLand(sx, sz)) return;
@@ -5009,6 +4974,27 @@ let tankInst = [];      // 這次建出來的 InstancedMesh／一般模型，重
 const TANK_BOTTOM = new Set(['crab', 'kingcrab', 'lobster', 'bluelobster', 'crayfish', 'prawn', 'blueclaw', 'goldprawn', 'whiteshrimp', 'tigerprawn', 'octopus', 'flounder', 'stingray', 'hillstream', 'loach', 'angler', 'catfish']);
 // 水族館裡魚的大小：不同種類照真實的大小差很多（壓縮過），同一種也會因為重量不同有大有小
 function tankScale(f, w){ const avg = (f.min + f.max) / 2, base = 0.2 + 0.13 * Math.log(1 + avg * 4), k = clamp(Math.cbrt(Math.max(0.0001, w) / avg), 0.7, 1.35); return clamp(base * k, 0.16, 1.2); }
+// 模型在 1 倍大小時的範圍：水平半徑（會轉向所以前後左右都要算）、上下
+const shapeExtCache = {};
+function shapeExt(shape, zk){
+  const key = shape + '/' + zk; if (shapeExtCache[key]) return shapeExtCache[key];
+  let r = 0, y0 = 0, y1 = 0;
+  for (const part of Object.keys(FISH_MESH[shape])){ const a = fishGeo(shape, part).attributes.position.array;
+    for (let i = 0; i < a.length; i += 3){ r = Math.max(r, Math.hypot(a[i], a[i + 2] * zk)); y0 = Math.min(y0, a[i + 1]); y1 = Math.max(y1, a[i + 1]); } }
+  return (shapeExtCache[key] = { r, y0, y1 });
+}
+// 水族館的水：x ±5.3、y -1.27（沙面）~ 1.4、z ±1.5，魚整隻都要待在裡面，不會穿出玻璃
+const TANK_IN = { x:5.2, z:1.42, y0:-1.26, y1:1.32 };
+function tankFit(fish, ext){
+  let s = fish.scale; const maxR = TANK_IN.z - 0.12, maxH = (TANK_IN.y1 - TANK_IN.y0) * 0.8;
+  s = Math.min(s, maxR / Math.max(0.01, ext.r), maxH / Math.max(0.01, ext.y1 - ext.y0)); fish.scale = s;
+  const R = ext.r * s;
+  fish.az = Math.max(0, Math.min(fish.az, TANK_IN.z - R));
+  fish.cx = clamp(fish.cx, -1, 1) * Math.max(0, Math.min(0.4, TANK_IN.x - R - 2));
+  fish.ax = Math.max(0, Math.min(fish.ax, TANK_IN.x - R - Math.abs(fish.cx)));
+  fish.ylo = TANK_IN.y0 - ext.y0 * s; fish.yhi = Math.max(fish.ylo, TANK_IN.y1 - ext.y1 * s);
+  fish.y = fish.bottom ? fish.ylo : clamp(fish.y, fish.ylo + 0.12, Math.max(fish.ylo + 0.12, fish.yhi - 0.12));
+}
 function buildTank(){
   if (!tankGroup) return;
   for (const m of tankInst){ tankGroup.remove(m); if (m.isInstancedMesh) m.dispose(); } tankInst = []; tankFish = [];
@@ -5020,7 +5006,11 @@ function buildTank(){
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
     if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
     tankFish.push(fish);
-    if (!FISH_STYLE[f.id]){ fish.m = fishModel(f, fish.scale); tankGroup.add(fish.m); tankInst.push(fish.m); return; }   // 旗魚：專屬模型
+    if (!FISH_STYLE[f.id]){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型
+      const bb = new THREE.Box3().setFromObject(fish.m), k = 1 / fish.scale;
+      const ext = { r: Math.max(Math.abs(bb.min.x), bb.max.x, Math.abs(bb.min.z), bb.max.z) * k * 1.05, y0: bb.min.y * k, y1: bb.max.y * k };
+      tankFit(fish, ext); fish.m.scale.multiplyScalar(fish.scale * k); tankGroup.add(fish.m); tankInst.push(fish.m); return; }
+    tankFit(fish, shapeExt(FISH_STYLE[f.id].shape, fish.zk));
     if (!bySpecies.has(f.id)) bySpecies.set(f.id, []); bySpecies.get(f.id).push(fish);
   });
   for (const [id, fishes] of bySpecies){
@@ -5050,7 +5040,7 @@ function updateTank(t){
     const a = t * fish.sp + fish.ph, b = t * fish.sp * 0.7 + fish.ph2;
     const x = fish.cx + Math.sin(a) * fish.ax, z = Math.cos(b) * fish.az;
     const vx = Math.cos(a) * fish.ax * fish.sp, vz = -Math.sin(b) * fish.az * fish.sp * 0.7;
-    const y = tankRockY(x, z, fish.bottom ? fish.y : fish.y + Math.sin(a * 1.3) * 0.12, fish.bottom), ry = Math.atan2(-vz, vx);
+    const y = clamp(tankRockY(x, z, fish.bottom ? fish.y : fish.y + Math.sin(a * 1.3) * 0.12, fish.bottom), fish.ylo, fish.yhi), ry = Math.atan2(-vz, vx);
     if (fish.m){ fish.m.position.set(x, y, z); fish.m.rotation.y = ry; if (fish.m.userData.tail) fish.m.userData.tail.rotation.y = Math.sin(t * 8 + fish.ph) * 0.4; continue; }
     tankDummy.position.set(x, y, z); tankDummy.rotation.set(0, ry, 0); tankDummy.scale.set(fish.scale, fish.scale, fish.scale * fish.zk); tankDummy.updateMatrix();
     for (const [im, k] of fish.slots){ im.setMatrixAt(k, tankDummy.matrix); touched.add(im); }
