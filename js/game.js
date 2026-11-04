@@ -1336,7 +1336,7 @@ const GEAR = [
 function paidGear(it){ return !!it && (it.price > 0 || it.love > 0); }
 const GEAR_BY_ID = Object.fromEntries(GEAR.map(g => [g.id, g]));
 const GEAR_DEFAULT = { hat:'hat_sun', top:'top_tee', pants:'pants_jeans', shoes:'shoes_boots', socks:'socks_none', acc:'acc_none', back:'back_none', face:'face_normal' };
-function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; } return r; }
+function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; else if (typeof v === 'string' && /^(top|pants)_dz\d+$/.test(v) && v.split('_')[0] === k) r[k] = v; } return r; }
 const PANTS_COL = { pants_jeans:'#2f4b63', pants_shorts:'#3f6fa0', pants_khaki:'#c8a873', pants_skirt:'#b8443a', pants_overalls:'#4a78b0', pants_rainbow:'#f6f0e6' };
 const SHOE_COL = { shoes_boots:'#6b4a35', shoes_sandals:'#3fbf9d', shoes_sneakers:'#f4f4f4', shoes_rain:'#f6c83b', shoes_gold:'#e8b730' };
 const RAINBOW = ['#f05a4a', '#ff9f43', '#ffd36a', '#3fbf9d', '#2f89c7', '#9b7bff'];
@@ -1466,6 +1466,7 @@ function applyGear(av, gear){
     case 'face_heart': { const hm = new THREE.MeshBasicMaterial({ color:'#ff4d6d' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(heartShape(0.055)), hm, sx * 0.115, 0.01, 0.318, HD); break; }
     case 'face_star': { const sm = new THREE.MeshBasicMaterial({ color:'#ffc93c' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(starShape(0.065)), sm, sx * 0.115, 0.01, 0.318, HD); break; }
   }
+  applyDesigns(av, gear);   /* 自己設計的衣服、褲子（044） */
 }
 
 // 竿子的樣子：手竿最長、沒有捲線器；遠投竿又長又粗；磯釣竿長長細細的
@@ -5593,6 +5594,115 @@ function pvLoop(){
   if (a.eyes){ const bt = (t + a.blinkAt) % 4.2; a.eyes[0].scale.y = a.eyes[1].scale.y = bt < 0.12 ? 0.12 : 1.15; }
   PV.r.render(PV.sc, PV.cam); PV.raf = requestAnimationFrame(pvLoop);
 }
+// ===== 自己設計衣服、褲子（044）：16×16 格子畫布，上衣有正面＋背面；放到「設計師市集」賣 =====
+const DESIGN_PAL = ['#ffffff', '#1d1d24', '#e8473a', '#f5a5d8', '#ff9f43', '#ffd36a', '#3fbf9d', '#5d9c55', '#5fb6e3', '#2f89c7', '#18334a', '#9b7bff', '#8c5d3b', '#f1e3c8', '#9fb3bf', '#5b6b7a'];
+const Designs = { map: new Map(), mats: new Map(), want: new Set(), timer: 0, ver: 0 };
+function designId(item){ const m = /^(top|pants)_dz(\d+)$/.exec(item || ''); return m ? { kind: m[1], id: +m[2] } : null; }
+function designCanvas(px, kind, cell){
+  cell = cell || 1; const top = kind === 'top', W = top ? 32 : 16, cv = document.createElement('canvas'); cv.width = W * cell; cv.height = 16 * cell; const c = cv.getContext('2d');
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++){
+    if (top){ c.fillStyle = DESIGN_PAL[parseInt(px[y * 16 + x], 16)] || '#fff'; c.fillRect((8 + x) * cell, y * cell, cell, cell);   /* 正面在中間 */
+      c.fillStyle = DESIGN_PAL[parseInt(px[256 + y * 16 + x], 16)] || '#fff'; c.fillRect(((24 + x) % 32) * cell, y * cell, cell, cell); }   /* 背面在兩邊（繞到後面） */
+    else { c.fillStyle = DESIGN_PAL[parseInt(px[y * 16 + x], 16)] || '#fff'; c.fillRect(x * cell, y * cell, cell, cell); } }
+  return cv;
+}
+function designMat(d){
+  const k = d.id + ':' + d.kind; let m = Designs.mats.get(k); if (m) return m;
+  const D = Designs.map.get(d.id); if (!D || !D.px){ queueDesign(d.id); return null; }
+  const tx = new THREE.CanvasTexture(designCanvas(D.px, d.kind, 1)); tx.colorSpace = THREE.SRGBColorSpace; tx.magFilter = THREE.NearestFilter; tx.minFilter = THREE.NearestFilter; tx.wrapS = THREE.RepeatWrapping;
+  if (d.kind === 'top') tx.offset.x = 0.5;   /* 身體的貼圖接縫在正前方：轉半圈讓正面在中間 */
+  m = new THREE.MeshStandardMaterial({ map: tx, roughness: 0.75, metalness: 0.02 }); Designs.mats.set(k, m); return m;
+}
+function queueDesign(id){ if (Designs.map.has(id) || !Cloud.on || !Cloud.sb) return; Designs.want.add(id); clearTimeout(Designs.timer); Designs.timer = setTimeout(fetchDesigns, 300); }
+async function fetchDesigns(){ const ids = [...Designs.want].filter(id => !Designs.map.has(id)).slice(0, 40); Designs.want.clear(); if (!ids.length) return;
+  try { const { data } = await Cloud.sb.rpc('get_designs', { p_ids: ids }); for (const d of data || []) Designs.map.set(d.id, d); for (const id of ids) if (!Designs.map.has(id)) Designs.map.set(id, { id, px: null }); } catch(e){ return; }
+  Designs.ver++; refreshDesignAvatars(); }
+function refreshDesignAvatars(){ const all = [me, ...[...peers.values()].map(p => p.fisher), ...npcs]; for (const f of all){ if (f && f.gearKey && /_dz\d+/.test(f.gearKey)){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); } } AvShot.cache.clear(); if (!$('#sheet').hidden && ['style', 'market', 'shop', 'design'].includes(curTab)) renderTab(); }
+function applyDesigns(av, gear){
+  const t = designId(gear.top), p = designId(gear.pants);
+  av.body.material = (t && designMat(t)) || av.shirtM;
+  const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]) if (L.userData.pants) L.userData.pants.material = pm;
+}
+function ownsDesign(item){ return (rec.owned || []).includes(item); }
+function wearDesign(item){ const d = designId(item); if (!d || !ownsDesign(item)) return; endTryOn(); rec.gear = Object.assign(cleanGear(rec.gear), { [d.kind]: item }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); cloudCall('set_gear', { p_gear: rec.gear }); renderTab(); }
+function designThumb(px, kind, h){ const cv = designCanvas(px, kind, kind === 'top' ? 3 : 4); cv.className = 'dzthumb'; cv.style.height = (h || 40) + 'px'; cv.style.imageRendering = 'pixelated'; cv.style.borderRadius = '6px'; cv.style.border = '1px solid rgba(24,51,74,.15)'; return cv; }
+// 我的設計（造型分頁的衣服／褲子欄位下面）
+function renderMyDesigns(body, slot){
+  const mine = (rec.owned || []).filter(id => { const d = designId(id); return d && d.kind === slot; });
+  body.appendChild(el('div', 'dexhead', `🎨 自己設計的${slot === 'top' ? '衣服' : '褲子'}・設計師市集`));
+  const bar = el('div', 'tankbar'), nb = el('button', 'tbtn', '＋ 自己設計'), mk = el('button', 'tbtn ghost', '🛍️ 設計師市集');
+  nb.addEventListener('click', () => { if (!Cloud.on){ toast('要連上雲端（登入）才能設計衣服'); return; } DesignEd.kind = slot; DesignEd.px = null; curTab = 'design'; renderTab(); });
+  mk.addEventListener('click', () => { Market.mode = 'new'; Market.kind = slot; curTab = 'market'; renderTab(); }); bar.append(nb, mk); body.appendChild(bar);
+  if (!mine.length){ body.appendChild(el('p', 'sub', '還沒有自己的設計。可以自己畫，也可以去市集買別人設計的。')); return; }
+  const ul = el('ul', 'shoplist cols');
+  for (const item of mine){ const d = designId(item), D = Designs.map.get(d.id), on = cleanGear(rec.gear)[slot] === item, li = el('li', on ? 'on' : '');
+    if (D && D.px) li.appendChild(designThumb(D.px, slot, 40)); else { queueDesign(d.id); li.appendChild(el('span', 'dishic', '🎨')); }
+    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', D ? D.name || '設計' : '載入中…')); inf.appendChild(el('div', 'sub2', D ? (D.mine ? '我設計的' : `${D.by || ''} 設計`) : '')); li.appendChild(inf);
+    const a = el('div', 'tacts'); if (!on){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearDesign(item)); a.appendChild(b); } else { const b = el('button', 'tbtn ghost', '脫掉'); b.addEventListener('click', () => { rec.gear = Object.assign(cleanGear(rec.gear), { [slot]: GEAR_DEFAULT[slot] }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); cloudCall('set_gear', { p_gear: rec.gear }); renderTab(); }); a.appendChild(b); }
+    li.appendChild(a); ul.appendChild(li); }
+  body.appendChild(ul);
+}
+// 設計室
+const DesignEd = { kind:'top', side:0, px:null, col:2, tool:'pen', name:'', price:100, busy:false };
+function renderDesignEd(body){
+  const E = DesignEd, N = E.kind === 'top' ? 512 : 256; if (!E.px || E.px.length !== N) E.px = Array(N).fill(0);
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🎨 設計室・${E.kind === 'top' ? '上衣' : '褲子'}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  body.appendChild(el('p', 'sub', `在格子上畫圖案，畫好按「儲存」就能穿，也可以放到設計師市集賣（別人買了，九成的錢給你）。${E.kind === 'top' ? '上衣有正面和背面。' : '兩隻褲管是同一個圖案。'}請不要畫讓人不舒服的東西，被檢舉三次會下架。`));
+  const seg = el('div', 'seg'); [['top', '👕 上衣'], ['pants', '👖 褲子']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.kind === k)); b.addEventListener('click', () => { if (E.kind !== k){ E.kind = k; E.px = null; E.side = 0; renderTab(); } }); seg.appendChild(b); });
+  if (E.kind === 'top') [[0, '正面'], [1, '背面']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.side === k)); b.addEventListener('click', () => { E.side = k; renderTab(); }); seg.appendChild(b); });
+  body.appendChild(seg);
+  const wrap = el('div', ''); wrap.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start';
+  const S = 15, cv = document.createElement('canvas'); cv.width = cv.height = 16 * S; cv.style.cssText = 'width:240px;height:240px;touch-action:none;border-radius:8px;border:2px solid #18334a;image-rendering:pixelated;background:#fff;cursor:crosshair';
+  const off = () => E.side * 256;
+  const draw = () => { const c = cv.getContext('2d'); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++){ c.fillStyle = DESIGN_PAL[E.px[off() + y * 16 + x]]; c.fillRect(x * S, y * S, S, S); } c.strokeStyle = 'rgba(24,51,74,.12)'; c.lineWidth = 1; for (let i = 1; i < 16; i++){ c.beginPath(); c.moveTo(i * S + 0.5, 0); c.lineTo(i * S + 0.5, 16 * S); c.stroke(); c.beginPath(); c.moveTo(0, i * S + 0.5); c.lineTo(16 * S, i * S + 0.5); c.stroke(); } drawPrev(); };
+  const fill = (x, y) => { const o = off(), from = E.px[o + y * 16 + x], to = E.col; if (from === to) return; const st = [[x, y]]; while (st.length){ const [a, b] = st.pop(); if (a < 0 || b < 0 || a > 15 || b > 15 || E.px[o + b * 16 + a] !== from) continue; E.px[o + b * 16 + a] = to; st.push([a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1]); } };
+  const at = ev => { const r = cv.getBoundingClientRect(); return [Math.floor((ev.clientX - r.left) / r.width * 16), Math.floor((ev.clientY - r.top) / r.height * 16)]; };
+  let down = false; const paint = ev => { const [x, y] = at(ev); if (x < 0 || y < 0 || x > 15 || y > 15) return; if (E.tool === 'fill') fill(x, y); else E.px[off() + y * 16 + x] = E.tool === 'erase' ? 0 : E.col; draw(); };
+  cv.addEventListener('pointerdown', ev => { down = true; cv.setPointerCapture(ev.pointerId); paint(ev); ev.preventDefault(); }); cv.addEventListener('pointermove', ev => { if (down && E.tool !== 'fill') paint(ev); }); cv.addEventListener('pointerup', () => { down = false; }); cv.addEventListener('pointercancel', () => { down = false; });
+  wrap.appendChild(cv);
+  const side = el('div', ''); side.style.cssText = 'display:flex;flex-direction:column;gap:8px;min-width:150px';
+  const pal = el('div', ''); pal.style.cssText = 'display:grid;grid-template-columns:repeat(8,22px);gap:4px';
+  DESIGN_PAL.forEach((c, i) => { const b = el('button', ''); b.style.cssText = `width:22px;height:22px;border-radius:5px;background:${c};border:${E.col === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};padding:0`; b.setAttribute('aria-label', '顏色 ' + (i + 1)); b.addEventListener('click', () => { E.col = i; if (E.tool === 'erase') E.tool = 'pen'; renderTab(); }); pal.appendChild(b); });
+  side.appendChild(pal);
+  const tools = el('div', 'seg'); [['pen', '✏️ 畫筆'], ['fill', '🪣 填色'], ['erase', '🧽 橡皮擦']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.tool === k)); b.addEventListener('click', () => { E.tool = k; renderTab(); }); tools.appendChild(b); }); side.appendChild(tools);
+  const clr = el('button', 'tbtn ghost', '全部清掉'); clr.addEventListener('click', () => { for (let i = 0; i < 256; i++) E.px[off() + i] = 0; draw(); }); side.appendChild(clr);
+  const prev = el('img'); prev.alt = '預覽'; prev.style.cssText = 'width:120px;height:120px;border-radius:10px;background:#eef4f7'; side.appendChild(prev);
+  const drawPrev = () => { const pxs = E.px.map(v => v.toString(16)).join(''); Designs.map.set(0, { id: 0, kind: E.kind, px: pxs }); Designs.mats.delete('0:top'); Designs.mats.delete('0:pants'); try { const g = Object.assign(cleanGear(rec.gear), { [E.kind]: E.kind + '_dz0' }); AvShot.cache.clear(); prev.src = avatarShot(g, E.side ? 'back' : 'full', 160); } catch(e){} };
+  wrap.appendChild(side); body.appendChild(wrap); draw();
+  const f1 = el('div', 'field'); f1.appendChild(el('label', '', '名字（最多 16 個字）')); const ni = el('input'); ni.maxLength = 16; ni.value = E.name; ni.placeholder = '我的設計'; ni.addEventListener('input', () => { E.name = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
+  const f2 = el('div', 'field'); f2.appendChild(el('label', '', '在市集賣多少金幣（0 ＝ 免費送大家）')); const pi = el('input'); pi.type = 'number'; pi.min = 0; pi.max = 5000; pi.value = E.price; pi.addEventListener('input', () => { E.price = clamp(Math.round(+pi.value || 0), 0, 5000); }); f2.appendChild(pi); body.appendChild(f2);
+  const bar = el('div', 'tankbar'), sv = el('button', 'tbtn', E.busy ? '儲存中…' : '💾 儲存並穿上'), bk = el('button', 'tbtn ghost', '取消');
+  sv.disabled = E.busy; sv.addEventListener('click', async () => { if (!Cloud.on || !Cloud.sb){ toast('要連上雲端（登入）才能儲存設計'); return; } E.busy = true; renderTab();
+    try { const { data, error } = await Cloud.sb.rpc('save_design', { p_kind: E.kind, p_name: E.name, p_px: E.px.map(v => v.toString(16)).join(''), p_price: E.price }); if (error) throw error;
+      Designs.map.set(data.id, data); const item = E.kind + '_dz' + data.id; if (!rec.owned.includes(item)) rec.owned.push(item); E.busy = false; E.px = null; E.name = ''; toast(`🎨 存好了！「${esc(data.name)}」已經放到設計師市集`); wearDesign(item); curTab = 'style'; renderTab(); }
+    catch(e){ E.busy = false; toast(String(e.message || '').includes('12') ? '最多設計 12 件' : '存不起來，等一下再試'); renderTab(); } });
+  bk.addEventListener('click', () => { curTab = 'style'; renderTab(); }); bar.append(sv, bk); body.appendChild(bar);
+}
+// 設計師市集
+const Market = { mode:'new', kind:'top', list:null, at:0, busy:false };
+async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = true; try { const { data } = await Cloud.sb.rpc('list_designs', { p_mode: Market.mode, p_offset: 0 }); Market.list = data || []; for (const d of Market.list) Designs.map.set(d.id, d); } catch(e){ Market.list = []; } Market.busy = false; Market.at = Date.now(); if (!$('#sheet').hidden && curTab === 'market') renderTab(); }
+function renderMarket(body){
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🛍️ 設計師市集</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能逛市集。')); return; }
+  body.appendChild(el('p', 'sub', '大家自己設計的衣服和褲子。買了就是你的，九成的錢會給設計的人。'));
+  const seg = el('div', 'seg'); [['new', '🆕 新上架'], ['hot', '🔥 最多人買'], ['mine', '🎨 我的設計']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Market.mode === k)); b.addEventListener('click', () => { Market.mode = k; Market.list = null; loadMarket(); renderTab(); }); seg.appendChild(b); });
+  const nb = el('button', '', '＋ 自己設計'); nb.addEventListener('click', () => { DesignEd.px = null; curTab = 'design'; renderTab(); }); seg.appendChild(nb); body.appendChild(seg);
+  if (!Market.list){ if (!Market.busy) loadMarket(); body.appendChild(el('div', 'empty', '載入中…')); return; }
+  if (!Market.list.length){ body.appendChild(el('div', 'empty', Market.mode === 'mine' ? '你還沒有設計。按「＋ 自己設計」開始畫吧！' : '市集還沒有東西，來當第一個設計師吧！')); return; }
+  const ul = el('ul', 'shoplist');
+  for (const d of Market.list){ const item = d.kind + '_dz' + d.id, own = ownsDesign(item), on = cleanGear(rec.gear)[d.kind] === item, li = el('li', on ? 'on' : '');
+    if (d.px) li.appendChild(designThumb(d.px, d.kind, 40)); else li.appendChild(el('span', 'dishic', '🚫'));
+    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${d.kind === 'top' ? '👕' : '👖'} ${d.name}`)); inf.appendChild(el('div', 'sub2', `${esc(d.by || '')} 設計・賣出 ${d.sold}・${d.price ? '🪙' + d.price : '免費'}${d.mine && !d.listed ? '・已下架' : ''}`)); li.appendChild(inf);
+    const a = el('div', 'tacts');
+    if (d.mine){ const pb = el('button', 'tbtn ghost', '改價錢'); pb.addEventListener('click', async () => { const v = prompt('新的價錢（0～5000）', String(d.price)); if (v == null) return; const p = clamp(Math.round(+v || 0), 0, 5000); try { const { data } = await Cloud.sb.rpc('edit_design', { p_id: d.id, p_price: p, p_listed: null }); Object.assign(d, data); renderTab(); } catch(e){} });
+      const lb = el('button', 'tbtn ghost', d.listed ? '下架' : '上架'); lb.addEventListener('click', async () => { try { const { data } = await Cloud.sb.rpc('edit_design', { p_id: d.id, p_price: null, p_listed: !d.listed }); Object.assign(d, data); renderTab(); } catch(e){} }); a.append(pb, lb); }
+    if (own && !on){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearDesign(item)); a.appendChild(b); }
+    if (!own){ const b = el('button', 'tbtn' + (rec.coins < d.price ? ' ghost' : ''), d.price ? `買 🪙${d.price}` : '免費拿'); b.addEventListener('click', async () => { if (rec.coins < d.price){ toast('金幣不夠'); return; } b.disabled = true; const row = await cloudCall('buy_design', { p_id: d.id }); if (row){ SFX.catch(); toast(`買到了「${esc(d.name)}」！`); wearDesign(item); } renderTab(); }); a.appendChild(b);
+      const rp = el('button', 'tbtn ghost', '檢舉'); rp.addEventListener('click', async () => { if (!confirmOnce(rp)) return; try { await Cloud.sb.rpc('report_design', { p_id: d.id, p_reason: '不適當的圖案' }); toast('謝謝你，我們收到了'); rp.disabled = true; } catch(e){ toast('今天檢舉太多次了'); } }); a.appendChild(rp); }
+    li.appendChild(a); ul.appendChild(li); }
+  body.appendChild(ul);
+}
+function confirmOnce(b){ if (b.dataset.sure === '1') return true; b.dataset.sure = '1'; const t = b.textContent; b.textContent = '確定？'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = t; } }, 2500); return false; }
 function renderWardrobe(body, only){
   const pv = el('div', 'wprev'), showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'pvbox');
   if (pvShow(box, showG)){ box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); if (Wardrobe.preview && Wardrobe.previewOf && GEAR_BY_ID[Wardrobe.previewOf] && GEAR_BY_ID[Wardrobe.previewOf].slot === 'back' && !PV.drag){ PV.yaw = Math.PI + 0.5; PV.idleAt = now() + 2.5; } }
@@ -5620,6 +5730,7 @@ function renderWardrobe(body, only){
     li.appendChild(acts); ul.appendChild(li);
   }
   body.appendChild(ul);
+  if (!only && (Wardrobe.slot === 'top' || Wardrobe.slot === 'pants')) renderMyDesigns(body, Wardrobe.slot);
 }
 function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
@@ -5759,7 +5870,7 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
-  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id])))];
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants)_dz\d+$/.test(id) || /^tool_/.test(id)))];
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
@@ -6945,6 +7056,8 @@ function renderTab(){
     });
     body.appendChild(ul);
   } else if (curTab === 'cage'){ renderCage(body);
+  } else if (curTab === 'design'){ renderDesignEd(body);
+  } else if (curTab === 'market'){ renderMarket(body);
   } else if (curTab === 'people'){
     if (Cloud.on){ if (renderFriends(body)) return; body.appendChild(el('div', 'dexhead', '🏘️ 現在在村子裡的人')); }
     if (room && room.isLobby){ body.appendChild(el('p', 'sub', `你在公共大廳 ${room.lobbyNo}：打開遊戲的人都會自動來這裡（每個大廳最多 ${LOBBY_MAX} 人，滿了會分到下一個）。想只跟朋友玩，可以開私人房間。`)); body.appendChild(pjBox()); }
@@ -7061,6 +7174,7 @@ function renderTab(){
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
+      '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」，最下面按「＋ 自己設計」，就能在 16×16 的格子上畫圖案（上衣有正面和背面），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。每個人最多設計 12 件；不適當的圖案被檢舉三次會下架。',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 箱網養殖（參考澎湖的圓形箱網）：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
