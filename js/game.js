@@ -167,6 +167,7 @@ const SPOTS = [
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [11, -14];
+const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過去）
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
 const LANDMARKS = [
   { id:'plaza',      label:'潮汐廣場', pos:V3(4, 4),            color:PALETTE.gold, ly:1.8 },
@@ -938,7 +939,7 @@ function castPoint(x, z, dx, dz, dist){
   // 魚缸本體（之後的魚會放在 tankGroup 裡）
   const tank = new THREE.Group(); tank.position.set(AX, 2.45, AZ - 0.6); scene.add(tank);
   tank.add(box([10.6, 0.25, 3.0], '#e8d9a8', [0, -1.4, 0]));               // 沙
-  for (let i = 0; i < 9; i++){ const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + wr() * 0.25, 0), mat(['#9d998d', '#b7b2a4', '#c9a8a0'][i % 3], 0.9, { flatShading:true })); rk.position.set(wrand(-4.8, 4.8), -1.2, wrand(-1.2, 1.0)); rk.rotation.set(wr() * 3, wr() * 3, 0); tank.add(rk); }
+  for (let i = 0; i < 9; i++){ const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + wr() * 0.25, 0), mat(['#9d998d', '#b7b2a4', '#c9a8a0'][i % 3], 0.9, { flatShading:true })); rk.position.set(wrand(-4.8, 4.8), -1.2, wrand(-1.2, 1.0)); TANK_ROCKS.push([rk.position.x, rk.position.z, rk.geometry.parameters.radius]); rk.rotation.set(wr() * 3, wr() * 3, 0); tank.add(rk); }
   for (let i = 0; i < 16; i++){ const len = wrand(0.5, 1.6), sw = new THREE.Mesh(new THREE.ConeGeometry(0.06, len, 4), mat(i % 2 ? '#3f8f6a' : '#5aa874', 0.8)); sw.position.set(wrand(-5, 5), -1.3 + len / 2, wrand(-1.3, -0.4)); tank.add(sw); }
   const twater = new THREE.Mesh(new THREE.BoxGeometry(10.6, 2.8, 3.0), new THREE.MeshStandardMaterial({ color:'#67c9d0', transparent:true, opacity:0.32, roughness:0.2, depthWrite:false, emissive:'#4fc2cf', emissiveIntensity:0 })); tankWaterMat = twater.material;
   const glass = new THREE.Mesh(new THREE.BoxGeometry(11, 3.2, 3.4), new THREE.MeshPhysicalMaterial({ color:'#b8f3f1', transparent:true, opacity:0.16, roughness:0.05, depthWrite:false }));
@@ -3882,7 +3883,8 @@ function buildDive(){
     pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); pg.computeVertexNormals();
     const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed); }
   // 石頭
-  for (let i = 0; i < S.rocks; i++){ const [x, y, z] = onBed(), s = 0.5 + rnd() * 1.8 * (S.cave ? 1.6 : 1); M.add(new THREE.IcosahedronGeometry(s, 0), ['#7d7a72', '#6a6f72', '#8a8170'][i % 3], x, y + s * 0.2, z, rnd(), rnd() * 6, rnd(), 1, 0.55 + rnd() * 0.3, 1, 0.95); }
+  Dive.rocks = [];
+  for (let i = 0; i < S.rocks; i++){ const [x, y, z] = onBed(), s = 0.5 + rnd() * 1.8 * (S.cave ? 1.6 : 1); Dive.rocks.push([x, z, s, y + s * 0.95]); M.add(new THREE.IcosahedronGeometry(s, 0), ['#7d7a72', '#6a6f72', '#8a8170'][i % 3], x, y + s * 0.2, z, rnd(), rnd() * 6, rnd(), 1, 0.55 + rnd() * 0.3, 1, 0.95); }
   // 珊瑚：樹枝、腦紋、扇形、管狀
   const CC = ['#ff6f61', '#ff9f43', '#f5a5d8', '#b48cff', '#ffd36a', '#ff7fa8', '#7fd6c4'];
   for (let i = 0; i < S.coral; i++){ const [x, y, z] = onBed(), c = CC[Math.floor(rnd() * CC.length)], kind = i % 4, s = 0.6 + rnd() * 0.9;
@@ -4053,13 +4055,13 @@ function updateDive(dt, t){
   // 海帶
   if (Dive.kelp && frameNo % 2 === 0){ const { im, list } = Dive.kelp; for (let i = 0; i < list.length; i++){ const k = list[i]; tankDummy.position.set(k.x, k.y, k.z); tankDummy.rotation.set(Math.sin(t * 0.9 + k.ph) * 0.12, k.ry, Math.cos(t * 0.7 + k.ph) * 0.1); tankDummy.scale.set(1, k.s, 1); tankDummy.updateMatrix(); im.setMatrixAt(i, tankDummy.matrix); } im.instanceMatrix.needsUpdate = true; }
   // 魚群
-  for (const s of Dive.schools){ const a = t * s.sp + s.ph, cx = s.cx + Math.cos(a) * s.rad, cz = s.cz + Math.sin(a) * s.rad, cy = diveBed(cx, cz) + s.y + Math.sin(t * 0.3 + s.ph) * 0.8; s.pos.set(cx, cy, cz);
+  for (const s of Dive.schools){ const a = t * s.sp + s.ph, cx = s.cx + Math.cos(a) * s.rad, cz = s.cz + Math.sin(a) * s.rad, cy = Math.max(diveBed(cx, cz) + s.y + Math.sin(t * 0.3 + s.ph) * 0.8, rockLift(cx, cz, 2.2)); s.pos.set(cx, cy, cz);
     const hd = Math.atan2(-Math.cos(a) * Math.sign(s.sp), -Math.sin(a) * Math.sign(s.sp));
     for (let i = 0; i < s.n; i++){ const q = s.off[i], w = t * 2 + q[3]; tankDummy.position.set(cx + q[0] * 1.6 + Math.sin(w) * 0.15, cy + q[1] * 0.7, cz + q[2] * 1.6 + Math.cos(w) * 0.15); tankDummy.rotation.set(0, hd + Math.sin(w * 0.7) * 0.15, 0); tankDummy.scale.set(0.55, 0.55, 0.55 * s.zk); tankDummy.updateMatrix(); for (const im of s.ims) im.setMatrixAt(i, tankDummy.matrix); }
     for (const im of s.ims) im.instanceMatrix.needsUpdate = true;
     // 靠太近會散開一點
     const d = Math.hypot(me.pos.x - cx, me.pos.z - cz); if (d < 3) s.ph += dt * 0.25 * Math.sign(s.sp); }
-  for (const f of Dive.fish){ const a = t * f.sp + f.ph, x = f.cx + Math.cos(a) * f.rad, z = f.cz + Math.sin(a) * f.rad, y = diveBed(x, z) + f.y + (f.bottom ? 0 : Math.sin(t * 0.4 + f.ph) * 0.6); f.pos.set(x, y, z); f.m.position.copy(f.pos);
+  for (const f of Dive.fish){ const a = t * f.sp + f.ph, x = f.cx + Math.cos(a) * f.rad, z = f.cz + Math.sin(a) * f.rad, y0 = diveBed(x, z) + f.y + (f.bottom ? 0 : Math.sin(t * 0.4 + f.ph) * 0.6), y = Math.max(y0, rockLift(x, z, f.bottom ? 0.1 : 0.7)); f.pos.set(x, y, z); f.m.position.copy(f.pos);
     f.m.rotation.y = Math.atan2(-Math.cos(a) * Math.sign(f.sp), -Math.sin(a) * Math.sign(f.sp)); if (f.m.userData.tail) f.m.userData.tail.rotation.y = Math.sin(t * 6 + f.ph) * 0.35; }
   // 看到的魚記下來
   if (frameNo % 20 === 0) for (const tg of diveTargets()) if (Math.hypot(tg.p.x - me.pos.x, tg.p.y - me.baseY, tg.p.z - me.pos.z) < 9) Dive.seen.add(tg.f.id);
@@ -5015,6 +5017,9 @@ function buildTank(){
 let tankFish = [], tankDirty = true;
 const tankDummy = new THREE.Object3D();
 buildTank();
+// 魚遇到石頭會從上面游過去（螃蟹這類會爬過去），不會穿過石頭
+function rockLift(x, z, clear){ let h = -1e9; for (const [rx, rz, s, top] of Dive.rocks || []){ const d = Math.hypot(x - rx, z - rz), k = 1 - d / (s * 1.5); if (k > 0) h = Math.max(h, top + clear - (1 - Math.min(1, k * 2)) * (s + clear)); } return h; }
+function tankRockY(x, z, y, bottom){ for (const [rx, rz, r] of TANK_ROCKS){ const d = Math.hypot(x - rx, z - rz), k = 1 - d / (r + (bottom ? 0.15 : 0.35)); if (k > 0){ const top = -1.2 + r * 0.9 + (bottom ? 0.02 : 0.22); y = Math.max(y, y + (top - y) * Math.min(1, k * 2.5)); } } return y; }
 function updateTank(t){
   // 離水族館太遠就不更新也不畫
   const near = Math.hypot(me.pos.x - AQUA[0], me.pos.z - AQUA[1]) < 45;
@@ -5025,7 +5030,7 @@ function updateTank(t){
     const a = t * fish.sp + fish.ph, b = t * fish.sp * 0.7 + fish.ph2;
     const x = fish.cx + Math.sin(a) * fish.ax, z = Math.cos(b) * fish.az;
     const vx = Math.cos(a) * fish.ax * fish.sp, vz = -Math.sin(b) * fish.az * fish.sp * 0.7;
-    const y = fish.bottom ? fish.y : fish.y + Math.sin(a * 1.3) * 0.12, ry = Math.atan2(-vz, vx);
+    const y = tankRockY(x, z, fish.bottom ? fish.y : fish.y + Math.sin(a * 1.3) * 0.12, fish.bottom), ry = Math.atan2(-vz, vx);
     if (fish.m){ fish.m.position.set(x, y, z); fish.m.rotation.y = ry; if (fish.m.userData.tail) fish.m.userData.tail.rotation.y = Math.sin(t * 8 + fish.ph) * 0.4; continue; }
     tankDummy.position.set(x, y, z); tankDummy.rotation.set(0, ry, 0); tankDummy.scale.set(fish.scale, fish.scale, fish.scale * fish.zk); tankDummy.updateMatrix();
     for (const [im, k] of fish.slots){ im.setMatrixAt(k, tankDummy.matrix); touched.add(im); }
