@@ -35,6 +35,8 @@ index.html          畫面骨架（按鈕、選單）
 css/game.css        畫面樣式
 js/game.js          遊戲主程式（世界、釣魚、商店、雲端、多人）
 js/fish-models.js   魚和海洋生物的 3D 模型資料
+js/fish-gen.js      照真實比例「參數化」產生 3D 魚模型（魚、蝦、蟹、魷魚、章魚、水母、海龜、海馬）
+js/fish-specs.js    每一種魚的外形參數（參考維基百科的體型、鰭、尾鰭形狀、顏色和花紋）
 js/peer-room.js     私人房間（PeerJS 手機互連）
 supabase/schema.sql 雲端資料庫設定（Supabase SQL Editor 執行）
 supabase/002_cooking.sql 料理功能的資料庫設定（接著執行）

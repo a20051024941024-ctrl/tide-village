@@ -5,6 +5,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { FISH_MESH } from './fish-models.js';
+import * as FishGen from './fish-gen.js';
+import { SPECS as FISH_SPECS } from './fish-specs.js';
 window.__gameStarted = true;
 (function(){
 'use strict';
@@ -251,6 +253,12 @@ const FISH_STYLE = {
   sunfish:  { shape:'Sunfish', c:{ Top:'#8fa3b8', Bottom:'#d3dce5', Fins:'#7b8ea3', Eye:'#1d2228' }, move:'flap' },
   whaleshark:{ shape:'WhaleShark', c:{ Top:'#7f8c99', Bottom:'#e8ecef', Fins:'#6f7c89', Eye:'#1d2228', Spots:'#f3f5f7', Gill:'#4c5762' }, glow:true },
 };
+// 照維基百科重做的魚：用參數產生模型（js/fish-gen.js、js/fish-specs.js），第一次用到才產生
+for (const [id, S] of Object.entries(FISH_SPECS)){
+  const shape = 'G_' + id; let cache = null;
+  Object.defineProperty(FISH_MESH, shape, { configurable:true, enumerable:true, get(){ if (!cache){ const gen = FishGen[{ shrimp:'genShrimp', crab:'genCrab', squid:'genSquid', octo:'genOcto', jelly:'genJelly', turtle:'genTurtle', seahorse:'genSeahorse' }[S.gen] || 'genFish']; cache = gen(Quality.tier === 'low' ? Object.assign({ lod:true }, S.p) : S.p); } return cache; } });
+  FISH_STYLE[id] = { shape, c: S.c, move: S.move || 'side', glow: !!S.glow, glowParts: S.glowParts };
+}
 const fishTime = { value: 0 };           // 尾巴擺動用的共用時間
 const fishGeoCache = {}, fishMatCache = {};
 function fishGeo(shape, part){
@@ -294,14 +302,15 @@ function makeModelFish(f, scale){
   const st = FISH_STYLE[f.id]; const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
   const inner = new THREE.Group(); if (/^Fish/.test(st.shape)) inner.scale.z = 1.5; fish.add(inner);   // 稍微加厚，從上往下看比較清楚
   for (const part of Object.keys(FISH_MESH[st.shape])){
-    const mesh = new THREE.Mesh(fishGeo(st.shape, part), fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape));
+    const mt = fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape); if (st.glowParts && st.glowParts.includes(part) && !mt.userData.gl){ mt.userData.gl = 1; mt.emissive = new THREE.Color(st.c[part] || f.color); mt.emissiveIntensity = 0.9; }
+    const mesh = new THREE.Mesh(fishGeo(st.shape, part), mt);
     mesh.castShadow = true; inner.add(mesh);
   }
   fish.userData.tail = new THREE.Object3D();   // 舊程式會轉尾巴；新模型的擺動在 shader 裡
   return fish;
 }
 function fishModel(f, scale){
-  if (f.id === 'marlin') return makeMarlin(scale);
+  if (f.id === 'marlin' && !FISH_STYLE.marlin) return makeMarlin(scale);
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
 }
@@ -4825,7 +4834,7 @@ function recordCatch(f, w){
 
 function shade(hex, amt){ const c = new THREE.Color(hex); if (amt < 0) c.lerp(new THREE.Color('#000'), -amt); else c.lerp(new THREE.Color('#fff'), amt); return '#' + c.getHexString(); }
 function drawFish(cv, color, known, id){
-  if (id === 'marlin') return drawMarlin(cv, known);
+  if (id === 'marlin' && !FISH_STYLE.marlin) return drawMarlin(cv, known);
   if (id && FISH_STYLE[id]){ try { return drawModelFish(cv, FISH_BY_ID[id], known); } catch(e){} }
   const ctx = cv.getContext('2d'), W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(W*0.52, H/2);
   const c = known ? color : '#b9c8cf';
@@ -4837,7 +4846,11 @@ function drawFish(cv, color, known, id){
   else { ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `bold ${Math.round(H*0.34)}px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', 0, H*0.02); }
   ctx.restore();
 }
-function fishCanvas(f, known, w, h){ const cv = document.createElement('canvas'); cv.width = w*2; cv.height = h*2; drawFish(cv, f.color, known, f.id); return cv; }
+// 圖鑑的魚圖：畫一次就記起來（新模型三角形比較多，每次重畫手機會卡）
+const fishCvCache = new Map();
+function fishCanvas(f, known, w, h){ const cv = document.createElement('canvas'); cv.width = w*2; cv.height = h*2; const key = f.id + (known ? 1 : 0) + 'x' + cv.width + 'x' + cv.height;
+  let src = fishCvCache.get(key); if (!src){ src = document.createElement('canvas'); src.width = cv.width; src.height = cv.height; drawFish(src, f.color, known, f.id); if (fishCvCache.size > 400) fishCvCache.clear(); fishCvCache.set(key, src); }
+  cv.getContext('2d').drawImage(src, 0, 0); return cv; }
 // 用 3D 模型資料畫側面圖（圖鑑、釣到卡片、魚缸清單共用）
 function drawModelFish(cv, f, known){
   const st = FISH_STYLE[f.id], mesh = FISH_MESH[st.shape];
