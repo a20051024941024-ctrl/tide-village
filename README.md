@@ -70,6 +70,7 @@ supabase/030_variants.sql 變種：同一種魚、長得不一樣（錦鯉、金
 supabase/031_scarves.sql 更多顏色的圍巾（黑、白、深藍、粉紅、格紋、條紋、彩虹…）
 supabase/032_redshark.sql 赤紅霸王鯊：全伺服器一群（一公一母開始、會繁殖、會絕種），掙脫會多一道叉叉
 supabase/033_rare_board.sql 排行榜「最稀有的魚」
+supabase/034_home.sql 家：房子格局、家具、室友／家人（一起住、一起蓋）
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

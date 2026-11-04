@@ -3164,7 +3164,7 @@ function renderHomeTab(body){
   const ownerP = people.find(p => p.owner) || people[0];
   body.appendChild(el('div', 'dexhead', `👨‍👩‍👧 ${amOwner ? '我家' : `${ownerP.name || '島主'} 的家`}（${people.length} / ${Home.cap} 人）`)); const ul = el('ul', 'shoplist');
   for (const p of people){ const isMe = p.id === meId, li = el('li', isMe ? 'on' : ''); li.appendChild(el('span', 'dishic', p.owner ? '👑' : p.role === 'family' ? '👪' : p.role === 'couple' ? '💞' : '🙂'));
-    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', (isMe ? (p.name || myDisplayName()) + '（你）' : p.name || '釣客'))); d.appendChild(el('div', 'sub2', `${p.owner ? '島主・' : ''}${homeTitle(p)}`)); li.appendChild(d);
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', (isMe ? (p.name || myDisplayName()) + '（你）' : p.name || '釣客'))); d.appendChild(el('div', 'sub2', p.owner ? '島主' + (p.title ? '・' + p.title : '') : homeTitle(p))); li.appendChild(d);
     const a = el('div', 'tacts');
     if (amOwner && !isMe){ const k = el('button', 'tbtn ghost', '請他搬走'); k.addEventListener('click', () => { if (k.dataset.sure !== '1'){ k.dataset.sure = '1'; k.textContent = '確定？'; k.classList.add('warn'); return; } homeRpc('kick_home', { p_member: p.id }); }); a.appendChild(k); }
     if (!amOwner && isMe){ const k = el('button', 'tbtn ghost', '搬出去'); k.addEventListener('click', () => { if (k.dataset.sure !== '1'){ k.dataset.sure = '1'; k.textContent = '確定搬走？'; k.classList.add('warn'); return; } homeRpc('leave_home').then(d => d && toast('你搬出去了，「回家」會回到你自己的小島')); }); a.appendChild(k); }
@@ -6363,6 +6363,7 @@ function renderTab(){
     ]);
     sec('🤿 潛水（進階玩法）', [
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。',
+      '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '外海魚情：在外海的船上按「🤿 下潛看魚」，可以直接潛下去看這一帶現在有哪些魚。外海每 5 分鐘會有 3 種魚特別活躍（上鉤機率 ×2.5），浮上來之後跑馬燈會告訴你是哪幾種、還剩幾分鐘。',
       isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
       '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
