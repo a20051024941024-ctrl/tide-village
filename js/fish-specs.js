@@ -447,5 +447,10 @@ Object.assign(SPECS, {
     dots:[{ n:9, t0:0.2, t1:0.85, y0:0.8, y1:0.92, r:0.045, part:'Spots' }, { n:8, t0:0.2, t1:0.9, y0:-0.02, y1:0.05, r:0.04, part:'Spots', seed:3 }] }),
   crayfish_blue: VAR('crayfish', { Top:'#2a5ec8', Bottom:'#6a9ae8', Stripes:'#1a3a8a', Fins:'#3a6ad0', Claw:'#2f6fe0' }, {}),
   tilapia_red: VAR('tilapia', { Top:'#e8503a', Mid:'#ff7a5a', Bottom:'#ffc8b0', Stripes:'#e86a50', Fins:'#f06a50' }, {}),
+  // 赤紅霸王鯊：礁岩鯊的變種（全伺服器只有一公一母，會繁殖）；深紅身體、背上黑色虎紋、更高更尖的背鰭、黃眼睛
+  shark_red: VAR('shark', { Top:'#8e1016', Mid:'#c8161c', Bottom:'#e9d9c8', Accent:'#2a0406', Gill:'#3a0408', Fins:'#8a0f14', Stripes:'#1e0204', Eye:'#f2c230' }, {
+    depth:0.2, pat:[{ k:'band', t0:0.2, t1:0.85, y0:-0.4, y1:-0.05, part:'Mid' }, { k:'bars', bars:BARS(6, 0.25, 0.64, 0.032, 0.15, 1.2), part:'Stripes' }, GILLS(0.17)],
+    dorsal:[{ s:0.31, e:0.47, h:0.95, shape:'falcate', sweep:0.7 }, { s:0.75, e:0.79, h:0.3 }, { s:0.39, e:0.425, h:0.98, shape:'falcate', sweep:0.75, part:'Accent', inset:0 }],
+    pect:{ t:0.26, y:-0.7, size:1.25, shape:'tri', ang:-0.6, out:0.65, w:0.42 }, caudal:{ type:'hetero', hk:1.9 } }),
   arowana_red: VAR('arowana', { Top:'#8a2420', Mid:'#d8302a', Bottom:'#f06a50', Stripes:'#b8241e', Fins:'#a8201a' }, {}, { glow:true }),
 });
