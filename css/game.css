@@ -704,3 +704,10 @@ html,body{position:fixed;inset:0;width:100%;overscroll-behavior:none}
 #top{overflow:hidden}
 #brand{pointer-events:auto}
 @media (orientation:landscape) and (max-height:540px){ #menu{gap:4px} .mbtn{padding:6px} .mbtn svg{width:16px;height:16px} }
+/* 上面幾條不要疊在一起：資訊列 → 釣點名牌 → 跑馬燈 → 船隊／參觀／潛水的提示，由上往下排 */
+@media (orientation:landscape) and (max-height:540px){
+  #spotCard{top:calc(var(--gt) + 70px)}
+  #ticker{top:calc(var(--gt) + 106px)}
+  #ferryBar,#visitBar,#isleBar,#diveHud{top:calc(var(--gt) + 142px)}
+  #toasts{top:calc(var(--gt) + 142px)}
+}
