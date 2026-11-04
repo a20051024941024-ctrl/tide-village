@@ -3622,7 +3622,7 @@ function cageFeed(){ if (!(rec.cage || []).length){ toast('箱網裡還沒有魚
 function cageTake(x){ cageCall('cage_take', { p_ts: x.t }, () => { rec.cage = rec.cage.filter(y => y.t !== x.t); const b = Object.assign({}, x, { fm: true }); delete b.w0; delete b.at; rec.tank.unshift(b); trimTank(); return true; }).then(ok => ok && toast(`🎉 收成${esc(FISH_BY_ID[x.f].name)} ${fmtKg(x.w)}，放進魚缸了`)); }
 function renderCage(body){
   const list = rec.cage || [], fed = rec.cageFed === taipeiDate();
-  const tip = el('div', 'tipbox'); tip.innerHTML = `<b>🐟 箱網養殖（參考澎湖的圓形箱網）</b><span>把魚缸裡的魚放進來慢慢養大（最多 ${CAGE.max} 條）。每天可以餵一次飼料（🪙${CAGE.feed}），餵了每條魚會往最大重量長 ${Math.round(CAGE.k * 100)}%。養大的魚收成後放回魚缸，可以賣比較多錢。可以養的魚：${[...FARM].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。</span>`; body.appendChild(tip);
+  const tip = el('div', 'tipbox'); tip.innerHTML = `<b>🐟 箱網養殖（參考澎湖的圓形箱網）</b><span>把魚缸裡的魚放進來慢慢養大（最多 ${CAGE.max} 條）。每天可以餵一次飼料（🪙${CAGE.feed}），餵一次魚會長大「離最大重量還差的 ${Math.round(CAGE.k * 100)}%」，所以小魚長得快、快長到最大的時候長得慢。養大的魚收成後放回魚缸，可以賣比較多錢。可以養的魚：${[...FARM].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。</span>`; body.appendChild(tip);
   const bar = el('div', 'tankbar'), fb = el('button', 'tbtn' + (fed || !list.length ? ' ghost' : ''), fed ? '🍚 今天餵過了' : `🍚 餵飼料（🪙${CAGE.feed}）`); fb.disabled = fed || !list.length; fb.addEventListener('click', cageFeed); bar.appendChild(fb); body.appendChild(bar);
   body.appendChild(el('div', 'dexhead', `🐟 箱網裡（${list.length} / ${CAGE.max}）`));
   if (!list.length) body.appendChild(el('div', 'empty', '箱網是空的。從下面挑魚放進來吧！'));
@@ -5682,7 +5682,7 @@ async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = t
 function renderMarket(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>🛍️ 設計師市集</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能逛市集。')); return; }
-  body.appendChild(el('p', 'sub', '大家自己設計的衣服和褲子。買了就是你的，九成的錢會給設計的人。'));
+  body.appendChild(el('p', 'sub', '大家自己設計的衣服、帽子、鞋子、披風和領巾。買了就是你的，九成的錢給設計的人（每個設計師一天最多從市集收 3000 金幣）。要錢的設計要先釣到 30 條魚才能買。'));
   const seg = el('div', 'seg'); [['new', '🆕 新上架'], ['hot', '🔥 最多人買'], ['mine', '🎨 我的設計']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Market.mode === k)); b.addEventListener('click', () => { Market.mode = k; Market.list = null; loadMarket(); renderTab(); }); seg.appendChild(b); });
   const nb = el('button', '', '＋ 自己設計'); nb.addEventListener('click', () => { DesignEd.px = null; curTab = 'design'; renderTab(); }); seg.appendChild(nb); body.appendChild(seg);
   if (!Market.list){ if (!Market.busy) loadMarket(); body.appendChild(el('div', 'empty', '載入中…')); return; }
@@ -5690,7 +5690,7 @@ function renderMarket(body){
   const ul = el('ul', 'shoplist');
   for (const d of Market.list){ const item = d.kind + '_dz' + d.id, own = ownsDesign(item), on = cleanGear(rec.gear)[d.kind] === item, li = el('li', on ? 'on' : '');
     if (d.px) li.appendChild(designThumb(d.px, d.kind, 40)); else li.appendChild(el('span', 'dishic', '🚫'));
-    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${({ top:'👕', pants:'👖', hat:'👒', shoes:'👟', back:'🦸', acc:'🧣' })[d.kind] || '👕'} ${d.name}`)); inf.appendChild(el('div', 'sub2', `${esc(d.by || '')} 設計・賣出 ${d.sold}・${d.price ? '🪙' + d.price : '免費'}${d.mine && !d.listed ? '・已下架' : ''}`)); li.appendChild(inf);
+    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${({ top:'👕', pants:'👖', hat:'👒', shoes:'👟', back:'🦸', acc:'🧣' })[d.kind] || '👕'} ${d.name}`)); inf.appendChild(el('div', 'sub2', `${d.by || ''} 設計・賣出 ${d.sold}・${d.price ? '🪙' + d.price : '免費'}${d.mine && !d.listed ? '・已下架' : ''}`)); li.appendChild(inf);
     const a = el('div', 'tacts');
     if (d.mine){ const pb = el('button', 'tbtn ghost', '改價錢'); pb.addEventListener('click', async () => { const v = prompt('新的價錢（0～5000）', String(d.price)); if (v == null) return; const p = clamp(Math.round(+v || 0), 0, 5000); try { const { data } = await Cloud.sb.rpc('edit_design', { p_id: d.id, p_price: p, p_listed: null }); Object.assign(d, data); renderTab(); } catch(e){} });
       const lb = el('button', 'tbtn ghost', d.listed ? '下架' : '上架'); lb.addEventListener('click', async () => { try { const { data } = await Cloud.sb.rpc('edit_design', { p_id: d.id, p_price: null, p_listed: !d.listed }); Object.assign(d, data); renderTab(); } catch(e){} }); a.append(pb, lb); }
@@ -6594,7 +6594,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island'].includes(curTab) && !Cloud.ui.busy) renderTab();
 }
-const CLOUD_ERR = ['這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
@@ -7233,7 +7233,7 @@ function renderTab(){
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
-      '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」，最下面按「＋ 自己設計」，就能在 16×16 的格子上畫圖案（上衣有正面和背面），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
+      '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 16×16 的格子上畫圖案（上衣有正面和背面），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
