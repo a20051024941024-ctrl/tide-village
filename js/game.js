@@ -3149,7 +3149,7 @@ function cleanIsland(o){
     for (const [k, v] of Object.entries(o.d || {})){ const p = OLD_DS[+k]; if (p && ISLE_ITEMS[v]) items.push({ id:++n, t:v, x:p[0], z:p[1], r:+(Math.atan2(-p[0], -p[1]) + Math.PI).toFixed(2) }); }
     o = { v:2, items }; }
   const items = (o && Array.isArray(o.items) ? o.items : []).filter(it => it && ISLE_ITEMS[it.t] && isFinite(+it.x) && isFinite(+it.z)).slice(0, ISLE_MAX)
-    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (typeof it.by === 'string' && it.by.length < 64) o.by = it.by; if (typeof it.lby === 'string' && it.lby.length < 64) o.lby = it.lby; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; if (it.t === 'mansion'){ o.lay = 'custom'; if (it.cl && typeof it.cl === 'object') o.cl = it.cl; if (!o.f) o.f = []; o.lv = Math.max(1, Math.min(5, Math.floor(+it.lv) || 5)); o.loan = Math.max(0, Math.floor(+it.loan) || 0); } } return o; });   /* 房子的格局、家具（034） */
+    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (typeof it.by === 'string' && it.by.length < 64) o.by = it.by; if (typeof it.lby === 'string' && it.lby.length < 64) o.lby = it.lby; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; if (it.t === 'mansion'){ o.lay = 'custom'; if (it.cl && typeof it.cl === 'object') o.cl = it.cl; if (!o.f) o.f = []; o.lv = Math.max(1, Math.min(8, Math.floor(+it.lv) || 5)); o.loan = Math.max(0, Math.floor(+it.loan) || 0); } } return o; });   /* 房子的格局、家具（034） */
   return { v:2, items };
 }
 // 跟伺服器一樣的位置檢查
@@ -3645,14 +3645,18 @@ const FURN_DEF = [{ id:1, t:'bed', x:-3.4, z:-2.1, r:0 }, { id:2, t:'rug', x:0.5
   { id:6, t:'shelf', x:4.2, z:-2.1, r:-1.57 }, { id:7, t:'fire', x:0, z:-3.2, r:0 }, { id:8, t:'tank', x:3.3, z:2.7, r:3.14 }, { id:9, t:'plant', x:-4, z:2.9, r:0 }];
 const HOME_ROLES = { mate:'室友', family:'家人', couple:'情侶' };
 const HOME_TITLES = ['爸爸', '媽媽', '哥哥', '姊姊', '弟弟', '妹妹', '爺爺', '奶奶', '老公', '老婆', '寶貝', '房東'];
-// 大宅（064_mansion.sql）：格局是玩家自己畫的（1 公尺的格子；房子 18×12，中心在 0,0）
+// 大宅（064_mansion.sql）：格局是玩家自己畫的（1 公尺的格子；房子最大 30×18，中心在 0,0）
 const CL_CACHE = new WeakMap();
 // 大宅一步一步擴建（075）：每一級的大小和擴建費（跟伺服器一樣）；以前買的大宅沒有 lv，當作最大
-const MANSION_LV = [null, { hw:5, hd:4, cost:0 }, { hw:6, hd:4, cost:1500 }, { hw:7, hd:5, cost:2000 }, { hw:8, hd:5, cost:2500 }, { hw:9, hd:6, cost:3000 }];
-function mansionLv(it){ return Math.max(1, Math.min(5, Math.floor(+(it && it.lv)) || 5)); }
+const MANSION_LV = [null, { hw:5, hd:4, cost:0 }, { hw:6, hd:4, cost:1500 }, { hw:7, hd:5, cost:2000 }, { hw:8, hd:5, cost:2500 }, { hw:9, hd:6, cost:3000 }, { hw:11, hd:7, cost:4000 }, { hw:13, hd:8, cost:5000 }, { hw:15, hd:9, cost:6000 }];   /* 076：再加 3 級，最大 30×18 */
+const MANSION_MAX = 8;
+function mansionLv(it){ return Math.max(1, Math.min(MANSION_MAX, Math.floor(+(it && it.lv)) || 5)); }
+// 地板、壁紙每一格的資料：最大的 30×18 格（中心在 0,0）；以前的資料是 18×12（216 格），讀進來時換成新的格子
+function clI(x, z){ return (z + 9) * 30 + (x + 15); }
+function clGrid(s){ s = typeof s === 'string' ? s : ''; if (s.length === 540) return s; const a = new Array(540).fill('0'); if (s.length === 216) for (let z = -6; z < 6; z++) for (let x = -9; x < 9; x++) a[clI(x, z)] = s[(z + 6) * 18 + (x + 9)]; return a.join(''); }
 function houseLay(it){
   if (it && it.t === 'mansion'){ const c = it.cl || {}, L = MANSION_LV[mansionLv(it)], k = JSON.stringify(c) + L.hw, old = CL_CACHE.get(it); if (old && old.k === k) return old.lay;
-    const lay = { name:'自己設計', price:0, W:L.hw * 2, D:L.hd * 2, hw:L.hw, hd:L.hd, custom:true, walls:[...(c.walls || []), ...(c.wins || [])], doors:c.doors || [], wins:c.wins || [], owins:c.owins || [], fl:c.fl || '0'.repeat(216), wp:c.wp || '0'.repeat(216), rooms:[] }; CL_CACHE.set(it, { k, lay }); return lay; }
+    const lay = { name:'自己設計', price:0, W:L.hw * 2, D:L.hd * 2, hw:L.hw, hd:L.hd, custom:true, walls:[...(c.walls || []), ...(c.wins || [])], doors:c.doors || [], wins:c.wins || [], owins:c.owins || [], fl:clGrid(c.fl), wp:clGrid(c.wp), rooms:[] }; CL_CACHE.set(it, { k, lay }); return lay; }
   return LAYOUTS[it && it.lay] || LAYOUTS.open; }
 const CL_FLOOR = [['木地板', '#c99a6b'], ['藍色地毯', '#a8c8e8'], ['白磁磚', '#eef2ee'], ['格子磁磚', '#e8d4a8'], ['粉紅地毯', '#f2c4d8'], ['深色木頭', '#7a5638']];
 const CL_WALL = [['米白', '#f4ead6'], ['天空藍', '#cfe6f4'], ['淡粉紅', '#f8dce6'], ['薄荷綠', '#dcefd8'], ['海軍藍', '#3a4a5e']];
@@ -3761,7 +3765,7 @@ function localHomeOp(op, p){
   if (op === 'place'){ const T = ISLE_ITEMS[p.t], e = isleCheck(items, p.t, p.x, p.z, -1); if (e) return e; if (items.length >= ISLE_MAX) return '島上已經放滿了'; if (T.house && items.filter(i => ISLE_ITEMS[i.t].house).length >= ISLE_HOUSE_MAX) return '房子最多 6 棟'; const c = cost(T.price); if (c) return c; items.push(Object.assign({ id: items.reduce((m, i) => Math.max(m, i.id), 0) + 1, t:p.t, x:p.x, z:p.z, r:p.r }, p.t === 'mansion' ? { lay:'custom', f:[], lv:1, loan:0 } : {})); }
   else if (op === 'design'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以自己設計格局'; const L = MANSION_LV[mansionLv(it)], ow = w => w[0] === w[2] ? Math.abs(w[0]) === L.hw : Math.abs(w[1]) === L.hd; it.cl = Object.assign({ owins: (p.cl.wins || []).filter(ow) }, p.cl, { wins: (p.cl.wins || []).filter(w => !ow(w)) }); it.lay = 'custom'; }
   else if (op === 'expand' || op === 'repay'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以擴建'; const lv = mansionLv(it);
-    if (op === 'expand'){ if (lv >= 5) return '已經擴建到最大了'; if (it.loan > 0) return '上一次的擴建貸款還沒還清'; it.lv = lv + 1; it.loan = MANSION_LV[lv + 1].cost; }
+    if (op === 'expand'){ if (lv >= MANSION_MAX) return '已經擴建到最大了'; if (it.loan > 0) return '上一次的擴建貸款還沒還清'; it.lv = lv + 1; it.loan = MANSION_LV[lv + 1].cost; }
     else { const a = Math.min(it.loan || 0, Math.max(0, Math.floor(p.amount) || 0)); if (a <= 0) return '沒有要還的錢'; const c = cost(a); if (c) return c; it.loan -= a; } }
   else if (op === 'move'){ const it = items.find(i => i.id === p.id); if (!it) return '找不到這個東西'; const e = isleCheck(items, it.t, p.x, p.z, it.id); if (e) return e; Object.assign(it, { x:p.x, z:p.z, r:p.r }); }
   else if (op === 'remove'){ const it = items.find(i => i.id === p.id); if (!it) return '找不到這個東西'; if (it.loan > 0) return '這棟房子還有擴建貸款沒還清，先還完才能拆'; let back = Math.floor(ISLE_ITEMS[it.t].price / 2); if (it.t === 'mansion') for (let i = 2; i <= mansionLv(it); i++) back += Math.floor(MANSION_LV[i].cost / 2); if (it.f) back += it.f.reduce((a, x) => a + Math.floor(FURN[x.t].price / 2), 0); if (it.lay) back += Math.floor(houseLay(it).price / 2); rec.island.items = items.filter(i => i !== it); addCoins(back); }
@@ -3798,7 +3802,7 @@ function clearHouseRoom(){
 }
 // 大宅的地板（每一格照房間的地板）、壁紙（每一面牆照旁邊那一格的房間）、窗戶
 function clDecorate(g, lay, cx, cz, fy){
-  const HW = lay.hw || 9, HD = lay.hd || 6, cell = (x, z) => (z + 6) * 18 + (x + 9), byF = {}, byW = {};
+  const HW = lay.hw || 9, HD = lay.hd || 6, cell = clI, byF = {}, byW = {};
   for (let z = -HD; z < HD; z++) for (let x = -HW; x < HW; x++){ const i = +lay.fl[cell(x, z)] || 0; (byF[i] = byF[i] || []).push([x, z]); }
   for (const [i, cs] of Object.entries(byF)){ const gs = cs.map(([x, z]) => { const pg = new THREE.PlaneGeometry(1, 1); pg.rotateX(-Math.PI / 2); pg.translate(x + 0.5, 0, z + 0.5); return pg; }); const m = new THREE.Mesh(mergeGeometries(gs), new THREE.MeshStandardMaterial({ map: clFloorTex(+i), roughness: 0.85, emissive: '#ffffff', emissiveMap: clFloorTex(+i), emissiveIntensity: 0.2 })); m.position.set(cx, fy + 0.004, cz); g.add(m); }
   // 壁紙：每一面牆（外牆、自己畫的牆、窗戶）兩邊各貼一片，顏色照那一邊的房間
@@ -3967,8 +3971,8 @@ async function confirmFurn(){
 var CLE = null;
 // 擴建：跟村長阿土伯借錢（不收利息），房間馬上變大；慢慢還，還清了才能再擴建
 function renderMansionGrow(body, it){ const lv = mansionLv(it), L = MANSION_LV[lv], N = MANSION_LV[lv + 1], loan = it.loan || 0, box = el('div', 'growbox');
-  box.appendChild(el('div', 'gb-t', `🏗️ 大宅擴建　第 ${lv} / 5 級・${L.hw * 2}×${L.hd * 2} 公尺`));
-  const bar = el('div', 'gb-bar'); for (let i = 1; i <= 5; i++) bar.appendChild(el('i', i <= lv ? 'on' : '')); box.appendChild(bar);
+  box.appendChild(el('div', 'gb-t', `🏗️ 大宅擴建　第 ${lv} / ${MANSION_MAX} 級・${L.hw * 2}×${L.hd * 2} 公尺`));
+  const bar = el('div', 'gb-bar'); for (let i = 1; i <= MANSION_MAX; i++) bar.appendChild(el('i', i <= lv ? 'on' : '')); box.appendChild(bar);
   if (loan > 0){ box.appendChild(el('div', 'gb-s', `🏦 擴建貸款還剩 🪙${loan.toLocaleString()}（跟村長阿土伯借的，不收利息）`)); const row = el('div', 'gb-r');
     for (const amt of [...[500, 1000].filter(v => v < loan), loan]){ const b = el('button', 'tbtn' + (amt === loan ? '' : ' ghost'), amt === loan ? `全部還清 🪙${amt.toLocaleString()}` : `還 🪙${amt.toLocaleString()}`); b.disabled = rec.coins < amt;
       b.addEventListener('click', () => homeOp('repay', { house: it.id, amount: amt }).then(ok => { if (ok){ SFX.catch(); const left = (isleItems().find(x => x.id === it.id) || {}).loan || 0; flash(left ? `🏦 還了 🪙${amt.toLocaleString()}，還剩 🪙${left.toLocaleString()}` : '🎉 擴建貸款還清了！可以再擴建囉', 1.6); renderTab(); } })); row.appendChild(b); }
@@ -3980,7 +3984,7 @@ function renderMansionGrow(body, it){ const lv = mansionLv(it), L = MANSION_LV[l
     box.appendChild(b); }
   else box.appendChild(el('div', 'gb-s', '🎉 已經擴建到最大了！'));
   body.appendChild(box); }
-function clOpen(it){ const c = JSON.parse(JSON.stringify(it.cl || {})); CLE = { it, tool:'wall', fl:1, wp:1, walls:c.walls || [], doors:c.doors || [], wins:[...(c.wins || []), ...(c.owins || [])], flS:(c.fl || '0'.repeat(216)).split(''), wpS:(c.wp || '0'.repeat(216)).split(''), busy:false, hw: MANSION_LV[mansionLv(it)].hw, hd: MANSION_LV[mansionLv(it)].hd }; curTab = 'cldesign'; if ($('#sheet').hidden) openSheet('cldesign'); else renderTab(); }
+function clOpen(it){ const c = JSON.parse(JSON.stringify(it.cl || {})); CLE = { it, tool:'wall', fl:1, wp:1, walls:c.walls || [], doors:c.doors || [], wins:[...(c.wins || []), ...(c.owins || [])], flS:clGrid(c.fl).split(''), wpS:clGrid(c.wp).split(''), busy:false, hw: MANSION_LV[mansionLv(it)].hw, hd: MANSION_LV[mansionLv(it)].hd }; curTab = 'cldesign'; if ($('#sheet').hidden) openSheet('cldesign'); else renderTab(); }
 const CL_PX = 22;
 function clKey(e){ return e.map(v => +(+v).toFixed(1)).join(','); }
 function clHas(list, e){ const k = clKey(e), k2 = clKey([e[2], e[3], e[0], e[1]]); return list.findIndex(x => clKey(x) === k || clKey(x) === k2); }
@@ -3989,7 +3993,7 @@ function clEdgeAt(px, pz){   // 點到哪一條格線（房子座標）
   const fx = px - Math.floor(px), fz = pz - Math.floor(pz), dx = Math.min(fx, 1 - fx), dz = Math.min(fz, 1 - fz);
   if (dx < dz){ const x = Math.round(px), z = Math.floor(pz); return [x, z, x, z + 1]; } const z = Math.round(pz), x = Math.floor(px); return [x, z, x + 1, z]; }
 function clBlocked(x0, z0, x1, z1){ const e = [x0, z0, x1, z1]; if (x0 === x1 ? Math.abs(x0) === CLE.hw : Math.abs(z0) === CLE.hd) return true; return clHas(CLE.walls, e) >= 0 || clHas(CLE.wins, e) >= 0 || CLE.doors.some(d => clKey(d) === clKey(clDoorAt(e))); }
-function clFill(x, z){ const seen = new Set(), st = [[x, z]]; while (st.length){ const [cx, cz] = st.pop(), k = cx + ',' + cz; if (seen.has(k) || cx < -CLE.hw || cx >= CLE.hw || cz < -CLE.hd || cz >= CLE.hd) continue; seen.add(k); const i = (cz + 6) * 18 + (cx + 9); CLE.flS[i] = String(CLE.fl); CLE.wpS[i] = String(CLE.wp);
+function clFill(x, z){ const seen = new Set(), st = [[x, z]]; while (st.length){ const [cx, cz] = st.pop(), k = cx + ',' + cz; if (seen.has(k) || cx < -CLE.hw || cx >= CLE.hw || cz < -CLE.hd || cz >= CLE.hd) continue; seen.add(k); const i = clI(cx, cz); CLE.flS[i] = String(CLE.fl); CLE.wpS[i] = String(CLE.wp);
     if (!clBlocked(cx + 1, cz, cx + 1, cz + 1)) st.push([cx + 1, cz]); if (!clBlocked(cx, cz, cx, cz + 1)) st.push([cx - 1, cz]); if (!clBlocked(cx, cz + 1, cx + 1, cz + 1)) st.push([cx, cz + 1]); if (!clBlocked(cx, cz, cx + 1, cz)) st.push([cx, cz - 1]); } }
 function clApply(e){ const T = CLE.tool, HW = CLE.hw, HD = CLE.hd; if (Math.min(e[0], e[2]) < -HW || Math.max(e[0], e[2]) > HW || Math.min(e[1], e[3]) < -HD || Math.max(e[1], e[3]) > HD) return;   /* 還沒擴建到的地方不能畫 */
   const outer = e[0] === e[2] ? Math.abs(e[0]) === HW : Math.abs(e[1]) === HD, dk = clKey(clDoorAt(e));
@@ -3997,12 +4001,13 @@ function clApply(e){ const T = CLE.tool, HW = CLE.hw, HD = CLE.hd; if (Math.min(
   if (T === 'erase'){ rm(); return; }
   if (outer && T !== 'win') return; rm();
   if (T === 'wall') CLE.walls.push(e); else if (T === 'win') CLE.wins.push(e); else if (T === 'door' && !outer) CLE.doors.push(clDoorAt(e)); }
-function clDraw(cv){ const c = cv.getContext('2d'), P = CL_PX, O = 10; c.clearRect(0, 0, cv.width, cv.height);
-  for (let z = -6; z < 6; z++) for (let x = -9; x < 9; x++){ const i = (z + 6) * 18 + (x + 9); c.fillStyle = CL_FLOOR[+CLE.flS[i]][1]; c.fillRect(O + (x + 9) * P, O + (z + 6) * P, P, P); c.fillStyle = CL_WALL[+CLE.wpS[i]][1]; c.fillRect(O + (x + 9) * P + P - 6, O + (z + 6) * P + 2, 4, 4); if (x < -CLE.hw || x >= CLE.hw || z < -CLE.hd || z >= CLE.hd){ c.fillStyle = 'rgba(120,130,140,0.82)'; c.fillRect(O + (x + 9) * P, O + (z + 6) * P, P, P); } c.strokeStyle = 'rgba(0,0,0,0.08)'; c.strokeRect(O + (x + 9) * P, O + (z + 6) * P, P, P); }
-  const line = (e, col, w) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.beginPath(); c.moveTo(O + (e[0] + 9) * P, O + (e[1] + 6) * P); c.lineTo(O + (e[2] + 9) * P, O + (e[3] + 6) * P); c.stroke(); };
-  { const W = CLE.hw, D = CLE.hd; line([-W, -D, W, -D], '#5a3d2b', 6); line([-W, -D, -W, D], '#5a3d2b', 6); line([W, -D, W, D], '#5a3d2b', 6); line([-W, D, -1, D], '#5a3d2b', 6); line([1, D, W, D], '#5a3d2b', 6); line([-1, D, 1, D], '#e8473a', 6); }   /* 灰色的格子是還沒擴建到的地方 */
+function clPx(){ return Math.max(12, Math.min(CL_PX, Math.floor(396 / (CLE.hw * 2)))); }   /* 房子越大格子越小，整張圖都看得到 */
+function clDraw(cv){ const c = cv.getContext('2d'), P = clPx(), O = 10, HW = CLE.hw, HD = CLE.hd, X = x => O + (x + HW) * P, Z = z => O + (z + HD) * P; c.clearRect(0, 0, cv.width, cv.height);
+  for (let z = -HD; z < HD; z++) for (let x = -HW; x < HW; x++){ const i = clI(x, z); c.fillStyle = CL_FLOOR[+CLE.flS[i]][1]; c.fillRect(X(x), Z(z), P, P); c.fillStyle = CL_WALL[+CLE.wpS[i]][1]; c.fillRect(X(x) + P - 6, Z(z) + 2, 4, 4); c.strokeStyle = 'rgba(0,0,0,0.08)'; c.lineWidth = 1; c.strokeRect(X(x) + 0.5, Z(z) + 0.5, P - 1, P - 1); }
+  const line = (e, col, w) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.beginPath(); c.moveTo(X(e[0]), Z(e[1])); c.lineTo(X(e[2]), Z(e[3])); c.stroke(); };
+  { const W = HW, D = HD; line([-W, -D, W, -D], '#5a3d2b', 6); line([-W, -D, -W, D], '#5a3d2b', 6); line([W, -D, W, D], '#5a3d2b', 6); line([-W, D, -1, D], '#5a3d2b', 6); line([1, D, W, D], '#5a3d2b', 6); line([-1, D, 1, D], '#e8473a', 6); }
   for (const e of CLE.walls) line(e, '#5a3d2b', 5); for (const e of CLE.wins) line(e, '#5fb6e3', 5);
-  for (const d of CLE.doors){ c.fillStyle = '#ffd36a'; const vert = Math.abs(d[0] - Math.round(d[0])) < 0.01; c.fillRect(O + (d[0] + 9) * P - (vert ? 3 : P / 2), O + (d[1] + 6) * P - (vert ? P / 2 : 3), vert ? 6 : P, vert ? P : 6); } }
+  for (const d of CLE.doors){ c.fillStyle = '#ffd36a'; const vert = Math.abs(d[0] - Math.round(d[0])) < 0.01; c.fillRect(X(d[0]) - (vert ? 3 : P / 2), Z(d[1]) - (vert ? P / 2 : 3), vert ? 6 : P, vert ? P : 6); } }
 function renderClDesign(body){
   const E = CLE; if (!E){ curTab = 'furn'; renderTab(); return; }
   body.appendChild(el('div', 'shophead')).innerHTML = '<b>📐 設計大宅的格局</b>';
@@ -4010,10 +4015,10 @@ function renderClDesign(body){
   const tools = el('div', 'seg'); [['wall', '🧱 牆'], ['door', '🚪 門'], ['win', '🪟 窗'], ['erase', '🧽 擦掉'], ['paint', '🎨 房間上色']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.tool === k)); b.addEventListener('click', () => { E.tool = k; renderTab(); }); tools.appendChild(b); }); body.appendChild(tools);
   if (E.tool === 'paint'){ const r1 = el('div', 'chipline'); CL_FLOOR.forEach(([n, col], i) => { const b = el('button', 'chip' + (E.fl === i ? ' on' : ''), n); b.style.borderLeft = `14px solid ${col}`; b.addEventListener('click', () => { E.fl = i; renderTab(); }); r1.appendChild(b); }); body.appendChild(el('div', 'sub2', '地板')); body.appendChild(r1);
     const r2 = el('div', 'chipline'); CL_WALL.forEach(([n, col], i) => { const b = el('button', 'chip' + (E.wp === i ? ' on' : ''), n); b.style.borderLeft = `14px solid ${col}`; b.addEventListener('click', () => { E.wp = i; renderTab(); }); r2.appendChild(b); }); body.appendChild(el('div', 'sub2', '壁紙')); body.appendChild(r2); }
-  const cv = el('canvas', 'clcv'); cv.width = 18 * CL_PX + 20; cv.height = 12 * CL_PX + 20; cv.style.cssText = 'width:100%;max-width:416px;touch-action:none;border-radius:12px;background:#fff;display:block;margin:6px auto'; body.appendChild(cv); clDraw(cv);
-  const toH = ev => { const r = cv.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * cv.width, y = (ev.clientY - r.top) / r.height * cv.height; return [(x - 10) / CL_PX - 9, (y - 10) / CL_PX - 6]; };
+  const P = clPx(), cv = el('canvas', 'clcv'); cv.width = E.hw * 2 * P + 20; cv.height = E.hd * 2 * P + 20; cv.style.cssText = 'width:100%;max-width:' + cv.width + 'px;touch-action:none;border-radius:12px;background:#fff;display:block;margin:6px auto'; body.appendChild(cv); clDraw(cv);
+  const toH = ev => { const r = cv.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * cv.width, y = (ev.clientY - r.top) / r.height * cv.height; return [(x - 10) / P - E.hw, (y - 10) / P - E.hd]; };
   let drag = false, last = '';
-  const act = ev => { const [hx, hz] = toH(ev); if (hx < -9.4 || hx > 9.4 || hz < -6.4 || hz > 6.4) return;
+  const act = ev => { const [hx, hz] = toH(ev); if (hx < -E.hw - 0.4 || hx > E.hw + 0.4 || hz < -E.hd - 0.4 || hz > E.hd + 0.4) return;
     if (E.tool === 'paint'){ clFill(Math.max(-E.hw, Math.min(E.hw - 1, Math.floor(hx))), Math.max(-E.hd, Math.min(E.hd - 1, Math.floor(hz)))); clDraw(cv); return; }
     const e = clEdgeAt(hx, hz), k = clKey(e); if (k === last) return; last = k; clApply(e); clDraw(cv); };
   cv.addEventListener('pointerdown', ev => { ev.preventDefault(); drag = true; last = ''; try { cv.setPointerCapture(ev.pointerId); } catch(_){} act(ev); });
@@ -4022,9 +4027,9 @@ function renderClDesign(body){
   ok.addEventListener('click', async () => { if (E.busy) return; E.busy = true; ok.disabled = true;
     const cl = { walls: E.walls, doors: E.doors, wins: E.wins, fl: E.flS.join(''), wp: E.wpS.join('') }; const okk = await homeOp('design', { house: E.it.id, cl });
     E.busy = false; if (okk){ SFX.catch(); flash('🏠 格局改好了！放不下的家具已經收起來、退一半了', 1.8); CLE = null; closeSheet(); const it = isleItems().find(x => x.id === E.it.id); if (it && House.on) rebuildHouseRoom(it); } else ok.disabled = false; });
-  clr.addEventListener('click', () => { if (clr.dataset.sure !== '1'){ clr.dataset.sure = '1'; clr.textContent = '確定清掉？'; return; } E.walls = []; E.doors = []; E.wins = []; E.flS = '0'.repeat(216).split(''); E.wpS = '0'.repeat(216).split(''); renderTab(); });
+  clr.addEventListener('click', () => { if (clr.dataset.sure !== '1'){ clr.dataset.sure = '1'; clr.textContent = '確定清掉？'; return; } E.walls = []; E.doors = []; E.wins = []; E.flS = '0'.repeat(540).split(''); E.wpS = '0'.repeat(540).split(''); renderTab(); });
   bk.addEventListener('click', () => { CLE = null; curTab = 'furn'; renderTab(); }); bar.append(ok, clr, bk); body.appendChild(bar);
-  body.appendChild(el('p', 'sub', `牆 ${E.walls.length} 段・門 ${E.doors.length} 個・窗 ${E.wins.length} 個（最多：牆＋窗 300、門 40）`));
+  body.appendChild(el('p', 'sub', `牆 ${E.walls.length} 段・門 ${E.doors.length} 個・窗 ${E.wins.length} 個（最多：牆＋窗 500、門 60）`));
 }
 let furnSheet = 'buy';
 function renderFurnSheet(body){
@@ -9011,7 +9016,8 @@ const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quate
 function faiTraits(f){ if (f._fai) return f._fai; const id = f.of || f.id, size = (f.min + f.max) / 2;
   const pred = LURE_FISH.has(id) || /shark|barracuda|grouper|tuna|marlin|trevally|amberjack|mahi|ito|sixgill|orca|snakehead|bass|arowana|lionfish/.test(id);
   const bottom = BOTTOM_FISH.has(id) || /flounder|stingray|crab|lobster|octopus|goby|rattail|batfish|blobfish|catfish|loach|pleco|turbot|mudskipper|fiddler|shrimp|prawn|crayfish/.test(id);
-  return (f._fai = { size, pred, bottom, curious: FAI_CURIOUS.has(id), circle: /shark/.test(id), maxV: clamp(0.8 + Math.log10(1 + size) * 1.1, 0.6, 2.8), scale: clamp(0.3 + Math.log10(1 + size) * 0.62, 0.28, 2.6) }); }
+  const crawl = /crab|lobster|prawn|shrimp|crayfish|fiddler/.test(id) && !/crabeat/.test(id);   /* 螃蟹、龍蝦、蝦子：在淺水的水底橫著爬，不會在水中間游 */
+  return (f._fai = { size, pred, bottom: bottom || crawl, crawl, curious: FAI_CURIOUS.has(id), circle: /shark/.test(id), maxV: crawl ? 0.32 : clamp(0.8 + Math.log10(1 + size) * 1.1, 0.6, 2.8), scale: clamp(0.3 + Math.log10(1 + size) * 0.62, 0.28, 2.6) }); }
 // ---- 物件池：同一種魚的模型用完放回去，下次直接拿來用 ----
 function faiTake(f, scale){ const sil = !rec.count[f.id], k = f.id + '|' + scale.toFixed(2) + (sil ? 's' : ''), P = FAI.pool.get(k); let m = P && P.pop(); if (!m){ m = fishModel(f, scale); m.userData.poolKey = k; m.traverse(o => { if (o.isMesh){ o.castShadow = false; o.frustumCulled = true; o.renderOrder = -1; if (sil) o.material = FAI_SIL; } }); } m.visible = true; return m; }
 function faiGive(m){ if (!m) return; if (m.parent) m.parent.remove(m); const k = m.userData.poolKey; if (!k) return; if (!FAI.pool.has(k)) FAI.pool.set(k, []); const P = FAI.pool.get(k); if (P.length < 4) P.push(m); }
@@ -9033,7 +9039,7 @@ function faiAgent(f, x, z, opt){ const tr = faiTraits(f), sc = opt && opt.scale 
   const a = { f, tr, m, pos: new THREE.Vector3(x, 0, z), vel: new THREE.Vector3((Math.random() - 0.5) * 0.4, 0, (Math.random() - 0.5) * 0.4), tgt: new THREE.Vector3(x, 0, z), home: new THREE.Vector3(x, 0, z), state:'wander', st:0, cd:0, lod:0, acc:0, id: Math.random(), depth: opt && opt.depth || faiDepth(x, z) };
   a.pos.y = faiSurfaceY(a, a.depth); faiNewWander(a); FAI.agents.push(a); return a; }
 function faiFree(a){ faiGive(a.m); a.dead = true; }
-function faiNewWander(a){ for (let k = 0; k < 6; k++){ const ang = Math.random() * 6.283, r = 2 + Math.random() * 6, x = a.home.x + Math.cos(ang) * r, z = a.home.z + Math.sin(ang) * r; if (faiDepth(x, z) > 0.35){ a.tgt.set(x, 0, z); return; } } a.tgt.copy(a.home); }
+function faiNewWander(a){ for (let k = 0; k < 6; k++){ const ang = Math.random() * 6.283, r = a.tr.crawl ? 0.8 + Math.random() * 2.5 : 2 + Math.random() * 6, x = a.home.x + Math.cos(ang) * r, z = a.home.z + Math.sin(ang) * r, dd = faiDepth(x, z); if (dd > 0.35 && (!a.tr.crawl || dd < 1.2)){ a.tgt.set(x, 0, z); return; } } a.tgt.copy(a.home); }
 function faiSet(a, s, secs){ a.state = s; a.st = secs || 0; }
 // 轉向：慢慢轉過去、慢慢加速減速；碰到岸邊就轉開
 function faiSteer(a, dt, speed, tx, tz){
@@ -9041,9 +9047,11 @@ function faiSteer(a, dt, speed, tx, tz){
   const dvx = dx / d * speed * arrive - a.vel.x, dvz = dz / d * speed * arrive - a.vel.z, acc = a.tr.maxV * 2.2;
   const dl = Math.hypot(dvx, dvz) || 1, k = Math.min(1, acc * dt / dl); a.vel.x += dvx * k; a.vel.z += dvz * k;
   const nx = a.pos.x + a.vel.x * dt, nz = a.pos.z + a.vel.z * dt, dep = faiDepth(nx + a.vel.x * 0.4, nz + a.vel.z * 0.4);
-  if (dep < 0.35){ a.vel.multiplyScalar(-0.4); if (a.state === 'wander' || a.state === 'flee') faiNewWander(a); return d; }
+  if (dep < 0.35 || (a.tr.crawl && dep > 1.25)){ a.vel.multiplyScalar(-0.4); if (a.state === 'wander' || a.state === 'flee') faiNewWander(a); return d; }
   a.pos.x = nx; a.pos.z = nz; a.depth += (dep - a.depth) * Math.min(1, dt * 2); return d; }
-function faiPlace(a, dt, t){ const ty = a.state === 'forage' ? WATER_LEVEL - Math.min(0.7, Math.max(0.3, a.depth) - 0.1) : faiSurfaceY(a, a.depth); a.pos.y += (ty - a.pos.y) * Math.min(1, dt * 1.5);
+function faiPlace(a, dt, t){ if (a.tr.crawl){ const ty = WATER_LEVEL - Math.max(0.3, a.depth) + 0.05; a.pos.y += (ty - a.pos.y) * Math.min(1, dt * 3); a.m.position.copy(a.pos); const sp = Math.hypot(a.vel.x, a.vel.z);   /* 橫著走：身體跟走的方向垂直，走路時小小地晃 */
+    if (sp > 0.02) a.m.rotation.y = lerpAngle(a.m.rotation.y, Math.atan2(-a.vel.z, a.vel.x) + Math.PI / 2, Math.min(1, dt * 4)); a.m.rotation.z = sp > 0.05 ? Math.sin(t * 14 + a.id * 9) * 0.06 : 0; a.m.rotation.x = 0; return; }
+  const ty = a.state === 'forage' ? WATER_LEVEL - Math.min(0.7, Math.max(0.3, a.depth) - 0.1) : faiSurfaceY(a, a.depth); a.pos.y += (ty - a.pos.y) * Math.min(1, dt * 1.5);
   const sp = Math.hypot(a.vel.x, a.vel.z); a.m.position.copy(a.pos); if (sp > 0.02) a.m.rotation.y = lerpAngle(a.m.rotation.y, Math.atan2(-a.vel.z, a.vel.x), Math.min(1, dt * 6));
   a.m.rotation.z = a.state === 'forage' ? -0.35 : Math.sin(t * 2 + a.id * 9) * 0.05; }
 // ---- 岸上看得到的水裡：每一幀 ----
@@ -9055,7 +9063,7 @@ function updateFishAI(dt0, t){
     for (const a of FAI.agents) if (Math.hypot(a.pos.x - px, a.pos.z - pz) > 32 || faiDepth(a.pos.x, a.pos.z) <= 0) faiFree(a);   /* 太遠、跑到岸上（不應該發生）就收回 */
     FAI.agents = FAI.agents.filter(a => !a.dead);
     if (FAI.agents.length < max) for (let k = 0; k < 4; k++){ const ang = Math.random() * 6.283, r = 7 + Math.random() * 16, x = px + Math.cos(ang) * r, z = pz + Math.sin(ang) * r, dep = faiDepth(x, z);
-      if (dep < 0.6) continue; const f = faiPick(waterSpotId(x, z), dep); if (f){ faiAgent(f, x, z, { depth: dep }); break; } }
+      if (dep < 0.6) continue; const f = faiPick(waterSpotId(x, z), dep); if (f && faiTraits(f).crawl && dep > 1.15) continue; if (f){ faiAgent(f, x, z, { depth: dep }); break; } }   /* 螃蟹只出現在看得到水底的淺水 */
     faiSchoolSpawn(px, pz); }
   // 拋竿以後：上鉤的那條魚由原本的 BiteFish 游過來咬（伺服器抽的魚）；附近的魚會被浮標吸引過去，咬到、拉魚、水花大的時候，旁邊的魚會嚇跑
   const bob = me.bobState === 'water' && F.phase === 'waiting' && !Dive.on ? me.bobPos : null, splash = (F.phase === 'bite' || F.phase === 'reeling') && me.bobPos ? me.bobPos : null;
@@ -9151,7 +9159,7 @@ function faiObserve(t){
   const fx = Math.sin(me.rot), fz = Math.cos(me.rot), list = Dive.on ? Dive.fish.filter(o => o.ai).map(o => ({ f: o.f, pos: o.pos, state: o.ai.state })) : FAI.agents;
   let best = null, bd = Dive.on ? 7 : 5.5; for (const a of list){ const dx = a.pos.x - me.pos.x, dz = a.pos.z - me.pos.z, d = Math.hypot(dx, dz); if (d < bd && (dx * fx + dz * fz) / (d || 1) > 0.3){ bd = d; best = a; } }
   if (!best || F.phase === 'reeling' || !$('#sheet').hidden){ el2.hidden = true; return; }
-  el2.textContent = `🔍 ${rec.count[best.f.id] ? best.f.name : '沒看過的魚'}・${FAI_STATE[best.state] || ''}`; el2.hidden = false; }
+  el2.textContent = `🔍 ${rec.count[best.f.id] ? best.f.name : best.tr.crawl ? '沒看過的蟹蝦' : '沒看過的魚'}・${best.tr.crawl && best.state === 'wander' ? '在水底橫著慢慢爬' : best.tr.crawl && best.state === 'forage' ? '用鉗子在沙裡找東西吃' : best.tr.crawl && best.state === 'flee' ? '橫著快跑躲起來了！' : (FAI_STATE[best.state] || '')}`; el2.hidden = false; }
 // ---- 潛水的魚：換成 AI ----
 function faiCurrent(){ const c = Ocean.d && Ocean.d.state && Ocean.d.state.coast, sp = c ? clamp(+c.spd || 0.3, 0.1, 1) : 0.3, a = c ? (+c.dir || 0) * Math.PI / 180 : 0.6; return { sp, lx: Math.cos(a) * sp * 0.12, lz: Math.sin(a) * sp * 0.12 }; }   /* 海流：海帶、海草往海流的方向倒一點 */
 function faiDiveInit(){ Dive.bait = null; Dive.baitFx = null;
