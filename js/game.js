@@ -8282,7 +8282,7 @@ const NPC_TIPS = [
   '去過的地方，打開地圖就能直接傳送過去',
   '釣蝦場要先跟老闆買時段才能釣',
   '圖鑑裡還沒釣過的魚，都是黑黑的影子',
-  '變種的魚很少見，釣到才會出現在圖鑑裡',
+  '變種的魚很少見，圖鑑裡看得到牠的影子，釣到才知道長什麼樣子',
   '幫村民完成任務，可以拿到金幣',
 ];
 // ---- 動態海洋生態（066_ocean.sql）：水溫、海流、魚類洄游、魚群、保育週（伺服器每小時更新，抽魚時直接算進去）----
@@ -8588,17 +8588,17 @@ function renderTab(){
   if (curTab === 'ferry'){ renderFerry(body); return; }
   if (curTab === 'shrimp'){ renderShrimpDesk(body); return; }
   if (curTab === 'dex'){
-    const base = FISH.filter(f => !f.of), got = base.filter(f => rec.count[f.id]).length, vgot = FISH.filter(f => f.of && rec.count[f.id]).length;   /* 變種不算在總數裡（不然就知道有幾種了） */
-    body.appendChild(el('p', 'sub', `已收集 ${got} / ${base.length} 種${vgot ? `・✨ 找到 ${vgot} 種變種` : ''}・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
+    const base = FISH.filter(f => !f.of), got = base.filter(f => rec.count[f.id]).length, vall = FISH.filter(f => f.of && !f.rs), vgot = vall.filter(f => rec.count[f.id]).length;   /* 變種也放進圖鑑（沒釣到是剪影）；紅鯊例外，要釣到才會出現 */
+    body.appendChild(el('p', 'sub', `已收集 ${got} / ${base.length} 種・✨ 變種 ${vgot} / ${vall.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
     for (const s of SPOTS){
       if (!FISH.some(f => f.spot === s.id)) continue;
       const sf = FISH.filter(f => f.spot === s.id && !f.of), sg = sf.filter(f => rec.count[f.id]).length, sn = sf.reduce((a, f) => a + (rec.count[f.id] || 0), 0);
       const h = el('div', 'dexhead', s.label); h.appendChild(el('span', 'dexcnt' + (sg === sf.length ? ' all' : ''), `${sg} / ${sf.length} 種${sn ? `・${sn} 條` : ''}${sg === sf.length ? ' ✨' : ''}`)); h.appendChild(el('small', '', s.subtitle)); body.appendChild(h);
       const g = el('div', 'dex');
-      FISH.filter(f => f.spot === s.id && (!f.of || rec.count[f.id])).sort((a,b) => (a.of ? 1 : 0) - (b.of ? 1 : 0) || RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]).forEach(f => {   // 變種要釣到才會出現在圖鑑
+      FISH.filter(f => f.spot === s.id && (!f.rs || rec.count[f.id])).sort((a,b) => (a.of ? 1 : 0) - (b.of ? 1 : 0) || RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]).forEach(f => {   // 變種也列出來（沒釣到是剪影）；紅鯊要釣到才會出現
         const known = !!rec.count[f.id]; const it = el('div', 'it' + (known ? '' : ' lock'));
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
-        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', `✨ ${FISH_BY_ID[f.of].name}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季')); if (f.sci && !f.of) it.appendChild(el('span', 'chip sci', f.sci.giant ? '🐋 深海巨魚' : '🔬 新品種'));
+        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', known ? `✨ ${FISH_BY_ID[f.of].name}的變種` : `✨ ${rec.count[f.of] ? FISH_BY_ID[f.of].name : '某種魚'}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季')); if (f.sci && !f.of) it.appendChild(el('span', 'chip sci', f.sci.giant ? '🐋 深海巨魚' : '🔬 新品種'));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         g.appendChild(it);
@@ -8858,7 +8858,7 @@ function renderTab(){
       `廣場東邊的大水族館只放你自己選的魚（最多 ${SHOW_MAX} 條）：釣到時按「🏛️ 展示」，或在「魚缸」分頁按「展示」。展示中的魚不會被賣掉或拿去做菜。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）。主要在港口外海出沒，偶爾也會到珊瑚礁群島外側的深水邊巡游（機率更低）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
-      '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低，要釣到才會出現在圖鑑裡。',
+      '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低。圖鑑裡會先顯示影子，釣到才看得到樣子（赤紅霸王鯊例外，要釣到才會出現）。',
       '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚捧起來炫耀給大家看。',
       '可以參觀別人的水族館（玩家分頁或排行榜點他的名字）。',
     ]);
