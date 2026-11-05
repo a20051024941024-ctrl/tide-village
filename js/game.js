@@ -243,7 +243,10 @@ const ISLE = { x:150, z:0, r:24, y:0.32 };
 const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
 // 潮汐食堂：跟釣蝦場一樣是室內的（實際位置在地圖外，從村子裡食堂的門走進去）
 const CAFE = { x:-118, z:74, w:18, d:13, y:0.9 };
-let CAFE_DOOR = { x:12.5, z:10.5 };   // 村子裡食堂門口（蓋門面的時候會改成真正的位置）
+let CAFE_DOOR = { x:12.5, z:10.5 };
+// 海洋博物館（078）：一樣是室內的，在地圖外；村子裡的門面在廣場和海邊商店中間
+const MUSEUM = { x:-118, z:118, w:22, d:16, y:0.9 };
+let MUSEUM_DOOR = { x:8, z:-2 };   // 村子裡食堂門口（蓋門面的時候會改成真正的位置）
 const ICE = { x:-120, z:-72, w:30, d:22, y:0.45 };
 // 北方冰封群島（2026-11-05）：主島北邊（-x）的雪島，中間一座結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。坐港口阿海的船去
 const FROST = { x:-160, z:-10, r:22, y:0.36, lake:{ x:-156, z:-8, r:8.5, y:0.37 }, holes:[[-158.4, -9.6], [-153.6, -5.8], [-155.2, -11.6], [-159.6, -4.6], [-152.4, -9.8]], dock:[-139.2, -10] };
@@ -286,6 +289,7 @@ const LANDMARKS = [
   { id:'tackle',     label:'釣具店',   pos:V3(-9, -3),          color:'#f6a96b', ly:5.5, mx:2.4, mz:2.8 },
   { id:'shop',       label:'海邊商店', pos:V3(18, -1),          color:'#5fb6e3', ly:5.5, mx:-2.6, mz:2.8 },
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
+  { id:'museum',     label:'海洋博物館', pos:V3(10.5, -5),      color:'#7fb0c8', ly:6.0 },
   { id:'tailor',     label:'阿綾服裝店', pos:V3(SHOPLOT.ling.x, SHOPLOT.ling.z), color:'#f5a5d8', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'mu',         label:'阿木木工坊', pos:V3(SHOPLOT.mu.x, SHOPLOT.mu.z), color:'#c79a6b', ly:5.5, mx:-2.4, mz:2.6 },
   { id:'market',     label:'釣客魚市', pos:V3(SHOPLOT.spare.x, SHOPLOT.spare.z), color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.6 },
@@ -655,6 +659,9 @@ function addDeck(x, z, w, d, y){ decks.push({ x0:x-w/2, x1:x+w/2, z0:z-d/2, z1:z
   addDeck(S.x, S.z - S.pd / 2 - bd / 2, S.w, bd, S.y); addDeck(S.x, S.z + S.pd / 2 + bd / 2, S.w, bd, S.y);
   addDeck(S.x - S.pw / 2 - bw / 2, S.z, bw, S.pd, S.y); addDeck(S.x + S.pw / 2 + bw / 2, S.z, bw, S.pd, S.y); }
 addDeck(CAFE.x, CAFE.z, CAFE.w, CAFE.d, CAFE.y);
+addDeck(MUSEUM.x, MUSEUM.z, MUSEUM.w, MUSEUM.d, MUSEUM.y);
+function inMuseum(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } return Math.abs(x - MUSEUM.x) < MUSEUM.w / 2 && Math.abs(z - MUSEUM.z) < MUSEUM.d / 2; }
+function inIndoor(){ return inCafe() || inMuseum(); }
 function inCafe(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } return Math.abs(x - CAFE.x) < CAFE.w / 2 && Math.abs(z - CAFE.z) < CAFE.d / 2; }
 function inShrimpHall(x, z, m){ return Math.abs(x - SHRIMP.x) < SHRIMP.w / 2 + (m || 0) && Math.abs(z - SHRIMP.z) < SHRIMP.d / 2 + (m || 0); }
 function inShrimpPool(x, z){ return Math.abs(x - SHRIMP.x) < SHRIMP.pw / 2 - 0.05 && Math.abs(z - SHRIMP.z) < SHRIMP.pd / 2 - 0.05; }
@@ -1008,6 +1015,26 @@ function castPoint(x, z, dx, dz, dist){
       g.add(box([0.06, 0.9, 0.06], '#6e4a2f', [1.55, 0.45, 1.5])); }
     const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addOBoxCol(KX - sn * 0.6, KZ - c * 0.6, 5.0, 3.2, g.rotation.y);
     CAFE_DOOR = { x: KX + sn * 1.9, z: KZ + c * 1.9, face: g.rotation.y };   /* 門口前面一點點 */
+  }
+  // ---- 海洋博物館的門面：白色石柱、三角屋頂、藍色招牌、門口的鯨魚尾巴雕像 ----
+  {
+    const [KX, KZ] = [10.5, -5], g = new THREE.Group(); g.position.set(KX, terrainH(KX, KZ), KZ); g.rotation.y = faceTo(KX, KZ); scene.add(g);
+    const stone = '#eef0ea', stone2 = '#d9dcd2';
+    g.add(box([6.4, 0.4, 4.6], stone2, [0, 0.2, -0.4]));                                   // 台階
+    g.add(box([6.8, 0.2, 5.0], stone2, [0, 0.05, -0.4]));
+    g.add(box([5.8, 3.4, 3.4], stone, [0, 2.1, -0.9]));                                    // 本體
+    for (const sx of [-2.5, -1.25, 1.25, 2.5]){ const col = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 3.2, 12), mat('#fbfbf6', 0.6)); col.position.set(sx, 2.0, 1.15); col.castShadow = true; g.add(col); }
+    g.add(box([6.4, 0.3, 4.4], stone2, [0, 3.75, -0.4]));                                  // 屋簷
+    { const sh = new THREE.Shape(); sh.moveTo(-3.3, 0); sh.lineTo(3.3, 0); sh.lineTo(0, 1.3); sh.lineTo(-3.3, 0); const pg = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 4.4, bevelEnabled: false }), mat('#f4f5ef', 0.7)); pg.position.set(0, 3.9, -2.6); pg.castShadow = true; g.add(pg); }
+    g.add(box([1.3, 2.3, 0.08], '#2f5f7a', [0, 1.55, 0.83]));                               // 門
+    g.add(box([1.5, 0.12, 0.12], '#c9a24a', [0, 2.75, 0.85]));
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96; const cx = cv.getContext('2d'); cx.fillStyle = '#1f4f6e'; cx.fillRect(0, 0, 512, 96); cx.fillStyle = '#ffe9a8'; cx.font = 'bold 54px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('🏛 海洋博物館', 256, 50);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.64), new THREE.MeshBasicMaterial({ map: tex })); sign.position.set(0, 3.25, 1.36); g.add(sign);
+    { const tail = new THREE.Group(); tail.position.set(-2.9, 0.4, 2.0); const tm = mat('#5f8ea8', 0.5); const st = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 1.2, 10), tm); st.position.y = 0.6; tail.add(st);
+      for (const sd of [-1, 1]){ const fl = box([0.9, 0.08, 0.38], null, [sd * 0.42, 1.25, 0], tm); fl.rotation.z = sd * 0.45; tail.add(fl); } g.add(tail); }   // 鯨魚尾巴雕像
+    for (const sx of [-1.0, 1.0]){ const lan = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.7 })); lan.position.set(sx, 2.6, 1.0); g.add(lan); lanterns.push(lan); }
+    const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addOBoxCol(KX - sn * 0.9, KZ - c * 0.9, 6.0, 3.6, g.rotation.y);
+    MUSEUM_DOOR = { x: KX + sn * 1.9, z: KZ + c * 1.9, face: g.rotation.y };
   }
 
 
@@ -2635,7 +2662,7 @@ function shoreSpot(){
   const t = performance.now();
   if (Math.hypot(me.pos.x - Shore.x, me.pos.z - Shore.z) < 0.25 && Math.abs(lerpAngle(me.rot, Shore.r, 1) - me.rot) < 0.01 && t - Shore.at < 600) return Shore.res;
   Shore.x = me.pos.x; Shore.z = me.pos.z; Shore.r = me.rot; Shore.at = t; Shore.res = null;
-  if (inCafe() || House.on) return null;   /* 食堂裡、房子裡不能釣魚（底下其實是海） */
+  if (inIndoor() || House.on) return null;   /* 食堂、博物館、房子裡不能釣魚（底下其實是海） */
   if (myBoat || mySeat) return null;
   { const h = Math.hypot(me.pos.x - FROST.lake.x, me.pos.z - FROST.lake.z) < FROST.lake.r + 1 && FROST.holes.find(h => Math.hypot(me.pos.x - h[0], me.pos.z - h[1]) < 2.2); if (h){ const dx = h[0] - me.pos.x, dz = h[1] - me.pos.z, L = Math.hypot(dx, dz) || 1; Shore.res = Object.assign({}, SPOT_BY_ID.icelake, { pos: me.pos.clone(), dir: new THREE.Vector2(dx / L, dz / L), shore: true, legendBoost: 1, hole: h }); return Shore.res; } }
   const dirs = [me.rot]; for (let k = 1; k <= 6; k++){ dirs.push(me.rot + k * 0.45); dirs.push(me.rot - k * 0.45); }
@@ -2712,7 +2739,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 function updateCamera2(dt){
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   const reelOn = F.phase === 'reeling' && !Photo.on;
@@ -2756,7 +2783,7 @@ function actionDown(){
     if (nearSnorkel()){ act.classList.remove('down'); startDive('reef', { x: me.pos.x, z: me.pos.z }); return; }   /* 珊瑚礁島：從沙灘下水浮潛 */
     let spot;
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
-    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } } return; } spot = ns.spot; }
+    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } else if (inMuseum()){ act.classList.remove('down'); openMuseum(); } } return; } spot = ns.spot; }
     if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('🎫 要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
@@ -3067,13 +3094,14 @@ function updateFishing(dt, t){
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
     else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
     else if (inCafe()){ label = '做料理'; sub = '🏮 潮汐食堂'; cls = 'shop'; }
+    else if (inMuseum()){ label = '捐魚'; sub = '🏛️ 海洋博物館'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if ((F.phase === 'waiting' || F.phase === 'bite') && F.spot && F.spot.id === 'shrimp' && Rig.rig !== 'lure'){ label = '提竿'; sub = '浮標整個沉下去才拉'; cls = ''; }
@@ -3547,7 +3575,12 @@ const FURN = {
   paint:{ name:'畫', price:0, rad:0.45, g:'_base' },
   plant:{ name:'盆栽', price:150, rad:0.4, g:'plant' }, bigplant:{ name:'大盆栽', price:300, rad:0.5, g:'plant' },
 };
-const FURN_GROUPS = [['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
+// 博物館魚拓（078）：集滿一區才拿得到，擺在家裡不用錢
+function MZ_REGIONS(){ return SPOTS.filter(s => s.id !== 'isle' && Array.isArray(s.fish) && s.fish.some(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of)); }
+function mzNeed(s){ return [...new Set(s.fish.filter(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of))]; }
+function mzSlots(s){ return [...new Set(s.fish.filter(id => FISH_BY_ID[id] && !/^nx/.test(id)))]; }
+for (const s of MZ_REGIONS()) FURN['gy_' + s.id] = { name: s.label + '魚拓', price: 0, rad: 0.45, g: 'gy', gy: s.id };
+const FURN_GROUPS = [['gy', '🏛️ 博物館魚拓（集滿一區才拿得到）'], ['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
 // KayKit Furniture Bits（Kay Lousberg，CC0）的家具：models/kaykit_furn.glb，價格大小跟伺服器 069_kaykit_furn.sql 一樣
 const KKF_LIST = {
   kk_bed_single_A:{ name:'原木單人床', price:650, rad:1.0, g:'bed', base:'bed', kk:'bed_single_A', bed:1 },
@@ -3708,6 +3741,7 @@ function furnMesh(t){
   if (FURN[t] && FURN[t].dz) return FURN[t].dz.base === 'paint' ? paintMesh(FURN[t].dz) : fzMesh(FURN[t].dz);
   if (t === 'paint') return paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'sea', fish:null });
   if (FURN[t] && FURN[t].kk) return kkfMesh(t);
+  if (FURN[t] && FURN[t].gy) return gyMesh(FURN[t].gy);
   const g = new THREE.Group(), B = (sz, c, p, rough) => { const b = box(sz, c, p, mat(c, rough == null ? 0.8 : rough, { emissive:c, emissiveIntensity:0.1 })); g.add(b); return b; };
   const C = (rt, rb, h, c, p, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 12), mat(c, 0.7, { emissive:c, emissiveIntensity:0.1 })); m.position.set(p[0], p[1], p[2]); g.add(m); return m; };
   const wood = '#8c5d3b', lw = '#c79a6b';
@@ -4107,8 +4141,8 @@ function renderFurnSheet(body){
   }
   body.appendChild(el('p', 'sub', `${houseUp(it) ? `現在在 ${curFloor(it) + 1} 樓，這一層` : '這棟房子'}有 ${floorFurn(it).length} / 40 件家具。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。收掉退一半金幣。床可以認領，房門上會掛你的名字。`));
   if (!FZ.list && Cloud.on) loadMu(); if (!Cai.list && Cloud.on) loadCai();
-  for (const [gk, title] of FURN_GROUPS){ if ((gk === 'mu' || gk === 'cai') && !Object.values(FURN).some(v => v.g === gk)) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
-    for (const [k, v] of Object.entries(FURN).filter(([, v]) => v.g === gk)){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
+  for (const [gk, title] of FURN_GROUPS){ if ((gk === 'mu' || gk === 'cai') && !Object.values(FURN).some(v => v.g === gk)) continue; if (gk === 'gy' && !Object.keys(FURN).some(k => FURN[k].g === 'gy' && (rec.owned || []).includes(k))) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
+    for (const [k, v] of Object.entries(FURN).filter(([k2, v]) => v.g === gk && (gk !== 'gy' || (rec.owned || []).includes(k2)))){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・家裡 ${f.filter(x => x.t === k).length} 個`)); li.appendChild(d);
       const b = el('button', 'tbtn', '拿去擺'); b.disabled = rec.coins < v.price; b.addEventListener('click', () => startFurn(k)); const a = el('div', 'tacts'); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
@@ -4847,15 +4881,15 @@ function updateEnv(dt, t){
       const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { const W2 = WEATHERS[Env.wx]; toast(`${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}<br>${W2.icon} ${W2.name}：${W2.desc}<br>${Env.tide.icon} ${Env.tide.name}：海邊、外海、小島在漲潮時最好釣，乾潮時比較難。<br>🧔 ${esc(dailyTip().text)}`); }); }
     Env.lastWx = Env.wx; }
   // 畫面：光線變暗、下雨、起霧、打雷
-  const dim = House.on || inHall() || inCafe() ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
+  const dim = House.on || inHall() || inIndoor() ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
   sun.intensity *= Env.k; hemi.intensity *= 0.55 + 0.45 * Env.k;
-  if (W.fog && !House.on && !inHall() && !inCafe()){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
+  if (W.fog && !House.on && !inHall() && !inIndoor()){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
   if (!Env.rain) Env.rain = buildRain();
-  const rn = House.on || Dive.on || inHall() || inCafe() ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
+  const rn = House.on || Dive.on || inHall() || inIndoor() ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
   if (rn > 0){ Env.rain.geometry.setDrawRange(0, rn * 2); Env.rain.position.set(camera.position.x, camera.position.y - 6, camera.position.z); const a = Env.rain.geometry.attributes.position.array, fall = dt * (W.storm ? 26 : 18);
     for (let i = 0; i < rn; i++){ const o = i * 6; a[o + 1] -= fall; a[o + 4] -= fall; if (a[o + 1] < 0){ a[o + 1] += 18; a[o + 4] += 18; } if (W.storm){ a[o + 3] = a[o] + 0.25; } } Env.rain.geometry.attributes.position.needsUpdate = true;
     if (Math.random() < dt * 6) ripple(me.pos.x + (Math.random() - 0.5) * 16, me.pos.z + (Math.random() - 0.5) * 16); }
-  if (W.storm && !House.on && !Dive.on && !inHall() && !inCafe()){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
+  if (W.storm && !House.on && !Dive.on && !inHall() && !inIndoor()){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
   if (Dive.on) diveEnvFx();
   updateSeasonFx(dt, t, rn > 0);
   const chip = $('#wxChip'); if (chip){ const txt = `${SEASONS[SEASON].icon} ${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
@@ -5016,6 +5050,7 @@ const ACH = [
   { id:'s10',   icon:'📗', name:'小小圖鑑',     desc:'圖鑑收集 10 種魚',          cur:speciesN, goal:10 },
   { id:'s40',   icon:'📘', name:'圖鑑達人',     desc:'圖鑑收集 40 種魚',          cur:speciesN, goal:40 },
   { id:'sAll',  icon:'📚', name:'圖鑑全收集',   desc:'所有魚都釣過',              cur:() => FISH.filter(f => !f.of && rec.count[f.id]).length, goal:() => FISH.filter(f => !f.of).length, title:'圖鑑博士' },
+  { id:'mzAll', icon:'🏛️', name:'博物館全集滿', desc:'海洋博物館每一區都集滿、領了獎勵', cur:() => (rec.owned || []).filter(x => /^gy_/.test(x)).length, goal:() => MZ_REGIONS().length, title:'博物館榮譽館長' },
   { id:'l1',    icon:'🐉', name:'傳說的開始',   desc:'釣到第一條傳說魚',          cur:() => rec.legend, goal:1 },
   { id:'l10',   icon:'👑', name:'傳說獵人',     desc:'釣到 10 條傳說魚',          cur:() => rec.legend, goal:10, title:'傳說獵人' },
   { id:'w100',  icon:'🐋', name:'巨物',         desc:'釣到 100 公斤以上的魚',     cur:() => rec.bestW, goal:100, kg:true, title:'巨物殺手' },
@@ -5323,6 +5358,124 @@ function exitCafe(){
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (mySeat) standUp(); if (CookGame.on) return;
   setTimeout(() => { const f = CAFE_DOOR.face || 0; me.pos.x = CAFE_DOOR.x + Math.sin(f) * 0.6; me.pos.z = CAFE_DOOR.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; if (Venue.cafeDist) cam.dist = Venue.cafeDist; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260);
 }
+// ===== 🏛️ 海洋博物館（078）：每一區一個展示缸（左右兩面牆各 6 個、後面 4 個），缸裡游著大家捐的魚，牌子寫這一區展出了幾種 =====
+const Museum = { list:null, my:null, at:0, busy:false, tab:'donate', region:null, by:new Map() };
+function buildMuseum(){
+  const S = MUSEUM, g = new THREE.Group(); scene.add(g); Venue.museum = g; g.visible = false; const Y = S.y, H = 4.6;
+  const B = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(S.x + x, y, S.z + z); o.receiveShadow = true; g.add(o); return o; };
+  const wallM = mat('#dfeaf0', 0.9, { emissive:'#dfeaf0', emissiveIntensity:0.14 }), dark = mat('#2f4f63', 0.7);
+  B(S.w, 0.2, S.d, mat('#e6e2d8', 0.5), 0, Y - 0.1, 0);   // 石頭地板
+  for (let x = -S.w / 2 + 2; x < S.w / 2; x += 2) B(0.03, 0.004, S.d, mat('#cfc9bc', 0.6), x, Y + 0.003, 0);
+  for (let z = -S.d / 2 + 2; z < S.d / 2; z += 2) B(S.w, 0.004, 0.03, mat('#cfc9bc', 0.6), 0, Y + 0.003, z);
+  for (const [w, x, z, ry] of [[S.w, 0, -S.d / 2, 0], [S.w, 0, S.d / 2, Math.PI], [S.d, -S.w / 2, 0, Math.PI / 2], [S.d, S.w / 2, 0, -Math.PI / 2]]){ const o = new THREE.Mesh(new THREE.PlaneGeometry(w, H), wallM); o.position.set(S.x + x, Y + H / 2, S.z + z); o.rotation.y = ry; g.add(o); }
+  { const o = new THREE.Mesh(new THREE.PlaneGeometry(S.w, S.d), mat('#f2f5f6', 0.9, { emissive:'#f2f5f6', emissiveIntensity:0.18 })); o.rotation.x = Math.PI / 2; o.position.set(S.x, Y + H, S.z); g.add(o); }
+  for (const z of [-S.d / 2 + 0.03, S.d / 2 - 0.03]) B(S.w, 0.5, 0.03, dark, 0, Y + 0.25, z); for (const x of [-S.w / 2 + 0.03, S.w / 2 - 0.03]) B(0.03, 0.5, S.d, dark, x, Y + 0.25, 0);
+  for (const x of [-6, 0, 6]) for (const z of [-4, 2]) B(2.4, 0.06, 0.24, mat('#ffffff', 0.3, { emissive:'#ffffff', emissiveIntensity:1.3 }), x, Y + H - 0.1, z);   // 天花板的燈
+  // 中間：一副大大的鯨魚骨架（掛在天花板下）
+  { const bone = mat('#f3ecdc', 0.6), wg = new THREE.Group(); wg.position.set(S.x, Y + H - 1.3, S.z - 0.5);
+    for (let i = 0; i < 14; i++){ const k = i / 13, r = 0.55 * Math.sin(Math.PI * Math.min(1, k * 1.25)) + 0.08; const v = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), bone); v.position.set(-4 + i * 0.62, 0, 0); wg.add(v);
+      if (i > 1 && i < 11){ const rib = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 5, 14, Math.PI), bone); rib.position.set(-4 + i * 0.62, -0.02, 0); rib.rotation.set(Math.PI, Math.PI / 2, 0); wg.add(rib); } }
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), bone); skull.scale.set(1.6, 0.7, 0.9); skull.position.set(-4.6, 0, 0); wg.add(skull);
+    for (const sd of [-1, 1]){ const fin = box([0.9, 0.05, 0.3], null, [-2.6, -0.35, sd * 0.55], bone); fin.rotation.y = sd * 0.5; wg.add(fin); }
+    const tl = box([0.25, 0.05, 1.3], null, [4.7, 0, 0], bone); wg.add(tl); for (const sd of [-1, 1]) wg.add(new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.3, 4), mat('#888888', 0.5)).translateX(sd * 2).translateY(0.65)); g.add(wg); Venue.mzWhale = wg; }
+  // 櫃台和館長
+  B(2.6, 1.0, 0.8, mat('#7a5638', 0.7), 0, Y + 0.5, S.d / 2 - 5.2); B(2.7, 0.06, 0.9, mat('#c79a6b', 0.6), 0, Y + 1.03, S.d / 2 - 5.2); addBoxCol(S.x, S.z + S.d / 2 - 5.2, 2.7, 0.9);
+  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.5), new THREE.MeshBasicMaterial({ map: signTex('捐魚請找館長', '#1f4f6e', '#ffe9a8', 512, 110) })); sg.position.set(S.x, Y + 1.5, S.z + S.d / 2 - 4.74); g.add(sg); }
+  Venue.mzDesk = { x: S.x, z: S.z + S.d / 2 - 2.2 - 2.0 };
+  { const f = new Fisher({ shirt:'#2f5f7a', hat:'#f4f6f8', name:'館長 海音・海洋博物館', kind:'npc' }); f.pos.set(S.x + 0.3, Y, S.z + S.d / 2 - 5.9); f.baseY = Y; f.rot = 0; f.setGear({ hat:'hat_none', acc:'acc_glasses', top:'top_vest' }); f.nm.classList.add('quest'); f.lines = ['歡迎來到海洋博物館！捐一條魚，名字就會刻在展示缸前面', '每一區集滿了，記得來找我領魚拓', '這副鯨魚骨架是很久很久以前漂到南方沙灘的', '第一個捐的人名字會一直留著喔']; Venue.mzCur = f; }
+  // 展示缸：左右牆各 6 個、後牆 4 個
+  const R0 = MZ_REGIONS(), spots = []; for (let i = 0; i < 6; i++) spots.push([-S.w / 2 + 0.75, -6 + i * 2.4, Math.PI / 2]); for (let i = 0; i < 6; i++) spots.push([S.w / 2 - 0.75, -6 + i * 2.4, -Math.PI / 2]); for (let i = 0; i < 4; i++) spots.push([-4.5 + i * 3, -S.d / 2 + 0.75, 0]);
+  Venue.mzTanks = [];
+  R0.forEach((sp, i) => { const P = spots[i]; if (!P) return; const tg = new THREE.Group(); tg.position.set(S.x + P[0], Y, S.z + P[1]); tg.rotation.y = P[2]; g.add(tg); const col = sp.color || '#5fb6e3';
+    tg.add(box([2.0, 0.72, 0.95], null, [0, 0.36, 0], mat('#3a4a58', 0.6))); tg.add(box([2.0, 0.08, 0.95], null, [0, 0.76, 0], mat('#c9a24a', 0.4)));
+    tg.add(box([1.9, 0.12, 0.85], null, [0, 0.86, 0], mat('#e8d9b0', 0.9)));   // 沙
+    const water = new THREE.Mesh(new THREE.BoxGeometry(1.92, 1.15, 0.87), new THREE.MeshStandardMaterial({ color: shade(col, 0.35), transparent:true, opacity:0.32, roughness:0.1, metalness:0.1, depthWrite:false })); water.position.set(0, 1.4, 0); tg.add(water);
+    for (const [x, y] of [[-0.98, 1.4], [0.98, 1.4]]) tg.add(box([0.05, 1.2, 0.92], null, [x, y, 0], mat('#2f3b44', 0.5))); tg.add(box([2.02, 0.06, 0.95], null, [0, 2.0, 0], mat('#2f3b44', 0.5)));
+    for (let k = 0; k < 3; k++){ const w = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.4 + k * 0.12, 4), mat('#4e9a52', 0.8)); w.position.set(-0.7 + k * 0.6, 1.1, -0.25); tg.add(w); }
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.48), new THREE.MeshBasicMaterial({ map: tx })); pl.position.set(0, 2.35, 0.1); tg.add(pl);
+    const c = Math.cos(P[2]), sn = Math.sin(P[2]); addOBoxCol(S.x + P[0], S.z + P[1], 2.1, 1.0, P[2]);
+    Venue.mzTanks.push({ id: sp.id, label: sp.label, g: tg, cv, tx, fish: [], fx: S.x + P[0] + sn * 1.3, fz: S.z + P[1] + c * 1.3, key: '' }); });
+  // 出口
+  B(1.5, 2.3, 0.06, mat('#2f5f7a', 0.6), 0, Y + 1.15, S.d / 2 - 0.04); { const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.4), new THREE.MeshBasicMaterial({ map: signTex('出口', '#3fbf9d', '#ffffff', 256, 96) })); sg.position.set(S.x, Y + 2.6, S.z + S.d / 2 - 0.06); sg.rotation.y = Math.PI; g.add(sg); }
+  Venue.mzExit = { x: S.x, z: S.z + S.d / 2 - 0.9 };
+  for (const [x, z, w, d] of [[0, -S.d / 2, S.w, 0.3], [0, S.d / 2, S.w, 0.3], [-S.w / 2, 0, 0.3, S.d], [S.w / 2, 0, 0.3, S.d]]) addBoxCol(S.x + x, S.z + z, w, d);
+  g.traverse(o => { if (o.isMesh){ o.castShadow = false; o.userData.keep = true; } });
+  mzPlaques();
+}
+// 牌子：區名、展出了幾種（全部的人一起捐的）
+function mzPlaques(){ for (const tk of Venue.mzTanks || []){ const sp = SPOT_BY_ID[tk.id], all = mzSlots(sp), got = all.filter(id => Museum.by.has(id)).length, k = got + '/' + all.length; if (tk.key === k) continue; tk.key = k;
+  const c = tk.cv.getContext('2d'); c.fillStyle = '#1f4f6e'; c.fillRect(0, 0, 512, 128); c.strokeStyle = '#c9a24a'; c.lineWidth = 8; c.strokeRect(4, 4, 504, 120); c.fillStyle = '#ffe9a8'; c.textAlign = 'center'; c.font = 'bold 44px sans-serif'; c.fillText(sp.label, 256, 56); c.fillStyle = '#ffffff'; c.font = 'bold 30px sans-serif'; c.fillText(`展出 ${got} / ${all.length} 種`, 256, 104); tk.tx.needsUpdate = true; } }
+// 缸裡的魚：每一區挑最多 4 種大家捐過的
+function mzFillTanks(){ for (const tk of Venue.mzTanks || []){ for (const f of tk.fish) tk.g.remove(f.m); tk.fish = []; const ids = mzSlots(SPOT_BY_ID[tk.id]).filter(id => Museum.by.has(id)).slice(-4);
+  ids.forEach((id, i) => { try { const f = FISH_BY_ID[id], sz = (f.min + f.max) / 2, m = fishModel(f, clamp(0.16 + Math.log10(1 + sz) * 0.12, 0.14, 0.34)); m.position.set(0, 1.3 + i * 0.18, 0); tk.g.add(m); tk.fish.push({ m, ph: Math.random() * 6, sp: 0.4 + Math.random() * 0.4, y: 1.05 + (i % 4) * 0.22 }); } catch(e){} }); } }
+function updateMuseumHall(dt, t){ const im = inMuseum(); if (Venue.museum && Venue.museum.visible !== im){ Venue.museum.visible = im; if (im){ mzFillTanks(); } }
+  const cur = Venue.mzCur; if (cur){ cur.av.g.visible = im; if (im){ const d = Math.hypot(me.pos.x - cur.pos.x, me.pos.z - cur.pos.z); if (d < 6) cur.rot = lerpAngle(cur.rot, Math.atan2(me.pos.x - cur.pos.x, me.pos.z - cur.pos.z), 1 - Math.exp(-3 * dt));
+      if (d < 6 && t > (cur.talkAt || 0)){ cur.say(cur.lines[Math.floor(Math.random() * cur.lines.length)], '', 5); cur.talkAt = t + rand(16, 26); } cur.update(dt, t); cur.placeTag(); } else cur.tag.style.display = 'none'; }
+  if (!im) return; if (!Museum.at || Date.now() - Museum.at > 60000) loadMuseum();
+  for (const tk of Venue.mzTanks || []) for (const f of tk.fish){ const a = t * f.sp + f.ph, x = Math.sin(a) * 0.72, vx = Math.cos(a); f.m.position.set(x, f.y + Math.sin(a * 1.7) * 0.05, Math.sin(a * 0.6) * 0.18); f.m.rotation.y = vx > 0 ? 0 : Math.PI; }
+  if (Venue.mzWhale) Venue.mzWhale.rotation.y = Math.sin(t * 0.1) * 0.05; }
+function enterMuseum(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
+  setTimeout(() => { me.pos.x = Venue.mzExit.x; me.pos.z = Venue.mzExit.z - 2.2; me.baseY = MUSEUM.y; Jump.gy = MUSEUM.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.55; Venue.mzDist = cam.dist; cam.dist = Math.min(cam.dist, 7); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🏛️ 歡迎來到海洋博物館！', 1.4); loadMuseum(true); }, 260); }
+function exitMuseum(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door();
+  setTimeout(() => { const f = MUSEUM_DOOR.face || 0; me.pos.x = MUSEUM_DOOR.x + Math.sin(f) * 0.6; me.pos.z = MUSEUM_DOOR.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; if (Venue.mzDist) cam.dist = Venue.mzDist; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260); }
+async function loadMuseum(force){ if (Museum.busy || !Cloud.on || !Cloud.sb) return; if (!force && Museum.at && Date.now() - Museum.at < 20000) return; Museum.busy = true; Museum.at = Date.now();
+  try { const [a, b] = await Promise.all([Cloud.sb.rpc('museum_list'), Cloud.sb.rpc('museum_my')]); if (Array.isArray(a.data)){ Museum.list = a.data; Museum.by = new Map(a.data.map(r => [r.s, r])); } if (b.data) Museum.my = b.data; } catch(e){}
+  Museum.busy = false; mzPlaques(); if (inMuseum()) mzFillTanks(); if (!$('#sheet').hidden && curTab === 'museum') renderTab(); }
+function openMuseum(region){ if (region){ Museum.tab = 'show'; Museum.region = region; } openSheet('museum'); loadMuseum(); }
+function renderMuseum(body){
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🏛️ 海洋博物館</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能捐魚、看展覽。')); return; }
+  const my = new Set((Museum.my && Museum.my.slots) || []), claims = new Set((Museum.my && Museum.my.claims) || []);
+  const seg = el('div', 'seg'); [['donate', '🐟 捐魚'], ['show', '🏛️ 展示'], ['reward', '🎁 收集獎勵']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Museum.tab === k)); b.addEventListener('click', () => { Museum.tab = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
+  if (!Museum.list){ body.appendChild(el('div', 'empty', '館長正在整理展示缸…')); return; }
+  if (Museum.tab === 'donate'){
+    body.appendChild(el('p', 'sub', '從魚缸挑一條魚捐出來（魚會從魚缸拿走）。每一種魚、變種、白化都是一格；你是第一個捐的，名字會刻在展示缸前面。同一種自己只能捐一次。'));
+    const tank = (rec.tank || []).filter(x => FISH_BY_ID[x.f]), cand = [], done = [];
+    for (const x of tank){ if (/^nx/.test(x.f)) continue; (my.has(x.f) ? done : cand).push(x); }
+    const best = new Map(); for (const x of cand){ const o = best.get(x.f); if (!o || x.w > o.w) best.set(x.f, x); }   /* 同一種只列最重的那條 */
+    const ul = el('ul', 'shoplist cols');
+    if (!best.size) body.appendChild(el('div', 'empty', tank.length ? '魚缸裡的魚你都捐過了，去釣新的魚吧！' : '魚缸裡沒有魚。'));
+    for (const x of [...best.values()].sort((a, b) => (Museum.by.has(a.f) ? 1 : 0) - (Museum.by.has(b.f) ? 1 : 0))){ const f = FISH_BY_ID[x.f], li = el('li'), first = !Museum.by.has(x.f);
+      const cv = fishCanvas(f, true, 64, 40); cv.className = 'gearic'; li.appendChild(cv);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name} ${(+x.w).toFixed(2)}kg`)); d.appendChild(el('div', 'sub2', first ? '🌟 還沒有人捐過！你會是首位捐贈者' : `首位：${Museum.by.get(x.f).fn}`)); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn', '捐出'); b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定捐？'; b.classList.add('warn'); return; } b.disabled = true;
+        try { const { data, error } = await Cloud.sb.rpc('donate_fish', { p_t: x.t }); if (error) throw error; adoptRow(data.player); my.add(x.f); if (Museum.my) Museum.my.slots = [...my];
+          if (data.first){ SFX.catch(); flash(`🏛️ 你是第一個捐出${f.name}的人，名字刻在博物館了！`, 2.4); } else { SFX.coin(); flash(`🏛️ 捐出了${f.name}，謝謝你！`, 1.6); } loadMuseum(true); }
+        catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+    body.appendChild(ul); return; }
+  const R0 = MZ_REGIONS();
+  if (Museum.tab === 'reward'){
+    body.appendChild(el('p', 'sub', `每一區的一般魚都捐齊了，可以領一次：金幣，加上那一區專屬的魚拓家具（擺在家裡不用錢）。變種是加分的格子，不用捐也能集滿。已經領了 ${claims.size} / ${R0.length} 區${claims.size >= R0.length ? '・🏅 博物館榮譽館長' : ''}。`));
+    const ul = el('ul', 'shoplist cols');
+    for (const sp of R0){ const need = mzNeed(sp), got = need.filter(id => my.has(id)).length, li = el('li', claims.has(sp.id) ? 'on' : '');
+      li.appendChild(el('span', 'dishic', claims.has(sp.id) ? '✅' : got >= need.length ? '🎁' : '🐟'));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', sp.label)); d.appendChild(el('div', 'sub2', claims.has(sp.id) ? '已經領了・魚拓在家具裡' : `捐了 ${got} / ${need.length} 種・獎勵 🪙${300 + 30 * need.length} ＋ 魚拓`)); li.appendChild(d);
+      if (!claims.has(sp.id) && got >= need.length){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '領獎'); b.addEventListener('click', async () => { b.disabled = true;
+          try { const { data, error } = await Cloud.sb.rpc('museum_claim', { p_region: sp.id }); if (error) throw error; adoptRow(data.player); claims.add(sp.id); if (Museum.my) Museum.my.claims = [...claims]; SFX.catch(); flash(`🎁 ${sp.label}集滿了！+${data.coins} 金幣，還有「${sp.label}魚拓」`, 2.6); renderTab(); }
+          catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); a.appendChild(b); li.appendChild(a); }
+      ul.appendChild(li); }
+    body.appendChild(ul); return; }
+  // 展示：一區一區看，沒人捐過的是問號剪影
+  if (!Museum.region || !SPOT_BY_ID[Museum.region]) Museum.region = R0[0] && R0[0].id;
+  const chips = el('div', 'chipline'); for (const sp of R0){ const all = mzSlots(sp), got = all.filter(id => Museum.by.has(id)).length, b = el('button', 'chip' + (Museum.region === sp.id ? ' on' : ''), `${sp.label} ${got}/${all.length}`); b.addEventListener('click', () => { Museum.region = sp.id; renderTab(); }); chips.appendChild(b); } body.appendChild(chips);
+  const g = el('div', 'dex');
+  for (const id of mzSlots(SPOT_BY_ID[Museum.region])){ const f = FISH_BY_ID[id], r = Museum.by.get(id), it = el('div', 'it' + (r ? '' : ' lock'));
+    it.appendChild(fishCanvas(f, !!r, 96, 60)); it.appendChild(el('div', 'n', r ? f.name : '？？？')); if (f.of) it.appendChild(el('span', 'chip var', '✨ 變種'));
+    it.appendChild(el('div', 'meta', r ? `首位：${r.fn}・${r.fd}・${(+r.fw).toFixed(2)}kg` : '還沒有人捐過'));
+    if (r && r.mn && (r.mn !== r.fn || +r.mw !== +r.fw)) it.appendChild(el('div', 'meta', `最大展示：${r.mn}・${(+r.mw).toFixed(2)}kg`));
+    if (my.has(id)) it.appendChild(el('div', 'meta tm', '✔ 我捐過'));
+    g.appendChild(it); }
+  body.appendChild(g);
+}
+// 魚拓家具：畫架上的一張和紙，墨色的魚、紅色印章、區名
+function gyMesh(region){ const sp = SPOT_BY_ID[region], g = new THREE.Group(); const pick = sp ? (mzNeed(sp).map(id => FISH_BY_ID[id]).sort((a, b) => RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || (b.max - a.max))[0]) : null;
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 192; const c = cv.getContext('2d'); c.fillStyle = '#f3ead2'; c.fillRect(0, 0, 256, 192);
+  if (pick){ try { const fc = fishCanvas(pick, false, 200, 120); c.globalAlpha = 0.9; c.drawImage(fc, 28, 22, 200, 120); c.globalAlpha = 1; } catch(e){} }
+  c.fillStyle = '#2a2420'; c.font = 'bold 22px serif'; c.textAlign = 'center'; c.fillText((sp ? sp.label : '') + ' 魚拓', 128, 170); c.fillStyle = '#c8161c'; c.fillRect(214, 150, 26, 26); c.fillStyle = '#f3ead2'; c.font = 'bold 15px serif'; c.fillText('館', 227, 169);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+  const fr = box([0.95, 0.74, 0.05], null, [0, 1.25, 0], mat('#5a3d2b', 0.6)); g.add(fr); const pic = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.64), new THREE.MeshBasicMaterial({ map: tx })); pic.position.set(0, 1.25, 0.03); g.add(pic);
+  for (const sx of [-0.32, 0.32]){ const l = box([0.05, 1.05, 0.05], null, [sx, 0.5, -0.12], mat('#7a5638', 0.7)); l.rotation.x = 0.12; g.add(l); } const bl = box([0.05, 1.1, 0.05], null, [0, 0.55, -0.32], mat('#7a5638', 0.7)); bl.rotation.x = -0.32; g.add(bl);
+  return g; }
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
 function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); }
 function enterShrimp(){
@@ -5431,6 +5584,7 @@ function renderShrimpChip(ih){
 function updateVenues(dt, t){
   const nearI = Venue.penguins.length > 0 && Math.hypot(me.pos.x - ICE.x, me.pos.z - ICE.z) < 70, nearS = Math.hypot(me.pos.x - SHRIMP.x, me.pos.z - SHRIMP.z) < 50; updateAmbient(dt, t, false);
   if (Venue.snow){ Venue.snow.visible = nearI && !Dive.on; if (nearI && frameNo % 2 === 0){ const a = Venue.snow.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] -= dt * 2 * 1.2; a[i] += Math.sin(t + i) * dt * 0.3; if (a[i + 1] < 0) a[i + 1] = 14; } Venue.snow.geometry.attributes.position.needsUpdate = true; } }
+  try { updateMuseumHall(dt, t); } catch(e){}
   { const ic = inCafe(); if (Venue.cafe && Venue.cafe.visible !== ic) Venue.cafe.visible = ic; if (ic && Venue.cafeCoal) Venue.cafeCoal.material.emissiveIntensity = 1 + Math.sin(t * 7) * 0.25; }
   { const ih = inHall(); if (Venue.hall && Venue.hall.visible !== ih) Venue.hall.visible = ih; if (Venue.boss){ Venue.boss.av.g.visible = ih; if (ih){ Venue.boss.update(dt, t); Venue.boss.placeTag(); } else Venue.boss.tag.style.display = 'none'; }
     renderShrimpChip(ih); if (ih !== Venue.wasIn){ Venue.wasIn = ih; updateBobberLook(); } }
@@ -6517,17 +6671,23 @@ function nearShop(){
     if (Venue.grill && Math.hypot(me.pos.x - Venue.grill.x, me.pos.z - Venue.grill.z) < 1.8) return { id:'grill', label:'烤蝦', mode:'cook' };
     if (Venue.exit && Math.hypot(me.pos.x - Venue.exit.x, me.pos.z - Venue.exit.z) < 1.3) return { id:'shrimpexit', label:'出去', mode:'shrimpexit' };
     return null; }
+  if (inMuseum()){
+    if (Venue.mzExit && Math.hypot(me.pos.x - Venue.mzExit.x, me.pos.z - Venue.mzExit.z) < 1.3) return { id:'museumexit', label:'出去', mode:'museumexit' };
+    if (Venue.mzDesk && Math.hypot(me.pos.x - Venue.mzDesk.x, me.pos.z - Venue.mzDesk.z) < 2.4) return { id:'museum', label:'館長 海音', mode:'museum' };
+    for (const tk of Venue.mzTanks || []) if (Math.hypot(me.pos.x - tk.fx, me.pos.z - tk.fz) < 1.5) return { id:'museum', label:tk.label, mode:'museum', region:tk.id };
+    return null; }
   if (inCafe()){
     if (Venue.cafeExit && Math.hypot(me.pos.x - Venue.cafeExit.x, me.pos.z - Venue.cafeExit.z) < 1.3) return { id:'cafeexit', label:'出去', mode:'cafeexit' };
     if (Venue.cafeCounter && Math.abs(me.pos.x - Venue.cafeCounter.x) < 5 && Math.abs(me.pos.z - Venue.cafeCounter.z) < 1.6) return SHOPS.find(s => s.id === 'cook');
     return null; }
   if (Math.hypot(me.pos.x - SHRIMP_DOOR.x, me.pos.z - (SHRIMP_DOOR.z + 1.9)) < 1.6) return { id:'shrimpdoor', label:'釣蝦場', mode:'shrimpdoor' };
   if (Math.hypot(me.pos.x - CAFE_DOOR.x, me.pos.z - CAFE_DOOR.z) < 1.7) return { id:'cafedoor', label:'潮汐食堂', mode:'cafedoor' };
+  if (Math.hypot(me.pos.x - MUSEUM_DOOR.x, me.pos.z - MUSEUM_DOOR.z) < 1.7) return { id:'museumdoor', label:'海洋博物館', mode:'museumdoor' };
   for (const sh of SHOPS){ if (sh.id === 'cook') continue; const l = LANDMARKS.find(l => l.id === sh.id); if (l && Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) < 4.8) return sh; }
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -6793,7 +6953,7 @@ function renderMarket(body, inShop){
 }
 function confirmOnce(b){ if (b.dataset.sure === '1') return true; b.dataset.sure = '1'; const t = b.textContent; b.textContent = '確定？'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = t; } }, 2500); return false; }
 // ===== 推播通知（048、Edge Function tide-push）：遊戲關著時手機也會跳通知 =====
-const PUSH_KINDS = [['market', '🐟 你在魚市的魚賣掉了'], ['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚']];
+const PUSH_KINDS = [['market', '🐟 你在魚市的魚賣掉了'], ['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚'], ['museum', '🏛️ 你的名字刻在博物館了']];
 const Push = { busy:false, sub:null, prefs:null, checked:false, msg:'' };
 function pushOk(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
 function b64u(s){ const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
@@ -7060,7 +7220,7 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
-  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id)))];
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gy_[a-z]+$/.test(id)))];   /* gy_：博物館魚拓 */
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
@@ -8664,6 +8824,7 @@ function renderTab(){
   const body = $('#sheetBody'); body.textContent = '';
   $('#sheet').classList.toggle('closet', curTab === 'closet');
   if (curTab === 'closet'){ renderCloset(body); return; }
+  if (curTab === 'museum'){ renderMuseum(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'cldesign'){ renderClDesign(body); return; }
   if (curTab === 'shop'){ renderShop(body); return; }
@@ -8954,6 +9115,12 @@ function renderTab(){
       '釣具店：釣竿（越好越不容易斷線、收線越快、稀有傳說機率越高）、魚餌（每拋一次用掉一個）、窩料。',
       '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情共 54 件，可以先試穿看看，大家都看得到你的打扮。',
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
+    ]);
+    sec('🏛️ 海洋博物館', [
+      '博物館在廣場和海邊商店中間，走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
+      '每一格會刻上「首位捐贈者」的名字、日期和那條魚的重量；之後別人捐更重的，另外記「最大展示」。同一種魚自己只能捐一次。箱網、儲物箱的魚不能捐，蔚博士發現的新品種也不收。',
+      '每一個釣點的一般魚都捐齊了，可以領一次獎勵：金幣，加上那一區專屬的「魚拓」家具（只有集滿才拿得到，擺在家裡不用錢）。變種是加分的格子，不用捐也能集滿。每一區都集滿會得到稱號「博物館榮譽館長」。',
+      '你是第一個捐出某種魚的人時，會收到推播（可以在設定裡關掉）。',
     ]);
     sec('🍳 潮汐食堂（料理）', [
       '潮汐食堂在廣場旁邊，跟釣蝦場一樣從門口走進去。裡面有開放式廚房、櫃台前的高腳椅和靠牆的小桌子，美雲姨在櫃台後面。走到櫃台前（或按「做料理」）就可以做菜。',
@@ -9360,7 +9527,7 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
   flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
 
 
-addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); }
+addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 camera.position.set(4, 5, 18);
