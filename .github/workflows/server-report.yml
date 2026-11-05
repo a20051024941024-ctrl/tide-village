@@ -1,0 +1,33 @@
+# 伺服器狀況報告：每天早上 8 點多（台灣時間）看一次資料庫大小、玩家人數、今天釣了幾條、每天自動跑的排程有沒有成功
+# 只讀資料，不會改任何東西。結果在 GitHub → Actions → 「伺服器狀況報告」→ 點最新一次 → 最下面的 Summary
+# 流量（Egress）和專案有沒有被暫停，資料庫裡查不到，要到 Supabase 後台的 Usage 看
+name: 伺服器狀況報告
+on:
+  schedule:
+    - cron: '41 0 * * *'
+  workflow_dispatch: {}
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安裝 psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: 查伺服器狀況
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then echo "還沒設定 SUPABASE_DB_URL，略過"; exit 0; fi
+          U="$(echo "$DB_URL" | tr -d '\r\n' | sed 's/^ *//;s/ *$//')"
+          {
+            echo "# 🎣 潮汐釣魚村：伺服器狀況（$(TZ=Asia/Taipei date '+%Y/%m/%d %H:%M')）"
+            echo
+            if ! psql "$U" -q -f tools/server_report.sql 2>/tmp/err1; then echo "> ⚠️ 資料庫查詢失敗：$(head -c 300 /tmp/err1)"; fi
+            echo
+            if ! psql "$U" -v ON_ERROR_STOP=1 -q -f tools/server_report_cron.sql 2>/tmp/err2; then echo "## ⏰ 自動排程"; echo; echo "> 查不到排程紀錄：$(head -c 200 /tmp/err2)"; fi
+            echo
+            echo "---"
+            echo "流量（Egress，免費每月 5 GB）和專案有沒有被暫停，要到 Supabase 後台 → Usage 看。"
+          } > report.md
+          cat report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
