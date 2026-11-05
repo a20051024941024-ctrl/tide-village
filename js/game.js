@@ -2852,6 +2852,7 @@ function pickFish(spot, charge){
 function startReel(){
   F.phase = 'reeling'; F.T = 0.35; F.P = 0.3; F.surge = 0; F.seed = Math.random()*10;
   F.S = 1; F.dir = 0; F.dirUntil = now() + rand(1.2, 2.2); F.lat = 0; F.jump = 0; F.maxDist = 4 + (F.castCharge || 0) * 6 + (BIG_FISH.has(F.fish.id) ? 6 : 0);
+  F.castD = clamp(F.spot && F.spot.pos ? Math.hypot(me.bobPos.x - F.spot.pos.x, me.bobPos.z - F.spot.pos.z) : 5, 2, 22); F.slack = 0; F.run = 0; F.runAt = now() + rand(1.8, 3.5); F.dragT = 0;   /* 遛魚：魚會往外衝（線被拉出去、浮標越來越遠），線太鬆會脫鉤 */
   if (F.leap){ scene.remove(F.leap); F.leap = null; }
   F.boss = (BIG_FISH.has(F.fish.id) || F.fish.rarity === '傳說') && !(F.spot && F.spot.id === 'shrimp'); F.mash = false; F.mashHits = 0; F.surf = 0; F.surfT = now() + rand(1.2, 2.5);
   F.bossScale = F.boss ? clamp(0.55 + Math.log10(Math.max(1, F.weight || 1)) * 0.6, 0.65, 3.4) : (BIG_FISH.has(F.fish.id) ? 0.7 : 0.55);
@@ -2984,6 +2985,10 @@ function updateFishing(dt, t){
       F.jump = 1.0; ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); camShake = Math.max(camShake, big ? 0.18 : 0.08);
     }
     let pull = p * (0.55 + 0.45 * Math.sin(t*2.3 + F.seed) * Math.sin(t*0.7 + F.seed*2)) * (0.35 + 0.65 * F.S);
+    // 魚往外衝：線被拉出去（浮標越跑越遠、捲線器嘰嘰叫），這時候硬拉張力會飆高；先放開讓牠跑，牠會越跑越累
+    if (!F.shr && !F.mash){ if (F.run > 0){ F.run -= dt; F.P -= (0.12 + 0.16 * p) * dt * (F.hold ? 0.45 : 1); pull += 0.55 * p; F.S = Math.max(0, F.S - dt * 0.035);
+        F.dragT += dt; if (F.dragT > 0.07){ F.dragT = 0; SFX.tick && SFX.tick(); } if (Math.random() < dt * 10) ripple(me.bobPos.x, me.bobPos.z, Math.random() < 0.3); if (F.run <= 0) F.runAt = t + rand(3.5, 7.5) * (1.3 - p * 0.5); }
+      else if (t > F.runAt && F.S > 0.18 && F.jump <= 0){ F.run = rand(1.1, 2.3) * (0.6 + p); camShake = Math.max(camShake, 0.06); } }
     if (F.surge > 0){ F.surge -= dt; pull += 0.55 * p; } else if (Math.random() < dt * 0.3 * p){ F.surge = rand(0.4, 0.9); }
     let steer = 0; if (!uiBlocked){ steer = joy.x + ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0); } steer = clamp(steer, -1, 1);
     const counter = F.dir !== 0 && steer * F.dir < -0.35, wrong = F.dir !== 0 && steer * F.dir > 0.35;
@@ -3000,11 +3005,12 @@ function updateFishing(dt, t){
       F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S));
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
+    if (!F.shr && !F.mash && F.run <= 0 && F.jump <= 0 && !F.hold && F.T < 0.16 && F.S > 0.12) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2.5);   /* 線太鬆：魚會甩掉魚鉤 */
     F.S = Math.max(0, F.S - dt * (0.04 + (F.hold && inZone ? 0.09 : 0) + (counter ? 0.12 : 0)) / (0.6 + p * 0.8));
     me.bend = clamp(F.T, 0, 1); me.dip = 0.5 + pull*0.4; fxReel(dt);
     // 浮標：越收越近，魚往哪邊衝就往哪邊偏
     F.lat += (F.dir * 1.8 * (counter ? 0.35 : 1) - F.lat) * Math.min(1, dt * 1.6);
-    const s = F.spot; const dist = 1.4 + (1 - F.P) * (2 + F.castCharge*4.5), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
+    const s = F.spot; const dist = Math.max(1.3, F.castD * (1 - F.P) / 0.7), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);   /* 線放出去多少，浮標就真的在多遠（魚衝出去看得到） */
     let tx = s.pos.x + s.dir.x*dist + rx * F.lat + Math.sin(t*3 + F.seed)*0.4*(1-F.P), tz = s.pos.z + s.dir.y*dist + rz * F.lat + Math.cos(t*2.4)*0.4*(1-F.P);
     // 浮標一定要在水裡：左右偏到岸上就不偏，太靠近岸邊就停在最近的水面（不會被拉到陸地上）
     if (!waterAt(tx, tz)){ tx = s.pos.x + s.dir.x*dist; tz = s.pos.z + s.dir.y*dist; F.lat *= 0.5;
@@ -3016,7 +3022,7 @@ function updateFishing(dt, t){
     arc.style.strokeDashoffset = (339.3 * (1 - T)).toFixed(1); arc.style.stroke = T > 0.8 ? '#f05a4a' : T > 0.62 ? '#f3b33d' : T < 0.3 ? '#8fb7d6' : '#3fbf9d';
     $('#tRing').classList.toggle('hot', T > 0.8);
     $('#hpFill').style.width = (F.S * 100).toFixed(1) + '%';
-    $('#fhDist').textContent = ((1 - clamp(F.P, 0, 1)) * F.maxDist + 0.5).toFixed(1) + ' m';
+    const realD = Math.hypot(me.bobPos.x - me.pos.x, me.bobPos.z - me.pos.z); $('#fhDist').textContent = realD.toFixed(1) + ' m';
     $('#fhT').textContent = F.shr ? (T > 0.8 ? '太用力了，蝦子快鬆鉗了！放開！' : T < 0.3 ? '太鬆了，慢慢拉' : F.S < 0.25 ? '蝦子沒力氣了，拉上來！' : '很好，慢慢拉，保持在綠色') : F.jump > 0 ? '🐟 跳起來了！快放開！' : T > 0.8 ? '線快斷了！放開！' : counter ? '👍 反方向拉，魚越來越累了' : wrong ? '⚠️ 方向拉錯了！' : T < 0.3 ? '太鬆了，按住拉' : F.S < 0.25 ? '魚沒力氣了，一口氣拉上來！' : '很好，保持在綠色';
     $('#fhT').className = 'fh-hint' + (F.jump > 0 || T > 0.8 || wrong ? ' warn' : counter ? ' good' : '');
     // ---- 跟著魚走的標記：體力條、魚的圖示、距離；收線時跳出傷害數字 ----
@@ -3026,8 +3032,8 @@ function updateFishing(dt, t){
       $('#fmHp').style.width = (F.S * 100).toFixed(1) + '%';
       if (F.boss){ $('#bbHp').style.width = (F.S * 100).toFixed(1) + '%'; $('#bbPct').textContent = Math.ceil(F.S * 100) + '%'; mk.classList.add('boss'); } else mk.classList.remove('boss');
       { const want = F.boss && F.jump > 0 ? 44 : F.mash ? 50 : 55; if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
-      $('#fmDist').textContent = ((1 - clamp(F.P, 0, 1)) * F.maxDist + 0.5).toFixed(1) + 'm';
-      const warn = F.mash ? '' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
+      $('#fmDist').textContent = realD.toFixed(1) + 'm';
+      const warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.8 ? '線太鬆！快收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
       const fw = $('#fmWarn'); if (fw.textContent !== warn) fw.textContent = warn; fw.className = 'fm-warn' + (warn ? ' on' : '') + (F.S < 0.25 && T <= 0.8 && !F.jump && !wrong ? ' good' : '');
       const dir = $('#fhDir'); if (!dir.hidden){ dir.style.left = (sxC + (F.dir < 0 ? -110 : 110)) + 'px'; dir.style.top = (syC - 10) + 'px'; }
       mk.classList.toggle('hot', T > 0.8);
@@ -3041,7 +3047,8 @@ function updateFishing(dt, t){
     }
     if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`🦈 ${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
     else if (F.T >= 1){ SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
-    else if (F.P <= 0){ SFX.fail(); flash('魚掙脫了', 1.4); cancelFishing(); }
+    else if (F.slack > 2.2){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); cancelFishing(); }
+    else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); cancelFishing(); }
     else if (F.P >= 1){ landFish(); }
   }
   // HUD + button
@@ -6657,7 +6664,7 @@ function applyDesigns(av, gear){
 }
 // 3D 角色的上衣原本是膠囊形，圖只會印在中間一段；穿自己設計的上衣時換成「繞身體一圈」的貼圖座標（正面在圖的中間、背面在兩邊）
 const DZ_GEO = new WeakMap();
-function dzShirtGeo(g0){ let g = DZ_GEO.get(g0); if (g) return g; g = g0.clone(); const P = g.attributes.position, uv = g.attributes.uv.clone(); let y0 = 1e9, y1 = -1e9, xm = 0;
+function dzShirtGeo(g0){ let g = DZ_GEO.get(g0); if (g) return g; g = g0.index ? g0.toNonIndexed() : g0.clone();   /* 拆成一個一個三角形，接縫才修得好（不然正面中間會有一條線） */ const P = g.attributes.position, uv = g.attributes.uv.clone(); let y0 = 1e9, y1 = -1e9, xm = 0;
   for (let i = 0; i < P.count; i++) xm = Math.max(xm, Math.abs(P.getX(i)));
   y0 = 0.45; y1 = 1.02;   /* 上衣在模型裡的高度（腰到脖子，照骨架量的：hips 0.33、chest 0.81、head 1.04）；圖的上緣對肩膀、下緣對衣襬 */
   for (let i = 0; i < P.count; i++){ const x = P.getX(i), z = P.getZ(i); uv.setXY(i, (Math.atan2(x, z) / (Math.PI * 2) + 1) % 1, clamp((P.getY(i) - y0) / (y1 - y0 || 1), 0, 1)); }
@@ -6672,7 +6679,7 @@ function renderMyDesigns(body, slot){
   body.appendChild(el('div', 'dexhead', `🎨 自己設計的${(DESIGN_SLOTS.find(([k]) => k === slot) || [, '衣服'])[1]}・設計師市集`));
   const bar = el('div', 'tankbar'), nb = el('button', 'tbtn', '＋ 自己設計'), mk = el('button', 'tbtn ghost', '🛍️ 設計師市集');
   nb.addEventListener('click', () => { if (!Cloud.on){ toast('要連上雲端（登入）才能設計衣服'); return; } DesignEd.kind = slot; DesignEd.px = null; curTab = 'design'; renderTab(); });
-  mk.addEventListener('click', () => { Market.mode = 'new'; Market.kind = slot; curTab = 'market'; renderTab(); }); bar.append(nb, mk); body.appendChild(bar);
+  mk.addEventListener('click', () => { Market.mode = 'new'; Market.kind = slot; curTab = 'dzmarket'; Market.list = null; renderTab(); }); bar.append(nb, mk); body.appendChild(bar);
   if (!mine.length){ body.appendChild(el('p', 'sub', '還沒有自己的設計。可以自己畫，也可以去市集買別人設計的。')); return; }
   const ul = el('ul', 'shoplist cols');
   for (const item of mine){ const d = designId(item), D = Designs.map.get(d.id), on = cleanGear(rec.gear)[slot] === item, li = el('li', on ? 'on' : '');
@@ -6758,12 +6765,12 @@ function renderDesignEd(body){
 }
 // 設計師市集
 const Market = { mode:'new', kind:'top', list:null, at:0, busy:false };
-async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = true; try { const { data } = await Cloud.sb.rpc('list_designs', { p_mode: Market.mode, p_offset: 0 }); Market.list = data || []; for (const d of Market.list) Designs.map.set(d.id, d); } catch(e){ Market.list = []; } Market.busy = false; Market.at = Date.now(); if (!$('#sheet').hidden && (curTab === 'market' || curTab === 'shop')) renderTab(); }
+async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = true; try { const { data } = await Cloud.sb.rpc('list_designs', { p_mode: Market.mode, p_offset: 0 }); Market.list = data || []; for (const d of Market.list) Designs.map.set(d.id, d); } catch(e){ Market.list = []; } Market.busy = false; Market.at = Date.now(); if (!$('#sheet').hidden && (curTab === 'dzmarket' || curTab === 'shop')) renderTab(); }
 function renderMarket(body, inShop){
   if (!inShop){ const head = el('div', 'shophead'); head.innerHTML = `<b>🛍️ 設計師市集</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head); }
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能逛市集。')); return; }
   if (inShop){ body.appendChild(el('p', 'sub', '👗 阿綾每天早上 10 點、傍晚 6 點左右會設計一件新的放到店裡。買了就是你的。'));
-    const go = el('button', 'tbtn ghost', '🛍️ 去設計師市集看大家的設計'); go.addEventListener('click', () => { Market.mode = 'new'; Market.list = null; curTab = 'market'; renderTab(); }); body.appendChild(go); }
+    const go = el('button', 'tbtn ghost', '🛍️ 去設計師市集看大家的設計'); go.addEventListener('click', () => { Market.mode = 'new'; Market.list = null; curTab = 'dzmarket'; renderTab(); }); body.appendChild(go); }
   if (!inShop){
   body.appendChild(el('p', 'sub', '大家自己設計的衣服、帽子、鞋子、披風和領巾。買了就是你的，九成的錢給設計的人（每個設計師一天最多從市集收 3000 金幣）。要錢的設計要先釣到 30 條魚才能買。'));
   if (Market.mode === 'ling') body.appendChild(el('p', 'sub', '👗 阿綾服裝店：村子裡的設計師阿綾每天早上 10 點、傍晚 6 點左右會設計一件新的，設計過的都會一直留在店裡。'));
@@ -6904,7 +6911,7 @@ function renderCloset(body){
     if (DESIGN_SLOTS.some(([k]) => k === Closet.slot)){ for (const item of (rec.owned || []).filter(id => { const d = designId(id); return d && d.kind === Closet.slot; })){ const d = designId(item), D = Designs.map.get(d.id); if (!D) queueDesign(d.id); let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [Closet.slot]: item }), Closet.slot, 96); } catch(e){}
         tile(item, D ? D.name || '設計' : '載入中…', ic, cur[Closet.slot] === item ? '✔ 穿著' : '🎨', cur[Closet.slot] === item, () => wearDesign(item)); }
       const nb = el('button', 'cl-it add'); nb.append(el('span', 'plus', '＋'), el('span', 'n', '自己設計')); nb.addEventListener('click', () => { if (!Cloud.on){ toast('要連上雲端（登入）才能設計衣服'); return; } DesignEd.kind = Closet.slot; DesignEd.px = null; curTab = 'design'; renderTab(); }); grid.appendChild(nb);
-      const mk = el('button', 'cl-it add'); mk.append(el('span', 'plus', '🛍️'), el('span', 'n', '設計師市集')); mk.addEventListener('click', () => { Market.mode = 'new'; Market.kind = Closet.slot; curTab = 'market'; renderTab(); }); grid.appendChild(mk); }
+      const mk = el('button', 'cl-it add'); mk.append(el('span', 'plus', '🛍️'), el('span', 'n', '設計師市集')); mk.addEventListener('click', () => { Market.mode = 'new'; Market.kind = Closet.slot; Market.list = null; curTab = 'dzmarket'; renderTab(); }); grid.appendChild(mk); }
     list.appendChild(grid); }
   list.scrollTop = Closet.scroll[Closet.slot] || 0; list.addEventListener('scroll', () => { Closet.scroll[Closet.slot] = list.scrollTop; });
   requestAnimationFrame(() => { list.scrollTop = Closet.scroll[Closet.slot] || 0; });
@@ -8796,7 +8803,7 @@ function renderTab(){
   } else if (curTab === 'news'){ renderNews(body);
   } else if (curTab === 'gang'){ renderGangShop(body);
   } else if (curTab === 'fu'){ renderFuShop(body);
-  } else if (curTab === 'market'){ renderMarket(body);
+  } else if (curTab === 'dzmarket'){ renderMarket(body);
   } else if (curTab === 'people'){
     if (Cloud.on){ if (renderFriends(body)) return; body.appendChild(el('div', 'dexhead', '🏘️ 現在在村子裡的人')); }
     if (room && room.isLobby){ body.appendChild(el('p', 'sub', `你在公共大廳 ${room.lobbyNo}：打開遊戲的人都會自動分到有位子的大廳（每個大廳最多 ${LOBBY_MAX} 人，會先找有好友的大廳）。可以換到別的大廳、自己開一個新的，或開私人房間只跟朋友玩。村民、魚市、村報這些資料每個大廳都一樣。`)); body.appendChild(lobbyBox()); body.appendChild(pjBox()); }
@@ -8880,6 +8887,7 @@ function renderTab(){
       '魚上鉤的快慢跟現實一樣有快有慢：大多幾秒鐘，偶爾一丟下去就咬，偶爾要等很久。清晨和黃昏「魚口」最好；海邊乾潮時咬得快、漲潮時慢一點但稀有魚多；下雨天也比較好釣。',
       '等魚的時候，可以看到魚從旁邊游過來試探、咬餌（大型魚除外）。釣過的魚看得到顏色，上鉤時也會直接說是什麼魚；沒釣過的只看得到黑影。',
       '魚上鉤後：上面是魚的體力和距離，下面是張力條。按住收線，張力太高（紅色）要放開，不然線會斷。',
+      '遛魚：魚會突然往外衝（「往外衝！先放開」），線被拉出去、浮標越跑越遠，這時候硬拉線很容易斷；先放開讓牠跑，牠會越跑越累。可是線也不能一直放著不收：太鬆超過 2 秒左右，魚會甩掉魚鉤（脫鉤）。線被拉光了魚也會跑掉。',
       '魚往左衝時畫面會出現「往右拉 ➡」，把搖桿往反方向推，魚會累得更快。稀有魚會跳出水面，跳的時候要放開！',
       '大魚搏鬥：釣到大型魚或傳說魚時會出現「巨大魚影」和 Boss 血條，大魚會浮出水面、破水而出。血條快沒的時候出現「連打！」，狂按拉線把牠拉上來。',
       '傳說魚很少見：港口外海大約 3%，其他地方不到 1%。好的釣竿、魚餌、窩料和料理加成都能提高機率。',
