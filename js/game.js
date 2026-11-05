@@ -705,7 +705,12 @@ const lanterns = [];
 const schools = [];
 const clouds = [];
 
-function mat(color, roughness=0.8, extra){ return new THREE.MeshStandardMaterial(Object.assign({ color, roughness, metalness:0.04 }, extra||{})); }
+function mat(color, roughness=0.8, extra){ const m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness, metalness:0.04 }, extra||{}));
+  /* v207 精緻化第 3 批：木頭顏色的東西（碼頭、長椅、圍欄、木箱、招牌柱、家具）自動加木紋（shader，低畫質不加） */
+  if (typeof color === 'string' && !(extra && (extra.map || extra.onBeforeCompile)) && isWoodColor(color)){ m.onBeforeCompile = sh => addDetail(sh, 'wood'); m.customProgramCacheKey = () => 'wood' + (DETAIL_ON() ? '-d' : ''); }
+  return m; }
+const woodCache = new Map();
+function isWoodColor(hex){ if (woodCache.has(hex)) return woodCache.get(hex); let r = false; try { const c = new THREE.Color(hex), h = {}; c.getHSL(h); r = h.h > 0.04 && h.h < 0.12 && h.s > 0.22 && h.s < 0.75 && h.l > 0.18 && h.l < 0.62; } catch(e){} woodCache.set(hex, r); return r; }
 function box(size, color, pos, material){ const m = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material || mat(color)); m.position.set(pos[0], pos[1], pos[2]); m.castShadow = true; m.receiveShadow = true; return m; }
 const addBoxCol = (x, z, w, d) => colliders.push({ t:'b', x, z, hw:w/2, hd:d/2 });
 /* 斜放的房子、攤子：照它真正的方向擋（原本用外框方塊，斜的東西四個角會多擋一大塊，走不過去） */
@@ -2038,6 +2043,7 @@ var DETAIL_FRAG = {
   crown: 'float lf = dN(vDetP * 7.0) * 0.6 + dN(vDetP * 15.0) * 0.4; float gap = smoothstep(0.32, 0.18, lf); diffuseColor.rgb *= mix(1.0, 0.62, gap) * (0.9 + 0.2 * smoothstep(0.45, 0.75, lf)) * (0.92 + 0.12 * vDetN.y);',
   pine:  'float nd = dN(vec3(vDetP.x * 22.0, vDetP.y * 4.0, vDetP.z * 22.0)); float tier = fract(vDetP.y * 1.47); diffuseColor.rgb *= (0.82 + 0.3 * nd) * mix(0.78, 1.08, smoothstep(0.0, 0.6, tier));',
   trunk: 'float ang = atan(vDetP.z, vDetP.x); float gr = sin(ang * 13.0 + dN(vDetP * vec3(3.0, 1.2, 3.0)) * 4.0); diffuseColor.rgb *= 0.78 + 0.22 * smoothstep(-0.6, 0.6, gr) + 0.08 * dN(vDetP * 20.0);',
+  wood:  'float wg = dN(vec3(vDetP.x * 3.0 + vDetP.z * 3.0, vDetP.y * 26.0, vDetP.z * 1.5)) * 0.65 + dN(vDetP * vec3(1.5, 60.0, 1.5)) * 0.35; diffuseColor.rgb *= 0.82 + 0.3 * wg; float kn = smoothstep(0.86, 0.95, dN(vDetP * 5.0)); diffuseColor.rgb *= 1.0 - kn * 0.25;',
   rock:  'float sp = dN(vDetP * 9.0) * 0.6 + dN(vDetP * 23.0) * 0.4; diffuseColor.rgb *= 0.8 + 0.32 * sp; float moss = smoothstep(0.55, 0.85, vDetN.y) * smoothstep(0.35, 0.6, dN(vDetP * 4.0)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.36, 0.52, 0.27) * (0.8 + 0.3 * sp), moss * 0.75);',
 };
 function addDetail(sh, kind){ if (!DETAIL_ON() || !DETAIL_FRAG[kind]) return;
