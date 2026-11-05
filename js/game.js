@@ -2753,7 +2753,7 @@ function actionDown(){
     if (nearSnorkel()){ act.classList.remove('down'); startDive('reef', { x: me.pos.x, z: me.pos.z }); return; }   /* 珊瑚礁島：從沙灘下水浮潛 */
     let spot;
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
-    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } } return; } spot = ns.spot; }
+    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } } return; } spot = ns.spot; }
     if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('🎫 要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
@@ -3058,6 +3058,7 @@ function updateFishing(dt, t){
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
     else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
@@ -3131,7 +3132,7 @@ const ISLE_ITEMS = {
   beach:   { name:'海邊小屋', price:3000, rad:2.9, house:true, roof:'#5fb6e3', w:3.6, awning:'#2f89c7' },
   tea:     { name:'和風茶屋', price:5500, rad:3.0, house:true, roof:'#4a4f5a', w:3.4, wall:'#f1e6cf' },
   villa:   { name:'大別墅',   price:8000, rad:3.6, house:true, roof:'#ec8b68', w:4.4, scale:1.3 },
-  mansion: { name:'大宅（可以一步一步擴建）', price:3000, rad:4.6, house:true, roof:'#5a6f8a', w:4.4, scale:1.7, wall:'#f4efe4' },
+  mansion: { name:'大宅（可以擴建、加蓋二樓三樓）', price:3000, rad:4.6, house:true, roof:'#5a6f8a', w:4.4, scale:1.7, wall:'#f4efe4' },
   flower:  { name:'花圃', price:200, rad:0.9 },   bench:  { name:'長椅', price:150, rad:0.9 },   lamp:   { name:'路燈', price:250, rad:0.35 },
   palm:    { name:'椰子樹', price:400, rad:0.6 }, pond:   { name:'小魚池', price:1200, rad:1.5 }, flag:   { name:'旗子', price:300, rad:0.3 },
   fence:   { name:'木圍籬', price:80, rad:0.9 },  tree:   { name:'圓圓樹', price:300, rad:1.1 }, rock:   { name:'石頭', price:100, rad:0.7 },
@@ -3139,6 +3140,7 @@ const ISLE_ITEMS = {
   campfire:{ name:'營火', price:450, rad:0.8 },   statue: { name:'金魚雕像', price:2000, rad:0.9 }, swing: { name:'鞦韆', price:900, rad:1.3 },
   bush:    { name:'小樹叢', price:120, rad:0.7 }, lantern:{ name:'石燈籠', price:180, rad:0.4 }, boat:  { name:'小木船', price:1500, rad:1.6 },
 };
+const OLD_HOUSES = new Set(['cabin', 'beach', 'tea', 'villa']);   // 076 起不再賣（已經買的人保留）
 const HOUSES = Object.fromEntries(Object.entries(ISLE_ITEMS).filter(([, v]) => v.house));
 const ISLE_MAX = 60, ISLE_HOUSE_MAX = 6;
 // 舊版（固定格子）的島轉成新版（跟伺服器的 _isle_upgrade 一樣）
@@ -3149,7 +3151,7 @@ function cleanIsland(o){
     for (const [k, v] of Object.entries(o.d || {})){ const p = OLD_DS[+k]; if (p && ISLE_ITEMS[v]) items.push({ id:++n, t:v, x:p[0], z:p[1], r:+(Math.atan2(-p[0], -p[1]) + Math.PI).toFixed(2) }); }
     o = { v:2, items }; }
   const items = (o && Array.isArray(o.items) ? o.items : []).filter(it => it && ISLE_ITEMS[it.t] && isFinite(+it.x) && isFinite(+it.z)).slice(0, ISLE_MAX)
-    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (typeof it.by === 'string' && it.by.length < 64) o.by = it.by; if (typeof it.lby === 'string' && it.lby.length < 64) o.lby = it.lby; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; if (it.t === 'mansion'){ o.lay = 'custom'; if (it.cl && typeof it.cl === 'object') o.cl = it.cl; if (!o.f) o.f = []; o.lv = Math.max(1, Math.min(8, Math.floor(+it.lv) || 5)); o.loan = Math.max(0, Math.floor(+it.loan) || 0); } } return o; });   /* 房子的格局、家具（034） */
+    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (typeof it.by === 'string' && it.by.length < 64) o.by = it.by; if (typeof it.lby === 'string' && it.lby.length < 64) o.lby = it.lby; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; if (it.t === 'mansion'){ o.lay = 'custom'; if (it.cl && typeof it.cl === 'object') o.cl = it.cl; if (!o.f) o.f = []; o.lv = Math.max(1, Math.min(8, Math.floor(+it.lv) || 5)); o.loan = Math.max(0, Math.floor(+it.loan) || 0); o.up = Math.max(0, Math.min(2, Math.floor(+it.up) || 0)); if (Array.isArray(it.dc)) o.dc = it.dc.slice(0, 3).map(d => Array.isArray(d) ? [Math.floor(+d[0]), Math.floor(+d[1])] : [-1, -1]); } } return o; });   /* 房子的格局、家具（034） */
   return { v:2, items };
 }
 // 跟伺服器一樣的位置檢查
@@ -3505,10 +3507,16 @@ function removeIsleItem(id){
   toast(`拆掉了 ${ISLE_ITEMS[it.t].name}，退回 🪙${back}`); Build.sel = null; onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); renderBuildBar();
 }
 // ---- 房子裡面（在島的正下方蓋一間房間，從門口走進去）----
-const House = { on:false, group:null, cols:[], back:null, door:null, type:null, fish:[], it:null, furnG:new Map(), fires:[], lamps:[] };
+const House = { on:false, group:null, cols:[], back:null, door:null, type:null, fish:[], it:null, furnG:new Map(), fires:[], lamps:[], floor:0, stairs:[] };
 const ROOM_Y = -40;
 function nearDoor(){ if (!onIsle || House.on || Build.ghost) return null; let best = null, bd = 1.6; for (const d of isleDoors){ const dd = Math.hypot(me.pos.x - d.x, me.pos.z - d.z); if (dd < bd){ bd = dd; best = d; } } return best; }
-function nearExit(){ return House.on && Math.hypot(me.pos.x - House.door.x, me.pos.z - House.door.z) < 1.4 ? House.door : null; }
+// 樓梯（076）：走到樓梯前面按「上樓／下樓」
+function nearStairs(){ if (!House.on || !House.stairs || !House.stairs.length || FB.on) return null; for (const st of House.stairs) if (Math.hypot(me.pos.x - st.x, me.pos.z - st.z) < 1.3) return st; return null; }
+function goFloor(d){ const it = House.it; if (!it) return; const nf = Math.max(0, Math.min(houseUp(it), (House.floor || 0) + d)); if (nf === House.floor) return;
+  const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (mySeat) standUp();
+  setTimeout(() => { House.floor = nf; rebuildHouseRoom(it); const st = House.stairs.find(s => s.d === -d) || House.stairs[0]; if (st){ me.pos.x = st.x; me.pos.z = st.z + 0.9; } me.baseY = ROOM_Y; Jump.gy = ROOM_Y; me.rot = 0; cam.yaw = 0; pushPresence(true);
+    setTimeout(() => fx.classList.remove('on'), 80); flash(nf ? `🏠 ${nf + 1} 樓` : '🏠 1 樓', 1.0); renderIsleBar(); }, 260); }
+function nearExit(){ return House.on && !House.floor && House.door && Math.hypot(me.pos.x - House.door.x, me.pos.z - House.door.z) < 1.4 ? House.door : null; }
 // ===== 家：房子的格局、家具、室友／家人（伺服器 034_home.sql；價格大小要一樣）=====
 const LAYOUTS = {
   open:  { name:'套房',     price:0,    W:9,  D:7,  walls:[], doors:[], rooms:[] },
@@ -3651,12 +3659,18 @@ const CL_CACHE = new WeakMap();
 const MANSION_LV = [null, { hw:5, hd:4, cost:0 }, { hw:6, hd:4, cost:1500 }, { hw:7, hd:5, cost:2000 }, { hw:8, hd:5, cost:2500 }, { hw:9, hd:6, cost:3000 }, { hw:11, hd:7, cost:4000 }, { hw:13, hd:8, cost:5000 }, { hw:15, hd:9, cost:6000 }];   /* 076：再加 3 級，最大 30×18 */
 const MANSION_MAX = 8;
 function mansionLv(it){ return Math.max(1, Math.min(MANSION_MAX, Math.floor(+(it && it.lv)) || 5)); }
+// 076：加蓋二樓、三樓（up = 加蓋了幾層），樓梯在後面的兩個角落；House.floor 是現在在第幾層（0 = 一樓）
+const FLOOR_COST = [0, 6000, 9000];
+function houseUp(it){ return it && it.t === 'mansion' ? Math.max(0, Math.min(2, Math.floor(+it.up) || 0)) : 0; }
+function curFloor(it){ return House.on && House.it && it && House.it.id === it.id ? Math.min(House.floor || 0, houseUp(it)) : 0; }
+function floorFurn(it){ const k = curFloor(it); return houseFurn(it).filter(o => (o.k || 0) === k); }
+function stairSpots(hw, hd){ return [[hw - 1.3, -hd + 1.0], [-(hw - 1.3), -hd + 1.0]]; }   /* [往上, 往下]，跟伺服器 _stair_hit 一樣 */
 // 地板、壁紙每一格的資料：最大的 30×18 格（中心在 0,0）；以前的資料是 18×12（216 格），讀進來時換成新的格子
 function clI(x, z){ return (z + 9) * 30 + (x + 15); }
 function clGrid(s){ s = typeof s === 'string' ? s : ''; if (s.length === 540) return s; const a = new Array(540).fill('0'); if (s.length === 216) for (let z = -6; z < 6; z++) for (let x = -9; x < 9; x++) a[clI(x, z)] = s[(z + 6) * 18 + (x + 9)]; return a.join(''); }
 function houseLay(it){
-  if (it && it.t === 'mansion'){ const c = it.cl || {}, L = MANSION_LV[mansionLv(it)], k = JSON.stringify(c) + L.hw, old = CL_CACHE.get(it); if (old && old.k === k) return old.lay;
-    const lay = { name:'自己設計', price:0, W:L.hw * 2, D:L.hd * 2, hw:L.hw, hd:L.hd, custom:true, walls:[...(c.walls || []), ...(c.wins || [])], doors:c.doors || [], wins:c.wins || [], owins:c.owins || [], fl:clGrid(c.fl), wp:clGrid(c.wp), rooms:[] }; CL_CACHE.set(it, { k, lay }); return lay; }
+  if (it && it.t === 'mansion'){ const fk = curFloor(it), up = houseUp(it), dc = Array.isArray(it.dc) && Array.isArray(it.dc[fk]) && +it.dc[fk][0] >= 0 ? it.dc[fk] : null, c = fk ? {} : (it.cl || {}), L = MANSION_LV[mansionLv(it)], k = JSON.stringify(c) + L.hw + '|' + fk + '|' + up + '|' + (dc ? dc.join() : ''), old = CL_CACHE.get(it); if (old && old.k === k) return old.lay;
+    const lay = { name:'大宅', price:0, W:L.hw * 2, D:L.hd * 2, hw:L.hw, hd:L.hd, custom:true, walls:[...(c.walls || []), ...(c.wins || [])], doors:c.doors || [], wins:c.wins || [], owins:c.owins || [], fl: dc ? String(dc[0]).repeat(540) : clGrid(c.fl), wp: dc ? String(dc[1]).repeat(540) : clGrid(c.wp), rooms:[], k: fk, stairs: up ? stairSpots(L.hw, L.hd) : [] }; CL_CACHE.set(it, { k, lay }); return lay; }
   return LAYOUTS[it && it.lay] || LAYOUTS.open; }
 const CL_FLOOR = [['木地板', '#c99a6b'], ['藍色地毯', '#a8c8e8'], ['白磁磚', '#eef2ee'], ['格子磁磚', '#e8d4a8'], ['粉紅地毯', '#f2c4d8'], ['深色木頭', '#7a5638']];
 const CL_WALL = [['米白', '#f4ead6'], ['天空藍', '#cfe6f4'], ['淡粉紅', '#f8dce6'], ['薄荷綠', '#dcefd8'], ['海軍藍', '#3a4a5e']];
@@ -3671,12 +3685,13 @@ function furnCheck(lay, f, type, x, z, skip){
   const me = FURN[type]; if (!me) return '沒有這種家具';
   if (Math.abs(x) > lay.W / 2 - 0.25 || Math.abs(z) > lay.D / 2 - 0.25) return '放在房間外面了';
   if (!me.flat && Math.hypot(x, z - (lay.D / 2 - 0.6)) < me.rad * 0.7 + 0.8) return '會擋住大門';
+  for (const st of lay.stairs || []) if (Math.hypot(Math.abs(x) - Math.abs(st[0]), z - st[1]) < 1.5) return '會擋住樓梯';
   for (const w of lay.walls) if (segD(x, z, w[0], w[1], w[2], w[3]) < me.rad * 0.7) return '卡在牆上了';
   if (!me.flat) for (const d of lay.doors) if (Math.hypot(x - d[0], z - d[1]) < me.rad * 0.7 + 0.7) return '會擋住房門';
   for (const o of f){ if (o.id === skip) continue; const it = FURN[o.t]; if (!it || it.flat || me.flat) continue; if (Math.hypot(o.x - x, o.z - z) < (it.rad + me.rad) * 0.75) return '跟別的家具疊在一起了'; }
   return null;
 }
-function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x.t] && fzId(x.t)) fzWant(fzId(x.t)); return Array.isArray(f) ? f.filter(x => x && (FURN[x.t] || fzId(x.t)) && isFinite(+x.x) && isFinite(+x.z)).slice(0, 40).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, typeof x.by === 'string' && x.by.length < 64 ? { by: x.by } : {}, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
+function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x.t] && fzId(x.t)) fzWant(fzId(x.t)); return Array.isArray(f) ? f.filter(x => x && (FURN[x.t] || fzId(x.t)) && isFinite(+x.x) && isFinite(+x.z)).slice(0, 120).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, +x.k > 0 ? { k: Math.min(2, Math.floor(+x.k)) } : {}, typeof x.by === 'string' && x.by.length < 64 ? { by: x.by } : {}, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
 
 // 家具的樣子（正面朝 +z，放在地板上）
 function furnMesh(t){
@@ -3764,6 +3779,8 @@ function localHomeOp(op, p){
   const items = rec.island.items, cost = n => { if (rec.coins < n) return `金幣不夠，還差 🪙${(n - rec.coins).toLocaleString()}`; addCoins(-n); return null; };
   if (op === 'place'){ const T = ISLE_ITEMS[p.t], e = isleCheck(items, p.t, p.x, p.z, -1); if (e) return e; if (items.length >= ISLE_MAX) return '島上已經放滿了'; if (T.house && items.filter(i => ISLE_ITEMS[i.t].house).length >= ISLE_HOUSE_MAX) return '房子最多 6 棟'; const c = cost(T.price); if (c) return c; items.push(Object.assign({ id: items.reduce((m, i) => Math.max(m, i.id), 0) + 1, t:p.t, x:p.x, z:p.z, r:p.r }, p.t === 'mansion' ? { lay:'custom', f:[], lv:1, loan:0 } : {})); }
   else if (op === 'design'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以自己設計格局'; const L = MANSION_LV[mansionLv(it)], ow = w => w[0] === w[2] ? Math.abs(w[0]) === L.hw : Math.abs(w[1]) === L.hd; it.cl = Object.assign({ owins: (p.cl.wins || []).filter(ow) }, p.cl, { wins: (p.cl.wins || []).filter(w => !ow(w)) }); it.lay = 'custom'; }
+  else if (op === 'floor'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以加蓋樓層'; const up = houseUp(it); if (up >= 2) return '最多蓋到三樓'; if (it.loan > 0) return '上一次的貸款還沒還清'; it.up = up + 1; it.loan = FLOOR_COST[up + 1]; }
+  else if (op === 'deco'){ const it = items.find(i => i.id === p.house); if (!it) return '找不到這棟房子'; const dc = Array.isArray(it.dc) ? it.dc.slice() : []; while (dc.length < 3) dc.push([-1, -1]); dc[Math.min(+p.k || 0, houseUp(it))] = [+p.fl, +p.wp]; it.dc = dc; }
   else if (op === 'expand' || op === 'repay'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以擴建'; const lv = mansionLv(it);
     if (op === 'expand'){ if (lv >= MANSION_MAX) return '已經擴建到最大了'; if (it.loan > 0) return '上一次的擴建貸款還沒還清'; it.lv = lv + 1; it.loan = MANSION_LV[lv + 1].cost; }
     else { const a = Math.min(it.loan || 0, Math.max(0, Math.floor(p.amount) || 0)); if (a <= 0) return '沒有要還的錢'; const c = cost(a); if (c) return c; it.loan -= a; } }
@@ -3772,8 +3789,8 @@ function localHomeOp(op, p){
   else { const h = items.find(i => i.id === p.house); if (!h) return '找不到這棟房子'; const f = houseFurn(h), lay = houseLay(h);
     if (op === 'layout'){ const nl = LAYOUTS[p.lay]; if (!nl) return '沒有這種格局'; let back = Math.max(0, Math.floor((lay.price - nl.price) / 2)); const keep = []; for (const o of f){ if (furnCheck(nl, keep, o.t, o.x, o.z, -1)) back += Math.floor(FURN[o.t].price / 2); else keep.push(o); }
       const need = Math.max(0, nl.price - lay.price); if (rec.coins + back < need) return '金幣不夠'; addCoins(back - need); h.lay = p.lay; h.f = keep; }
-    else if (op === 'fplace'){ const e = furnCheck(lay, f, p.t, p.x, p.z, -1); if (e) return e; if (f.length >= 40) return '這棟房子已經擺滿了'; const c = cost(FURN[p.t].price); if (c) return c; f.push({ id: f.reduce((m, i) => Math.max(m, i.id), 0) + 1, t:p.t, x:p.x, z:p.z, r:p.r }); h.f = f; }
-    else if (op === 'fmove'){ const o = f.find(i => i.id === p.id); if (!o) return '找不到這個家具'; const e = furnCheck(lay, f, o.t, p.x, p.z, o.id); if (e) return e; Object.assign(o, { x:p.x, z:p.z, r:p.r }); h.f = f; }
+    else if (op === 'fplace'){ const fk = Math.min(+p.k || 0, houseUp(h)), ff = f.filter(i => (i.k || 0) === fk), e = furnCheck(lay, ff, p.t, p.x, p.z, -1); if (e) return e; if (ff.length >= 40) return '這一層已經擺滿了'; const c = cost(FURN[p.t].price); if (c) return c; const no = { id: f.reduce((m, i) => Math.max(m, i.id), 0) + 1, t:p.t, x:p.x, z:p.z, r:p.r }; if (fk) no.k = fk; f.push(no); h.f = f; }
+    else if (op === 'fmove'){ const o = f.find(i => i.id === p.id); if (!o) return '找不到這個家具'; const e = furnCheck(lay, f.filter(i => (i.k || 0) === (o.k || 0)), o.t, p.x, p.z, o.id); if (e) return e; Object.assign(o, { x:p.x, z:p.z, r:p.r }); h.f = f; }
     else if (op === 'fremove'){ const o = f.find(i => i.id === p.id); if (!o) return '找不到這個家具'; addCoins(Math.floor(FURN[o.t].price / 2)); h.f = f.filter(i => i !== o); }
     else if (op === 'bed'){ const o = f.find(i => i.id === p.id); if (!o || !FURN[o.t].bed) return '這不是床'; const meId = myIdOrMe(); if (o.own && o.own !== meId) return '這張床已經有人了';
       if (o.own === meId) delete o.own; else { for (const it of items) if (it.f) it.f.forEach(x => { if (x.own === meId) delete x.own; }); o.own = meId; } h.f = f; } }
@@ -3789,7 +3806,7 @@ function roomSign(text, x, y, z, ry){
 }
 function enterHouse(door){
   if (House.on) return; SFX.door(); stopBuild(); const it = door.it, T = ISLE_ITEMS[it.t];
-  House.on = true; House.type = it.t; House.back = { x: door.x, z: door.z, rot: door.face };
+  House.on = true; House.floor = 0; House.type = it.t; House.back = { x: door.x, z: door.z, rot: door.face };
   rebuildHouseRoom(it);
   const fx = $('#fadeFx'); fx.classList.add('on'); const lay = houseLay(it);
   setTimeout(() => { me.pos.x = ISLE.x; me.pos.z = ISLE.z + lay.D / 2 - 1.4; me.baseY = ROOM_Y; Jump.gy = ROOM_Y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = Math.max(cam.pitch, 0.6); House.savedDist = cam.dist; cam.dist = Math.min(cam.dist, 7); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 220);
@@ -3821,7 +3838,7 @@ function clDecorate(g, lay, cx, cz, fy){
 }
 function rebuildHouseRoom(it){
   clearHouseRoom(); clearFurnGhost();
-  const T = ISLE_ITEMS[it.t], lay = houseLay(it), f = houseFurn(it), W = lay.W, D = lay.D, cx = ISLE.x, cz = ISLE.z, fy = ROOM_Y;
+  const T = ISLE_ITEMS[it.t], lay = houseLay(it), f = floorFurn(it), W = lay.W, D = lay.D, cx = ISLE.x, cz = ISLE.z, fy = ROOM_Y, fk = curFloor(it), up = houseUp(it);
   House.it = it; const g = new THREE.Group(); scene.add(g); House.group = g; const n0 = colliders.length;
   const warm = (c, r) => mat(c, r == null ? 0.85 : r, { emissive: c, emissiveIntensity: 0.12 });
   const wallC = T.wall || (it.t === 'tea' ? '#efe3c8' : it.t === 'beach' ? '#e6f3f7' : '#f6e4bd'), floorC = it.t === 'tea' ? '#c9b27a' : '#c99a6b';
@@ -3867,11 +3884,19 @@ function rebuildHouseRoom(it){
   House.winTx = [winM.map, roomTex('winnight', 64, 48, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0f1a33'); gr.addColorStop(1, '#2a3d66'); c.fillStyle = gr; c.fillRect(0, 0, w, h); c.fillStyle = '#fff6d0'; c.beginPath(); c.arc(46, 14, 6, 0, 7); c.fill(); c.fillStyle = '#ffffff'; for (const [x, y] of [[8, 8], [20, 18], [30, 6], [14, 32], [52, 34], [38, 24]]) c.fillRect(x, y, 1.5, 1.5); })];
   for (const wx of W > 10 ? [-W / 3, 0, W / 3] : [-W / 4, W / 4]){ const wn = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.0), winM); wn.position.set(cx + wx, fy + 1.8, cz - D / 2 + 0.02); g.add(wn); g.add(box([1.5, 0.08, 0.08], '#8c5d3b', [cx + wx, fy + 1.8, cz - D / 2 + 0.05])); g.add(box([0.08, 1.1, 0.08], '#8c5d3b', [cx + wx, fy + 1.8, cz - D / 2 + 0.05])); }
   /* 大門在靠鏡頭那面牆（會被切掉看不到），所以只放門口的地墊、門檻和出口箭頭，不會擋住人 */
+  // 樓梯（076）：右後角往上、左後角往下；樓上沒有大門
+  House.stairs = []; if (up){ const [U, Dn] = stairSpots(W / 2, D / 2), wood = '#a8754a', dark = '#7a4e2e';
+    if (fk < up){ const sx = cx + U[0], sz = cz - D / 2; for (let i = 0; i < 7; i++) g.add(box([1.5, 0.22 * (i + 1), 0.32], i % 2 ? wood : shade(wood, -0.08), [sx, fy + 0.11 * (i + 1), sz + 2.25 - i * 0.32]));
+      g.add(box([0.08, 2.4, 2.4], dark, [sx - 0.8, fy + 1.2, sz + 1.2])); g.add(roomSign(`⬆ ${fk + 2} 樓`, sx, fy + 2.5, sz + 0.05, 0)); addBoxCol(sx, sz + 1.1, 1.6, 2.2); House.stairs.push({ x: sx, z: sz + 2.75, d: 1 }); }
+    if (fk > 0){ const sx = cx + Dn[0], sz = cz - D / 2; g.add(box([1.6, 0.03, 2.2], '#2a2018', [sx, fy + 0.012, sz + 1.2])); for (let i = 0; i < 4; i++) g.add(box([1.4, 0.02, 0.3], wood, [sx, fy + 0.03, sz + 0.4 + i * 0.5]));
+      g.add(box([0.08, 0.9, 2.2], dark, [sx + 0.85, fy + 0.45, sz + 1.2])); g.add(box([1.7, 0.9, 0.08], dark, [sx, fy + 0.45, sz + 0.05])); g.add(roomSign(`⬇ ${fk} 樓`, sx, fy + 2.3, sz + 0.05, 0)); House.stairs.push({ x: sx, z: sz + 2.75, d: -1 }); } }
+  if (!fk){
   g.add(box([1.4, 0.03, 0.8], '#6f8f5a', [cx, fy + 0.015, cz + D / 2 - 0.55])); g.add(box([1.2, 0.035, 0.6], '#8fb07a', [cx, fy + 0.02, cz + D / 2 - 0.55]));
   g.add(box([1.5, 0.08, 0.12], '#7a4e2e', [cx, fy + 0.04, cz + D / 2 - 0.08]));
   { const ar = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.45), new THREE.MeshBasicMaterial({ map: roomTex('exitar', 128, 80, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.moveTo(w / 2, h - 6); c.lineTo(w - 14, 30); c.lineTo(w / 2 + 16, 30); c.lineTo(w / 2 + 16, 4); c.lineTo(w / 2 - 16, 4); c.lineTo(w / 2 - 16, 30); c.lineTo(14, 30); c.closePath(); c.fill(); }), transparent: true, depthWrite: false }));
     ar.rotation.x = -Math.PI / 2; ar.position.set(cx, fy + 0.045, cz + D / 2 - 0.55); g.add(ar); }
-  House.door = { x: cx, z: cz + D / 2 - 0.9 };
+  }
+  House.door = fk ? null : { x: cx, z: cz + D / 2 - 0.9 };
   // 家具
   const tank = (onIsle && onIsle.tank) || [], show = (onIsle && onIsle.show) || [], shown = tank.filter(x => show.includes(x.t) && FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 4), pick = shown.length ? shown : tank.filter(x => FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 3);
   for (const o of f){ const F0 = FURN[o.t]; if (!F0){ fzWant(fzId(o.t)); continue; } const m = furnMesh(o.t); m.position.set(cx + o.x, fy, cz + o.z); m.rotation.y = o.r; m.userData.furn = o; g.add(m); House.furnG.set(o.id, m);
@@ -3900,7 +3925,7 @@ function roomTex(key, w, h, draw){ let t = _roomTx.get(key); if (t) return t; co
 function exitHouse(instant){
   if (!House.on) return; const b = House.back; stopFurn();
   const done = () => {
-    clearHouseRoom(); House.on = false; House.it = null;
+    clearHouseRoom(); House.on = false; House.it = null; House.floor = 0;
     if (!instant){ me.pos.x = b.x; me.pos.z = b.z; me.baseY = groundHeight(b.x, b.z); Jump.gy = me.baseY; me.rot = b.rot; cam.yaw = b.rot + Math.PI; if (House.savedDist) cam.dist = House.savedDist; }
     pushPresence(true); renderIsleBar();
   };
@@ -3930,7 +3955,7 @@ function startFurn(type, moveId){
 function clearFurnGhost(){ if (FB.ghost){ scene.remove(FB.ghost); FB.ghost = null; } if (FB.moveId && House.furnG){ const m = House.furnG.get(FB.moveId); if (m) m.visible = true; } FB.type = null; FB.moveId = null; }
 function stopFurn(){ clearFurnGhost(); FB.on = false; FB.sel = null; renderFurnBar(); }
 function updateFurn(){
-  if (!FB.on || !House.on || !House.it) return; const lay = houseLay(House.it), f = houseFurn(House.it);
+  if (!FB.on || !House.on || !House.it) return; const lay = houseLay(House.it), f = floorFurn(House.it);
   if (FB.ghost){
     const T = FURN[FB.type], d = T.rad + 0.9, lx = Math.round((me.pos.x + Math.sin(me.rot) * d - ISLE.x) * 4) / 4, lz = Math.round((me.pos.z + Math.cos(me.rot) * d - ISLE.z) * 4) / 4;
     FB.x = lx; FB.z = lz; FB.err = furnCheck(lay, f, FB.type, lx, lz, FB.moveId || -1);
@@ -3963,7 +3988,7 @@ async function confirmFurn(){
   if (!FB.ghost) return; if (FB.err){ toast(FB.err); return; }
   const T = FURN[FB.type], p = { house: House.it.id, x: FB.x, z: FB.z, r: +FB.rot.toFixed(2) }, moving = FB.moveId, type = FB.type;
   if (!moving && rec.coins < T.price){ toast(`金幣不夠，還差 🪙${(T.price - rec.coins).toLocaleString()}`); return; }
-  const ok = await homeOp(moving ? 'fmove' : 'fplace', moving ? Object.assign(p, { id: moving }) : Object.assign(p, { t: type }));
+  const ok = await homeOp(moving ? 'fmove' : 'fplace', moving ? Object.assign(p, { id: moving }) : Object.assign(p, { t: type, k: House.floor || 0 }));
   if (!ok) return; SFX.plop(); FX.emit(ISLE.x + p.x, ROOM_Y + 0.6, ISLE.z + p.z, 12, '#fff4dc', 0.5, 1.4, 0.8);
   if (!moving && rec.coins >= T.price && !T.bed) startFurn(type); else { FB.on = true; renderFurnBar(); }
 }
@@ -3983,6 +4008,27 @@ function renderMansionGrow(body, it){ const lv = mansionLv(it), L = MANSION_LV[l
       homeOp('expand', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`🏗️ 擴建好了！房間變成 ${N.hw * 2}×${N.hd * 2}`, 1.8); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
     box.appendChild(b); }
   else box.appendChild(el('div', 'gb-s', '🎉 已經擴建到最大了！'));
+  { const up = houseUp(it), nf = up + 1;   /* 加蓋樓層（076） */
+    box.appendChild(el('div', 'gb-t', `🏢 樓層：${up + 1} / 3 層`));
+    if (up >= 2) box.appendChild(el('div', 'gb-s', '🎉 已經蓋到三樓了！'));
+    else if (!loan){ box.appendChild(el('div', 'gb-s', `加蓋 ${nf + 1} 樓：🪙${FLOOR_COST[nf].toLocaleString()}（一樣跟阿土伯借，之後慢慢還）。樓梯會蓋在房間後面的兩個角落${up ? '' : '，那裡的家具要先移開'}。`));
+      const b = el('button', 'tbtn', `🏢 加蓋 ${nf + 1} 樓（貸款 🪙${FLOOR_COST[nf].toLocaleString()}）`); b.disabled = isleRank() < 2;
+      b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定加蓋？要還 🪙${FLOOR_COST[nf].toLocaleString()}`; b.classList.add('warn'); return; }
+        homeOp('floor', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`🏢 ${nf + 1} 樓蓋好了！走到右後角的樓梯就可以上去`, 2.0); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
+      box.appendChild(b); } }
+  body.appendChild(box); }
+// 每一層的地板、壁紙（免費換，076）；以前畫過的隔間牆可以一鍵拆掉
+function renderMansionDeco(body, it){ const fk = curFloor(it), dc = Array.isArray(it.dc) && Array.isArray(it.dc[fk]) ? it.dc[fk] : [-1, -1], box = el('div', 'growbox');
+  box.appendChild(el('div', 'gb-t', `🎨 ${fk + 1} 樓的地板和壁紙`));
+  const send = (fl, wp) => homeOp('deco', { house: it.id, k: fk, fl, wp }).then(ok => { if (ok){ const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } });
+  const cur = [dc[0] >= 0 ? dc[0] : 0, dc[1] >= 0 ? dc[1] : 0];
+  const r1 = el('div', 'chipline'); CL_FLOOR.forEach(([n, col], i) => { const b = el('button', 'chip' + (dc[0] === i ? ' on' : ''), n); b.style.borderLeft = `14px solid ${col}`; b.addEventListener('click', () => send(i, cur[1])); r1.appendChild(b); }); box.appendChild(el('div', 'sub2', '地板')); box.appendChild(r1);
+  const r2 = el('div', 'chipline'); CL_WALL.forEach(([n, col], i) => { const b = el('button', 'chip' + (dc[1] === i ? ' on' : ''), n); b.style.borderLeft = `14px solid ${col}`; b.addEventListener('click', () => send(cur[0], i)); r2.appendChild(b); }); box.appendChild(el('div', 'sub2', '壁紙')); box.appendChild(r2);
+  const c = it.cl || {}; if (!fk && ((c.walls || []).length || (c.doors || []).length || (c.wins || []).length)){
+    const b = el('button', 'tbtn ghost', '🧱 拆掉以前畫的隔間牆'); b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定拆掉？（家具不會動）'; return; }
+      homeOp('design', { house: it.id, cl: { walls: [], doors: [], wins: [], fl: clGrid(c.fl), wp: clGrid(c.wp) } }).then(ok => { if (ok){ const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
+    box.appendChild(b); }
+  box.appendChild(el('p', 'sub', '像天天玩樂園一樣：不用自己畫牆，買家具直接擺就好。房子不夠大就擴建，不夠用就往上蓋。'));
   body.appendChild(box); }
 function clOpen(it){ const c = JSON.parse(JSON.stringify(it.cl || {})); CLE = { it, tool:'wall', fl:1, wp:1, walls:c.walls || [], doors:c.doors || [], wins:[...(c.wins || []), ...(c.owins || [])], flS:clGrid(c.fl).split(''), wpS:clGrid(c.wp).split(''), busy:false, hw: MANSION_LV[mansionLv(it)].hw, hd: MANSION_LV[mansionLv(it)].hd }; curTab = 'cldesign'; if ($('#sheet').hidden) openSheet('cldesign'); else renderTab(); }
 const CL_PX = 22;
@@ -4038,8 +4084,9 @@ function renderFurnSheet(body){
   const seg = el('div', 'seg'); [['buy', '🛒 買家具'], ['lay', '🏠 換格局']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(furnSheet === k)); b.addEventListener('click', () => { furnSheet = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
   const it = House.it, cur = houseLay(it), f = houseFurn(it);
   if (furnSheet === 'lay' && isleRank() < 2){ body.appendChild(el('div', 'empty', '只有島主、共同島主、管理成員可以改格局。')); return; }
-  if (furnSheet === 'lay' && it.t === 'mansion'){ renderMansionGrow(body, it); body.appendChild(el('p', 'sub', '大宅的格局是你自己畫的：畫牆、放門窗、每個房間選地板和壁紙（只能畫在現在的大小裡面，擴建以後就有更多地方）。')); const b = el('button', 'tbtn', '📐 設計格局'); b.addEventListener('click', () => { if (!canEditIsle()){ toast('只有住在這座島的人可以改'); return; } clOpen(it); }); body.appendChild(b); return; }
+  if (furnSheet === 'lay' && it.t === 'mansion'){ renderMansionGrow(body, it); renderMansionDeco(body, it); return; }
   if (furnSheet === 'lay'){
+    body.appendChild(el('p', 'sub', '這種房子已經不賣了（現在只賣可以擴建、加蓋樓層的大宅），還是可以照樣住、擺家具、換格局。'));
     body.appendChild(el('p', 'sub', '換大一點的格局只要補差價；換小的退一半。放不下的家具會自動收起來，退一半給當初買的人。'));
     const ul = el('ul', 'shoplist'); for (const [k, L] of Object.entries(LAYOUTS)){ const on = (it.lay || 'open') === k, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ['🏠', '🏡', '🏘️', '🏰'][Object.keys(LAYOUTS).indexOf(k)]));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${L.name}（${L.W}×${L.D}）`)); d.appendChild(el('div', 'sub2', `${LAYOUT_DESC[k]}・${L.rooms.length ? L.rooms.length + ' 間臥室' : '沒有隔間'}`)); li.appendChild(d);
@@ -4048,7 +4095,7 @@ function renderFurnSheet(body){
       const a = el('div', 'tacts'); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); return;
   }
-  body.appendChild(el('p', 'sub', `這棟房子有 ${f.length} / 40 件家具。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。收掉退一半金幣。床可以認領，房門上會掛你的名字。`));
+  body.appendChild(el('p', 'sub', `${houseUp(it) ? `現在在 ${curFloor(it) + 1} 樓，這一層` : '這棟房子'}有 ${floorFurn(it).length} / 40 件家具。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。收掉退一半金幣。床可以認領，房門上會掛你的名字。`));
   if (!FZ.list && Cloud.on) loadMu(); if (!Cai.list && Cloud.on) loadCai();
   for (const [gk, title] of FURN_GROUPS){ if ((gk === 'mu' || gk === 'cai') && !Object.values(FURN).some(v => v.g === gk)) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
     for (const [k, v] of Object.entries(FURN).filter(([, v]) => v.g === gk)){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
@@ -4584,7 +4631,7 @@ function renderIsland(body){
   body.appendChild(el('p', 'sub', `島上有 ${items.length} / ${ISLE_MAX} 件東西、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。走到房子門口可以進去！拆掉退一半金幣。`));
   for (const [title, filt] of [['🏠 房子', v => v.house], ['🌷 裝飾和家具', v => !v.house]]){
     body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
-    for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([, v]) => filt(v))){
+    for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([k2, v]) => filt(v) && !OLD_HOUSES.has(k2))){   /* 076：房子只賣大宅 */
       const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・島上 ${items.filter(i => i.t === k).length} 個`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'); b.addEventListener('click', () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
@@ -7385,7 +7432,7 @@ function presenceObj(){
   if (mySeat) o.st = 1;
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
-  if (House.on) o.hs = House.it ? House.it.id : 1;   /* 在哪一棟房子裡（不同房子的人互相看不到） */
+  if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
@@ -7458,7 +7505,7 @@ function updatePeers(dt, t){
     f.speed += ((d > 0.05 ? Math.min(6, d*8) : 0) - f.speed) * Math.min(1, dt*8);
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
-    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) : 0) && !!p.diving === Dive.on; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
+    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
     f.dip = p.ph === 'bite' ? 0.9 + Math.sin(t*30)*0.1 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
@@ -8834,6 +8881,8 @@ function renderTab(){
       '選單的「小島」可以去自己的島。在「買東西擺島上」挑房子或家具，拿著半透明預覽走路調位置（綠色可以放、紅色不行），「⟲」轉方向、「✔」放下。',
       '按「🔨 建造」後走到東西旁邊，可以移動或拆掉（退一半金幣）。島上最多 60 件東西、房子 6 棟。',
       '走到房子門口可以「進屋」，屋裡的魚缸會游著你展示的魚。長椅、野餐桌、鞦韆、屋裡的椅子都可以坐。',
+      '房子現在只賣「大宅」（像天天玩樂園）：🪙3000 先買小的（10×8），之後在屋裡「家具 → 換格局」跟村長阿土伯借錢擴建（最大 30×18），也可以加蓋二樓、三樓。借的錢不收利息，慢慢還就好，還清才能再擴建或加蓋。',
+      '大宅不用自己畫牆：買家具直接擺就好，每一層樓都可以免費換地板和壁紙。樓梯在房間後面的兩個角落（右後往上、左後往下），走到樓梯前按「上樓／下樓」。以前買的小木屋、海邊小屋、茶屋、別墅還是可以照樣住。',
       '海上看得到其他人的島。在小島分頁「逛別人的島」可以去參觀，幫喜歡的島按 ❤️（每天每座島一次）。',
     ]);
     sec('👥 跟大家一起玩', [
