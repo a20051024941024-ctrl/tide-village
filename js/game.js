@@ -1525,10 +1525,11 @@ function makeMarlin2(scale, albino){
   for (const sz of [-1, 1]){ const pf = new THREE.Mesh(Marlin2.finGeo([[0.3, 0], [0.26, -0.03], [-0.04, -0.1], [0.02, -0.04]], 0.008), finM); pf.position.set(0, -0.03, sz * 0.07); pf.rotation.y = sz * 0.5; pf.rotation.x = sz * 0.3; fish.add(pf);
     const vf = new THREE.Mesh(Marlin2.finGeo([[0.22, 0], [0.2, -0.03], [-0.02, -0.11], [0.0, -0.05]], 0.006), finM); vf.position.set(0, -0.11, sz * 0.02); vf.rotation.y = sz * 0.25; fish.add(vf);
     const keel = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.012, 0.04), finM); keel.position.set(-0.56, -0.005, sz * 0.03); fish.add(keel); }
-  // 眼睛：大一點，白眼球 + 黑眼珠 + 反光點
-  for (const sz of [-1, 1]){ const ew = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 10), new THREE.MeshStandardMaterial({ color:'#f8fbff', roughness:0.3 })); ew.position.set(0.45, 0.035, sz * 0.056); ew.scale.set(1, 1, 0.5); fish.add(ew);
-    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 10), new THREE.MeshStandardMaterial({ color:'#0b0e14', roughness:0.25 })); ep.position.set(0.455, 0.035, sz * 0.064); ep.scale.set(1, 1, 0.5); fish.add(ep);
-    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 6), new THREE.MeshBasicMaterial({ color:'#ffffff' })); hl.position.set(0.462, 0.045, sz * 0.072); fish.add(hl); }
+  // 眼睛：貼在頭側面的扁圓片（白眼球、黑眼珠在中間、小反光點），不凸出來
+  for (const sz of [-1, 1]){ const ex = 0.45, ey = 0.035, half = 0.0295 * 0.86 + 0.005;   /* 頭在 x=0.45 的剖面寬 */
+    const ew = new THREE.Mesh(new THREE.CircleGeometry(0.03, 20), new THREE.MeshStandardMaterial({ color:'#f8fbff', roughness:0.35 })); ew.position.set(ex, ey, sz * half); ew.rotation.y = sz > 0 ? 0 : Math.PI; fish.add(ew);
+    const ep = new THREE.Mesh(new THREE.CircleGeometry(0.019, 16), new THREE.MeshStandardMaterial({ color:'#0b0e14', roughness:0.25 })); ep.position.set(ex, ey, sz * (half + 0.002)); ep.rotation.y = sz > 0 ? 0 : Math.PI; fish.add(ep);
+    const hl = new THREE.Mesh(new THREE.CircleGeometry(0.006, 8), new THREE.MeshBasicMaterial({ color:'#ffffff' })); hl.position.set(ex + 0.007, ey + 0.008, sz * (half + 0.004)); hl.rotation.y = sz > 0 ? 0 : Math.PI; fish.add(hl); }
   fish.userData.tail = new THREE.Object3D(); fish.traverse(o => { if (o.isMesh) o.castShadow = true; }); return fish;
 }
 function makeMarlin(scale){
