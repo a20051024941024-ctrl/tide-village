@@ -6504,7 +6504,7 @@ function renderFerry(body){
 }
 /* ================= DIVE：潛水（進階玩法：要先買潛水裝備，氧氣瓶可以升級）================= */
 // 水下場景蓋在外海的正下方（跟房子一樣，外面用一顆大球包起來，看不到上面的世界）
-const DIVE = { x:60, y:-70, z:-40, r:30, top:15 };
+const DIVE = { x:60, y:-70, z:-40, r:Quality.tier === 'low' ? 40 : 48, top:15 };   /* v204：海底變大（原本半徑 30） */
 // 三個潛水點：越深越需要好裝備，寶物也越多（伺服器 022_dive_sites.sql 一樣）
 const DIVE_SITES = {
   reef:  { name:'珊瑚礁',   icon:'🪸', need:['dive_suit'], top:15, sky:['#8ee6f7', '#0b4a78'], fog:'#2a9cc8', far:34, coral:90, lush:true, kelp:46, rocks:26, shells:14, chests:[0.55], pearls:0, legendP:0.28, desc:'淺淺的珊瑚礁，有一艘小沉船、很多魚群。' },
@@ -6517,6 +6517,36 @@ const DIVE_SITES = {
     fish:['angler', 'jelly', 'lantern', 'oarfish', 'giantsquid', 'octopus', 'eel', 'moonbream', 'ika', 'squid', 'goby', 'kingcrab'] },
 };
 function diveSiteOk(k){ return DIVE_SITES[k].need.every(hasDive); }
+/* v204：海底通道＋氧氣泡泡口。潛水的時候游到海底邊緣的發光拱門，就能直接游到相鄰的海域（不用浮上去）；
+   海底有冒泡的「氣泡口」，游進泡泡柱裡會補氧氣。相鄰關係照地圖：港口 ↔ 珊瑚礁（西邊長橋那頭）、港口 ↔ 沉船深海（外海往下）、珊瑚礁 ↔ 海底洞穴、沉船 ↔ 海底洞穴、外海 ↔ 港口／沉船 */
+const DIVE_LINKS = { harbor:['reef', 'wreck'], reef:['harbor', 'cave'], wreck:['harbor', 'cave'], cave:['reef', 'wreck'], offshore:['harbor', 'wreck'] };
+function diveExtras(){ const g = Dive.group; if (!g) return; const X = DIVE.x, Z = DIVE.z, R = DIVE.r, links = DIVE_LINKS[Dive.site] || [];
+  Dive.portals = []; Dive.vents = [];
+  links.forEach((to, i) => { const a = (i === 0 ? -0.6 : 2.4) + (Dive.site.length % 3) * 0.3, x = X + Math.cos(a) * (R - 3.5), z = Z + Math.sin(a) * (R - 3.5), y = diveBed(x, z), S2 = DIVE_SITES[to], ok = diveSiteOk(to);
+    const pg = new THREE.Group(); pg.position.set(x, y, z); pg.rotation.y = -a + Math.PI / 2; g.add(pg);
+    const stoneM = mat('#6d6a62', 0.95), glowM = new THREE.MeshBasicMaterial({ color: ok ? '#7fe8ff' : '#8a8a8a', transparent:true, opacity:0.55, side:THREE.DoubleSide, depthWrite:false });
+    for (const sx of [-1.8, 1.8]) pg.add(box([0.9, 4.2, 0.9], null, [sx, 2.1, 0], stoneM)); const top = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.45, 6, 16, Math.PI), stoneM); top.position.y = 4.2; pg.add(top);
+    const veil = new THREE.Mesh(new THREE.CircleGeometry(1.75, 24, 0, Math.PI), glowM); veil.position.y = 4.2; pg.add(veil); const veil2 = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 4.2), glowM); veil2.position.y = 2.1; pg.add(veil2);
+    const cv = document.createElement('canvas'); cv.width = 320; cv.height = 80; const c = cv.getContext('2d'); c.fillStyle = 'rgba(10,40,70,0.85)'; c.fillRect(0, 0, 320, 80); c.fillStyle = ok ? '#bff6ff' : '#cccccc'; c.font = 'bold 40px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(`${S2.icon} 往${S2.name}`, 160, 42);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshBasicMaterial({ map: tx, transparent:true, side:THREE.DoubleSide })); sg.position.y = 6.2; pg.add(sg);
+    Dive.portals.push({ to, x, z, y, ok, veil: [veil, veil2] }); });
+  for (let k = 0; k < 3; k++){ const a = k / 3 * Math.PI * 2 + 0.9, r = R * (0.35 + k * 0.15), x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, y = diveBed(x, z);
+    const vg = new THREE.Group(); vg.position.set(x, y, z); g.add(vg); vg.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 0.5, 9), mat('#5a5850', 0.95))); 
+    const N = 40, bg = new THREE.BufferGeometry(), bp = new Float32Array(N * 3); for (let i = 0; i < N; i++){ bp[i * 3] = (Math.random() - 0.5) * 0.6; bp[i * 3 + 1] = Math.random() * DIVE.top; bp[i * 3 + 2] = (Math.random() - 0.5) * 0.6; } bg.setAttribute('position', new THREE.BufferAttribute(bp, 3));
+    const pts = new THREE.Points(bg, new THREE.PointsMaterial({ color:'#e8fbff', size:0.22, transparent:true, opacity:0.85, depthWrite:false })); vg.add(pts); Dive.vents.push({ x, z, y, pts }); } }
+function diveExtrasUpdate(dt, t){
+  for (const v of Dive.vents || []){ const a = v.pts.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (1.2 + (i % 5) * 0.2); a[i] += Math.sin(t * 3 + i) * dt * 0.1; if (a[i + 1] > DIVE.top + (DIVE.y - v.y)) a[i + 1] = 0.3; } v.pts.geometry.attributes.position.needsUpdate = true;
+    if (Math.hypot(me.pos.x - v.x, me.pos.z - v.z) < 1.4 && Dive.o2 < Dive.o2max){ Dive.o2 = Math.min(Dive.o2max, Dive.o2 + dt * 12); if (!Dive.ventTold || now() - Dive.ventTold > 6){ Dive.ventTold = now(); flash('🫧 吸到氣泡口的空氣，氧氣慢慢補回來', 1.2); } } }
+  for (const p of Dive.portals || []){ for (const v of p.veil) v.material.opacity = 0.4 + Math.sin(t * 2.2) * 0.15;
+    if (!Dive.ending && !Dive.moving && Math.hypot(me.pos.x - p.x, me.pos.z - p.z) < 2.2 && me.baseY < p.y + 4.5){
+      if (!p.ok){ if (!p.told || now() - p.told > 5){ p.told = now(); const S2 = DIVE_SITES[p.to]; toast(`${S2.name}要先買：${S2.need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); } continue; }
+      diveMoveTo(p.to); break; } } }
+function diveMoveTo(site){ if (Dive.moving) return; Dive.moving = true; const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop(); const from = Dive.site, o2 = Dive.o2, seen = Dive.seen;
+  setTimeout(() => { if (Dive.group){ Dive.group.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); scene.remove(Dive.group); Dive.group = null; }
+    Dive.fish = []; Dive.schools = []; Dive.loot = []; Dive.kelp = null; Dive.site = site; buildDive(); diveExtras(); diveHideWorld(true); Dive.o2 = o2; Dive.seen = seen;
+    const back = (Dive.portals || []).find(p => p.to === from); if (back){ const ang = Math.atan2(back.z - DIVE.z, back.x - DIVE.x); me.pos.x = back.x - Math.cos(ang) * 4; me.pos.z = back.z - Math.sin(ang) * 4; me.rot = Math.atan2(-Math.cos(ang), -Math.sin(ang)); }
+    me.baseY = Math.max(me.baseY, diveBed(me.pos.x, me.pos.z) + 1.5); Jump.gy = me.baseY; renderDiveHud(); setTimeout(() => { fx.classList.remove('on'); Dive.moving = false; }, 150);
+    flash(`${DIVE_SITES[site].icon} 游到了${DIVE_SITES[site].name}`, 1.6); }, 380); }
 const DIVE_GEAR = [
   { id:'dive_suit',  name:'潛水裝備組',   icon:'🤿', price:1500, o2:60,  desc:'潛水衣、面鏡、蛙鞋和小氧氣瓶。有了它才能請船夫阿海帶你去潛水，氧氣 60 秒。' },
   { id:'dive_tank2', name:'中型氧氣瓶',   icon:'🫧', price:1200, o2:100, need:'dive_suit',  desc:'氧氣變成 100 秒。' },
@@ -6557,9 +6587,10 @@ function diveMerger(){
   };
 }
 function buildDive(){
-  const S = DIVE_SITES[Dive.site] || DIVE_SITES.reef; DIVE.top = S.top; Dive.crystals = [];
+  let S = DIVE_SITES[Dive.site] || DIVE_SITES.reef; DIVE.top = S.top; Dive.crystals = [];
   const g = new THREE.Group(); g.name = 'dive'; scene.add(g); Dive.group = g;
   const X = DIVE.x, Y = DIVE.y, Z = DIVE.z, R = DIVE.r, M = diveMerger(), rnd = mulberry(Math.floor(Date.now() / 60000));
+  const AK = Quality.tier === 'low' ? 1.2 : 1.7; S = Object.assign({}, S, { coral: Math.round(S.coral * AK), kelp: Math.round(S.kelp * AK), rocks: Math.round(S.rocks * AK), shells: Math.round(S.shells * 1.4) });   /* 海底變大，東西也多放一點 */
   const onBed = () => { const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * R * 0.92, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; return [x, diveBed(x, z), z]; };
   // 外面的大球（上亮下暗）和水面
   { const sg = new THREE.SphereGeometry(R + 16, 28, 16), cs = [], p = sg.attributes.position, c1 = new THREE.Color(S.sky[0]), c0 = new THREE.Color(S.sky[1]), cc = new THREE.Color();
@@ -6743,7 +6774,7 @@ function startDive(site, back){
   if (Dive.boat){ Dive.back = { x: myBoat.m.position.x, z: myBoat.m.position.z }; myBoat = null; me.sitting = false; } else if (myBoat) leaveFerry(true);
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
   setTimeout(() => {
-    buildDive(); diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
+    buildDive(); try { diveExtras(); } catch(e){ console.warn('diveExtras', e); } diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
     me.pos.x = DIVE.x - 4; me.pos.z = DIVE.z + DIVE.r * 0.45; me.baseY = DIVE.y + DIVE.top - 2.5; Jump.gy = me.baseY; Jump.air = 0; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.35; Dive.savedDist = cam.dist; cam.dist = 5.5;
     me.setSwim(true); renderDiveHud(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120);
     flash(`${DIVE_SITES[site].icon} ${DIVE_SITES[site].name}・氧氣 ${Dive.o2max} 秒`, 1.6);
@@ -6822,6 +6853,7 @@ function updateDive(dt, t){
   // 海帶
   if (Dive.kelp && frameNo % 2 === 0){ const { im, list } = Dive.kelp, cur = faiCurrent(); for (let i = 0; i < list.length; i++){ const k = list[i]; tankDummy.position.set(k.x, k.y, k.z); tankDummy.rotation.set(Math.sin(t * 0.9 + k.ph) * 0.12 * (0.6 + cur.sp) + cur.lz, k.ry, Math.cos(t * 0.7 + k.ph) * 0.1 * (0.6 + cur.sp) - cur.lx); tankDummy.scale.set(1, k.s, 1); tankDummy.updateMatrix(); im.setMatrixAt(i, tankDummy.matrix); } im.instanceMatrix.needsUpdate = true; }
   // 魚群、單獨的魚：海洋生態 AI（faiDiveUpdate）；出錯的話用原本繞圈圈的游法
+  try { diveExtrasUpdate(dt, t); } catch(e){}
   if (Dive.aiOn){ try { faiDiveUpdate(dt, t); } catch(e){ console.warn('fishAI dive', e); Dive.aiOn = false; } }
   if (!Dive.aiOn){
   // 魚群
@@ -9990,6 +10022,7 @@ function renderTab(){
       '愛海點數在商店的「💙愛海」分頁換限定服飾（海龜帽、海洋守護衫、珊瑚項鍊、鯊魚背鰭），金幣買不到。',
     ]);
     sec('🤿 潛水（進階玩法）', [
+      '海底很大，到處游看看：海底邊緣有發光的石拱門「往○○」，游進去就直接到隔壁的海域，不用浮上去（要有那個海域需要的裝備）。海底有冒泡泡的「氣泡口」，游進泡泡柱裡會慢慢補氧氣。',
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
@@ -10406,7 +10439,7 @@ function faiObserve(t){
   if (t < FAI.obsAt) return; FAI.obsAt = t + 0.3; let el2 = $('#obsTip'); if (!el2){ el2 = document.createElement('div'); el2.id = 'obsTip'; document.body.appendChild(el2); }
   const ev = FAI.events.shift(); if (ev && now() - ev.at < 3){ el2.textContent = '👀 ' + ev.text; el2.hidden = false; el2.dataset.until = now() + 2.5; return; }
   if (+el2.dataset.until > now()) return;
-  const fx = Math.sin(me.rot), fz = Math.cos(me.rot), list = Dive.on ? Dive.fish.filter(o => o.ai).map(o => ({ f: o.f, pos: o.pos, state: o.ai.state })) : FAI.agents;
+  const fx = Math.sin(me.rot), fz = Math.cos(me.rot), list = Dive.on ? Dive.fish.filter(o => o.ai).map(o => ({ f: o.f, pos: o.pos, state: o.ai.state, tr: o.ai.tr })) : FAI.agents;   /* v204：潛水時少了 tr，看魚的提示會出錯讓魚的 AI 停掉 */
   let best = null, bd = Dive.on ? 7 : 5.5; for (const a of list){ const dx = a.pos.x - me.pos.x, dz = a.pos.z - me.pos.z, d = Math.hypot(dx, dz); if (d < bd && (dx * fx + dz * fz) / (d || 1) > 0.3){ bd = d; best = a; } }
   if (!best || F.phase === 'reeling' || !$('#sheet').hidden){ el2.hidden = true; return; }
   el2.textContent = `🔍 ${rec.count[best.f.id] ? best.f.name : best.tr.crawl ? '沒看過的蟹蝦' : '沒看過的魚'}・${best.tr.crawl && best.state === 'wander' ? '在水底橫著慢慢爬' : best.tr.crawl && best.state === 'forage' ? '用鉗子在沙裡找東西吃' : best.tr.crawl && best.state === 'flee' ? '橫著快跑躲起來了！' : (FAI_STATE[best.state] || '')}`; el2.hidden = false; }
