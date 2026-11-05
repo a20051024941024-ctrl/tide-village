@@ -1144,7 +1144,7 @@ function castPoint(x, z, dx, dz, dist){
     const side = [sp.dir.y, -sp.dir.x];
     let mx = sp.pos.x - sp.dir.x*1.4 + side[0]*1.5, mz = sp.pos.z - sp.dir.y*1.4 + side[1]*1.5;
     if (!walkable(mx, mz)){ mx = sp.pos.x - sp.dir.x*1.4 - side[0]*1.5; mz = sp.pos.z - sp.dir.y*1.4 - side[1]*1.5; }
-    const m = labelMarker(sp.color); m.position.set(mx, groundHeight(mx, mz), mz); scene.add(m);
+    if (sp.id !== 'shrimp'){ const m = labelMarker(sp.color); m.position.set(mx, groundHeight(mx, mz), mz); scene.add(m); }   /* 釣蝦場裡面不要立一根標示柱（擋在走道中間） */
     // 魚群：在釣點前方找一處夠深的水
     const p = castPoint(sp.pos.x, sp.pos.z, sp.dir.x, sp.dir.y, 5);
     const g = new THREE.Group(); g.position.set(p[0], Math.max(terrainH(p[0], p[1]) + 0.25, -0.12), p[1]);
@@ -2690,7 +2690,8 @@ function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
 function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 0) d += Math.PI*2; return a + (d - Math.PI) * k; }
 
 const reelCam = { k:0, pos:new THREE.Vector3(), look:new THREE.Vector3() };
-function updateCamera(dt){ updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); } }
+const camLook = new THREE.Vector3();
+function updateCamera(dt){ updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 function updateCamera2(dt){
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   const reelOn = F.phase === 'reeling' && !Photo.on;
@@ -2702,7 +2703,7 @@ function updateCamera2(dt){
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
     const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(House.on ? ROOM_Y + 0.8 : Dive.on ? DIVE.y + 0.5 : 0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
     camera.position.lerp(normal.lerp(want, reelCam.k), 1 - Math.exp(-8 * dt));
-    camera.lookAt(tg.lerp(look, reelCam.k));
+    camera.lookAt(tg.lerp(look, reelCam.k)); camLook.copy(tg);
     if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
     return;
   }
@@ -2711,7 +2712,7 @@ function updateCamera2(dt){
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
   want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
-  camera.lookAt(target);
+  camera.lookAt(target); camLook.copy(target);
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
 }
 
