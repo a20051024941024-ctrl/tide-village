@@ -6596,8 +6596,9 @@ function pvInit(){
     Object.assign(PV, { r, cv, sc, cam, av }); return true;
   } catch(e){ PV.failed = true; return false; }
 }
+function pvSize(w, h){ if (!PV.r) return; if (PV.w === w && PV.h === h) return; PV.w = w; PV.h = h; PV.r.setSize(w, h, false); PV.cam.aspect = w / h; PV.cam.updateProjectionMatrix(); }
 function pvShow(host, gear){
-  if (!pvInit()) return false;
+  if (!pvInit()) return false; if (!host.closest || !host.closest('.closet')){ pvSize(150, 170); PV.cam.position.set(0, 1.3, 5.0); PV.cam.lookAt(0, 1.15, 0); }
   if (avKidify(PV.av)) PV.key = ''; PV.av.shirtM.color.set(look.shirt); PV.av.hatM.color.set(look.hat);
   const k = JSON.stringify(gear); if (PV.key !== k){ applyGear(PV.av, gear); PV.key = k; }
   host.appendChild(PV.cv); if (!PV.raf) PV.raf = requestAnimationFrame(pvLoop); return true;
@@ -6870,6 +6871,43 @@ function renderWardrobe(body, only){
   }
   body.appendChild(ul);
   if (!only && DESIGN_SLOTS.some(([k]) => k === Wardrobe.slot)) renderMyDesigns(body, Wardrobe.slot);
+}
+// ===== 衣櫃（像天天玩樂園）：左邊是大大的自己，右邊點衣服，身上馬上換給你看 =====
+const Closet = { slot:'top', scroll:{} };
+function closetTryAll(){ const g = cleanGear(Wardrobe.preview || rec.gear); return GEAR_SLOTS.map(([k]) => g[k]).filter(id => id && GEAR_BY_ID[id] && !ownsGear(id)).map(id => GEAR_BY_ID[id]); }
+function renderCloset(body){
+  const wrap = el('div', 'closet'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap);
+  // 左邊：大的 3D 預覽（可以轉）
+  const showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'cl-pv');
+  if (pvShow(box, showG)){ const W = Math.max(140, Math.min(300, Math.round(innerWidth * 0.3))), H = Math.max(180, Math.min(420, Math.round(innerHeight * 0.66))); pvSize(W, H); PV.cam.position.set(0, 1.05, 3.7); PV.cam.lookAt(0, 0.9, 0); box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); }
+  else { const img = el('img'); img.alt = '預覽'; try { img.src = avatarShot(showG, 'full', 256); } catch(e){} box.appendChild(img); }
+  L.appendChild(box);
+  const tries = closetTryAll(), info = el('div', 'cl-info');
+  if (tries.length){ const coin = tries.filter(i => !i.love).reduce((a, i) => a + i.price, 0), love = tries.filter(i => i.love).reduce((a, i) => a + i.love, 0);
+    info.appendChild(el('div', 'cl-t', `試穿中：${tries.map(i => i.name).join('、')}`));
+    const bar = el('div', 'cl-bar'), bk = el('button', 'tbtn ghost', '換回原本'); bk.addEventListener('click', () => { endTryOn(); renderTab(); });
+    const buy = el('button', 'tbtn', `全部買下 ${coin ? '🪙' + coin.toLocaleString() : ''}${love ? ' 💙' + love : ''}`); buy.disabled = rec.coins < coin || (rec.love || 0) < love;
+    buy.addEventListener('click', () => { const keep = cleanGear(Wardrobe.preview || rec.gear); for (const it of tries){ if (it.love) redeemLove(it.id); else buyGear(it.id); } rec.gear = Object.assign(cleanGear(rec.gear), Object.fromEntries(GEAR_SLOTS.map(([k]) => [k, keep[k]]).filter(([k, v]) => v && ownsGear(v)))); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); cloudCall('set_gear', { p_gear: rec.gear }); endTryOn(); renderTab(); });
+    bar.append(bk, buy); info.appendChild(bar); }
+  else info.appendChild(el('div', 'cl-t sub', '點右邊的衣服就會馬上換上；還沒買的會先試穿，喜歡再買。'));
+  info.appendChild(el('div', 'cl-coin', `🪙 ${rec.coins.toLocaleString()}　💙 ${(rec.love || 0).toLocaleString()}`)); L.appendChild(info);
+  // 右邊：分類和衣服格子
+  const tabs = el('div', 'cl-tabs'); const ICON = { look:'💇', hat:'👒', top:'👕', pants:'👖', shoes:'👟', socks:'🧦', acc:'🕶️', back:'🎒', face:'😊' };
+  for (const [k, l] of GEAR_SLOTS){ const b = el('button', 'cl-tab' + (Closet.slot === k ? ' on' : '')); b.append(el('span', 'i', ICON[k] || '•'), el('span', 'n', l)); b.addEventListener('click', () => { Closet.slot = k; renderTab(); }); tabs.appendChild(b); }
+  R2.appendChild(tabs);
+  const list = el('div', 'cl-list'); R2.appendChild(list);
+  if (Closet.slot === 'look'){ renderLookEd(list); }
+  else { const grid = el('div', 'cl-grid'), cur = cleanGear(rec.gear), pv = cleanGear(Wardrobe.preview || rec.gear);
+    const tile = (id, name, icon, badge, on, onClick) => { const b = el('button', 'cl-it' + (on ? ' on' : '')); const im = el('img'); im.alt = name; im.loading = 'lazy'; if (icon) im.src = icon; b.appendChild(im); b.appendChild(el('span', 'n', name)); if (badge) b.appendChild(el('span', 'b', badge)); b.addEventListener('click', onClick); grid.appendChild(b); };
+    for (const it of GEAR.filter(g => g.slot === Closet.slot)){ const own = ownsGear(it.id), wearing = cur[it.slot] === it.id, trying = pv[it.slot] === it.id && !wearing; let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){}
+      tile(it.id, it.name, ic, wearing ? '✔ 穿著' : own ? '' : it.love ? `💙${it.love}` : `🪙${it.price.toLocaleString()}`, wearing || trying, () => { if (own){ endTryOn(); wearGear(it.id); } else { Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: it.id }); Wardrobe.previewOf = it.id; renderTab(); } }); }
+    if (DESIGN_SLOTS.some(([k]) => k === Closet.slot)){ for (const item of (rec.owned || []).filter(id => { const d = designId(id); return d && d.kind === Closet.slot; })){ const d = designId(item), D = Designs.map.get(d.id); if (!D) queueDesign(d.id); let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [Closet.slot]: item }), Closet.slot, 96); } catch(e){}
+        tile(item, D ? D.name || '設計' : '載入中…', ic, cur[Closet.slot] === item ? '✔ 穿著' : '🎨', cur[Closet.slot] === item, () => wearDesign(item)); }
+      const nb = el('button', 'cl-it add'); nb.append(el('span', 'plus', '＋'), el('span', 'n', '自己設計')); nb.addEventListener('click', () => { if (!Cloud.on){ toast('要連上雲端（登入）才能設計衣服'); return; } DesignEd.kind = Closet.slot; DesignEd.px = null; curTab = 'design'; renderTab(); }); grid.appendChild(nb);
+      const mk = el('button', 'cl-it add'); mk.append(el('span', 'plus', '🛍️'), el('span', 'n', '設計師市集')); mk.addEventListener('click', () => { Market.mode = 'new'; Market.kind = Closet.slot; curTab = 'market'; renderTab(); }); grid.appendChild(mk); }
+    list.appendChild(grid); }
+  list.scrollTop = Closet.scroll[Closet.slot] || 0; list.addEventListener('scroll', () => { Closet.scroll[Closet.slot] = list.scrollTop; });
+  requestAnimationFrame(() => { list.scrollTop = Closet.scroll[Closet.slot] || 0; });
 }
 function renderShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
@@ -8600,7 +8638,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
 function closeSheet(){ if ($('#sheet').hidden) return; $('#sheet').hidden = true; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
-$$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab)));
+$$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
 $('#closeSheet').addEventListener('click', closeSheet);
 let sheetOpenedAt = 0;   // 用按鈕打開選單的那一下，放開手指時的 click 不要把它關掉
@@ -8617,6 +8655,8 @@ function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.c
 function renderTab(){
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
   const body = $('#sheetBody'); body.textContent = '';
+  $('#sheet').classList.toggle('closet', curTab === 'closet');
+  if (curTab === 'closet'){ renderCloset(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'cldesign'){ renderClDesign(body); return; }
   if (curTab === 'shop'){ renderShop(body); return; }
@@ -8803,7 +8843,7 @@ function renderTab(){
     const f2 = el('div', 'field'); f2.appendChild(el('label', '', '帽子顏色')); const s2 = el('div', 'swatches');
     HATS.forEach(c => { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', '帽子 ' + c); b.setAttribute('aria-pressed', String(look.hat === c)); b.addEventListener('click', () => { look.hat = c; saveLook(); renderTab(); }); s2.appendChild(b); });
     f2.appendChild(s2); body.appendChild(f2);
-    { const fw = el('div', 'field'); fw.appendChild(el('label', '', `👗 服裝（🪙 ${rec.coins.toLocaleString()}）`)); body.appendChild(fw); renderWardrobe(body); }
+    { const fw = el('div', 'field'); fw.appendChild(el('label', '', '👗 服裝')); const b = el('button', 'tbtn', '👕 打開衣櫃（點一下馬上換上看看）'); b.addEventListener('click', () => { curTab = 'closet'; renderTab(); }); fw.appendChild(b); body.appendChild(fw); }
     const f3 = el('div', 'field'); const lab = el('label', '', '暱稱'); lab.htmlFor = 'nickIn'; f3.appendChild(lab);
     const inp = el('input', 'txt'); inp.id = 'nickIn'; inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳';
     inp.addEventListener('change', () => { nickname = clean(inp.value.trim().slice(0, 16)); inp.value = nickname; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); cloudProfile(); });

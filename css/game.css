@@ -892,3 +892,33 @@ body.ui2 #brand .mark{width:46px;height:46px}
 .growbox .gb-r{display:flex;flex-wrap:wrap;gap:6px}
 #brand.open{position:relative;z-index:60}   /* 打開時蓋在搖桿區上面，點頭像才收得起來 */
 body:has(#brand.open) #joyZone{pointer-events:none}
+/* ===== 衣櫃（像天天玩樂園）：全螢幕，左邊大大的自己、右邊衣服格子 ===== */
+#sheet.closet .box{width:min(1100px,calc(100vw - var(--gl,0px) - var(--gr,0px) - 8px));max-height:100%;height:100%;box-sizing:border-box}
+#sheet.closet #sheetBody{padding:6px 12px 10px;overflow:hidden;display:flex;flex:1;min-height:0}
+.closet{display:flex;gap:12px;flex:1;min-height:0;min-width:0}
+.closet .cl-l{flex:0 0 auto;width:min(320px,32vw);display:flex;flex-direction:column;gap:8px;min-height:0}
+.closet .cl-pv{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#fff 0,#e8f3f8 60%,#d6e8f0 100%);border-radius:18px;position:relative;overflow:hidden}
+.closet .cl-pv canvas,.closet .cl-pv img{max-width:100%;max-height:100%}
+.closet .cl-pv .pvhint{position:absolute;bottom:6px;left:0;right:0;text-align:center;color:var(--ink-soft);font-size:11px}
+.closet .cl-info{background:#fff;border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.closet .cl-t{font-weight:700;line-height:1.35}
+.closet .cl-t.sub{font-weight:400;color:var(--ink-soft)}
+.closet .cl-bar{display:flex;gap:6px;flex-wrap:wrap}
+.closet .cl-coin{font-size:12px;color:var(--ink-soft)}
+.closet .cl-r{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0}
+.closet .cl-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:none;padding-bottom:2px}
+.closet .cl-tab{flex:none;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 10px;border-radius:14px;border:0;background:#eef4f7;color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.closet .cl-tab .i{font-size:20px;line-height:1}
+.closet .cl-tab.on{background:#18334a;color:#fff}
+.closet .cl-list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
+.closet .cl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.closet .cl-it{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px 8px;border-radius:14px;border:2px solid transparent;background:#fff;box-shadow:0 2px 6px rgba(24,51,74,.08);font:inherit;color:var(--ink);cursor:pointer}
+.closet .cl-it > img{width:72px;height:72px;object-fit:contain}
+.closet .cl-it .b img,.closet .cl-info img{width:1.1em;height:1.1em;vertical-align:-0.18em}
+.closet .cl-it .n{font-size:12px;line-height:1.2;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.closet .cl-it .b{position:absolute;top:4px;right:4px;font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:999px;background:#fff3d6;color:#6a4a00}
+.closet .cl-it.on{border-color:#2a8fb8;background:#eaf7fc}
+.closet .cl-it.on .b{background:#2a8fb8;color:#fff}
+.closet .cl-it.add{border:2px dashed rgba(24,51,74,.25);background:transparent;box-shadow:none;justify-content:center;min-height:110px}
+.closet .cl-it.add .plus{font-size:26px}
+@media (orientation:portrait){ .closet{flex-direction:column} .closet .cl-l{width:100%;flex:0 0 40%} }
