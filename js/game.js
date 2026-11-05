@@ -768,7 +768,8 @@ function buildTrees(trees, PX, PZ){
   };
   const vm = (opts) => new THREE.MeshStandardMaterial(Object.assign({ color:'#ffffff', vertexColors:true, roughness:0.85 }, opts));
   const M = { trunk: vm(), round: vm(), pine: vm({ flatShading:true }), birch: vm(), fruit: new THREE.MeshStandardMaterial({ color:'#ffffff', roughness:0.45, emissive:'#401010', emissiveIntensity:0.15 }) };
-  instSway(M.round, 0.07, 1.4, 3.6, 'round'); instSway(M.pine, 0.05, 1.4, 4.4, 'pine'); instSway(M.birch, 0.08, 1.9, 4.0, 'birch'); instSway(M.fruit, 0.07, 1.4, 3.6, 'round');
+  instSway(M.round, 0.07, 1.4, 3.6, 'round', 'crown'); instSway(M.pine, 0.05, 1.4, 4.4, 'pine', 'pine'); instSway(M.birch, 0.08, 1.9, 4.0, 'birch', 'crown'); instSway(M.fruit, 0.07, 1.4, 3.6, 'round');
+  M.trunk.onBeforeCompile = sh => addDetail(sh, 'trunk'); M.trunk.customProgramCacheKey = () => 'trunk' + (DETAIL_ON() ? '-d' : '');
   const C = (h) => new THREE.Color(h);
   const kinds = { round:[], pine:[], birch:[] }, fruits = [];
   for (const [x, z, k] of trees){
@@ -2003,6 +2004,12 @@ function buildNewEnvironment(){
 
 // 樹冠、蘆葦隨風輕輕擺動
 /* ---- 卡通植物的共用工具：頂點明暗漸層、InstancedMesh 專用的擺動 ---- */
+/* 石頭：中、高畫質用凹凸不平的圓石（細分後用雜訊推一推），低畫質維持原本的 12 面體 */
+function rockGeo(){ if (!DETAIL_ON()) return new THREE.DodecahedronGeometry(0.4, 0);
+  const g = new THREE.IcosahedronGeometry(0.4, 2), p = g.attributes.position, v = new THREE.Vector3();
+  const n3 = (x, y, z) => Math.sin(x * 5.1 + y * 2.3) * 0.5 + Math.sin(y * 4.7 - z * 3.1) * 0.35 + Math.sin(z * 6.3 + x * 1.7) * 0.25;
+  const seen = new Map(); for (let i = 0; i < p.count; i++){ v.fromBufferAttribute(p, i); const key = v.x.toFixed(4) + v.y.toFixed(4) + v.z.toFixed(4); let k = seen.get(key); if (k === undefined){ k = 1 + n3(v.x * 3, v.y * 3, v.z * 3) * 0.14; seen.set(key, k); } v.multiplyScalar(k); if (v.y < -0.15) v.y = -0.15 + (v.y + 0.15) * 0.3; p.setXYZ(i, v.x, v.y, v.z); }
+  g.computeVertexNormals(); return g; }
 function vgrad(geo, y0, y1, lo, hi, noise, tint){
   if (!geo) return new THREE.BufferGeometry();
   geo = geo.index ? geo.toNonIndexed() : geo;
@@ -2021,8 +2028,24 @@ function mergeParts(list){
   return mergeGeometries(gs, false) || gs[0];   // 合併失敗時至少用第一個形狀，不讓整個遊戲壞掉
 }
 // 依每棵樹自己的位置錯開擺動，看起來不會整片同步
-function instSway(material, amp, y0, y1, key){
+/* v205 精緻化第 2 批：葉子、樹皮、石頭的細節用 shader 畫（不加幾何，便宜手機關掉） */
+function DETAIL_ON(){ return Quality.tier !== 'low' && !CLASSIC; }
+var GLSL_NOISE = `
+float dH(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float dN(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(dH(i), dH(i + vec3(1,0,0)), f.x), mix(dH(i + vec3(0,1,0)), dH(i + vec3(1,1,0)), f.x), f.y), mix(mix(dH(i + vec3(0,0,1)), dH(i + vec3(1,0,1)), f.x), mix(dH(i + vec3(0,1,1)), dH(i + vec3(1,1,1)), f.x), f.y), f.z); }`;
+var DETAIL_FRAG = {
+  crown: 'float lf = dN(vDetP * 7.0) * 0.6 + dN(vDetP * 15.0) * 0.4; float gap = smoothstep(0.32, 0.18, lf); diffuseColor.rgb *= mix(1.0, 0.62, gap) * (0.9 + 0.2 * smoothstep(0.45, 0.75, lf)) * (0.92 + 0.12 * vDetN.y);',
+  pine:  'float nd = dN(vec3(vDetP.x * 22.0, vDetP.y * 4.0, vDetP.z * 22.0)); float tier = fract(vDetP.y * 1.47); diffuseColor.rgb *= (0.82 + 0.3 * nd) * mix(0.78, 1.08, smoothstep(0.0, 0.6, tier));',
+  trunk: 'float ang = atan(vDetP.z, vDetP.x); float gr = sin(ang * 13.0 + dN(vDetP * vec3(3.0, 1.2, 3.0)) * 4.0); diffuseColor.rgb *= 0.78 + 0.22 * smoothstep(-0.6, 0.6, gr) + 0.08 * dN(vDetP * 20.0);',
+  rock:  'float sp = dN(vDetP * 9.0) * 0.6 + dN(vDetP * 23.0) * 0.4; diffuseColor.rgb *= 0.8 + 0.32 * sp; float moss = smoothstep(0.55, 0.85, vDetN.y) * smoothstep(0.35, 0.6, dN(vDetP * 4.0)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.36, 0.52, 0.27) * (0.8 + 0.3 * sp), moss * 0.75);',
+};
+function addDetail(sh, kind){ if (!DETAIL_ON() || !DETAIL_FRAG[kind]) return;
+  sh.vertexShader = 'varying vec3 vDetP;\nvarying vec3 vDetN;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vDetP = position;\n vDetN = normal;');
+  sh.fragmentShader = 'varying vec3 vDetP;\nvarying vec3 vDetN;\n' + GLSL_NOISE + '\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' + DETAIL_FRAG[kind]); }
+function instSway(material, amp, y0, y1, key, detail){
   material.onBeforeCompile = sh => {
+    if (detail) addDetail(sh, detail);
     sh.uniforms.uT = fishTime;
     sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       #ifdef USE_INSTANCING
@@ -2032,7 +2055,7 @@ function instSway(material, amp, y0, y1, key){
       transformed.z += cos(uT * 1.05 + ph * 1.3) * ${(amp * 0.6).toFixed(3)} * sw;
       #endif`);
   };
-  material.customProgramCacheKey = () => 'isway-' + key;
+  material.customProgramCacheKey = () => 'isway-' + key + (detail && DETAIL_ON() ? '-d' + detail : '');
 }
 function addSway(material, amp, y0, y1){
   if (CLASSIC) return;
@@ -2079,7 +2102,7 @@ function addFlora(){
   inst(stemGeo, new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.8 }), flowerPts,
     (p, d, col) => { flowerPlace(p, d); col.set('#ffffff'); });
   // 石頭（海岸、沙灘、淺水）
-  inst(new THREE.DodecahedronGeometry(0.4, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, flatShading: true }),
+  inst(rockGeo(), (() => { const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, flatShading: !DETAIL_ON() }); m.onBeforeCompile = sh => addDetail(sh, 'rock'); m.customProgramCacheKey = () => 'rock' + (DETAIL_ON() ? '-d' : ''); return m; })(),
     scatter(Math.round(130 * dens), (x, z) => { const e = islandEdge(x, z), h = terrainH(x, z); return !deckAt(x, z) && !avoid(x, z) && !blocked(x, z, 0.5) && ((e > -2 && e < 4) || inSand(x, z) || (h < -0.15 && h > -0.9)) && Math.hypot(x - MAP.plaza[0], z - MAP.plaza[1]) > 8 && Math.abs(x) < 52 && Math.abs(z) < 56; }),
     ([x, z], d, col) => { const s = rand(0.5, 1.4); d.position.set(x, terrainH(x, z) + 0.08 * s, z); d.scale.set(s, s * rand(0.5, 0.8), s); d.rotation.set(rand(0, 1), rand(0, 6), 0); col.set(Math.random() < 0.5 ? '#b7b2a4' : '#9d998d'); });
   // 蘆葦叢：長在岸邊（陸地邊緣或很淺的水），每叢 5 片細長葉子，會隨風擺
@@ -10446,7 +10469,7 @@ function faiObserve(t){
 // ---- 潛水的魚：換成 AI ----
 function faiCurrent(){ const c = Ocean.d && Ocean.d.state && Ocean.d.state.coast, sp = c ? clamp(+c.spd || 0.3, 0.1, 1) : 0.3, a = c ? (+c.dir || 0) * Math.PI / 180 : 0.6; return { sp, lx: Math.cos(a) * sp * 0.12, lz: Math.sin(a) * sp * 0.12 }; }   /* 海流：海帶、海草往海流的方向倒一點 */
 function faiDiveInit(){ Dive.bait = null; Dive.baitFx = null;
-  for (const s of Dive.schools){ if (s.ball) continue; const n = s.n; s.P = []; s.V = []; s.alive = new Array(n).fill(true); s.respawn = new Array(n).fill(0); const y = diveBed(s.cx, s.cz) + s.y;
+  for (const s of Dive.schools){ if (s.ball){ s.ball = false; s.big = true; } const n = s.n; s.P = [];   /* v205：丁香魚的餌球不再原地繞圈，改成跟其他魚群一樣到處游、會躲人躲大魚 */ s.V = []; s.alive = new Array(n).fill(true); s.respawn = new Array(n).fill(0); const y = diveBed(s.cx, s.cz) + s.y;
     for (let i = 0; i < n; i++){ s.P.push(new THREE.Vector3(s.cx + s.off[i][0] * 1.6, y + s.off[i][1] * 0.7, s.cz + s.off[i][2] * 1.6)); s.V.push(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)); }
     s.lead = new THREE.Vector3(s.cx, y, s.cz); s.lv = new THREE.Vector3(); s.tgt = s.lead.clone(); s.state = 'school'; s.st = 0; s.scale = 0.55; s.surface = false; }
   for (const o of Dive.fish){ const tr = faiTraits(o.f); o.ai = { state:'wander', st:0, cd: Math.random() * 5, vel: new THREE.Vector3(), tgt: new THREE.Vector3(o.cx, diveBed(o.cx, o.cz) + o.y, o.cz), tr, id: Math.random(), prey:null };
