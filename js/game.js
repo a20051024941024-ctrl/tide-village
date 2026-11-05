@@ -3458,6 +3458,49 @@ const FURN = {
   plant:{ name:'盆栽', price:150, rad:0.4, g:'plant' }, bigplant:{ name:'大盆栽', price:300, rad:0.5, g:'plant' },
 };
 const FURN_GROUPS = [['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
+// KayKit Furniture Bits（Kay Lousberg，CC0）的家具：models/kaykit_furn.glb，價格大小跟伺服器 069_kaykit_furn.sql 一樣
+const KKF_LIST = {
+  kk_bed_single_A:{ name:'原木單人床', price:650, rad:1.0, g:'bed', base:'bed', kk:'bed_single_A', bed:1 },
+  kk_bed_single_B:{ name:'白漆單人床', price:650, rad:1.0, g:'bed', base:'bed', kk:'bed_single_B', bed:1 },
+  kk_bed_double_A:{ name:'原木雙人床', price:1300, rad:1.3, g:'bed', base:'dbed', kk:'bed_double_A', bed:1 },
+  kk_bed_double_B:{ name:'白漆雙人床', price:1300, rad:1.3, g:'bed', base:'dbed', kk:'bed_double_B', bed:1 },
+  kk_cabinet_small:{ name:'床頭小櫃', price:300, rad:0.4, g:'bed', base:'desk', kk:'cabinet_small' },
+  kk_cabinet_small_decorated:{ name:'床頭櫃（放了小東西）', price:380, rad:0.4, g:'bed', base:'desk', kk:'cabinet_small_decorated' },
+  kk_cabinet_medium:{ name:'矮櫃', price:450, rad:0.7, g:'bed', base:'ward', kk:'cabinet_medium' },
+  kk_cabinet_medium_decorated:{ name:'矮櫃（擺滿裝飾）', price:600, rad:0.7, g:'bed', base:'ward', kk:'cabinet_medium_decorated' },
+  kk_lamp_table:{ name:'圓燈罩檯燈', price:180, rad:0.3, g:'bed', base:'lamp', kk:'lamp_table' },
+  kk_lamp_standing:{ name:'圓燈罩立燈', price:260, rad:0.35, g:'bed', base:'lamp', kk:'lamp_standing' },
+  kk_couch:{ name:'圓角沙發', price:900, rad:1.1, g:'live', base:'sofa', kk:'couch' },
+  kk_couch_pillows:{ name:'抱枕沙發', price:1000, rad:1.1, g:'live', base:'sofa', kk:'couch_pillows' },
+  kk_armchair:{ name:'圓角扶手椅', price:450, rad:0.6, g:'live', base:'arm', kk:'armchair' },
+  kk_armchair_pillows:{ name:'抱枕扶手椅', price:520, rad:0.6, g:'live', base:'arm', kk:'armchair_pillows' },
+  kk_chair_A:{ name:'靠背餐椅', price:140, rad:0.35, g:'live', base:'chair', kk:'chair_A' },
+  kk_chair_A_wood:{ name:'原木靠背椅', price:140, rad:0.35, g:'live', base:'chair', kk:'chair_A_wood' },
+  kk_chair_B_wood:{ name:'原木格子椅', price:160, rad:0.35, g:'live', base:'chair', kk:'chair_B_wood' },
+  kk_chair_C:{ name:'高背椅', price:160, rad:0.35, g:'live', base:'chair', kk:'chair_C' },
+  kk_chair_stool_wood:{ name:'原木圓凳', price:90, rad:0.3, g:'live', base:'chair', kk:'chair_stool_wood' },
+  kk_table_low:{ name:'矮茶几', price:350, rad:0.9, g:'live', base:'table', kk:'table_low' },
+  kk_table_small:{ name:'小方桌', price:250, rad:0.4, g:'live', base:'table', kk:'table_small' },
+  kk_table_medium:{ name:'四人方桌', price:450, rad:0.8, g:'live', base:'table', kk:'table_medium' },
+  kk_table_medium_long:{ name:'長餐桌', price:600, rad:1.1, g:'live', base:'table', kk:'table_medium_long' },
+  kk_rug_oval_A:{ name:'橢圓地毯', price:260, rad:1.1, g:'live', base:'rug', kk:'rug_oval_A', flat:1 },
+  kk_rug_rectangle_A:{ name:'素色長地毯', price:240, rad:1.1, g:'live', base:'rug', kk:'rug_rectangle_A', flat:1 },
+  kk_rug_rectangle_stripes_A:{ name:'條紋地毯（暖色）', price:280, rad:1.1, g:'live', base:'rug', kk:'rug_rectangle_stripes_A', flat:1 },
+  kk_rug_rectangle_stripes_B:{ name:'條紋地毯（冷色）', price:280, rad:1.1, g:'live', base:'rug', kk:'rug_rectangle_stripes_B', flat:1 },
+  kk_cactus_small_A:{ name:'小仙人掌', price:120, rad:0.25, g:'plant', base:'plant', kk:'cactus_small_A' },
+  kk_cactus_small_B:{ name:'圓圓小仙人掌', price:120, rad:0.25, g:'plant', base:'plant', kk:'cactus_small_B' },
+  kk_cactus_medium_A:{ name:'仙人掌盆栽', price:220, rad:0.4, g:'plant', base:'bigplant', kk:'cactus_medium_A' },
+  kk_cactus_medium_B:{ name:'胖胖仙人掌盆栽', price:220, rad:0.4, g:'plant', base:'bigplant', kk:'cactus_medium_B' },
+};
+Object.assign(FURN, KKF_LIST);
+const KKF = { scene:null, busy:false, wait:[] };
+function kkfLoad(){ if (KKF.scene || KKF.busy) return; KKF.busy = true;
+  new GLTFLoader().load('models/kaykit_furn.glb', g => { KKF.scene = g.scene; g.scene.traverse(o => { if (o.isMesh && o.material){ o.material.metalness = 0; o.material.roughness = 0.85; } }); const W = KKF.wait; KKF.wait = []; for (const x of W) kkfFill(x); },
+    undefined, () => { KKF.busy = false; setTimeout(kkfLoad, 8000); }); }   /* 載入失敗過一陣子再試 */
+function kkfFill(g){ const src = KKF.scene.getObjectByName(g.userData.kk); if (!src) return; if (g.userData.ph){ g.remove(g.userData.ph); g.userData.ph = null; } const m = new THREE.Mesh(src.geometry, src.material); m.castShadow = false; m.receiveShadow = false; g.add(m); }
+function kkfMesh(t){ const F0 = FURN[t], g = new THREE.Group(); g.userData.kk = F0.kk;
+  if (KKF.scene) kkfFill(g); else { const ph = box([F0.rad * 1.3, F0.flat ? 0.04 : 0.5, F0.rad * 1.3], null, [0, F0.flat ? 0.02 : 0.25, 0], new THREE.MeshStandardMaterial({ color:'#d8c8b0', transparent:true, opacity:0.35 })); ph.castShadow = false; g.add(ph); g.userData.ph = ph; KKF.wait.push(g); kkfLoad(); }   /* 模型還沒載好：先放一個淡淡的方塊 */
+  return g; }
 // ---- 阿木的家具（052_mu.sql）：'fz<編號>'＝某一種家具＋自己的木頭顏色、布料顏色、花樣 ----
 const FZ = { map: new Map(), list: null, at: 0, busy: false, want: new Set(), timer: 0, tex: new Map() };
 function fzId(t){ const m = /^fz(\d{1,9})$/.exec(t || ''); return m ? +m[1] : 0; }
@@ -3560,6 +3603,7 @@ function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x
 function furnMesh(t){
   if (FURN[t] && FURN[t].dz) return FURN[t].dz.base === 'paint' ? paintMesh(FURN[t].dz) : fzMesh(FURN[t].dz);
   if (t === 'paint') return paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'sea', fish:null });
+  if (FURN[t] && FURN[t].kk) return kkfMesh(t);
   const g = new THREE.Group(), B = (sz, c, p, rough) => { const b = box(sz, c, p, mat(c, rough == null ? 0.8 : rough, { emissive:c, emissiveIntensity:0.1 })); g.add(b); return b; };
   const C = (rt, rb, h, c, p, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 12), mat(c, 0.7, { emissive:c, emissiveIntensity:0.1 })); m.position.set(p[0], p[1], p[2]); g.add(m); return m; };
   const wood = '#8c5d3b', lw = '#c79a6b';
