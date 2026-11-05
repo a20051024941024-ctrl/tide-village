@@ -123,6 +123,7 @@ supabase/083_festivals.sql 🏮 台灣節慶：festivals 表（2027、2028 跨�
 supabase/084_night_games.sql 🐟🎈 夜市小遊戲：fest_game_start（夜市時才能玩，一次 30 金幣）／fest_game_end（伺服器照分數和實際時間算獎勵，撈金魚每分 6 金幣最多 20 分、射氣球 10 發照打中數給獎、每人每天最多 600；撈到 8 分送 fe_goldbowl 一次）。
 supabase/085_christmas.sql 🎄 聖誕節：2026～2028 每年 12/20～12/26 加進節慶表；fest_gift 每天一份禮物（50～500 金幣）；限定聖誕帽 hat_santa、麋鹿角 hat_antler、聖誕樹家具 fe_xtree；開始時推播。
 supabase/086_no_coin_gift.sql 🎁 拿掉送金幣：send_gift 只能送魚（每天 10 條），送金幣會被擋下（避免分身帳號刷金幣再轉給自己）。同一版也重新產生 020（苔森溪澗 moss 釣點和 10 種新魚）。
+supabase/020_fair_fishing.sql（v209 重新產生）🎆 節慶限定魚：魚的設定加 fest，roll_fish 只有在那個節日期間（_fest_on）才會抽到；煙火魚／金色煙火魚（跨年、港口外海晚上）、紅錦鯉／福錦鯉（春節、鏡湖）。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

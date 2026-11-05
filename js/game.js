@@ -252,6 +252,11 @@ const FISH = [
   { id:'kuhlia_gold',     spot:'moss', of:'kuhlia', name:'金湯鯉', rarity:'傳說', color:'#f0d878', min:0.1, max:0.6, power:0.55, w:0.03, desc:'全身金黃色的湯鯉，在陽光下的溪水裡閃閃發亮。' },
   { id:'mokuzu_blue',     spot:'moss', of:'mokuzu', name:'藍色絨螯蟹', rarity:'傳說', color:'#3a6aa8', min:0.08, max:0.4, power:0.45, w:0.03, desc:'殼和腳都是藍色的絨螯蟹，毛手套還是深褐色的。' },
   { id:'marmorata_gold',  spot:'moss', of:'marmorata', time:'night', name:'黃金鱸鰻', rarity:'傳說', color:'#f0d070', min:2.0, max:20, power:0.95, w:0.03, desc:'全身金黃色的鱸鰻，大理石花紋也變成了金色。傳說是這座島上溪流的守護神。' },
+  // 節慶限定魚（2026-11-06）：fest 寫的是哪個節日；只有那個節日期間釣得到（伺服器也照這個擋）
+  { id:'fwfish', spot:'harbor', fest:'ny', time:'night', name:'煙火魚', rarity:'稀有', color:'#ff7aa8', min:0.3, max:1.6, power:0.55, desc:'跨年夜才會出現在港口外海的魚，全身彩色的亮點像煙火，長長的鰭像煙火的尾巴。' },
+  { id:'fwfish_gold', spot:'harbor', of:'fwfish', fest:'ny', time:'night', name:'金色煙火魚', rarity:'傳說', color:'#ffd36a', min:0.3, max:1.6, power:0.55, w:0.05, desc:'整條閃著金光的煙火魚，傳說釣到的人新的一年都會很幸運。' },
+  { id:'koi_red', spot:'lake', fest:'cny', name:'紅錦鯉', rarity:'稀有', color:'#d8231c', min:0.5, max:4, power:0.55, desc:'春節才會在鏡湖出現的大紅錦鯉，頭上一點白，討個好彩頭。' },
+  { id:'koi_fuku', spot:'lake', of:'koi_red', fest:'cny', name:'福錦鯉', rarity:'傳說', color:'#f2c040', min:0.5, max:4, power:0.55, w:0.05, desc:'紅色的身體配上金色的鰭，背上有一塊金斑，大家都說釣到會招福。' },
   // 老闆的放生活動：每天一段時間只放一隻，全伺服器只有一隻（不在一般的釣點清單裡，見 Sev）
   { id:'bluelobster', spot:'shrimp', sev:true, name:'藍色龍蝦',   rarity:'傳說', color:'#2f6fe0', min:0.4,  max:1.2,  power:0.5,  desc:'大約兩百萬隻龍蝦才有一隻是藍色的，是基因讓殼裡的色素變成寶藍色。阿忠說這是他的壓箱寶。' },
 ];
@@ -294,11 +299,11 @@ function mystH(x, z){ const d = Math.hypot(x - MYST.x, z - MYST.z); if (d > MYST
 function frostHole(x, z, r){ for (const h of FROST.holes) if (Math.hypot(x - h[0], z - h[1]) < (r || 0.45)) return h; return null; }
 const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
-  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red'], legendBoost:1.4 },
+  { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red','koi_red','koi_fuku'], legendBoost:1.4 },
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino','fwfish','fwfish_gold'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
@@ -3091,7 +3096,7 @@ function cancelFishing(msg){
 }
 const LEG_K = { harbor: 1.3, other: 0.35 };   /* 傳說魚：大概幾十分鐘到幾個小時才遇到一次（2026-11-04 調低） */
 function pickFish(spot, charge){
-  const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(Boolean);
+  const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(f => f && (!f.fest || festOn(f.fest)));   /* 節慶限定魚：節日期間才有 */
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
   const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare * LINES[Rig.line].rare, kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
@@ -6595,7 +6600,7 @@ function diveBed(x, z){
   const dx = x - DIVE.x, dz = z - DIVE.z, d = Math.hypot(dx, dz);
   return DIVE.y + Math.sin(dx * 0.21) * 0.45 + Math.cos(dz * 0.17 + dx * 0.05) * 0.55 + Math.sin((dx + dz) * 0.09) * 0.8 + Math.max(0, d - DIVE.r * 0.72) * 0.55;
 }
-let diveSp = null; function diveSpecies(){ return diveSp || (diveSp = FISH.filter(f => SEA_SPOTS.has(f.spot) || DIVE_SITES.cave.fish.includes(f.id))); }
+let diveSp = null; function diveSpecies(){ return diveSp || (diveSp = FISH.filter(f => !f.fest && (SEA_SPOTS.has(f.spot) || DIVE_SITES.cave.fish.includes(f.id)))); }
 /* ---- 外海的魚情：每 5 分鐘換一次，這段時間有 3 種魚特別活躍（上鉤機率 ×2.5）。潛水下去就看得到是哪幾種 ----
    伺服器（fair_fishing.sql.tpl）用一樣的雜湊算，傳說魚和變種不會出現在魚情裡 */
 const INTEL_WIN = 300000;
@@ -6605,7 +6610,7 @@ const Intel = { seenW: -1 };
 function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
 // 外海潛水偶爾遠遠看到一道紅色影子：赤紅霸王鯊還在（海裡沒有了就不會出現）
 function offshoreDiveFish(){ const l = offshoreFish(); if (RS.n > 0 && Math.random() < 0.15) l.push('shark_red'); return l; }
-function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice|^abyss|^mystic/.test(f.spot) && !f.rs); }   /* 紅鯊不會在一般潛點出現 */
+function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice|^abyss|^mystic/.test(f.spot) && !f.rs && !f.fest); }   /* 紅鯊不會在一般潛點出現 */
 // 把很多小東西合併成少數幾個網格（手機比較順）
 function diveMerger(){
   const parts = new Map(), tmp = new THREE.Object3D();
@@ -10106,7 +10111,7 @@ function renderTab(){
       '魚缸、箱網、水族館裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
     ]);
     sec('🏮 節慶活動', [
-      '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，倒數的時候在線上領紀念章）、春節（除夕起 7 天，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、限定香包和龍舟模型）、中秋（大月亮、限定柚子帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
+      '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、限定香包和龍舟模型）、中秋（大月亮、限定柚子帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
       '點頭像的「🏮 節慶」看現在有什麼活動、下一個節日是什麼時候。限定商品過了節日就買不到，已經買到的永遠保留。節日開始的時候會推播（可以在推播開關裡關掉）。',
     ]);
     sec('🐋 全服合作大魚', [
@@ -10343,7 +10348,7 @@ function faiSurfaceY(a, depth){ const d = Math.max(0.3, depth); return a.tr.bott
 function faiPick(spotId, depth){
   const sp = SPOT_BY_ID[spotId]; if (!sp || !sp.fish) return null; const per = periodOf(gameHour()), eco = {}; for (const e of (Ocean.d && Ocean.d.eco) || []) if (e.spot === spotId) eco[e.fish] = +e.mult;
   const rainy = WEATHERS[Env.wx] && WEATHERS[Env.wx].rain > 0, list = [], w = [];
-  for (const id of sp.fish){ const f = FISH_BY_ID[id]; if (!f || f.rs || f.of) continue; if (BIG_FISH.has(id) || (f.min + f.max) / 2 > 40) continue;   /* 鯨魚、大鯊魚這種大傢伙不會游到岸邊 */   /* 變種不會在岸邊游給你看（釣到才知道） */
+  for (const id of sp.fish){ const f = FISH_BY_ID[id]; if (!f || f.rs || f.of || (f.fest && !festOn(f.fest))) continue; if (BIG_FISH.has(id) || (f.min + f.max) / 2 > 40) continue;   /* 鯨魚、大鯊魚這種大傢伙不會游到岸邊 */   /* 變種不會在岸邊游給你看（釣到才知道） */
     let k = f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.18 : 0;
     if (f.time && f.time !== per) k *= 0.12;   /* 白天的魚晚上很少出來，晚上的魚白天躲著 */
     if (rainy && RAIN_FISH.has(id)) k *= 2; if (SEASON_FISH.has(id)) k *= 1.6; if (eco[id] != null) k *= eco[id]; if (k > 0){ list.push(f); w.push(k); } }

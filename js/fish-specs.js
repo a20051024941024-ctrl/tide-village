@@ -749,6 +749,22 @@ Object.assign(SPECS, {
   mokuzu_blue: VAR('mokuzu', { Top:'#3a6aa8', Spots:'#2a4a7a', Fins:'#4a7ab8', Claw:'#24304a' }, {}),
 });
 
+/* ---------------- 節慶限定魚（2026-11-06）：只在節日期間釣得到 ---------------- */
+Object.assign(SPECS, {
+  // 煙火魚（跨年限定，虛構的魚）：深藍夜空色的身體、滿身彩色亮點像煙火、長長的鰭像煙火的尾巴，會發光
+  fwfish: { c:{ Top:'#14204a', Mid:'#22306a', Bottom:'#3a3f7a', Spots:'#ffd36a', Accent:'#ff5a8a', Stripes:'#5fe0ff', Fins:'#ff7aa8', Fins2:'#ffd36a', Eye:'#15181c', EyeW:'#f8f0ff' }, glow:true, glowParts:['Spots', 'Accent', 'Stripes'], p:{
+    bl:0.8, depth:0.34, wr:0.5, tm:0.38, nose:0.6, ped:0.25, cs:0.1,
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }], dots:{ n:30, t0:0.12, t1:0.9, y0:-0.6, y1:0.95, r:0.032, part:'Spots' },
+    dorsal:[{ s:0.3, e:0.62, h:0.7, shape:'flat', sweep:0.6, part:'Fins' }], anal:{ s:0.6, e:0.78, h:0.55, shape:'flat', sweep:0.6, part:'Fins2' },
+    pect:{ t:0.26, y:-0.2, size:0.55, shape:'round', part:'Fins2' }, pelv:{ t:0.34, size:0.5, part:'Fins' }, caudal:{ type:'forked', notch:0.25, hk:2.0, len:1.4, part:'Fins' }, eye:EYE(0.11, 0.3, 0.1, { ring:true }) } },
+});
+Object.assign(SPECS, {
+  fwfish_gold: VAR('fwfish', { Top:'#5a3a08', Mid:'#8a6010', Bottom:'#c8a040', Spots:'#fff6c0', Accent:'#ffe080', Stripes:'#ffffff', Fins:'#ffd36a', Fins2:'#fff0a0' }, {}, { glow:true }),
+  // 紅錦鯉（春節限定）：全身大紅、頭上一點白（「丹頂」反過來的紅白）；福錦鯉：紅身金鰭
+  koi_red: VAR('koi', { Top:'#d8231c', Bottom:'#e83a2a', Accent:'#f8f2ea', Fins:'#e85a40' }, { pat:[{ k:'ell', t:0.1, y:0.7, rt:0.07, ry:0.45, part:'Accent' }] }),
+  koi_fuku: VAR('koi', { Top:'#d8231c', Bottom:'#e83a2a', Accent:'#ffd36a', Fins:'#f2c040' }, { pat:[{ k:'ell', t:0.1, y:0.7, rt:0.07, ry:0.45, part:'Accent' }, { k:'ell', t:0.5, y:0.8, rt:0.12, ry:0.3, part:'Accent' }] }, { glow:true }),
+});
+
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {

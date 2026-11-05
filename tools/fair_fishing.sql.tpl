@@ -151,6 +151,7 @@ begin
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
     f := cfg->'fish'->fid; if f is null then continue; end if;
+    if f ? 'fest' and not public._fest_on(f->>'fest') then continue; end if;   -- 節慶限定魚（087）：只有那個節日期間釣得到
     wt := (f->>'w')::numeric
       * (case when rig = 'lure' then (case when cfg->'lure' ? fid then 2.2 else 0.55 end) when rig = 'bottom' then (case when cfg->'bottom' ? fid then 2.2 else 0.65 end) else 1 end)
       * (case when fid = any(intel) then 2.5 else 1 end)
