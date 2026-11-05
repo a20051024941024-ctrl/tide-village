@@ -401,11 +401,12 @@ const FISH_STYLE = {
   whaleshark:{ shape:'WhaleShark', c:{ Top:'#7f8c99', Bottom:'#e8ecef', Fins:'#6f7c89', Eye:'#1d2228', Spots:'#f3f5f7', Gill:'#4c5762' }, glow:true },
 };
 // 照維基百科重做的魚：用參數產生模型（js/fish-gen.js、js/fish-specs.js），第一次用到才產生
-for (const [id, S] of Object.entries(FISH_SPECS)){
+function regFishSpec(id, S){
   const shape = 'G_' + id; let cache = null;
   Object.defineProperty(FISH_MESH, shape, { configurable:true, enumerable:true, get(){ if (!cache){ const gen = FishGen[{ shrimp:'genShrimp', crab:'genCrab', squid:'genSquid', octo:'genOcto', jelly:'genJelly', turtle:'genTurtle', seahorse:'genSeahorse' }[S.gen] || 'genFish']; cache = gen(Quality.tier === 'low' ? Object.assign({ lod:true }, S.p) : S.p); } return cache; } });
   FISH_STYLE[id] = { shape, c: Object.assign({ Mouth:'#2a1a18' }, S.c), move: S.move || 'side', glow: !!S.glow, glowParts: S.glowParts };   /* 嘴巴預設深色 */
 }
+for (const [id, S] of Object.entries(FISH_SPECS)) regFishSpec(id, S);
 const fishTime = { value: 0 };           // 尾巴擺動用的共用時間
 const fishGeoCache = {}, fishMatCache = {};
 function fishGeo(shape, part){
@@ -2795,7 +2796,7 @@ function doCast(){
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
   if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';
     cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat })
-      .then(row => { if (F.castId !== id) return; F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood, gp: row.cast_gp || null } : 'fail'; }); }
+      .then(async row => { if (row && /^nx\d{6}v?$/.test(row.cast_fish || '') && !FISH_BY_ID[row.cast_fish]) await loadSci(true); if (F.castId !== id) return; F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood, gp: row.cast_gp || null } : 'fail'; }); }
   F.envB = envBonus(s.id);
   F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('🐟 浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
   F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (F.nest ? 0.55 : 1) * (rodFit(s.id) ? ROD_FIT[rodFit(s.id)].bite : 1) * (s.id === 'shrimp' ? 0.75 : 1) * (s.id === 'mangrove' && Env.tide.lv < -0.35 ? 1.6 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
@@ -3013,7 +3014,7 @@ function updateFishing(dt, t){
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
@@ -6278,6 +6279,7 @@ function nearShop(){
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
   if (ferryNpc && Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z) < 2.3) return { id:'ferry', label:FERRY.name, mode:'ferry' };
   { const g = npcs.find(n => n.shopNpc === 'news'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'news', label:'阿報・村報', mode:'news' }; }
+  { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
   { const g = npcs.find(n => n.wid === 'gang'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'gang', label:'老港・漁夫', mode:'gang' }; }
   if (inHall()){
     if (Venue.desk && Math.hypot(me.pos.x - Venue.desk.x, me.pos.z - Venue.desk.z) < 2) return { id:'shrimpdesk', label:'買時段', mode:'shrimpdesk' };
@@ -6289,7 +6291,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -7755,6 +7757,9 @@ const npcs = [
   // 阿報：廣場的報童，每天早上 7 點出《潮汐村報》（057_news.sql）
   { name:'阿報・村報記者', shirt:'#f1e3c8', hat:'#2b2f36', x:-0.6, z:1.2, y:0.02, dir:new THREE.Vector2(0.6, 0.8).normalize(), shopNpc:'news',
     lines:['號外號外！今天的《潮汐村報》出來了', '每天早上 7 點出報，昨天發生什麼事都寫在上面', '釣到稀有的魚，明天就會上報喔，名字還是金色的', '報紙我都留 7 天，想看以前的也可以', '我到處跑新聞，村民的八卦我最清楚了'] },
+  // 蔚博士：海洋科學家，每天跑到世界上的一個釣點調查，發現一種新品種（070_sci.sql）；站在今天調查的釣點旁邊
+  { name:'蔚博士・海洋科學家', shirt:'#f4f6f8', hat:'#2f7fa8', x:2.4, z:3.2, y:0.02, dir:new THREE.Vector2(-0.6, 0.8).normalize(), shopNpc:'sci',
+    lines:['我是海洋科學家，每天都會到不同的地方做調查', '世界上還有好多沒被發現的魚，每天都有新驚喜', '我發現的新品種，會放進大家的圖鑑裡', '新品種剛發現的那天最容易遇到，之後也一直都在那裡', '每一種新品種都有很少見的白化或黑化個體，我也還沒看過'] },
   { name:'阿伯・老校工', shirt:'#c8b48a', hat:'#5a6a3a', x:21.6, z:-41.0, y:0.02, dir:new THREE.Vector2(-0.2, 1).normalize(), lines:['這個池子比我年紀還大，學校一百多年前就有了', '以前的學生下課都蹲在池邊看魚', '琵琶鼠魚是有人亂放生的，現在池子裡到處都是', '大肚魚是以前放來吃孑孓的', '紅色的拱橋走上去看魚最清楚', '看到垃圾就順手撿一下啦', '假山上的蕨類是老師們一棵一棵種的'] },
 ].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.tailor = !!n.tailor; f.shopNpc = n.shopNpc || null; if (n.tailor || n.shopNpc){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 for (const n of npcs){ const nm = n.nm.textContent; n.wid = nm.startsWith('阿綾') ? 'ling' : nm.startsWith('阿木') ? 'mu' : nm.startsWith('阿福') ? 'fu' : nm.startsWith('老港') ? 'gang' : null; }
@@ -7827,6 +7832,63 @@ function renderMarketFish(body){
       const s2 = el('button', 'tbtn ghost', '同種'); s2.addEventListener('click', () => { Mkt.fish = m.fish; loadMarket(); }); a.appendChild(s2); }
     li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
+}
+// ---- 蔚博士：海洋科學家（070_sci.sql）：每天到世界上的一個釣點調查，發現一種新品種，放進大家的圖鑑 ----
+// 新品種＝那個釣點本來就有的一種魚的近親：同一套照維基百科做的模型產生方式，換成伺服器給的顏色（hue／hue2），身體高矮差一點點。
+// 每一種都有一個很少見的變種（白化或黑化），跟其他變種一樣釣到才會出現在圖鑑。
+var Sci = { list:null, at:0, busy:null, reg:new Set(), gear:null };
+function sciToday(){ return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); }
+function sciRecolor(c, hue, hue2, kind){ const out = {}, col = new THREE.Color(), o = {};
+  for (const [k, v] of Object.entries(c)){ out[k] = v; if (typeof v !== 'string' || /^(Eye|EyeW|Mouth|Teeth|Pupil|Iris)/.test(k)) continue;
+    try { col.set(v); col.getHSL(o, THREE.SRGBColorSpace); } catch(e){ continue; } let { h, s: sa, l } = o;
+    if (hue != null){ const white = sa < 0.1 && l > 0.82, bot = /^(Bottom|Belly|Under)/.test(k);
+      if (!white){ h = (/^(Stripes|Spots|Accent|Fins2|Patch|Gill|Band|Dots|Lines|Mark|Spot)/.test(k) ? hue2 : hue) / 360; sa = Math.max(sa, bot ? 0.18 : 0.42); l = clamp(l, 0.2, bot ? 0.9 : 0.72); } }
+    if (kind === 'albino'){ sa *= 0.22; l = 0.8 + l * 0.17; } else if (kind === 'melan'){ sa *= 0.55; l = 0.05 + l * 0.3; }
+    col.setHSL(h, sa, l, THREE.SRGBColorSpace); out[k] = '#' + col.getHexString(); }
+  if (kind === 'albino' && out.Eye) out.Eye = '#c8384a';
+  return out; }
+function sciReg(d){ if (!d || Sci.reg.has(d.id)) return; const B = FISH_BY_ID[d.base], S0 = FISH_SPECS[d.base]; if (!B || !S0) return;
+  const mk = (id, name, kind, of) => { if (FISH_BY_ID[id]) return;
+    const c = sciRecolor(sciRecolor(S0.c, d.hue, d.hue2, null), null, null, kind), p = !S0.gen && typeof S0.p.depth === 'number' ? Object.assign({}, S0.p, { depth: S0.p.depth * (+d.shape || 1) }) : S0.p;
+    regFishSpec(id, Object.assign({}, S0, { c, p }));
+    const f = { id, spot: d.spot, name, rarity:'稀有', color: c.Top || c.Body || c.Mid || B.color, min: +d.min, max: +d.max * (of ? 1.1 : 1), power: B.power, desc: d.story, time: B.time, sci: d };
+    if (of) f.of = of; FISH.push(f); FISH_BY_ID[id] = f; };
+  mk(d.id, d.name, null, null); mk(d.vid, d.vname, d.vkind, d.id); Sci.reg.add(d.id); }
+function loadSci(force){ if (Sci.busy) return Sci.busy; if (!Cloud.on || !Cloud.sb) return Promise.resolve(); if (!force && Sci.at && Date.now() - Sci.at < 60000) return Promise.resolve(); Sci.at = Date.now();
+  Sci.busy = (async () => { try { const { data, error } = await Cloud.sb.rpc('sci_list'); if (!error && Array.isArray(data)){ Sci.list = data; for (const d of data.slice().reverse()) sciReg(d); sciPlace();
+      const T = data[0]; if (T && T.day === sciToday()){ let seen = null; try { seen = localStorage.getItem('tide.sciSeen'); } catch(e){} if (seen !== T.day){ try { localStorage.setItem('tide.sciSeen', T.day); } catch(e){} setTimeout(() => toast(`🔬 蔚博士今天在${SPOT_BY_ID[T.spot].label}發現了新品種「${T.name}」！`), 2500); } } } } catch(e){}
+    Sci.busy = null; if (!$('#sheet').hidden && (curTab === 'sci' || curTab === 'dex')) renderTab(); })();
+  return Sci.busy; }
+// 蔚博士站在今天調查的釣點旁邊，身邊放著水下攝影機、保冷箱和調查旗
+function sciPlace(){ const n = npcs.find(x => x.shopNpc === 'sci'), T = Sci.list && Sci.list[0], S = T && SPOT_BY_ID[T.spot]; if (!n || !S) return;
+  const dx = S.dir.x, dz = S.dir.y, sx = dz, sz = -dx; let best = null;
+  for (const [a, b] of [[-2.2, 2.0], [-2.2, -2.0], [-1.4, 2.6], [-1.4, -2.6], [-3.2, 0.8], [-3.2, -0.8], [-1, 1.6], [-1, -1.6]]){ const x = S.pos.x + dx * a + sx * b, z = S.pos.z + dz * a + sz * b; if (walkable(x, z) && !waterAt(x, z)){ best = [x, z]; break; } }
+  Sci.ok = !!best; if (!best) best = [S.pos.x - dx * 1.6, S.pos.z - dz * 1.6];   /* 遠方的浮台、島要玩家靠近才蓋出來：先站釣點旁邊，玩家靠近時再重新找位置 */
+  const y = groundHeight(best[0], best[1]); n.pos.set(best[0], y, best[1]); n.baseY = y; n.fishing = false; n.bobState = 'none'; n.rot = Math.atan2(dx, dz);
+  if (!Sci.gear){ const g = new THREE.Group(), m = (c, r) => mat(c, r == null ? 0.7 : r);
+    for (let i = 0; i < 3; i++){ const a = i / 3 * Math.PI * 2, l = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.0, 5), m('#3a3f46')); l.position.set(Math.cos(a) * 0.18, 0.48, Math.sin(a) * 0.18); l.rotation.set(Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35); g.add(l); }
+    g.add(box([0.26, 0.18, 0.2], null, [0, 1.0, 0], m('#2b2f36', 0.5))); const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.14, 12), m('#5ac8e8', 0.3)); lens.rotation.x = Math.PI / 2; lens.position.set(0, 1.0, 0.16); g.add(lens);
+    g.add(box([0.55, 0.36, 0.36], null, [0.75, 0.18, -0.15], m('#2f7fa8'))); g.add(box([0.57, 0.08, 0.38], null, [0.75, 0.4, -0.15], m('#f4f6f8')));
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.6, 6), m('#d8dde2')); pole.position.set(-0.7, 0.8, -0.3); g.add(pole); g.add(box([0.45, 0.28, 0.02], null, [-0.47, 1.45, -0.3], m('#4fb8d8')));
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g); Sci.gear = g; }
+  const fx = best[0] + dx * 0.9 + sx * 0.9, fz = best[1] + dz * 0.9 + sz * 0.9; Sci.gear.position.set(fx, groundHeight(fx, fz), fz); Sci.gear.rotation.y = Math.atan2(dx, dz); }
+function sciLines(){ const L = Sci.list || [], T = L[0]; if (!T) return []; const S = SPOT_BY_ID[T.spot], B = FISH_BY_ID[T.base], out = [];
+  out.push(`今天我在${S.label}發現了「${T.name}」！`); out.push(T.story); if (B) out.push(`「${T.name}」是${B.name}的親戚，今天在${S.label}特別容易遇到`);
+  out.push(T.first ? `${T.first} 是第一個釣到「${T.name}」的人，好厲害！` : `還沒有人釣到「${T.name}」，你要不要當第一個？`);
+  if (L.length > 1) out.push(`到今天為止，我已經發現 ${L.length} 種新品種了`); return out; }
+function renderSci(body){
+  const head = el('div', 'shophead'); head.innerHTML = '<b>🔬 蔚博士的新品種調查</b>'; body.appendChild(head);
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能看蔚博士的調查。')); return; }
+  const L = Sci.list; if (!L){ body.appendChild(el('div', 'empty', '載入中…')); loadSci(); return; } if (!L.length){ body.appendChild(el('div', 'empty', '蔚博士還在做第一次調查。')); return; }
+  body.appendChild(el('p', 'sub', '蔚博士每天到世界上的一個釣點調查，發現一種新品種，馬上放進大家的圖鑑。新品種從發現那天起就住在那個釣點，發現當天最容易釣到。聽說每一種都有很少見的白化或黑化個體。'));
+  const T = L[0], S = SPOT_BY_ID[T.spot], isToday = T.day === sciToday(), card = el('div', 'scicard');
+  card.appendChild(el('div', 'scit', `${isToday ? '📍 今天' : '📍 最近'}在${S.label}`)); const cv = fishCanvas(FISH_BY_ID[T.id] || FISH_BY_ID[T.base], true, 220, 120); cv.className = 'scicv'; card.appendChild(cv);
+  card.appendChild(el('div', 'scin', T.name)); card.appendChild(el('div', 'sub2', `${FISH_BY_ID[T.base] ? FISH_BY_ID[T.base].name + '的近親・' : ''}稀有・${(+T.min).toFixed(2)}～${(+T.max).toFixed(2)} kg`));
+  card.appendChild(el('p', 'scis', T.story)); card.appendChild(el('div', 'sub2', rec.count[T.id] ? `✅ 你已經釣到 ${rec.count[T.id]} 條了` : T.first ? `🏅 第一個釣到的人：${T.first}` : '還沒有人釣到，去當第一個吧！')); body.appendChild(card);
+  if (L.length > 1){ body.appendChild(el('div', 'dexhead', `📒 調查筆記（${L.length} 種）`)); const ul = el('ul', 'shoplist');
+    for (const d of L.slice(1, 60)){ const li = el('li'), f = FISH_BY_ID[d.id], got = !!rec.count[d.id]; const c2 = fishCanvas(f || FISH_BY_ID[d.base], true, 64, 40); c2.className = 'dishic'; li.appendChild(c2);
+      const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${got ? '✅ ' : ''}${d.name}`)); inf.appendChild(el('div', 'sub2', `${d.day.slice(5).replace('-', '/')}・${SPOT_BY_ID[d.spot] ? SPOT_BY_ID[d.spot].label : ''}${d.first ? '・🏅' + d.first : ''}`)); li.appendChild(inf); ul.appendChild(li); }
+    body.appendChild(ul); }
 }
 // ---- 阿報的《潮汐村報》（057_news.sql）：每天早上 7 點出報、留 7 天；上報的玩家名字是金色的 ----
 var News = { list:null, at:0, busy:false, pick:0 };
@@ -7963,6 +8025,7 @@ const NPC_TIPS = [
 var Ocean = { d:null, at:0, busy:false };
 async function loadOcean(){ if (Ocean.busy || !Cloud.on || !Cloud.sb) return; Ocean.busy = true; Ocean.at = Date.now(); try { const { data } = await Cloud.sb.rpc('ocean_now'); if (data) Ocean.d = data; } catch(e){} Ocean.busy = false; if (!$('#sheet').hidden && curTab === 'map') renderTab(); }
 setInterval(() => { try { if (Cloud.on && (!Ocean.at || Date.now() - Ocean.at > 10 * 60000)) loadOcean(); } catch(e){} }, 20000);
+setInterval(() => { try { if (Cloud.on && (!Sci.list || Date.now() - Sci.at > 30 * 60000)) loadSci(); } catch(e){} }, 5000);   /* 一連上雲端就先拿蔚博士的新品種（不然釣到新品種會不認得） */
 function oceanLines(){ const D = Ocean.d; if (!D) return []; const out = []; for (const e of D.eco || []){ const f = FISH_BY_ID[e.fish], sp = SPOT_BY_ID[e.spot]; if (!f || !sp) continue; out.push(e.kind === 'protect' ? `${e.label}` : `聽說${e.label}，去${sp.short}看看`); }
   const c = D.state && D.state.coast; if (c) out.push(`今天海水 ${c.temp} 度${c.spd > 1 ? '，海流很強' : ''}`); return out; }
 function renderOcean(body){ const D = Ocean.d; if (!D){ if (Cloud.on) loadOcean(); return; } const S = D.state || {}, dir = d => ['北', '東北', '東', '東南', '南', '西南', '西', '西北'][Math.round(((+d % 360) + 360) % 360 / 45) % 8];
@@ -8019,7 +8082,7 @@ function npcHear(text){
   if (!best) return; worldTalk(best); const r = npcReply(best, text); { const q = questNpcs.find(q => q.f === best); if (q){ q.mark = null; q.talkUntil = now() + 10; } } best.replyUntil = now() + 9;
   setTimeout(() => { best.say(r, '', 6); logMsg(best.nm.textContent || '村民', r); }, 900 + Math.random() * 600);
 }
-function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.wid && r < 0.3){ const m = worldMemLines(n); if (m.length) return pick(m); } if (n.shopNpc === 'cai'){ const a = caiLines(); if (a.length && r < 0.55) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'news'){ const a = newsLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.wid === 'gang'){ const a = gangLines(); if (a.length && r < 0.45) return pick(a); } if (n.shopNpc === 'fu'){ const a = fuLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
+function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.wid && r < 0.3){ const m = worldMemLines(n); if (m.length) return pick(m); } if (n.shopNpc === 'cai'){ const a = caiLines(); if (a.length && r < 0.55) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'sci'){ const a = sciLines(); if (a.length && r < 0.65) return pick(a); return pick(n.lines); } if (n.shopNpc === 'news'){ const a = newsLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.wid === 'gang'){ const a = gangLines(); if (a.length && r < 0.45) return pick(a); } if (n.shopNpc === 'fu'){ const a = fuLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
 // 阿默：港口裡不會有紅鯊，所以他每一趟都開自己的紅色小船，繞著島到外海隨便一個地方釣（每一趟去哪裡大家看到的都一樣）
 // 每 7 分鐘一趟：從碼頭開到外海的環線 → 沿著環線繞到這次的釣點 → 釣魚 → 原路開回來 → 在碼頭休息一下。環線離岸邊 22 公尺，不會撞到紅樹林；不會經過往珊瑚礁群島的跨海大橋那一側
 const AMO = { dock:[35.6, -27.2], cycle:420, pier:50, speed:4.2, off:22 };
@@ -8060,6 +8123,7 @@ function updateNpcs(dt, t){
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
     if (n.shopNpc === 'cai'){ updateShopNpc(n, dt, t, () => (!Cai.at || Date.now() - Cai.at > 10 * 60000) && loadCai()); continue; }
     if (n.shopNpc === 'news'){ updateShopNpc(n, dt, t, () => (!News.at || Date.now() - News.at > 10 * 60000) && loadNews()); continue; }
+    if (n.shopNpc === 'sci'){ if (!Sci.ok && Sci.list && frameNo % 45 === 0 && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 70) sciPlace(); updateShopNpc(n, dt, t, () => (!Sci.at || Date.now() - Sci.at > 10 * 60000) && loadSci()); continue; }
     if (n.shopNpc === 'fu'){ updateShopNpc(n, dt, t, () => (!Fu.at || Date.now() - Fu.at > 5 * 60000) && loadFu()); continue; }
     if (n.amo) updateAmo(n, dt, t);
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
@@ -8260,7 +8324,7 @@ function renderTab(){
       FISH.filter(f => f.spot === s.id && (!f.of || rec.count[f.id])).sort((a,b) => (a.of ? 1 : 0) - (b.of ? 1 : 0) || RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]).forEach(f => {   // 變種要釣到才會出現在圖鑑
         const known = !!rec.count[f.id]; const it = el('div', 'it' + (known ? '' : ' lock'));
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
-        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', `✨ ${FISH_BY_ID[f.of].name}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季'));
+        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', `✨ ${FISH_BY_ID[f.of].name}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季')); if (f.sci && !f.of) it.appendChild(el('span', 'chip sci', '🔬 新品種'));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         g.appendChild(it);
@@ -8375,6 +8439,7 @@ function renderTab(){
   } else if (curTab === 'mu'){ renderMuShop(body);
   } else if (curTab === 'market'){ renderMarketFish(body);
   } else if (curTab === 'cai'){ renderCaiShop(body);
+  } else if (curTab === 'sci'){ renderSci(body);
   } else if (curTab === 'news'){ renderNews(body);
   } else if (curTab === 'gang'){ renderGangShop(body);
   } else if (curTab === 'fu'){ renderFuShop(body);
@@ -8744,6 +8809,7 @@ function faiPick(spotId, depth){
     let k = f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.18 : 0;
     if (f.time && f.time !== per) k *= 0.12;   /* 白天的魚晚上很少出來，晚上的魚白天躲著 */
     if (rainy && RAIN_FISH.has(id)) k *= 2; if (SEASON_FISH.has(id)) k *= 1.6; if (eco[id] != null) k *= eco[id]; if (k > 0){ list.push(f); w.push(k); } }
+  for (const d of (typeof Sci !== 'undefined' && Sci.list) || []){ const f = FISH_BY_ID[d.id]; if (f && d.spot === spotId){ list.push(f); w.push(d.day === sciToday() ? 0.25 : 0.06); } }   /* 蔚博士發現的新品種也在這裡游 */
   if (!list.length) return null; let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; } return list[0]; }
 // ---- 一條魚 ----
 function faiAgent(f, x, z, opt){ const tr = faiTraits(f), sc = opt && opt.scale || tr.scale, m = faiTake(f, sc); scene.add(m);

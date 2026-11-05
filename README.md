@@ -106,6 +106,7 @@ supabase/066_ocean.sql 動態海洋生態（架構第八階段）：三個海域
 supabase/067_far_seas.sql 深海浮台（青眼魚、鼠尾鱈、赤鯥、水滴魚、角高體金眼鯛、歐氏尖吻鮫、灰六鰓鯊）、遠洋神秘島（克里奧鮨、黃尾刺尾鯛、角蝶魚、紅唇蝙蝠魚、加拉巴哥鯊）和各自的變種
 supabase/068_kaykit_gear.sql KayKit Adventurers（CC0）的帽子、頭盔、短披風上架（_item_price 加上 7 件）
 supabase/069_kaykit_furn.sql KayKit Furniture Bits（CC0）的 31 件家具上架（_furn 加上 kk_ 開頭的家具）
+supabase/070_sci.sql 海洋科學家蔚博士：每天在一個釣點發現一種新品種（近親的魚換顏色），放進圖鑑、在那個釣點釣得到（roll_fish 020 加上新品種）；每種都有白化／黑化變種
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

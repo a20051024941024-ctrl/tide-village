@@ -809,3 +809,11 @@ body.ui2.touch #chat{bottom:calc(var(--gb) + 8px)}
 #obsTip{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 58px);transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:rgba(14,40,60,.72);color:#fff;font-size:13px;font-weight:700;pointer-events:none;z-index:6;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis}
 #obsTip[hidden]{display:none}
 body.infish #obsTip{display:none}
+
+/* 蔚博士的新品種 */
+.chip.sci{background:#d8f0fb;color:#1d6a8a;margin-left:4px}
+.scicard{background:linear-gradient(180deg,#eaf7fc,#fff);border:1px solid #cfe7f1;border-radius:16px;padding:12px 14px;margin:8px 0 12px;text-align:center}
+.scicard .scit{font-weight:800;color:#1d6a8a;font-size:14px}
+.scicard .scicv{width:220px;max-width:100%;height:auto;margin:4px auto;display:block}
+.scicard .scin{font-size:20px;font-weight:900;margin:2px 0}
+.scicard .scis{font-size:13px;line-height:1.6;color:#3a4a57;margin:8px 0;text-align:left}

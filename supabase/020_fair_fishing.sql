@@ -67,6 +67,7 @@ declare
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
   rsh public.red_sharks; rs text; gpv text; fitk numeric := 1; sx text; brood boolean := false; wild boolean := false;
   c jsonb; ctype text; cat timestamptz; left_k numeric; fit numeric; k numeric; sc jsonb; age numeric; pw numeric; nb integer; fw numeric;
+  sf record;   -- 蔚博士的新品種（070）
 begin
   if sp is null then raise exception '沒有這個釣點'; end if;
   if pl.cast_at is not null and now() - pl.cast_at < interval '2.5 seconds' then raise exception '拋太快了'; end if;
@@ -158,12 +159,18 @@ begin
   if cardinality(ids) = 0 then raise exception '沒有這個釣點'; end if;
   r := random() * tot; pick := ids[1];
   for i in 1..cardinality(ids) loop r := r - wts[i]; if r <= 0 then pick := ids[i]; exit; end if; end loop;
+  -- 蔚博士發現的新品種（070）：在發現的那個釣點，抽到的魚有機會換成新品種（當天發現的 5%，以前的每一種 1.2%）；新品種的變種 4%
+  begin
+    for sf in select s.id, s.var_id, s.day from public.sci_finds s where s.spot = p_spot and s.day <= (now() at time zone 'Asia/Taipei')::date order by s.day desc limit 60 loop
+      if random() < (case when sf.day = (now() at time zone 'Asia/Taipei')::date then 0.05 else 0.012 end) then pick := case when random() < 0.04 then sf.var_id else sf.id end; exit; end if;
+    end loop;
+  exception when undefined_table then null; end;
   -- 釣蝦場老闆的放生活動（027）：極小的機會碰到全伺服器只有一隻的特別蝦
   if p_spot = 'shrimp' then fid := public._sev_try(pl.id); if fid is not null and cfg->'fish' ? fid then pick := fid; end if; end if;
   -- 赤紅霸王鯊（032）：全伺服器的族群，隻數越多機率越高（還是非常低）
   -- 珊瑚礁岸：紅鯊偶爾在礁外的深水邊巡游（機率是港口外海的四成）
   if p_spot = 'harbor' or (p_spot = 'reef' and random() < 0.4) then rsh := public._rs_try(pl.id); if rsh.id is not null then pick := case when rsh.albino then 'shark_red_albino' else 'shark_red' end; rs := rsh.id || ':' || rsh.sex || ':' || rsh.scars || (case when rsh.hooked_by is null then ':x' else '' end); end if; end if;
-  f := cfg->'fish'->pick;
+  f := coalesce(cfg->'fish'->pick, (select jsonb_build_object('r', s.rarity, 'min', s.min_w, 'max', s.max_w) from public.fish_species s where s.id = pick));
   wild := season in ('spring', 'summer') and cfg->'wildBreed' ? pick;
   fw := round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), case when wild then 2.4 else 1.7 end))::numeric, 2);   -- 繁殖季小魚比較多
   -- 公母（037）：一半一半；紅鯊用牠自己的性別；繁殖季的母吳郭魚有三成嘴裡含著小魚
@@ -233,7 +240,7 @@ begin
     fish_best  = case when coalesce((fish_best ->> p_fish)::numeric, 0) < w then jsonb_set(fish_best, array[p_fish], to_jsonb(w)) else fish_best end,
     best_fish  = case when w > best_w then p_fish else best_fish end,
     best_w     = greatest(best_w, w),
-    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when pl.cast_gp is not null then jsonb_build_object('gp', pl.cast_gp) else '{}'::jsonb end || case when p_fish in ('shark_red', 'shark_red_albino') then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
+    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' or p_fish ~ '^nx[0-9]{6}v$' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when pl.cast_gp is not null then jsonb_build_object('gp', pl.cast_gp) else '{}'::jsonb end || case when p_fish in ('shark_red', 'shark_red_albino') then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
     week_best_w = case when p_fish <> c.fish then (case when week_id = c.week_id then week_best_w else 0 end)
                        when week_id = c.week_id then greatest(week_best_w, w) else w end,
     week_id    = case when p_fish = c.fish or week_id = c.week_id then c.week_id else week_id end,
