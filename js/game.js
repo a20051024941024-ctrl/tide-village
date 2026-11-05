@@ -2735,7 +2735,7 @@ function nearChair(){
   for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
   return best;
 }
-function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.sitting = true; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
+function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.sitting = true; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
 function standUp(){ if (!mySeat) return; if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
@@ -2796,6 +2796,7 @@ function actionDown(){
     if (nearHarborDive()){ act.classList.remove('down'); startDive('harbor', { x: me.pos.x, z: me.pos.z }); return; }   /* 港口碼頭的潛水梯 */   /* 珊瑚礁島：從沙灘下水浮潛 */
     let spot;
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
+    else if (mySeat && mySeat.nook){ spot = nookSpot(mySeat); if (!spot){ standUp(); return; } }   /* 釣魚小角落：坐在長椅上直接拋竿 */
     else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } else if (inMuseum()){ act.classList.remove('down'); openMuseum(); } } return; } spot = ns.spot; }
     if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('🎫 要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
@@ -3099,7 +3100,7 @@ function updateFishing(dt, t){
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
   if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : l.kind === 'pearl' ? '撿珍珠' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
   else if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
-    const shoreS = near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
+    const shoreS = mySeat && mySeat.nook ? nookSpot(mySeat) : near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
     const crN = nearCritter();
     const ltN = !crN && nearLitter();
     if (crN){ label = '抓！'; sub = crN.kind === 'crab' ? '🦀 招潮蟹' : '🐟 彈塗魚'; cls = 'bite'; }
@@ -5746,6 +5747,38 @@ function renderSettings(body){
     f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
   { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
   { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
+}
+// ===== 🪑 釣魚小角落（v189）：沿著河、湖、海邊放長椅、路燈、小營火，坐在長椅上就能直接拋竿，旁邊的人一起聊天 =====
+// 位置是照地形自動找的（每次都一樣）：岸邊、前面是夠深的水、地面平、不擋路，彼此至少隔 16 公尺
+const NOOKS = [];
+function nookSpot(c){ const dx = Math.sin(c.face), dz = Math.cos(c.face); for (let d = 1.4; d <= 5; d += 0.4){ const px = c.x + dx * d, pz = c.z + dz * d; if (waterAt(px, pz) && waterAt(px + dx * 1.5, pz + dz * 1.5)){ const base = SPOT_BY_ID[waterSpotId(px, pz)]; if (!base) return null; return Object.assign({}, base, { pos: new THREE.Vector3(c.x, 0, c.z), dir: new THREE.Vector2(dx, dz), shore: true, legendBoost: 1 }); } } return null; }
+function buildNooks(){
+  const cand = [], rr = mulberry(20261105), far = (x, z, L, r) => L.every(p => Math.hypot(p[0] - x, p[1] - z) > r);
+  const avoid = SPOTS.map(s => [s.pos.x, s.pos.z]).concat(LANDMARKS.map(l => [l.pos.x, l.pos.z]));
+  for (let x = -60; x <= 75; x += 2.5) for (let z = -62; z <= 62; z += 2.5){
+    const px = x + (rr() - 0.5), pz = z + (rr() - 0.5); if (!isLand(px, pz) || waterAt(px, pz) || deckAt(px, pz) || blocked(px, pz, 1.4)) continue;
+    const h0 = terrainH(px, pz); if (h0 < -0.3 || h0 > 2.2) continue;
+    let best = null; for (let k = 0; k < 16; k++){ const a = k / 16 * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a); let ok = waterAt(px + dx * 2.6, pz + dz * 2.6) && waterAt(px + dx * 4.2, pz + dz * 4.2) && !waterAt(px + dx * 0.9, pz + dz * 0.9) && !waterAt(px - dx * 1.6, pz - dz * 1.6);
+      if (ok && Math.abs(terrainH(px - dx * 1.2, pz - dz * 1.2) - h0) < 0.35 && Math.abs(terrainH(px + dx * 0.6 + dz, pz + dz * 0.6 - dx) - h0) < 0.35 && Math.abs(terrainH(px + dx * 0.6 - dz, pz + dz * 0.6 + dx) - h0) < 0.35){ best = a; break; } }
+    if (best == null) continue; const id = waterSpotId(px + Math.sin(best) * 3, pz + Math.cos(best) * 3); if (!SPOT_BY_ID[id] || id === 'shrimp') continue;
+    if (!far(px, pz, avoid, 9)) continue; cand.push([px, pz, best, id]); }
+  for (const c of cand.sort(() => rr() - 0.5)){ if (NOOKS.length >= 16) break; if (!far(c[0], c[1], NOOKS.map(n => [n.x, n.z]), 16)) continue; NOOKS.push({ x: c[0], z: c[1], face: c[2], spot: c[3] }); }
+  const wood = '#8c5d3b', dark = '#5a3d2b';
+  NOOKS.forEach((n, i) => { const g = new THREE.Group(), y = groundHeight(n.x, n.z); g.position.set(n.x, y, n.z); g.rotation.y = n.face; scene.add(g);
+    // 長椅（面向水，坐兩個人）
+    g.add(box([1.8, 0.08, 0.45], wood, [0, 0.45, 0])); g.add(box([1.8, 0.4, 0.06], wood, [0, 0.72, -0.22])); for (const sx of [-0.75, 0.75]) for (const sz of [-0.15, 0.15]) g.add(box([0.07, 0.45, 0.07], dark, [sx, 0.22, sz]));
+    const c = Math.cos(n.face), s2 = Math.sin(n.face);
+    for (const lx of [-0.45, 0.45]){ const wx = n.x + c * lx, wz = n.z - s2 * lx; const seat = { x: wx, z: wz, face: n.face, y: y + 0.32, nook: true }; CHAIRS.push(seat); }
+    addOBoxCol(n.x - s2 * 0.05, n.z - c * 0.05, 1.9, 0.5, n.face);
+    // 路燈或營火（輪流），旁邊放一個木桶
+    if (i % 2 === 0){ const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 2.4, 8), mat('#2f3b44', 0.5)); lp.position.set(1.3, 1.2, -0.3); g.add(lp); const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.8 })); bulb.position.set(1.3, 2.45, -0.3); g.add(bulb); lanterns.push(bulb); }
+    else { for (let k = 0; k < 5; k++){ const st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12, 0), mat('#8a8578', 0.9)); const a = k / 5 * Math.PI * 2; st.position.set(-1.5 + Math.cos(a) * 0.32, 0.08, -0.6 + Math.sin(a) * 0.32); g.add(st); }
+      for (let k = 0; k < 3; k++){ const lg = box([0.06, 0.06, 0.5], '#6e4a2f', [-1.5, 0.08, -0.6]); lg.rotation.y = k * 1.05; g.add(lg); }
+      const fl = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.42, 8), new THREE.MeshBasicMaterial({ color:'#ffb347', transparent:true, opacity:0.9 })); fl.position.set(-1.5, 0.3, -0.6); g.add(fl); n.fire = fl; }
+    const br = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.2, 0.5, 12), mat('#a8673e', 0.8)); br.position.set(-1.25, 0.25, 0.1); g.add(br); g.add(box([0.48, 0.03, 0.48], '#7a4e2e', [-1.25, 0.51, 0.1]));
+    addCircleCol(n.x + c * -1.25 + s2 * 0.1, n.z - s2 * -1.25 + c * 0.1, 0.3);
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; }); });
+  setInterval(() => { const t = now(); for (const n of NOOKS) if (n.fire){ n.fire.scale.set(1 + Math.sin(t * 9 + n.x) * 0.12, 1 + Math.sin(t * 7 + n.z) * 0.2, 1); } }, 80);
 }
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
 function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); }
@@ -9486,6 +9519,7 @@ function renderTab(){
       '走到房子門口可以「進屋」，屋裡的魚缸會游著你展示的魚。長椅、野餐桌、鞦韆、屋裡的椅子都可以坐。',
       '房子現在只賣「大宅」（像天天玩樂園）：🪙3000 先買小的（10×8），之後在屋裡「家具 → 換格局」跟村長阿土伯借錢擴建（最大 30×18），也可以加蓋二樓、三樓。借的錢不收利息，慢慢還就好，還清才能再擴建或加蓋。',
       '大宅不用自己畫牆：買家具直接擺就好，每一層樓都可以免費換地板和壁紙。樓梯在房間後面的兩個角落（右後往上、左後往下），走到樓梯前按「上樓／下樓」。以前買的小木屋、海邊小屋、茶屋、別墅還是可以照樣住。',
+      '🪑 釣魚小角落：河邊、湖邊、海邊到處有長椅（旁邊有路燈或小營火），坐下來就能直接拋竿，按「跳」站起來。找個安靜的角落跟朋友邊釣邊聊吧。',
       '海上看得到其他人的島。在小島分頁「逛別人的島」可以去參觀，幫喜歡的島按 ❤️（每天每座島一次）。',
     ]);
     sec('👥 跟大家一起玩', [
@@ -9870,7 +9904,7 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
   flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
 
 
-addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); } try { buildPetShop(); } catch(e){ console.warn('petshop', e); }
+addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); } try { buildPetShop(); } catch(e){ console.warn('petshop', e); } try { buildNooks(); } catch(e){ console.warn('nooks', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 camera.position.set(4, 5, 18);
