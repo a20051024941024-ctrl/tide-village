@@ -463,7 +463,7 @@ function regFishSpec(id, S){
 }
 for (const [id, S] of Object.entries(FISH_SPECS)) regFishSpec(id, S);
 /* 深藍旗魚（2026-11-06）：手刻的 Marlin 模型（js/fish-models.js），身體顏色和條紋在 fishMat 的 shader 裡畫；蓋掉 fish-specs 的參數版 */
-FISH_STYLE.marlin = { shape:'Marlin', c:{ Body:'#2e62c8', Fins:'#26307a', Bill:'#283858', Eye:'#0b0e14', EyeW:'#ffffff', Gill:'#0e1f4a' }, move:'marlin', glow:false, marlin:true };
+FISH_STYLE.marlin = { shape:'Marlin', c:{ Body:'#2e62c8', Fins:'#2a44b0', Bill:'#283858', Eye:'#0b0e14', EyeW:'#ffffff', Gill:'#0e1f4a' }, move:'marlin', glow:false, marlin:true };
 const fishTime = { value: 0 };           // 尾巴擺動用的共用時間
 const fishGeoCache = {}, fishMatCache = {};
 function fishGeo(shape, part){
@@ -490,6 +490,7 @@ function fishMat(id, part, color, glow, move, shape){
   const body = ['Top', 'Bottom', 'Body', 'Front', 'Stripes'].includes(part), scaly = body && /^Fish/.test(shape || ''), marlinBody = shape === 'Marlin' && part === 'Body', albino = /albino|_white/.test(id);
   if (marlinBody){ m.metalness = 0.55; m.roughness = 0.32; m.flatShading = false; }
   if (shape === 'Marlin' && part === 'Fins'){ m.metalness = 0.2; m.roughness = 0.5; }
+  const marlinFin = shape === 'Marlin' && part === 'Fins';
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
   if (glow && (part === 'Top' || part === 'Body')){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.35; }
   if (shape === 'Goby' && part === 'Spots'){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.9; }
@@ -501,10 +502,11 @@ function fishMat(id, part, color, glow, move, shape){
       sh.fragmentShader = 'varying vec3 vFishP;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' +
         (marlinBody ? (albino
           ? 'vec3 mTop = vec3(0.86, 0.89, 0.94), mMid = vec3(0.96, 0.97, 0.99), mBot = vec3(1.0, 1.0, 1.0), mStr = vec3(0.62, 0.8, 1.0);'
-          : 'vec3 mTop = vec3(0.045, 0.1, 0.27), mMid = vec3(0.16, 0.4, 0.86), mBot = vec3(0.9, 0.93, 0.97), mStr = vec3(0.6, 0.84, 1.0);') +
-          'float my = vFishP.y; vec3 mc = mix(mMid, mTop, smoothstep(0.045, 0.1, my)); mc = mix(mBot, mc, smoothstep(-0.075, -0.01, my));'
-          + 'float sx = (vFishP.x + 0.42) / 0.84 * 14.0; float sb = smoothstep(0.42, 0.3, abs(fract(sx) - 0.5)) * smoothstep(-0.06, -0.02, my) * smoothstep(0.11, 0.07, my) * step(-0.42, vFishP.x) * step(vFishP.x, 0.42);'
-          + 'mc = mix(mc, mStr, sb * 0.75); diffuseColor.rgb = mc;\n'
+          : 'vec3 mTop = vec3(0.08, 0.16, 0.45), mMid = vec3(0.14, 0.4, 0.9), mBot = vec3(0.98, 0.94, 0.86), mStr = vec3(0.45, 0.92, 1.0);') +
+          'float my = vFishP.y; vec3 mc = mix(mMid, mTop, smoothstep(0.05, 0.11, my)); mc = mix(mBot, mc, smoothstep(-0.07, -0.02, my));'
+          + 'float sx = (vFishP.x + 0.42) / 0.84 * 12.0; float sb = smoothstep(0.5, 0.36, abs(fract(sx) - 0.5)) * smoothstep(-0.05, -0.01, my) * step(-0.42, vFishP.x) * step(vFishP.x, 0.42);'
+          + 'mc = mix(mc, mStr, sb * 0.9); diffuseColor.rgb = mc;\n'
+          : marlinFin ? 'float fsx = (vFishP.x + 0.42 - vFishP.y * 0.35) / 0.84 * 12.0; float fsb = smoothstep(0.5, 0.36, abs(fract(fsx) - 0.5)) * step(-0.4, vFishP.x) * step(0.1, abs(vFishP.y)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.35, 0.6, 1.0), fsb * 0.8);\n'
           : body ? 'diffuseColor.rgb *= mix(1.08, 0.88, smoothstep(-0.2, 0.22, vFishP.y));\n' : '') +
         (scaly ? 'vec2 sp = vFishP.xy * vec2(30.0, 34.0); sp.y += mod(floor(sp.x), 2.0) * 0.5; vec2 fq = fract(sp) - 0.5; diffuseColor.rgb *= 0.9 + 0.14 * smoothstep(0.52, 0.2, length(fq * vec2(1.0, 1.3)));\n' : ''));
       const outChunk = sh.fragmentShader.includes('#include <opaque_fragment>') ? '#include <opaque_fragment>' : '#include <output_fragment>';
@@ -8081,9 +8083,9 @@ function drawModelFish(cv, f, known){
   const tilt = st.shape === 'Manta' ? 0.95 : 0.22, ct = Math.cos(tilt), sn = Math.sin(tilt), thick = /^Fish/.test(st.shape) ? 1.5 : 1;
   const mar = st.shape === 'Marlin', L = mar ? [0.45, 0.4, 0.8] : [0.3, 0.85, 0.45], ll = Math.hypot(...L), tris = [];   /* 旗魚打側光，藍色和銀白肚子才分得出來 */
   const albino = /albino|_white/.test(f.id), mix3 = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), sms = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
-  const marCol = (x, y) => { const T = albino ? [0.86, 0.89, 0.94] : [0.045, 0.1, 0.27], M = albino ? [0.96, 0.97, 0.99] : [0.16, 0.4, 0.86], B = albino ? [1, 1, 1] : [0.9, 0.93, 0.97], S = albino ? [0.62, 0.8, 1] : [0.6, 0.84, 1];
+  const marCol = (x, y) => { const T = albino ? [0.86, 0.89, 0.94] : [0.08, 0.16, 0.45], M = albino ? [0.96, 0.97, 0.99] : [0.14, 0.4, 0.9], B = albino ? [1, 1, 1] : [0.98, 0.94, 0.86], S = albino ? [0.62, 0.8, 1] : [0.45, 0.92, 1];
     let c = mix3(M, T, sms(0.045, 0.1, y)); c = mix3(B, c, sms(-0.075, -0.01, y)); return c; };
-  const bodyPath = mar ? new Path2D() : null;
+  const bodyPath = mar ? new Path2D() : null, finPath = mar ? new Path2D() : null;
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
   for (const part in mesh){
     const raw = mesh[part], c = new THREE.Color(known ? (st.c[part] || f.color) : '#b9c8cf');
@@ -8094,7 +8096,7 @@ function drawModelFish(cv, f, known){
       const nx = ay*bz - az*by, ny = az*bx - ax*bz, nz = ax*by - ay*bx, nl = Math.hypot(nx, ny, nz) || 1;
       const sh = (mar && part === 'Body') ? 0.78 + 0.22 * Math.abs((nx*L[0] + ny*L[1] + nz*L[2]) / nl / ll) : 0.55 + 0.45 * Math.abs((nx*L[0] + ny*L[1] + nz*L[2]) / nl / ll);
       let cr = c.r, cg = c.g, cb = c.b; if (mar && part === 'Body' && known){ const mc = marCol((raw[i] + raw[i+3] + raw[i+6]) / 3000, (raw[i+1] + raw[i+4] + raw[i+7]) / 3000); cr = mc[0]; cg = mc[1]; cb = mc[2]; }
-      tris.push({ P, d: (P[0][2]+P[1][2]+P[2][2]) / 3, body: part === 'Body' && nz > 0, col: `rgb(${Math.round(cr*255*sh)},${Math.round(cg*255*sh)},${Math.round(cb*255*sh)})` });
+      tris.push({ P, d: (P[0][2]+P[1][2]+P[2][2]) / 3, body: part === 'Body' && nz > 0, fin: part === 'Fins' && nz > 0 && (raw[i] + raw[i+3] + raw[i+6]) / 3000 > -0.4 && Math.abs((raw[i+1] + raw[i+4] + raw[i+7]) / 3000) > 0.1, col: `rgb(${Math.round(cr*255*sh)},${Math.round(cg*255*sh)},${Math.round(cb*255*sh)})` });
       for (const p of P){ x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
     }
   }
@@ -8102,9 +8104,11 @@ function drawModelFish(cv, f, known){
   const sc = Math.min(W*0.9/(x1-x0), H*0.86/(y1-y0)), ox = W/2 - (x0+x1)/2*sc, oy = H/2 + (y0+y1)/2*sc;
   ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, W/400);
   for (const t of tris){ ctx.beginPath(); ctx.moveTo(ox + t.P[0][0]*sc, oy - t.P[0][1]*sc); ctx.lineTo(ox + t.P[1][0]*sc, oy - t.P[1][1]*sc); ctx.lineTo(ox + t.P[2][0]*sc, oy - t.P[2][1]*sc); ctx.closePath(); ctx.fillStyle = t.col; ctx.strokeStyle = t.col; ctx.fill(); ctx.stroke();
+    if (finPath && t.fin){ finPath.moveTo(ox + t.P[0][0]*sc, oy - t.P[0][1]*sc); finPath.lineTo(ox + t.P[1][0]*sc, oy - t.P[1][1]*sc); finPath.lineTo(ox + t.P[2][0]*sc, oy - t.P[2][1]*sc); finPath.closePath(); }
     if (bodyPath && t.body){ bodyPath.moveTo(ox + t.P[0][0]*sc, oy - t.P[0][1]*sc); bodyPath.lineTo(ox + t.P[1][0]*sc, oy - t.P[1][1]*sc); bodyPath.lineTo(ox + t.P[2][0]*sc, oy - t.P[2][1]*sc); bodyPath.closePath(); } }
-  if (bodyPath && known){ ctx.save(); ctx.clip(bodyPath); ctx.fillStyle = albino ? 'rgba(160,205,255,0.5)' : 'rgba(165,215,255,0.55)';   /* 旗魚的直條紋：畫在身體上（clip 住），一條一條清楚分開 */
-    const yTop = oy - 0.085*sc, yBot = oy + 0.045*sc; for (let k = 0; k < 14; k++){ const x = ox + (-0.4 + (k + 0.5) * 0.058) * sc; ctx.fillRect(x - 0.0085*sc, yTop, 0.017*sc, yBot - yTop); } ctx.restore(); }
+  if (bodyPath && known){ ctx.save(); ctx.clip(bodyPath); ctx.fillStyle = albino ? 'rgba(160,205,255,0.5)' : 'rgba(120,235,255,0.8)';   /* 旗魚的直條紋：畫在身體上（clip 住），一條一條清楚分開 */
+    const yTop = oy - 0.2*sc, yBot = oy + 0.04*sc; for (let k = 0; k < 12; k++){ const x = ox + (-0.42 + (k + 0.5) * 0.07) * sc; ctx.fillRect(x - 0.0115*sc, yTop, 0.023*sc, yBot - yTop); } ctx.restore();
+    ctx.save(); ctx.clip(finPath); ctx.fillStyle = 'rgba(90,150,255,0.8)'; for (let k = 0; k < 12; k++){ const x = ox + (-0.42 + (k + 0.5) * 0.07) * sc; ctx.beginPath(); ctx.moveTo(x - 0.0115*sc, oy + 0.1*sc); ctx.lineTo(x + 0.0115*sc, oy + 0.1*sc); ctx.lineTo(x + 0.0115*sc + 0.2*sc, oy - 0.5*sc); ctx.lineTo(x - 0.0115*sc + 0.2*sc, oy - 0.5*sc); ctx.closePath(); ctx.fill(); } ctx.restore(); }
   if (!known){ ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `bold ${Math.round(H*0.34)}px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', W/2, H/2); }
 }
 function drawMarlin(cv, known){
