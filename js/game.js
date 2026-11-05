@@ -2134,7 +2134,7 @@ class Fisher {
     this.held = { o, y, until: now() + (secs || 6) };
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
-  dispose(){ KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
+  dispose(){ if (this.pet){ petFree(this.pet); this.pet = null; } KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
   update(dt, t){
     const a = this.av; dt = Math.min(dt, 0.1);
     // ===== 走路動畫（2026-11-04 改版）：Idle／Walk／Run／Sprint 依速度平滑混合；腳步照「實際走了多遠」前進，減少滑步 =====
@@ -3096,7 +3096,7 @@ function updateFishing(dt, t){
     else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
@@ -5487,6 +5487,161 @@ function gyMesh(region){ const sp = SPOT_BY_ID[region], g = new THREE.Group(); c
   const fr = box([0.95, 0.74, 0.05], null, [0, 1.25, 0], mat('#5a3d2b', 0.6)); g.add(fr); const pic = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.64), new THREE.MeshBasicMaterial({ map: tx })); pic.position.set(0, 1.25, 0.03); g.add(pic);
   for (const sx of [-0.32, 0.32]){ const l = box([0.05, 1.05, 0.05], null, [sx, 0.5, -0.12], mat('#7a5638', 0.7)); l.rotation.x = 0.12; g.add(l); } const bl = box([0.05, 1.1, 0.05], null, [0, 0.55, -0.32], mat('#7a5638', 0.7)); bl.rotation.x = -0.32; g.add(bl);
   return g; }
+// ===== 🐾 寵物（080）：模型都是程式畫的；帶出門的跟著主人走，其他的待在主人的小島上 =====
+const PET_KINDS = {
+  cat:   { name:'貓',     icon:'🐱', price:300,  desc:'港邊的流浪貓，領養只收一點手續費。看到魚群會喵喵叫。' },
+  shiba: { name:'柴犬',   icon:'🐕', price:2000, desc:'笑咪咪的柴犬，走路屁股一扭一扭。' },
+  otter: { name:'水獺',   icon:'🦦', price:2500, desc:'很愛玩水的水獺，常常在旁邊翻滾。' },
+  gull:  { name:'海鷗',   icon:'🕊️', price:1200, desc:'在你頭上飛來飛去，停下來就站在旁邊。' },
+  crab:  { name:'寄居蟹', icon:'🐚', price:800,  desc:'背著貝殼橫著走，走得慢但很可愛。' },
+};
+const Pets = { list:null, at:0, busy:false, atShop:false, feedFor:null, home:[], homeKey:'', meowAt:0, newName:'' };
+function petMine(){ return Pets.list ? Pets.list.find(p => p.out) || null : null; }
+async function loadPets(force){ if (Pets.busy || !Cloud.on || !Cloud.sb) return; if (!force && Pets.at && Date.now() - Pets.at < 60000) return; Pets.busy = true; Pets.at = Date.now();
+  try { const { data } = await Cloud.sb.rpc('pet_list'); if (Array.isArray(data)) Pets.list = data; } catch(e){} Pets.busy = false; Pets.homeKey = ''; pushPresence(true); if (!$('#sheet').hidden && curTab === 'pets') renderTab(); }
+async function petRpc(fn, args){ try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
+// ---- 模型 ----
+function petModel(kind, acc){
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const M = (c, r) => mat(c, r == null ? 0.75 : r), ink = M('#1d1d24', 0.4), legs = [];
+  const S = (r, c, x, y, z, sx, sy, sz, par) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.scale.set(sx || 1, sy || sx || 1, sz || sx || 1); m.castShadow = true; (par || body).add(m); return m; };
+  const C = (rt, rb, h, c, x, y, z, par, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 8), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.castShadow = true; (par || body).add(m); return m; };
+  const leg = (x, z, h, c) => { const pv = new THREE.Group(); pv.position.set(x, h, z); body.add(pv); const m = C(0.035, 0.03, h, c, 0, -h / 2, 0, pv); legs.push(pv); return pv; };
+  const eyes = (head, y, z, sp) => { for (const sx of [-1, 1]) S(0.022, ink, sx * sp, y, z, 1, 1.2, 1, head); };
+  let head = null, tail = null, wings = null, neckY = 0.3, neckZ = 0.15, hatY = 0.5, hatZ = 0.2;
+  if (kind === 'cat' || kind === 'shiba'){ const dog = kind === 'shiba', c = dog ? '#d9924a' : '#e8a35a', w = '#fbf5ea';
+    S(0.16, c, 0, 0.2, 0, 1, 0.82, 1.45); S(0.1, w, 0, 0.17, 0.12, 1, 0.8, 0.9);
+    for (const [x, z] of [[-0.08, 0.13], [0.08, 0.13], [-0.08, -0.13], [0.08, -0.13]]) leg(x, z, 0.12, c);
+    head = new THREE.Group(); head.position.set(0, 0.32, 0.2); body.add(head); S(0.12, c, 0, 0, 0, 1.05, 0.95, 1, head); S(0.07, w, 0, -0.03, 0.08, 1, 0.75, 0.8, head); S(0.016, ink, 0, 0.005, 0.15, 1, 0.8, 1, head);
+    for (const sx of [-1, 1]){ const e = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.09, 4), M(c)); e.position.set(sx * 0.07, 0.11, -0.01); e.rotation.z = -sx * 0.25; head.add(e); const ei = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.05, 4), M('#f5b8b0')); ei.position.set(sx * 0.07, 0.11, 0.012); ei.rotation.z = -sx * 0.25; head.add(ei); }
+    eyes(head, 0.03, 0.105, 0.05);
+    if (!dog){ for (let k = 0; k < 3; k++) S(0.04, '#c97a3a', 0, 0.27, -0.06 + k * 0.08, 1.4, 0.3, 0.6); }   /* 虎斑 */
+    tail = new THREE.Group(); tail.position.set(0, 0.24, -0.22); body.add(tail);
+    if (dog){ const tr = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.025, 6, 12, Math.PI * 1.5), M(c)); tr.rotation.y = Math.PI / 2; tr.position.set(0, 0.05, 0); tail.add(tr); }
+    else { const t1 = C(0.022, 0.026, 0.22, c, 0, 0.1, -0.02, tail); t1.rotation.x = -0.5; }
+    neckY = 0.3; neckZ = 0.16; hatY = 0.46; hatZ = 0.19; }
+  else if (kind === 'otter'){ const c = '#7a5236', l = '#c9a07a';
+    S(0.12, c, 0, 0.14, 0, 1, 0.85, 2.1); S(0.08, l, 0, 0.13, 0.1, 0.9, 0.7, 1.5);
+    for (const [x, z] of [[-0.07, 0.15], [0.07, 0.15], [-0.07, -0.15], [0.07, -0.15]]) leg(x, z, 0.07, c);
+    head = new THREE.Group(); head.position.set(0, 0.2, 0.28); body.add(head); S(0.09, c, 0, 0, 0, 1.1, 0.95, 1, head); S(0.055, l, 0, -0.02, 0.06, 1, 0.75, 0.9, head); S(0.015, ink, 0, 0.0, 0.11, 1, 0.8, 1, head);
+    for (const sx of [-1, 1]) S(0.022, c, sx * 0.075, 0.06, -0.01, 1, 1, 0.6, head); eyes(head, 0.025, 0.075, 0.04);
+    tail = new THREE.Group(); tail.position.set(0, 0.12, -0.25); body.add(tail); const t1 = C(0.05, 0.02, 0.26, c, 0, 0, -0.12, tail); t1.rotation.x = Math.PI / 2;
+    neckY = 0.19; neckZ = 0.22; hatY = 0.3; hatZ = 0.28; }
+  else if (kind === 'gull'){ const w = '#f6f6f2', gy = '#a9b4bc';
+    S(0.11, w, 0, 0.18, 0, 1, 0.9, 1.6); S(0.08, gy, 0, 0.22, -0.12, 1, 0.5, 1.2);
+    for (const x of [-0.04, 0.04]) leg(x, 0, 0.1, '#f2a03d');
+    head = new THREE.Group(); head.position.set(0, 0.3, 0.13); body.add(head); S(0.075, w, 0, 0, 0, 1, 1, 1, head); const bk = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.09, 6), M('#f2c43d')); bk.rotation.x = Math.PI / 2; bk.position.set(0, -0.01, 0.1); head.add(bk); eyes(head, 0.02, 0.06, 0.04);
+    wings = []; for (const sx of [-1, 1]){ const wg = new THREE.Group(); wg.position.set(sx * 0.09, 0.22, 0); body.add(wg); const p = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.02, 0.14), M(gy)); p.position.set(sx * 0.13, 0, 0); wg.add(p); const tip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.021, 0.12), M('#2f353b')); tip.position.set(sx * 0.24, 0, -0.01); wg.add(tip); wings.push(wg); }
+    neckY = 0.25; neckZ = 0.11; hatY = 0.38; hatZ = 0.13; }
+  else { // 寄居蟹：粉紅貝殼＋紅色身體、兩隻鉗子
+    const sh = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.26, 10), M('#f2c7b8', 0.6)); sh.position.set(0, 0.17, -0.04); sh.rotation.x = -0.9; body.add(sh); S(0.1, '#f6d6c8', 0, 0.12, -0.05, 1, 0.9, 1.1);
+    for (let k = 0; k < 3; k++){ const r = new THREE.Mesh(new THREE.TorusGeometry(0.1 - k * 0.025, 0.012, 5, 14), M('#d99a88')); r.position.set(0, 0.15 + k * 0.04, -0.06 - k * 0.04); r.rotation.x = 0.7; body.add(r); }
+    S(0.06, '#e0553c', 0, 0.07, 0.08, 1.2, 0.7, 1);
+    for (const sx of [-1, 1]){ S(0.04, '#e0553c', sx * 0.08, 0.07, 0.13, 1, 0.8, 1.2); for (let k = 0; k < 2; k++) leg(sx * 0.07, 0.02 - k * 0.06, 0.06, '#c8442e'); }
+    head = new THREE.Group(); head.position.set(0, 0.1, 0.12); body.add(head); for (const sx of [-1, 1]){ C(0.006, 0.006, 0.07, '#c8442e', sx * 0.025, 0.04, 0, head); S(0.016, ink, sx * 0.025, 0.08, 0, 1, 1, 1, head); }
+    neckY = 0.08; neckZ = 0.08; hatY = 0.33; hatZ = -0.1; }
+  if (acc >= 1 && kind !== 'crab'){ const col = new THREE.Mesh(new THREE.TorusGeometry(kind === 'gull' ? 0.055 : 0.075, 0.014, 6, 14), M('#e8473a', 0.5)); col.rotation.x = Math.PI / 2; col.position.set(0, neckY, neckZ); body.add(col); const tag = S(0.018, M('#ffd36a', 0.3), 0, neckY - 0.03, neckZ + 0.06); }
+  if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, hatY, hatZ); body.add(hat); const brim = C(0.07, 0.07, 0.012, '#f2d48a', 0, 0, 0, hat, 14); const top = C(0.04, 0.045, 0.05, '#f2d48a', 0, 0.03, 0, hat, 12); C(0.046, 0.046, 0.012, '#e8473a', 0, 0.012, 0, hat, 12); }
+  g.userData = { body, head, tail, wings, legs, kind };
+  return g;
+}
+function petLabel(name){ const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = 'rgba(255,255,255,0.88)'; const w = Math.min(244, 30 + c.measureText ? 40 + name.length * 30 : 200); c.beginPath(); c.roundRect ? c.roundRect((256 - w) / 2, 8, w, 46, 22) : c.rect((256 - w) / 2, 8, w, 46); c.fill(); c.fillStyle = '#18334a'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 128, 32);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest:false, transparent:true })); sp.scale.set(1.1, 0.28, 1); sp.renderOrder = 5; return sp; }
+function petMake(w){ const m = petModel(w.kind, w.acc || 0), lb = petLabel(w.name || PET_KINDS[w.kind].name); lb.position.y = w.kind === 'gull' ? 0.6 : 0.62; m.add(lb); scene.add(m); return { kind: w.kind, name: w.name, acc: w.acc || 0, m, pos: new THREE.Vector3(), vel: 0, rot: 0, ph: Math.random() * 6, fly: 0, key: w.kind + '|' + w.name + '|' + (w.acc || 0), wander: null }; }
+function petFree(pt){ if (pt && pt.m){ if (pt.m.parent) pt.m.parent.remove(pt.m); pt.m.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); }); } }
+// 跟著主人：走在主人斜後方；海鷗在頭上飛；寄居蟹橫著走
+function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
+  const dx = tx - pt.pos.x, dz = tz - pt.pos.z, d = Math.hypot(dx, dz), U = pt.m.userData;
+  if (d > 14){ pt.pos.x = tx; pt.pos.z = tz; }
+  const sp = d > 0.12 ? Math.min(7, d * 2.6 + (moving ? 1.2 : 0)) * (pt.kind === 'crab' ? 0.75 : 1) : 0; pt.vel += (sp - pt.vel) * Math.min(1, dt * 6);
+  if (d > 0.05){ const k = Math.min(d, pt.vel * dt) / d; pt.pos.x += dx * k; pt.pos.z += dz * k; }
+  const want = pt.vel > 0.25 ? Math.atan2(dx, dz) + (pt.kind === 'crab' ? Math.PI / 2 : 0) : faceTo; pt.rot = lerpAngle(pt.rot, want, Math.min(1, dt * 6));
+  pt.ph += dt * (4 + pt.vel * 3); const mv = clamp(pt.vel / 2, 0, 1);
+  let y = ty;
+  if (pt.kind === 'gull'){ pt.fly += ((moving || pt.vel > 0.6 ? 1 : 0) - pt.fly) * Math.min(1, dt * 2); y = ty + pt.fly * (1.7 + Math.sin(t * 1.6 + pt.ph * 0.1) * 0.15);
+    if (U.wings) U.wings.forEach((w, i) => { w.rotation.z = (i ? -1 : 1) * (pt.fly > 0.2 ? Math.sin(t * 14) * 0.7 : 0.15); }); }
+  else y = ty + Math.abs(Math.sin(pt.ph)) * 0.05 * mv;
+  pt.pos.y = y; pt.m.position.copy(pt.pos); pt.m.rotation.y = pt.rot;
+  U.legs.forEach((l, i) => { l.rotation.x = Math.sin(pt.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.6 * mv; });
+  if (U.tail) U.tail.rotation.y = Math.sin(t * (pt.kind === 'shiba' ? 9 : 2.5)) * (pt.kind === 'shiba' ? 0.3 : 0.4);
+  if (U.head) U.head.rotation.y = mv < 0.1 ? Math.sin(t * 0.7 + pt.ph * 0.01) * 0.35 : 0;
+  if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
+}
+function updatePetFor(f, want, dt, t){
+  if (!want){ if (f.pet){ petFree(f.pet); f.pet = null; } return; }
+  const k = want.kind + '|' + want.name + '|' + (want.acc || 0); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
+  const pt = f.pet, vis = f.av.g.visible && !f.swim && !(f === me && Dive.on); pt.m.visible = vis; if (!vis) return;
+  if (pt.hug){ return; }
+  const c = Math.cos(f.rot), s = Math.sin(f.rot), ox = 0.75, oz = -0.85, tx = f.pos.x + c * ox + s * oz, tz = f.pos.z - s * ox + c * oz;
+  petStep(pt, dt, t, tx, tz, f.baseY + (f.sitting ? 0 : 0), (f.speed || 0) > 0.3, Math.atan2(f.pos.x - pt.pos.x, f.pos.z - pt.pos.z));
+}
+// 小島上待在家的寵物：在島中間附近閒晃
+async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.forEach(petFree); Pets.home = []; Pets.homeKey = ''; } return; }
+  const key = onIsle.owner + '|' + (Pets.list ? Pets.list.map(p => p.id + ':' + p.out + ':' + p.acc + p.name).join() : ''); if (Pets.homeKey === key) return; Pets.homeKey = key;
+  let list = []; if (onIsle.owner === myIdOrMe()) list = (Pets.list || []).filter(p => !p.out); else if (Cloud.on){ try { const { data } = await Cloud.sb.rpc('isle_pets', { p_owner: onIsle.owner }); if (Array.isArray(data)) list = data; } catch(e){} }
+  Pets.home.forEach(petFree); Pets.home = list.slice(0, 3).map((w, i) => { const pt = petMake(w); pt.pos.set(ISLE.x + 3 + i * 1.5, groundHeight(ISLE.x + 3 + i * 1.5, ISLE.z + 4), ISLE.z + 4); pt.wander = { x: pt.pos.x, z: pt.pos.z, at: 0 }; return pt; }); }
+function updatePets(dt, t){
+  updatePetFor(me, petMine(), dt, t);
+  for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
+  if (frameNo % 30 === 0) petHomeSync();
+  for (const pt of Pets.home){ const vis = !!onIsle && !House.on && !Dive.on; pt.m.visible = vis; if (!vis) continue; const w = pt.wander;
+    if (t > w.at){ w.at = t + rand(3, 7); for (let k = 0; k < 6; k++){ const a = Math.random() * 6.283, r = 2 + Math.random() * 7, x = ISLE.x + Math.cos(a) * r, z = ISLE.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.3)){ w.x = x; w.z = z; break; } } }
+    petStep(pt, dt, t, w.x, w.z, groundHeight(pt.pos.x, pt.pos.z), false, pt.rot); }
+  // 貓看到附近有魚群會喵喵叫
+  const mine = me.pet; if (mine && mine.kind === 'cat' && t > Pets.meowAt && !Dive.on && !House.on){ const sc = (FAI.schools || []).find(sc => Math.hypot(sc.lead.x - me.pos.x, sc.lead.z - me.pos.z) < 14);
+    if (sc){ Pets.meowAt = t + 45; const ang = Math.atan2(sc.lead.x - me.pos.x, sc.lead.z - me.pos.z) - cam.yaw, dir = Math.abs(Math.sin(ang)) < 0.5 ? '前面' : Math.sin(ang) > 0 ? '左邊' : '右邊'; toast(`🐱 ${esc(mine.name)}：喵～（${dir}的水裡好像有魚群）`); SFX.tick && SFX.tick(); mine.m.position.y += 0.15; } }
+  // 抱寵物：放開以後放回地上
+  if (mine && mine.hug && !(me.held && me.held.pet)){ mine.hug = false; scene.add(mine.m); mine.pos.set(me.pos.x + Math.sin(me.rot) * 0.8, me.baseY, me.pos.z + Math.cos(me.rot) * 0.8); }
+  if (PetShop.npc){ const d = Math.hypot(me.pos.x - PetShop.npc.pos.x, me.pos.z - PetShop.npc.pos.z); if (d < 40 && !onIsle){ PetShop.npc.av.g.visible = true; if (d < 6) PetShop.npc.rot = lerpAngle(PetShop.npc.rot, Math.atan2(me.pos.x - PetShop.npc.pos.x, me.pos.z - PetShop.npc.pos.z), 1 - Math.exp(-3 * dt)); PetShop.npc.update(dt, t); PetShop.npc.placeTag();
+      for (const pt of PetShop.demo) petStep(pt, dt, t, pt.wander.x, pt.wander.z, pt.wander.y, false, pt.rot); } else { PetShop.npc.av.g.visible = false; PetShop.npc.tag.style.display = 'none'; } }
+}
+function petHug(){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held) me.av.g.remove(me.held.o); pt.hug = true; if (pt.m.parent) pt.m.parent.remove(pt.m); const y = me.av.kid ? 0.66 : 0.82; pt.m.position.set(0, y, me.av.kid ? 0.36 : 0.42); pt.m.rotation.set(0, 0, 0); me.av.g.add(pt.m); me.held = { o: pt.m, y, until: now() + 4, pet: true }; me.say(`🤗 ${pt.name}`, 'emote', 4); closeEmotePanel(); }
+function petPat(){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } pt.pos.set(me.pos.x + Math.sin(me.rot) * 0.7, me.baseY, me.pos.z + Math.cos(me.rot) * 0.7); pt.rot = me.rot + Math.PI; FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); me.say(`✋ 摸摸 ${pt.name}`, 'emote', 3); closeEmotePanel(); }
+// ---- 寵物店：廣場西邊的小攤子，店長小花，攤子上有幾隻寵物在玩 ----
+const PetShop = { npc:null, demo:[] };
+function buildPetShop(){ const X = -14, Z = 6, g = new THREE.Group(), y0 = groundHeight(X, Z); g.position.set(X, y0, Z); g.rotation.y = Math.atan2(4 - X, 4 - Z); scene.add(g);
+  const B = (sz, c, p) => { const b = box(sz, c, p); g.add(b); return b; };
+  B([3.4, 0.9, 0.9], '#c79a6b', [0, 0.45, -0.6]); B([3.6, 0.08, 1.05], '#e9d6b0', [0, 0.92, -0.6]);
+  for (const sx of [-1.7, 1.7]) for (const sz of [-1.1, 0.4]) B([0.12, 2.5, 0.12], '#6e4a2f', [sx, 1.25, sz]);
+  for (let i = 0; i < 6; i++){ const st = B([0.6, 0.06, 1.9], i % 2 ? '#ffffff' : '#9fd8a8', [-1.5 + i * 0.6, 2.5, -0.35]); st.rotation.x = 0.2; }
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), new THREE.MeshBasicMaterial({ map: signTex('🐾 寵物店', '#3fbf9d', '#ffffff', 512, 128) })); sg.position.set(0, 2.15, 0.45); g.add(sg);
+  for (const [x, c] of [[-1.1, '#e8473a'], [1.1, '#5fb6e3']]){ const bed = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.12, 16), mat(c, 0.8)); bed.position.set(x, 0.06, 0.9); g.add(bed); }
+  const c = Math.cos(g.rotation.y), s = Math.sin(g.rotation.y); addOBoxCol(X - s * 0.6, Z - c * 0.6, 3.6, 1.1, g.rotation.y);
+  const f = new Fisher({ shirt:'#9fd8a8', hat:'#f6f0dd', name:'寵物店 小花', kind:'npc' }); const bx = X - s * 1.25, bz = Z - c * 1.25; f.pos.set(bx, groundHeight(bx, bz), bz); f.baseY = f.pos.y; f.rot = g.rotation.y; f.setGear({ hat:'hat_none', top:'top_apron' }); f.nm.classList.add('quest'); PetShop.npc = f;
+  [['cat', -1.1], ['shiba', 1.1]].forEach(([k, x]) => { const pt = petMake({ kind:k, name: PET_KINDS[k].name, acc:0 }); const wx = X + c * x + s * 0.9, wz = Z - s * x + c * 0.9; pt.pos.set(wx, y0 + 0.12, wz); pt.rot = g.rotation.y; pt.wander = { x: wx, z: wz, y: y0 + 0.12 }; PetShop.demo.push(pt); }); }
+// ---- 寵物分頁 ----
+function renderPets(body){
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🐾 ${Pets.atShop ? '寵物店' : '我的寵物'}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能養寵物。')); return; }
+  if (!Pets.list){ body.appendChild(el('div', 'empty', '載入中…')); loadPets(true); return; }
+  const L = Pets.list; body.appendChild(el('p', 'sub', `養了 ${L.length} / 3 隻，同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
+  const ul = el('ul', 'shoplist');
+  for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(el('span', 'dishic', K.icon));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${K.name}${p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
+    const a = el('div', 'tacts');
+    const ob = el('button', 'tbtn' + (p.out ? ' ghost' : ''), p.out ? '回家' : '帶出門'); ob.addEventListener('click', async () => { const r = await petRpc('pet_out', { p_id: p.out ? null : p.id }); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); renderTab(); } }); a.appendChild(ob);
+    const fb = el('button', 'tbtn ghost', '🐟 餵'); fb.addEventListener('click', () => { Pets.feedFor = Pets.feedFor === p.id ? null : p.id; renderTab(); }); a.appendChild(fb);
+    if (!p.gift){ const gb = el('button', 'tbtn ghost', '🎁 禮物'); gb.disabled = p.love < 10; gb.addEventListener('click', async () => { const r = await petRpc('pet_gift', { p_id: p.id }); if (r){ adoptRow(r.player); const what = r.what === 'shell' ? '撿到一個漂亮的貝殼' : r.what === 'photo' ? '叼來一張你們出去玩的照片' : '找到一些亮晶晶的硬幣'; flash(`🎁 ${p.name}${what}！+${r.coins} 金幣`, 2.2); SFX.coin(); loadPets(true); } }); a.appendChild(gb); }
+    const mb = el('button', 'tbtn ghost', '⋯'); mb.addEventListener('click', () => { Pets.menu = Pets.menu === p.id ? null : p.id; renderTab(); }); a.appendChild(mb);
+    li.appendChild(a); ul.appendChild(li);
+    if (Pets.feedFor === p.id){ const box = el('li', ''); const fishes = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !FISH_BY_ID[x.f].rs).slice(0, 30);
+      if (!fishes.length) box.appendChild(el('div', 'sub', '魚缸裡沒有魚，先去釣幾條吧。'));
+      else { box.appendChild(el('div', 'sub2', `選一條魚餵${p.name}（魚會從魚缸拿走）：`)); const row = el('div', 'chipline'); for (const x of fishes){ const b = el('button', 'chip', `${FISH_BY_ID[x.f].name} ${(+x.w).toFixed(2)}kg`); b.addEventListener('click', async () => { b.disabled = true; const r = await petRpc('pet_feed', { p_id: p.id, p_t: x.t }); if (r){ adoptRow(r.player); flash(`😋 ${p.name}吃得好開心！親密度 +${r.add}`, 1.6); SFX.catch(); Pets.feedFor = null; await loadPets(true); } else b.disabled = false; }); row.appendChild(b); } box.appendChild(row); }
+      ul.appendChild(box); }
+    if (Pets.menu === p.id){ const box = el('li', ''), ni = el('input', 'txt'); ni.maxLength = 8; ni.value = p.name; ni.style.cssText = 'width:9em'; const rn = el('button', 'tbtn ghost', '改名'); rn.addEventListener('click', async () => { const r = await petRpc('pet_rename', { p_id: p.id, p_name: ni.value }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); renderTab(); } });
+      const rl = el('button', 'tbtn ghost', '送養'); rl.addEventListener('click', async () => { if (rl.dataset.sure !== '1'){ rl.dataset.sure = '1'; rl.textContent = `確定把${p.name}送給別人養？`; rl.classList.add('warn'); return; } const r = await petRpc('pet_release', { p_id: p.id }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); toast(`👋 ${p.name}找到新家了`); renderTab(); } });
+      box.append(ni, rn, rl); ul.appendChild(box); } }
+  if (L.length) body.appendChild(ul); else body.appendChild(el('div', 'empty', Pets.atShop ? '還沒有寵物，從下面挑一隻吧！' : '還沒有寵物。到廣場西邊的寵物店找小花領養。'));
+  if (!Pets.atShop){ if (L.length < 3) body.appendChild(el('p', 'sub', '想再養一隻？到廣場西邊的寵物店找小花。')); return; }
+  if (L.length >= 3){ body.appendChild(el('p', 'sub', '已經養滿 3 隻了。')); return; }
+  body.appendChild(el('div', 'dexhead', '🏠 領養'));
+  const f1 = el('div', 'field'); f1.appendChild(el('label', '', '幫牠取名字（1～8 個字）')); const ni = el('input', 'txt'); ni.maxLength = 8; ni.value = Pets.newName; ni.placeholder = '例如：小咪'; ni.addEventListener('input', () => { Pets.newName = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
+  const ul2 = el('ul', 'shoplist cols');
+  for (const [k, K] of Object.entries(PET_KINDS)){ const li = el('li'); li.appendChild(el('span', 'dishic', K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc)); li.appendChild(d);
+    const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < K.price ? ' ghost' : ''), '領養'); b.addEventListener('click', async () => { const nm = (Pets.newName || '').trim() || K.name; if (rec.coins < K.price){ toast(`金幣不夠，還差 🪙${(K.price - rec.coins).toLocaleString()}`); return; } b.disabled = true;
+      const r = await petRpc('pet_adopt', { p_kind: k, p_name: nm }); if (r){ adoptRow(r.player); Pets.list = r.pets; Pets.newName = ''; SFX.catch(); flash(`${K.icon} ${nm}成為你的家人了！`, 1.8); if (!petMine()){ const np = r.pets[r.pets.length - 1]; const o = await petRpc('pet_out', { p_id: np.id }); if (o) Pets.list = o; } pushPresence(true); renderTab(); } else b.disabled = false; });
+    a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
+  body.appendChild(ul2);
+}
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
 function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); }
 function enterShrimp(){
@@ -6723,11 +6878,12 @@ function nearShop(){
   if (Math.hypot(me.pos.x - SHRIMP_DOOR.x, me.pos.z - (SHRIMP_DOOR.z + 1.9)) < 1.6) return { id:'shrimpdoor', label:'釣蝦場', mode:'shrimpdoor' };
   if (Math.hypot(me.pos.x - CAFE_DOOR.x, me.pos.z - CAFE_DOOR.z) < 1.7) return { id:'cafedoor', label:'潮汐食堂', mode:'cafedoor' };
   if (Math.hypot(me.pos.x - MUSEUM_DOOR.x, me.pos.z - MUSEUM_DOOR.z) < 1.7) return { id:'museumdoor', label:'海洋博物館', mode:'museumdoor' };
+  if (PetShop.npc && Math.hypot(me.pos.x - PetShop.npc.pos.x, me.pos.z - PetShop.npc.pos.z) < 2.6) return { id:'petshop', label:'寵物店 小花', mode:'petshop' };
   for (const sh of SHOPS){ if (sh.id === 'cook') continue; const l = LANDMARKS.find(l => l.id === sh.id); if (l && Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) < 4.8) return sh; }
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -7587,6 +7743,7 @@ $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(
 (function buildBquick(){   /* 先做好這一行，下面 compactBrand 再把它收進 ☰ 裡 */ const host = $('#btools') && $('#btools').parentNode; if (!host || $('#bquick')) return; const row = document.createElement('div'); row.id = 'bquick'; host.appendChild(row);
   const mk = (id, txt, fn, title) => { const b = el('button', 'bq', txt); b.id = id; if (title) b.title = title; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); fn(); }); row.appendChild(b); return b; };
   mk('bqId', '🆔', async () => { const c = friendCode(); if (!c){ toast('連上雲端以後才有好友代碼'); return; } try { await navigator.clipboard.writeText(c); toast(`好友代碼 ${c} 已經複製了，貼給朋友就能加好友`); } catch(e){ toast(`你的好友代碼：${c}`); } openSheet('people'); }, '好友代碼：點一下複製，打開加好友');
+  mk('bqPet', '🐾 寵物', () => { Pets.atShop = false; openSheet('pets'); loadPets(true); });
   mk('bqQuest', '📜 任務', () => openSheet('quest')); mk('bqAch', '🏅 成就', () => openSheet('ach')); mk('bqHelp', '❓ 玩法', () => openSheet('help'));
   mk('bqLogin', '🔑 登入', () => { if (Cloud.isAnon && Cloud.ui){ Cloud.ui.step = 'idle'; } openSheet('style'); setTimeout(() => { const cb = document.querySelector('#sheet .cloudbox'); if (cb) cb.scrollIntoView({ block:'center' }); }, 150); }, '登入、綁定 Email、換裝置');
   const upd = () => { const c = friendCode(), id = $('#bqId'), lg = $('#bqLogin'); if (id){ id.textContent = c ? '🆔 ' + c : '🆔 ———'; id.classList.toggle('off', !c); }
@@ -7608,6 +7765,7 @@ function closeEmotePanel(){ const P = $('#emotePanel'); if (P) P.hidden = true; 
 function openEmotePanel(){ let P = $('#emotePanel'); if (!P){ P = document.createElement('div'); P.id = 'emotePanel'; P.className = 'panel'; P.hidden = true; document.body.appendChild(P);
     P.appendChild(el('div', 'ep-t', '😀 表情動作'));
     const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', D.name)); b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
+    for (const [ic, nm, fn] of [['🤗', '抱寵物', () => petHug()], ['✋', '摸摸頭', () => petPat()]]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
     P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。')); }
   P.hidden = !P.hidden; if (!P.hidden){ const em = $('#emotes'), r = em && em.getBoundingClientRect(); if (r && r.width){ P.style.bottom = Math.round(innerHeight - r.top + 8) + 'px'; P.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; } } }   /* 貼在表情按鈕列的正上方 */
 { const em = $('#emotes'); if (em){ const b = document.createElement('button'); b.className = 'panel'; b.id = 'emoteMore'; b.setAttribute('aria-label', '表情動作'); b.textContent = '😀'; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); openEmotePanel(); }); em.appendChild(b); } }
@@ -7716,6 +7874,7 @@ function presenceObj(){
   if (mySeat) o.st = 1;
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
+  { const pt = petMine(); if (pt) o.pt = [pt.kind, pt.name, pt.acc || 0]; }   /* 080：帶出門的寵物（只放種類、名字、配件，不放親密度） */
   if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
@@ -7761,6 +7920,7 @@ function applyPeer(pp){
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st;
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
+  p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2) } : null;
   p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = Number(pr.hs) || 0; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
@@ -8865,6 +9025,7 @@ function renderTab(){
   $('#sheet').classList.toggle('closet', curTab === 'closet');
   if (curTab === 'closet'){ renderCloset(body); return; }
   if (curTab === 'museum'){ renderMuseum(body); return; }
+  if (curTab === 'pets'){ renderPets(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'cldesign'){ renderClDesign(body); return; }
   if (curTab === 'shop'){ renderShop(body); return; }
@@ -9155,6 +9316,12 @@ function renderTab(){
       '釣具店：釣竿（越好越不容易斷線、收線越快、稀有傳說機率越高）、魚餌（每拋一次用掉一個）、窩料。',
       '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情共 54 件，可以先試穿看看，大家都看得到你的打扮。',
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
+    ]);
+    sec('🐾 寵物', [
+      '在廣場西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
+      '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
+      '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
+      '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
     ]);
     sec('⚓ 港口海底潛水', [
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
@@ -9571,14 +9738,14 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
   flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
 
 
-addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); }
+addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); } try { buildPetShop(); } catch(e){ console.warn('petshop', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
