@@ -297,13 +297,13 @@ const LANDMARKS = [
   { id:'plaza',      label:'潮汐廣場', pos:V3(4, 4),            color:PALETTE.gold, ly:1.8 },
   { id:'aquarium',   label:'水族館',   pos:V3(AQUA[0], AQUA[1]), color:PALETTE.coral, ly:6.8, mx:7.6, mz:4.6 },
   { id:'chat',       label:'聊天亭',   pos:V3(-3, 22),          color:'#f5a5d8', ly:3.8 },
-  { id:'tackle',     label:'釣具店',   pos:V3(-9, -3),          color:'#f6a96b', ly:5.5, mx:2.4, mz:2.8 },
-  { id:'shop',       label:'海邊商店', pos:V3(18, -1),          color:'#5fb6e3', ly:5.5, mx:-2.6, mz:2.8 },
+  { id:'tackle',     label:'釣具店',   pos:V3(5, -24),          color:'#f6a96b', ly:5.5, mx:2.4, mz:2.8 },
+  { id:'shop',       label:'海邊商店', pos:V3(12.5, -24),          color:'#5fb6e3', ly:5.5, mx:-2.6, mz:2.8 },
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
   { id:'museum',     label:'海洋博物館', pos:V3(SHOPLOT.museum.x, SHOPLOT.museum.z), color:'#7fb0c8', ly:6.0, mx:2.6, mz:2.6 },
   { id:'tailor',     label:'阿綾服裝店', pos:V3(SHOPLOT.ling.x, SHOPLOT.ling.z), color:'#f5a5d8', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'mu',         label:'阿木木工坊', pos:V3(SHOPLOT.mu.x, SHOPLOT.mu.z), color:'#c79a6b', ly:5.5, mx:-2.4, mz:2.6 },
-  { id:'market',     label:'釣客魚市', pos:V3(SHOPLOT.spare.x, SHOPLOT.spare.z), color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.6 },
+  { id:'market',     label:'釣客魚市', pos:V3(22.5, -16.5), color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.6 },
   { id:'cai',        label:'阿彩畫廊', pos:V3(SHOPLOT.cai.x, SHOPLOT.cai.z), color:'#9b7bff', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'fu',         label:'阿福海產店', pos:V3(20.5, -25.5),   color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.4 },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
@@ -989,19 +989,20 @@ function castPoint(x, z, dx, dz, dist){
     Cai.show = new THREE.Group(); Cai.show.position.set(-2.5, 0, 1.7); Cai.show.rotation.y = -0.35; Cai.show.scale.setScalar(1.3); cg.add(Cai.show); Cai.show.add(paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'mist', fish:null }));
     const c = Math.cos(cg.rotation.y), sn = Math.sin(cg.rotation.y); addOBoxCol(cg.position.x - c * 2.5 + sn * 1.7, cg.position.z + sn * 2.5 + c * 1.7, 1.1, 0.7, cg.rotation.y); }
   /* 釣客魚市（2026-11-05）：商店街最後一間，玩家之間買賣魚；門口一排冰桶 */
-  { const mg = house(SHOPLOT.spare.x, SHOPLOT.spare.z, '#5fb6e3', 3.4, SHOPLOT.spare.r, { awning: '#2f89c7', sign: '釣客魚市', signIcon: '🐟', signInk: '#1d4a6a' });
+  { const mg = house(22.5, -16.5, '#5fb6e3', 3.4, faceTo(22.5, -16.5), { awning: '#2f89c7', sign: '釣客魚市', signIcon: '🐟', signInk: '#1d4a6a' });
     for (const sx of [-2.6, -1.7]){ const b = new THREE.Group(); b.position.set(sx, 0, 1.6); mg.add(b); b.add(box([0.75, 0.55, 0.5], '#e8f4f8', [0, 0.28, 0])); b.add(box([0.78, 0.06, 0.53], '#2f89c7', [0, 0.57, 0])); }
     const c = Math.cos(mg.rotation.y), sn = Math.sin(mg.rotation.y); addOBoxCol(mg.position.x - c * 2.15 + sn * 1.6, mg.position.z + sn * 2.15 + c * 1.6, 1.8, 0.6, mg.rotation.y); }
   house(-14, -9, '#ec8b68', 3.3, faceTo(-14, -9));
   house(22, 7, '#9fc7a8', 3.2, faceTo(22, 7));
-  house(-9, -3, '#f6a96b', 3.6, faceTo(-9, -3), { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店
+  /* v190 照功能分區：釣具店、海邊商店（賣魚）、阿福海產店、釣客魚市都在港口；吃的在廣場；衣服家具寵物在商店街 */
+  house(5, -24, '#f6a96b', 3.6, faceTo(5, -24), { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店（港口）
   /* 阿福海產店（2026-11-04）：碼頭邊的小海產店，櫃台上一個冰櫃，擺著今天高價收購的魚 */
   { const fg = house(20.5, -25.5, '#2f6fa0', 3.4, faceTo(20.5, -25.5), { awning: '#2f89c7', sign: '阿福海產店', signIcon: '🐟', signInk: '#1d4a6a' });
     const ice = new THREE.Group(); ice.position.set(0, 0.92, 1.25 + 0.8); fg.add(ice);
     ice.add(box([2.3, 0.1, 0.46], '#e8f4f8', [0, 0.05, 0])); { const gl = new THREE.Mesh(new THREE.BoxGeometry(2.36, 0.32, 0.5), new THREE.MeshStandardMaterial({ color:'#cfefff', transparent:true, opacity:0.28, roughness:0.1, depthWrite:false })); gl.position.y = 0.22; ice.add(gl); }
     for (let i = 0; i < 14; i++){ const c = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), mat('#f4fbff', 0.3)); c.position.set(-1.05 + (i % 7) * 0.35, 0.12, i < 7 ? -0.12 : 0.12); c.rotation.y = i * 0.7; ice.add(c); }
     Fu.ice = ice; }
-  house(18, -1, '#5fb6e3', 3.8, faceTo(18, -1), { awning: '#2f89c7', sign: '海邊商店', signIcon: '🐟' });      // 海邊商店
+  house(12.5, -24, '#5fb6e3', 3.8, faceTo(12.5, -24), { awning: '#2f89c7', sign: '海邊商店', signIcon: '🐟' });      // 海邊商店（港口，賣魚）
   // ---- 潮汐食堂：村子裡的門面（裡面的店在地圖外，跟釣蝦場一樣走進去）：木造小店、紅白遮雨棚、招牌、紙燈籠、亮著的窗、門口菜單 ----
   {
     const [KX, KZ] = [12.5, 8.5], g = new THREE.Group(); g.position.set(KX, 0, KZ); g.rotation.y = faceTo(KX, KZ); scene.add(g);
@@ -9491,6 +9492,9 @@ function renderTab(){
     sec('⚓ 港口海底潛水', [
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
+    ]);
+    sec('🗺️ 村子怎麼逛', [
+      '照功能分區：🎣 港口一排（水族館後面）是釣具店、海邊商店（賣魚）、阿福海產店、釣客魚市；🍜 廣場旁是潮汐食堂、水族館、釣蝦場；👗 商店街（往北走過牌樓）是阿綾服裝店、阿木木工坊、阿彩畫廊、寵物店、海洋博物館。',
     ]);
     sec('🏛️ 海洋博物館', [
       '博物館在商店街最裡面東邊（白色石柱的建築，旁邊就是海），走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
