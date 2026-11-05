@@ -1,7 +1,8 @@
 -- 潮汐釣魚村：公平釣魚（伺服器決定上鉤的是什麼魚）（可以重複執行）
 -- ⚠️ 這份是 tools/gen_fair_sql.py 自動產生的，不要直接改；要改請改 tools/fair_fishing.sql.tpl 或 tools/fishcfg.json
 -- 流程：拋竿時遊戲呼叫 roll_fish()，伺服器用跟遊戲一樣的機率抽一條魚（釣竿、魚餌、料理、窩料、天氣、潮汐、季節、時段、今日情報、釣法、釣線），
---       記在 cast_fish／cast_w；拉上來時 record_catch() 一定要是這條魚、這個重量才算數。
+--       記在 casts（072：不公開的表，手機讀不到）；咬餌前大約 2 秒 hook_fish() 才告訴手機是什麼魚（游過來的動畫要用）；
+--       拉上來時 record_catch() 一定要是這條魚、這個重量才算數。players 的 cast_* 欄位不再用（一直是空的），不會跟著玩家資料送出去。
 alter table public.players add column if not exists cast_fish  text;
 alter table public.players add column if not exists cast_w     numeric(10,2);
 alter table public.players add column if not exists cast_at    timestamptz;
@@ -16,6 +17,13 @@ alter table public.players add column if not exists cast_gp text;       -- 孔�
 create or replace function public._gpy_wild() returns text language sql volatile as $$
   select substr('wwwrby', 1 + floor(random() * 6)::int, 1) || substr('wwwrby', 1 + floor(random() * 6)::int, 1) || '|' || substr('ooosd', 1 + floor(random() * 5)::int, 1) || substr('ooosd', 1 + floor(random() * 5)::int, 1) $$;
 alter table public.players add column if not exists cast_sex text;      -- 這次碰到的魚是公（M）還是母（F）（037）
+create table if not exists public.casts (
+  uid uuid primary key references public.players(id) on delete cascade, spot text, fish text not null, w numeric(10,2) not null,
+  rs text, sex text, brood boolean, gp text, at timestamptz not null default now(), shown_at timestamptz);
+alter table public.casts enable row level security;
+revoke all on public.casts from anon, authenticated;
+alter table public.players add column if not exists last_fish text;            -- 剛剛釣到的魚（村報、蔚博士的觸發器用；已經釣上來了，不是秘密）
+alter table public.players add column if not exists last_w numeric(10,2);
 alter table public.players add column if not exists cast_brood boolean; -- 母吳郭魚嘴裡含著小魚（037）   -- 赤紅霸王鯊（032）：這次碰到的那一隻
 -- 赤紅霸王鯊的族群（032 會放一開始的一公一母和其他函式；表要先建好，roll_fish 才編得過）
 create table if not exists public.red_sharks (
@@ -178,7 +186,9 @@ begin
   brood := sx = 'F' and season in ('spring', 'summer') and cfg->'brood' ? pick and random() < 0.3;
   if rs is not null then fw := public._rs_w(rsh); end if;
   gpv := case when pick in ('guppy', 'guppy_albino') then public._gpy_wild() end;
-  update public.players set cast_fish = pick, cast_w = fw, cast_rs = rs, cast_sex = sx, cast_brood = brood, cast_gp = gpv, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()
+  insert into public.casts (uid, spot, fish, w, rs, sex, brood, gp, at, shown_at) values (pl.id, p_spot, pick, fw, rs, sx, brood, gpv, now(), null)
+  on conflict (uid) do update set spot = excluded.spot, fish = excluded.fish, w = excluded.w, rs = excluded.rs, sex = excluded.sex, brood = excluded.brood, gp = excluded.gp, at = excluded.at, shown_at = null;
+  update public.players set cast_fish = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null, cast_gp = null, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()
   where id = pl.id returning * into pl;
   return pl;
 end $$;
@@ -226,6 +236,7 @@ declare
 begin
   select * into sp from public.fish_species where id = p_fish;
   if not found then raise exception '沒有這種魚'; end if;
+  select cs.fish, cs.w, cs.rs, cs.sex, cs.brood, cs.gp into pl.cast_fish, pl.cast_w, pl.cast_rs, pl.cast_sex, pl.cast_brood, pl.cast_gp from public.casts cs where cs.uid = pl.id;   -- 這一竿的結果（不公開的表）
   if pl.cast_fish is null or pl.cast_fish <> p_fish or pl.cast_w is distinct from w then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
   if now() - pl.cast_at < interval '1.5 seconds' then raise exception '釣太快了'; end if;
   if now() - pl.cast_at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
@@ -247,14 +258,27 @@ begin
     tourney_w  = case when tid is null then tourney_w when tourney_id = tid then tourney_w + w else w end,
     tourney_n  = case when tid is null then tourney_n when tourney_id = tid then tourney_n + 1 else 1 end,
     tourney_id = coalesce(tid, tourney_id),
-    cast_fish  = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null, cast_gp = null,
+    cast_fish  = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null, cast_gp = null, last_fish = p_fish, last_w = w,
     last_catch_at = now(), updated_at = now()
   where id = pl.id returning * into pl;
+  delete from public.casts where uid = pl.id;
   return pl;
 end $$;
 
+-- 魚游過來咬餌之前大約 2 秒，手機才拿到這一竿是什麼魚（畫游過來、咬餌的動畫）；拋竿 2 秒內問不到（泥灘用手抓的不用等）
+create or replace function public.hook_fish() returns jsonb language plpgsql security definer set search_path = public as $$
+declare c public.casts;
+begin
+  select * into c from public.casts where uid = auth.uid() for update;
+  if c.uid is null then raise exception '還沒有拋竿'; end if;
+  if now() - c.at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
+  if c.spot is distinct from 'mudflat' and now() - c.at < interval '1.9 seconds' then raise exception '魚還沒游過來'; end if;
+  update public.casts set shown_at = coalesce(shown_at, now()) where uid = c.uid;
+  return jsonb_build_object('cast_fish', c.fish, 'cast_w', c.w, 'cast_rs', c.rs, 'cast_sex', c.sex, 'cast_brood', c.brood, 'cast_gp', c.gp);
+end $$;
+
 do $$ declare f text; begin
-  foreach f in array array['roll_fish(text,numeric,numeric,numeric,text,text,text,text,boolean)', 'use_bait(text)', 'eat_dish(bigint)', 'record_catch(text,numeric)'] loop
+  foreach f in array array['roll_fish(text,numeric,numeric,numeric,text,text,text,text,boolean)', 'use_bait(text)', 'eat_dish(bigint)', 'record_catch(text,numeric)', 'hook_fish()'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;

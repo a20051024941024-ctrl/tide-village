@@ -2796,7 +2796,7 @@ function doCast(){
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
   if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';
     cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat })
-      .then(async row => { if (row && /^nx\d{6}v?$/.test(row.cast_fish || '') && !FISH_BY_ID[row.cast_fish]) await loadSci(true); if (F.castId !== id) return; F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood, gp: row.cast_gp || null } : 'fail'; }); }
+      .then(row => { if (F.castId !== id) return; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; }); }   /* 伺服器抽好了，但不會告訴手機是什麼魚（072）；咬餌前大約 2 秒才用 hook_fish 問 */
   F.envB = envBonus(s.id);
   F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('🐟 浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
   F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (F.nest ? 0.55 : 1) * (rodFit(s.id) ? ROD_FIT[rodFit(s.id)].bite : 1) * (s.id === 'shrimp' ? 0.75 : 1) * (s.id === 'mangrove' && Env.tide.lv < -0.35 ? 1.6 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
@@ -2849,9 +2849,18 @@ function startReel(){
 function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = 55; camera.updateProjectionMatrix(); }
 /* ---- 來吃餌的魚：等魚的時候看得到牠從旁邊游過來、試探、咬下去（大魚不顯示）。沒釣過的魚只看得到黑影 ---- */
 const BiteFish = { m:null, id:null, ang:0, k:0, shadowM:null };
-function biteFishOf(){ if (F.phase === 'reeling') return F.fish; if (Rig.rig === 'bottom') return null; const f = F.roll && F.roll.f ? F.roll.f : F.pre; return f && !BIG_FISH.has(f.id) && !BOTTOM_FISH.has(f.id) ? f : null; }   /* 沉底釣、底棲魚在很深的地方吃餌，看不到牠游過來 */
+// 咬餌前大約 2 秒（伺服器規定拋竿 2 秒後才能問）：問伺服器這一竿是什麼魚，魚才游上來現身
+function fishHook(){ if (!Cloud.on || F.roll !== 'cast' || F.hookReq) return; const nt = now(); if (nt < F.castAt + 2.1 || nt < F.waitUntil - 2.0) return;
+  const id = F.castId; F.hookReq = 1; F.roll = 'hooking';
+  Cloud.sb.rpc('hook_fish').then(async ({ data: row, error }) => { if (F.castId !== id) return;
+    if (error){ if (/還沒游過來/.test(String(error.message || ''))){ F.roll = 'cast'; F.hookReq = 0; F.castAt = now() - 1.6; } else F.roll = 'fail'; return; }
+    if (row && /^nx\d{6}v?$/.test(row.cast_fish || '') && !FISH_BY_ID[row.cast_fish]) await loadSci(true); if (F.castId !== id) return;
+    F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood, gp: row.cast_gp || null } : 'fail'; },
+    () => { if (F.castId === id) F.roll = 'fail'; }); }
+function biteFishOf(){ if (F.phase === 'reeling') return F.fish; if (Rig.rig === 'bottom') return null; if (F.phase === 'waiting' && now() < F.waitUntil - 2.0) return null; const f = F.roll && F.roll.f ? F.roll.f : F.pre; return f && !BIG_FISH.has(f.id) && !BOTTOM_FISH.has(f.id) ? f : null; }   /* 沉底釣、底棲魚在很深的地方吃餌，看不到牠游過來 */
 function updateBiteFish(dt, t){
   const on = ((F.phase === 'waiting' || F.phase === 'bite') && me.bobState === 'water' && !me.flying || F.phase === 'reeling') && !Dive.on, f = on ? biteFishOf() : null;
+  updateBiteShadow(dt, t, on && !f && F.phase !== 'reeling');
   if (!f){ if (BiteFish.m){ scene.remove(BiteFish.m); BiteFish.m = null; BiteFish.id = null; } return; }
   if (BiteFish.id !== f.id){
     if (BiteFish.m) scene.remove(BiteFish.m);
@@ -2859,7 +2868,8 @@ function updateBiteFish(dt, t){
     const mats = []; if (!rec.count[f.id]){ const sm = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0, depthWrite:false }); mats.push([sm, 0.5]); m.traverse(o => { if (o.isMesh) o.material = sm; }); }
     else m.traverse(o => { if (o.isMesh){ o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0; o.material.depthWrite = false; mats.push([o.material, 0.75]); } });
     m.traverse(o => { if (o.isMesh){ o.castShadow = false; o.renderOrder = -1; } });   /* 先畫魚、再畫水面：看起來在水裡 */
-    m.visible = false; scene.add(m); BiteFish.m = m; BiteFish.mats = mats; BiteFish.id = f.id; BiteFish.ang = Math.random() * Math.PI * 2; BiteFish.k = 0; BiteFish.fade = 0; BiteFish.showAt = t + rand(1.2, 3.5);   /* 等一下才游過來，不會一丟下去就出現 */ m.position.set(me.bobPos.x + Math.cos(BiteFish.ang) * 2.4, WATER_LEVEL - 0.06, me.bobPos.z + Math.sin(BiteFish.ang) * 2.4);
+    m.visible = false; scene.add(m); BiteFish.m = m; BiteFish.mats = mats; BiteFish.id = f.id; BiteFish.ang = Math.random() * Math.PI * 2; BiteFish.k = 0; BiteFish.fade = 0; BiteFish.showAt = t + rand(1.2, 3.5);
+    if (BiteFish.lastSh && t - BiteFish.lastSh.t < 0.5){ const L = BiteFish.lastSh; BiteFish.ang = L.ang; BiteFish.k = L.k; BiteFish.showAt = t; }   /* 從魚影接著游上來現身 */   /* 等一下才游過來，不會一丟下去就出現 */ m.position.set(me.bobPos.x + Math.cos(BiteFish.ang) * 2.4, WATER_LEVEL - 0.06, me.bobPos.z + Math.sin(BiteFish.ang) * 2.4);
   }
   const m = BiteFish.m, b = me.bobPos, nib = F.lastNib && t - F.lastNib < 0.35, bite = F.phase === 'bite';
   if (F.phase === 'reeling'){   // 拉魚時：魚就在浮標底下掙扎，往外衝的方向擺頭
@@ -2867,7 +2877,7 @@ function updateBiteFish(dt, t){
     const dx = b.x - me.pos.x, dz = b.z - me.pos.z, ang = Math.atan2(-dz, dx), thr = Math.sin(t * 14) * 0.45 * (0.5 + (F.T || 0));
     m.position.set(b.x + Math.cos(ang) * 0.25, WATER_LEVEL - 0.12 + Math.sin(t * 9) * 0.04 + (F.jump > 0 ? 0.3 : 0), b.z - Math.sin(ang) * 0.25); m.rotation.y = ang + thr; m.rotation.z = Math.sin(t * 11) * 0.25; return; }
   if (t < BiteFish.showAt && !bite) return; if (!m.visible){ m.visible = true; }
-  BiteFish.fade = Math.min(1, BiteFish.fade + dt * 0.6); for (const [mt, op] of BiteFish.mats) mt.opacity = op * BiteFish.fade;   // 從深處慢慢浮現
+  BiteFish.fade = Math.min(1, BiteFish.fade + dt * 0.9); for (const [mt, op] of BiteFish.mats) mt.opacity = op * BiteFish.fade;   // 從深處慢慢浮現
   // 慢慢靠近：一開始在 2.2 公尺外繞圈，越等越近；試探時衝過來碰一下；咬下去時頭頂著浮標
   BiteFish.k = Math.min(1, BiteFish.k + dt * 0.25); BiteFish.ang += dt * (bite ? 0 : 0.5);
   const r = bite ? 0.12 : nib ? 0.25 : 1.7 + (0.7 - 1.7) * BiteFish.k;
@@ -2876,6 +2886,21 @@ function updateBiteFish(dt, t){
   m.position.y = (F.spot && F.spot.id === 'shrimp' ? WATER_LEVEL - 0.14 : WATER_LEVEL - 0.22 - (1 - BiteFish.fade) * 0.4) + (bite ? Math.sin(t * 20) * 0.02 : 0);
   m.rotation.y = Math.atan2(-(b.z - m.position.z), b.x - m.position.x) + (bite ? Math.sin(t * 18) * 0.25 : Math.sin(t * 3) * 0.1);
 }
+// 水深處的魚影：拋竿以後先看到一個黑黑的影子從深處慢慢靠近（還不知道是什麼魚）；咬餌前大約 2 秒，原本看得到的魚會游上來現身；沉底釣、底棲魚、大型魚一直是影子
+const BITE_SH_MAT = new THREE.MeshBasicMaterial({ color:'#0b1d2b', transparent:true, opacity:0, depthWrite:false });
+function updateBiteShadow(dt, t, want){ const B = BiteFish;
+  if (!want){ if (B.sh){ B.lastSh = { t, ang: B.shAng, k: B.shK }; scene.remove(B.sh); B.sh = null; } return; }
+  const b = me.bobPos, big = F.roll && F.roll.f ? BIG_FISH.has(F.roll.f.id) || F.roll.f.rarity === '傳說' : false, sc = big ? 1.15 : 0.62;
+  if (!B.sh || B.shBig !== big){ if (B.sh) scene.remove(B.sh); const g = fishModel({ id:'__shadow', color:'#0b1d2b' }, sc); g.traverse(o => { if (o.isMesh){ o.material = BITE_SH_MAT; o.castShadow = false; o.renderOrder = -1; } });
+    scene.add(g); B.shBig = big; if (!B.sh){ B.shAng = Math.random() * Math.PI * 2; B.shK = 0; B.shAt = t + rand(0.8, 2.0); g.position.set(b.x + Math.cos(B.shAng) * 2.8, WATER_LEVEL - 1.2, b.z + Math.sin(B.shAng) * 2.8); } else g.position.copy(B.sh.position); B.sh = g; }
+  const g = B.sh, bite = F.phase === 'bite', nib = F.lastNib && t - F.lastNib < 0.35;
+  if (t < B.shAt && !bite){ BITE_SH_MAT.opacity = 0; return; }
+  BITE_SH_MAT.opacity = Math.min(0.42, BITE_SH_MAT.opacity + dt * 0.25);
+  B.shK = Math.min(1, B.shK + dt * 0.18); B.shAng += dt * (bite ? 0 : 0.4);
+  const r = bite ? 0.15 : nib ? 0.35 : 2.4 + (0.8 - 2.4) * B.shK, tx = b.x + Math.cos(B.shAng) * r, tz = b.z + Math.sin(B.shAng) * r, shallow = F.spot && F.spot.id === 'shrimp';
+  g.position.x += (tx - g.position.x) * Math.min(1, dt * (nib || bite ? 7 : 1.6)); g.position.z += (tz - g.position.z) * Math.min(1, dt * (nib || bite ? 7 : 1.6));
+  const ty = shallow ? WATER_LEVEL - 0.2 : WATER_LEVEL - (bite ? 0.4 : 1.1 - 0.45 * B.shK); g.position.y += (ty - g.position.y) * Math.min(1, dt * 2);
+  g.rotation.y = Math.atan2(-(b.z - g.position.z), b.x - g.position.x) + Math.sin(t * 2.5) * 0.12; }
 function updateFishing(dt, t){
   { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
   const act = $('#act');
@@ -2894,7 +2919,8 @@ function updateFishing(dt, t){
     } else {
     if (t > F.nibbleAt && t < F.waitUntil - 0.6){ me.dip = 0.35; F.lastNib = t; ripple(me.bobPos.x, me.bobPos.z); F.nibbleAt = t + 0.9 + Math.random()*1.6; }
     me.dip *= Math.pow(0.02, dt); }
-    if (t > F.waitUntil && Cloud.on && F.roll === 'pending'){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); } }
+    fishHook();
+    if (t > F.waitUntil && Cloud.on && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); } }
     else if (t > F.waitUntil && Cloud.on && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); }
     else if (t > F.waitUntil){
       // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
@@ -3105,7 +3131,7 @@ function cleanIsland(o){
     for (const [k, v] of Object.entries(o.d || {})){ const p = OLD_DS[+k]; if (p && ISLE_ITEMS[v]) items.push({ id:++n, t:v, x:p[0], z:p[1], r:+(Math.atan2(-p[0], -p[1]) + Math.PI).toFixed(2) }); }
     o = { v:2, items }; }
   const items = (o && Array.isArray(o.items) ? o.items : []).filter(it => it && ISLE_ITEMS[it.t] && isFinite(+it.x) && isFinite(+it.z)).slice(0, ISLE_MAX)
-    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; if (it.t === 'mansion'){ o.lay = 'custom'; if (it.cl && typeof it.cl === 'object') o.cl = it.cl; if (!o.f) o.f = []; } } return o; });   /* 房子的格局、家具（034） */
+    .map(it => { const o = { id: Math.floor(+it.id) || 0, t: it.t, x: +it.x, z: +it.z, r: +it.r || 0 }; if (typeof it.by === 'string' && it.by.length < 64) o.by = it.by; if (typeof it.lby === 'string' && it.lby.length < 64) o.lby = it.lby; if (ISLE_ITEMS[it.t].house){ if (LAYOUTS[it.lay]) o.lay = it.lay; const f = cleanFurn(it.f); if (f) o.f = f; if (it.t === 'mansion'){ o.lay = 'custom'; if (it.cl && typeof it.cl === 'object') o.cl = it.cl; if (!o.f) o.f = []; } } return o; });   /* 房子的格局、家具（034） */
   return { v:2, items };
 }
 // 跟伺服器一樣的位置檢查
@@ -3189,6 +3215,23 @@ function placeItemInGroup(group, it, withCols){
   else if (it.t !== 'flower') addCircleCol(ISLE.x + it.x, ISLE.z + it.z, T.rad * 0.7);
   return g;
 }
+// 大島效能（風險檢查第 4 點）：島上不會動的東西（房子外觀、花、樹、石頭、長椅…）照材質合併成少數幾個網格，畫的次數少很多；
+// 會動的（旗子、營火、池塘的魚、鞦韆、小船）不合併；建造模式的時候拆回原本的樣子（才能移動、拆掉）。
+const BATCH_STATIC = new Set(['cabin', 'beach', 'villa', 'tea', 'mansion', 'flower', 'bench', 'lamp', 'palm', 'fence', 'tree', 'rock', 'mailbox', 'picnic', 'parasol', 'bush', 'lantern', 'statue']);
+function isleUnbatch(group){ const B = group && group.userData.batched; if (!B) return; group.remove(B.batch); B.batch.traverse(o => { if (o.isMesh) o.geometry.dispose(); }); for (const o of B.hidden) o.visible = true; group.userData.batched = null; }
+function isleBatch(group){ if (!group) return; isleUnbatch(group); try {
+  group.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(group.matrixWorld).invert(), M = new THREE.Matrix4(), buckets = new Map();
+  for (const g of group.children){ const it = g.userData.item; if (!it || !BATCH_STATIC.has(it.t) || !g.visible) continue;
+    g.traverse(o => { if (!o.isMesh || !o.visible || o.isInstancedMesh || o.isSkinnedMesh) return; const m = o.material, geo = o.geometry; if (!m || Array.isArray(m) || !m.isMeshStandardMaterial || !geo || !geo.attributes.position) return;
+      if (geo.morphAttributes && Object.keys(geo.morphAttributes).length) return; M.multiplyMatrices(inv, o.matrixWorld); if (M.determinant() <= 0) return;   /* 鏡像的不合併（面會翻過來） */
+      const key = [m.color.getHexString(), m.roughness, m.metalness, m.emissive.getHexString(), m.emissiveIntensity, m.transparent, m.opacity, m.side, m.flatShading, m.map ? m.map.uuid : '', m.vertexColors, m.depthWrite, o.castShadow, Object.keys(geo.attributes).sort().join('|'), geo.index ? 'i' : 'n'].join(',');
+      let b = buckets.get(key); if (!b) buckets.set(key, b = { m, geos: [], objs: [], cast: o.castShadow });
+      const gg = geo.clone(); gg.applyMatrix4(M); b.geos.push(gg); b.objs.push(o); }); }
+  const batch = new THREE.Group(), hidden = [];
+  for (const b of buckets.values()){ if (b.objs.length < 2){ b.geos.forEach(x => x.dispose()); continue; }
+    let merged = null; try { merged = mergeGeometries(b.geos, false); } catch(e){} b.geos.forEach(x => x.dispose()); if (!merged) continue;
+    const mesh = new THREE.Mesh(merged, b.m); mesh.castShadow = b.cast; mesh.receiveShadow = true; batch.add(mesh); for (const o of b.objs){ o.visible = false; hidden.push(o); } }
+  group.add(batch); group.userData.batched = { batch, hidden }; } catch(e){ console.warn('isleBatch', e); isleUnbatch(group); } }
 function buildIsle(layout, ownerName){
   if (!isleSignCtx) isleBase();
   if (isleGroup){ scene.remove(isleGroup); }
@@ -3198,6 +3241,7 @@ function buildIsle(layout, ownerName){
   for (const it of L.items) placeItemInGroup(isleGroup, it, true);
   isleCols = colliders.slice(n0);
   isleGroup.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+  if (!Build.on) isleBatch(isleGroup);
 }
 // ---- 北方冰封群島的樣子（第一次走近才蓋，手機比較省）：雪島、結冰的湖和冰洞、冰釣帳篷、雪松、雪屋、雪人、流冰、海豹、一直下的小雪 ----
 const Frost = { built:false, snow:null, floes:[], seals:[] };
@@ -3334,7 +3378,7 @@ function goMyIsle(){ goIsle(myIdOrMe(), myDisplayName() === '你' ? '我' : myDi
 async function visitIsle(id, name){
   if (!Cloud.sb){ toast('要連上雲端才能參觀別人的島'); return; }
   if (id === myIdOrMe()){ closeSheet(); goMyIsle(); return; }
-  try { const { data } = await Cloud.sb.from('players').select('nickname,island,likes,tank,show').eq('id', id).maybeSingle(); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
+  try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: id }); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
   catch(e){ toast('暫時連不上雲端'); }
 }
 function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL[0]); pushPresence(true); }
@@ -3352,7 +3396,7 @@ function renderIsleBar(){
   bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 我家（${onIsle.name}）` : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}`));
   if (House.on && canEditIsle()){ const fb = el('button', 'tbtn', FB.on ? '完成擺設' : '🛋️ 擺家具'); fb.addEventListener('click', () => { if (FB.on) stopFurn(); else startFurn(); renderIsleBar(); }); bar.appendChild(fb);
     const lb = el('button', 'tbtn ghost', '🏠 格局'); lb.addEventListener('click', () => { furnSheet = 'lay'; openSheet('furn'); }); bar.appendChild(lb); }
-  else if (mine || canEditIsle()){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (Build.on) stopBuild(); else { Build.on = true; renderBuildBar(); renderIsleBar(); } }); bar.appendChild(b);
+  else if (mine || canEditIsle()){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (Build.on) stopBuild(); else { Build.on = true; isleUnbatch(isleGroup); renderBuildBar(); renderIsleBar(); } }); bar.appendChild(b);
     const s = el('button', 'tbtn ghost', '🛒 買東西'); s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
   if (!mine && !canEditIsle()){ const l = el('button', 'tbtn' + (onIsle.liked ? ' ghost' : ''), onIsle.liked ? '❤️ 已按讚' : '❤️ 按讚'); l.disabled = !!onIsle.liked; l.addEventListener('click', likeIsle); bar.appendChild(l); }
   const back = el('button', 'tbtn ghost', '回村子'); back.addEventListener('click', leaveIsle); bar.appendChild(back);
@@ -3363,14 +3407,14 @@ const ghostOk = new THREE.MeshStandardMaterial({ color:'#7fe0a8', transparent:tr
 const ghostBad = new THREE.MeshStandardMaterial({ color:'#ff8a7a', transparent:true, opacity:0.55, emissive:'#f04a3a', emissiveIntensity:0.6, depthWrite:false });
 function startPlace(type, moveId){
   if (!onIsle || !canEditIsle()){ goMyIsle(); setTimeout(() => startPlace(type, moveId), 900); return; }
-  closeSheet(); clearGhost(); Build.on = true; Build.type = type; Build.moveId = moveId || null;
+  closeSheet(); clearGhost(); Build.on = true; isleUnbatch(isleGroup); Build.type = type; Build.moveId = moveId || null;
   const it = moveId ? isleItems().find(x => x.id === moveId) : null; Build.rot = it ? it.r : Math.round(((me.rot + Math.PI) % (Math.PI * 2)) / (Math.PI / 4)) * Math.PI / 4;
   Build.ghost = itemMesh(type, { lite:true }); Build.ghost.traverse(o => { if (o.isMesh){ o.material = ghostOk; o.castShadow = false; } }); scene.add(Build.ghost);
   if (moveId && isleGroup){ const g = isleGroup.children.find(c => c.userData.item && c.userData.item.id === moveId); if (g) g.visible = false; }
   renderBuildBar(); renderIsleBar();
 }
 function clearGhost(){ if (Build.ghost){ scene.remove(Build.ghost); Build.ghost = null; } if (Build.moveId && isleGroup) isleGroup.children.forEach(c => { c.visible = true; }); Build.type = null; Build.moveId = null; }
-function stopBuild(){ clearGhost(); Build.on = false; Build.sel = null; renderBuildBar(); if (onIsle) renderIsleBar(); }
+function stopBuild(){ clearGhost(); Build.on = false; isleBatch(isleGroup); Build.sel = null; renderBuildBar(); if (onIsle) renderIsleBar(); }
 function updateBuild(){
   if (!Build.on || !onIsle) return;
   if (Build.ghost){
@@ -3399,21 +3443,29 @@ function renderBuildBar(){
     const x = el('button', 'tbtn ghost', '✖'); x.addEventListener('click', () => { clearGhost(); renderBuildBar(); }); bar.appendChild(x);
   } else if (Build.sel){
     const T = ISLE_ITEMS[Build.sel.t]; bar.appendChild(el('span', 'bb-hint', `🔨 ${T.name}`));
-    const mv = el('button', 'tbtn', '移動'); mv.addEventListener('click', () => startPlace(Build.sel.t, Build.sel.id)); bar.appendChild(mv);
-    const rm = el('button', 'tbtn ghost', `拆掉 +${Math.floor(T.price / 2)}`); rm.addEventListener('click', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定拆掉？'; rm.classList.add('warn'); return; } removeIsleItem(Build.sel.id); }); bar.appendChild(rm);
+    if (canTouch(Build.sel)){ const mv = el('button', 'tbtn', '移動'); mv.addEventListener('click', () => startPlace(Build.sel.t, Build.sel.id)); bar.appendChild(mv); }
+    if (isleRank() >= 2){ const rm = el('button', 'tbtn ghost', `拆掉 +${Math.floor(T.price / 2)}`); rm.addEventListener('click', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定拆掉？'; rm.classList.add('warn'); return; } removeIsleItem(Build.sel.id); }); bar.appendChild(rm); }
+    else bar.appendChild(el('span', 'bb-hint', canTouch(Build.sel) ? '（拆東西要管理成員以上）' : '（一般成員只能移動自己蓋的）'));
     const sh = el('button', 'tbtn ghost', '🛒'); sh.addEventListener('click', () => openSheet('island')); bar.appendChild(sh);
   } else {
     bar.appendChild(el('span', 'bb-hint', '🔨 建造模式：走到東西旁邊可以移動或拆掉'));
     const sh = el('button', 'tbtn', '🛒 買東西'); sh.addEventListener('click', () => openSheet('island')); bar.appendChild(sh);
   }
 }
+// 訪客帳號蓋房子、買大宅的時候提醒綁定 Email（清掉瀏覽器資料整座島就不見了）；三天內只提醒一次
+function bindRemind(what){ if (!Cloud.on || !Cloud.isAnon) return; let k = null; try { k = localStorage.getItem('tide.bindAsk'); } catch(e){} if (k && Date.now() - Number(k) < 3 * 864e5) return; try { localStorage.setItem('tide.bindAsk', String(Date.now())); } catch(e){}
+  setTimeout(() => { let b = $('#bindAsk'); if (!b){ b = document.createElement('div'); b.id = 'bindAsk'; document.body.appendChild(b); } b.innerHTML = ''; b.hidden = false;
+    b.appendChild(el('div', 'ba-t', `🏠 蓋好${what}了！`)); b.appendChild(el('div', 'ba-s', '你現在是訪客帳號：清除瀏覽器資料或換手機，整座島就找不回來了。綁定 Email 就能永久保存。'));
+    const row = el('div', 'ba-r'), go = el('button', 'tbtn', '📧 去綁定 Email'), no = el('button', 'tbtn ghost', '之後再說');
+    go.addEventListener('click', () => { b.hidden = true; Cloud.ui.step = 'email'; Cloud.ui.mode = 'bind'; Cloud.ui.msg = ''; openSheet('style'); setTimeout(() => { const cb = document.querySelector('#sheet .cloudbox'); if (cb) cb.scrollIntoView({ block:'center' }); }, 150); });
+    no.addEventListener('click', () => { b.hidden = true; }); row.appendChild(go); row.appendChild(no); b.appendChild(row); }, 1400); }
 function confirmPlace(){
   if (!Build.ghost) return; if (Build.err){ toast(Build.err); return; }
   if (Cloud.on && Cloud.sb){   // 雲端：經過伺服器（島主和住戶都可以蓋）
     const T = ISLE_ITEMS[Build.type], x = Build.x, z = Build.z, r = +Build.rot.toFixed(2), moving = Build.moveId, type = Build.type;
     if (!moving && rec.coins < T.price){ toast(`金幣不夠，還差 🪙${(T.price - rec.coins).toLocaleString()}`); return; }
     clearGhost(); homeOp(moving ? 'move' : 'place', moving ? { id: moving, x, z, r } : { t: type, x, z, r }).then(ok => { if (!ok) return; SFX.plop(); FX.emit(ISLE.x + x, 0.6, ISLE.z + z, 14, '#fff4dc', 0.6, 1.6, 0.9);
-      if (!moving) ticker(`🏗️ 你在小島上放了 <b>${esc(T.name)}</b>！`); if (!moving && rec.coins >= T.price && !T.house) startPlace(type); });
+      if (!moving) ticker(`🏗️ 你在小島上放了 <b>${esc(T.name)}</b>！`); if (!moving && T.house) bindRemind(T.name); if (!moving && rec.coins >= T.price && !T.house) startPlace(type); });
     return; }
   const T = ISLE_ITEMS[Build.type], items = rec.island.items, x = Build.x, z = Build.z, r = +Build.rot.toFixed(2);
   if (Build.moveId){ const it = items.find(i => i.id === Build.moveId); if (!it) return; it.x = x; it.z = z; it.r = r; cloudCall('move_item', { p_id: it.id, p_x: x, p_z: z, p_r: r }); }
@@ -3599,7 +3651,7 @@ function furnCheck(lay, f, type, x, z, skip){
   for (const o of f){ if (o.id === skip) continue; const it = FURN[o.t]; if (!it || it.flat || me.flat) continue; if (Math.hypot(o.x - x, o.z - z) < (it.rad + me.rad) * 0.75) return '跟別的家具疊在一起了'; }
   return null;
 }
-function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x.t] && fzId(x.t)) fzWant(fzId(x.t)); return Array.isArray(f) ? f.filter(x => x && (FURN[x.t] || fzId(x.t)) && isFinite(+x.x) && isFinite(+x.z)).slice(0, 40).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
+function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x.t] && fzId(x.t)) fzWant(fzId(x.t)); return Array.isArray(f) ? f.filter(x => x && (FURN[x.t] || fzId(x.t)) && isFinite(+x.x) && isFinite(+x.z)).slice(0, 40).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, typeof x.by === 'string' && x.by.length < 64 ? { by: x.by } : {}, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
 
 // 家具的樣子（正面朝 +z，放在地板上）
 function furnMesh(t){
@@ -3643,6 +3695,9 @@ function furnMesh(t){
 
 // ---- 家的資料（住在誰家、住戶、邀請）----
 const Home = { owner:null, people:[], invites:[], sent:[], cap:6, at:0, told:{} };
+// 島上的權限（071）：拆東西、改格局要管理成員以上；一般成員只能移動、收掉自己買的
+function isleRank(){ const owner = onIsle && onIsle.owner, meId = myIdOrMe(); if (!Cloud.on || !owner || owner === meId) return 4; if (!IsleP.me && !IsleP.busy && Date.now() - IsleP.at > 20000) loadIsleP(); return PERM_RANK[IsleP.me] || 1; }
+function canTouch(o){ return isleRank() >= 2 || !!(o && o.by && o.by === myIdOrMe()); }
 function canEditIsle(owner){ owner = owner || (onIsle && onIsle.owner); const meId = myIdOrMe(); return !!owner && (owner === meId || (Home.owner === owner && Home.people.some(p => p.id === meId))); }
 function homeMate(uid){ return uid && Home.people.find(p => p.id === uid && p.id !== myIdOrMe()); }
 function homeTitle(p){ return p ? (p.title || (p.owner ? '島主' : HOME_ROLES[p.role] || '室友')) : ''; }
@@ -3687,7 +3742,7 @@ function localHomeOp(op, p){
   else if (op === 'move'){ const it = items.find(i => i.id === p.id); if (!it) return '找不到這個東西'; const e = isleCheck(items, it.t, p.x, p.z, it.id); if (e) return e; Object.assign(it, { x:p.x, z:p.z, r:p.r }); }
   else if (op === 'remove'){ const it = items.find(i => i.id === p.id); if (!it) return '找不到這個東西'; let back = Math.floor(ISLE_ITEMS[it.t].price / 2); if (it.f) back += it.f.reduce((a, x) => a + Math.floor(FURN[x.t].price / 2), 0); if (it.lay) back += Math.floor(houseLay(it).price / 2); rec.island.items = items.filter(i => i !== it); addCoins(back); }
   else { const h = items.find(i => i.id === p.house); if (!h) return '找不到這棟房子'; const f = houseFurn(h), lay = houseLay(h);
-    if (op === 'layout'){ const nl = LAYOUTS[p.lay]; if (!nl) return '沒有這種格局'; let back = Math.max(0, Math.floor((lay.price - nl.price) / 2)); const keep = []; for (const o of f){ if (furnCheck(nl, keep, o.t, o.x, o.z, -1)) back += FURN[o.t].price; else keep.push(o); }
+    if (op === 'layout'){ const nl = LAYOUTS[p.lay]; if (!nl) return '沒有這種格局'; let back = Math.max(0, Math.floor((lay.price - nl.price) / 2)); const keep = []; for (const o of f){ if (furnCheck(nl, keep, o.t, o.x, o.z, -1)) back += Math.floor(FURN[o.t].price / 2); else keep.push(o); }
       const need = Math.max(0, nl.price - lay.price); if (rec.coins + back < need) return '金幣不夠'; addCoins(back - need); h.lay = p.lay; h.f = keep; }
     else if (op === 'fplace'){ const e = furnCheck(lay, f, p.t, p.x, p.z, -1); if (e) return e; if (f.length >= 40) return '這棟房子已經擺滿了'; const c = cost(FURN[p.t].price); if (c) return c; f.push({ id: f.reduce((m, i) => Math.max(m, i.id), 0) + 1, t:p.t, x:p.x, z:p.z, r:p.r }); h.f = f; }
     else if (op === 'fmove'){ const o = f.find(i => i.id === p.id); if (!o) return '找不到這個家具'; const e = furnCheck(lay, f, o.t, p.x, p.z, o.id); if (e) return e; Object.assign(o, { x:p.x, z:p.z, r:p.r }); h.f = f; }
@@ -3869,9 +3924,9 @@ function renderFurnBar(){
     btn('⟲ 轉向', 'ghost', () => { FB.rot = (FB.rot + Math.PI / 2) % (Math.PI * 2); });
     btn(FB.moveId ? '✔ 放這裡' : `✔ 放這裡 🪙${T.price.toLocaleString()}`, '', confirmFurn); btn('✖', 'ghost', () => { clearFurnGhost(); renderFurnBar(); }); }
   else if (FB.sel){ const o = FB.sel, T = FURN[o.t]; bar.appendChild(el('span', 'bb-hint', `🛋️ ${T.name}${o.own ? `・${roomName(o.own)}的` : ''}`));
-    btn('移動', '', () => startFurn(o.t, o.id));
+    const mine = canTouch(o); if (mine) btn('移動', '', () => startFurn(o.t, o.id));
     if (T.bed && (!o.own || o.own === myIdOrMe())) btn(o.own ? '不睡這張了' : '🛏️ 這是我的床', 'ghost', () => homeOp('bed', { house: House.it.id, id: o.id }).then(ok => ok && toast(o.own ? '已經放掉這張床' : '這張床是你的了！房門上會掛你的名字')));
-    const rm = btn(`收掉 +${Math.floor(T.price / 2)}`, 'ghost', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定收掉？'; rm.classList.add('warn'); return; } homeOp('fremove', { house: House.it.id, id: o.id }).then(ok => { if (ok){ FB.sel = null; toast(`收掉了 ${T.name}，退回 🪙${Math.floor(T.price / 2)}`); } }); });
+    const rm = !mine ? (bar.appendChild(el('span', 'bb-hint', '（一般成員只能動自己買的家具）')), null) : btn(`收掉 +${Math.floor(T.price / 2)}`, 'ghost', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定收掉？'; rm.classList.add('warn'); return; } homeOp('fremove', { house: House.it.id, id: o.id }).then(ok => { if (ok){ FB.sel = null; toast(`收掉了 ${T.name}，退回 🪙${Math.floor(T.price / 2)}`); } }); });
     btn('🛒', 'ghost', () => openSheet('furn')); btn('完成', 'ghost', stopFurn); }
   else { bar.appendChild(el('span', 'bb-hint', '🛋️ 擺家具：走到家具旁邊可以移動、收掉'));
     btn('🛒 買家具', '', () => openSheet('furn')); btn('🏠 格局', 'ghost', () => { furnSheet = 'lay'; openSheet('furn'); }); btn('完成', 'ghost', stopFurn); }
@@ -3926,7 +3981,7 @@ function renderClDesign(body){
   const bar = el('div', 'tankbar'), ok = el('button', 'tbtn', '💾 儲存格局'), clr = el('button', 'tbtn ghost', '全部清掉'), bk = el('button', 'tbtn ghost', '取消');
   ok.addEventListener('click', async () => { if (E.busy) return; E.busy = true; ok.disabled = true;
     const cl = { walls: E.walls, doors: E.doors, wins: E.wins, fl: E.flS.join(''), wp: E.wpS.join('') }; const okk = await homeOp('design', { house: E.it.id, cl });
-    E.busy = false; if (okk){ SFX.catch(); flash('🏠 格局改好了！放不下的家具已經收起來、退錢了', 1.8); CLE = null; closeSheet(); const it = isleItems().find(x => x.id === E.it.id); if (it && House.on) rebuildHouseRoom(it); } else ok.disabled = false; });
+    E.busy = false; if (okk){ SFX.catch(); flash('🏠 格局改好了！放不下的家具已經收起來、退一半了', 1.8); CLE = null; closeSheet(); const it = isleItems().find(x => x.id === E.it.id); if (it && House.on) rebuildHouseRoom(it); } else ok.disabled = false; });
   clr.addEventListener('click', () => { if (clr.dataset.sure !== '1'){ clr.dataset.sure = '1'; clr.textContent = '確定清掉？'; return; } E.walls = []; E.doors = []; E.wins = []; E.flS = '0'.repeat(216).split(''); E.wpS = '0'.repeat(216).split(''); renderTab(); });
   bk.addEventListener('click', () => { CLE = null; curTab = 'furn'; renderTab(); }); bar.append(ok, clr, bk); body.appendChild(bar);
   body.appendChild(el('p', 'sub', `牆 ${E.walls.length} 段・門 ${E.doors.length} 個・窗 ${E.wins.length} 個（最多：牆＋窗 300、門 40）`));
@@ -3937,9 +3992,10 @@ function renderFurnSheet(body){
   if (!House.on || !House.it){ body.appendChild(el('div', 'empty', '走進小島上的房子裡才能擺家具。')); return; }
   const seg = el('div', 'seg'); [['buy', '🛒 買家具'], ['lay', '🏠 換格局']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(furnSheet === k)); b.addEventListener('click', () => { furnSheet = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
   const it = House.it, cur = houseLay(it), f = houseFurn(it);
+  if (furnSheet === 'lay' && isleRank() < 2){ body.appendChild(el('div', 'empty', '只有島主、共同島主、管理成員可以改格局。')); return; }
   if (furnSheet === 'lay' && it.t === 'mansion'){ body.appendChild(el('p', 'sub', '大宅的格局是你自己畫的：畫牆、放門窗、每個房間選地板和壁紙。')); const b = el('button', 'tbtn', '📐 設計格局'); b.addEventListener('click', () => { if (!canEditIsle()){ toast('只有住在這座島的人可以改'); return; } clOpen(it); }); body.appendChild(b); return; }
   if (furnSheet === 'lay'){
-    body.appendChild(el('p', 'sub', '換大一點的格局只要補差價；換小的退一半。放不下的家具會自動收起來，全額退錢。'));
+    body.appendChild(el('p', 'sub', '換大一點的格局只要補差價；換小的退一半。放不下的家具會自動收起來，退一半給當初買的人。'));
     const ul = el('ul', 'shoplist'); for (const [k, L] of Object.entries(LAYOUTS)){ const on = (it.lay || 'open') === k, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ['🏠', '🏡', '🏘️', '🏰'][Object.keys(LAYOUTS).indexOf(k)]));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${L.name}（${L.W}×${L.D}）`)); d.appendChild(el('div', 'sub2', `${LAYOUT_DESC[k]}・${L.rooms.length ? L.rooms.length + ' 間臥室' : '沒有隔間'}`)); li.appendChild(d);
       const diff = L.price - cur.price, b = el('button', 'tbtn' + (on ? ' ghost' : ''), on ? '現在的' : diff > 0 ? `換 🪙${diff.toLocaleString()}` : diff < 0 ? `換 +${Math.floor(-diff / 2)}` : '換'); b.disabled = on || (diff > 0 && rec.coins < diff);
@@ -4410,7 +4466,7 @@ async function grabCritter(c){
   Grab.busy = true; me.rot = Math.atan2(c.x - me.pos.x, c.z - me.pos.z); me.say('嘿！', 'alert', 0.8); camShake = Math.max(camShake, 0.08); puff(c.x, Mang.mudY, c.z);
   const kindRig = c.kind === 'crab' ? 'bottom' : 'float', sp = SPOT_BY_ID.mudflat; let f = null, w = 0;
   try {
-    if (Cloud.on && Cloud.sb){ const { data, error } = await Cloud.sb.rpc('roll_fish', { p_spot:'mudflat', p_charge:0, p_x:+me.pos.x.toFixed(2), p_z:+me.pos.z.toFixed(2), p_rig:kindRig, p_line:'normal', p_bait:null, p_chum:null, p_boat:false }); if (error) throw error; f = FISH_BY_ID[data.cast_fish]; w = Number(data.cast_w); F.sex = data.cast_sex || null; F.brood = !!data.cast_brood; F.rsTag = null; }
+    if (Cloud.on && Cloud.sb){ const { data, error } = await Cloud.sb.rpc('roll_fish', { p_spot:'mudflat', p_charge:0, p_x:+me.pos.x.toFixed(2), p_z:+me.pos.z.toFixed(2), p_rig:kindRig, p_line:'normal', p_bait:null, p_chum:null, p_boat:false }); if (error) throw error; const hk = await Cloud.sb.rpc('hook_fish'); if (hk.error) throw hk.error; const hd = hk.data || {}; f = FISH_BY_ID[hd.cast_fish]; w = Number(hd.cast_w); F.sex = hd.cast_sex || null; F.brood = !!hd.cast_brood; if (!f) throw new Error('這條魚對不上伺服器，請重新整理遊戲'); F.rsTag = null; }
     else { const keep = Rig.rig; Rig.rig = kindRig; F.baitUsed = null; F.buffAt = null; f = pickFish(Object.assign({}, sp, { shore:true }), 0); Rig.rig = keep; F.sex = Math.random() < 0.5 ? 'M' : 'F'; F.brood = false; F.rsTag = null; w = +(f.min + (f.max - f.min) * Math.pow(Math.random(), 1.7)).toFixed(2); }
   } catch(e){ Grab.busy = false; toast(cloudErrMsg(e)); return; }
   // 跟牠的距離越近、動作越慢，越容易抓到
@@ -4427,7 +4483,7 @@ const NB_POS = [[-78, -30], [70, -48], [10, -92]];
 function clearNeighbors(){ if (neighborGroup){ scene.remove(neighborGroup); neighborGroup = null; } }
 async function fetchIslands(){
   if (!Cloud.sb) return []; if (Neighbors.list && Date.now() - Neighbors.at < 3 * 60 * 1000) return Neighbors.list;
-  try { const { data } = await Cloud.sb.from('players').select('id,nickname,island,likes').order('likes', { ascending:false }).limit(30);
+  try { const { data } = await Cloud.sb.rpc('isle_neighbors');
     Neighbors.list = (data || []).filter(p => p.id !== myIdOrMe() && cleanIsland(p.island).items.length > 0).slice(0, 12); Neighbors.at = Date.now(); return Neighbors.list; } catch(e){ return []; }
 }
 async function loadNeighbors(){
@@ -4438,6 +4494,7 @@ async function loadNeighbors(){
     const [ox, oz] = NB_POS[i], g = new THREE.Group(); g.position.set(ox, 0, oz); neighborGroup.add(g);
     const base = new THREE.Group(); base.position.set(ISLE.x, 0, ISLE.z); isleBaseMesh(base, ISLE.r, false); g.add(base);
     const L = cleanIsland(p.island); for (const it of L.items.filter(it => ISLE_ITEMS[it.t].house).concat(L.items.filter(it => !ISLE_ITEMS[it.t].house).slice(0, 18))) placeItemInGroup(g, it, false);
+    isleBatch(g);   /* 鄰居島也合併（只看得到外觀） */
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = 'rgba(24,51,74,.82)'; c.beginPath(); c.roundRect ? c.roundRect(8, 16, 496, 96, 48) : c.rect(8, 16, 496, 96); c.fill();
     c.fillStyle = '#fff'; c.font = 'bold 46px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(`${String(p.nickname || '釣客').slice(0, 8)} 的島 ❤️${p.likes || 0}`, 256, 66);
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthWrite:false })); sp.scale.set(14, 3.5, 1); sp.position.set(ISLE.x, 11, ISLE.z); g.add(sp);
@@ -4715,7 +4772,7 @@ function tourneyNow(ms){
 const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 async function loadTnyBoard(id){
   if (!Cloud.sb || !id) return; Tny.boardAt = Date.now();
-  try { const { data, error } = await Cloud.sb.from('players').select('id,nickname,tourney_id,tourney_w,tourney_n').eq('tourney_id', id).gt('tourney_w', 0).order('tourney_w', { ascending:false }).limit(10);
+  try { const { data, error } = await Cloud.sb.rpc('tourney_board', { p_id: id });
     if (!error && data){ Tny.board = data.filter(r => Number(r.tourney_id) === id).map(r => ({ id:r.id, name:r.nickname, w:Number(r.tourney_w) || 0, n:r.tourney_n || 0 })); Tny.boardId = id; }
     if (!$('#sheet').hidden && curTab === 'rank' && lbMode === 'tny') renderTab(); } catch(e){}
 }
@@ -7490,6 +7547,8 @@ function rowToRec(r){
 }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
+  if (Cloud.lastRow && !('island' in row)) row = Object.assign({}, Cloud.lastRow, row);   /* 省流量：常用的動作不回傳整座島（072），用上次的島補上 */
+  Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
   rec = rowToRec(row); rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
@@ -7498,12 +7557,17 @@ function adoptRow(row){
 }
 const CLOUD_ERR = ['要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
+// 省流量（風險檢查第 3 點）：島的資料很大（房子、家具、大宅格局），常用的動作（拋竿、收線、賣魚、餵食…）都不會改到島，就不要回傳；至少每分鐘拿一次完整的（同島的人可能蓋了東西）
+function cloudSel(fn){ const L = Cloud.lastRow; if (Cloud.noSel || !L || ['place_item', 'remove_item', 'move_item'].includes(fn) || !Cloud.fullAt || Date.now() - Cloud.fullAt > 60000) return null;
+  return Object.keys(L).filter(k => k !== 'island' && k !== 'cast_fish' && k !== 'cast_w' && k !== 'cast_rs' && k !== 'cast_gp' && k !== 'cast_sex' && k !== 'cast_brood').join(','); }
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
   Cloud.pending++;
   const job = Cloud.queue.then(async () => {
     let data = null, error = null;
-    try { ({ data, error } = await Cloud.sb.rpc(fn, args || {})); } catch(e){ error = e; }
+    const sel = cloudSel(fn);
+    try { let q = Cloud.sb.rpc(fn, args || {}); if (sel) q = q.select(sel); ({ data, error } = await q); } catch(e){ error = e; }
+    if (error && sel && /select|column|PGRST1|parse/i.test(String(error.message || error))){ Cloud.noSel = true; try { ({ data, error } = await Cloud.sb.rpc(fn, args || {})); } catch(e){ error = e; } }   /* 不支援就改回整筆 */
     Cloud.pending--;
     if (error){
       const m = String(error.message || error); const known = CLOUD_ERR.find(k => m.includes(k));
@@ -7525,7 +7589,7 @@ async function visitAquarium(id, name){
   if (!Cloud.sb || !id){ toast('要連上雲端才能參觀別人的水族館'); return; }
   if (id === Cloud.userId){ leaveVisit(); return; }
   try {
-    const { data, error } = await Cloud.sb.from('players').select('nickname,tank,show').eq('id', id).maybeSingle();
+    const { data, error } = await Cloud.sb.rpc('visit_aqua', { p_id: id });
     if (error || !data){ toast('找不到這位玩家的水族館'); return; }
     const r = normRec({ tank:data.tank, show:data.show });
     const set = new Set(r.show || []), list = r.tank.filter(x => set.has(x.t));
@@ -7571,13 +7635,12 @@ async function loadContest(){
 }
 async function loadBoard(){
   if (!Cloud.sb) return;
-  const cols = 'id,nickname,best_w,best_fish,total,legend,fish_count,earned';
-  const q = (col) => Cloud.sb.from('players').select(cols).gt('total', 0).order(col, { ascending:false }).limit(20);
+  const q = (col) => Cloud.sb.rpc('board_list', { p_col: col === 'best_w' ? 'best' : col });   /* players 不能直接讀了（072） */
   try {
     const [a, b, c] = await Promise.all([q('best_w'), q('total'), q('earned')]);
-    const map = r => ({ id:r.id, name:r.nickname, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, total:r.total, legend:r.legend, count:r.fish_count || {}, earned:r.earned || 0 });
+    const map = r => ({ id:r.id, name:r.nickname, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, total:r.total, legend:r.legend, species:r.species || 0, count:r.fish_count || {}, earned:r.earned || 0 });
     if (!a.error) Cloud.board.best = a.data.map(map); if (!b.error) Cloud.board.total = b.data.map(map); if (!c.error) Cloud.board.earned = c.data.map(map);
-    if (Cloud.contest){ const w = await Cloud.sb.from('players').select(cols + ',week_id,week_best_w').eq('week_id', Cloud.contest.week_id).gt('week_best_w', 0).order('week_best_w', { ascending:false }).limit(20);
+    if (Cloud.contest){ const w = await Cloud.sb.rpc('board_week', { p_week: Cloud.contest.week_id });
       if (!w.error) Cloud.board.week = w.data.filter(r => r.week_id === Cloud.contest.week_id).map(r => Object.assign(map(r), { weekW: Number(r.week_best_w) || 0 })); }
     if (curTab === 'rank' && !$('#sheet').hidden) renderTab();
   } catch(e){}
@@ -8382,7 +8445,7 @@ function renderTab(){
       const who = el('span', 'who', isMe ? `${myDisplayName() === '你' ? '你' : myDisplayName() + '（你）'}` : (r.name || profileNames[r.id] || '釣客'));
       who.dataset.id = r.id;
       const bf = r.bestFish && FISH_BY_ID[r.bestFish];
-      who.appendChild(el('small', '', lbMode === 'week' ? (i === 0 ? '👑 目前第一名' : '') : lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${Object.keys(r.count || {}).length} 種・傳說 ${r.legend || 0} 條`));
+      who.appendChild(el('small', '', lbMode === 'week' ? (i === 0 ? '👑 目前第一名' : '') : lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${r.species || Object.keys(r.count || {}).length} 種・傳說 ${r.legend || 0} 條`));
       li.appendChild(who);
       if (Cloud.on && !isMe && r.id){ who.classList.add('canvisit'); who.title = '參觀水族館'; who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); const vi = el('button', 'tbtn ghost vbtn', '🏝️ 小島'); vi.addEventListener('click', e => { e.stopPropagation(); visitIsle(r.id, r.name); }); who.appendChild(vi); }
       li.appendChild(el('span', 'val', lbMode === 'week' ? (r.weekW || 0).toFixed(2) + ' kg' : lbMode === 'best' ? r.bestW.toFixed(2) + ' kg' : lbMode === 'earned' ? '🪙' + (r.earned || 0).toLocaleString() : r.total + ' 條'));
