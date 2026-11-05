@@ -2177,7 +2177,7 @@ class Fisher {
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
-    const showBob = this.fishing && this.bobState !== 'none';
+    const showBob = this.fishing && this.bobState !== 'none' && a.g.visible;   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
     this.bob.visible = showBob; this.line.visible = showBob;
     if (showBob){
       if (this.flying && this.flying.delay > 0){ this.flying.delay -= dt; this.av.tip.getWorldPosition(this.flying.from); this.bob.position.copy(this.flying.from); }   // 甩到一半浮標才飛出去
@@ -8228,7 +8228,7 @@ function amoTrip(k){
   amoTrip.k = k; amoTrip.c = { pts, cum, len: cum[cum.length - 1], aT, sail: cum[cum.length - 1] / AMO.speed }; return amoTrip.c;
 }
 function amoAt(c, s){ s = clamp(s, 0, c.len); let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++; const a = c.pts[i - 1], b = c.pts[i], seg = c.cum[i] - c.cum[i - 1] || 1, u = (s - c.cum[i - 1]) / seg; return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
-function amoRecast(n, t){ const a = n.rot, dx = Math.sin(a), dz = Math.cos(a), cp = castPoint(n.pos.x, n.pos.z, dx, dz, 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
+function amoRecast(n, t){ const a = n.rot, dx = Math.sin(a), dz = Math.cos(a), cp = n.sitting ? [n.pos.x + dx * 4.5, n.pos.z + dz * 4.5] : castPoint(n.pos.x, n.pos.z, dx, dz, 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
 function updateAmo(n, dt, t){
   if (!n.boat){ n.boat = makeBoatMesh('#c8161c'); scene.add(n.boat); n.home = n.pos.clone(); n.homeRot = n.rot; n.homeY = n.baseY; }
   const T = Date.now() / 1000, k = Math.floor(T / AMO.cycle), ph = T - k * AMO.cycle, c = amoTrip(k), S = c.sail, fishEnd = AMO.cycle - AMO.pier - S;
@@ -9166,4 +9166,7 @@ logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋�
 initSocial().catch(() => {});
 cloudInit();
 initUpdateCheck();
+// 點左上角的頭像或名字 → 打開「成就」（等級、稱號、成就都在這裡；大家習慣點頭像看自己的資料）
+(function(){ for (const s of ['#brand .mark', '#brand h1']){ const e = document.querySelector(s); if (!e) continue; e.style.cursor = 'pointer'; e.setAttribute('role', 'button'); e.title = '我的等級、稱號和成就';
+  e.addEventListener('click', ev => { if (ev.target.closest('#lvChip')) return; ev.stopPropagation(); openSheet('ach'); }); } })();
 })();
