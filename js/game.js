@@ -8363,6 +8363,13 @@ $('#closeSheet').addEventListener('click', closeSheet);
 let sheetOpenedAt = 0;   // 用按鈕打開選單的那一下，放開手指時的 click 不要把它關掉
 $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet' && performance.now() - sheetOpenedAt > 450) closeSheet(); });
 
+// 金幣圖示：畫面上所有的 🪙 換成 icons/coin.svg（3D 招牌上的字還是 emoji）
+const COIN_SRC = 'icons/coin.svg';
+function coinify(root){ if (!root || !root.ownerDocument && root !== document) return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.nodeValue.indexOf('🪙') >= 0 && n.parentNode && !/^(OPTION|TEXTAREA|SCRIPT|STYLE|TITLE)$/.test(n.parentNode.nodeName) ? 1 : 3 }), L = [];
+  while (w.nextNode()) L.push(w.currentNode);
+  for (const t of L){ const parts = t.nodeValue.split('🪙'), f = document.createDocumentFragment(); parts.forEach((p, i) => { if (i){ const im = document.createElement('img'); im.src = COIN_SRC; im.className = 'coin-ic'; im.alt = '金幣'; im.draggable = false; f.appendChild(im); } if (p) f.appendChild(document.createTextNode(p)); }); if (t.parentNode) t.parentNode.replaceChild(f, t); } }
+try { let pend = new Set(), qd = false; new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData'){ if (m.target.nodeValue && m.target.nodeValue.indexOf('🪙') >= 0) pend.add(m.target.parentNode); } else for (const n of m.addedNodes){ if (n.nodeType === 3 ? n.nodeValue.indexOf('🪙') >= 0 : n.nodeType === 1 && (n.textContent || '').indexOf('🪙') >= 0) pend.add(n.nodeType === 3 ? n.parentNode : n); } }
+    if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function renderTab(){
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
