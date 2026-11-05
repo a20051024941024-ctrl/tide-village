@@ -462,13 +462,17 @@ function regFishSpec(id, S){
   FISH_STYLE[id] = { shape, c: Object.assign({ Mouth:'#2a1a18' }, S.c), move: S.move || 'side', glow: !!S.glow, glowParts: S.glowParts };   /* 嘴巴預設深色 */
 }
 for (const [id, S] of Object.entries(FISH_SPECS)) regFishSpec(id, S);
+/* 深藍旗魚（2026-11-06）：手刻的 Marlin 模型（js/fish-models.js），身體顏色和條紋在 fishMat 的 shader 裡畫；蓋掉 fish-specs 的參數版 */
+FISH_STYLE.marlin = { shape:'Marlin', c:{ Body:'#2e62c8', Fins:'#26307a', Bill:'#283858', Eye:'#0b0e14', EyeW:'#ffffff', Gill:'#0e1f4a' }, move:'marlin', glow:false, marlin:true };
 const fishTime = { value: 0 };           // 尾巴擺動用的共用時間
 const fishGeoCache = {}, fishMatCache = {};
 function fishGeo(shape, part){
   const key = shape + '/' + part; if (fishGeoCache[key]) return fishGeoCache[key];
   const raw = FISH_MESH[shape][part]; const arr = new Float32Array(raw.length);
   for (let i = 0; i < raw.length; i++) arr[i] = raw[i] / 1000;
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals();
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  if (shape === 'Marlin' && part === 'Body'){ const idx = [], map = new Map(), pos = []; for (let i = 0; i < arr.length; i += 3){ const k = arr[i].toFixed(3) + ',' + arr[i + 1].toFixed(3) + ',' + arr[i + 2].toFixed(3); let j = map.get(k); if (j === undefined){ j = pos.length / 3; map.set(k, j); pos.push(arr[i], arr[i + 1], arr[i + 2]); } idx.push(j); } g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setIndex(idx); }   /* 旗魚身體把重複的點接起來，才會有平滑的光（不然每一面都是硬邊） */
+  g.computeVertexNormals();
   return (fishGeoCache[key] = g);
 }
 const FISH_MOVES = {
@@ -477,12 +481,15 @@ const FISH_MOVES = {
   flap: 'float wk = clamp((abs(position.y) - 0.45) / 0.5, 0.0, 1.0);\n transformed.z += sin(uFishT * 2.6) * 0.16 * wk * sign(position.y);',
   eel:  'float wk = clamp((0.6 - position.x) / 1.3, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 7.0) * 0.07 * (0.25 + wk);',
   wing: 'float wk = clamp((abs(position.z) - 0.12) / 0.4, 0.0, 1.0);\n transformed.y += sin(uFishT * 3.0 - abs(position.z) * 2.0) * 0.13 * wk;',
+  marlin: 'float wk = clamp((-position.x - 0.15) / 0.55, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 4.0) * 0.1 * wk * wk;',   /* 只有後 1/3 擺動，前段和劍不動 */
 };
 function fishMat(id, part, color, glow, move, shape){
   move = move || 'side';
   const key = id + '/' + part; if (fishMatCache[key]) return fishMatCache[key];
   const m = new THREE.MeshStandardMaterial({ color, roughness:0.55, metalness:0.05, flatShading:true });
-  const body = ['Top', 'Bottom', 'Body', 'Front', 'Stripes'].includes(part), scaly = body && /^Fish/.test(shape || '');
+  const body = ['Top', 'Bottom', 'Body', 'Front', 'Stripes'].includes(part), scaly = body && /^Fish/.test(shape || ''), marlinBody = shape === 'Marlin' && part === 'Body', albino = /albino|_white/.test(id);
+  if (marlinBody){ m.metalness = 0.55; m.roughness = 0.32; m.flatShading = false; }
+  if (shape === 'Marlin' && part === 'Fins'){ m.metalness = 0.2; m.roughness = 0.5; }
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
   if (glow && (part === 'Top' || part === 'Body')){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.35; }
   if (shape === 'Goby' && part === 'Spots'){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.9; }
@@ -492,7 +499,13 @@ function fishMat(id, part, color, glow, move, shape){
       'vec3 transformed = vec3(position);\n vFishP = position;\n ' + FISH_MOVES[move]);
     if (!CLASSIC){
       sh.fragmentShader = 'varying vec3 vFishP;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' +
-        (body ? 'diffuseColor.rgb *= mix(1.08, 0.88, smoothstep(-0.2, 0.22, vFishP.y));\n' : '') +
+        (marlinBody ? (albino
+          ? 'vec3 mTop = vec3(0.86, 0.89, 0.94), mMid = vec3(0.96, 0.97, 0.99), mBot = vec3(1.0, 1.0, 1.0), mStr = vec3(0.62, 0.8, 1.0);'
+          : 'vec3 mTop = vec3(0.045, 0.1, 0.27), mMid = vec3(0.16, 0.4, 0.86), mBot = vec3(0.9, 0.93, 0.97), mStr = vec3(0.6, 0.84, 1.0);') +
+          'float my = vFishP.y; vec3 mc = mix(mMid, mTop, smoothstep(0.045, 0.1, my)); mc = mix(mBot, mc, smoothstep(-0.075, -0.01, my));'
+          + 'float sx = (vFishP.x + 0.42) / 0.84 * 14.0; float sb = smoothstep(0.42, 0.3, abs(fract(sx) - 0.5)) * smoothstep(-0.06, -0.02, my) * smoothstep(0.11, 0.07, my) * step(-0.42, vFishP.x) * step(vFishP.x, 0.42);'
+          + 'mc = mix(mc, mStr, sb * 0.75); diffuseColor.rgb = mc;\n'
+          : body ? 'diffuseColor.rgb *= mix(1.08, 0.88, smoothstep(-0.2, 0.22, vFishP.y));\n' : '') +
         (scaly ? 'vec2 sp = vFishP.xy * vec2(30.0, 34.0); sp.y += mod(floor(sp.x), 2.0) * 0.5; vec2 fq = fract(sp) - 0.5; diffuseColor.rgb *= 0.9 + 0.14 * smoothstep(0.52, 0.2, length(fq * vec2(1.0, 1.3)));\n' : ''));
       const outChunk = sh.fragmentShader.includes('#include <opaque_fragment>') ? '#include <opaque_fragment>' : '#include <output_fragment>';
       sh.fragmentShader = sh.fragmentShader.replace(outChunk, 'outgoingLight += vec3(0.85, 0.95, 1.0) * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0) * 0.28;\n' + outChunk);
@@ -2813,7 +2826,7 @@ function updatePlayer(dt){
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     // 可以走上山坡，但太陡的崖爬不上去
     // 跳在空中時，只要腳比前面的地面高，就能跳上去
-    const okStep = (ax, az, bx, bz) => { if (!walkable(bx, bz) || blocked(bx, bz, 0.35)) return false; { const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); } }   /* 高高的堤防路只能從樓梯上去 */ const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh / dl < 1.2; };
+    const okStep = (ax, az, bx, bz) => { if (!walkable(bx, bz) || blocked(bx, bz, 0.35)) return false; { const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); } }   /* 高高的堤防路只能從樓梯上去 */ const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh < 0.34 || dh / dl < 1.2; };   /* v199：小台階（34 公分以內）直接跨上去，不會卡在路緣、泥灘台地邊 */
     if (okStep(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx;
     if (okStep(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz;
     const target = Math.atan2(mx, mz);
@@ -2853,28 +2866,27 @@ function jump(){ if (mySeat){ standUp(); return; }
 function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
 function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 0) d += Math.PI*2; return a + (d - Math.PI) * k; }
 
-const reelCam = { k:0, pos:new THREE.Vector3(), look:new THREE.Vector3() };
+const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
 function updateCamera(dt){ if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor()) cam.pitch = 0.3; updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 };   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 function camClear(target, want, dt){
-  const bad = (x, y, z) => { const g = groundHeight(x, z); if (y < g + 0.6) return true;
-    for (const c of colliders){ if (!c.tree) continue; const dx = x - c.x, dz = z - c.z; if (dx * dx + dz * dz < 1.6 && y > g + 1.2 && y < g + 6.5) return true; } return false; };   /* 只算樹（路燈、石頭、柵欄不算，不然鏡頭會一直忽遠忽近） */
+  const bad = (x, y, z) => y < groundHeight(x, z) + 0.5;   /* v199：只檢查地形（樹不再讓鏡頭拉近，使用者說會忽遠忽近） */
   const dx = want.x - target.x, dy = want.y - target.y, dz = want.z - target.z; let good = 1;
   const L = Math.hypot(dx, dy, dz) || 1, kmin = Math.min(0.9, 2.6 / L);   /* 最近只拉到離角色 2.6 公尺，再近就看到帽子裡面了 */
   for (let k = kmin; k <= 1.0001; k += 0.08){ if (bad(target.x + dx * k, target.y + dy * k, target.z + dz * k)){ good = Math.max(kmin, k - 0.08); break; } }
-  CamK.k += (good - CamK.k) * Math.min(1, dt * (good < CamK.k ? 9 : 2.5));   /* 拉近快一點（不然會看到樹裡面），拉遠慢慢來 */
+  CamK.k += (good - CamK.k) * Math.min(1, dt * (good < CamK.k ? 6 : 1.5));   /* 拉近快一點，拉遠慢慢來 */
   const k = CamK.k; if (k >= 0.999) return;
   const x = target.x + dx * k, z = target.z + dz * k; let y = Math.max(target.y + dy * k, groundHeight(x, z) + 0.6);
-  if (good <= kmin + 1e-6 && bad(x, y, z)) y = groundHeight(x, z) + 6.4;   /* 角色就貼著樹：鏡頭拉到樹冠上面往下看 */
   want.set(x, y, z); }
 function updateCamera2(dt){
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   const reelOn = F.phase === 'reeling' && !Photo.on;
-  reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4));
+  reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4)); if (!reelOn) reelCam.y0 = null;
   if (reelCam.k > 0.01){
-    const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, L = Math.hypot(bx, bz) || 1, dx = bx / L, dz = bz / L, rx = -dz, rz = dx;
+    const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, L = Math.hypot(bx, bz) || 1; if (reelCam.y0 === null) reelCam.y0 = cam.yaw;
+    const ye = Math.atan2(bx, bz) + Math.PI + (cam.yaw - reelCam.y0), dx = -Math.sin(ye), dz = -Math.cos(ye), rx = -dz, rz = dx;   /* v199：拉魚時也可以拖畫面轉鏡頭（繞著角色和魚轉） */
     const want = reelCam.pos.set(me.pos.x - dx * 2.0 + rx * 1.25, me.baseY + 2.05, me.pos.z - dz * 2.0 + rz * 1.25);   // 右肩後上方，角色在畫面左下，不會擋住魚
     const look = reelCam.look.set(me.bobPos.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, me.bobPos.z);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
@@ -3129,7 +3141,9 @@ function updateFishing(dt, t){
     if (F.jump > 0){
       const u0 = 1 - Math.max(0, F.jump) / 1.0; F.jump -= dt * (F.boss && u0 > 0.32 && u0 < 0.68 ? 0.35 : 1);   // 大魚跳到最高的時候畫面放慢
       const u = 1 - Math.max(0, F.jump) / 1.0, hgt = (F.boss ? 1.3 + F.bossScale * 1.1 : big ? 2.6 : 1.5) * Math.sin(u * Math.PI);
-      if (F.leap){ F.leap.visible = F.jump > 0; F.leap.position.set(me.bobPos.x, 0.1 + hgt, me.bobPos.z); F.leap.rotation.set(0, Math.atan2(me.pos.x - me.bobPos.x, me.pos.z - me.bobPos.z) + Math.PI / 2, (0.5 - u) * 2.2); }
+      if (F.leap){ F.leap.visible = F.jump > 0; F.leap.position.set(me.bobPos.x, 0.1 + hgt, me.bobPos.z); const ya = Math.atan2(me.pos.x - me.bobPos.x, me.pos.z - me.bobPos.z);
+        if (FISH_STYLE[F.fish.id] && FISH_STYLE[F.fish.id].marlin) F.leap.rotation.set(-0.95, ya, (0.5 - u) * 2.2, 'YZX');   /* 旗魚側著跳：肚子和條紋朝玩家 */
+        else F.leap.rotation.set(0, ya + Math.PI / 2, (0.5 - u) * 2.2); }
       if (F.jump <= 0){ ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, F.boss ? 48 : 16, '#e8f7ff', F.boss ? 2.2 : 1.2, F.boss ? 3.6 : 2.2, 0.9); if (F.boss){ camShake = Math.max(camShake, 0.45); SFX.plop(); ripple(me.bobPos.x + 0.8, me.bobPos.z, true); ripple(me.bobPos.x - 0.7, me.bobPos.z + 0.5, true); } $('#fhT').textContent = ''; }
     } else if (F.boss && !F.mash && F.surf > 0){
       // 大魚浮上水面翻身、拖出水痕
@@ -4449,7 +4463,7 @@ function mangE(x, z){   // 到最近的小島邊緣的距離（正的＝在島�
 function mudOut(){ return Env.tide.lv < -0.35; }          // 泥灘露出來（伺服器抓的時候要更低：-0.5）
 function mudGrabOk(){ return Env.tide.lv < -0.5; }
 var Mang = { mud:[], mudY:-0.4, critters:[], told:0, flies:null, onMud:false };
-function mangH(x, z){ if (!Mang) return null; const e = mangE(x, z); if (e > 0) return Math.max(MANG.y, terrainH(x, z)); if (e > -MANG.mud && Mang.mudY > WATER_LEVEL && !isLand(x, z)) return Mang.mudY; return null; }
+function mangH(x, z){ if (!Mang) return null; const e = mangE(x, z); if (e > 0) return Math.max(MANG.y * Math.min(1, e / 1.6), terrainH(x, z));   /* v199：泥灘台地邊緣做成緩坡，跟沙灘接得自然 */ if (e > -MANG.mud && Mang.mudY > WATER_LEVEL && !isLand(x, z)) return Mang.mudY; return null; }
 function mangWalk(x, z){ if (!Mang) return false; const e = mangE(x, z); return e > 0 || (e > -MANG.mud + 0.3 && mudOut()); }
 function inMang(x, z){ return !!MANG && Math.hypot(x - MANG.x, z - MANG.z) < 16; }
 function islePath(pts, wobA, wobB, k){ const s = new THREE.Shape(); for (let i = 0; i <= 48; i++){ const a = i / 48 * Math.PI * 2, r = pts + wobble(a * 3, wobA) * wobB + (k || 0); const x = Math.cos(a) * r, z = Math.sin(a) * r; if (i === 0) s.moveTo(x, -z); else s.lineTo(x, -z); } return s; }
@@ -4460,6 +4474,10 @@ function buildMangrove(){
   MANG.isl.forEach(([ix, iz, r], i) => {
     const top = new THREE.Mesh(ext(islePath(r, i * 1.7, 0.5), 3.0), soil); top.position.set(ix, MANG.y - 3.0, iz); top.receiveShadow = true; g.add(top);
     const gr = new THREE.Mesh(ext(islePath(r - 0.35, i * 1.7, 0.5), 0.04), grass); gr.position.set(ix, MANG.y, iz); gr.receiveShadow = true; g.add(gr);
+    { /* v199：台地邊緣的緩坡裙（土色），從台地高度斜到地面，跟沙灘接得自然 */
+      const N = 48, pos = [], idx = []; for (let k = 0; k <= N; k++){ const a = k / N * Math.PI * 2, ri = r + wobble(a * 3, i * 1.7) * 0.5 - 0.08, ro = ri + 1.7; pos.push(ix + Math.cos(a) * ri, MANG.y + 0.005, iz + Math.sin(a) * ri, ix + Math.cos(a) * ro, -0.06, iz + Math.sin(a) * ro); }
+      for (let k = 0; k < N; k++){ const b = k * 2; idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3); }
+      const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); sg.setIndex(idx); sg.computeVertexNormals(); const sk = new THREE.Mesh(sg, mat('#a89a7e', 0.95, { side:THREE.DoubleSide })); sk.receiveShadow = true; g.add(sk); }
     const mud = new THREE.Mesh(ext(islePath(r + MANG.mud, i * 1.7 + 0.4, 0.7), 2.6), mudM); mud.position.set(ix, Mang.mudY - 2.6, iz); mud.receiveShadow = true; g.add(mud); Mang.mud.push(mud);
     // 泥灘上的小洞（招潮蟹、彈塗魚的家）
     for (let k = 0; k < 10; k++){ const a = rr() * Math.PI * 2, d = r + 0.6 + rr() * (MANG.mud - 1.1); const h = new THREE.Mesh(new THREE.CircleGeometry(0.07 + rr() * 0.05, 8), new THREE.MeshBasicMaterial({ color:'#4a463c' })); h.rotation.x = -Math.PI / 2; h.position.set(Math.cos(a) * d, 2.605, Math.sin(a) * d); mud.add(h); }
@@ -8061,7 +8079,11 @@ function drawModelFish(cv, f, known){
   const st = FISH_STYLE[f.id], mesh = FISH_MESH[st.shape];
   const ctx = cv.getContext('2d'), W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H);
   const tilt = st.shape === 'Manta' ? 0.95 : 0.22, ct = Math.cos(tilt), sn = Math.sin(tilt), thick = /^Fish/.test(st.shape) ? 1.5 : 1;
-  const L = [0.3, 0.85, 0.45], ll = Math.hypot(...L), tris = [];
+  const mar = st.shape === 'Marlin', L = mar ? [0.45, 0.4, 0.8] : [0.3, 0.85, 0.45], ll = Math.hypot(...L), tris = [];   /* 旗魚打側光，藍色和銀白肚子才分得出來 */
+  const albino = /albino|_white/.test(f.id), mix3 = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), sms = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  const marCol = (x, y) => { const T = albino ? [0.86, 0.89, 0.94] : [0.045, 0.1, 0.27], M = albino ? [0.96, 0.97, 0.99] : [0.16, 0.4, 0.86], B = albino ? [1, 1, 1] : [0.9, 0.93, 0.97], S = albino ? [0.62, 0.8, 1] : [0.6, 0.84, 1];
+    let c = mix3(M, T, sms(0.045, 0.1, y)); c = mix3(B, c, sms(-0.075, -0.01, y)); return c; };
+  const bodyPath = mar ? new Path2D() : null;
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
   for (const part in mesh){
     const raw = mesh[part], c = new THREE.Color(known ? (st.c[part] || f.color) : '#b9c8cf');
@@ -8070,15 +8092,19 @@ function drawModelFish(cv, f, known){
       for (let k = 0; k < 3; k++){ const x = raw[i+k*3]/1000, y = raw[i+k*3+1]/1000, z = raw[i+k*3+2]/1000*thick; P.push([x, y*ct - z*sn, y*sn + z*ct]); }
       const ax = P[1][0]-P[0][0], ay = P[1][1]-P[0][1], az = P[1][2]-P[0][2], bx = P[2][0]-P[0][0], by = P[2][1]-P[0][1], bz = P[2][2]-P[0][2];
       const nx = ay*bz - az*by, ny = az*bx - ax*bz, nz = ax*by - ay*bx, nl = Math.hypot(nx, ny, nz) || 1;
-      const sh = 0.55 + 0.45 * Math.abs((nx*L[0] + ny*L[1] + nz*L[2]) / nl / ll);
-      tris.push({ P, d: (P[0][2]+P[1][2]+P[2][2]) / 3, col: `rgb(${Math.round(c.r*255*sh)},${Math.round(c.g*255*sh)},${Math.round(c.b*255*sh)})` });
+      const sh = (mar && part === 'Body') ? 0.78 + 0.22 * Math.abs((nx*L[0] + ny*L[1] + nz*L[2]) / nl / ll) : 0.55 + 0.45 * Math.abs((nx*L[0] + ny*L[1] + nz*L[2]) / nl / ll);
+      let cr = c.r, cg = c.g, cb = c.b; if (mar && part === 'Body' && known){ const mc = marCol((raw[i] + raw[i+3] + raw[i+6]) / 3000, (raw[i+1] + raw[i+4] + raw[i+7]) / 3000); cr = mc[0]; cg = mc[1]; cb = mc[2]; }
+      tris.push({ P, d: (P[0][2]+P[1][2]+P[2][2]) / 3, body: part === 'Body' && nz > 0, col: `rgb(${Math.round(cr*255*sh)},${Math.round(cg*255*sh)},${Math.round(cb*255*sh)})` });
       for (const p of P){ x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
     }
   }
   tris.sort((a, b) => a.d - b.d);
   const sc = Math.min(W*0.9/(x1-x0), H*0.86/(y1-y0)), ox = W/2 - (x0+x1)/2*sc, oy = H/2 + (y0+y1)/2*sc;
   ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, W/400);
-  for (const t of tris){ ctx.beginPath(); ctx.moveTo(ox + t.P[0][0]*sc, oy - t.P[0][1]*sc); ctx.lineTo(ox + t.P[1][0]*sc, oy - t.P[1][1]*sc); ctx.lineTo(ox + t.P[2][0]*sc, oy - t.P[2][1]*sc); ctx.closePath(); ctx.fillStyle = t.col; ctx.strokeStyle = t.col; ctx.fill(); ctx.stroke(); }
+  for (const t of tris){ ctx.beginPath(); ctx.moveTo(ox + t.P[0][0]*sc, oy - t.P[0][1]*sc); ctx.lineTo(ox + t.P[1][0]*sc, oy - t.P[1][1]*sc); ctx.lineTo(ox + t.P[2][0]*sc, oy - t.P[2][1]*sc); ctx.closePath(); ctx.fillStyle = t.col; ctx.strokeStyle = t.col; ctx.fill(); ctx.stroke();
+    if (bodyPath && t.body){ bodyPath.moveTo(ox + t.P[0][0]*sc, oy - t.P[0][1]*sc); bodyPath.lineTo(ox + t.P[1][0]*sc, oy - t.P[1][1]*sc); bodyPath.lineTo(ox + t.P[2][0]*sc, oy - t.P[2][1]*sc); bodyPath.closePath(); } }
+  if (bodyPath && known){ ctx.save(); ctx.clip(bodyPath); ctx.fillStyle = albino ? 'rgba(160,205,255,0.5)' : 'rgba(165,215,255,0.55)';   /* 旗魚的直條紋：畫在身體上（clip 住），一條一條清楚分開 */
+    const yTop = oy - 0.085*sc, yBot = oy + 0.045*sc; for (let k = 0; k < 14; k++){ const x = ox + (-0.4 + (k + 0.5) * 0.058) * sc; ctx.fillRect(x - 0.0085*sc, yTop, 0.017*sc, yBot - yTop); } ctx.restore(); }
   if (!known){ ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `bold ${Math.round(H*0.34)}px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', W/2, H/2); }
 }
 function drawMarlin(cv, known){
