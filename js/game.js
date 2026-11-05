@@ -309,7 +309,14 @@ const TRAVEL = [
 ];
 const SHIRTS = ['#f17b6d','#2f89c7','#3fbf9d','#ffd36a','#9b7bff','#f5a5d8','#ff9f43','#5b6b7a'];
 const HATS = ['#ffd36a','#f6f0dd','#18334a','#f17b6d','#3fbf9d','#8c5d3b'];
-const EMOTES = { wave:'👋', fish:'🐟', wow:'😮' };
+const EMOTES = { wave:'👋', fish:'🐟', wow:'😮', cheer:'🎉', dance:'💃', clap:'👏', bow:'🙇', laugh:'😂', angry:'😠', scared:'😱', sitdown:'🧘', sleep:'😴', pushups:'💪', situps:'🏋️', playdead:'💀' };
+// 表情動作（2026-11-05）：角色真的會做動作（KayKit 動作＋自己做的跳舞、鞠躬、拍手、跺腳、大笑）；有 loop 的會一直做到你走開
+const EMOTE_DEF = {
+  wave:{ name:'揮手', anim:'wave', dur:2.1 }, wow:{ name:'驚嘆', anim:'surprised', dur:1.1 }, cheer:{ name:'歡呼', anim:'cheer', dur:3.3 }, dance:{ name:'跳舞', anim:'dance', loop:true },
+  clap:{ name:'拍手', anim:'clap', dur:2.4 }, bow:{ name:'鞠躬', anim:'bow', dur:2.0 }, laugh:{ name:'大笑', anim:'laugh', dur:2.0 }, angry:{ name:'生氣', anim:'angry', dur:2.7 },
+  scared:{ name:'嚇一跳', anim:'surprised', dur:1.1 }, sitdown:{ name:'坐地上', anim:'sit_floor', loop:true }, sleep:{ name:'躺下睡覺', anim:'lie', loop:true, bub:'💤' },
+  pushups:{ name:'伏地挺身', anim:'pushups', loop:true }, situps:{ name:'仰臥起坐', anim:'situps', loop:true }, playdead:{ name:'裝死', anim:'playdead', loop:true, once:true } };
+const EMOTE_ORDER = ['wave', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'angry', 'scared', 'sitdown', 'sleep', 'pushups', 'situps', 'playdead', 'wow'];
 const RARITY_ORDER = { '常見':0, '稀有':1, '傳說':2 };
 
 /* ---- Quaternius「Animated Fish Pack」(CC0) 的三種魚形，依魚種重新上色 ----
@@ -2017,11 +2024,17 @@ function kidUpgrade(f){
   a.g.rotation.copy(keepRot); a.g.position.copy(keepPos);
   const mixer = new THREE.AnimationMixer(m), acts = {};
   for (const [nm, c] of Object.entries(KID.clips)){ const ac = mixer.clipAction(c); ac.enabled = true; ac.setEffectiveWeight(0); ac.play(); acts[nm] = ac; }
-  for (const nm of ['jump_land', 'fish_cast']){ if (acts[nm]){ acts[nm].setLoop(THREE.LoopOnce, 1); acts[nm].clampWhenFinished = true; } }
+  for (const nm of ['jump_land', 'fish_cast', 'playdead', 'surprised', 'bow', 'lie_down', 'sit_floor_down']){ if (acts[nm]){ acts[nm].setLoop(THREE.LoopOnce, 1); acts[nm].clampWhenFinished = true; } }
   a.kid = { m, B, prim, mixer, acts, w: {}, handR: B.handr, v: new THREE.Vector3(), skipT: 0 };
   a.body = prim.shirt || a.body;
   if (f.gearKey){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); }
 }
+// 表情動作還在做嗎：時間到、走開、開始釣魚就停
+function kidEmoteOn(f, t){ const E = f.emote, D = E && EMOTE_DEF[E.k]; if (!D || !f.av.kid || !f.av.kid.acts[D.anim]) { f.emote = null; return false; }
+  const moved = (f.aspd || 0) > 0.35 || f.air > 0.05; if (moved || f.fishing || f.sitting || f.swim || (!D.loop && now() > E.until)){ f.emote = null; if (f.bub && f.bubEmote) f.bub.hidden = true; return false; }
+  if (!E.started){ E.started = true; const ac = f.av.kid.acts[D.anim]; ac.reset(); ac.play(); }
+  return true; }
+function startEmote(f, k){ const D = EMOTE_DEF[k]; if (!D) return; f.emote = { k, until: now() + (D.dur || 9999), started: false }; }
 // 每一格：照角色現在在做什麼，決定每個動作的比重（平滑過去，不會瞬間跳），播放速度跟移動速度一樣
 function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
@@ -2029,6 +2042,7 @@ function kidAnimate(f, dt, t){
   else if (f.sitting) W.sit = 1;
   else if (f.air > 0.05) W.jump_air = 1;
   else if (f.fishing){ if ((f.windup || 0) > 0.02 || f.castT >= 0) W.fish_cast = 1; else if ((f.bend || 0) > 0.45) W.fish_fight = 1; else if ((f.bend || 0) > 0.05) W.fish_reel = 1; else W.fish_idle = 1; }
+  else if (f.emote && kidEmoteOn(f, t)){ W[EMOTE_DEF[f.emote.k].anim] = 1; }
   else { const wk = smooth01((v - 0.2) / 0.8) * (1 - smooth01((v - 2.4) / 1.2)), rn = smooth01((v - 2.4) / 1.2) * (1 - smooth01((v - 4.3) / 0.6)), sp = smooth01((v - 4.3) / 0.6);   /* 走 3.8 用跑步動作、推到底 5.0 用衝刺動作 */
     W.idle = 1 - smooth01((v - 0.1) / 0.5); if (wk > 0) W.walk = wk; if (rn > 0) W.run = rn; if (sp > 0) W.sprint = sp;
     if (f.held) W.hold_arms = 5; }   /* 上半身捧著魚的比重大很多，手幾乎都是捧魚的樣子 */
@@ -7128,8 +7142,37 @@ $('#chatToggle').addEventListener('click', () => { document.body.classList.toggl
 $('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = false; });
 
 let myEmote = null;
-function emote(k){ ensureAudio(); me.say(EMOTES[k], 'emote', 3); myEmote = { k, at: Date.now() }; pushPresence(true); }
+function emote(k){ ensureAudio(); const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); }
 $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(b.dataset.emote)));
+// 左上角卡片第四行：好友代碼（點一下複製、打開玩家分頁加好友）、任務、成就、玩法、登入／帳號
+(function buildBquick(){   /* 先做好這一行，下面 compactBrand 再把它收進 ☰ 裡 */ const host = $('#btools') && $('#btools').parentNode; if (!host || $('#bquick')) return; const row = document.createElement('div'); row.id = 'bquick'; host.appendChild(row);
+  const mk = (id, txt, fn, title) => { const b = el('button', 'bq', txt); b.id = id; if (title) b.title = title; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); fn(); }); row.appendChild(b); return b; };
+  mk('bqId', '🆔', async () => { const c = friendCode(); if (!c){ toast('連上雲端以後才有好友代碼'); return; } try { await navigator.clipboard.writeText(c); toast(`好友代碼 ${c} 已經複製了，貼給朋友就能加好友`); } catch(e){ toast(`你的好友代碼：${c}`); } openSheet('people'); }, '好友代碼：點一下複製，打開加好友');
+  mk('bqQuest', '📜 任務', () => openSheet('quest')); mk('bqAch', '🏅 成就', () => openSheet('ach')); mk('bqHelp', '❓ 玩法', () => openSheet('help'));
+  mk('bqLogin', '🔑 登入', () => { if (Cloud.isAnon && Cloud.ui){ Cloud.ui.step = 'idle'; } openSheet('style'); setTimeout(() => { const cb = document.querySelector('#sheet .cloudbox'); if (cb) cb.scrollIntoView({ block:'center' }); }, 150); }, '登入、綁定 Email、換裝置');
+  const upd = () => { const c = friendCode(), id = $('#bqId'), lg = $('#bqLogin'); if (id){ id.textContent = c ? '🆔 ' + c : '🆔 ———'; id.classList.toggle('off', !c); }
+    if (lg){ const anon = !Cloud.on || Cloud.isAnon; lg.textContent = anon ? '🔑 登入' : '👤 帳號'; lg.classList.toggle('hot', !!(Cloud.on && Cloud.isAnon)); } };
+  setTimeout(() => { try { upd(); } catch(e){} }, 0); setInterval(() => { try { upd(); } catch(e){} }, 2000); })();
+// 左上角平常只顯示頭像、名字、金幣（不要擋畫面）；按 ☰ 才展開：狀態、好友代碼、任務、成就、玩法、登入、拍照、全螢幕、音樂、音效
+(function compactBrand(){ const B = $('#brand'), bt = $('#btools'); if (!B || !bt || $('#bMoreBtn')) return;
+  const more = document.createElement('div'); more.id = 'bmore'; bt.parentNode.appendChild(more);
+  const on = $('#online'); if (on) more.appendChild(on); const q = $('#bquick'); if (q) more.appendChild(q);
+  const tools = document.createElement('div'); tools.className = 'bm-tools'; for (const id of ['photoBtn', 'fsBtn', 'musicBtn', 'soundBtn']){ const b = $('#' + id); if (b) tools.appendChild(b); } more.appendChild(tools);
+  const tg = document.createElement('button'); tg.id = 'bMoreBtn'; tg.className = 'btool'; tg.setAttribute('aria-label', '更多'); tg.textContent = '☰';
+  tg.addEventListener('click', e => { e.stopPropagation(); B.classList.toggle('open'); }); bt.appendChild(tg);
+  const tny = () => { const p = $('#tnyPill'); if (p && p.parentNode !== bt) bt.insertBefore(p, tg); };   /* 大賽倒數放在金幣旁邊，收起來也看得到 */
+  setInterval(tny, 1500); tny();
+  addEventListener('pointerdown', e => { if (B.classList.contains('open') && !B.contains(e.target)) B.classList.remove('open'); });
+  for (const b of more.querySelectorAll('button')) if (b.id !== 'musicBtn' && b.id !== 'soundBtn') b.addEventListener('click', () => B.classList.remove('open')); })();
+// 表情動作選單：按 😀 打開，選一個做
+function closeEmotePanel(){ const P = $('#emotePanel'); if (P) P.hidden = true; }
+function openEmotePanel(){ let P = $('#emotePanel'); if (!P){ P = document.createElement('div'); P.id = 'emotePanel'; P.className = 'panel'; P.hidden = true; document.body.appendChild(P);
+    P.appendChild(el('div', 'ep-t', '😀 表情動作'));
+    const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', D.name)); b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
+    P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。')); }
+  P.hidden = !P.hidden; if (!P.hidden){ const em = $('#emotes'), r = em && em.getBoundingClientRect(); if (r && r.width){ P.style.bottom = Math.round(innerHeight - r.top + 8) + 'px'; P.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; } } }   /* 貼在表情按鈕列的正上方 */
+{ const em = $('#emotes'); if (em){ const b = document.createElement('button'); b.className = 'panel'; b.id = 'emoteMore'; b.setAttribute('aria-label', '表情動作'); b.textContent = '😀'; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); openEmotePanel(); }); em.appendChild(b); } }
+addEventListener('pointerdown', e => { const P = $('#emotePanel'); if (P && !P.hidden && !P.contains(e.target) && e.target.id !== 'emoteMore') P.hidden = true; });
 
 /* ---- 炫耀魚：選一條釣過的魚，舉起來給大家看 ---- */
 let myShow = null;
@@ -7239,7 +7282,7 @@ function presenceObj(){
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
-  if (myEmote && Date.now() - myEmote.at < 4000) o.e = myEmote;
+  if (myEmote && (Date.now() - myEmote.at < 4000 || (me.emote && me.emote.k === myEmote.k))) o.e = myEmote;   /* 一直在做的動作（坐著、躺著、跳舞）別人晚一點進來也看得到 */
   if (myShow && Date.now() - myShow.at < 6500) o.s = myShow;
   if (rec.rod !== 'bamboo') o.rd = rec.rod;
   return o;
@@ -7297,7 +7340,7 @@ function applyPeer(pp){
     p.fisher.holdFish(sf, sw, 6);
     ticker(`🐟 <b>${esc(peerName(p))}</b> 在炫耀 <span class="chip r-${sf.rarity}">${sf.rarity}</span> <b>${esc(sf.name)}</b> ${fmtKg(sw)}`);
   }
-  if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; p.fisher.say(EMOTES[pr.e.k], 'emote', 3); }
+  if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; const D = EMOTE_DEF[pr.e.k]; p.fisher.say(D && D.bub || EMOTES[pr.e.k], 'emote', 3); startEmote(p.fisher, pr.e.k); }
 }
 function updatePeers(dt, t){
   for (const p of peers.values()){

@@ -15,6 +15,8 @@ export const CLIPS = {
   'Jump_Start': 'jump_start', 'Jump_Idle': 'jump_air', 'Jump_Land': 'jump_land',
   'Fishing_Cast': 'fish_cast', 'Fishing_Idle': 'fish_idle', 'Fishing_Reeling': 'fish_reel', 'Fishing_Struggling': 'fish_fight', 'Fishing_Catch': 'fish_catch', 'Fishing_Bite': 'fish_bite',
   'Sit_Chair_Idle': 'sit', 'Sit_Floor_Idle': 'sit_floor', 'Lie_Idle': 'lie', 'Waving': 'wave', 'Cheering': 'cheer', 'Holding_A': 'hold', 'PickUp': 'pickup', 'Interact': 'interact', 'Throw': 'throw',
+  // 表情動作（2026-11-05）
+  'Push_Ups': 'pushups', 'Sit_Ups': 'situps', 'Hit_A': 'surprised', 'Death_A': 'playdead', 'Lie_Down': 'lie_down', 'Sit_Floor_Down': 'sit_floor_down',
 };
 const FILES = ['Rig_Medium_General.glb', 'Rig_Medium_MovementBasic.glb', 'Rig_Medium_Tools.glb', 'Rig_Medium_Simulation.glb'];
 
@@ -132,6 +134,7 @@ export async function buildCharacter(base){
         t.values[i] = r.x; t.values[i + 1] = r.y; t.values[i + 2] = r.z; t.values[i + 3] = r.w; } }
     clips.push(cc); } }
   clips.push(swimClip(boneList, 'swim', false), swimClip(boneList, 'dive', true));
+  clips.push(...emoteClips(boneList));
   return { holder, mesh, clips, boneList };
 }
 
@@ -164,6 +167,39 @@ function swimClip(bones, name, dive){
   q('head', k => [dive ? -0.75 : -1.0, 0, 0]);
   q('chest', k => [0.05 * Math.sin(k * 2), 0, 0]);
   return new THREE.AnimationClip(name, T, tracks);
+}
+
+// 自己做的表情動作：跳舞、鞠躬、拍手、生氣跺腳、大笑（跟游泳一樣用「站著時的方向」寫旋轉：繞 x＝往前後、繞 z＝往兩邊抬）
+function poseClip(bones, name, T, N, def){
+  const times = Array.from({ length: N }, (_, i) => i / (N - 1) * T), tracks = [], byName = Object.fromEntries(bones.map(b => [b.name, b]));
+  for (const [bn, fn] of Object.entries(def.rot || {})){ const b = byName[bn]; if (!b) continue; const restL = b.quaternion.clone(), W = b.getWorldQuaternion(new THREE.Quaternion()), Wi = W.clone().invert(), vals = [];
+    for (const t of times){ const k = t / T, e = fn(k), D = new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0], e[1], e[2], 'XYZ')); const r = restL.clone().multiply(Wi.clone().multiply(D).multiply(W)); vals.push(r.x, r.y, r.z, r.w); }
+    tracks.push(new THREE.QuaternionKeyframeTrack(bn + '.quaternion', times, vals)); }
+  if (def.hipsY && byName.hips){ const h = byName.hips, vals = []; for (const t of times){ const k = t / T; vals.push(h.position.x, h.position.y + def.hipsY(k), h.position.z); } tracks.push(new THREE.VectorKeyframeTrack('hips.position', times, vals)); }
+  return new THREE.AnimationClip(name, T, tracks);
+}
+function emoteClips(bones){
+  const S = Math.sin, P2 = Math.PI * 2, out = [], arms = (fnL, fnR, low) => { const r = {}; r.upperarml = fnL; r.upperarmr = fnR; if (low){ r.lowerarml = low[0]; r.lowerarmr = low[1]; } return r; };
+  // 跳舞：左右搖、手輪流往上舉、膝蓋一彈一彈
+  out.push(poseClip(bones, 'dance', 1.2, 25, { hipsY: k => -0.035 * Math.abs(S(k * P2 * 2)),
+    rot: Object.assign(arms(k => [-0.3, 0, 1.0 + 0.9 * Math.max(0, S(k * P2))], k => [-0.3, 0, -(1.0 + 0.9 * Math.max(0, -S(k * P2)))], [k => [0, 0, 0.6 + 0.4 * S(k * P2)], k => [0, 0, -(0.6 - 0.4 * S(k * P2))]]),
+      { hips: k => [0, 0.3 * S(k * P2), 0.06 * S(k * P2)], chest: k => [0, -0.15 * S(k * P2), -0.08 * S(k * P2)], head: k => [0, 0, 0.18 * S(k * P2)],
+        upperlegl: k => [-0.25 * Math.max(0, S(k * P2 * 2)), 0, 0.05], upperlegr: k => [-0.25 * Math.max(0, -S(k * P2 * 2)), 0, -0.05], lowerlegl: k => [0.4 * Math.max(0, S(k * P2 * 2)), 0, 0], lowerlegr: k => [0.4 * Math.max(0, -S(k * P2 * 2)), 0, 0] }) }));
+  // 鞠躬：彎下去、停一下、起來
+  const bw = k => k < 0.3 ? Math.sin(k / 0.3 * Math.PI / 2) : k < 0.65 ? 1 : Math.cos((k - 0.65) / 0.35 * Math.PI / 2);
+  out.push(poseClip(bones, 'bow', 2.0, 21, { rot: { spine: k => [0.45 * bw(k), 0, 0], chest: k => [0.45 * bw(k), 0, 0], head: k => [0.25 * bw(k), 0, 0], upperarml: k => [0, 0.15 * bw(k), -1.2], upperarmr: k => [0, 0.15 * bw(k), 1.2] } }));
+  // 拍手：手在胸前，一開一合
+  const op = k => 0.5 + 0.5 * Math.cos(k * P2);   /* 1＝張開、0＝合起來 */
+  out.push(poseClip(bones, 'clap', 0.6, 13, { rot: { upperarml: k => [0, 1.7 - 0.45 * op(k), -0.45], upperarmr: k => [0, 1.7 - 0.45 * op(k), 0.45],
+    lowerarml: k => [0, 0.35, 0], lowerarmr: k => [0, 0.35, 0], head: k => [-0.1, 0, 0] } }));
+  // 生氣跺腳：手插腰、一腳一腳用力踩
+  out.push(poseClip(bones, 'angry', 0.9, 19, { hipsY: k => -0.02 * Math.abs(S(k * P2)),
+    rot: { upperarml: k => [0, -0.25, -1.05], upperarmr: k => [0, -0.25, 1.05], lowerarml: k => [0, 0.7 + 0.15 * S(k * P2 * 2), 0], lowerarmr: k => [0, 0.7 - 0.15 * S(k * P2 * 2), 0], head: k => [0.2, 0, 0.08 * S(k * P2 * 2)], chest: k => [0.12, 0, 0.05 * S(k * P2)],
+      upperlegl: k => [-0.55 * Math.max(0, S(k * P2)), 0, 0], lowerlegl: k => [0.7 * Math.max(0, S(k * P2)), 0, 0], upperlegr: k => [-0.55 * Math.max(0, -S(k * P2)), 0, 0], lowerlegr: k => [0.7 * Math.max(0, -S(k * P2)), 0, 0] } }));
+  // 大笑：身體往後仰、抖肩膀、抱肚子
+  out.push(poseClip(bones, 'laugh', 0.5, 11, { rot: { chest: k => [-0.22 + 0.06 * S(k * P2), 0, 0], head: k => [-0.3 + 0.08 * S(k * P2), 0, 0], spine: k => [-0.08, 0, 0],
+    upperarml: k => [0, 0.45, -1.0 + 0.06 * S(k * P2)], upperarmr: k => [0, 0.45, 1.0 - 0.06 * S(k * P2)], lowerarml: k => [0, 1.5, 0], lowerarmr: k => [0, 1.5, 0] } }));
+  return out;
 }
 
 export async function exportGLB(holder, clips){

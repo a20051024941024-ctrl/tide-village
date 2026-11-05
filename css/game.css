@@ -840,3 +840,41 @@ body.ui2 #brand{border-radius:999px 22px 22px 999px}
 @media (orientation:landscape) and (max-height:540px){ #btools{gap:5px;margin-top:3px} #brand .btool,body.ui2 #brand .btool{width:26px;height:26px} #brand .btool svg,body.ui2 #brand .btool svg{width:14px;height:14px} #btools #coins{font-size:12px} #btools #coins .coin-ic{width:17px;height:17px} }
 /* 金幣圖示（取代 🪙） */
 .coin-ic{width:1.15em;height:1.15em;vertical-align:-0.22em;display:inline-block;object-fit:contain;user-select:none;-webkit-user-drag:none;pointer-events:none}
+/* 左上角第四行：好友代碼、任務、成就、玩法、登入 */
+#bquick{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+#bquick .bq{border:0;border-radius:999px;padding:3px 9px;font:inherit;font-size:12px;font-weight:800;background:#eaf5fb;color:#18334a;box-shadow:inset 0 0 0 1.5px #c9e2ee;cursor:pointer;white-space:nowrap;line-height:1.35}
+#bquick .bq:active{transform:translateY(1px)}
+#bquick #bqId{font-family:ui-monospace,monospace;letter-spacing:.5px;color:#2a6f9a}
+#bquick #bqId.off{opacity:.55}
+#bquick #bqLogin.hot{background:linear-gradient(180deg,#fff4cf,#ffe39a);box-shadow:inset 0 0 0 1.5px #f0b53a;color:#7a4a00}
+@media (orientation:landscape) and (max-height:540px){ #bquick{gap:3px;margin-top:3px} #bquick .bq{font-size:11px;padding:2px 7px} }
+/* 表情動作選單 */
+#emotePanel{position:fixed;right:calc(var(--gr, 16px) + 4px);bottom:calc(var(--gb, 16px) + 150px);width:min(340px,calc(100vw - 32px));padding:10px 12px;border-radius:18px;z-index:12;pointer-events:auto}
+#emotePanel[hidden]{display:none}
+#emotePanel .ep-t{font-weight:900;font-size:14px;margin-bottom:6px}
+#emotePanel .ep-g{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+#emotePanel .ep-b{display:flex;flex-direction:column;align-items:center;gap:1px;border:0;border-radius:12px;padding:6px 2px;background:#eef7fb;cursor:pointer;font:inherit}
+#emotePanel .ep-b:active{transform:translateY(1px);background:#dff0f8}
+#emotePanel .ep-i{font-size:22px;line-height:1.1}
+#emotePanel .ep-n{font-size:11px;font-weight:800;color:#18334a;white-space:nowrap}
+#emotePanel .ep-s{font-size:11px;color:#5a6f80;margin-top:6px;line-height:1.4}
+@media (orientation:landscape) and (max-height:540px){ #emotePanel{bottom:calc(var(--gb, 12px) + 112px);width:min(320px,calc(100vw - 32px));padding:8px 10px} #emotePanel .ep-i{font-size:19px} #emotePanel .ep-b{padding:4px 2px} }
+/* 左上角精簡：平常只有頭像、名字、金幣、☰；展開才看到其他的 */
+#brand #bmore{display:none}
+#brand.open #bmore{display:block}
+#brand.open{border-radius:26px 22px 22px 26px}
+#bmore #online{margin-top:5px}
+#bmore .bm-tools{display:flex;gap:6px;margin-top:6px}
+#btools #bMoreBtn{font-size:15px;font-weight:900;line-height:1}
+#brand.open #bMoreBtn{background:#18334a;color:#fff;box-shadow:none}
+#btools #tnyPill{margin:0;font-size:12px}
+body.ui2 #brand .mark{width:46px;height:46px}
+@media (orientation:landscape) and (max-height:540px){ body.ui2 #brand .mark{width:36px;height:36px} body.ui2 #brand{padding:4px 10px 4px 4px} #btools #tnyPill{font-size:11px} }
+#emotePanel{width:auto;max-width:calc(100vw - 32px)}
+#emotePanel .ep-g{grid-template-columns:repeat(7,46px);gap:4px}
+#emotePanel .ep-b{padding:4px 0}
+#emotePanel .ep-i{font-size:19px}
+#emotePanel .ep-n{font-size:10.5px}
+#emotePanel .ep-t{font-size:13px;margin-bottom:4px}
+#emotePanel .ep-s{font-size:10.5px;margin-top:4px}
+@media (orientation:landscape) and (max-height:540px){ #emotePanel{bottom:auto;padding:6px 8px} #emotePanel .ep-g{grid-template-columns:repeat(7,44px)} #emotePanel .ep-i{font-size:17px} }
