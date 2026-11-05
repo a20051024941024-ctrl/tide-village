@@ -562,6 +562,7 @@ const MAP = {
     [[4, 4], [-10, 7], [-19, 6], [-24, 5.2]],            // 往瀑布潭
     [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
     [[4, 4], [3, 18], [1, 32], [0, 43.6]],               // 往跨海大橋（珊瑚礁群島）
+    [[2, -18], [5, -20.5], [12.5, -20.5], [20.5, -21], [22.5, -14], [16, -8]],   // v192：港口商店街（釣具店、海邊商店、阿福、魚市門口）
   ],
 };
 // 珊瑚礁群島（參考小琉球、澎湖）的位置，放在這裡是因為建地形、種樹的時候就要用到
@@ -615,7 +616,7 @@ function terrainColor(x, z, info, out){
   if (info.water){ const k = Math.min(1, -h / 1.4); out[0] = 0.85 - 0.42 * k; out[1] = 0.75 - 0.15 * k; out[2] = 0.54 + 0.02 * k; return out; }
   if (inSand(x, z)){ out[0] = 0.949; out[1] = 0.839; out[2] = 0.604; return out; }
   const pd = pathDist(x, z);
-  if (pd < 0.85){ const k = smooth01((0.85 - pd) / 0.45) * 0.75; out[0] = 0.5 + 0.41 * k; out[1] = 0.73 + 0.08 * k; out[2] = 0.42 + 0.18 * k; return out; }   // 小路（踩出來的步道）
+  if (pd < 1.7){ if (pd > 1.35){ out[0] = 0.62; out[1] = 0.6; out[2] = 0.54; return out; } const k = 0.5 + 0.5 * Math.sin(x * 3.1) * Math.sin(z * 3.3), q = (Math.floor(x * 1.2) + Math.floor(z * 1.2)) % 2 ? 0.03 : 0; out[0] = 0.86 - 0.04 * k - q; out[1] = 0.8 - 0.04 * k - q; out[2] = 0.68 - 0.03 * k - q; return out; }   // v192：路變寬，鋪石板、兩邊有路緣石
   const n = Math.sin(x * 0.21 + z * 0.17) * Math.sin(x * 0.09 - z * 0.23), k = 0.5 + 0.5 * n;
   const hk = Math.min(1, Math.max(0, h / 5));             // 山上的草偏黃綠
   out[0] = 0.467 + 0.09 * k + 0.12 * hk; out[1] = 0.722 + 0.05 * k + 0.02 * hk; out[2] = 0.416 + 0.03 * k + 0.04 * hk;
@@ -1169,7 +1170,7 @@ function castPoint(x, z, dx, dz, dist){
 
   // ---- 樹：南邊的森林、山丘，加上村子周圍零星幾棵 ----
   const nearThing = (x, z) => Math.hypot(x - PX, z - PZ) < 10 || Math.hypot(x - CX, z - CZ) < 4.5 || Math.hypot(x - AX, z - AZ) < 9 || Math.hypot(x - LX, z - LZ) < 4 || SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 4.5) || Math.hypot(x - HX, z - HZ) < 4 || BOAT_DOCKS.some(b => Math.hypot(x - b.x, z - b.z) < 4);
-  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 2.2 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
+  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
   const trees = [];
   const want = Quality.tier === 'low' ? 85 : Quality.tier === 'mid' ? 115 : 145;
   let guard = 0;
@@ -1191,7 +1192,7 @@ function castPoint(x, z, dx, dz, dist){
   const lampM = () => new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:1.2 });
   for (let i = 0; i < 6; i++){
     const a = i/6*Math.PI*2 + 0.3; const x = PX + Math.cos(a)*6.4, z = PZ + Math.sin(a)*6.4;
-    if (pathDist(x, z) < 1.2) continue;
+    if (pathDist(x, z) < 2.0) continue;
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 1.6, 6), mat(PALETTE.ink)); pole.position.set(x, 0.8, z); pole.castShadow = true;
     const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 8), lampM()); lamp.position.set(x, 1.68, z);
     scene.add(pole, lamp); lanterns.push(lamp); addCircleCol(x, z, 0.2);
@@ -1225,7 +1226,7 @@ function castPoint(x, z, dx, dz, dist){
   const dummy = new THREE.Object3D(); const col = new THREE.Color(); let n = 0; guard = 0;
   while (n < N && guard++ < 9000){
     const x = wrand(-48, 48), z = wrand(-48, 48);
-    if (!isLand(x, z) || Math.hypot(x - PX, z - PZ) < 7.4 || blocked(x, z, 0.3) || inSand(x, z) || islandEdge(x, z) < 3.6 || pathDist(x, z) < 1.2 || deckAt(x, z)) continue;
+    if (!isLand(x, z) || Math.hypot(x - PX, z - PZ) < 7.4 || blocked(x, z, 0.3) || inSand(x, z) || islandEdge(x, z) < 3.6 || pathDist(x, z) < 2.0 || deckAt(x, z)) continue;
     dummy.position.set(x, terrainH(x, z) + 0.14, z); dummy.rotation.set(wrand(-0.2,0.2), wrand(0,6), wrand(-0.2,0.2)); dummy.scale.setScalar(wrand(0.7,1.4)); dummy.updateMatrix();
     tufts.setMatrixAt(n, dummy.matrix); col.set(wr() < 0.08 ? (wr()<0.5 ? '#ffd36a' : '#f5a5d8') : (wr()<0.5 ? '#8fc46f' : '#a6d37d')); tufts.setColorAt(n, col); n++;
   }
@@ -1912,7 +1913,7 @@ function addFlora(){
   const dens = Quality.tier === 'low' ? 0.35 : Quality.tier === 'mid' ? 0.65 : 1;
   const dummy = new THREE.Object3D(), c = new THREE.Color();
   const avoid = (x, z) => SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 3.5) || LANDMARKS.some(l => Math.hypot(x - l.pos.x, z - l.pos.z) < 3);
-  const grassOK = (x, z, r) => isLand(x, z) && islandEdge(x, z) > 3.6 && !inSand(x, z) && Math.hypot(x - MAP.plaza[0], z - MAP.plaza[1]) > 8 && pathDist(x, z) > 1.3 && !blocked(x, z, r) && !deckAt(x, z) && !avoid(x, z);
+  const grassOK = (x, z, r) => isLand(x, z) && islandEdge(x, z) > 3.6 && !inSand(x, z) && Math.hypot(x - MAP.plaza[0], z - MAP.plaza[1]) > 8 && pathDist(x, z) > 2.0 && !blocked(x, z, r) && !deckAt(x, z) && !avoid(x, z);
   function scatter(count, test){ const out = []; let guard = 0; while (out.length < count && guard++ < count * 40){ const x = rand(-50, 50), z = rand(-50, 50); if (test(x, z)) out.push([x, z]); } return out; }
   function inst(geo, mat, pts, place, shadow){
     if (!pts.length) return null;
@@ -5831,6 +5832,13 @@ function renderSettings(body){
 // 位置是照地形自動找的（每次都一樣）：岸邊、前面是夠深的水、地面平、不擋路，彼此至少隔 16 公尺
 const NOOKS = [];
 function nookSpot(c){ const dx = Math.sin(c.face), dz = Math.cos(c.face); for (let d = 1.4; d <= 5; d += 0.4){ const px = c.x + dx * d, pz = c.z + dz * d; if (waterAt(px, pz) && waterAt(px + dx * 1.5, pz + dz * 1.5)){ const base = SPOT_BY_ID[waterSpotId(px, pz)]; if (!base) return null; return Object.assign({}, base, { pos: new THREE.Vector3(c.x, 0, c.z), dir: new THREE.Vector2(dx, dz), shore: true, legendBoost: 1 }); } } return null; }
+// v192：大路兩邊每隔一段放一盞路燈（晚上會亮）
+function buildStreetLamps(){ const pole = mat('#2f3b44', 0.5), done = [];
+  for (const P of MAP.paths) for (let i = 0; i < P.length - 1; i++){ const [ax, az] = P[i], [bx, bz] = P[i + 1], L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L, nz = (bx - ax) / L;
+    for (let t = 5; t < L; t += 11){ const side = (Math.floor(t / 11) + i) % 2 ? 1 : -1, x = ax + (bx - ax) * t / L + nx * 2.1 * side, z = az + (bz - az) * t / L + nz * 2.1 * side;
+      if (!isLand(x, z) || deckAt(x, z) || blocked(x, z, 0.6) || pathDist(x, z) < 1.8 || done.some(d => Math.hypot(d[0] - x, d[1] - z) < 7) || Math.hypot(x - MAP.plaza[0], z - MAP.plaza[1]) < 9) continue; done.push([x, z]);
+      const y = groundHeight(x, z), g = new THREE.Group(); g.position.set(x, y, z); scene.add(g); const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 2.6, 8), pole); p2.position.y = 1.3; g.add(p2); const arm = box([0.5, 0.05, 0.05], '#2f3b44', [-side * 0.22, 2.55, 0]); g.add(arm);
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.8 })); b.position.set(-side * 0.44, 2.45, 0); g.add(b); lanterns.push(b); g.rotation.y = Math.atan2(nx, nz) - Math.PI / 2; addCircleCol(x, z, 0.15); } } }
 function buildNooks(){
   const cand = [], rr = mulberry(20261105), far = (x, z, L, r) => L.every(p => Math.hypot(p[0] - x, p[1] - z) > r);
   const avoid = SPOTS.map(s => [s.pos.x, s.pos.z]).concat(LANDMARKS.map(l => [l.pos.x, l.pos.z]));
@@ -9990,7 +9998,7 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
   flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
 
 
-addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); } try { buildPetShop(); } catch(e){ console.warn('petshop', e); } try { buildNooks(); } catch(e){ console.warn('nooks', e); }
+addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); } try { buildPetShop(); } catch(e){ console.warn('petshop', e); } try { buildNooks(); } catch(e){ console.warn('nooks', e); } try { buildStreetLamps(); } catch(e){ console.warn('lamps', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 camera.position.set(4, 5, 18);
