@@ -5501,86 +5501,144 @@ function gyMesh(region){ const sp = SPOT_BY_ID[region], g = new THREE.Group(); c
   return g; }
 // ===== 🐾 寵物（080）：模型都是程式畫的；帶出門的跟著主人走，其他的待在主人的小島上 =====
 const PET_KINDS = {
-  cat:   { name:'貓',     icon:'🐱', price:300,  desc:'港邊的流浪貓，領養只收一點手續費。看到魚群會喵喵叫。' },
-  shiba: { name:'柴犬',   icon:'🐕', price:2000, desc:'笑咪咪的柴犬，走路屁股一扭一扭。' },
-  otter: { name:'水獺',   icon:'🦦', price:2500, desc:'很愛玩水的水獺，常常在旁邊翻滾。' },
-  gull:  { name:'海鷗',   icon:'🕊️', price:1200, desc:'在你頭上飛來飛去，停下來就站在旁邊。' },
-  crab:  { name:'寄居蟹', icon:'🐚', price:800,  desc:'背著貝殼橫著走，走得慢但很可愛。' },
+  cat:     { name:'貓',     icon:'🐱', price:300,  desc:'港邊的流浪貓，領養只收一點手續費。看到魚群會喵喵叫。' },
+  shiba:   { name:'柴犬',   icon:'🐕', price:2000, desc:'笑咪咪的柴犬，走路屁股一扭一扭。' },
+  otter:   { name:'水獺',   icon:'🦦', price:2500, desc:'很愛玩水的水獺，常常在旁邊翻滾。在溪邊釣魚偶爾也會撈到小水獺。' },
+  gull:    { name:'海鷗',   icon:'🕊️', price:1200, desc:'在你頭上飛來飛去，停下來就站在旁邊。' },
+  crab:    { name:'寄居蟹', icon:'🐚', price:800,  desc:'背著貝殼橫著走。海邊、紅樹林釣魚偶爾會撈到。' },
+  turtle:  { name:'小海龜', icon:'🐢', fish:true, desc:'只能在海邊、港口、珊瑚礁釣魚時偶爾撈到。慢慢爬，很療癒。' },
+  octopus: { name:'小章魚', icon:'🐙', fish:true, desc:'只能在海邊、港口、珊瑚礁釣魚時偶爾撈到。八隻腳一扭一扭地跟著你。' },
+  puffer:  { name:'河豚',   icon:'🐡', fish:true, desc:'只能在海邊、紅樹林釣魚時偶爾撈到。在你身邊飄著，嚇到會鼓起來。' },
 };
+// 花色（081，跟伺服器 _pet_vars 一樣；最後一個最少見）
+const PET_VARS = {
+  cat:     { a:['橘貓', '#e8a35a', '#fbf5ea'], b:['虎斑', '#a89a86', '#efe9dd'], c:['三花', '#fbf5ea', '#e8a35a'], d:['黑貓', '#2a2a30', '#2a2a30'], e:['白貓', '#f7f4ee', '#ffffff'], f:['賓士貓', '#26262c', '#fbf8f2'], g:['暹羅', '#efe3cf', '#6b4a35'] },
+  shiba:   { a:['赤柴', '#d9924a', '#fbf5ea'], b:['芝麻柴', '#b07a46', '#f2e6d4'], c:['黑柴', '#2f2a28', '#f2e6d4'], d:['白柴', '#f4ecdc', '#ffffff'] },
+  otter:   { a:['棕水獺', '#7a5236', '#c9a07a'], b:['淺棕', '#a07850', '#e2c8a4'], c:['白化', '#efe6da', '#ffffff'] },
+  gull:    { a:['銀鷗', '#f6f6f2', '#a9b4bc'], b:['黑頭鷗', '#f6f6f2', '#3a3f45'], c:['金色海鷗', '#ffe6a0', '#e8b84a'] },
+  crab:    { a:['粉紅殼', '#f2c7b8', '#e0553c'], b:['藍殼', '#9fd0f0', '#e0553c'], c:['螺旋白殼', '#f6efe2', '#d8443a'], d:['彩虹殼', '#b9a0ff', '#e0553c'] },
+  turtle:  { a:['綠蠵龜', '#5f9a5a', '#c9d88a'], b:['玳瑁', '#a8743a', '#e6c48a'], c:['金色海龜', '#e8c04a', '#fff0b0'] },
+  octopus: { a:['紅章魚', '#e0654a', '#ffc2b0'], b:['紫章魚', '#9a6ad0', '#e0c8ff'], c:['藍環章魚', '#f2d06a', '#2f7ae8'] },
+  puffer:  { a:['黃河豚', '#f2d06a', '#fff6d8'], b:['斑點河豚', '#c9b48a', '#fbf4e2'], c:['藍河豚', '#5fb6e3', '#e8f6ff'] },
+};
+function petVarName(k, v){ const V = PET_VARS[k] && PET_VARS[k][v]; return V ? V[0] : ''; }
+function petFull(k, v){ const vn = petVarName(k, v), kn = (PET_KINDS[k] || {}).name || ''; return vn && [...kn].some(ch => vn.includes(ch)) ? vn : vn + kn; }   /* 「橘貓」不要變成「橘貓貓」 */
+function petVarRare(k, v){ const keys = Object.keys(PET_VARS[k] || {}); return keys.length > 2 && v === keys[keys.length - 1]; }
 const Pets = { list:null, at:0, busy:false, atShop:false, feedFor:null, home:[], homeKey:'', meowAt:0, newName:'' };
+async function petLuckyTry(){ if (!Cloud.on || !Cloud.sb) return; let r = null; try { const { data } = await Cloud.sb.rpc('pet_lucky'); r = data; } catch(e){ return; } if (!r || !r.got) return;
+  const K = PET_KINDS[r.kind], vn = petFull(r.kind, r.var);
+  setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是你已經養了 3 隻，只好放牠回去了`, 2.6); return; }
+    SFX.catch(); flash(`${K.icon} 哇！順便撈到一隻${vn}${petVarRare(r.kind, r.var) ? '（很少見的花色！）' : ''}，牠決定跟你回家了`, 3); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); }
 function petMine(){ return Pets.list ? Pets.list.find(p => p.out) || null : null; }
 async function loadPets(force){ if (Pets.busy || !Cloud.on || !Cloud.sb) return; if (!force && Pets.at && Date.now() - Pets.at < 60000) return; Pets.busy = true; Pets.at = Date.now();
   try { const { data } = await Cloud.sb.rpc('pet_list'); if (Array.isArray(data)) Pets.list = data; } catch(e){} Pets.busy = false; Pets.homeKey = ''; pushPresence(true); if (!$('#sheet').hidden && curTab === 'pets') renderTab(); }
 async function petRpc(fn, args){ try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
 // ---- 模型 ----
-function petModel(kind, acc){
-  const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const M = (c, r) => mat(c, r == null ? 0.75 : r), ink = M('#1d1d24', 0.4), legs = [];
-  const S = (r, c, x, y, z, sx, sy, sz, par) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.scale.set(sx || 1, sy || sx || 1, sz || sx || 1); m.castShadow = true; (par || body).add(m); return m; };
-  const C = (rt, rb, h, c, x, y, z, par, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 8), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.castShadow = true; (par || body).add(m); return m; };
-  const leg = (x, z, h, c) => { const pv = new THREE.Group(); pv.position.set(x, h, z); body.add(pv); const m = C(0.035, 0.03, h, c, 0, -h / 2, 0, pv); legs.push(pv); return pv; };
-  const eyes = (head, y, z, sp) => { for (const sx of [-1, 1]) S(0.022, ink, sx * sp, y, z, 1, 1.2, 1, head); };
-  let head = null, tail = null, wings = null, neckY = 0.3, neckZ = 0.15, hatY = 0.5, hatZ = 0.2;
-  if (kind === 'cat' || kind === 'shiba'){ const dog = kind === 'shiba', c = dog ? '#d9924a' : '#e8a35a', w = '#fbf5ea';
-    S(0.16, c, 0, 0.2, 0, 1, 0.82, 1.45); S(0.1, w, 0, 0.17, 0.12, 1, 0.8, 0.9);
-    for (const [x, z] of [[-0.08, 0.13], [0.08, 0.13], [-0.08, -0.13], [0.08, -0.13]]) leg(x, z, 0.12, c);
-    head = new THREE.Group(); head.position.set(0, 0.32, 0.2); body.add(head); S(0.12, c, 0, 0, 0, 1.05, 0.95, 1, head); S(0.07, w, 0, -0.03, 0.08, 1, 0.75, 0.8, head); S(0.016, ink, 0, 0.005, 0.15, 1, 0.8, 1, head);
-    for (const sx of [-1, 1]){ const e = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.09, 4), M(c)); e.position.set(sx * 0.07, 0.11, -0.01); e.rotation.z = -sx * 0.25; head.add(e); const ei = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.05, 4), M('#f5b8b0')); ei.position.set(sx * 0.07, 0.11, 0.012); ei.rotation.z = -sx * 0.25; head.add(ei); }
-    eyes(head, 0.03, 0.105, 0.05);
-    if (!dog){ for (let k = 0; k < 3; k++) S(0.04, '#c97a3a', 0, 0.27, -0.06 + k * 0.08, 1.4, 0.3, 0.6); }   /* 虎斑 */
-    tail = new THREE.Group(); tail.position.set(0, 0.24, -0.22); body.add(tail);
-    if (dog){ const tr = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.025, 6, 12, Math.PI * 1.5), M(c)); tr.rotation.y = Math.PI / 2; tr.position.set(0, 0.05, 0); tail.add(tr); }
-    else { const t1 = C(0.022, 0.026, 0.22, c, 0, 0.1, -0.02, tail); t1.rotation.x = -0.5; }
-    neckY = 0.3; neckZ = 0.16; hatY = 0.46; hatZ = 0.19; }
-  else if (kind === 'otter'){ const c = '#7a5236', l = '#c9a07a';
-    S(0.12, c, 0, 0.14, 0, 1, 0.85, 2.1); S(0.08, l, 0, 0.13, 0.1, 0.9, 0.7, 1.5);
-    for (const [x, z] of [[-0.07, 0.15], [0.07, 0.15], [-0.07, -0.15], [0.07, -0.15]]) leg(x, z, 0.07, c);
-    head = new THREE.Group(); head.position.set(0, 0.2, 0.28); body.add(head); S(0.09, c, 0, 0, 0, 1.1, 0.95, 1, head); S(0.055, l, 0, -0.02, 0.06, 1, 0.75, 0.9, head); S(0.015, ink, 0, 0.0, 0.11, 1, 0.8, 1, head);
-    for (const sx of [-1, 1]) S(0.022, c, sx * 0.075, 0.06, -0.01, 1, 1, 0.6, head); eyes(head, 0.025, 0.075, 0.04);
-    tail = new THREE.Group(); tail.position.set(0, 0.12, -0.25); body.add(tail); const t1 = C(0.05, 0.02, 0.26, c, 0, 0, -0.12, tail); t1.rotation.x = Math.PI / 2;
-    neckY = 0.19; neckZ = 0.22; hatY = 0.3; hatZ = 0.28; }
-  else if (kind === 'gull'){ const w = '#f6f6f2', gy = '#a9b4bc';
-    S(0.11, w, 0, 0.18, 0, 1, 0.9, 1.6); S(0.08, gy, 0, 0.22, -0.12, 1, 0.5, 1.2);
-    for (const x of [-0.04, 0.04]) leg(x, 0, 0.1, '#f2a03d');
-    head = new THREE.Group(); head.position.set(0, 0.3, 0.13); body.add(head); S(0.075, w, 0, 0, 0, 1, 1, 1, head); const bk = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.09, 6), M('#f2c43d')); bk.rotation.x = Math.PI / 2; bk.position.set(0, -0.01, 0.1); head.add(bk); eyes(head, 0.02, 0.06, 0.04);
-    wings = []; for (const sx of [-1, 1]){ const wg = new THREE.Group(); wg.position.set(sx * 0.09, 0.22, 0); body.add(wg); const p = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.02, 0.14), M(gy)); p.position.set(sx * 0.13, 0, 0); wg.add(p); const tip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.021, 0.12), M('#2f353b')); tip.position.set(sx * 0.24, 0, -0.01); wg.add(tip); wings.push(wg); }
-    neckY = 0.25; neckZ = 0.11; hatY = 0.38; hatZ = 0.13; }
-  else { // 寄居蟹：粉紅貝殼＋紅色身體、兩隻鉗子
-    const sh = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.26, 10), M('#f2c7b8', 0.6)); sh.position.set(0, 0.17, -0.04); sh.rotation.x = -0.9; body.add(sh); S(0.1, '#f6d6c8', 0, 0.12, -0.05, 1, 0.9, 1.1);
-    for (let k = 0; k < 3; k++){ const r = new THREE.Mesh(new THREE.TorusGeometry(0.1 - k * 0.025, 0.012, 5, 14), M('#d99a88')); r.position.set(0, 0.15 + k * 0.04, -0.06 - k * 0.04); r.rotation.x = 0.7; body.add(r); }
-    S(0.06, '#e0553c', 0, 0.07, 0.08, 1.2, 0.7, 1);
-    for (const sx of [-1, 1]){ S(0.04, '#e0553c', sx * 0.08, 0.07, 0.13, 1, 0.8, 1.2); for (let k = 0; k < 2; k++) leg(sx * 0.07, 0.02 - k * 0.06, 0.06, '#c8442e'); }
-    head = new THREE.Group(); head.position.set(0, 0.1, 0.12); body.add(head); for (const sx of [-1, 1]){ C(0.006, 0.006, 0.07, '#c8442e', sx * 0.025, 0.04, 0, head); S(0.016, ink, sx * 0.025, 0.08, 0, 1, 1, 1, head); }
+function petModel(kind, acc, v){
+  const VV = (PET_VARS[kind] || {})[v] || Object.values(PET_VARS[kind] || {})[0] || ['', '#cccccc', '#ffffff'], c1 = VV[1], c2 = VV[2];
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const M = (c, r) => mat(c, r == null ? 0.72 : r), ink = M('#1d1d24', 0.35), shine = new THREE.MeshBasicMaterial({ color:'#ffffff' }), legs = [];
+  const S = (r, c, x, y, z, sx, sy, sz, par, seg) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, seg || 18, Math.max(8, (seg || 18) - 4)), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.scale.set(sx || 1, sy || sx || 1, sz || sx || 1); m.castShadow = true; (par || body).add(m); return m; };
+  const C = (rt, rb, h, c, x, y, z, par, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 10), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.castShadow = true; (par || body).add(m); return m; };
+  const leg = (x, z, h, c, paw) => { const pv = new THREE.Group(); pv.position.set(x, h, z); body.add(pv); C(0.032, 0.028, h, c, 0, -h / 2, 0, pv); if (paw) S(0.034, paw, 0, -h + 0.012, 0.012, 1, 0.6, 1.2, pv, 10); legs.push(pv); return pv; };
+  const eyes = (head, y, z, sp, big) => { for (const sx of [-1, 1]){ const e = S(big || 0.026, ink, sx * sp, y, z, 1, 1.15, 0.8, head, 12); S((big || 0.026) * 0.35, shine, sx * sp + 0.008, y + 0.01, z + (big || 0.026) * 0.7, 1, 1, 1, head, 8); } };
+  let head = null, tail = null, wings = null, neckY = 0.3, neckZ = 0.15, hatY = 0.5, hatZ = 0.2, arms = null;
+  if (kind === 'cat' || kind === 'shiba'){ const dog = kind === 'shiba', belly = c2, earIn = '#f5b8b0';
+    // 身體：前胸、後臀兩顆合在一起，比較像動物的身形
+    S(0.13, c1, 0, 0.22, 0.07, 1, 0.92, 1.05); S(0.135, c1, 0, 0.21, -0.08, 1.02, 0.92, 1.1); S(0.095, belly, 0, 0.17, 0.12, 0.95, 0.85, 0.8);
+    if (v === 'c' && !dog){ S(0.07, '#2a2a30', 0.06, 0.29, -0.06, 1, 0.5, 1.2); S(0.06, '#e8a35a', -0.07, 0.28, 0.06, 1, 0.5, 1.1); }   /* 三花 */
+    if (v === 'b' && !dog){ for (let k = 0; k < 4; k++) S(0.045, '#7a6a58', 0, 0.3, -0.12 + k * 0.07, 1.5, 0.28, 0.45); }   /* 虎斑 */
+    if (v === 'f' && !dog) S(0.08, '#fbf8f2', 0, 0.2, 0.14, 0.9, 1, 0.6);   /* 賓士貓的白胸口 */
+    for (const [x, z] of [[-0.075, 0.12], [0.075, 0.12], [-0.075, -0.13], [0.075, -0.13]]) leg(x, z, 0.13, v === 'g' && !dog ? '#6b4a35' : c1, v === 'f' || v === 'g' ? '#fbf8f2' : belly);
+    head = new THREE.Group(); head.position.set(0, 0.35, 0.2); body.add(head);
+    S(0.12, c1, 0, 0, 0, 1.1, 0.98, 1, head, 22);
+    for (const sx of [-1, 1]) S(0.045, belly, sx * 0.07, -0.04, 0.07, 1.1, 0.8, 0.9, head, 12);   /* 臉頰的毛 */
+    S(0.05, belly, 0, -0.035, 0.095, dog ? 1.1 : 0.9, 0.75, dog ? 1.2 : 0.8, head, 14);   /* 嘴巴 */
+    S(0.017, dog ? ink : M('#e88a8a'), 0, -0.005, dog ? 0.155 : 0.137, 1.2, 0.8, 1, head, 10);   /* 鼻子 */
+    if (v === 'g' && !dog) S(0.06, '#6b4a35', 0, -0.02, 0.09, 1.1, 0.9, 0.6, head, 12);   /* 暹羅的臉 */
+    for (const sx of [-1, 1]){ const e = new THREE.Mesh(new THREE.ConeGeometry(dog ? 0.045 : 0.048, dog ? 0.08 : 0.09, 4), M(v === 'g' && !dog ? '#6b4a35' : c1)); e.position.set(sx * 0.072, 0.105, -0.01); e.rotation.set(dog ? 0.15 : 0, Math.PI / 4, -sx * 0.22); e.castShadow = true; head.add(e);
+      const ei = new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.05, 4), M(earIn)); ei.position.set(sx * 0.072, 0.1, 0.012); ei.rotation.set(dog ? 0.15 : 0, Math.PI / 4, -sx * 0.22); head.add(ei); }
+    eyes(head, 0.025, 0.1, 0.048, 0.024);
+    if (!dog) for (const sx of [-1, 1]) for (let k = 0; k < 2; k++){ const wsk = C(0.002, 0.002, 0.09, '#f4f4f0', sx * 0.08, -0.03 + k * 0.015, 0.11, head, 4); wsk.rotation.z = Math.PI / 2 + sx * (0.12 - k * 0.2); }   /* 鬍鬚 */
+    tail = new THREE.Group(); tail.position.set(0, 0.26, -0.22); body.add(tail);
+    if (dog){ const tr = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.03, 8, 14, Math.PI * 1.6), M(c1)); tr.rotation.y = Math.PI / 2; tr.position.set(0, 0.06, 0); tail.add(tr); S(0.03, belly, 0, 0.11, 0.02, 1, 1, 1, tail, 10); }
+    else { for (let k = 0; k < 4; k++){ const sg = S(0.026 - k * 0.002, v === 'g' ? '#6b4a35' : k === 3 && v === 'b' ? '#7a6a58' : c1, 0, 0.02 + k * 0.06, -0.02 - k * 0.025, 1, 1.6, 1, tail, 10); } }
+    neckY = 0.29; neckZ = 0.15; hatY = 0.48; hatZ = 0.19; }
+  else if (kind === 'otter'){
+    S(0.11, c1, 0, 0.15, 0.08, 1, 0.9, 1.3); S(0.115, c1, 0, 0.14, -0.09, 1, 0.88, 1.35); S(0.08, c2, 0, 0.13, 0.08, 0.9, 0.75, 1.3);
+    for (const [x, z] of [[-0.07, 0.14], [0.07, 0.14], [-0.07, -0.15], [0.07, -0.15]]) leg(x, z, 0.07, c1, '#3a2a20');
+    head = new THREE.Group(); head.position.set(0, 0.22, 0.25); body.add(head); S(0.09, c1, 0, 0, 0, 1.12, 0.95, 1, head, 20); S(0.06, c2, 0, -0.025, 0.055, 1.15, 0.8, 0.9, head); S(0.016, ink, 0, -0.005, 0.11, 1.3, 0.8, 1, head, 10);
+    for (const sx of [-1, 1]) S(0.022, c1, sx * 0.075, 0.055, -0.01, 1, 1, 0.6, head, 10); eyes(head, 0.025, 0.075, 0.042, 0.02);
+    for (const sx of [-1, 1]) for (let k = 0; k < 2; k++){ const wsk = C(0.002, 0.002, 0.07, '#f4f4f0', sx * 0.06, -0.025 + k * 0.012, 0.08, head, 4); wsk.rotation.z = Math.PI / 2 + sx * (0.1 - k * 0.2); }
+    tail = new THREE.Group(); tail.position.set(0, 0.12, -0.24); body.add(tail); const t1 = C(0.05, 0.015, 0.28, c1, 0, 0, -0.13, tail, 12); t1.rotation.x = Math.PI / 2;
+    neckY = 0.2; neckZ = 0.2; hatY = 0.31; hatZ = 0.26; }
+  else if (kind === 'gull'){ const wingC = v === 'c' ? c2 : '#a9b4bc', headC = v === 'b' ? c2 : c1;
+    S(0.1, c1, 0, 0.19, 0, 1, 0.92, 1.55, null, 20); S(0.07, wingC, 0, 0.23, -0.12, 1.1, 0.45, 1.2); const tl = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 6), M(wingC)); tl.rotation.x = -Math.PI / 2; tl.position.set(0, 0.2, -0.2); body.add(tl);
+    for (const x of [-0.04, 0.04]) leg(x, 0, 0.1, '#f2a03d', '#f2a03d');
+    head = new THREE.Group(); head.position.set(0, 0.31, 0.13); body.add(head); S(0.072, headC, 0, 0, 0, 1, 1, 1.05, head, 18); const bk = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.09, 8), M('#f2c43d', 0.5)); bk.rotation.x = Math.PI / 2; bk.position.set(0, -0.01, 0.1); head.add(bk); S(0.008, M('#e0553c'), 0, -0.022, 0.115, 1, 1, 1, head, 6); eyes(head, 0.02, 0.055, 0.04, 0.016);
+    wings = []; for (const sx of [-1, 1]){ const wg = new THREE.Group(); wg.position.set(sx * 0.085, 0.23, 0); body.add(wg); const p = S(0.13, wingC, sx * 0.12, 0, 0, 1, 0.12, 0.55, wg, 14); const tip = S(0.06, '#2f353b', sx * 0.235, 0, -0.01, 1, 0.12, 0.5, wg, 10); wings.push(wg); }
+    neckY = 0.26; neckZ = 0.1; hatY = 0.39; hatZ = 0.13; }
+  else if (kind === 'crab'){ const shell = c1, red = c2;
+    const sh = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.26, 16), M(shell, 0.45)); sh.position.set(0, 0.17, -0.05); sh.rotation.x = -0.95; sh.castShadow = true; body.add(sh); S(0.1, shell, 0, 0.12, -0.04, 1, 0.92, 1.12, null, 18);
+    for (let k = 0; k < 4; k++){ const r = new THREE.Mesh(new THREE.TorusGeometry(0.1 - k * 0.022, 0.011, 6, 18), M(v === 'd' ? ['#ff8fa8', '#ffd36a', '#8fe3c0', '#8ccaf7'][k] : shade(shell, -0.15), 0.5)); r.position.set(0, 0.14 + k * 0.035, -0.06 - k * 0.038); r.rotation.x = 0.75; body.add(r); }
+    S(0.058, red, 0, 0.07, 0.08, 1.2, 0.72, 1, null, 14);
+    for (const sx of [-1, 1]){ const cl = new THREE.Group(); cl.position.set(sx * 0.07, 0.07, 0.12); body.add(cl); S(0.035, red, 0, 0, 0.01, 1, 0.8, 1.2, cl, 12); const p1 = S(0.025, red, sx * 0.005, 0.02, 0.05, 0.8, 0.6, 1.3, cl, 10); for (let k = 0; k < 2; k++) leg(sx * 0.07, 0.02 - k * 0.06, 0.06, shade(red, -0.15)); }
+    head = new THREE.Group(); head.position.set(0, 0.1, 0.12); body.add(head); for (const sx of [-1, 1]){ C(0.006, 0.006, 0.07, red, sx * 0.025, 0.04, 0, head, 6); S(0.017, ink, sx * 0.025, 0.08, 0, 1, 1, 1, head, 10); S(0.006, shine, sx * 0.025 + 0.005, 0.087, 0.012, 1, 1, 1, head, 6); }
     neckY = 0.08; neckZ = 0.08; hatY = 0.33; hatZ = -0.1; }
-  if (acc >= 1 && kind !== 'crab'){ const col = new THREE.Mesh(new THREE.TorusGeometry(kind === 'gull' ? 0.055 : 0.075, 0.014, 6, 14), M('#e8473a', 0.5)); col.rotation.x = Math.PI / 2; col.position.set(0, neckY, neckZ); body.add(col); const tag = S(0.018, M('#ffd36a', 0.3), 0, neckY - 0.03, neckZ + 0.06); }
-  if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, hatY, hatZ); body.add(hat); const brim = C(0.07, 0.07, 0.012, '#f2d48a', 0, 0, 0, hat, 14); const top = C(0.04, 0.045, 0.05, '#f2d48a', 0, 0.03, 0, hat, 12); C(0.046, 0.046, 0.012, '#e8473a', 0, 0.012, 0, hat, 12); }
-  g.userData = { body, head, tail, wings, legs, kind };
+  else if (kind === 'turtle'){ const shellC = c1, skin = c2;
+    const shell = S(0.16, shellC, 0, 0.12, 0, 1.15, 0.55, 1.3, null, 22); for (let k = 0; k < 5; k++){ const a = k / 5 * Math.PI * 2; const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.02, 6), M(shade(shellC, -0.18))); pl.position.set(Math.cos(a) * 0.09, 0.19, Math.sin(a) * 0.1); pl.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45); body.add(pl); }
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.02, 6), M(shade(shellC, -0.18))); top.position.set(0, 0.205, 0); body.add(top);
+    S(0.15, skin, 0, 0.08, 0, 1.12, 0.25, 1.25, null, 16);
+    for (const [x, z] of [[-0.14, 0.12], [0.14, 0.12], [-0.12, -0.13], [0.12, -0.13]]){ const f = S(0.05, skin, x, 0.07, z, 1.4, 0.4, 0.8, null, 12); legs.push(f); }
+    head = new THREE.Group(); head.position.set(0, 0.11, 0.23); body.add(head); S(0.06, skin, 0, 0, 0, 1, 0.9, 1.15, head, 16); eyes(head, 0.02, 0.05, 0.035, 0.016);
+    tail = new THREE.Group(); tail.position.set(0, 0.08, -0.2); body.add(tail); const tt = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.07, 8), M(skin)); tt.rotation.x = -Math.PI / 2; tail.add(tt);
+    neckY = 0.11; neckZ = 0.2; hatY = 0.24; hatZ = 0.04; }
+  else if (kind === 'octopus'){ const sk = c1, sp = c2;
+    S(0.12, sk, 0, 0.26, -0.02, 1, 1.15, 1.05, null, 22); if (v === 'c') for (let k = 0; k < 8; k++){ const a = k * 0.8; const r = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.006, 5, 10), M(sp, 0.3)); r.position.set(Math.cos(a) * 0.1, 0.28 + Math.sin(k) * 0.05, Math.sin(a) * 0.1 - 0.02); r.lookAt(0, 0.28, -0.02); body.add(r); }
+    head = new THREE.Group(); head.position.set(0, 0.2, 0.08); body.add(head); eyes(head, 0.02, 0.025, 0.045, 0.024);
+    arms = []; for (let k = 0; k < 8; k++){ const a = k / 8 * Math.PI * 2, arm = new THREE.Group(); arm.position.set(Math.cos(a) * 0.07, 0.15, Math.sin(a) * 0.07); arm.rotation.y = -a; body.add(arm);
+      for (let q = 0; q < 4; q++) S(0.028 - q * 0.005, sk, 0.04 + q * 0.04, -0.03 - q * 0.025, 0, 1.2, 1, 1, arm, 10); arms.push(arm); }
+    neckY = 0.17; neckZ = 0.09; hatY = 0.42; hatZ = -0.02; }
+  else { // 河豚
+    const bd = S(0.13, c1, 0, 0.3, 0, 1.05, 0.95, 1.1, null, 22); S(0.1, c2, 0, 0.26, 0.03, 1, 0.75, 1, null, 16);
+    if (v === 'b') for (let k = 0; k < 10; k++) S(0.014, '#6b5a3a', Math.cos(k * 2.4) * 0.09, 0.33 + Math.sin(k * 1.7) * 0.06, Math.sin(k * 2.4) * 0.08, 1, 1, 0.4, null, 6);
+    for (let k = 0; k < 14; k++){ const a = k / 14 * Math.PI * 2, sp = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.04, 4), M(shade(c1, -0.2))); sp.position.set(Math.cos(a) * 0.13, 0.32 + Math.sin(k * 1.3) * 0.06, Math.sin(a) * 0.13); sp.lookAt(0, 0.3, 0); sp.rotateX(-Math.PI / 2); body.add(sp); }
+    head = new THREE.Group(); head.position.set(0, 0.32, 0.1); body.add(head); eyes(head, 0.02, 0.03, 0.06, 0.026); S(0.015, M('#e88a6a'), 0, -0.03, 0.04, 1.2, 0.8, 0.8, head, 8);
+    tail = new THREE.Group(); tail.position.set(0, 0.3, -0.14); body.add(tail); const tf = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.08, 4), M(c1)); tf.rotation.x = Math.PI / 2; tf.scale.set(1, 1, 0.3); tail.add(tf);
+    wings = []; for (const sx of [-1, 1]){ const fn = new THREE.Group(); fn.position.set(sx * 0.12, 0.3, 0.02); body.add(fn); S(0.03, shade(c1, 0.1), sx * 0.02, 0, 0, 1.2, 0.3, 0.8, fn, 8); wings.push(fn); }
+    neckY = 0.22; neckZ = 0.1; hatY = 0.44; hatZ = 0.0; }
+  if (acc >= 1 && !['crab', 'turtle', 'octopus', 'puffer'].includes(kind)){ const col = new THREE.Mesh(new THREE.TorusGeometry(kind === 'gull' ? 0.055 : 0.075, 0.014, 8, 16), M('#e8473a', 0.5)); col.rotation.x = Math.PI / 2; col.position.set(0, neckY, neckZ); body.add(col); S(0.018, M('#ffd36a', 0.3), 0, neckY - 0.03, neckZ + 0.07, 1, 1, 1, null, 8); }
+  if (acc >= 1 && ['crab', 'turtle', 'octopus', 'puffer'].includes(kind)){ const bw = new THREE.Group(); bw.position.set(0.06, hatY - 0.06, hatZ); body.add(bw); for (const sx of [-1, 1]) S(0.025, M('#ff7aa8', 0.5), sx * 0.025, 0, 0, 1, 0.7, 0.5, bw, 8); S(0.012, M('#ff7aa8', 0.5), 0, 0, 0, 1, 1, 1, bw, 6); }   /* 不會戴項圈的就戴蝴蝶結 */
+  if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, hatY, hatZ); body.add(hat); C(0.07, 0.07, 0.012, '#f2d48a', 0, 0, 0, hat, 16); C(0.04, 0.045, 0.05, '#f2d48a', 0, 0.03, 0, hat, 14); C(0.046, 0.046, 0.012, '#e8473a', 0, 0.012, 0, hat, 14); }
+  g.userData = { body, head, tail, wings, legs, arms, kind };
   return g;
 }
 function petLabel(name){ const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = 'rgba(255,255,255,0.88)'; const w = Math.min(244, 30 + c.measureText ? 40 + name.length * 30 : 200); c.beginPath(); c.roundRect ? c.roundRect((256 - w) / 2, 8, w, 46, 22) : c.rect((256 - w) / 2, 8, w, 46); c.fill(); c.fillStyle = '#18334a'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 128, 32);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest:false, transparent:true })); sp.scale.set(1.1, 0.28, 1); sp.renderOrder = 5; return sp; }
-function petMake(w){ const m = petModel(w.kind, w.acc || 0), lb = petLabel(w.name || PET_KINDS[w.kind].name); lb.position.y = w.kind === 'gull' ? 0.6 : 0.62; m.add(lb); scene.add(m); return { kind: w.kind, name: w.name, acc: w.acc || 0, m, pos: new THREE.Vector3(), vel: 0, rot: 0, ph: Math.random() * 6, fly: 0, key: w.kind + '|' + w.name + '|' + (w.acc || 0), wander: null }; }
+function petMake(w){ const m = petModel(w.kind, w.acc || 0, w.var), lb = petLabel(w.name || PET_KINDS[w.kind].name); lb.position.y = w.kind === 'gull' ? 0.6 : 0.62; m.add(lb); scene.add(m); return { kind: w.kind, name: w.name, acc: w.acc || 0, m, pos: new THREE.Vector3(), vel: 0, rot: 0, ph: Math.random() * 6, fly: 0, key: w.kind + '|' + (w.var || '') + '|' + w.name + '|' + (w.acc || 0), wander: null }; }
 function petFree(pt){ if (pt && pt.m){ if (pt.m.parent) pt.m.parent.remove(pt.m); pt.m.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); }); } }
 // 跟著主人：走在主人斜後方；海鷗在頭上飛；寄居蟹橫著走
 function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   const dx = tx - pt.pos.x, dz = tz - pt.pos.z, d = Math.hypot(dx, dz), U = pt.m.userData;
   if (d > 14){ pt.pos.x = tx; pt.pos.z = tz; }
-  const sp = d > 0.12 ? Math.min(7, d * 2.6 + (moving ? 1.2 : 0)) * (pt.kind === 'crab' ? 0.75 : 1) : 0; pt.vel += (sp - pt.vel) * Math.min(1, dt * 6);
+  const sp = d > 0.12 ? Math.min(7, d * 2.6 + (moving ? 1.2 : 0)) * (pt.kind === 'crab' || pt.kind === 'turtle' ? 0.75 : 1) : 0; pt.vel += (sp - pt.vel) * Math.min(1, dt * 6);
   if (d > 0.05){ const k = Math.min(d, pt.vel * dt) / d; pt.pos.x += dx * k; pt.pos.z += dz * k; }
   const want = pt.vel > 0.25 ? Math.atan2(dx, dz) + (pt.kind === 'crab' ? Math.PI / 2 : 0) : faceTo; pt.rot = lerpAngle(pt.rot, want, Math.min(1, dt * 6));
   pt.ph += dt * (4 + pt.vel * 3); const mv = clamp(pt.vel / 2, 0, 1);
   let y = ty;
-  if (pt.kind === 'gull'){ pt.fly += ((moving || pt.vel > 0.6 ? 1 : 0) - pt.fly) * Math.min(1, dt * 2); y = ty + pt.fly * (1.7 + Math.sin(t * 1.6 + pt.ph * 0.1) * 0.15);
+  if (pt.kind === 'puffer'){ y = ty + 0.55 + Math.sin(t * 1.8 + pt.ph * 0.05) * 0.08; if (U.wings) U.wings.forEach((w, i) => { w.rotation.y = Math.sin(t * 10 + i) * 0.6; }); }
+  else if (pt.kind === 'octopus' && U.arms){ y = ty; U.arms.forEach((a, i) => { a.rotation.z = Math.sin(pt.ph * 0.8 + i) * 0.25 * (0.3 + mv); }); }
+  else if (pt.kind === 'gull'){ pt.fly += ((moving || pt.vel > 0.6 ? 1 : 0) - pt.fly) * Math.min(1, dt * 2); y = ty + pt.fly * (1.7 + Math.sin(t * 1.6 + pt.ph * 0.1) * 0.15);
     if (U.wings) U.wings.forEach((w, i) => { w.rotation.z = (i ? -1 : 1) * (pt.fly > 0.2 ? Math.sin(t * 14) * 0.7 : 0.15); }); }
   else y = ty + Math.abs(Math.sin(pt.ph)) * 0.05 * mv;
   pt.pos.y = y; pt.m.position.copy(pt.pos); pt.m.rotation.y = pt.rot;
-  U.legs.forEach((l, i) => { l.rotation.x = Math.sin(pt.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.6 * mv; });
+  if (pt.kind === 'turtle') U.legs.forEach((l, i) => { l.rotation.y = Math.sin(pt.ph + i) * 0.5 * mv; }); else U.legs.forEach((l, i) => { l.rotation.x = Math.sin(pt.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.6 * mv; });
   if (U.tail) U.tail.rotation.y = Math.sin(t * (pt.kind === 'shiba' ? 9 : 2.5)) * (pt.kind === 'shiba' ? 0.3 : 0.4);
   if (U.head) U.head.rotation.y = mv < 0.1 ? Math.sin(t * 0.7 + pt.ph * 0.01) * 0.35 : 0;
   if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
 }
 function updatePetFor(f, want, dt, t){
   if (!want){ if (f.pet){ petFree(f.pet); f.pet = null; } return; }
-  const k = want.kind + '|' + want.name + '|' + (want.acc || 0); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
+  const k = want.kind + '|' + (want.var || '') + '|' + want.name + '|' + (want.acc || 0); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
   const pt = f.pet, vis = f.av.g.visible && !f.swim && !(f === me && Dive.on); pt.m.visible = vis; if (!vis) return;
   if (pt.hug){ return; }
   const c = Math.cos(f.rot), s = Math.sin(f.rot), ox = 0.75, oz = -0.85, tx = f.pos.x + c * ox + s * oz, tz = f.pos.z - s * ox + c * oz;
@@ -5619,18 +5677,32 @@ function buildPetShop(){ const X = SHOPLOT.pet.x, Z = SHOPLOT.pet.z, g = new THR
   for (const [x, c] of [[-1.1, '#e8473a'], [1.1, '#5fb6e3']]){ const bed = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.12, 16), mat(c, 0.8)); bed.position.set(x, 0.06, 0.9); g.add(bed); }
   const c = Math.cos(g.rotation.y), s = Math.sin(g.rotation.y); addOBoxCol(X - s * 0.6, Z - c * 0.6, 3.6, 1.1, g.rotation.y);
   const f = new Fisher({ shirt:'#9fd8a8', hat:'#f6f0dd', name:'寵物店 小花', kind:'npc' }); const bx = X - s * 1.25, bz = Z - c * 1.25; f.pos.set(bx, groundHeight(bx, bz), bz); f.baseY = f.pos.y; f.rot = g.rotation.y; f.setGear({ hat:'hat_none', top:'top_apron' }); f.nm.classList.add('quest'); PetShop.npc = f;
-  [['cat', -1.1], ['shiba', 1.1]].forEach(([k, x]) => { const pt = petMake({ kind:k, name: PET_KINDS[k].name, acc:0 }); const wx = X + c * x + s * 0.9, wz = Z - s * x + c * 0.9; pt.pos.set(wx, y0 + 0.12, wz); pt.rot = g.rotation.y; pt.wander = { x: wx, z: wz, y: y0 + 0.12 }; PetShop.demo.push(pt); }); }
+  [['cat', -1.1, 'c'], ['shiba', 1.1, 'a']].forEach(([k, x, vv]) => { const pt = petMake({ kind:k, var:vv, name: PET_KINDS[k].name, acc:0 }); const wx = X + c * x + s * 0.9, wz = Z - s * x + c * 0.9; pt.pos.set(wx, y0 + 0.12, wz); pt.rot = g.rotation.y; pt.wander = { x: wx, z: wz, y: y0 + 0.12 }; PetShop.demo.push(pt); }); }
 // ---- 寵物分頁 ----
+async function loadPetMarket(){ if (!Cloud.on || !Cloud.sb) return; try { const { data } = await Cloud.sb.rpc('pet_market'); Pets.market = Array.isArray(data) ? data : []; } catch(e){ Pets.market = []; } if (!$('#sheet').hidden && curTab === 'pets') renderTab(); }
+function renderPetMarket(body){
+  body.appendChild(el('p', 'sub', '大家掛出來賣的寵物。買了以後要重新培養親密度（從 0 開始）。要釣到 30 條魚才能買；賣家拿九成。想賣自己的寵物：在「我的寵物」按「⋯」→「放到市集賣」。'));
+  if (!Pets.market){ body.appendChild(el('div', 'empty', '載入中…')); loadPetMarket(); return; }
+  if (!Pets.market.length){ body.appendChild(el('div', 'empty', '市集現在沒有寵物。')); return; }
+  const ul = el('ul', 'shoplist cols');
+  for (const m of Pets.market){ const K = PET_KINDS[m.kind]; if (!K) continue; const li = el('li'); li.appendChild(el('span', 'dishic', K.icon));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${m.name}・${petFull(m.kind, m.var)}${petVarRare(m.kind, m.var) ? ' ⭐' : ''}`)); d.appendChild(el('div', 'sub2', `🪙${(+m.price).toLocaleString()}・${m.mine ? '你自己的' : esc(m.by) + ' 賣的'}`)); li.appendChild(d);
+    if (!m.mine){ const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < m.price ? ' ghost' : ''), '買'); b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定 🪙${(+m.price).toLocaleString()}？`; b.classList.add('warn'); return; } b.disabled = true;
+        const r = await petRpc('pet_buy', { p_id: m.id }); if (r){ adoptRow(r.player); Pets.list = r.pets; SFX.catch(); flash(`${K.icon} ${m.name}跟你回家了！`, 1.8); Pets.homeKey = ''; loadPetMarket(); } else b.disabled = false; }); a.appendChild(b); li.appendChild(a); }
+    ul.appendChild(li); }
+  body.appendChild(ul); }
 function renderPets(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>🐾 ${Pets.atShop ? '寵物店' : '我的寵物'}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能養寵物。')); return; }
   if (!Pets.list){ body.appendChild(el('div', 'empty', '載入中…')); loadPets(true); return; }
+  { const seg = el('div', 'seg'); [['mine', Pets.atShop ? '🏠 領養' : '🐾 我的寵物'], ['market', '🏷️ 寵物市集']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((Pets.tab || 'mine') === k)); b.addEventListener('click', () => { Pets.tab = k; if (k === 'market') loadPetMarket(); renderTab(); }); seg.appendChild(b); }); body.appendChild(seg); }
+  if (Pets.tab === 'market'){ renderPetMarket(body); return; }
   const L = Pets.list; body.appendChild(el('p', 'sub', `養了 ${L.length} / 3 隻，同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
   const ul = el('ul', 'shoplist');
   for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(el('span', 'dishic', K.icon));
-    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${K.name}${p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}${petVarRare(p.kind, p.var) ? ' ⭐' : ''}${p.price != null ? `（市集掛賣中 🪙${p.price.toLocaleString()}）` : p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
     const a = el('div', 'tacts');
-    const ob = el('button', 'tbtn' + (p.out ? ' ghost' : ''), p.out ? '回家' : '帶出門'); ob.addEventListener('click', async () => { const r = await petRpc('pet_out', { p_id: p.out ? null : p.id }); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); renderTab(); } }); a.appendChild(ob);
+    const ob = el('button', 'tbtn' + (p.out ? ' ghost' : ''), p.out ? '回家' : '帶出門'); ob.disabled = p.price != null; ob.addEventListener('click', async () => { const r = await petRpc('pet_out', { p_id: p.out ? null : p.id }); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); renderTab(); } }); a.appendChild(ob);
     const fb = el('button', 'tbtn ghost', '🐟 餵'); fb.addEventListener('click', () => { Pets.feedFor = Pets.feedFor === p.id ? null : p.id; renderTab(); }); a.appendChild(fb);
     if (!p.gift){ const gb = el('button', 'tbtn ghost', '🎁 禮物'); gb.disabled = p.love < 10; gb.addEventListener('click', async () => { const r = await petRpc('pet_gift', { p_id: p.id }); if (r){ adoptRow(r.player); const what = r.what === 'shell' ? '撿到一個漂亮的貝殼' : r.what === 'photo' ? '叼來一張你們出去玩的照片' : '找到一些亮晶晶的硬幣'; flash(`🎁 ${p.name}${what}！+${r.coins} 金幣`, 2.2); SFX.coin(); loadPets(true); } }); a.appendChild(gb); }
     const mb = el('button', 'tbtn ghost', '⋯'); mb.addEventListener('click', () => { Pets.menu = Pets.menu === p.id ? null : p.id; renderTab(); }); a.appendChild(mb);
@@ -5641,16 +5713,19 @@ function renderPets(body){
       ul.appendChild(box); }
     if (Pets.menu === p.id){ const box = el('li', ''), ni = el('input', 'txt'); ni.maxLength = 8; ni.value = p.name; ni.style.cssText = 'width:9em'; const rn = el('button', 'tbtn ghost', '改名'); rn.addEventListener('click', async () => { const r = await petRpc('pet_rename', { p_id: p.id, p_name: ni.value }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); renderTab(); } });
       const rl = el('button', 'tbtn ghost', '送養'); rl.addEventListener('click', async () => { if (rl.dataset.sure !== '1'){ rl.dataset.sure = '1'; rl.textContent = `確定把${p.name}送給別人養？`; rl.classList.add('warn'); return; } const r = await petRpc('pet_release', { p_id: p.id }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); toast(`👋 ${p.name}找到新家了`); renderTab(); } });
-      box.append(ni, rn, rl); ul.appendChild(box); } }
+      const pi2 = el('input', 'txt'); pi2.type = 'number'; pi2.min = 50; pi2.max = 20000; pi2.value = p.price || 500; pi2.style.cssText = 'width:6em';
+      const sb = el('button', 'tbtn ghost', p.price != null ? '從市集收回' : '放到市集賣'); sb.addEventListener('click', async () => { const r = await petRpc('pet_sell', { p_id: p.id, p_price: p.price != null ? null : Math.round(+pi2.value || 0) }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); toast(p.price != null ? `${p.name}回家了` : `🏷️ ${p.name}放到寵物市集了，賣出去拿九成`); renderTab(); } });
+      box.append(ni, rn, rl); if (p.price == null) box.append(el('span', 'sub2', '　價錢'), pi2); box.append(sb); ul.appendChild(box); } }
   if (L.length) body.appendChild(ul); else body.appendChild(el('div', 'empty', Pets.atShop ? '還沒有寵物，從下面挑一隻吧！' : '還沒有寵物。到商店街的寵物店找小花領養。'));
   if (!Pets.atShop){ if (L.length < 3) body.appendChild(el('p', 'sub', '想再養一隻？到商店街的寵物店找小花。')); return; }
   if (L.length >= 3){ body.appendChild(el('p', 'sub', '已經養滿 3 隻了。')); return; }
   body.appendChild(el('div', 'dexhead', '🏠 領養'));
   const f1 = el('div', 'field'); f1.appendChild(el('label', '', '幫牠取名字（1～8 個字）')); const ni = el('input', 'txt'); ni.maxLength = 8; ni.value = Pets.newName; ni.placeholder = '例如：小咪'; ni.addEventListener('input', () => { Pets.newName = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
   const ul2 = el('ul', 'shoplist cols');
-  for (const [k, K] of Object.entries(PET_KINDS)){ const li = el('li'); li.appendChild(el('span', 'dishic', K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc)); li.appendChild(d);
+  body.appendChild(el('p', 'sub', '每一種都有好幾種花色，領養的時候隨機，⭐ 是很少見的花色。小海龜、小章魚、河豚店裡沒有賣，要在海邊釣魚時碰運氣撈到（寄居蟹、水獺也撈得到）。'));
+  for (const [k, K] of Object.entries(PET_KINDS).filter(([, K]) => !K.fish)){ const li = el('li'); li.appendChild(el('span', 'dishic', K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc + '　花色：' + Object.values(PET_VARS[k]).map(x => x[0]).join('、'))); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < K.price ? ' ghost' : ''), '領養'); b.addEventListener('click', async () => { const nm = (Pets.newName || '').trim() || K.name; if (rec.coins < K.price){ toast(`金幣不夠，還差 🪙${(K.price - rec.coins).toLocaleString()}`); return; } b.disabled = true;
-      const r = await petRpc('pet_adopt', { p_kind: k, p_name: nm }); if (r){ adoptRow(r.player); Pets.list = r.pets; Pets.newName = ''; SFX.catch(); flash(`${K.icon} ${nm}成為你的家人了！`, 1.8); if (!petMine()){ const np = r.pets[r.pets.length - 1]; const o = await petRpc('pet_out', { p_id: np.id }); if (o) Pets.list = o; } pushPresence(true); renderTab(); } else b.disabled = false; });
+      const r = await petRpc('pet_adopt', { p_kind: k, p_name: nm }); if (r){ adoptRow(r.player); Pets.list = r.pets; Pets.newName = ''; SFX.catch(); flash(`${K.icon} ${nm}（${petVarName(k, r.var)}${petVarRare(k, r.var) ? '⭐很少見！' : ''}）成為你的家人了！`, 2.2); if (!petMine()){ const np = r.pets[r.pets.length - 1]; const o = await petRpc('pet_out', { p_id: np.id }); if (o) Pets.list = o; } pushPresence(true); renderTab(); } else b.disabled = false; });
     a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
   body.appendChild(ul2);
 }
@@ -7495,7 +7570,7 @@ function recordCatch(f, w){
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
-  cloudCall('record_catch', { p_fish: f.id, p_weight: w });
+  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) petLuckyTry(); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
   if (Tny.on){ Tny.myW += w; Tny.myN++; }
   return { isNew, isBest: isBest && !isNew };
 }
@@ -7931,7 +8006,7 @@ function presenceObj(){
   if (mySeat) o.st = 1;
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
-  { const pt = petMine(); if (pt) o.pt = [pt.kind, pt.name, pt.acc || 0]; }   /* 080：帶出門的寵物（只放種類、名字、配件，不放親密度） */
+  { const pt = petMine(); if (pt) o.pt = [pt.kind, pt.name, pt.acc || 0, pt.var || 'a']; }   /* 080：帶出門的寵物（只放種類、名字、配件，不放親密度） */
   if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
@@ -7977,7 +8052,7 @@ function applyPeer(pp){
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st;
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
-  p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2) } : null;
+  p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2), var: /^[a-g]$/.test(pr.pt[3]) ? pr.pt[3] : 'a' } : null;
   p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = Number(pr.hs) || 0; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
@@ -9375,7 +9450,7 @@ function renderTab(){
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
     ]);
     sec('🐾 寵物', [
-      '在商店街入口西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
+      '在商店街入口西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹，每一種都有好幾種花色（隨機，⭐ 很少見）。小海龜、小章魚、河豚只能在海邊、港口、珊瑚礁、紅樹林釣魚時偶爾順便撈到；溪邊、湖邊偶爾撈到小水獺。寵物可以放到「🏷️ 寵物市集」賣（賣家拿九成，買的人要重新培養親密度）。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
