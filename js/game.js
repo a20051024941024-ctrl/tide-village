@@ -6906,7 +6906,7 @@ function updateDive(dt, t){
 function diveKeep(){ const k = new Set([Dive.group, me.av.g, me.bob, me.line, me.blob]); for (const p of peers.values()){ const f = p.fisher; k.add(f.av.g); k.add(f.bob); k.add(f.line); if (f.blob) k.add(f.blob); } return k; }
 function diveHideWorld(start){
   const keep = diveKeep();
-  if (start){ Dive.restore = scene.children.filter(o => o.visible && !o.isLight && !keep.has(o)); }
+  if (start){ const now2 = scene.children.filter(o => o.visible && !o.isLight && !keep.has(o)); Dive.restore = Dive.restore ? [...new Set([...Dive.restore, ...now2])] : now2; }   /* v206：潛水中換海域再呼叫一次時不要蓋掉原本要還原的清單（不然浮上來世界會不見） */
   for (const o of scene.children) if (o.visible && !o.isLight && !keep.has(o)) o.visible = false;
 }
 function diveShowWorld(){ for (const o of Dive.restore || []) o.visible = true; Dive.restore = null; }
