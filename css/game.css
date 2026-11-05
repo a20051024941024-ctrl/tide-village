@@ -939,3 +939,7 @@ body:has(#brand.open) #joyZone{pointer-events:none}
 .breedbox .bb-c.half{border-color:#f3b33d}
 .breedbox .bb-c.no{opacity:.6}
 .breedbox p.sub{padding:0 12px 10px;margin:4px 0 0}
+/* 設定：音量 */
+.volrow{display:flex;align-items:center;gap:10px}
+.volrow input[type=range]{flex:1;accent-color:#2a8fb8;height:28px}
+.volrow .volpct{min-width:3em;text-align:right;color:var(--ink-soft);font-size:13px}

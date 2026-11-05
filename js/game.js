@@ -8,6 +8,17 @@ import { FISH_MESH } from './fish-models.js';
 import * as FishGen from './fish-gen.js';
 import { SPECS as FISH_SPECS } from './fish-specs.js';
 window.__gameStarted = true;
+// 語言（設定裡選）：簡體中文時用 OpenCC 的對照表把畫面上的字、看板上的字都轉成簡體（載不到就照原本的繁體）
+let OCC = null;
+try { if (localStorage.getItem('tide.lang') === '"cn"'){ const m = await import('./zh-cn.js'); OCC = m.toCN;   /* 對照表放在自己的網站上（js/zh-cn.js，OpenCC 的資料），不用連外部網站 */
+  const ft = CanvasRenderingContext2D.prototype.fillText, st = CanvasRenderingContext2D.prototype.strokeText, mt = CanvasRenderingContext2D.prototype.measureText;
+  CanvasRenderingContext2D.prototype.fillText = function(t, ...a){ return ft.call(this, typeof t === 'string' ? OCC(t) : t, ...a); };
+  CanvasRenderingContext2D.prototype.strokeText = function(t, ...a){ return st.call(this, typeof t === 'string' ? OCC(t) : t, ...a); };
+  CanvasRenderingContext2D.prototype.measureText = function(t){ return mt.call(this, typeof t === 'string' ? OCC(t) : t); };
+  const conv = n => { if (n.nodeType === 3){ const p = n.parentNode; if (p && (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || p.nodeName === 'TEXTAREA' || (p.closest && p.closest('.ignore-opencc')))) return; const v = n.nodeValue, c = OCC(v); if (c !== v) n.nodeValue = c; return; }
+    if (n.nodeType !== 1) return; for (const at of ['title', 'placeholder', 'aria-label']){ const v = n.getAttribute && n.getAttribute(at); if (v){ const c = OCC(v); if (c !== v) n.setAttribute(at, c); } } for (const ch of n.childNodes) conv(ch); };
+  const go = () => { conv(document.body); new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData') conv(m.target); else if (m.type === 'attributes') conv(m.target); else for (const x of m.addedNodes) conv(x); } }).observe(document.body, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['title', 'placeholder', 'aria-label'] }); document.documentElement.lang = 'zh-CN'; };
+  if (document.body) go(); else addEventListener('DOMContentLoaded', go); } } catch(e){ console.warn('lang', e); OCC = null; }
 (function(){
 'use strict';
 const $ = (s, r=document) => r.querySelector(s);
@@ -2280,12 +2291,12 @@ function placeLabelsUpdate(){
 }
 
 /* ================= SOUND ================= */
-let actx = null, soundOn = LS.get('tide.sound', true), musicOn = LS.get('tide.music', true);
+let actx = null, soundOn = LS.get('tide.sound', true), musicOn = LS.get('tide.music', true), sfxVol = clamp(+LS.get('tide.sfxVol', 1) || 0, 0, 1), musicVol = clamp(+LS.get('tide.musicVol', 1) || 0, 0, 1);   /* 設定裡的音量 0～1 */
 function ensureAudio(){ if (!actx && (soundOn || musicOn)){ try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (actx && actx.state === 'suspended') actx.resume(); if (actx && musicOn && typeof MUSIC !== 'undefined' && !MUSIC.playing()) MUSIC.start(); }
-function tone(freq, dur, type, vol, slide){ if (!soundOn || !actx) return; const t = actx.currentTime; const o = actx.createOscillator(), g = actx.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur); g.gain.setValueAtTime(vol || 0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur); }
+function tone(freq, dur, type, vol, slide){ if (!soundOn || !actx || sfxVol <= 0.01) return; vol = Math.max(0.0012, (vol || 0.15) * sfxVol); const t = actx.currentTime; const o = actx.createOscillator(), g = actx.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur); g.gain.setValueAtTime(vol || 0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur); }
 // 噪音做的音效（水花、風、腳步）
 let noiseBuf = null;
-function noise(dur, vol, f0, f1, q, type){ if (!soundOn || !actx) return; if (!noiseBuf){ noiseBuf = actx.createBuffer(1, actx.sampleRate * 1.5, actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+function noise(dur, vol, f0, f1, q, type){ if (!soundOn || !actx || sfxVol <= 0.01) return; vol = Math.max(0.0012, vol * sfxVol); if (!noiseBuf){ noiseBuf = actx.createBuffer(1, actx.sampleRate * 1.5, actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
   const t = actx.currentTime, src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain(); src.buffer = noiseBuf; f.type = type || 'bandpass'; f.Q.value = q || 1; f.frequency.setValueAtTime(f0, t); if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.03, dur * 0.2)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); src.connect(f).connect(g).connect(actx.destination); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.05); }
 const SFX = {
@@ -2375,7 +2386,8 @@ const MUSIC = (() => {
   function noiseHit(t, vol){ if (!noiseBuf){ noise(0.01, 0.0001, 1000); } if (!noiseBuf) return; const src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain(); src.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = 5000; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); src.connect(f).connect(g).connect(master); src.start(t, Math.random()); src.stop(t + 0.06); }
   return {
     theme: () => THEMES[theme].name,
-    start(){ if (!actx || master) return; master = actx.createGain(); master.gain.value = 0.0001; master.connect(actx.destination); master.gain.exponentialRampToValueAtTime(0.4, actx.currentTime + 2.5); next = actx.currentTime + 0.1; seaStart(); timer = setInterval(tick, 100); },
+    start(){ if (!actx || master) return; master = actx.createGain(); master.gain.value = 0.0001; master.connect(actx.destination); master.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime + 2.5); next = actx.currentTime + 0.1; seaStart(); timer = setInterval(tick, 100); },
+    vol(){ if (master && actx) master.gain.setTargetAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime, 0.1); },
     stop(){ if (!master) return; clearInterval(timer); const m = master, s = sea; m.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(() => { try { s && s.src.stop(); s && s.lfo.stop(); m.disconnect(); } catch(e){} }, 1500); master = null; sea = null; },
     playing(){ return !!master; }
   };
@@ -5642,6 +5654,24 @@ function renderPets(body){
     a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
   body.appendChild(ul2);
 }
+// ===== ⚙️ 設定：語言、音效、背景音樂、畫質、聊天過濾 =====
+function renderSettings(body){
+  body.appendChild(el('div', 'shophead')).innerHTML = '<b>⚙️ 設定</b>';
+  const field = (title, sub) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); body.appendChild(f); if (sub) f._sub = sub; return f; };
+  { const f = field('🌐 語言'), seg = el('div', 'seg'), cur = LS.get('tide.lang', 'tw');
+    [['tw', '繁體中文'], ['cn', '简体中文']].forEach(([k, l]) => { const b = el('button', 'ignore-opencc', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { if (cur === k) return; LS.set('tide.lang', k); toast(k === 'cn' ? '切换成简体中文，马上重新载入…' : '切換成繁體中文，馬上重新載入…'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。' + (cur === 'cn' && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
+  const vol = (title, on, v, setOn, setV) => { const f = field(title), row = el('div', 'volrow'), tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { setOn(!on); renderTab(); });
+    const sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(v * 100); sl.disabled = !on; const pct = el('span', 'volpct', Math.round(v * 100) + '%');
+    sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
+  vol('🔊 音效', soundOn, sfxVol, on => { soundOn = on; LS.set('tide.sound', on); if (on) ensureAudio(); renderSoundIcon(); }, v => { sfxVol = v; LS.set('tide.sfxVol', v); clearTimeout(renderSettings.t); renderSettings.t = setTimeout(() => SFX.coin(), 120); });
+  vol('🎵 背景音樂', musicOn, musicVol, on => { musicOn = on; LS.set('tide.music', on); if (on){ ensureAudio(); MUSIC.start(); } else MUSIC.stop(); renderMusicIcon(); }, v => { musicVol = v; LS.set('tide.musicVol', v); MUSIC.vol(); });
+  { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
+    [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
+  { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
+  { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
+}
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
 function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); }
 function enterShrimp(){
@@ -7769,6 +7799,7 @@ $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(
 (function buildBquick(){   /* 先做好這一行，下面 compactBrand 再把它收進 ☰ 裡 */ const host = $('#btools') && $('#btools').parentNode; if (!host || $('#bquick')) return; const row = document.createElement('div'); row.id = 'bquick'; host.appendChild(row);
   const mk = (id, txt, fn, title) => { const b = el('button', 'bq', txt); b.id = id; if (title) b.title = title; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); fn(); }); row.appendChild(b); return b; };
   mk('bqId', '🆔', async () => { const c = friendCode(); if (!c){ toast('連上雲端以後才有好友代碼'); return; } try { await navigator.clipboard.writeText(c); toast(`好友代碼 ${c} 已經複製了，貼給朋友就能加好友`); } catch(e){ toast(`你的好友代碼：${c}`); } openSheet('people'); }, '好友代碼：點一下複製，打開加好友');
+  mk('bqSet', '⚙️ 設定', () => openSheet('settings'));
   mk('bqPet', '🐾 寵物', () => { Pets.atShop = false; openSheet('pets'); loadPets(true); });
   mk('bqQuest', '📜 任務', () => openSheet('quest')); mk('bqAch', '🏅 成就', () => openSheet('ach')); mk('bqHelp', '❓ 玩法', () => openSheet('help'));
   mk('bqLogin', '🔑 登入', () => { if (Cloud.isAnon && Cloud.ui){ Cloud.ui.step = 'idle'; } openSheet('style'); setTimeout(() => { const cb = document.querySelector('#sheet .cloudbox'); if (cb) cb.scrollIntoView({ block:'center' }); }, 150); }, '登入、綁定 Email、換裝置');
@@ -9052,6 +9083,7 @@ function renderTab(){
   if (curTab === 'closet'){ renderCloset(body); return; }
   if (curTab === 'museum'){ renderMuseum(body); return; }
   if (curTab === 'pets'){ renderPets(body); return; }
+  if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'cldesign'){ renderClDesign(body); return; }
   if (curTab === 'shop'){ renderShop(body); return; }
