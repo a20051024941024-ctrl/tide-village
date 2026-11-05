@@ -1,7 +1,8 @@
 -- 085 聖誕節（加在 083 的節慶活動裡）：可以重複執行
 -- 每年 12/20～12/26：廣場大聖誕樹、每天一份聖誕禮物、限定聖誕帽／麋鹿角／聖誕樹家具；12/31 接著是跨年
 alter table public.festivals drop constraint if exists festivals_kind_check;
-alter table public.festivals add constraint festivals_kind_check check (kind in ('ny', 'cny', 'lantern', 'duanwu', 'moon', 'night', 'xmas', 'qixi', 'halloween'))   -- 088 之後的種類也要列進來，不然重新執行會失敗;
+-- 088 之後的種類也要列進來，不然重新執行會失敗
+alter table public.festivals add constraint festivals_kind_check check (kind in ('ny', 'cny', 'lantern', 'duanwu', 'moon', 'night', 'xmas', 'qixi', 'halloween'));
 insert into public.festivals (id, kind, name, starts_at, ends_at) values
   ('xmas2026', 'xmas', '聖誕節', '2026-12-20 00:00+08', '2026-12-26 23:59+08'),
   ('xmas2027', 'xmas', '聖誕節', '2027-12-20 00:00+08', '2027-12-26 23:59+08'),
