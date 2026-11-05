@@ -10167,6 +10167,7 @@ function renderTab(){
     ]);
     sec('🦈 魚的生態', [
       '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
+      '水面上的魚群（沙丁魚、丁香魚這些）大家看到的是同一群：同一個時間、同一個地方，朋友也會看到一樣的魚群在一樣的位置游，可以約一起去追。',
       '魚缸、箱網、水族館裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
     ]);
     sec('🏮 節慶活動', [
@@ -10482,11 +10483,23 @@ function updateFishAI(dt0, t){
 }
 // ---- 小魚群（instanced）：boids ----
 function faiSchoolsClear(){ for (const s of FAI.schools){ for (const im of s.ims){ if (im.parent) im.parent.remove(im); } } FAI.schools = []; }
-function faiSchoolSpawn(px, pz){ FAI.schools = FAI.schools.filter(s => { const far = Math.hypot(s.lead.x - px, s.lead.z - pz) > 40; if (far) for (const im of s.ims) if (im.parent) im.parent.remove(im); return !far; });
-  if (FAI.schools.length >= (Quality.tier === 'low' ? 1 : 2)) return;
-  for (let k = 0; k < 3; k++){ const ang = Math.random() * 6.283, r = 10 + Math.random() * 14, x = px + Math.cos(ang) * r, z = pz + Math.sin(ang) * r, dep = faiDepth(x, z); if (dep < 1.0) continue;
-    const sid = waterSpotId(x, z), sp = SPOT_BY_ID[sid]; if (!sp) continue; const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && !f.of && f.rarity === '常見' && FISH_STYLE[f.id] && f.max < 3 && !BIG_FISH.has(f.id)); if (!pool.length) continue;
-    const f = pool[Math.floor(Math.random() * pool.length)], n = FAI_SCHOOL[Quality.tier] || 14; FAI.schools.push(faiMakeSchool(f, n, x, z, scene, { surface: true, scale: 0.42 })); return; } }
+/* v215：野外的魚群大家看到的一樣 —— 魚群放在固定的格子上（每格 22 公尺），有沒有魚群、是哪一種、繞哪條路線，
+   都用「格子位置＋現在是第幾個 10 分鐘」算出來，所有玩家算出來都一樣；靠近時會被嚇開，嚇完再游回同一條路線 */
+const SCHOOL_CELL = 22, SCHOOL_WIN = 600;
+function schoolHash(a, b, c){ let h = Math.imul(a | 0, 73856093) ^ Math.imul(b | 0, 19349663) ^ Math.imul(c | 0, 83492791); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function schoolPlan(cx, cz, win){ if (schoolHash(cx, cz, win * 3 + 1) > 0.42) return null;
+  const ax = (cx + 0.2 + schoolHash(cx, cz, win * 3 + 2) * 0.6) * SCHOOL_CELL, az = (cz + 0.2 + schoolHash(cx, cz, win * 3 + 3) * 0.6) * SCHOOL_CELL; if (faiDepth(ax, az) < 1.2) return null;
+  let r = 3 + schoolHash(cx, cz, win + 7) * 3; for (let k = 0; k < 8 && r > 1.2; k++){ const a = k / 8 * Math.PI * 2; if (faiDepth(ax + Math.cos(a) * r, az + Math.sin(a) * r) < 0.8){ r *= 0.7; k = -1; } }
+  const sid = waterSpotId(ax, az), sp = SPOT_BY_ID[sid]; if (!sp) return null; const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && !f.of && !f.fest && f.rarity === '常見' && FISH_STYLE[f.id] && f.max < 3 && !BIG_FISH.has(f.id)); if (!pool.length) return null;
+  return { key: cx + ',' + cz + ',' + win, f: pool[Math.floor(schoolHash(cx, cz, win + 11) * pool.length)], ax, az, r, w: (0.05 + schoolHash(cx, cz, win + 13) * 0.06) * (schoolHash(cx, cz, win + 17) < 0.5 ? -1 : 1), ph: schoolHash(cx, cz, win + 19) * 6.283 }; }
+function schoolPathAt(pl, ts){ const a = pl.ph + ts * pl.w; return [pl.ax + Math.cos(a) * pl.r, pl.az + Math.sin(a) * pl.r]; }
+function faiSchoolSpawn(px, pz){ const win = Math.floor(Date.now() / 1000 / SCHOOL_WIN);
+  FAI.schools = FAI.schools.filter(s => { const far = Math.hypot(s.lead.x - px, s.lead.z - pz) > 40 || (s.plan && !s.plan.key.endsWith(',' + win) && Math.hypot(s.lead.x - px, s.lead.z - pz) > 18); if (far) for (const im of s.ims) if (im.parent) im.parent.remove(im); return !far; });
+  const max = Quality.tier === 'low' ? 1 : Quality.tier === 'mid' ? 2 : 3; if (FAI.schools.length >= max) return;
+  const have = new Set(FAI.schools.map(s => s.plan && s.plan.key)), c0x = Math.floor(px / SCHOOL_CELL), c0z = Math.floor(pz / SCHOOL_CELL), cand = [];
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++){ const pl = schoolPlan(c0x + dx, c0z + dz, win); if (!pl || have.has(pl.key)) continue; const d = Math.hypot(pl.ax - px, pl.az - pz); if (d < 34) cand.push([d, pl]); }
+  cand.sort((a, b) => a[0] - b[0]); const pick = cand[0]; if (!pick) return; const pl = pick[1], [x, z] = schoolPathAt(pl, Date.now() / 1000);
+  const sc = faiMakeSchool(pl.f, FAI_SCHOOL[Quality.tier] || 14, x, z, scene, { surface: true, scale: 0.42 }); sc.plan = pl; FAI.schools.push(sc); }
 function faiMakeSchool(f, n, x, z, parent, o){ const st = FISH_STYLE[f.id], ims = [];
   for (const part of Object.keys(FISH_MESH[st.shape])){ const im = new THREE.InstancedMesh(fishGeo(st.shape, part), fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape), n); im.frustumCulled = false; parent.add(im); ims.push(im); }
   const P = [], V = []; for (let i = 0; i < n; i++){ P.push(new THREE.Vector3(x + (Math.random() - 0.5) * 2, WATER_LEVEL - 0.3, z + (Math.random() - 0.5) * 2)); V.push(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)); }
@@ -10509,7 +10522,8 @@ function faiSchoolsUpdate(dt, t, dive){
     for (const th of threats){ const d = Math.hypot(s.lead.x - th.x, s.lead.z - th.z); if (d < th.r * 1.5){ s.tgt.set(s.lead.x + (s.lead.x - th.x) / (d || 1) * 8, s.lead.y, s.lead.z + (s.lead.z - th.z) / (d || 1) * 8); speed = 2.2; s.state = 'flee'; s.st = 1.5; } }
     if (s.state !== 'bait' && (s.st <= 0 || Math.hypot(s.tgt.x - s.lead.x, s.tgt.z - s.lead.z) < 1.2)){ s.state = 'school'; s.st = 6 + Math.random() * 6;
       const cur = Ocean.d && Ocean.d.state && Ocean.d.state.coast, drift = cur ? (+cur.dir) * Math.PI / 180 : 0;   /* 魚群順著海流慢慢移動 */
-      for (let k = 0; k < 6; k++){ const ang = drift + (Math.random() - 0.5) * 2.4, r = 3 + Math.random() * 7, x = s.lead.x + Math.sin(ang) * r, z = s.lead.z + Math.cos(ang) * r; if (faiOk(s, x, 0, z)){ const [y0, y1] = faiYRange(s, x, z); s.tgt.set(x, y0 + (y1 - y0) * (0.3 + Math.random() * 0.5), z); break; } } }
+      if (s.plan){ const [x, z] = schoolPathAt(s.plan, Date.now() / 1000 + 4); const [y0, y1] = faiYRange(s, x, z); s.tgt.set(x, (y0 + y1) / 2, z); s.st = 1.2; }   /* 大家共用的路線 */
+      else for (let k = 0; k < 6; k++){ const ang = drift + (Math.random() - 0.5) * 2.4, r = 3 + Math.random() * 7, x = s.lead.x + Math.sin(ang) * r, z = s.lead.z + Math.cos(ang) * r; if (faiOk(s, x, 0, z)){ const [y0, y1] = faiYRange(s, x, z); s.tgt.set(x, y0 + (y1 - y0) * (0.3 + Math.random() * 0.5), z); break; } } }
     _v1.subVectors(s.tgt, s.lead); const dl = _v1.length() || 1; _v1.multiplyScalar(speed / dl).sub(s.lv).clampLength(0, 2.5 * sdt); s.lv.add(_v1);
     const nx = s.lead.x + s.lv.x * sdt, nz = s.lead.z + s.lv.z * sdt; if (faiOk(s, nx, 0, nz)){ s.lead.x = nx; s.lead.z = nz; } else { s.lv.multiplyScalar(-0.5); s.st = 0; }
     { const [y0, y1] = faiYRange(s, s.lead.x, s.lead.z); s.lead.y = clamp(s.lead.y + s.lv.y * sdt, y0, y1); }
