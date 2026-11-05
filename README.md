@@ -119,6 +119,7 @@ supabase/079_harbor_dive.sql 港口海底潛水點：從港口碼頭的潛水梯
 supabase/080_pets.sql 🐾 寵物：貓、柴犬、水獺、海鷗、寄居蟹，最多養 3 隻、帶 1 隻出門；名字擋髒話；用魚缸的魚餵（一天一次大親密度）；每天小禮物；參觀小島看得到在家的寵物。
 supabase/081_pets_more.sql 寵物第二版：每種寵物好幾種花色（伺服器抽）、釣魚時偶爾撈到小海龜／小章魚／河豚／寄居蟹／小水獺、寵物市集（賣家拿九成，買了親密度歸零）。
 supabase/082_world_boss.sql 🐋 全服合作大魚：每天 20:30、週末加 14:00 在港口外海出現 10 分鐘；boss_join／boss_pull（每秒最多一次、照釣竿算出力、掙扎時拉會斷線 10 秒）；體力照人數；結束時發一次獎勵（金幣、前 3 名魚拓、第 1 名稱號）；測試：select public.boss_test_spawn(1);
+supabase/083_festivals.sql 🏮 台灣節慶：festivals 表（2027、2028 跨年／春節／元宵／端午／中秋 + 每月第一個週末夜市）、fest_now／fest_hongbao（春節每天一次）／fest_riddles＋fest_answer（元宵燈謎）／fest_badge（跨年倒數紀念章）／fest_buy（限定家具）；限定帽子只有節日期間能買，買到的永遠保留；每 5 分鐘 _fest_tick 推播節日開始。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

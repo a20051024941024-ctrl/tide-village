@@ -1562,8 +1562,10 @@ const GEAR = [
   ['back_none','沒有背飾',0,'🙂'],['back_kcape_m','紫紅短披風',900,'🟣'],['back_kcape_r','紅色短披風',900,'🔴'],['back_kcape_b','咖啡色短披風',800,'🟤'],['back_kcape_g','綠色短披風',900,'🟢'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
   ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
   // 愛海商店：只能用放流得到的愛海點數換（第 5 欄是點數）
+  // 節慶限定（083）：只有節日期間買得到（第 6 欄是哪個節日），買到的永遠保留
+  ['hat_lion','舞獅帽',800,'🦁',0,'cny'],['hat_party','跨年派對帽',300,'🎉',0,'ny'],['hat_pomelo','柚子帽',300,'🍈',0,'moon'],['acc_sachet','端午香包',300,'🧧',0,'duanwu'],
   ['hat_turtle','海龜帽',0,'🐢',30],['top_ocean','海洋守護衫',0,'🌊',40],['acc_coral','珊瑚項鍊',0,'🪸',20],['back_fin','鯊魚背鰭',0,'🦈',60],
-].map(([id, name, price, icon, love]) => ({ id, slot: id.split('_')[0], name, price, icon, love: love || 0 }));
+].map(([id, name, price, icon, love, fest]) => ({ id, slot: id.split('_')[0], name, price, icon, love: love || 0, fest: fest || null }));
 function paidGear(it){ return !!it && (it.price > 0 || it.love > 0); }
 const GEAR_BY_ID = Object.fromEntries(GEAR.map(g => [g.id, g]));
 const GEAR_DEFAULT = { look:LOOK_DEFAULT, hat:'hat_sun', top:'top_tee', pants:'pants_jeans', shoes:'shoes_boots', socks:'socks_none', acc:'acc_none', back:'back_none', face:'face_normal' };
@@ -1604,6 +1606,14 @@ function applyGear(av, gear){
   gear3dApply(av, gear);
   const H = av.hatG, HD = av.headG;
   switch (gear.hat){
+    case 'hat_lion': { const red = M('#d8262a', 0.55), gold = M('#f2c43d', 0.4), wht = M('#fbf8f2', 0.7);   /* 舞獅頭：紅色大頭、金色眉毛、白色鬍鬚、大眼睛 */
+      const d = mk(new THREE.SphereGeometry(0.36, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, -0.04, 0, H); d.scale.set(1.05, 0.85, 1.1);
+      for (const sx of [-1, 1]){ mk(new THREE.SphereGeometry(0.075, 12, 10), wht, sx * 0.13, 0.12, 0.3, H); mk(new THREE.SphereGeometry(0.04, 10, 8), ink, sx * 0.13, 0.12, 0.365, H); const br = mk(new THREE.BoxGeometry(0.16, 0.04, 0.05), gold, sx * 0.13, 0.22, 0.29, H); br.rotation.z = -sx * 0.25; const ear = mk(new THREE.ConeGeometry(0.06, 0.14, 6), gold, sx * 0.27, 0.22, 0.05, H); ear.rotation.z = -sx * 0.6; }
+      const horn = mk(new THREE.ConeGeometry(0.05, 0.14, 8), gold, 0, 0.32, 0.12, H); horn.rotation.x = 0.3; const mir = mk(new THREE.CircleGeometry(0.035, 12), M('#bfe6f8', 0.1), 0, 0.27, 0.27, H); mir.rotation.x = -0.6;
+      for (let k = 0; k < 7; k++){ const b = mk(new THREE.ConeGeometry(0.03, 0.14, 5), wht, -0.18 + k * 0.06, -0.06, 0.34, H); b.rotation.x = Math.PI; } break; }
+    case 'hat_party': { const c = mk(new THREE.ConeGeometry(0.17, 0.42, 16), M('#9b7bff', 0.5), 0, 0.33, 0, H); for (let k = 0; k < 3; k++){ const r = mk(new THREE.TorusGeometry(0.15 - k * 0.045, 0.014, 6, 16), M(['#ffd36a', '#3fbf9d', '#f17b6d'][k], 0.4), 0, 0.18 + k * 0.11, 0, H); r.rotation.x = Math.PI / 2; } mk(new THREE.SphereGeometry(0.045, 10, 8), M('#ffd36a', 0.4), 0, 0.56, 0, H); break; }
+    case 'hat_pomelo': { const d = mk(new THREE.SphereGeometry(0.36, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), M('#a8cf5a', 0.7), 0, -0.04, 0, H); d.scale.set(1, 0.9, 1); const r2 = mk(new THREE.TorusGeometry(0.355, 0.03, 6, 22), M('#f6f0d8', 0.8), 0, -0.04, 0, H); r2.rotation.x = Math.PI / 2;
+      for (let k = 0; k < 6; k++){ const a = k / 6 * Math.PI * 2, st = mk(new THREE.BoxGeometry(0.03, 0.2, 0.012), M('#8ab84a', 0.7), Math.cos(a) * 0.3, 0.06, Math.sin(a) * 0.3, H); st.rotation.y = -a; } mk(new THREE.CylinderGeometry(0.012, 0.012, 0.07, 6), M('#6b4a35', 0.8), 0, 0.3, 0, H); const lf = mk(new THREE.SphereGeometry(0.05, 8, 6), M('#4f8a40', 0.7), 0.05, 0.32, 0, H); lf.scale.set(1.4, 0.3, 0.8); break; }
     case 'hat_turtle': { const sh = M('#4f9a54', 0.6), dk = M('#2f6b3a', 0.65), sk = M('#9fd08a', 0.7);
       const d = mk(new THREE.SphereGeometry(0.34, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), sh, 0, -0.05, 0, H); d.scale.set(1, 0.78, 1.05);
       const rim = mk(new THREE.TorusGeometry(0.335, 0.035, 6, 24), dk, 0, -0.05, 0, H); rim.rotation.x = Math.PI / 2; rim.scale.y = 1.05;
@@ -1684,6 +1694,7 @@ function applyGear(av, gear){
     case 'acc_scarf': { const red = M('#e8473a', 0.75); const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), red, 0, 1.1, 0); r.rotation.x = Math.PI / 2; const tl = mk(new THREE.BoxGeometry(0.09, 0.24, 0.05), red, 0.1, 0.96, 0.2); tl.rotation.z = 0.25; for (const y of [0.9, 0.97]) mk(new THREE.BoxGeometry(0.095, 0.02, 0.055), white, 0.1 + (0.96 - y) * 0.25, y, 0.2); break; }
     case 'acc_bowtie': { const red = M('#c9302c', 0.5); for (const sx of [-1, 1]){ const c = mk(new THREE.ConeGeometry(0.05, 0.09, 4), red, sx * 0.05, 1.08, 0.2); c.rotation.z = sx * Math.PI / 2; } mk(new THREE.SphereGeometry(0.025, 8, 6), red, 0, 1.08, 0.21); break; }
     case 'acc_glasses': { const fr = M('#5a3a24', 0.4); for (const sx of [-1, 1]) mk(new THREE.TorusGeometry(0.062, 0.011, 6, 16), fr, sx * 0.115, 0.0, 0.31, HD); mk(new THREE.BoxGeometry(0.07, 0.012, 0.012), fr, 0, 0.01, 0.315, HD); break; }
+    case 'acc_sachet': { const s1 = mk(new THREE.SphereGeometry(0.06, 12, 10), M('#e8473a', 0.5), 0.12, 0.86, 0.22); s1.scale.set(1, 1.2, 0.6); mk(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 4), M('#f2c43d', 0.4), 0.1, 0.98, 0.2); for (let k = 0; k < 4; k++) mk(new THREE.CylinderGeometry(0.004, 0.004, 0.09, 4), M('#f2c43d', 0.4), 0.105 + (k - 1.5) * 0.012, 0.76, 0.23); mk(new THREE.TorusGeometry(0.2, 0.008, 4, 20), M('#e8473a', 0.5), 0, 1.04, 0).rotation.x = Math.PI / 2; break; }
     case 'acc_shell': { const pearl = M('#fbf3ea', 0.3); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.018, 6, 4), pearl, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); } const sh2 = mk(new THREE.ConeGeometry(0.05, 0.07, 7), M('#f5a5d8', 0.4), 0, 0.98, 0.21); sh2.rotation.x = Math.PI; break; }
     case 'acc_lei': { const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#ff9f43']; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.045, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.21, 1.06 - Math.max(0, Math.sin(a)) * 0.1, Math.sin(a) * 0.19); } break; }
   }
@@ -3674,9 +3685,10 @@ const FURN = {
 function MZ_REGIONS(){ return SPOTS.filter(s => s.id !== 'isle' && Array.isArray(s.fish) && s.fish.some(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of)); }
 function mzNeed(s){ return [...new Set(s.fish.filter(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of))]; }
 function mzSlots(s){ return [...new Set(s.fish.filter(id => FISH_BY_ID[id] && !/^nx/.test(id)))]; }
+for (const [k, n, r, f] of [['fe_couplet', '春聯', 0.45, 'cny'], ['fe_skylantern', '天燈', 0.45, 'lantern'], ['fe_dragonboat', '龍舟模型', 0.9, 'duanwu'], ['fe_stall', '夜市小攤', 0.9, 'night']]) FURN[k] = { name: n, price: 0, rad: r, g: 'fe', fe: f };
 for (const [k, n] of [['dragon', '海龍王'], ['gwhite', '大白鯊'], ['oarking', '皇帶魚王']]) FURN['gyb_' + k] = { name: n + '魚拓', price: 0, rad: 0.45, g: 'gy', gyb: k };
 for (const s of MZ_REGIONS()) FURN['gy_' + s.id] = { name: s.label + '魚拓', price: 0, rad: 0.45, g: 'gy', gy: s.id };
-const FURN_GROUPS = [['gy', '🏛️ 博物館魚拓（集滿一區才拿得到）'], ['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
+const FURN_GROUPS = [['fe', '🏮 節慶家具（節日期間在「🏮 節慶」買）'], ['gy', '🏛️ 博物館魚拓（集滿一區才拿得到）'], ['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
 // KayKit Furniture Bits（Kay Lousberg，CC0）的家具：models/kaykit_furn.glb，價格大小跟伺服器 069_kaykit_furn.sql 一樣
 const KKF_LIST = {
   kk_bed_single_A:{ name:'原木單人床', price:650, rad:1.0, g:'bed', base:'bed', kk:'bed_single_A', bed:1 },
@@ -3837,6 +3849,7 @@ function furnMesh(t){
   if (FURN[t] && FURN[t].dz) return FURN[t].dz.base === 'paint' ? paintMesh(FURN[t].dz) : fzMesh(FURN[t].dz);
   if (t === 'paint') return paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'sea', fish:null });
   if (FURN[t] && FURN[t].kk) return kkfMesh(t);
+  if (FURN[t] && FURN[t].fe) return feMesh(t);
   if (FURN[t] && FURN[t].gyb) return gybMesh(FURN[t].gyb);
   if (FURN[t] && FURN[t].gy) return gyMesh(FURN[t].gy);
   const g = new THREE.Group(), B = (sz, c, p, rough) => { const b = box(sz, c, p, mat(c, rough == null ? 0.8 : rough, { emissive:c, emissiveIntensity:0.1 })); g.add(b); return b; };
@@ -4238,8 +4251,8 @@ function renderFurnSheet(body){
   }
   body.appendChild(el('p', 'sub', `${houseUp(it) ? `現在在 ${curFloor(it) + 1} 樓，這一層` : '這棟房子'}有 ${floorFurn(it).length} / 40 件家具。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。收掉退一半金幣。床可以認領，房門上會掛你的名字。`));
   if (!FZ.list && Cloud.on) loadMu(); if (!Cai.list && Cloud.on) loadCai();
-  for (const [gk, title] of FURN_GROUPS){ if ((gk === 'mu' || gk === 'cai') && !Object.values(FURN).some(v => v.g === gk)) continue; if (gk === 'gy' && !Object.keys(FURN).some(k => FURN[k].g === 'gy' && (rec.owned || []).includes(k))) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
-    for (const [k, v] of Object.entries(FURN).filter(([k2, v]) => v.g === gk && (gk !== 'gy' || (rec.owned || []).includes(k2)))){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
+  for (const [gk, title] of FURN_GROUPS){ if ((gk === 'mu' || gk === 'cai') && !Object.values(FURN).some(v => v.g === gk)) continue; if ((gk === 'gy' || gk === 'fe') && !Object.keys(FURN).some(k => FURN[k].g === gk && (rec.owned || []).includes(k))) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
+    for (const [k, v] of Object.entries(FURN).filter(([k2, v]) => v.g === gk && ((gk !== 'gy' && gk !== 'fe') || (rec.owned || []).includes(k2)))){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・家裡 ${f.filter(x => x.t === k).length} 個`)); li.appendChild(d);
       const b = el('button', 'tbtn', '拿去擺'); b.disabled = rec.coins < v.price; b.addEventListener('click', () => startFurn(k)); const a = el('div', 'tacts'); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
@@ -5156,6 +5169,8 @@ const ACH = [
   { id:'s10',   icon:'📗', name:'小小圖鑑',     desc:'圖鑑收集 10 種魚',          cur:speciesN, goal:10 },
   { id:'s40',   icon:'📘', name:'圖鑑達人',     desc:'圖鑑收集 40 種魚',          cur:speciesN, goal:40 },
   { id:'sAll',  icon:'📚', name:'圖鑑全收集',   desc:'所有魚都釣過',              cur:() => FISH.filter(f => !f.of && rec.count[f.id]).length, goal:() => FISH.filter(f => !f.of).length, title:'圖鑑博士' },
+  { id:'ny2027', icon:'🎆', name:'2027 跨年', desc:'2027 跨年倒數的時候在線上領了紀念章', cur:() => (rec.owned || []).includes('bt_ny2027') ? 1 : 0, goal:1, title:'2027 跨年紀念' },
+  { id:'ny2028', icon:'🎆', name:'2028 跨年', desc:'2028 跨年倒數的時候在線上領了紀念章', cur:() => (rec.owned || []).includes('bt_ny2028') ? 1 : 0, goal:1, title:'2028 跨年紀念' },
   { id:'bossDragon', icon:'🐉', name:'海龍王征服者', desc:'全服合作大魚「海龍王」出力第 1 名', cur:() => (rec.owned || []).includes('bt_dragon') ? 1 : 0, goal:1, title:'海龍王征服者' },
   { id:'bossShark', icon:'🦈', name:'大白鯊征服者', desc:'全服合作大魚「大白鯊」出力第 1 名', cur:() => (rec.owned || []).includes('bt_gwhite') ? 1 : 0, goal:1, title:'大白鯊征服者' },
   { id:'bossOar', icon:'🐍', name:'皇帶魚王征服者', desc:'全服合作大魚「皇帶魚王」出力第 1 名', cur:() => (rec.owned || []).includes('bt_oarking') ? 1 : 0, goal:1, title:'皇帶魚王征服者' },
@@ -5920,6 +5935,86 @@ function gybMesh(k){ const g = new THREE.Group(), nm = { dragon:'海龍王', gwh
   c.fillStyle = '#2a2420'; c.font = 'bold 24px serif'; c.textAlign = 'center'; c.fillText(nm + ' 全服合作', 160, 168); c.fillStyle = '#c8161c'; c.fillRect(276, 148, 28, 28); c.fillStyle = '#f3ead2'; c.font = 'bold 16px serif'; c.fillText('王', 290, 168);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; g.add(box([1.25, 0.8, 0.05], null, [0, 1.3, 0], mat('#2f2018', 0.6))); const pic = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.7), new THREE.MeshBasicMaterial({ map: tx })); pic.position.set(0, 1.3, 0.03); g.add(pic);
   for (const sx of [-0.4, 0.4]){ const l = box([0.05, 1.05, 0.05], null, [sx, 0.5, -0.12], mat('#4a3020', 0.7)); l.rotation.x = 0.12; g.add(l); } const bl = box([0.05, 1.1, 0.05], null, [0, 0.55, -0.32], mat('#4a3020', 0.7)); bl.rotation.x = -0.32; g.add(bl); return g; }
+// ===== 🏮 台灣節慶（083）：日期在伺服器的 festivals 表；網址加 #fest=cny（或 ny、lantern、duanwu、moon、night）可以在本機看裝飾 =====
+const Fest = { d:null, at:0, busy:false, deco:{}, riddles:null, seen:{} };
+function festTest(){ const m = /fest=(ny|cny|lantern|duanwu|moon|night)/.exec(location.hash); return m ? m[1] : null; }
+function festOn(k){ if (festTest() === k) return true; return !!(Fest.d && (Fest.d.on || []).some(f => f.kind === k)); }
+function festActive(){ const t = festTest(); return t ? [{ kind:t, name:{ ny:'跨年', cny:'春節', lantern:'元宵節', duanwu:'端午節', moon:'中秋節', night:'夜市' }[t], end: new Date(Date.now() + 864e5).toISOString() }] : (Fest.d && Fest.d.on) || []; }
+async function loadFest(force){ if (Fest.busy || !Cloud.on || !Cloud.sb) return; if (!force && Date.now() - Fest.at < 300000) return; Fest.busy = true; Fest.at = Date.now();
+  try { const { data } = await Cloud.sb.rpc('fest_now'); if (data){ Fest.d = data; for (const f of data.on || []) if (!Fest.seen[f.id]){ Fest.seen[f.id] = 1; let k = null; try { k = localStorage.getItem('tide.fest.' + f.id); } catch(e){} if (!k){ try { localStorage.setItem('tide.fest.' + f.id, '1'); } catch(e){} setTimeout(() => ticker(`🏮 <b>${esc(f.name)}</b>活動開始了！點頭像的「🏮 節慶」看看有什麼`), 3000); } } } } catch(e){}
+  Fest.busy = false; if (!$('#sheet').hidden && curTab === 'fest') renderTab(); }
+async function festRpc(fn, args){ try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
+function updateFest(dt, t){ if (Cloud.on && Date.now() - Fest.at > 300000) loadFest();
+  const on = new Set(festActive().map(f => f.kind));
+  for (const k of ['ny', 'cny', 'lantern', 'duanwu', 'moon', 'night']){ const want = on.has(k); if (want && !Fest.deco[k]){ const c0 = colliders.length; try { Fest.deco[k] = festBuild(k); } catch(e){ console.warn('fest', k, e); Fest.deco[k] = { g: new THREE.Group() }; } Fest.deco[k].cols = colliders.slice(c0); } else if (!want && Fest.deco[k]){ const D = Fest.deco[k], cs = new Set(D.cols || []); scene.remove(D.g); for (let i = colliders.length - 1; i >= 0; i--) if (cs.has(colliders[i])) colliders.splice(i, 1); delete Fest.deco[k]; } }
+  for (const k in Fest.deco){ const D = Fest.deco[k]; D.g.visible = !onIsle && !House.on && !Dive.on && !inIndoor(); if (D.tick && D.g.visible) D.tick(dt, t); }
+  { const b = $('#bqFest'); if (b){ const a = festActive(); b.textContent = a.length ? `🏮 ${a[0].name}` : '🏮 節慶'; b.classList.toggle('hot', a.length > 0); } } }
+function festBuild(k){ const g = new THREE.Group(); scene.add(g); const D = { g }, [PX, PZ] = MAP.plaza, night = () => DayNight.period !== 'day';
+  const lanternRing = (cols, r, y) => { const L = []; for (let i = 0; i < 18; i++){ const a = i / 18 * Math.PI * 2, x = PX + Math.cos(a) * r, z = PZ + Math.sin(a) * r, l = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), mat(cols[i % cols.length], 0.5, { emissive: cols[i % cols.length], emissiveIntensity:0.7 })); l.scale.y = 1.3; l.position.set(x, y, z); g.add(l); L.push(l); const tas = box([0.04, 0.2, 0.04], '#f2c43d', [x, y - 0.38, z]); g.add(tas); } for (let i = 0; i < 18; i++){ const a = (i + 0.5) / 18 * Math.PI * 2; const w = box([r * 0.36, 0.015, 0.015], '#5a3d2b', [PX + Math.cos(a) * r, y + 0.28, PZ + Math.sin(a) * r]); w.rotation.y = -a + Math.PI / 2; g.add(w); }
+    for (let i = 0; i < 6; i++){ const a = i / 6 * Math.PI * 2, x = PX + Math.cos(a) * r, z = PZ + Math.sin(a) * r; const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, y + 0.4, 8), mat('#8c2a20', 0.6)); p2.position.set(x, (y + 0.4) / 2 + groundHeight(x, z), z); g.add(p2); addCircleCol(x, z, 0.12); } return L; };
+  if (k === 'cny' || k === 'lantern' || k === 'moon'){ lanternRing(k === 'moon' ? ['#ffd36a', '#ff9f43'] : ['#e8473a', '#e8473a', '#ffd36a'], 10.5, 3.2); }
+  if (k === 'night'){ lanternRing(['#ff7aa8', '#ffd36a', '#5fb6e3', '#8fe3c0'], 10.5, 3.0); }
+  if (k === 'cny'){   // 舞獅：繞著廣場跳；店門口貼春聯
+    const lion = new THREE.Group(), red = mat('#d8262a', 0.55), gold = mat('#f2c43d', 0.4), wh = mat('#fbf8f2', 0.7); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), red); hd.scale.set(1.1, 0.95, 1); hd.position.set(0, 1.25, 0.7); lion.add(hd);
+    for (const sx of [-1, 1]){ const e = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), wh); e.position.set(sx * 0.22, 1.42, 1.15); lion.add(e); const p3 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), mat('#111', 0.3)); p3.position.set(sx * 0.22, 1.42, 1.26); lion.add(p3); }
+    const mouth = box([0.6, 0.12, 0.3], null, [0, 0.95, 1.05], mat('#fbf8f2', 0.6)); lion.add(mouth); const horn = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 8), gold); horn.position.set(0, 1.78, 0.75); lion.add(horn);
+    const body2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.55, 2.2, 14, 1, true), mat('#e8473a', 0.7, { side: THREE.DoubleSide })); body2.rotation.x = Math.PI / 2; body2.position.set(0, 0.95, -0.5); lion.add(body2);
+    for (let i = 0; i < 6; i++){ const fr = box([1.05, 0.06, 0.25], null, [0, 0.45, 0.4 - i * 0.35], gold); lion.add(fr); }
+    for (const z of [0.5, -1.4]) for (const sx of [-0.25, 0.25]){ const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), mat('#f2c43d', 0.5)); lg.position.set(sx, 0.25, z); lion.add(lg); }
+    g.add(lion); D.tick = (dt, t) => { const a = t * 0.25, x = PX + Math.cos(a) * 7, z = PZ + Math.sin(a) * 7; lion.position.set(x, groundHeight(x, z) + Math.abs(Math.sin(t * 5)) * 0.35, z); lion.rotation.y = -a; hd.rotation.x = Math.sin(t * 6) * 0.2; hd.rotation.y = Math.sin(t * 2.3) * 0.3; if (Math.random() < dt * 2 && Math.hypot(me.pos.x - x, me.pos.z - z) < 25) FX.emit(x, 2.2, z, 6, '#ffd36a', 0.6, 1.6, 0.9); };
+    for (const L of LANDMARKS.filter(l => ['tackle', 'shop', 'tailor', 'mu', 'cai', 'fu', 'market'].includes(l.id))){ const a = Math.atan2(PX - L.pos.x, PZ - L.pos.z); for (const sx of [-1, 1]){ const cp = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 1.3), new THREE.MeshBasicMaterial({ map: signTex(sx < 0 ? '年年有魚' : '春到漁村', '#d8262a', '#f2c43d', 96, 360), side:THREE.DoubleSide })); const ox = Math.cos(a) * sx * 1.0, oz = -Math.sin(a) * sx * 1.0; cp.position.set(L.pos.x + Math.sin(a) * 1.95 + ox, groundHeight(L.pos.x, L.pos.z) + 1.3, L.pos.z + Math.cos(a) * 1.95 + oz); cp.rotation.y = a; g.add(cp); } } }
+  if (k === 'lantern'){   // 水面上漂著燈籠；晚上天燈慢慢飛上去
+    const fl = []; const [hx, hz] = [SPOT_BY_ID.harbor.pos.x, SPOT_BY_ID.harbor.pos.z]; for (let i = 0; i < 26; i++){ const x = hx + (Math.random() - 0.2) * 22, z = hz - 4 - Math.random() * 18; if (!waterAt(x, z)) continue; const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), mat('#ff9f43', 0.5, { emissive:'#ff7a2a', emissiveIntensity:0.9 })); l.position.set(x, WATER_LEVEL + 0.15, z); g.add(l); fl.push(l); }
+    const sky = []; for (let i = 0; i < 14; i++){ const l = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.6, 10), mat('#ffe0a0', 0.5, { emissive:'#ffb050', emissiveIntensity:0.9 })); l.userData = { x: PX + (Math.random() - 0.5) * 30, z: PZ + (Math.random() - 0.5) * 30, ph: Math.random() * 40 }; g.add(l); sky.push(l); }
+    D.tick = (dt, t) => { fl.forEach((l, i) => { l.position.y = WATER_LEVEL + 0.15 + Math.sin(t * 1.5 + i) * 0.04; l.rotation.y = t * 0.3 + i; }); const nn = night(); sky.forEach(l => { l.visible = nn; const u = ((t + l.userData.ph) % 40) / 40; l.position.set(l.userData.x + Math.sin(t * 0.3 + l.userData.ph) * 2, 2 + u * 40, l.userData.z); }); }; }
+  if (k === 'ny'){   // 晚上港口外面放煙火
+    let nextAt = 0; D.tick = (dt, t) => { if (!night() || t < nextAt) return; nextAt = t + rand(0.5, 1.6); const s2 = SPOT_BY_ID.harbor, x = s2.pos.x + rand(4, 22), z = s2.pos.z + rand(-26, -6), y = rand(14, 22), c = ['#ff5a5a', '#ffd36a', '#5fb6e3', '#8fe3c0', '#ff7aa8', '#b9a0ff'][Math.floor(Math.random() * 6)];
+      FX.emit(x, y, z, 70, c, 3.2, 6, 1.6); if (Math.hypot(me.pos.x - x, me.pos.z - z) < 60) SFX.plop(); }; }
+  if (k === 'duanwu'){   // 港口邊停一艘龍舟、插彩旗
+    const s2 = SPOT_BY_ID.harbor, bx = s2.pos.x + 4, bz = s2.pos.z - 5, bt = new THREE.Group(); bt.position.set(bx, WATER_LEVEL, bz); g.add(bt); bt.add(box([1.1, 0.35, 7], null, [0, 0.05, 0], mat('#d8262a', 0.6))); bt.add(box([1.15, 0.08, 7], null, [0, 0.24, 0], mat('#f2c43d', 0.5)));
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.2, 8), mat('#2f8a4a', 0.6)); head.rotation.x = Math.PI / 2 + 0.4; head.position.set(0, 0.7, 3.8); bt.add(head); for (const sx of [-0.2, 0.2]){ const e = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), mat('#ffd36a', 0.4)); e.position.set(sx, 0.85, 3.6); bt.add(e); } const tl = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1, 6), mat('#2f8a4a', 0.6)); tl.rotation.x = -Math.PI / 2 - 0.5; tl.position.set(0, 0.6, -3.8); bt.add(tl);
+    for (let i = 0; i < 8; i++) for (const sx of [-0.7, 0.7]){ const pd = box([0.06, 0.06, 0.8], null, [sx, 0.15, -2.8 + i * 0.8], mat('#8c5d3b', 0.8)); pd.rotation.x = 0.5; bt.add(pd); } const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.3, 12), mat('#c8473a', 0.5)); drum.position.set(0, 0.45, 2.6); bt.add(drum);
+    for (let i = 0; i < 10; i++){ const a = i / 10 * Math.PI * 2, x = PX + Math.cos(a) * 10.5, z = PZ + Math.sin(a) * 10.5, fl = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), new THREE.MeshBasicMaterial({ color: ['#e8473a', '#ffd36a', '#3fbf9d', '#5fb6e3', '#f5f0e8'][i % 5], side:THREE.DoubleSide })); fl.position.set(x, groundHeight(x, z) + 2.4, z); g.add(fl); const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.8, 6), mat('#8c5d3b', 0.7)); p2.position.set(x - 0.28, groundHeight(x, z) + 1.4, z); g.add(p2); }
+    D.tick = (dt, t) => { bt.position.y = WATER_LEVEL + Math.sin(t * 1.2) * 0.05; bt.rotation.z = Math.sin(t * 0.9) * 0.03; }; }
+  if (k === 'moon'){   // 晚上東邊升起很大的月亮，廣場有兔子燈
+    const mn = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 16), new THREE.MeshBasicMaterial({ color:'#fff4c8', fog:false })); g.add(mn); const glow = new THREE.Mesh(new THREE.SphereGeometry(13, 24, 16), new THREE.MeshBasicMaterial({ color:'#ffe9a0', transparent:true, opacity:0.18, fog:false, depthWrite:false })); g.add(glow);
+    const rb = new THREE.Group(); rb.position.set(PX + 3, groundHeight(PX + 3, PZ + 3), PZ + 3); g.add(rb); const rw = mat('#fbf8f2', 0.5, { emissive:'#ffe9c0', emissiveIntensity:0.6 }); const b2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 14, 10), rw); b2.scale.set(1.3, 1, 1); b2.position.y = 0.6; rb.add(b2); const h2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), rw); h2.position.set(0.5, 0.95, 0); rb.add(h2); for (const sz of [-0.1, 0.1]){ const ear = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.4, 4, 8), rw); ear.position.set(0.45, 1.4, sz); rb.add(ear); } for (const sz of [-0.12, 0.12]){ const e = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), mat('#e8473a', 0.4)); e.position.set(0.76, 1.0, sz); rb.add(e); } addCircleCol(PX + 3, PZ + 3, 0.7);
+    D.tick = () => { const nn = night(); mn.visible = glow.visible = nn; if (nn){ mn.position.set(camera.position.x + 120, camera.position.y + 60, camera.position.z - 80); glow.position.copy(mn.position); } }; }
+  if (k === 'night'){   // 夜市攤：撈金魚、射氣球、雞排、珍奶、烤魷魚
+    const names = [['🐟 撈金魚', '#5fb6e3'], ['🎈 射氣球', '#ff7aa8'], ['🍗 大雞排', '#ff9f43'], ['🧋 珍珠奶茶', '#c79a6b'], ['🦑 烤魷魚', '#e8473a']];
+    names.forEach(([nm, col], i) => { const a = (i - 2) * 0.32 + Math.PI * 0.62, x = PX + Math.cos(a) * 13.5, z = PZ + Math.sin(a) * 13.5; if (!isLand(x, z)) return; const st = new THREE.Group(), y = groundHeight(x, z); st.position.set(x, y, z); st.rotation.y = Math.atan2(PX - x, PZ - z); g.add(st);
+      st.add(box([2.0, 0.9, 0.8], null, [0, 0.45, 0], mat('#8c5d3b', 0.8))); st.add(box([2.1, 0.06, 0.9], null, [0, 0.92, 0], mat('#f4f0e6', 0.7))); for (const sx of [-0.95, 0.95]) st.add(box([0.08, 2.2, 0.08], null, [sx, 1.1, -0.35], mat('#5a3d2b', 0.8)));
+      st.add(box([2.2, 0.08, 1.3], null, [0, 2.2, 0.1], mat(col, 0.6))); const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.45), new THREE.MeshBasicMaterial({ map: signTex(nm, col, '#ffffff', 448, 112), side:THREE.DoubleSide })); sg.position.set(0, 1.9, 0.42); st.add(sg);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), mat('#fff4d0', 0.4, { emissive:'#ffd98a', emissiveIntensity:1 })); bulb.position.set(0, 2.05, 0.3); st.add(bulb);
+      if (i === 0){ const tub = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.45, 0.25, 16), mat('#5fb6e3', 0.4)); tub.position.set(0, 1.05, 0.05); st.add(tub); for (let q = 0; q < 6; q++){ const fsh = box([0.12, 0.05, 0.05], null, [Math.cos(q) * 0.25, 1.18, Math.sin(q) * 0.25], mat('#ff7a2a', 0.4)); st.add(fsh); } }
+      if (i === 1) for (let q = 0; q < 9; q++){ const bl = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), mat(['#e8473a', '#ffd36a', '#5fb6e3'][q % 3], 0.4)); bl.position.set(-0.7 + (q % 3) * 0.7, 1.35 + Math.floor(q / 3) * 0.28, -0.3); st.add(bl); }
+      addOBoxCol(x, z, 2.1, 0.9, st.rotation.y); }); }
+  return D; }
+function feMesh(t){ const g = new THREE.Group(), k = FURN[t].fe;
+  if (k === 'cny'){ for (const sx of [-0.35, 0.35]){ const cp = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 1.1), new THREE.MeshBasicMaterial({ map: signTex(sx < 0 ? '年年有魚' : '春到漁村', '#d8262a', '#f2c43d', 96, 360), side:THREE.DoubleSide })); cp.position.set(sx, 1.2, 0); g.add(cp); } const top = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.24), new THREE.MeshBasicMaterial({ map: signTex('五福臨門', '#d8262a', '#f2c43d', 360, 110), side:THREE.DoubleSide })); top.position.set(0, 1.9, 0); g.add(top); const fu = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), new THREE.MeshBasicMaterial({ map: signTex('福', '#d8262a', '#f2c43d', 128, 128), side:THREE.DoubleSide })); fu.position.set(0, 1.2, 0); fu.rotation.z = Math.PI / 4; g.add(fu); g.add(box([1.0, 0.06, 0.1], '#6e4a2f', [0, 0.03, 0])); }
+  else if (k === 'lantern'){ const l = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.6, 12), mat('#ffe0a0', 0.5, { emissive:'#ffb050', emissiveIntensity:0.8 })); l.position.y = 1.0; g.add(l); const bs = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.7, 8), mat('#8c5d3b', 0.8)); bs.position.y = 0.35; g.add(bs); const ch = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({ map: signTex('平安', '#ffe0a0', '#c8161c', 128, 128), side:THREE.DoubleSide, transparent:true })); ch.position.set(0, 1.0, 0.29); g.add(ch); }
+  else if (k === 'duanwu'){ g.add(box([0.5, 0.18, 1.8], '#d8262a', [0, 0.35, 0])); g.add(box([0.52, 0.04, 1.8], '#f2c43d', [0, 0.45, 0])); const hd = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 8), mat('#2f8a4a', 0.6)); hd.rotation.x = Math.PI / 2 + 0.4; hd.position.set(0, 0.6, 1.0); g.add(hd); g.add(box([0.6, 0.26, 1.2], '#6e4a2f', [0, 0.13, 0])); }
+  else { g.add(box([1.4, 0.8, 0.6], '#8c5d3b', [0, 0.4, 0])); g.add(box([1.5, 0.05, 0.7], '#f4f0e6', [0, 0.82, 0])); for (const sx of [-0.65, 0.65]) g.add(box([0.06, 1.8, 0.06], '#5a3d2b', [sx, 0.9, -0.25])); g.add(box([1.6, 0.06, 0.9], '#ff7aa8', [0, 1.8, 0])); const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.3), new THREE.MeshBasicMaterial({ map: signTex('夜市小吃', '#ff7aa8', '#ffffff', 384, 96), side:THREE.DoubleSide })); sg.position.set(0, 1.5, 0.32); g.add(sg); }
+  return g; }
+function renderFest(body){ body.appendChild(el('div', 'shophead')).innerHTML = '<b>🏮 節慶活動</b>';
+  if (!Cloud.on && !festTest()){ body.appendChild(el('div', 'empty', '要連上雲端才看得到節慶活動。')); return; }
+  const on = festActive(), d = Fest.d, fmt = x => new Date(x).toLocaleString('zh-TW', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  if (!on.length){ body.appendChild(el('div', 'empty', d && d.next ? `現在沒有節慶活動。下一個是「${d.next.name}」：${fmt(d.next.start)} 開始。` : '現在沒有節慶活動。')); }
+  for (const f of on){ const box2 = el('div', 'growbox'); box2.appendChild(el('div', 'gb-t', `🏮 ${f.name}・到 ${fmt(f.end)}`)); body.appendChild(box2);
+    if (f.kind === 'cny'){ const done = d && (d.mine || []).includes('hongbao'), b = el('button', 'tbtn', done ? '🧧 今天的紅包領過了' : '🧧 領今天的紅包'); b.disabled = done; b.addEventListener('click', async () => { const r = await festRpc('fest_hongbao'); if (r){ adoptRow(r.player); SFX.catch(); flash(`🧧 恭喜發財！紅包裡有 ${r.coins} 金幣`, 2.2); loadFest(true); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '春節每天都可以領一次紅包。舞獅在廣場繞圈圈，店門口都貼了春聯。')); }
+    if (f.kind === 'lantern'){ box2.appendChild(el('p', 'sub', '猜燈謎：每一題答對 50 金幣（每題只能答對一次）。晚上水面上有燈籠，天燈會飛上天。'));
+      if (!Fest.riddles){ Fest.riddles = []; festRpc('fest_riddles').then(r => { Fest.riddles = r || []; renderTab(); }); }
+      for (const q of Fest.riddles){ const row = el('div', 'field'); row.appendChild(el('label', '', `${q.done ? '✅' : '🏮'} ${q.q}`)); if (!q.done){ const ip = el('input', 'txt'); ip.placeholder = `提示：${q.hint || ''}`; const b = el('button', 'tbtn ghost', '猜'); b.addEventListener('click', async () => { const r = await festRpc('fest_answer', { p_id: q.id, p_answer: ip.value }); if (!r) return; if (r.ok){ adoptRow(r.player); q.done = true; SFX.catch(); flash('🎉 答對了！+50 金幣', 1.6); renderTab(); } else { SFX.fail(); toast('不對喔，再想想看'); } }); const rr = el('div', 'tankbar'); rr.append(ip, b); row.appendChild(rr); } box2.appendChild(row); } }
+    if (f.kind === 'ny'){ const b = el('button', 'tbtn', '🎆 領跨年紀念章'); b.addEventListener('click', async () => { const r = await festRpc('fest_badge'); if (r){ adoptRow(r.player); SFX.catch(); flash('🎆 新年快樂！拿到跨年紀念章（成就裡可以換稱號）', 2.4); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '晚上港口外面會放煙火。12/31 23:50～1/1 00:15 倒數的時候在線上，按上面的按鈕就能領紀念章。')); }
+    if (f.kind === 'duanwu') box2.appendChild(el('p', 'sub', '港口邊停著一艘龍舟，廣場插滿了彩旗。'));
+    if (f.kind === 'moon') box2.appendChild(el('p', 'sub', '晚上東邊會升起很大的月亮，廣場有兔子燈，記得拍照！'));
+    if (f.kind === 'night') box2.appendChild(el('p', 'sub', '廣場旁邊擺了夜市攤：撈金魚、射氣球、大雞排、珍珠奶茶、烤魷魚。'));
+    const items = GEAR.filter(g => g.fest === f.kind), furns = Object.keys(FURN).filter(k2 => FURN[k2].fe === f.kind), ul = el('ul', 'shoplist cols');
+    for (const it of items){ const li = el('li'), own = ownsGear(it.id); li.appendChild(el('span', 'dishic', it.icon)); const dd = el('div', 'tinfo'); dd.appendChild(el('div', 'n', `${it.name}（限定）`)); dd.appendChild(el('div', 'sub2', own ? '已經買了・在衣櫃裡' : `🪙${it.price.toLocaleString()}`)); li.appendChild(dd); if (!own){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '買'); b.addEventListener('click', () => buyGear(it.id)); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
+    for (const k2 of furns){ const li = el('li'), own = (rec.owned || []).includes(k2), pr = { fe_couplet:200, fe_skylantern:300, fe_dragonboat:600, fe_stall:800 }[k2]; li.appendChild(el('span', 'dishic', '🏮')); const dd = el('div', 'tinfo'); dd.appendChild(el('div', 'n', `${FURN[k2].name}（限定家具）`)); dd.appendChild(el('div', 'sub2', own ? '已經買了・在家具清單裡（擺不用錢）' : `🪙${pr}・買一次就永遠是你的`)); li.appendChild(dd);
+      if (!own){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '買'); b.addEventListener('click', async () => { const r = await festRpc('fest_buy', { p_item: k2 }); if (r){ adoptRow(r); SFX.coin(); flash(`🏮 買了${FURN[k2].name}！到家裡的家具清單就能擺`, 2); renderTab(); } }); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
+    if (items.length || furns.length){ box2.appendChild(el('div', 'sub2', '限定商品（過了節日就買不到，買到的永遠保留）：')); box2.appendChild(ul); } }
+  if (d && d.next && on.length) body.appendChild(el('p', 'sub', `下一個節日：「${d.next.name}」${fmt(d.next.start)}`)); }
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
 function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); }
 function enterShrimp(){
@@ -7453,7 +7548,7 @@ function renderMarket(body, inShop){
 }
 function confirmOnce(b){ if (b.dataset.sure === '1') return true; b.dataset.sure = '1'; const t = b.textContent; b.textContent = '確定？'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = t; } }, 2500); return false; }
 // ===== 推播通知（048、Edge Function tide-push）：遊戲關著時手機也會跳通知 =====
-const PUSH_KINDS = [['market', '🐟 你在魚市的魚賣掉了'], ['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚'], ['museum', '🏛️ 你的名字刻在博物館了'], ['boss', '🐋 全服合作大魚要出現了']];
+const PUSH_KINDS = [['market', '🐟 你在魚市的魚賣掉了'], ['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚'], ['museum', '🏛️ 你的名字刻在博物館了'], ['boss', '🐋 全服合作大魚要出現了'], ['fest', '🏮 節慶活動開始']];
 const Push = { busy:false, sub:null, prefs:null, checked:false, msg:'' };
 function pushOk(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
 function b64u(s){ const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
@@ -7525,7 +7620,7 @@ function renderWardrobe(body, only){
   body.appendChild(seg); }
   if (!only && Wardrobe.slot === 'look'){ renderLookEd(body); return; }
   const ul = el('ul', 'shoplist cols');
-  for (const it of only ? GEAR.filter(only) : GEAR.filter(g => g.slot === Wardrobe.slot && !g.love)){
+  for (const it of only ? GEAR.filter(only) : GEAR.filter(g => g.slot === Wardrobe.slot && !g.love && (!g.fest || ownsGear(g.id) || festOn(g.fest)))){
     const on = cleanGear(rec.gear)[it.slot] === it.id, own = ownsGear(it.id), li = el('li', on ? 'on' : '');
     { const ic = el('img', 'gearic'); ic.alt = it.name; try { ic.src = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){} li.appendChild(ic); }
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', it.name)); d.appendChild(el('div', 'sub2', on ? '穿著中' : own ? (paidGear(it) ? '已擁有' : '免費') : gearCost(it))); li.appendChild(d);
@@ -7566,7 +7661,7 @@ function renderCloset(body){
   if (Closet.slot === 'look'){ renderLookEd(list); }
   else { const grid = el('div', 'cl-grid'), cur = cleanGear(rec.gear), pv = cleanGear(Wardrobe.preview || rec.gear);
     const tile = (id, name, icon, badge, on, onClick) => { const b = el('button', 'cl-it' + (on ? ' on' : '')); const im = el('img'); im.alt = name; im.loading = 'lazy'; if (icon) im.src = icon; b.appendChild(im); b.appendChild(el('span', 'n', name)); if (badge) b.appendChild(el('span', 'b', badge)); b.addEventListener('click', onClick); grid.appendChild(b); };
-    for (const it of GEAR.filter(g => g.slot === Closet.slot)){ const own = ownsGear(it.id), wearing = cur[it.slot] === it.id, trying = pv[it.slot] === it.id && !wearing; let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){}
+    for (const it of GEAR.filter(g => g.slot === Closet.slot && (!g.fest || ownsGear(g.id) || festOn(g.fest)))){ const own = ownsGear(it.id), wearing = cur[it.slot] === it.id, trying = pv[it.slot] === it.id && !wearing; let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){}
       tile(it.id, it.name, ic, wearing ? '✔ 穿著' : own ? '' : it.love ? `💙${it.love}` : `🪙${it.price.toLocaleString()}`, wearing || trying, () => { if (own){ endTryOn(); wearGear(it.id); } else { Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: it.id }); Wardrobe.previewOf = it.id; renderTab(); } }); }
     if (DESIGN_SLOTS.some(([k]) => k === Closet.slot)){ for (const item of (rec.owned || []).filter(id => { const d = designId(id); return d && d.kind === Closet.slot; })){ const d = designId(item), D = Designs.map.get(d.id); if (!D) queueDesign(d.id); let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [Closet.slot]: item }), Closet.slot, 96); } catch(e){}
         tile(item, D ? D.name || '設計' : '載入中…', ic, cur[Closet.slot] === item ? '✔ 穿著' : '🎨', cur[Closet.slot] === item, () => wearDesign(item)); }
@@ -7720,7 +7815,7 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
-  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gyb?_[a-z]+$/.test(id) || /^bt_[a-z]+$/.test(id)))];   /* gyb_：大魚的魚拓、bt_：大魚稱號 */   /* gy_：博物館魚拓 */
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gyb?_[a-z]+$/.test(id) || /^bt_[a-z0-9]+$/.test(id) || /^fe_[a-z]+$/.test(id)))];   /* gyb_：大魚的魚拓、bt_：大魚稱號 */   /* gy_：博物館魚拓 */
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
@@ -8048,6 +8143,7 @@ $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(
   const mk = (id, txt, fn, title) => { const b = el('button', 'bq', txt); b.id = id; if (title) b.title = title; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); fn(); }); row.appendChild(b); return b; };
   mk('bqId', '🆔', async () => { const c = friendCode(); if (!c){ toast('連上雲端以後才有好友代碼'); return; } try { await navigator.clipboard.writeText(c); toast(`好友代碼 ${c} 已經複製了，貼給朋友就能加好友`); } catch(e){ toast(`你的好友代碼：${c}`); } openSheet('people'); }, '好友代碼：點一下複製，打開加好友');
   mk('bqSet', '⚙️ 設定', () => openSheet('settings'));
+  mk('bqFest', '🏮 節慶', () => { openSheet('fest'); loadFest(true); });
   mk('bqPet', '🐾 寵物', () => { Pets.atShop = false; openSheet('pets'); loadPets(true); });
   mk('bqQuest', '📜 任務', () => openSheet('quest')); mk('bqAch', '🏅 成就', () => openSheet('ach')); mk('bqHelp', '❓ 玩法', () => openSheet('help'));
   mk('bqLogin', '🔑 登入', () => { if (Cloud.isAnon && Cloud.ui){ Cloud.ui.step = 'idle'; } openSheet('style'); setTimeout(() => { const cb = document.querySelector('#sheet .cloudbox'); if (cb) cb.scrollIntoView({ block:'center' }); }, 150); }, '登入、綁定 Email、換裝置');
@@ -9332,6 +9428,7 @@ function renderTab(){
   if (curTab === 'museum'){ renderMuseum(body); return; }
   if (curTab === 'pets'){ renderPets(body); return; }
   if (curTab === 'settings'){ renderSettings(body); return; }
+  if (curTab === 'fest'){ renderFest(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'cldesign'){ renderClDesign(body); return; }
   if (curTab === 'shop'){ renderShop(body); return; }
@@ -9631,6 +9728,10 @@ function renderTab(){
     sec('⚓ 港口海底潛水', [
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
+    ]);
+    sec('🏮 節慶活動', [
+      '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，倒數的時候在線上領紀念章）、春節（除夕起 7 天，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、限定香包和龍舟模型）、中秋（大月亮、限定柚子帽）、每個月第一個週末晚上的夜市（廣場夜市攤、限定夜市小攤）。',
+      '點頭像的「🏮 節慶」看現在有什麼活動、下一個節日是什麼時候。限定商品過了節日就買不到，已經買到的永遠保留。節日開始的時候會推播（可以在推播開關裡關掉）。',
     ]);
     sec('🐋 全服合作大魚', [
       '每天晚上 8:30（週六日下午 2:00 也有一次），港口外海會出現一條超大的魚：海龍王、大白鯊或皇帶魚王（輪流）。出現前 10 分鐘會跑馬燈和推播。',
@@ -10063,7 +10164,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
