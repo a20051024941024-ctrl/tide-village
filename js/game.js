@@ -6235,9 +6235,22 @@ NightGame.start = async function(kind){ if (NightGame.on) return; let gid = null
   // ---------- 射氣球 ----------
   const balloons = []; if (kind === 'balloon'){ for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) balloons.push({ c, r, col: ['#ff5a5a', '#ffd36a', '#5fb6e3', '#8fe3c0', '#ff7aa8', '#b9a0ff'][(c + r * 2) % 6], pop:0, ph: Math.random() * 6 }); S.lim = 45; }
   const bPos = b => { const bw = Math.min(W * 0.7, H * 1.2), x0 = W / 2 - bw / 2, sp = bw / 6; return { x: x0 + sp * (b.c + 0.5), y: H * 0.26 + b.r * sp * 0.95 + Math.sin(S.t * 1.6 + b.ph) * sp * 0.06, rr: sp * 0.32 }; };
+  /* 划龍舟：跟著鼓聲（每 0.62 秒一下）按，按在拍子上 ±0.16 秒算划對；25 秒；旁邊有一艘對手船 */
+  if (kind === 'boat'){ S.lim = 25; S.beat = 0.62; S.boatX = 0; S.rival = 0; S.combo = 0; S.lastBeat = -1; S.rush = 0; }
+  /* 中秋烤肉：烤架上 4 串，慢慢從生的變金黃再變焦；金黃的時候點一下拿起來 +1，焦了換一串新的；40 秒 */
+  const sk = []; if (kind === 'bbq'){ S.lim = 40; for (let i = 0; i < 4; i++) sk.push({ c: -Math.random() * 0.4, sp: 0.16 + Math.random() * 0.08, flip: 0, kind: i % 2 }); }
+  const skPos = i => ({ x: W * (0.24 + i * 0.17), y: H * 0.55 });
   const wob = () => { const k = Math.min(W, H) * 0.05; return { x: Math.sin(S.t * 2.3) * k + Math.sin(S.t * 5.1) * k * 0.3, y: Math.cos(S.t * 1.7) * k * 0.8 }; };
   cv.addEventListener('pointerdown', e => { e.preventDefault(); if (S.over){ if (S.res) close(); return; } S.ptr = pos(e); S.last = pos(e); S.down = true; try { cv.setPointerCapture(e.pointerId); } catch(_){}
     if (kind === 'scoop'){ SFX.plop(); const { cx, cy, R } = T(); S.parts.push({ x: S.ptr.x, y: S.ptr.y, t:0, ring:1 }); }
+    if (kind === 'boat' && !S.over){ const ph = S.t / S.beat, near = Math.round(ph), off = Math.abs(ph - near) * S.beat;
+      if (off < 0.16 && near !== S.lastBeat && near > 0){ S.lastBeat = near; S.score++; S.combo++; S.rush = 0.35; SFX.splash(false); S.parts.push({ x: W * 0.5, y: H * 0.28, t:0, txt: S.combo >= 5 ? `連划 ${S.combo}！` : '划！' }); }
+      else { S.combo = 0; SFX.fail(); S.parts.push({ x: W * 0.5, y: H * 0.28, t:0, txt: '亂了！' }); } }
+    if (kind === 'bbq' && !S.over){ sk.forEach((k, i) => { const p2 = skPos(i); if (Math.abs(S.ptr.x - p2.x) < W * 0.07 && Math.abs(S.ptr.y - p2.y) < H * 0.25){
+        if (k.c >= 0.62 && k.c <= 0.85){ S.score++; SFX.catch(); S.parts.push({ x: p2.x, y: p2.y - H * 0.2, t:0, txt: '+1 烤得剛好！' }); }
+        else if (k.c < 0.62){ k.flip = 0.3; SFX.plop(); S.parts.push({ x: p2.x, y: p2.y - H * 0.2, t:0, txt: '還沒熟' }); return; }
+        else { SFX.fail(); S.parts.push({ x: p2.x, y: p2.y - H * 0.2, t:0, txt: '焦了…' }); }
+        k.c = -Math.random() * 0.4; k.sp = 0.16 + Math.random() * 0.08; k.kind = Math.random() < 0.5 ? 0 : 1; } }); }
     if (kind === 'balloon' && S.shots > 0){ const w = wob(), hx = S.ptr.x + w.x, hy = S.ptr.y + w.y; S.shots--; let hit = null; for (const b of balloons){ if (b.pop) continue; const p2 = bPos(b); if (Math.hypot(hx - p2.x, hy - p2.y) < p2.rr) { hit = b; break; } }
       S.parts.push({ x: hx, y: hy, t:0, shot:1 }); if (hit){ hit.pop = 1; S.hits++; S.score = S.hits; SFX.catch(); const p2 = bPos(hit); for (let q = 0; q < 14; q++) S.parts.push({ x: p2.x, y: p2.y, vx: (Math.random() - 0.5) * 300, vy: (Math.random() - 0.5) * 300, t:0, col: hit.col }); } else SFX.plop();
       if (S.shots <= 0) setTimeout(() => finish(S.hits >= 10 ? '全部打中！' : '子彈用完了'), 600); } });
@@ -6272,6 +6285,31 @@ NightGame.start = async function(kind){ if (NightGame.on) return; let gid = null
       g.fillText('網子', 16, 92); g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(60, 80, 110, 14); g.fillStyle = S.paper > 50 ? '#8fe3c0' : S.paper > 25 ? '#ffd36a' : '#ff5a5a'; g.fillRect(60, 80, 110 * S.paper / 100, 14);
       if (!S.t || S.t < 4){ g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,0.9)'; g.font = '15px sans-serif'; g.fillText('按住＝網子下水，移到金魚下面放開＝撈起來', W / 2, H - 14); }
       if (!S.over && S.t >= S.lim) finish('時間到！'); }
+    else if (kind === 'boat'){
+      const sky = g.createLinearGradient(0, 0, 0, H * 0.45); sky.addColorStop(0, '#7cc6ec'); sky.addColorStop(1, '#bfe6f6'); g.fillStyle = sky; g.fillRect(0, 0, W, H * 0.45); g.fillStyle = '#3d8fc0'; g.fillRect(0, H * 0.45, W, H * 0.55);
+      if (!S.over){ S.boatX += dt * (40 + (S.rush > 0 ? 160 : 0) + S.combo * 6); S.rival += dt * 92; S.rush = Math.max(0, S.rush - dt); }
+      for (let i = 0; i < 12; i++){ const x = ((i * 120 - S.boatX * 0.8) % (W + 120) + W + 120) % (W + 120) - 60; g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, H * 0.62 + (i % 3) * 30); g.lineTo(x + 40, H * 0.62 + (i % 3) * 30); g.stroke(); }
+      const drawBoat = (x, y, col, sc) => { g.save(); g.translate(x, y); g.scale(sc, sc); g.fillStyle = col; g.beginPath(); g.moveTo(-140, 0); g.lineTo(140, 0); g.lineTo(120, 22); g.lineTo(-120, 22); g.closePath(); g.fill(); g.fillStyle = '#f2c43d'; g.fillRect(-130, -4, 260, 6);
+        g.fillStyle = '#2f8a4a'; g.beginPath(); g.moveTo(140, 0); g.quadraticCurveTo(170, -30, 158, -50); g.lineTo(150, -18); g.closePath(); g.fill(); g.fillStyle = '#ffd36a'; g.beginPath(); g.arc(156, -40, 4, 0, 7); g.fill();
+        for (let k = 0; k < 8; k++){ const px = -100 + k * 27, sw = Math.sin(S.t * 10 + k) * 6; g.fillStyle = '#ffd9b0'; g.beginPath(); g.arc(px, -12, 6, 0, 7); g.fill(); g.strokeStyle = '#8c5d3b'; g.lineWidth = 3; g.beginPath(); g.moveTo(px, -8); g.lineTo(px - 10 + sw, 26); g.stroke(); } g.restore(); };
+      const lead = S.boatX - S.rival; drawBoat(W * 0.5 + clamp(-lead * 0.3, -W * 0.3, W * 0.3), H * 0.5, '#8a8a9a', 0.55); drawBoat(W * 0.5, H * 0.74, '#d8262a', 0.8);
+      const ph = (S.t / S.beat) % 1, pulse = 1 - Math.min(1, Math.min(ph, 1 - ph) / 0.2); g.fillStyle = `rgba(200,60,40,${0.5 + pulse * 0.5})`; g.beginPath(); g.arc(W * 0.86, H * 0.3, 28 + pulse * 10, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = 'bold 18px sans-serif'; g.textAlign = 'center'; g.fillText('咚', W * 0.86, H * 0.3 + 6);
+      g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = 'bold 17px sans-serif'; g.fillText(`🐉 划了 ${S.score} 下${S.combo >= 3 ? `・連划 ${S.combo}` : ''}`, 16, 44); g.fillText(`⏱ ${Math.max(0, Math.ceil(S.lim - S.t))}　${lead >= 0 ? '領先中！' : '落後了，加油'}`, 16, 68);
+      if (S.t < 4){ g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,0.95)'; g.font = '15px sans-serif'; g.fillText('右上的鼓「咚」亮起來的時候點畫面＝划一下，跟著節奏連划會越來越快', W / 2, H - 14); }
+      if (!S.over && S.t >= S.lim) finish(lead >= 0 ? '贏了！龍舟第一個到！' : '到終點了！'); }
+    else if (kind === 'bbq'){
+      const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#1a1840'); bg.addColorStop(1, '#2a2050'); g.fillStyle = bg; g.fillRect(0, 0, W, H); g.fillStyle = '#fff4c8'; g.beginPath(); g.arc(W * 0.85, H * 0.18, Math.min(W, H) * 0.09, 0, 7); g.fill();
+      g.fillStyle = '#2a2a2e'; g.fillRect(W * 0.14, H * 0.6, W * 0.72, H * 0.12); for (let k = 0; k < 14; k++){ g.fillStyle = `rgba(255,${120 + Math.sin(S.t * 6 + k) * 40},40,0.8)`; g.fillRect(W * 0.16 + k * W * 0.049, H * 0.66, W * 0.03, H * 0.04); }
+      g.strokeStyle = '#888'; g.lineWidth = 2; for (let k = 0; k < 10; k++){ g.beginPath(); g.moveTo(W * 0.14, H * 0.6 + k * 2); g.lineTo(W * 0.86, H * 0.6 + k * 2); g.stroke(); }
+      sk.forEach((k, i) => { if (!S.over){ k.c += dt * k.sp; k.flip = Math.max(0, k.flip - dt); } const p2 = skPos(i), c = clamp(k.c, 0, 1.2);
+        const col = c < 0.62 ? `rgb(${Math.round(240 - c * 60)},${Math.round(170 - c * 60)},${Math.round(160 - c * 90)})` : c <= 0.85 ? '#d8902a' : `rgb(${Math.round(120 - (c - 0.85) * 200)},${Math.round(60 - (c - 0.85) * 100)},30)`;
+        g.strokeStyle = '#c8a070'; g.lineWidth = 4; g.beginPath(); g.moveTo(p2.x, p2.y - H * 0.28); g.lineTo(p2.x, p2.y + H * 0.06); g.stroke();
+        for (let q = 0; q < 4; q++){ g.fillStyle = col; const y = p2.y - H * 0.22 + q * H * 0.065 - (k.flip > 0 ? Math.sin(k.flip * 10) * 6 : 0); if (k.kind){ g.beginPath(); g.ellipse(p2.x, y, W * 0.03, H * 0.028, 0, 0, 7); g.fill(); } else { g.fillRect(p2.x - W * 0.028, y - H * 0.025, W * 0.056, H * 0.05); } }
+        if (c >= 0.62 && c <= 0.85){ g.strokeStyle = '#ffe680'; g.lineWidth = 3; g.strokeRect(p2.x - W * 0.045, p2.y - H * 0.27, W * 0.09, H * 0.3); }
+        if (c > 0.85 && Math.random() < dt * 8) S.parts.push({ x: p2.x + (Math.random() - 0.5) * 20, y: p2.y - H * 0.25, vx: 0, vy: -40, t:0, col: 'rgba(80,80,80,0.7)' }); });
+      g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = 'bold 17px sans-serif'; g.fillText(`🍢 烤好 ${S.score} 串`, 16, 44); g.fillText(`⏱ ${Math.max(0, Math.ceil(S.lim - S.t))}`, 16, 68);
+      if (S.t < 4){ g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,0.95)'; g.font = '15px sans-serif'; g.fillText('串燒變金黃色（亮框）的時候點它拿起來；太早拿會翻面，太晚會焦掉', W / 2, H - 14); }
+      if (!S.over && S.t >= S.lim) finish('中秋烤肉結束！'); }
     else { const w = wob();
       g.fillStyle = '#6b3d2a'; const bw = Math.min(W * 0.7, H * 1.2); g.fillRect(W / 2 - bw / 2 - 14, H * 0.12, bw + 28, H * 0.66); g.fillStyle = '#f4e6c8'; g.fillRect(W / 2 - bw / 2, H * 0.12 + 12, bw, H * 0.66 - 24);
       for (const b of balloons){ if (b.pop) continue; const p2 = bPos(b); g.strokeStyle = '#888'; g.lineWidth = 1; g.beginPath(); g.moveTo(p2.x, p2.y + p2.rr); g.lineTo(p2.x, p2.y + p2.rr * 1.6); g.stroke(); g.fillStyle = b.col; g.beginPath(); g.ellipse(p2.x, p2.y, p2.rr * 0.85, p2.rr, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.ellipse(p2.x - p2.rr * 0.3, p2.y - p2.rr * 0.35, p2.rr * 0.18, p2.rr * 0.28, -0.4, 0, Math.PI * 2); g.fill(); }
@@ -6285,7 +6323,7 @@ NightGame.start = async function(kind){ if (NightGame.on) return; let gid = null
       else if (q.shot){ g.fillStyle = '#333'; g.beginPath(); g.arc(q.x, q.y, 4, 0, Math.PI * 2); g.fill(); }
       else { q.x += q.vx * dt; q.y += q.vy * dt; g.fillStyle = q.col; g.fillRect(q.x - 3, q.y - 3, 6, 6); } } g.globalAlpha = 1;
     if (S.over){ g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, 0, W, H); g.textAlign = 'center'; g.fillStyle = '#fff'; g.font = 'bold 26px sans-serif'; g.fillText(S.msg, W / 2, H / 2 - 40);
-      if (S.res){ g.font = 'bold 20px sans-serif'; g.fillText(kind === 'scoop' ? `撈到 ${S.res.score} 分` : `打中 ${S.res.score} 顆`, W / 2, H / 2); g.fillStyle = '#ffd36a'; g.fillText(S.res.local ? '（本機測試，沒有金幣）' : `🪙 +${S.res.coins}${S.res.capped ? '（今天的小遊戲獎勵到上限了）' : ''}`, W / 2, H / 2 + 32); if (S.res.bowl){ g.fillStyle = '#8fe3c0'; g.fillText('🐟 拿到「金魚缸」家具！', W / 2, H / 2 + 62); } g.fillStyle = '#ddd'; g.font = '15px sans-serif'; g.fillText('點一下回到夜市', W / 2, H / 2 + 94); } else { g.font = '16px sans-serif'; g.fillText('結算中…', W / 2, H / 2); } }
+      if (S.res){ g.font = 'bold 20px sans-serif'; g.fillText(kind === 'scoop' ? `撈到 ${S.res.score} 分` : kind === 'boat' ? `划對 ${S.res.score} 下` : kind === 'bbq' ? `烤好 ${S.res.score} 串` : `打中 ${S.res.score} 顆`, W / 2, H / 2); g.fillStyle = '#ffd36a'; g.fillText(S.res.local ? '（本機測試，沒有金幣）' : `🪙 +${S.res.coins}${S.res.capped ? '（今天的小遊戲獎勵到上限了）' : ''}`, W / 2, H / 2 + 32); if (S.res.bowl){ g.fillStyle = '#8fe3c0'; g.fillText('🐟 拿到「金魚缸」家具！', W / 2, H / 2 + 62); } g.fillStyle = '#ddd'; g.font = '15px sans-serif'; g.fillText('點一下回到夜市', W / 2, H / 2 + 94); } else { g.font = '16px sans-serif'; g.fillText('結算中…', W / 2, H / 2); } }
     raf = requestAnimationFrame(frame); };
   raf = requestAnimationFrame(frame); };
 function feMesh(t){ const g = new THREE.Group(), k = FURN[t].fe;
@@ -6312,8 +6350,8 @@ function renderFest(body){ body.appendChild(el('div', 'shophead')).innerHTML = '
       for (const q of Fest.riddles){ const row = el('div', 'field'); row.appendChild(el('label', '', `${q.done ? '✅' : '🏮'} ${q.q}`)); if (!q.done){ const ip = el('input', 'txt'); ip.placeholder = `提示：${q.hint || ''}`; const b = el('button', 'tbtn ghost', '猜'); b.addEventListener('click', async () => { const r = await festRpc('fest_answer', { p_id: q.id, p_answer: ip.value }); if (!r) return; if (r.ok){ adoptRow(r.player); q.done = true; SFX.catch(); flash('🎉 答對了！+50 金幣', 1.6); renderTab(); } else { SFX.fail(); toast('不對喔，再想想看'); } }); const rr = el('div', 'tankbar'); rr.append(ip, b); row.appendChild(rr); } box2.appendChild(row); } }
     if (f.kind === 'ny'){ const b = el('button', 'tbtn', '🎆 領跨年紀念章'); b.addEventListener('click', async () => { const r = await festRpc('fest_badge'); if (r){ adoptRow(r.player); SFX.catch(); flash('🎆 新年快樂！拿到跨年紀念章（成就裡可以換稱號）', 2.4); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '晚上港口外面會放煙火。12/31 23:50～1/1 00:15 倒數的時候在線上，按上面的按鈕就能領紀念章。')); }
     if (f.kind === 'xmas'){ const done = d && (d.mine || []).includes('xgift'), b = el('button', 'tbtn', done ? '🎁 今天的禮物拿過了' : '🎁 拿今天的聖誕禮物'); b.disabled = done; b.addEventListener('click', async () => { const r = await festRpc('fest_gift'); if (r){ adoptRow(r.player); SFX.catch(); flash(`🎁 聖誕快樂！禮物裡有 ${r.coins} 金幣`, 2.2); loadFest(true); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '聖誕節每天都可以拿一份禮物。廣場中間立了大聖誕樹，晚上還會下小雪。')); }
-    if (f.kind === 'duanwu') box2.appendChild(el('p', 'sub', '港口邊停著一艘龍舟，廣場插滿了彩旗。'));
-    if (f.kind === 'moon') box2.appendChild(el('p', 'sub', '晚上東邊會升起很大的月亮，廣場有兔子燈，記得拍照！'));
+    if (f.kind === 'duanwu'){ box2.appendChild(el('p', 'sub', '港口邊停著一艘龍舟，廣場插滿了彩旗。划龍舟小遊戲一次 30 金幣：跟著鼓聲划，划贏對手船、連划越多獎勵越多（最多 160）。')); const b = el('button', 'tbtn', '🐉 划龍舟（🪙30）'); b.addEventListener('click', () => { closeSheet(); NightGame.start('boat'); }); box2.appendChild(b); }
+    if (f.kind === 'moon'){ box2.appendChild(el('p', 'sub', '晚上東邊會升起很大的月亮，廣場有兔子燈，記得拍照！中秋烤肉小遊戲一次 30 金幣：串燒烤到金黃就拿起來，一串 12 金幣。')); const b = el('button', 'tbtn', '🍢 中秋烤肉（🪙30）'); b.addEventListener('click', () => { closeSheet(); NightGame.start('bbq'); }); box2.appendChild(b); }
     if (f.kind === 'night'){ box2.appendChild(el('p', 'sub', '廣場旁邊擺了夜市攤：撈金魚、射氣球、大雞排、珍珠奶茶、烤魷魚。小遊戲一次 30 金幣，每天最多贏 600 金幣。'));
       const rr = el('div', 'tankbar'); for (const [k2, t2] of [['scoop', '🐟 撈金魚'], ['balloon', '🎈 射氣球']]){ const b = el('button', 'tbtn', `${t2}（🪙30）`); b.addEventListener('click', () => { closeSheet(); NightGame.start(k2); }); rr.appendChild(b); } box2.appendChild(rr);
       box2.appendChild(el('p', 'sub', '撈金魚：手指按下去網子就下水，移到金魚下面放開就撈起來。網子是紙做的，在水裡越久、動越快越容易破，一次撈太多也會破。黑金魚 2 分。一次撈到 8 分以上送「金魚缸」家具。射氣球：10 發子彈，準心會晃，看準了再點。')); }
@@ -10111,7 +10149,7 @@ function renderTab(){
       '魚缸、箱網、水族館裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
     ]);
     sec('🏮 節慶活動', [
-      '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、限定香包和龍舟模型）、中秋（大月亮、限定柚子帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
+      '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
       '點頭像的「🏮 節慶」看現在有什麼活動、下一個節日是什麼時候。限定商品過了節日就買不到，已經買到的永遠保留。節日開始的時候會推播（可以在推播開關裡關掉）。',
     ]);
     sec('🐋 全服合作大魚', [
