@@ -3674,6 +3674,7 @@ const FURN = {
 function MZ_REGIONS(){ return SPOTS.filter(s => s.id !== 'isle' && Array.isArray(s.fish) && s.fish.some(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of)); }
 function mzNeed(s){ return [...new Set(s.fish.filter(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of))]; }
 function mzSlots(s){ return [...new Set(s.fish.filter(id => FISH_BY_ID[id] && !/^nx/.test(id)))]; }
+for (const [k, n] of [['dragon', '海龍王'], ['gwhite', '大白鯊'], ['oarking', '皇帶魚王']]) FURN['gyb_' + k] = { name: n + '魚拓', price: 0, rad: 0.45, g: 'gy', gyb: k };
 for (const s of MZ_REGIONS()) FURN['gy_' + s.id] = { name: s.label + '魚拓', price: 0, rad: 0.45, g: 'gy', gy: s.id };
 const FURN_GROUPS = [['gy', '🏛️ 博物館魚拓（集滿一區才拿得到）'], ['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
 // KayKit Furniture Bits（Kay Lousberg，CC0）的家具：models/kaykit_furn.glb，價格大小跟伺服器 069_kaykit_furn.sql 一樣
@@ -3836,6 +3837,7 @@ function furnMesh(t){
   if (FURN[t] && FURN[t].dz) return FURN[t].dz.base === 'paint' ? paintMesh(FURN[t].dz) : fzMesh(FURN[t].dz);
   if (t === 'paint') return paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'sea', fish:null });
   if (FURN[t] && FURN[t].kk) return kkfMesh(t);
+  if (FURN[t] && FURN[t].gyb) return gybMesh(FURN[t].gyb);
   if (FURN[t] && FURN[t].gy) return gyMesh(FURN[t].gy);
   const g = new THREE.Group(), B = (sz, c, p, rough) => { const b = box(sz, c, p, mat(c, rough == null ? 0.8 : rough, { emissive:c, emissiveIntensity:0.1 })); g.add(b); return b; };
   const C = (rt, rb, h, c, p, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 12), mat(c, 0.7, { emissive:c, emissiveIntensity:0.1 })); m.position.set(p[0], p[1], p[2]); g.add(m); return m; };
@@ -5154,6 +5156,9 @@ const ACH = [
   { id:'s10',   icon:'📗', name:'小小圖鑑',     desc:'圖鑑收集 10 種魚',          cur:speciesN, goal:10 },
   { id:'s40',   icon:'📘', name:'圖鑑達人',     desc:'圖鑑收集 40 種魚',          cur:speciesN, goal:40 },
   { id:'sAll',  icon:'📚', name:'圖鑑全收集',   desc:'所有魚都釣過',              cur:() => FISH.filter(f => !f.of && rec.count[f.id]).length, goal:() => FISH.filter(f => !f.of).length, title:'圖鑑博士' },
+  { id:'bossDragon', icon:'🐉', name:'海龍王征服者', desc:'全服合作大魚「海龍王」出力第 1 名', cur:() => (rec.owned || []).includes('bt_dragon') ? 1 : 0, goal:1, title:'海龍王征服者' },
+  { id:'bossShark', icon:'🦈', name:'大白鯊征服者', desc:'全服合作大魚「大白鯊」出力第 1 名', cur:() => (rec.owned || []).includes('bt_gwhite') ? 1 : 0, goal:1, title:'大白鯊征服者' },
+  { id:'bossOar', icon:'🐍', name:'皇帶魚王征服者', desc:'全服合作大魚「皇帶魚王」出力第 1 名', cur:() => (rec.owned || []).includes('bt_oarking') ? 1 : 0, goal:1, title:'皇帶魚王征服者' },
   { id:'mzAll', icon:'🏛️', name:'博物館全集滿', desc:'海洋博物館每一區都集滿、領了獎勵', cur:() => (rec.owned || []).filter(x => /^gy_/.test(x)).length, goal:() => MZ_REGIONS().length, title:'博物館榮譽館長' },
   { id:'l1',    icon:'🐉', name:'傳說的開始',   desc:'釣到第一條傳說魚',          cur:() => rec.legend, goal:1 },
   { id:'l10',   icon:'👑', name:'傳說獵人',     desc:'釣到 10 條傳說魚',          cur:() => rec.legend, goal:10, title:'傳說獵人' },
@@ -5867,6 +5872,54 @@ function buildNooks(){
     g.traverse(o => { if (o.isMesh) o.castShadow = true; }); });
   setInterval(() => { const t = now(); for (const n of NOOKS) if (n.fire){ n.fire.scale.set(1 + Math.sin(t * 9 + n.x) * 0.12, 1 + Math.sin(t * 7 + n.z) * 0.2, 1); } }, 80);
 }
+// ===== 🐋 全服合作大魚（082）：血量、出力、獎勵都在伺服器；手機只負責畫面和每秒回報一次 =====
+const BossW = { st:null, at:0, busy:false, joined:null, hold:false, T:0.3, sent:0, seen:{}, m:null, mk:null, tug:0 };
+const BOSS_FISH = { dragon:['grouper', 3.2], gwhite:['shark', 2.6], oarking:['oarfish', 2.4] };
+function bossAt(){ const s = SPOT_BY_ID.harbor, L = Math.hypot(s.dir.x, s.dir.y) || 1; return [s.pos.x + s.dir.x / L * 13, s.pos.z + s.dir.y / L * 13]; }
+function bossNear(){ const [x, z] = bossAt(); return Math.hypot(me.pos.x - x, me.pos.z - z) < 30 && !onIsle && !House.on && !Dive.on; }
+async function loadBoss(){ if (BossW.busy || !Cloud.on || !Cloud.sb) return; BossW.busy = true; BossW.at = Date.now(); try { const { data } = await Cloud.sb.rpc('boss_state'); if (data) bossAdopt(data); } catch(e){} BossW.busy = false; }
+function bossAdopt(d){ BossW.st = d; BossW.off = d.now ? Date.parse(d.now) - Date.now() : 0; if (!d.id) return; const k = d.id + d.state;
+  if (!BossW.seen[k]){ BossW.seen[k] = 1;
+    if (d.state === 'soon') ticker(`🐋 <b>${esc(d.name)}</b> ${new Date(d.start).toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })} 會出現在港口外海！大家一起來拉`);
+    else if (d.state === 'live') ticker(`🐋 <b>${esc(d.name)}</b> 出現在港口外海了！快去按「一起拉！」`);
+    else if (d.state === 'won'){ ticker(`🎉 大家一起把 <b>${esc(d.name)}</b> 釣上來了！出力最多的是 <b>${esc((d.top[0] || {}).name || '')}</b>`); if (d.me && d.me.p > 0){ SFX.catch(); flash(`🎉 ${d.name}釣上來了！你是第 ${d.me.rank} 名${d.me.rank <= 3 ? '，拿到魚拓！' : ''}`, 3); setTimeout(() => cloudRefresh && cloudRefresh(), 1500); } }
+    else if (d.state === 'lost'){ ticker(`💨 <b>${esc(d.name)}</b> 掙脫逃走了…下次再一起努力`); if (d.me && d.me.p > 0) setTimeout(() => cloudRefresh && cloudRefresh(), 1500); } }
+  if (d.me) BossW.joined = d.id; }
+function bossNow(){ return Date.now() + (BossW.off || 0); }
+function updateBoss(dt, t){ const st = BossW.st, live = st && st.id && st.state === 'live', near = bossNear();
+  const every = live && near ? 2000 : st && st.id && (st.state === 'soon' || live) ? 10000 : 30000; if (Cloud.on && Date.now() - BossW.at > every) loadBoss();
+  // 海上的大魚
+  if (st && st.id && (live || (st.state === 'won' && bossNow() < Date.parse(st.end) + 60000))){ if (!BossW.m || BossW.mk !== st.kind){ if (BossW.m) scene.remove(BossW.m); const [fid, sc] = BOSS_FISH[st.kind] || BOSS_FISH.dragon; try { BossW.m = fishModel(FISH_BY_ID[fid] || FISH_BY_ID.shark, sc); scene.add(BossW.m); BossW.mk = st.kind; } catch(e){ BossW.m = null; } }
+    if (BossW.m){ const [x, z] = bossAt(), str = st.struggle, a = t * 0.25; BossW.m.visible = !onIsle && !House.on && !Dive.on; BossW.m.position.set(x + Math.cos(a) * 2.5, WATER_LEVEL - 0.35 + (str ? Math.abs(Math.sin(t * 3)) * 1.6 : Math.sin(t * 0.8) * 0.12), z + Math.sin(a) * 2.5); BossW.m.rotation.set(0, -a + (str ? Math.sin(t * 8) * 0.4 : 0), str ? Math.sin(t * 5) * 0.4 : 0);
+      if (Math.random() < dt * (str ? 14 : 3)) ripple(BossW.m.position.x + rand(-1.5, 1.5), BossW.m.position.z + rand(-1.5, 1.5), str); } }
+  else if (BossW.m){ scene.remove(BossW.m); BossW.m = null; }
+  // 拉線：按住張力上升，放開下降；魚會一下一下扯
+  const joined = live && BossW.joined === st.id; if (joined){ BossW.tug -= dt; if (BossW.tug <= 0) BossW.tug = rand(0.6, 1.8); const tug = BossW.tug > 0.45 ? 0 : 0.9;
+    BossW.T = clamp(BossW.T + (BossW.hold ? 0.55 : -0.7) * dt + tug * dt * 0.6, 0, 1);
+    if (Date.now() - BossW.sent > 1000 && near){ BossW.sent = Date.now(); const good = BossW.hold && BossW.T > 0.35 && BossW.T < 0.75 ? 1 : 0; if (BossW.hold) me.bend = 0.8; Cloud.sb.rpc('boss_pull', { p_id: st.id, p_good: good }).then(({ data }) => { if (data) bossAdopt(data); }, () => {}); } }
+  renderBossPanel(near); }
+function renderBossPanel(near){ const st = BossW.st; let P = $('#bossPanel'); const show = near && st && st.id && ['soon', 'live', 'won', 'lost'].includes(st.state) && $('#sheet').hidden;
+  if (!show){ if (P) P.hidden = true; BossW.hold = false; return; }
+  if (!P){ P = document.createElement('div'); P.id = 'bossPanel'; P.className = 'panel'; document.body.appendChild(P);
+    P.innerHTML = '<div class="bp-h"><b class="bp-n"></b><span class="bp-t"></span></div><div class="bp-hp"><i></i><span></span></div><div class="bp-s"></div><div class="bp-ten"><div class="bp-zone"></div><i></i></div><div class="bp-row"><button class="tbtn bp-join">🎣 一起拉！</button><button class="bp-pull">拉！</button></div><div class="bp-top"></div>';
+    const pb = P.querySelector('.bp-pull'), on = e => { e.preventDefault(); BossW.hold = true; ensureAudio(); }, off = () => { BossW.hold = false; };
+    pb.addEventListener('pointerdown', on); pb.addEventListener('pointerup', off); pb.addEventListener('pointercancel', off); pb.addEventListener('pointerleave', off);
+    P.querySelector('.bp-join').addEventListener('click', async () => { if (!Cloud.on){ toast('要連上雲端才能一起拉'); return; } try { const { data, error } = await Cloud.sb.rpc('boss_join', { p_id: BossW.st.id }); if (error) throw error; bossAdopt(data); BossW.joined = BossW.st.id; SFX.catch(); flash(`🎣 加入了！按住「拉！」讓張力在綠色區`, 1.8); } catch(e){ toast(cloudErrMsg(e)); } }); }
+  P.hidden = false; const live = st.state === 'live', joined = live && BossW.joined === st.id, left = Math.max(0, Math.ceil(((live ? Date.parse(st.end) : Date.parse(st.start)) - bossNow()) / 1000));
+  P.querySelector('.bp-n').textContent = `🐋 ${st.name}`; P.querySelector('.bp-t').textContent = st.state === 'soon' ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} 後出現` : live ? `剩 ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : st.state === 'won' ? '🎉 成功了！' : '💨 逃走了';
+  const k = st.hp_max ? clamp(st.hp / st.hp_max, 0, 1) : 1; P.querySelector('.bp-hp i').style.width = (k * 100).toFixed(1) + '%'; P.querySelector('.bp-hp span').textContent = `體力 ${Math.ceil(k * 100)}%・${st.n} 人一起拉`;
+  const paused = st.me && st.me.pause; P.classList.toggle('struggle', !!st.struggle && live);
+  P.querySelector('.bp-s').textContent = !live ? (st.state === 'soon' ? '時間到就可以加入，人越多越好打！' : st.me && st.me.p ? `你出力 ${st.me.p}・第 ${st.me.rank} 名` : '') : paused ? '💥 斷線了！10 秒後才能再拉' : st.struggle ? '⚠️ 大魚在掙扎！放線！（放開）' : joined ? `按住「拉！」讓指針留在綠色區・你出力 ${st.me ? st.me.p : 0}（第 ${st.me ? st.me.rank : '-'} 名）` : '按「一起拉！」加入';
+  P.querySelector('.bp-join').hidden = !live || joined; P.querySelector('.bp-pull').hidden = !joined; P.querySelector('.bp-ten').hidden = !joined;
+  P.querySelector('.bp-ten i').style.left = (BossW.T * 100).toFixed(1) + '%'; P.querySelector('.bp-pull').classList.toggle('on', BossW.hold);
+  P.querySelector('.bp-top').textContent = st.top && st.top.length ? '出力：' + st.top.slice(0, 3).map((x, i) => `${['🥇', '🥈', '🥉'][i]}${x.name} ${x.p}`).join('　') : ''; }
+// 大魚的魚拓：深色木框、墨色的大魚、名字
+function gybMesh(k){ const g = new THREE.Group(), nm = { dragon:'海龍王', gwhite:'大白鯊', oarking:'皇帶魚王' }[k] || '', [fid] = BOSS_FISH[k] || BOSS_FISH.dragon;
+  const cv = document.createElement('canvas'); cv.width = 320; cv.height = 192; const c = cv.getContext('2d'); c.fillStyle = '#f3ead2'; c.fillRect(0, 0, 320, 192);
+  try { const fc = fishCanvas(FISH_BY_ID[fid] || FISH_BY_ID.shark, false, 260, 120); c.drawImage(fc, 30, 18, 260, 120); } catch(e){}
+  c.fillStyle = '#2a2420'; c.font = 'bold 24px serif'; c.textAlign = 'center'; c.fillText(nm + ' 全服合作', 160, 168); c.fillStyle = '#c8161c'; c.fillRect(276, 148, 28, 28); c.fillStyle = '#f3ead2'; c.font = 'bold 16px serif'; c.fillText('王', 290, 168);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; g.add(box([1.25, 0.8, 0.05], null, [0, 1.3, 0], mat('#2f2018', 0.6))); const pic = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.7), new THREE.MeshBasicMaterial({ map: tx })); pic.position.set(0, 1.3, 0.03); g.add(pic);
+  for (const sx of [-0.4, 0.4]){ const l = box([0.05, 1.05, 0.05], null, [sx, 0.5, -0.12], mat('#4a3020', 0.7)); l.rotation.x = 0.12; g.add(l); } const bl = box([0.05, 1.1, 0.05], null, [0, 0.55, -0.32], mat('#4a3020', 0.7)); bl.rotation.x = -0.32; g.add(bl); return g; }
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
 function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); }
 function enterShrimp(){
@@ -7400,7 +7453,7 @@ function renderMarket(body, inShop){
 }
 function confirmOnce(b){ if (b.dataset.sure === '1') return true; b.dataset.sure = '1'; const t = b.textContent; b.textContent = '確定？'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = t; } }, 2500); return false; }
 // ===== 推播通知（048、Edge Function tide-push）：遊戲關著時手機也會跳通知 =====
-const PUSH_KINDS = [['market', '🐟 你在魚市的魚賣掉了'], ['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚'], ['museum', '🏛️ 你的名字刻在博物館了']];
+const PUSH_KINDS = [['market', '🐟 你在魚市的魚賣掉了'], ['rs', '🦈 紅鯊（有人釣到、生小鯊）'], ['tourney', '🏆 釣魚大賽快開始'], ['cage', '🐟 箱網還沒餵（晚上 8 點）'], ['design', '👕 有人買了你的設計'], ['visit', '🏝 有人來你的小島'], ['fu', '🐟 阿福的今日收購（早上 6 點）'], ['gang', '⚓ 老港的每週手作（週一早上 9 點）'], ['news', '📰 你上報了'], ['cai', '🎨 阿彩畫了你的魚'], ['museum', '🏛️ 你的名字刻在博物館了'], ['boss', '🐋 全服合作大魚要出現了']];
 const Push = { busy:false, sub:null, prefs:null, checked:false, msg:'' };
 function pushOk(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
 function b64u(s){ const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
@@ -7667,7 +7720,7 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
-  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gy_[a-z]+$/.test(id)))];   /* gy_：博物館魚拓 */
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gyb?_[a-z]+$/.test(id) || /^bt_[a-z]+$/.test(id)))];   /* gyb_：大魚的魚拓、bt_：大魚稱號 */   /* gy_：博物館魚拓 */
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
@@ -9579,6 +9632,11 @@ function renderTab(){
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
     ]);
+    sec('🐋 全服合作大魚', [
+      '每天晚上 8:30（週六日下午 2:00 也有一次），港口外海會出現一條超大的魚：海龍王、大白鯊或皇帶魚王（輪流）。出現前 10 分鐘會跑馬燈和推播。',
+      '到港口外海按「一起拉！」加入，按住「拉！」讓張力保持在綠色區才會扣大魚的體力。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
+      '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
+    ]);
     sec('🌲 苔森之島', [
       '找港口的船夫阿海，「海上的好地方」選「苔森之島」，或去過以後從地圖直接傳送。很大的森林島：長滿青苔的杉樹和大石頭、一棵千年大杉、北邊山上的瀑布、中間的湖、流進海裡的溪，南邊是沙灘和碼頭。',
       '湖邊釣得到湖的魚、溪裡釣得到河的魚、四周的海釣得到海邊的魚。湖邊、溪邊、海邊都有長椅，坐下來就能拋竿。森林裡有鹿和猴子，鹿很怕人，靠太近會跑開。',
@@ -10005,7 +10063,7 @@ camera.position.set(4, 5, 18);
 function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){

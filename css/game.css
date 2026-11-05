@@ -943,3 +943,21 @@ body:has(#brand.open) #joyZone{pointer-events:none}
 .volrow{display:flex;align-items:center;gap:10px}
 .volrow input[type=range]{flex:1;accent-color:#2a8fb8;height:28px}
 .volrow .volpct{min-width:3em;text-align:right;color:var(--ink-soft);font-size:13px}
+/* 全服合作大魚 */
+#bossPanel{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt, 8px) + 8px);z-index:25;width:min(340px,38vw);padding:6px 10px;border-radius:16px;display:flex;flex-direction:column;gap:5px;font-size:13px}
+#bossPanel[hidden]{display:none}
+#bossPanel .bp-h{display:flex;justify-content:space-between;align-items:center}
+#bossPanel .bp-hp{position:relative;height:16px;border-radius:999px;background:#e8eef2;overflow:hidden}
+#bossPanel .bp-hp i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#e8473a,#ff9f43);transition:width .4s}
+#bossPanel .bp-hp span{position:relative;display:block;text-align:center;font-size:11px;font-weight:800;line-height:16px;color:#18334a}
+#bossPanel .bp-s{color:var(--ink-soft);font-size:12px}
+#bossPanel.struggle{box-shadow:0 0 0 3px #e8473a, 0 8px 24px rgba(232,71,58,.35)}
+#bossPanel.struggle .bp-s{color:#c8161c;font-weight:800}
+#bossPanel .bp-ten{position:relative;height:12px;border-radius:999px;background:#f0d0c8}
+#bossPanel .bp-ten .bp-zone{position:absolute;left:35%;width:40%;top:0;bottom:0;background:#3fbf9d;border-radius:4px}
+#bossPanel .bp-ten i{position:absolute;top:-3px;width:4px;height:18px;margin-left:-2px;background:#18334a;border-radius:2px}
+#bossPanel .bp-row{display:flex;gap:8px;justify-content:center}
+#bossPanel .bp-pull{min-width:120px;height:42px;border-radius:999px;border:0;background:#ffd36a;color:#4a2a00;font:inherit;font-size:20px;font-weight:900;touch-action:none;box-shadow:0 4px 0 #d9a63a}
+#bossPanel .bp-pull.on{transform:translateY(3px);box-shadow:0 1px 0 #d9a63a;background:#ffc23a}
+#bossPanel .bp-pull[hidden],#bossPanel .bp-join[hidden],#bossPanel .bp-ten[hidden]{display:none}
+#bossPanel .bp-top{font-size:12px;color:#18334a}
