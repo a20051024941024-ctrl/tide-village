@@ -863,7 +863,7 @@ body.ui2 #brand{border-radius:999px 22px 22px 999px}
 #brand #bmore{display:none}
 #brand.open #bmore{display:block}
 #brand.open{border-radius:26px 22px 22px 26px}
-#bmore #online{margin-top:5px}
+#brand > div > #online{margin-top:3px}
 #bmore .bm-tools{display:flex;gap:6px;margin-top:6px}
 #btools #bMoreBtn{font-size:15px;font-weight:900;line-height:1}
 #brand.open #bMoreBtn{background:#18334a;color:#fff;box-shadow:none}
@@ -890,3 +890,5 @@ body.ui2 #brand .mark{width:46px;height:46px}
 .growbox .gb-bar i.on{background:linear-gradient(90deg,#ffb84a,#f08a1a)}
 .growbox .gb-s{font-size:12.5px;color:#5a4a30;line-height:1.5;margin-bottom:8px}
 .growbox .gb-r{display:flex;flex-wrap:wrap;gap:6px}
+#brand.open{position:relative;z-index:60}   /* 打開時蓋在搖桿區上面，點頭像才收得起來 */
+body:has(#brand.open) #joyZone{pointer-events:none}

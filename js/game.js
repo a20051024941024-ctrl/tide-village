@@ -7314,10 +7314,10 @@ $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(
 // 左上角平常只顯示頭像、名字、金幣（不要擋畫面）；按 ☰ 才展開：狀態、好友代碼、任務、成就、玩法、登入、拍照、全螢幕、音樂、音效
 (function compactBrand(){ const B = $('#brand'), bt = $('#btools'); if (!B || !bt || $('#bMoreBtn')) return;
   const more = document.createElement('div'); more.id = 'bmore'; bt.parentNode.appendChild(more);
-  const on = $('#online'); if (on) more.appendChild(on); const q = $('#bquick'); if (q) more.appendChild(q);
+  const on = $('#online'); if (on) bt.parentNode.insertBefore(on, more); const q = $('#bquick'); if (q) more.appendChild(q);   /* 時間、天氣、潮汐、幾個人在村裡：一直看得到；其他的點頭像才打開 */
   const tools = document.createElement('div'); tools.className = 'bm-tools'; for (const id of ['photoBtn', 'fsBtn', 'musicBtn', 'soundBtn']){ const b = $('#' + id); if (b) tools.appendChild(b); } more.appendChild(tools);
   const tg = document.createElement('button'); tg.id = 'bMoreBtn'; tg.className = 'btool'; tg.setAttribute('aria-label', '更多'); tg.textContent = '☰';
-  tg.addEventListener('click', e => { e.stopPropagation(); B.classList.toggle('open'); }); bt.appendChild(tg);
+  tg.addEventListener('click', e => { e.stopPropagation(); B.classList.toggle('open'); }); tg.hidden = true; bt.appendChild(tg);
   const tny = () => { const p = $('#tnyPill'); if (p && p.parentNode !== bt) bt.insertBefore(p, tg); };   /* 大賽倒數放在金幣旁邊，收起來也看得到 */
   setInterval(tny, 1500); tny();
   addEventListener('pointerdown', e => { if (B.classList.contains('open') && !B.contains(e.target)) B.classList.remove('open'); });
@@ -8557,6 +8557,9 @@ function cullAvatars(){
   for (const q of questNpcs) if (q.f.av.g.visible && far(q.f)){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; }
   if (ferryNpc && ferryNpc.f.av.g.visible && far(ferryNpc.f)){ ferryNpc.f.av.g.visible = false; if (ferryNpc.f.blob) ferryNpc.f.blob.visible = false; }
 }
+// 人被藏起來（太遠、回家、不同島）時，釣線、浮標、名字也一起藏（有些角色離太遠就不更新，線會留在空中）
+function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...questNpcs.map(q => q.f)]; if (ferryNpc) L.push(ferryNpc.f); try { for (const h of IsleH.fishers || []) L.push(h); } catch(e){}
+  for (const f of L){ if (!f || !f.av || f.av.g.visible) continue; if (f.line && f.line.visible) f.line.visible = false; if (f.bob && f.bob.visible) f.bob.visible = false; if (f.tag && f.tag.style.display !== 'none') f.tag.style.display = 'none'; } }
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
@@ -9300,7 +9303,7 @@ function frame(){
   if (waterfall && Math.hypot(me.pos.x - waterfall.x, me.pos.z - waterfall.z) < 45){ if (Math.random() < dt * 10) FX.emit(waterfall.x + rand(-1, 1), 0.3, waterfall.z + rand(-0.5, 0.5), 1, '#ffffff', 0.9, 1.6, 0.7); if (Math.random() < dt * 1.5) ripple(waterfall.x + rand(-0.8, 0.8), waterfall.z + rand(-0.4, 0.4)); }
   fishTime.value = t; updateSeaLife(t); FX.update(dt); if (skyDome) skyDome.position.copy(camera.position); updateZones(t); watchFps(t);
   placeLabelsUpdate();
-  if (Dive.on) diveHideWorld(); else cullAvatars();
+  if (Dive.on) diveHideWorld(); else { cullAvatars(); hideOrphanBits(); }
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
@@ -9310,7 +9313,7 @@ logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋�
 initSocial().catch(() => {});
 cloudInit();
 initUpdateCheck();
-// 點左上角的頭像或名字 → 打開「成就」（等級、稱號、成就都在這裡；大家習慣點頭像看自己的資料）
-(function(){ for (const s of ['#brand .mark', '#brand h1']){ const e = document.querySelector(s); if (!e) continue; e.style.cursor = 'pointer'; e.setAttribute('role', 'button'); e.title = '我的等級、稱號和成就';
-  e.addEventListener('click', ev => { if (ev.target.closest('#lvChip')) return; ev.stopPropagation(); openSheet('ach'); }); } })();
+// 點左上角的頭像或名字 → 打開／收起更多功能（等級旁邊的 Lv 還是打開成就）
+(function(){ for (const s of ['#brand .mark', '#brand h1']){ const e = document.querySelector(s); if (!e) continue; e.style.cursor = 'pointer'; e.setAttribute('role', 'button'); e.title = '更多功能';
+  e.addEventListener('click', ev => { if (ev.target.closest('#lvChip')) return; ev.stopPropagation(); const B = document.getElementById('brand'); if (B) B.classList.toggle('open'); }); } })();   /* 點頭像打開／收起：好友代碼、任務、成就、玩法、帳號、拍照、全螢幕、音樂、音效 */
 })();
