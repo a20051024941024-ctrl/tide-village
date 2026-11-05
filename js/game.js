@@ -279,7 +279,7 @@ const AQUA = [11, -14];
 const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過去）
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
 /* 潮汐商店街（2026-11-04 使用者：NPC 的店分開一點、整齊一點）：往珊瑚礁群島那條路的兩邊，一排一排的店，門口都朝著路 */
-var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:31, r:-Math.PI / 2 } };
+var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:31, r:-Math.PI / 2 }, museum:{ x:9.5, z:39, r:-Math.PI / 2 }, pet:{ x:-8, z:22.5, r:Math.PI / 2 } };   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
 var Mkt = { tab:'new', list:null, mine:null, stats:null, at:0, busy:false, sell:null, fish:null };
 function lotAt(k, lx, lz){ const L = SHOPLOT[k], c = Math.cos(L.r), s = Math.sin(L.r); return [L.x + c * lx + s * lz, L.z - s * lx + c * lz]; }
 const LANDMARKS = [
@@ -289,7 +289,7 @@ const LANDMARKS = [
   { id:'tackle',     label:'釣具店',   pos:V3(-9, -3),          color:'#f6a96b', ly:5.5, mx:2.4, mz:2.8 },
   { id:'shop',       label:'海邊商店', pos:V3(18, -1),          color:'#5fb6e3', ly:5.5, mx:-2.6, mz:2.8 },
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
-  { id:'museum',     label:'海洋博物館', pos:V3(10.5, -5),      color:'#7fb0c8', ly:6.0 },
+  { id:'museum',     label:'海洋博物館', pos:V3(SHOPLOT.museum.x, SHOPLOT.museum.z), color:'#7fb0c8', ly:6.0, mx:2.6, mz:2.6 },
   { id:'tailor',     label:'阿綾服裝店', pos:V3(SHOPLOT.ling.x, SHOPLOT.ling.z), color:'#f5a5d8', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'mu',         label:'阿木木工坊', pos:V3(SHOPLOT.mu.x, SHOPLOT.mu.z), color:'#c79a6b', ly:5.5, mx:-2.4, mz:2.6 },
   { id:'market',     label:'釣客魚市', pos:V3(SHOPLOT.spare.x, SHOPLOT.spare.z), color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.6 },
@@ -1018,7 +1018,7 @@ function castPoint(x, z, dx, dz, dist){
   }
   // ---- 海洋博物館的門面：白色石柱、三角屋頂、藍色招牌、門口的鯨魚尾巴雕像 ----
   {
-    const [KX, KZ] = [10.5, -5], g = new THREE.Group(); g.position.set(KX, terrainH(KX, KZ), KZ); g.rotation.y = faceTo(KX, KZ); scene.add(g);
+    const KX = SHOPLOT.museum.x, KZ = SHOPLOT.museum.z, g = new THREE.Group(); g.position.set(KX, terrainH(KX, KZ), KZ); g.rotation.y = SHOPLOT.museum.r; scene.add(g);   /* 商店街西邊第一間（以前蓋在水族館前面會擋住） */
     const stone = '#eef0ea', stone2 = '#d9dcd2';
     g.add(box([6.4, 0.4, 4.6], stone2, [0, 0.2, -0.4]));                                   // 台階
     g.add(box([6.8, 0.2, 5.0], stone2, [0, 0.05, -0.4]));
@@ -5598,7 +5598,7 @@ function petHug(){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出�
 function petPat(){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } pt.pos.set(me.pos.x + Math.sin(me.rot) * 0.7, me.baseY, me.pos.z + Math.cos(me.rot) * 0.7); pt.rot = me.rot + Math.PI; FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); me.say(`✋ 摸摸 ${pt.name}`, 'emote', 3); closeEmotePanel(); }
 // ---- 寵物店：廣場西邊的小攤子，店長小花，攤子上有幾隻寵物在玩 ----
 const PetShop = { npc:null, demo:[] };
-function buildPetShop(){ const X = -14, Z = 6, g = new THREE.Group(), y0 = groundHeight(X, Z); g.position.set(X, y0, Z); g.rotation.y = Math.atan2(4 - X, 4 - Z); scene.add(g);
+function buildPetShop(){ const X = SHOPLOT.pet.x, Z = SHOPLOT.pet.z, g = new THREE.Group(), y0 = groundHeight(X, Z); g.position.set(X, y0, Z); g.rotation.y = SHOPLOT.pet.r; scene.add(g);   /* 商店街東邊最後一間 */
   const B = (sz, c, p) => { const b = box(sz, c, p); g.add(b); return b; };
   B([3.4, 0.9, 0.9], '#c79a6b', [0, 0.45, -0.6]); B([3.6, 0.08, 1.05], '#e9d6b0', [0, 0.92, -0.6]);
   for (const sx of [-1.7, 1.7]) for (const sz of [-1.1, 0.4]) B([0.12, 2.5, 0.12], '#6e4a2f', [sx, 1.25, sz]);
@@ -5630,8 +5630,8 @@ function renderPets(body){
     if (Pets.menu === p.id){ const box = el('li', ''), ni = el('input', 'txt'); ni.maxLength = 8; ni.value = p.name; ni.style.cssText = 'width:9em'; const rn = el('button', 'tbtn ghost', '改名'); rn.addEventListener('click', async () => { const r = await petRpc('pet_rename', { p_id: p.id, p_name: ni.value }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); renderTab(); } });
       const rl = el('button', 'tbtn ghost', '送養'); rl.addEventListener('click', async () => { if (rl.dataset.sure !== '1'){ rl.dataset.sure = '1'; rl.textContent = `確定把${p.name}送給別人養？`; rl.classList.add('warn'); return; } const r = await petRpc('pet_release', { p_id: p.id }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); toast(`👋 ${p.name}找到新家了`); renderTab(); } });
       box.append(ni, rn, rl); ul.appendChild(box); } }
-  if (L.length) body.appendChild(ul); else body.appendChild(el('div', 'empty', Pets.atShop ? '還沒有寵物，從下面挑一隻吧！' : '還沒有寵物。到廣場西邊的寵物店找小花領養。'));
-  if (!Pets.atShop){ if (L.length < 3) body.appendChild(el('p', 'sub', '想再養一隻？到廣場西邊的寵物店找小花。')); return; }
+  if (L.length) body.appendChild(ul); else body.appendChild(el('div', 'empty', Pets.atShop ? '還沒有寵物，從下面挑一隻吧！' : '還沒有寵物。到商店街的寵物店找小花領養。'));
+  if (!Pets.atShop){ if (L.length < 3) body.appendChild(el('p', 'sub', '想再養一隻？到商店街的寵物店找小花。')); return; }
   if (L.length >= 3){ body.appendChild(el('p', 'sub', '已經養滿 3 隻了。')); return; }
   body.appendChild(el('div', 'dexhead', '🏠 領養'));
   const f1 = el('div', 'field'); f1.appendChild(el('label', '', '幫牠取名字（1～8 個字）')); const ni = el('input', 'txt'); ni.maxLength = 8; ni.value = Pets.newName; ni.placeholder = '例如：小咪'; ni.addEventListener('input', () => { Pets.newName = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
@@ -6784,6 +6784,32 @@ function gpyFish(x){ const base = FISH_BY_ID[x.f], g = base && isGuppy(x.f) ? gp
     if (alb) Object.assign(c, FISH_STYLE.guppy_albino.c); c.Tail = fem ? lt(GPY_COL[g.c[0]][0], 0.55) : GPY_COL[g.c[0]][0]; c.Tail2 = fem ? lt(GPY_COL[g.c[1]][0], 0.6) : GPY_COL[g.c[1]][0];
     FISH_STYLE[key] = Object.assign({}, B, { c }); FISH_BY_ID[key] = Object.assign({}, base, { id: key, color: c.Tail }); }
   return Object.assign({}, FISH_BY_ID[key], { name: fishNameOf(x) }); }
+// 養魚繁殖說明（魚缸分頁最上面）：三個步驟＋自己每一種會生的魚現在的進度
+const Breed = { open: null };
+function renderBreedGuide(body){
+  const box = el('div', 'breedbox'), pairs = tankPairs(), ok = pairs.filter(p => p.pairs > 0), half = pairs.filter(p => !p.pairs);
+  if (Breed.open == null) Breed.open = !ok.length;   /* 還沒配成對的人預設打開 */
+  const hd = el('button', 'bb-h'); hd.innerHTML = `<b>🐣 養魚繁殖</b><span>${ok.length ? `正在配對 ${ok.length} 種・每天有機會生小魚` : half.length ? `還差一隻就能配對` : '怎麼讓魚生小魚？'}</span><i>${Breed.open ? '▲' : '▼'}</i>`;
+  hd.addEventListener('click', () => { Breed.open = !Breed.open; renderTab(); }); box.appendChild(hd);
+  if (Breed.open){
+    const steps = el('ol', 'bb-steps');
+    [['🎣', '釣到同一種魚的<b>一隻 ♂ 公魚</b>和<b>一隻 ♀ 母魚</b>', '每條魚的卡片上都有 ♂／♀。'],
+     ['🏛️', '兩條都按「<b>展示</b>」放進廣場東邊的大水族館', '只放在魚缸裡不會生，要展示才會。'],
+     ['🍼', '每天有一半機會生<b>一條小魚</b>', '一天最多 3 條。打開魚缸就會算；小魚有 🍼 標記，賣的錢只有四分之一，可以一直養大放流。']].forEach(([ic, t, sub]) => { const li = el('li'); li.innerHTML = `<span class="i">${ic}</span><span><b2>${t}</b2><small>${sub}</small></span>`; steps.appendChild(li); });
+    box.appendChild(steps);
+    box.appendChild(el('div', 'bb-t', '會生小魚的魚：'));
+    const row = el('div', 'bb-fish'), have = new Map();
+    for (const x of rec.tank || []){ const b = breedBase(x.f); if (!TANK_BREED.has(b) || !x.s || x.rs) continue; const k = have.get(b) || { M:0, F:0, sM:0, sF:0 }; k[x.s]++; if ((rec.show || []).includes(x.t)) k['s' + x.s]++; have.set(b, k); }
+    for (const id of TANK_BREED){ const f = FISH_BY_ID[id]; if (!f) continue; const k = have.get(id), chip = el('div', 'bb-c');
+      let st, cls; if (!k){ st = rec.count[id] ? '魚缸裡沒有了' : '還沒釣過'; cls = 'no'; }
+      else if (k.sM && k.sF){ st = '✅ 配對中'; cls = 'ok'; }
+      else if (k.M && k.F){ st = `有公有母・${!k.sM && !k.sF ? '兩隻都要展示' : k.sM ? '♀ 還沒展示' : '♂ 還沒展示'}`; cls = 'half'; }
+      else { st = k.M ? '有 ♂・缺 ♀' : '有 ♀・缺 ♂'; cls = 'half'; }
+      chip.classList.add(cls); chip.appendChild(fishCanvas(f, !!rec.count[id], 48, 30)); chip.appendChild(el('b', '', f.name)); chip.appendChild(el('small', '', st)); row.appendChild(chip); }
+    box.appendChild(row);
+    box.appendChild(el('p', 'sub', '✨ 變種也會生：同一種變種一公一母，小魚就是變種；變種配一般的，小魚會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種。🐟 孔雀魚的小魚會遺傳爸媽的尾巴顏色和形狀，偶爾突變出新顏色。🌸 春夏是野外繁殖季，吳郭魚、鯽魚這些在野外也比較多。'));
+  }
+  body.appendChild(box); }
 function breedSeason(){ return SEASON === 'spring' || SEASON === 'summer'; }
 function sexIcon(x){ return x && x.s === 'M' ? '♂' : x && x.s === 'F' ? '♀' : ''; }
 // 水族館繁殖：展示中同一種魚的一公一母，每天一半機會生一條小魚（每天最多 3 條；伺服器 breed_tank 算）
@@ -9120,8 +9146,7 @@ function renderTab(){
       : `廣場東邊的大水族館現在是空的。想讓大家看到哪條魚，就按那條魚的「展示」（最多 ${SHOW_MAX} 條）。`));
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
     breedTank();
-    { const pairs = tankPairs(), tip = el('div', 'tipbox'); const ok = pairs.filter(p => p.pairs > 0), half = pairs.filter(p => !p.pairs);
-      tip.innerHTML = `<b>🐣 水族館繁殖</b><span>${ok.length ? '正在配對：' + ok.map(p => `${FISH_BY_ID[p.f].name}（♂${p.M} ♀${p.F}）`).join('、') + '。每天有機會生小魚（🍼），小魚賣的錢只有四分之一。' + (half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '') : half.length ? '還差一隻：' + half.map(p => `${FISH_BY_ID[p.f].name}${p.M ? '要一隻 ♀' : '要一隻 ♂'}`).join('、') + '。' : '把同一種魚的一公一母放進水族館展示，就有機會生小魚。會生的有：金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。'}</span><br>✨ 變種也會生：同一種變種一公一母，小魚就是變種；變種配一般的，小魚會「🧬 帶著變種的基因」，帶基因的再配變種，一半會是變種；兩條帶同樣基因的配在一起，四分之一會是變種。`; body.appendChild(tip); }
+    renderBreedGuide(body);
     const bar = el('div', 'tankbar');
     const sortSel = el('div', 'seg');
     [['new','最新'],['big','最重'],['rare','最稀有'],['fav','⭐收藏']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((tankSort || 'new') === k)); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortSel.appendChild(b); });
@@ -9318,7 +9343,7 @@ function renderTab(){
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
     ]);
     sec('🐾 寵物', [
-      '在廣場西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
+      '在商店街入口西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
@@ -9328,7 +9353,7 @@ function renderTab(){
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
     ]);
     sec('🏛️ 海洋博物館', [
-      '博物館在廣場和海邊商店中間，走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
+      '博物館在商店街最裡面東邊（白色石柱的建築，旁邊就是海），走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
       '每一格會刻上「首位捐贈者」的名字、日期和那條魚的重量；之後別人捐更重的，另外記「最大展示」。同一種魚自己只能捐一次。箱網、儲物箱的魚不能捐，蔚博士發現的新品種也不收。',
       '每一個釣點的一般魚都捐齊了，可以領一次獎勵：金幣，加上那一區專屬的「魚拓」家具（只有集滿才拿得到，擺在家裡不用錢）。變種是加分的格子，不用捐也能集滿。每一區都集滿會得到稱號「博物館榮譽館長」。',
       '你是第一個捐出某種魚的人時，會收到推播（可以在設定裡關掉）。',

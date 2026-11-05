@@ -922,3 +922,20 @@ body:has(#brand.open) #joyZone{pointer-events:none}
 .closet .cl-it.add{border:2px dashed rgba(24,51,74,.25);background:transparent;box-shadow:none;justify-content:center;min-height:110px}
 .closet .cl-it.add .plus{font-size:26px}
 @media (orientation:portrait){ .closet{flex-direction:column} .closet .cl-l{width:100%;flex:0 0 40%} }
+/* 養魚繁殖說明 */
+.breedbox{background:#fff7e6;border:1px solid #f2d9a6;border-radius:14px;margin:8px 0 10px;overflow:hidden}
+.breedbox .bb-h{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border:0;background:transparent;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.breedbox .bb-h span{flex:1;color:var(--ink-soft);font-size:13px}
+.breedbox .bb-steps{list-style:none;margin:0;padding:0 12px 6px;display:flex;flex-direction:column;gap:6px}
+.breedbox .bb-steps li{display:flex;gap:10px;align-items:flex-start;background:#fff;border-radius:12px;padding:8px 10px;counter-increment:st}
+.breedbox .bb-steps .i{font-size:22px;line-height:1}
+.breedbox .bb-steps b2{display:block;font-size:14px}
+.breedbox .bb-steps small{display:block;color:var(--ink-soft);font-size:12px;margin-top:2px}
+.breedbox .bb-t{padding:4px 12px;font-weight:700;font-size:13px}
+.breedbox .bb-fish{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;padding:0 12px 6px}
+.breedbox .bb-c{display:flex;flex-direction:column;align-items:center;gap:1px;background:#fff;border-radius:10px;padding:6px 4px;border:2px solid transparent;font-size:12px;text-align:center}
+.breedbox .bb-c small{color:var(--ink-soft);font-size:11px;line-height:1.25}
+.breedbox .bb-c.ok{border-color:#3fbf9d;background:#eafaf4}
+.breedbox .bb-c.half{border-color:#f3b33d}
+.breedbox .bb-c.no{opacity:.6}
+.breedbox p.sub{padding:0 12px 10px;margin:4px 0 0}
