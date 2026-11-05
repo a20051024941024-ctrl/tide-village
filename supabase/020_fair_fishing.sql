@@ -167,12 +167,13 @@ begin
   if cardinality(ids) = 0 then raise exception '沒有這個釣點'; end if;
   r := random() * tot; pick := ids[1];
   for i in 1..cardinality(ids) loop r := r - wts[i]; if r <= 0 then pick := ids[i]; exit; end if; end loop;
-  -- 蔚博士發現的新品種（070）：在發現的那個釣點，抽到的魚有機會換成新品種（當天發現的 5%，以前的每一種 1.2%）；新品種的變種 4%
+  -- 蔚博士發現的新品種（070）：在發現的那個釣點，抽到的魚有機會換成新品種（當天發現的 5%，以前的每一種 1.2%；深海巨魚 1.5%／0.4%）；新品種的變種 4%
   begin
-    for sf in select s.id, s.var_id, s.day from public.sci_finds s where s.spot = p_spot and s.day <= (now() at time zone 'Asia/Taipei')::date order by s.day desc limit 60 loop
-      if random() < (case when sf.day = (now() at time zone 'Asia/Taipei')::date then 0.05 else 0.012 end) then pick := case when random() < 0.04 then sf.var_id else sf.id end; exit; end if;
+    for sf in select s.id, s.var_id, s.day, s.giant from public.sci_finds s where s.spot = p_spot and s.day <= (now() at time zone 'Asia/Taipei')::date order by s.day desc limit 60 loop
+      if random() < (case when sf.giant then (case when sf.day = (now() at time zone 'Asia/Taipei')::date then 0.015 else 0.004 end) * (1 + charge * 0.6)   -- 深海巨魚（074）：傳說級，很難遇到
+                          when sf.day = (now() at time zone 'Asia/Taipei')::date then 0.05 else 0.012 end) then pick := case when random() < 0.04 then sf.var_id else sf.id end; exit; end if;
     end loop;
-  exception when undefined_table then null; end;
+  exception when undefined_table or undefined_column then null; end;
   -- 釣蝦場老闆的放生活動（027）：極小的機會碰到全伺服器只有一隻的特別蝦
   if p_spot = 'shrimp' then fid := public._sev_try(pl.id); if fid is not null and cfg->'fish' ? fid then pick := fid; end if; end if;
   -- 赤紅霸王鯊（032）：全伺服器的族群，隻數越多機率越高（還是非常低）

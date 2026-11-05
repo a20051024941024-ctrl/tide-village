@@ -25,6 +25,7 @@ create table if not exists public.sci_finds (
   first_at timestamptz,
   created_at timestamptz not null default now()
 );
+alter table public.sci_finds add column if not exists giant boolean not null default false;   -- 深海巨魚（074）
 create index if not exists sci_finds_spot on public.sci_finds (spot, day desc);
 alter table public.sci_finds enable row level security;
 revoke all on public.sci_finds from anon, authenticated;

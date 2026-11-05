@@ -878,3 +878,6 @@ body.ui2 #brand .mark{width:46px;height:46px}
 #emotePanel .ep-t{font-size:13px;margin-bottom:4px}
 #emotePanel .ep-s{font-size:10.5px;margin-top:4px}
 @media (orientation:landscape) and (max-height:540px){ #emotePanel{bottom:auto;padding:6px 8px} #emotePanel .ep-g{grid-template-columns:repeat(7,44px)} #emotePanel .ep-i{font-size:17px} }
+
+.scicard.giant{background:linear-gradient(180deg,#1d3d5c,#2a5f8a);border-color:#4f8fc0;color:#fff}
+.scicard.giant .scit{color:#9fe0ff}.scicard.giant .scis{color:#e6f3fb}.scicard.giant .sub2{color:#cfe6f5}

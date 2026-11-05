@@ -110,6 +110,7 @@ supabase/070_sci.sql 海洋科學家蔚博士：每天在一個釣點發現一�
 supabase/071_isle_perm_fix.sql 島嶼權限修正：拆東西、改格局要管理成員以上；一般成員只能動自己買的；每件東西記下付錢的人，退錢退給付錢的人（都是一半）；舊的 place_item／remove_item／move_item 停用
 supabase/072_privacy.sql 玩家資料不公開：players 不能直接讀，排行榜／參觀／鄰居島／大賽改用函式；這一竿的結果存在不公開的 casts 表，咬餌前約 2 秒 hook_fish 才告訴手機
 supabase/073_market_guard.sql 設計師市集加強：檢舉要綁 Email 或帳號滿 3 天；新手一天在市集最多花 1500；島上幫手名字擋髒話
+supabase/074_sci_giant.sql 蔚博士偶爾（約 6% 的日子）發現深海巨魚：六鰓鯊、尖吻鮫、大王魷、皇帶魚、睡鯊的巨型近親，傳說級，在發現的釣點很難才釣得到
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

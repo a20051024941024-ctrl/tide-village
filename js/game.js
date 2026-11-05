@@ -7957,12 +7957,12 @@ function sciReg(d){ if (!d || Sci.reg.has(d.id)) return; const B = FISH_BY_ID[d.
   const mk = (id, name, kind, of) => { if (FISH_BY_ID[id]) return;
     const c = sciRecolor(sciRecolor(S0.c, d.hue, d.hue2, null), null, null, kind), p = !S0.gen && typeof S0.p.depth === 'number' ? Object.assign({}, S0.p, { depth: S0.p.depth * (+d.shape || 1) }) : S0.p;
     regFishSpec(id, Object.assign({}, S0, { c, p }));
-    const f = { id, spot: d.spot, name, rarity:'稀有', color: c.Top || c.Body || c.Mid || B.color, min: +d.min, max: +d.max * (of ? 1.1 : 1), power: B.power, desc: d.story, time: B.time, sci: d };
-    if (of) f.of = of; FISH.push(f); FISH_BY_ID[id] = f; };
+    const f = { id, spot: d.spot, name, rarity: d.rarity || (d.giant ? '傳說' : '稀有'), color: c.Top || c.Body || c.Mid || B.color, min: +d.min, max: +d.max * (of ? 1.1 : 1), power: B.power, desc: d.story, time: B.time, sci: d };
+    if (of) f.of = of; if (d.giant || BIG_FISH.has(d.base)) BIG_FISH.add(id); FISH.push(f); FISH_BY_ID[id] = f; };   /* 深海巨魚：跟大型魚一樣（王者對決、只看得到魚影） */
   mk(d.id, d.name, null, null); mk(d.vid, d.vname, d.vkind, d.id); Sci.reg.add(d.id); }
 function loadSci(force){ if (Sci.busy) return Sci.busy; if (!Cloud.on || !Cloud.sb) return Promise.resolve(); if (!force && Sci.at && Date.now() - Sci.at < 60000) return Promise.resolve(); Sci.at = Date.now();
   Sci.busy = (async () => { try { const { data, error } = await Cloud.sb.rpc('sci_list'); if (!error && Array.isArray(data)){ Sci.list = data; for (const d of data.slice().reverse()) sciReg(d); sciPlace();
-      const T = data[0]; if (T && T.day === sciToday()){ let seen = null; try { seen = localStorage.getItem('tide.sciSeen'); } catch(e){} if (seen !== T.day){ try { localStorage.setItem('tide.sciSeen', T.day); } catch(e){} setTimeout(() => toast(`🔬 蔚博士今天在${SPOT_BY_ID[T.spot].label}發現了新品種「${T.name}」！`), 2500); } } } } catch(e){}
+      const T = data[0]; if (T && T.day === sciToday()){ let seen = null; try { seen = localStorage.getItem('tide.sciSeen'); } catch(e){} if (seen !== T.day){ try { localStorage.setItem('tide.sciSeen', T.day); } catch(e){} setTimeout(() => { if (T.giant){ flash(`🐋 蔚博士在${SPOT_BY_ID[T.spot].label}發現了深海巨魚「${T.name}」！`, 3.2); SFX.catch(); } else toast(`🔬 蔚博士今天在${SPOT_BY_ID[T.spot].label}發現了新品種「${T.name}」！`); }, 2500); } } } } catch(e){}
     Sci.busy = null; if (!$('#sheet').hidden && (curTab === 'sci' || curTab === 'dex')) renderTab(); })();
   return Sci.busy; }
 // 蔚博士站在今天調查的釣點旁邊，身邊放著水下攝影機、保冷箱和調查旗
@@ -7979,7 +7979,7 @@ function sciPlace(){ const n = npcs.find(x => x.shopNpc === 'sci'), T = Sci.list
     g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g); Sci.gear = g; }
   const fx = best[0] + dx * 0.9 + sx * 0.9, fz = best[1] + dz * 0.9 + sz * 0.9; Sci.gear.position.set(fx, groundHeight(fx, fz), fz); Sci.gear.rotation.y = Math.atan2(dx, dz); }
 function sciLines(){ const L = Sci.list || [], T = L[0]; if (!T) return []; const S = SPOT_BY_ID[T.spot], B = FISH_BY_ID[T.base], out = [];
-  out.push(`今天我在${S.label}發現了「${T.name}」！`); out.push(T.story); if (B) out.push(`「${T.name}」是${B.name}的親戚，今天在${S.label}特別容易遇到`);
+  out.push(T.giant ? `不得了！我在${S.label}發現了深海巨魚「${T.name}」！` : `今天我在${S.label}發現了「${T.name}」！`); if (T.giant) out.push('巨魚很難釣，拋遠一點、魚竿和魚線要夠強，祝你好運！'); out.push(T.story); if (B) out.push(`「${T.name}」是${B.name}的親戚，今天在${S.label}特別容易遇到`);
   out.push(T.first ? `${T.first} 是第一個釣到「${T.name}」的人，好厲害！` : `還沒有人釣到「${T.name}」，你要不要當第一個？`);
   if (L.length > 1) out.push(`到今天為止，我已經發現 ${L.length} 種新品種了`); return out; }
 function renderSci(body){
@@ -7988,12 +7988,12 @@ function renderSci(body){
   const L = Sci.list; if (!L){ body.appendChild(el('div', 'empty', '載入中…')); loadSci(); return; } if (!L.length){ body.appendChild(el('div', 'empty', '蔚博士還在做第一次調查。')); return; }
   body.appendChild(el('p', 'sub', '蔚博士每天到世界上的一個釣點調查，發現一種新品種，馬上放進大家的圖鑑。新品種從發現那天起就住在那個釣點，發現當天最容易釣到。聽說每一種都有很少見的白化或黑化個體。'));
   const T = L[0], S = SPOT_BY_ID[T.spot], isToday = T.day === sciToday(), card = el('div', 'scicard');
-  card.appendChild(el('div', 'scit', `${isToday ? '📍 今天' : '📍 最近'}在${S.label}`)); const cv = fishCanvas(FISH_BY_ID[T.id] || FISH_BY_ID[T.base], true, 220, 120); cv.className = 'scicv'; card.appendChild(cv);
-  card.appendChild(el('div', 'scin', T.name)); card.appendChild(el('div', 'sub2', `${FISH_BY_ID[T.base] ? FISH_BY_ID[T.base].name + '的近親・' : ''}稀有・${(+T.min).toFixed(2)}～${(+T.max).toFixed(2)} kg`));
+  card.appendChild(el('div', 'scit', `${T.giant ? '🐋 深海巨魚・' : ''}${isToday ? '📍 今天' : '📍 最近'}在${S.label}`)); if (T.giant) card.classList.add('giant'); const cv = fishCanvas(FISH_BY_ID[T.id] || FISH_BY_ID[T.base], true, 220, 120); cv.className = 'scicv'; card.appendChild(cv);
+  card.appendChild(el('div', 'scin', T.name)); card.appendChild(el('div', 'sub2', `${FISH_BY_ID[T.base] ? FISH_BY_ID[T.base].name + '的近親・' : ''}${T.giant ? '傳說' : '稀有'}・${(+T.min).toFixed(2)}～${(+T.max).toFixed(2)} kg`));
   card.appendChild(el('p', 'scis', T.story)); card.appendChild(el('div', 'sub2', rec.count[T.id] ? `✅ 你已經釣到 ${rec.count[T.id]} 條了` : T.first ? `🏅 第一個釣到的人：${T.first}` : '還沒有人釣到，去當第一個吧！')); body.appendChild(card);
   if (L.length > 1){ body.appendChild(el('div', 'dexhead', `📒 調查筆記（${L.length} 種）`)); const ul = el('ul', 'shoplist');
     for (const d of L.slice(1, 60)){ const li = el('li'), f = FISH_BY_ID[d.id], got = !!rec.count[d.id]; const c2 = fishCanvas(f || FISH_BY_ID[d.base], true, 64, 40); c2.className = 'dishic'; li.appendChild(c2);
-      const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${got ? '✅ ' : ''}${d.name}`)); inf.appendChild(el('div', 'sub2', `${d.day.slice(5).replace('-', '/')}・${SPOT_BY_ID[d.spot] ? SPOT_BY_ID[d.spot].label : ''}${d.first ? '・🏅' + d.first : ''}`)); li.appendChild(inf); ul.appendChild(li); }
+      const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${got ? '✅ ' : ''}${d.giant ? '🐋 ' : ''}${d.name}`)); inf.appendChild(el('div', 'sub2', `${d.day.slice(5).replace('-', '/')}・${SPOT_BY_ID[d.spot] ? SPOT_BY_ID[d.spot].label : ''}${d.first ? '・🏅' + d.first : ''}`)); li.appendChild(inf); ul.appendChild(li); }
     body.appendChild(ul); }
 }
 // ---- 阿報的《潮汐村報》（057_news.sql）：每天早上 7 點出報、留 7 天；上報的玩家名字是金色的 ----
@@ -8437,7 +8437,7 @@ function renderTab(){
       FISH.filter(f => f.spot === s.id && (!f.of || rec.count[f.id])).sort((a,b) => (a.of ? 1 : 0) - (b.of ? 1 : 0) || RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]).forEach(f => {   // 變種要釣到才會出現在圖鑑
         const known = !!rec.count[f.id]; const it = el('div', 'it' + (known ? '' : ' lock'));
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
-        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', `✨ ${FISH_BY_ID[f.of].name}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季')); if (f.sci && !f.of) it.appendChild(el('span', 'chip sci', '🔬 新品種'));
+        it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', `✨ ${FISH_BY_ID[f.of].name}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季')); if (f.sci && !f.of) it.appendChild(el('span', 'chip sci', f.sci.giant ? '🐋 深海巨魚' : '🔬 新品種'));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         g.appendChild(it);
@@ -8922,7 +8922,7 @@ function faiPick(spotId, depth){
     let k = f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.18 : 0;
     if (f.time && f.time !== per) k *= 0.12;   /* 白天的魚晚上很少出來，晚上的魚白天躲著 */
     if (rainy && RAIN_FISH.has(id)) k *= 2; if (SEASON_FISH.has(id)) k *= 1.6; if (eco[id] != null) k *= eco[id]; if (k > 0){ list.push(f); w.push(k); } }
-  for (const d of (typeof Sci !== 'undefined' && Sci.list) || []){ const f = FISH_BY_ID[d.id]; if (f && d.spot === spotId){ list.push(f); w.push(d.day === sciToday() ? 0.25 : 0.06); } }   /* 蔚博士發現的新品種也在這裡游 */
+  for (const d of (typeof Sci !== 'undefined' && Sci.list) || []){ const f = FISH_BY_ID[d.id]; if (f && d.spot === spotId && !d.giant){ list.push(f); w.push(d.day === sciToday() ? 0.25 : 0.06); } }   /* 蔚博士發現的新品種也在這裡游 */
   if (!list.length) return null; let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; } return list[0]; }
 // ---- 一條魚 ----
 function faiAgent(f, x, z, opt){ const tr = faiTraits(f), sc = opt && opt.scale || tr.scale, m = faiTake(f, sc); scene.add(m);
