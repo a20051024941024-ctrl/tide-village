@@ -710,9 +710,9 @@ const lanterns = [];
 const schools = [];
 const clouds = [];
 
-function mat(color, roughness=0.8, extra){ const m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness, metalness:0.04 }, extra||{}));
+function mat(color, roughness=0.8, extra){ const noWood = extra && extra.noWood; if (noWood){ extra = Object.assign({}, extra); delete extra.noWood; } const m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness, metalness:0.04 }, extra||{}));
   /* v207 精緻化第 3 批：木頭顏色的東西（碼頭、長椅、圍欄、木箱、招牌柱、家具）自動加木紋（shader，低畫質不加） */
-  if (typeof color === 'string' && !(extra && (extra.map || extra.onBeforeCompile)) && isWoodColor(color)){ m.onBeforeCompile = sh => addDetail(sh, 'wood'); m.customProgramCacheKey = () => 'wood' + (DETAIL_ON() ? '-d' : ''); }
+  if (typeof color === 'string' && !noWood && !(extra && (extra.map || extra.onBeforeCompile)) && isWoodColor(color)){ m.onBeforeCompile = sh => addDetail(sh, 'wood'); m.customProgramCacheKey = () => 'wood' + (DETAIL_ON() ? '-d' : ''); }
   return m; }
 const woodCache = new Map();
 function isWoodColor(hex){ if (woodCache.has(hex)) return woodCache.get(hex); let r = false; try { const c = new THREE.Color(hex), h = {}; c.getHSL(h); r = h.h > 0.04 && h.h < 0.12 && h.s > 0.22 && h.s < 0.75 && h.l > 0.18 && h.l < 0.62; } catch(e){} woodCache.set(hex, r); return r; }
@@ -1730,7 +1730,7 @@ function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
   av.gearMeshes = []; av.gearAnim = null;
-  const G = avGeo(), M = (c, r, ex) => mat(c, r == null ? 0.7 : r, ex);
+  const G = avGeo(), M = (c, r, ex) => mat(c, r == null ? 0.7 : r, Object.assign({ noWood: true }, ex || {}));   /* 衣服帽子不要木紋 */
   const mk = (geo, m, x, y, z, parent) => { if (parent && parent.userData.foot && y < -0.395){ parent = parent.userData.foot; y += 0.40; } else if (parent && parent.userData.shin && y < -0.22){ parent = parent.userData.shin; y += 0.22; }   /* 膝蓋以下的東西跟著小腿、腳踝以下跟著腳 */
     const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.torsoG || av.g).add(o); av.gearMeshes.push(o); return o; };
   const hatC = av.hatM, ink = av.inkM, white = M('#ffffff', 0.6);
@@ -2054,6 +2054,7 @@ var DETAIL_FRAG = {
   crown: 'float lf = dN(vDetP * 7.0) * 0.6 + dN(vDetP * 15.0) * 0.4; float gap = smoothstep(0.32, 0.18, lf); diffuseColor.rgb *= mix(1.0, 0.62, gap) * (0.9 + 0.2 * smoothstep(0.45, 0.75, lf)) * (0.92 + 0.12 * vDetN.y);',
   pine:  'float nd = dN(vec3(vDetP.x * 22.0, vDetP.y * 4.0, vDetP.z * 22.0)); float tier = fract(vDetP.y * 1.47); diffuseColor.rgb *= (0.82 + 0.3 * nd) * mix(0.78, 1.08, smoothstep(0.0, 0.6, tier));',
   trunk: 'float ang = atan(vDetP.z, vDetP.x); float gr = sin(ang * 13.0 + dN(vDetP * vec3(3.0, 1.2, 3.0)) * 4.0); diffuseColor.rgb *= 0.78 + 0.22 * smoothstep(-0.6, 0.6, gr) + 0.08 * dN(vDetP * 20.0);',
+  fur:   'float fu = dN(vDetP * 90.0) * 0.5 + dN(vDetP * 40.0) * 0.5; diffuseColor.rgb *= 0.9 + 0.16 * fu; diffuseColor.rgb *= 0.94 + 0.1 * smoothstep(-0.2, 0.8, vDetN.y);',   /* v217 寵物的毛（細細的亮暗、背上亮肚子暗） */
   wood:  'float wg = dN(vec3(vDetP.x * 3.0 + vDetP.z * 3.0, vDetP.y * 26.0, vDetP.z * 1.5)) * 0.65 + dN(vDetP * vec3(1.5, 60.0, 1.5)) * 0.35; diffuseColor.rgb *= 0.82 + 0.3 * wg; float kn = smoothstep(0.86, 0.95, dN(vDetP * 5.0)); diffuseColor.rgb *= 1.0 - kn * 0.25;',
   rock:  'float sp = dN(vDetP * 9.0) * 0.6 + dN(vDetP * 23.0) * 0.4; diffuseColor.rgb *= 0.8 + 0.32 * sp; float moss = smoothstep(0.55, 0.85, vDetN.y) * smoothstep(0.35, 0.6, dN(vDetP * 4.0)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.36, 0.52, 0.27) * (0.8 + 0.3 * sp), moss * 0.75);',
 };
@@ -5852,7 +5853,7 @@ async function petRpc(fn, args){ try { const { data, error } = await Cloud.sb.rp
 // ---- 模型 ----
 function petModel(kind, acc, v){
   const VV = (PET_VARS[kind] || {})[v] || Object.values(PET_VARS[kind] || {})[0] || ['', '#cccccc', '#ffffff'], c1 = VV[1], c2 = VV[2];
-  const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const M = (c, r) => mat(c, r == null ? 0.72 : r), ink = M('#1d1d24', 0.35), shine = new THREE.MeshBasicMaterial({ color:'#ffffff' }), legs = [];
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const M = (c, r) => { const m = mat(c, r == null ? 0.72 : r, { onBeforeCompile: sh => addDetail(sh, 'fur') }); m.customProgramCacheKey = () => 'fur' + (DETAIL_ON() ? '-d' : ''); return m; }, ink = M('#1d1d24', 0.35), shine = new THREE.MeshBasicMaterial({ color:'#ffffff' }), legs = [];
   const S = (r, c, x, y, z, sx, sy, sz, par, seg) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, seg || 18, Math.max(8, (seg || 18) - 4)), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.scale.set(sx || 1, sy || sx || 1, sz || sx || 1); m.castShadow = true; (par || body).add(m); return m; };
   const C = (rt, rb, h, c, x, y, z, par, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 10), typeof c === 'string' ? M(c) : c); m.position.set(x, y, z); m.castShadow = true; (par || body).add(m); return m; };
   const leg = (x, z, h, c, paw) => { const pv = new THREE.Group(); pv.position.set(x, h, z); body.add(pv); C(0.032, 0.028, h, c, 0, -h / 2, 0, pv); if (paw) S(0.034, paw, 0, -h + 0.012, 0.012, 1, 0.6, 1.2, pv, 10); legs.push(pv); return pv; };
