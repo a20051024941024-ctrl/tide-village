@@ -241,6 +241,17 @@ const FISH = [
   { id:'shark_red_albino', spot:'harbor', of:'shark', rs:true, name:'白化赤紅霸王鯊', rarity:'傳說', color:'#f8e8e2', min:15, max:420, power:0.99, desc:'赤紅霸王鯊生小鯊時極少數會出現的白化個體，全身粉白、眼睛是紅的。牠一樣是族群裡的一隻，會長大、會留下叉叉；被釣光一樣會絕種。不能賣，也不能送人。' },
   { id:'shark_red', spot:'harbor', of:'shark', rs:true, name:'赤紅霸王鯊', rarity:'傳說', color:'#c8161c', min:15, max:420, power:0.99, desc:'全身深紅、背上有黑色虎紋的礁岩鯊。整片海只有一小群，從一公一母開始，沒被釣走就會慢慢繁殖；全部被釣光就絕種了。不能賣，也不能送人。' },
   { id:'arowana_red', spot:'lake', of:'arowana', name:'紅龍魚', rarity:'傳說', color:'#d8302a', min:3.0, max:12, power:0.86, w:0.1, desc:'鱗片紅得像火一樣的紅龍，比金龍更稀有。' },
+  // 苔森之島的溪流和湖（2026-11-05，參考南方多雨的杉木島嶼溪流；模型照維基百科）：只有島上的溪和湖才釣得到
+  { id:'sicyo',     spot:'moss', name:'日本禿頭鯊', rarity:'常見', color:'#8a8a72', min:0.02, max:0.08, power:0.3, desc:'腹鰭合成一個吸盤，可以貼著石頭一路爬上瀑布。在溪底的石頭上刮青苔吃。' },
+  { id:'eleotris',  spot:'moss', name:'尖頭塘鱧', rarity:'常見', color:'#5a4a36', min:0.05, max:0.3, power:0.42, desc:'頭扁扁、嘴巴很大，白天躲在石頭和落葉下面，晚上出來吃小蝦和小魚。' },
+  { id:'kuhlia',    spot:'moss', name:'黑邊湯鯉', rarity:'稀有', color:'#c8d0d0', min:0.1, max:0.6, power:0.55, desc:'銀亮亮的溪魚，尾鰭有一圈黑邊。很機警，一有影子就整群游走。' },
+  { id:'mokuzu',    spot:'moss', name:'日本絨螯蟹', rarity:'稀有', color:'#5a6a3a', min:0.08, max:0.4, power:0.45, desc:'兩隻螯上長滿了毛，像戴著毛手套。平常住在溪裡，秋天會游到海邊生小孩。' },
+  { id:'marmorata', spot:'moss', time:'night', name:'鱸鰻', rarity:'傳說', color:'#a08a44', min:2.0, max:20, power:0.95, desc:'最大的淡水鰻，可以長到兩公尺。全身大理石花紋，晚上才從深潭的石洞裡出來，力氣非常大。' },
+  { id:'sicyo_blue',      spot:'moss', of:'sicyo', name:'藍色禿頭鯊', rarity:'稀有', color:'#3a7ac8', min:0.02, max:0.08, power:0.3, w:0.04, desc:'繁殖期的公魚會變成亮藍色，背鰭帶一點橘色，非常漂亮。' },
+  { id:'eleotris_albino', spot:'moss', of:'eleotris', name:'白化尖頭塘鱧', rarity:'稀有', color:'#f8e8d8', min:0.05, max:0.3, power:0.42, w:0.025, desc:'全身淡粉白色、眼睛紅紅的塘鱧，很少見。' },
+  { id:'kuhlia_gold',     spot:'moss', of:'kuhlia', name:'金湯鯉', rarity:'傳說', color:'#f0d878', min:0.1, max:0.6, power:0.55, w:0.03, desc:'全身金黃色的湯鯉，在陽光下的溪水裡閃閃發亮。' },
+  { id:'mokuzu_blue',     spot:'moss', of:'mokuzu', name:'藍色絨螯蟹', rarity:'傳說', color:'#3a6aa8', min:0.08, max:0.4, power:0.45, w:0.03, desc:'殼和腳都是藍色的絨螯蟹，毛手套還是深褐色的。' },
+  { id:'marmorata_gold',  spot:'moss', of:'marmorata', time:'night', name:'黃金鱸鰻', rarity:'傳說', color:'#f0d070', min:2.0, max:20, power:0.95, w:0.03, desc:'全身金黃色的鱸鰻，大理石花紋也變成了金色。傳說是這座島上溪流的守護神。' },
   // 老闆的放生活動：每天一段時間只放一隻，全伺服器只有一隻（不在一般的釣點清單裡，見 Sev）
   { id:'bluelobster', spot:'shrimp', sev:true, name:'藍色龍蝦',   rarity:'傳說', color:'#2f6fe0', min:0.4,  max:1.2,  power:0.5,  desc:'大約兩百萬隻龍蝦才有一隻是藍色的，是基因讓殼裡的色素變成寶藍色。阿忠說這是他的壓箱寶。' },
 ];
@@ -298,10 +309,11 @@ const SPOTS = [
   { id:'icesea', label:'流冰海岸', short:'流冰', subtitle:'冰封群島北邊的海岸，流冰一塊一塊漂過來', pos:V3(-179.4, -10), color:'#5f9fc8', dir:V2(-1, 0), late:true, fish:['capelin','hokke','cod','sleepershark','capelin_gold','hokke_albino','cod_albino','sleepershark_albino'] },
   { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島，站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold'] },
   { id:'weir', label:'雙心石滬', short:'石滬', subtitle:'珊瑚礁島東邊用咾咕石疊成的愛心石滬，退潮時魚被困在裡面、咬得特別快', pos:V3(11.0, 82.0), color:'#e86a8a', dir:V2(1, 0), late:true, fish:['rabbitfish','sergeant','butterfly','girella','octopus','puffer','rabbitfish_gold','girella_gold'] },
+  { id:'moss', label:'苔森溪澗', short:'苔森', subtitle:'苔森之島長滿青苔的溪流和湖，有很多島上才有的魚', pos:V3(GREEN.x + GREEN.lake[0], GREEN.z + GREEN.lake[1] + GREEN.lake[2] + 1.2), color:'#4e9a52', dir:V2(0, -1), late:true, fish:['sicyo','eleotris','kuhlia','mokuzu','marmorata','sicyo_blue','eleotris_albino','kuhlia_gold','mokuzu_blue','marmorata_gold','ayu','kuhua','eel'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','guppy','trout_golden'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
-const AQUA = [11, -14];
+const AQUA = [23.5, -6];   /* v197：移到廣場東北邊，不再擋在廣場和港口商店街中間 */
 const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過去）
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
 /* 潮汐商店街（2026-11-04 使用者：NPC 的店分開一點、整齊一點）：往珊瑚礁群島那條路的兩邊，一排一排的店，門口都朝著路 */
@@ -559,13 +571,13 @@ const MAP = {
     [[4, 4], [2, -18], [0, -40]],                        // 往北海灘碼頭
     [[4, 4], [-6, -8], [-16, -15], [-24.5, -17.6]],     // 往木橋
     [[4, 4], [-8, 1], [-16, -2]],                        // 往鏡湖棧道
-    [[4, 4], [16, -8], [27, -21]],                       // 往港口
+    [[4, 4], [12, -5], [13.5, -17], [13.5, -21.6]],      // 往港口（v197：廣場直直往北走到港口商店街）
+    [[12, -5], [17.5, -4], [19, -0.8]],                   // 往水族館門口
     [[4, 4], [10, 14], [18, 20], [23, 22]],              // 往螢光溪
     [[4, 4], [-10, 7], [-19, 6], [-24, 5.2]],            // 往瀑布潭
     [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
     [[4, 4], [3, 18], [1, 32], [0, 43.6]],               // 往跨海大橋（珊瑚礁群島）
     [[1, -18], [1, -21.6], [22.5, -21.6], [25, -26.5]],   // v195：港口商店街，一條直路經過四間店門口，接到碼頭
-    [[16, -8], [21, -17], [22.5, -21.6]],
   ],
 };
 // 珊瑚礁群島（參考小琉球、澎湖）的位置，放在這裡是因為建地形、種樹的時候就要用到
@@ -2723,7 +2735,7 @@ function waterSpotId(x, z){
   if (Math.hypot(x - FROST.x, z - FROST.z) < 50) return frostHole(x, z, 1) ? 'icelake' : 'icesea';
   if (Math.hypot(x - ABYSS.x, z - ABYSS.z) < 40) return 'abyss';
   if (Math.hypot(x - MYST.x, z - MYST.z) < 45) return 'mystic';
-  if (greenNear(x, z, 14)){ const lx = x - GREEN.x, lz = z - GREEN.z; if (Math.hypot(lx - GREEN.lake[0], lz - GREEN.lake[1]) < GREEN.lake[2] + 1) return 'lake'; if (gSeg(lx, lz, GREEN.river) < 2.6 || gSeg(lx, lz, GREEN.creek) < 1.8) return Math.hypot(lx, lz) < greenEdge(lx, lz) - 1 ? 'river' : 'sea'; return 'sea'; }
+  if (greenNear(x, z, 14)){ const lx = x - GREEN.x, lz = z - GREEN.z; if (Math.hypot(lx - GREEN.lake[0], lz - GREEN.lake[1]) < GREEN.lake[2] + 1) return 'moss'; if (gSeg(lx, lz, GREEN.river) < 2.6 || gSeg(lx, lz, GREEN.creek) < 1.8) return Math.hypot(lx, lz) < greenEdge(lx, lz) - 1 ? 'moss' : 'sea'; return 'sea'; }
   const i = terrainInfo(x, z);
   if (!i.region && inMang(x, z)) return 'mangrove';
   if (!i.region && inReef(x, z)) return inWeir(x, z) ? 'weir' : 'reef';   /* 溪的出海口還是溪 */
@@ -2736,6 +2748,7 @@ function shoreSpot(){
   Shore.x = me.pos.x; Shore.z = me.pos.z; Shore.r = me.rot; Shore.at = t; Shore.res = null;
   if (inIndoor() || House.on) return null;   /* 食堂、博物館、房子裡不能釣魚（底下其實是海） */
   if (myBoat || mySeat) return null;
+  if (!deckAt(me.pos.x, me.pos.z) && me.baseY - WATER_LEVEL > 2.2) return null;   /* v197：站在山坡、大樹旁的高處不能往下釣（苔森之島的山上看得到河，卻離水面太高） */
   { const h = Math.hypot(me.pos.x - FROST.lake.x, me.pos.z - FROST.lake.z) < FROST.lake.r + 1 && FROST.holes.find(h => Math.hypot(me.pos.x - h[0], me.pos.z - h[1]) < 2.2); if (h){ const dx = h[0] - me.pos.x, dz = h[1] - me.pos.z, L = Math.hypot(dx, dz) || 1; Shore.res = Object.assign({}, SPOT_BY_ID.icelake, { pos: me.pos.clone(), dir: new THREE.Vector2(dx / L, dz / L), shore: true, legendBoost: 1, hole: h }); return Shore.res; } }
   const dirs = [me.rot]; for (let k = 1; k <= 6; k++){ dirs.push(me.rot + k * 0.45); dirs.push(me.rot - k * 0.45); }
   for (const a of dirs){ const dx = Math.sin(a), dz = Math.cos(a);
@@ -2779,6 +2792,9 @@ function updatePlayer(dt){
     me.rot = lerpAngle(me.rot, target, 1 - Math.exp(-14 * dt));
   }
   me.speed += (speed - me.speed) * Math.min(1, dt * 12);
+  if (!myBoat && !mySeat && !Dive.on && !House.on && !inIndoor() && frameNo % 30 === 0 && !walkable(me.pos.x, me.pos.z)){   /* v197：不管怎麼進到水裡（下船、傳送、舊版本留下的位置），都推回最近的岸上 */
+    let best = null, bd = 1e9; for (let r = 0.8; r <= 14 && !best; r += 0.8) for (let k = 0; k < 24; k++){ const a = k / 24 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)){ const d = r; if (d < bd){ bd = d; best = [x, z]; } } }
+    if (best){ me.pos.x = best[0]; me.pos.z = best[1]; me.baseY = groundHeight(best[0], best[1]); Jump.gy = me.baseY; } }
   const gy = groundHeight(me.pos.x, me.pos.z);
   if (Math.abs(gy - Jump.gy) > 1.5 && Jump.air <= 0) Jump.gy = gy; else Jump.gy += (gy - Jump.gy) * Math.min(1, dt * 14);
   if (Jump.vy !== 0 || Jump.air > 0){
@@ -2812,6 +2828,17 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 const reelCam = { k:0, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
 function updateCamera(dt){ if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor()) cam.pitch = 0.3; updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+/* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
+function camClear(target, want){
+  const bad = (x, y, z) => { const g = groundHeight(x, z); if (y < g + 0.6) return true;
+    for (const c of colliders){ if (c.t !== 'c' || c.r > 0.6) continue; const dx = x - c.x, dz = z - c.z; if (dx * dx + dz * dz < 2.1 && y > g + 1.0 && y < g + 7) return true; } return false; };
+  const dx = want.x - target.x, dy = want.y - target.y, dz = want.z - target.z; let good = 1;
+  const L = Math.hypot(dx, dy, dz) || 1, kmin = Math.min(0.9, 2.6 / L);   /* 最近只拉到離角色 2.6 公尺，再近就看到帽子裡面了 */
+  for (let k = kmin; k <= 1.0001; k += 0.08){ if (bad(target.x + dx * k, target.y + dy * k, target.z + dz * k)){ good = Math.max(kmin, k - 0.08); break; } }
+  if (good >= 1) return;
+  const x = target.x + dx * good, z = target.z + dz * good; let y = Math.max(target.y + dy * good, groundHeight(x, z) + 0.6);
+  if (good <= kmin + 1e-6 && bad(x, y, z)) y = groundHeight(x, z) + 6.4;   /* 角色就貼著樹：鏡頭拉到樹冠上面往下看 */
+  want.set(x, y, z); }
 function updateCamera2(dt){
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   const reelOn = F.phase === 'reeling' && !Photo.on;
@@ -2831,6 +2858,7 @@ function updateCamera2(dt){
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
   want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
+  if (!Dive.on && !House.on && !inIndoor()) camClear(target, want);
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
   camera.lookAt(target); camLook.copy(target);
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
@@ -3480,9 +3508,13 @@ function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.
 function buildGreen(){ Far.green = true; const G = GREEN, g = new THREE.Group(); g.position.set(G.x, 0, G.z); scene.add(g); Far.gg = g; let sd = 77; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const H = (lx, lz) => greenH(G.x + lx, G.z + lz) ?? G.y, Rmax = G.r + 10;
   // 地面：一張大網格，照高度上色（沙灘、苔綠、深綠森林、山上的岩石、湖底、溪底）
-  { const pg = new THREE.PlaneGeometry(Rmax * 2, Rmax * 2, 110, 110); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], c = new THREE.Color();
-    for (let i = 0; i < p.count; i++){ const x = p.getX(i), z = p.getZ(i), h = H(x, z), d = Math.hypot(x, z), R = greenEdge(x, z), n = Math.sin(x * 0.9) * Math.cos(z * 0.7) * 0.5 + 0.5; p.setY(i, h);
-      if (h < WATER_LEVEL - 0.1) c.set(d > R ? '#c9b98a' : '#7a8a6a'); else if (d > R - 3.5 && z < -8) c.set(n > 0.5 ? '#e8d8a8' : '#dccb98'); else if (d > R - 1.5) c.set('#8a8a7a'); else if (h > G.y + 6) c.set(n > 0.5 ? '#8a9a7a' : '#7a8a6e'); else c.set(n > 0.6 ? '#5f9a4a' : n > 0.3 ? '#4f8a40' : '#6aa452');
+  { const pg = new THREE.PlaneGeometry(Rmax * 2, Rmax * 2, 110, 110); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], c = new THREE.Color(), c2 = new THREE.Color();
+    for (let i = 0; i < p.count; i++){ const x = p.getX(i), z = p.getZ(i), h = H(x, z), d = Math.hypot(x, z), R = greenEdge(x, z), n = (Math.sin(x * 1.7 + z * 0.4) * Math.cos(z * 1.3 - x * 0.3) * 0.5 + 0.5) * 0.6 + (Math.sin(x * 5.1) * Math.cos(z * 4.7) * 0.5 + 0.5) * 0.4; p.setY(i, h);
+      /* v197：顏色用漸層混合（以前是一格一格硬切，看起來像棋盤） */
+      if (h < WATER_LEVEL - 0.1) c.set(d > R ? '#c9b98a' : '#7a8a6a').lerp(c2.set('#5a7a60'), clamp((WATER_LEVEL - h) * 0.4, 0, 0.6));
+      else if (d > R - 3.5 && z < -8) c.set('#e8d8a8').lerp(c2.set('#d8c690'), n);
+      else if (d > R - 1.5) c.set('#8a8a7a').lerp(c2.set('#a09a86'), n);
+      else { const up = clamp((h - G.y - 3) / 5, 0, 1); c.set('#4f8a40').lerp(c2.set('#6aa452'), n).lerp(c2.set('#8a9a7a'), up); }
       cs.push(c.r, c.g, c.b); }
     pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); pg.computeVertexNormals(); const m = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.95 })); m.receiveShadow = true; g.add(m); }
   const ok = (lx, lz, pad) => { const d = Math.hypot(lx, lz); if (d > greenEdge(lx, lz) - (pad || 2)) return false; if (greenWater(G.x + lx, G.z + lz) || greenWater(G.x + lx + 1.2, G.z + lz) || greenWater(G.x + lx - 1.2, G.z + lz) || greenWater(G.x + lx, G.z + lz + 1.2) || greenWater(G.x + lx, G.z + lz - 1.2)) return false; if (Math.abs(lx - 6) < 5 && lz < -20) return false; return true; };   /* 碼頭前面留路 */
@@ -3511,7 +3543,7 @@ function buildGreen(){ Far.green = true; const G = GREEN, g = new THREE.Group();
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshBasicMaterial({ map: signTex('🌲 苔森之島', '#3a6a3a', '#f4f0e0', 512, 128), side:THREE.DoubleSide })); sg.position.set(dx + 3, H(dx + 3, dz0 + 4) + 2.2, dz0 + 4); g.add(sg); for (const sx of [-1.4, 1.4]) g.add(box([0.14, 2.4, 0.14], '#5a4030', [dx + 3 + sx, H(dx + 3, dz0 + 4) + 1.1, dz0 + 4]));
     for (let k = 0; k < 14; k++){ const fx = -12 + k * 0.9, fz = -27 - Math.sin(k * 0.5) * 1.2; for (const sd2 of [-0.25, 0.25]){ const ft = new THREE.Mesh(new THREE.CircleGeometry(0.08, 6), new THREE.MeshBasicMaterial({ color:'#c9b888' })); ft.rotation.x = -Math.PI / 2; ft.position.set(fx + sd2 * 0.3, H(fx, fz) + 0.02, fz + sd2); g.add(ft); } } }
   // 湖邊的木棧道
-  { const [cx, cz, r] = G.lake; for (let k = 0; k < 10; k++){ const a = -0.4 + k * 0.17, x = cx + Math.cos(a) * (r + 0.6), z = cz + Math.sin(a) * (r + 0.6); g.add(box([1.2, 0.1, 0.9], '#a8754a', [x, G.y + 0.42, z])).rotation.y = -a; } }
+  { const [cx, cz, r] = G.lake; for (let k = 0; k < 10; k++){ const a = -0.4 + k * 0.17, x = cx + Math.cos(a) * (r + 0.6), z = cz + Math.sin(a) * (r + 0.6); const pk = box([1.2, 0.1, 0.9], '#a8754a', [x, G.y + 0.42, z]); pk.rotation.y = -a; g.add(pk); } }   /* v197：以前寫成 g.add(...).rotation.y，等於把整座島轉了 65 度（畫面和碰撞、水、高度全部對不上：人會走在水上、卡進樹裡、鏡頭鑽進山） */
   // 長椅（釣魚小角落）：湖邊、溪邊、海邊各幾張
   { const spots = [[G.lake[0] + G.lake[2] + 2.0, G.lake[1] - 1, -Math.PI / 2], [G.lake[0] - 2, G.lake[1] - G.lake[2] - 2.0, 0.1], [G.lake[0] - G.lake[2] - 2.2, G.lake[1] + 2, Math.PI / 2], [-14, -14, 0], [-21, -20, 0.6], [-17, -9, -0.9]];
     for (let i = 0; i < 360 && spots.length < 12; i += 30){ const a = (i - 90) * Math.PI / 180, R = greenEdge(Math.cos(a), Math.sin(a)) - 3.2, lx = Math.cos(a) * R, lz = Math.sin(a) * R; if (Math.abs(lx - 6) < 5 && lz < -20) continue; if (H(lx, lz) > G.y + 1.2) continue; spots.push([lx, lz, Math.atan2(lx, lz)]); }
@@ -4657,7 +4689,7 @@ function buildCages(){
   const hdpe = mat('#2a2c2e', 0.6), yel = mat('#f0c020', 0.6), netM = new THREE.MeshBasicMaterial({ color:'#3a5a5a', wireframe:true, transparent:true, opacity:0.35 }), plank = mat('#b88a5a', 0.9);
   const deck = (x0, x1, z0, z1) => { const w = x1 - x0, d = z1 - z0; const m = box([w, 0.12, d], '', [(x0 + x1) / 2, Y - 0.06, (z0 + z1) / 2], plank); m.castShadow = false; g.add(m); addDeck((x0 + x1) / 2, (z0 + z1) / 2, w, d, Y);
     for (let x = x0 + 0.3; x < x1; x += 1.6) for (const z of [z0 + 0.1, z1 - 0.1]){ const f = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.5, 8), mat('#e8e4d8', 0.7)); f.rotation.x = Math.PI / 2; f.position.set(x, Y - 0.2, z); g.add(f); } };
-  deck(-13.6, -10.2, C.z - 0.6, C.z + 0.6); deck(-22.0, -13.6, C.z - 0.6, C.z + 0.6);   /* 浮動步道：從島上走過來，穿過兩排箱網中間 */
+  deck(-13.6, -6.6, C.z - 0.6, C.z + 0.6); deck(-22.0, -13.6, C.z - 0.6, C.z + 0.6);   /* v197：步道接到岸上（以前 x -8～-10 中間是一段水，走不過去） */   /* 浮動步道：從島上走過來，穿過兩排箱網中間 */
   C.pos.forEach(([x, z], i) => {
     for (const [r, h, m] of [[C.r, 0.12, hdpe], [C.r + 0.22, 0.1, hdpe], [C.r - 0.05, 0.95, yel]]){ const t = new THREE.Mesh(new THREE.TorusGeometry(r, h === 0.95 ? 0.025 : h, 6, 32), m); t.rotation.x = Math.PI / 2; t.position.set(x, h === 0.95 ? Y + 0.9 : Y - 0.1, z); g.add(t); }
     for (let k = 0; k < 10; k++){ const a = k / 10 * Math.PI * 2, p = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 5), yel); p.position.set(x + Math.cos(a) * (C.r - 0.05), Y + 0.4, z + Math.sin(a) * (C.r - 0.05)); g.add(p); }
@@ -5122,10 +5154,7 @@ function renderFriends(body){
   // 送禮畫面
   if (Fr.giftTo){ const to = Fr.giftTo;
     const head = el('div', 'tankbar'); head.appendChild(el('b', '', `🎁 送禮給 ${to.name || '朋友'}`)); const bk = el('button', 'tbtn ghost', '返回'); bk.addEventListener('click', () => { Fr.giftTo = null; renderTab(); }); head.appendChild(bk); body.appendChild(head);
-    body.appendChild(el('p', 'sub', '金幣每天最多送 1000，魚每天最多送 10 條（展示中的魚不能送）。對方打開禮物就會收到。'));
-    body.appendChild(el('div', 'dexhead', `🪙 金幣（你有 ${rec.coins.toLocaleString()}）`)); const cb = el('div', 'tankbar');
-    for (const n of [50, 100, 300, 1000]){ const b = el('button', 'tbtn' + (rec.coins < n ? ' ghost' : ''), `送 🪙${n}`); b.disabled = rec.coins < n; b.addEventListener('click', () => { b.disabled = true; sendGift(to, 'coins', n); }); cb.appendChild(b); }
-    body.appendChild(cb);
+    body.appendChild(el('p', 'sub', '可以送魚缸裡的魚，每天最多 10 條（展示中的魚不能送）。對方打開禮物就會收到。金幣不能送人。'));   /* v197：拿掉送金幣（086） */
     body.appendChild(el('div', 'dexhead', '🐟 魚缸裡的魚')); const locked = new Set(rec.show || []);
     const list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w)).slice(0, 24);
     if (!list.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以送的魚。'));
@@ -9907,7 +9936,7 @@ function renderTab(){
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
       '跑馬燈會報出大家釣到的稀有魚和傳說魚，還有做出來的料理。',
       '鬼抓人：在「玩家」分頁發起，2 個人以上就能玩。被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。',
-      '好友：在「玩家」分頁按「加好友」，或輸入朋友的 8 碼好友代碼。互相加好友以後可以送金幣（每天最多 1000）或魚缸裡的魚（每天 10 條），對方在玩家分頁打開禮物就會收到。也可以從好友名單去參觀他的水族館和小島。',
+      '好友：在「玩家」分頁按「加好友」，或輸入朋友的 8 碼好友代碼。互相加好友以後可以送魚缸裡的魚（每天 10 條；金幣不能送人），對方在玩家分頁打開禮物就會收到。也可以從好友名單去參觀他的水族館和小島。',
       '遇到不友善的人可以在「玩家」分頁封鎖或檢舉。聊天會自動過濾不雅字。',
       '「玩家」分頁有「誰來逛過你的小島、水族館」：就算你不在線上也會記在雲端（保留 14 天），可以按「回訪小島」去他的島。別人的名字被房子、樹擋住或離太遠時會變淡。',
       '「玩家」分頁最下面有「最近來過村子的人」：誰進過你在的大廳、什麼時候離開、來過幾次（記在這台裝置，保留 7 天），也可以直接加好友或參觀他的小島。',

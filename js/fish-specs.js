@@ -712,6 +712,43 @@ Object.assign(SPECS, {
 });
 Object.assign(SPECS, { guppy_albino: VAR('guppy', { Top:'#f0dcc8', Mid:'#f8ece0', Bottom:'#fff8f0', Fins:'#f4e4d8', Eye:'#d02a3a' }, {}) });
 
+/* ---------------- 苔森之島的溪流（2026-11-05；照維基百科各種魚的體型、鰭、花紋） ---------------- */
+Object.assign(SPECS, {
+  // 日本禿頭鯊 Sicyopterus japonicus：圓筒形的蝦虎、頭圓鈍、嘴在下面，腹鰭合成吸盤可以爬瀑布；兩個背鰭、圓尾；灰褐色、身上有暗色橫斑
+  sicyo: { c:{ Top:'#5a5a48', Mid:'#9a9a82', Bottom:'#e4e0cc', Stripes:'#3a3a2e', Fins:'#7a7a64', Fins2:'#6a8aa0', Eye:'#15181c', EyeW:'#d8d4b8' }, p:{
+    bl:0.86, depth:0.17, wr:0.9, tm:0.38, nose:0.35, ped:0.3, n:1.9, cs:0.0, up:[[0,0.55],[0.1,0.9],[0.25,1],[0.6,0.8],[1,0.45]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.2, part:'Mid' }, { k:'bars', bars:BARS(7, 0.2, 0.86, 0.05, -0.2, 1.1), part:'Stripes' }],
+    dorsal:[{ s:0.3, e:0.44, h:0.5, shape:'round', part:'Fins2' }, { s:0.5, e:0.8, h:0.36, shape:'flat', part:'Fins2' }], anal:{ s:0.56, e:0.8, h:0.26 },
+    pect:{ t:0.22, y:-0.45, size:0.6, shape:'round' }, pelv:{ t:0.26, size:0.4, shape:'round' }, caudal:{ type:'rounded', hk:1.1 }, eye:EYE(0.07, 0.55, 0.09) } },
+  // 尖頭塘鱧 Eleotris oxycephala：頭扁、吻尖、大嘴；深褐色，頰上有暗紋；兩個背鰭、圓尾；腹鰭分開（跟蝦虎不同）
+  eleotris: { c:{ Top:'#3a3226', Mid:'#6a5a44', Bottom:'#c8b898', Stripes:'#2a2218', Fins:'#5a4a36', Eye:'#15181c', EyeW:'#c8b088' }, p:{
+    bl:0.84, depth:0.22, wr:0.85, tm:0.38, nose:0.75, ped:0.3, n:2.0, cs:0.0, up:[[0,0.4],[0.12,0.8],[0.3,1],[0.6,0.85],[1,0.45]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.2, part:'Mid' }, { k:'line', t0:0.02, t1:0.22, y:[[0,0.1],[1,-0.1]], w:0.05, part:'Stripes' }, { k:'line', t0:0.02, t1:0.2, y:[[0,-0.25],[1,-0.4]], w:0.04, part:'Stripes' }],
+    dorsal:[{ s:0.38, e:0.5, h:0.4, shape:'round' }, { s:0.56, e:0.78, h:0.38, shape:'flat' }], anal:{ s:0.6, e:0.78, h:0.3 },
+    pect:{ t:0.24, y:-0.3, size:0.55, shape:'round' }, pelv:{ t:0.27, size:0.35 }, caudal:{ type:'rounded', hk:1.2 }, eye:EYE(0.09, 0.5, 0.07) } },
+  // 黑邊湯鯉 Kuhlia marginata：銀色、側扁像鱸魚，背鰭有缺刻，尾鰭分叉、邊緣黑色；眼睛大
+  kuhlia: { c:{ Top:'#5a6a6a', Mid:'#d0d8d8', Bottom:'#f4f6f4', Fins:'#c8cccc', Fins2:'#222428', Eye:'#15181c', EyeW:'#e8e8e0' }, p:{
+    bl:0.8, depth:0.33, wr:0.45, tm:0.38, nose:0.7, ped:0.22, cs:0.2,
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.3, part:'Mid' }, { k:'bars', bars:[[0.93, 1.0, -1.2, 1.2]], part:'Fins2' }],
+    dorsal:[{ s:0.3, e:0.5, h:0.45, shape:'spiny', back:0.5 }, { s:0.52, e:0.7, h:0.32, shape:'tri', peak:0.2 }], anal:{ s:0.6, e:0.74, h:0.3 },
+    pect:{ t:0.26, y:-0.2, size:0.4 }, pelv:{ t:0.3, size:0.32 }, caudal:{ type:'forked', notch:0.5, hk:1.3, part:'Fins2' }, eye:EYE(0.1, 0.32, 0.12, { ring:true }) } },
+  // 日本絨螯蟹 Eriocheir japonica：橄欖綠的方形殼，兩隻螯上長滿毛（像戴手套），腳長
+  mokuzu: { gen:'crab', c:{ Top:'#5a6a3a', Bottom:'#d8d0a8', Spots:'#3a4628', Fins:'#6a7a44', Claw:'#3a2e22', Eye:'#141418' }, move:'vert', p:{
+    cd:0.26, cr:0.3, ch:0.13, pairs:4, span:0.78, legR:0.024, eyeH:0.07, spots:3, claw:{ size:0.8, right:1.0 },
+    shell:v => [v[0] * 0.98, v[1], v[2] * 1.06] } },
+});
+Object.assign(SPECS, {
+  // 鱸鰻 Anguilla marmorata：最大的淡水鰻之一，黃褐色底、全身布滿深色大理石花紋
+  marmorata: VAR('eel', { Top:'#5a4a22', Mid:'#a08a44', Bottom:'#e8dcb0', Spots:'#2a2210', Fins:'#5a4a28' }, { depth:0.075, dots:{ n:46, t0:0.06, t1:0.95, y0:-0.3, y1:0.95, r:0.03, part:'Spots' } }),
+});
+Object.assign(SPECS, {
+  marmorata_gold: VAR('marmorata', { Top:'#c8a030', Mid:'#f0d070', Bottom:'#fbf0c8', Spots:'#b08020', Fins:'#e0b848' }, {}, { glow:true }),
+  sicyo_blue: VAR('sicyo', { Top:'#2a5a9a', Mid:'#5aa0d8', Bottom:'#d8ecf4', Stripes:'#1a3a6a', Fins:'#3a7ac8', Fins2:'#f0a030' }, {}),   /* 繁殖期公魚的藍色婚姻色 */
+  eleotris_albino: VAR('eleotris', { Top:'#f0d8c0', Mid:'#f8e8d8', Bottom:'#fff8f0', Stripes:'#e8c0a0', Fins:'#f4e0cc', Eye:'#d02a3a' }, {}),
+  kuhlia_gold: VAR('kuhlia', { Top:'#c8a030', Mid:'#f0d878', Bottom:'#fbf0c8', Fins:'#e8c860' }, {}, { glow:true }),
+  mokuzu_blue: VAR('mokuzu', { Top:'#3a6aa8', Spots:'#2a4a7a', Fins:'#4a7ab8', Claw:'#24304a' }, {}),
+});
+
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {
@@ -727,7 +764,7 @@ const MOUTH = {
   puffer:{ t:0.025, y:-0.05, th:1.4 }, parrot:{ t:0.035, y:-0.1, th:1.6, part:'EyeW' }, sunfish:{ t:0.03, y:-0.05, open:0.4 }, milkfish:{ t:0.035, y:-0.15 }, mullet:{ t:0.035, y:-0.2 },
   mudskipper:{ t:0.06, y:-0.35, th:1.2 }, bigskipper:{ t:0.06, y:-0.35, th:1.2 }, anchovy:{ type:'sub', t:0.09, y:-0.4, t0:0.02 }, loach:{ type:'sub', t:0.05, y:-0.6, t0:0.02 },
   hillstream:{ type:'sub', t:0.06, y:-0.8, t0:0.05 }, salmon:{ t:0.08, y:-0.15 }, trout:{ t:0.08, y:-0.15 }, ayu:{ t:0.06, y:-0.2 }, tilapia:{ t:0.05, y:-0.1, lip:'Mid' }, bonito:{ t:0.06, y:-0.15 },
-  mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 },
+  mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 }, sicyo:{ type:'sub', t:0.06, y:-0.55, t0:0.03 }, eleotris:{ t:0.1, y:-0.05, open:0.25 }, kuhlia:{ t:0.06, y:-0.1 },
   dolphin:{ t:0.11, y:-0.3, th:1.1 }, orca:{ t:0.13, y:-0.3, th:1.2 }, beluga:{ t:0.08, y:-0.25 }, sperm:{ type:'sub', t:0.24, y:-0.65, t0:0.04, th:1.3 }, whale:{ t:0.2, y:-0.2, th:1.4 },
 };
 for (const id of Object.keys(SPECS)){ const S = SPECS[id]; if (S.gen) continue; const m = id in MOUTH ? MOUTH[id] : MOUTH[id.split('_')[0]];
