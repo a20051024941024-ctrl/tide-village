@@ -10036,6 +10036,10 @@ function renderTab(){
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
     ]);
+    sec('🦈 魚的生態', [
+      '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
+      '魚缸、箱網、水族館裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
+    ]);
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，倒數的時候在線上領紀念章）、春節（除夕起 7 天，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、限定香包和龍舟模型）、中秋（大月亮、限定柚子帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
       '點頭像的「🏮 節慶」看現在有什麼活動、下一個節日是什麼時候。限定商品過了節日就買不到，已經買到的永遠保留。節日開始的時候會推播（可以在推播開關裡關掉）。',
@@ -10327,7 +10331,7 @@ function updateFishAI(dt0, t){
     if (a.state === 'wander' && a.cd <= 0){ if (bob && Math.hypot(a.pos.x - bob.x, a.pos.z - bob.z) < 8 && Math.random() < dt * 0.5){ faiSet(a, 'bait', 5 + Math.random() * 5); a.cd = 10; }
       else for (const zn of chumZones) if (zn.until > now() && Math.hypot(a.pos.x - zn.x, a.pos.z - zn.z) < 12){ faiSet(a, 'bait', 8); a.baitZ = zn; a.cd = 4; break; } }
     // 掠食魚：偶爾追比自己小很多的魚
-    if (a.tr.pred && a.state === 'wander' && a.cd <= 0 && Math.random() < dt * 0.15){ const prey = FAI.agents.find(b => b !== a && !b.dead && b.tr.size < a.tr.size * 0.3 && Math.hypot(b.pos.x - a.pos.x, b.pos.z - a.pos.z) < 9); if (prey){ faiSet(a, 'chase', 5); a.prey = prey; a.cd = 25; } }
+    if (a.tr.pred && a.state === 'wander' && a.cd <= 0 && Math.random() < dt * 0.28){ const prey = FAI.agents.find(b => b !== a && !b.dead && b.tr.size < a.tr.size * 0.35 && Math.hypot(b.pos.x - a.pos.x, b.pos.z - a.pos.z) < 12); if (prey){ faiSet(a, 'chase', 6); a.prey = prey; a.cd = 18; } }   /* v203：大魚吃小魚更常發生（野外） */
     if (!a.tr.bottom && a.state === 'wander' && a.cd <= 0 && Math.random() < dt * 0.05){ faiSet(a, 'forage', 3 + Math.random() * 3); a.cd = 15; }
     if (a.tr.bottom && a.state === 'wander' && Math.random() < dt * 0.1) faiSet(a, 'forage', 2 + Math.random() * 3);
     // 狀態
@@ -10338,7 +10342,7 @@ function updateFishAI(dt0, t){
       case 'curious': { const ang = Math.atan2(a.pos.z - pz, a.pos.x - px); faiSteer(a, dt, V * 0.4, px + Math.cos(ang) * 2.2, pz + Math.sin(ang) * 2.2); if (a.st <= 0) faiSet(a, 'wander'); break; }
       case 'bait': { const c = a.baitZ && a.baitZ.until > now() ? a.baitZ : bob; if (!c){ faiSet(a, 'wander'); break; } const ang = t * 0.9 + a.id * 6; faiSteer(a, dt, V * 0.55, c.x + Math.cos(ang) * 1.1, c.z + Math.sin(ang) * 1.1); if (a.st <= 0){ a.baitZ = null; faiSet(a, 'wander'); } break; }
       case 'chase': { const p = a.prey; if (!p || p.dead || a.st <= 0){ faiSet(a, 'wander'); break; } if (p.state !== 'flee'){ faiSet(p, 'flee', 3); p.tgt.set(p.pos.x + (p.pos.x - a.pos.x) * 3, 0, p.pos.z + (p.pos.z - a.pos.z) * 3); }
-        if (faiSteer(a, dt, V * 1.6, p.pos.x, p.pos.z) < 0.35 + a.tr.scale * 0.2){ faiFree(p); faiSet(a, 'eat', 6); faiEvent(a, `${a.f.name}吃掉了一條${p.f.name}`); ripple(p.pos.x, p.pos.z); } break; }
+        if (faiSteer(a, dt, V * 2.4, p.pos.x, p.pos.z) < 0.6 + a.tr.scale * 0.3){ faiFree(p); faiSet(a, 'eat', 6); faiEvent(a, `${a.f.name}吃掉了一條${p.f.name}`); ripple(p.pos.x, p.pos.z, true); FX.emit(p.pos.x, 0.2, p.pos.z, 14, '#e8f7ff', 0.8, 2.0, 0.7); if (Math.hypot(p.pos.x - me.pos.x, p.pos.z - me.pos.z) < 20) SFX.splash(false); } break; }
       case 'eat': faiSteer(a, dt, V * 0.2, a.tgt.x, a.tgt.z); if (a.st <= 0) faiSet(a, 'wander'); break;
     }
     faiPlace(a, dt, t);
@@ -10387,7 +10391,7 @@ function faiSchoolsUpdate(dt, t, dive){
       for (let j = Math.max(0, i - 4); j < Math.min(s.n, i + 5); j++){ if (j === i || !s.alive[j]) continue; _v2.subVectors(p, s.P[j]); const d = _v2.length(); if (d < 0.45 && d > 0.001) _v1.addScaledVector(_v2, (0.45 - d) / d * 4); }
       _v1.addScaledVector(s.lv, 0.6);
       for (const th of threats){ _v2.set(p.x - th.x, (p.y - th.y) * 0.5, p.z - th.z); const d = _v2.length(); if (d < th.r){ _v1.addScaledVector(_v2, (th.r - d) / (d || 1) * 6 * th.k);
-        if (th.p && th.eat && d < th.eat && th.p.ai){ s.alive[i] = false; s.respawn[i] = t + 20; th.p.ai.state = 'eat'; th.p.ai.st = 5; faiEvent(th.p, `${th.p.f.name}吃掉了一條${s.f.name}`); } } }
+        if (th.p && th.eat && d < th.eat && th.p.ai){ s.alive[i] = false; s.respawn[i] = t + 20; th.p.ai.state = 'eat'; th.p.ai.st = 5; faiEvent(th.p, `${th.p.f.name}吃掉了一條${s.f.name}`); FX.emit(p.x, p.y, p.z, 10, dive ? '#cfefff' : '#e8f7ff', 0.5, dive ? 0.8 : 1.6, 0.8); if (!dive) ripple(p.x, p.z); } } }
       v.addScaledVector(_v1, sdt * 2.2); const sp = v.length(), mx = s.state === 'flee' ? 3.2 : 1.6; if (sp > mx) v.multiplyScalar(mx / sp); if (sp < 0.35) v.multiplyScalar(0.35 / (sp || 1));
       const nxp = p.x + v.x * sdt, nzp = p.z + v.z * sdt; if (faiOk(s, nxp, 0, nzp)){ p.x = nxp; p.z = nzp; } else { v.x *= -0.6; v.z *= -0.6; }
       const [y0, y1] = faiYRange(s, p.x, p.z); p.y = clamp(p.y + v.y * sdt, y0, y1);
@@ -10432,7 +10436,7 @@ function faiDiveUpdate(dt, t){
       else if (tr.circle && dP < 9 && A.state !== 'circle' && A.cd <= 0){ A.state = 'circle'; A.st = 8; A.cd = 20; }
       else if (tr.curious && dP < 8 && pSpeed < 0.3 && A.state === 'wander' && A.cd <= 0 && Math.random() < dt * 0.4){ A.state = 'curious'; A.st = 5; A.cd = 12; }
       else if (bait && A.state !== 'bait' && Math.hypot(bait.x - o.pos.x, bait.z - o.pos.z) < 14 && Math.random() < dt * 1.5){ A.state = 'bait'; A.st = bait.until - t; }
-      else if (tr.pred && A.state === 'wander' && A.cd <= 0 && Math.random() < dt * 0.12){ const S = Dive.schools.filter(s => s.P && Math.hypot(s.lead.x - o.pos.x, s.lead.z - o.pos.z) < 15); if (S.length){ A.state = 'chase'; A.st = 6; A.cd = 30; A.prey = S[0]; } }
+      else if (tr.pred && A.state === 'wander' && A.cd <= 0 && Math.random() < dt * 0.25){ const S = Dive.schools.filter(s => s.P && Math.hypot(s.lead.x - o.pos.x, s.lead.z - o.pos.z) < 18); if (S.length){ A.state = 'chase'; A.st = 8; A.cd = 20; A.prey = S[Math.floor(Math.random() * S.length)]; } }
       else if (A.state === 'wander' && A.cd <= 0 && Math.random() < dt * 0.08){ A.state = 'forage'; A.st = 3 + Math.random() * 3; A.cd = 10; } }
     let speed = V * 0.45, tx = A.tgt.x, ty = A.tgt.y, tz = A.tgt.z;
     switch (A.state){
