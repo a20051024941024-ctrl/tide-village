@@ -6613,12 +6613,16 @@ function pvLoop(){
 const DESIGN_PAL = ['#ffffff', '#1d1d24', '#e8473a', '#f5a5d8', '#ff9f43', '#ffd36a', '#3fbf9d', '#5d9c55', '#5fb6e3', '#2f89c7', '#18334a', '#9b7bff', '#8c5d3b', '#f1e3c8', '#9fb3bf', '#5b6b7a'];
 const Designs = { map: new Map(), mats: new Map(), want: new Set(), timer: 0, ver: 0 };
 function designId(item){ const m = /^(top|pants|hat|shoes|back|acc)_dz(\d+)$/.exec(item || ''); return m ? { kind: m[1], id: +m[2] } : null; }
+// 077：設計變精緻：32×32 格、48 色（每格 2 個十六進位字）；以前的 16×16、16 色（每格 1 個字）照樣看得到
+const DESIGN_PAL2 = DESIGN_PAL.concat(['#f6d7c3', '#e8b998', '#c98d6a', '#8a5a3c', '#ffe9ef', '#ffc2d4', '#ff7aa8', '#c2185b', '#fff4c2', '#ffe066', '#f4b400', '#c77700', '#ffd1b3', '#ff7f50', '#b23a2a', '#6d1f1a', '#d9f7e8', '#8fe3c0', '#1f8a70', '#0f4c3a', '#d6ecff', '#8ccaf7', '#3a6fd8', '#1b2f7a', '#eadcff', '#c3a6ff', '#6a3fc8', '#3b1f6e', '#f4f4f0', '#c9ced4', '#7d8791', '#33383d']);
+function designInfo(px, kind){ const top = kind === 'top', v2 = typeof px === 'string' && px.length === (top ? 4096 : 2048); return { v2, N: v2 ? 32 : 16, faces: top ? 2 : 1 }; }
+function designColor(px, I, face, x, y){ if (I.v2){ const i = (face * 1024 + y * 32 + x) * 2; return DESIGN_PAL2[parseInt(px.substr(i, 2), 16)] || '#fff'; } return DESIGN_PAL[parseInt(px[face * 256 + y * 16 + x], 16)] || '#fff'; }
 function designCanvas(px, kind, cell){
-  cell = cell || 1; const top = kind === 'top', W = top ? 32 : 16, cv = document.createElement('canvas'); cv.width = W * cell; cv.height = 16 * cell; const c = cv.getContext('2d');
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++){
-    if (top){ c.fillStyle = DESIGN_PAL[parseInt(px[y * 16 + x], 16)] || '#fff'; c.fillRect((8 + x) * cell, y * cell, cell, cell);   /* 正面在中間 */
-      c.fillStyle = DESIGN_PAL[parseInt(px[256 + y * 16 + x], 16)] || '#fff'; c.fillRect(((24 + x) % 32) * cell, y * cell, cell, cell); }   /* 背面在兩邊（繞到後面） */
-    else { c.fillStyle = DESIGN_PAL[parseInt(px[y * 16 + x], 16)] || '#fff'; c.fillRect(x * cell, y * cell, cell, cell); } }
+  const I = designInfo(px, kind), N = I.N; cell = Math.max(1, Math.round((cell || 1) * 16 / N)); const top = kind === 'top', W = top ? N * 2 : N, cv = document.createElement('canvas'); cv.width = W * cell; cv.height = N * cell; const c = cv.getContext('2d');
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){
+    if (top){ c.fillStyle = designColor(px, I, 0, x, y); c.fillRect((N / 2 + x) * cell, y * cell, cell, cell);   /* 正面在中間 */
+      c.fillStyle = designColor(px, I, 1, x, y); c.fillRect(((N * 3 / 2 + x) % (N * 2)) * cell, y * cell, cell, cell); }   /* 背面在兩邊（繞到後面） */
+    else { c.fillStyle = designColor(px, I, 0, x, y); c.fillRect(x * cell, y * cell, cell, cell); } }
   return cv;
 }
 function designMat(d){
@@ -6638,6 +6642,7 @@ const DESIGN_SLOTS = [['top', '上衣'], ['pants', '褲子'], ['hat', '帽子'],
 function applyDesigns(av, gear){
   const t = designId(gear.top), p = designId(gear.pants), h = designId(gear.hat), sh = designId(gear.shoes), bk = designId(gear.back), ac = designId(gear.acc);
   av.body.material = (t && designMat(t)) || av.shirtM;
+  if (av.kid && av.kid.prim.shirt){ const sh = av.kid.prim.shirt; if (!sh.userData.geo0) sh.userData.geo0 = sh.geometry; sh.geometry = t && av.body.material !== av.shirtM ? dzShirtGeo(sh.userData.geo0) : sh.userData.geo0; }   /* 自己設計的上衣：整張圖從肩膀到衣襬繞身體一圈 */
   const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]){ if (L.userData.pants) L.userData.pants.material = pm; if (L.userData.pants2) L.userData.pants2.material = pm; } if (av.kid && av.kid.prim.pants) av.kid.prim.pants.material = pm; if (av.kid && av.kid.prim.shin) av.kid.prim.shin.material = av.shortLegs ? av.skinM : pm;
   // 帽子：用草帽的形狀，整頂換成你的圖案
   for (const b of av.hatBase){ if (!b.userData.m0) b.userData.m0 = b.material; const hm = h && designMat(h); if (h) b.visible = true; b.material = hm && b !== av.hatBase[2] ? hm : b.userData.m0; }
@@ -6649,6 +6654,14 @@ function applyDesigns(av, gear){
   if (ac){ const m = designMat(ac); if (m){ const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.045, 6, 18), m); ring.rotation.x = Math.PI / 2; ring.position.set(0, 1.02, 0); ring.scale.z = 0.9; av.g.add(ring); av.gearMeshes.push(ring);
     const tri = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.22, 3), m); tri.rotation.set(Math.PI, 0, 0); tri.scale.z = 0.3; tri.position.set(0, 0.93, 0.22); av.g.add(tri); av.gearMeshes.push(tri); } }
 }
+// 3D 角色的上衣原本是膠囊形，圖只會印在中間一段；穿自己設計的上衣時換成「繞身體一圈」的貼圖座標（正面在圖的中間、背面在兩邊）
+const DZ_GEO = new WeakMap();
+function dzShirtGeo(g0){ let g = DZ_GEO.get(g0); if (g) return g; g = g0.clone(); const P = g.attributes.position, uv = g.attributes.uv.clone(); let y0 = 1e9, y1 = -1e9, xm = 0;
+  for (let i = 0; i < P.count; i++) xm = Math.max(xm, Math.abs(P.getX(i)));
+  y0 = 0.45; y1 = 1.02;   /* 上衣在模型裡的高度（腰到脖子，照骨架量的：hips 0.33、chest 0.81、head 1.04）；圖的上緣對肩膀、下緣對衣襬 */
+  for (let i = 0; i < P.count; i++){ const x = P.getX(i), z = P.getZ(i); uv.setXY(i, (Math.atan2(x, z) / (Math.PI * 2) + 1) % 1, clamp((P.getY(i) - y0) / (y1 - y0 || 1), 0, 1)); }
+  if (!g.index) for (let i = 0; i + 2 < P.count; i += 3){ const u = [uv.getX(i), uv.getX(i + 1), uv.getX(i + 2)]; if (Math.max(...u) - Math.min(...u) > 0.5) for (let k = 0; k < 3; k++) if (u[k] < 0.5) uv.setX(i + k, u[k] + 1); }   /* 接縫：跨過去的三角形不要被整張圖擠成一條 */
+  g.setAttribute('uv', uv); DZ_GEO.set(g0, g); return g; }
 function ownsDesign(item){ return (rec.owned || []).includes(item); }
 function wearDesign(item){ const d = designId(item); if (!d || !ownsDesign(item)) return; endTryOn(); rec.gear = Object.assign(cleanGear(rec.gear), { [d.kind]: item }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); cloudCall('set_gear', { p_gear: rec.gear }); renderTab(); }
 function designThumb(px, kind, h){ const cv = designCanvas(px, kind, kind === 'top' ? 3 : 4); cv.className = 'dzthumb'; cv.style.height = (h || 40) + 'px'; cv.style.imageRendering = 'pixelated'; cv.style.borderRadius = '6px'; cv.style.border = '1px solid rgba(24,51,74,.15)'; return cv; }
@@ -6669,52 +6682,75 @@ function renderMyDesigns(body, slot){
   body.appendChild(ul);
 }
 // 設計室
-function designFromImage(im, px, o){
-  const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d', { willReadFrequently: true });
-  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, sz = Math.min(w, h);   /* 從中間裁成正方形 */
-  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(im, (w - sz) / 2, (h - sz) / 2, sz, sz, 0, 0, 16, 16);
-  const d = g.getImageData(0, 0, 16, 16).data, pal = DESIGN_PAL.map(hx => [parseInt(hx.slice(1, 3), 16), parseInt(hx.slice(3, 5), 16), parseInt(hx.slice(5, 7), 16)]);
-  for (let i = 0; i < 256; i++){ const r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2], a = d[i * 4 + 3]; if (a < 100){ px[o + i] = 0; continue; }
+function designFromImage(im, px, o){   /* 圖片縮成 32×32，每一格換成調色盤裡最接近的顏色（原圖不會上傳） */
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d', { willReadFrequently: true });
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, sz = Math.min(w, h);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(im, (w - sz) / 2, (h - sz) / 2, sz, sz, 0, 0, 32, 32);
+  const d = g.getImageData(0, 0, 32, 32).data, pal = DESIGN_PAL2.map(hx => [parseInt(hx.slice(1, 3), 16), parseInt(hx.slice(3, 5), 16), parseInt(hx.slice(5, 7), 16)]);
+  for (let i = 0; i < 1024; i++){ const r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2], a = d[i * 4 + 3]; if (a < 100){ px[o + i] = 0; continue; }
     let best = 0, bd = 1e9; pal.forEach(([pr, pg, pb], k) => { const rm = (r + pr) / 2, dr = r - pr, dg = gg - pg, db = b - pb, dd = (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db; if (dd < bd){ bd = dd; best = k; } }); px[o + i] = best; }
 }
-const DesignEd = { kind:'top', side:0, px:null, col:2, tool:'pen', name:'', price:100, busy:false };
+const DesignEd = { kind:'top', side:0, px:null, col:2, tool:'pen', name:'', price:100, busy:false, mirror:false, size:1, grid:true, undo:[], redo:[] };
+function designPxStr(px){ return px.map(v => (v < 16 ? '0' : '') + v.toString(16)).join(''); }
 function renderDesignEd(body){
-  const E = DesignEd, N = E.kind === 'top' ? 512 : 256; if (!E.px || E.px.length !== N) E.px = Array(N).fill(0);
+  const E = DesignEd, N = 32, F = E.kind === 'top' ? 2 : 1; if (!E.px || E.px.length !== F * 1024){ E.px = Array(F * 1024).fill(0); E.undo = []; E.redo = []; }
   const head = el('div', 'shophead'); head.innerHTML = `<b>🎨 設計室・${(DESIGN_SLOTS.find(([k]) => k === E.kind) || [, '上衣'])[1]}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
-  body.appendChild(el('p', 'sub', `在格子上畫圖案，畫好按「儲存」就能穿，也可以放到設計師市集賣（別人買了，九成的錢給你）。${E.kind === 'top' ? '上衣有正面和背面。' : E.kind === 'pants' ? '兩隻褲管是同一個圖案。' : E.kind === 'shoes' ? '兩隻鞋子是同一個圖案。' : ''}請不要畫讓人不舒服的東西，被檢舉三次會下架。`));
+  body.appendChild(el('p', 'sub', `32×32 格、48 種顏色。畫好按「儲存」就能穿，也可以放到設計師市集賣（別人買了，九成的錢給你）。${E.kind === 'top' ? '上衣有正面和背面。' : E.kind === 'pants' ? '兩隻褲管是同一個圖案。' : E.kind === 'shoes' ? '兩隻鞋子是同一個圖案。' : ''}請不要畫讓人不舒服的東西，被檢舉三次會下架。`));
   const seg = el('div', 'seg'); [['top', '👕 上衣'], ['pants', '👖 褲子'], ['hat', '👒 帽子'], ['shoes', '👟 鞋子'], ['back', '🦸 披風'], ['acc', '🧣 領巾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.kind === k)); b.addEventListener('click', () => { if (E.kind !== k){ E.kind = k; E.px = null; E.side = 0; renderTab(); } }); seg.appendChild(b); });
   if (E.kind === 'top') [[0, '正面'], [1, '背面']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.side === k)); b.addEventListener('click', () => { E.side = k; renderTab(); }); seg.appendChild(b); });
   body.appendChild(seg);
   const wrap = el('div', ''); wrap.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start';
-  const S = 15, cv = document.createElement('canvas'); cv.width = cv.height = 16 * S; cv.style.cssText = 'width:240px;height:240px;touch-action:none;border-radius:8px;border:2px solid #18334a;image-rendering:pixelated;background:#fff;cursor:crosshair';
-  const off = () => E.side * 256;
-  const draw = () => { const c = cv.getContext('2d'); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++){ c.fillStyle = DESIGN_PAL[E.px[off() + y * 16 + x]]; c.fillRect(x * S, y * S, S, S); } c.strokeStyle = 'rgba(24,51,74,.12)'; c.lineWidth = 1; for (let i = 1; i < 16; i++){ c.beginPath(); c.moveTo(i * S + 0.5, 0); c.lineTo(i * S + 0.5, 16 * S); c.stroke(); c.beginPath(); c.moveTo(0, i * S + 0.5); c.lineTo(16 * S, i * S + 0.5); c.stroke(); } drawPrev(); };
-  const fill = (x, y) => { const o = off(), from = E.px[o + y * 16 + x], to = E.col; if (from === to) return; const st = [[x, y]]; while (st.length){ const [a, b] = st.pop(); if (a < 0 || b < 0 || a > 15 || b > 15 || E.px[o + b * 16 + a] !== from) continue; E.px[o + b * 16 + a] = to; st.push([a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1]); } };
-  const at = ev => { const r = cv.getBoundingClientRect(); return [Math.floor((ev.clientX - r.left) / r.width * 16), Math.floor((ev.clientY - r.top) / r.height * 16)]; };
-  let down = false; const paint = ev => { const [x, y] = at(ev); if (x < 0 || y < 0 || x > 15 || y > 15) return; if (E.tool === 'fill') fill(x, y); else E.px[off() + y * 16 + x] = E.tool === 'erase' ? 0 : E.col; draw(); };
-  cv.addEventListener('pointerdown', ev => { down = true; cv.setPointerCapture(ev.pointerId); paint(ev); ev.preventDefault(); }); cv.addEventListener('pointermove', ev => { if (down && E.tool !== 'fill') paint(ev); }); cv.addEventListener('pointerup', () => { down = false; }); cv.addEventListener('pointercancel', () => { down = false; });
+  const S = 10, cv = document.createElement('canvas'); cv.width = cv.height = N * S; cv.style.cssText = 'width:min(300px,62vw);height:min(300px,62vw);touch-action:none;border-radius:8px;border:2px solid #18334a;image-rendering:pixelated;background:#fff;cursor:crosshair';
+  const off = () => E.side * 1024, idx = (x, y) => off() + y * N + x;
+  let preview = null;   /* 畫直線、方框時拖著看到的樣子 */
+  const draw = () => { const c = cv.getContext('2d'); for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ c.fillStyle = DESIGN_PAL2[E.px[idx(x, y)]] || '#fff'; c.fillRect(x * S, y * S, S, S); }
+    if (preview){ c.fillStyle = E.tool === 'erase' ? '#ffffff' : DESIGN_PAL2[E.col]; for (const [x, y] of preview) c.fillRect(x * S, y * S, S, S); }
+    if (E.grid){ c.strokeStyle = 'rgba(24,51,74,.10)'; c.lineWidth = 1; for (let i = 1; i < N; i++){ c.beginPath(); c.moveTo(i * S + 0.5, 0); c.lineTo(i * S + 0.5, N * S); c.stroke(); c.beginPath(); c.moveTo(0, i * S + 0.5); c.lineTo(N * S, i * S + 0.5); c.stroke(); }
+      c.strokeStyle = 'rgba(24,51,74,.28)'; for (const i of [8, 16, 24]){ c.beginPath(); c.moveTo(i * S + 0.5, 0); c.lineTo(i * S + 0.5, N * S); c.stroke(); c.beginPath(); c.moveTo(0, i * S + 0.5); c.lineTo(N * S, i * S + 0.5); c.stroke(); } }
+    if (E.mirror){ c.strokeStyle = 'rgba(232,71,58,.6)'; c.lineWidth = 2; c.beginPath(); c.moveTo(N / 2 * S, 0); c.lineTo(N / 2 * S, N * S); c.stroke(); } };
+  const snap = () => { E.undo.push(E.px.slice()); if (E.undo.length > 40) E.undo.shift(); E.redo = []; };
+  const put = (x, y, v) => { const sz = E.size; for (let dy = 0; dy < sz; dy++) for (let dx = 0; dx < sz; dx++){ const px = x + dx, py = y + dy; if (px < 0 || py < 0 || px >= N || py >= N) continue; E.px[idx(px, py)] = v; if (E.mirror) E.px[idx(N - 1 - px, py)] = v; } };
+  const fill = (x, y) => { const from = E.px[idx(x, y)], to = E.col; if (from === to) return; const st = [[x, y]]; while (st.length){ const [a, b] = st.pop(); if (a < 0 || b < 0 || a >= N || b >= N || E.px[idx(a, b)] !== from) continue; E.px[idx(a, b)] = to; st.push([a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1]); } };
+  const linePts = (x0, y0, x1, y1) => { const P = [], dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy; for (;;){ P.push([x0, y0]); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy){ e += dy; x0 += sx; } if (e2 <= dx){ e += dx; y0 += sy; } } return P; };
+  const rectPts = (x0, y0, x1, y1) => { const P = [], a = Math.min(x0, x1), b = Math.max(x0, x1), c = Math.min(y0, y1), d = Math.max(y0, y1); for (let x = a; x <= b; x++){ P.push([x, c], [x, d]); } for (let y = c; y <= d; y++){ P.push([a, y], [b, y]); } return P; };
+  const at = ev => { const r = cv.getBoundingClientRect(); return [Math.floor((ev.clientX - r.left) / r.width * N), Math.floor((ev.clientY - r.top) / r.height * N)]; };
+  let down = false, start = null, last = null;
+  const strokeTo = (x, y) => { const v = E.tool === 'erase' ? 0 : E.col; for (const [a, b] of last ? linePts(last[0], last[1], x, y) : [[x, y]]) put(a, b, v); last = [x, y]; };
+  cv.addEventListener('pointerdown', ev => { ev.preventDefault(); const [x, y] = at(ev); if (x < 0 || y < 0 || x >= N || y >= N) return; cv.setPointerCapture(ev.pointerId);
+    if (E.tool === 'pick'){ E.col = E.px[idx(x, y)]; E.tool = 'pen'; renderTab(); return; }
+    snap(); down = true; start = [x, y]; last = null;
+    if (E.tool === 'fill'){ fill(x, y); down = false; draw(); drawPrev(); return; }
+    if (E.tool === 'pen' || E.tool === 'erase') strokeTo(x, y); draw(); });
+  cv.addEventListener('pointermove', ev => { if (!down) return; const [x, y] = at(ev).map(v => clamp(v, 0, N - 1));
+    if (E.tool === 'line' || E.tool === 'rect'){ preview = (E.tool === 'line' ? linePts : rectPts)(start[0], start[1], x, y); if (E.mirror) preview = preview.concat(preview.map(([a, b]) => [N - 1 - a, b])); draw(); return; }
+    strokeTo(x, y); draw(); });
+  const end = ev => { if (!down) return; down = false; if ((E.tool === 'line' || E.tool === 'rect') && start){ const [x, y] = at(ev).map(v => clamp(v, 0, N - 1)); for (const [a, b] of (E.tool === 'line' ? linePts : rectPts)(start[0], start[1], x, y)) put(a, b, E.col); } preview = null; last = null; draw(); drawPrev(); };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', () => { down = false; preview = null; last = null; draw(); });
   wrap.appendChild(cv);
-  const side = el('div', ''); side.style.cssText = 'display:flex;flex-direction:column;gap:8px;min-width:150px';
-  const pal = el('div', ''); pal.style.cssText = 'display:grid;grid-template-columns:repeat(8,22px);gap:4px';
-  DESIGN_PAL.forEach((c, i) => { const b = el('button', ''); b.style.cssText = `width:22px;height:22px;border-radius:5px;background:${c};border:${E.col === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};padding:0`; b.setAttribute('aria-label', '顏色 ' + (i + 1)); b.addEventListener('click', () => { E.col = i; if (E.tool === 'erase') E.tool = 'pen'; renderTab(); }); pal.appendChild(b); });
+  const side = el('div', ''); side.style.cssText = 'display:flex;flex-direction:column;gap:8px;min-width:150px;max-width:260px';
+  const pal = el('div', ''); pal.style.cssText = 'display:grid;grid-template-columns:repeat(8,24px);gap:4px';
+  DESIGN_PAL2.forEach((c, i) => { const b = el('button', ''); b.style.cssText = `width:24px;height:24px;border-radius:5px;background:${c};border:${E.col === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};padding:0`; b.setAttribute('aria-label', '顏色 ' + (i + 1)); b.addEventListener('click', () => { E.col = i; if (E.tool === 'erase' || E.tool === 'pick') E.tool = 'pen'; renderTab(); }); pal.appendChild(b); });
   side.appendChild(pal);
-  const tools = el('div', 'seg'); [['pen', '✏️ 畫筆'], ['fill', '🪣 填色'], ['erase', '🧽 橡皮擦']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.tool === k)); b.addEventListener('click', () => { E.tool = k; renderTab(); }); tools.appendChild(b); }); side.appendChild(tools);
-  const clr = el('button', 'tbtn ghost', '全部清掉'); clr.addEventListener('click', () => { for (let i = 0; i < 256; i++) E.px[off() + i] = 0; draw(); }); side.appendChild(clr);
-  /* 用自己的圖片：在手機上把圖片縮成 16×16，每一格換成調色盤裡最接近的顏色（原圖不會上傳，只存格子的顏色） */
+  const tools = el('div', 'seg'); tools.style.flexWrap = 'wrap'; [['pen', '✏️ 畫筆'], ['line', '📏 直線'], ['rect', '⬜ 方框'], ['fill', '🪣 填色'], ['pick', '💧 吸色'], ['erase', '🧽 橡皮擦']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(E.tool === k)); b.addEventListener('click', () => { E.tool = k; renderTab(); }); tools.appendChild(b); }); side.appendChild(tools);
+  const opts = el('div', 'seg'); opts.style.flexWrap = 'wrap';
+  [['mirror', E.mirror ? '🪞 左右對稱：開' : '🪞 左右對稱'], ['size', E.size === 2 ? '🖌️ 粗筆' : '🖊️ 細筆'], ['grid', E.grid ? '▦ 格線' : '▢ 格線']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(k === 'mirror' ? E.mirror : k === 'size' ? E.size === 2 : E.grid)); b.addEventListener('click', () => { if (k === 'mirror') E.mirror = !E.mirror; else if (k === 'size') E.size = E.size === 2 ? 1 : 2; else E.grid = !E.grid; renderTab(); }); opts.appendChild(b); }); side.appendChild(opts);
+  const hist = el('div', 'tankbar'), ub = el('button', 'tbtn ghost', '↶ 復原'), rb = el('button', 'tbtn ghost', '↷ 重做'); ub.disabled = !E.undo.length; rb.disabled = !E.redo.length;
+  ub.addEventListener('click', () => { if (!E.undo.length) return; E.redo.push(E.px.slice()); E.px = E.undo.pop(); renderTab(); }); rb.addEventListener('click', () => { if (!E.redo.length) return; E.undo.push(E.px.slice()); E.px = E.redo.pop(); renderTab(); });
+  const clr = el('button', 'tbtn ghost', '全部清掉'); clr.addEventListener('click', () => { snap(); for (let i = 0; i < 1024; i++) E.px[off() + i] = 0; renderTab(); }); hist.append(ub, rb, clr); side.appendChild(hist);
   { const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true; const ib = el('button', 'tbtn', '🖼️ 用自己的圖片');
     ib.addEventListener('click', () => fi.click());
     fi.addEventListener('change', () => { const file = fi.files && fi.files[0]; fi.value = ''; if (!file) return; const url = URL.createObjectURL(file), im = new Image();
-      im.onload = () => { try { designFromImage(im, E.px, off()); draw(); drawPrev(); toast('🖼️ 圖片變成格子圖了，可以再用畫筆修一修'); } catch(e){ toast('這張圖片讀不出來，換一張試試'); } URL.revokeObjectURL(url); };
+      im.onload = () => { try { snap(); designFromImage(im, E.px, off()); draw(); drawPrev(); toast('🖼️ 圖片變成格子圖了，可以再用畫筆修一修'); } catch(e){ toast('這張圖片讀不出來，換一張試試'); } URL.revokeObjectURL(url); };
       im.onerror = () => { URL.revokeObjectURL(url); toast('這張圖片讀不出來，換一張試試'); }; im.src = url; });
     side.append(ib, fi); }
   const prev = el('img'); prev.alt = '預覽'; prev.style.cssText = 'width:120px;height:120px;border-radius:10px;background:#eef4f7'; side.appendChild(prev);
-  const drawPrev = () => { const pxs = E.px.map(v => v.toString(16)).join(''); Designs.map.set(0, { id: 0, kind: E.kind, px: pxs }); for (const [k] of DESIGN_SLOTS) Designs.mats.delete('0:' + k); try { const g = Object.assign(cleanGear(rec.gear), { [E.kind]: E.kind + '_dz0' }); AvShot.cache.clear(); prev.src = avatarShot(g, E.side || E.kind === 'back' ? 'back' : E.kind === 'hat' ? 'hat' : E.kind === 'shoes' ? 'shoes' : 'full', 160); } catch(e){} };
-  wrap.appendChild(side); body.appendChild(wrap); draw();
+  const drawPrev = () => { const pxs = designPxStr(E.px); Designs.map.set(0, { id: 0, kind: E.kind, px: pxs }); for (const [k] of DESIGN_SLOTS) Designs.mats.delete('0:' + k); try { const g = Object.assign(cleanGear(rec.gear), { [E.kind]: E.kind + '_dz0' }); AvShot.cache.clear(); prev.src = avatarShot(g, E.side || E.kind === 'back' ? 'back' : E.kind === 'hat' ? 'hat' : E.kind === 'shoes' ? 'shoes' : 'full', 160); } catch(e){} };
+  wrap.appendChild(side); body.appendChild(wrap); draw(); drawPrev();
   const f1 = el('div', 'field'); f1.appendChild(el('label', '', '名字（最多 16 個字）')); const ni = el('input'); ni.maxLength = 16; ni.value = E.name; ni.placeholder = '我的設計'; ni.addEventListener('input', () => { E.name = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
   const f2 = el('div', 'field'); f2.appendChild(el('label', '', '在市集賣多少金幣（0 ＝ 免費送大家）')); const pi = el('input'); pi.type = 'number'; pi.min = 0; pi.max = 5000; pi.value = E.price; pi.addEventListener('input', () => { E.price = clamp(Math.round(+pi.value || 0), 0, 5000); }); f2.appendChild(pi); body.appendChild(f2);
   const bar = el('div', 'tankbar'), sv = el('button', 'tbtn', E.busy ? '儲存中…' : '💾 儲存並穿上'), bk = el('button', 'tbtn ghost', '取消');
   sv.disabled = E.busy; sv.addEventListener('click', async () => { if (!Cloud.on || !Cloud.sb){ toast('要連上雲端（登入）才能儲存設計'); return; } E.busy = true; renderTab();
-    try { const { data, error } = await Cloud.sb.rpc('save_design', { p_kind: E.kind, p_name: E.name, p_px: E.px.map(v => v.toString(16)).join(''), p_price: E.price }); if (error) throw error;
+    try { const { data, error } = await Cloud.sb.rpc('save_design', { p_kind: E.kind, p_name: E.name, p_px: designPxStr(E.px), p_price: E.price }); if (error) throw error;
       Designs.map.set(data.id, data); const item = E.kind + '_dz' + data.id; if (!rec.owned.includes(item)) rec.owned.push(item); E.busy = false; E.px = null; E.name = ''; toast(`🎨 存好了！「${esc(data.name)}」已經放到設計師市集`); wearDesign(item); curTab = 'style'; renderTab(); }
     catch(e){ E.busy = false; toast(String(e.message || '').includes('今天') ? '今天設計太多件了，明天再來' : '存不起來，等一下再試'); renderTab(); } });
   bk.addEventListener('click', () => { curTab = 'style'; renderTab(); }); bar.append(sv, bk); body.appendChild(bar);
@@ -8838,7 +8874,7 @@ function renderTab(){
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
-      '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 16×16 的格子上畫圖案（上衣有正面和背面），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
+      '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 32×32 的格子、48 種顏色上畫圖案（上衣有正面和背面；有直線、方框、填色、吸色、左右對稱、粗細筆、復原重做，也可以用自己的圖片），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
