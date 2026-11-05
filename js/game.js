@@ -1326,11 +1326,14 @@ function updateSeaLife(t){
     if (s.mixer) s.mixer.update(Math.min(0.1, t - (s.lastT || t)) * (s.mode === 'whale' ? 0.6 : 1)); s.lastT = t;
     const a = t * s.speed + s.ph, x = s.cx + Math.cos(a) * s.r, z = s.cz + Math.sin(a) * s.r;
     const vx = -Math.sin(a), vz = Math.cos(a); s.m.position.x = x; s.m.position.z = z; s.m.rotation.y = Math.atan2(-vz, vx);
+    // 出現、離開都是從水裡游上來、潛回水裡（不會憑空出現或消失）：前 2.5 秒慢慢浮上來，最後 3 秒頭朝下潛下去
+    const u0 = t - s.showAt, u1 = s.showAt + s.dur - t, eIn = smooth01(clamp(u0 / 2.5, 0, 1)), eOut = smooth01(clamp(u1 / 3, 0, 1)), e = Math.min(eIn, eOut), sink = (1 - e) * 2.6, tilt = eOut < 1 ? -(1 - eOut) * 0.55 : (1 - eIn) * 0.4;
     if (s.mode === 'jump'){
-      const k = Math.sin(t * 1.1 + s.ph * 3), up = k > 0.55; const h = up ? (k - 0.55) / 0.45 : 0;
-      s.m.position.y = -0.35 + Math.sin(h * Math.PI / 2) * 1.5; s.m.rotation.z = up ? Math.cos(t * 1.1 + s.ph * 3) * 1.2 : 0;
+      const k = Math.sin(t * 1.1 + s.ph * 3), up = k > 0.55 && (s.prevUp || (eIn > 0.98 && u1 > 5)), hh = up ? (k - 0.55) / 0.45 : 0;   /* 浮上來、快要潛下去的時候不開始跳；跳到一半的會跳完 */
+      s.m.position.y = -0.35 - sink + Math.sin(hh * Math.PI / 2) * 1.5; s.m.rotation.z = up ? Math.cos(t * 1.1 + s.ph * 3) * 1.2 : tilt;
       if (up !== s.prevUp){ ripple(x, z, true); s.prevUp = up; }
-    } else if (s.mode === 'glide'){ s.m.position.y = CLASSIC ? -0.02 : -0.12; s.m.rotation.z = Math.sin(t * 0.7) * 0.08; }
+      if (u1 < 3 && u1 > 2.9 && !s.dived){ s.dived = true; ripple(x, z, true); } if (u1 > 3) s.dived = false;
+    } else if (s.mode === 'glide'){ s.m.position.y = (CLASSIC ? -0.02 : -0.12) - sink; s.m.rotation.z = Math.sin(t * 0.7) * 0.08 + tilt; }
     else if (s.mode === 'whale'){ s.m.position.y = -1.3 + Math.sin(Math.min(1, (t - s.showAt) / s.dur) * Math.PI) * 1.1; }
   }
 }
@@ -6500,7 +6503,7 @@ function nearShop(){
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
   if (ferryNpc && Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z) < 2.3) return { id:'ferry', label:FERRY.name, mode:'ferry' };
   { const g = npcs.find(n => n.shopNpc === 'news'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'news', label:'阿報・村報', mode:'news' }; }
-  { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
+  { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
   { const g = npcs.find(n => n.wid === 'gang'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'gang', label:'老港・漁夫', mode:'gang' }; }
   if (inHall()){
     if (Venue.desk && Math.hypot(me.pos.x - Venue.desk.x, me.pos.z - Venue.desk.z) < 2) return { id:'shrimpdesk', label:'買時段', mode:'shrimpdesk' };
@@ -8384,7 +8387,10 @@ function updateNpcs(dt, t){
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
     if (n.shopNpc === 'cai'){ updateShopNpc(n, dt, t, () => (!Cai.at || Date.now() - Cai.at > 10 * 60000) && loadCai()); continue; }
     if (n.shopNpc === 'news'){ updateShopNpc(n, dt, t, () => (!News.at || Date.now() - News.at > 10 * 60000) && loadNews()); continue; }
-    if (n.shopNpc === 'sci'){ if (!Sci.ok && Sci.list && frameNo % 45 === 0 && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 70) sciPlace(); updateShopNpc(n, dt, t, () => (!Sci.at || Date.now() - Sci.at > 10 * 60000) && loadSci()); continue; }
+    if (n.shopNpc === 'sci'){ const hid = Cloud.status === 'connecting' || (Cloud.on && !Sci.list);   /* 還不知道今天在哪個釣點：先不出現（不然會先站在廣場、資料來了又突然消失） */
+      if (hid){ n.wHide = true; n.av.g.visible = false; n.tag.style.display = 'none'; if (n.blob) n.blob.visible = false; if (Cloud.on && !Sci.busy && (!Sci.at || Date.now() - Sci.at > 15000)) loadSci(true); continue; }
+      if (n.wHide){ n.wHide = false; n.av.g.visible = true; n._culled = false; }
+      if (!Sci.ok && Sci.list && frameNo % 45 === 0 && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 70) sciPlace(); updateShopNpc(n, dt, t, () => (!Sci.at || Date.now() - Sci.at > 10 * 60000) && loadSci()); continue; }
     if (n.shopNpc === 'fu'){ updateShopNpc(n, dt, t, () => (!Fu.at || Date.now() - Fu.at > 5 * 60000) && loadFu()); continue; }
     if (n.amo) updateAmo(n, dt, t);
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
