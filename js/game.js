@@ -241,6 +241,9 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 const ISLE = { x:150, z:0, r:24, y:0.32 };
 // 海上的釣蝦場、企鵝冰原：在主島西邊的海上（用快速傳送或渡船去）
 const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
+// 潮汐食堂：跟釣蝦場一樣是室內的（實際位置在地圖外，從村子裡食堂的門走進去）
+const CAFE = { x:-118, z:74, w:18, d:13, y:0.9 };
+let CAFE_DOOR = { x:12.5, z:10.5 };   // 村子裡食堂門口（蓋門面的時候會改成真正的位置）
 const ICE = { x:-120, z:-72, w:30, d:22, y:0.45 };
 // 北方冰封群島（2026-11-05）：主島北邊（-x）的雪島，中間一座結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。坐港口阿海的船去
 const FROST = { x:-160, z:-10, r:22, y:0.36, lake:{ x:-156, z:-8, r:8.5, y:0.37 }, holes:[[-158.4, -9.6], [-153.6, -5.8], [-155.2, -11.6], [-159.6, -4.6], [-152.4, -9.8]], dock:[-139.2, -10] };
@@ -651,6 +654,8 @@ function addDeck(x, z, w, d, y){ decks.push({ x0:x-w/2, x1:x+w/2, z0:z-d/2, z1:z
 { const S = SHRIMP, bw = (S.w - S.pw) / 2, bd = (S.d - S.pd) / 2;
   addDeck(S.x, S.z - S.pd / 2 - bd / 2, S.w, bd, S.y); addDeck(S.x, S.z + S.pd / 2 + bd / 2, S.w, bd, S.y);
   addDeck(S.x - S.pw / 2 - bw / 2, S.z, bw, S.pd, S.y); addDeck(S.x + S.pw / 2 + bw / 2, S.z, bw, S.pd, S.y); }
+addDeck(CAFE.x, CAFE.z, CAFE.w, CAFE.d, CAFE.y);
+function inCafe(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } return Math.abs(x - CAFE.x) < CAFE.w / 2 && Math.abs(z - CAFE.z) < CAFE.d / 2; }
 function inShrimpHall(x, z, m){ return Math.abs(x - SHRIMP.x) < SHRIMP.w / 2 + (m || 0) && Math.abs(z - SHRIMP.z) < SHRIMP.d / 2 + (m || 0); }
 function inShrimpPool(x, z){ return Math.abs(x - SHRIMP.x) < SHRIMP.pw / 2 - 0.05 && Math.abs(z - SHRIMP.z) < SHRIMP.pd / 2 - 0.05; }
 function nearIce(x, z, m){ return Math.abs(x - ICE.x) < ICE.w / 2 + (m || 0) && Math.abs(z - ICE.z) < ICE.d / 2 + (m || 0); }
@@ -979,36 +984,32 @@ function castPoint(x, z, dx, dz, dist){
     for (let i = 0; i < 14; i++){ const c = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), mat('#f4fbff', 0.3)); c.position.set(-1.05 + (i % 7) * 0.35, 0.12, i < 7 ? -0.12 : 0.12); c.rotation.y = i * 0.7; ice.add(c); }
     Fu.ice = ice; }
   house(18, -1, '#5fb6e3', 3.8, faceTo(18, -1), { awning: '#2f89c7', sign: '海邊商店', signIcon: '🐟' });      // 海邊商店
-  // ---- 潮汐食堂：小吃攤（櫃台、紅白遮雨棚、招牌、燒烤爐、紙燈籠、壽司盤、板凳）----
+  // ---- 潮汐食堂：村子裡的門面（裡面的店在地圖外，跟釣蝦場一樣走進去）：木造小店、紅白遮雨棚、招牌、紙燈籠、亮著的窗、門口菜單 ----
   {
     const [KX, KZ] = [12.5, 8.5], g = new THREE.Group(); g.position.set(KX, 0, KZ); g.rotation.y = faceTo(KX, KZ); scene.add(g);
-    g.add(box([3.0, 0.95, 0.9], PALETTE.wood, [0, 0.48, 0.4]));                          // 櫃台
-    g.add(box([3.2, 0.08, 1.05], '#c79a6b', [0, 0.99, 0.42]));                           // 檯面
-    g.add(box([3.0, 1.6, 0.12], '#e9d6b0', [0, 0.8, -0.8]));                             // 後牆
-    for (const sx of [-1.45, 1.45]) for (const sz of [-0.8, 0.85]) g.add(box([0.12, 2.4, 0.12], '#6e4a2f', [sx, 1.2, sz]));
-    for (let i = 0; i < 6; i++){ const st = box([0.54, 0.06, 2.1], i % 2 ? '#ffffff' : PALETTE.coral, [-1.35 + i * 0.54, 2.48, 0.1]); st.rotation.x = 0.22; g.add(st); }
-    // 招牌：用畫布寫字
+    g.add(box([4.8, 2.9, 3.0], '#e9d6b0', [0, 1.45, -0.6]));                              // 牆
+    g.add(box([5.2, 0.22, 3.4], '#8c3b2e', [0, 3.0, -0.6]));                              // 屋頂
+    g.add(box([4.9, 0.5, 3.1], PALETTE.wood, [0, 0.25, -0.6]));                            // 牆腳
+    for (const sx of [-2.35, 2.35]) g.add(box([0.16, 2.9, 0.16], '#6e4a2f', [sx, 1.45, 0.92]));
+    for (let i = 0; i < 6; i++){ const st = box([0.82, 0.06, 1.2], i % 2 ? '#ffffff' : PALETTE.coral, [-2.05 + i * 0.82, 2.55, 1.35]); st.rotation.x = 0.3; g.add(st); }   // 紅白遮雨棚
+    g.add(box([1.2, 2.1, 0.08], '#6e4a2f', [0, 1.05, 0.92]));                             // 門框
+    g.add(box([1.0, 1.95, 0.06], '#a8673e', [0, 0.98, 0.95]));                            // 門
+    for (const dx of [-0.25, 0, 0.25]) g.add(box([0.22, 0.75, 0.02], dx === 0 ? '#ffffff' : '#2f4f7a', [dx, 1.75, 1.0]));   // 門口的布簾（暖簾）
+    const glow = mat('#ffd9a0', 0.3, { emissive:'#ffb060', emissiveIntensity:0.55 });
+    for (const sx of [-1.6, 1.6]){ g.add(box([1.1, 0.9, 0.05], '#ffd9a0', [sx, 1.55, 0.93], glow)); g.add(box([1.25, 0.08, 0.1], '#6e4a2f', [sx, 1.05, 0.96])); }   // 亮著的窗
     const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const cx = cv.getContext('2d');
     cx.fillStyle = '#8c3b2e'; cx.fillRect(0, 0, 256, 64); cx.fillStyle = '#fff4d6'; cx.font = 'bold 40px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('潮汐食堂', 128, 34);
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.42), new THREE.MeshBasicMaterial({ map: tex })); sign.position.set(0, 2.08, 1.0); g.add(sign);
-    // 燒烤爐（炭火會發光）
-    g.add(box([0.8, 0.5, 0.5], '#3b3b3b', [-0.85, 1.25, -0.45]));
-    const coal = box([0.7, 0.04, 0.4], '#ff7a3a', [-0.85, 1.52, -0.45], mat('#ff7a3a', 0.6, { emissive:'#ff5a1a', emissiveIntensity:1.2 })); coal.castShadow = false; g.add(coal);
-    for (let i = 0; i < 3; i++){ const sk = box([0.04, 0.04, 0.5], '#d9b98a', [-1.05 + i * 0.2, 1.56, -0.45]); g.add(sk); const fishBit = box([0.09, 0.06, 0.2], '#c98a5a', [-1.05 + i * 0.2, 1.6, -0.45]); g.add(fishBit); }
-    // 壽司盤
-    for (let i = 0; i < 3; i++){ const px = 0.15 + i * 0.45; const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.03, 14), mat('#ffffff', 0.4)); plate.position.set(px, 1.05, 0.6); g.add(plate);
-      for (const dx of [-0.05, 0.05]){ g.add(box([0.07, 0.05, 0.12], '#fbf7ee', [px + dx, 1.09, 0.6])); g.add(box([0.075, 0.025, 0.13], i === 1 ? '#f2a37a' : '#e86a5a', [px + dx, 1.125, 0.6])); } }
-    // 紙燈籠
-    for (const sx of [-1.2, 1.2]){ const lan = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), mat('#e8473a', 0.6, { emissive:'#ff6a3a', emissiveIntensity:0.6 })); lan.scale.y = 1.25; lan.position.set(sx, 2.05, 1.05); g.add(lan); lanterns.push(lan); }
-    // 板凳
-    for (const sx of [-0.8, 0, 0.8]){ const st = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12), mat(PALETTE.wood)); st.position.set(sx, 0.55, 1.35); st.castShadow = true; g.add(st); g.add(box([0.06, 0.52, 0.06], '#6e4a2f', [sx, 0.27, 1.35])); 
-      // 客人（和玩家）坐這三張板凳，面向櫃台
-      const wp = new THREE.Vector3(sx, 0, 1.35).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)), fd = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y);
-      const seat = { x: wp.x, z: wp.z, face: Math.atan2(fd.x, fd.z), y: terrainH(wp.x, wp.z) + 0.13, cafe: true }; CHAIRS.push(seat); cafeSeats.push(seat); }
-    const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addOBoxCol(KX + sn * 0.1, KZ + c * 0.1, 3.3, 2.0, g.rotation.y);
-    cookStall = { x: KX, z: KZ, rot: g.rotation.y, grill: new THREE.Vector3(-0.85, 1.6, -0.45).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(new THREE.Vector3(KX, 0, KZ)) };
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: tex })); sign.position.set(0, 3.45, 0.85); g.add(sign); g.add(box([2.55, 0.72, 0.1], '#5a2a20', [0, 3.45, 0.78]));
+    for (const sx of [-1.0, 1.0]){ const lan = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), mat('#e8473a', 0.6, { emissive:'#ff6a3a', emissiveIntensity:0.6 })); lan.scale.y = 1.25; lan.position.set(sx, 2.25, 1.15); g.add(lan); lanterns.push(lan); }
+    { const mc = document.createElement('canvas'); mc.width = 256; mc.height = 320; const c = mc.getContext('2d'); c.fillStyle = '#2f3b36'; c.fillRect(0, 0, 256, 320); c.strokeStyle = '#c79a6b'; c.lineWidth = 10; c.strokeRect(5, 5, 246, 310);
+      c.fillStyle = '#ffd36a'; c.font = 'bold 40px sans-serif'; c.textAlign = 'center'; c.fillText('今日菜單', 128, 60); c.fillStyle = '#ffffff'; c.font = 'bold 30px sans-serif'; ['🍣 握壽司', '🍢 鹽烤香魚', '🐙 章魚燒', '🍲 魚湯'].forEach((l, i) => c.fillText(l, 128, 120 + i * 50));
+      const mt = new THREE.CanvasTexture(mc); mt.colorSpace = THREE.SRGBColorSpace; const mb = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.78), new THREE.MeshBasicMaterial({ map: mt })); mb.position.set(1.55, 0.95, 1.55); mb.rotation.y = -0.25; g.add(mb);
+      g.add(box([0.06, 0.9, 0.06], '#6e4a2f', [1.55, 0.45, 1.5])); }
+    const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); addOBoxCol(KX - sn * 0.6, KZ - c * 0.6, 5.0, 3.2, g.rotation.y);
+    CAFE_DOOR = { x: KX + sn * 1.9, z: KZ + c * 1.9, face: g.rotation.y };   /* 門口前面一點點 */
   }
+
 
   // ---- 聊天亭 ----
   const [CX, CZ] = [-3, 22];
@@ -2631,6 +2632,7 @@ function shoreSpot(){
   const t = performance.now();
   if (Math.hypot(me.pos.x - Shore.x, me.pos.z - Shore.z) < 0.25 && Math.abs(lerpAngle(me.rot, Shore.r, 1) - me.rot) < 0.01 && t - Shore.at < 600) return Shore.res;
   Shore.x = me.pos.x; Shore.z = me.pos.z; Shore.r = me.rot; Shore.at = t; Shore.res = null;
+  if (inCafe() || House.on) return null;   /* 食堂裡、房子裡不能釣魚（底下其實是海） */
   if (myBoat || mySeat) return null;
   { const h = Math.hypot(me.pos.x - FROST.lake.x, me.pos.z - FROST.lake.z) < FROST.lake.r + 1 && FROST.holes.find(h => Math.hypot(me.pos.x - h[0], me.pos.z - h[1]) < 2.2); if (h){ const dx = h[0] - me.pos.x, dz = h[1] - me.pos.z, L = Math.hypot(dx, dz) || 1; Shore.res = Object.assign({}, SPOT_BY_ID.icelake, { pos: me.pos.clone(), dir: new THREE.Vector2(dx / L, dz / L), shore: true, legendBoost: 1, hole: h }); return Shore.res; } }
   const dirs = [me.rot]; for (let k = 1; k <= 6; k++){ dirs.push(me.rot + k * 0.45); dirs.push(me.rot - k * 0.45); }
@@ -2707,7 +2709,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 function updateCamera2(dt){
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   const reelOn = F.phase === 'reeling' && !Photo.on;
@@ -2751,7 +2753,7 @@ function actionDown(){
     if (nearSnorkel()){ act.classList.remove('down'); startDive('reef', { x: me.pos.x, z: me.pos.z }); return; }   /* 珊瑚礁島：從沙灘下水浮潛 */
     let spot;
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
-    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); } return; } spot = ns.spot; }
+    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } } return; } spot = ns.spot; }
     if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('🎫 要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
@@ -3060,6 +3062,7 @@ function updateFishing(dt, t){
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
     else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
     else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
+    else if (inCafe()){ label = '做料理'; sub = '🏮 潮汐食堂'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if ((F.phase === 'waiting' || F.phase === 'bite') && F.spot && F.spot.id === 'shrimp' && Rig.rig !== 'lure'){ label = '提竿'; sub = '浮標整個沉下去才拉'; cls = ''; }
@@ -4782,15 +4785,15 @@ function updateEnv(dt, t){
       const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { const W2 = WEATHERS[Env.wx]; toast(`${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}<br>${W2.icon} ${W2.name}：${W2.desc}<br>${Env.tide.icon} ${Env.tide.name}：海邊、外海、小島在漲潮時最好釣，乾潮時比較難。<br>🧔 ${esc(dailyTip().text)}`); }); }
     Env.lastWx = Env.wx; }
   // 畫面：光線變暗、下雨、起霧、打雷
-  const dim = House.on || inHall() ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
+  const dim = House.on || inHall() || inCafe() ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
   sun.intensity *= Env.k; hemi.intensity *= 0.55 + 0.45 * Env.k;
-  if (W.fog && !House.on && !inHall()){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
+  if (W.fog && !House.on && !inHall() && !inCafe()){ scene.fog.near = 8; scene.fog.far = 55; } else { scene.fog.near = 45; scene.fog.far = 140; }
   if (!Env.rain) Env.rain = buildRain();
-  const rn = House.on || Dive.on || inHall() ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
+  const rn = House.on || Dive.on || inHall() || inCafe() ? 0 : (W.rain || 0); Env.rain.visible = rn > 0;
   if (rn > 0){ Env.rain.geometry.setDrawRange(0, rn * 2); Env.rain.position.set(camera.position.x, camera.position.y - 6, camera.position.z); const a = Env.rain.geometry.attributes.position.array, fall = dt * (W.storm ? 26 : 18);
     for (let i = 0; i < rn; i++){ const o = i * 6; a[o + 1] -= fall; a[o + 4] -= fall; if (a[o + 1] < 0){ a[o + 1] += 18; a[o + 4] += 18; } if (W.storm){ a[o + 3] = a[o] + 0.25; } } Env.rain.geometry.attributes.position.needsUpdate = true;
     if (Math.random() < dt * 6) ripple(me.pos.x + (Math.random() - 0.5) * 16, me.pos.z + (Math.random() - 0.5) * 16); }
-  if (W.storm && !House.on && !Dive.on && !inHall()){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
+  if (W.storm && !House.on && !Dive.on && !inHall() && !inCafe()){ if (Env.flash <= 0 && Math.random() < dt * 0.08){ Env.flash = 0.25; camShake = Math.max(camShake, 0.04); SFX.fail && 0; } if (Env.flash > 0){ Env.flash -= dt; hemi.intensity += 2.2 * Math.max(0, Env.flash) / 0.25; } }
   if (Dive.on) diveEnvFx();
   updateSeasonFx(dt, t, rn > 0);
   const chip = $('#wxChip'); if (chip){ const txt = `${SEASONS[SEASON].icon} ${W.icon} ${W.name}・${Env.tide.icon} ${Env.tide.name}`; if (chip._t !== txt){ chip.textContent = txt; chip._t = txt; } }
@@ -5187,6 +5190,77 @@ function buildShrimpHall(){
   // 老闆
   const boss = new Fisher({ shirt:'#3f8fd8', hat:'#18334a', name:'釣蝦場老闆 阿忠', kind:'npc' }); boss.pos.set(Venue.desk.x, Y, Venue.desk.z - 1.3); boss.baseY = Y; boss.rot = 0; boss.setGear({ hat:'hat_cap', top:'top_apron' }); boss.nm.classList.add('quest'); Venue.boss = boss;
 }
+// 潮汐食堂（室內）：後面是開放式廚房（長櫃台、燒烤爐、壽司櫃），櫃台前一排高腳椅，兩邊靠牆有小桌子；美雲姨站在櫃台後面
+function buildCafe(){
+  const S = CAFE, g = new THREE.Group(); scene.add(g); Venue.cafe = g; g.visible = false; const Y = S.y, H = 4.2;
+  const B = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(S.x + x, y, S.z + z); o.receiveShadow = true; g.add(o); return o; };
+  const wood = mat('#c79a6b', 0.8), dark = mat('#6e4a2f', 0.8), red = mat('#c8473a', 0.6), cream = mat('#f3e6cc', 0.9, { emissive:'#f3e6cc', emissiveIntensity:0.12 });
+  // 地板（木頭）、四面牆、天花板、牆腳
+  B(S.w, 0.2, S.d, mat('#b9875a', 0.85), 0, Y - 0.1, 0);
+  for (let i = -S.w / 2 + 0.6; i < S.w / 2; i += 1.2) B(0.03, 0.005, S.d, mat('#8f633e', 0.9), i, Y + 0.003, 0);   // 地板的木紋
+  for (const [w, x, z, ry] of [[S.w, 0, -S.d / 2, 0], [S.w, 0, S.d / 2, Math.PI], [S.d, -S.w / 2, 0, Math.PI / 2], [S.d, S.w / 2, 0, -Math.PI / 2]]){ const o = new THREE.Mesh(new THREE.PlaneGeometry(w, H), cream); o.position.set(S.x + x, Y + H / 2, S.z + z); o.rotation.y = ry; g.add(o); }
+  { const o = new THREE.Mesh(new THREE.PlaneGeometry(S.w, S.d), mat('#e9dcc2', 0.9, { emissive:'#e9dcc2', emissiveIntensity:0.15 })); o.rotation.x = Math.PI / 2; o.position.set(S.x, Y + H, S.z); g.add(o); }
+  for (const z of [-S.d / 2 + 0.03, S.d / 2 - 0.03]) B(S.w, 0.9, 0.03, dark, 0, Y + 0.45, z);
+  for (const x of [-S.w / 2 + 0.03, S.w / 2 - 0.03]) B(0.03, 0.9, S.d, dark, x, Y + 0.45, 0);
+  for (let x = -S.w / 2 + 1.5; x < S.w / 2; x += 3) B(0.14, H, 0.14, dark, x, Y + H / 2, -S.d / 2 + 0.08);   // 後牆的木柱
+  // 開放式廚房：長櫃台、後面的工作檯和架子
+  const CZ = -S.d / 2 + 2.3;
+  B(9.2, 1.0, 0.9, dark, 0, Y + 0.5, CZ); B(9.4, 0.08, 1.05, wood, 0, Y + 1.04, CZ);
+  B(12, 0.95, 0.8, mat('#9a9a9a', 0.4, { metalness:0.3 }), 0, Y + 0.48, -S.d / 2 + 0.5);   // 後面的不鏽鋼工作檯
+  for (const y of [2.0, 2.7]) B(8, 0.06, 0.4, wood, 0, Y + y, -S.d / 2 + 0.22);   // 架子
+  for (let i = 0; i < 10; i++){ const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.3, 10), mat(['#e86a5a', '#ffd36a', '#7fc8e8', '#9fc7a8'][i % 4], 0.5)); jar.position.set(S.x - 3.6 + i * 0.8, Y + 2.2 + (i % 2) * 0.7, S.z - S.d / 2 + 0.22); g.add(jar); }
+  // 燒烤爐（炭火會發光）、鍋子
+  B(1.4, 0.12, 0.6, mat('#2a2a2a', 0.4), -3.6, Y + 1.0, -S.d / 2 + 0.5);
+  const coal = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.45), mat('#ff7a2a', 0.6, { emissive:'#ff5a1a', emissiveIntensity:1.2 })); coal.position.set(S.x - 3.6, Y + 1.08, S.z - S.d / 2 + 0.5); g.add(coal); Venue.cafeCoal = coal;
+  for (let i = 0; i < 4; i++){ B(0.04, 0.04, 0.5, mat('#d9b98a', 0.7), -4.05 + i * 0.3, Y + 1.13, -S.d / 2 + 0.5); B(0.09, 0.06, 0.2, mat('#c98a5a', 0.6), -4.05 + i * 0.3, Y + 1.17, -S.d / 2 + 0.5); }
+  { const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.28, 0.35, 16), mat('#3a3a3a', 0.4, { metalness:0.5 })); pot.position.set(S.x + 3.4, Y + 1.13, S.z - S.d / 2 + 0.5); g.add(pot); }
+  // 壽司櫃（玻璃）和櫃台上的壽司盤
+  { const gl = new THREE.Mesh(new THREE.BoxGeometry(3, 0.4, 0.5), new THREE.MeshStandardMaterial({ color:'#d8f2ff', transparent:true, opacity:0.35, roughness:0.1 })); gl.position.set(S.x + 1.2, Y + 1.3, S.z + CZ); g.add(gl);
+    for (let i = 0; i < 6; i++){ B(0.16, 0.06, 0.26, mat('#fbf7ee', 0.6), 0 + i * 0.45, Y + 1.13, CZ); B(0.17, 0.03, 0.27, mat(i % 2 ? '#f2a37a' : '#e86a5a', 0.5), 0 + i * 0.45, Y + 1.175, CZ); } }
+  for (const px of [-2.6, -1.6]){ const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.03, 14), mat('#ffffff', 0.4)); plate.position.set(S.x + px, Y + 1.1, S.z + CZ + 0.15); g.add(plate); }
+  // 廚房兩邊：冰箱、碗櫃（把廚房圍起來，客人不會走進去）
+  for (const sx of [-1, 1]){ B(1.0, 1.9, 0.8, mat('#f4f4f0', 0.5), sx * 5.2, Y + 0.95, CZ); B(2.2, 1.0, 0.8, dark, sx * 6.9, Y + 0.5, CZ); B(2.3, 0.06, 0.9, wood, sx * 6.9, Y + 1.03, CZ);
+    for (let i = 0; i < 3; i++){ const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.1, 0.12, 12), mat('#ffffff', 0.4)); bowl.position.set(S.x + sx * (6.3 + i * 0.5), Y + 1.12, S.z + CZ); g.add(bowl); } }
+  addBoxCol(S.x, S.z + CZ, S.w, 1.0); addBoxCol(S.x, S.z - S.d / 2 + 0.9, S.w, 1.8);
+  // 牆上的菜單、布簾、標語
+  { const cv = document.createElement('canvas'); cv.width = 768; cv.height = 256; const c = cv.getContext('2d'); c.fillStyle = '#2f3b36'; c.fillRect(0, 0, 768, 256); c.strokeStyle = '#c79a6b'; c.lineWidth = 10; c.strokeRect(5, 5, 758, 246);
+    c.fillStyle = '#ffd36a'; c.textAlign = 'center'; c.font = 'bold 56px sans-serif'; c.fillText('潮汐食堂', 384, 70); c.fillStyle = '#ffffff'; c.font = 'bold 34px sans-serif'; c.fillText('🍣 壽司　🍢 燒烤　🐙 章魚燒　🍲 火鍋', 384, 140); c.fillText('用你釣的魚，現點現做！', 384, 200);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; const mb = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.4), new THREE.MeshBasicMaterial({ map: tx })); mb.position.set(S.x, Y + 3.35, S.z - S.d / 2 + 0.05); g.add(mb); }
+  for (let i = 0; i < 7; i++) B(0.6, 0.7, 0.02, i % 2 ? mat('#ffffff', 0.7) : mat('#2f4f7a', 0.7), -1.8 + i * 0.6, Y + 2.45, CZ - 0.45);   // 櫃台上的布簾
+  for (const [txt, x] of [['新鮮的魚 最好吃', -5.5], ['客人有 🔔 就是想點餐', 5.5]]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.65), new THREE.MeshBasicMaterial({ map: signTex(txt, '#fff7e0', '#c8473a', 640, 140) })); sg.position.set(S.x + x, Y + 2.9, S.z + S.d / 2 - 0.04); sg.rotation.y = Math.PI; g.add(sg); }
+  // 天花板的紙燈籠
+  for (const x of [-6, -2, 2, 6]) for (const z of [-1.2, 2.6]){ const lan = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), mat('#e8473a', 0.6, { emissive:'#ff6a3a', emissiveIntensity:0.8 })); lan.scale.y = 1.1; lan.position.set(S.x + x, Y + H - 0.42, S.z + z); g.add(lan); B(0.02, 0.2, 0.02, dark, x, Y + H - 0.1, z); }
+  // 櫃台前的高腳椅
+  cafeSeats.length = 0;
+  const seat = (x, z, face, hi) => { const cg = new THREE.Group(); cg.position.set(S.x + x, Y, S.z + z); g.add(cg); const h = hi ? 0.72 : 0.45;
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.2, 0.07, 14), red); st.position.y = h; cg.add(st);
+    const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, h, 8), dark); lg.position.y = h / 2; cg.add(lg);
+    const ft = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.04, 12), dark); ft.position.y = 0.02; cg.add(ft);
+    const sObj = { x: S.x + x, z: S.z + z, face, y: Y + (hi ? 0.4 : 0.13), cafe: true }; CHAIRS.push(sObj); cafeSeats.push(sObj); };
+  for (const x of [-3.6, -1.8, 0, 1.8, 3.6]) seat(x, CZ + 1.15, Math.PI, true);
+  // 兩邊靠牆的小桌子（每桌一張椅子，椅子在走道這邊）
+  for (const sx of [-1, 1]) for (const z of [-0.2, 3.2]){ B(1.3, 0.06, 1.3, wood, sx * 7.4, Y + 0.76, z); B(0.12, 0.76, 0.12, dark, sx * 7.4, Y + 0.38, z); addBoxCol(S.x + sx * 7.4, S.z + z, 1.4, 1.4);
+    const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.14, 0.03, 14), mat('#ffffff', 0.4)); pl.position.set(S.x + sx * 7.4, Y + 0.8, S.z + z); g.add(pl);
+    seat(sx * 6.15, z, sx > 0 ? Math.PI / 2 : -Math.PI / 2, false); }
+  // 盆栽
+  for (const [x, z] of [[-8.3, 5.6], [8.3, 5.6]]){ B(0.6, 0.6, 0.6, mat('#a8673e', 0.8), x, Y + 0.3, z); const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 0), mat('#4e9a52', 0.8)); lf.position.set(S.x + x, Y + 1.05, S.z + z); g.add(lf); addBoxCol(S.x + x, S.z + z, 0.7, 0.7); }
+  // 出口
+  B(1.4, 2.2, 0.06, mat('#a8673e', 0.6), 0, Y + 1.1, S.d / 2 - 0.04); { const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.4), new THREE.MeshBasicMaterial({ map: signTex('出口', '#3fbf9d', '#ffffff', 256, 96) })); sg.position.set(S.x, Y + 2.5, S.z + S.d / 2 - 0.06); sg.rotation.y = Math.PI; g.add(sg); }
+  Venue.cafeExit = { x: S.x, z: S.z + S.d / 2 - 0.9 };
+  for (const [x, z, w, d] of [[0, -S.d / 2, S.w, 0.3], [0, S.d / 2, S.w, 0.3], [-S.w / 2, 0, 0.3, S.d], [S.w / 2, 0, 0.3, S.d]]) addBoxCol(S.x + x, S.z + z, w, d);
+  g.traverse(o => { if (o.isMesh){ o.castShadow = false; o.userData.keep = true; } });
+  Venue.cafeCounter = { x: S.x, z: S.z + CZ + 1.4 };
+  cookStall = { x: S.x, z: S.z, rot: 0, grill: new THREE.Vector3(S.x - 3.6, Y + 1.2, S.z - S.d / 2 + 0.5), hall: true };
+}
+function enterCafe(){
+  const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
+  setTimeout(() => { me.pos.x = Venue.cafeExit.x; me.pos.z = Venue.cafeExit.z - 2.2; me.baseY = CAFE.y; Jump.gy = CAFE.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.6; Venue.cafeDist = cam.dist; cam.dist = Math.min(cam.dist, 6); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80);
+    flash('🏮 歡迎光臨潮汐食堂！', 1.4); }, 260);
+}
+function exitCafe(){
+  const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (mySeat) standUp(); if (CookGame.on) return;
+  setTimeout(() => { const f = CAFE_DOOR.face || 0; me.pos.x = CAFE_DOOR.x + Math.sin(f) * 0.6; me.pos.z = CAFE_DOOR.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; if (Venue.cafeDist) cam.dist = Venue.cafeDist; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260);
+}
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
 function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); }
 function enterShrimp(){
@@ -5295,6 +5369,7 @@ function renderShrimpChip(ih){
 function updateVenues(dt, t){
   const nearI = Venue.penguins.length > 0 && Math.hypot(me.pos.x - ICE.x, me.pos.z - ICE.z) < 70, nearS = Math.hypot(me.pos.x - SHRIMP.x, me.pos.z - SHRIMP.z) < 50; updateAmbient(dt, t, false);
   if (Venue.snow){ Venue.snow.visible = nearI && !Dive.on; if (nearI && frameNo % 2 === 0){ const a = Venue.snow.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] -= dt * 2 * 1.2; a[i] += Math.sin(t + i) * dt * 0.3; if (a[i + 1] < 0) a[i + 1] = 14; } Venue.snow.geometry.attributes.position.needsUpdate = true; } }
+  { const ic = inCafe(); if (Venue.cafe && Venue.cafe.visible !== ic) Venue.cafe.visible = ic; if (ic && Venue.cafeCoal) Venue.cafeCoal.material.emissiveIntensity = 1 + Math.sin(t * 7) * 0.25; }
   { const ih = inHall(); if (Venue.hall && Venue.hall.visible !== ih) Venue.hall.visible = ih; if (Venue.boss){ Venue.boss.av.g.visible = ih; if (ih){ Venue.boss.update(dt, t); Venue.boss.placeTag(); } else Venue.boss.tag.style.display = 'none'; }
     renderShrimpChip(ih); if (ih !== Venue.wasIn){ Venue.wasIn = ih; updateBobberLook(); } }
   if (nearS && Venue.coal){ Venue.coal.material.emissiveIntensity = 1 + Math.sin(t * 7) * 0.25; if (Math.random() < dt * 8) ripple(Venue.pump[Math.floor(Math.random() * 3)] + (Math.random() - 0.5) * 0.4, SHRIMP.z + (Math.random() - 0.5) * (SHRIMP.pd - 1)); }
@@ -5761,7 +5836,7 @@ function renderDiveShop(body){
 const QUEST_NPC = {
   chief: { name:'村長 阿土伯', at:[7.2, 1.2], shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
   wang:  { name:'漁夫 老王',   at:[29.5, -23.2], shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
-  mei:   { name:'食堂 美雲姨', at:[10.4, 11.2], shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
+  mei:   { name:'食堂 美雲姨', at:[CAFE.x + 1.6, CAFE.z - CAFE.d / 2 + 1.4], cafe:true, shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
 };
 // 任務 NPC 走近時也會講話：村長多講新手教學，老王講釣法，美雲姨講料理
 const QUEST_TALK = {
@@ -5773,8 +5848,8 @@ const questNpcs = []; let Quests = { list:null, at:0, loading:false }, questWho 
 function freeSpot(x, z){ for (let r = 0; r < 6; r += 0.5) for (let a = 0; a < 6.28; a += 0.6){ const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (walkable(px, pz) && !blocked(px, pz, 0.45) && !deckAt(px, pz)) return [px, pz]; } return [x, z]; }
 function initQuestNpcs(){
   for (const [who, d] of Object.entries(QUEST_NPC)){
-    const [x, z] = freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, name:d.name, kind:'npc' });
-    f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.atan2(MAP.plaza[0] - x, MAP.plaza[1] - z); f.setGear(d.gear); f.nm.classList.add('quest');
+    const [x, z] = d.cafe ? d.at : freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, name:d.name, kind:'npc' });
+    f.pos.set(x, 0, z); f.baseY = d.cafe ? CAFE.y : groundHeight(x, z); f.rot = d.cafe ? 0 : Math.atan2(MAP.plaza[0] - x, MAP.plaza[1] - z);   /* 美雲姨站在食堂裡的櫃台後面 */ f.setGear(d.gear); f.nm.classList.add('quest');
     f.lines = QUEST_TALK[who] || []; if (who === 'chief') f.wid = 'chief'; questNpcs.push({ who, name:d.name, f });
   }
 }
@@ -5955,8 +6030,8 @@ function pickOrder(){ const ks = Object.keys(ORDER_W), tot = ks.reduce((a, k) =>
 function spawnCustomer(t){
   const free = cafeSeats.map((_, i) => i).filter(i => !customers.some(c => c.seat === i) && cafeSeats[i] !== mySeat && !customers.some(c => Math.abs(c.seat - i) === 1)); if (!free.length) return;   // 一桌只坐一位客人，泡泡才不會疊在一起
   const seat = free[Math.floor(Math.random() * free.length)], st = stallSeat(seat);
-  const ang = Math.random() * Math.PI * 2, sx = st.x + Math.cos(ang) * 14, sz = st.z + Math.sin(ang) * 14;
-  if (!isLand(sx, sz)) return;
+  let sx, sz; if (cookStall && cookStall.hall){ sx = Venue.cafeExit.x + rand(-0.3, 0.3); sz = Venue.cafeExit.z; }   /* 室內：客人從門口走進來 */
+  else { const ang = Math.random() * Math.PI * 2; sx = st.x + Math.cos(ang) * 14; sz = st.z + Math.sin(ang) * 14; if (!isLand(sx, sz)) return; }
   const name = CUST_NAMES[Math.floor(Math.random() * CUST_NAMES.length)], lk = CUST_LOOK[Math.floor(Math.random() * CUST_LOOK.length)];
   const f = new Fisher({ shirt:lk[0], hat:lk[1], name:'客人・' + name, kind:'npc' }); f.pos.set(sx, 0, sz); f.baseY = groundHeight(sx, sz);
   customers.push({ f, name, seat, st, order: pickOrder(), state:'in', until: t + 160, from:{ x:sx, z:sz } });
@@ -6380,12 +6455,17 @@ function nearShop(){
     if (Venue.grill && Math.hypot(me.pos.x - Venue.grill.x, me.pos.z - Venue.grill.z) < 1.8) return { id:'grill', label:'烤蝦', mode:'cook' };
     if (Venue.exit && Math.hypot(me.pos.x - Venue.exit.x, me.pos.z - Venue.exit.z) < 1.3) return { id:'shrimpexit', label:'出去', mode:'shrimpexit' };
     return null; }
+  if (inCafe()){
+    if (Venue.cafeExit && Math.hypot(me.pos.x - Venue.cafeExit.x, me.pos.z - Venue.cafeExit.z) < 1.3) return { id:'cafeexit', label:'出去', mode:'cafeexit' };
+    if (Venue.cafeCounter && Math.abs(me.pos.x - Venue.cafeCounter.x) < 5 && Math.abs(me.pos.z - Venue.cafeCounter.z) < 1.6) return SHOPS.find(s => s.id === 'cook');
+    return null; }
   if (Math.hypot(me.pos.x - SHRIMP_DOOR.x, me.pos.z - (SHRIMP_DOOR.z + 1.9)) < 1.6) return { id:'shrimpdoor', label:'釣蝦場', mode:'shrimpdoor' };
-  for (const sh of SHOPS){ const l = LANDMARKS.find(l => l.id === sh.id); if (l && Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) < 4.8) return sh; }
+  if (Math.hypot(me.pos.x - CAFE_DOOR.x, me.pos.z - CAFE_DOOR.z) < 1.7) return { id:'cafedoor', label:'潮汐食堂', mode:'cafedoor' };
+  for (const sh of SHOPS){ if (sh.id === 'cook') continue; const l = LANDMARKS.find(l => l.id === sh.id); if (l && Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) < 4.8) return sh; }
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -8731,9 +8811,10 @@ function renderTab(){
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
     ]);
     sec('🍳 潮汐食堂（料理）', [
+      '潮汐食堂在廣場旁邊，跟釣蝦場一樣從門口走進去。裡面有開放式廚房、櫃台前的高腳椅和靠牆的小桌子，美雲姨在櫃台後面。走到櫃台前（或按「做料理」）就可以做菜。',
       '在食堂用魚缸裡的魚做料理，共 13 道。不同料理玩法不一樣：壽司類切魚、章魚燒翻面、燒烤和油炸控制火候、火鍋和麵記住下料順序。做得越好星星越多、越值錢。',
       '料理可以賣掉，也可以「吃掉」：接下來幾次拋竿會有加成（例如稀有魚變多、線比較不容易斷）。',
-      '食堂露台會有客人來點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
+      '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
     ]);
     sec('📜 每日任務', [
       '村長阿土伯（廣場）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',
@@ -9129,7 +9210,7 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
   flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
 
 
-addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); }
+addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 camera.position.set(4, 5, 18);
