@@ -121,6 +121,7 @@ supabase/081_pets_more.sql 寵物第二版：每種寵物好幾種花色（伺�
 supabase/082_world_boss.sql 🐋 全服合作大魚：每天 20:30、週末加 14:00 在港口外海出現 10 分鐘；boss_join／boss_pull（每秒最多一次、照釣竿算出力、掙扎時拉會斷線 10 秒）；體力照人數；結束時發一次獎勵（金幣、前 3 名魚拓、第 1 名稱號）；測試：select public.boss_test_spawn(1);
 supabase/083_festivals.sql 🏮 台灣節慶：festivals 表（2027、2028 跨年／春節／元宵／端午／中秋 + 每月第一個週末夜市）、fest_now／fest_hongbao（春節每天一次）／fest_riddles＋fest_answer（元宵燈謎）／fest_badge（跨年倒數紀念章）／fest_buy（限定家具）；限定帽子只有節日期間能買，買到的永遠保留；每 5 分鐘 _fest_tick 推播節日開始。
 supabase/084_night_games.sql 🐟🎈 夜市小遊戲：fest_game_start（夜市時才能玩，一次 30 金幣）／fest_game_end（伺服器照分數和實際時間算獎勵，撈金魚每分 6 金幣最多 20 分、射氣球 10 發照打中數給獎、每人每天最多 600；撈到 8 分送 fe_goldbowl 一次）。
+supabase/085_christmas.sql 🎄 聖誕節：2026～2028 每年 12/20～12/26 加進節慶表；fest_gift 每天一份禮物（50～500 金幣）；限定聖誕帽 hat_santa、麋鹿角 hat_antler、聖誕樹家具 fe_xtree；開始時推播。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開
