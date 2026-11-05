@@ -69,7 +69,7 @@ declare
   bait jsonb; bf jsonb; cb_r numeric := 1; cb_l numeric := 1; w jsonb; tide_st text; tr numeric := 1;
   sea boolean := p_spot = any(array(select jsonb_array_elements_text(cfg->'sea')));
   ring numeric := 1; lb numeric := 1; per text; gh numeric; tip_spot text; tip_fish text; hh bigint; pool text[];
-  ipool text[]; ih bigint; intel text[] := '{}';
+  ipool text[]; ih bigint; intel text[] := '{}'; sc_mine boolean := false;
   eco jsonb := '{}';   -- 海洋生態（066）：魚群洄游、群聚、保育
   season text; mo integer; kr numeric; kl numeric; nleg integer; legk numeric; rainy boolean;
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
@@ -102,13 +102,16 @@ begin
       end if;
     end if;
   elsif p_chum like 'secret:%' then
-    select e into sc from public.secret_chum s, jsonb_array_elements(s.spots) e where s.owner = pl.id and e->>'id' = substr(p_chum, 8) limit 1;
+    -- 092：別人的祕密窩點也能用（要站在窩點 10 公尺內），效果 75%；自己的 100%
+    select e, s.owner = pl.id into sc, sc_mine from public.secret_chum s, jsonb_array_elements(s.spots) e
+      where e->>'id' = substr(p_chum, 8) and (s.owner = pl.id or (p_x is not null and p_z is not null and sqrt(power(p_x - (e->>'x')::numeric, 2) + power(p_z - (e->>'z')::numeric, 2)) < 10))
+      order by (s.owner = pl.id) desc limit 1;
     if sc is not null and cfg->'chums' ? (sc->>'type') then
       c := cfg->'chums'->(sc->>'type'); age := ms - (sc->>'at')::bigint;
       if age >= 0 and age <= (cfg->>'secretLife')::numeric then
         pw := least(1, greatest(0.15, 0.15 + 0.85 * age / (cfg->>'secretGrow')::numeric));
         fit := case when (c->>'fresh')::boolean then (case when sea then 0.45 else 1 end) when (c->>'sea')::boolean then (case when sea then 1 else 0.5 end) else 1 end;
-        k := pw * fit; cb_r := 1 + ((c->>'rare')::numeric * 1.25 - 1) * k; cb_l := 1 + ((c->>'legend')::numeric * 1.35 - 1) * k;
+        k := pw * fit * (case when sc_mine then 1 else 0.75 end); cb_r := 1 + ((c->>'rare')::numeric * 1.25 - 1) * k; cb_l := 1 + ((c->>'legend')::numeric * 1.35 - 1) * k;
       end if;
     end if;
   end if;

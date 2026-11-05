@@ -2843,7 +2843,7 @@ function renderMap(body){
     const tag = (txt, px, py, bg) => { const w = ctx.measureText(txt).width + 12; ctx.fillStyle = bg || 'rgba(255,255,255,.82)'; ctx.fillRect(px - w / 2, py - 11, w, 20); ctx.fillStyle = bg ? '#fff' : '#18334a'; ctx.fillText(txt, px, py + 4); };
     for (const R of WORLD_REGIONS){ const [px, py] = R.edge ? R.edge.map(v => v * S) : toPx(R.x, R.z); tag(R.label, clamp(px, 70, S - 70), clamp(py, 14, S - 12), R.edge ? 'rgba(24,51,74,.78)' : null); }
     ctx.translate(S - 26, 30); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(6, 2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#18334a'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('北', 0, 13); ctx.restore(); }
-  for (const sp of secretSpots){ const [sx, sy] = toPx(sp.x, sp.z); if (sx < 0 || sy < 0 || sx > S || sy > S) continue; ctx.font = '20px sans-serif'; ctx.fillText('🤫', sx, sy + 7); }   // 只有自己看得到的祕密窩點
+  for (const sp of secretSpots.concat(OtherSecret.list.filter(x => secretPower(x) > 0))){ const [sx, sy] = toPx(sp.x, sp.z); if (sx < 0 || sy < 0 || sx > S || sy > S) continue; ctx.font = sp.other ? '16px sans-serif' : '20px sans-serif'; ctx.globalAlpha = sp.other ? 0.8 : 1; ctx.fillText('🤫', sx, sy + 7); ctx.globalAlpha = 1; }   // 窩點（自己的大一點，別人的淡一點）
   const WS = worldSummary();   // 村民現在在哪裡（伺服器的資料）
   for (const w of WS){ const [px, py] = toPx(w.x, w.z); ctx.font = '16px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill(); ctx.fillText(w.icon, px, py + 6); ctx.font = `bold 11px ${getComputedStyle(document.body).fontFamily}`; ctx.fillStyle = '#18334a'; ctx.fillText(w.name, px, py + 23); }
   const [mx, my] = toPx(me.pos.x, me.pos.z);   // 你在這裡
@@ -6568,7 +6568,7 @@ function renderFerry(body){
     body.appendChild(ul); }
   body.appendChild(el('div', 'dexhead', '🤫 你的祕密窩點'));
   const ul = el('ul', 'shoplist');
-  if (!secretSpots.length) ul.appendChild(el('li', '', '還沒有祕密窩點。在水邊按「🍚 打窩」→「🤫 提前打」，就能做一個只有你知道的窩點。'));
+  if (!secretSpots.length) ul.appendChild(el('li', '', '還沒有祕密窩點。在水邊按「🍚 打窩」→「🤫 提前打」，就能做一個慢慢發酵的窩點（大家都看得到）。'));
   for (const sp of secretSpots){ const pw = secretPower(sp), li = el('li'), mins = Math.max(0, Math.round((SECRET_LIFE - (Date.now() - sp.at)) / 60000));
     li.appendChild(el('span', 'dishic', '🍚')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${sp.where}・${CHUM_BY_ID[sp.type].name}`)); d.appendChild(el('div', 'sub2', pw >= 1 ? `🔥 效果最強！還剩 ${mins} 分鐘` : `發酵中 ${Math.round(pw * 100)}%・還剩 ${mins} 分鐘`)); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(sp.x, sp.z, `祕密窩點（${sp.where}）`)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
@@ -6583,7 +6583,7 @@ function renderFerry(body){
     const [a0, b0] = toPx(-MAP_VIEW, MAP_VIEW), [a1] = toPx(MAP_VIEW, -MAP_VIEW); ctx.drawImage(getMapImage(), a0, b0, a1 - a0, a1 - a0);
     ctx.textAlign = 'center'; ctx.font = '18px sans-serif';
     const [hx, hy] = toPx(FERRY.at[0], FERRY.at[1]); ctx.fillText('🚤', hx, hy + 6);
-    for (const sp of secretSpots){ const [sx, sy] = toPx(sp.x, sp.z); ctx.fillText('🤫', sx, sy + 6); }
+    for (const sp of secretSpots.concat(OtherSecret.list.filter(x => secretPower(x) > 0))){ const [sx, sy] = toPx(sp.x, sp.z); ctx.fillText('🤫', sx, sy + 6); }
     const [mx, my] = toPx(me.pos.x, me.pos.z); ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI * 2); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
     if (pick){ const [px, py] = toPx(pick[0], pick[1]); ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.setLineDash([4, 3]); ctx.lineWidth = 3; ctx.strokeStyle = pick[2] ? '#ffd36a' : '#f04a3a'; ctx.stroke(); ctx.setLineDash([]); }
   };
@@ -7409,7 +7409,7 @@ function updateChum(dt, t){
     if (k >= 1){ ChumFly.on = false; scene.remove(ChumFly.m); SFX.plop();
       if (ChumFly.secret){ ripple(ChumFly.to.x, ChumFly.to.z, true); while (secretSpots.length >= SECRET_MAX){ const old = secretSpots.shift(); const g = secretMarks.get(old.id); if (g) scene.remove(g); secretMarks.delete(old.id); }
         const sp = { id: Date.now(), x: +ChumFly.to.x.toFixed(2), z: +ChumFly.to.z.toFixed(2), type: ChumFly.type, at: Date.now(), where: spotName(ChumFly.to.x, ChumFly.to.z) }; secretSpots.push(sp); saveSecrets(); secretMark(sp);
-        toast(`🤫 祕密窩點做好了（${sp.where}）！窩料會慢慢發酵，大約 10 分鐘後效果最強。只有你看得到那顆橘色浮標。`); }
+        toast(`🤫 窩點做好了（${sp.where}）！窩料會慢慢發酵，大約 10 分鐘後效果最強。大家都看得到這顆浮標，別人來釣效果是你的 75%。`); OtherSecret.at = 0; }
       else { const zn = addChumZone(ChumFly.to.x, ChumFly.to.z, ChumFly.type, 'me'); if (zn) toast(`🍚 打好窩了！在這附近下竿，魚會比較快上鉤（${Math.round(CHUM_BY_ID[ChumFly.type].dur / 60)} 分鐘左右）`); } } }
 }
 const ChumFly = { on:false };
@@ -7431,11 +7431,12 @@ async function loadSecretsCloud(){
   } catch(e){}
 }
 function secretPower(sp){ const age = Date.now() - sp.at; return age > SECRET_LIFE ? 0 : clamp(0.15 + 0.85 * age / SECRET_GROW, 0.15, 1); }
-function secretMark(sp){
-  // 只有自己看得到的小浮標＋淡淡的窩
+function secretMark(sp, other){
+  // 窩點的小浮標＋淡淡的窩（自己的是黃旗，別人的是藍旗＋名字）
   const g = new THREE.Group(); g.position.set(sp.x, WATER_LEVEL, sp.z); scene.add(g);
   const bo = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), mat('#ff7a2a', 0.4, { emissive:'#ff7a2a', emissiveIntensity:0.4 })); bo.position.y = 0.08; g.add(bo);
-  const st = box([0.03, 0.55, 0.03], '#333', [0, 0.35, 0]); g.add(st); const fl = box([0.26, 0.16, 0.01], '#ffd36a', [0.14, 0.55, 0]); g.add(fl);
+  const st = box([0.03, 0.55, 0.03], '#333', [0, 0.35, 0]); g.add(st); const fl = box([0.26, 0.16, 0.01], other ? '#5fb6e3' : '#ffd36a', [0.14, 0.55, 0]); g.add(fl);
+  if (other){ const tg = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.36), new THREE.MeshBasicMaterial({ map: signTex(`🤫 ${sp.nick || '釣客'}的窩點`, 'rgba(20,40,70,0.75)', '#ffffff', 384, 86), transparent:true, side:THREE.DoubleSide, depthWrite:false })); tg.position.y = 0.95; g.add(tg); g.userData.tag = tg; }
   const pt = new THREE.Mesh(new THREE.CircleGeometry(2.4, 28), new THREE.MeshBasicMaterial({ map: chumTexture(), color: CHUM_BY_ID[sp.type].color, transparent:true, opacity:0.18, depthWrite:false })); pt.rotation.x = -Math.PI / 2; pt.position.y = 0.03; g.add(pt);
   g.userData = { bo, pt }; secretMarks.set(sp.id, g); return g;
 }
@@ -7446,8 +7447,18 @@ function updateSecrets(t){
     let g = secretMarks.get(sp.id); if (!g) g = secretMark(sp);
     const vis = !onIsle && !House.on; if (g.visible !== vis) g.visible = vis;
     g.userData.bo.position.y = 0.08 + Math.sin(t * 2 + sp.x) * 0.04; g.userData.pt.material.opacity = 0.08 + 0.22 * pw; }
+  try { updateOtherSecrets(t); } catch(e){}
 }
-function secretAt(x, z){ let best = null; for (const sp of secretSpots){ if (Math.hypot(x - sp.x, z - sp.z) < 3.0 && (!best || secretPower(sp) > secretPower(best))) best = sp; } return best; }
+/* v218：大家的祕密窩點都看得到（092 secret_chum_all），別人的窩點也能釣（效果 75%） */
+var OtherSecret = { list: [], at: 0, busy: false, marks: new Map() };
+async function loadOtherSecrets(){ if (OtherSecret.busy || !Cloud.on || !Cloud.sb) return; OtherSecret.busy = true; OtherSecret.at = Date.now();
+  try { const { data } = await Cloud.sb.rpc('secret_chum_all'); if (Array.isArray(data)) OtherSecret.list = data.filter(x => x && !x.mine && CHUM_BY_ID[x.type]).map(x => ({ id:+x.id, x:+x.x, z:+x.z, type:x.type, at:+x.at, where:x.where, nick:x.nick, other:true })); } catch(e){}
+  OtherSecret.busy = false; }
+function updateOtherSecrets(t){ if (Cloud.on && Date.now() - OtherSecret.at > 30000) loadOtherSecrets();
+  const live = new Set(); for (const sp of OtherSecret.list){ if (secretPower(sp) <= 0) continue; live.add(sp.id); let g = OtherSecret.marks.get(sp.id); if (!g){ g = secretMark(sp, true); secretMarks.delete(sp.id); OtherSecret.marks.set(sp.id, g); }
+    const vis = !onIsle && !House.on && !Dive.on; if (g.visible !== vis) g.visible = vis; g.userData.bo.position.y = 0.08 + Math.sin(t * 2 + sp.x) * 0.04; g.userData.pt.material.opacity = 0.06 + 0.18 * secretPower(sp); }
+  for (const [id, g] of OtherSecret.marks) if (!live.has(id)){ scene.remove(g); OtherSecret.marks.delete(id); } }
+function secretAt(x, z){ let best = null; for (const sp of secretSpots.concat(OtherSecret.list)){ if (Math.hypot(x - sp.x, z - sp.z) < 3.0 && (!best || secretPower(sp) > secretPower(best))) best = sp; } return best; }
 function spotName(x, z){ const id = waterSpotId(x, z), s = SPOT_BY_ID[id]; return s ? s.short : '水邊'; }
 function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || mySeat || House.on || inHall()) return null;   /* 釣蝦場不能打窩 */ if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
 function myChums(){ return CHUMS.filter(c => (rec.bait[c.id] || 0) > 0); }
@@ -7466,7 +7477,7 @@ function throwChum(type, secret){
 function chumAt(x, z){ let best = null; for (const zn of chumZones){ const d = Math.hypot(x - zn.x, z - zn.z); if (d < 3.2 && (!best || zn.until > best.until)) best = zn; } return best; }
 function chumBonus(zn, spotId, secret){
   if (secret){ const C = CHUM_BY_ID[secret.type], pw = secretPower(secret), sea = SEA_SPOTS.has(spotId), fit = C.fresh ? (sea ? 0.45 : 1) : C.sea ? (sea ? 1 : 0.5) : 1, k = pw * fit;
-    const b2 = { wait: 1 - (1 - C.wait * 0.85) * k, rare: 1 + (C.rare * 1.25 - 1) * k, legend: 1 + (C.legend * 1.35 - 1) * k, name: `祕密窩點（${Math.round(pw * 100)}%）`, src: 'secret:' + secret.id };
+    const ko = secret.other ? k * 0.75 : k, b2 = { wait: 1 - (1 - C.wait * 0.85) * ko, rare: 1 + (C.rare * 1.25 - 1) * ko, legend: 1 + (C.legend * 1.35 - 1) * ko, name: secret.other ? `${secret.nick || '別人'}的窩點（${Math.round(pw * 75)}%）` : `祕密窩點（${Math.round(pw * 100)}%）`, src: 'secret:' + secret.id };
     const b1 = chumBonus(zn, spotId); return b1 && b1.rare > b2.rare ? b1 : b2; }
   if (!zn) return null; const C = CHUM_BY_ID[zn.type], left = clamp((zn.until - now()) / C.dur, 0, 1), sea = SEA_SPOTS.has(spotId);
   const fit = C.fresh ? (sea ? 0.45 : 1) : C.sea ? (sea ? 1 : 0.5) : 1, k = (0.45 + 0.55 * left) * fit;
@@ -7477,8 +7488,8 @@ function renderChumPick(){
   pk.innerHTML = ''; pk.appendChild(el('b', '', '🍚 要用哪一種窩料打窩？'));
   for (const c of myChums()){ const row = el('div', 'cprow'); row.appendChild(el('span', 'cpn', `${c.name} ×${rec.bait[c.id]}`)); row.style.setProperty('--cc', c.color);
     const b = el('button', 'tbtn', '現在打'); b.title = '馬上有效、大家看得到、2～3 分鐘'; b.addEventListener('click', () => throwChum(c.id, false)); row.appendChild(b);
-    const s2 = el('button', 'tbtn ghost', '🤫 提前打'); s2.title = '祕密窩點：只有你知道，10 分鐘後最強、維持 1 小時'; s2.addEventListener('click', () => throwChum(c.id, true)); row.appendChild(s2); pk.appendChild(row); }
-  pk.appendChild(el('small', 'sub', '「現在打」馬上有效、大家都看得到；「提前打」是祕密窩點，只有你知道，10 分鐘後最強、可以維持 1 小時（最多 3 個）。'));
+    const s2 = el('button', 'tbtn ghost', '🤫 提前打'); s2.title = '提前打的窩點：10 分鐘後最強、維持 1 小時，大家都看得到'; s2.addEventListener('click', () => throwChum(c.id, true)); row.appendChild(s2); pk.appendChild(row); }
+  pk.appendChild(el('small', 'sub', '「現在打」馬上有效、大家都看得到；「提前打」的窩點會慢慢發酵，10 分鐘後最強、可以維持 1 小時（最多 3 個），大家都看得到，別人來釣效果是你的 75%。'));
   const x = el('button', 'tbtn ghost', '取消'); x.addEventListener('click', () => { pk.hidden = true; }); pk.appendChild(x);
   pk.hidden = false;
 }
@@ -10108,7 +10119,7 @@ function renderTab(){
     sec('🍚 打窩、祕密窩點、渡船', [
       '先到釣具店的「魚餌」分頁買窩料：酒米窩料（淡水好用）、南極蝦窩料（海水好用）、黃金特製窩（哪裡都有效，傳說魚也會被吸引）。',
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到，維持 2～3 分鐘；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
-      '「🤫 提前打」是祕密窩點：只有你自己知道（橘色浮標和地圖上的 🤫 只有你看得到）。窩料會慢慢發酵，10 分鐘後最強，可以維持 1 小時，最多 3 個。祕密窩點存在雲端，換手機登入也找得到。',
+      '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫），別人的窩點也能去釣，效果是打窩那個人的 75%。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、東邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
       '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。',

@@ -129,6 +129,7 @@ supabase/088_qixi_halloween.sql 💞🎃 七夕（2027-08-07～08、2028-08-25�
 supabase/089_alt_guard.sql 🛡️ 分身帳號限制：釣客魚市也算進新手每天 1500 的市集上限；送魚要帳號滿 3 天（或綁 Email）且釣過 30 條、一人一天最多收 20 份；節慶紅包／禮物／小遊戲要先釣過 10 條魚。
 supabase/090_news_events.sql 📰 村報加上海洋事件：昨天的全服合作大魚結果（贏了寫出力最多的人）、博物館第一次收到的魚、正在進行的節慶。
 supabase/091_boat_team.sql 🐉 划龍舟多人一起划：前後 20 秒內一起開始划的玩家算隊友，每位 +20%（最多 +60%），結算會顯示隊友人數。
+supabase/092_secret_chum_public.sql 🤫 祕密窩點大家看得到：secret_chum_all() 回傳大家還有效的窩點（只給暱稱），別人的窩點站在 10 公尺內也能用、效果 75%（020 重新產生，roll_fish 跟著改）。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開
