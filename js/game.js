@@ -918,13 +918,32 @@ function castPoint(x, z, dx, dz, dist){
   // 溫馨木屋：石頭地基、灰泥牆加木框、斜屋頂（瓦片層次＋屋脊）、拱門、窗框和花台、煙囪
   const shade = (hex, k) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString();
   const glassM = mat('#9fdbe3', 0.25, { emissive:'#ffe3a0', emissiveIntensity:0.18 }); windowGlass = glassM;
+  /* v198 精緻化第 1 批：房子的材質用畫布畫出來（木板牆、瓦片屋頂、石頭地基、磚煙囪），不用多加幾何，便宜手機也不會卡；低畫質不貼材質 */
+  const HT = { cache:{} };
+  HT.tex = (key, w, h, draw, rx, ry) => { if (HT.cache[key]) return HT.cache[key]; const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx || 1, ry || 1); t.anisotropy = 4; HT.cache[key] = t; return t; };
+  HT.ok = () => Quality.tier !== 'low';
+  HT.wallM = (col) => { const k = 'w' + col; if (HT.cache[k]) return HT.cache[k]; if (!HT.ok()) return (HT.cache[k] = mat(col));
+    const t = HT.tex('wallT', 256, 256, (c, w, h) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h); for (let i = 0; i < 1400; i++){ c.fillStyle = `rgba(0,0,0,${0.02 + Math.random() * 0.05})`; c.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 3, 2 + Math.random() * 3); }
+      for (let y = 0; y < h; y += 32){ c.fillStyle = 'rgba(0,0,0,0.16)'; c.fillRect(0, y, w, 2); c.fillStyle = 'rgba(255,255,255,0.35)'; c.fillRect(0, y + 2, w, 1); } }, 2, 1);
+    return (HT.cache[k] = mat(col, 0.85, { map: t })); };
+  HT.roofM = (col) => { const k = 'r' + col; if (HT.cache[k]) return HT.cache[k]; if (!HT.ok()) return (HT.cache[k] = mat(col));
+    const t = HT.tex('roofT', 256, 256, (c, w, h) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h); const tw = 32, th = 32;
+      for (let row = 0; row < h / th + 1; row++) for (let i = -1; i < w / tw + 1; i++){ const x = i * tw + (row % 2 ? tw / 2 : 0), y = row * th; c.fillStyle = `rgba(255,255,255,${0.16 + Math.random() * 0.16})`; c.beginPath(); c.arc(x + tw / 2, y + th * 0.3, tw / 2 - 1, 0, Math.PI); c.fill();
+        c.fillStyle = 'rgba(0,0,0,0.16)'; c.beginPath(); c.arc(x + tw / 2, y + th * 0.3 + 4, tw / 2 - 1, 0, Math.PI); c.lineTo(x + 1, y + th); c.lineTo(x + tw - 1, y + th); c.closePath(); c.fill(); c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(x, y + th * 0.3, 2, th); } }, 3, 2);
+    return (HT.cache[k] = mat(col, 0.9, { map: t })); };
+  HT.stoneM = () => { if (HT.cache.stone) return HT.cache.stone; if (!HT.ok()) return (HT.cache.stone = mat('#b9b2a3'));
+    const t = HT.tex('stoneT', 256, 128, (c, w, h) => { c.fillStyle = '#b9b2a3'; c.fillRect(0, 0, w, h); let y = 0; while (y < h){ let x = (Math.random() * 30) | 0; const rh = 22 + Math.random() * 14; while (x < w){ const rw = 26 + Math.random() * 34; c.fillStyle = `hsl(36, 12%, ${60 + Math.random() * 16}%)`; c.beginPath(); c.roundRect(x + 2, y + 2, rw - 4, rh - 4, 5); c.fill(); x += rw; } y += rh; } }, 3, 1);
+    return (HT.cache.stone = mat('#ffffff', 0.95, { map: t })); };
+  HT.brickM = () => { if (HT.cache.brick) return HT.cache.brick; if (!HT.ok()) return (HT.cache.brick = mat('#c9b38a'));
+    const t = HT.tex('brickT', 128, 128, (c, w, h) => { c.fillStyle = '#d8ccb0'; c.fillRect(0, 0, w, h); for (let row = 0; row < 8; row++) for (let i = -1; i < 5; i++){ const x = i * 32 + (row % 2 ? 16 : 0), y = row * 16; c.fillStyle = `hsl(28, 40%, ${48 + Math.random() * 14}%)`; c.fillRect(x + 1, y + 1, 30, 14); } }, 1, 3);
+    return (HT.cache.brick = mat('#ffffff', 0.95, { map: t })); };
   function house(x, z, roofColor, width, rotY, opts){
     opts = opts || {};
     const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = rotY || 0;
     const W = width, D = 2.5, wallH = 2.0, base = 0.3, top = base + wallH;
     const dark = '#6e4a2f', wall = opts.wall || '#f6e4bd', trim = '#fffaf0';
-    g.add(box([W + 0.24, base, D + 0.24], '#b9b2a3', [0, base / 2, 0]));                        // 地基
-    g.add(box([W, wallH, D], wall, [0, base + wallH / 2, 0]));                                  // 牆
+    g.add(box([W + 0.24, base, D + 0.24], null, [0, base / 2, 0], HT.stoneM()));                 // 地基（石頭）
+    g.add(box([W, wallH, D], null, [0, base + wallH / 2, 0], HT.wallM(wall)));                   // 牆（木板）
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(box([0.16, wallH, 0.16], dark, [sx * (W / 2 - 0.02), base + wallH / 2, sz * (D / 2 - 0.02)]));
     for (const sz of [-1, 1]) g.add(box([W + 0.06, 0.14, 0.1], dark, [0, top - 0.07, sz * (D / 2 + 0.01)]));
     for (const sx of [-1, 1]) g.add(box([0.1, 0.14, D + 0.06], dark, [sx * (W / 2 + 0.01), top - 0.07, 0]));
@@ -938,12 +957,14 @@ function castPoint(x, z, dx, dz, dist){
     const roofDark = shade(roofColor, 0.8);
     for (const sz of [-1, 1]){
       const zc = sz * run / 2, yc = top + rise - Math.tan(ang) * run / 2 + 0.06;
-      const slab = box([W + 0.5, 0.14, L], roofColor, [0, yc, zc]); slab.rotation.x = sz * ang; g.add(slab);
-      for (const f of [0.3, 0.55, 0.8]){ const zz = sz * run * f, yy = top + rise - Math.tan(ang) * run * f + 0.15; const st = box([W + 0.54, 0.05, 0.12], roofDark, [0, yy, zz]); st.rotation.x = sz * ang; g.add(st); }
+      const slab = box([W + 0.5, 0.14, L], null, [0, yc, zc], HT.roofM(roofColor)); slab.rotation.x = sz * ang; g.add(slab);
+      if (!HT.ok()) for (const f of [0.3, 0.55, 0.8]){ const zz = sz * run * f, yy = top + rise - Math.tan(ang) * run * f + 0.15; const st = box([W + 0.54, 0.05, 0.12], roofDark, [0, yy, zz]); st.rotation.x = sz * ang; g.add(st); }
+      if (HT.ok()){ const st = box([W + 0.54, 0.07, 0.1], roofDark, [0, top + rise - Math.tan(ang) * run * 0.98 + 0.12, sz * run * 0.98]); st.rotation.x = sz * ang; g.add(st);   /* 屋簷邊 */
+        for (let i = 0; i <= 4; i++) g.add(box([0.08, 0.1, 0.42], dark, [-W / 2 - 0.2 + i * (W + 0.4) / 4, top - 0.02, sz * (D / 2 + 0.2)])); }   /* 簷下的椽木 */
     }
     g.add(box([W + 0.6, 0.16, 0.22], roofDark, [0, top + rise + 0.13, 0]));                       // 屋脊
     // 煙囪
-    g.add(box([0.42, 1.3, 0.42], '#c9b38a', [W * 0.27, top + rise * 0.55 + 0.4, -0.55]));
+    g.add(box([0.42, 1.3, 0.42], null, [W * 0.27, top + rise * 0.55 + 0.4, -0.55], HT.brickM()));
     g.add(box([0.54, 0.12, 0.54], '#9d8f78', [W * 0.27, top + rise * 0.55 + 1.08, -0.55]));
     // 門（住家是拱門，商店是方門）
     const fz = D / 2;
@@ -954,12 +975,19 @@ function castPoint(x, z, dx, dz, dist){
       const arch = new THREE.Mesh(new THREE.CircleGeometry(0.4, 16, 0, Math.PI), mat(dark)); arch.position.set(0, base + 1.3, fz + 0.065); g.add(arch);
       const arch2 = new THREE.Mesh(new THREE.CircleGeometry(0.31, 16, 0, Math.PI), mat(PALETTE.wood)); arch2.position.set(0, base + 1.18, fz + 0.105); g.add(arch2); }
     const knob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), mat(PALETTE.gold, 0.3, { metalness:0.5 })); knob.position.set(0.2, base + 0.6, fz + 0.12); g.add(knob);
+    if (HT.ok()){ for (const yy of [0.35, 0.85]) g.add(box([0.46, 0.03, 0.02], dark, [0, base + yy, fz + 0.1]));   /* 門板的橫槽 */
+      g.add(box([0.03, 1.0, 0.02], dark, [0, base + 0.6, fz + 0.1]));
+      const lampX = opts.awning ? -0.75 : 0.72; g.add(box([0.06, 0.06, 0.16], dark, [lampX, base + 1.55, fz + 0.08]));   /* 門邊的小燈 */
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.7 })); lamp.position.set(lampX, base + 1.46, fz + 0.16); g.add(lamp); lanterns.push(lamp);
+      if (!opts.awning){ const pr = box([1.3, 0.06, 0.6], roofColor, [0, base + 1.62, fz + 0.3]); pr.rotation.x = 0.35; g.add(pr); for (const sx of [-0.55, 0.55]){ const br = box([0.05, 0.05, 0.5], dark, [sx, base + 1.42, fz + 0.26]); br.rotation.x = -0.6; g.add(br); } } }   /* 住家門上小雨遮 */
     // 窗戶：白色窗框、十字窗格、下方花台
     const flowerCols = ['#f17b6d', '#ffd36a', '#f5a5d8', '#b9a4ff'];
     function windowAt(px, py, pz, ry, flowers){
       const w = new THREE.Group(); w.position.set(px, py, pz); w.rotation.y = ry; g.add(w);
       w.add(box([0.74, 0.68, 0.07], trim, [0, 0, 0])); const gl = box([0.58, 0.52, 0.08], null, [0, 0, 0.01], glassM); gl.castShadow = false; w.add(gl);
       w.add(box([0.05, 0.52, 0.1], trim, [0, 0, 0.03])); w.add(box([0.58, 0.05, 0.1], trim, [0, 0, 0.03]));
+      if (HT.ok()){ for (const sx of [-1, 1]){ const sh = box([0.2, 0.68, 0.04], shade(roofColor, 0.12), [sx * 0.49, 0, 0.01]); w.add(sh); for (let k = 0; k < 5; k++) w.add(box([0.15, 0.02, 0.015], shade(roofColor, -0.3), [sx * 0.49, -0.26 + k * 0.13, 0.035])); }   /* 百葉窗板 */
+        w.add(box([0.86, 0.05, 0.14], trim, [0, -0.37, 0.05])); }   /* 窗台 */
       if (flowers){ w.add(box([0.82, 0.14, 0.2], PALETTE.wood, [0, -0.42, 0.08]));
         for (let i = 0; i < 4; i++){ const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.075, 0), mat(flowerCols[(i + Math.round(px * 3)) & 3], 0.6)); f.position.set(-0.27 + i * 0.18, -0.3, 0.1); w.add(f); } }
     }
@@ -1207,7 +1235,7 @@ function castPoint(x, z, dx, dz, dist){
     if (Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) continue;   /* 生態池旁邊自己種樹 */
     if (x > -13 && x < 15 && z > 18 && z < 42) continue;   /* 潮汐商店街 */
     if (Math.abs(x - REEF.x) < 4.5 && z > REEF.bz0 - 6) continue;   /* 往珊瑚礁群島的橋頭 */   /* 城市水圳那一區是工廠和水泥路，不長樹 */   /* 山頂留一塊空地、上山的路寬一點，走得過去 */
-    trees.push([x, z, wr()]); addCircleCol(x, z, 0.38);
+    trees.push([x, z, wr()]); addCircleCol(x, z, 0.38); colliders[colliders.length - 1].tree = 1;
   }
   buildTrees(trees, PX, PZ);
 
@@ -2829,14 +2857,16 @@ const reelCam = { k:0, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
 function updateCamera(dt){ if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor()) cam.pitch = 0.3; updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
-function camClear(target, want){
+const CamK = { k:1 };   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
+function camClear(target, want, dt){
   const bad = (x, y, z) => { const g = groundHeight(x, z); if (y < g + 0.6) return true;
-    for (const c of colliders){ if (c.t !== 'c' || c.r > 0.6) continue; const dx = x - c.x, dz = z - c.z; if (dx * dx + dz * dz < 2.1 && y > g + 1.0 && y < g + 7) return true; } return false; };
+    for (const c of colliders){ if (!c.tree) continue; const dx = x - c.x, dz = z - c.z; if (dx * dx + dz * dz < 1.6 && y > g + 1.2 && y < g + 6.5) return true; } return false; };   /* 只算樹（路燈、石頭、柵欄不算，不然鏡頭會一直忽遠忽近） */
   const dx = want.x - target.x, dy = want.y - target.y, dz = want.z - target.z; let good = 1;
   const L = Math.hypot(dx, dy, dz) || 1, kmin = Math.min(0.9, 2.6 / L);   /* 最近只拉到離角色 2.6 公尺，再近就看到帽子裡面了 */
   for (let k = kmin; k <= 1.0001; k += 0.08){ if (bad(target.x + dx * k, target.y + dy * k, target.z + dz * k)){ good = Math.max(kmin, k - 0.08); break; } }
-  if (good >= 1) return;
-  const x = target.x + dx * good, z = target.z + dz * good; let y = Math.max(target.y + dy * good, groundHeight(x, z) + 0.6);
+  CamK.k += (good - CamK.k) * Math.min(1, dt * (good < CamK.k ? 9 : 2.5));   /* 拉近快一點（不然會看到樹裡面），拉遠慢慢來 */
+  const k = CamK.k; if (k >= 0.999) return;
+  const x = target.x + dx * k, z = target.z + dz * k; let y = Math.max(target.y + dy * k, groundHeight(x, z) + 0.6);
   if (good <= kmin + 1e-6 && bad(x, y, z)) y = groundHeight(x, z) + 6.4;   /* 角色就貼著樹：鏡頭拉到樹冠上面往下看 */
   want.set(x, y, z); }
 function updateCamera2(dt){
@@ -2858,7 +2888,7 @@ function updateCamera2(dt){
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
   want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
-  if (!Dive.on && !House.on && !inIndoor()) camClear(target, want);
+  if (!Dive.on && !House.on && !inIndoor()) camClear(target, want, dt); else CamK.k = 1;
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
   camera.lookAt(target); camLook.copy(target);
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
@@ -3526,7 +3556,7 @@ function buildGreen(){ Far.green = true; const G = GREEN, g = new THREE.Group();
   trees.forEach(([lx, lz], i) => { const y = H(lx, lz), cedar = rr() < 0.7, s = 0.8 + rr() * 0.6;
     if (cedar){ const th = 3.2 * s; add(cyl, trunkM, lx, y + th / 2, lz, s, th, s); for (let k = 0; k < 4; k++) add(cone, cedarM[(i + k) % 3], lx, y + th * 0.55 + k * 0.9 * s, lz, (1.5 - k * 0.3) * s, s, (1.5 - k * 0.3) * s); add(sph, moss, lx, y + 0.35, lz, 0.45 * s, 0.25, 0.45 * s); }
     else { const th = 2.2 * s; add(cyl, trunkM, lx, y + th / 2, lz, s, th, s); add(sph, leafM[i % 2], lx, y + th + 0.8 * s, lz, 1.6 * s, 1.2 * s, 1.6 * s); add(sph, leafM[(i + 1) % 2], lx + 0.6 * s, y + th + 0.4 * s, lz - 0.3 * s, 1.0 * s, 0.9 * s, 1.0 * s); }
-    addCircleCol(G.x + lx, G.z + lz, 0.4 * s); });
+    addCircleCol(G.x + lx, G.z + lz, 0.4 * s); colliders[colliders.length - 1].tree = 1; });
   for (let i = 0; i < 60; i++){ const lx = (rr() - 0.5) * G.r * 1.9, lz = (rr() - 0.5) * G.r * 1.9; if (!ok(lx, lz, 2)) continue; const y = H(lx, lz), s = 0.5 + rr() * 1.1; add(ico, mat(rr() < 0.5 ? '#8a8a80' : '#9a988c', 0.95), lx, y + s * 0.3, lz, s, s * 0.7, s * 1.1, rr() * 6); add(sph, moss, lx, y + s * 0.75, lz, s * 0.85, s * 0.3, s * 0.95); if (s > 0.8) addCircleCol(G.x + lx, G.z + lz, s * 0.8); }
   const fern = new THREE.ConeGeometry(0.12, 0.8, 3); for (let i = 0; i < 160; i++){ const lx = (rr() - 0.5) * G.r * 1.9, lz = (rr() - 0.5) * G.r * 1.9; if (!ok(lx, lz, 1)) continue; const y = H(lx, lz); for (let k = 0; k < 5; k++){ const gg = fern.clone(); gg.rotateZ(0.9); gg.rotateY(k * 1.26 + rr()); gg.translate(lx, y + 0.25, lz); const key = leafM[0].uuid; if (!merge.has(key)) merge.set(key, { m: leafM[0], gs: [] }); merge.get(key).gs.push(gg.toNonIndexed()); } }
   // 千年大杉：島中間偏北的一棵巨木，樹幹很粗、長滿青苔，旁邊圍一圈木棧道
@@ -4701,9 +4731,16 @@ function buildCages(){
 function buildCageFish(){
   if (!CageV.g) return; for (const m of CageV.fish) CageV.g.remove(m.m); CageV.fish = [];
   const [cx, cz] = CAGE.pos[0];
-  (rec.cage || []).forEach((x, i) => { let m = null; try { m = fishModel(FISH_BY_ID[x.f], clamp(0.35 + Math.log(1 + x.w) * 0.22, 0.35, 1.1)); } catch(e){} if (!m) return; CageV.g.add(m); CageV.fish.push({ m, a: i / 6 * Math.PI * 2, r: 0.5 + (i % 3) * 0.35, y: -0.25 - (i % 2) * 0.35, sp: 0.4 + (i % 4) * 0.12, cx, cz }); });
+  (rec.cage || []).forEach((x, i) => { let m = null; try { m = fishModel(FISH_BY_ID[x.f], clamp(0.35 + Math.log(1 + x.w) * 0.22, 0.35, 1.1)); } catch(e){} if (!m) return; CageV.g.add(m); const a0 = i / 6 * Math.PI * 2; CageV.fish.push({ m, x: cx + Math.cos(a0) * 0.6, z: cz + Math.sin(a0) * 0.6, y: -0.3 - (i % 3) * 0.25, h: a0 + Math.PI / 2, sp: 0.35 + (i % 4) * 0.1, tx: cx, tz: cz, ty: -0.4, at: 0, cx, cz, big: x.w }); });
 }
-function updateCages(dt, t){ for (const f of CageV.fish){ f.a += dt * f.sp; f.m.position.set(f.cx + Math.cos(f.a) * f.r, f.y + Math.sin(t * 2 + f.a) * 0.05, f.cz + Math.sin(f.a) * f.r); f.m.rotation.y = -f.a; } }
+/* v198：箱網裡的魚自然一點：各自在網子裡慢慢游、轉彎、換深度，快到網邊會轉回來；偶爾停下來；大的魚游得慢一點 */
+function updateCages(dt, t){ const R = CAGE.r - 0.45; for (const f of CageV.fish){
+    if (t > f.at){ f.at = t + 2 + Math.random() * 4; const a = Math.random() * Math.PI * 2, r = Math.random() * R * 0.85; f.tx = f.cx + Math.cos(a) * r; f.tz = f.cz + Math.sin(a) * r; f.ty = -0.2 - Math.random() * 0.7; f.rest = Math.random() < 0.25; }
+    const dx = f.tx - f.x, dz = f.tz - f.z, d = Math.hypot(dx, dz); let want = d > 0.15 ? Math.atan2(dz, dx) : f.h;
+    const od = Math.hypot(f.x - f.cx, f.z - f.cz); if (od > R){ want = Math.atan2(f.cz - f.z, f.cx - f.x); }   /* 快撞到網子就往中間轉 */
+    let dh = want - f.h; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2; f.h += dh * Math.min(1, dt * 2.2);
+    const sp = (f.rest && d < 0.5 ? 0.05 : f.sp) * (1 + Math.sin(t * 1.3 + f.h) * 0.2); f.x += Math.cos(f.h) * sp * dt; f.z += Math.sin(f.h) * sp * dt; f.y += (f.ty - f.y) * Math.min(1, dt * 0.8);
+    f.m.position.set(f.x, f.y + Math.sin(t * 1.7 + f.x) * 0.03, f.z); f.m.rotation.y = Math.PI / 2 - f.h; f.m.rotation.z = -dh * 0.35; f.m.rotation.x = (f.ty - f.y) * 0.5; } }
 // 港口碼頭的潛水梯（079）：穿潛水裝從這裡直接下去港口海底
 const HarborDive = { at:null };
 function harborDiveAt(){ if (HarborDive.at) return HarborDive.at; const s = SPOT_BY_ID.harbor, L = Math.hypot(s.dir.x, s.dir.y), dx = s.dir.x / L, dz = s.dir.y / L, px = -dz, pz = dx; HarborDive.at = [s.pos.x - dx * 3 + px * -1.35, s.pos.z - dz * 3 + pz * -1.35]; HarborDive.side = [-px, -pz]; return HarborDive.at; }
