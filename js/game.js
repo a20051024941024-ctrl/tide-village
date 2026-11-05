@@ -10,7 +10,7 @@ import { SPECS as FISH_SPECS } from './fish-specs.js';
 window.__gameStarted = true;
 // 語言（設定裡選）：簡體中文時用 OpenCC 的對照表把畫面上的字、看板上的字都轉成簡體（載不到就照原本的繁體）
 let OCC = null;
-try { if (localStorage.getItem('tide.lang') === '"cn"'){ const m = await import('./zh-cn.js'); OCC = m.toCN;   /* 對照表放在自己的網站上（js/zh-cn.js，OpenCC 的資料），不用連外部網站 */
+try { const lng = localStorage.getItem('tide.lang'); if (lng === '"cn"' || lng === '"en"'){ const m = lng === '"en"' ? await import('./en.js') : await import('./zh-cn.js'); OCC = m.toCN || m.toEN;   /* v214：英文（beta）用 js/en.js 的對照表 */   /* 對照表放在自己的網站上（js/zh-cn.js，OpenCC 的資料），不用連外部網站 */
   const ft = CanvasRenderingContext2D.prototype.fillText, st = CanvasRenderingContext2D.prototype.strokeText, mt = CanvasRenderingContext2D.prototype.measureText;
   CanvasRenderingContext2D.prototype.fillText = function(t, ...a){ return ft.call(this, typeof t === 'string' ? OCC(t) : t, ...a); };
   CanvasRenderingContext2D.prototype.strokeText = function(t, ...a){ return st.call(this, typeof t === 'string' ? OCC(t) : t, ...a); };
@@ -6050,8 +6050,8 @@ function renderSettings(body){
   body.appendChild(el('div', 'shophead')).innerHTML = '<b>⚙️ 設定</b>';
   const field = (title, sub) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); body.appendChild(f); if (sub) f._sub = sub; return f; };
   { const f = field('🌐 語言'), seg = el('div', 'seg'), cur = LS.get('tide.lang', 'tw');
-    [['tw', '繁體中文'], ['cn', '简体中文']].forEach(([k, l]) => { const b = el('button', 'ignore-opencc', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { if (cur === k) return; LS.set('tide.lang', k); toast(k === 'cn' ? '切换成简体中文，马上重新载入…' : '切換成繁體中文，馬上重新載入…'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
-    f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。' + (cur === 'cn' && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
+    [['tw', '繁體中文'], ['cn', '简体中文'], ['en', 'English (beta)']].forEach(([k, l]) => { const b = el('button', 'ignore-opencc', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { if (cur === k) return; LS.set('tide.lang', k); toast(k === 'cn' ? '切换成简体中文，马上重新载入…' : k === 'en' ? 'Switching to English (beta), reloading…' : '切換成繁體中文，馬上重新載入…'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。English 是測試版：選單、地名、魚名是英文，比較長的說明還是中文。' + ((cur === 'cn' || cur === 'en') && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
   const vol = (title, on, v, setOn, setV) => { const f = field(title), row = el('div', 'volrow'), tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { setOn(!on); renderTab(); });
     const sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(v * 100); sl.disabled = !on; const pct = el('span', 'volpct', Math.round(v * 100) + '%');
     sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
