@@ -2780,7 +2780,8 @@ function actionDown(){
    /* 紅樹林泥灘：徒手抓 */
     { const lt = nearLitter(); if (lt){ act.classList.remove('down'); pickLitter(lt); return; } }   /* 水圳：撿垃圾 */
     if (nearCage()){ act.classList.remove('down'); openSheet('cage'); return; }   /* 箱網 */
-    if (nearSnorkel()){ act.classList.remove('down'); startDive('reef', { x: me.pos.x, z: me.pos.z }); return; }   /* 珊瑚礁島：從沙灘下水浮潛 */
+    if (nearSnorkel()){ act.classList.remove('down'); startDive('reef', { x: me.pos.x, z: me.pos.z }); return; }
+    if (nearHarborDive()){ act.classList.remove('down'); startDive('harbor', { x: me.pos.x, z: me.pos.z }); return; }   /* 港口碼頭的潛水梯 */   /* 珊瑚礁島：從沙灘下水浮潛 */
     let spot;
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
     else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } else if (inMuseum()){ act.classList.remove('down'); openMuseum(); } } return; } spot = ns.spot; }
@@ -3092,6 +3093,7 @@ function updateFishing(dt, t){
     if (crN){ label = '抓！'; sub = crN.kind === 'crab' ? '🦀 招潮蟹' : '🐟 彈塗魚'; cls = 'bite'; }
     else if (ltN){ label = '撿起來'; sub = `${ltN.T.icon} ${ltN.T.name}・💙+1`; cls = 'shop'; }
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
+    else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
     else if (sh){ label = sh.label; sub = sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
@@ -4533,6 +4535,15 @@ function buildCageFish(){
   (rec.cage || []).forEach((x, i) => { let m = null; try { m = fishModel(FISH_BY_ID[x.f], clamp(0.35 + Math.log(1 + x.w) * 0.22, 0.35, 1.1)); } catch(e){} if (!m) return; CageV.g.add(m); CageV.fish.push({ m, a: i / 6 * Math.PI * 2, r: 0.5 + (i % 3) * 0.35, y: -0.25 - (i % 2) * 0.35, sp: 0.4 + (i % 4) * 0.12, cx, cz }); });
 }
 function updateCages(dt, t){ for (const f of CageV.fish){ f.a += dt * f.sp; f.m.position.set(f.cx + Math.cos(f.a) * f.r, f.y + Math.sin(t * 2 + f.a) * 0.05, f.cz + Math.sin(f.a) * f.r); f.m.rotation.y = -f.a; } }
+// 港口碼頭的潛水梯（079）：穿潛水裝從這裡直接下去港口海底
+const HarborDive = { at:null };
+function harborDiveAt(){ if (HarborDive.at) return HarborDive.at; const s = SPOT_BY_ID.harbor, L = Math.hypot(s.dir.x, s.dir.y), dx = s.dir.x / L, dz = s.dir.y / L, px = -dz, pz = dx; HarborDive.at = [s.pos.x - dx * 3 + px * -1.35, s.pos.z - dz * 3 + pz * -1.35]; HarborDive.side = [-px, -pz]; return HarborDive.at; }
+function nearHarborDive(){ if (myBoat || mySeat || F.phase !== 'idle' || Dive.on) return false; const a = harborDiveAt(); return Math.hypot(me.pos.x - a[0], me.pos.z - a[1]) < 1.1; }
+function buildHarborLadder(){ const [x, z] = harborDiveAt(), [sx, sz] = HarborDive.side, g = new THREE.Group(), y0 = groundHeight(x, z); g.position.set(x + sx * 0.45, y0, z + sz * 0.45); g.rotation.y = Math.atan2(sx, sz); scene.add(g);
+  const m = mat('#c9ced4', 0.4, { metalness:0.5 }); for (const lx of [-0.3, 0.3]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.2, 8), m); r.position.set(lx, -0.5, 0.12); g.add(r); const top = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.035, 6, 10, Math.PI), m); top.position.set(lx, 0.6, 0); top.rotation.y = Math.PI / 2; g.add(top); }
+  for (let k = 0; k < 5; k++){ const st = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.6, 6), m); st.rotation.z = Math.PI / 2; st.position.set(0, 0.3 - k * 0.38, 0.12); g.add(st); }
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.5), new THREE.MeshBasicMaterial({ map: signTex('🤿 潛水點', '#1f4f6e', '#ffe9a8', 256, 100), side:THREE.DoubleSide })); sg.position.set(0, 1.85, -0.2); sg.rotation.y = Math.PI; g.add(sg);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 6), mat('#6e4a2f', 0.8)); post.position.set(0, 0.85, -0.25); g.add(post); }
 function nearSnorkel(){ return !!(Reef.diveAt && !myBoat && !mySeat && F.phase === 'idle' && !Dive.on && Math.hypot(me.pos.x - Reef.diveAt[0], me.pos.z - Reef.diveAt[1]) < 1.8); }
 function nearCage(){ if (!CageV.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on) return false; return Math.hypot(me.pos.x - CAGE.pos[0][0], me.pos.z - CAGE.pos[0][1]) < CAGE.r + 1.6 && !!deckAt(me.pos.x, me.pos.z); }
 function cageGrowNext(x){ const f = FISH_BY_ID[x.f]; return Math.min(f.max, +(x.w + (f.max - x.w) * CAGE.k).toFixed(2)); }
@@ -5701,6 +5712,8 @@ const DIVE_SITES = {
   wreck: { name:'沉船深海', icon:'⚓', need:['dive_suit', 'dive_tank3'], top:24, sky:['#2f7fb0', '#04182c'], fog:'#0f4a70', far:22, coral:24, kelp:18, rocks:34, shells:8, chests:[1, 0.7, 0.4], pearls:0, legendP:0.6, big:true, desc:'更深的海底躺著一艘大帆船，寶箱比較多、也比較值錢，大魚和傳說魚常在附近。要大型氧氣瓶。',
     fish:['grouper', 'shark', 'hammer', 'barracuda', 'moonbream', 'kingcrab', 'lobster', 'tuna', 'octopus', 'turtle', 'manta', 'stingray', 'trevally', 'scorpion', 'mackerel', 'bonito'] },
   offshore: { name:'外海', icon:'🌊', need:['dive_suit'], top:20, sky:['#3f9fd0', '#05213a'], fog:'#145a85', far:26, coral:4, kelp:10, rocks:14, shells:0, chests:[], pearls:0, legendP:0, boat:true, desc:'從船上直接潛下去，看看這一帶現在有哪些魚特別多。', get fish(){ return offshoreDiveFish(); } },
+  harbor: { name:'港口海底', icon:'⚓', need:['dive_suit'], top:16, sky:['#4aa0c4', '#041a2c'], fog:'#1a6488', far:28, coral:6, kelp:70, rocks:24, shells:12, chests:[0.6], pearls:0, legendP:0.15, harbor:true, desc:'從港口碼頭的梯子直接下水：防波堤的消波塊、碼頭的木樁、海藻森林、沉在海底的舊漁船、掉下去的貨櫃和大錨，越往外海越深越暗。',
+    fish:['mackerel', 'moonbream', 'scorpion', 'grouper', 'octopus', 'ika', 'squid', 'stingray', 'barracuda', 'trevally', 'jelly', 'lobster', 'kingcrab', 'eel', 'bonito', 'turtle'] },
   cave:  { name:'海底洞穴', icon:'🕳️', need:['dive_suit', 'dive_tank4', 'dive_light'], top:18, sky:['#1a3550', '#02060c'], fog:'#12324c', far:22, coral:0, kelp:0, rocks:60, shells:4, chests:[0.8], pearls:7, legendP:0.55, cave:true, desc:'又暗又神祕的洞穴，有會發光的水晶和珍珠貝，住著深海的怪魚。要專業雙氧氣瓶和潛水燈。',
     fish:['angler', 'jelly', 'lantern', 'oarfish', 'giantsquid', 'octopus', 'eel', 'moonbream', 'ika', 'squid', 'goby', 'kingcrab'] },
 };
@@ -5830,6 +5843,33 @@ function buildDive(){
     M.add(new THREE.BoxGeometry(2.2, 0.1, 0.1), dark, sx + 1.4, sy + 4.4, sz + 1.3, 0.5, 0.2, 0.7, 1, 1, 1, 0.9);
     for (let k = 0; k < 4; k++) M.add(new THREE.TorusGeometry(0.22, 0.05, 6, 12), '#3a3a3a', sx - 0.9 + k * 0.1, sy + 0.9, sz - 2.4 + k * 1.4, 0, 0.5 + Math.PI / 2, 0.32, 1, 1, 1, 0.6);
     Dive.wreck = { x: sx, z: sz }; } } else Dive.wreck = { x: X, z: Z };
+  // ---- 港口海底（079）：消波塊、碼頭木樁、掉下去的貨櫃、大錨和鐵鍊、舊輪胎；越往外越深越暗 ----
+  if (S.harbor){
+    const tet = (() => { const parts = [], o = new THREE.Object3D(), dirs = [[0, 1, 0], [0.943, -0.333, 0], [-0.471, -0.333, 0.816], [-0.471, -0.333, -0.816]];
+      for (const d of dirs){ const c = new THREE.CylinderGeometry(0.22, 0.42, 1.25, 8); c.translate(0, 0.62, 0); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...d).normalize()); o.updateMatrix(); c.applyMatrix4(o.matrix); parts.push(c); }
+      const g = mergeGeometries(parts.map(p => p.toNonIndexed ? p.toNonIndexed() : p)); parts.forEach(p => p.dispose()); return g; })();
+    for (let i = 0; i < 26; i++){ const a = -2.4 + (i / 25) * 1.6 + (rnd() - 0.5) * 0.1, r = R * (0.62 + rnd() * 0.22) - (i % 3) * 1.3, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, y = diveBed(x, z) + 0.45 + (i % 3 === 2 ? 0.9 : 0), sc = 1.0 + rnd() * 0.35;
+      M.add(tet.clone(), ['#a3a39b', '#8f908a', '#b1aea3'][i % 3], x, y, z, rnd() * 3, rnd() * 3, rnd() * 3, sc, sc, sc, 0.95); Dive.rocks.push([x, z, 1.1 * sc, y + 1.0 * sc]);
+      if (i % 4 === 0) M.add(new THREE.SphereGeometry(0.5, 6, 4), '#4e7a52', x + 0.2, y + 0.4, z, 0, 0, 0, 1.2, 0.25, 1.2, 1); }   /* 消波塊上長的海藻 */
+    tet.dispose();
+    for (let i = 0; i < 9; i++){ const x = X - 20 + i * 2.6, z = Z + 9 + (i % 2) * 2.2, y = diveBed(x, z), h = DIVE.top + 1.5 - (y - DIVE.y);   // 碼頭的木樁（一直通到水面）
+      M.add(new THREE.CylinderGeometry(0.32, 0.36, h, 10), '#4a3626', x, y + h / 2, z, 0, 0, 0, 1, 1, 1, 0.95);
+      for (let k = 0; k < 4; k++) M.add(new THREE.SphereGeometry(0.12, 5, 4), ['#e8e2d0', '#2f3b44'][k % 2], x + Math.cos(k * 1.7) * 0.33, y + 0.4 + k * 0.5, z + Math.sin(k * 1.7) * 0.33, 0, 0, 0, 1, 0.7, 1, 0.8);   /* 藤壺、淡菜 */
+      Dive.rocks.push([x, z, 0.5, y + h]); }
+    { const cx = X - 12, cz = Z - 5, cy = diveBed(cx, cz);   // 掉下去的貨櫃（斜斜插在沙裡）
+      M.add(new THREE.BoxGeometry(2.4, 2.5, 6), '#a8442e', cx, cy + 0.9, cz, 0.08, 0.6, 0.18, 1, 1, 1, 0.8);
+      for (let k = -2; k <= 2; k++) M.add(new THREE.BoxGeometry(2.46, 2.4, 0.08), '#8a3624', cx + Math.sin(0.6) * k * 1.15, cy + 0.9 + k * 0.1, cz + Math.cos(0.6) * k * 1.15, 0.08, 0.6, 0.18, 1, 1, 1, 0.8);
+      M.add(new THREE.BoxGeometry(2.5, 0.25, 6.1), '#6f7a4a', cx, cy + 2.1, cz, 0.08, 0.6, 0.18, 1, 1, 1, 1); Dive.rocks.push([cx, cz, 3.2, cy + 2.2]); }
+    { const ax = X + 5, az = Z + 5, ay = diveBed(ax, az);   // 大錨和鐵鍊
+      M.add(new THREE.CylinderGeometry(0.12, 0.12, 2.6, 8), '#3d4248', ax, ay + 1.1, az, 0, 0, 0.25, 1, 1, 1, 0.6);
+      M.add(new THREE.BoxGeometry(1.6, 0.16, 0.16), '#3d4248', ax + 0.3, ay + 2.15, az, 0, 0, 0.25, 1, 1, 1, 0.6);
+      M.add(new THREE.TorusGeometry(0.85, 0.1, 6, 14, Math.PI), '#3d4248', ax - 0.22, ay + 0.2, az, Math.PI, 0, 0.25, 1, 1, 1, 0.6);
+      M.add(new THREE.TorusGeometry(0.22, 0.05, 6, 10), '#3d4248', ax + 0.55, ay + 2.45, az, 0, 0, 0, 1, 1, 1, 0.6);
+      for (let k = 0; k < 22; k++){ const u = k / 21, x = ax + 0.6 + u * 7, z = az - u * 3, y = diveBed(x, z) + 0.06 + Math.max(0, u - 0.6) * 4 * u; M.add(new THREE.TorusGeometry(0.16, 0.045, 5, 8), '#5a4a3c', x, y, z, (k % 2) * Math.PI / 2, 0.4, 0, 1, 1, 1, 0.7); }
+      Dive.rocks.push([ax, az, 0.9, ay + 2.4]); }
+    for (let i = 0; i < 7; i++){ const [x, y, z] = onBed(); M.add(new THREE.TorusGeometry(0.38, 0.15, 8, 14), '#26282c', x, y + 0.12, z, Math.PI / 2 + (rnd() - 0.5) * 0.6, rnd() * 3, 0, 1, 1, 1, 0.95); }   // 舊輪胎
+    for (let i = 0; i < 5; i++){ const [x, y, z] = onBed(); M.add(new THREE.BoxGeometry(0.5, 0.5, 0.5), '#6b4a35', x, y + 0.25, z, 0, rnd() * 3, 0.1, 1, 1, 1, 0.9); }   // 木箱
+  }
   M.build(g);
   // 海帶（InstancedMesh，會跟著水流晃）
   { const kg = new THREE.PlaneGeometry(0.34, 3.2, 1, 6); kg.translate(0, 1.6, 0); const p = kg.attributes.position; for (let i = 0; i < p.count; i++){ const yy = p.getY(i); p.setX(i, p.getX(i) * (1 - yy / 4) + Math.sin(yy * 1.6) * 0.12); } kg.computeVertexNormals();
@@ -5957,7 +5997,7 @@ async function grabLoot(l){
   if (l.kind === 'shell'){ l.m.visible = false; } else if (l.kind === 'pearl'){ l.pearl.visible = false; } else { l.open = now(); }
   if (Cloud.on){ const before = rec.coins, row = await cloudCall('dive_loot', { p_kind: l.kind, p_site: Dive.site || 'reef' }); if (!row) return; const got = (Number(row.coins) || 0) - before;
     flash(got > 0 ? `${LOOT_TXT[l.kind]} 🪙${got}！` : LOOT_FULL[l.kind], 1.6); return; }
-  const got = l.kind === 'chest' ? (Dive.site === 'wreck' ? 300 : Dive.site === 'cave' ? 400 : 150) + Math.floor(Math.random() * 200) : l.kind === 'pearl' ? 80 + Math.floor(Math.random() * 81) : 5 + Math.floor(Math.random() * 16); addCoins(got); flash(`${LOOT_TXT[l.kind]} 🪙${got}！`, 1.6);
+  const got = l.kind === 'chest' ? (Dive.site === 'wreck' ? 300 : Dive.site === 'cave' ? 400 : Dive.site === 'harbor' ? 200 : 150) + Math.floor(Math.random() * 200) : l.kind === 'pearl' ? 80 + Math.floor(Math.random() * 81) : 5 + Math.floor(Math.random() * 16); addCoins(got); flash(`${LOOT_TXT[l.kind]} 🪙${got}！`, 1.6);
 }
 function updateDiveSwim(dt, ix, iz, L){
   if (Dive.ending) return;
@@ -9116,6 +9156,10 @@ function renderTab(){
       '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情共 54 件，可以先試穿看看，大家都看得到你的打扮。',
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
     ]);
+    sec('⚓ 港口海底潛水', [
+      '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
+      '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
+    ]);
     sec('🏛️ 海洋博物館', [
       '博物館在廣場和海邊商店中間，走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
       '每一格會刻上「首位捐贈者」的名字、日期和那條魚的重量；之後別人捐更重的，另外記「最大展示」。同一種魚自己只能捐一次。箱網、儲物箱的魚不能捐，蔚博士發現的新品種也不收。',
@@ -9527,7 +9571,7 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
   flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
 
 
-addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); }
+addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 camera.position.set(4, 5, 18);
