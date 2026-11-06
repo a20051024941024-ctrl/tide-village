@@ -2880,7 +2880,7 @@ class Fisher {
         if (k >= 1){ this.flying = null; this.bobState = 'water'; ripple(f.to.x, f.to.z); if (f.done) f.done(); }
       } else {
         const wy = waterY(this.bobPos.x, this.bobPos.z, t);
-        const jt = this === me && F.phase === 'bite' ? (this.bobJit || 0) : 0; this.bob.position.set(this.bobPos.x + Math.sin(t * 37) * jt, wy - this.dip * 0.16 + Math.sin(t*3)*0.01, this.bobPos.z + Math.cos(t * 41) * jt);
+        const jt = this === me && F.phase === 'bite' ? (this.bobJit || 0) : 0; this.bob.position.set(this.bobPos.x + Math.sin(t * 37) * jt, wy - this.dip * 0.16 + (this.dip < 0 ? this.dip * 0.06 : 0) + Math.sin(t*3)*0.01, this.bobPos.z + Math.cos(t * 41) * jt);
       }
       // line
       const tip = new THREE.Vector3(); a.tip.getWorldPosition(tip);
@@ -3491,6 +3491,7 @@ function actionDown(){
       if (F.lastNib && t - F.lastNib < 0.6){ flash('太早了！蝦子被嚇跑了 🦐', 1.3); SFX.fail(); F.waitUntil = Math.max(F.waitUntil, t) + rand(2.5, 4.5); F.nibbleAt = t + 1.5; F.lastNib = 0; me.bend = 0.5; F.spooked = (F.spooked || 0) + 1; return; }
       cancelFishing('收竿了'); return;
     }
+    if (F.spot && F.spot.id !== 'shrimp' && F.probe && F.lastNib && now() - F.lastNib < 0.7){ flash('太早了！那只是在試探，魚被嚇跑了 💨', 1.6); SFX.fail(); cancelFishing(); return; }   /* v249 試探的時候按 → 嚇跑 */
     if (Rig.rig === 'lure' && me.bobState === 'water'){
       // 路亞抽竿：假餌往回跳一下，魚比較快咬；拉到太近就收竿
       const dx = me.pos.x - me.bobPos.x, dz = me.pos.z - me.bobPos.z, d = Math.hypot(dx, dz);
@@ -3513,11 +3514,16 @@ function actionUp(){
   else if (F.phase === 'reeling') F.hold = false;
 }
 // 等魚的時間跟現實一樣有快有慢：大多 3～8 秒，偶爾一丟下去就咬，偶爾要等很久；清晨和黃昏魚口比較好（漲退潮、天氣在 envBonus 裡）
+/* v249 每一類魚咬餌前的試探（秒數是相對知道是什麼魚的那一刻；dip 正的是往下點、負的是往上頂） */
+const PROBES = { many:{ taps:[0.2, 0.55, 0.85, 1.2, 1.5], len:2.0, dip:0.9, hold:0.16 }, heavy:{ taps:[0.6], len:1.6, dip:1.6, hold:0.32 }, grab:{ taps:[], len:0.5, dip:0 },
+  lift:{ taps:[0.4, 1.2], len:2.0, dip:-1.1, hold:0.55 }, cunning:{ taps:[0.3], len:2.9, dip:0.8, hold:0.2 } };
+const CUNNING = new Set(['mahi', 'barracuda', 'trevally', 'yellowtail', 'hairtail', 'squid', 'ika', 'cuttle']);
+function probeKind(f){ const b = f.of || f.id; if (CUNNING.has(b)) return 'cunning'; const k = sigClass(f); return k === 'school' ? 'many' : k === 'shadow' ? 'heavy' : k === 'pred' ? 'grab' : 'lift'; }
 doCast.told = {};
 function biteWait(c){
-  const r = Math.random(); let w = r < 0.14 ? rand(0.9, 2.2) : r < 0.74 ? rand(2.5, 7.5) : r < 0.94 ? rand(7.5, 14) : rand(14, 24);
+  const r = Math.random(); let w = r < 0.14 ? rand(0.9, 2.2) : r < 0.74 ? rand(2.5, 5.5) : rand(5.5, 7.2);   /* v249 第 2 段：最多等 8 秒左右，不要呆看 */
   const per = periodOf(gameHour()); w *= per === 'twilight' ? 0.75 : per === 'day' ? 1.08 : 1;
-  return Math.max(0.8, w - c * 0.8);
+  return Math.min(7.6, Math.max(0.8, w - c * 0.8));
 }
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
@@ -3538,7 +3544,7 @@ function doCast(){
   F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`💨 砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了！要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`🎯 落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
   me.flying = { from, to, t:0, delay:0.17, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } }; me.windup = 0; me.castT = 0;
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
-  F.roll = null; F.rollWait = 0; F.pre = null;
+  F.roll = null; F.rollWait = 0; F.pre = null; F.probe = null; F.lastNib = 0;
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
   if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';
     cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat, p_bx: +to.x.toFixed(2), p_bz: +to.z.toFixed(2), p_sl: F.castSlot || signSlot() })
@@ -3666,8 +3672,13 @@ function updateFishing(dt, t){
       if (t > F.nibbleAt && t < F.waitUntil - 0.9){ F.nibK = rand(0.25, 0.55); F.lastNib = t; ripple(me.bobPos.x, me.bobPos.z); SFX.tick(); F.nibbleAt = t + 0.45 + Math.random() * 1.3; }
       me.dip = Math.max(me.dip * Math.pow(0.01, dt), F.nibK && t - F.lastNib < 0.25 ? F.nibK : 0); if (t - F.lastNib > 0.25) F.nibK = 0;
     } else {
-    if (t > F.nibbleAt && t < F.waitUntil - 0.6){ me.dip = 0.35; F.lastNib = t; ripple(me.bobPos.x, me.bobPos.z); F.nibbleAt = t + 0.9 + Math.random()*1.6; }
-    me.dip *= Math.pow(0.02, dt); }
+      /* v249 第 2 段：試探。知道是什麼魚以後（伺服器在咬之前大約 2 秒才說），浮標照那種魚的習慣動：
+         小魚群點很多下才咬、中大型魚重重點一下、掠食魚不試探直接拖走、底棲魚會把浮標頂起來、鬼頭刀這類狡猾的點一下停很久。試探的時候按會把魚嚇跑 */
+      const kf = (F.roll && F.roll.f) || (!Cloud.on ? F.pre : null);
+      if (kf && !F.probe && (Cloud.on || t > F.waitUntil - PROBES[probeKind(kf)].len)){ const pk = probeKind(kf), now0 = t, P = PROBES[pk]; F.probe = { k:pk, taps:P.taps.map(o => now0 + o), i:0 }; F.waitUntil = Math.max(F.waitUntil, now0 + P.len); }
+      const PR = F.probe;
+      if (PR && PR.i < PR.taps.length && t >= PR.taps[PR.i]){ PR.i++; F.lastNib = t; const P = PROBES[PR.k]; F.nibK = P.dip; ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} if (P.dip > 0.8) try { navigator.vibrate && navigator.vibrate(25); } catch(e){} }
+      const tgt = PR && F.lastNib && t - F.lastNib < (PROBES[PR.k].hold || 0.2) ? F.nibK : 0; me.dip += (tgt - me.dip) * Math.min(1, dt * 16); }
     fishHook();
     if (t > F.waitUntil && Cloud.on && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); } }
     else if (t > F.waitUntil && Cloud.on && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); }
@@ -3677,14 +3688,17 @@ function updateFishing(dt, t){
       else { F.fish = F.pre || pickFish(F.spot, F.castCharge); const wild = breedSeason() && WILD_BREED.has(F.fish.id); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), wild ? 2.4 : 1.7)).toFixed(2); F.sex = Math.random() < 0.5 ? 'M' : 'F'; F.brood = F.sex === 'F' && wild && BROOD.has(F.fish.id) && Math.random() < 0.3; F.gp = isGuppy(F.fish.id) ? gpyWild() : null; }
       F.phase = 'bite'; F.biteAt = t; F.drift = 0;
       if (F.spot && F.spot.id === 'shrimp'){ F.biteUntil = t + (F.fish.rarity === '傳說' ? 1.5 : F.fish.rarity === '稀有' ? 1.7 : 1.9) + curSrod().win; ripple(me.bobPos.x, me.bobPos.z); }   // 釣蝦場：沒有「!」，浮標會慢慢沉下去
-      else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say('!', 'alert', 1); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); }
+      else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say('!', 'alert', 1); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true);
+        FX.emit(me.bobPos.x, waterY(me.bobPos.x, me.bobPos.z, t) + 0.1, me.bobPos.z, 14, '#e8f7ff', 0.9, 2.2, 0.7); try { navigator.vibrate && navigator.vibrate([70, 40, 110]); } catch(e){}   /* v249 真的咬了：浮標猛沉、水花、手機震動 */
+        F.drift = probeKind(F.fish) === 'grab' ? (Math.random() < 0.5 ? -1 : 1) : 0; }
       pushPresence(true);
     }
   }
   if (F.phase === 'bite'){
     if (F.spot && F.spot.id === 'shrimp'){ const k = clamp((t - F.biteAt) / 0.5, 0, 1); me.dip = 0.3 + k * 1.1 + Math.sin(t * 24) * 0.06 * k; me.bobJit = 0.04 * k; if (!F.drift) F.drift = Math.random() < 0.5 ? -1 : 1; const nx = me.bobPos.x + F.drift * 0.25 * dt; if (inShrimpPool(nx, me.bobPos.z)) me.bobPos.x = nx; }   // 慢慢沉到底、一直抖、往旁邊跑   // 慢慢沉到底、一直抖
-    else me.dip = 0.9 + Math.sin(t*30)*0.1;
-    if (t > F.biteUntil){ me.dip = 0; F.phase = 'waiting'; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); SFX.fail(); pushPresence(true); }
+    else { const k = clamp((t - F.biteAt) / 0.12, 0, 1); me.dip = k * 3.2 + Math.sin(t * 30) * 0.15; me.bobJit = 0.03;
+      if (F.drift && F.spot && F.spot.dir){ const L = Math.hypot(F.spot.dir.x, F.spot.dir.y) || 1, sx = -F.spot.dir.y / L * F.drift, sz = F.spot.dir.x / L * F.drift, nx = me.bobPos.x + sx * 1.6 * dt, nz = me.bobPos.z + sz * 1.6 * dt; if (waterAt(nx, nz)){ me.bobPos.x = nx; me.bobPos.z = nz; } } }   /* 掠食魚一口咬住往旁邊拖 */
+    if (t > F.biteUntil){ me.dip = 0; me.bobJit = 0; F.phase = 'waiting'; F.probe = null; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); SFX.fail(); pushPresence(true); }
   }
   if (F.phase === 'reeling'){
     // 像一般釣魚遊戲：魚有體力，會往左右衝（往反方向拉最有效），稀有的魚會跳出水面（跳的時候要放開）
@@ -9305,7 +9319,7 @@ function updatePeers(dt, t){
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
     { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on && !p.sub; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
-    f.dip = p.ph === 'bite' ? 0.9 + Math.sin(t*30)*0.1 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
+    f.dip = p.ph === 'bite' ? 3 + Math.sin(t*30)*0.15 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
     { const rf = p.ph === 'reel' && f.av.g.visible && camera.position.distanceTo(f.pos) < 35 ? p.reelFish : null;   /* 別人上鉤的魚在浮標那裡掙扎、偶爾跳出水面 */
       if (rf && (!f.hookM || f.hookM.userData.id !== rf.id)){ if (f.hookM) scene.remove(f.hookM); let m = null; try { m = fishModel(rf, clamp(0.45 + Math.log(1 + (rf.min + rf.max) / 2) * 0.25, 0.45, 1.3)); } catch(e){} if (m){ m.userData.id = rf.id; scene.add(m); } f.hookM = m; f.hookJ = 0; }
@@ -10611,6 +10625,7 @@ function renderTab(){
     sec('🎣 釣魚', [
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
+      '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
