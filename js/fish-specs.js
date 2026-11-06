@@ -647,6 +647,12 @@ Object.assign(SPECS, {
   rattail_albino: VAR('rattail', { Top:'#e8e0d8', Mid:'#efe8e2', Bottom:'#f8f4f0', Spots:'#d8ccc4', Fins:'#e0d6cc' }, {}),
   blackthroat_gold: VAR('blackthroat', { Top:'#e0a020', Mid:'#f0c850', Bottom:'#fbeab0', Fins:'#e8b030' }, {}, { glow:true }),
   blobfish_albino: VAR('blobfish', { Top:'#f4f0ee', Mid:'#f8f4f2', Bottom:'#fcfaf8', Spots:'#e8e0dc', Fins:'#f0eae6' }, {}),
+  // 黑淵裂縫（v237）
+  deeplantern: VAR('lantern', { Top:'#1e3550', Mid:'#5a7a98', Bottom:'#b8c8d4', Glow:'#5ce0ff' }, {}),
+  deeplantern_albino: VAR('lantern', { Top:'#e4ecf2', Mid:'#eef2f6', Bottom:'#f8fafc', Glow:'#5ce0ff', Fins:'#dce4ea' }, {}),
+  vampsquid: VAR('squid', { Top:'#5a1424', Bottom:'#8a2a3a', Spots:'#2a0810', Fins:'#6a1a2a', Arms:'#4a0e1c', Eye:'#e83a3a', EyeW:'#f0c8c8' }, { mantle:0.4, R:0.11, armLen:0.24, tentLen:0.24 }, { glow:true }),
+  vampsquid_albino: VAR('squid', { Top:'#f2e4e8', Bottom:'#f8eef0', Spots:'#e0c8d0', Fins:'#f0dee4', Arms:'#ecd8de', Eye:'#d8202a', EyeW:'#f8e8e8' }, { mantle:0.4, R:0.11, armLen:0.24, tentLen:0.24 }, { glow:true }),
+  angler_albino: VAR('angler', { Top:'#eeeae6', Bottom:'#f6f2ee', Fins:'#e4ded8', Eye:'#c02a30', EyeW:'#f0e8e8' }, {}),
   fangtooth_gold: VAR('fangtooth', { Top:'#a07820', Mid:'#c89830', Bottom:'#e8c860', Spots:'#806010', Fins:'#a07820' }, {}, { glow:true }),
   goblinshark_albino: VAR('goblinshark', { Top:'#f4ecec', Mid:'#f8f0f0', Bottom:'#fcf8f8', Accent:'#e8d8d8', Gill:'#d8c0c0', Fins:'#f0e4e4', Eye:'#c0303a' }, {}, { glow:true }),
   sixgill_albino: VAR('sixgill', { Top:'#ece8e0', Mid:'#f0ece6', Bottom:'#f8f6f2', Gill:'#d0c8c0', Eye:'#c0303a' }, {}, { glow:true }),

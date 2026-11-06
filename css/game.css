@@ -975,3 +975,38 @@ body.ui2 #brand:not(.open) #online{order:2;flex:0 1 auto;flex-wrap:nowrap;min-wi
 #btools #tnyPill{position:static;display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;border:0;background:#fff3d6;color:#6a4a00;font-weight:800;font-size:12px;line-height:1.3;white-space:nowrap;cursor:pointer;z-index:auto}
 #btools #tnyPill.live{background:linear-gradient(135deg,#ffd36a,#ff9f43);color:#4a2a00}
 #btools #tnyPill[hidden]{display:none}
+/* v237 潛水艇 */
+body.subbing #actWrap, body.subbing #menu, body.subbing #chat, body.subbing #spotCard, body.subbing #labels, body.subbing #fishHud, body.subbing #ticker{display:none!important}
+#subHud{display:none}
+body.subbing #subHud{display:block}
+#subHud .sh-top{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt, 8px) + 74px);display:flex;gap:14px;align-items:center;padding:6px 14px;border-radius:999px;font-weight:800;font-size:14px;color:#18334a;z-index:8;white-space:nowrap}
+#subHud .sh-top b{font-variant-numeric:tabular-nums;font-size:17px}
+#subHud .sh-lim{font-size:11px;color:#5a6a7a;font-weight:700}
+#subHud.deep .sh-depth{color:#d8262a;animation:shBlink 1s steps(2) infinite}
+@keyframes shBlink{50%{opacity:.35}}
+#subHud .sh-bat.low{color:#d8262a}
+#subHud .sh-warn{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt, 8px) + 118px);background:rgba(200,30,40,.9);color:#fff;padding:8px 14px;border-radius:12px;font-weight:800;font-size:13px;z-index:8;max-width:86vw;text-align:center;animation:shBlink .8s steps(2) infinite}
+#subHud .sh-msg{position:fixed;left:0;right:0;top:40%;text-align:center;color:#cfe6ff;font-size:26px;letter-spacing:4px;font-weight:600;text-shadow:0 0 18px rgba(80,160,255,.6);opacity:0;z-index:9;pointer-events:none}
+#subHud .sh-msg.show{animation:shMsg 3.2s ease forwards}
+@keyframes shMsg{0%{opacity:0}30%{opacity:1}70%{opacity:1}100%{opacity:0}}
+#subHud .sh-btns{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:flex-end;z-index:8}
+#subHud .sh-btns button{width:64px;height:64px;border-radius:50%;border:0;font-size:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;color:#18334a;font-weight:800}
+#subHud .sh-btns button small{font-size:11px;margin-top:3px}
+#subHud .sh-btns button.down{transform:scale(.94);filter:brightness(.9)}
+#subHud .sh-btns .sh-act{width:auto;height:64px;border-radius:32px;padding:0 18px;font-size:16px;background:linear-gradient(180deg,#ffe28a,#ffc23a)}
+#subHud .sh-fish{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));width:min(360px,88vw);padding:12px 14px;border-radius:16px;z-index:9;display:flex;flex-direction:column;gap:8px}
+#subHud .sh-fish .sf-row{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700}
+#subHud .sh-fish .sf-bar{flex:1;height:12px;border-radius:6px;background:#dde8ef;position:relative;overflow:hidden}
+#subHud .sh-fish .sf-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+#subHud .sh-fish .sf-ten{background:linear-gradient(90deg,#4cc38a,#ffc23a 70%,#e8473a)}
+#subHud .sh-fish .sf-pro{background:#2a8fd8}
+#subHud .sh-fish .sf-bar em{position:absolute;left:82%;top:0;bottom:0;width:2px;background:#e8473a}
+#subHud .sh-fish.danger{box-shadow:0 0 0 3px #e8473a}
+#subHud .sf-reel{height:52px;border:0;border-radius:14px;background:linear-gradient(180deg,#5fb6e3,#2a8fd8);color:#fff;font-size:17px;font-weight:800;touch-action:none}
+#subHud .sf-reel.down{filter:brightness(.88)}
+#subPanel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:84vh;overflow:auto;padding:16px 18px;border-radius:18px;z-index:30}
+#subPanel h3{margin:0 0 8px} #subPanel h4{margin:14px 0 6px}
+#subPanel .spx{position:absolute;right:10px;top:8px;border:0;background:none;font-size:18px;cursor:pointer}
+#subPanel .sp-up{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #e3edf3}
+#subPanel .sp-up small{display:block;color:#5a6a7a;font-size:12px;margin-top:2px}
+#subPanel .sp-go{width:100%;margin-top:6px;height:46px;font-size:17px}
