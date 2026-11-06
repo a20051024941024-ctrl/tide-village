@@ -333,6 +333,7 @@ async function deepQSync(){ if (!Cloud.on || !Cloud.sb) return; DeepQ.at = Date.
     const fresh = base.filter(id => !seen.includes(id)); if (fresh.length && seen.length) ticker('🔬 蔚博士在黑淵裂縫發現了新的深海生物！開潛水艇下去找找看');
     try { localStorage.setItem('tide.deepSeen', JSON.stringify(base)); } catch(e){} } catch(e){} }
 setInterval(() => { if (Cloud.on && Cloud.sb && (!DeepQ.at || Date.now() - DeepQ.at > 30 * 60000)) deepQSync(); }, 5000);
+setInterval(() => { try { if (Cloud.on && Cloud.sb && document.visibilityState === 'visible' && (!Home.at || Date.now() - Home.at > 90000)) loadHome(); } catch(e){} }, 15000);   /* v245 每一分半鐘看一下有沒有人邀請你搬家（不在同一個大廳也收得到） */
 
 const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector2(x, z).normalize();
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
@@ -623,6 +624,10 @@ function fishModel(f, scale){
 
 /* ================= QUALITY（畫質分級：低 / 中 / 高） ================= */
 // 中 = 原本手機的設定，高 = 原本電腦的設定；低是給較舊的 Android 手機
+/* v245 省電：手機預設每秒最多 45 張，閒置 30 秒（沒碰畫面、沒在釣魚、沒開潛水艇）降到 30 張 */
+var Power = { cap: (() => { try { const v = localStorage.getItem('tide.fpsCap'); if (v !== null) return +JSON.parse(v) || 0; } catch(e){} return (matchMedia && matchMedia('(pointer:coarse)').matches) ? 45 : 0; })(), last:0, input:0,
+  want(){ let c = this.cap; try { const busy = (typeof F !== 'undefined' && F.phase && F.phase !== 'idle') || (typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) || Dive.on; if (!busy && performance.now() - this.input > 30000) c = c ? Math.min(c, 30) : 30; } catch(e){} return c; } };
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { Power.input = performance.now(); }, { passive:true, capture:true });
 const TIERS = {
   low:  { label:'低', dpr:1.0, shadow:0,    tufts:0.25, waterEvery:2, aa:false },
   mid:  { label:'中', dpr:1.5, shadow:1024, tufts:0.5,  waterEvery:1, aa:false },
@@ -4514,11 +4519,19 @@ async function loadHome(){
 }
 function adoptHome(d){
   Home.owner = d.owner || null; Home.people = Array.isArray(d.people) ? d.people : []; Home.invites = Array.isArray(d.invites) ? d.invites : []; Home.sent = Array.isArray(d.sent) ? d.sent : []; Home.cap = d.cap || 6; Home.at = Date.now();
-  for (const iv of Home.invites){ const k = iv.owner + iv.at; if (!Home.told[k]){ Home.told[k] = 1; ticker(`🏠 <b>${esc(iv.name || '朋友')}</b> 邀請你搬進他家！到「小島」分頁的「🏠 我的家」回覆`); } }
+  for (const iv of Home.invites){ const k = iv.owner + iv.at; if (!Home.told[k]){ Home.told[k] = 1; ticker(`🏠 <b>${esc(iv.name || '朋友')}</b> 邀請你搬進他家！`); homeInviteCard(iv); } }
   for (const p of peers.values()) p.fisher.setName(peerName(p));
   $$('[data-tab="island"]').forEach(b => b.classList.toggle('hasdot', Home.invites.length > 0));
   if (!$('#sheet').hidden && curTab === 'island') renderTab(); if (onIsle) renderIsleBar();
 }
+/* v245 有人邀請你搬進他家：畫面中間跳一張卡片（有聲音），可以直接回覆，不用自己去「小島」分頁找 */
+function homeInviteCard(iv){ try { let c = $('#invCard'); if (c) c.remove(); c = el('div', 'panel'); c.id = 'invCard';
+  c.innerHTML = `<div class="ic-h">🏠 ${esc(iv.name || '朋友')} 邀請你搬進他家！</div><div class="ic-s">搬過去以後你的小島還在，只是「回家」會回到他家。</div>`;
+  const a = el('div', 'ic-a'), y = el('button', 'tbtn', '搬進去'), v = el('button', 'tbtn ghost', '先去看看'), n = el('button', 'tbtn ghost', '不要'), x = el('button', 'tbtn ghost', '晚點再說');
+  y.addEventListener('click', () => { c.remove(); homeRpc('answer_home', { p_owner: iv.owner, p_ok: true }).then(d => d && (SFX.catch(), flash(`🏠 搬進 ${iv.name || '朋友'} 的家了！`, 1.8))); });
+  n.addEventListener('click', () => { c.remove(); homeRpc('answer_home', { p_owner: iv.owner, p_ok: false }); });
+  v.addEventListener('click', () => { c.remove(); try { visitIsle(iv.owner); } catch(e){ openSheet('island'); } });
+  x.addEventListener('click', () => c.remove()); a.append(y, v, n, x); c.appendChild(a); document.body.appendChild(c); SFX.catch(); } catch(e){} }
 async function homeRpc(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能用家的功能'); return null; } try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; adoptHome(data); return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
 function cloudErrMsg(e){ const m = String(e && (e.message || e) || ''); return /[一-龥]/.test(m) ? m.replace(/^.*?([一-龥])/, '$1') : '暫時連不上雲端'; }
 async function goHome(){
@@ -4533,9 +4546,18 @@ async function homeOp(op, p){
   const owner = onIsle ? onIsle.owner : myIdOrMe(), mine = owner === myIdOrMe();
   if (!Cloud.on || !Cloud.sb){ if (!mine){ toast('要連上雲端才能幫別人蓋家'); return false; } const err = localHomeOp(op, p); if (err){ toast(err); return false; } afterHomeOp(rec.island); return true; }
   try { const { data, error } = await Cloud.sb.rpc('home_edit', { p_owner: owner, p_op: op, p }); if (error) throw error;
-    const L = cleanIsland(data.island); if (mine) rec.island = L; if (onIsle && onIsle.owner === owner) onIsle.layout = L; rec.coins = Number(data.coins) || 0; saveRecLocal(); renderCoins(); afterHomeOp(L); return true; }
+    const L = cleanIsland(data.island); if (mine) rec.island = L; if (onIsle && onIsle.owner === owner) onIsle.layout = L; rec.coins = Number(data.coins) || 0; saveRecLocal(); renderCoins(); afterHomeOp(L);
+    try { if (room && room.connected()) room.emit('isleup', { owner }).catch(() => {}); } catch(e){}   /* v245 告訴同一座島上的人：島上的東西改了，馬上重新讀 */
+    return true; }
   catch(e){ toast(cloudErrMsg(e)); return false; }
 }
+/* v245 別人在同一座島上蓋、拆、搬東西：重新讀一次島（有人通知就馬上讀；在島上時每 20 秒也會自己讀一次，不在同一個大廳也看得到） */
+async function isleRefresh(owner){ if (!Cloud.on || !Cloud.sb || !onIsle || onIsle.owner !== owner || Isle_refreshing) return; Isle_refreshing = true;
+  try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: owner }); if (data && data.island && onIsle && onIsle.owner === owner){ const L = cleanIsland(data.island);
+      if (JSON.stringify(L) !== JSON.stringify(onIsle.layout || null) && !Build.moveId){ if (owner === myIdOrMe()) rec.island = L; afterHomeOp(L); } } } catch(e){}
+  Isle_refreshing = false; }
+var Isle_refreshing = false;
+setInterval(() => { try { if (onIsle && document.visibilityState === 'visible' && !Build.moveId) isleRefresh(onIsle.owner); } catch(e){} }, 20000);
 function afterHomeOp(L){
   if (!onIsle) return; onIsle.layout = L; const keepHouse = House.on && House.it ? House.it.id : null;
   buildIsle(L, onIsle.name);
@@ -4905,7 +4927,7 @@ function renderHomeTab(body){
     if (people.length >= Home.cap) body.appendChild(el('div', 'empty', '家裡已經住滿了。'));
     else if (!fl.length) body.appendChild(el('div', 'empty', '要先在「玩家」分頁互相加好友，才能邀請他搬進來。'));
     else { const u2 = el('ul', 'shoplist'); for (const f of fl){ const sent = Home.sent.includes(f.id), li = el('li'); li.appendChild(el('span', 'dishic', '🙂')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name || '釣客')); d.appendChild(el('div', 'sub2', sent ? '已經寄出邀請，等他回覆' : '互相加好友')); li.appendChild(d);
-        const a = el('div', 'tacts'), b = el('button', 'tbtn' + (sent ? ' ghost' : ''), sent ? '收回' : '邀請'); b.addEventListener('click', () => sent ? homeRpc('kick_home', { p_member: f.id }) : homeRpc('invite_home', { p_member: f.id }).then(d => d && toast(`📨 邀請寄給 ${esc(f.name || '朋友')} 了`))); a.appendChild(b); li.appendChild(a); u2.appendChild(li); }
+        const a = el('div', 'tacts'), b = el('button', 'tbtn' + (sent ? ' ghost' : ''), sent ? '收回' : '邀請'); b.addEventListener('click', () => sent ? homeRpc('kick_home', { p_member: f.id }) : homeRpc('invite_home', { p_member: f.id }).then(d => { if (!d) return; toast(`📨 邀請寄給 ${esc(f.name || '朋友')} 了`); try { if (room && room.connected()) room.emit('hinv', { to: f.id }).catch(() => {}); } catch(e){} })); a.appendChild(b); li.appendChild(a); u2.appendChild(li); }
       body.appendChild(u2); } }
 }
 // ---- 共同島嶼的權限、公共儲物箱（062_isle_roles.sql）----
@@ -6468,6 +6490,9 @@ function renderSettings(body){
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
+  { const f = field('🔋 省電（每秒最多畫幾張）'), seg = el('div', 'seg');
+    [[30, '30（最省電）'], [45, '45'], [60, '60'], [0, '不限']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Power.cap === k)); b.addEventListener('click', () => { Power.cap = k; LS.set('tide.fpsCap', k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '手機會發燙，多半是畫面每秒畫太多張。手機預設 45 張；超過 30 秒沒碰畫面（不在釣魚）會自動降到 30 張。')); }
   { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
   { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
 }
@@ -9272,6 +9297,8 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {});
     room.on('subq', onSubQ, () => {});
+    room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
+    room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
     room.on('sail', onSail, () => {}); room.on('sailjoin', onSailJoin, () => {});
     room.on('lvup', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), L = Math.floor(+msg.data.L); if (!p || !(L > 1 && L < 100)) return; /* 別人升級不用跑馬燈 */ void 0; }, () => {});
     room.on('gift', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; if (msg.data.to === Cloud.userId) setTimeout(loadFriends, 800); }, () => {});
@@ -10589,6 +10616,8 @@ function renderTab(){
     sec('🤿 潛水（進階玩法）', [
       '海底很大，到處游看看：海底邊緣有發光的石拱門「往○○」，游進去就直接到隔壁的海域，不用浮上去（要有那個海域需要的裝備）。海底有冒泡泡的「氣泡口」，游進泡泡柱裡會慢慢補氧氣。',
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
+      '👥 一起蓋島：同一座島上有人蓋、拆、搬東西，大家的畫面會馬上（最慢 20 秒）跟著更新，不用重新進遊戲。有人邀請你搬進他家時，畫面中間會跳出邀請卡片，可以直接回覆。',
+      '🔋 省電：手機預設每秒最多畫 45 張，超過 30 秒沒碰畫面會降到 30 張；手機還是很燙，可以在「⚙️ 設定」選 30 張或把畫質調低。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
       '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 32×32 的格子、48 種顏色上畫圖案（上衣有正面和背面；有直線、方框、填色、吸色、左右對稱、粗細筆、復原重做，也可以用自己的圖片），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
@@ -11511,6 +11540,7 @@ try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 try { buildSubDock(); } catch(e){ console.warn('subdock', e); }
 camera.position.set(4, 5, 18);
 function frame(){
+  { const cap = Power.want(); if (cap){ const ms = performance.now(); if (ms - Power.last < 1000 / cap - 3){ requestAnimationFrame(frame); return; } Power.last = ms; } }   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因） */
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */

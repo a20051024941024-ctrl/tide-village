@@ -1030,3 +1030,11 @@ body:has(#brand.open) #isleBar, body:has(#brand.open) #ferryBar, body:has(#brand
 #subHud .sh-vs{font-weight:700;color:#2a6f9a;min-width:0}
 #subHud .sh-vs:empty{display:none}
 body.subbing #top #brand.panel:not(.open) h1, body.subbing #top #brand.panel:not(.open) #online{color:#eaf4fa;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.7)}
+/* v245 左上角沒有白底以後，小島／渡船這條要再往下一點，不要蓋到「大廳・時間・天氣」那行 */
+@media (orientation:landscape) and (max-height:540px){ #ferryBar,#visitBar,#isleBar,#diveHud{top:calc(var(--gt) + 84px)} }
+/* v245 搬家邀請卡片 */
+#invCard{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:70;padding:16px 18px;width:min(420px,calc(100vw - 32px));text-align:center;animation:invPop .35s ease-out}
+#invCard .ic-h{font-size:18px;font-weight:800;color:#18334a}
+#invCard .ic-s{font-size:13px;color:#4a6478;margin:6px 0 12px}
+#invCard .ic-a{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+@keyframes invPop{from{transform:translate(-50%,-12px) scale(.92);opacity:0}to{transform:translate(-50%,0) scale(1);opacity:1}}
