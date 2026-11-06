@@ -1020,3 +1020,13 @@ body.subbing #subHud{display:block}
 #top #brand.panel:not(.open) .mark, #top #brand.panel:not(.open) h1, #top #brand.panel:not(.open) button, #top #brand.panel:not(.open) #coins, #top #brand.panel:not(.open) #lvChip, #top #brand.panel:not(.open) #tnyPill{pointer-events:auto}
 #top #brand.panel:not(.open) h1, #top #brand.panel:not(.open) #online{text-shadow:0 0 2px #fff,0 0 4px #fff,0 0 7px rgba(255,255,255,.95),0 1px 1px rgba(255,255,255,.9)}
 #top #brand.panel:not(.open) #online{font-weight:600}
+/* v244 上下潛水艇的過場：只留畫面 */
+body.subcine #top, body.subcine #chat, body.subcine #actWrap, body.subcine #joy, body.subcine #joyZone, body.subcine #spotCard, body.subcine #fishHud, body.subcine #chargeHud, body.subcine #hint, body.subcine #tankPanel, body.subcine #emoBar, body.subcine #emotes, body.subcine #subPanel{display:none!important}
+/* v244 點頭像打開的選單時，小島／渡船／拜訪／潛水的那一條先藏起來（不然疊在一起） */
+body:has(#brand.open) #isleBar, body:has(#brand.open) #ferryBar, body:has(#brand.open) #visitBar, body:has(#brand.open) #diveHud{visibility:hidden}
+.mktic{position:relative;flex:none;width:64px;height:40px;display:grid;place-items:center;font-size:26px}
+.mktic canvas{width:64px;height:40px;display:block}
+.mktic i{position:absolute;right:-4px;top:-6px;font-style:normal;font-size:14px}
+#subHud .sh-vs{font-weight:700;color:#2a6f9a;min-width:0}
+#subHud .sh-vs:empty{display:none}
+body.subbing #top #brand.panel:not(.open) h1, body.subbing #top #brand.panel:not(.open) #online{color:#eaf4fa;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.7)}

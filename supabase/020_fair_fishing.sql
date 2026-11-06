@@ -59,8 +59,8 @@ end $$;
 -- 抽一條魚（拋竿時呼叫）
 -- 藍鯨浮上來的時間（228，230 改成 90 秒）：每 20 分鐘一輪，這一輪從第 off 秒開始的 90 秒；off 用固定公式算，遊戲畫面（bwWin）也是同一個公式
 create or replace function public._bw_up() returns boolean language sql stable as $$
-  select (s - c * 1200 - ((c * 2654435761) % 4294967296) % 1020) between 0 and 89
-  from (select floor(extract(epoch from now()))::bigint as s, floor(extract(epoch from now()) / 1200)::bigint as c) x $$;
+  select (s - c * 3600 - ((c * 2654435761) % 4294967296) % 3420) between 0 and 89   -- v244：每小時一次（原本每 20 分鐘，太常出現）
+  from (select floor(extract(epoch from now()))::bigint as s, floor(extract(epoch from now()) / 3600)::bigint as c) x $$;
 
 create or replace function public.roll_fish(p_spot text, p_charge numeric, p_x numeric, p_z numeric, p_rig text, p_line text, p_bait text, p_chum text, p_boat boolean)
 returns public.players language plpgsql security definer set search_path = public as $$
