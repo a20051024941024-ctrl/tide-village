@@ -2590,9 +2590,12 @@ class Fisher {
       const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.46, 12), y); c1.position.set(0, 0.86, -0.3); tank.add(c1);
       const c2 = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 6), y); c2.position.set(0, 1.09, -0.3); tank.add(c2);
       const v = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 6), k); v.position.set(0, 1.2, -0.3); tank.add(v);
-      a.g.add(tank); const mask = new THREE.Group(); const gl = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.14, 0.05), mat('#9fe3ff', 0.1, { transparent:true, opacity:0.6, metalness:0.2 })); gl.position.set(0, 0.0, 0.31); mask.add(gl);
+      a.g.add(tank); const mask = new THREE.Group();
+      if (/acc_goggles/.test(this.gearKey || '')){ }   /* v231：本來就戴著潛水鏡（配件）就不用再戴一副 */
+      else if (GOGGLE.geo){ const gm = new THREE.Mesh(GOGGLE.geo, goggleMat()); gm.scale.setScalar(0.37); gm.position.set(0, -0.02, 0.11); gm.castShadow = true; mask.add(gm); }   /* v231：潛水時戴的面鏡換成新的 3D 潛水鏡 */
+      else { const gl = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.14, 0.05), mat('#9fe3ff', 0.1, { transparent:true, opacity:0.6, metalness:0.2 })); gl.position.set(0, 0.0, 0.31); mask.add(gl);
       const st = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.02, 6, 20), k); st.rotation.x = Math.PI / 2; st.position.y = 0.0; st.scale.set(1, 1.08, 1); mask.add(st);
-      const sn = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6), mat('#f05a4a', 0.5)); sn.position.set(0.22, 0.15, 0.1); mask.add(sn);
+      const sn = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6), mat('#f05a4a', 0.5)); sn.position.set(0.22, 0.15, 0.1); mask.add(sn); }
       a.headG.add(mask); this.swimMesh = [tank, mask]; a.rod.visible = false; }
     else { for (const m of this.swimMesh || []) if (m.parent) m.parent.remove(m); this.swimMesh = null; const g = a.g; g.rotation.x = 0; g.rotation.order = 'XYZ'; }
   }
