@@ -2678,7 +2678,7 @@ class Fisher {
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
-    const showBob = this.fishing && this.bobState !== 'none' && a.g.visible;   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
+    this._uf = frameNo; const showBob = this.fishing && this.bobState !== 'none' && a.g.visible && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
     this.bob.visible = showBob; this.line.visible = showBob;
     if (showBob){
       if (this.flying && this.flying.delay > 0){ this.flying.delay -= dt; this.av.tip.getWorldPosition(this.flying.from); this.bob.position.copy(this.flying.from); }   // 甩到一半浮標才飛出去
@@ -10135,8 +10135,9 @@ function cullAvatars(){
   if (ferryNpc && ferryNpc.f.av.g.visible && far(ferryNpc.f)){ ferryNpc.f.av.g.visible = false; if (ferryNpc.f.blob) ferryNpc.f.blob.visible = false; }
 }
 // 人被藏起來（太遠、回家、不同島）時，釣線、浮標、名字也一起藏（有些角色離太遠就不更新，線會留在空中）
-function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...questNpcs.map(q => q.f)]; if (ferryNpc) L.push(ferryNpc.f); try { for (const h of IsleH.fishers || []) L.push(h); } catch(e){}
-  for (const f of L){ if (!f || !f.av || f.av.g.visible) continue; if (f.line && f.line.visible) f.line.visible = false; if (f.bob && f.bob.visible) f.bob.visible = false; if (f.tag && f.tag.style.display !== 'none') f.tag.style.display = 'none'; } }
+function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...questNpcs.map(q => q.f)]; if (ferryNpc) L.push(ferryNpc.f); try { for (const h of IsleH.fishers || []) L.push(h); } catch(e){} try { for (const p of peers.values()) L.push(p.fisher); } catch(e){} L.push(me);
+  for (const f of L){ if (f && f.line && f.line.visible && f._uf != null && f._uf < frameNo - 2){ f.line.visible = false; if (f.bob) f.bob.visible = false; }   /* v230：好幾幀沒更新的角色（離太遠就不算）線會停在空中，藏起來 */
+    if (!f || !f.av || f.av.g.visible) continue; if (f.line && f.line.visible) f.line.visible = false; if (f.bob && f.bob.visible) f.bob.visible = false; if (f.tag && f.tag.style.display !== 'none') f.tag.style.display = 'none'; } }
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
