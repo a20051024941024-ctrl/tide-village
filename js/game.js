@@ -538,6 +538,7 @@ function fishModel(f, scale){
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
   if (f.id === 'octopus') return makeOctopus(scale);
+  if (MFISH && MFISH.of[f.id]) return makeMFish(f.id, scale);
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
 }
@@ -1619,6 +1620,25 @@ function octoMat(){ if (OCTO.mat) return OCTO.mat;
       }`); };
   m.customProgramCacheKey = () => 'octo226'; return (OCTO.mat = m); }
 function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScalar((scale || 1) * 1.05); const m = new THREE.Mesh(octoGeo(), octoMat()); m.castShadow = true; fish.add(m); fish.userData.tail = new THREE.Object3D(); return fish; }
+/* v226 精緻魚模型（Meshy 付費方案生成）：一般的作法——減到約 5,000 面、從側面重新烘一張 1024×512 貼圖（左半邊右側身、右半邊左側身），
+   頭朝 +x、長度跟原本的模型一樣；白化版在載入時把貼圖換成粉白色（保留明暗）。還沒載好的時候先用原本的模型，載好後換掉。
+   要加新的魚：在 MFISH.defs 加一行 { file, scale（讓長度跟原本一樣）, alb（白化版的 id）}。 */
+var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' } }, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
+for (const [k, d] of Object.entries(MFISH.defs)){ MFISH.of[k] = { k, albino:false }; if (d.alb) MFISH.of[d.alb] = { k, albino:true }; MFISH.wait[k] = new Set();
+  new GLTFLoader().loadAsync(d.file).then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
+    const geo = mesh.geometry.clone(); geo.scale(d.scale, d.scale, d.scale); geo.computeBoundingSphere(); MFISH.geo[k] = geo; MFISH.tex[k] = mesh.material.map; MFISH.tex[k].colorSpace = THREE.SRGBColorSpace;
+    for (const fish of [...MFISH.wait[k]]){ try { mfishFill(fish); } catch(e){ console.warn('mfish', e); } } MFISH.wait[k].clear(); }).catch(e => console.warn('mfish ' + k, e)); }
+function mfishAlbinoTex(k){ const key = k + '_a'; if (MFISH.tex[key]) return MFISH.tex[key]; const src = MFISH.tex[k], img = src.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const c = cv.getContext('2d'); c.drawImage(img, 0, 0);
+  const d = c.getImageData(0, 0, cv.width, cv.height), px = d.data;
+  for (let i = 0; i < px.length; i += 4){ const l = (px[i] * 0.3 + px[i + 1] * 0.55 + px[i + 2] * 0.15) / 255, t = Math.pow(l, 0.6); px[i] = 236 + 19 * t; px[i + 1] = 206 + 46 * t; px[i + 2] = 204 + 46 * t; }   /* 深的地方變淡粉紅、白的地方還是白 */
+  c.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.flipY = src.flipY; return (MFISH.tex[key] = t); }
+function mfishMat(k, albino){ const key = k + (albino ? '_a' : ''); if (MFISH.mats[key]) return MFISH.mats[key];
+  const m = new THREE.MeshStandardMaterial({ map: albino ? mfishAlbinoTex(k) : MFISH.tex[k], roughness:0.5, metalness:0.05, side:THREE.DoubleSide });
+  const mv = MFISH.defs[k].move || 'side'; m.onBeforeCompile = fishMat('mfish_' + mv, 'Body', '#888888', false, mv, 'MF').onBeforeCompile; m.customProgramCacheKey = () => 'mfish' + mv; return (MFISH.mats[key] = m); }   /* 鯨魚尾巴上下擺（vert），鯊魚左右擺（side） */
+function mfishFill(fish){ const o = fish.userData.mf; for (const c of [...fish.children]) fish.remove(c); const b = new THREE.Mesh(MFISH.geo[o.k], mfishMat(o.k, o.albino)); b.castShadow = true; fish.add(b); }
+function makeMFish(id, scale){ const o = MFISH.of[id];
+  if (!MFISH.geo[o.k]){ let fish; try { fish = makeModelFish(FISH_BY_ID[id], scale); } catch(e){ fish = makeFish(FISH_BY_ID[id].color, scale); } fish.userData.mf = o; MFISH.wait[o.k].add(fish); return fish; }
+  const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.mf = o; mfishFill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
 function makeMarlin3(scale, albino){
   if (!Marlin3.geo){ const fish = makeMarlin2(scale, albino); fish.userData.m3albino = albino; Marlin3.wait.add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.m3albino = albino; marlin3Fill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
@@ -8591,7 +8611,7 @@ function buildTank(){
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
     if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
     tankFish.push(fish);
-    if (!FISH_STYLE[f.id] || x.rs || /^marlin/.test(f.id) || f.id === 'octopus'){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
+    if (!FISH_STYLE[f.id] || x.rs || /^marlin/.test(f.id) || f.id === 'octopus' || (MFISH && MFISH.of[f.id])){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
       const bb = new THREE.Box3().setFromObject(fish.m), k = 1 / fish.scale;
       const ext = { r: Math.max(Math.abs(bb.min.x), bb.max.x, Math.abs(bb.min.z), bb.max.z) * k * 1.05, y0: bb.min.y * k, y1: bb.max.y * k };
       tankFit(fish, ext); fish.m.scale.multiplyScalar(fish.scale * k); if (x.rs) addScars(fish.m, rsInfo(x.rs).scars); tankGroup.add(fish.m); tankInst.push(fish.m); return; }
