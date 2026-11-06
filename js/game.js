@@ -333,7 +333,8 @@ async function deepQSync(){ if (!Cloud.on || !Cloud.sb) return; DeepQ.at = Date.
     const fresh = base.filter(id => !seen.includes(id)); if (fresh.length && seen.length) ticker('🔬 蔚博士在黑淵裂縫發現了新的深海生物！開潛水艇下去找找看');
     try { localStorage.setItem('tide.deepSeen', JSON.stringify(base)); } catch(e){} } catch(e){} }
 setInterval(() => { if (Cloud.on && Cloud.sb && (!DeepQ.at || Date.now() - DeepQ.at > 30 * 60000)) deepQSync(); }, 5000);
-setInterval(() => { try { if (Cloud.on && Cloud.sb && document.visibilityState === 'visible' && (!Home.at || Date.now() - Home.at > 90000)) loadHome(); } catch(e){} }, 15000);   /* v245 每一分半鐘看一下有沒有人邀請你搬家（不在同一個大廳也收得到） */
+setInterval(() => { try { if (Cloud.on && Cloud.sb && document.visibilityState === 'visible' && (!Home.at || Date.now() - Home.at > 90000)) loadHome(); } catch(e){} }, 15000);
+setInterval(() => { try { if (Cloud.on && Cloud.sb && !Pets.list && !Pets.busy) loadPets(true); } catch(e){} }, 3000);   /* v250 一連上雲端就讀寵物：帶出門的寵物重新進遊戲還在（以前要打開寵物頁才會出現） */   /* v245 每一分半鐘看一下有沒有人邀請你搬家（不在同一個大廳也收得到） */
 
 const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector2(x, z).normalize();
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
@@ -932,7 +933,9 @@ function signHit(spot, x, z){ let best = null; const sl = F.castSlot = signSlot(
 const Signs = { objs:[], scared:new Set(), mark:null };
 function signObj(){ const g = new THREE.Group(), C = {};
   const rm = new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.5, depthWrite:false }); C.ripple = []; for (let j = 0; j < 3; j++){ const r = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 28), rm.clone()); r.rotation.x = -Math.PI / 2; g.add(r); C.ripple.push(r); }
-  C.shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color:'#06202e', transparent:true, opacity:0.42, depthWrite:false })); C.shadow.rotation.x = -Math.PI / 2; C.shadow.scale.set(1.7, 0.65, 1); g.add(C.shadow);
+  { const sh = new THREE.Shape(); sh.moveTo(1.0, 0); sh.quadraticCurveTo(0.7, 0.42, 0, 0.4); sh.quadraticCurveTo(-0.6, 0.36, -0.95, 0.08); sh.lineTo(-1.45, 0.42); sh.lineTo(-1.3, 0); sh.lineTo(-1.45, -0.42); sh.lineTo(-0.95, -0.08); sh.quadraticCurveTo(-0.6, -0.36, 0, -0.4); sh.quadraticCurveTo(0.7, -0.42, 1.0, 0);   /* v250 魚的形狀（以前是橢圓，看不出來） */
+    C.shadow = new THREE.Mesh(new THREE.ShapeGeometry(sh, 8), new THREE.MeshBasicMaterial({ color:'#06202e', transparent:true, opacity:0.45, depthWrite:false, side:THREE.DoubleSide })); C.shadow.rotation.x = -Math.PI / 2; C.shadow.scale.setScalar(0.85); g.add(C.shadow); }
+  C.lab = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthTest:false, depthWrite:false, sizeAttenuation:false })); C.lab.scale.set(0.26, 0.065, 1); C.lab.position.y = 1.4; C.lab.renderOrder = 9; g.add(C.lab);
   C.birds = new THREE.Group(); const bm = new THREE.MeshBasicMaterial({ color:'#2b2f36' }); for (let j = 0; j < 3; j++){ const b = new THREE.Group(); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.14), bm); w.position.x = sd * 0.26; w.rotation.z = sd * 0.35; b.add(w); } b.userData.a = j / 3 * Math.PI * 2; C.birds.add(b); } g.add(C.birds);
   C.bub = []; const wm = new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.8 }); for (let j = 0; j < 6; j++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), wm); g.add(b); C.bub.push(b); }
   g.userData.C = C; scene.add(g); return g; }
@@ -943,7 +946,9 @@ function signsTick(dt, t){
   Signs.objs.forEach((o, i) => { const g = list[i]; o.visible = !!g; if (!g) return; const C = o.userData.C, wy = waterY(g.x, g.z, t), ph = t + g.i * 1.7;
     o.position.set(g.x + Math.sin(ph * 0.3) * 0.35, wy + 0.03, g.z + Math.cos(ph * 0.23) * 0.35);
     C.ripple.forEach((r, j) => { r.visible = g.k === 'school'; if (!r.visible) return; const u = ((ph * 0.55) + j / 3) % 1; r.scale.setScalar(0.6 + u * 3.2); r.material.opacity = 0.55 * (1 - u); });
-    C.shadow.visible = g.k === 'shadow'; if (C.shadow.visible){ C.shadow.rotation.z = ph * 0.15; C.shadow.material.opacity = 0.32 + Math.sin(ph * 0.9) * 0.08; }
+    C.shadow.visible = g.k === 'shadow'; if (C.shadow.visible){ const a = ph * 0.35; C.shadow.position.set(Math.cos(a) * 0.9, -0.02, Math.sin(a) * 0.9); C.shadow.rotation.z = a + Math.PI / 2 + Math.sin(ph * 4) * 0.08; C.shadow.material.opacity = 0.38 + Math.sin(ph * 0.9) * 0.07; }   /* 慢慢繞圈游 */
+    { const near = Math.hypot(me.pos.x - g.x, me.pos.z - g.z) < 13; C.lab.visible = near; if (near && C.lab.userData.k !== g.k){ C.lab.userData.k = g.k; const K = SIGN_KIND[g.k], cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c2 = cv.getContext('2d'); c2.font = 'bold 30px sans-serif'; const tx = `${K.icon} ${K.what}`, w = c2.measureText(tx).width + 28; c2.fillStyle = 'rgba(8,26,44,.62)'; c2.beginPath(); if (c2.roundRect) c2.roundRect(128 - w / 2, 8, w, 48, 24); else c2.rect(128 - w / 2, 8, w, 48); c2.fill(); c2.fillStyle = '#ffffff'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(tx, 128, 33);
+      if (C.lab.material.map) C.lab.material.map.dispose(); const T = new THREE.CanvasTexture(cv); T.colorSpace = THREE.SRGBColorSpace; C.lab.material.map = T; C.lab.material.needsUpdate = true; } }   /* 靠近時標出是什麼徵兆 */
     C.birds.visible = g.k === 'pred'; if (C.birds.visible) C.birds.children.forEach(b => { const a = b.userData.a + ph * 0.9; b.position.set(Math.cos(a) * 1.3, 3.0 + Math.sin(ph * 1.3 + a) * 0.25, Math.sin(a) * 1.3); b.rotation.y = -a; const fl = Math.sin(ph * 9 + a * 3) * 0.5; b.children[0].rotation.z = -0.35 - fl; b.children[1].rotation.z = 0.35 + fl; });
     C.bub.forEach((b, j) => { b.visible = g.k === 'bottom'; if (!b.visible) return; const u = ((ph * 0.8) + j / 6) % 1; b.position.set(Math.sin(j * 2.1) * 0.35, -0.1 + u * 0.25, Math.cos(j * 1.7) * 0.35); b.scale.setScalar(u > 0.9 ? 1.6 : 0.6 + u * 0.6); }); });
   // 蓄力時：水面上顯示會落在哪裡（左右滑可以瞄準）
@@ -7549,7 +7554,7 @@ function updateQuestNpcs(dt, t){
   if (!questNpcs.length) initQuestNpcs();
   for (const q of questNpcs){
     const d = Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z);
-    const wd = worldDrive(q.f, dt, t);
+    const wd = q.who === 'chief' ? false : worldDrive(q.f, dt, t);   /* v250 村長要發任務，一直待在廣場（不跟著村民作息到處走、回家睡覺） */
     if (wd){}
     else if (d < 62){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
     else q.f.tag.style.display = 'none';
@@ -10624,7 +10629,7 @@ function renderTab(){
     const sec = (title, lines, open) => { const d = el('details', 'help'); if (open) d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
-      '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
+      '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
