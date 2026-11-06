@@ -1552,10 +1552,18 @@ RedShark.albinoTex = function(){ if (RedShark.tex.a) return RedShark.tex.a; cons
   for (let i = 0; i < px.length; i += 4){ const r = px[i] / 255, gg = px[i + 1] / 255, a = sm(0.08, 0.5, r), w = sm(0.35, 0.75, gg);
     for (let k = 0; k < 3; k++) px[i + k] = (st[k] + (bo[k] - st[k]) * a) * (1 - w) + be[k] * w; }
   c.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.flipY = RedShark.tex.n.flipY; return (RedShark.tex.a = t); };
-RedShark.mat = function(albino){ const k = albino ? 'a' : 'n'; if (RedShark.mats[k]) return RedShark.mats[k];
-  const m = new THREE.MeshStandardMaterial({ map: albino ? RedShark.albinoTex() : RedShark.tex.n, roughness:0.5, metalness:0.05, side:THREE.DoubleSide });
-  m.onBeforeCompile = fishMat('redshark3', 'Body', '#c8161c', false, 'side', 'RS3').onBeforeCompile; m.customProgramCacheKey = () => 'redshark3'; return (RedShark.mats[k] = m); };
-function redSharkFill(fish){ for (const c of [...fish.children]) if (!c.userData.scar) fish.remove(c); const b = new THREE.Mesh(RedShark.geo, RedShark.mat(fish.userData.rsAlbino)); b.castShadow = true; fish.add(b); }
+/* 叉叉（掙脫過幾次就有幾道）直接畫在皮膚上：兩道交叉的舊傷疤，比旁邊的皮膚淡、邊緣柔，跟著身體彎；兩側都有。每種道數一個材質（最多 9 道） */
+RedShark.mat = function(albino, n){ n = Math.max(0, Math.min(9, n | 0)); const k = (albino ? 'a' : 'n') + n; if (RedShark.mats[k]) return RedShark.mats[k];
+  const m = new THREE.MeshStandardMaterial({ map: albino ? RedShark.albinoTex() : RedShark.tex.n, roughness:0.5, metalness:0.05, side:THREE.DoubleSide }), base = fishMat('redshark3', 'Body', '#c8161c', false, 'side', 'RS3').onBeforeCompile, uS = { value: n };
+  m.onBeforeCompile = sh => { base(sh); sh.uniforms.uScars = uS; if (CLASSIC) return;
+    sh.fragmentShader = 'uniform float uScars;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      { float sc = 0.0;
+        for (int i = 0; i < 9; i++){ if (float(i) >= uScars) break; float fi = float(i), od = mod(fi, 2.0);
+          vec2 c = vec2(0.3 - fi * 0.088, (od > 0.5 ? -0.04 : 0.05) + 0.012 * sin(fi * 3.1)); float r = 0.07 + 0.012 * fract(fi * 0.618); vec2 q = vFishP.xy - c;
+          for (int j = 0; j < 2; j++){ float a = j == 0 ? 0.85 + 0.12 * sin(fi * 2.3) : -0.8 + 0.1 * cos(fi * 1.7); vec2 d = vec2(cos(a), sin(a)); float t = clamp(dot(q, d), -r, r); float w = 0.021 * (1.0 - abs(t) / r * 0.8); float dist = length(q - d * t); sc = max(sc, smoothstep(w, w * 0.35, dist)); } }
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.55 + vec3(0.42, 0.2, 0.19), sc * 0.85); }`); };
+  m.customProgramCacheKey = () => 'redshark3s'; return (RedShark.mats[k] = m); };
+function redSharkFill(fish){ for (const c of [...fish.children]) fish.remove(c); const b = new THREE.Mesh(RedShark.geo, RedShark.mat(fish.userData.rsAlbino, fish.userData.scarN || 0)); b.castShadow = true; fish.add(b); }
 function makeRedShark(scale, albino){
   if (!RedShark.geo){ const st = FISH_STYLE[albino ? 'shark_red_albino' : 'shark_red']; let fish; try { fish = makeModelFish(FISH_BY_ID[albino ? 'shark_red_albino' : 'shark_red'], scale); } catch(e){ fish = makeFish('#c8161c', scale); } fish.userData.rsAlbino = albino; RedShark.wait.add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.rsAlbino = albino; redSharkFill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
@@ -9367,15 +9375,22 @@ async function saveRemote(){
   saving = false; if (saveAgain){ saveAgain = false; saveRemote(); }
 }
 // 紅鯊身上的叉叉：掙脫過幾次就有幾道（越多道，下次越容易掙脫）
+const SCAR_GEO = (() => { const g = new THREE.CircleGeometry(1, 14); g.userData.shared = true; return g; })();   /* 扁扁的橢圓：兩頭尖、中間寬，像一道割痕 */
+const SCAR_M = [new THREE.MeshStandardMaterial({ color:'#f2b4ac', roughness:0.55, side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-2 }), new THREE.MeshStandardMaterial({ color:'#5c0b12', roughness:0.35, side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-4 })];
 function addScars(m, n){
-  if (!m || !(n > 0)) return; m.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3()), k = 1 / (m.scale.x || 1);
-  const L = sz.x * k, H = sz.y * k, Z = sz.z * k, mt = new THREE.MeshBasicMaterial({ color:'#f4e6d8' }), g = new THREE.Group(); g.userData.scar = 1; g.position.copy(c.clone().sub(m.position)).multiplyScalar(k);
+  if (!m || !(n > 0)) return;
+  if (m.userData.rsAlbino !== undefined){ m.userData.scarN = n; if (RedShark.geo){ redSharkFill(m); return; } }   /* 新紅鯊：叉叉畫在皮膚上；模型還沒載好的話先用舊的方式，載好後換掉 */ m.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3()), k = 1 / (m.scale.x || 1);
+  const L = sz.x * k, H = sz.y * k, Z = sz.z * k, g = new THREE.Group(); g.userData.scar = 1; g.position.copy(c.clone().sub(m.position)).multiplyScalar(k);
   const body = []; m.traverse(o => { if (o.isMesh) body.push(o); }); const rc = new THREE.Raycaster(), inv = new THREE.Matrix4().copy(m.matrixWorld).invert();
-  for (let i = 0; i < Math.min(n, 9); i++){ const s = L * (0.045 + 0.006 * Math.min(n, 9)), x = L * (0.18 - i * 0.07), y = H * (0.08 + (i % 2) * 0.1);
+  const vhit = (x, dir) => { const from = m.localToWorld(new THREE.Vector3(g.position.x + x, g.position.y - dir * H * 2, 0)), to = m.localToWorld(new THREE.Vector3(g.position.x + x, g.position.y, 0)); rc.set(from, to.sub(from).normalize()); const h = rc.intersectObjects(body, false)[0]; return h ? h.point.clone().applyMatrix4(inv).y - g.position.y : null; };
+  for (let i = 0; i < Math.min(n, 9); i++){ const s = L * (0.045 + 0.006 * Math.min(n, 9)), x = L * (0.16 - Math.floor(i / 2) * 0.075 - (i % 2) * 0.03);
+    const top = vhit(x, -1), bot = vhit(x, 1); const y = top != null && bot != null ? bot + (top - bot) * (i % 2 ? 0.42 : 0.66) : H * (0.08 + (i % 2) * 0.1);   /* 疤在身體側面（量出這一段身體的上下緣，放在中間偏上），不會跑到背鰭外面 */
     for (const side of [-1, 1]){ let zz = side * Z * 0.36;   /* v223：從側面打一條線到身體，叉叉貼在皮膚上（新模型的胸鰭很寬，用外框算會浮在半空） */
       const from = m.localToWorld(new THREE.Vector3(g.position.x + x, g.position.y + y, side * Z * 2)), to = m.localToWorld(new THREE.Vector3(g.position.x + x, g.position.y + y, 0));
-      rc.set(from, to.sub(from).normalize()); const hit = rc.intersectObjects(body, false)[0]; if (hit){ const lp = hit.point.clone().applyMatrix4(inv); zz = lp.z + side * 0.012; }
-      for (const a of [0.785, -0.785]){ const b = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.18, 0.004), mt); b.position.set(x, y, zz); b.rotation.z = a; g.add(b); } } }
+      rc.set(from, to.sub(from).normalize()); const hit = rc.intersectObjects(body, false)[0]; if (hit){ const lp = hit.point.clone().applyMatrix4(inv); zz = lp.z + side * 0.006; } else continue;
+      for (const [j, a] of [[0, 0.72 + (i % 3) * 0.08], [1, -0.8 + (i % 2) * 0.1]]){ const len = s * (j ? 0.95 : 1.1);   /* v223：叉叉做成兩道交叉的傷口：外圈淡粉紅的疤、中間深紅色的裂口 */
+        const o1 = new THREE.Mesh(SCAR_GEO, SCAR_M[0]); o1.scale.set(len / 2, s * 0.17, 1); o1.position.set(x, y, zz); o1.rotation.z = a; if (side < 0) o1.rotation.y = Math.PI; g.add(o1);
+        const o2 = new THREE.Mesh(SCAR_GEO, SCAR_M[1]); o2.scale.set(len * 0.4, s * 0.055, 1); o2.position.set(x, y, zz + side * 0.002); o2.rotation.z = a; if (side < 0) o2.rotation.y = Math.PI; g.add(o2); } } }
   m.add(g);
 }
 // ---- 赤紅霸王鯊（032）：整個伺服器共用一群，一開始一公一母，會繁殖，被釣光就絕種 ----
