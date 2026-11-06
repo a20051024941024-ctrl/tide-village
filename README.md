@@ -139,6 +139,7 @@ supabase/098_mariana.sql 🐙 馬里亞納海溝的生物：獅子魚、深海�
 supabase/099_deep_weekly.sql 🔬 深海生物每週解鎖：deep_queue（從 2026-11-06 起每週五解鎖一種，白化同一週），deep_unlocked() 只回傳已解鎖的 id；sub_cast 加進已解鎖的魚。以後新魚加在 deep_queue 最後面。
 supabase/100_deep_variants.sql ✨ 深海生物變種：排隊的 12 種各加一個螢光變種（_glow），另外加紅燈巨口魚、斑點銀鮫、南非皺鰓鯊（真實的不同顏色）；跟本種同一週解鎖。
 supabase/101_bluewhale_hourly.sql 🐋 藍鯨浮上來改成每小時一次（原本每 20 分鐘）。
+supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

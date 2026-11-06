@@ -909,6 +909,48 @@ function castBlocked(x, z, px, pz){
   let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
   return false;
 }
+/* ===== v247 釣魚第 1 段：水面的徵兆＋左右瞄準 =====
+   每個釣點每 45 秒換一批 2～4 個徵兆（照伺服器時間，大家看到的一樣；伺服器 020 的 _sign_hit 用同一個公式算）：
+   〰️ 一圈圈漣漪＝小魚群、🌑 水下的深色影子＝中大型魚、🐦 海鳥盤旋＝掠食魚、🫧 一串氣泡＝底棲魚。
+   浮標落在徵兆旁邊（0.7～2.4 公尺）那一類魚比較容易上鉤（×2.5，傳說魚 ×1.3）；直接砸在上面（0.7 公尺內）會把魚嚇跑。 */
+const SIGN_T = 45, SIGN_OFF = new Set(['shrimp', 'icelake', 'mudflat']), SIGN_ORDER = ['school', 'shadow', 'pred', 'bottom'];
+const SIGN_KIND = { school:{ icon:'〰️', name:'漣漪', what:'小魚群' }, shadow:{ icon:'🌑', name:'魚影', what:'中大型魚' }, pred:{ icon:'🐦', name:'海鳥', what:'掠食魚' }, bottom:{ icon:'🫧', name:'氣泡', what:'底棲魚' } };
+const PRED_RE = /shark|marlin|mahi|tuna|barracuda|trevally|yellowtail|bonito|amberjack|kingfish|sailfish|orca|greatwhite/;
+function sigClass(f){ const b = f.of || f.id; if (BOTTOM_FISH.has(b)) return 'bottom'; if (LURE_FISH.has(b) || PRED_RE.test(b)) return 'pred'; if (BIG_FISH.has(b) || (f.max || 0) >= 8) return 'shadow'; return 'school'; }
+function sigM(a){ const m = (a * 9301 + 49297) % 233280; return (m * 9301 + 49297) % 233280; }   /* 算兩次才會散開（伺服器 _sign_m 一樣） */
+function signSpotOk(s){ return !!(s && s.dir && !SIGN_OFF.has(s.id) && SPOT_BY_ID[s.id] === s); }
+function signsAt(spot, slot){ if (!signSpotOk(spot)) return []; const key = spot.id + ':' + slot; signsAt.c = signsAt.c || {}; if (signsAt.c[key]) return signsAt.c[key];
+  const kinds = SIGN_ORDER.filter(k => (spot.fish || []).some(id => { const f = FISH_BY_ID[id]; return f && !f.of && sigClass(f) === k; })); if (!kinds.length) return (signsAt.c[key] = []);
+  let sc = 0; for (const ch of spot.id) sc += ch.charCodeAt(0);
+  const base = (slot % 100000) * 13 + sc * 7, n = 2 + Math.floor(sigM(base) * 3 / 233280), L = Math.hypot(spot.dir.x, spot.dir.y), dx = spot.dir.x / L, dz = spot.dir.y / L, out = [], all = [];
+  for (let i = 0; i < n; i++){ const b = base + (i + 1) * 101, k = kinds[Math.floor(sigM(b) * kinds.length / 233280)], d = 3.5 + sigM(b + 17) / 233280 * 5.5, a = (sigM(b + 34) / 233280 - 0.5) * 1.5, c = Math.cos(a), sn = Math.sin(a);
+    const x = spot.pos.x + (dx * c - dz * sn) * d, z = spot.pos.z + (dx * sn + dz * c) * d; if (all.some(o => Math.hypot(o.x - x, o.z - z) < 3)) continue; const g = { k, x, z, i, key: key + ':' + i }; all.push(g); if (waterAt(x, z)) out.push(g); }   /* 太靠近前一個的不要（伺服器一樣），在陸地上的不畫 */
+  const ks = Object.keys(signsAt.c); if (ks.length > 40) delete signsAt.c[ks[0]];
+  return (signsAt.c[key] = out); }
+function signSlot(){ return Math.floor(bossNow() / 1000 / SIGN_T); }
+function signHit(spot, x, z){ let best = null; const sl = F.castSlot = signSlot(); for (const g of signsAt(spot, sl)){ const d = Math.hypot(x - g.x, z - g.z); if (d < 0.7) return { scare:true, g }; if (d <= 2.4 && (!best || d < best.d)) best = { g, d }; } return best ? { g: best.g } : null; }
+const Signs = { objs:[], scared:new Set(), mark:null };
+function signObj(){ const g = new THREE.Group(), C = {};
+  const rm = new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.5, depthWrite:false }); C.ripple = []; for (let j = 0; j < 3; j++){ const r = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 28), rm.clone()); r.rotation.x = -Math.PI / 2; g.add(r); C.ripple.push(r); }
+  C.shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color:'#06202e', transparent:true, opacity:0.42, depthWrite:false })); C.shadow.rotation.x = -Math.PI / 2; C.shadow.scale.set(1.7, 0.65, 1); g.add(C.shadow);
+  C.birds = new THREE.Group(); const bm = new THREE.MeshBasicMaterial({ color:'#2b2f36' }); for (let j = 0; j < 3; j++){ const b = new THREE.Group(); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.14), bm); w.position.x = sd * 0.26; w.rotation.z = sd * 0.35; b.add(w); } b.userData.a = j / 3 * Math.PI * 2; C.birds.add(b); } g.add(C.birds);
+  C.bub = []; const wm = new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.8 }); for (let j = 0; j < 6; j++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), wm); g.add(b); C.bub.push(b); }
+  g.userData.C = C; scene.add(g); return g; }
+function signsTick(dt, t){
+  const sp = F.spot && signSpotOk(F.spot) ? F.spot : (() => { const ns = nearestSpot(); return ns.spot && ns.d < 14 && signSpotOk(ns.spot) ? ns.spot : null; })();
+  const show = sp && !onIsle && !House.on && !inIndoor() && !Dive.on, list = show ? signsAt(sp, signSlot()).filter(g => !Signs.scared.has(g.key)) : [];
+  while (Signs.objs.length < list.length) Signs.objs.push(signObj());
+  Signs.objs.forEach((o, i) => { const g = list[i]; o.visible = !!g; if (!g) return; const C = o.userData.C, wy = waterY(g.x, g.z, t), ph = t + g.i * 1.7;
+    o.position.set(g.x + Math.sin(ph * 0.3) * 0.35, wy + 0.03, g.z + Math.cos(ph * 0.23) * 0.35);
+    C.ripple.forEach((r, j) => { r.visible = g.k === 'school'; if (!r.visible) return; const u = ((ph * 0.55) + j / 3) % 1; r.scale.setScalar(0.6 + u * 3.2); r.material.opacity = 0.55 * (1 - u); });
+    C.shadow.visible = g.k === 'shadow'; if (C.shadow.visible){ C.shadow.rotation.z = ph * 0.15; C.shadow.material.opacity = 0.32 + Math.sin(ph * 0.9) * 0.08; }
+    C.birds.visible = g.k === 'pred'; if (C.birds.visible) C.birds.children.forEach(b => { const a = b.userData.a + ph * 0.9; b.position.set(Math.cos(a) * 1.3, 3.0 + Math.sin(ph * 1.3 + a) * 0.25, Math.sin(a) * 1.3); b.rotation.y = -a; const fl = Math.sin(ph * 9 + a * 3) * 0.5; b.children[0].rotation.z = -0.35 - fl; b.children[1].rotation.z = 0.35 + fl; });
+    C.bub.forEach((b, j) => { b.visible = g.k === 'bottom'; if (!b.visible) return; const u = ((ph * 0.8) + j / 6) % 1; b.position.set(Math.sin(j * 2.1) * 0.35, -0.1 + u * 0.25, Math.cos(j * 1.7) * 0.35); b.scale.setScalar(u > 0.9 ? 1.6 : 0.6 + u * 0.6); }); });
+  // 蓄力時：水面上顯示會落在哪裡（左右滑可以瞄準）
+  if (!Signs.mark){ Signs.mark = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.42, 24), new THREE.MeshBasicMaterial({ color:'#ffd36a', transparent:true, opacity:0.9, depthWrite:false })); Signs.mark.rotation.x = -Math.PI / 2; Signs.mark.visible = false; scene.add(Signs.mark); }
+  const M = Signs.mark; if (F.phase === 'charging' && F.spot && F.spot.dir && F.spot.id !== 'icelake'){ const [dx, dz] = aimDir(F.spot), cp = castPoint(F.spot.pos.x, F.spot.pos.z, dx, dz, castDist(F.spot, F.charge)); M.visible = true; M.position.set(cp[0], waterY(cp[0], cp[1], t) + 0.05, cp[1]); M.scale.setScalar(1 + Math.sin(t * 8) * 0.08); } else M.visible = false; }
+function aimDir(s){ const L = Math.hypot(s.dir.x, s.dir.y) || 1, a = s.id === 'icelake' || s.id === 'shrimp' ? 0 : (F.aim || 0), c = Math.cos(a), sn = Math.sin(a), dx = s.dir.x / L, dz = s.dir.y / L; return [dx * c - dz * sn, dx * sn + dz * c]; }
+function castDist(s, c){ const rt = rodType(curRod()); return s.id === 'shrimp' ? 1.4 + c * 1.6 : (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1); }
 function castPoint(x, z, dx, dz, dist){
   const ok = d => waterAt(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
@@ -3441,7 +3483,7 @@ function actionDown(){
     else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } else if (inMuseum()){ act.classList.remove('down'); openMuseum(); } } return; } spot = ns.spot; }
     if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('🎫 要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
-    me.rot = Math.atan2(spot.dir.x, spot.dir.y); me.fishing = true; me.bobState = 'none';
+    if (F.aimSpot !== spot.id){ F.aim = 0; F.aimSpot = spot.id; } { const [ax, az] = aimDir(spot); me.rot = Math.atan2(ax, az); } me.fishing = true; me.bobState = 'none';
   } else if (F.phase === 'waiting'){
     if (F.spot && F.spot.id === 'shrimp' && me.bobState === 'water' && Rig.rig !== 'lure'){
       const t = now();
@@ -3478,7 +3520,7 @@ function biteWait(c){
 }
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
-  if (s && s.id !== 'shrimp' && s.id !== 'icelake' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, d0);
+  if (s && s.id !== 'shrimp' && s.id !== 'icelake' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, ...aimDir(s), d0);
     if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
   { const fit = rodFit(s && s.id); if (fit === 'bad' && !doCast.told[s.id]){ doCast.told[s.id] = 1; const best = Object.entries(ROD_TYPES).find(([, T]) => T.fit && T.fit.includes(s.id)); setTimeout(() => toast(`${ROD_TYPES[rodType(curRod())].name}在這裡不太好用${best ? `，${s.short}比較適合用${best[1].icon}${best[1].name}（包包裡可以換）` : '，換成甩竿試試'}`), 900); } }
   if (liftHeight() > LIFT_H && !hasNet() && !doCast.netTold){ doCast.netTold = 1; setTimeout(() => toast(`🥅 這裡比水面高很多：1.5 公斤以上的魚沒有撈網會拉不上來（釣具店「🧰工具」有賣）`), 400); }
@@ -3488,16 +3530,17 @@ function doCast(){
   if (bt){ if (!Cloud.on) cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
   const rt = rodType(curRod()), dist = s.id === 'shrimp' ? 1.4 + c * 1.6 : (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1);   /* 手竿拋不遠、遠投竿拋很遠 */   /* 蝦竿很短，拋近近的 */
   const hole = s.id === 'icelake' ? (s.hole || FROST.holes.slice().sort((a, b) => Math.hypot(me.pos.x - a[0], me.pos.z - a[1]) - Math.hypot(me.pos.x - b[0], me.pos.z - b[1]))[0]) : null;   /* 冰洞：直接放進洞裡 */
-  const cp = hole ? hole : castPoint(s.pos.x, s.pos.z, s.dir.x, s.dir.y, dist);
+  const cp = hole ? hole : castPoint(s.pos.x, s.pos.z, ...aimDir(s), dist);
   const to = new THREE.Vector3(cp[0] + (hole ? 0 : rand(-0.3,0.3)), 0.12, cp[1] + (hole ? 0 : rand(-0.3,0.3)));
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
+  F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`💨 砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了！要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`🎯 落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
   me.flying = { from, to, t:0, delay:0.17, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } }; me.windup = 0; me.castT = 0;
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.roll = null; F.rollWait = 0; F.pre = null;
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
   if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';
-    cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat })
+    cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat, p_bx: +to.x.toFixed(2), p_bz: +to.z.toFixed(2), p_sl: F.castSlot || signSlot() })
       .then(row => { if (F.castId !== id) return; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; }); }   /* 伺服器抽好了，但不會告訴手機是什麼魚（072）；咬餌前大約 2 秒才用 hook_fish 問 */
   F.envB = envBonus(s.id);
   F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('🐟 浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
@@ -3526,7 +3569,7 @@ function pickFish(spot, charge){
   const intel = spot.id === 'harbor' ? intelAt(Date.now()).ids : null;
   const mudK = f => spot.id !== 'mudflat' ? 1 : ((Rig.rig === 'bottom') === BOTTOM_FISH.has(f.id) ? 1 : 0);   /* 泥灘：抓招潮蟹就是蟹、抓彈塗魚就是魚 */
   const wildK = f => breedSeason() && WILD_BREED.has(f.id) ? 1.5 : 1;   /* 野外繁殖季 */
-  const w = list.map(f => (f.w || 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const w = list.map(f => (f.w || 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? 1.3 : 2.5) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -3605,10 +3648,12 @@ function updateBiteShadow(dt, t, want){ const B = BiteFish;
   const ty = shallow ? WATER_LEVEL - 0.2 : WATER_LEVEL - (bite ? 0.4 : 1.1 - 0.45 * B.shK); g.position.y += (ty - g.position.y) * Math.min(1, dt * 2);
   g.rotation.y = Math.atan2(-(b.z - g.position.z), b.x - g.position.x) + Math.sin(t * 2.5) * 0.12; }
 function updateFishing(dt, t){
+  try { signsTick(dt, t); } catch(e){}
   { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
   const act = $('#act');
   if (F.phase === 'charging'){
     F.chargeT += dt; F.charge = 1 - Math.abs(((F.chargeT / 1.3) % 2) - 1);
+    { const k = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0); if (k) F.aim = clamp((F.aim || 0) + k * dt * 0.9, -0.6, 0.6); if (F.spot && F.spot.dir){ const [ax, az] = aimDir(F.spot); me.rot = Math.atan2(ax, az); } }   /* 左右瞄準 */
     $('#chargeFill').style.width = (F.charge*100).toFixed(1) + '%';
     me.bend = F.charge * 0.25; me.windup += (0.8 - me.windup) * Math.min(1, dt * 6);   /* 蓄力時竿子往後舉一次就停住（不會跟著力量條一直上下） */
   }
@@ -8978,7 +9023,8 @@ $('#chumBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropaga
   j.addEventListener('contextmenu', e => e.preventDefault());
 })();
 (function(){ const a = $('#act');
-  a.addEventListener('pointerdown', e => { e.preventDefault(); try { a.setPointerCapture(e.pointerId); } catch(_){} actionDown(); });
+  a.addEventListener('pointerdown', e => { e.preventDefault(); try { a.setPointerCapture(e.pointerId); } catch(_){} actionDown(); F.aimX0 = e.clientX; F.aim0 = F.aim || 0; });
+  a.addEventListener('pointermove', e => { if (F.phase !== 'charging' || F.aimX0 == null) return; F.aim = clamp(F.aim0 + (e.clientX - F.aimX0) * 0.006, -0.6, 0.6); });   /* v247 按住拋竿鍵左右滑＝瞄準方向 */
   const up = () => actionUp();
   a.addEventListener('pointerup', up); a.addEventListener('pointercancel', up); a.addEventListener('lostpointercapture', up);
   a.addEventListener('contextmenu', e => e.preventDefault());
@@ -10563,6 +10609,7 @@ function renderTab(){
     const sec = (title, lines, open) => { const d = el('details', 'help'); if (open) d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
+      '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',

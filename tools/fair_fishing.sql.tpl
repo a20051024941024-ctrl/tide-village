@@ -62,7 +62,43 @@ create or replace function public._bw_up() returns boolean language sql stable a
   select (s - c * 3600 - ((c * 2654435761) % 4294967296) % 3420) between 0 and 89   -- v244：每小時一次（原本每 20 分鐘，太常出現）
   from (select floor(extract(epoch from now()))::bigint as s, floor(extract(epoch from now()) / 3600)::bigint as c) x $$;
 
-create or replace function public.roll_fish(p_spot text, p_charge numeric, p_x numeric, p_z numeric, p_rig text, p_line text, p_bait text, p_chum text, p_boat boolean)
+-- 247：水面的徵兆（漣漪＝小魚群、魚影＝中大型魚、海鳥＝掠食魚、氣泡＝底棲魚）。每個釣點每 45 秒一批，跟 js/game.js 的 signsAt 同一個公式。
+-- 浮標落在徵兆旁邊 0.7～2.4 公尺：那一類魚 ×2.5（傳說 ×1.3）；0.7 公尺內是砸在上面，魚被嚇跑，沒有加成。
+create or replace function public._sign_m(a bigint) returns bigint language sql immutable as $$ select (((a * 9301 + 49297) % 233280) * 9301 + 49297) % 233280 $$;
+drop function if exists public._sign_hit(text, numeric, numeric);
+create or replace function public._sign_hit(p_spot text, p_bx numeric, p_bz numeric, p_sl bigint) returns text language plpgsql stable set search_path = public as $$
+declare cfg jsonb := public._fishcfg(); sp jsonb := cfg->'spots'->p_spot; kinds text[]; sc integer := 0; slot bigint; o integer; base bigint; n integer; i integer; b bigint;
+  k text; d float8; a float8; acc float8[] := '{}'; j integer; ok boolean; scared boolean := false; sx float8; sz float8; dx float8; dz float8; gx float8; gz float8; dist float8; best float8 := 99; bk text := null;
+begin
+  if sp is null or sp->>'dx' is null or p_bx is null or p_bz is null or p_spot in ('shrimp', 'icelake', 'mudflat') then return null; end if;
+  sx := (sp->>'x')::float8; sz := (sp->>'z')::float8; dx := (sp->>'dx')::float8; dz := (sp->>'dz')::float8;
+  if sqrt(power(p_bx::float8 - sx, 2) + power(p_bz::float8 - sz, 2)) > 16 then return null; end if;
+  select array_agg(v.k0 order by v.o0) into kinds from (values ('school', 1), ('shadow', 2), ('pred', 3), ('bottom', 4)) v(k0, o0)
+    where exists (select 1 from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'k' = v.k0 and not coalesce((cfg->'fish'->x->>'v')::boolean, false));
+  if kinds is null then return null; end if;
+  for i in 1..length(p_spot) loop sc := sc + ascii(substr(p_spot, i, 1)); end loop;
+  slot := floor(extract(epoch from clock_timestamp()) / 45)::bigint;
+  if p_sl is null or abs(p_sl - slot) > 1 then return null; end if;   -- 手機說是哪一批（差一批以內都算：剛好換批、時間差一點點）
+  for o in 0..0 loop
+    base := (p_sl % 100000) * 13 + sc * 7; n := 2 + floor(public._sign_m(base) * 3 / 233280.0)::integer;
+    acc := '{}';
+    for i in 0..n - 1 loop
+      b := base + (i + 1) * 101; k := kinds[1 + floor(public._sign_m(b) * array_length(kinds, 1) / 233280.0)::integer];
+      d := 3.5 + public._sign_m(b + 17) / 233280.0 * 5.5; a := (public._sign_m(b + 34) / 233280.0 - 0.5) * 1.5;
+      gx := sx + (dx * cos(a) - dz * sin(a)) * d; gz := sz + (dx * sin(a) + dz * cos(a)) * d;
+      ok := true; j := 1; while j < coalesce(array_length(acc, 1), 0) loop if sqrt(power(acc[j] - gx, 2) + power(acc[j + 1] - gz, 2)) < 3 then ok := false; end if; j := j + 2; end loop;   -- 太靠近前一個的不算（跟 js 一樣）
+      if not ok then continue; end if; acc := acc || array[gx, gz];
+      dist := sqrt(power(p_bx::float8 - gx, 2) + power(p_bz::float8 - gz, 2));
+      if dist < 0.7 then scared := true; end if;
+      if dist >= 0.7 and dist <= 2.4 and dist < best then best := dist; bk := k; end if;
+    end loop;
+  end loop;
+  if scared then return null; end if;   -- 砸在徵兆上面：魚被嚇跑
+  return bk; end $$;
+
+drop function if exists public.roll_fish(text, numeric, numeric, numeric, text, text, text, text, boolean);
+drop function if exists public.roll_fish(text, numeric, numeric, numeric, text, text, text, text, boolean, numeric, numeric);
+create or replace function public.roll_fish(p_spot text, p_charge numeric, p_x numeric, p_z numeric, p_rig text, p_line text, p_bait text, p_chum text, p_boat boolean, p_bx numeric default null, p_bz numeric default null, p_sl bigint default null)
 returns public.players language plpgsql security definer set search_path = public as $$
 declare
   pl public.players := public._me(); cfg jsonb := public._fishcfg(); sp jsonb := cfg->'spots'->p_spot;
@@ -81,6 +117,7 @@ declare
   rsh public.red_sharks; rs text; gpv text; fitk numeric := 1; sx text; brood boolean := false; wild boolean := false;
   c jsonb; ctype text; cat timestamptz; left_k numeric; fit numeric; k numeric; sc jsonb; age numeric; pw numeric; nb integer; fw numeric;
   sf record;   -- 蔚博士的新品種（070）
+  sg_k text;   -- 247：浮標落在哪一種徵兆旁邊
 begin
   if sp is null then raise exception '沒有這個釣點'; end if;
   if pl.cast_at is not null and now() - pl.cast_at < interval '2.5 seconds' then raise exception '拋太快了'; end if;
@@ -157,6 +194,7 @@ begin
   select count(*) into nleg from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'r' = '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false);   -- 變種不算
   legk := (case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
+  sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl) end;
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
     f := cfg->'fish'->fid; if f is null then continue; end if;
     if f ? 'fest' and not public._fest_on(f->>'fest') then continue; end if;   -- 節慶限定魚（087）：只有那個節日期間釣得到
@@ -170,7 +208,8 @@ begin
       * (case when rainy and cfg->'rain' ? fid then 2 else 1 end)
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)
       * (case when f->>'t' is null then 1 when f->>'t' = per then 1.5 else 0.15 end)
-      * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
+      * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
+      * (case when sg_k is not null and f->>'k' = sg_k then (case when f->>'r' = '傳說' then 1.3 else 2.5 end) else 1 end)   -- 247 徵兆   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
       * (case f->>'r' when '常見' then 1 when '稀有' then 0.34 * (1 + charge * 0.8) * kr * ring else 0.07 * (1 + charge * 1.6) * lb * kl * ring * legk end);
     ids := ids || fid; wts := wts || wt; tot := tot + wt;
   end loop;
@@ -289,7 +328,7 @@ begin
 end $$;
 
 do $$ declare f text; begin
-  foreach f in array array['roll_fish(text,numeric,numeric,numeric,text,text,text,text,boolean)', 'use_bait(text)', 'eat_dish(bigint)', 'record_catch(text,numeric)', 'hook_fish()'] loop
+  foreach f in array array['roll_fish(text,numeric,numeric,numeric,text,text,text,text,boolean,numeric,numeric,bigint)', 'use_bait(text)', 'eat_dish(bigint)', 'record_catch(text,numeric)', 'hook_fish()'] loop
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
