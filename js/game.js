@@ -4179,7 +4179,7 @@ function renderIsleBar(){
   bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 我家（${onIsle.name}）` : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}`));
   if (House.on && canEditIsle()){ const fb = el('button', 'tbtn', FB.on ? '完成擺設' : '🛋️ 擺家具'); fb.addEventListener('click', () => { if (FB.on) stopFurn(); else startFurn(); renderIsleBar(); }); bar.appendChild(fb);
     const lb = el('button', 'tbtn ghost', '🏠 格局'); lb.addEventListener('click', () => { furnSheet = 'lay'; openSheet('furn'); }); bar.appendChild(lb); }
-  else if (mine || canEditIsle()){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (Build.on) stopBuild(); else { Build.on = true; isleUnbatch(isleGroup); renderBuildBar(); renderIsleBar(); } }); bar.appendChild(b);
+  else if (mine || canEditIsle()){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (Build.on) stopBuild(); else { if (onIsle && onIsle.owner !== myIdOrMe()) loadIsleP(); Build.on = true; isleUnbatch(isleGroup); renderBuildBar(); renderIsleBar(); } }); bar.appendChild(b);
     const s = el('button', 'tbtn ghost', '🛒 買東西'); s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
   if (!mine && !canEditIsle()){ const l = el('button', 'tbtn' + (onIsle.liked ? ' ghost' : ''), onIsle.liked ? '❤️ 已按讚' : '❤️ 按讚'); l.disabled = !!onIsle.liked; l.addEventListener('click', likeIsle); bar.appendChild(l); }
   const back = el('button', 'tbtn ghost', '回村子'); back.addEventListener('click', leaveIsle); bar.appendChild(back);
@@ -4228,6 +4228,7 @@ function renderBuildBar(){
     const T = ISLE_ITEMS[Build.sel.t]; bar.appendChild(el('span', 'bb-hint', `🔨 ${T.name}`));
     if (canTouch(Build.sel)){ const mv = el('button', 'tbtn', '移動'); mv.addEventListener('click', () => startPlace(Build.sel.t, Build.sel.id)); bar.appendChild(mv); }
     if (isleRank() >= 2){ const rm = el('button', 'tbtn ghost', `拆掉 +${Math.floor(T.price / 2)}`); rm.addEventListener('click', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定拆掉？'; rm.classList.add('warn'); return; } removeIsleItem(Build.sel.id); }); bar.appendChild(rm); }
+    else if (onIsle && onIsle.owner !== myIdOrMe() && !IsleP.me){ bar.appendChild(el('span', 'bb-hint', '（讀取權限中…）')); loadIsleP(); }
     else bar.appendChild(el('span', 'bb-hint', canTouch(Build.sel) ? '（拆東西要管理成員以上）' : '（一般成員只能移動自己蓋的）'));
     const sh = el('button', 'tbtn ghost', '🛒'); sh.addEventListener('click', () => openSheet('island')); bar.appendChild(sh);
   } else {
@@ -4935,7 +4936,7 @@ var IsleP = { me:null, people:[], store:null, at:0, busy:false };
 const PERM_NAME = { owner:'👑 創建者', co:'🤝 共同島主', admin:'🛠️ 管理成員', member:'🙂 一般成員' }, PERM_RANK = { owner:4, co:3, admin:2, member:1 };
 async function loadIsleP(){ if (IsleP.busy || !Cloud.on) return; IsleP.busy = true; IsleP.at = Date.now();
   try { const [a, b] = await Promise.all([Cloud.sb.rpc('isle_people'), Cloud.sb.rpc('isle_storage')]); if (a.data){ IsleP.me = a.data.me; IsleP.people = a.data.people || []; } IsleP.store = b.data || []; } catch(e){}
-  IsleP.busy = false; if (!$('#sheet').hidden && curTab === 'island') renderTab(); }
+  IsleP.busy = false; if (!$('#sheet').hidden && curTab === 'island') renderTab(); try { if (Build.on) renderBuildBar(); } catch(e){} }   /* v246 權限讀到了，建造列馬上換成對的按鈕（之前要等很久，共同島主會先被當成一般成員，不能拆） */
 async function isleCall(fn, args, msg){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; if (data && data.tank) { adoptRow(data); buildTank(); } if (msg) flash(msg, 1.4); } catch(e){ toast(cloudErrMsg(e)); } IsleP.at = 0; Home.at = 0; loadIsleP(); }
 // ---- 島上的幫手（065_isle_npc.sql）：白天在碼頭釣魚、釣到的放進公共儲物箱；大家都離線也照樣工作 ----
 var IsleH = { owner:null, list:null, at:0, busy:false, fishers:[], hireName:'', hireTrait:'hard' };
