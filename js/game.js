@@ -1388,6 +1388,7 @@ function castPoint(x, z, dx, dz, dist){
     if (!treeOK(x, z)) continue;
     { const hd = Math.hypot(x - MAP.hill.x, z - MAP.hill.z); if (hd < 7 || (hd < MAP.hill.R + 2 && pathDist(x, z) < 3.4)) continue; }
     if (Math.hypot((x - 40) / 1, (z + 6) / 1.5) < 11) continue;   /* 南方沙灘不長樹 */
+    if (x > 24 && x < 37 && z > -25 && z < -14) continue;   /* v248 港口沙灘不長樹（擋住看海） */
     if (Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) continue;   /* 生態池旁邊自己種樹 */
     if (x > -13 && x < 15 && z > 18 && z < 42) continue;   /* 潮汐商店街 */
     if (Math.abs(x - REEF.x) < 4.5 && z > REEF.bz0 - 6) continue;   /* 往珊瑚礁群島的橋頭 */   /* 城市水圳那一區是工廠和水泥路，不長樹 */   /* 山頂留一塊空地、上山的路寬一點，走得過去 */
@@ -4056,8 +4057,8 @@ function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group();
   addDeck(A.x, A.z, A.w, A.d, A.y); g.add(box([A.w, 0.3, A.d], '#5a6470', [0, A.y - 0.15, 0])); g.add(box([A.w - 0.3, 0.04, A.d - 0.3], '#8a7a62', [0, A.y + 0.01, 0]));
   for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]){ const fl = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 12), mat('#e8a040', 0.6)); fl.position.set(sx * (A.w / 2 - 0.8), 0, sz * (A.d / 2 - 0.8)); g.add(fl); }
   for (let i = 0; i <= 12; i++){ const x = -A.w / 2 + i * A.w / 12; for (const z of [-A.d / 2, A.d / 2]) if (!(z > 0 && Math.abs(x) < 1.2)) g.add(box([0.06, 0.9, 0.06], '#c8ccd0', [x, A.y + 0.45, z])); }
-  for (const z of [-A.d / 2, A.d / 2]){ g.add(box([A.w, 0.06, 0.06], '#c8ccd0', [0, A.y + 0.9, z])); } for (const x of [-A.w / 2, A.w / 2]) g.add(box([0.06, 0.06, A.d], '#c8ccd0', [x, A.y + 0.9, 0]));
-  addBoxCol(A.x, A.z - A.d / 2 - 0.1, A.w, 0.2); addBoxCol(A.x - A.w / 2 - 0.1, A.z, 0.2, A.d); addBoxCol(A.x + A.w / 2 + 0.1, A.z, 0.2, A.d);
+  for (const z of [-A.d / 2, A.d / 2]){ g.add(box([A.w, 0.06, 0.06], '#c8ccd0', [0, A.y + 0.9, z])); } g.add(box([0.06, 0.06, A.d], '#c8ccd0', [-A.w / 2, A.y + 0.9, 0])); for (const sz of [-1, 1]) g.add(box([0.06, 0.06, A.d / 2 - 1.3], '#c8ccd0', [A.w / 2, A.y + 0.9, sz * (1.3 + (A.d / 2 - 1.3) / 2)]));   /* v248 東邊欄杆中間留一個缺口：上潛水艇 */
+  addBoxCol(A.x, A.z - A.d / 2 - 0.1, A.w, 0.2); addBoxCol(A.x - A.w / 2 - 0.1, A.z, 0.2, A.d); for (const sz of [-1, 1]) addBoxCol(A.x + A.w / 2 + 0.1, A.z + sz * (1.3 + (A.d / 2 - 1.3) / 2), 0.2, A.d / 2 - 1.3);
   // 小小的觀測站、吊臂、燈
   g.add(box([3, 2.4, 2.2], '#e8ecf0', [-3.6, A.y + 1.2, 1.8])); g.add(box([3.2, 0.2, 2.4], '#2f5a8a', [-3.6, A.y + 2.5, 1.8])); g.add(box([0.8, 1.6, 0.05], '#2f5a8a', [-3.6, A.y + 0.8, 0.68])); addBoxCol(A.x - 3.6, A.z + 1.8, 3, 2.2);
   { const arm = new THREE.Group(); arm.position.set(4.2, A.y, 2.4); g.add(arm); arm.add(box([0.3, 3.2, 0.3], '#e8a040', [0, 1.6, 0])); const jib = box([0.2, 0.2, 3.2], '#e8a040', [0, 3.1, -1.4]); arm.add(jib); arm.add(box([0.03, 2.4, 0.03], '#333', [0, 1.9, -2.9])); addCircleCol(A.x + 4.2, A.z + 2.4, 0.35); }
@@ -4172,7 +4173,7 @@ function buildGreen(){ Far.green = true; const G = GREEN, g = new THREE.Group();
   g.traverse(o => { if (o.isMesh && !o.castShadow) o.castShadow = false; }); }
 function updateFar(dt, t){
   if (frameNo % 30 === 0){ const vis = (G, x, z, R) => { if (G) G.visible = Math.hypot(camera.position.x - x, camera.position.z - z) < R; };   /* 手機效能：離很遠的區域先不畫（走近再出現） */
-    vis(Frost.g, FROST.x, FROST.z, 130); vis(Far.ag, ABYSS.x, ABYSS.z, 120); vis(Far.mg, MYST.x, MYST.z, 130); vis(Far.gg, GREEN.x, GREEN.z, 150); }
+    vis(Frost.g, FROST.x, FROST.z, 130); vis(Far.ag, ABYSS.x, ABYSS.z, 120); if (Sub.dockG && !Sub.cine) vis(Sub.dockG, ABYSS.x, ABYSS.z, 120); vis(Far.mg, MYST.x, MYST.z, 130); vis(Far.gg, GREEN.x, GREEN.z, 150); }
   if (!Far.green && greenNear(me.pos.x, me.pos.z, 90)) buildGreen();
   if (Far.green && Far.gAnim) Far.gAnim(dt, t);
   if (!Far.abyss && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 90) buildAbyss();
@@ -5852,7 +5853,7 @@ function lvOf(xp){ let L = 1; while (L < 99 && xp >= lvNeed(L + 1)) L++; return 
 const speciesN = () => Object.keys(rec.count || {}).filter(id => FISH_BY_ID[id]).length;
 const spotDone = id => FISH.filter(f => f.spot === id).every(f => rec.count[f.id]);
 const ACH = [
-  { id:'trench', icon:'🕳️', name:'發現黑淵裂縫', desc:'開潛水艇找到港口外海底下的黑淵裂縫', cur:() => (typeof Sub !== 'undefined' && Sub.st && Sub.st.found) ? 1 : 0, goal:1 },
+  { id:'trench', icon:'🕳️', name:'發現黑淵裂縫', desc:'開潛水艇找到深海浮台底下的黑淵裂縫', cur:() => (typeof Sub !== 'undefined' && Sub.st && Sub.st.found) ? 1 : 0, goal:1 },
   { id:'c1',    icon:'🎣', name:'第一條魚',     desc:'釣到第一條魚',              cur:() => rec.total, goal:1 },
   { id:'c100',  icon:'🪣', name:'百條釣手',     desc:'總共釣到 100 條魚',         cur:() => rec.total, goal:100 },
   { id:'c500',  icon:'🧺', name:'五百條',       desc:'總共釣到 500 條魚',         cur:() => rec.total, goal:500, title:'勤勞釣客' },
@@ -9274,7 +9275,7 @@ function applyPeer(pp){
   p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = Number(pr.hs) || 0; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
   { const a = Array.isArray(pr.sb) && pr.sb.length >= 4 && pr.sb.every(v => Number.isFinite(+v)) ? pr.sb : null, was = !!p.sub;   /* v241 開潛水艇的人（村子裡看不到他，裂縫裡看得到他的潛水艇） */
     p.sub = a ? [clamp(+a[0], -80, 80), clamp(+a[1], -130, 12), clamp(+a[2], -70, 90), +a[3]] : null;
-    if (p.subInit && !was && p.sub && !(typeof Sub !== 'undefined' && Sub.on) && Date.now() - (p.subTold || 0) > 300000){ p.subTold = Date.now(); ticker(`🚢 <b>${esc(peerName(p))}</b> 開潛水艇下去黑淵裂縫了！到港口的潛水艇碼頭就能一起潛`); } p.subInit = 1; }
+    if (p.subInit && !was && p.sub && !(typeof Sub !== 'undefined' && Sub.on) && Date.now() - (p.subTold || 0) > 300000){ p.subTold = Date.now(); ticker(`🚢 <b>${esc(peerName(p))}</b> 開潛水艇下去黑淵裂縫了！搭船到深海浮台的潛水艇碼頭就能一起潛`); } p.subInit = 1; }
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
@@ -9831,7 +9832,7 @@ const npcs = [
     lines:['號外號外！今天的《潮汐村報》出來了', '每天早上 7 點出報，昨天發生什麼事都寫在上面，全服大魚、博物館新展品、節慶活動也會寫', '釣到稀有的魚，明天就會上報喔，名字還是金色的', '報紙我都留 7 天，想看以前的也可以', '我到處跑新聞，村民的八卦我最清楚了'] },
   // 蔚博士：海洋科學家，每天跑到世界上的一個釣點調查，發現一種新品種（070_sci.sql）；站在今天調查的釣點旁邊
   { name:'蔚博士・海洋科學家', shirt:'#f4f6f8', hat:'#2f7fa8', x:2.4, z:3.2, y:0.02, dir:new THREE.Vector2(-0.6, 0.8).normalize(), shopNpc:'sci',
-    lines:['我是海洋科學家，每天都會到不同的地方做調查', '世界上還有好多沒被發現的魚，每天都有新驚喜', '我發現的新品種，會放進大家的圖鑑裡', '我研究站的探測潛水艇需要人幫忙採樣，港口阿海旁邊的潛水艇碼頭可以借你（Lv.15 以上）', '新品種剛發現的那天最容易遇到，之後也一直都在那裡', '每一種新品種都有很少見的白化或黑化個體，我也還沒看過'] },
+    lines:['我是海洋科學家，每天都會到不同的地方做調查', '世界上還有好多沒被發現的魚，每天都有新驚喜', '我發現的新品種，會放進大家的圖鑑裡', '我研究站的探測潛水艇需要人幫忙採樣，深海浮台上的潛水艇碼頭可以借你（Lv.15 以上，搭阿海的船去）', '新品種剛發現的那天最容易遇到，之後也一直都在那裡', '每一種新品種都有很少見的白化或黑化個體，我也還沒看過'] },
   { name:'阿伯・老校工', shirt:'#c8b48a', hat:'#5a6a3a', x:21.6, z:-41.0, y:0.02, dir:new THREE.Vector2(-0.2, 1).normalize(), lines:['這個池子比我年紀還大，學校一百多年前就有了', '以前的學生下課都蹲在池邊看魚', '琵琶鼠魚是有人亂放生的，現在池子裡到處都是', '大肚魚是以前放來吃孑孓的', '紅色的拱橋走上去看魚最清楚', '看到垃圾就順手撿一下啦', '假山上的蕨類是老師們一棵一棵種的'] },
 ].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.tailor = !!n.tailor; f.shopNpc = n.shopNpc || null; if (n.tailor || n.shopNpc){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 for (const n of npcs){ const nm = n.nm.textContent; n.wid = nm.startsWith('阿綾') ? 'ling' : nm.startsWith('阿木') ? 'mu' : nm.startsWith('阿福') ? 'fu' : nm.startsWith('老港') ? 'gang' : null; }
@@ -10651,7 +10652,7 @@ function renderTab(){
       '愛海點數在商店的「💙愛海」分頁換限定服飾（海龜帽、海洋守護衫、珊瑚項鍊、鯊魚背鰭），金幣買不到。',
     ]);
     sec('🚢 潛水艇與黑淵裂縫', [
-      '潛水艇碼頭在魚市旁邊沙灘往東伸出去的長棧橋上：跟蔚博士租潛水艇（Lv.15 以上、4500 金幣，租一次以後免費）。按「出發」會走上潛水艇、關上艙門，冒著泡泡沉進港口外海底下的深海；回港時潛水艇會浮上來，你從艙門走回棧橋。',
+      '潛水艇碼頭在「深海浮台」（搭阿海的船去）東邊：跟蔚博士租潛水艇（Lv.15 以上、4500 金幣，租一次以後免費）。按「出發」會走上潛水艇、關上艙門，冒著泡泡沉進浮台底下的深海；回港時潛水艇會浮上來，你從艙門走回棧橋。',
       '搖桿往哪邊推，潛水艇就慢慢轉過去往那邊開；手指拖畫面可以轉鏡頭看四周。按住 ⬇ 下潛、⬆ 上浮：壓艙水要慢慢灌、慢慢排，所以會慢慢加速，放開也會再滑一下（深度旁邊會顯示上下的速度）。深海很暗，只看得到前燈照到的地方。往前開到大陸棚的盡頭，看看會發現什麼。',
       '停下來（深度 200 公尺以下）可以按「🎣 放線」釣深海魚：按住收線，張力太高線會斷、太鬆魚會脫鉤。釣到的魚先放在船艙，按「⚓ 回港」才放進魚缸。',
       '🐙 裂縫越深，住著越奇怪的生物——都是真實世界的深海裡真的有的。蔚博士每個星期五會在裂縫裡發現一種新的，發現了村子會通知大家；有哪些、長什麼樣子，就要自己開潛水艇下去找了。運氣好的話，還會遇到牠們很少見的變種，有的全身發光。',
@@ -11165,7 +11166,7 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
 
 
 /* ===================== v237 潛水艇與黑淵裂縫 =====================
-   港口的潛水艇碼頭 → 開進港口外海底下的深海區（獨立的場景，放在世界正下方很深的地方，進去時把村子藏起來）。
+   深海浮台的潛水艇碼頭 → 開進浮台底下的深海區（獨立的場景，放在世界正下方很深的地方，進去時把村子藏起來）。
    地形：大陸棚（平緩沙地）→ 地面突然斷掉 → 黑淵裂縫（三段近乎垂直的岩壁、兩個岩架、溝底）。地形用程式算的高度（subH），不用外部模型。
    深海很暗：霧只看得到前燈照到的距離（探照燈 25/40/60 公尺），光錐外面是黑的。
    第一次走到裂縫邊緣：背景音樂淡掉換成低沉的水壓聲、深度計變紅閃、中間淡入「……這裡沒有底。」、溝底遠遠有一點藍光。
@@ -11504,36 +11505,26 @@ function subFishTick(dt, t){ const F = Sub.fish; if (F.phase !== 'fight') return
   if (F.pro <= -0.05 || now() - F.t0 > 75){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('魚脫鉤跑掉了', 1.4); return; }
   if (F.pro >= 1){ F.phase = 'land'; b.hidden = true; subRpc('sub_land', { p_fish: F.id, p_w: F.w }).then(r => { Sub.fish = null; if (!r) return; Sub.hold = r.hold || []; SFX.catch(); const n = F.f ? F.f.name : F.id; flash(`${F.legend ? '🌟 ' : ''}釣到${n}！${F.w}kg（先放在船艙，回港才算）`, 2.4); if (F.legend) ticker(`🌟 你在黑淵裂縫釣到了 <b>${esc(n)}</b>！`); }); } }
 
-/* ---- 潛水艇碼頭（港口阿海旁邊）和租借、升級的面板 ---- */
-/* v244 潛水艇專用碼頭：從沙灘往東伸出去的一條長棧橋（避開魚市碼頭和潛水點），潛水艇停在棧橋北邊比較深的水裡，旁邊有吊臂和燈 */
-const SUBPIER = { x0:30.4, x1:44.4, z:-21.8, w:1.8, y:0.32 };
-const SUBDOCK = { x:40.4, z:-22.25 };   /* 站在這裡（棧橋靠潛水艇那邊）按「開潛水艇」 */
-const SUBPARK = { x:40.6, z:-24.4, s:2.0 };   /* 跟真的小型研究潛水艇差不多大（約 6 公尺長），人站上去才合比例 */
-function buildSubDock(){ try { const P = SUBPIER, wd = [], dk = [], E = new THREE.Euler(), Q = new THREE.Quaternion(), M4 = new THREE.Matrix4();
-  const add = (L, g, p, r) => { E.set(...(r || [0, 0, 0])); Q.setFromEuler(E); M4.compose(new THREE.Vector3(...p), Q, new THREE.Vector3(1, 1, 1)); g.applyMatrix4(M4); L.push(g); };
-  addDeck((P.x0 + P.x1) / 2, P.z, P.x1 - P.x0, P.w, P.y);
-  add(wd, new THREE.BoxGeometry(P.x1 - P.x0, 0.1, P.w), [(P.x0 + P.x1) / 2, P.y - 0.05, P.z]);
-  for (let x = P.x0 + 0.25; x < P.x1; x += 0.55) add(dk, new THREE.BoxGeometry(0.03, 0.02, P.w), [x, P.y + 0.005, P.z]);   /* 木板縫 */
-  for (let x = P.x0 + 1.2; x <= P.x1 + 0.01; x += 2.6) for (const sd of [-1, 1]) add(dk, new THREE.CylinderGeometry(0.1, 0.1, 3.4, 7), [x, P.y - 1.4, P.z + sd * (P.w / 2 - 0.05)]);
-  for (const sd of [-1, 1]){ add(dk, new THREE.BoxGeometry(P.x1 - P.x0 - 4.5, 0.05, 0.05), [(P.x0 + P.x1) / 2 - 2.0, P.y + 0.7, P.z + sd * (P.w / 2 - 0.05) + (sd < 0 ? 0 : 0)]);
-    for (let x = P.x0 + 0.6; x < P.x1 - 4.5; x += 1.8) add(dk, new THREE.CylinderGeometry(0.03, 0.03, 0.7, 4), [x, P.y + 0.35, P.z + sd * (P.w / 2 - 0.05)]); }   /* 欄杆（靠潛水艇那段留空才上得去） */
-  for (const x of [SUBPARK.x - 1.3, SUBPARK.x + 1.3]) add(dk, new THREE.CylinderGeometry(0.09, 0.11, 0.25, 8), [x, P.y + 0.12, P.z - P.w / 2 + 0.18]);
-  { const cx = P.x1 - 0.35, cz = P.z - P.w / 2 + 0.25; add(dk, new THREE.BoxGeometry(0.16, 2.4, 0.16), [cx, P.y + 1.2, cz]); add(dk, new THREE.BoxGeometry(0.12, 0.12, 2.0), [cx, P.y + 2.35, cz - 0.9]); add(dk, new THREE.CylinderGeometry(0.012, 0.012, 1.2, 4), [cx, P.y + 1.75, cz - 1.8]); colliders.push({ x:cx, z:cz, r:0.25 }); }   /* 吊臂 */
-  { const lx = P.x0 + 7.2, lz = P.z + P.w / 2 - 0.12; add(dk, new THREE.CylinderGeometry(0.05, 0.06, 2.0, 6), [lx, P.y + 1.0, lz]); colliders.push({ x:lx, z:lz, r:0.12 }); const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), new THREE.MeshBasicMaterial({ color:'#fff3c4' })); bulb.position.set(lx, P.y + 2.05, lz); scene.add(bulb); }
-  const W = new THREE.Mesh(mergeGeometries(wd, false), mat('#9a7452')), D = new THREE.Mesh(mergeGeometries(dk, false), mat('#3a3330')); W.receiveShadow = true; scene.add(W); scene.add(D);
-  for (const x of [SUBPARK.x - 1.3, SUBPARK.x + 1.3]){ const a = new THREE.Vector3(x, P.y + 0.22, P.z - P.w / 2 + 0.18), b = new THREE.Vector3(SUBPARK.x + (x < SUBPARK.x ? -1.9 : 1.9), WATER_LEVEL + 0.55, SUBPARK.z + 0.95), L = a.distanceTo(b);
-    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, L, 4), mat('#d8c8a0')); r.position.copy(a).add(b).multiplyScalar(0.5); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); scene.add(r); }   /* 纜繩 */
-  const m = subModel(); m.scale.setScalar(SUBPARK.s); m.position.set(SUBPARK.x, WATER_LEVEL - 0.3, SUBPARK.z); m.rotation.y = Math.PI / 2; scene.add(m); Sub.dockM = m; Sub.dockY = m.position.y; m.userData.hatch.rotation.x = -1.9;   /* 停著的時候艙門開著 */
+/* ---- 潛水艇碼頭（v248 搬到深海浮台）和租借、升級的面板 ---- */
+/* v248 潛水艇搬到深海浮台（遠洋上的浮台，底下就是海溝）：停在浮台東邊，欄杆中間留一個缺口，旁邊有纜樁和纜繩。原本港口那條棧橋拆掉了 */
+const SUBDOCK = { x:ABYSS.x + ABYSS.w / 2 - 0.7, z:ABYSS.z };   /* 站在這裡（浮台東邊的缺口）按「開潛水艇」 */
+const SUBPARK = { x:ABYSS.x + ABYSS.w / 2 + 1.75, z:ABYSS.z, s:2.0 };   /* 跟真的小型研究潛水艇差不多大（約 6 公尺長） */
+const SUBBOARD = { x:ABYSS.x + ABYSS.w / 2 - 0.35, z:ABYSS.z + 0.5, y:ABYSS.y };
+function buildSubDock(){ try { const A = ABYSS, G = new THREE.Group(); scene.add(G); Sub.dockG = G;
+  for (const sz of [-1, 1]){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.25, 8), mat('#3a3330')); b.position.set(A.x + A.w / 2 - 0.25, A.y + 0.12, A.z + sz * 1.55); G.add(b);
+    const a = new THREE.Vector3(A.x + A.w / 2 - 0.25, A.y + 0.22, A.z + sz * 1.55), c = new THREE.Vector3(SUBPARK.x - 0.95, WATER_LEVEL + 0.55, SUBPARK.z + sz * 1.9), L = a.distanceTo(c);
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, L, 4), mat('#d8c8a0')); r.position.copy(a).add(c).multiplyScalar(0.5); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().sub(a).normalize()); G.add(r); }
+  const m = subModel(); m.scale.setScalar(SUBPARK.s); m.position.set(SUBPARK.x, WATER_LEVEL - 0.3, SUBPARK.z); m.rotation.y = Math.PI; G.add(m); Sub.dockM = m; Sub.dockY = m.position.y; m.userData.hatch.rotation.x = -1.9;   /* 船頭朝北；停著的時候艙門開著 */
   const cv = document.createElement('canvas'); cv.width = 320; cv.height = 80; const c = cv.getContext('2d'); c.fillStyle = '#18334a'; c.fillRect(0, 0, 320, 80); c.fillStyle = '#ffd36a'; c.font = 'bold 40px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🚢 潛水艇碼頭', 160, 42);
-  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map:tx, side:THREE.DoubleSide })); const y = groundHeight(P.x0 - 0.3, P.z - 1.25);
-  sg.position.set(P.x0 - 0.3, y + 1.6, P.z - 1.25); sg.rotation.y = Math.PI / 2; scene.add(sg); const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.5, 6), mat('#6b4a35')); pl.position.set(P.x0 - 0.3, y + 0.75, P.z - 1.25); scene.add(pl); colliders.push({ x:P.x0 - 0.3, z:P.z - 1.25, r:0.12 });
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map:tx, side:THREE.DoubleSide }));
+  sg.position.set(A.x + A.w / 2 - 0.15, A.y + 1.35, A.z - 1.45); sg.rotation.y = -Math.PI / 2; G.add(sg);
   } catch(e){ console.warn('subdock', e); } }
 
 /* v244 上船、下潛、浮上來、走出來的過場（大約 4 秒，看得到人走上潛水艇、艙門關上、潛水艇冒著泡泡沉下去；回來時反過來） */
 const easeIO = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
 function subCineCam(){ const c = Sub.cine; if (!c) return false; camera.position.copy(c.cp); camera.lookAt(c.lk); return true; }
-function subCineStart(kind, done){ const m = Sub.dockM; if (!m){ done(); return; } const P = SUBPIER;
-  Sub.cine = { kind, t0:now(), done, ui:uiBlocked, B:new THREE.Vector3(SUBPARK.x - 0.15, P.y, P.z - P.w / 2 + 0.35), P0:me.pos.clone(), cp:new THREE.Vector3(), lk:new THREE.Vector3(), rip:0 };
+function subCineStart(kind, done){ const m = Sub.dockM; if (!m){ done(); return; }
+  Sub.cine = { kind, t0:now(), done, ui:uiBlocked, B:new THREE.Vector3(SUBBOARD.x, SUBBOARD.y, SUBBOARD.z), P0:me.pos.clone(), cp:new THREE.Vector3(), lk:new THREE.Vector3(), rip:0 };
   uiBlocked = true; for (const k in keys) keys[k] = false; joy.x = joy.z = 0; document.body.classList.add('subcine'); closeSubPanel();
   if (kind === 'back'){ m.position.y = Sub.dockY - 3.2; m.userData.hatch.rotation.x = 0; me.av.g.visible = false; } }
 function subCineTick(dt){ const c = Sub.cine, m = Sub.dockM, T = now() - c.t0, y0 = Sub.dockY, hp = new THREE.Vector3();
@@ -11568,7 +11559,7 @@ async function openSubPanel(){
   const st = await subRpc('sub_get'); if (!st) { closeSubPanel(); return; } Sub.st = st;
   const lv = lvOf(calcXP()); let html = head;
   if (!st.unlocked){
-    html += `<p>蔚博士：「我研究站的探測潛水艇需要人幫忙到深海採樣。港口外海底下，好像有一條還沒有人看過的大裂縫……」</p><p class="sub">租用一次 <b>4500 金幣</b>，之後免費使用。要 <b>Lv.15</b> 以上（你現在 Lv.${lv}）。</p><button class="tbtn sp-unlock">租用潛水艇（4500）</button>`;
+    html += `<p>蔚博士：「我研究站的探測潛水艇需要人幫忙到深海採樣。深海浮台底下，好像有一條還沒有人看過的大裂縫……」</p><p class="sub">租用一次 <b>4500 金幣</b>，之後免費使用。要 <b>Lv.15</b> 以上（你現在 Lv.${lv}）。</p><button class="tbtn sp-unlock">租用潛水艇（4500）</button>`;
   } else {
     const P = [800, 1500, 3000], B = [5, 8, 12], Lt = [25, 40, 60];
     html += `<p class="sub">耐壓 <b>${P[st.pressure_lv - 1]} m</b>・電池 <b>${B[st.battery_lv - 1]} 分鐘</b>・探照燈 <b>${Lt[st.light_lv - 1]} m</b>・深海礦石 ${st.ore}・古代船錨 ${st.anchor}${st.max_depth ? `・最深到過 ${st.max_depth} m` : ''}</p><button class="tbtn sp-go">出發 ⬇</button><h4>升級</h4>`;
