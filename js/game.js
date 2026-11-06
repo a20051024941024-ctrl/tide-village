@@ -2599,6 +2599,7 @@ class Fisher {
       const tk = new THREE.Mesh(SCUBA.tank, sm); tk.scale.setScalar(0.33); tk.position.set(0, 0.8, -0.4); tk.castShadow = true; (a.torsoG || a.g).add(tk); parts.push(tk);   /* 氧氣瓶背在背上（掛在胸骨，跟著身體動） */
       if (!/acc_goggles/.test(this.gearKey || '')){ const mk2 = new THREE.Mesh(SCUBA.mask, sm); mk2.scale.setScalar(0.4); mk2.position.set(0.05, -0.04, 0.02); a.headG.add(mk2); parts.push(mk2); }   /* 面鏡蓋住兩隻眼睛，呼吸管在右邊 */
       for (const L of [a.legL, a.legR]){ const ft = L.userData.foot || L; const fn = new THREE.Mesh(SCUBA.fin, sm); fn.scale.setScalar(0.34); fn.rotation.x = -Math.PI / 2; fn.position.set(0, -0.03, 0.26); ft.add(fn); parts.push(fn); }   /* 蛙鞋套在腳上，蹼往腳尖方向伸出去 */
+      this._hatHid = []; if (a.hatG && a.hatG.visible){ a.hatG.visible = false; this._hatHid.push(a.hatG); } for (const m of a.gearMeshes || []) if (m.parent === a.headG && m.visible && !(GOGGLE.mat && m.material === GOGGLE.mat)){ m.visible = false; this._hatHid.push(m); }   /* v234：潛水時把帽子拿下來 */
       this.swimMesh = parts; a.rod.visible = false; return; }
     if (on){ const tank = new THREE.Group(), y = mat('#f6c83b', 0.4, { metalness:0.3 }), k = mat('#2b2f36', 0.5);
       const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.46, 12), y); c1.position.set(0, 0.86, -0.3); tank.add(c1);
@@ -2612,6 +2613,7 @@ class Fisher {
       const sn = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6), mat('#f05a4a', 0.5)); sn.position.set(0.22, 0.15, 0.1); mask.add(sn); }
       a.headG.add(mask); this.swimMesh = [tank, mask]; a.rod.visible = false; }
     else { for (const m of this.swimMesh || []) if (m.parent) m.parent.remove(m); this.swimMesh = null; const g = a.g; g.rotation.x = 0; g.rotation.order = 'XYZ';
+      for (const m of this._hatHid || []) m.visible = true; this._hatHid = null;
       if (this._wet){ const W = this._wet, pr = a.kid && a.kid.prim; a.shirtM.color.copy(W.shirt); a.pantsM.color.copy(W.pants); a.body.material = W.body; if (pr && pr.pants && W.ppm) pr.pants.material = W.ppm; if (pr && pr.shin && W.shin) pr.shin.material = W.shin; if (pr && pr.shoe) pr.shoe.visible = true; this._wet = null;
         try { const gg = cleanGear(JSON.parse(this.gearKey || '{}')); topStyle(a, designId(gg.top) ? '' : gg.top); } catch(e){ try { topStyle(a, 'top_tee'); } catch(e2){} } } }   /* 上岸：換回原本的衣服 */
   }
