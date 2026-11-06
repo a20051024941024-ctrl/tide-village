@@ -1479,12 +1479,53 @@ function updateSeaLife(t){
       if (!s.sp1 && u0 > s.dur * 0.38){ s.sp1 = true; blow(); } if (!s.sp2 && u0 > s.dur * 0.62){ s.sp2 = true; blow(); }
     }
   }
-  spoutTick(t);
+  BlueW.update(t); spoutTick(t);
 }
+/* ===== v228 藍鯨的習性 =====
+   1) 全服同步：照伺服器時間，每 20 分鐘裡有 3 分鐘藍鯨會浮到港口外海（每一輪的時間點不一樣，用同一個公式算，伺服器 020 的 _bw_up() 也一樣）。
+      這 3 分鐘大家看到的是同一隻、同一個時候噴水；這段時間在港口外海釣到藍鯨的機率是平常的 5 倍（伺服器決定）。
+   2) 浮在水面時一次連續噴 3～4 口又直又高的水柱，潛下去一下再浮上來。
+   3) 靠近的時候聽得到低沉的鯨歌。
+   4) 中間會衝向一團粉紅色的磷蝦、側身張嘴吞下去（衝撞式進食）。
+   5) 在「外海」潛水時，偶爾有一隻巨大的藍鯨從頭頂慢慢游過。 */
+function bwWin(ms){ const s = Math.floor(ms / 1000), c = Math.floor(s / 1200), off = ((c * 2654435761) % 4294967296) % 1020, d = s - c * 1200 - off; return d >= 0 && d < 180 ? d : -1; }
+const BlueW = { m:null, told:-1, songAt:0, blowAt:0, nBlow:0, krill:null,
+  init(){ try { const m = fishModel(FISH_BY_ID.bluewhale, 9); m.rotation.order = 'YXZ'; m.visible = false; scene.add(m); this.m = m;   /* YXZ：rotation.x 是沿著身體翻滾 */ } catch(e){ console.warn('bluewhale', e); } },
+  // 浮上來的位置：港口外海釣點往外看出去 45 公尺，沿著海岸方向慢慢游
+  path(d){ const S = SPOT_BY_ID.harbor, dir = new THREE.Vector2(S.dir.x, S.dir.y).normalize(), side = new THREE.Vector2(-dir.y, dir.x), u = (d / 180 - 0.5) * 70;
+    return { x: S.pos.x + dir.x * 46 + side.x * u, z: S.pos.z + dir.y * 46 + side.y * u, hx: side.x, hz: side.y }; },
+  update(t){ const m = this.m; if (!m) return; const d = bwWin(bossNow()); if (d < 0 || Dive.on){ m.visible = false; if (this.krill) this.krill.visible = false; return; }
+    const P = this.path(d); m.visible = true; m.position.set(P.x, 0, P.z); m.rotation.set(0, Math.atan2(-P.hz, P.hx), 0);
+    // 浮沉：每 45 秒一輪，前 28 秒在水面（背露出來），後面潛下去；剛開始和最後 8 秒在水下
+    const ph = d % 45, surf = d > 6 && d < 172 && ph < 28, k = surf ? smooth01(clamp(Math.min(ph, 28 - ph) / 3, 0, 1)) : 0;
+    m.position.y = -2.6 + k * 2.2; m.rotation.z = surf ? 0 : -0.15;
+    // 噴水：浮上來後每 3 秒噴一口，連噴 4 口
+    const want = surf ? Math.min(4, Math.floor((ph - 2) / 3) + 1) : 0, cyc = Math.floor(d / 45);
+    if (this.cyc !== cyc){ this.cyc = cyc; this.nBlow = 0; } if (want > this.nBlow && ph > 2){ this.nBlow = want; spoutAt(P.x + P.hx * 6.2, 0.4, P.z + P.hz * 6.2, 12, true); }
+    // 衝撞式進食：第 90～102 秒，前面出現一團磷蝦，藍鯨加速、側身翻過去吞掉
+    if (d >= 88 && d < 104){ const u = (d + (bossNow() % 1000) / 1000 - 88) / 16; if (!this.krill) this.krill = this.makeKrill();
+      const kx = P.x + P.hx * 10, kz = P.z + P.hz * 10; this.krill.position.set(kx, 0.1, kz); this.krill.visible = u < 0.55; this.krill.rotation.y = t * 0.6;
+      const roll = Math.sin(clamp((u - 0.3) / 0.5, 0, 1) * Math.PI); m.rotation.x = roll * 1.4; m.position.y = -0.4 + roll * 0.2; m.position.x += P.hx * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; m.position.z += P.hz * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; }
+    else { m.rotation.x = 0; if (this.krill) this.krill.visible = false; }
+    // 公告（每一輪一次）＋鯨歌（離藍鯨 140 公尺內，每 16 秒一段）
+    const c = Math.floor(Math.floor(bossNow() / 1000) / 1200); if (this.told !== c && d < 170){ this.told = c; ticker('🐋 港口外海有藍鯨浮上來噴水了！接下來 3 分鐘，在港口外海比較容易釣到藍鯨'); }
+    const dist = Math.hypot(me.pos.x - P.x, me.pos.z - P.z); if (dist < 140 && t - this.songAt > 16){ this.songAt = t; whaleSong(clamp(1 - dist / 140, 0.15, 1)); } },
+  makeKrill(){ const N = 260, g = new THREE.BufferGeometry(), a = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const r = Math.random() * 3, th = Math.random() * 6.28; a[i * 3] = Math.cos(th) * r; a[i * 3 + 1] = -Math.random() * 1.2; a[i * 3 + 2] = Math.sin(th) * r; }
+    g.setAttribute('position', new THREE.BufferAttribute(a, 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ color:'#ff8fa0', size:0.45, transparent:true, opacity:0.9, depthWrite:false })); scene.add(p); return p; } };
+// 鯨歌：兩個音疊在一起、慢慢滑上滑下、有一點顫音，像低沉的長鳴（手機喇叭聽不到太低的聲音，所以比真的藍鯨高一些）
+function whaleSong(v){ if (!soundOn || !actx || sfxVol <= 0.01) return; const t = actx.currentTime, vol = 0.07 * v * sfxVol, f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900; f.connect(actx.destination);
+  const g = actx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.9); g.gain.setValueAtTime(vol, t + 2.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 4.2); g.connect(f);
+  const lfo = actx.createOscillator(), lg = actx.createGain(); lfo.frequency.value = 4.5; lg.gain.value = 5; lfo.connect(lg);
+  for (const [mul, type] of [[1, 'sine'], [2.01, 'triangle']]){ const o = actx.createOscillator(); o.type = type; o.frequency.setValueAtTime(150 * mul, t); o.frequency.exponentialRampToValueAtTime(235 * mul, t + 1.6); o.frequency.exponentialRampToValueAtTime(115 * mul, t + 4.2); lg.connect(o.frequency); o.connect(g); o.start(t); o.stop(t + 4.3); }
+  lfo.start(t); lfo.stop(t + 4.3); }
 /* 鯨魚噴水：一團霧（十幾顆半透明白球）從噴氣孔往上衝，越高越散、越淡，2.6 秒後消失；最多同時 3 團，手機也不會卡 */
 const SPOUTS = [], SPOUT_GEO = new THREE.SphereGeometry(1, 8, 6);
-function spoutAt(x, y, z, k){ if (SPOUTS.length >= 3){ const o = SPOUTS.shift(); scene.remove(o.g); }
+function spoutAt(x, y, z, k, tall){ if (SPOUTS.length >= 4){ const o = SPOUTS.shift(); scene.remove(o.g); }
   const g = new THREE.Group(), parts = []; g.position.set(x, y, z); const sz = clamp(k / 7, 0.6, 1.8);
+  if (tall){   /* v228 藍鯨的噴氣：又直又高的細水柱（真的藍鯨可以噴到 9 公尺），頂端才散開 */
+    for (let i = 0; i < 22; i++){ const m = new THREE.Mesh(SPOUT_GEO, new THREE.MeshBasicMaterial({ color:'#f4fbff', transparent:true, opacity:0.85, depthWrite:false })); m.renderOrder = 3; g.add(m); const top = i > 15;
+      parts.push({ m, vx:(Math.random() - 0.5) * (top ? 1.6 : 0.25) * sz, vz:(Math.random() - 0.5) * (top ? 1.6 : 0.25) * sz, vy:(top ? 7.5 + Math.random() * 1.5 : 2.5 + i * 0.32) * sz, r:(0.1 + Math.random() * 0.08) * sz * (top ? 1.6 : 1), d:i * 0.02 }); }
+    scene.add(g); SPOUTS.push({ g, parts, t0:null }); return; }
   for (let i = 0; i < 14; i++){ const m = new THREE.Mesh(SPOUT_GEO, new THREE.MeshBasicMaterial({ color:'#f4fbff', transparent:true, opacity:0.8, depthWrite:false })); m.renderOrder = 3; g.add(m);
     parts.push({ m, vx:(Math.random() - 0.5) * 0.9 * sz, vz:(Math.random() - 0.5) * 0.9 * sz, vy:(3.2 + Math.random() * 2.2) * sz, r:(0.12 + Math.random() * 0.12) * sz, d:Math.random() * 0.25 }); }
   scene.add(g); SPOUTS.push({ g, parts, t0:null }); }
@@ -2430,7 +2471,7 @@ addSeaLife('sunfish', 1.4, -30, -58, 3, 0.08, 'glide', 0.4);
 addSeaLife('whaleshark', 4.5, 30, -62, 8, 0.07, 'glide', 3);
 addSeaLife('baskingshark', 3.2, 70, -20, 7, 0.06, 'glide', 4.2);
 addSeaLife('beluga', 1.5, -46, -50, 6, 0.2, 'jump', 2.2);
-addSeaLife('bluewhale', 9, -30, -125, 22, 0.025, 'whale', 0.7);   /* v227 藍鯨：比座頭鯨大很多，在更遠的外海慢慢游，偶爾浮上來噴水 */
+BlueW.init();   /* v228 藍鯨：全服同步出現（BlueW），不再是隨機的風景 */
 
 /* ================= FISHER ================= */
 const labelsEl = $('#labels');
@@ -6832,6 +6873,7 @@ function diveSiteOk(k){ return DIVE_SITES[k].need.every(hasDive); }
    海底有冒泡的「氣泡口」，游進泡泡柱裡會補氧氣。相鄰關係照地圖：港口 ↔ 珊瑚礁（西邊長橋那頭）、港口 ↔ 沉船深海（外海往下）、珊瑚礁 ↔ 海底洞穴、沉船 ↔ 海底洞穴、外海 ↔ 港口／沉船 */
 const DIVE_LINKS = { harbor:['reef', 'wreck'], reef:['harbor', 'cave'], wreck:['harbor', 'cave'], cave:['reef', 'wreck'], offshore:['harbor', 'wreck'] };
 function diveExtras(){ const g = Dive.group; if (!g) return; const X = DIVE.x, Z = DIVE.z, R = DIVE.r, links = DIVE_LINKS[Dive.site] || [];
+  Dive.bw = null; if (Dive.site === 'offshore' && (bwWin(bossNow()) >= 0 || Math.random() < 0.4)){ try { const a = Math.random() * 6.28, m = fishModel(FISH_BY_ID.bluewhale, 16); m.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a)); g.add(m); Dive.bw = { m, dx: Math.cos(a), dz: Math.sin(a), px: -Math.sin(a) * 6, pz: Math.cos(a) * 6, t0: fishTime.value - 20 }; } catch(e){} }
   Dive.portals = []; Dive.vents = [];
   links.forEach((to, i) => { const a = (i === 0 ? -0.6 : 2.4) + (Dive.site.length % 3) * 0.3, x = X + Math.cos(a) * (R - 3.5), z = Z + Math.sin(a) * (R - 3.5), y = diveBed(x, z), S2 = DIVE_SITES[to], ok = diveSiteOk(to);
     const pg = new THREE.Group(); pg.position.set(x, y, z); pg.rotation.y = -a + Math.PI / 2; g.add(pg);
@@ -6846,6 +6888,7 @@ function diveExtras(){ const g = Dive.group; if (!g) return; const X = DIVE.x, Z
     const N = 40, bg = new THREE.BufferGeometry(), bp = new Float32Array(N * 3); for (let i = 0; i < N; i++){ bp[i * 3] = (Math.random() - 0.5) * 0.6; bp[i * 3 + 1] = Math.random() * DIVE.top; bp[i * 3 + 2] = (Math.random() - 0.5) * 0.6; } bg.setAttribute('position', new THREE.BufferAttribute(bp, 3));
     const pts = new THREE.Points(bg, new THREE.PointsMaterial({ color:'#e8fbff', size:0.22, transparent:true, opacity:0.85, depthWrite:false })); vg.add(pts); Dive.vents.push({ x, z, y, pts }); } }
 function diveExtrasUpdate(dt, t){
+  if (Dive.bw){ const B = Dive.bw, u = ((t - B.t0) % 110) / 110, on = u < 0.7; B.m.visible = on; if (on){ const v = u / 0.7; B.m.position.set(DIVE.x + B.dx * (v - 0.5) * DIVE.r * 2.6 + B.px, DIVE.y + DIVE.top - 3.5, DIVE.z + B.dz * (v - 0.5) * DIVE.r * 2.6 + B.pz); if (!B.sang && v > 0.3){ B.sang = true; whaleSong(0.8); } } else B.sang = false; }   /* v228：外海潛水，頭頂偶爾有藍鯨游過 */
   for (const v of Dive.vents || []){ const a = v.pts.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (1.2 + (i % 5) * 0.2); a[i] += Math.sin(t * 3 + i) * dt * 0.1; if (a[i + 1] > DIVE.top + (DIVE.y - v.y)) a[i + 1] = 0.3; } v.pts.geometry.attributes.position.needsUpdate = true;
     if (Math.hypot(me.pos.x - v.x, me.pos.z - v.z) < 1.4 && Dive.o2 < Dive.o2max){ Dive.o2 = Math.min(Dive.o2max, Dive.o2 + dt * 12); if (!Dive.ventTold || now() - Dive.ventTold > 6){ Dive.ventTold = now(); flash('🫧 吸到氣泡口的空氣，氧氣慢慢補回來', 1.2); } } }
   for (const p of Dive.portals || []){ for (const v of p.veil) v.material.opacity = 0.4 + Math.sin(t * 2.2) * 0.15;
@@ -10408,7 +10451,8 @@ function renderTab(){
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
     ]);
     sec('🦈 魚的生態', [
-      '🐋 港口外海遠處偶爾會看到鯨魚浮上來噴水。最大的藍鯨也能在外海釣到（傳說等級、非常稀有），還有更稀有的白化藍鯨。',
+      '🐋 藍鯨：每 20 分鐘裡有 3 分鐘會浮到港口外海，所有人同時看得到。牠會連續噴好幾口又直又高的水柱、偶爾側身衝向一團磷蝦吞下去，靠近還聽得到鯨歌。藍鯨浮上來的這 3 分鐘，在港口外海釣到藍鯨（和超稀有的白化藍鯨）的機率是平常的 5 倍。',
+      '🤿 在外海潛水，偶爾會有巨大的藍鯨從頭頂慢慢游過。座頭鯨也會在遠處浮上來噴水。',
       '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
       '水面上的魚群（沙丁魚、丁香魚這些）大家看到的是同一群：同一個時間、同一個地方，朋友也會看到一樣的魚群在一樣的位置游，可以約一起去追。',
       '魚缸、箱網、水族館裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
@@ -10637,7 +10681,7 @@ const FAI_CURIOUS = new Set(['butterfly', 'sergeant', 'idol', 'bluetang', 'turtl
 const FAI_STATE = { wander:'慢慢游著', flee:'被嚇跑了！', curious:'好奇地靠過來看你', bait:'被魚餌吸引過來了', hooked:'在咬你的餌…', chase:'正在追獵物！', forage:'在找東西吃', hide:'躲在岩石旁邊', circle:'在你附近繞圈圈', school:'成群游過去', eat:'吃得飽飽的' };
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YZX');
 function faiTraits(f){ if (f._fai) return f._fai; const id = f.of || f.id, size = (f.min + f.max) / 2;
-  const pred = LURE_FISH.has(id) || /shark|barracuda|grouper|tuna|marlin|trevally|amberjack|mahi|ito|sixgill|orca|snakehead|bass|arowana|lionfish/.test(id);
+  const pred = (LURE_FISH.has(id) || /shark|barracuda|grouper|tuna|marlin|trevally|amberjack|mahi|ito|sixgill|orca|snakehead|bass|arowana|lionfish/.test(id)) && !/^(baskingshark|whaleshark)/.test(id);   /* v228：姥鯊、鯨鯊吃浮游生物，不追小魚 */
   const bottom = BOTTOM_FISH.has(id) || /flounder|stingray|crab|lobster|octopus|goby|rattail|batfish|blobfish|catfish|loach|pleco|turbot|mudskipper|fiddler|shrimp|prawn|crayfish/.test(id);
   const crawl = /crab|lobster|prawn|shrimp|crayfish|fiddler/.test(id) && !/crabeat/.test(id);   /* 螃蟹、龍蝦、蝦子：在淺水的水底橫著爬，不會在水中間游 */
   return (f._fai = { size, pred, bottom: bottom || crawl, crawl, curious: FAI_CURIOUS.has(id), circle: /shark/.test(id), maxV: crawl ? 0.32 : clamp(0.8 + Math.log10(1 + size) * 1.1, 0.6, 2.8), scale: clamp(0.3 + Math.log10(1 + size) * 0.62, 0.28, 2.6) }); }
