@@ -1625,7 +1625,7 @@ const BlueW = { m:null, told:-1, songAt:0, blowAt:0, nBlow:0, krill:null,
   // 浮上來的位置：港口外海釣點往外看出去 45 公尺，沿著海岸方向慢慢游
   path(d){ const S = SPOT_BY_ID.harbor, dir = new THREE.Vector2(S.dir.x, S.dir.y).normalize(), side = new THREE.Vector2(-dir.y, dir.x), u = (d / 90 - 0.5) * 40;
     return { x: S.pos.x + dir.x * 46 + side.x * u, z: S.pos.z + dir.y * 46 + side.y * u, hx: side.x, hz: side.y }; },
-  update(t){ const m = this.m; if (!m) return; const d = bwWin(bossNow()); if (d < 0 || Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on)){ m.visible = false;   /* 在小島、屋裡看不到港口外海的藍鯨 */ if (this.krill) this.krill.visible = false; return; }
+  update(t){ const m = this.m; if (!m) return; const d0 = bwWin(bossNow()), d = d0 < 0 ? d0 : d0 + (bossNow() % 1000) / 1000;   /* v253 位置用帶小數的秒數，不然一秒跳一格（卡卡的） */ if (d < 0 || Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on)){ m.visible = false;   /* 在小島、屋裡看不到港口外海的藍鯨 */ if (this.krill) this.krill.visible = false; return; }
     const P = this.path(d); m.visible = true; m.position.set(P.x, 0, P.z); m.rotation.set(0, Math.atan2(-P.hz, P.hx), 0);
     // 浮沉：每 45 秒一輪，前 28 秒在水面（背露出來），後面潛下去；剛開始和最後 8 秒在水下
     const ph = d % 45, surf = d > 5 && d < 84 && ph < 30, k = surf ? smooth01(clamp(Math.min(ph - 5 * (d < 45), 30 - ph) / 3, 0, 1)) : 0;
@@ -1634,7 +1634,7 @@ const BlueW = { m:null, told:-1, songAt:0, blowAt:0, nBlow:0, krill:null,
     const want = surf ? Math.min(4, Math.floor((ph - 2) / 3) + 1) : 0, cyc = Math.floor(d / 45);
     if (this.cyc !== cyc){ this.cyc = cyc; this.nBlow = 0; } if (want > this.nBlow && ph > 2){ this.nBlow = want; spoutAt(P.x + P.hx * 6.2, 0.4, P.z + P.hz * 6.2, 12, true); }
     // 衝撞式進食：第 90～102 秒，前面出現一團磷蝦，藍鯨加速、側身翻過去吞掉
-    if (d >= 52 && d < 66){ const u = (d + (bossNow() % 1000) / 1000 - 52) / 14; if (!this.krill) this.krill = this.makeKrill();
+    if (d >= 52 && d < 66){ const u = (d - 52) / 14; if (!this.krill) this.krill = this.makeKrill();
       const kx = P.x + P.hx * 10, kz = P.z + P.hz * 10; this.krill.position.set(kx, 0.1, kz); this.krill.visible = u < 0.55; this.krill.rotation.y = t * 0.6;
       const roll = Math.sin(clamp((u - 0.3) / 0.5, 0, 1) * Math.PI); m.rotation.x = roll * 1.4; m.position.y = -0.4 + roll * 0.2; m.position.x += P.hx * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; m.position.z += P.hz * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; }
     else { m.rotation.x = 0; if (this.krill) this.krill.visible = false; }
@@ -2321,9 +2321,30 @@ function applyGear(av, gear){
 
 /* v252 精緻釣竿（自己和其他玩家才用，NPC 維持簡單的省效能）：竿身分 6 節會真的彎、導環＋綁線、軟木握把＋尾塞、
    紡車式捲線器（線杯有線、導線環、搖臂和握把，收線時會轉）；手竿沒有捲線器、竿身有竹節 */
-function rodHD(av, type, color){
+/* v253 阿鐵師傅的工坊：竿子造型（rs_）、釣線顏色（lc_）。價錢和要幾條魚跟 supabase/102_craft.sql 的 _craft_def 一樣 */
+const CRAFT = [
+  { id:'rs_bamboo', name:'竹紋竿', c:400, n:3, r:'常見', desc:'黃綠色、一節一節的竹子紋路' }, { id:'rs_wood', name:'木紋竿', c:500, n:3, r:'常見', desc:'溫暖的木頭紋，像老師傅手作' },
+  { id:'rs_stripe', name:'紅白條紋竿', c:800, n:4, r:'常見', desc:'像燈塔一樣的紅白斜條紋' }, { id:'rs_wave', name:'海浪竿', c:1200, n:5, r:'常見', desc:'從深藍到淺藍，上面有白色浪花' },
+  { id:'rs_coral', name:'珊瑚竿', c:1200, n:5, r:'常見', desc:'粉紅珊瑚色，點點小泡泡' }, { id:'rs_carbon', name:'碳纖維竿', c:2000, n:2, r:'稀有', desc:'黑色編織格紋，看起來很專業' },
+  { id:'rs_gold', name:'金箔竿', c:4000, n:3, r:'稀有', desc:'整支閃亮的金色' }, { id:'rs_rainbow', name:'彩虹竿', c:6000, n:4, r:'稀有', desc:'從竿底到竿尖七種顏色' },
+  { id:'lc_red', name:'紅色釣線', c:200, n:2, r:'常見', col:'#ff4a4a' }, { id:'lc_yellow', name:'螢光黃釣線', c:200, n:2, r:'常見', col:'#f2ff3a' },
+  { id:'lc_green', name:'螢光綠釣線', c:300, n:2, r:'常見', col:'#4aff8a' }, { id:'lc_pink', name:'粉紅釣線', c:300, n:2, r:'常見', col:'#ff8ad8' },
+  { id:'lc_blue', name:'夜光藍釣線', c:800, n:1, r:'稀有', col:'#5ad8ff' }, { id:'lc_gold', name:'金色釣線', c:1500, n:2, r:'稀有', col:'#ffd36a' } ];
+const CRAFT_BY = Object.fromEntries(CRAFT.map(c => [c.id, c]));
+const RSKIN_TEX = {};
+function rodSkinTex(k){ if (RSKIN_TEX[k]) return RSKIN_TEX[k]; const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const c = cv.getContext('2d'), W = 64, H = 256;
+  if (k === 'rs_bamboo'){ c.fillStyle = '#b8c25a'; c.fillRect(0, 0, W, H); for (let y = 0; y < H; y += 42){ c.fillStyle = '#7a8a32'; c.fillRect(0, y, W, 5); c.fillStyle = '#d6dc8a'; c.fillRect(0, y + 5, W, 2); } }
+  else if (k === 'rs_wood'){ c.fillStyle = '#8a5a34'; c.fillRect(0, 0, W, H); for (let i = 0; i < 26; i++){ c.strokeStyle = i % 2 ? 'rgba(60,30,12,.5)' : 'rgba(190,130,80,.4)'; c.lineWidth = 1 + (i % 3); c.beginPath(); const x = (i * 23) % W; c.moveTo(x, 0); c.bezierCurveTo(x + 6, H / 3, x - 6, H * 2 / 3, x + 3, H); c.stroke(); } }
+  else if (k === 'rs_stripe'){ c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); c.fillStyle = '#e0302c'; for (let y = -W; y < H + W; y += 28){ c.beginPath(); c.moveTo(0, y); c.lineTo(W, y + W * 0.6); c.lineTo(W, y + W * 0.6 + 14); c.lineTo(0, y + 14); c.fill(); } }
+  else if (k === 'rs_wave'){ const g = c.createLinearGradient(0, H, 0, 0); g.addColorStop(0, '#0b2e5a'); g.addColorStop(1, '#5ad0ff'); c.fillStyle = g; c.fillRect(0, 0, W, H); c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 2; for (let y = 16; y < H; y += 26){ c.beginPath(); for (let x = 0; x <= W; x += 4) c.lineTo(x, y + Math.sin(x / W * Math.PI * 2) * 4); c.stroke(); } }
+  else if (k === 'rs_coral'){ const g = c.createLinearGradient(0, H, 0, 0); g.addColorStop(0, '#e8507a'); g.addColorStop(1, '#ffb0a0'); c.fillStyle = g; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 40; i++){ c.beginPath(); c.arc((i * 37) % W, (i * 53) % H, 1.5 + (i % 3), 0, 6.3); c.fill(); } }
+  else if (k === 'rs_carbon'){ c.fillStyle = '#16181c'; c.fillRect(0, 0, W, H); for (let y = 0; y < H; y += 8) for (let x = 0; x < W; x += 8){ c.fillStyle = ((x + y) / 8) % 2 ? '#2a2e36' : '#0e1014'; c.fillRect(x, y, 8, 8); } }
+  else if (k === 'rs_rainbow'){ for (let y = 0; y < H; y++){ c.fillStyle = `hsl(${(1 - y / H) * 300},85%,55%)`; c.fillRect(0, y, W, 1); } }
+  else { c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 0.5); return (RSKIN_TEX[k] = t); }
+function rodHD(av, type, color, skin){
   if (!av || !av.rod) return; if (av.hd){ av.rod.remove(av.hd.root); if (av.hd.reelG) av.rod.remove(av.hd.reelG); }
-  const pole = type === 'pole', blank = new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.25 }), dk = mat('#23262b', 0.4, { metalness:0.5 }), gold = mat('#d8b25a', 0.35, { metalness:0.6 }), wrap = mat(pole ? '#5a4030' : '#b8282c', 0.5);
+  const pole = type === 'pole', blank = skin === 'rs_gold' ? new THREE.MeshStandardMaterial({ color:'#e0b84a', roughness:0.25, metalness:0.85 }) : skin && CRAFT_BY[skin] ? new THREE.MeshStandardMaterial({ map: rodSkinTex(skin), roughness:0.35, metalness:0.2 }) : new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.25 }), dk = mat('#23262b', 0.4, { metalness:0.5 }), gold = mat('#d8b25a', 0.35, { metalness:0.6 }), wrap = mat(pole ? '#5a4030' : '#b8282c', 0.5);
   const N = 6, L = 2.3, root = new THREE.Group(), segs = []; let par = root; root.position.y = 0.2;
   for (let i = 0; i < N; i++){ const r0 = 0.03 - i * 0.0036, r1 = 0.03 - (i + 1) * 0.0036, sl = (L - 0.2) / N, pv = new THREE.Group(); pv.position.y = i ? sl : 0; par.add(pv);
     const m = new THREE.Mesh(new THREE.CylinderGeometry(Math.max(0.006, r1), r0, sl, 7), blank); m.position.y = sl / 2; pv.add(m);
@@ -2797,7 +2818,9 @@ class Fisher {
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
   setGear(gear){ const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
-  setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); if (!this.isNpc){ try { rodHD(this.av, this.rodType, r.color); } catch(e){ console.warn('rodHD', e); } } applyRodShape(this.av, this.rodType, false); } }
+  setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); if (!this.isNpc){ try { rodHD(this.av, this.rodType, r.color, this.rodSkin); } catch(e){ console.warn('rodHD', e); } } applyRodShape(this.av, this.rodType, false); } }
+  setRodLook(skin, lc){ skin = CRAFT_BY[skin] ? skin : null; lc = CRAFT_BY[lc] ? lc : null; if (lc !== this.lineCol){ this.lineCol = lc; this.line.material.color.set(lc ? CRAFT_BY[lc].col : '#fbf8ef'); this.line.material.opacity = lc ? 0.95 : 0.85; }   /* v253 工坊做的竿子造型、釣線顏色 */
+    if (skin !== this.rodSkin){ this.rodSkin = skin; if (!this.isNpc && this.rodId){ const r = RODS.find(x => x.id === this.rodId) || RODS[0]; try { rodHD(this.av, this.rodType, r.color, skin); applyRodShape(this.av, this.rodType, false); } catch(e){} } } }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubUntil = now() + (secs || 5); }
   // 炫耀魚：把魚舉在頭上幾秒
@@ -3853,7 +3876,7 @@ function updateFishing(dt, t){
     else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
@@ -6405,6 +6428,29 @@ async function petLuckyTry(){ if (!Cloud.on || !Cloud.sb) return; let r = null; 
   const K = PET_KINDS[r.kind], vn = petFull(r.kind, r.var);
   setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是你已經養了 3 隻，只好放牠回去了`, 2.6); return; }
     SFX.catch(); flash(`${K.icon} 哇！順便撈到一隻${vn}${petVarRare(r.kind, r.var) ? '（很少見的花色！）' : ''}，牠決定跟你回家了`, 3); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); }
+/* v253 阿鐵師傅的工坊 */
+function craftUse(c){ const shown = new Set((rec.show || []).map(String)); return (rec.tank || []).filter(x => { const f = FISH_BY_ID[x.f]; return f && f.rarity === c.r && !f.of && !x.k && !shown.has(String(x.t)); }).sort((a, b) => a.w - b.w).slice(0, c.n); }
+function craftSwatch(c){ const cv = document.createElement('canvas'); cv.width = 64; cv.height = 40; const g = cv.getContext('2d');
+  if (c.col){ g.strokeStyle = c.col; g.lineWidth = 4; g.beginPath(); g.moveTo(4, 30); g.bezierCurveTo(20, 4, 44, 36, 60, 10); g.stroke(); }
+  else { const T = rodSkinTex(c.id).image; g.save(); g.translate(32, 20); g.rotate(-0.35); if (c.id === 'rs_gold'){ g.fillStyle = '#e0b84a'; g.fillRect(-30, -5, 60, 10); } else g.drawImage(T, 0, 0, 64, 256, -30, -5, 60, 10); g.restore(); }
+  cv.className = 'mktic'; cv.style.width = '64px'; cv.style.height = '40px'; return cv; }
+async function craftRpc(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能找阿鐵師傅'); return null; } try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
+function renderCraft(body){
+  body.appendChild(el('div', 'dexhead', '🔧 阿鐵師傅的工坊'));
+  body.appendChild(el('p', 'sub', '帶魚和金幣來，阿鐵師傅幫你做竿子造型和釣線顏色。會用掉魚缸裡同稀有度最輕的魚（收藏⭐、展示中、變種的不會用），一天最多做 10 件。只是外觀，別人也看得到。'));
+  const own = new Set(rec.owned || []);
+  for (const [kind, title] of [['rs_', '🎣 竿子造型'], ['lc_', '🧵 釣線顏色']]){
+    body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
+    for (const c of CRAFT.filter(x => x.id.startsWith(kind))){ const li = el('li', own.has(c.id) ? 'on' : ''); li.appendChild(craftSwatch(c)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name));
+      const cur = kind === 'rs_' ? rec.rodSkin : rec.lineCol, using = cur === c.id;
+      d.appendChild(el('div', 'sub2', own.has(c.id) ? (using ? '使用中' : '已經有了') : `🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條${c.desc ? '・' + c.desc : ''}`)); li.appendChild(d);
+      const a = el('div', 'tacts');
+      if (own.has(c.id)){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上'); b.addEventListener('click', async () => { const sk = kind === 'rs_' ? (using ? null : c.id) : rec.rodSkin || null, lc = kind === 'lc_' ? (using ? null : c.id) : rec.lineCol || null; const row = await craftRpc('set_rod_look', { p_skin: sk, p_line: lc }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } }); a.appendChild(b); }
+      else { const use = craftUse(c), ok = use.length >= c.n && rec.coins >= c.c, b = el('button', 'tbtn', '做'); b.disabled = !ok; if (!ok) d.appendChild(el('div', 'sub2', use.length < c.n ? `魚缸裡能用的${c.r}魚只有 ${use.length} 條` : '金幣不夠'));
+        b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; b.classList.add('warn'); d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
+          b.disabled = true; const r = await craftRpc('craft_item', { p_id: c.id }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash(`🔧 阿鐵師傅做好了：${c.name}！`, 1.8); const n = npcs.find(x => x.shopNpc === 'craft'); if (n) n.say('做好了！拿去用吧', 'emote', 3); try { renderTab(); } catch(e){} } else b.disabled = false; }); a.appendChild(b); }
+      li.appendChild(a); ul.appendChild(li); }
+    body.appendChild(ul); } }
 function petMine(){ return Pets.list ? Pets.list.find(p => p.out) || null : null; }
 async function loadPets(force){ if (Pets.busy || !Cloud.on || !Cloud.sb) return; if (!force && Pets.at && Date.now() - Pets.at < 60000) return; Pets.busy = true; Pets.at = Date.now();
   try { const { data } = await Cloud.sb.rpc('pet_list'); if (Array.isArray(data)) Pets.list = data; } catch(e){} Pets.busy = false; Pets.homeKey = ''; pushPresence(true); if (!$('#sheet').hidden && curTab === 'pets') renderTab(); }
@@ -8249,6 +8295,7 @@ function nearShop(){
   { const g = npcs.find(n => n.shopNpc === 'news'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'news', label:'阿報・村報', mode:'news' }; }
   { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
   { const g = npcs.find(n => n.wid === 'gang'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'gang', label:'老港・漁夫', mode:'gang' }; }
+  { const g = npcs.find(n => n.shopNpc === 'craft'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'craft', label:'阿鐵師傅', mode:'craft' }; }
   if (inHall()){
     if (Venue.desk && Math.hypot(me.pos.x - Venue.desk.x, me.pos.z - Venue.desk.z) < 2) return { id:'shrimpdesk', label:'買時段', mode:'shrimpdesk' };
     if (Venue.grill && Math.hypot(me.pos.x - Venue.grill.x, me.pos.z - Venue.grill.z) < 1.8) return { id:'grill', label:'烤蝦', mode:'cook' };
@@ -8271,7 +8318,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -8822,7 +8869,7 @@ function normRec(r){
 }
 let rec = normRec(LS.get('tide.rec', null));
 if (!LS.get('tide.favInit', 0)){ for (const x of rec.tank) if (FISH_BY_ID[x.f].of && rec.tank.filter(y => y.k).length < FAV_MAX) x.k = true; LS.set('tide.favInit', 1); LS.set('tide.rec', rec); }   /* 以前釣到的變種也自動收藏（只做一次；雲端由 039 做） */
-me.setRod(rec.rod); updateBobberLook(); me.setGear(rec.gear); updateBobberLook(); renderCoins(); setTimeout(renderBuff, 0);
+me.setRodLook(rec.rodSkin, rec.lineCol); me.setRod(rec.rod); updateBobberLook(); me.setGear(rec.gear); updateBobberLook(); renderCoins(); setTimeout(renderBuff, 0);
 function recordCatch(f, w){
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
@@ -9307,6 +9354,7 @@ function presenceObj(){
   if (mySeat) o.st = 1;
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
+  if (rec.rodSkin || rec.lineCol) o.rk = [rec.rodSkin || '', rec.lineCol || ''];   /* v253 工坊做的竿子造型、釣線顏色 */
   { const pt = petMine(); if (pt) o.pt = [pt.kind, pt.name, pt.acc || 0, pt.var || 'a']; }   /* 080：帶出門的寵物（只放種類、名字、配件，不放親密度） */
   if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
@@ -9359,6 +9407,7 @@ function applyPeer(pp){
   { const a = Array.isArray(pr.sb) && pr.sb.length >= 4 && pr.sb.every(v => Number.isFinite(+v)) ? pr.sb : null, was = !!p.sub;   /* v241 開潛水艇的人（村子裡看不到他，裂縫裡看得到他的潛水艇） */
     p.sub = a ? [clamp(+a[0], -80, 80), clamp(+a[1], -130, 12), clamp(+a[2], -70, 90), +a[3]] : null;
     if (p.subInit && !was && p.sub && !(typeof Sub !== 'undefined' && Sub.on) && Date.now() - (p.subTold || 0) > 300000){ p.subTold = Date.now(); ticker(`🚢 <b>${esc(peerName(p))}</b> 開潛水艇下去黑淵裂縫了！搭船到深海浮台的潛水艇碼頭就能一起潛`); } p.subInit = 1; }
+  p.fisher.setRodLook(Array.isArray(pr.rk) ? String(pr.rk[0] || '') : null, Array.isArray(pr.rk) ? String(pr.rk[1] || '') : null);
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
@@ -9633,7 +9682,8 @@ function adoptRow(row){
   Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
-  rec = rowToRec(row); rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
+  rec = rowToRec(row); rec.rodSkin = row.rod_skin || null; rec.lineCol = row.line_col || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
+  rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island', 'closet', 'museum'].includes(curTab) && !Cloud.ui.busy) renderTab();   /* 衣櫃也照伺服器的結果重畫（伺服器沒有你買過的紀錄時，不會一直顯示穿著） */
 }
@@ -9910,6 +9960,9 @@ const npcs = [
   // 阿彩：畫廊的畫家，每天早上 8 點畫一幅魚（058_cai.sql）
   (() => { const r = SHOPLOT.cai.r, [x, z] = lotAt('cai', -1.75, 2.75); return { name:'阿彩・畫家', shirt:'#9b7bff', hat:'#2b2f36', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'cai',
     lines:['歡迎來阿彩畫廊！每一幅都是我親手畫的', '我每天早上 8 點，會畫昨天全村最厲害的那條魚', '被我畫的人，我會送他一幅喔', '畫可以擺在家裡，像家具一樣', '清晨、晚霞、月夜……同一條魚，顏色不一樣感覺就不一樣'] }; })(),
+  // 阿鐵師傅：釣具店旁邊擺攤的工匠，用魚和金幣做竿子造型、釣線顏色（102_craft.sql）
+  { name:'阿鐵・釣具師傅', shirt:'#5a6470', hat:'#2b2f36', x:HLOT.tackle[0] + 1.75, z:HLOT.tackle[1] + 2.75, y:0.02, dir:new THREE.Vector2(0, 1), shopNpc:'craft',
+    lines:['我會做竿子造型和釣線顏色，帶幾條魚來就好', '魚不是拿來吃的啦，是我拿來練手藝、換材料的', '金箔竿要三條稀有魚，很值得喔', '收藏的、展示中的魚我不會拿', '線換個顏色，別人一眼就認得出是你的'] },
   // 阿報：廣場的報童，每天早上 7 點出《潮汐村報》（057_news.sql）
   { name:'阿報・村報記者', shirt:'#f1e3c8', hat:'#2b2f36', x:-0.6, z:1.2, y:0.02, dir:new THREE.Vector2(0.6, 0.8).normalize(), shopNpc:'news',
     lines:['號外號外！今天的《潮汐村報》出來了', '每天早上 7 點出報，昨天發生什麼事都寫在上面，全服大魚、博物館新展品、節慶活動也會寫', '釣到稀有的魚，明天就會上報喔，名字還是金色的', '報紙我都留 7 天，想看以前的也可以', '我到處跑新聞，村民的八卦我最清楚了'] },
@@ -10478,6 +10531,7 @@ function renderTab(){
   if (curTab === 'closet'){ renderCloset(body); return; }
   if (curTab === 'museum'){ renderMuseum(body); return; }
   if (curTab === 'pets'){ renderPets(body); return; }
+  if (curTab === 'craft'){ renderCraft(body); return; }
   if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'fest'){ renderFest(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
@@ -10696,6 +10750,7 @@ function renderTab(){
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
       '🎣 釣竿：竿子分好幾節，魚拉得越用力竿尖彎得越厲害；甩竿時竿尖會慢半拍再甩出去；按住收線時捲線器的搖臂會轉。換不同的竿子，長短、粗細、顏色都不一樣（手竿沒有捲線器，有竹節）。',
+      '🔧 阿鐵師傅（釣具店旁邊）：帶魚和金幣去，可以做竿子造型（竹紋、木紋、紅白條紋、海浪、珊瑚、碳纖維、金箔、彩虹）和釣線顏色（紅、螢光黃、螢光綠、粉紅、夜光藍、金色）。會用掉魚缸裡同稀有度最輕的魚，收藏⭐、展示中、變種的不會用；一天最多做 10 件。做好按「裝上」，別人也看得到。只是外觀，不影響釣魚。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
