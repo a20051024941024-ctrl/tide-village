@@ -1716,7 +1716,7 @@ function applyLook(av, gear, mk){
 const GEAR_SLOTS = [['look','外觀'],['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
 const GEAR = [
   ['hat_sun','草帽',0,'👒'],['hat_wizard','巫師帽',1200,'🧙'],['hat_knight','騎士頭盔',1800,'🛡️'],['hat_bear','熊熊帽',1000,'🐻'],['hat_none','不戴帽子',0,'🙂'],['hat_cap','棒球帽',250,'🧢'],['hat_beanie','毛線帽',300,'🧶'],['hat_bucket','漁夫帽',350,'🎣'],['hat_cat','貓耳朵',600,'🐱'],['hat_chef','廚師帽',800,'👨‍🍳'],['hat_flower','花環',500,'🌼'],['hat_pirate','海盜帽',1500,'🏴‍☠️'],['hat_crown','皇冠',5000,'👑'],
-  ['top_tee','素 T',0,'👕'],['top_stripe','水手條紋衫',300,'⚓'],['top_apron','食堂圍裙',400,'🍳'],['top_vest','救生衣',500,'🦺'],['top_hoodie','連帽外套',700,'🧥'],['top_hawaii','夏威夷衫',800,'🌺'],['top_suit','帥氣西裝',2500,'🤵'],
+  ['top_tee','素 T',0,'👕'],['top_vtee','V 領 T',150,'👕'],['top_polo','POLO 衫',300,'👔'],['top_tank','背心',150,'🎽'],['top_wide','寬版 T',200,'👕'],['top_pocket','口袋 T',180,'👕'],['top_dry','吸濕排汗 T',250,'🏃'],['top_dryv','吸濕排汗 V 領',250,'🏃'],['top_bstripe','粗條紋 T',220,'🦓'],['top_fstripe','細條紋 T',220,'📏'],['top_long','長版 T',250,'👕'],['top_kid','小魚童趣 T',150,'🐟'],['top_sweat','大學 T',450,'🎓'],['top_hoodt','連帽 T',650,'🧥'],['top_nylon','尼龍外套',900,'🧥'],['top_stripe','水手條紋衫',300,'⚓'],['top_apron','食堂圍裙',400,'🍳'],['top_vest','救生衣',500,'🦺'],['top_hoodie','連帽外套',700,'🧥'],['top_hawaii','夏威夷衫',800,'🌺'],['top_suit','帥氣西裝',2500,'🤵'],
   ['pants_jeans','牛仔褲',0,'👖'],['pants_shorts','短褲',200,'🩳'],['pants_khaki','卡其褲',250,'🟫'],['pants_skirt','格紋裙',500,'👗'],['pants_overalls','吊帶褲',600,'🧑‍🌾'],['pants_rainbow','彩虹褲',1500,'🌈'],
   ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
   ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
@@ -1754,6 +1754,62 @@ function gear3dApply(av, gear){ const ids = [gear.hat, gear.back].filter(id => G
       // 披風掛在胸骨（3D 角色）或身體上
       const m = src.clone(); m.castShadow = true; m.position.multiplyScalar(F.s); m.scale.multiplyScalar(F.s);
       if (av.kid){ av.kid.B.chest.add(m); av.gearMeshes.push(m); } else { const w = new THREE.Group(); w.add(m); w.position.set(0, 0.62, 0); (av.torsoG || av.g).add(w); av.gearMeshes.push(w); } } } }
+/* v222 衣服款式：同一件 3D 上衣，用 shader 畫出不同的領口（V 領、POLO 領、羅紋領）、袖子（背心沒袖子、長袖）、條紋、口袋、吸濕排汗布紋，
+   寬版、長版直接把衣服的點往外、往下推（在骨架綁定前的姿勢上算，動作照樣跟著）。只有正式 3D 角色（tide_kid.glb）有，程式角色不畫。
+   座標是角色 T-pose：身體 y 0.37～1.09、正面 +z；袖子在 |x| 0.18～0.45、y≈0.94；前臂（皮膚）|x| 0.33～0.62。 */
+const TOP_STYLE = {   // [領口, 袖子, 條紋, 圖案, 布紋, 羅紋袖口下襬, 寬, 長]  領口 0 圓 1 V 2 POLO 3 羅紋圓領 4 拉鍊 5 尼龍立領；袖子 0 短 1 無 2 長；條紋 1 粗 2 細；圖案 1 口袋 2 小魚 3 袋鼠口袋
+  top_tee:[0,0,0,0,0,0,0,0], top_vtee:[1,0,0,0,0,0,0,0], top_polo:[2,0,0,0,0,0,0,0], top_tank:[0,1,0,0,0,0,0,0], top_wide:[0,0,0,0,0,0,1,0], top_pocket:[0,0,0,1,0,0,0,0],
+  top_dry:[0,0,0,0,1,0,0,0], top_dryv:[1,0,0,0,1,0,0,0], top_bstripe:[0,0,1,0,0,0,0,0], top_fstripe:[0,0,2,0,0,0,0,0], top_long:[0,0,0,0,0,0,0,1], top_kid:[0,0,0,2,0,0,0,0],
+  top_sweat:[3,2,0,0,1,1,0,0], top_hoodt:[3,2,0,3,0,1,0,0], top_hoodie:[4,2,0,0,0,1,0,0], top_nylon:[5,2,0,0,0,1,1,0],
+};
+const TOP_GLSL_V = 'uniform float uKidT; uniform vec4 uTopA; uniform vec4 uTopB; varying vec3 vRest;\n';
+const TOP_GLSL_F = 'uniform float uKidT; uniform vec4 uTopA; uniform vec4 uTopB; uniform vec3 uTopC2; uniform vec3 uTopSkin; uniform vec3 uTopShirt; varying vec3 vRest;\n'
+  + 'float tHash(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }\n';
+function topShader(av){
+  if (av.topU) return av.topU;
+  const U = av.topU = { uKidT:{ value:0 }, uTopA:{ value:new THREE.Vector4() }, uTopB:{ value:new THREE.Vector4() }, uTopC2:{ value:new THREE.Color('#ffffff') }, uTopSkin:{ value:av.skinM.color }, uTopShirt:{ value:av.shirtM.color } };
+  const bind = sh => { for (const k in U) sh.uniforms[k] = U[k]; };
+  av.shirtM.onBeforeCompile = sh => { bind(sh);
+    sh.vertexShader = TOP_GLSL_V + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vRest = position;
+      if (uKidT > 0.5){ bool sl = abs(position.x) > 0.27;
+        if (uTopB.z > 0.5){ if (sl){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * 1.3; if (abs(position.x) > 0.4) transformed.x += sign(position.x) * 0.05; } else transformed.xz *= 1.07; }
+        if (uTopB.w > 0.5 && !sl && position.y < 0.52){ float k = (0.52 - position.y) / 0.155; transformed.y -= k * 0.1; float r = length(transformed.xz * vec2(1.0, 1.0 / 0.86)); transformed.xz *= mix(1.0, 0.272 / max(r, 0.01), smoothstep(0.0, 0.35, k)); }
+      }`);
+    sh.fragmentShader = TOP_GLSL_F + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      if (uKidT > 0.5){ vec3 P = vRest; vec3 c = diffuseColor.rgb; bool sl = abs(P.x) > 0.27; bool fr = P.z > 0.02; float ax = abs(P.x);
+        if (uTopA.z > 0.5){ float per = uTopA.z > 1.5 ? 0.045 : 0.1; float duty = uTopA.z > 1.5 ? 0.32 : 0.5; if (fract((P.y - 0.37) / per) < duty && P.y < 1.02) c = uTopC2; }
+        if (uTopB.x > 0.5){ c *= 0.93 + 0.12 * tHash(floor(P * 140.0)); }
+        if (!sl && uTopB.y > 0.5 && P.y < 0.47 && uTopB.w < 0.5){ c *= 0.84 + 0.07 * step(0.5, fract(atan(P.z, P.x) * 9.55)); }
+        if (sl && uTopA.y < 0.5 && ax > 0.42) c *= 0.86;
+        if (uTopA.w > 0.5 && uTopA.w < 1.5 && fr && P.x > 0.06 && P.x < 0.16 && P.y > 0.79 && P.y < 0.9){ c *= 0.9; if (P.y > 0.88) c *= 0.85; }
+        if (uTopA.w > 1.5 && uTopA.w < 2.5 && fr && !sl){ vec2 q = vec2(P.x + 0.01, P.y - 0.72); float e = (q.x / 0.07) * (q.x / 0.07) + (q.y / 0.042) * (q.y / 0.042); bool tail = q.x < -0.06 && q.x > -0.12 && abs(q.y) < (-0.06 - q.x) * 0.8; if (e < 1.0 || tail) c = uTopC2; if (length(q - vec2(0.035, 0.008)) < 0.009) c = vec3(0.1, 0.12, 0.2); }
+        if (uTopA.w > 2.5 && fr && !sl && P.y > 0.47 && P.y < 0.63 && ax < 0.15 - (P.y - 0.47) * 0.45){ c *= 0.86; if (ax > 0.13 - (P.y - 0.47) * 0.45) c *= 0.85; }
+        float n = uTopA.x;
+        if (n < 0.5 && !sl && P.y > 1.035) c *= 0.84;
+        if (n > 2.5 && n < 3.5 && !sl && P.y > 1.02) c *= 0.82 + 0.06 * step(0.5, fract(atan(P.z, P.x) * 9.55));
+        if (n > 0.5 && n < 1.5 && fr && !sl && P.y > 0.88){ float w = (P.y - 0.88) * 0.75; if (ax < w - 0.012) c = uTopSkin; else if (ax < w + 0.012) c *= 0.8; }
+        if (n > 1.5 && n < 2.5 && !sl){ if (P.y > 1.0) c *= 0.84; if (fr && P.y > 0.98 && ax < (P.y - 0.96) * 0.35) c = uTopSkin; if (fr && ax < 0.024 && P.y > 0.84 && P.y < 0.99){ c *= 0.9; if (length(vec2(P.x, mod(P.y - 0.865, 0.05) - 0.025)) < 0.011) c = vec3(0.95); } }
+        if (n > 3.5 && n < 4.5 && fr && !sl){ if (ax < 0.009) c = vec3(0.72, 0.74, 0.78); else if (ax < 0.018) c *= 0.85; if (P.y > 1.02) c *= 0.85; }
+        if (n > 4.5 && !sl){ if (P.y > 1.0) c *= 0.8; if (fr && ax < 0.01) c *= 0.75; if (fr && P.x > 0.02 && P.x < 0.05 && P.y > 0.5 && P.y < 1.0 && length(vec2(P.x - 0.035, mod(P.y - 0.5, 0.1) - 0.05)) < 0.012) c = vec3(0.82, 0.84, 0.88); }
+        if (uTopA.y > 0.5 && uTopA.y < 1.5){ if (sl) c = uTopSkin; else if (ax > 0.1 && P.y > 0.99) c = uTopSkin; else if (ax > 0.085 && P.y > 0.97) c *= 0.84; }
+        diffuseColor.rgb = c; }`); };
+  av.shirtM.customProgramCacheKey = () => 'top222';
+  av.skinM.onBeforeCompile = sh => { bind(sh);
+    sh.vertexShader = TOP_GLSL_V + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vRest = position;
+      if (uKidT > 0.5 && uTopA.y > 1.5 && abs(position.x) > 0.33 && abs(position.x) < 0.615 && position.y > 0.85 && position.y < 1.03){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * (uTopB.z > 0.5 ? 1.35 : 1.14); }`);
+    sh.fragmentShader = TOP_GLSL_F + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      if (uKidT > 0.5 && uTopA.y > 1.5){ vec3 P = vRest; float ax = abs(P.x); if (ax > 0.33 && ax < 0.615 && P.y > 0.85 && P.y < 1.03){ vec3 c = uTopShirt; if (uTopB.x > 0.5) c *= 0.93 + 0.12 * tHash(floor(P * 140.0)); if (ax > 0.565) c *= uTopB.y > 0.5 ? 0.8 + 0.06 * step(0.5, fract(atan(P.z, P.y - 0.941) * 4.0)) : 0.86; diffuseColor.rgb = c; } }`); };
+  av.skinM.customProgramCacheKey = () => 'skin222';
+  av.shirtM.needsUpdate = av.skinM.needsUpdate = true;
+  return U; }
+function topStyle(av, top){
+  const U = topShader(av), st = TOP_STYLE[top] || [0,0,0,0,0,0,0,0];
+  U.uKidT.value = av.kid ? 1 : 0; U.uTopA.value.set(st[0], st[1], st[2], st[3]); U.uTopB.value.set(st[4], st[5], st[6], st[7]);
+  const hsl = {}; av.shirtM.color.getHSL(hsl); U.uTopC2.value.set(hsl.l > 0.72 ? '#24406e' : '#ffffff');
+  av.shirtM.roughness = top === 'top_nylon' ? 0.32 : 0.75; av.shirtM.metalness = top === 'top_nylon' ? 0.12 : 0.04;
+}
 function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
@@ -1809,6 +1865,7 @@ function applyGear(av, gear){
   const torsoR = y => { const dy = Math.abs(y - 0.8); return dy <= 0.11 ? 0.25 : Math.sqrt(Math.max(0, 0.0625 - (dy - 0.11) * (dy - 0.11))); };
   const band = (y, h, c) => { const o = mk(new THREE.CylinderGeometry(torsoR(y) + 0.012, torsoR(y) + 0.012, h, 18), c, 0, y, 0); o.scale.z = 0.88; return o; };
   const shell = (c, gap) => { const o = mk(new THREE.CylinderGeometry(0.272, 0.27, 0.44, 18, 1, true, gap, Math.PI * 2 - gap * 2), c, 0, 0.82, 0); o.material.side = THREE.DoubleSide; o.scale.z = 0.9; return o; };
+  topStyle(av, gear.top);
   switch (gear.top){
     case 'top_ocean': { const sea = M('#2f89c7', 0.6), foam = M('#ffffff', 0.6); band(0.64, 0.1, sea); band(0.71, 0.03, foam);
       for (let i = 0; i < 10; i++){ const a = i / 10 * Math.PI * 2; const r = torsoR(0.735) + 0.012; mk(new THREE.SphereGeometry(0.03, 6, 4), foam, Math.sin(a) * r, 0.735, Math.cos(a) * r * 0.88); }
@@ -1817,7 +1874,7 @@ function applyGear(av, gear){
       mk(new THREE.SphereGeometry(0.01, 6, 4), ink, -0.07, 0.91, 0.258); break; }
     case 'top_stripe': { for (const y of [0.64, 0.76, 0.88, 1.0]) band(y, 0.045, white); const nk = mk(new THREE.ConeGeometry(0.07, 0.14, 3), M('#e8473a', 0.6), 0, 1.02, 0.2); nk.rotation.x = Math.PI; break; }
     case 'top_vest': { const or = M('#ff7a2a', 0.6); shell(or, 0.32); band(0.72, 0.035, M('#e9eef2', 0.3, { metalness:0.3 })); band(0.92, 0.035, M('#e9eef2', 0.3, { metalness:0.3 })); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.03, 0.05, 0.02), ink, sx * 0.05, 0.82, 0.245); break; }
-    case 'top_hoodie': { const hd = mk(new THREE.SphereGeometry(0.21, 14, 10), av.shirtM, 0, 1.13, -0.17); hd.scale.set(1.25, 0.75, 0.85); mk(new THREE.BoxGeometry(0.24, 0.1, 0.03), av.shirtM, 0, 0.66, 0.225); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.015, 0.16, 0.015), white, sx * 0.06, 0.98, 0.235); break; }
+    case 'top_hoodie': case 'top_hoodt': { const hm = av.hoodM || (av.hoodM = M('#ffffff', 0.75)); hm.color.copy(av.shirtM.color); const hd = mk(new THREE.SphereGeometry(0.21, 16, 10), hm, 0, 1.13, -0.17); hd.scale.set(1.25, 0.75, 0.85); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.015, 0.16, 0.015), white, sx * 0.06, 0.98, 0.235); break; }   /* v222：口袋、拉鍊、長袖改在衣服 shader 裡畫（topStyle） */
     case 'top_hawaii': { const cs = ['#ffd36a', '#ffffff', '#f5a5d8', '#3fbf9d']; for (let i = 0; i < 18; i++){ const a = (i * 2.399) % (Math.PI * 2), y = 0.6 + ((i * 0.37) % 1) * 0.42, r = torsoR(y) + 0.005; mk(new THREE.IcosahedronGeometry(0.035, 0), M(cs[i % 4], 0.6), Math.sin(a) * r, y, Math.cos(a) * r * 0.88); } for (const sx of [-1, 1]){ const c = mk(new THREE.BoxGeometry(0.1, 0.02, 0.08), av.shirtM, sx * 0.07, 1.08, 0.17); c.rotation.z = sx * 0.4; } break; }
     case 'top_apron': { mk(new THREE.BoxGeometry(0.34, 0.46, 0.02), white, 0, 0.72, 0.228); mk(new THREE.BoxGeometry(0.16, 0.08, 0.025), M('#f1e3c8', 0.7), 0, 0.68, 0.24); for (const sx of [-1, 1]){ const st = mk(new THREE.BoxGeometry(0.025, 0.2, 0.02), white, sx * 0.13, 1.02, 0.16); st.rotation.x = -0.5; } break; }
     case 'top_suit': { const nv = M('#243447', 0.55); shell(nv, 0.42); mk(new THREE.BoxGeometry(0.12, 0.3, 0.02), white, 0, 0.88, 0.235); mk(new THREE.BoxGeometry(0.04, 0.22, 0.025), M('#c9302c', 0.5), 0, 0.86, 0.247); for (const y of [0.7, 0.8]) mk(new THREE.SphereGeometry(0.014, 6, 4), M('#e8b730', 0.3), 0.07, y, 0.24); break; }
@@ -7846,6 +7903,7 @@ const DESIGN_SLOTS = [['top', '上衣'], ['pants', '褲子'], ['hat', '帽子'],
 function applyDesigns(av, gear){
   const t = designId(gear.top), p = designId(gear.pants), h = designId(gear.hat), sh = designId(gear.shoes), bk = designId(gear.back), ac = designId(gear.acc);
   av.body.material = (t && designMat(t)) || av.shirtM;
+  if (t && av.topU) topStyle(av, '');   /* 自己設計的上衣：不畫領口、條紋、長袖 */
   if (av.kid && av.kid.prim.shirt){ const sh = av.kid.prim.shirt; if (!sh.userData.geo0) sh.userData.geo0 = sh.geometry; sh.geometry = t && av.body.material !== av.shirtM ? dzShirtGeo(sh.userData.geo0) : sh.userData.geo0; }   /* 自己設計的上衣：整張圖從肩膀到衣襬繞身體一圈 */
   const pm = (p && designMat(p)) || av.pantsM; for (const L of [av.legL, av.legR]){ if (L.userData.pants) L.userData.pants.material = pm; if (L.userData.pants2) L.userData.pants2.material = pm; } if (av.kid && av.kid.prim.pants) av.kid.prim.pants.material = pm; if (av.kid && av.kid.prim.shin) av.kid.prim.shin.material = av.shortLegs ? av.skinM : pm;
   // 帽子：用草帽的形狀，整頂換成你的圖案
@@ -10194,7 +10252,8 @@ function renderTab(){
     sec('🪙 金幣與商店', [
       '海邊商店：把魚缸裡的魚賣掉，越稀有、越重越值錢。',
       '釣具店：釣竿（越好越不容易斷線、收線越快、稀有傳說機率越高）、魚餌（每拋一次用掉一個）、窩料。',
-      '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情共 54 件，可以先試穿看看，大家都看得到你的打扮。',
+      '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情加起來快 100 件，可以先試穿看看，大家都看得到你的打扮。',
+      '衣服有很多款：V 領、POLO 衫、背心、寬版、口袋 T、吸濕排汗、粗細條紋、長版 T、小魚童趣 T，還有長袖的大學 T、連帽 T、連帽外套、尼龍外套。衣服的顏色在「外觀」裡換，每一款都跟著變。',
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
     ]);
     sec('🐾 寵物', [
