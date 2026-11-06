@@ -135,6 +135,7 @@ supabase/094_cloaks.sql 🧣 斗篷：價目表加上 4 款斗篷（紅、深藍
 supabase/095_species_sync.sql 🐟 魚種補齊：把遊戲裡每一種魚補進 fish_species（藍鯨、苔森之島的魚、節慶魚之前沒加到，釣到記不起來、拍照收不進圖鑑），已經有的不改。由 tools/gen_species_sql.py 產生。
 supabase/096_fishpack.sql 🎒 漁夫冒險背包：價目表加上 back_fishpack（800），其他價格不變。
 supabase/097_submarine.sql 🚢 潛水艇與黑淵裂縫：sub_state、sub_dives，sub_unlock／sub_dive_start／sub_cast／sub_land／sub_pick／sub_found／sub_dive_end／sub_upgrade，新魚深海燈籠魚、吸血鬼烏賊（白化）、白化深海鮟鱇。
+supabase/098_mariana.sql 🐙 馬里亞納海溝的生物：獅子魚、深海鼬鳚、小飛象章魚、超巨型端足類、游泳海參（各有白化），加進潛水艇 sub_cast 的魚池。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

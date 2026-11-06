@@ -209,6 +209,17 @@ const FISH = [
   { id:'vampsquid', spot:'abyss', sub:true, name:'吸血鬼烏賊', rarity:'稀有', color:'#6a1a2a', min:0.2, max:0.6, power:0.5, desc:'名字很可怕，其實只吃從上面飄下來的「海洋雪」。八隻腳中間連著一層黑紅色的膜，遇到危險會把膜翻過來包住自己。住在幾乎沒有氧氣的深海。' },
   { id:'vampsquid_albino', spot:'abyss', of:'vampsquid', sub:true, name:'白化吸血鬼烏賊', rarity:'稀有', color:'#f2e4e8', min:0.2, max:0.6, power:0.5, w:0.02, desc:'膜是淡淡的粉白色，眼睛還是紅的。' },
   { id:'angler_albino', spot:'harbor', of:'angler', sub:true, name:'白化深海鮟鱇', rarity:'傳說', color:'#f0ece8', min:5, max:50, power:0.85, w:0.02, desc:'整隻白得像瓷器，頭上的小燈籠一樣會亮。只在黑淵裂縫深處見過。' },
+  // 馬里亞納海溝真的有的生物（v239，參考維基百科和深海探勘的紀錄；遊戲裡住在黑淵裂縫 1500 公尺以下的溝底，真實世界在 5000～8000 公尺）
+  { id:'marsnail', spot:'abyss', sub:true, name:'馬里亞納獅子魚', rarity:'稀有', color:'#f2c8cc', min:0.03, max:0.16, power:0.3, desc:'目前紀錄過住得最深的魚（大約 8000 公尺），身體軟軟的、半透明粉紅色，看得到肝臟。骨頭很薄、沒有鱗片，靠吃小小的端足類過活。學名 Pseudoliparis swirei，2017 年才正式命名。' },
+  { id:'marsnail_albino', spot:'abyss', of:'marsnail', sub:true, name:'白化馬里亞納獅子魚', rarity:'稀有', color:'#f8f4f4', min:0.03, max:0.16, power:0.3, w:0.03, desc:'連淡淡的粉紅都沒有，整隻像一塊透明的果凍。' },
+  { id:'cuskeel', spot:'abyss', sub:true, name:'深海鼬鳚', rarity:'稀有', color:'#c8c0b8', min:0.05, max:0.3, power:0.35, desc:'身體細長像鰻魚，眼睛很小。牠的親戚曾在 8000 公尺以下被撈到過，是最深紀錄的魚之一。' },
+  { id:'cuskeel_albino', spot:'abyss', of:'cuskeel', sub:true, name:'白化深海鼬鳚', rarity:'稀有', color:'#f6f2ee', min:0.05, max:0.3, power:0.35, w:0.03, desc:'全身雪白，眼睛淡紅。' },
+  { id:'dumbo', spot:'abyss', sub:true, name:'小飛象章魚', rarity:'稀有', color:'#f0a8a0', min:0.2, max:2.5, power:0.3, desc:'頭上兩片像大象耳朵的鰭一搧一搧地游，是住得最深的章魚，沒有墨囊。腳之間連著一層膜，張開來像一把小傘。' },
+  { id:'dumbo_albino', spot:'abyss', of:'dumbo', sub:true, name:'白化小飛象章魚', rarity:'稀有', color:'#f8f0f0', min:0.2, max:2.5, power:0.3, w:0.03, desc:'白得發亮的小飛象章魚，耳朵邊緣透著一點點粉紅。' },
+  { id:'amphipod', spot:'abyss', sub:true, name:'超巨型端足類', rarity:'常見', color:'#f2e2d6', min:0.02, max:0.12, power:0.15, desc:'長得像一隻大蝦子的甲殼動物，在馬里亞納海溝成群出現，會把掉下來的東西吃得一乾二淨。有一種還會用海水裡的鋁加強自己的外殼。' },
+  { id:'amphipod_albino', spot:'abyss', of:'amphipod', sub:true, name:'白化超巨型端足類', rarity:'常見', color:'#ffffff', min:0.02, max:0.12, power:0.15, w:0.02, desc:'殼是純白的，像瓷器做的小蝦。' },
+  { id:'seacuc', spot:'abyss', sub:true, name:'紫色游泳海參', rarity:'常見', color:'#a85ab8', min:0.1, max:0.6, power:0.1, desc:'半透明的紫色海參，看得到肚子裡的腸子。平常在海底吃泥，有時候會浮起來慢慢「游」到別的地方。' },
+  { id:'seacuc_albino', spot:'abyss', of:'seacuc', sub:true, name:'白化游泳海參', rarity:'常見', color:'#f4eef6', min:0.1, max:0.6, power:0.1, w:0.02, desc:'像一團漂在水裡的白色果凍。' },
   { id:'fangtooth_gold', spot:'abyss', of:'fangtooth', name:'金牙角高體金眼鯛', rarity:'稀有', color:'#c89830', min:0.03, max:0.12, power:0.3, w:0.02, desc:'全身金色的角高體金眼鯛，尖牙閃閃發亮。' },
   { id:'goblinshark_albino', spot:'abyss', of:'goblinshark', name:'白化尖吻鮫', rarity:'傳說', color:'#f8f0f0', min:40, max:200, power:0.9, w:0.008, desc:'全身雪白的尖吻鮫，幾乎沒有人看過。' },
   { id:'sixgill_albino', spot:'abyss', of:'sixgill', name:'白化六鰓鯊', rarity:'傳說', color:'#f0ece6', min:80, max:500, power:0.95, w:0.008, desc:'白色的六鰓鯊，眼睛是淡淡的紅色。' },
@@ -550,6 +561,8 @@ function fishModel(f, scale){
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
   if (f.id === 'octopus') return makeOctopus(scale);
+  if (/^dumbo/.test(f.id)) return makeDumbo(scale, f.id !== 'dumbo');
+  if (/^seacuc/.test(f.id)) return makeSeacuc(scale, f.id !== 'seacuc');
   if (MFISH && MFISH.of[f.id]) return makeMFish(f.id, scale);
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
@@ -1692,6 +1705,35 @@ function mfishFill(fish){ const o = fish.userData.mf; for (const c of [...fish.c
 function makeMFish(id, scale){ const o = MFISH.of[id];
   if (!MFISH.geo[o.k]){ let fish; try { fish = makeModelFish(FISH_BY_ID[id], scale); } catch(e){ fish = makeFish(FISH_BY_ID[id].color, scale); } fish.userData.mf = o; MFISH.wait[o.k].add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.mf = o; mfishFill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
+/* v239 小飛象章魚：圓圓的頭（往前）、兩片像大象耳朵的鰭一搧一搧、八隻短腳之間連著一層膜（往後張開像小傘）；
+   游泳海參：半透明紫色的長條身體、前面一片會擺動的「帆」、看得到肚子裡的腸子。動作都在 shader 裡算（aK：0 身體、1 耳朵／帆、2 膜） */
+const DEEPC = { mats:{} };
+function deepcGeo(parts){ const gs = parts.map(([g, k]) => { g = g.index ? g.toNonIndexed() : g; const n = g.attributes.position.count; g.setAttribute('aK', new THREE.Float32BufferAttribute(new Array(n).fill(k), 1)); for (const a of Object.keys(g.attributes)) if (!['position', 'normal', 'aK'].includes(a)) g.deleteAttribute(a); return g; }); const m = mergeGeometries(gs); m.computeBoundingSphere(); return m; }
+function deepcMat(key, color, opts, vert){ if (DEEPC.mats[key]) return DEEPC.mats[key]; const m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness:0.5, side:THREE.DoubleSide }, opts || {}));
+  m.onBeforeCompile = sh => { sh.uniforms.uFishT = fishTime; sh.vertexShader = 'uniform float uFishT;\nattribute float aK;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' + vert); }; m.customProgramCacheKey = () => key; return (DEEPC.mats[key] = m); }
+function makeDumbo(scale, albino){ if (!DEEPC.dumbo){
+    const head = new THREE.SphereGeometry(0.3, 16, 12); head.scale(1.1, 1, 1); head.translate(0.12, 0.02, 0);
+    const parts = [[head, 0]];
+    for (const sz of [-1, 1]){ const e = new THREE.CircleGeometry(0.17, 14); e.scale(1, 0.75, 1); e.rotateX(-Math.PI / 2); e.translate(0, 0, sz * 0.16); e.rotateX(-sz * 0.6); e.translate(0.14, 0.22, sz * 0.2); parts.push([e, 1]); }   /* 耳朵斜斜地往兩邊上方張開，從側面也看得到 */
+    const sk = new THREE.ConeGeometry(0.34, 0.42, 16, 1, true); sk.rotateZ(Math.PI / 2); sk.translate(-0.24, -0.02, 0); parts.push([sk, 2]);
+    for (let a = 0; a < 8; a++){ const ang = a / 8 * Math.PI * 2, r = new THREE.CylinderGeometry(0.018, 0.03, 0.46, 5); r.rotateZ(Math.PI / 2 - 0.0); r.translate(-0.25, Math.cos(ang) * 0.24, Math.sin(ang) * 0.24); parts.push([r, 2]); }
+    DEEPC.dumbo = deepcGeo(parts);
+    const eg = []; for (const sz of [-1, 1]){ const w = new THREE.SphereGeometry(0.06, 10, 8); w.scale(0.7, 0.9, 0.5); w.translate(0.32, 0.06, sz * 0.25); eg.push([w, 0]); } DEEPC.dumboEye = deepcGeo(eg); }
+  const vert = 'if (aK > 0.5 && aK < 1.5){ transformed.y += sin(uFishT * 3.2) * 0.5 * max(0.0, abs(position.z) - 0.2); }\n if (aK > 1.5){ float k = clamp((-position.x - 0.05) / 0.45, 0.0, 1.0); transformed.yz *= 1.0 + sin(uFishT * 1.6) * 0.18 * k; }';
+  const g = new THREE.Group(); g.scale.setScalar((scale || 1) * 1.2);
+  const b = new THREE.Mesh(DEEPC.dumbo, deepcMat(albino ? 'dumboA' : 'dumbo', albino ? '#f6eeee' : '#f0a8a0', { emissive: albino ? '#3a3030' : '#3a1410', emissiveIntensity:0.3 }, vert)); b.castShadow = true; g.add(b);
+  g.add(new THREE.Mesh(DEEPC.dumboEye, deepcMat('dumboEye', '#141018', { roughness:0.2 }, ''))); g.userData.tail = new THREE.Object3D(); return g; }
+function makeSeacuc(scale, albino){ if (!DEEPC.cuc){
+    const body = new THREE.CapsuleGeometry(0.13, 0.62, 6, 12); body.rotateZ(Math.PI / 2); body.scale(1, 0.85, 1.15);
+    const sail = new THREE.PlaneGeometry(0.22, 0.26, 4, 4); sail.translate(0, 0.13, 0); sail.rotateZ(-0.5); sail.translate(0.36, 0.08, 0);
+    const skirt = new THREE.PlaneGeometry(0.7, 0.16, 8, 2); skirt.rotateX(Math.PI / 2); skirt.translate(-0.05, -0.1, 0);
+    DEEPC.cuc = deepcGeo([[body, 0], [sail, 1], [skirt, 2]]);
+    const gut = new THREE.CapsuleGeometry(0.035, 0.6, 3, 6); gut.rotateZ(Math.PI / 2); gut.translate(0, -0.02, 0); DEEPC.gut = deepcGeo([[gut, 0]]); }
+  const vert = 'transformed.y += sin(uFishT * 1.8 + position.x * 5.0) * 0.025;\n if (aK > 0.5 && aK < 1.5) transformed.z += sin(uFishT * 2.4) * 0.08 * (position.y + 0.05) * 4.0;\n if (aK > 1.5) transformed.y += sin(uFishT * 3.0 + position.x * 9.0) * 0.03 * abs(position.z) * 6.0;';
+  const g = new THREE.Group(); g.scale.setScalar((scale || 1) * 1.2);
+  g.add(new THREE.Mesh(DEEPC.gut, deepcMat('cucGut', albino ? '#e8d8d0' : '#5a2a3a', { roughness:0.6 }, vert)));
+  const b = new THREE.Mesh(DEEPC.cuc, deepcMat(albino ? 'cucA' : 'cuc', albino ? '#f4eef6' : '#a85ab8', { transparent:true, opacity:0.62, depthWrite:false, emissive: albino ? '#302a34' : '#2a0a34', emissiveIntensity:0.5 }, vert)); b.renderOrder = 2; g.add(b);
+  g.userData.tail = new THREE.Object3D(); return g; }
 function makeMarlin3(scale, albino){
   if (!Marlin3.geo){ const fish = makeMarlin2(scale, albino); fish.userData.m3albino = albino; Marlin3.wait.add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.m3albino = albino; marlin3Fill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
@@ -8716,7 +8758,7 @@ function buildTank(){
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
     if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
     tankFish.push(fish);
-    if (!FISH_STYLE[f.id] || x.rs || /^marlin/.test(f.id) || f.id === 'octopus' || (MFISH && MFISH.of[f.id])){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
+    if (!FISH_STYLE[f.id] || x.rs || /^marlin/.test(f.id) || f.id === 'octopus' || /^(dumbo|seacuc)/.test(f.id) || (MFISH && MFISH.of[f.id])){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
       const bb = new THREE.Box3().setFromObject(fish.m), k = 1 / fish.scale;
       const ext = { r: Math.max(Math.abs(bb.min.x), bb.max.x, Math.abs(bb.min.z), bb.max.z) * k * 1.05, y0: bb.min.y * k, y1: bb.max.y * k };
       tankFit(fish, ext); fish.m.scale.multiplyScalar(fish.scale * k); if (x.rs) addScars(fish.m, rsInfo(x.rs).scars); tankGroup.add(fish.m); tankInst.push(fish.m); return; }
@@ -10467,6 +10509,7 @@ function renderTab(){
       '港口阿海旁邊有潛水艇碼頭：跟蔚博士租潛水艇（Lv.15 以上、4500 金幣，租一次以後免費）。按「出發」就會開進港口外海底下的深海。',
       '搖桿前後＝前進後退、左右＝轉向；⬇ 下潛、⬆ 上浮。深海很暗，只看得到前燈照到的地方。往前開到大陸棚的盡頭，看看會發現什麼。',
       '停下來（深度 200 公尺以下）可以按「🎣 放線」釣深海魚：按住收線，張力太高線會斷、太鬆魚會脫鉤。釣到的魚先放在船艙，按「⚓ 回港」才放進魚缸。',
+      '🐙 溝底住著馬里亞納海溝真的有的生物：馬里亞納獅子魚（目前紀錄最深的魚）、深海鼬鳚、小飛象章魚、超巨型端足類（一大群圍著鯨魚骨頭）、紫色游泳海參，都釣得到、也都有白化；海底一顆顆像海綿的是巨型單細胞生物。（真實世界牠們住在 5000～8000 公尺，遊戲裡縮短了深度）',
       '新魚：深海燈籠魚、吸血鬼烏賊（各有白化），還有白化深海鮟鱇；皇帶魚在岩壁中段、大王魷魚在 2500 公尺以下的溝底。偶爾會有抹香鯨從頭頂游過、擋住所有的光。',
       '耐壓：超過耐壓深度會開始警告，30 秒內不上浮會被強制拉回港，船艙的魚全部不見。電池：用完會自動回港，魚會保留。',
       '升級（潛水艇碼頭）：耐壓 800→1500→3000 公尺、電池 5→8→12 分鐘、探照燈 25→40→60 公尺；要金幣加上深海燈籠魚、水滴魚、吸血鬼烏賊，或在裂縫裡撿的深海礦石、古代船錨。',
@@ -11025,7 +11068,7 @@ function subGlow(color, s, fog){ const sp = new THREE.Sprite(new THREE.SpriteMat
 
 function subBuild(){
   const g = new THREE.Group(); g.position.set(SUBW.x, SUBW.y, SUBW.z); Sub.group = g; scene.add(g);
-  g.add(subTerrain());
+  Sub.terr = subTerrain(); g.add(Sub.terr);
   const hemi = new THREE.HemisphereLight('#3a6a9a', '#0a1018', 0.7); g.add(hemi); Sub.hemi = hemi;
   // 潛水艇和前燈
   const m = subModel(); g.add(m); Sub.m = m;
@@ -11041,7 +11084,7 @@ function subBuild(){
     const gl = subGlow('#3aa8ff', 26, false); gl.position.y = 4; v.add(gl); const pl = new THREE.PointLight('#4ab8ff', 6, 18, 1.2); pl.position.y = 4; v.add(pl);
     g.add(v); Sub.vents.push({ v, pts }); }
   const rockM = new THREE.MeshLambertMaterial({ color:'#2e2c2a' });
-  for (let i = 0; i < 9; i++){ const x = -60 + rnd() * 120, z = subEdge(x) + subWidth(x) * (0.25 + rnd() * 0.5), y = subH(x, z), h = 5 + rnd() * 12; const c = new THREE.Mesh(new THREE.ConeGeometry(1 + rnd() * 1.5, h, 6), rockM); c.position.set(x, y + h / 2 - 0.3, z); c.rotation.y = rnd() * 6; g.add(c); (Sub.pillars = Sub.pillars || []).push({ m:c, x, y, z, h }); }
+  for (let i = 0; i < 7; i++){ const x = -60 + rnd() * 120, z = subEdge(x) + subWidth(x) * (rnd() < 0.5 ? 0.2 : 0.8), y = subH(x, z), h = 4 + rnd() * 9;   /* 岩柱靠兩邊的岩壁，不擋中間 */ const c = new THREE.Mesh(new THREE.ConeGeometry(1 + rnd() * 1.5, h, 6), rockM); c.position.set(x, y + h / 2 - 0.3, z); c.rotation.y = rnd() * 6; g.add(c); (Sub.pillars = Sub.pillars || []).push({ m:c, x, y, z, h }); }
   { const x = 20, z = subEdge(x) + subWidth(x) * 0.55, y = subH(x, z), w = new THREE.Group(), wm = new THREE.MeshLambertMaterial({ color:'#3a2e24' }); w.position.set(x, y + 0.6, z); w.rotation.set(0.25, 0.7, 0.18);   /* 沉船殘骸 */
     const hull = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2, 11), wm); w.add(hull); for (let k = 0; k < 5; k++){ const r = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.14, 4, 10, Math.PI), wm); r.position.set(0, 1, -4 + k * 2.2); r.rotation.y = Math.PI / 2; w.add(r); }
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 7, 6), wm); mast.position.set(0, 3, 1); mast.rotation.z = 0.6; w.add(mast); g.add(w); Sub.wreck = { x, z, y, g:w }; }
@@ -11065,6 +11108,29 @@ function subBuild(){
   try { const of = fishModel(FISH_BY_ID.oarfish, 4.5); of.rotation.z = Math.PI / 2; const x = -14, z = subEdge(x) + 3.2; of.position.set(x, -44, z + 2.5); g.add(of); Sub.oar = { m:of, x, z: z + 2.5, y:-44, dy:0 }; } catch(e){}
   try { const sq = fishModel(FISH_BY_ID.giantsquid, 7); const x = 6, z = subEdge(x) + subWidth(x) * 0.5; sq.position.set(x, -112, z); g.add(sq); Sub.squid = { m:sq, cx:x, cz:z }; } catch(e){}
   Sub.whale = null; Sub.whaleNext = 70 + Math.random() * 60;
+  // v239 裂縫裡的生物變多：中層有一群群發光的深海燈籠魚；溝底有馬里亞納海溝真的有的生物——獅子魚、鼬鳚、小飛象章魚、游泳海參、
+  // 一大群端足類圍著一具鯨魚骨頭（鯨落）、海底一顆顆像海綿的「巨型單細胞生物」（xenophyophore）；還有吸血鬼烏賊、鼠尾鱈、深海鮟鱇
+  Sub.crit = []; const crit = (id, sc, x, y, z, r, sp, near) => { try { const m = fishModel(FISH_BY_ID[id], sc); m.position.set(x, y, z); g.add(m); Sub.crit.push({ m, cx:x, cy:y, cz:z, r, sp, ph: rnd() * 6, near }); } catch(e){} };
+  const floorAt = (u, v) => { const x = -50 + u * 100, z = subEdge(x) + subWidth(x) * (0.3 + v * 0.4); return [x, subH(x, z), z]; };
+  for (let i = 0; i < 3; i++){ const [x, y, z] = floorAt(0.2 + i * 0.3, rnd()); crit(i === 2 ? 'marsnail_albino' : 'marsnail', 1.3, x, y + 0.6, z, 2 + rnd() * 2, 0.25, true); }
+  { const [x, y, z] = floorAt(0.55, 0.3); crit('cuskeel', 1.4, x, y + 0.5, z, 3, 0.2, true); }
+  for (let i = 0; i < 2; i++){ const [x, y, z] = floorAt(0.3 + i * 0.4, 0.7); crit('dumbo', 1.6, x, y + 3 + i, z, 2.5, 0.12, true); }
+  for (let i = 0; i < 3; i++){ const [x, y, z] = floorAt(0.15 + i * 0.32, 0.5); crit('seacuc', 1.6, x, y + 0.4 + i * 0.8, z, 1.5, 0.05, true); }
+  { const [x, y, z] = floorAt(0.7, 0.8); crit('rattail', 1.0, x, y + 0.8, z, 4, 0.18, true); }
+  { const [x, y, z] = floorAt(0.42, 0.2); crit('angler', 1.2, x, y + 1.5, z, 2, 0.08, true); }
+  for (let i = 0; i < 2; i++){ const x = -20 + i * 40, z = subEdge(x) + subWidth(x) * 0.5; crit('vampsquid', 0.9, x, -60 - i * 20, z, 3, 0.1, true); }
+  { const [x, y, z] = floorAt(0.62, 0.55), bone = new THREE.Group(), bm = new THREE.MeshLambertMaterial({ color:'#d8d2c0' }); bone.position.set(x, y + 0.2, z); bone.rotation.y = 0.6;   /* 鯨落：一具鯨魚骨頭，上面爬滿端足類 */
+    const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.15, 9, 6), bm); sp.rotation.z = Math.PI / 2; sp.position.y = 0.5; bone.add(sp);
+    for (let k = 0; k < 9; k++){ const rb = new THREE.Mesh(new THREE.TorusGeometry(1.1 - Math.abs(k - 3) * 0.1, 0.07, 4, 8, Math.PI), bm); rb.position.set(-3 + k * 0.75, 0.5, 0); rb.rotation.y = Math.PI / 2; bone.add(rb); }
+    const sk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 1.1), bm); sk.position.set(4.8, 0.4, 0); bone.add(sk); g.add(bone);
+    const N = 160, bg = new THREE.BufferGeometry(), bp = new Float32Array(N * 3); for (let k = 0; k < N; k++){ bp[k * 3] = (rnd() - 0.5) * 9; bp[k * 3 + 1] = rnd() * 1.6; bp[k * 3 + 2] = (rnd() - 0.5) * 2.8; } bg.setAttribute('position', new THREE.BufferAttribute(bp, 3));
+    const sw = new THREE.Points(bg, new THREE.PointsMaterial({ color:'#f4e4d4', size:0.22, transparent:true, opacity:0.95 })); bone.add(sw); Sub.swarm = sw;
+    }   /* 端足類用一大群小點表示（單獨一隻的模型三角形太多） */
+  { const xm = new THREE.MeshLambertMaterial({ color:'#b8ad98' }); for (let i = 0; i < 12; i++){ const [x, y, z] = floorAt(rnd(), rnd()); const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + rnd() * 0.3, 1), xm); m.position.set(x, y + 0.15, z); m.scale.y = 0.7; g.add(m); } }
+  // 深海燈籠魚的魚群：一條魚只有十幾個三角形，用 InstancedMesh 一次畫完
+  { const fg = new THREE.ConeGeometry(0.1, 0.45, 5); fg.rotateZ(-Math.PI / 2); const fm = new THREE.MeshStandardMaterial({ color:'#3a5a7a', emissive:'#4ad8ff', emissiveIntensity:0.9, roughness:0.4 });
+    Sub.schools = []; for (let s2 = 0; s2 < 4; s2++){ const n = 40, im = new THREE.InstancedMesh(fg, fm, n), x = -45 + s2 * 30, z = subEdge(x) + subWidth(x) * (0.3 + rnd() * 0.4), y = -12 - s2 * 18 - rnd() * 10; g.add(im);
+      Sub.schools.push({ im, n, cx:x, cy:y, cz:z, off: Array.from({ length:n }, () => [rnd() * 6.28, (rnd() - 0.5) * 2.2, 1 + rnd() * 2.2, 0.8 + rnd() * 0.5]), ph: rnd() * 6 }); } }
   g.traverse(o => { if (o.isMesh) o.frustumCulled = true; });
 }
 
@@ -11074,10 +11140,11 @@ const DEEP = { geo:{}, p:null };
 function deepLoad(){ if (DEEP.p) return DEEP.p; DEEP.p = Promise.all(['smoker', 'basalt', 'wreck', 'jelly'].map(k => new GLTFLoader().loadAsync('models/deep_' + k + '.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); DEEP.geo[k] = geo; }).catch(e => console.warn('deep ' + k, e)))); return DEEP.p; }
 function subDecoSwap(){ deepLoad().then(() => { const G = DEEP.geo, lam = new THREE.MeshLambertMaterial({ vertexColors:true }), add = (geo, mat, parent, sc, y, cull) => { const m = new THREE.Mesh(geo, mat); m.scale.set(sc[0], sc[1], sc[2]); m.position.y = y; parent.add(m); if (cull) Sub.cull.push(m); return m; };
   if (G.smoker) for (const v of Sub.vents){ v.v.children[0].visible = false; v.v.children[1].visible = false; add(G.smoker, lam, v.v, [3.4, 3.4, 3.4], 0.96 * 3.4 - 0.3, true); v.pts.position.y = 3; v.pts.material.color.set('#4a5058'); v.pts.material.size = 0.5; for (const c of v.v.children) if (c.isSprite || c.isLight) c.position.y = 7.2; }   /* 黑煙往上冒，頂端還是有一點藍光 */
-  if (G.basalt) for (const P of Sub.pillars || []){ P.m.visible = false; const k = P.h / 1.9; const m = add(G.basalt, lam, Sub.group, [k * 1.6, k, k * 1.6], 0, true); m.position.set(P.x, P.y + 0.95 * k - 0.4, P.z); m.rotation.y = P.x * 1.7; }
+  if (G.basalt) for (const P of Sub.pillars || []){ P.m.visible = false; P.m.userData.off = true; const k = P.h / 1.9; const m = add(G.basalt, lam, Sub.group, [Math.min(k, 4) * 1.1, k, Math.min(k, 4) * 1.1], 0, true); m.position.set(P.x, P.y + 0.95 * k - 0.4, P.z); m.rotation.y = P.x * 1.7; }
   if (G.wreck && Sub.wreck){ for (const c of Sub.wreck.g.children) c.visible = false; const m = add(G.wreck, lam, Sub.wreck.g, [6.5, 6.5, 6.5], 0.8 * 6.5 - 1.2, true); m.rotation.y = Math.PI / 2; }
-  if (G.jelly){ const jm = new THREE.MeshBasicMaterial({ vertexColors:true, transparent:true, opacity:0.88 }); for (const j of Sub.jelly){ j.m.visible = false; const m = new THREE.Mesh(G.jelly, jm); m.scale.setScalar(1.1); m.position.copy(j.m.position); Sub.group.add(m); Sub.cull.push(m); j.m = m; } }   /* 水母自己會發光，不用打光 */
+  if (G.jelly){ const jm = new THREE.MeshBasicMaterial({ vertexColors:true, transparent:true, opacity:0.88 }); for (const j of Sub.jelly){ j.m.visible = false; j.m.userData.off = true; const m = new THREE.Mesh(G.jelly, jm); m.scale.setScalar(1.1); m.position.copy(j.m.position); Sub.group.add(m); Sub.cull.push(m); j.m = m; } }   /* 水母自己會發光，不用打光 */
   for (const o of [Sub.oar && Sub.oar.m, Sub.squid && Sub.squid.m, ...Sub.shelfFish.map(f => f.m)]) if (o) Sub.cull.push(o); }); }
+function subCullCrit(P){ for (const c of Sub.crit || []){ const dx = c.m.position.x - P.x, dy = c.m.position.y - P.y, dz = c.m.position.z - P.z; c.m.visible = dx * dx + dy * dy + dz * dz < 14 * 14; } }   /* 小生物 22 公尺外就先不畫 */
 function subHud(){ let h = $('#subHud'); if (h) return h;
   h = document.createElement('div'); h.id = 'subHud';
   h.innerHTML = '<div class="sh-top panel"><span class="sh-depth">深度 <b>0</b> m</span><span class="sh-bat">🔋 <b>5:00</b></span><span class="sh-hold">🐟 <b>0</b></span><span class="sh-lim"></span></div>'
@@ -11153,6 +11220,10 @@ function subFrame(dt, t){
   if (depth > (Sub.dive.pressure_m || 800)){ Sub.warnT += dt; if (Sub.warnT > 30 && !Sub.ending){ subEnd('pressure'); return; } if (Math.floor(t * 2) % 2) camShake = Math.max(camShake || 0, 0.05); } else Sub.warnT = 0;
   // 東西的動作
   for (const v of Sub.vents){ const a = v.pts.geometry.attributes.position.array; for (let i = 1; i < a.length; i += 3){ a[i] += dt * 2.2; if (a[i] > 12) a[i] = 3.3; } v.pts.geometry.attributes.position.needsUpdate = true; }
+  for (const c of Sub.crit || []){ const a = t * c.sp + c.ph; c.m.position.set(c.cx + Math.cos(a) * c.r, c.cy + Math.sin(t * 0.7 + c.ph) * 0.3, c.cz + Math.sin(a) * c.r); c.m.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)) + (c.sp > 0 ? 0 : Math.PI); }
+  if (frameNo % 2 === 0) for (const S of Sub.schools || []){ const d2 = (S.cx - P.x) ** 2 + (S.cy - P.y) ** 2 + (S.cz - P.z) ** 2; S.im.visible = d2 < (Sub.range + 10) ** 2; if (!S.im.visible) continue; const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), cx = S.cx + Math.cos(t * 0.15 + S.ph) * 8, cz = S.cz + Math.sin(t * 0.15 + S.ph) * 5;
+    for (let i = 0; i < S.n; i++){ const [a0, dy, r, sp] = S.off[i], a = a0 + t * 0.6 * sp; e.set(0, -a - Math.PI / 2, 0); q.setFromEuler(e); M.compose(new THREE.Vector3(cx + Math.cos(a) * r, S.cy + dy + Math.sin(t + a0) * 0.2, cz + Math.sin(a) * r), q, new THREE.Vector3(1, 1, 1)); S.im.setMatrixAt(i, M); } S.im.instanceMatrix.needsUpdate = true; }
+  if (Sub.swarm && frameNo % 3 === 0){ const a = Sub.swarm.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i] += (Math.random() - 0.5) * 0.08; a[i + 1] = clamp(a[i + 1] + (Math.random() - 0.5) * 0.06, 0, 1.8); a[i + 2] += (Math.random() - 0.5) * 0.06; a[i] = clamp(a[i], -4.6, 4.6); a[i + 2] = clamp(a[i + 2], -1.5, 1.5); } Sub.swarm.geometry.attributes.position.needsUpdate = true; }
   for (const j of Sub.jelly){ j.m.position.y = j.y0 + Math.sin(t * 0.5 + j.ph) * 1.5; j.m.scale.y = 1 + Math.sin(t * 2 + j.ph) * 0.15; }
   for (const f of Sub.shelfFish){ const a = t * 0.35 + f.ph; f.m.position.set(f.cx + Math.cos(a) * f.r, f.y, f.cz + Math.sin(a) * f.r); f.m.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)) + Math.PI / 2; }
   if (Sub.oar){ const O = Sub.oar, d = Math.hypot(P.x - O.x, P.y - O.m.position.y, P.z - O.z), lit = d < 12 && ((O.x - P.x) * fx + (O.z - P.z) * fz) > 0; O.dy += ((lit ? -1.2 : 0.15) - O.dy) * dt; O.m.position.y = clamp(O.m.position.y + O.dy * dt, -56, -34); O.m.position.x = O.x + Math.sin(t * 0.3) * 0.6; }   /* 被燈照到會慢慢往下躲 */
@@ -11161,7 +11232,7 @@ function subFrame(dt, t){
   if (!Sub.whale && now() - Sub.t0 > Sub.whaleNext && depth < 1500){ try { const m = fishModel(FISH_BY_ID.sperm, 22); const a = Sub.yaw + Math.PI / 2; m.rotation.y = a - Math.PI / 2; Sub.group.add(m); Sub.whale = { m, t0:t, sx: P.x - Math.sin(a) * 30, sz: P.z - Math.cos(a) * 30, dx: Math.sin(a), dz: Math.cos(a), y: P.y + 7 }; whaleSong(0.9); } catch(e){ Sub.whaleNext += 120; } }
   if (Sub.whale){ const W = Sub.whale, u = (t - W.t0) / 10; W.m.position.set(W.sx + W.dx * u * 60, W.y, W.sz + W.dz * u * 60); const dark = Math.sin(clamp(u, 0, 1) * Math.PI); Sub.light.intensity = 90 * (1 - dark * 0.88); Sub.hemi.intensity = 0.7 * (1 - dark);
     if (u > 1){ Sub.group.remove(W.m); Sub.whale = null; Sub.whaleNext = (now() - Sub.t0) + 150 + Math.random() * 120; Sub.light.intensity = 90; Sub.hemi.intensity = 0.7; } }
-  if (frameNo % 10 === 0){ const R2 = (Sub.range + 6) * (Sub.range + 6), w = new THREE.Vector3(); for (const m of Sub.cull){ m.getWorldPosition(w); const dx = w.x - SUBW.x - P.x, dy = w.y - SUBW.y - P.y, dz = w.z - SUBW.z - P.z; m.visible = dx * dx + dy * dy + dz * dz < R2; } }   /* 霧外面的東西先不畫 */
+  if (frameNo % 10 === 0){ const R2 = (Sub.range + 6) * (Sub.range + 6), w = new THREE.Vector3(); if (!Sub.cullAll){ const skip = new Set([Sub.terr, Sub.m, ...Sub.vents.map(v => v.v), ...(Sub.crit || []).map(c => c.m), ...Sub.ores.map(o => o.m), Sub.wreck && Sub.wreck.g]); Sub.cullAll = Sub.group.children.filter(o => !o.isLight && !skip.has(o)); } for (const m of [...Sub.cull, ...Sub.cullAll]){ if (m.userData.off) continue; m.getWorldPosition(w); const dx = w.x - SUBW.x - P.x, dy = w.y - SUBW.y - P.y, dz = w.z - SUBW.z - P.z; m.visible = dx * dx + dy * dy + dz * dz < R2; } subCullCrit(P); }   /* 霧外面的東西先不畫 */
   // 附近可以撿的東西、可以放線的地方
   Sub.near = null; for (const o of Sub.ores){ if (!o.m.visible) continue; if (Math.hypot(P.x - o.x, P.y - o.y - 0.5, P.z - o.z) < 3.2){ Sub.near = o; break; } }
   if (Sub.fish) subFishTick(dt, t);
