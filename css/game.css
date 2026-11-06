@@ -1015,3 +1015,8 @@ body.subbing #subHud{display:block}
 #subHud .sh-q{position:fixed;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;width:min(300px,80vw);padding:8px;border-radius:16px;z-index:9}
 #subHud .sh-q[hidden]{display:none}
 #subHud .sh-q button{border:0;border-radius:999px;padding:8px 12px;font-size:14px;font-weight:700;background:#eef5fa;color:#18334a}
+/* v243 左上角：平常不要白底（太擋畫面），只留字；字加白色光暈，背景再亮再暗都看得清楚。點頭像打開時才有底 */
+#top #brand.panel:not(.open){background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;pointer-events:none}
+#top #brand.panel:not(.open) .mark, #top #brand.panel:not(.open) h1, #top #brand.panel:not(.open) button, #top #brand.panel:not(.open) #coins, #top #brand.panel:not(.open) #lvChip, #top #brand.panel:not(.open) #tnyPill{pointer-events:auto}
+#top #brand.panel:not(.open) h1, #top #brand.panel:not(.open) #online{text-shadow:0 0 2px #fff,0 0 4px #fff,0 0 7px rgba(255,255,255,.95),0 1px 1px rgba(255,255,255,.9)}
+#top #brand.panel:not(.open) #online{font-weight:600}
