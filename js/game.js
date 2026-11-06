@@ -1803,6 +1803,7 @@ function topShader(av){
       vRest = position;
       if (uKidT > 0.5){ bool sl = abs(position.x) > 0.27;
         if (uTopB.z > 0.5){ if (sl){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * 1.3; if (abs(position.x) > 0.4) transformed.x += sign(position.x) * 0.05; } else transformed.xz *= 1.07; }
+        if (uTopB.w < 0.5 && !sl && position.y < 0.58){ float r = length(transformed.xz * vec2(1.0, 1.0 / 0.86)); transformed.xz *= max(1.0, mix(1.0, 0.285 / max(r, 0.01), smoothstep(0.58, 0.5, position.y))); }   /* v224：衣服下襬往外蓋住褲頭（以前褲頭會從衣服下面凸出來一圈） */
         if (uTopB.w > 0.5 && !sl && position.y < 0.52){ float k = (0.52 - position.y) / 0.155; transformed.y -= k * 0.1; float r = length(transformed.xz * vec2(1.0, 1.0 / 0.86)); transformed.xz *= mix(1.0, 0.272 / max(r, 0.01), smoothstep(0.0, 0.35, k)); }
       }`);
     sh.fragmentShader = TOP_GLSL_F + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
