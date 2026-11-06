@@ -534,6 +534,7 @@ function makeModelFish(f, scale){
 }
 function fishModel(f, scale){
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
+  if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
 }
@@ -1538,6 +1539,26 @@ function marlin3Fill(fish){ const albino = fish.userData.m3albino;
   const e = Marlin3.eye(); if (!Marlin3.eyeM) Marlin3.eyeM = [new THREE.MeshStandardMaterial({ color:'#f8fbff', roughness:0.35 }), new THREE.MeshStandardMaterial({ color:'#0b0e14', roughness:0.25 }), new THREE.MeshBasicMaterial({ color:'#ffffff' })];
   for (const sz of [-1, 1]){ const ry = sz > 0 ? 0 : Math.PI;
     for (const [r, k, dz, dx, dy, seg] of [[0.024, 0, 0.002, 0, 0, 18], [0.015, 1, 0.004, 0, 0, 14], [0.005, 2, 0.006, 0.006, 0.007, 8]]){ const d = new THREE.Mesh(new THREE.CircleGeometry(r, seg), Marlin3.eyeM[k]); d.position.set(e.x + dx, e.y + dy, sz * (e.z + dz)); d.rotation.y = ry; fish.add(d); } } }
+/* 赤紅霸王鯊 v223：Meshy 生成的模型（付費方案，見 CREDITS.md），14 萬面減到 5,000 面；Meshy 的貼圖碎成很多小塊，
+   重新從側面烘成一張 1024×512 的貼圖（左半邊是右側身體、右半邊是左側），models/redshark.glb。白化版在載入時把貼圖換色。
+   頭朝 +x，長度跟原本的鯊魚模型一樣（1.6）；游泳擺尾一樣用 fishMat 的 side。還沒載好的時候先用原本的模型。 */
+const RedShark = { geo:null, tex:{}, mats:{}, wait:new Set() };
+new GLTFLoader().loadAsync('models/redshark.glb').then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
+  const geo = mesh.geometry.clone(); geo.scale(0.8, 0.8, 0.8); geo.computeBoundingSphere(); RedShark.geo = geo; RedShark.tex.n = mesh.material.map; RedShark.tex.n.colorSpace = THREE.SRGBColorSpace;
+  for (const fish of [...RedShark.wait]){ try { redSharkFill(fish); } catch(e){ console.warn('redshark', e); } } RedShark.wait.clear(); }).catch(e => console.warn('redshark glb', e));
+RedShark.albinoTex = function(){ if (RedShark.tex.a) return RedShark.tex.a; const img = RedShark.tex.n.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const c = cv.getContext('2d'); c.drawImage(img, 0, 0);
+  const d = c.getImageData(0, 0, cv.width, cv.height), px = d.data, sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const st = [224, 168, 160], bo = [248, 232, 226], be = [255, 248, 244];   /* 淡粉紅虎紋、粉白身體、白肚子 */
+  for (let i = 0; i < px.length; i += 4){ const r = px[i] / 255, gg = px[i + 1] / 255, a = sm(0.08, 0.5, r), w = sm(0.35, 0.75, gg);
+    for (let k = 0; k < 3; k++) px[i + k] = (st[k] + (bo[k] - st[k]) * a) * (1 - w) + be[k] * w; }
+  c.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.flipY = RedShark.tex.n.flipY; return (RedShark.tex.a = t); };
+RedShark.mat = function(albino){ const k = albino ? 'a' : 'n'; if (RedShark.mats[k]) return RedShark.mats[k];
+  const m = new THREE.MeshStandardMaterial({ map: albino ? RedShark.albinoTex() : RedShark.tex.n, roughness:0.5, metalness:0.05, side:THREE.DoubleSide });
+  m.onBeforeCompile = fishMat('redshark3', 'Body', '#c8161c', false, 'side', 'RS3').onBeforeCompile; m.customProgramCacheKey = () => 'redshark3'; return (RedShark.mats[k] = m); };
+function redSharkFill(fish){ for (const c of [...fish.children]) if (!c.userData.scar) fish.remove(c); const b = new THREE.Mesh(RedShark.geo, RedShark.mat(fish.userData.rsAlbino)); b.castShadow = true; fish.add(b); }
+function makeRedShark(scale, albino){
+  if (!RedShark.geo){ const st = FISH_STYLE[albino ? 'shark_red_albino' : 'shark_red']; let fish; try { fish = makeModelFish(FISH_BY_ID[albino ? 'shark_red_albino' : 'shark_red'], scale); } catch(e){ fish = makeFish('#c8161c', scale); } fish.userData.rsAlbino = albino; RedShark.wait.add(fish); return fish; }
+  const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.rsAlbino = albino; redSharkFill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
 function makeMarlin3(scale, albino){
   if (!Marlin3.geo){ const fish = makeMarlin2(scale, albino); fish.userData.m3albino = albino; Marlin3.wait.add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.m3albino = albino; marlin3Fill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
@@ -9348,9 +9369,13 @@ async function saveRemote(){
 // 紅鯊身上的叉叉：掙脫過幾次就有幾道（越多道，下次越容易掙脫）
 function addScars(m, n){
   if (!m || !(n > 0)) return; m.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3()), k = 1 / (m.scale.x || 1);
-  const L = sz.x * k, H = sz.y * k, Z = sz.z * k, mt = new THREE.MeshBasicMaterial({ color:'#f4e6d8' }), g = new THREE.Group(); g.position.copy(c.sub(m.position)).multiplyScalar(k);
+  const L = sz.x * k, H = sz.y * k, Z = sz.z * k, mt = new THREE.MeshBasicMaterial({ color:'#f4e6d8' }), g = new THREE.Group(); g.userData.scar = 1; g.position.copy(c.clone().sub(m.position)).multiplyScalar(k);
+  const body = []; m.traverse(o => { if (o.isMesh) body.push(o); }); const rc = new THREE.Raycaster(), inv = new THREE.Matrix4().copy(m.matrixWorld).invert();
   for (let i = 0; i < Math.min(n, 9); i++){ const s = L * (0.045 + 0.006 * Math.min(n, 9)), x = L * (0.18 - i * 0.07), y = H * (0.08 + (i % 2) * 0.1);
-    for (const side of [-1, 1]) for (const a of [0.785, -0.785]){ const b = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.18, 0.004), mt); b.position.set(x, y, side * Z * 0.36); b.rotation.z = a; g.add(b); } }
+    for (const side of [-1, 1]){ let zz = side * Z * 0.36;   /* v223：從側面打一條線到身體，叉叉貼在皮膚上（新模型的胸鰭很寬，用外框算會浮在半空） */
+      const from = m.localToWorld(new THREE.Vector3(g.position.x + x, g.position.y + y, side * Z * 2)), to = m.localToWorld(new THREE.Vector3(g.position.x + x, g.position.y + y, 0));
+      rc.set(from, to.sub(from).normalize()); const hit = rc.intersectObjects(body, false)[0]; if (hit){ const lp = hit.point.clone().applyMatrix4(inv); zz = lp.z + side * 0.012; }
+      for (const a of [0.785, -0.785]){ const b = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.18, 0.004), mt); b.position.set(x, y, zz); b.rotation.z = a; g.add(b); } } }
   m.add(g);
 }
 // ---- 赤紅霸王鯊（032）：整個伺服器共用一群，一開始一公一母，會繁殖，被釣光就絕種 ----
