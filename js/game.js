@@ -1983,12 +1983,26 @@ function goggleMat(){ if (GOGGLE.mat) return GOGGLE.mat;
         if (P.z < 0.25) c = vec3(0.12, 0.2, 0.35); else if (tube) c = vec3(1.0, 0.8, 0.2); else if (P.z > 0.72 && lens < 0.34) c = vec3(0.62, 0.86, 0.96);
         diffuseColor.rgb = c; }`); };
   m.customProgramCacheKey = () => 'goggles'; return (GOGGLE.mat = m); }
-/* v233 整套潛水裝備（Meshy 付費方案生成：面鏡＋呼吸管、氧氣瓶背架、蛙鞋），潛水時自動穿上，上岸脫掉；還有深色長袖長褲的潛水衣（用衣服 shader 做）。
+/* v233 整套潛水裝備（Meshy 付費方案生成：氧氣瓶背架、蛙鞋；面鏡 v235 改成程式做的單片大面鏡），潛水時自動穿上，上岸脫掉；還有深色長袖長褲的潛水衣（用衣服 shader 做）。
    模型的顏色烘在頂點上（models/scuba_*.glb），載好前先用原本程式做的面鏡和氧氣瓶。 */
 const SCUBA = { tank:null, mask:null, fin:null, mat:null };
-for (const k of ['tank', 'mask', 'fin']) new GLTFLoader().loadAsync('models/scuba_' + k + '.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.userData.shared = true; SCUBA[k] = geo; }).catch(e => console.warn('scuba ' + k, e));
+for (const k of ['tank', 'fin']) new GLTFLoader().loadAsync('models/scuba_' + k + '.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.userData.shared = true; SCUBA[k] = geo; }).catch(e => console.warn('scuba ' + k, e));
 function scubaMat(){ return SCUBA.mat || (SCUBA.mat = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.45, metalness:0.08, side:THREE.DoubleSide })); }
-TOP_STYLE.__wet = [3, 2, 0, 0, 0, 1, 0, 0];   /* 潛水衣：羅紋領、長袖、羅紋袖口 */
+TOP_STYLE.__wet = [3, 2, 0, 0, 0, 1, 0, 0];
+function scubaMask(){ if (!SCUBA.maskG){ const g = new THREE.Group(), blk = new THREE.MeshStandardMaterial({ color:'#1b1e24', roughness:0.6 }), frame = new THREE.MeshStandardMaterial({ color:'#2f8fe0', roughness:0.35, metalness:0.15 }),
+    glass = new THREE.MeshStandardMaterial({ color:'#bfe9ff', roughness:0.05, metalness:0.3, transparent:true, opacity:0.45, depthWrite:false }), org = new THREE.MeshStandardMaterial({ color:'#ff8a2a', roughness:0.5 });
+    const shape = (w, h, r) => { const sh = new THREE.Shape(), x = -w / 2, y = -h / 2; sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r); sh.lineTo(x + w, y + h - r); sh.quadraticCurveTo(x + w, y + h, x + w - r, y + h); sh.lineTo(x + r, y + h); sh.quadraticCurveTo(x, y + h, x, y + h - r); sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y); return sh; };
+    const bend = (geo, R) => { const p = geo.attributes.position; for (let i = 0; i < p.count; i++){ const x = p.getX(i), a = x / R; p.setXYZ(i, Math.sin(a) * R, p.getY(i), p.getZ(i) - (1 - Math.cos(a)) * R); } geo.computeVertexNormals(); return geo; };   /* 沿著臉彎一點 */
+    const skirt = bend(new THREE.ExtrudeGeometry(shape(0.5, 0.24, 0.09), { depth:0.07, bevelEnabled:true, bevelSize:0.012, bevelThickness:0.012, bevelSegments:2, curveSegments:6 }), 0.4); const sk = new THREE.Mesh(skirt, blk); sk.position.z = 0.27; g.add(sk);
+    const fr = bend(new THREE.ExtrudeGeometry(shape(0.46, 0.2, 0.075), { depth:0.03, bevelEnabled:false, curveSegments:6 }), 0.4); const fm = new THREE.Mesh(fr, frame); fm.position.z = 0.335; g.add(fm);
+    const gl = bend(new THREE.ShapeGeometry(shape(0.4, 0.15, 0.06), 6), 0.4); const gm = new THREE.Mesh(gl, glass); gm.position.z = 0.368; gm.renderOrder = 2; g.add(gm);
+    const hl = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.11), new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.55, depthWrite:false })); hl.position.set(-0.12, 0.01, 0.372); hl.rotation.z = -0.5; g.add(hl);
+    const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.075, 0.09, 12, 1, false, 0, Math.PI), blk); nose.rotation.set(Math.PI / 2, 0, Math.PI / 2); nose.position.set(0, -0.15, 0.31); nose.scale.set(0.8, 0.7, 0.7); g.add(nose);   /* 鼻子的部分包起來 */
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(0.335, 0.022, 6, 20, Math.PI), blk); strap.rotation.x = -Math.PI / 2;   /* 綁帶只繞後腦勺（以前整圈，前面會橫過鏡片） */ strap.scale.set(1, 1.02, 1); g.add(strap);
+    const sn = new THREE.CatmullRomCurve3([new THREE.Vector3(0.24, -0.08, 0.2), new THREE.Vector3(0.33, 0.0, 0.1), new THREE.Vector3(0.36, 0.2, 0.05), new THREE.Vector3(0.34, 0.42, 0.0)]);
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(sn, 14, 0.028, 7), blk)); const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.03, 0.09, 8), org); tip.position.set(0.34, 0.46, 0.0); g.add(tip);
+    g.traverse(o => { if (o.isMesh){ o.castShadow = true; o.geometry.userData.shared = true; } }); SCUBA.maskG = g; }
+  return SCUBA.maskG.clone(); }   /* 潛水衣：羅紋領、長袖、羅紋袖口 */
 function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
@@ -2592,12 +2606,12 @@ class Fisher {
   // 潛水：身體趴平、背氧氣瓶、戴面鏡
   setSwim(on){
     on = !!on; if (on === !!this.swim) return; this.swim = on; const a = this.av;
-    if (on && SCUBA.tank && SCUBA.mask && SCUBA.fin){ const sm = scubaMat(), parts = [];
+    if (on && SCUBA.tank && SCUBA.fin){ const sm = scubaMat(), parts = [];
       // 潛水衣：衣服、褲子換成深藍色、長袖長褲（上岸換回來）
       const pr = a.kid && a.kid.prim; this._wet = { shirt: a.shirtM.color.clone(), pants: a.pantsM.color.clone(), body: a.body.material, ppm: pr && pr.pants ? pr.pants.material : null, shin: pr && pr.shin ? pr.shin.material : null };
       a.shirtM.color.set('#1d2b3c'); a.pantsM.color.set('#1d2b3c'); a.body.material = a.shirtM; if (pr && pr.pants) pr.pants.material = a.pantsM; if (pr && pr.shin) pr.shin.material = a.pantsM; if (pr && pr.shoe) pr.shoe.visible = false; try { topStyle(a, '__wet'); } catch(e){}   /* 穿蛙鞋就不穿鞋子 */
       const tk = new THREE.Mesh(SCUBA.tank, sm); tk.scale.setScalar(0.33); tk.position.set(0, 0.8, -0.4); tk.castShadow = true; (a.torsoG || a.g).add(tk); parts.push(tk);   /* 氧氣瓶背在背上（掛在胸骨，跟著身體動） */
-      if (!/acc_goggles/.test(this.gearKey || '')){ const mk2 = new THREE.Mesh(SCUBA.mask, sm); mk2.scale.setScalar(0.4); mk2.position.set(0.05, -0.04, 0.02); a.headG.add(mk2); parts.push(mk2); }   /* 面鏡蓋住兩隻眼睛，呼吸管在右邊 */
+      if (!/acc_goggles/.test(this.gearKey || '')){ const mk2 = scubaMask(); a.headG.add(mk2); parts.push(mk2); }   /* v235 面鏡：一整片大鏡片包住兩隻眼睛和鼻子（像真的潛水面鏡，不像眼鏡），右邊一根呼吸管 */
       for (const L of [a.legL, a.legR]){ const ft = L.userData.foot || L; const fn = new THREE.Mesh(SCUBA.fin, sm); fn.scale.setScalar(0.34); fn.rotation.x = -Math.PI / 2; fn.position.set(0, -0.03, 0.26); ft.add(fn); parts.push(fn); }   /* 蛙鞋套在腳上，蹼往腳尖方向伸出去 */
       this._hatHid = []; if (a.hatG && a.hatG.visible){ a.hatG.visible = false; this._hatHid.push(a.hatG); } for (const m of a.gearMeshes || []) if (m.parent === a.headG && m.visible && !(GOGGLE.mat && m.material === GOGGLE.mat)){ m.visible = false; this._hatHid.push(m); }   /* v234：潛水時把帽子拿下來 */
       this.swimMesh = parts; a.rod.visible = false; return; }
