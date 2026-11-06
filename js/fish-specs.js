@@ -691,6 +691,9 @@ Object.assign(SPECS, {
   // 變種（很稀有）：白化姥鯊、白化大白鯊（白中帶粉、紅眼睛）。白化在好幾種鯊魚身上都有報告
   baskingshark_albino: VAR('baskingshark', { Top:'#ece4da', Mid:'#f2ece4', Bottom:'#fbf7f2', Accent:'#d8c8bc', Gill:'#c8a8a0', Fins:'#e6dcd0', Eye:'#c0303a' }, {}, { glow:true }),
   greatwhite_albino: VAR('greatwhite', { Top:'#eee6de', Mid:'#f4eee8', Bottom:'#fdfaf6', Accent:'#d8c4bc', Gill:'#d4aaa2', Fins:'#e8ded4', Eye:'#c0303a' }, {}, { glow:true }),
+  // 藍鯨（v227）：座頭鯨的身體拉長變細、頭扁平，藍灰色帶淡斑；白化版全身雪白
+  bluewhale: VAR('whale', { Top:'#4d6f93', Bottom:'#a9bccf', Accent:'#8fa9c2', Gill:'#6f88a3', Fins:'#4d6f93', Eye:'#15181c' }, { bl:0.95, depth:0.17 }),
+  bluewhale_albino: VAR('whale', { Top:'#e6ecf2', Bottom:'#f6f8fb', Accent:'#d8e0e8', Gill:'#cdd6e0', Fins:'#e6ecf2', Eye:'#c0303a' }, { bl:0.95, depth:0.17 }, { glow:true }),
 });
 
 Object.assign(SPECS, {
@@ -781,7 +784,7 @@ const MOUTH = {
   mudskipper:{ t:0.06, y:-0.35, th:1.2 }, bigskipper:{ t:0.06, y:-0.35, th:1.2 }, anchovy:{ type:'sub', t:0.09, y:-0.4, t0:0.02 }, loach:{ type:'sub', t:0.05, y:-0.6, t0:0.02 },
   hillstream:{ type:'sub', t:0.06, y:-0.8, t0:0.05 }, salmon:{ t:0.08, y:-0.15 }, trout:{ t:0.08, y:-0.15 }, ayu:{ t:0.06, y:-0.2 }, tilapia:{ t:0.05, y:-0.1, lip:'Mid' }, bonito:{ t:0.06, y:-0.15 },
   mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 }, sicyo:{ type:'sub', t:0.06, y:-0.55, t0:0.03 }, eleotris:{ t:0.1, y:-0.05, open:0.25 }, kuhlia:{ t:0.06, y:-0.1 },
-  dolphin:{ t:0.11, y:-0.3, th:1.1 }, orca:{ t:0.13, y:-0.3, th:1.2 }, beluga:{ t:0.08, y:-0.25 }, sperm:{ type:'sub', t:0.24, y:-0.65, t0:0.04, th:1.3 }, whale:{ t:0.2, y:-0.2, th:1.4 },
+  dolphin:{ t:0.11, y:-0.3, th:1.1 }, orca:{ t:0.13, y:-0.3, th:1.2 }, beluga:{ t:0.08, y:-0.25 }, sperm:{ type:'sub', t:0.24, y:-0.65, t0:0.04, th:1.3 }, whale:{ t:0.2, y:-0.2, th:1.4 }, bluewhale:{ t:0.2, y:-0.2, th:1.4 }, bluewhale_albino:{ t:0.2, y:-0.2, th:1.4 },
 };
 for (const id of Object.keys(SPECS)){ const S = SPECS[id]; if (S.gen) continue; const m = id in MOUTH ? MOUTH[id] : MOUTH[id.split('_')[0]];
   S.p = Object.assign({}, S.p, { mouth: m === false ? false : Object.assign({}, m || {}) }); S.c = Object.assign({ Mouth:'#2a1a18' }, S.c); }

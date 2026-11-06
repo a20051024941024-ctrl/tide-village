@@ -57,6 +57,7 @@ const FISH = [
   { id:'sperm',   spot:'harbor', time:'night',   name:'深潛抹香鯨', rarity:'傳說', color:'#6d7f96', min:3000, max:15000, power:1.0, w:0.18, desc:'方方的大頭可以潛到最深的海溝。能把牠拉上岸的人，手臂一定很有力。' },
   { id:'whaleshark', spot:'harbor', time:'day', name:'星斑鯨鯊', rarity:'傳說', color:'#7f8c99', min:2000, max:12000, power:0.96, w:0.22, desc:'世界上最大的魚，背上滿是白色星點。脾氣非常溫和，只吃小小的浮游生物。' },
   { id:'whale',   spot:'harbor',   name:'座頭鯨',   rarity:'傳說', color:'#34395e', min:900, max:3000, power:1.0, w:0.25, desc:'偶爾會游進海灣唱歌。能釣上牠的人，整個村子都會記住你的名字。' },
+  { id:'bluewhale', spot:'harbor', name:'藍鯨', rarity:'傳說', color:'#4d6f93', min:5000, max:25000, power:1.0, w:0.1, desc:'地球上出現過最大的動物，比恐龍還大。身體又細又長，藍灰色的皮膚上有淡淡的斑點，叫聲在海裡能傳好幾百公里。是瀕危的保育動物，能遇到牠是一輩子的幸運。' },
   // creek
   { id:'kuhua',  spot:'pool', name:'清溪苦花', rarity:'常見', color:'#9fd8c4', min:0.2, max:0.8, power:0.34, desc:'只住在最乾淨的溪水裡，身上有一條淡淡的光帶。' },
   { id:'ayu',    spot:'pool', time:'twilight', name:'霧溪香魚', rarity:'常見', color:'#b8e0a0', min:0.1, max:0.6, power:0.32, desc:'聞起來有西瓜般的清香，是溪間居民的驕傲。' },
@@ -238,6 +239,7 @@ const FISH = [
   { id:'greatwhite', spot:'harbor', name:'大白鯊', rarity:'傳說', color:'#6c7480', min:300, max:1500, power:0.99, w:0.2, desc:'背是石板灰、肚子雪白，一口三角形的鋸齒牙。會從深處往上衝撞獵物，力氣大到能把整條船拖著走，拉線一定要穩。' },
   { id:'baskingshark_albino', spot:'harbor', of:'baskingshark', name:'白化姥鯊', rarity:'傳說', color:'#f2ece4', min:500, max:4000, power:0.95, w:0.008, desc:'全身白裡透粉、眼睛淡紅的姥鯊。白化在好幾種鯊魚身上都出現過，但在姥鯊身上非常非常罕見。' },
   { id:'greatwhite_albino', spot:'harbor', of:'greatwhite', name:'白化大白鯊', rarity:'傳說', color:'#f4eee8', min:300, max:1500, power:0.99, w:0.008, desc:'背上的灰色不見了，全身粉白、眼睛是紅的。白化在好幾種鯊魚身上都出現過，但大白鯊非常非常罕見。' },
+  { id:'bluewhale_albino', spot:'harbor', of:'bluewhale', name:'白化藍鯨', rarity:'傳說', color:'#eef2f6', min:5000, max:25000, power:1.0, w:0.005, desc:'全身雪白的藍鯨，在大海裡像一座漂著的冰山。白化的大型鯨魚非常非常稀少，看過的人都說不出話來。' },
   { id:'shark_red_albino', spot:'harbor', of:'shark', rs:true, name:'白化赤紅霸王鯊', rarity:'傳說', color:'#f8e8e2', min:15, max:420, power:0.99, desc:'赤紅霸王鯊生小鯊時極少數會出現的白化個體，全身粉白、眼睛是紅的。牠一樣是族群裡的一隻，會長大、會留下叉叉；被釣光一樣會絕種。不能賣，也不能送人。' },
   { id:'shark_red', spot:'harbor', of:'shark', rs:true, name:'赤紅霸王鯊', rarity:'傳說', color:'#c8161c', min:15, max:420, power:0.99, desc:'全身深紅、背上有黑色虎紋的礁岩鯊。整片海只有一小群，從一公一母開始，沒被釣走就會慢慢繁殖；全部被釣光就絕種了。不能賣，也不能送人。' },
   { id:'arowana_red', spot:'lake', of:'arowana', name:'紅龍魚', rarity:'傳說', color:'#d8302a', min:3.0, max:12, power:0.86, w:0.1, desc:'鱗片紅得像火一樣的紅龍，比金龍更稀有。' },
@@ -303,7 +305,7 @@ const SPOTS = [
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino','fwfish','fwfish_gold'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino','bluewhale','bluewhale_albino','fwfish','fwfish_gold'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
@@ -1469,9 +1471,25 @@ function updateSeaLife(t){
       if (up !== s.prevUp){ ripple(x, z, true); s.prevUp = up; }
       if (u1 < 3 && u1 > 2.9 && !s.dived){ s.dived = true; ripple(x, z, true); } if (u1 > 3) s.dived = false;
     } else if (s.mode === 'glide'){ s.m.position.y = (CLASSIC ? -0.02 : -0.12) - sink; s.m.rotation.z = Math.sin(t * 0.7) * 0.08 + tilt; }
-    else if (s.mode === 'whale'){ s.m.position.y = -1.3 + Math.sin(Math.min(1, (t - s.showAt) / s.dur) * Math.PI) * 1.1; }
+    else if (s.mode === 'whale'){ s.m.position.y = -1.3 + Math.sin(Math.min(1, (t - s.showAt) / s.dur) * Math.PI) * 1.1;
+      // v227：浮到水面附近時從頭頂的噴氣孔噴兩次水（一團白色水霧往上衝、散開、慢慢消失）
+      if (u0 < 1){ s.sp1 = s.sp2 = false; }
+      const blow = () => { const L = (s.blowK || 0.55) * 1.6 * s.m.scale.x; spoutAt(x + vx * L, 0.2, z + vz * L, s.m.scale.x); };
+      if (!s.sp1 && u0 > s.dur * 0.38){ s.sp1 = true; blow(); } if (!s.sp2 && u0 > s.dur * 0.62){ s.sp2 = true; blow(); }
+    }
   }
+  spoutTick(t);
 }
+/* 鯨魚噴水：一團霧（十幾顆半透明白球）從噴氣孔往上衝，越高越散、越淡，2.6 秒後消失；最多同時 3 團，手機也不會卡 */
+const SPOUTS = [], SPOUT_GEO = new THREE.SphereGeometry(1, 8, 6);
+function spoutAt(x, y, z, k){ if (SPOUTS.length >= 3){ const o = SPOUTS.shift(); scene.remove(o.g); }
+  const g = new THREE.Group(), parts = []; g.position.set(x, y, z); const sz = clamp(k / 7, 0.6, 1.8);
+  for (let i = 0; i < 14; i++){ const m = new THREE.Mesh(SPOUT_GEO, new THREE.MeshBasicMaterial({ color:'#f4fbff', transparent:true, opacity:0.8, depthWrite:false })); m.renderOrder = 3; g.add(m);
+    parts.push({ m, vx:(Math.random() - 0.5) * 0.9 * sz, vz:(Math.random() - 0.5) * 0.9 * sz, vy:(3.2 + Math.random() * 2.2) * sz, r:(0.12 + Math.random() * 0.12) * sz, d:Math.random() * 0.25 }); }
+  scene.add(g); SPOUTS.push({ g, parts, t0:null }); }
+function spoutTick(t){ for (let i = SPOUTS.length - 1; i >= 0; i--){ const S = SPOUTS[i]; if (S.t0 == null) S.t0 = t; const u = t - S.t0;
+  if (u > 2.6){ scene.remove(S.g); for (const p of S.parts) p.m.material.dispose(); SPOUTS.splice(i, 1); continue; }
+  for (const p of S.parts){ const v = Math.max(0, u - p.d); p.m.position.set(p.vx * v * 1.4, p.vy * v - 1.6 * v * v, p.vz * v * 1.4); p.m.scale.setScalar(p.r * (1 + v * 2.2)); p.m.material.opacity = 0.8 * Math.max(0, 1 - v / 2.3); } } }
 
 /* ================= MODELS ================= */
 function makeFish(color, scale){
@@ -2364,7 +2382,7 @@ const FX = (() => {
   return { emit, update };
 })();
 let camShake = 0;
-const BIG_FISH = new Set(['goblinshark', 'goblinshark_albino', 'sixgill', 'sixgill_albino', 'galapagosshark', 'galapagosshark_albino', 'sleepershark', 'sleepershark_albino', 'bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_albino']);
+const BIG_FISH = new Set(['goblinshark', 'goblinshark_albino', 'sixgill', 'sixgill_albino', 'galapagosshark', 'galapagosshark_albino', 'sleepershark', 'sleepershark_albino', 'bullshark', 'sawfish', 'shark_red', 'shark_red_albino', 'toothfish', 'narwhal', 'angler', 'sturgeon', 'grouper', 'hammer', 'oarfish', 'turtle', 'giantsquid', 'tuna', 'marlin', 'shark', 'whale', 'dolphin', 'manta', 'orca', 'beluga', 'sperm', 'sunfish', 'whaleshark', 'baskingshark', 'greatwhite', 'baskingshark_albino', 'greatwhite_albino', 'bluewhale', 'bluewhale_albino']);
 function rareBurst(){
   if (CLASSIC || !F.fish || F.fish.rarity === '常見') return;
   const leg = F.fish.rarity === '傳說';
@@ -2392,6 +2410,7 @@ addSeaLife('sunfish', 1.4, -30, -58, 3, 0.08, 'glide', 0.4);
 addSeaLife('whaleshark', 4.5, 30, -62, 8, 0.07, 'glide', 3);
 addSeaLife('baskingshark', 3.2, 70, -20, 7, 0.06, 'glide', 4.2);
 addSeaLife('beluga', 1.5, -46, -50, 6, 0.2, 'jump', 2.2);
+addSeaLife('bluewhale', 9, -30, -125, 22, 0.025, 'whale', 0.7);   /* v227 藍鯨：比座頭鯨大很多，在更遠的外海慢慢游，偶爾浮上來噴水 */
 
 /* ================= FISHER ================= */
 const labelsEl = $('#labels');
