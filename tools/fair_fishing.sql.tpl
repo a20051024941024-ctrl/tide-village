@@ -57,9 +57,9 @@ begin
 end $$;
 
 -- 抽一條魚（拋竿時呼叫）
--- 藍鯨浮上來的時間（228）：每 20 分鐘一輪，這一輪從第 off 秒開始的 3 分鐘；off 用固定公式算，遊戲畫面（bwWin）也是同一個公式
+-- 藍鯨浮上來的時間（228，230 改成 90 秒）：每 20 分鐘一輪，這一輪從第 off 秒開始的 90 秒；off 用固定公式算，遊戲畫面（bwWin）也是同一個公式
 create or replace function public._bw_up() returns boolean language sql stable as $$
-  select (s - c * 1200 - ((c * 2654435761) % 4294967296) % 1020) between 0 and 179
+  select (s - c * 1200 - ((c * 2654435761) % 4294967296) % 1020) between 0 and 89
   from (select floor(extract(epoch from now()))::bigint as s, floor(extract(epoch from now()) / 1200)::bigint as c) x $$;
 
 create or replace function public.roll_fish(p_spot text, p_charge numeric, p_x numeric, p_z numeric, p_rig text, p_line text, p_bait text, p_chum text, p_boat boolean)
@@ -170,7 +170,7 @@ begin
       * (case when rainy and cfg->'rain' ? fid then 2 else 1 end)
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)
       * (case when f->>'t' is null then 1 when f->>'t' = per then 1.5 else 0.15 end)
-      * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)   -- 藍鯨浮上來的 3 分鐘（228）：港口外海釣到藍鯨的機率 ×5
+      * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
       * (case f->>'r' when '常見' then 1 when '稀有' then 0.34 * (1 + charge * 0.8) * kr * ring else 0.07 * (1 + charge * 1.6) * lb * kl * ring * legk end);
     ids := ids || fid; wts := wts || wt; tot := tot + wt;
   end loop;
