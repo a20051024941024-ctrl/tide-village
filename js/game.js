@@ -1983,6 +1983,12 @@ function goggleMat(){ if (GOGGLE.mat) return GOGGLE.mat;
         if (P.z < 0.25) c = vec3(0.12, 0.2, 0.35); else if (tube) c = vec3(1.0, 0.8, 0.2); else if (P.z > 0.72 && lens < 0.34) c = vec3(0.62, 0.86, 0.96);
         diffuseColor.rgb = c; }`); };
   m.customProgramCacheKey = () => 'goggles'; return (GOGGLE.mat = m); }
+/* v233 整套潛水裝備（Meshy 付費方案生成：面鏡＋呼吸管、氧氣瓶背架、蛙鞋），潛水時自動穿上，上岸脫掉；還有深色長袖長褲的潛水衣（用衣服 shader 做）。
+   模型的顏色烘在頂點上（models/scuba_*.glb），載好前先用原本程式做的面鏡和氧氣瓶。 */
+const SCUBA = { tank:null, mask:null, fin:null, mat:null };
+for (const k of ['tank', 'mask', 'fin']) new GLTFLoader().loadAsync('models/scuba_' + k + '.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.userData.shared = true; SCUBA[k] = geo; }).catch(e => console.warn('scuba ' + k, e));
+function scubaMat(){ return SCUBA.mat || (SCUBA.mat = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.45, metalness:0.08, side:THREE.DoubleSide })); }
+TOP_STYLE.__wet = [3, 2, 0, 0, 0, 1, 0, 0];   /* 潛水衣：羅紋領、長袖、羅紋袖口 */
 function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
@@ -2586,6 +2592,14 @@ class Fisher {
   // 潛水：身體趴平、背氧氣瓶、戴面鏡
   setSwim(on){
     on = !!on; if (on === !!this.swim) return; this.swim = on; const a = this.av;
+    if (on && SCUBA.tank && SCUBA.mask && SCUBA.fin){ const sm = scubaMat(), parts = [];
+      // 潛水衣：衣服、褲子換成深藍色、長袖長褲（上岸換回來）
+      const pr = a.kid && a.kid.prim; this._wet = { shirt: a.shirtM.color.clone(), pants: a.pantsM.color.clone(), body: a.body.material, ppm: pr && pr.pants ? pr.pants.material : null, shin: pr && pr.shin ? pr.shin.material : null };
+      a.shirtM.color.set('#1d2b3c'); a.pantsM.color.set('#1d2b3c'); a.body.material = a.shirtM; if (pr && pr.pants) pr.pants.material = a.pantsM; if (pr && pr.shin) pr.shin.material = a.pantsM; if (pr && pr.shoe) pr.shoe.visible = false; try { topStyle(a, '__wet'); } catch(e){}   /* 穿蛙鞋就不穿鞋子 */
+      const tk = new THREE.Mesh(SCUBA.tank, sm); tk.scale.setScalar(0.33); tk.position.set(0, 0.8, -0.4); tk.castShadow = true; (a.torsoG || a.g).add(tk); parts.push(tk);   /* 氧氣瓶背在背上（掛在胸骨，跟著身體動） */
+      if (!/acc_goggles/.test(this.gearKey || '')){ const mk2 = new THREE.Mesh(SCUBA.mask, sm); mk2.scale.setScalar(0.4); mk2.position.set(0.05, -0.04, 0.02); a.headG.add(mk2); parts.push(mk2); }   /* 面鏡蓋住兩隻眼睛，呼吸管在右邊 */
+      for (const L of [a.legL, a.legR]){ const ft = L.userData.foot || L; const fn = new THREE.Mesh(SCUBA.fin, sm); fn.scale.setScalar(0.34); fn.rotation.x = -Math.PI / 2; fn.position.set(0, -0.03, 0.26); ft.add(fn); parts.push(fn); }   /* 蛙鞋套在腳上，蹼往腳尖方向伸出去 */
+      this.swimMesh = parts; a.rod.visible = false; return; }
     if (on){ const tank = new THREE.Group(), y = mat('#f6c83b', 0.4, { metalness:0.3 }), k = mat('#2b2f36', 0.5);
       const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.46, 12), y); c1.position.set(0, 0.86, -0.3); tank.add(c1);
       const c2 = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 6), y); c2.position.set(0, 1.09, -0.3); tank.add(c2);
@@ -2597,7 +2611,9 @@ class Fisher {
       const st = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.02, 6, 20), k); st.rotation.x = Math.PI / 2; st.position.y = 0.0; st.scale.set(1, 1.08, 1); mask.add(st);
       const sn = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6), mat('#f05a4a', 0.5)); sn.position.set(0.22, 0.15, 0.1); mask.add(sn); }
       a.headG.add(mask); this.swimMesh = [tank, mask]; a.rod.visible = false; }
-    else { for (const m of this.swimMesh || []) if (m.parent) m.parent.remove(m); this.swimMesh = null; const g = a.g; g.rotation.x = 0; g.rotation.order = 'XYZ'; }
+    else { for (const m of this.swimMesh || []) if (m.parent) m.parent.remove(m); this.swimMesh = null; const g = a.g; g.rotation.x = 0; g.rotation.order = 'XYZ';
+      if (this._wet){ const W = this._wet, pr = a.kid && a.kid.prim; a.shirtM.color.copy(W.shirt); a.pantsM.color.copy(W.pants); a.body.material = W.body; if (pr && pr.pants && W.ppm) pr.pants.material = W.ppm; if (pr && pr.shin && W.shin) pr.shin.material = W.shin; if (pr && pr.shoe) pr.shoe.visible = true; this._wet = null;
+        try { const gg = cleanGear(JSON.parse(this.gearKey || '{}')); topStyle(a, designId(gg.top) ? '' : gg.top); } catch(e){ try { topStyle(a, 'top_tee'); } catch(e2){} } } }   /* 上岸：換回原本的衣服 */
   }
   holdFish(f, w, secs){
     const a = this.av; if (this.held) a.g.remove(this.held.o);
@@ -10458,6 +10474,7 @@ function renderTab(){
       '釣具店：釣竿（越好越不容易斷線、收線越快、稀有傳說機率越高）、魚餌（每拋一次用掉一個）、窩料。',
       '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情加起來快 100 件，可以先試穿看看，大家都看得到你的打扮。',
       '配件和背飾也有用 3D 模型做的：4 色斗篷（披在肩膀上、走路跟著身體動）、潛水鏡（鏡片、綁帶、呼吸管）。',
+      '潛水的時候會自動換上整套潛水裝備：深藍色潛水衣、面鏡和呼吸管、背上的氧氣瓶、腳上的蛙鞋，上岸就換回原本的衣服。',
       '衣服有很多款：V 領、POLO 衫、背心、寬版、口袋 T、吸濕排汗、粗細條紋、長版 T、小魚童趣 T，還有長袖的大學 T、連帽 T、連帽外套、尼龍外套。衣服的顏色在「外觀」裡換，每一款都跟著變。',
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
     ]);
