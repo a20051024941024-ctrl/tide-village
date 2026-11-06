@@ -1010,3 +1010,8 @@ body.subbing #subHud{display:block}
 #subPanel .sp-up{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #e3edf3}
 #subPanel .sp-up small{display:block;color:#5a6a7a;font-size:12px;margin-top:2px}
 #subPanel .sp-go{width:100%;margin-top:6px;height:46px;font-size:17px}
+/* v241 一起潛：快速說話 */
+#subHud .sh-btns .sh-say{width:56px;height:56px;font-size:19px}
+#subHud .sh-q{position:fixed;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;width:min(300px,80vw);padding:8px;border-radius:16px;z-index:9}
+#subHud .sh-q[hidden]{display:none}
+#subHud .sh-q button{border:0;border-radius:999px;padding:8px 12px;font-size:14px;font-weight:700;background:#eef5fa;color:#18334a}

@@ -9126,6 +9126,7 @@ function presenceObj(){
   { const pt = petMine(); if (pt) o.pt = [pt.kind, pt.name, pt.acc || 0, pt.var || 'a']; }   /* 080：帶出門的寵物（只放種類、名字、配件，不放親密度） */
   if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
+  if (typeof Sub !== 'undefined' && Sub && Sub.on && Sub.pos) o.sb = [+Sub.pos.x.toFixed(1), +Sub.pos.y.toFixed(1), +Sub.pos.z.toFixed(1), +(Sub.yaw % (Math.PI * 2)).toFixed(2)];   /* v241 一起潛：潛水艇在裂縫裡的位置 */
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
@@ -9171,6 +9172,9 @@ function applyPeer(pp){
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
   p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2), var: /^[a-g]$/.test(pr.pt[3]) ? pr.pt[3] : 'a' } : null;
   p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = Number(pr.hs) || 0; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
+  { const a = Array.isArray(pr.sb) && pr.sb.length >= 4 && pr.sb.every(v => Number.isFinite(+v)) ? pr.sb : null, was = !!p.sub;   /* v241 開潛水艇的人（村子裡看不到他，裂縫裡看得到他的潛水艇） */
+    p.sub = a ? [clamp(+a[0], -80, 80), clamp(+a[1], -130, 12), clamp(+a[2], -70, 90), +a[3]] : null;
+    if (p.subInit && !was && p.sub && !(typeof Sub !== 'undefined' && Sub.on) && Date.now() - (p.subTold || 0) > 300000){ p.subTold = Date.now(); ticker(`🚢 <b>${esc(peerName(p))}</b> 開潛水艇下去黑淵裂縫了！到港口的潛水艇碼頭就能一起潛`); } p.subInit = 1; }
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
   if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
@@ -9198,7 +9202,7 @@ function updatePeers(dt, t){
     f.speed += ((d > 0.05 ? Math.min(6, d*8) : 0) - f.speed) * Math.min(1, dt*8);
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
-    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
+    { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on && !p.sub; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
     f.dip = p.ph === 'bite' ? 0.9 + Math.sin(t*30)*0.1 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
@@ -9239,6 +9243,7 @@ function useRoom(r){
       if (p) p.fisher.say(rc.icon, 'emote', 3);
     }, () => {});
     room.on('tag', onTagMsg, () => {});
+    room.on('subq', onSubQ, () => {});
     room.on('sail', onSail, () => {}); room.on('sailjoin', onSailJoin, () => {});
     room.on('lvup', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), L = Math.floor(+msg.data.L); if (!p || !(L > 1 && L < 100)) return; /* 別人升級不用跑馬燈 */ void 0; }, () => {});
     room.on('gift', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; if (msg.data.to === Cloud.userId) setTimeout(loadFriends, 800); }, () => {});
@@ -10550,6 +10555,7 @@ function renderTab(){
       '新魚：深海燈籠魚、吸血鬼烏賊（各有白化），還有白化深海鮟鱇；皇帶魚在岩壁中段、大王魷魚在 2500 公尺以下的溝底。偶爾會有抹香鯨從頭頂游過、擋住所有的光。',
       '耐壓：超過耐壓深度會開始警告，30 秒內不上浮會被強制拉回港，船艙的魚全部不見。電池：用完會自動回港，魚會保留。',
       '升級（潛水艇碼頭）：耐壓 800→1500→3000 公尺、電池 5→8→12 分鐘、探照燈 25→40→60 公尺；要金幣加上深海燈籠魚、水滴魚、吸血鬼烏賊，或在裂縫裡撿的深海礦石、古代船錨。',
+      '👥 一起潛：同一個大廳或私人房間的人，在裂縫裡看得到彼此的潛水艇（名字和距離，遠遠就看得到燈光）。按「💬 說話」可以喊「跟我來！」「這裡有東西！」。兩台潛水艇靠在一起，燈光加起來看得比較遠。魚和金幣還是每個人各自算。',
       '所有魚、金幣、材料都由伺服器決定；回報的深度比耐壓深度＋警告區還深的話，整趟作廢。',
     ]);
     sec('🤿 潛水（進階玩法）', [
@@ -11183,19 +11189,22 @@ function subDecoSwap(){ deepLoad().then(() => { const G = DEEP.geo, lam = new TH
   if (G.wreck && Sub.wreck){ for (const c of Sub.wreck.g.children) c.visible = false; const m = add(G.wreck, lam, Sub.wreck.g, [6.5, 6.5, 6.5], 0.8 * 6.5 - 1.2, true); m.rotation.y = Math.PI / 2; }
   if (G.jelly){ const jm = new THREE.MeshBasicMaterial({ vertexColors:true, transparent:true, opacity:0.88 }); for (const j of Sub.jelly){ j.m.visible = false; j.m.userData.off = true; const m = new THREE.Mesh(G.jelly, jm); m.scale.setScalar(1.1); m.position.copy(j.m.position); Sub.group.add(m); Sub.cull.push(m); j.m = m; } }   /* 水母自己會發光，不用打光 */
   for (const o of [Sub.oar && Sub.oar.m, Sub.squid && Sub.squid.m, ...Sub.shelfFish.map(f => f.m)]) if (o) Sub.cull.push(o); }); }
-function subCullCrit(P){ for (const c of Sub.crit || []){ const dx = c.m.position.x - P.x, dy = c.m.position.y - P.y, dz = c.m.position.z - P.z; c.m.visible = dx * dx + dy * dy + dz * dz < 14 * 14; } }   /* 小生物 22 公尺外就先不畫 */
+function subCullCrit(P){ const R = 14 * (1 + (Sub.buddy || 0) * 0.45); for (const c of Sub.crit || []){ const dx = c.m.position.x - P.x, dy = c.m.position.y - P.y, dz = c.m.position.z - P.z; c.m.visible = dx * dx + dy * dy + dz * dz < R * R; } }   /* 小生物 22 公尺外就先不畫 */
 function subHud(){ let h = $('#subHud'); if (h) return h;
   h = document.createElement('div'); h.id = 'subHud';
   h.innerHTML = '<div class="sh-top panel"><span class="sh-depth">深度 <b>0</b> m</span><span class="sh-bat">🔋 <b>5:00</b></span><span class="sh-hold">🐟 <b>0</b></span><span class="sh-lim"></span></div>'
     + '<div class="sh-warn" hidden>⚠️ 超過耐壓深度！<b>30</b> 秒內不上浮會被拉回港、船艙的魚全部不見</div>'
     + '<div class="sh-msg" hidden></div>'
-    + '<div class="sh-btns"><button class="panel sh-act" hidden></button><button class="panel sh-dn">⬇<small>下潛</small></button><button class="panel sh-up">⬆<small>上浮</small></button><button class="panel sh-home">⚓<small>回港</small></button></div>'
+    + '<div class="sh-q panel" hidden>' + SUB_Q.map((q, i) => `<button data-k="${i}">${q}</button>`).join('') + '</div>'
+    + '<div class="sh-btns"><button class="panel sh-say">💬<small>說話</small></button><button class="panel sh-act" hidden></button><button class="panel sh-dn">⬇<small>下潛</small></button><button class="panel sh-up">⬆<small>上浮</small></button><button class="panel sh-home">⚓<small>回港</small></button></div>'
     + '<div class="sh-fish panel" hidden><b class="sf-name">有東西咬了！</b><div class="sf-row"><span>張力</span><div class="sf-bar"><i class="sf-ten"></i><em></em></div></div><div class="sf-row"><span>距離</span><div class="sf-bar"><i class="sf-pro"></i></div></div><button class="sf-reel">按住收線</button></div>';
   document.body.appendChild(h);
   const hold = (sel, k) => { const b = h.querySelector(sel); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sub[k] = true; b.classList.add('down'); }); const off = () => { Sub[k] = false; b.classList.remove('down'); }; b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); };
   hold('.sh-up', 'up'); hold('.sh-dn', 'down'); hold('.sf-reel', 'reel');
   h.querySelector('.sh-home').addEventListener('click', () => { if (Sub.warnT > 0){ toast('先上浮到安全深度才能回港'); return; } subEnd('normal'); });
   h.querySelector('.sh-act').addEventListener('click', () => subAction());
+  h.querySelector('.sh-say').addEventListener('click', () => { if (!room || !room.connected()){ toast('要在大廳或房間裡，才能跟一起潛的人說話'); return; } const q = h.querySelector('.sh-q'); q.hidden = !q.hidden; });
+  h.querySelectorAll('.sh-q button').forEach(b => b.addEventListener('click', () => { h.querySelector('.sh-q').hidden = true; if (now() - (Sub.sayAt || 0) < 1.5) return; Sub.sayAt = now(); if (room && room.connected()) room.emit('subq', { k: +b.dataset.k }).catch(() => {}); }));
   return h; }
 
 async function subStart(){
@@ -11209,7 +11218,8 @@ async function subStart(){
   Sub.fogWas = scene.fog; Sub.bgWas = scene.background; const range = [25, 40, 60][(Sub.st.light_lv || 1) - 1]; Sub.range = range;
   scene.fog = new THREE.Fog('#020a14', 2, range); scene.background = new THREE.Color('#020a14'); Sub.light.distance = range * 1.5;
   Sub.pos.set(0, 4, -58); Sub.yaw = 0; Sub.v = 0; Sub.on = true; document.body.classList.add('subbing'); subHud(); Sub.camWas = { ...cam };
-  ensureAudio(); flash('🚢 潛水艇出發！往前開，看看大陸棚的盡頭有什麼', 2.4); SFX.plop(); subRender(); }
+  ensureAudio(); flash('🚢 潛水艇出發！往前開，看看大陸棚的盡頭有什麼', 2.4); SFX.plop(); subRender();
+  { const down = [...peers.values()].filter(p => p.sub).map(p => peerName(p)); Sub.peerT0 = now(); if (down.length) setTimeout(() => { if (Sub.on) subMsg(`🚢 ${down.slice(0, 3).join('、')}${down.length > 3 ? ' 等人' : ''} 也在下面`, 2); }, 3000); } }
 
 async function subEnd(why){
   if (!Sub.on || Sub.ending) return; Sub.ending = true; const fx = $('#fadeFx'); if (fx) fx.classList.add('on');
@@ -11249,6 +11259,7 @@ function subFrame(dt, t){
   // 鏡頭：在艇後上方跟著
   const cdist = 7, ch = 4.2; camera.position.set(SUBW.x + P.x - fx * cdist, SUBW.y + P.y + ch, SUBW.z + P.z - fz * cdist); camera.lookAt(SUBW.x + P.x + fx * 7, SUBW.y + P.y - 2.2 - Math.max(0, -Sub.vy) * 2, SUBW.z + P.z + fz * 7);   /* 從艇的後上方往前下方看，看得到前燈照的地方 */
   const depth = subDepth(P.y); Sub.maxD = Math.max(Sub.maxD, depth);
+  try { subPeersTick(dt, t); } catch(e){}
   // 第一次走到裂縫邊緣（5 公尺內）
   if (!Sub.edgeHit && P.z > subEdge(P.x) - 5 && P.y > -3){ Sub.edgeHit = true; if (musicOn){ try { MUSIC.stop(); Sub.musicOff = true; } catch(e){} } subDrone(true); H.classList.add('deep');
     if (!Sub.st.found){ subMsg('……這裡沒有底。', 2); setTimeout(async () => { const r = await subRpc('sub_found'); if (r){ Sub.st = r.sub; if (r.first){ flash('🏅 成就達成：發現黑淵裂縫', 2.4); ticker('🕳️ 你發現了黑淵裂縫。沒有人知道它有多深。'); SFX.catch(); } } }, 3200); } }
@@ -11294,6 +11305,48 @@ async function subAction(){ const P = Sub.pos, depth = Math.round(subDepth(P.y))
   setTimeout(async () => { if (!Sub.fish || Sub.fish.phase !== 'wait') return; const { data, error } = await Cloud.sb.rpc('hook_fish'); if (error || !data || !Sub.fish){ toast(cloudErrMsg(error || '')); Sub.fish = null; return; }
     const f = FISH_BY_ID[data.cast_fish]; Sub.fish = { phase:'fight', id:data.cast_fish, w:data.cast_w, f, ten:0.35, pro:0.15, t0: now(), surge:0, power: f ? f.power || 0.5 : 0.5, legend: f && f.rarity === '傳說' };
     const H = subHud(), b = H.querySelector('.sh-fish'); b.hidden = false; b.querySelector('.sf-name').textContent = '有東西咬了！快收線'; SFX.splash(true); camShake = 0.3; }, 2300 + Math.random() * 1500); }
+
+/* ===== v241 一起潛：同一個大廳／私人房間的人在裂縫裡看得到彼此的潛水艇 =====
+   位置跟村子裡一樣用 presence 送（sb：x, y, z, 方向；每秒 2～3 次），這裡內插成平滑的動作。
+   別人的潛水艇：換一個顏色、前燈的光錐（不用真的燈，手機才跑得動）、霧外面也看得到的燈光和名字＋距離，方便在黑暗裡找到對方。
+   靠近一起潛的人（15 公尺內）：兩台的燈光加在一起，看得比較遠（霧往外推、小生物在比較遠就看得到）。
+   純畫面：魚、金幣、材料還是每個人自己跟伺服器算。快速說話只能選固定的句子（不用過濾髒話）。 */
+var SUB_Q = ['👋 嗨！', '跟我來！', '這裡有東西！', '等等我', '👍 好', '我要上去了'];
+const SUB_PEER_COL = ['#ff8a5c', '#5cc8ff', '#8de07a', '#d79bff', '#ff7fb0', '#ffffff'];
+function subNameTex(text, bub){ const cv = document.createElement('canvas'); cv.width = 320; cv.height = 64; const c = cv.getContext('2d'); c.font = 'bold 28px sans-serif'; const w = Math.min(312, c.measureText(text).width + 30);
+  c.fillStyle = bub ? 'rgba(255,255,255,.92)' : 'rgba(8,26,44,.78)'; c.beginPath(); if (c.roundRect) c.roundRect(160 - w / 2, 8, w, 48, 24); else c.rect(160 - w / 2, 8, w, 48); c.fill();
+  c.fillStyle = bub ? '#18334a' : '#ffe28a'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, 160, 33); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx; }
+function subLabel(text, bub){ const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: subNameTex(text, bub), depthWrite:false, depthTest:false, fog:false, transparent:true, sizeAttenuation:false })); sp.scale.set(0.4, 0.08, 1);   /* 遠近都一樣大，才找得到人 */ sp.renderOrder = 10; sp.userData.txt = text; return sp; }
+function subSetLabel(sp, text){ if (sp.userData.txt === text) return; sp.userData.txt = text; const old = sp.material.map; sp.material.map = subNameTex(text, sp.userData.bub); sp.material.needsUpdate = true; if (old) old.dispose(); }
+function subPeerMake(id, p){ const g = new THREE.Group(), m = subModel(); g.add(m); g.userData.off = true;   /* 不讓霧外剔除藏起來（遠遠要看得到燈和名字） */
+  let h = 0; for (const ch of String(p.by || id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; m.children[0].material.color.set(SUB_PEER_COL[h % SUB_PEER_COL.length]); { const hm = m.children[0].material; hm.emissive = new THREE.Color(hm.color); hm.emissiveIntensity = 0.28; }   /* 別人的艇身微微亮，黑暗裡也認得出顏色 */
+  const beamG = new THREE.Group(); beamG.position.set(0, -0.2, 1.3); beamG.rotation.x = 0.57; const cone = new THREE.Mesh(new THREE.ConeGeometry(2.6, 9, 12, 1, true), new THREE.MeshBasicMaterial({ color:'#cfe6ff', transparent:true, opacity:0.07, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide }));
+  cone.rotation.x = -Math.PI / 2; cone.position.z = 4.5; beamG.add(cone); m.add(beamG);
+  const gl = subGlow('#d8ecff', 3.2, false); gl.position.set(0, -0.2, 1.5); m.add(gl);
+  const lab = subLabel(peerName(p)); lab.position.y = -1.3;   /* 名字放在艇的下面，不會被上面的深度計擋住 */ g.add(lab);
+  Sub.group.add(g); return { g, m, lab, yaw: 0, bub: null, bubT: 0 }; }
+function subPeerDrop(e){ Sub.group.remove(e.g); e.g.traverse(o => { if (o.material && o.material.map) o.material.map.dispose(); }); }
+function subPeersTick(dt, t){ const S = Sub.peers || (Sub.peers = new Map()), P = Sub.pos, k = 1 - Math.exp(-4 * dt); let near = 0;
+  for (const [id, p] of peers){ const sb = p.sub; let e = S.get(id);
+    if (!sb){ if (e){ subPeerDrop(e); S.delete(id); } continue; }
+    if (!e){ e = subPeerMake(id, p); S.set(id, e); e.g.position.set(sb[0], sb[1], sb[2]); e.yaw = sb[3]; if (now() - (Sub.peerT0 || 0) > 4) subMsg(`🚢 ${peerName(p)} 也開潛水艇下來了`, 2); }
+    const G = e.g.position, dx = sb[0] - G.x, dy = sb[1] - G.y, dz = sb[2] - G.z;
+    if (dx * dx + dy * dy + dz * dz > 400){ G.set(sb[0], sb[1], sb[2]); } else { G.x += dx * k; G.y += dy * k; G.z += dz * k; }
+    e.yaw = lerpAngle(e.yaw, sb[3], k); e.m.rotation.set(-clamp(dy, -1, 1) * 0.12, e.yaw, 0); e.m.userData.prop.rotation.z += dt * (2 + Math.min(4, Math.hypot(dx, dz) * 3));
+    const d = G.distanceTo(P); if (d < 15) near = 1;
+    if (frameNo % 12 === 0) subSetLabel(e.lab, `${peerName(p)}・${d < 20 ? Math.round(d) : Math.round(d / 5) * 5}m`);
+    if (e.bub && now() > e.bubT){ e.g.remove(e.bub); e.bub.material.map.dispose(); e.bub = null; } }
+  for (const [id, e] of S) if (!peers.has(id)){ subPeerDrop(e); S.delete(id); }
+  if (Sub.myBub && now() > Sub.myBubT){ Sub.m.remove(Sub.myBub); Sub.myBub.material.map.dispose(); Sub.myBub = null; }
+  Sub.buddy = (Sub.buddy || 0) + (near - (Sub.buddy || 0)) * Math.min(1, dt * 0.8);
+  if (scene.fog && Sub.range) scene.fog.far = Sub.range * (1 + Sub.buddy * 0.45); }
+function subBubble(parent, text){ const sp = subLabel(text, true); sp.userData.bub = true; sp.position.y = parent === Sub.m ? 1.5 : 1.7; parent.add(sp); return sp; }   /* 自己的泡泡放低一點，不要被上面的深度計擋住 */
+function onSubQ(msg){ if (!msg || !msg.data) return; const k = Math.floor(+msg.data.k); if (!(k >= 0 && k < SUB_Q.length)) return; const q = SUB_Q[k];
+  if (typeof Sub === 'undefined' || !Sub.on) return;
+  if (msg.sameTab){ if (Sub.myBub){ Sub.m.remove(Sub.myBub); Sub.myBub.material.map.dispose(); } Sub.myBub = subBubble(Sub.m, q); Sub.myBubT = now() + 4; return; }
+  if (isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), e = Sub.peers && Sub.peers.get(msg.peer); if (!p || !e) return;
+  if (e.bub){ e.g.remove(e.bub); e.bub.material.map.dispose(); } e.bub = subBubble(e.g, q); e.bubT = now() + 5; SFX.chat();
+  if (e.g.position.distanceTo(Sub.pos) > (Sub.range || 25)) toast(`🚢 ${esc(peerName(p))}：${q}`); }
 
 /* 拉魚：按住收線會拉近、張力上升；魚偶爾會猛衝。張力滿了線會斷，太鬆魚會脫鉤；拉到 100% 就上來了 */
 function subFishTick(dt, t){ const F = Sub.fish; if (F.phase !== 'fight') return; const H = subHud(), b = H.querySelector('.sh-fish');
