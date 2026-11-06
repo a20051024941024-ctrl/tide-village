@@ -1749,7 +1749,7 @@ const GEAR = [
   ['pants_jeans','牛仔褲',0,'👖'],['pants_shorts','短褲',200,'🩳'],['pants_khaki','卡其褲',250,'🟫'],['pants_skirt','格紋裙',500,'👗'],['pants_overalls','吊帶褲',600,'🧑‍🌾'],['pants_rainbow','彩虹褲',1500,'🌈'],
   ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
   ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
-  ['acc_none','沒有配件',0,'🙂'],['acc_scarf','紅圍巾',300,'🧣'],['acc_scarf_black','黑圍巾',320,'⚫'],['acc_scarf_white','白圍巾',320,'⚪'],['acc_scarf_navy','深藍圍巾',350,'🔵'],['acc_scarf_pink','粉紅圍巾',350,'🩷'],['acc_scarf_yellow','芥末黃圍巾',350,'🟡'],['acc_scarf_green','森林綠圍巾',350,'🟢'],['acc_scarf_grey','灰色毛圍巾',380,'🩶'],['acc_scarf_brown','焦糖圍巾',380,'🟤'],['acc_scarf_plaid','紅黑格紋圍巾',500,'🟥'],['acc_scarf_stripe','藍白條紋圍巾',500,'🔷'],['acc_scarf_rainbow','彩虹圍巾',900,'🌈'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
+  ['acc_none','沒有配件',0,'🙂'],['acc_goggles','潛水鏡',600,'🤿'],['acc_scarf','紅圍巾',300,'🧣'],['acc_scarf_black','黑圍巾',320,'⚫'],['acc_scarf_white','白圍巾',320,'⚪'],['acc_scarf_navy','深藍圍巾',350,'🔵'],['acc_scarf_pink','粉紅圍巾',350,'🩷'],['acc_scarf_yellow','芥末黃圍巾',350,'🟡'],['acc_scarf_green','森林綠圍巾',350,'🟢'],['acc_scarf_grey','灰色毛圍巾',380,'🩶'],['acc_scarf_brown','焦糖圍巾',380,'🟤'],['acc_scarf_plaid','紅黑格紋圍巾',500,'🟥'],['acc_scarf_stripe','藍白條紋圍巾',500,'🔷'],['acc_scarf_rainbow','彩虹圍巾',900,'🌈'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
   ['back_none','沒有背飾',0,'🙂'],['back_cloak_r','紅色斗篷',1200,'🧣'],['back_cloak_n','深藍斗篷',1200,'🌌'],['back_cloak_g','墨綠斗篷',1200,'🌲'],['back_cloak_k','黑色斗篷',1200,'🖤'],['back_kcape_m','紫紅短披風',900,'🟣'],['back_kcape_r','紅色短披風',900,'🔴'],['back_kcape_b','咖啡色短披風',800,'🟤'],['back_kcape_g','綠色短披風',900,'🟢'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
   ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
   // 愛海商店：只能用放流得到的愛海點數換（第 5 欄是點數）
@@ -1849,6 +1849,21 @@ new GLTFLoader().loadAsync('models/cloak.glb').then(g => { let geo = null; g.sce
 function cloakMat(c0, c1){ const k = c0 + c1; if (CLOAK.mats[k]) return CLOAK.mats[k];
   const m = new THREE.MeshStandardMaterial({ color:c0, roughness:0.72, side:THREE.DoubleSide });
   return (CLOAK.mats[k] = m); }   /* 內裡顏色先不畫：Meshy 的布是兩層疊在一起，減面後分不清裡外，畫了會變成一點一點的 */
+/* v225 潛水鏡（Meshy 付費方案生成，models/goggles.glb）：兩個圓鏡片、鬆緊帶繞頭一圈、右邊一根呼吸管。掛在頭上跟著頭動。
+   模型沒有顏色，用位置分顏色：鏡片淡藍、鏡框藍色、鬆緊帶深藍、呼吸管黃色（模型座標：前面 +z、呼吸管在 +x）。 */
+const GOGGLE = { geo:null, wait:new Set(), mat:null };
+new GLTFLoader().loadAsync('models/goggles.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.userData.shared = true; GOGGLE.geo = geo;
+  for (const av of [...GOGGLE.wait]){ try { if (av.gogWant) applyGear(av, av.gogWant); } catch(e){} } GOGGLE.wait.clear(); }).catch(e => console.warn('goggles', e));
+function goggleMat(){ if (GOGGLE.mat) return GOGGLE.mat;
+  const m = new THREE.MeshStandardMaterial({ color:'#ffffff', roughness:0.4, metalness:0.05, side:THREE.DoubleSide });
+  m.onBeforeCompile = sh => { sh.vertexShader = 'varying vec3 vGp;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vGp = position;');
+    sh.fragmentShader = 'varying vec3 vGp;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      { vec3 P = vGp; vec3 c = vec3(0.18, 0.5, 0.85);
+        bool tube = P.x > 0.8 && P.z > 0.2 && P.z < 0.8 || (P.y < -0.3 && P.z > 0.3) || (P.y > 0.3 && P.z > 0.2);
+        float lens = min(length(vec2(abs(P.x) - 0.45, P.y - 0.04)), 9.0);
+        if (P.z < 0.25) c = vec3(0.12, 0.2, 0.35); else if (tube) c = vec3(1.0, 0.8, 0.2); else if (P.z > 0.72 && lens < 0.34) c = vec3(0.62, 0.86, 0.96);
+        diffuseColor.rgb = c; }`); };
+  m.customProgramCacheKey = () => 'goggles'; return (GOGGLE.mat = m); }
 function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
@@ -1945,6 +1960,7 @@ function applyGear(av, gear){
     }
   }
   // ---- 配件 ----
+  if (gear.acc === 'acc_goggles'){ if (!GOGGLE.geo){ av.gogWant = gear; GOGGLE.wait.add(av); } else { const m = mk(GOGGLE.geo, goggleMat(), 0, -0.02, 0.11, av.headG); m.scale.setScalar(0.37); } }
   switch (gear.acc){
     case 'acc_coral': { const bead = M('#ffd9c7', 0.4); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.017, 6, 4), bead, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); }
       const cr = M('#ff6f61', 0.5); const br = (x, y, len, rz) => { const c = mk(new THREE.CylinderGeometry(0.011, 0.016, len, 5), cr, x, y, 0.215); c.rotation.z = rz; mk(new THREE.SphereGeometry(0.016, 6, 4), cr, x - Math.sin(rz) * len / 2, y + Math.cos(rz) * len / 2, 0.215); };
