@@ -535,6 +535,7 @@ function makeModelFish(f, scale){
 function fishModel(f, scale){
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
+  if (f.id === 'octopus') return makeOctopus(scale);
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
 }
@@ -1567,6 +1568,39 @@ function redSharkFill(fish){ for (const c of [...fish.children]) fish.remove(c);
 function makeRedShark(scale, albino){
   if (!RedShark.geo){ const st = FISH_STYLE[albino ? 'shark_red_albino' : 'shark_red']; let fish; try { fish = makeModelFish(FISH_BY_ID[albino ? 'shark_red_albino' : 'shark_red'], scale); } catch(e){ fish = makeFish('#c8161c', scale); } fish.userData.rsAlbino = albino; RedShark.wait.add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.rsAlbino = albino; redSharkFill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
+/* v226 章魚重做：以前是魚的身體插八根直直的腳，跟著魚一樣左右擺，看起來很假。
+   現在：圓圓的頭（外套膜）往後仰、會一縮一脹地呼吸；八隻腳從身體下面往外攤開，越到尖端越細、尖端往上捲，
+   每隻腳一波一波地扭動（shader 裡算，相位不同所以不會整齊劃一），在海底爬的時候就像真的章魚。頭朝 +x。 */
+const OCTO = { geo:null, mat:null };
+function octoGeo(){ if (OCTO.geo) return OCTO.geo;
+  const pos = [], col = [], arm = [], idx = []; const cTop = new THREE.Color('#c9472f'), cBot = new THREE.Color('#f3b09a'), cSuck = new THREE.Color('#fbe3d6'), cEye = new THREE.Color('#f7d07a'), cPup = new THREE.Color('#1e130e');
+  { const g = new THREE.SphereGeometry(0.17, 18, 14); g.scale(1.15, 1.3, 1.0); g.rotateZ(0.6); g.translate(-0.14, 0.25, 0); const pa = g.attributes.position, na = g.attributes.normal, base = pos.length / 3;
+    for (let i = 0; i < pa.count; i++){ pos.push(pa.getX(i), pa.getY(i), pa.getZ(i)); const c = cBot.clone().lerp(cTop, THREE.MathUtils.smoothstep(na.getY(i), -0.6, 0.3)); if (Math.sin(pa.getX(i) * 60) * Math.sin(pa.getY(i) * 55) * Math.sin(pa.getZ(i) * 50) > 0.55) c.lerp(cSuck, 0.35); col.push(c.r, c.g, c.b); arm.push(-1, 0); }
+    for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i)); }
+  for (const sz of [-1, 1]){ for (const [r, c, dx, sx, sy] of [[0.05, cEye, 0, 1, 1], [0.028, cPup, 0.032, 0.5, 0.35]]){ const g = new THREE.SphereGeometry(r, 10, 8); g.scale(sx, sy, 1); g.translate(0.02 + dx, 0.19, sz * 0.11); const pa = g.attributes.position, base = pos.length / 3;
+    for (let i = 0; i < pa.count; i++){ pos.push(pa.getX(i), pa.getY(i), pa.getZ(i)); col.push(c.r, c.g, c.b); arm.push(-2, 0); } for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i)); } }
+  const S = 22, R = 7;
+  for (let a = 0; a < 8; a++){ const ang = a * Math.PI / 4 + Math.PI / 8, dx = Math.cos(ang), dz = Math.sin(ang), curl = (a % 2 ? 1 : -1);
+    const P = t => { const rr = 0.07 + t * 0.6, lift = 0.1 - t * 0.09 + Math.pow(Math.max(0, t - 0.7) / 0.3, 2) * 0.12, side = Math.pow(Math.max(0, t - 0.6) / 0.4, 2) * 0.12 * curl; return new THREE.Vector3(dx * rr - dz * side, lift, dz * rr + dx * side); };
+    const base = pos.length / 3;
+    for (let j = 0; j <= S; j++){ const t = j / S, c = P(t), n = P(Math.min(1, t + 0.02)).sub(P(Math.max(0, t - 0.02))).normalize(); const b1 = new THREE.Vector3(0, 1, 0).cross(n).normalize(), b2 = n.clone().cross(b1).normalize(); const r = 0.058 * (1 - t * 0.88);
+      for (let k = 0; k < R; k++){ const th = k / R * Math.PI * 2, v = c.clone().addScaledVector(b1, Math.cos(th) * r).addScaledVector(b2, Math.sin(th) * r * 0.85); pos.push(v.x, v.y, v.z);
+        const under = Math.sin(th) > 0.3; const cc = under ? (Math.sin(t * 70) > 0.55 ? cSuck : cBot) : cTop.clone().lerp(cBot, t * 0.25); col.push(cc.r, cc.g, cc.b); arm.push(t, a); } }
+    for (let j = 0; j < S; j++) for (let k = 0; k < R; k++){ const i0 = base + j * R + k, i1 = base + j * R + (k + 1) % R, i2 = i0 + R, i3 = i1 + R; idx.push(i0, i2, i1, i1, i2, i3); } }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setAttribute('aArm', new THREE.Float32BufferAttribute(arm, 2)); g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere();
+  return (OCTO.geo = g); }
+function octoMat(){ if (OCTO.mat) return OCTO.mat;
+  const m = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.5, metalness:0.02 });
+  m.onBeforeCompile = sh => { sh.uniforms.uFishT = fishTime;
+    sh.vertexShader = 'uniform float uFishT;\nattribute vec2 aArm;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      { float t = aArm.x;
+        if (t >= 0.0){ float ang = aArm.y * 0.7854 + 0.3927; vec2 dir = vec2(cos(ang), sin(ang)); vec2 perp = vec2(-dir.y, dir.x);
+          float w = sin(uFishT * 2.2 + aArm.y * 1.9 - t * 6.5); transformed.xz += perp * w * 0.075 * t + dir * sin(uFishT * 1.3 + aArm.y * 2.3) * 0.035 * t;
+          transformed.y += (0.5 + 0.5 * sin(uFishT * 1.7 + aArm.y * 1.3 - t * 4.0)) * 0.07 * t * t; }
+        else if (t > -1.5){ float s = 1.0 + 0.07 * sin(uFishT * 1.9); vec3 c0 = vec3(-0.14, 0.25, 0.0); transformed = c0 + (transformed - c0) * vec3(s, 1.0 + (s - 1.0) * 0.5, s); }
+      }`); };
+  m.customProgramCacheKey = () => 'octo226'; return (OCTO.mat = m); }
+function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScalar((scale || 1) * 1.05); const m = new THREE.Mesh(octoGeo(), octoMat()); m.castShadow = true; fish.add(m); fish.userData.tail = new THREE.Object3D(); return fish; }
 function makeMarlin3(scale, albino){
   if (!Marlin3.geo){ const fish = makeMarlin2(scale, albino); fish.userData.m3albino = albino; Marlin3.wait.add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.m3albino = albino; marlin3Fill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
@@ -5409,7 +5443,7 @@ function tourneyTick(){
   // 大賽倒數（在左上角資訊列）
   let pill = $('#tnyPill'); const soon = !T.active && T.start - nowMs < 15 * 60e3;
   if (!T.active && !soon){ if (pill) pill.hidden = true; return; }
-  if (!pill){ pill = document.createElement('button'); pill.id = 'tnyPill'; pill.addEventListener('click', () => { lbMode = 'tny'; openSheet('rank'); }); ($('#online') || document.body).appendChild(pill); }   /* 放進左上角的資訊列，不再單獨一顆 */
+  if (!pill){ pill = document.createElement('button'); pill.id = 'tnyPill'; pill.addEventListener('click', () => { lbMode = 'tny'; openSheet('rank'); }); ($('#btools') || $('#online') || document.body).appendChild(pill); }   /* v226：放在金幣旁邊（放在時間天氣那排會被截掉一半） */
   pill.hidden = false; pill.classList.toggle('live', T.active);
   const txt = T.active ? `🏆 大賽 ${mmss(T.end - nowMs)}・${Tny.myW > 0 ? `${Tny.myW.toFixed(1)}kg 第 ${tnyRank()} 名` : Cloud.on ? '快去釣！' : '要連上雲端'}` : `🏆 大賽 ${mmss(T.start - nowMs)} 後開始`;
   if (pill._t !== txt){ pill.textContent = txt; pill._t = txt; }
@@ -7950,9 +7984,9 @@ function designMat(d){
   m = new THREE.MeshStandardMaterial({ map: tx, roughness: 0.75, metalness: 0.02 }); Designs.mats.set(k, m); return m;
 }
 /* 遊戲剛開始、雲端還沒準備好時（穿著自己設計的衣服進遊戲）先排著，等一下再抓 */
-function queueDesign(id){ if (Designs.map.has(id)) return; let on = false; try { on = Cloud.on && !!Cloud.sb; } catch(e){ setTimeout(() => queueDesign(id), 1500); return; } if (!on) return; Designs.want.add(id); clearTimeout(Designs.timer); Designs.timer = setTimeout(fetchDesigns, 300); }
+function queueDesign(id){ if (Designs.map.has(id)) return; let on = false; try { on = Cloud.on && !!Cloud.sb; } catch(e){ setTimeout(() => queueDesign(id), 1500); return; } if (!on){ const n = (queueDesign.n = (queueDesign.n || 0) + 1); if (n < 120) setTimeout(() => queueDesign(id), 1500); return; } Designs.want.add(id); clearTimeout(Designs.timer); Designs.timer = setTimeout(fetchDesigns, 300); }
 async function fetchDesigns(){ const ids = [...Designs.want].filter(id => !Designs.map.has(id)).slice(0, 40); Designs.want.clear(); if (!ids.length) return;
-  try { const { data } = await Cloud.sb.rpc('get_designs', { p_ids: ids }); for (const d of data || []) Designs.map.set(d.id, d); for (const id of ids) if (!Designs.map.has(id)) Designs.map.set(id, { id, px: null }); } catch(e){ return; }
+  try { const { data, error } = await Cloud.sb.rpc('get_designs', { p_ids: ids }); if (error) throw error; for (const d of data || []) Designs.map.set(d.id, d); for (const id of ids) if (!Designs.map.has(id)) Designs.map.set(id, { id, px: null }); } catch(e){ setTimeout(() => { for (const id of ids) queueDesign(id); }, 3000); return; }   /* 網路不穩抓失敗：3 秒後再試 */
   Designs.ver++; refreshDesignAvatars(); }
 function refreshDesignAvatars(){ const all = [me, ...[...peers.values()].map(p => p.fisher), ...npcs]; for (const f of all){ if (f && f.gearKey && /_dz\d+/.test(f.gearKey)){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); } } AvShot.cache.clear(); if (!$('#sheet').hidden && ['style', 'market', 'shop', 'design'].includes(curTab)) renderTab(); }
 const DESIGN_SLOTS = [['top', '上衣'], ['pants', '褲子'], ['hat', '帽子'], ['shoes', '鞋子'], ['back', '披風'], ['acc', '領巾']];
@@ -8538,7 +8572,7 @@ function buildTank(){
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
     if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
     tankFish.push(fish);
-    if (!FISH_STYLE[f.id] || x.rs){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
+    if (!FISH_STYLE[f.id] || x.rs || /^marlin/.test(f.id) || f.id === 'octopus'){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
       const bb = new THREE.Box3().setFromObject(fish.m), k = 1 / fish.scale;
       const ext = { r: Math.max(Math.abs(bb.min.x), bb.max.x, Math.abs(bb.min.z), bb.max.z) * k * 1.05, y0: bb.min.y * k, y1: bb.max.y * k };
       tankFit(fish, ext); fish.m.scale.multiplyScalar(fish.scale * k); if (x.rs) addScars(fish.m, rsInfo(x.rs).scars); tankGroup.add(fish.m); tankInst.push(fish.m); return; }
