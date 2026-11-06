@@ -1750,7 +1750,7 @@ const GEAR = [
   ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
   ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
   ['acc_none','沒有配件',0,'🙂'],['acc_scarf','紅圍巾',300,'🧣'],['acc_scarf_black','黑圍巾',320,'⚫'],['acc_scarf_white','白圍巾',320,'⚪'],['acc_scarf_navy','深藍圍巾',350,'🔵'],['acc_scarf_pink','粉紅圍巾',350,'🩷'],['acc_scarf_yellow','芥末黃圍巾',350,'🟡'],['acc_scarf_green','森林綠圍巾',350,'🟢'],['acc_scarf_grey','灰色毛圍巾',380,'🩶'],['acc_scarf_brown','焦糖圍巾',380,'🟤'],['acc_scarf_plaid','紅黑格紋圍巾',500,'🟥'],['acc_scarf_stripe','藍白條紋圍巾',500,'🔷'],['acc_scarf_rainbow','彩虹圍巾',900,'🌈'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
-  ['back_none','沒有背飾',0,'🙂'],['back_kcape_m','紫紅短披風',900,'🟣'],['back_kcape_r','紅色短披風',900,'🔴'],['back_kcape_b','咖啡色短披風',800,'🟤'],['back_kcape_g','綠色短披風',900,'🟢'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
+  ['back_none','沒有背飾',0,'🙂'],['back_cloak_r','紅色斗篷',1200,'🧣'],['back_cloak_n','深藍斗篷',1200,'🌌'],['back_cloak_g','墨綠斗篷',1200,'🌲'],['back_cloak_k','黑色斗篷',1200,'🖤'],['back_kcape_m','紫紅短披風',900,'🟣'],['back_kcape_r','紅色短披風',900,'🔴'],['back_kcape_b','咖啡色短披風',800,'🟤'],['back_kcape_g','綠色短披風',900,'🟢'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
   ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
   // 愛海商店：只能用放流得到的愛海點數換（第 5 欄是點數）
   // 節慶限定（083）：只有節日期間買得到（第 6 欄是哪個節日），買到的永遠保留
@@ -1839,6 +1839,15 @@ function topStyle(av, top){
   const hsl = {}; av.shirtM.color.getHSL(hsl); U.uTopC2.value.set(hsl.l > 0.72 ? '#24406e' : '#ffffff');
   av.shirtM.roughness = top === 'top_nylon' ? 0.32 : 0.75; av.shirtM.metalness = top === 'top_nylon' ? 0.12 : 0.04;
 }
+/* v224 斗篷（Meshy 付費方案生成，models/cloak.glb）：立領、肩膀一圈、前面開襟、後面比較長。掛在胸骨上跟著身體動；
+   模型還沒載好的人，載好後自動重新穿一次。 */
+const CLOAK = { geo:null, top:0, cz:0, wait:new Set(), mats:{}, col:{ back_cloak_r:['#b8262a', '#e8b730'], back_cloak_n:['#1f3358', '#c9d2dc'], back_cloak_g:['#2f5a3c', '#e2b84a'], back_cloak_k:['#1d1d24', '#b8262a'] } };
+new GLTFLoader().loadAsync('models/cloak.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.computeBoundingBox(); geo.userData.shared = true;
+  CLOAK.top = geo.boundingBox.max.y; CLOAK.cz = -0.06; CLOAK.geo = geo;
+  for (const av of [...CLOAK.wait]){ try { if (av.cloakWant) applyGear(av, av.cloakWant); } catch(e){} } CLOAK.wait.clear(); }).catch(e => console.warn('cloak', e));
+function cloakMat(c0, c1){ const k = c0 + c1; if (CLOAK.mats[k]) return CLOAK.mats[k];
+  const m = new THREE.MeshStandardMaterial({ color:c0, roughness:0.72, side:THREE.DoubleSide });
+  return (CLOAK.mats[k] = m); }   /* 內裡顏色先不畫：Meshy 的布是兩層疊在一起，減面後分不清裡外，畫了會變成一點一點的 */
 function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
@@ -1958,6 +1967,7 @@ function applyGear(av, gear){
     case 'acc_lei': { const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#ff9f43']; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.045, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.21, 1.06 - Math.max(0, Math.sin(a)) * 0.1, Math.sin(a) * 0.19); } break; }
   }
   // ---- 背飾 ----
+  if (CLOAK.col[gear.back]){ if (!CLOAK.geo){ av.cloakWant = gear; CLOAK.wait.add(av); } else { const [c0, c1] = CLOAK.col[gear.back], m = mk(CLOAK.geo, cloakMat(c0, c1), 0, 1.085, 0.0); m.scale.set(0.66, 0.44, 0.66); m.position.y -= CLOAK.top * 0.44 - 0.03; m.position.z -= CLOAK.cz * 0.66 + 0.01; } }
   switch (gear.back){
     case 'back_fin': { const gr = M('#7f95a6', 0.55), wh = M('#e9eef2', 0.6);
       const sh = new THREE.Shape(); sh.moveTo(-0.2, 0); sh.quadraticCurveTo(-0.05, 0.12, 0.08, 0.46); sh.quadraticCurveTo(0.12, 0.2, 0.22, 0); sh.lineTo(-0.2, 0);
