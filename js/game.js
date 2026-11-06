@@ -2319,9 +2319,45 @@ function applyGear(av, gear){
   applyDesigns(av, gear);   /* 自己設計的衣服、褲子（044） */
 }
 
+/* v252 精緻釣竿（自己和其他玩家才用，NPC 維持簡單的省效能）：竿身分 6 節會真的彎、導環＋綁線、軟木握把＋尾塞、
+   紡車式捲線器（線杯有線、導線環、搖臂和握把，收線時會轉）；手竿沒有捲線器、竿身有竹節 */
+function rodHD(av, type, color){
+  if (!av || !av.rod) return; if (av.hd){ av.rod.remove(av.hd.root); if (av.hd.reelG) av.rod.remove(av.hd.reelG); }
+  const pole = type === 'pole', blank = new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.25 }), dk = mat('#23262b', 0.4, { metalness:0.5 }), gold = mat('#d8b25a', 0.35, { metalness:0.6 }), wrap = mat(pole ? '#5a4030' : '#b8282c', 0.5);
+  const N = 6, L = 2.3, root = new THREE.Group(), segs = []; let par = root; root.position.y = 0.2;
+  for (let i = 0; i < N; i++){ const r0 = 0.03 - i * 0.0036, r1 = 0.03 - (i + 1) * 0.0036, sl = (L - 0.2) / N, pv = new THREE.Group(); pv.position.y = i ? sl : 0; par.add(pv);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(Math.max(0.006, r1), r0, sl, 7), blank); m.position.y = sl / 2; pv.add(m);
+    if (pole){ const nd = new THREE.Mesh(new THREE.TorusGeometry(r0 + 0.002, 0.004, 4, 10), wrap); nd.rotation.x = Math.PI / 2; nd.position.y = 0.02; pv.add(nd); }
+    else if (i > 0){ const gr = new THREE.Mesh(new THREE.TorusGeometry(0.03 - i * 0.003, 0.0045, 4, 12), dk); gr.position.set(0, 0.05, r0 + 0.03 - i * 0.003); pv.add(gr); const st = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.006, 0.03), dk); st.position.set(0, 0.05, r0 + 0.012); pv.add(st);
+      const wr = new THREE.Mesh(new THREE.CylinderGeometry(r0 + 0.002, r0 + 0.002, 0.03, 7), wrap); wr.position.y = 0.05; pv.add(wr); }
+    segs.push(pv); par = pv; }
+  const tip = new THREE.Object3D(); tip.position.y = (L - 0.2) / N; par.add(tip);
+  { const tt = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 4), wrap); tt.position.y = (L - 0.2) / N; par.add(tt); }
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.04, 0.42, 9), mat(pole ? '#8a6a48' : '#c8a070', 0.85)); grip.position.y = -0.02; root.add(grip);
+  const butt = new THREE.Mesh(new THREE.SphereGeometry(0.042, 9, 6), dk); butt.scale.y = 0.6; butt.position.y = -0.24; root.add(butt);
+  if (!pole){ const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.034, 0.16, 9), mat('#c8a070', 0.85)); fore.position.y = 0.36; root.add(fore); const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.1, 9), dk); seat.position.y = 0.25; root.add(seat); }
+  let reelG = null, handle = null;
+  if (!pole){ reelG = new THREE.Group(); reelG.position.set(0, 0.25, 0.03);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.09, 0.05), dk); foot.position.z = 0.03; reelG.add(foot);
+    const stem = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.02, 0.07), dk); stem.position.z = 0.07; reelG.add(stem);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.07, 12), mat('#c9d6e3', 0.3, { metalness:0.7 })); body.position.set(0, 0, 0.12); body.rotation.x = Math.PI / 2; reelG.add(body);
+    const spool = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.05, 12), mat('#e8eef2', 0.5)); spool.position.set(0, 0.06, 0.12); reelG.add(spool);
+    const lineR = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.035, 12), mat('#f6f2e8', 0.8)); lineR.position.set(0, 0.06, 0.12); reelG.add(lineR);
+    const bail = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.004, 4, 14, Math.PI), gold); bail.position.set(0, 0.07, 0.12); bail.rotation.y = Math.PI / 2; reelG.add(bail);
+    handle = new THREE.Group(); handle.position.set(0.05, 0, 0.12); const arm = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.08, 0.012), dk); arm.position.y = 0.04; handle.add(arm); const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.035, 8), gold); knob.rotation.z = Math.PI / 2; knob.position.set(0.02, 0.08, 0); handle.add(knob); reelG.add(handle); }
+  av.pole.visible = false; if (av.reel) av.reel.visible = false; av.rod.children.forEach(c => { if (c !== av.tip && c.isMesh && c !== av.pole && c !== av.reel) c.visible = false; });
+  av.rod.add(root); if (reelG) av.rod.add(reelG); av.tip.position.set(0, -9999, 0);
+  av.hd = { root, segs, tip, reelG, handle, flex:0 }; av.tipReal = av.tip; av.tip = tip; }
+function rodHDAnim(f, dt, t){ const H = f.av.hd; if (!H) return;
+  let B = (f.bend || 0) * 0.9 + Math.max(0, f.dip || 0) * 0.03;
+  if (f.castT >= 0){ const k = f.castT / 0.5; B += -Math.sin(k * Math.PI * 2) * 0.55; }   /* 甩竿：竿尖慢半拍再甩出去 */
+  else if ((f.windup || 0) > 0.05) B += -0.25 * f.windup;
+  H.flex += (B - H.flex) * Math.min(1, dt * 14);
+  for (let i = 0; i < H.segs.length; i++) H.segs[i].rotation.x = i ? H.flex * Math.pow(i / (H.segs.length - 1), 1.6) * 0.42 : 0;   /* 越靠竿尖彎越多 */
+  if (H.handle){ const spin = f === me ? (typeof F !== 'undefined' && F.phase === 'reeling' && F.hold ? 16 : F.phase === 'reeling' && F.run ? -6 : 0) : ((f.bend || 0) > 0.45 ? 12 : 0); H.handle.rotation.x += spin * dt; } }
 // 竿子的樣子：手竿最長、沒有捲線器；遠投竿又長又粗；磯釣竿長長細細的
 const ROD_SHAPE = { cast:{ len:1, thick:1, reel:true }, pole:{ len:1.4, thick:0.8, reel:false }, surf:{ len:1.55, thick:1.25, reel:true }, iso:{ len:1.4, thick:0.85, reel:true } };
-function applyRodShape(av, type, hall){ if (!av || !av.pole) return; const S = ROD_SHAPE[type] || ROD_SHAPE.cast, k = hall ? 0.5 : S.len; av.pole.scale.set(hall ? 1 : S.thick, k, hall ? 1 : S.thick); av.pole.position.y = 1.15 * k; av.tip.position.y = 2.3 * k; if (av.reel) av.reel.visible = hall || S.reel; }
+function applyRodShape(av, type, hall){ if (!av || !av.pole) return; const S = ROD_SHAPE[type] || ROD_SHAPE.cast, k = hall ? 0.5 : S.len; if (av.hd){ av.hd.root.scale.set(hall ? 1 : S.thick, k, hall ? 1 : S.thick); if (av.hd.reelG) av.hd.reelG.visible = hall || S.reel; return; } av.pole.scale.set(hall ? 1 : S.thick, k, hall ? 1 : S.thick); av.pole.position.y = 1.15 * k; av.tip.position.y = 2.3 * k; if (av.reel) av.reel.visible = hall || S.reel; }
 // 竿種不同，甩竿的動作也不同：手竿輕輕往前放、遠投竿舉過頭用力甩
 const CAST_STYLE = { cast:{ w:1, f:1, raise:0 }, pole:{ w:0.35, f:0.55, raise:0 }, surf:{ w:1.35, f:1.35, raise:0.6 }, iso:{ w:1.05, f:1, raise:0.15 } };
 function makeBobber(){
@@ -2761,7 +2797,7 @@ class Fisher {
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
   setGear(gear){ const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
-  setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); applyRodShape(this.av, this.rodType, false); } }
+  setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); if (!this.isNpc){ try { rodHD(this.av, this.rodType, r.color); } catch(e){ console.warn('rodHD', e); } } applyRodShape(this.av, this.rodType, false); } }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubUntil = now() + (secs || 5); }
   // 炫耀魚：把魚舉在頭上幾秒
@@ -2842,7 +2878,7 @@ class Fisher {
       const back = Math.max(0, -pz), fwd = Math.max(0, pz); T.zR = CS.raise && back > 0 ? -back * CS.raise * 0.4 : 0;   /* 遠投：手舉高一點 */
       T.aR = -1.0 - this.bend * 0.3 - back * 0.55 + fwd * 0.3; T.aL = -0.7 - this.bend * 0.2 - back * 0.4 + fwd * 0.2; T.zL = 0.08 * 0;   /* 手不要舉太高：主要是竿子往後倒 */
       T.tw = -back * 0.12 + fwd * 0.08; T.pit += fwd * 0.06 - back * 0.03;
-      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.1 + fwd * 0.5;
+      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.1 + fwd * 0.5; if (a.hd) rodHDAnim(this, dt, t);
       this.castSnap = this.castT >= 0 || (this.windup || 0) > 0;
     } else this.castSnap = false;
     if (this.held){
@@ -10659,6 +10695,7 @@ function renderTab(){
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
+      '🎣 釣竿：竿子分好幾節，魚拉得越用力竿尖彎得越厲害；甩竿時竿尖會慢半拍再甩出去；按住收線時捲線器的搖臂會轉。換不同的竿子，長短、粗細、顏色都不一樣（手竿沒有捲線器，有竹節）。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
