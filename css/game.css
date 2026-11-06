@@ -1038,3 +1038,13 @@ body.subbing #top #brand.panel:not(.open) h1, body.subbing #top #brand.panel:not
 #invCard .ic-s{font-size:13px;color:#4a6478;margin:6px 0 12px}
 #invCard .ic-a{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 @keyframes invPop{from{transform:translate(-50%,-12px) scale(.92);opacity:0}to{transform:translate(-50%,0) scale(1);opacity:1}}
+/* v254 搏鬥：魚的動作提示 */
+#fhCue{position:fixed;left:50%;top:auto;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;padding:8px 18px;border-radius:999px;font-size:22px;font-weight:900;color:#fff;background:rgba(14,40,64,.72);pointer-events:none;white-space:nowrap;text-shadow:0 2px 4px rgba(0,0,0,.4)}
+#fhCue[hidden]{display:none}
+#fhCue.tele{background:rgba(200,120,20,.85);animation:cuePulse .25s ease-in-out infinite alternate}
+#fhCue.go{background:rgba(214,48,60,.88);font-size:26px}
+#fhCue.ok{background:rgba(40,150,90,.88)}
+#fhCue.bad{background:rgba(90,90,100,.8)}
+@keyframes cuePulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.08)}}
+body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse at center,transparent 35%,rgba(4,16,30,.55) 100%)}
+@media (orientation:landscape) and (max-height:540px){ #fhCue{bottom:78px;font-size:18px} #fhCue.go{font-size:21px} }

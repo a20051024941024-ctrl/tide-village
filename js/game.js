@@ -3566,6 +3566,7 @@ function actionDown(){
   } else if (F.phase === 'bite'){
     startReel(); F.hold = true;
   } else if (F.phase === 'reeling'){
+    if (F.act && !F.act.tele && (F.act.k === 'pause' || F.act.k === 'feint')){ F.act.taps++; F.P += 0.03 * (F.prof ? F.prof.quick : 1); F.S = Math.max(0, F.S - 0.025); me.bend = 0.6; try { SFX.reel(); } catch(e){} return; }   /* v254 泵竿：喘氣時連續點 */
     if (F.mash){ F.P += 0.045; F.mashHits++; camShake = Math.max(camShake, 0.06);
       const v = tmpV.set(me.bobPos.x, 0.45, me.bobPos.z).project(camera), d = document.createElement('div'); d.className = 'dmg crit'; d.textContent = '-' + Math.round(300 + Math.random() * 500); d.style.left = ((v.x + 1) / 2 * viewW() + Math.random() * 60 - 30) + 'px'; d.style.top = ((1 - v.y) / 2 * viewH() - 40) + 'px'; $('#dmgLayer').appendChild(d); setTimeout(() => d.remove(), 900);
       return; }
@@ -3645,8 +3646,20 @@ function pickFish(spot, charge){
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
 }
+/* ===== v254 釣魚第 3 段：搏鬥 —— 魚會輪流做動作，動作前 0.5 秒有預兆，玩家用對的方法回應 =====
+   💨 衝刺：放開不要收｜😮‍💨 停住喘氣：連續快速點（泵竿）｜⬅➡ 左右竄：搖桿往反方向｜⬆️ 跳出水面：放開，落水再收｜⬇️ 鑽底：按著但不要全力（拉力停在中間）｜🪨 纏礁石：放開等它自己游出來
+   做對：魚掉很多體力、連擊 +1；做錯：拉力爆衝或線鬆掉，連擊歸零。小魚只會喘氣和小衝刺，10 秒內解決。
+   重量照舊由伺服器決定（連擊不改重量，避免被改數字作弊），連擊高的會有「🏅 完美搏鬥」的紀錄。 */
+const FIGHT_ACT = { run:{ ico:'💨', cue:'要衝了！', how:'放開！讓牠跑' }, pause:{ ico:'😮‍💨', cue:'牠停下來喘氣', how:'連續快速點！' }, left:{ ico:'⬅', cue:'往左竄！', how:'搖桿往右拉' }, right:{ ico:'➡', cue:'往右竄！', how:'搖桿往左拉' },
+  jump:{ ico:'⬆️', cue:'要跳出水面了！', how:'放開！落水再收' }, dive:{ ico:'⬇️', cue:'往下鑽！', how:'按著但不要全力' }, snag:{ ico:'🪨', cue:'卡到礁石了！', how:'放開等 3 秒' }, feint:{ ico:'😮‍💨', cue:'牠好像累了…', how:'連續快速點！' } };
+const FIGHT_PROF = { school:{ acts:['pause', 'run'], gap:0.5, quick:1.9, dmg:1.4, runK:0.6 }, shadow:{ acts:['run', 'left', 'pause', 'right', 'jump'], gap:1 }, pred:{ acts:['run', 'jump', 'run', 'jump', 'pause'], gap:0.9, runK:1.5 },
+  bottom:{ acts:['dive', 'pause', 'snag', 'dive'], gap:1 }, cunning:{ acts:['left', 'right', 'left', 'pause', 'right'], gap:0.45 }, tuna:{ acts:['run', 'run', 'pause', 'run'], gap:0.7, runK:1.7 } };
+function fightProf(f){ const b = f.of || f.id; let k = /tuna|bonito/.test(b) ? 'tuna' : CUNNING.has(b) ? 'cunning' : sigClass(f); if (k === 'school' && f.rarity !== '常見') k = 'shadow'; const P = Object.assign({ gap:1, quick:1, dmg:1, runK:1 }, FIGHT_PROF[k]); P.k = k;
+  let acts = P.acts.slice(); if (!['reef', 'harbor', 'isle', 'abyss', 'kelp'].includes(F.spot && F.spot.id)) acts = acts.map(a => a === 'snag' ? 'dive' : a); if (f.rarity === '傳說') acts = acts.concat(['feint']); P.list = acts; return P; }
+function fightCue(txt, cls){ let c = $('#fhCue'); if (!c){ c = document.createElement('div'); c.id = 'fhCue'; document.body.appendChild(c); } c.textContent = txt; c.className = cls || ''; c.hidden = !txt; }
 function startReel(){
   F.phase = 'reeling'; F.T = 0.35; F.P = 0.3; F.surge = 0; F.seed = Math.random()*10;
+  F.act = null; F.combo = 0; F.bestCombo = 0; F.prof = F.spot && F.spot.id !== 'shrimp' ? fightProf(F.fish) : null; F.acts = !!F.prof; F.actI = 0; F.nextActAt = now() + 0.8; fightCue('');
   F.S = 1; F.dir = 0; F.dirUntil = now() + rand(1.2, 2.2); F.lat = 0; F.jump = 0; F.maxDist = 4 + (F.castCharge || 0) * 6 + (BIG_FISH.has(F.fish.id) ? 6 : 0);
   F.castD = clamp(F.spot && F.spot.pos ? Math.hypot(me.bobPos.x - F.spot.pos.x, me.bobPos.z - F.spot.pos.z) : 5, 2, 22); F.slack = 0; F.run = 0; F.runAt = now() + rand(1.8, 3.5); F.dragT = 0;   /* 遛魚：魚會往外衝（線被拉出去、浮標越來越遠），線太鬆會脫鉤 */
   if (F.leap){ scene.remove(F.leap); F.leap = null; }
@@ -3663,7 +3676,7 @@ function startReel(){
   $('#fishMark').className = 'r-' + F.fish.rarity; { const ic = $('#fmIco'); ic.textContent = ''; const cv = fishCanvas(F.fish, !!rec.count[F.fish.id], 40, 26); cv.className = 'fmpic'; ic.appendChild(cv); }   /* 拉魚時顯示這條魚的樣子（沒釣過的只有黑影） */ F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
   pushPresence(true);
 }
-function reelCleanup(){ if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = 55; camera.updateProjectionMatrix(); }
+function reelCleanup(){ fightCue(''); F.act = null; document.body.classList.remove('fdive'); if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = 55; camera.updateProjectionMatrix(); }
 /* ---- 來吃餌的魚：等魚的時候看得到牠從旁邊游過來、試探、咬下去（大魚不顯示）。沒釣過的魚只看得到黑影 ---- */
 const BiteFish = { m:null, id:null, ang:0, k:0, shadowM:null };
 // 咬餌前大約 2 秒（伺服器規定拋竿 2 秒後才能問）：問伺服器這一竿是什麼魚，魚才游上來現身
@@ -3767,7 +3780,28 @@ function updateFishing(dt, t){
   if (F.phase === 'reeling'){
     // 像一般釣魚遊戲：魚有體力，會往左右衝（往反方向拉最有效），稀有的魚會跳出水面（跳的時候要放開）
     const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
-    if (t > F.dirUntil && !F.mash){
+    let actPull = 0;
+    if (F.acts && !F.mash){ const P = F.prof; let A = F.act;
+      if (!A && t > F.nextActAt && F.S > 0.06){ const k = P.list[F.actI % P.list.length]; F.actI++; const dur = k === 'run' ? rand(1.1, 1.9) * P.runK * (0.7 + p * 0.5) : k === 'pause' || k === 'feint' ? rand(1.6, 2.2) : k === 'jump' ? 1.4 : k === 'snag' ? 3.0 : k === 'dive' ? rand(2.0, 2.8) : rand(1.3, 2.0);
+        A = F.act = { k, t0: t + 0.5, end: t + 0.5 + dur, tele: true, hold: 0, tot: 0, taps: 0, good: 0 }; const D = FIGHT_ACT[k]; fightCue(`${D.ico} ${D.cue}`, 'tele'); try { SFX.tick(); } catch(e){} camShake = Math.max(camShake, 0.04); }   /* 預兆：先提示 0.5 秒 */
+      if (A && A.tele && t >= A.t0){ A.tele = false; const D = FIGHT_ACT[A.k]; fightCue(`${D.ico} ${D.how}`, 'go');
+        if (A.k === 'run') F.run = A.end - t; else if (A.k === 'jump'){ F.jump = 1.0; ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); }
+        else if (A.k === 'left' || A.k === 'right'){ F.dir = A.k === 'left' ? -1 : 1; const d = $('#fhDir'); d.hidden = false; d.className = F.dir < 0 ? 'l' : 'r'; d.innerHTML = F.dir < 0 ? '<span>往右拉</span><b>➡</b>' : '<b>⬅</b><span>往左拉</span>'; }
+        else if (A.k === 'dive') document.body.classList.add('fdive'); }
+      if (A && !A.tele){ A.tot += dt; if (F.hold) A.hold += dt;
+        if (A.k === 'feint' && !A.turned && t > A.t0 + 0.9){ A.turned = true; A.k = 'run'; A.hold = 0; A.tot = 0; A.end = t + 1.4; F.run = 1.4; fightCue('💨 騙你的！放開！', 'go warn'); camShake = Math.max(camShake, 0.15); }   /* 傳說魚：假裝累了，突然衝刺 */
+        if (A.k === 'pause' || A.k === 'feint'){ F.T -= dt * 1.1; actPull = -p * 0.6; if (A.tot > 0.9 && A.taps === 0) F.slack += dt * 0.6; }
+        else if (A.k === 'dive'){ me.dip = 1.6; actPull = 0.35 * p; if (F.T > 0.3 && F.T < 0.7) A.good += dt; }
+        else if (A.k === 'snag'){ if (F.hold){ F.T += dt * 0.9; F.P -= dt * 0.02; } F.lat *= 0.9; }
+        else if (A.k === 'jump' && A.tot < 1.0 && F.hold) A.bad = (A.bad || 0) + dt;
+        if (t >= A.end){ let ok = false; if (A.k === 'run') ok = A.hold / Math.max(0.01, A.tot) < 0.3; else if (A.k === 'pause' || A.k === 'feint') ok = A.taps >= 3; else if (A.k === 'left' || A.k === 'right') ok = A.good / Math.max(0.01, A.tot) > 0.5;
+          else if (A.k === 'jump') ok = (A.bad || 0) < 0.25; else if (A.k === 'dive') ok = A.good / Math.max(0.01, A.tot) > 0.55; else if (A.k === 'snag') ok = A.hold / Math.max(0.01, A.tot) < 0.2;
+          if (ok){ F.combo++; F.bestCombo = Math.max(F.bestCombo, F.combo); F.S = Math.max(0, F.S - 0.13 * P.dmg); F.P += 0.05 * P.quick; fightCue(`👍 漂亮！連擊 ×${F.combo}`, 'ok'); try { SFX.tick(); } catch(e){} }
+          else { F.combo = 0; fightCue('😣 沒對上', 'bad'); if (A.k === 'snag' || A.k === 'run') F.T += 0.25; }
+          setTimeout(() => { if (F.act === null && F.phase === 'reeling') fightCue(''); }, 700);
+          if (A.k === 'left' || A.k === 'right'){ F.dir = 0; $('#fhDir').hidden = true; } if (A.k === 'dive') document.body.classList.remove('fdive');
+          F.act = null; F.nextActAt = t + rand(0.9, 2.0) * P.gap; } } }
+    if (t > F.dirUntil && !F.mash && !F.acts){
       const nd = Math.random() < 0.3 ? 0 : (Math.random() < 0.5 ? -1 : 1);
       if (nd !== F.dir && nd !== 0){ const d = $('#fhDir'); d.hidden = false; d.className = nd < 0 ? 'l' : 'r'; d.innerHTML = nd < 0 ? '<span>往右拉</span><b>➡</b>' : '<b>⬅</b><span>往左拉</span>'; }
       else if (nd === 0) $('#fhDir').hidden = true;
@@ -3789,18 +3823,19 @@ function updateFishing(dt, t){
       if (F.surf <= 0 && F.leap) F.leap.visible = false;
     } else if (F.boss && !F.mash && t > F.surfT && F.S > 0.12){
       F.surf = rand(1.4, 2.4); F.surfT = t + rand(3.5, 6.5); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.3, 2.4, 0.9);
-    } else if ((F.fish.rarity !== '常見' || big) && F.S > 0.15 && !F.mash && Math.random() < dt * (F.boss ? 0.16 : 0.11) * p){
+    } else if (!F.acts && (F.fish.rarity !== '常見' || big) && F.S > 0.15 && !F.mash && Math.random() < dt * (F.boss ? 0.16 : 0.11) * p){
       F.jump = 1.0; ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); camShake = Math.max(camShake, big ? 0.18 : 0.08);
     }
     let pull = p * (0.55 + 0.45 * Math.sin(t*2.3 + F.seed) * Math.sin(t*0.7 + F.seed*2)) * (0.35 + 0.65 * F.S);
     // 魚往外衝：線被拉出去（浮標越跑越遠、捲線器嘰嘰叫），這時候硬拉張力會飆高；先放開讓牠跑，牠會越跑越累
     if (!F.shr && !F.mash){ if (F.run > 0){ F.run -= dt; F.P -= (0.12 + 0.16 * p) * dt * (F.hold ? 0.45 : 1); pull += 0.55 * p; F.S = Math.max(0, F.S - dt * 0.035);
         F.dragT += dt; if (F.dragT > 0.07){ F.dragT = 0; SFX.tick && SFX.tick(); } if (Math.random() < dt * 10) ripple(me.bobPos.x, me.bobPos.z, Math.random() < 0.3); if (F.run <= 0) F.runAt = t + rand(3.5, 7.5) * (1.3 - p * 0.5); }
-      else if (t > F.runAt && F.S > 0.18 && F.jump <= 0){ F.run = rand(1.1, 2.3) * (0.6 + p); camShake = Math.max(camShake, 0.06); } }
+      else if (!F.acts && t > F.runAt && F.S > 0.18 && F.jump <= 0){ F.run = rand(1.1, 2.3) * (0.6 + p); camShake = Math.max(camShake, 0.06); } }
     if (F.surge > 0){ F.surge -= dt; pull += 0.55 * p; } else if (Math.random() < dt * 0.3 * p){ F.surge = rand(0.4, 0.9); }
     let steer = 0; if (!uiBlocked){ steer = joy.x + ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0); } steer = clamp(steer, -1, 1);
     const counter = F.dir !== 0 && steer * F.dir < -0.35, wrong = F.dir !== 0 && steer * F.dir > 0.35;
     if (F.dir !== 0) pull += (counter ? -0.18 : wrong ? 0.45 : 0.22) * p;
+    if (F.act && !F.act.tele && (F.act.k === 'left' || F.act.k === 'right') && counter) F.act.good += dt; pull += actPull;
     const inZone = F.T > 0.3 && F.T < 0.8;
     if (F.boss && !F.mash && F.S < 0.1){ F.mash = true; F.hold = false; $('#mashFx').hidden = false; SFX.bite(); F.dir = 0; $('#fhDir').hidden = true; if (F.leap) F.leap.visible = false; }
     if (F.mash){
@@ -3810,7 +3845,7 @@ function updateFishing(dt, t){
     } else if (F.hold){
       F.reelT = (F.reelT || 0) + dt; if (F.reelT > 0.09){ F.reelT = 0; SFX.reel(); }
       F.T += (0.42 + pull*0.9) * dt * (F.spot && F.spot.id === 'shrimp' ? curSrod().ten : rod.tension) * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
-      F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S));
+      F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S)) * (F.prof ? F.prof.quick : 1) * (F.act && !F.act.tele && (F.act.k === 'snag' || F.act.k === 'run') ? 0.2 : 1);
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
     if (!F.shr && !F.mash && F.run <= 0 && F.jump <= 0 && !F.hold && F.T < 0.16 && F.S > 0.12) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2.5);   /* 線太鬆：魚會甩掉魚鉤 */
@@ -3841,7 +3876,8 @@ function updateFishing(dt, t){
       if (F.boss){ $('#bbHp').style.width = (F.S * 100).toFixed(1) + '%'; $('#bbPct').textContent = Math.ceil(F.S * 100) + '%'; mk.classList.add('boss'); } else mk.classList.remove('boss');
       { const want = F.boss && F.jump > 0 ? 44 : F.mash ? 50 : 55; if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
       $('#fmDist').textContent = realD.toFixed(1) + 'm';
-      const warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.8 ? '線太鬆！快收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
+      let warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.8 ? '線太鬆！快收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
+      if (F.act && F.acts) warn = '';   /* v254 有動作提示的時候不要再疊一行 */
       const fw = $('#fmWarn'); if (fw.textContent !== warn) fw.textContent = warn; fw.className = 'fm-warn' + (warn ? ' on' : '') + (F.S < 0.25 && T <= 0.8 && !F.jump && !wrong ? ' good' : '');
       const dir = $('#fhDir'); if (!dir.hidden){ dir.style.left = (sxC + (F.dir < 0 ? -110 : 110)) + 'px'; dir.style.top = (syC - 10) + 'px'; }
       mk.classList.toggle('hot', T > 0.8);
@@ -10749,6 +10785,8 @@ function renderTab(){
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
+      '⚔️ 怎麼對付魚的動作：拉魚的時候魚會輪流做動作，動作前畫面中間會先跳出黃色的提示（大約半秒），接著變紅色告訴你要怎麼做 —— 💨 衝刺：放開不要收，等牠跑完｜😮‍💨 停住喘氣：連續快速點按鈕（這時候收最多）｜⬅➡ 往左／右竄：搖桿往反方向拉｜⬆️ 跳出水面：放開，落水以後再收｜⬇️ 往下鑽：按著但不要全力，拉力條停在中間｜🪨 纏到礁石（只有礁石多的地方）：放開等 3 秒讓牠自己游出來，硬拉會斷線。做對了魚會掉很多體力、連擊 +1。',
+      '🐟 每種魚的習性：小魚只會喘氣和小衝刺，幾秒就拉上來｜旗魚、鯊魚這類掠食魚：衝刺 → 跳 → 衝刺 → 跳，衝很久｜石斑、螃蟹這類底棲魚：愛往下鑽、纏礁石，幾乎不跳｜鬼頭刀、魷魚：一直左右竄，方向換很快｜鮪魚：一直衝刺不停，拚耐心｜傳說魚：會假裝累了停下來，突然又衝刺，看到「騙你的！」趕快放開。',
       '🎣 釣竿：竿子分好幾節，魚拉得越用力竿尖彎得越厲害；甩竿時竿尖會慢半拍再甩出去；按住收線時捲線器的搖臂會轉。換不同的竿子，長短、粗細、顏色都不一樣（手竿沒有捲線器，有竹節）。',
       '🔧 阿鐵師傅（釣具店旁邊）：帶魚和金幣去，可以做竿子造型（竹紋、木紋、紅白條紋、海浪、珊瑚、碳纖維、金箔、彩虹）和釣線顏色（紅、螢光黃、螢光綠、粉紅、夜光藍、金色）。會用掉魚缸裡同稀有度最輕的魚，收藏⭐、展示中、變種的不會用；一天最多做 10 件。做好按「裝上」，別人也看得到。只是外觀，不影響釣魚。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
