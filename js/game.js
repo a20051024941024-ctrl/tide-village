@@ -3412,7 +3412,7 @@ function nearChair(){
   return best;
 }
 function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.sitting = true; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
-function standUp(){ if (!mySeat) return; if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
+function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
 function canJump(){ return !Dive.on && !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
@@ -3486,7 +3486,7 @@ function actionDown(){
     let spot;
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
     else if (mySeat && mySeat.nook){ spot = nookSpot(mySeat); if (!spot){ standUp(); return; } }   /* 釣魚小角落：坐在長椅上直接拋竿 */
-    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch) sitDown(ch); else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } else if (inMuseum()){ act.classList.remove('down'); openMuseum(); } } return; } spot = ns.spot; }
+    else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch){ if (ch.bed && House.furnG && House.furnG.get(ch.bed.id)) useFurn({ o: ch.bed, m: House.furnG.get(ch.bed.id), b:'bed' }); else sitDown(ch); } else if (nearFurn()){ act.classList.remove('down'); useFurn(nearFurn()); } else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } else if (inMuseum()){ act.classList.remove('down'); openMuseum(); } } return; } spot = ns.spot; }
     if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('🎫 要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
     if (F.aimSpot !== spot.id){ F.aim = 0; F.aimSpot = spot.id; } { const [ax, az] = aimDir(spot); me.rot = Math.atan2(ax, az); } me.fishing = true; me.bobState = 'none';
@@ -3821,8 +3821,9 @@ function updateFishing(dt, t){
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
-    else if (mySeat){ label = '站起來'; sub = '坐著休息中'; cls = 'shop'; }
-    else if (chNear){ label = '坐下'; sub = '休息一下'; cls = 'shop'; }
+    else if (mySeat){ label = mySeat.furnLie || mySeat.bed ? '起來' : '站起來'; sub = mySeat.furnLie === 'bath' ? '🛁 泡澡中' : mySeat.furnLie || mySeat.bed ? '😴 休息中' : '坐著休息中'; cls = 'shop'; }
+    else if (chNear){ label = chNear.bed ? '躺下' : '坐下'; sub = chNear.bed ? '😴 睡一下' : '休息一下'; cls = 'shop'; }
+    else if (nearFurn()){ const n = nearFurn(); label = n.U[1]; sub = `${n.U[0]} ${(FURN[n.o.t] || {}).name || ''}`; cls = 'shop'; }
     else if (inCafe()){ label = '做料理'; sub = '🏮 潮汐食堂'; cls = 'shop'; }
     else if (inMuseum()){ label = '捐魚'; sub = '🏛️ 海洋博物館'; cls = 'shop'; }
     else { label = '走到釣點'; cls = 'idle'; } }
@@ -4788,10 +4789,37 @@ function exitHouse(instant){
   if (instant){ done(); return; }
   const fx = $('#fadeFx'); fx.classList.add('on'); setTimeout(() => { done(); setTimeout(() => fx.classList.remove('on'), 80); }, 260);
 }
+/* v251 家具可以用：走近按按鈕。床躺下睡覺、電視開關、燈開關、壁爐生火、鋼琴彈一段、爐台做料理、冰箱和小魚缸看魚、衣櫃換衣服、書櫃看書、書桌翻圖鑑、時鐘看時間、浴缸泡澡、馬桶坐一下、流理台洗手、盆栽澆水 */
+const FURN_USE = { bed:['😴', '躺下睡覺'], dbed:['😴', '躺下睡覺'], bunk:['😴', '躺下睡覺'], tv:['📺', '開電視'], lamp:['💡', '開關燈'], fire:['🔥', '壁爐'], piano:['🎹', '彈鋼琴'],
+  stove:['🍳', '做料理'], fridge:['🧊', '打開冰箱'], tank:['🐟', '看魚'], ward:['👕', '換衣服'], shelf:['📚', '看書'], desk:['📔', '翻圖鑑'], clock:['🕰️', '看時間'], bath:['🛁', '泡澡'], toilet:['🚽', '坐一下'], sink:['🚰', '洗手'], plant:['💧', '澆水'], bigplant:['💧', '澆水'] };
+function furnBase(o){ const F0 = FURN[o.t]; return F0 ? (F0.base || o.t) : o.t; }
+function nearFurn(){ if (!House.on || !House.furnG || FB.on || mySeat) return null; let best = null, bd = 9;
+  for (const m of House.furnG.values()){ const o = m.userData.furn; if (!o) continue; const b = furnBase(o), U = FURN_USE[b] || (FURN[o.t] && FURN[o.t].bed ? FURN_USE.bed : null); if (!U) continue; const r = Math.max(0.55, (FURN[o.t] || {}).rad || 0.6) + 0.9, d = Math.hypot(me.pos.x - m.position.x, me.pos.z - m.position.z); if (d < r && d < bd){ bd = d; best = { o, m, b: FURN[o.t] && FURN[o.t].bed ? 'bed' : b, U }; } }
+  return best; }
+function useFurn(n){ const { o, m, b } = n, P = m.position, say = (x, s2) => me.say(x, 'emote', s2 || 3);
+  const lieOn = (y, kind) => { const c = { x: P.x, z: P.z, face: o.r, y, room: true, furnLie: kind }; sitDown(c); if (kind !== 'bath') me.sitting = false; startEmote(me, kind === 'bath' ? 'sitdown' : 'sleep');   /* 躺著要用躺下的動作，不是坐著 */ myEmote = { k: kind === 'bath' ? 'sitdown' : 'sleep', at: Date.now() }; pushPresence(true); };
+  if (b === 'bed'){ lieOn(P.y + 0.42, 'bed'); say('💤', 4); toast('😴 躺下來休息…（按「起來」或搖桿就起來）'); return; }
+  if (b === 'bath'){ lieOn(P.y + 0.15, 'bath'); say('🛁', 4); for (let i = 0; i < 3; i++) setTimeout(() => FX.emit(P.x, P.y + 0.7, P.z, 10, '#ffffff', 0.5, 1.2, 1.2), i * 500); toast('🛁 好舒服～'); return; }
+  if (b === 'toilet'){ sitDown({ x: P.x, z: P.z, face: o.r, y: P.y + 0.12, room: true }); say('🚽'); return; }
+  if (b === 'tv'){ if (!m.userData.tvScreen){ m.traverse(c => { if (!m.userData.tvScreen && c.isMesh && c.material && c.material.color && c.material.color.getHexString() === '2b4a6a'){ c.material = c.material.clone(); m.userData.tvScreen = c; } }); }
+    m.userData.tvOn = !m.userData.tvOn; const sc = m.userData.tvScreen; if (sc && !m.userData.tvOn){ sc.material.emissive.set('#000000'); }
+    if (m.userData.tvOn){ const L = FISH.filter(f => f.desc && !f.of); const f = L[Math.floor(Math.random() * L.length)]; toast(`📺 電視正在播海洋節目：${f.name}——${f.desc}`); try { tone(660, 0.12, 'sine', 0.04); } catch(e){} } else toast('📺 關掉電視'); return; }
+  if (b === 'lamp'){ m.traverse(c => { if (House.lamps.includes(c)) c.userData.off = !c.userData.off; }); try { SFX.tick(); } catch(e){} return; }
+  if (b === 'fire'){ m.traverse(c => { if (House.fires.includes(c)) c.userData.off = !c.userData.off; }); FX.emit(P.x, P.y + 0.6, P.z, 8, '#ffb040', 0.4, 1.2, 0.8); toast('🔥 劈哩啪啦…'); return; }
+  if (b === 'piano'){ say('🎵', 4); const N = [523, 587, 659, 698, 784, 880], song = Array.from({ length: 8 }, () => N[Math.floor(Math.random() * N.length)]); song.forEach((hz, i) => setTimeout(() => { try { tone(hz, 0.35, 'triangle', 0.06); } catch(e){} FX.emit(P.x, P.y + 1.4, P.z, 2, '#ffd36a', 0.4, 1.4, 1.0); }, i * 260)); return; }
+  if (b === 'stove'){ const sh = SHOPS.find(x => x.id === 'cook'); if (sh) openShop(sh); return; }
+  if (b === 'fridge' || b === 'tank'){ openSheet('tank'); return; }
+  if (b === 'ward'){ openSheet('closet'); return; }
+  if (b === 'desk'){ openSheet('dex'); return; }
+  if (b === 'shelf'){ const L = FISH.filter(f => f.desc && !f.of), f = L[Math.floor(Math.random() * L.length)]; say('📖'); toast(`📚 書上寫著：${f.name}——${f.desc}`); return; }
+  if (b === 'clock'){ const h = gameHour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60); say('🕰️'); toast(`🕰️ 村子現在 ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`); return; }
+  if (b === 'sink'){ FX.emit(P.x, P.y + 1.0, P.z, 12, '#9fe3ff', 0.3, 0.6, 0.6); try { SFX.splash(); } catch(e){} say('🫧'); return; }
+  if (b === 'plant' || b === 'bigplant'){ FX.emit(P.x, P.y + 1.2, P.z, 10, '#9fe3ff', 0.4, 0.4, 0.7); const s0 = m.scale.x; m.scale.setScalar(s0 * 1.08); setTimeout(() => m.scale.setScalar(s0), 300); say('💧'); toast('💧 澆好水了，葉子看起來很開心'); return; } }
 function updateHouse(t){
   if (!House.on) return;
-  for (const fl of House.fires || []) fl.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1);
-  for (const l of House.lamps || []) l.material.emissiveIntensity = 0.5 + DayNight.lamp * 1.2;
+  for (const fl of House.fires || []){ fl.visible = !fl.userData.off; fl.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1); }
+  for (const l of House.lamps || []) l.material.emissiveIntensity = l.userData.off ? 0.02 : 0.5 + DayNight.lamp * 1.2;
+  for (const m of House.furnG ? House.furnG.values() : []){ const sc = m.userData.tvScreen; if (sc && m.userData.tvOn){ const k = Math.floor(t * 2.2) % 5, cols = ['#7fd0ff', '#ffd36a', '#8de07a', '#ff9ab0', '#c8b0ff']; sc.material.emissive.set(cols[k]); sc.material.emissiveIntensity = 0.7 + Math.sin(t * 17) * 0.15; } }   /* v251 電視開著：畫面一閃一閃換顏色 */
   if (House.win && House.winTx){ const tx = House.winTx[DayNight.lamp > 0.5 ? 1 : 0]; if (House.win.map !== tx){ House.win.map = tx; House.win.needsUpdate = true; } }
   if (House.bg){ const nt = DayNight.lamp > 0.5; House.bg.color.set(nt ? '#1b2440' : '#a9d6e8'); House.lawn.color.set(nt ? '#2f4a3a' : '#7fb069'); House.pool.opacity = nt ? 1 : 0.55; }
   for (const o of House.fish){ const a = t * 0.8 + o.k, c = Math.cos(o.r), s = Math.sin(o.r), lx = Math.cos(a) * 0.45, lz = Math.sin(a * 1.3) * 0.12; o.f.position.x = o.x + c * lx + s * lz; o.f.position.z = o.z - s * lx + c * lz; o.f.rotation.y = o.r + (Math.sin(a) > 0 ? Math.PI : 0); }
@@ -10687,6 +10715,7 @@ function renderTab(){
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '👥 一起蓋島：同一座島上有人蓋、拆、搬東西，大家的畫面會馬上（最慢 20 秒）跟著更新，不用重新進遊戲。有人邀請你搬進他家時，畫面中間會跳出邀請卡片，可以直接回覆。',
       '🔋 省電：手機預設每秒最多畫 45 張，超過 30 秒沒碰畫面會降到 30 張；手機還是很燙，可以在「⚙️ 設定」選 30 張或把畫質調低。',
+      '🛋️ 家具可以用：在家裡走近家具，按鈕就會變成能做的事 —— 床躺下睡覺、沙發和椅子坐下、電視開關（會播海洋節目）、燈開關、壁爐生火、鋼琴彈一段、爐台做料理、冰箱和小魚缸看魚、衣櫃換衣服、書櫃看書、書桌翻圖鑑、時鐘看時間、浴缸泡澡、流理台洗手、盆栽澆水。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
       '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 32×32 的格子、48 種顏色上畫圖案（上衣有正面和背面；有直線、方框、填色、吸色、左右對稱、粗細筆、復原重做，也可以用自己的圖片），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
