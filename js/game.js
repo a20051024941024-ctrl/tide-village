@@ -6641,6 +6641,8 @@ function diveExtrasUpdate(dt, t){
 function diveMoveTo(site){ if (Dive.moving) return; Dive.moving = true; const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop(); const from = Dive.site, o2 = Dive.o2, seen = Dive.seen;
   setTimeout(() => { if (Dive.group){ Dive.group.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); scene.remove(Dive.group); Dive.group = null; }
     Dive.fish = []; Dive.schools = []; Dive.loot = []; Dive.kelp = null; Dive.site = site; buildDive(); diveExtras(); diveHideWorld(true); Dive.o2 = o2; Dive.seen = seen;
+    /* v219：游到別的海域，浮上來就在那個海域的岸邊（港口海底→港口碼頭的潛水梯、珊瑚礁→珊瑚礁沙灘），其他深海域→港口碼頭 */
+    { const hd = harborDiveAt(), pt = site === 'reef' && Reef.diveAt ? Reef.diveAt : hd; Dive.back = { x: pt[0], z: pt[1] }; Dive.ret = null; Dive.boat = null; }
     const back = (Dive.portals || []).find(p => p.to === from); if (back){ const ang = Math.atan2(back.z - DIVE.z, back.x - DIVE.x); me.pos.x = back.x - Math.cos(ang) * 4; me.pos.z = back.z - Math.sin(ang) * 4; me.rot = Math.atan2(-Math.cos(ang), -Math.sin(ang)); }
     me.baseY = Math.max(me.baseY, diveBed(me.pos.x, me.pos.z) + 1.5); Jump.gy = me.baseY; renderDiveHud(); setTimeout(() => { fx.classList.remove('on'); Dive.moving = false; }, 150);
     flash(`${DIVE_SITES[site].icon} 游到了${DIVE_SITES[site].name}`, 1.6); }, 380); }
