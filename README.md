@@ -137,6 +137,7 @@ supabase/096_fishpack.sql 🎒 漁夫冒險背包：價目表加上 back_fishpac
 supabase/097_submarine.sql 🚢 潛水艇與黑淵裂縫：sub_state、sub_dives，sub_unlock／sub_dive_start／sub_cast／sub_land／sub_pick／sub_found／sub_dive_end／sub_upgrade，新魚深海燈籠魚、吸血鬼烏賊（白化）、白化深海鮟鱇。
 supabase/098_mariana.sql 🐙 馬里亞納海溝的生物：獅子魚、深海鼬鳚、小飛象章魚、超巨型端足類、游泳海參（各有白化），加進潛水艇 sub_cast 的魚池。
 supabase/099_deep_weekly.sql 🔬 深海生物每週解鎖：deep_queue（從 2026-11-06 起每週五解鎖一種，白化同一週），deep_unlocked() 只回傳已解鎖的 id；sub_cast 加進已解鎖的魚。以後新魚加在 deep_queue 最後面。
+supabase/100_deep_variants.sql ✨ 深海生物變種：排隊的 12 種各加一個螢光變種（_glow），另外加紅燈巨口魚、斑點銀鮫、南非皺鰓鯊（真實的不同顏色）；跟本種同一週解鎖。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

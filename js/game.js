@@ -289,7 +289,7 @@ const DEEP_Q = [
   { id:'gulper_albino', spot:'abyss', of:'gulper', sub:true, name:'白化寬咽魚', rarity:'稀有', color:'#f4f2f2', min:0.2, max:1.5, power:0.4, w:0.03, depth:900, desc:'全身灰白，尾巴的光還是粉紅色。' },
   { id:'viperfish', spot:'abyss', sub:true, name:'蝰魚', rarity:'稀有', color:'#888888', min:0.05, max:0.3, power:0.45, depth:500, desc:'牙齒長得嘴巴都闔不起來，身上一排排的發光器像小燈泡，白天待在深處，晚上才游上來吃東西。' },
   { id:'viperfish_albino', spot:'abyss', of:'viperfish', sub:true, name:'白化蝰魚', rarity:'稀有', color:'#f4f2f2', min:0.05, max:0.3, power:0.45, w:0.03, depth:500, desc:'銀白色的蝰魚，牙齒和發光器一樣嚇人。' },
-  { id:'dragonfish', spot:'abyss', sub:true, name:'巨口魚', rarity:'稀有', color:'#888888', min:0.1, max:0.6, power:0.45, depth:700, desc:'下巴垂著一根會發光的長鬚，用來引誘獵物；還能發出紅光，在幾乎看不到紅色的深海裡像開了夜視鏡。' },
+  { id:'dragonfish', spot:'abyss', sub:true, name:'巨口魚', rarity:'稀有', color:'#888888', min:0.1, max:0.6, power:0.45, depth:700, desc:'全身黑得像墨水，連嘴巴裡面都是黑的；下巴垂著一根尖端會發光的長鬚，用來引誘獵物。' },
   { id:'dragonfish_albino', spot:'abyss', of:'dragonfish', sub:true, name:'白化巨口魚', rarity:'稀有', color:'#f4f2f2', min:0.1, max:0.6, power:0.45, w:0.03, depth:700, desc:'全身白色，下巴的發光鬚是淡淡的藍色。' },
   { id:'hatchetfish', spot:'abyss', sub:true, name:'斧頭魚', rarity:'常見', color:'#888888', min:0.01, max:0.06, power:0.2, depth:300, desc:'扁扁的銀色身體像一把小斧頭，肚子有一排向下發光的發光器，讓下面的魚看不到牠的影子。' },
   { id:'hatchetfish_albino', spot:'abyss', of:'hatchetfish', sub:true, name:'白化斧頭魚', rarity:'常見', color:'#f4f2f2', min:0.01, max:0.06, power:0.2, w:0.03, depth:300, desc:'銀白色的身體透著淡淡的粉紅。' },
@@ -307,13 +307,29 @@ const DEEP_Q = [
   { id:'redshrimp_albino', spot:'abyss', of:'redshrimp', sub:true, name:'白化深海紅蝦', rarity:'常見', color:'#f4f2f2', min:0.01, max:0.05, power:0.15, w:0.03, depth:800, desc:'白色的深海紅蝦（不太紅了）。' },
   { id:'frilledshark', spot:'abyss', sub:true, name:'皺鰓鯊', rarity:'傳說', color:'#888888', min:20, max:90, power:0.85, depth:1200, desc:'被稱為「活化石」，身體像鰻魚、六對鰓邊緣皺皺的像荷葉，嘴裡有三百多顆三叉形的牙齒。幾千萬年來幾乎沒有改變。' },
   { id:'frilledshark_albino', spot:'abyss', of:'frilledshark', sub:true, name:'白化皺鰓鯊', rarity:'傳說', color:'#f4f2f2', min:20, max:90, power:0.85, w:0.03, depth:1200, desc:'白化的皺鰓鯊，粉白色的身體配上一圈圈荷葉邊的鰓。' },
+  /* v242 每種深海生物再加一個螢光變種（_glow）；真的有不同顏色的種類另外加一個（紅燈巨口魚、斑點銀鮫、南非皺鰓鯊）。跟本種同一週解鎖 */
+  { id:'barreleye_glow', spot:'abyss', of:'barreleye', sub:true, name:'螢光管眼魚', rarity:'稀有', color:'#7affd0', min:0.05, max:0.25, power:0.3, w:0.02, depth:600, desc:'身上的發光點特別亮，透明罩子裡的眼睛像兩顆綠色小燈。' },
+  { id:'gulper_glow', spot:'abyss', of:'gulper', sub:true, name:'螢光寬咽魚', rarity:'稀有', color:'#ff6ae0', min:0.2, max:1.5, power:0.4, w:0.02, depth:900, desc:'尾巴的粉紅光一路亮到身體，像一條會發光的緞帶。' },
+  { id:'viperfish_glow', spot:'abyss', of:'viperfish', sub:true, name:'螢光蝰魚', rarity:'稀有', color:'#5ad0ff', min:0.05, max:0.3, power:0.45, w:0.02, depth:500, desc:'整排發光器都是亮亮的藍色，在黑暗裡像一串小燈泡。' },
+  { id:'dragonfish_glow', spot:'abyss', of:'dragonfish', sub:true, name:'螢光巨口魚', rarity:'稀有', color:'#c070ff', min:0.1, max:0.6, power:0.45, w:0.02, depth:700, desc:'下巴的鬚和身上的點發出紫色的光。' },
+  { id:'dragonfish_red', spot:'abyss', of:'dragonfish', sub:true, name:'紅燈巨口魚', rarity:'稀有', color:'#c81e1e', min:0.1, max:0.6, power:0.45, w:0.05, depth:700, desc:'巨口魚家族裡有一些眼睛下面長著會發紅光的發光器。深海裡大部分的魚看不到紅色，所以牠就像偷偷開了一支只有自己看得到的手電筒。' },
+  { id:'hatchetfish_glow', spot:'abyss', of:'hatchetfish', sub:true, name:'螢光斧頭魚', rarity:'常見', color:'#9ad8ff', min:0.01, max:0.06, power:0.2, w:0.02, depth:300, desc:'肚子的發光器特別亮，整條魚像一盞藍白色的小燈。' },
+  { id:'tripodfish_glow', spot:'abyss', of:'tripodfish', sub:true, name:'螢光三腳架魚', rarity:'常見', color:'#ffd36a', min:0.1, max:0.5, power:0.25, w:0.02, depth:1500, desc:'三根長鰭的尖端發出金黃色的光，站在海底像點了三根蠟燭。' },
+  { id:'swallower_glow', spot:'abyss', of:'swallower', sub:true, name:'螢光黑叉齒魚', rarity:'稀有', color:'#5aff9a', min:0.05, max:0.3, power:0.4, w:0.02, depth:1000, desc:'鼓起來的肚子會發出綠光，像吞了一顆燈泡。' },
+  { id:'chimaera_glow', spot:'abyss', of:'chimaera', sub:true, name:'螢光銀鮫', rarity:'稀有', color:'#7ae0ff', min:0.5, max:4, power:0.5, w:0.02, depth:500, desc:'鰭的邊緣發出冰藍色的光，游起來像一隻發光的幽靈。' },
+  { id:'chimaera_spot', spot:'abyss', of:'chimaera', sub:true, name:'斑點銀鮫', rarity:'稀有', color:'#8a6a4a', min:0.5, max:4, power:0.5, w:0.05, depth:500, desc:'銀鮫的親戚，身體是古銅色、滿身白色小斑點，住得比較淺，常在海底慢慢「飛」來飛去找貝殼吃。' },
+  { id:'hagfish_glow', spot:'abyss', of:'hagfish', sub:true, name:'螢光盲鰻', rarity:'常見', color:'#ff9ac0', min:0.1, max:0.8, power:0.3, w:0.02, depth:800, desc:'身體兩側的小孔透出粉紅色的光。' },
+  { id:'isopod_glow', spot:'abyss', of:'isopod', sub:true, name:'螢光大王具足蟲', rarity:'稀有', color:'#9a8aff', min:0.5, max:1.7, power:0.35, w:0.02, depth:1500, desc:'殼的邊緣發出紫色的光，爬起來像一台小坦克打開了車燈。' },
+  { id:'redshrimp_glow', spot:'abyss', of:'redshrimp', sub:true, name:'螢光深海紅蝦', rarity:'常見', color:'#5ad8ff', min:0.01, max:0.05, power:0.15, w:0.02, depth:800, desc:'吐出來的藍色發光煙霧沾滿了全身，整隻蝦都在發藍光。' },
+  { id:'frilledshark_glow', spot:'abyss', of:'frilledshark', sub:true, name:'螢光皺鰓鯊', rarity:'傳說', color:'#ffb04a', min:20, max:90, power:0.85, w:0.02, depth:1200, desc:'荷葉邊的鰓發出橘色的光，像脖子圍了一圈燈籠。' },
+  { id:'frilledshark_af', spot:'abyss', of:'frilledshark', sub:true, name:'南非皺鰓鯊', rarity:'傳說', color:'#8a8278', min:20, max:60, power:0.85, w:0.05, depth:1200, desc:'2009 年才被認出來是另一種皺鰓鯊，住在非洲南邊的海裡；比一般的皺鰓鯊小一點、顏色淡一點，鰓的荷葉邊一樣皺皺的。' },
 ];
 var DeepQ = { got:new Set(), at:0 };
 for (const d of DEEP_Q) FISH_BY_ID[d.id] = d;   /* 查得到（魚缸裡已經有的不會被當成不認識的魚丟掉），但還不在 FISH 名單裡（圖鑑、清單看不到） */
 function deepQOpen(ids){ let added = 0; for (const id of ids || []){ const d = DEEP_Q.find(x => x.id === id); if (!d || FISH.includes(d)) continue; FISH.push(d); DeepQ.got.add(id); added++; }
   if (added){ try { diveSp = null; } catch(e){} try { if (!$('#sheet').hidden) renderTab(); } catch(e){} } return added; }
 async function deepQSync(){ if (!Cloud.on || !Cloud.sb) return; DeepQ.at = Date.now(); try { const { data } = await Cloud.sb.rpc('deep_unlocked'); if (!Array.isArray(data)) return; deepQOpen(data);
-    const base = data.filter(id => !/_albino$/.test(id)); let seen = []; try { seen = JSON.parse(localStorage.getItem('tide.deepSeen') || '[]'); } catch(e){}
+    const base = data.filter(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of); let seen = []; try { seen = JSON.parse(localStorage.getItem('tide.deepSeen') || '[]'); } catch(e){}
     const fresh = base.filter(id => !seen.includes(id)); if (fresh.length && seen.length) ticker('🔬 蔚博士在黑淵裂縫發現了新的深海生物！開潛水艇下去找找看');
     try { localStorage.setItem('tide.deepSeen', JSON.stringify(base)); } catch(e){} } catch(e){} }
 setInterval(() => { if (Cloud.on && Cloud.sb && (!DeepQ.at || Date.now() - DeepQ.at > 30 * 60000)) deepQSync(); }, 5000);
@@ -1726,8 +1742,8 @@ function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScala
 /* v226 精緻魚模型（Meshy 付費方案生成）：一般的作法——減到約 5,000 面、從側面重新烘一張 1024×512 貼圖（左半邊右側身、右半邊左側身），
    頭朝 +x、長度跟原本的模型一樣；白化版在載入時把貼圖換成粉白色（保留明暗）。還沒載好的時候先用原本的模型，載好後換掉。
    要加新的魚：在 MFISH.defs 加一行 { file, scale（讓長度跟原本一樣）, alb（白化版的 id）}。 */
-var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' } }, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
-for (const [k, d] of Object.entries(MFISH.defs)){ MFISH.of[k] = { k, albino:false }; if (d.alb) MFISH.of[d.alb] = { k, albino:true }; MFISH.wait[k] = new Set();
+var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' }, barreleye:{ file:'models/barreleye.glb', scale:0.5, alb:'barreleye_albino', glow:'barreleye_glow', lift:0.35 } }, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
+for (const [k, d] of Object.entries(MFISH.defs)){ MFISH.of[k] = { k, albino:false }; if (d.alb) MFISH.of[d.alb] = { k, albino:true }; if (d.glow) MFISH.of[d.glow] = { k, glow:true }; MFISH.wait[k] = new Set();
   new GLTFLoader().loadAsync(d.file).then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
     const geo = mesh.geometry.clone(); geo.scale(d.scale, d.scale, d.scale); geo.computeBoundingSphere(); MFISH.geo[k] = geo; MFISH.tex[k] = mesh.material.map; MFISH.tex[k].colorSpace = THREE.SRGBColorSpace;
     for (const fish of [...MFISH.wait[k]]){ try { mfishFill(fish); } catch(e){ console.warn('mfish', e); } } MFISH.wait[k].clear(); }).catch(e => console.warn('mfish ' + k, e)); }
@@ -1735,10 +1751,16 @@ function mfishAlbinoTex(k){ const key = k + '_a'; if (MFISH.tex[key]) return MFI
   const d = c.getImageData(0, 0, cv.width, cv.height), px = d.data;
   for (let i = 0; i < px.length; i += 4){ const l = (px[i] * 0.3 + px[i + 1] * 0.55 + px[i + 2] * 0.15) / 255, t = Math.pow(l, 0.6); px[i] = 236 + 19 * t; px[i + 1] = 206 + 46 * t; px[i + 2] = 204 + 46 * t; }   /* 深的地方變淡粉紅、白的地方還是白 */
   c.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.flipY = src.flipY; return (MFISH.tex[key] = t); }
-function mfishMat(k, albino){ const key = k + (albino ? '_a' : ''); if (MFISH.mats[key]) return MFISH.mats[key];
-  const m = new THREE.MeshStandardMaterial({ map: albino ? mfishAlbinoTex(k) : MFISH.tex[k], roughness:0.5, metalness:0.05, side:THREE.DoubleSide });
+/* v242 螢光變種：身體壓暗，原本亮的地方（鰭、透明的頭）換成螢光色，再拿同一張圖當自己發的光 */
+function mfishGlowTex(k){ const key = k + '_g'; if (MFISH.tex[key]) return MFISH.tex[key]; const src = MFISH.tex[k], img = src.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const c = cv.getContext('2d'); c.drawImage(img, 0, 0);
+  const g = new THREE.Color((FISH_BY_ID[MFISH.defs[k].glow] || {}).color || '#7affd0'), d = c.getImageData(0, 0, cv.width, cv.height), px = d.data;
+  for (let i = 0; i < px.length; i += 4){ const l = (px[i] * 0.3 + px[i + 1] * 0.55 + px[i + 2] * 0.15) / 255, t = Math.pow(Math.max(0, l - 0.35) / 0.65, 1.4); px[i] = 14 + 241 * g.r * t; px[i + 1] = 16 + 239 * g.g * t; px[i + 2] = 22 + 233 * g.b * t; }
+  c.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.flipY = src.flipY; return (MFISH.tex[key] = t); }
+function mfishMat(k, albino, glow){ const key = k + (albino ? '_a' : '') + (glow ? '_g' : ''); if (MFISH.mats[key]) return MFISH.mats[key];
+  const m = new THREE.MeshStandardMaterial({ map: albino ? mfishAlbinoTex(k) : glow ? mfishGlowTex(k) : MFISH.tex[k], roughness:0.5, metalness:0.05, side:THREE.DoubleSide });
+  if (glow){ m.emissive = new THREE.Color('#ffffff'); m.emissiveMap = m.map; m.emissiveIntensity = 0.8; } else if (MFISH.defs[k].lift){ m.emissive = new THREE.Color('#ffffff'); m.emissiveMap = m.map; m.emissiveIntensity = MFISH.defs[k].lift; }   /* 薄薄的鰭和透明的頭打光後太暗，自己補一點亮 */
   const mv = MFISH.defs[k].move || 'side'; m.onBeforeCompile = fishMat('mfish_' + mv, 'Body', '#888888', false, mv, 'MF').onBeforeCompile; m.customProgramCacheKey = () => 'mfish' + mv; return (MFISH.mats[key] = m); }   /* 鯨魚尾巴上下擺（vert），鯊魚左右擺（side） */
-function mfishFill(fish){ const o = fish.userData.mf; for (const c of [...fish.children]) fish.remove(c); const b = new THREE.Mesh(MFISH.geo[o.k], mfishMat(o.k, o.albino)); b.castShadow = true; fish.add(b); }
+function mfishFill(fish){ const o = fish.userData.mf; for (const c of [...fish.children]) fish.remove(c); const b = new THREE.Mesh(MFISH.geo[o.k], mfishMat(o.k, o.albino, o.glow)); b.castShadow = true; fish.add(b); }
 function makeMFish(id, scale){ const o = MFISH.of[id];
   if (!MFISH.geo[o.k]){ let fish; try { fish = makeModelFish(FISH_BY_ID[id], scale); } catch(e){ fish = makeFish(FISH_BY_ID[id].color, scale); } fish.userData.mf = o; MFISH.wait[o.k].add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.mf = o; mfishFill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
@@ -10551,7 +10573,7 @@ function renderTab(){
       '港口阿海旁邊有潛水艇碼頭：跟蔚博士租潛水艇（Lv.15 以上、4500 金幣，租一次以後免費）。按「出發」就會開進港口外海底下的深海。',
       '搖桿前後＝前進後退、左右＝轉向；⬇ 下潛、⬆ 上浮。深海很暗，只看得到前燈照到的地方。往前開到大陸棚的盡頭，看看會發現什麼。',
       '停下來（深度 200 公尺以下）可以按「🎣 放線」釣深海魚：按住收線，張力太高線會斷、太鬆魚會脫鉤。釣到的魚先放在船艙，按「⚓ 回港」才放進魚缸。',
-      '🐙 裂縫越深，住著越奇怪的生物——都是真實世界的深海裡真的有的。蔚博士每個星期五會在裂縫裡發現一種新的，發現了村子會通知大家；有哪些、長什麼樣子，就要自己開潛水艇下去找了。',
+      '🐙 裂縫越深，住著越奇怪的生物——都是真實世界的深海裡真的有的。蔚博士每個星期五會在裂縫裡發現一種新的，發現了村子會通知大家；有哪些、長什麼樣子，就要自己開潛水艇下去找了。運氣好的話，還會遇到牠們很少見的變種，有的全身發光。',
       '新魚：深海燈籠魚、吸血鬼烏賊（各有白化），還有白化深海鮟鱇；皇帶魚在岩壁中段、大王魷魚在 2500 公尺以下的溝底。偶爾會有抹香鯨從頭頂游過、擋住所有的光。',
       '耐壓：超過耐壓深度會開始警告，30 秒內不上浮會被強制拉回港，船艙的魚全部不見。電池：用完會自動回港，魚會保留。',
       '升級（潛水艇碼頭）：耐壓 800→1500→3000 公尺、電池 5→8→12 分鐘、探照燈 25→40→60 公尺；要金幣加上深海燈籠魚、水滴魚、吸血鬼烏賊，或在裂縫裡撿的深海礦石、古代船錨。',
@@ -11169,7 +11191,7 @@ function subBuild(){
     const N = 160, bg = new THREE.BufferGeometry(), bp = new Float32Array(N * 3); for (let k = 0; k < N; k++){ bp[k * 3] = (rnd() - 0.5) * 9; bp[k * 3 + 1] = rnd() * 1.6; bp[k * 3 + 2] = (rnd() - 0.5) * 2.8; } bg.setAttribute('position', new THREE.BufferAttribute(bp, 3));
     const sw = new THREE.Points(bg, new THREE.PointsMaterial({ color:'#f4e4d4', size:0.22, transparent:true, opacity:0.95 })); bone.add(sw); Sub.swarm = sw;
     }   /* 端足類用一大群小點表示（單獨一隻的模型三角形太多） */
-  for (const id of DeepQ.got){ if (/_albino$/.test(id)) continue; const d = FISH_BY_ID[id]; if (!d) continue; const k = clamp((d.depth - 200) / 2800, 0, 1), y0 = -k * 120;   /* 已經解鎖的深海生物也會在牠住的深度游 */
+  for (const id of DeepQ.got){ if (FISH_BY_ID[id] && FISH_BY_ID[id].of) continue; const d = FISH_BY_ID[id]; if (!d) continue; const k = clamp((d.depth - 200) / 2800, 0, 1), y0 = -k * 120;   /* 已經解鎖的深海生物也會在牠住的深度游 */
     for (let n = 0; n < 2; n++){ const x = -40 + rnd() * 80, z = subEdge(x) + subWidth(x) * (0.3 + rnd() * 0.4), yy = Math.max(subH(x, z) + 1, y0 - rnd() * 8); crit(id, d.rarity === '傳說' ? 3 : 1.3, x, yy, z, 2 + rnd() * 3, 0.15, true); } }
   { const xm = new THREE.MeshLambertMaterial({ color:'#b8ad98' }); for (let i = 0; i < 12; i++){ const [x, y, z] = floorAt(rnd(), rnd()); const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + rnd() * 0.3, 1), xm); m.position.set(x, y + 0.15, z); m.scale.y = 0.7; g.add(m); } }
   // 深海燈籠魚的魚群：一條魚只有十幾個三角形，用 InstancedMesh 一次畫完
