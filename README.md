@@ -133,6 +133,7 @@ supabase/092_secret_chum_public.sql 🤫 祕密窩點大家看得到：secret_ch
 supabase/093_more_tops.sql 👕 衣服新款式：價目表加上 14 款上衣（V 領、POLO、背心、寬版、口袋、吸濕排汗、粗細條紋、長版、童趣、大學 T、連帽 T、尼龍外套），其他價格不變。
 supabase/094_cloaks.sql 🧣 斗篷：價目表加上 4 款斗篷（紅、深藍、墨綠、黑，各 1200），其他價格不變。
 supabase/095_species_sync.sql 🐟 魚種補齊：把遊戲裡每一種魚補進 fish_species（藍鯨、苔森之島的魚、節慶魚之前沒加到，釣到記不起來、拍照收不進圖鑑），已經有的不改。由 tools/gen_species_sql.py 產生。
+supabase/096_fishpack.sql 🎒 漁夫冒險背包：價目表加上 back_fishpack（800），其他價格不變。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
 sw.js               離線備份：網路不穩時也能打開

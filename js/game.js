@@ -1869,7 +1869,7 @@ const GEAR = [
   ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
   ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
   ['acc_none','沒有配件',0,'🙂'],['acc_goggles','潛水鏡',600,'🤿'],['acc_scarf','紅圍巾',300,'🧣'],['acc_scarf_black','黑圍巾',320,'⚫'],['acc_scarf_white','白圍巾',320,'⚪'],['acc_scarf_navy','深藍圍巾',350,'🔵'],['acc_scarf_pink','粉紅圍巾',350,'🩷'],['acc_scarf_yellow','芥末黃圍巾',350,'🟡'],['acc_scarf_green','森林綠圍巾',350,'🟢'],['acc_scarf_grey','灰色毛圍巾',380,'🩶'],['acc_scarf_brown','焦糖圍巾',380,'🟤'],['acc_scarf_plaid','紅黑格紋圍巾',500,'🟥'],['acc_scarf_stripe','藍白條紋圍巾',500,'🔷'],['acc_scarf_rainbow','彩虹圍巾',900,'🌈'],['acc_bowtie','領結',350,'🎀'],['acc_glasses','圓框眼鏡',450,'👓'],['acc_shell','貝殼項鍊',600,'🐚'],['acc_lei','花圈項鍊',700,'🌸'],
-  ['back_none','沒有背飾',0,'🙂'],['back_cloak_r','紅色斗篷',1200,'🧣'],['back_cloak_n','深藍斗篷',1200,'🌌'],['back_cloak_g','墨綠斗篷',1200,'🌲'],['back_cloak_k','黑色斗篷',1200,'🖤'],['back_kcape_m','紫紅短披風',900,'🟣'],['back_kcape_r','紅色短披風',900,'🔴'],['back_kcape_b','咖啡色短披風',800,'🟤'],['back_kcape_g','綠色短披風',900,'🟢'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
+  ['back_none','沒有背飾',0,'🙂'],['back_fishpack','漁夫冒險背包',800,'🎒'],['back_cloak_r','紅色斗篷',1200,'🧣'],['back_cloak_n','深藍斗篷',1200,'🌌'],['back_cloak_g','墨綠斗篷',1200,'🌲'],['back_cloak_k','黑色斗篷',1200,'🖤'],['back_kcape_m','紫紅短披風',900,'🟣'],['back_kcape_r','紅色短披風',900,'🔴'],['back_kcape_b','咖啡色短披風',800,'🟤'],['back_kcape_g','綠色短披風',900,'🟢'],['back_bag','小背包',400,'🎒'],['back_basket','魚簍',500,'🧺'],['back_balloon','魚魚氣球',800,'🎈'],['back_cape','英雄披風',1500,'🦸'],['back_wings','天使翅膀',3000,'🪽'],
   ['face_normal','普通',0,'🙂'],['face_happy','笑咪咪',200,'😊'],['face_sleepy','想睡覺',200,'😪'],['face_wink','眨眼',300,'😉'],['face_cool','墨鏡',600,'😎'],['face_heart','愛心眼',700,'😍'],['face_star','星星眼',900,'🤩'],
   // 愛海商店：只能用放流得到的愛海點數換（第 5 欄是點數）
   // 節慶限定（083）：只有節日期間買得到（第 6 欄是哪個節日），買到的永遠保留
@@ -1987,6 +1987,7 @@ function goggleMat(){ if (GOGGLE.mat) return GOGGLE.mat;
    模型的顏色烘在頂點上（models/scuba_*.glb），載好前先用原本程式做的面鏡和氧氣瓶。 */
 const SCUBA = { tank:null, mask:null, fin:null, mat:null };
 for (const k of ['tank', 'fin']) new GLTFLoader().loadAsync('models/scuba_' + k + '.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.userData.shared = true; SCUBA[k] = geo; }).catch(e => console.warn('scuba ' + k, e));
+SCUBA.packWait = new Set(); new GLTFLoader().loadAsync('models/fishpack.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.userData.shared = true; SCUBA.pack = geo; for (const av of [...SCUBA.packWait]){ try { if (av.packWant) applyGear(av, av.packWant); } catch(e){} } SCUBA.packWait.clear(); }).catch(e => console.warn('fishpack', e));
 function scubaMat(){ return SCUBA.mat || (SCUBA.mat = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.45, metalness:0.08, side:THREE.DoubleSide })); }
 TOP_STYLE.__wet = [3, 2, 0, 0, 0, 1, 0, 0];
 function scubaMask(){ if (!SCUBA.maskG){ const g = new THREE.Group(), blk = new THREE.MeshStandardMaterial({ color:'#1b1e24', roughness:0.6 }), frame = new THREE.MeshStandardMaterial({ color:'#2f8fe0', roughness:0.35, metalness:0.15 }),
@@ -2123,6 +2124,7 @@ function applyGear(av, gear){
     case 'acc_lei': { const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#ff9f43']; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.045, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.21, 1.06 - Math.max(0, Math.sin(a)) * 0.1, Math.sin(a) * 0.19); } break; }
   }
   // ---- 背飾 ----
+  if (gear.back === 'back_fishpack'){ if (!SCUBA.pack){ av.packWant = gear; SCUBA.packWait.add(av); } else { const m = mk(SCUBA.pack, scubaMat(), 0, 0.8, -0.24); m.scale.setScalar(0.3); } }   /* v236 漁夫冒險背包（Meshy）：帆布包、上面捆著綠色睡墊 */
   if (CLOAK.col[gear.back]){ if (!CLOAK.geo){ av.cloakWant = gear; CLOAK.wait.add(av); } else { const [c0, c1] = CLOAK.col[gear.back], m = mk(CLOAK.geo, cloakMat(c0, c1), 0, 1.085, 0.0); m.scale.set(0.66, 0.44, 0.66); m.position.y -= CLOAK.top * 0.44 - 0.03; m.position.z -= CLOAK.cz * 0.66 + 0.01; } }
   switch (gear.back){
     case 'back_fin': { const gr = M('#7f95a6', 0.55), wh = M('#e9eef2', 0.6);
@@ -10489,7 +10491,7 @@ function renderTab(){
       '海邊商店：把魚缸裡的魚賣掉，越稀有、越重越值錢。',
       '釣具店：釣竿（越好越不容易斷線、收線越快、稀有傳說機率越高）、魚餌（每拋一次用掉一個）、窩料。',
       '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情加起來快 100 件，可以先試穿看看，大家都看得到你的打扮。',
-      '配件和背飾也有用 3D 模型做的：4 色斗篷（披在肩膀上、走路跟著身體動）、潛水鏡（鏡片、綁帶、呼吸管）。',
+      '配件和背飾也有用 3D 模型做的：4 色斗篷（披在肩膀上、走路跟著身體動）、潛水鏡（鏡片、綁帶、呼吸管）、漁夫冒險背包。',
       '潛水的時候會自動換上整套潛水裝備：深藍色潛水衣、面鏡和呼吸管、背上的氧氣瓶、腳上的蛙鞋，上岸就換回原本的衣服。',
       '衣服有很多款：V 領、POLO 衫、背心、寬版、口袋 T、吸濕排汗、粗細條紋、長版 T、小魚童趣 T，還有長袖的大學 T、連帽 T、連帽外套、尼龍外套。衣服的顏色在「外觀」裡換，每一款都跟著變。',
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
