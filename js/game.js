@@ -488,8 +488,14 @@ const FISH_MOVES = {
   flap: 'float wk = clamp((abs(position.y) - 0.45) / 0.5, 0.0, 1.0);\n transformed.z += sin(uFishT * 2.6) * 0.16 * wk * sign(position.y);',
   eel:  'float wk = clamp((0.6 - position.x) / 1.3, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 7.0) * 0.07 * (0.25 + wk);',
   wing: 'float wk = clamp((abs(position.z) - 0.12) / 0.4, 0.0, 1.0);\n transformed.y += sin(uFishT * 3.0 - abs(position.z) * 2.0) * 0.13 * wk;',
+  squid: 'float wk = clamp((-position.x - 0.05) / 0.6, 0.0, 1.0);\n transformed.y += sin(uFishT * 3.2 + position.x * 9.0 + position.z * 20.0) * 0.05 * wk * wk; transformed.z += cos(uFishT * 2.6 + position.x * 7.0 + position.y * 15.0) * 0.04 * wk * wk; transformed.yz *= 1.0 + sin(uFishT * 2.0) * 0.04 * (1.0 - wk);',   /* v229 大王魷魚：腳一波一波地擺、身體一縮一脹（外套膜朝 +x） */
+  // v229 螃蟹：八隻腳輪流抬起來往前踩（左右兩邊、前後腳相位錯開），鉗子一開一合；身體不擺
+  crab: 'float lg = smoothstep(0.38, 0.5, abs(position.z)) * step(position.y, 0.12) * step(position.x, 0.2); float cl = smoothstep(0.42, 0.5, position.x) * smoothstep(0.2, 0.3, abs(position.z));\n float ph = uFishT * 7.0 + position.x * 22.0 + step(0.0, position.z) * 3.14159;\n transformed.y += max(0.0, sin(ph)) * 0.07 * lg * smoothstep(0.38, 0.75, abs(position.z)); transformed.x += cos(ph) * 0.035 * lg;\n transformed.y += sin(uFishT * 2.5 + step(0.0, position.z) * 1.7) * 0.03 * cl * smoothstep(0.5, 0.72, position.x);',
+  // 龍蝦、螯蝦：尾巴上下拍（跟 vert 一樣）＋ 細腳輪流划、觸角左右晃
+  lobster: 'float wk = clamp((-position.x - 0.1) / 0.7, 0.0, 1.0);\n transformed.y += sin(uFishT * 4.0 + position.x * 3.0) * 0.08 * wk * wk;\n float lg = step(position.y, -0.1) * smoothstep(0.1, 0.18, abs(position.z)) * step(-0.05, position.x) * step(position.x, 0.3); transformed.y += max(0.0, sin(uFishT * 8.0 + position.x * 30.0 + step(0.0, position.z) * 3.14)) * 0.035 * lg;\n float an = smoothstep(0.7, 1.15, position.x); transformed.z += sin(uFishT * 2.2 + position.z * 4.0) * 0.06 * an;',
   marlin: 'float wk = clamp((-position.x - 0.15) / 0.55, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 4.0) * 0.1 * wk * wk;',   /* 只有後 1/3 擺動，前段和劍不動 */
 };
+for (const [id, st] of Object.entries(FISH_STYLE)){ const gen = FISH_SPECS[id] && FISH_SPECS[id].gen; if (st.shape === 'Crab' || gen === 'crab') st.move = 'crab'; else if (st.shape === 'Lobster') st.move = 'lobster'; }   /* v229：螃蟹、龍蝦的腳會動 */
 function fishMat(id, part, color, glow, move, shape){
   move = move || 'side';
   const key = id + '/' + part + (shape === 'Marlin2' ? '/2' : ''); if (fishMatCache[key]) return fishMatCache[key];
@@ -1660,11 +1666,11 @@ function octoMat(){ if (OCTO.mat) return OCTO.mat;
         else if (t > -1.5){ float s = 1.0 + 0.07 * sin(uFishT * 1.9); vec3 c0 = vec3(-0.14, 0.25, 0.0); transformed = c0 + (transformed - c0) * vec3(s, 1.0 + (s - 1.0) * 0.5, s); }
       }`); };
   m.customProgramCacheKey = () => 'octo226'; return (OCTO.mat = m); }
-function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScalar((scale || 1) * 1.05); const m = new THREE.Mesh(octoGeo(), octoMat()); m.castShadow = true; fish.add(m); fish.userData.tail = new THREE.Object3D(); return fish; }
+function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScalar((scale || 1) * 1.05); const m = new THREE.Mesh(octoGeo(), octoMat()); m.position.y = -0.32; m.castShadow = true; fish.add(m);   /* v229：往下移，腳貼在海底（以前浮在海底上面） */ fish.userData.tail = new THREE.Object3D(); return fish; }
 /* v226 精緻魚模型（Meshy 付費方案生成）：一般的作法——減到約 5,000 面、從側面重新烘一張 1024×512 貼圖（左半邊右側身、右半邊左側身），
    頭朝 +x、長度跟原本的模型一樣；白化版在載入時把貼圖換成粉白色（保留明暗）。還沒載好的時候先用原本的模型，載好後換掉。
    要加新的魚：在 MFISH.defs 加一行 { file, scale（讓長度跟原本一樣）, alb（白化版的 id）}。 */
-var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' } }, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
+var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' } }, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
 for (const [k, d] of Object.entries(MFISH.defs)){ MFISH.of[k] = { k, albino:false }; if (d.alb) MFISH.of[d.alb] = { k, albino:true }; MFISH.wait[k] = new Set();
   new GLTFLoader().loadAsync(d.file).then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
     const geo = mesh.geometry.clone(); geo.scale(d.scale, d.scale, d.scale); geo.computeBoundingSphere(); MFISH.geo[k] = geo; MFISH.tex[k] = mesh.material.map; MFISH.tex[k].colorSpace = THREE.SRGBColorSpace;
@@ -6873,6 +6879,10 @@ function diveSiteOk(k){ return DIVE_SITES[k].need.every(hasDive); }
    海底有冒泡的「氣泡口」，游進泡泡柱裡會補氧氣。相鄰關係照地圖：港口 ↔ 珊瑚礁（西邊長橋那頭）、港口 ↔ 沉船深海（外海往下）、珊瑚礁 ↔ 海底洞穴、沉船 ↔ 海底洞穴、外海 ↔ 港口／沉船 */
 const DIVE_LINKS = { harbor:['reef', 'wreck'], reef:['harbor', 'cave'], wreck:['harbor', 'cave'], cave:['reef', 'wreck'], offshore:['harbor', 'wreck'] };
 function diveExtras(){ const g = Dive.group; if (!g) return; const X = DIVE.x, Z = DIVE.z, R = DIVE.r, links = DIVE_LINKS[Dive.site] || [];
+  Dive.fight = null; if (Dive.site === 'wreck' && Math.random() < 0.3){ try {   /* v229 深海大戰：抹香鯨和大王魷魚纏在一起（真的抹香鯨會潛到深海獵大王魷魚，身上留著吸盤的圓形疤） */
+    const fg = new THREE.Group(), wh = fishModel(FISH_BY_ID.sperm, 9), sq = fishModel(FISH_BY_ID.giantsquid, 5); fg.add(wh); wh.position.x = -3.5; fg.add(sq); sq.position.set(4.6, 0.4, 0); sq.rotation.y = Math.PI; sq.rotation.z = 0.25;   /* 魷魚面對鯨魚的頭，腳纏上去 */
+    const a = Math.random() * 6.28, r = DIVE.r * 0.45; fg.position.set(DIVE.x + Math.cos(a) * r, DIVE.y + DIVE.top * 0.45, DIVE.z + Math.sin(a) * r); fg.rotation.order = 'YXZ'; fg.rotation.y = a + 1.2; g.add(fg); Dive.fight = { g: fg, sq, y0: fg.position.y, told: false };
+  } catch(e){} }
   Dive.bw = null; if (Dive.site === 'offshore' && (bwWin(bossNow()) >= 0 || Math.random() < 0.4)){ try { const a = Math.random() * 6.28, m = fishModel(FISH_BY_ID.bluewhale, 16); m.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a)); g.add(m); Dive.bw = { m, dx: Math.cos(a), dz: Math.sin(a), px: -Math.sin(a) * 6, pz: Math.cos(a) * 6, t0: fishTime.value - 20 }; } catch(e){} }
   Dive.portals = []; Dive.vents = [];
   links.forEach((to, i) => { const a = (i === 0 ? -0.6 : 2.4) + (Dive.site.length % 3) * 0.3, x = X + Math.cos(a) * (R - 3.5), z = Z + Math.sin(a) * (R - 3.5), y = diveBed(x, z), S2 = DIVE_SITES[to], ok = diveSiteOk(to);
@@ -6888,6 +6898,8 @@ function diveExtras(){ const g = Dive.group; if (!g) return; const X = DIVE.x, Z
     const N = 40, bg = new THREE.BufferGeometry(), bp = new Float32Array(N * 3); for (let i = 0; i < N; i++){ bp[i * 3] = (Math.random() - 0.5) * 0.6; bp[i * 3 + 1] = Math.random() * DIVE.top; bp[i * 3 + 2] = (Math.random() - 0.5) * 0.6; } bg.setAttribute('position', new THREE.BufferAttribute(bp, 3));
     const pts = new THREE.Points(bg, new THREE.PointsMaterial({ color:'#e8fbff', size:0.22, transparent:true, opacity:0.85, depthWrite:false })); vg.add(pts); Dive.vents.push({ x, z, y, pts }); } }
 function diveExtrasUpdate(dt, t){
+  if (Dive.fight){ const F = Dive.fight, k = t * 0.9; F.g.rotation.x = Math.sin(k) * 0.55 + Math.sin(k * 2.3) * 0.15; F.g.rotation.z = Math.sin(k * 0.7) * 0.25; F.g.position.y = F.y0 + Math.sin(k * 0.5) * 1.2; F.sq.rotation.z = 0.25 + Math.sin(t * 3.1) * 0.12;   /* 鯨魚甩頭翻滾、魷魚死命纏住 */
+    if (!F.told && Math.hypot(me.pos.x - F.g.position.x, me.pos.z - F.g.position.z) < 22){ F.told = true; flash('🐋🦑 你目擊了抹香鯨大戰大王魷魚！快拍照', 2.6); } }
   if (Dive.bw){ const B = Dive.bw, u = ((t - B.t0) % 110) / 110, on = u < 0.7; B.m.visible = on; if (on){ const v = u / 0.7; B.m.position.set(DIVE.x + B.dx * (v - 0.5) * DIVE.r * 2.6 + B.px, DIVE.y + DIVE.top - 3.5, DIVE.z + B.dz * (v - 0.5) * DIVE.r * 2.6 + B.pz); if (!B.sang && v > 0.3){ B.sang = true; whaleSong(0.8); } } else B.sang = false; }   /* v228：外海潛水，頭頂偶爾有藍鯨游過 */
   for (const v of Dive.vents || []){ const a = v.pts.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (1.2 + (i % 5) * 0.2); a[i] += Math.sin(t * 3 + i) * dt * 0.1; if (a[i + 1] > DIVE.top + (DIVE.y - v.y)) a[i + 1] = 0.3; } v.pts.geometry.attributes.position.needsUpdate = true;
     if (Math.hypot(me.pos.x - v.x, me.pos.z - v.z) < 1.4 && Dive.o2 < Dive.o2max){ Dive.o2 = Math.min(Dive.o2max, Dive.o2 + dt * 12); if (!Dive.ventTold || now() - Dive.ventTold > 6){ Dive.ventTold = now(); flash('🫧 吸到氣泡口的空氣，氧氣慢慢補回來', 1.2); } } }
@@ -7302,7 +7314,7 @@ function updateQuestNpcs(dt, t){
     const d = Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z);
     const wd = worldDrive(q.f, dt, t);
     if (wd){}
-    else if (d < 40){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
+    else if (d < 62){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
     else q.f.tag.style.display = 'none';
     const qs = Quests.list && Quests.list.find(x => x.who === q.who), mark = !Cloud.on ? '' : !qs ? '' : qs.done ? '✔️' : '❗';
     if (!wd && d < 7 && t > (q.talkAt || 0) && !(q.f.replyUntil > now())){ q.talkAt = t + rand(14, 24); const L = q.f.lines; if (L.length){ const ML = q.f.wid && Math.random() < 0.3 ? worldMemLines(q.f) : []; q.f.say(ML.length ? ML[Math.floor(Math.random() * ML.length)] : L[Math.floor(Math.random() * L.length)], '', 6); q.mark = null; q.talkUntil = now() + 6.2; } }   /* 走近會講話，講完再把 ❗ 放回去 */
@@ -10108,10 +10120,10 @@ function renderWorldGift(body){ const k = World.giftTo; body.appendChild(el('div
 function worldSummary(){ if (!World.rows || !World.places) return []; return Object.keys(WORLD_WHO).filter(k => World.rows[k]).map(k => { const wp = worldPose(k), r = World.rows[k], pl = World.places[r.place] || {}; return { id:k, name:WORLD_WHO[k], icon: wp && wp.walk ? '🚶' : (WORLD_ACT[r.act] || ['❔'])[0], text: wp && wp.walk ? `正在走去${pl.name || ''}（要${(WORLD_ACT[r.act] || ['', ''])[1]}）` : `在${pl.name || ''}${(WORLD_ACT[r.act] || ['', ''])[1]}`, x: wp ? wp.x : pl.x, z: wp ? wp.z : pl.z }; }); }
 
 // 手機效能：畫質「低／中」時，離鏡頭太遠的 NPC 和客人先不畫（每個角色有 20～40 個零件，很吃效能）
-const AV_CULL = { low: 30, mid: 48 };
+const AV_CULL = { low: 40, mid: 62 };   /* v229：放遠一點，而且「消失」要再遠 8 公尺（來回走的時候不會一直閃） */
 function cullAvatars(){
   const R = AV_CULL[Quality.tier]; if (!R) return; const cx = camera.position.x, cz = camera.position.z, R2 = R * R;
-  const far = f => { const dx = f.pos.x - cx, dz = f.pos.z - cz; return dx * dx + dz * dz > R2; };
+  const R2o = (R + 8) * (R + 8), far = f => { const dx = f.pos.x - cx, dz = f.pos.z - cz, d2 = dx * dx + dz * dz; return f._culled ? d2 > R2 : d2 > R2o; };
   const own = f => { if (f.wHide){ f.av.g.visible = false; if (f.blob) f.blob.visible = false; return; } const fr = far(f); if (fr && f.av.g.visible){ f.av.g.visible = false; f._culled = true; } else if (!fr && f._culled){ f.av.g.visible = true; f._culled = false; } if (f.blob) f.blob.visible = f.av.g.visible; };
   for (const n of npcs) own(n); for (const c of customers) if (c.f) own(c.f);
   for (const q of questNpcs) if (q.f.av.g.visible && far(q.f)){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; }
@@ -10453,6 +10465,8 @@ function renderTab(){
     sec('🦈 魚的生態', [
       '🐋 藍鯨：每 20 分鐘裡有 3 分鐘會浮到港口外海，所有人同時看得到。牠會連續噴好幾口又直又高的水柱、偶爾側身衝向一團磷蝦吞下去，靠近還聽得到鯨歌。藍鯨浮上來的這 3 分鐘，在港口外海釣到藍鯨（和超稀有的白化藍鯨）的機率是平常的 5 倍。',
       '🤿 在外海潛水，偶爾會有巨大的藍鯨從頭頂慢慢游過。座頭鯨也會在遠處浮上來噴水。',
+      '🦀 螃蟹、龍蝦的腳會一隻一隻輪流動；章魚的八隻腳會一波一波地扭。',
+      '🦑 在沉船深海潛水，偶爾會目擊抹香鯨和大王魷魚纏鬥（真的抹香鯨身上常有魷魚吸盤留下的圓形疤痕，遊戲裡的抹香鯨也有）。',
       '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
       '水面上的魚群（沙丁魚、丁香魚這些）大家看到的是同一群：同一個時間、同一個地方，朋友也會看到一樣的魚群在一樣的位置游，可以約一起去追。',
       '魚缸、箱網、水族館裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
