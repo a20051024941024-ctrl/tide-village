@@ -533,7 +533,7 @@ function makeModelFish(f, scale){
   return fish;
 }
 function fishModel(f, scale){
-  if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin2(scale, f.id !== 'marlin');
+  if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
 }
@@ -1513,6 +1513,34 @@ Marlin2.bodyGeo = function(){ if (Marlin2.geo) return Marlin2.geo;
   for (let i = 0; i < M; i++) for (let j = 0; j < N; j++){ const a = i * (N + 1) + j, b = a + N + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); Marlin2.geo = g; return g; };
 Marlin2.finGeo = function(pts, depth){ const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) sh.lineTo(pts[k][0], pts[k][1]); sh.closePath(); return new THREE.ShapeGeometry(sh); };   /* 平面雙面，省三角形 */
+/* 深藍旗魚 v221：造型用 Meshy 生成的模型（CC BY 4.0，見 CREDITS.md），25 萬面減到約 4,000 面、自己上色（models/marlin.glb）。
+   頂點色：深藍背、藍側、銀白肚、深藍鰭；_alb 是白化版的顏色；_sw 標出哪裡畫直條紋（條紋在 shader 裡畫，比較清楚）。
+   模型還沒載好的時候先用 v201 的做法 3，載好後換掉。 */
+const Marlin3 = { geo:null, wait:new Set(), mats:{} };
+new GLTFLoader().loadAsync('models/marlin.glb').then(g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); geo.computeVertexNormals(); geo.computeBoundingSphere(); Marlin3.geo = geo;
+  for (const fish of [...Marlin3.wait]){ try { marlin3Fill(fish); } catch(e){ console.warn('marlin3', e); } } Marlin3.wait.clear(); }).catch(e => console.warn('marlin glb', e));
+Marlin3.mat = function(albino){ const k = albino ? 'a' : 'n'; if (Marlin3.mats[k]) return Marlin3.mats[k];
+  const m = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.38, metalness:0.15, side:THREE.DoubleSide }); const base = fishMat('marlin', 'Body', '#2e62c8', false, 'marlin', 'Marlin2').onBeforeCompile;
+  m.onBeforeCompile = sh => { base(sh); if (CLASSIC) return;
+    sh.vertexShader = 'attribute float _sw;\nvarying float vSw;\n' + sh.vertexShader.replace('void main() {', 'void main() {\n vSw = _sw;');
+    sh.fragmentShader = 'varying float vSw;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n { float sx = (vFishP.x + 0.42) / 0.84 * 11.0; float sb = (1.0 - smoothstep(0.1, 0.2, abs(fract(sx) - 0.5))) * clamp(vSw * 1.6, 0.0, 1.0); diffuseColor.rgb = mix(diffuseColor.rgb, ' + (albino ? 'vec3(0.62, 0.78, 1.0)' : 'vec3(0.42, 0.88, 1.0)') + ', sb * 0.6); }'); };
+  m.customProgramCacheKey = () => 'marlin3' + (CLASSIC ? 'c' : '');
+  return (Marlin3.mats[k] = m); };
+Marlin3.geoFor = function(albino){ if (!albino) return Marlin3.geo; if (Marlin3.geoA) return Marlin3.geoA;
+  const g = Marlin3.geo.clone(); if (g.getAttribute('_alb')) g.setAttribute('color', g.getAttribute('_alb')); return (Marlin3.geoA = g); };
+Marlin3.eye = function(){ if (Marlin3.eyeAt) return Marlin3.eyeAt;   /* 從側面往身體打一條線，找頭側面的位置貼眼睛 */
+  const mesh = new THREE.Mesh(Marlin3.geo, new THREE.MeshBasicMaterial({ side:THREE.DoubleSide })), rc = new THREE.Raycaster(), ex = 0.5, ey = 0.0;
+  rc.set(new THREE.Vector3(ex, ey, 1), new THREE.Vector3(0, 0, -1)); const h = rc.intersectObject(mesh)[0];
+  return (Marlin3.eyeAt = { x: ex, y: ey, z: h ? h.point.z : 0.09 }); };
+function marlin3Fill(fish){ const albino = fish.userData.m3albino;
+  for (const c of [...fish.children]) fish.remove(c);
+  const body = new THREE.Mesh(Marlin3.geoFor(albino), Marlin3.mat(albino)); body.castShadow = true; fish.add(body);
+  const e = Marlin3.eye(); if (!Marlin3.eyeM) Marlin3.eyeM = [new THREE.MeshStandardMaterial({ color:'#f8fbff', roughness:0.35 }), new THREE.MeshStandardMaterial({ color:'#0b0e14', roughness:0.25 }), new THREE.MeshBasicMaterial({ color:'#ffffff' })];
+  for (const sz of [-1, 1]){ const ry = sz > 0 ? 0 : Math.PI;
+    for (const [r, k, dz, dx, dy, seg] of [[0.024, 0, 0.002, 0, 0, 18], [0.015, 1, 0.004, 0, 0, 14], [0.005, 2, 0.006, 0.006, 0.007, 8]]){ const d = new THREE.Mesh(new THREE.CircleGeometry(r, seg), Marlin3.eyeM[k]); d.position.set(e.x + dx, e.y + dy, sz * (e.z + dz)); d.rotation.y = ry; fish.add(d); } } }
+function makeMarlin3(scale, albino){
+  if (!Marlin3.geo){ const fish = makeMarlin2(scale, albino); fish.userData.m3albino = albino; Marlin3.wait.add(fish); return fish; }
+  const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.m3albino = albino; marlin3Fill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
 function makeMarlin2(scale, albino){
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
   const bodyM = new THREE.MeshStandardMaterial({ map: Marlin2.texture(albino), roughness:0.38, metalness:0.18 }); bodyM.onBeforeCompile = fishMat('marlin', 'Body', '#2e62c8', false, 'marlin', 'Marlin2').onBeforeCompile;
