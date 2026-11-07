@@ -1059,3 +1059,7 @@ body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:
 #sailComp span{background:rgba(10,30,50,.62);color:#fff;font:600 13px/1 system-ui,sans-serif;padding:6px 10px;border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:5px}
 #sailComp i{font-style:normal;display:inline-block;color:#ffd36a}
 #sailComp[hidden]{display:none}
+
+/* v258 聊天範圍切換 */
+#chatMode{flex:none;border:0;border-radius:999px;padding:5px 9px;font:700 12px/1 system-ui,sans-serif;background:#e6eef3;color:#2a4a5e;white-space:nowrap}
+#chatMode.near{background:#ffe7a8;color:#7a4a00}

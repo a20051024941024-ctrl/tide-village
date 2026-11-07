@@ -612,6 +612,7 @@ function makeModelFish(f, scale){
   fish.userData.tail = new THREE.Object3D();   // 舊程式會轉尾巴；新模型的擺動在 shader 裡
   return fish;
 }
+function fishShowScale(w){ return clamp(0.42 + Math.log(1 + (+w || 0)) * 0.36, 0.42, 1.85); }   /* v258 拉上來、捧在手上、炫耀共用同一個大小 */
 function fishModel(f, scale){
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
@@ -2858,9 +2859,9 @@ class Fisher {
   holdFish(f, w, secs){
     const a = this.av; if (this.held) a.g.remove(this.held.o);
     // 像拍釣魚紀念照一樣，雙手把魚捧在胸前
-    const big = BIG_FISH.has(f.id), o = new THREE.Group(), m = fishModel(f, big ? 0.75 : 0.45);
-    const y = a.kid ? 0.8 : 0.98; o.position.set(0, y, a.kid ? 0.42 : 0.48); o.add(m); a.g.add(o);
-    this.held = { o, y, until: now() + (secs || 6) };
+    const sc = fishShowScale(w), o = new THREE.Group(), m = fishModel(f, sc);   /* v258 手上的魚照實際重量決定大小（跟從水裡飛上來的那條一樣大），大魚不會一到手上就變小 */
+    const y = (a.kid ? 0.8 : 0.98) + Math.max(0, sc - 0.9) * 0.12; o.position.set(0, y, (a.kid ? 0.42 : 0.48) + Math.max(0, sc - 0.6) * 0.12); o.add(m); a.g.add(o);
+    this.held = { o, y, z: o.position.z, until: now() + (secs || 6) };
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
   dispose(){ if (this.pet){ petFree(this.pet); this.pet = null; } KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
@@ -2910,7 +2911,11 @@ class Fisher {
     if (this.held){
       const h = this.held;
       if (now() > h.until || this.fishing){ a.g.remove(h.o); this.held = null; }
-      else { T.aL = T.aR = -1.3; T.zL = -0.05; T.zR = 0.05; h.o.position.y = h.y + Math.sin(t * 4) * 0.04; h.o.rotation.z = Math.sin(t * 2.6) * 0.1; }
+      else { const ch = this.emote && this.emote.k === 'cheer' && now() < this.emote.until;   /* v258 炫耀時歡呼：雙手把魚舉過頭跳一跳 */
+        h.up = (h.up || 0) + ((ch ? 1 : 0) - (h.up || 0)) * Math.min(1, dt * 6);
+        if (ch && !a.kid){ T.aL = T.aR = -2.9; T.zL = -0.2; T.zR = 0.2; } else if (!ch){ T.aL = T.aR = -1.3; T.zL = -0.05; T.zR = 0.05; }
+        const hop = ch ? Math.abs(Math.sin(t * 5.2)) * 0.12 : 0;
+        h.o.position.y = h.y + h.up * ((a.kid ? 1.12 : 1.15) + hop) + Math.sin(t * 4) * 0.04; h.o.position.z = h.z * (1 - h.up * 0.45); h.o.rotation.z = Math.sin(t * (ch ? 5 : 2.6)) * (ch ? 0.18 : 0.1); }
     }
     if (this.swim){ const mv = Math.min(1, this.speed / 2.5), want = this.swimPitch != null ? this.swimPitch : 0.3 + mv * 0.95; this.swimP = (this.swimP || 0) + (want - (this.swimP || 0)) * Math.min(1, dt * 4);
       const kick = Math.sin(t * (4 + mv * 6)) * (0.2 + mv * 0.25); T.lL = kick; T.lR = -kick; T.kL = 0.25 + Math.max(0, kick) * 0.6; T.kR = 0.25 + Math.max(0, -kick) * 0.6; T.fL = T.fR = 0.6;   /* 蛙鞋往後伸直 */
@@ -3991,7 +3996,7 @@ function landFish(){
   F.phase = 'landing'; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2;
   const f = F.fish, w = F.weight;
   const from = me.bobPos.clone(); from.y = 0.1;
-  const fm = fishModel(f, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); fm.position.copy(from); scene.add(fm);
+  const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm);
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
   jumpers.push({ m: fm, from, to, t: 0, end: 0.92 });
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
@@ -9272,6 +9277,15 @@ function toast(html){ const t = document.createElement('div'); t.className = 'to
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 let chatAllowed = true;
+/* v258 附近聊天：切到「📍 附近」，只有 28 公尺內、同一個地方（同一座小島、同一棟房子）的人看得到 */
+const NEAR_R = 28; let chatNear = !!LS.get('tide.chatNear', false);
+function myPlaceKey(){ let k = ''; if (onIsle) k += 'i' + onIsle.owner; if (House.on) k += 'h' + ((House.it ? House.it.id : 1) + (House.floor || 0) * 1000); return k; }
+function peerPlaceKey(pr){ let k = ''; if (pr && pr.is) k += 'i' + pr.is; if (pr && pr.hs) k += 'h' + pr.hs; return k; }
+function nearListeners(){ let n = 0; const pk = myPlaceKey(); for (const p of peers.values()){ if (!p.pres || peerPlaceKey(p.pres) !== pk) continue; if (Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z) < NEAR_R) n++; } return n; }
+function renderChatMode(){ const b = $('#chatMode'); if (!b) return; b.textContent = chatNear ? '📍 附近' : '🌐 全部'; b.classList.toggle('near', chatNear); const i = $('#chatIn'); if (i) i.placeholder = chatNear ? `跟附近的人說（${nearListeners()} 人聽得到）…` : (isTouch ? '點這裡跟大家聊天…' : '按 Enter 跟大家聊天…'); }
+if ($('#chatMode')){ $('#chatMode').addEventListener('pointerdown', e => e.preventDefault());   /* 按切換的時候不要讓輸入框失去焦點（手機鍵盤不會收起來） */
+  $('#chatMode').addEventListener('click', e => { e.preventDefault(); chatNear = !chatNear; LS.set('tide.chatNear', chatNear); renderChatMode(); toast(chatNear ? '📍 附近聊天：只有旁邊 28 公尺內的人看得到你說的話' : '🌐 全部聊天：大廳裡的人都看得到'); $('#chatIn').focus(); }); }
+
 $('#chatForm').addEventListener('submit', async e => {
   e.preventDefault(); const inp = $('#chatIn'); const text = clean(inp.value.trim().slice(0, 120)); if (!text) return;
   const nowT = performance.now(); myChatAt = myChatAt.filter(x => nowT - x < 6000);
@@ -9281,9 +9295,9 @@ $('#chatForm').addEventListener('submit', async e => {
   inp.value = '';
   if (mutedUntil > Date.now()){ const d = new Date(mutedUntil); toast(`你被禁言到 ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}，其他人看不到你說的話。`); return; }
   if (room && room.connected() && chatAllowed){
-    try { await room.emit('chat', { t: text }); }
+    try { await room.emit('chat', chatNear ? { t: text, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text }); if (chatNear && !nearListeners()) logMsg('系統', '📍 附近沒有人聽到喔（切回「🌐 全部」大家都看得到）', true); }
     catch(err){ if (err && err.code === 'not_permitted'){ chatAllowed = false; logMsg('系統', '你目前是檢視者，聊天只有你自己看得到。', true); } me.say(text); logMsg('你', text); }
-  } else { me.say(text); logMsg('你', text + (room ? '' : '（單人模式）')); }
+  } else { me.say(text); logMsg((chatNear ? '📍' : '') + '你', text + (room ? '' : '（單人模式）')); }
   npcHear(text);   /* 旁邊的村民會回話 */
   if (isTouch){ inp.blur(); document.body.classList.remove('chatting'); }
 });
@@ -9292,7 +9306,8 @@ if (window.visualViewport){ const kb = () => { const v = visualViewport, h = Mat
 if (isTouch && $('#chatIn')) $('#chatIn').placeholder = '點這裡跟大家聊天…';
 if ($('#chatIn')){ $('#chatIn').addEventListener('focus', () => document.body.classList.add('chatting')); $('#chatIn').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('#chatIn')) document.body.classList.remove('chatting'); }, 150)); }
 $('#chatToggle').addEventListener('click', () => { document.body.classList.toggle('chatting'); if (document.body.classList.contains('chatting')) $('#chatIn').focus(); });
-$('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = false; });
+$('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = false; renderChatMode(); });
+renderChatMode();
 
 let myEmote = null;
 function emote(k){ ensureAudio(); const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); }
@@ -9353,7 +9368,7 @@ function openShowPick(){
 }
 function showOff(id, w){
   const f = FISH_BY_ID[id]; if (!f) return;
-  me.holdFish(f, w, 6);
+  emote('cheer'); me.holdFish(f, w, 6);   /* v258 炫耀的時候歡呼（先歡呼，頭上的泡泡再換成魚的名字和重量） */
   myShow = { f: id, w: +(+w).toFixed(2), at: Date.now() }; pushPresence(true);
   const p = me.av.g.position; FX.emit(p.x, p.y + 2.5, p.z, f.rarity === '傳說' ? 40 : 18, f.rarity === '傳說' ? '#ffd36a' : '#9fe3ff', 1.2, 2.2, 1.0);
   SFX.catch();
@@ -9543,12 +9558,14 @@ function useRoom(r){
       setOnline(); }, () => { room = null; setOnline(); });
     room.on('chat', msg => {
       let text = msg && msg.data && typeof msg.data.t === 'string' ? msg.data.t.slice(0, 120) : ''; if (!text) return;
-      if (msg.sameTab){ me.say(text); logMsg(myDisplayName() === '你' ? '你' : myDisplayName(), text); return; }
+      const nr = !!(msg.data.nr);
+      if (msg.sameTab){ me.say(text); logMsg((nr ? '📍' : '') + (myDisplayName() === '你' ? '你' : myDisplayName()), text); return; }
+      if (nr && (String(msg.data.pk || '') !== myPlaceKey() || !(Math.hypot((+msg.data.x || 0) - me.pos.x, (+msg.data.z || 0) - me.pos.z) < NEAR_R))) return;   /* 附近聊天：離太遠、不在同一個地方就聽不到 */
       if (isBlockedPeer(msg.peer) || tooChatty(msg.peer)) return;
       text = clean(text);
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '釣客';
       { const a = recentChat.get(msg.peer) || []; a.push(msg.data.t.slice(0, 120)); recentChat.set(msg.peer, a.slice(-5)); }
-      if (p) p.fisher.say(text); logMsg(name, text); SFX.chat();
+      if (p) p.fisher.say(text); logMsg((nr ? '📍' : '') + name, text); SFX.chat();
     }, () => {});
     room.on('cook', msg => {
       if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const rc = RECIPES[msg.data.r]; if (!rc) return; const q = clamp(Math.round(Number(msg.data.q) || 1), 1, 3);
@@ -10942,6 +10959,7 @@ function renderTab(){
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
     ]);
     sec('⚓ 港口海底潛水', [
+      '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '⛵ 坐自己的小船（港口的船，按「上船」）可以一路划到別的島：冰封群島、深海浮台、神秘島、苔森之島。離開本島以後船會划得比較快，畫面上面會有箭頭指出最近的島在哪、還有幾公尺；靠到島邊按「下船」就上岸了。想快一點還是可以找阿海直接載你去。',
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
