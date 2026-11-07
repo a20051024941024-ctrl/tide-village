@@ -9577,14 +9577,17 @@ function openShowPick(){
   const pick = $('#showPick');
   if (!pick.hidden){ pick.hidden = true; return; }
   if (F.phase !== 'idle'){ toast('正在釣魚，先收竿再炫耀吧'); return; }
-  const ids = Object.keys(rec.best || {}).filter(id => FISH_BY_ID[id] && rec.best[id] > 0);
-  if (!ids.length){ toast('還沒有釣到魚，先去釣一條再來炫耀吧！'); return; }
-  ids.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b].rarity] - RARITY_ORDER[FISH_BY_ID[a].rarity] || rec.best[b] - rec.best[a]);
+  /* v272 只能炫耀現在還在你身邊的魚：魚缸裡的（展示中的也算），每一種挑最重的那條。賣掉、捐給博物館、交給阿鐵的就不算了 */
+  const shown = new Set((rec.show || []).map(String)), top = {};
+  for (const x of rec.tank || []){ const f = FISH_BY_ID[x.f]; if (!f || !(x.w > 0)) continue; if (!top[x.f] || x.w > top[x.f].w) top[x.f] = x; }
+  const ids = Object.keys(top);
+  if (!ids.length){ toast('魚缸裡沒有魚可以炫耀，先去釣一條吧！'); return; }
+  ids.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b].rarity] - RARITY_ORDER[FISH_BY_ID[a].rarity] || top[b].w - top[a].w);
   const list = pick.querySelector('.splist'); list.innerHTML = '';
   for (const id of ids){
-    const f = FISH_BY_ID[id], b = el('button', 'spbtn');
-    b.innerHTML = `<span class="chip r-${f.rarity}">${f.rarity}</span><b>${esc(f.name)}</b><small>${fmtKg(rec.best[id])}</small>`;
-    b.addEventListener('click', () => { pick.hidden = true; showOff(id, rec.best[id]); });
+    const f = FISH_BY_ID[id], x = top[id], b = el('button', 'spbtn');
+    b.innerHTML = `<span class="chip r-${f.rarity}">${f.rarity}</span><b>${esc(f.name)}</b><small>${shown.has(String(x.t)) ? '⭐展示中 ' : ''}${fmtKg(x.w)}</small>`;
+    b.addEventListener('click', () => { pick.hidden = true; showOff(id, x.w); });
     list.appendChild(b);
   }
   pick.hidden = false;
@@ -11241,7 +11244,7 @@ function renderTab(){
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）。主要在港口外海出沒，偶爾也會到珊瑚礁群島外側的深水邊巡游（機率更低）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
       '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低。圖鑑裡會先顯示影子，釣到才看得到樣子（赤紅霸王鯊例外，要釣到才會出現）。',
-      '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚捧起來炫耀給大家看。',
+      '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚缸裡的魚捧起來炫耀給大家看（展示中的也可以；賣掉、捐給博物館的就不行了）。',
       '可以參觀別人的水族館（玩家分頁或排行榜點他的名字）。',
     ]);
     sec('🪙 金幣與商店', [
