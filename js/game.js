@@ -10960,6 +10960,7 @@ function renderTab(){
     ]);
     sec('⚓ 港口海底潛水', [
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
+      '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。',
       '⛵ 坐自己的小船（港口的船，按「上船」）可以一路划到別的島：冰封群島、深海浮台、神秘島、苔森之島。離開本島以後船會划得比較快，畫面上面會有箭頭指出最近的島在哪、還有幾公尺；靠到島邊按「下船」就上岸了。想快一點還是可以找阿海直接載你去。',
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
@@ -11430,8 +11431,9 @@ function subWallK(n){ if (n <= 0) return 0; for (let i = 1; i < SUB_WALL.length;
 function subH(x, z){ const e = subEdge(x), w = subWidth(x), dz = z - e, far = e + w - z, shelf = subNoise(x, z) * 0.6 - 0.01 * (z + 60);
   if (dz <= 0) return shelf; if (far <= 0) return subNoise(x + 50, z) * 0.6 + 1.2;
   const floor = -120 + subNoise(x * 0.6, z * 0.6) * 3, n = Math.min(dz, far), k = subWallK(n); return shelf + (floor - shelf) * k + (k > 0.02 && k < 0.98 ? subNoise(x * 2.1, n * 3) * 0.8 : 0); }
-function subDepth(y){ return y >= 0 ? clamp(200 - y * 15, 50, 200) : 200 + (-y) / 120 * 2800; }   /* 顯示的深度（公尺） */
-function subYAt(m){ return m <= 200 ? (200 - m) / 15 : -(m - 200) / 2800 * 120; }
+function subDepth(y){ return y >= 0 ? clamp(200 - y * 17, 30, 200) : 200 + (-y) / 120 * 2800; }   /* v260 大陸棚上面最淺到 30 公尺（看得到陽光） */   /* 顯示的深度（公尺） */
+function subYAt(m){ return m <= 200 ? (200 - m) / 17 : -(m - 200) / 2800 * 120; }
+const SUB_SURF = 200 / 17;   /* 水面（0 公尺）的高度 */
 function subRpc(fn, args){ return festRpc(fn, args); }
 
 function subTerrain(){
@@ -11575,7 +11577,7 @@ function subDecoSwap(){ deepLoad().then(() => { const G = DEEP.geo, lam = new TH
 function subCullCrit(P){ const R = 14 * (1 + (Sub.buddy || 0) * 0.45); for (const c of Sub.crit || []){ const dx = c.m.position.x - P.x, dy = c.m.position.y - P.y, dz = c.m.position.z - P.z; c.m.visible = dx * dx + dy * dy + dz * dz < R * R; } }   /* 小生物 22 公尺外就先不畫 */
 function subHud(){ let h = $('#subHud'); if (h) return h;
   h = document.createElement('div'); h.id = 'subHud';
-  h.innerHTML = '<div class="sh-top panel"><span class="sh-depth">深度 <b>0</b> m</span><span class="sh-vs"></span><span class="sh-bat">🔋 <b>5:00</b></span><span class="sh-hold">🐟 <b>0</b></span><span class="sh-lim"></span></div>'
+  h.innerHTML = '<div class="sh-top panel"><span class="sh-depth">深度 <b>0</b> m</span><span class="sh-zone"></span><span class="sh-vs"></span><span class="sh-bat">🔋 <b>5:00</b></span><span class="sh-hold">🐟 <b>0</b></span><span class="sh-lim"></span></div>'
     + '<div class="sh-warn" hidden>⚠️ 超過耐壓深度！<b>30</b> 秒內不上浮會被拉回港、船艙的魚全部不見</div>'
     + '<div class="sh-msg" hidden></div>'
     + '<div class="sh-q panel" hidden>' + SUB_Q.map((q, i) => `<button data-k="${i}">${q}</button>`).join('') + '</div>'
@@ -11603,7 +11605,7 @@ function subEnter(r){   /* 過場播完才真的切到深海 */
   Sub.restore = scene.children.filter(o => o !== Sub.group && o.visible); for (const o of Sub.restore) o.visible = false;
   Sub.fogWas = scene.fog; Sub.bgWas = scene.background; const range = [25, 40, 60][(Sub.st.light_lv || 1) - 1]; Sub.range = range;
   scene.fog = new THREE.Fog('#020a14', 2, range); scene.background = new THREE.Color('#020a14'); Sub.light.distance = range * 1.5;
-  Sub.pos.set(0, 4, -58); Sub.yaw = 0; Sub.v = 0; Sub.on = true; document.body.classList.add('subbing'); subHud(); Sub.camWas = { ...cam }; cam.yaw = Sub.yaw + Math.PI; cam.pitch = 0.42;
+  Sub.pos.set(0, 9.2, -58); subLightInit(); Sub.zone = ''; Sub.wentDark = false; Sub.yaw = 0; Sub.v = 0; Sub.on = true; document.body.classList.add('subbing'); subHud(); Sub.camWas = { ...cam }; cam.yaw = Sub.yaw + Math.PI; cam.pitch = 0.42;
   ensureAudio(); flash('🚢 潛水艇出發！往前開，看看大陸棚的盡頭有什麼', 2.4); SFX.plop(); subRender();
   { const down = [...peers.values()].filter(p => p.sub).map(p => peerName(p)); Sub.peerT0 = now(); if (down.length) setTimeout(() => { if (Sub.on) subMsg(`🚢 ${down.slice(0, 3).join('、')}${down.length > 3 ? ' 等人' : ''} 也在下面`, 2); }, 3000); } }
 
@@ -11631,6 +11633,64 @@ function subDrone(on){ if (!on){ if (Sub.drone){ const D = Sub.drone; try { D.g.
 
 function subMsg(text, secs){ const m = subHud().querySelector('.sh-msg'); m.textContent = text; m.hidden = false; m.classList.remove('show'); void m.offsetWidth; m.classList.add('show'); clearTimeout(Sub.msgT); Sub.msgT = setTimeout(() => { m.hidden = true; }, (secs || 2) * 1000 + 1200); }
 
+/* ===== v260 深海三層：光線跟著深度變 =====
+   0～200 m 透光層：藍綠色、亮，從上面斜斜照下來的光束、沙地上的水波光斑、抬頭看得到水面發亮
+   200～1000 m 暮光層：越來越深的藍，光束越來越淡、到 600 m 完全不見
+   1000 m 以下 午夜層：全黑，只剩潛水艇的燈和生物自己的光
+   整段都有海雪（細小的白點慢慢往下飄，越深越明顯）。全部用最便宜的做法：幾片平面、一個 Points，沒有後製特效。 */
+const SUB_FOG_C = [[30, '#3d9cc4'], [200, '#2a7fa8'], [600, '#0f3352'], [1000, '#0a2238'], [1300, '#020a14']];
+const SUB_HEMI = [[30, 1.7], [200, 1.4], [1000, 0.6], [1300, 0.25]];
+function subKey(L, d){ if (d <= L[0][0]) return L[0][1]; for (let i = 1; i < L.length; i++) if (d <= L[i][0]){ const k = smooth01((d - L[i - 1][0]) / (L[i][0] - L[i - 1][0])); return [L[i - 1][1], L[i][1], k]; } return L[L.length - 1][1]; }
+function subKeyN(L, d){ const r = subKey(L, d); return Array.isArray(r) ? r[0] + (r[1] - r[0]) * r[2] : r; }
+function subKeyC(L, d, out){ const r = subKey(L, d); if (!Array.isArray(r)) return out.set(r); return out.set(r[0]).lerp((Sub._kc || (Sub._kc = new THREE.Color())).set(r[1]), r[2]); }
+function subRayTex(){ const cv = document.createElement('canvas'); cv.width = 32; cv.height = 128; const c = cv.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, 32, 128);
+  const g2 = c.getImageData(0, 0, 32, 128); for (let y = 0; y < 128; y++) for (let x = 0; x < 32; x++){ const k = Math.sin((x / 31) * Math.PI); g2.data[(y * 32 + x) * 4 + 3] *= k * k; } c.putImageData(g2, 0, 0); const t = new THREE.CanvasTexture(cv); return t; }
+function subCausticTex(){ const N = 128, cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d'), im = c.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ const u = x / N * Math.PI * 2, v = y / N * Math.PI * 2; let s = Math.sin(u * 2 + Math.sin(v * 3) * 1.2) + Math.sin(v * 2 + Math.sin(u * 3 + 1) * 1.2) + Math.sin((u + v) * 3 + Math.sin(u - v) * 0.8) * 0.6;
+    const k = Math.pow(Math.max(0, 1 - Math.abs(s) * 0.85), 3) * 255, o = (y * N + x) * 4; im.data[o] = k * 0.85; im.data[o + 1] = k; im.data[o + 2] = k; im.data[o + 3] = 255; }
+  c.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+function subLightInit(){
+  if (Sub.lit) return; const g = Sub.group, L = Sub.lit = {};
+  // 光束：8 片長長的半透明平面，從水面斜斜往下，慢慢晃
+  const rm = new THREE.MeshBasicMaterial({ map: subRayTex(), color:'#cfefff', transparent:true, opacity:0.0, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false });
+  L.rays = []; L.rayG = new THREE.Group(); g.add(L.rayG); L.rayG.userData.off = true;
+  for (let i = 0; i < 8; i++){ const m = new THREE.Mesh(new THREE.PlaneGeometry(2.2 + Math.random() * 2.5, 34), rm); m.geometry.translate(0, -17, 0); m.userData.off = true; L.rayG.add(m); L.rays.push({ m, ox: (Math.random() - 0.5) * 50, oz: (Math.random() - 0.5) * 50, ph: Math.random() * 6, tilt: 0.25 + Math.random() * 0.15 }); }
+  L.rayM = rm;
+  // 水面：抬頭看到一片發亮的水面
+  const sm = new THREE.MeshBasicMaterial({ color:'#bfeaff', transparent:true, opacity:0.0, side:THREE.DoubleSide, depthWrite:false, fog:true });
+  L.surf = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), sm); L.surf.rotation.x = Math.PI / 2; L.surf.position.y = SUB_SURF; L.surf.userData.off = true; g.add(L.surf);
+  // 水波光斑：地形同一份形狀疊一層會捲動的光斑貼圖（加亮）
+  { const tg = Sub.terr.geometry, pos = tg.attributes.position, uv = new Float32Array(pos.count * 2); for (let i = 0; i < pos.count; i++){ uv[i * 2] = pos.getX(i) / 9; uv[i * 2 + 1] = pos.getZ(i) / 9; }
+    const cg = new THREE.BufferGeometry(); cg.setAttribute('position', pos); cg.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); cg.setIndex(tg.index);
+    const ct = subCausticTex(); L.cTex = ct; const cm = new THREE.MeshBasicMaterial({ map: ct, color:'#9fe6ff', transparent:true, opacity:0.0, blending:THREE.AdditiveBlending, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 });
+    L.caus = new THREE.Mesh(cg, cm); L.caus.position.y = 0.02; L.caus.userData.off = true; g.add(L.caus); }
+  // 海雪：300 顆小白點，跟著潛水艇，慢慢往下飄
+  { const N = 300, a = new Float32Array(N * 3); L.snowB = new Float32Array(N * 3); for (let i = 0; i < N * 3; i++) L.snowB[i] = Math.random(); const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    L.snow = new THREE.Points(sg, new THREE.PointsMaterial({ color:'#e8f4ff', size:0.09, transparent:true, opacity:0.4, depthWrite:false })); L.snow.frustumCulled = false; L.snow.userData.off = true; g.add(L.snow); }
+  L.fogC = new THREE.Color(); Sub.cullAll = null; }
+function subLightTick(dt, t, depth){
+  const L = Sub.lit; if (!L) return; const P = Sub.pos, dark = Sub.whaleDark || 0;
+  const sun = 1 - smooth01((depth - 200) / 400);   /* 200 m 以下光束開始變淡，600 m 完全沒有 */
+  const lim = Sub.range * (1 + (Sub.buddy || 0) * 0.45), far = depth < 1000 ? Math.max(lim, subKeyN([[30, 95], [200, 80], [600, 55], [1000, lim * 1.3]], depth)) : subKeyN([[1000, lim * 1.3], [1300, lim]], depth);
+  subKeyC(SUB_FOG_C, depth, L.fogC); if (dark > 0) L.fogC.multiplyScalar(1 - dark * 0.85);
+  scene.fog.color.copy(L.fogC); scene.background.copy(L.fogC); scene.fog.far = far; scene.fog.near = depth < 600 ? 6 : 2; Sub.viewR = far;
+  Sub.hemi.intensity = subKeyN(SUB_HEMI, depth) * (1 - dark); Sub.hemi.color.set(depth < 600 ? '#6ab4d8' : '#3a6a9a');
+  Sub.light.distance = Math.max(Sub.range * 1.5, far * 0.6);
+  // 光束：跟著潛水艇（在附近的固定位置，不會黏在畫面上），朝鏡頭轉，慢慢晃
+  L.rayM.opacity = 0.22 * sun * (1 - dark); L.rayG.visible = L.rayM.opacity > 0.004;
+  if (L.rayG.visible){ const cy = Math.atan2(camera.position.x - SUBW.x - P.x, camera.position.z - SUBW.z - P.z); for (const r of L.rays){ const wx = Math.round((P.x - r.ox) / 50) * 50 + r.ox, wz = Math.round((P.z - r.oz) / 50) * 50 + r.oz; r.m.position.set(wx + Math.sin(t * 0.13 + r.ph) * 2, SUB_SURF, wz); r.m.rotation.set(0, cy, 0); r.m.rotateX(r.tilt + Math.sin(t * 0.21 + r.ph) * 0.05); } }
+  L.surf.material.opacity = 0.55 * sun * (1 - dark); L.surf.visible = L.surf.material.opacity > 0.01;
+  L.caus.material.opacity = 0.17 * (1 - smooth01((depth - 120) / 260)) * (1 - dark); L.caus.visible = L.caus.material.opacity > 0.01; if (L.caus.visible){ L.cTex.offset.set(Math.sin(t * 0.07) * 0.6 + t * 0.012, Math.cos(t * 0.05) * 0.6 + t * 0.008); }
+  // 海雪
+  { const a = L.snow.geometry.attributes.position.array, B = L.snowB, W = 26, Hh = 16, fall = t * 0.18; for (let i = 0; i < a.length; i += 3){ const bx = B[i] * W, by = B[i + 1] * Hh, bz = B[i + 2] * W;
+      a[i] = P.x + ((((bx - P.x + Math.sin(t * 0.3 + i) * 0.3) % W) + W) % W) - W / 2; a[i + 1] = P.y + ((((by - P.y - fall) % Hh) + Hh) % Hh) - Hh / 2; a[i + 2] = P.z + ((((bz - P.z) % W) + W) % W) - W / 2; }
+    L.snow.geometry.attributes.position.needsUpdate = true; L.snow.material.opacity = 0.22 + 0.45 * smooth01((depth - 100) / 900); }
+  // 層的名字、音樂
+  const z = depth < 200 ? '☀️ 透光層' : depth < 1000 ? '🌘 暮光層' : '🌑 午夜層'; if (z !== Sub.zone){ const first = !!Sub.zone; Sub.zone = z; const e = subHud().querySelector('.sh-zone'); if (e) e.textContent = z; if (first) subMsg(depth < 200 ? '☀️ 回到透光層，看得到陽光了' : depth < 1000 ? '🌘 暮光層：陽光越來越少' : '🌑 午夜層：這裡再也沒有陽光', 1.6); }
+  if (depth > 1000) Sub.wentDark = true;
+  if (Sub.wentDark && depth < 180 && Sub.drone){ Sub.wentDark = false; subDrone(false); if (musicOn && Sub.musicOff){ try { MUSIC.start(); } catch(e){} Sub.musicOff = false; } }   /* 從午夜層回到透光層：深海的低音換回明亮的音樂 */
+  if (!Sub.drone && Sub.edgeHit && depth > 260){ if (musicOn && !Sub.musicOff){ try { MUSIC.stop(); Sub.musicOff = true; } catch(e){} } subDrone(true); }
+}
 function subFrame(dt, t){
   const P = Sub.pos, H = subHud();
   // 操作：搖桿推的方向（照鏡頭）＝潛水艇要去的方向；上浮／下潛按鈕（鍵盤：空白鍵／C）
@@ -11651,8 +11711,9 @@ function subFrame(dt, t){
   const gh = subH(nx, nz) + 1.1; if (ny < gh){ if (subH(nx, nz) + 1.1 - P.y > 1.2){ nx = P.x; nz = P.z; Sub.v *= -0.2; } ny = Math.max(ny, subH(nx, nz) + 1.1); }   /* 撞到岩壁就停住 */
   P.set(nx, ny, nz); Sub.m.position.copy(P); Sub.m.rotation.set(-Sub.vy * 0.25, Sub.yaw, -Sub.turn * 0.14); Sub.m.userData.prop.rotation.z += dt * (2 + Math.abs(Sub.v) * 4);
   // 鏡頭：在艇後上方跟著
-  const cdist = 7, ch = 1.0 + clamp(cam.pitch, -0.25, 1.0) * 7.5, kx = Math.sin(cam.yaw), kz = Math.cos(cam.yaw); camera.position.set(SUBW.x + P.x + kx * cdist, SUBW.y + P.y + ch, SUBW.z + P.z + kz * cdist); camera.lookAt(SUBW.x + P.x - kx * 7, SUBW.y + P.y + 1.8 - ch * 0.95 - Math.max(0, -Sub.vy) * 2, SUBW.z + P.z - kz * 7);   /* 從艇的後上方往前下方看，看得到前燈照的地方 */
+  const cdist = 7, ch = 1.0 + clamp(cam.pitch, -0.25, 1.0) * 7.5, kx = Math.sin(cam.yaw), kz = Math.cos(cam.yaw); camera.position.set(SUBW.x + P.x + kx * cdist, SUBW.y + Math.min(P.y + ch, SUB_SURF - 0.4), SUBW.z + P.z + kz * cdist); camera.lookAt(SUBW.x + P.x - kx * 7, SUBW.y + P.y + 1.8 - ch * 0.95 - Math.max(0, -Sub.vy) * 2, SUBW.z + P.z - kz * 7);   /* 從艇的後上方往前下方看，看得到前燈照的地方 */
   const depth = subDepth(P.y); Sub.maxD = Math.max(Sub.maxD, depth);
+  try { subLightTick(dt, t, depth); } catch(e){ console.warn('sublight', e); }
   try { subPeersTick(dt, t); } catch(e){}
   // 第一次走到裂縫邊緣（5 公尺內）
   if (!Sub.edgeHit && P.z > subEdge(P.x) - 5 && P.y > -3){ Sub.edgeHit = true; if (musicOn){ try { MUSIC.stop(); Sub.musicOff = true; } catch(e){} } subDrone(true); H.classList.add('deep');
@@ -11665,7 +11726,7 @@ function subFrame(dt, t){
   // 東西的動作
   for (const v of Sub.vents){ const a = v.pts.geometry.attributes.position.array; for (let i = 1; i < a.length; i += 3){ a[i] += dt * 2.2; if (a[i] > 12) a[i] = 3.3; } v.pts.geometry.attributes.position.needsUpdate = true; }
   for (const c of Sub.crit || []){ const a = t * c.sp + c.ph; c.m.position.set(c.cx + Math.cos(a) * c.r, c.cy + Math.sin(t * 0.7 + c.ph) * 0.3, c.cz + Math.sin(a) * c.r); c.m.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)) + (c.sp > 0 ? 0 : Math.PI); }
-  if (frameNo % 2 === 0) for (const S of Sub.schools || []){ const d2 = (S.cx - P.x) ** 2 + (S.cy - P.y) ** 2 + (S.cz - P.z) ** 2; S.im.visible = d2 < (Sub.range + 10) ** 2; if (!S.im.visible) continue; const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), cx = S.cx + Math.cos(t * 0.15 + S.ph) * 8, cz = S.cz + Math.sin(t * 0.15 + S.ph) * 5;
+  if (frameNo % 2 === 0) for (const S of Sub.schools || []){ const d2 = (S.cx - P.x) ** 2 + (S.cy - P.y) ** 2 + (S.cz - P.z) ** 2; S.im.visible = d2 < ((Sub.viewR || Sub.range) + 10) ** 2; if (!S.im.visible) continue; const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), cx = S.cx + Math.cos(t * 0.15 + S.ph) * 8, cz = S.cz + Math.sin(t * 0.15 + S.ph) * 5;
     for (let i = 0; i < S.n; i++){ const [a0, dy, r, sp] = S.off[i], a = a0 + t * 0.6 * sp; e.set(0, -a - Math.PI / 2, 0); q.setFromEuler(e); M.compose(new THREE.Vector3(cx + Math.cos(a) * r, S.cy + dy + Math.sin(t + a0) * 0.2, cz + Math.sin(a) * r), q, new THREE.Vector3(1, 1, 1)); S.im.setMatrixAt(i, M); } S.im.instanceMatrix.needsUpdate = true; }
   if (Sub.swarm && frameNo % 3 === 0){ const a = Sub.swarm.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i] += (Math.random() - 0.5) * 0.08; a[i + 1] = clamp(a[i + 1] + (Math.random() - 0.5) * 0.06, 0, 1.8); a[i + 2] += (Math.random() - 0.5) * 0.06; a[i] = clamp(a[i], -4.6, 4.6); a[i + 2] = clamp(a[i + 2], -1.5, 1.5); } Sub.swarm.geometry.attributes.position.needsUpdate = true; }
   for (const j of Sub.jelly){ j.m.position.y = j.y0 + Math.sin(t * 0.5 + j.ph) * 1.5; j.m.scale.y = 1 + Math.sin(t * 2 + j.ph) * 0.15; }
@@ -11674,9 +11735,9 @@ function subFrame(dt, t){
   if (Sub.squid){ const S = Sub.squid, a = t * 0.06; S.m.position.set(S.cx + Math.cos(a) * 9, -112 + Math.sin(t * 0.4) * 1.5, S.cz + Math.sin(a) * 6); S.m.rotation.y = -a; }
   // 抹香鯨從頭頂游過：擋住所有的光 10 秒（純演出）
   if (!Sub.whale && now() - Sub.t0 > Sub.whaleNext && depth < 1500){ try { const m = fishModel(FISH_BY_ID.sperm, 22); const a = Sub.yaw + Math.PI / 2; m.rotation.y = a - Math.PI / 2; Sub.group.add(m); Sub.whale = { m, t0:t, sx: P.x - Math.sin(a) * 30, sz: P.z - Math.cos(a) * 30, dx: Math.sin(a), dz: Math.cos(a), y: P.y + 7 }; whaleSong(0.9); } catch(e){ Sub.whaleNext += 120; } }
-  if (Sub.whale){ const W = Sub.whale, u = (t - W.t0) / 10; W.m.position.set(W.sx + W.dx * u * 60, W.y, W.sz + W.dz * u * 60); const dark = Math.sin(clamp(u, 0, 1) * Math.PI); Sub.light.intensity = 90 * (1 - dark * 0.88); Sub.hemi.intensity = 0.7 * (1 - dark);
-    if (u > 1){ Sub.group.remove(W.m); Sub.whale = null; Sub.whaleNext = (now() - Sub.t0) + 150 + Math.random() * 120; Sub.light.intensity = 90; Sub.hemi.intensity = 0.7; } }
-  if (frameNo % 10 === 0){ const R2 = (Sub.range + 6) * (Sub.range + 6), w = new THREE.Vector3(); if (!Sub.cullAll){ const skip = new Set([Sub.terr, Sub.m, ...Sub.vents.map(v => v.v), ...(Sub.crit || []).map(c => c.m), ...Sub.ores.map(o => o.m), Sub.wreck && Sub.wreck.g]); Sub.cullAll = Sub.group.children.filter(o => !o.isLight && !skip.has(o)); } for (const m of [...Sub.cull, ...Sub.cullAll]){ if (m.userData.off) continue; m.getWorldPosition(w); const dx = w.x - SUBW.x - P.x, dy = w.y - SUBW.y - P.y, dz = w.z - SUBW.z - P.z; m.visible = dx * dx + dy * dy + dz * dz < R2; } subCullCrit(P); }   /* 霧外面的東西先不畫 */
+  if (Sub.whale){ const W = Sub.whale, u = (t - W.t0) / 10; W.m.position.set(W.sx + W.dx * u * 60, W.y, W.sz + W.dz * u * 60); const dark = Math.sin(clamp(u, 0, 1) * Math.PI); Sub.light.intensity = 90 * (1 - dark * 0.88); Sub.whaleDark = dark;
+    if (u > 1){ Sub.group.remove(W.m); Sub.whale = null; Sub.whaleNext = (now() - Sub.t0) + 150 + Math.random() * 120; Sub.light.intensity = 90; Sub.whaleDark = 0; } }
+  if (frameNo % 10 === 0){ const VR = (Sub.viewR || Sub.range) + 6, R2 = VR * VR, w = new THREE.Vector3(); if (!Sub.cullAll){ const skip = new Set([Sub.terr, Sub.m, ...Sub.vents.map(v => v.v), ...(Sub.crit || []).map(c => c.m), ...Sub.ores.map(o => o.m), Sub.wreck && Sub.wreck.g]); Sub.cullAll = Sub.group.children.filter(o => !o.isLight && !skip.has(o)); } for (const m of [...Sub.cull, ...Sub.cullAll]){ if (m.userData.off) continue; m.getWorldPosition(w); const dx = w.x - SUBW.x - P.x, dy = w.y - SUBW.y - P.y, dz = w.z - SUBW.z - P.z; m.visible = dx * dx + dy * dy + dz * dz < R2; } subCullCrit(P); }   /* 霧外面的東西先不畫 */
   // 附近可以撿的東西、可以放線的地方
   Sub.near = null; for (const o of Sub.ores){ if (!o.m.visible) continue; if (Math.hypot(P.x - o.x, P.y - o.y - 0.5, P.z - o.z) < 3.2){ Sub.near = o; break; } }
   if (Sub.fish) subFishTick(dt, t);
@@ -11684,7 +11745,7 @@ function subFrame(dt, t){
 
 function subRender(){ const H = subHud(), P = Sub.pos, depth = subDepth(P.y), left = Math.max(0, (Sub.dive.battery_s || 300) - (now() - Sub.t0));
   const set = (sel, v) => { const e = H.querySelector(sel); if (e.textContent !== v) e.textContent = v; };
-  set('.sh-depth b', String(Math.round(depth))); { const vs = Math.abs(Sub.vy) < 0.03 ? '' : `${Sub.vy < 0 ? '↓' : '↑'}${Math.round(Math.abs(Sub.vy) * (P.y >= 0 ? 15 : 23.3))} m/s`; set('.sh-vs', vs); } set('.sh-bat b', `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`); set('.sh-hold b', String(Sub.hold.length)); set('.sh-lim', `耐壓 ${Sub.dive.pressure_m} m`);
+  set('.sh-depth b', String(Math.round(depth))); { const vs = Math.abs(Sub.vy) < 0.03 ? '' : `${Sub.vy < 0 ? '↓' : '↑'}${Math.round(Math.abs(Sub.vy) * (P.y >= 0 ? 17 : 23.3))} m/s`; set('.sh-vs', vs); } set('.sh-bat b', `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`); set('.sh-hold b', String(Sub.hold.length)); set('.sh-lim', `耐壓 ${Sub.dive.pressure_m} m`);
   H.querySelector('.sh-bat').classList.toggle('low', left < 45);
   const w = H.querySelector('.sh-warn'); w.hidden = !(Sub.warnT > 0); if (Sub.warnT > 0) set('.sh-warn b', String(Math.max(0, Math.ceil(30 - Sub.warnT))));
   const act = H.querySelector('.sh-act'); let lbl = '';
@@ -11733,7 +11794,7 @@ function subPeersTick(dt, t){ const S = Sub.peers || (Sub.peers = new Map()), P 
   for (const [id, e] of S) if (!peers.has(id)){ subPeerDrop(e); S.delete(id); }
   if (Sub.myBub && now() > Sub.myBubT){ Sub.m.remove(Sub.myBub); Sub.myBub.material.map.dispose(); Sub.myBub = null; }
   Sub.buddy = (Sub.buddy || 0) + (near - (Sub.buddy || 0)) * Math.min(1, dt * 0.8);
-  if (scene.fog && Sub.range) scene.fog.far = Sub.range * (1 + Sub.buddy * 0.45); }
+}   /* v260 霧的距離改在 subLightTick 裡算（深度＋一起潛的加成） */
 function subBubble(parent, text){ const sp = subLabel(text, true); sp.userData.bub = true; sp.position.y = parent === Sub.m ? 1.5 : 1.7; parent.add(sp); return sp; }   /* 自己的泡泡放低一點，不要被上面的深度計擋住 */
 function onSubQ(msg){ if (!msg || !msg.data) return; const k = Math.floor(+msg.data.k); if (!(k >= 0 && k < SUB_Q.length)) return; const q = SUB_Q[k];
   if (typeof Sub === 'undefined' || !Sub.on) return;

@@ -1063,3 +1063,6 @@ body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:
 /* v258 聊天範圍切換 */
 #chatMode{flex:none;border:0;border-radius:999px;padding:5px 9px;font:700 12px/1 system-ui,sans-serif;background:#e6eef3;color:#2a4a5e;white-space:nowrap}
 #chatMode.near{background:#ffe7a8;color:#7a4a00}
+
+/* v260 深海三層 */
+#subHud .sh-zone{font-size:12px;font-weight:700;opacity:.85}
