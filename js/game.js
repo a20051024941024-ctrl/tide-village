@@ -548,6 +548,7 @@ for (const [id, S] of Object.entries(FISH_SPECS)) regFishSpec(id, S);
 /* 深藍旗魚（2026-11-06）：手刻的 Marlin 模型（js/fish-models.js），身體顏色和條紋在 fishMat 的 shader 裡畫；蓋掉 fish-specs 的參數版 */
 FISH_STYLE.marlin = { shape:'Marlin', c:{ Body:'#2e62c8', Fins:'#2a44b0', Bill:'#283858', Eye:'#0b0e14', EyeW:'#ffffff', Gill:'#0e1f4a' }, move:'marlin', glow:false, marlin:true };
 const fishTime = { value: 0 };           // 尾巴擺動用的共用時間
+const finSpd = { value: 0 };             // v267 鰭動用的時間：平常跟著時間走，搏鬥的時候走快一點（鰭動得快）
 const fishGeoCache = {}, fishMatCache = {};
 function fishGeo(shape, part){
   const key = shape + '/' + part; if (fishGeoCache[key]) return fishGeoCache[key];
@@ -558,6 +559,15 @@ function fishGeo(shape, part){
   g.computeVertexNormals();
   return (fishGeoCache[key] = g);
 }
+/* v267 鰭自己會動（只動 Fins 這個部位；頭朝 +x，身體大約 x -0.5～0.8，尾鰭在 -0.5 後面）：
+   胸鰭、腹鰭（往兩側伸出去的）以根部為軸前後划，左右兩片錯開一點；背鰭、臀鰭（上下、很薄的）一波一波往後傳；尾鰭尖端比根部慢一點跟上，看起來軟軟的。
+   每條魚用自己的位置當相位，魚缸裡不會整齊劃一。 */
+const FIN_MOVE = 'float fph = dot(modelMatrix[3].xz, vec2(1.7, 2.3)); float ft = uFinS + fph;'
+  + ' float fside = smoothstep(0.03, 0.08, abs(position.z)) * step(-0.5, position.x); float fr = max(0.0, abs(position.z) - 0.05);'
+  + ' float fpel = mix(1.0, 0.5, step(position.y, -0.1));'
+  + ' transformed.x += sin(ft * 6.0 + sign(position.z) * 0.7) * fr * 0.45 * fside * fpel;'
+  + ' float fdor = (1.0 - fside) * step(-0.48, position.x); transformed.z += sin(ft * 5.0 + position.x * 18.0) * max(0.0, abs(position.y) - 0.1) * 0.16 * fdor;'
+  + ' float ftl = smoothstep(-0.5, -0.78, position.x); transformed.z += sin(uFishT * 9.0 + position.x * 5.0 - 1.4) * 0.03 * ftl;';
 const FISH_MOVES = {
   side: 'float wk = clamp((-position.x - 0.05) / 0.75, 0.0, 1.0);\n transformed.z += sin(uFishT * 9.0 + position.x * 5.0) * 0.12 * wk * wk;',
   vert: 'float wk = clamp((-position.x - 0.1) / 0.7, 0.0, 1.0);\n transformed.y += sin(uFishT * 4.0 + position.x * 3.0) * 0.1 * wk * wk;',
@@ -580,13 +590,14 @@ function fishMat(id, part, color, glow, move, shape){
   if (marlinBody){ m.metalness = 0.55; m.roughness = 0.32; m.flatShading = false; }
   if (shape === 'Marlin' && part === 'Fins'){ m.metalness = 0.2; m.roughness = 0.5; }
   const marlinFin = shape === 'Marlin' && part === 'Fins', m2 = shape === 'Marlin2';
+  const finMove = !CLASSIC && part === 'Fins' && !/^Marlin/.test(shape || '') && (move === 'side' || move === 'vert' || move === 'eel');   /* v267 鰭自己會動（螃蟹、龍蝦、魟魚、旗魚不用） */
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
   if (glow && (part === 'Top' || part === 'Body')){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.35; }
   if (shape === 'Goby' && part === 'Spots'){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.9; }
   m.onBeforeCompile = sh => {
-    sh.uniforms.uFishT = fishTime;
-    sh.vertexShader = 'uniform float uFishT;\nvarying vec3 vFishP;\n' + sh.vertexShader.replace('#include <begin_vertex>',
-      'vec3 transformed = vec3(position);\n vFishP = position;\n ' + FISH_MOVES[move]);
+    sh.uniforms.uFishT = fishTime; sh.uniforms.uFinS = finSpd;
+    sh.vertexShader = 'uniform float uFishT;\nuniform float uFinS;\nvarying vec3 vFishP;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      'vec3 transformed = vec3(position);\n vFishP = position;\n ' + FISH_MOVES[move] + (finMove ? '\n' + FIN_MOVE : ''));
     if (!CLASSIC){
       sh.fragmentShader = 'varying vec3 vFishP;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' +
         (marlinBody ? (albino
@@ -1801,9 +1812,25 @@ function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScala
    頭朝 +x、長度跟原本的模型一樣；白化版在載入時把貼圖換成粉白色（保留明暗）。還沒載好的時候先用原本的模型，載好後換掉。
    要加新的魚：在 MFISH.defs 加一行 { file, scale（讓長度跟原本一樣）, alb（白化版的 id）}。 */
 var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' }, barreleye:{ file:'models/barreleye.glb', scale:0.5, alb:'barreleye_albino', glow:'barreleye_glow', lift:0.35 }, angler:{ file:'models/angler.glb', scale:1.6, alb:'angler_albino', bulb:[0.41, 0.376, 0], lift:0.12 } }   /* v263 深海鮟鱇換成使用者用 Meshy 做的模型（大嘴尖牙、頭上吊一盞燈；bulb 是燈的位置，自己會發光） */, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
+/* v264 Meshy 模型的鰭會動：載入時依位置算出每個頂點「是鰭的程度」aFin（0 身體～1 鰭尖），shader 裡只讓鰭動。
+   m(x,y,z)：模型原始座標（頭朝 +x、長度 -1～1，縮放前）；v(s)：GLSL，s 是 defs 的 scale */
+{ const sat = v => Math.max(0, Math.min(1, v)), inX = (x, a, b) => (x >= a && x <= b ? 1 : 0), FIN = {
+  bluewhale:{ m:(x, y, z) => sat((Math.abs(z) - 0.15) / 0.36) * inX(x, -0.05, 0.7) * (y < 0.06 ? 1 : 0),   /* 兩片長長的胸鰭：慢慢上下搧，順便往前後划一點 */
+    v:s => `transformed.y += sin(uFishT * 1.5) * ${(0.12 * s).toFixed(4)} * aFin; transformed.x += cos(uFishT * 1.5) * ${(0.04 * s).toFixed(4)} * aFin;` },
+  sperm:{ m:(x, y, z) => sat((Math.abs(z) - 0.2) / 0.11) * inX(x, -0.05, 0.5) * (y < 0.02 ? 1 : 0),
+    v:s => `transformed.y += sin(uFishT * 1.7) * ${(0.06 * s).toFixed(4)} * aFin; transformed.x += cos(uFishT * 1.7) * ${(0.025 * s).toFixed(4)} * aFin;` },
+  greatwhite:{ m:(x, y, z) => sat((Math.abs(z) - 0.12) / 0.36) * inX(x, -0.05, 0.55) * (y < -0.08 ? 1 : 0),   /* 鯊魚胸鰭幾乎不搧，只是隨著游動微微調整 */
+    v:s => `transformed.y += sin(uFishT * 2.2) * ${(0.05 * s).toFixed(4)} * aFin;` },
+  giantsquid:{ m:(x, y, z) => sat((Math.abs(y) - 0.03) / 0.07) * sat((x - 0.7) / 0.08),   /* 外套膜尾端的兩片鰭：一波一波像波浪 */
+    v:s => `transformed.z += sin(uFishT * 3.4 - position.x / ${s.toFixed(3)} * 10.0) * ${(0.06 * s).toFixed(4)} * aFin;` },
+  barreleye:{ m:(x, y, z) => sat((Math.abs(z) - 0.16) / 0.18) * inX(x, -0.05, 0.65) * (y < 0.12 ? 1 : 0),
+    v:s => `transformed.y += sin(uFishT * 3.0) * ${(0.05 * s).toFixed(4)} * aFin; transformed.x += cos(uFishT * 3.0) * ${(0.02 * s).toFixed(4)} * aFin;` },
+  angler:{ m:(x, y, z) => sat((Math.abs(z) - 0.21) / 0.05) * inX(x, -0.08, 0.26) * (y > -0.28 && y < 0.08 ? 1 : 0),   /* 鮟鱇的小胸鰭：快速前後扇 */
+    v:s => `transformed.x += sin(uFishT * 5.0 + sign(position.z) * 0.8) * ${(0.035 * s).toFixed(4)} * aFin;` } };
+  for (const [k, f] of Object.entries(FIN)) if (MFISH.defs[k]) MFISH.defs[k].fin = f; }
 for (const [k, d] of Object.entries(MFISH.defs)){ MFISH.of[k] = { k, albino:false }; if (d.alb) MFISH.of[d.alb] = { k, albino:true }; if (d.glow) MFISH.of[d.glow] = { k, glow:true }; MFISH.wait[k] = new Set();
   new GLTFLoader().loadAsync(d.file).then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
-    const geo = mesh.geometry.clone(); geo.scale(d.scale, d.scale, d.scale); geo.computeBoundingSphere(); MFISH.geo[k] = geo; MFISH.tex[k] = mesh.material.map; MFISH.tex[k].colorSpace = THREE.SRGBColorSpace;
+    const geo = mesh.geometry.clone(); if (d.fin){ const p = geo.attributes.position, a = new Float32Array(p.count); for (let i = 0; i < p.count; i++) a[i] = d.fin.m(p.getX(i), p.getY(i), p.getZ(i)); geo.setAttribute('aFin', new THREE.BufferAttribute(a, 1)); } geo.scale(d.scale, d.scale, d.scale); geo.computeBoundingSphere(); MFISH.geo[k] = geo; MFISH.tex[k] = mesh.material.map; MFISH.tex[k].colorSpace = THREE.SRGBColorSpace;
     for (const fish of [...MFISH.wait[k]]){ try { mfishFill(fish); } catch(e){ console.warn('mfish', e); } } MFISH.wait[k].clear(); }).catch(e => console.warn('mfish ' + k, e)); }
 function mfishAlbinoTex(k){ const key = k + '_a'; if (MFISH.tex[key]) return MFISH.tex[key]; const src = MFISH.tex[k], img = src.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const c = cv.getContext('2d'); c.drawImage(img, 0, 0);
   const d = c.getImageData(0, 0, cv.width, cv.height), px = d.data;
@@ -1817,7 +1844,8 @@ function mfishGlowTex(k){ const key = k + '_g'; if (MFISH.tex[key]) return MFISH
 function mfishMat(k, albino, glow){ const key = k + (albino ? '_a' : '') + (glow ? '_g' : ''); if (MFISH.mats[key]) return MFISH.mats[key];
   const m = new THREE.MeshStandardMaterial({ map: albino ? mfishAlbinoTex(k) : glow ? mfishGlowTex(k) : MFISH.tex[k], roughness:0.5, metalness:0.05, side:THREE.DoubleSide });
   if (glow){ m.emissive = new THREE.Color('#ffffff'); m.emissiveMap = m.map; m.emissiveIntensity = 0.8; } else if (MFISH.defs[k].lift){ m.emissive = new THREE.Color('#ffffff'); m.emissiveMap = m.map; m.emissiveIntensity = MFISH.defs[k].lift; }   /* 薄薄的鰭和透明的頭打光後太暗，自己補一點亮 */
-  const mv = MFISH.defs[k].move || 'side'; m.onBeforeCompile = fishMat('mfish_' + mv, 'Body', '#888888', false, mv, 'MF').onBeforeCompile; m.customProgramCacheKey = () => 'mfish' + mv; return (MFISH.mats[key] = m); }   /* 鯨魚尾巴上下擺（vert），鯊魚左右擺（side） */
+  const mv = MFISH.defs[k].move || 'side', base = fishMat('mfish_' + mv, 'Body', '#888888', false, mv, 'MF').onBeforeCompile, fd = MFISH.defs[k].fin, fv = fd && !CLASSIC && MFISH.geo[k] && MFISH.geo[k].attributes.aFin ? fd.v(MFISH.defs[k].scale) : '';
+  m.onBeforeCompile = sh => { base(sh); if (fv) sh.vertexShader = 'attribute float aFin;\n' + sh.vertexShader.replace('vFishP = position;', 'vFishP = position;\n ' + fv); }; m.customProgramCacheKey = () => 'mfish' + mv + (fv ? '_fin_' + k : ''); return (MFISH.mats[key] = m); }   /* 鯨魚尾巴上下擺（vert），鯊魚左右擺（side） */
 function mfishFill(fish){ const o = fish.userData.mf; for (const c of [...fish.children]) fish.remove(c); const b = new THREE.Mesh(MFISH.geo[o.k], mfishMat(o.k, o.albino, o.glow)); b.castShadow = true; fish.add(b);
   const d = MFISH.defs[o.k]; if (d.bulb){ const bm = MFISH.bulbM || (MFISH.bulbM = new THREE.MeshBasicMaterial({ color:'#d8fbff' })), bl = new THREE.Mesh(MFISH.bulbG || (MFISH.bulbG = new THREE.SphereGeometry(1, 8, 6)), bm); bl.scale.setScalar(0.035 * d.scale); bl.position.set(d.bulb[0] * d.scale, d.bulb[1] * d.scale, d.bulb[2] * d.scale); fish.add(bl); const gl = subGlow('#9fefff', 0.28 * d.scale, true); gl.position.copy(bl.position); fish.add(gl); } }   /* 鮟鱇頭上的小燈自己會亮 */
 function makeMFish(id, scale){ const o = MFISH.of[id];
@@ -12106,7 +12134,7 @@ function frame(){
   { const cap = Power.want(); if (cap){ const ms = performance.now(); if (ms - Power.last < 1000 / cap - 3){ requestAnimationFrame(frame); return; } Power.last = ms; } }   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因） */
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
-  if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
+  if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
   updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
@@ -12126,7 +12154,7 @@ function frame(){
   discover(t); updateBoatButton();
   { const jb = $('#jumpBtn'), hide = !!myBoat || F.phase !== 'idle'; if (jb.hidden !== hide) jb.hidden = hide; }
   if (waterfall && Math.hypot(me.pos.x - waterfall.x, me.pos.z - waterfall.z) < 45){ if (Math.random() < dt * 10) FX.emit(waterfall.x + rand(-1, 1), 0.3, waterfall.z + rand(-0.5, 0.5), 1, '#ffffff', 0.9, 1.6, 0.7); if (Math.random() < dt * 1.5) ripple(waterfall.x + rand(-0.8, 0.8), waterfall.z + rand(-0.4, 0.4)); }
-  fishTime.value = t; updateSeaLife(t); FX.update(dt); if (skyDome) skyDome.position.copy(camera.position); updateZones(t); watchFps(t);
+  fishTime.value = t; finSpd.value += Math.min(dt, 0.1) * (F.phase === 'reeling' ? 1.9 : 1); updateSeaLife(t); FX.update(dt); if (skyDome) skyDome.position.copy(camera.position); updateZones(t); watchFps(t);
   placeLabelsUpdate();
   if (Dive.on) diveHideWorld(); else { cullAvatars(); hideOrphanBits(); }
   renderer.render(scene, camera);
