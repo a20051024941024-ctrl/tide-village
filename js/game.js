@@ -9671,7 +9671,7 @@ const chatRate = new Map();
 function tooChatty(peerId){ const t = performance.now(), a = (chatRate.get(peerId) || []).filter(x => t - x < 6000); a.push(t); chatRate.set(peerId, a); return a.length > 4; }
 let myChatAt = [], lastMyChat = '';
 
-function peerName(p){ const pr = p.pres || {}; const n = typeof pr.n === 'string' && pr.n.trim() ? clean(pr.n.trim().slice(0, 16)) : (p.by && profileNames[p.by]) || '釣客'; const hm = typeof homeMate === 'function' && homeMate(p.by); return hm ? `${n}・${homeTitle(hm)}` : n; }   /* 一起住的人名字後面加稱呼 */
+function peerName(p){ const pr = p.pres || {}; const n = typeof pr.n === 'string' && pr.n.trim() ? clean(pr.n.trim().slice(0, 16)) : (p.by && profileNames[p.by]) || '釣客'; const hm = (onIsle || House.on) && typeof homeMate === 'function' && homeMate(p.by); return hm ? `${n}・${homeTitle(hm)}` : n; }   /* 一起住的人名字後面加稱呼（v275 只在小島上、房子裡才加，在外面就只顯示名字） */
 function myDisplayName(){ return nickname || (myId && profileNames[myId]) || '你'; }
 
 let lastPres = '', lastPresAt = 0;
