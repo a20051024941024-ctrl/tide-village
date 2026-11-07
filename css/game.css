@@ -1053,3 +1053,9 @@ body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:
 #sheet #tabs{display:none!important}
 #sheet header{justify-content:space-between;align-items:center}
 #sheetTitle{margin:0;font-size:20px;font-weight:800;color:#18334a;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:4px}
+
+/* v258 遠洋羅盤 */
+#sailComp{position:fixed;top:calc(env(safe-area-inset-top,0px) + 116px);left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:30;pointer-events:none}
+#sailComp span{background:rgba(10,30,50,.62);color:#fff;font:600 13px/1 system-ui,sans-serif;padding:6px 10px;border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+#sailComp i{font-style:normal;display:inline-block;color:#ffd36a}
+#sailComp[hidden]{display:none}

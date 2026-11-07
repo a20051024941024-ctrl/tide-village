@@ -3239,7 +3239,11 @@ $('#photoView').addEventListener('click', e => { if (e.target.id === 'photoView'
 const boats = BOAT_DOCKS.map(d => { const m = makeBoatMesh('#c98b55'); m.position.set(d.x, WATER_LEVEL, d.z); m.rotation.y = d.rot; scene.add(m); return { dock: d, m }; });
 let myBoat = null;
 function nearBoat(){ for (const b of boats){ if (b === myBoat) continue; if (Math.hypot(me.pos.x - b.m.position.x, me.pos.z - b.m.position.z) < 3.4) return b; } return null; }
-function boatWater(x, z){ if (Math.abs(x) > 85 || Math.abs(z) > 85) return false; { const e = mangE(x, z); if (e > -1.0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(x, z); return i.water && i.h < -0.3 && !deckAt(x, z); }
+function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return false;   /* v258 小船可以一路划到冰封群島、深海浮台、神秘島、苔森之島（以前只能在本島附近 85 公尺內） */
+  if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 16) return false;   /* 大家的小島是另外進去的，船不能划過去 */
+  if (greenNear(x, z, 6)){ const lx = x - GREEN.x, lz = z - GREEN.z; return Math.hypot(lx, lz) > greenEdge(lx, lz) + 1.2; }
+  if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 2.6 || Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 2.2) return false;
+  if (nearReef(x, z) && reefE(x, z) > -0.8) return false; { const e = mangE(x, z); if (e > -1.0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(x, z); return i.water && i.h < -0.3 && !deckAt(x, z); }
 function boardBoat(b){
   if (F.phase !== 'idle') cancelFishing();
   myBoat = b; me.pos.x = b.m.position.x; me.pos.z = b.m.position.z; me.rot = b.m.rotation.y; me.sitting = true; cam.yaw = me.rot + Math.PI;
@@ -3253,9 +3257,21 @@ function leaveBoat(){
   if (F.phase !== 'idle') cancelFishing();
   const b = myBoat; myBoat = null; me.sitting = false; me.pos.x = best[0]; me.pos.z = best[1];
   b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0);   // 小船自己划回碼頭
+  sailCompass();
   pushPresence(true);
 }
 // 在船上拋竿：依所在的水域決定會釣到哪些魚
+/* v258 遠洋羅盤：坐自己的船離開本島後，上面會指出最近的島在哪個方向、還有多遠 */
+const SAIL_ISLES = [ { n:'🏝️ 潮汐釣魚村', x:6, z:6, r:58 }, { n:'❄️ 冰封群島', x:FROST.dock[0] - 1, z:FROST.dock[1], r:3 }, { n:'🌌 深海浮台', x:ABYSS.x, z:ABYSS.z + ABYSS.d / 2 + 1.5, r:3 }, { n:'🌋 神秘島', x:MYST.x, z:MYST.z - MYST.r - 2, r:3 }, { n:'🌲 苔森之島', x:GREEN.x + 6, z:GREEN.z - 33, r:3 } ];
+function sailCompass(){
+  let el0 = document.getElementById('sailComp'); const far0 = myBoat && !Dive.on && !onIsle && Math.hypot(me.pos.x, me.pos.z) > 62;
+  if (!far0){ if (el0 && !el0.hidden) el0.hidden = true; return; }
+  if (!el0){ el0 = document.createElement('div'); el0.id = 'sailComp'; document.body.appendChild(el0); }
+  const L = SAIL_ISLES.map(i => ({ i, d: Math.max(0, Math.hypot(i.x - me.pos.x, i.z - me.pos.z) - i.r) })).sort((a, b) => a.d - b.d).slice(0, 2);
+  const fw = cam.yaw + Math.PI; let h = '';
+  for (const o of L){ const a = Math.atan2(o.i.x - me.pos.x, o.i.z - me.pos.z), rel = ((a - fw) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI; h += `<span><i style="transform:rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)">⬆</i>${o.i.n} ${o.d < 5 ? '就在這' : Math.round(o.d) + ' 公尺'}</span>`; }
+  if (el0.innerHTML !== h) el0.innerHTML = h; el0.hidden = false;
+}
 function boatSpot(){
   const id = waterSpotId(me.pos.x, me.pos.z);
   return Object.assign({}, SPOT_BY_ID[id], { pos: me.pos.clone(), dir: new THREE.Vector2(Math.sin(me.rot), Math.cos(me.rot)), shore: true, legendBoost: 1 });
@@ -3266,7 +3282,7 @@ function updateBoat(dt, ix, iz, L, locked){
     if (F.phase !== 'idle') cancelFishing('收竿了');
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, ml = Math.max(1e-6, Math.hypot(mx, mz));
-    speed = 4.2 * Math.min(1, L);
+    speed = 4.2 * Math.min(1, L) * (Math.hypot(me.pos.x, me.pos.z) > 72 ? 1.9 : 1);   /* v258 離開本島到了遠洋，船划得快一點（不然到別的島要划一分鐘） */
     const nx = me.pos.x + mx / ml * speed * dt, nz = me.pos.z + mz / ml * speed * dt;
     if (boatWater(nx, me.pos.z)) me.pos.x = nx;
     if (boatWater(me.pos.x, nz)) me.pos.z = nz;
@@ -3277,6 +3293,7 @@ function updateBoat(dt, ix, iz, L, locked){
   const bob = Math.sin(t * 1.6) * 0.04;
   me.baseY = WATER_LEVEL - 0.08 + bob;
   myBoat.m.position.set(me.pos.x, WATER_LEVEL + bob, me.pos.z); myBoat.m.rotation.set(Math.sin(t * 1.1) * 0.02, me.rot, Math.sin(t * 1.3) * 0.03);
+  if (frameNo % 10 === 0) sailCompass();
   const oar = myBoat.m.userData.oars; if (oar){ const k = speed > 0.3 ? Math.sin(t * 6) * 0.6 : 0; oar[0].rotation.y = k; oar[1].rotation.y = -k; }
 }
 $('#boatBtn').addEventListener('click', () => { ensureAudio(); if (myBoat) leaveBoat(); else { const b = nearBoat(); if (b) boardBoat(b); } });
@@ -3454,6 +3471,7 @@ function updatePlayer(dt){
     me.rot = lerpAngle(me.rot, target, 1 - Math.exp(-14 * dt));
   }
   me.speed += (speed - me.speed) * Math.min(1, dt * 12);
+  if (!myBoat && frameNo % 30 === 0) sailCompass();
   if (!myBoat && !mySeat && !Dive.on && !House.on && !inIndoor() && frameNo % 30 === 0 && !walkable(me.pos.x, me.pos.z)){   /* v197：不管怎麼進到水裡（下船、傳送、舊版本留下的位置），都推回最近的岸上 */
     let best = null, bd = 1e9; for (let r = 0.8; r <= 14 && !best; r += 0.8) for (let k = 0; k < 24; k++){ const a = k / 24 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)){ const d = r; if (d < bd){ bd = d; best = [x, z]; } } }
     if (best){ me.pos.x = best[0]; me.pos.z = best[1]; me.baseY = groundHeight(best[0], best[1]); Jump.gy = me.baseY; } }
@@ -10924,6 +10942,7 @@ function renderTab(){
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
     ]);
     sec('⚓ 港口海底潛水', [
+      '⛵ 坐自己的小船（港口的船，按「上船」）可以一路划到別的島：冰封群島、深海浮台、神秘島、苔森之島。離開本島以後船會划得比較快，畫面上面會有箭頭指出最近的島在哪、還有幾公尺；靠到島邊按「下船」就上岸了。想快一點還是可以找阿海直接載你去。',
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
     ]);
