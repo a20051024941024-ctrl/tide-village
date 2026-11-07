@@ -2170,18 +2170,26 @@ const LOOK_HC = ['#2a2422', '#5a3d2b', '#8a5a3a', '#d8a850', '#f0d890', '#c0482a
   /* v270 阿萍每天發現的新髮色（109，要染）：從 3 色開始，每天多一色 */ '#f6a99a', '#b7a0e0', '#9fe0c8', '#a8d8f0', '#b8906a', '#c88a3a', '#e0a090', '#c8283c', '#f08060', '#7f98b8', '#8aa890', '#7a2236', '#a8aab0', '#f2e6c8', '#3a7a5a', '#1e2a5a', '#5a2a7a', '#f0e060', '#e0a848', '#4a2c1e', '#b0582a', '#f0b880', '#d8a8a8', '#78b8f0', '#7ab8a8', '#8aa848', '#a03a8a', '#f07838', '#ff5fa8', '#1a2850'];
 const LOOK_HC_NAME = ['蜜桃粉', '薰衣草紫', '薄荷綠', '冰川藍', '奶茶棕', '焦糖金', '玫瑰金', '櫻桃紅', '珊瑚橘', '霧霾藍', '灰綠', '酒紅', '銀灰', '白金', '海藻綠', '午夜藍', '葡萄紫', '檸檬黃', '蜂蜜色', '巧克力', '紅銅', '杏桃', '藕粉', '天空藍', '青瓷', '抹茶', '莓果紫', '落日橘', '霓虹粉', '星空藍'];
 const LOOK_FREE_H = 10, LOOK_FREE_C = 11;
+/* v273 阿萍不會停：前 30 色是手調的，第 31 色以後每天自動調一個新顏色、取一個名字（照編號算，大家看到的都一樣），一直到 999 號 */
+const HC_PLACE = ['港口', '深海', '晨霧', '夕陽', '珊瑚', '月光', '雨後', '海風', '星砂', '浪花', '苔森', '冰封', '火山', '潮汐', '燈塔', '夏夜', '初雪', '黎明', '暮色', '螢火'];
+function hcHash(n, k){ let h = (n * 2654435761 + k * 40503) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822519) >>> 0; h ^= h >>> 13; return (h >>> 0) / 4294967296; }
+function hcCol(i){ if (i < LOOK_HC.length) return LOOK_HC[i]; const hue = (i * 137.508) % 360, sat = 0.38 + hcHash(i, 1) * 0.5, lit = 0.32 + hcHash(i, 2) * 0.4; return '#' + new THREE.Color().setHSL(hue / 360, sat, lit, THREE.SRGBColorSpace).getHexString(); }
+function hcName(i){ if (i < LOOK_FREE_C) return '髮色 ' + (i + 1); if (i < LOOK_HC.length) return LOOK_HC_NAME[i - LOOK_FREE_C];
+  const h = (i * 137.508) % 360, hsl = { l: 0.32 + hcHash(i, 2) * 0.4 }, nouns = [[15, '紅'], [40, '橘'], [55, '金'], [70, '檸檬黃'], [100, '青檸'], [150, '綠'], [175, '薄荷'], [195, '湖水藍'], [225, '藍'], [255, '靛'], [285, '紫'], [320, '梅'], [345, '粉'], [361, '紅']];
+  const noun = (nouns.find(([m]) => h < m) || nouns[0])[1]; return HC_PLACE[Math.floor(hcHash(i, 3) * HC_PLACE.length)] + (hsl.l < 0.42 ? '深' : hsl.l > 0.62 ? '淺' : '') + noun; }
 function salonDays(){ return Math.max(0, Math.floor((bossNow() / 1000 + 8 * 3600) / 86400) - Math.floor(Date.UTC(2026, 10, 7) / 86400000)); }   /* 跟 109 的 _salon_days 一樣（台灣時間，從 2026-11-07 起算） */
-function salonOk(kind, n){ const d = salonDays(); return kind === 'hs' ? n >= 10 && n <= 21 && n - 10 < 4 + Math.floor(d / 2) : n >= 11 && n <= 40 && n - 11 < 3 + d; }
+const SALON_HS_MAX = 21;   /* 阿萍最新的髮型編號（每週加新髮型時改這裡和 SQL 的 _salon_hs_max） */
+function salonOk(kind, n){ const d = salonDays(); return kind === 'hs' ? n >= 10 && n <= SALON_HS_MAX && n - 10 < 4 + Math.floor(d / 2) : n >= 11 && n <= 999 && n - 11 < 3 + d; }
 function lookOwnH(h){ return h < LOOK_FREE_H || (rec.owned || []).includes('hs' + h); }
 function lookOwnC(c){ return c < LOOK_FREE_C || (rec.owned || []).includes('hc' + c); }
 const LOOK_SKIN = ['#ffe6d2', '#ffd9b8', '#f2c49a', '#d9a070', '#a8704a', '#74492f'];
 const LOOK_EYE = ['#3a2a20', '#7a4a28', '#2f6fb5', '#3a8a5a', '#8a5ac0', '#c0402a', '#3aa0b0'];
 const LOOK_DEFAULT = 'h0c1s1e0';
-function lookParse(v){ const m = /^h(\d{1,2})c(\d{1,2})s(\d)e(\d)$/.exec(v || ''); const r = m ? { h:+m[1], c:+m[2], s:+m[3], e:+m[4] } : { h:0, c:1, s:1, e:0 }; r.h = r.h < LOOK_HAIR.length ? r.h : 0; r.c = r.c < LOOK_HC.length ? r.c : 1; r.s = r.s < LOOK_SKIN.length ? r.s : 1; r.e = r.e < LOOK_EYE.length ? r.e : 0; return r; }
+function lookParse(v){ const m = /^h(\d{1,2})c(\d{1,3})s(\d)e(\d)$/.exec(v || ''); const r = m ? { h:+m[1], c:+m[2], s:+m[3], e:+m[4] } : { h:0, c:1, s:1, e:0 }; r.h = r.h < LOOK_HAIR.length ? r.h : 0; r.c = r.c < 1000 ? r.c : 1; r.s = r.s < LOOK_SKIN.length ? r.s : 1; r.e = r.e < LOOK_EYE.length ? r.e : 0; return r; }
 function lookStr(L){ return `h${L.h}c${L.c}s${L.s}e${L.e}`; }
 function applyLook(av, gear, mk){
   const L = lookParse(gear.look), HD = av.headG, hm = av.hairM, hatOn = gear.hat !== 'hat_none';
-  av.skinM.color.set(LOOK_SKIN[L.s]); hm.color.set(LOOK_HC[L.c]); if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
+  av.skinM.color.set(LOOK_SKIN[L.s]); hm.color.set(hcCol(L.c)); if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
   const sph = (r, x, y, z, sx, sy, sz) => { const o = mk(new THREE.SphereGeometry(r, 14, 10), hm, x, y, z, HD); o.scale.set(sx || 1, sy || 1, sz || 1); return o; };
   const shell = (rt, rb, h, y, gap) => { const o = mk(new THREE.CylinderGeometry(rt, rb, h, 22, 1, true, gap, Math.PI * 2 - gap * 2), hm, 0, y, -0.01, HD); o.material = hm.clone(); o.material.side = THREE.DoubleSide; return o; };
   switch (L.h){
@@ -8930,8 +8938,8 @@ function renderLookEd(body){
   const row = (title, cols, key) => { body.appendChild(el('div', 'dexhead', title)); const r = el('div', ''); r.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px';
     cols.forEach((c, i) => { const b = el('button', ''); b.setAttribute('aria-label', title + ' ' + (i + 1)); b.style.cssText = `width:34px;height:34px;border-radius:50%;background:${c};padding:0;border:${L[key] === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};box-shadow:${L[key] === i ? '0 0 0 2px #fff inset' : 'none'}`;
       b.addEventListener('click', () => setLook(Object.assign({}, L, { [key]: i }))); r.appendChild(b); }); body.appendChild(r); };
-  { const own = LOOK_HC.map((c, i) => lookOwnC(i) ? c : null); body.appendChild(el('div', 'dexhead', '🎨 髮色')); const r = el('div', ''); r.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px';
-    own.forEach((c, i) => { if (!c) return; const b = el('button', ''); b.setAttribute('aria-label', i >= LOOK_FREE_C ? LOOK_HC_NAME[i - LOOK_FREE_C] : '髮色 ' + (i + 1)); b.style.cssText = `width:34px;height:34px;border-radius:50%;background:${c};padding:0;border:${L.c === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};box-shadow:${L.c === i ? '0 0 0 2px #fff inset' : 'none'}`; b.addEventListener('click', () => setLook(Object.assign({}, L, { c: i }))); r.appendChild(b); }); body.appendChild(r); }
+  { const own = []; for (let i = 0; i < LOOK_FREE_C; i++) own[i] = hcCol(i); for (const o of rec.owned || []){ const m = /^hc(\d+)$/.exec(o); if (m) own[+m[1]] = hcCol(+m[1]); } body.appendChild(el('div', 'dexhead', '🎨 髮色')); const r = el('div', ''); r.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px';
+    own.forEach((c, i) => { if (!c) return; const b = el('button', ''); b.setAttribute('aria-label', hcName(i)); b.title = hcName(i); b.style.cssText = `width:34px;height:34px;border-radius:50%;background:${c};padding:0;border:${L.c === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};box-shadow:${L.c === i ? '0 0 0 2px #fff inset' : 'none'}`; b.addEventListener('click', () => setLook(Object.assign({}, L, { c: i }))); r.appendChild(b); }); body.appendChild(r); }
   body.appendChild(el('p', 'sub', '💇 想要更多髮型、更特別的髮色？去找「阿綾服裝店」對面「阿萍美髮沙龍」的阿萍，她每天都在設計新的。'));
   row('🙂 膚色', LOOK_SKIN, 's'); row('👀 眼睛顏色', LOOK_EYE, 'e');
 }
@@ -10440,17 +10448,17 @@ async function boardDo(fn, args){ if (Board.busy) return; Board.busy = true; con
 /* ===== v270 阿萍美髮沙龍：新髮型 🪙400、新髮色 🪙200（伺服器 109 決定價錢、哪些已經設計出來）。原本的髮型髮色照舊免費 ===== */
 const SALON_TALK = ['昨天我又熬夜了，因為這個顏色一直調不出我要的感覺……終於！', '今天的設計靈感來自港口的夕陽', '你知道嗎？我連做夢都在編辮子', '休假？那是什麼？可以吃嗎？', '我剛剛幫海鷗修了一下羽毛，牠很滿意', '每一個髮型我都至少試剪了一百次', '今天的新髮色，是我盯著海浪看了一整個下午才調出來的'];
 async function salonBuy(kind, n, apply){ if (!Cloud.on || !Cloud.sb){ toast('要連上線才能找阿萍'); return; } const price = kind === 'hs' ? 400 : 200; if ((rec.coins || 0) < price){ toast('金幣不夠喔'); return; }
-  const r = await festRpc('buy_salon', { p_kind: kind, p_n: n }); if (r && r.player){ adoptRow(r.player); SFX.coin(); const nm = kind === 'hs' ? LOOK_HAIR[n] : LOOK_HC_NAME[n - LOOK_FREE_C]; flash(`💇 阿萍幫你${kind === 'hs' ? '剪好了' : '染好了'}：${nm}！`, 1.8); const np = npcs.find(x => x.shopNpc === 'salon'); if (np) np.say(kind === 'hs' ? '剪好了！超適合你的！' : '這個顏色在你頭上超亮眼！', 'emote', 3); if (apply) apply(); renderTab(); } }
+  const r = await festRpc('buy_salon', { p_kind: kind, p_n: n }); if (r && r.player){ adoptRow(r.player); SFX.coin(); const nm = kind === 'hs' ? LOOK_HAIR[n] : hcName(n); flash(`💇 阿萍幫你${kind === 'hs' ? '剪好了' : '染好了'}：${nm}！`, 1.8); const np = npcs.find(x => x.shopNpc === 'salon'); if (np) np.say(kind === 'hs' ? '剪好了！超適合你的！' : '這個顏色在你頭上超亮眼！', 'emote', 3); if (apply) apply(); renderTab(); } }
 function renderSalon(body){
   const g0 = cleanGear(rec.gear), L = lookParse(g0.look), d = salonDays();
   body.appendChild(el('p', 'sub', `💇「${SALON_TALK[d % SALON_TALK.length]}」——阿萍`));
-  body.appendChild(el('p', 'sub', '阿萍每天都在設計：新髮型每兩天出一款，新髮色每天一色。買了就是你的，之後在「造型 → 外觀」也可以隨時換。原本的髮型髮色一樣免費。'));
+  body.appendChild(el('p', 'sub', '阿萍每天都在設計：新髮色每天一色、永遠不會停；新髮型每週都會發表新作品。買了就是你的，之後在「造型 → 外觀」也可以隨時換。原本的髮型髮色一樣免費。'));
   // 今天的新設計
-  const nh = [...Array(12).keys()].map(i => 10 + i).filter(n => salonOk('hs', n)).pop(), nc = [...Array(30).keys()].map(i => 11 + i).filter(n => salonOk('hc', n)).pop();
+  const nh = [...Array(SALON_HS_MAX - 9).keys()].map(i => 10 + i).filter(n => salonOk('hs', n)).pop(), nc = Math.min(999, 11 + 3 + d - 1);
   body.appendChild(el('div', 'dexhead', '🆕 阿萍最新的設計'));
   { const ul = el('ul', 'shoplist');
     if (nh != null){ const li = el('li', 'on'), ic = el('img', 'gearic'); try { ic.src = avatarShot(Object.assign({}, g0, { hat:'hat_none', look: lookStr(Object.assign({}, L, { h: nh })) }), 'hat', 96); } catch(e){} li.appendChild(ic); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', '新髮型：' + LOOK_HAIR[nh])); t.appendChild(el('div', 'sub2', lookOwnH(nh) ? '你已經有了' : '🪙400')); li.appendChild(t); body && ul.appendChild(li); }
-    if (nc != null){ const li = el('li', 'on'), sw = el('span', 'dishic', ''); sw.style.cssText = `display:inline-block;width:40px;height:40px;border-radius:50%;background:${LOOK_HC[nc]};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)`; li.appendChild(sw); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', '新髮色：' + LOOK_HC_NAME[nc - LOOK_FREE_C])); t.appendChild(el('div', 'sub2', lookOwnC(nc) ? '你已經有了' : '🪙200')); li.appendChild(t); ul.appendChild(li); }
+    if (nc != null){ const li = el('li', 'on'), sw = el('span', 'dishic', ''); sw.style.cssText = `display:inline-block;width:40px;height:40px;border-radius:50%;background:${hcCol(nc)};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)`; li.appendChild(sw); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', '今天的新髮色：' + hcName(nc))); t.appendChild(el('div', 'sub2', lookOwnC(nc) ? '你已經有了' : '🪙200')); li.appendChild(t); ul.appendChild(li); }
     body.appendChild(ul); }
   // 髮型
   body.appendChild(el('div', 'dexhead', '✂️ 剪新髮型・每款 400 金幣'));
@@ -10462,10 +10470,11 @@ function renderSalon(body){
   // 髮色
   body.appendChild(el('div', 'dexhead', '🎨 染新髮色・每色 200 金幣'));
   const ul = el('ul', 'shoplist cols'); let waitC = 0;
-  for (let n = LOOK_FREE_C; n < LOOK_HC.length; n++){ if (!salonOk('hc', n)){ waitC++; continue; } const own = lookOwnC(n), li = el('li', L.c === n ? 'on' : ''), sw = el('span', 'dishic', ''); sw.style.cssText = `display:inline-block;width:36px;height:36px;border-radius:50%;background:${LOOK_HC[n]};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)`; li.appendChild(sw);
-    const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', LOOK_HC_NAME[n - LOOK_FREE_C])); t.appendChild(el('div', 'sub2', L.c === n ? '現在的髮色' : own ? '已經有了' : '🪙200')); li.appendChild(t);
+  const lastC = Math.min(999, 11 + 3 + d - 1), firstC = Math.max(LOOK_FREE_C, lastC - 39);   /* 只列最近 40 色（越新越前面）；更早買過的在「造型 → 外觀」 */
+  for (let n = lastC; n >= firstC; n--){ if (!salonOk('hc', n)){ waitC++; continue; } const own = lookOwnC(n), li = el('li', L.c === n ? 'on' : ''), sw = el('span', 'dishic', ''); sw.style.cssText = `display:inline-block;width:36px;height:36px;border-radius:50%;background:${hcCol(n)};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)`; li.appendChild(sw);
+    const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', hcName(n))); t.appendChild(el('div', 'sub2', L.c === n ? '現在的髮色' : own ? '已經有了' : '🪙200')); li.appendChild(t);
     if (L.c !== n){ const a = el('div', 'tacts'), b = el('button', 'tbtn', own ? '換' : '染'); b.addEventListener('click', () => own ? setLook(Object.assign({}, L, { c:n })) : salonBuy('hc', n, () => setLook(Object.assign({}, lookParse(cleanGear(rec.gear).look), { c:n })))); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
-  body.appendChild(ul); if (waitC) body.appendChild(el('p', 'sub', `🧪 阿萍還在調 ${waitC} 種新髮色，每天會發現一種。`)); }
+  body.appendChild(ul); if (waitC) body.appendChild(el('p', 'sub', '🧪 阿萍每天都會調出一種新髮色，永遠不會停。')); }
 function renderBoard(body){
   body.appendChild(el('p', 'sub', '大家都可以在這裡留言，跟村子裡的人打招呼、約一起釣魚、分享好釣點。一則最多 60 個字；要釣過 5 條魚才能留，一天最多 5 則。不要留電話、地址這些個人資料喔。'));
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '要連上線才看得到留言板。')); return; }
@@ -11266,7 +11275,7 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
-      '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂，每天都在設計：新髮型每兩天出一款（🪙400），新髮色每天發現一種（🪙200）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。',
+      '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
       '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨，沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。',
       '💬 開潛水艇也能聊天：按「💬 說話」可以選常用的話，也可以自己打字（最多 40 個字）。一邊用搖桿開船一邊打字也可以；同一個大廳的人都收得到，一起潛的人頭上會冒泡泡。',
