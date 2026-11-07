@@ -112,7 +112,7 @@ declare
   bait jsonb; bf jsonb; cb_r numeric := 1; cb_l numeric := 1; w jsonb; tide_st text; tr numeric := 1;
   sea boolean := p_spot = any(array(select jsonb_array_elements_text(cfg->'sea')));
   ring numeric := 1; lb numeric := 1; per text; gh numeric; tip_spot text; tip_fish text; hh bigint; pool text[];
-  ipool text[]; ih bigint; intel text[] := '{}'; sc_mine boolean := false;
+  ipool text[]; ih bigint; intel text[] := '{}'; sc_mine boolean := false; evm jsonb;
   eco jsonb := '{}';   -- 海洋生態（066）：魚群洄游、群聚、保育
   season text; mo integer; kr numeric; kl numeric; nleg integer; legk numeric; rainy boolean;
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
@@ -197,6 +197,7 @@ begin
   legk := (case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
   sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl, bait->>'k') end;
+  begin evm := public._ev_mig(); if public._ev_meteor() then kl := kl * 1.6; end if; exception when undefined_function then evm := null; end;   -- 111 釣魚活動：魚群洄游、流星雨
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
     f := cfg->'fish'->fid; if f is null then continue; end if;
     if f ? 'fest' and not public._fest_on(f->>'fest') then continue; end if;   -- 節慶限定魚（087）：只有那個節日期間釣得到
@@ -211,6 +212,7 @@ begin
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)
       * (case when f->>'t' is null then 1 when f->>'t' = per then 1.5 else 0.15 end)
       * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
+      * (case when evm is not null and (evm->>'active')::boolean and p_spot = evm->>'spot' and fid = evm->>'fish' then 4 else 1 end)   -- 111 魚群洄游：那種魚在那個釣點 ×4
       * (case when sg_k is not null and f->>'k' = sg_k then (case when f->>'r' = '傳說' then (case when sg_k = bait->>'k' then 1.5 else 1.3 end) else (case when sg_k = bait->>'k' then 4 else 2.5 end) end) else 1 end)   -- 247 徵兆（255：餌對上徵兆加成更大）
       * (case when bait->>'k' is not null and f->>'k' = bait->>'k' then 1.5 else 1 end)   -- 255 餌吸引的那一類魚   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
       * (case f->>'r' when '常見' then 1 when '稀有' then 0.34 * (1 + charge * 0.8) * kr * ring else 0.07 * (1 + charge * 1.6) * lb * kl * ring * legk end);
@@ -285,11 +287,11 @@ declare
   w  numeric := round(p_weight, 2);
   ts bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
   c  record;
-  tid bigint := public._tourney_at(now());
+  tid bigint := public._tourney_at(now()); v_spot text;
 begin
   select * into sp from public.fish_species where id = p_fish;
   if not found then raise exception '沒有這種魚'; end if;
-  select cs.fish, cs.w, cs.rs, cs.sex, cs.brood, cs.gp into pl.cast_fish, pl.cast_w, pl.cast_rs, pl.cast_sex, pl.cast_brood, pl.cast_gp from public.casts cs where cs.uid = pl.id;   -- 這一竿的結果（不公開的表）
+  select cs.fish, cs.w, cs.rs, cs.sex, cs.brood, cs.gp, cs.spot into pl.cast_fish, pl.cast_w, pl.cast_rs, pl.cast_sex, pl.cast_brood, pl.cast_gp, v_spot from public.casts cs where cs.uid = pl.id;   -- 這一竿的結果（不公開的表）
   if pl.cast_fish is null or pl.cast_fish <> p_fish or pl.cast_w is distinct from w then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
   if now() - pl.cast_at < interval '1.5 seconds' then raise exception '釣太快了'; end if;
   if now() - pl.cast_at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
@@ -315,6 +317,7 @@ begin
     last_catch_at = now(), updated_at = now()
   where id = pl.id returning * into pl;
   delete from public.casts where uid = pl.id;
+  begin perform public._ev_on_catch(pl.id, v_spot, p_fish, w); select * into pl from public.players where id = pl.id; exception when undefined_function then null; end;   -- 111 洄游、懸賞的獎勵
   return pl;
 end $$;
 
