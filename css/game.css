@@ -1066,3 +1066,11 @@ body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:
 
 /* v260 深海三層 */
 #subHud .sh-zone{font-size:12px;font-weight:700;opacity:.85}
+/* v261 深海的相遇 */
+#subHud .sh-sonar{position:relative;width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(24,51,74,.55);display:inline-block;background:radial-gradient(circle,rgba(80,200,255,.25) 0 2px,transparent 3px)}
+#subHud .sh-sonar i{position:absolute;border-radius:50%;opacity:0;transition:opacity .4s;box-shadow:0 0 6px currentColor}
+#subVig{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;transition:opacity 1.6s;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.75) 100%)}
+#subVig.on{opacity:1}
+#subBlack{position:fixed;inset:0;pointer-events:none;z-index:6;background:#000;opacity:0;transition:opacity 1.2s}
+#subBlack.on{opacity:1;transition:opacity .25s}
+body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
