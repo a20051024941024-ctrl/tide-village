@@ -146,6 +146,7 @@ supabase/105_sub_sightings.sql 🔭 深海目擊（sub_sighting，第一次送 �
 supabase/106_board.sql 📌 廣場留言板（board_list / board_post / board_del / board_report）：釣過 5 條才能留、每分鐘一則、一天 5 則、60 字、擋髒話；50 條以上的 3 人檢舉就收起來。
 supabase/107_emotes.sql 😀 表情商店（buy_emote）：9 個新表情動作用金幣買（300～800），買了放進 owned（em_ 開頭）。
 supabase/108_sea_sightings.sql 🐋 海上目擊（sea_sighting）：外海遇到海豚、座頭鯨、藍鯨、抹香鯨，每種第一次送 💙30（釣過 10 條才送）。
+supabase/109_salon.sql 💇 阿萍美髮沙龍（buy_salon）：新髮型 hs10～21（🪙400，從 4 款開始每兩天多一款）、新髮色 hc11～40（🪙200，從 3 色開始每天多一色）；set_gear 換外觀時檢查有沒有買。
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
