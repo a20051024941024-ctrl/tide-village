@@ -840,7 +840,12 @@ function inShrimpHall(x, z, m){ return Math.abs(x - SHRIMP.x) < SHRIMP.w / 2 + (
 function inShrimpPool(x, z){ return Math.abs(x - SHRIMP.x) < SHRIMP.pw / 2 - 0.05 && Math.abs(z - SHRIMP.z) < SHRIMP.pd / 2 - 0.05; }
 function nearIce(x, z, m){ return Math.abs(x - ICE.x) < ICE.w / 2 + (m || 0) && Math.abs(z - ICE.z) < ICE.d / 2 + (m || 0); }
 
-function waterY(x, z, t){ return 0.12 + Math.sin(x*0.6 + t*1.3)*0.035 + Math.cos(z*0.5 + t*1.1)*0.035; }
+function waterY(x, z, t){ return 0.12 + Math.sin(x*0.6 + t*1.3)*0.035 + Math.cos(z*0.5 + t*1.1)*0.035 + (WAVES.on ? waveH(x, z, t) : 0); }
+/* v269 海面真的起浪：鯨魚躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪（最多同時 4 個，波峰每秒 6 公尺，越往外越小、15 秒消失）。
+   水面 shader 和 waterY() 用同一個公式，所以小船、浮標都會跟著浪起伏。低畫質只有原本的白圈。 */
+const WAVES = Array.from({ length: 4 }, () => ({ x:0, z:0, t0:-99, a:0 })); WAVES.on = false;
+function addWave(x, z, a){ const w = WAVES.reduce((o, v) => v.t0 < o.t0 ? v : o, WAVES[0]); w.x = x; w.z = z; w.t0 = now(); w.a = a; WAVES.on = true; }
+function waveH(x, z, t){ let h = 0; for (const w of WAVES){ const age = t - w.t0; if (age < 0 || age > 15) continue; const d = Math.hypot(x - w.x, z - w.z), q = d - age * 6; if (q > 6 || q < -12) continue; const A = w.a * Math.exp(-age / 5) / (1 + d * 0.04); h += A * (Math.exp(-q * q / 6) - 0.45 * Math.exp(-(q + 3.5) * (q + 3.5) / 6)); } return h; }
 
 // 小船（港口裝飾與可以划的船共用）
 function makeBoatMesh(color){
@@ -1723,9 +1728,16 @@ function owPose(e, u){ const P = e.P, S = OW_SP[P.k], L = S.len, hd = P.hd, fx =
   else if (P.k === 'sperm'){ if (u < 6){ y = -L * 0.35 + (surfY + L * 0.35) * rise; } else if (u < endT){ y = surfY + Math.sin(u * 0.6) * 0.06; if ((u - 6) % 10 < 0.2 && e.lastEv !== Math.floor(u / 10)){ e.lastEv = Math.floor(u / 10); ev = 'blow'; } }
     else { const q = clamp((u - endT) / 12, 0, 1); y = surfY - (q < 0.35 ? 0 : (q - 0.35) / 0.65 * L * 0.9); pitch = -1.5 * Math.sin(Math.min(1, q / 0.5) * Math.PI / 2); if (q > 0.3 && !e.dv){ e.dv = 1; ev = 'dive'; } } }
   return { x: P.x0 + fx * s, z: P.z0 + fz * s, y, pitch, roll, ev, surf: y > -L * 0.12 }; }
+// 被淋濕：落水點附近、或被噴氣噴到，畫面邊緣有水滴往下流 2 秒（噴到的話還有一句話）
+function owWet(on, breath){ if (!on) return; let w = $('#owWet'); if (!w){ w = document.createElement('div'); w.id = 'owWet'; document.body.appendChild(w); } w.classList.remove('on'); void w.offsetWidth; w.classList.add('on'); setTimeout(() => w.classList.remove('on'), 2200); if (breath && now() - (OW.smellAt || 0) > 20){ OW.smellAt = now(); me.say('好臭的鯨魚口氣……'); } }
+// 座頭鯨在水下唱歌：比藍鯨的鯨歌更多變、音高起伏大（最近也不超過鯨歌的 2 倍音量）
+function owSong(v){ if (!soundOn || !actx || sfxVol <= 0.01) return; const t = actx.currentTime, vol = 0.05 * v * sfxVol, f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400; f.connect(actx.destination);
+  const notes = [[220, 520, 0.9], [480, 180, 0.7], [160, 300, 1.1], [600, 420, 0.5]]; let at = t;
+  for (const [a, b, d] of notes){ const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(a, at); o.frequency.exponentialRampToValueAtTime(b, at + d); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, at + d); o.connect(g); g.connect(f); o.start(at); o.stop(at + d + 0.05); at += d + 0.25; } }
 function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; ticker(`${S.ic} 你遇到了${S.n}！`); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
   if (Cloud.on && Cloud.sb) festRpc('sea_sighting', { p_kind: k }).then(r => { if (r && r.player) adoptRow(r.player); if (r && r.first) setTimeout(() => toast(`🔭 海上目擊：${S.ic} ${S.n}（💙 +30）`), 1600); }); }
 OW.update = function(t){
+  if (waterSurface && waterSurface.material.uniforms.uWaves){ const U = waterSurface.material.uniforms, tn = now(); U.uWT.value = tn; let any = false; WAVES.forEach((w, i) => { U.uWaves.value[i].set(w.x, w.z, w.t0, w.a); if (tn - w.t0 < 15) any = true; }); U.uWOn.value = any && Quality.tier !== 'low' ? 1 : 0; WAVES.on = any; }
   const hide = Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || Photo.on && false;
   const ns = bossNow() / 1000, W = Math.floor(ns / OW_WIN), inW = ns - W * OW_WIN, mx = me.pos.x, mz = me.pos.z;
   if (t - OW.scanAt > 1 || hide){ OW.scanAt = t; const want = new Map();
@@ -1737,18 +1749,33 @@ OW.update = function(t){
   let photo = false;
   for (const e of OW.act.values()){ const P = e.P, u = inW - P.st + (bossNow() % 1000) / 1000 * 0, L = OW_SP[P.k].len, m = e.m, d = Math.hypot(m.position.x - mx, m.position.z - mz);
     if (P.k === 'dolphin'){ const s = u * P.spd, fx = Math.sin(P.hd), fz = Math.cos(P.hd), sx = fz, sz = -fx, fade = smooth01(u / 3) * (1 - smooth01((u - P.dur + 4) / 4));
-      m.position.set(P.x0 + fx * s, 0, P.z0 + fz * s); m.rotation.set(0, P.hd - Math.PI / 2, 0);
+      let gx = P.x0 + fx * s, gz = P.z0 + fz * s, gh = P.hd;
+      /* 海豚跟船（bow riding）：你在划船、海豚群在 40 公尺內，就跑到船頭前面一起游 */
+      if (myBoat && (OW.boatSpd || 0) > 1 && Math.hypot(gx - mx, gz - mz) < 40) e.bow = Math.min(1, (e.bow || 0) + 1 / 90); else if (e.bow) e.bow = Math.max(0, e.bow - 1 / 120);
+      if (e.bow){ const b = smooth01(e.bow), bx = mx + Math.sin(me.rot) * 7, bz = mz + Math.cos(me.rot) * 7; gx += (bx - gx) * b; gz += (bz - gz) * b; gh = gh + ((((me.rot - gh) % 6.283) + 9.425) % 6.283 - 3.1416) * b; if (b > 0.5) e.seenNear = true; }
+      m.position.set(gx, 0, gz); m.rotation.set(0, gh - Math.PI / 2, 0);
       m.children.forEach((dm, i) => { if (i >= P.n){ dm.visible = false; return; } dm.visible = fade > 0.02; const ox = (owR(P.cx, P.cz, P.W, 40 + i) - 0.5) * 9, oz = (owR(P.cx, P.cz, P.W, 60 + i) - 0.5) * 7, ph = u * 2.1 + i * 1.7, arc = Math.sin(ph);
         dm.position.set(oz, (arc > 0 ? arc * 1.7 - 0.6 : arc * 1.2 - 0.6) * fade + (fade - 1) * 2, ox); dm.rotation.set(0, 0, Math.cos(ph) * 0.65);
         if (Math.abs(arc) < 0.06 && Math.cos(ph) < 0 && dm.visible && d < 70 && (e.spl || 0) < u - 0.25){ e.spl = u; const wp = dm.getWorldPosition(new THREE.Vector3()); ripple(wp.x, wp.z, false); } });
       if (d < 60 && u > 4) e.seenNear = true; if (e.seenNear && u > P.dur - 6) owSight('dolphin'); continue; }
-    const Q = owPose(e, u); m.position.set(Q.x, Q.y, Q.z); m.rotation.set(Q.roll, P.hd - Math.PI / 2, Q.pitch); m.visible = !hide;
+    const Q = owPose(e, u);
+    /* 從船底下游過：路徑上 8 公尺內有船，就潛深一點從底下穿過去，船被水流輕輕推一下 */
+    if (myBoat && P.k !== 'sperm'){ const bd = Math.hypot(Q.x - mx, Q.z - mz); if (bd < OW_SP[P.k].len * 0.6 + 8 && Q.surf && !e.mug){ Q.y = Math.min(Q.y, -((OW.boxH && OW.boxH[P.k]) || 0.15) * OW_SP[P.k].len * 1.3); Q.ev = Q.ev === 'land' ? null : Q.ev; me.pos.x += Math.sin(P.hd) * 0.4 * (1 / 60); me.pos.z += Math.cos(P.hd) * 0.4 * (1 / 60); } }
+    /* 座頭鯨好奇靠近（真的叫 mugging）：船停著不動超過 10 秒，有機會游過來繞著船轉，側身用一隻眼睛看你，最後在船邊噴一口氣 */
+    if (P.k === 'humpback' && myBoat && !e.mugDone){ if (!e.mug && (OW.still || 0) > 10 && d < 70 && Q.surf && owR(P.cx, P.cz, P.W, 99) < 0.6){ e.mug = { t0: now(), a0: Math.atan2(Q.x - mx, Q.z - mz) }; } }
+    if (e.mug){ const k = now() - e.mug.t0, L2 = OW_SP.humpback.len, R0 = L2 * 0.5 + 5; if (k > 34){ e.mug = null; e.mugDone = true; } else {
+        const blend = smooth01(Math.min(k / 4, (34 - k) / 4)), a = e.mug.a0 + k * 0.09, cx2 = mx + Math.sin(a) * R0, cz2 = mz + Math.cos(a) * R0, hdm = a + Math.PI / 2;
+        Q.x += (cx2 - Q.x) * blend; Q.z += (cz2 - Q.z) * blend; Q.y = Q.y + (-((OW.boxH && OW.boxH.humpback) || 0.15) * L2 * 0.3 - Q.y) * blend; Q.roll = Q.roll * (1 - blend) + 0.75 * blend; Q.pitch *= 1 - blend; Q.ev = null; e.mugHd = hdm; e.mugB = blend;
+        if (k > 22 && !e.mugBlow){ e.mugBlow = true; const bx = mx + Math.sin(a) * (R0 - 3), bz = mz + Math.cos(a) * (R0 - 3); spoutAt(bx, 0.4, bz, 9, false); owBlowSnd('humpback', 6); owWet(true, true); if (!LS.get('tide.mugged', false)) LS.set('tide.mugged', true); } } }
+    const hdNow = e.mug && e.mugHd != null ? P.hd + ((((e.mugHd - P.hd) % 6.283) + 9.425) % 6.283 - 3.1416) * e.mugB : P.hd;
+    m.position.set(Q.x, Q.y, Q.z); m.rotation.set(Q.roll, hdNow - Math.PI / 2, Q.pitch); m.visible = !hide;
+    if (P.k === 'humpback' && d < 100 && now() - (OW.songAt || 0) > 50){ OW.songAt = now(); owSong(clamp(1 - d / 100, 0.15, 0.7)); }
     const fx = Math.sin(P.hd), fz = Math.cos(P.hd), hx = Q.x + fx * L * 0.32, hz = Q.z + fz * L * 0.32;
     if (Q.surf && d < 90) photo = true; if (Q.surf && d < 120) e.seenNear = true;
-    if (Q.ev === 'blow'){ if (P.k === 'bluewhale') spoutAt(hx, 0.4, hz, 14, true); else if (P.k === 'sperm') spoutAt(Q.x + fx * L * 0.47, 0.4, Q.z + fz * L * 0.47, 8, false, P.hd + 0.6); else spoutAt(hx, 0.4, hz, 9, false); owBlowSnd(P.k, d); }
-    else if (Q.ev === 'land'){ for (let i = 0; i < 3; i++) ripple(Q.x + (Math.random() - 0.5) * L * 0.5, Q.z + (Math.random() - 0.5) * L * 0.5, true); spoutAt(Q.x, 0.2, Q.z, 18, false); spoutAt(Q.x + fx * 3, 0.2, Q.z + fz * 3, 16, false); owSplashSnd(true, d); camShake = Math.max(camShake || 0, d < 30 ? 0.45 : d < 60 ? 0.2 : 0); try { if (navigator.vibrate) navigator.vibrate(d < 30 ? 150 : d < 60 ? 60 : 0); } catch(_){} }
-    else if (Q.ev === 'slapT'){ const tx = Q.x - fx * L * 0.48, tz = Q.z - fz * L * 0.48; ripple(tx, tz, true); spoutAt(tx, 0.2, tz, 8, false); owSplashSnd(false, d); }
-    else if (Q.ev === 'slapP'){ const sx = Q.x + fz * L * 0.3, sz = Q.z - fx * L * 0.3; ripple(sx, sz, false); spoutAt(sx, 0.2, sz, 5, false); owSplashSnd(false, d); }
+    if (Q.ev === 'blow'){ if (P.k === 'bluewhale') spoutAt(hx, 0.4, hz, 14, true); else if (P.k === 'sperm') spoutAt(Q.x + fx * L * 0.47, 0.4, Q.z + fz * L * 0.47, 8, false, P.hd + 0.6); else spoutAt(hx, 0.4, hz, 9, false); owBlowSnd(P.k, d); if (myBoat && Math.hypot(hx - mx, hz - mz) < 6) owWet(true, true); }
+    else if (Q.ev === 'land'){ addWave(Q.x, Q.z, P.k === 'bluewhale' ? 1.4 : 1.2); owWet(d < 20, false); for (let i = 0; i < 3; i++) ripple(Q.x + (Math.random() - 0.5) * L * 0.5, Q.z + (Math.random() - 0.5) * L * 0.5, true); spoutAt(Q.x, 0.2, Q.z, 18, false); spoutAt(Q.x + fx * 3, 0.2, Q.z + fz * 3, 16, false); owSplashSnd(true, d); camShake = Math.max(camShake || 0, d < 30 ? 0.45 : d < 60 ? 0.2 : 0); try { if (navigator.vibrate) navigator.vibrate(d < 30 ? 150 : d < 60 ? 60 : 0); } catch(_){} }
+    else if (Q.ev === 'slapT'){ const tx = Q.x - fx * L * 0.48, tz = Q.z - fz * L * 0.48; ripple(tx, tz, true); addWave(tx, tz, 0.5); spoutAt(tx, 0.2, tz, 8, false); owSplashSnd(false, d); }
+    else if (Q.ev === 'slapP'){ const sx = Q.x + fz * L * 0.3, sz = Q.z - fx * L * 0.3; ripple(sx, sz, false); addWave(sx, sz, 0.25); spoutAt(sx, 0.2, sz, 5, false); owSplashSnd(false, d); }
     else if (Q.ev === 'dive'){ owSlick(Q.x, Q.z, L * 0.45); }
     if (e.seenNear && (e.dv || u > P.dur - 3)) owSight(P.k); }
   for (const o of OW.slick){ if (o.t <= 0) continue; o.t -= Math.min(0.1, 1 / 30); o.m.material.opacity = 0.32 * clamp(o.t / 30, 0, 1) * clamp((30 - o.t) / 2, 0, 1); o.m.visible = o.t > 0 && !hide; }
@@ -2581,6 +2608,7 @@ function buildNewEnvironment(){
       uSkyTop: { value: new THREE.Color('#6cc4ea') }, uSkyHor: { value: new THREE.Color('#d2f1f2') },
       cSea: { value: new THREE.Color(PALETTE.sea) }, cRiver: { value: new THREE.Color(PALETTE.river) }, cCreek: { value: new THREE.Color(PALETTE.creek) }, cLake: { value: new THREE.Color('#4fb3d6') }, cPool: { value: new THREE.Color('#7fd6ec') },
       cDeep: { value: new THREE.Color('#1c5d8c') }, uFoam: { value: Quality.tier === 'low' ? 0.6 : 1.0 },
+      uWaves: { value: WAVES.map(() => new THREE.Vector4(0, 0, -99, 0)) }, uWT: { value: 0 }, uWOn: { value: 0 },
       uLight: { value: new THREE.Color(1, 1, 1) }, uGlint: { value: new THREE.Color(1.0, 0.96, 0.85) },
     }),
     vertexShader: `varying vec3 vW;
@@ -2589,7 +2617,7 @@ function buildNewEnvironment(){
       #include <fog_vertex>
       }`,
     fragmentShader: `uniform sampler2D uMask; uniform float uTime; uniform vec3 uSun; uniform vec3 uSkyTop; uniform vec3 uSkyHor;
-      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint;
+      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint; uniform vec4 uWaves[4]; uniform float uWT; uniform float uWOn;
       varying vec3 vW;
       #include <common>
       #include <fog_pars_fragment>
@@ -2611,6 +2639,10 @@ function buildNewEnvironment(){
         vec3 V = normalize(cameraPosition - vW);
         float far = smoothstep(25.0, 85.0, length(cameraPosition.xz - vW.xz));
         vec3 N = normalize(mix(waveN(vW.xz, uTime), vec3(0.0, 1.0, 0.0), far * 0.85));
+        float crest = 0.0;
+        if (uWOn > 0.5){ vec2 gw = vec2(0.0); for (int i = 0; i < 4; i++){ vec4 w = uWaves[i]; float age = uWT - w.z; if (age < 0.0 || age > 15.0) continue; vec2 dv = vW.xz - w.xy; float d = length(dv); float q = d - age * 6.0; if (q > 6.0 || q < -12.0) continue;
+            float A = w.w * exp(-age / 5.0) / (1.0 + d * 0.04); float e1 = exp(-q * q / 6.0), e2 = exp(-(q + 3.5) * (q + 3.5) / 6.0); crest += A * e1; gw += normalize(dv + 0.001) * A * (-q / 3.0 * e1 + 0.45 * (q + 3.5) / 3.0 * e2); }
+          N = normalize(N + vec3(-gw.x, 0.0, -gw.y) * 0.6); }
         float fres = 0.04 + 0.6 * pow(1.0 - max(dot(N, V), 0.0), 4.0);
         vec3 R = reflect(-V, N);
         vec3 sky = mix(uSkyHor, uSkyTop, clamp(R.y * 1.4, 0.0, 1.0));
@@ -2622,7 +2654,8 @@ function buildNewEnvironment(){
         float shore = 1.0 - smoothstep(0.08, 0.24, depth);
         float fn = sin(vW.x * 2.3 + uTime * 1.4 + sin(vW.z * 1.7)) * sin(vW.z * 2.1 - uTime * 1.1 + sin(vW.x * 1.3));
         float foam = shore * smoothstep(0.15, 0.75, fn * 0.5 + 0.5 + shore * 0.35) * uFoam;
-        col = mix(col, uLight, foam * 0.7);
+        foam = max(foam, shore * clamp(crest * 3.0, 0.0, 1.0) * uFoam);   /* 浪打到岸邊冒一排白色浪花 */
+        col = mix(col, uLight, foam * 0.7 + clamp(crest * 0.9, 0.0, 0.55));   /* 浪峰帶一點白 */
         float alpha = mix(0.58, 0.93, smoothstep(0.1, 1.2, depth));
         gl_FragColor = vec4(col, max(alpha, foam * 0.8) * edge);
         #include <tonemapping_fragment>
@@ -3437,7 +3470,9 @@ function updateBoat(dt, ix, iz, L, locked){
   me.speed = 0;
   const bob = Math.sin(t * 1.6) * 0.04;
   me.baseY = WATER_LEVEL - 0.08 + bob;
-  myBoat.m.position.set(me.pos.x, WATER_LEVEL + bob, me.pos.z); myBoat.m.rotation.set(Math.sin(t * 1.1) * 0.02, me.rot, Math.sin(t * 1.3) * 0.03);
+  let wh = 0, wp = 0, wr = 0; if (WAVES.on){ const tn = now(), x = me.pos.x, z = me.pos.z, fx = Math.sin(me.rot), fz = Math.cos(me.rot); wh = waveH(x, z, tn); wp = clamp(Math.atan((waveH(x + fx, z + fz, tn) - waveH(x - fx, z - fz, tn)) / 2), -0.35, 0.35); wr = clamp(Math.atan((waveH(x + fz, z - fx, tn) - waveH(x - fz, z + fx, tn)) / 2), -0.35, 0.35); }   /* v269 浪來的時候船跟著起伏、依坡度傾斜（最多 20 度，不會翻） */
+  me.baseY += wh; OW.boatSpd = speed; OW.still = speed > 0.2 ? 0 : (OW.still || 0) + dt;
+  myBoat.m.position.set(me.pos.x, WATER_LEVEL + bob + wh, me.pos.z); myBoat.m.rotation.set(Math.sin(t * 1.1) * 0.02 - wp, me.rot, Math.sin(t * 1.3) * 0.03 + wr);
   if (frameNo % 10 === 0) sailCompass();
   const oar = myBoat.m.userData.oars; if (oar){ const k = speed > 0.3 ? Math.sin(t * 6) * 0.6 : 0; oar[0].rotation.y = k; oar[1].rotation.y = -k; }
 }
@@ -6168,6 +6203,7 @@ function lvOf(xp){ let L = 1; while (L < 99 && xp >= lvNeed(L + 1)) L++; return 
 const speciesN = () => Object.keys(rec.count || {}).filter(id => FISH_BY_ID[id]).length;
 const spotDone = id => FISH.filter(f => f.spot === id).every(f => rec.count[f.id]);
 const ACH = [
+  { id:'mug', icon:'👁️', name:'與座頭鯨對望', desc:'划船停在外海，讓好奇的座頭鯨游過來看你', cur:() => { try { return LS.get('tide.mugged', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
   { id:'seasight', icon:'🐋', name:'海上目擊者', desc:'划船在外海遇過海豚、座頭鯨、藍鯨、抹香鯨', cur:() => { try { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a.length : 0; } catch(e){ return 0; } }, goal:4 },
   { id:'sight', icon:'🔭', name:'深海目擊者', desc:'開潛水艇看過全部 5 種深海相遇', cur:() => { try { return subSeen().length; } catch(e){ return 0; } }, goal:5 },
   { id:'trench', icon:'🕳️', name:'發現黑淵裂縫', desc:'開潛水艇找到深海浮台底下的黑淵裂縫', cur:() => (typeof Sub !== 'undefined' && Sub.st && Sub.st.found) ? 1 : 0, goal:1 },
@@ -9684,7 +9720,7 @@ function updatePeers(dt, t){
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
     { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on && !p.sub; if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
-    if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04, f.pos.z); f.boatMesh.rotation.y = f.rot; }
+    if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04 + (WAVES.on ? waveH(f.pos.x, f.pos.z, now()) : 0), f.pos.z); f.boatMesh.rotation.y = f.rot; }   /* 別人的船也被同一圈浪晃 */
     f.dip = p.ph === 'bite' ? 3 + Math.sin(t*30)*0.15 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
     { const rf = p.ph === 'reel' && f.av.g.visible && camera.position.distanceTo(f.pos) < 35 ? p.reelFish : null;   /* 別人上鉤的魚在浮標那裡掙扎、偶爾跳出水面 */
@@ -11159,6 +11195,7 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
+      '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
       '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨，沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。',
       '💬 開潛水艇也能聊天：按「💬 說話」可以選常用的話，也可以自己打字（最多 40 個字）。一邊用搖桿開船一邊打字也可以；同一個大廳的人都收得到，一起潛的人頭上會冒泡泡。',
       '🔭 深海目擊：開潛水艇有時候會遇到特別的事——淺海被幾百條小魚圍成一顆球；午夜層按「🔦 關燈」看發光的生物（關燈時電池只用一半）；在黑暗裡停太久，聲納上可能會出現一個紅點……；遠處一盞溫暖的小燈；抹香鯨從頭頂游過。每 90 秒最多一件，每一種第一次看到記在圖鑑的「深海目擊」、送 💙30 愛海點數。只會嚇人，不會扣電、扣魚或弄壞潛水艇；怕的話可以在設定關掉「深海驚嚇效果」。',

@@ -1100,3 +1100,11 @@ body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
 #owPhoto{position:fixed;right:calc(var(--gr, 16px) + 4px);top:42%;width:52px;height:52px;border-radius:50%;border:0;font-size:24px;z-index:11;animation:owp 1.6s ease-in-out infinite}
 #owPhoto[hidden]{display:none}
 @keyframes owp{50%{transform:scale(1.08)}}
+/* v269 被淋濕 */
+#owWet{position:fixed;inset:0;pointer-events:none;z-index:7;opacity:0;background:
+ radial-gradient(ellipse 6px 14px at 8% 10%,rgba(220,240,255,.7),transparent 70%),radial-gradient(ellipse 5px 12px at 20% 4%,rgba(220,240,255,.6),transparent 70%),
+ radial-gradient(ellipse 7px 16px at 88% 12%,rgba(220,240,255,.7),transparent 70%),radial-gradient(ellipse 5px 11px at 76% 6%,rgba(220,240,255,.6),transparent 70%),
+ radial-gradient(ellipse 6px 13px at 94% 30%,rgba(220,240,255,.6),transparent 70%),radial-gradient(ellipse 6px 13px at 4% 34%,rgba(220,240,255,.6),transparent 70%),
+ radial-gradient(ellipse at center,transparent 55%,rgba(200,230,255,.35) 100%)}
+#owWet.on{animation:owwet 2.1s ease-out forwards}
+@keyframes owwet{0%{opacity:1;background-position:0 0}100%{opacity:0;background-position:0 140px}}
