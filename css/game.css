@@ -1085,3 +1085,10 @@ body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
 .boardlist .bh b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .boardlist .bh .tbtn{padding:3px 9px;font-size:12px}
 .boardlist .bb{margin-top:4px;font-size:15px;line-height:1.45;word-break:break-word}
+/* v264 表情商店 */
+#emotePanel .ep-b.lock{background:#fff4d6;opacity:.9}
+#emotePanel .ep-b.lock .ep-i{filter:grayscale(.5)}
+#emotePanel .ep-b.lock .ep-n{color:#a06a00;font-weight:800}
+#emotePanel{width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 150px);overflow:auto}
+#emotePanel .ep-g{grid-template-columns:repeat(8,1fr)}
+@media (max-width:560px){#emotePanel .ep-g{grid-template-columns:repeat(5,1fr)}}

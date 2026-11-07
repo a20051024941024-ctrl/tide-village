@@ -436,14 +436,18 @@ const TRAVEL = [
 ];
 const SHIRTS = ['#f17b6d','#2f89c7','#3fbf9d','#ffd36a','#9b7bff','#f5a5d8','#ff9f43','#5b6b7a'];
 const HATS = ['#ffd36a','#f6f0dd','#18334a','#f17b6d','#3fbf9d','#8c5d3b'];
-const EMOTES = { wave:'👋', fish:'🐟', wow:'😮', cheer:'🎉', dance:'💃', clap:'👏', bow:'🙇', laugh:'😂', angry:'😠', scared:'😱', sitdown:'🧘', sleep:'😴', pushups:'💪', situps:'🏋️', playdead:'💀' };
+const EMOTES = { wave:'👋', fish:'🐟', wow:'😮', cheer:'🎉', dance:'💃', clap:'👏', bow:'🙇', laugh:'😂', angry:'😠', scared:'😱', sitdown:'🧘', sleep:'😴', pushups:'💪', situps:'🏋️', playdead:'💀', thumbs:'👍', point:'👉', pickup:'🫳', throw:'🤾', shrug:'🤷', yawn:'🥱', stretch:'🙆', spin:'🌀', hop:'🥳' };
 // 表情動作（2026-11-05）：角色真的會做動作（KayKit 動作＋自己做的跳舞、鞠躬、拍手、跺腳、大笑）；有 loop 的會一直做到你走開
 const EMOTE_DEF = {
   wave:{ name:'揮手', anim:'wave', dur:2.1 }, wow:{ name:'驚嘆', anim:'surprised', dur:1.1 }, cheer:{ name:'歡呼', anim:'cheer', dur:3.3 }, dance:{ name:'跳舞', anim:'dance', loop:true },
   clap:{ name:'拍手', anim:'clap', dur:2.4 }, bow:{ name:'鞠躬', anim:'bow', dur:2.0 }, laugh:{ name:'大笑', anim:'laugh', dur:2.0 }, angry:{ name:'生氣', anim:'angry', dur:2.7 },
   scared:{ name:'嚇一跳', anim:'surprised', dur:1.1 }, sitdown:{ name:'坐地上', anim:'sit_floor', loop:true }, sleep:{ name:'躺下睡覺', anim:'lie', loop:true, bub:'💤' },
-  pushups:{ name:'伏地挺身', anim:'pushups', loop:true }, situps:{ name:'仰臥起坐', anim:'situps', loop:true }, playdead:{ name:'裝死', anim:'playdead', loop:true, once:true } };
-const EMOTE_ORDER = ['wave', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'angry', 'scared', 'sitdown', 'sleep', 'pushups', 'situps', 'playdead', 'wow'];
+  pushups:{ name:'伏地挺身', anim:'pushups', loop:true }, situps:{ name:'仰臥起坐', anim:'situps', loop:true }, playdead:{ name:'裝死', anim:'playdead', loop:true, once:true },
+  /* v264 表情商店（107）：要用金幣買，價錢以伺服器為準 */
+  thumbs:{ name:'比讚', anim:'thumbs', dur:2.0, buy:300 }, point:{ name:'指前面', anim:'point', dur:2.0, buy:300 }, pickup:{ name:'撿東西', anim:'pickup', dur:1.3, buy:300 }, throw:{ name:'丟東西', anim:'throw', dur:1.35, buy:300 },
+  shrug:{ name:'聳肩', anim:'shrug', dur:1.6, buy:500 }, yawn:{ name:'打哈欠', anim:'yawn', dur:2.4, buy:500, bub:'🥱' }, stretch:{ name:'伸懶腰', anim:'stretch', dur:2.6, buy:500 }, spin:{ name:'轉圈圈', anim:'spin', dur:1.3, buy:800 }, hop:{ name:'開心跳', anim:'hop', dur:1.8, buy:800, bub:'🥳' } };
+function emoteOwned(k){ const D = EMOTE_DEF[k]; return !D || !D.buy || (rec.owned || []).includes('em_' + k); }
+const EMOTE_ORDER = ['wave', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'angry', 'scared', 'sitdown', 'sleep', 'pushups', 'situps', 'playdead', 'wow', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin', 'hop'];
 const RARITY_ORDER = { '常見':0, '稀有':1, '傳說':2 };
 
 /* ---- Quaternius「Animated Fish Pack」(CC0) 的三種魚形，依魚種重新上色 ----
@@ -2770,7 +2774,7 @@ function kidUpgrade(f){
   a.g.rotation.copy(keepRot); a.g.position.copy(keepPos);
   const mixer = new THREE.AnimationMixer(m), acts = {};
   for (const [nm, c] of Object.entries(KID.clips)){ const ac = mixer.clipAction(c); ac.enabled = true; ac.setEffectiveWeight(0); ac.play(); acts[nm] = ac; }
-  for (const nm of ['jump_land', 'fish_cast', 'playdead', 'surprised', 'bow', 'lie_down', 'sit_floor_down']){ if (acts[nm]){ acts[nm].setLoop(THREE.LoopOnce, 1); acts[nm].clampWhenFinished = true; } }
+  for (const nm of ['jump_land', 'fish_cast', 'playdead', 'surprised', 'bow', 'lie_down', 'sit_floor_down', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin']){ if (acts[nm]){ acts[nm].setLoop(THREE.LoopOnce, 1); acts[nm].clampWhenFinished = true; } }
   a.kid = { m, B, prim, mixer, acts, w: {}, handR: B.handr, v: new THREE.Vector3(), skipT: 0 };
   a.body = prim.shirt || a.body;
   if (f.gearKey){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); }
@@ -9315,7 +9319,7 @@ $('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = f
 renderChatMode();
 
 let myEmote = null;
-function emote(k){ ensureAudio(); const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); }
+function emote(k){ ensureAudio(); if (!emoteOwned(k)){ buyEmote(k); return; } const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); }
 $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(b.dataset.emote)));
 // 左上角卡片第四行：好友代碼（點一下複製、打開玩家分頁加好友）、任務、成就、玩法、登入／帳號
 (function buildBquick(){   /* 先做好這一行，下面 compactBrand 再把它收進 ☰ 裡 */ const host = $('#btools') && $('#btools').parentNode; if (!host || $('#bquick')) return; const row = document.createElement('div'); row.id = 'bquick'; host.appendChild(row);
@@ -9342,12 +9346,20 @@ $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(
   for (const b of more.querySelectorAll('button')) if (b.id !== 'musicBtn' && b.id !== 'soundBtn') b.addEventListener('click', () => B.classList.remove('open')); })();
 // 表情動作選單：按 😀 打開，選一個做
 function closeEmotePanel(){ const P = $('#emotePanel'); if (P) P.hidden = true; }
-function openEmotePanel(){ let P = $('#emotePanel'); if (!P){ P = document.createElement('div'); P.id = 'emotePanel'; P.className = 'panel'; P.hidden = true; document.body.appendChild(P);
-    P.appendChild(el('div', 'ep-t', '😀 表情動作'));
-    const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', D.name)); b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
-    for (const [ic, nm, fn] of [['🤗', '抱寵物', () => petHug()], ['✋', '摸摸頭', () => petPat()]]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
-    P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。')); }
-  P.hidden = !P.hidden; if (!P.hidden){ const em = $('#emotes'), r = em && em.getBoundingClientRect(); if (r && r.width){ P.style.bottom = Math.round(innerHeight - r.top + 8) + 'px'; P.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; } } }   /* 貼在表情按鈕列的正上方 */
+function openEmotePanel(force){ let P = $('#emotePanel'); if (!P){ P = document.createElement('div'); P.id = 'emotePanel'; P.className = 'panel'; P.hidden = true; document.body.appendChild(P); }
+  if (!force) P.hidden = !P.hidden; if (P.hidden) return;
+  P.textContent = ''; P.appendChild(el('div', 'ep-t', '😀 表情動作'));
+  const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], own = emoteOwned(k), b = el('button', 'ep-b' + (own ? '' : ' lock')); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', own ? D.name : `🪙${D.buy}`)); if (!own) b.title = D.name + '（' + D.buy + ' 金幣）'; b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
+  for (const [ic, nm, fn] of [['🤗', '抱寵物', () => petHug()], ['✋', '摸摸頭', () => petPat()]]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
+  P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。有 🪙 的是新動作，點一下就能用金幣學會。'));
+  const em = $('#emotes'), r = em && em.getBoundingClientRect(); if (r && r.width){ P.style.bottom = Math.round(innerHeight - r.top + 8) + 'px'; P.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; P.style.maxHeight = Math.max(160, Math.round(r.top - 16)) + 'px'; } }   /* 貼在表情按鈕列的正上方；太高就捲動，不會超出畫面 */
+/* v264 學新的表情動作：第一次點跳出確認，再點一次就買（金幣由伺服器扣） */
+let emoteAsk = null;
+async function buyEmote(k){ const D = EMOTE_DEF[k]; if (!D) return;
+  if (!Cloud.on){ toast('要連上線才能學新的表情動作'); return; }
+  if (emoteAsk !== k){ emoteAsk = k; setTimeout(() => { if (emoteAsk === k) emoteAsk = null; }, 4000); toast(`${EMOTES[k]} ${D.name}：要花 🪙${D.buy} 學會嗎？再點一次就買`); return; }
+  emoteAsk = null; if ((rec.coins || 0) < D.buy){ toast('金幣不夠喔'); return; }
+  const r = await festRpc('buy_emote', { p_id: 'em_' + k }); if (r && r.player){ adoptRow(r.player); SFX.coin(); toast(`🎉 學會了「${D.name}」！`); openEmotePanel(true); setTimeout(() => emote(k), 300); } }
 { const em = $('#emotes'); if (em){ const b = document.createElement('button'); b.className = 'panel'; b.id = 'emoteMore'; b.setAttribute('aria-label', '表情動作'); b.textContent = '😀'; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); openEmotePanel(); }); em.appendChild(b); } }
 addEventListener('pointerdown', e => { const P = $('#emotePanel'); if (P && !P.hidden && !P.contains(e.target) && e.target.id !== 'emoteMore') P.hidden = true; });
 
@@ -11006,6 +11018,7 @@ function renderTab(){
     ]);
     sec('⚓ 港口海底潛水', [
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
+      '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
       '🔭 深海目擊：開潛水艇有時候會遇到特別的事——淺海被幾百條小魚圍成一顆球；午夜層按「🔦 關燈」看發光的生物（關燈時電池只用一半）；在黑暗裡停太久，聲納上可能會出現一個紅點……；遠處一盞溫暖的小燈；抹香鯨從頭頂游過。每 90 秒最多一件，每一種第一次看到記在圖鑑的「深海目擊」、送 💙30 愛海點數。只會嚇人，不會扣電、扣魚或弄壞潛水艇；怕的話可以在設定關掉「深海驚嚇效果」。',
       '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。',
@@ -11634,6 +11647,7 @@ function subHud(){ let h = $('#subHud'); if (h) return h;
   document.body.appendChild(h);
   const hold = (sel, k) => { const b = h.querySelector(sel); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sub[k] = true; b.classList.add('down'); }); const off = () => { Sub[k] = false; b.classList.remove('down'); }; b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); };
   hold('.sh-up', 'up'); hold('.sh-dn', 'down'); hold('.sf-reel', 'reel');
+  const allOff = () => { Sub.up = Sub.down = false; for (const q of ['.sh-up', '.sh-dn']){ const b = h.querySelector(q); if (b) b.classList.remove('down'); } }; window.addEventListener('blur', allOff); document.addEventListener('visibilitychange', allOff);   /* v264 手指放開的事件沒收到時（切出去、跳通知），上浮／下潛不會一直卡著 */
   h.querySelector('.sh-home').addEventListener('click', () => { if (Sub.warnT > 0){ toast('先上浮到安全深度才能回港'); return; } subEnd('normal'); });
   h.querySelector('.sh-act').addEventListener('click', () => subAction());
   h.querySelector('.sh-lamp').addEventListener('click', () => subLamp(!Sub.dark));
@@ -11748,7 +11762,7 @@ function subLightTick(dt, t, depth){
 const SUB_SIGHT = { school:{ n:'被魚群包圍', ic:'🐟', d:'幾百條銀色的小魚繞著潛水艇轉成一顆球，一條大魚衝過去，魚群一下子炸開。' }, glow:{ n:'深海的光', ic:'✨', d:'在午夜層把燈關掉，黑暗裡慢慢浮現發光的水母、像發光繩子的管水母，遠處有東西一閃一閃。' }, eyes:{ n:'黑暗中的眼睛', ic:'👁️', d:'停在黑暗裡的時候，有個很大的東西在後面……轉過去就會看到。' }, lure:{ n:'那盞燈', ic:'🏮', d:'黑暗裡一盞溫暖的小燈，靠近一看，燈下面是一張巨大的嘴。' }, whale:{ n:'抹香鯨經過', ic:'🐋', d:'一頭抹香鯨從頭頂游過去，所有的光都被擋住了。' } };
 function subScareOn(){ return LS.get('tide.subScare', true) !== false; }
 function subSeen(){ const a = LS.get('tide.subSeen', []); return Array.isArray(a) ? a : []; }
-function subEvReset(){ subEvStop(true); Sub.E = { last: now() - 75, cur: null, done: new Set(), guided: subSeen().length === 0, midT: 0, hinted: false }; Sub.stillT = 0; Sub.dark = false; Sub.darkK = 0;
+function subEvReset(){ subEvStop(true); Sub.E = { last: now() - 75, cur: null, done: new Set(), guided: subSeen().length === 0, midT: 0, hinted: false, schoolRoll: now() }; Sub.stillT = 0; Sub.dark = false; Sub.darkK = 0;
   if (Cloud.on && Cloud.sb) subRpc('sub_sighting', { p_kind: null }).then(r => { if (r && Array.isArray(r.kinds)){ const m = [...new Set([...subSeen(), ...r.kinds])]; LS.set('tide.subSeen', m); } }).catch(() => {}); }
 function subEvFree(t){ const E = Sub.E; return !!E && !E.cur && now() - E.last > 90; }
 function subEvMark(t, k){ const E = Sub.E; if (!E) return; E.last = now(); E.done.add(k); }
@@ -11764,6 +11778,13 @@ function subEvEnd(){ const E = Sub.E; Sub.evFog = 0; subEvStop(false); subQuiet(
 function subAngD(a, b){ return Math.atan2(Math.sin(a - b), Math.cos(a - b)); }
 function subBigFace(len){ const f = FISH_BY_ID.angler, m = fishModel(f, 1); const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), k = len / Math.max(0.01, sz.x); m.scale.multiplyScalar(k); const g = new THREE.Group(); g.add(m); b.setFromObject(m); g.userData.box = b.clone();
   const d = MFISH.defs.angler; if (MFISH.geo.angler && d.bulb) g.userData.bulb = new THREE.Vector3(...d.bulb).multiplyScalar(d.scale * m.scale.x);   /* 燈在模型上的位置（那盞燈的事件用它把臉對準燈） */
+  /* v264 嘴巴會動：模型沒有骨架，所以用程式把下巴（嘴角後面、嘴巴下緣以下那一塊）繞著嘴角轉。a < 0 張大、a > 0 閉起來 */
+  let mesh = null; m.traverse(o => { if (o.isMesh && !mesh && o.geometry === MFISH.geo.angler) mesh = o; });
+  if (mesh){ const geo = mesh.geometry.clone(); mesh.geometry = geo; const pa = geo.attributes.position, base = pa.array.slice(), S = d.scale, hx = 0.2 * S, hy = -0.04 * S, W = new Float32Array(pa.count);
+    for (let i = 0; i < pa.count; i++){ const x = base[i * 3], y = base[i * 3 + 1], line = hy + (x - hx) * 0.12; W[i] = smooth01((x - 0.12 * S) / (0.16 * S)) * smooth01((line - y) / (0.035 * S) + 0.5); }
+    let last = 0; g.userData.jaw = a => { if (Math.abs(a - last) < 0.002) return; last = a; const ar = pa.array;
+      for (let i = 0; i < pa.count; i++){ const w = W[i]; if (w <= 0.001) continue; const th = a * w, c = Math.cos(th), sn = Math.sin(th), dx = base[i * 3] - hx, dy = base[i * 3 + 1] - hy; ar[i * 3] = hx + dx * c - dy * sn; ar[i * 3 + 1] = hy + dx * sn + dy * c; }
+      pa.needsUpdate = true; }; }
   return g; }
 function subEvTick(dt, t, depth){
   const E = Sub.E; if (!E) return; const P = Sub.pos, fx = Math.sin(Sub.yaw), fz = Math.cos(Sub.yaw);
@@ -11781,10 +11802,9 @@ function subEvTick(dt, t, depth){
   if (now() - Sub.t0 < 18) return;
   const scare = subScareOn() && depth >= 1000 && (!E.guided || E.done.has('glow') || E.midT > 45);
   const can = [];
-  if (!E.done.has('school') && depth < 500 && !Sub.dark) can.push('school');
+  if (!E.done.has('school') && depth < 500 && !Sub.dark && now() - (E.schoolRoll || 0) > 60){ E.schoolRoll = now(); if (Math.random() < 0.2) can.push('school'); }   /* v264 魚群包圍不一定會出現：每分鐘抽一次、五分之一的機會，也不再一開始就來 */
   if (scare && !E.done.has('eyes') && !Sub.dark && (Sub.stillT > 4 || Sub.fish)) can.push('eyes');
   if (scare && !E.done.has('lure') && !Sub.fish && Math.abs(Sub.v) > 0.4) can.push('lure');
-  if (E.guided && !E.done.has('school') && can.includes('school')) return subEvStart('school', t);
   if (!can.length) return; subEvStart(can[Math.floor(Math.random() * can.length)], t); }
 function subEvStart(k, t){ const E = Sub.E, P = Sub.pos; E.done.add(k); E.last = now(); const c = { k, t0: now(), g: new THREE.Group() }; c.g.userData.off = true; Sub.group.add(c.g); E.cur = c;
   if (k === 'school'){ const N = 300, geo = new THREE.ConeGeometry(0.05, 0.22, 4); geo.rotateZ(-Math.PI / 2); geo.scale(1, 1, 0.45);
@@ -11800,7 +11820,7 @@ function subEvStart(k, t){ const E = Sub.E, P = Sub.pos; E.done.add(k); E.last =
 function subEvRun(c, dt, t, depth){ const P = Sub.pos, u = now() - c.t0, fx = Math.sin(Sub.yaw), fz = Math.cos(Sub.yaw);
   if (c.k === 'school'){ const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1), mv = Math.min(1, Math.abs(Sub.v) / 1.5);
     c.ctr.lerp(P, Math.min(1, dt * 1.2)); const inK = smooth01(u / 2.5), boom = u > 10.6;
-    if (u > 9 && !c.big){ const side = Sub.yaw + Math.PI / 2; c.big = fishModel(FISH_BY_ID.tuna, 2.4); c.g.add(c.big); c.bs = new THREE.Vector3(c.ctr.x + Math.sin(side) * 14, c.ctr.y + 0.4, c.ctr.z + Math.cos(side) * 14); c.bd = new THREE.Vector3(-Math.sin(side), 0, -Math.cos(side)); c.big.rotation.y = Math.atan2(c.bd.x, c.bd.z) - Math.PI / 2; SFX.splash(true); }
+    if (u > 9 && !c.big){ const side = Sub.yaw + Math.PI / 2; c.big = fishModel(FISH_BY_ID.tuna, 2.4); c.g.add(c.big); c.bs = new THREE.Vector3(c.ctr.x + Math.sin(side) * 14, c.ctr.y + 0.4, c.ctr.z + Math.cos(side) * 14); c.bd = new THREE.Vector3(-Math.sin(side), 0, -Math.cos(side)); c.big.rotation.y = Math.atan2(c.bd.x, c.bd.z) - Math.PI / 2; }
     if (c.big){ const k = (u - 9) / 3.2; c.big.position.copy(c.bs).addScaledVector(c.bd, k * 28); if (k > 1.1){ c.g.remove(c.big); c.big = null; c.bigGone = true; } }
     if (boom && !c.boomed){ c.boomed = true; camShake = Math.max(camShake || 0, 0.15); subSight('school'); for (const f of c.f) f.ov.set(Math.random() - 0.5, (Math.random() - 0.5) * 0.6, Math.random() - 0.5).normalize().multiplyScalar(6 + Math.random() * 8); }
     for (let i = 0; i < c.f.length; i++){ const f = c.f[i]; f.a += dt * f.sp * (boom ? 0.3 : 1);
@@ -11823,7 +11843,7 @@ function subEvRun(c, dt, t, depth){ const P = Sub.pos, u = now() - c.t0, fx = Ma
     if (c.phase !== 'lurk'){ const k = now() - c.pt; let dist;
       if (c.phase === 'eyes'){ c.eyeM.opacity = Math.min(1, k / 1.2); dist = 0; if (k > 1.8){ c.phase = 'come'; c.pt = now(); subSight('eyes'); } }
       else if (c.phase === 'come'){ dist = smooth01(k / 3) * (Sub.range * 0.95 - 7.5); if (k > 3){ c.phase = 'stare'; c.pt = now(); subHeart(2, 450); try { navigator.vibrate && navigator.vibrate(80); } catch(e){} } }
-      else if (c.phase === 'stare'){ dist = Sub.range * 0.95 - 7.5 + Math.sin(k * 1.4) * 0.3; if (k > 3){ c.phase = 'back'; c.pt = now(); } }
+      else if (c.phase === 'stare'){ dist = Sub.range * 0.95 - 7.5 + Math.sin(k * 1.4) * 0.3; if (c.face.userData.jaw) c.face.userData.jaw(-0.18 * Math.max(0, Math.sin(k * 1.8))); if (k > 3){ c.phase = 'back'; c.pt = now(); } }
       else if (c.phase === 'back'){ dist = (1 - smooth01(k / 3.5)) * (Sub.range * 0.95 - 7.5); c.eyeM.opacity = 1 - smooth01((k - 2.4) / 1.1); if (k > 3.6){ c.phase = 'gone'; subEvEnd(); return; } }
       const fp = new THREE.Vector3(c.home.x + Math.sin(toSub) * dist, c.home.y, c.home.z + Math.cos(toSub) * dist); c.face.position.set(fp.x - Math.sin(toSub) * hx, fp.y - hy, fp.z - Math.cos(toSub) * hx); c.face.rotation.y = toSub - Math.PI / 2;
       c.fl.intensity = c.phase === 'come' || c.phase === 'stare' ? Math.min(9, (now() - c.pt) * 4 + (c.phase === 'stare' ? 9 : 0)) : c.phase === 'back' ? Math.max(0, 9 - (now() - c.pt) * 4) : 0; c.fl.position.set(P.x + Math.sin(-toSub + Math.PI) * 0 + (fp.x - P.x) * 0.35, P.y + 1.5, P.z + (fp.z - P.z) * 0.35);
@@ -11838,7 +11858,8 @@ function subEvRun(c, dt, t, depth){ const P = Sub.pos, u = now() - c.t0, fx = Ma
       else if (u > 45){ c.lure.material.opacity = Math.max(0, 1 - (u - 45)); if (u > 46){ subEvEnd(); return; } } return; }
     const k = now() - c.pt; c.lure.position.set(L.x, L.y + smooth01(k / 0.35) * 1.6, L.z);
     const bulbAt = () => { const bu = c.face.userData.bulb; if (!bu) return; const ry = c.face.rotation.y, cr = Math.cos(ry), sr = Math.sin(ry); c.lure.position.set(c.face.position.x + bu.x * cr + bu.z * sr, c.face.position.y + bu.y, c.face.position.z - bu.x * sr + bu.z * cr); }; c.pl.position.copy(c.lure.position).add(new THREE.Vector3(Math.sin(c.toSub) * 2.5, -1.8, Math.cos(c.toSub) * 2.5));
-    const lunge = k < 1.6 ? Math.sin(clamp((k - 0.5) / 1.1, 0, 1) * Math.PI) * 1.8 : 0; c.face.position.set(c.fp0.x + Math.sin(c.toSub) * lunge, c.fp0.y, c.fp0.z + Math.cos(c.toSub) * lunge); if (c.face.userData.bulb){ bulbAt(); if (k < 0.45){ const e = smooth01(k / 0.45); c.lure.position.set(L.x + (c.lure.position.x - L.x) * e, L.y + (c.lure.position.y - L.y) * e, L.z + (c.lure.position.z - L.z) * e); } }   /* 燈從原本的位置往上一提，之後就掛在牠頭上跟著動 */
+    const lunge = k < 1.6 ? Math.sin(clamp((k - 0.5) / 1.1, 0, 1) * Math.PI) * 1.8 : 0;
+    if (c.face.userData.jaw){ const jw = k < 0.5 ? -0.32 * smooth01(k / 0.5) : k < 0.85 ? -0.32 + 0.72 * smooth01((k - 0.5) / 0.35) : k < 1.8 ? 0.4 - 0.4 * smooth01((k - 0.85) / 0.95) : k < 2.4 ? -0.12 * Math.sin((k - 1.8) / 0.6 * Math.PI) : 0; c.face.userData.jaw(jw); }   /* 張大嘴 → 喀一聲咬下去 → 慢慢鬆開 */ c.face.position.set(c.fp0.x + Math.sin(c.toSub) * lunge, c.fp0.y, c.fp0.z + Math.cos(c.toSub) * lunge); if (c.face.userData.bulb){ bulbAt(); if (k < 0.45){ const e = smooth01(k / 0.45); c.lure.position.set(L.x + (c.lure.position.x - L.x) * e, L.y + (c.lure.position.y - L.y) * e, L.z + (c.lure.position.z - L.z) * e); } }   /* 燈從原本的位置往上一提，之後就掛在牠頭上跟著動 */
     if (k > 2.4){ const tk = smooth01((k - 2.4) / 2.2); c.face.rotation.y = c.toSub - Math.PI / 2 + tk * Math.PI; const away = Math.max(0, k - 3.6) * 2.4; c.face.position.x -= Math.sin(c.toSub) * away; c.face.position.z -= Math.cos(c.toSub) * away; if (c.face.userData.bulb) bulbAt(); else { c.lure.position.x -= Math.sin(c.toSub) * away; c.lure.position.z -= Math.cos(c.toSub) * away; } c.pl.intensity = Math.max(0, 22 - (k - 2.4) * 5); if (k > 4) Sub.evFog = 0; }
     c.lure.material.opacity = 1 - smooth01((k - 6) / 1.5); subSonar(null);
     if (k > 7.6){ subEvEnd(); return; } return; }
@@ -11880,7 +11901,10 @@ function subFrame(dt, t){
   Sub.vy += ((upK ? 0.64 : 0) * vk - (dnK ? 0.52 : 0) * vk - Sub.vy) * Math.min(1, dt * 0.55);
   const fx = Math.sin(Sub.yaw), fz = Math.cos(Sub.yaw); let nx = clamp(P.x + fx * Sub.v * dt, -76, 76), nz = clamp(P.z + fz * Sub.v * dt, -66, 86);
   const minY = subYAt((Sub.dive.pressure_m || 800) + 140); let ny = clamp(P.y + Sub.vy * dt, minY, 10);
-  const gh = subH(nx, nz) + 1.1; if (ny < gh){ if (subH(nx, nz) + 1.1 - P.y > 1.2){ nx = P.x; nz = P.z; Sub.v *= -0.2; } ny = Math.max(ny, subH(nx, nz) + 1.1); }   /* 撞到岩壁就停住 */
+  /* v264 撞到斜坡、岩壁就停住（以前會沿著坡一直往上爬，看起來像莫名其妙上浮）；只有很緩的坡才會順著抬一點點，貼著牆可以往旁邊滑 */
+  { const okAt = (x, z) => subH(x, z) + 1.1 <= Math.max(ny, P.y) + 0.04;
+    if (!okAt(nx, nz)){ if (okAt(nx, P.z)) nz = P.z; else if (okAt(P.x, nz)) nx = P.x; else { nx = P.x; nz = P.z; Sub.v *= 0.5; } }
+    ny = Math.max(ny, subH(nx, nz) + 1.1); }
   P.set(nx, ny, nz); Sub.m.position.copy(P); Sub.m.rotation.set(-Sub.vy * 0.25, Sub.yaw, -Sub.turn * 0.14); Sub.m.userData.prop.rotation.z += dt * (2 + Math.abs(Sub.v) * 4);
   // 鏡頭：在艇後上方跟著
   const cdist = 7, ch = 1.0 + clamp(cam.pitch, -0.25, 1.0) * 7.5, kx = Math.sin(cam.yaw), kz = Math.cos(cam.yaw); camera.position.set(SUBW.x + P.x + kx * cdist, SUBW.y + Math.min(P.y + ch, SUB_SURF - 0.4), SUBW.z + P.z + kz * cdist); camera.lookAt(SUBW.x + P.x - kx * 7, SUBW.y + P.y + 1.8 - ch * 0.95 - Math.max(0, -Sub.vy) * 2, SUBW.z + P.z - kz * 7);   /* 從艇的後上方往前下方看，看得到前燈照的地方 */

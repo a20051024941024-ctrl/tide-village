@@ -190,8 +190,8 @@ function emoteClips(bones){
   out.push(poseClip(bones, 'bow', 2.0, 21, { rot: { spine: k => [0.45 * bw(k), 0, 0], chest: k => [0.45 * bw(k), 0, 0], head: k => [0.25 * bw(k), 0, 0], upperarml: k => [0, 0.15 * bw(k), -1.2], upperarmr: k => [0, 0.15 * bw(k), 1.2] } }));
   // 拍手：手在胸前，一開一合
   const op = k => 0.5 + 0.5 * Math.cos(k * P2);   /* 1＝張開、0＝合起來 */
-  out.push(poseClip(bones, 'clap', 0.6, 13, { rot: { upperarml: k => [0, 1.7 - 0.45 * op(k), -0.45], upperarmr: k => [0, 1.7 - 0.45 * op(k), 0.45],
-    lowerarml: k => [0, 0.35, 0], lowerarmr: k => [0, 0.35, 0], head: k => [-0.1, 0, 0] } }));
+  out.push(poseClip(bones, 'clap', 0.6, 13, { rot: { upperarml: k => [0, -(1.25 - 0.45 * op(k)), -0.45], upperarmr: k => [0, 1.25 - 0.45 * op(k), 0.45],   /* 2026-11-07 修正：左手往前要轉負的（以前左手跑到後面） */
+    lowerarml: k => [0, -0.35, 0], lowerarmr: k => [0, 0.35, 0], head: k => [-0.1, 0, 0] } }));
   // 生氣跺腳：手插腰、一腳一腳用力踩
   out.push(poseClip(bones, 'angry', 0.9, 19, { hipsY: k => -0.02 * Math.abs(S(k * P2)),
     rot: { upperarml: k => [0, -0.25, -1.05], upperarmr: k => [0, -0.25, 1.05], lowerarml: k => [0, 0.7 + 0.15 * S(k * P2 * 2), 0], lowerarmr: k => [0, 0.7 - 0.15 * S(k * P2 * 2), 0], head: k => [0.2, 0, 0.08 * S(k * P2 * 2)], chest: k => [0.12, 0, 0.05 * S(k * P2)],
@@ -199,8 +199,26 @@ function emoteClips(bones){
   // 大笑：身體往後仰、抖肩膀、抱肚子
   out.push(poseClip(bones, 'laugh', 0.5, 11, { rot: { chest: k => [-0.22 + 0.06 * S(k * P2), 0, 0], head: k => [-0.3 + 0.08 * S(k * P2), 0, 0], spine: k => [-0.08, 0, 0],
     upperarml: k => [0, 0.45, -1.0 + 0.06 * S(k * P2)], upperarmr: k => [0, 0.45, 1.0 - 0.06 * S(k * P2)], lowerarml: k => [0, 1.5, 0], lowerarmr: k => [0, 1.5, 0] } }));
+  // ---- 2026-11-07 新表情（商店賣的）----
+  const DL = [0, 0, -1.2], DR = [0, 0, 1.2], ease = (k, a, b) => k < a ? Math.sin(k / a * Math.PI / 2) : k < b ? 1 : Math.cos((k - b) / (1 - b) * Math.PI / 2);
+  // 轉圈：手張開、原地轉一圈、輕輕跳一下
+  out.push(poseClip(bones, 'spin', 1.3, 41, { hipsY: k => 0.06 * Math.sin(k * Math.PI), rot: { hips: k => [0, (k < 0.85 ? k / 0.85 : 1) * P2, 0], upperarml: k => [0, 0, -0.25], upperarmr: k => [0, 0, 0.25], head: k => [-0.1, 0, 0] } }));
+  // 比讚：右手往前伸、手肘彎起來，左手放下
+  out.push(poseClip(bones, 'thumbs', 2.0, 21, { rot: { upperarmr: k => [0, ARMF * 1.25 * ease(k, 0.2, 0.8), 1.2 - 1.0 * ease(k, 0.2, 0.8)], lowerarmr: k => [0, 0, -1.3 * ease(k, 0.2, 0.8)], upperarml: k => DL, head: k => [0, 0, -0.12 * ease(k, 0.2, 0.8)] } }));
+  // 開心跳：雙手舉高、連跳三下
+  out.push(poseClip(bones, 'hop', 1.8, 37, { hipsY: k => 0.16 * Math.abs(Math.sin(k * Math.PI * 3)), rot: { upperarml: k => [0, 0, 1.25 + 0.15 * Math.sin(k * P2 * 3)], upperarmr: k => [0, 0, -(1.25 + 0.15 * Math.sin(k * P2 * 3))], head: k => [-0.2, 0, 0],
+    upperlegl: k => [-0.3 * Math.abs(Math.sin(k * Math.PI * 3)), 0, 0], upperlegr: k => [-0.3 * Math.abs(Math.sin(k * Math.PI * 3)), 0, 0], lowerlegl: k => [0.5 * Math.abs(Math.sin(k * Math.PI * 3)), 0, 0], lowerlegr: k => [0.5 * Math.abs(Math.sin(k * Math.PI * 3)), 0, 0] } }));
+  // 伸懶腰：兩手往上伸直、身體往後仰、左右晃一下
+  out.push(poseClip(bones, 'stretch', 2.6, 27, { rot: { upperarml: k => [0, -0.25 * ease(k, 0.3, 0.75), -1.2 + 2.35 * ease(k, 0.3, 0.75)], upperarmr: k => [0, 0.25 * ease(k, 0.3, 0.75), 1.2 - 2.35 * ease(k, 0.3, 0.75)], chest: k => [-0.25 * ease(k, 0.3, 0.75), 0, 0.12 * Math.sin(k * P2) * ease(k, 0.3, 0.75)], head: k => [-0.3 * ease(k, 0.3, 0.75), 0, 0], spine: k => [-0.1 * ease(k, 0.3, 0.75), 0, 0] } }));
+  // 打哈欠：右手摀嘴、頭往後仰
+  out.push(poseClip(bones, 'yawn', 2.4, 25, { rot: { upperarmr: k => [0, ARMF * 0.7 * ease(k, 0.25, 0.75), 1.2 - 1.0 * ease(k, 0.25, 0.75)], lowerarmr: k => [0, ARMF * 2.2 * ease(k, 0.25, 0.75), -0.5 * ease(k, 0.25, 0.75)], upperarml: k => DL, head: k => [-0.4 * ease(k, 0.25, 0.75), 0, 0.1 * ease(k, 0.25, 0.75)], chest: k => [-0.1 * ease(k, 0.25, 0.75), 0, 0] } }));
+  // 聳肩：兩手攤開、手掌朝上、頭歪一邊
+  out.push(poseClip(bones, 'shrug', 1.6, 17, { hipsY: k => 0, rot: { upperarml: k => [0, 0, -1.2 + 0.45 * ease(k, 0.25, 0.7)], upperarmr: k => [0, 0, 1.2 - 0.45 * ease(k, 0.25, 0.7)], lowerarml: k => [0, ARMF * -1.2 * ease(k, 0.25, 0.7), 0], lowerarmr: k => [0, ARMF * 1.2 * ease(k, 0.25, 0.7), 0], head: k => [0, 0, 0.22 * ease(k, 0.25, 0.7)] } }));
+  // 指前面：右手伸直往前指
+  out.push(poseClip(bones, 'point', 2.0, 21, { rot: { upperarmr: k => [0, ARMF * 1.45 * ease(k, 0.2, 0.8), 1.2 - 1.2 * ease(k, 0.2, 0.8)], upperarml: k => DL, chest: k => [0, 0.2 * ease(k, 0.2, 0.8), 0], head: k => [0, 0, 0] } }));
   return out;
 }
+const ARMF = 1;   /* 繞 y 轉的方向：右手往前是正（左手相反，看預覽圖決定的） */
 
 export async function exportGLB(holder, clips){
   const ex = new GLTFExporter();
