@@ -3194,6 +3194,16 @@ canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(
   zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
   function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy); if (L > M){ dx *= M/L; dy *= M/L; } knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / M; joy.z = dy / M; }
 })();
+/* v266 一手按著搖桿、另一手點按鈕：手機瀏覽器在有別的手指按著時常常不會送出「點一下」，所以按鈕按了沒反應（開潛水艇按快速聊天、走路時按表情）。
+   這裡自己補：別的手指還按著的時候，手指在同一顆按鈕上按下又放開，就幫它點一下；如果瀏覽器自己也送了，就擋掉重複的那次。 */
+(() => { const down = new Map(); let fired = null, firedAt = 0;
+  addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; const b = e.target && e.target.closest && e.target.closest('button'); down.set(e.pointerId, { b, x: e.clientX, y: e.clientY, multi: down.size > 0 }); }, true);
+  const up = e => { const d = down.get(e.pointerId); down.delete(e.pointerId); if (!d || e.type !== 'pointerup' || !d.b || !(d.multi || down.size > 0)) return;
+    const b2 = document.elementFromPoint(e.clientX, e.clientY), bb = b2 && b2.closest && b2.closest('button'); if (bb !== d.b || d.b.disabled || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 24) return;
+    if (d.b.matches('.sh-up, .sh-dn, .sf-reel')) return;   /* 按住型的按鈕本來就用按下／放開，不用補 */
+    fired = d.b; firedAt = performance.now(); d.b.click(); };
+  addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
+  addEventListener('click', e => { if (fired && e.isTrusted && performance.now() - firedAt < 600 && (e.target === fired || fired.contains(e.target))){ fired = null; e.stopImmediatePropagation(); e.preventDefault(); } }, true); })();
 
 /* ================= 拍照模式 ================= */
 const Photo = { on: false, saved: null, names: true, url: null, blob: null };
