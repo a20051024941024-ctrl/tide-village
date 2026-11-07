@@ -11925,7 +11925,7 @@ async function subStart(){
 function subEnter(r){   /* 過場播完才真的切到深海 */
   { const fx = $('#fadeFx'); if (fx) setTimeout(() => fx.classList.remove('on'), 350); }
   Sub.dive = r; Sub.st = r.sub; Sub.hold = []; Sub.maxD = 0; Sub.edgeHit = false; Sub.warnT = 0; Sub.fish = null; Sub.ending = false; Sub.t0 = now(); Sub.near = null;
-  if (!Sub.group) subBuild(); Sub.group.visible = true;
+  if (!Sub.group) subBuild(); Sub.group.visible = true; subPaint(Sub.m, subColorOf(myId || 'me'));
   for (const o of Sub.ores) o.m.visible = true;
   // 藏起村子、關掉村子的燈、換成深海的霧
   Sub.restore = scene.children.filter(o => o !== Sub.group && o.visible); for (const o of Sub.restore) o.visible = false;
@@ -12235,14 +12235,17 @@ async function subAction(){ const P = Sub.pos, depth = Math.round(subDepth(P.y))
    靠近一起潛的人（15 公尺內）：兩台的燈光加在一起，看得比較遠（霧往外推、小生物在比較遠就看得到）。
    純畫面：魚、金幣、材料還是每個人自己跟伺服器算。快速說話只能選固定的句子（不用過濾髒話）。 */
 var SUB_Q = ['👋 嗨！', '跟我來！', '這裡有東西！', '等等我', '👍 好', '我要上去了'];
-const SUB_PEER_COL = ['#ff8a5c', '#5cc8ff', '#8de07a', '#d79bff', '#ff7fb0', '#ffffff'];
+const SUB_PEER_COL = ['#f2c230', '#ff8a5c', '#5cc8ff', '#8de07a', '#d79bff', '#ff7fb0', '#ffffff', '#4fd0c0'];
+/* v274 每個人的潛水艇有固定的顏色（照帳號算），自己看和別人看到的一樣 */
+function subColorOf(id){ let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return SUB_PEER_COL[h % SUB_PEER_COL.length]; }
+function subPaint(m, col){ const hm = m && m.children[0] && m.children[0].material; if (!hm) return; hm.color.set(col); hm.emissive = new THREE.Color(col); hm.emissiveIntensity = 0.28; }
 function subNameTex(text, bub){ const cv = document.createElement('canvas'); cv.width = 320; cv.height = 64; const c = cv.getContext('2d'); c.font = 'bold 28px sans-serif'; const w = Math.min(312, c.measureText(text).width + 30);
   c.fillStyle = bub ? 'rgba(255,255,255,.92)' : 'rgba(8,26,44,.78)'; c.beginPath(); if (c.roundRect) c.roundRect(160 - w / 2, 8, w, 48, 24); else c.rect(160 - w / 2, 8, w, 48); c.fill();
   c.fillStyle = bub ? '#18334a' : '#ffe28a'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, 160, 33); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx; }
 function subLabel(text, bub){ const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: subNameTex(text, bub), depthWrite:false, depthTest:false, fog:false, transparent:true, sizeAttenuation:false })); sp.scale.set(0.4, 0.08, 1);   /* 遠近都一樣大，才找得到人 */ sp.renderOrder = 10; sp.userData.txt = text; return sp; }
 function subSetLabel(sp, text){ if (sp.userData.txt === text) return; sp.userData.txt = text; const old = sp.material.map; sp.material.map = subNameTex(text, sp.userData.bub); sp.material.needsUpdate = true; if (old) old.dispose(); }
 function subPeerMake(id, p){ const g = new THREE.Group(), m = subModel(); g.add(m); g.userData.off = true;   /* 不讓霧外剔除藏起來（遠遠要看得到燈和名字） */
-  let h = 0; for (const ch of String(p.by || id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; m.children[0].material.color.set(SUB_PEER_COL[h % SUB_PEER_COL.length]); { const hm = m.children[0].material; hm.emissive = new THREE.Color(hm.color); hm.emissiveIntensity = 0.28; }   /* 別人的艇身微微亮，黑暗裡也認得出顏色 */
+  subPaint(m, subColorOf(p.by || id));   /* 別人的艇身微微亮，黑暗裡也認得出顏色 */
   const beamG = new THREE.Group(); beamG.position.set(0, -0.2, 1.3); beamG.rotation.x = 0.57; const cone = new THREE.Mesh(new THREE.ConeGeometry(2.6, 9, 12, 1, true), new THREE.MeshBasicMaterial({ color:'#cfe6ff', transparent:true, opacity:0.07, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide }));
   cone.rotation.x = -Math.PI / 2; cone.position.z = 4.5; beamG.add(cone); m.add(beamG);
   const gl = subGlow('#d8ecff', 3.2, false); gl.position.set(0, -0.2, 1.5); m.add(gl);
@@ -12302,7 +12305,7 @@ function buildSubDock(){ try { const A = ABYSS, G = new THREE.Group(); scene.add
 /* v244 上船、下潛、浮上來、走出來的過場（大約 4 秒，看得到人走上潛水艇、艙門關上、潛水艇冒著泡泡沉下去；回來時反過來） */
 const easeIO = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
 function subCineCam(){ const c = Sub.cine; if (!c) return false; camera.position.copy(c.cp); camera.lookAt(c.lk); return true; }
-function subCineStart(kind, done){ const m = Sub.dockM; if (!m){ done(); return; }
+function subCineStart(kind, done){ const m = Sub.dockM; if (!m){ done(); return; } subPaint(m, subColorOf(myId || 'me'));   /* 碼頭上要開走的那台也是你的顏色 */
   Sub.cine = { kind, t0:now(), done, ui:uiBlocked, B:new THREE.Vector3(SUBBOARD.x, SUBBOARD.y, SUBBOARD.z), P0:me.pos.clone(), cp:new THREE.Vector3(), lk:new THREE.Vector3(), rip:0 };
   uiBlocked = true; for (const k in keys) keys[k] = false; joy.x = joy.z = 0; document.body.classList.add('subcine'); closeSubPanel();
   if (kind === 'back'){ m.position.y = Sub.dockY - 3.2; m.userData.hatch.rotation.x = 0; me.av.g.visible = false; } }
