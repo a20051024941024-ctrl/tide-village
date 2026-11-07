@@ -1108,3 +1108,7 @@ body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
  radial-gradient(ellipse at center,transparent 55%,rgba(200,230,255,.35) 100%)}
 #owWet.on{animation:owwet 2.1s ease-out forwards}
 @keyframes owwet{0%{opacity:1;background-position:0 0}100%{opacity:0;background-position:0 140px}}
+/* v271 海底提示箭頭 */
+#subHud .sh-deep{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);font-weight:800}
+#subHud .sh-deep.on{display:flex}
+#subHud .sh-deep i{font-style:normal;font-size:44px;line-height:1;color:#ffd36a;transition:transform .3s}

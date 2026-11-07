@@ -9712,7 +9712,7 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by;
-  if (pos){ p.target.set(clamp(+pos[0]||0, -160, ISLE.x + ISLE.r + 25), 0, clamp(+pos[1]||0, -110, 90)); p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
+  if (pos){ p.target.set(clamp(+pos[0]||0, -200, 200), 0, clamp(+pos[1]||0, -200, 200));   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
@@ -12162,6 +12162,13 @@ function subFrame(dt, t){
   const depth = subDepth(P.y); Sub.maxD = Math.max(Sub.maxD, depth);
   try { subLightTick(dt, t, depth); } catch(e){ console.warn('sublight', e); }
   try { subEvTick(dt, t, depth); } catch(e){ console.warn('subev', e); }
+  /* v271 按著下潛但已經貼在海底：提示往深的方向開，畫面上出現一個箭頭指向比較深的地方 */
+  { const onFloor = P.y - (subH(P.x, P.z) + 1.1) < 0.06; Sub.floorT = Sub.down && onFloor ? (Sub.floorT || 0) + dt : 0; let ar = subHud().querySelector('.sh-deep');
+    if (!ar){ ar = document.createElement('div'); ar.className = 'sh-deep'; ar.innerHTML = '<i>⬆</i><span>往這邊比較深</span>'; subHud().appendChild(ar); }
+    if (Sub.floorT > 1.2 && P.y > -100){ if (frameNo % 10 === 0){ let best = null, bh = 1e9; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, h = subH(P.x + Math.sin(a) * 14, P.z + Math.cos(a) * 14); if (h < bh){ bh = h; best = a; } }
+        const camYaw = Math.atan2(camera.position.x - SUBW.x - P.x, camera.position.z - SUBW.z - P.z) + Math.PI; ar.querySelector('i').style.transform = `rotate(${((camYaw - best) * 180 / Math.PI).toFixed(0)}deg)`; }
+      ar.classList.add('on'); if (now() - (Sub.floorTip || 0) > 15){ Sub.floorTip = now(); subMsg('⬇ 到海底了，照箭頭往深的地方開', 2.4); } }
+    else if (!Sub.down || !onFloor) ar.classList.remove('on'); }
   try { subPeersTick(dt, t); } catch(e){}
   // 第一次走到裂縫邊緣（5 公尺內）
   if (!Sub.edgeHit && P.z > subEdge(P.x) - 5 && P.y > -3){ Sub.edgeHit = true; if (musicOn){ try { MUSIC.stop(); Sub.musicOff = true; } catch(e){} } subDrone(true); H.classList.add('deep');
