@@ -143,6 +143,7 @@ supabase/102_craft.sql 🔧 阿鐵師傅的工坊：craft_item 用魚缸裡的�
 supabase/103_craft_bait.sql 🪱 阿鐵師傅做活餌：craft_bait 用 2 條常見魚＋30 金幣做 4 個活餌（吸引掠食魚）；020 重產：餌的 k（吸引哪一類魚）、_sign_hit 多 p_bk。
 supabase/104_hooks.sql 🪝 阿鐵師傅做鉤子（hk_ 放進 owned）、set_hook 裝上；_craft_def 加鉤子。只影響拉魚手感。
 supabase/105_sub_sightings.sql 🔭 深海目擊（sub_sighting，第一次送 💙30）、關燈省電（sub_dark，_sub_active 多給關燈時間的一半）、_sub_depth 記到過多深。
+supabase/106_board.sql 📌 廣場留言板（board_list / board_post / board_del / board_report）：釣過 5 條才能留、每分鐘一則、一天 5 則、60 字、擋髒話；50 條以上的 3 人檢舉就收起來。
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」

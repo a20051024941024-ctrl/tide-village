@@ -3945,7 +3945,7 @@ function updateFishing(dt, t){
     else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'board' ? '📝 看留言・寫留言' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
@@ -7213,6 +7213,7 @@ let ferryNpc = null; const Ferry = { on:false };
 function updateFerry(){
   if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
   if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
+  if (frameNo % 30 === 0) try { boardTick(); } catch(e){}
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
   if (Ferry.on && frameNo % 60 === 0){ const n = crewNear(); if (n !== Ferry.crewN){ Ferry.crewN = n; renderFerryBar(); } }
 }
@@ -8373,6 +8374,7 @@ function nearShop(){
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
   if (ferryNpc && Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z) < 2.3) return { id:'ferry', label:FERRY.name, mode:'ferry' };
   if (Math.hypot(me.pos.x - SUBDOCK.x, me.pos.z - SUBDOCK.z) < 2.4) return { id:'subdock', label:'🚢 潛水艇碼頭', mode:'sub' };
+  if (!onIsle && !House.on && Math.hypot(me.pos.x - BOARD.x, me.pos.z - BOARD.z) < 2.5) return { id:'board', label:'📌 廣場留言板', mode:'board' };
   { const g = npcs.find(n => n.shopNpc === 'news'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'news', label:'阿報・村報', mode:'news' }; }
   { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
   { const g = npcs.find(n => n.wid === 'gang'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'gang', label:'老港・漁夫', mode:'gang' }; }
@@ -8399,7 +8401,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -10205,6 +10207,44 @@ async function loadNews(){ if (News.busy || !Cloud.on || !Cloud.sb) return; News
   News.busy = false; if (!$('#sheet').hidden && curTab === 'news') renderTab(); }
 function newsLines(){ const P = (News.list || [])[0]; if (!P) return []; const out = (P.items || []).filter(it => it.k !== 'wx').slice(0, 3).map(it => '號外！' + it.text); if (P.me) out.push('你今天上報了！快來看看'); return out; }
 function newsHtml(it){ let h = esc(it.text); for (const nm of it.names || []) if (nm) h = h.split(esc(nm)).join(`<b class="gold">${esc(nm)}</b>`); return h; }
+/* ===== v262 廣場留言板：大家都可以留言（伺服器 106：要釣過 5 條魚、每分鐘一則、一天 5 則、一則 60 字、擋髒話；3 個老玩家檢舉就收起來）===== */
+const BOARD = { x:-2.3, z:4.0, rot:Math.PI / 2 };
+const Board = { list:null, at:0, busy:false, g:null, tex:null, draft:'' };
+async function loadBoard(){ if (!Cloud.on || !Cloud.sb || Board.busy) return; Board.busy = true; const r = await festRpc('board_list'); Board.busy = false; if (Array.isArray(r)){ Board.list = r; Board.at = Date.now(); paintBoard(); if (!$('#sheet').hidden && curTab === 'board') renderTab(); } }
+async function boardDo(fn, args){ if (Board.busy) return; Board.busy = true; const r = await festRpc(fn, args); Board.busy = false; if (Array.isArray(r)){ Board.list = r; Board.at = Date.now(); paintBoard(); } else if (r && r.msg) toast(esc(r.msg)); if (!$('#sheet').hidden && curTab === 'board') renderTab(); return r; }
+function renderBoard(body){
+  body.appendChild(el('p', 'sub', '大家都可以在這裡留言，跟村子裡的人打招呼、約一起釣魚、分享好釣點。一則最多 60 個字；要釣過 5 條魚才能留，一天最多 5 則。不要留電話、地址這些個人資料喔。'));
+  if (!Cloud.on){ body.appendChild(el('p', 'sub', '要連上線才看得到留言板。')); return; }
+  const f = el('form', 'boardform'), ta = el('textarea'); ta.maxLength = 60; ta.rows = 2; ta.placeholder = '寫點什麼給大家看…'; ta.value = Board.draft; ta.addEventListener('input', () => { Board.draft = ta.value; cnt.textContent = `${ta.value.length} / 60`; });
+  const row = el('div', 'boardrow'), cnt = el('span', 'sub2', `${Board.draft.length} / 60`), go = el('button', 'tbtn', '📌 貼上去'); go.type = 'submit'; row.append(cnt, go); f.append(ta, row);
+  f.addEventListener('submit', async e => { e.preventDefault(); const t = ta.value.trim(); if (!t) return; if (clean(t) !== t){ toast('這句話不行，換個說法吧'); return; } const r = await boardDo('board_post', { p_text: t }); if (Array.isArray(r)){ Board.draft = ''; SFX.coin(); toast('📌 貼上留言板了'); renderTab(); } });
+  body.appendChild(f);
+  const L = Board.list; if (!L){ body.appendChild(el('p', 'sub', Board.busy ? '讀取中…' : '讀不到留言，等一下再試試。')); return; }
+  if (!L.length){ body.appendChild(el('p', 'sub', '還沒有人留言，當第一個吧！')); return; }
+  const ul = el('ul', 'boardlist');
+  for (const m of L){ const li = el('li', m.me ? 'mine' : ''), hd = el('div', 'bh'); hd.append(el('b', '', m.n || '釣客'), el('span', 'sub2', agoText(Date.parse(m.at))));
+    const b = el('button', 'tbtn ghost', m.me ? '刪掉' : '檢舉'); b.addEventListener('click', () => { if (m.me){ if (b.dataset.ok){ boardDo('board_del', { p_id: m.id }); } else { b.dataset.ok = 1; b.textContent = '確定刪掉？'; } } else { if (b.dataset.ok) return; b.dataset.ok = 1; b.textContent = '已檢舉'; festRpc('board_report', { p_id: m.id }).then(r => { if (r && r.msg) toast(esc(r.msg)); }); } }); hd.appendChild(b);
+    li.append(hd, el('div', 'bb', clean(m.b || ''))); ul.appendChild(li); }
+  body.appendChild(ul); }
+/* 廣場上的木頭留言板：上面貼著最新幾張彩色便條（字是從留言畫上去的） */
+function buildBoard(){ if (Board.g) return; const g = new THREE.Group(); g.position.set(BOARD.x, groundHeight(BOARD.x, BOARD.z), BOARD.z); g.rotation.y = BOARD.rot;
+  const wood = mat('#8a5a34', 0.8), dark = mat('#5e3b22', 0.8);
+  for (const sx of [-1.15, 1.15]){ const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.3, 0.14), dark); p.position.set(sx, 1.15, 0); p.castShadow = true; g.add(p); }
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.5, 0.1), wood); fr.position.set(0, 1.45, 0); fr.castShadow = true; g.add(fr);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 0.5), dark); roof.position.set(0, 2.32, 0.05); roof.rotation.x = 0.2; g.add(roof);
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 300; Board.cv = cv; Board.tex = new THREE.CanvasTexture(cv); Board.tex.colorSpace = THREE.SRGBColorSpace;
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(2.36, 1.38), new THREE.MeshLambertMaterial({ map: Board.tex })); face.position.set(0, 1.45, 0.056); g.add(face);
+  const bk = face.clone(); bk.rotation.y = Math.PI; bk.position.z = -0.056; g.add(bk);
+  scene.add(g); Board.g = g; addOBoxCol(BOARD.x, BOARD.z, 2.6, 0.4, BOARD.rot); paintBoard(); }
+function paintBoard(){ const cv = Board.cv; if (!cv) return; const c = cv.getContext('2d'); c.fillStyle = '#c99a63'; c.fillRect(0, 0, 512, 300); c.fillStyle = 'rgba(90,55,25,.25)'; for (let i = 0; i < 14; i++) c.fillRect(0, i * 22 + 6, 512, 2);
+  c.fillStyle = '#4a2c14'; c.font = 'bold 34px sans-serif'; c.textAlign = 'center'; c.fillText('📌 廣場留言板', 256, 42);
+  const L = (Board.list || []).slice(0, 6), cols = ['#fff6a8', '#ffd1dc', '#c8f0ff', '#d6f5c4', '#ffe0b0', '#e6d8ff'];
+  if (!L.length){ c.font = '22px sans-serif'; c.fillStyle = '#4a2c14'; c.fillText(Cloud.on ? '還沒有人留言，走過來寫一則吧！' : '連上線就看得到大家的留言', 256, 170); }
+  L.forEach((m, i) => { const x = 14 + (i % 3) * 165, y = 64 + Math.floor(i / 3) * 116, r = ((i * 37) % 7 - 3) * 0.012; c.save(); c.translate(x + 76, y + 52); c.rotate(r); c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(-72, -46, 150, 102); c.fillStyle = cols[i % cols.length]; c.fillRect(-76, -50, 150, 102); c.fillStyle = '#e04a3a'; c.beginPath(); c.arc(0, -42, 6, 0, 7); c.fill();
+    c.fillStyle = '#3a2a1a'; c.textAlign = 'left'; c.font = 'bold 15px sans-serif'; c.fillText(String(m.n || '釣客').slice(0, 8), -66, -22); c.font = '15px sans-serif'; const t = clean(m.b || ''); for (let k = 0; k < 3; k++){ const seg = t.slice(k * 8, k * 8 + 8); if (!seg) break; c.fillText(seg + (k === 2 && t.length > 24 ? '…' : ''), -66, 0 + k * 20); } c.restore(); });
+  if (Board.tex) Board.tex.needsUpdate = true; }
+function boardTick(){ if (!Board.g && typeof houseBuilder !== 'undefined' && houseBuilder) buildBoard(); if (!Board.g) return; Board.g.visible = !onIsle && !House.on && !inIndoor();
+  if (Cloud.on && Board.g.visible && Date.now() - Board.at > 120000 && Math.hypot(me.pos.x - BOARD.x, me.pos.z - BOARD.z) < 30){ Board.at = Date.now(); loadBoard(); } }
 function renderNews(body){
   const head = el('div', 'shophead'); head.innerHTML = '<b>📰 潮汐村報</b>'; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能看村報。')); return; }
@@ -10625,7 +10665,7 @@ try { let pend = new Set(), qd = false; new MutationObserver(ms => { for (const 
     if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
-const SHEET_TITLE = { map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
+const SHEET_TITLE = { map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
 function renderTab(){
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
@@ -10775,6 +10815,7 @@ function renderTab(){
   } else if (curTab === 'market'){ renderMarketFish(body);
   } else if (curTab === 'cai'){ renderCaiShop(body);
   } else if (curTab === 'sci'){ renderSci(body);
+  } else if (curTab === 'board'){ renderBoard(body);
   } else if (curTab === 'news'){ renderNews(body);
   } else if (curTab === 'gang'){ renderGangShop(body);
   } else if (curTab === 'fu'){ renderFuShop(body);
@@ -10964,6 +11005,7 @@ function renderTab(){
     ]);
     sec('⚓ 港口海底潛水', [
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
+      '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
       '🔭 深海目擊：開潛水艇有時候會遇到特別的事——淺海被幾百條小魚圍成一顆球；午夜層按「🔦 關燈」看發光的生物（關燈時電池只用一半）；在黑暗裡停太久，聲納上可能會出現一個紅點……；遠處一盞溫暖的小燈；抹香鯨從頭頂游過。每 90 秒最多一件，每一種第一次看到記在圖鑑的「深海目擊」、送 💙30 愛海點數。只會嚇人，不會扣電、扣魚或弄壞潛水艇；怕的話可以在設定關掉「深海驚嚇效果」。',
       '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。',
       '⛵ 坐自己的小船（港口的船，按「上船」）可以一路划到別的島：冰封群島、深海浮台、神秘島、苔森之島。離開本島以後船會划得比較快，畫面上面會有箭頭指出最近的島在哪、還有幾公尺；靠到島邊按「下船」就上岸了。想快一點還是可以找阿海直接載你去。',
