@@ -10,14 +10,14 @@ import { SPECS as FISH_SPECS } from './fish-specs.js';
 window.__gameStarted = true;
 // 語言（設定裡選）：簡體中文時用 OpenCC 的對照表把畫面上的字、看板上的字都轉成簡體（載不到就照原本的繁體）
 let OCC = null;
-try { const lng = localStorage.getItem('tide.lang'); if (lng === '"cn"' || lng === '"en"'){ const m = lng === '"en"' ? await import('./en.js') : await import('./zh-cn.js'); OCC = m.toCN || m.toEN;   /* v214：英文（beta）用 js/en.js 的對照表 */   /* 對照表放在自己的網站上（js/zh-cn.js，OpenCC 的資料），不用連外部網站 */
+try { const lng = localStorage.getItem('tide.lang'); if (lng === '"cn"' || lng === '"en"' || lng === '"id"'){ const m = lng === '"en"' ? await import('./en.js') : lng === '"id"' ? await import('./id.js') : await import('./zh-cn.js'); OCC = m.toCN || m.toEN || m.toID;   /* v277：印尼文（beta）用 js/id.js */   /* v214：英文（beta）用 js/en.js 的對照表 */   /* 對照表放在自己的網站上（js/zh-cn.js，OpenCC 的資料），不用連外部網站 */
   const ft = CanvasRenderingContext2D.prototype.fillText, st = CanvasRenderingContext2D.prototype.strokeText, mt = CanvasRenderingContext2D.prototype.measureText;
   CanvasRenderingContext2D.prototype.fillText = function(t, ...a){ return ft.call(this, typeof t === 'string' ? OCC(t) : t, ...a); };
   CanvasRenderingContext2D.prototype.strokeText = function(t, ...a){ return st.call(this, typeof t === 'string' ? OCC(t) : t, ...a); };
   CanvasRenderingContext2D.prototype.measureText = function(t){ return mt.call(this, typeof t === 'string' ? OCC(t) : t); };
   const conv = n => { if (n.nodeType === 3){ const p = n.parentNode; if (p && (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || p.nodeName === 'TEXTAREA' || (p.closest && p.closest('.ignore-opencc')))) return; const v = n.nodeValue, c = OCC(v); if (c !== v) n.nodeValue = c; return; }
     if (n.nodeType !== 1) return; for (const at of ['title', 'placeholder', 'aria-label']){ const v = n.getAttribute && n.getAttribute(at); if (v){ const c = OCC(v); if (c !== v) n.setAttribute(at, c); } } for (const ch of n.childNodes) conv(ch); };
-  const go = () => { conv(document.body); new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData') conv(m.target); else if (m.type === 'attributes') conv(m.target); else for (const x of m.addedNodes) conv(x); } }).observe(document.body, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['title', 'placeholder', 'aria-label'] }); document.documentElement.lang = 'zh-CN'; };
+  const go = () => { conv(document.body); new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData') conv(m.target); else if (m.type === 'attributes') conv(m.target); else for (const x of m.addedNodes) conv(x); } }).observe(document.body, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['title', 'placeholder', 'aria-label'] }); document.documentElement.lang = lng === '"en"' ? 'en' : lng === '"id"' ? 'id' : 'zh-CN'; };
   if (document.body) go(); else addEventListener('DOMContentLoaded', go); } } catch(e){ console.warn('lang', e); OCC = null; }
 (function(){
 'use strict';
@@ -1669,7 +1669,7 @@ const BlueW = { m:null, told:-1, songAt:0, blowAt:0, nBlow:0, krill:null,
       const roll = Math.sin(clamp((u - 0.3) / 0.5, 0, 1) * Math.PI); m.rotation.x = roll * 1.4; m.position.y = -0.4 + roll * 0.2; m.position.x += P.hx * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; m.position.z += P.hz * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; }
     else { m.rotation.x = 0; if (this.krill) this.krill.visible = false; }
     // 公告（每一輪一次）＋鯨歌（離藍鯨 140 公尺內，每 16 秒一段）
-    const c = Math.floor(Math.floor(bossNow() / 1000) / 3600); if (this.told !== c && d < 80){ this.told = c; ticker('🐋 港口外海有藍鯨浮上來噴水了！接下來一分半鐘，在港口外海比較容易釣到藍鯨'); }
+    const c = Math.floor(Math.floor(bossNow() / 1000) / 3600); if (this.told !== c && d < 80){ this.told = c; toast('🐋 港口外海有藍鯨浮上來噴水了！接下來一分半鐘，在港口外海比較容易釣到藍鯨'); }
     const dist = Math.hypot(me.pos.x - P.x, me.pos.z - P.z); if (dist < 90 && t - this.songAt > 45){ this.songAt = t; whaleSong(clamp(1 - dist / 90, 0.1, 0.8)); } },   /* v244 鯨歌小聲一點、少一點（45 秒一段、90 公尺內才聽得到） */
   makeKrill(){ const N = 260, g = new THREE.BufferGeometry(), a = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const r = Math.random() * 3, th = Math.random() * 6.28; a[i * 3] = Math.cos(th) * r; a[i * 3 + 1] = -Math.random() * 1.2; a[i * 3 + 2] = Math.sin(th) * r; }
     g.setAttribute('position', new THREE.BufferAttribute(a, 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ color:'#ff8fa0', size:0.45, transparent:true, opacity:0.9, depthWrite:false })); scene.add(p); return p; } };
@@ -1743,7 +1743,7 @@ function owWet(on, breath){ if (!on) return; let w = $('#owWet'); if (!w){ w = d
 function owSong(v){ if (!soundOn || !actx || sfxVol <= 0.01) return; const t = actx.currentTime, vol = 0.05 * v * sfxVol, f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400; f.connect(actx.destination);
   const notes = [[220, 520, 0.9], [480, 180, 0.7], [160, 300, 1.1], [600, 420, 0.5]]; let at = t;
   for (const [a, b, d] of notes){ const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(a, at); o.frequency.exponentialRampToValueAtTime(b, at + d); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, at + d); o.connect(g); g.connect(f); o.start(at); o.stop(at + d + 0.05); at += d + 0.25; } }
-function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; ticker(`${S.ic} 你遇到了${S.n}！`); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
+function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; toast(`${S.ic} 你遇到了${S.n}！`); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
   if (Cloud.on && Cloud.sb) festRpc('sea_sighting', { p_kind: k }).then(r => { if (r && r.player) adoptRow(r.player); if (r && r.first) setTimeout(() => toast(`🔭 海上目擊：${S.ic} ${S.n}（💙 +30）`), 1600); }); }
 OW.update = function(t){
   if (waterSurface && waterSurface.material.uniforms.uWaves){ const U = waterSurface.material.uniforms, tn = now(); U.uWT.value = tn; let any = false; WAVES.forEach((w, i) => { U.uWaves.value[i].set(w.x, w.z, w.t0, w.a); if (tn - w.t0 < 15) any = true; }); U.uWOn.value = any && Quality.tier !== 'low' ? 1 : 0; WAVES.on = any; }
@@ -6950,8 +6950,8 @@ function renderSettings(body){
   body.appendChild(el('div', 'shophead')).innerHTML = '<b>⚙️ 設定</b>';
   const field = (title, sub) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); body.appendChild(f); if (sub) f._sub = sub; return f; };
   { const f = field('🌐 語言'), seg = el('div', 'seg'), cur = LS.get('tide.lang', 'tw');
-    [['tw', '繁體中文'], ['cn', '简体中文'], ['en', 'English (beta)']].forEach(([k, l]) => { const b = el('button', 'ignore-opencc', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { if (cur === k) return; LS.set('tide.lang', k); toast(k === 'cn' ? '切换成简体中文，马上重新载入…' : k === 'en' ? 'Switching to English (beta), reloading…' : '切換成繁體中文，馬上重新載入…'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
-    f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。English 是測試版：選單、地名、魚名是英文，比較長的說明還是中文。' + ((cur === 'cn' || cur === 'en') && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
+    [['tw', '繁體中文'], ['cn', '简体中文'], ['en', 'English (beta)'], ['id', 'Bahasa Indonesia (beta)']].forEach(([k, l]) => { const b = el('button', 'ignore-opencc', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { if (cur === k) return; LS.set('tide.lang', k); toast(k === 'cn' ? '切换成简体中文，马上重新载入…' : k === 'en' ? 'Switching to English (beta), reloading…' : k === 'id' ? 'Beralih ke Bahasa Indonesia (beta), memuat ulang…' : '切換成繁體中文，馬上重新載入…'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。English／Bahasa Indonesia 是測試版：選單、地名、魚名會換成英文／印尼文，比較長的說明還是中文。' + ((cur === 'cn' || cur === 'en' || cur === 'id') && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
   const vol = (title, on, v, setOn, setV) => { const f = field(title), row = el('div', 'volrow'), tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { setOn(!on); renderTab(); });
     const sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(v * 100); sl.disabled = !on; const pct = el('span', 'volpct', Math.round(v * 100) + '%');
     sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
@@ -11324,6 +11324,7 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
+      '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
       '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 5 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
       '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',

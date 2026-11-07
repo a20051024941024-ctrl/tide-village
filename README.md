@@ -149,6 +149,7 @@ supabase/108_sea_sightings.sql 🐋 海上目擊（sea_sighting）：外海遇�
 supabase/109_salon.sql 💇 阿萍美髮沙龍（buy_salon）：新髮型 hs10～21（🪙400，從 4 款開始每兩天多一款）、新髮色 hc11～40（🪙200，從 3 色開始每天多一色）；set_gear 換外觀時檢查有沒有買。
 supabase/110_salon_forever.sql 💇 阿萍不會停：髮色第 31 色以後每天自動一色（到 999 號，外觀髮色最多 3 位數）；髮型最大編號改由 _salon_hs_max() 決定。
 supabase/111_events.sql 📅 釣魚活動：🐟 魚群洄游（每 3 小時，某釣點某種魚 ×4，釣 5 條送 200）、🎯 懸賞魚（每 2 小時換一種，夠重送 300）、🌠 流星雨夜釣（每天 23:00～23:30 傳說魚 ×1.6）；ev_claims 記錄每人每場一次。020_fair_fishing.sql 也重新產生（roll_fish／record_catch 接上活動）。
+v277：設定按鈕獨立放在右上角選單最右邊；新增印尼文（Bahasa Indonesia，beta，js/id.js 由 tools/gen_id.py 產生）；潛水時不顯示遠洋羅盤；鯨魚目擊提示改成不捲動的小卡。（沒有新的資料庫檔）
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」

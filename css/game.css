@@ -167,7 +167,7 @@ body.touch #chatToggle{display:grid}
 
 /* toasts */
 #ticker{position:fixed;left:0;right:0;top:calc(var(--gt) + 62px);height:34px;overflow:hidden;pointer-events:none;z-index:6}
-.tk{position:absolute;top:2px;left:0;white-space:nowrap;padding:5px 14px;border-radius:999px;background:rgba(24,51,74,.72);color:#fff;font-size:14px;box-shadow:0 4px 14px rgba(24,51,74,.2);will-change:transform}
+.tk{position:absolute;top:2px;left:0;white-space:nowrap;padding:5px 14px;border-radius:999px;background:rgba(24,51,74,.72);color:#fff;font-size:14px;will-change:transform;contain:layout paint}
 .tk b{color:#ffe08a}
 .tk .chip{font-size:11px;padding:1px 7px;margin:0 2px}
 #toasts{position:fixed;top:calc(var(--gt) + 102px);right:var(--gr);display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:min(320px,calc(100vw - 32px))}
@@ -1056,6 +1056,7 @@ body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:
 
 /* v258 遠洋羅盤 */
 #sailComp{position:fixed;top:calc(env(safe-area-inset-top,0px) + 116px);left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:30;pointer-events:none}
+#sailComp[hidden]{display:none}
 #sailComp span{background:rgba(10,30,50,.62);color:#fff;font:600 13px/1 system-ui,sans-serif;padding:6px 10px;border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:5px}
 #sailComp i{font-style:normal;display:inline-block;color:#ffd36a}
 #sailComp[hidden]{display:none}
@@ -1116,3 +1117,9 @@ body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
 /* v276 活動條 */
 #evChip{position:fixed;left:calc(var(--gl) + 2px);top:calc(var(--gt) + 140px);z-index:6;max-width:62vw;padding:5px 10px;border-radius:14px;font-size:12px;line-height:1.3;color:#fff;background:rgba(20,40,60,.62);border:1px solid rgba(255,255,255,.25);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 #evChip[hidden]{display:none}
+
+/* v277 設定按鈕單獨放右上角（選單第一排最右邊，第二排那格空著） */
+body.ui2 #menu{grid-template-columns:repeat(4,auto) auto}
+body.ui2 .mbtn.gearbtn{grid-column:5;grid-row:1}
+body.ui2 .mbtn[data-tab="settings"]{--ic:linear-gradient(160deg,#b8c4d0,#6f8193)}
+html[lang=id] .mbtn span, html[lang=en] .mbtn span{font-size:10.5px;letter-spacing:-.2px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
