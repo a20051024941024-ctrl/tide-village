@@ -1123,3 +1123,5 @@ body.ui2 #menu{grid-template-columns:repeat(4,auto) auto}
 body.ui2 .mbtn.gearbtn{grid-column:5;grid-row:1}
 body.ui2 .mbtn[data-tab="settings"]{--ic:linear-gradient(160deg,#b8c4d0,#6f8193)}
 html[lang=id] .mbtn span, html[lang=en] .mbtn span{font-size:10.5px;letter-spacing:-.2px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v278 拍照的時候把跑馬燈、遠洋羅盤、活動條、鯨魚拍照鈕這些字都藏起來，才不會拍進去 */
+body.photo #ticker, body.photo #sailComp, body.photo #evChip, body.photo #owPhoto, body.photo #owWet, body.photo #bigMsg, body.photo #emotes, body.photo #menu, body.photo #ferryBar, body.photo #boatBar{display:none!important}
