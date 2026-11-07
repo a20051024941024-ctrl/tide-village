@@ -1092,3 +1092,7 @@ body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
 #emotePanel{width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 150px);overflow:auto}
 #emotePanel .ep-g{grid-template-columns:repeat(8,1fr)}
 @media (max-width:560px){#emotePanel .ep-g{grid-template-columns:repeat(5,1fr)}}
+/* v265 潛水艇打字聊天 */
+#subHud .sh-qf{display:flex;gap:6px;width:100%;margin-top:2px}
+#subHud .sh-qf input{flex:1;min-width:0;border:1.5px solid #cfe0ea;border-radius:999px;padding:8px 12px;font:inherit;font-size:15px;background:#fff;-webkit-user-select:text;user-select:text}
+#subHud .sh-qf button{border:0;border-radius:999px;padding:8px 14px;font-weight:800;background:#1f6fa8;color:#fff}

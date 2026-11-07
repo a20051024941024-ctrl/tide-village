@@ -11020,6 +11020,7 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
+      '💬 開潛水艇也能聊天：按「💬 說話」可以選常用的話，也可以自己打字（最多 40 個字）。一邊用搖桿開船一邊打字也可以；同一個大廳的人都收得到，一起潛的人頭上會冒泡泡。',
       '🔭 深海目擊：開潛水艇有時候會遇到特別的事——淺海被幾百條小魚圍成一顆球；午夜層按「🔦 關燈」看發光的生物（關燈時電池只用一半）；在黑暗裡停太久，聲納上可能會出現一個紅點……；遠處一盞溫暖的小燈；抹香鯨從頭頂游過。每 90 秒最多一件，每一種第一次看到記在圖鑑的「深海目擊」、送 💙30 愛海點數。只會嚇人，不會扣電、扣魚或弄壞潛水艇；怕的話可以在設定關掉「深海驚嚇效果」。',
       '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。',
       '⛵ 坐自己的小船（港口的船，按「上船」）可以一路划到別的島：冰封群島、深海浮台、神秘島、苔森之島。離開本島以後船會划得比較快，畫面上面會有箭頭指出最近的島在哪、還有幾公尺；靠到島邊按「下船」就上岸了。想快一點還是可以找阿海直接載你去。',
@@ -11641,7 +11642,7 @@ function subHud(){ let h = $('#subHud'); if (h) return h;
   h.innerHTML = '<div class="sh-top panel"><span class="sh-depth">深度 <b>0</b> m</span><span class="sh-zone"></span><span class="sh-sonar" title="聲納"><i></i></span><span class="sh-vs"></span><span class="sh-bat">🔋 <b>5:00</b></span><span class="sh-hold">🐟 <b>0</b></span><span class="sh-lim"></span></div>'
     + '<div class="sh-warn" hidden>⚠️ 超過耐壓深度！<b>30</b> 秒內不上浮會被拉回港、船艙的魚全部不見</div>'
     + '<div class="sh-msg" hidden></div>'
-    + '<div class="sh-q panel" hidden>' + SUB_Q.map((q, i) => `<button data-k="${i}">${q}</button>`).join('') + '</div>'
+    + '<div class="sh-q panel" hidden>' + SUB_Q.map((q, i) => `<button data-k="${i}">${q}</button>`).join('') + '<form class="sh-qf"><input maxlength="40" placeholder="自己打字…" enterkeyhint="send" autocomplete="off"><button type="submit">送出</button></form></div>'
     + '<div class="sh-btns"><button class="panel sh-say">💬<small>說話</small></button><button class="panel sh-act" hidden></button><button class="panel sh-lamp" hidden>🔦<small>關燈</small></button><button class="panel sh-dn">⬇<small>下潛</small></button><button class="panel sh-up">⬆<small>上浮</small></button><button class="panel sh-home">⚓<small>回港</small></button></div>'
     + '<div class="sh-fish panel" hidden><b class="sf-name">有東西咬了！</b><div class="sf-row"><span>張力</span><div class="sf-bar"><i class="sf-ten"></i><em></em></div></div><div class="sf-row"><span>距離</span><div class="sf-bar"><i class="sf-pro"></i></div></div><button class="sf-reel">按住收線</button></div>';
   document.body.appendChild(h);
@@ -11652,7 +11653,11 @@ function subHud(){ let h = $('#subHud'); if (h) return h;
   h.querySelector('.sh-act').addEventListener('click', () => subAction());
   h.querySelector('.sh-lamp').addEventListener('click', () => subLamp(!Sub.dark));
   h.querySelector('.sh-say').addEventListener('click', () => { if (!room || !room.connected()){ toast('要在大廳或房間裡，才能跟一起潛的人說話'); return; } const q = h.querySelector('.sh-q'); q.hidden = !q.hidden; });
-  h.querySelectorAll('.sh-q button').forEach(b => b.addEventListener('click', () => { h.querySelector('.sh-q').hidden = true; if (now() - (Sub.sayAt || 0) < 1.5) return; Sub.sayAt = now(); if (room && room.connected()) room.emit('subq', { k: +b.dataset.k }).catch(() => {}); }));
+  /* v265 開潛水艇也能打字聊天：一邊用搖桿開，一邊打字（同一個大廳的人都收得到，一起潛的人頭上會冒泡泡） */
+  h.querySelector('.sh-qf').addEventListener('submit', e => { e.preventDefault(); const inp = h.querySelector('.sh-qf input'), t = clean(inp.value.trim()).slice(0, 40); if (!t) return;
+    if (!room || !room.connected()){ toast('要在大廳或房間裡，才能跟別人說話'); return; } if (now() - (Sub.sayAt || 0) < 1.5){ toast('說太快了，等一下'); return; } Sub.sayAt = now();
+    inp.value = ''; inp.blur(); h.querySelector('.sh-q').hidden = true; room.emit('subq', { t }).catch(() => {}); logMsg('🚢' + (myDisplayName() === '你' ? '你' : myDisplayName()), t); });
+  h.querySelectorAll('.sh-q > button').forEach(b => b.addEventListener('click', () => { h.querySelector('.sh-q').hidden = true; if (now() - (Sub.sayAt || 0) < 1.5) return; Sub.sayAt = now(); if (room && room.connected()) room.emit('subq', { k: +b.dataset.k }).catch(() => {}); }));
   return h; }
 
 async function subStart(){
@@ -11994,7 +11999,8 @@ function subPeersTick(dt, t){ const S = Sub.peers || (Sub.peers = new Map()), P 
   Sub.buddy = (Sub.buddy || 0) + (near - (Sub.buddy || 0)) * Math.min(1, dt * 0.8);
 }   /* v260 霧的距離改在 subLightTick 裡算（深度＋一起潛的加成） */
 function subBubble(parent, text){ const sp = subLabel(text, true); sp.userData.bub = true; sp.position.y = parent === Sub.m ? 1.5 : 1.7; parent.add(sp); return sp; }   /* 自己的泡泡放低一點，不要被上面的深度計擋住 */
-function onSubQ(msg){ if (!msg || !msg.data) return; const k = Math.floor(+msg.data.k); if (!(k >= 0 && k < SUB_Q.length)) return; const q = SUB_Q[k];
+function onSubQ(msg){ if (!msg || !msg.data) return; const k = Math.floor(+msg.data.k), ft = typeof msg.data.t === 'string' ? clean(msg.data.t.trim()).slice(0, 40) : ''; if (!ft && !(k >= 0 && k < SUB_Q.length)) return; const q = ft || SUB_Q[k];
+  if (ft && !msg.sameTab && !isBlockedPeer(msg.peer)){ const p0 = peers.get(msg.peer); if (p0) logMsg('🚢' + peerName(p0), ft); }   /* 打字的話不管在不在潛水，聊天紀錄都看得到 */
   if (typeof Sub === 'undefined' || !Sub.on) return;
   if (msg.sameTab){ if (Sub.myBub){ Sub.m.remove(Sub.myBub); Sub.myBub.material.map.dispose(); } Sub.myBub = subBubble(Sub.m, q); Sub.myBubT = now() + 4; return; }
   if (isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), e = Sub.peers && Sub.peers.get(msg.peer); if (!p || !e) return;
