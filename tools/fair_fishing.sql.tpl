@@ -66,7 +66,9 @@ create or replace function public._bw_up() returns boolean language sql stable a
 -- 浮標落在徵兆旁邊 0.7～2.4 公尺：那一類魚 ×2.5（傳說 ×1.3）；0.7 公尺內是砸在上面，魚被嚇跑，沒有加成。
 create or replace function public._sign_m(a bigint) returns bigint language sql immutable as $$ select (((a * 9301 + 49297) % 233280) * 9301 + 49297) % 233280 $$;
 drop function if exists public._sign_hit(text, numeric, numeric);
-create or replace function public._sign_hit(p_spot text, p_bx numeric, p_bz numeric, p_sl bigint) returns text language plpgsql stable set search_path = public as $$
+drop function if exists public._sign_hit(text, numeric, numeric, bigint);
+-- 255：p_bk＝用的餌吸引哪一類（活餌→掠食魚、蚯蚓→底棲魚），那一類徵兆的範圍從 2.4 變 3.6 公尺
+create or replace function public._sign_hit(p_spot text, p_bx numeric, p_bz numeric, p_sl bigint, p_bk text default null) returns text language plpgsql stable set search_path = public as $$
 declare cfg jsonb := public._fishcfg(); sp jsonb := cfg->'spots'->p_spot; kinds text[]; sc integer := 0; slot bigint; o integer; base bigint; n integer; i integer; b bigint;
   k text; d float8; a float8; acc float8[] := '{}'; j integer; ok boolean; scared boolean := false; sx float8; sz float8; dx float8; dz float8; gx float8; gz float8; dist float8; best float8 := 99; bk text := null;
 begin
@@ -90,7 +92,7 @@ begin
       if not ok then continue; end if; acc := acc || array[gx, gz];
       dist := sqrt(power(p_bx::float8 - gx, 2) + power(p_bz::float8 - gz, 2));
       if dist < 0.7 then scared := true; end if;
-      if dist >= 0.7 and dist <= 2.4 and dist < best then best := dist; bk := k; end if;
+      if dist >= 0.7 and dist <= (case when k = p_bk then 3.6 else 2.4 end) and dist < best then best := dist; bk := k; end if;
     end loop;
   end loop;
   if scared then return null; end if;   -- 砸在徵兆上面：魚被嚇跑
@@ -194,7 +196,7 @@ begin
   select count(*) into nleg from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'r' = '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false);   -- 變種不算
   legk := (case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
-  sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl) end;
+  sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl, bait->>'k') end;
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
     f := cfg->'fish'->fid; if f is null then continue; end if;
     if f ? 'fest' and not public._fest_on(f->>'fest') then continue; end if;   -- 節慶限定魚（087）：只有那個節日期間釣得到
@@ -209,7 +211,8 @@ begin
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)
       * (case when f->>'t' is null then 1 when f->>'t' = per then 1.5 else 0.15 end)
       * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
-      * (case when sg_k is not null and f->>'k' = sg_k then (case when f->>'r' = '傳說' then 1.3 else 2.5 end) else 1 end)   -- 247 徵兆   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
+      * (case when sg_k is not null and f->>'k' = sg_k then (case when f->>'r' = '傳說' then (case when sg_k = bait->>'k' then 1.5 else 1.3 end) else (case when sg_k = bait->>'k' then 4 else 2.5 end) end) else 1 end)   -- 247 徵兆（255：餌對上徵兆加成更大）
+      * (case when bait->>'k' is not null and f->>'k' = bait->>'k' then 1.5 else 1 end)   -- 255 餌吸引的那一類魚   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
       * (case f->>'r' when '常見' then 1 when '稀有' then 0.34 * (1 + charge * 0.8) * kr * ring else 0.07 * (1 + charge * 1.6) * lb * kl * ring * legk end);
     ids := ids || fid; wts := wts || wt; tot := tot + wt;
   end loop;

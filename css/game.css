@@ -1048,3 +1048,4 @@ body.subbing #top #brand.panel:not(.open) h1, body.subbing #top #brand.panel:not
 @keyframes cuePulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.08)}}
 body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse at center,transparent 35%,rgba(4,16,30,.55) 100%)}
 @media (orientation:landscape) and (max-height:540px){ #fhCue{bottom:78px;font-size:18px} #fhCue.go{font-size:21px} }
+.rodsw.bait-live{background:linear-gradient(#bfe0f0,#6a8aa8)}.rodsw.bait-worm{background:linear-gradient(#e0a080,#b06048)}
