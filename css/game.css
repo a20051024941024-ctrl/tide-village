@@ -1096,3 +1096,7 @@ body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
 #subHud .sh-qf{display:flex;gap:6px;width:100%;margin-top:2px}
 #subHud .sh-qf input{flex:1;min-width:0;border:1.5px solid #cfe0ea;border-radius:999px;padding:8px 12px;font:inherit;font-size:15px;background:#fff;-webkit-user-select:text;user-select:text}
 #subHud .sh-qf button{border:0;border-radius:999px;padding:8px 14px;font-weight:800;background:#1f6fa8;color:#fff}
+/* v268 拍鯨魚 */
+#owPhoto{position:fixed;right:calc(var(--gr, 16px) + 4px);top:42%;width:52px;height:52px;border-radius:50%;border:0;font-size:24px;z-index:11;animation:owp 1.6s ease-in-out infinite}
+#owPhoto[hidden]{display:none}
+@keyframes owp{50%{transform:scale(1.08)}}

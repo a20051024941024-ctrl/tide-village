@@ -1626,7 +1626,7 @@ function updateSeaLife(t){
       if (!s.sp1 && u0 > s.dur * 0.38){ s.sp1 = true; blow(); } if (!s.sp2 && u0 > s.dur * 0.62){ s.sp2 = true; blow(); }
     }
   }
-  BlueW.update(t); spoutTick(t);
+  BlueW.update(t); try { OW.update(t); } catch(e){ console.warn('ow', e); } spoutTick(t);
 }
 /* ===== v228 藍鯨的習性 =====
    1) 全服同步：照伺服器時間，每小時有一分半鐘（v244 從每 20 分鐘改成每小時）（v230 從 3 分鐘縮短）藍鯨會浮到港口外海（每一輪的時間點不一樣，用同一個公式算，伺服器 020 的 _bw_up() 也一樣）。
@@ -1660,6 +1660,101 @@ const BlueW = { m:null, told:-1, songAt:0, blowAt:0, nBlow:0, krill:null,
   makeKrill(){ const N = 260, g = new THREE.BufferGeometry(), a = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const r = Math.random() * 3, th = Math.random() * 6.28; a[i * 3] = Math.cos(th) * r; a[i * 3 + 1] = -Math.random() * 1.2; a[i * 3 + 2] = Math.sin(th) * r; }
     g.setAttribute('position', new THREE.BufferAttribute(a, 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ color:'#ff8fa0', size:0.45, transparent:true, opacity:0.9, depthWrite:false })); scene.add(p); return p; } };
 // 鯨歌：兩個音疊在一起、慢慢滑上滑下、有一點顫音，像低沉的長鳴（手機喇叭聽不到太低的聲音，所以比真的藍鯨高一些）
+/* ===== v268 外海的鯨魚：整片外海任何地方都可能遇到（沒有預告、碰運氣），照真的鯨魚會做的事 =====
+   外海切成 64 公尺一格，每一格每 20 分鐘用伺服器時間（bossNow）＋格子座標當種子，決定這段時間有沒有東西、是哪一種、從哪裡游到哪裡。
+   所以大家算出來都一樣，不用另外連線：兩個人划到同一個地方，看到的是同一隻鯨魚在做同一件事。只算玩家 150 公尺內的格子。
+   藍鯨：浮上來呼吸 3～6 次（每次 17 秒，噴又直又高的水柱），背像長長的島滑過，最後弓背深潛；躍身極少（約 1/30）。
+   座頭鯨：矮胖的噴氣；會躍身、拍尾、胸鰭拍水；深潛一定把整片尾鰭舉出水面。
+   抹香鯨：在水面像木頭一樣漂著休息，水柱斜斜往左前方噴；深潛前尾鰭垂直舉起。只在離陸地很遠的地方。
+   海豚群：5～12 隻，快速游、輪流跳出水面成弧線。
+   大小照真實比例：小船約 4 公尺，藍鯨 25、座頭鯨 14、抹香鯨 15、海豚 2.5。只嚇人不傷人：不翻船、不扣東西。 */
+const OW_CELL = 64, OW_WIN = 1200;
+const OW_SP = { dolphin:{ n:'海豚群', ic:'🐬', p:0.25, len:2.5 }, humpback:{ n:'座頭鯨', ic:'🐋', p:0.08, len:14 }, bluewhale:{ n:'藍鯨', ic:'🐳', p:0.05, len:25 }, sperm:{ n:'抹香鯨', ic:'🐋', p:0.04, len:15 } };
+const OW = { ok:new Map(), act:new Map(), scanAt:0, slick:[], seen:new Set(), btn:null, boxL:{} };
+function owR(a, b, c, k){ let h = (a * 374761393 + b * 668265263 + c * 2147483647 + k * 1274126177) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; h = Math.imul(h, 2246822519); h ^= h >>> 13; return ((h >>> 0) % 100000) / 100000; }
+function owOpen(x, z, R){ if (Math.abs(x) > 186 || Math.abs(z) > 186 || !boatWater(x, z)) return false; for (let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2, px = x + Math.cos(a) * R, pz = z + Math.sin(a) * R; if (walkable(px, pz) || deckAt(px, pz) || (Math.abs(px) < 190 && Math.abs(pz) < 190 && !boatWater(px, pz) && !(Math.hypot(px - ISLE.x, pz - ISLE.z) < ISLE.r + 16))) return false; } return Math.hypot(x - ISLE.x, z - ISLE.z) > ISLE.r + 40; }
+function owCellOk(cx, cz){ const k = cx + ',' + cz; if (!OW.ok.has(k)){ const x = (cx + 0.5) * OW_CELL, z = (cz + 0.5) * OW_CELL; OW.ok.set(k, owOpen(x, z, 40) ? (owOpen(x, z, 70) ? 2 : 1) : 0); } return OW.ok.get(k); }
+// 這一格這段時間的計畫（同樣的格子、同樣的 20 分鐘，大家算出來都一樣）
+function owPlan(cx, cz, W){ const ok = owCellOk(cx, cz); if (!ok) return null; const r = owR(cx, cz, W, 1); let acc = 0, k = null;
+  for (const [id, S] of Object.entries(OW_SP)){ acc += S.p; if (r < acc){ k = id; break; } } if (!k || (k === 'sperm' && ok < 2)) return null;
+  const R = i => owR(cx, cz, W, 10 + i), P = { k, cx, cz, W };
+  if (k === 'bluewhale'){ P.nb = 3 + Math.floor(R(1) * 4); P.breach = R(2) < 1 / 30; P.dur = 6 + P.nb * 17 + 14 + (P.breach ? 6 : 0); P.spd = 2.0; }
+  else if (k === 'humpback'){ P.nb = 2 + Math.floor(R(1) * 2); const acts = []; const na = 2 + Math.floor(R(2) * 2); for (let i = 0; i < na; i++){ const q = R(3 + i); acts.push(q < 0.4 ? ['breach', 1 + Math.floor(R(8 + i) * 3)] : q < 0.7 ? ['tail', 3 + Math.floor(R(8 + i) * 6)] : ['pec', 4 + Math.floor(R(8 + i) * 7)]); } P.acts = acts;
+    P.dur = 6 + P.nb * 12 + acts.reduce((s, a) => s + (a[0] === 'breach' ? a[1] * 6 : a[1] * 2 + 4), 0) + 12; P.spd = 1.5; }
+  else if (k === 'sperm'){ P.log = 60 + Math.floor(R(1) * 40); P.dur = 6 + P.log + 12; P.spd = 0.3; }
+  else { P.n = 5 + Math.floor(R(1) * 8); P.dur = 50 + Math.floor(R(2) * 30); P.spd = 6.0; }
+  const x0 = (cx + 0.2 + R(5) * 0.6) * OW_CELL, z0 = (cz + 0.2 + R(6) * 0.6) * OW_CELL; let hd = R(7) * Math.PI * 2; const L = P.spd * P.dur;
+  if (!owOpen(x0 + Math.sin(hd) * L, z0 + Math.cos(hd) * L, 25)) hd += Math.PI; if (!owOpen(x0 + Math.sin(hd) * L, z0 + Math.cos(hd) * L, 25)){ P.spd *= 0.3; }
+  P.x0 = x0; P.z0 = z0; P.hd = hd; P.st = 20 + R(9) * (OW_WIN - P.dur - 40); return P; }
+function owModel(k){ const S = OW_SP[k]; let m;
+  if (k === 'humpback'){ if (!MFISH.geo.humpback) return null; m = new THREE.Group(); m.userData.mf = MFISH.of.humpback || (MFISH.of.humpback = { k:'humpback', albino:false }); mfishFill(m); m.userData.tail = new THREE.Object3D(); }
+  else if (k === 'dolphin'){ m = new THREE.Group(); for (let i = 0; i < 12; i++){ const d = fishModel(FISH_BY_ID.dolphin, 1); m.add(d); } }
+  else m = fishModel(FISH_BY_ID[k], 1);
+  const one = k === 'dolphin' ? m.children[0] : m; if (!OW.boxL[k]){ const b = new THREE.Box3().setFromObject(one); OW.boxL[k] = Math.max(0.01, b.max.x - b.min.x); OW.boxH = OW.boxH || {}; OW.boxH[k] = (b.max.y - b.min.y) / OW.boxL[k]; }   /* 身高／身長，用來決定浮在水面時露出多少 */
+  const sc = S.len / OW.boxL[k]; if (k === 'dolphin') m.children.forEach(d => d.scale.setScalar(sc)); else m.scale.setScalar(sc);
+  m.rotation.order = 'YXZ'; scene.add(m); return m; }
+// 噴氣聲：很大的「噗——嘶」，藍鯨最低最長、海豚短促；音量照距離（最近也不超過鯨歌的 2 倍）
+function owBlowSnd(k, dist){ if (!soundOn || !actx || sfxVol <= 0.01 || dist > 110) return; const t = actx.currentTime, dur = k === 'bluewhale' ? 1.6 : k === 'dolphin' ? 0.25 : 1.1, vol = 0.07 * sfxVol * clamp(1 - dist / 110, 0, 1) * (k === 'dolphin' ? 0.4 : 1);
+  const n = Math.floor(actx.sampleRate * dur), buf = actx.createBuffer(1, n, actx.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const src = actx.createBufferSource(); src.buffer = buf; const f = actx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(k === 'bluewhale' ? 380 : k === 'dolphin' ? 1800 : 700, t); f.frequency.exponentialRampToValueAtTime(k === 'bluewhale' ? 1200 : 2400, t + dur); f.Q.value = 0.7;
+  const g = actx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.06); g.gain.exponentialRampToValueAtTime(vol * 0.4, t + dur * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); src.connect(f); f.connect(g); g.connect(actx.destination); src.start(t); src.stop(t + dur + 0.05); }
+function owSplashSnd(big, dist){ if (!soundOn || !actx || dist > 120) return; try { SFX.splash(big); } catch(e){} if (big) tone(55, 0.5, 'sine', 0.3 * clamp(1 - dist / 120, 0, 1), 35); }
+// 鯨魚腳印：潛下去後水面留下一片圓圓的、特別平的水面，30 秒慢慢不見
+function owSlick(x, z, r){ let o = OW.slick.find(s => s.t <= 0); if (!o){ if (OW.slick.length >= 3) o = OW.slick[0]; else { const m = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshBasicMaterial({ color:'#d6f1f6', transparent:true, opacity:0, depthWrite:false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 2; scene.add(m); o = { m, t:0 }; OW.slick.push(o); } }
+  o.t = 30; o.m.position.set(x, waterY(x, z, now()) + 0.03, z); o.m.scale.setScalar(r); o.m.visible = true; }
+function owPose(e, u){ const P = e.P, S = OW_SP[P.k], L = S.len, hd = P.hd, fx = Math.sin(hd), fz = Math.cos(hd);
+  let s = u * P.spd, y = -L * 0.3, pitch = 0, roll = 0, ev = null;   /* y 是身體中心的高度（0＝水面） */
+  const hh = ((OW.boxH && OW.boxH[P.k]) || 0.15) * L / 2, surfY = -hh * 0.55, under = -hh * 1.6, rise = smooth01(u / 5), endT = P.dur - 12;   /* 浮在水面：背露出來大約身高的 1/4 */
+  if (P.k === 'bluewhale'){ const sb = Math.floor((u - 6) / 17), ph = (u - 6) - sb * 17;
+    if (u < 6){ y = -L * 0.35 + (surfY + L * 0.35) * rise; pitch = 0.12 * (1 - rise); }
+    else if (sb < P.nb){ const k = ph < 1.2 ? smooth01(ph / 1.2) : ph < 7 ? 1 : 1 - smooth01((ph - 7) / 3); y = under + (surfY - under) * k; pitch = ph < 1.5 ? 0.06 : ph > 7 && ph < 10 ? -0.05 : 0; if (ph < 0.2) ev = 'blow';
+      if (P.breach && sb === 1 && ph > 8){ const q = clamp((ph - 8) / 5, 0, 1); y = -L * 0.4 + Math.sin(q * Math.PI) * L * 0.75; pitch = 1.0 * (1 - q * 1.6); roll = q * 1.5; if (q > 0.62 && !e.br1){ e.br1 = 1; ev = 'land'; } } }
+    else { const q = clamp((u - endT) / 12, 0, 1); y = surfY - q * L * 0.5; pitch = -0.35 * Math.sin(q * Math.PI * 0.9); if (q > 0.15 && !e.dv){ e.dv = 1; ev = 'dive'; } } }
+  else if (P.k === 'humpback'){ let c = 6;
+    if (u < 6){ y = -L * 0.35 + (surfY + L * 0.35) * rise; }
+    else { y = surfY; const b = u - 6; if (b < P.nb * 12){ const ph = b % 12; y = ph < 6 ? surfY : surfY - L * 0.06 * Math.sin((ph - 6) / 6 * Math.PI); if (ph < 0.2) ev = 'blow'; c += P.nb * 12; }
+      else { let tt = c + P.nb * 12; let done = false;
+        for (const [a, n] of P.acts){ const len = a === 'breach' ? n * 6 : n * 2 + 4; if (u < tt + len){ const q = u - tt; done = true;
+          if (a === 'breach'){ const i = Math.floor(q / 6), w = q - i * 6; s = (tt + i * 6) * P.spd + w * 0.6; if (w < 1.5){ y = -L * 0.45; pitch = 1.05 * smooth01(w / 1.5); } else if (w < 4.5){ const z = (w - 1.5) / 3; y = -L * 0.45 + Math.sin(z * Math.PI) * L * 0.62; pitch = 1.05 - z * 1.3; roll = z * 1.55; if (z > 0.8 && e.lastEv !== a + i){ e.lastEv = a + i; ev = 'land'; } } else { y = -L * 0.3 + (w - 4.5) / 1.5 * (surfY + L * 0.3); pitch = 0; roll = 1.55 * (1 - (w - 4.5) / 1.5); } }
+          else if (a === 'tail'){ const k0 = smooth01(Math.min(q, 2) / 2) * (1 - smooth01((q - len + 2) / 2)); pitch = -1.22 * k0; y = surfY - L * 0.28 * k0; const i = Math.floor((q - 2) / 2); if (q > 2 && q < len - 2){ const w = (q - 2) % 2; pitch += -0.25 * Math.sin(w / 2 * Math.PI * 2); if (w < 0.08 && e.lastEv !== a + i){ e.lastEv = a + i; ev = 'slapT'; } } }
+          else { const k0 = smooth01(Math.min(q, 2) / 2) * (1 - smooth01((q - len + 2) / 2)); roll = 1.35 * k0; y = surfY; const i = Math.floor((q - 2) / 2); if (q > 2 && q < len - 2){ const w = (q - 2) % 2; roll += 0.35 * Math.sin(w / 2 * Math.PI * 2); if (w < 0.08 && e.lastEv !== a + i){ e.lastEv = a + i; ev = 'slapP'; } } }
+          break; } tt += len; }
+        if (!done){ const q = clamp((u - endT) / 12, 0, 1); y = surfY - (q < 0.35 ? 0 : (q - 0.35) / 0.65 * L * 0.9); pitch = -1.45 * Math.sin(Math.min(1, q / 0.55) * Math.PI / 2) * (q < 0.9 ? 1 : 1 - (q - 0.9) * 10); if (q > 0.3 && !e.dv){ e.dv = 1; ev = 'dive'; } } } } }
+  else if (P.k === 'sperm'){ if (u < 6){ y = -L * 0.35 + (surfY + L * 0.35) * rise; } else if (u < endT){ y = surfY + Math.sin(u * 0.6) * 0.06; if ((u - 6) % 10 < 0.2 && e.lastEv !== Math.floor(u / 10)){ e.lastEv = Math.floor(u / 10); ev = 'blow'; } }
+    else { const q = clamp((u - endT) / 12, 0, 1); y = surfY - (q < 0.35 ? 0 : (q - 0.35) / 0.65 * L * 0.9); pitch = -1.5 * Math.sin(Math.min(1, q / 0.5) * Math.PI / 2); if (q > 0.3 && !e.dv){ e.dv = 1; ev = 'dive'; } } }
+  return { x: P.x0 + fx * s, z: P.z0 + fz * s, y, pitch, roll, ev, surf: y > -L * 0.12 }; }
+function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; ticker(`${S.ic} 你遇到了${S.n}！`); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
+  if (Cloud.on && Cloud.sb) festRpc('sea_sighting', { p_kind: k }).then(r => { if (r && r.player) adoptRow(r.player); if (r && r.first) setTimeout(() => toast(`🔭 海上目擊：${S.ic} ${S.n}（💙 +30）`), 1600); }); }
+OW.update = function(t){
+  const hide = Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || Photo.on && false;
+  const ns = bossNow() / 1000, W = Math.floor(ns / OW_WIN), inW = ns - W * OW_WIN, mx = me.pos.x, mz = me.pos.z;
+  if (t - OW.scanAt > 1 || hide){ OW.scanAt = t; const want = new Map();
+    if (!hide){ const c0x = Math.floor((mx - 150) / OW_CELL), c1x = Math.floor((mx + 150) / OW_CELL), c0z = Math.floor((mz - 150) / OW_CELL), c1z = Math.floor((mz + 150) / OW_CELL), cand = [];
+      for (let cx = c0x; cx <= c1x; cx++) for (let cz = c0z; cz <= c1z; cz++){ if (Math.hypot((cx + 0.5) * OW_CELL - mx, (cz + 0.5) * OW_CELL - mz) > 150 + OW_CELL * 0.7) continue; const P = owPlan(cx, cz, W); if (!P) continue; const u = inW - P.st; if (u < 0 || u > P.dur) continue; cand.push([P, Math.hypot(P.x0 - mx, P.z0 - mz)]); }
+      cand.sort((a, b) => a[1] - b[1]); let nw = 0, nd = 0; for (const [P] of cand){ if (P.k === 'dolphin' ? nd++ >= 1 : nw++ >= 2) continue; want.set(P.cx + ',' + P.cz + ',' + P.W, P); } }
+    for (const [k, e] of OW.act) if (!want.has(k)){ if (e.m) scene.remove(e.m); OW.act.delete(k); }
+    for (const [k, P] of want) if (!OW.act.has(k)){ const m = owModel(P.k); if (m) OW.act.set(k, { P, m, seenNear:false }); } }
+  let photo = false;
+  for (const e of OW.act.values()){ const P = e.P, u = inW - P.st + (bossNow() % 1000) / 1000 * 0, L = OW_SP[P.k].len, m = e.m, d = Math.hypot(m.position.x - mx, m.position.z - mz);
+    if (P.k === 'dolphin'){ const s = u * P.spd, fx = Math.sin(P.hd), fz = Math.cos(P.hd), sx = fz, sz = -fx, fade = smooth01(u / 3) * (1 - smooth01((u - P.dur + 4) / 4));
+      m.position.set(P.x0 + fx * s, 0, P.z0 + fz * s); m.rotation.set(0, P.hd - Math.PI / 2, 0);
+      m.children.forEach((dm, i) => { if (i >= P.n){ dm.visible = false; return; } dm.visible = fade > 0.02; const ox = (owR(P.cx, P.cz, P.W, 40 + i) - 0.5) * 9, oz = (owR(P.cx, P.cz, P.W, 60 + i) - 0.5) * 7, ph = u * 2.1 + i * 1.7, arc = Math.sin(ph);
+        dm.position.set(oz, (arc > 0 ? arc * 1.7 - 0.6 : arc * 1.2 - 0.6) * fade + (fade - 1) * 2, ox); dm.rotation.set(0, 0, Math.cos(ph) * 0.65);
+        if (Math.abs(arc) < 0.06 && Math.cos(ph) < 0 && dm.visible && d < 70 && (e.spl || 0) < u - 0.25){ e.spl = u; const wp = dm.getWorldPosition(new THREE.Vector3()); ripple(wp.x, wp.z, false); } });
+      if (d < 60 && u > 4) e.seenNear = true; if (e.seenNear && u > P.dur - 6) owSight('dolphin'); continue; }
+    const Q = owPose(e, u); m.position.set(Q.x, Q.y, Q.z); m.rotation.set(Q.roll, P.hd - Math.PI / 2, Q.pitch); m.visible = !hide;
+    const fx = Math.sin(P.hd), fz = Math.cos(P.hd), hx = Q.x + fx * L * 0.32, hz = Q.z + fz * L * 0.32;
+    if (Q.surf && d < 90) photo = true; if (Q.surf && d < 120) e.seenNear = true;
+    if (Q.ev === 'blow'){ if (P.k === 'bluewhale') spoutAt(hx, 0.4, hz, 14, true); else if (P.k === 'sperm') spoutAt(Q.x + fx * L * 0.47, 0.4, Q.z + fz * L * 0.47, 8, false, P.hd + 0.6); else spoutAt(hx, 0.4, hz, 9, false); owBlowSnd(P.k, d); }
+    else if (Q.ev === 'land'){ for (let i = 0; i < 3; i++) ripple(Q.x + (Math.random() - 0.5) * L * 0.5, Q.z + (Math.random() - 0.5) * L * 0.5, true); spoutAt(Q.x, 0.2, Q.z, 18, false); spoutAt(Q.x + fx * 3, 0.2, Q.z + fz * 3, 16, false); owSplashSnd(true, d); camShake = Math.max(camShake || 0, d < 30 ? 0.45 : d < 60 ? 0.2 : 0); try { if (navigator.vibrate) navigator.vibrate(d < 30 ? 150 : d < 60 ? 60 : 0); } catch(_){} }
+    else if (Q.ev === 'slapT'){ const tx = Q.x - fx * L * 0.48, tz = Q.z - fz * L * 0.48; ripple(tx, tz, true); spoutAt(tx, 0.2, tz, 8, false); owSplashSnd(false, d); }
+    else if (Q.ev === 'slapP'){ const sx = Q.x + fz * L * 0.3, sz = Q.z - fx * L * 0.3; ripple(sx, sz, false); spoutAt(sx, 0.2, sz, 5, false); owSplashSnd(false, d); }
+    else if (Q.ev === 'dive'){ owSlick(Q.x, Q.z, L * 0.45); }
+    if (e.seenNear && (e.dv || u > P.dur - 3)) owSight(P.k); }
+  for (const o of OW.slick){ if (o.t <= 0) continue; o.t -= Math.min(0.1, 1 / 30); o.m.material.opacity = 0.32 * clamp(o.t / 30, 0, 1) * clamp((30 - o.t) / 2, 0, 1); o.m.visible = o.t > 0 && !hide; }
+  // 📷 鯨魚在水面而且離你不遠的時候，畫面角落出現拍照按鈕
+  if (!OW.btn){ OW.btn = document.createElement('button'); OW.btn.id = 'owPhoto'; OW.btn.className = 'panel'; OW.btn.textContent = '📷'; OW.btn.setAttribute('aria-label', '拍鯨魚'); OW.btn.addEventListener('click', () => { try { enterPhoto(); } catch(e){} }); document.body.appendChild(OW.btn); }
+  const show = photo && !hide && !Photo.on; if (OW.btn.hidden === show) OW.btn.hidden = !show; };
 function whaleSong(v){ if (!soundOn || !actx || sfxVol <= 0.01) return; const t = actx.currentTime, vol = 0.04 * v * sfxVol, f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900; f.connect(actx.destination);
   const g = actx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.9); g.gain.setValueAtTime(vol, t + 2.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 4.2); g.connect(f);
   const lfo = actx.createOscillator(), lg = actx.createGain(); lfo.frequency.value = 4.5; lg.gain.value = 5; lfo.connect(lg);
@@ -1667,8 +1762,8 @@ function whaleSong(v){ if (!soundOn || !actx || sfxVol <= 0.01) return; const t 
   lfo.start(t); lfo.stop(t + 4.3); }
 /* 鯨魚噴水：一團霧（十幾顆半透明白球）從噴氣孔往上衝，越高越散、越淡，2.6 秒後消失；最多同時 3 團，手機也不會卡 */
 const SPOUTS = [], SPOUT_GEO = new THREE.SphereGeometry(1, 8, 6);
-function spoutAt(x, y, z, k, tall){ if (SPOUTS.length >= 4){ const o = SPOUTS.shift(); scene.remove(o.g); }
-  const g = new THREE.Group(), parts = []; g.position.set(x, y, z); const sz = clamp(k / 7, 0.6, 1.8);
+function spoutAt(x, y, z, k, tall, tilt){ if (SPOUTS.length >= 6){ const o = SPOUTS.shift(); scene.remove(o.g); }
+  const g = new THREE.Group(), parts = []; g.position.set(x, y, z); const sz = clamp(k / 7, 0.6, 1.8); if (tilt != null){ g.rotation.set(0, tilt, 0); g.rotateZ(0.75); }   /* v268 抹香鯨：噴氣孔在頭的左前方，水柱斜斜往左前噴 */
   if (tall){   /* v228 藍鯨的噴氣：又直又高的細水柱（真的藍鯨可以噴到 9 公尺），頂端才散開 */
     for (let i = 0; i < 22; i++){ const m = new THREE.Mesh(SPOUT_GEO, new THREE.MeshBasicMaterial({ color:'#f4fbff', transparent:true, opacity:0.85, depthWrite:false })); m.renderOrder = 3; g.add(m); const top = i > 15;
       parts.push({ m, vx:(Math.random() - 0.5) * (top ? 1.6 : 0.25) * sz, vz:(Math.random() - 0.5) * (top ? 1.6 : 0.25) * sz, vy:(top ? 7.5 + Math.random() * 1.5 : 2.5 + i * 0.32) * sz, r:(0.1 + Math.random() * 0.08) * sz * (top ? 1.6 : 1), d:i * 0.02 }); }
@@ -1811,7 +1906,7 @@ function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScala
 /* v226 精緻魚模型（Meshy 付費方案生成）：一般的作法——減到約 5,000 面、從側面重新烘一張 1024×512 貼圖（左半邊右側身、右半邊左側身），
    頭朝 +x、長度跟原本的模型一樣；白化版在載入時把貼圖換成粉白色（保留明暗）。還沒載好的時候先用原本的模型，載好後換掉。
    要加新的魚：在 MFISH.defs 加一行 { file, scale（讓長度跟原本一樣）, alb（白化版的 id）}。 */
-var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' }, barreleye:{ file:'models/barreleye.glb', scale:0.5, alb:'barreleye_albino', glow:'barreleye_glow', lift:0.35 }, angler:{ file:'models/angler.glb', scale:1.6, alb:'angler_albino', bulb:[0.41, 0.376, 0], lift:0.12 } }   /* v263 深海鮟鱇換成使用者用 Meshy 做的模型（大嘴尖牙、頭上吊一盞燈；bulb 是燈的位置，自己會發光） */, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
+var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' }, barreleye:{ file:'models/barreleye.glb', scale:0.5, alb:'barreleye_albino', glow:'barreleye_glow', lift:0.35 }, angler:{ file:'models/angler.glb', scale:1.6, alb:'angler_albino', bulb:[0.41, 0.376, 0], lift:0.12 }, humpback:{ file:'models/humpback.glb', scale:1.0, move:'vert', nofish:true } }   /* v263 深海鮟鱇換成使用者用 Meshy 做的模型（大嘴尖牙、頭上吊一盞燈；bulb 是燈的位置，自己會發光） */, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
 /* v264 Meshy 模型的鰭會動：載入時依位置算出每個頂點「是鰭的程度」aFin（0 身體～1 鰭尖），shader 裡只讓鰭動。
    m(x,y,z)：模型原始座標（頭朝 +x、長度 -1～1，縮放前）；v(s)：GLSL，s 是 defs 的 scale */
 { const sat = v => Math.max(0, Math.min(1, v)), inX = (x, a, b) => (x >= a && x <= b ? 1 : 0), FIN = {
@@ -1825,6 +1920,8 @@ var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'
     v:s => `transformed.z += sin(uFishT * 3.4 - position.x / ${s.toFixed(3)} * 10.0) * ${(0.06 * s).toFixed(4)} * aFin;` },
   barreleye:{ m:(x, y, z) => sat((Math.abs(z) - 0.16) / 0.18) * inX(x, -0.05, 0.65) * (y < 0.12 ? 1 : 0),
     v:s => `transformed.y += sin(uFishT * 3.0) * ${(0.05 * s).toFixed(4)} * aFin; transformed.x += cos(uFishT * 3.0) * ${(0.02 * s).toFixed(4)} * aFin;` },
+  humpback:{ m:(x, y, z) => sat((Math.abs(z) - 0.128) / 0.256) * inX(x, -0.08, 0.64) * (y < 0.016 ? 1 : 0),   /* v268 座頭鯨的兩片長胸鰭（模型 -0.8～0.8，所以數字乘 0.8） */
+    v:s => `transformed.y += sin(uFishT * 1.3) * ${(0.08 * s).toFixed(4)} * aFin; transformed.x += cos(uFishT * 1.3) * ${(0.032 * s).toFixed(4)} * aFin;` },
   angler:{ m:(x, y, z) => sat((Math.abs(z) - 0.21) / 0.05) * inX(x, -0.08, 0.26) * (y > -0.28 && y < 0.08 ? 1 : 0),   /* 鮟鱇的小胸鰭：快速前後扇 */
     v:s => `transformed.x += sin(uFishT * 5.0 + sign(position.z) * 0.8) * ${(0.035 * s).toFixed(4)} * aFin;` } };
   for (const [k, f] of Object.entries(FIN)) if (MFISH.defs[k]) MFISH.defs[k].fin = f; }
@@ -6071,6 +6168,7 @@ function lvOf(xp){ let L = 1; while (L < 99 && xp >= lvNeed(L + 1)) L++; return 
 const speciesN = () => Object.keys(rec.count || {}).filter(id => FISH_BY_ID[id]).length;
 const spotDone = id => FISH.filter(f => f.spot === id).every(f => rec.count[f.id]);
 const ACH = [
+  { id:'seasight', icon:'🐋', name:'海上目擊者', desc:'划船在外海遇過海豚、座頭鯨、藍鯨、抹香鯨', cur:() => { try { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a.length : 0; } catch(e){ return 0; } }, goal:4 },
   { id:'sight', icon:'🔭', name:'深海目擊者', desc:'開潛水艇看過全部 5 種深海相遇', cur:() => { try { return subSeen().length; } catch(e){ return 0; } }, goal:5 },
   { id:'trench', icon:'🕳️', name:'發現黑淵裂縫', desc:'開潛水艇找到深海浮台底下的黑淵裂縫', cur:() => (typeof Sub !== 'undefined' && Sub.st && Sub.st.found) ? 1 : 0, goal:1 },
   { id:'c1',    icon:'🎣', name:'第一條魚',     desc:'釣到第一條魚',              cur:() => rec.total, goal:1 },
@@ -10741,6 +10839,9 @@ function renderTab(){
   if (curTab === 'dex'){
     const base = FISH.filter(f => !f.of), got = base.filter(f => rec.count[f.id]).length, vall = FISH.filter(f => f.of && !f.rs), vgot = vall.filter(f => rec.count[f.id]).length;   /* 變種也放進圖鑑（沒釣到是剪影）；紅鯊例外，要釣到才會出現 */
     body.appendChild(el('p', 'sub', `已收集 ${got} / ${base.length} 種・✨ 變種 ${vgot} / ${vall.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
+    { let seen = []; try { seen = LS.get('tide.seaSeen', []); if (!Array.isArray(seen)) seen = []; } catch(e){} const h = el('div', 'dexhead', '🐋 海上目擊'); h.appendChild(el('span', 'dexcnt' + (seen.length === 4 ? ' all' : ''), `${seen.length} / 4`)); h.appendChild(el('small', '', '划船到外海碰運氣，每一種第一次遇到送 💙30 愛海點數')); body.appendChild(h);
+      const ul = el('ul', 'shoplist'), DS = { dolphin:'5～12 隻一群，快速游、輪流跳出水面。', humpback:'會躍身、拍尾、用長長的白色胸鰭拍水；深潛時把整片尾鰭舉出水面。', bluewhale:'噴又直又高的水柱，背像一條長長的島慢慢滑過。', sperm:'在水面像木頭一樣漂著休息，水柱斜斜往左前方噴。' };
+      for (const [k, S] of Object.entries(OW_SP)){ const ok = seen.includes(k), li = el('li', ok ? '' : 'lock'); li.appendChild(el('span', 'dishic', ok ? S.ic : '❔')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', ok ? S.n : '？？？')); d.appendChild(el('div', 'sub2', ok ? DS[k] : '還沒遇到')); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul); }
     if (typeof Sub !== 'undefined' && Sub.st && Sub.st.unlocked || subSeen().length){ const seen = subSeen(), h = el('div', 'dexhead', '🔭 深海目擊'); h.appendChild(el('span', 'dexcnt' + (seen.length === 5 ? ' all' : ''), `${seen.length} / 5`)); h.appendChild(el('small', '', '開潛水艇在深海遇到的事，每一種第一次看到送 💙30 愛海點數')); body.appendChild(h);
       const ul = el('ul', 'shoplist'); for (const [k, S] of Object.entries(SUB_SIGHT)){ const ok = seen.includes(k), li = el('li', ok ? '' : 'lock'); li.appendChild(el('span', 'dishic', ok ? S.ic : '❔')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', ok ? S.n : '？？？')); d.appendChild(el('div', 'sub2', ok ? S.d : '還沒遇到')); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul); }
     for (const s of SPOTS){
@@ -11058,6 +11159,7 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
+      '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨，沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。',
       '💬 開潛水艇也能聊天：按「💬 說話」可以選常用的話，也可以自己打字（最多 40 個字）。一邊用搖桿開船一邊打字也可以；同一個大廳的人都收得到，一起潛的人頭上會冒泡泡。',
       '🔭 深海目擊：開潛水艇有時候會遇到特別的事——淺海被幾百條小魚圍成一顆球；午夜層按「🔦 關燈」看發光的生物（關燈時電池只用一半）；在黑暗裡停太久，聲納上可能會出現一個紅點……；遠處一盞溫暖的小燈；抹香鯨從頭頂游過。每 90 秒最多一件，每一種第一次看到記在圖鑑的「深海目擊」、送 💙30 愛海點數。只會嚇人，不會扣電、扣魚或弄壞潛水艇；怕的話可以在設定關掉「深海驚嚇效果」。',
       '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。',

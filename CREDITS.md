@@ -15,3 +15,4 @@
 - **帽子、頭盔、短披風**（巫師帽、騎士頭盔、熊熊帽、四色短披風，models/kaykit_gear.glb）：從 [KayKit Character Pack: Adventurers 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) by Kay Lousberg（www.kaylousberg.com）取出，授權 CC0（包內 LICENSE.txt）。2026-11-05
 - **家具 31 件**（床、櫃子、檯燈、沙發、扶手椅、椅子、桌子、地毯、仙人掌，models/kaykit_furn.glb）：從 [KayKit Furniture Bits 1.0](https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0) by Kay Lousberg（www.kaylousberg.com）合成（每件合成一個 mesh、縮成 0.7 倍配合遊戲的比例），授權 CC0（包內 LICENSE.txt）。2026-11-05
 - **深海鮟鱇的 3D 模型**（`models/angler.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有），2026-11-07 由本專案從約 77 萬面減到約 9,500 面、貼圖縮成 1024×1024，頭上的小燈另外用程式發光。
+- **座頭鯨的 3D 模型**（`models/humpback.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有），2026-11-07 減到約 1.27 萬面、貼圖 1536×1536。
