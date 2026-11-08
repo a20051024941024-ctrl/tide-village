@@ -1127,3 +1127,9 @@ html[lang=id] .mbtn span, html[lang=en] .mbtn span{font-size:10.5px;letter-spaci
 body.photo #ticker, body.photo #sailComp, body.photo #evChip, body.photo #owPhoto, body.photo #owWet, body.photo #bigMsg, body.photo #emotes, body.photo #menu, body.photo #ferryBar, body.photo #boatBar{display:none!important}
 
 /* v283 活動條搬到右上角選單下面，不要擋在搖桿的地方（以前按到它會打開活動表、角色不會走） */
+
+/* v287 魚種精通 */
+.dexgrid .it .stars, .it .stars{font-size:13px;letter-spacing:1px;color:#c9b99a;margin-top:2px}
+.it .stars.s1{color:#e0a83a}.it .stars.s2{color:#e8952a}.it .stars.s3{color:#d8a400;text-shadow:0 0 6px rgba(255,210,80,.7)}
+.it.gold{border:2px solid #e8b830!important;box-shadow:0 0 0 2px rgba(255,214,90,.35),0 4px 14px rgba(232,184,48,.35)!important;background:linear-gradient(180deg,#fffaf0,#fff4d8)!important}
+.starhead{margin:4px 0 8px;padding:8px 12px;border-radius:12px;background:#fff6dc;color:#8a5a00;font-weight:700;font-size:14px}

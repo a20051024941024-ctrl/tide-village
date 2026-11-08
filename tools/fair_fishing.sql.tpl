@@ -240,6 +240,7 @@ begin
   -- 公母（037）：一半一半；紅鯊用牠自己的性別；繁殖季的母吳郭魚有三成嘴裡含著小魚
   sx := case when rs is not null then rsh.sex when random() < 0.5 then 'M' else 'F' end;
   brood := sx = 'F' and season in ('spring', 'summer') and cfg->'brood' ? pick and random() < 0.3;
+  begin if rs is null and random() < 0.5 and public._mastery3(pl.id, pick) then fw := greatest(fw, round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), 1.3))::numeric, 2)); end if; exception when undefined_function then null; end;   -- 114 三顆星的魚：大尺寸機率小幅提高
   if rs is not null then fw := public._rs_w(rsh); end if;
   gpv := case when pick in ('guppy', 'guppy_albino') then public._gpy_wild() end;
   insert into public.casts (uid, spot, fish, w, rs, sex, brood, gp, at, shown_at) values (pl.id, p_spot, pick, fw, rs, sx, brood, gpv, now(), null)

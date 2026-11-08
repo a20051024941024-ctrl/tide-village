@@ -3948,7 +3948,7 @@ function fightProf(f){ const b = f.of || f.id; let k = /tuna|bonito/.test(b) ? '
 function fightCue(txt, cls){ let c = $('#fhCue'); if (!c){ c = document.createElement('div'); c.id = 'fhCue'; document.body.appendChild(c); } c.textContent = txt; c.className = cls || ''; c.hidden = !txt; }
 function startReel(){
   F.phase = 'reeling'; F.T = 0.35; F.P = 0.3; F.surge = 0; F.seed = Math.random()*10;
-  F.act = null; F.combo = 0; F.bestCombo = 0; F.circleUsed = false; F.prof = F.spot && F.spot.id !== 'shrimp' ? fightProf(F.fish) : null; F.acts = !!F.prof; F.actI = 0; F.nextActAt = now() + 0.8; fightCue('');
+  F.act = null; F.combo = 0; F.bestCombo = 0; F.circleUsed = false; F.pf = true; F.actN = 0; F.Tmax = 0; F.pfCatch = false; F.prof = F.spot && F.spot.id !== 'shrimp' ? fightProf(F.fish) : null; F.acts = !!F.prof; F.actI = 0; F.nextActAt = now() + 0.8; fightCue('');
   F.S = 1; F.dir = 0; F.dirUntil = now() + rand(1.2, 2.2); F.lat = 0; F.jump = 0; F.maxDist = 4 + (F.castCharge || 0) * 6 + (BIG_FISH.has(F.fish.id) ? 6 : 0);
   F.castD = clamp(F.spot && F.spot.pos ? Math.hypot(me.bobPos.x - F.spot.pos.x, me.bobPos.z - F.spot.pos.z) : 5, 2, 22); F.slack = 0; F.run = 0; F.runAt = now() + rand(1.8, 3.5); F.dragT = 0;   /* 遛魚：魚會往外衝（線被拉出去、浮標越來越遠），線太鬆會脫鉤 */
   if (F.leap){ scene.remove(F.leap); F.leap = null; }
@@ -4055,7 +4055,7 @@ function updateFishing(dt, t){
       else { F.fish = F.pre || pickFish(F.spot, F.castCharge); const wild = breedSeason() && WILD_BREED.has(F.fish.id); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), wild ? 2.4 : 1.7)).toFixed(2); F.sex = Math.random() < 0.5 ? 'M' : 'F'; F.brood = F.sex === 'F' && wild && BROOD.has(F.fish.id) && Math.random() < 0.3; F.gp = isGuppy(F.fish.id) ? gpyWild() : null; }
       F.phase = 'bite'; F.biteAt = t; F.drift = 0;
       if (F.spot && F.spot.id === 'shrimp'){ F.biteUntil = t + (F.fish.rarity === '傳說' ? 1.5 : F.fish.rarity === '稀有' ? 1.7 : 1.9) + curSrod().win; ripple(me.bobPos.x, me.bobPos.z); }   // 釣蝦場：沒有「!」，浮標會慢慢沉下去
-      else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say('!', 'alert', 1); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true);
+      else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say(starsOf(F.fish) >= 2 ? `！${F.fish.name}` : '!', 'alert', 1);   /* v287 兩顆星：咬餌時認得出是什麼魚 */ SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true);
         FX.emit(me.bobPos.x, waterY(me.bobPos.x, me.bobPos.z, t) + 0.1, me.bobPos.z, 14, '#e8f7ff', 0.9, 2.2, 0.7); try { navigator.vibrate && navigator.vibrate([70, 40, 110]); } catch(e){}   /* v249 真的咬了：浮標猛沉、水花、手機震動 */
         F.drift = probeKind(F.fish) === 'grab' ? (Math.random() < 0.5 ? -1 : 1) : 0; }
       pushPresence(true);
@@ -4068,6 +4068,7 @@ function updateFishing(dt, t){
     if (t > F.biteUntil){ me.dip = 0; me.bobJit = 0; F.phase = 'waiting'; F.probe = null; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); SFX.fail(); pushPresence(true); }
   }
   if (F.phase === 'reeling'){
+    F.Tmax = Math.max(F.Tmax || 0, F.T || 0);
     // 像一般釣魚遊戲：魚有體力，會往左右衝（往反方向拉最有效），稀有的魚會跳出水面（跳的時候要放開）
     const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
     let actPull = 0;
@@ -4087,6 +4088,7 @@ function updateFishing(dt, t){
         if (t >= A.end){ let ok = false; const sf = P.soft ? 1 : 0; if (A.k === 'run') ok = A.hold / Math.max(0.01, A.tot) < 0.3 + sf * 0.15; else if (A.k === 'pause' || A.k === 'feint') ok = A.taps >= 3 - sf; else if (A.k === 'left' || A.k === 'right') ok = A.good / Math.max(0.01, A.tot) > 0.5 - sf * 0.12;
           else if (A.k === 'jump') ok = (A.bad || 0) < 0.25; else if (A.k === 'dive') ok = A.good / Math.max(0.01, A.tot) > 0.55; else if (A.k === 'snag') ok = A.hold / Math.max(0.01, A.tot) < 0.2;
           if (!ok && rec.hook === 'hk_circle' && !F.circleUsed){ F.circleUsed = true; ok = 'forgive'; }   /* 圓形鉤：原諒一次 */
+          if (ok && ok !== 'forgive') F.actN++; else F.pf = false;   /* v287 完美搏鬥：每個動作都對上 */
           if (ok === 'forgive'){ fightCue(`⭕ 圓形鉤撐住了！連擊 ×${F.combo}`, 'ok'); }
           else if (ok){ F.combo++; F.bestCombo = Math.max(F.bestCombo, F.combo); F.S = Math.max(0, F.S - 0.13 * P.dmg * (rec.hook === 'hk_gold' ? 1.2 : 1)); F.P += 0.05 * P.quick; fightCue(`👍 漂亮！連擊 ×${F.combo}`, 'ok'); try { SFX.tick(); } catch(e){} }
           else { F.combo = 0; fightCue('😣 沒對上', 'bad'); if (A.k === 'snag' || A.k === 'run') F.T += P.soft ? 0.12 : 0.25; }
@@ -4185,7 +4187,7 @@ function updateFishing(dt, t){
     else if (F.T >= 1){ SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
     else if (F.slack > (rec.hook === 'hk_barb' ? 3.6 : 2.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
     else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); cancelFishing(); }
-    else if (F.P >= 1){ landFish(); }
+    else if (F.P >= 1){ F.pfCatch = !!(F.acts && F.pf && F.actN >= 2 && (F.Tmax || 0) < 0.92); landFish(); }
   }
   // HUD + button
   $('#chargeHud').hidden = F.phase !== 'charging';
@@ -6336,8 +6338,8 @@ const ACH = [
 const goalOf = a => typeof a.goal === 'function' ? a.goal() : a.goal;
 const achDone = a => a.cur() >= goalOf(a);
 const LV_TITLES = [[1, '新手釣客'], [5, '見習釣客'], [10, '熟練釣客'], [20, '資深釣客'], [30, '釣魚達人'], [50, '海之傳說']];
-function myTitles(){ const L = lvOf(calcXP()), out = LV_TITLES.filter(([l]) => L >= l).map(([l, n]) => ({ id:'lv' + l, name:n, how:`到 Lv.${l}` })); for (const a of ACH) if (a.title && achDone(a)) out.push({ id:'a_' + a.id, name:a.title, how:`成就「${a.name}」` }); return out; }
-const ALL_TITLES = new Set(LV_TITLES.map(([, n]) => n).concat(ACH.filter(a => a.title).map(a => a.title)));
+function myTitles(){ const L = lvOf(calcXP()), out = LV_TITLES.filter(([l]) => L >= l).map(([l, n]) => ({ id:'lv' + l, name:n, how:`到 Lv.${l}` })); for (const a of ACH) if (a.title && achDone(a)) out.push({ id:'a_' + a.id, name:a.title, how:`成就「${a.name}」` }); try { const st = starTotal(); for (const [n, t] of STAR_TITLES) if (st >= n) out.push({ id:'st' + n, name:t, how:`圖鑑 ${n} 顆星` }); } catch(e){} return out; }
+const ALL_TITLES = new Set(LV_TITLES.map(([, n]) => n).concat(ACH.filter(a => a.title).map(a => a.title)).concat(['魚種通', '海洋學者', '深海學者', '潮汐大師']));
 var Lv = { L:null, title: LS.get('tide.title', ''), seen: new Set(LS.get('tide.achSeen', [])), init: LS.get('tide.achInit', false) };
 function curTitle(){ return myTitles().some(t => t.name === Lv.title) ? Lv.title : ''; }
 function renderLvChip(){
@@ -9238,7 +9240,21 @@ function normRec(r){
 let rec = normRec(LS.get('tide.rec', null));
 if (!LS.get('tide.favInit', 0)){ for (const x of rec.tank) if (FISH_BY_ID[x.f].of && rec.tank.filter(y => y.k).length < FAV_MAX) x.k = true; LS.set('tide.favInit', 1); LS.set('tide.rec', rec); }   /* 以前釣到的變種也自動收藏（只做一次；雲端由 039 做） */
 me.setRodLook(rec.rodSkin, rec.lineCol); me.setRod(rec.rod); updateBobberLook(); me.setGear(rec.gear); updateBobberLook(); renderCoins(); setTimeout(renderBuff, 0);
+/* ===== v287 魚種精通（114）：每種魚 3 顆星 =====
+   ★ 第一次釣到；★★ 釣到 10 條或釣過大尺寸（重量前 20%）；★★★ 完美搏鬥過一次＋釣過紀錄級（前 5%）。
+   兩顆星：魚咬餌的時候頭上會出現牠的樣子（你認得牠了）；三顆星：圖鑑金框，伺服器讓這種魚比較常是大尺寸。 */
+const Mast = { set:new Set(), loaded:false, board:null };
+function starsOf(f){ const n = rec.count[f.id] || 0, b = rec.best[f.id] || 0; if (!n) return 0; const big = x => b >= f.min + (f.max - f.min) * x; if (Mast.set.has(f.id) && big(0.95)) return 3; if (n >= 10 || big(0.8)) return 2; return 1; }
+function starFish(){ return FISH.filter(f => !f.rs); }
+function starTotal(){ let n = 0; for (const f of starFish()) n += starsOf(f); return n; }
+const STAR_TITLES = [[50, '魚種通'], [150, '海洋學者'], [300, '深海學者'], [450, '潮汐大師']];
+function starStr(k){ return '★'.repeat(k) + '☆'.repeat(3 - k); }
+async function mastLoad(){ if (!Cloud.on || !Cloud.sb || Mast.busy) return; Mast.busy = true; try { const { data, error } = await Cloud.sb.rpc('my_mastery'); if (!error && Array.isArray(data)){ Mast.set = new Set(data); Mast.loaded = true; } } catch(e){} Mast.busy = false; }
+async function mastAfterCatch(f, pfc, star0){ if (pfc && Cloud.on && Cloud.sb){ try { const { data } = await Cloud.sb.rpc('fish_perfect', { p_fish: f.id }); if (data && data.ok){ if (data.new){ Mast.set.add(f.id); toast(`✨ 完美搏鬥！${f.name}的每個動作都對上了`); } } } catch(e){} }
+  const s1 = starsOf(f); if (s1 > star0 && s1 >= 2) setTimeout(() => { SFX.catch(); flash(`${'⭐'.repeat(s1)} ${f.name}升到 ${s1} 顆星！${s1 === 2 ? '以後牠咬餌時你一眼就認得出來' : '圖鑑金框，以後比較常釣到大尺寸的'}`, 2.6); }, 1200);
+  else if (pfc && s1 < 3 && Mast.set.has(f.id)) setTimeout(() => toast(`再釣一條 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上的${f.name}，就三顆星了`), 1500); }
 function recordCatch(f, w){
+  const pfc = F.pfCatch; F.pfCatch = false; const star0 = starsOf(f);
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
@@ -9246,7 +9262,7 @@ function recordCatch(f, w){
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
-  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
+  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
   if (Tny.on){ Tny.myW += w; Tny.myN++; }
   return { isNew, isBest: isBest && !isNew };
 }
@@ -10599,6 +10615,7 @@ function evtTick(t){ const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), me
   if (Evt.lastB !== null && Evt.lastB !== b.id) ticker(`🎯 新的懸賞：釣到 ${b.minw} 公斤以上的${(FISH_BY_ID[b.fish] || {}).name}，送 300 金幣（2 小時內）`); Evt.lastB = b.id;
   if (Evt.lastMet === false && met) ticker('🌠 流星雨來了！接下來 30 分鐘，所有釣點的傳說魚都比較好釣'); Evt.lastMet = met;
   if (Cloud.on && Date.now() - Evt.at > 90000) evtLoad().then(() => renderEvtChip());
+  if (Cloud.on && !Mast.loaded) mastLoad();
   renderEvtChip(); }
 /* 流星：晚上流星雨的時候，天上每隔一下劃過一顆 */
 function meteorTick(dt, t){ if (!evtMeteor(bossNow()) || House.on || inIndoor() || Dive.on){ for (const o of Evt.met) o.m.visible = false; return; }
@@ -11095,6 +11112,7 @@ function renderTab(){
   if (curTab === 'shrimp'){ renderShrimpDesk(body); return; }
   if (curTab === 'dex'){
     const base = FISH.filter(f => !f.of), got = base.filter(f => rec.count[f.id]).length, vall = FISH.filter(f => f.of && !f.rs), vgot = vall.filter(f => rec.count[f.id]).length;   /* 變種也放進圖鑑（沒釣到是剪影）；紅鯊例外，要釣到才會出現 */
+    { const tot = starTotal(), mx = starFish().length * 3, nt = STAR_TITLES.find(([n]) => tot < n); body.appendChild(el('div', 'starhead', `⭐ 圖鑑星數 ${tot} / ${mx}${nt ? `　再 ${nt[0] - tot} 顆得到稱號「${nt[1]}」` : ''}　（點魚卡看怎麼升星）`)); }
     body.appendChild(el('p', 'sub', `已收集 ${got} / ${base.length} 種・✨ 變種 ${vgot} / ${vall.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
     { let seen = []; try { seen = LS.get('tide.seaSeen', []); if (!Array.isArray(seen)) seen = []; } catch(e){} const h = el('div', 'dexhead', '🐋 海上目擊'); h.appendChild(el('span', 'dexcnt' + (seen.length === 4 ? ' all' : ''), `${seen.length} / 4`)); h.appendChild(el('small', '', '划船到外海碰運氣，每一種第一次遇到送 💙30 愛海點數')); body.appendChild(h);
       const ul = el('ul', 'shoplist'), DS = { dolphin:'5～12 隻一群，快速游、輪流跳出水面。', humpback:'會躍身、拍尾、用長長的白色胸鰭拍水；深潛時把整片尾鰭舉出水面。', bluewhale:'噴又直又高的水柱，背像一條長長的島慢慢滑過。', sperm:'在水面像木頭一樣漂著休息，水柱斜斜往左前方噴。' };
@@ -11111,6 +11129,7 @@ function renderTab(){
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
         it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', known ? `✨ ${FISH_BY_ID[f.of].name}的變種` : `✨ ${rec.count[f.of] ? FISH_BY_ID[f.of].name : '某種魚'}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季')); if (f.sci && !f.of) it.appendChild(el('span', 'chip sci', f.sci.giant ? '🐋 深海巨魚' : '🔬 新品種'));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
+        if (known){ const st = starsOf(f), sd = el('div', 'stars s' + st, starStr(st)); sd.title = st >= 3 ? '已經三顆星了' : st === 2 ? `三顆星：完美搏鬥一次＋釣到 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上（${Mast.set.has(f.id) ? '完美搏鬥 ✓' : '還沒完美搏鬥'}）` : `兩顆星：釣到 10 條（現在 ${rec.count[f.id]}）或 ${fmtKg(f.min + (f.max - f.min) * 0.8)} 以上`; it.appendChild(sd); it.addEventListener('click', () => toast(`${f.name} ${starStr(st)}：${sd.title}`)); if (st >= 3) it.classList.add('gold'); }
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         g.appendChild(it);
       });
@@ -11118,10 +11137,16 @@ function renderTab(){
     }
   } else if (curTab === 'rank'){
     const seg = el('div', 'seg');
-    (Cloud.contest ? [['week','🏆本週比賽']] : []).concat(Cloud.on ? [['tny','⏱️定時大賽']] : []).concat([['best','最大的魚']]).concat(Cloud.on ? [['rare','💎最稀有的魚']] : []).concat([['total','釣魚總數']]).concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
+    (Cloud.contest ? [['week','🏆本週比賽']] : []).concat(Cloud.on ? [['tny','⏱️定時大賽']] : []).concat([['best','最大的魚']]).concat(Cloud.on ? [['rare','💎最稀有的魚'], ['stars','⭐圖鑑星數']] : []).concat([['total','釣魚總數']]).concat(Cloud.on ? [['earned','賺最多金幣']] : []).forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(lbMode === k)); b.addEventListener('click', () => { lbMode = k; renderTab(); }); seg.appendChild(b); });
     body.appendChild(seg);
     if (lbMode === 'week' && !Cloud.contest) lbMode = 'best';
-    if ((lbMode === 'tny' || lbMode === 'rare') && !Cloud.on) lbMode = 'best';
+    if ((lbMode === 'tny' || lbMode === 'rare' || lbMode === 'stars') && !Cloud.on) lbMode = 'best';
+    if (lbMode === 'stars'){   // v287 圖鑑星數（114）
+      body.appendChild(el('p', 'sub', `每種魚最多 3 顆星（★ 釣到、★★ 釣 10 條或大尺寸、★★★ 完美搏鬥＋紀錄級）。你現在 ★ ${starTotal()}。`));
+      if (!Mast.bat || Date.now() - Mast.bat > 60000){ Mast.bat = Date.now(); Cloud.sb.rpc('star_board').then(({ data }) => { if (Array.isArray(data)){ Mast.board = data; if (curTab === 'rank' && lbMode === 'stars' && !$('#sheet').hidden) renderTab(); } }, () => {}); }
+      const rows = Mast.board || []; if (!rows.length){ body.appendChild(el('div', 'empty', Mast.board ? '還沒有人上榜。' : '正在讀取排行榜…')); return; }
+      const ul = el('ol', 'rank'); rows.forEach((r, i) => { const li = el('li', 'rk4'); li.appendChild(el('span', 'pos', String(i + 1))); li.appendChild(el('span', 'who', r.name || '釣客')); li.appendChild(el('span', 'val', `★ ${r.stars}`)); ul.appendChild(li); });
+      body.appendChild(ul); return; }
     if (lbMode === 'rare'){   // 最稀有的魚：全服總共被釣到最少次的魚（伺服器 033_rare_board.sql）
       body.appendChild(el('p', 'sub', '每個人釣過的魚裡面，全服被釣到最少次的那一種。越少人釣到的越稀有；同樣少的話，傳說 > 稀有 > 常見。'));
       if (!Rare.at || Date.now() - Rare.at > 60000){ Rare.at = Date.now(); Cloud.sb.rpc('get_rare_board').then(({ data }) => { if (Array.isArray(data)){ Rare.rows = data; if (curTab === 'rank' && lbMode === 'rare' && !$('#sheet').hidden) renderTab(); } }, () => {}); }
@@ -11418,6 +11443,7 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
+      '⭐ 魚種精通：圖鑑每種魚有 3 顆星。★ 第一次釣到；★★ 釣到 10 條，或釣過重量前 20% 的大尺寸（之後牠咬餌時頭上會出現牠的名字）；★★★ 完美搏鬥一次（魚的每個動作都對上、線沒有快斷）＋釣過重量前 5% 的紀錄級（圖鑑金框，之後比較常釣到大尺寸的）。圖鑑最上面看總星數，50、150、300、450 顆有稱號，排行榜有「圖鑑星數」。',
       '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。',
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
