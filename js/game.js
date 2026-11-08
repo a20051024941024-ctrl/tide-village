@@ -3865,8 +3865,8 @@ function actionDown(){
   } else if (F.phase === 'bite'){
     startReel(); F.hold = true;
   } else if (F.phase === 'reeling'){
-    if (F.act && !F.act.tele && (F.act.k === 'pause' || F.act.k === 'feint')){ F.act.taps++; F.P += 0.03 * (F.prof ? F.prof.quick : 1); F.S = Math.max(0, F.S - 0.025); me.bend = 0.6; try { SFX.reel(); } catch(e){} return; }   /* v254 泵竿：喘氣時連續點 */
-    if (F.mash){ F.P += 0.045; F.mashHits++; camShake = Math.max(camShake, 0.06);
+    if (F.act && !F.act.tele && (F.act.k === 'pause' || F.act.k === 'feint')){ F.act.taps++; F.P += 0.03 * (F.prof ? F.prof.quick : 1) * (F.Td ? F.g || 1 : 1); F.S = Math.max(0, F.S - 0.025 * (F.Td ? F.gS || 1 : 1)); me.bend = 0.6; try { SFX.reel(); } catch(e){} return; }   /* v254 泵竿：喘氣時連續點 */
+    if (F.mash){ F.P += 0.045 * (F.Td ? Math.max(0.1, F.g || 1) : 1); F.mashHits++; camShake = Math.max(camShake, 0.06);
       const v = tmpV.set(me.bobPos.x, 0.45, me.bobPos.z).project(camera), d = document.createElement('div'); d.className = 'dmg crit'; d.textContent = '-' + Math.round(300 + Math.random() * 500); d.style.left = ((v.x + 1) / 2 * viewW() + Math.random() * 60 - 30) + 'px'; d.style.top = ((1 - v.y) / 2 * viewH() - 40) + 'px'; $('#dmgLayer').appendChild(d); setTimeout(() => d.remove(), 900);
       return; }
     F.hold = true;
@@ -3885,9 +3885,10 @@ const CUNNING = new Set(['mahi', 'barracuda', 'trevally', 'yellowtail', 'hairtai
 function probeKind(f){ const b = f.of || f.id; if (CUNNING.has(b)) return 'cunning'; const k = sigClass(f); return k === 'school' ? 'many' : k === 'shadow' ? 'heavy' : k === 'pred' ? 'grab' : 'lift'; }
 doCast.told = {};
 function biteWait(c){
-  const r = Math.random(); let w = r < 0.14 ? rand(0.9, 2.2) : r < 0.74 ? rand(2.5, 5.5) : rand(5.5, 7.2);   /* v249 第 2 段：最多等 8 秒左右，不要呆看 */
-  const per = periodOf(gameHour()); w *= per === 'twilight' ? 0.75 : per === 'day' ? 1.08 : 1;
-  return Math.min(7.6, Math.max(0.8, w - c * 0.8));
+  /* v293 玩家說釣太快、沒有期待感：大部分等 5～12 秒，15% 快咬（2～4 秒），10% 慢咬（12～18 秒）；等的時候浮標會被小魚試探 */
+  const r = Math.random(); let w = r < 0.15 ? rand(2, 4) : r < 0.9 ? rand(5, 12) : rand(12, 18);
+  const per = periodOf(gameHour()); w *= per === 'twilight' ? 0.85 : per === 'day' ? 1.05 : 1;
+  return Math.min(18, Math.max(1.8, w - c * 1.2));
 }
 function doCast(){
   const s = F.spot; const c = F.charge; F.castCharge = c;
@@ -3960,8 +3961,13 @@ function fightProf(f){ const b = f.of || f.id; let k = /tuna|bonito/.test(b) ? '
   { const R = rodFeel(); P.dmg *= R.dmg; P.gap *= R.spd; P.spd = R.spd; P.tele = R.tele; P.soft = R.soft; }
   let acts = P.acts.slice(); if (!['reef', 'harbor', 'isle', 'abyss', 'kelp'].includes(F.spot && F.spot.id)) acts = acts.map(a => a === 'snag' ? 'dive' : a); if (f.rarity === '傳說') acts = acts.concat(['feint']); P.list = acts; return P; }
 function fightCue(txt, cls){ let c = $('#fhCue'); if (!c){ c = document.createElement('div'); c.id = 'fhCue'; document.body.appendChild(c); } c.textContent = txt; c.className = cls || ''; c.hidden = !txt; }
+/* v293 玩家說魚釣太快：搏鬥目標時間 —— 小魚 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說 60～120 秒（同一種魚越重越久）；釣蝦場不算 */
+function fightSize(f, w){ if (f.rarity === '傳說') return 'legend'; if (BIG_FISH.has(f.id) || f.max >= 15 || w >= 15) return 'big'; if (f.rarity === '稀有' || f.max >= 2.5 || w >= 2.5) return 'medium'; return 'small'; }
+const FIGHT_T = { small:[6, 10], medium:[15, 25], big:[30, 50], legend:[60, 120] };
+function fightTarget(f, w){ const [lo, hi] = FIGHT_T[fightSize(f, w)], k = f.max > f.min ? clamp(((w || f.min) - f.min) / (f.max - f.min), 0, 1) : 0.5; return lo + (hi - lo) * clamp(k * 0.7 + Math.random() * 0.3, 0, 1); }
 function startReel(){
   F.phase = 'reeling'; F.T = 0.35; F.P = 0.3; F.surge = 0; F.seed = Math.random()*10;
+  F.t0 = now(); F.g = 1; F.Td = F.spot && F.spot.id === 'shrimp' ? 0 : fightTarget(F.fish, F.weight);
   F.act = null; F.combo = 0; F.bestCombo = 0; F.circleUsed = false; F.pf = true; F.actN = 0; F.Tmax = 0; F.pfCatch = false; F.prof = F.spot && F.spot.id !== 'shrimp' ? fightProf(F.fish) : null; F.acts = !!F.prof; F.actI = 0; F.nextActAt = now() + 0.8; fightCue('');
   F.S = 1; F.dir = 0; F.dirUntil = now() + rand(1.2, 2.2); F.lat = 0; F.jump = 0; F.maxDist = 4 + (F.castCharge || 0) * 6 + (BIG_FISH.has(F.fish.id) ? 6 : 0);
   F.castD = clamp(F.spot && F.spot.pos ? Math.hypot(me.bobPos.x - F.spot.pos.x, me.bobPos.z - F.spot.pos.z) : 5, 2, 22); F.slack = 0; F.run = 0; F.runAt = now() + rand(1.8, 3.5); F.dragT = 0;   /* 遛魚：魚會往外衝（線被拉出去、浮標越來越遠），線太鬆會脫鉤 */
@@ -4057,6 +4063,8 @@ function updateFishing(dt, t){
       const kf = (F.roll && F.roll.f) || (!Cloud.on ? F.pre : null);
       if (kf && !F.probe && (Cloud.on || t > F.waitUntil - PROBES[probeKind(kf)].len)){ const pk = probeKind(kf), now0 = t, P = PROBES[pk], lk = Rig.line === 'thick' ? 1.5 : Rig.line === 'thin' ? 0.75 : 1;   /* v255 粗線：魚比較警覺，試探久一點（多點一下）；細線：試探快 */
         const taps = P.taps.map(o => now0 + o * lk); if (Rig.line === 'thick' && taps.length) taps.push(now0 + P.len * lk - 0.25); F.probe = { k:pk, taps, i:0 }; F.waitUntil = Math.max(F.waitUntil, now0 + P.len * lk + (Rig.line === 'thick' ? 0.2 : 0)); }
+      if (!F.probe && me.bobState === 'water' && t > F.nibbleAt && t < F.waitUntil - 2.5){ F.nibbleAt = t + rand(1.6, 3.8); F.idleNib = t; F.idleK = Math.random() < 0.3 ? rand(0.45, 0.7) : rand(0.18, 0.35); ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} }   /* v293 等的時候小魚來碰一下浮標（不是真的咬，按了只會收竿） */
+      if (!F.probe && F.idleNib && t - F.idleNib < 0.18 && me.dip < F.idleK) me.dip = F.idleK;
       const PR = F.probe;
       if (PR && PR.i < PR.taps.length && t >= PR.taps[PR.i]){ PR.i++; F.lastNib = t; const P = PROBES[PR.k]; F.nibK = P.dip; ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} if (P.dip > 0.8) try { navigator.vibrate && navigator.vibrate(25); } catch(e){} }
       const tgt = PR && F.lastNib && t - F.lastNib < (PROBES[PR.k].hold || 0.2) ? F.nibK : 0; me.dip += (tgt - me.dip) * Math.min(1, dt * 16); }
@@ -4082,7 +4090,7 @@ function updateFishing(dt, t){
     if (t > F.biteUntil){ me.dip = 0; me.bobJit = 0; F.phase = 'waiting'; F.probe = null; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); SFX.fail(); pushPresence(true); }
   }
   if (F.phase === 'reeling'){
-    F.Tmax = Math.max(F.Tmax || 0, F.T || 0);
+    F.Tmax = Math.max(F.Tmax || 0, F.T || 0); const _P0 = F.P, _S0 = F.S;
     // 像一般釣魚遊戲：魚有體力，會往左右衝（往反方向拉最有效），稀有的魚會跳出水面（跳的時候要放開）
     const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
     let actPull = 0;
@@ -4145,7 +4153,7 @@ function updateFishing(dt, t){
     if (F.dir !== 0) pull += (counter ? -0.18 : wrong ? 0.45 : 0.22) * p;
     if (F.act && !F.act.tele && (F.act.k === 'left' || F.act.k === 'right') && counter) F.act.good += dt; pull += actPull;
     const inZone = F.T > 0.3 && F.T < 0.8;
-    if (F.boss && !F.mash && F.S < 0.1){ F.mash = true; F.hold = false; $('#mashFx').hidden = false; SFX.bite(); F.dir = 0; $('#fhDir').hidden = true; if (F.leap) F.leap.visible = false; }
+    if (F.boss && !F.mash && F.S < 0.1 && (!F.Td || t - F.t0 > F.Td * 0.85)){ F.mash = true; F.hold = false; $('#mashFx').hidden = false; SFX.bite(); F.dir = 0; $('#fhDir').hidden = true; if (F.leap) F.leap.visible = false; }
     if (F.mash){
       // 最後關頭：狂按按鈕把大魚拉上來（不會斷線，但魚會慢慢往回拉）
       F.T += (0.55 - F.T) * Math.min(1, dt * 3); F.P -= 0.05 * dt; F.S = Math.max(0, F.S - dt * 0.01);
@@ -4197,6 +4205,9 @@ function updateFishing(dt, t){
       // 下面的張力條
       $('#tbFill').style.width = (T * 100).toFixed(1) + '%'; $('#tenBar').classList.toggle('hot', T > 0.8); $('#tenBar').classList.toggle('low', T < 0.3);
     }
+    if (F.Td){ /* v293 搏鬥時間跟魚的大小有關：進度和魚的體力照目標時間調快慢（玩得好壞還是有差，只是不會一下就拉上來） */
+      const d = (t - F.t0) / F.Td; F.g = clamp(1 + 2.2 * (d - F.P), 0.012, 3); if (F.P > _P0) F.P = _P0 + (F.P - _P0) * F.g;
+      const want = Math.min(0.9, d / 0.85 * 0.9), gS = F.gS = clamp(1 + 2.2 * (want - (1 - F.S)), 0.03, 3); if (F.S < _S0) F.S = _S0 - (_S0 - F.S) * gS; }
     if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`🦈 ${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
     else if (F.T >= 1){ SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
     else if (F.slack > (rec.hook === 'hk_barb' ? 3.6 : 2.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
@@ -10708,7 +10719,7 @@ function sbBuild(){ const dyn = sbDynRoots(), groups = new Map(); scene.updateMa
   if (!SB.g.parent) scene.add(SB.g); SB.state = 'done'; SB.next = performance.now() + 20000; const st = { cand: SB.cand.length, still: nIn, removed, made }; if (SB.stats){ SB.stats.removed += removed; SB.stats.made += made; SB.stats.passes = (SB.stats.passes || 1) + 1; } else SB.stats = st; SB.cand = null; console.log('[staticBatch]', JSON.stringify(SB.stats)); }
 
 /* ===== v276 釣魚活動（111）：時間表跟伺服器一樣（台灣時間），金幣都由伺服器給 =====
-   🐟 魚群洄游：每 3 小時（0、3、6…點的 30 分開始，25 分鐘）某個釣點來一大群某種魚（×4）；洄游期間在那裡釣到 5 條送 200 金幣
+   🐟 魚群洄游：每 3 小時（0、3、6…點的 30 分開始，25 分鐘）某個釣點來一大群某種魚（×4）；洄游期間在那裡釣到 4 條送 200 金幣
    🎯 懸賞魚：每 2 小時換一種稀有魚＋最低重量；釣到夠重的送 300 金幣
    🌠 流星雨夜釣：每天 23:00～23:30，所有釣點傳說魚機率 ×1.6，天上一直有流星 */
 const EVT_MIG = ['harbor:saury', 'mangrove:mullet', 'harbor:horsemack', 'icesea:capelin', 'harbor:sardine', 'reef:girella', 'icelake:wakasagi', 'isle:bluetang', 'harbor:yellowtail', 'sea:flounder'];
@@ -10721,7 +10732,7 @@ function evtHM(sec){ const d = new Date(sec * 1000 + 8 * 3600000); return String
 async function evtLoad(){ if (!Cloud.on || !Cloud.sb) return null; try { const { data, error } = await Cloud.sb.rpc('ev_status'); if (error) throw error; Evt.st = data; Evt.at = Date.now(); return data; } catch(e){ return null; } }
 async function evtAfterCatch(fid, w){ const m = evtMig(bossNow()), b = evtBounty(bossNow()); if (!((m.active && fid === m.fish) || (fid === b.fish && w >= b.minw))) return;
   const old = Evt.st; const r = await evtLoad(); if (!r) return; renderEvtChip(true);
-  if (r.mig && r.mig.active && fid === r.mig.fish){ if (r.mig.done && !(old && old.mig && old.mig.id === r.mig.id && old.mig.done)){ SFX.catch(); flash('🐟 洄游任務完成！🪙+200', 2); } else if (!r.mig.done) toast(`🐟 洄游：${FISH_BY_ID[fid].name} ${r.mig.n}/5`); }
+  if (r.mig && r.mig.active && fid === r.mig.fish){ if (r.mig.done && !(old && old.mig && old.mig.id === r.mig.id && old.mig.done)){ SFX.catch(); flash('🐟 洄游任務完成！🪙+200', 2); } else if (!r.mig.done) toast(`🐟 洄游：${FISH_BY_ID[fid].name} ${r.mig.n}/4`); }
   if (r.bounty && r.bounty.done && fid === r.bounty.fish && !(old && old.bounty && old.bounty.id === r.bounty.id && old.bounty.done)){ SFX.catch(); flash(`🎯 懸賞達成：${FISH_BY_ID[fid].name}！🪙+300`, 2.2); } }
 function renderEvtChip(force){ if (!Evt.chip){ Evt.chip = document.createElement('button'); Evt.chip.id = 'evChip'; Evt.chip.className = 'panel'; Evt.chip.addEventListener('click', () => { openSheet('events'); evtLoad().then(() => { if (curTab === 'events') renderTab(); }); }); document.body.appendChild(Evt.chip); }
   const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms), st = Evt.st, parts = [];
@@ -10732,7 +10743,7 @@ function renderEvtChip(force){ if (!Evt.chip){ Evt.chip = document.createElement
   const txt = parts.join(' · '); if (Evt.chip.textContent !== txt) Evt.chip.textContent = txt;
   Evt.chip.hidden = !!(Dive.on || (typeof Sub !== 'undefined' && Sub.on) || House.on || inIndoor()); }
 function evtTick(t){ if (!Kid.applied){ Kid.applied = true; kidApply(); } const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms);
-  if (Evt.lastMig !== null && m.active && Evt.lastMig !== m.id + ':1') ticker(`🐟 魚群洄游！一大群${(FISH_BY_ID[m.fish] || {}).name}游到了${(SPOT_BY_ID[m.spot] || {}).label}，接下來 25 分鐘特別好釣，釣到 5 條送 200 金幣`);
+  if (Evt.lastMig !== null && m.active && Evt.lastMig !== m.id + ':1') ticker(`🐟 魚群洄游！一大群${(FISH_BY_ID[m.fish] || {}).name}游到了${(SPOT_BY_ID[m.spot] || {}).label}，接下來 25 分鐘特別好釣，釣到 4 條送 200 金幣`);
   Evt.lastMig = m.id + ':' + (m.active ? 1 : 0);
   if (Evt.lastB !== null && Evt.lastB !== b.id) ticker(`🎯 新的懸賞：釣到 ${b.minw} 公斤以上的${(FISH_BY_ID[b.fish] || {}).name}，送 300 金幣（2 小時內）`); Evt.lastB = b.id;
   if (Evt.lastMet === false && met) ticker('🌠 流星雨來了！接下來 30 分鐘，所有釣點的傳說魚都比較好釣'); Evt.lastMet = met;
@@ -10749,7 +10760,7 @@ function renderEvents(body){ const ms = bossNow(), s = Math.floor(ms / 1000), m 
   body.appendChild(el('p', 'sub', '村子裡每天都有活動，時間都是台灣時間。金幣由伺服器發，每次活動一個人拿一次。'));
   const ul = el('ul', 'shoplist'), item = (ic, title, sub, on) => { const li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', title)); d.appendChild(el('div', 'sub2', sub)); li.appendChild(d); ul.appendChild(li); };
   { const nx = m.active ? m : evtMig((m.st + 10800 + 60) * 1000), n = st && st.mig && st.mig.id === m.id ? st.mig.n : 0, done = st && st.mig && st.mig.id === m.id && st.mig.done;
-    item('🐟', '魚群洄游' + (m.active ? '（進行中）' : ''), m.active ? `${(SPOT_BY_ID[m.spot] || {}).label}：一大群${(FISH_BY_ID[m.fish] || {}).name}（到 ${evtHM(m.en)}）。在那裡釣到 5 條送 🪙200 ── 你：${done ? '已完成 ✅' : Math.min(5, n) + '/5'}` : `下一次 ${evtHM(nx.st)}：${(SPOT_BY_ID[nx.spot] || {}).label}的${(FISH_BY_ID[nx.fish] || {}).name}。每 3 小時一次，每次 25 分鐘。`, m.active); }
+    item('🐟', '魚群洄游' + (m.active ? '（進行中）' : ''), m.active ? `${(SPOT_BY_ID[m.spot] || {}).label}：一大群${(FISH_BY_ID[m.fish] || {}).name}（到 ${evtHM(m.en)}）。在那裡釣到 4 條送 🪙200 ── 你：${done ? '已完成 ✅' : Math.min(5, n) + '/5'}` : `下一次 ${evtHM(nx.st)}：${(SPOT_BY_ID[nx.spot] || {}).label}的${(FISH_BY_ID[nx.fish] || {}).name}。每 3 小時一次，每次 25 分鐘。`, m.active); }
   { const done = st && st.bounty && st.bounty.id === b.id && st.bounty.done; item('🎯', '懸賞魚', `${(FISH_BY_ID[b.fish] || {}).name} ${b.minw} 公斤以上（到 ${evtHM(b.en)}）送 🪙300 ── ${done ? '你已經領了 ✅' : '還沒達成'}`, !done); }
   item('🌠', '流星雨夜釣' + (evtMeteor(ms) ? '（進行中）' : ''), '每天 23:00～23:30，所有釣點傳說魚比較好釣，天上一直有流星。', evtMeteor(ms));
   item('🏆', '釣魚大賽', '每天 12:00、19:00、21:00，各 10 分鐘，比總重量，前三名有獎。');
@@ -11591,10 +11602,11 @@ function renderTab(){
       '⭐ 魚種精通：圖鑑每種魚有 3 顆星。★ 第一次釣到；★★ 釣到 10 條，或釣過重量前 20% 的大尺寸（之後牠咬餌時頭上會出現牠的名字）；★★★ 完美搏鬥一次（魚的每個動作都對上、線沒有快斷）＋釣過重量前 5% 的紀錄級（圖鑑金框，之後比較常釣到大尺寸的）。圖鑑最上面看總星數，50、150、300、450 顆有稱號，排行榜有「圖鑑星數」。',
       '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。',
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
+      '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
       '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
-      '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 5 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
+      '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 4 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
       '💇 阿萍新設計的 9 款髮型（八字瀏海、法式瀏海、鎖骨髮、低馬尾、空氣瀏海、內扣髮、蛋捲頭、低丸子頭、高顱頂半扎）排在原本的後面，一樣每兩天上架一款。',
       '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
