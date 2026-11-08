@@ -3005,6 +3005,7 @@ function kidUpgrade(f){
   const mapM = { skin: a.skinM, shirt: a.shirtM, pants: a.pantsM, shin: a.pantsM, shoe: a.shoeM };
   for (const k in prim){ if (mapM[k]) prim[k].material = mapM[k]; else prim[k].visible = false; }   /* 臉、頭髮用原本的（表情、髮型才換得了），身體用模型的 */
   const keepRot = a.g.rotation.clone(), keepPos = a.g.position.clone(); a.g.rotation.set(0, 0, 0); a.g.position.set(0, 0, 0); a.g.add(m); m.updateMatrixWorld(true); a.g.updateMatrixWorld(true);
+  m.traverse(o => { if (o.isSkinnedMesh){ o.computeBoundingSphere(); o.boundingSphere.radius = Math.max(o.boundingSphere.radius * 1.6, 1.2); } if (o.isMesh) o.frustumCulled = true; });   /* v299：角色不在畫面裡就不畫（以前整個世界的角色每一格都畫，約 14 萬個三角形） */
   for (const o of a.BODY) if (o.parent) o.parent.remove(o);
   // 掛點：頭、帽子 → 頭骨；腿 → 大腿／小腿／腳骨；上衣類配件 → 胸骨
   B.head.attach(a.headG); B.head.attach(a.hatG);
