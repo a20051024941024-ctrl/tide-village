@@ -1155,3 +1155,6 @@ body.kid #chatIn, body.kid #chatSend, body.kid .sh-qf{display:none!important}
 #baitFav[hidden]{display:none}
 body.photo #baitFav{display:none}
 .rodsw.bait-corn{background:linear-gradient(#ffe680,#f2b62f)}.rodsw.bait-redworm{background:linear-gradient(#f08a8a,#b8373f)}.rodsw.bait-bread{background:linear-gradient(#f6dfb0,#d29a55)}.rodsw.bait-shrimpmeat{background:linear-gradient(#ffd0c0,#f08a6a)}.rodsw.bait-krill{background:linear-gradient(#ffb3a0,#e0604a)}.rodsw.bait-lugworm{background:linear-gradient(#d8b49a,#9a6a50)}.rodsw.bait-crabbait{background:linear-gradient(#ff9a7a,#d0503a)}.rodsw.bait-saurychunk{background:linear-gradient(#cfd8e0,#6a7f95)}.rodsw.bait-nightbug{background:linear-gradient(#b8f0ff,#5a7ad8)}
+/* v296 小烏龜照顧 */
+.shinebar{height:7px;border-radius:4px;background:#e6eef3;overflow:hidden;margin-top:4px;max-width:220px}.shinebar i{display:block;height:100%;background:linear-gradient(90deg,#9ac46a,#ffd36a);border-radius:4px}
+.turtlecare{display:block!important;padding:10px 12px!important}.tcrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #e6eef3}.tci{font-size:22px;width:28px;text-align:center}.tct{flex:1;min-width:0}.tct .chipline{margin-top:4px}
