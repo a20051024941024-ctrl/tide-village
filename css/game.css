@@ -347,11 +347,12 @@ body.photo.nonames #labels{display:none}
 #fadeFx{position:fixed;inset:0;background:#18334a;opacity:0;pointer-events:none;z-index:40;transition:opacity .25s}
 #fadeFx.on{opacity:1}
 .mapwrap{width:min(100%,460px);margin:0 auto 12px}
-.mapcv{width:100%;height:auto;aspect-ratio:1;border-radius:14px;display:block;cursor:pointer;box-shadow:0 2px 8px rgba(24,51,74,.2)}
+.mapcv{width:100%;height:auto;aspect-ratio:1;border-radius:14px;display:block;cursor:pointer;touch-action:none;box-shadow:0 2px 8px rgba(24,51,74,.2)}
+.mapbar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 auto 8px;max-width:460px}.mapchip{border:0;border-radius:999px;padding:6px 11px;font:inherit;font-size:14px;font-weight:700;background:#e6eef3;color:#4d6577}.mapchip[aria-pressed=true]{background:#2f89c7;color:#fff}.mapchip.mz{background:#fff;color:#18334a;box-shadow:0 1px 3px rgba(24,51,74,.2);min-width:34px}.maptip{text-align:center;min-height:1.4em}
 .tplist{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .tpbtn{padding:10px 12px;border-radius:12px;background:var(--ink);color:#fff;font-weight:700;font-size:14px}
 .tpbtn.lock{background:var(--paper-2);color:#9fb3bf;cursor:not-allowed}
-@media (orientation:landscape) and (max-height:540px){.mapwrap{width:min(100%,300px)}}
+@media (orientation:landscape) and (max-height:540px){.mapwrap{width:min(100%,340px)}}
 .tankbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .tankbar .seg{margin-bottom:0}
 .tank li{flex-wrap:wrap}

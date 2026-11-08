@@ -974,7 +974,7 @@ function signObj(){ const g = new THREE.Group(), C = {};
   const rm = new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.5, depthWrite:false }); C.ripple = []; for (let j = 0; j < 3; j++){ const r = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 28), rm.clone()); r.rotation.x = -Math.PI / 2; g.add(r); C.ripple.push(r); }
   { const sh = new THREE.Shape(); sh.moveTo(1.0, 0); sh.quadraticCurveTo(0.7, 0.42, 0, 0.4); sh.quadraticCurveTo(-0.6, 0.36, -0.95, 0.08); sh.lineTo(-1.45, 0.42); sh.lineTo(-1.3, 0); sh.lineTo(-1.45, -0.42); sh.lineTo(-0.95, -0.08); sh.quadraticCurveTo(-0.6, -0.36, 0, -0.4); sh.quadraticCurveTo(0.7, -0.42, 1.0, 0);   /* v250 魚的形狀（以前是橢圓，看不出來） */
     C.shadow = new THREE.Mesh(new THREE.ShapeGeometry(sh, 8), new THREE.MeshBasicMaterial({ color:'#06202e', transparent:true, opacity:0.45, depthWrite:false, side:THREE.DoubleSide })); C.shadow.rotation.x = -Math.PI / 2; C.shadow.scale.setScalar(0.85); g.add(C.shadow); }
-  C.lab = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthTest:false, depthWrite:false, sizeAttenuation:false })); C.lab.scale.set(0.26, 0.065, 1); C.lab.position.y = 1.4; C.lab.renderOrder = 9; g.add(C.lab);
+  C.lab = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthTest:false, depthWrite:false, sizeAttenuation:false })); C.lab.scale.set(0.17, 0.0425, 1); C.lab.position.y = 0.9; C.lab.renderOrder = 9; g.add(C.lab);
   C.birds = new THREE.Group(); const bm = new THREE.MeshBasicMaterial({ color:'#2b2f36' }); for (let j = 0; j < 3; j++){ const b = new THREE.Group(); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.14), bm); w.position.x = sd * 0.26; w.rotation.z = sd * 0.35; b.add(w); } b.userData.a = j / 3 * Math.PI * 2; C.birds.add(b); } g.add(C.birds);
   C.bub = []; const wm = new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.8 }); for (let j = 0; j < 6; j++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), wm); g.add(b); C.bub.push(b); }
   g.userData.C = C; scene.add(g); return g; }
@@ -982,13 +982,15 @@ function signsTick(dt, t){
   const sp = F.spot && signSpotOk(F.spot) ? F.spot : (() => { const ns = nearestSpot(); return ns.spot && ns.d < 14 && signSpotOk(ns.spot) ? ns.spot : null; })();
   const show = sp && !onIsle && !House.on && !inIndoor() && !Dive.on, list = show ? signsAt(sp, signSlot()).filter(g => !Signs.scared.has(g.key)) : [];
   while (Signs.objs.length < list.length) Signs.objs.push(signObj());
+  /* v294 太擠：徵兆的字只標最近的一個，而且只在還沒拋竿（瞄準）時標；字也小一點 */
+  let nearI = -1; { let bd = 13; if (F.phase === 'idle' || F.phase === 'charging') list.forEach((g, i) => { if (!g) return; const d = Math.hypot(me.pos.x - g.x, me.pos.z - g.z); if (d < bd){ bd = d; nearI = i; } }); }
   Signs.objs.forEach((o, i) => { const g = list[i]; o.visible = !!g; if (!g) return; const C = o.userData.C, wy = waterY(g.x, g.z, t), ph = t + g.i * 1.7;
     o.position.set(g.x + Math.sin(ph * 0.3) * 0.35, wy + 0.03, g.z + Math.cos(ph * 0.23) * 0.35);
     /* v283：小魚群不再是一圈一圈往外擴的大圓圈 —— 改成水面這裡那裡冒出的小點點漣漪（小魚啄水面），位置每次都不一樣 */
     C.ripple.forEach((r, j) => { r.visible = g.k === 'school'; if (!r.visible) return; const q = ph * 0.8 + j * 0.37, cyc = Math.floor(q), u = q - cyc, h = Math.sin((cyc + 1) * 12.9898 + j * 78.233 + g.i * 3.1) * 43758.5453, rx = (h - Math.floor(h)) - 0.5, h2 = Math.sin((cyc + 1) * 39.346 + j * 11.135 + g.i) * 24634.6345, rz = (h2 - Math.floor(h2)) - 0.5;
       r.position.set(rx * 3.2, 0, rz * 3.2); r.scale.setScalar(0.25 + u * 1.1); r.material.opacity = 0.42 * (1 - u) * (1 - u); });
     C.shadow.visible = g.k === 'shadow'; if (C.shadow.visible){ /* v283：魚影不再繞圓圈，改成慢慢晃來晃去、停一下再游 */ const w = ph * 0.22, px = Math.sin(w) * 1.1 + Math.sin(w * 2.3 + 1.3) * 0.45, pz = Math.sin(w * 1.37 + 0.6) * 0.8 + Math.sin(w * 3.1) * 0.25, vx = Math.cos(w) * 1.1 + Math.cos(w * 2.3 + 1.3) * 1.035, vz = Math.cos(w * 1.37 + 0.6) * 1.096 + Math.cos(w * 3.1) * 0.775; C.shadow.position.set(px, -0.02, pz); const want = Math.atan2(vz, vx); C.shadow.rotation.z = -want + Math.sin(ph * 4) * 0.08 * Math.min(1, Math.hypot(vx, vz)); C.shadow.material.opacity = 0.38 + Math.sin(ph * 0.9) * 0.07; }   /* 慢慢繞圈游 */
-    { const near = Math.hypot(me.pos.x - g.x, me.pos.z - g.z) < 13; C.lab.visible = near; if (near && C.lab.userData.k !== g.k){ C.lab.userData.k = g.k; const K = SIGN_KIND[g.k], cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c2 = cv.getContext('2d'); c2.font = 'bold 30px sans-serif'; const tx = `${K.icon} ${K.what}`, w = c2.measureText(tx).width + 28; c2.fillStyle = 'rgba(8,26,44,.62)'; c2.beginPath(); if (c2.roundRect) c2.roundRect(128 - w / 2, 8, w, 48, 24); else c2.rect(128 - w / 2, 8, w, 48); c2.fill(); c2.fillStyle = '#ffffff'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(tx, 128, 33);
+    { const near = i === nearI; C.lab.visible = near; if (near && C.lab.userData.k !== g.k){ C.lab.userData.k = g.k; const K = SIGN_KIND[g.k], cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c2 = cv.getContext('2d'); c2.font = 'bold 30px sans-serif'; const tx = `${K.icon} ${K.what}`, w = c2.measureText(tx).width + 28; c2.fillStyle = 'rgba(8,26,44,.62)'; c2.beginPath(); if (c2.roundRect) c2.roundRect(128 - w / 2, 8, w, 48, 24); else c2.rect(128 - w / 2, 8, w, 48); c2.fill(); c2.fillStyle = '#ffffff'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(tx, 128, 33);
       if (C.lab.material.map) C.lab.material.map.dispose(); const T = new THREE.CanvasTexture(cv); T.colorSpace = THREE.SRGBColorSpace; C.lab.material.map = T; C.lab.material.needsUpdate = true; } }   /* 靠近時標出是什麼徵兆 */
     C.birds.visible = g.k === 'pred'; if (C.birds.visible) C.birds.children.forEach(b => { const a = b.userData.a + ph * 0.9; b.position.set(Math.cos(a) * 1.3, 3.0 + Math.sin(ph * 1.3 + a) * 0.25, Math.sin(a) * 1.3); b.rotation.y = -a; const fl = Math.sin(ph * 9 + a * 3) * 0.5; b.children[0].rotation.z = -0.35 - fl; b.children[1].rotation.z = 0.35 + fl; });
     C.bub.forEach((b, j) => { b.visible = g.k === 'bottom'; if (!b.visible) return; const u = ((ph * 0.8) + j / 6) % 1; b.position.set(Math.sin(j * 2.1) * 0.35, -0.1 + u * 0.25, Math.cos(j * 1.7) * 0.35); b.scale.setScalar(u > 0.9 ? 1.6 : 0.6 + u * 0.6); }); });
@@ -3212,7 +3214,7 @@ class Fisher {
     const v = tmpV.set(this.pos.x, this.pos.y + 1.95, this.pos.z);
     const d = camera.position.distanceTo(v);
     v.project(camera);
-    if (v.z > 1 || d > (this.isNpc ? 24 : 45)){ this.tag.style.display = 'none'; return; }
+    if (v.z > 1 || d > (this.isNpc ? 24 : 45) || (this === me && F.phase !== 'idle' && F.phase !== 'charging')){ this.tag.style.display = 'none'; return; }   /* v294 自己釣魚的時候不顯示自己的名字，畫面不擠 */
     const sx = (v.x*0.5+0.5)*viewW(), sy = (-v.y*0.5+0.5)*viewH();
     /* v195：村民的名字跟別的名字牌疊到就先不顯示（玩家自己和其他玩家的名字一直顯示） */
     if (this.tag.style.display === 'none' || !this._tw || (frameNo + (this._ofs || 0)) % 120 === 0){ this.tag.style.display = ''; this._tw = this.tag.offsetWidth || 60; this._th = this.tag.offsetHeight || 22; }
@@ -3638,33 +3640,80 @@ function getMapImage(){
 }
 function renderMap(body){
   body.appendChild(el('p', 'sub', '走到新的地點就會解鎖。點地圖上的地點，或下面的按鈕，就能直接傳送過去。'));
-  const wrap = el('div', 'mapwrap'); const cv = el('canvas', 'mapcv'); const S = 480; cv.width = cv.height = S; wrap.appendChild(cv); body.appendChild(wrap);
-  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.drawImage(getMapImage(), 0, 0, S, S);
-  const toPx = (x, z) => [(-z + MAP_VIEW) / (MAP_VIEW * 2) * S, (x + MAP_VIEW) / (MAP_VIEW * 2) * S];   /* 上北下南、左西右東 */
-  ctx.font = `bold 15px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = 'center';
-  for (const tp of TRAVEL){
-    const [px, py] = toPx(tp.x, tp.z), on = visited.has(tp.id);
-    ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2); ctx.fillStyle = on ? tp.color : '#9fb3bf'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
-    const label = on ? tp.label : '？？？'; const w = ctx.measureText(label).width + 12;
-    ctx.fillStyle = 'rgba(24,51,74,.8)'; ctx.fillRect(px - w / 2, py - 32, w, 20); ctx.fillStyle = '#fff'; ctx.fillText(label, px, py - 17);
+  /* v294 玩家說地圖太亂：還沒去過的只畫「？」小點、標籤不重疊、可以放大拖動、外島放在四邊的小箭頭、上面可以只看釣點／商店／村民 */
+  const MU = renderMap.st || (renderMap.st = { z: 1, ox: 0, oy: 0, show: { spot: true, shop: true, npc: true } });
+  const bar = el('div', 'mapbar'); [['spot', '🎣 釣點'], ['shop', '🏪 商店'], ['npc', '🧑 村民']].forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(MU.show[k])); b.addEventListener('click', () => { MU.show[k] = !MU.show[k]; b.setAttribute('aria-pressed', String(MU.show[k])); draw(); }); bar.appendChild(b); });
+  const zin = el('button', 'mapchip mz', '＋'), zout = el('button', 'mapchip mz', '－'), zre = el('button', 'mapchip mz', '⟲'); bar.append(zin, zout, zre); body.appendChild(bar);
+  const wrap = el('div', 'mapwrap'); const cv = el('canvas', 'mapcv'); wrap.appendChild(cv); body.appendChild(wrap);
+  const tipEl = el('p', 'sub maptip', '用兩根手指放大縮小、一根手指拖動；點地點可以傳送。'); body.appendChild(tipEl);
+  const dpr = Math.min(2, devicePixelRatio || 1); let S = 480, k = 1; const ctx = cv.getContext('2d'); const font = getComputedStyle(document.body).fontFamily;
+  const toB = (x, z) => [(-z + MAP_VIEW) / (MAP_VIEW * 2) * S, (x + MAP_VIEW) / (MAP_VIEW * 2) * S];   /* 上北下南、左西右東（放大前） */
+  const toPx = (x, z) => { const [bx, by] = toB(x, z); return [(bx - S / 2) * MU.z + S / 2 + MU.ox, (by - S / 2) * MU.z + S / 2 + MU.oy]; };
+  const SHOP_ICON = { aquarium:'🐠', chat:'💬', tackle:'🎣', shop:'🏪', cook:'🍲', museum:'🏛️', tailor:'👗', mu:'🪚', market:'🐟', salon:'💇', cai:'🎨', fu:'🦐' };
+  const short = t => t.replace(/（[^）]*）/g, '').trim(), howOf = t => { const m = /（([^）]*)）/.exec(t); if (!m) return ''; return /阿海/.test(m[1]) ? '坐船：到港口找阿海' : m[1]; };
+  let hits = [];
+  function clampView(){ const m = (MU.z - 1) * S / 2 + 20; MU.ox = clamp(MU.ox, -m, m); MU.oy = clamp(MU.oy, -m, m); if (MU.z <= 1){ MU.ox = 0; MU.oy = 0; } }
+  function draw(){
+    const cw = cv.clientWidth || 300; S = Math.round(cw * dpr); if (cv.width !== S){ cv.width = cv.height = S; } k = S / cw; clampView(); hits = [];
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#2f89c7'; ctx.fillRect(0, 0, S, S); ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(getMapImage(), S / 2 - S / 2 * MU.z + MU.ox, S / 2 - S / 2 * MU.z + MU.oy, S * MU.z, S * MU.z);
+    const occ = [], fits = r => r[0] >= 2 && r[1] >= 2 && r[2] <= S - 2 && r[3] <= S - 2 && !occ.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
+    const label = (txt, px, py, off, opt) => { opt = opt || {}; ctx.font = `bold ${Math.round((opt.fs || 12) * k)}px ${font}`; const w = ctx.measureText(txt).width + 10 * k, h = (opt.fs || 12) * k + 7 * k;
+      const cand = opt.center ? [[px - w / 2, py - h / 2]] : [[px - w / 2, py - off - h], [px - w / 2, py + off], [px + off, py - h / 2], [px - off - w, py - h / 2]];
+      for (const [x, y] of cand){ const r = [x, y, x + w, y + h]; if (!fits(r)) continue; occ.push(r); ctx.fillStyle = opt.bg || 'rgba(24,51,74,.82)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, h / 2); else ctx.rect(x, y, w, h); ctx.fill(); ctx.fillStyle = opt.fg || '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x + w / 2, y + h / 2 + 0.5 * k); return true; }
+      return false; };
+    const inView = (px, py) => px > -10 && py > -10 && px < S + 10 && py < S + 10;
+    /* 自己的位置：大一點、有箭頭，先佔位置 */
+    const [mx, my] = toPx(me.pos.x, me.pos.z), meOn = inView(mx, my); if (meOn) occ.push([mx - 16 * k, my - 16 * k, mx + 16 * k, my + 16 * k]);
+    /* 外島：四邊的小箭頭＋短名字（固定在畫面邊上，不跟著拖） */
+    ctx.font = `bold ${Math.round(11 * k)}px ${font}`;
+    for (const R of WORLD_REGIONS){ if (!R.edge) continue; const ex = R.edge[0] * S, ey = R.edge[1] * S, txt = short(R.label), w = ctx.measureText(txt).width + 22 * k, h = 20 * k;
+      const x = clamp(ex - w / 2, 4 * k, S - w - 4 * k), y = clamp(ey - h / 2, 4 * k, S - h - 4 * k), ar = R.edge[0] < 0.2 ? '◀' : R.edge[0] > 0.8 ? '▶' : R.edge[1] < 0.2 ? '▲' : '▼';
+      ctx.fillStyle = 'rgba(24,51,74,.86)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, h / 2); else ctx.rect(x, y, w, h); ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ar + ' ' + txt, x + w / 2, y + h / 2 + 0.5 * k);
+      occ.push([x, y, x + w, y + h]); hits.push({ r: [x, y, x + w, y + h], tip: `${txt}：${howOf(R.label) || '在地圖外面'}` }); }
+    /* 區域名字（大字、淡色），放大一點點才不擋 */
+    const LQ = [], mark = (px, py, r) => occ.push([px - r, py - r, px + r, py + r]);   /* 先畫所有圖示、佔好位置，最後才放字（字不會蓋到圖示） */
+    /* 釣點和地點 */
+    if (MU.show.spot) for (const tp of TRAVEL){ const [px, py] = toPx(tp.x, tp.z); if (!inView(px, py)) continue; const on = visited.has(tp.id), r = (on ? 7 : 6) * k;
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fillStyle = on ? tp.color : '#9fb3bf'; ctx.fill(); ctx.lineWidth = 2 * k; ctx.strokeStyle = '#fff'; ctx.stroke();
+      if (!on){ ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(9 * k)}px ${font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', px, py + 0.5 * k); }
+      hits.push({ c: [px, py], tp }); mark(px, py, r); if (on) LQ.push([0, tp.label, px, py, r + 2 * k]); }
+    /* 商店：小圖示，放大才寫名字 */
+    if (MU.show.shop) for (const L of LANDMARKS){ const ic = SHOP_ICON[L.id]; if (!ic) continue; const [px, py] = toPx(L.pos.x, L.pos.z); if (!inView(px, py)) continue;
+      ctx.beginPath(); ctx.arc(px, py, 9 * k, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill(); ctx.font = `${Math.round(11 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ic, px, py + 1 * k);
+      hits.push({ c: [px, py], tip: L.label }); mark(px, py, 9 * k); if (MU.z >= 1.6) LQ.push([2, L.label, px, py, 11 * k, { fs: 11, bg: 'rgba(255,255,255,.92)', fg: '#18334a' }]); }
+    /* 村民 */
+    if (MU.show.npc) for (const w of worldSummary()){ const [px, py] = toPx(w.x, w.z); if (!inView(px, py)) continue; ctx.beginPath(); ctx.arc(px, py, 9 * k, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,240,214,.95)'; ctx.fill(); ctx.font = `${Math.round(11 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(w.icon, px, py + 1 * k);
+      hits.push({ c: [px, py], tip: `${w.name}：${w.text}` }); mark(px, py, 9 * k); if (MU.z >= 1.6) LQ.push([3, w.name, px, py, 11 * k, { fs: 11 }]); }
+    /* 窩點 */
+    for (const sp of secretSpots.concat(OtherSecret.list.filter(x => secretPower(x) > 0))){ const [sx, sy] = toPx(sp.x, sp.z); if (!inView(sx, sy)) continue; ctx.font = `${Math.round((sp.other ? 12 : 15) * k)}px sans-serif`; ctx.globalAlpha = sp.other ? 0.8 : 1; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🤫', sx, sy); ctx.globalAlpha = 1; }
+    { const names = new Set(TRAVEL.filter(t => visited.has(t.id)).map(t => t.label)); for (const R of WORLD_REGIONS){ if (R.edge) continue; const t = short(R.label).replace(/^\S+\s/, ''); if (names.has(t) && MU.show.spot) continue; const [px, py] = toPx(R.x, R.z); if (inView(px, py)) LQ.push([1, short(R.label), px, py, 0, { center: true, fs: 11, bg: 'rgba(255,255,255,.8)', fg: '#18334a' }]); } }
+    LQ.sort((a, b) => a[0] - b[0]); for (const q of LQ) label(q[1], q[2], q[3], q[4], q[5]);
+    /* 你在這裡：大箭頭＋白圈 */
+    if (meOn){ ctx.save(); ctx.translate(mx, my); ctx.beginPath(); ctx.arc(0, 0, 15 * k, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fill(); ctx.rotate(Math.atan2(Math.cos(me.rot), -Math.sin(me.rot)) + Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -14 * k); ctx.lineTo(10 * k, 10 * k); ctx.lineTo(0, 5 * k); ctx.lineTo(-10 * k, 10 * k); ctx.closePath(); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5 * k; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore(); }
+    /* 指北針 */
+    ctx.save(); ctx.translate(S - 22 * k, S - 22 * k); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(0, 0, 14 * k, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(0, -11 * k); ctx.lineTo(5 * k, 1 * k); ctx.lineTo(-5 * k, 1 * k); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#18334a'; ctx.font = `bold ${Math.round(9 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('北', 0, 7 * k); ctx.restore();
   }
-  // 各區域的名字（照真實地方設計的世界地圖）、地圖外面要坐船去的地方畫箭頭、指北針
-  { ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold 13px ${getComputedStyle(document.body).fontFamily}`;
-    const tag = (txt, px, py, bg) => { const w = ctx.measureText(txt).width + 12; ctx.fillStyle = bg || 'rgba(255,255,255,.82)'; ctx.fillRect(px - w / 2, py - 11, w, 20); ctx.fillStyle = bg ? '#fff' : '#18334a'; ctx.fillText(txt, px, py + 4); };
-    for (const R of WORLD_REGIONS){ const [px, py] = R.edge ? R.edge.map(v => v * S) : toPx(R.x, R.z); tag(R.label, clamp(px, 70, S - 70), clamp(py, 14, S - 12), R.edge ? 'rgba(24,51,74,.78)' : null); }
-    ctx.translate(S - 26, 30); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(6, 2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#18334a'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('北', 0, 13); ctx.restore(); }
-  for (const sp of secretSpots.concat(OtherSecret.list.filter(x => secretPower(x) > 0))){ const [sx, sy] = toPx(sp.x, sp.z); if (sx < 0 || sy < 0 || sx > S || sy > S) continue; ctx.font = sp.other ? '16px sans-serif' : '20px sans-serif'; ctx.globalAlpha = sp.other ? 0.8 : 1; ctx.fillText('🤫', sx, sy + 7); ctx.globalAlpha = 1; }   // 窩點（自己的大一點，別人的淡一點）
-  const WS = worldSummary();   // 村民現在在哪裡（伺服器的資料）
-  for (const w of WS){ const [px, py] = toPx(w.x, w.z); ctx.font = '16px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill(); ctx.fillText(w.icon, px, py + 6); ctx.font = `bold 11px ${getComputedStyle(document.body).fontFamily}`; ctx.fillStyle = '#18334a'; ctx.fillText(w.name, px, py + 23); }
-  const [mx, my] = toPx(me.pos.x, me.pos.z);   // 你在這裡
-  ctx.save(); ctx.translate(mx, my); ctx.rotate(Math.atan2(Math.cos(me.rot), -Math.sin(me.rot)) + Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 8); ctx.lineTo(0, 4); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fillStyle = PALETTE.coral; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
-  cv.addEventListener('click', e => {
-    const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * S, y = (e.clientY - r.top) / r.height * S;
-    let best = null, bd = 30; for (const tp of TRAVEL){ const [px, py] = toPx(tp.x, tp.z), d = Math.hypot(px - x, py - y); if (d < bd){ bd = d; best = tp; } }
-    if (!best) return; if (visited.has(best.id)) travelTo(best); else toast('還沒去過這裡，先走過去一次就能解鎖。');
-  });
+  const zoomAt = (f, cx, cy) => { const z0 = MU.z, z1 = clamp(z0 * f, 1, 4); if (z1 === z0) return; cx = cx == null ? S / 2 : cx; cy = cy == null ? S / 2 : cy; MU.ox = cx - S / 2 - (cx - S / 2 - MU.ox) * z1 / z0; MU.oy = cy - S / 2 - (cy - S / 2 - MU.oy) * z1 / z0; MU.z = z1; draw(); };
+  const meAt = () => { const [x, y] = toPx(me.pos.x, me.pos.z); return [clamp(x, 0, S), clamp(y, 0, S)]; }; zin.addEventListener('click', () => zoomAt(1.5, ...meAt())); zout.addEventListener('click', () => zoomAt(1 / 1.5, ...meAt()));   /* 按＋以自己的位置為中心放大 */ zre.addEventListener('click', () => { MU.z = 1; MU.ox = MU.oy = 0; draw(); });
+  const ptr = new Map(); let moved = 0, pd0 = 0;
+  const loc = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; };
+  cv.addEventListener('pointerdown', e => { ptr.set(e.pointerId, loc(e)); moved = 0; if (ptr.size === 2){ const [a, b] = [...ptr.values()]; pd0 = Math.hypot(a[0] - b[0], a[1] - b[1]); } try { cv.setPointerCapture(e.pointerId); } catch(_){} });
+  cv.addEventListener('pointermove', e => { if (!ptr.has(e.pointerId)) return; const p0 = ptr.get(e.pointerId), p1 = loc(e); ptr.set(e.pointerId, p1);
+    if (ptr.size === 2){ const [a, b] = [...ptr.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pd0 > 0){ zoomAt(d / pd0, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); } pd0 = d; moved = 99; return; }
+    const dx = p1[0] - p0[0], dy = p1[1] - p0[1]; moved += Math.abs(dx) + Math.abs(dy); if (MU.z > 1 && moved > 6 * k){ MU.ox += dx; MU.oy += dy; draw(); } });
+  const up = e => { ptr.delete(e.pointerId); if (ptr.size < 2) pd0 = 0; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = loc(e); zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2, x, y); }, { passive: false });
+  cv.addEventListener('click', e => { if (moved > 8 * k) return; const [x, y] = loc(e);
+    for (const h of hits) if (h.r && x >= h.r[0] && x <= h.r[2] && y >= h.r[1] && y <= h.r[3]){ tipEl.textContent = h.tip; return; }
+    let best = null, bd = 18 * k; for (const h of hits) if (h.c){ const d = Math.hypot(h.c[0] - x, h.c[1] - y); if (d < bd){ bd = d; best = h; } }
+    if (!best) return; if (best.tp){ if (visited.has(best.tp.id)) travelTo(best.tp); else { tipEl.textContent = '還沒去過這裡，先走過去一次就能解鎖。'; } } else tipEl.textContent = best.tip; });
+  requestAnimationFrame(draw);
   const list = el('div', 'tplist');
-  for (const tp of TRAVEL){ const on = visited.has(tp.id); const b = el('button', 'tpbtn' + (on ? '' : ' lock'), on ? tp.label : '？？？（還沒去過）'); b.disabled = !on; b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
+  const WS = worldSummary();
+  let nLock = 0; for (const tp of TRAVEL){ const on = visited.has(tp.id); if (!on){ nLock++; continue; } const b = el('button', 'tpbtn', tp.label); b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
+  if (nLock){ const c = el('span', 'tpbtn lock', `❔ 還有 ${nLock} 個地點沒去過`); c.style.gridColumn = '1 / -1'; list.appendChild(c); }
   body.appendChild(list);
   renderOcean(body);
   if (WS.length){ body.appendChild(el('div', 'dexhead', '🏘️ 村民現在在做什麼'));
@@ -11603,6 +11652,7 @@ function renderTab(){
       '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。',
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
       '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
+      '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。',
       '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
