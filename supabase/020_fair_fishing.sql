@@ -181,7 +181,7 @@ begin
   tip_fish := pool[1 + ((hh / 256) % cardinality(pool))::integer];
   -- 外海的魚情（每 5 分鐘換 3 種活躍的魚，×2.5；跟 js/game.js 的 intelAt 一樣）
   if p_spot = 'harbor' then
-    ipool := array(select x from jsonb_array_elements_text(cfg->'spots'->'harbor'->'fish') with ordinality t(x, n) where cfg->'fish'->x->>'r' <> '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false) order by n);
+    ipool := array(select x from jsonb_array_elements_text(cfg->'spots'->'harbor'->'fish') with ordinality t(x, n) where cfg->'fish'->x->>'r' <> '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false) and cfg->'fish'->x->>'fest' is null order by n);   -- v283 節慶魚不排進魚情
     ih := public._fnv('intel' || floor(ms / 300000.0)::bigint::text);
     intel := array[ipool[1 + (ih % cardinality(ipool))::integer], ipool[1 + ((ih / 256) % cardinality(ipool))::integer], ipool[1 + ((ih / 65536) % cardinality(ipool))::integer]];
   end if;

@@ -6094,7 +6094,7 @@ function taipeiDate(){ return new Date(Date.now() + 8 * 3600000).toISOString().s
 function dailyTip(){
   const d = taipeiDate(); if (dailyTip.c && dailyTip.c.d === d) return dailyTip.c;
   const spots = SPOTS.filter(s => s.id !== 'isle'), h = hash32('tip' + d), sp = spots[h % spots.length];
-  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說' && !f.of), f = pool[(h >>> 8) % pool.length];
+  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說' && !f.of && (!f.fest || festOn(f.fest))), f = pool[(h >>> 8) % pool.length];
   return (dailyTip.c = { d, spot: sp.id, fish: f.id, text: `今天${sp.label}的「${f.name}」特別多！` });
 }
 // 釣魚的加成：給 doCast（等待時間）、pickFish（稀有／傳說／權重）、拉線（張力）用
@@ -7619,10 +7619,10 @@ let diveSp = null; function diveSpecies(){ return diveSp || (diveSp = FISH.filte
 /* ---- 外海的魚情：每 5 分鐘換一次，這段時間有 3 種魚特別活躍（上鉤機率 ×2.5）。潛水下去就看得到是哪幾種 ----
    伺服器（fair_fishing.sql.tpl）用一樣的雜湊算，傳說魚和變種不會出現在魚情裡 */
 const INTEL_WIN = 300000;
-function intelAt(ms){ const w = Math.floor(ms / INTEL_WIN), h = hash32('intel' + w), pool = SPOT_BY_ID.harbor.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說' && !f.of), n = pool.length;
+function intelAt(ms){ const w = Math.floor(ms / INTEL_WIN), h = hash32('intel' + w), pool = SPOT_BY_ID.harbor.fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity !== '傳說' && !f.of && !f.fest), n = pool.length;   /* v283：節慶魚不排進魚情（以前跨年的煙火魚平常也會被排成「特別多」、潛水看得到）；跟 020 一樣 */
   return { w, end: (w + 1) * INTEL_WIN, ids: [...new Set([pool[h % n].id, pool[Math.floor(h / 256) % n].id, pool[Math.floor(h / 65536) % n].id])] }; }
 const Intel = { seenW: -1 };
-function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
+function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of && !FISH_BY_ID[id].fest).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
 // 外海潛水偶爾遠遠看到一道紅色影子：赤紅霸王鯊還在（海裡沒有了就不會出現）
 function offshoreDiveFish(){ const l = offshoreFish(); if (RS.n > 0 && Math.random() < 0.15) l.push('shark_red'); return l; }
 function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice|^abyss|^mystic/.test(f.spot) && !f.rs && !f.fest); }   /* 紅鯊不會在一般潛點出現 */
@@ -7826,7 +7826,7 @@ function startDive(site, back){
   if (Dive.boat){ Dive.back = { x: myBoat.m.position.x, z: myBoat.m.position.z }; myBoat = null; me.sitting = false; } else if (myBoat) leaveFerry(true);
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
   setTimeout(() => {
-    buildDive(); try { diveExtras(); } catch(e){ console.warn('diveExtras', e); } diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
+    buildDive(); try { diveExtras(); } catch(e){ console.warn('diveExtras', e); } { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; if (Evt.chip) Evt.chip.hidden = true; }   /* v283：潛水的時候主畫面的迴圈不跑，羅盤不會自己藏，進去前先藏 */ diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
     me.pos.x = DIVE.x - 4; me.pos.z = DIVE.z + DIVE.r * 0.45; me.baseY = DIVE.y + DIVE.top - 2.5; Jump.gy = me.baseY; Jump.air = 0; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.35; Dive.savedDist = cam.dist; cam.dist = 5.5;
     me.setSwim(true); renderDiveHud(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120);
     flash(`${DIVE_SITES[site].icon} ${DIVE_SITES[site].name}・氧氣 ${Dive.o2max} 秒`, 1.6);
@@ -10854,7 +10854,7 @@ function updateNpcs(dt, t){
       else n.next = t + rand(6, 15); }
     { const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && n.st !== 'show' && !Dive.on && !House.on){ n.say(npcLine(n), '', 6); n.talkAt = t + rand(20, 40); } else if (d > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5); }   /* 走近才講話，講完隔一陣子再講 */
     if (st === 'reel'){ n.bend = 0.75 + Math.sin(t * 6) * 0.2; n.dip = 0.6 + Math.sin(t * 9) * 0.3; if (Math.random() < dt * 3) ripple(n.bobPos.x + (Math.random() - 0.5) * 0.6, n.bobPos.z + (Math.random() - 0.5) * 0.6);
-      if (t > n.stT){ const sid = waterSpotId(n.bobPos.x, n.bobPos.z), pool = (SPOT_BY_ID[sid] || SPOT_BY_ID.sea).fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity === '常見' && !BIG_FISH.has(f.id));
+      if (t > n.stT){ const sid = waterSpotId(n.bobPos.x, n.bobPos.z), pool = (SPOT_BY_ID[sid] || SPOT_BY_ID.sea).fish.map(id => FISH_BY_ID[id]).filter(f => f && f.rarity === '常見' && !BIG_FISH.has(f.id) && (!f.fest || festOn(f.fest)));
         const f = pool[Math.floor(Math.random() * pool.length)]; ripple(n.bobPos.x, n.bobPos.z, true); n.fishing = false; n.bobState = 'none'; n.flying = null; n.dip = 0; n.bend = 0;
         if (f){ n.holdFish(f, +(f.min + (f.max - f.min) * Math.random() * 0.6).toFixed(2), 4); if (camera.position.distanceTo(n.pos) < 25 && Math.random() < 0.6) n.say((n.catchLines || ['釣到了！', `是${f.name}！`, '今天運氣不錯～', '嘿咻！'])[Math.floor(Math.random() * (n.catchLines ? n.catchLines.length : 4))], '', 3); }
         n.st = 'show'; n.stT = t + 4.2; } }
@@ -12041,7 +12041,7 @@ function subEnter(r){   /* 過場播完才真的切到深海 */
   Sub.restore = scene.children.filter(o => o !== Sub.group && o.visible); for (const o of Sub.restore) o.visible = false;
   Sub.fogWas = scene.fog; Sub.bgWas = scene.background; const range = [25, 40, 60][(Sub.st.light_lv || 1) - 1]; Sub.range = range;
   scene.fog = new THREE.Fog('#020a14', 2, range); scene.background = new THREE.Color('#020a14'); Sub.light.distance = range * 1.5;
-  Sub.pos.set(0, 9.2, -58); subLightInit(); Sub.zone = ''; Sub.wentDark = false; subEvReset(); Sub.yaw = 0; Sub.v = 0; Sub.on = true; document.body.classList.add('subbing'); subHud(); Sub.camWas = { ...cam }; cam.yaw = Sub.yaw + Math.PI; cam.pitch = 0.42;
+  Sub.pos.set(0, 9.2, -58); subLightInit(); Sub.zone = ''; Sub.wentDark = false; subEvReset(); Sub.yaw = 0; Sub.v = 0; { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; } Sub.on = true; document.body.classList.add('subbing'); subHud(); Sub.camWas = { ...cam }; cam.yaw = Sub.yaw + Math.PI; cam.pitch = 0.42;
   ensureAudio(); flash('🚢 潛水艇出發！往前開，看看大陸棚的盡頭有什麼', 2.4); SFX.plop(); subRender();
   { const down = [...peers.values()].filter(p => p.sub).map(p => peerName(p)); Sub.peerT0 = now(); if (down.length) setTimeout(() => { if (Sub.on) subMsg(`🚢 ${down.slice(0, 3).join('、')}${down.length > 3 ? ' 等人' : ''} 也在下面`, 2); }, 3000); } }
 
