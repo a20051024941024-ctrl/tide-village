@@ -3990,7 +3990,7 @@ function pickFish(spot, charge){
   const intel = spot.id === 'harbor' ? intelAt(Date.now()).ids : null;
   const mudK = f => spot.id !== 'mudflat' ? 1 : ((Rig.rig === 'bottom') === BOTTOM_FISH.has(f.id) ? 1 : 0);   /* 泥灘：抓招潮蟹就是蟹、抓彈塗魚就是魚 */
   const wildK = f => breedSeason() && WILD_BREED.has(f.id) ? 1.5 : 1;   /* 野外繁殖季 */
-  const bk = curBait() && curBait().k, w = list.map(f => (f.w || 1) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -4265,6 +4265,8 @@ function updateFishing(dt, t){
   }
   // HUD + button
   $('#chargeHud').hidden = F.phase !== 'charging';
+  { const gk = gatherKind(), gb = $('#gatherBtn'); if (gb && gb.dataset.k !== (gk || '')){ gb.dataset.k = gk || ''; gb.hidden = !gk; if (gk) gb.innerHTML = gk === 'lugworm' ? '🪱<small>挖沙蠶</small>' : '🦀<small>撿螃蟹</small>'; } }
+  if (frameNo % 15 === 3) baitFavChip();
   { const cb = $('#chumBtn'), show = !Dive.on && !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
@@ -6874,7 +6876,15 @@ function renderCraft(body){
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '做'); b.disabled = use.length < 2 || rec.coins < 30;
     b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
       b.disabled = true; const r = await craftRpc('craft_bait', { p_id:'live' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('🪱 做好 4 個活餌了！到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b.disabled = false; });
-    a.appendChild(b); li.appendChild(a); ul.appendChild(li); body.appendChild(ul); }
+    a.appendChild(b); li.appendChild(a); ul.appendChild(li);
+    { /* v295 秋刀魚切塊：1 條秋刀魚＋🪙20 → 4 個；鯊魚和大型掠食魚最愛 */ const li2 = el('li'); li2.appendChild(el('span', 'rodsw bait-saurychunk'));
+      const shown = new Set((rec.show || []).map(String)), use2 = (rec.tank || []).filter(x => x.f === 'saury' && !x.k && !shown.has(String(x.t))).sort((p, q) => p.w - q.w).slice(0, 1);
+      const d2 = el('div', 'tinfo'); d2.appendChild(el('div', 'n', `秋刀魚切塊（現在有 ${(rec.bait || {}).saurychunk || 0} 個）`)); d2.appendChild(el('div', 'sub2', '🪙20＋秋刀魚 1 條 → 4 個。鯊魚、鮪魚、浪人鰺這些大型掠食魚最愛（愛吃的魚 ×1.8）。跟活餌加起來一天最多做 8 次。')); li2.appendChild(d2);
+      const a2 = el('div', 'tacts'), b2 = el('button', 'tbtn', '做'); b2.disabled = !use2.length || rec.coins < 20;
+      b2.addEventListener('click', async () => { if (b2.dataset.sure !== '1'){ b2.dataset.sure = '1'; b2.textContent = '確定？'; d2.appendChild(el('div', 'sub2', '會用掉：' + use2.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
+        b2.disabled = true; const r = await craftRpc('craft_bait', { p_id:'saurychunk' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('🔪 切好 4 個秋刀魚切塊了！到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b2.disabled = false; });
+      a2.appendChild(b2); li2.appendChild(a2); ul.appendChild(li2); }
+    body.appendChild(ul); }
   const own = new Set(rec.owned || []);
   for (const [kind, title] of [['hk_', '🪝 鉤子（一次裝一個，影響拉魚）'], ['rs_', '🎣 竿子造型'], ['lc_', '🧵 釣線顏色']]){
     body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
@@ -8731,7 +8741,20 @@ const BAITS = [
   { id:'squidbait', name:'小卷切片', price:150, pack:5, desc:'大魚最愛的味道，稀有 ×1.4、傳說 ×1.4。', rare:1.4, legend:1.4 },
   { id:'gold', name:'黃金餌', price:300, pack:3, desc:'傳說中的金色魚餌，傳說魚機率 ×1.8。', rare:1.3, legend:1.8 },
   { id:'rainbow', name:'彩虹餌', price:900, pack:2, desc:'七種顏色一閃一閃，稀有 ×2.2、傳說 ×2.2。', rare:2.2, legend:2.2 },
+  /* v295 玩家說「餌料很少，可以做特定的」：針對特定魚的餌 —— 愛吃的魚 ×1.8（傳說 ×1.3），其他魚稍微少一點（×0.88）；伺服器 118＋020 照 fav 算 */
+  { id:'corn', name:'玉米粒', icon:'🌽', price:30, pack:10, desc:'甜甜的玉米，湖裡吃雜食的魚最愛。', rare:1, legend:1, fav:['crucian', 'carp', 'koi', 'goldfish', 'bighead', 'milkfish'] },
+  { id:'redworm', name:'紅蟲', icon:'🪱', price:25, pack:10, desc:'細細的紅色小蟲，溪裡的小魚一看到就搶。', rare:1, legend:1, fav:['zacco', 'acro', 'pseudorasbora', 'kuhua', 'candidia', 'hillstream', 'ayu', 'loach', 'medaka', 'guppy', 'mosquitofish', 'wakasagi', 'shirauo', 'sicyo', 'eleotris'] },
+  { id:'bread', name:'麵包糰', icon:'🍞', price:20, pack:10, desc:'揉成小球的麵包，浮在表層，吳郭魚和表層的魚最愛。', rare:1, legend:1, fav:['tilapia', 'mullet', 'scat', 'sergeant', 'clarias', 'pleco', 'rabbitfish'] },
+  { id:'shrimpmeat', name:'蝦仁', icon:'🦐', price:80, pack:6, desc:'剝好的蝦肉，鯛類和礁岩的魚最愛。', rare:1.1, legend:1, fav:['blackbream', 'moonbream', 'girella', 'blackgirella', 'lethrinus', 'grunt', 'threadfin', 'mangsnapper', 'terapon'] },
+  { id:'krill', name:'南極蝦', icon:'🦐', price:50, pack:8, desc:'一小包磷蝦，成群的小魚（鯖、鰺、沙丁）最愛。', rare:1, legend:1, fav:['mackerel', 'horsemack', 'sardine', 'saury', 'roundscad', 'anchovy', 'capelin', 'hokke', 'pomfret', 'flyingfish'] },
+  { id:'lugworm', name:'沙蠶', icon:'🪱', price:0, pack:2, gather:'lugworm', desc:'退潮時在沙灘自己挖（一天 6 次）。海邊沙底的魚最愛。', rare:1.05, legend:1, fav:['flounder', 'tilefish', 'scorpion', 'stingray', 'crab', 'mudskipper', 'bigskipper', 'cod'] },
+  { id:'crabbait', name:'小螃蟹', icon:'🦀', price:0, pack:1, gather:'crabbait', desc:'在珊瑚礁島的礁岩上撿（一天 6 次）。石斑、黑鯛最愛。', rare:1.15, legend:1, fav:['grouper', 'blackbream', 'lethrinus', 'octopus', 'blackgirella', 'cod'] },
+  { id:'saurychunk', name:'秋刀魚切塊', icon:'🔪', price:0, pack:4, craft:true, desc:'阿鐵師傅用秋刀魚切的（1 條秋刀魚＋🪙20 → 4 個）。鯊魚和大型掠食魚最愛。', rare:1.2, legend:1.1, fav:['shark', 'hammer', 'greatwhite', 'bullshark', 'galapagosshark', 'yellowtail', 'amberjack', 'trevally', 'barracuda', 'mahi', 'tuna', 'barramundi'] },
+  { id:'nightbug', name:'夜光蟲餌', icon:'✨', price:0, pack:3, craft:true, desc:'蔚博士的委託獎勵（把今天的新品種釣上來給他看）。晚上才出現的魚最愛。', rare:1.1, legend:1, fav:['catfish', 'eel', 'moonbream', 'squid', 'jelly', 'ika', 'hairtail', 'octopus', 'goby', 'lantern', 'trout', 'lobster', 'kingcrab', 'marmorata', 'sturgeon'] },
 ];
+const baitFavK = (b, f) => !b || !b.fav ? 1 : b.fav.includes(f.of || f.id) ? (f.rarity === '傳說' ? 1.3 : 1.8) : 0.88;   /* 跟伺服器 020 一樣 */
+function baitFavNames(b, spotId){ if (!b || !b.fav) return []; return b.fav.map(id => FISH_BY_ID[id]).filter(f => f && (!spotId || f.spot === spotId)).map(f => rec.count[f.id] ? f.name : '？？？'); }
+function baitsFor(f){ const id = f.of || f.id; return BAITS.filter(b => b.fav && b.fav.includes(id)); }
 const SELL_BASE = { '常見':10, '稀有':60, '傳說':400 };
 function fishPrice(f, w){ const rel = clamp((w - f.min) / Math.max(0.01, f.max - f.min), 0, 1); return Math.round(SELL_BASE[f.rarity] * (1 + 1.5 * rel) * (undersized(f, w) ? 0.5 : 1)); }
 // 尺寸限制：比「最輕 + 四分之一範圍」還輕就是未達尺寸（賣半價，放流點數比較多）；跟伺服器 015_release.sql 一樣
@@ -9286,17 +9309,17 @@ function renderShop(body){
     const d0 = el('div', 'tinfo'); d0.appendChild(el('div', 'n', '普通魚餌')); d0.appendChild(el('div', 'meta', '免費、用不完。')); none.appendChild(d0);
     const b0 = el('button', 'tbtn' + (!curBait() ? ' ghost' : ''), !curBait() ? '使用中' : '換上'); b0.disabled = !curBait(); b0.addEventListener('click', () => { rec.baitOn = null; saveRecLocal(); renderTab(); cloudCall('set_bait', { p_bait: null }); }); none.appendChild(b0); ul.appendChild(none);
     for (const bt of BAITS){
-      if (bt.craft && !(rec.bait[bt.id] > 0)) continue;   /* 阿鐵師傅做的餌：商店不賣，有的話才列出來 */
+      if ((bt.craft || bt.gather) && !(rec.bait[bt.id] > 0)) continue;   /* 阿鐵師傅做的、自己撿的餌：商店不賣，有的話才列出來 */
       const n = rec.bait[bt.id] || 0, using = rec.baitOn === bt.id && n > 0, li = el('li', using ? 'on' : '');
       li.appendChild(el('span', 'rodsw bait-' + bt.id));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${bt.name}　×${n}`)); d.appendChild(el('div', 'meta', `${bt.desc} 一包 ${bt.pack} 個。`)); li.appendChild(d);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${bt.name}　×${n}`)); d.appendChild(el('div', 'meta', `${bt.desc}${bt.price ? ` 一包 ${bt.pack} 個。` : ''}`)); if (bt.fav) d.appendChild(el('div', 'meta', '🍽️ 愛吃：' + bt.fav.map(id => FISH_BY_ID[id]).filter(Boolean).map(f => rec.count[f.id] ? f.name : '？？？').join('、'))); li.appendChild(d);
       const acts = el('div', 'tacts');
       const buy = el('button', 'tbtn', `買一包 🪙${bt.price}`);
       buy.addEventListener('click', async () => {
         if (rec.coins < bt.price){ toast(`金幣不夠，還差 🪙${bt.price - rec.coins}`); return; }
         if (Cloud.on){ buy.disabled = true; buy.textContent = '處理中…'; const row = await cloudCall('buy_bait', { p_bait: bt.id }); if (row) SFX.chat(); renderTab(); return; }
         rec.bait[bt.id] = n + bt.pack; if (!curBait()) rec.baitOn = bt.id; addCoins(-bt.price); SFX.chat(); renderTab(); });
-      if (!bt.craft) acts.appendChild(buy);
+      if (!bt.craft && !bt.gather) acts.appendChild(buy);
       if (n > 0 && !using){ const u = el('button', 'tbtn ghost', '換上'); u.addEventListener('click', () => { rec.baitOn = bt.id; saveRecLocal(); renderTab(); cloudCall('set_bait', { p_bait: bt.id }); }); acts.appendChild(u); }
       li.appendChild(acts); ul.appendChild(li);
     }
@@ -9672,6 +9695,20 @@ $('#ccShow').addEventListener('click', () => {   // 釣到時直接選「放進�
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x){ closeCatch(); return; }
   rec.show = (rec.show || []).filter(t => t !== x.t); if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先到魚缸拿出一條`); return; }
   rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); ticker(`🏛️ <b>${esc(f.name)}</b> 放進廣場的水族館展示了`); closeCatch(); });
+/* v295 自己拿餌：退潮時在沙灘挖沙蠶、在珊瑚礁島撿小螃蟹（伺服器 gather_bait 算次數和潮汐） */
+function gatherKind(){ if (F.phase !== 'idle' || Dive.on || myBoat || mySeat || House.on || inIndoor() || onIsle) return null; if (typeof Sub !== 'undefined' && Sub.on) return null;
+  if (REEF && Math.hypot(me.pos.x - REEF.x, me.pos.z - REEF.z) < REEF.r + 1 && walkable(me.pos.x, me.pos.z)) return 'crabbait';
+  if (Math.abs(me.pos.x) < 80 && Math.abs(me.pos.z) < 80 && surfaceAt(me.pos.x, me.pos.z) === 'sand' && Env.tide && Env.tide.lv < -0.3) return 'lugworm'; return null; }
+async function doGather(k){ const B = BAITS.find(b => b.id === k), gb = $('#gatherBtn'); if (gb.disabled) return; gb.disabled = true; me.bend = 0.6; puff(me.pos.x, me.baseY, me.pos.z); try { SFX.tick(); } catch(e){}
+  if (!Cloud.on || !Cloud.sb){ rec.bait[k] = (rec.bait[k] || 0) + B.pack; saveRecLocal(); flash(`${B.icon} ${B.name} +${B.pack}`, 1.4); setTimeout(() => { gb.disabled = false; }, 900); return; }
+  try { const { data, error } = await Cloud.sb.rpc('gather_bait', { p_kind: k }); if (error) throw error; adoptRow(data.player); SFX.catch(); flash(`${B.icon} ${k === 'lugworm' ? '挖到' : '撿到'} ${B.name} ×${data.got}！今天還可以 ${data.left} 次`, 1.8); if (!rec.baitOn){ rec.baitOn = k; cloudCall('set_bait', { p_bait: k }); } }
+  catch(e){ toast(cloudErrMsg(e)); } setTimeout(() => { gb.disabled = false; }, 900); }
+$('#gatherBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const k = gatherKind(); if (k) doGather(k); });
+/* v295 換上針對特定魚的餌時，旁邊寫「這個餌：愛吃的魚 ○○、○○」（只寫這個釣點有的） */
+function baitFavChip(){ let c = $('#baitFav'); if (!c){ c = document.createElement('div'); c.id = 'baitFav'; document.body.appendChild(c); }
+  const b = Rig.rig === 'lure' ? null : curBait(); let txt = '';
+  if (b && b.fav && (F.phase === 'idle' || F.phase === 'charging') && !Dive.on && !Photo.on){ const near = nearestSpot(), sp = near.d < 1.7 ? near.spot : shoreSpot(); if (sp){ const names = baitFavNames(b, sp.id); txt = `${b.icon || '🪱'} ${b.name}：${names.length ? '這裡愛吃的魚 ' + names.slice(0, 3).join('、') + (names.length > 3 ? '…' : '') : '這裡沒有愛吃牠的魚'}`; } }
+  if (c.textContent !== txt) c.textContent = txt; c.hidden = !txt; }
 $('#chumBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const pk = $('#chumPick'); if (pk && !pk.hidden){ pk.hidden = true; return; } renderChumPick(); });
 (function(){ const j = $('#jumpBtn');
   j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); j.classList.add('down'); if (Dive.on){ Dive.up = true; return; } jump(); });
@@ -10651,6 +10688,8 @@ function renderSci(body){
   card.appendChild(el('div', 'scit', `${T.giant ? '🐋 深海巨魚・' : ''}${isToday ? '📍 今天' : '📍 最近'}在${S.label}`)); if (T.giant) card.classList.add('giant'); const cv = fishCanvas(FISH_BY_ID[T.id] || FISH_BY_ID[T.base], true, 220, 120); cv.className = 'scicv'; card.appendChild(cv);
   card.appendChild(el('div', 'scin', T.name)); card.appendChild(el('div', 'sub2', `${FISH_BY_ID[T.base] ? FISH_BY_ID[T.base].name + '的近親・' : ''}${T.giant ? '傳說' : '稀有'}・${(+T.min).toFixed(2)}～${(+T.max).toFixed(2)} kg`));
   card.appendChild(el('p', 'scis', T.story)); card.appendChild(el('div', 'sub2', rec.count[T.id] ? `✅ 你已經釣到 ${rec.count[T.id]} 條了` : T.first ? `🏅 第一個釣到的人：${T.first}` : '還沒有人釣到，去當第一個吧！')); body.appendChild(card);
+  if (isToday){ /* v295 蔚博士的委託：把今天的新品種釣上來給他看 → 3 個夜光蟲餌（一天一次） */ const q = el('div', 'scicard'); q.appendChild(el('div', 'scit', '📋 蔚博士的委託')); q.appendChild(el('p', 'scis', `「幫我把今天的新品種「${T.name}」釣上來，放在魚缸裡給我看看！我用實驗室養的夜光蟲做了魚餌當謝禮。」→ ✨ 夜光蟲餌 ×3（晚上才出現的魚最愛），一天一次。`));
+    const bb = el('button', 'tbtn', '給蔚博士看'); bb.addEventListener('click', async () => { bb.disabled = true; try { const { data, error } = await Cloud.sb.rpc('sci_bug'); if (error) throw error; adoptRow(data.player); SFX.catch(); flash('✨ 拿到 3 個夜光蟲餌！', 2); } catch(e){ toast(cloudErrMsg(e)); } bb.disabled = false; }); q.appendChild(bb); body.appendChild(q); }
   if (L.length > 1){ body.appendChild(el('div', 'dexhead', `📒 調查筆記（${L.length} 種）`)); const ul = el('ul', 'shoplist');
     for (const d of L.slice(1, 60)){ const li = el('li'), f = FISH_BY_ID[d.id], got = !!rec.count[d.id]; const c2 = fishCanvas(f || FISH_BY_ID[d.base], true, 64, 40); c2.className = 'dishic'; li.appendChild(c2);
       const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${got ? '✅ ' : ''}${d.giant ? '🐋 ' : ''}${d.name}`)); inf.appendChild(el('div', 'sub2', `${d.day.slice(5).replace('-', '/')}・${SPOT_BY_ID[d.spot] ? SPOT_BY_ID[d.spot].label : ''}${d.first ? '・🏅' + d.first : ''}`)); li.appendChild(inf); ul.appendChild(li); }
@@ -11334,6 +11373,7 @@ function renderTab(){
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (known){ const st = starsOf(f), sd = el('div', 'stars s' + st, starStr(st)); sd.title = st >= 3 ? '已經三顆星了' : st === 2 ? `三顆星：完美搏鬥一次＋釣到 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上（${Mast.set.has(f.id) ? '完美搏鬥 ✓' : '還沒完美搏鬥'}）` : `兩顆星：釣到 10 條（現在 ${rec.count[f.id]}）或 ${fmtKg(f.min + (f.max - f.min) * 0.8)} 以上`; it.appendChild(sd); it.addEventListener('click', () => toast(`${f.name} ${starStr(st)}：${sd.title}`)); if (st >= 3) it.classList.add('gold'); }
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
+        if (known && baitsFor(f).length) it.appendChild(el('div', 'meta', starsOf(f) >= 2 ? '🍽️ 喜歡：' + baitsFor(f).map(b => b.name).join('、') : '🍽️ 喜歡的餌：★★ 解鎖'));   /* v295 先自己試，釣到 10 條（兩顆星）才告訴你 */
         g.appendChild(it);
       });
       body.appendChild(g);
@@ -11653,6 +11693,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
       '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。',
+      '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。',
       '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',

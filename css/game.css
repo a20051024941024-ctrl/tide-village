@@ -557,13 +557,13 @@ body.photo #fishMark, body.photo #tenBar, body.photo #dmgLayer{display:none!impo
 @media (max-height:500px){ #buildBar,#furnBar{bottom:calc(var(--gb) + 8px);max-width:calc(100vw - 420px)} }
 
 /* 打窩 */
-#chumBtn{width:64px;height:64px;border-radius:50%;font-size:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;align-self:flex-end;margin-right:8px}
+#chumBtn,#gatherBtn{width:64px;height:64px;border-radius:50%;font-size:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;align-self:flex-end;margin-right:8px}
 #chumBtn[hidden]{display:none}
 #chumBtn small{font-size:11px;font-weight:700;margin-top:2px}
 #chumPick{position:fixed;right:var(--gr);bottom:calc(var(--gb) + 140px);display:flex;flex-direction:column;gap:6px;padding:10px 12px;z-index:9;min-width:180px}
 #chumPick[hidden]{display:none}
 #chumPick .tbtn{box-shadow:inset 6px 0 0 var(--cc,#ffd36a)}
-@media (max-height:500px){ #chumBtn{width:52px;height:52px;font-size:20px} #chumPick{bottom:calc(var(--gb) + 110px)} }
+@media (max-height:500px){ #chumBtn,#gatherBtn{width:52px;height:52px;font-size:20px} #chumPick{bottom:calc(var(--gb) + 110px)} }
 
 #chumPick{min-width:260px;max-width:calc(100vw - 32px)}
 #chumPick .cprow{display:flex;align-items:center;gap:6px;padding-left:8px;border-left:5px solid var(--cc,#ffd36a)}
@@ -1148,3 +1148,10 @@ body.kid #chatIn, body.kid #chatSend, body.kid .sh-qf{display:none!important}
 #ageGate h2{margin:0;font-size:22px}#ageGate p{margin:0}#ageGate select{font-size:18px;padding:10px;border-radius:10px;border:1px solid #c9d8e2;min-width:200px}
 #ageGate .tbtn{min-width:160px;min-height:46px;font-size:18px}
 #rot .privlink{display:block;margin-top:10px;font-size:13px;color:inherit;opacity:.8}
+
+/* v295 新魚餌 */
+#gatherBtn small{font-size:11px;font-weight:700;margin-top:2px}
+#baitFav{position:fixed;right:calc(var(--gr) + 4px);top:calc(var(--gt) + 164px);z-index:6;max-width:min(36vw,320px);padding:5px 10px;border-radius:14px;font-size:12px;line-height:1.35;color:#fff;background:rgba(20,40,60,.62);border:1px solid rgba(255,255,255,.25);pointer-events:none}
+#baitFav[hidden]{display:none}
+body.photo #baitFav{display:none}
+.rodsw.bait-corn{background:linear-gradient(#ffe680,#f2b62f)}.rodsw.bait-redworm{background:linear-gradient(#f08a8a,#b8373f)}.rodsw.bait-bread{background:linear-gradient(#f6dfb0,#d29a55)}.rodsw.bait-shrimpmeat{background:linear-gradient(#ffd0c0,#f08a6a)}.rodsw.bait-krill{background:linear-gradient(#ffb3a0,#e0604a)}.rodsw.bait-lugworm{background:linear-gradient(#d8b49a,#9a6a50)}.rodsw.bait-crabbait{background:linear-gradient(#ff9a7a,#d0503a)}.rodsw.bait-saurychunk{background:linear-gradient(#cfd8e0,#6a7f95)}.rodsw.bait-nightbug{background:linear-gradient(#b8f0ff,#5a7ad8)}

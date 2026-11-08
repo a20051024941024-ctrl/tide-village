@@ -215,6 +215,7 @@ begin
       * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
       * (case when evm is not null and (evm->>'active')::boolean and p_spot = evm->>'spot' and fid = evm->>'fish' then 4 else 1 end)   -- 111 魚群洄游：那種魚在那個釣點 ×4
       * (case when sg_k is not null and f->>'k' = sg_k then (case when f->>'r' = '傳說' then (case when sg_k = bait->>'k' then 1.5 else 1.3 end) else (case when sg_k = bait->>'k' then 4 else 2.5 end) end) else 1 end)   -- 247 徵兆（255：餌對上徵兆加成更大）
+      * (case when bait ? 'fav' then (case when bait->'fav' ? coalesce(f->>'of', fid) then (case when f->>'r' = '傳說' then 1.3 else 1.8 end) else 0.88 end) else 1 end)   -- 118 針對特定魚的餌：愛吃的魚 ×1.8（傳說 ×1.3），其他 ×0.88
       * (case when bait->>'k' is not null and f->>'k' = bait->>'k' then 1.5 else 1 end)   -- 255 餌吸引的那一類魚   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
       * (case f->>'r' when '常見' then 1 when '稀有' then 0.34 * (1 + charge * 0.8) * kr * ring else 0.07 * (1 + charge * 1.6) * lb * kl * ring * legk end);
     ids := ids || fid; wts := wts || wt; tot := tot + wt;
