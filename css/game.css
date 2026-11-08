@@ -1115,7 +1115,7 @@ body:not(.subbing) #subVig,body:not(.subbing) #subBlack{display:none}
 #subHud .sh-deep i{font-style:normal;font-size:44px;line-height:1;color:#ffd36a;transition:transform .3s}
 
 /* v276 活動條 */
-#evChip{position:fixed;left:calc(var(--gl) + 2px);top:calc(var(--gt) + 140px);z-index:6;max-width:62vw;padding:5px 10px;border-radius:14px;font-size:12px;line-height:1.3;color:#fff;background:rgba(20,40,60,.62);border:1px solid rgba(255,255,255,.25);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+#evChip{position:fixed;right:calc(var(--gr) + 4px);top:calc(var(--gt) + 134px);z-index:6;max-width:min(30vw, 300px);padding:5px 10px;border-radius:14px;font-size:12px;line-height:1.3;color:#fff;background:rgba(20,40,60,.62);border:1px solid rgba(255,255,255,.25);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 #evChip[hidden]{display:none}
 
 /* v277 設定按鈕單獨放右上角（選單第一排最右邊，第二排那格空著） */
@@ -1125,3 +1125,5 @@ body.ui2 .mbtn[data-tab="settings"]{--ic:linear-gradient(160deg,#b8c4d0,#6f8193)
 html[lang=id] .mbtn span, html[lang=en] .mbtn span{font-size:10.5px;letter-spacing:-.2px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* v278 拍照的時候把跑馬燈、遠洋羅盤、活動條、鯨魚拍照鈕這些字都藏起來，才不會拍進去 */
 body.photo #ticker, body.photo #sailComp, body.photo #evChip, body.photo #owPhoto, body.photo #owWet, body.photo #bigMsg, body.photo #emotes, body.photo #menu, body.photo #ferryBar, body.photo #boatBar{display:none!important}
+
+/* v283 活動條搬到右上角選單下面，不要擋在搖桿的地方（以前按到它會打開活動表、角色不會走） */

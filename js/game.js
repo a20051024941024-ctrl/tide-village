@@ -968,8 +968,10 @@ function signsTick(dt, t){
   while (Signs.objs.length < list.length) Signs.objs.push(signObj());
   Signs.objs.forEach((o, i) => { const g = list[i]; o.visible = !!g; if (!g) return; const C = o.userData.C, wy = waterY(g.x, g.z, t), ph = t + g.i * 1.7;
     o.position.set(g.x + Math.sin(ph * 0.3) * 0.35, wy + 0.03, g.z + Math.cos(ph * 0.23) * 0.35);
-    C.ripple.forEach((r, j) => { r.visible = g.k === 'school'; if (!r.visible) return; const u = ((ph * 0.55) + j / 3) % 1; r.scale.setScalar(0.6 + u * 3.2); r.material.opacity = 0.55 * (1 - u); });
-    C.shadow.visible = g.k === 'shadow'; if (C.shadow.visible){ const a = ph * 0.35; C.shadow.position.set(Math.cos(a) * 0.9, -0.02, Math.sin(a) * 0.9); C.shadow.rotation.z = a + Math.PI / 2 + Math.sin(ph * 4) * 0.08; C.shadow.material.opacity = 0.38 + Math.sin(ph * 0.9) * 0.07; }   /* 慢慢繞圈游 */
+    /* v283：小魚群不再是一圈一圈往外擴的大圓圈 —— 改成水面這裡那裡冒出的小點點漣漪（小魚啄水面），位置每次都不一樣 */
+    C.ripple.forEach((r, j) => { r.visible = g.k === 'school'; if (!r.visible) return; const q = ph * 0.8 + j * 0.37, cyc = Math.floor(q), u = q - cyc, h = Math.sin((cyc + 1) * 12.9898 + j * 78.233 + g.i * 3.1) * 43758.5453, rx = (h - Math.floor(h)) - 0.5, h2 = Math.sin((cyc + 1) * 39.346 + j * 11.135 + g.i) * 24634.6345, rz = (h2 - Math.floor(h2)) - 0.5;
+      r.position.set(rx * 3.2, 0, rz * 3.2); r.scale.setScalar(0.25 + u * 1.1); r.material.opacity = 0.42 * (1 - u) * (1 - u); });
+    C.shadow.visible = g.k === 'shadow'; if (C.shadow.visible){ /* v283：魚影不再繞圓圈，改成慢慢晃來晃去、停一下再游 */ const w = ph * 0.22, px = Math.sin(w) * 1.1 + Math.sin(w * 2.3 + 1.3) * 0.45, pz = Math.sin(w * 1.37 + 0.6) * 0.8 + Math.sin(w * 3.1) * 0.25, vx = Math.cos(w) * 1.1 + Math.cos(w * 2.3 + 1.3) * 1.035, vz = Math.cos(w * 1.37 + 0.6) * 1.096 + Math.cos(w * 3.1) * 0.775; C.shadow.position.set(px, -0.02, pz); const want = Math.atan2(vz, vx); C.shadow.rotation.z = -want + Math.sin(ph * 4) * 0.08 * Math.min(1, Math.hypot(vx, vz)); C.shadow.material.opacity = 0.38 + Math.sin(ph * 0.9) * 0.07; }   /* 慢慢繞圈游 */
     { const near = Math.hypot(me.pos.x - g.x, me.pos.z - g.z) < 13; C.lab.visible = near; if (near && C.lab.userData.k !== g.k){ C.lab.userData.k = g.k; const K = SIGN_KIND[g.k], cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c2 = cv.getContext('2d'); c2.font = 'bold 30px sans-serif'; const tx = `${K.icon} ${K.what}`, w = c2.measureText(tx).width + 28; c2.fillStyle = 'rgba(8,26,44,.62)'; c2.beginPath(); if (c2.roundRect) c2.roundRect(128 - w / 2, 8, w, 48, 24); else c2.rect(128 - w / 2, 8, w, 48); c2.fill(); c2.fillStyle = '#ffffff'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(tx, 128, 33);
       if (C.lab.material.map) C.lab.material.map.dispose(); const T = new THREE.CanvasTexture(cv); T.colorSpace = THREE.SRGBColorSpace; C.lab.material.map = T; C.lab.material.needsUpdate = true; } }   /* 靠近時標出是什麼徵兆 */
     C.birds.visible = g.k === 'pred'; if (C.birds.visible) C.birds.children.forEach(b => { const a = b.userData.a + ph * 0.9; b.position.set(Math.cos(a) * 1.3, 3.0 + Math.sin(ph * 1.3 + a) * 0.25, Math.sin(a) * 1.3); b.rotation.y = -a; const fl = Math.sin(ph * 9 + a * 3) * 0.5; b.children[0].rotation.z = -0.35 - fl; b.children[1].rotation.z = 0.35 + fl; });
@@ -3413,7 +3415,11 @@ canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(
   zone.addEventListener('pointermove', e => { if (e.pointerId === id) move(e); });
   const end = e => { if (e.pointerId !== id) return; id = null; joy.x = joy.z = 0; knob.style.transform = ''; el.style.left = el.style.top = el.style.bottom = ''; el.classList.remove('active'); };
   zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
-  function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy); if (L > M){ dx *= M/L; dy *= M/L; } knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / M; joy.z = dy / M; }
+  /* v283 比較順手：手指拉超過圈圈時，圈圈跟著手指走（要轉彎不用把手指拉回來）；中間一小圈不算（手指抖一下不會亂走） */
+  function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy), R = el.offsetWidth / 2;
+    if (L > M * 1.15){ const k = (L - M * 1.15) / L; cx = clamp(cx + dx * k, R + 4, innerWidth - R - 4); cy = clamp(cy + dy * k, R + 4, innerHeight - R - 4); el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; dx = e.clientX - cx; dy = e.clientY - cy; }
+    const L2 = Math.hypot(dx, dy); if (L2 > M){ dx *= M / L2; dy *= M / L2; } knob.style.transform = `translate(${dx}px,${dy}px)`;
+    const m = Math.min(1, L2 / M), dz = 0.1, g = m < dz ? 0 : (m - dz) / (1 - dz); joy.x = L2 > 0 ? dx / L2 * g : 0; joy.z = L2 > 0 ? dy / L2 * g : 0; }
 })();
 /* v266 一手按著搖桿、另一手點按鈕：手機瀏覽器在有別的手指按著時常常不會送出「點一下」，所以按鈕按了沒反應（開潛水艇按快速聊天、走路時按表情）。
    這裡自己補：別的手指還按著的時候，手指在同一顆按鈕上按下又放開，就幫它點一下；如果瀏覽器自己也送了，就擋掉重複的那次。 */
@@ -6340,6 +6346,11 @@ function renderAch(body){
   const xp = calcXP(), L = lvOf(xp), nx = lvNeed(L + 1), k = L >= 99 ? 1 : (xp - lvNeed(L)) / (nx - lvNeed(L));
   const hd = el('div', 'lvhead'); hd.innerHTML = `<b>⭐ Lv.${L}</b><div class="lvbar"><i style="width:${(k * 100).toFixed(1)}%"></i></div><span>${L >= 99 ? '已經滿級了！' : `經驗 ${xp.toLocaleString()} / ${nx.toLocaleString()}`}</span>`; body.appendChild(hd);
   body.appendChild(el('p', 'sub', '經驗值：釣到常見魚 +10、稀有魚 +40、傳說魚 +250，放流 +5，水下照片每種 +30。每升一級都有金幣獎勵（Lv × 50），連上雲端時自動發。'));
+  /* v283 改名字放在這裡（跟稱號在一起，點左上角等級就找得到） */
+  body.appendChild(el('div', 'dexhead', '✏️ 名字（顯示在頭上，大家都看得到）'));
+  { const row = el('div', 'titles'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳'; inp.style.cssText = 'flex:1 1 12em;min-width:0';
+    const ok = el('button', 'tbtn', '改名'); const save = () => { const v = clean(inp.value.trim().slice(0, 16)); if (!v){ toast('名字不能是空的'); inp.value = nickname; return; } if (v === nickname){ toast('名字沒有改'); return; } nickname = v; inp.value = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); };
+    ok.addEventListener('click', save); inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); }); row.appendChild(inp); row.appendChild(ok); body.appendChild(row); }
   body.appendChild(el('div', 'dexhead', '🏷️ 稱號（顯示在名字上面，大家都看得到）'));
   const tl = el('div', 'titles'), cur = curTitle();
   const none = el('button', 'tbtn' + (cur ? ' ghost' : ''), '不顯示'); none.addEventListener('click', () => { Lv.title = ''; Lv.cur = ''; LS.set('tide.title', ''); refreshMyName(); renderLvChip(); pushPresence(true); renderTab(); }); tl.appendChild(none);
@@ -11381,6 +11392,7 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
+      '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
       '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 5 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
