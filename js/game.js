@@ -3384,7 +3384,14 @@ const look = LS.get('tide.look', { shirt: SHIRTS[Math.floor(Math.random()*SHIRTS
 let nickname = LS.get('tide.nick', '');
 const me = new Fisher({ shirt: look.shirt, hat: look.hat, name: '你', kind: 'me' });
 me.pos.set(4, 0, 9.6); me.rot = Math.PI;
-const cam = { yaw: 0, pitch: 0.42, dist: 9 };
+/* v291 視角：俯瞰（預設，從斜上方往下看）／貼近（舊的）。存在本機 */
+const CAMV = { P: { top: { pitch: 0.9, dist: 13, fov: 45 }, near: { pitch: 0.42, dist: 9, fov: 55 } }, mode: 'top', fk: 0 };
+try { const v = localStorage.getItem('tide.camView'); if (v === 'near' || v === 'top') CAMV.mode = v; } catch(e){}
+{ const m = /camv=([\d.]+),([\d.]+),([\d.]+)/.exec(location.hash); if (m){ CAMV.P.top = { pitch: +m[1], dist: +m[2], fov: +m[3] }; CAMV.mode = 'top'; } }   /* 測試用：#camv=俯角,距離,視野 */
+const camBaseFov = () => CAMV.P[CAMV.mode].fov;
+const cam = { yaw: 0, pitch: CAMV.P[CAMV.mode].pitch, dist: CAMV.P[CAMV.mode].dist };
+camera.fov = camBaseFov(); camera.updateProjectionMatrix();
+function setCamView(m){ if (m !== 'top' && m !== 'near') return; CAMV.mode = m; try { localStorage.setItem('tide.camView', m); } catch(e){} const P = CAMV.P[m]; cam.pitch = P.pitch; cam.dist = P.dist; }
 
 const keys = {};
 const joy = { x: 0, z: 0 };
@@ -3802,8 +3809,13 @@ function updateCamera2(dt){
     return;
   }
   const target = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);   // 用地面高度，不跟著走路的上下晃動（不然鏡頭會一直震）
+  const own = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on);   /* 有自己鏡頭的地方不改 */
+  { const bf = own ? 55 : camBaseFov(); if (!Photo.on && Math.abs(camera.fov - bf) > 0.05){ camera.fov += (bf - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); } }
+  /* v291 俯瞰視角釣魚時：鏡頭對準角色和浮標中間，拋得遠就稍微拉遠，浮標不會跑出畫面 */
+  const fishOn = !own && CAMV.mode === 'top' && (F.phase === 'waiting' || F.phase === 'bite') && me.bobPos; CAMV.fk += ((fishOn ? 1 : 0) - CAMV.fk) * Math.min(1, dt * 2.5);
+  let dist = cam.dist; if (CAMV.fk > 0.001 && me.bobPos){ const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, bl = Math.min(30, Math.hypot(bx, bz)); target.x += bx * 0.42 * CAMV.fk; target.z += bz * 0.42 * CAMV.fk; target.y -= 0.5 * CAMV.fk; dist += Math.max(0, bl * 0.3 - 1) * CAMV.fk; }
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
-  const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*cam.dist, target.y + sp*cam.dist, target.z + Math.cos(cam.yaw)*cp*cam.dist);
+  const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*dist, target.y + sp*dist, target.z + Math.cos(cam.yaw)*cp*dist);
   want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
   if (!Dive.on && !House.on && !inIndoor()) camClear(target, want, dt); else CamK.k = 1;
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
@@ -3967,7 +3979,7 @@ function startReel(){
   $('#fishMark').className = 'r-' + F.fish.rarity; { const ic = $('#fmIco'); ic.textContent = ''; const cv = fishCanvas(F.fish, !!rec.count[F.fish.id], 40, 26); cv.className = 'fmpic'; ic.appendChild(cv); }   /* 拉魚時顯示這條魚的樣子（沒釣過的只有黑影） */ F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
   pushPresence(true);
 }
-function reelCleanup(){ fightCue(''); F.act = null; document.body.classList.remove('fdive'); if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = 55; camera.updateProjectionMatrix(); }
+function reelCleanup(){ fightCue(''); F.act = null; document.body.classList.remove('fdive'); if (F.leap){ scene.remove(F.leap); F.leap = null; } const d = $('#fhDir'); if (d) d.hidden = true; $('#bossBar').hidden = true; $('#mashFx').hidden = true; F.mash = false; F.boss = false; camera.fov = camBaseFov(); camera.updateProjectionMatrix(); }
 /* ---- 來吃餌的魚：等魚的時候看得到牠從旁邊游過來、試探、咬下去（大魚不顯示）。沒釣過的魚只看得到黑影 ---- */
 const BiteFish = { m:null, id:null, ang:0, k:0, shadowM:null };
 // 咬餌前大約 2 秒（伺服器規定拋竿 2 秒後才能問）：問伺服器這一竿是什麼魚，魚才游上來現身
@@ -4170,7 +4182,7 @@ function updateFishing(dt, t){
       mk.style.transform = `translate(${sxC.toFixed(0)}px, ${syC.toFixed(0)}px)`;
       $('#fmHp').style.width = (F.S * 100).toFixed(1) + '%';
       if (F.boss){ $('#bbHp').style.width = (F.S * 100).toFixed(1) + '%'; $('#bbPct').textContent = Math.ceil(F.S * 100) + '%'; mk.classList.add('boss'); } else mk.classList.remove('boss');
-      { const want = F.boss && F.jump > 0 ? 44 : F.mash ? 50 : 55; if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
+      { const bf = camBaseFov(), want = F.boss && F.jump > 0 ? bf - 11 : F.mash ? bf - 5 : bf; if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
       $('#fmDist').textContent = realD.toFixed(1) + 'm';
       let warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.8 ? '線太鬆！快收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
       if (F.act && F.acts) warn = '';   /* v254 有動作提示的時候不要再疊一行 */
@@ -12237,6 +12249,7 @@ function subEnter(r){   /* 過場播完才真的切到深海 */
   Sub.restore = scene.children.filter(o => o !== Sub.group && o.visible); for (const o of Sub.restore) o.visible = false;
   Sub.fogWas = scene.fog; Sub.bgWas = scene.background; const range = [25, 40, 60][(Sub.st.light_lv || 1) - 1]; Sub.range = range;
   scene.fog = new THREE.Fog('#020a14', 2, range); scene.background = new THREE.Color('#020a14'); Sub.light.distance = range * 1.5;
+  Sub.camWas = cam.pitch; cam.pitch = 0.42; camera.fov = 55; camera.updateProjectionMatrix();   /* v291 潛水艇用自己的鏡頭（跟舊視角一樣） */
   Sub.pos.set(0, 9.2, -58); subLightInit(); Sub.zone = ''; Sub.wentDark = false; subEvReset(); Sub.yaw = 0; Sub.v = 0; { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; } Sub.on = true; document.body.classList.add('subbing'); subHud(); Sub.camWas = { ...cam }; cam.yaw = Sub.yaw + Math.PI; cam.pitch = 0.42;
   ensureAudio(); flash('🚢 潛水艇出發！往前開，看看大陸棚的盡頭有什麼', 2.4); SFX.plop(); subRender();
   { const down = [...peers.values()].filter(p => p.sub).map(p => peerName(p)); Sub.peerT0 = now(); if (down.length) setTimeout(() => { if (Sub.on) subMsg(`🚢 ${down.slice(0, 3).join('、')}${down.length > 3 ? ' 等人' : ''} 也在下面`, 2); }, 3000); } }
@@ -12245,6 +12258,7 @@ async function subEnd(why){
   if (!Sub.on || Sub.ending) return; Sub.ending = true; const fx = $('#fadeFx'); if (fx) fx.classList.add('on');
   const r = await subRpc('sub_dive_end', { p_max_depth: Math.round(Sub.maxD), p_reason: why });
   setTimeout(() => { if (fx) fx.classList.remove('on'); }, 500);
+  if (Sub.camWas != null){ cam.pitch = Sub.camWas; Sub.camWas = null; }
   Sub.on = false; Sub.group.visible = false; for (const o of Sub.restore || []) o.visible = true; Sub.restore = null; scene.fog = Sub.fogWas; scene.background = Sub.bgWas;
   if (Sub.whale){ Sub.group.remove(Sub.whale.m); Sub.whale = null; } try { subEvStop(true); } catch(e){} subDrone(false); if (musicOn && Sub.musicOff){ try { MUSIC.start(); } catch(e){} } Sub.musicOff = false;
   document.body.classList.remove('subbing'); Object.assign(cam, Sub.camWas || {}); if (Sub.dockM) subCineStart('back', () => {});   /* 回港：潛水艇從水裡浮上來、人從艙門走出來 */ camera.position.set(me.pos.x - Math.sin(cam.yaw || 0) * -6, me.baseY + 4, me.pos.z - Math.cos(cam.yaw || 0) * -6); camera.lookAt(me.pos.x, me.baseY + 1, me.pos.z);   /* 鏡頭直接回到人旁邊 */ Sub.fish = null; const h = $('#subHud'); if (h) h.querySelector('.sh-fish').hidden = true;
