@@ -1039,7 +1039,7 @@ body.subbing #top #brand.panel:not(.open) h1, body.subbing #top #brand.panel:not
 #invCard .ic-a{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 @keyframes invPop{from{transform:translate(-50%,-12px) scale(.92);opacity:0}to{transform:translate(-50%,0) scale(1);opacity:1}}
 /* v254 搏鬥：魚的動作提示 */
-#fhCue{position:fixed;left:50%;top:auto;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;padding:8px 18px;border-radius:999px;font-size:22px;font-weight:900;color:#fff;background:rgba(14,40,64,.72);pointer-events:none;white-space:nowrap;text-shadow:0 2px 4px rgba(0,0,0,.4)}
+#fhCue{position:fixed;left:50%;top:calc(var(--gt) + 170px);bottom:auto;transform:translateX(-50%);z-index:30;padding:8px 18px;border-radius:999px;font-size:22px;font-weight:900;color:#fff;background:rgba(14,40,64,.72);pointer-events:none;white-space:nowrap;text-shadow:0 2px 4px rgba(0,0,0,.4)}
 #fhCue[hidden]{display:none}
 #fhCue.tele{background:rgba(200,120,20,.85);animation:cuePulse .25s ease-in-out infinite alternate}
 #fhCue.go{background:rgba(214,48,60,.88);font-size:26px}
@@ -1047,7 +1047,7 @@ body.subbing #top #brand.panel:not(.open) h1, body.subbing #top #brand.panel:not
 #fhCue.bad{background:rgba(90,90,100,.8)}
 @keyframes cuePulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.08)}}
 body.fdive::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse at center,transparent 35%,rgba(4,16,30,.55) 100%)}
-@media (orientation:landscape) and (max-height:540px){ #fhCue{bottom:78px;font-size:18px} #fhCue.go{font-size:21px} }
+@media (orientation:landscape) and (max-height:540px){ #fhCue{top:calc(var(--gt) + 62px);bottom:auto;font-size:18px} #fhCue.go{font-size:21px} }   /* v281 拉魚提示移到畫面上方，不擋住下面的拉力條和收線鈕 */
 .rodsw.bait-live{background:linear-gradient(#bfe0f0,#6a8aa8)}.rodsw.bait-worm{background:linear-gradient(#e0a080,#b06048)}
 /* v256 面板只顯示標題，不顯示分頁列 */
 #sheet #tabs{display:none!important}
