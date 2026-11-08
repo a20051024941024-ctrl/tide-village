@@ -47,8 +47,14 @@ keys = sorted([k for k in D if len(k) >= 2 and k not in ('分鐘','小時','開�
 tail = open(os.path.join(ROOT,'tools/gen_en.py')).read().split('const RE = ', 1)[1].split('"""', 1)[0]
 tail = tail.replace('toEN0', 'toID0').replace('toEN', 'toID')
 # v293：一句話裡好幾段分別翻譯時，中間補空白（不然印尼文的字會黏在一起）
-tail = tail.split('function toID0', 1)[0] + r"""function toID0(s){ if (!s || !/[㐀-鿿]/.test(s)) return s; const t = s.trim(); if (D[t]) return s.replace(t, D[t]);
-  let r = s.replace(RE, m => '\u0001' + D[m] + '\u0001').replace(/\u0001+/g, '\u0001');
+# v296：不用一個超大的正規表示式（四千多個詞，有些瀏覽器會很慢、甚至卡住），改成照第一個字分組、一個一個比對
+tail = r"""null;
+const IDX = new Map(); for (const k of K){ const c = k[0]; let L = IDX.get(c); if (!L) IDX.set(c, L = []); L.push(k); }
+function rep(s){ let out = '', i = 0; const n = s.length; while (i < n){ const L = IDX.get(s[i]); let hit = null; if (L) for (const k of L){ if (s.startsWith(k, i)){ hit = k; break; } } if (hit){ out += '\u0001' + D[hit] + '\u0001'; i += hit.length; } else { out += s[i]; i++; } } return out; }
+const MEMO = new Map();
+export function toID(s){ if (!s) return s; const hit = MEMO.get(s); if (hit !== undefined) return hit; const r = toID0(s); if (MEMO.size > 4000) MEMO.clear(); MEMO.set(s, r); return r; }
+function toID0(s){ if (!s || !/[㐀-鿿]/.test(s)) return s; const t = s.trim(); if (D[t]) return s.replace(t, D[t]);
+  let r = rep(s).replace(/\u0001+/g, '\u0001');
   r = r.replace(/\u0001(?=[\s,.!?:;)\]」』、，。！？：；）・·~～…]|$)/g, '').replace(/(^|[\s(\[「『（・·])\u0001/g, '$1').replace(/\u0001/g, ' ');
   return r.replace(/・/g, ' · ').replace(/，/g, ', ').replace(/。/g, '. ').replace(/！/g, '! ').replace(/？/g, '? ').replace(/：/g, ': ').replace(/（/g, ' (').replace(/）/g, ') ').replace(/(\S)  +/g, '$1 ').replace(/(^|[^㐀-鿿])([種個條隻次件顆低中高你再天秒])(?![㐀-鿿])/g, (a, p, c) => p + (p && !/\s$/.test(p) && !/[(「]/.test(p) ? ' ' : '') + ONE[c]); }
 const ONE = {'種':'jenis','個':'buah','條':'ekor','隻':'ekor','次':'kali','件':'buah','顆':'butir','低':'Rendah','中':'Sedang','高':'Tinggi','你':'Kamu','再':'Lagi','天':'hari','秒':'dtk'};
