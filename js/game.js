@@ -6283,7 +6283,7 @@ const ACH = [
   { id:'p25',   icon:'🎞️', name:'海洋攝影師',   desc:'水下圖鑑拍到 25 種魚',      cur:() => (rec.photos || []).length, goal:25, title:'海洋攝影師' },
   { id:'is10',  icon:'🏝️', name:'小島主人',     desc:'小島上放 10 件東西',        cur:() => (rec.island && rec.island.items || []).length, goal:10 },
   { id:'is40',  icon:'🏡', name:'夢想小島',     desc:'小島上放 40 件東西',        cur:() => (rec.island && rec.island.items || []).length, goal:40, title:'島主' },
-  { id:'g15',   icon:'👗', name:'愛打扮',       desc:'擁有 15 件服飾',            cur:() => (rec.owned || []).filter(x => !x.startsWith('tool_')).length, goal:15, title:'時尚釣客' },
+  { id:'g15',   icon:'👗', name:'愛打扮',       desc:'擁有 15 件服飾',            cur:() => (rec.owned || []).filter(x => !/^(tool_|rs_|lc_|hk_|em_|h[sc]\d)/.test(x)).length, goal:15, title:'時尚釣客' },
   { id:'f1',    icon:'🤝', name:'交到朋友',     desc:'互相加 1 位好友',           cur:() => Fr.list.filter(f => f.mutual).length, goal:1 },
   { id:'f10',   icon:'🎉', name:'朋友很多',     desc:'互相加 10 位好友',          cur:() => Fr.list.filter(f => f.mutual).length, goal:10, title:'社交達人' },
 ].concat(SPOTS.filter(sp => FISH.some(f => f.spot === sp.id)).map(sp => ({ id:'sp_' + sp.id, icon:'📍', name:`${sp.short}全收集`, desc:`${sp.label}的魚全部釣過`, cur:() => FISH.filter(f => f.spot === sp.id && rec.count[f.id]).length, goal:() => FISH.filter(f => f.spot === sp.id).length, title: sp.id === 'harbor' ? '外海霸主' : null })));
@@ -9172,7 +9172,7 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
-  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gyb?_[a-z]+$/.test(id) || /^bt_[a-z0-9]+$/.test(id) || /^fe_[a-z]+$/.test(id)))];   /* gyb_：大魚的魚拓、bt_：大魚稱號 */   /* gy_：博物館魚拓 */
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gyb?_[a-z]+$/.test(id) || /^bt_[a-z0-9]+$/.test(id) || /^fe_[a-z]+$/.test(id) || /^(rs|lc|hk|em)_[a-z0-9_]+$/.test(id) || /^h[sc]\d{1,3}$/.test(id)))];   /* v280 修正：阿鐵做的竿子／釣線／鉤子（rs_ lc_ hk_）、買的動作（em_）、阿萍的髮型髮色（hs hc）以前在這裡被濾掉，做好了卻顯示沒有 */   /* gyb_：大魚的魚拓、bt_：大魚稱號 */   /* gy_：博物館魚拓 */
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
