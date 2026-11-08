@@ -891,7 +891,8 @@ var SEASON_FISH = new Set(SEASONS[SEASON].fish);
 function buildTrees(trees, PX, PZ){
   const hash = (k, n) => { const v = Math.sin(k * 9301.7 + n * 49.3) * 43758.5453; return v - Math.floor(v); };
   const hiDet = Quality.tier === 'high' ? 2 : 1;
-  const blob = (r, x, y, z, sy, det) => { const g = new THREE.IcosahedronGeometry(r, det == null ? 1 : det); g.scale(1, sy || 0.88, 1); g.translate(x, y, z); return g; };
+  const loDet = Quality.tier === 'low' ? 0 : 1;   /* v289 低畫質樹冠用比較少的面 */
+  const blob = (r, x, y, z, sy, det) => { const g = new THREE.IcosahedronGeometry(r, det == null ? loDet : Math.min(det, loDet + 1)); g.scale(1, sy || 0.88, 1); g.translate(x, y, z); return g; };
   const trunkGeo = (r0, r1, h, flare, seg) => { const g = new THREE.CylinderGeometry(r0, r1, h, 9, seg || 4); g.translate(0, h / 2, 0); const p = g.attributes.position; for (let i = 0; i < p.count; i++){ const y = p.getY(i); if (y < 0.3){ const k = 1 + (0.3 - y) / 0.3 * flare; p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } } g.computeVertexNormals(); return g; };
   // 幾何
   const G = {
@@ -6897,8 +6898,27 @@ function petModel(kind, acc, v){
   if (acc >= 1 && ['crab', 'turtle', 'octopus', 'puffer'].includes(kind)){ const bw = new THREE.Group(); bw.position.set(0.06, hatY - 0.06, hatZ); body.add(bw); for (const sx of [-1, 1]) S(0.025, M('#ff7aa8', 0.5), sx * 0.025, 0, 0, 1, 0.7, 0.5, bw, 8); S(0.012, M('#ff7aa8', 0.5), 0, 0, 0, 1, 1, 1, bw, 6); }   /* 不會戴項圈的就戴蝴蝶結 */
   if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, hatY, hatZ); body.add(hat); C(0.07, 0.07, 0.012, '#f2d48a', 0, 0, 0, hat, 16); C(0.04, 0.045, 0.05, '#f2d48a', 0, 0.03, 0, hat, 14); C(0.046, 0.046, 0.012, '#e8473a', 0, 0.012, 0, hat, 14); }
   g.userData = { body, head, tail, wings, legs, arms, kind };
+  rigidMerge(g);   /* v290 同一塊會一起動的小零件合成一個，寵物從 30 幾個 draw call 變十個左右 */
   return g;
 }
+/* v290 把一個模型裡「跟著同一個父節點一起動」的小零件合併（不同顏色用頂點顏色），動畫用的節點（userData 裡記著的）不動 */
+function rigidMerge(root){ const keep = new Set(); const mark = v => { if (!v) return; if (Array.isArray(v)) v.forEach(mark); else if (v.isObject3D) keep.add(v); }; for (const v of Object.values(root.userData || {})) mark(v);
+  const nodes = []; root.traverse(o => { if (!o.isMesh) nodes.push(o); });
+  for (const n of nodes){ const G = new Map();
+    for (const o of n.children){ if (!o.isMesh || keep.has(o) || o.children.length || o.isSkinnedMesh || o.isInstancedMesh) continue; const m = o.material, g = o.geometry;
+      if (!m || Array.isArray(m) || !(m.isMeshStandardMaterial || (m.isMeshBasicMaterial && !m.transparent)) || m.map || m.transparent || m.vertexColors || !g || !g.attributes.position || g.morphAttributes.position) continue;
+      const k = m.customProgramCacheKey && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? String(m.customProgramCacheKey()) : '';
+      const sig = [m.type, Math.round((m.roughness || 0) * 20), Math.round((m.metalness || 0) * 20), m.side, m.emissive ? m.emissive.getHexString() + (m.emissiveIntensity || 0).toFixed(2) : '', k, o.castShadow ? 1 : 0, o.visible ? 1 : 0].join('|');
+      let L = G.get(sig); if (!L){ L = []; G.set(sig, L); } L.push(o); }
+    for (const L of G.values()){ if (L.length < 2) continue; const geos = [];
+      for (const o of L){ o.updateMatrix(); let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const a of Object.keys(g.attributes)) if (a !== 'position' && a !== 'normal') g.deleteAttribute(a); if (!g.attributes.normal) g.computeVertexNormals(); g.clearGroups(); g.applyMatrix4(o.matrix);
+        const c = o.material.color, cnt = g.attributes.position.count, col = new Float32Array(cnt * 3); for (let i = 0; i < cnt; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); geos.push(g); }
+      let mg = null; try { mg = mergeGeometries(geos, false); } catch(e){} geos.forEach(g => g.dispose()); if (!mg) continue; mg.computeBoundingSphere();
+      const T = L[0].material, M = T.isMeshBasicMaterial ? new THREE.MeshBasicMaterial({ vertexColors: true, color: '#ffffff', side: T.side }) : new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness, metalness: T.metalness, side: T.side, emissive: T.emissive, emissiveIntensity: T.emissiveIntensity });
+      if (T.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile && T.customProgramCacheKey){ M.onBeforeCompile = T.onBeforeCompile; M.customProgramCacheKey = () => T.customProgramCacheKey() + '-vc'; }
+      const mesh = new THREE.Mesh(mg, M); mesh.castShadow = L[0].castShadow; mesh.receiveShadow = L[0].receiveShadow; n.add(mesh);
+      for (const o of L){ n.remove(o); o.geometry.dispose(); } } }
+  return root; }
 function petLabel(name){ const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = 'rgba(255,255,255,0.88)'; const w = Math.min(244, 30 + c.measureText ? 40 + name.length * 30 : 200); c.beginPath(); c.roundRect ? c.roundRect((256 - w) / 2, 8, w, 46, 22) : c.rect((256 - w) / 2, 8, w, 46); c.fill(); c.fillStyle = '#18334a'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 128, 32);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest:false, transparent:true })); sp.scale.set(1.1, 0.28, 1); sp.renderOrder = 5; return sp; }
 function petMake(w){ const m = petModel(w.kind, w.acc || 0, w.var), lb = petLabel(w.name || PET_KINDS[w.kind].name); lb.position.y = w.kind === 'gull' ? 0.6 : 0.62; m.add(lb); scene.add(m); return { kind: w.kind, name: w.name, acc: w.acc || 0, m, pos: new THREE.Vector3(), vel: 0, rot: 0, ph: Math.random() * 6, fly: 0, key: w.kind + '|' + (w.var || '') + '|' + w.name + '|' + (w.acc || 0), wander: null }; }
@@ -6926,7 +6946,7 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
 function updatePetFor(f, want, dt, t){
   if (!want){ if (f.pet){ petFree(f.pet); f.pet = null; } return; }
   const k = want.kind + '|' + (want.var || '') + '|' + want.name + '|' + (want.acc || 0); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
-  const pt = f.pet, vis = f.av.g.visible && !f.swim && !(f === me && Dive.on); pt.m.visible = vis; if (!vis) return;
+  const pt = f.pet, vis = f.av.g.visible && !f.swim && !(f === me && Dive.on) && !(f !== me && f._lod >= 2);   /* v290 30 公尺外的寵物先不畫 */ pt.m.visible = vis; if (!vis) return;
   if (pt.hug){ return; }
   const c = Math.cos(f.rot), s = Math.sin(f.rot), ox = 0.75, oz = -0.85, tx = f.pos.x + c * ox + s * oz, tz = f.pos.z - s * ox + c * oz;
   petStep(pt, dt, t, tx, tz, f.baseY + (f.sitting ? 0 : 0), (f.speed || 0) > 0.3, Math.atan2(f.pos.x - pt.pos.x, f.pos.z - pt.pos.z));
@@ -7512,6 +7532,7 @@ function updateFerry(dt, t){
   if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){}
   if (frameNo % 30 === 0) try { sbTick(); } catch(e){ console.warn('sb', e); SB.state = 'off'; }
   if (frameNo % 15 === 7) try { clodTick(); } catch(e){}
+  if (frameNo % 20 === 11) try { farcTick(); } catch(e){}
   try { meteorTick(dt, t); } catch(e){}
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
   if (Ferry.on && frameNo % 60 === 0){ const n = crewNear(); if (n !== Ferry.crewN){ Ferry.crewN = n; renderFerryBar(); } }
@@ -10606,12 +10627,35 @@ function renderSalon(body){
 /* ===== v289 效能：角色遠一點就不畫小東西 =====
    每個角色有 60 幾個小零件（眼睛、亮點、腮紅、眉毛、釣竿的環…），離鏡頭 18 公尺以外就不畫這些小零件，
    48 公尺以外整個人都不畫（霧也看不太到了）。用「圖層」做，不會跟遊戲本來的顯示／隱藏打架。 */
+/* v290 遠一點的角色：身體那幾塊（皮膚、衣服、褲子、鞋子…）合成一塊會動的模型，5 個 draw call 變 1 個；衣服顏色或換裝變了就重做 */
+function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinnedMesh && o !== f._px) P.push(o); }); if (!P.length) return null;
+  const vis = o => { for (let q = o; q && q !== a.g; q = q.parent) if (!q.visible) return false; return true; };
+  const use = P.filter(o => vis(o) && o.material && !Array.isArray(o.material) && !o.material.transparent && !o.material.map && o.skeleton && o.skeleton.bones.length === P[0].skeleton.bones.length && o.skeleton.bones.every((b, i) => b === P[0].skeleton.bones[i]) && o.bindMatrix.equals(P[0].bindMatrix) && o.parent === P[0].parent && !(o.geometry.morphAttributes && o.geometry.morphAttributes.position));
+  if (use.length < 2 || use.length !== P.filter(vis).length) return null;
+  const key = use.map(o => o.geometry.uuid + o.material.uuid + o.material.color.getHexString()).join('|');
+  if (f._px && f._pxKey === key) return f._px;
+  if (f._px){ if (f._px.parent) f._px.parent.remove(f._px); f._px.geometry.dispose(); f._px = null; }
+  const gs = []; for (const o of use){ const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k)) g.deleteAttribute(k); g.morphAttributes = {}; g.clearGroups(); if (!g.attributes.normal) g.computeVertexNormals();
+    const c = o.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); gs.push(g); }
+  let mg = null; try { mg = mergeGeometries(gs, false); } catch(e){} gs.forEach(g => g.dispose()); if (!mg) return null;
+  const T = use[0].material, px = new THREE.SkinnedMesh(mg, CLOD.mat || (CLOD.mat = new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness == null ? 0.8 : T.roughness, metalness: 0 })));
+  px.position.copy(use[0].position); px.quaternion.copy(use[0].quaternion); px.scale.copy(use[0].scale); px.bind(use[0].skeleton, use[0].bindMatrix); px.castShadow = use[0].castShadow; px.frustumCulled = use[0].frustumCulled; px.userData.keep = true;
+  use[0].parent.add(px); f._px = px; f._pxKey = key; return px; }
+/* v290 遠的小東西不畫：低畫質 48 公尺（半徑 1.5 以下）、中畫質 75 公尺（半徑 1 以下）外的小東西（花、小石頭、魚、浮標…）先不畫；高畫質不動 */
+const FARC = { list: [], at: -1e9, L: 7 };
+function farcTick(){ const lim = Quality.tier === 'low' ? 48 : Quality.tier === 'mid' ? 75 : 0, rMax = Quality.tier === 'low' ? 1.5 : 1;
+  if (!lim){ if (FARC.list.length){ for (const o of FARC.list) o.layers.set(0); FARC.list = []; } return; }
+  if (frameNo - FARC.at > 300){ FARC.at = frameNo; for (const o of FARC.list) o.layers.set(0); const skip = new Set(); for (const f of CLOD.all) if (f.av && f.av.g) skip.add(f.av.g); const L = [], v = FARC.v || (FARC.v = new THREE.Vector3());
+    const walk = o => { if (skip.has(o)) return; if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !o.userData.sb && !o.userData.keep && o.geometry){ const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const sc = o.getWorldScale(v); if (g.boundingSphere && g.boundingSphere.radius * Math.max(sc.x, sc.y, sc.z) < rMax) L.push(o); } for (const c of o.children) walk(c); };
+    for (const c of scene.children) walk(c); FARC.list = L; }
+  const cp = camera.position, l2 = lim * lim; for (const o of FARC.list){ const e = o.matrixWorld.elements, dx = e[12] - cp.x, dz = e[14] - cp.z; o.layers.set(dx * dx + dz * dz > l2 ? FARC.L : 0); } }
 function clodTick(){ const cp = camera.position;
   for (const f of CLOD.all){ const g = f.av && f.av.g; if (!g || !g.parent){ if (g && !g.parent && f !== me) CLOD.all.delete(f); continue; }
-    const d = Math.hypot(g.position.x - cp.x, g.position.z - cp.z), lvl = f === me ? 0 : d > 48 ? 2 : d > 16 ? 1 : 0;
+    const d = Math.hypot(g.position.x - cp.x, g.position.z - cp.z), lvl = f === me ? 0 : d > 48 ? 3 : d > 30 ? 2 : d > 16 ? 1 : 0;   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
     if (lvl === f._lod && frameNo - (f._lodAt || 0) < 120) continue; f._lod = lvl; f._lodAt = frameNo;
-    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; let small = false; if (lvl === 1 && !o.isSkinnedMesh){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < 0.09; }
-      if (lvl === 2 || small) o.layers.set(CLOD.L); else o.layers.set(0); }); } }
+    const px = lvl === 1 || lvl === 2 ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
+    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh){ o.layers.set(CLOD.L); return; } let small = false; if ((lvl === 1 || lvl === 2) && !o.isSkinnedMesh){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < (lvl === 2 ? 0.12 : 0.09); }
+      if (lvl === 3 || small) o.layers.set(CLOD.L); else o.layers.set(0); }); } }
 
 /* ===== v289 效能：主島不會動的東西合併成少數幾大塊（draw call 從上千降到一兩百） =====
    做法：開場 3 秒內位置、顏色、顯示都沒變過的普通方塊／圓柱（沒有貼圖、不透明、標準材質），照「材質樣子＋所在的 32 公尺格子」分組，
@@ -10627,25 +10671,26 @@ function sbOk(o, dyn){ if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || 
   if (o.userData.keep || o.userData.dyn || !o.visible) return false;
   for (let a = o.parent; a; a = a.parent){ if (a === scene) break; if (!a.visible || dyn.has(a) || a.userData.dyn || a.isSkinnedMesh || a.isBone) return false; }
   const e = o.matrixWorld.elements; if (Math.abs(e[12]) > 95 || Math.abs(e[14]) > 95) return false; return true; }
-function sbSig(o){ const m = o.material, k = m.customProgramCacheKey && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? String(m.customProgramCacheKey()) : '';
+const sbGlow = m => !!(m.emissive && m.emissive.getHex() !== 0);   /* v290 會發光的（窗戶、燈籠晚上會變亮）只跟用同一個材質的合併，而且繼續用原本的材質，晚上才會照樣亮 */
+function sbSig(o){ const m = o.material; if (sbGlow(m)) return 'glow|' + m.uuid + '|' + (o.castShadow ? 1 : 0) + (o.receiveShadow ? 1 : 0); const k = m.customProgramCacheKey && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? String(m.customProgramCacheKey()) : '';
   return [m.type, Math.round((m.roughness || 0) * 20), Math.round((m.metalness || 0) * 20), m.side, m.flatShading ? 1 : 0, m.emissive ? m.emissive.getHexString() + (m.emissiveIntensity || 0).toFixed(2) : '', k, o.castShadow ? 1 : 0, o.receiveShadow ? 1 : 0, m.depthWrite ? 1 : 0, m.fog ? 1 : 0].join('|'); }
-function sbTick(){ if (SB.state === 'off' || SB.state === 'done') return; if (frameNo < 60 || performance.now() - SB.boot < 6000 || Dive.on || (typeof Sub !== 'undefined' && Sub.on) || onIsle || House.on || inIndoor()) return;
-  if (SB.state === 'wait'){ const dyn = sbDynRoots(), L = []; scene.updateMatrixWorld(true); scene.traverse(o => { if (sbOk(o, dyn)) L.push({ o, m: o.matrixWorld.elements.slice(), c: o.material.color.getHex(), p: o.parent }); }); SB.cand = L; SB.t0 = performance.now(); SB.state = 'watch'; return; }
+function sbTick(){ if (SB.state === 'off') return; if (SB.state === 'done'){ if (performance.now() < (SB.next || 0)) return; SB.next = performance.now() + 20000; SB.state = 'wait'; SB.again = true; }   /* v290 之後走到才蓋出來的東西，每 20 秒再合併一次 */ if (frameNo < 60 || performance.now() - SB.boot < 6000 || Dive.on || (typeof Sub !== 'undefined' && Sub.on) || onIsle || House.on || inIndoor()) return;
+  if (SB.state === 'wait'){ const dyn = sbDynRoots(), L = []; scene.updateMatrixWorld(true); scene.traverse(o => { if (!o.userData.sb && sbOk(o, dyn)) L.push({ o, m: o.matrixWorld.elements.slice(), c: o.material.color.getHex(), p: o.parent }); }); if (SB.again && L.length < 12){ SB.state = 'done'; return; } SB.cand = L; SB.t0 = performance.now(); SB.state = 'watch'; return; }
   if (SB.state === 'watch'){ if (performance.now() - SB.t0 < 3000) return; sbBuild(); } }
 function sbBuild(){ const dyn = sbDynRoots(), groups = new Map(); scene.updateMatrixWorld(true); let nIn = 0;
   for (const c of SB.cand){ const o = c.o; if (!o.parent || o.parent !== c.p || !sbOk(o, dyn) || o.material.color.getHex() !== c.c) continue; const e = o.matrixWorld.elements; let same = true; for (let i = 0; i < 16; i++) if (Math.abs(e[i] - c.m[i]) > 1e-4){ same = false; break; } if (!same) continue;
     const root = sbRoot(o); if (!root || root === o) { if (!root) continue; }
     const cx = Math.floor(e[12] / 32), cz = Math.floor(e[14] / 32), key = sbSig(o) + '#' + cx + ',' + cz + '#' + (root === o ? 'scene' : root.uuid); let G = groups.get(key); if (!G){ G = { list: [], tmpl: o.material, shadow: o.castShadow, recv: o.receiveShadow, root: root === o ? null : root }; groups.set(key, G); } G.list.push(o); nIn++; }
-  SB.g = new THREE.Group(); SB.g.name = 'staticBatch'; let made = 0, removed = 0;
+  if (!SB.g){ SB.g = new THREE.Group(); SB.g.name = 'staticBatch'; } let made = 0, removed = 0;
   for (const G of groups.values()){ if (G.list.length < 2) continue; const geos = [], inv = G.root ? new THREE.Matrix4().copy(G.root.matrixWorld).invert() : null;
     for (const o of G.list){ let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); if (!g.attributes.normal) g.computeVertexNormals(); g.morphAttributes = {}; g.clearGroups();
-      g.applyMatrix4(o.matrixWorld); if (inv) g.applyMatrix4(inv); const n = g.attributes.position.count, col = new Float32Array(n * 3), cc = o.material.color; for (let i = 0; i < n; i++){ col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); geos.push(g); }
+      g.applyMatrix4(o.matrixWorld); if (inv) g.applyMatrix4(inv); if (sbGlow(G.tmpl)){ geos.push(g); continue; } const n = g.attributes.position.count, col = new Float32Array(n * 3), cc = o.material.color; for (let i = 0; i < n; i++){ col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); geos.push(g); }
     const mg = mergeGeometries(geos, false); for (const g of geos) g.dispose(); if (!mg) continue; mg.computeBoundingSphere(); mg.computeBoundingBox();
-    const T = G.tmpl, M = T.isMeshBasicMaterial ? new THREE.MeshBasicMaterial({ vertexColors: true, color: '#ffffff', side: T.side, fog: T.fog, depthWrite: T.depthWrite, toneMapped: T.toneMapped }) : new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness, metalness: T.metalness, side: T.side, flatShading: T.flatShading, emissive: T.emissive, emissiveIntensity: T.emissiveIntensity, fog: T.fog, depthWrite: T.depthWrite });
-    if (T.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile && T.customProgramCacheKey){ const k = String(T.customProgramCacheKey()); M.onBeforeCompile = T.onBeforeCompile; M.customProgramCacheKey = () => T.customProgramCacheKey() + '-vc'; }
+    const T = G.tmpl, M = sbGlow(T) ? T : T.isMeshBasicMaterial ? new THREE.MeshBasicMaterial({ vertexColors: true, color: '#ffffff', side: T.side, fog: T.fog, depthWrite: T.depthWrite, toneMapped: T.toneMapped }) : new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness, metalness: T.metalness, side: T.side, flatShading: T.flatShading, emissive: T.emissive, emissiveIntensity: T.emissiveIntensity, fog: T.fog, depthWrite: T.depthWrite });
+    if (M !== T && T.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile && T.customProgramCacheKey){ const k = String(T.customProgramCacheKey()); M.onBeforeCompile = T.onBeforeCompile; M.customProgramCacheKey = () => T.customProgramCacheKey() + '-vc'; }
     const mesh = new THREE.Mesh(mg, M); mesh.castShadow = G.shadow; mesh.receiveShadow = G.recv; mesh.matrixAutoUpdate = false; mesh.updateMatrix(); mesh.userData.sb = true; (G.root || SB.g).add(mesh); made++;
     for (const o of G.list){ o.parent.remove(o); removed++; } }
-  scene.add(SB.g); SB.state = 'done'; SB.stats = { cand: SB.cand.length, still: nIn, removed, made }; SB.cand = null; console.log('[staticBatch]', JSON.stringify(SB.stats)); }
+  if (!SB.g.parent) scene.add(SB.g); SB.state = 'done'; SB.next = performance.now() + 20000; const st = { cand: SB.cand.length, still: nIn, removed, made }; if (SB.stats){ SB.stats.removed += removed; SB.stats.made += made; SB.stats.passes = (SB.stats.passes || 1) + 1; } else SB.stats = st; SB.cand = null; console.log('[staticBatch]', JSON.stringify(SB.stats)); }
 
 /* ===== v276 釣魚活動（111）：時間表跟伺服器一樣（台灣時間），金幣都由伺服器給 =====
    🐟 魚群洄游：每 3 小時（0、3、6…點的 30 分開始，25 分鐘）某個釣點來一大群某種魚（×4）；洄游期間在那裡釣到 5 條送 200 金幣

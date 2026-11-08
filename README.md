@@ -163,6 +163,7 @@ supabase/114_mastery.sql ⭐ 魚種精通：fish_mastery（完美搏鬥紀錄）
 supabase/115_delete_account.sql 🗑️ 刪除我的帳號（delete_my_account，只能刪自己，不用 service_role）；被檢舉的聊天內容保存 30 天自動清除。
 supabase/116_kid_mode.sql 🧒 兒童安全模式：players.birth_year / kid、set_birth_year、my_age_mode；兒童不能留言（觸發器）、名字只能用「形容詞＋動物」、好友只能用好友代碼加。v288 另外新增 privacy.html、delete.html。
 v289：⚡ 效能第一步：主島不會動的東西開場後合併成少數大塊（低畫質廣場 draw calls 709→約 320）、角色 16 公尺外不畫小零件、48 公尺外整個不畫、影子範圍縮小、中低畫質影子兩張更新一次。網址加 #nobatch 可以關掉合併做比較。（沒有新的資料庫檔）
+v290：⚡ 效能第二步：寵物零件合併（約 30→12 個 draw call）、30 公尺外的角色身體合成一塊、遠的小東西（低畫質 48 公尺、中畫質 75 公尺外）先不畫、後來才蓋出來的東西每 20 秒再合併一次、會發光的窗戶和燈只跟同材質合併（晚上照樣亮）、低畫質樹冠面數減少。（沒有新的資料庫檔）
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
