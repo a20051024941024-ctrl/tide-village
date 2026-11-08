@@ -2165,7 +2165,8 @@ function makeAvatar(shirt, hat){
 // 價格要跟 supabase/008_wardrobe.sql 的 _item_price 一樣；價格 0 的是預設，大家都有
 /* ---- 外觀（2026-11-04）：髮型、髮色、膚色、眼睛顏色，全部免費，存在 gear.look，例如 'h3c2s1e0' ---- */
 const LOOK_HAIR = ['短髮', '齊瀏海', '刺刺頭', '鮑伯頭', '長髮', '馬尾', '雙馬尾', '丸子頭', '捲髮', '飛機頭',
-  /* v270 阿萍美髮沙龍設計的（109，要買）：從 4 款開始，每兩天多一款 */ '公主頭', '大波浪', '側馬尾', '高馬尾', '麻花辮', '雙辮子', '雙丸子', '公主切', '長直瀏海', '蓬蓬捲', '油頭', '中分'];
+  /* v270 阿萍美髮沙龍設計的（109，要買）：從 4 款開始，每兩天多一款 */ '公主頭', '大波浪', '側馬尾', '高馬尾', '麻花辮', '雙辮子', '雙丸子', '公主切', '長直瀏海', '蓬蓬捲', '油頭', '中分',
+  /* v279 阿萍又設計的（112）：照臉型挑的熱門髮型，一樣每兩天多一款 */ '八字瀏海', '法式瀏海', '鎖骨髮', '低馬尾', '空氣瀏海', '內扣髮', '蛋捲頭', '低丸子頭', '高顱頂半扎'];
 const LOOK_HC = ['#2a2422', '#5a3d2b', '#8a5a3a', '#d8a850', '#f0d890', '#c0482a', '#f2a0c0', '#4a7ad0', '#4aa070', '#8a6ad0', '#ecebe6',
   /* v270 阿萍每天發現的新髮色（109，要染）：從 3 色開始，每天多一色 */ '#f6a99a', '#b7a0e0', '#9fe0c8', '#a8d8f0', '#b8906a', '#c88a3a', '#e0a090', '#c8283c', '#f08060', '#7f98b8', '#8aa890', '#7a2236', '#a8aab0', '#f2e6c8', '#3a7a5a', '#1e2a5a', '#5a2a7a', '#f0e060', '#e0a848', '#4a2c1e', '#b0582a', '#f0b880', '#d8a8a8', '#78b8f0', '#7ab8a8', '#8aa848', '#a03a8a', '#f07838', '#ff5fa8', '#1a2850'];
 const LOOK_HC_NAME = ['蜜桃粉', '薰衣草紫', '薄荷綠', '冰川藍', '奶茶棕', '焦糖金', '玫瑰金', '櫻桃紅', '珊瑚橘', '霧霾藍', '灰綠', '酒紅', '銀灰', '白金', '海藻綠', '午夜藍', '葡萄紫', '檸檬黃', '蜂蜜色', '巧克力', '紅銅', '杏桃', '藕粉', '天空藍', '青瓷', '抹茶', '莓果紫', '落日橘', '霓虹粉', '星空藍'];
@@ -2178,7 +2179,7 @@ function hcName(i){ if (i < LOOK_FREE_C) return '髮色 ' + (i + 1); if (i < LOO
   const h = (i * 137.508) % 360, hsl = { l: 0.32 + hcHash(i, 2) * 0.4 }, nouns = [[15, '紅'], [40, '橘'], [55, '金'], [70, '檸檬黃'], [100, '青檸'], [150, '綠'], [175, '薄荷'], [195, '湖水藍'], [225, '藍'], [255, '靛'], [285, '紫'], [320, '梅'], [345, '粉'], [361, '紅']];
   const noun = (nouns.find(([m]) => h < m) || nouns[0])[1]; return HC_PLACE[Math.floor(hcHash(i, 3) * HC_PLACE.length)] + (hsl.l < 0.42 ? '深' : hsl.l > 0.62 ? '淺' : '') + noun; }
 function salonDays(){ return Math.max(0, Math.floor((bossNow() / 1000 + 8 * 3600) / 86400) - Math.floor(Date.UTC(2026, 10, 7) / 86400000)); }   /* 跟 109 的 _salon_days 一樣（台灣時間，從 2026-11-07 起算） */
-const SALON_HS_MAX = 21;   /* 阿萍最新的髮型編號（每週加新髮型時改這裡和 SQL 的 _salon_hs_max） */
+const SALON_HS_MAX = 30;   /* 阿萍最新的髮型編號（每週加新髮型時改這裡和 SQL 的 _salon_hs_max） */
 function salonOk(kind, n){ const d = salonDays(); return kind === 'hs' ? n >= 10 && n <= SALON_HS_MAX && n - 10 < 4 + Math.floor(d / 2) : n >= 11 && n <= 999 && n - 11 < 3 + d; }
 function lookOwnH(h){ return h < LOOK_FREE_H || (rec.owned || []).includes('hs' + h); }
 function lookOwnC(c){ return c < LOOK_FREE_C || (rec.owned || []).includes('hc' + c); }
@@ -2192,6 +2193,8 @@ function applyLook(av, gear, mk){
   av.skinM.color.set(LOOK_SKIN[L.s]); hm.color.set(hcCol(L.c)); if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
   const sph = (r, x, y, z, sx, sy, sz) => { const o = mk(new THREE.SphereGeometry(r, 14, 10), hm, x, y, z, HD); o.scale.set(sx || 1, sy || 1, sz || 1); return o; };
   const shell = (rt, rb, h, y, gap) => { const o = mk(new THREE.CylinderGeometry(rt, rb, h, 22, 1, true, gap, Math.PI * 2 - gap * 2), hm, 0, y, -0.01, HD); o.material = hm.clone(); o.material.side = THREE.DoubleSide; return o; };
+  const fr = (p0, pl, tl) => { const f = mk(new THREE.SphereGeometry(0.352, 8, 4, p0, pl, Math.PI * 0.28, tl), hm, 0, 0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; return f; };   /* 瀏海一片（p0 從哪個角度開始、pl 多寬、tl 多長；角度 0 是臉的正中間） */
+  const rim = (y, r, rr, front) => { for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; if (Math.sin(a) > front) continue; sph(rr, Math.cos(a) * r, y, Math.sin(a) * r - 0.01, 1, 0.8, 1); } };   /* 髮尾一圈（臉前面空著） */
   switch (L.h){
     case 1: { const f = mk(new THREE.SphereGeometry(0.352, 20, 6, -1.05, 2.1, Math.PI * 0.28, Math.PI * 0.145), hm, 0, 0.0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; break; }   /* 齊瀏海 */
     case 2: if (!hatOn) for (let i = 0; i < 7; i++){ const a = i / 7 * Math.PI * 2, c = mk(new THREE.ConeGeometry(0.075, 0.2, 6), hm, Math.cos(a) * 0.17, 0.3, Math.sin(a) * 0.17 - 0.03, HD); c.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); } if (!hatOn) mk(new THREE.ConeGeometry(0.08, 0.22, 6), hm, 0, 0.37, -0.02, HD); break;
@@ -2204,7 +2207,7 @@ function applyLook(av, gear, mk){
     case 9: if (!hatOn) sph(0.16, 0, 0.27, 0.12, 1.3, 0.75, 1.4); break;   /* 飛機頭 */
     /* v270 阿萍的新髮型（頭的中心在原點，半徑大約 0.35；+z 是臉、-z 是後腦勺） */
     case 10: shell(0.352, 0.34, 0.62, -0.2, 1.05); sph(0.1, 0, 0.17, -0.34); { const bw = mk(new THREE.TorusGeometry(0.05, 0.022, 6, 12), av.inkM, 0, 0.17, -0.44, HD); bw.scale.set(1.6, 1, 1); } break;   /* 公主頭：長髮、後面上半部綁一個小髻 */
-    case 11: shell(0.352, 0.36, 0.6, -0.2, 1.05); for (let i = 0; i < 9; i++){ const a = Math.PI * (0.62 + i / 8 * 0.76), r = 0.36; sph(0.1, Math.cos(a) * r * 1.05, -0.42 - (i % 2) * 0.07, Math.sin(a) * -r, 1, 1.25, 1); } break;   /* 大波浪：長捲髮，髮尾一顆一顆捲起來 */
+    case 11: shell(0.352, 0.36, 0.6, -0.2, 1.05); for (let i = 0; i < 9; i++){ const a = Math.PI * (-0.42 + i / 8 * 0.84), r = 0.36; sph(0.1, Math.sin(a) * r * 1.05, -0.42 - (i % 2) * 0.07, -Math.cos(a) * r, 1, 1.25, 1); }   /* v279 修正：髮尾的捲平均分在後面左右（以前全擠在一邊） */ break;   /* 大波浪：長捲髮，髮尾一顆一顆捲起來 */
     case 12: sph(0.07, 0.28, 0.1, -0.2); { const t = mk(new THREE.CapsuleGeometry(0.075, 0.34, 4, 10), hm, 0.36, -0.2, -0.06, HD); t.rotation.set(0.25, 0, 0.35); } break;   /* 側馬尾：綁在右邊、垂到肩膀前面 */
     case 13: if (!hatOn){ sph(0.08, 0, 0.3, -0.27); const t = mk(new THREE.CapsuleGeometry(0.08, 0.36, 4, 10), hm, 0, 0.08, -0.46, HD); t.rotation.x = -0.55; } else { const t = mk(new THREE.CapsuleGeometry(0.075, 0.3, 4, 10), hm, 0, -0.06, -0.42, HD); t.rotation.x = -0.35; } break;   /* 高馬尾：綁在頭頂後面、甩出去 */
     case 14: for (let i = 0; i < 7; i++) sph(0.085 - i * 0.006, 0, 0.0 - i * 0.12, -0.36 - Math.min(i, 2) * 0.03, 1.1, 0.9, 0.9); sph(0.04, 0, -0.84, -0.42); break;   /* 麻花辮：一條辮子垂在背後 */
@@ -2215,6 +2218,16 @@ function applyLook(av, gear, mk){
     case 19: for (let i = 0; i < 20; i++){ const a = i / 20 * Math.PI * 2, ring = i % 2; sph(0.11, Math.cos(a) * (0.3 - ring * 0.08), 0.12 + ring * 0.14, Math.sin(a) * (0.3 - ring * 0.08) - 0.03); } if (!hatOn) sph(0.14, 0, 0.36, -0.03); break;   /* 蓬蓬捲：一整頭蓬鬆的小捲 */
     case 20: sph(0.34, 0, 0.11, -0.06, 1.05, 0.78, 1.12); break;   /* 油頭：往後梳得服服貼貼 */
     case 21: if (!hatOn) for (const sx of [-1, 1]){ const o = sph(0.2, sx * 0.15, 0.24, 0.05, 1, 0.55, 1.25); o.rotation.z = sx * -0.35; } break;   /* 中分：從中間分開往兩邊 */
+    /* v279 */
+    case 22: shell(0.352, 0.34, 0.62, -0.2, 1.05); fr(-1.1, 0.95, Math.PI * 0.2); fr(0.15, 0.95, Math.PI * 0.2); break;   /* 八字瀏海＋長直髮：瀏海從中間分開、往兩邊斜下來 */
+    case 23: shell(0.352, 0.36, 0.6, -0.2, 1.05); for (let i = 0; i < 7; i++) fr(-0.95 + i * 0.28, 0.2, Math.PI * (0.13 + (i % 2) * 0.03)); for (let i = 0; i < 7; i++){ const a = Math.PI * (-0.4 + i / 6 * 0.8); sph(0.085, Math.sin(a) * 0.37, -0.42 - (i % 2) * 0.06, -Math.cos(a) * 0.36, 1, 1.2, 1); } break;   /* 法式瀏海＋慵懶捲：一絲一絲的空氣感瀏海、髮尾微捲 */
+    case 24: shell(0.352, 0.39, 0.44, -0.13, 1.0); rim(-0.34, 0.39, 0.05, 0.5); break;   /* 鎖骨髮：剛好到鎖骨、髮尾微微外翹 */
+    case 25: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, -0.12, -0.35, HD); bd.rotation.x = -0.2; sph(0.085, 0, -0.07, -0.32); const t = mk(new THREE.CapsuleGeometry(0.07, 0.3, 4, 10), hm, 0, -0.36, -0.38, HD); t.rotation.x = 0.12; break; }   /* 低馬尾：綁在後頸、乖乖垂下來 */
+    case 26: shell(0.352, 0.36, 0.5, -0.15, 1.05); for (let i = 0; i < 5; i++) fr(-0.82 + i * 0.36, 0.22, Math.PI * 0.15); break;   /* 空氣瀏海＋中長髮：稀稀疏疏的薄瀏海 */
+    case 27: shell(0.352, 0.36, 0.3, -0.06, 0.95); rim(-0.2, 0.33, 0.065, 0.55); break;   /* 內扣髮：短髮、髮尾往內捲成一圈 */
+    case 28: shell(0.352, 0.36, 0.48, -0.15, 1.05); for (let r = 0; r < 3; r++) for (let i = 0; i < 9; i++){ const a = Math.PI * (1.05 + i / 8 * 0.9) + r * 0.12; sph(0.075, Math.cos(a) * 0.37, -0.1 - r * 0.13, Math.sin(a) * 0.37 - 0.02, 1.3, 0.8, 1); } break;   /* 蛋捲頭：一層一層像蛋捲的小捲 */
+    case 29: { sph(0.125, 0, -0.1, -0.39); const bd = mk(new THREE.TorusGeometry(0.075, 0.02, 6, 14), av.inkM, 0, -0.1, -0.31, HD); bd.rotation.x = 0.1; break; }   /* 低丸子頭：盤在後頸（戴帽子也看得到） */
+    case 30: shell(0.352, 0.34, 0.62, -0.2, 1.05); if (!hatOn) sph(0.3, 0, 0.2, -0.1, 1.05, 0.7, 1.1); sph(0.075, 0, 0.12, -0.38); { const bw = mk(new THREE.TorusGeometry(0.045, 0.02, 6, 12), av.inkM, 0, 0.12, -0.45, HD); bw.scale.set(1.5, 1, 1); } break;   /* 高顱頂半扎：頭頂蓬起來、上半部綁在後面 */
   }
 }
 const GEAR_SLOTS = [['look','外觀'],['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
@@ -11326,6 +11339,7 @@ function renderTab(){
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
       '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 5 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
+      '💇 阿萍新設計的 9 款髮型（八字瀏海、法式瀏海、鎖骨髮、低馬尾、空氣瀏海、內扣髮、蛋捲頭、低丸子頭、高顱頂半扎）排在原本的後面，一樣每兩天上架一款。',
       '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
       '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨，沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。',
