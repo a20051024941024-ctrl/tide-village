@@ -3386,12 +3386,12 @@ const me = new Fisher({ shirt: look.shirt, hat: look.hat, name: '你', kind: 'me
 me.pos.set(4, 0, 9.6); me.rot = Math.PI;
 /* v291 視角：俯瞰（預設，從斜上方往下看）／貼近（舊的）。存在本機 */
 const CAMV = { P: { top: { pitch: 0.9, dist: 13, fov: 45 }, near: { pitch: 0.42, dist: 9, fov: 55 } }, mode: 'top', fk: 0 };
-try { const v = localStorage.getItem('tide.camView'); if (v === 'near' || v === 'top') CAMV.mode = v; } catch(e){}
+try { let v = localStorage.getItem('tide.camView'); try { v = JSON.parse(v); } catch(_){} if (v === 'near' || v === 'top') CAMV.mode = v; } catch(e){}
 { const m = /camv=([\d.]+),([\d.]+),([\d.]+)/.exec(location.hash); if (m){ CAMV.P.top = { pitch: +m[1], dist: +m[2], fov: +m[3] }; CAMV.mode = 'top'; } }   /* 測試用：#camv=俯角,距離,視野 */
 const camBaseFov = () => CAMV.P[CAMV.mode].fov;
 const cam = { yaw: 0, pitch: CAMV.P[CAMV.mode].pitch, dist: CAMV.P[CAMV.mode].dist };
 camera.fov = camBaseFov(); camera.updateProjectionMatrix();
-function setCamView(m){ if (m !== 'top' && m !== 'near') return; CAMV.mode = m; try { localStorage.setItem('tide.camView', m); } catch(e){} const P = CAMV.P[m]; cam.pitch = P.pitch; cam.dist = P.dist; }
+function setCamView(m){ if (m !== 'top' && m !== 'near') return; CAMV.mode = m; try { localStorage.setItem('tide.camView', JSON.stringify(m)); } catch(e){} const P = CAMV.P[m]; cam.pitch = P.pitch; cam.dist = P.dist; }
 
 const keys = {};
 const joy = { x: 0, z: 0 };
@@ -7060,6 +7060,8 @@ function renderSettings(body){
     sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
   vol('🔊 音效', soundOn, sfxVol, on => { soundOn = on; LS.set('tide.sound', on); if (on) ensureAudio(); renderSoundIcon(); }, v => { sfxVol = v; LS.set('tide.sfxVol', v); clearTimeout(renderSettings.t); renderSettings.t = setTimeout(() => SFX.coin(), 120); });
   vol('🎵 背景音樂', musicOn, musicVol, on => { musicOn = on; LS.set('tide.music', on); if (on){ ensureAudio(); MUSIC.start(); } else MUSIC.stop(); renderMusicIcon(); }, v => { musicVol = v; LS.set('tide.musicVol', v); MUSIC.vol(); });
+  { const f = field('🎥 視角'), seg = el('div', 'seg'); [['top', '俯瞰（預設）'], ['near', '貼近（舊的）']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(CAMV.mode === k)); b.addEventListener('click', () => { setCamView(k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '俯瞰：從斜上方往下看，看得比較遠、比較整齊。貼近：從角色背後看，比較有臨場感。兩種都可以用手指拖動、兩指縮放。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
@@ -11589,6 +11591,7 @@ function renderTab(){
       '⭐ 魚種精通：圖鑑每種魚有 3 顆星。★ 第一次釣到；★★ 釣到 10 條，或釣過重量前 20% 的大尺寸（之後牠咬餌時頭上會出現牠的名字）；★★★ 完美搏鬥一次（魚的每個動作都對上、線沒有快斷）＋釣過重量前 5% 的紀錄級（圖鑑金框，之後比較常釣到大尺寸的）。圖鑑最上面看總星數，50、150、300、450 顆有稱號，排行榜有「圖鑑星數」。',
       '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。',
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
+      '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
       '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 5 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
