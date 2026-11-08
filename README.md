@@ -160,6 +160,8 @@ v284：搖桿比較順手（拉超過圈圈時圈圈會跟著手指走、中間�
 v285：「誰來逛過」簡化成一個人一行（最近一次、逛了小島幾次／水族館幾次），先列 5 個，其他按「看全部」。（沒有新的資料庫檔）
 v286：🎄 聖誕節限定魚（戴聖誕帽）：聖誕小丑魚、聖誕隆頭魚（小島）、雪花鰻（珊瑚礁岸），各有金色傳說變種。fishcfg.json 重新匯出、020_fair_fishing.sql 重新產生。
 supabase/114_mastery.sql ⭐ 魚種精通：fish_mastery（完美搏鬥紀錄）、_star_of、fish_perfect、my_mastery、star_board、_mastery3（三顆星的魚大尺寸機率小幅提高，roll_fish 接上，020 重新產生）。
+supabase/115_delete_account.sql 🗑️ 刪除我的帳號（delete_my_account，只能刪自己，不用 service_role）；被檢舉的聊天內容保存 30 天自動清除。
+supabase/116_kid_mode.sql 🧒 兒童安全模式：players.birth_year / kid、set_birth_year、my_age_mode；兒童不能留言（觸發器）、名字只能用「形容詞＋動物」、好友只能用好友代碼加。v288 另外新增 privacy.html、delete.html。
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」

@@ -6215,7 +6215,7 @@ function adoptFriends(d){
   if (!$('#sheet').hidden && curTab === 'people') renderTab();
 }
 async function loadFriends(){ const d = await frRpc('get_friends'); if (d) adoptFriends(d); }
-async function addFriend(uid, name){ const d = await frRpc('add_friend', { p_uid: uid }); if (d){ adoptFriends(d); const f = Fr.list.find(x => x.id === uid); toast(f && f.mutual ? `🤝 你和 ${esc(name || '對方')} 成為好友了！` : `👋 已經送出好友邀請給 ${esc(name || '對方')}，對方也加你就是好友了`); } }
+async function addFriend(uid, name){ if (Kid.on){ toast('兒童安全模式：請用好友代碼加好友'); return; } const d = await frRpc('add_friend', { p_uid: uid }); if (d){ adoptFriends(d); const f = Fr.list.find(x => x.id === uid); toast(f && f.mutual ? `🤝 你和 ${esc(name || '對方')} 成為好友了！` : `👋 已經送出好友邀請給 ${esc(name || '對方')}，對方也加你就是好友了`); } }
 async function openGift(g){
   const before = rec.coins, row = await cloudCall('open_gift', { p_id: g.id }); if (!row) return;
   SFX.catch(); const from = g.name || '朋友';
@@ -6365,7 +6365,11 @@ function renderAch(body){
   body.appendChild(el('p', 'sub', '經驗值：釣到常見魚 +10、稀有魚 +40、傳說魚 +250，放流 +5，水下照片每種 +30。每升一級都有金幣獎勵（Lv × 50），連上雲端時自動發。'));
   /* v283 改名字放在這裡（跟稱號在一起，點左上角等級就找得到） */
   body.appendChild(el('div', 'dexhead', '✏️ 名字（顯示在頭上，大家都看得到）'));
-  { const row = el('div', 'titles'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳'; inp.style.cssText = 'flex:1 1 12em;min-width:0';
+  if (Kid.on){ const row = el('div', 'titles'), sa = el('select', 'txt'), sb = el('select', 'txt'); for (const a of KID_ADJ) sa.appendChild(new Option(a, a)); for (const b of KID_ANI) sb.appendChild(new Option(b, b));
+    const cur = KID_ADJ.find(a => (nickname || '').startsWith(a)); if (cur){ sa.value = cur; sb.value = nickname.slice(cur.length); }
+    const ok = el('button', 'tbtn', '改名'); ok.addEventListener('click', () => { const v = sa.value + sb.value; nickname = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); });
+    row.append(sa, sb, ok); body.appendChild(row); body.appendChild(el('p', 'sub', '兒童安全模式：名字從「形容詞＋動物」選。')); }
+  else { const row = el('div', 'titles'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳'; inp.style.cssText = 'flex:1 1 12em;min-width:0';
     const ok = el('button', 'tbtn', '改名'); const save = () => { const v = clean(inp.value.trim().slice(0, 16)); if (!v){ toast('名字不能是空的'); inp.value = nickname; return; } if (v === nickname){ toast('名字沒有改'); return; } nickname = v; inp.value = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); };
     ok.addEventListener('click', save); inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); }); row.appendChild(inp); row.appendChild(ok); body.appendChild(row); }
   body.appendChild(el('div', 'dexhead', '🏷️ 稱號（顯示在名字上面，大家都看得到）'));
@@ -7032,6 +7036,16 @@ function renderSettings(body){
   { const f = field('🚢 深海驚嚇效果'), seg = el('div', 'seg'); [[true, '開'], [false, '關']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(subScareOn() === k)); b.addEventListener('click', () => { LS.set('tide.subScare', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); f.appendChild(el('p', 'sub', '開潛水艇到午夜層時，黑暗裡會有嚇人的東西（黑暗中的眼睛、那盞燈）。關掉就不會出現，其他的相遇照常。')); }
   { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
   { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
+  /* v288 上架 Google Play 必備：隱私權政策、刪除帳號（115） */
+  { const f = field('📄 隱私權政策'); const a = el('a', 'tbtn ghost', '打開隱私權政策'); a.href = 'privacy.html'; a.target = '_blank'; a.rel = 'noopener'; f.appendChild(a); f.appendChild(el('p', 'sub', '我們收集什麼、用在哪裡、怎麼刪除。')); }
+  if (Cloud.on && Cloud.sb){ const f = field('🗑️ 刪除我的帳號');
+    f.appendChild(el('p', 'sub', '會永久刪除：你的角色、金幣、魚缸、圖鑑、衣服、家具、小島、寵物、好友、設計圖和所有紀錄；廣場留言會改成「已刪除的玩家」。刪除後不能復原。確定的話，在下面輸入「刪除」兩個字再按確認。'));
+    const row = el('div', 'titles'), inp = el('input', 'txt'); inp.placeholder = '輸入：刪除'; inp.maxLength = 4; inp.style.cssText = 'flex:1 1 8em;min-width:0'; const ok = el('button', 'tbtn danger', '確認刪除');
+    ok.addEventListener('click', async () => { if (inp.value.trim() !== '刪除'){ toast('請輸入「刪除」兩個字'); return; } ok.disabled = true; ok.textContent = '刪除中…';
+      try { const { data, error } = await Cloud.sb.rpc('delete_my_account', { p_confirm: '刪除' }); if (error) throw error;
+        try { await Cloud.sb.auth.signOut(); } catch(e){} try { for (const k of Object.keys(localStorage)) if (k.startsWith('tide.') || k.startsWith('sb-')) localStorage.removeItem(k); } catch(e){}
+        flash('帳號已經刪除了。謝謝你來玩潮汐釣魚村。', 2.5); setTimeout(() => location.reload(), 2600); } catch(e){ ok.disabled = false; ok.textContent = '確認刪除'; toast('刪除失敗：' + ((e && e.message) || '請稍後再試')); } });
+    row.append(inp, ok); f.appendChild(row); }
 }
 // ===== 🪑 釣魚小角落（v189）：沿著河、湖、海邊放長椅、路燈、小營火，坐在長椅上就能直接拋竿，旁邊的人一起聊天 =====
 // 位置是照地形自動找的（每次都一樣）：岸邊、前面是夠深的水、地面平、不擋路，彼此至少隔 16 公尺
@@ -8923,7 +8937,7 @@ function renderDesignEd(body){
 }
 // 設計師市集
 const Market = { mode:'new', kind:'top', list:null, at:0, busy:false };
-async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = true; try { const { data } = await Cloud.sb.rpc('list_designs', { p_mode: Market.mode, p_offset: 0 }); Market.list = data || []; for (const d of Market.list) Designs.map.set(d.id, d); } catch(e){ Market.list = []; } Market.busy = false; Market.at = Date.now(); if (!$('#sheet').hidden && (curTab === 'dzmarket' || curTab === 'shop')) renderTab(); }
+async function loadMarket(){ if (!Cloud.on || !Cloud.sb) return; Market.busy = true; try { const { data } = await Cloud.sb.rpc('list_designs', { p_mode: Market.mode, p_offset: 0 }); Market.list = (data || []).filter(d => !Kid.on || Market.mode === 'ling' || Market.mode === 'mine' || (d && (d.sold || 0) >= 5 && !d.hidden));   /* 兒童安全模式：別人的設計只看很多人買過、沒被檢舉的 */ for (const d of Market.list) Designs.map.set(d.id, d); } catch(e){ Market.list = []; } Market.busy = false; Market.at = Date.now(); if (!$('#sheet').hidden && (curTab === 'dzmarket' || curTab === 'shop')) renderTab(); }
 function renderMarket(body, inShop){
   if (!inShop){ const head = el('div', 'shophead'); head.innerHTML = `<b>🛍️ 設計師市集</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head); }
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能逛市集。')); return; }
@@ -9897,6 +9911,7 @@ function useRoom(r){
       setOnline(); }, () => { room = null; setOnline(); });
     room.on('chat', msg => {
       let text = msg && msg.data && typeof msg.data.t === 'string' ? msg.data.t.slice(0, 120) : ''; if (!text) return;
+      if (Kid.on && !msg.sameTab){ const qi = Math.floor(+msg.data.q); if (!(qi >= 0 && qi < KID_Q.length)) return; text = KID_Q[qi]; }   /* v288 兒童安全模式：只看得到快速聊天的固定句子 */
       const nr = !!(msg.data.nr);
       if (msg.sameTab){ me.say(text); logMsg((nr ? '📍' : '') + (myDisplayName() === '你' ? '你' : myDisplayName()), text); return; }
       if (nr && (String(msg.data.pk || '') !== myPlaceKey() || !(Math.hypot((+msg.data.x || 0) - me.pos.x, (+msg.data.z || 0) - me.pos.z) < NEAR_R))) return;   /* 附近聊天：離太遠、不在同一個地方就聽不到 */
@@ -10038,7 +10053,7 @@ function renderVisits(body){
   const ul = el('ul', 'people');
   for (const v of list.slice(0, 30)){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = online.has(v.u) ? '#3fbf9d' : '#c9d3da';
     li.append(sw, el('span', '', `${v.n}`), el('span', 'st', online.has(v.u) ? '現在在線上' : `${agoText(v.out || v.last)}離開・來過 ${v.times} 次`));
-    if (Cloud.on && typeof isFriend === 'function' && !isFriend(v.u)){ const af = el('button', 'tbtn ghost vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(v.u, v.n); }); li.appendChild(af); }
+    if (Cloud.on && !Kid.on && typeof isFriend === 'function' && !isFriend(v.u)){ const af = el('button', 'tbtn ghost vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(v.u, v.n); }); li.appendChild(af); }
     if (Cloud.on){ const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(v.u, v.n); }); li.appendChild(vi); }
     ul.appendChild(li); }
   body.appendChild(ul);
@@ -10609,13 +10624,14 @@ function renderEvtChip(force){ if (!Evt.chip){ Evt.chip = document.createElement
   if (OW.luckUntil && OW.luckUntil > Date.now()){ const r = Math.ceil((OW.luckUntil - Date.now()) / 1000); parts.unshift(`🐋 好運 ${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`); }
   const txt = parts.join(' · '); if (Evt.chip.textContent !== txt) Evt.chip.textContent = txt;
   Evt.chip.hidden = !!(Dive.on || (typeof Sub !== 'undefined' && Sub.on) || House.on || inIndoor()); }
-function evtTick(t){ const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms);
+function evtTick(t){ if (!Kid.applied){ Kid.applied = true; kidApply(); } const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms);
   if (Evt.lastMig !== null && m.active && Evt.lastMig !== m.id + ':1') ticker(`🐟 魚群洄游！一大群${(FISH_BY_ID[m.fish] || {}).name}游到了${(SPOT_BY_ID[m.spot] || {}).label}，接下來 25 分鐘特別好釣，釣到 5 條送 200 金幣`);
   Evt.lastMig = m.id + ':' + (m.active ? 1 : 0);
   if (Evt.lastB !== null && Evt.lastB !== b.id) ticker(`🎯 新的懸賞：釣到 ${b.minw} 公斤以上的${(FISH_BY_ID[b.fish] || {}).name}，送 300 金幣（2 小時內）`); Evt.lastB = b.id;
   if (Evt.lastMet === false && met) ticker('🌠 流星雨來了！接下來 30 分鐘，所有釣點的傳說魚都比較好釣'); Evt.lastMet = met;
   if (Cloud.on && Date.now() - Evt.at > 90000) evtLoad().then(() => renderEvtChip());
   if (Cloud.on && !Mast.loaded) mastLoad();
+  if (Cloud.on && !Kid.loaded) kidLoad();
   renderEvtChip(); }
 /* 流星：晚上流星雨的時候，天上每隔一下劃過一顆 */
 function meteorTick(dt, t){ if (!evtMeteor(bossNow()) || House.on || inIndoor() || Dive.on){ for (const o of Evt.met) o.m.visible = false; return; }
@@ -10634,13 +10650,33 @@ function renderEvents(body){ const ms = bossNow(), s = Math.floor(ms / 1000), m 
   item('🐳', '港口外海藍鯨', '每小時浮上來一次，那一分半鐘在港口外海比較容易釣到藍鯨。');
   item('🦞', '釣蝦場放生', '每天 12～21 點之間的某個時間，老闆放一隻全服唯一的藍色龍蝦。');
   body.appendChild(ul); }
+/* ===== v288 兒童安全模式（116）：第一次進遊戲問出生年份，未滿 13 歲就開 =====
+   聊天只能用下面的快速句子、看不到別人自己打的字；不能在留言板留言；名字從「形容詞＋動物」選；好友只能用好友代碼加；深海驚嚇預設關。 */
+const KID_Q = ['你好！', '一起釣魚吧！', '好厲害！', '謝謝你～', '我釣到了！', '等等我！', '要去哪裡？', '掰掰～', '加油！', '哈哈哈', '好可愛！', '晚安～'];
+const KID_ADJ = ['開心的','勇敢的','害羞的','愛睡的','好奇的','溫柔的','活潑的','安靜的','聰明的','愛笑的','迷糊的','閃亮的'], KID_ANI = ['水獺','海豚','企鵝','海龜','小貓','柴犬','海鷗','河豚','章魚','螃蟹','鯨魚','兔子','松鼠','貓頭鷹','刺蝟','熊貓'];
+var Kid = { on: LS.get('tide.kid', false), asked: LS.get('tide.ageAsked', false), loaded:false };
+function kidApply(){ document.body.classList.toggle('kid', !!Kid.on); let qb = $('#kidQ');
+  if (Kid.on && !qb){ qb = document.createElement('div'); qb.id = 'kidQ'; qb.className = 'panel'; KID_Q.forEach((q, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => kidSay(i)); qb.appendChild(b); }); const f = $('#chatForm'); f.parentNode.insertBefore(qb, f.nextSibling); }
+  if (qb) qb.hidden = !Kid.on; }
+async function kidSay(i){ const text = KID_Q[i], nowT = performance.now(); myChatAt = myChatAt.filter(x => nowT - x < 6000); if (myChatAt.length >= 4){ toast('說太快了，休息一下再說'); return; } myChatAt.push(nowT);
+  if (room && room.connected() && chatAllowed){ try { await room.emit('chat', chatNear ? { t: text, q: i, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text, q: i }); } catch(e){ me.say(text); logMsg('你', text); } }
+  else { me.say(text); logMsg('你', text); } npcHear(text); }
+async function kidLoad(){ if (!Cloud.on || !Cloud.sb || Kid.busy) return; Kid.busy = true; try { const { data, error } = await Cloud.sb.rpc('my_age_mode'); if (!error && data){ Kid.loaded = true; Kid.on = !!data.kid; Kid.asked = !!data.asked; LS.set('tide.kid', Kid.on); LS.set('tide.ageAsked', Kid.asked); kidApply(); if (!Kid.asked) ageGate(); } } catch(e){} Kid.busy = false; }
+function ageGate(){ if ($('#ageGate')) return; const y = new Date().getFullYear(), g = document.createElement('div'); g.id = 'ageGate';
+  g.innerHTML = `<div class="ag panel"><h2>歡迎來到潮汐釣魚村！</h2><p>你是哪一年出生的？</p><select id="agY" aria-label="出生年份"><option value="">請選擇年份</option>${Array.from({ length: 100 }, (_, i) => `<option value="${y - i}">${y - i} 年</option>`).join('')}</select>
+    <p class="sub">只用來決定要不要開「兒童安全模式」，不會給別人看，選了之後就不能改。不用填真名、生日。</p><button id="agOk" class="tbtn">確定</button><a class="sub" href="privacy.html" target="_blank" rel="noopener">隱私權政策</a></div>`;
+  document.body.appendChild(g); g.querySelector('#agOk').addEventListener('click', async () => { const v = +g.querySelector('#agY').value; if (!v){ toast('請選你的出生年份'); return; } const b = g.querySelector('#agOk'); b.disabled = true;
+    try { const { data, error } = await Cloud.sb.rpc('set_birth_year', { p_year: v }); if (error) throw error; Kid.on = !!data.kid; Kid.asked = true; LS.set('tide.kid', Kid.on); LS.set('tide.ageAsked', true);
+      if (Kid.on && data.name){ nickname = data.name; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); }
+      g.remove(); kidApply(); if (Kid.on) flash('🧒 已經開啟兒童安全模式：聊天用下面的快速句子，玩得開心！', 2.6); }
+    catch(e){ b.disabled = false; toast((e && e.message) || '請稍後再試'); } }); }
 function renderBoard(body){
   body.appendChild(el('p', 'sub', '大家都可以在這裡留言，跟村子裡的人打招呼、約一起釣魚、分享好釣點。一則最多 60 個字；要釣過 5 條魚才能留，一天最多 5 則。不要留電話、地址這些個人資料喔。'));
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '要連上線才看得到留言板。')); return; }
   const f = el('form', 'boardform'), ta = el('textarea'); ta.maxLength = 60; ta.rows = 2; ta.placeholder = '寫點什麼給大家看…'; ta.value = Board.draft; ta.addEventListener('input', () => { Board.draft = ta.value; cnt.textContent = `${ta.value.length} / 60`; });
   const row = el('div', 'boardrow'), cnt = el('span', 'sub2', `${Board.draft.length} / 60`), go = el('button', 'tbtn', '📌 貼上去'); go.type = 'submit'; row.append(cnt, go); f.append(ta, row);
   f.addEventListener('submit', async e => { e.preventDefault(); const t = ta.value.trim(); if (!t) return; if (clean(t) !== t){ toast('這句話不行，換個說法吧'); return; } const r = await boardDo('board_post', { p_text: t }); if (Array.isArray(r)){ Board.draft = ''; SFX.coin(); toast('📌 貼上留言板了'); renderTab(); } });
-  body.appendChild(f);
+  if (Kid.on) body.appendChild(el('p', 'sub', '🧒 兒童安全模式：可以看大家的留言，不能留言喔。')); else body.appendChild(f);
   const L = Board.list; if (!L){ body.appendChild(el('p', 'sub', Board.busy ? '讀取中…' : '讀不到留言，等一下再試試。')); return; }
   if (!L.length){ body.appendChild(el('p', 'sub', '還沒有人留言，當第一個吧！')); return; }
   const ul = el('ul', 'boardlist');
@@ -11269,7 +11305,7 @@ function renderTab(){
     }
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
-      if (uid && Cloud.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
+      if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
           const box = el('div', 'rpbox'); box.appendChild(el('span', '', '檢舉原因：'));
@@ -11443,6 +11479,8 @@ function renderTab(){
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
+      '🧒 兒童安全模式（給家長看）：第一次進遊戲會問出生年份（只問年，不問真名、生日）。未滿 13 歲會自動開啟，之後不能自己關掉：聊天只能用固定的快速句子，看不到別人自己打的字；可以看留言板但不能留言；名字從「形容詞＋動物」裡選；好友只能用當面給的好友代碼加，陌生人不能直接加；設計師市集只看得到很多人買過、沒被檢舉的作品；深海驚嚇效果預設關閉；不會要求 email。',
+      '🔒 帳號與隱私：設定最下面有「隱私權政策」和「刪除我的帳號」（輸入「刪除」兩個字確認，會刪掉所有遊戲資料，不能復原）。聊天不會存在伺服器，只有被檢舉的內容會保存 30 天給管理員處理。',
       '⭐ 魚種精通：圖鑑每種魚有 3 顆星。★ 第一次釣到；★★ 釣到 10 條，或釣過重量前 20% 的大尺寸（之後牠咬餌時頭上會出現牠的名字）；★★★ 完美搏鬥一次（魚的每個動作都對上、線沒有快斷）＋釣過重量前 5% 的紀錄級（圖鑑金框，之後比較常釣到大尺寸的）。圖鑑最上面看總星數，50、150、300、450 顆有稱號，排行榜有「圖鑑星數」。',
       '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。',
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
@@ -12198,7 +12236,7 @@ function subLightTick(dt, t, depth){
    第一次開潛水艇：先遇到魚群 → 到午夜層提示關燈 → 然後才會有嚇人的。設定可以關掉「深海驚嚇效果」（B3、B4 不出現）。
    嚇人的時候不用大聲的音效：深海的低音停掉，只剩低沉的心跳。 */
 const SUB_SIGHT = { school:{ n:'被魚群包圍', ic:'🐟', d:'幾百條銀色的小魚繞著潛水艇轉成一顆球，一條大魚衝過去，魚群一下子炸開。' }, glow:{ n:'深海的光', ic:'✨', d:'在午夜層把燈關掉，黑暗裡慢慢浮現發光的水母、像發光繩子的管水母，遠處有東西一閃一閃。' }, eyes:{ n:'黑暗中的眼睛', ic:'👁️', d:'停在黑暗裡的時候，有個很大的東西在後面……轉過去就會看到。' }, lure:{ n:'那盞燈', ic:'🏮', d:'黑暗裡一盞溫暖的小燈，靠近一看，燈下面是一張巨大的嘴。' }, whale:{ n:'抹香鯨經過', ic:'🐋', d:'一頭抹香鯨從頭頂游過去，所有的光都被擋住了。' } };
-function subScareOn(){ return LS.get('tide.subScare', true) !== false; }
+function subScareOn(){ return LS.get('tide.subScare', !(typeof Kid !== 'undefined' && Kid.on)) !== false; }   /* 兒童安全模式預設關 */
 function subSeen(){ const a = LS.get('tide.subSeen', []); return Array.isArray(a) ? a : []; }
 function subEvReset(){ subEvStop(true); Sub.E = { last: now() - 75, cur: null, done: new Set(), guided: subSeen().length === 0, midT: 0, hinted: false, schoolRoll: now() }; Sub.stillT = 0; Sub.dark = false; Sub.darkK = 0;
   if (Cloud.on && Cloud.sb) subRpc('sub_sighting', { p_kind: null }).then(r => { if (r && Array.isArray(r.kinds)){ const m = [...new Set([...subSeen(), ...r.kinds])]; LS.set('tide.subSeen', m); } }).catch(() => {}); }
@@ -12443,6 +12481,7 @@ function subPeersTick(dt, t){ const S = Sub.peers || (Sub.peers = new Map()), P 
 }   /* v260 霧的距離改在 subLightTick 裡算（深度＋一起潛的加成） */
 function subBubble(parent, text){ const sp = subLabel(text, true); sp.userData.bub = true; sp.position.y = parent === Sub.m ? 1.5 : 1.7; parent.add(sp); return sp; }   /* 自己的泡泡放低一點，不要被上面的深度計擋住 */
 function onSubQ(msg){ if (!msg || !msg.data) return; const k = Math.floor(+msg.data.k), ft = typeof msg.data.t === 'string' ? clean(msg.data.t.trim()).slice(0, 40) : ''; if (!ft && !(k >= 0 && k < SUB_Q.length)) return; const q = ft || SUB_Q[k];
+  if (ft && Kid.on && !msg.sameTab) return;   /* 兒童安全模式：別人自己打的字不顯示 */
   if (ft && !msg.sameTab && !isBlockedPeer(msg.peer)){ const p0 = peers.get(msg.peer); if (p0) logMsg('🚢' + peerName(p0), ft); }   /* 打字的話不管在不在潛水，聊天紀錄都看得到 */
   if (typeof Sub === 'undefined' || !Sub.on) return;
   if (msg.sameTab){ if (Sub.myBub){ Sub.m.remove(Sub.myBub); Sub.myBub.material.map.dispose(); } Sub.myBub = subBubble(Sub.m, q); Sub.myBubT = now() + 4; return; }
