@@ -1685,6 +1685,13 @@ const BlueW = { m:null, told:-1, songAt:0, blowAt:0, nBlow:0, krill:null,
 const OW_CELL = 64, OW_WIN = 1200;
 const OW_SP = { dolphin:{ n:'海豚群', ic:'🐬', p:0.25, len:2.5 }, humpback:{ n:'座頭鯨', ic:'🐋', p:0.08, len:14 }, bluewhale:{ n:'藍鯨', ic:'🐳', p:0.05, len:25 }, sperm:{ n:'抹香鯨', ic:'🐋', p:0.04, len:15 } };
 const OW = { ok:new Map(), act:new Map(), scanAt:0, slick:[], seen:new Set(), btn:null, boxL:{} };
+/* v282 鯨魚跳出水面的好運（113）：伺服器自己算那一格是不是真的有跳出水面的鯨魚，對了就給 3 分鐘船上釣魚的好運 */
+async function owBreachLuck(P){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('sea_breach', { p_cx: P.cx, p_cz: P.cz }); if (error) throw error;
+  if (data && data.ok){ OW.luckUntil = Date.now() + 180000; SFX.catch(); flash('🐋 看到鯨魚跳出水面了！好運 3 分鐘：在船上釣，稀有魚、傳說魚比較好釣', 2.6); } } catch(e){} }
+function owEmit(t, d){ try { if (room && room.connected()) room.emit(t, d).catch(() => {}); } catch(e){} }
+function owFind(k){ for (const e of OW.act.values()){ const P = e.P; if (P.cx + ',' + P.cz + ',' + P.W === k) return e; } return null; }
+function onOwMug(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const e = owFind(String(m.data.k)); if (!e || e.P.k !== 'humpback' || e.mug || e.mugDone || !isFinite(+m.data.a0)) return; e.mug = { t0: now(), a0: +m.data.a0, peer: m.peer }; }
+function onOwBow(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const e = owFind(String(m.data.k)); if (!e || e.P.k !== 'dolphin') return; if (m.data.on) e.bowPeer = m.peer; else if (e.bowPeer === m.peer) e.bowPeer = null; }
 function owR(a, b, c, k){ let h = (a * 374761393 + b * 668265263 + c * 2147483647 + k * 1274126177) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; h = Math.imul(h, 2246822519); h ^= h >>> 13; return ((h >>> 0) % 100000) / 100000; }
 function owOpen(x, z, R){ if (Math.abs(x) > 186 || Math.abs(z) > 186 || !boatWater(x, z)) return false; for (let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2, px = x + Math.cos(a) * R, pz = z + Math.sin(a) * R; if (walkable(px, pz) || deckAt(px, pz) || (Math.abs(px) < 190 && Math.abs(pz) < 190 && !boatWater(px, pz) && !(Math.hypot(px - ISLE.x, pz - ISLE.z) < ISLE.r + 16))) return false; } return Math.hypot(x - ISLE.x, z - ISLE.z) > ISLE.r + 40; }
 function owCellOk(cx, cz){ const k = cx + ',' + cz; if (!OW.ok.has(k)){ const x = (cx + 0.5) * OW_CELL, z = (cz + 0.5) * OW_CELL; OW.ok.set(k, owOpen(x, z, 40) ? (owOpen(x, z, 70) ? 2 : 1) : 0); } return OW.ok.get(k); }
@@ -1760,8 +1767,12 @@ OW.update = function(t){
     if (P.k === 'dolphin'){ const s = u * P.spd, fx = Math.sin(P.hd), fz = Math.cos(P.hd), sx = fz, sz = -fx, fade = smooth01(u / 3) * (1 - smooth01((u - P.dur + 4) / 4));
       let gx = P.x0 + fx * s, gz = P.z0 + fz * s, gh = P.hd;
       /* 海豚跟船（bow riding）：你在划船、海豚群在 40 公尺內，就跑到船頭前面一起游 */
-      if (myBoat && (OW.boatSpd || 0) > 1 && Math.hypot(gx - mx, gz - mz) < 40) e.bow = Math.min(1, (e.bow || 0) + 1 / 90); else if (e.bow) e.bow = Math.max(0, e.bow - 1 / 120);
-      if (e.bow){ const b = smooth01(e.bow), bx = mx + Math.sin(me.rot) * 7, bz = mz + Math.cos(me.rot) * 7; gx += (bx - gx) * b; gz += (bz - gz) * b; gh = gh + ((((me.rot - gh) % 6.283) + 9.425) % 6.283 - 3.1416) * b; if (b > 0.5) e.seenNear = true; }
+      /* v282：跟著別人的船也大家看得到 —— 誰的船在帶這群海豚，會告訴附近的人（owbow），大家都畫在那艘船的船頭前面 */
+      const mine = myBoat && (OW.boatSpd || 0) > 1 && Math.hypot(gx - mx, gz - mz) < 40 && !(e.bowPeer && peers.get(e.bowPeer));
+      const bp = !mine && e.bowPeer ? peers.get(e.bowPeer) : null; if (e.bowPeer && !bp) e.bowPeer = null;
+      if (mine || bp) e.bow = Math.min(1, (e.bow || 0) + 1 / 90); else if (e.bow) e.bow = Math.max(0, e.bow - 1 / 120);
+      if (mine !== !!e.bowMine){ e.bowMine = mine; owEmit('owbow', { k: P.cx + ',' + P.cz + ',' + P.W, on: mine ? 1 : 0 }); }
+      if (e.bow){ const b = smooth01(e.bow), ox = bp ? bp.fisher.pos.x : mx, oz = bp ? bp.fisher.pos.z : mz, orr = bp ? bp.fisher.rot : me.rot, bx = ox + Math.sin(orr) * 7, bz = oz + Math.cos(orr) * 7; gx += (bx - gx) * b; gz += (bz - gz) * b; gh = gh + ((((orr - gh) % 6.283) + 9.425) % 6.283 - 3.1416) * b; if (b > 0.5 && (!bp || Math.hypot(gx - mx, gz - mz) < 50)) e.seenNear = true; }
       m.position.set(gx, 0, gz); m.rotation.set(0, gh - Math.PI / 2, 0);
       m.children.forEach((dm, i) => { if (i >= P.n){ dm.visible = false; return; } dm.visible = fade > 0.02; const ox = (owR(P.cx, P.cz, P.W, 40 + i) - 0.5) * 9, oz = (owR(P.cx, P.cz, P.W, 60 + i) - 0.5) * 7, ph = u * 2.1 + i * 1.7, arc = Math.sin(ph);
         dm.position.set(oz, (arc > 0 ? arc * 1.7 - 0.6 : arc * 1.2 - 0.6) * fade + (fade - 1) * 2, ox); dm.rotation.set(0, 0, Math.cos(ph) * 0.65);
@@ -1771,18 +1782,19 @@ OW.update = function(t){
     /* 從船底下游過：路徑上 8 公尺內有船，就潛深一點從底下穿過去，船被水流輕輕推一下 */
     if (myBoat && P.k !== 'sperm'){ const bd = Math.hypot(Q.x - mx, Q.z - mz); if (bd < OW_SP[P.k].len * 0.6 + 8 && Q.surf && !e.mug){ Q.y = Math.min(Q.y, -((OW.boxH && OW.boxH[P.k]) || 0.15) * OW_SP[P.k].len * 1.3); Q.ev = Q.ev === 'land' ? null : Q.ev; me.pos.x += Math.sin(P.hd) * 0.4 * (1 / 60); me.pos.z += Math.cos(P.hd) * 0.4 * (1 / 60); } }
     /* 座頭鯨好奇靠近（真的叫 mugging）：船停著不動超過 10 秒，有機會游過來繞著船轉，側身用一隻眼睛看你，最後在船邊噴一口氣 */
-    if (P.k === 'humpback' && myBoat && !e.mugDone){ if (!e.mug && (OW.still || 0) > 10 && d < 70 && Q.surf && owR(P.cx, P.cz, P.W, 99) < 0.6){ e.mug = { t0: now(), a0: Math.atan2(Q.x - mx, Q.z - mz) }; } }
-    if (e.mug){ const k = now() - e.mug.t0, L2 = OW_SP.humpback.len, R0 = L2 * 0.5 + 5; if (k > 34){ e.mug = null; e.mugDone = true; } else {
-        const blend = smooth01(Math.min(k / 4, (34 - k) / 4)), a = e.mug.a0 + k * 0.09, cx2 = mx + Math.sin(a) * R0, cz2 = mz + Math.cos(a) * R0, hdm = a + Math.PI / 2;
+    if (P.k === 'humpback' && myBoat && !e.mugDone){ if (!e.mug && (OW.still || 0) > 10 && d < 70 && Q.surf && owR(P.cx, P.cz, P.W, 99) < 0.6){ e.mug = { t0: now(), a0: Math.atan2(Q.x - mx, Q.z - mz) }; owEmit('owmug', { k: P.cx + ',' + P.cz + ',' + P.W, a0: +e.mug.a0.toFixed(3) }); } }   /* v282：告訴附近的人，大家都看到鯨魚繞著你的船 */
+    if (e.mug && e.mug.peer && !peers.get(e.mug.peer)){ e.mug = null; e.mugDone = true; }
+    if (e.mug){ const k = now() - e.mug.t0, L2 = OW_SP.humpback.len, R0 = L2 * 0.5 + 5, mp = e.mug.peer ? peers.get(e.mug.peer).fisher.pos : null, ccx = mp ? mp.x : mx, ccz = mp ? mp.z : mz; if (k > 34){ e.mug = null; e.mugDone = true; } else {
+        const blend = smooth01(Math.min(k / 4, (34 - k) / 4)), a = e.mug.a0 + k * 0.09, cx2 = ccx + Math.sin(a) * R0, cz2 = ccz + Math.cos(a) * R0, hdm = a + Math.PI / 2;
         Q.x += (cx2 - Q.x) * blend; Q.z += (cz2 - Q.z) * blend; Q.y = Q.y + (-((OW.boxH && OW.boxH.humpback) || 0.15) * L2 * 0.3 - Q.y) * blend; Q.roll = Q.roll * (1 - blend) + 0.75 * blend; Q.pitch *= 1 - blend; Q.ev = null; e.mugHd = hdm; e.mugB = blend;
-        if (k > 22 && !e.mugBlow){ e.mugBlow = true; const bx = mx + Math.sin(a) * (R0 - 3), bz = mz + Math.cos(a) * (R0 - 3); spoutAt(bx, 0.4, bz, 9, false); owBlowSnd('humpback', 6); owWet(true, true); if (!LS.get('tide.mugged', false)) LS.set('tide.mugged', true); } } }
+        if (k > 22 && !e.mugBlow){ e.mugBlow = true; const bx = ccx + Math.sin(a) * (R0 - 3), bz = ccz + Math.cos(a) * (R0 - 3); spoutAt(bx, 0.4, bz, 9, false); if (Math.hypot(bx - mx, bz - mz) < 80) owBlowSnd('humpback', 6); if (!e.mug.peer){ owWet(true, true); if (!LS.get('tide.mugged', false)) LS.set('tide.mugged', true); } } } }
     const hdNow = e.mug && e.mugHd != null ? P.hd + ((((e.mugHd - P.hd) % 6.283) + 9.425) % 6.283 - 3.1416) * e.mugB : P.hd;
     m.position.set(Q.x, Q.y, Q.z); m.rotation.set(Q.roll, hdNow - Math.PI / 2, Q.pitch); m.visible = !hide;
     if (P.k === 'humpback' && d < 100 && now() - (OW.songAt || 0) > 50){ OW.songAt = now(); owSong(clamp(1 - d / 100, 0.15, 0.7)); }
     const fx = Math.sin(P.hd), fz = Math.cos(P.hd), hx = Q.x + fx * L * 0.32, hz = Q.z + fz * L * 0.32;
     if (Q.surf && d < 90) photo = true; if (Q.surf && d < 120) e.seenNear = true;
     if (Q.ev === 'blow'){ if (P.k === 'bluewhale') spoutAt(hx, 0.4, hz, 14, true); else if (P.k === 'sperm') spoutAt(Q.x + fx * L * 0.47, 0.4, Q.z + fz * L * 0.47, 8, false, P.hd + 0.6); else spoutAt(hx, 0.4, hz, 9, false); owBlowSnd(P.k, d); if (myBoat && Math.hypot(hx - mx, hz - mz) < 6) owWet(true, true); }
-    else if (Q.ev === 'land'){ addWave(Q.x, Q.z, P.k === 'bluewhale' ? 1.4 : 1.2); owWet(d < 20, false); for (let i = 0; i < 3; i++) ripple(Q.x + (Math.random() - 0.5) * L * 0.5, Q.z + (Math.random() - 0.5) * L * 0.5, true); spoutAt(Q.x, 0.2, Q.z, 18, false); spoutAt(Q.x + fx * 3, 0.2, Q.z + fz * 3, 16, false); owSplashSnd(true, d); camShake = Math.max(camShake || 0, d < 30 ? 0.45 : d < 60 ? 0.2 : 0); try { if (navigator.vibrate) navigator.vibrate(d < 30 ? 150 : d < 60 ? 60 : 0); } catch(_){} }
+    else if (Q.ev === 'land'){ if (myBoat && d < 90 && !e.luck){ e.luck = true; owBreachLuck(P); } addWave(Q.x, Q.z, P.k === 'bluewhale' ? 1.4 : 1.2); owWet(d < 20, false); for (let i = 0; i < 3; i++) ripple(Q.x + (Math.random() - 0.5) * L * 0.5, Q.z + (Math.random() - 0.5) * L * 0.5, true); spoutAt(Q.x, 0.2, Q.z, 18, false); spoutAt(Q.x + fx * 3, 0.2, Q.z + fz * 3, 16, false); owSplashSnd(true, d); camShake = Math.max(camShake || 0, d < 30 ? 0.45 : d < 60 ? 0.2 : 0); try { if (navigator.vibrate) navigator.vibrate(d < 30 ? 150 : d < 60 ? 60 : 0); } catch(_){} }
     else if (Q.ev === 'slapT'){ const tx = Q.x - fx * L * 0.48, tz = Q.z - fz * L * 0.48; ripple(tx, tz, true); addWave(tx, tz, 0.5); spoutAt(tx, 0.2, tz, 8, false); owSplashSnd(false, d); }
     else if (Q.ev === 'slapP'){ const sx = Q.x + fz * L * 0.3, sz = Q.z - fx * L * 0.3; ripple(sx, sz, false); addWave(sx, sz, 0.25); spoutAt(sx, 0.2, sz, 5, false); owSplashSnd(false, d); }
     else if (Q.ev === 'dive'){ owSlick(Q.x, Q.z, L * 0.45); }
@@ -1964,7 +1976,7 @@ var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'
 for (const [k, d] of Object.entries(MFISH.defs)){ MFISH.of[k] = { k, albino:false }; if (d.alb) MFISH.of[d.alb] = { k, albino:true }; if (d.glow) MFISH.of[d.glow] = { k, glow:true }; MFISH.wait[k] = new Set();
   new GLTFLoader().loadAsync(d.file).then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
     const geo = mesh.geometry.clone(); if (d.fin){ const p = geo.attributes.position, a = new Float32Array(p.count); for (let i = 0; i < p.count; i++) a[i] = d.fin.m(p.getX(i), p.getY(i), p.getZ(i)); geo.setAttribute('aFin', new THREE.BufferAttribute(a, 1)); } geo.scale(d.scale, d.scale, d.scale); geo.computeBoundingSphere(); MFISH.geo[k] = geo; MFISH.tex[k] = mesh.material.map; MFISH.tex[k].colorSpace = THREE.SRGBColorSpace;
-    for (const fish of [...MFISH.wait[k]]){ try { mfishFill(fish); } catch(e){ console.warn('mfish', e); } } MFISH.wait[k].clear(); }).catch(e => console.warn('mfish ' + k, e)); }
+    for (const fish of [...MFISH.wait[k]]){ try { mfishFill(fish); } catch(e){ console.warn('mfish', e); } } MFISH.wait[k].clear(); try { fishCvCache.clear(); } catch(e){} }).catch(e => console.warn('mfish ' + k, e)); }
 function mfishAlbinoTex(k){ const key = k + '_a'; if (MFISH.tex[key]) return MFISH.tex[key]; const src = MFISH.tex[k], img = src.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const c = cv.getContext('2d'); c.drawImage(img, 0, 0);
   const d = c.getImageData(0, 0, cv.width, cv.height), px = d.data;
   for (let i = 0; i < px.length; i += 4){ const l = (px[i] * 0.3 + px[i + 1] * 0.55 + px[i + 2] * 0.15) / 255, t = Math.pow(l, 0.6); px[i] = 236 + 19 * t; px[i + 1] = 206 + 46 * t; px[i + 2] = 204 + 46 * t; }   /* 深的地方變淡粉紅、白的地方還是白 */
@@ -4438,7 +4450,19 @@ function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group();
   { const arm = new THREE.Group(); arm.position.set(4.2, A.y, 2.4); g.add(arm); arm.add(box([0.3, 3.2, 0.3], '#e8a040', [0, 1.6, 0])); const jib = box([0.2, 0.2, 3.2], '#e8a040', [0, 3.1, -1.4]); arm.add(jib); arm.add(box([0.03, 2.4, 0.03], '#333', [0, 1.9, -2.9])); addCircleCol(A.x + 4.2, A.z + 2.4, 0.35); }
   for (const [x, z] of [[-5.6, -3.6], [5.6, -3.6], [5.6, 3.6]]){ g.add(box([0.1, 2.2, 0.1], '#7a8088', [x, A.y + 1.1, z])); const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color:'#ffe9a8' })); b.position.set(x, A.y + 2.25, z); g.add(b); Far.glows.push(b); }
   // 很深的海：浮台底下一大片深藍色，裡面有發光的水母慢慢飄
-  { const deep = new THREE.Mesh(new THREE.CircleGeometry(60, 40), new THREE.MeshBasicMaterial({ color:'#06182e', transparent:true, opacity:0.55, depthWrite:false })); deep.rotation.x = -Math.PI / 2; deep.position.set(0, WATER_LEVEL - 0.25, 0); g.add(deep);
+  /* v282：深水區不再是一個硬邊的深色圓圈 —— 邊緣歪歪的、慢慢變深，交界有一條斷斷續續的淡淡白浪（像兩種海水交會的地方） */
+  { const mk2 = foam => { const m = new THREE.ShaderMaterial({ transparent:true, depthWrite:false, fog:true, uniforms: Object.assign({ uT:{ value:0 }, uFoam:{ value: foam ? 1 : 0 } }, THREE.UniformsLib.fog),
+      vertexShader:`varying vec2 vP; #include <fog_pars_vertex>
+        void main(){ vP = position.xy; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mvPosition; #include <fog_vertex> }`.replace(/#include <(\w+)>/g, '\n#include <$1>\n'),
+      fragmentShader:`uniform float uT; uniform float uFoam; varying vec2 vP; #include <fog_pars_fragment>
+        void main(){ float d = length(vP), a = atan(vP.y, vP.x);
+          float r = 50.0 + 5.0 * sin(3.0 * a + 0.7) + 3.5 * sin(5.0 * a + 2.3 + uT * 0.02) + 2.0 * sin(11.0 * a + 1.1) + 1.2 * sin(23.0 * a + uT * 0.05);
+          if (uFoam < 0.5){ float k = 1.0 - smoothstep(r - 18.0, r + 3.0, d); gl_FragColor = vec4(0.024, 0.094, 0.18, 0.6 * k); }
+          else { float band = 1.0 - smoothstep(0.0, 1.6, abs(d - r - 0.5)); float brk = smoothstep(0.15, 0.75, 0.5 + 0.5 * sin(a * 37.0 + uT * 0.35) * sin(a * 13.0 - uT * 0.2 + 1.7)); gl_FragColor = vec4(0.93, 0.97, 1.0, 0.32 * band * brk); }
+          #include <fog_fragment> }`.replace(/#include <(\w+)>/g, '\n#include <$1>\n') });
+      const o = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), m); o.rotation.x = -Math.PI / 2; o.position.set(0, foam ? WATER_LEVEL + 0.03 : WATER_LEVEL - 0.25, 0); o.renderOrder = foam ? 1 : 0; g.add(o); return m; };
+    const dm = mk2(false), fm = mk2(true); Far.deepMats = [dm, fm]; }
+  { 
     const N = 70, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const a = Math.random() * 6.28, r = 6 + Math.random() * 40; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = -0.6 - Math.random() * 1.5; pos[i * 3 + 2] = Math.sin(a) * r; }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color:'#7ef0ff', size:0.35, transparent:true, opacity:0.75, depthWrite:false })); g.add(pts); Far.jelly = pts; }
   { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#1d3a6a'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#e8f4fb'; c.font = 'bold 64px sans-serif'; c.textAlign = 'center'; c.fillText('🌌 深海浮台', 256, 88); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
@@ -4552,6 +4576,7 @@ function updateFar(dt, t){
   if (Far.green && Far.gAnim) Far.gAnim(dt, t);
   if (!Far.abyss && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 90) buildAbyss();
   if (!Far.myst && Math.hypot(me.pos.x - MYST.x, me.pos.z - MYST.z) < 90) buildMyst();
+  if (Far.deepMats && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 140) for (const m of Far.deepMats) m.uniforms.uT.value = t;
   if (Far.jelly && frameNo % 3 === 0 && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 70){ Far.jelly.position.y = Math.sin(t * 0.5) * 0.25; Far.jelly.material.opacity = 0.55 + Math.sin(t * 1.3) * 0.2; }
   if (Far.lava) Far.lava.material.color.setHSL(0.05, 1, 0.5 + Math.sin(t * 2) * 0.08);
   if (Far.smoke){ Far.smoke.position.y = MYST.y + 4.6 + (t * 0.3 % 2); Far.smoke.material.opacity = 0.35 * (1 - (t * 0.3 % 2) / 2); }
@@ -9201,7 +9226,24 @@ function recordCatch(f, w){
 }
 
 function shade(hex, amt){ const c = new THREE.Color(hex); if (amt < 0) c.lerp(new THREE.Color('#000'), -amt); else c.lerp(new THREE.Color('#fff'), amt); return '#' + c.getHexString(); }
+/* v282：用 3D 模型（glb）的魚，圖鑑、魚缸的小圖也照模型畫（以前用的是另一套參數模型，像管眼魚就變成普通的燈籠魚） */
+const MShot = { kit:null };
+function drawMFishGL(cv, id, known){ const o = MFISH && MFISH.of[id]; if (!o || !MFISH.geo[o.k] || MFISH.defs[o.k].nofish) return false;
+  if (!MShot.kit){ const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#8a9aa8', 1.7)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(1, 3, 4); sc.add(dl);
+    MShot.kit = { sc, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100), rt: new THREE.WebGLRenderTarget(4, 4, { samples: 4 }) }; MShot.kit.rt.texture.colorSpace = THREE.SRGBColorSpace; }
+  const K = MShot.kit, W = cv.width, H = cv.height, fish = makeMFish(id, 1); fish.rotation.set(0.12, -0.32, 0); K.sc.add(fish); fish.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(fish), c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3()), asp = W / H, half = Math.max(sz.x / 2 / asp, sz.y / 2) * 1.12;
+  K.cam.left = -half * asp; K.cam.right = half * asp; K.cam.top = half; K.cam.bottom = -half; K.cam.position.set(c.x, c.y, c.z + 20); K.cam.lookAt(c); K.cam.updateProjectionMatrix();
+  if (K.rt.width !== W || K.rt.height !== H) K.rt.setSize(W, H);
+  const pT = renderer.getRenderTarget(), pC = renderer.getClearColor(new THREE.Color()), pA = renderer.getClearAlpha();
+  renderer.setRenderTarget(K.rt); renderer.setClearColor('#000000', 0); renderer.clear(); renderer.render(K.sc, K.cam);
+  const px = new Uint8Array(W * H * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, W, H, px); renderer.setRenderTarget(pT); renderer.setClearColor(pC, pA); K.sc.remove(fish);
+  const ctx = cv.getContext('2d'), im = ctx.createImageData(W, H); for (let y = 0; y < H; y++) im.data.set(px.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+  ctx.clearRect(0, 0, W, H); ctx.putImageData(im, 0, 0);
+  if (!known){ ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = '#b9c8cf'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+  return true; }
 function drawFish(cv, color, known, id){
+  if (id){ try { if (drawMFishGL(cv, id, known)) return; } catch(e){} }
   if (id === 'marlin' || id === 'marlin_albino') return drawMarlin2(cv, known, id !== 'marlin');
   if (id && FISH_STYLE[id]){ try { return drawModelFish(cv, FISH_BY_ID[id], known); } catch(e){} }
   const ctx = cv.getContext('2d'), W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(W*0.52, H/2);
@@ -9825,6 +9867,7 @@ function useRoom(r){
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
     room.on('sail', onSail, () => {}); room.on('sailjoin', onSailJoin, () => {});
+    room.on('owmug', onOwMug, () => {}); room.on('owbow', onOwBow, () => {});   /* v282 鯨魚靠近、海豚跟船，大家看得到 */
     room.on('lvup', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const p = peers.get(msg.peer), L = Math.floor(+msg.data.L); if (!p || !(L > 1 && L < 100)) return; /* 別人升級不用跑馬燈 */ void 0; }, () => {});
     room.on('gift', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; if (msg.data.to === Cloud.userId) setTimeout(loadFriends, 800); }, () => {});
     room.on('chum', msg => { if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const d = msg.data, p = peers.get(msg.peer); if (!CHUM_BY_ID[d.ty] || !isFinite(+d.x) || !isFinite(+d.z)) return;
@@ -10510,6 +10553,7 @@ function renderEvtChip(force){ if (!Evt.chip){ Evt.chip = document.createElement
   if (m.active){ const n = st && st.mig && st.mig.id === m.id ? st.mig.n : 0, done = st && st.mig && st.mig.id === m.id && st.mig.done; parts.push(`🐟 ${(SPOT_BY_ID[m.spot] || {}).short || ''}${(FISH_BY_ID[m.fish] || {}).name || ''}洄游 ${done ? '✅' : Math.min(5, n) + '/5'}`); }
   { const done = st && st.bounty && st.bounty.id === b.id && st.bounty.done; parts.push(`🎯 ${(FISH_BY_ID[b.fish] || {}).name || ''}≥${b.minw}kg${done ? ' ✅' : ''}`); }
   if (met) parts.push('🌠 流星雨');
+  if (OW.luckUntil && OW.luckUntil > Date.now()){ const r = Math.ceil((OW.luckUntil - Date.now()) / 1000); parts.unshift(`🐋 好運 ${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`); }
   const txt = parts.join(' · '); if (Evt.chip.textContent !== txt) Evt.chip.textContent = txt;
   Evt.chip.hidden = !!(Dive.on || (typeof Sub !== 'undefined' && Sub.on) || House.on || inIndoor()); }
 function evtTick(t){ const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms);
@@ -11338,6 +11382,7 @@ function renderTab(){
       '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
       '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
+      '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
       '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 5 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
       '💇 阿萍新設計的 9 款髮型（八字瀏海、法式瀏海、鎖骨髮、低馬尾、空氣瀏海、內扣髮、蛋捲頭、低丸子頭、高顱頂半扎）排在原本的後面，一樣每兩天上架一款。',
       '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。',

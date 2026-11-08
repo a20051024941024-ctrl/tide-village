@@ -198,6 +198,7 @@ begin
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
   sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl, bait->>'k') end;
   begin evm := public._ev_mig(); if public._ev_meteor() then kl := kl * 1.6; end if; exception when undefined_function then evm := null; end;   -- 111 釣魚活動：魚群洄游、流星雨
+  if p_boat then begin if public._breach_luck(pl.id) then kr := kr * 1.4; kl := kl * 1.25; end if; exception when undefined_function then null; end; end if;   -- 113 在外海看到鯨魚跳出水面：3 分鐘內在船上釣稀有 ×1.4、傳說 ×1.25
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
     f := cfg->'fish'->fid; if f is null then continue; end if;
     if f ? 'fest' and not public._fest_on(f->>'fest') then continue; end if;   -- 節慶限定魚（087）：只有那個節日期間釣得到
