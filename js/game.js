@@ -10654,7 +10654,8 @@ function clodTick(){ const cp = camera.position;
     const d = Math.hypot(g.position.x - cp.x, g.position.z - cp.z), lvl = f === me ? 0 : d > 48 ? 3 : d > 30 ? 2 : d > 16 ? 1 : 0;   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
     if (lvl === f._lod && frameNo - (f._lodAt || 0) < 120) continue; f._lod = lvl; f._lodAt = frameNo;
     const px = lvl === 1 || lvl === 2 ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
-    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh){ o.layers.set(CLOD.L); return; } let small = false; if ((lvl === 1 || lvl === 2) && !o.isSkinnedMesh){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < (lvl === 2 ? 0.12 : 0.09); }
+    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
+      if ((lvl === 1 || lvl === 2) && !o.isSkinnedMesh && !o.userData._face){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < (lvl === 2 ? 0.12 : 0.09); }
       if (lvl === 3 || small) o.layers.set(CLOD.L); else o.layers.set(0); }); } }
 
 /* ===== v289 效能：主島不會動的東西合併成少數幾大塊（draw call 從上千降到一兩百） =====
