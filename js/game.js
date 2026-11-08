@@ -818,7 +818,7 @@ sun.castShadow = true;
 const SM = TIERS[Quality.tier].shadow || 1024;
 sun.shadow.mapSize.set(SM, SM);
 sun.castShadow = TIERS[Quality.tier].shadow > 0;
-Object.assign(sun.shadow.camera, { left:-30, right:30, top:30, bottom:-30, near:1, far:100 });
+Object.assign(sun.shadow.camera, { left:-24, right:24, top:24, bottom:-24, near:1, far:100 });   /* v289 影子只算玩家附近 */
 sun.shadow.bias = -0.0008;
 sun.shadow.camera.updateProjectionMatrix();
 scene.add(sun, sun.target);
@@ -3048,9 +3048,10 @@ function kidAnimate(f, dt, t){
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   K.mixer.update(dt);
 }
+const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc';
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; CLOD.all.add(this);
     if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
@@ -7509,6 +7510,8 @@ function updateFerry(dt, t){
   if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
   if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
   if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){}
+  if (frameNo % 30 === 0) try { sbTick(); } catch(e){ console.warn('sb', e); SB.state = 'off'; }
+  if (frameNo % 15 === 7) try { clodTick(); } catch(e){}
   try { meteorTick(dt, t); } catch(e){}
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
   if (Ferry.on && frameNo % 60 === 0){ const n = crewNear(); if (n !== Ferry.crewN){ Ferry.crewN = n; renderFerryBar(); } }
@@ -10600,6 +10603,50 @@ function renderSalon(body){
     const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', hcName(n))); t.appendChild(el('div', 'sub2', L.c === n ? '現在的髮色' : own ? '已經有了' : '🪙200')); li.appendChild(t);
     if (L.c !== n){ const a = el('div', 'tacts'), b = el('button', 'tbtn', own ? '換' : '染'); b.addEventListener('click', () => own ? setLook(Object.assign({}, L, { c:n })) : salonBuy('hc', n, () => setLook(Object.assign({}, lookParse(cleanGear(rec.gear).look), { c:n })))); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
   body.appendChild(ul); if (waitC) body.appendChild(el('p', 'sub', '🧪 阿萍每天都會調出一種新髮色，永遠不會停。')); }
+/* ===== v289 效能：角色遠一點就不畫小東西 =====
+   每個角色有 60 幾個小零件（眼睛、亮點、腮紅、眉毛、釣竿的環…），離鏡頭 18 公尺以外就不畫這些小零件，
+   48 公尺以外整個人都不畫（霧也看不太到了）。用「圖層」做，不會跟遊戲本來的顯示／隱藏打架。 */
+function clodTick(){ const cp = camera.position;
+  for (const f of CLOD.all){ const g = f.av && f.av.g; if (!g || !g.parent){ if (g && !g.parent && f !== me) CLOD.all.delete(f); continue; }
+    const d = Math.hypot(g.position.x - cp.x, g.position.z - cp.z), lvl = f === me ? 0 : d > 48 ? 2 : d > 16 ? 1 : 0;
+    if (lvl === f._lod && frameNo - (f._lodAt || 0) < 120) continue; f._lod = lvl; f._lodAt = frameNo;
+    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; let small = false; if (lvl === 1 && !o.isSkinnedMesh){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < 0.09; }
+      if (lvl === 2 || small) o.layers.set(CLOD.L); else o.layers.set(0); }); } }
+
+/* ===== v289 效能：主島不會動的東西合併成少數幾大塊（draw call 從上千降到一兩百） =====
+   做法：開場 3 秒內位置、顏色、顯示都沒變過的普通方塊／圓柱（沒有貼圖、不透明、標準材質），照「材質樣子＋所在的 32 公尺格子」分組，
+   把顏色寫進每個頂點、合併成一個網格；原本的那些拿掉。會動的（村民、旗子、水、魚、門…）3 秒內會被發現而不合併。
+   遠處島、室內、節慶裝飾、珊瑚礁、冰島這些會整組開關的不合併。網址加 #nobatch 可以關掉比較。 */
+const SB = { boot: performance.now(), state: /nobatch/.test(location.hash) ? 'off' : 'wait', cand:null, t0:0, g:null, stats:null };
+function sbDynRoots(){ const R = new Set(); try { if (Sub.group) R.add(Sub.group); } catch(e){} return R; }
+function sbRoot(o){ let a = o; while (a.parent && a.parent !== scene) a = a.parent; return a.parent === scene ? a : null; }
+function sbOk(o, dyn){ if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || o.isPoints || o.isLine || o.isSprite) return false; const m = o.material, g = o.geometry;
+  if (!m || Array.isArray(m) || !(m.isMeshStandardMaterial || (m.isMeshBasicMaterial && !m.transparent)) || m.map || m.alphaMap || m.normalMap || m.emissiveMap || m.envMap || m.aoMap || m.bumpMap || m.transparent || m.opacity < 1 || m.vertexColors || m.wireframe || m.alphaTest > 0) return false;
+  if (m.onBeforeCompile && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile){ const k = m.customProgramCacheKey ? String(m.customProgramCacheKey()) : ''; if (!/^(wood|rock)(-d)?$/.test(k)) return false; }
+  if (!g || !g.isBufferGeometry || !g.attributes.position || g.morphAttributes.position) return false;
+  if (o.userData.keep || o.userData.dyn || !o.visible) return false;
+  for (let a = o.parent; a; a = a.parent){ if (a === scene) break; if (!a.visible || dyn.has(a) || a.userData.dyn || a.isSkinnedMesh || a.isBone) return false; }
+  const e = o.matrixWorld.elements; if (Math.abs(e[12]) > 95 || Math.abs(e[14]) > 95) return false; return true; }
+function sbSig(o){ const m = o.material, k = m.customProgramCacheKey && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? String(m.customProgramCacheKey()) : '';
+  return [m.type, Math.round((m.roughness || 0) * 20), Math.round((m.metalness || 0) * 20), m.side, m.flatShading ? 1 : 0, m.emissive ? m.emissive.getHexString() + (m.emissiveIntensity || 0).toFixed(2) : '', k, o.castShadow ? 1 : 0, o.receiveShadow ? 1 : 0, m.depthWrite ? 1 : 0, m.fog ? 1 : 0].join('|'); }
+function sbTick(){ if (SB.state === 'off' || SB.state === 'done') return; if (frameNo < 60 || performance.now() - SB.boot < 6000 || Dive.on || (typeof Sub !== 'undefined' && Sub.on) || onIsle || House.on || inIndoor()) return;
+  if (SB.state === 'wait'){ const dyn = sbDynRoots(), L = []; scene.updateMatrixWorld(true); scene.traverse(o => { if (sbOk(o, dyn)) L.push({ o, m: o.matrixWorld.elements.slice(), c: o.material.color.getHex(), p: o.parent }); }); SB.cand = L; SB.t0 = performance.now(); SB.state = 'watch'; return; }
+  if (SB.state === 'watch'){ if (performance.now() - SB.t0 < 3000) return; sbBuild(); } }
+function sbBuild(){ const dyn = sbDynRoots(), groups = new Map(); scene.updateMatrixWorld(true); let nIn = 0;
+  for (const c of SB.cand){ const o = c.o; if (!o.parent || o.parent !== c.p || !sbOk(o, dyn) || o.material.color.getHex() !== c.c) continue; const e = o.matrixWorld.elements; let same = true; for (let i = 0; i < 16; i++) if (Math.abs(e[i] - c.m[i]) > 1e-4){ same = false; break; } if (!same) continue;
+    const root = sbRoot(o); if (!root || root === o) { if (!root) continue; }
+    const cx = Math.floor(e[12] / 32), cz = Math.floor(e[14] / 32), key = sbSig(o) + '#' + cx + ',' + cz + '#' + (root === o ? 'scene' : root.uuid); let G = groups.get(key); if (!G){ G = { list: [], tmpl: o.material, shadow: o.castShadow, recv: o.receiveShadow, root: root === o ? null : root }; groups.set(key, G); } G.list.push(o); nIn++; }
+  SB.g = new THREE.Group(); SB.g.name = 'staticBatch'; let made = 0, removed = 0;
+  for (const G of groups.values()){ if (G.list.length < 2) continue; const geos = [], inv = G.root ? new THREE.Matrix4().copy(G.root.matrixWorld).invert() : null;
+    for (const o of G.list){ let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); if (!g.attributes.normal) g.computeVertexNormals(); g.morphAttributes = {}; g.clearGroups();
+      g.applyMatrix4(o.matrixWorld); if (inv) g.applyMatrix4(inv); const n = g.attributes.position.count, col = new Float32Array(n * 3), cc = o.material.color; for (let i = 0; i < n; i++){ col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); geos.push(g); }
+    const mg = mergeGeometries(geos, false); for (const g of geos) g.dispose(); if (!mg) continue; mg.computeBoundingSphere(); mg.computeBoundingBox();
+    const T = G.tmpl, M = T.isMeshBasicMaterial ? new THREE.MeshBasicMaterial({ vertexColors: true, color: '#ffffff', side: T.side, fog: T.fog, depthWrite: T.depthWrite, toneMapped: T.toneMapped }) : new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness, metalness: T.metalness, side: T.side, flatShading: T.flatShading, emissive: T.emissive, emissiveIntensity: T.emissiveIntensity, fog: T.fog, depthWrite: T.depthWrite });
+    if (T.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile && T.customProgramCacheKey){ const k = String(T.customProgramCacheKey()); M.onBeforeCompile = T.onBeforeCompile; M.customProgramCacheKey = () => T.customProgramCacheKey() + '-vc'; }
+    const mesh = new THREE.Mesh(mg, M); mesh.castShadow = G.shadow; mesh.receiveShadow = G.recv; mesh.matrixAutoUpdate = false; mesh.updateMatrix(); mesh.userData.sb = true; (G.root || SB.g).add(mesh); made++;
+    for (const o of G.list){ o.parent.remove(o); removed++; } }
+  scene.add(SB.g); SB.state = 'done'; SB.stats = { cand: SB.cand.length, still: nIn, removed, made }; SB.cand = null; console.log('[staticBatch]', JSON.stringify(SB.stats)); }
+
 /* ===== v276 釣魚活動（111）：時間表跟伺服器一樣（台灣時間），金幣都由伺服器給 =====
    🐟 魚群洄游：每 3 小時（0、3、6…點的 30 分開始，25 分鐘）某個釣點來一大群某種魚（×4）；洄游期間在那裡釣到 5 條送 200 金幣
    🎯 懸賞魚：每 2 小時換一種稀有魚＋最低重量；釣到夠重的送 300 金幣
@@ -12601,6 +12648,7 @@ function frame(){
   fishTime.value = t; finSpd.value += Math.min(dt, 0.1) * (F.phase === 'reeling' ? 1.9 : 1); updateSeaLife(t); FX.update(dt); if (skyDome) skyDome.position.copy(camera.position); updateZones(t); watchFps(t);
   placeLabelsUpdate();
   if (Dive.on) diveHideWorld(); else { cullAvatars(); hideOrphanBits(); }
+  if (Quality.tier !== 'high'){ renderer.shadowMap.autoUpdate = false; if (frameNo % 2 === 0) renderer.shadowMap.needsUpdate = true; }   /* v289 中畫質影子兩張更新一次 */
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);

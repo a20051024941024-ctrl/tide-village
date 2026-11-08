@@ -162,6 +162,7 @@ v286：🎄 聖誕節限定魚（戴聖誕帽）：聖誕小丑魚、聖誕隆�
 supabase/114_mastery.sql ⭐ 魚種精通：fish_mastery（完美搏鬥紀錄）、_star_of、fish_perfect、my_mastery、star_board、_mastery3（三顆星的魚大尺寸機率小幅提高，roll_fish 接上，020 重新產生）。
 supabase/115_delete_account.sql 🗑️ 刪除我的帳號（delete_my_account，只能刪自己，不用 service_role）；被檢舉的聊天內容保存 30 天自動清除。
 supabase/116_kid_mode.sql 🧒 兒童安全模式：players.birth_year / kid、set_birth_year、my_age_mode；兒童不能留言（觸發器）、名字只能用「形容詞＋動物」、好友只能用好友代碼加。v288 另外新增 privacy.html、delete.html。
+v289：⚡ 效能第一步：主島不會動的東西開場後合併成少數大塊（低畫質廣場 draw calls 709→約 320）、角色 16 公尺外不畫小零件、48 公尺外整個不畫、影子範圍縮小、中低畫質影子兩張更新一次。網址加 #nobatch 可以關掉合併做比較。（沒有新的資料庫檔）
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
