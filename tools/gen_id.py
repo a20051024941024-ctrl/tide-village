@@ -1,7 +1,8 @@
 # 印尼文（beta）：跟 gen_en.py 一樣的做法，把常用的介面、地名、魚名換成印尼文；還沒翻到的就用英文對照，再沒有就維持中文。
 # 產生 js/id.js
-import json, re
-src = open('/home/claude/tide-village-repo/tools/gen_en.py').read().split("js = ")[0]
+import json, re, os
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src = open(os.path.join(ROOT,'tools/gen_en.py')).read().split("js = ")[0]
 g = {}; exec(src, g); EN = g['D']
 ID = {
 # 魚
@@ -32,14 +33,26 @@ ID = {
 # v277 新增
 "今天的活動":"Acara hari ini","現在":"Sekarang","洄游":"migrasi","魚群洄游":"Migrasi ikan","懸賞魚":"Ikan buruan","流星雨夜釣":"Mancing hujan meteor","流星雨":"Hujan meteor","釣魚大賽":"Lomba mancing","活動":"Acara","阿萍美髮沙龍":"Salon Rambut Aping","廣場留言板":"Papan pesan alun-alun","髮型":"Gaya rambut","髮色":"Warna rambut","潛水艇":"Kapal selam","留言":"Pesan","檢舉":"Laporkan","刪除":"Hapus",
 }
+# 整句翻譯（v293）：tools/id_extra.json 是遊戲裡其他句子的印尼文，手寫的 ID 優先
+EXTRA = json.load(open(os.path.join(ROOT,'tools/id_extra.json')))
+for k, v in EXTRA.items(): ID.setdefault(k, v)
 D = {}
 for k, v in EN.items(): D[k] = ID.get(k, v)
 for k, v in ID.items(): D.setdefault(k, v)
 missing = [k for k in EN if k not in ID]
 D = {k: v for k, v in D.items() if k and v}
-keys = sorted([k for k in D if len(k) >= 2 and k not in ('今天','明天','昨天','分鐘','小時','開啟','數量','價格','全部','關閉','看到','深度','氧氣','賣','售出','最大')], key=lambda k: -len(k))
-tail = open('/home/claude/tide-village-repo/tools/gen_en.py').read().split('const RE = ', 1)[1].split('"""', 1)[0]
+# v293：整句都翻了，大部分短字不會再卡在半句中文裡，所以只留下真的容易誤換的
+D.update({'比較多':'Lebih banyak','「低」':'「Rendah」','「中」':'「Sedang」','「高」':'「Tinggi」'})
+keys = sorted([k for k in D if len(k) >= 2 and k not in ('分鐘','小時','開啟','數量','價格','售出')], key=lambda k: -len(k))
+tail = open(os.path.join(ROOT,'tools/gen_en.py')).read().split('const RE = ', 1)[1].split('"""', 1)[0]
 tail = tail.replace('toEN0', 'toID0').replace('toEN', 'toID')
+# v293：一句話裡好幾段分別翻譯時，中間補空白（不然印尼文的字會黏在一起）
+tail = tail.split('function toID0', 1)[0] + r"""function toID0(s){ if (!s || !/[㐀-鿿]/.test(s)) return s; const t = s.trim(); if (D[t]) return s.replace(t, D[t]);
+  let r = s.replace(RE, m => '\u0001' + D[m] + '\u0001').replace(/\u0001+/g, '\u0001');
+  r = r.replace(/\u0001(?=[\s,.!?:;)\]」』、，。！？：；）・·~～…]|$)/g, '').replace(/(^|[\s(\[「『（・·])\u0001/g, '$1').replace(/\u0001/g, ' ');
+  return r.replace(/・/g, ' · ').replace(/，/g, ', ').replace(/。/g, '. ').replace(/！/g, '! ').replace(/？/g, '? ').replace(/：/g, ': ').replace(/（/g, ' (').replace(/）/g, ') ').replace(/(\S)  +/g, '$1 ').replace(/(^|[^㐀-鿿])([種個條隻次件顆低中高你再天秒])(?![㐀-鿿])/g, (a, p, c) => p + (p && !/\s$/.test(p) && !/[(「]/.test(p) ? ' ' : '') + ONE[c]); }
+const ONE = {'種':'jenis','個':'buah','條':'ekor','隻':'ekor','次':'kali','件':'buah','顆':'butir','低':'Rendah','中':'Sedang','高':'Tinggi','你':'Kamu','再':'Lagi','天':'hari','秒':'dtk'};
+"""
 js = "// 印尼文（beta）：常用的介面、地名、魚名換成印尼文；還沒翻到的句子維持中文。由 tools/gen_id.py 產生\nconst D = " + json.dumps(D, ensure_ascii=False) + ";\nconst K = " + json.dumps(keys, ensure_ascii=False) + ";\nconst RE = " + tail
-open('/home/claude/tide-village-repo/js/id.js', 'w').write(js)
+open(os.path.join(ROOT,'js/id.js'), 'w').write(js)
 print(len(D), 'missing', missing)

@@ -7065,7 +7065,7 @@ function renderSettings(body){
   const field = (title, sub) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); body.appendChild(f); if (sub) f._sub = sub; return f; };
   { const f = field('🌐 語言'), seg = el('div', 'seg'), cur = LS.get('tide.lang', 'tw');
     [['tw', '繁體中文'], ['cn', '简体中文'], ['en', 'English (beta)'], ['id', 'Bahasa Indonesia (beta)']].forEach(([k, l]) => { const b = el('button', 'ignore-opencc', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { if (cur === k) return; LS.set('tide.lang', k); toast(k === 'cn' ? '切换成简体中文，马上重新载入…' : k === 'en' ? 'Switching to English (beta), reloading…' : k === 'id' ? 'Beralih ke Bahasa Indonesia (beta), memuat ulang…' : '切換成繁體中文，馬上重新載入…'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
-    f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。English／Bahasa Indonesia 是測試版：選單、地名、魚名會換成英文／印尼文，比較長的說明還是中文。' + ((cur === 'cn' || cur === 'en' || cur === 'id') && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。English 是測試版：選單、地名、魚名會換成英文，比較長的說明還是中文。Bahasa Indonesia（測試版）：遊戲裡的字幾乎都翻成印尼文了。' + ((cur === 'cn' || cur === 'en' || cur === 'id') && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
   const vol = (title, on, v, setOn, setV) => { const f = field(title), row = el('div', 'volrow'), tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { setOn(!on); renderTab(); });
     const sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(v * 100); sl.disabled = !on; const pct = el('span', 'volpct', Math.round(v * 100) + '%');
     sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
@@ -7086,8 +7086,8 @@ function renderSettings(body){
   { const f = field('📄 隱私權政策'); const a = el('a', 'tbtn ghost', '打開隱私權政策'); a.href = 'privacy.html'; a.target = '_blank'; a.rel = 'noopener'; f.appendChild(a); f.appendChild(el('p', 'sub', '我們收集什麼、用在哪裡、怎麼刪除。')); }
   if (Cloud.on && Cloud.sb){ const f = field('🗑️ 刪除我的帳號');
     f.appendChild(el('p', 'sub', '會永久刪除：你的角色、金幣、魚缸、圖鑑、衣服、家具、小島、寵物、好友、設計圖和所有紀錄；廣場留言會改成「已刪除的玩家」。刪除後不能復原。確定的話，在下面輸入「刪除」兩個字再按確認。'));
-    const row = el('div', 'titles'), inp = el('input', 'txt'); inp.placeholder = '輸入：刪除'; inp.maxLength = 4; inp.style.cssText = 'flex:1 1 8em;min-width:0'; const ok = el('button', 'tbtn danger', '確認刪除');
-    ok.addEventListener('click', async () => { if (inp.value.trim() !== '刪除'){ toast('請輸入「刪除」兩個字'); return; } ok.disabled = true; ok.textContent = '刪除中…';
+    const row = el('div', 'titles'), inp = el('input', 'txt'); inp.placeholder = '輸入：刪除'; inp.maxLength = 8; inp.style.cssText = 'flex:1 1 8em;min-width:0'; const ok = el('button', 'tbtn danger', '確認刪除');
+    ok.addEventListener('click', async () => { if (!['刪除', '删除', 'HAPUS', 'DELETE'].includes(inp.value.trim().toUpperCase())){ /* v293：印尼文、英文玩家打不出中文，也可以打 HAPUS / DELETE */ toast('請輸入「刪除」兩個字'); return; } ok.disabled = true; ok.textContent = '刪除中…';
       try { const { data, error } = await Cloud.sb.rpc('delete_my_account', { p_confirm: '刪除' }); if (error) throw error;
         try { await Cloud.sb.auth.signOut(); } catch(e){} try { for (const k of Object.keys(localStorage)) if (k.startsWith('tide.') || k.startsWith('sb-')) localStorage.removeItem(k); } catch(e){}
         flash('帳號已經刪除了。謝謝你來玩潮汐釣魚村。', 2.5); setTimeout(() => location.reload(), 2600); } catch(e){ ok.disabled = false; ok.textContent = '確認刪除'; toast('刪除失敗：' + ((e && e.message) || '請稍後再試')); } });
