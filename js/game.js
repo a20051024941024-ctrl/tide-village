@@ -9980,14 +9980,18 @@ async function loadCloudVisits(){ if (!Cloud.on || CVisits.loading) return; CVis
   if (!$('#sheet').hidden && curTab === 'people') renderTab(); } } catch(e){} CVisits.loading = false; }
 function renderCloudVisits(body){
   if (!Cloud.on) return; if (Date.now() - CVisits.at > 30000) loadCloudVisits();
-  const list = CVisits.list || []; body.appendChild(el('div', 'dexhead', `👣 誰來逛過你的小島、水族館（最近 14 天）`));
+  const list = CVisits.list || []; body.appendChild(el('div', 'dexhead', `👣 誰來逛過（最近 14 天，🏝️小島 🐠水族館）`));
   if (!list.length){ body.appendChild(el('p', 'sub', CVisits.list ? '還沒有人來逛過。把小島佈置得漂亮一點，別人在「逛別人的島」就比較容易看到你！' : '讀取中…')); return; }
-  const seenAt = LS.get('tide.visitSeen', 0), ul = el('ul', 'people');
-  for (const v of list.slice(0, 30)){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = Date.parse(v.at) > seenAt ? '#f17b6d' : '#c9d3da';
-    li.append(sw, el('span', '', `${v.kind === 'isle' ? '🏝️' : '🐠'} ${v.name || '釣客'}`), el('span', 'st', `${agoText(Date.parse(v.at))}逛了你的${v.kind === 'isle' ? '小島' : '水族館'}${v.n > 1 ? `（${v.n} 次）` : ''}`));
-    if (typeof isFriend === 'function' && !isFriend(v.id)){ const af = el('button', 'tbtn ghost vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(v.id, v.name); }); li.appendChild(af); }
-    const vi = el('button', 'tbtn ghost vbtn', '回訪小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(v.id, v.name); }); li.appendChild(vi); ul.appendChild(li); }
-  body.appendChild(ul); setTimeout(() => LS.set('tide.visitSeen', Date.now()), 1500);
+  /* v285 簡化：同一個人只列一行（最近一次＋逛了哪裡），先列 5 個，其他的點「看全部」 */
+  const seenAt = LS.get('tide.visitSeen', 0), ul = el('ul', 'people'), by = new Map();
+  for (const v of list){ const k = v.id || v.name; let g = by.get(k); if (!g){ g = { id: v.id, name: v.name, at: 0, isle: 0, aq: 0 }; by.set(k, g); } g.at = Math.max(g.at, Date.parse(v.at) || 0); g[v.kind === 'isle' ? 'isle' : 'aq'] += v.n || 1; }
+  const G = [...by.values()].sort((a, b) => b.at - a.at), lim = CVisits.all ? 30 : 5;
+  for (const v of G.slice(0, lim)){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = v.at > seenAt ? '#f17b6d' : '#c9d3da';
+    li.append(sw, el('span', '', v.name || '釣客'), el('span', 'st', `${agoText(v.at)}・${[v.isle ? `🏝️${v.isle > 1 ? '×' + v.isle : ''}` : '', v.aq ? `🐠${v.aq > 1 ? '×' + v.aq : ''}` : ''].filter(Boolean).join(' ')}`));
+    const vi = el('button', 'tbtn ghost vbtn', '回訪'); vi.addEventListener('click', () => { closeSheet(); visitIsle(v.id, v.name); }); li.appendChild(vi); ul.appendChild(li); }
+  body.appendChild(ul);
+  if (G.length > 5){ const mb = el('button', 'tbtn ghost', CVisits.all ? '收起來' : `看全部（${G.length} 人）`); mb.addEventListener('click', () => { CVisits.all = !CVisits.all; renderTab(); }); body.appendChild(mb); }
+  setTimeout(() => LS.set('tide.visitSeen', Date.now()), 1500);
 }
 function renderVisits(body){
   const online = onlineUids(), list = Visits.list.filter(v => v.u !== Cloud.userId);
