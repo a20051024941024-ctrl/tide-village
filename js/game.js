@@ -3973,12 +3973,14 @@ function updateCamera2(dt){
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   /* v329 玩家建議：等魚、魚咬、拉魚都用肩膀後面的視角看著浮標（以前只有拉魚才這樣；等魚時用俯瞰，在瀑布潭鏡頭會跑進水霧變一片白）。拖畫面一樣可以繞著轉 */
   const reelOn = ['waiting', 'bite', 'reeling'].includes(F.phase) && me.bobPos && !Photo.on && !Dive.on && !House.on && !(typeof Sub !== 'undefined' && Sub.on);
-  reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4)); if (!reelOn) reelCam.y0 = null;
+  reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4)); if (!reelOn){ reelCam.y0 = null; reelCam.p0 = null; }
   if (me.bobPos) reelCam.bob = { x: me.bobPos.x, z: me.bobPos.z };
   if (reelCam.k > 0.01 && reelCam.bob){
-    const bp = reelCam.bob, bx = bp.x - me.pos.x, bz = bp.z - me.pos.z, L = Math.hypot(bx, bz) || 1; if (reelCam.y0 === null) reelCam.y0 = cam.yaw;
+    const bp = reelCam.bob, bx = bp.x - me.pos.x, bz = bp.z - me.pos.z, L = Math.hypot(bx, bz) || 1; if (reelCam.y0 === null){ reelCam.y0 = cam.yaw; reelCam.p0 = cam.pitch; reelCam.d0 = cam.dist; }
     const ye = Math.atan2(bx, bz) + Math.PI + (cam.yaw - reelCam.y0), dx = -Math.sin(ye), dz = -Math.cos(ye), rx = -dz, rz = dx;   /* v199：拉魚時也可以拖畫面轉鏡頭（繞著角色和魚轉） */
-    const want = reelCam.pos.set(me.pos.x - dx * 2.1 + rx * 2.3, me.baseY + 2.0, me.pos.z - dz * 2.1 + rz * 2.3);   /* v331 玩家建議：從右斜後方看（看得到側臉和釣竿），不要正後方看後腦勺 */   // 右肩後上方，角色在畫面左下，不會擋住魚
+    /* v333 玩家建議：一開始自動移到右斜後方（約 70 度，看得到側臉和釣竿），之後拖畫面可以轉、上下拖可以調高低、雙指可以拉遠拉近 */
+    const zf = clamp(cam.dist / (reelCam.d0 || cam.dist), 0.5, 3), hy = clamp(2.0 + (cam.pitch - (reelCam.p0 ?? cam.pitch)) * 5, 0.6, 7);
+    const want = reelCam.pos.set(me.pos.x + (-dx * 1.1 + rx * 3.0) * zf, me.baseY + hy * Math.sqrt(zf), me.pos.z + (-dz * 1.1 + rz * 3.0) * zf);
     const look = reelCam.look.set(bp.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, bp.z);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
     const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(House.on ? ROOM_Y + 0.8 : Dive.on ? DIVE.y + 0.5 : 0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
