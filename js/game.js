@@ -8532,8 +8532,29 @@ function completeQuest(q){
   SFX.catch(); flash(`📜 任務完成！+${q.reward} 金幣`, 1.6); const npc = questNpcs.find(n => n.who === q.who); if (npc){ npc.f.say('謝謝你！😄', 'emote', 3); npc.mark = null; FX.emit(npc.f.pos.x, 2, npc.f.pos.z, 18, '#ffd36a', 1, 2, 1); }
   renderTab();
 }
+/* v328「今天可以做的事」（27）：把今天能做的事整理成一張清單，每一項都有按鈕直接過去 */
+function todayItems(){ const L = [], ms = bossNow(), tp = new Date(ms + 8 * 3600000), hm = tp.getUTCHours() * 60 + tp.getUTCMinutes();
+  const go = (id) => () => { closeSheet(); const t = TRAVEL.find(x => x.id === id); if (t) travelTo(t); };
+  const ev = () => { curTab = 'events'; openSheet('events'); };
+  if (Guide.i != null && Guide.i !== 'done' && GUIDE[Guide.i]) L.push({ ic:'🧭', t:'新手任務：' + GUIDE[Guide.i].t, s:GUIDE[Guide.i].h, done:false });
+  if (Quests.list){ const d = Quests.list.filter(q => q.done).length; L.push({ ic:'📜', t:`每日任務 ${d}/${Quests.list.length}`, s:d >= Quests.list.length ? '今天的請求都完成了，明天半夜 12 點換新的' : Quests.list.filter(q => !q.done).map(q => (QUEST_NPC[q.who] || {}).name + '：' + (q.kind === 'dish' ? (RECIPES[q.target] || {}).name || '' : (FISH_BY_ID[q.target] || {}).name || '')).join('、'), done:d >= Quests.list.length, btn:'看任務', fn:() => { const e = document.getElementById('questList'); if (e) e.scrollIntoView({ block:'start', behavior:'smooth' }); } }); }
+  if (typeof Story !== 'undefined' && Story.list) for (const v of Story.list.filter(v => !v.today)) L.push({ ic:'💌', t:`${v.name}的委託`, s:v.ask || '去找他聊聊', done:false, btn:'看故事', fn:() => { curTab = 'story'; renderTab(); } });
+  if (Rumor.st){ const st = Rumor.st; L.push({ ic:'🔍', t:'本週傳聞：' + rumorSpot(st) + '的大影子', s:st.caught ? '你已經釣到了 ✅' : !st.c2 ? `在${rumorSpot(st)}釣到 5 條魚找線索（${Math.min(5, st.n)}/5）` : !st.c3 ? '去港口問追紅鯊的阿默' : `線索齊了：${PER_NAME[st.per]}用${RIG_NAME[st.rig]}`, done:!!st.caught, btn:st.c2 && !st.c3 ? '去港口' : '去釣點', fn:st.c2 && !st.c3 ? go('harbor') : go(st.spot) }); }
+  { const m = evtMig(ms); L.push({ ic:'🐟', t:'魚群洄游' + (m.active ? '（進行中）' : ''), s:m.active ? `${(SPOT_BY_ID[m.spot] || {}).label}的${(FISH_BY_ID[m.fish] || {}).name}，釣 4 條送 🪙200（到 ${evtHM(m.en)}）` : `下一次 ${evtHM(evtMig((m.st + 10800 + 60) * 1000).st)}`, done:false, btn:m.active ? '去釣點' : '', fn:m.active ? go(m.spot) : null }); }
+  { const b = evtBounty(ms), dn = Evt.st && Evt.st.bounty && Evt.st.bounty.id === b.id && Evt.st.bounty.done; L.push({ ic:'🎯', t:'懸賞魚：' + ((FISH_BY_ID[b.fish] || {}).name || ''), s:dn ? '已經領了 ✅' : `${b.minw} 公斤以上送 🪙300（到 ${evtHM(b.en)}）`, done:!!dn, btn:'看活動', fn:ev }); }
+  { const nx = TOURNEY.hours.map(h => h * 60).find(m => m + TOURNEY.mins > hm); L.push({ ic:'🏆', t:'釣魚大賽', s:nx == null ? '今天的大賽都結束了，明天 12:00 再來' : nx <= hm ? '進行中！10 分鐘比總重量' : `下一場 ${String(nx / 60 | 0).padStart(2, '0')}:00，10 分鐘比總重量`, done:nx == null }); }
+  if (evtMeteor(ms) || hm >= 22 * 60) L.push({ ic:'🌠', t:'流星雨夜釣', s:evtMeteor(ms) ? '進行中！傳說魚比較好釣' : '今晚 23:00～23:30', done:false });
+  { const near = FISH.filter(f => !f.rs && !f.of && (rec.count[f.id] || 0) >= 5 && (rec.count[f.id] || 0) < 10 && starsOf(f) < 2).sort((a, b) => (rec.count[b.id] || 0) - (rec.count[a.id] || 0)).slice(0, 3);
+    if (near.length) L.push({ ic:'⭐', t:'差一點升星', s:near.map(f => `${f.name}再釣 ${10 - rec.count[f.id]} 條`).join('、') + ' 就有 ★★', done:false }); }
+  return L; }
+function renderToday(body){ const L = todayItems(); if (!L.length) return; const ul = el('ul', 'shoplist today');
+  for (const it of L){ const li = el('li', it.done ? 'on' : ''); li.appendChild(el('span', 'dishic', it.done ? '✅' : it.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', it.t)); if (it.s) d.appendChild(el('div', 'sub2', it.s)); li.appendChild(d);
+    if (it.btn && it.fn){ const b = el('button', 'tbtn ghost', it.btn); b.addEventListener('click', it.fn); li.appendChild(b); } ul.appendChild(li); }
+  body.appendChild(ul); }
 function renderQuests(body){
-  body.appendChild(el('div', 'shophead')).innerHTML = `<b>📜 今天的任務</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
+  body.appendChild(el('div', 'shophead')).innerHTML = `<b>📋 今天可以做的事</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
+  renderToday(body); if (Cloud.on && !Rumor.st) rumorLoad(true).then(() => { if (curTab === 'quest' && Rumor.st) renderTab(); });
+  body.appendChild(el('div', 'dexhead', '📜 村民的請求')).id = 'questList';
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '任務要連上雲端才能接，等一下再試試看。')); return; }
   if (!Quests.list){ body.appendChild(el('p', 'sub', '讀取中…')); loadQuests(); return; }
   body.appendChild(el('p', 'sub', '村子裡的人每天會有新的請求（台灣時間半夜 12 點換）。走到他們旁邊，或在這裡交付都可以。'));
@@ -12236,6 +12257,7 @@ function renderTab(){
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
     ]);
     sec('📜 每日任務、釣魚活動', [
+      '選單的「今天」分頁：把今天可以做的事整理成一張清單（每日任務、本週傳聞、洄游、懸賞、大賽、流星雨、差一點升星的魚），按旁邊的按鈕可以直接過去。',
       '🔍 本週傳聞（每週一換）：有人在某個釣點看到很大的影子。在那裡釣到 5 條魚會發現牠出現的時段；再去港口問追紅鯊的阿默，他會告訴你要用哪種釣法。三條線索都找到，在對的釣點、時段、釣法，那條傳說魚比較好釣（4 倍）。本週第一個釣到的人 🪙500，之後釣到的人 🪙150。進度在「活動」頁。',
       '村長阿土伯（潮汐廣場東邊、村長辦公室門口）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',
       '走到他們旁邊、或在選單的「任務」分頁交付魚或料理，就能拿到金幣。每天台灣時間半夜 12 點換新任務。',
