@@ -3971,13 +3971,15 @@ function updateCamera2(dt){
     if (fishing && !CAMV.snap && !Photo.on) CAMV.snap = { p: cam.pitch, d: cam.dist, y: null };
     if (!fishing && CAMV.snap && F.phase === 'idle'){ const S = CAMV.snap, k = Math.min(1, dt * 5); cam.pitch += (S.p - cam.pitch) * k; cam.dist += (S.d - cam.dist) * k; if (Math.abs(S.p - cam.pitch) < 0.005 && Math.abs(S.d - cam.dist) < 0.02){ cam.pitch = S.p; cam.dist = S.d; CAMV.snap = null; } } }
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
-  const reelOn = F.phase === 'reeling' && !Photo.on;
+  /* v329 玩家建議：等魚、魚咬、拉魚都用肩膀後面的視角看著浮標（以前只有拉魚才這樣；等魚時用俯瞰，在瀑布潭鏡頭會跑進水霧變一片白）。拖畫面一樣可以繞著轉 */
+  const reelOn = ['waiting', 'bite', 'reeling'].includes(F.phase) && me.bobPos && !Photo.on && !Dive.on && !House.on && !(typeof Sub !== 'undefined' && Sub.on);
   reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4)); if (!reelOn) reelCam.y0 = null;
-  if (reelCam.k > 0.01){
-    const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, L = Math.hypot(bx, bz) || 1; if (reelCam.y0 === null) reelCam.y0 = cam.yaw;
+  if (me.bobPos) reelCam.bob = { x: me.bobPos.x, z: me.bobPos.z };
+  if (reelCam.k > 0.01 && reelCam.bob){
+    const bp = reelCam.bob, bx = bp.x - me.pos.x, bz = bp.z - me.pos.z, L = Math.hypot(bx, bz) || 1; if (reelCam.y0 === null) reelCam.y0 = cam.yaw;
     const ye = Math.atan2(bx, bz) + Math.PI + (cam.yaw - reelCam.y0), dx = -Math.sin(ye), dz = -Math.cos(ye), rx = -dz, rz = dx;   /* v199：拉魚時也可以拖畫面轉鏡頭（繞著角色和魚轉） */
     const want = reelCam.pos.set(me.pos.x - dx * 2.0 + rx * 1.25, me.baseY + 2.05, me.pos.z - dz * 2.0 + rz * 1.25);   // 右肩後上方，角色在畫面左下，不會擋住魚
-    const look = reelCam.look.set(me.bobPos.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, me.bobPos.z);
+    const look = reelCam.look.set(bp.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, bp.z);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
     const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(House.on ? ROOM_Y + 0.8 : Dive.on ? DIVE.y + 0.5 : 0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
     camera.position.lerp(normal.lerp(want, reelCam.k), 1 - Math.exp(-8 * dt));
