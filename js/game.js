@@ -410,7 +410,7 @@ const HARBOR_SQ = [22.5, -24.5, 10];   /* v320 玩家說出生點太擠：店圍
 var HLOT = (() => { const R = 11.5, at = d => { const a = d * Math.PI / 180, x = HARBOR_SQ[0] + Math.cos(a) * R, z = HARBOR_SQ[1] + Math.sin(a) * R; return [x, z, Math.atan2(HARBOR_SQ[0] - x, HARBOR_SQ[1] - z)]; };
   return { tackle: at(60), shop: at(105), fu: at(150), market: at(200) }; })();   /* 馬蹄形：開口朝東北對著碼頭和海；150 和 200 中間是從村子進來的路 */
 /* 57 主島分區：中央＝社交生活（村長辦公室、廣場花園），森林＝自然寵物（寵物活動區） */
-const CHIEF_OFFICE = [14.5, 1.5, -Math.PI / 2], PETPARK = [-13, 18.5, 4.2], PETGATE = -2.3;   /* 入口朝西北，對著上望海丘的小步道 */
+const CHIEF_OFFICE = [14.5, 1.5, -Math.PI / 2], PETPARK = [-15, 21.8, 4.2], PETGATE = -2.05;   /* 入口朝西北，對著上望海丘的小步道 */
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
@@ -737,7 +737,7 @@ const MAP = {
     [[3, 14], [10, 15], [18, 20], [23, 22]],             // 往螢光溪
     [[-8, 1], [-19, 6], [-24, 5.2]],                     // 往瀑布潭
     [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
-    [[-17.6, 15.2], [PETPARK[0] + Math.cos(PETGATE) * (PETPARK[2] - 0.5), PETPARK[1] + Math.sin(PETGATE) * (PETPARK[2] - 0.5)]],   // 57 往寵物樂園入口
+    [[-18.2, 16.4], [PETPARK[0] + Math.cos(PETGATE) * (PETPARK[2] - 0.5), PETPARK[1] + Math.sin(PETGATE) * (PETPARK[2] - 0.5)]],   // 57 往寵物樂園入口
   ],
 };
 // 珊瑚礁群島（參考小琉球、澎湖）的位置，放在這裡是因為建地形、種樹的時候就要用到
