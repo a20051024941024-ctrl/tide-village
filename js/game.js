@@ -406,8 +406,8 @@ const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2
 /* 潮汐商店街（2026-11-04 使用者：NPC 的店分開一點、整齊一點）：往珊瑚礁群島那條路的兩邊，一排一排的店，門口都朝著路 */
 // v195 港口商店一排排整齊：四間都朝南（面向水族館那條路），間隔一樣
 /* 44 港口小鎮第一區：四間港口的店圍著碼頭排成半月形，門都朝向港邊廣場（HARBOR_SQ）；[x, z, 轉向] */
-const HARBOR_SQ = [22.5, -24.5, 8];   /* 44 第三區（選 C）：廣場擴大一點，噴水池、村長、出生點都在這裡 */
-var HLOT = (() => { const R = 9, at = d => { const a = d * Math.PI / 180, x = HARBOR_SQ[0] + Math.cos(a) * R, z = HARBOR_SQ[1] + Math.sin(a) * R; return [x, z, Math.atan2(HARBOR_SQ[0] - x, HARBOR_SQ[1] - z)]; };
+const HARBOR_SQ = [22.5, -24.5, 10];   /* v320 玩家說出生點太擠：店圍的圈從 9 拉大到 11.5 公尺，廣場也變大 */   /* 44 第三區（選 C）：廣場擴大一點，噴水池、村長、出生點都在這裡 */
+var HLOT = (() => { const R = 11.5, at = d => { const a = d * Math.PI / 180, x = HARBOR_SQ[0] + Math.cos(a) * R, z = HARBOR_SQ[1] + Math.sin(a) * R; return [x, z, Math.atan2(HARBOR_SQ[0] - x, HARBOR_SQ[1] - z)]; };
   return { tackle: at(60), shop: at(105), fu: at(150), market: at(200) }; })();   /* 馬蹄形：開口朝東北對著碼頭和海；150 和 200 中間是從村子進來的路 */
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
@@ -417,7 +417,6 @@ var Mkt = { tab:'new', list:null, mine:null, stats:null, at:0, busy:false, sell:
 function lotAt(k, lx, lz){ const L = SHOPLOT[k], c = Math.cos(L.r), s = Math.sin(L.r); return [L.x + c * lx + s * lz, L.z - s * lx + c * lz]; }
 const LANDMARKS = [
   { id:'plaza',      label:'潮汐廣場', pos:V3(4, 4),            color:PALETTE.gold, ly:1.8 },
-  { id:'harborsq',   label:'港邊廣場', pos:V3(HARBOR_SQ[0], HARBOR_SQ[1]), color:'#cfc6b4', ly:2.6 },
   { id:'aquarium',   label:'水族館',   pos:V3(AQUA[0], AQUA[1]), color:PALETTE.coral, ly:6.8, mx:7.6, mz:4.6 },
   { id:'chat',       label:'聊天亭',   pos:V3(-3, 22),          color:'#f5a5d8', ly:3.8 },
   { id:'tackle',     label:'釣具店',   pos:V3(HLOT.tackle[0], HLOT.tackle[1]), color:'#f6a96b', ly:5.5, ...hlOff('tackle', 2.4, 2.8) },
@@ -4049,9 +4048,12 @@ function doCast(){
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.roll = null; F.rollWait = 0; F.pre = null; F.probe = null; F.lastNib = 0;
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
-  if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';
-    cloudCall('roll_fish', { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat, p_bx: +to.x.toFixed(2), p_bz: +to.z.toFixed(2), p_sl: F.castSlot || signSlot() })
-      .then(row => { if (F.castId !== id) return; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; }); }   /* 伺服器抽好了，但不會告訴手機是什麼魚（072）；咬餌前大約 2 秒才用 hook_fish 問 */
+  if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending'; F.rollErr = ''; F.hookTry = 0;
+    const args = { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat, p_bx: +to.x.toFixed(2), p_bz: +to.z.toFixed(2), p_sl: F.castSlot || signSlot() };
+    const roll = n => cloudCall('roll_fish', args).then(row => { if (F.castId !== id) return;
+      if (!row && n === 0 && netErr(Cloud.lastErr)){ F.rollWait = 0; setTimeout(() => { if (F.castId === id && F.phase === 'waiting') roll(1); }, 2600); return; }   /* v320 網路問題就等 2.6 秒再試一次 */
+      F.rollErr = row ? '' : Cloud.lastErr; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; });
+    roll(0); }   /* 伺服器抽好了，但不會告訴手機是什麼魚（072）；咬餌前大約 2 秒才用 hook_fish 問 */
   F.envB = envBonus(s.id);
   F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('🐟 浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
   F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (F.nest ? 0.55 : 1) * (rodFit(s.id) ? ROD_FIT[rodFit(s.id)].bite : 1) * (s.id === 'shrimp' ? 0.75 : 1) * (s.id === 'mangrove' && Env.tide.lv < -0.35 ? 1.6 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
@@ -4130,10 +4132,10 @@ const BiteFish = { m:null, id:null, ang:0, k:0, shadowM:null };
 function fishHook(){ if (!Cloud.on || F.roll !== 'cast' || F.hookReq) return; const nt = now(); if (nt < F.castAt + 2.1 || nt < F.waitUntil - 2.0) return;
   const id = F.castId; F.hookReq = 1; F.roll = 'hooking';
   Cloud.sb.rpc('hook_fish').then(async ({ data: row, error }) => { if (F.castId !== id) return;
-    if (error){ if (/還沒游過來/.test(String(error.message || ''))){ F.roll = 'cast'; F.hookReq = 0; F.castAt = now() - 1.6; } else F.roll = 'fail'; return; }
+    if (error){ const em = String(error.message || ''); if (/還沒游過來/.test(em)){ F.roll = 'cast'; F.hookReq = 0; F.castAt = now() - 1.6; } else if (netErr(em) && (F.hookTry = (F.hookTry || 0) + 1) <= 2){ F.roll = 'cast'; F.hookReq = 0; F.rollWait = 0; } else { F.rollErr = em; F.roll = 'fail'; } return; }   /* v320 網路問題重試兩次 */
     if (row && /^nx\d{6}v?$/.test(row.cast_fish || '') && !FISH_BY_ID[row.cast_fish]) await loadSci(true); if (F.castId !== id) return;
     F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood, gp: row.cast_gp || null } : 'fail'; },
-    () => { if (F.castId === id) F.roll = 'fail'; }); }
+    () => { if (F.castId !== id) return; if ((F.hookTry = (F.hookTry || 0) + 1) <= 2){ F.roll = 'cast'; F.hookReq = 0; F.rollWait = 0; } else F.roll = 'fail'; }); }
 function biteFishOf(){ if (F.phase === 'reeling') return F.fish; if (Rig.rig === 'bottom') return null; if (F.phase === 'waiting' && now() < F.waitUntil - 2.0) return null; const f = F.roll && F.roll.f ? F.roll.f : F.pre; return f && !BIG_FISH.has(f.id) && !BOTTOM_FISH.has(f.id) ? f : null; }   /* 沉底釣、底棲魚在很深的地方吃餌，看不到牠游過來 */
 function updateBiteFish(dt, t){
   const on = ((F.phase === 'waiting' || F.phase === 'bite') && me.bobState === 'water' && !me.flying || F.phase === 'reeling') && !Dive.on, f = on ? biteFishOf() : null;
@@ -4207,8 +4209,8 @@ function updateFishing(dt, t){
       if (PR && PR.i < PR.taps.length && t >= PR.taps[PR.i]){ PR.i++; F.lastNib = t; const P = PROBES[PR.k]; F.nibK = P.dip; ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} if (P.dip > 0.8) try { navigator.vibrate && navigator.vibrate(25); } catch(e){} }
       const tgt = PR && F.lastNib && t - F.lastNib < (PROBES[PR.k].hold || 0.2) ? F.nibK : 0; me.dip += (tgt - me.dip) * Math.min(1, dt * 16); }
     fishHook();
-    if (t > F.waitUntil && Cloud.on && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); } }
-    else if (t > F.waitUntil && Cloud.on && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash('連不上伺服器，魚跑掉了', 1.4); }
+    if (t > F.waitUntil && Cloud.on && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash(rollFailMsg(), 1.4); } }
+    else if (t > F.waitUntil && Cloud.on && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash(rollFailMsg(), 1.6); }
     else if (t > F.waitUntil){
       // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
       if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; F.sex = F.roll.sex; F.brood = F.roll.brood; F.gp = F.roll.gp; F.rsTag = F.roll.rs; F.rsEscAt = F.rsTag && rsInfo(F.rsTag).esc ? rand(0.45, 0.85) : 0; }
@@ -6150,13 +6152,16 @@ async function grabCritter(c){
     setTimeout(() => { Grab.busy = false; }, 1800);
   }, 1650);   // 伺服器規定拋竿後 1.5 秒以上才能算釣到
 }
-// ---- 海上看得到別人的島（最多 3 座，用讚數排序）----
-let neighborGroup = null, Neighbors = { list:null, at:0 };
+// ---- 海上看得到別人的島（v320：只放現在在線上的人的島，最多 3 座，用讚數排序）----
+let neighborGroup = null, Neighbors = { list:null, at:0, key:'' };
+function neighborsRefresh(){ if (!onIsle) return; clearTimeout(Neighbors.t); Neighbors.t = setTimeout(() => { if (onIsle) loadNeighbors(); }, 2500); }   /* v320 有人上線、下線就重新排海上的島 */
 const NB_POS = [[-78, -30], [70, -48], [10, -92]];
 function clearNeighbors(){ if (neighborGroup){ scene.remove(neighborGroup); neighborGroup = null; } }
 async function fetchIslands(){
-  if (!Cloud.sb) return []; if (Neighbors.list && Date.now() - Neighbors.at < 3 * 60 * 1000) return Neighbors.list;
-  try { const { data } = await Cloud.sb.rpc('isle_neighbors');
+  if (!Cloud.sb) return []; const ids = [...new Set([...peers.keys()].map(k => peerUid.get(k)).filter(u => typeof u === 'string' && /^[0-9a-f-]{36}$/.test(u)))].slice(0, 12).sort(), key = ids.join(',');
+  if (!ids.length) return [];   /* v320 只顯示「現在在線上的人」的島：沒有人在線上，海上就不放別人的島 */
+  if (Neighbors.list && Neighbors.key === key && Date.now() - Neighbors.at < 3 * 60 * 1000) return Neighbors.list;
+  try { const { data } = await Cloud.sb.rpc('isle_neighbors_of', { p_ids: ids }); Neighbors.key = key;
     Neighbors.list = (data || []).filter(p => p.id !== myIdOrMe() && cleanIsland(p.island).items.length > 0).slice(0, 12); Neighbors.at = Date.now(); return Neighbors.list; } catch(e){ return []; }
 }
 async function loadNeighbors(){
@@ -8423,8 +8428,8 @@ function renderDiveShop(body){
   body.appendChild(ul);
 }
 const QUEST_NPC = {
-  chief: { name:'村長 阿土伯', at:[HARBOR_SQ[0] + 2.6, HARBOR_SQ[1] + 1.6], face:HARBOR_SQ, shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
-  wang:  { name:'漁夫 老王',   at:[29.5, -23.2], shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
+  chief: { name:'村長 阿土伯', at:[HARBOR_SQ[0] - 2.8, HARBOR_SQ[1] + 1.2], face:HARBOR_SQ,   /* v320 移到噴水池西邊，不擠在碼頭入口 */ shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
+  wang:  { name:'漁夫 老王',   at:[27.4, -32.6],   /* v320 移到北邊那座碼頭的岸邊（原本跟村長、阿福、阿海擠在同一個碼頭口） */ shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
   mei:   { name:'食堂 美雲姨', at:[CAFE.x + 1.6, CAFE.z - CAFE.d / 2 + 1.4], cafe:true, shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
 };
 // 任務 NPC 走近時也會講話：村長多講新手教學，老王講釣法，美雲姨講料理
@@ -10424,7 +10429,7 @@ function updatePeers(dt, t){
 let pjMode = false, roomTimer = null, roomJoinAt = 0, roomGreeted = false; const seenPeers = new Map();   /* 剛進大廳時，本來就在的人不要報「來到了村子」 */
 function useRoom(r){
   room = r; tagReset(); roomJoinAt = Date.now(); roomGreeted = false;
-    room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp);
+    room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp); if (ch.joined.length || ch.left.length) neighborsRefresh();
       for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ seenPeers.set((p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, Date.now()); visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
       for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (!p) return; visitLog(p);
         const key = (p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, last = seenPeers.get(key); seenPeers.set(key, Date.now());
@@ -10678,13 +10683,18 @@ const CLOUD_ERR = ['要先釣到 30 條魚才能買要錢的設計', '這件設�
 // 省流量（風險檢查第 3 點）：島的資料很大（房子、家具、大宅格局），常用的動作（拋竿、收線、賣魚、餵食…）都不會改到島，就不要回傳；至少每分鐘拿一次完整的（同島的人可能蓋了東西）
 function cloudSel(fn){ const L = Cloud.lastRow; if (Cloud.noSel || !L || ['place_item', 'remove_item', 'move_item'].includes(fn) || !Cloud.fullAt || Date.now() - Cloud.fullAt > 60000) return null;
   return Object.keys(L).filter(k => k !== 'island' && k !== 'cast_fish' && k !== 'cast_w' && k !== 'cast_rs' && k !== 'cast_gp' && k !== 'cast_sex' && k !== 'cast_brood').join(','); }
+function netErr(m){ return !m || /fetch|network|abort|timeout|load failed|connection|502|503|504/i.test(String(m)) && !CLOUD_ERR.some(k => String(m).includes(k)); }
+function rollFailMsg(){ const m = String(F.rollErr || ''), k = CLOUD_ERR.find(x => m.includes(x)) || (/拋太快了|釣太快了|沒有這個釣點|要先買|泥灘/.exec(m) || [])[0]; return k ? `伺服器：${k}` : '網路不穩，連不上伺服器，魚跑掉了'; }
 function cloudCall(fn, args){
   if (!Cloud.on) return Promise.resolve(null);
   Cloud.pending++;
   const job = Cloud.queue.then(async () => {
     let data = null, error = null;
     const sel = cloudSel(fn);
-    try { let q = Cloud.sb.rpc(fn, args || {}); if (sel) q = q.select(sel); ({ data, error } = await q); } catch(e){ error = e; }
+    /* v320 玩家回報「一直連不上伺服器，魚跑掉」：以前一個請求卡住（手機網路晃一下）會擋住後面所有動作，抽魚排太久就算失敗。現在每個請求最多等 12 秒 */
+    const ac = typeof AbortController !== 'undefined' ? new AbortController() : null, tm = ac ? setTimeout(() => ac.abort(), 12000) : 0;
+    try { let q = Cloud.sb.rpc(fn, args || {}); if (sel) q = q.select(sel); if (ac && q.abortSignal) q = q.abortSignal(ac.signal); ({ data, error } = await q); } catch(e){ error = e; } clearTimeout(tm);
+    Cloud.lastErr = error ? String(error.message || error) : '';
     if (error && sel && /select|column|PGRST1|parse/i.test(String(error.message || error))){ Cloud.noSel = true; try { ({ data, error } = await Cloud.sb.rpc(fn, args || {})); } catch(e){ error = e; } }   /* 不支援就改回整筆 */
     Cloud.pending--;
     if (error){
@@ -12163,6 +12173,7 @@ function renderTab(){
       `⏱️ 定時釣魚大賽：每天台灣時間 ${TOURNEY.hours.map(h => h + ':00').join('、')} 開始，每場 ${TOURNEY.mins} 分鐘。比賽時間內釣到的魚總重量最重的前三名拿 🪙${TOURNEY.prize.join(' / ')}，有參加就有 🪙${TOURNEY.join}。開始前 15 分鐘右上角會倒數，點一下可以看即時排名。`,
     ]);
     sec('🏝️ 私人小島', [
+      '在小島上看得到海上其他人的島：只會出現「現在也在線上」的人的島（最多 3 座），人下線了島就收起來。',
       '屋裡的家具多了 20 種：梳妝台、床頭櫃、落地鏡、懶骨頭、和室坐墊、茶几、魚標本牆、釣竿架、地球儀、收音機、電風扇、鞋櫃、吧台、洗衣機、微波爐、茶具組、仙人掌、盆景、花瓶、龜背芋。家具清單點一下就能先轉著看 3D 模型，再決定要不要買。',
       '選單的「小島」可以去自己的島。在「買東西擺島上」挑房子或家具，拿著半透明預覽走路調位置（綠色可以放、紅色不行），「⟲」轉方向、「✔」放下。',
       '按「🔨 建造」後走到東西旁邊，可以移動或拆掉（退一半金幣）。島上最多 60 件東西、房子 6 棟。',
