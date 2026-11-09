@@ -414,7 +414,7 @@ const CHIEF_OFFICE = [14.5, 1.5, -Math.PI / 2], PETPARK = [-15, 21.8, 4.2], PETG
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
-var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:31, r:-Math.PI / 2 }, museum:{ x:9.5, z:35.2, r:-Math.PI / 2 }, pet:{ x:-8, z:22.5, r:Math.PI / 2 } };   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
+var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:27.3, r:-Math.PI / 2 }, museum:{ x:9.5, z:35.2, r:-Math.PI / 2 }, pet:{ x:-8, z:22.5, r:Math.PI / 2 } };   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
 var Mkt = { tab:'new', list:null, mine:null, stats:null, at:0, busy:false, sell:null, fish:null };
 function lotAt(k, lx, lz){ const L = SHOPLOT[k], c = Math.cos(L.r), s = Math.sin(L.r); return [L.x + c * lx + s * lz, L.z - s * lx + c * lz]; }
 const LANDMARKS = [
@@ -11098,7 +11098,7 @@ const npcs = [
   { name:'阿鐵・釣具師傅', shirt:'#5a6470', hat:'#2b2f36', x:hlAt('tackle', 1.75, 2.75)[0], z:hlAt('tackle', 1.75, 2.75)[1], y:0.02, dir:new THREE.Vector2(Math.sin(HLOT.tackle[2]), Math.cos(HLOT.tackle[2])), shopNpc:'craft',
     lines:['我會做竿子造型和釣線顏色，帶幾條魚來就好', '魚不是拿來吃的啦，是我拿來練手藝、換材料的', '金箔竿要三條稀有魚，很值得喔', '收藏的、展示中的魚我不會拿', '線換個顏色，別人一眼就認得出是你的'] },
   // v270 阿萍：美髮沙龍的設計師，超認真的工作狂，每天都在設計新髮型、調新髮色，染髮剪髮什麼都會（109_salon.sql）
-  { name:'阿萍・髮型設計師', shirt:'#2a2a2a', hat:'#7fd0c8', x:lotAt('spare', 2.5, -0.4)[0], z:lotAt('spare', 2.5, -0.4)[1], y:0.02, dir:new THREE.Vector2(1, 0), shopNpc:'salon',
+  { name:'阿萍・髮型設計師', shirt:'#2a2a2a', hat:'#7fd0c8', x:lotAt('spare', 0.3, 2.3)[0], z:lotAt('spare', 0.3, 2.3)[1],   /* v336 沙龍以前跟博物館疊在一起、阿萍站在博物館牆裡面按不到：沙龍往南移、阿萍站到店門口 */ y:0.02, dir:new THREE.Vector2(1, 0), shopNpc:'salon',
     lines:['今天的新髮色我昨天半夜三點才調出來的，你看看！', '剪頭髮、染頭髮、燙頭髮、編辮子，跟頭髮有關的我全部都會', '我每天都在設計，不設計我會睡不著', '你這個髮型……要不要讓我修一下？', '海風很傷頭髮，釣完魚記得來護髮喔', '新髮型每兩天出一款，新髮色每天一色，我一天都沒休息過'] },
   // 阿報：廣場的報童，每天早上 7 點出《潮汐村報》（057_news.sql）
   { name:'阿報・村報記者', shirt:'#f1e3c8', hat:'#2b2f36', x:-0.6, z:1.2, y:0.02, dir:new THREE.Vector2(0.6, 0.8).normalize(), shopNpc:'news',
