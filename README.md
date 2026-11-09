@@ -173,6 +173,7 @@ v295：🍽️ 玩家意見「餌料很少，可以做特定的」：新增 9 �
 supabase/118_baits.sql 🍽️ 新魚餌：商店價格（_bait_info）、craft_bait 多了秋刀魚切塊、gather_bait（挖沙蠶要退潮、撿螃蟹，各一天 6 次）、sci_bug（蔚博士的委託，一天一次）、bait_gather 表。
 v298：🐢 玩家意見：小烏龜（斑龜）寵物＋龜殼光澤度照顧（曬太陽最有效、均衡飲食、蛋黃一週一次、換水刷殼、保養一個月一次；三天沒照顧慢慢變暗，不會生病）。光澤 80 殼上有花紋、100 金色殼邊；隔天村報「本週最美烏龜」。寵物店 600 金幣領養，河邊、池塘偶爾撿到被棄養的。小海龜維持原樣。
 supabase/119_turtle.sql 🐢 pet_turtle 表、turtle_care（光澤度、冷卻都在伺服器算）、pondturtle 寵物種類／花色／價錢、pet_lucky 加撿到小烏龜、isle_pets 帶光澤度、村報出報時自動加「本週最美烏龜」（news 的 before insert 觸發器）。
+v300：📮 聯絡信箱 chaoxi.fishing@gmail.com 填進隱私權政策、刪除帳號說明頁（中英文）和遊戲玩法說明。（沒有新的資料庫檔）
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
 manifest.json       讓手機可以「加到主畫面」
