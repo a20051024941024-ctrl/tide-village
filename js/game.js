@@ -5109,7 +5109,7 @@ function mzSlots(s){ return [...new Set(s.fish.filter(id => FISH_BY_ID[id] && !/
 for (const [k, n, r, f] of [['fe_bridge', '鵲橋', 0.9, 'qixi'], ['fe_jacko', '南瓜燈', 0.45, 'halloween'], ['fe_xtree', '聖誕樹', 0.45, 'xmas'], ['fe_goldbowl', '金魚缸', 0.45, 'bowl'], ['fe_couplet', '春聯', 0.45, 'cny'], ['fe_skylantern', '天燈', 0.45, 'lantern'], ['fe_dragonboat', '龍舟模型', 0.9, 'duanwu'], ['fe_stall', '夜市小攤', 0.9, 'night']]) FURN[k] = { name: n, price: 0, rad: r, g: 'fe', fe: f };
 for (const [k, n] of [['dragon', '海龍王'], ['gwhite', '大白鯊'], ['oarking', '皇帶魚王']]) FURN['gyb_' + k] = { name: n + '魚拓', price: 0, rad: 0.45, g: 'gy', gyb: k };
 for (const s of MZ_REGIONS()) FURN['gy_' + s.id] = { name: s.label + '魚拓', price: 0, rad: 0.45, g: 'gy', gy: s.id };
-const FURN_GROUPS = [['fe', '🏮 節慶家具（節日期間在「🏮 節慶」買）'], ['gy', '🏛️ 博物館魚拓（集滿一區才拿得到）'], ['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
+const FURN_GROUPS = [['gk', '🖋️ 我的魚拓（在魚缸做）'], ['fe', '🏮 節慶家具（節日期間在「🏮 節慶」買）'], ['gy', '🏛️ 博物館魚拓（集滿一區才拿得到）'], ['mu', '🪵 阿木的作品'], ['cai', '🎨 阿彩的畫'], ['bed', '🛏️ 臥室'], ['live', '🛋️ 客廳'], ['kit', '🍳 廚房、浴室'], ['plant', '🪴 植物']];
 // KayKit Furniture Bits（Kay Lousberg，CC0）的家具：models/kaykit_furn.glb，價格大小跟伺服器 069_kaykit_furn.sql 一樣
 const KKF_LIST = {
   kk_bed_single_A:{ name:'原木單人床', price:650, rad:1.0, g:'bed', base:'bed', kk:'bed_single_A', bed:1 },
@@ -5154,6 +5154,7 @@ function kkfMesh(t){ const F0 = FURN[t], g = new THREE.Group(); g.userData.kk = 
   if (KKF.scene) kkfFill(g); else { const ph = box([F0.rad * 1.3, F0.flat ? 0.04 : 0.5, F0.rad * 1.3], null, [0, F0.flat ? 0.02 : 0.25, 0], new THREE.MeshStandardMaterial({ color:'#d8c8b0', transparent:true, opacity:0.35 })); ph.castShadow = false; g.add(ph); g.userData.ph = ph; KKF.wait.push(g); kkfLoad(); }   /* 模型還沒載好：先放一個淡淡的方塊 */
   return g; }
 // ---- 阿木的家具（052_mu.sql）：'fz<編號>'＝某一種家具＋自己的木頭顏色、布料顏色、花樣 ----
+const GK = { map: new Map(), mine: null, busy: false, want: new Set(), timer: 0, cv: new Map() }, GK_COST = 200;   /* 132 魚拓（程式在寵物前面） */
 const FZ = { map: new Map(), list: null, at: 0, busy: false, want: new Set(), timer: 0, tex: new Map() };
 function fzId(t){ const m = /^fz(\d{1,9})$/.exec(t || ''); return m ? +m[1] : 0; }
 function fzReg(d){ if (!d || !FURN[d.base] || FURN[d.base].dz) return; FZ.map.set(d.id, d); const B = FURN[d.base]; FURN['fz' + d.id] = { name: d.name + (d.gift ? '（阿彩送你的）' : ''), price: d.price, rad: B.rad, flat: B.flat, g: !d.listed ? 'mu_old' : d.base === 'paint' ? (d.gift && !d.mine ? 'mu_old' : 'cai') : 'mu', base: d.base, dz: d }; }
@@ -5263,7 +5264,7 @@ function furnCheck(lay, f, type, x, z, skip){
   for (const o of f){ if (o.id === skip) continue; const it = FURN[o.t]; if (!it || it.flat || me.flat) continue; if (Math.hypot(o.x - x, o.z - z) < (it.rad + me.rad) * 0.75) return '跟別的家具疊在一起了'; }
   return null;
 }
-function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x.t] && fzId(x.t)) fzWant(fzId(x.t)); return Array.isArray(f) ? f.filter(x => x && (FURN[x.t] || fzId(x.t)) && isFinite(+x.x) && isFinite(+x.z)).slice(0, 120).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, +x.k > 0 ? { k: Math.min(2, Math.floor(+x.k)) } : {}, typeof x.by === 'string' && x.by.length < 64 ? { by: x.by } : {}, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
+function cleanFurn(f){ if (Array.isArray(f)) for (const x of f) if (x && !FURN[x.t]){ if (fzId(x.t)) fzWant(fzId(x.t)); else if (gkId(x.t)) gkWant(gkId(x.t)); } return Array.isArray(f) ? f.filter(x => x && (FURN[x.t] || fzId(x.t) || gkId(x.t)) && isFinite(+x.x) && isFinite(+x.z)).slice(0, 120).map(x => Object.assign({ id: Math.floor(+x.id) || 0, t: x.t, x: +x.x, z: +x.z, r: +x.r || 0 }, +x.k > 0 ? { k: Math.min(2, Math.floor(+x.k)) } : {}, typeof x.by === 'string' && x.by.length < 64 ? { by: x.by } : {}, typeof x.own === 'string' && x.own.length < 64 ? { own: x.own } : {})) : null; }
 
 // 家具的樣子（正面朝 +z，放在地板上）
 function furnMesh(t){
@@ -5271,6 +5272,7 @@ function furnMesh(t){
   if (t === 'paint') return paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'sea', fish:null });
   if (FURN[t] && FURN[t].kk) return kkfMesh(t);
   if (FURN[t] && FURN[t].fe) return feMesh(t);
+  if (gkId(t)) return gkMesh(FURN[t] ? FURN[t].gk : GK.map.get(gkId(t)));
   if (FURN[t] && FURN[t].gyb) return gybMesh(FURN[t].gyb);
   if (FURN[t] && FURN[t].gy) return gyMesh(FURN[t].gy);
   const g = new THREE.Group(), B = (sz, c, p, rough) => { const b = box(sz, c, p, mat(c, rough == null ? 0.8 : rough, { emissive:c, emissiveIntensity:0.1 })); g.add(b); return b; };
@@ -5741,7 +5743,7 @@ function renderFurnSheet(body){
     body.appendChild(ul); return;
   }
   body.appendChild(el('p', 'sub', `${houseUp(it) ? `現在在 ${curFloor(it) + 1} 樓，這一層` : '這棟房子'}有 ${floorFurn(it).length} / 40 件家具。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。收掉退一半金幣。床可以認領，房門上會掛你的名字。`));
-  if (!FZ.list && Cloud.on) loadMu(); if (!Cai.list && Cloud.on) loadCai();
+  if (!FZ.list && Cloud.on) loadMu(); if (!Cai.list && Cloud.on) loadCai(); if (!GK.mine && Cloud.on) gkLoad();
   for (const [gk, title] of FURN_GROUPS){ if ((gk === 'mu' || gk === 'cai') && !Object.values(FURN).some(v => v.g === gk)) continue; if ((gk === 'gy' || gk === 'fe') && !Object.keys(FURN).some(k => FURN[k].g === gk && (rec.owned || []).includes(k))) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
     for (const [k, v] of Object.entries(FURN).filter(([k2, v]) => v.g === gk && ((gk !== 'gy' && gk !== 'fe') || (rec.owned || []).includes(k2)))){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・家裡 ${f.filter(x => x.t === k).length} 個`)); li.appendChild(d);
@@ -7169,6 +7171,68 @@ function gyMesh(region){ const sp = SPOT_BY_ID[region], g = new THREE.Group(); c
   const fr = box([0.95, 0.74, 0.05], null, [0, 1.25, 0], mat('#5a3d2b', 0.6)); g.add(fr); const pic = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.64), new THREE.MeshBasicMaterial({ map: tx })); pic.position.set(0, 1.25, 0.03); g.add(pic);
   for (const sx of [-0.32, 0.32]){ const l = box([0.05, 1.05, 0.05], null, [sx, 0.5, -0.12], mat('#7a5638', 0.7)); l.rotation.x = 0.12; g.add(l); } const bl = box([0.05, 1.1, 0.05], null, [0, 0.55, -0.32], mat('#7a5638', 0.7)); bl.rotation.x = -0.32; g.add(bl);
   return g; }
+// ===== 🖋️ 魚拓（132）：魚缸裡的魚做成墨色魚拓（🪙200，魚還留著），可以存圖、分享、掛在家裡（家具 'gk<編號>'） =====
+function gkId(t){ const m = /^gk(\d{1,9})$/.exec(t || ''); return m ? +m[1] : 0; }
+function gkReg(d){ if (!d || !d.id) return; GK.map.set(d.id, d); const f = FISH_BY_ID[d.fish]; FURN['gk' + d.id] = { name: `${f ? f.name : '魚'}魚拓（${(+d.w).toFixed(2)}kg）`, price: 0, rad: 0.45, g: d.mine ? 'gk' : 'gk_old', gk: d }; }
+function gkWant(id){ if (!id || GK.map.has(id)) return; let on = false; try { on = Cloud.on && !!Cloud.sb; } catch(e){ return; } if (!on) return; GK.want.add(id); clearTimeout(GK.timer); GK.timer = setTimeout(gkFetch, 250); }
+async function gkFetch(){ const ids = [...GK.want].filter(id => !GK.map.has(id)).slice(0, 60); GK.want.clear(); if (!ids.length) return;
+  try { const { data, error } = await Cloud.sb.rpc('gyotaku_get', { p_ids: ids }); if (error) throw error; for (const d of data || []) gkReg(d); for (const id of ids) if (!GK.map.has(id)) GK.map.set(id, null); } catch(e){ return; }
+  if (House.on && House.it) rebuildHouseRoom(House.it); }
+async function gkLoad(force){ if (GK.busy || !Cloud.on || !Cloud.sb) return; if (GK.mine && !force) return; GK.busy = true;
+  try { const { data, error } = await Cloud.sb.rpc('gyotaku_mine'); if (error) throw error; GK.mine = data || []; for (const d of GK.mine) gkReg(d); } catch(e){ GK.mine = GK.mine || []; }
+  GK.busy = false; if (!$('#sheet').hidden && (curTab === 'gyotaku' || curTab === 'furn')) renderTab(); }
+/* 墨色的魚：用魚的樣子，深的地方墨比較濃，加上和紙的斑點；直的寫魚名，旁邊小字寫重量、日期、釣客，紅色印章 */
+function gkCanvas(d, W){ W = W || 480; const H = Math.round(W * 2 / 3), key = d.id ? d.id + ':' + W : ''; if (key && GK.cv.has(key)) return GK.cv.get(key);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), k = W / 480; let seed = (d.id || 7) * 9301 + 49297; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  c.fillStyle = '#f2ead6'; c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 900 * k; i++){ c.fillStyle = rnd() < 0.5 ? 'rgba(160,140,100,0.10)' : 'rgba(255,255,255,0.35)'; c.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 2.5 * k, 0.6 + rnd() * k); }   /* 和紙的纖維 */
+  c.strokeStyle = 'rgba(120,100,70,0.25)'; c.lineWidth = 2 * k; c.strokeRect(8 * k, 8 * k, W - 16 * k, H - 16 * k);
+  const f = FISH_BY_ID[d.fish]; const fw = Math.round(330 * k), fh = Math.round(fw * 0.5);
+  if (f){ try { const src = fishCanvas(f, true, fw / 2, fh / 2), t = document.createElement('canvas'); t.width = fw; t.height = fh; const tc = t.getContext('2d'); tc.drawImage(src, 0, 0, fw, fh);
+      const im = tc.getImageData(0, 0, fw, fh), D = im.data;
+      for (let i = 0; i < D.length; i += 4){ const a = D[i + 3]; if (!a) continue; const L = (0.3 * D[i] + 0.59 * D[i + 1] + 0.11 * D[i + 2]) / 255, n = rnd();
+        D[i] = 24; D[i + 1] = 21; D[i + 2] = 19; D[i + 3] = Math.max(0, Math.min(255, a * (0.42 + 0.58 * (1 - L)) * (n < 0.06 ? 0.25 : 0.82 + n * 0.18))); }   /* 深的地方墨濃、隨機的白點像真的拓印 */
+      tc.putImageData(im, 0, 0); c.save(); c.translate(W * 0.43, H * 0.52); c.rotate(-0.04); c.drawImage(t, -fw / 2, -fh / 2); c.restore(); } catch(e){} }
+  c.fillStyle = '#1d1a17'; c.textAlign = 'center'; c.textBaseline = 'middle'; const name = f ? f.name : '魚', fs = Math.round(Math.min(34, 200 / Math.max(2, name.length)) * k);
+  c.font = `bold ${fs}px serif`; [...name].forEach((ch, i) => c.fillText(ch, W - 42 * k, 46 * k + i * fs * 1.1));   /* 直的寫魚名 */
+  const dt = new Date(+d.t || Date.now()), small = Math.round(14 * k); c.font = `${small}px serif`;
+  const lines = [`${(+d.w).toFixed(2)} 公斤`, `${dt.getFullYear()}年${dt.getMonth() + 1}月${dt.getDate()}日`, f && SPOT_BY_ID[f.spot] ? SPOT_BY_ID[f.spot].label : '', `${d.name || '釣客'} 釣`].filter(Boolean);
+  lines.forEach((ln, j) => { const x = W - (82 + j * 22) * k; [...ln].forEach((ch, i) => c.fillText(ch, x, 48 * k + i * small * 1.12)); });
+  const sx = 28 * k, sy = H - 66 * k, ss = 40 * k; c.fillStyle = '#c8161c'; c.globalAlpha = 0.88; c.fillRect(sx, sy, ss, ss); c.globalAlpha = 1; c.fillStyle = '#f2ead6'; c.font = `bold ${Math.round(16 * k)}px serif`; c.fillText('潮', sx + ss / 2, sy + ss * 0.3); c.fillText('汐', sx + ss / 2, sy + ss * 0.72);   /* 紅色印章 */
+  if (key) GK.cv.set(key, cv); return cv; }
+function gkMesh(d){ const g = new THREE.Group(); const cv = d ? gkCanvas(d, 384) : null;
+  const fr = box([1.02, 0.72, 0.05], null, [0, 1.25, 0], mat('#3e2c20', 0.6)); g.add(fr);
+  const tx = cv ? new THREE.CanvasTexture(cv) : null; if (tx) tx.colorSpace = THREE.SRGBColorSpace;
+  const pic = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.63), tx ? new THREE.MeshBasicMaterial({ map: tx }) : mat('#f2ead6', 0.9)); pic.position.set(0, 1.25, 0.03); g.add(pic);
+  for (const sx of [-0.32, 0.32]){ const l = box([0.05, 1.05, 0.05], null, [sx, 0.5, -0.12], mat('#7a5638', 0.7)); l.rotation.x = 0.12; g.add(l); } const bl = box([0.05, 1.1, 0.05], null, [0, 0.55, -0.32], mat('#7a5638', 0.7)); bl.rotation.x = -0.32; g.add(bl);
+  return g; }
+async function gkShare(d){ const cv = gkCanvas(d, 960), f = FISH_BY_ID[d.fish], fn = `魚拓-${f ? f.name : 'fish'}.png`;
+  try { const blob = await new Promise(r => cv.toBlob(r, 'image/png')); const file = new File([blob], fn, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: '潮汐釣魚村 魚拓' }); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast('🖋️ 魚拓圖片存好了'); } catch(e){ if (e && e.name !== 'AbortError') toast('存不了圖片，可以用手機截圖'); } }
+/* 看一張魚拓（大圖）＋按鈕 */
+function gkView(d, opts){ opts = opts || {}; let ov = $('#gkView'); if (ov) ov.remove(); ov = document.createElement('div'); ov.id = 'gkView'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  const box2 = el('div', 'gkbox panel'); const img = gkCanvas(d, 720); const show = document.createElement('img'); show.src = img.toDataURL('image/png'); show.alt = '魚拓'; box2.appendChild(show);
+  const acts = el('div', 'gkacts');
+  if (opts.make){ const b = el('button', 'tbtn', `做成魚拓 🪙${GK_COST}`); b.disabled = rec.coins < GK_COST; if (b.disabled) b.title = '金幣不夠';
+    b.addEventListener('click', async () => { if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能做魚拓'); return; } b.disabled = true;
+      try { const { data, error } = await Cloud.sb.rpc('gyotaku_make', { p_t: opts.make }); if (error) throw error; adoptRow(data.player); gkReg(data.item); if (GK.mine) GK.mine.unshift(data.item); SFX.catch(); ov.remove(); flash('🖋️ 魚拓做好了！在「📖 圖鑑 → 魚拓」', 2); gkView(data.item); if (!$('#sheet').hidden) renderTab(); }
+      catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); acts.appendChild(b); }
+  else { const sh = el('button', 'tbtn', '📤 存圖片／分享'); sh.addEventListener('click', () => gkShare(d)); acts.appendChild(sh);
+    if (d.mine){ const hang = el('button', 'tbtn ghost', House.on && canEditIsle() ? '🏠 拿去掛' : '🏠 回家掛'); hang.addEventListener('click', () => { if (House.on && canEditIsle()){ ov.remove(); closeSheet(); startFurn('gk' + d.id); } else toast('回到自己家，打開「🏠 家具」就看得到你的魚拓'); }); acts.appendChild(hang);
+      const del = el('button', 'tbtn ghost', '丟掉'); del.addEventListener('click', async () => { if (del.dataset.sure !== '1'){ del.dataset.sure = '1'; del.textContent = '確定丟掉？（金幣不會退）'; return; }
+        try { const { data, error } = await Cloud.sb.rpc('gyotaku_del', { p_id: d.id }); if (error) throw error; GK.mine = data || []; delete FURN['gk' + d.id]; GK.map.delete(d.id); ov.remove(); toast('丟掉了'); if (!$('#sheet').hidden) renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }); acts.appendChild(del); } }
+  const x = el('button', 'tbtn ghost', '關閉'); x.addEventListener('click', () => ov.remove()); acts.appendChild(x);
+  box2.appendChild(acts); if (opts.make) box2.appendChild(el('p', 'sub', '做好以後魚還是在魚缸裡；同一條魚只能做一次。'));
+  ov.appendChild(box2); document.body.appendChild(ov); }
+function renderGyotaku(body){
+  body.appendChild(el('p', 'sub', `把釣到的魚做成魚拓：到「🎒 背包 → 魚缸」，在想留念的那條魚按「🖋️」（一張 🪙${GK_COST}，魚還會留著）。做好的魚拓可以存成圖片、分享，也可以掛在家裡。`));
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端才能做魚拓。')); return; }
+  if (!GK.mine){ body.appendChild(el('p', 'sub', '讀取中…')); gkLoad(); return; }
+  if (!GK.mine.length){ const e = el('div', 'empty', '還沒有魚拓。'); const b = el('button', 'tbtn', '去魚缸挑一條'); b.addEventListener('click', () => { curTab = 'tank'; renderTab(); }); e.appendChild(document.createElement('br')); e.appendChild(b); body.appendChild(e); return; }
+  body.appendChild(el('p', 'sub', `${GK.mine.length} / 40 張`)); const ul = el('div', 'gkgrid');
+  for (const d of GK.mine){ const it = el('button', 'gkit'); const im = document.createElement('img'); im.src = gkCanvas(d, 240).toDataURL('image/png'); im.alt = ''; it.appendChild(im); const f = FISH_BY_ID[d.fish]; it.appendChild(el('span', '', `${f ? f.name : ''} ${(+d.w).toFixed(2)}kg`)); it.addEventListener('click', () => gkView(d)); ul.appendChild(it); }
+  body.appendChild(ul); }
 // ===== 🐾 寵物（080）：模型都是程式畫的；帶出門的跟著主人走，其他的待在主人的小島上 =====
 const PET_KINDS = {
   cat:     { name:'貓',     icon:'🐱', price:300,  desc:'港邊的流浪貓，領養只收一點手續費。看到魚群會喵喵叫。' },
@@ -12018,7 +12082,7 @@ try { let pend = new Set(), qd = false; new MutationObserver(ms => { for (const 
     if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
-const SHEET_TITLE = { map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
+const SHEET_TITLE = { gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
 function renderTab(){
   try { ui3Tabs(); } catch(e){}
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
@@ -12172,7 +12236,8 @@ function renderTab(){
       const star = el('button', 'tbtn' + (x.k ? '' : ' ghost'), x.k ? '⭐' : '☆'); star.title = x.k ? '取消收藏' : '收藏（不能賣）'; star.setAttribute('aria-pressed', String(!!x.k)); star.style.minWidth = '42px';
       star.addEventListener('click', () => { if (setFav(x, !x.k)){ toast(x.k ? `⭐ 收藏了${esc(f.name)}，不會被賣掉` : `取消收藏${esc(f.name)}`); renderTab(); } });
       if (x.k) rel.disabled = true, rel.title = '收藏中的魚要先取消收藏才能放流';
-      acts.append(star, show, rel); li.appendChild(acts); ul.appendChild(li);
+      const gk = el('button', 'tbtn ghost', '🖋️'); gk.title = '做成魚拓'; gk.style.minWidth = '42px'; gk.addEventListener('click', () => { const done = GK.mine && GK.mine.find(g => +g.t === +x.t); if (done) gkView(done); else gkView({ id: 0, fish: x.f, w: x.w, t: x.t, name: myDisplayName() }, { make: x.t }); }); if (!GK.mine && Cloud.on) gkLoad();
+      acts.append(star, gk, show, rel); li.appendChild(acts); ul.appendChild(li);
     });
     body.appendChild(ul);
   } else if (curTab === 'cage'){ renderCage(body);
@@ -12182,6 +12247,7 @@ function renderTab(){
   } else if (curTab === 'cai'){ renderCaiShop(body);
   } else if (curTab === 'sci'){ renderSci(body);
   } else if (curTab === 'story'){ renderStory(body);
+  } else if (curTab === 'gyotaku'){ renderGyotaku(body);
   } else if (curTab === 'events'){ renderEvents(body);
   } else if (curTab === 'salon'){ renderSalon(body);
   } else if (curTab === 'board'){ renderBoard(body);
@@ -12429,6 +12495,9 @@ function renderTab(){
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
     ]);
+    sec('🖋️ 魚拓', [
+      '「🎒 背包 → 魚缸」每條魚旁邊有「🖋️」：一張 🪙200，把那條魚做成墨色的魚拓（和紙上印著魚，寫著魚名、重量、釣到的日期、地點、你的名字，蓋紅色印章）。魚還是留在魚缸裡；同一條魚只能做一次，最多 40 張。',
+      '做好的魚拓在「📖 圖鑑 → 魚拓」：可以存成圖片、分享給朋友，或在自己家「🏠 家具 → 🖋️ 我的魚拓」掛起來（不用錢），來玩的人也看得到。丟掉的魚拓金幣不會退。' ]);
     sec('🏛️ 海洋博物館', [
       '博物館在商店街最裡面東邊（白色石柱的建築，旁邊就是海），走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
       '每一格會刻上「首位捐贈者」的名字、日期和那條魚的重量；之後別人捐更重的，另外記「最大展示」。同一種魚自己只能捐一次。箱網、儲物箱的魚不能捐，蔚博士發現的新品種也不收。',
@@ -13555,12 +13624,12 @@ const UI_GROUPS = [
   { k:'map',   ic:'🗺️', lab:'地圖',  tabs:[['map', '地圖']] },
   { k:'today', ic:'🎁', lab:'今天',  tabs:[['quest', '今天'], ['story', '村民'], ['events', '活動'], ['fest', '節慶']] },
   { k:'bag',   ic:'🎒', lab:'背包',  tabs:[['bag', '包包'], ['tank', '魚缸'], ['pets', '寵物']] },
-  { k:'dex',   ic:'📖', lab:'圖鑑',  tabs:[['dex', '圖鑑'], ['rank', '排行榜'], ['ach', '成就']] },
+  { k:'dex',   ic:'📖', lab:'圖鑑',  tabs:[['dex', '圖鑑'], ['gyotaku', '魚拓'], ['rank', '排行榜'], ['ach', '成就']] },
   { k:'fr',    ic:'👥', lab:'朋友',  tabs:[['people', '玩家'], ['island', '小島']] },
   { k:'style', ic:'👕', lab:'造型',  tabs:[['closet', '衣櫃'], ['style', '頭像・帳號']] },
   { k:'set',   ic:'⚙️', lab:'設定',  tabs:[['settings', '設定'], ['help', '玩法']] } ];
 function ui3Group(tab){ return UI_GROUPS.find(g => g.tabs.some(t => t[0] === tab)); }
-function ui3Open(tab){ if (tab === 'pets'){ Pets.atShop = false; loadPets(true); } if (tab === 'fest') loadFest(true); if (tab === 'story') storyLoad(true); if (tab === 'events') evtLoad().then(() => { if (curTab === 'events') renderTab(); }); }
+function ui3Open(tab){ if (tab === 'pets'){ Pets.atShop = false; loadPets(true); } if (tab === 'fest') loadFest(true); if (tab === 'story') storyLoad(true); if (tab === 'gyotaku') gkLoad(true); if (tab === 'events') evtLoad().then(() => { if (curTab === 'events') renderTab(); }); }
 function ui3OpenGroup(k){ const g = UI_GROUPS.find(x => x.k === k); if (!g) return; const tab = UI3.last[k] || g.tabs[0][0]; ui3Open(tab); openSheet(tab); }
 function ui3Tabs(){ if (!UI3.on) return; const T = $('#tabs'); if (!T) return; const g = ui3Group(curTab), key = g ? g.k : '';
   if (g) UI3.last[g.k] = curTab;

@@ -1327,3 +1327,14 @@ body.fs-l #chatHist{zoom:1.1} body.fs-xl #chatHist{zoom:1.2}
   body.ui3.touch:not(.chatting) #chat{bottom:calc(var(--gb) + 250px);left:50%;transform:translateX(-50%);width:min(340px,86vw);align-items:center}
   #chatHist{bottom:calc(var(--gb) + 250px)}
 }
+/* v342 魚拓 */
+#gkView{position:fixed;inset:0;z-index:80;background:rgba(10,20,30,.55);display:flex;align-items:center;justify-content:center;padding:12px}
+#gkView .gkbox{max-width:min(620px,96vw);max-height:94vh;overflow:auto;padding:10px;border-radius:18px;display:flex;flex-direction:column;gap:8px;align-items:center}
+#gkView img{width:100%;max-height:62vh;object-fit:contain;border-radius:6px;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+#gkView .gkacts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.gkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.gkit{border:0;background:#f4f9fc;border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;align-items:center;font-size:12px;font-weight:700;color:var(--ink)}
+.gkit img{width:100%;border-radius:4px}
+@media (orientation:landscape) and (max-height:540px){ #gkView img{max-height:56vh} }
+#gkView .tbtn{white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+#gkView .tbtn img{display:inline-block;height:1.1em;width:auto;margin:0}
