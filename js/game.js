@@ -3412,7 +3412,7 @@ addEventListener('keydown', e => {
   if (!$('#photoView').hidden){ if (e.key === 'Escape') closePhotoView(); return; }
   if (Photo.on){ if (e.key === 'Escape' || e.code === 'KeyP') exitPhoto(); else if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat){ e.preventDefault(); takePhoto(); } else if (e.code === 'Digit1') emote('wave'); else if (e.code === 'Digit2') emote('fish'); else if (e.code === 'Digit3') emote('wow'); return; }
   if (e.code === 'KeyP' && $('#sheet').hidden && $('#catchCard').hidden){ enterPhoto(); return; }
-  if (!$('#sheet').hidden || !$('#catchCard').hidden){ if (e.key === 'Escape'){ closeSheet(); closeCatch(); } if (e.key === 'Enter' && !$('#catchCard').hidden) closeCatch(); return; }
+  if (!$('#sheet').hidden || !$('#catchCard').hidden){ if (e.key === 'Escape'){ closeSheet(); closeCatch(); } if (e.key === 'Enter' && !$('#catchCard').hidden && !ccEarly()) closeCatch(); return; }
   keys[e.code] = true;
   if (Dive.on && e.code === 'Space'){ e.preventDefault(); return; }
   if (e.code === 'KeyJ' && !e.repeat){ jump(); return; }
@@ -9799,8 +9799,9 @@ function showCatch(f, w, res){
   ccFish = f; const rb = $('#ccRel'); rb.innerHTML = `放流 💙+${lp}`; rb.classList.toggle('hot', small);
   $('#ccOk').textContent = small ? '還是帶走' : '放進魚缸';
   { const sb = $('#ccShare'), big = f.rarity !== '常見' || !!f.of || res.isNew || res.isBest; sb.hidden = !big; sb.onclick = () => shareCard({ kind: 'fish', title: gx ? gx.name : f.name, sub: `${w.toFixed(2)} kg・${f.rarity}${f.of ? '・罕見變種' : ''}`, place: SPOT_BY_ID[f.spot].label, img: $('#ccCanvas'), badge: res.isNew ? '圖鑑新登錄！' : res.isBest ? '個人新紀錄！' : '' }); }
-  $('#catchCard').hidden = false; uiBlocked = true;
-  setTimeout(() => $('#ccOk').focus(), 50);
+  $('#catchCard').hidden = false; uiBlocked = true; ccAt = performance.now();
+  /* v307：拉魚時一直快速點，卡片跳出來那一下會被誤按（直接帶走／放流）。卡片出現後 0.7 秒內的點擊不算；手機不要自動選中按鈕（那圈藍框會讓人以為按到了） */
+  if (!matchMedia('(pointer:coarse)').matches) setTimeout(() => $('#ccOk').focus(), 700);
 }
 /* v304 一鍵分享卡片：釣到稀有魚、遇到鯨魚時，做一張直式的圖（有遊戲名字和網址），可以直接分享到 IG、LINE，或存起來 */
 function gameUrl(){ return location.origin + location.pathname.replace(/index\.html$/, ''); }
@@ -9819,16 +9820,17 @@ async function shareCard(o){ const W = 1080, H = 1920, cv = document.createEleme
   const text = `${o.kind === 'whale' ? '我在潮汐釣魚村遇到了' : '我在潮汐釣魚村釣到了'}${o.title}！一起來玩：${gameUrl()}`;
   try { if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: '潮汐釣魚村', text }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); toast('📥 分享圖已經存起來了，可以傳到 IG、LINE'); }
-var ccFish = null;
+var ccFish = null, ccAt = 0;
+const ccEarly = () => performance.now() - ccAt < 700;
 function releaseCaught(){
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x) { closeCatch(); return; }
   const p = releaseLocal(x); if (me.held) me.held.until = 0;
   SFX.chat(); ticker(`💙 <b>${esc(f.name)}</b> 游回大海了！愛海點數 +${p}`); cloudCall('release_catch', { p_fish: f.id }); closeCatch();
 }
 function closeCatch(){ if ($('#catchCard').hidden) return; $('#catchCard').hidden = true; uiBlocked = !$('#sheet').hidden; if (F.phase === 'result') F.phase = 'idle'; }
-$('#ccOk').addEventListener('click', closeCatch);
-$('#ccRel').addEventListener('click', releaseCaught);
-$('#ccShow').addEventListener('click', () => {   // 釣到時直接選「放進水族館展示」
+$('#ccOk').addEventListener('click', () => { if (!ccEarly()) closeCatch(); });
+$('#ccRel').addEventListener('click', () => { if (!ccEarly()) releaseCaught(); });
+$('#ccShow').addEventListener('click', () => { if (ccEarly()) return;   // 釣到時直接選「放進水族館展示」
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x){ closeCatch(); return; }
   rec.show = (rec.show || []).filter(t => t !== x.t); if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先到魚缸拿出一條`); return; }
   rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); ticker(`🏛️ <b>${esc(f.name)}</b> 放進廣場的水族館展示了`); closeCatch(); });
