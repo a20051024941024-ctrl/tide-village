@@ -12360,7 +12360,7 @@ function updateDayNight(t){
    2. 潛水：原本繞圈圈的魚群和單獨的魚都換成這套 AI，會避開海底、礁丘，可以撒魚餌，被追的魚會躲到岩石旁邊。
    效能：魚的模型用物件池重複使用；離鏡頭遠的魚降低更新頻率、太遠就不畫；手機畫質越低，魚越少。 */
 const FAI = { agents:[], pool:new Map(), spawnAt:0, hooked:null, schools:[], obsAt:0, events:[], bait:null, baitCd:0 };
-const FAI_MAX = { low:5, mid:8, high:12 }, FAI_SCHOOL = { low:9, mid:12, high:16 };
+const FAI_MAX = { low:3, mid:5, high:8 }, FAI_SCHOOL = { low:6, mid:8, high:11 };   /* v319 玩家說海邊一直看到魚有點多：附近單獨游的魚、魚群裡的條數都少大約三分之一 */
 const FAI_SIL = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0.45, depthWrite:false });   /* 還沒釣過的魚：只看到黑黑的影子 */
 const FAI_CURIOUS = new Set(['butterfly', 'sergeant', 'idol', 'bluetang', 'turtle', 'clown', 'parrot', 'rabbitfish', 'razorsurgeon', 'creolefish', 'goldfish', 'koi', 'carp', 'tilapia', 'dolphin', 'moonwrasse', 'girella']);
 const FAI_STATE = { wander:'慢慢游著', flee:'被嚇跑了！', curious:'好奇地靠過來看你', bait:'被魚餌吸引過來了', hooked:'在咬你的餌…', chase:'正在追獵物！', forage:'在找東西吃', hide:'躲在岩石旁邊', circle:'在你附近繞圈圈', school:'成群游過去', eat:'吃得飽飽的' };
@@ -12467,7 +12467,7 @@ function schoolPlan(cx, cz, win){ if (schoolHash(cx, cz, win * 3 + 1) > 0.42) re
 function schoolPathAt(pl, ts){ const a = pl.ph + ts * pl.w; return [pl.ax + Math.cos(a) * pl.r, pl.az + Math.sin(a) * pl.r]; }
 function faiSchoolSpawn(px, pz){ const win = Math.floor(Date.now() / 1000 / SCHOOL_WIN);
   FAI.schools = FAI.schools.filter(s => { const far = Math.hypot(s.lead.x - px, s.lead.z - pz) > 40 || (s.plan && !s.plan.key.endsWith(',' + win) && Math.hypot(s.lead.x - px, s.lead.z - pz) > 18); if (far) for (const im of s.ims) if (im.parent) im.parent.remove(im); return !far; });
-  const max = Quality.tier === 'low' ? 1 : Quality.tier === 'mid' ? 2 : 3; if (FAI.schools.length >= max) return;
+  const max = Quality.tier === 'high' ? 2 : 1; if (FAI.schools.length >= max) return;
   const have = new Set(FAI.schools.map(s => s.plan && s.plan.key)), c0x = Math.floor(px / SCHOOL_CELL), c0z = Math.floor(pz / SCHOOL_CELL), cand = [];
   for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++){ const pl = schoolPlan(c0x + dx, c0z + dz, win); if (!pl || have.has(pl.key)) continue; const d = Math.hypot(pl.ax - px, pl.az - pz); if (d < 34) cand.push([d, pl]); }
   cand.sort((a, b) => a[0] - b[0]); const pick = cand[0]; if (!pick) return; const pl = pick[1], [x, z] = schoolPathAt(pl, Date.now() / 1000);
