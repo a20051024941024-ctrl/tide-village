@@ -3978,7 +3978,7 @@ function updateCamera2(dt){
   if (reelCam.k > 0.01 && reelCam.bob){
     const bp = reelCam.bob, bx = bp.x - me.pos.x, bz = bp.z - me.pos.z, L = Math.hypot(bx, bz) || 1; if (reelCam.y0 === null) reelCam.y0 = cam.yaw;
     const ye = Math.atan2(bx, bz) + Math.PI + (cam.yaw - reelCam.y0), dx = -Math.sin(ye), dz = -Math.cos(ye), rx = -dz, rz = dx;   /* v199：拉魚時也可以拖畫面轉鏡頭（繞著角色和魚轉） */
-    const want = reelCam.pos.set(me.pos.x - dx * 2.0 + rx * 1.25, me.baseY + 2.05, me.pos.z - dz * 2.0 + rz * 1.25);   // 右肩後上方，角色在畫面左下，不會擋住魚
+    const want = reelCam.pos.set(me.pos.x - dx * 2.1 + rx * 2.3, me.baseY + 2.0, me.pos.z - dz * 2.1 + rz * 2.3);   /* v331 玩家建議：從右斜後方看（看得到側臉和釣竿），不要正後方看後腦勺 */   // 右肩後上方，角色在畫面左下，不會擋住魚
     const look = reelCam.look.set(bp.x, F.boss && F.jump > 0 && F.leap ? 0.55 + F.leap.position.y * 0.6 : 0.55, bp.z);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), tg = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);
     const normal = new THREE.Vector3(tg.x + Math.sin(cam.yaw)*cp*cam.dist, Math.max(House.on ? ROOM_Y + 0.8 : Dive.on ? DIVE.y + 0.5 : 0.8, tg.y + sp*cam.dist), tg.z + Math.cos(cam.yaw)*cp*cam.dist);
