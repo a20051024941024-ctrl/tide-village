@@ -721,16 +721,19 @@ const MAP = {
   pool: [-26.3, 9.9, 3.4],                               // 瀑布潭
   hill: { x: -29, z: 24, R: 13, H: 5, face: [0.184, -0.983] },
   squares: [HARBOR_SQ],   /* 44 鋪石頭的廣場 [x, z, 半徑] */
+  /* 44 第二區：只留三條大路（往港邊廣場、往鏡湖、往跨海大橋），其他的改成細細的小步道 */
   paths: [
-    [[4, 4], [2, -18], [0, -40]],                        // 往北海灘碼頭
-    [[4, 4], [-6, -8], [-16, -15], [-24.5, -17.6]],     // 往木橋
-    [[4, 4], [-8, 1], [-16, -2]],                        // 往鏡湖棧道
     [[4, 4], [12, -5], [8, -14], [8, -23], [14.5, -24], [22.5, -24.5], [29, -27.5]],   // 往港口（44：從西邊的開口走進港邊廣場，穿過廣場到碼頭）
-    [[12, -5], [17.5, -4], [19, -0.8]],                   // 往水族館門口
-    [[4, 4], [10, 14], [18, 20], [23, 22]],              // 往螢光溪
-    [[4, 4], [-10, 7], [-19, 6], [-24, 5.2]],            // 往瀑布潭
-    [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
+    [[4, 4], [-8, 1], [-16, -2]],                        // 往鏡湖棧道
     [[4, 4], [3, 18], [1, 32], [0, 43.6]],               // 往跨海大橋（珊瑚礁群島）
+  ],
+  trails: [
+    [[8, -14], [2, -22], [0, -40]],                      // 往北海灘碼頭（從港口大路分出去）
+    [[-8, 1], [-16, -15], [-24.5, -17.6]],               // 往木橋（從鏡湖大路分出去）
+    [[12, -5], [17.5, -4], [19, -0.8]],                   // 往水族館門口
+    [[3, 14], [10, 15], [18, 20], [23, 22]],             // 往螢光溪
+    [[-8, 1], [-19, 6], [-24, 5.2]],                     // 往瀑布潭
+    [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
   ],
 };
 // 珊瑚礁群島（參考小琉球、澎湖）的位置，放在這裡是因為建地形、種樹的時候就要用到
@@ -776,6 +779,7 @@ function terrainInfo(x, z){
 }
 function terrainH(x, z){ return terrainInfo(x, z).h; }
 function isLand(x, z){ return !terrainInfo(x, z).water; }
+function trailDist(x, z){ let d = 1e9; for (const p of MAP.trails || []) d = Math.min(d, lineDist(x, z, p)); return d; }
 function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); return d; }
 function inSand(x, z){ const e = islandEdge(x, z); return e < 4.5 + wobble(x + z, 2) * 1.2; }
 // 地面顏色（0～1 的 sRGB）
@@ -784,6 +788,7 @@ function terrainColor(x, z, info, out){
   if (info.water){ const k = Math.min(1, -h / 1.4); out[0] = 0.85 - 0.42 * k; out[1] = 0.75 - 0.15 * k; out[2] = 0.54 + 0.02 * k; return out; }
   if ((MAP.squares || []).some(q => Math.hypot(x - q[0], z - q[1]) < q[2])){ const q = (Math.floor(x * 1.1) + Math.floor(z * 1.1)) % 2 ? 0.035 : 0, k = 0.5 + 0.5 * Math.sin(x * 2.3) * Math.sin(z * 2.7); out[0] = 0.84 - q - 0.03 * k; out[1] = 0.80 - q - 0.03 * k; out[2] = 0.72 - q - 0.02 * k; return out; }   /* 44 港邊廣場的石板（蓋過沙灘） */
   if (inSand(x, z)){ out[0] = 0.949; out[1] = 0.839; out[2] = 0.604; return out; }
+  { const td = trailDist(x, z); if (td < 0.8 && pathDist(x, z) > 1.35){ const k = 0.5 + 0.5 * Math.sin(x * 2.1) * Math.sin(z * 2.4), e = smooth01((0.8 - td) / 0.25); out[0] = 0.55 + (0.80 - 0.55) * e - 0.03 * k; out[1] = 0.70 + (0.70 - 0.70) * e - 0.03 * k; out[2] = 0.42 + (0.55 - 0.42) * e - 0.02 * k; return out; } }   /* 44 小步道：比大路窄、顏色淡 */
   const pd = pathDist(x, z);
   if (pd < 1.7){ if (pd > 1.35){ out[0] = 0.62; out[1] = 0.6; out[2] = 0.54; return out; } const k = 0.5 + 0.5 * Math.sin(x * 3.1) * Math.sin(z * 3.3), q = (Math.floor(x * 1.2) + Math.floor(z * 1.2)) % 2 ? 0.03 : 0; out[0] = 0.86 - 0.04 * k - q; out[1] = 0.8 - 0.04 * k - q; out[2] = 0.68 - 0.03 * k - q; return out; }   // v192：路變寬，鋪石板、兩邊有路緣石
   const n = Math.sin(x * 0.21 + z * 0.17) * Math.sin(x * 0.09 - z * 0.23), k = 0.5 + 0.5 * n;
@@ -1468,14 +1473,18 @@ function castPoint(x, z, dx, dz, dist){
 
   // ---- 樹：南邊的森林、山丘，加上村子周圍零星幾棵 ----
   const nearThing = (x, z) => Math.hypot(x - PX, z - PZ) < 10 || Math.hypot(x - CX, z - CZ) < 4.5 || Math.hypot(x - AX, z - AZ) < 9 || Math.hypot(x - LX, z - LZ) < 4 || SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 4.5) || Math.hypot(x - HX, z - HZ) < 4 || BOAT_DOCKS.some(b => Math.hypot(x - b.x, z - b.z) < 4);
-  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
+  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
   const trees = [];
+  const TREE_CLUMPS = []; { let g2 = 0; while (TREE_CLUMPS.length < 13 && g2++ < 600){ const x = wrand(-46, 46), z = wrand(-44, 14), r = 3.2 + wr() * 2.2; if (!isLand(x, z) || islandEdge(x, z) < 6 || pathDist(x, z) < r + 1.5 || trailDist(x, z) < r || Math.hypot(x - PX, z - PZ) < 14 || TREE_CLUMPS.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + r + 5)) continue; TREE_CLUMPS.push([x, z, r]); } }
+  const OKC = (x, z) => treeOK(x, z) && !(x > 24 && x < 37 && z > -25 && z < -14) && Math.hypot(x - HARBOR_SQ[0], z - HARBOR_SQ[1]) > HARBOR_SQ[2] + 5.5 && !(Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) && Math.hypot((x - 40), (z + 6) / 1.5) > 11 && Math.hypot(x - MAP.hill.x, z - MAP.hill.z) > 7;
+  for (const [cx, cz, r] of TREE_CLUMPS){ const n = 4 + Math.floor(r) + (Quality.tier === 'low' ? -1 : 0); let k = 0, g3 = 0; while (k < n && g3++ < 40){ const a = wr() * Math.PI * 2, d = Math.sqrt(wr()) * r, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
+    if (!OKC(x, z) || trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 1.5)) continue; trees.push([x, z, wr()]); addCircleCol(x, z, 0.38); colliders[colliders.length - 1].tree = 1; k++; } }   /* 44：一叢一叢的樹 */
   const want = Quality.tier === 'low' ? 85 : Quality.tier === 'mid' ? 115 : 145;
   let guard = 0;
-  while (trees.length < want && guard++ < 6000){
+  const want0 = trees.length; while (trees.length - want0 < want * 0.8 && guard++ < 6000){
     const x = wrand(-48, 48), z = wrand(-46, 48);
     const forest = z > 15 || Math.hypot(x - MAP.hill.x, z - MAP.hill.z) < MAP.hill.R + 4;   // 森林和山丘密，其他地方稀疏
-    if (!forest && wr() > 0.12) continue;
+    if (!forest) continue;   /* 44：村子裡不再零星散落，樹都長在下面的樹叢裡 */
     if (!treeOK(x, z)) continue;
     { const hd = Math.hypot(x - MAP.hill.x, z - MAP.hill.z); if (hd < 7 || (hd < MAP.hill.R + 2 && pathDist(x, z) < 3.4)) continue; }
     if (Math.hypot((x - 40) / 1, (z + 6) / 1.5) < 11) continue;   /* 南方沙灘不長樹 */
@@ -2900,7 +2909,7 @@ function addFlora(){
   const dens = Quality.tier === 'low' ? 0.35 : Quality.tier === 'mid' ? 0.65 : 1;
   const dummy = new THREE.Object3D(), c = new THREE.Color();
   const avoid = (x, z) => SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 3.5) || LANDMARKS.some(l => Math.hypot(x - l.pos.x, z - l.pos.z) < 3);
-  const grassOK = (x, z, r) => isLand(x, z) && islandEdge(x, z) > 3.6 && !inSand(x, z) && Math.hypot(x - MAP.plaza[0], z - MAP.plaza[1]) > 8 && pathDist(x, z) > 2.0 && !blocked(x, z, r) && !deckAt(x, z) && !avoid(x, z);
+  const grassOK = (x, z, r) => isLand(x, z) && islandEdge(x, z) > 3.6 && !inSand(x, z) && Math.hypot(x - MAP.plaza[0], z - MAP.plaza[1]) > 8 && pathDist(x, z) > 2.0 && trailDist(x, z) > 1.0 && !blocked(x, z, r) && !deckAt(x, z) && !avoid(x, z);
   function scatter(count, test){ const out = []; let guard = 0; while (out.length < count && guard++ < count * 40){ const x = rand(-50, 50), z = rand(-50, 50); if (test(x, z)) out.push([x, z]); } return out; }
   function inst(geo, mat, pts, place, shadow){
     if (!pts.length) return null;
