@@ -1214,3 +1214,81 @@ body.fs-l #tabs button, body.fs-l #chatIn{font-size:15px} body.fs-xl #tabs butto
 .avopt.on{border-color:var(--sea);box-shadow:0 0 0 2px rgba(47,137,199,.25)}
 .avopt .avimg{width:100%;height:100%;border-radius:50%;object-fit:cover}
 ul.people li .avimg{width:26px;height:26px;border-radius:50%;flex:0 0 auto;margin-right:2px}
+
+/* ===== v336 介面重排（ui3）：右上 6 個大按鈕、小地圖、左邊「今天」、下面聊天列、右下 🐾 ===== */
+body.ui3 #menu{display:grid;grid-template-columns:repeat(6,auto);gap:6px;justify-content:end;align-content:start}
+body.ui3 #menu .mbtn.g3{width:60px;height:auto;padding:0;background:transparent;box-shadow:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+body.ui3 #menu .mbtn.g3::after{content:none!important}
+body.ui3 #menu .mbtn.g3 span{display:block!important}
+body.ui3 .g3i{width:48px;height:48px;border-radius:50%;display:grid!important;place-items:center;font-size:24px;line-height:1;background:var(--ic,#3fa0d0);box-shadow:0 0 0 3px #fff,0 4px 0 3px rgba(24,51,74,.22),inset 0 -6px 0 rgba(0,0,0,.12)}
+body.ui3 .g3l{font-size:12px;font-weight:900;color:#fff;letter-spacing:.5px;white-space:nowrap;text-shadow:0 1px 0 #18334a,0 0 3px rgba(24,51,74,.9),1px 0 0 #18334a,-1px 0 0 #18334a,0 -1px 0 #18334a}
+body.ui3 #menu .mbtn.g3:active .g3i{transform:translateY(2px)}
+body.ui3 .mbtn[data-group="today"]{--ic:linear-gradient(160deg,#ffb36a,#f07a3a)}
+body.ui3 .mbtn[data-group="bag"]{--ic:linear-gradient(160deg,#ff9a7a,#e8583a)}
+body.ui3 .mbtn[data-group="dex"]{--ic:linear-gradient(160deg,#6aa8ff,#3a6fd8)}
+body.ui3 .mbtn[data-group="fr"]{--ic:linear-gradient(160deg,#c59aff,#8a5ae0)}
+body.ui3 .mbtn[data-group="style"]{--ic:linear-gradient(160deg,#ff8ec0,#e0508a)}
+body.ui3 .mbtn[data-group="set"]{--ic:linear-gradient(160deg,#a9b8c4,#6f8494)}
+body.ui3 #menu .rdot{position:absolute;top:-3px;right:-3px}
+body.ui3 #online, body.ui3 #evChip, body.ui3 #emotes > button{display:none!important}
+body.ui3:not(.nav3) #guideCard{display:none!important}
+body.ui3.nav3 #today3{display:none!important}   /* 地圖帶路的時候顯示箭頭卡，「今天」先收起來 */
+body.ui3 #emotes{pointer-events:none}
+#mini3{position:fixed;right:calc(var(--gr) + 8px);top:calc(var(--gt) + 76px);z-index:5;width:118px;padding:4px;border-radius:20px;display:none;flex-direction:column;align-items:center;gap:2px}
+body.ui3 #mini3{display:flex}
+#mini3 canvas{width:110px;height:110px;border-radius:50%;cursor:pointer;display:block}
+#mini3 .m3info{display:flex;flex-wrap:wrap;justify-content:center;max-width:100%;overflow:hidden;gap:2px 6px;font-size:11px;font-weight:700;color:var(--ink);line-height:1.25;text-align:center}
+#mini3 .m3info > span{white-space:nowrap}
+#today3{position:fixed;left:calc(var(--gl) + 8px);top:calc(var(--gt) + 92px);z-index:6;width:min(250px,36vw);padding:6px;border-radius:16px;display:none;flex-direction:column;gap:4px}
+body.ui3 #today3{display:flex}
+#today3 .t3h{display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px;color:var(--ink);background:none;border:0;padding:2px 4px;text-align:left}
+#today3 .t3h b{background:#f17b6d;color:#fff;border-radius:999px;padding:0 7px;font-size:11px}
+#today3 .t3h span{margin-left:auto;color:var(--ink-soft)}
+#today3 .t3r{display:flex;align-items:center;gap:6px;background:#f4f9fc;border:0;border-radius:10px;padding:5px 8px;text-align:left;font-size:12px;color:var(--ink);line-height:1.3}
+#today3 .t3i{font-size:16px;flex:0 0 auto}
+#today3 .t3t{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#today3 .t3t small{color:#2f89c7;font-weight:800}
+#today3 .t3m{align-self:flex-end;background:none;border:0;font-size:11px;font-weight:800;color:#2f89c7;padding:0 4px}
+#today3 .t3e{font-size:12px;color:var(--ink-soft);padding:2px 6px}
+#chat3{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb) + 10px);z-index:6;display:none;gap:6px;align-items:center;width:min(380px,42vw)}
+body.ui3 #chat3{display:flex}
+body.ui3.chatting #chat3, body.kid #chat3{display:none}
+#chat3 .c3bar{flex:1;min-width:0;height:42px;border-radius:999px;text-align:left;padding:0 16px;font-size:14px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#chat3 .c3em{width:42px;height:42px;border-radius:50%;font-size:20px;padding:0;flex:0 0 auto}
+body.ui3 #emotePanel{left:50%!important;right:auto!important;transform:translateX(-50%);bottom:calc(var(--gb) + 60px)!important}
+#pet3{width:56px;height:56px;border-radius:50%;font-size:20px;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0}
+#pet3 small{font-size:10px;font-weight:800}
+#pet3[hidden]{display:none}
+#xp3{position:relative;height:12px;border-radius:999px;background:rgba(24,51,74,.12);overflow:hidden;min-width:90px;max-width:150px;margin:1px 0 2px;display:none}
+body.ui3 #xp3{display:block}
+#xp3 i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ffd36a,#ffb300);border-radius:999px}
+#xp3 span{position:relative;display:block;font-size:9px;font-weight:900;line-height:12px;text-align:center;color:#5a3a00}
+#love3{font-weight:800;font-size:13px;color:#2f6fb5;margin-left:6px;white-space:nowrap;display:none}
+body.ui3 #love3{display:inline}
+body.ui3.photo #mini3, body.ui3.photo #today3, body.ui3.photo #chat3, body.ui3.diving #today3, body.ui3.subcine #mini3, body.ui3.subcine #today3, body.ui3.subcine #chat3, body.ui3.f3 #today3, body.ui3.f3 #chat3{display:none!important}
+@media (orientation:landscape) and (max-height:540px){
+  body.ui3 #menu .mbtn.g3{width:52px} body.ui3 .g3i{width:40px;height:40px;font-size:20px} body.ui3 .g3l{font-size:11px}
+  #mini3{top:calc(var(--gt) + 62px);width:96px} #mini3 canvas{width:88px;height:88px} #mini3 .m3info{font-size:10px}
+  #today3{top:calc(var(--gt) + 74px);width:min(220px,32vw)} #today3 .t3r{padding:4px 7px;font-size:11px}
+  #chat3 .c3bar, #chat3 .c3em{height:38px} #chat3 .c3em{width:38px}
+}
+@media (orientation:portrait){ body.ui3 #menu{grid-template-columns:repeat(3,auto)} #mini3{top:calc(var(--gt) + 140px);width:92px} #mini3 canvas{width:84px;height:84px} #chat3{width:min(360px,60vw);bottom:calc(var(--gb) + 196px)} #today3{top:calc(var(--gt) + 84px);width:min(220px,48vw)} }
+body.fs-l #today3, body.fs-l #mini3 .m3info, body.fs-l #chat3{zoom:1.1} body.fs-xl #today3, body.fs-xl #mini3 .m3info, body.fs-xl #chat3{zoom:1.2}
+body.ui3 #mini3 #wxChip{margin:0;white-space:normal;font-size:10px;display:inline}
+body.ui3 #mini3 #clock{margin:0;white-space:nowrap}
+body.ui3 #brand:not(.open) #xp3{flex-basis:100%;order:0}
+body.ui3 #menu{margin-top:6px}
+body.ui3 #xp3{background:#e3edf3;box-shadow:inset 0 0 0 1.5px #b9cfdc;height:13px}
+body.ui3 #xp3 span{line-height:13px;font-size:10px;color:#18334a}
+body.ui3 #sheet #tabs:not([hidden]){display:flex!important;order:2;flex:1 1 auto;gap:6px;justify-content:flex-start;overflow-x:auto;margin:0 8px}
+body.ui3 #sheet #tabs button{padding:6px 14px;border-radius:999px;font-size:14px;font-weight:800;background:#eef5f9;color:var(--ink-soft)}
+body.ui3 #sheet #tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+body.ui3 #sheet header{display:flex;align-items:center}
+body.ui3 #sheet #sheetTitle{order:1;flex:0 0 auto}
+body.ui3 #sheet #closeSheet{order:3}
+@media (orientation:portrait){
+  body.ui3 #menu .mbtn.g3{width:50px} body.ui3 .g3i{width:40px;height:40px;font-size:20px} body.ui3 .g3l{font-size:11px}
+  body.ui3 #brand{max-width:calc(100vw - 180px)}
+  #today3{top:calc(var(--gt) + 140px)} #mini3{top:calc(var(--gt) + 140px)}
+}
+@media (orientation:landscape) and (max-height:540px){ body.ui3 #sheet #tabs button{padding:4px 11px;font-size:13px} }
