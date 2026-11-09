@@ -7341,11 +7341,37 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   if (U.head) U.head.rotation.y = mv < 0.1 ? Math.sin(t * 0.7 + pt.ph * 0.01) * 0.35 : 0;
   if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
 }
+/* ===== v332 跟寵物互動：丟球（跑去撿回來）、給點心、坐下、跳一跳、轉圈；揮手、跳舞、歡呼時寵物也會跟著動；別人也看得到 ===== */
+const PET_ACTS = [['🎾', '丟球', 'ball'], ['🦴', '給點心', 'treat'], ['🐾', '坐下', 'sit'], ['🦘', '跳一跳', 'jump'], ['🌀', '轉圈', 'spin']];
+let myPetAct = null;
+function petBall(){ if (!PetBallM){ PetBallM = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), mat('#ffd23a', 0.45)); PetBallM.castShadow = true; PetBallM.userData.dyn = true; } return PetBallM.clone(); }
+let PetBallM = null;
+function petDo(f, k, at){ const pt = f.pet; if (!pt || pt.hug) return false; if (pt.act && pt.act.ball){ scene.remove(pt.act.ball); }
+  const t = now(); pt.act = { k, t0: t, at };
+  if (k === 'ball'){ const fx = Math.sin(f.rot), fz = Math.cos(f.rot); let d = 6.5; while (d > 1.5 && !walkable(f.pos.x + fx * d, f.pos.z + fz * d)) d -= 0.5;
+    const bx = f.pos.x + fx * d, bz = f.pos.z + fz * d, b = petBall(); b.position.set(f.pos.x, f.baseY + 1.2, f.pos.z); scene.add(b); Object.assign(pt.act, { ball: b, bx, bz, by: groundHeight(bx, bz) + 0.11, sx: f.pos.x, sz: f.pos.z, sy: f.baseY + 1.2, ph: 'fly' }); }
+  if (k === 'treat'){ pt.spinUntil = t + 1.4; try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 12, '#ff9ab0', 0.4, 1.2, 1.0); } catch(e){} }
+  if (k === 'spin') pt.spinUntil = t + 1.6;
+  return true; }
+function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = groundHeight(pt.pos.x, pt.pos.z), age = t - A.t0, faceMe = Math.atan2(f.pos.x - pt.pos.x, f.pos.z - pt.pos.z);
+  if (A.k === 'ball'){ const b = A.ball;
+    if (A.ph === 'fly'){ const u = Math.min(1, age / 0.7); b.position.set(A.sx + (A.bx - A.sx) * u, A.sy + (A.by - A.sy) * u + Math.sin(u * Math.PI) * 1.6, A.sz + (A.bz - A.sz) * u); if (u >= 1){ A.ph = 'go'; } petStep(pt, dt, t, A.bx, A.bz, gy, true, pt.rot); return true; }
+    if (A.ph === 'go'){ petStep(pt, dt, t, A.bx, A.bz, gy, true, pt.rot); if (Math.hypot(pt.pos.x - A.bx, pt.pos.z - A.bz) < 0.35 || age > 8){ A.ph = 'back'; } return true; }
+    if (A.ph === 'back'){ const c = Math.cos(f.rot), s2 = Math.sin(f.rot), tx = f.pos.x + s2 * 0.9, tz = f.pos.z + c * 0.9; petStep(pt, dt, t, tx, tz, gy, true, faceMe); b.position.set(pt.pos.x + Math.sin(pt.rot) * 0.32, pt.pos.y + 0.32, pt.pos.z + Math.cos(pt.rot) * 0.32);
+      if (Math.hypot(pt.pos.x - tx, pt.pos.z - tz) < 0.3 || age > 16){ scene.remove(b); pt.act = null; pt.spinUntil = t + 0.8; try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); } catch(e){} if (f === me) toast(`🎾 ${esc(pt.name || '寵物')}把球撿回來了！`); } return true; }
+  }
+  if (A.k === 'sit'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); if (U.body) U.body.scale.y = age < 2.2 ? 0.82 : 1; if (age > 2.4){ if (U.body) U.body.scale.y = 1; pt.act = null; } return true; }
+  if (A.k === 'jump'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); pt.pos.y = gy + Math.abs(Math.sin(age * 7)) * 0.35 * (pt.kind === 'gull' || pt.kind === 'puffer' ? 0 : 1); pt.m.position.y = pt.pos.y; if (age > 1.8) pt.act = null; return true; }
+  if (A.k === 'treat' || A.k === 'spin'){ if (age > 1.7) pt.act = null; return false; }
+  pt.act = null; return false; }
+function petAct(k){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held && me.held.pet) return;
+  if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'treat') toast(`🦴 ${esc(pt.name || '寵物')}吃得好開心！`); } }
 function updatePetFor(f, want, dt, t){
   if (!want){ if (f.pet){ petFree(f.pet); f.pet = null; } return; }
   const k = petKey(want); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
   const pt = f.pet, vis = f.av.g.visible && !f.swim && !(f === me && Dive.on) && !(f !== me && f._lod >= 2);   /* v290 30 公尺外的寵物先不畫 */ pt.m.visible = vis; if (!vis) return;
   if (pt.hug){ return; }
+  if (pt.act && petActStep(f, pt, dt, t)) return;   /* v332 跟寵物玩：丟球、坐下、跳、轉圈 */
   if (Math.hypot(f.pos.x - PETPARK[0], f.pos.z - PETPARK[1]) < PETPARK[2] - 0.3 && (f.speed || 0) < 0.3){ const w = pt.park || (pt.park = { x: pt.pos.x, z: pt.pos.z, at: 0 });   /* 57 主人站在寵物樂園裡：寵物自己在裡面跑來跑去 */
     if (t > w.at || Math.hypot(w.x - pt.pos.x, w.z - pt.pos.z) < 0.3){ w.at = t + rand(1.5, 3.5); const a = Math.random() * 6.283, r = Math.random() * (PETPARK[2] - 0.9); w.x = PETPARK[0] + Math.cos(a) * r; w.z = PETPARK[1] + Math.sin(a) * r; }
     petStep(pt, dt, t, w.x, w.z, groundHeight(pt.pos.x, pt.pos.z), true, Math.atan2(w.x - pt.pos.x, w.z - pt.pos.z)); return; }
@@ -10254,7 +10280,7 @@ function meetDone(peerId){ const u = peerUid.get(peerId), p = peers.get(peerId);
   toast(`👋 你和 <b>${esc(n)}</b> 互相打了招呼，變成認識的人了！${strangerSafe() && !Kid.on ? '現在看得到他打的字了。' : ''}`); }
 function meetMyWave(){ Meet.myWave = Date.now(); for (const [pid, t] of Meet.peerWave) if (Date.now() - t < 60000 && meetNear(pid)) meetDone(pid); }
 function meetPeerWave(pid){ Meet.peerWave.set(pid, Date.now()); if (Date.now() - Meet.myWave < 60000 && meetNear(pid)) meetDone(pid); }
-function emote(k){ ensureAudio(); if (!emoteOwned(k)){ buyEmote(k); return; } const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'wave') meetMyWave(); }
+function emote(k){ ensureAudio(); if (!emoteOwned(k)){ buyEmote(k); return; } const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'wave') meetMyWave(); if (me.pet && !me.pet.act){ const rk = { wave:'sit', dance:'jump', cheer:'jump', clap:'spin' }[k]; if (rk) petDo(me, rk, Date.now()); } }   /* v332 你做動作，寵物也跟著 */
 $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(b.dataset.emote)));
 // 左上角卡片第四行：好友代碼（點一下複製、打開玩家分頁加好友）、任務、成就、玩法、登入／帳號
 (function buildBquick(){   /* 先做好這一行，下面 compactBrand 再把它收進 ☰ 裡 */ const host = $('#btools') && $('#btools').parentNode; if (!host || $('#bquick')) return; const row = document.createElement('div'); row.id = 'bquick'; host.appendChild(row);
@@ -10285,7 +10311,7 @@ function openEmotePanel(force){ let P = $('#emotePanel'); if (!P){ P = document.
   if (!force) P.hidden = !P.hidden; if (P.hidden) return;
   P.textContent = ''; P.appendChild(el('div', 'ep-t', '😀 表情動作'));
   const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], own = emoteOwned(k), b = el('button', 'ep-b' + (own ? '' : ' lock')); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', own ? D.name : `🪙${D.buy}`)); if (!own) b.title = D.name + '（' + D.buy + ' 金幣）'; b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
-  for (const [ic, nm, fn] of [['🤗', '抱寵物', () => petHug()], ['✋', '摸摸頭', () => petPat()]]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
+  for (const [ic, nm, fn] of [['🤗', '抱寵物', () => petHug()], ['✋', '摸摸頭', () => petPat()], ...PET_ACTS.map(([i2, n2, k2]) => [i2, n2, () => petAct(k2)])]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
   P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。有 🪙 的是新動作，點一下就能用金幣學會。'));
   const em = $('#emotes'), r = em && em.getBoundingClientRect(); if (r && r.width){ P.style.bottom = Math.round(innerHeight - r.top + 8) + 'px'; P.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; P.style.maxHeight = Math.max(160, Math.round(r.top - 16)) + 'px'; } }   /* 貼在表情按鈕列的正上方；太高就捲動，不會超出畫面 */
 /* v264 學新的表情動作：第一次點跳出確認，再點一次就買（金幣由伺服器扣） */
@@ -10412,7 +10438,8 @@ function presenceObj(){
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
-  if (myEmote && (Date.now() - myEmote.at < 4000 || (me.emote && me.emote.k === myEmote.k))) o.e = myEmote;   /* 一直在做的動作（坐著、躺著、跳舞）別人晚一點進來也看得到 */
+  if (myEmote && (Date.now() - myEmote.at < 4000 || (me.emote && me.emote.k === myEmote.k))) o.e = myEmote;
+  if (myPetAct && Date.now() - myPetAct.at < 4000) o.pa = myPetAct;   /* v332 跟寵物玩的動作，別人也看得到 */   /* 一直在做的動作（坐著、躺著、跳舞）別人晚一點進來也看得到 */
   if (myShow && Date.now() - myShow.at < 6500) o.s = myShow;
   if (rec.rod !== 'bamboo') o.rd = rec.rod;
   return o;
@@ -10475,6 +10502,7 @@ function applyPeer(pp){
     p.fisher.holdFish(sf, sw, 6);
     ticker(`🐟 <b>${esc(peerName(p))}</b> 在炫耀 <span class="chip r-${sf.rarity}">${sf.rarity}</span> <b>${esc(sf.name)}</b> ${fmtKg(sw)}`);
   }
+  if (pr.pa && typeof pr.pa === 'object' && PET_ACTS.some(a => a[2] === pr.pa.k) && pr.pa.at !== p.lastPa){ p.lastPa = pr.pa.at; if (p.fisher && p.fisher.pet) petDo(p.fisher, pr.pa.k, pr.pa.at); }
   if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; if (pr.e.k === 'wave') try { meetPeerWave(pp.peer); } catch(e){} const D = EMOTE_DEF[pr.e.k]; p.fisher.say(D && D.bub || EMOTES[pr.e.k], 'emote', 3); startEmote(p.fisher, pr.e.k); }
 }
 function updatePeers(dt, t){
@@ -12263,6 +12291,7 @@ function renderTab(){
       '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。'
     ]);
     sec('🐾 寵物', [
+      '跟寵物玩：按 😀 表情，下面有「丟球」（寵物會跑去撿回來）、「給點心」、「坐下」、「跳一跳」、「轉圈」，還有抱抱、摸摸頭。你揮手、跳舞、歡呼、拍手時寵物也會跟著動。這些動作大家都看得到。',
       '在商店街入口西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹，每一種都有好幾種花色（隨機，⭐ 很少見）。小海龜、小章魚、河豚只能在海邊、港口、珊瑚礁、紅樹林釣魚時偶爾順便撈到；溪邊、湖邊偶爾撈到小水獺。寵物可以放到「🏷️ 寵物市集」賣（賣家拿九成，買的人要重新培養親密度）。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
