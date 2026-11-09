@@ -1669,6 +1669,27 @@ function blocked(x, z, r){
   }
   return false;
 }
+/* v338 玩家建議：矮的東西（石頭、長椅、花台、木桶、矮柵欄…）跳起來可以跳過去、跳上去站，不是一直被擋住。
+   每個障礙物第一次靠近時，從上往下照一條線量它有多高（只量一次）；1 公尺以下算「矮的」。樹、燈柱、房子照舊擋住 */
+const colIn = (c, x, z, r) => c.t === 'b' ? Math.abs(x - c.x) < c.hw + r && Math.abs(z - c.z) < c.hd + r : c.t === 'o' ? (() => { const dx = x - c.x, dz = z - c.z; return Math.abs(dx * c.c - dz * c.s) < c.hw + r && Math.abs(dx * c.s + dz * c.c) < c.hd + r; })() : Math.hypot(x - c.x, z - c.z) < c.r + r;
+const _colRay = new THREE.Raycaster(), _colDown = new THREE.Vector3(0, -1, 0), _colQ = new Set();
+const COL_PTS = [[0, 0], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7], [0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7]];
+/* 量高度很花時間（要照整個場景），所以不在撞到的當下量：先當成擋住，排進清單，每一格畫面只照 2 條線慢慢量完（手機不會頓） */
+function colTop(c){ if (c.top !== undefined) return c.top; if (!c.tree) _colQ.add(c); return null; }
+function colWork(n){ if (!_colQ.size) return; for (const c of _colQ){ if (Math.hypot(c.x - me.pos.x, c.z - me.pos.z) > 30){ _colQ.delete(c); continue; }
+    try { if (c._g === undefined){ c._g = groundHeight(c.x, c.z); c._t = -1e9; c._k = 0; }
+      while (n-- > 0 && c._k < COL_PTS.length){ const [u, v] = COL_PTS[c._k++], ex = c.t === 'c' ? c.r : c.hw, ez = c.t === 'c' ? c.r : c.hd; let px = c.x + u * ex, pz = c.z + v * ez;
+        if (c.t === 'o'){ const lx = u * c.hw, lz = v * c.hd; px = c.x + lx * c.c + lz * c.s; pz = c.z - lx * c.s + lz * c.c; }
+        _colRay.set(new THREE.Vector3(px, c._g + 30, pz), _colDown); _colRay.far = 31; _colRay.camera = camera;
+        for (const h of _colRay.intersectObjects(scene.children, true)){ const ob = h.object; if (ob.isSprite || ob.isPoints || ob.isLine || ob.isSkinnedMesh || (ob.userData && ob.userData.dyn)) continue; let vis = true; for (let o = ob; o; o = o.parent) if (!o.visible){ vis = false; break; } if (!vis) continue; if (h.point.y > c._t) c._t = h.point.y; break; }
+        if (c._t - c._g > 1.0){ c._k = 99; break; } }
+      if (c._k >= COL_PTS.length){ c.top = c._t - c._g > 1.0 || c._t - c._g < 0.2 ? null : c._t; _colQ.delete(c); } } catch(e){ c.top = null; _colQ.delete(c); }
+    return; } }
+function blockedJ(x, z, r, feet, ax, az){
+  let L = colliders; try { if (House.on && House.cols) L = House.cols; } catch(e){}
+  for (const c of L){ if (!colIn(c, x, z, r)) continue; const t = colTop(c); if (t != null && (feet >= t - 0.05 || colIn(c, ax, az, r))) continue; return true; }
+  return false; }
+function lowTop(x, z){ let L = colliders, best = -1e9; try { if (House.on && House.cols) L = House.cols; } catch(e){} for (const c of L){ if (c.top == null || !colIn(c, x, z, 0.05)) continue; if (c.top > best) best = c.top; } return best; }
 
 /* ================= ASSETS（外部 3D 模型：載入、快取、失敗時用程式模型代替） ================= */
 // 之後換美術模型時，在這裡登記；檔案放在 models/ 資料夾（.glb）。目前還沒有外部模型。
@@ -3912,7 +3933,7 @@ function updatePlayer(dt){
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     // 可以走上山坡，但太陡的崖爬不上去
     // 跳在空中時，只要腳比前面的地面高，就能跳上去
-    const okStep = (ax, az, bx, bz) => { if (!walkable(bx, bz) || blocked(bx, bz, 0.35)) return false; { const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); } }   /* 高高的堤防路只能從樓梯上去 */ const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh < 0.34 || dh / dl < 1.2; };   /* v199：小台階（34 公分以內）直接跨上去，不會卡在路緣、泥灘台地邊 */
+    const okStep = (ax, az, bx, bz) => { if (!walkable(bx, bz) || blockedJ(bx, bz, 0.35, Jump.gy + Jump.air, ax, az)) return false; { const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); } }   /* 高高的堤防路只能從樓梯上去 */ const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh < 0.34 || dh / dl < 1.2; };   /* v199：小台階（34 公分以內）直接跨上去，不會卡在路緣、泥灘台地邊 */
     if (okStep(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx;
     if (okStep(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz;
     const target = Math.atan2(mx, mz);
@@ -3923,7 +3944,8 @@ function updatePlayer(dt){
   if (!myBoat && !mySeat && !Dive.on && !House.on && !inIndoor() && frameNo % 30 === 0 && !walkable(me.pos.x, me.pos.z)){   /* v197：不管怎麼進到水裡（下船、傳送、舊版本留下的位置），都推回最近的岸上 */
     let best = null, bd = 1e9; for (let r = 0.8; r <= 14 && !best; r += 0.8) for (let k = 0; k < 24; k++){ const a = k / 24 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)){ const d = r; if (d < bd){ bd = d; best = [x, z]; } } }
     if (best){ me.pos.x = best[0]; me.pos.z = best[1]; me.baseY = groundHeight(best[0], best[1]); Jump.gy = me.baseY; } }
-  const gy = groundHeight(me.pos.x, me.pos.z);
+  try { if (frameNo % 30 === 7){ let L = colliders; try { if (House.on && House.cols) L = House.cols; } catch(e){} for (const c of L) if (c.top === undefined && !c.tree && Math.abs(c.x - me.pos.x) < 12 && Math.abs(c.z - me.pos.z) < 12) _colQ.add(c); } colWork(2); } catch(e){}
+  const gy = Math.max(groundHeight(me.pos.x, me.pos.z), Dive.on || House.on ? -1e9 : lowTop(me.pos.x, me.pos.z));   /* v338 站在跳上去的石頭、長椅上 */
   if (Math.abs(gy - Jump.gy) > 1.5 && Jump.air <= 0) Jump.gy = gy; else Jump.gy += (gy - Jump.gy) * Math.min(1, dt * 14);
   if (Jump.vy !== 0 || Jump.air > 0){
     Jump.vy -= 24 * dt; Jump.air += Jump.vy * dt;
@@ -12378,6 +12400,7 @@ function renderTab(){
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、瀑布潭、望海丘走細細的小步道。',
       '照功能分區：🎣 港邊廣場（水族館北邊，四間店圍著船錨紀念碑，開口對著碼頭）是釣具店、海邊商店（賣魚）、阿福海產店、釣客魚市；🍜 廣場旁是潮汐食堂、水族館、釣蝦場；👗 商店街（往北走過牌樓）是阿綾服裝店、阿木木工坊、阿彩畫廊、寵物店、海洋博物館。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
+      '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
     ]);
     sec('🏛️ 海洋博物館', [
