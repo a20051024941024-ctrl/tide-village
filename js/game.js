@@ -3430,7 +3430,7 @@ const pinch = new Map(); let pinchDist = 0;
 const camLimits = () => Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: 0.12, pmax: 1.15, dmin: 4.5, dmax: 18 };   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
 canvas.addEventListener('pointerdown', e => { ensureAudio(); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); drag = null; } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
 canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const L = camLimits(); if (pinchDist > 0) cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); pinchDist = d; } });
-['pointerup', 'pointercancel'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
 canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
 const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
@@ -3869,8 +3869,10 @@ function updateCamera2(dt){
   const own = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on);   /* 有自己鏡頭的地方不改 */
   { const bf = own ? 55 : camBaseFov(); if (!Photo.on && Math.abs(camera.fov - bf) > 0.05){ camera.fov += (bf - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); } }
   /* v291 俯瞰視角釣魚時：鏡頭對準角色和浮標中間，拋得遠就稍微拉遠，浮標不會跑出畫面 */
-  const fishOn = !own && CAMV.mode === 'top' && (F.phase === 'waiting' || F.phase === 'bite') && me.bobPos; CAMV.fk += ((fishOn ? 1 : 0) - CAMV.fk) * Math.min(1, dt * 2.5);
-  let dist = cam.dist; if (CAMV.fk > 0.001 && me.bobPos){ const bx = me.bobPos.x - me.pos.x, bz = me.bobPos.z - me.pos.z, bl = Math.min(30, Math.hypot(bx, bz)); target.x += bx * 0.42 * CAMV.fk; target.z += bz * 0.42 * CAMV.fk; target.y -= 0.5 * CAMV.fk; dist += Math.max(0, bl * 0.3 - 1) * CAMV.fk; }
+  const fishNow = !own && CAMV.mode === 'top' && ['waiting', 'bite', 'reeling', 'landing', 'land'].includes(F.phase) && me.bobPos; if (fishNow){ CAMV.fkAt = now(); CAMV.bob = { x: me.bobPos.x, z: me.bobPos.z }; }
+  /* v308：一直快速點（拋竿→收竿→再拋）鏡頭會一直拉遠拉近。現在拉魚的時候也維持，結束後停 3 秒才慢慢拉回來 */
+  const fishOn = fishNow || (CAMV.fkAt && now() - CAMV.fkAt < 3 && CAMV.bob && F.phase !== 'charging'); CAMV.fk += ((fishOn ? 1 : 0) - CAMV.fk) * Math.min(1, dt * (fishOn ? 1.6 : 0.8));
+  let dist = cam.dist; const bob = me.bobPos || CAMV.bob; if (CAMV.fk > 0.001 && bob){ const bx = bob.x - me.pos.x, bz = bob.z - me.pos.z, bl = Math.min(30, Math.hypot(bx, bz)); target.x += bx * 0.42 * CAMV.fk; target.z += bz * 0.42 * CAMV.fk; target.y -= 0.5 * CAMV.fk; dist += Math.max(0, bl * 0.3 - 1) * CAMV.fk; }
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*dist, target.y + sp*dist, target.z + Math.cos(cam.yaw)*cp*dist);
   want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
