@@ -12,7 +12,7 @@ alter table public.pets add column if not exists listed_at timestamptz;
 alter table public.pets add column if not exists caught boolean not null default false;
 alter table public.players add column if not exists pet_try_n integer not null default 0;
 alter table public.pets drop constraint if exists pets_kind_check;
-alter table public.pets add constraint pets_kind_check check (kind in ('cat', 'shiba', 'otter', 'gull', 'crab', 'turtle', 'octopus', 'puffer'));
+alter table public.pets add constraint pets_kind_check check (kind in ('cat', 'shiba', 'otter', 'gull', 'crab', 'turtle', 'octopus', 'puffer', 'pondturtle'));   -- 119 加了小烏龜，這裡也要允許，不然重跑會失敗
 
 -- 每一種的花色和權重（a 一定最常見；最後一個最稀有）
 create or replace function public._pet_vars(k text) returns jsonb language sql immutable as $$
