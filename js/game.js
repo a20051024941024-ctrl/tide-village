@@ -4037,9 +4037,9 @@ const bigMsg = $('#bigMsg');
 let bigTimer = 0;
 function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bigMsg.classList.toggle('long', [...String(text)].length > 9); document.body.classList.toggle('diving', !!(typeof Dive !== 'undefined' && Dive.on)); bigMsg.classList.remove('pop'); void bigMsg.offsetWidth; bigMsg.classList.add('pop'); clearTimeout(bigTimer); bigTimer = setTimeout(() => bigMsg.hidden = true, (secs || 1.2) * 1000); }
 
-/* v336「🎣 出發釣魚」：沒在水邊、旁邊也沒有可以按的東西時，帶你走到最近的釣點（動搖桿就停） */
+/* v340 玩家說不要自動走：大按鈕只用箭頭和光柱指出最近的釣點，自己走過去（AW 自動走已經停用） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
-function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; Object.assign(AW, { on:true, x:sp.pos.x, z:sp.pos.z, t0:now(), lx:me.pos.x, lz:me.pos.z, lt:now(), label:sp.label }); Nav.t = { label: sp.label, x: sp.pos.x, z: sp.pos.z }; if (Guide.el) Guide.el._k = ''; toast(`🎣 帶你去「${esc(sp.label)}」：自己走過去，動搖桿就停（箭頭和光柱會一直指路）`); }
+function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; Nav.t = { label: sp.label, x: sp.pos.x, z: sp.pos.z }; if (Guide.el) Guide.el._k = ''; toast(`🧭 最近的釣點是「${esc(sp.label)}」：跟著箭頭和地上的光柱走過去`); }
 function awStop(msg){ if (!AW.on) return; AW.on = false; joy.x = joy.z = 0; if (msg) toast(msg); }
 function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ awStop(); return; } if (F.phase !== 'idle' || uiBlocked || Dive.on || onIsle){ awStop(); return; } const dx = AW.x - me.pos.x, dz = AW.z - me.pos.z, d = Math.hypot(dx, dz), t = now();
   if (d < 1.4){ awStop(`🎣 到了「${esc(AW.label)}」，按「拋竿」開始釣魚`); return; }
@@ -4466,7 +4466,7 @@ function updateFishing(dt, t){
     else if (nearFurn()){ const n = nearFurn(); label = n.U[1]; sub = `${n.U[0]} ${(FURN[n.o.t] || {}).name || ''}`; cls = 'shop'; }
     else if (inCafe()){ label = '做料理'; sub = '🏮 潮汐食堂'; cls = 'shop'; }
     else if (inMuseum()){ label = '捐魚'; sub = '🏛️ 海洋博物館'; cls = 'shop'; }
-    else { label = '出發釣魚'; sub = '🎣 帶你去最近的釣點'; cls = 'idle'; } }
+    else { label = '找釣點'; sub = '🧭 箭頭指路'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if ((F.phase === 'waiting' || F.phase === 'bite') && F.spot && F.spot.id === 'shrimp' && Rig.rig !== 'lure'){ label = '提竿'; sub = '浮標整個沉下去才拉'; cls = ''; }
   else if (F.phase === 'waiting'){ label = Rig.rig === 'lure' ? '抽竿' : '等待中'; sub = Rig.rig === 'lure' ? '點一下讓假餌動・搖桿收竿' : '點一下收竿'; cls = 'idle'; }
@@ -12488,7 +12488,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
-      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，這支手機保留 24 小時），😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「出發釣魚」，會帶你走到最近的釣點，路上一樣有箭頭和光柱指路。',
+      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，這支手機保留 24 小時），😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「找釣點」，點了會用箭頭和地上的光柱指出最近的釣點，自己走過去就好。',
       '移動搖桿想固定在左下角：設定 →「🕹️ 移動搖桿」選「固定在左下角」。',
       '檢舉不禮貌的人（點他的名字 →「檢舉」）會送到管理員那裡處理，管理員可以禁言或把不適合的名字改掉；被改名的人 30 天內不能自己改回來。',
       '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',
@@ -13606,5 +13606,4 @@ function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (con
   const t = Math.round(y + 8) + 'px'; if (P.style.top !== t) P.style.top = t;
   const B = $('#brand'), G = document.getElementById('guideCard'); P.classList.toggle('slim', !!(B && B.classList.contains('open')) || !!(G && !G.hidden && G.offsetHeight > 60)); }   /* 頭像打開或有指引卡：「今天」只剩標題，不會壓到搖桿 */
 setTimeout(ui3Init, 300);
-(function awLoop(){ try { awTick(); } catch(e){} requestAnimationFrame(awLoop); })();
 })();
