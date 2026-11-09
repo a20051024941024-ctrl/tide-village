@@ -7356,6 +7356,9 @@ function renderSettings(body){
     [[30, '30（最省電）'], [45, '45'], [60, '60'], [0, '不限']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Power.cap === k)); b.addEventListener('click', () => { Power.cap = k; LS.set('tide.fpsCap', k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '手機會發燙，多半是畫面每秒畫太多張。手機預設 45 張；超過 30 秒沒碰畫面（不在釣魚）會自動降到 30 張。')); }
   { const f = field('🚢 深海驚嚇效果'), seg = el('div', 'seg'); [[true, '開'], [false, '關']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(subScareOn() === k)); b.addEventListener('click', () => { LS.set('tide.subScare', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); f.appendChild(el('p', 'sub', '開潛水艇到午夜層時，黑暗裡會有嚇人的東西（黑暗中的眼睛、那盞燈）。關掉就不會出現，其他的相遇照常。')); }
+  { const f = field('👋 陌生人'), seg = el('div', 'seg'), cur = strangerSafe(); [[false, '看得到大家打的字'], [true, '只看認識的人打的字']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.strangerChat', k ? 'met' : 'all'); renderTab(); }); seg.appendChild(b); });
+    if (Kid.on) f.appendChild(el('p', 'sub', '🧒 兒童安全模式：只看得到大家的快速聊天句子。')); else f.appendChild(seg);
+    const n = Object.keys(Meet.list).length; f.appendChild(el('p', 'sub', `走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。選「只看認識的人打的字」時，陌生人打的字只會顯示 💬（兒童模式的快速句子還是看得到）。你已經認識 ${n} 個人。`)); }
   { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
   { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
   /* v288 上架 Google Play 必備：隱私權政策、刪除帳號（115） */
@@ -10082,7 +10085,21 @@ $('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = f
 renderChatMode();
 
 let myEmote = null;
-function emote(k){ ensureAudio(); if (!emoteOwned(k)){ buyEmote(k); return; } const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); }
+/* v313 安全認識陌生人（41）：跟 Sky 一樣，先「互相揮手」才算認識。開了「只看認識的人打的字」之後，
+   陌生人自己打的字只會顯示成 💬，快速聊天的固定句子還是看得到；互相揮手（60 秒內、8 公尺內）就變成認識的人。
+   13～17 歲預設開，成人預設關，設定裡可以改；兒童模式照原本的規則（只看得到快速聊天）。 */
+const Meet = { list: LS.get('tide.met', {}) || {}, peerWave: new Map(), myWave: 0, hinted: false };
+function metWith(uid){ return !!(uid && Meet.list[uid]); }
+function strangerSafe(){ const v = LS.get('tide.strangerChat', null); return v == null ? !!Kid.teen : v === 'met'; }
+function knownPeer(peerId){ const u = peerUid.get(peerId); return !!u && (metWith(u) || (typeof isFriend === 'function' && isFriend(u))); }
+function meetNear(peerId){ const p = peers.get(peerId); return !!p && Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < 8; }
+function meetDone(peerId){ const u = peerUid.get(peerId), p = peers.get(peerId); if (!u || !p || metWith(u)) return; const n = peerName(p);
+  Meet.list[u] = { n: String(n).slice(0, 16), at: Date.now() }; const ks = Object.keys(Meet.list); if (ks.length > 300){ ks.sort((a, b) => Meet.list[a].at - Meet.list[b].at).slice(0, ks.length - 300).forEach(k => delete Meet.list[k]); }
+  LS.set('tide.met', Meet.list); SFX.catch(); try { FX.emit(p.fisher.pos.x, 2, p.fisher.pos.z, 14, '#ffd36a', 1, 1.5); } catch(e){}
+  toast(`👋 你和 <b>${esc(n)}</b> 互相打了招呼，變成認識的人了！${strangerSafe() && !Kid.on ? '現在看得到他打的字了。' : ''}`); }
+function meetMyWave(){ Meet.myWave = Date.now(); for (const [pid, t] of Meet.peerWave) if (Date.now() - t < 60000 && meetNear(pid)) meetDone(pid); }
+function meetPeerWave(pid){ Meet.peerWave.set(pid, Date.now()); if (Date.now() - Meet.myWave < 60000 && meetNear(pid)) meetDone(pid); }
+function emote(k){ ensureAudio(); if (!emoteOwned(k)){ buyEmote(k); return; } const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'wave') meetMyWave(); }
 $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(b.dataset.emote)));
 // 左上角卡片第四行：好友代碼（點一下複製、打開玩家分頁加好友）、任務、成就、玩法、登入／帳號
 (function buildBquick(){   /* 先做好這一行，下面 compactBrand 再把它收進 ☰ 裡 */ const host = $('#btools') && $('#btools').parentNode; if (!host || $('#bquick')) return; const row = document.createElement('div'); row.id = 'bquick'; host.appendChild(row);
@@ -10303,7 +10320,7 @@ function applyPeer(pp){
     p.fisher.holdFish(sf, sw, 6);
     ticker(`🐟 <b>${esc(peerName(p))}</b> 在炫耀 <span class="chip r-${sf.rarity}">${sf.rarity}</span> <b>${esc(sf.name)}</b> ${fmtKg(sw)}`);
   }
-  if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; const D = EMOTE_DEF[pr.e.k]; p.fisher.say(D && D.bub || EMOTES[pr.e.k], 'emote', 3); startEmote(p.fisher, pr.e.k); }
+  if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; if (pr.e.k === 'wave') try { meetPeerWave(pp.peer); } catch(e){} const D = EMOTE_DEF[pr.e.k]; p.fisher.say(D && D.bub || EMOTES[pr.e.k], 'emote', 3); startEmote(p.fisher, pr.e.k); }
 }
 function updatePeers(dt, t){
   for (const p of peers.values()){
@@ -10346,6 +10363,9 @@ function useRoom(r){
       if (msg.sameTab){ me.say(text); logMsg((nr ? '📍' : '') + (myDisplayName() === '你' ? '你' : myDisplayName()), text); return; }
       if (nr && (String(msg.data.pk || '') !== myPlaceKey() || !(Math.hypot((+msg.data.x || 0) - me.pos.x, (+msg.data.z || 0) - me.pos.z) < NEAR_R))) return;   /* 附近聊天：離太遠、不在同一個地方就聽不到 */
       if (isBlockedPeer(msg.peer) || tooChatty(msg.peer)) return;
+      if (!Kid.on && strangerSafe() && !knownPeer(msg.peer) && !(Math.floor(+msg.data.q) >= 0 && Math.floor(+msg.data.q) < KID_Q.length && text === KID_Q[Math.floor(+msg.data.q)])){   /* v313 陌生人自己打的字先藏起來 */
+        const p0 = peers.get(msg.peer); if (p0) p0.fisher.say('💬', 'emote', 2);
+        if (!Meet.hinted){ Meet.hinted = true; logMsg('系統', '有陌生人說話了。跟他互相揮手 👋 變成認識的人，就看得到他打的字（設定 → 👋 陌生人）'); } return; }
       text = clean(text);
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '釣客';
       { const a = recentChat.get(msg.peer) || []; a.push(msg.data.t.slice(0, 120)); recentChat.set(msg.peer, a.slice(-5)); }
@@ -11168,19 +11188,19 @@ function renderEvents(body){ const ms = bossNow(), s = Math.floor(ms / 1000), m 
    聊天只能用下面的快速句子、看不到別人自己打的字；不能在留言板留言；名字從「形容詞＋動物」選；好友只能用好友代碼加；深海驚嚇預設關。 */
 const KID_Q = ['你好！', '一起釣魚吧！', '好厲害！', '謝謝你～', '我釣到了！', '等等我！', '要去哪裡？', '掰掰～', '加油！', '哈哈哈', '好可愛！', '晚安～'];
 const KID_ADJ = ['開心的','勇敢的','害羞的','愛睡的','好奇的','溫柔的','活潑的','安靜的','聰明的','愛笑的','迷糊的','閃亮的'], KID_ANI = ['水獺','海豚','企鵝','海龜','小貓','柴犬','海鷗','河豚','章魚','螃蟹','鯨魚','兔子','松鼠','貓頭鷹','刺蝟','熊貓'];
-var Kid = { on: LS.get('tide.kid', false), asked: LS.get('tide.ageAsked', false), loaded:false };
+var Kid = { on: LS.get('tide.kid', false), teen: LS.get('tide.teen', false), asked: LS.get('tide.ageAsked', false), loaded:false };
 function kidApply(){ document.body.classList.toggle('kid', !!Kid.on); let qb = $('#kidQ');
   if (Kid.on && !qb){ qb = document.createElement('div'); qb.id = 'kidQ'; qb.className = 'panel'; KID_Q.forEach((q, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => kidSay(i)); qb.appendChild(b); }); const f = $('#chatForm'); f.parentNode.insertBefore(qb, f.nextSibling); }
   if (qb) qb.hidden = !Kid.on; }
 async function kidSay(i){ const text = KID_Q[i], nowT = performance.now(); myChatAt = myChatAt.filter(x => nowT - x < 6000); if (myChatAt.length >= 4){ toast('說太快了，休息一下再說'); return; } myChatAt.push(nowT);
   if (room && room.connected() && chatAllowed){ try { await room.emit('chat', chatNear ? { t: text, q: i, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text, q: i }); } catch(e){ me.say(text); logMsg('你', text); } }
   else { me.say(text); logMsg('你', text); } npcHear(text); }
-async function kidLoad(){ if (!Cloud.on || !Cloud.sb || Kid.busy) return; Kid.busy = true; try { const { data, error } = await Cloud.sb.rpc('my_age_mode'); if (!error && data){ Kid.loaded = true; Kid.on = !!data.kid; Kid.asked = !!data.asked; LS.set('tide.kid', Kid.on); LS.set('tide.ageAsked', Kid.asked); kidApply(); if (!Kid.asked) ageGate(); } } catch(e){} Kid.busy = false; }
+async function kidLoad(){ if (!Cloud.on || !Cloud.sb || Kid.busy) return; Kid.busy = true; try { const { data, error } = await Cloud.sb.rpc('my_age_mode'); if (!error && data){ Kid.loaded = true; Kid.on = !!data.kid; Kid.asked = !!data.asked; Kid.teen = !!data.teen; LS.set('tide.kid', Kid.on); LS.set('tide.teen', Kid.teen); LS.set('tide.ageAsked', Kid.asked); kidApply(); if (!Kid.asked) ageGate(); } } catch(e){} Kid.busy = false; }
 function ageGate(){ if ($('#ageGate')) return; const y = new Date().getFullYear(), g = document.createElement('div'); g.id = 'ageGate';
   g.innerHTML = `<div class="ag panel"><h2>歡迎來到潮汐釣魚村！</h2><p>你是哪一年出生的？</p><select id="agY" aria-label="出生年份"><option value="">請選擇年份</option>${Array.from({ length: 100 }, (_, i) => `<option value="${y - i}">${y - i} 年</option>`).join('')}</select>
     <p class="sub">只用來決定要不要開「兒童安全模式」，不會給別人看，選了之後就不能改。不用填真名、生日。</p><button id="agOk" class="tbtn">確定</button><a class="sub" href="privacy.html" target="_blank" rel="noopener">隱私權政策</a></div>`;
   document.body.appendChild(g); g.querySelector('#agOk').addEventListener('click', async () => { const v = +g.querySelector('#agY').value; if (!v){ toast('請選你的出生年份'); return; } const b = g.querySelector('#agOk'); b.disabled = true;
-    try { const { data, error } = await Cloud.sb.rpc('set_birth_year', { p_year: v }); if (error) throw error; Kid.on = !!data.kid; Kid.asked = true; LS.set('tide.kid', Kid.on); LS.set('tide.ageAsked', true);
+    try { const { data, error } = await Cloud.sb.rpc('set_birth_year', { p_year: v }); if (error) throw error; Kid.on = !!data.kid; Kid.asked = true; Kid.teen = !Kid.on && new Date().getFullYear() - v <= 17; LS.set('tide.teen', Kid.teen); LS.set('tide.kid', Kid.on); LS.set('tide.ageAsked', true);
       if (Kid.on && data.name){ nickname = data.name; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); }
       g.remove(); kidApply(); if (Kid.on) flash('🧒 已經開啟兒童安全模式：聊天用下面的快速句子，玩得開心！', 2.6); }
     catch(e){ b.disabled = false; toast((e && e.message) || '請稍後再試'); } }); }
@@ -12076,6 +12096,7 @@ function renderTab(){
       '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。'
     ]);
     sec('👥 跟大家一起玩', [
+      '走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。設定 →「👋 陌生人」可以選只看認識的人和好友打的字（13～17 歲預設打開），陌生人說話只會顯示 💬。',
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
       '跑馬燈會報出大家釣到的稀有魚和傳說魚，還有做出來的料理。',
       '鬼抓人：在「玩家」分頁發起，2 個人以上就能玩。被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。',
@@ -13018,6 +13039,7 @@ function subPeersTick(dt, t){ const S = Sub.peers || (Sub.peers = new Map()), P 
 function subBubble(parent, text){ const sp = subLabel(text, true); sp.userData.bub = true; sp.position.y = parent === Sub.m ? 1.5 : 1.7; parent.add(sp); return sp; }   /* 自己的泡泡放低一點，不要被上面的深度計擋住 */
 function onSubQ(msg){ if (!msg || !msg.data) return; const k = Math.floor(+msg.data.k), ft = typeof msg.data.t === 'string' ? clean(msg.data.t.trim()).slice(0, 40) : ''; if (!ft && !(k >= 0 && k < SUB_Q.length)) return; const q = ft || SUB_Q[k];
   if (ft && Kid.on && !msg.sameTab) return;   /* 兒童安全模式：別人自己打的字不顯示 */
+  if (ft && !msg.sameTab && strangerSafe() && !knownPeer(msg.peer)) return;   /* v313 陌生人打的字先藏起來 */
   if (ft && !msg.sameTab && !isBlockedPeer(msg.peer)){ const p0 = peers.get(msg.peer); if (p0) logMsg('🚢' + peerName(p0), ft); }   /* 打字的話不管在不在潛水，聊天紀錄都看得到 */
   if (typeof Sub === 'undefined' || !Sub.on) return;
   if (msg.sameTab){ if (Sub.myBub){ Sub.m.remove(Sub.myBub); Sub.myBub.material.map.dispose(); } Sub.myBub = subBubble(Sub.m, q); Sub.myBubT = now() + 4; return; }
