@@ -2570,7 +2570,22 @@ function applyGear(av, gear){
     case 'face_star': { const sm = new THREE.MeshBasicMaterial({ color:'#ffc93c' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(starShape(0.065)), sm, sx * 0.115, 0.01, 0.318, HD); break; }
   }
   applyDesigns(av, gear);   /* 自己設計的衣服、褲子（044） */
+  try { mergeHeadGear(av); } catch(e){}
 }
+/* v315 效能（42）：頭上的帽子、髮飾、表情零件以前一個零件一個 draw call（廣場上的人頭上加起來 50 多個）。
+   換完裝之後，同一個材質、掛在頭或帽子上的零件合成一塊（材質不變，所以換帽子顏色、髮色還是會跟著變）。會動的帽子（有 gearAnim）和潛水鏡不合併 */
+function mergeHeadGear(av){ if (av.gearAnim || !mergeGeometries) return; const own = new Set(av.gearMeshes);
+  for (const P of [av.hatG, av.headG]){ if (!P) continue; const G = new Map();
+    for (const o of P.children){ if (!own.has(o) || !o.isMesh || o.children.length || o.isSkinnedMesh || o.isInstancedMesh || !o.visible) continue; const m = o.material, g = o.geometry;
+      if (!m || Array.isArray(m) || m.transparent || (typeof GOGGLE !== 'undefined' && GOGGLE.mat && m === GOGGLE.mat) || !g || !g.attributes.position || g.morphAttributes.position) continue;
+      const k = m.uuid + '|' + (o.castShadow ? 1 : 0); let L = G.get(k); if (!L){ L = []; G.set(k, L); } L.push(o); }
+    for (const L of G.values()){ if (L.length < 2) continue; const geos = [];
+      for (const o of L){ o.updateMatrix(); const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const n of Object.keys(g.attributes)) if (n !== 'position' && n !== 'normal' && n !== 'uv') g.deleteAttribute(n); if (!g.attributes.normal) g.computeVertexNormals(); g.clearGroups(); g.applyMatrix4(o.matrix); geos.push(g); }
+      const hasUv = geos.every(g => g.attributes.uv); if (!hasUv) geos.forEach(g => g.deleteAttribute('uv'));
+      let mg = null; try { mg = mergeGeometries(geos, false); } catch(e){} geos.forEach(g => g.dispose()); if (!mg) continue; mg.computeBoundingSphere();
+      const mesh = new THREE.Mesh(mg, L[0].material); mesh.castShadow = L[0].castShadow; mesh.receiveShadow = L[0].receiveShadow; mesh.layers.mask = L[0].layers.mask; P.add(mesh);
+      for (const o of L){ P.remove(o); if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); const i = av.gearMeshes.indexOf(o); if (i >= 0) av.gearMeshes.splice(i, 1); }
+      av.gearMeshes.push(mesh); } } }
 
 /* v252 精緻釣竿（自己和其他玩家才用，NPC 維持簡單的省效能）：竿身分 6 節會真的彎、導環＋綁線、軟木握把＋尾塞、
    紡車式捲線器（線杯有線、導線環、搖臂和握把，收線時會轉）；手竿沒有捲線器、竿身有竹節 */
