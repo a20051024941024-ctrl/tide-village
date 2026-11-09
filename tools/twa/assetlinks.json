@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.chaoxi.fishing",
+      "sha256_cert_fingerprints": ["換成 Play Console「應用程式簽署」頁面的 SHA-256 憑證指紋"]
+    }
+  }
+]

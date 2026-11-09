@@ -4825,7 +4825,7 @@ function updateBuild(){
     Build.x = lx; Build.z = lz; Build.err = isleCheck(isleItems(), Build.type, lx, lz, Build.moveId || -1);
     Build.ghost.position.set(ISLE.x + lx, ISLE.y + 0.02, ISLE.z + lz); Build.ghost.rotation.y = Build.rot;
     const m = Build.err ? ghostBad : ghostOk; Build.ghost.traverse(o => { if (o.isMesh && o.material !== m) o.material = m; });
-    const hint = $('#bbHint'); if (hint){ const t = Build.err || `${T.name}：走路調整位置`; if (hint.textContent !== t) hint.textContent = t; hint.classList.toggle('bad', !!Build.err); }
+    const hint = $('#bbHint'); if (hint){ const t = Build.err ? '✖ ' + Build.err : `✓ ${T.name}：走路調整位置`;   /* v311：可不可以放除了綠紅，也用 ✓ ✖ 分 */ if (hint.textContent !== t) hint.textContent = t; hint.classList.toggle('bad', !!Build.err); }
   } else {
     // 沒拿東西時：選最靠近的東西，可以移動或拆掉
     let best = null, bd = 2.6; for (const it of isleItems()){ const dd = Math.hypot(me.pos.x - ISLE.x - it.x, me.pos.z - ISLE.z - it.z) - ISLE_ITEMS[it.t].rad * 0.6; if (dd < bd){ bd = dd; best = it; } }
@@ -4856,9 +4856,9 @@ function renderBuildBar(){
   }
 }
 // 訪客帳號蓋房子、買大宅的時候提醒綁定 Email（清掉瀏覽器資料整座島就不見了）；三天內只提醒一次
-function bindRemind(what){ if (!Cloud.on || !Cloud.isAnon) return; let k = null; try { k = localStorage.getItem('tide.bindAsk'); } catch(e){} if (k && Date.now() - Number(k) < 3 * 864e5) return; try { localStorage.setItem('tide.bindAsk', String(Date.now())); } catch(e){}
+function bindRemind(what, msg){ if (!Cloud.on || !Cloud.isAnon) return; let k = null; try { k = localStorage.getItem('tide.bindAsk'); } catch(e){} if (k && Date.now() - Number(k) < 3 * 864e5) return; try { localStorage.setItem('tide.bindAsk', String(Date.now())); } catch(e){}
   setTimeout(() => { let b = $('#bindAsk'); if (!b){ b = document.createElement('div'); b.id = 'bindAsk'; document.body.appendChild(b); } b.innerHTML = ''; b.hidden = false;
-    b.appendChild(el('div', 'ba-t', `🏠 蓋好${what}了！`)); b.appendChild(el('div', 'ba-s', '你現在是訪客帳號：清除瀏覽器資料或換手機，整座島就找不回來了。綁定 Email 就能永久保存。'));
+    b.appendChild(el('div', 'ba-t', msg ? msg.t : `🏠 蓋好${what}了！`)); b.appendChild(el('div', 'ba-s', msg ? msg.s : '你現在是訪客帳號：清除瀏覽器資料或換手機，整座島就找不回來了。綁定 Email 就能永久保存。'));
     const row = el('div', 'ba-r'), go = el('button', 'tbtn', '📧 去綁定 Email'), no = el('button', 'tbtn ghost', '之後再說');
     go.addEventListener('click', () => { b.hidden = true; Cloud.ui.step = 'email'; Cloud.ui.mode = 'bind'; Cloud.ui.msg = ''; openSheet('style'); setTimeout(() => { const cb = document.querySelector('#sheet .cloudbox'); if (cb) cb.scrollIntoView({ block:'center' }); }, 150); });
     no.addEventListener('click', () => { b.hidden = true; }); row.appendChild(go); row.appendChild(no); b.appendChild(row); }, 1400); }
@@ -5445,7 +5445,7 @@ function updateFurn(){
     FB.x = lx; FB.z = lz; FB.err = furnCheck(lay, f, FB.type, lx, lz, FB.moveId || -1);
     FB.ghost.position.set(ISLE.x + lx, ROOM_Y + 0.01, ISLE.z + lz); FB.ghost.rotation.y = FB.rot;
     const m = FB.err ? ghostBad : ghostOk; FB.ghost.traverse(o => { if (o.isMesh && o.material !== m) o.material = m; });
-    const hint = $('#fbHint'); if (hint){ const t = FB.err || `${T.name}：走路調整位置`; if (hint.textContent !== t) hint.textContent = t; hint.classList.toggle('bad', !!FB.err); }
+    const hint = $('#fbHint'); if (hint){ const t = FB.err ? '✖ ' + FB.err : `✓ ${T.name}：走路調整位置`; if (hint.textContent !== t) hint.textContent = t; hint.classList.toggle('bad', !!FB.err); }
   } else {
     let best = null, bd = 1.6; for (const o of f){ const dd = Math.hypot(me.pos.x - ISLE.x - o.x, me.pos.z - ISLE.z - o.z) - FURN[o.t].rad * 0.5; if (dd < bd){ bd = dd; best = o; } }
     if ((best && best.id) !== (FB.sel && FB.sel.id)){ FB.sel = best; renderFurnBar(); }
@@ -6588,8 +6588,15 @@ function renderLvChip(){
   const xp = calcXP(), L = lvOf(xp), k = L >= 99 ? 1 : (xp - lvNeed(L)) / (lvNeed(L + 1) - lvNeed(L)); let tt = ''; try { tt = curTitle(); } catch(e){} const t = `⭐ Lv.${L}${tt ? `・${tt}` : ''}`; if (c._t !== t){ c.textContent = t; c._t = t; } c.style.setProperty('--k', (k * 100).toFixed(0) + '%');
 }
 async function claimLevels(){ if (!Cloud.on) return; const before = rec.coins, row = await cloudCall('claim_levels'); if (!row) return; const got = (Number(row.coins) || 0) - before; if (got > 0){ SFX.catch(); flash(`⭐ 升級獎勵 🪙${got.toLocaleString()}！`, 2); } }
+/* v311 上架（35）：玩到第 3 天、或升到 Lv10，提醒訪客帳號綁定 Email（換手機才登得回同一個角色）。每個時機只提醒一次 */
+const PlayDays = (() => { const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); let n = Number(LS.get('tide.pdN', 0)) || 0; if (LS.get('tide.pdLast', '') !== d){ n++; LS.set('tide.pdN', n); LS.set('tide.pdLast', d); } return n; })();
+function bindMilestone(L){ if (!Cloud.on || !Cloud.isAnon) return; const done = LS.get('tide.bindMs', []) || [];
+  const k = L >= 10 && !done.includes('lv10') ? 'lv10' : PlayDays >= 3 && !done.includes('d3') ? 'd3' : null; if (!k) return;
+  LS.set('tide.bindMs', done.concat(k)); try { localStorage.removeItem('tide.bindAsk'); } catch(e){}
+  bindRemind('', k === 'lv10' ? { t:`🎉 Lv.${L} 了！`, s:'你的魚缸、圖鑑、衣服都存在這支手機的訪客帳號裡。綁定 Email，換手機或清掉瀏覽器資料也能登回同一個角色。' }
+                              : { t:'🌊 第 3 天來釣魚了！', s:'謝謝你常常來！你現在是訪客帳號，換手機或清掉瀏覽器資料，角色就找不回來了。綁定 Email 就能永久保存。' }); }
 function lvTick(){
-  if (!rec) return; const L = lvOf(calcXP()); renderLvChip(); { const t = curTitle(); if (t !== Lv.cur){ Lv.cur = t; refreshMyName(); pushPresence(true); } }
+  if (!rec) return; const L = lvOf(calcXP()); if (Lv.L != null) try { bindMilestone(L); } catch(e){} renderLvChip(); { const t = curTitle(); if (t !== Lv.cur){ Lv.cur = t; refreshMyName(); pushPresence(true); } }
   if (Lv.L != null && L > Lv.L){ flash(`🎉 升級了！Lv.${L}`, 2); SFX.catch(); ticker(`🎉 <b>你</b>升到 Lv.${L} 了！${LV_TITLES.some(([l]) => l === L) ? `得到稱號「${LV_TITLES.find(([l]) => l === L)[1]}」` : ''}`); if (room && room.connected()) room.emit('lvup', { L }).catch(() => {}); setTimeout(claimLevels, 1500); }
   Lv.L = L;
   // 成就
@@ -7324,6 +7331,8 @@ function renderPets(body){
   body.appendChild(ul2);
 }
 // ===== ⚙️ 設定：語言、音效、背景音樂、畫質、聊天過濾 =====
+function applyFontSize(){ const k = LS.get('tide.fs', 0); document.body.classList.toggle('fs-l', k === 1); document.body.classList.toggle('fs-xl', k === 2); }
+applyFontSize();
 function renderSettings(body){
   body.appendChild(el('div', 'shophead')).innerHTML = '<b>⚙️ 設定</b>';
   const field = (title, sub) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); body.appendChild(f); if (sub) f._sub = sub; return f; };
@@ -7335,6 +7344,9 @@ function renderSettings(body){
     sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
   vol('🔊 音效', soundOn, sfxVol, on => { soundOn = on; LS.set('tide.sound', on); if (on) ensureAudio(); renderSoundIcon(); }, v => { sfxVol = v; LS.set('tide.sfxVol', v); clearTimeout(renderSettings.t); renderSettings.t = setTimeout(() => SFX.coin(), 120); });
   vol('🎵 背景音樂', musicOn, musicVol, on => { musicOn = on; LS.set('tide.music', on); if (on){ ensureAudio(); MUSIC.start(); } else MUSIC.stop(); renderMusicIcon(); }, v => { musicVol = v; LS.set('tide.musicVol', v); MUSIC.vol(); });
+  /* v311 上架（34）：字體大小。標準／大／特大，選單、聊天、提示、釣到魚的卡片一起放大 */
+  { const f = field('🔠 字體大小'), seg = el('div', 'seg'), cur = LS.get('tide.fs', 0); [[0, '標準'], [1, '大'], [2, '特大']].forEach(([k, l]) => { const b = el('button', '', l); b.style.fontSize = [14, 16, 18][k] + 'px'; b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.fs', k); applyFontSize(); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '字太小看不清楚的話選「大」或「特大」。選單、聊天、提示文字和釣到魚的卡片都會變大。')); }
   { const f = field('🎥 視角'), seg = el('div', 'seg'); [['top', '俯瞰（預設）'], ['near', '貼近（舊的）']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(CAMV.mode === k)); b.addEventListener('click', () => { setCamView(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '俯瞰：從斜上方往下看，看得比較遠、比較整齊。貼近：從角色背後看，比較有臨場感。兩種都可以用手指拖動、兩指縮放。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
@@ -12080,6 +12092,8 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
+      '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',
+      '訪客帳號玩到第 3 天、或升到 Lv10 時，會提醒你綁定 Email。綁好之後換手機、清掉瀏覽器資料，用同一個 Email 登入就能找回同一個角色。',
       '紀錄自動存在雲端。到「造型」分頁綁定 Email，換手機或換瀏覽器時就能接回同一份紀錄。',
       '遊戲裡的一天是現實 36 分鐘，大家看到的時間都一樣；晚上路燈、窗戶和燈塔會亮。',
       '背景音樂會跟著地方和狀況換：白天的海島、夜晚的海邊、釣蝦場、海底、拉魚時變緊張、跟大魚搏鬥時更激烈。右上角 ♫ 可以關掉音樂，喇叭可以關掉音效。',

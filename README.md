@@ -183,6 +183,7 @@ supabase/121_mig_spots.sql 🐟 魚群洄游的釣點清單改成主島上的（
 supabase/122_guide.sql 🧭 players.guide_done、guide_reward()：走完新手主線送 🪙300（一次，要真的釣過 5 條）。
 v309：🛏️ 修正躺床「沒辦法馬上睡」（躺上去那一下的瞬間移動被當成走開、把躺下的動作取消）；🌸 小島新增 24 種裝飾；小圖照整件東西大小取景，金魚雕像小圖也有金魚了。
 v310：🛋️ 屋裡家具多 20 種，清單點一下可以看 3D 模型；🗺️ 橫著拿手機時地圖在左、清單在右，不再擠在一起；🐙 小飛象章魚、海參、龍蝦、紅鯊的小圖改用遊戲裡的 3D 模型畫，跟實際長相一樣。資料庫要跑 supabase/124_more_furn.sql（新增家具價格，可重複跑）。
+v311：🔠 設定多了字體大小（標準／大／特大）；張力太高多一個 ⚠️、擺東西可不可以放多了 ✓ ✖、連線點改成空心／實心（不只靠顏色）；📧 訪客帳號玩到第 3 天或 Lv10 提醒綁定 Email；📱 manifest 加上商店截圖（icons/shots）、分類，tools/twa 有包成 Android App 的步驟和驗證檔範本。
 supabase/123_isle_decor.sql 🌸 _isle_item 加 24 種小島裝飾的價錢和大小。
 supabase/020_fair_fishing.sql 重新產生（v247）：roll_fish 多了 p_bx、p_bz、p_sl（浮標落點和徵兆批次），_sign_hit 判斷有沒有落在水面徵兆旁邊。
 supabase/008_wardrobe.sql 服飾（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）
