@@ -9068,10 +9068,31 @@ function renderMyDesigns(body, slot){
   for (const item of mine){ const d = designId(item), D = Designs.map.get(d.id), on = cleanGear(rec.gear)[slot] === item, li = el('li', on ? 'on' : '');
     if (D && D.px) li.appendChild(designThumb(D.px, slot, 40)); else { queueDesign(d.id); li.appendChild(el('span', 'dishic', '🎨')); }
     const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', D ? D.name || '設計' : '載入中…')); inf.appendChild(el('div', 'sub2', D ? (D.mine ? '我設計的' : `${D.by || ''} 設計`) : '')); li.appendChild(inf);
-    const a = el('div', 'tacts'); if (!on){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearDesign(item)); a.appendChild(b); } else { const b = el('button', 'tbtn ghost', '脫掉'); b.addEventListener('click', () => { rec.gear = Object.assign(cleanGear(rec.gear), { [slot]: GEAR_DEFAULT[slot] }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); cloudCall('set_gear', { p_gear: rec.gear }); renderTab(); }); a.appendChild(b); }
+    const a = el('div', 'tacts'); a.appendChild(designDelBtn(item, D)); if (!on){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearDesign(item)); a.appendChild(b); } else { const b = el('button', 'tbtn ghost', '脫掉'); b.addEventListener('click', () => { rec.gear = Object.assign(cleanGear(rec.gear), { [slot]: GEAR_DEFAULT[slot] }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); cloudCall('set_gear', { p_gear: rec.gear }); renderTab(); }); a.appendChild(b); }
     li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
 }
+/* v303 玩家說：自己設計的衣服要能刪掉，而且要有一個地方專門放自己的衣服 → 造型裡的「🎨 我的設計」：自己畫的、買來的設計衣服都在這裡，可以穿、脫、刪掉 */
+async function dropDesign(item){ const d = designId(item); if (!d) return; if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能刪掉'); return; }
+  try { const { data, error } = await Cloud.sb.rpc('drop_design', { p_id: d.id }); if (error) throw error; adoptRow(data); rec.owned = (rec.owned || []).filter(x => x !== item); me.setGear(rec.gear); pushPresence(true); SFX.click(); toast('🗑️ 拿掉了'); renderTab(); }
+  catch(e){ toast(cloudErrMsg(e)); } }
+function designDelBtn(item, D){ const b = el('button', 'tbtn ghost', '🗑️'); b.title = '刪掉'; b.addEventListener('click', e => { e.stopPropagation(); if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.classList.add('warn'); b.textContent = D && D.mine ? (D.sold ? '確定下架並拿掉？' : '確定刪掉？') : '確定從衣櫃拿掉？'; return; } b.disabled = true; dropDesign(item); }); return b; }
+function renderMyClothes(list){
+  const mine = (rec.owned || []).filter(id => designId(id)), cur = cleanGear(rec.gear);
+  list.appendChild(el('p', 'sub', '你自己畫的、在設計師市集買的衣服都放在這裡。按 🗑️ 可以刪掉：自己畫的、還沒有人買過的會整件刪掉；有人買過的會下架，買的人還是可以穿。買來的只會從你的衣櫃拿掉（不會退錢）。'));
+  const bar = el('div', 'tankbar'), nb = el('button', 'tbtn', '＋ 自己設計'), mk = el('button', 'tbtn ghost', '🛍️ 設計師市集');
+  nb.addEventListener('click', () => { if (!Cloud.on){ toast('要連上雲端（登入）才能設計衣服'); return; } DesignEd.kind = 'top'; DesignEd.px = null; curTab = 'design'; renderTab(); });
+  mk.addEventListener('click', () => { Market.mode = 'new'; Market.kind = 'top'; Market.list = null; curTab = 'dzmarket'; renderTab(); }); bar.append(nb, mk); list.appendChild(bar);
+  if (!mine.length){ list.appendChild(el('div', 'empty', '還沒有自己的設計。按「＋ 自己設計」畫一件，或去設計師市集逛逛。')); return; }
+  for (const [kind, label] of DESIGN_SLOTS){ const its = mine.filter(id => designId(id).kind === kind); if (!its.length) continue;
+    list.appendChild(el('div', 'dexhead', `${label}（${its.length}）`)); const ul = el('ul', 'shoplist');
+    for (const item of its){ const d = designId(item), D = Designs.map.get(d.id), on = cur[kind] === item, li = el('li', on ? 'on' : '');
+      if (D && D.px) li.appendChild(designThumb(D.px, kind, 40)); else { queueDesign(d.id); li.appendChild(el('span', 'dishic', '🎨')); }
+      const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', D ? D.name || '設計' : '載入中…')); inf.appendChild(el('div', 'sub2', D ? (D.mine ? `我設計的${D.sold ? `・賣出 ${D.sold} 件` : ''}` : `${D.by || ''} 設計`) : '')); li.appendChild(inf);
+      const a = el('div', 'tacts'); if (!on){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearDesign(item)); a.appendChild(b); }
+      else { const b = el('button', 'tbtn ghost', '脫掉'); b.addEventListener('click', () => { const none = GEAR.find(g => g.slot === kind && /_none$/.test(g.id)); if (none) wearGear(none.id); else { const g = cleanGear(rec.gear); delete g[kind]; rec.gear = g; saveRecLocal(); me.setGear(rec.gear); cloudCall('set_gear', { p_gear: rec.gear }); renderTab(); } }); a.appendChild(b); }
+      a.appendChild(designDelBtn(item, D)); li.appendChild(a); ul.appendChild(li); }
+    list.appendChild(ul); } }
 // 設計室
 function designFromImage(im, px, o){   /* 圖片縮成 32×32，每一格換成調色盤裡最接近的顏色（原圖不會上傳） */
   const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d', { willReadFrequently: true });
@@ -9286,8 +9307,9 @@ function renderCloset(body){
   info.appendChild(el('div', 'cl-coin', `🪙 ${rec.coins.toLocaleString()}　💙 ${(rec.love || 0).toLocaleString()}`)); L.appendChild(info);
   // 右邊：分類和衣服格子
   const tabs = el('div', 'cl-tabs'); const ICON = { look:'💇', hat:'👒', top:'👕', pants:'👖', shoes:'👟', socks:'🧦', acc:'🕶️', back:'🎒', face:'😊' };
-  for (const [k, l] of GEAR_SLOTS){ const b = el('button', 'cl-tab' + (Closet.slot === k ? ' on' : '')); b.append(el('span', 'i', ICON[k] || '•'), el('span', 'n', l)); b.addEventListener('click', () => { Closet.slot = k; renderTab(); }); tabs.appendChild(b); }
+  for (const [k, l] of [['mine', '我的設計']].concat(GEAR_SLOTS)){ const b = el('button', 'cl-tab' + (Closet.slot === k ? ' on' : '')); b.append(el('span', 'i', ICON[k] || '🎨'), el('span', 'n', l)); b.addEventListener('click', () => { Closet.slot = k; renderTab(); }); tabs.appendChild(b); }
   R2.appendChild(tabs);
+  if (Closet.slot === 'mine'){ const list = el('div', 'cl-list'); R2.appendChild(list); renderMyClothes(list); return; }
   const list = el('div', 'cl-list'); R2.appendChild(list);
   if (Closet.slot === 'look'){ renderLookEd(list); }
   else { const grid = el('div', 'cl-grid'), cur = cleanGear(rec.gear), pv = cleanGear(Wardrobe.preview || rec.gear);
@@ -11783,6 +11805,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
       '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。',
+      '🎨 我的設計：「造型」最左邊的「我的設計」放著你自己畫的、在設計師市集買的衣服，可以穿上、脫掉，按 🗑️ 刪掉（自己畫、還沒人買過的會整件刪掉；有人買過的只會下架，買的人還能穿）。',
       '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。',
       '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。',
       '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。',
