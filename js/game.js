@@ -1489,7 +1489,7 @@ function castPoint(x, z, dx, dz, dist){
     if (!OKC(x, z) || trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 1.5)) continue; trees.push([x, z, wr()]); addCircleCol(x, z, 0.38); colliders[colliders.length - 1].tree = 1; k++; } }   /* 44：一叢一叢的樹 */
   const want = Quality.tier === 'low' ? 85 : Quality.tier === 'mid' ? 115 : 145;
   let guard = 0;
-  const want0 = trees.length; while (trees.length - want0 < want * 0.8 && guard++ < 6000){
+  while (trees.length < want && guard++ < 6000){   /* v320：樹的總數跟以前一樣，樹叢用掉的從森林扣（之前多了三成，手機走路變卡） */
     const x = wrand(-48, 48), z = wrand(-46, 48);
     const forest = z > 15 || Math.hypot(x - MAP.hill.x, z - MAP.hill.z) < MAP.hill.R + 4;   // 森林和山丘密，其他地方稀疏
     if (!forest) continue;   /* 44：村子裡不再零星散落，樹都長在下面的樹叢裡 */
@@ -11177,9 +11177,10 @@ function farcTick(){ const lim = Quality.tier === 'low' ? 48 : Quality.tier === 
     const walk = o => { if (skip.has(o)) return; if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !o.userData.sb && !o.userData.keep && o.geometry){ const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const sc = o.getWorldScale(v); if (g.boundingSphere && g.boundingSphere.radius * Math.max(sc.x, sc.y, sc.z) < rMax) L.push(o); } for (const c of o.children) walk(c); };
     for (const c of scene.children) walk(c); FARC.list = L; }
   const cp = camera.position, l2 = lim * lim; for (const o of FARC.list){ const e = o.matrixWorld.elements, dx = e[12] - cp.x, dz = e[14] - cp.z; o.layers.set(dx * dx + dz * dz > l2 ? FARC.L : 0); } }
+const CLOD_K = { low:0.7, mid:0.85, high:1 };
 function clodTick(){ const cp = camera.position;
   for (const f of CLOD.all){ const g = f.av && f.av.g; if (!g || !g.parent){ if (g && !g.parent && f !== me) CLOD.all.delete(f); continue; }
-    const d = Math.hypot(g.position.x - cp.x, g.position.z - cp.z), lvl = f === me ? 0 : d > 48 ? 3 : d > 30 ? 2 : d > 16 ? 1 : 0;   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
+    const d = Math.hypot(g.position.x - me.pos.x, g.position.z - me.pos.z) / CLOD_K[Quality.tier], lvl = f === me ? 0 : d > 44 ? 3 : d > 26 ? 2 : d > 11 ? 1 : 0;   /* v320 玩家說走路卡：俯瞰視角的鏡頭本來就離角色十幾公尺，以前從鏡頭算距離，廣場上的人全部都是完整版。改成從自己的角色算，低／中畫質提早換簡化版 */   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
     if (lvl === f._lod && frameNo - (f._lodAt || 0) < 120) continue; f._lod = lvl; f._lodAt = frameNo;
     const px = lvl === 1 || lvl === 2 ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
     g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
