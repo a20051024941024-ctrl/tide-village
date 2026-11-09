@@ -4037,9 +4037,9 @@ const bigMsg = $('#bigMsg');
 let bigTimer = 0;
 function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bigMsg.classList.toggle('long', [...String(text)].length > 9); document.body.classList.toggle('diving', !!(typeof Dive !== 'undefined' && Dive.on)); bigMsg.classList.remove('pop'); void bigMsg.offsetWidth; bigMsg.classList.add('pop'); clearTimeout(bigTimer); bigTimer = setTimeout(() => bigMsg.hidden = true, (secs || 1.2) * 1000); }
 
-/* v340 玩家說不要自動走：大按鈕只用箭頭和光柱指出最近的釣點，自己走過去（AW 自動走已經停用） */
+/* v341 玩家說不要自動走、也不要箭頭：大按鈕只用一句話說最近的釣點在哪個方向、多遠（AW 自動走已經停用） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
-function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; Nav.t = { label: sp.label, x: sp.pos.x, z: sp.pos.z }; if (Guide.el) Guide.el._k = ''; toast(`🧭 最近的釣點是「${esc(sp.label)}」：跟著箭頭和地上的光柱走過去`); }
+function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`🎣 最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
 function awStop(msg){ if (!AW.on) return; AW.on = false; joy.x = joy.z = 0; if (msg) toast(msg); }
 function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ awStop(); return; } if (F.phase !== 'idle' || uiBlocked || Dive.on || onIsle){ awStop(); return; } const dx = AW.x - me.pos.x, dz = AW.z - me.pos.z, d = Math.hypot(dx, dz), t = now();
   if (d < 1.4){ awStop(`🎣 到了「${esc(AW.label)}」，按「拋竿」開始釣魚`); return; }
@@ -4325,7 +4325,7 @@ function updateFishing(dt, t){
         else if (A.k === 'dive') document.body.classList.add('fdive'); }
       if (A && !A.tele){ A.tot += dt; if (F.hold) A.hold += dt;
         if (A.k === 'feint' && !A.turned && t > A.t0 + 0.9){ A.turned = true; A.k = 'run'; A.hold = 0; A.tot = 0; A.end = t + 1.4; F.run = 1.4; fightCue('💨 騙你的！放開！', 'go warn'); camShake = Math.max(camShake, 0.15); }   /* 傳說魚：假裝累了，突然衝刺 */
-        if (A.k === 'pause' || A.k === 'feint'){ F.T -= dt * 1.1; actPull = -p * 0.6; if (A.tot > 0.9 && A.taps === 0) F.slack += dt * 0.6; }
+        if (A.k === 'pause' || A.k === 'feint'){ F.T -= dt * 1.1; actPull = -p * 0.6; if (A.tot > 1.2 && A.taps === 0) F.slack += dt * 0.8; }
         else if (A.k === 'dive'){ me.dip = 1.6; actPull = 0.35 * p; if (F.T > 0.3 && F.T < 0.7) A.good += dt; }
         else if (A.k === 'snag'){ if (F.hold){ F.T += dt * 0.9; F.P -= dt * 0.02; } F.lat *= 0.9; }
         else if (A.k === 'jump' && A.tot < 1.0 && F.hold) A.bad = (A.bad || 0) + dt;
@@ -4386,7 +4386,8 @@ function updateFishing(dt, t){
       F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S)) * (F.prof ? F.prof.quick : 1) * (F.act && !F.act.tele && (F.act.k === 'snag' || F.act.k === 'run') ? 0.2 : 1);
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
-    if (!F.shr && !F.mash && F.run <= 0 && F.jump <= 0 && !F.hold && F.T < 0.16 && F.S > 0.12) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2.5);   /* 線太鬆：魚會甩掉魚鉤 */
+    if (F.run > 0 || (F.act && !F.act.tele) || F.jump > 0) F.slackOK = t + 1.6;   /* v341 玩家說線太容易鬆掉脫鉤：魚衝、跳、做動作的時候和剛結束的 1.6 秒，放開是對的，不算線鬆（喘氣的時候另外算） */
+    if (!F.shr && !F.mash && t > (F.slackOK || 0) && !F.hold && F.T < 0.16 && F.S > 0.12) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2.5);   /* 線太鬆：魚會甩掉魚鉤 */
     F.S = Math.max(0, F.S - dt * (0.04 + (F.hold && inZone ? 0.09 : 0) + (counter ? 0.12 : 0)) / (0.6 + p * 0.8));
     me.bend = clamp(F.T, 0, 1); me.dip = 0.5 + pull*0.4; fxReel(dt);
     // 浮標：越收越近，魚往哪邊衝就往哪邊偏
@@ -4414,7 +4415,7 @@ function updateFishing(dt, t){
       if (F.boss){ $('#bbHp').style.width = (F.S * 100).toFixed(1) + '%'; $('#bbPct').textContent = Math.ceil(F.S * 100) + '%'; mk.classList.add('boss'); } else mk.classList.remove('boss');
       { const bf = camBaseFov(), want = F.boss && F.jump > 0 ? bf - 11 : F.mash ? bf - 5 : bf; if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
       $('#fmDist').textContent = realD.toFixed(1) + 'm';
-      let warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.8 ? '線太鬆！快收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
+      let warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.9 ? '線太鬆！按住收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
       if (F.act && F.acts) warn = '';   /* v254 有動作提示的時候不要再疊一行 */
       const fw = $('#fmWarn'); if (fw.textContent !== warn) fw.textContent = warn; fw.className = 'fm-warn' + (warn ? ' on' : '') + (F.S < 0.25 && T <= 0.8 && !F.jump && !wrong ? ' good' : '');
       const dir = $('#fhDir'); if (!dir.hidden){ dir.style.left = (sxC + (F.dir < 0 ? -110 : 110)) + 'px'; dir.style.top = (syC - 10) + 'px'; }
@@ -4432,7 +4433,7 @@ function updateFishing(dt, t){
       const want = Math.min(0.9, d / 0.85 * 0.9), gS = F.gS = clamp(1 + 2.2 * (want - (1 - F.S)), 0.03, 3); if (F.S < _S0) F.S = _S0 - (_S0 - F.S) * gS; }
     if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`🦈 ${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
     else if (F.T >= 1){ SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
-    else if (F.slack > (rec.hook === 'hk_barb' ? 3.6 : 2.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
+    else if (F.slack > (rec.hook === 'hk_barb' ? 4.6 : 3.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
     else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); cancelFishing(); }
     else if (F.P >= 1){ F.pfCatch = !!(F.acts && F.pf && F.actN >= 2 && (F.Tmax || 0) < 0.92); landFish(); }
   }
@@ -4466,7 +4467,7 @@ function updateFishing(dt, t){
     else if (nearFurn()){ const n = nearFurn(); label = n.U[1]; sub = `${n.U[0]} ${(FURN[n.o.t] || {}).name || ''}`; cls = 'shop'; }
     else if (inCafe()){ label = '做料理'; sub = '🏮 潮汐食堂'; cls = 'shop'; }
     else if (inMuseum()){ label = '捐魚'; sub = '🏛️ 海洋博物館'; cls = 'shop'; }
-    else { label = '找釣點'; sub = '🧭 箭頭指路'; cls = 'idle'; } }
+    else { label = '找釣點'; sub = '告訴你最近的釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if ((F.phase === 'waiting' || F.phase === 'bite') && F.spot && F.spot.id === 'shrimp' && Rig.rig !== 'lure'){ label = '提竿'; sub = '浮標整個沉下去才拉'; cls = ''; }
   else if (F.phase === 'waiting'){ label = Rig.rig === 'lure' ? '抽竿' : '等待中'; sub = Rig.rig === 'lure' ? '點一下讓假餌動・搖桿收竿' : '點一下收竿'; cls = 'idle'; }
@@ -12283,7 +12284,7 @@ function renderTab(){
       '魚上鉤的快慢跟現實一樣有快有慢：大多幾秒鐘，偶爾一丟下去就咬，偶爾要等很久。清晨和黃昏「魚口」最好；海邊乾潮時咬得快、漲潮時慢一點但稀有魚多；下雨天也比較好釣。',
       '等魚的時候，可以看到魚從旁邊游過來試探、咬餌（大型魚除外）。釣過的魚看得到顏色，上鉤時也會直接說是什麼魚；沒釣過的只看得到黑影。',
       '魚上鉤後：上面是魚的體力和距離，下面是張力條。按住收線，張力太高（紅色）要放開，不然線會斷。',
-      '遛魚：魚會突然往外衝（「往外衝！先放開」），線被拉出去、浮標越跑越遠，這時候硬拉線很容易斷；先放開讓牠跑，牠會越跑越累。可是線也不能一直放著不收：太鬆超過 2 秒左右，魚會甩掉魚鉤（脫鉤）。線被拉光了魚也會跑掉。',
+      '遛魚：魚會突然往外衝（「往外衝！先放開」），線被拉出去、浮標越跑越遠，這時候硬拉線很容易斷；先放開讓牠跑，牠會越跑越累。牠衝完、跳完的 1.6 秒內放開沒關係；之後線也不能一直放著不收：太鬆超過 3 秒左右，魚會甩掉魚鉤（脫鉤），看到「線太鬆！按住收線」就按住。線被拉光了魚也會跑掉。',
       '魚往左衝時畫面會出現「往右拉 ➡」，把搖桿往反方向推，魚會累得更快。稀有魚會跳出水面，跳的時候要放開！',
       '大魚搏鬥：釣到大型魚或傳說魚時會出現「巨大魚影」和 Boss 血條，大魚會浮出水面、破水而出。血條快沒的時候出現「連打！」，狂按拉線把牠拉上來。',
       '傳說魚很少見：港口外海大約 3%，其他地方不到 1%。好的釣竿、魚餌、窩料和料理加成都能提高機率。',
@@ -12488,7 +12489,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
-      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，這支手機保留 24 小時），😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「找釣點」，點了會用箭頭和地上的光柱指出最近的釣點，自己走過去就好。',
+      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，這支手機保留 24 小時），😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「找釣點」，點了會告訴你最近的釣點在哪個方向、多遠。',
       '移動搖桿想固定在左下角：設定 →「🕹️ 移動搖桿」選「固定在左下角」。',
       '檢舉不禮貌的人（點他的名字 →「檢舉」）會送到管理員那裡處理，管理員可以禁言或把不適合的名字改掉；被改名的人 30 天內不能自己改回來。',
       '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',
