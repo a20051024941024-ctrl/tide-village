@@ -4039,7 +4039,7 @@ function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bi
 
 /* v336「🎣 出發釣魚」：沒在水邊、旁邊也沒有可以按的東西時，帶你走到最近的釣點（動搖桿就停） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
-function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; Object.assign(AW, { on:true, x:sp.pos.x, z:sp.pos.z, t0:now(), lx:me.pos.x, lz:me.pos.z, lt:now(), label:sp.label }); toast(`🎣 帶你去「${esc(sp.label)}」…（動搖桿就停下來）`); }
+function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; Object.assign(AW, { on:true, x:sp.pos.x, z:sp.pos.z, t0:now(), lx:me.pos.x, lz:me.pos.z, lt:now(), label:sp.label }); Nav.t = { label: sp.label, x: sp.pos.x, z: sp.pos.z }; if (Guide.el) Guide.el._k = ''; toast(`🎣 帶你去「${esc(sp.label)}」：自己走過去，動搖桿就停（箭頭和光柱會一直指路）`); }
 function awStop(msg){ if (!AW.on) return; AW.on = false; joy.x = joy.z = 0; if (msg) toast(msg); }
 function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ awStop(); return; } if (F.phase !== 'idle' || uiBlocked || Dive.on || onIsle){ awStop(); return; } const dx = AW.x - me.pos.x, dz = AW.z - me.pos.z, d = Math.hypot(dx, dz), t = now();
   if (d < 1.4){ awStop(`🎣 到了「${esc(AW.label)}」，按「拋竿」開始釣魚`); return; }
@@ -4466,7 +4466,7 @@ function updateFishing(dt, t){
     else if (nearFurn()){ const n = nearFurn(); label = n.U[1]; sub = `${n.U[0]} ${(FURN[n.o.t] || {}).name || ''}`; cls = 'shop'; }
     else if (inCafe()){ label = '做料理'; sub = '🏮 潮汐食堂'; cls = 'shop'; }
     else if (inMuseum()){ label = '捐魚'; sub = '🏛️ 海洋博物館'; cls = 'shop'; }
-    else { label = '🎣 出發釣魚'; sub = '帶你去最近的釣點'; cls = 'idle'; } }
+    else { label = '出發釣魚'; sub = '🎣 帶你去最近的釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if ((F.phase === 'waiting' || F.phase === 'bite') && F.spot && F.spot.id === 'shrimp' && Rig.rig !== 'lure'){ label = '提竿'; sub = '浮標整個沉下去才拉'; cls = ''; }
   else if (F.phase === 'waiting'){ label = Rig.rig === 'lure' ? '抽竿' : '等待中'; sub = Rig.rig === 'lure' ? '點一下讓假餌動・搖桿收竿' : '點一下收竿'; cls = 'idle'; }
@@ -10285,9 +10285,21 @@ function logMsg(name, text, sys){
   if (name){ const b = document.createElement('b'); b.textContent = name; d.appendChild(b); }
   d.appendChild(document.createTextNode(text)); logEl.appendChild(d);
   while (logEl.children.length > 30) logEl.firstChild.remove();
+  if (name && !sys) chatHistAdd(name, text);
   setTimeout(() => d.classList.add('fade'), sys ? 5000 : 14000);   /* 系統訊息 5 秒就淡掉；玩家說的話留久一點（14 秒） */
   setTimeout(() => d.classList.add('gone'), sys ? 5700 : 14700);
 }
+/* v339 聊天紀錄：大家說過的話留在這支手機上（最多 80 句、24 小時），點聊天列旁邊的 📜 看 */
+const ChatH = { L: null };
+function chatHistLoad(){ if (ChatH.L) return ChatH.L; let L = []; try { L = LS.get('tide.chatHist', []) || []; } catch(e){} const t0 = Date.now() - 864e5; ChatH.L = Array.isArray(L) ? L.filter(m => m && m.t > t0).slice(-80) : []; return ChatH.L; }
+function chatHistAdd(name, text){ const L = chatHistLoad(); L.push({ n: String(name).slice(0, 24), x: String(text).slice(0, 160), t: Date.now() }); while (L.length > 80) L.shift(); clearTimeout(ChatH.sv); ChatH.sv = setTimeout(() => { try { LS.set('tide.chatHist', L); } catch(e){} }, 800); if (ChatH.el && !ChatH.el.hidden) chatHistRender(); }
+function chatHistRender(){ const P = ChatH.el; if (!P) return; const box = P.querySelector('.chl'); const L = chatHistLoad(); box.innerHTML = '';
+  if (!L.length){ box.appendChild(el('div', 'che', '還沒有人說話。點下面的聊天列打個招呼吧！')); return; }
+  let lastDay = ''; for (const m of L){ const d = new Date(m.t), day = `${d.getMonth() + 1}/${d.getDate()}`; if (day !== lastDay && lastDay){ box.appendChild(el('div', 'chd', day)); } lastDay = day;
+    const r = el('div', 'chm'); const tm = el('span', 'cht', `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`); const nb = el('b', '', m.n); r.append(tm, nb, document.createTextNode(m.x)); box.appendChild(r); }
+  box.scrollTop = box.scrollHeight; }
+function chatHistToggle(force){ let P = ChatH.el; if (!P){ P = ChatH.el = document.createElement('div'); P.id = 'chatHist'; P.className = 'panel'; P.hidden = true; P.innerHTML = '<div class="chh"><b>📜 聊天紀錄</b><button class="chx" aria-label="關閉">✕</button></div><div class="chl"></div>'; P.querySelector('.chx').addEventListener('click', () => chatHistToggle(false)); document.body.appendChild(P); }
+  P.hidden = force != null ? !force : !P.hidden; if (!P.hidden) chatHistRender(); }
 // 跑馬燈：大家的動態（誰釣到什麼、誰在炫耀、天色變化）從右往左飄過去；排隊一則接一則，不會疊在一起
 const Ticker = { q:[], nextAt:0, busy:false, speed:110 };
 function ticker(html){
@@ -12476,7 +12488,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
-      '🧭 畫面怎麼看：右上 6 個大按鈕──🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面的圓形小地圖點一下就是大地圖，小地圖下面是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「🎣 出發釣魚」，會帶你走到最近的釣點。',
+      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，這支手機保留 24 小時），😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「出發釣魚」，會帶你走到最近的釣點，路上一樣有箭頭和光柱指路。',
       '移動搖桿想固定在左下角：設定 →「🕹️ 移動搖桿」選「固定在左下角」。',
       '檢舉不禮貌的人（點他的名字 →「檢舉」）會送到管理員那裡處理，管理員可以禁言或把不適合的名字改掉；被改名的人 30 天內不能自己改回來。',
       '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',
@@ -13539,6 +13551,7 @@ initUpdateCheck();
    左上頭像列多經驗條和愛海點數。只換位置，原本的功能都在。網址加 #ui2 可以看舊版 ===== */
 var UI3 = { on: !/ui2\b/.test(location.hash) && document.body.classList.contains('ui2'), last:{}, mini:null, todayOpen: LS.get('tide.todayOpen', true) };
 const UI_GROUPS = [
+  { k:'map',   ic:'🗺️', lab:'地圖',  tabs:[['map', '地圖']] },
   { k:'today', ic:'🎁', lab:'今天',  tabs:[['quest', '今天'], ['story', '村民'], ['events', '活動'], ['fest', '節慶']] },
   { k:'bag',   ic:'🎒', lab:'背包',  tabs:[['bag', '包包'], ['tank', '魚缸'], ['pets', '寵物']] },
   { k:'dex',   ic:'📖', lab:'圖鑑',  tabs:[['dex', '圖鑑'], ['rank', '排行榜'], ['ach', '成就']] },
@@ -13551,29 +13564,17 @@ function ui3OpenGroup(k){ const g = UI_GROUPS.find(x => x.k === k); if (!g) retu
 function ui3Tabs(){ if (!UI3.on) return; const T = $('#tabs'); if (!T) return; const g = ui3Group(curTab), key = g ? g.k : '';
   if (g) UI3.last[g.k] = curTab;
   if (T._g !== key){ T._g = key; T.innerHTML = ''; if (g) for (const [tab, lab] of g.tabs){ const b = document.createElement('button'); b.setAttribute('role', 'tab'); b.dataset.tab = tab; b.textContent = lab; b.addEventListener('click', () => { ui3Open(tab); curTab = tab; renderTab(); }); T.appendChild(b); } }
-  T.hidden = !g; }
+  T.hidden = !g || g.tabs.length < 2; }
 function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
   for (const g of UI_GROUPS){ const b = document.createElement('button'); b.className = 'mbtn panel g3'; b.dataset.group = g.k; b.dataset.tabs = g.tabs.map(t => t[0]).join(' '); b.setAttribute('aria-label', g.lab);
     b.innerHTML = `<span class="g3i">${g.ic}</span><span class="g3l">${g.lab}</span>`; b.addEventListener('click', () => ui3OpenGroup(g.k)); M.appendChild(b); } }
-/* 小地圖：北在上（跟大地圖一樣），自己是箭頭，附近的釣點是藍點、帶路的目的地是金色 */
-function ui3Mini(){ if (UI3.mini) return; const w = document.createElement('div'); w.id = 'mini3'; w.className = 'panel'; w.innerHTML = '<canvas width="232" height="232"></canvas><div class="m3info"></div>'; document.body.appendChild(w);
-  w.querySelector('canvas').addEventListener('click', () => openSheet('map')); UI3.mini = w;
+/* 右上一小條：時間、天氣、潮汐 */
+function ui3Mini(){ if (UI3.mini) return; const w = document.createElement('div'); w.id = 'mini3'; w.className = 'panel'; w.innerHTML = '<div class="m3info"></div>'; document.body.appendChild(w); UI3.mini = w;   /* v339 玩家說小地圖會擋到：拿掉小地圖，只留時間天氣；地圖回到大按鈕 */
   const info = w.querySelector('.m3info'); for (const id of ['clock', 'wxChip']){ const e = document.getElementById(id); if (e) info.appendChild(e); } }
-function ui3MiniDraw(){ const w = UI3.mini; if (!w || w.hidden) return; const cv = w.querySelector('canvas'), c = cv.getContext('2d'), N = cv.width, R = 26;   /* 看自己周圍 26 公尺 */
-  const MV = MAP_VIEW, img = getMapImage(), M = img.width, px = (MV - me.pos.z) / (2 * MV) * M, py = (me.pos.x + MV) / (2 * MV) * M, sr = R / (2 * MV) * M;
-  c.save(); c.clearRect(0, 0, N, N); c.beginPath(); c.arc(N / 2, N / 2, N / 2 - 2, 0, Math.PI * 2); c.clip(); c.fillStyle = '#2f89c7'; c.fillRect(0, 0, N, N);
-  if (Math.abs(me.pos.x) < MV + R && Math.abs(me.pos.z) < MV + R && !onIsle && !House.on) c.drawImage(img, px - sr, py - sr, sr * 2, sr * 2, 0, 0, N, N);
-  const toMini = (x, z) => [N / 2 + (me.pos.z - z) / R * (N / 2), N / 2 + (x - me.pos.x) / R * (N / 2)];
-  for (const sp of SPOTS){ if (sp.hidden) continue; const [a, b] = toMini(sp.pos.x, sp.pos.z); if (Math.hypot(a - N / 2, b - N / 2) > N / 2 - 8) continue; c.fillStyle = '#fff'; c.beginPath(); c.arc(a, b, 9, 0, 7); c.fill(); c.fillStyle = sp.color || '#2f89c7'; c.beginPath(); c.arc(a, b, 6, 0, 7); c.fill(); }
-  for (const L of LANDMARKS){ const [a, b] = toMini(L.pos.x, L.pos.z); if (Math.hypot(a - N / 2, b - N / 2) > N / 2 - 8) continue; c.fillStyle = 'rgba(255,255,255,.9)'; c.fillRect(a - 6, b - 6, 12, 12); c.fillStyle = L.color || '#f17b6d'; c.fillRect(a - 4, b - 4, 8, 8); }
-  try { const g0 = typeof Nav !== 'undefined' && Nav.t ? { x: Nav.t.x, z: Nav.t.z } : AW.on ? { x: AW.x, z: AW.z } : Guide.beacon && Guide.beacon.visible ? Guide.beacon.position : null; if (g0){ const g = g0; let [a, b] = toMini(g.x, g.z); const d = Math.hypot(a - N / 2, b - N / 2), lim = N / 2 - 12; if (d > lim){ a = N / 2 + (a - N / 2) / d * lim; b = N / 2 + (b - N / 2) / d * lim; } c.fillStyle = '#ffd23a'; c.strokeStyle = '#a06a00'; c.lineWidth = 3; c.beginPath(); c.arc(a, b, 10, 0, 7); c.fill(); c.stroke(); } } catch(e){}
-  c.translate(N / 2, N / 2); c.rotate(Math.atan2(-Math.cos(me.rot), -Math.sin(me.rot))); c.fillStyle = '#ff5a4a'; c.strokeStyle = '#fff'; c.lineWidth = 4; c.beginPath(); c.moveTo(0, -18); c.lineTo(12, 12); c.lineTo(0, 6); c.lineTo(-12, 12); c.closePath(); c.stroke(); c.fill();
-  c.restore(); c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = 6; c.beginPath(); c.arc(N / 2, N / 2, N / 2 - 3, 0, Math.PI * 2); c.stroke();
-  c.fillStyle = '#18334a'; c.font = 'bold 22px sans-serif'; c.textAlign = 'center'; c.fillText('N', N / 2, 26); }
 /* 左邊常駐「今天」：最多 3 行，新手任務沒做完時第一行就是新手任務（有距離） */
 function ui3Today(){ let P = $('#today3'); if (!P){ P = document.createElement('div'); P.id = 'today3'; P.className = 'panel'; document.body.appendChild(P); }
   if (document.body.classList.contains('photo')) return; let L = []; try { L = todayItems().filter(it => !it.done); } catch(e){}
-  try { if (Guide.i != null && Guide.i !== 'done'){ const at = GUIDE[Guide.i].at(); if (at && L[0] && /^新手任務/.test(L[0].t)) L[0].d = Math.round(Math.hypot(at.x - me.pos.x, at.z - me.pos.z)); } } catch(e){}
+  try { if (Guide.el && !Guide.el.hidden && !Guide.hide) L = L.filter(it => !/^新手任務/.test(it.t)); } catch(e){}   /* 指引卡已經寫了，不重複 */
   const key = UI3.todayOpen + '|' + L.slice(0, 3).map(it => it.ic + it.t + (it.d || '')).join('|') + '|' + L.length; if (P._k === key) return; P._k = key; P.innerHTML = '';
   const h = el('button', 't3h'); h.innerHTML = `📋 今天 <b>${L.length}</b> <span>${UI3.todayOpen ? '▾' : '▸'}</span>`; h.addEventListener('click', () => { UI3.todayOpen = !UI3.todayOpen; LS.set('tide.todayOpen', UI3.todayOpen); P._k = ''; ui3Today(); }); P.appendChild(h);
   if (!UI3.todayOpen) return;
@@ -13587,15 +13588,23 @@ function ui3Brand(){ const B = $('#brand'); if (!B) return; let xb = $('#xp3'); 
 /* 下面：一條聊天列＋😀（原本 💬 👋 🐟 😮 😀 五顆合併） */
 function ui3Chat(){ if ($('#chat3')) return; const b = document.createElement('div'); b.id = 'chat3';
   const bar = el('button', 'c3bar panel', '💬 點這裡聊天…'); bar.addEventListener('click', () => { const t = $('#chatToggle'); if (t) t.click(); });
+  const hb = el('button', 'c3em c3h panel', '📜'); hb.setAttribute('aria-label', '聊天紀錄'); hb.addEventListener('click', e => { e.stopPropagation(); chatHistToggle(); });
   const em = el('button', 'c3em panel', '😀'); em.setAttribute('aria-label', '表情動作'); em.addEventListener('click', e => { e.stopPropagation(); openEmotePanel(); });
-  b.append(bar, em); document.body.appendChild(b); }
+  b.append(hb, bar, em); document.body.appendChild(b);
+  const ci = $('#chatIn'); if (ci){ ci.addEventListener('focus', () => { if (!ChatH.el || ChatH.el.hidden){ ChatH.auto = true; chatHistToggle(true); } });   /* 打字的時候順便看到大家剛剛說什麼 */
+    ci.addEventListener('blur', () => setTimeout(() => { if (ChatH.auto && document.activeElement !== ci){ ChatH.auto = false; chatHistToggle(false); } }, 250)); } }
 /* 右下：🐾（有帶寵物才出現）＝打開表情動作裡的寵物互動 */
 function ui3Pet(){ let pb = $('#pet3'); const row = $('#actRow'); if (!row) return; if (!pb){ pb = document.createElement('button'); pb.id = 'pet3'; pb.className = 'panel'; pb.innerHTML = '🐾<small>寵物</small>'; pb.addEventListener('click', e => { e.stopPropagation(); openEmotePanel(); setTimeout(() => { const P = $('#emotePanel'); const x = P && [...P.querySelectorAll('.ep-b')].find(b => /抱寵物/.test(b.textContent)); if (x) x.scrollIntoView({ block:'center' }); }, 50); }); row.insertBefore(pb, $('#jumpBtn')); }
   const want = !!me.pet && F.phase === 'idle' && !Dive.on; if (pb.hidden === want) pb.hidden = !want; }
 function ui3Init(){ if (!UI3.on) return; document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet();
+  const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
   setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
-  (function loop(){ try { if (frameNo % 4 === 0) ui3MiniDraw(); } catch(e){} requestAnimationFrame(loop); })(); }
+  (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); } catch(e){} requestAnimationFrame(loop); })(); }
+/* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
+function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
+  const t = Math.round(y + 8) + 'px'; if (P.style.top !== t) P.style.top = t;
+  const B = $('#brand'), G = document.getElementById('guideCard'); P.classList.toggle('slim', !!(B && B.classList.contains('open')) || !!(G && !G.hidden && G.offsetHeight > 60)); }   /* 頭像打開或有指引卡：「今天」只剩標題，不會壓到搖桿 */
 setTimeout(ui3Init, 300);
 (function awLoop(){ try { awTick(); } catch(e){} requestAnimationFrame(awLoop); })();
 })();

@@ -1231,8 +1231,6 @@ body.ui3 .mbtn[data-group="style"]{--ic:linear-gradient(160deg,#ff8ec0,#e0508a)}
 body.ui3 .mbtn[data-group="set"]{--ic:linear-gradient(160deg,#a9b8c4,#6f8494)}
 body.ui3 #menu .rdot{position:absolute;top:-3px;right:-3px}
 body.ui3 #online, body.ui3 #evChip, body.ui3 #emotes > button{display:none!important}
-body.ui3:not(.nav3) #guideCard{display:none!important}
-body.ui3.nav3 #today3{display:none!important}   /* 地圖帶路的時候顯示箭頭卡，「今天」先收起來 */
 body.ui3 #emotes{pointer-events:none}
 #mini3{position:fixed;right:calc(var(--gr) + 8px);top:calc(var(--gt) + 76px);z-index:5;width:118px;padding:4px;border-radius:20px;display:none;flex-direction:column;align-items:center;gap:2px}
 body.ui3 #mini3{display:flex}
@@ -1292,3 +1290,40 @@ body.ui3 #sheet #closeSheet{order:3}
   #today3{top:calc(var(--gt) + 140px)} #mini3{top:calc(var(--gt) + 140px)}
 }
 @media (orientation:landscape) and (max-height:540px){ body.ui3 #sheet #tabs button{padding:4px 11px;font-size:13px} }
+
+/* v339 拿掉小地圖（會擋到）：右上大按鈕多一顆「地圖」，下面一小條時間天氣；左上排成一直列；出發釣魚不換行 */
+body.ui3 #menu{grid-template-columns:repeat(7,auto)}
+#mini3{width:auto!important;max-width:170px;padding:4px 10px!important;border-radius:14px!important;top:calc(var(--gt) + 82px)!important}
+#mini3 .m3info{font-size:11px!important;gap:0 6px}
+body.ui3 #today3{top:calc(var(--gt) + 92px)}
+body.ui3 #guideCard{max-width:min(300px,40vw)}
+@media (orientation:landscape) and (max-height:540px){ #mini3{top:calc(var(--gt) + 66px)!important} }
+@media (orientation:portrait){ body.ui3 #menu{grid-template-columns:repeat(4,auto)} #mini3{top:calc(var(--gt) + 136px)!important} }
+/* v339 聊天紀錄 📜；聊天泡泡不要被聊天列蓋住 */
+#chatHist{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb) + 62px);z-index:30;width:min(420px,calc(100vw - 32px));max-height:min(320px,52vh);display:flex;flex-direction:column;padding:8px;border-radius:16px}
+#chatHist[hidden]{display:none}
+#chatHist .chh{display:flex;align-items:center;justify-content:space-between;padding:0 4px 6px;font-size:14px;color:var(--ink)}
+#chatHist .chx{border:0;background:#eef5f9;border-radius:50%;width:30px;height:30px;font-size:14px}
+#chatHist .chl{overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.4;color:var(--ink);overscroll-behavior:contain}
+#chatHist .chm{background:#f4f9fc;border-radius:10px;padding:4px 8px;word-break:break-word}
+#chatHist .chm b{color:#2a8fb8;margin-right:6px}
+#chatHist .cht{color:var(--ink-soft);font-size:11px;margin-right:6px}
+#chatHist .chd{align-self:center;font-size:11px;color:var(--ink-soft)}
+#chatHist .che{font-size:13px;color:var(--ink-soft);padding:8px}
+body.ui3.chatting #chatHist{bottom:calc(var(--gb) + 64px)}
+body.ui3.photo #chatHist, body.ui3.f3 #chatHist{display:none}
+body.ui3.touch:not(.chatting) #chat{bottom:calc(var(--gb) + 60px)}
+body.fs-l #chatHist{zoom:1.1} body.fs-xl #chatHist{zoom:1.2}
+#today3.slim .t3r, #today3.slim .t3m, #today3.slim .t3e{display:none}
+@media (orientation:landscape) and (max-height:430px){ #today3 .t3r:nth-child(4){display:none} }
+@media (orientation:landscape){ body.ui3 #brand.open{max-width:calc(100vw - 440px)} }
+@media (orientation:portrait){   /* 直拿：頭像一整行，7 個大按鈕排在下面一整行 */
+  body.ui3 #top{flex-wrap:wrap;row-gap:4px}
+  body.ui3 #brand{max-width:100%!important}
+  body.ui3 #menu{grid-template-columns:repeat(7,1fr)!important;width:100%;justify-content:space-between;margin-top:0}
+  body.ui3 #menu .mbtn.g3{width:auto} body.ui3 .g3i{width:38px;height:38px;font-size:19px} body.ui3 .g3l{font-size:10px}
+  #mini3{top:calc(var(--gt) + 150px)!important;max-width:150px}
+  #today3{width:min(196px,46vw)!important}
+  body.ui3.touch:not(.chatting) #chat{bottom:calc(var(--gb) + 250px);left:50%;transform:translateX(-50%);width:min(340px,86vw);align-items:center}
+  #chatHist{bottom:calc(var(--gb) + 250px)}
+}
