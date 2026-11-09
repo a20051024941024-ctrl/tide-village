@@ -409,6 +409,8 @@ const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2
 const HARBOR_SQ = [22.5, -24.5, 10];   /* v320 玩家說出生點太擠：店圍的圈從 9 拉大到 11.5 公尺，廣場也變大 */   /* 44 第三區（選 C）：廣場擴大一點，噴水池、村長、出生點都在這裡 */
 var HLOT = (() => { const R = 11.5, at = d => { const a = d * Math.PI / 180, x = HARBOR_SQ[0] + Math.cos(a) * R, z = HARBOR_SQ[1] + Math.sin(a) * R; return [x, z, Math.atan2(HARBOR_SQ[0] - x, HARBOR_SQ[1] - z)]; };
   return { tackle: at(60), shop: at(105), fu: at(150), market: at(200) }; })();   /* 馬蹄形：開口朝東北對著碼頭和海；150 和 200 中間是從村子進來的路 */
+/* 57 主島分區：中央＝社交生活（村長辦公室、廣場花園），森林＝自然寵物（寵物活動區） */
+const CHIEF_OFFICE = [14.5, 1.5, -Math.PI / 2], PETPARK = [-13, 18.5, 4.2];
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
@@ -1299,6 +1301,40 @@ function castPoint(x, z, dx, dz, dist){
     for (let i = 0; i < 14; i++){ const c = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), mat('#f4fbff', 0.3)); c.position.set(-1.05 + (i % 7) * 0.35, 0.12, i < 7 ? -0.12 : 0.12); c.rotation.y = i * 0.7; ice.add(c); }
     Fu.ice = ice; }
   house(HLOT.shop[0], HLOT.shop[1], '#5fb6e3', 3.8, HLOT.shop[2], { awning: '#2f89c7', sign: '海邊商店', signIcon: '🐟' });      // 海邊商店（港口，賣魚）
+  /* 57 村長辦公室：潮汐廣場東邊，門朝廣場；門口掛「村長辦公室」招牌，旁邊一根旗竿 */
+  { const [OX, OZ, OR] = CHIEF_OFFICE, og = house(OX, OZ, '#b8553a', 3.8, OR, { awning: '#2f6fa0', sign: '村長辦公室', signIcon: '🏛️', signInk: '#5a2a20', wall: '#f1e6cf' });
+    const fx = OX - 2.6, fz = OZ + 2.2, fy = groundHeight(fx, fz), pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.6, 8), mat('#e9e2cf', 0.5)); pole.position.set(fx, fy + 1.8, fz); pole.castShadow = true; scene.add(pole);
+    const flag = box([0.05, 0.6, 0.95], '#2f89c7', [fx, fy + 3.25, fz + 0.5]); scene.add(flag); addCircleCol(fx, fz, 0.2); }
+  /* 57 廣場外圈花園：大路和大路之間的空地放花圃，跟長椅輪流擺，長椅面向廣場 */
+  { const [PX0, PZ0] = MAP.plaza, R = 9.4, cols = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#9b7bff']; let n = 0;
+    for (let d = 0; d < 360 && n < 8; d += 18){ const a = d * Math.PI / 180, x = PX0 + Math.cos(a) * R, z = PZ0 + Math.sin(a) * R;
+      if (!isLand(x, z) || pathDist(x, z) < 2.4 || trailDist(x, z) < 1.6 || blocked(x, z, 1.3) || Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) < 4.5) continue;
+      const y = groundHeight(x, z);
+      if (n % 2 === 0){ const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = -a; scene.add(g);
+        const bed = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 1.1), mat('#a8754a', 0.8)); bed.position.y = 0.15; bed.castShadow = bed.receiveShadow = true; g.add(bed);
+        const soil = box([2.05, 0.06, 0.95], '#6b4a32', [0, 0.31, 0]); g.add(soil);
+        for (let i = 0; i < 9; i++){ const f = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat(cols[(i + n) % 5], 0.8)); f.position.set(-0.85 + (i % 5) * 0.42, 0.45, i < 5 ? -0.2 : 0.22); g.add(f); }
+        for (const sx of [-0.7, 0.7]){ const lf = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), mat('#5fa35a', 0.8)); lf.position.set(sx, 0.38, 0); lf.scale.set(1.4, 0.6, 1.4); g.add(lf); }
+        addOBoxCol(x, z, 2.3, 1.2, -a); }
+      else { const face = Math.atan2(PX0 - x, PZ0 - z), bg = new THREE.Group(); bg.position.set(x, y, z); bg.rotation.y = face; scene.add(bg);
+        bg.add(box([1.8, 0.08, 0.45], '#8c5d3b', [0, 0.45, 0])); bg.add(box([1.8, 0.4, 0.06], '#8c5d3b', [0, 0.72, -0.22])); for (const sx of [-0.75, 0.75]) for (const sz of [-0.15, 0.15]) bg.add(box([0.07, 0.45, 0.07], '#5a3d2b', [sx, 0.22, sz]));
+        const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32 }); addOBoxCol(x, z, 1.9, 0.5, face); }
+      n++; d += 18; } }
+  /* 57 寵物活動區：南邊森林邊緣、寵物店西邊。圍籬（東邊留入口）、小隧道、球、水盆。帶寵物走進來，寵物會在裡面跑 */
+  { const [KX, KZ, KR] = PETPARK, wood = mat('#c9a06a', 0.8);
+    for (let i = 0; i < 26; i++){ const a = i / 26 * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 0.32) continue; const x = KX + Math.cos(a) * KR, z = KZ + Math.sin(a) * KR, y = groundHeight(x, z);
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 0.12), wood); post.position.set(x, y + 0.37, z); post.castShadow = true; scene.add(post);
+      const a2 = (i + 1) / 26 * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a2), Math.cos(a2))) < 0.32) continue; const x2 = KX + Math.cos(a2) * KR, z2 = KZ + Math.sin(a2) * KR, L = Math.hypot(x2 - x, z2 - z), mx = (x + x2) / 2, mz = (z + z2) / 2, my = groundHeight(mx, mz);
+      for (const h of [0.35, 0.62]){ const rail = new THREE.Mesh(new THREE.BoxGeometry(L, 0.07, 0.05), wood); rail.position.set(mx, my + h, mz); rail.rotation.y = Math.atan2(-(z2 - z), x2 - x); scene.add(rail); }
+      addCircleCol(mx, mz, 0.35); }
+    { const tg = new THREE.Group(), tx = KX - 1.4, tz = KZ - 1.0; tg.position.set(tx, groundHeight(tx, tz), tz); tg.rotation.y = 0.5; scene.add(tg);
+      const tun = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.6, 14, 1, true, 0, Math.PI), mat('#f17b6d', 0.7, { side: THREE.DoubleSide })); tun.rotation.z = Math.PI / 2; tun.rotation.y = Math.PI / 2; tun.position.y = 0.02; tun.castShadow = true; tg.add(tun); }
+    for (const [bx, bz, bc] of [[1.2, 1.4, '#ffd36a'], [-0.6, 2.0, '#5fb6e3'], [1.8, -1.6, '#f5a5d8']]){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat(bc, 0.5)); b.position.set(KX + bx, groundHeight(KX + bx, KZ + bz) + 0.16, KZ + bz); b.castShadow = true; scene.add(b); }
+    { const wx = KX + 0.4, wz = KZ - 2.4, wy = groundHeight(wx, wz); const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.26, 0.14, 14), mat('#5a8ac8', 0.5)); bowl.position.set(wx, wy + 0.07, wz); scene.add(bowl);
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.02, 14), mat('#9fd8f0', 0.15)); w.position.set(wx, wy + 0.13, wz); scene.add(w); }
+    { const sx = KX + KR + 0.9, sz = KZ + 1.6, sy = groundHeight(sx, sz), sg = new THREE.Group(); sg.position.set(sx, sy, sz); sg.rotation.y = Math.PI / 2; scene.add(sg);
+      sg.add(box([0.1, 1.1, 0.1], '#8c5d3b', [0, 0.55, 0])); const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c2 = cv.getContext('2d'); c2.fillStyle = '#fff4d6'; c2.fillRect(0, 0, 256, 96); c2.fillStyle = '#5a3a24'; c2.font = 'bold 40px sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText('🐾 寵物樂園', 128, 50);
+      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.42), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); pl.position.y = 1.15; sg.add(pl); addCircleCol(sx, sz, 0.15); } }
   /* 44 港邊廣場：中間一個船錨紀念碑、靠海那邊三張長椅（可以坐著看海）、店和店中間的花盆、四盞晚上會亮的路燈 */
   { const [CX, CZ, CR] = HARBOR_SQ, AX0 = CX + Math.cos(-1.75) * 4.8, AZ0 = CZ + Math.sin(-1.75) * 4.8, y0 = groundHeight(AX0, AZ0), g = new THREE.Group(); g.position.set(AX0, y0, AZ0); scene.add(g);   /* 船錨紀念碑讓位給噴水池，移到靠生態池那一邊 */
     const stone = mat('#cfc6b4', 0.85), dark = mat('#3d4650', 0.45, { metalness:0.4 });
@@ -1481,7 +1517,7 @@ function castPoint(x, z, dx, dz, dist){
 
   // ---- 樹：南邊的森林、山丘，加上村子周圍零星幾棵 ----
   const nearThing = (x, z) => Math.hypot(x - PX, z - PZ) < 10 || Math.hypot(x - CX, z - CZ) < 4.5 || Math.hypot(x - AX, z - AZ) < 9 || Math.hypot(x - LX, z - LZ) < 4 || SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 4.5) || Math.hypot(x - HX, z - HZ) < 4 || BOAT_DOCKS.some(b => Math.hypot(x - b.x, z - b.z) < 4);
-  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
+  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && Math.hypot(x - PETPARK[0], z - PETPARK[1]) > PETPARK[2] + 1.6 && Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) > 4.5 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
   const trees = [];
   const TREE_CLUMPS = []; { let g2 = 0; while (TREE_CLUMPS.length < 13 && g2++ < 600){ const x = wrand(-46, 46), z = wrand(-44, 14), r = 3.2 + wr() * 2.2; if (!isLand(x, z) || islandEdge(x, z) < 6 || pathDist(x, z) < r + 1.5 || trailDist(x, z) < r || Math.hypot(x - PX, z - PZ) < 14 || TREE_CLUMPS.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + r + 5)) continue; TREE_CLUMPS.push([x, z, r]); } }
   const OKC = (x, z) => treeOK(x, z) && !(x > 24 && x < 37 && z > -25 && z < -14) && Math.hypot(x - HARBOR_SQ[0], z - HARBOR_SQ[1]) > HARBOR_SQ[2] + 5.5 && !(Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) && Math.hypot((x - 40), (z + 6) / 1.5) > 11 && Math.hypot(x - MAP.hill.x, z - MAP.hill.z) > 7;
@@ -7305,6 +7341,10 @@ function updatePetFor(f, want, dt, t){
   const k = petKey(want); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
   const pt = f.pet, vis = f.av.g.visible && !f.swim && !(f === me && Dive.on) && !(f !== me && f._lod >= 2);   /* v290 30 公尺外的寵物先不畫 */ pt.m.visible = vis; if (!vis) return;
   if (pt.hug){ return; }
+  if (Math.hypot(f.pos.x - PETPARK[0], f.pos.z - PETPARK[1]) < PETPARK[2] - 0.3 && (f.speed || 0) < 0.3){ const w = pt.park || (pt.park = { x: pt.pos.x, z: pt.pos.z, at: 0 });   /* 57 主人站在寵物樂園裡：寵物自己在裡面跑來跑去 */
+    if (t > w.at || Math.hypot(w.x - pt.pos.x, w.z - pt.pos.z) < 0.3){ w.at = t + rand(1.5, 3.5); const a = Math.random() * 6.283, r = Math.random() * (PETPARK[2] - 0.9); w.x = PETPARK[0] + Math.cos(a) * r; w.z = PETPARK[1] + Math.sin(a) * r; }
+    petStep(pt, dt, t, w.x, w.z, groundHeight(pt.pos.x, pt.pos.z), true, Math.atan2(w.x - pt.pos.x, w.z - pt.pos.z)); return; }
+  if (pt.park) pt.park = null;
   const c = Math.cos(f.rot), s = Math.sin(f.rot), ox = 0.75, oz = -0.85, tx = f.pos.x + c * ox + s * oz, tz = f.pos.z - s * ox + c * oz;
   petStep(pt, dt, t, tx, tz, f.baseY + (f.sitting ? 0 : 0), (f.speed || 0) > 0.3, Math.atan2(f.pos.x - pt.pos.x, f.pos.z - pt.pos.z));
 }
@@ -8434,7 +8474,7 @@ function renderDiveShop(body){
   body.appendChild(ul);
 }
 const QUEST_NPC = {
-  chief: { name:'村長 阿土伯', at:[HARBOR_SQ[0] - 2.8, HARBOR_SQ[1] + 1.2], face:HARBOR_SQ,   /* v320 移到噴水池西邊，不擠在碼頭入口 */ shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
+  chief: { name:'村長 阿土伯', at:[CHIEF_OFFICE[0] - 3.2, CHIEF_OFFICE[1] + 0.6],   /* 57 回到潮汐廣場，站在村長辦公室門口 */ shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
   wang:  { name:'漁夫 老王',   at:[27.4, -32.6],   /* v320 移到北邊那座碼頭的岸邊（原本跟村長、阿福、阿海擠在同一個碼頭口） */ shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
   mei:   { name:'食堂 美雲姨', at:[CAFE.x + 1.6, CAFE.z - CAFE.d / 2 + 1.4], cafe:true, shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
 };
@@ -12171,7 +12211,7 @@ function renderTab(){
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
     ]);
     sec('📜 每日任務、釣魚活動', [
-      '村長阿土伯（港邊廣場的噴水池旁）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',
+      '村長阿土伯（潮汐廣場東邊、村長辦公室門口）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',
       '走到他們旁邊、或在選單的「任務」分頁交付魚或料理，就能拿到金幣。每天台灣時間半夜 12 點換新任務。',
       '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 4 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。'
     ]);
