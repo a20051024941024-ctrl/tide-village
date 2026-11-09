@@ -1201,3 +1201,9 @@ body.fs-l #tabs button, body.fs-l #chatIn{font-size:15px} body.fs-xl #tabs butto
 #catchCard .card > *{min-width:0}
 #catchCard .ccbtns .pbtn{min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
 @media (orientation:landscape) and (max-height:540px){ #catchCard .card{grid-template-columns:minmax(110px,200px) minmax(0,1fr)} #catchCard canvas{width:100%;height:auto;aspect-ratio:220/140} }
+
+/* v330 村民的故事 */
+.affbar{height:7px;border-radius:4px;background:rgba(240,90,120,.15);margin:4px 0;overflow:hidden;max-width:260px}
+.affbar i{display:block;height:100%;background:linear-gradient(90deg,#ff9ab0,#f05a78);border-radius:4px}
+.storybox{background:#fff8ef;border-radius:10px;padding:8px 12px;margin-top:6px;font-size:13px;line-height:1.7;color:var(--ink)}
+.storybox p{margin:4px 0}

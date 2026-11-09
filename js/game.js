@@ -6667,6 +6667,7 @@ function lvNeed(L){ return 80 * (L - 1) + 20 * (L - 1) * (L - 2); }   // 到 Lv.
 function lvOf(xp){ let L = 1; while (L < 99 && xp >= lvNeed(L + 1)) L++; return L; }
 const speciesN = () => Object.keys(rec.count || {}).filter(id => FISH_BY_ID[id]).length;
 const spotDone = id => FISH.filter(f => f.spot === id).every(f => rec.count[f.id]);
+const STORY_WHO_A = { chief:'阿土伯', ling:'阿綾', mu:'阿木', fu:'阿福', gang:'老港' };   /* v330 村民的故事：讀完 5 章得到稱號 */
 const ACH = [
   { id:'mug', icon:'👁️', name:'與座頭鯨對望', desc:'划船停在外海，讓好奇的座頭鯨游過來看你', cur:() => { try { return LS.get('tide.mugged', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
   { id:'seasight', icon:'🐋', name:'海上目擊者', desc:'划船在外海遇過海豚、座頭鯨、藍鯨、抹香鯨', cur:() => { try { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a.length : 0; } catch(e){ return 0; } }, goal:4 },
@@ -6697,6 +6698,7 @@ const ACH = [
   { id:'p25',   icon:'🎞️', name:'海洋攝影師',   desc:'水下圖鑑拍到 25 種魚',      cur:() => (rec.photos || []).length, goal:25, title:'海洋攝影師' },
   { id:'is10',  icon:'🏝️', name:'小島主人',     desc:'小島上放 10 件東西',        cur:() => (rec.island && rec.island.items || []).length, goal:10 },
   { id:'is40',  icon:'🏡', name:'夢想小島',     desc:'小島上放 40 件東西',        cur:() => (rec.island && rec.island.items || []).length, goal:40, title:'島主' },
+  ...Object.keys(STORY_WHO_A).map(k => ({ id:'story_' + k, icon:'💌', name:STORY_WHO_A[k] + '的知己', desc:`讀完${STORY_WHO_A[k]}的 5 章故事`, cur:() => storyChOf(k), goal:5, title:STORY_WHO_A[k] + '的知己' })),
   { id:'g15',   icon:'👗', name:'愛打扮',       desc:'擁有 15 件服飾',            cur:() => (rec.owned || []).filter(x => !/^(tool_|rs_|lc_|hk_|em_|h[sc]\d)/.test(x)).length, goal:15, title:'時尚釣客' },
   { id:'f1',    icon:'🤝', name:'交到朋友',     desc:'互相加 1 位好友',           cur:() => Fr.list.filter(f => f.mutual).length, goal:1 },
   { id:'f10',   icon:'🎉', name:'朋友很多',     desc:'互相加 10 位好友',          cur:() => Fr.list.filter(f => f.mutual).length, goal:10, title:'社交達人' },
@@ -8540,7 +8542,7 @@ function todayItems(){ const L = [], ms = bossNow(), tp = new Date(ms + 8 * 3600
   const ev = () => { curTab = 'events'; openSheet('events'); };
   if (Guide.i != null && Guide.i !== 'done' && GUIDE[Guide.i]) L.push({ ic:'🧭', t:'新手任務：' + GUIDE[Guide.i].t, s:GUIDE[Guide.i].h, done:false });
   if (Quests.list){ const d = Quests.list.filter(q => q.done).length; L.push({ ic:'📜', t:`每日任務 ${d}/${Quests.list.length}`, s:d >= Quests.list.length ? '今天的請求都完成了，明天半夜 12 點換新的' : Quests.list.filter(q => !q.done).map(q => (QUEST_NPC[q.who] || {}).name + '：' + (q.kind === 'dish' ? (RECIPES[q.target] || {}).name || '' : (FISH_BY_ID[q.target] || {}).name || '')).join('、'), done:d >= Quests.list.length, btn:'看任務', fn:() => { const e = document.getElementById('questList'); if (e) e.scrollIntoView({ block:'start', behavior:'smooth' }); } }); }
-  if (typeof Story !== 'undefined' && Story.list) for (const v of Story.list.filter(v => !v.today)) L.push({ ic:'💌', t:`${v.name}的委託`, s:v.ask || '去找他聊聊', done:false, btn:'看故事', fn:() => { curTab = 'story'; renderTab(); } });
+  if (typeof Story !== 'undefined' && Story.list){ const open = Story.list.filter(v => !v.asked), rd = Story.list.filter(v => v.ch < 5 && v.aff >= STORY_NEED[v.ch]); L.push({ ic:'💌', t:`村民的委託 ${5 - open.length}/5` + (rd.length ? `・📖 ${rd.length} 章故事可以讀` : ''), s:open.length ? open.map(v => `${v.name.replace('村長 ', '')}想要${v.askName}`).join('、') : '今天的委託都完成了', done:!open.length && !rd.length, btn:'看故事', fn:() => { curTab = 'story'; renderTab(); } }); }
   if (Rumor.st){ const st = Rumor.st; L.push({ ic:'🔍', t:'本週傳聞：' + rumorSpot(st) + '的大影子', s:st.caught ? '你已經釣到了 ✅' : !st.c2 ? `在${rumorSpot(st)}釣到 5 條魚找線索（${Math.min(5, st.n)}/5）` : !st.c3 ? '去港口問追紅鯊的阿默' : `線索齊了：${PER_NAME[st.per]}用${RIG_NAME[st.rig]}`, done:!!st.caught, btn:st.c2 && !st.c3 ? '去港口' : '去釣點', fn:st.c2 && !st.c3 ? go('harbor') : go(st.spot) }); }
   { const m = evtMig(ms); L.push({ ic:'🐟', t:'魚群洄游' + (m.active ? '（進行中）' : ''), s:m.active ? `${(SPOT_BY_ID[m.spot] || {}).label}的${(FISH_BY_ID[m.fish] || {}).name}，釣 4 條送 🪙200（到 ${evtHM(m.en)}）` : `下一次 ${evtHM(evtMig((m.st + 10800 + 60) * 1000).st)}`, done:false, btn:m.active ? '去釣點' : '', fn:m.active ? go(m.spot) : null }); }
   { const b = evtBounty(ms), dn = Evt.st && Evt.st.bounty && Evt.st.bounty.id === b.id && Evt.st.bounty.done; L.push({ ic:'🎯', t:'懸賞魚：' + ((FISH_BY_ID[b.fish] || {}).name || ''), s:dn ? '已經領了 ✅' : `${b.minw} 公斤以上送 🪙300（到 ${evtHM(b.en)}）`, done:!!dn, btn:'看活動', fn:ev }); }
@@ -8555,7 +8557,8 @@ function renderToday(body){ const L = todayItems(); if (!L.length) return; const
   body.appendChild(ul); }
 function renderQuests(body){
   body.appendChild(el('div', 'shophead')).innerHTML = `<b>📋 今天可以做的事</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
-  renderToday(body); if (Cloud.on && !Rumor.st) rumorLoad(true).then(() => { if (curTab === 'quest' && Rumor.st) renderTab(); });
+  if (Cloud.on && (!Rumor.st || !Story.list)) Promise.all([Rumor.st ? 0 : rumorLoad(true), Story.list ? 0 : storyLoad(true)]).then(() => { if (curTab === 'quest' && Rumor.st && Story.list) renderTab(); });
+  renderToday(body);
   body.appendChild(el('div', 'dexhead', '📜 村民的請求')).id = 'questList';
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '任務要連上雲端才能接，等一下再試試看。')); return; }
   if (!Quests.list){ body.appendChild(el('p', 'sub', '讀取中…')); loadQuests(); return; }
@@ -11353,6 +11356,62 @@ function rumorItem(item){ const st = Rumor.st; if (!st) return;
   const clue = [`📍 地點：${rumorSpot(st)}`, st.c2 ? `🕒 時段：${PER_NAME[st.per]}` : `🕒 時段：？？（在${rumorSpot(st)}釣到 5 條魚就會注意到，${Math.min(5, st.n)}/5）`, st.c3 ? `🎣 釣法：${RIG_NAME[st.rig]}` : st.c2 ? '🎣 釣法：？？（去港口問追紅鯊的阿默）' : '🎣 釣法：？？'];
   const head = st.first ? `本週第一個釣到的是 ${st.first.name}（${(FISH_BY_ID[st.fish] || {}).name || ''} ${fmtKg(st.first.w)}）` : '還沒有人釣到，第一個釣到的人 🪙500';
   item('🔍', '本週傳聞' + (st.caught ? '（你已經釣到了 ✅）' : ''), `有人在${rumorSpot(st)}看到很大的影子。${clue.join('；')}。三條線索都找到，在對的時段用對的釣法，那條傳說魚比較好釣（4 倍）。${head}；之後釣到的人 🪙150。每週一換。`, !st.caught); }
+/* ===== v330 村民的故事（28，129）：5 位村民的好感度、每天委託、5 章故事、第 5 章的稱號 ===== */
+const STORY_WHO = { chief:'村長 阿土伯', ling:'阿綾', mu:'阿木', fu:'阿福', gang:'老港' }, STORY_IC = { chief:'👴', ling:'🧵', mu:'🪚', fu:'🐟', gang:'⚓' };
+const STORY_NEED = [15, 35, 60, 85, 100], STORY_PAY = [100, 150, 200, 300, 500];
+const STORY_TXT = {
+  chief:['這個村子剛開始只有三戶人家。我年輕的時候在這片海捕魚，那時候港口還只是一排竹筏。',
+    '後來颱風把竹筏都打壞了，大家差點要搬走。是我說：我們一起把碼頭蓋起來吧。',
+    '蓋碼頭那年，阿福還是個小孩，天天跑來幫忙搬石頭。現在他的海產店是全村最熱鬧的地方。',
+    '我當村長不是因為我最厲害，是因為我最捨不得這裡。每一個搬來的人，我都記得他第一天的樣子。',
+    '你也是。你第一天拿著竹竿站在岸邊，什麼都釣不到，還是一直笑。這個村子有你，真好。'],
+  ling:['我小時候想當畫家，可是買不起顏料，就用海邊撿來的碎布拼衣服。',
+    '第一件拼布衣服送給了媽媽，她穿去市場，大家都問她是哪裡買的。那天我開心得睡不著。',
+    '我剛開店的時候很怕沒人來。阿土伯第一天就來買了一頂帽子，到現在還戴著。',
+    '我每天設計新衣服，是因為每個人試穿時笑起來的樣子都不一樣，我想把那些笑容都留下來。',
+    '其實我一直有偷偷記下你喜歡的顏色。下次你來，我做一件只屬於你的衣服。謝謝你一直來看我的作品。'],
+  mu:['我的第一件作品是一張歪掉的小板凳。我爸看了說：會歪才知道哪裡要改。',
+    '木頭跟魚一樣，每一塊都有自己的紋路，急不得。要先聽聽它想變成什麼。',
+    '碼頭上有好幾塊木板是我年輕時候換的。下雨天走過去，還聞得到松木的味道。',
+    '有一年冬天我的手受傷了，整整一個月不能做工，是大家輪流來店裡幫我顧店。',
+    '所以我現在做的每一件家具，都是想讓人坐下來好好休息。你也是，累了就來坐坐。'],
+  fu:['我爸是漁夫，我從小在船上長大，五歲就認得十幾種魚。',
+    '後來我暈船暈得太厲害，只好上岸。我爸說：那你就在岸上，讓大家吃到最新鮮的魚。',
+    '我每天看大家釣到什麼就收什麼，不讓同一種魚被釣光。海裡的魚多了，大家才都有得釣。',
+    '傍晚的特餐，是我想念我爸的方式。他最愛把一天釣最多的那種魚，煮成一大鍋湯分給大家。',
+    '現在換你們釣魚給我。每次你拿魚來，我都覺得好像又回到船上一樣。謝謝你。'],
+  gang:['年輕的時候我跑遍了整個外海，最遠到過冰封的群島。',
+    '有一次遇到暴風雨，船差點翻了，是一群海豚把我帶回港口。從那天起，我再也不釣海豚。',
+    '我教過很多年輕人釣魚，阿默也是我教的。他那股傻勁，跟我年輕的時候一模一樣。',
+    '現在我不出遠海了，每天在碼頭邊釣一點點，夠吃就好。海給我們的，要懂得還回去。',
+    '好的釣客不是釣最多的人，是最懂得等待的人。你已經是了。'] };
+var Story = { list:null, at:0, busy:false, open:null };
+async function storyLoad(force){ if (!Cloud.on || !Cloud.sb || Story.busy) return; if (!force && Story.at && Date.now() - Story.at < 3 * 60000) return; Story.busy = true;
+  try { const { data, error } = await Cloud.sb.rpc('story_status'); if (!error && Array.isArray(data)){ Story.list = data.map(v => Object.assign(v, { name: STORY_WHO[v.who] || v.who, today: v.asked, askName: (FISH_BY_ID[v.ask] || {}).name || v.ask })); Story.at = Date.now(); LS.set('tide.storyCh', Object.fromEntries(Story.list.map(v => [v.who, v.ch]))); } } catch(e){} Story.busy = false; }
+function storyChOf(who){ const L = typeof Story !== 'undefined' && Story && Story.list && Story.list.find(v => v.who === who); return L ? L.ch : ((LS.get('tide.storyCh', {}) || {})[who] || 0); }
+function storyNpc(who){ return npcs.find(n => n.wid === who) || (who === 'chief' && questNpcs.find(q => q.who === 'chief') || {}).f; }
+async function storyCall(fn, args, after){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; if (data && data.player) adoptRow(data.player); const st = data && (data.story || (Array.isArray(data) ? data : null)); if (st){ Story.list = null; Story.at = 0; await storyLoad(true); } if (after) after(data); renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
+function renderStory(body){ body.appendChild(el('div', 'shophead')).innerHTML = `<b>💌 村民的故事</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
+  if (!Cloud.on){ body.appendChild(el('p', 'sub', '要連上雲端才看得到村民的故事。')); return; }
+  if (!Story.list){ body.appendChild(el('p', 'sub', '讀取中…')); storyLoad(true).then(() => { if (curTab === 'story') renderTab(); }); return; }
+  body.appendChild(el('p', 'sub', '每天幫村民完成委託（交一條他想要的魚）＋15 好感、🪙80；走到他旁邊打招呼 ＋3 好感（每天一次）。好感到 15、35、60、85、100 會解鎖一章故事，讀完 5 章得到稱號「○○的知己」。'));
+  const ul = el('ul', 'shoplist story');
+  for (const v of Story.list){ const li = el('li', ''); li.appendChild(el('span', 'dishic', STORY_IC[v.who] || '🙂')); const d = el('div', 'tinfo');
+    d.appendChild(el('div', 'n', `${v.name}　❤️ ${v.aff}/100　📖 ${v.ch}/5`));
+    const bar = el('div', 'affbar'); bar.innerHTML = `<i style="width:${v.aff}%"></i>`; d.appendChild(bar);
+    d.appendChild(el('div', 'sub2', v.asked ? '✅ 今天的委託完成了' : `今天的委託：想要一條「${v.askName}」`));
+    const row = el('div', 'titles'); const npc = storyNpc(v.who), near = npc && Math.hypot(me.pos.x - npc.pos.x, me.pos.z - npc.pos.z) < 5;
+    if (!v.asked){ const fish = rec.tank.filter(x => x.f === v.ask && !(rec.show || []).includes(x.t)).sort((a, b) => a.w - b.w)[0], b = el('button', 'tbtn' + (fish ? '' : ' ghost'), fish ? `交出${v.askName}` : '魚缸裡還沒有');
+      b.disabled = !fish; if (fish) b.addEventListener('click', () => { b.disabled = true; rec.tank = rec.tank.filter(x => x.t !== fish.t); buildTank(); storyCall('story_give', { p_who: v.who, p_t: fish.t }, () => { SFX.catch(); flash(`💌 ${v.name}：謝謝你！❤️ +15、🪙 +80`, 1.8); }); }); row.appendChild(b); }
+    if (!v.talked){ const b = el('button', 'tbtn ghost', near ? '👋 打招呼' : '去找他'); b.addEventListener('click', () => { if (!near){ if (npc){ closeSheet(); travelTo({ id:'npc', label:v.name, x: npc.pos.x + 1.6, z: npc.pos.z + 1.6, rot: Math.atan2(-1.6, -1.6) }); } return; } b.disabled = true; storyCall('story_talk', { p_who: v.who }, () => { npc.say(STORY_HI[v.who] || '你好！', 'talk', 4); toast(`❤️ ${v.name} +3`); }); }); row.appendChild(b); }
+    if (v.ch < 5 && v.aff >= STORY_NEED[v.ch]){ const b = el('button', 'tbtn', `📖 讀第 ${v.ch + 1} 章（🪙${STORY_PAY[v.ch]}）`); b.addEventListener('click', () => { b.disabled = true; storyCall('story_read', { p_who: v.who }, r => { Story.open = v.who + ':' + r.ch; SFX.catch(); if (r.ch === 5) flash(`🏅 得到稱號「${STORY_WHO[v.who].replace('村長 ', '')}的知己」`, 2.4); }); }); row.appendChild(b); }
+    else if (v.ch < 5) d.appendChild(el('div', 'sub2', `下一章：好感 ${STORY_NEED[v.ch]}`));
+    if (v.ch > 0){ const b = el('button', 'tbtn ghost', '📖 看故事'); b.addEventListener('click', () => { Story.open = Story.open && Story.open.startsWith(v.who + ':') ? null : v.who + ':' + v.ch; renderTab(); }); row.appendChild(b); }
+    d.appendChild(row);
+    if (Story.open && Story.open.startsWith(v.who + ':')){ const box = el('div', 'storybox'); for (let i = 0; i < v.ch; i++) box.appendChild(el('p', '', `第 ${i + 1} 章　${STORY_TXT[v.who][i]}`)); d.appendChild(box); }
+    li.appendChild(d); ul.appendChild(li); }
+  body.appendChild(ul); }
+const STORY_HI = { chief:'今天也來釣魚啊？村子有你真熱鬧！', ling:'嗨～今天的衣服很好看喔！', mu:'來來，坐一下，這張椅子剛做好的', fu:'今天有釣到什麼好魚嗎？', gang:'海很平靜，是釣魚的好日子' };
 function renderEvents(body){ const ms = bossNow(), s = Math.floor(ms / 1000), m = evtMig(ms), b = evtBounty(ms), st = Evt.st;
   body.appendChild(el('p', 'sub', '村子裡每天都有活動，時間都是台灣時間。金幣由伺服器發，每次活動一個人拿一次。'));
   const ul = el('ul', 'shoplist'), item = (ic, title, sub, on) => { const li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', title)); d.appendChild(el('div', 'sub2', sub)); li.appendChild(d); ul.appendChild(li); };
@@ -12003,6 +12062,7 @@ function renderTab(){
   } else if (curTab === 'market'){ renderMarketFish(body);
   } else if (curTab === 'cai'){ renderCaiShop(body);
   } else if (curTab === 'sci'){ renderSci(body);
+  } else if (curTab === 'story'){ renderStory(body);
   } else if (curTab === 'events'){ renderEvents(body);
   } else if (curTab === 'salon'){ renderSalon(body);
   } else if (curTab === 'board'){ renderBoard(body);
@@ -12284,6 +12344,7 @@ function renderTab(){
       '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。'
     ]);
     sec('👥 跟大家一起玩', [
+      '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
       '走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。設定 →「👋 陌生人」可以選只看認識的人和好友打的字（13～17 歲預設打開），陌生人說話只會顯示 💬。',
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
       '跑馬燈會報出大家釣到的稀有魚和傳說魚，還有做出來的料理。',
