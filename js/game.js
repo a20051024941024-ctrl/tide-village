@@ -6615,10 +6615,10 @@ function renderAch(body){
   body.appendChild(el('div', 'dexhead', '✏️ 名字（顯示在頭上，大家都看得到）'));
   if (Kid.on){ const row = el('div', 'titles'), sa = el('select', 'txt'), sb = el('select', 'txt'); for (const a of KID_ADJ) sa.appendChild(new Option(a, a)); for (const b of KID_ANI) sb.appendChild(new Option(b, b));
     const cur = KID_ADJ.find(a => (nickname || '').startsWith(a)); if (cur){ sa.value = cur; sb.value = nickname.slice(cur.length); }
-    const ok = el('button', 'tbtn', '改名'); ok.addEventListener('click', () => { const v = sa.value + sb.value; nickname = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); });
+    const ok = el('button', 'tbtn', '改名'); ok.addEventListener('click', () => { if (nameLocked()) return; const v = sa.value + sb.value; nickname = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); });
     row.append(sa, sb, ok); body.appendChild(row); body.appendChild(el('p', 'sub', '兒童安全模式：名字從「形容詞＋動物」選。')); }
   else { const row = el('div', 'titles'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳'; inp.style.cssText = 'flex:1 1 12em;min-width:0';
-    const ok = el('button', 'tbtn', '改名'); const save = () => { const v = clean(inp.value.trim().slice(0, 16)); if (!v){ toast('名字不能是空的'); inp.value = nickname; return; } if (v === nickname){ toast('名字沒有改'); return; } nickname = v; inp.value = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); };
+    const ok = el('button', 'tbtn', '改名'); const save = () => { if (nameLocked()){ inp.value = nickname; return; } const v = clean(inp.value.trim().slice(0, 16)); if (!v){ toast('名字不能是空的'); inp.value = nickname; return; } if (v === nickname){ toast('名字沒有改'); return; } nickname = v; inp.value = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); };
     ok.addEventListener('click', save); inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); }); row.appendChild(inp); row.appendChild(ok); body.appendChild(row); }
   body.appendChild(el('div', 'dexhead', '🏷️ 稱號（顯示在名字上面，大家都看得到）'));
   const tl = el('div', 'titles'), cur = curTitle();
@@ -10562,8 +10562,11 @@ function rowToRec(r){
   return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
     gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, shrimpUntil: r.shrimp_until ? Date.parse(r.shrimp_until) : 0, srods: r.srods, srod: r.srod, dive:r.dive, photos:r.photos, cage:r.cage, cageFed:r.cage_fed, updatedAt:Date.parse(r.updated_at) || Date.now() });
 }
+/* v312 管理員改名（125）：名字不適合被管理員改掉後，30 天內自己不能改回來；遊戲照伺服器的名字顯示 */
+function nameLocked(){ const L = Cloud.lastRow && Cloud.lastRow.name_lock; const t = L ? Date.parse(L) : 0; if (t > Date.now()){ toast(`你的名字被管理員改過了（原本的名字不適合），${Math.ceil((t - Date.now()) / 864e5)} 天後才能再改`); return true; } return false; }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
+  if (row.name_lock && Date.parse(row.name_lock) > Date.now() && row.nickname && row.nickname !== nickname){ nickname = row.nickname; LS.set('tide.nick', nickname); try { refreshMyName(); pushPresence(true); } catch(e){} toast(`管理員把你的名字改成「${esc(nickname)}」了（原本的名字不適合）`); }
   if (Cloud.lastRow && !('island' in row)) row = Object.assign({}, Cloud.lastRow, rec && rec.island ? { island: rec.island } : {}, row);   /* 島用手上最新的（蓋房子、擴建是直接問伺服器的，不會經過 lastRow） */   /* 省流量：常用的動作不回傳整座島（072），用上次的島補上 */
   Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
@@ -11854,7 +11857,7 @@ function renderTab(){
     { const fw = el('div', 'field'); fw.appendChild(el('label', '', '👗 服裝')); const b = el('button', 'tbtn', '👕 打開衣櫃（點一下馬上換上看看）'); b.addEventListener('click', () => { curTab = 'closet'; renderTab(); }); fw.appendChild(b); body.appendChild(fw); }
     const f3 = el('div', 'field'); const lab = el('label', '', '暱稱'); lab.htmlFor = 'nickIn'; f3.appendChild(lab);
     const inp = el('input', 'txt'); inp.id = 'nickIn'; inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳';
-    inp.addEventListener('change', () => { nickname = clean(inp.value.trim().slice(0, 16)); inp.value = nickname; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); cloudProfile(); });
+    inp.addEventListener('change', () => { if (nameLocked()){ inp.value = nickname; return; } nickname = clean(inp.value.trim().slice(0, 16)); inp.value = nickname; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); cloudProfile(); });
     f3.appendChild(inp); f3.appendChild(el('p', 'sub', '其他玩家會在你頭上看到這個名字。'));
     body.appendChild(f3);
     const ff = el('div', 'field'); ff.appendChild(el('label', '', '聊天'));
@@ -12092,6 +12095,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
+      '檢舉不禮貌的人（點他的名字 →「檢舉」）會送到管理員那裡處理，管理員可以禁言或把不適合的名字改掉；被改名的人 30 天內不能自己改回來。',
       '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',
       '訪客帳號玩到第 3 天、或升到 Lv10 時，會提醒你綁定 Email。綁好之後換手機、清掉瀏覽器資料，用同一個 Email 登入就能找回同一個角色。',
       '紀錄自動存在雲端。到「造型」分頁綁定 Email，換手機或換瀏覽器時就能接回同一份紀錄。',

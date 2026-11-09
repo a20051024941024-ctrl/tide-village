@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>潮汐釣魚村 管理頁</title>
+<link rel="icon" href="favicon.png">
+<style>
+:root{--bg:#f2f7fa;--card:#fff;--ink:#18334a;--sub:#55697a;--line:#d7e4ec;--accent:#2f89c7;--bad:#c8402e;--ok:#2f8f5a;--warn:#b7791f;--chip:#e9f2f8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0f1b24;--card:#162633;--ink:#e3edf3;--sub:#9fb3c2;--line:#26394a;--accent:#5fb0e6;--bad:#ff7a66;--ok:#5fcf8f;--warn:#e8b04a;--chip:#1e3344}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Noto Sans TC",sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px 16px 64px}
+h1{font-size:22px;margin:4px 0 2px}h2{font-size:18px;margin:22px 0 8px}
+.sub{color:var(--sub);font-size:14px}
+a{color:var(--accent)}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 6px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2}
+nav.tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:15px;cursor:pointer}
+nav.tabs button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--bad);color:#fff;font-size:12px;font-weight:700;text-align:center;margin-left:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grow{flex:1 1 auto;min-width:0}
+.k{font-weight:700}
+.chip{display:inline-block;background:var(--chip);border-radius:6px;padding:1px 8px;font-size:13px;margin-right:4px}
+.chip.bad{background:var(--bad);color:#fff}.chip.ok{background:var(--ok);color:#fff}.chip.warn{background:var(--warn);color:#fff}
+.chat{white-space:pre-wrap;word-break:break-word;background:var(--bg);border-radius:8px;padding:6px 10px;margin:6px 0;font-size:14px;max-height:160px;overflow:auto}
+button.b{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 12px;font:inherit;font-size:14px;cursor:pointer}
+button.b.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.b.d{background:var(--bad);color:#fff;border-color:var(--bad)}
+button.b:disabled{opacity:.5;cursor:default}
+input,select{font:inherit;font-size:15px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-width:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:26px;line-height:1.2}
+.stat span{color:var(--sub);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
+.uid{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--sub);word-break:break-all}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
+#toast.on{opacity:1}
+pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px}
+.empty{color:var(--sub);text-align:center;padding:24px 0}
+</style>
+</head>
+<body>
+<main>
+  <div class="row"><div class="grow"><h1>🛡️ 潮汐釣魚村 管理頁</h1><div class="sub" id="who">連線中…</div></div><a href="./">回到遊戲</a></div>
+  <div id="app"></div>
+  <section id="setup" hidden>
+    <h2>怎麼成為管理員</h2>
+    <div class="card">
+      <ol>
+        <li>在<b>這個瀏覽器</b>打開遊戲，用 Email 登入（造型 → 雲端存檔 → 用 Email 登入）。訪客帳號不能當管理員。</li>
+        <li>回到這一頁重新整理，下面會出現你的帳號編號和一行指令。</li>
+        <li>打開 Supabase 後台 → 左邊「SQL Editor」→ 貼上那一行指令 → 按「Run」。</li>
+        <li>回到這一頁重新整理就可以用了。要加其他管理員，請他照 1、2 做，再把他頁面上的指令貼到 SQL Editor。</li>
+      </ol>
+      <div id="mySql"></div>
+      <p class="sub">管理員名單只能從 Supabase 後台加，玩家沒辦法自己把自己變成管理員。手機要收到「有新檢舉」的通知：在同一支手機的遊戲裡，造型 → 打開推播。</p>
+    </div>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+<script type="module">
+const SUPABASE_URL = 'https://mfaskrjcxofwkusrzkhb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const when = t => { if (!t) return ''; const d = new Date(t), s = (Date.now() - d) / 1000; if (s < 60) return '剛剛'; if (s < 3600) return Math.floor(s / 60) + ' 分鐘前'; if (s < 86400) return Math.floor(s / 3600) + ' 小時前'; return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const until = t => { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600); }
+let sb = null, tab = 'reports', counts = {};
+async function rpc(name, args){ const { data, error } = await sb.rpc(name, args || {}); if (error) throw error; return data; }
+async function act(btn, fn, okMsg){ if (btn) btn.disabled = true; try { await fn(); if (okMsg) toast(okMsg); await render(); } catch(e){ toast('失敗：' + (e.message || e)); if (btn) btn.disabled = false; } }
+const ask = (q, def) => { const v = prompt(q, def || ''); return v == null ? null : v.trim(); };
+
+/* 共用：對一個玩家的動作（禁言、改名） */
+function playerActions(uid, name){
+  const w = document.createElement('div'); w.className = 'row';
+  const mk = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'b ' + (cls || ''); b.textContent = label; b.addEventListener('click', () => fn(b)); w.appendChild(b); };
+  mk('禁言 1 天', '', b => { const n = ask(`禁言「${name}」1 天的原因（會記在紀錄裡）`, '聊天不禮貌'); if (n != null) act(b, () => rpc('admin_mute', { p_uid: uid, p_hours: 24, p_note: n }), '已禁言 1 天'); });
+  mk('禁言 7 天', '', b => { const n = ask(`禁言「${name}」7 天的原因`, '多次檢舉'); if (n != null) act(b, () => rpc('admin_mute', { p_uid: uid, p_hours: 168, p_note: n }), '已禁言 7 天'); });
+  mk('解除禁言', '', b => act(b, () => rpc('admin_mute', { p_uid: uid, p_hours: 0, p_note: '' }), '已解除禁言'));
+  mk('改名', '', b => { const nn = ask(`把「${name}」改成什麼？（空白＝自動改成「釣客＋數字」，30 天內他不能自己改回來）`, ''); if (nn != null) act(b, () => rpc('admin_rename', { p_uid: uid, p_name: nn, p_note: '名字不適合' }), '已改名'); });
+  return w;
+}
+
+const TABS = [['home', '總覽'], ['reports', '檢舉'], ['players', '找玩家'], ['muted', '禁言中'], ['designs', '設計'], ['board', '留言板'], ['log', '紀錄']];
+function renderTabs(){ const n = document.createElement('nav'); n.className = 'tabs';
+  for (const [k, l] of TABS){ const b = document.createElement('button'); b.setAttribute('aria-pressed', String(tab === k)); b.innerHTML = esc(l) + (k === 'reports' && counts.reports_open ? `<span class="badge">${counts.reports_open}</span>` : ''); b.addEventListener('click', () => { tab = k; try { localStorage.setItem('tide.adminTab', k); } catch(e){} render(); }); n.appendChild(b); }
+  return n; }
+
+async function render(){
+  const app = $('#app'), box = document.createElement('div');
+  try { counts = await rpc('admin_overview'); } catch(e){ app.innerHTML = `<div class="card">讀取失敗：${esc(e.message)}</div>`; return; }
+  box.appendChild(renderTabs()); const body = document.createElement('div'); box.appendChild(body);
+  try {
+    if (tab === 'home'){
+      const s = [['reports_open', '還沒處理的檢舉'], ['reports_today', '今天的檢舉'], ['muted', '禁言中'], ['designs_hidden', '下架的設計'], ['designs_reported', '7 天內被檢舉的設計'], ['board_hidden', '收起來的留言'], ['players', '玩家總數'], ['players_today', '今天有玩的人']];
+      body.innerHTML = '<div class="stats">' + s.map(([k, l]) => `<div class="stat"><b>${Number(counts[k] || 0)}</b><span>${l}</span></div>`).join('') + '</div><p class="sub">檢舉會推播到管理員的手機（要先在遊戲裡打開推播）。被 3 個資深玩家檢舉的設計、留言會自動收起來，也會通知你。</p>';
+    }
+    if (tab === 'reports'){
+      const st = localStorage.getItem('tide.adminRs') || 'open', list = await rpc('admin_reports', { p_status: st, p_limit: 150 });
+      const bar = document.createElement('div'); bar.className = 'row'; bar.innerHTML = '<span class="sub">顯示：</span>';
+      for (const [k, l] of [['open', '還沒處理'], ['done', '處理完'], ['all', '全部']]){ const b = document.createElement('button'); b.className = 'b' + (st === k ? ' p' : ''); b.textContent = l; b.addEventListener('click', () => { try { localStorage.setItem('tide.adminRs', k); } catch(e){} render(); }); bar.appendChild(b); }
+      body.appendChild(bar);
+      if (!list.length) body.insertAdjacentHTML('beforeend', '<div class="empty">沒有檢舉 🎉</div>');
+      for (const r of list){
+        const c = document.createElement('div'); c.className = 'card';
+        c.innerHTML = `<div class="row"><div class="grow"><span class="k">${esc(r.target_name)}</span>${r.name_then && r.name_then !== r.target_name ? ` <span class="sub">（當時叫 ${esc(r.name_then)}）</span>` : ''}
+          <span class="chip bad">${esc(r.reason)}</span>${r.target_n30 > 1 ? `<span class="chip warn">30 天被檢舉 ${r.target_n30} 次</span>` : ''}${r.muted_until ? `<span class="chip">禁言到 ${until(r.muted_until)}</span>` : ''}${r.status === 'done' ? '<span class="chip ok">處理完</span>' : ''}</div>
+          <span class="sub">${when(r.at)}</span></div>
+          <div class="sub">檢舉人：${esc(r.reporter_name || '（已刪除）')}（釣過 ${Number(r.reporter_total)} 條）${r.note ? '・處理備註：' + esc(r.note) : ''}</div>
+          ${r.chat ? `<div class="chat">${esc(r.chat)}</div>` : ''}<div class="uid">${esc(r.target)}</div>`;
+        const acts = playerActions(r.target, r.target_name);
+        if (r.status === 'open'){
+          const ok = document.createElement('button'); ok.className = 'b p'; ok.textContent = '✓ 處理完'; ok.addEventListener('click', () => { const n = ask('處理備註（可以空白）', '已警告'); if (n != null) act(ok, () => rpc('admin_report_close', { p_id: r.id, p_note: n }), '已標成處理完'); }); acts.prepend(ok);
+          if (r.target_n30 > 1){ const all = document.createElement('button'); all.className = 'b'; all.textContent = '這個人的檢舉全部處理完'; all.addEventListener('click', () => { const n = ask('處理備註', '已處理'); if (n != null) act(all, () => rpc('admin_reports_close_target', { p_target: r.target, p_note: n }), '全部處理完'); }); acts.appendChild(all); }
+        }
+        c.appendChild(acts); body.appendChild(c);
+      }
+    }
+    if (tab === 'players'){
+      const row = document.createElement('div'); row.className = 'row'; const q = document.createElement('input'); q.className = 'grow'; q.placeholder = '輸入名字的一部分，或貼上完整的帳號編號'; q.value = sessionStorage.getItem('tide.adminQ') || '';
+      const go = document.createElement('button'); go.className = 'b p'; go.textContent = '找'; row.append(q, go); body.appendChild(row); const out = document.createElement('div'); body.appendChild(out);
+      const run = async () => { const v = q.value.trim(); try { sessionStorage.setItem('tide.adminQ', v); } catch(e){} if (!v){ out.innerHTML = ''; return; } out.innerHTML = '<div class="empty">找…</div>'; const list = await rpc('admin_players', { p_q: v });
+        out.innerHTML = list.length ? '' : '<div class="empty">找不到</div>';
+        for (const p of list){ const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<div class="row"><div class="grow"><span class="k">${esc(p.nickname)}</span> <span class="sub">釣過 ${Number(p.total)} 條・${when(p.at)}上線</span>
+          ${p.reports ? `<span class="chip warn">被檢舉 ${p.reports} 次</span>` : ''}${p.muted_until ? `<span class="chip bad">禁言到 ${until(p.muted_until)}</span>` : ''}${p.name_lock && new Date(p.name_lock) > Date.now() ? '<span class="chip">名字鎖定中</span>' : ''}</div></div><div class="uid">${esc(p.id)}</div>`;
+          c.appendChild(playerActions(p.id, p.nickname)); out.appendChild(c); } };
+      go.addEventListener('click', () => run().catch(e => toast(e.message))); q.addEventListener('keydown', e => { if (e.key === 'Enter') run().catch(er => toast(er.message)); }); if (q.value) run().catch(e => toast(e.message));
+    }
+    if (tab === 'muted'){
+      const list = await rpc('admin_muted'); if (!list.length) body.innerHTML = '<div class="empty">沒有人被禁言</div>';
+      for (const m of list){ const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<div class="row"><div class="grow"><span class="k">${esc(m.nickname || '（已刪除）')}</span> <span class="chip bad">到 ${until(m.until)}</span> <span class="sub">${esc(m.note || '')}</span></div></div><div class="uid">${esc(m.id)}</div>`; c.appendChild(playerActions(m.id, m.nickname || '')); body.appendChild(c); }
+    }
+    if (tab === 'designs'){
+      const list = await rpc('admin_designs'); if (!list.length) body.innerHTML = '<div class="empty">沒有被檢舉的設計</div>';
+      const KIND = { top:'上衣', pants:'褲子', hat:'帽子', shoes:'鞋子', back:'背飾', acc:'配件' };
+      for (const d of list){ const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<div class="row"><div class="grow"><span class="k">${esc(d.name)}</span> <span class="chip">${esc(KIND[d.kind] || d.kind)}</span>${d.hidden ? '<span class="chip bad">已下架</span>' : '<span class="chip ok">架上</span>'}<span class="chip warn">檢舉 ${d.n}</span>
+        <span class="sub">作者：${esc(d.owner_name)}・${d.last ? when(d.last) : ''}</span></div></div>${d.reasons ? `<div class="sub">原因：${esc(d.reasons)}</div>` : ''}`;
+        const r = document.createElement('div'); r.className = 'row'; const b = document.createElement('button'); b.className = 'b ' + (d.hidden ? '' : 'd'); b.textContent = d.hidden ? '放回架上（清掉檢舉）' : '下架';
+        b.addEventListener('click', () => act(b, () => rpc('admin_design_hide', { p_id: d.id, p_hidden: !d.hidden, p_note: '' }), d.hidden ? '已放回' : '已下架')); r.appendChild(b); c.appendChild(r); c.appendChild(playerActions(d.owner, d.owner_name)); body.appendChild(c); }
+    }
+    if (tab === 'board'){
+      const list = await rpc('admin_board'); if (!list.length) body.innerHTML = '<div class="empty">最近沒有留言</div>';
+      for (const p of list){ const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<div class="row"><div class="grow"><span class="k">${esc(p.name)}</span> ${p.hidden ? '<span class="chip bad">收起來了</span>' : ''}${p.n ? `<span class="chip warn">檢舉 ${p.n}</span>` : ''} <span class="sub">${when(p.at)}</span></div></div><div class="chat">${esc(p.body)}</div>`;
+        const r = document.createElement('div'); r.className = 'row'; const b = document.createElement('button'); b.className = 'b ' + (p.hidden ? '' : 'd'); b.textContent = p.hidden ? '放回去（清掉檢舉）' : '收起來';
+        b.addEventListener('click', () => act(b, () => rpc('admin_board_hide', { p_id: p.id, p_hidden: !p.hidden, p_note: '' }), p.hidden ? '已放回' : '已收起來')); r.appendChild(b); c.appendChild(r); c.appendChild(playerActions(p.uid, p.name)); body.appendChild(c); }
+    }
+    if (tab === 'log'){
+      const list = await rpc('admin_log_list', { p_limit: 200 });
+      body.innerHTML = list.length ? '<div class="card"><table><thead><tr><th>時間</th><th>管理員</th><th>動作</th><th>對象</th><th>備註</th></tr></thead><tbody>' + list.map(l => `<tr><td>${when(l.at)}</td><td>${esc(l.admin_name)}</td><td>${esc(l.action)}</td><td>${esc(l.target_name || '')}</td><td>${esc(l.note || '')}</td></tr>`).join('') + '</tbody></table></div>' : '<div class="empty">還沒有紀錄</div>';
+    }
+  } catch(e){ body.insertAdjacentHTML('beforeend', `<div class="card">讀取失敗：${esc(e.message)}</div>`); }
+  app.replaceChildren(box);
+}
+
+(async () => {
+  try { tab = localStorage.getItem('tide.adminTab') || 'reports'; } catch(e){}
+  try { const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm'); sb = mod.createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true, storageKey:'tide.auth' } }); }
+  catch(e){ $('#who').textContent = '連不上伺服器，請稍後重新整理'; return; }
+  const { data } = await sb.auth.getSession(); const u = data && data.session && data.session.user;
+  if (!u){ $('#who').textContent = '還沒登入。請先在這個瀏覽器打開遊戲、用 Email 登入。'; $('#setup').hidden = false; return; }
+  if (!u.email){ $('#who').textContent = '你現在是訪客帳號，不能當管理員。請在遊戲裡綁定 Email 或用 Email 登入。'; $('#setup').hidden = false; return; }
+  let ok = false; try { ok = await rpc('is_admin'); } catch(e){}
+  $('#who').textContent = `登入：${u.email}` + (ok ? '' : '（還不是管理員）');
+  if (!ok){ $('#setup').hidden = false; $('#mySql').innerHTML = `<p>你的帳號編號：<span class="uid">${esc(u.id)}</span></p><p>貼到 SQL Editor 的指令：</p><pre>insert into public.admins (user_id, note) values ('${esc(u.id)}', '${esc(u.email)}') on conflict do nothing;</pre>`; return; }
+  render(); setInterval(() => { if (document.visibilityState === 'visible' && tab === 'home') render(); }, 60000);
+})();
+</script>
+</body>
+</html>
