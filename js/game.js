@@ -5469,7 +5469,9 @@ function renderFurnSheet(body){
   for (const [gk, title] of FURN_GROUPS){ if ((gk === 'mu' || gk === 'cai') && !Object.values(FURN).some(v => v.g === gk)) continue; if ((gk === 'gy' || gk === 'fe') && !Object.keys(FURN).some(k => FURN[k].g === gk && (rec.owned || []).includes(k))) continue; body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
     for (const [k, v] of Object.entries(FURN).filter(([k2, v]) => v.g === gk && ((gk !== 'gy' && gk !== 'fe') || (rec.owned || []).includes(k2)))){ const li = el('li'); li.appendChild(el('span', 'dishic', { bed:'🛏️', dbed:'🛏️', bunk:'🛏️', ward:'🚪', desk:'🖥️', lamp:'💡', clock:'🕰️', sofa:'🛋️', arm:'💺', tv:'📺', table:'🍽️', chair:'🪑', shelf:'📚', rug:'🟣', fire:'🔥', piano:'🎹', tank:'🐠', fridge:'🧊', stove:'🍳', sink:'🚰', bath:'🛁', toilet:'🚽', plant:'🪴', bigplant:'🌳' }[v.base || k] || '📦'));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・家裡 ${f.filter(x => x.t === k).length} 個`)); li.appendChild(d);
-      const b = el('button', 'tbtn', '拿去擺'); b.disabled = rec.coins < v.price; b.addEventListener('click', () => startFurn(k)); const a = el('div', 'tacts'); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+      const b = el('button', 'tbtn', '拿去擺'); b.disabled = rec.coins < v.price; b.addEventListener('click', () => startFurn(k)); const a = el('div', 'tacts'); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
+      { /* v302 家具也換成真的模型小圖，點一下看 3D */ const ic0 = li.querySelector('.dishic'); thumbLater(ic0, 'furn:' + k, () => furnMesh(k), v.name);
+        li.classList.add('viewable'); d.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); const look = () => viewModel(v.name, `🪙 ${v.price.toLocaleString()}`, () => furnMesh(k), { label: `拿去擺（🪙${v.price.toLocaleString()}）`, disabled: rec.coins < v.price, fn: () => startFurn(k) }); ic0.addEventListener('click', look); ic0._look = look; d.addEventListener('click', look); } }
     body.appendChild(ul); }
 }
 
@@ -5998,6 +6000,46 @@ function itemShot(type, size){
   for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
   c2.putImageData(id, 0, 0); const url = cv.toDataURL(); ItemShot.cache.set(type, url); return url;
 }
+/* v302 玩家說：家具、小島的東西要按了能看到模型，才知道適不適合 → 3D 預覽（手指拖動轉、兩指或滾輪放大），下面直接按「拿去擺」 */
+function fitCam(cam, obj, k){ const b = new THREE.Box3().setFromObject(obj), c = b.getCenter(new THREE.Vector3()), r = Math.max(0.3, b.getSize(new THREE.Vector3()).length() / 2); return { c, r: r * (k || 1) }; }
+function modelShot(key, make, size){ if (ItemShot.cache.has(key)) return ItemShot.cache.get(key); itemShot('bench', size); const K = ItemShot.kit, g = make(); K.sc.add(g);
+  const { c, r } = fitCam(K.cam, g); K.cam.position.set(c.x + r * 1.5, c.y + r * 1.2, c.z + r * 1.9); K.cam.lookAt(c);
+  const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
+  renderer.setRenderTarget(K.rt); renderer.setClearColor('#f3ede4', 1); renderer.clear(); renderer.render(K.sc, K.cam);
+  const px = new Uint8Array(size * size * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, size, size, px); renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA); K.sc.remove(g);
+  const cv = document.createElement('canvas'); cv.width = cv.height = size; const c2 = cv.getContext('2d'), id = c2.createImageData(size, size);
+  for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
+  c2.putImageData(id, 0, 0); const url = cv.toDataURL(); ItemShot.cache.set(key, url); return url; }
+/* 小圖一次做幾個，不要一打開清單就卡住（便宜的手機） */
+const ThumbQ = []; let thumbBusy = false;
+function thumbLater(node, key, make, alt){ ThumbQ.push({ node, key, make, alt }); if (!thumbBusy){ thumbBusy = true; setTimeout(thumbRun, 30); } }
+function thumbRun(){ const t0 = performance.now(); while (ThumbQ.length && performance.now() - t0 < 24){ const q = ThumbQ.shift(); if (!q.node.isConnected) continue; try { const img = el('img', 'gearic'); img.alt = q.alt; img.src = modelShot(q.key, q.make, 96); if (q.node._look) img.addEventListener('click', q.node._look); q.node.replaceWith(img); } catch(e){} }
+  if (ThumbQ.length) setTimeout(thumbRun, 16); else thumbBusy = false; }
+const MView = { on: false };
+function viewModel(title, info, make, act){ closeModelView(); const ov = document.createElement('div'); ov.id = 'mview'; ov.innerHTML = '<div class="mvbox"><div class="mvhead"><b></b><button class="mvx" aria-label="關閉">✕</button></div><canvas class="mvcv"></canvas><p class="mvtip">用手指拖動轉一圈看看，兩根手指放大縮小</p><p class="mvinfo"></p><div class="mvacts"></div></div>';
+  document.body.appendChild(ov); ov.querySelector('b').textContent = title; ov.querySelector('.mvinfo').textContent = info || '';
+  const cv = ov.querySelector('canvas'), W = Math.min(340, innerWidth - 60, innerHeight - 190); cv.style.width = cv.style.height = Math.max(160, W) + 'px';
+  let R = null; try { R = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false }); } catch(e){ toast('這台手機沒辦法顯示 3D 預覽'); ov.remove(); return; }
+  R.setPixelRatio(Math.min(2, devicePixelRatio || 1)); R.setSize(Math.max(160, W), Math.max(160, W), false); R.outputColorSpace = THREE.SRGBColorSpace; R.setClearColor('#eef4f0', 1);
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#b8c8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(3, 5, 4); sc.add(dl);
+  const g = make(); sc.add(g); const ground = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshStandardMaterial({ color: '#dfe8d6', roughness: 1 })); ground.rotation.x = -Math.PI / 2; sc.add(ground);
+  const cam = new THREE.PerspectiveCamera(32, 1, 0.05, 200), { c, r } = fitCam(cam, g); ground.scale.setScalar(r * 1.6); ground.position.set(c.x, -0.01, c.z);
+  const V = { yaw: 0.75, pitch: 0.42, z: 3.8 }; const ptr = new Map(); let pd = 0;
+  const place = () => { const d = r * V.z; cam.position.set(c.x + Math.sin(V.yaw) * Math.cos(V.pitch) * d, c.y + Math.sin(V.pitch) * d, c.z + Math.cos(V.yaw) * Math.cos(V.pitch) * d); cam.lookAt(c); };
+  cv.style.touchAction = 'none';
+  cv.addEventListener('pointerdown', e => { ptr.set(e.pointerId, [e.clientX, e.clientY]); MView.idle = 0; try { cv.setPointerCapture(e.pointerId); } catch(_){} });
+  cv.addEventListener('pointermove', e => { if (!ptr.has(e.pointerId)) return; const p0 = ptr.get(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]);
+    if (ptr.size === 2){ const [a, b] = [...ptr.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pd) V.z = clamp(V.z * pd / d, 1.8, 7); pd = d; return; }
+    V.yaw -= (e.clientX - p0[0]) * 0.012; V.pitch = clamp(V.pitch + (e.clientY - p0[1]) * 0.008, 0.05, 1.35); });
+  const up = e => { ptr.delete(e.pointerId); if (ptr.size < 2) pd = 0; }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e => { e.preventDefault(); V.z = clamp(V.z * (e.deltaY > 0 ? 1.1 : 0.9), 1.8, 7); }, { passive: false });
+  const acts = ov.querySelector('.mvacts'); if (act){ const b = el('button', 'tbtn', act.label); b.disabled = !!act.disabled; b.addEventListener('click', () => { closeModelView(); act.fn(); }); acts.appendChild(b); }
+  const cl = el('button', 'tbtn ghost', '關閉'); cl.addEventListener('click', closeModelView); acts.appendChild(cl); ov.querySelector('.mvx').addEventListener('click', closeModelView);
+  ov.addEventListener('click', e => { if (e.target === ov) closeModelView(); });
+  MView.on = true; MView.ov = ov; MView.R = R; MView.idle = 1; let last = performance.now();
+  const loop = t => { if (!MView.on || MView.R !== R) return; const dt = Math.min(0.05, (t - last) / 1000); last = t; if (!ptr.size && MView.idle) V.yaw += dt * 0.5; place(); R.render(sc, cam); MView.raf = requestAnimationFrame(loop); };
+  MView.raf = requestAnimationFrame(loop); }
+function closeModelView(){ if (!MView.on) return; MView.on = false; cancelAnimationFrame(MView.raf); try { MView.R.dispose(); MView.R.forceContextLoss(); } catch(e){} if (MView.ov) MView.ov.remove(); MView.R = MView.ov = null; }
 let isleTab = 'shop';
 function renderIsland(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>🏝️ 我的小島</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
@@ -6023,7 +6065,8 @@ function renderIsland(body){
     for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([k2, v]) => filt(v) && !OLD_HOUSES.has(k2))){   /* 076：房子只賣大宅 */
       const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・島上 ${items.filter(i => i.t === k).length} 個`)); li.appendChild(d);
-      const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'); b.addEventListener('click', () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'), place = () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }; b.addEventListener('click', place); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
+      li.classList.add('viewable'); d.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); const look = () => viewModel(v.name, `🪙 ${v.price.toLocaleString()}${v.house ? '・房子，可以走進去擺家具' : ''}`, () => itemMesh(k, { lite: true }), { label: `拿去擺（🪙${v.price.toLocaleString()}）`, fn: place }); ic.addEventListener('click', look); d.addEventListener('click', look);
     }
     body.appendChild(ul);
   }
@@ -11361,7 +11404,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
-function closeSheet(){ if ($('#sheet').hidden) return; $('#sheet').hidden = true; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
+function closeSheet(){ closeModelView(); if ($('#sheet').hidden) return; $('#sheet').hidden = true; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
 $('#closeSheet').addEventListener('click', closeSheet);
@@ -11740,6 +11783,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
       '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。',
+      '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。',
       '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。',
       '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。',
       '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',

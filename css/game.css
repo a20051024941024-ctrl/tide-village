@@ -1158,3 +1158,13 @@ body.photo #baitFav{display:none}
 /* v296 小烏龜照顧 */
 .shinebar{height:7px;border-radius:4px;background:#e6eef3;overflow:hidden;margin-top:4px;max-width:220px}.shinebar i{display:block;height:100%;background:linear-gradient(90deg,#9ac46a,#ffd36a);border-radius:4px}
 .turtlecare{display:block!important;padding:10px 12px!important}.tcrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #e6eef3}.tci{font-size:22px;width:28px;text-align:center}.tct{flex:1;min-width:0}.tct .chipline{margin-top:4px}
+/* v302 3D 模型預覽 */
+#mview{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(10,24,36,.45);padding:12px}
+#mview .mvbox{background:#fff;border-radius:18px;padding:12px 14px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:94vw;max-height:94vh;overflow:auto;text-align:center}
+#mview .mvhead{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:18px;margin-bottom:6px}
+#mview .mvx{border:0;background:#eef3f6;border-radius:50%;width:32px;height:32px;font-size:16px}
+#mview .mvcv{display:block;margin:0 auto;border-radius:14px;cursor:grab}
+#mview .mvtip{font-size:12px;color:#6b8191;margin:6px 0 0}#mview .mvinfo{font-size:14px;margin:4px 0 8px;color:#18334a}
+#mview .mvacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+@media (orientation:landscape) and (max-height:540px){#mview .mvbox{display:grid;grid-template-columns:auto auto;align-items:center;column-gap:14px;text-align:left}#mview .mvhead{grid-column:1/-1}#mview .mvcv{grid-row:2/5}#mview .mvacts{justify-content:flex-start}}
+.shoplist li.viewable .gearic,.shoplist li.viewable .tinfo{cursor:pointer}.sub2.look{color:#2f89c7;font-size:12px}
