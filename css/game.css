@@ -1168,3 +1168,15 @@ body.photo #baitFav{display:none}
 #mview .mvacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 @media (orientation:landscape) and (max-height:540px){#mview .mvbox{display:grid;grid-template-columns:auto auto;align-items:center;column-gap:14px;text-align:left}#mview .mvhead{grid-column:1/-1}#mview .mvcv{grid-row:2/5}#mview .mvacts{justify-content:flex-start}}
 .shoplist li.viewable .gearic,.shoplist li.viewable .tinfo{cursor:pointer}.sub2.look{color:#2f89c7;font-size:12px}
+/* v304 新手主線、第一次釣魚的手指教學 */
+#guideCard{position:fixed;left:calc(var(--gl) + 8px);top:calc(var(--gt) + 96px);z-index:6;max-width:min(46vw,330px);padding:8px 12px;border-radius:14px;background:rgba(255,250,236,.95);color:#18334a;border:2px solid #ffd36a;box-shadow:0 3px 10px rgba(24,51,74,.2);font-size:14px;line-height:1.45}
+#guideCard[hidden]{display:none}#guideCard .gt{display:flex;align-items:flex-start;gap:8px;justify-content:space-between}#guideCard .gh{margin-top:3px;font-size:13px;color:#33506a}
+#guideCard .gd{margin-top:4px;font-weight:700;color:#c0662a}#guideCard .garr{display:inline-block;font-size:16px}
+#guideCard .gx{border:0;background:#f3e3b4;border-radius:10px;padding:2px 9px;font:inherit;font-weight:700;color:#18334a}
+#fingerTip{position:fixed;right:calc(var(--gr) + 132px);bottom:calc(var(--gb) + 34px);z-index:7;padding:8px 14px;border-radius:16px;background:rgba(24,51,74,.9);color:#fff;font-size:17px;font-weight:700;line-height:1.35;pointer-events:none;animation:fgbob 1s ease-in-out infinite}
+#fingerTip[hidden]{display:none}#fingerTip.hot{background:#e0553f;font-size:22px}
+@keyframes fgbob{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+body.photo #guideCard,body.photo #fingerTip{display:none}
+/* v304 分享 */
+#shareChip{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 96px);z-index:8;border:0;border-radius:999px;padding:9px 18px;font:inherit;font-size:15px;font-weight:800;background:#ffd36a;color:#5a3a00;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+#shareChip[hidden]{display:none}body.photo #shareChip{display:none}

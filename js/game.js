@@ -1771,8 +1771,13 @@ function owWet(on, breath){ if (!on) return; let w = $('#owWet'); if (!w){ w = d
 function owSong(v){ if (!soundOn || !actx || sfxVol <= 0.01) return; const t = actx.currentTime, vol = 0.05 * v * sfxVol, f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400; f.connect(actx.destination);
   const notes = [[220, 520, 0.9], [480, 180, 0.7], [160, 300, 1.1], [600, 420, 0.5]]; let at = t;
   for (const [a, b, d] of notes){ const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(a, at); o.frequency.exponentialRampToValueAtTime(b, at + d); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, at + d); o.connect(g); g.connect(f); o.start(at); o.stop(at + d + 0.05); at += d + 0.25; } }
-function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; toast(`${S.ic} 你遇到了${S.n}！`); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
+function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; toast(`${S.ic} 你遇到了${S.n}！`); shareChip(S); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
   if (Cloud.on && Cloud.sb) festRpc('sea_sighting', { p_kind: k }).then(r => { if (r && r.player) adoptRow(r.player); if (r && r.first) setTimeout(() => toast(`🔭 海上目擊：${S.ic} ${S.n}（💙 +30）`), 1600); }); }
+/* v304 遇到鯨魚、海豚時，畫面上出現「📤 分享這一刻」小按鈕（10 秒），按了用現在的畫面做分享卡片 */
+function shareChip(S){ let c = $('#shareChip'); if (!c){ c = document.createElement('button'); c.id = 'shareChip'; document.body.appendChild(c); }
+  c.textContent = `📤 分享這一刻（${S.n}）`; c.hidden = false; clearTimeout(shareChip.t); shareChip.t = setTimeout(() => { c.hidden = true; }, 10000);
+  c.onclick = () => { c.hidden = true; let shot = null; try { renderer.render(scene, camera); const src = renderer.domElement, k = Math.min(1, 1200 / src.width), cv = document.createElement('canvas'); cv.width = Math.round(src.width * k); cv.height = Math.round(src.height * k); cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height); shot = cv; } catch(e){}
+    shareCard({ kind: 'whale', title: S.n, sub: '海上目擊', place: '外海', img: shot }); }; }
 OW.update = function(t){
   if (waterSurface && waterSurface.material.uniforms.uWaves){ const U = waterSurface.material.uniforms, tn = now(); U.uWT.value = tn; let any = false; WAVES.forEach((w, i) => { U.uWaves.value[i].set(w.x, w.z, w.t0, w.a); if (tn - w.t0 < 15) any = true; }); U.uWOn.value = any && Quality.tier !== 'low' ? 1 : 0; WAVES.on = any; }
   const hide = Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || Photo.on && false;
@@ -4269,6 +4274,7 @@ function updateFishing(dt, t){
   $('#chargeHud').hidden = F.phase !== 'charging';
   { const gk = gatherKind(), gb = $('#gatherBtn'); if (gb && gb.dataset.k !== (gk || '')){ gb.dataset.k = gk || ''; gb.hidden = !gk; if (gk) gb.innerHTML = gk === 'lugworm' ? '🪱<small>挖沙蠶</small>' : '🦀<small>撿螃蟹</small>'; } }
   if (frameNo % 15 === 3) baitFavChip();
+  if (frameNo % 10 === 5) try { guideTick(); } catch(e){}
   { const cb = $('#chumBtn'), show = !Dive.on && !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
@@ -8869,7 +8875,7 @@ function setFav(x, on){
 }
 function sellFish(ts, batch){
   const i = rec.tank.findIndex(x => x.t === ts); if (i < 0 || FISH_BY_ID[rec.tank[i].f].rs || rec.tank[i].k) return 0;   /* 收藏的魚不能賣 */   /* 赤紅霸王鯊不能賣 */
-  const x = rec.tank[i], f = FISH_BY_ID[x.f], price = itemPrice(x);
+  const x = rec.tank[i], f = FISH_BY_ID[x.f], price = itemPrice(x); try { guideMark('sell'); } catch(e){}
   rec.tank.splice(i, 1); if (rec.show) rec.show = rec.show.filter(t => t !== ts);
   rec.sold++; rec.earned += price; addCoins(price);
   if (!batch) cloudCall('sell_fish', { p_ts: [ts] });
@@ -9791,9 +9797,27 @@ function showCatch(f, w, res){
   $('#ccDesc').textContent = small ? '這條還太小，放牠回去長大吧！放流可以得到比較多愛海點數，帶走只能賣半價。' : f.desc;
   ccFish = f; const rb = $('#ccRel'); rb.innerHTML = `放流 💙+${lp}`; rb.classList.toggle('hot', small);
   $('#ccOk').textContent = small ? '還是帶走' : '放進魚缸';
+  { const sb = $('#ccShare'), big = f.rarity !== '常見' || !!f.of || res.isNew || res.isBest; sb.hidden = !big; sb.onclick = () => shareCard({ kind: 'fish', title: gx ? gx.name : f.name, sub: `${w.toFixed(2)} kg・${f.rarity}${f.of ? '・罕見變種' : ''}`, place: SPOT_BY_ID[f.spot].label, img: $('#ccCanvas'), badge: res.isNew ? '圖鑑新登錄！' : res.isBest ? '個人新紀錄！' : '' }); }
   $('#catchCard').hidden = false; uiBlocked = true;
   setTimeout(() => $('#ccOk').focus(), 50);
 }
+/* v304 一鍵分享卡片：釣到稀有魚、遇到鯨魚時，做一張直式的圖（有遊戲名字和網址），可以直接分享到 IG、LINE，或存起來 */
+function gameUrl(){ return location.origin + location.pathname.replace(/index\.html$/, ''); }
+async function shareCard(o){ const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#8fd3f4'); bg.addColorStop(0.55, '#2f89c7'); bg.addColorStop(1, '#173d63'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.globalAlpha = 0.18; g.strokeStyle = '#fff'; g.lineWidth = 10; for (let k = 0; k < 6; k++){ const y = 1500 + k * 70; g.beginPath(); for (let x = -40; x <= W + 40; x += 20) g.lineTo(x, y + Math.sin(x / 70 + k) * 16); g.stroke(); } g.globalAlpha = 1;
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = `900 92px ${font}`; g.fillText('🎣 潮汐釣魚村', W / 2, 200); g.font = `600 44px ${font}`; g.globalAlpha = 0.9; g.fillText(o.kind === 'whale' ? '我在海上遇到了…' : '我釣到了…', W / 2, 290); g.globalAlpha = 1;
+  const cardY = 360, cardH = 1000; g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); if (g.roundRect) g.roundRect(70, cardY, W - 140, cardH, 48); else g.rect(70, cardY, W - 140, cardH); g.fill();
+  if (o.img){ const iw = o.img.width, ih = o.img.height, s = Math.min((W - 220) / iw, 620 / ih), dw = iw * s, dh = ih * s; g.save(); g.beginPath(); if (g.roundRect) g.roundRect(110, cardY + 40, W - 220, 640, 34); else g.rect(110, cardY + 40, W - 220, 640); g.clip(); g.fillStyle = '#eef6fb'; g.fillRect(110, cardY + 40, W - 220, 640); g.drawImage(o.img, (W - dw) / 2, cardY + 40 + (640 - dh) / 2, dw, dh); g.restore(); }
+  g.fillStyle = '#18334a'; g.font = `900 84px ${font}`; g.fillText(o.title, W / 2, cardY + 790); g.font = `700 50px ${font}`; g.fillStyle = '#2f89c7'; g.fillText(o.sub || '', W / 2, cardY + 870);
+  g.font = `500 40px ${font}`; g.fillStyle = '#4d6577'; g.fillText([o.place, (nickname || '釣客'), taipeiDate()].filter(Boolean).join('・'), W / 2, cardY + 940);
+  if (o.badge){ g.font = `800 46px ${font}`; const bw = g.measureText(o.badge).width + 60; g.fillStyle = '#ffd36a'; g.beginPath(); if (g.roundRect) g.roundRect(W / 2 - bw / 2, cardY - 36, bw, 72, 36); else g.rect(W / 2 - bw / 2, cardY - 36, bw, 72); g.fill(); g.fillStyle = '#5a3a00'; g.fillText(o.badge, W / 2, cardY + 16); }
+  g.fillStyle = '#fff'; g.font = `800 56px ${font}`; g.fillText('一起來釣魚吧！', W / 2, 1520); g.font = `600 40px ${font}`; g.fillText(gameUrl().replace(/^https?:\/\//, ''), W / 2, 1600);
+  g.font = `500 32px ${font}`; g.globalAlpha = 0.8; g.fillText('免下載，手機打開網址就能玩', W / 2, 1660); g.globalAlpha = 1;
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.9)); if (!blob){ toast('做圖失敗了'); return; } const file = new File([blob], `tide-${Date.now()}.jpg`, { type: 'image/jpeg' });
+  const text = `${o.kind === 'whale' ? '我在潮汐釣魚村遇到了' : '我在潮汐釣魚村釣到了'}${o.title}！一起來玩：${gameUrl()}`;
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: '潮汐釣魚村', text }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); toast('📥 分享圖已經存起來了，可以傳到 IG、LINE'); }
 var ccFish = null;
 function releaseCaught(){
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x) { closeCatch(); return; }
@@ -9807,6 +9831,41 @@ $('#ccShow').addEventListener('click', () => {   // 釣到時直接選「放進�
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x){ closeCatch(); return; }
   rec.show = (rec.show || []).filter(t => t !== x.t); if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先到魚缸拿出一條`); return; }
   rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); ticker(`🏛️ <b>${esc(f.name)}</b> 放進廣場的水族館展示了`); closeCatch(); });
+/* ===== v304 新手主線：釣第一條魚 → 賣魚 → 買竿子 → 去自己的小島 → 潛一次水（長輩、小孩都看得懂；左上角一張小卡片＋地上的光柱指路）＋第一次釣魚的手指教學 ===== */
+const GUIDE = [
+  { t:'釣到第一條魚', h:'走到水邊（地上有光柱的地方），按住右下的「拋竿」蓄力，放開就拋出去。', at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 1 },
+  { t:'把魚賣掉換金幣', h:'到「海邊商店」，按「賣魚」把魚賣掉（也可以先放在魚缸收藏）。', at:() => LANDMARKS.find(l => l.id === 'shop').pos, ok:() => !!LS.get('tide.guideSold', false) },
+  { t:'買一根新的釣竿', h:'到「釣具店」，在「釣竿」挑一根買下來。好的竿子比較不容易斷線。', at:() => LANDMARKS.find(l => l.id === 'tackle').pos, ok:() => (rec.rods || []).length > 1 },
+  { t:'去自己的小島看看', h:'按右上角的「小島」，再按「前往我的小島」。小島可以蓋房子、擺家具。', at:() => null, ok:() => !!LS.get('tide.guideIsle', false) },
+  { t:'潛一次水', h:'存到 🪙1,500 在「釣具店」的「🤿 潛水」買潛水裝備，再到港口碼頭旁邊的潛水點按「潛水」。', at:() => hasDive('dive_suit') ? (() => { const a = harborDiveAt(); return new THREE.Vector3(a[0], 0, a[1]); })() : LANDMARKS.find(l => l.id === 'tackle').pos, ok:() => !!LS.get('tide.guideDive', false) },
+];
+const Guide = { i: null, el: null, beacon: null, fin: null, hide: false };
+function guideMark(k){ if (k === 'sell') LS.set('tide.guideSold', true); if (k === 'isle') LS.set('tide.guideIsle', true); if (k === 'dive') LS.set('tide.guideDive', true); }
+function guideInit(){ let v = LS.get('tide.guide', null); if (v == null){ v = rec.total >= 20 ? 'done' : 0; LS.set('tide.guide', v); } Guide.i = v; Guide.hide = !!LS.get('tide.guideHide', false); }
+function guideTick(){ if (Guide.i == null) guideInit(); if (onIsle && onIsle.owner === myIdOrMe()) guideMark('isle'); if (Dive.on) guideMark('dive');
+  fingerTip(); if (Guide.i === 'done') return guideShow(null);
+  while (Guide.i !== 'done' && GUIDE[Guide.i].ok()){ Guide.i++; SFX.catch(); if (Guide.i >= GUIDE.length){ Guide.i = 'done'; LS.set('tide.guide', 'done'); flash('🎉 新手任務全部完成！你已經是潮汐村的釣客了', 2.6); guideReward(); break; } LS.set('tide.guide', Guide.i); flash(`✅ 完成！下一個：${GUIDE[Guide.i].t}`, 2); }
+  guideShow(Guide.i === 'done' ? null : GUIDE[Guide.i]); }
+async function guideReward(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('guide_reward'); if (error) throw error; adoptRow(data); setTimeout(() => flash('🎁 新手獎勵 🪙300！', 2), 2800); } catch(e){} }
+function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.createElement('div'); c.id = 'guideCard'; document.body.appendChild(c); c.addEventListener('click', e => { if (e.target.closest('.gx')){ Guide.hide = !Guide.hide; LS.set('tide.guideHide', Guide.hide); c._k = ''; guideTick(); } }); }
+  const busy = !G || !!onIsle || Dive.on || House.on || inIndoor() || F.phase === 'reeling' || F.phase === 'bite' || Photo.on || (typeof Sub !== 'undefined' && Sub.on);
+  c.hidden = busy; let tgt = null;
+  if (!busy){ const p = G.at(); if (p && !onIsle){ tgt = p; } const d = tgt ? Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) : 0;
+    let dir = ''; if (tgt && d > 2){ const a = Math.atan2(tgt.x - camera.position.x, tgt.z - camera.position.z), cy = Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)), rel = ((a - cy + Math.PI * 3) % (Math.PI * 2)) - Math.PI; dir = `<span class="garr" style="transform:rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)">⬆</span> 大約 ${Math.round(d)} 公尺`; }
+    const k = Guide.i + '|' + Guide.hide + '|' + dir; if (c._k !== k){ c._k = k; c.innerHTML = Guide.hide ? `<b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}</b> <button class="gx">打開</button>` : `<div class="gt"><b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}：${G.t}</b><button class="gx" aria-label="收起">－</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}`; } }
+  /* 地上的光柱指路 */
+  if (!Guide.beacon){ const g = new THREE.Group(), m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 9, 18, 1, true), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })); m.position.y = 4.5; g.add(m);
+    const r = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.85, 32), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.8, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.y = 0.06; g.add(r); g.userData.dyn = true; scene.add(g); Guide.beacon = g; }
+  const show = !busy && !!tgt && !Guide.hide && Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) > 3; Guide.beacon.visible = show; if (show){ Guide.beacon.position.set(tgt.x, groundHeight(tgt.x, tgt.z), tgt.z); Guide.beacon.children[0].material.opacity = 0.22 + Math.sin(now() * 3) * 0.1; } }
+/* 第一次釣魚的手指教學（釣到 3 條以前都會出現） */
+function fingerTip(){ let c = Guide.fin; if (!c){ c = Guide.fin = document.createElement('div'); c.id = 'fingerTip'; document.body.appendChild(c); }
+  let t = ''; if (rec.total < 3 && !Dive.on && !House.on && !Photo.on){ const ph = F.phase, near = nearestSpot(), canCast = near && (near.d < 1.7 || shoreSpot());
+    if (ph === 'idle' && canCast && !mySeat) t = '👆 按住「拋竿」不要放，<br>力量條滿了再放開！';
+    else if (ph === 'charging') t = '✋ 放開就拋出去！';
+    else if (ph === 'waiting') t = '👀 看著浮標…<br>沉下去、出現「!」再按';
+    else if (ph === 'bite') t = '👆 現在按！';
+    else if (ph === 'reeling') t = '👆 按住收線，<br>線變紅（太緊）就放開'; }
+  if (c._t !== t){ c._t = t; c.innerHTML = t; c.className = F.phase === 'bite' ? 'hot' : ''; } c.hidden = !t; }
 /* v295 自己拿餌：退潮時在沙灘挖沙蠶、在珊瑚礁島撿小螃蟹（伺服器 gather_bait 算次數和潮汐） */
 function gatherKind(){ if (F.phase !== 'idle' || Dive.on || myBoat || mySeat || House.on || inIndoor() || onIsle) return null; if (typeof Sub !== 'undefined' && Sub.on) return null;
   if (REEF && Math.hypot(me.pos.x - REEF.x, me.pos.z - REEF.z) < REEF.r + 1 && walkable(me.pos.x, me.pos.z)) return 'crabbait';
@@ -10922,7 +10981,7 @@ function sbBuild(){ const dyn = sbDynRoots(), groups = new Map(); scene.updateMa
    🐟 魚群洄游：每 3 小時（0、3、6…點的 30 分開始，25 分鐘）某個釣點來一大群某種魚（×4）；洄游期間在那裡釣到 4 條送 200 金幣
    🎯 懸賞魚：每 2 小時換一種稀有魚＋最低重量；釣到夠重的送 300 金幣
    🌠 流星雨夜釣：每天 23:00～23:30，所有釣點傳說魚機率 ×1.6，天上一直有流星 */
-const EVT_MIG = ['harbor:saury', 'mangrove:mullet', 'harbor:horsemack', 'icesea:capelin', 'harbor:sardine', 'reef:girella', 'icelake:wakasagi', 'isle:bluetang', 'harbor:yellowtail', 'sea:flounder'];
+const EVT_MIG = ['harbor:saury', 'mangrove:mullet', 'harbor:horsemack', 'lake:crucian', 'harbor:sardine', 'reef:girella', 'river:zacco', 'pool:ayu', 'lake:bass', 'sea:flounder'];   /* v304 只輪主島上新手走得到的釣點（121） */
 const EVT_BOUNTY = ['snakehead', 'carp', 'salmon', 'cuttle', 'lionfish', 'manta', 'barramundi', 'blackgirella', 'dolly', 'batfish', 'kuhlia', 'mangsnapper'];
 const Evt = { st:null, at:0, chip:null, lastMig:null, lastB:null, lastMet:null, met:[] };
 function evtMig(ms){ const s = Math.floor(ms / 1000), p = Math.floor((s + 28800) / 10800), st = p * 10800 - 28800 + 1800, e = EVT_MIG[Number((BigInt(p) * 2654435761n % 4294967296n) % BigInt(EVT_MIG.length))].split(':'); return { id:p, spot:e[0], fish:e[1], active: s >= st && s < st + 1500, st, en: st + 1500 }; }
@@ -11682,7 +11741,11 @@ function renderTab(){
      ['拋竿', '走到水邊，按住右下按鈕蓄力、放開拋出；拋越遠越容易遇到稀有魚'], ['提竿', '浮標猛沉、出現「!」時馬上按'], ['拉線', '按住收線、放開卸力，讓下面的張力條停在黃色、不要到紅色'],
      ['聊天', isTouch ? '💬 按鈕' : 'Enter'], ['互動', '走到商店、NPC、椅子、門口旁邊，右下按鈕會變成對應的動作']].forEach(([a, b]) => k.append(el('kbd', '', a), el('span', '', b)));
     body.appendChild(k);
-    const sec = (title, lines, open) => { const d = el('details', 'help'); if (open) d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
+    /* v304 玩法說明分類：上面的按鈕可以只看一類 */
+    const HCAT = [['all', '全部'], ['fish', '🎣 釣魚'], ['event', '📅 活動'], ['home', '🏠 商店和家'], ['pet', '🐾 寵物'], ['social', '👥 社交'], ['other', '⚙️ 其他']];
+    const catOf = t => /^(🎣|🦐|🍚|💙|🤿|⚓|🚢|🦈)/.test(t) ? 'fish' : /^(🏮|🐋|📜|🏆|🌲)/.test(t) ? 'event' : /^(🪙|🍳|🏝️|🐠|🏛️|🗺️)/.test(t) ? 'home' : /^🐾/.test(t) ? 'pet' : /^(👥|⭐)/.test(t) ? 'social' : 'other';
+    const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
+    const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
@@ -11707,6 +11770,10 @@ function renderTab(){
       '傳說魚很少見：港口外海大約 3%，其他地方不到 1%。好的釣竿、魚餌、窩料和料理加成都能提高機率。',
       '在港口和鏡湖可以「上船」，划到水上任何地方釣魚。',
       '釣法（釣具店「釣法」分頁，免費隨時換）：浮標釣什麼都能釣；路亞不用魚餌、拋得遠，等魚時點按鈕「抽竿」讓假餌動，掠食魚特別多；沉底釣等比較久，但底棲魚（鯰魚、鰻魚、螃蟹、龍蝦、石斑…）特別多。釣線：細線咬口快但容易斷、粗線不容易斷但咬口少。',
+      '📤 分享卡片：釣到稀有魚、傳說魚、變種、新紀錄，或圖鑑新登錄時，結果卡片上會有「📤 分享」；在海上遇到鯨魚、海豚，畫面上會跳出「分享這一刻」。按了會做一張直式的圖（有遊戲名字和網址），可以直接傳到 IG、LINE，或存在手機裡。',
+      '🧭 新手任務：剛開始玩時，左上角有一張小卡片帶你一步一步玩 —— 釣第一條魚、到海邊商店賣魚、到釣具店買新釣竿、去自己的小島、潛一次水。要去的地方地上會有黃色光柱，卡片上的箭頭指方向。按「－」可以收起來。全部完成送 🪙300。釣到 3 條魚以前，右下角還會有手指提示教你怎麼拋竿、提竿、收線。',
+      '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
+      '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。'
     ], true);
     sec('🦐 室內釣蝦場', [
       '在村子廣場東邊的街上，招牌寫「🦐 釣蝦場」，走到門口按按鈕就能進去。也可以從「地圖」傳送到門口。',
@@ -11719,13 +11786,14 @@ function renderTab(){
       '拉蝦的時候要慢慢拉，一直按住太用力，蝦子會鬆鉗掉回池子裡。釣蝦場不會跟大魚搏鬥。',
       '釣蝦場的蝦是老闆放的，沒有尺寸限制，而且比外面的釣點更快上鉤。有泰國蝦、白蝦、草蝦、小龍蝦、藍鉗泰國蝦，還有傳說中的金鉤蝦王。三隻泰國蝦可以拿到池邊的烤爐免費烤，也可以在食堂做「鹽烤泰國蝦」。',
     ]);
-    sec('🍚 打窩、祕密窩點、渡船', [
+    sec('🍚 打窩、窩點、渡船、小船', [
       '先到釣具店的「魚餌」分頁買窩料：酒米窩料（淡水好用）、南極蝦窩料（海水好用）、黃金特製窩（哪裡都有效，傳說魚也會被吸引）。',
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到，維持 2～3 分鐘；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
       '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫），別人的窩點也能去釣，效果是打窩那個人的 75%。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、東邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
       '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。',
+      '⛵ 坐自己的小船（港口的船，按「上船」）可以一路划到別的島：冰封群島、深海浮台、神秘島、苔森之島。離開本島以後船會划得比較快，畫面上面會有箭頭指出最近的島在哪、還有幾公尺；靠到島邊按「下船」就上岸了。想快一點還是可以找阿海直接載你去。'
     ]);
     sec('💙 尺寸限制、放流、愛海點數', [
       '每種魚都有「建議尺寸」：比最輕的再重四分之一以上才算夠大。太小的魚釣到時會標「📏 未達尺寸」，帶走只能賣半價。',
@@ -11742,6 +11810,9 @@ function renderTab(){
       '升級（潛水艇碼頭）：耐壓 800→1500→3000 公尺、電池 5→8→12 分鐘、探照燈 25→40→60 公尺；要金幣加上深海燈籠魚、水滴魚、吸血鬼烏賊，或在裂縫裡撿的深海礦石、古代船錨。',
       '👥 一起潛：同一個大廳或私人房間的人，在裂縫裡看得到彼此的潛水艇（名字和距離，遠遠就看得到燈光）。按「💬 說話」可以喊「跟我來！」「這裡有東西！」。兩台潛水艇靠在一起，燈光加起來看得比較遠。魚和金幣還是每個人各自算。',
       '所有魚、金幣、材料都由伺服器決定；回報的深度比耐壓深度＋警告區還深的話，整趟作廢。',
+      '💬 開潛水艇也能聊天：按「💬 說話」可以選常用的話，也可以自己打字（最多 40 個字）。一邊用搖桿開船一邊打字也可以；同一個大廳的人都收得到，一起潛的人頭上會冒泡泡。',
+      '🔭 深海目擊：開潛水艇有時候會遇到特別的事——淺海被幾百條小魚圍成一顆球；午夜層按「🔦 關燈」看發光的生物（關燈時電池只用一半）；在黑暗裡停太久，聲納上可能會出現一個紅點……；遠處一盞溫暖的小燈；抹香鯨從頭頂游過。每 90 秒最多一件，每一種第一次看到記在圖鑑的「深海目擊」、送 💙30 愛海點數。只會嚇人，不會扣電、扣魚或弄壞潛水艇；怕的話可以在設定關掉「深海驚嚇效果」。',
+      '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。'
     ]);
     sec('🤿 潛水（進階玩法）', [
       '海底很大，到處游看看：海底邊緣有發光的石拱門「往○○」，游進去就直接到隔壁的海域，不用浮上去（要有那個海域需要的裝備）。海底有冒泡泡的「氣泡口」，游進泡泡柱裡會慢慢補氧氣。',
@@ -11787,40 +11858,18 @@ function renderTab(){
       '潛水的時候會自動換上整套潛水裝備：深藍色潛水衣、面鏡和呼吸管、背上的氧氣瓶、腳上的蛙鞋，上岸就換回原本的衣服。',
       '衣服有很多款：V 領、POLO 衫、背心、寬版、口袋 T、吸濕排汗、粗細條紋、長版 T、小魚童趣 T，還有長袖的大學 T、連帽 T、連帽外套、尼龍外套。衣服的顏色在「外觀」裡換，每一款都跟著變。',
       '所有價格都由伺服器檢查，金幣不會亂跳。連上雲端時，上鉤的是什麼魚、多重，也是伺服器用一樣的機率抽的，沒辦法作弊刷排行榜。',
+      '🎨 我的設計：「造型」最左邊的「我的設計」放著你自己畫的、在設計師市集買的衣服，可以穿上、脫掉，按 🗑️ 刪掉（自己畫、還沒人買過的會整件刪掉；有人買過的只會下架，買的人還能穿）。',
+      '💇 阿萍新設計的 9 款髮型（八字瀏海、法式瀏海、鎖骨髮、低馬尾、空氣瀏海、內扣髮、蛋捲頭、低丸子頭、高顱頂半扎）排在原本的後面，一樣每兩天上架一款。',
+      '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。'
     ]);
     sec('🐾 寵物', [
       '在商店街入口西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹，每一種都有好幾種花色（隨機，⭐ 很少見）。小海龜、小章魚、河豚只能在海邊、港口、珊瑚礁、紅樹林釣魚時偶爾順便撈到；溪邊、湖邊偶爾撈到小水獺。寵物可以放到「🏷️ 寵物市集」賣（賣家拿九成，買的人要重新培養親密度）。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
+      '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。'
     ]);
     sec('⚓ 港口海底潛水', [
-      '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
-      '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
-      '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。',
-      '🧒 兒童安全模式（給家長看）：第一次進遊戲會問出生年份（只問年，不問真名、生日）。未滿 13 歲會自動開啟，之後不能自己關掉：聊天只能用固定的快速句子，看不到別人自己打的字；可以看留言板但不能留言；名字從「形容詞＋動物」裡選；好友只能用當面給的好友代碼加，陌生人不能直接加；設計師市集只看得到很多人買過、沒被檢舉的作品；深海驚嚇效果預設關閉；不會要求 email。',
-      '🔒 帳號與隱私：設定最下面有「隱私權政策」和「刪除我的帳號」（輸入「刪除」兩個字確認，會刪掉所有遊戲資料，不能復原）。聊天不會存在伺服器，只有被檢舉的內容會保存 30 天給管理員處理。有問題或想刪除資料，也可以寫信到 chaoxi.fishing@gmail.com。',
-      '⭐ 魚種精通：圖鑑每種魚有 3 顆星。★ 第一次釣到；★★ 釣到 10 條，或釣過重量前 20% 的大尺寸（之後牠咬餌時頭上會出現牠的名字）；★★★ 完美搏鬥一次（魚的每個動作都對上、線沒有快斷）＋釣過重量前 5% 的紀錄級（圖鑑金框，之後比較常釣到大尺寸的）。圖鑑最上面看總星數，50、150、300、450 顆有稱號，排行榜有「圖鑑星數」。',
-      '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。',
-      '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。',
-      '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
-      '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。',
-      '🎨 我的設計：「造型」最左邊的「我的設計」放著你自己畫的、在設計師市集買的衣服，可以穿上、脫掉，按 🗑️ 刪掉（自己畫、還沒人買過的會整件刪掉；有人買過的只會下架，買的人還能穿）。',
-      '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。',
-      '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。',
-      '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。',
-      '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
-      '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。',
-      '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
-      '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 4 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。',
-      '💇 阿萍新設計的 9 款髮型（八字瀏海、法式瀏海、鎖骨髮、低馬尾、空氣瀏海、內扣髮、蛋捲頭、低丸子頭、高顱頂半扎）排在原本的後面，一樣每兩天上架一款。',
-      '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。',
-      '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
-      '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨，沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。',
-      '💬 開潛水艇也能聊天：按「💬 說話」可以選常用的話，也可以自己打字（最多 40 個字）。一邊用搖桿開船一邊打字也可以；同一個大廳的人都收得到，一起潛的人頭上會冒泡泡。',
-      '🔭 深海目擊：開潛水艇有時候會遇到特別的事——淺海被幾百條小魚圍成一顆球；午夜層按「🔦 關燈」看發光的生物（關燈時電池只用一半）；在黑暗裡停太久，聲納上可能會出現一個紅點……；遠處一盞溫暖的小燈；抹香鯨從頭頂游過。每 90 秒最多一件，每一種第一次看到記在圖鑑的「深海目擊」、送 💙30 愛海點數。只會嚇人，不會扣電、扣魚或弄壞潛水艇；怕的話可以在設定關掉「深海驚嚇效果」。',
-      '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。',
-      '⛵ 坐自己的小船（港口的船，按「上船」）可以一路划到別的島：冰封群島、深海浮台、神秘島、苔森之島。離開本島以後船會划得比較快，畫面上面會有箭頭指出最近的島在哪、還有幾公尺；靠到島邊按「下船」就上岸了。想快一點還是可以找阿海直接載你去。',
       '有潛水裝備組的話，走到港口外海碼頭旁邊的「🤿 潛水點」梯子，按「潛水」就能直接下去港口海底，不用坐船。',
       '港口海底有防波堤的消波塊、通到水面的碼頭木樁、整片海藻森林、沉在海底的舊漁船、掉下去的貨櫃、大錨和鐵鍊。港口的魚、章魚、龍蝦、水母都在這裡，也可以撿貝殼、開寶箱。',
     ]);
@@ -11836,11 +11885,15 @@ function renderTab(){
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、七夕（晚上天上有鵲橋、每天一份禮物、限定花冠和鵲橋）、萬聖節（10/29～10/31，南瓜燈和蝙蝠、每天拿糖果、限定南瓜帽和巫師帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
       '點頭像的「🏮 節慶」看現在有什麼活動、下一個節日是什麼時候。要先釣過 10 條魚才能領紅包、禮物和玩小遊戲（防止有人開一堆分身帳號來領）。限定商品過了節日就買不到，已經買到的永遠保留。節日開始的時候會推播（可以在推播開關裡關掉）。',
+      '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。'
     ]);
-    sec('🐋 全服合作大魚', [
+    sec('🐋 大魚、鯨魚、海上目擊', [
       '每天晚上 8:30（週六日下午 2:00 也有一次），港口外海會出現一條超大的魚：海龍王、大白鯊或皇帶魚王（輪流）。出現前 10 分鐘會跑馬燈和推播。',
       '到港口外海按「一起拉！」加入，按住「拉！」讓張力保持在綠色區才會扣大魚的體力。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
+      '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
+      '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
+      '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨，沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。'
     ]);
     sec('🌲 苔森之島', [
       '找港口的船夫阿海，「海上的好地方」選「苔森之島」，或去過以後從地圖直接傳送。很大的森林島：長滿青苔的杉樹和大石頭、一棵千年大杉、北邊山上的瀑布、中間的湖、流進海裡的溪，南邊是沙灘和碼頭。',
@@ -11848,6 +11901,7 @@ function renderTab(){
     ]);
     sec('🗺️ 村子怎麼逛', [
       '照功能分區：🎣 港口一排（水族館後面）是釣具店、海邊商店（賣魚）、阿福海產店、釣客魚市；🍜 廣場旁是潮汐食堂、水族館、釣蝦場；👗 商店街（往北走過牌樓）是阿綾服裝店、阿木木工坊、阿彩畫廊、寵物店、海洋博物館。',
+      '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
     ]);
     sec('🏛️ 海洋博物館', [
       '博物館在商店街最裡面東邊（白色石柱的建築，旁邊就是海），走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
@@ -11861,9 +11915,10 @@ function renderTab(){
       '料理可以賣掉，也可以「吃掉」：接下來幾次拋竿會有加成（例如稀有魚變多、線比較不容易斷）。',
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
     ]);
-    sec('📜 每日任務', [
+    sec('📜 每日任務、釣魚活動', [
       '村長阿土伯（廣場）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',
       '走到他們旁邊、或在選單的「任務」分頁交付魚或料理，就能拿到金幣。每天台灣時間半夜 12 點換新任務。',
+      '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 4 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。'
     ]);
     sec('🏆 每週比賽與排行榜', [
       '每週一半夜 12 點（台灣時間）換一種比賽魚，比誰釣到最重的那一條。排行榜第一個分頁就是本週比賽。',
@@ -11878,6 +11933,7 @@ function renderTab(){
       '大宅不用自己畫牆：買家具直接擺就好，每一層樓都可以免費換地板和壁紙。樓梯在房間後面的兩個角落（右後往上、左後往下），走到樓梯前按「上樓／下樓」。以前買的小木屋、海邊小屋、茶屋、別墅還是可以照樣住。',
       '🪑 釣魚小角落：河邊、湖邊、海邊到處有長椅（旁邊有路燈或小營火），坐下來就能直接拋竿，按「跳」站起來。找個安靜的角落跟朋友邊釣邊聊吧。',
       '海上看得到其他人的島。在小島分頁「逛別人的島」可以去參觀，幫喜歡的島按 ❤️（每天每座島一次）。',
+      '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。'
     ]);
     sec('👥 跟大家一起玩', [
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
@@ -11887,18 +11943,27 @@ function renderTab(){
       '遇到不友善的人可以在「玩家」分頁封鎖或檢舉。聊天會自動過濾不雅字。',
       '「玩家」分頁有「誰來逛過你的小島、水族館」：就算你不在線上也會記在雲端（保留 14 天），可以按「回訪小島」去他的島。別人的名字被房子、樹擋住或離太遠時會變淡。',
       '「玩家」分頁最下面有「最近來過村子的人」：誰進過你在的大廳、什麼時候離開、來過幾次（記在這台裝置，保留 7 天），也可以直接加好友或參觀他的小島。',
+      '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
+      '😀 表情商店：表情選單裡有 🪙 價錢的是新動作（比讚、指前面、撿東西、丟東西、聳肩、打哈欠、伸懶腰、轉圈圈、開心跳），點一下再點一次就用金幣學會，學會之後永遠可以用，大家都看得到。',
+      '📌 廣場留言板：廣場西邊有一塊木頭留言板，走過去按按鈕就能看大家的留言、自己也留一則（一則最多 60 個字，要釣過 5 條魚才能留，一天最多 5 則）。板子上會貼著最新的幾張便條。看到不好的留言可以按「檢舉」，自己留的可以自己刪。'
     ]);
     sec('⭐ 等級、稱號、成就', [
       '經驗值從你的紀錄算出來：釣到常見魚 +10、稀有魚 +40、傳說魚 +250，放流 +5，水下照片每種 +30。左上角的 ⭐ Lv 點一下就能看進度。',
       '每升一級都有金幣獎勵（Lv × 50），由伺服器自動發。',
       `成就有 ${ACH.length} 個（釣魚數量、圖鑑、傳說魚、巨物、賺錢、放流、潛水、小島、服飾、好友、每個釣點全收集）。有些成就和等級會給稱號，在「成就」分頁選一個，名字上面就會顯示，大家都看得到。`,
+      '⭐ 魚種精通：圖鑑每種魚有 3 顆星。★ 第一次釣到；★★ 釣到 10 條，或釣過重量前 20% 的大尺寸（之後牠咬餌時頭上會出現牠的名字）；★★★ 完美搏鬥一次（魚的每個動作都對上、線沒有快斷）＋釣過重量前 5% 的紀錄級（圖鑑金框，之後比較常釣到大尺寸的）。圖鑑最上面看總星數，50、150、300、450 顆有稱號，排行榜有「圖鑑星數」。',
+      '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
-    sec('☁️ 存檔、時間、其他', [
+    sec('⚙️ 設定、帳號、存檔、其他', [
       '紀錄自動存在雲端。到「造型」分頁綁定 Email，換手機或換瀏覽器時就能接回同一份紀錄。',
       '遊戲裡的一天是現實 36 分鐘，大家看到的時間都一樣；晚上路燈、窗戶和燈塔會亮。',
       '背景音樂會跟著地方和狀況換：白天的海島、夜晚的海邊、釣蝦場、海底、拉魚時變緊張、跟大魚搏鬥時更激烈。右上角 ♫ 可以關掉音樂，喇叭可以關掉音效。',
       '右上角相機按鈕是拍照模式；畫質可以在「造型」分頁調整，舊手機選「低」會比較順。',
       '遊戲更新時畫面上方會出現「有新版本」，按「更新」就好，不會在你拉魚時突然重開。',
+      '🧒 兒童安全模式（給家長看）：第一次進遊戲會問出生年份（只問年，不問真名、生日）。未滿 13 歲會自動開啟，之後不能自己關掉：聊天只能用固定的快速句子，看不到別人自己打的字；可以看留言板但不能留言；名字從「形容詞＋動物」裡選；好友只能用當面給的好友代碼加，陌生人不能直接加；設計師市集只看得到很多人買過、沒被檢舉的作品；深海驚嚇效果預設關閉；不會要求 email。',
+      '🔒 帳號與隱私：設定最下面有「隱私權政策」和「刪除我的帳號」（輸入「刪除」兩個字確認，會刪掉所有遊戲資料，不能復原）。聊天不會存在伺服器，只有被檢舉的內容會保存 30 天給管理員處理。有問題或想刪除資料，也可以寫信到 chaoxi.fishing@gmail.com。',
+      '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
+      '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。'
     ]);
     body.appendChild(el('p', 'sub', '© 2026 潮汐釣魚村作者，保留所有權利；未經同意禁止複製、修改或轉載。部分魚的 3D 模型：Animated Fish Pack by Quaternius（CC0 授權，quaternius.com）。'));
   }
