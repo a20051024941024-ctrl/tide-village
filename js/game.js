@@ -5108,7 +5108,7 @@ setInterval(() => { try { if (onIsle && document.visibilityState === 'visible' &
 function afterHomeOp(L){
   if (!onIsle) return; onIsle.layout = L; const keepHouse = House.on && House.it ? House.it.id : null;
   buildIsle(L, onIsle.name);
-  if (keepHouse){ const it = L.items.find(i => i.id === keepHouse); if (it) rebuildHouseRoom(it); else exitHouse(); }
+  if (keepHouse){ const it = L.items.find(i => i.id === keepHouse); if (!it) exitHouse(); else if (JSON.stringify(it) !== JSON.stringify(House.it)) rebuildHouseRoom(it); else House.it = it; }   /* v301 每 20 秒重新整理小島時，房子沒變就不要重畫房間 */
   renderBuildBar(); renderFurnBar(); renderIsleBar();
 }
 // 沒連雲端時（只有自己的島）在本機照一樣的規則改
@@ -5151,7 +5151,7 @@ function enterHouse(door){
 }
 function clearHouseRoom(){
   if (House.group) scene.remove(House.group); for (const c of House.cols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } House.cols = [];
-  const di = decks.indexOf(House.deck); if (di >= 0) decks.splice(di, 1); CHAIRS_ROOM.length = 0; if (mySeat && mySeat.room){ mySeat = null; me.sitting = false; }
+  const di = decks.indexOf(House.deck); if (di >= 0) decks.splice(di, 1); CHAIRS_ROOM.length = 0; if (mySeat && mySeat.room){ House.keepSeat = mySeat; mySeat = null; me.sitting = false; }   /* v301 房間重畫完會把人放回床上／椅子上（之前會卡在床邊） */
   House.group = null; House.fish = []; House.fires = []; House.lamps = []; House.furnG = new Map();
 }
 // 大宅的地板（每一格照房間的地板）、壁紙（每一面牆照旁邊那一格的房間）、窗戶
@@ -5254,6 +5254,11 @@ function rebuildHouseRoom(it){
   lay.rooms.forEach(r => { delete r._sign; });
   House.cols = colliders.slice(n0);
   g.traverse(o => { if (o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
+  if (House.keepSeat){ const c = House.keepSeat; House.keepSeat = null; let ok = false;
+    if (c.furnLie){ for (const m of House.furnG.values()) if (Math.hypot(m.position.x - c.x, m.position.z - c.z) < 0.05){ ok = true; break; } }
+    else ok = CHAIRS_ROOM.some(q => Math.hypot(q.x - c.x, q.z - c.z) < 0.05);
+    if (ok){ mySeat = c; me.sitting = !c.furnLie || c.furnLie === 'bath'; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; Jump.gy = c.y; }
+    else { if (c.furnLie || c.bed){ me.emote = null; myEmote = null; } me.baseY = ROOM_Y; Jump.gy = ROOM_Y; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; pushPresence(true); } }
 }
 const CHAIRS_ROOM = [];
 const _roomTx = new Map();
