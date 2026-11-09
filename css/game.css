@@ -1180,3 +1180,10 @@ body.photo #guideCard,body.photo #fingerTip{display:none}
 /* v304 分享 */
 #shareChip{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 96px);z-index:8;border:0;border-radius:999px;padding:9px 18px;font:inherit;font-size:15px;font-weight:800;background:#ffd36a;color:#5a3a00;box-shadow:0 3px 10px rgba(0,0,0,.25)}
 #shareChip[hidden]{display:none}body.photo #shareChip{display:none}
+/* v310 地圖：橫放時左右兩欄 */
+.mapsplit{display:block}
+@media (orientation:landscape) and (max-height:540px){
+  .mapsplit{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start}
+  .mapleft{position:sticky;top:0}.mapleft .mapwrap{width:calc(100dvh - 185px);max-width:46vw;min-width:200px}
+  .mapleft .mapbar{max-width:calc(100dvh - 185px);gap:4px}.mapleft .mapchip{padding:4px 8px;font-size:12px}.mapleft .maptip{font-size:11px;max-width:calc(100dvh - 185px)}
+}

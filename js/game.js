@@ -3735,6 +3735,9 @@ function renderMap(body){
     const L = (World.log || []).slice(0, 8); if (L.length){ const ul2 = el('ul', 'wlist old'); for (const l of L){ const pl = (World.places && World.places[l.place]) || {}, d = new Date(l.at), hh = d.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Taipei' });
       ul2.appendChild(el('li', '', `${hh}　${WORLD_WHO[l.npc] || l.npc}${l.why ? '（' + l.why + '）' : ''}→ 去${pl.name || ''}${(WORLD_ACT[l.act] || ['', ''])[1]}`)); } body.appendChild(ul2); } }
   else if (Cloud.on && !World.rows) loadWorld();
+  /* v310 手機橫放：地圖放左邊（照螢幕高度），清單放右邊，不用往下滑 */
+  { const kids = [...body.children], wrap = kids.find(k => k.classList && k.classList.contains('mapwrap')); if (wrap){ const L = el('div', 'mapleft'), R2 = el('div', 'mapright'), keepL = new Set([wrap, wrap.previousElementSibling, wrap.nextElementSibling]);
+      for (const k of kids){ if (keepL.has(k)) L.appendChild(k); else R2.appendChild(k); } const sp = el('div', 'mapsplit'); sp.append(L, R2); body.appendChild(sp); } }
 }
 
 // 岸邊釣魚：不在發光圈裡也可以，只要面前（或旁邊）幾公尺內有水
@@ -4916,6 +4919,27 @@ const FURN = {
   fridge:{ name:'冰箱', price:800, rad:0.5, g:'kit' }, stove:{ name:'爐台', price:700, rad:0.5, g:'kit' }, sink:{ name:'流理台', price:500, rad:0.6, g:'kit' }, bath:{ name:'浴缸', price:1200, rad:1.0, g:'kit' }, toilet:{ name:'馬桶', price:400, rad:0.4, g:'kit' },
   paint:{ name:'畫', price:0, rad:0.45, g:'_base' },
   plant:{ name:'盆栽', price:150, rad:0.4, g:'plant' }, bigplant:{ name:'大盆栽', price:300, rad:0.5, g:'plant' },
+  /* v310 屋子裡的家具再多 20 種（伺服器 124） */
+  vanity:{ name:'梳妝台', price:600, rad:0.6, g:'bed' },
+  nightstand:{ name:'床頭櫃', price:200, rad:0.35, g:'bed' },
+  mirror:{ name:'落地鏡', price:350, rad:0.35, g:'bed' },
+  beanbag:{ name:'懶骨頭', price:250, rad:0.5, g:'live' },
+  cushion:{ name:'和室坐墊', price:80, rad:0.35, g:'live' },
+  coffee:{ name:'茶几', price:350, rad:0.6, g:'live' },
+  trophy:{ name:'魚標本牆', price:500, rad:0.45, g:'live' },
+  rodrack:{ name:'釣竿架', price:400, rad:0.5, g:'live' },
+  globe:{ name:'地球儀', price:300, rad:0.3, g:'live' },
+  radio:{ name:'收音機', price:250, rad:0.3, g:'live' },
+  fan:{ name:'電風扇', price:200, rad:0.3, g:'live' },
+  shoerack:{ name:'鞋櫃', price:300, rad:0.5, g:'live' },
+  bar:{ name:'吧台', price:900, rad:0.9, g:'kit' },
+  washer:{ name:'洗衣機', price:700, rad:0.45, g:'kit' },
+  micro:{ name:'微波爐', price:250, rad:0.35, g:'kit' },
+  teaset:{ name:'茶具組', price:300, rad:0.4, g:'kit' },
+  cactus:{ name:'仙人掌', price:100, rad:0.3, g:'plant' },
+  bonsai:{ name:'盆景', price:400, rad:0.35, g:'plant' },
+  vase:{ name:'花瓶', price:150, rad:0.3, g:'plant' },
+  monstera:{ name:'龜背芋', price:350, rad:0.5, g:'plant' },
 };
 // 博物館魚拓（078）：集滿一區才拿得到，擺在家裡不用錢
 function MZ_REGIONS(){ return SPOTS.filter(s => s.id !== 'isle' && Array.isArray(s.fish) && s.fish.some(id => FISH_BY_ID[id] && !FISH_BY_ID[id].of)); }
@@ -5117,6 +5141,27 @@ function furnMesh(t){
     case 'sink': B([1.1, 0.9, 0.65], '#7fb0a0', [0, 0.45, 0]); B([1.12, 0.05, 0.67], '#e6e9ec', [0, 0.92, 0]); B([0.5, 0.04, 0.35], '#9aa4ab', [0, 0.95, 0.02]); B([0.04, 0.25, 0.04], '#b8c0c6', [0, 1.05, -0.22]); break;
     case 'bath': B([1.0, 0.6, 1.8], '#f8f8f4', [0, 0.3, 0], 0.3); B([0.8, 0.04, 1.6], '#9fd8f0', [0, 0.55, 0]); B([0.05, 0.3, 0.05], '#b8c0c6', [0, 0.75, -0.85]); break;
     case 'toilet': B([0.45, 0.4, 0.55], '#f8f8f4', [0, 0.2, 0.05], 0.3); B([0.48, 0.05, 0.5], '#ffffff', [0, 0.43, 0.08]); B([0.45, 0.5, 0.2], '#f8f8f4', [0, 0.6, -0.22], 0.3); break;
+    /* v310 新家具 */
+    case 'vanity': B([0.9, 0.08, 0.45], lw, [0, 0.75, 0]); for (const sx of [-0.4, 0.4]) B([0.06, 0.72, 0.4], lw, [sx, 0.37, 0]); B([0.3, 0.2, 0.4], wood, [0.25, 0.6, 0]); { const m = new THREE.Mesh(new THREE.CircleGeometry(0.3, 20), mat('#cfe8f5', 0.1, { metalness:0.6 })); m.position.set(0, 1.25, -0.2); g.add(m); } B([0.66, 0.66, 0.04], lw, [0, 1.25, -0.22]); break;
+    case 'nightstand': B([0.45, 0.5, 0.4], wood, [0, 0.25, 0]); B([0.38, 0.12, 0.02], lw, [0, 0.36, 0.21]); C(0.06, 0.1, 0.1, '#ffffff', [0.08, 0.55, 0]); { const l = C(0.12, 0.16, 0.18, '#fff3c4', [0.08, 0.7, 0]); l.material.emissive.set('#ffd36a'); l.material.emissiveIntensity = 0.6; } break;
+    case 'mirror': B([0.55, 1.6, 0.06], wood, [0, 0.85, 0]); { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 1.45), mat('#d5ecf7', 0.05, { metalness:0.7 })); m.position.set(0, 0.87, 0.035); g.add(m); } B([0.4, 0.05, 0.3], wood, [0, 0.03, 0]); break;
+    case 'beanbag': { const b = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 10), mat('#f08a4b', 0.95)); b.scale.set(1, 0.65, 1); b.position.y = 0.27; g.add(b); const t2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), mat('#f08a4b', 0.95)); t2.scale.set(1, 0.8, 0.6); t2.position.set(0, 0.48, -0.2); g.add(t2); break; }
+    case 'cushion': B([0.6, 0.1, 0.6], '#d8b4e2', [0, 0.05, 0]); C(0.05, 0.05, 0.02, '#8a5aa8', [0, 0.11, 0], 8); break;
+    case 'coffee': B([1.0, 0.07, 0.55], lw, [0, 0.38, 0]); for (const [x, z] of [[-0.42, -0.2], [0.42, -0.2], [-0.42, 0.2], [0.42, 0.2]]) B([0.06, 0.36, 0.06], wood, [x, 0.18, z]); B([0.9, 0.04, 0.45], wood, [0, 0.12, 0]); C(0.06, 0.05, 0.1, '#ffffff', [0.2, 0.46, 0.05], 10); break;
+    case 'trophy': B([1.0, 0.65, 0.05], wood, [0, 1.3, 0]); B([0.9, 0.55, 0.02], '#2f6f9a', [0, 1.3, 0.03]); { const f = fishModel(FISH_BY_ID.bass || FISH[0], 0.6); f.position.set(0, 1.3, 0.12); f.rotation.y = Math.PI / 2; g.add(f); } B([0.3, 0.06, 0.03], '#e8b730', [0, 1.06, 0.05]); break;
+    case 'rodrack': B([0.9, 0.08, 0.3], wood, [0, 0.05, 0]); B([0.9, 0.08, 0.1], wood, [0, 1.3, -0.1]); for (let i = 0; i < 4; i++){ const r = C(0.012, 0.022, 1.6, ['#2a2a2a', '#c8553d', '#2f89c7', '#e8b730'][i], [-0.3 + i * 0.2, 0.85, 0], 6); r.rotation.x = -0.08; } break;
+    case 'globe': C(0.12, 0.16, 0.06, wood, [0, 0.03, 0]); C(0.02, 0.02, 0.5, wood, [0, 0.3, 0], 6); { const gl = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), mat('#4f9ad8', 0.6)); gl.position.y = 0.72; g.add(gl); for (const [x, y, z] of [[0.15, 0.78, 0.12], [-0.1, 0.65, 0.17], [0.05, 0.86, -0.18]]){ const l = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), mat('#6fae52')); l.position.set(x, y, z); l.scale.set(1, 0.6, 0.4); g.add(l); } } break;
+    case 'radio': B([0.45, 0.28, 0.16], '#c8553d', [0, 0.14, 0], 0.5); { const sp = C(0.08, 0.08, 0.02, '#3a3a3a', [-0.1, 0.15, 0.08], 14); sp.rotation.x = Math.PI / 2; } B([0.12, 0.04, 0.02], '#f6efe2', [0.12, 0.2, 0.08]); C(0.006, 0.006, 0.35, '#9aa4ad', [0.17, 0.42, 0], 4); break;
+    case 'fan': C(0.15, 0.18, 0.04, '#f6efe2', [0, 0.02, 0]); C(0.02, 0.02, 0.9, '#f6efe2', [0, 0.47, 0], 6); { const cg = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.012, 6, 20), mat('#8fb6ff')); cg.position.set(0, 0.95, 0.04); g.add(cg); for (let i = 0; i < 3; i++){ const bl = box([0.07, 0.18, 0.01], '#8fb6ff', [0, 0.95, 0.05]); bl.geometry.translate(0, 0.09, 0); bl.position.y = 0.95; bl.rotation.z = i * Math.PI * 2 / 3; g.add(bl); } } break;
+    case 'shoerack': B([0.9, 0.5, 0.35], lw, [0, 0.25, 0]); for (let i = 0; i < 3; i++){ B([0.16, 0.08, 0.26], ['#3a3a3a', '#c8553d', '#2f89c7'][i], [-0.25 + i * 0.25, 0.54, 0]); } break;
+    case 'bar': B([1.6, 1.0, 0.5], wood, [0, 0.5, 0]); B([1.7, 0.06, 0.6], '#3a3a3a', [0, 1.03, 0], 0.4); for (const x of [-0.5, 0.1, 0.6]){ C(0.17, 0.17, 0.05, '#c8553d', [x, 0.75, 0.5]); C(0.025, 0.025, 0.75, '#9aa4ad', [x, 0.37, 0.5], 6); } break;
+    case 'washer': B([0.6, 0.85, 0.6], '#f6f6f2', [0, 0.43, 0], 0.4); { const d = C(0.2, 0.2, 0.03, '#9fd1ea', [0, 0.45, 0.3], 20); d.rotation.x = Math.PI / 2; d.material.metalness = 0.4; } B([0.5, 0.08, 0.02], '#cfd6dc', [0, 0.78, 0.31]); break;
+    case 'micro': B([0.6, 0.65, 0.45], lw, [0, 0.33, 0]); B([0.48, 0.28, 0.36], '#e9eef0', [0, 0.82, 0], 0.4); B([0.3, 0.2, 0.02], '#2a3a44', [-0.05, 0.82, 0.18], 0.2); B([0.06, 0.18, 0.02], '#9aa4ad', [0.17, 0.82, 0.18]); break;
+    case 'teaset': B([0.7, 0.06, 0.45], wood, [0, 0.36, 0]); for (const [x, z] of [[-0.3, -0.18], [0.3, -0.18], [-0.3, 0.18], [0.3, 0.18]]) B([0.05, 0.34, 0.05], wood, [x, 0.17, z]); C(0.09, 0.1, 0.12, '#e9e2cf', [0, 0.45, 0], 12); for (const [x, z] of [[-0.18, 0.1], [0.18, 0.1], [0.15, -0.12]]) C(0.04, 0.03, 0.05, '#e9e2cf', [x, 0.42, z], 10); break;
+    case 'cactus': C(0.15, 0.12, 0.2, '#c7643e', [0, 0.1, 0]); { const c1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.35, 4, 8), mat('#5d9c55', 0.8)); c1.position.y = 0.42; g.add(c1); const c2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.14, 4, 8), mat('#5d9c55', 0.8)); c2.position.set(0.11, 0.48, 0); c2.rotation.z = -0.6; g.add(c2); const fl = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), mat('#f5a5d8')); fl.position.y = 0.68; g.add(fl); } break;
+    case 'bonsai': B([0.45, 0.12, 0.3], '#3a5f8a', [0, 0.06, 0]); { const tr = C(0.03, 0.05, 0.3, '#6e4a2f', [0, 0.27, 0], 6); tr.rotation.z = 0.35; for (const [x, y, z, r] of [[-0.08, 0.42, 0, 0.13], [0.1, 0.36, 0.04, 0.1], [-0.18, 0.34, -0.03, 0.08]]){ const l = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), mat('#4f8f48', 0.85, { flatShading:true })); l.position.set(x, y, z); l.scale.y = 0.6; g.add(l); } } break;
+    case 'vase': C(0.08, 0.11, 0.35, '#2f89c7', [0, 0.18, 0], 12); for (let i = 0; i < 5; i++){ const st = C(0.006, 0.006, 0.35, '#5d9c55', [Math.cos(i) * 0.03, 0.5, Math.sin(i) * 0.03], 4); st.rotation.z = (i - 2) * 0.15; const fl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), mat(['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#b9a4ff'][i])); fl.position.set(Math.cos(i) * 0.03 - (i - 2) * 0.05, 0.68, Math.sin(i) * 0.03); g.add(fl); } break;
+    case 'monstera': C(0.2, 0.16, 0.3, '#e9e2cf', [0, 0.15, 0], 12); for (let i = 0; i < 7; i++){ const a = i / 7 * Math.PI * 2, lf = new THREE.Mesh(new THREE.CircleGeometry(0.2, 10), mat('#3f8f48', 0.7, { side:THREE.DoubleSide })); lf.position.set(Math.cos(a) * 0.2, 0.55 + (i % 3) * 0.15, Math.sin(a) * 0.2); lf.rotation.set(-0.9, a, 0); lf.scale.set(1, 1.3, 1); g.add(lf); } break;
     case 'plant': case 'bigplant': { const k = t === 'bigplant' ? 1.5 : 1; C(0.25 * k, 0.2 * k, 0.4 * k, '#c7643e', [0, 0.2 * k, 0]); const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4 * k, 0), mat('#5d9c55', 0.85, { flatShading:true })); l.position.y = 0.7 * k; g.add(l);
       if (t === 'bigplant') for (const [x, y, z] of [[0.35, 1.3, 0], [-0.3, 1.4, 0.15], [0, 1.6, -0.2]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 0), mat('#6fae52', 0.85, { flatShading:true })); b.position.set(x, y, z); g.add(b); } break; }
   }
@@ -9587,10 +9632,10 @@ function recordCatch(f, w){
 function shade(hex, amt){ const c = new THREE.Color(hex); if (amt < 0) c.lerp(new THREE.Color('#000'), -amt); else c.lerp(new THREE.Color('#fff'), amt); return '#' + c.getHexString(); }
 /* v282：用 3D 模型（glb）的魚，圖鑑、魚缸的小圖也照模型畫（以前用的是另一套參數模型，像管眼魚就變成普通的燈籠魚） */
 const MShot = { kit:null };
-function drawMFishGL(cv, id, known){ const o = MFISH && MFISH.of[id]; if (!o || !MFISH.geo[o.k] || MFISH.defs[o.k].nofish) return false;
+function drawMFishGL(cv, id, known, mk){ const o = MFISH && MFISH.of[id]; if (!mk && (!o || !MFISH.geo[o.k] || MFISH.defs[o.k].nofish)) return false;
   if (!MShot.kit){ const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#8a9aa8', 1.7)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(1, 3, 4); sc.add(dl);
     MShot.kit = { sc, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100), rt: new THREE.WebGLRenderTarget(4, 4, { samples: 4 }) }; MShot.kit.rt.texture.colorSpace = THREE.SRGBColorSpace; }
-  const K = MShot.kit, W = cv.width, H = cv.height, fish = makeMFish(id, 1); fish.rotation.set(0.12, -0.32, 0); K.sc.add(fish); fish.updateMatrixWorld(true);
+  const K = MShot.kit, W = cv.width, H = cv.height, fish = mk ? mk() : makeMFish(id, 1); fish.rotation.set(0.12, -0.32, 0); K.sc.add(fish); fish.updateMatrixWorld(true);
   const bb = new THREE.Box3().setFromObject(fish), c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3()), asp = W / H, half = Math.max(sz.x / 2 / asp, sz.y / 2) * 1.12;
   K.cam.left = -half * asp; K.cam.right = half * asp; K.cam.top = half; K.cam.bottom = -half; K.cam.position.set(c.x, c.y, c.z + 20); K.cam.lookAt(c); K.cam.updateProjectionMatrix();
   if (K.rt.width !== W || K.rt.height !== H) K.rt.setSize(W, H);
@@ -9609,6 +9654,7 @@ function drawHat2D(cv, kind){ const ctx = cv.getContext('2d'), W = cv.width, H =
   ctx.fillStyle = '#d81e2c'; ctx.beginPath(); ctx.moveTo(-r, 0); ctx.quadraticCurveTo(-r * 0.6, -r * 2.4, -r * 2.2, -r * 2.1); ctx.quadraticCurveTo(-r * 0.2, -r * 2.6, r, 0); ctx.closePath(); ctx.fill(); ctx.lineWidth = Math.max(1, r * 0.18); ctx.strokeStyle = '#6a0a12'; ctx.stroke();
   ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(0, 0, r * 1.15, r * 0.38, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(-r * 2.2, -r * 2.1, r * 0.38, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 function drawFish(cv, color, known, id){
+  if (id && /^(octopus|dumbo|seacuc|shark_red|lobster|bluelobster|crayfish)/.test(id) && FISH_BY_ID[id]){ try { if (drawMFishGL(cv, id, known, () => fishModel(FISH_BY_ID[id], 1))) return; } catch(e){} }   /* v310 手工做的模型（小飛象章魚、海參、章魚、紅鯊、龍蝦），小圖直接用遊戲裡的 3D 模型畫，兩邊才會一樣 */
   if (id){ try { if (drawMFishGL(cv, id, known)) return; } catch(e){} }
   if (id === 'marlin' || id === 'marlin_albino') return drawMarlin2(cv, known, id !== 'marlin');
   if (id && FISH_STYLE[id]){ try { drawModelFish(cv, FISH_BY_ID[id], known); if (known && FISH_BY_ID[id].hat) drawHat2D(cv, FISH_BY_ID[id].hat); return; } catch(e){} }
@@ -11251,8 +11297,9 @@ function renderMuShop(body){
   if (!FZ.list.length){ body.appendChild(el('div', 'empty', '阿木還在做第一件家具，晚一點再來。')); return; }
   const icons = { table:'🍽️', chair:'🪑', desk:'🖥️', shelf:'📚', ward:'🚪', sofa:'🛋️', arm:'💺', rug:'🟣', lamp:'💡', clock:'🕰️', bed:'🛏️', dbed:'🛏️' };
   const ul = el('ul', 'shoplist');
-  for (const d of FZ.list){ const li = el('li'), sw = el('span', 'dishic', icons[d.base] || '🪑'); sw.style.cssText = `background:linear-gradient(135deg, ${d.main} 0 50%, ${d.accent} 50% 100%);border-radius:10px`; li.appendChild(sw);
-    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', d.name)); inf.appendChild(el('div', 'sub2', `${d.story}・${d.price ? '🪙' + d.price : '免費'}`)); li.appendChild(inf);
+  for (const d of FZ.list){ const li = el('li', 'viewable'), sw = el('span', 'dishic', icons[d.base] || '🪑'); sw.style.cssText = `background:linear-gradient(135deg, ${d.main} 0 50%, ${d.accent} 50% 100%);border-radius:10px`; li.appendChild(sw);
+    { /* v310 阿木的作品也有模型小圖，點一下看 3D */ const look = () => viewModel(d.name, `${d.story}・${d.price ? '🪙' + d.price : '免費'}`, () => fzMesh(d), House.on && canEditIsle() ? { label: '拿去擺', fn: () => { closeSheet(); startFurn('fz' + d.id); } } : null); thumbLater(sw, 'fz:' + d.id, () => fzMesh(d), d.name); li.addEventListener('click', e => { if (!e.target.closest('button')) look(); }); }
+    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', d.name)); inf.appendChild(el('div', 'sub2', `${d.story}・${d.price ? '🪙' + d.price : '免費'}`)); inf.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); li.appendChild(inf);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', House.on && canEditIsle() ? '拿去擺' : '回家擺'); b.addEventListener('click', () => { if (House.on && canEditIsle()){ closeSheet(); startFurn('fz' + d.id); } else toast('走進你小島上的房子，按「擺家具」→「🪵 阿木的作品」就能擺'); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
 }
@@ -12002,6 +12049,7 @@ function renderTab(){
       `⏱️ 定時釣魚大賽：每天台灣時間 ${TOURNEY.hours.map(h => h + ':00').join('、')} 開始，每場 ${TOURNEY.mins} 分鐘。比賽時間內釣到的魚總重量最重的前三名拿 🪙${TOURNEY.prize.join(' / ')}，有參加就有 🪙${TOURNEY.join}。開始前 15 分鐘右上角會倒數，點一下可以看即時排名。`,
     ]);
     sec('🏝️ 私人小島', [
+      '屋裡的家具多了 20 種：梳妝台、床頭櫃、落地鏡、懶骨頭、和室坐墊、茶几、魚標本牆、釣竿架、地球儀、收音機、電風扇、鞋櫃、吧台、洗衣機、微波爐、茶具組、仙人掌、盆景、花瓶、龜背芋。家具清單點一下就能先轉著看 3D 模型，再決定要不要買。',
       '選單的「小島」可以去自己的島。在「買東西擺島上」挑房子或家具，拿著半透明預覽走路調位置（綠色可以放、紅色不行），「⟲」轉方向、「✔」放下。',
       '按「🔨 建造」後走到東西旁邊，可以移動或拆掉（退一半金幣）。島上最多 60 件東西、房子 6 棟。',
       '走到房子門口可以「進屋」，屋裡的魚缸會游著你展示的魚。長椅、野餐桌、鞦韆、屋裡的椅子都可以坐。',
