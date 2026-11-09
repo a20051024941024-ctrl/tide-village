@@ -1195,3 +1195,9 @@ body.fs-l #tabs button, body.fs-l #chatIn{font-size:15px} body.fs-xl #tabs butto
 /* v311：只靠顏色的地方加上形狀（色弱也看得懂）：張力太高多一個 ⚠️、危險區斜線 */
 #tenBar.hot .tb-lbl::after{content:' ⚠️'}
 #tenBar .tb-red{background:repeating-linear-gradient(135deg,rgba(240,74,58,.45) 0 4px,rgba(240,74,58,.15) 4px 8px)}
+/* v314 玩家回報：手機系統字體調大時，釣到魚的卡片比螢幕還寬、左邊和上面被切掉。卡片最寬就是螢幕寬，太高就可以捲，按鈕的字可以換行 */
+#catchCard{place-items:safe center;overflow:auto}
+#catchCard .card{max-width:100%;max-height:calc(100dvh - 12px);overflow:auto;min-width:0;box-sizing:border-box}
+#catchCard .card > *{min-width:0}
+#catchCard .ccbtns .pbtn{min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+@media (orientation:landscape) and (max-height:540px){ #catchCard .card{grid-template-columns:minmax(110px,200px) minmax(0,1fr)} #catchCard canvas{width:100%;height:auto;aspect-ratio:220/140} }

@@ -560,8 +560,13 @@ FISH_STYLE.marlin = { shape:'Marlin', c:{ Body:'#2e62c8', Fins:'#2a44b0', Bill:'
 const fishTime = { value: 0 };           // 尾巴擺動用的共用時間
 const finSpd = { value: 0 };             // v267 鰭動用的時間：平常跟著時間走，搏鬥的時候走快一點（鰭動得快）
 const fishGeoCache = {}, fishMatCache = {};
+/* v314 效能（43）：魚的形狀快取以前只進不出，逛久了 290 種魚、近 2000 個零件都留在記憶體（約 15MB）。
+   現在最多留 70 種魚的形狀，超過就把最久沒用到（1 分鐘以上）的那種釋放掉；還在畫面上的魚要用時 three.js 會自己重新上傳 */
+const fishGeoUse = new Map();
+function fishGeoTrim(){ if (fishGeoUse.size <= 70) return; const t = performance.now(), old = [...fishGeoUse].filter(([, u]) => t - u > 60000).sort((a, b) => a[1] - b[1]);
+  for (const [sh] of old.slice(0, fishGeoUse.size - 70)){ for (const k of Object.keys(fishGeoCache)) if (k.startsWith(sh + '/')){ fishGeoCache[k].dispose(); delete fishGeoCache[k]; } fishGeoUse.delete(sh); } }
 function fishGeo(shape, part){
-  const key = shape + '/' + part; if (fishGeoCache[key]) return fishGeoCache[key];
+  const key = shape + '/' + part; fishGeoUse.set(shape, performance.now()); if (fishGeoCache[key]) return fishGeoCache[key]; if (fishGeoUse.size > 70) fishGeoTrim();
   const raw = FISH_MESH[shape][part]; const arr = new Float32Array(raw.length);
   for (let i = 0; i < raw.length; i++) arr[i] = raw[i] / 1000;
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
@@ -3429,20 +3434,26 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; actionUp
 let drag = null;
 const pinch = new Map(); let pinchDist = 0;
 const camLimits = () => Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: 0.12, pmax: 1.15, dmin: 4.5, dmax: 18 };   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
-canvas.addEventListener('pointerdown', e => { ensureAudio(); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); drag = null; } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
-canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const L = camLimits(); if (pinchDist > 0) cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); pinchDist = d; } });
+/* v314 玩家回報：快速點畫面時會一下放大一下縮小。兩隻手指輪流快點會被當成「兩指縮放」，或手指放開的訊號漏掉、留下一隻「幽靈手指」。
+   現在：手指放開在任何地方都會清掉；兩指距離要先變超過 14px 才開始縮放（快點的小抖動不算） */
+let pinchArm = 0;
+addEventListener('pointerup', e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }, true); addEventListener('pointercancel', e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }, true);
+canvas.addEventListener('pointerdown', e => { ensureAudio(); if (pinch.size >= 2) pinch.clear(); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); pinchArm = pinchDist; drag = null; } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
+canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchArm){ if (Math.abs(d - pinchArm) < 14) return; pinchArm = 0; pinchDist = d; return; } const L = camLimits(); if (pinchDist > 0) cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); pinchDist = d; } });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
 canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
 const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); }, { passive:false });
 
-// joystick（浮動：按在左半邊哪裡，搖桿中心就在哪裡）
+// joystick（浮動：按在左半邊哪裡，搖桿中心就在哪裡；v314 設定可以改成固定在左下角）
+function joyFixed(){ return LS.get('tide.joyFixed', false) === true; }
 (function(){
   const zone = $('#joyZone'), el = $('#joy'), knob = $('.knob', el); let id = null, cx = 0, cy = 0, M = 60;
   zone.addEventListener('pointerdown', e => {
     if (id !== null) return; ensureAudio(); id = e.pointerId; try { zone.setPointerCapture(id); } catch(_){}
     const R = el.offsetWidth / 2; M = R * 0.72;
+    if (joyFixed()){ const r = el.getBoundingClientRect(); cx = r.left + R; cy = r.top + R; el.classList.add('active'); move(e); return; }   /* v314 固定搖桿：圈圈不動，按左半邊哪裡都從原本的位置推 */
     cx = clamp(e.clientX, R + 4, innerWidth - R - 4); cy = clamp(e.clientY, R + 4, innerHeight - R - 4);
     el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; el.style.bottom = 'auto'; el.classList.add('active');
     move(e);
@@ -3452,7 +3463,7 @@ canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(
   zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
   /* v283 比較順手：手指拉超過圈圈時，圈圈跟著手指走（要轉彎不用把手指拉回來）；中間一小圈不算（手指抖一下不會亂走） */
   function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy), R = el.offsetWidth / 2;
-    if (L > M * 1.15){ const k = (L - M * 1.15) / L; cx = clamp(cx + dx * k, R + 4, innerWidth - R - 4); cy = clamp(cy + dy * k, R + 4, innerHeight - R - 4); el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; dx = e.clientX - cx; dy = e.clientY - cy; }
+    if (L > M * 1.15 && !joyFixed()){ const k = (L - M * 1.15) / L; cx = clamp(cx + dx * k, R + 4, innerWidth - R - 4); cy = clamp(cy + dy * k, R + 4, innerHeight - R - 4); el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; dx = e.clientX - cx; dy = e.clientY - cy; }
     const L2 = Math.hypot(dx, dy); if (L2 > M){ dx *= M / L2; dy *= M / L2; } knob.style.transform = `translate(${dx}px,${dy}px)`;
     const m = Math.min(1, L2 / M), dz = 0.1, g = m < dz ? 0 : (m - dz) / (1 - dz); joy.x = L2 > 0 ? dx / L2 * g : 0; joy.z = L2 > 0 ? dy / L2 * g : 0; }
 })();
@@ -7347,6 +7358,8 @@ function renderSettings(body){
   /* v311 上架（34）：字體大小。標準／大／特大，選單、聊天、提示、釣到魚的卡片一起放大 */
   { const f = field('🔠 字體大小'), seg = el('div', 'seg'), cur = LS.get('tide.fs', 0); [[0, '標準'], [1, '大'], [2, '特大']].forEach(([k, l]) => { const b = el('button', '', l); b.style.fontSize = [14, 16, 18][k] + 'px'; b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.fs', k); applyFontSize(); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '字太小看不清楚的話選「大」或「特大」。選單、聊天、提示文字和釣到魚的卡片都會變大。')); }
+  { const f = field('🕹️ 移動搖桿'), seg = el('div', 'seg'), cur = joyFixed(); [[false, '跟著手指（預設）'], [true, '固定在左下角']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.joyFixed', k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '跟著手指：按在左半邊哪裡，搖桿就出現在哪裡。固定：搖桿一直在左下角不會動，按左半邊任何地方都是從那裡推。')); }
   { const f = field('🎥 視角'), seg = el('div', 'seg'); [['top', '俯瞰（預設）'], ['near', '貼近（舊的）']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(CAMV.mode === k)); b.addEventListener('click', () => { setCamView(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '俯瞰：從斜上方往下看，看得比較遠、比較整齊。貼近：從角色背後看，比較有臨場感。兩種都可以用手指拖動、兩指縮放。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
@@ -12116,6 +12129,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
+      '移動搖桿想固定在左下角：設定 →「🕹️ 移動搖桿」選「固定在左下角」。',
       '檢舉不禮貌的人（點他的名字 →「檢舉」）會送到管理員那裡處理，管理員可以禁言或把不適合的名字改掉；被改名的人 30 天內不能自己改回來。',
       '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',
       '訪客帳號玩到第 3 天、或升到 Lv10 時，會提醒你綁定 Email。綁好之後換手機、清掉瀏覽器資料，用同一個 Email 登入就能找回同一個角色。',
