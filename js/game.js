@@ -10506,7 +10506,7 @@ function renderVisitBar(){
 }
 
 async function cloudRefresh(){ try { const { data, error } = await Cloud.sb.rpc('ensure_player'); if (!error) adoptRow(data); } catch(e){} }
-function setCloudUser(u){ const switched = Cloud.userId && Cloud.userId !== u.id; Cloud.userId = u.id; Cloud.email = u.email || null; Cloud.isAnon = !u.email; if (!myId || switched) myId = u.id; }
+function setCloudUser(u){ const switched = Cloud.userId && Cloud.userId !== u.id; Cloud.userId = u.id; Cloud.email = u.email || null; Cloud.isAnon = !u.email; Cloud.pendingEmail = (!u.email && u.new_email) || null; if (!myId || switched) myId = u.id; }
 async function cloudLoad(allowImport){
   let { data:row, error } = await Cloud.sb.rpc('ensure_player'); if (error) throw error;
   if (allowImport && row && row.total === 0 && !row.imported && rec.total > 0){
@@ -10557,6 +10557,9 @@ async function cloudInit(){
       session = data.session;
     }
     setCloudUser(session.user);
+    /* v306：綁定 Email 要點信裡的確認連結才算數。很多人填了 Email 就以為綁好了，換手機才發現找不到紀錄 → 打開遊戲就問伺服器，還沒確認就一直提醒 */
+    if (Cloud.isAnon) sb.auth.getUser().then(({ data }) => { const u = data && data.user; if (!u) return; setCloudUser(u);
+      if (Cloud.pendingEmail){ watchBind(); setTimeout(() => toast(`⚠️ Email 還沒綁定完成：請到 ${Cloud.pendingEmail} 收信，點裡面的確認連結（在「造型 → 雲端存檔」可以重寄）`), 6000); } }).catch(() => {});
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
@@ -10587,7 +10590,7 @@ function cloudErrText(e){
   const m = String(e && e.message || e);
   if (/rate|security purposes|too many|seconds/i.test(m)) return '寄信太頻繁了，等一下再試（免費方案每小時只能寄幾封）。';
   if (/already.*registered|already been registered|exists/i.test(m)) return '這個 Email 已經保存過別的紀錄了，請改用「我已經保存過，登入」。';
-  if (/signups not allowed|not found|user not found/i.test(m)) return '這個 Email 還沒有保存過紀錄。';
+  if (/signups not allowed|not found|user not found/i.test(m)) return '這個 Email 還沒有保存過紀錄。如果你之前有「綁定 Email」，可能還沒點確認信裡的連結：請回到原本玩的那支手機或瀏覽器，打開「造型 → 雲端存檔」，照提示重寄確認信並點連結，之後就能在這裡登入。也請檢查 Email 有沒有打錯。';
   return '發生錯誤：' + m;
 }
 function renderCloudBox(body){
@@ -10599,7 +10602,14 @@ function renderCloudBox(body){
     box.appendChild(el('p', 'sub', `✅ 已保存到 ${Cloud.email}。換手機或換瀏覽器時，選「我已經保存過，登入」並輸入同一個 Email，就能用同一份紀錄。`));
     body.appendChild(box); return;
   }
-  if (U.step === 'idle'){
+  if (U.step === 'idle' && Cloud.pendingEmail){
+    box.appendChild(el('p', 'sub warnmsg', `⚠️ 還沒綁定完成！確認信寄到 ${Cloud.pendingEmail}，要打開信、點裡面的確認連結才算保存（用哪支手機、哪個瀏覽器打開都可以）。沒點的話，換手機會找不到這份紀錄。沒收到請看垃圾郵件，或按下面重寄。`));
+    const row = el('div', 'tankbar');
+    const b1 = el('button', 'tbtn', U.busy ? '寄送中…' : '重寄確認信'); b1.disabled = U.busy;
+    b1.addEventListener('click', async () => { U.busy = true; U.mode = 'bind'; U.email = Cloud.pendingEmail; renderTab(); try { await cloudSendLink(Cloud.pendingEmail, 'bind'); U.step = 'sent'; watchBind(); } catch(e){ U.msg = cloudErrText(e); toast(U.msg); } U.busy = false; renderTab(); });
+    const b2 = el('button', 'tbtn ghost', '換一個 Email'); b2.addEventListener('click', () => { U.step = 'email'; U.mode = 'bind'; U.msg = ''; renderTab(); });
+    row.appendChild(b1); row.appendChild(b2); box.appendChild(row);
+  } else if (U.step === 'idle'){
     box.appendChild(el('p', 'sub', '你的紀錄已經存在雲端（訪客身分），但只認得這個瀏覽器。綁定 Email 之後，換手機、換瀏覽器（例如 LINE 和 Chrome）都能用同一份紀錄。'));
     const row = el('div', 'tankbar');
     const b1 = el('button', 'tbtn', '綁定 Email 保存紀錄'); b1.addEventListener('click', () => { U.step = 'email'; U.mode = 'bind'; U.msg = ''; renderTab(); });
