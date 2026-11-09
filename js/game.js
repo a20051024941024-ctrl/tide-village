@@ -3765,7 +3765,7 @@ function renderMap(body){
   const bar = el('div', 'mapbar'); [['spot', '🎣 釣點'], ['shop', '🏪 商店'], ['npc', '🧑 村民']].forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(MU.show[k])); b.addEventListener('click', () => { MU.show[k] = !MU.show[k]; b.setAttribute('aria-pressed', String(MU.show[k])); draw(); }); bar.appendChild(b); });
   const zin = el('button', 'mapchip mz', '＋'), zout = el('button', 'mapchip mz', '－'), zre = el('button', 'mapchip mz', '⟲'); bar.append(zin, zout, zre); body.appendChild(bar);
   const wrap = el('div', 'mapwrap'); const cv = el('canvas', 'mapcv'); wrap.appendChild(cv); body.appendChild(wrap);
-  const tipEl = el('p', 'sub maptip', '用兩根手指放大縮小、一根手指拖動；點地點可以傳送。'); body.appendChild(tipEl);
+  const tipEl = el('p', 'sub maptip', '用兩根手指放大縮小、一根手指拖動；點釣點可以傳送，點商店圖示會帶路。'); body.appendChild(tipEl);
   const dpr = Math.min(2, devicePixelRatio || 1); let S = 480, k = 1; const ctx = cv.getContext('2d'); const font = getComputedStyle(document.body).fontFamily;
   const toB = (x, z) => [(-z + MAP_VIEW) / (MAP_VIEW * 2) * S, (x + MAP_VIEW) / (MAP_VIEW * 2) * S];   /* 上北下南、左西右東（放大前） */
   const toPx = (x, z) => { const [bx, by] = toB(x, z); return [(bx - S / 2) * MU.z + S / 2 + MU.ox, (by - S / 2) * MU.z + S / 2 + MU.oy]; };
@@ -3801,7 +3801,7 @@ function renderMap(body){
     /* 商店：小圖示，放大才寫名字 */
     if (MU.show.shop) for (const L of LANDMARKS){ const ic = SHOP_ICON[L.id]; if (!ic) continue; const [px, py] = toPx(L.pos.x, L.pos.z); if (!inView(px, py)) continue;
       ctx.beginPath(); ctx.arc(px, py, 9 * k, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill(); ctx.font = `${Math.round(11 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ic, px, py + 1 * k);
-      hits.push({ c: [px, py], tip: L.label }); mark(px, py, 9 * k); if (MU.z >= 1.6) LQ.push([2, L.label, px, py, 11 * k, { fs: 11, bg: 'rgba(255,255,255,.92)', fg: '#18334a' }]); }
+      hits.push({ c: [px, py], tip: L.label, nav: [L.label, L.pos.x, L.pos.z] }); mark(px, py, 9 * k); if (MU.z >= 1.6) LQ.push([2, L.label, px, py, 11 * k, { fs: 11, bg: 'rgba(255,255,255,.92)', fg: '#18334a' }]); }
     /* 村民 */
     if (MU.show.npc) for (const w of worldSummary()){ const [px, py] = toPx(w.x, w.z); if (!inView(px, py)) continue; ctx.beginPath(); ctx.arc(px, py, 9 * k, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,240,214,.95)'; ctx.fill(); ctx.font = `${Math.round(11 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(w.icon, px, py + 1 * k);
       hits.push({ c: [px, py], tip: `${w.name}：${w.text}` }); mark(px, py, 9 * k); if (MU.z >= 1.6) LQ.push([3, w.name, px, py, 11 * k, { fs: 11 }]); }
@@ -3828,13 +3828,16 @@ function renderMap(body){
   cv.addEventListener('click', e => { if (moved > 8 * k) return; const [x, y] = loc(e);
     for (const h of hits) if (h.r && x >= h.r[0] && x <= h.r[2] && y >= h.r[1] && y <= h.r[3]){ tipEl.textContent = h.tip; return; }
     let best = null, bd = 18 * k; for (const h of hits) if (h.c){ const d = Math.hypot(h.c[0] - x, h.c[1] - y); if (d < bd){ bd = d; best = h; } }
-    if (!best) return; if (best.tp){ if (visited.has(best.tp.id)) travelTo(best.tp); else { tipEl.textContent = '還沒去過這裡，先走過去一次就能解鎖。'; } } else tipEl.textContent = best.tip; });
+    if (!best) return; if (best.tp){ if (visited.has(best.tp.id)) travelTo(best.tp); else { tipEl.textContent = '還沒去過這裡，先走過去一次就能解鎖。'; } } else if (best.nav){ navTo(...best.nav); } else tipEl.textContent = best.tip; });
   requestAnimationFrame(draw);
   const list = el('div', 'tplist');
   const WS = worldSummary();
   let nLock = 0; for (const tp of TRAVEL){ const on = visited.has(tp.id); if (!on){ nLock++; continue; } const b = el('button', 'tpbtn', tp.label); b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
   if (nLock){ const c = el('span', 'tpbtn lock', `❔ 還有 ${nLock} 個地點沒去過`); c.style.gridColumn = '1 / -1'; list.appendChild(c); }
   body.appendChild(list);
+  { body.appendChild(el('div', 'dexhead', '🧭 找人、找店（點了會帶路）')); const nl = el('div', 'tplist');
+    for (const [ic, lab, q] of navList()){ const b = el('button', 'tpbtn', `${ic} ${lab}`); b.addEventListener('click', () => navTo(lab.replace(/（.*$/, ''), q[0], q[1])); nl.appendChild(b); }
+    body.appendChild(nl); }
   renderOcean(body);
   if (WS.length){ body.appendChild(el('div', 'dexhead', '🏘️ 村民現在在做什麼'));
     const ul = el('ul', 'wlist'); for (const w of WS){ const li = el('li', '', `${w.icon} ${w.name}：${w.text}`), m = (World.me || {})[w.id];
@@ -10173,23 +10176,37 @@ const GUIDE = [
   { t:'潛一次水', h:'存到 🪙1,500 在「釣具店」的「🤿 潛水」買潛水裝備，再到港口碼頭旁邊的潛水點按「潛水」。', at:() => hasDive('dive_suit') ? (() => { const a = harborDiveAt(); return new THREE.Vector3(a[0], 0, a[1]); })() : LANDMARKS.find(l => l.id === 'tackle').pos, ok:() => !!LS.get('tide.guideDive', false) },
 ];
 const Guide = { i: null, el: null, beacon: null, fin: null, hide: false };
+/* v337 玩家找不到阿海、理髮店：地圖可以選「帶我去」，左上角出現箭頭和距離、地上有光柱，走到了自動結束 */
+const Nav = { t: null };
+function navTo(label, x, z){ Nav.t = { label, x, z }; if (!$('#sheet').hidden) closeSheet(); if (Guide.el) Guide.el._k = ''; toast(`🧭 帶你去「${label}」：跟著左上角的箭頭和地上的光柱走`); }
+function navList(){ const L = [], byName = p => { const n = npcs.find(n => n.shopNpc === p && !n.wHide); return n && n.pos ? [n.pos.x, n.pos.z] : null; };
+  L.push(['🚤', '阿海（坐船、潛水、去別的島）', FERRY.at]);
+  const ICON = { aquarium:'🐠', chat:'💬', tackle:'🎣', shop:'🏪', cook:'🍲', museum:'🏛️', tailor:'👗', mu:'🪚', market:'🐟', salon:'💇', cai:'🎨', fu:'🦐' };
+  for (const l of LANDMARKS) if (ICON[l.id]) L.push([ICON[l.id], l.label, [l.pos.x, l.pos.z]]);
+  L.push(['🦐', '釣蝦場', [SHRIMP_DOOR.x, SHRIMP_DOOR.z]]); if (SHOPLOT.pet) L.push(['🐾', '小花寵物店', [SHOPLOT.pet.x, SHOPLOT.pet.z]]);
+  for (const [ic, p, lab] of [['🔧', 'craft', '阿鐵（做魚餌、釣竿造型）'], ['🔬', 'sci', '蔚博士（潛水艇、新品種）']]){ const q = byName(p); if (q) L.push([ic, lab, q]); }
+  L.push(['⚓', '老港（每週限量）', [31.4, -34.4]]);
+  return L; }
 function guideMark(k){ if (k === 'sell') LS.set('tide.guideSold', true); if (k === 'isle') LS.set('tide.guideIsle', true); if (k === 'dive') LS.set('tide.guideDive', true); }
 function guideInit(){ let v = LS.get('tide.guide', null); if (v == null){ v = rec.total >= 20 ? 'done' : 0; LS.set('tide.guide', v); } Guide.i = v; Guide.hide = !!LS.get('tide.guideHide', false); }
 function guideTick(){ if (Guide.i == null) guideInit(); if (onIsle && onIsle.owner === myIdOrMe()) guideMark('isle'); if (Dive.on) guideMark('dive');
-  fingerTip(); if (Guide.i === 'done') return guideShow(null);
+  fingerTip();
+  if (Nav.t){ const d = Math.hypot(Nav.t.x - me.pos.x, Nav.t.z - me.pos.z); if (d < 3.4){ const lab = Nav.t.label; Nav.t = null; if (Guide.el) Guide.el._k = ''; flash(`📍 到了：${lab}`, 1.8); try { SFX.catch(); } catch(e){} }
+    else { const T = Nav.t; return guideShow({ nav: true, t: '帶你去：' + T.label, h: '跟著箭頭和地上的光柱走，到了會自動結束。', at: () => new THREE.Vector3(T.x, 0, T.z) }); } }
+  if (Guide.i === 'done') return guideShow(null);
   while (Guide.i !== 'done' && GUIDE[Guide.i].ok()){ Guide.i++; SFX.catch(); if (Guide.i >= GUIDE.length){ Guide.i = 'done'; LS.set('tide.guide', 'done'); flash('🎉 新手任務全部完成！你已經是潮汐村的釣客了', 2.6); guideReward(); break; } LS.set('tide.guide', Guide.i); flash(`✅ 完成！下一個：${GUIDE[Guide.i].t}`, 2); }
   guideShow(Guide.i === 'done' ? null : GUIDE[Guide.i]); }
 async function guideReward(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('guide_reward'); if (error) throw error; adoptRow(data); setTimeout(() => flash('🎁 新手獎勵 🪙300！', 2), 2800); } catch(e){} }
-function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.createElement('div'); c.id = 'guideCard'; document.body.appendChild(c); c.addEventListener('click', e => { if (e.target.closest('.gx')){ Guide.hide = !Guide.hide; LS.set('tide.guideHide', Guide.hide); c._k = ''; guideTick(); } }); }
+function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.createElement('div'); c.id = 'guideCard'; document.body.appendChild(c); c.addEventListener('click', e => { if (e.target.closest('.gnav')){ Nav.t = null; c._k = ''; guideTick(); return; } if (e.target.closest('.gx')){ Guide.hide = !Guide.hide; LS.set('tide.guideHide', Guide.hide); c._k = ''; guideTick(); } }); }
   const busy = !G || !!onIsle || Dive.on || House.on || inIndoor() || F.phase === 'reeling' || F.phase === 'bite' || Photo.on || (typeof Sub !== 'undefined' && Sub.on);
   c.hidden = busy; let tgt = null;
   if (!busy){ const p = G.at(); if (p && !onIsle){ tgt = p; } const d = tgt ? Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) : 0;
     let dir = ''; if (tgt && d > 2){ const a = Math.atan2(tgt.x - camera.position.x, tgt.z - camera.position.z), cy = Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)), rel = ((a - cy + Math.PI * 3) % (Math.PI * 2)) - Math.PI; dir = `<span class="garr" style="transform:rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)">⬆</span> 大約 ${Math.round(d)} 公尺`; }
-    const k = Guide.i + '|' + Guide.hide + '|' + dir; if (c._k !== k){ c._k = k; c.innerHTML = Guide.hide ? `<b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}</b> <button class="gx">打開</button>` : `<div class="gt"><b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}：${G.t}</b><button class="gx" aria-label="收起">－</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}`; } }
+    const k = (G.nav ? 'nav' + G.t : Guide.i + '|' + Guide.hide) + '|' + dir; if (c._k !== k){ c._k = k; c.innerHTML = G.nav ? `<div class="gt"><b>🧭 ${esc(G.t)}</b><button class="gx gnav">取消</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}` : Guide.hide ? `<b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}</b> <button class="gx">打開</button>` : `<div class="gt"><b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}：${G.t}</b><button class="gx" aria-label="收起">－</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}`; } }
   /* 地上的光柱指路 */
   if (!Guide.beacon){ const g = new THREE.Group(), m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 9, 18, 1, true), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })); m.position.y = 4.5; g.add(m);
     const r = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.85, 32), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.8, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.y = 0.06; g.add(r); g.userData.dyn = true; scene.add(g); Guide.beacon = g; }
-  const show = !busy && !!tgt && !Guide.hide && Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) > 3; Guide.beacon.visible = show; if (show){ Guide.beacon.position.set(tgt.x, groundHeight(tgt.x, tgt.z), tgt.z); Guide.beacon.children[0].material.opacity = 0.22 + Math.sin(now() * 3) * 0.1; } }
+  const show = !busy && !!tgt && (!Guide.hide || !!(G && G.nav)) && Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) > 3; Guide.beacon.visible = show; if (show){ Guide.beacon.position.set(tgt.x, groundHeight(tgt.x, tgt.z), tgt.z); Guide.beacon.children[0].material.opacity = 0.22 + Math.sin(now() * 3) * 0.1; } }
 /* 第一次釣魚的手指教學（釣到 3 條以前都會出現） */
 function fingerTip(){ let c = Guide.fin; if (!c){ c = Guide.fin = document.createElement('div'); c.id = 'fingerTip'; document.body.appendChild(c); }
   let t = ''; if (rec.total < 3 && !Dive.on && !House.on && !Photo.on){ const ph = F.phase, near = nearestSpot(), canCast = near && (near.d < 1.7 || shoreSpot());
@@ -12360,6 +12377,7 @@ function renderTab(){
       '一進遊戲會站在「港邊廣場」：中間有噴水池；四間港口的店（釣具店、海邊商店、阿福海產店、釣客魚市）圍著廣場，往前走就是碼頭。島中央的「潮汐廣場」是三條大路交會的地方，節慶活動也在那裡。',
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、瀑布潭、望海丘走細細的小步道。',
       '照功能分區：🎣 港邊廣場（水族館北邊，四間店圍著船錨紀念碑，開口對著碼頭）是釣具店、海邊商店（賣魚）、阿福海產店、釣客魚市；🍜 廣場旁是潮汐食堂、水族館、釣蝦場；👗 商店街（往北走過牌樓）是阿綾服裝店、阿木木工坊、阿彩畫廊、寵物店、海洋博物館。',
+      '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
     ]);
     sec('🏛️ 海洋博物館', [
