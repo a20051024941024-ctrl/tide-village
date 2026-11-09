@@ -405,7 +405,12 @@ const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過�
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
 /* 潮汐商店街（2026-11-04 使用者：NPC 的店分開一點、整齊一點）：往珊瑚礁群島那條路的兩邊，一排一排的店，門口都朝著路 */
 // v195 港口商店一排排整齊：四間都朝南（面向水族館那條路），間隔一樣
-var HLOT = { tackle:[3, -25], shop:[8.6, -25], fu:[14.2, -25], market:[19.8, -25] };
+/* 44 港口小鎮第一區：四間港口的店圍著碼頭排成半月形，門都朝向港邊廣場（HARBOR_SQ）；[x, z, 轉向] */
+const HARBOR_SQ = [22.5, -24.5, 7];
+var HLOT = (() => { const R = 9, at = d => { const a = d * Math.PI / 180, x = HARBOR_SQ[0] + Math.cos(a) * R, z = HARBOR_SQ[1] + Math.sin(a) * R; return [x, z, Math.atan2(HARBOR_SQ[0] - x, HARBOR_SQ[1] - z)]; };
+  return { tackle: at(60), shop: at(105), fu: at(150), market: at(200) }; })();   /* 馬蹄形：開口朝東北對著碼頭和海；150 和 200 中間是從村子進來的路 */
+function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
+function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
 var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:31, r:-Math.PI / 2 }, museum:{ x:9.5, z:35.2, r:-Math.PI / 2 }, pet:{ x:-8, z:22.5, r:Math.PI / 2 } };   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
 var Mkt = { tab:'new', list:null, mine:null, stats:null, at:0, busy:false, sell:null, fish:null };
@@ -414,16 +419,16 @@ const LANDMARKS = [
   { id:'plaza',      label:'潮汐廣場', pos:V3(4, 4),            color:PALETTE.gold, ly:1.8 },
   { id:'aquarium',   label:'水族館',   pos:V3(AQUA[0], AQUA[1]), color:PALETTE.coral, ly:6.8, mx:7.6, mz:4.6 },
   { id:'chat',       label:'聊天亭',   pos:V3(-3, 22),          color:'#f5a5d8', ly:3.8 },
-  { id:'tackle',     label:'釣具店',   pos:V3(HLOT.tackle[0], HLOT.tackle[1]), color:'#f6a96b', ly:5.5, mx:2.4, mz:2.8 },
-  { id:'shop',       label:'海邊商店', pos:V3(HLOT.shop[0], HLOT.shop[1]), color:'#5fb6e3', ly:5.5, mx:-2.6, mz:2.8 },
+  { id:'tackle',     label:'釣具店',   pos:V3(HLOT.tackle[0], HLOT.tackle[1]), color:'#f6a96b', ly:5.5, ...hlOff('tackle', 2.4, 2.8) },
+  { id:'shop',       label:'海邊商店', pos:V3(HLOT.shop[0], HLOT.shop[1]), color:'#5fb6e3', ly:5.5, ...hlOff('shop', -2.6, 2.8) },
   { id:'cook',       label:'潮汐食堂', pos:V3(12.5, 8.5),       color:'#f17b6d', ly:3.6 },
   { id:'museum',     label:'海洋博物館', pos:V3(SHOPLOT.museum.x, SHOPLOT.museum.z), color:'#7fb0c8', ly:6.0, mx:2.6, mz:2.6 },
   { id:'tailor',     label:'阿綾服裝店', pos:V3(SHOPLOT.ling.x, SHOPLOT.ling.z), color:'#f5a5d8', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'mu',         label:'阿木木工坊', pos:V3(SHOPLOT.mu.x, SHOPLOT.mu.z), color:'#c79a6b', ly:5.5, mx:-2.4, mz:2.6 },
-  { id:'market',     label:'釣客魚市', pos:V3(HLOT.market[0], HLOT.market[1]), color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.6 },
+  { id:'market',     label:'釣客魚市', pos:V3(HLOT.market[0], HLOT.market[1]), color:'#5fb6e3', ly:5.5, ...hlOff('market', -2.4, 2.6) },
   { id:'salon',      label:'阿萍美髮沙龍', pos:V3(SHOPLOT.spare.x, SHOPLOT.spare.z), color:'#7fd0c8', ly:5.5, mx:-2.4, mz:2.6 },
   { id:'cai',        label:'阿彩畫廊', pos:V3(SHOPLOT.cai.x, SHOPLOT.cai.z), color:'#9b7bff', ly:5.5, mx:2.4, mz:-2.6 },
-  { id:'fu',         label:'阿福海產店', pos:V3(HLOT.fu[0], HLOT.fu[1]), color:'#5fb6e3', ly:5.5, mx:-2.4, mz:2.4 },
+  { id:'fu',         label:'阿福海產店', pos:V3(HLOT.fu[0], HLOT.fu[1]), color:'#5fb6e3', ly:5.5, ...hlOff('fu', -2.4, 2.4) },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
   { id:'hill',       label:'望海丘',   pos:V3(-28, 25),         color:'#a6d37d', ly:2.6 },
   { id:'beach',      label:'南方沙灘', pos:V3(40, -6),          color:'#f2d69a', ly:2.2 },
@@ -715,17 +720,17 @@ const MAP = {
   lake: [-30, -6, 11, 9],                                // 中心 x, z、半徑 rx, rz
   pool: [-26.3, 9.9, 3.4],                               // 瀑布潭
   hill: { x: -29, z: 24, R: 13, H: 5, face: [0.184, -0.983] },
+  squares: [HARBOR_SQ],   /* 44 鋪石頭的廣場 [x, z, 半徑] */
   paths: [
     [[4, 4], [2, -18], [0, -40]],                        // 往北海灘碼頭
     [[4, 4], [-6, -8], [-16, -15], [-24.5, -17.6]],     // 往木橋
     [[4, 4], [-8, 1], [-16, -2]],                        // 往鏡湖棧道
-    [[4, 4], [12, -5], [13.5, -17], [13.5, -21.6]],      // 往港口（v197：廣場直直往北走到港口商店街）
+    [[4, 4], [12, -5], [8, -14], [8, -23], [14.5, -24], [22.5, -24.5], [29, -27.5]],   // 往港口（44：從西邊的開口走進港邊廣場，穿過廣場到碼頭）
     [[12, -5], [17.5, -4], [19, -0.8]],                   // 往水族館門口
     [[4, 4], [10, 14], [18, 20], [23, 22]],              // 往螢光溪
     [[4, 4], [-10, 7], [-19, 6], [-24, 5.2]],            // 往瀑布潭
     [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
     [[4, 4], [3, 18], [1, 32], [0, 43.6]],               // 往跨海大橋（珊瑚礁群島）
-    [[1, -18], [1, -21.6], [22.5, -21.6], [25, -26.5]],   // v195：港口商店街，一條直路經過四間店門口，接到碼頭
   ],
 };
 // 珊瑚礁群島（參考小琉球、澎湖）的位置，放在這裡是因為建地形、種樹的時候就要用到
@@ -771,12 +776,13 @@ function terrainInfo(x, z){
 }
 function terrainH(x, z){ return terrainInfo(x, z).h; }
 function isLand(x, z){ return !terrainInfo(x, z).water; }
-function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); return d; }
+function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); return d; }
 function inSand(x, z){ const e = islandEdge(x, z); return e < 4.5 + wobble(x + z, 2) * 1.2; }
 // 地面顏色（0～1 的 sRGB）
 function terrainColor(x, z, info, out){
   const h = info.h;
   if (info.water){ const k = Math.min(1, -h / 1.4); out[0] = 0.85 - 0.42 * k; out[1] = 0.75 - 0.15 * k; out[2] = 0.54 + 0.02 * k; return out; }
+  if ((MAP.squares || []).some(q => Math.hypot(x - q[0], z - q[1]) < q[2])){ const q = (Math.floor(x * 1.1) + Math.floor(z * 1.1)) % 2 ? 0.035 : 0, k = 0.5 + 0.5 * Math.sin(x * 2.3) * Math.sin(z * 2.7); out[0] = 0.84 - q - 0.03 * k; out[1] = 0.80 - q - 0.03 * k; out[2] = 0.72 - q - 0.02 * k; return out; }   /* 44 港邊廣場的石板（蓋過沙灘） */
   if (inSand(x, z)){ out[0] = 0.949; out[1] = 0.839; out[2] = 0.604; return out; }
   const pd = pathDist(x, z);
   if (pd < 1.7){ if (pd > 1.35){ out[0] = 0.62; out[1] = 0.6; out[2] = 0.54; return out; } const k = 0.5 + 0.5 * Math.sin(x * 3.1) * Math.sin(z * 3.3), q = (Math.floor(x * 1.2) + Math.floor(z * 1.2)) % 2 ? 0.03 : 0; out[0] = 0.86 - 0.04 * k - q; out[1] = 0.8 - 0.04 * k - q; out[2] = 0.68 - 0.03 * k - q; return out; }   // v192：路變寬，鋪石板、兩邊有路緣石
@@ -1266,20 +1272,44 @@ function castPoint(x, z, dx, dz, dist){
     Cai.show = new THREE.Group(); Cai.show.position.set(-2.5, 0, 1.7); Cai.show.rotation.y = -0.35; Cai.show.scale.setScalar(1.3); cg.add(Cai.show); Cai.show.add(paintMesh({ main:'#f1e3c8', accent:'#8c5d3b', pat:'mist', fish:null }));
     const c = Math.cos(cg.rotation.y), sn = Math.sin(cg.rotation.y); addOBoxCol(cg.position.x - c * 2.5 + sn * 1.7, cg.position.z + sn * 2.5 + c * 1.7, 1.1, 0.7, cg.rotation.y); }
   /* 釣客魚市（2026-11-05）：商店街最後一間，玩家之間買賣魚；門口一排冰桶 */
-  { const mg = house(HLOT.market[0], HLOT.market[1], '#5fb6e3', 3.4, 0, { awning: '#2f89c7', sign: '釣客魚市', signIcon: '🐟', signInk: '#1d4a6a' });
+  { const mg = house(HLOT.market[0], HLOT.market[1], '#5fb6e3', 3.4, HLOT.market[2], { awning: '#2f89c7', sign: '釣客魚市', signIcon: '🐟', signInk: '#1d4a6a' });
     for (const sx of [-2.6, -1.7]){ const b = new THREE.Group(); b.position.set(sx, 0, 1.6); mg.add(b); b.add(box([0.75, 0.55, 0.5], '#e8f4f8', [0, 0.28, 0])); b.add(box([0.78, 0.06, 0.53], '#2f89c7', [0, 0.57, 0])); }
     const c = Math.cos(mg.rotation.y), sn = Math.sin(mg.rotation.y); addOBoxCol(mg.position.x - c * 2.15 + sn * 1.6, mg.position.z + sn * 2.15 + c * 1.6, 1.8, 0.6, mg.rotation.y); }
   house(-14, -9, '#ec8b68', 3.3, faceTo(-14, -9));
   house(22, 7, '#9fc7a8', 3.2, faceTo(22, 7));
   /* v190 照功能分區：釣具店、海邊商店（賣魚）、阿福海產店、釣客魚市都在港口；吃的在廣場；衣服家具寵物在商店街 */
-  house(HLOT.tackle[0], HLOT.tackle[1], '#f6a96b', 3.6, 0, { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店（港口）
+  house(HLOT.tackle[0], HLOT.tackle[1], '#f6a96b', 3.6, HLOT.tackle[2], { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店（港口）
   /* 阿福海產店（2026-11-04）：碼頭邊的小海產店，櫃台上一個冰櫃，擺著今天高價收購的魚 */
-  { const fg = house(HLOT.fu[0], HLOT.fu[1], '#2f6fa0', 3.4, 0, { awning: '#2f89c7', sign: '阿福海產店', signIcon: '🐟', signInk: '#1d4a6a' });
+  { const fg = house(HLOT.fu[0], HLOT.fu[1], '#2f6fa0', 3.4, HLOT.fu[2], { awning: '#2f89c7', sign: '阿福海產店', signIcon: '🐟', signInk: '#1d4a6a' });
     const ice = new THREE.Group(); ice.position.set(0, 0.92, 1.25 + 0.8); fg.add(ice);
     ice.add(box([2.3, 0.1, 0.46], '#e8f4f8', [0, 0.05, 0])); { const gl = new THREE.Mesh(new THREE.BoxGeometry(2.36, 0.32, 0.5), new THREE.MeshStandardMaterial({ color:'#cfefff', transparent:true, opacity:0.28, roughness:0.1, depthWrite:false })); gl.position.y = 0.22; ice.add(gl); }
     for (let i = 0; i < 14; i++){ const c = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), mat('#f4fbff', 0.3)); c.position.set(-1.05 + (i % 7) * 0.35, 0.12, i < 7 ? -0.12 : 0.12); c.rotation.y = i * 0.7; ice.add(c); }
     Fu.ice = ice; }
-  house(HLOT.shop[0], HLOT.shop[1], '#5fb6e3', 3.8, 0, { awning: '#2f89c7', sign: '海邊商店', signIcon: '🐟' });      // 海邊商店（港口，賣魚）
+  house(HLOT.shop[0], HLOT.shop[1], '#5fb6e3', 3.8, HLOT.shop[2], { awning: '#2f89c7', sign: '海邊商店', signIcon: '🐟' });      // 海邊商店（港口，賣魚）
+  /* 44 港邊廣場：中間一個船錨紀念碑、靠海那邊三張長椅（可以坐著看海）、店和店中間的花盆、四盞晚上會亮的路燈 */
+  { const [CX, CZ, CR] = HARBOR_SQ, y0 = groundHeight(CX, CZ), g = new THREE.Group(); g.position.set(CX, y0, CZ); scene.add(g);
+    const stone = mat('#cfc6b4', 0.85), dark = mat('#3d4650', 0.45, { metalness:0.4 });
+    { const b1 = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.3, 0.35, 20), stone); b1.position.y = 0.17; b1.receiveShadow = b1.castShadow = true; g.add(b1);
+      const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.85, 0.3, 16), stone); b2.position.y = 0.5; b2.castShadow = true; g.add(b2);
+      const an = new THREE.Group(); an.position.y = 0.65; an.rotation.y = 0.6; g.add(an);
+      const shank = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.9, 10), dark); shank.position.y = 0.95; an.add(shank);
+      const stock = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.0, 8), dark); stock.rotation.z = Math.PI / 2; stock.position.y = 1.65; an.add(stock);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.05, 8, 16), dark); ring.position.y = 2.0; an.add(ring);
+      const arm = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.08, 8, 20, Math.PI), dark); arm.rotation.z = Math.PI; arm.position.y = 0.62; an.add(arm);
+      for (const sx of [-1, 1]){ const fl = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.36, 4), dark); fl.position.set(sx * 0.62, 0.72, 0); fl.rotation.z = sx * 0.5; an.add(fl); }
+      addCircleCol(CX, CZ, 1.3); }
+    const bench = (a, r) => { const x = CX + Math.cos(a) * r, z = CZ + Math.sin(a) * r, face = Math.atan2(Math.cos(a), Math.sin(a)), y = groundHeight(x, z), bg = new THREE.Group(); bg.position.set(x, y, z); bg.rotation.y = face; scene.add(bg);
+      bg.add(box([1.8, 0.08, 0.45], '#8c5d3b', [0, 0.45, 0])); bg.add(box([1.8, 0.4, 0.06], '#8c5d3b', [0, 0.72, -0.22])); for (const sx of [-0.75, 0.75]) for (const sz of [-0.15, 0.15]) bg.add(box([0.07, 0.45, 0.07], '#5a3d2b', [sx, 0.22, sz]));
+      const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32 }); addOBoxCol(x, z, 1.9, 0.5, face); };
+    for (const d of [-95, -50, 10]){ const a = d * Math.PI / 180; let r = CR - 0.6; while (r > 2.8){ const x = CX + Math.cos(a) * r, z = CZ + Math.sin(a) * r, x2 = CX + Math.cos(a) * (r + 1.2), z2 = CZ + Math.sin(a) * (r + 1.2); if (isLand(x, z) && isLand(x2, z2) && !deckAt(x, z) && !MAP.paths.some(p => lineDist(x, z, p) < 1.8)) break; r -= 0.4; } if (r > 2.8) bench(a, r); }   /* 長椅放在陸地上、面向海 */
+    const pot = (x, z) => { const y = groundHeight(x, z), pg = new THREE.Group(); pg.position.set(x, y, z); scene.add(pg);
+      pg.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 0.55, 10), mat('#c8704a', 0.8)), { castShadow: true })).position.y = 0.27;
+      const cols = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff']; for (let i = 0; i < 5; i++){ const f = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat(i === 0 ? '#5fa35a' : cols[(i + Math.round(x)) % 4], 0.8)); f.position.set(Math.cos(i * 1.3) * 0.2 * (i > 0), 0.66 + (i === 0) * -0.05, Math.sin(i * 1.3) * 0.2 * (i > 0)); if (i === 0) f.scale.set(2.2, 0.9, 2.2); pg.add(f); }
+      addCircleCol(x, z, 0.45); };
+    const ks = ['tackle', 'shop', 'fu', 'market']; for (let i = 0; i < ks.length - 1; i++){ if (ks[i] === 'fu') continue; const A = HLOT[ks[i]], B = HLOT[ks[i + 1]]; pot((A[0] + B[0]) / 2 + (CX - (A[0] + B[0]) / 2) * 0.12, (A[1] + B[1]) / 2 + (CZ - (A[1] + B[1]) / 2) * 0.12); }
+    for (const d of [-110, -20, 70, 160]){ const a = d * Math.PI / 180, x = CX + Math.cos(a) * (CR + 0.3), z = CZ + Math.sin(a) * (CR + 0.3); if (!isLand(x, z) || MAP.paths.some(p => lineDist(x, z, p) < 1.7)) continue; const y = groundHeight(x, z);
+      const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2.7, 8), mat('#2f3b44', 0.5)); pl.position.set(x, y + 1.35, z); pl.castShadow = true; scene.add(pl);
+      const lp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.8 })); lp.position.set(x, y + 2.8, z); scene.add(lp); lanterns.push(lp); addCircleCol(x, z, 0.2); } }
   // ---- 潮汐食堂：村子裡的門面（裡面的店在地圖外，跟釣蝦場一樣走進去）：木造小店、紅白遮雨棚、招牌、紙燈籠、亮著的窗、門口菜單 ----
   {
     const [KX, KZ] = [12.5, 8.5], g = new THREE.Group(); g.position.set(KX, 0, KZ); g.rotation.y = faceTo(KX, KZ); scene.add(g);
@@ -1450,6 +1480,7 @@ function castPoint(x, z, dx, dz, dist){
     { const hd = Math.hypot(x - MAP.hill.x, z - MAP.hill.z); if (hd < 7 || (hd < MAP.hill.R + 2 && pathDist(x, z) < 3.4)) continue; }
     if (Math.hypot((x - 40) / 1, (z + 6) / 1.5) < 11) continue;   /* 南方沙灘不長樹 */
     if (x > 24 && x < 37 && z > -25 && z < -14) continue;   /* v248 港口沙灘不長樹（擋住看海） */
+    if (Math.hypot(x - HARBOR_SQ[0], z - HARBOR_SQ[1]) < HARBOR_SQ[2] + 5.5) continue;   /* 44 港邊廣場和四間店 */
     if (Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) continue;   /* 生態池旁邊自己種樹 */
     if (x > -13 && x < 15 && z > 18 && z < 42) continue;   /* 潮汐商店街 */
     if (Math.abs(x - REEF.x) < 4.5 && z > REEF.bz0 - 6) continue;   /* 往珊瑚礁群島的橋頭 */   /* 城市水圳那一區是工廠和水泥路，不長樹 */   /* 山頂留一塊空地、上山的路寬一點，走得過去 */
@@ -10902,13 +10933,13 @@ const npcs = [
   (() => { const r = SHOPLOT.mu.r, [x, z] = lotAt('mu', -2.55, 0.55); return { name:'阿木・家具木匠', shirt:'#8a6a4a', hat:'#5a3d2b', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'mu',
     lines:['歡迎來阿木木工坊！每一件家具都是我親手做的', '我每天早上和傍晚都會做一件新的，做過的都會留在店裡', '木頭要曬過、磨過，坐起來才舒服', '買了以後回家按「擺家具」，在「阿木的作品」裡面就找得到', '漂流木是我在南方沙灘撿的，每一塊紋路都不一樣'] }; })(),
   // 阿福：碼頭邊海產店的老闆，每天早上 6 點公布今日收購、傍晚 6 點做特餐（053_fu.sql）
-  (() => { const r = 0, lz = 2.75, lx = -1.75; return { name:'阿福・海產店老闆', shirt:'#2f89c7', hat:'#ffffff', x:HLOT.fu[0] + lx, z:HLOT.fu[1] + lz, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'fu',
+  (() => { const r = HLOT.fu[2], [x, z] = hlAt('fu', -1.75, 2.75); return { name:'阿福・海產店老闆', shirt:'#2f89c7', hat:'#ffffff', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'fu',
     lines:['來來來，今天的收購單貼在櫃台上囉！', '箱網養的和魚缸生的我不收，我只要海裡、河裡釣上來的', '前一天大家都釣很多的魚，我今天就不收了', '傍晚 6 點我會用今天收最多的魚做特餐，吃了釣魚有加成', '魚要新鮮！釣到了就快拿來'] }; })(),
   // 阿彩：畫廊的畫家，每天早上 8 點畫一幅魚（058_cai.sql）
   (() => { const r = SHOPLOT.cai.r, [x, z] = lotAt('cai', -1.75, 2.75); return { name:'阿彩・畫家', shirt:'#9b7bff', hat:'#2b2f36', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'cai',
     lines:['歡迎來阿彩畫廊！每一幅都是我親手畫的', '我每天早上 8 點，會畫昨天全村最厲害的那條魚', '被我畫的人，我會送他一幅喔', '畫可以擺在家裡，像家具一樣', '清晨、晚霞、月夜……同一條魚，顏色不一樣感覺就不一樣'] }; })(),
   // 阿鐵師傅：釣具店旁邊擺攤的工匠，用魚和金幣做竿子造型、釣線顏色（102_craft.sql）
-  { name:'阿鐵・釣具師傅', shirt:'#5a6470', hat:'#2b2f36', x:HLOT.tackle[0] + 1.75, z:HLOT.tackle[1] + 2.75, y:0.02, dir:new THREE.Vector2(0, 1), shopNpc:'craft',
+  { name:'阿鐵・釣具師傅', shirt:'#5a6470', hat:'#2b2f36', x:hlAt('tackle', 1.75, 2.75)[0], z:hlAt('tackle', 1.75, 2.75)[1], y:0.02, dir:new THREE.Vector2(Math.sin(HLOT.tackle[2]), Math.cos(HLOT.tackle[2])), shopNpc:'craft',
     lines:['我會做竿子造型和釣線顏色，帶幾條魚來就好', '魚不是拿來吃的啦，是我拿來練手藝、換材料的', '金箔竿要三條稀有魚，很值得喔', '收藏的、展示中的魚我不會拿', '線換個顏色，別人一眼就認得出是你的'] },
   // v270 阿萍：美髮沙龍的設計師，超認真的工作狂，每天都在設計新髮型、調新髮色，染髮剪髮什麼都會（109_salon.sql）
   { name:'阿萍・髮型設計師', shirt:'#2a2a2a', hat:'#7fd0c8', x:lotAt('spare', 2.5, -0.4)[0], z:lotAt('spare', 2.5, -0.4)[1], y:0.02, dir:new THREE.Vector2(1, 0), shopNpc:'salon',
