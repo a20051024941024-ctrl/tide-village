@@ -3030,10 +3030,11 @@ function kidUpgrade(f){
 }
 // 表情動作還在做嗎：時間到、走開、開始釣魚就停
 function kidEmoteOn(f, t){ const E = f.emote, D = E && EMOTE_DEF[E.k]; if (!D || !f.av.kid || !f.av.kid.acts[D.anim]) { f.emote = null; return false; }
-  const moved = (f.aspd || 0) > 0.35 || f.air > 0.05; if (moved || f.fishing || f.sitting || f.swim || (!D.loop && now() > E.until)){ f.emote = null; if (f.bub && f.bubEmote) f.bub.hidden = true; return false; }
+  const moved = !(f === me && mySeat) && now() - (E.at || 0) > 0.8 && ((f.aspd || 0) > 0.35 || f.air > 0.05); if (moved || f.fishing || f.sitting || f.swim || (!D.loop && now() > E.until)){ f.emote = null; if (f.bub && f.bubEmote) f.bub.hidden = true; return false; }
   if (!E.started){ E.started = true; const ac = f.av.kid.acts[D.anim]; ac.reset(); ac.play(); }
   return true; }
-function startEmote(f, k){ const D = EMOTE_DEF[k]; if (!D) return; f.emote = { k, until: now() + (D.dur || 9999), started: false }; }
+function startEmote(f, k){ const D = EMOTE_DEF[k]; if (!D) return; f.emote = { k, until: now() + (D.dur || 9999), started: false, at: now() }; }
+/* v305 修正躺床「沒辦法馬上睡」：躺上去那一下人會瞬間移到床上，速度看起來很快，躺下的動作就被當成「走開了」取消，人變成站在床上。現在剛開始 0.8 秒內、或自己正坐著／躺著時不會因為移動被取消；躺著時動作不見了也會自動補回來 */
 // 每一格：照角色現在在做什麼，決定每個動作的比重（平滑過去，不會瞬間跳），播放速度跟移動速度一樣
 function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
@@ -3821,7 +3822,7 @@ function nearChair(){
   for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
   return best;
 }
-function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.sitting = true; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
+function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
 function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
@@ -4278,6 +4279,7 @@ function updateFishing(dt, t){
   { const gk = gatherKind(), gb = $('#gatherBtn'); if (gb && gb.dataset.k !== (gk || '')){ gb.dataset.k = gk || ''; gb.hidden = !gk; if (gk) gb.innerHTML = gk === 'lugworm' ? '🪱<small>挖沙蠶</small>' : '🦀<small>撿螃蟹</small>'; } }
   if (frameNo % 15 === 3) baitFavChip();
   if (frameNo % 10 === 5) try { guideTick(); } catch(e){}
+  if (mySeat && mySeat.furnLie && !me.emote) startEmote(me, mySeat.furnLie === 'bath' ? 'sitdown' : 'sleep');   /* v305 躺著的時候動作不見了就補回來 */
   { const cb = $('#chumBtn'), show = !Dive.on && !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
@@ -4377,6 +4379,31 @@ const ISLE_ITEMS = {
   mailbox: { name:'信箱', price:200, rad:0.35 },  picnic: { name:'野餐桌', price:600, rad:1.4 }, parasol:{ name:'遮陽傘', price:350, rad:1.0 },
   campfire:{ name:'營火', price:450, rad:0.8 },   statue: { name:'金魚雕像', price:2000, rad:0.9 }, swing: { name:'鞦韆', price:900, rad:1.3 },
   bush:    { name:'小樹叢', price:120, rad:0.7 }, lantern:{ name:'石燈籠', price:180, rad:0.4 }, boat:  { name:'小木船', price:1500, rad:1.6 },
+  /* v305 玩家說家具太少：新增 24 種小島裝飾（伺服器 123） */
+  hammock:{ name:'吊床', price:700, rad:1.4 },
+  windmill:{ name:'小風車', price:1200, rad:0.9 },
+  well:{ name:'古井', price:800, rad:0.8 },
+  arch:{ name:'花拱門', price:650, rad:1.0 },
+  birdhouse:{ name:'鳥屋', price:220, rad:0.35 },
+  bbq:{ name:'烤肉架', price:500, rad:0.7 },
+  sunbed:{ name:'海灘躺椅', price:300, rad:1.0 },
+  surf:{ name:'衝浪板', price:250, rad:0.4 },
+  fountain:{ name:'噴水池', price:2500, rad:1.4 },
+  bridge:{ name:'小木橋', price:900, rad:1.5 },
+  minilh:{ name:'迷你燈塔', price:1800, rad:0.8 },
+  scarecrow:{ name:'稻草人', price:300, rad:0.5 },
+  bike:{ name:'腳踏車', price:600, rad:0.8 },
+  hydrangea:{ name:'繡球花', price:180, rad:0.7 },
+  sunflower:{ name:'向日葵', price:150, rad:0.5 },
+  cherry:{ name:'櫻花樹', price:800, rad:1.3 },
+  maple:{ name:'楓樹', price:600, rad:1.2 },
+  pergola:{ name:'葡萄架', price:1100, rad:1.6 },
+  tent:{ name:'露營帳篷', price:700, rad:1.2 },
+  buoys:{ name:'浮球堆', price:150, rad:0.5 },
+  crates:{ name:'木箱堆', price:120, rad:0.6 },
+  fishrack:{ name:'曬魚架', price:400, rad:0.9 },
+  stonepath:{ name:'石板路', price:40, rad:0.6 },
+  hedge:{ name:'矮樹籬', price:100, rad:0.9 },
 };
 const OLD_HOUSES = new Set(['cabin', 'beach', 'tea', 'villa']);   // 076 起不再賣（已經買的人保留）
 const HOUSES = Object.fromEntries(Object.entries(ISLE_ITEMS).filter(([, v]) => v.house));
@@ -4457,6 +4484,40 @@ function itemMesh(type, opts){
     case 'swing': { for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const p = box([0.1, 2.3, 0.1], '#8c5d3b', [sx * 0.95, 1.1, sz * 0.35]); p.rotation.x = -sz * 0.15; g.add(p); } B([2.1, 0.12, 0.12], '#8c5d3b', [0, 2.2, 0]); const sw = new THREE.Group(); sw.position.y = 2.15; g.add(sw); for (const sx of [-0.3, 0.3]){ const r = box([0.03, 1.6, 0.03], '#e9e2cf', [sx, -0.8, 0]); sw.add(r); } sw.add(box([0.75, 0.06, 0.32], '#e8473a', [0, -1.62, 0])); g.userData.swing = sw; break; }
     case 'bush': { for (const [x, z, r] of [[0, 0, 0.5], [0.4, 0.15, 0.35], [-0.35, 0.1, 0.38]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), mat('#5d9c55', 0.85, { flatShading:true })); b.position.set(x, r * 0.8, z); b.castShadow = true; g.add(b); } break; }
     case 'lantern': { B([0.5, 0.15, 0.5], '#b7b2a4', [0, 0.08, 0]); B([0.18, 0.6, 0.18], '#b7b2a4', [0, 0.45, 0]); const lt = box([0.4, 0.32, 0.4], '#fff3c4', [0, 0.9, 0], new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:0.9 })); g.add(lt); g.userData.lamp = lt; const rf = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.25, 4), mat('#9a958a', 0.9)); rf.rotation.y = Math.PI / 4; rf.position.y = 1.2; g.add(rf); break; }
+    /* v305 新的小島裝飾 */
+    case 'hammock': { for (const sx of [-1, 1]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.6, 8), mat('#8c5d3b')); p.position.set(sx * 1.15, 0.8, 0); g.add(p); } const n = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 2.1, 12, 1, true, Math.PI * 0.15, Math.PI * 0.7), mat('#f2e3c4', 0.9, { side:THREE.DoubleSide })); n.rotation.z = Math.PI / 2; n.rotation.x = Math.PI; n.position.y = 1.15; g.add(n); for (let i = -2; i <= 2; i++) B([0.04, 0.02, 0.6], '#e07a5f', [i * 0.38, 0.72, 0]); break; }
+    case 'windmill': { const tw = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 2.2, 8), mat('#f6efe2')); tw.position.y = 1.1; g.add(tw); const rf = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.5, 8), mat('#c8553d')); rf.position.y = 2.45; g.add(rf);
+      const hub = new THREE.Group(); hub.position.set(0, 2.0, 0.38); g.add(hub); for (let i = 0; i < 4; i++){ const bl = box([0.16, 1.1, 0.03], '#e9d8b5', [0, 0.55, 0]); const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2; arm.add(bl); hub.add(arm); } g.userData.spin = hub; B([0.3, 0.45, 0.04], '#8c5d3b', [0, 0.25, 0.42]); break; }
+    case 'well': { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.65, 0.7, 14, 1, true), mat('#a9a499', 0.95, { side:THREE.DoubleSide })); w.position.y = 0.35; g.add(w); const wt = new THREE.Mesh(new THREE.CircleGeometry(0.58, 14), mat('#2f6f9a', 0.2)); wt.rotation.x = -Math.PI / 2; wt.position.y = 0.3; g.add(wt);
+      for (const sx of [-1, 1]) B([0.08, 1.5, 0.08], '#8c5d3b', [sx * 0.6, 1.0, 0]); const rf = new THREE.Mesh(new THREE.ConeGeometry(0.95, 0.5, 4), mat('#8a4b3a', 0.85, { flatShading:true })); rf.rotation.y = Math.PI / 4; rf.position.y = 1.95; g.add(rf); B([1.2, 0.08, 0.08], '#6e4a2f', [0, 1.35, 0]); B([0.18, 0.2, 0.18], '#8c5d3b', [0.1, 1.05, 0]); break; }
+    case 'arch': { const a = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.07, 6, 20, Math.PI), mat('#f6efe2')); a.position.y = 1.35; g.add(a); for (const sx of [-1, 1]) B([0.12, 1.35, 0.12], '#f6efe2', [sx * 0.85, 0.68, 0]);
+      const cols = ['#f5a5d8', '#ffffff', '#f17b6d', '#b9a4ff']; for (let i = 0; i < 16; i++){ const t = i / 15 * Math.PI, f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), mat(i % 3 ? '#6fae52' : cols[i % 4], 0.7, { flatShading:true })); f.position.set(Math.cos(t) * 0.85, 1.35 + Math.sin(t) * 0.85, (i % 2 - 0.5) * 0.12); g.add(f); } break; }
+    case 'birdhouse': { B([0.08, 1.5, 0.08], PALETTE.wood, [0, 0.75, 0]); B([0.36, 0.36, 0.34], '#7fb8d8', [0, 1.66, 0]); const rf = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.25, 4), mat('#c8553d', 0.85, { flatShading:true })); rf.rotation.y = Math.PI / 4; rf.position.y = 1.96; g.add(rf); const h = new THREE.Mesh(new THREE.CircleGeometry(0.06, 10), mat('#2a2a2a')); h.position.set(0, 1.7, 0.175); g.add(h); break; }
+    case 'bbq': { for (const [x, z] of [[-0.3, -0.2], [0.3, -0.2], [-0.3, 0.2], [0.3, 0.2]]) B([0.05, 0.7, 0.05], '#2f3a44', [x, 0.35, z]); B([0.8, 0.18, 0.5], '#2f3a44', [0, 0.75, 0]); for (let i = -3; i <= 3; i++) B([0.02, 0.02, 0.48], '#9aa4ad', [i * 0.1, 0.86, 0]); for (let i = 0; i < 3; i++){ const c = new THREE.Mesh(new THREE.DodecahedronGeometry(0.06, 0), new THREE.MeshStandardMaterial({ color:'#ff7a3a', emissive:'#ff5a1a', emissiveIntensity:0.8 })); c.position.set(-0.2 + i * 0.2, 0.82, 0); g.add(c); } break; }
+    case 'sunbed': { const s0 = box([0.6, 0.08, 1.2], '#f2f2ee', [0, 0.35, 0.15]); g.add(s0); const bk = box([0.6, 0.08, 0.7], '#f2f2ee', [0, 0.6, -0.62]); bk.rotation.x = 0.75; g.add(bk); for (let i = 0; i < 4; i++) B([0.58, 0.02, 0.18], i % 2 ? '#2f89c7' : '#ffffff', [0, 0.4, -0.25 + i * 0.3]); for (const [x, z] of [[-0.25, 0.65], [0.25, 0.65], [-0.25, -0.35], [0.25, -0.35]]) B([0.05, 0.32, 0.05], '#c79a6b', [x, 0.16, z]); break; }
+    case 'surf': { const b = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 8), mat('#ffd36a', 0.4)); b.scale.set(0.5, 1.9, 0.08); b.position.y = 0.9; b.rotation.x = -0.18; g.add(b); B([0.04, 1.5, 0.01], '#2f89c7', [0, 0.92, 0.045]).rotation.x = -0.18; break; }
+    case 'fountain': { const base = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.35, 0.4, 20), mat('#d8d2c4')); base.position.y = 0.2; g.add(base); const w = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.05, 20), mat('#5bc4dc', 0.15, { emissive:'#2f89c7', emissiveIntensity:0.15 })); w.position.y = 0.38; g.add(w);
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.1, 10), mat('#d8d2c4')); c.position.y = 0.9; g.add(c); const bw = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.3, 0.2, 14), mat('#d8d2c4')); bw.position.y = 1.45; g.add(bw);
+      const jet = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6, 8), new THREE.MeshStandardMaterial({ color:'#bfefff', transparent:true, opacity:0.7, emissive:'#7fd6f0', emissiveIntensity:0.3 })); jet.position.y = 1.85; g.add(jet); g.userData.jet = jet; break; }
+    case 'bridge': { for (let i = -5; i <= 5; i++){ const x = i * 0.24, y = 0.28 + Math.cos(i / 5 * 1.1) * 0.35 - 0.16, pl = box([0.22, 0.07, 1.0], i % 2 ? '#b98a5c' : '#c79a6b', [x, y, 0]); pl.rotation.z = -Math.sin(i / 5 * 1.1) * 0.35; g.add(pl); } for (const sz of [-0.5, 0.5]){ for (let i = -2; i <= 2; i++) B([0.07, 0.5, 0.07], '#8c5d3b', [i * 0.55, 0.42 + Math.cos(i / 2 * 1.1) * 0.35, sz]); for (let i = -4; i < 4; i++){ const x0 = i * 0.275, y0 = 0.72 + Math.cos(x0 / 1.2 * 1.1) * 0.35, x1 = x0 + 0.275, y1 = 0.72 + Math.cos(x1 / 1.2 * 1.1) * 0.35, rl = box([0.29, 0.06, 0.06], '#8c5d3b', [(x0 + x1) / 2, (y0 + y1) / 2, sz]); rl.rotation.z = Math.atan2(y1 - y0, x1 - x0); g.add(rl); } } break; }
+    case 'minilh': { const tw = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.42, 2.2, 12), mat('#ffffff')); tw.position.y = 1.1; g.add(tw); for (const y of [0.5, 1.3]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.4 - y * 0.08, 0.42 - y * 0.08, 0.3, 12), mat('#e8473a')); r.position.y = y; g.add(r); }
+      const l = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.3, 10), new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffd36a', emissiveIntensity:1.2 })); l.position.y = 2.35; g.add(l); g.userData.lamp = l; const rf = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.35, 10), mat('#e8473a')); rf.position.y = 2.67; g.add(rf); break; }
+    case 'scarecrow': { B([0.07, 1.6, 0.07], '#8c5d3b', [0, 0.8, 0]); B([1.1, 0.07, 0.07], '#8c5d3b', [0, 1.25, 0]); B([0.5, 0.55, 0.22], '#6f9bd1', [0, 1.15, 0]); const h = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), mat('#e9d8b5')); h.position.y = 1.65; g.add(h); const hat = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.22, 12), mat('#d8b65a')); hat.position.y = 1.86; g.add(hat); break; }
+    case 'bike': { for (const x of [-0.45, 0.45]){ const w = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 6, 18), mat('#2a2a2a')); w.position.set(x, 0.32, 0); g.add(w); }
+      const fr = box([0.9, 0.05, 0.05], '#2fa889', [0, 0.55, 0]); g.add(fr); const s2 = box([0.05, 0.4, 0.05], '#2fa889', [-0.15, 0.45, 0]); s2.rotation.z = 0.35; g.add(s2); B([0.22, 0.05, 0.12], '#3a3a3a', [-0.2, 0.68, 0]); B([0.05, 0.05, 0.42], '#3a3a3a', [0.4, 0.78, 0]); B([0.05, 0.4, 0.05], '#2fa889', [0.42, 0.58, 0]); B([0.28, 0.18, 0.24], '#c79a6b', [0.52, 0.66, 0]); break; }
+    case 'hydrangea': { const cols = ['#8fb6ff', '#b9a4ff', '#f5a5d8']; for (const [x, z, r, c] of [[0, 0, 0.42, 0], [0.38, 0.15, 0.32, 1], [-0.35, 0.12, 0.34, 2], [0.05, -0.32, 0.3, 1]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), mat(cols[c], 0.8, { flatShading:true })); b.position.set(x, r * 0.9, z); g.add(b); } for (const [x, z] of [[0.2, 0.35], [-0.2, -0.3]]){ const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), mat('#5d9c55', 0.85, { flatShading:true })); l.position.set(x, 0.18, z); g.add(l); } break; }
+    case 'sunflower': { for (const [x, z, h] of [[0, 0, 1.4], [0.3, 0.2, 1.1], [-0.28, 0.15, 1.2]]){ B([0.05, h, 0.05], '#5d9c55', [x, h / 2, z]); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.05, 12), mat('#ffcf3a')); p.rotation.x = Math.PI / 2 - 0.3; p.position.set(x, h, z + 0.03); g.add(p); const c = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.07, 10), mat('#6e4a2f')); c.rotation.x = Math.PI / 2 - 0.3; c.position.set(x, h, z + 0.05); g.add(c); } break; }
+    case 'cherry': case 'maple': { const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.24, 1.7, 8), mat('#6e4a2f')); tr.position.y = 0.85; g.add(tr); const cc = type === 'cherry' ? ['#f8bfd6', '#f5a5c8', '#ffd9e6'] : ['#e8603c', '#f0a030', '#c8402c'];
+      for (const [x, y, z, r, k] of [[0, 2.1, 0, 0.95, 0], [0.55, 1.8, 0.2, 0.62, 1], [-0.5, 1.85, -0.15, 0.68, 2], [0.1, 2.6, -0.1, 0.58, 1], [-0.2, 1.9, 0.5, 0.5, 0]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), mat(cc[k], 0.85, { flatShading:true })); b.position.set(x, y, z); b.castShadow = true; g.add(b); } break; }
+    case 'pergola': { for (const [x, z] of [[-1, -0.8], [1, -0.8], [-1, 0.8], [1, 0.8]]) B([0.12, 2.1, 0.12], '#c79a6b', [x, 1.05, z]); for (let i = -3; i <= 3; i++) B([0.07, 0.08, 1.9], '#c79a6b', [i * 0.33, 2.15, 0]); for (const z of [-0.8, 0.8]) B([2.2, 0.12, 0.1], '#a97c50', [0, 2.08, z]);
+      for (let i = 0; i < 10; i++){ const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 0), mat('#6fae52', 0.85, { flatShading:true })); l.position.set(-0.9 + (i % 5) * 0.45, 2.25, i < 5 ? -0.45 : 0.45); g.add(l); } for (let i = 0; i < 4; i++){ const gr = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.25, 6), mat('#7b4fa8')); gr.rotation.x = Math.PI; gr.position.set(-0.6 + i * 0.4, 1.95, (i % 2 - 0.5) * 0.6); g.add(gr); } break; }
+    case 'tent': { const t2 = new THREE.Mesh(new THREE.ConeGeometry(1.0, 1.3, 4, 1, true), mat('#f08a4b', 0.8, { side:THREE.DoubleSide, flatShading:true })); t2.rotation.y = Math.PI / 4; t2.position.y = 0.65; t2.scale.set(1, 1, 1.25); g.add(t2); const dr = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), mat('#5a3a2a', 0.9, { side:THREE.DoubleSide })); dr.position.set(0, 0.35, 0.74); dr.rotation.x = -0.45; g.add(dr); break; }
+    case 'buoys': { const cols = ['#e8473a', '#ffffff', '#ffcf3a', '#2f89c7']; for (const [x, z, y, k] of [[0, 0, 0.22, 0], [0.38, 0.1, 0.2, 2], [-0.32, 0.18, 0.2, 3], [0.05, 0.22, 0.55, 1], [0.12, -0.32, 0.18, 1]]){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), mat(cols[k], 0.5)); b.position.set(x, y, z); g.add(b); } break; }
+    case 'crates': { B([0.6, 0.55, 0.6], '#b98a5c', [0, 0.28, 0]); B([0.5, 0.45, 0.5], '#c79a6b', [0.62, 0.23, 0.1]); const t3 = box([0.45, 0.4, 0.45], '#a97c50', [0.15, 0.75, -0.02]); t3.rotation.y = 0.4; g.add(t3); break; }
+    case 'fishrack': { for (const sx of [-1, 1]) for (const sz of [-1, 1]) B([0.07, 1.3, 0.07], '#8c5d3b', [sx * 0.85, 0.65, sz * 0.25]); for (const z of [-0.25, 0.25]) B([1.8, 0.05, 0.05], '#8c5d3b', [0, 1.28, z]);
+      for (let i = 0; i < 5; i++){ const f = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.42, 6), mat('#b8b2a2', 0.6)); f.rotation.x = Math.PI; f.position.set(-0.7 + i * 0.35, 1.02, (i % 2 - 0.5) * 0.5); g.add(f); } break; }
+    case 'stonepath': { for (const [x, z, r] of [[-0.3, -0.25, 0.3], [0.28, 0.0, 0.26], [-0.18, 0.32, 0.24]]){ const k = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.05, 0.08, 7), mat('#c9c2b2', 0.95, { flatShading:true })); k.position.set(x, 0.04, z); g.add(k); } break; }
+    case 'hedge': { const h = box([1.8, 0.7, 0.55], '#4f8f48', [0, 0.35, 0]); g.add(h); for (let i = 0; i < 4; i++){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), mat('#5d9c55', 0.85, { flatShading:true })); b.position.set(-0.7 + i * 0.47, 0.68, 0); g.add(b); } break; }
     case 'boat': { const b = makeBoatMesh('#c98b55'); b.position.y = 0.15; b.rotation.z = 0.08; g.add(b); break; }
   }
   return g;
@@ -4700,7 +4761,7 @@ function updateFrost(dt, t){
 }
 function updateIsle(t){
   if (isleGroup) isleGroup.children.forEach(g => { const u = g.userData; if (u.flag) u.flag.rotation.y = Math.sin(t * 2 + g.position.x) * 0.25; if (u.fish) u.fish.forEach((f, k) => { const a = t * 0.6 + k * 2.1; f.position.set(Math.cos(a) * 0.55, 0.06, Math.sin(a) * 0.55); f.rotation.y = -a; });
-    if (u.lamp) u.lamp.material.emissiveIntensity = 0.4 + DayNight.lamp * 1.6; if (u.fire){ u.fire.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1); u.fire.rotation.y = t * 2; } if (u.swing) u.swing.rotation.x = Math.sin(t * 1.6 + g.position.x) * 0.25; });
+    if (u.lamp) u.lamp.material.emissiveIntensity = 0.4 + DayNight.lamp * 1.6; if (u.fire){ u.fire.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1); u.fire.rotation.y = t * 2; } if (u.swing) u.swing.rotation.x = Math.sin(t * 1.6 + g.position.x) * 0.25; if (u.spin) u.spin.rotation.z = t * 1.2; if (u.jet) u.jet.scale.y = 1 + Math.sin(t * 6) * 0.15; });
   updateBuild(); updateHouse(t);
 }
 // ---- 去島上／離開 ----
@@ -5999,9 +6060,9 @@ function itemShot(type, size){
   if (ItemShot.cache.has(type)) return ItemShot.cache.get(type);
   if (!ItemShot.kit){ const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#b8c8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(3, 5, 4); sc.add(dl);
     const rt = new THREE.WebGLRenderTarget(size, size, { samples:4 }); rt.texture.colorSpace = THREE.SRGBColorSpace; ItemShot.kit = { sc, cam: new THREE.PerspectiveCamera(32, 1, 0.05, 60), rt }; }
-  const K = ItemShot.kit, T = ISLE_ITEMS[type], g = itemMesh(type, { lite:true }); K.sc.add(g);
+  const K = ItemShot.kit, T = ISLE_ITEMS[type], g = itemMesh(type, { lite: !!T.house });   /* v305 小圖也畫出金魚雕像上的金魚 */ K.sc.add(g);
   const r = T.house ? 3.4 * (T.scale || 1) : Math.max(1.1, T.rad * 1.4), h = T.house ? 2.2 : ['palm', 'tree', 'flag', 'swing', 'parasol', 'lamp'].includes(type) ? 1.4 : 0.5;
-  K.cam.position.set(r * 1.6, h + r * 0.9, r * 2.0); K.cam.lookAt(0, h, 0);
+  if (T.house){ K.cam.position.set(r * 1.6, h + r * 0.9, r * 2.0); K.cam.lookAt(0, h, 0); } else { const f = fitCam(K.cam, g), d = new THREE.Vector3(1.6, 1.0, 2.0).normalize().multiplyScalar(f.r * 3.3); K.cam.position.copy(f.c).add(d); K.cam.lookAt(f.c); }   /* v305 照整件東西的大小取景，高的東西不會被切掉 */
   const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
   renderer.setRenderTarget(K.rt); renderer.setClearColor('#eef6e8', 1); renderer.clear(); renderer.render(K.sc, K.cam);
   const px = new Uint8Array(size * size * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, size, size, px); renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA); K.sc.remove(g);
@@ -6012,7 +6073,7 @@ function itemShot(type, size){
 /* v302 玩家說：家具、小島的東西要按了能看到模型，才知道適不適合 → 3D 預覽（手指拖動轉、兩指或滾輪放大），下面直接按「拿去擺」 */
 function fitCam(cam, obj, k){ const b = new THREE.Box3().setFromObject(obj), c = b.getCenter(new THREE.Vector3()), r = Math.max(0.3, b.getSize(new THREE.Vector3()).length() / 2); return { c, r: r * (k || 1) }; }
 function modelShot(key, make, size){ if (ItemShot.cache.has(key)) return ItemShot.cache.get(key); itemShot('bench', size); const K = ItemShot.kit, g = make(); K.sc.add(g);
-  const { c, r } = fitCam(K.cam, g); K.cam.position.set(c.x + r * 1.5, c.y + r * 1.2, c.z + r * 1.9); K.cam.lookAt(c);
+  const { c, r } = fitCam(K.cam, g); K.cam.position.copy(c).add(new THREE.Vector3(1.5, 1.1, 1.9).normalize().multiplyScalar(r * 3.3)); K.cam.lookAt(c);
   const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
   renderer.setRenderTarget(K.rt); renderer.setClearColor('#f3ede4', 1); renderer.clear(); renderer.render(K.sc, K.cam);
   const px = new Uint8Array(size * size * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, size, size, px); renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA); K.sc.remove(g);
@@ -6075,7 +6136,7 @@ function renderIsland(body){
       const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・島上 ${items.filter(i => i.t === k).length} 個`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'), place = () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }; b.addEventListener('click', place); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
-      li.classList.add('viewable'); d.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); const look = () => viewModel(v.name, `🪙 ${v.price.toLocaleString()}${v.house ? '・房子，可以走進去擺家具' : ''}`, () => itemMesh(k, { lite: true }), { label: `拿去擺（🪙${v.price.toLocaleString()}）`, fn: place }); ic.addEventListener('click', look); d.addEventListener('click', look);
+      li.classList.add('viewable'); d.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); const look = () => viewModel(v.name, `🪙 ${v.price.toLocaleString()}${v.house ? '・房子，可以走進去擺家具' : ''}`, () => itemMesh(k, { lite: !!v.house }), { label: `拿去擺（🪙${v.price.toLocaleString()}）`, fn: place }); ic.addEventListener('click', look); d.addEventListener('click', look);
     }
     body.appendChild(ul);
   }
@@ -11948,6 +12009,7 @@ function renderTab(){
       '大宅不用自己畫牆：買家具直接擺就好，每一層樓都可以免費換地板和壁紙。樓梯在房間後面的兩個角落（右後往上、左後往下），走到樓梯前按「上樓／下樓」。以前買的小木屋、海邊小屋、茶屋、別墅還是可以照樣住。',
       '🪑 釣魚小角落：河邊、湖邊、海邊到處有長椅（旁邊有路燈或小營火），坐下來就能直接拋竿，按「跳」站起來。找個安靜的角落跟朋友邊釣邊聊吧。',
       '海上看得到其他人的島。在小島分頁「逛別人的島」可以去參觀，幫喜歡的島按 ❤️（每天每座島一次）。',
+      '🌸 小島新裝飾（24 種）：吊床、小風車、古井、花拱門、鳥屋、烤肉架、海灘躺椅、衝浪板、噴水池、小木橋、迷你燈塔、稻草人、腳踏車、繡球花、向日葵、櫻花樹、楓樹、葡萄架、露營帳篷、浮球堆、木箱堆、曬魚架、石板路、矮樹籬。',
       '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。'
     ]);
     sec('👥 跟大家一起玩', [
