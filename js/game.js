@@ -410,7 +410,7 @@ const HARBOR_SQ = [22.5, -24.5, 10];   /* v320 玩家說出生點太擠：店圍
 var HLOT = (() => { const R = 11.5, at = d => { const a = d * Math.PI / 180, x = HARBOR_SQ[0] + Math.cos(a) * R, z = HARBOR_SQ[1] + Math.sin(a) * R; return [x, z, Math.atan2(HARBOR_SQ[0] - x, HARBOR_SQ[1] - z)]; };
   return { tackle: at(60), shop: at(105), fu: at(150), market: at(200) }; })();   /* 馬蹄形：開口朝東北對著碼頭和海；150 和 200 中間是從村子進來的路 */
 /* 57 主島分區：中央＝社交生活（村長辦公室、廣場花園），森林＝自然寵物（寵物活動區） */
-const CHIEF_OFFICE = [14.5, 1.5, -Math.PI / 2], PETPARK = [-13, 18.5, 4.2];
+const CHIEF_OFFICE = [14.5, 1.5, -Math.PI / 2], PETPARK = [-13, 18.5, 4.2], PETGATE = -2.3;   /* 入口朝西北，對著上望海丘的小步道 */
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
@@ -737,6 +737,7 @@ const MAP = {
     [[3, 14], [10, 15], [18, 20], [23, 22]],             // 往螢光溪
     [[-8, 1], [-19, 6], [-24, 5.2]],                     // 往瀑布潭
     [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
+    [[-17.6, 15.2], [PETPARK[0] + Math.cos(PETGATE) * (PETPARK[2] - 0.5), PETPARK[1] + Math.sin(PETGATE) * (PETPARK[2] - 0.5)]],   // 57 往寵物樂園入口
   ],
 };
 // 珊瑚礁群島（參考小琉球、澎湖）的位置，放在這裡是因為建地形、種樹的時候就要用到
@@ -1322,9 +1323,9 @@ function castPoint(x, z, dx, dz, dist){
       n++; d += 18; } }
   /* 57 寵物活動區：南邊森林邊緣、寵物店西邊。圍籬（東邊留入口）、小隧道、球、水盆。帶寵物走進來，寵物會在裡面跑 */
   { const [KX, KZ, KR] = PETPARK, wood = mat('#c9a06a', 0.8);
-    for (let i = 0; i < 26; i++){ const a = i / 26 * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 0.32) continue; const x = KX + Math.cos(a) * KR, z = KZ + Math.sin(a) * KR, y = groundHeight(x, z);
+    for (let i = 0; i < 26; i++){ const a = i / 26 * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a - PETGATE), Math.cos(a - PETGATE))) < 0.32) continue; const x = KX + Math.cos(a) * KR, z = KZ + Math.sin(a) * KR, y = groundHeight(x, z);
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 0.12), wood); post.position.set(x, y + 0.37, z); post.castShadow = true; scene.add(post);
-      const a2 = (i + 1) / 26 * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a2), Math.cos(a2))) < 0.32) continue; const x2 = KX + Math.cos(a2) * KR, z2 = KZ + Math.sin(a2) * KR, L = Math.hypot(x2 - x, z2 - z), mx = (x + x2) / 2, mz = (z + z2) / 2, my = groundHeight(mx, mz);
+      const a2 = (i + 1) / 26 * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a2 - PETGATE), Math.cos(a2 - PETGATE))) < 0.32) continue; const x2 = KX + Math.cos(a2) * KR, z2 = KZ + Math.sin(a2) * KR, L = Math.hypot(x2 - x, z2 - z), mx = (x + x2) / 2, mz = (z + z2) / 2, my = groundHeight(mx, mz);
       for (const h of [0.35, 0.62]){ const rail = new THREE.Mesh(new THREE.BoxGeometry(L, 0.07, 0.05), wood); rail.position.set(mx, my + h, mz); rail.rotation.y = Math.atan2(-(z2 - z), x2 - x); scene.add(rail); }
       addCircleCol(mx, mz, 0.35); }
     { const tg = new THREE.Group(), tx = KX - 1.4, tz = KZ - 1.0; tg.position.set(tx, groundHeight(tx, tz), tz); tg.rotation.y = 0.5; scene.add(tg);
@@ -1332,7 +1333,7 @@ function castPoint(x, z, dx, dz, dist){
     for (const [bx, bz, bc] of [[1.2, 1.4, '#ffd36a'], [-0.6, 2.0, '#5fb6e3'], [1.8, -1.6, '#f5a5d8']]){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat(bc, 0.5)); b.position.set(KX + bx, groundHeight(KX + bx, KZ + bz) + 0.16, KZ + bz); b.castShadow = true; scene.add(b); }
     { const wx = KX + 0.4, wz = KZ - 2.4, wy = groundHeight(wx, wz); const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.26, 0.14, 14), mat('#5a8ac8', 0.5)); bowl.position.set(wx, wy + 0.07, wz); scene.add(bowl);
       const w = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.02, 14), mat('#9fd8f0', 0.15)); w.position.set(wx, wy + 0.13, wz); scene.add(w); }
-    { const sx = KX + KR + 0.9, sz = KZ + 1.6, sy = groundHeight(sx, sz), sg = new THREE.Group(); sg.position.set(sx, sy, sz); sg.rotation.y = Math.PI / 2; scene.add(sg);
+    { const ga = PETGATE + 0.42, sx = KX + Math.cos(ga) * (KR + 0.8), sz = KZ + Math.sin(ga) * (KR + 0.8), sy = groundHeight(sx, sz), sg = new THREE.Group(); sg.position.set(sx, sy, sz); sg.rotation.y = Math.atan2(Math.cos(PETGATE), Math.sin(PETGATE)); scene.add(sg);
       sg.add(box([0.1, 1.1, 0.1], '#8c5d3b', [0, 0.55, 0])); const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c2 = cv.getContext('2d'); c2.fillStyle = '#fff4d6'; c2.fillRect(0, 0, 256, 96); c2.fillStyle = '#5a3a24'; c2.font = 'bold 40px sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText('🐾 寵物樂園', 128, 50);
       const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.42), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); pl.position.y = 1.15; sg.add(pl); addCircleCol(sx, sz, 0.15); } }
   /* 44 港邊廣場：中間一個船錨紀念碑、靠海那邊三張長椅（可以坐著看海）、店和店中間的花盆、四盞晚上會亮的路燈 */
