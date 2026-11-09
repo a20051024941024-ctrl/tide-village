@@ -6630,6 +6630,7 @@ function renderFriends(body){
   const on = onlineUids(), ul = el('ul', 'people');
   for (const f of Fr.list.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || (b.mutual - a.mutual))){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
     const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null;
+    { const im = avatarImg(f.av); if (im) sw.replaceWith && li.append(im); }
     li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在這個大廳' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
     if (f.mutual){ const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
     const v = el('button', 'tbtn ghost vbtn', '水族館'); v.addEventListener('click', () => visitAquarium(f.id, f.name)); const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(v, vi);
@@ -9569,6 +9570,28 @@ function renderLookEd(body){
   body.appendChild(el('p', 'sub', '💇 想要更多髮型、更特別的髮色？去找「阿綾服裝店」對面「阿萍美髮沙龍」的阿萍，她每天都在設計新的。'));
   row('🙂 膚色', LOOK_SKIN, 's'); row('👀 眼睛顏色', LOOK_EYE, 'e');
 }
+/* ===== v334 頭像：自己的角色（預設）、釣過的魚、自己的寵物、一組符號。伺服器檢查（130），左上角、玩家列表、好友列表都看得到 ===== */
+const AV_EMOJI = ['🐟', '🐠', '🐡', '🦈', '🐙', '🦑', '🦀', '🦞', '🐢', '🐬', '🐳', '🦭', '🐧', '🦦', '🐚', '🪸', '⛵', '🎣', '🌊', '🏝️', '🌸', '⭐', '🌙', '☀️'];
+const AV_BG = ['#cfe9f7', '#ffe3c4', '#e3f4d8', '#f6dcef', '#e8e3ff', '#fff2c2'];
+const AvCache = new Map();
+function myAvatar(){ const r = Cloud.lastRow && typeof Cloud.lastRow.avatar === 'string' ? Cloud.lastRow.avatar : null; return r != null ? r : LS.get('tide.avatar', ''); }
+function avatarOk(code){ return typeof code === 'string' && (code === '' || /^f:[a-z0-9_]{1,40}$/.test(code) && FISH_BY_ID[code.slice(2)] || /^p:[a-z]{1,20}$/.test(code) && PET_KINDS[code.slice(2)] || /^e:\d{1,2}$/.test(code) && AV_EMOJI[+code.slice(2)]); }
+function avatarSrc(code, size){ size = size || 96; if (!avatarOk(code) || code === '') return null; const key = code + '|' + size; if (AvCache.has(key)) return AvCache.get(key);
+  const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), h = [...code].reduce((a, ch) => a + ch.charCodeAt(0), 0);
+  c.fillStyle = AV_BG[h % AV_BG.length]; c.beginPath(); c.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); c.fill();
+  if (code.startsWith('f:')){ const f = FISH_BY_ID[code.slice(2)], fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; try { drawFish(fc, f.color, true, f.id); } catch(e){} c.drawImage(fc, size * 0.04, size * 0.2, size * 0.92, size * 0.575); }
+  else { const ch = code.startsWith('p:') ? PET_KINDS[code.slice(2)].icon : AV_EMOJI[+code.slice(2)]; c.font = `${Math.round(size * 0.58)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ch, size / 2, size * 0.54); }
+  const u = cv.toDataURL('image/png'); AvCache.set(key, u); if (code.startsWith('f:')) setTimeout(() => AvCache.delete(key), 4000); return u; }   /* 魚的小圖要一下下才畫好，過一會兒重畫 */
+function avatarImg(code, cls){ const src = avatarSrc(code, 64); if (!src) return null; const im = el('img', 'avimg ' + (cls || '')); im.src = src; im.alt = ''; return im; }
+async function setAvatar(code){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能換頭像'); return; }
+  try { const { data, error } = await Cloud.sb.rpc('set_avatar', { p: code }); if (error) throw error; if (Cloud.lastRow) Cloud.lastRow.avatar = data || ''; LS.set('tide.avatar', data || ''); pushPresence(true); const mk = $('#brand .mark'); if (mk) mk._src = null; toast('🖼️ 頭像換好了'); renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
+function renderAvatarPick(body){ const f = el('div', 'field'); f.appendChild(el('label', '', '🖼️ 頭像')); const cur = myAvatar(), g = el('div', 'avpick');
+  const opt = (code, node, title) => { const b = el('button', 'avopt' + (code === cur ? ' on' : '')); b.title = title || ''; b.appendChild(node); b.addEventListener('click', () => setAvatar(code)); g.appendChild(b); };
+  { const im = el('img', 'avimg'); try { im.src = avatarShot(cleanGear(rec.gear), 'face', 96) || ''; } catch(e){} opt('', im, '我的角色'); }
+  AV_EMOJI.forEach((e, i) => opt('e:' + i, avatarImg('e:' + i), e));
+  for (const k of [...new Set((Pets.list || []).map(p => p.kind))]) if (PET_KINDS[k]) opt('p:' + k, avatarImg('p:' + k), PET_KINDS[k].name);
+  for (const fz of FISH.filter(x => (rec.count[x.id] || 0) > 0 && !x.of).sort((a, b) => (rec.count[b.id] || 0) - (rec.count[a.id] || 0)).slice(0, 48)) opt('f:' + fz.id, avatarImg('f:' + fz.id), fz.name);
+  f.appendChild(g); f.appendChild(el('p', 'sub', '可以選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚（最常釣的 48 種）。大家在玩家列表和好友列表都看得到。')); body.appendChild(f); }
 function renderWardrobe(body, only){
   const pv = el('div', 'wprev'), showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'pvbox');
   if (pvShow(box, showG)){ box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); if (Wardrobe.preview && Wardrobe.previewOf && GEAR_BY_ID[Wardrobe.previewOf] && GEAR_BY_ID[Wardrobe.previewOf].slot === 'back' && !PV.drag){ PV.yaw = Math.PI + 0.5; PV.idleAt = now() + 2.5; } }
@@ -10042,7 +10065,7 @@ if (UI2) document.body.classList.add('ui2');
 function ui2Tick(){
   if (!UI2) return;
   // 左上角的頭像：用自己的角色拍一張大頭照
-  try { const mk = $('#brand .mark'); if (mk){ const src = avatarShot(cleanGear(rec.gear), 'face', 96); if (src && mk._src !== src){ mk._src = src; mk.innerHTML = ''; const im = document.createElement('img'); im.src = src; im.alt = ''; mk.appendChild(im); } } } catch(e){}
+  try { const mk = $('#brand .mark'); if (mk){ const src = avatarSrc(myAvatar(), 96) || avatarShot(cleanGear(rec.gear), 'face', 96); if (src && mk._src !== src){ mk._src = src; mk.innerHTML = ''; const im = document.createElement('img'); im.src = src; im.alt = ''; mk.appendChild(im); } } } catch(e){}
   { const h = $('#brand h1'); const nm = nickname || '潮汐釣魚村'; if (h && h._nm !== nm){ h._nm = nm; h.textContent = nm; } }   // 左上角顯示自己的名字
   // 紅點：有禮物或好友邀請、有任務可以交
   const dot = (tab, n) => { const b = $(`#menu .mbtn[data-tab="${tab}"]`); if (!b) return; let d = $('.rdot', b); if (!n){ if (d) d.remove(); return; } if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); };
@@ -10427,6 +10450,7 @@ let lastPres = '', lastPresAt = 0;
 function presenceObj(){
   const o = { p:[+me.pos.x.toFixed(2), +me.pos.z.toFixed(2), +me.baseY.toFixed(2)], r:+me.rot.toFixed(2), sh:look.shirt, ht:look.hat };
   if (nickname) o.n = nickname;
+  { const av = myAvatar(); if (av) o.av = av; }   /* v334 頭像 */
   if (myId) o.u = myId;
   if (myBoat) o.bt = 1;
   if (mySeat) o.st = 1;
@@ -12112,7 +12136,7 @@ function renderTab(){
       tb.appendChild(el('small', 'sub', '2 人以上就能玩：被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。')); body.appendChild(tb);
     }
     const ul = el('ul', 'people');
-    const add = (name, color, st, isMe, uid, peerId) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
+    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { const im = avatarImg(av); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
@@ -12122,8 +12146,8 @@ function renderTab(){
       if (peerId){ const bk = el('button', 'tbtn ghost vbtn bk', '封鎖'); bk.addEventListener('click', () => { if (bk.dataset.sure !== '1'){ bk.dataset.sure = '1'; bk.textContent = '確定封鎖？'; bk.classList.add('warn'); return; } blockPeer(peerId, name); renderTab(); }); li.appendChild(bk); }
       ul.appendChild(li); };
     const stOf = (ph, x, z) => { if (ph){ const s = SPOTS.reduce((a, b) => Math.hypot(x-a.pos.x, z-a.pos.z) < Math.hypot(x-b.pos.x, z-b.pos.z) ? a : b); return `在${s.short}釣魚中`; } return '散步中'; };
-    add(myDisplayName() === '你' ? '你' : myDisplayName(), look.shirt, stOf(me.fishing, me.pos.x, me.pos.z), true);
-    for (const p of peers.values()) add(peerName(p) + (p.guest ? '・訪客' : ''), isHex(p.pres.sh) ? p.pres.sh : '#9fb3bf', stOf(!!p.pres.f, p.target.x, p.target.z), false, typeof p.pres.u === 'string' ? p.pres.u : null, [...peers.entries()].find(([k, v]) => v === p)[0]);
+    add(myDisplayName() === '你' ? '你' : myDisplayName(), look.shirt, stOf(me.fishing, me.pos.x, me.pos.z), true, null, null, myAvatar());
+    for (const p of peers.values()) add(peerName(p) + (p.guest ? '・訪客' : ''), isHex(p.pres.sh) ? p.pres.sh : '#9fb3bf', stOf(!!p.pres.f, p.target.x, p.target.z), false, typeof p.pres.u === 'string' ? p.pres.u : null, [...peers.entries()].find(([k, v]) => v === p)[0], typeof p.pres.av === 'string' ? p.pres.av : '');
     /* NPC 不列在玩家清單裡（這裡只放真人） */
     body.appendChild(ul);
     const bl = Object.entries(blockList);
@@ -12138,6 +12162,7 @@ function renderTab(){
   } else if (curTab === 'map'){
     renderMap(body);
   } else if (curTab === 'style'){
+    renderAvatarPick(body);
     renderCloudBox(body);
     renderPushBox(body);
     const f1 = el('div', 'field'); f1.appendChild(el('label', '', '衣服顏色')); const s1 = el('div', 'swatches');
@@ -12375,6 +12400,7 @@ function renderTab(){
       '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。'
     ]);
     sec('👥 跟大家一起玩', [
+      '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
       '走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。設定 →「👋 陌生人」可以選只看認識的人和好友打的字（13～17 歲預設打開），陌生人說話只會顯示 💬。',
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
