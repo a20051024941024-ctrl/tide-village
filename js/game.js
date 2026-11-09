@@ -3501,7 +3501,7 @@ const camLimits = () => Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 
    現在：手指放開在任何地方都會清掉；兩指距離要先變超過 14px 才開始縮放（快點的小抖動不算） */
 let pinchArm = 0;
 addEventListener('pointerup', e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }, true); addEventListener('pointercancel', e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }, true);
-canvas.addEventListener('pointerdown', e => { ensureAudio(); if (pinch.size >= 2) pinch.clear(); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); pinchArm = pinchDist; drag = null; } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
+canvas.addEventListener('pointerdown', e => { ensureAudio(); if (F.phase === 'idle' && CAMV.snap) CAMV.snap = null; if (pinch.size >= 2) pinch.clear(); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); pinchArm = pinchDist; drag = null; } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
 canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchArm){ if (Math.abs(d - pinchArm) < 14) return; pinchArm = 0; pinchDist = d; return; } const L = camLimits(); if (pinchDist > 0) cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); pinchDist = d; } });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
 canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
@@ -3928,6 +3928,11 @@ function camClear(target, want, dt){
   const x = target.x + dx * k, z = target.z + dz * k; let y = Math.max(target.y + dy * k, groundHeight(x, z) + 0.6);
   want.set(x, y, z); }
 function updateCamera2(dt){
+  /* v323 玩家回報：快速點、釣完魚鏡頭就變了。拉魚連打的時候另一隻手指碰到畫面，會被當成拖動或縮放鏡頭。
+     開始釣魚時記住鏡頭的角度和距離，釣完就慢慢回到原本的樣子（釣完以後自己再拖、再縮放就照你的意思） */
+  { const fishing = ['charging', 'waiting', 'bite', 'reeling', 'landing', 'land'].includes(F.phase);
+    if (fishing && !CAMV.snap && !Photo.on) CAMV.snap = { p: cam.pitch, d: cam.dist, y: null };
+    if (!fishing && CAMV.snap && F.phase === 'idle'){ const S = CAMV.snap, k = Math.min(1, dt * 5); cam.pitch += (S.p - cam.pitch) * k; cam.dist += (S.d - cam.dist) * k; if (Math.abs(S.p - cam.pitch) < 0.005 && Math.abs(S.d - cam.dist) < 0.02){ cam.pitch = S.p; cam.dist = S.d; CAMV.snap = null; } } }
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   const reelOn = F.phase === 'reeling' && !Photo.on;
   reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4)); if (!reelOn) reelCam.y0 = null;
