@@ -9768,7 +9768,7 @@ function recordCatch(f, w){
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
-  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
+  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); if (r) rumorAfterCatch(F.spot && F.spot.id); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
   if (Tny.on){ Tny.myW += w; Tny.myN++; }
   return { isNew, isBest: isBest && !isNew };
 }
@@ -11294,7 +11294,7 @@ function renderEvtChip(force){ if (!Evt.chip){ Evt.chip = document.createElement
   if (OW.luckUntil && OW.luckUntil > Date.now()){ const r = Math.ceil((OW.luckUntil - Date.now()) / 1000); parts.unshift(`🐋 好運 ${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`); }
   const txt = parts.join(' · '); if (Evt.chip.textContent !== txt) Evt.chip.textContent = txt;
   Evt.chip.hidden = !!(Dive.on || (typeof Sub !== 'undefined' && Sub.on) || House.on || inIndoor()); }
-function evtTick(t){ if (!Kid.applied){ Kid.applied = true; kidApply(); } const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms);
+function evtTick(t){ if (!Kid.applied){ Kid.applied = true; kidApply(); } if (Cloud.on && !Rumor.busy && (!Rumor.at || Date.now() - Rumor.at > 5 * 60000)) rumorLoad(); const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms);
   if (Evt.lastMig !== null && m.active && Evt.lastMig !== m.id + ':1') ticker(`🐟 魚群洄游！一大群${(FISH_BY_ID[m.fish] || {}).name}游到了${(SPOT_BY_ID[m.spot] || {}).label}，接下來 25 分鐘特別好釣，釣到 4 條送 200 金幣`);
   Evt.lastMig = m.id + ':' + (m.active ? 1 : 0);
   if (Evt.lastB !== null && Evt.lastB !== b.id) ticker(`🎯 新的懸賞：釣到 ${b.minw} 公斤以上的${(FISH_BY_ID[b.fish] || {}).name}，送 300 金幣（2 小時內）`); Evt.lastB = b.id;
@@ -11308,12 +11308,35 @@ function meteorTick(dt, t){ if (!evtMeteor(bossNow()) || House.on || inIndoor() 
   if (Evt.met.length < 5){ const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 0.25), new THREE.MeshBasicMaterial({ color:'#fff6d8', transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false, fog:false })); m.geometry.translate(4.5, 0, 0); m.renderOrder = 2; scene.add(m); Evt.met.push({ m, life:0 }); }
   for (const o of Evt.met){ if (o.life <= 0){ if (Math.random() < dt * 0.6){ const a = Math.random() * 6.28, r = 60 + Math.random() * 60; o.m.position.set(me.pos.x + Math.cos(a) * r, 55 + Math.random() * 25, me.pos.z + Math.sin(a) * r); o.m.lookAt(camera.position); o.m.rotateZ(-0.5 - Math.random() * 0.4); o.life = 1; o.v = new THREE.Vector3(-1, -0.5, 0).applyQuaternion(o.m.quaternion).multiplyScalar(40); } else { o.m.visible = false; continue; } }
     o.life -= dt * 1.4; o.m.visible = true; o.m.position.addScaledVector(o.v, dt); o.m.material.opacity = Math.sin(Math.max(0, o.life) * Math.PI) * 0.9; } }
+/* ===== v326 傳說魚的線索（29，128）：每週一則傳聞，三條線索，第一個釣到的人 ===== */
+const RIG_NAME = { float:'浮標釣', bottom:'沉底釣', lure:'路亞' }, PER_NAME = { day:'白天', twilight:'清晨或黃昏', night:'晚上' };
+var Rumor = { st:null, at:0, busy:false, talked:'' };
+async function rumorLoad(force){ if (!Cloud.on || !Cloud.sb || Rumor.busy) return; if (!force && Rumor.at && Date.now() - Rumor.at < 5 * 60000) return; Rumor.busy = true;
+  try { const { data, error } = await Cloud.sb.rpc('rumor_status'); if (!error && data){ const old = Rumor.st; Rumor.st = data; Rumor.at = Date.now(); rumorNotice(old, data); } } catch(e){} Rumor.busy = false; }
+function rumorSpot(st){ return (SPOT_BY_ID[st && st.spot] || {}).label || '某個釣點'; }
+function rumorNotice(old, st){ const wk = String(st.week || '');
+  if (LS.get('tide.rumorWk', '') !== wk){ LS.set('tide.rumorWk', wk); setTimeout(() => ticker(`📰 本週傳聞：有人在<b>${esc(rumorSpot(st))}</b>看到很大的影子……（活動頁看線索）`), 4000); }
+  if (old && old.week === st.week){
+    if (st.c2 && !old.c2){ flash(`🔍 你注意到了：那個大影子好像都在${PER_NAME[st.per] || '某個時段'}出現`, 2.6); setTimeout(() => toast('港口追紅鯊的阿默整天看著海，去問問他吧'), 2800); }
+    if (st.caught && !old.caught){ setTimeout(() => flash(st.first && st.first.me ? '🏆 你是本週第一個釣到傳聞大魚的人！+500 金幣' : '🔍 你也釣到了傳聞的大魚！+150 金幣', 2.6), 2200); }
+  }
+  if (st.first && !st.first.me && LS.get('tide.rumorFirst', '') !== wk){ LS.set('tide.rumorFirst', wk); ticker(`🏆 本週傳聞的大魚被 <b>${esc(st.first.name)}</b> 第一個釣到了！（${(FISH_BY_ID[st.fish] || {}).name || '傳說魚'} ${fmtKg(st.first.w)}）`); }
+}
+function rumorAfterCatch(spotId){ if (Rumor.st && spotId === Rumor.st.spot) setTimeout(() => rumorLoad(true), 1200); }
+function rumorAmo(n){ const st = Rumor.st; if (!st || !st.c2 || st.c3 || Rumor.talked === st.week || !Cloud.on) return; if (Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) > 3.6) return;
+  Rumor.talked = st.week; Cloud.sb.rpc('rumor_talk').then(({ data }) => { if (!data) return; const old = Rumor.st; Rumor.st = data; Rumor.at = Date.now();
+    n.say(`${rumorSpot(data)}的大影子？我看過！要用「${RIG_NAME[data.rig] || '?'}」才釣得到，${PER_NAME[data.per] || ''}去最好`, 'talk', 7); flash(`🔍 第三條線索：用「${RIG_NAME[data.rig] || '?'}」`, 2.4); rumorNotice(old, data); }, () => { Rumor.talked = ''; }); }
+function rumorItem(item){ const st = Rumor.st; if (!st) return;
+  const clue = [`📍 地點：${rumorSpot(st)}`, st.c2 ? `🕒 時段：${PER_NAME[st.per]}` : `🕒 時段：？？（在${rumorSpot(st)}釣到 5 條魚就會注意到，${Math.min(5, st.n)}/5）`, st.c3 ? `🎣 釣法：${RIG_NAME[st.rig]}` : st.c2 ? '🎣 釣法：？？（去港口問追紅鯊的阿默）' : '🎣 釣法：？？'];
+  const head = st.first ? `本週第一個釣到的是 ${st.first.name}（${(FISH_BY_ID[st.fish] || {}).name || ''} ${fmtKg(st.first.w)}）` : '還沒有人釣到，第一個釣到的人 🪙500';
+  item('🔍', '本週傳聞' + (st.caught ? '（你已經釣到了 ✅）' : ''), `有人在${rumorSpot(st)}看到很大的影子。${clue.join('；')}。三條線索都找到，在對的時段用對的釣法，那條傳說魚比較好釣（4 倍）。${head}；之後釣到的人 🪙150。每週一換。`, !st.caught); }
 function renderEvents(body){ const ms = bossNow(), s = Math.floor(ms / 1000), m = evtMig(ms), b = evtBounty(ms), st = Evt.st;
   body.appendChild(el('p', 'sub', '村子裡每天都有活動，時間都是台灣時間。金幣由伺服器發，每次活動一個人拿一次。'));
   const ul = el('ul', 'shoplist'), item = (ic, title, sub, on) => { const li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', title)); d.appendChild(el('div', 'sub2', sub)); li.appendChild(d); ul.appendChild(li); };
   { const nx = m.active ? m : evtMig((m.st + 10800 + 60) * 1000), n = st && st.mig && st.mig.id === m.id ? st.mig.n : 0, done = st && st.mig && st.mig.id === m.id && st.mig.done;
     item('🐟', '魚群洄游' + (m.active ? '（進行中）' : ''), m.active ? `${(SPOT_BY_ID[m.spot] || {}).label}：一大群${(FISH_BY_ID[m.fish] || {}).name}（到 ${evtHM(m.en)}）。在那裡釣到 4 條送 🪙200 ── 你：${done ? '已完成 ✅' : Math.min(5, n) + '/5'}` : `下一次 ${evtHM(nx.st)}：${(SPOT_BY_ID[nx.spot] || {}).label}的${(FISH_BY_ID[nx.fish] || {}).name}。每 3 小時一次，每次 25 分鐘。`, m.active); }
   { const done = st && st.bounty && st.bounty.id === b.id && st.bounty.done; item('🎯', '懸賞魚', `${(FISH_BY_ID[b.fish] || {}).name} ${b.minw} 公斤以上（到 ${evtHM(b.en)}）送 🪙300 ── ${done ? '你已經領了 ✅' : '還沒達成'}`, !done); }
+  rumorItem(item); if (!Rumor.st) rumorLoad(true).then(() => { if (curTab === 'events' && Rumor.st) renderTab(); });
   item('🌠', '流星雨夜釣' + (evtMeteor(ms) ? '（進行中）' : ''), '每天 23:00～23:30，所有釣點傳說魚比較好釣，天上一直有流星。', evtMeteor(ms));
   item('🏆', '釣魚大賽', '每天 12:00、19:00、21:00，各 10 分鐘，比總重量，前三名有獎。');
   item('🐋', '全服大魚', '每天 20:30（週六日 14:00 也有），港口外海大家一起拉。');
@@ -11607,7 +11630,7 @@ function updateNpcs(dt, t){
     if (n.shopNpc === 'fu'){ updateShopNpc(n, dt, t, () => (!Fu.at || Date.now() - Fu.at > 5 * 60000) && loadFu()); continue; }
     if (n.shopNpc === 'salon'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); if (Salon.poleTex) Salon.poleTex.offset.y = (t * 0.35) % 1; continue; }   /* 阿萍站在店門口顧店；理髮燈一直轉 */
     if (n.shopNpc === 'craft'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); continue; }   /* v255 阿鐵師傅站著顧攤，不釣魚 */
-    if (n.amo) updateAmo(n, dt, t);
+    if (n.amo){ updateAmo(n, dt, t); if (frameNo % 20 === 0) rumorAmo(n); }
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
     const st = n.st || 'wait';
     if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z);
@@ -12213,6 +12236,7 @@ function renderTab(){
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
     ]);
     sec('📜 每日任務、釣魚活動', [
+      '🔍 本週傳聞（每週一換）：有人在某個釣點看到很大的影子。在那裡釣到 5 條魚會發現牠出現的時段；再去港口問追紅鯊的阿默，他會告訴你要用哪種釣法。三條線索都找到，在對的釣點、時段、釣法，那條傳說魚比較好釣（4 倍）。本週第一個釣到的人 🪙500，之後釣到的人 🪙150。進度在「活動」頁。',
       '村長阿土伯（潮汐廣場東邊、村長辦公室門口）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',
       '走到他們旁邊、或在選單的「任務」分頁交付魚或料理，就能拿到金幣。每天台灣時間半夜 12 點換新任務。',
       '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 4 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。'

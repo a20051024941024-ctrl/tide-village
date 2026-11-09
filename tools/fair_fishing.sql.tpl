@@ -109,7 +109,7 @@ declare
   rig text := case when p_rig in ('float', 'lure', 'bottom') then p_rig else 'float' end;
   ln jsonb := coalesce(cfg->'lines'->coalesce(p_line, 'normal'), cfg->'lines'->'normal');
   rod jsonb := coalesce(cfg->'rods'->pl.rod, cfg->'rods'->'bamboo');
-  bait jsonb; bf jsonb; cb_r numeric := 1; cb_l numeric := 1; w jsonb; tide_st text; tr numeric := 1;
+  bait jsonb; bf jsonb; cb_r numeric := 1; cb_l numeric := 1; w jsonb; tide_st text; tr numeric := 1; rum_f text;
   sea boolean := p_spot = any(array(select jsonb_array_elements_text(cfg->'sea')));
   ring numeric := 1; lb numeric := 1; per text; gh numeric; tip_spot text; tip_fish text; hh bigint; pool text[];
   ipool text[]; ih bigint; intel text[] := '{}'; sc_mine boolean := false; evm jsonb;
@@ -197,7 +197,8 @@ begin
   legk := (case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
   sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl, bait->>'k') end;
-  begin evm := public._ev_mig(); if public._ev_meteor() then kl := kl * 1.6; end if; exception when undefined_function then evm := null; end;   -- 111 釣魚活動：魚群洄游、流星雨
+  begin evm := public._ev_mig(); if public._ev_meteor() then kl := kl * 1.6; end if; exception when undefined_function then evm := null; end;
+  begin rum_f := public._rumor_hit(pl.id, p_spot, rig, per); exception when undefined_function then rum_f := null; end;   -- 128 傳說魚的線索：三條線索都找到、在對的釣點時段釣法，那條傳說魚 ×4   -- 111 釣魚活動：魚群洄游、流星雨
   if p_boat then begin if public._breach_luck(pl.id) then kr := kr * 1.4; kl := kl * 1.25; end if; exception when undefined_function then null; end; end if;   -- 113 在外海看到鯨魚跳出水面：3 分鐘內在船上釣稀有 ×1.4、傳說 ×1.25
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
     f := cfg->'fish'->fid; if f is null then continue; end if;
@@ -213,7 +214,8 @@ begin
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)
       * (case when f->>'t' is null then 1 when f->>'t' = per then 1.5 else 0.15 end)
       * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
-      * (case when evm is not null and (evm->>'active')::boolean and p_spot = evm->>'spot' and fid = evm->>'fish' then 4 else 1 end)   -- 111 魚群洄游：那種魚在那個釣點 ×4
+      * (case when evm is not null and (evm->>'active')::boolean and p_spot = evm->>'spot' and fid = evm->>'fish' then 4 else 1 end)
+      * (case when rum_f is not null and fid = rum_f then 4 else 1 end)   -- 111 魚群洄游：那種魚在那個釣點 ×4
       * (case when sg_k is not null and f->>'k' = sg_k then (case when f->>'r' = '傳說' then (case when sg_k = bait->>'k' then 1.5 else 1.3 end) else (case when sg_k = bait->>'k' then 4 else 2.5 end) end) else 1 end)   -- 247 徵兆（255：餌對上徵兆加成更大）
       * (case when bait ? 'fav' then (case when bait->'fav' ? coalesce(f->>'of', fid) then (case when f->>'r' = '傳說' then 1.3 else 1.8 end) else 0.88 end) else 1 end)   -- 118 針對特定魚的餌：愛吃的魚 ×1.8（傳說 ×1.3），其他 ×0.88
       * (case when bait->>'k' is not null and f->>'k' = bait->>'k' then 1.5 else 1 end)   -- 255 餌吸引的那一類魚   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
