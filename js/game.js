@@ -6523,6 +6523,7 @@ setInterval(tourneyTick, 1000);
 var Fr = { list:[], req:[], gifts:[], at:0, giftTo:null, notified:'' };
 function friendCode(){ return (Cloud.userId || '').slice(0, 8); }
 function isFriend(uid){ return Fr.list.some(f => f.id === uid); }
+function friendNameOf(uid){ if (!uid || !Fr || !Array.isArray(Fr.list)) return ''; const f = Fr.list.find(x => x.id === uid); return f && f.name ? clean(String(f.name).slice(0, 16)) : ''; }   /* v322 對方名字沒傳過來時，用好友列表裡的名字 */
 function onlineUids(){ const s = new Set(); for (const p of peers.values()) if (typeof p.pres.u === 'string') s.add(p.pres.u); return s; }
 async function frRpc(fn, args){
   if (!Cloud.on || !Cloud.sb) return null;
@@ -10319,7 +10320,7 @@ const chatRate = new Map();
 function tooChatty(peerId){ const t = performance.now(), a = (chatRate.get(peerId) || []).filter(x => t - x < 6000); a.push(t); chatRate.set(peerId, a); return a.length > 4; }
 let myChatAt = [], lastMyChat = '';
 
-function peerName(p){ const pr = p.pres || {}; const n = typeof pr.n === 'string' && pr.n.trim() ? clean(pr.n.trim().slice(0, 16)) : (p.by && profileNames[p.by]) || '釣客'; const hm = (onIsle || House.on) && typeof homeMate === 'function' && homeMate(p.by); return hm ? `${n}・${homeTitle(hm)}` : n; }   /* 一起住的人名字後面加稱呼（v275 只在小島上、房子裡才加，在外面就只顯示名字） */
+function peerName(p){ const pr = p.pres || {}; const n = typeof pr.n === 'string' && pr.n.trim() ? clean(pr.n.trim().slice(0, 16)) : (p.by && profileNames[p.by]) || friendNameOf(typeof pr.u === 'string' ? pr.u : p.by) || '釣客'; const hm = (onIsle || House.on) && typeof homeMate === 'function' && homeMate(p.by); return hm ? `${n}・${homeTitle(hm)}` : n; }   /* 一起住的人名字後面加稱呼（v275 只在小島上、房子裡才加，在外面就只顯示名字） */
 function myDisplayName(){ return nickname || (myId && profileNames[myId]) || '你'; }
 
 let lastPres = '', lastPresAt = 0;
@@ -10668,6 +10669,7 @@ function rowToRec(r){
 function nameLocked(){ const L = Cloud.lastRow && Cloud.lastRow.name_lock; const t = L ? Date.parse(L) : 0; if (t > Date.now()){ toast(`你的名字被管理員改過了（原本的名字不適合），${Math.ceil((t - Date.now()) / 864e5)} 天後才能再改`); return true; } return false; }
 function adoptRow(row){
   if (!row || typeof row !== 'object') return;
+  if (!nickname && row.nickname && row.nickname !== '釣客'){ nickname = String(row.nickname).slice(0, 16); LS.set('tide.nick', nickname); try { refreshMyName(); pushPresence(true); } catch(e){} }   /* v322 換手機、清過資料時手機上的名字是空的，別人就只看到「釣客」：用伺服器上的名字 */
   if (row.name_lock && Date.parse(row.name_lock) > Date.now() && row.nickname && row.nickname !== nickname){ nickname = row.nickname; LS.set('tide.nick', nickname); try { refreshMyName(); pushPresence(true); } catch(e){} toast(`管理員把你的名字改成「${esc(nickname)}」了（原本的名字不適合）`); }
   if (Cloud.lastRow && !('island' in row)) row = Object.assign({}, Cloud.lastRow, rec && rec.island ? { island: rec.island } : {}, row);   /* 島用手上最新的（蓋房子、擴建是直接問伺服器的，不會經過 lastRow） */   /* 省流量：常用的動作不回傳整座島（072），用上次的島補上 */
   Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
