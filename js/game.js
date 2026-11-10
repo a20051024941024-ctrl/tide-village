@@ -3402,7 +3402,7 @@ function placeLabelsUpdate(){
     const d = L.d; tmpV.copy(L.p).project(camera);
     const sx = (tmpV.x*0.5+0.5)*viewW(), sy = (-tmpV.y*0.5+0.5)*viewH();
     const atSpot = L.spot && Math.hypot(me.pos.x - L.spot.pos.x, me.pos.z - L.spot.pos.z) < 4;
-    if (tmpV.z > 1 || d > 45 || atSpot || sy < topBarBottom + 26){ L.el.style.display = 'none'; continue; }
+    if (L.off || tmpV.z > 1 || d > (L.max || 45) || atSpot || sy < topBarBottom + 26){ L.el.style.display = 'none'; continue; }
     if (L.el.style.display === 'none' || !L.w){ L.el.style.display = ''; L.w = L.el.offsetWidth || 80; L.h = L.el.offsetHeight || 22; }
     const r = [sx - L.w / 2 - 4, sy - L.h - 2, sx + L.w / 2 + 4, sy + 2];
     if (put.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1])){ L.el.style.display = 'none'; continue; }
@@ -12039,6 +12039,22 @@ var WORLD_LINES = {
 function worldLine(n, wp){ const pick = a => a[Math.floor(Math.random() * a.length)]; if (wp.walk) return pick(WORLD_LINES.walk[wp.r.act] || ['出門囉']); return pick(WORLD_LINES[wp.r.act] || ['嗯嗯']); }
 function worldTag(n, wp){ const ic = wp ? (wp.walk ? '🚶' : (WORLD_ACT[wp.r.act] || [''])[0]) : ''; if (n.nm.dataset.st !== ic){ if (ic) n.nm.dataset.st = ic; else delete n.nm.dataset.st; } }
 // 每一幀：回傳 true 表示這一幀已經處理完（走路中、在家、不在工作的地方），false 表示「在原本的位置做原本的事」，讓原本的程式接手
+/* v352 老闆不在店裡的時候，店門口立一塊小牌子，寫他去哪了（玩家說找不到人以為壞掉）。店照常可以買賣；老港要本人在才買得到 */
+const WORLD_SIGN = { sleep:['💤', '回家睡覺了'], rest:['🏠', '回家休息了'], eat:['🍚', '去吃飯了'], chat:['💬', '去找人聊天了'], fish:['🎣', '去釣魚了'], stroll:['🚶', '出去走走了'], work:['🚶', '出去一下'] };
+function worldSign(n, away, act){ if (!n.post || !(n.shopNpc || n.wid === 'gang')) return; let S = n.wSign;
+  if (!away){ if (S && S.on){ S.on = false; S.g.visible = false; S.L.off = true; } return; }
+  if (!S){ const g = new THREE.Group(); g.userData.dyn = true; const wood = new THREE.MeshStandardMaterial({ color:'#8c5d3b', roughness:0.9 }), cv = document.createElement('canvas'); cv.width = cv.height = 128;
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const face = new THREE.MeshStandardMaterial({ map: tx, roughness:0.8 });
+    for (const sx of [-1, 1]){ const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.05), wood); leg.position.set(sx * 0.22, 0.45, 0); leg.userData.dyn = true; g.add(leg); }
+    const board = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.5, 0.04), wood); board.position.y = 0.72; board.castShadow = true; board.userData.dyn = true; g.add(board);
+    for (const sz of [-1, 1]){ const f = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.42), face); f.position.set(0, 0.72, sz * 0.022); if (sz < 0) f.rotation.y = Math.PI; f.userData.dyn = true; g.add(f); }
+    const a = n.post.rot || 0; g.position.set(n.post.x + Math.cos(a) * 0.75, n.post.y, n.post.z - Math.sin(a) * 0.75); g.rotation.y = a; g.scale.setScalar(1.35); scene.add(g);
+    const el = document.createElement('div'); el.className = 'lbl'; labelsEl.appendChild(el); const L = { el, p: new THREE.Vector3(g.position.x, n.post.y + 1.7, g.position.z), off: true, max: 20 }; placeLabels.push(L);
+    S = n.wSign = { g, cv, tx, L, on: false, act: null }; }
+  if (S.act !== act){ S.act = act; const W = WORLD_SIGN[act] || WORLD_SIGN.work, who = WORLD_WHO[n.wid] || '老闆';
+    const c = S.cv.getContext('2d'); c.fillStyle = '#fbf3df'; c.fillRect(0, 0, 128, 128); c.strokeStyle = '#8c5d3b'; c.lineWidth = 6; c.strokeRect(5, 5, 118, 118); c.font = '72px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(W[0], 64, 68); S.tx.needsUpdate = true;
+    S.L.el.textContent = `${W[0]} ${who}${W[1]}` + (n.wid === 'gang' ? '，回來才買得到' : '・店照常營業'); S.L.w = 0; }
+  if (!S.on){ S.on = true; S.g.visible = true; S.L.off = false; } }
 function worldDrive(n, dt, t){
   if (!n.wid) return false;
   /* v351 玩家回報：一進遊戲海產店老闆站在店門口，過一兩秒又突然消失。原因：村民照伺服器的作息過日子（回家休息、吃飯、睡覺時不在店裡），但作息資料要連上線才知道，沒拿到之前先站在原位，拿到後才「消失」。
@@ -12050,9 +12066,10 @@ function worldDrive(n, dt, t){
   const wp = Cloud.on ? worldPose(n.wid) : null;
   if (!n.post) n.post = { x:n.pos.x, z:n.pos.z, y:n.baseY, rot:n.rot, fishing:n.fishing, bob:n.bobPos.clone() };
   worldTag(n, wp);
-  if (!wp){ if (n.wMode){ n.wMode = null; n.wHide = false; n.pos.set(n.post.x, n.post.y, n.post.z); n.baseY = n.post.y; n.rot = n.post.rot; n.av.g.visible = true; } return false; }
+  if (!wp){ worldSign(n, false); if (n.wMode){ n.wMode = null; n.wHide = false; n.pos.set(n.post.x, n.post.y, n.post.z); n.baseY = n.post.y; n.rot = n.post.rot; n.av.g.visible = true; } return false; }
   const P = n.post, atPost = !wp.walk && Math.hypot(wp.x - P.x, wp.z - P.z) < 0.6 && (wp.r.act === 'work' || wp.r.act === 'fish' && n.post.fishing);
   const mode = wp.walk ? 'walk' : atPost ? 'post' : (wp.r.act === 'sleep' || wp.r.act === 'rest') && wp.to.kind === 'home' ? 'home' : 'away';
+  worldSign(n, mode !== 'post', wp.walk ? 'stroll' : wp.r.act);
   const d = Math.hypot(n.pos.x - wp.x, n.pos.z - wp.z);
   if (d > 12 || !n.wMode) n.pos.x = wp.x, n.pos.z = wp.z;   /* 剛載入、或差太多：直接放到正確的位置 */
   else { const k = Math.min(1, dt * 6); n.pos.x += (wp.x - n.pos.x) * k; n.pos.z += (wp.z - n.pos.z) * k; }
@@ -12599,6 +12616,7 @@ function renderTab(){
     ]);
     sec('👥 跟大家一起玩', [
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
+      '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
       '走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。設定 →「👋 陌生人」可以選只看認識的人和好友打的字（13～17 歲預設打開），陌生人說話只會顯示 💬。',
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
