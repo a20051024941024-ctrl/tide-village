@@ -3614,13 +3614,13 @@ canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(
 // joystick（浮動：按在左半邊哪裡，搖桿中心就在哪裡；v314 設定可以改成固定在左下角）
 function joyFixed(){ return LS.get('tide.joyFixed', false) === true; }
 (function(){
-  const zone = $('#joyZone'), el = $('#joy'), knob = $('.knob', el); let id = null, cx = 0, cy = 0, M = 60;
+  const zone = $('#joyZone'), el = $('#joy'), knob = $('.knob', el); let id = null, cx = 0, cy = 0, M = 60, ox = 0, oy = 0;
   zone.addEventListener('pointerdown', e => { try { awStop(); } catch(_){}
     if (id !== null) return; ensureAudio(); id = e.pointerId; try { zone.setPointerCapture(id); } catch(_){}
     const R = el.offsetWidth / 2; M = R * 0.72;
     if (joyFixed()){ const r = el.getBoundingClientRect(); cx = r.left + R; cy = r.top + R; el.classList.add('active'); move(e); return; }   /* v314 固定搖桿：圈圈不動，按左半邊哪裡都從原本的位置推 */
     cx = clamp(e.clientX, R + 4, innerWidth - R - 4); cy = clamp(e.clientY, R + 4, innerHeight - R - 4);
-    el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; el.style.bottom = 'auto'; el.classList.add('active');
+    ox = cx; oy = cy; el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; el.style.bottom = 'auto'; el.classList.add('active');
     move(e);
   });
   zone.addEventListener('pointermove', e => { if (e.pointerId === id) move(e); });
@@ -3628,9 +3628,12 @@ function joyFixed(){ return LS.get('tide.joyFixed', false) === true; }
   zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
   /* v283 比較順手：手指拉超過圈圈時，圈圈跟著手指走（要轉彎不用把手指拉回來）；中間一小圈不算（手指抖一下不會亂走） */
   function move(e){ let dx = e.clientX - cx, dy = e.clientY - cy; const L = Math.hypot(dx, dy), R = el.offsetWidth / 2;
-    if (L > M * 1.15 && !joyFixed()){ const k = (L - M * 1.15) / L; cx = clamp(cx + dx * k, R + 4, innerWidth - R - 4); cy = clamp(cy + dy * k, R + 4, innerHeight - R - 4); el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; dx = e.clientX - cx; dy = e.clientY - cy; }
+    if (L > M * 1.15 && !joyFixed()){ const k = (L - M * 1.15) / L; cx = clamp(cx + dx * k, R + 4, innerWidth - R - 4); cy = clamp(cy + dy * k, R + 4, innerHeight - R - 4);
+      /* v356 玩家回報：推著走的時候搖桿一直跟著手指往畫面中間跑，擋到角色。現在圈圈最多只離按下去的地方半個圈圈遠，也不會超過畫面左邊 38% */
+      { const ddx = cx - ox, ddy = cy - oy, dl = Math.hypot(ddx, ddy), mx = R * 0.5; if (dl > mx){ cx = ox + ddx / dl * mx; cy = oy + ddy / dl * mx; } cx = Math.min(cx, Math.max(ox, innerWidth * 0.38)); }
+      el.style.left = (cx - R) + 'px'; el.style.top = (cy - R) + 'px'; dx = e.clientX - cx; dy = e.clientY - cy; }
     const L2 = Math.hypot(dx, dy); if (L2 > M){ dx *= M / L2; dy *= M / L2; } knob.style.transform = `translate(${dx}px,${dy}px)`;
-    const m = Math.min(1, L2 / M), dz = 0.1, g = m < dz ? 0 : (m - dz) / (1 - dz); joy.x = L2 > 0 ? dx / L2 * g : 0; joy.z = L2 > 0 ? dy / L2 * g : 0; }
+    const m = Math.min(1, L2 / M), dz = 0.1, g = m < dz ? 0 : (m - dz) / (1 - dz), L3 = Math.hypot(dx, dy); joy.x = L3 > 0 ? dx / L3 * g : 0; joy.z = L3 > 0 ? dy / L3 * g : 0; }   /* v356 以前手指拉超過圈圈時，方向沒有算成滿格（只剩八成多），所以搖桿推到底也跑不起來、走得慢；現在推到底就是滿格 */
 })();
 /* v266 一手按著搖桿、另一手點按鈕：手機瀏覽器在有別的手指按著時常常不會送出「點一下」，所以按鈕按了沒反應（開潛水艇按快速聊天、走路時按表情）。
    這裡自己補：別的手指還按著的時候，手指在同一顆按鈕上按下又放開，就幫它點一下；如果瀏覽器自己也送了，就擋掉重複的那次。 */
@@ -3972,7 +3975,7 @@ function updatePlayer(dt){
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); const rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix;
     const run = keys.ShiftLeft || keys.ShiftRight || L > 0.95;
-    speed = (run ? 6.2 : 4.6) * Math.min(1, L)   /* v354 玩家說走太慢：走路 3.8→4.6、跑步 5.0→6.2（快兩成多）*/
+    speed = (run ? 5.0 : 3.8) * Math.min(1, L)   /* v356 走太慢的真正原因是搖桿推到底只算八成多、跑不起來（已修）；數字改回原本的 3.8／5.0，推到底實際是 3.3 → 5.0 */
        * (Jump.air > 0 ? 1.1 : 1) * (Mang.onMud ? 0.75 : 1) * (iAmGhost() ? 1.08 : 1);   // 鬼跑快一點點
     const nx = me.pos.x + mx / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
