@@ -15,11 +15,20 @@ ui = {
 }
 D.update(ui)
 D={k:v for k,v in D.items() if k and v}
-keys=sorted([k for k in D if len(k) >= 2 and k not in ('今天','明天','昨天','分鐘','小時','開啟','數量','價格','全部','關閉','看到','深度','氧氣','賣','售出','最大')], key=lambda k:-len(k))
-js = "// 英文（beta）：常用的介面、地名、魚名換成英文；還沒翻到的句子維持中文。由 tools/gen_en.py 產生\nconst D = " + json.dumps(D, ensure_ascii=False) + ";\nconst K = " + json.dumps(keys, ensure_ascii=False) + ";\n" + r"""const RE = new RegExp(K.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g');
+# v350 整句翻譯：tools/en_extra.json 是遊戲裡其他句子的英文（跟印尼文同一套做法），上面手寫的優先
+for k, v in json.load(open('/home/claude/tide-village-repo/tools/en_extra.json', encoding='utf8')).items(): D.setdefault(k, v)
+D.update({'比較多':'More','「低」':'"Low"','「中」':'"Mid"','「高」':'"High"'})
+keys=sorted([k for k in D if len(k) >= 2 and k not in ('分鐘','小時','開啟','數量','價格','售出')], key=lambda k:-len(k))
+js = "// 英文（beta）：介面、地名、魚名和整句說明都換成英文。由 tools/gen_en.py 產生\nconst D = " + json.dumps(D, ensure_ascii=False) + ";\nconst K = " + json.dumps(keys, ensure_ascii=False) + ";\n" + r"""const RE = null;
+const IDX = new Map(); for (const k of K){ const c = k[0]; let L = IDX.get(c); if (!L) IDX.set(c, L = []); L.push(k); }
+function rep(s){ let out = '', i = 0; const n = s.length; while (i < n){ const L = IDX.get(s[i]); let hit = null; if (L) for (const k of L){ if (s.startsWith(k, i)){ hit = k; break; } } if (hit){ out += '\u0001' + D[hit] + '\u0001'; i += hit.length; } else { out += s[i]; i++; } } return out; }
 const MEMO = new Map();
 export function toEN(s){ if (!s) return s; const hit = MEMO.get(s); if (hit !== undefined) return hit; const r = toEN0(s); if (MEMO.size > 4000) MEMO.clear(); MEMO.set(s, r); return r; }
-function toEN0(s){ if (!s || !/[㐀-鿿]/.test(s)) return s; const t = s.trim(); if (D[t]) return s.replace(t, D[t]); return s.replace(RE, m => D[m]).replace(/・/g, ' · ').replace(/，/g, ', ').replace(/。/g, '. ').replace(/！/g, '! ').replace(/？/g, '? ').replace(/：/g, ': ').replace(/（/g, ' (').replace(/）/g, ') '); }
+function toEN0(s){ if (!s || !/[㐀-鿿]/.test(s)) return s; const t = s.trim(); if (D[t]) return s.replace(t, D[t]);
+  let r = rep(s).replace(/\u0001+/g, '\u0001');
+  r = r.replace(/\u0001(?=[\s,.!?:;)\]」』、，。！？：；）・·~～…]|$)/g, '').replace(/(^|[\s(\[「『（・·])\u0001/g, '$1').replace(/\u0001/g, ' ');
+  return r.replace(/・/g, ' · ').replace(/，/g, ', ').replace(/、/g, ', ').replace(/。/g, '. ').replace(/！/g, '! ').replace(/？/g, '? ').replace(/：/g, ': ').replace(/；/g, '; ').replace(/（/g, ' (').replace(/）/g, ') ').replace(/([A-Za-z0-9])\s*[「『]\s*/g, '$1 "').replace(/\s*[」』]\s*([A-Za-z0-9])/g, '" $1').replace(/[「『]\s*/g, '"').replace(/\s*[」』]/g, '"').replace(/(\S)  +/g, '$1 ').replace(/ +([,.!?;:)])/g, '$1').replace(/([A-Za-z0-9]) +"(?=[:,.;!?)]|$)/g, '$1"').replace(/(^|[^㐀-鿿])([種個條隻次件顆低中高你再天秒])(?![㐀-鿿])/g, (a, p, c) => p + (p && !/\s$/.test(p) && !/[("]/.test(p) && ONE[c] ? ' ' : '') + ONE[c]); }
+const ONE = {'種':'kinds','個':'','條':'fish','隻':'','次':'times','件':'items','顆':'','低':'Low','中':'Mid','高':'High','你':'You','再':'more','天':'days','秒':'s'};
 """
 open('/home/claude/tide-village-repo/js/en.js','w').write(js)
 print(len(D))
