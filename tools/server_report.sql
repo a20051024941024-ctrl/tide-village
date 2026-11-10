@@ -30,3 +30,26 @@ select '## 🎣 今天' || chr(10) || chr(10) ||
   '- 釣客魚市上架中：' || coalesce((select count(*) from public.fish_market where status = 'open'), 0) || ' 條' || chr(10) ||
   '- 設計師市集：' || (select count(*) from public.designs where listed and not hidden) || ' 件上架中' || chr(10) ||
   '- 海裡的紅鯊：' || coalesce((select count(*) from public.red_sharks where status = 'sea'), 0) || ' 隻' || chr(10);
+
+-- v357 上架前要看的數據：每天上線人數、新玩家留不留得住、新手卡在哪
+select '## 📈 最近 30 天（每天）' || chr(10) || chr(10) || '> 從 2026/11/10 開始記錄，之前的日子沒有資料。隔天回來＝那天新來的人裡，第二天還有上線的比例。' || chr(10) || chr(10) ||
+  '| 日期 | 上線人數 | 新玩家 | 隔天回來 | 第 7 天回來 | 有玩的小時數（粗估） |' || chr(10) || '|---|---|---|---|---|---|' || chr(10) ||
+  coalesce(string_agg('| ' || to_char(d.day, 'MM/DD') || ' | ' || d.dau || ' | ' || d.newp || ' | ' ||
+    case when d.day >= t.today or d.newp = 0 then '–' else d.r1 || '（' || round(d.r1 * 100.0 / d.newp) || '%）' end || ' | ' ||
+    case when d.day > t.today - 7 or d.newp = 0 then '–' else d.r7 || '（' || round(d.r7 * 100.0 / d.newp) || '%）' end || ' | ' || d.hrs || ' |', chr(10) order by d.day desc), '| （還沒有資料） | | | | | |') || chr(10)
+from (select (now() at time zone 'Asia/Taipei')::date as today) t,
+  lateral (select a.day, count(*) as dau, round(avg(a.hrs), 1) as hrs,
+      count(*) filter (where (p.created_at at time zone 'Asia/Taipei')::date = a.day) as newp,
+      count(*) filter (where (p.created_at at time zone 'Asia/Taipei')::date = a.day and exists (select 1 from public.metrics_active b where b.uid = a.uid and b.day = a.day + 1)) as r1,
+      count(*) filter (where (p.created_at at time zone 'Asia/Taipei')::date = a.day and exists (select 1 from public.metrics_active b where b.uid = a.uid and b.day between a.day + 6 and a.day + 8)) as r7
+    from public.metrics_active a join public.players p on p.id = a.uid where a.day > t.today - 30 group by a.day) d;
+
+select '## 🧭 最近 30 天的新玩家，走到哪一步' || chr(10) || chr(10) || '| 步驟 | 人數 | 比例 |' || chr(10) || '|---|---|---|' || chr(10) ||
+  string_agg('| ' || r.label || ' | ' || r.c || ' | ' || case when s.n > 0 then round(r.c * 100.0 / s.n) || '%' else '–' end || ' |', chr(10) order by r.ord) || chr(10)
+from (select count(*) as n, count(*) filter (where total >= 1) as c1, count(*) filter (where total >= 5) as c5, count(*) filter (where sold > 0) as sold,
+    count(*) filter (where array_length(rods, 1) >= 2) as rod2, count(*) filter (where guide_done) as guide, count(*) filter (where total >= 50) as c50,
+    count(*) filter (where kid) as kids,
+    count(*) filter (where exists (select 1 from auth.users u where u.id = p.id and (to_jsonb(u)->>'email') is not null)) as em
+  from public.players p where created_at >= now() - interval '30 days') s
+  cross join lateral (values (1, '開始玩', s.n), (2, '釣到第一條魚', s.c1), (3, '釣到 5 條', s.c5), (4, '賣過魚', s.sold), (5, '買了第二支釣竿', s.rod2),
+    (6, '新手任務全部做完', s.guide), (7, '釣到 50 條', s.c50), (8, '綁定 Email', s.em), (9, '兒童模式（13 歲以下）', s.kids)) as r(ord, label, c);
