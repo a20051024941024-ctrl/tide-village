@@ -10233,25 +10233,66 @@ function showCatch(f, w, res){
   $('#ccDesc').textContent = small ? '這條還太小，放牠回去長大吧！放流可以得到比較多愛海點數，帶走只能賣半價。' : f.desc;
   ccFish = f; const rb = $('#ccRel'); rb.innerHTML = `放流 💙+${lp}`; rb.classList.toggle('hot', small);
   $('#ccOk').textContent = small ? '還是帶走' : '放進魚缸';
-  { const sb = $('#ccShare'), big = f.rarity !== '常見' || !!f.of || res.isNew || res.isBest; sb.hidden = !big; sb.onclick = () => shareCard({ kind: 'fish', title: gx ? gx.name : f.name, sub: `${w.toFixed(2)} kg・${f.rarity}${f.of ? '・罕見變種' : ''}`, place: SPOT_BY_ID[f.spot].label, img: $('#ccCanvas'), badge: res.isNew ? '圖鑑新登錄！' : res.isBest ? '個人新紀錄！' : '' }); }
+  { const sb = $('#ccShare'), big = f.rarity !== '常見' || !!f.of || res.isNew || res.isBest; sb.hidden = !big; sb.onclick = () => shareCard({ kind: 'fish', fish: gx || f, title: gx ? gx.name : f.name, sub: `${w.toFixed(2)} kg・${f.rarity}`, place: SPOT_BY_ID[f.spot].label, img: $('#ccCanvas'), badges: [res.isNew ? '📖 圖鑑新登錄' : '', res.isBest ? '🏆 個人新紀錄' : '', f.of ? '✨ 罕見變種' : ''].filter(Boolean) }); }
   $('#catchCard').hidden = false; uiBlocked = true; ccAt = performance.now();
   /* v307：拉魚時一直快速點，卡片跳出來那一下會被誤按（直接帶走／放流）。卡片出現後 0.7 秒內的點擊不算；手機不要自動選中按鈕（那圈藍框會讓人以為按到了） */
   if (!matchMedia('(pointer:coarse)').matches) setTimeout(() => $('#ccOk').focus(), 700);
 }
 /* v304 一鍵分享卡片：釣到稀有魚、遇到鯨魚時，做一張直式的圖（有遊戲名字和網址），可以直接分享到 IG、LINE，或存起來 */
 function gameUrl(){ return location.origin + location.pathname.replace(/index\.html$/, ''); }
-async function shareCard(o){ const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
-  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#8fd3f4'); bg.addColorStop(0.55, '#2f89c7'); bg.addColorStop(1, '#173d63'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  g.globalAlpha = 0.18; g.strokeStyle = '#fff'; g.lineWidth = 10; for (let k = 0; k < 6; k++){ const y = 1500 + k * 70; g.beginPath(); for (let x = -40; x <= W + 40; x += 20) g.lineTo(x, y + Math.sin(x / 70 + k) * 16); g.stroke(); } g.globalAlpha = 1;
-  g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = `900 92px ${font}`; g.fillText('🎣 潮汐釣魚村', W / 2, 200); g.font = `600 44px ${font}`; g.globalAlpha = 0.9; g.fillText(o.kind === 'whale' ? '我在海上遇到了…' : '我釣到了…', W / 2, 290); g.globalAlpha = 1;
-  const cardY = 360, cardH = 1000; g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); if (g.roundRect) g.roundRect(70, cardY, W - 140, cardH, 48); else g.rect(70, cardY, W - 140, cardH); g.fill();
-  if (o.img){ const iw = o.img.width, ih = o.img.height, s = Math.min((W - 220) / iw, 620 / ih), dw = iw * s, dh = ih * s; g.save(); g.beginPath(); if (g.roundRect) g.roundRect(110, cardY + 40, W - 220, 640, 34); else g.rect(110, cardY + 40, W - 220, 640); g.clip(); g.fillStyle = '#eef6fb'; g.fillRect(110, cardY + 40, W - 220, 640); g.drawImage(o.img, (W - dw) / 2, cardY + 40 + (640 - dh) / 2, dw, dh); g.restore(); }
-  g.fillStyle = '#18334a'; g.font = `900 84px ${font}`; g.fillText(o.title, W / 2, cardY + 790); g.font = `700 50px ${font}`; g.fillStyle = '#2f89c7'; g.fillText(o.sub || '', W / 2, cardY + 870);
-  g.font = `500 40px ${font}`; g.fillStyle = '#4d6577'; g.fillText([o.place, (nickname || '釣客'), taipeiDate()].filter(Boolean).join('・'), W / 2, cardY + 940);
-  if (o.badge){ g.font = `800 46px ${font}`; const bw = g.measureText(o.badge).width + 60; g.fillStyle = '#ffd36a'; g.beginPath(); if (g.roundRect) g.roundRect(W / 2 - bw / 2, cardY - 36, bw, 72, 36); else g.rect(W / 2 - bw / 2, cardY - 36, bw, 72); g.fill(); g.fillStyle = '#5a3a00'; g.fillText(o.badge, W / 2, cardY + 16); }
-  g.fillStyle = '#fff'; g.font = `800 56px ${font}`; g.fillText('一起來釣魚吧！', W / 2, 1520); g.font = `600 40px ${font}`; g.fillText(gameUrl().replace(/^https?:\/\//, ''), W / 2, 1600);
-  g.font = `500 32px ${font}`; g.globalAlpha = 0.8; g.fillText('免下載，手機打開網址就能玩', W / 2, 1660); g.globalAlpha = 1;
-  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.9)); if (!blob){ toast('做圖失敗了'); return; } const file = new File([blob], `tide-${Date.now()}.jpg`, { type: 'image/jpeg' });
+/* v345 QR 碼（給分享卡片用：朋友看到圖片掃一下就能進遊戲）。位元組模式、容錯 M、版本 1～6（最多 106 個字） */
+function qrMatrix(text){ const bytes = [...new TextEncoder().encode(text)], V = [null, [16, 10, 1], [28, 16, 1], [44, 26, 1], [64, 18, 2], [86, 24, 2], [108, 16, 4]];
+  let v = 1; while (v <= 6 && bytes.length + 2 > V[v][0]) v++; if (v > 6) return null; const [nd, ne, nb] = V[v], n = 17 + 4 * v;
+  const bits = [], put = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+  put(4, 4); put(bytes.length, 8); bytes.forEach(x => put(x, 8)); put(0, Math.min(4, nd * 8 - bits.length)); while (bits.length % 8) bits.push(0);
+  const cw = []; for (let i = 0; i < bits.length; i += 8){ let x = 0; for (let j = 0; j < 8; j++) x = (x << 1) | bits[i + j]; cw.push(x); } for (let k = 0; cw.length < nd; k++) cw.push(k % 2 ? 17 : 236);
+  const EXP = new Array(512), LOG = new Array(256); { let x = 1; for (let i = 0; i < 255; i++){ EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 256) x ^= 0x11d; } for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255]; }
+  let gen = [1]; for (let i = 0; i < ne; i++){ const g2 = new Array(gen.length + 1).fill(0); for (let j = 0; j < gen.length; j++){ g2[j] ^= gen[j]; if (gen[j]) g2[j + 1] ^= EXP[LOG[gen[j]] + i]; } gen = g2; }
+  const ecc = d => { const r = new Array(ne).fill(0); for (const x of d){ const f = x ^ r.shift(); r.push(0); if (f) for (let j = 0; j < ne; j++) if (gen[j + 1]) r[j] ^= EXP[LOG[gen[j + 1]] + LOG[f]]; } return r; };
+  const bl = nd / nb, D = [], E = []; for (let k = 0; k < nb; k++){ const d = cw.slice(k * bl, (k + 1) * bl); D.push(d); E.push(ecc(d)); }
+  const all = []; for (let i = 0; i < bl; i++) for (let k = 0; k < nb; k++) all.push(D[k][i]); for (let i = 0; i < ne; i++) for (let k = 0; k < nb; k++) all.push(E[k][i]);
+  const M = Array.from({ length: n }, () => new Array(n).fill(null)), set = (x, y, on) => { if (x >= 0 && y >= 0 && x < n && y < n) M[y][x] = on ? 1 : 0; };
+  const finder = (cx, cy) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++){ const d = Math.max(Math.abs(dx), Math.abs(dy)); set(cx + dx, cy + dy, d !== 2 && d !== 4); } };
+  finder(3, 3); finder(n - 4, 3); finder(3, n - 4);
+  if (v >= 2){ const c = n - 7; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(c + dx, c + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1); }
+  for (let i = 8; i < n - 8; i++){ if (M[6][i] == null) set(i, 6, i % 2 === 0); if (M[i][6] == null) set(6, i, i % 2 === 0); }
+  const fmt = mask => { let rem = mask; for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >> 9) * 0x537); const w = ((mask << 10) | rem) ^ 0x5412, bit = i => (w >> i) & 1;   /* 容錯 M 的代號是 00 */
+    for (let i = 0; i <= 5; i++) set(8, i, bit(i)); set(8, 7, bit(6)); set(8, 8, bit(7)); set(7, 8, bit(8)); for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i));
+    for (let i = 0; i < 8; i++) set(n - 1 - i, 8, bit(i)); for (let i = 8; i < 15; i++) set(8, n - 15 + i, bit(i)); set(8, n - 8, 1); };
+  fmt(0); const fn = M.map(r => r.map(x => x != null));
+  let bi = 0; const tot = all.length * 8;
+  for (let right = n - 1; right >= 1; right -= 2){ if (right === 6) right = 5; for (let vert = 0; vert < n; vert++) for (let j = 0; j < 2; j++){ const x = right - j, up = ((right + 1) & 2) === 0, y = up ? n - 1 - vert : vert;
+      if (fn[y][x]) continue; let on = bi < tot ? (all[bi >> 3] >> (7 - (bi & 7))) & 1 : 0; bi++; if ((x + y) % 2 === 0) on ^= 1; M[y][x] = on; } }   /* 遮罩 0 */
+  return M; }
+/* v304 一鍵分享卡片；v345 重做：魚畫得清楚、兩個徽章都顯示、有頭像等級和圖鑑數、下面有 QR 碼（掃了就能玩） */
+async function shareCard(o){ if (shareCard.busy) return; shareCard.busy = true; setTimeout(() => { shareCard.busy = false; }, 2500); toast('🖼️ 正在做分享圖…'); const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
+  const rr = (x, y, w, h, r) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); };
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#8fd3f4'); bg.addColorStop(0.5, '#2f89c7'); bg.addColorStop(1, '#173d63'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.globalAlpha = 0.16; g.strokeStyle = '#fff'; g.lineWidth = 10; for (let k = 0; k < 4; k++){ const y = 1330 + k * 60; g.beginPath(); for (let x = -40; x <= W + 40; x += 20) g.lineTo(x, y + Math.sin(x / 70 + k) * 14); g.stroke(); } g.globalAlpha = 1;
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = `900 88px ${font}`; g.fillText('🎣 潮汐釣魚村', W / 2, 170); g.font = `600 42px ${font}`; g.globalAlpha = 0.92; g.fillText(o.kind === 'whale' ? '我在海上遇到了…' : '我釣到了…', W / 2, 245); g.globalAlpha = 1;
+  const cardY = 300, cardH = 960; g.fillStyle = 'rgba(10,40,70,.22)'; rr(78, cardY + 16, W - 156, cardH, 48); g.fill(); g.fillStyle = '#fdfefe'; rr(70, cardY, W - 140, cardH, 48); g.fill();   /* 影子用一塊深色墊著（模糊陰影在便宜手機上很慢） */
+  const ix = 110, iy = cardY + 40, iw = W - 220, ih = 600; g.save(); rr(ix, iy, iw, ih, 34); g.clip(); const wg = g.createLinearGradient(0, iy, 0, iy + ih); wg.addColorStop(0, '#e4f4fb'); wg.addColorStop(1, '#bfe3f3'); g.fillStyle = wg; g.fillRect(ix, iy, iw, ih);
+  g.globalAlpha = 0.5; g.fillStyle = '#fff'; for (const [bx, by, br] of [[200, 520, 18], [250, 440, 10], [880, 560, 14], [840, 470, 8], [180, 380, 7]]){ g.beginPath(); g.arc(bx, iy + by - 300, br, 0, Math.PI * 2); g.fill(); } g.globalAlpha = 1;   /* 泡泡 */
+  let img = o.img; if (o.fish){ try { const fc = document.createElement('canvas'); fc.width = 704; fc.height = 440; drawFish(fc, o.fish.color, true, o.fish.id); await new Promise(r => setTimeout(r, 300)); img = fc; } catch(e){} }   /* 重新畫一張大的，不用卡片上那張小圖放大 */
+  if (img){ const s = Math.min((iw - 40) / img.width, (ih - 40) / img.height), dw = img.width * s, dh = img.height * s; g.drawImage(img, (W - dw) / 2, iy + (ih - dh) / 2, dw, dh); } g.restore();
+  { const bs = (o.badges || (o.badge ? [o.badge] : [])).slice(0, 3); g.font = `800 40px ${font}`; let tw = 0; const ws = bs.map(t => { const w = g.measureText(t).width + 52; tw += w + 14; return w; }); let x = W / 2 - (tw - 14) / 2;
+    bs.forEach((t, i) => { g.fillStyle = i === 0 ? '#ffd36a' : i === 1 ? '#ff9d8a' : '#c9b6ff'; rr(x, cardY - 34, ws[i], 68, 34); g.fill(); g.fillStyle = '#4a2f00'; g.textAlign = 'left'; g.fillText(t, x + 26, cardY + 14); x += ws[i] + 14; }); g.textAlign = 'center'; }
+  g.fillStyle = '#18334a'; { let fs = 88; g.font = `900 ${fs}px ${font}`; while (g.measureText(o.title).width > W - 240 && fs > 48){ fs -= 4; g.font = `900 ${fs}px ${font}`; } } g.fillText(o.title, W / 2, cardY + 750);
+  g.font = `800 54px ${font}`; g.fillStyle = '#2f89c7'; g.fillText(o.sub || '', W / 2, cardY + 832);
+  g.font = `500 38px ${font}`; g.fillStyle = '#5b7385'; { const d = new Date(Date.now() + 8 * 3600000); g.fillText([o.place ? '📍 ' + o.place : '', `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`].filter(Boolean).join('　'), W / 2, cardY + 900); }
+  /* 釣客：頭像、名字、等級稱號、圖鑑和總數 */
+  { const py = 1300, ph = 150; g.fillStyle = 'rgba(255,255,255,.16)'; rr(70, py, W - 140, ph, 40); g.fill(); let ax = 110; const ar = 52, ay = py + ph / 2;
+    let av = null; try { const src = avatarSrc(myAvatar(), 208); if (src){ av = new Image(); av.src = src; await new Promise(r => { av.onload = r; av.onerror = r; setTimeout(r, 600); }); } } catch(e){}
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(ax + ar, ay, ar + 5, 0, Math.PI * 2); g.fill(); if (av && av.width) g.drawImage(av, ax, ay - ar, ar * 2, ar * 2); else { g.font = `60px ${font}`; g.fillText('🧢', ax + ar, ay + 22); }
+    let lv = 1, ttl = '', kinds = 0, total = 0; try { lv = lvOf(calcXP()); ttl = (typeof Lv !== 'undefined' && Lv.title) || ''; kinds = Object.keys(rec.count || {}).filter(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k]).length; total = rec.total || 0; } catch(e){}
+    g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = `800 50px ${font}`; g.fillText(String(nickname || '釣客').slice(0, 12), ax + ar * 2 + 26, ay - 8); g.font = `600 34px ${font}`; g.globalAlpha = 0.92; g.fillText(`Lv.${lv}${ttl ? '・' + ttl : ''}`, ax + ar * 2 + 26, ay + 42);
+    g.textAlign = 'right'; g.font = `600 34px ${font}`; g.fillText(`圖鑑 ${kinds} 種`, W - 110, ay - 8); g.fillText(`共釣到 ${total.toLocaleString()} 條`, W - 110, ay + 42); g.globalAlpha = 1; g.textAlign = 'center'; }
+  /* 下面：QR 碼＋邀請 */
+  { const url = gameUrl(), q = (() => { try { return qrMatrix(url); } catch(e){ return null; } })(), qy = 1520, qs = 300;
+    if (q){ g.fillStyle = '#fff'; rr(90, qy, qs, qs, 28); g.fill(); const n = q.length, m = (qs - 44) / n; g.fillStyle = '#12314a'; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q[y][x]) g.fillRect(Math.floor(90 + 22 + x * m), Math.floor(qy + 22 + y * m), Math.ceil(m), Math.ceil(m)); }
+    const tx = q ? 90 + qs + 50 : W / 2; g.textAlign = q ? 'left' : 'center'; g.fillStyle = '#fff'; g.font = `900 60px ${font}`; g.fillText('一起來釣魚吧！', tx, qy + 90); g.font = `600 38px ${font}`; g.globalAlpha = 0.95; g.fillText(q ? '📱 用相機掃一下就能玩' : '手機打開網址就能玩', tx, qy + 160);
+    g.font = `500 32px ${font}`; g.globalAlpha = 0.85; g.fillText('免費、不用下載', tx, qy + 214); { let fs = 30; const u = url.replace(/^https?:\/\//, '').replace(/\/$/, ''); g.font = `500 ${fs}px ${font}`; while (g.measureText(u).width > W - tx - 60 && fs > 18){ fs -= 2; g.font = `500 ${fs}px ${font}`; } g.fillText(u, tx, qy + 266); } g.globalAlpha = 1; g.textAlign = 'center'; }
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.92)); if (!blob){ toast('做圖失敗了'); return; } const file = new File([blob], `tide-${Date.now()}.jpg`, { type: 'image/jpeg' });
   const text = `${o.kind === 'whale' ? '我在潮汐釣魚村遇到了' : '我在潮汐釣魚村釣到了'}${o.title}！一起來玩：${gameUrl()}`;
   try { if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: '潮汐釣魚村', text }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); toast('📥 分享圖已經存起來了，可以傳到 IG、LINE'); }
@@ -12359,7 +12400,7 @@ function renderTab(){
       '傳說魚很少見：港口外海大約 3%，其他地方不到 1%。好的釣竿、魚餌、窩料和料理加成都能提高機率。',
       '在港口和鏡湖可以「上船」，划到水上任何地方釣魚。',
       '釣法（釣具店「釣法」分頁，免費隨時換）：浮標釣什麼都能釣；路亞不用魚餌、拋得遠，等魚時點按鈕「抽竿」讓假餌動，掠食魚特別多；沉底釣等比較久，但底棲魚（鯰魚、鰻魚、螃蟹、龍蝦、石斑…）特別多。釣線：細線咬口快但容易斷、粗線不容易斷但咬口少。',
-      '📤 分享卡片：釣到稀有魚、傳說魚、變種、新紀錄，或圖鑑新登錄時，結果卡片上會有「📤 分享」；在海上遇到鯨魚、海豚，畫面上會跳出「分享這一刻」。按了會做一張直式的圖（有遊戲名字和網址），可以直接傳到 IG、LINE，或存在手機裡。',
+      '📤 分享卡片：釣到稀有魚、傳說魚、變種、新紀錄，或圖鑑新登錄時，結果卡片上會有「📤 分享」；在海上遇到鯨魚、海豚，畫面上會跳出「分享這一刻」。按了會做一張直式的圖：有魚的大圖、重量、地點、日期，你的頭像、等級、稱號、圖鑑種數，下面還有 QR 碼（朋友用相機掃一下就能進遊戲）。可以直接傳到 IG、LINE，或存在手機裡。',
       '🧭 新手任務：剛開始玩時，左上角有一張小卡片帶你一步一步玩 —— 釣第一條魚、到海邊商店賣魚、到釣具店買新釣竿、去自己的小島、潛一次水。要去的地方地上會有黃色光柱，卡片上的箭頭指方向。按「－」可以收起來。全部完成送 🪙300。釣到 3 條魚以前，右下角還會有手指提示教你怎麼拋竿、提竿、收線。',
       '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
       '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。'
