@@ -1338,3 +1338,7 @@ body.fs-l #chatHist{zoom:1.1} body.fs-xl #chatHist{zoom:1.2}
 @media (orientation:landscape) and (max-height:540px){ #gkView img{max-height:56vh} }
 #gkView .tbtn{white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
 #gkView .tbtn img{display:inline-block;height:1.1em;width:auto;margin:0}
+/* v348 玩家說右上圓圈裡的圖案太小：圖案放大（圓圈大小不變） */
+body.ui3 .g3i{font-size:33px!important}
+@media (orientation:landscape) and (max-height:540px){ body.ui3 .g3i{font-size:28px!important} }
+@media (orientation:portrait){ body.ui3 .g3i{font-size:26px!important} }
