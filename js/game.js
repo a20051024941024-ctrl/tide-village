@@ -808,7 +808,9 @@ function terrainColor(x, z, info, out){
 const CLASSIC = false;   // 新地圖只有新版畫面
 let waterfall = null;
 var houseBuilder = null;
-var CHAIRS = [], cafeSeats = [], mySeat = null;   // 可以坐的椅子；cafeSeats 是食堂露台給客人坐的位置
+var CHAIRS = [], cafeSeats = [], mySeat = null;
+/* v356 玩家說坐長椅很奇怪：3D 人物坐下的姿勢屁股在座位中心後面 0.14 公尺，有椅背的長椅身體會陷進椅背裡。有椅背的（back）往前坐一點 */
+function seatX(c){ return c.x + (c.back ? Math.sin(c.face) * 0.15 : 0); } function seatZ(c){ return c.z + (c.back ? Math.cos(c.face) * 0.15 : 0); }   // 可以坐的椅子；cafeSeats 是食堂露台給客人坐的位置
 let skyDome = null, waterSurface = null, sunDisc = null, windowGlass = null, tankWaterMat = null, cookStall = null, aquaVane = null, rainbow = null;
 
 /* ================= RENDERER ================= */
@@ -1340,7 +1342,7 @@ function castPoint(x, z, dx, dz, dist){
         addOBoxCol(x, z, 2.3, 1.2, -a); }
       else { const face = Math.atan2(PX0 - x, PZ0 - z), bg = new THREE.Group(); bg.position.set(x, y, z); bg.rotation.y = face; scene.add(bg);
         bg.add(box([1.8, 0.08, 0.45], '#8c5d3b', [0, 0.45, 0])); bg.add(box([1.8, 0.4, 0.06], '#8c5d3b', [0, 0.72, -0.22])); for (const sx of [-0.75, 0.75]) for (const sz of [-0.15, 0.15]) bg.add(box([0.07, 0.45, 0.07], '#5a3d2b', [sx, 0.22, sz]));
-        const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32 }); addOBoxCol(x, z, 1.9, 0.5, face); }
+        const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32, back: true }); addOBoxCol(x, z, 1.9, 0.5, face); }
       n++; d += 18; } }
   /* 57 寵物活動區：南邊森林邊緣、寵物店西邊。圍籬（東邊留入口）、小隧道、球、水盆。帶寵物走進來，寵物會在裡面跑 */
   { const [KX, KZ, KR] = PETPARK, wood = mat('#c9a06a', 0.8);
@@ -1371,7 +1373,7 @@ function castPoint(x, z, dx, dz, dist){
       addCircleCol(AX0, AZ0, 1.3); }
     const bench = (a, r) => { const x = CX + Math.cos(a) * r, z = CZ + Math.sin(a) * r, face = Math.atan2(Math.cos(a), Math.sin(a)), y = groundHeight(x, z), bg = new THREE.Group(); bg.position.set(x, y, z); bg.rotation.y = face; scene.add(bg);
       bg.add(box([1.8, 0.08, 0.45], '#8c5d3b', [0, 0.45, 0])); bg.add(box([1.8, 0.4, 0.06], '#8c5d3b', [0, 0.72, -0.22])); for (const sx of [-0.75, 0.75]) for (const sz of [-0.15, 0.15]) bg.add(box([0.07, 0.45, 0.07], '#5a3d2b', [sx, 0.22, sz]));
-      const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32 }); addOBoxCol(x, z, 1.9, 0.5, face); };
+      const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32, back: true }); addOBoxCol(x, z, 1.9, 0.5, face); };
     for (const d of [-95, -50, 10]){ const a = d * Math.PI / 180; let r = CR - 0.6; while (r > 2.8){ const x = CX + Math.cos(a) * r, z = CZ + Math.sin(a) * r, x2 = CX + Math.cos(a) * (r + 1.2), z2 = CZ + Math.sin(a) * (r + 1.2); if (isLand(x, z) && isLand(x2, z2) && !deckAt(x, z) && !MAP.paths.some(p => lineDist(x, z, p) < 1.8)) break; r -= 0.4; } if (r > 2.8) bench(a, r); }   /* 長椅放在陸地上、面向海 */
     const pot = (x, z) => { const y = groundHeight(x, z), pg = new THREE.Group(); pg.position.set(x, y, z); scene.add(pg);
       pg.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 0.55, 10), mat('#c8704a', 0.8)), { castShadow: true })).position.y = 0.27;
@@ -3967,7 +3969,7 @@ function updatePlayer(dt){
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
   if (mySeat){
     if (L > 0.08 && !locked) standUp();
-    else { me.pos.x = mySeat.x; me.pos.z = mySeat.z; me.rot = lerpAngle(me.rot, mySeat.face, 1 - Math.exp(-10 * dt)); me.speed = 0; me.baseY = mySeat.y; Jump.gy = mySeat.y; return; }
+    else { me.pos.x = seatX(mySeat); me.pos.z = seatZ(mySeat); me.rot = lerpAngle(me.rot, mySeat.face, 1 - Math.exp(-10 * dt)); me.speed = 0; me.baseY = mySeat.y; Jump.gy = mySeat.y; return; }
   }
   let speed = 0;
   if (L > 0.08 && !locked){
@@ -4009,7 +4011,7 @@ function nearChair(){
   for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
   return best;
 }
-function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = c.x; me.pos.z = c.z; me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
+function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
 function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
@@ -4940,7 +4942,7 @@ function buildGreen(){ Far.green = true; const G = GREEN, g = new THREE.Group();
       for (let k = 0; k < 16; k++){ const a = f0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.35, dx = Math.sin(a), dz = Math.cos(a); if (greenWater(G.x + lx + dx * 3, G.z + lz + dz * 3) && !greenWater(G.x + lx, G.z + lz)){ face = a; break; } }
       const x = G.x + lx, z = G.z + lz, y = groundHeight(x, z), bg = new THREE.Group(); bg.position.set(lx, y, lz); bg.rotation.y = face; g.add(bg);
       bg.add(box([1.8, 0.08, 0.45], '#8c5d3b', [0, 0.45, 0])); bg.add(box([1.8, 0.4, 0.06], '#8c5d3b', [0, 0.72, -0.22])); for (const sx of [-0.75, 0.75]) for (const sz of [-0.15, 0.15]) bg.add(box([0.07, 0.45, 0.07], '#5a3d2b', [sx, 0.22, sz]));
-      const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32, nook: true }); addOBoxCol(x, z, 1.9, 0.5, face);
+      const c = Math.cos(face), sn = Math.sin(face); for (const ox of [-0.45, 0.45]) CHAIRS.push({ x: x + c * ox, z: z - sn * ox, face, y: y + 0.32, nook: true, back: true }); addOBoxCol(x, z, 1.9, 0.5, face);
       const lp = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.8 })); lp.position.set(lx + c * 1.3, y + 2.3, lz - sn * 1.3); g.add(lp); lanterns.push(lp); g.add(box([0.06, 2.3, 0.06], '#2f3b44', [lx + c * 1.3, y + 1.15, lz - sn * 1.3])); } }
   // 鹿和猴子（在森林裡走來走去）
   const animals = []; const deer = () => { const a = new THREE.Group(), m = mat('#a8703f', 0.8), w = mat('#f2e6d0', 0.8); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.55, 4, 10), m); b.rotation.z = Math.PI / 2; b.position.y = 0.75; a.add(b); const nk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.45, 8), m); nk.position.set(0.42, 1.05, 0); nk.rotation.z = -0.5; a.add(nk); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), m); hd.scale.set(1.4, 1, 1); hd.position.set(0.58, 1.25, 0); a.add(hd);
@@ -7701,7 +7703,7 @@ function buildStreetLamps(){ const pole = mat('#2f3b44', 0.5), done = [];
       const b = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.8 })); b.position.set(-side * 0.44, 2.45, 0); g.add(b); lanterns.push(b); g.rotation.y = Math.atan2(nx, nz) - Math.PI / 2; addCircleCol(x, z, 0.15); } } }
 function buildNooks(){
   const cand = [], rr = mulberry(20261105), far = (x, z, L, r) => L.every(p => Math.hypot(p[0] - x, p[1] - z) > r);
-  const avoid = SPOTS.map(s => [s.pos.x, s.pos.z]).concat(LANDMARKS.map(l => [l.pos.x, l.pos.z]));
+  const avoid = SPOTS.map(s => [s.pos.x, s.pos.z]).concat(LANDMARKS.map(l => [l.pos.x, l.pos.z]), [[REEF.x, REEF.bz0]]);   /* v356 跨海大橋橋頭（招牌）旁邊不放 */
   for (let x = -60; x <= 75; x += 2.5) for (let z = -62; z <= 62; z += 2.5){
     const px = x + (rr() - 0.5), pz = z + (rr() - 0.5); if (!isLand(px, pz) || waterAt(px, pz) || deckAt(px, pz) || blocked(px, pz, 1.4)) continue;
     const h0 = terrainH(px, pz); if (h0 < -0.3 || h0 > 2.2) continue;
@@ -7715,7 +7717,7 @@ function buildNooks(){
     // 長椅（面向水，坐兩個人）
     g.add(box([1.8, 0.08, 0.45], wood, [0, 0.45, 0])); g.add(box([1.8, 0.4, 0.06], wood, [0, 0.72, -0.22])); for (const sx of [-0.75, 0.75]) for (const sz of [-0.15, 0.15]) g.add(box([0.07, 0.45, 0.07], dark, [sx, 0.22, sz]));
     const c = Math.cos(n.face), s2 = Math.sin(n.face);
-    for (const lx of [-0.45, 0.45]){ const wx = n.x + c * lx, wz = n.z - s2 * lx; const seat = { x: wx, z: wz, face: n.face, y: y + 0.32, nook: true }; CHAIRS.push(seat); }
+    for (const lx of [-0.45, 0.45]){ const wx = n.x + c * lx, wz = n.z - s2 * lx; const seat = { x: wx, z: wz, face: n.face, y: y + 0.32, nook: true, back: true }; CHAIRS.push(seat); }
     addOBoxCol(n.x - s2 * 0.05, n.z - c * 0.05, 1.9, 0.5, n.face);
     // 路燈或營火（輪流），旁邊放一個木桶
     if (i % 2 === 0){ const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 2.4, 8), mat('#2f3b44', 0.5)); lp.position.set(1.3, 1.2, -0.3); g.add(lp); const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat('#fff4d0', 0.5, { emissive:'#ffd98a', emissiveIntensity:0.8 })); bulb.position.set(1.3, 2.45, -0.3); g.add(bulb); lanterns.push(bulb); }
