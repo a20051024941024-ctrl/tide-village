@@ -4000,7 +4000,11 @@ function updateCamera2(dt){
     if (!fishing && CAMV.snap && F.phase === 'idle'){ const S = CAMV.snap, k = Math.min(1, dt * 5); cam.pitch += (S.p - cam.pitch) * k; cam.dist += (S.d - cam.dist) * k; if (Math.abs(S.p - cam.pitch) < 0.005 && Math.abs(S.d - cam.dist) < 0.02){ cam.pitch = S.p; cam.dist = S.d; CAMV.snap = null; } } }
   // 拉魚的時候：鏡頭移到肩膀後面、靠近釣竿，看著魚的方向（像一般釣魚遊戲）
   /* v329 玩家建議：等魚、魚咬、拉魚都用肩膀後面的視角看著浮標（以前只有拉魚才這樣；等魚時用俯瞰，在瀑布潭鏡頭會跑進水霧變一片白）。拖畫面一樣可以繞著轉 */
-  const reelOn = ['waiting', 'bite', 'reeling'].includes(F.phase) && me.bobPos && !Photo.on && !Dive.on && !House.on && !(typeof Sub !== 'undefined' && Sub.on);
+  const reelOn0 = ['waiting', 'bite', 'reeling'].includes(F.phase) && me.bobPos && !Photo.on && !Dive.on && !House.on && !(typeof Sub !== 'undefined' && Sub.on);
+  /* v347 玩家回報：釣魚時快速連點，畫面會突然拉近拉遠。原因：連點會「拋竿→馬上收回→再拋」，鏡頭每次都在俯瞰和肩後視角之間來回換。
+     現在收竿後肩後視角多留 2.5 秒（這段時間再拋竿就不會換鏡頭）；一走動就馬上回到平常的視角 */
+  const tNow = now(); if (reelOn0) reelCam.hold = tNow + 2.5; else if ((me.aspd || 0) > 0.5 || !reelCam.bob || !(F.phase === 'idle' || F.phase === 'charging')) reelCam.hold = 0;
+  const reelOn = reelOn0 || tNow < (reelCam.hold || 0);
   reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4)); if (!reelOn){ reelCam.y0 = null; reelCam.p0 = null; }
   if (me.bobPos) reelCam.bob = { x: me.bobPos.x, z: me.bobPos.z };
   if (reelCam.k > 0.01 && reelCam.bob){
