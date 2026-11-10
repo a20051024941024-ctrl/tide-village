@@ -3962,7 +3962,8 @@ function updatePlayer(dt){
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); const rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix;
     const run = keys.ShiftLeft || keys.ShiftRight || L > 0.95;
-    speed = (run ? 5.0 : 3.8) * Math.min(1, L) * (Jump.air > 0 ? 1.1 : 1) * (Mang.onMud ? 0.75 : 1) * (iAmGhost() ? 1.08 : 1);   // 鬼跑快一點點
+    speed = (run ? 6.2 : 4.6) * Math.min(1, L)   /* v354 玩家說走太慢：走路 3.8→4.6、跑步 5.0→6.2（快兩成多）*/
+       * (Jump.air > 0 ? 1.1 : 1) * (Mang.onMud ? 0.75 : 1) * (iAmGhost() ? 1.08 : 1);   // 鬼跑快一點點
     const nx = me.pos.x + mx / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     // 可以走上山坡，但太陡的崖爬不上去
