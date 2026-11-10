@@ -816,7 +816,7 @@ const canvas = $('#c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: TIERS[Quality.tier].aa, powerPreference:'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, TIERS[Quality.tier].dpr));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = Quality.tier === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;   /* v346 中畫質用便宜一點的影子（邊緣沒那麼柔，但手機省很多） */
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PALETTE.sky);
 scene.fog = new THREE.Fog('#b7e5df', 45, 140);
@@ -8103,6 +8103,7 @@ function updateFerry(dt, t){
   if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){}
   if (frameNo % 30 === 0) try { sbTick(); } catch(e){ console.warn('sb', e); SB.state = 'off'; }
   if (frameNo % 15 === 7) try { clodTick(); } catch(e){}
+  if (frameNo % 60 === 31) try { shadowTrim(); } catch(e){}
   if (frameNo % 20 === 11) try { farcTick(); } catch(e){}
   try { meteorTick(dt, t); } catch(e){}
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
@@ -10240,7 +10241,7 @@ function showCatch(f, w, res){
 }
 /* v304 一鍵分享卡片：釣到稀有魚、遇到鯨魚時，做一張直式的圖（有遊戲名字和網址），可以直接分享到 IG、LINE，或存起來 */
 function gameUrl(){ return location.origin + location.pathname.replace(/index\.html$/, ''); }
-/* v345 QR 碼（給分享卡片用：朋友看到圖片掃一下就能進遊戲）。位元組模式、容錯 M、版本 1～6（最多 106 個字） */
+/* v346 QR 碼（給分享卡片用：朋友看到圖片掃一下就能進遊戲）。位元組模式、容錯 M、版本 1～6（最多 106 個字） */
 function qrMatrix(text){ const bytes = [...new TextEncoder().encode(text)], V = [null, [16, 10, 1], [28, 16, 1], [44, 26, 1], [64, 18, 2], [86, 24, 2], [108, 16, 4]];
   let v = 1; while (v <= 6 && bytes.length + 2 > V[v][0]) v++; if (v > 6) return null; const [nd, ne, nb] = V[v], n = 17 + 4 * v;
   const bits = [], put = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); };
@@ -10264,7 +10265,7 @@ function qrMatrix(text){ const bytes = [...new TextEncoder().encode(text)], V = 
   for (let right = n - 1; right >= 1; right -= 2){ if (right === 6) right = 5; for (let vert = 0; vert < n; vert++) for (let j = 0; j < 2; j++){ const x = right - j, up = ((right + 1) & 2) === 0, y = up ? n - 1 - vert : vert;
       if (fn[y][x]) continue; let on = bi < tot ? (all[bi >> 3] >> (7 - (bi & 7))) & 1 : 0; bi++; if ((x + y) % 2 === 0) on ^= 1; M[y][x] = on; } }   /* 遮罩 0 */
   return M; }
-/* v304 一鍵分享卡片；v345 重做：魚畫得清楚、兩個徽章都顯示、有頭像等級和圖鑑數、下面有 QR 碼（掃了就能玩） */
+/* v304 一鍵分享卡片；v346 重做：魚畫得清楚、兩個徽章都顯示、有頭像等級和圖鑑數、下面有 QR 碼（掃了就能玩） */
 async function shareCard(o){ if (shareCard.busy) return; shareCard.busy = true; setTimeout(() => { shareCard.busy = false; }, 2500); toast('🖼️ 正在做分享圖…'); const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
   const rr = (x, y, w, h, r) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); };
   const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#8fd3f4'); bg.addColorStop(0.5, '#2f89c7'); bg.addColorStop(1, '#173d63'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
@@ -11485,7 +11486,16 @@ function clodTick(){ const cp = camera.position;
     const px = lvl === 1 || lvl === 2 ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
     g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
       if ((lvl === 1 || lvl === 2) && !o.isSkinnedMesh && !o.userData._face){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < (lvl === 2 ? 0.12 : 0.09); }
-      if (lvl === 3 || small) o.layers.set(CLOD.L); else o.layers.set(0); }); } }
+      if (lvl === 3 || small) o.layers.set(CLOD.L); else o.layers.set(0);
+      /* v346 影子：身體一定有；頭、頭髮這種大塊的近處才有；小配件（眼睛、扣子、小飾品）不投影子，26 公尺外只剩身體的影子 */
+      if (o.isMesh){ if (o.userData._cs == null) o.userData._cs = !!o.castShadow; if (o.userData._cs){ let big = true; if (!o.isSkinnedMesh && o !== f._px){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); big = lvl <= 1 && !!gs && gs.radius * Math.max(sc.x, sc.y, sc.z) >= 0.15; } o.castShadow = big; } } }); } }
+/* v346 影子：地上的小東西（小石頭、花、小擺設，半徑 30 公分以下）不投影子——影子那一遍少畫很多東西，看起來幾乎沒差。每 20 秒看一次新蓋出來的。 */
+const ShTrim = { next: 0, n: 0 };
+function shadowTrim(){ if (performance.now() < ShTrim.next || frameNo < 90) return; ShTrim.next = performance.now() + 20000; const V = CLOD.v || (CLOD.v = new THREE.Vector3());
+  const walk = o => { if (o.isBone || o.isSkinnedMesh || o.userData.keepShadow) return; if (o.isMesh && o.castShadow && !o.isInstancedMesh && !o.userData.sb && !o.userData._st){ o.userData._st = 1; const g = o.geometry, bs = g && (g.boundingSphere || (g.computeBoundingSphere(), g.boundingSphere)); if (bs){ const sc = o.getWorldScale(V); if (bs.radius * Math.max(Math.abs(sc.x), Math.abs(sc.y), Math.abs(sc.z)) < 0.3){ o.castShadow = false; ShTrim.n++; } } }
+    for (const c of o.children) walk(c); };
+  const av = new Set(); for (const f of CLOD.all) if (f.av && f.av.g) av.add(f.av.g);   /* 角色的影子在 clodTick 管 */
+  for (const c of scene.children){ if (av.has(c)) continue; walk(c); } }
 
 /* ===== v289 效能：主島不會動的東西合併成少數幾大塊（draw call 從上千降到一兩百） =====
    做法：開場 3 秒內位置、顏色、顯示都沒變過的普通方塊／圓柱（沒有貼圖、不透明、標準材質），照「材質樣子＋所在的 32 公尺格子」分組，
@@ -11495,13 +11505,13 @@ const SB = { boot: performance.now(), state: /nobatch/.test(location.hash) ? 'of
 function sbDynRoots(){ const R = new Set(); try { if (Sub.group) R.add(Sub.group); } catch(e){} return R; }
 function sbRoot(o){ let a = o; while (a.parent && a.parent !== scene) a = a.parent; return a.parent === scene ? a : null; }
 function sbOk(o, dyn){ if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || o.isPoints || o.isLine || o.isSprite) return false; const m = o.material, g = o.geometry;
-  if (!m || Array.isArray(m) || !(m.isMeshStandardMaterial || (m.isMeshBasicMaterial && !m.transparent)) || m.map || m.alphaMap || m.normalMap || m.emissiveMap || m.envMap || m.aoMap || m.bumpMap || m.transparent || m.opacity < 1 || m.vertexColors || m.wireframe || m.alphaTest > 0) return false;
+  if (!m || Array.isArray(m) || !(m.isMeshStandardMaterial || (m.isMeshBasicMaterial && !m.transparent)) || (m.map && (!g || !g.attributes || !g.attributes.uv || m.map.isVideoTexture)) || m.alphaMap || m.normalMap || m.emissiveMap || m.envMap || m.aoMap || m.bumpMap || m.transparent || m.opacity < 1 || m.vertexColors || m.wireframe || m.alphaTest > 0) return false;
   if (m.onBeforeCompile && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile){ const k = m.customProgramCacheKey ? String(m.customProgramCacheKey()) : ''; if (!/^(wood|rock)(-d)?$/.test(k)) return false; }
   if (!g || !g.isBufferGeometry || !g.attributes.position || g.morphAttributes.position) return false;
   if (o.userData.keep || o.userData.dyn || !o.visible) return false;
   for (let a = o.parent; a; a = a.parent){ if (a === scene) break; if (!a.visible || dyn.has(a) || a.userData.dyn || a.isSkinnedMesh || a.isBone) return false; }
   const e = o.matrixWorld.elements; if (Math.abs(e[12]) > 95 || Math.abs(e[14]) > 95) return false; return true; }
-const sbGlow = m => !!(m.emissive && m.emissive.getHex() !== 0);   /* v290 會發光的（窗戶、燈籠晚上會變亮）只跟用同一個材質的合併，而且繼續用原本的材質，晚上才會照樣亮 */
+const sbGlow = m => !!(m.map || (m.emissive && m.emissive.getHex() !== 0));   /* v346 有貼圖的（木牆、招牌）也合併：只跟用同一個材質的合，繼續用原本的材質和貼圖座標 */   /* v290 會發光的（窗戶、燈籠晚上會變亮）只跟用同一個材質的合併，而且繼續用原本的材質，晚上才會照樣亮 */
 function sbSig(o){ const m = o.material; if (sbGlow(m)) return 'glow|' + m.uuid + '|' + (o.castShadow ? 1 : 0) + (o.receiveShadow ? 1 : 0); const k = m.customProgramCacheKey && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? String(m.customProgramCacheKey()) : '';
   return [m.type, Math.round((m.roughness || 0) * 20), Math.round((m.metalness || 0) * 20), m.side, m.flatShading ? 1 : 0, m.emissive ? m.emissive.getHexString() + (m.emissiveIntensity || 0).toFixed(2) : '', k, o.castShadow ? 1 : 0, o.receiveShadow ? 1 : 0, m.depthWrite ? 1 : 0, m.fog ? 1 : 0].join('|'); }
 function sbTick(){ if (SB.state === 'off') return; if (SB.state === 'done'){ if (performance.now() < (SB.next || 0)) return; SB.next = performance.now() + 20000; SB.state = 'wait'; SB.again = true; }   /* v290 之後走到才蓋出來的東西，每 20 秒再合併一次 */ if (frameNo < 60 || performance.now() - SB.boot < 6000 || Dive.on || (typeof Sub !== 'undefined' && Sub.on) || onIsle || House.on || inIndoor()) return;
@@ -11513,7 +11523,7 @@ function sbBuild(){ const dyn = sbDynRoots(), groups = new Map(); scene.updateMa
     const cx = Math.floor(e[12] / 32), cz = Math.floor(e[14] / 32), key = sbSig(o) + '#' + cx + ',' + cz + '#' + (root === o ? 'scene' : root.uuid); let G = groups.get(key); if (!G){ G = { list: [], tmpl: o.material, shadow: o.castShadow, recv: o.receiveShadow, root: root === o ? null : root }; groups.set(key, G); } G.list.push(o); nIn++; }
   if (!SB.g){ SB.g = new THREE.Group(); SB.g.name = 'staticBatch'; } let made = 0, removed = 0;
   for (const G of groups.values()){ if (G.list.length < 2) continue; const geos = [], inv = G.root ? new THREE.Matrix4().copy(G.root.matrixWorld).invert() : null;
-    for (const o of G.list){ let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); if (!g.attributes.normal) g.computeVertexNormals(); g.morphAttributes = {}; g.clearGroups();
+    for (const o of G.list){ let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && !(k === 'uv' && G.tmpl.map)) g.deleteAttribute(k); if (!g.attributes.normal) g.computeVertexNormals(); g.morphAttributes = {}; g.clearGroups();
       g.applyMatrix4(o.matrixWorld); if (inv) g.applyMatrix4(inv); if (sbGlow(G.tmpl)){ geos.push(g); continue; } const n = g.attributes.position.count, col = new Float32Array(n * 3), cc = o.material.color; for (let i = 0; i < n; i++){ col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); geos.push(g); }
     const mg = mergeGeometries(geos, false); for (const g of geos) g.dispose(); if (!mg) continue; mg.computeBoundingSphere(); mg.computeBoundingBox();
     const T = G.tmpl, M = sbGlow(T) ? T : T.isMeshBasicMaterial ? new THREE.MeshBasicMaterial({ vertexColors: true, color: '#ffffff', side: T.side, fog: T.fog, depthWrite: T.depthWrite, toneMapped: T.toneMapped }) : new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness, metalness: T.metalness, side: T.side, flatShading: T.flatShading, emissive: T.emissive, emissiveIntensity: T.emissiveIntensity, fog: T.fog, depthWrite: T.depthWrite });
