@@ -1342,3 +1342,7 @@ body.fs-l #chatHist{zoom:1.1} body.fs-xl #chatHist{zoom:1.2}
 body.ui3 .g3i{font-size:33px!important}
 @media (orientation:landscape) and (max-height:540px){ body.ui3 .g3i{font-size:28px!important} }
 @media (orientation:portrait){ body.ui3 .g3i{font-size:26px!important} }
+/* v349 玩家說不要圓圈：只留圖案（放大、加一點影子，白天晚上都看得清楚） */
+body.ui3 .g3i{background:none!important;box-shadow:none!important;font-size:40px!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45)) drop-shadow(0 0 1px rgba(0,0,0,.4))}
+@media (orientation:landscape) and (max-height:540px){ body.ui3 .g3i{font-size:34px!important} }
+@media (orientation:portrait){ body.ui3 .g3i{font-size:31px!important} }
