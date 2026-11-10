@@ -863,13 +863,13 @@ function hairTex(){ if (HAIR_TEX) return HAIR_TEX; const W = 64, H = 128, cv = d
       const i = (y * W + x) * 4, g = Math.round(Math.min(1, b) * 255); D[i] = D[i + 1] = D[i + 2] = g; D[i + 3] = 255; } }
   c.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(cv); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; t.anisotropy = 2; HAIR_TEX = t; return t; }
 /* 一束頭髮：沿著 pts 的曲線，橫切面是扁的橢圓（w 寬、th 是厚度比例），從 w0 慢慢變細到 w1，最後收成尖尖的髮尾；貼圖的 v 從根部 1 到髮尾 0 */
-function hairLockGeo(pts, w0, w1, th, out){ const cur = new THREE.CatmullRomCurve3(pts), N = 10, RS = 8, P = [], UV = [], I = [];
+function hairLockGeo(pts, w0, w1, th, out, op){ op = op || {}; const va = op.v0 != null ? op.v0 : 1, vb = op.v1 != null ? op.v1 : 0, gr = op.grow || 0; const cur = new THREE.CatmullRomCurve3(pts), N = 10, RS = 8, P = [], UV = [], I = [];
   const p = new THREE.Vector3(), T = new THREE.Vector3(), S = new THREE.Vector3(), B = new THREE.Vector3(), O = new THREE.Vector3();
   for (let i = 0; i <= N; i++){ const t = i / N; cur.getPointAt(t, p); cur.getTangentAt(t, T);
     if (out) O.copy(out); else { O.set(p.x, 0, p.z); if (O.lengthSq() < 1e-6) O.set(0, 0, -1); O.normalize(); }
     S.crossVectors(T, O); if (S.lengthSq() < 1e-6) S.set(1, 0, 0); S.normalize(); B.crossVectors(S, T).normalize();
-    let w = w0 + (w1 - w0) * t; if (t > 0.8) w *= Math.sqrt(Math.max(0.02, (1 - t) / 0.2)); const hw = w / 2, ht = w * th / 2;
-    for (let j = 0; j <= RS; j++){ const a = j / RS * Math.PI * 2; P.push(p.x + S.x * Math.cos(a) * hw + B.x * Math.sin(a) * ht, p.y + S.y * Math.cos(a) * hw + B.y * Math.sin(a) * ht, p.z + S.z * Math.cos(a) * hw + B.z * Math.sin(a) * ht); UV.push(j / RS, 1 - t); } }
+    let w = gr && t < gr ? w0 * (0.45 + 0.55 * t / gr) : w0 + (w1 - w0) * (gr ? (t - gr) / (1 - gr) : t); if (t > 0.8)   /* grow：根部從頭頂細細的長出來 */ w *= Math.sqrt(Math.max(0.02, (1 - t) / 0.2)); const hw = w / 2, ht = w * th / 2;
+    for (let j = 0; j <= RS; j++){ const a = j / RS * Math.PI * 2; P.push(p.x + S.x * Math.cos(a) * hw + B.x * Math.sin(a) * ht, p.y + S.y * Math.cos(a) * hw + B.y * Math.sin(a) * ht, p.z + S.z * Math.cos(a) * hw + B.z * Math.sin(a) * ht); UV.push(j / RS, va + (vb - va) * t); } }
   for (let i = 0; i < N; i++) for (let j = 0; j < RS; j++){ const a = i * (RS + 1) + j, b = a + RS + 1; I.push(a, b, a + 1, b, b + 1, a + 1); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); g.setIndex(I); g.computeVertexNormals(); return g; }
 const HAIR_GEO = new Map();
@@ -2368,11 +2368,20 @@ function applyLook(av, gear, mk){
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
   /* v350 長髮不再是一個圓筒：改成一圈垂下來的髮束（數量照長度、髮尾長短交錯） */
   const shell = (rt, rb, h, y, gap) => mk(hairMerged(`sh${rt},${rb},${h},${y},${gap}`, () => { const arc = Math.PI * 2 - gap * 2, n = Math.max(7, Math.round(arc / (Math.PI * 2) * 22)), top = y + h / 2, bot = y - h / 2, out = [];
+      const cy = 0.01, cz = -0.02, onHead = (dx, dz, ph, r) => V3(dx * Math.sin(ph) * r, cy + Math.cos(ph) * r, cz + dz * Math.sin(ph) * r);   /* 頭頂那顆頭髮球的表面 */
       for (let k = 0; k < n; k++){ const a = gap + arc * (k + 0.5) / n, dx = Math.sin(a), dz = Math.cos(a), back = Math.max(0, -dz), len = (k % 3 === 1 ? 0.035 : k % 3 === 2 ? -0.02 : 0) * Math.min(1, h * 2), b = bot - len - back * 0.015, mid = (top + b) / 2, rm = (rt + rb) / 2 * 1.045;
-        const w = 2 * rt * Math.sin(arc / n / 2) * 1.55; out.push(hairLockGeo([V3(dx * rt * 0.8, top + 0.09, dz * rt * 0.8), V3(dx * rt * 1.03, top - 0.03, dz * rt * 1.03), V3(dx * rm, mid, dz * rm), V3(dx * rb * 1.02, b + 0.05, dz * rb * 1.02), V3(dx * rb * 0.96, b, dz * rb * 0.96)], w, w * 0.72, 0.42)); }
+        const w = 2 * rt * Math.sin(arc / n / 2) * 1.55, pts = [onHead(dx, dz, 0.42, 0.325), onHead(dx, dz, 0.85, 0.352), onHead(dx, dz, 1.2, Math.max(0.358, rt * 0.99))];   /* 從頭頂裡面長出來、貼著頭往下，接縫看不到 */
+        for (const q of [V3(dx * rt * 1.03, top - 0.03, dz * rt * 1.03), V3(dx * rm, mid, dz * rm), V3(dx * rb * 1.02, b + 0.05, dz * rb * 1.02), V3(dx * rb * 0.96, b, dz * rb * 0.96)]) if (q.y < pts[pts.length - 1].y - 0.02) pts.push(q);
+        if (pts.length < 4) pts.push(V3(dx * rb * 0.98, Math.min(b, pts[pts.length - 1].y - 0.05), dz * rb * 0.98));
+        out.push(hairLockGeo(pts, w, w * 0.72, 0.42, null, { grow: 0.22, v0: 0.66, v1: 0 })); }   /* 髮束不畫亮光（亮光只在頭頂那圈，接起來才自然） */
       return out; }), hm, 0, 0, -0.01, HD);
   /* 馬尾：一大束＋旁邊兩小束，根部粗、髮尾尖（跟原本的膠囊一樣長、一樣的方向） */
-  const tail = (r, len, x, y, z) => mk(hairMerged(`tl${r},${len}`, () => { const L = len / 2 + r, o = []; for (const [ox, oz, sw, sl] of [[0, 0, 1.25, 1], [-0.5, 0.1, 1, 0.88], [0.5, 0.1, 1, 0.92], [0, -0.5, 1, 0.84], [0, 0.5, 0.95, 0.8]]) o.push(hairLockGeo([V3(ox * r * 0.4, L * 0.95, oz * r * 0.4), V3(ox * r * 0.75, L * 0.3, oz * r * 0.75 - r * 0.15), V3(ox * r * 0.7, -L * 0.35, oz * r * 0.7 + r * 0.1), V3(ox * r * 0.5, -L * sl * 1.08, oz * r * 0.5)], r * 1.35 * sw, r * 0.75 * sw, 0.9)); return o; }), hm, x, y, z, HD);
+  const tail = (r, len, x, y, z) => mk(hairMerged(`tl${r},${len}`, () => { const L = len / 2 + r, o = []; for (const [ox, oz, sw, sl] of [[0, 0, 1.25, 1], [-0.5, 0.1, 1, 0.88], [0.5, 0.1, 1, 0.92], [0, -0.5, 1, 0.84], [0, 0.5, 0.95, 0.8]]) o.push(hairLockGeo([V3(ox * r * 0.4, L * 0.95, oz * r * 0.4), V3(ox * r * 0.75, L * 0.3, oz * r * 0.75 - r * 0.15), V3(ox * r * 0.7, -L * 0.35, oz * r * 0.7 + r * 0.1), V3(ox * r * 0.5, -L * sl * 1.08, oz * r * 0.5)], r * 1.35 * sw, r * 0.75 * sw, 0.9, null, { grow: 0.18 })); return o; }), hm, x, y, z, HD);   /* 根部收細，藏在髮圈／丸子裡 */
+  /* 綁起來的髮型：後腦勺下面多一層往上梳的頭髮（不會露出頭皮、看起來是梳上去綁的） */
+  const nape = (lift) => { const o = mk(hairMerged('np', () => { const g = new THREE.SphereGeometry(0.3505, 22, 12, Math.PI, Math.PI, Math.PI * 0.28, Math.PI * 0.46), P = g.attributes.position, U = g.attributes.uv, v = new THREE.Vector3();
+      for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i); const r = v.length(), th = Math.acos(v.y / r), ph = Math.atan2(v.z, -v.x), f = Math.pow(Math.max(0, -Math.sin(ph)), 1.5), tmax = Math.PI * (0.52 + 0.22 * f);   /* 後面中間比較低、兩邊收上去，像真的髮際線 */
+        if (th > tmax){ const k = Math.sin(tmax) / Math.sin(th); v.set(v.x * k, r * Math.cos(tmax), v.z * k); P.setXYZ(i, v.x, v.y, v.z); } U.setY(i, U.getY(i) * 0.6); }
+      g.computeVertexNormals(); return [g]; }), hm, 0, 0.01, -0.02, HD); o.rotation.x = lift || 0; return o; };
   /* 辮子：一節一節交叉的小橢圓（像真的編起來），最後綁一個小髮圈＋一小撮髮尾 */
   const braid = (x0, y0, z0, n, r0, dr, dx, dy, dz) => { for (let i = 0; i < n; i++){ const r = r0 - i * dr, o = sph(r, x0 + dx * i + (i % 2 ? 1 : -1) * r * 0.3, y0 + dy * i, z0 + dz * i, 0.8, 1.35, 0.8); o.rotation.z = i % 2 ? 0.6 : -0.6; }
     const ex = x0 + dx * n, ey = y0 + dy * n, ez = z0 + dz * n; const bd = mk(new THREE.TorusGeometry(r0 * 0.42, 0.014, 6, 12), av.inkM, ex, ey + 0.035, ez, HD); bd.rotation.x = Math.PI / 2;
@@ -2384,7 +2393,7 @@ function applyLook(av, gear, mk){
     case 2: if (!hatOn) mk(hairMerged('spk', () => { const o = []; for (let i = 0; i < 11; i++){ const a = i / 11 * Math.PI * 2 + 0.3, r = i < 8 ? 0.21 : 0.07, dx = Math.sin(a), dz = Math.cos(a) - 0.2; o.push(hairLockGeo([V3(dx * r, 0.24, dz * r - 0.02), V3(dx * (r + 0.06), 0.33, dz * (r + 0.06) - 0.06), V3(dx * (r + 0.1), 0.43, dz * (r + 0.1) - 0.13)], 0.17, 0.035, 0.75, V3(dx, 0.5, dz).normalize())); } return o; }), hm, 0, 0, 0, HD); break;
     case 3: shell(0.352, 0.37, 0.3, -0.06, 0.95); break;   /* 鮑伯頭：到下巴 */
     case 4: shell(0.352, 0.34, 0.62, -0.2, 1.05); { const b = sph(0.2, 0, -0.38, -0.2, 1.4, 0.9, 0.6); } break;   /* 長髮：到肩膀 */
-    case 5: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, 0.12, -0.34, HD); bd.rotation.x = 0.4; const t = tail(0.075, 0.28, 0, -0.08, -0.42); t.rotation.x = -0.35; sph(0.08, 0, 0.12, -0.35); break; }   /* 馬尾 */
+    case 5: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, 0.12, -0.34, HD); bd.rotation.x = 0.4; nape(0.1); const t = tail(0.075, 0.28, 0, -0.08, -0.43); t.rotation.x = 0.3; sph(0.08, 0, 0.12, -0.35); break; }   /* 馬尾 */
     case 6: for (const sx of [-1, 1]){ sph(0.07, sx * 0.3, 0.12, -0.06); const t = tail(0.065, 0.26, sx * 0.39, -0.08, -0.08); t.rotation.set(0, sx * -Math.PI / 2, sx * 0.25); } break;   /* 雙馬尾 */
     case 7: if (!hatOn) sph(0.13, 0, 0.36, -0.08); else sph(0.11, 0, 0.12, -0.36); break;   /* 丸子頭（戴帽子時改成在後腦勺） */
     case 8: for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, y = 0.05 + (i % 2) * 0.12; sph(0.085, Math.cos(a) * 0.31, y, Math.sin(a) * 0.31 - 0.02); } break;   /* 捲髮 */
@@ -2393,8 +2402,8 @@ function applyLook(av, gear, mk){
     case 10: shell(0.352, 0.34, 0.62, -0.2, 1.05); sph(0.1, 0, 0.17, -0.34); { const bw = mk(new THREE.TorusGeometry(0.05, 0.022, 6, 12), av.inkM, 0, 0.17, -0.44, HD); bw.scale.set(1.6, 1, 1); } break;   /* 公主頭：長髮、後面上半部綁一個小髻 */
     case 11: shell(0.352, 0.36, 0.6, -0.2, 1.05); for (let i = 0; i < 9; i++){ const a = Math.PI * (-0.42 + i / 8 * 0.84), r = 0.36; sph(0.1, Math.sin(a) * r * 1.05, -0.42 - (i % 2) * 0.07, -Math.cos(a) * r, 1, 1.25, 1); }   /* v279 修正：髮尾的捲平均分在後面左右（以前全擠在一邊） */ break;   /* 大波浪：長捲髮，髮尾一顆一顆捲起來 */
     case 12: sph(0.07, 0.28, 0.1, -0.2); { const t = tail(0.075, 0.34, 0.36, -0.2, -0.06); t.rotation.set(0.25, -Math.PI / 2, 0.35, 'YXZ'); } break;   /* 側馬尾：綁在右邊、垂到肩膀前面 */
-    case 13: if (!hatOn){ sph(0.08, 0, 0.3, -0.27); const t = tail(0.08, 0.36, 0, 0.08, -0.46); t.rotation.x = -0.55; } else { const t = tail(0.075, 0.3, 0, -0.06, -0.42); t.rotation.x = -0.35; } break;   /* 高馬尾：綁在頭頂後面、甩出去 */
-    case 14: sph(0.09, 0, 0.02, -0.34, 1.1, 0.9, 0.9); braid(0, -0.08, -0.38, 7, 0.08, 0.005, 0, -0.105, -0.008); break;   /* 麻花辮：一條辮子垂在背後 */
+    case 13: if (!hatOn){ sph(0.08, 0, 0.3, -0.27); nape(0.25); const t = tail(0.08, 0.36, 0, 0.1, -0.42); t.rotation.x = 0.5; } else { nape(0.1); const t = tail(0.075, 0.3, 0, -0.06, -0.43); t.rotation.x = 0.3; } break;   /* 高馬尾：綁在頭頂後面、甩出去 */
+    case 14: nape(0.05); sph(0.09, 0, 0.02, -0.34, 1.1, 0.9, 0.9); braid(0, -0.08, -0.38, 7, 0.08, 0.005, 0, -0.105, -0.008); break;   /* 麻花辮：一條辮子垂在背後 */
     case 15: for (const sx of [-1, 1]){ sph(0.075, sx * 0.31, -0.04, 0.0, 1, 0.9, 1); braid(sx * 0.315, -0.12, 0.03, 6, 0.066, 0.004, sx * 0.008, -0.092, 0.028); } break;   /* 雙辮子：兩條辮子垂在肩膀前面 */
     case 16: if (!hatOn) for (const sx of [-1, 1]) sph(0.11, sx * 0.21, 0.31, -0.06); else for (const sx of [-1, 1]) sph(0.1, sx * 0.3, 0.1, -0.22); break;   /* 雙丸子 */
     case 17: shell(0.352, 0.345, 0.64, -0.21, 1.15); { const f = mk(new THREE.SphereGeometry(0.352, 20, 6, -1.05, 2.1, Math.PI * 0.28, Math.PI * 0.145), hm, 0, 0.0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; } for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.06, 0.3, 0.12), hm, sx * 0.33, -0.12, 0.13, HD); break;   /* 公主切：齊瀏海、兩頰齊長的鬢髮、後面長直髮 */
@@ -2406,11 +2415,11 @@ function applyLook(av, gear, mk){
     case 22: shell(0.352, 0.34, 0.62, -0.2, 1.05); fr(-1.1, 0.95, Math.PI * 0.2); fr(0.15, 0.95, Math.PI * 0.2); break;   /* 八字瀏海＋長直髮：瀏海從中間分開、往兩邊斜下來 */
     case 23: shell(0.352, 0.36, 0.6, -0.2, 1.05); for (let i = 0; i < 7; i++) fr(-0.95 + i * 0.28, 0.2, Math.PI * (0.13 + (i % 2) * 0.03)); for (let i = 0; i < 7; i++){ const a = Math.PI * (-0.4 + i / 6 * 0.8); sph(0.085, Math.sin(a) * 0.37, -0.42 - (i % 2) * 0.06, -Math.cos(a) * 0.36, 1, 1.2, 1); } break;   /* 法式瀏海＋慵懶捲：一絲一絲的空氣感瀏海、髮尾微捲 */
     case 24: shell(0.352, 0.39, 0.44, -0.13, 1.0); rim(-0.34, 0.39, 0.05, 0.5); break;   /* 鎖骨髮：剛好到鎖骨、髮尾微微外翹 */
-    case 25: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, -0.12, -0.35, HD); bd.rotation.x = -0.2; sph(0.085, 0, -0.07, -0.32); const t = tail(0.07, 0.3, 0, -0.36, -0.38); t.rotation.x = 0.12; break; }   /* 低馬尾：綁在後頸、乖乖垂下來 */
+    case 25: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, -0.12, -0.35, HD); bd.rotation.x = -0.2; sph(0.085, 0, -0.07, -0.32); nape(-0.05); const t = tail(0.07, 0.3, 0, -0.36, -0.38); t.rotation.x = 0.12; break; }   /* 低馬尾：綁在後頸、乖乖垂下來 */
     case 26: shell(0.352, 0.36, 0.5, -0.15, 1.05); for (let i = 0; i < 5; i++) fr(-0.82 + i * 0.36, 0.22, Math.PI * 0.15); break;   /* 空氣瀏海＋中長髮：稀稀疏疏的薄瀏海 */
     case 27: shell(0.352, 0.36, 0.3, -0.06, 0.95); rim(-0.2, 0.33, 0.065, 0.55); break;   /* 內扣髮：短髮、髮尾往內捲成一圈 */
     case 28: shell(0.352, 0.36, 0.48, -0.15, 1.05); for (let r = 0; r < 3; r++) for (let i = 0; i < 9; i++){ const a = Math.PI * (1.05 + i / 8 * 0.9) + r * 0.12; sph(0.075, Math.cos(a) * 0.37, -0.1 - r * 0.13, Math.sin(a) * 0.37 - 0.02, 1.3, 0.8, 1); } break;   /* 蛋捲頭：一層一層像蛋捲的小捲 */
-    case 29: { sph(0.125, 0, -0.1, -0.39); const bd = mk(new THREE.TorusGeometry(0.075, 0.02, 6, 14), av.inkM, 0, -0.1, -0.31, HD); bd.rotation.x = 0.1; break; }   /* 低丸子頭：盤在後頸（戴帽子也看得到） */
+    case 29: { nape(-0.05); sph(0.125, 0, -0.1, -0.39); const bd = mk(new THREE.TorusGeometry(0.075, 0.02, 6, 14), av.inkM, 0, -0.1, -0.31, HD); bd.rotation.x = 0.1; break; }   /* 低丸子頭：盤在後頸（戴帽子也看得到） */
     case 30: shell(0.352, 0.34, 0.62, -0.2, 1.05); if (!hatOn) sph(0.3, 0, 0.2, -0.1, 1.05, 0.7, 1.1); sph(0.075, 0, 0.12, -0.38); { const bw = mk(new THREE.TorusGeometry(0.045, 0.02, 6, 12), av.inkM, 0, 0.12, -0.45, HD); bw.scale.set(1.5, 1, 1); } break;   /* 高顱頂半扎：頭頂蓬起來、上半部綁在後面 */
   }
 }
