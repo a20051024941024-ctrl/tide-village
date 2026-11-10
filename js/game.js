@@ -12041,6 +12041,10 @@ function worldTag(n, wp){ const ic = wp ? (wp.walk ? '🚶' : (WORLD_ACT[wp.r.ac
 // 每一幀：回傳 true 表示這一幀已經處理完（走路中、在家、不在工作的地方），false 表示「在原本的位置做原本的事」，讓原本的程式接手
 function worldDrive(n, dt, t){
   if (!n.wid) return false;
+  /* v351 玩家回報：一進遊戲海產店老闆站在店門口，過一兩秒又突然消失。原因：村民照伺服器的作息過日子（回家休息、吃飯、睡覺時不在店裡），但作息資料要連上線才知道，沒拿到之前先站在原位，拿到後才「消失」。
+     現在連線中、作息還沒拿到的時候先不畫（最多等 12 秒；連不上就照舊站在原位），拿到後直接出現在對的地方 */
+  if (!World.rows && (Cloud.status === 'connecting' || (Cloud.on && !World.fails)) && performance.now() - SB.boot < 12000){ if (Cloud.on && !World.at) loadWorld(); n.wPre = true; n.av.g.visible = false; if (n.blob) n.blob.visible = false; n.tag.style.display = 'none'; return true; }
+  if (n.wPre){ n.wPre = false; n.av.g.visible = true; n._culled = false; if (n.blob) n.blob.visible = true; }
   { const fd = Math.hypot(camera.position.x - n.pos.x, camera.position.z - n.pos.z); if (fd > 70 && n.wMode && n.wMode !== 'post'){ n.wSkip = (n.wSkip || 0) + dt; if (frameNo % 6) return true; dt = n.wSkip; n.wSkip = 0; } }   /* 遠的村民 6 幀才算一次 */
   if (Cloud.on && (!World.at || Date.now() - World.at > (World.fails ? 90000 : 30000))) loadWorld();
   const wp = Cloud.on ? worldPose(n.wid) : null;
