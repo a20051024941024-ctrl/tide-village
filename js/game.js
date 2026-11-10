@@ -602,6 +602,8 @@ const FISH_MOVES = {
   crab: 'float lg = smoothstep(0.38, 0.5, abs(position.z)) * step(position.y, 0.12) * step(position.x, 0.2); float cl = smoothstep(0.42, 0.5, position.x) * smoothstep(0.2, 0.3, abs(position.z));\n float ph = uFishT * 7.0 + position.x * 22.0 + step(0.0, position.z) * 3.14159;\n transformed.y += max(0.0, sin(ph)) * 0.07 * lg * smoothstep(0.38, 0.75, abs(position.z)); transformed.x += cos(ph) * 0.035 * lg;\n transformed.y += sin(uFishT * 2.5 + step(0.0, position.z) * 1.7) * 0.03 * cl * smoothstep(0.5, 0.72, position.x);',
   // 龍蝦、螯蝦：尾巴上下拍（跟 vert 一樣）＋ 細腳輪流划、觸角左右晃
   lobster: 'float wk = clamp((-position.x - 0.1) / 0.7, 0.0, 1.0);\n transformed.y += sin(uFishT * 4.0 + position.x * 3.0) * 0.08 * wk * wk;\n float lg = step(position.y, -0.1) * smoothstep(0.1, 0.18, abs(position.z)) * step(-0.05, position.x) * step(position.x, 0.3); transformed.y += max(0.0, sin(uFishT * 8.0 + position.x * 30.0 + step(0.0, position.z) * 3.14)) * 0.035 * lg;\n float an = smoothstep(0.7, 1.15, position.x); transformed.z += sin(uFishT * 2.2 + position.z * 4.0) * 0.06 * an;',
+  blob: 'float wk = clamp((-position.x - 0.05) / 0.6, 0.0, 1.0);\n transformed.z += sin(uFishT * 3.0 + position.x * 4.0) * 0.05 * wk * wk; transformed.y += sin(uFishT * 1.7 + position.x * 3.0) * 0.01;',   /* 水滴魚：軟軟的、慢慢晃 */
+  hover: 'transformed.y += sin(uFishT * 1.4) * 0.03;',   /* 小飛象章魚：身體輕輕上下浮，耳朵和腳的膜另外動（FIN） */
   marlin: 'float wk = clamp((-position.x - 0.15) / 0.55, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 4.0) * 0.1 * wk * wk;',   /* 只有後 1/3 擺動，前段和劍不動 */
 };
 for (const [id, st] of Object.entries(FISH_STYLE)){ const gen = FISH_SPECS[id] && FISH_SPECS[id].gen; if (st.shape === 'Crab' || gen === 'crab') st.move = 'crab'; else if (st.shape === 'Lobster') st.move = 'lobster'; }   /* v229：螃蟹、龍蝦的腳會動 */
@@ -663,7 +665,6 @@ function fishModel(f, scale){
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
   if (f.id === 'octopus') return makeOctopus(scale);
-  if (/^dumbo/.test(f.id)) return makeDumbo(scale, f.id !== 'dumbo');
   if (/^seacuc/.test(f.id)) return makeSeacuc(scale, f.id !== 'seacuc');
   if (MFISH && MFISH.of[f.id]) return makeMFish(f.id, scale);
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
@@ -2092,7 +2093,7 @@ function makeOctopus(scale){ const fish = new THREE.Group(); fish.scale.setScala
 /* v226 精緻魚模型（Meshy 付費方案生成）：一般的作法——減到約 5,000 面、從側面重新烘一張 1024×512 貼圖（左半邊右側身、右半邊左側身），
    頭朝 +x、長度跟原本的模型一樣；白化版在載入時把貼圖換成粉白色（保留明暗）。還沒載好的時候先用原本的模型，載好後換掉。
    要加新的魚：在 MFISH.defs 加一行 { file, scale（讓長度跟原本一樣）, alb（白化版的 id）}。 */
-var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' }, barreleye:{ file:'models/barreleye.glb', scale:0.5, alb:'barreleye_albino', glow:'barreleye_glow', lift:0.35 }, angler:{ file:'models/angler.glb', scale:1.6, alb:'angler_albino', bulb:[0.41, 0.376, 0], lift:0.12 }, humpback:{ file:'models/humpback.glb', scale:1.0, move:'vert', nofish:true } }   /* v263 深海鮟鱇換成使用者用 Meshy 做的模型（大嘴尖牙、頭上吊一盞燈；bulb 是燈的位置，自己會發光） */, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
+var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'greatwhite_albino' }, sperm:{ file:'models/sperm.glb', scale:0.8, move:'vert' }, bluewhale:{ file:'models/bluewhale.glb', scale:0.8, move:'vert', alb:'bluewhale_albino' }, giantsquid:{ file:'models/giantsquid.glb', scale:0.8, move:'squid' }, barreleye:{ file:'models/barreleye.glb', scale:0.5, alb:'barreleye_albino', glow:'barreleye_glow', lift:0.35 }, angler:{ file:'models/angler.glb', scale:1.6, alb:'angler_albino', bulb:[0.41, 0.376, 0], lift:0.12 }, humpback:{ file:'models/humpback.glb', scale:1.0, move:'vert', nofish:true }, blobfish:{ file:'models/blobfish.glb', scale:0.7, move:'blob', alb:'blobfish_albino' }, dumbo:{ file:'models/dumbo.glb', scale:0.65, move:'hover', alb:'dumbo_albino' } }   /* 水滴魚、小飛象章魚換成使用者用 Meshy 做的模型 */   /* v263 深海鮟鱇換成使用者用 Meshy 做的模型（大嘴尖牙、頭上吊一盞燈；bulb 是燈的位置，自己會發光） */, of:{}, geo:{}, tex:{}, mats:{}, wait:{} };
 /* v264 Meshy 模型的鰭會動：載入時依位置算出每個頂點「是鰭的程度」aFin（0 身體～1 鰭尖），shader 裡只讓鰭動。
    m(x,y,z)：模型原始座標（頭朝 +x、長度 -1～1，縮放前）；v(s)：GLSL，s 是 defs 的 scale */
 { const sat = v => Math.max(0, Math.min(1, v)), inX = (x, a, b) => (x >= a && x <= b ? 1 : 0), FIN = {
@@ -2109,7 +2110,9 @@ var MFISH = { defs:{ greatwhite:{ file:'models/greatwhite.glb', scale:0.8, alb:'
   humpback:{ m:(x, y, z) => sat((Math.abs(z) - 0.128) / 0.256) * inX(x, -0.08, 0.64) * (y < 0.016 ? 1 : 0),   /* v268 座頭鯨的兩片長胸鰭（模型 -0.8～0.8，所以數字乘 0.8） */
     v:s => `transformed.y += sin(uFishT * 1.3) * ${(0.08 * s).toFixed(4)} * aFin; transformed.x += cos(uFishT * 1.3) * ${(0.032 * s).toFixed(4)} * aFin;` },
   angler:{ m:(x, y, z) => sat((Math.abs(z) - 0.21) / 0.05) * inX(x, -0.08, 0.26) * (y > -0.28 && y < 0.08 ? 1 : 0),   /* 鮟鱇的小胸鰭：快速前後扇 */
-    v:s => `transformed.x += sin(uFishT * 5.0 + sign(position.z) * 0.8) * ${(0.035 * s).toFixed(4)} * aFin;` } };
+    v:s => `transformed.x += sin(uFishT * 5.0 + sign(position.z) * 0.8) * ${(0.035 * s).toFixed(4)} * aFin;` },
+  dumbo:{ m:(x, y, z) => { const e = sat((Math.abs(z) - 0.3) / 0.22) * sat((y - 0.12) / 0.2); return e > 0 ? e : -sat((-0.32 - y) / 0.22); },   /* 正的：頭上兩片耳朵鰭（一搧一搧）；負的：下面八隻腳連著的膜（一張一合） */
+    v:s => `float ea = max(aFin, 0.0), sk = max(-aFin, 0.0); transformed.z += sign(position.z) * sin(uFishT * 3.2) * ${(0.07 * s).toFixed(4)} * ea; transformed.y += sin(uFishT * 3.2) * ${(0.06 * s).toFixed(4)} * ea; transformed.xz *= 1.0 + sin(uFishT * 1.6) * 0.12 * sk; transformed.y += sin(uFishT * 1.6 - 0.8) * ${(0.04 * s).toFixed(4)} * sk;` } };
   for (const [k, f] of Object.entries(FIN)) if (MFISH.defs[k]) MFISH.defs[k].fin = f; }
 for (const [k, d] of Object.entries(MFISH.defs)){ MFISH.of[k] = { k, albino:false }; if (d.alb) MFISH.of[d.alb] = { k, albino:true }; if (d.glow) MFISH.of[d.glow] = { k, glow:true }; MFISH.wait[k] = new Set();
   new GLTFLoader().loadAsync(d.file).then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
@@ -2132,7 +2135,7 @@ function mfishMat(k, albino, glow){ const key = k + (albino ? '_a' : '') + (glow
 function mfishFill(fish){ const o = fish.userData.mf; for (const c of [...fish.children]) fish.remove(c); const b = new THREE.Mesh(MFISH.geo[o.k], mfishMat(o.k, o.albino, o.glow)); b.castShadow = true; fish.add(b);
   const d = MFISH.defs[o.k]; if (d.bulb){ const bm = MFISH.bulbM || (MFISH.bulbM = new THREE.MeshBasicMaterial({ color:'#d8fbff' })), bl = new THREE.Mesh(MFISH.bulbG || (MFISH.bulbG = new THREE.SphereGeometry(1, 8, 6)), bm); bl.scale.setScalar(0.035 * d.scale); bl.position.set(d.bulb[0] * d.scale, d.bulb[1] * d.scale, d.bulb[2] * d.scale); fish.add(bl); const gl = subGlow('#9fefff', 0.28 * d.scale, true); gl.position.copy(bl.position); fish.add(gl); } }   /* 鮟鱇頭上的小燈自己會亮 */
 function makeMFish(id, scale){ const o = MFISH.of[id];
-  if (!MFISH.geo[o.k]){ let fish; try { fish = makeModelFish(FISH_BY_ID[id], scale); } catch(e){ fish = makeFish(FISH_BY_ID[id].color, scale); } fish.userData.mf = o; MFISH.wait[o.k].add(fish); return fish; }
+  if (!MFISH.geo[o.k]){ let fish; try { if (o.k === 'dumbo'){ fish = makeDumbo(scale, o.albino); fish.scale.setScalar(scale || 1); } else fish = makeModelFish(FISH_BY_ID[id], scale); } catch(e){ fish = makeFish(FISH_BY_ID[id].color, scale); } fish.userData.mf = o; MFISH.wait[o.k].add(fish); return fish; }
   const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); fish.userData.mf = o; mfishFill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
 /* v239 小飛象章魚：圓圓的頭（往前）、兩片像大象耳朵的鰭一搧一搧、八隻短腳之間連著一層膜（往後張開像小傘）；
    游泳海參：半透明紫色的長條身體、前面一片會擺動的「帆」、看得到肚子裡的腸子。動作都在 shader 裡算（aK：0 身體、1 耳朵／帆、2 膜） */
