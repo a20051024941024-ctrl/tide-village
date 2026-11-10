@@ -3440,10 +3440,11 @@ function placeLabelsUpdate(){
   const order = placeLabels.slice().sort((a, b) => a.d - b.d), put = TagR.slice(); TagR.length = 0;
   for (const L of order){
     const d = L.d; tmpV.copy(L.p).project(camera);
-    const sx = (tmpV.x*0.5+0.5)*viewW(), sy = (-tmpV.y*0.5+0.5)*viewH();
+    let sx = (tmpV.x*0.5+0.5)*viewW(); const sy = (-tmpV.y*0.5+0.5)*viewH();
     const atSpot = L.spot && Math.hypot(me.pos.x - L.spot.pos.x, me.pos.z - L.spot.pos.z) < 4;
     if (L.off || tmpV.z > 1 || d > (L.max || 45) || atSpot || sy < topBarBottom + 26){ L.el.style.display = 'none'; continue; }
     if (L.el.style.display === 'none' || !L.w){ L.el.style.display = ''; L.w = L.el.offsetWidth || 80; L.h = L.el.offsetHeight || 22; }
+    if (L.max && L.w) sx = clamp(sx, L.w / 2 + 8, viewW() - L.w / 2 - 8);   /* 老闆不在的牌子：字不要被螢幕邊邊切掉 */
     const r = [sx - L.w / 2 - 4, sy - L.h - 2, sx + L.w / 2 + 4, sy + 2];
     if (put.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1])){ L.el.style.display = 'none'; continue; }
     put.push(r); L.el.style.display = ''; L.el.style.opacity = String(clamp(1.3 - d/45, 0.3, 1));
@@ -12108,7 +12109,9 @@ function worldDrive(n, dt, t){
   if (!n.post) n.post = { x:n.pos.x, z:n.pos.z, y:n.baseY, rot:n.rot, fishing:n.fishing, bob:n.bobPos.clone() };
   worldTag(n, wp);
   if (!wp){ worldSign(n, false); if (n.wMode){ n.wMode = null; n.wHide = false; n.pos.set(n.post.x, n.post.y, n.post.z); n.baseY = n.post.y; n.rot = n.post.rot; n.av.g.visible = true; } return false; }
-  const P = n.post, atPost = !wp.walk && Math.hypot(wp.x - P.x, wp.z - P.z) < 0.6 && (wp.r.act === 'work' || wp.r.act === 'fish' && n.post.fishing);
+  /* v355 阿福一直不在店裡、牌子寫「出去一下」：港口重新排過以後，他的攤位搬了 6 公尺，但伺服器記的上班地點還是舊的，所以他「在上班」卻站在舊位置，被當成不在店裡。
+     現在只要伺服器說他在自己上班的地方工作，就站在遊戲裡現在的攤位（不比對座標）。伺服器的座標也用 133_fu_place.sql 改成新的 */
+  const P = n.post, atPost = !wp.walk && (wp.r.act === 'work' && (wp.to.kind === 'work' || Math.hypot(wp.x - P.x, wp.z - P.z) < 0.6) || wp.r.act === 'fish' && n.post.fishing && Math.hypot(wp.x - P.x, wp.z - P.z) < 0.6);
   const mode = wp.walk ? 'walk' : atPost ? 'post' : (wp.r.act === 'sleep' || wp.r.act === 'rest') && wp.to.kind === 'home' ? 'home' : 'away';
   worldSign(n, mode !== 'post', wp.walk ? 'stroll' : wp.r.act);
   const d = Math.hypot(n.pos.x - wp.x, n.pos.z - wp.z);
