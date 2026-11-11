@@ -4289,7 +4289,7 @@ function doCast(){
     if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
   { const fit = rodFit(s && s.id); if (fit === 'bad' && !doCast.told[s.id]){ doCast.told[s.id] = 1; const best = Object.entries(ROD_TYPES).find(([, T]) => T.fit && T.fit.includes(s.id)); setTimeout(() => toast(`${ROD_TYPES[rodType(curRod())].name}在這裡不太好用${best ? `，${s.short}比較適合用${best[1].icon}${best[1].name}（包包裡可以換）` : '，換成甩竿試試'}`), 900); } }
   if (liftHeight() > LIFT_H && !hasNet() && !doCast.netTold){ doCast.netTold = 1; setTimeout(() => toast(`🥅 這裡比水面高很多：1.5 公斤以上的魚沒有撈網會拉不上來（釣具店「🧰工具」有賣）`), 400); }
-  F.buffAt = curBuff(); useBuffCast();
+  F.buffAt = curBuff(); useBuffCast(); F.careAt = careLeft() > 0; useCareCast();
   // 用掉一個魚餌
   const bt = Rig.rig === 'lure' ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
   if (bt){ if (!Cloud.on) cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
@@ -4561,8 +4561,8 @@ function updateFishing(dt, t){
       $('#mashFx').style.setProperty('--m', (F.mashHits % 2).toString());
     } else if (F.hold){
       F.reelT = (F.reelT || 0) + dt; if (F.reelT > 0.09){ F.reelT = 0; SFX.reel(); }
-      F.T += (0.42 + pull*0.9) * dt * (rec.hook === 'hk_forge' ? 0.85 : 1) * (F.spot && F.spot.id === 'shrimp' ? curSrod().ten : rod.tension) * (fb && fb.tension || 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
-      F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (0.7 + 0.6 * (1 - F.S)) * (F.prof ? F.prof.quick : 1) * (F.act && !F.act.tele && (F.act.k === 'snag' || F.act.k === 'run') ? 0.2 : 1);
+      F.T += (0.42 + pull*0.9) * dt * (rec.hook === 'hk_forge' ? 0.85 : 1) * (F.spot && F.spot.id === 'shrimp' ? curSrod().ten : rod.tension) * (fb && fb.tension || 1) * (F.careAt ? CARE.tension : 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
+      F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (F.careAt ? CARE.reel : 1) * (0.7 + 0.6 * (1 - F.S)) * (F.prof ? F.prof.quick : 1) * (F.act && !F.act.tele && (F.act.k === 'snag' || F.act.k === 'run') ? 0.2 : 1);
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
     if (F.run > 0 || (F.act && !F.act.tele) || F.jump > 0) F.slackOK = t + 1.6;   /* v341 玩家說線太容易鬆掉脫鉤：魚衝、跳、做動作的時候和剛結束的 1.6 秒，放開是對的，不算線鬆（喘氣的時候另外算） */
@@ -9451,6 +9451,14 @@ const BUFFS = {
   ebi:    { txt:'稀有魚 ×1.25',       casts:6,  rare:1.25 },
 };
 let buff = LS.get('tide.buff', null);   // { r, left }
+/* v380 保養釣竿：釣竿不會壞；在釣具店花金幣保養，接下來 30 次拋竿收線快一點、線比較不容易斷。沒保養照常釣（次數存在這台裝置，跟料理的加成分開算、可以疊） */
+const CARE = { casts:30, price:200, reel:1.1, tension:0.9 };
+function careLeft(){ const c = LS.get('tide.care', null); return c && c.left > 0 ? Math.min(CARE.casts, Math.floor(c.left)) : 0; }
+function useCareCast(){ const n = careLeft(); if (!n) return; LS.set('tide.care', { left: n - 1 }); if (n - 1 <= 0) toast('🧴 釣竿的保養效果用完了，可以再去釣具店保養'); renderBuff(); }
+let careBusy = false;
+async function rodCare(){ if (careBusy) return; if (careLeft() > 0){ toast('釣竿才剛保養過，用完再來'); return; } if (rec.coins < CARE.price){ toast('金幣不夠'); return; }
+  if (Cloud.on && Cloud.sb){ careBusy = true; let ok = false; try { const { data, error } = await Cloud.sb.rpc('rod_care'); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); ok = true; } catch(e){ toast(cloudErrMsg(e)); } careBusy = false; if (!ok) return; } else addCoins(-CARE.price);
+  LS.set('tide.care', { left: CARE.casts }); try { SFX.catch(); } catch(e){} flash('🧴 釣竿保養好了！', 1.4); toast(`接下來 ${CARE.casts} 次拋竿：收線快 10%、線比較不容易斷`); renderBuff(); if (!$('#sheet').hidden) renderTab(); }
 function curBuff(){ return buff && BUFFS[buff.r] && buff.left > 0 ? Object.assign({ r:buff.r, left:buff.left }, BUFFS[buff.r]) : null; }
 function eatDish(ts){
   const d = rec.dishes.find(x => x.t === ts); if (!d) return; const rc = RECIPES[d.r], bf = BUFFS[d.r];
@@ -9462,7 +9470,7 @@ function eatDish(ts){
   renderTab();
 }
 function useBuffCast(){ const b = curBuff(); if (!b) return; buff.left--; if (buff.left <= 0){ buff = null; toast('料理的加成用完了'); } LS.set('tide.buff', buff); renderBuff(); }
-function renderBuff(){ const c = $('#buffChip'); if (!c) return; const b = curBuff(); c.hidden = !b; if (b) c.textContent = `${RECIPES[b.r].icon}${b.left}`; c.title = b ? `${RECIPES[b.r].name}：${b.txt}（剩 ${b.left} 次）` : ''; }
+function renderBuff(){ const c = $('#buffChip'); if (!c) return; const b = curBuff(), k = careLeft(); c.hidden = !b && !k; const t = (b ? `${RECIPES[b.r].icon}${b.left}` : '') + (k ? `${b ? ' ' : ''}🧴${k}` : ''); if (c.textContent !== t) c.textContent = t; c.title = (b ? `${RECIPES[b.r].name}：${b.txt}（剩 ${b.left} 次）` : '') + (k ? ` 釣竿保養（剩 ${k} 次）` : ''); }
 function dishPrice(d){ const rc = RECIPES[d.r]; return rc ? Math.round(rc.value * STAR_K[clamp(d.q, 1, 3)]) : 0; }
 // 挑食材：沒有展示、最便宜的那幾條（大魚留著）
 function pickIngredients(key){
@@ -10555,6 +10563,7 @@ function renderShop(body){
         acts.appendChild(b); li.appendChild(acts); u2.appendChild(li); }
       body.appendChild(u2); }
   } else if (shopMode === 'rod'){
+    { const k = careLeft(), box = el('div', 'field'); box.appendChild(el('label', '', '🧴 保養釣竿')); box.appendChild(el('p', 'sub', k ? `保養的效果還有 ${k} 次拋竿（收線快 10%、線比較不容易斷）。用完再來。` : `幫釣竿上油、換導環。接下來 ${CARE.casts} 次拋竿收線快 10%、線比較不容易斷。釣竿不會壞，沒保養也可以照常釣。`)); const b = el('button', 'tbtn', k ? `還有 ${k} 次` : `保養　🪙${CARE.price}`); b.disabled = k > 0 || rec.coins < CARE.price; b.addEventListener('click', rodCare); box.appendChild(b); body.appendChild(box); }
     body.appendChild(el('p', 'sub', '換一支好竿子，拉線時比較不容易斷，也更容易遇到稀有魚。甩竿哪裡都能用；手竿、遠投竿、磯釣竿在對的地方用，稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都放在包包裡，隨時可以換。'));
     let ul = null, lastT = null;
     for (const r of RODS){
@@ -13140,6 +13149,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
       '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
