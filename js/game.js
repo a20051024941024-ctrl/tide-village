@@ -11147,22 +11147,6 @@ function logMsg(name, text, sys, noHist){
 }
 /* v339 聊天紀錄：大家說過的話留在這支手機上（最多 80 句、24 小時），點聊天列旁邊的 📜 看 */
 const ChatH = { L: null, unread: 0 };
-/* v367 大廳聊天存 24 小時（146）：說「🌐 全部」的時候順便存一份；剛上線、換大廳的人先看到最近的對話 */
-function chatStore(text, q){ try { if (!room || !room.isLobby || !room.lobbyNo || !Cloud.on || !Cloud.sb) return; Cloud.sb.rpc('chat_post', { p_lobby: room.lobbyNo, p_t: text, p_q: q == null ? null : q }).then(() => {}, () => {}); } catch(e){} }
-async function chatBackfill(){ try { if (!room || !room.isLobby || !room.lobbyNo || !Cloud.on || !Cloud.sb) return; const no = room.lobbyNo; if (ChatH.filled === no) return; ChatH.filled = no;
-    const { data, error } = await Cloud.sb.rpc('chat_history', { p_lobby: no }); if (error || !Array.isArray(data) || !data.length) return;
-    const L = chatHistLoad(), out = [];
-    for (const m of data){ const u = String(m.u || ''), at = Date.parse(m.at) || Date.now(), mine = u === Cloud.userId; let text = String(m.t || '').slice(0, 120); const qi = m.q == null ? -1 : Math.floor(+m.q), isQ = qi >= 0 && qi < KID_Q.length;
-      if (!mine && (blockList[u] || mutedSet.has(u))) continue;
-      if (Kid.on && !mine){ if (!isQ) continue; text = KID_Q[qi]; }
-      else if (!mine && strangerSafe() && !(metWith(u) || (typeof isFriend === 'function' && isFriend(u))) && !(isQ && text === KID_Q[qi])) text = '💬（陌生人說的話先藏起來）';
-      text = clean(text); const name = mine ? '你' : clean(String(m.n || '釣客').slice(0, 16));
-      if (L.some(x => (x.n === name || (mine && x.n === myDisplayName())) && x.x === text && Math.abs(x.t - at) < 120e3)) continue;   /* 我在線上時本來就收過的不重複 */
-      out.push({ n: name, x: text, t: at }); }
-    if (!out.length) return; for (const m of out) L.push(m); L.sort((a, b) => a.t - b.t); while (L.length > 80) L.shift(); try { LS.set('tide.chatHist', L); } catch(e){}
-    logMsg('', `💬 你上線前大家說了 ${out.length} 句話，點聊天列左邊的 📜 看`, true);
-    for (const m of out.slice(-3)) logMsg(m.n, m.x + '（剛剛）', false, true);
-    if (ChatH.el && !ChatH.el.hidden) chatHistRender(); else chatBadge(out.length); } catch(e){} }
 function chatBadge(add){ ChatH.unread = add ? ChatH.unread + add : 0; const b = document.querySelector('#chat3 .c3h'); if (!b) return; b.dataset.n = ChatH.unread > 99 ? '99+' : ChatH.unread || ''; b.classList.toggle('has', ChatH.unread > 0); }
 function chatHistLoad(){ if (ChatH.L) return ChatH.L; let L = []; try { L = LS.get('tide.chatHist', []) || []; } catch(e){} const t0 = Date.now() - 864e5; ChatH.L = Array.isArray(L) ? L.filter(m => m && m.t > t0).slice(-80) : []; return ChatH.L; }
 function chatHistAdd(name, text){ const L = chatHistLoad(); L.push({ n: String(name).slice(0, 24), x: String(text).slice(0, 160), t: Date.now() }); while (L.length > 80) L.shift(); clearTimeout(ChatH.sv); ChatH.sv = setTimeout(() => { try { LS.set('tide.chatHist', L); } catch(e){} }, 800); if (ChatH.el && !ChatH.el.hidden) chatHistRender(); }
@@ -11171,8 +11155,11 @@ function chatHistRender(){ const P = ChatH.el; if (!P) return; const box = P.que
   let lastDay = ''; for (const m of L){ const d = new Date(m.t), day = `${d.getMonth() + 1}/${d.getDate()}`; if (day !== lastDay && lastDay){ box.appendChild(el('div', 'chd', day)); } lastDay = day;
     const r = el('div', 'chm'); const tm = el('span', 'cht', `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`); const nb = el('b', '', m.n); r.append(tm, nb, document.createTextNode(m.x)); box.appendChild(r); }
   box.scrollTop = box.scrollHeight; }
+function chatHistPlace(){ const P = ChatH.el; if (!P || P.hidden) return; const f = document.body.classList.contains('chatting') && $('#chatForm');
+  const r = f && getComputedStyle(f).display !== 'none' ? f.getBoundingClientRect() : null; const top = r && r.height ? r.top : null;
+  if (top != null){ P.style.bottom = Math.round(innerHeight - top + 6) + 'px'; P.style.maxHeight = Math.max(70, Math.round(top - 14)) + 'px'; } else { P.style.bottom = ''; P.style.maxHeight = ''; } }   /* v368 打字時鍵盤會蓋住下面：聊天紀錄貼在輸入框正上方 */
 function chatHistToggle(force){ let P = ChatH.el; if (!P){ P = ChatH.el = document.createElement('div'); P.id = 'chatHist'; P.className = 'panel'; P.hidden = true; P.innerHTML = '<div class="chh"><b>📜 聊天紀錄</b><button class="chx" aria-label="關閉">✕</button></div><div class="chl"></div>'; P.querySelector('.chx').addEventListener('click', () => chatHistToggle(false)); document.body.appendChild(P); }
-  P.hidden = force != null ? !force : !P.hidden; if (!P.hidden){ chatHistRender(); chatBadge(0); } }
+  P.hidden = force != null ? !force : !P.hidden; document.body.classList.toggle('histOpen', !P.hidden); if (!P.hidden){ chatHistRender(); chatBadge(0); chatHistPlace(); setTimeout(chatHistPlace, 350); } }
 // 跑馬燈：大家的動態（誰釣到什麼、誰在炫耀、天色變化）從右往左飄過去；排隊一則接一則，不會疊在一起
 const Ticker = { q:[], nextAt:0, busy:false, speed:110 };
 function ticker(html){
@@ -11196,6 +11183,8 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', 
 let chatAllowed = true;
 /* v258 附近聊天：切到「📍 附近」，只有 28 公尺內、同一個地方（同一座小島、同一棟房子）的人看得到 */
 const NEAR_R = 28; let chatNear = !!LS.get('tide.chatNear', false);
+/* v368 小島上的「🌐 全部」聊天只給同一座小島的人看；主島的人看主島的（舊版沒帶 a 的當成主島） */
+function chatArea(){ return onIsle ? 'i' + onIsle.owner : ''; }
 function myPlaceKey(){ let k = ''; if (onIsle) k += 'i' + onIsle.owner; if (House.on) k += 'h' + ((House.it ? House.it.id : 1) + (House.floor || 0) * 1000); return k; }
 function peerPlaceKey(pr){ let k = ''; if (pr && pr.is) k += 'i' + pr.is; if (pr && pr.hs) k += 'h' + pr.hs; return k; }
 function nearListeners(){ let n = 0; const pk = myPlaceKey(); for (const p of peers.values()){ if (!p.pres || peerPlaceKey(p.pres) !== pk) continue; if (Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z) < NEAR_R) n++; } return n; }
@@ -11212,14 +11201,14 @@ $('#chatForm').addEventListener('submit', async e => {
   inp.value = '';
   if (mutedUntil > Date.now()){ const d = new Date(mutedUntil); toast(`你被禁言到 ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}，其他人看不到你說的話。`); return; }
   if (room && room.connected() && chatAllowed){
-    try { await room.emit('chat', chatNear ? { t: text, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text }); if (!chatNear) chatStore(text, null); if (chatNear && !nearListeners()) logMsg('系統', '📍 附近沒有人聽到喔（切回「🌐 全部」大家都看得到）', true); }
+    try { await room.emit('chat', chatNear ? { t: text, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text, a: chatArea() }); if (chatNear && !nearListeners()) logMsg('系統', '📍 附近沒有人聽到喔（切回「🌐 全部」大家都看得到）', true); }
     catch(err){ if (err && err.code === 'not_permitted'){ chatAllowed = false; logMsg('系統', '你目前是檢視者，聊天只有你自己看得到。', true); } me.say(text); logMsg('你', text); }
   } else { me.say(text); logMsg((chatNear ? '📍' : '') + '你', text + (room ? '' : '（單人模式）')); }
   npcHear(text);   /* 旁邊的村民會回話 */
   if (isTouch){ inp.blur(); document.body.classList.remove('chatting'); }
 });
 // 手機鍵盤跳出來時，把聊天輸入框往上推到鍵盤上面
-if (window.visualViewport){ const kb = () => { const v = visualViewport, h = Math.max(0, innerHeight - (v.height + v.offsetTop)); document.documentElement.style.setProperty('--kb', (h > 60 ? h : 0) + 'px'); }; visualViewport.addEventListener('resize', kb); visualViewport.addEventListener('scroll', kb); }
+if (window.visualViewport){ const kb = () => { const v = visualViewport, h = Math.max(0, innerHeight - (v.height + v.offsetTop)); document.documentElement.style.setProperty('--kb', (h > 60 ? h : 0) + 'px'); }; visualViewport.addEventListener('resize', kb); visualViewport.addEventListener('scroll', kb); visualViewport.addEventListener('resize', () => setTimeout(chatHistPlace, 60)); }
 if (isTouch && $('#chatIn')) $('#chatIn').placeholder = '點這裡跟大家聊天…';
 if ($('#chatIn')){ $('#chatIn').addEventListener('focus', () => document.body.classList.add('chatting')); $('#chatIn').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('#chatIn')) document.body.classList.remove('chatting'); }, 150)); }
 $('#chatToggle').addEventListener('click', () => { document.body.classList.toggle('chatting'); if (document.body.classList.contains('chatting')) $('#chatIn').focus(); });
@@ -11491,7 +11480,7 @@ function updatePeers(dt, t){
 
 let pjMode = false, roomTimer = null, roomJoinAt = 0, roomGreeted = false; const seenPeers = new Map();   /* 剛進大廳時，本來就在的人不要報「來到了村子」 */
 function useRoom(r){
-  room = r; tagReset(); roomJoinAt = Date.now(); roomGreeted = false; setTimeout(chatBackfill, 1500);   /* v367 先看到這個大廳剛剛大家說了什麼 */
+  room = r; tagReset(); roomJoinAt = Date.now(); roomGreeted = false;
     room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp); if (ch.joined.length || ch.left.length) neighborsRefresh();
       for (const pp of ch.left){ const p = peers.get(pp.peer); if (p){ seenPeers.set((p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, Date.now()); visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
       for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (!p) return; visitLog(p);
@@ -11506,6 +11495,7 @@ function useRoom(r){
       if (Kid.on && !msg.sameTab){ const qi = Math.floor(+msg.data.q); if (!(qi >= 0 && qi < KID_Q.length)) return; text = KID_Q[qi]; }   /* v288 兒童安全模式：只看得到快速聊天的固定句子 */
       const nr = !!(msg.data.nr);
       if (msg.sameTab){ me.say(text); logMsg((nr ? '📍' : '') + (myDisplayName() === '你' ? '你' : myDisplayName()), text); return; }
+      if (!nr && !msg.sameTab && String(msg.data.a || '') !== chatArea()) return;   /* 不同島的聊天看不到 */
       if (nr && (String(msg.data.pk || '') !== myPlaceKey() || !(Math.hypot((+msg.data.x || 0) - me.pos.x, (+msg.data.z || 0) - me.pos.z) < NEAR_R))) return;   /* 附近聊天：離太遠、不在同一個地方就聽不到 */
       if (isBlockedPeer(msg.peer) || tooChatty(msg.peer)) return;
       if (!Kid.on && strangerSafe() && !knownPeer(msg.peer) && !(Math.floor(+msg.data.q) >= 0 && Math.floor(+msg.data.q) < KID_Q.length && text === KID_Q[Math.floor(+msg.data.q)])){   /* v313 陌生人自己打的字先藏起來 */
@@ -12433,7 +12423,7 @@ function kidApply(){ document.body.classList.toggle('kid', !!Kid.on); let qb = $
   if (Kid.on && !qb){ qb = document.createElement('div'); qb.id = 'kidQ'; qb.className = 'panel'; KID_Q.forEach((q, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => kidSay(i)); qb.appendChild(b); }); const f = $('#chatForm'); f.parentNode.insertBefore(qb, f.nextSibling); }
   if (qb) qb.hidden = !Kid.on; }
 async function kidSay(i){ const text = KID_Q[i], nowT = performance.now(); myChatAt = myChatAt.filter(x => nowT - x < 6000); if (myChatAt.length >= 4){ toast('說太快了，休息一下再說'); return; } myChatAt.push(nowT);
-  if (room && room.connected() && chatAllowed){ try { await room.emit('chat', chatNear ? { t: text, q: i, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text, q: i }); if (!chatNear) chatStore(text, i); } catch(e){ me.say(text); logMsg('你', text); } }
+  if (room && room.connected() && chatAllowed){ try { await room.emit('chat', chatNear ? { t: text, q: i, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text, q: i, a: chatArea() }); } catch(e){ me.say(text); logMsg('你', text); } }
   else { me.say(text); logMsg('你', text); } npcHear(text); }
 async function kidLoad(){ if (!Cloud.on || !Cloud.sb || Kid.busy) return; Kid.busy = true; try { const { data, error } = await Cloud.sb.rpc('my_age_mode'); if (!error && data){ Kid.loaded = true; Kid.on = !!data.kid; Kid.asked = !!data.asked; Kid.teen = !!data.teen; LS.set('tide.kid', Kid.on); LS.set('tide.teen', Kid.teen); LS.set('tide.ageAsked', Kid.asked); kidApply(); if (!Kid.asked) ageGate(); } } catch(e){} Kid.busy = false; }
 function ageGate(){ if ($('#ageGate')) return; const y = new Date().getFullYear(), g = document.createElement('div'); g.id = 'ageGate';
@@ -13408,7 +13398,7 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
-      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（剛上線也看得到這個大廳最近 3 小時大家說的話；有新訊息會出現紅色數字），😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「找釣點」，點了會告訴你最近的釣點在哪個方向、多遠。',
+      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，打字的時候會出現在輸入框上面；有新訊息會出現紅色數字）。在小島上說的話只有同一座小島的人看得到，😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「找釣點」，點了會告訴你最近的釣點在哪個方向、多遠。',
       '移動搖桿想固定在左下角：設定 →「🕹️ 移動搖桿」選「固定在左下角」。',
       '檢舉不禮貌的人（點他的名字 →「檢舉」）會送到管理員那裡處理，管理員可以禁言或把不適合的名字改掉；被改名的人 30 天內不能自己改回來。',
       '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',

@@ -1352,3 +1352,6 @@ body.ui3 .g3i{background:none!important;box-shadow:none!important;font-size:40px
 /* v367 聊天紀錄有新訊息：📜 右上角紅點數字 */
 #chat3 .c3h{position:relative}
 #chat3 .c3h.has::after{content:attr(data-n);position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#ff5a5a;color:#fff;font:700 11px/18px system-ui,sans-serif;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+/* v368 打字時：聊天紀錄在輸入框正上方；畫面上飄的聊天字先藏起來（紀錄裡都有） */
+body.chatting.histOpen #log{visibility:hidden}
+#chatHist{transition:none}
