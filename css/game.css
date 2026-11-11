@@ -1346,3 +1346,6 @@ body.ui3 .g3i{font-size:33px!important}
 body.ui3 .g3i{background:none!important;box-shadow:none!important;font-size:40px!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45)) drop-shadow(0 0 1px rgba(0,0,0,.4))}
 @media (orientation:landscape) and (max-height:540px){ body.ui3 .g3i{font-size:34px!important} }
 @media (orientation:portrait){ body.ui3 .g3i{font-size:31px!important} }
+
+/* v377 潛水時下面中間是氧氣列，聊天列往上移一點，才不會被蓋住 */
+@media (min-width:701px){ body.ui3.sdive #chat3{bottom:calc(var(--gb) + 66px)} }
