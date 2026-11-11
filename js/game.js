@@ -4753,7 +4753,18 @@ const ISLE_ITEMS = {
   fishrack:{ name:'曬魚架', price:400, rad:0.9 },
   stonepath:{ name:'石板路', price:40, rad:0.6 },
   hedge:{ name:'矮樹籬', price:100, rad:0.9 },
+  /* v386 寵物圍欄（伺服器 149）：每一個多 5 隻那一類寵物的名額，待在家的寵物會在裡面玩 */
+  penland:{ name:'陸地圍欄（貓、柴犬、海鷗 +5 隻）', price:1500, rad:2.0, pen:'land' },
+  pensea:{ name:'海水池（水獺、寄居蟹、小海龜、章魚、河豚 +5 隻）', price:1500, rad:1.8, pen:'sea' },
+  pentank:{ name:'烏龜缸（小烏龜 +5 隻）', price:1500, rad:1.2, pen:'tank' },
 };
+const PET_CAT = k => k === 'cat' || k === 'shiba' || k === 'gull' ? 'land' : k === 'pondturtle' ? 'tank' : 'sea';
+const PEN_AREA = { penland:{ hx:1.15, hz:1.15, y:0.04 }, pensea:{ hx:1.05, hz:0.62, y:0.24 }, pentank:{ hx:0.72, hz:0.32, y:0.42 } };
+/* 寵物名額：一般 3 隻什麼都能養，每一類超過圍欄名額的部分要擠在這 3 隻裡（跟伺服器 _pet_over 一樣） */
+function petOver(list, items, add){ const cap = { land:0, sea:0, tank:0 }, n = { land:0, sea:0, tank:0 };
+  for (const it of items || []){ const T = ISLE_ITEMS[it.t]; if (T && T.pen) cap[T.pen] += 5; }
+  for (const p of list || []) n[PET_CAT(p.kind)]++; if (add) n[PET_CAT(add)]++;
+  return Object.keys(n).reduce((a, k) => a + Math.max(0, n[k] - cap[k]), 0); }
 const OLD_HOUSES = new Set(['cabin', 'beach', 'tea', 'villa']);   // 076 起不再賣（已經買的人保留）
 const HOUSES = Object.fromEntries(Object.entries(ISLE_ITEMS).filter(([, v]) => v.house));
 const ISLE_MAX = 60, ISLE_HOUSE_MAX = 6;
@@ -4868,6 +4879,23 @@ function itemMesh(type, opts){
       for (let i = 0; i < 5; i++){ const f = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.42, 6), mat('#b8b2a2', 0.6)); f.rotation.x = Math.PI; f.position.set(-0.7 + i * 0.35, 1.02, (i % 2 - 0.5) * 0.5); g.add(f); } break; }
     case 'stonepath': { for (const [x, z, r] of [[-0.3, -0.25, 0.3], [0.28, 0.0, 0.26], [-0.18, 0.32, 0.24]]){ const k = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.05, 0.08, 7), mat('#c9c2b2', 0.95, { flatShading:true })); k.position.set(x, 0.04, z); g.add(k); } break; }
     case 'hedge': { const h = box([1.8, 0.7, 0.55], '#4f8f48', [0, 0.35, 0]); g.add(h); for (let i = 0; i < 4; i++){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), mat('#5d9c55', 0.85, { flatShading:true })); b.position.set(-0.7 + i * 0.47, 0.68, 0); g.add(b); } break; }
+    case 'penland': { B([3.3, 0.05, 3.3], '#8fcf6a', [0, 0.025, 0]);
+      for (let i = 0; i < 4; i++){ const a = i * Math.PI / 2, c = Math.cos(a), sn = Math.sin(a);
+        for (const u of [-1.6, -0.53, 0.53, 1.6]){ B([0.12, 0.7, 0.12], PALETTE.wood, [c * u + sn * 1.6, 0.35, -sn * u + c * 1.6]); }
+        for (const y of [0.3, 0.58]){ const r = B([3.2, 0.07, 0.06], '#c79a6b', [sn * 1.6, y, c * 1.6]); r.rotation.y = a; } }
+      B([0.9, 0.6, 0.75], '#e8a85f', [-0.95, 0.3, -0.95]); B([0.36, 0.42, 0.04], '#6e4a2f', [-0.95, 0.24, -0.57]);
+      for (const sx of [-1, 1]){ const rf = B([0.62, 0.06, 0.9], '#c4553f', [-0.95 + sx * 0.25, 0.76, -0.95]); rf.rotation.z = -sx * 0.6; }
+      for (const [x, c] of [[0.9, '#5fb6e3'], [1.2, '#e8473a']]){ const bw = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.08, 12), mat(c, 0.7)); bw.position.set(x, 0.09, -1.15); g.add(bw); }
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), mat('#ffd36a', 0.6)); ball.position.set(0.6, 0.15, 0.7); g.add(ball); break; }
+    case 'pensea': { const rim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.05, 0.3, 24), mat('#c9c2b2', 0.95)); rim.scale.set(1.5, 1, 1.05); rim.position.y = 0.15; g.add(rim);
+      const w = new THREE.Mesh(new THREE.CircleGeometry(1, 24), mat('#3fb7c9', 0.2, { emissive:'#2f89c7', emissiveIntensity:0.25 })); w.rotation.x = -Math.PI / 2; w.scale.set(1.36, 0.92, 1); w.position.y = 0.22; g.add(w);
+      for (const [x, z, r, c] of [[-1.05, 0.35, 0.28, '#a8a08f'], [1.1, -0.3, 0.22, '#b7b2a4'], [0.2, 0.55, 0.16, '#d9cfb6']]){ const k = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), mat(c, 0.9, { flatShading:true })); k.position.set(x, 0.24, z); g.add(k); }
+      for (let i = 0; i < 4; i++){ const sw = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.42, 4), mat('#3f9a5a', 0.8)); sw.position.set(-0.6 + i * 0.4, 0.38, -0.5 + (i % 2) * 0.12); g.add(sw); } break; }
+    case 'pentank': { B([2.0, 0.12, 1.1], '#8c5d3b', [0, 0.06, 0]); for (const sx of [-1, 1]) B([0.08, 0.5, 1.1], '#a97c50', [sx * 0.96, 0.3, 0]); for (const sz of [-1, 1]) B([2.0, 0.5, 0.08], '#a97c50', [0, 0.3, sz * 0.51]);
+      const w = box([1.84, 0.04, 0.94], '#6fc9c3', [0, 0.38, 0], mat('#6fc9c3', 0.2, { emissive:'#2f89c7', emissiveIntensity:0.2 })); g.add(w);
+      const rk = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.2, 7), mat('#b7b2a4', 0.95, { flatShading:true })); rk.position.set(0.6, 0.45, 0.05); g.add(rk);
+      B([0.06, 1.3, 0.06], PALETTE.ink, [0.95, 1.05, -0.5]); B([0.5, 0.05, 0.05], PALETTE.ink, [0.72, 1.7, -0.5]);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshStandardMaterial({ color:'#fff3c4', emissive:'#ffb070', emissiveIntensity:1.0 })); bulb.position.set(0.5, 1.6, -0.45); g.add(bulb); break; }
     case 'boat': { const b = makeBoatMesh('#c98b55'); b.position.y = 0.15; b.rotation.z = 0.08; g.add(b); break; }
   }
   return g;
@@ -4880,13 +4908,16 @@ function placeItemInGroup(group, it, withCols){
   else if (it.t === 'bench' || it.t === 'picnic' || it.t === 'swing'){
     const c = Math.cos(it.r), s = Math.sin(it.r), seat = (lx, lz, face) => isleChairs.push({ x: ISLE.x + it.x + c * lx + s * lz, z: ISLE.z + it.z - s * lx + c * lz, face: it.r + face, y: ISLE.y + (it.t === 'swing' ? 0.1 : 0.02), isle: true });
     if (it.t === 'bench'){ seat(-0.45, 0.05, 0); seat(0.45, 0.05, 0); } else if (it.t === 'picnic'){ seat(-0.4, -0.78, 0); seat(0.4, -0.78, 0); seat(-0.4, 0.78, Math.PI); seat(0.4, 0.78, Math.PI); addCircleCol(ISLE.x + it.x, ISLE.z + it.z, 0.5); } else seat(0, 0, 0);
-  } else if (it.t === 'fence'){ const c = Math.cos(it.r), s = Math.sin(it.r); addBoxCol(ISLE.x + it.x, ISLE.z + it.z, Math.abs(c) * 1.9 + Math.abs(s) * 0.2, Math.abs(s) * 1.9 + Math.abs(c) * 0.2); }
+  } else if (it.t === 'penland'){ const X = ISLE.x + it.x, Z = ISLE.z + it.z;   /* 四面牆：寵物在裡面跑、人進不去 */
+    for (let i = 0; i < 4; i++){ const a = it.r + i * Math.PI / 2; addOBoxCol(X + Math.sin(a) * 1.6, Z + Math.cos(a) * 1.6, 3.3, 0.2, a); } }
+  else if (it.t === 'pensea' || it.t === 'pentank'){ const W = it.t === 'pensea' ? 3.1 : 2.0, D = it.t === 'pensea' ? 2.2 : 1.1; addOBoxCol(ISLE.x + it.x, ISLE.z + it.z, W, D, it.r); }
+  else if (it.t === 'fence'){ const c = Math.cos(it.r), s = Math.sin(it.r); addBoxCol(ISLE.x + it.x, ISLE.z + it.z, Math.abs(c) * 1.9 + Math.abs(s) * 0.2, Math.abs(s) * 1.9 + Math.abs(c) * 0.2); }
   else if (it.t !== 'flower') addCircleCol(ISLE.x + it.x, ISLE.z + it.z, T.rad * 0.7);
   return g;
 }
 // 大島效能（風險檢查第 4 點）：島上不會動的東西（房子外觀、花、樹、石頭、長椅…）照材質合併成少數幾個網格，畫的次數少很多；
 // 會動的（旗子、營火、池塘的魚、鞦韆、小船）不合併；建造模式的時候拆回原本的樣子（才能移動、拆掉）。
-const BATCH_STATIC = new Set(['cabin', 'beach', 'villa', 'tea', 'mansion', 'flower', 'bench', 'lamp', 'palm', 'fence', 'tree', 'rock', 'mailbox', 'picnic', 'parasol', 'bush', 'lantern', 'statue']);
+const BATCH_STATIC = new Set(['cabin', 'beach', 'villa', 'tea', 'mansion', 'flower', 'bench', 'lamp', 'palm', 'fence', 'tree', 'rock', 'mailbox', 'picnic', 'parasol', 'bush', 'lantern', 'statue', 'penland', 'pensea', 'pentank']);
 function isleUnbatch(group){ const B = group && group.userData.batched; if (!B) return; group.remove(B.batch); B.batch.traverse(o => { if (o.isMesh) o.geometry.dispose(); }); for (const o of B.hidden) o.visible = true; group.userData.batched = null; }
 function isleBatch(group){ if (!group) return; isleUnbatch(group); try {
   group.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(group.matrixWorld).invert(), M = new THREE.Matrix4(), buckets = new Map();
@@ -7044,7 +7075,7 @@ function renderIsland(body){
   }
   const items = isleItems(), nh = items.filter(i => ISLE_ITEMS[i.t].house).length;   /* 住在別人家時就是那座島 */
   body.appendChild(el('p', 'sub', `島上有 ${items.length} / ${ISLE_MAX} 件東西、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。走到房子門口可以進去！拆掉退一半金幣。`));
-  for (const [title, filt] of [['🏠 房子', v => v.house], ['🌷 裝飾和家具', v => !v.house]]){
+  for (const [title, filt] of [['🏠 房子', v => v.house], ['🐾 寵物圍欄（每個多養 5 隻那一類的寵物）', v => v.pen], ['🌷 裝飾和家具', v => !v.house && !v.pen]]){
     body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
     for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([k2, v]) => filt(v) && !OLD_HOUSES.has(k2))){   /* 076：房子只賣大宅 */
       const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
@@ -7966,7 +7997,7 @@ function petVarRare(k, v){ const keys = Object.keys(PET_VARS[k] || {}); return k
 const Pets = { list:null, at:0, busy:false, atShop:false, feedFor:null, home:[], homeKey:'', meowAt:0, newName:'' };
 async function petLuckyTry(){ if (!Cloud.on || !Cloud.sb) return; let r = null; try { const { data } = await Cloud.sb.rpc('pet_lucky'); r = data; } catch(e){ return; } if (!r || !r.got) return;
   const K = PET_KINDS[r.kind], vn = petFull(r.kind, r.var);
-  setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是你已經養了 3 隻，只好放牠回去了`, 2.6); return; }
+  setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是寵物名額滿了，只好放牠回去了（小島買圍欄、海水池、烏龜缸可以多養）`, 2.6); return; }
     SFX.catch(); flash(r.kind === 'pondturtle' ? `${K.icon} 撿到一隻${vn}！這是被棄養的烏龜，帶回家好好照顧吧` : `${K.icon} 哇！順便撈到一隻${vn}${petVarRare(r.kind, r.var) ? '（很少見的花色！）' : ''}，牠決定跟你回家了`, 3); if (r.kind === 'pondturtle') setTimeout(() => toast('🐢 養了就要一直照顧，不要棄養。烏龜可以活幾十年喔'), 3400); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); }
 /* v253 阿鐵師傅的工坊 */
 function craftUse(c){ const shown = new Set((rec.show || []).map(String)); return (rec.tank || []).filter(x => { const f = FISH_BY_ID[x.f]; return f && f.rarity === c.r && !f.of && !x.k && !shown.has(String(x.t)); }).sort((a, b) => a.w - b.w).slice(0, c.n); }
@@ -8245,14 +8276,22 @@ function updatePetFor(f, want, dt, t){
 }
 // 小島上待在家的寵物：在島中間附近閒晃
 async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.forEach(petFree); Pets.home = []; Pets.homeKey = ''; } return; }
-  const key = onIsle.owner + '|' + (Pets.list ? Pets.list.map(p => p.id + ':' + p.out + ':' + p.acc + p.name + ':' + (p.shine == null ? '' : Math.floor(p.shine / 10))).join() : ''); if (Pets.homeKey === key) return; Pets.homeKey = key;
+  const pens = ((onIsle.owner === myIdOrMe() ? rec.island : onIsle.layout) || { items: [] }).items.filter(it => ISLE_ITEMS[it.t] && ISLE_ITEMS[it.t].pen);
+  const key = onIsle.owner + '|' + pens.map(it => it.id + ':' + it.x + ':' + it.z + ':' + it.r).join() + '|' + (Pets.list ? Pets.list.map(p => p.id + ':' + p.out + ':' + p.acc + p.name + ':' + (p.shine == null ? '' : Math.floor(p.shine / 10))).join() : ''); if (Pets.homeKey === key) return; Pets.homeKey = key;
   let list = []; if (onIsle.owner === myIdOrMe()) list = (Pets.list || []).filter(p => !p.out); else if (Cloud.on){ try { const { data } = await Cloud.sb.rpc('isle_pets', { p_owner: onIsle.owner }); if (Array.isArray(data)) list = data; } catch(e){} }
-  Pets.home.forEach(petFree); Pets.home = list.slice(0, 3).map((w, i) => { const pt = petMake(w); pt.pos.set(ISLE.x + 3 + i * 1.5, groundHeight(ISLE.x + 3 + i * 1.5, ISLE.z + 4), ISLE.z + 4); pt.wander = { x: pt.pos.x, z: pt.pos.z, at: 0 }; return pt; }); }
+  /* v386 有圍欄就住進對的圍欄（每個 5 隻），其他的在島上閒晃；便宜手機最多畫 18 隻 */
+  const room = new Map(pens.map(it => [it, 5])), byCat = c => pens.filter(it => ISLE_ITEMS[it.t].pen === c && room.get(it) > 0)[0];
+  Pets.home.forEach(petFree); let free = 0; Pets.home = list.slice(0, 18).map(w => { const pt = petMake(w), pen = byCat(PET_CAT(w.kind));
+    if (pen){ room.set(pen, room.get(pen) - 1); pt.pen = pen; const p = penSpot(pen); pt.pos.set(p.x, p.y, p.z); pt.wander = { x: p.x, z: p.z, at: 0 }; return pt; }
+    const i = free++, x = ISLE.x + 3 + (i % 3) * 1.5, z = ISLE.z + 4 + Math.floor(i / 3) * 1.2; pt.pos.set(x, groundHeight(x, z), z); pt.wander = { x, z, at: 0 }; return pt; }); }
+function penSpot(it){ const A = PEN_AREA[it.t], u = (Math.random() * 2 - 1) * A.hx, v = (Math.random() * 2 - 1) * A.hz, c = Math.cos(it.r), s = Math.sin(it.r);
+  return { x: ISLE.x + it.x + u * c + v * s, z: ISLE.z + it.z - u * s + v * c, y: ISLE.y + A.y }; }
 function updatePets(dt, t){
   updatePetFor(me, petMine(), dt, t);
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
   for (const pt of Pets.home){ const vis = !!onIsle && !House.on && !Dive.on; pt.m.visible = vis; if (!vis) continue; const w = pt.wander;
+    if (pt.pen){ if (t > w.at){ w.at = t + rand(2, 5); const p = penSpot(pt.pen); w.x = p.x; w.z = p.z; } petStep(pt, dt, t, w.x, w.z, ISLE.y + PEN_AREA[pt.pen.t].y, false, pt.rot); continue; }
     if (t > w.at){ w.at = t + rand(3, 7); for (let k = 0; k < 6; k++){ const a = Math.random() * 6.283, r = 2 + Math.random() * 7, x = ISLE.x + Math.cos(a) * r, z = ISLE.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.3)){ w.x = x; w.z = z; break; } } }
     petStep(pt, dt, t, w.x, w.z, groundHeight(pt.pos.x, pt.pos.z), false, pt.rot); }
   // 貓看到附近有魚群會喵喵叫
@@ -8317,7 +8356,9 @@ function renderPets(body){
   if (!Pets.list){ body.appendChild(el('div', 'empty', '載入中…')); loadPets(true); return; }
   { const seg = el('div', 'seg'); [['mine', Pets.atShop ? '🏠 領養' : '🐾 我的寵物'], ['market', '🏷️ 寵物市集']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((Pets.tab || 'mine') === k)); b.addEventListener('click', () => { Pets.tab = k; if (k === 'market') loadPetMarket(); renderTab(); }); seg.appendChild(b); }); body.appendChild(seg); }
   if (Pets.tab === 'market'){ renderPetMarket(body); return; }
-  const L = Pets.list; body.appendChild(el('p', 'sub', `養了 ${L.length} / 3 隻，同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
+  const L = Pets.list, pc = { land:0, sea:0, tank:0 }; for (const it of (rec.island && rec.island.items) || []){ const T = ISLE_ITEMS[it.t]; if (T && T.pen) pc[T.pen] += 5; }
+  const room = 3 + pc.land + pc.sea + pc.tank, free = 3 - petOver(L, rec.island && rec.island.items);
+  body.appendChild(el('p', 'sub', `養了 ${L.length} 隻（名額：一般 3${pc.land ? `＋陸地圍欄 ${pc.land}` : ''}${pc.sea ? `＋海水池 ${pc.sea}` : ''}${pc.tank ? `＋烏龜缸 ${pc.tank}` : ''}＝${room}；一般名額還剩 ${Math.max(0, free)} 隻）。想多養：在小島的「🔨 蓋東西」買陸地圍欄、海水池、烏龜缸，每個多 5 隻那一類。同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
   const ul = el('ul', 'shoplist');
   for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(el('span', 'dishic', K.icon));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}${petVarRare(p.kind, p.var) ? ' ⭐' : ''}${p.price != null ? `（市集掛賣中 🪙${p.price.toLocaleString()}）` : p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
@@ -13348,6 +13389,7 @@ function renderTab(){
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
+      '寵物名額：一般 3 隻什麼都能養。在小島「🔨 蓋東西」→「🐾 寵物圍欄」可以買陸地圍欄（貓、柴犬、海鷗）、海水池（水獺、寄居蟹、小海龜、章魚、河豚）、烏龜缸（小烏龜），各 1500 金幣、每個多 5 隻那一類的名額，數量不限（算在小島 60 件東西裡）。待在家的寵物會在圍欄裡玩，來參觀的人也看得到。圍欄裡還有寵物時不能拆。',
       '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。'
     ]);
     sec('⚓ 港口海底潛水', [
