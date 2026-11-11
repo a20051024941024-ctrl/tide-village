@@ -4335,9 +4335,10 @@ function pickFish(spot, charge){
   const nLeg = list.filter(f => f.rarity === '傳說' && !f.of).length,   /* 變種不算在傳說魚種類數裡 */ legK = (spot.id === 'harbor' ? LEG_K.harbor : LEG_K.other) / Math.max(1, nLeg);
   const rw = f => Rig.rig === 'lure' ? (LURE_FISH.has(f.id) ? 2.2 : 0.55) : Rig.rig === 'bottom' ? (BOTTOM_FISH.has(f.id) ? 2.2 : 0.65) : 1;
   const intel = spot.id === 'harbor' ? intelAt(Date.now()).ids : null;
+  const corK = spot.id === 'isle' ? coralK() : 0;   /* v376 自己種的珊瑚吸引珊瑚礁魚（跟伺服器 142 一樣） */
   const mudK = f => spot.id !== 'mudflat' ? 1 : ((Rig.rig === 'bottom') === BOTTOM_FISH.has(f.id) ? 1 : 0);   /* 泥灘：抓招潮蟹就是蟹、抓彈塗魚就是魚 */
   const wildK = f => breedSeason() && WILD_BREED.has(f.id) ? 1.5 : 1;   /* 野外繁殖季 */
-  const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (corK && CORAL_FISH.has(f.id) ? 1 + 0.25 * corK : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -6549,6 +6550,8 @@ function renderFarm(body){
 const SEA = { at:[ISLE.x - 1.15, ISLE.z + ISLE.r + 2.6] };
 const Sea = { g:null, n:4, max:8, next:undefined, vis:'' };
 function nearSeaDive(){ if (!onIsle || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return false; return Math.hypot(me.pos.x - SEA.at[0], me.pos.z - SEA.at[1]) < 1.15; }
+const CORAL_FISH = new Set(['parrot', 'seahorse', 'lionfish']);
+function coralK(){ if (!farmMine()) return Sea.myCoral || 0; let k = 0; for (let i = 0; i < Sea.max; i++){ const p = Farm.plots[100 + i]; if (p && p.c === 'coral' && farmProg(p) >= 0.5) k++; } return (Sea.myCoral = Math.min(4, k)); }   /* 在朋友的島上：用上次在自己島上算的 */
 function seaGrown(){ let k = 0; for (let i = 0; i < Sea.max; i++){ const p = Farm.plots[100 + i]; if (p && farmProg(p) >= 0.5) k++; } return k; }
 function seaDive(){ if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; } DIVE_SITES.isle.schoolsN = Math.min(7, 1 + seaGrown()); startDive('isle', { x: me.pos.x, z: me.pos.z }); setTimeout(() => { try { seaBuild(); } catch(e){ console.warn('sea', e); } }, 520); }
 function seaPos(i){ const cols = 4, rows = Math.ceil(Sea.max / cols), x = DIVE.x - 4 + (i % cols - (cols - 1) / 2) * 2.6, z = DIVE.z + DIVE.r * 0.45 - 5 - (Math.floor(i / cols) - (rows - 1) / 2) * 2.8; return [x, z, diveBed(x, z)]; }
@@ -6583,6 +6586,7 @@ function renderSea(body, mine){
   body.appendChild(el('p', 'sub', '海底花園：把海底的種子種在海床上，照現實的時間長大，不用澆水。長到一半以上的越多，游過來的魚群越多（可以拍照）。種子在菜園的種子攤買。'));
   if (mine && Farm.sel >= 0 && Farm.sel < Sea.n && !Farm.plots[100 + Farm.sel]){ body.appendChild(el('div', 'dexhead', `🪸 海床 ${Farm.sel + 1} 要種什麼？`)); const ul = el('ul', 'shoplist'); const own = CROPS.filter(C => C.sea && seedN(C.id) > 0); if (!own.length) ul.appendChild(el('li', 'empty', '背包裡沒有海底的種子。'));
     for (const C of own){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子 ×${seedN(C.id)}`)); t.appendChild(el('div', 'sub2', `${C.hrs} 小時・收成 🪙${C.sell}`)); li.appendChild(t); const b = el('button', 'tbtn', '種下'); b.disabled = Farm.busy; b.addEventListener('click', async () => { const i = Farm.sel; Farm.sel = -1; closeSheet(); await farmSow(100 + i, C.id); seaBuild(); }); li.appendChild(b); ul.appendChild(li); } body.appendChild(ul); }
+  if (mine){ const k = coralK(); body.appendChild(el('p', 'sub', k ? `🪸 你有 ${k} 株長大的珊瑚：在小島釣魚，稀有的珊瑚礁魚（鸚哥魚、海馬、獅子魚）多 ${k * 25}%` : '🪸 珊瑚長到一半以上，在小島釣魚時，稀有的珊瑚礁魚（鸚哥魚、海馬、獅子魚）會比較容易上鉤（每株多 25%，最多 4 株）')); }
   body.appendChild(el('div', 'dexhead', `🌊 海床（${Sea.n}／${Sea.max} 格）`)); const ul = el('ul', 'shoplist');
   for (let i = 0; i < Sea.n; i++){ const p = Farm.plots[100 + i], C = p && CROP_BY[p.c], li = el('li', 'on'); li.appendChild(el('span', 'dishic', C ? C.icon : '🟡')); const t = el('div', 'tinfo'), ripe = p && farmProg(p) >= 1; t.appendChild(el('div', 'n', `海床 ${i + 1}` + (C ? '：' + C.name : '：空的')));
     t.appendChild(el('div', 'sub2', !p ? '空的' : ripe ? '✅ 成熟了' : `還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}`)); li.appendChild(t); if (p && ripe && mine){ const b = el('button', 'tbtn', '收成'); b.disabled = Farm.busy; b.addEventListener('click', () => farmHarvest(100 + i)); li.appendChild(b); } ul.appendChild(li); }
@@ -13261,7 +13265,7 @@ function renderTab(){
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。',
-      '🪸 小島海底花園：小島碼頭左邊有一座潛水梯（有紅色救生圈），有潛水裝備就可以下去自己小島的海底。海床上可以種海底的作物：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時（種子在菜園的種子攤買）。海底的不用澆水，照現實時間長大；長到一半以上的越多，游過來的魚群越多，可以拍照。一開始 4 格海床，可以花金幣開到 8 格。去朋友的島也可以潛下去參觀他的海底花園。',
+      '🪸 小島海底花園：小島碼頭左邊有一座潛水梯（有紅色救生圈），有潛水裝備就可以下去自己小島的海底。海床上可以種海底的作物：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時（種子在菜園的種子攤買）。海底的不用澆水，照現實時間長大；長到一半以上的越多，游過來的魚群越多，可以拍照。珊瑚還會吸引珊瑚礁魚：每有一株長到一半以上的珊瑚，在小島釣魚時鸚哥魚、海馬、獅子魚這三種稀有的珊瑚礁魚多 25%（最多算 4 株，也就是最多 2 倍）。跟朋友一起從同一座島潛下去，在海底看得到彼此。一開始 4 格海床，可以花金幣開到 8 格。去朋友的島也可以潛下去參觀他的海底花園。',
       '🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。',
       '📍 共同海圖：打開「地圖」，可以在自己現在站的地方做記號給所有人看（🐟 魚很多、✨ 釣到稀有魚、🐋 有大魚或鯨魚、🎁 有寶箱或貝殼、📸 風景很漂亮）。點地圖上別人的記號，可以按「帶我去」跟著箭頭走過去，也可以按「👍 謝謝」。記號 24 小時後消失，每個人同時最多 3 個、一天最多做 10 個，要釣過 5 條魚才能做。走到記號附近，那個位置上面也會浮出小標籤。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
