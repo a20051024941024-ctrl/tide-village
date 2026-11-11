@@ -4145,7 +4145,6 @@
 "開墾": "Expand",
 "💧 澆水": "💧 Water",
 "看菜園": "Garden",
-"・多 4 格": "・4 more plots",
 "🌱 選一種種子": "🌱 Pick a seed",
 "・豐收！": "・Bumper crop!",
 "還要": "Ready in",
@@ -4171,13 +4170,11 @@
 "小時・收成": "h・sells for",
 "＋玉米粒魚餌 5 份": " + 5 corn baits",
 "🧺 菜園（": "🧺 Garden (",
-"12 格）": "12 plots)",
 "：空的": ": empty",
 "可以播種": "Ready to sow",
 "還沒種東西": "Nothing planted",
 "✨ 成熟了・豐收": "✨ Ripe・bumper crop",
 "✅ 成熟了": "✅ Ripe",
-"開墾 4 格新的地": "Open 4 new plots",
 "菜田": "Plot",
 "要種什麼？": "what to plant?",
 "🌱 菜田": "🌱 Plot",
@@ -4220,5 +4217,10 @@
 "還沒有種子。菜園最西邊有種子攤，走過去就可以買。": "No seeds yet. There is a seed stall at the west end of the garden.",
 "種東西": "Plant",
 "先到菜園最西邊的種子攤買種子，放進背包後點「拿在手上」，再走到空的田旁邊按「種下」，一格一顆。作物照現實的時間長大（關掉遊戲也會繼續長）。澆水一次快 12%（最多 3 次，每格一小時澆一次），澆滿 2 次會「豐收」多賣五成。忘記澆水也不會枯掉。": "Buy seeds at the stall at the west end of the garden (they go into your bag), tap \"Hold\", then walk to an empty plot and tap \"Plant\": one seed per plot. Crops grow in real time, even while the game is closed. Each watering makes it 12% faster (up to 3 times, once an hour per plot). Water twice for a \"bumper crop\" worth 50% more. Crops never die if you forget.",
-"🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。": "🌱 Island garden: every island has a garden on its west side (just walk west across the grass). Buy seeds at the seed stall at the west end of the garden; they go into your bag. Besides the 6 regular crops there is one \"this week only\" crop (watermelon, carrot, grape and sunflower take turns, changing every Monday, Taiwan time); limited seeds you bought can be planted any time. tap \"Hold\" in the bag or garden, then walk to an empty plot and tap \"Plant\", one seed per plot: tomato 2 h, cabbage 4 h, corn 6 h (plus corn bait), sweet potato 8 h, strawberry 12 h, pumpkin 24 h. Crops grow in real time, even while the game is closed. Each watering makes it 12% faster (up to 3 per plot, once an hour); water twice for a \"bumper crop\" worth 50% more. Crops never die if you forget. You start with 4 plots and can pay coins to open up to 12. On a friend's island you can help water for 🪙10 each time (up to 10 a day)."
+"🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。": "🌱 Island garden: every island has a garden on its west side (just walk west across the grass). Buy seeds at the seed stall at the west end of the garden; they go into your bag. Besides the 6 regular crops there is one \"this week only\" crop (watermelon, carrot, grape and sunflower take turns, changing every Monday, Taiwan time); limited seeds you bought can be planted any time. tap \"Hold\" in the bag or garden, then walk to an empty plot and tap \"Plant\", one seed per plot: tomato 2 h, cabbage 4 h, corn 6 h (plus corn bait), sweet potato 8 h, strawberry 12 h, pumpkin 24 h. Crops grow in real time, even while the game is closed. Each watering makes it 12% faster (up to 3 per plot, once an hour); water twice for a \"bumper crop\" worth 50% more. Crops never die if you forget. You start with 4 plots and can pay coins to open up to 12. On a friend's island you can help water for 🪙10 each time (up to 10 a day).",
+"・多": "・+",
+"格田": "plots",
+"格）": "plots)",
+"格新的地": "new plots",
+"這一格還沒開放": "This plot is not available yet"
 }

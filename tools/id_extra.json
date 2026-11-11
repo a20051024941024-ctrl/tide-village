@@ -4126,7 +4126,6 @@
 "開墾": "Perluas",
 "💧 澆水": "💧 Siram",
 "看菜園": "Kebun",
-"・多 4 格": "・+4 petak",
 "🌱 選一種種子": "🌱 Pilih benih",
 "・豐收！": "・Panen besar!",
 "還要": "Siap dalam",
@@ -4152,13 +4151,11 @@
 "小時・收成": "jam・dijual",
 "＋玉米粒魚餌 5 份": " + 5 umpan jagung",
 "🧺 菜園（": "🧺 Kebun (",
-"12 格）": "12 petak)",
 "：空的": ": kosong",
 "可以播種": "Siap ditanam",
 "還沒種東西": "Belum ditanami",
 "✨ 成熟了・豐收": "✨ Matang・panen besar",
 "✅ 成熟了": "✅ Matang",
-"開墾 4 格新的地": "Buka 4 petak baru",
 "菜田": "Petak",
 "要種什麼？": "mau tanam apa?",
 "🌱 菜田": "🌱 Petak",
@@ -4201,5 +4198,10 @@
 "還沒有種子。菜園最西邊有種子攤，走過去就可以買。": "Belum ada benih. Ada kios benih di ujung barat kebun.",
 "種東西": "Menanam",
 "先到菜園最西邊的種子攤買種子，放進背包後點「拿在手上」，再走到空的田旁邊按「種下」，一格一顆。作物照現實的時間長大（關掉遊戲也會繼續長）。澆水一次快 12%（最多 3 次，每格一小時澆一次），澆滿 2 次會「豐收」多賣五成。忘記澆水也不會枯掉。": "Beli benih di kios di ujung barat kebun (masuk ke tas), tekan \"Pegang\", lalu jalan ke petak kosong dan tekan \"Tanam\": satu benih per petak. Tanaman tumbuh dalam waktu nyata, bahkan saat game ditutup. Tiap siraman 12% lebih cepat (maks. 3 kali, sekali per jam per petak). Siram 2 kali untuk \"panen besar\" yang harganya 50% lebih tinggi. Tanaman tidak mati kalau lupa disiram.",
-"🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。": "🌱 Kebun pulau: setiap pulau punya kebun di sisi barat (jalan saja ke barat melewati rumput). Beli benih di kios benih di ujung barat kebun; benih masuk ke tas. Selain 6 tanaman biasa ada satu tanaman \"khusus minggu ini\" (semangka, wortel, anggur, dan bunga matahari bergiliran, berganti tiap Senin waktu Taiwan); benih khusus yang sudah dibeli bisa ditanam kapan saja. tekan \"Pegang\" di tas atau kebun, lalu jalan ke petak kosong dan tekan \"Tanam\", satu benih per petak: tomat 2 jam, kubis 4 jam, jagung 6 jam (plus umpan jagung), ubi jalar 8 jam, stroberi 12 jam, labu 24 jam. Tanaman tumbuh dalam waktu nyata, bahkan saat game ditutup. Tiap siraman 12% lebih cepat (maks. 3 kali per petak, sekali per jam); siram 2 kali untuk \"panen besar\" yang harganya 50% lebih tinggi. Tanaman tidak mati kalau lupa disiram. Awalnya 4 petak, bisa dibuka sampai 12 dengan koin. Di pulau teman kamu bisa bantu menyiram, 🪙10 tiap kali (maks. 10 kali sehari)."
+"🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。": "🌱 Kebun pulau: setiap pulau punya kebun di sisi barat (jalan saja ke barat melewati rumput). Beli benih di kios benih di ujung barat kebun; benih masuk ke tas. Selain 6 tanaman biasa ada satu tanaman \"khusus minggu ini\" (semangka, wortel, anggur, dan bunga matahari bergiliran, berganti tiap Senin waktu Taiwan); benih khusus yang sudah dibeli bisa ditanam kapan saja. tekan \"Pegang\" di tas atau kebun, lalu jalan ke petak kosong dan tekan \"Tanam\", satu benih per petak: tomat 2 jam, kubis 4 jam, jagung 6 jam (plus umpan jagung), ubi jalar 8 jam, stroberi 12 jam, labu 24 jam. Tanaman tumbuh dalam waktu nyata, bahkan saat game ditutup. Tiap siraman 12% lebih cepat (maks. 3 kali per petak, sekali per jam); siram 2 kali untuk \"panen besar\" yang harganya 50% lebih tinggi. Tanaman tidak mati kalau lupa disiram. Awalnya 4 petak, bisa dibuka sampai 12 dengan koin. Di pulau teman kamu bisa bantu menyiram, 🪙10 tiap kali (maks. 10 kali sehari).",
+"・多": "・+",
+"格田": "petak",
+"格）": "petak)",
+"格新的地": "petak baru",
+"這一格還沒開放": "Petak ini belum tersedia"
 }
