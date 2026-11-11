@@ -5002,6 +5002,42 @@ function palmGeo2(h, lean, seed){ const parts = [], c = new THREE.Color(), hs = 
   for (let k = 0; k < 4; k++){ const a = k * 1.7 + hs(k + 80), cg = new THREE.SphereGeometry(0.16, 7, 6).toNonIndexed(); cg.translate(tx + Math.cos(a) * 0.2, h - 0.22 - hs(k + 90) * 0.08, tz + Math.sin(a) * 0.2); cg.computeVertexNormals(); parts.push(paint(cg, c => c.set(k % 2 ? '#6a4a2a' : '#7a5a30'))); }
   for (const p of parts){ if (p.index) p.setIndex(null); for (const k of Object.keys(p.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'color') p.deleteAttribute(k); }
   return mergeGeometries(parts, false); }
+/* v368 海鬣蜥換成使用者用 Meshy 做的模型（三隻共用）：平常趴著曬太陽，尾巴慢慢擺、偶爾點頭（真的海鬣蜥會這樣打招呼）；玩家走到 2.2 公尺內會四隻腳快快爬開一小段。 */
+function igLoad(g){ new GLTFLoader().loadAsync('models/iguana.glb').then(gl => { let src = null; gl.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src || !Far.igOld) return;
+  const geo = src.geometry, P = geo.attributes.position, n = P.count, aN = new Float32Array(n), aL = new Float32Array(n), aP = new Float32Array(n), aT = new Float32Array(n), sat = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  for (let i = 0; i < n; i++){ const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    if (x < -0.12 && Math.abs(z) < 0.09) aT[i] = sat((-0.12 - x) / 0.6);                                   /* 尾巴：越後面擺越多 */
+    else if (y < -0.1 && Math.abs(z) > 0.09){ aL[i] = sat((Math.abs(z) - 0.09) / 0.1) * sat((-0.08 - y) / 0.1); aP[i] = ((x > 0.25) === (z > 0)) ? 0 : Math.PI; }   /* 四隻腳，對角一組 */
+    else if (x > 0.5 && y > 0.0) aN[i] = sat((x - 0.5) / 0.2); }                                           /* 頭 */
+  geo.setAttribute('aNeck', new THREE.BufferAttribute(aN, 1)); geo.setAttribute('aLeg', new THREE.BufferAttribute(aL, 1)); geo.setAttribute('aPh', new THREE.BufferAttribute(aP, 1)); geo.setAttribute('aTl', new THREE.BufferAttribute(aT, 1));
+  const S = 0.75; Far.ig = [];
+  for (const old of Far.igOld){ const U = { uT:{ value:0 }, uPitch:{ value:0 }, uWalk:{ value:0 }, uAmp:{ value:0 }, uPh:{ value: Math.random() * 6 } };
+    const m = new THREE.MeshStandardMaterial({ map: src.material.map, roughness:0.8, metalness:0 });
+    m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
+      sh.vertexShader = 'attribute float aNeck; attribute float aLeg; attribute float aPh; attribute float aTl; uniform float uT, uPitch, uWalk, uAmp, uPh;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        { vec3 pv = vec3(0.5, 0.05, 0.0); vec3 q = transformed - pv; float a = uPitch * aNeck, ca = cos(a), sa = sin(a); q = vec3(q.x * ca - q.y * sa, q.x * sa + q.y * ca, q.z); transformed = pv + q;
+          transformed.z += sin(uT * 1.3 + uPh + position.x * 3.5 + uWalk) * (0.05 + 0.09 * uAmp) * aTl * aTl;
+          transformed.x += sin(uWalk * 2.0 + aPh) * 0.07 * aLeg * uAmp; transformed.y += max(0.0, cos(uWalk * 2.0 + aPh)) * 0.035 * aLeg * uAmp;
+          transformed.z += sin(uWalk * 2.0) * 0.02 * uAmp * (1.0 - aTl) * (1.0 - aLeg);
+          transformed.y += sin(uT * 1.2 + uPh) * 0.006 * (1.0 - aLeg) * (1.0 - aTl); }`); };
+    m.customProgramCacheKey = () => 'iguana';
+    const mesh = new THREE.Mesh(geo, m); mesh.scale.setScalar(S); mesh.position.y = 0.2547 * S; mesh.rotation.y = -Math.PI / 2; mesh.userData.dyn = true;
+    const ig = new THREE.Group(); ig.userData.dyn = true; ig.add(mesh); ig.position.copy(old.position); ig.rotation.y = old.rotation.y + Math.PI / 2; g.add(ig); g.remove(old);
+    Far.ig.push({ g: ig, U, hx: old.position.x, hz: old.position.z, amp: 0, pitch: 0, run: 0, dir: 0, nod: 0, next: 4 + Math.random() * 8 }); }
+  Far.igOld = null;
+}).catch(() => {}); }
+function igTick(dt, t){ const M = MYST; if (Math.hypot(me.pos.x - M.x, me.pos.z - M.z) > 60) return;
+  for (const s of Far.ig){ const g = s.g, U = s.U, dx = (M.x + g.position.x) - me.pos.x, dz = (M.z + g.position.z) - me.pos.z, d = Math.hypot(dx, dz);
+    if (s.run <= 0 && d < 2.2 && !Dive.on){ s.run = 1.3 + Math.random() * 0.6; let a = Math.atan2(dx, dz) + (Math.random() - 0.5) * 0.8;   /* 往玩家的反方向爬開；離原本的位置太遠就繞回去 */
+      if (Math.hypot(g.position.x - s.hx, g.position.z - s.hz) > 4) a = Math.atan2(s.hx - g.position.x, s.hz - g.position.z); s.dir = a; }
+    let pitch = 0;
+    if (s.run > 0){ s.run -= dt; let da = s.dir - g.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); g.rotation.y += clamp(da, -6 * dt, 6 * dt);
+      const v = 1.5 * dt, nx = g.position.x + Math.sin(g.rotation.y) * v, nz = g.position.z + Math.cos(g.rotation.y) * v, rr = Math.hypot(nx, nz);
+      if (rr < M.r - 1.2 && rr > M.r * 0.34 && !colliders.some(c => c.t === 'c' && Math.hypot(c.x - (M.x + nx), c.z - (M.z + nz)) < c.r + 0.3)){ g.position.x = nx; g.position.z = nz; g.position.y = mystH(M.x + nx, M.z + nz) || M.y; } else s.run = 0;
+      U.uWalk.value += dt * 9; }
+    else { if (!s.nod && t > s.next){ s.nod = t; } if (s.nod){ const k = t - s.nod; if (k > 1.4){ s.nod = 0; s.next = t + 7 + Math.random() * 12; } else pitch = Math.max(0, Math.sin(k * 13.5)) * 0.32; } }
+    s.amp += ((s.run > 0 ? 1 : 0) - s.amp) * Math.min(1, dt * 8); s.pitch += (pitch - s.pitch) * Math.min(1, dt * 14);
+    U.uT.value = t; U.uAmp.value = s.amp; U.uPitch.value = s.pitch; } }
 function slLoad(g){ new GLTFLoader().loadAsync('models/sealion.glb').then(gl => { let src = null; gl.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src || !Far.slOld) return;
   const geo = src.geometry; geo.rotateY(-0.313); geo.translate(0, 0, -0.03);   /* 模型的身體是斜的，先轉正（頭朝 +x） */
   const P = geo.attributes.position, n = P.count, aN = new Float32Array(n), aF = new Float32Array(n), aT = new Float32Array(n), sat = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -5108,7 +5144,8 @@ function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.
     for (const ez of [-0.09, 0.09]) sl.add(box([0.05, 0.05, 0.05], '#111', [0.9, 0.68, ez])); sl.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); sl.rotation.y = ry; g.add(sl); addCircleCol(M.x + x, M.z + z, 0.6); (Far.slOld = Far.slOld || []).push(sl); }
   slLoad(g);
   for (const [x, z, ry] of [[-4, -9, 0.3], [5, -10, 2.8], [-11, 2, 1.2]]){ const ig = new THREE.Group(), m3 = mat('#3a3a36', 0.7); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), m3); b.rotation.z = Math.PI / 2; b.position.y = 0.12; ig.add(b);
-    const tl = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.8, 6), m3); tl.rotation.z = Math.PI / 2; tl.position.set(-0.65, 0.1, 0); ig.add(tl); for (let k = 0; k < 6; k++) ig.add(box([0.03, 0.07, 0.03], '#8a3a30', [-0.25 + k * 0.1, 0.25, 0])); ig.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); ig.rotation.y = ry; g.add(ig); }
+    const tl = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.8, 6), m3); tl.rotation.z = Math.PI / 2; tl.position.set(-0.65, 0.1, 0); ig.add(tl); for (let k = 0; k < 6; k++) ig.add(box([0.03, 0.07, 0.03], '#8a3a30', [-0.25 + k * 0.1, 0.25, 0])); ig.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); ig.rotation.y = ry; g.add(ig); (Far.igOld = Far.igOld || []).push(ig); }
+  igLoad(g);
   { const tt = new THREE.Group(), sh = new THREE.Mesh(new THREE.SphereGeometry(0.9, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('#5a5040', 0.8)); sh.scale.set(1.2, 0.8, 1); sh.position.y = 0.35; tt.add(sh); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat('#6a6050', 0.8)); hd.position.set(1.2, 0.45, 0); tt.add(hd);
     tt.position.set(-3, mystH(M.x - 3, M.z + 4) || M.y, 4); tt.rotation.y = 0.8; g.add(tt); addCircleCol(M.x - 3, M.z + 4, 1.1); Far.tortoise = tt; tortLoad(g, tt, colliders[colliders.length - 1]); }
   { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#3a6a5a'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#f4f0e0'; c.font = 'bold 60px sans-serif'; c.textAlign = 'center'; c.fillText('🌋 遠洋神秘島', 256, 86); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
@@ -5191,6 +5228,7 @@ function updateFar(dt, t){
   if (Far.lava) Far.lava.material.color.setHSL(0.05, 1, 0.5 + Math.sin(t * 2) * 0.08);
   if (Far.smoke){ Far.smoke.position.y = MYST.y + 4.6 + (t * 0.3 % 2); Far.smoke.material.opacity = 0.35 * (1 - (t * 0.3 % 2) / 2); }
   if (Far.sl) slTick(dt, t);
+  if (Far.ig) igTick(dt, t);
   if (Far.tort) tortTick(dt, t); else if (Far.tortoise && frameNo % 2 === 0) Far.tortoise.rotation.y = 0.8 + Math.sin(t * 0.1) * 0.6;
 }
 function updateFrost(dt, t){
