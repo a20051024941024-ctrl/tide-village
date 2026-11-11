@@ -6399,7 +6399,7 @@ const Farm = { g:null, owner:null, n:4, plots:{}, off:0, busy:false, sel:-1, vis
 const FARM_STEPS = [[8, 2000], [12, 5000]];
 function farmNext(){ if (farmOnline() && Farm.next !== undefined && Farm.owner === (onIsle && onIsle.owner) && farmMine()) return Farm.next; const st = FARM_STEPS.find(x => x[0] > Farm.n); return st ? { n: st[0], cost: st[1] } : null; }
 function farmRows(){ return Math.max(3, Math.ceil(Farm.max / 4)); }
-function farmLayout(){ const rows = farmRows(); GARDEN.hz = rows * 1.5 + 0.5; if (rows !== Farm.rows) farmBase(); }
+function farmLayout(){ const rows = farmRows(); GARDEN.hz = rows * 1.5 + 0.5; if (rows !== Farm.rows){ farmBase(); Farm.vis = []; } }
 function seedN(id){ return (rec.bait && rec.bait['seed_' + id]) || 0; }
 function seedHand(){ return Farm.hand && CROP_BY[Farm.hand] && seedN(Farm.hand) > 0 ? CROP_BY[Farm.hand] : null; }
 /* v371 玩家建議：種子先買起來放背包，再從背包拿在手上，走到田邊一顆一顆種 */
@@ -6473,6 +6473,7 @@ function farmPlant(g, p, st){   /* 依成長階段畫作物：芽 → 小苗 →
   }
 }
 function farmBuild(){
+  if (onIsle && Farm.g){ let same = Farm.vis.length === Farm.max; for (let i = 0; same && i < Farm.max; i++){ const p = Farm.plots[i], wet = p && farmWetLeft(p) > 0; if (Farm.vis[i] !== (i >= Farm.n ? 'L' : p ? p.c + farmStage(p) : '-') + (wet ? 'w' : '')) same = false; } if (same) return; }   /* 沒有變就不重畫 */
   farmClear(); if (!onIsle) return; const g = Farm.g = new THREE.Group(); g.userData.dyn = true; scene.add(g);
   for (let i = 0; i < Farm.max; i++){ const [x, z] = farmPos(i), p = Farm.plots[i], locked = i >= Farm.n, st = farmStage(p), wet = p && farmWetLeft(p) > 0;
     const pg = new THREE.Group(); pg.position.set(x, ISLE.y, z); g.add(pg);
@@ -6496,8 +6497,10 @@ async function farmLoad(){ if (!onIsle) return; const own = onIsle.owner; Farm.o
   if (!farmOnline()){ if (farmMine()) farmAdopt(Object.assign({ owner: own }, farmLocal())); return; }
   try { const { data, error } = await Cloud.sb.rpc('farm_get', { p_owner: own }); if (error) throw error; if (onIsle && onIsle.owner === own) farmAdopt(data); } catch(e){ console.warn('farm_get', e && e.message); } }
 async function farmRpc(fn, args){ if (Farm.busy) return false; Farm.busy = true; let ok = false;
-  try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; adoptRow(data); ok = true; } catch(e){ toast(cloudErrMsg(e)); }
-  Farm.busy = false; if (onIsle) await farmLoad(); return ok; }
+  try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; if (data && typeof data === 'object') delete data.island;   /* 菜園的動作不會改到島：不要拿回傳的島去比對，不然整座島會重蓋一次（畫面閃一下） */ adoptRow(data); ok = true; } catch(e){ toast(cloudErrMsg(e)); }
+  Farm.busy = false; if (onIsle && !/_buy$|^sea_deco_buy$|^farm_buy_seed$/.test(fn)) await farmRefresh(); return ok; }
+/* v379 買種子、種下去的時候畫面會閃一下：以前每次都把整個菜園清空再重畫。現在買東西不重畫，種／澆／收只在拿到新資料後換一次 */
+async function farmRefresh(){ if (!onIsle || !farmOnline()) return; const own = onIsle.owner; try { const { data, error } = await Cloud.sb.rpc('farm_get', { p_owner: own }); if (error) throw error; if (onIsle && onIsle.owner === own) farmAdopt(data); } catch(e){ console.warn('farm_get', e && e.message); } }
 function nearFarm(){ if (!onIsle || !Farm.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return null; if (Math.abs(me.pos.x - GARDEN.x) > GARDEN.hx + 1 || Math.abs(me.pos.z - GARDEN.z) > GARDEN.hz + 1) return null;
   let best = -1, bd = 1.55; for (let i = 0; i < Farm.max; i++){ const [x, z] = farmPos(i), d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd){ bd = d; best = i; } } if (best < 0) return null;
   const p = Farm.plots[best], mine = farmMine(); if (!mine && (!p || best >= Farm.n || farmProg(p) >= 1)) return null; return { i: best, p, locked: best >= Farm.n, mine }; }
@@ -9525,7 +9528,7 @@ function dishBuyPrice(key){ return Math.round(RECIPES[key].value * 2.5); }
 function dishBuyLeft(){ const d = LS.get('tide.dishBuy', null), day = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); return Math.max(0, 6 - (d && d.day === day ? d.n : 0)); }
 let dishBuying = false;
 async function buyDish(key){ const rc = RECIPES[key]; if (!rc || dishBuying) return; const price = dishBuyPrice(key); if (dishBuyLeft() <= 0){ toast('今天買太多了，明天再來（一天最多 6 道）'); return; } if (rec.coins < price){ toast('金幣不夠'); return; }
-  if (Cloud.on && Cloud.sb){ dishBuying = true; let ok = false; try { const { data, error } = await Cloud.sb.rpc('buy_dish', { p_recipe: key }); if (error) throw error; adoptRow(data); ok = true; } catch(e){ toast(cloudErrMsg(e)); } dishBuying = false; if (!ok){ if (/今天買太多/.test($('#toast') ? $('#toast').textContent : '')){ const day = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); LS.set('tide.dishBuy', { day, n: 6 }); } renderTab(); return; } }
+  if (Cloud.on && Cloud.sb){ dishBuying = true; let ok = false; try { const { data, error } = await Cloud.sb.rpc('buy_dish', { p_recipe: key }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); ok = true; } catch(e){ toast(cloudErrMsg(e)); } dishBuying = false; if (!ok){ if (/今天買太多/.test($('#toast') ? $('#toast').textContent : '')){ const day = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); LS.set('tide.dishBuy', { day, n: 6 }); } renderTab(); return; } }
   else { addCoins(-price); rec.dishes.unshift({ r: key, q: 1, t: Date.now() }); saveRecLocal(); }
   { const day = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10), d = LS.get('tide.dishBuy', null); LS.set('tide.dishBuy', { day, n: (d && d.day === day ? d.n : 0) + 1 }); }
   try { SFX.coin(); } catch(e){} toast(`${rc.icon} 買了 <b>${esc(rc.name)}</b>，放在「我的料理」`); renderTab(); }
