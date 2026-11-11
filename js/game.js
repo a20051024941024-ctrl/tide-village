@@ -4357,6 +4357,8 @@ function rodFeel(){ return ROD_FEEL[rodType(curRod())] || ROD_FEEL.cast; }
 function fightProf(f){ const b = f.of || f.id; let k = /tuna|bonito/.test(b) ? 'tuna' : CUNNING.has(b) ? 'cunning' : sigClass(f); if (k === 'school' && f.rarity !== '常見') k = 'shadow'; const P = Object.assign({ gap:1, quick:1, dmg:1, runK:1 }, FIGHT_PROF[k]); P.k = k;
   { const R = rodFeel(); P.dmg *= R.dmg; P.gap *= R.spd; P.spd = R.spd; P.tele = R.tele; P.soft = R.soft; }
   let acts = P.acts.slice(); if (!['reef', 'harbor', 'isle', 'abyss', 'kelp'].includes(F.spot && F.spot.id)) acts = acts.map(a => a === 'snag' ? 'dive' : a); if (f.rarity === '傳說') acts = acts.concat(['feint']); P.list = acts; return P; }
+/* v378 朋友建議：加震動。魚衝、魚跳、線快斷、線斷、釣到都會震（設定裡可以關；電腦和 iPhone 的瀏覽器不支援震動） */
+function buzz(p){ if (LS.get('tide.vib', true) === false) return; try { navigator.vibrate && navigator.vibrate(p); } catch(e){} }
 function fightCue(txt, cls){ let c = $('#fhCue'); if (!c){ c = document.createElement('div'); c.id = 'fhCue'; document.body.appendChild(c); } c.textContent = txt; c.className = cls || ''; c.hidden = !txt; }
 /* v293 玩家說魚釣太快：搏鬥目標時間 —— 小魚 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說 60～120 秒（同一種魚越重越久）；釣蝦場不算 */
 function fightSize(f, w){ if (f.rarity === '傳說') return 'legend'; if (BIG_FISH.has(f.id) || f.max >= 15 || w >= 15) return 'big'; if (f.rarity === '稀有' || f.max >= 2.5 || w >= 2.5) return 'medium'; return 'small'; }
@@ -4373,7 +4375,9 @@ function startReel(){
   F.bossScale = F.boss ? clamp(0.55 + Math.log10(Math.max(1, F.weight || 1)) * 0.6, 0.65, 3.4) : (BIG_FISH.has(F.fish.id) ? 0.7 : 0.55);
   try { F.leap = fishModel(F.fish, F.bossScale); if (F.fish.rs && F.rsTag) addScars(F.leap, rsInfo(F.rsTag).scars); F.leap.visible = false; scene.add(F.leap); } catch(e){ F.leap = null; }
   { const bb = $('#bossBar'); bb.hidden = !F.boss; if (F.boss){ bb.className = 'r-' + F.fish.rarity; $('#bbName').textContent = `？？？・${F.fish.rarity}`; $('#bbHp').style.width = '100%'; $('#bbPct').textContent = '100%';
-    flash('⚠️ 巨大魚影！', 1.8); camShake = Math.max(camShake, 0.35); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 36, '#e8f7ff', 1.8, 3.2, 1.1); } }
+    F.eaten = Math.random() < 0.45;   /* v378 朋友建議：有時候是小魚先上鉤，再被更大的魚一口吞掉（只是演出，釣到什麼魚的機率沒有變） */
+    if (F.eaten){ flash('🐟 小魚上鉤了…', 0.9); buzz(40); const tk = F.t0; setTimeout(() => { if (F.phase !== 'reeling' || F.t0 !== tk) return; flash('😱 被更大的魚一口吞掉了！', 1.9); camShake = Math.max(camShake, 0.6); SFX.bite(); buzz([60, 50, 260]); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 46, '#e8f7ff', 2.2, 3.6, 1.2); FX.emit(me.bobPos.x, 0.2, me.bobPos.z, 10, '#ff6b5a', 0.8, 1.6, 0.9); $('#fhName').textContent = '小魚被大魚吞掉了！超大的拉力！'; }, 950); }
+    else { flash('⚠️ 巨大魚影！', 1.8); buzz([80, 40, 160]); camShake = Math.max(camShake, 0.35); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 36, '#e8f7ff', 1.8, 3.2, 1.1); } } }
   $('#mashFx').hidden = true;
   me.say('!', 'alert', 0.6);
   const shr = F.spot && F.spot.id === 'shrimp'; F.shr = shr;
@@ -4463,7 +4467,7 @@ function updateFishing(dt, t){
       if (!F.probe && me.bobState === 'water' && t > F.nibbleAt && t < F.waitUntil - 2.5){ F.nibbleAt = t + rand(1.6, 3.8); F.idleNib = t; F.idleK = Math.random() < 0.3 ? rand(0.45, 0.7) : rand(0.18, 0.35); ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} }   /* v293 等的時候小魚來碰一下浮標（不是真的咬，按了只會收竿） */
       if (!F.probe && F.idleNib && t - F.idleNib < 0.18 && me.dip < F.idleK) me.dip = F.idleK;
       const PR = F.probe;
-      if (PR && PR.i < PR.taps.length && t >= PR.taps[PR.i]){ PR.i++; F.lastNib = t; const P = PROBES[PR.k]; F.nibK = P.dip; ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} if (P.dip > 0.8) try { navigator.vibrate && navigator.vibrate(25); } catch(e){} }
+      if (PR && PR.i < PR.taps.length && t >= PR.taps[PR.i]){ PR.i++; F.lastNib = t; const P = PROBES[PR.k]; F.nibK = P.dip; ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} if (P.dip > 0.8) try { buzz(25); } catch(e){} }
       const tgt = PR && F.lastNib && t - F.lastNib < (PROBES[PR.k].hold || 0.2) ? F.nibK : 0; me.dip += (tgt - me.dip) * Math.min(1, dt * 16); }
     fishHook();
     if (t > F.waitUntil && Cloud.on && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash(rollFailMsg(), 1.4); } }
@@ -4475,7 +4479,7 @@ function updateFishing(dt, t){
       F.phase = 'bite'; F.biteAt = t; F.drift = 0;
       if (F.spot && F.spot.id === 'shrimp'){ F.biteUntil = t + (F.fish.rarity === '傳說' ? 1.5 : F.fish.rarity === '稀有' ? 1.7 : 1.9) + curSrod().win; ripple(me.bobPos.x, me.bobPos.z); }   // 釣蝦場：沒有「!」，浮標會慢慢沉下去
       else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say(starsOf(F.fish) >= 2 ? `！${F.fish.name}` : '!', 'alert', 1);   /* v287 兩顆星：咬餌時認得出是什麼魚 */ SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true);
-        FX.emit(me.bobPos.x, waterY(me.bobPos.x, me.bobPos.z, t) + 0.1, me.bobPos.z, 14, '#e8f7ff', 0.9, 2.2, 0.7); try { navigator.vibrate && navigator.vibrate([70, 40, 110]); } catch(e){}   /* v249 真的咬了：浮標猛沉、水花、手機震動 */
+        FX.emit(me.bobPos.x, waterY(me.bobPos.x, me.bobPos.z, t) + 0.1, me.bobPos.z, 14, '#e8f7ff', 0.9, 2.2, 0.7); try { buzz([70, 40, 110]); } catch(e){}   /* v249 真的咬了：浮標猛沉、水花、手機震動 */
         F.drift = probeKind(F.fish) === 'grab' ? (Math.random() < 0.5 ? -1 : 1) : 0; }
       pushPresence(true);
     }
@@ -4495,7 +4499,7 @@ function updateFishing(dt, t){
       if (!A && t > F.nextActAt && F.S > 0.06){ const k = P.list[F.actI % P.list.length]; F.actI++; const dur = (k === 'run' ? rand(1.1, 1.9) * P.runK * (0.7 + p * 0.5) : k === 'pause' || k === 'feint' ? rand(1.6, 2.2) : k === 'jump' ? 1.4 : k === 'snag' ? 3.0 : k === 'dive' ? rand(2.0, 2.8) : rand(1.3, 2.0)) * (k === 'jump' || k === 'snag' ? 1 : P.spd || 1);
         A = F.act = { k, t0: t + (P.tele || 0.5), end: t + (P.tele || 0.5) + dur, tele: true, hold: 0, tot: 0, taps: 0, good: 0 }; const D = FIGHT_ACT[k]; fightCue(`${D.ico} ${D.cue}`, 'tele'); try { SFX.tick(); } catch(e){} camShake = Math.max(camShake, 0.04); }   /* 預兆：先提示 0.5 秒 */
       if (A && A.tele && t >= A.t0){ A.tele = false; const D = FIGHT_ACT[A.k]; fightCue(`${D.ico} ${D.how}`, 'go');
-        if (A.k === 'run') F.run = A.end - t; else if (A.k === 'jump'){ F.jump = 1.0; ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); }
+        if (A.k === 'run'){ F.run = A.end - t; buzz(35); } else if (A.k === 'jump'){ F.jump = 1.0; buzz(60); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); }
         else if (A.k === 'left' || A.k === 'right'){ F.dir = A.k === 'left' ? -1 : 1; const d = $('#fhDir'); d.hidden = false; d.className = F.dir < 0 ? 'l' : 'r'; d.innerHTML = F.dir < 0 ? '<span>往右拉</span><b>➡</b>' : '<b>⬅</b><span>往左拉</span>'; }
         else if (A.k === 'dive') document.body.classList.add('fdive'); }
       if (A && !A.tele){ A.tot += dt; if (F.hold) A.hold += dt;
@@ -4537,7 +4541,7 @@ function updateFishing(dt, t){
     } else if (F.boss && !F.mash && t > F.surfT && F.S > 0.12){
       F.surf = rand(1.4, 2.4); F.surfT = t + rand(3.5, 6.5); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.3, 2.4, 0.9);
     } else if (!F.acts && (F.fish.rarity !== '常見' || big) && F.S > 0.15 && !F.mash && Math.random() < dt * (F.boss ? 0.16 : 0.11) * p){
-      F.jump = 1.0; ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); camShake = Math.max(camShake, big ? 0.18 : 0.08);
+      F.jump = 1.0; buzz(big ? 90 : 50); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); camShake = Math.max(camShake, big ? 0.18 : 0.08);
     }
     let pull = p * (0.55 + 0.45 * Math.sin(t*2.3 + F.seed) * Math.sin(t*0.7 + F.seed*2)) * (0.35 + 0.65 * F.S);
     // 魚往外衝：線被拉出去（浮標越跑越遠、捲線器嘰嘰叫），這時候硬拉張力會飆高；先放開讓牠跑，牠會越跑越累
@@ -4607,7 +4611,7 @@ function updateFishing(dt, t){
       const d = (t - F.t0) / F.Td; F.g = clamp(1 + 2.2 * (d - F.P), 0.012, 3); if (F.P > _P0) F.P = _P0 + (F.P - _P0) * F.g;
       const want = Math.min(0.9, d / 0.85 * 0.9), gS = F.gS = clamp(1 + 2.2 * (want - (1 - F.S)), 0.03, 3); if (F.S < _S0) F.S = _S0 - (_S0 - F.S) * gS; }
     if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`🦈 ${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
-    else if (F.T >= 1){ SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
+    else if (F.T >= 1){ buzz([200, 60, 80]); SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
     else if (F.slack > (rec.hook === 'hk_barb' ? 4.6 : 3.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
     else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); cancelFishing(); }
     else if (F.P >= 1){ F.pfCatch = !!(F.acts && F.pf && F.actN >= 2 && (F.Tmax || 0) < 0.92); landFish(); }
@@ -4687,7 +4691,7 @@ function landFish(){
     const poleM = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1, 6), mat('#c8b070', 0.6)); poleM.geometry.translate(0, 0.5, 0); ng.add(poleM); ng.userData.pole = poleM;
     const from = me.bobPos.clone(); from.y = WATER_LEVEL + 0.05; ng.position.copy(from); scene.add(ng); jumpers.push({ m: ng, from, to: new THREE.Vector3(me.pos.x, me.pos.y + 2.2, me.pos.z), t: 0, end: 0.92, net: true }); }
   reelCleanup(); SFX.splash(BIG_FISH.has(F.fish.id) || F.fish.rarity === '傳說');
-  F.phase = 'landing'; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2;
+  F.phase = 'landing'; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2; buzz(F.fish && F.fish.rarity === '傳說' ? [60, 40, 60, 40, 220] : F.fish && F.fish.rarity === '稀有' ? [50, 40, 120] : 45);
   const f = F.fish, w = F.weight;
   const from = me.bobPos.clone(); from.y = 0.1;
   const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm);
@@ -8299,6 +8303,7 @@ function renderSettings(body){
     sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
   vol('🔊 音效', soundOn, sfxVol, on => { soundOn = on; LS.set('tide.sound', on); if (on) ensureAudio(); renderSoundIcon(); }, v => { sfxVol = v; LS.set('tide.sfxVol', v); clearTimeout(renderSettings.t); renderSettings.t = setTimeout(() => SFX.coin(), 120); });
   vol('🎵 背景音樂', musicOn, musicVol, on => { musicOn = on; LS.set('tide.music', on); if (on){ ensureAudio(); MUSIC.start(); } else MUSIC.stop(); renderMusicIcon(); }, v => { musicVol = v; LS.set('tide.musicVol', v); MUSIC.vol(); });
+  { const f = field('📳 震動'), on = LS.get('tide.vib', true) !== false, tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { LS.set('tide.vib', !on); if (!on) buzz(60); renderTab(); }); f.appendChild(tg); f.appendChild(el('p', 'sub', '魚咬餌、魚往外衝、魚跳起來、線斷掉、釣到魚的時候手機會震一下。電腦和 iPhone 的瀏覽器不支援震動。')); }
   /* v311 上架（34）：字體大小。標準／大／特大，選單、聊天、提示、釣到魚的卡片一起放大 */
   { const f = field('🔠 字體大小'), seg = el('div', 'seg'), cur = LS.get('tide.fs', 0); [[0, '標準'], [1, '大'], [2, '特大']].forEach(([k, l]) => { const b = el('button', '', l); b.style.fontSize = [14, 16, 18][k] + 'px'; b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.fs', k); applyFontSize(); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '字太小看不清楚的話選「大」或「特大」。選單、聊天、提示文字和釣到魚的卡片都會變大。')); }
@@ -13132,6 +13137,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
@@ -14124,7 +14130,7 @@ function subEvRun(c, dt, t, depth){ const P = Sub.pos, u = now() - c.t0, fx = Ma
     const toSub = Math.atan2(P.x - c.home.x, P.z - c.home.z), box = c.face.userData.box, hx = box.max.x * 0.62, hy = box.max.y * 0.45;
     if (c.phase !== 'lurk'){ const k = now() - c.pt; let dist;
       if (c.phase === 'eyes'){ c.eyeM.opacity = Math.min(1, k / 1.2); dist = 0; if (k > 1.8){ c.phase = 'come'; c.pt = now(); subSight('eyes'); } }
-      else if (c.phase === 'come'){ dist = smooth01(k / 3) * (Sub.range * 0.95 - 7.5); if (k > 3){ c.phase = 'stare'; c.pt = now(); subHeart(2, 450); try { navigator.vibrate && navigator.vibrate(80); } catch(e){} } }
+      else if (c.phase === 'come'){ dist = smooth01(k / 3) * (Sub.range * 0.95 - 7.5); if (k > 3){ c.phase = 'stare'; c.pt = now(); subHeart(2, 450); try { buzz(80); } catch(e){} } }
       else if (c.phase === 'stare'){ dist = Sub.range * 0.95 - 7.5 + Math.sin(k * 1.4) * 0.3; if (c.face.userData.jaw) c.face.userData.jaw(-0.18 * Math.max(0, Math.sin(k * 1.8))); if (k > 3){ c.phase = 'back'; c.pt = now(); } }
       else if (c.phase === 'back'){ dist = (1 - smooth01(k / 3.5)) * (Sub.range * 0.95 - 7.5); c.eyeM.opacity = 1 - smooth01((k - 2.4) / 1.1); if (k > 3.6){ c.phase = 'gone'; subEvEnd(); return; } }
       const fp = new THREE.Vector3(c.home.x + Math.sin(toSub) * dist, c.home.y, c.home.z + Math.cos(toSub) * dist); c.face.position.set(fp.x - Math.sin(toSub) * hx, fp.y - hy, fp.z - Math.cos(toSub) * hx); c.face.rotation.y = toSub - Math.PI / 2;
@@ -14136,7 +14142,7 @@ function subEvRun(c, dt, t, depth){ const P = Sub.pos, u = now() - c.t0, fx = Ma
       c.lure.position.copy(L).add(sway); c.pl.position.copy(c.lure.position); c.lure.material.opacity = 0.75 + Math.sin(t * 3) * 0.2; subSonar(Math.atan2(L.x - P.x, L.z - P.z) - Sub.yaw, 5, '#ffc36a');
       if (d < 6.5){ c.phase = 'snap'; c.pt = now(); c.toSub = Math.atan2(P.x - L.x, P.z - L.z); const box = c.face.userData.box; c.fp0 = new THREE.Vector3(L.x - Math.sin(c.toSub) * (box.max.x + 0.6), L.y - box.max.y * 0.8, L.z - Math.cos(c.toSub) * (box.max.x + 0.6));
         if (c.face.userData.bulb){ const bu = c.face.userData.bulb, ry = c.toSub - Math.PI / 2, cr = Math.cos(ry), sr = Math.sin(ry); c.fp0.set(L.x - (bu.x * cr + bu.z * sr) + Math.sin(c.toSub) * 3.5, L.y - 1.2, L.z - (-bu.x * sr + bu.z * cr) + Math.cos(c.toSub) * 3.5); }   /* 真的模型：讓牠頭上的燈剛好就是那盞燈（往上一提的位置） */ c.face.visible = true; c.face.rotation.y = c.toSub - Math.PI / 2; c.face.position.copy(c.fp0);
-        subQuiet(true); subHeart(1); camShake = Math.max(camShake || 0, 0.55); try { navigator.vibrate && navigator.vibrate(120); } catch(e){} c.pl.intensity = 22; c.pl.distance = 22; Sub.evFog = 1; subSight('lure'); }
+        subQuiet(true); subHeart(1); camShake = Math.max(camShake || 0, 0.55); try { buzz(120); } catch(e){} c.pl.intensity = 22; c.pl.distance = 22; Sub.evFog = 1; subSight('lure'); }
       else if (u > 45){ c.lure.material.opacity = Math.max(0, 1 - (u - 45)); if (u > 46){ subEvEnd(); return; } } return; }
     const k = now() - c.pt; c.lure.position.set(L.x, L.y + smooth01(k / 0.35) * 1.6, L.z);
     const bulbAt = () => { const bu = c.face.userData.bulb; if (!bu) return; const ry = c.face.rotation.y, cr = Math.cos(ry), sr = Math.sin(ry); c.lure.position.set(c.face.position.x + bu.x * cr + bu.z * sr, c.face.position.y + bu.y, c.face.position.z - bu.x * sr + bu.z * cr); }; c.pl.position.copy(c.lure.position).add(new THREE.Vector3(Math.sin(c.toSub) * 2.5, -1.8, Math.cos(c.toSub) * 2.5));
