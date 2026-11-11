@@ -4627,7 +4627,7 @@ function updateFishing(dt, t){
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
-  const pkN = Dive.on ? nearPick() : null, seaL = pkN ? pickLabel(pkN) : Dive.on ? seaLabel() : null;
+  const pkN = Dive.on ? nearPick() : null, seaL = pkN ? pickLabel(pkN) : Dive.on ? (seaLabel() || trapLabel()) : null;
   if (seaL){ label = seaL[0]; sub = seaL[1]; cls = 'shop'; }
   else if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : l.kind === 'pearl' ? '撿珍珠' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
   else if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
@@ -6710,6 +6710,42 @@ async function pickDo(p){ if (DPICK.busy || p.gone) return; const d = dvState();
   const q = dvQuest(); if (!q.done && q.kind === p.kind){ if (q.have >= q.need) dvClaim(); else toast(`📋 潛水委託 ${q.have}／${q.need}`); } }
 async function dvClaim(){ const d = dvState(); if (d.q === dvDay()) return; if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('dive_quest_claim'); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ if (/領過/.test(String(e && e.message))) { dvState().q = dvDay(); saveRecLocal(); } return; } } else { addCoins(300); rec.love = (rec.love || 0) + 2; }
   dvState().q = dvDay(); saveRecLocal(); try { SFX.catch(); } catch(e){} setTimeout(() => { flash('📋 潛水委託完成！🪙+300　💙+2', 2.2); }, 1300); }
+/* v389 籠子：潛水時在公共潛水點的海底放籠子（🪙50），4 小時後回同一個潛水點收，裡面有螃蟹、蝦、小卷、章魚…（伺服器 150；沒連線時手機自己算） */
+const TRAP_LOOT = [['crab', 30], ['shrimp', 20], ['squid', 12], ['eel', 8], ['mudcrab', 8], ['cuttle', 6], ['lobster', 6], ['octopus', 5], ['kingcrab', 5]], TRAP_MS = 4 * 3600000;
+const Trap = { list:[], off:0, g:null, busy:false, sure:0, loaded:false };
+function trapNow(){ return Date.now() + Trap.off; }
+function trapOnline(){ return Cloud.on && Cloud.sb; }
+async function trapLoad(){ if (trapOnline()){ try { const { data, error } = await Cloud.sb.rpc('trap_list'); if (error) throw error; Trap.off = data && data.now ? Number(data.now) - Date.now() : 0; Trap.list = ((data && data.traps) || []).map(t => ({ id: t.id, site: t.site, x: Number(t.x), z: Number(t.z), ready: Number(t.ready) })); Trap.loaded = true; } catch(e){ console.warn('trap_list', e && e.message); } }
+  else { Trap.off = 0; Trap.list = (LS.get('tide.traps', []) || []).filter(t => t && t.site); Trap.loaded = true; } trapBuild(); }
+function trapBuild(){ if (Trap.g && Trap.g.parent) Trap.g.parent.remove(Trap.g); Trap.g = null; if (!Dive.on || !Dive.group || Dive.site === 'isle') return; const g = Trap.g = new THREE.Group(); Dive.group.add(g);
+  for (const t of Trap.list){ if (t.site !== Dive.site) continue; const x = DIVE.x + t.x, z = DIVE.z + t.z, y = diveBed(x, z), o = new THREE.Group(); o.position.set(x, y, z);
+    const cage = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6, 3, 2, 2), new THREE.MeshBasicMaterial({ color:'#d9b46a', wireframe:true })); cage.position.y = 0.27; o.add(cage); const base = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.05, 0.62), decoMat('#8a6a3c')); base.position.y = 0.03; o.add(base);
+    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.6, 4), decoMat('#e8e2d0')); rope.position.y = 1.3; o.add(rope); const fl = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), decoMat('#ff6b4a')); fl.position.y = 2.15; o.add(fl);
+    if (trapNow() >= t.ready){ const sp = farmSprite('🦀'); sp.scale.set(0.5, 0.5, 1); sp.position.y = 0.95; o.add(sp); } g.add(o); } }
+function nearTrap(){ if (!Dive.on || Dive.site === 'isle') return null; let best = null, bd = 1.6; for (const t of Trap.list){ if (t.site !== Dive.site) continue; const x = DIVE.x + t.x, z = DIVE.z + t.z, d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd && me.baseY - diveBed(x, z) < 3){ bd = d; best = t; } } return best; }
+function trapSpot(){ if (!Dive.on || Dive.site === 'isle' || !Trap.loaded || Trap.list.length >= 2 || !['reef', 'wreck', 'offshore', 'harbor', 'cave'].includes(Dive.site)) return null; if (me.baseY - diveBed(me.pos.x, me.pos.z) > 2.2) return null; return { x: +(me.pos.x - DIVE.x).toFixed(2), z: +(me.pos.z - DIVE.z).toFixed(2) }; }
+function trapLabel(){ const t = nearTrap(); if (t) return trapNow() >= t.ready ? ['收籠子', '🧺 有東西了！'] : ['籠子', `🧺 還要 ${farmLeftStr(t.ready - trapNow())}`]; return null; }
+function trapAct(){ const t = nearTrap(); if (t){ if (trapNow() >= t.ready) trapTake(t); else toast(`🧺 籠子還要 ${farmLeftStr(t.ready - trapNow())}才有東西。到時候回${DIVE_SITES[t.site].name}來收`); return true; }
+  return false; }
+/* 放籠子：按下面那一排的「🧺 籠子」（要貼近海底），按兩次才會放，免得不小心花掉金幣 */
+function trapBtn(){ if (!Dive.on || Dive.site === 'isle') return; if (!Trap.loaded){ toast('籠子的資料還在載入，等一下再按'); return; } const mine = Trap.list.map(t => `${DIVE_SITES[t.site] ? DIVE_SITES[t.site].name : t.site}：${trapNow() >= t.ready ? '可以收了' : '還要 ' + farmLeftStr(t.ready - trapNow())}`);
+  if (Trap.list.length >= 2){ toast('🧺 最多同時放 2 個籠子。' + mine.join('；')); return; } const sp = trapSpot(); if (!sp){ toast('🧺 要先往下游到貼近海底，才能放籠子' + (mine.length ? '。已經放的：' + mine.join('；') : '')); return; }
+  if (Date.now() > Trap.sure){ Trap.sure = Date.now() + 4000; toast('🧺 再按一次「籠子」，就放在這裡（🪙50，4 小時後回來收螃蟹、蝦、章魚）'); return; } Trap.sure = 0; trapPut(sp); }
+async function trapPut(sp){ if (Trap.busy) return; if (rec.coins < 50){ toast('金幣不夠'); return; } Trap.busy = true;
+  if (trapOnline()){ try { const { data, error } = await Cloud.sb.rpc('trap_put', { p_site: Dive.site, p_x: sp.x, p_z: sp.z }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ toast(cloudErrMsg(e)); Trap.busy = false; return; } await trapLoad(); }
+  else { addCoins(-50); Trap.list.push({ id: Date.now(), site: Dive.site, x: sp.x, z: sp.z, ready: Date.now() + TRAP_MS }); LS.set('tide.traps', Trap.list); trapBuild(); }
+  Trap.busy = false; try { SFX.plop(); } catch(e){} flash('🧺 籠子放好了', 1.3); toast(`4 小時後回${DIVE_SITES[Dive.site].name}潛下來收（紅色浮球底下）`); }
+async function trapTake(t){ if (Trap.busy) return; Trap.busy = true; let got = [];
+  if (trapOnline()){ try { const { data, error } = await Cloud.sb.rpc('trap_take', { p_id: t.id }); if (error) throw error; got = (data && data.got) || []; if (data && data.pl){ delete data.pl.island; adoptRow(data.pl); } } catch(e){ toast(cloudErrMsg(e)); Trap.busy = false; return; } await trapLoad(); }
+  else { const r0 = Math.random(), n = 1 + (r0 < 0.6 ? 1 : 0) + (r0 < 0.2 ? 1 : 0), tot = TRAP_LOOT.reduce((a, x) => a + x[1], 0); for (let i = 0; i < n; i++){ let r = Math.random() * tot, id = 'crab'; for (const [k, w] of TRAP_LOOT){ if ((r -= w) < 0){ id = k; break; } } const f = FISH_BY_ID[id]; if (!f) continue; const w = +(f.min + (f.max - f.min) * Math.pow(Math.random(), 2)).toFixed(2); got.push({ f: id, w }); rec.tank.unshift({ f: id, w, t: Date.now() + i }); rec.count[id] = (rec.count[id] || 0) + 1; rec.total++; if (w > (rec.best[id] || 0)) rec.best[id] = w; }
+    trimTank(); saveRecLocal(); buildTank(); Trap.list = Trap.list.filter(x => x !== t); LS.set('tide.traps', Trap.list); trapBuild(); }
+  Trap.busy = false; try { SFX.catch(); } catch(e){} buzz([40, 30, 80]); const names = got.map(g => FISH_BY_ID[g.f] ? `${FISH_BY_ID[g.f].name} ${fmtKg(g.w)}` : '').filter(Boolean); flash(`🧺 收到 ${got.length} 隻！`, 1.6); toast(`籠子裡有：${names.join('、')}。已經放進魚缸`); }
+/* v389 標記放流：幫魚掛上標籤再放走；之後別人釣到牠，兩邊都有獎勵、都會收到通知 */
+function tagNoteShow(n){ if (!n || !n.id || !n.k) return; const key = n.k + n.id; if (LS.get('tide.tagSeen', '') === key) return; LS.set('tide.tagSeen', key); const f = FISH_BY_ID[n.f], fn = f ? f.name : '魚';
+  setTimeout(() => { try { SFX.catch(); } catch(e){} if (n.k === 'catch'){ flash('🏷️ 這條魚身上有標籤！', 2.2); toast(`是 ${esc(n.name || '釣客')} ${n.days ? n.days + ' 天前' : '今天'}標記放流的${esc(fn)}（當時 ${fmtKg(n.w)}）。謝謝你找到牠　🪙+50`); }
+    else { flash('🏷️ 你標記的魚被釣到了！', 2.2); toast(`${esc(n.name || '釣客')} 釣到了你標記放流的${esc(fn)}（現在 ${fmtKg(n.w)}）　💙+5`); } logMsg('', n.k === 'catch' ? `你釣到 ${n.name || '釣客'} 標記放流的${fn}` : `${n.name || '釣客'} 釣到了你標記放流的${fn}`, true); }, 2800); }
+async function tagRelease(x, f){ const p = releaseLocal(x) + 1; rec.love = (rec.love || 0) + 1; saveRecLocal(); renderTab(); toast(`🏷️ ${esc(f.name)} 掛上標籤游回大海了 💙 愛海點數 +${p}。以後有人釣到牠，會通知你`);
+  if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('tag_release', { p_ts: x.t }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ toast(cloudErrMsg(e)); } } }
 /* v386 海底花園按讚、本週最美海底：去別人的島潛下去可以按讚（一週一次），排行每週一重算（伺服器 148） */
 const SeaLike = { n:0, liked:false, pieces:0, owner:null, top:null, last:null, at:0, busy:false };
 async function seaLikeLoad(){ if (!onIsle || !farmOnline()){ SeaLike.owner = null; return; } const own = onIsle.owner; try { const { data, error } = await Cloud.sb.rpc('sea_like_info', { p_owner: own }); if (error) throw error; if (data && onIsle && onIsle.owner === own){ SeaLike.owner = own; SeaLike.n = Number(data.n) || 0; SeaLike.liked = !!data.liked; SeaLike.pieces = Number(data.pieces) || 0; } } catch(e){ SeaLike.owner = null; } }
@@ -9311,7 +9347,7 @@ function startDive(site, back){
   if (Dive.boat){ Dive.back = { x: myBoat.m.position.x, z: myBoat.m.position.z }; myBoat = null; me.sitting = false; } else if (myBoat) leaveFerry(true);
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
   setTimeout(() => {
-    buildDive(); try { diveExtras(); } catch(e){ console.warn('diveExtras', e); } try { divePickSpawn(); } catch(e){ console.warn('divePick', e); } { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; if (Evt.chip) Evt.chip.hidden = true; }   /* v283：潛水的時候主畫面的迴圈不跑，羅盤不會自己藏，進去前先藏 */ diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
+    buildDive(); try { diveExtras(); } catch(e){ console.warn('diveExtras', e); } try { divePickSpawn(); } catch(e){ console.warn('divePick', e); } try { trapLoad(); } catch(e){} { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; if (Evt.chip) Evt.chip.hidden = true; }   /* v283：潛水的時候主畫面的迴圈不跑，羅盤不會自己藏，進去前先藏 */ diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
     me.pos.x = DIVE.x - 4; me.pos.z = DIVE.z + DIVE.r * 0.45; me.baseY = DIVE.y + DIVE.top - 2.5; Jump.gy = me.baseY; Jump.air = 0; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.35; Dive.savedDist = cam.dist; cam.dist = 5.5;
     me.setSwim(true); renderDiveHud(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120);
     flash(`${DIVE_SITES[site].icon} ${DIVE_SITES[site].name}・氧氣 ${Dive.o2max} 秒`, 1.6);
@@ -9353,6 +9389,7 @@ function diveNearLoot(){ let best = null, bd = 1.8; for (const l of Dive.loot){ 
 function diveAction(){
   { const pk = nearPick(); if (pk){ pickDo(pk); return; } }
   try { if (seaAct()) return; } catch(e){ console.warn('sea', e); }
+  try { if (trapAct()) return; } catch(e){ console.warn('trap', e); }
   const l = diveNearLoot(); if (l){ grabLoot(l); return; }
   const t = diveFacing(); if (t){ divePhoto(t.f); return; }
   toast('靠近魚按「📷 拍照」，靠近貝殼或寶箱可以撿起來');
@@ -9440,12 +9477,12 @@ function diveEnvFx(){
 function renderDiveHud(tick){ document.body.classList.toggle('sdive', !!Dive.on);
   let h = $('#diveHud');
   if (!Dive.on){ if (h) h.hidden = true; const dn = $('#diveDn'); if (dn) dn.hidden = true; const jb = $('#jumpBtn'); if (jb && jb.dataset.dive){ jb.textContent = '跳'; delete jb.dataset.dive; } return; }
-  if (!h){ h = document.createElement('div'); h.id = 'diveHud'; h.className = 'panel'; h.innerHTML = '<div class="o2"><span>O₂</span><div class="bar"><i></i></div><b></b></div><div class="dmeta"></div><button class="tbtn ghost" id="diveBait">🍞 撒餌</button><button class="tbtn ghost" id="diveUp">⬆ 上岸</button>'; h.querySelector('#diveBait').addEventListener('click', () => { try { faiDiveBait(); } catch(e){ console.warn(e); } }); document.body.appendChild(h);
+  if (!h){ h = document.createElement('div'); h.id = 'diveHud'; h.className = 'panel'; h.innerHTML = '<div class="o2"><span>O₂</span><div class="bar"><i></i></div><b></b></div><div class="dmeta"></div><button class="tbtn ghost" id="diveBait">🍞 撒餌</button><button class="tbtn ghost" id="diveTrap">🧺 籠子</button><button class="tbtn ghost" id="diveUp">⬆ 上岸</button>'; h.querySelector('#diveBait').addEventListener('click', () => { try { faiDiveBait(); } catch(e){ console.warn(e); } }); h.querySelector('#diveTrap').addEventListener('click', () => { try { trapBtn(); } catch(e){ console.warn(e); } }); document.body.appendChild(h);
     h.querySelector('#diveUp').addEventListener('click', () => endDive()); }
   if (!$('#diveDn')){ const b = document.createElement('button'); b.id = 'diveDn'; b.className = 'panel'; b.setAttribute('aria-label', '下潛'); b.textContent = '⬇'; $('#jumpBtn').before(b);
     b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Dive.down = true; b.classList.add('down'); }); const off = () => { Dive.down = false; b.classList.remove('down'); }; b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); b.addEventListener('contextmenu', e => e.preventDefault()); }
   const jb = $('#jumpBtn'); if (!jb.dataset.dive){ jb.dataset.dive = '1'; jb.textContent = '⬆'; }
-  h.hidden = false; $('#diveDn').hidden = false;
+  h.hidden = false; $('#diveDn').hidden = false; { const tb = h.querySelector('#diveTrap'); if (tb) tb.hidden = Dive.site === 'isle'; }
   const k = clamp(Dive.o2 / Dive.o2max, 0, 1), bar = h.querySelector('.bar i'); bar.style.width = (k * 100).toFixed(1) + '%'; bar.className = k < 0.25 ? 'low' : '';
   const s = Math.max(0, Math.ceil(Dive.o2)) + ' 秒'; const b = h.querySelector('.o2 b'); if (b.textContent !== s) b.textContent = s;
   const depth = Math.max(0, DIVE.y + DIVE.top - me.baseY), meta = `深度 ${depth.toFixed(1)}m・看到 ${Dive.seen.size} 種・📸 ${(rec.photos || []).length}/${diveSpecies().length}`; const mm = h.querySelector('.dmeta'); if (mm.textContent !== meta) mm.textContent = meta;
@@ -11877,6 +11914,7 @@ function adoptRow(row){
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
   { const keep = rec && rec.rodLog, keepDv = rec && rec.dv; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; if ('dive_trash' in row) rec.dv = { day: row.dive_day || '', trash: row.dive_trash || 0, mat: row.dive_mat || 0, crit: row.dive_crit || 0, q: row.dive_q_done || null }; else if (keepDv) rec.dv = keepDv; } rec.rodSkin = row.rod_skin || null; rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
+  try { if (row.tag_note) tagNoteShow(row.tag_note); } catch(e){}
   rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island', 'closet', 'museum'].includes(curTab) && !Cloud.ui.busy) renderTab();   /* 衣櫃也照伺服器的結果重畫（伺服器沒有你買過的紀錄時，不會一直顯示穿著） */
@@ -13216,7 +13254,9 @@ function renderTab(){
       star.addEventListener('click', () => { if (setFav(x, !x.k)){ toast(x.k ? `⭐ 收藏了${esc(f.name)}，不會被賣掉` : `取消收藏${esc(f.name)}`); renderTab(); } });
       if (x.k) rel.disabled = true, rel.title = '收藏中的魚要先取消收藏才能放流';
       const gk = el('button', 'tbtn ghost', '🖋️'); gk.title = '做成魚拓'; gk.style.minWidth = '42px'; gk.addEventListener('click', () => { const done = GK.mine && GK.mine.find(g => +g.t === +x.t); if (done) gkView(done); else gkView({ id: 0, fish: x.f, w: x.w, t: x.t, name: myDisplayName() }, { make: x.t }); }); if (!GK.mine && Cloud.on) gkLoad();
-      acts.append(star, gk, show, rel); li.appendChild(acts); ul.appendChild(li);
+      const tgb = el('button', 'tbtn ghost', '🏷️'); tgb.title = '標記放流：掛上標籤再放走，別人釣到會通知你'; tgb.style.minWidth = '42px'; if (x.k) tgb.disabled = true;
+      tgb.addEventListener('click', () => { if (tgb.dataset.sure !== '1'){ tgb.dataset.sure = '1'; tgb.textContent = '標記放流？'; setTimeout(() => { if (tgb.isConnected){ tgb.dataset.sure = ''; tgb.textContent = '🏷️'; } }, 2500); return; } seaMemAdd(seaMemHere(), 3, 'release'); tagRelease(x, f); });
+      acts.append(star, gk, show, rel, tgb); li.appendChild(acts); ul.appendChild(li);
     });
     body.appendChild(ul);
   } else if (curTab === 'cage'){ renderCage(body);
@@ -13313,6 +13353,8 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
+      '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，用手抄網抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
