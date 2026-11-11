@@ -6173,11 +6173,14 @@ function renderIslePerms(body, meId){
   renderIsleHelpers(body);
   // 公共儲物箱
   body.appendChild(el('div', 'dexhead', `📦 公共儲物箱（${(IsleP.store || []).length} / 60）`)); body.appendChild(el('p', 'sub', '島上大家共用，跟自己的魚缸分開。放進去的魚誰都看得到，誰放的、誰拿的都有紀錄。'));
-  const S = IsleP.store || []; if (S.length){ const u2 = el('ul', 'shoplist cols'); for (const x of S){ const f = FISH_BY_ID[x.item.f], li = el('li'); li.appendChild(el('span', 'dishic', '🐟')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f ? f.name : x.item.f} ${fmtKg(+x.item.w)}`)); d.appendChild(el('div', 'sub2', `${x.by} 放的`)); li.appendChild(d);
+  const S = IsleP.store || []; if (S.length){ const u2 = el('ul', 'shoplist cols'); for (const x of S){ const f = FISH_BY_ID[x.item.f], li = el('li'); li.appendChild(f ? fishCanvas(f, true, 56, 36) : el('span', 'dishic', '🐟'));   /* v384 魚要有圖 */ const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f ? f.name : x.item.f} ${fmtKg(+x.item.w)}`)); d.appendChild(el('div', 'sub2', `${x.by} 放的`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn ghost vbtn', '拿出來'); b.disabled = !(my >= 2 || x.mine); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_withdraw', { p_id: x.id }, '🐟 放回你的魚缸了'); }); a.appendChild(b); li.appendChild(a); u2.appendChild(li); } body.appendChild(u2); }
   else body.appendChild(el('div', 'empty', '儲物箱是空的。'));
-  if (IsleP.me){ const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.rs && !(rec.show || []).includes(x.t)).slice(0, 30); if (cand.length){ const sel = el('select'); sel.style.cssText = 'font-size:14px;padding:6px;border-radius:10px;max-width:220px'; for (const x of cand){ const o = el('option', '', `${FISH_BY_ID[x.f].name} ${fmtKg(x.w)}`); o.value = x.t; sel.appendChild(o); }
-    const bar = el('div', 'tankbar'), b = el('button', 'tbtn', '放進儲物箱'); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_deposit', { p_t: +sel.value }, '📦 放進公共儲物箱了'); }); bar.append(sel, b); body.appendChild(bar); } }
+  if (IsleP.me){ const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.rs && !x.k && !(rec.show || []).includes(x.t)).slice(0, 30); if (cand.length){   /* v384 原本是下拉選單（只有字），改成有魚的圖、一條一條按 */
+    body.appendChild(el('p', 'sub', '從你的魚缸放進去（收藏的、展示中的魚不會出現在這裡）：')); const u3 = el('ul', 'shoplist cols');
+    for (const x of cand){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(fishCanvas(f, true, 56, 36)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name} ${fmtKg(x.w)}`)); d.appendChild(el('div', 'sub2', f.rarity)); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn vbtn', '放進去'); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_deposit', { p_t: x.t }, '📦 放進公共儲物箱了'); }); a.appendChild(b); li.appendChild(a); u3.appendChild(li); }
+    body.appendChild(u3); } }
 }
 // ===== 紅樹林（本島東岸、螢光溪出海口；2026-11-04）=====
 // 四座小島接在岸邊、用木棧道連起來，東邊有一條碼頭。退潮時島邊的泥灘會露出來，可以走下去慢慢靠近、徒手抓彈塗魚和招潮蟹。
@@ -8114,7 +8117,16 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   const dx = tx - pt.pos.x, dz = tz - pt.pos.z, d = Math.hypot(dx, dz), U = pt.m.userData;
   if (d > 14){ pt.pos.x = tx; pt.pos.z = tz; }
   const sp = d > 0.12 ? Math.min(7, d * 2.6 + (moving ? 1.2 : 0)) * (pt.kind === 'crab' || pt.kind === 'turtle' ? 0.75 : pt.kind === 'pondturtle' ? 0.6 : 1) : 0; pt.vel += (sp - pt.vel) * Math.min(1, dt * 6);
-  if (d > 0.05){ const k = Math.min(d, pt.vel * dt) / d; pt.pos.x += dx * k; pt.pos.z += dz * k; }
+  if (d > 0.05){ const k = Math.min(d, pt.vel * dt) / d, mx = dx * k, mz = dz * k, st = Math.hypot(mx, mz), R = 0.2, x0 = pt.pos.x, z0 = pt.pos.z;
+    let hit = false; try { if (blocked(x0, z0, R) || !blocked(x0 + mx, z0 + mz, R)){ pt.pos.x += mx; pt.pos.z += mz; pt.side = 0; }   /* 已經在東西裡面就讓牠走出來 */
+      else { hit = true; if (!pt.side) pt.side = (Math.abs(mx) >= Math.abs(mz) ? Math.sign(mz) : Math.sign(mx)) || (Math.random() < 0.5 ? -1 : 1); const sx = Math.abs(mx) >= Math.abs(mz) ? Math.sign(mx) || 1 : pt.side, sz = Math.abs(mx) >= Math.abs(mz) ? pt.side : Math.sign(mz) || 1;   /* 撞到牆就固定往一邊繞，不會左右晃 */
+        if (Math.abs(mx) >= Math.abs(mz)){ if (!blocked(x0, z0 + sz * st, R)) pt.pos.z += sz * st; else if (!blocked(x0 + sx * st, z0, R)) pt.pos.x += sx * st; }   /* v384 寵物不會穿牆：撞到就沿著牆走，繞過房子 */
+        else { if (!blocked(x0 + sx * st, z0, R)) pt.pos.x += sx * st; else if (!blocked(x0, z0 + sz * st, R)) pt.pos.z += sz * st; } } } catch(e){ pt.pos.x += mx; pt.pos.z += mz; }
+    const nd = Math.hypot(tx - pt.pos.x, tz - pt.pos.z);
+    if (d > 1.2 && (hit || pt.stuck > 0)){ pt.best = Math.min(pt.best == null ? d : pt.best, nd); if (nd > pt.best - 0.02) pt.stuck = (pt.stuck || 0) + dt; else { pt.stuck = 0; pt.best = nd; }   /* 2.5 秒都沒有更靠近主人＝卡住了 */
+      if (pt.stuck > 2.5){ pt.stuck = 0; pt.best = null; let gx = tx, gz = tz; try { if (blocked(gx, gz, R)) for (let j = 0; j < 16; j++){ const a = j * 2.4, rr = 0.6 + j * 0.08, cx = tx + Math.sin(a) * rr, cz = tz + Math.cos(a) * rr; if (!blocked(cx, cz, R)){ gx = cx; gz = cz; break; } } } catch(e){}
+        pt.pos.x = gx; pt.pos.z = gz; try { FX.emit(gx, ty + 0.3, gz, 6, '#ffffff', 0.25, 0.6, 0.6); } catch(e){} } }   /* 真的卡住就跳回主人旁邊 */
+    else { pt.stuck = 0; pt.best = null; } }
   const want = pt.vel > 0.25 ? Math.atan2(dx, dz) + (pt.kind === 'crab' ? Math.PI / 2 : 0) : faceTo; pt.rot = lerpAngle(pt.rot, want, Math.min(1, dt * 6));
   pt.ph += dt * (4 + pt.vel * 3); const mv = clamp(pt.vel / 2, 0, 1);
   let y = ty;
