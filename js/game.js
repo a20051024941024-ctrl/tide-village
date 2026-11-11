@@ -4943,6 +4943,38 @@ function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group();
 /* v360 象龜換成使用者用 Meshy 做的模型，會自己動（沒有骨架，用頂點位置分出脖子和四隻腳，在著色器裡動）：
    平常慢慢伸脖子、轉頭看、呼吸；每隔一陣子慢慢走到附近另一個地方（對角的腳一起動）；玩家走到 2 公尺內就把頭縮進殼裡停下來，離開後再伸出來。 */
 /* v362 海獅換成使用者用 Meshy 做的模型（三隻共用一個模型），會自己動：平常慢慢轉頭、呼吸；偶爾抬頭點幾下（像在叫）或用前鰭拍地；玩家走到 4.5 公尺內會轉頭看著你。 */
+/* v364 比較精緻的石頭和椰子樹（先用在神秘島；頂點上色、可以整批合成一個網格） */
+function lavaRockGeo(r, seed, cols){ const g0 = new THREE.IcosahedronGeometry(r, 2).toNonIndexed(), P = g0.attributes.position, n = P.count, C = new Float32Array(n * 3), c = new THREE.Color(), c2 = new THREE.Color();
+  const hs = (x, y, z) => { const v = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + seed * 3.17) * 43758.5453; return v - Math.floor(v); };
+  const sx = 0.85 + hs(1, 2, 3) * 0.5, sy = 0.55 + hs(4, 5, 6) * 0.35, szz = 0.85 + hs(7, 8, 9) * 0.5;
+  for (let i = 0; i < n; i++){ let x = P.getX(i) / r, y = P.getY(i) / r, z = P.getZ(i) / r;   /* 同一個方向的頂點算出一樣的凹凸，面才不會裂開 */
+    const qx = Math.round(x * 2.2), qy = Math.round(y * 2.2), qz = Math.round(z * 2.2), big = hs(qx, qy, qz) * 0.34 - 0.12, small = hs(Math.round(x * 40), Math.round(y * 40), Math.round(z * 40)) * 0.12 - 0.06, k = 1 + big + small;
+    x *= k * sx; y *= k * sy; z *= k * szz; if (y < -0.35) y = -0.35 - (y + 0.35) * 0.2;   /* 底部壓平，像半埋在地上 */
+    P.setXYZ(i, x * r, y * r, z * r); }
+  g0.computeVertexNormals(); const N = g0.attributes.normal;
+  for (let f = 0; f < n; f += 3){ const ny = N.getY(f), yy = (P.getY(f) + P.getY(f + 1) + P.getY(f + 2)) / 3 / r, h = hs(f, seed, 1);
+    c.set(cols[h < 0.5 ? 0 : h < 0.8 ? 1 : 2]); c2.set('#000000'); c.multiplyScalar(0.82 + Math.max(0, ny) * 0.42 + (h - 0.5) * 0.14); if (yy < -0.2) c.lerp(c2, 0.35);
+    for (let k = 0; k < 3; k++){ C[(f + k) * 3] = c.r; C[(f + k) * 3 + 1] = c.g; C[(f + k) * 3 + 2] = c.b; } }
+  g0.setAttribute('color', new THREE.BufferAttribute(C, 3)); g0.deleteAttribute('uv'); return g0; }
+function palmGeo2(h, lean, seed){ const parts = [], c = new THREE.Color(), hs = k => { const v = Math.sin(k * 91.7 + seed * 13.1) * 43758.5453; return v - Math.floor(v); };
+  const paint = (ge, fn) => { const P = ge.attributes.position, C = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++){ fn(c, P.getX(i), P.getY(i), P.getZ(i), i); C[i * 3] = c.r; C[i * 3 + 1] = c.g; C[i * 3 + 2] = c.b; } ge.setAttribute('color', new THREE.BufferAttribute(C, 3)); ge.deleteAttribute('uv'); return ge; };
+  const bend = t => lean * t * t, dir = hs(1) * 6.28, bx = Math.cos(dir), bz = Math.sin(dir);
+  /* 樹幹：一節一節疊上去，越上面越細，每節上緣凸出一圈 */
+  const SEG = 9; for (let k = 0; k < SEG; k++){ const t0 = k / SEG, t1 = (k + 1) / SEG, r0 = 0.17 - t0 * 0.06, r1 = 0.17 - t1 * 0.06, sg = new THREE.CylinderGeometry(r1 * 1.1, r0, h / SEG, 8, 1).toNonIndexed(); sg.translate(0, h * (t0 + t1) / 2, 0);
+    const P = sg.attributes.position; for (let i = 0; i < P.count; i++){ const t = P.getY(i) / h; P.setX(i, P.getX(i) + bx * bend(t)); P.setZ(i, P.getZ(i) + bz * bend(t)); }
+    sg.computeVertexNormals(); parts.push(paint(sg, (c, x, y) => c.set(k % 2 ? '#8a7858' : '#7a6a4c').multiplyScalar(0.9 + (y / h) * 0.2))); }
+  const tx = bx * bend(1), tz = bz * bend(1);
+  /* 葉子：每片是中間有葉脈、兩邊鋸齒狀的長葉，從樹頂往外拱出去再垂下來 */
+  const NF = 10; for (let f = 0; f < NF; f++){ const ang = f / NF * 6.28 + hs(f + 20) * 0.5, L = 1.9 + hs(f + 40) * 0.6, up = 0.25 + hs(f + 60) * 0.45, NS = 9, pos = [], col = [];
+    const pt = t => { const out = t * L, y = Math.sin(t * 1.9) * up * L * 0.55 - t * t * L * 0.62; return [out, y]; };
+    for (let k = 0; k < NS; k++){ const t0 = k / NS, t1 = (k + 1) / NS, [o0, y0] = pt(t0), [o1, y1] = pt(t1), w0 = 0.3 * Math.sin(Math.PI * Math.min(1, t0 * 1.15 + 0.08)) * (k % 2 ? 1 : 0.72), w1 = 0.3 * Math.sin(Math.PI * Math.min(1, t1 * 1.15 + 0.08)) * ((k + 1) % 2 ? 1 : 0.72), d0 = w0 * 0.45, d1 = w1 * 0.45;
+      for (const sd of [-1, 1]){ const A = [o0, y0, 0], B = [o1, y1, 0], Cc = [o1, y1 - d1, sd * w1], D = [o0, y0 - d0, sd * w0]; for (const v of (sd > 0 ? [A, B, Cc, A, Cc, D] : [A, Cc, B, A, D, Cc])) pos.push(v[0], v[1], v[2]);
+        for (let q = 0; q < 6; q++){ const tt = (q === 1 || q === 2) === (sd > 0) ? t1 : (q === 0 || q === 3 ? t0 : (sd > 0 ? t0 : t1)); c.set('#2f7a34').lerp(new THREE.Color('#6aa83e'), Math.min(1, t0 * 0.9 + hs(f + k) * 0.25)); if (f % 3 === 0) c.multiplyScalar(0.86); col.push(c.r, c.g, c.b); } } }
+    const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); fg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); fg.rotateY(ang); fg.translate(tx, h - 0.05, tz); fg.computeVertexNormals(); parts.push(fg); }
+  /* 樹頂的椰子 */
+  for (let k = 0; k < 4; k++){ const a = k * 1.7 + hs(k + 80), cg = new THREE.SphereGeometry(0.16, 7, 6).toNonIndexed(); cg.translate(tx + Math.cos(a) * 0.2, h - 0.22 - hs(k + 90) * 0.08, tz + Math.sin(a) * 0.2); cg.computeVertexNormals(); parts.push(paint(cg, c => c.set(k % 2 ? '#6a4a2a' : '#7a5a30'))); }
+  for (const p of parts){ if (p.index) p.setIndex(null); for (const k of Object.keys(p.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'color') p.deleteAttribute(k); }
+  return mergeGeometries(parts, false); }
 function slLoad(g){ new GLTFLoader().loadAsync('models/sealion.glb').then(gl => { let src = null; gl.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src || !Far.slOld) return;
   const geo = src.geometry; geo.rotateY(-0.313); geo.translate(0, 0, -0.03);   /* 模型的身體是斜的，先轉正（頭朝 +x） */
   const P = geo.attributes.position, n = P.count, aN = new Float32Array(n), aF = new Float32Array(n), aT = new Float32Array(n), sat = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -5035,12 +5067,15 @@ function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.
     for (let k = 0; k < 7; k++){ const pd = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 6), pad); pd.scale.set(1, 1.3, 0.28); const aa = k * 0.9 + rr(); pd.position.set(Math.cos(aa) * (0.25 + rr() * 0.3), h + 0.2 + rr() * 0.7, Math.sin(aa) * (0.25 + rr() * 0.3)); pd.rotation.set(rr() - 0.5, aa, (rr() - 0.5) * 0.8); cg.add(pd);
       if (rr() < 0.4){ const fl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), mat('#ffd040', 0.6)); fl.position.copy(pd.position); fl.position.y += 0.42; cg.add(fl); } }
     cg.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); g.add(cg); addCircleCol(M.x + x, M.z + z, 0.4); }
-  for (let i = 0; i < 9; i++){ const a = rr() * 6.28, r = R * (0.72 + rr() * 0.18), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 6) continue; const pg2 = new THREE.Group(), h = 3 + rr() * 1.5, lean = (rr() - 0.5) * 0.4;
-    for (let k = 0; k < 6; k++){ const sg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.17, h / 6, 7), trunkM); sg.position.set(lean * k * 0.3, h / 12 + k * h / 6, 0); pg2.add(sg); }
-    for (let k = 0; k < 7; k++){ const lf = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.8, 4), mat('#3f8a3a', 0.8)); lf.scale.z = 0.25; const aa = k / 7 * 6.28; lf.position.set(lean * 1.8 + Math.cos(aa) * 0.7, h - 0.1, Math.sin(aa) * 0.7); lf.rotation.set(Math.sin(aa) * 1.1, 0, -Math.cos(aa) * 1.1); pg2.add(lf); }
-    pg2.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); g.add(pg2); addCircleCol(M.x + x, M.z + z, 0.3); }
+  { const parts = [];   /* v364 椰子樹做細一點：樹幹彎彎的有一圈一圈的節，葉子是一片片會垂下來的羽狀葉，樹頂掛椰子。九棵合成一個網格，一次畫完 */
+    for (let i = 0; i < 9; i++){ const a = rr() * 6.28, r = R * (0.72 + rr() * 0.18), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 6) continue; const h = 3 + rr() * 1.5, lean = (rr() - 0.5) * 0.4;
+      const pg2 = palmGeo2(h, lean * 1.8, i * 7 + 3); pg2.translate(x, mystH(M.x + x, M.z + z) || M.y, z); parts.push(pg2); addCircleCol(M.x + x, M.z + z, 0.3); }
+    if (parts.length){ const pm = new THREE.Mesh(mergeGeometries(parts, false), new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.85, side: THREE.DoubleSide })); pm.userData.dyn = true; g.add(pm); } }
   for (let i = 0; i < 20; i++){ const a = rr() * 6.28, r = R * (0.38 + rr() * 0.45), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.45 && Math.abs(x) < 6) continue; const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45 + rr() * 0.4, 0), mat(rr() < 0.5 ? '#6a9a40' : '#8ab050', 0.9, { flatShading:true })); b.scale.y = 0.6; b.position.set(x, (mystH(M.x + x, M.z + z) || M.y) + 0.15, z); g.add(b); }
-  for (let i = 0; i < 22; i++){ const a = rr() * 6.28, r = R * (0.8 + rr() * 0.3), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 5) continue; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + rr() * 0.9, 0), mat('#2e2a28', 0.95, { flatShading:true })); rk.position.set(x, (mystH(M.x + x, M.z + z) || M.y) - 0.1, z); rk.rotation.set(rr(), rr() * 6, rr()); g.add(rk); }
+  { const parts = [];   /* v364 火山岩做細一點：形狀不規則、有稜有角，顏色有深有淺，朝上的面比較亮，貼地的地方比較黑。全部合成一個網格 */
+    for (let i = 0; i < 22; i++){ const a = rr() * 6.28, r = R * (0.8 + rr() * 0.3), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 5) continue; const sz = 0.5 + rr() * 0.9, e = new THREE.Euler(rr() * 0.4, rr() * 6, rr() * 0.4);
+      const rg = lavaRockGeo(sz, i * 13 + 5, ['#2e2a28', '#3b3531', '#24211f']); rg.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(e)); rg.translate(x, (mystH(M.x + x, M.z + z) || M.y) - 0.12, z); parts.push(rg); }
+    if (parts.length){ const rm = new THREE.Mesh(mergeGeometries(parts, false), new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.95, flatShading:true })); rm.userData.dyn = true; g.add(rm); } }
   // 海獅（躺在岩石上）、海鬣蜥、大象龜
   for (const [x, z, ry] of [[9, 6, 0.6], [-8, 9, 2.2], [11, -2, -0.4]]){ const sl = new THREE.Group(), m2 = mat('#7a5a40', 0.6); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 4, 10), m2); b.rotation.z = Math.PI / 2; b.position.y = 0.34; sl.add(b); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), m2); hd.position.set(0.7, 0.62, 0); sl.add(hd);
     for (const ez of [-0.09, 0.09]) sl.add(box([0.05, 0.05, 0.05], '#111', [0.9, 0.68, ez])); sl.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); sl.rotation.y = ry; g.add(sl); addCircleCol(M.x + x, M.z + z, 0.6); (Far.slOld = Far.slOld || []).push(sl); }
