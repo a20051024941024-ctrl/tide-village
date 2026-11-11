@@ -7511,7 +7511,7 @@ function renderMuseum(body){
 // 魚拓家具：畫架上的一張和紙，墨色的魚、紅色印章、區名
 function gyMesh(region){ const sp = SPOT_BY_ID[region], g = new THREE.Group(); const pick = sp ? (mzNeed(sp).map(id => FISH_BY_ID[id]).sort((a, b) => RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || (b.max - a.max))[0]) : null;
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 192; const c = cv.getContext('2d'); c.fillStyle = '#f3ead2'; c.fillRect(0, 0, 256, 192);
-  if (pick){ try { const fc = fishCanvas(pick, false, 200, 120); c.globalAlpha = 0.9; c.drawImage(fc, 28, 22, 200, 120); c.globalAlpha = 1; } catch(e){} }
+  if (pick){ try { const fc = fishCanvas(pick, false, 200, 120, true); c.globalAlpha = 0.9; c.drawImage(fc, 28, 22, 200, 120); c.globalAlpha = 1; } catch(e){} }
   c.fillStyle = '#2a2420'; c.font = 'bold 22px serif'; c.textAlign = 'center'; c.fillText((sp ? sp.label : '') + ' 魚拓', 128, 170); c.fillStyle = '#c8161c'; c.fillRect(214, 150, 26, 26); c.fillStyle = '#f3ead2'; c.font = 'bold 15px serif'; c.fillText('館', 227, 169);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
   const fr = box([0.95, 0.74, 0.05], null, [0, 1.25, 0], mat('#5a3d2b', 0.6)); g.add(fr); const pic = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.64), new THREE.MeshBasicMaterial({ map: tx })); pic.position.set(0, 1.25, 0.03); g.add(pic);
@@ -7534,7 +7534,7 @@ function gkCanvas(d, W){ W = W || 480; const H = Math.round(W * 2 / 3), key = d.
   for (let i = 0; i < 900 * k; i++){ c.fillStyle = rnd() < 0.5 ? 'rgba(160,140,100,0.10)' : 'rgba(255,255,255,0.35)'; c.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 2.5 * k, 0.6 + rnd() * k); }   /* 和紙的纖維 */
   c.strokeStyle = 'rgba(120,100,70,0.25)'; c.lineWidth = 2 * k; c.strokeRect(8 * k, 8 * k, W - 16 * k, H - 16 * k);
   const f = FISH_BY_ID[d.fish]; const fw = Math.round(330 * k), fh = Math.round(fw * 0.5);
-  if (f){ try { const src = fishCanvas(f, true, fw / 2, fh / 2), t = document.createElement('canvas'); t.width = fw; t.height = fh; const tc = t.getContext('2d'); tc.drawImage(src, 0, 0, fw, fh);
+  if (f){ try { const src = fishCanvas(f, true, fw / 2, fh / 2, true), t = document.createElement('canvas'); t.width = fw; t.height = fh; const tc = t.getContext('2d'); tc.drawImage(src, 0, 0, fw, fh);
       const im = tc.getImageData(0, 0, fw, fh), D = im.data;
       for (let i = 0; i < D.length; i += 4){ const a = D[i + 3]; if (!a) continue; const L = (0.3 * D[i] + 0.59 * D[i + 1] + 0.11 * D[i + 2]) / 255, n = rnd();
         D[i] = 24; D[i + 1] = 21; D[i + 2] = 19; D[i + 3] = Math.max(0, Math.min(255, a * (0.42 + 0.58 * (1 - L)) * (n < 0.06 ? 0.25 : 0.82 + n * 0.18))); }   /* 深的地方墨濃、隨機的白點像真的拓印 */
@@ -8113,7 +8113,7 @@ function renderBossPanel(near){ const st = BossW.st; let P = $('#bossPanel'); co
 // 大魚的魚拓：深色木框、墨色的大魚、名字
 function gybMesh(k){ const g = new THREE.Group(), nm = { dragon:'海龍王', gwhite:'大白鯊', oarking:'皇帶魚王' }[k] || '', [fid] = BOSS_FISH[k] || BOSS_FISH.dragon;
   const cv = document.createElement('canvas'); cv.width = 320; cv.height = 192; const c = cv.getContext('2d'); c.fillStyle = '#f3ead2'; c.fillRect(0, 0, 320, 192);
-  try { const fc = fishCanvas(FISH_BY_ID[fid] || FISH_BY_ID.shark, false, 260, 120); c.drawImage(fc, 30, 18, 260, 120); } catch(e){}
+  try { const fc = fishCanvas(FISH_BY_ID[fid] || FISH_BY_ID.shark, false, 260, 120, true); c.drawImage(fc, 30, 18, 260, 120); } catch(e){}
   c.fillStyle = '#2a2420'; c.font = 'bold 24px serif'; c.textAlign = 'center'; c.fillText(nm + ' 全服合作', 160, 168); c.fillStyle = '#c8161c'; c.fillRect(276, 148, 28, 28); c.fillStyle = '#f3ead2'; c.font = 'bold 16px serif'; c.fillText('王', 290, 168);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; g.add(box([1.25, 0.8, 0.05], null, [0, 1.3, 0], mat('#2f2018', 0.6))); const pic = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.7), new THREE.MeshBasicMaterial({ map: tx })); pic.position.set(0, 1.3, 0.03); g.add(pic);
   for (const sx of [-0.4, 0.4]){ const l = box([0.05, 1.05, 0.05], null, [sx, 0.5, -0.12], mat('#4a3020', 0.7)); l.rotation.x = 0.12; g.add(l); } const bl = box([0.05, 1.1, 0.05], null, [0, 0.55, -0.32], mat('#4a3020', 0.7)); bl.rotation.x = -0.32; g.add(bl); return g; }
@@ -10391,9 +10391,17 @@ function drawFish(cv, color, known, id){
 const fishCvCache = new Map();
 /* v244 魚市清單用魚的樣子當圖示（不是同一隻 🐟）；⭐ 是珍藏、✨ 是變種 */
 function mktIc(f, badge){ const w = el('span', 'mktic'); if (f){ try { w.appendChild(fishCanvas(f, true, 64, 40)); } catch(e){ w.textContent = '🐟'; } } else w.textContent = '🐟'; if (badge) w.appendChild(el('i', '', badge)); return w; }
-function fishCanvas(f, known, w, h){ const cv = document.createElement('canvas'); cv.width = w*2; cv.height = h*2; const key = f.id + (known ? 1 : 0) + 'x' + cv.width + 'x' + cv.height;
-  let src = fishCvCache.get(key); if (!src){ src = document.createElement('canvas'); src.width = cv.width; src.height = cv.height; drawFish(src, f.color, known, f.id); if (fishCvCache.size > 400) fishCvCache.clear(); fishCvCache.set(key, src); }
-  cv.getContext('2d').drawImage(src, 0, 0); return cv; }
+/* v369 檢查時發現：第一次打開圖鑑要把兩百多張魚圖一次畫完，畫面會整個卡住（電腦模擬卡了 33 秒，手機也會頓好幾下）。
+   現在還沒畫過的魚圖先放一張空白的，之後每一格只畫幾張（最多 10 毫秒），由上往下慢慢補上；畫過的照舊直接用。 */
+const FishCvQ = []; let fishCvBusy = false;
+function fishCvRun(){ const t0 = performance.now(); let n = 0;
+  while (FishCvQ.length && n < 6 && performance.now() - t0 < 10){ const q = FishCvQ.shift(); if (!q.cv.isConnected) continue; n++;
+    try { let src = fishCvCache.get(q.key); if (!src){ src = document.createElement('canvas'); src.width = q.cv.width; src.height = q.cv.height; drawFish(src, q.f.color, q.known, q.f.id); if (fishCvCache.size > 400) fishCvCache.clear(); fishCvCache.set(q.key, src); } q.cv.getContext('2d').drawImage(src, 0, 0); } catch(e){} }
+  if (FishCvQ.length) setTimeout(fishCvRun, 16); else fishCvBusy = false; }
+function fishCanvas(f, known, w, h, now){ const cv = document.createElement('canvas'); cv.width = w*2; cv.height = h*2; const key = f.id + (known ? 1 : 0) + 'x' + cv.width + 'x' + cv.height;
+  let src = fishCvCache.get(key); if (!src && now){ src = document.createElement('canvas'); src.width = cv.width; src.height = cv.height; drawFish(src, f.color, known, f.id); fishCvCache.set(key, src); }   /* now：馬上就要拿去畫到別張圖上的（分享卡、頭像、傳聞），不能等 */
+  if (src){ cv.getContext('2d').drawImage(src, 0, 0); return cv; }
+  FishCvQ.push({ cv, f, known, key }); if (!fishCvBusy){ fishCvBusy = true; setTimeout(fishCvRun, 30); } return cv; }
 // 用 3D 模型資料畫側面圖（圖鑑、釣到卡片、魚缸清單共用）
 function drawModelFish(cv, f, known){
   const st = FISH_STYLE[f.id], mesh = FISH_MESH[st.shape];
