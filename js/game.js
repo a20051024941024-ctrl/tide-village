@@ -3497,8 +3497,8 @@ $('#soundBtn').addEventListener('click', () => { soundOn = !soundOn; LS.set('tid
    一首歌的結構：前奏 → A 段 → A 段（換樂器） → B 段 → A 段 → 間奏，一直循環；加一點空間回音。
    樂器的聲音是第一次用到時用數學算出來一小段（每 6 個半音算一個，其他的用變速），之後都重複用，便宜手機也跑得動。 */
 const MusicKit = (() => {
-  const SR = 22050, LEN = { pluck:1.7, marimba:1.2, epiano:2.8, bell:3.2, flute:2.4, bass:1.6, kick:0.4, shaker:0.1, clave:0.09, tom:0.6, hat:0.06 };
-  const DRUM = { kick:1, shaker:1, clave:1, tom:1, hat:1 }, HOLD = { epiano:1, flute:1 };
+  const SR = 22050, LEN = { pluck:1.7, marimba:1.2, epiano:2.8, bell:3.2, flute:2.4, bass:1.6, kick:0.4, shaker:0.1, clave:0.09, tom:0.6, hat:0.06, clap:0.22 };
+  const DRUM = { kick:1, shaker:1, clave:1, tom:1, hat:1, clap:1 }, HOLD = { epiano:1, flute:1 };
   const per = new WeakMap(), hz = m => 440 * Math.pow(2, (m - 69) / 12), TAU = Math.PI * 2;
   function render(kind, root){
     const f = hz(root), n = Math.floor(SR * (LEN[kind] || 1)), d = new Float32Array(n); let sd = 977 + root * 131;
@@ -3516,6 +3516,7 @@ const MusicKit = (() => {
         else if (kind === 'kick'){ ph += TAU * (46 + 80 * Math.exp(-t * 32)) / SR; v = Math.sin(ph) * Math.exp(-t * 11); }
         else if (kind === 'tom'){ ph += TAU * (92 + 45 * Math.exp(-t * 14)) / SR; v = Math.sin(ph) * Math.exp(-t * 6.5); }
         else if (kind === 'shaker' || kind === 'hat'){ const x = rnd(), h = x - pv; pv = x; v = h * Math.min(1, t / (kind === 'shaker' ? 0.012 : 0.002)) * Math.exp(-t * (kind === 'shaker' ? 48 : 85)); }
+        else if (kind === 'clap'){ const x = rnd(); nl = nl * 0.55 + x * 0.45; v = (x - nl) * (Math.exp(-t * 26) + 0.8 * Math.exp(-Math.abs(t - 0.012) * 300) + 0.6 * Math.exp(-Math.abs(t - 0.024) * 300)); }   /* 拍手：好幾個人不太齊地拍 */
         else if (kind === 'clave') v = Math.sin(TAU * 2350 * t) * Math.exp(-t * 62) + 0.5 * Math.sin(TAU * 1640 * t) * Math.exp(-t * 52);
         d[i] = v * Math.min(1, t / 0.003); } }
     for (let i = Math.max(0, n - 600); i < n; i++) d[i] *= (n - i) / 600;   /* 尾巴淡出，不會喀一聲 */
@@ -3540,10 +3541,10 @@ function musMel(str){ const tk = str.trim().split(/[\s|]+/), bars = []; let cur 
     const M = /^([A-G])([#b]?)(\d)$/.exec(x); if (!M) return; const m = 12 * (+M[3] + 1) + ({ C:0, D:2, E:4, F:5, G:7, A:9, B:11 })[M[1]] + (M[2] === '#' ? 1 : M[2] === 'b' ? -1 : 0);
     cur = { b, m, len: 1 }; bars[bar].push(cur); }); return bars; }
 const MUS_THEMES = {
-  day: { name:'晴天的海島', bpm:96, swing:0.16, rev:0.18, comp:'strum', compI:'pluck', compV:0.12, bassPat:[[0, 0], [4, 7]], bassV:0.23, lead:['marimba', 'flute'], leadV:[0.49, 0.35],
-    drums:{ kick:[[0, 0.5]], shaker:[[0, 0.1], [1, 0.22], [2, 0.1], [3, 0.22], [4, 0.1], [5, 0.22], [6, 0.1], [7, 0.22]], clave:[[6, 0.12]] },
-    intro:'C Am F G', A:{ ch:'C Am F G C Am F G', mel:'E5 . G5 . A5 G5 E5 . | C5 . D5 E5 . . - - | F5 . A5 . C6 A5 F5 . | G5 . . . D5 . - - | E5 . G5 . A5 G5 E5 C5 | A4 . C5 . E5 . D5 C5 | D5 . F5 . E5 D5 C5 . | D5 . B4 . C5 . . .' },
-    B:{ ch:'F G Em Am F G C C', mel:'A5 . . G5 F5 . A5 . | G5 . . F5 D5 . . - | E5 . G5 . B5 . A5 G5 | A5 . . . E5 . - - | F5 . A5 . C6 . A5 . | B5 . . A5 G5 . D5 . | E5 . D5 . C5 . . . | - - - - - - - -' } },
+  day: { name:'晴天的海島', bpm:124, swing:0.24, rev:0.14, comp:'bounce', compI:'pluck', compV:0.15, bassPat:[[0, 0], [2, 7], [4, 12], [6, 7]], bassV:0.26, lead:['marimba', 'flute'], leadV:[0.5, 0.36], hi:true,   /* v364 玩家想要更輕快：反拍和弦、跳動的貝斯、拍手、口哨 */
+    drums:{ kick:[[0, 0.5], [4, 0.45], [7, 0.2]], clap:[[2, 0.3], [6, 0.34]], shaker:[[0, 0.1], [1, 0.2], [2, 0.1], [3, 0.2], [4, 0.1], [5, 0.2], [6, 0.1], [7, 0.2]], clave:[[3, 0.1]] },
+    intro:'C Am F G', A:{ ch:'C Am F G C Am G C', mel:'G5 - E5 G5 - E5 G5 A5 | G5 . E5 . C5 . - - | A5 - F5 A5 - F5 A5 C6 | B5 . G5 . D5 . - - | G5 - E5 G5 - E5 G5 A5 | C6 . A5 . E5 . G5 . | D5 D5 G5 . B5 A5 G5 . | C6 . G5 . C6 . - -' },
+    B:{ ch:'F G Em Am F G C C', mel:'A5 . C6 A5 . F5 A5 . | B5 . D6 B5 . G5 - - | G5 . B5 G5 . E5 G5 . | A5 . . . E5 . - - | A5 . C6 A5 . F5 A5 . | B5 . D6 . B5 . G5 . | C6 . . G5 E5 . G5 . | C6 . . . - - - -' } },
   twilight: { name:'海邊的黃昏', bpm:78, swing:0.1, rev:0.24, comp:'arp', compI:'pluck', compV:0.17, arpSteps:[[0, 0], [1, 1], [2, 2], [3, 3], [4, 2], [5, 1], [6, 2], [7, 3]], bassPat:[[0, 0]], bassV:0.21, lead:['flute', 'epiano'], leadV:[0.35, 0.38],
     drums:{ shaker:[[2, 0.1], [6, 0.12]], kick:[[0, 0.28]] },
     intro:'G Em C D', A:{ ch:'G Em C D G Em Am D', mel:'B4 . D5 . G5 . . F#5 | E5 . . . B4 . - - | C5 . E5 . G5 . A5 . | F#5 . . . . . - - | B5 . A5 . G5 . D5 . | E5 . G5 . B5 . . . | A5 . G5 . E5 . C5 . | D5 . . . . . - -' },
@@ -3554,8 +3555,8 @@ const MUS_THEMES = {
     B:{ ch:'Dm Am F C Dm Am F E', mel:'F5 . E5 . D5 . A4 . | C5 . . . E5 . . - | A5 . G5 . F5 . C5 . | E5 . . . . . - - | D5 . F5 . A5 . G5 . | E5 . . . C5 . . - | D5 . C5 . B4 . C5 . | B4 . . . . . - -' } },
   rain: { name:'下雨天', bpm:70, swing:0.05, rev:0.34, comp:'block', compI:'epiano', compV:0.14, bassPat:[[0, 0]], bassV:0.17, lead:['epiano', 'bell'], leadV:[0.41, 0.29], drip:true,
     drums:{}, intro:'Dm Bb F C', A:{ ch:'Dm Bb F C Dm Bb Gm A', mel:'A5 . . . F5 . D5 . | D5 . . . F5 . . - | C6 . . . A5 . F5 . | G5 . . . . . - - | A5 . . . F5 . D5 . | Bb5 . . . A5 . G5 . | G5 . F5 . E5 . D5 . | C#5 . . . E5 . A4 .' } },
-  isle: { name:'我的小島', bpm:84, swing:0.14, rev:0.2, comp:'arp', compI:'epiano', compV:0.12, arpSteps:[[0, 0], [2, 2], [3, 1], [4, 3], [6, 2], [7, 1]], strum2:0.1, bassPat:[[0, 0], [5, 7]], bassV:0.2, lead:['marimba', 'epiano'], leadV:[0.43, 0.41],
-    drums:{ kick:[[0, 0.35], [5, 0.2]], shaker:[[1, 0.14], [3, 0.14], [5, 0.14], [7, 0.14]] },
+  isle: { name:'我的小島', bpm:108, swing:0.22, rev:0.2, comp:'bounce', compI:'epiano', compV:0.12, arpSteps:[[0, 0], [2, 2], [3, 1], [4, 3], [6, 2], [7, 1]], strum2:0.1, bassPat:[[0, 0], [3, 7], [4, 12], [6, 7]], bassV:0.2, lead:['marimba', 'epiano'], leadV:[0.43, 0.41],
+    drums:{ kick:[[0, 0.4], [4, 0.3]], clap:[[2, 0.22], [6, 0.26]], shaker:[[1, 0.16], [3, 0.16], [5, 0.16], [7, 0.16]] },
     intro:'F Dm Bb C', A:{ ch:'F Dm Bb C F Dm Bb C', mel:'C5 . F5 . A5 . G5 F5 | A5 . . . F5 . - - | D5 . F5 . Bb5 . A5 G5 | G5 . . . E5 . - - | C5 . F5 . A5 . C6 . | D6 . C6 . A5 . F5 . | G5 . Bb5 . A5 . G5 . | F5 . . . - - - -' } },
   dive: { name:'海底', bpm:58, swing:0, rev:0.42, comp:'arp', compI:'bell', compV:0.07, arpSteps:[[0, 0], [3, 2], [6, 1]], pad:0.06, bassPat:[[0, 0]], bassV:0.14, lead:['bell', 'flute'], leadV:[0.4, 0.33],
     drums:{}, intro:'F C Dm C', A:{ ch:'F C Dm C F C Dm C', mel:'A5 . . . C6 . . . | G5 . . . E5 . . . | F5 . . . A5 . . . | G5 . . . . . . . | A5 . C6 . E6 . . . | D6 . . . C6 . . . | A5 . . . F5 . G5 . | E5 . . . . . . .' },
@@ -3590,12 +3591,13 @@ function MusicEngine(ctx, out){
       else if (pat === 'U') pool.slice(1).reverse().forEach((m, i) => P(T.compI, m, t + i * 0.011, v * 0.55)); }
     else if (T.comp === 'arp'){ for (const [b, j] of T.arpSteps) if (b === beat) P(T.compI, pool[j] + (T.compI === 'bell' ? 12 : 0), t, v, SPB * 3); if (T.strum2 && (beat === 0 || beat === 4)) pool.slice(0, 3).forEach((m, i) => P('pluck', m, t + i * 0.012, T.strum2)); }
     else if (T.comp === 'block'){ if (beat === 0) pool.slice(0, 3).forEach((m, i) => P(T.compI, m, t + i * 0.02, v, SPB * 7.5)); if (beat === 4) P(T.compI, pool[2] + 12, t, v * 0.6, SPB * 3); }
+    else if (T.comp === 'bounce'){ if (beat % 2 === 1) pool.slice(0, 3).forEach((m, i) => P(T.compI, m + 12, t + i * 0.006, v * (beat === 3 || beat === 7 ? 1.1 : 0.9), SPB * 0.6)); if (beat === 0) P(T.compI, pool[0], t, v * 0.7, SPB); }   /* 反拍的短和弦，聽起來蹦蹦跳跳 */
     else if (T.comp === 'stab'){ if (beat % 2 === 1) pool.slice(0, 3).forEach(m => P(T.compI, m + 12, t, v)); }
     else if (T.comp === 'drive') P(T.compI, pool[[0, 2, 1, 2, 3, 2, 1, 2][beat]] + 12, t, v * (beat % 2 ? 0.75 : 1));
     else if (T.comp === 'boss'){ const r = ch.tones[0] + 12, isMin = ch.tones[1] - ch.tones[0] === 3 || ch.tones[2] - ch.tones[1] === 4; P(T.compI, r + [0, 3, 7, 8, 7, 3, 11, 12][beat] - (isMin ? 0 : 0), t, v * (beat % 2 ? 0.7 : 1)); if (beat === 0) pool.slice(0, 3).forEach(m => P('epiano', m, t, 0.08, SPB * 1.5)); }
     if (T.pad && beat === 0) pad(ch.tones, t, SPB * 8, T.pad);
     if (T.drip && Math.random() < 0.12) P('bell', ch.tones[Math.floor(Math.random() * 3)] + 24, t, 0.05);   /* 雨滴 */
-    if (sec.mel && T.lead){ const li = sec.v ? 1 : 0, ins = T.lead[li]; for (const e of (sec.mel[bar] || [])) if (e.b === beat) P(ins, e.m + (ins === 'flute' && sec.v ? -12 : 0), t, T.leadV[li], e.len * SPB * 0.95); }
+    if (sec.mel && T.lead){ const li = sec.v ? 1 : 0, ins = T.lead[li]; for (const e of (sec.mel[bar] || [])) if (e.b === beat) P(ins, e.m + (ins === 'flute' && sec.v && !T.hi ? -12 : 0), t, T.leadV[li], e.len * SPB * 0.95); }
     if (brk && bar === sec.ch.length - 1 && beat >= 4 && T.lead){ P(T.lead[0], pool[beat - 4] + 12, t, T.leadV[0] * 0.6, SPB); }   /* 間奏最後一小節往上的小過門 */
     beat++; if (beat === 8){ beat = 0; bar++; if (bar >= sec.ch.length){ bar = 0; si++; if (si >= S.L.length) si = 1; } } return SPB; }
   return { set, key: () => key, name: () => S ? S.T.name : '',
