@@ -3913,14 +3913,35 @@ function getMapImage(){
   }
   ctx.putImageData(img, 0, 0); return (mapImg = cv);
 }
+/* v367 共同海圖：玩家可以在自己站的位置做記號（魚很多、釣到稀有魚、有大魚或鯨魚、有寶箱貝殼、風景漂亮），所有人打開地圖都看得到，可以按「帶我去」和「謝謝」。
+   沒有自由打字（兒童也安全），記號 24 小時後消失，每人同時最多 3 個。走到記號附近 40 公尺內，那個位置上面也會浮一個小標籤。 */
+const PIN_K = { school:['🐟', '魚很多'], rare:['✨', '釣到稀有魚'], big:['🐋', '有大魚或鯨魚'], chest:['🎁', '有寶箱或貝殼'], view:['📸', '風景很漂亮'] };
+const SeaPins = { list: [], at: 0, sel: null, lbl: [], busy: false };
+function seaPinsSet(data){ if (!Array.isArray(data)) return; SeaPins.list = data.filter(q => q && PIN_K[q.k] && isFinite(q.x) && isFinite(q.z)); SeaPins.at = Date.now(); if (SeaPins.sel) SeaPins.sel = SeaPins.list.find(q => q.id === SeaPins.sel.id) || null;
+  for (const L of SeaPins.lbl){ L.off = true; L.el.remove(); const i = placeLabels.indexOf(L); if (i >= 0) placeLabels.splice(i, 1); } SeaPins.lbl = [];
+  for (const q of SeaPins.list.slice(0, 40)){ const e = el('div', 'lbl'); e.textContent = `📍${PIN_K[q.k][0]} ${PIN_K[q.k][1]}（${q.mine ? '你' : q.n || '釣客'}）`; labelsEl.appendChild(e); const L = { el: e, p: new THREE.Vector3(q.x, 2.2, q.z), max: 40 }; placeLabels.push(L); SeaPins.lbl.push(L); } }
+function seaPinsCall(fn, args, okMsg){ if (!Cloud.on || !Cloud.sb){ toast('連上線才能用共同海圖'); return Promise.resolve(false); } if (SeaPins.busy) return Promise.resolve(false); SeaPins.busy = true;
+  return Cloud.sb.rpc(fn, args || {}).then(({ data, error }) => { SeaPins.busy = false; if (error){ toast(String(error.message || '現在連不上，等一下再試').slice(0, 60)); return false; } seaPinsSet(data); if (okMsg) toast(okMsg); return true; }, () => { SeaPins.busy = false; toast('現在連不上，等一下再試'); return false; }); }
+function seaPinsLoad(force){ if (!Cloud.on || !Cloud.sb) return Promise.resolve(false); if (!force && Date.now() - SeaPins.at < 60000) return Promise.resolve(true); return seaPinsCall('sea_pins_list'); }
 function renderMap(body){
   body.appendChild(el('p', 'sub', '走到新的地點就會解鎖。點地圖上的地點，或下面的按鈕，就能直接傳送過去。'));
   /* v294 玩家說地圖太亂：還沒去過的只畫「？」小點、標籤不重疊、可以放大拖動、外島放在四邊的小箭頭、上面可以只看釣點／商店／村民 */
-  const MU = renderMap.st || (renderMap.st = { z: 1, ox: 0, oy: 0, show: { spot: true, shop: true, npc: true } });
-  const bar = el('div', 'mapbar'); [['spot', '🎣 釣點'], ['shop', '🏪 商店'], ['npc', '🧑 村民']].forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(MU.show[k])); b.addEventListener('click', () => { MU.show[k] = !MU.show[k]; b.setAttribute('aria-pressed', String(MU.show[k])); draw(); }); bar.appendChild(b); });
+  const MU = renderMap.st || (renderMap.st = { z: 1, ox: 0, oy: 0, show: { spot: true, shop: true, npc: true, pin: true } }); if (MU.show.pin == null) MU.show.pin = true;
+  const bar = el('div', 'mapbar'); [['spot', '🎣 釣點'], ['shop', '🏪 商店'], ['npc', '🧑 村民'], ['pin', '📍 海圖']].forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(MU.show[k])); b.addEventListener('click', () => { MU.show[k] = !MU.show[k]; b.setAttribute('aria-pressed', String(MU.show[k])); draw(); }); bar.appendChild(b); });
   const zin = el('button', 'mapchip mz', '＋'), zout = el('button', 'mapchip mz', '－'), zre = el('button', 'mapchip mz', '⟲'); bar.append(zin, zout, zre); body.appendChild(bar);
   const wrap = el('div', 'mapwrap'); const cv = el('canvas', 'mapcv'); wrap.appendChild(cv); body.appendChild(wrap);
   const tipEl = el('p', 'sub maptip', '用兩根手指放大縮小、一根手指拖動；點釣點可以傳送，點商店圖示會帶路。'); body.appendChild(tipEl);
+  /* 共同海圖：選到的記號、做記號的按鈕 */
+  const pinBar = el('div', 'tplist'); body.appendChild(pinBar);
+  const pinUI = () => { pinBar.innerHTML = ''; const q = SeaPins.sel;
+    if (q){ const K = PIN_K[q.k], h = Math.floor(q.left / 60), info = el('span', 'tpbtn lock', `📍${K[0]} ${K[1]}・${q.mine ? '你' : (q.n || '釣客')}做的記號・還有 ${h >= 1 ? h + ' 小時' : Math.max(1, q.left) + ' 分鐘'}${q.l ? '・👍 ' + q.l : ''}`); info.style.gridColumn = '1 / -1'; pinBar.appendChild(info);
+      const go = el('button', 'tpbtn', '🧭 帶我去'); go.addEventListener('click', () => navTo(`${K[1]}（${q.mine ? '你' : q.n || '釣客'}的記號）`, q.x, q.z)); pinBar.appendChild(go);
+      if (q.mine){ const d = el('button', 'tpbtn', '🗑️ 拿掉這個記號'); d.addEventListener('click', () => seaPinsCall('sea_pin_del', { p_id: q.id }, '記號拿掉了').then(() => { SeaPins.sel = null; pinUI(); draw(); })); pinBar.appendChild(d); }
+      else { const t = el('button', 'tpbtn', q.liked ? '👍 已經謝過了' : '👍 謝謝'); t.disabled = !!q.liked; t.addEventListener('click', () => seaPinsCall('sea_pin_like', { p_id: q.id }, '👍 已經跟他說謝謝了').then(() => { pinUI(); draw(); })); pinBar.appendChild(t); } }
+    const hd = el('span', 'tpbtn lock', Cloud.on ? '📍 在我現在站的地方做記號，給大家看（24 小時後消失，最多 3 個）：' : '📍 共同海圖：連上線才能看到大家做的記號'); hd.style.gridColumn = '1 / -1'; pinBar.appendChild(hd);
+    if (Cloud.on) for (const k of Object.keys(PIN_K)){ const b = el('button', 'tpbtn', `${PIN_K[k][0]} ${PIN_K[k][1]}`); b.addEventListener('click', () => { if (House.on || Dive.on || Sub.on){ toast('在外面才能做記號'); return; }
+        seaPinsCall('sea_pin_add', { p_kind: k, p_x: Math.round(me.pos.x * 10) / 10, p_z: Math.round(me.pos.z * 10) / 10 }, `📍 做好記號了：${PIN_K[k][1]}`).then(ok => { if (ok){ SeaPins.sel = SeaPins.list.find(x => x.mine) || null; pinUI(); draw(); } }); }); pinBar.appendChild(b); } };
+  pinUI(); seaPinsLoad().then(() => { pinUI(); try { draw(); } catch(e){} });
   const dpr = Math.min(2, devicePixelRatio || 1); let S = 480, k = 1; const ctx = cv.getContext('2d'); const font = getComputedStyle(document.body).fontFamily;
   const toB = (x, z) => [(-z + MAP_VIEW) / (MAP_VIEW * 2) * S, (x + MAP_VIEW) / (MAP_VIEW * 2) * S];   /* 上北下南、左西右東（放大前） */
   const toPx = (x, z) => { const [bx, by] = toB(x, z); return [(bx - S / 2) * MU.z + S / 2 + MU.ox, (by - S / 2) * MU.z + S / 2 + MU.oy]; };
@@ -3960,6 +3981,10 @@ function renderMap(body){
     /* 村民 */
     if (MU.show.npc) for (const w of worldSummary()){ const [px, py] = toPx(w.x, w.z); if (!inView(px, py)) continue; ctx.beginPath(); ctx.arc(px, py, 9 * k, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,240,214,.95)'; ctx.fill(); ctx.font = `${Math.round(11 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(w.icon, px, py + 1 * k);
       hits.push({ c: [px, py], tip: `${w.name}：${w.text}` }); mark(px, py, 9 * k); if (MU.z >= 1.6) LQ.push([3, w.name, px, py, 11 * k, { fs: 11 }]); }
+    /* 共同海圖的記號 */
+    if (MU.show.pin) for (const q of SeaPins.list){ const [px, py] = toPx(q.x, q.z); if (!inView(px, py)) continue; const sel = SeaPins.sel && SeaPins.sel.id === q.id, r = (sel ? 12 : 10) * k;
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fillStyle = q.mine ? 'rgba(190,240,200,.96)' : 'rgba(255,236,150,.96)'; ctx.fill(); ctx.lineWidth = (sel ? 3 : 1.5) * k; ctx.strokeStyle = sel ? '#e8604c' : '#18334a'; ctx.stroke();
+      ctx.font = `${Math.round(12 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#18334a'; ctx.fillText(PIN_K[q.k][0], px, py + 1 * k); hits.push({ c: [px, py], pin: q }); mark(px, py, r); }
     /* 窩點 */
     for (const sp of secretSpots.concat(OtherSecret.list.filter(x => secretPower(x) > 0))){ const [sx, sy] = toPx(sp.x, sp.z); if (!inView(sx, sy)) continue; ctx.font = `${Math.round((sp.other ? 12 : 15) * k)}px sans-serif`; ctx.globalAlpha = sp.other ? 0.8 : 1; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🤫', sx, sy); ctx.globalAlpha = 1; }
     { const names = new Set(TRAVEL.filter(t => visited.has(t.id)).map(t => t.label)); for (const R of WORLD_REGIONS){ if (R.edge) continue; const t = short(R.label).replace(/^\S+\s/, ''); if (names.has(t) && MU.show.spot) continue; const [px, py] = toPx(R.x, R.z); if (inView(px, py)) LQ.push([1, short(R.label), px, py, 0, { center: true, fs: 11, bg: 'rgba(255,255,255,.8)', fg: '#18334a' }]); } }
@@ -3983,7 +4008,7 @@ function renderMap(body){
   cv.addEventListener('click', e => { if (moved > 8 * k) return; const [x, y] = loc(e);
     for (const h of hits) if (h.r && x >= h.r[0] && x <= h.r[2] && y >= h.r[1] && y <= h.r[3]){ tipEl.textContent = h.tip; return; }
     let best = null, bd = 18 * k; for (const h of hits) if (h.c){ const d = Math.hypot(h.c[0] - x, h.c[1] - y); if (d < bd){ bd = d; best = h; } }
-    if (!best) return; if (best.tp){ if (visited.has(best.tp.id)) travelTo(best.tp); else { tipEl.textContent = '還沒去過這裡，先走過去一次就能解鎖。'; } } else if (best.nav){ navTo(...best.nav); } else tipEl.textContent = best.tip; });
+    if (!best) return; if (best.pin){ SeaPins.sel = best.pin; pinUI(); draw(); tipEl.textContent = `📍 ${PIN_K[best.pin.k][1]}：${best.pin.mine ? '你' : best.pin.n || '釣客'}做的記號，下面可以按「帶我去」。`; } else if (best.tp){ if (visited.has(best.tp.id)) travelTo(best.tp); else { tipEl.textContent = '還沒去過這裡，先走過去一次就能解鎖。'; } } else if (best.nav){ navTo(...best.nav); } else tipEl.textContent = best.tip; });
   requestAnimationFrame(draw);
   const list = el('div', 'tplist');
   const WS = worldSummary();
@@ -12946,6 +12971,7 @@ function renderTab(){
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。',
+      '📍 共同海圖：打開「地圖」，可以在自己現在站的地方做記號給所有人看（🐟 魚很多、✨ 釣到稀有魚、🐋 有大魚或鯨魚、🎁 有寶箱或貝殼、📸 風景很漂亮）。點地圖上別人的記號，可以按「帶我去」跟著箭頭走過去，也可以按「👍 謝謝」。記號 24 小時後消失，每個人同時最多 3 個、一天最多做 10 個，要釣過 5 條魚才能做。走到記號附近，那個位置上面也會浮出小標籤。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
       '走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。設定 →「👋 陌生人」可以選只看認識的人和好友打的字（13～17 歲預設打開），陌生人說話只會顯示 💬。',
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,
