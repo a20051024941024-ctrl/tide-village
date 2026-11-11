@@ -4878,12 +4878,13 @@ function tortLoad(g, old, col){ new GLTFLoader().loadAsync('models/tortoise.glb'
         float a = uPitch * nk, b = uYaw * nk, ca = cos(a), sa = sin(a), cb = cos(b), sb = sin(b);
         q = vec3(q.x * ca - q.y * sa, q.x * sa + q.y * ca, q.z); q = vec3(q.x * cb + q.z * sb, q.y, -q.x * sb + q.z * cb);
         transformed = pv + q;
+        { float lr = uRet * aLeg; transformed.y = mix(transformed.y, -0.19, lr * 0.88); transformed.z *= 1.0 - 0.32 * lr; transformed.x = mix(transformed.x, transformed.x > 0.0 ? 0.12 : -0.5, lr * 0.45); }   /* 縮頭的時候四隻腳也收進殼底下 */
         transformed.x += sin(uWalk + aPh) * 0.085 * aLeg * uAmp; transformed.y += max(0.0, cos(uWalk + aPh)) * 0.04 * aLeg * uAmp;
         transformed.y += sin(uT * 1.1) * 0.006 * (1.0 - aLeg) * (1.0 - on); }`); };
   m.customProgramCacheKey = () => 'tortoise';
   const S = 1.2, mesh = new THREE.Mesh(geo, m); mesh.scale.setScalar(S); mesh.position.y = 0.458 * S; mesh.rotation.y = -Math.PI / 2; mesh.userData.dyn = true;   /* 模型頭朝 +x，轉成朝 +z（跟角色一樣，rotation.y = atan2(dx, dz)）*/
   const tg = new THREE.Group(); tg.userData.dyn = true; tg.add(mesh); tg.position.copy(old.position); tg.rotation.y = 0.8; g.add(tg); g.remove(old); Far.tortoise = null;
-  Far.tort = { g: tg, U, col, hx: old.position.x, hz: old.position.z, st:'idle', until: 4, tx:0, tz:0, ret:0, amp:0, away:0 };
+  Far.tort = { g: tg, mesh, S, U, col, hx: old.position.x, hz: old.position.z, st:'idle', until: 4, tx:0, tz:0, ret:0, amp:0, away:0 };
 }).catch(() => {}); }
 function tortTick(dt, t){ const T = Far.tort, M = MYST, g = T.g, U = T.U; if (Math.hypot(me.pos.x - M.x, me.pos.z - M.z) > 60) return;
   const wx = M.x + g.position.x, wz = M.z + g.position.z, pd = Math.hypot(me.pos.x - wx, me.pos.z - wz), shy = pd < 2.0 && !Dive.on;
@@ -4897,6 +4898,7 @@ function tortTick(dt, t){ const T = Far.tort, M = MYST, g = T.g, U = T.U; if (Ma
         if (Math.abs(da) < 0.5){ const v = 0.22 * dt; g.position.x += Math.sin(g.rotation.y) * v; g.position.z += Math.cos(g.rotation.y) * v; g.position.y = mystH(M.x + g.position.x, M.z + g.position.z) || M.y; } } } }
   T.amp += ((walking ? 1 : 0) - T.amp) * Math.min(1, dt * 3); if (T.amp > 0.02) U.uWalk.value += dt * 3.4;
   U.uT.value = t; U.uAmp.value = T.amp; U.uRet.value = T.ret; U.uYaw.value = Math.sin(t * 0.37) * 0.45 * (1 - T.amp * 0.6) * (1 - T.ret); U.uPitch.value = (Math.sin(t * 0.23) * 0.12 - 0.04) * (1 - T.ret);
+  T.mesh.position.y = (0.458 - 0.155 * T.ret) * T.S;   /* 腳收起來，殼就趴到地上 */
   if (T.col){ T.col.x = M.x + g.position.x; T.col.z = M.z + g.position.z; T.col.r = 0.95; } }
 function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.position.set(M.x, 0, M.z); scene.add(g); Far.mg = g; const R = M.r; let sd = 23; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   // 黑色火山岩的島：中間隆起一座小火山
