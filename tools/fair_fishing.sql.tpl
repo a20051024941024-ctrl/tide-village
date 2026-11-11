@@ -325,6 +325,7 @@ begin
   where id = pl.id returning * into pl;
   delete from public.casts where uid = pl.id;
   begin perform public._ev_on_catch(pl.id, v_spot, p_fish, w); select * into pl from public.players where id = pl.id; exception when undefined_function then null; end;   -- 111 洄游、懸賞的獎勵
+  if v_spot is distinct from 'shrimp' then begin perform public._rod_note(pl.id, p_fish, w); select * into pl from public.players where id = pl.id; exception when undefined_function then null; end; end if;   -- 145 釣竿的紀念：這支竿子釣過幾條、最大的是哪一條
   return pl;
 end $$;
 

@@ -9451,6 +9451,13 @@ const BUFFS = {
   ebi:    { txt:'稀有魚 ×1.25',       casts:6,  rare:1.25 },
 };
 let buff = LS.get('tide.buff', null);   // { r, left }
+/* v381 釣竿的紀念：每支釣竿記自己釣過幾條、最大的是哪一條（伺服器 145 也記一份，以伺服器為準）。純紀念，不影響釣魚 */
+const ROD_TIERS = [[2000, '傳家寶', '👑'], [500, '老夥伴', '🤝'], [100, '順手', '👍']];
+function rodLog(id){ return (rec.rodLog && rec.rodLog[id]) || null; }
+function rodTier(n){ return ROD_TIERS.find(t => n >= t[0]) || null; }
+function rodMemo(id){ const o = rodLog(id); if (!o || !o.n) return '還沒用這支竿子釣到魚'; const t = rodTier(o.n), fx = o.f && FISH_BY_ID[o.f]; return `${t ? t[2] + ' ' + t[1] + '・' : ''}已釣 ${o.n.toLocaleString()} 條` + (fx ? `・最大：${fx.name} ${fmtKg(o.w)}` : ''); }
+function rodNote(f, w){ if (!rec.rodLog) rec.rodLog = {}; const id = rec.rod, o = rec.rodLog[id] || { n: 0, f: null, w: 0 }, t0 = rodTier(o.n); o.n++; if (w > (o.w || 0)){ o.w = w; o.f = f.id; } rec.rodLog[id] = o; const t1 = rodTier(o.n);
+  if (t1 && t1 !== t0){ const r = RODS.find(x => x.id === id); setTimeout(() => { try { SFX.catch(); } catch(e){} flash(`${t1[2]} ${r ? r.name : '釣竿'}變成「${t1[1]}」了！`, 2.4); toast(`這支竿子已經陪你釣了 ${o.n.toLocaleString()} 條魚`); logMsg('', `${r ? r.name : '釣竿'}已經釣了 ${o.n} 條魚，成為你的「${t1[1]}」`, true); }, 2600); } }
 /* v380 保養釣竿：釣竿不會壞；在釣具店花金幣保養，接下來 30 次拋竿收線快一點、線比較不容易斷。沒保養照常釣（次數存在這台裝置，跟料理的加成分開算、可以疊） */
 const CARE = { casts:30, price:200, reel:1.1, tension:0.9 };
 function careLeft(){ const c = LS.get('tide.care', null); return c && c.left > 0 ? Math.min(CARE.casts, Math.floor(c.left)) : 0; }
@@ -10570,7 +10577,7 @@ function renderShop(body){
       if (rodType(r) !== lastT){ lastT = rodType(r); const T = ROD_TYPES[lastT]; const h = el('div', 'dexhead', `${T.icon} ${T.name}`); h.appendChild(el('small', '', T.fit ? '最適合：' + T.fit.map(id => SPOT_BY_ID[id].label).join('、') : '哪裡都可以用')); body.appendChild(h); ul = el('ul', 'shoplist'); body.appendChild(ul); }
       const owned = rec.rods.includes(r.id), using = rec.rod === r.id, li = el('li', using ? 'on' : '');
       const sw = el('span', 'rodsw'); sw.style.background = r.color; li.appendChild(sw);
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name)); d.appendChild(el('div', 'meta', r.desc)); li.appendChild(d);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name)); d.appendChild(el('div', 'meta', r.desc)); if (owned){ const mm = el('div', 'meta', rodMemo(r.id)); mm.style.color = '#b2783a'; d.appendChild(mm); } li.appendChild(d);
       const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '使用中' : owned ? '換上' : `買 🪙${r.price.toLocaleString()}`);
       b.disabled = using;
       b.addEventListener('click', async () => {
@@ -10644,6 +10651,7 @@ function normRec(r){
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
+  if (r.rodLog && typeof r.rodLog === 'object'){ e.rodLog = {}; for (const k in r.rodLog){ const o = r.rodLog[k]; if (o && Number(o.n) > 0) e.rodLog[k] = { n: Math.floor(Number(o.n)), f: typeof o.f === 'string' ? o.f : null, w: Number(o.w) || 0 }; } }   /* v381 釣竿的紀念 */
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
   if (r.bait && typeof r.bait === 'object') for (const b of BAITS.concat(CHUMS)){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
@@ -10673,7 +10681,7 @@ async function mastAfterCatch(f, pfc, star0){ if (pfc && Cloud.on && Cloud.sb){ 
 function recordCatch(f, w){
   const pfc = F.pfCatch; F.pfCatch = false; const star0 = starsOf(f);
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
-  rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w; seaMemAdd(F.spot && F.spot.id, 1, 'catch');
+  rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w; seaMemAdd(F.spot && F.spot.id, 1, 'catch'); try { if (!(F.spot && F.spot.id === 'shrimp')) rodNote(f, w); } catch(e){}
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
   if (f.rarity === '傳說') rec.legend++;
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
@@ -10928,7 +10936,7 @@ function renderBag(body){
         async () => { const r = await petRpc('pet_out', { p_id: p.out ? null : p.id }); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); } renderTab(); }, p.out); } } } }
   // 釣竿
   { const ul = sec('🎣 釣竿', '點「換上」就會拿在手上'); for (const r of RODS.filter(r => r.price === 0 || (rec.rods || []).includes(r.id))){ const using = rec.rod === r.id;
-      const li = row(ul, '', `${ROD_TYPES[rodType(r)].icon} ${r.name}`, r.desc + `（手感：${(ROD_FEEL[rodType(r)] || ROD_FEEL.cast).name}）`, using ? '使用中' : '換上', using ? null : async () => { if (Cloud.on){ await cloudCall('buy_rod', { p_rod: r.id }); } else { rec.rod = r.id; saveRecLocal(); } me.setRod(rec.rod); updateBobberLook(); pushPresence(true); renderTab(); }, using);
+      const li = row(ul, '', `${ROD_TYPES[rodType(r)].icon} ${r.name}`, r.desc + `（手感：${(ROD_FEEL[rodType(r)] || ROD_FEEL.cast).name}）｜` + rodMemo(r.id), using ? '使用中' : '換上', using ? null : async () => { if (Cloud.on){ await cloudCall('buy_rod', { p_rod: r.id }); } else { rec.rod = r.id; saveRecLocal(); } me.setRod(rec.rod); updateBobberLook(); pushPresence(true); renderTab(); }, using);
       li.firstChild.textContent = ''; const dot = el('span'); dot.style.cssText = `display:inline-block;width:10px;height:34px;border-radius:5px;background:${r.color};transform:rotate(20deg)`; li.firstChild.appendChild(dot); } }
   // 魚餌和窩料
   { const ul = sec('🪱 魚餌', '一次只能掛一種；路亞釣法不用魚餌'); const cur = curBait();
@@ -11712,7 +11720,7 @@ function adoptRow(row){
   Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
-  rec = rowToRec(row); rec.rodSkin = row.rod_skin || null; rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
+  { const keep = rec && rec.rodLog; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; } rec.rodSkin = row.rod_skin || null; rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
   rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island', 'closet', 'museum'].includes(curTab) && !Cloud.ui.busy) renderTab();   /* 衣櫃也照伺服器的結果重畫（伺服器沒有你買過的紀錄時，不會一直顯示穿著） */
@@ -13149,6 +13157,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
       '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
