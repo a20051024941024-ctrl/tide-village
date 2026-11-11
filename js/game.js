@@ -353,7 +353,7 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:24, y:0.32 };
-const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
+const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
 const GARDEN = { x:150 - 24 - 5.75, z:0, hx:6.75, hz:5, px:150 - 24 - 4.5, sx:150 - 24 - 11.3 };   /* px：田的中心；sx：種子攤 */   /* v370 小島西邊的菜園平台 */
 // 海上的釣蝦場、企鵝冰原：在主島西邊的海上（用快速傳送或渡船去）
 const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
@@ -4627,7 +4627,7 @@ function updateFishing(dt, t){
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
-  const seaL = Dive.on ? seaLabel() : null;
+  const pkN = Dive.on ? nearPick() : null, seaL = pkN ? pickLabel(pkN) : Dive.on ? seaLabel() : null;
   if (seaL){ label = seaL[0]; sub = seaL[1]; cls = 'shop'; }
   else if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : l.kind === 'pearl' ? '撿珍珠' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
   else if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
@@ -6573,7 +6573,7 @@ function renderFarm(body){
       body.appendChild(el('p', 'sub', `限定種子只有這週買得到，買起來放背包，之後隨時可以種。${NX ? `下週換：${NX.icon} ${NX.name}` : ''}`)); }
     body.appendChild(el('div', 'dexhead', '🛒 平常的種子')); const ul = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.lim == null && !C.sea)) ul.appendChild(seedLi(C)); body.appendChild(ul);
     body.appendChild(el('div', 'dexhead', '🌊 海底的種子')); { const u2 = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.sea)) u2.appendChild(seedLi(C)); body.appendChild(u2); body.appendChild(el('p', 'sub', '海底的種子要從小島碼頭的潛水梯下去，種在海底花園（要有潛水裝備）。不用澆水，長得比較慢。')); }
-    for (const [ttl, flt] of [['🪸 海底的造景（便宜，可以緊貼著放成一片）', D => D.eco], ['🏺 海底的裝飾', D => !D.eco]]){ body.appendChild(el('div', 'dexhead', ttl)); const u3 = el('ul', 'shoplist'); for (const D of DECOS.filter(flt)){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', D.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', D.name + (decoN(D.id) ? `（有 ${decoN(D.id)} 個）` : ''))); t.appendChild(el('div', 'sub2', `一個 🪙${D.price}`)); li.appendChild(t);
+    for (const [ttl, flt] of [['🪸 海底的造景（便宜，可以緊貼著放成一片）', D => D.eco], ['🏺 海底的裝飾', D => !D.eco && !D.live]]){ body.appendChild(el('div', 'dexhead', ttl)); const u3 = el('ul', 'shoplist'); for (const D of DECOS.filter(flt)){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', D.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', D.name + (decoN(D.id) ? `（有 ${decoN(D.id)} 個）` : ''))); t.appendChild(el('div', 'sub2', `一個 🪙${D.price}`)); li.appendChild(t);
         for (const n of D.eco ? [1, 10] : [1]){ const b = el('button', 'tbtn' + (n === 1 && D.eco ? ' ghost' : ''), D.eco ? `×${n}` : '買'); b.style.marginLeft = '6px'; b.disabled = rec.coins < D.price * n || Farm.busy; b.addEventListener('click', () => decoBuy(D.id, n)); li.appendChild(b); } u3.appendChild(li); } body.appendChild(u3); }
     { const rb = el('button', 'tbtn ghost', '🏆 看本週最美海底排行'); rb.style.cssText = 'display:block;margin:8px auto'; rb.addEventListener('click', () => { Farm.view = 'sea'; seaLikeLoad().then(() => { if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }); renderTab(); }); body.appendChild(rb); }
     body.appendChild(el('p', 'sub', `買了放背包，潛到海底拿在手上，想放哪裡就放哪裡，可以緊貼著排成一片，也可以再收回來。造景和裝飾合起來最多 ${DECO_MAX} 個。住在一起的室友、家人也可以一起來佈置。`));
@@ -6611,6 +6611,9 @@ const DECOS = [
   { id:'coral_p', name:'粉紅珊瑚', icon:'🪸', price:80, eco:true }, { id:'coral_o', name:'橘色珊瑚', icon:'🪸', price:80, eco:true }, { id:'coral_v', name:'紫色珊瑚', icon:'🪸', price:80, eco:true }, { id:'braincoral', name:'腦珊瑚', icon:'🧠', price:100, eco:true },
   { id:'seagrass', name:'海草', icon:'🌱', price:30, eco:true }, { id:'kelpdeco', name:'海帶林', icon:'🌿', price:40, eco:true }, { id:'anemone', name:'海葵', icon:'🌸', price:60, eco:true }, { id:'sponge', name:'海綿', icon:'🧽', price:50, eco:true },
   { id:'starfish', name:'海星', icon:'⭐', price:30, eco:true }, { id:'shell', name:'貝殼', icon:'🐚', price:20, eco:true }, { id:'rock_s', name:'小石頭', icon:'🪨', price:20, eco:true }, { id:'rock_l', name:'大石頭', icon:'🪨', price:50, eco:true }, { id:'sandtile', name:'白沙地', icon:'⚪', price:15, eco:true },
+  /* v387 用手抄網抓回來的小生物：放進海底會自己游來游去（不能用買的） */
+  { id:'c_shrimp', name:'小蝦', icon:'🦐', price:0, live:true, fly:0.25 }, { id:'c_crab', name:'小螃蟹', icon:'🦀', price:0, live:true, fly:0 }, { id:'c_slug', name:'海蛞蝓', icon:'🐌', price:0, live:true, fly:0 },
+  { id:'c_clown', name:'小丑魚寶寶', icon:'🐠', price:0, live:true, fly:0.7 }, { id:'c_seahorse', name:'海馬寶寶', icon:'🌀', price:0, live:true, fly:0.6 }, { id:'c_puffer', name:'小河豚', icon:'🐡', price:0, live:true, fly:0.8 },
 ];
 const DECO_BY = Object.fromEntries(DECOS.map(d => [d.id, d])), DECO_MAX = 300;
 const SeaDeco = { list:[], hand:null, bub:[], mats:{}, t:0 };
@@ -6637,15 +6640,23 @@ function decoMesh(g, k, sd){ const st = decoMat('#8f959c'), M = c => decoMat(c),
   else if (k === 'rock_s'){ const o = add(new THREE.DodecahedronGeometry(0.24, 0), st, 0, 0.12, 0, R(1) * 3, R(2) * 3, 0); o.scale.y = 0.7; }
   else if (k === 'rock_l'){ const o = add(new THREE.DodecahedronGeometry(0.62, 0), st, 0, 0.34, 0, R(1) * 3, R(2) * 3, 0); o.scale.y = 0.75; add(new THREE.DodecahedronGeometry(0.3, 0), st, 0.5, 0.15, 0.25); }
   else if (k === 'sandtile'){ add(new THREE.CylinderGeometry(0.42, 0.44, 0.05, 8), M('#f4ecd6'), 0, 0.03, 0); }
+  else if (k === 'c_shrimp'){ const m = M('#ff9c8a'); for (let n = 0; n < 4; n++) add(new THREE.SphereGeometry(0.05 - n * 0.006, 6, 5), m, 0, 0.08 + Math.sin(n * 0.7) * 0.03, 0.09 - n * 0.06); add(new THREE.ConeGeometry(0.04, 0.07, 4), m, 0, 0.07, -0.14, -Math.PI / 2); for (const d of [-1, 1]) add(new THREE.CylinderGeometry(0.004, 0.004, 0.16, 3), m, d * 0.03, 0.13, 0.17, 1.1, 0, d * 0.3); }
+  else if (k === 'c_crab'){ const m = M('#e2553d'); add(new THREE.SphereGeometry(0.09, 8, 6), m, 0, 0.07, 0).scale.set(1.3, 0.55, 1); for (const d of [-1, 1]){ add(new THREE.SphereGeometry(0.04, 6, 5), m, d * 0.13, 0.08, 0.07); for (let n = 0; n < 3; n++) add(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 3), m, d * 0.13, 0.04, -0.04 + n * 0.035, 0, 0, d * 1.0); add(new THREE.SphereGeometry(0.014, 5, 4), M('#1a1a1a'), d * 0.03, 0.13, 0.06); } }
+  else if (k === 'c_slug'){ add(new THREE.SphereGeometry(0.07, 8, 6), M('#7a5bd6'), 0, 0.05, 0).scale.set(0.8, 0.6, 2.0); for (let n = 0; n < 4; n++) add(new THREE.SphereGeometry(0.02, 5, 4), M('#ffd84a'), 0, 0.09, -0.08 + n * 0.05); for (const d of [-1, 1]) add(new THREE.ConeGeometry(0.012, 0.06, 4), M('#ffd84a'), d * 0.025, 0.1, 0.11); }
+  else if (k === 'c_clown'){ add(new THREE.SphereGeometry(0.07, 8, 6), M('#ff7a1f'), 0, 0.08, 0).scale.set(0.6, 0.9, 1.5); for (const z of [-0.04, 0.045]) add(new THREE.CylinderGeometry(0.047, 0.047, 0.018, 8), M('#ffffff'), 0, 0.08, z, Math.PI / 2).scale.set(0.62, 1, 0.92); add(new THREE.ConeGeometry(0.045, 0.07, 4), M('#ff7a1f'), 0, 0.08, -0.13, Math.PI / 2).scale.x = 0.3; for (const d of [-1, 1]) add(new THREE.SphereGeometry(0.011, 5, 4), M('#1a1a1a'), d * 0.03, 0.095, 0.075); }
+  else if (k === 'c_seahorse'){ const m = M('#f2c230'); add(new THREE.SphereGeometry(0.04, 7, 5), m, 0, 0.26, 0.01); add(new THREE.ConeGeometry(0.014, 0.07, 4), m, 0, 0.25, 0.06, Math.PI / 2); for (let n = 0; n < 5; n++) add(new THREE.SphereGeometry(0.036 - n * 0.005, 6, 5), m, 0, 0.2 - n * 0.04, -0.01 + Math.sin(n * 0.9) * 0.03); add(new THREE.TorusGeometry(0.03, 0.01, 4, 8, Math.PI * 1.4), m, 0, 0.03, 0.02, 0, Math.PI / 2); }
+  else if (k === 'c_puffer'){ const m = M('#f0d36a'); add(new THREE.SphereGeometry(0.085, 9, 7), m, 0, 0.1, 0); for (let n = 0; n < 10; n++){ const a = n * 2.4, b = 0.4 + (n % 3) * 0.5; add(new THREE.ConeGeometry(0.012, 0.035, 4), m, Math.cos(a) * Math.sin(b) * 0.09, 0.1 + Math.cos(b) * 0.09, Math.sin(a) * Math.sin(b) * 0.09, Math.sin(a) * b, 0, -Math.cos(a) * b); } for (const d of [-1, 1]) add(new THREE.SphereGeometry(0.014, 5, 4), M('#1a1a1a'), d * 0.045, 0.125, 0.065); add(new THREE.ConeGeometry(0.03, 0.05, 4), m, 0, 0.1, -0.11, Math.PI / 2).scale.x = 0.3; }
 }
 /* 300 個裝飾如果一個一個畫，手機會很卡：把同一種材質的全部合併成一塊再畫 */
 function decoBuild(g){ SeaDeco.bub = []; const by = new Map(), tmp = new THREE.Group();
-  for (const d of SeaDeco.list){ if (!DECO_BY[d.k]) continue; const x = DIVE.x + d.x, z = DIVE.z + d.z, y = diveBed(x, z), o = new THREE.Group(), inner = new THREE.Group(); decoMesh(inner, d.k, Math.round(d.x * 31 + d.z * 17)); o.add(inner); o.position.set(x, y, z); o.rotation.y = d.r || 0; tmp.add(o); if (d.k === 'bubble') SeaDeco.bub.push([x, y + 0.7, z]); }
+  SeaDeco.live = [];
+  for (const d of SeaDeco.list){ if (!DECO_BY[d.k]) continue; const x = DIVE.x + d.x, z = DIVE.z + d.z, y = diveBed(x, z); if (DECO_BY[d.k].live){ SeaDeco.live.push(critMake(g, d.k, x, z, 1.2, Math.round(d.x * 31 + d.z * 17))); continue; }
+    const o = new THREE.Group(), inner = new THREE.Group(); decoMesh(inner, d.k, Math.round(d.x * 31 + d.z * 17)); o.add(inner); o.position.set(x, y, z); o.rotation.y = d.r || 0; tmp.add(o); if (d.k === 'bubble') SeaDeco.bub.push([x, y + 0.7, z]); }
   tmp.updateMatrixWorld(true);
   tmp.traverse(o => { if (!o.isMesh) return; let ge = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(ge.attributes)) if (k !== 'position' && k !== 'normal') ge.deleteAttribute(k); ge.applyMatrix4(o.matrixWorld); o.geometry.dispose(); const a = by.get(o.material) || []; a.push(ge); by.set(o.material, a); });
   for (const [m, geos] of by){ let mg = null; try { mg = geos.length === 1 ? geos[0] : mergeGeometries(geos, false); } catch(e){} if (!mg) continue; if (geos.length > 1) geos.forEach(x => x.dispose()); const mesh = new THREE.Mesh(mg, m); mesh.frustumCulled = false; mesh.userData.keepMat = true; g.add(mesh); }
   if (SeaDeco.bub.length){ const n = SeaDeco.bub.length * 8, geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3)); const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color:'#e6f7ff', size:0.11, transparent:true, opacity:0.8, depthWrite:false })); pts.frustumCulled = false; g.add(pts); SeaDeco.pts = pts; } else SeaDeco.pts = null; }
-function decoTick(){ const P = SeaDeco.pts; if (!P || !P.parent) return; const A = P.geometry.attributes.position, t = performance.now() / 1000; let n = 0; for (const [x, y, z] of SeaDeco.bub) for (let k = 0; k < 8; k++){ const u = (t * 0.35 + k / 8) % 1; A.setXYZ(n++, x + Math.sin(t * 2 + k * 1.7) * 0.12 * u, y + u * 5, z + Math.cos(t * 1.6 + k * 2.3) * 0.12 * u); } A.needsUpdate = true; }
+function decoTick(){ if (SeaDeco.live && SeaDeco.live.length) critTick(SeaDeco.live); const P = SeaDeco.pts; if (!P || !P.parent) return; const A = P.geometry.attributes.position, t = performance.now() / 1000; let n = 0; for (const [x, y, z] of SeaDeco.bub) for (let k = 0; k < 8; k++){ const u = (t * 0.35 + k / 8) % 1; A.setXYZ(n++, x + Math.sin(t * 2 + k * 1.7) * 0.12 * u, y + u * 5, z + Math.cos(t * 1.6 + k * 2.3) * 0.12 * u); } A.needsUpdate = true; }
 function seaCanEdit(){ return !!onIsle && canEditIsle(onIsle.owner); }   /* 島主和住在一起的人（室友、家人）都可以佈置 */
 function nearDeco(){ if (!Dive.on || Dive.site !== 'isle' || !seaCanEdit()) return null; let best = null, bd = 1.0; for (const d of SeaDeco.list){ const x = DIVE.x + d.x, z = DIVE.z + d.z, dd = Math.hypot(me.pos.x - x, me.pos.z - z); if (dd < bd && me.baseY - diveBed(x, z) < 3.2){ bd = dd; best = d; } } return best; }
 /* 放的位置：你面前一點點，對齊半公尺的格子（這樣可以整整齊齊排成一片） */
@@ -6665,6 +6676,40 @@ async function decoTake(d){ const D = DECO_BY[d.k]; if (!D || Farm.busy) return;
     if (!await farmRpc('sea_deco_take', { p_id: d.id })) return; SeaDeco.list = SeaDeco.list.filter(x => x !== d); }
   else { SeaDeco.list = SeaDeco.list.filter(x => x !== d); rec.bait['deco_' + d.k] = decoN(d.k) + 1; saveRecLocal(); farmLocalSave(); }
   seaBuild(); try { SFX.click(); } catch(e){} toast(`${D.icon} ${D.name}收回背包了`); }
+/* v387 會動的小生物（自己海底的住戶、公共潛水點可以抓的）：在「家」附近慢慢繞，螃蟹、海蛞蝓貼著海底，其他的浮在水裡 */
+function critMake(parent, k, x, z, scale, seed){ const g = new THREE.Group(), inner = new THREE.Group(); decoMesh(inner, k, seed); inner.scale.setScalar(scale * 1.6); g.add(inner); parent.add(g); const c = { g, k, hx: x, hz: z, ph: (seed % 100) / 7, r: 0.5 + (Math.abs(seed) % 5) * 0.12, fly: DECO_BY[k].fly || 0, flee: 0 }; g.position.set(x, diveBed(x, z) + c.fly, z); return c; }
+function critTick(list){ const t = performance.now() / 1000; for (const c of list){ const sp = c.fly ? 0.35 : 0.16, a = t * sp + c.ph, x = c.hx + Math.cos(a) * c.r, z = c.hz + Math.sin(a * 1.3) * c.r, dx = -Math.sin(a) * c.r, dz = Math.cos(a * 1.3) * 1.3 * c.r; c.g.position.set(x, diveBed(x, z) + c.fly + (c.fly ? Math.sin(t * 1.7 + c.ph) * 0.08 : 0), z); c.g.rotation.y = Math.atan2(dx, dz); } }
+/* v387 潛水的新玩法：公共潛水點的海底有垃圾（撿了 💙+1）、造景材料（撿回去擺在自己的海底）、小生物（用手抄網抓，放進自己的海底）。
+   每天輪一種「潛水委託」。一天能撿的數量由伺服器算（149）。 */
+const PICK_MATS = ['shell', 'starfish', 'rock_s', 'seagrass', 'coral_p', 'coral_o', 'coral_v', 'sponge', 'anemone'], PICK_CRITS = ['c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer'];
+const DPICK = { list:[], cap:{ trash:20, mat:15, crit:10 }, busy:false };
+const DQUEST = [['trash', 5, '撿 5 個海底垃圾'], ['mat', 4, '撿 4 個海底的造景材料'], ['crit', 2, '用手抄網抓 2 隻小生物']];
+function dvDay(){ return new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); }
+function dvState(){ const d = rec.dv && rec.dv.day === dvDay() ? rec.dv : { day: dvDay(), trash:0, mat:0, crit:0, q: rec.dv && rec.dv.q }; rec.dv = d; return d; }
+function dvQuest(){ const n = Math.floor((Date.now() + 8 * 3600000) / 86400000) - Math.floor(Date.UTC(2026, 0, 1) / 86400000), q = DQUEST[((n % 3) + 3) % 3], d = dvState(); return { kind: q[0], need: q[1], txt: q[2], have: Math.min(q[1], d[q[0]] || 0), done: d.q === dvDay() }; }
+function divePickSpawn(){ DPICK.list = []; if (!Dive.group || Dive.site === 'isle') return; const g = new THREE.Group(); Dive.group.add(g); let sd = 0; for (const ch of String(Dive.site) + dvDay()) sd = (sd * 31 + ch.charCodeAt(0)) % 100000; const rnd = () => { sd = (sd * 9301 + 49297) % 233280; return sd / 233280; };
+  const spot = () => { for (let k = 0; k < 12; k++){ const a = rnd() * Math.PI * 2, r = 5 + rnd() * (DIVE.r * 0.62), x = DIVE.x + Math.cos(a) * r, z = DIVE.z + Math.sin(a) * r; if (!(Dive.rocks || []).some(q => Math.hypot(x - q[0], z - q[1]) < q[2] + 0.6)) return [x, z]; } return [DIVE.x + 6, DIVE.z + 6]; };
+  const tm = [decoMat('#9fd3c7'), decoMat('#c9ccd2'), decoMat('#e8e8e8')];
+  for (let i = 0; i < 5; i++){ const [x, z] = spot(), o = new THREE.Group(), t = i % 3; if (t === 0){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 8), tm[0]); b.rotation.z = 1.4; b.position.y = 0.09; o.add(b); const nk = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.1, 6), tm[0]); nk.rotation.z = 1.4; nk.position.set(-0.2, 0.12, 0); o.add(nk); } else if (t === 1){ const c = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.2, 10), tm[1]); c.rotation.x = 1.3; c.position.y = 0.09; o.add(c); } else { const b = new THREE.Mesh(new THREE.SphereGeometry(0.2, 7, 5), tm[2]); b.scale.set(1, 0.45, 0.8); b.position.y = 0.1; o.add(b); }
+    o.position.set(x, diveBed(x, z), z); o.rotation.y = rnd() * 6; g.add(o); DPICK.list.push({ kind:'trash', x, z, o }); }
+  for (let i = 0; i < 5; i++){ const [x, z] = spot(), k = PICK_MATS[Math.floor(rnd() * PICK_MATS.length)], o = new THREE.Group(); decoMesh(o, k, i * 7 + 3); o.position.set(x, diveBed(x, z), z); g.add(o); DPICK.list.push({ kind:'mat', item: k, x, z, o }); }
+  for (let i = 0; i < 4; i++){ const [x, z] = spot(), k = PICK_CRITS[Math.floor(rnd() * PICK_CRITS.length)], c = critMake(g, k, x, z, 1.3, i * 13 + 5); DPICK.list.push({ kind:'crit', item: k, x, z, o: c.g, c }); }
+  for (const p of DPICK.list){ const sp = farmSprite(p.kind === 'trash' ? '🗑️' : p.kind === 'crit' ? DECO_BY[p.item].icon : '✨'); sp.scale.set(0.45, 0.45, 1); sp.position.set(0, p.kind === 'crit' ? 0.7 : 0.9, 0); p.o.add(sp); p.sp = sp; }
+  const q = dvQuest(); setTimeout(() => { if (Dive.on) toast(q.done ? '📋 今天的潛水委託已經完成了' : `📋 今天的潛水委託：${q.txt}（${q.have}／${q.need}），完成有 🪙300、💙2`); }, 2600); }
+function divePickTick(){ if (!DPICK.list.length || Dive.site === 'isle') return; const cs = []; for (const p of DPICK.list) if (p.c && !p.gone) cs.push(p.c); if (cs.length) critTick(cs); for (const p of DPICK.list) if (p.c){ p.x = p.c.g.position.x; p.z = p.c.g.position.z; } }
+function nearPick(){ if (!Dive.on || Dive.site === 'isle' || !DPICK.list.length) return null; let best = null, bd = 1.5; for (const p of DPICK.list){ if (p.gone) continue; const d = Math.hypot(me.pos.x - p.x, me.pos.z - p.z); if (d < bd && me.baseY - diveBed(p.x, p.z) < 2.8){ bd = d; best = p; } } return best; }
+function pickLabel(p){ return p.kind === 'trash' ? ['撿起來', '🗑️ 海底垃圾・💙+1'] : p.kind === 'mat' ? ['撿起來', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・帶回去擺`] : ['抓！', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・用手抄網`]; }
+async function pickDo(p){ if (DPICK.busy || p.gone) return; const d = dvState(); if ((d[p.kind] || 0) >= DPICK.cap[p.kind]){ toast(p.kind === 'crit' ? '今天抓夠多了，明天再來（一天最多 10 隻）' : p.kind === 'mat' ? '今天撿夠多了，明天再來（一天最多 15 個）' : '今天撿夠多了，明天再來（一天最多 20 個）'); return; }
+  if (p.kind === 'crit' && Math.random() < 0.35){ p.c.hx += (Math.random() - 0.5) * 6; p.c.hz += (Math.random() - 0.5) * 6; p.c.ph += 2; try { SFX.fail(); } catch(e){} flash('💨 溜走了！再靠近一次', 1.1); buzz(30); return; }
+  DPICK.busy = true; let ok = true;
+  if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('dive_pick', { p_kind: p.kind, p_item: p.item || null }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ ok = false; toast(cloudErrMsg(e)); } }
+  else { if (p.kind === 'trash'){ rec.love = (rec.love || 0) + 1; } else rec.bait['deco_' + p.item] = decoN(p.item) + 1; }
+  DPICK.busy = false; if (!ok) return; const d2 = dvState(); d2[p.kind] = (d2[p.kind] || 0) + 1; saveRecLocal(); p.gone = true; if (p.o.parent) p.o.parent.remove(p.o);
+  try { p.kind === 'trash' ? SFX.click() : SFX.catch(); } catch(e){} buzz(25); flash(p.kind === 'trash' ? '🗑️ 撿起來了　💙+1' : `${DECO_BY[p.item].icon} ${p.kind === 'crit' ? '抓到' : '撿到'}${DECO_BY[p.item].name}！`, 1.2);
+  if (p.kind !== 'trash' && d2[p.kind] === 1) toast(p.kind === 'crit' ? '小生物放在背包裡。回自己小島的海底，拿出來放下，牠會在那裡游來游去' : '造景材料放在背包裡。回自己小島的海底就可以拿出來擺');
+  const q = dvQuest(); if (!q.done && q.kind === p.kind){ if (q.have >= q.need) dvClaim(); else toast(`📋 潛水委託 ${q.have}／${q.need}`); } }
+async function dvClaim(){ const d = dvState(); if (d.q === dvDay()) return; if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('dive_quest_claim'); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ if (/領過/.test(String(e && e.message))) { dvState().q = dvDay(); saveRecLocal(); } return; } } else { addCoins(300); rec.love = (rec.love || 0) + 2; }
+  dvState().q = dvDay(); saveRecLocal(); try { SFX.catch(); } catch(e){} setTimeout(() => { flash('📋 潛水委託完成！🪙+300　💙+2', 2.2); }, 1300); }
 /* v386 海底花園按讚、本週最美海底：去別人的島潛下去可以按讚（一週一次），排行每週一重算（伺服器 148） */
 const SeaLike = { n:0, liked:false, pieces:0, owner:null, top:null, last:null, at:0, busy:false };
 async function seaLikeLoad(){ if (!onIsle || !farmOnline()){ SeaLike.owner = null; return; } const own = onIsle.owner; try { const { data, error } = await Cloud.sb.rpc('sea_like_info', { p_owner: own }); if (error) throw error; if (data && onIsle && onIsle.owner === own){ SeaLike.owner = own; SeaLike.n = Number(data.n) || 0; SeaLike.liked = !!data.liked; SeaLike.pieces = Number(data.pieces) || 0; } } catch(e){ SeaLike.owner = null; } }
@@ -9266,7 +9311,7 @@ function startDive(site, back){
   if (Dive.boat){ Dive.back = { x: myBoat.m.position.x, z: myBoat.m.position.z }; myBoat = null; me.sitting = false; } else if (myBoat) leaveFerry(true);
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.plop();
   setTimeout(() => {
-    buildDive(); try { diveExtras(); } catch(e){ console.warn('diveExtras', e); } { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; if (Evt.chip) Evt.chip.hidden = true; }   /* v283：潛水的時候主畫面的迴圈不跑，羅盤不會自己藏，進去前先藏 */ diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
+    buildDive(); try { diveExtras(); } catch(e){ console.warn('diveExtras', e); } try { divePickSpawn(); } catch(e){ console.warn('divePick', e); } { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; if (Evt.chip) Evt.chip.hidden = true; }   /* v283：潛水的時候主畫面的迴圈不跑，羅盤不會自己藏，進去前先藏 */ diveHideWorld(true); Dive.on = true; Dive.o2max = diveO2(); Dive.o2 = Dive.o2max; Dive.warned = 0; Dive.seen = new Set(); Dive.startAt = now();
     me.pos.x = DIVE.x - 4; me.pos.z = DIVE.z + DIVE.r * 0.45; me.baseY = DIVE.y + DIVE.top - 2.5; Jump.gy = me.baseY; Jump.air = 0; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.35; Dive.savedDist = cam.dist; cam.dist = 5.5;
     me.setSwim(true); renderDiveHud(); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 120);
     flash(`${DIVE_SITES[site].icon} ${DIVE_SITES[site].name}・氧氣 ${Dive.o2max} 秒`, 1.6);
@@ -9306,6 +9351,7 @@ function diveFacing(){
 const tmpV2 = new THREE.Vector3();
 function diveNearLoot(){ let best = null, bd = 1.8; for (const l of Dive.loot){ if (l.got) continue; const d = Math.hypot(me.pos.x - l.x, me.pos.z - l.z, (me.baseY - l.y) * 0.6); if (d < bd){ bd = d; best = l; } } return best; }
 function diveAction(){
+  { const pk = nearPick(); if (pk){ pickDo(pk); return; } }
   try { if (seaAct()) return; } catch(e){ console.warn('sea', e); }
   const l = diveNearLoot(); if (l){ grabLoot(l); return; }
   const t = diveFacing(); if (t){ divePhoto(t.f); return; }
@@ -9351,6 +9397,7 @@ function updateDive(dt, t){
   // 魚群、單獨的魚：海洋生態 AI（faiDiveUpdate）；出錯的話用原本繞圈圈的游法
   try { diveExtrasUpdate(dt, t); } catch(e){}
   try { seaTick(); } catch(e){}
+  try { divePickTick(); } catch(e){}
   if (Dive.aiOn){ try { faiDiveUpdate(dt, t); } catch(e){ console.warn('fishAI dive', e); Dive.aiOn = false; } }
   if (!Dive.aiOn){
   // 魚群
@@ -10752,6 +10799,7 @@ function normRec(r){
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
+  if (r.dv && typeof r.dv === 'object') e.dv = { day: String(r.dv.day || ''), trash: Number(r.dv.trash) || 0, mat: Number(r.dv.mat) || 0, crit: Number(r.dv.crit) || 0, q: r.dv.q || null };
   if (r.rodLog && typeof r.rodLog === 'object'){ e.rodLog = {}; for (const k in r.rodLog){ const o = r.rodLog[k]; if (o && Number(o.n) > 0) e.rodLog[k] = { n: Math.floor(Number(o.n)), f: typeof o.f === 'string' ? o.f : null, w: Number(o.w) || 0 }; } }   /* v381 釣竿的紀念 */
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
@@ -11828,7 +11876,7 @@ function adoptRow(row){
   Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
-  { const keep = rec && rec.rodLog; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; } rec.rodSkin = row.rod_skin || null; rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
+  { const keep = rec && rec.rodLog, keepDv = rec && rec.dv; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; if ('dive_trash' in row) rec.dv = { day: row.dive_day || '', trash: row.dive_trash || 0, mat: row.dive_mat || 0, crit: row.dive_crit || 0, q: row.dive_q_done || null }; else if (keepDv) rec.dv = keepDv; } rec.rodSkin = row.rod_skin || null; rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
   rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island', 'closet', 'museum'].includes(curTab) && !Cloud.ui.busy) renderTab();   /* 衣櫃也照伺服器的結果重畫（伺服器沒有你買過的紀錄時，不會一直顯示穿著） */
@@ -13265,6 +13313,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，用手抄網抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
       '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',
