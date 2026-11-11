@@ -6365,7 +6365,14 @@ const CROPS = [
   { id:'pumpkin', name:'南瓜', icon:'🎃', seed:120, sell:420, hrs:24, col:'#ef8a1f' },
 ];
 const CROP_BY = Object.fromEntries(CROPS.map(c => [c.id, c]));
-const Farm = { g:null, owner:null, n:4, plots:{}, off:0, busy:false, sel:-1, vis:[], spr:{} };
+const Farm = { g:null, owner:null, n:4, plots:{}, off:0, busy:false, sel:-1, vis:[], spr:{}, hand:null };
+function seedN(id){ return (rec.bait && rec.bait['seed_' + id]) || 0; }
+function seedHand(){ return Farm.hand && CROP_BY[Farm.hand] && seedN(Farm.hand) > 0 ? CROP_BY[Farm.hand] : null; }
+/* v371 玩家建議：種子先買起來放背包，再從背包拿在手上，走到田邊一顆一顆種 */
+function seedHold(id){ Farm.hand = id && seedN(id) > 0 ? id : null; seedChip(); if (Farm.hand){ const C = CROP_BY[id]; toast(`${C.icon} 把${C.name}種子拿在手上了，走到空的田旁邊按「種下」`); } }
+function seedChip(){ let c = $('#seedHand'); const C = onIsle ? seedHand() : null; if (!C){ if (c) c.hidden = true; return; }
+  if (!c){ c = el('button'); c.id = 'seedHand'; c.style.cssText = 'position:fixed;right:max(16px,env(safe-area-inset-right));bottom:204px;z-index:20;padding:8px 14px;border-radius:999px;border:2px solid #fff;background:#fff6d8;color:#3d2f14;font:bold 16px sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.25)'; c.addEventListener('click', () => { Farm.hand = null; seedChip(); toast('把種子收回背包了'); }); document.body.appendChild(c); }
+  const k = C.id + seedN(C.id); if (c.dataset.k !== k){ c.dataset.k = k; c.textContent = `${C.icon} ×${seedN(C.id)}　✕`; } c.hidden = false; }
 function farmPos(i){ return [GARDEN.x - 3.6 + (i % 4) * 2.4, GARDEN.z - 3 + Math.floor(i / 4) * 3]; }
 function farmNow(){ return Date.now() + Farm.off; }
 function farmRipeAt(p){ return p.t + CROP_BY[p.c].hrs * 3600000 * (1 - 0.12 * Math.min(3, p.w || 0)); }
@@ -6412,7 +6419,7 @@ function farmBuild(){
   }
   g.traverse(o => { if (o.isMesh){ o.userData.dyn = true; o.castShadow = false; } });
 }
-function farmTick(){ if (frameNo % 90 !== 7 || !onIsle || !Farm.g) return; if (Farm.owner !== onIsle.owner){ farmLoad(); return; }
+function farmTick(){ if (frameNo % 30 === 11) seedChip(); if (frameNo % 90 !== 7 || !onIsle || !Farm.g) return; if (Farm.owner !== onIsle.owner){ farmLoad(); return; }
   for (let i = 0; i < 12; i++){ const p = Farm.plots[i], wet = p && farmWetLeft(p) > 0, k = (i >= Farm.n ? 'L' : p ? p.c + farmStage(p) : '-') + (wet ? 'w' : ''); if (k !== Farm.vis[i]){ farmBuild(); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); return; } } }
 function farmAdopt(d){ if (!d || !onIsle || (d.owner && d.owner !== onIsle.owner)) return; Farm.owner = onIsle.owner; Farm.n = Math.max(4, Math.min(12, Number(d.n) || 4)); Farm.off = d.now ? Number(d.now) - Date.now() : 0; Farm.plots = {};
   for (const r of d.plots || []) if (CROP_BY[r.c] && r.s >= 0 && r.s < 12) Farm.plots[r.s] = { c: r.c, t: Number(r.t), w: Number(r.w) || 0, wa: r.wa ? Number(r.wa) : 0 };
@@ -6424,17 +6431,20 @@ async function farmLoad(){ if (!onIsle) return; const own = onIsle.owner; Farm.o
   try { const { data, error } = await Cloud.sb.rpc('farm_get', { p_owner: own }); if (error) throw error; if (onIsle && onIsle.owner === own) farmAdopt(data); } catch(e){ console.warn('farm_get', e && e.message); } }
 async function farmRpc(fn, args){ if (Farm.busy) return false; Farm.busy = true; let ok = false;
   try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; adoptRow(data); ok = true; } catch(e){ toast(cloudErrMsg(e)); }
-  Farm.busy = false; await farmLoad(); return ok; }
+  Farm.busy = false; if (onIsle) await farmLoad(); return ok; }
 function nearFarm(){ if (!onIsle || !Farm.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return null; if (Math.abs(me.pos.x - GARDEN.x) > GARDEN.hx + 1 || Math.abs(me.pos.z - GARDEN.z) > GARDEN.hz + 1) return null;
   let best = -1, bd = 1.55; for (let i = 0; i < 12; i++){ const [x, z] = farmPos(i), d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd){ bd = d; best = i; } } if (best < 0) return null;
   const p = Farm.plots[best], mine = farmMine(); if (!mine && (!p || best >= Farm.n || farmProg(p) >= 1)) return null; return { i: best, p, locked: best >= Farm.n, mine }; }
-function farmBtn(fp){ const p = fp.p; if (fp.locked) return ['開墾', `🪙${Farm.n < 8 ? 2000 : 5000}・多 4 格`]; if (!p) return ['播種', '🌱 選一種種子'];
+function farmBtn(fp){ const p = fp.p; if (fp.locked) return ['開墾', `🪙${Farm.n < 8 ? 2000 : 5000}・多 4 格`]; if (!p){ const H = seedHand(); return H ? ['種下', `${H.icon} ${H.name} ×${seedN(H.id)}`] : ['播種', '🎒 從背包拿種子']; }
   const C = CROP_BY[p.c]; if (farmProg(p) >= 1) return ['收成', `${C.icon} ${C.name}${(p.w || 0) >= 2 ? '・豐收！' : ''}`];
   const left = farmLeftStr(farmRipeAt(p) - farmNow()); if ((p.w || 0) < 3 && !farmWetLeft(p)) return ['澆水', `${C.icon} 還要 ${left}`]; return ['看菜園', `${C.icon} 還要 ${left}`]; }
-function farmAct(fp){ const p = fp.p; if (fp.locked || !p){ Farm.sel = fp.locked ? -1 : fp.i; openSheet('farm'); return; } if (farmProg(p) >= 1){ farmHarvest(fp.i); return; } if ((p.w || 0) < 3 && !farmWetLeft(p)){ farmWater(fp.i); return; } Farm.sel = -1; openSheet('farm'); }
-async function farmSow(i, id){ const C = CROP_BY[id]; if (!C || !farmMine() || Farm.plots[i] || i >= Farm.n) return; if (rec.coins < C.seed){ toast('金幣不夠買種子'); return; }
-  if (farmOnline()){ if (!await farmRpc('farm_plant', { p_slot: i, p_crop: id })) return; } else { addCoins(-C.seed); Farm.plots[i] = { c: id, t: Date.now(), w: 0, wa: 0 }; farmLocalSave(); farmBuild(); }
-  try { SFX.coin(); } catch(e){} toast(`🌱 種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟。記得來澆水，會長得比較快`); Farm.sel = -1; if (curTab === 'farm') renderTab(); }
+function farmAct(fp){ const p = fp.p; if (!fp.locked && !p && seedHand()){ farmSow(fp.i, Farm.hand); return; } if (fp.locked || !p){ Farm.sel = -1; openSheet('farm'); return; } if (farmProg(p) >= 1){ farmHarvest(fp.i); return; } if ((p.w || 0) < 3 && !farmWetLeft(p)){ farmWater(fp.i); return; } Farm.sel = -1; openSheet('farm'); }
+async function farmSow(i, id){ const C = CROP_BY[id]; if (!C || !farmMine() || Farm.plots[i] || i >= Farm.n || Farm.busy) return; if (seedN(id) < 1){ toast('背包裡沒有這種種子'); return; }
+  if (farmOnline()){ if (!await farmRpc('farm_plant', { p_slot: i, p_crop: id })) return; } else { rec.bait['seed_' + id] = seedN(id) - 1; if (!rec.bait['seed_' + id]) delete rec.bait['seed_' + id]; saveRecLocal(); Farm.plots[i] = { c: id, t: Date.now(), w: 0, wa: 0 }; farmLocalSave(); farmBuild(); }
+  try { SFX.click(); } catch(e){} const left = seedN(id); if (!left) Farm.hand = null; seedChip(); toast(`🌱 種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟` + (left ? `（還有 ${left} 顆）` : '。種子用完了')); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+async function farmBuySeed(id, n){ const C = CROP_BY[id]; if (!C || Farm.busy) return; if (rec.coins < C.seed * n){ toast('金幣不夠買種子'); return; } if (seedN(id) + n > 999){ toast('種子帶太多了'); return; }
+  if (Cloud.on && Cloud.sb){ if (!await farmRpc('farm_buy_seed', { p_crop: id, p_n: n })) return; } else { addCoins(-C.seed * n); rec.bait['seed_' + id] = seedN(id) + n; saveRecLocal(); }
+  try { SFX.coin(); } catch(e){} if (!seedHand()) Farm.hand = id; seedChip(); if (!$('#sheet').hidden) renderTab(); }
 async function farmWater(i){ const p = Farm.plots[i]; if (!p || !onIsle) return; if ((p.w || 0) >= 3){ toast('水已經夠了'); return; } if (farmWetLeft(p)){ toast(`剛澆過水，再等 ${farmLeftStr(farmWetLeft(p))}`); return; }
   const mine = farmMine(), c0 = rec.coins;
   if (farmOnline()){ if (!await farmRpc('farm_water', { p_owner: onIsle.owner, p_slot: i })) return; } else { p.w = (p.w || 0) + 1; p.wa = Date.now(); farmLocalSave(); farmBuild(); }
@@ -6448,18 +6458,22 @@ async function farmUnlock(){ if (!farmMine() || Farm.n >= 12) return; const cost
 function renderFarm(body){
   if (!onIsle){ body.appendChild(el('p', 'sub', '菜園在小島的西邊，要先去小島。')); return; }
   const mine = farmMine();
-  body.appendChild(el('p', 'sub', mine ? '買種子種下去，照現實的時間長大（關掉遊戲也會繼續長）。澆水一次快 12%（最多 3 次，每格一小時澆一次），澆滿 2 次會「豐收」多賣五成。忘記澆水也不會枯掉。' : '這是朋友的菜園。你可以幫忙澆水（每次 🪙10，一天最多 10 次）。'));
-  if (mine && Farm.sel >= 0 && !Farm.plots[Farm.sel] && Farm.sel < Farm.n){
-    body.appendChild(el('div', 'dexhead', `🌱 菜田 ${Farm.sel + 1} 要種什麼？`)); const ul = el('ul', 'shoplist');
-    for (const C of CROPS){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', C.name)); t.appendChild(el('div', 'sub2', `${C.hrs} 小時・收成 🪙${C.sell}${C.id === 'corn' ? '＋玉米粒魚餌 5 份' : ''}`)); li.appendChild(t);
-      const b = el('button', 'tbtn', `🪙${C.seed}`); b.disabled = rec.coins < C.seed || Farm.busy; b.addEventListener('click', () => farmSow(Farm.sel, C.id)); li.appendChild(b); ul.appendChild(li); }
+  body.appendChild(el('p', 'sub', mine ? '先買種子放進背包，點「拿在手上」，再走到空的田旁邊按「種下」，一格一顆。作物照現實的時間長大（關掉遊戲也會繼續長）。澆水一次快 12%（最多 3 次，每格一小時澆一次），澆滿 2 次會「豐收」多賣五成。忘記澆水也不會枯掉。' : '這是朋友的菜園。你可以幫忙澆水（每次 🪙10，一天最多 10 次）。'));
+  if (mine){
+    const own = CROPS.filter(C => seedN(C.id) > 0); body.appendChild(el('div', 'dexhead', '🎒 背包裡的種子'));
+    { const ul = el('ul', 'shoplist'); if (!own.length) ul.appendChild(el('li', 'empty', '還沒有種子，在下面買。'));
+      for (const C of own){ const on = Farm.hand === C.id, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子 ×${seedN(C.id)}`)); t.appendChild(el('div', 'sub2', `${C.hrs} 小時・收成 🪙${C.sell}`)); li.appendChild(t);
+        const b = el('button', 'tbtn' + (on ? ' ghost' : ''), on ? '手上' : '拿在手上'); b.addEventListener('click', () => { seedHold(on ? null : C.id); if (!on) closeSheet(); else renderTab(); }); li.appendChild(b); ul.appendChild(li); }
+      body.appendChild(ul); }
+    body.appendChild(el('div', 'dexhead', '🛒 買種子')); const ul = el('ul', 'shoplist');
+    for (const C of CROPS){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子`)); t.appendChild(el('div', 'sub2', `一顆 🪙${C.seed}・${C.hrs} 小時・收成 🪙${C.sell}${C.id === 'corn' ? '＋玉米粒魚餌 5 份' : ''}`)); li.appendChild(t);
+      for (const n of [1, 5]){ const b = el('button', 'tbtn' + (n === 1 ? ' ghost' : ''), `×${n}`); b.style.marginLeft = '6px'; b.disabled = rec.coins < C.seed * n || Farm.busy; b.addEventListener('click', () => farmBuySeed(C.id, n)); li.appendChild(b); } ul.appendChild(li); }
     body.appendChild(ul); }
   body.appendChild(el('div', 'dexhead', `🧺 菜園（${Farm.n}／12 格）`)); const ul = el('ul', 'shoplist');
   for (let i = 0; i < Farm.n; i++){ const p = Farm.plots[i], C = p && CROP_BY[p.c], li = el('li', 'on'); li.appendChild(el('span', 'dishic', C ? C.icon : '🟫')); const t = el('div', 'tinfo'), ripe = p && farmProg(p) >= 1;
     t.appendChild(el('div', 'n', `菜田 ${i + 1}` + (C ? '：' + C.name : '：空的')));
-    t.appendChild(el('div', 'sub2', !p ? (mine ? '可以播種' : '還沒種東西') : ripe ? ((p.w || 0) >= 2 ? '✨ 成熟了・豐收' : '✅ 成熟了') : `還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}・💧${p.w || 0}／3`)); li.appendChild(t);
-    if (!p && mine){ const b = el('button', 'tbtn', '播種'); b.addEventListener('click', () => { Farm.sel = i; renderTab(); $('#sheetBody') && ($('#sheetBody').scrollTop = 0); }); li.appendChild(b); }
-    else if (p && ripe && mine){ const b = el('button', 'tbtn', '收成'); b.disabled = Farm.busy; b.addEventListener('click', () => farmHarvest(i)); li.appendChild(b); }
+    t.appendChild(el('div', 'sub2', !p ? (mine ? '空的，拿種子走過來種' : '還沒種東西') : ripe ? ((p.w || 0) >= 2 ? '✨ 成熟了・豐收' : '✅ 成熟了') : `還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}・💧${p.w || 0}／3`)); li.appendChild(t);
+    if (p && ripe && mine){ const b = el('button', 'tbtn', '收成'); b.disabled = Farm.busy; b.addEventListener('click', () => farmHarvest(i)); li.appendChild(b); }
     else if (p && !ripe){ const b = el('button', 'tbtn ghost', '💧 澆水'); b.disabled = Farm.busy || (p.w || 0) >= 3 || farmWetLeft(p) > 0; b.addEventListener('click', () => farmWater(i)); li.appendChild(b); }
     ul.appendChild(li); }
   body.appendChild(ul);
@@ -10428,6 +10442,7 @@ function normRec(r){
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
   if (r.bait && typeof r.bait === 'object') for (const b of BAITS.concat(CHUMS)){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
+  if (r.bait && typeof r.bait === 'object') for (const id of ['tomato', 'cabbage', 'corn', 'sweetpotato', 'strawberry', 'pumpkin']){ const n = Math.floor(Number(r.bait['seed_' + id]) || 0); if (n > 0) e.bait['seed_' + id] = Math.min(999, n); }   /* v371 菜園的種子也放在背包 */
   e.baitOn = BAITS.some(b => b.id === r.baitOn) ? r.baitOn : null;
   e.cage = Array.isArray(r.cage) ? r.cage.filter(x => x && FISH_BY_ID[x.f]).slice(0, CAGE.max).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, w0:Number(x.w0)||Number(x.w)||0, t:Number(x.t)||0, at:Number(x.at)||0 }, x.s === 'M' || x.s === 'F' ? { s:x.s } : {}, x.k ? { k:true } : {})) : [];
   e.cageFed = typeof r.cageFed === 'string' ? r.cageFed.slice(0, 10) : null;
@@ -10715,6 +10730,7 @@ function renderBag(body){
     const baits = BAITS.filter(b => (rec.bait[b.id] || 0) > 0); for (const b of baits){ const using = cur && cur.id === b.id; row(ul, '🪱', `${b.name} ×${rec.bait[b.id]}`, b.desc, using ? '使用中' : '換上', using ? null : () => { rec.baitOn = b.id; saveRecLocal(); cloudCall('set_bait', { p_bait: b.id }); renderTab(); }, using); }
     if (!baits.length) ul.appendChild(el('li', 'empty', '沒有魚餌，可以到釣具店買。'));
     const chums = CHUMS.filter(c => (rec.bait[c.id] || 0) > 0); if (chums.length){ const u2 = sec('🍚 窩料', '在水邊按「打窩」丟下去'); for (const c of chums) row(u2, '🍚', `${c.name} ×${rec.bait[c.id]}`, c.desc); } }
+  { const sd = CROPS.filter(C => seedN(C.id) > 0); if (sd.length){ const ul = sec('🌱 種子', '拿在手上，到小島西邊的菜園一顆一顆種'); for (const C of sd){ const on = Farm.hand === C.id; row(ul, C.icon, `${C.name}種子 ×${seedN(C.id)}`, `${C.hrs} 小時成熟・收成 🪙${C.sell}`, on ? '收起來' : '拿在手上', () => { seedHold(on ? null : C.id); renderTab(); }, on); } } }
   // 料理
   { const ds = rec.dishes || []; if (ds.length){ const ul = sec('🍱 料理', '吃了以後接下來幾次拋竿有加成'); const by = new Map(); for (const d of ds){ const k = d.r + ':' + d.q; if (!by.has(k)) by.set(k, []); by.get(k).push(d); }
       for (const [, list] of by){ const d = list[0], rc = RECIPES[d.r]; if (!rc) continue; row(ul, rc.icon, `${rc.name} ${'★'.repeat(d.q || 1)} ×${list.length}`, rc.desc, '吃', () => { eatDish(d.t); renderTab(); }); } } }
@@ -13132,7 +13148,7 @@ function renderTab(){
     sec('👥 跟大家一起玩', [
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
-      '🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。走到空的田旁邊按「播種」買種子：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。',
+      '🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。先在菜園按「播種」買種子，種子會放進背包；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。',
       '🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。',
       '📍 共同海圖：打開「地圖」，可以在自己現在站的地方做記號給所有人看（🐟 魚很多、✨ 釣到稀有魚、🐋 有大魚或鯨魚、🎁 有寶箱或貝殼、📸 風景很漂亮）。點地圖上別人的記號，可以按「帶我去」跟著箭頭走過去，也可以按「👍 謝謝」。記號 24 小時後消失，每個人同時最多 3 個、一天最多做 10 個，要釣過 5 條魚才能做。走到記號附近，那個位置上面也會浮出小標籤。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
