@@ -705,6 +705,11 @@ Object.assign(SPECS, {
   dragonfish_red: VAR('lantern', {"Top": "#0a0606", "Mid": "#1a0e0e", "Bottom": "#2a1414", "Glow": "#ff2a2a", "Fins": "#200c0c"}, {}, { glow:true }),
   chimaera_spot: VAR('rattail', {"Top": "#6a4a30", "Mid": "#9a7a5a", "Bottom": "#e0d8cc", "Fins": "#5a3e28", "Spots": "#f6f2ea"}, { dots:{ n:26, t0:0.12, t1:0.75, y0:-0.3, y1:0.9, r:0.025, part:'Spots' } }, { glow:true }),
   frilledshark_af: VAR('eel', {"Top": "#7a7268", "Mid": "#958c80", "Bottom": "#c8c0b4", "Fins": "#6a6258"}, {}, { glow:true }),
+  // 每週新增：雪人蟹（Kiwa hirsuta），毛用 Spots 的刺表示
+  yeticrab: VAR('kingcrab', { Top:'#e6dfd0', Bottom:'#f2ede2', Spots:'#e0c878', Fins:'#ddd4c2', Claw:'#ebe3d2', Eye:'#c8c0b0' }, { claw:{ size:1.15, right:1.1 }, spikes:{ n:90, h:0.06, r:0.012, part:'Spots' } }, { glow:true }),
+  yeticrab_albino: VAR('kingcrab', { Top:'#f6f3f0', Bottom:'#fcfaf8', Spots:'#f8eeee', Fins:'#f2eeea', Claw:'#f8f4f0', Eye:'#e8b8c0' }, { claw:{ size:1.15, right:1.1 }, spikes:{ n:90, h:0.06, r:0.012, part:'Spots' } }, { glow:true }),
+  yeticrab_glow: VAR('kingcrab', { Top:'#1a2a2a', Bottom:'#2a3a3a', Spots:'#7affc8', Fins:'#3a6a5a', Claw:'#2a4a44', Eye:'#7affc8' }, { claw:{ size:1.15, right:1.1 }, spikes:{ n:90, h:0.06, r:0.012, part:'Spots' } }, { glow:true, glowParts:['Spots', 'Eye'] }),
+  yeticrab_dance: VAR('kingcrab', { Top:'#efe2cc', Bottom:'#f6eee0', Spots:'#d8a060', Fins:'#e2d2b8', Claw:'#ecdcc2', Eye:'#c8b8a0' }, { claw:{ size:1.15, right:1.1 }, spikes:{ n:90, h:0.06, r:0.012, part:'Spots' } }, { glow:true }),
   fangtooth_gold: VAR('fangtooth', { Top:'#a07820', Mid:'#c89830', Bottom:'#e8c860', Spots:'#806010', Fins:'#a07820' }, {}, { glow:true }),
   goblinshark_albino: VAR('goblinshark', { Top:'#f4ecec', Mid:'#f8f0f0', Bottom:'#fcf8f8', Accent:'#e8d8d8', Gill:'#d8c0c0', Fins:'#f0e4e4', Eye:'#c0303a' }, {}, { glow:true }),
   sixgill_albino: VAR('sixgill', { Top:'#ece8e0', Mid:'#f0ece6', Bottom:'#f8f6f2', Gill:'#d0c8c0', Eye:'#c0303a' }, {}, { glow:true }),

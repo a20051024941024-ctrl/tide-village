@@ -331,6 +331,11 @@ const DEEP_Q = [
   { id:'redshrimp_glow', spot:'abyss', of:'redshrimp', sub:true, name:'螢光深海紅蝦', rarity:'常見', color:'#5ad8ff', min:0.01, max:0.05, power:0.15, w:0.02, depth:800, desc:'吐出來的藍色發光煙霧沾滿了全身，整隻蝦都在發藍光。' },
   { id:'frilledshark_glow', spot:'abyss', of:'frilledshark', sub:true, name:'螢光皺鰓鯊', rarity:'傳說', color:'#ffb04a', min:20, max:90, power:0.85, w:0.02, depth:1200, desc:'荷葉邊的鰓發出橘色的光，像脖子圍了一圈燈籠。' },
   { id:'frilledshark_af', spot:'abyss', of:'frilledshark', sub:true, name:'南非皺鰓鯊', rarity:'傳說', color:'#8a8278', min:20, max:60, power:0.85, w:0.05, depth:1200, desc:'2009 年才被認出來是另一種皺鰓鯊，住在非洲南邊的海裡；比一般的皺鰓鯊小一點、顏色淡一點，鰓的荷葉邊一樣皺皺的。' },
+  /* 每週新增：雪人蟹（Kiwa hirsuta） */
+  { id:'yeticrab', spot:'abyss', sub:true, name:'雪人蟹', rarity:'稀有', color:'#888888', min:0.05, max:0.3, power:0.3, depth:2200, desc:'全身白白的，兩隻長長的手臂上長滿金黃色的毛，像穿了毛茸茸的袖子；住在海底冒熱水的煙囪旁邊，眼睛幾乎看不見。2005 年才第一次被找到。' },
+  { id:'yeticrab_albino', spot:'abyss', of:'yeticrab', sub:true, name:'白化雪人蟹', rarity:'稀有', color:'#f4f2f2', min:0.05, max:0.3, power:0.3, w:0.03, depth:2200, desc:'連手臂上的毛都是雪白的，毛的根部透著淡淡的粉紅。' },
+  { id:'yeticrab_glow', spot:'abyss', of:'yeticrab', sub:true, name:'螢光雪人蟹', rarity:'稀有', color:'#7affc8', min:0.05, max:0.3, power:0.3, w:0.02, depth:2200, desc:'手臂上的長毛發出青綠色的光，揮起手來像兩把發光的毛刷。' },
+  { id:'yeticrab_dance', spot:'abyss', of:'yeticrab', sub:true, name:'跳舞雪人蟹', rarity:'稀有', color:'#e8c89a', min:0.05, max:0.25, power:0.3, w:0.05, depth:1000, desc:'雪人蟹的近親，住在海底冒出氣泡的地方。牠會一直有節奏地揮動毛茸茸的大螯，像在跳舞，其實是在幫毛上的小小細菌「搧風」，再把細菌吃掉。' },
 ];
 var DeepQ = { got:new Set(), at:0 };
 for (const d of DEEP_Q) FISH_BY_ID[d.id] = d;   /* 查得到（魚缸裡已經有的不會被當成不認識的魚丟掉），但還不在 FISH 名單裡（圖鑑、清單看不到） */

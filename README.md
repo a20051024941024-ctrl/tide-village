@@ -138,6 +138,7 @@ supabase/097_submarine.sql 🚢 潛水艇與黑淵裂縫：sub_state、sub_dives
 supabase/098_mariana.sql 🐙 馬里亞納海溝的生物：獅子魚、深海鼬鳚、小飛象章魚、超巨型端足類、游泳海參（各有白化），加進潛水艇 sub_cast 的魚池。
 supabase/099_deep_weekly.sql 🔬 深海生物每週解鎖：deep_queue（從 2026-11-06 起每週五解鎖一種，白化同一週），deep_unlocked() 只回傳已解鎖的 id；sub_cast 加進已解鎖的魚。以後新魚加在 deep_queue 最後面。
 supabase/100_deep_variants.sql ✨ 深海生物變種：排隊的 12 種各加一個螢光變種（_glow），另外加紅燈巨口魚、斑點銀鮫、南非皺鰓鯊（真實的不同顏色）；跟本種同一週解鎖。
+supabase/142_deep_yeticrab.sql 🦀 每週新深海生物：雪人蟹（白化、螢光、跳舞雪人蟹），排在 deep_queue 第 13 週（ord 12）。
 supabase/101_bluewhale_hourly.sql 🐋 藍鯨浮上來改成每小時一次（原本每 20 分鐘）。
 supabase/102_craft.sql 🔧 阿鐵師傅的工坊：craft_item 用魚缸裡的魚＋金幣做竿子造型（rs_）和釣線顏色（lc_），set_rod_look 裝上；一天最多 10 件。
 supabase/103_craft_bait.sql 🪱 阿鐵師傅做活餌：craft_bait 用 2 條常見魚＋30 金幣做 4 個活餌（吸引掠食魚）；020 重產：餌的 k（吸引哪一類魚）、_sign_hit 多 p_bk。
