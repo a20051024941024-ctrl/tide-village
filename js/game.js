@@ -4863,6 +4863,42 @@ function buildAbyss(){ Far.abyss = true; const A = ABYSS, g = new THREE.Group();
   g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
 /* v360 象龜換成使用者用 Meshy 做的模型，會自己動（沒有骨架，用頂點位置分出脖子和四隻腳，在著色器裡動）：
    平常慢慢伸脖子、轉頭看、呼吸；每隔一陣子慢慢走到附近另一個地方（對角的腳一起動）；玩家走到 2 公尺內就把頭縮進殼裡停下來，離開後再伸出來。 */
+/* v362 海獅換成使用者用 Meshy 做的模型（三隻共用一個模型），會自己動：平常慢慢轉頭、呼吸；偶爾抬頭點幾下（像在叫）或用前鰭拍地；玩家走到 4.5 公尺內會轉頭看著你。 */
+function slLoad(g){ new GLTFLoader().loadAsync('models/sealion.glb').then(gl => { let src = null; gl.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src || !Far.slOld) return;
+  const geo = src.geometry; geo.rotateY(-0.313); geo.translate(0, 0, -0.03);   /* 模型的身體是斜的，先轉正（頭朝 +x） */
+  const P = geo.attributes.position, n = P.count, aN = new Float32Array(n), aF = new Float32Array(n), aT = new Float32Array(n), sat = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  for (let i = 0; i < n; i++){ const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    if (x > 0.3 && y > -0.02 && Math.abs(z) < 0.2) aN[i] = sat((y + 0.02) / 0.3) * sat((x - 0.3) / 0.12);          /* 脖子和頭 */
+    else if (x > 0.25 && y < -0.18 && Math.abs(z) > 0.16) aF[i] = sat((Math.abs(z) - 0.16) / 0.18) * (z > 0 ? 1 : -1);   /* 兩片前鰭（正負分左右） */
+    else if (x < -0.45) aT[i] = sat((-0.45 - x) / 0.25); }                                                          /* 後鰭 */
+  geo.setAttribute('aNeck', new THREE.BufferAttribute(aN, 1)); geo.setAttribute('aFl', new THREE.BufferAttribute(aF, 1)); geo.setAttribute('aTl', new THREE.BufferAttribute(aT, 1));
+  const S = 1.15; Far.sl = [];
+  for (const old of Far.slOld){ const U = { uT:{ value:0 }, uPitch:{ value:0 }, uYaw:{ value:0 }, uFlap:{ value:0 }, uPh:{ value: Math.random() * 6 } };
+    const m = new THREE.MeshStandardMaterial({ map: src.material.map, roughness:0.55, metalness:0 });
+    m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
+      sh.vertexShader = 'attribute float aNeck; attribute float aFl; attribute float aTl; uniform float uT, uPitch, uYaw, uFlap, uPh;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        { vec3 pv = vec3(0.42, 0.0, 0.0); vec3 q = transformed - pv; float nk = aNeck;
+          float a = uPitch * nk, b = uYaw * nk, ca = cos(a), sa = sin(a), cb = cos(b), sb = sin(b);
+          q = vec3(q.x * ca - q.y * sa, q.x * sa + q.y * ca, q.z); q = vec3(q.x * cb + q.z * sb, q.y, -q.x * sb + q.z * cb); transformed = pv + q;
+          transformed.y += max(0.0, uFlap * sign(aFl)) * abs(aFl) * 0.16;
+          transformed.z += sin(uT * 1.7 + uPh) * 0.03 * aTl; transformed.y += max(0.0, sin(uT * 0.9 + uPh)) * 0.025 * aTl;
+          transformed.y += sin(uT * 1.5 + uPh) * 0.012 * clamp((position.y + 0.2) / 0.3, 0.0, 1.0) * (1.0 - nk) * (1.0 - aTl); }`); };
+    m.customProgramCacheKey = () => 'sealion';
+    const mesh = new THREE.Mesh(geo, m); mesh.scale.setScalar(S); mesh.position.y = 0.358 * S - 0.02; mesh.rotation.y = -Math.PI / 2; mesh.userData.dyn = true;
+    const sg = new THREE.Group(); sg.userData.dyn = true; sg.add(mesh); sg.position.copy(old.position); sg.rotation.y = old.rotation.y + Math.PI / 2; g.add(sg); g.remove(old);
+    Far.sl.push({ g: sg, U, yaw: 0, pitch: 0, act: null, t0: 0, next: 3 + Math.random() * 8 }); }
+  Far.slOld = null;
+}).catch(() => {}); }
+function slTick(dt, t){ const M = MYST; if (Math.hypot(me.pos.x - M.x, me.pos.z - M.z) > 60) return;
+  for (const s of Far.sl){ const g = s.g, dx = me.pos.x - (M.x + g.position.x), dz = me.pos.z - (M.z + g.position.z), d = Math.hypot(dx, dz), U = s.U, ph = U.uPh.value;
+    let yaw = Math.sin(t * 0.31 + ph) * 0.45, pitch = Math.sin(t * 0.47 + ph) * 0.08, flap = 0;
+    if (d < 4.5){ let a = Math.atan2(dx, dz) - g.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a)); yaw = clamp(a, -1.15, 1.15); pitch = 0.16; }   /* 看著玩家 */
+    if (!s.act && t > s.next){ s.act = Math.random() < 0.5 ? 'bark' : 'flap'; s.t0 = t; s.side = Math.random() < 0.5 ? 1 : -1; }
+    if (s.act){ const k = t - s.t0; if (k > 1.8){ s.act = null; s.next = t + 6 + Math.random() * 10; }
+      else if (s.act === 'bark') pitch += 0.3 + Math.max(0, Math.sin(k * 10.5)) * 0.16;
+      else flap = Math.max(0, Math.sin(k * 8.7)) * s.side; }
+    s.yaw += (yaw - s.yaw) * Math.min(1, dt * 3); s.pitch += (pitch - s.pitch) * Math.min(1, dt * 8);
+    U.uT.value = t; U.uYaw.value = s.yaw; U.uPitch.value = s.pitch; U.uFlap.value = flap; } }
 function tortLoad(g, old, col){ new GLTFLoader().loadAsync('models/tortoise.glb').then(gl => { let src = null; gl.scene.traverse(o => { if (o.isMesh && !src) src = o; }); if (!src) return;
   const geo = src.geometry, P = geo.attributes.position, n = P.count, aN = new Float32Array(n), aL = new Float32Array(n), aP = new Float32Array(n), sat = v => v < 0 ? 0 : v > 1 ? 1 : v;
   for (let i = 0; i < n; i++){ const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
@@ -4928,7 +4964,8 @@ function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.
   for (let i = 0; i < 22; i++){ const a = rr() * 6.28, r = R * (0.8 + rr() * 0.3), x = Math.cos(a) * r, z = Math.sin(a) * r; if (z < -R * 0.5 && Math.abs(x) < 5) continue; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + rr() * 0.9, 0), mat('#2e2a28', 0.95, { flatShading:true })); rk.position.set(x, (mystH(M.x + x, M.z + z) || M.y) - 0.1, z); rk.rotation.set(rr(), rr() * 6, rr()); g.add(rk); }
   // 海獅（躺在岩石上）、海鬣蜥、大象龜
   for (const [x, z, ry] of [[9, 6, 0.6], [-8, 9, 2.2], [11, -2, -0.4]]){ const sl = new THREE.Group(), m2 = mat('#7a5a40', 0.6); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 4, 10), m2); b.rotation.z = Math.PI / 2; b.position.y = 0.34; sl.add(b); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), m2); hd.position.set(0.7, 0.62, 0); sl.add(hd);
-    for (const ez of [-0.09, 0.09]) sl.add(box([0.05, 0.05, 0.05], '#111', [0.9, 0.68, ez])); sl.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); sl.rotation.y = ry; g.add(sl); addCircleCol(M.x + x, M.z + z, 0.6); }
+    for (const ez of [-0.09, 0.09]) sl.add(box([0.05, 0.05, 0.05], '#111', [0.9, 0.68, ez])); sl.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); sl.rotation.y = ry; g.add(sl); addCircleCol(M.x + x, M.z + z, 0.6); (Far.slOld = Far.slOld || []).push(sl); }
+  slLoad(g);
   for (const [x, z, ry] of [[-4, -9, 0.3], [5, -10, 2.8], [-11, 2, 1.2]]){ const ig = new THREE.Group(), m3 = mat('#3a3a36', 0.7); const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), m3); b.rotation.z = Math.PI / 2; b.position.y = 0.12; ig.add(b);
     const tl = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.8, 6), m3); tl.rotation.z = Math.PI / 2; tl.position.set(-0.65, 0.1, 0); ig.add(tl); for (let k = 0; k < 6; k++) ig.add(box([0.03, 0.07, 0.03], '#8a3a30', [-0.25 + k * 0.1, 0.25, 0])); ig.position.set(x, mystH(M.x + x, M.z + z) || M.y, z); ig.rotation.y = ry; g.add(ig); }
   { const tt = new THREE.Group(), sh = new THREE.Mesh(new THREE.SphereGeometry(0.9, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('#5a5040', 0.8)); sh.scale.set(1.2, 0.8, 1); sh.position.y = 0.35; tt.add(sh); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat('#6a6050', 0.8)); hd.position.set(1.2, 0.45, 0); tt.add(hd);
@@ -5012,6 +5049,7 @@ function updateFar(dt, t){
   if (Far.jelly && frameNo % 3 === 0 && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 70){ Far.jelly.position.y = Math.sin(t * 0.5) * 0.25; Far.jelly.material.opacity = 0.55 + Math.sin(t * 1.3) * 0.2; }
   if (Far.lava) Far.lava.material.color.setHSL(0.05, 1, 0.5 + Math.sin(t * 2) * 0.08);
   if (Far.smoke){ Far.smoke.position.y = MYST.y + 4.6 + (t * 0.3 % 2); Far.smoke.material.opacity = 0.35 * (1 - (t * 0.3 % 2) / 2); }
+  if (Far.sl) slTick(dt, t);
   if (Far.tort) tortTick(dt, t); else if (Far.tortoise && frameNo % 2 === 0) Far.tortoise.rotation.y = 0.8 + Math.sin(t * 0.1) * 0.6;
 }
 function updateFrost(dt, t){
