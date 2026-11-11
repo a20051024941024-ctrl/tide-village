@@ -4225,6 +4225,7 @@ function actionDown(){
     { const lt = nearLitter(); if (lt){ act.classList.remove('down'); pickLitter(lt); return; } }   /* 水圳：撿垃圾 */
     if (nearCage()){ act.classList.remove('down'); openSheet('cage'); return; }   /* 箱網 */
     if (nearSeedShop()){ act.classList.remove('down'); Farm.view = 'shop'; openSheet('farm'); return; }   /* 種子攤 */
+    if (nearSeaDive()){ act.classList.remove('down'); seaDive(); return; }   /* 小島碼頭的潛水梯：下去海底花園 */
     { const fp = nearFarm(); if (fp){ act.classList.remove('down'); farmAct(fp); return; } }   /* 小島菜園 */
     if (nearSnorkel()){ act.classList.remove('down'); startDive('reef', { x: me.pos.x, z: me.pos.z }); return; }
     if (nearHarborDive()){ act.classList.remove('down'); startDive('harbor', { x: me.pos.x, z: me.pos.z }); return; }   /* 港口碼頭的潛水梯 */   /* 珊瑚礁島：從沙灘下水浮潛 */
@@ -4615,7 +4616,8 @@ function updateFishing(dt, t){
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
-  if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : l.kind === 'pearl' ? '撿珍珠' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
+  if (Dive.on && nearSea()){ const sb = seaBtn(nearSea()); label = sb[0]; sub = sb[1]; cls = 'shop'; }
+  else if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : l.kind === 'pearl' ? '撿珍珠' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
   else if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     const shoreS = mySeat && mySeat.nook ? nookSpot(mySeat) : near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
     const crN = nearCritter();
@@ -4624,6 +4626,7 @@ function updateFishing(dt, t){
     else if (ltN){ label = '撿起來'; sub = `${ltN.T.icon} ${ltN.T.name}・💙+1`; cls = 'shop'; }
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
+    else if (nearSeaDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '🪸 小島海底花園' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearSeedShop()){ const L = CROPS.find(C => C.lim === farmWeek()); label = '種子攤'; sub = L ? `${L.icon} 本週限定：${L.name}` : '🌱 買種子'; cls = 'shop'; }
     else if (nearFarm()){ const fb = farmBtn(nearFarm()); label = fb[0]; sub = fb[1]; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
@@ -4777,7 +4780,8 @@ function isleBaseMesh(g, R, withSign){
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.6), new THREE.MeshBasicMaterial({ map: isleSignTex })); sign.position.set(1.6, ISLE.y + 1.35, R - 1.1); g.add(sign);
   }
 }
-function isleBase(){ const g = new THREE.Group(); g.position.set(ISLE.x, 0, ISLE.z); scene.add(g); isleBaseMesh(g, ISLE.r, true); try { farmBase(); } catch(e){ console.warn('farm', e); } }
+function isleBase(){ const g = new THREE.Group(); g.position.set(ISLE.x, 0, ISLE.z); scene.add(g); isleBaseMesh(g, ISLE.r, true); try { farmBase(); } catch(e){ console.warn('farm', e); }
+  try { const [lx, lz] = SEA.at; for (const dz of [-0.28, 0.28]) scene.add(box([0.07, 1.5, 0.07], '#c9ccd2', [lx - 0.32, 0.36 + 0.15, lz + dz])); for (let k = 0; k < 3; k++) scene.add(box([0.05, 0.05, 0.56], '#c9ccd2', [lx - 0.32, 0.2 + k * 0.32, lz])); const fl = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.07, 6, 14), mat('#ff6b4a', 0.6)); fl.position.set(lx - 0.36, 1.0, lz); fl.rotation.y = Math.PI / 2; scene.add(fl); } catch(e){} }
 let isleSignCtx = null, isleSignTex = null;
 function drawIsleSign(name){
   if (!isleSignCtx) return; const c = isleSignCtx;
@@ -5265,7 +5269,7 @@ async function visitIsle(id, name){
   catch(e){ toast('暫時連不上雲端'); }
 }
 function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
-function checkIsle(){ if (onIsle && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 45){ stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
+function checkIsle(){ if (onIsle && !Dive.on && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 45){ stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
 async function likeIsle(){
   if (!onIsle || onIsle.owner === myIdOrMe() || !Cloud.sb) return;
   try { const { data, error } = await Cloud.sb.rpc('like_island', { p_owner: onIsle.owner }); if (error) throw error; onIsle.likes = data; onIsle.liked = true; SFX.catch(); flash('❤️ 按讚了！', 1.2); renderIsleBar(); }
@@ -6371,6 +6375,11 @@ const CROPS = [
   { id:'carrot', name:'胡蘿蔔', icon:'🥕', seed:30, sell:105, hrs:5, col:'#f08a2c', lim:1 },
   { id:'grape', name:'葡萄', icon:'🍇', seed:100, sell:380, hrs:18, col:'#7a4fb0', lim:2 },
   { id:'sunflower', name:'向日葵', icon:'🌻', seed:60, sell:215, hrs:10, col:'#f6c21c', lim:3 },
+  /* v374 海底的作物：種在小島海底花園（格子編號 100 起），不用澆水 */
+  { id:'kelp', name:'海帶', icon:'🌿', seed:20, sell:70, hrs:3, col:'#3f8f4f', sea:true },
+  { id:'seagrape', name:'海葡萄', icon:'🫧', seed:50, sell:170, hrs:8, col:'#7fd08a', sea:true },
+  { id:'coral', name:'珊瑚', icon:'🪸', seed:150, sell:560, hrs:36, col:'#ff7f9a', sea:true },
+  { id:'oyster', name:'珍珠貝', icon:'🦪', seed:200, sell:760, hrs:48, col:'#d8d2c4', sea:true },
 ];
 const CROP_BY = Object.fromEntries(CROPS.map(c => [c.id, c]));
 const Farm = { g:null, owner:null, n:4, plots:{}, off:0, busy:false, sel:-1, vis:[], spr:{}, hand:null, max:12, next:null, baseG:null, rows:0, col:false };
@@ -6465,12 +6474,13 @@ function farmBuild(){
 }
 function farmTick(){ farmFxTick(); if (frameNo % 30 === 11) seedChip(); if (frameNo % 90 !== 7 || !onIsle || !Farm.g) return; if (Farm.owner !== onIsle.owner){ farmLoad(); return; }
   for (let i = 0; i < Farm.max; i++){ const p = Farm.plots[i], wet = p && farmWetLeft(p) > 0, k = (i >= Farm.n ? 'L' : p ? p.c + farmStage(p) : '-') + (wet ? 'w' : ''); if (k !== Farm.vis[i]){ farmBuild(); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); return; } } }
-function farmAdopt(d){ if (!d || !onIsle || (d.owner && d.owner !== onIsle.owner)) return; Farm.owner = onIsle.owner; Farm.max = Math.max(12, Math.min(96, Number(d.max) || 12)); Farm.next = d.next === undefined ? undefined : d.next && d.next.n ? { n: Number(d.next.n), cost: Number(d.next.cost) || 0 } : null; Farm.n = Math.max(4, Math.min(Farm.max, Number(d.n) || 4)); farmLayout(); Farm.off = d.now ? Number(d.now) - Date.now() : 0; Farm.plots = {};
-  for (const r of d.plots || []) if (CROP_BY[r.c] && r.s >= 0 && r.s < Farm.max) Farm.plots[r.s] = { c: r.c, t: Number(r.t), w: Number(r.w) || 0, wa: r.wa ? Number(r.wa) : 0 };
+function farmAdopt(d){ if (!d || !onIsle || (d.owner && d.owner !== onIsle.owner)) return; Farm.owner = onIsle.owner; Farm.max = Math.max(12, Math.min(96, Number(d.max) || 12)); Farm.next = d.next === undefined ? undefined : d.next && d.next.n ? { n: Number(d.next.n), cost: Number(d.next.cost) || 0 } : null; Farm.n = Math.max(4, Math.min(Farm.max, Number(d.n) || 4)); farmLayout();
+  { const sd = d.sea || {}; Sea.max = Math.max(8, Math.min(60, Number(sd.max) || 8)); Sea.n = Math.max(4, Math.min(Sea.max, Number(sd.n) || 4)); Sea.next = d.sea ? (sd.next && sd.next.n ? { n: Number(sd.next.n), cost: Number(sd.next.cost) || 0 } : null) : undefined; if (Dive.on && Dive.site === 'isle') seaBuild(); } Farm.off = d.now ? Number(d.now) - Date.now() : 0; Farm.plots = {};
+  for (const r of d.plots || []) if (CROP_BY[r.c] && r.s >= 0 && (r.s < Farm.max || (r.s >= 100 && r.s < 100 + Sea.max))) Farm.plots[r.s] = { c: r.c, t: Number(r.t), w: Number(r.w) || 0, wa: r.wa ? Number(r.wa) : 0 };
   farmBuild(); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
-function farmLocal(){ const d = LS.get('tide.farm', null) || { n:4, plots:[] }; return { n: d.n || 4, plots: Array.isArray(d.plots) ? d.plots : [] }; }
-function farmLocalSave(){ LS.set('tide.farm', { n: Farm.n, plots: Object.keys(Farm.plots).map(s => Object.assign({ s: Number(s) }, Farm.plots[s])) }); }
-async function farmLoad(){ if (!onIsle) return; const own = onIsle.owner; Farm.owner = own; Farm.plots = {}; Farm.n = 4; Farm.sel = -1; Farm.max = 12; Farm.next = undefined; farmLayout(); farmBuild();
+function farmLocal(){ const d = LS.get('tide.farm', null) || { n:4, plots:[] }; return { n: d.n || 4, plots: Array.isArray(d.plots) ? d.plots : [], sea: { n: d.sn || 4, max: 8 } }; }
+function farmLocalSave(){ LS.set('tide.farm', { n: Farm.n, sn: Sea.n, plots: Object.keys(Farm.plots).map(s => Object.assign({ s: Number(s) }, Farm.plots[s])) }); }
+async function farmLoad(){ if (!onIsle) return; const own = onIsle.owner; Farm.owner = own; Farm.plots = {}; Farm.n = 4; Farm.sel = -1; Farm.max = 12; Farm.next = undefined; Sea.n = 4; Sea.max = 8; Sea.next = undefined; farmLayout(); farmBuild();
   if (!farmOnline()){ if (farmMine()) farmAdopt(Object.assign({ owner: own }, farmLocal())); return; }
   try { const { data, error } = await Cloud.sb.rpc('farm_get', { p_owner: own }); if (error) throw error; if (onIsle && onIsle.owner === own) farmAdopt(data); } catch(e){ console.warn('farm_get', e && e.message); } }
 async function farmRpc(fn, args){ if (Farm.busy) return false; Farm.busy = true; let ok = false;
@@ -6479,13 +6489,13 @@ async function farmRpc(fn, args){ if (Farm.busy) return false; Farm.busy = true;
 function nearFarm(){ if (!onIsle || !Farm.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return null; if (Math.abs(me.pos.x - GARDEN.x) > GARDEN.hx + 1 || Math.abs(me.pos.z - GARDEN.z) > GARDEN.hz + 1) return null;
   let best = -1, bd = 1.55; for (let i = 0; i < Farm.max; i++){ const [x, z] = farmPos(i), d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd){ bd = d; best = i; } } if (best < 0) return null;
   const p = Farm.plots[best], mine = farmMine(); if (!mine && (!p || best >= Farm.n || farmProg(p) >= 1)) return null; return { i: best, p, locked: best >= Farm.n, mine }; }
-function farmBtn(fp){ const p = fp.p; if (fp.locked){ const nx = farmNext(); return nx ? ['開墾', `🪙${nx.cost}・多 ${nx.n - Farm.n} 格田`] : ['看菜園', '這一格還沒開放']; } if (!p){ const H = seedHand(); return H ? ['種下', `${H.icon} ${H.name} ×${seedN(H.id)}`] : ['播種', CROPS.some(C => seedN(C.id) > 0) ? '🎒 從背包拿種子' : '🛒 先去種子攤買種子']; }
+function farmBtn(fp){ const p = fp.p; if (fp.locked){ const nx = farmNext(); return nx ? ['開墾', `🪙${nx.cost}・多 ${nx.n - Farm.n} 格田`] : ['看菜園', '這一格還沒開放']; } if (!p){ const H = seedHand(); return H ? ['種下', `${H.icon} ${H.name} ×${seedN(H.id)}`] : ['播種', CROPS.some(C => seedN(C.id) > 0 && !C.sea) ? '🎒 從背包拿種子' : '🛒 先去種子攤買種子']; }
   const C = CROP_BY[p.c]; if (farmProg(p) >= 1) return ['收成', `${C.icon} ${C.name}${(p.w || 0) >= 2 ? '・豐收！' : ''}`];
   const left = farmLeftStr(farmRipeAt(p) - farmNow()); if ((p.w || 0) < 3 && !farmWetLeft(p)) return ['澆水', `${C.icon} 還要 ${left}`]; return ['看菜園', `${C.icon} 還要 ${left}`]; }
-function farmAct(fp){ const p = fp.p; if (!fp.locked && !p && seedHand()){ farmSow(fp.i, Farm.hand); return; } if (fp.locked || !p){ Farm.sel = -1; Farm.view = ''; openSheet('farm'); return; } if (farmProg(p) >= 1){ farmHarvest(fp.i); return; } if ((p.w || 0) < 3 && !farmWetLeft(p)){ farmWater(fp.i); return; } Farm.sel = -1; Farm.view = ''; openSheet('farm'); }
-async function farmSow(i, id){ const C = CROP_BY[id]; if (!C || !farmMine() || Farm.plots[i] || i >= Farm.n || Farm.busy) return; if (seedN(id) < 1){ toast('背包裡沒有這種種子'); return; }
+function farmAct(fp){ const p = fp.p; if (!fp.locked && !p && seedHand()){ if (seedHand().sea){ toast('這是海底的種子，要從小島碼頭的潛水梯下去種'); return; } farmSow(fp.i, Farm.hand); return; } if (fp.locked || !p){ Farm.sel = -1; Farm.view = ''; openSheet('farm'); return; } if (farmProg(p) >= 1){ farmHarvest(fp.i); return; } if ((p.w || 0) < 3 && !farmWetLeft(p)){ farmWater(fp.i); return; } Farm.sel = -1; Farm.view = ''; openSheet('farm'); }
+async function farmSow(i, id){ const C = CROP_BY[id]; if (!C || !farmMine() || Farm.plots[i] || (i < 100 ? i >= Farm.n || C.sea : i - 100 >= Sea.n || !C.sea) || Farm.busy) return; if (seedN(id) < 1){ toast('背包裡沒有這種種子'); return; }
   if (farmOnline()){ if (!await farmRpc('farm_plant', { p_slot: i, p_crop: id })) return; } else { rec.bait['seed_' + id] = seedN(id) - 1; if (!rec.bait['seed_' + id]) delete rec.bait['seed_' + id]; saveRecLocal(); Farm.plots[i] = { c: id, t: Date.now(), w: 0, wa: 0 }; farmLocalSave(); farmBuild(); }
-  farmDo('farmplant', i); try { SFX.click(); } catch(e){} const left = seedN(id); if (!left) Farm.hand = null; seedChip(); toast(`🌱 種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟` + (left ? `（還有 ${left} 顆）` : '。種子用完了')); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+  if (i < 100) farmDo('farmplant', i); else { seaBuild(); try { SFX.plop(); } catch(e){} } try { SFX.click(); } catch(e){} const left = seedN(id); if (!left) Farm.hand = null; seedChip(); toast(`🌱 種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟` + (left ? `（還有 ${left} 顆）` : '。種子用完了')); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 async function farmBuySeed(id, n){ const C = CROP_BY[id]; if (!C || Farm.busy) return; if (!cropOnSale(C)){ toast('這種種子這週沒有賣'); return; } if (rec.coins < C.seed * n){ toast('金幣不夠買種子'); return; } if (seedN(id) + n > 999){ toast('種子帶太多了'); return; }
   if (Cloud.on && Cloud.sb){ if (!await farmRpc('farm_buy_seed', { p_crop: id, p_n: n })) return; } else { addCoins(-C.seed * n); rec.bait['seed_' + id] = seedN(id) + n; saveRecLocal(); }
   try { SFX.coin(); } catch(e){} if (!seedHand()) Farm.hand = id; seedChip(); if (!$('#sheet').hidden) renderTab(); }
@@ -6495,13 +6505,14 @@ async function farmWater(i){ const p = Farm.plots[i]; if (!p || !onIsle) return;
   if (nearFarm() || Math.hypot(me.pos.x - farmPos(i)[0], me.pos.z - farmPos(i)[1]) < 2.5) farmDo('farmwater', i); const q = Farm.plots[i]; toast(mine ? `💧 澆好了（${q ? q.w : 1}／3）${q && q.w >= 2 ? '，這一格會豐收！' : '，澆滿 2 次會豐收'}` : `💧 幫忙澆水了${rec.coins > c0 ? `，謝謝你！🪙+${rec.coins - c0}` : '，謝謝你！'}`); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 async function farmHarvest(i){ const p = Farm.plots[i]; if (!p || !farmMine() || farmProg(p) < 1) return; const C = CROP_BY[p.c], big = (p.w || 0) >= 2, pay = Math.round(C.sell * (big ? 1.5 : 1));
   if (farmOnline()){ if (!await farmRpc('farm_harvest', { p_slot: i })) return; } else { addCoins(pay); if (p.c === 'corn'){ rec.bait.corn = Math.min(999, (rec.bait.corn || 0) + 5); saveRecLocal(); } delete Farm.plots[i]; farmLocalSave(); farmBuild(); }
-  try { SFX.coin(); } catch(e){} flash(`${C.icon} ${big ? '豐收！' : '收成！'}🪙+${pay}`, 1.6); if (p.c === 'corn') toast('🌽 另外拿到 5 份玉米粒魚餌'); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+  if (i >= 100) seaBuild(); try { SFX.coin(); } catch(e){} flash(`${C.icon} ${big ? '豐收！' : '收成！'}🪙+${pay}`, 1.6); if (p.c === 'corn') toast('🌽 另外拿到 5 份玉米粒魚餌'); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 async function farmUnlock(){ const nx = farmNext(); if (!farmMine() || !nx) return; const cost = nx.cost; if (rec.coins < cost){ toast('金幣不夠'); return; }
   if (farmOnline()){ if (!await farmRpc('farm_unlock')) return; } else { addCoins(-cost); Farm.n = nx.n; farmLocalSave(); farmBuild(); }
   try { SFX.coin(); } catch(e){} toast(`🌱 菜園變大了，現在有 ${Farm.n} 格`); if (curTab === 'farm') renderTab(); }
 function renderFarm(body){
   if (!onIsle){ body.appendChild(el('p', 'sub', '菜園在小島的西邊，要先去小島。')); return; }
   const mine = farmMine();
+  if (Farm.view === 'sea'){ renderSea(body, mine); return; }
   body.appendChild(el('p', 'sub', mine ? '先到菜園最西邊的種子攤買種子，放進背包後點「拿在手上」，再走到空的田旁邊按「種下」，一格一顆。作物照現實的時間長大（關掉遊戲也會繼續長）。澆水一次快 12%（最多 3 次，每格一小時澆一次），澆滿 2 次會「豐收」多賣五成。忘記澆水也不會枯掉。' : '這是朋友的菜園。你可以幫忙澆水（每次 🪙10，一天最多 10 次）。'));
   const seedLi = (C, lim) => { const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子` + (seedN(C.id) ? `（有 ${seedN(C.id)} 顆）` : ''))); t.appendChild(el('div', 'sub2', `一顆 🪙${C.seed}・${C.hrs} 小時・收成 🪙${C.sell}${C.id === 'corn' ? '＋玉米粒魚餌 5 份' : ''}`)); li.appendChild(t);
     for (const n of [1, 5]){ const b = el('button', 'tbtn' + (n === 1 ? ' ghost' : ''), `×${n}`); b.style.marginLeft = '6px'; b.disabled = rec.coins < C.seed * n || Farm.busy; b.addEventListener('click', () => farmBuySeed(C.id, n)); li.appendChild(b); } if (lim) li.style.boxShadow = '0 0 0 3px #ffb84d inset'; return li; };
@@ -6509,10 +6520,11 @@ function renderFarm(body){
     const L = CROPS.find(C => C.lim === farmWeek()), NX = CROPS.find(C => C.lim === (farmWeek() + 1) % 4);
     if (L){ body.appendChild(el('div', 'dexhead', `⏰ 本週限定（還剩 ${farmDaysLeft()} 天）`)); const ul = el('ul', 'shoplist'); ul.appendChild(seedLi(L, true)); body.appendChild(ul);
       body.appendChild(el('p', 'sub', `限定種子只有這週買得到，買起來放背包，之後隨時可以種。${NX ? `下週換：${NX.icon} ${NX.name}` : ''}`)); }
-    body.appendChild(el('div', 'dexhead', '🛒 平常的種子')); const ul = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.lim == null)) ul.appendChild(seedLi(C)); body.appendChild(ul);
+    body.appendChild(el('div', 'dexhead', '🛒 平常的種子')); const ul = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.lim == null && !C.sea)) ul.appendChild(seedLi(C)); body.appendChild(ul);
+    body.appendChild(el('div', 'dexhead', '🌊 海底的種子')); { const u2 = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.sea)) u2.appendChild(seedLi(C)); body.appendChild(u2); body.appendChild(el('p', 'sub', '海底的種子要從小島碼頭的潛水梯下去，種在海底花園（要有潛水裝備）。不用澆水，長得比較慢。')); }
     body.appendChild(el('p', 'sub', '買好以後到「背包 → 🌱 種子」或走到田邊按「播種」，把種子拿在手上，再一格一格種下去。')); return; }
   if (mine){
-    const own = CROPS.filter(C => seedN(C.id) > 0); body.appendChild(el('div', 'dexhead', '🎒 背包裡的種子'));
+    const own = CROPS.filter(C => seedN(C.id) > 0 && !C.sea); body.appendChild(el('div', 'dexhead', '🎒 背包裡的種子'));
     { const ul = el('ul', 'shoplist'); if (!own.length) ul.appendChild(el('li', 'empty', '還沒有種子。菜園最西邊有種子攤，走過去就可以買。'));
       for (const C of own){ const on = Farm.hand === C.id, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子 ×${seedN(C.id)}`)); t.appendChild(el('div', 'sub2', `${C.hrs} 小時・收成 🪙${C.sell}`)); li.appendChild(t);
         const b = el('button', 'tbtn' + (on ? ' ghost' : ''), on ? '手上' : '拿在手上'); b.addEventListener('click', () => { seedHold(on ? null : C.id); if (!on) closeSheet(); else renderTab(); }); li.appendChild(b); ul.appendChild(li); }
@@ -6526,6 +6538,50 @@ function renderFarm(body){
     ul.appendChild(li); }
   body.appendChild(ul);
   const nx = mine ? farmNext() : null; if (nx){ const b = el('button', 'tbtn', `開墾 ${nx.n - Farm.n} 格新的地　🪙${nx.cost}`); b.style.cssText = 'display:block;margin:10px auto'; b.disabled = Farm.busy || rec.coins < nx.cost; b.addEventListener('click', farmUnlock); body.appendChild(b); }
+}
+/* v374 小島海底花園：從小島碼頭的潛水梯下去，海床上有幾格可以種海底的作物（海帶、海葡萄、珊瑚、珍珠貝）。
+   跟菜園共用同一套（格子編號 100 起、種子放背包、伺服器算時間）。種得越多（長到一半以上的），游過來的魚群越多。 */
+const SEA = { at:[ISLE.x - 1.15, ISLE.z + ISLE.r + 2.6] };
+const Sea = { g:null, n:4, max:8, next:undefined, vis:'' };
+function nearSeaDive(){ if (!onIsle || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return false; return Math.hypot(me.pos.x - SEA.at[0], me.pos.z - SEA.at[1]) < 1.15; }
+function seaGrown(){ let k = 0; for (let i = 0; i < Sea.max; i++){ const p = Farm.plots[100 + i]; if (p && farmProg(p) >= 0.5) k++; } return k; }
+function seaDive(){ if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; } DIVE_SITES.isle.schoolsN = Math.min(7, 1 + seaGrown()); startDive('isle', { x: me.pos.x, z: me.pos.z }); setTimeout(() => { try { seaBuild(); } catch(e){ console.warn('sea', e); } }, 520); }
+function seaPos(i){ const cols = 4, rows = Math.ceil(Sea.max / cols), x = DIVE.x - 4 + (i % cols - (cols - 1) / 2) * 2.6, z = DIVE.z + DIVE.r * 0.45 - 5 - (Math.floor(i / cols) - (rows - 1) / 2) * 2.8; return [x, z, diveBed(x, z)]; }
+function seaNextStep(){ if (farmOnline() && Sea.next !== undefined && farmMine()) return Sea.next; return Sea.n < 8 ? { n: 8, cost: 3000 } : null; }
+function seaPlantMesh(g, p, k){   /* k：長了多少（0～1） */
+  const C = CROP_BY[p.c], s = 0.3 + 0.7 * k, ripe = k >= 1, m = mat(C.col, 0.7);
+  if (p.c === 'kelp'){ for (let n = 0; n < 5; n++){ const h = (1.0 + n * 0.25) * s, b = new THREE.Mesh(new THREE.BoxGeometry(0.16, h, 0.03), m); b.position.set(-0.5 + n * 0.25, h / 2 + 0.1, (n % 2 - 0.5) * 0.4); b.rotation.set(0.08 * (n % 2 ? 1 : -1), n * 0.7, 0.06 * (n - 2)); g.add(b); } }
+  else if (p.c === 'seagrape'){ for (let n = 0; n < 14; n++){ const a = n * 2.4, r = 0.15 + (n % 5) * 0.11, b = new THREE.Mesh(new THREE.SphereGeometry(0.07 + 0.05 * s, 7, 5), m); b.position.set(Math.cos(a) * r, 0.14 + (n % 4) * 0.13 * s, Math.sin(a) * r); g.add(b); } }
+  else if (p.c === 'coral'){ const cols = ['#ff7f9a', '#ffa45c', '#c58cff']; for (let n = 0; n < 7; n++){ const a = n * 0.9, r = n ? 0.38 : 0, h = (0.5 + (n % 3) * 0.28) * s, b = new THREE.Mesh(new THREE.ConeGeometry(0.11 * s + 0.03, h, 6), mat(cols[n % 3], 0.7)); b.position.set(Math.cos(a) * r, h / 2 + 0.1, Math.sin(a) * r); b.rotation.set(Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3); g.add(b); const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09 * s + 0.02, 6, 5), mat(cols[n % 3], 0.7)); tip.position.set(Math.cos(a) * (r + 0.1 * s), h + 0.1, Math.sin(a) * (r + 0.1 * s)); g.add(tip); } }
+  else { const r = 0.22 + 0.2 * s; const lo = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), m); lo.scale.y = 0.45; lo.position.y = 0.26; g.add(lo); const up = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), m); up.scale.y = 0.45; up.position.set(0, 0.26, -r * 0.2); up.rotation.x = ripe ? -0.7 : -0.12; g.add(up);
+    if (ripe){ const pe = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshStandardMaterial({ color:'#ffffff', emissive:'#bcd8ff', emissiveIntensity:0.6, roughness:0.2 })); pe.position.set(0, 0.3, 0.05); g.add(pe); } }
+}
+function seaKey(){ let k = Sea.n + '/' + Sea.max; for (let i = 0; i < Sea.max; i++){ const p = Farm.plots[100 + i]; k += '|' + (p ? p.c + Math.floor(farmProg(p) * 6) : '-'); } return k; }
+function seaBuild(){ if (!Dive.on || Dive.site !== 'isle' || !Dive.group) return; if (Sea.g){ Dive.group.remove(Sea.g); Sea.g.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
+  const g = Sea.g = new THREE.Group(); Dive.group.add(g); Sea.vis = seaKey();
+  for (let i = 0; i < Sea.max; i++){ const [x, z, y] = seaPos(i), p = Farm.plots[100 + i], locked = i >= Sea.n, pg = new THREE.Group(); pg.position.set(x, y, z); g.add(pg);
+    const bed = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.05, 0.16, 14), mat(locked ? '#8f9a8c' : '#e8d9a8', 0.95)); bed.position.y = 0.04; pg.add(bed);
+    if (!locked) for (let n = 0; n < 8; n++){ const a = n / 8 * Math.PI * 2, rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2, 0), mat('#8d8f96', 0.95, { flatShading:true })); rk.position.set(Math.cos(a) * 1.0, 0.1, Math.sin(a) * 1.0); pg.add(rk); }
+    if (p && CROP_BY[p.c]){ const k = farmProg(p); seaPlantMesh(pg, p, k); if (k >= 1){ const sp = farmSprite(CROP_BY[p.c].icon); sp.position.set(0, 2.0, 0); pg.add(sp); } } }
+  { const [x0, z0] = seaPos(0), [x1] = seaPos(3), y = diveBed((x0 + x1) / 2, z0 + 2.6), post = box([0.1, 1.3, 0.1], PALETTE.wood, [(x0 + x1) / 2, y + 0.65, z0 + 2.6]); g.add(post); const sp = farmSprite('🪸'); sp.position.set((x0 + x1) / 2, y + 1.6, z0 + 2.6); g.add(sp); } }
+function seaTick(){ if (!Dive.on || Dive.site !== 'isle') return; { const ib = $('#isleBar'); if (ib && !ib.hidden) ib.hidden = true; } if (frameNo % 120 === 9 && Sea.g && seaKey() !== Sea.vis) seaBuild(); }
+function nearSea(){ if (!Dive.on || Dive.site !== 'isle' || !Sea.g || !onIsle) return null; let best = -1, bd = 1.7; for (let i = 0; i < Sea.max; i++){ const [x, z, y] = seaPos(i), d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd && me.baseY - y < 3){ bd = d; best = i; } } if (best < 0) return null;
+  const p = Farm.plots[100 + best], mine = farmMine(); if (!mine && !p) return null; return { i: best, p, locked: best >= Sea.n, mine }; }
+function seaBtn(sp){ const p = sp.p; if (sp.locked){ const nx = seaNextStep(); return nx && sp.mine ? ['開墾', `🪙${nx.cost}・多 ${nx.n - Sea.n} 格海床`] : ['海床', '這一格還沒開放']; } if (!p) return ['種下', CROPS.some(C => C.sea && seedN(C.id) > 0) ? '🎒 選海底的種子' : '🛒 先去種子攤買海底的種子'];
+  const C = CROP_BY[p.c]; if (farmProg(p) >= 1) return sp.mine ? ['收成', `${C.icon} ${C.name}`] : ['看看', `${C.icon} ${C.name}・成熟了`]; return ['看看', `${C.icon} 還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}`]; }
+function seaAct(sp){ const p = sp.p; if (p && farmProg(p) >= 1 && sp.mine){ farmHarvest(100 + sp.i); return; } if (p){ const C = CROP_BY[p.c]; toast(farmProg(p) >= 1 ? `${C.icon} ${C.name}成熟了` : `${C.icon} ${C.name}還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}才成熟（海底的不用澆水）`); return; }
+  if (!sp.mine) return; if (!sp.locked && !CROPS.some(C => C.sea && seedN(C.id) > 0)){ toast('背包裡沒有海底的種子。先浮上去，到菜園的種子攤買'); return; } Farm.view = 'sea'; Farm.sel = sp.locked ? -1 : sp.i; openSheet('farm'); }
+async function seaUnlock(){ const nx = seaNextStep(); if (!farmMine() || !nx) return; if (rec.coins < nx.cost){ toast('金幣不夠'); return; }
+  if (farmOnline()){ if (!await farmRpc('farm_unlock_sea')) return; } else { addCoins(-nx.cost); Sea.n = nx.n; farmLocalSave(); }
+  seaBuild(); try { SFX.coin(); } catch(e){} toast(`🪸 海底花園變大了，現在有 ${Sea.n} 格`); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+function renderSea(body, mine){
+  body.appendChild(el('p', 'sub', '海底花園：把海底的種子種在海床上，照現實的時間長大，不用澆水。長到一半以上的越多，游過來的魚群越多（可以拍照）。種子在菜園的種子攤買。'));
+  if (mine && Farm.sel >= 0 && Farm.sel < Sea.n && !Farm.plots[100 + Farm.sel]){ body.appendChild(el('div', 'dexhead', `🪸 海床 ${Farm.sel + 1} 要種什麼？`)); const ul = el('ul', 'shoplist'); const own = CROPS.filter(C => C.sea && seedN(C.id) > 0); if (!own.length) ul.appendChild(el('li', 'empty', '背包裡沒有海底的種子。'));
+    for (const C of own){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子 ×${seedN(C.id)}`)); t.appendChild(el('div', 'sub2', `${C.hrs} 小時・收成 🪙${C.sell}`)); li.appendChild(t); const b = el('button', 'tbtn', '種下'); b.disabled = Farm.busy; b.addEventListener('click', async () => { const i = Farm.sel; Farm.sel = -1; closeSheet(); await farmSow(100 + i, C.id); seaBuild(); }); li.appendChild(b); ul.appendChild(li); } body.appendChild(ul); }
+  body.appendChild(el('div', 'dexhead', `🌊 海床（${Sea.n}／${Sea.max} 格）`)); const ul = el('ul', 'shoplist');
+  for (let i = 0; i < Sea.n; i++){ const p = Farm.plots[100 + i], C = p && CROP_BY[p.c], li = el('li', 'on'); li.appendChild(el('span', 'dishic', C ? C.icon : '🟡')); const t = el('div', 'tinfo'), ripe = p && farmProg(p) >= 1; t.appendChild(el('div', 'n', `海床 ${i + 1}` + (C ? '：' + C.name : '：空的')));
+    t.appendChild(el('div', 'sub2', !p ? '空的' : ripe ? '✅ 成熟了' : `還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}`)); li.appendChild(t); if (p && ripe && mine){ const b = el('button', 'tbtn', '收成'); b.disabled = Farm.busy; b.addEventListener('click', () => farmHarvest(100 + i)); li.appendChild(b); } ul.appendChild(li); }
+  body.appendChild(ul); const nx = mine ? seaNextStep() : null; if (nx){ const b = el('button', 'tbtn', `開墾 ${nx.n - Sea.n} 格海床　🪙${nx.cost}`); b.style.cssText = 'display:block;margin:10px auto'; b.disabled = Farm.busy || rec.coins < nx.cost; b.addEventListener('click', seaUnlock); body.appendChild(b); }
 }
 /* v365 海洋記憶：海會記得你在每個釣點做過的事。在同一個地方放流（+3）、撿垃圾（+2）、釣魚（+1，一天算 20 條），那個釣點對你的「記憶」就會變深：
    熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，那裡的水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（最多快兩成）。
@@ -8760,6 +8816,7 @@ const DIVE_SITES = {
   offshore: { name:'外海', icon:'🌊', need:['dive_suit'], top:20, sky:['#3f9fd0', '#05213a'], fog:'#145a85', far:26, coral:4, kelp:10, rocks:14, shells:0, chests:[], pearls:0, legendP:0, boat:true, desc:'從船上直接潛下去，看看這一帶現在有哪些魚特別多。', get fish(){ return offshoreDiveFish(); } },
   harbor: { name:'港口海底', icon:'⚓', need:['dive_suit'], top:16, sky:['#4aa0c4', '#041a2c'], fog:'#1a6488', far:28, coral:6, kelp:70, rocks:24, shells:12, chests:[0.6], pearls:0, legendP:0.15, harbor:true, desc:'從港口碼頭的梯子直接下水：防波堤的消波塊、碼頭的木樁、海藻森林、沉在海底的舊漁船、掉下去的貨櫃和大錨，越往外海越深越暗。',
     fish:['mackerel', 'moonbream', 'scorpion', 'grouper', 'octopus', 'ika', 'squid', 'stingray', 'barracuda', 'trevally', 'jelly', 'lobster', 'kingcrab', 'eel', 'bonito', 'turtle'] },
+  isle:  { name:'小島海底花園', icon:'🏝️', need:['dive_suit'], top:11, sky:['#9aeaf5', '#0d5584'], fog:'#35a8cf', far:32, coral:8, kelp:10, rocks:12, shells:0, chests:[], pearls:0, legendP:0, garden:true, schoolsN:1, desc:'自己小島碼頭底下的海底，可以種海帶、海葡萄、珊瑚、珍珠貝；種得越多，游過來的魚群越多。', get fish(){ return [...new Set((SPOT_BY_ID.isle.fish || []).concat((SPOT_BY_ID.reef || {}).fish || []))]; } },
   cave:  { name:'海底洞穴', icon:'🕳️', need:['dive_suit', 'dive_tank4', 'dive_light'], top:18, sky:['#1a3550', '#02060c'], fog:'#12324c', far:22, coral:0, kelp:0, rocks:60, shells:4, chests:[0.8], pearls:7, legendP:0.55, cave:true, desc:'又暗又神祕的洞穴，有會發光的水晶和珍珠貝，住著深海的怪魚。要專業雙氧氣瓶和潛水燈。',
     fish:['angler', 'jelly', 'lantern', 'oarfish', 'giantsquid', 'octopus', 'eel', 'moonbream', 'ika', 'squid', 'goby', 'kingcrab'] },
 };
@@ -8850,7 +8907,7 @@ function buildDive(){
   const g = new THREE.Group(); g.name = 'dive'; scene.add(g); Dive.group = g;
   const X = DIVE.x, Y = DIVE.y, Z = DIVE.z, R = DIVE.r, M = diveMerger(), rnd = mulberry(Math.floor(Date.now() / 60000));
   const AK = Quality.tier === 'low' ? 1.2 : 1.7; S = Object.assign({}, S, { coral: Math.round(S.coral * AK), kelp: Math.round(S.kelp * AK), rocks: Math.round(S.rocks * AK), shells: Math.round(S.shells * 1.4) });   /* 海底變大，東西也多放一點 */
-  const onBed = () => { const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * R * 0.92, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; return [x, diveBed(x, z), z]; };
+  const onBed = () => { for (let k = 0; k < 8; k++){ const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * R * 0.92, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; if (S.garden && k < 7 && Math.abs(x - (X - 4)) < 8 && Math.abs(z - (Z + R * 0.45 - 5)) < 8) continue;   /* v374 小島海底花園：海床那一塊不要放石頭、海藻 */ return [x, diveBed(x, z), z]; } };
   // 外面的大球（上亮下暗）和水面
   { const sg = new THREE.SphereGeometry(R + 16, 28, 16), cs = [], p = sg.attributes.position, c1 = new THREE.Color(S.sky[0]), c0 = new THREE.Color(S.sky[1]), cc = new THREE.Color();
     for (let i = 0; i < p.count; i++){ const k = clamp(p.getY(i) / (R + 16) * 0.5 + 0.5, 0, 1); cc.copy(c0).lerp(c1, Math.pow(k, 1.6)); cs.push(cc.r, cc.g, cc.b); }
@@ -8977,7 +9034,7 @@ function buildDive(){
   // 魚群（同一種魚一起游）
   const SP = siteSpecies(Dive.site || 'reef'), inst = SP.filter(f => FISH_STYLE[f.id] && !BIG_FISH.has(f.id) && f.rarity === '常見');
   Dive.schools = [];
-  const lowQ = Quality.tier === 'low', nS = Math.min(S.lush ? 7 : 5, inst.length); const pool = inst.slice().sort(() => rnd() - 0.5);
+  const lowQ = Quality.tier === 'low', nS = Math.min(S.schoolsN != null ? S.schoolsN : S.lush ? 7 : 5, inst.length); const pool = inst.slice().sort(() => rnd() - 0.5);
   for (let s = 0; s < nS; s++){ const f = pool[s], st = FISH_STYLE[f.id], n = S.lush ? Math.round((16 + Math.floor(rnd() * 9)) * (lowQ ? 0.7 : 1)) : 14 + Math.floor(rnd() * 10), ims = [];
     for (const part of Object.keys(FISH_MESH[st.shape])){ const im = new THREE.InstancedMesh(fishGeo(st.shape, part), fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape), n); im.frustumCulled = false; g.add(im); ims.push(im); }
     const a = rnd() * Math.PI * 2, r = 6 + rnd() * (R * 0.55);
@@ -9047,7 +9104,7 @@ function endDive(reason, instant){
     if (Dive.group){ Dive.group.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); scene.remove(Dive.group); Dive.group = null; }
     Dive.fish = []; Dive.schools = []; Dive.loot = []; Dive.kelp = null; diveShowWorld();
     me.setSwim(false); const [fx0, fz0] = Dive.back ? [Dive.back.x, Dive.back.z] : freeSpot(FERRY.at[0] - 1.2, FERRY.at[1] + 0.8); Dive.back = null; me.pos.x = fx0; me.pos.z = fz0; me.baseY = groundHeight(fx0, fz0); Jump.gy = me.baseY; me.rot = -Math.PI / 2; cam.yaw = me.rot + Math.PI; if (Dive.savedDist) cam.dist = Dive.savedDist;
-    renderDiveHud(); pushPresence(true); if (!instant) setTimeout(() => fx.classList.remove('on'), 120);
+    renderDiveHud(); pushPresence(true); if (!instant) setTimeout(() => fx.classList.remove('on'), 120); try { if (onIsle) renderIsleBar(); } catch(e){}
     const n = Dive.seen.size; if (!instant) toast(`${reason || '🤿 浮上水面了'}${n ? `　這次看到 ${n} 種魚` : ''}`);
     if (Dive.boat){ const bt = Dive.boat; Dive.boat = null; myBoat = bt; me.pos.x = bt.m.position.x; me.pos.z = bt.m.position.z; me.rot = bt.m.rotation.y; me.sitting = true; cam.yaw = me.rot + Math.PI; pushPresence(true); }
     const onBoat = !!(Dive.ret || myBoat); if (Dive.ret){ const r = Dive.ret; Dive.ret = null; ferryTo(r.x, r.z, r.label); }
@@ -9073,6 +9130,7 @@ function diveFacing(){
 const tmpV2 = new THREE.Vector3();
 function diveNearLoot(){ let best = null, bd = 1.8; for (const l of Dive.loot){ if (l.got) continue; const d = Math.hypot(me.pos.x - l.x, me.pos.z - l.z, (me.baseY - l.y) * 0.6); if (d < bd){ bd = d; best = l; } } return best; }
 function diveAction(){
+  { const sp = nearSea(); if (sp){ seaAct(sp); return; } }
   const l = diveNearLoot(); if (l){ grabLoot(l); return; }
   const t = diveFacing(); if (t){ divePhoto(t.f); return; }
   toast('靠近魚按「📷 拍照」，靠近貝殼或寶箱可以撿起來');
@@ -9116,6 +9174,7 @@ function updateDive(dt, t){
   if (Dive.kelp && frameNo % 2 === 0){ const { im, list } = Dive.kelp, cur = faiCurrent(); for (let i = 0; i < list.length; i++){ const k = list[i]; tankDummy.position.set(k.x, k.y, k.z); tankDummy.rotation.set(Math.sin(t * 0.9 + k.ph) * 0.12 * (0.6 + cur.sp) + cur.lz, k.ry, Math.cos(t * 0.7 + k.ph) * 0.1 * (0.6 + cur.sp) - cur.lx); tankDummy.scale.set(1, k.s, 1); tankDummy.updateMatrix(); im.setMatrixAt(i, tankDummy.matrix); } im.instanceMatrix.needsUpdate = true; }
   // 魚群、單獨的魚：海洋生態 AI（faiDiveUpdate）；出錯的話用原本繞圈圈的游法
   try { diveExtrasUpdate(dt, t); } catch(e){}
+  try { seaTick(); } catch(e){}
   if (Dive.aiOn){ try { faiDiveUpdate(dt, t); } catch(e){ console.warn('fishAI dive', e); Dive.aiOn = false; } }
   if (!Dive.aiOn){
   // 魚群
@@ -10490,7 +10549,7 @@ function normRec(r){
   if (Array.isArray(r.rods)) e.rods = ['bamboo', ...r.rods.filter(id => id !== 'bamboo' && RODS.some(x => x.id === id))];
   e.rod = e.rods.includes(r.rod) ? r.rod : 'bamboo';
   if (r.bait && typeof r.bait === 'object') for (const b of BAITS.concat(CHUMS)){ const n = Math.floor(Number(r.bait[b.id]) || 0); if (n > 0) e.bait[b.id] = Math.min(999, n); }
-  if (r.bait && typeof r.bait === 'object') for (const id of ['tomato', 'cabbage', 'corn', 'sweetpotato', 'strawberry', 'pumpkin', 'watermelon', 'carrot', 'grape', 'sunflower']){ const n = Math.floor(Number(r.bait['seed_' + id]) || 0); if (n > 0) e.bait['seed_' + id] = Math.min(999, n); }   /* v371 菜園的種子也放在背包 */
+  if (r.bait && typeof r.bait === 'object') for (const id of ['tomato', 'cabbage', 'corn', 'sweetpotato', 'strawberry', 'pumpkin', 'watermelon', 'carrot', 'grape', 'sunflower', 'kelp', 'seagrape', 'coral', 'oyster']){ const n = Math.floor(Number(r.bait['seed_' + id]) || 0); if (n > 0) e.bait['seed_' + id] = Math.min(999, n); }   /* v371 菜園的種子也放在背包 */
   e.baitOn = BAITS.some(b => b.id === r.baitOn) ? r.baitOn : null;
   e.cage = Array.isArray(r.cage) ? r.cage.filter(x => x && FISH_BY_ID[x.f]).slice(0, CAGE.max).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, w0:Number(x.w0)||Number(x.w)||0, t:Number(x.t)||0, at:Number(x.at)||0 }, x.s === 'M' || x.s === 'F' ? { s:x.s } : {}, x.k ? { k:true } : {})) : [];
   e.cageFed = typeof r.cageFed === 'string' ? r.cageFed.slice(0, 10) : null;
@@ -13197,6 +13256,7 @@ function renderTab(){
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。',
+      '🪸 小島海底花園：小島碼頭左邊有一座潛水梯（有紅色救生圈），有潛水裝備就可以下去自己小島的海底。海床上可以種海底的作物：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時（種子在菜園的種子攤買）。海底的不用澆水，照現實時間長大；長到一半以上的越多，游過來的魚群越多，可以拍照。一開始 4 格海床，可以花金幣開到 8 格。去朋友的島也可以潛下去參觀他的海底花園。',
       '🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。',
       '📍 共同海圖：打開「地圖」，可以在自己現在站的地方做記號給所有人看（🐟 魚很多、✨ 釣到稀有魚、🐋 有大魚或鯨魚、🎁 有寶箱或貝殼、📸 風景很漂亮）。點地圖上別人的記號，可以按「帶我去」跟著箭頭走過去，也可以按「👍 謝謝」。記號 24 小時後消失，每個人同時最多 3 個、一天最多做 10 個，要釣過 5 條魚才能做。走到記號附近，那個位置上面也會浮出小標籤。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
