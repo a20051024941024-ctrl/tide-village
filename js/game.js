@@ -610,7 +610,7 @@ const FISH_MOVES = {
   crab: 'float lg = smoothstep(0.38, 0.5, abs(position.z)) * step(position.y, 0.12) * step(position.x, 0.2); float cl = smoothstep(0.42, 0.5, position.x) * smoothstep(0.2, 0.3, abs(position.z));\n float ph = uFishT * 7.0 + position.x * 22.0 + step(0.0, position.z) * 3.14159;\n transformed.y += max(0.0, sin(ph)) * 0.07 * lg * smoothstep(0.38, 0.75, abs(position.z)); transformed.x += cos(ph) * 0.035 * lg;\n transformed.y += sin(uFishT * 2.5 + step(0.0, position.z) * 1.7) * 0.03 * cl * smoothstep(0.5, 0.72, position.x);',
   // 龍蝦、螯蝦：尾巴上下拍（跟 vert 一樣）＋ 細腳輪流划、觸角左右晃
   lobster: 'float wk = clamp((-position.x - 0.1) / 0.7, 0.0, 1.0);\n transformed.y += sin(uFishT * 4.0 + position.x * 3.0) * 0.08 * wk * wk;\n float lg = step(position.y, -0.1) * smoothstep(0.1, 0.18, abs(position.z)) * step(-0.05, position.x) * step(position.x, 0.3); transformed.y += max(0.0, sin(uFishT * 8.0 + position.x * 30.0 + step(0.0, position.z) * 3.14)) * 0.035 * lg;\n float an = smoothstep(0.7, 1.15, position.x); transformed.z += sin(uFishT * 2.2 + position.z * 4.0) * 0.06 * an;',
-  blob: 'float wk = clamp((-position.x - 0.05) / 0.6, 0.0, 1.0);\n transformed.z += sin(uFishT * 3.0 + position.x * 4.0) * 0.05 * wk * wk; transformed.y += sin(uFishT * 1.7 + position.x * 3.0) * 0.01;',   /* 水滴魚：軟軟的、慢慢晃 */
+  blob: 'float wk = clamp((-position.x + 0.1) / 0.7, 0.0, 1.0); float br = sin(uFishT * 1.5);\n transformed.y *= 1.0 + 0.07 * br; transformed.z *= 1.0 - 0.05 * br;\n transformed.z += sin(uFishT * 2.4 + position.x * 3.0) * 0.16 * wk * wk;\n transformed.y += sin(uFishT * 1.1) * 0.03 + sin(uFishT * 2.0 + position.x * 5.0) * 0.02 * (1.0 - wk);',   /* v386 玩家說水滴魚完全不會動：以前只晃一點點看不出來，現在身體會像果凍一樣一脹一縮、尾巴慢慢擺、整隻上下漂 */   /* 水滴魚：軟軟的、慢慢晃 */
   hover: 'transformed.y += sin(uFishT * 1.4) * 0.03;',   /* 小飛象章魚：身體輕輕上下浮，耳朵和腳的膜另外動（FIN） */
   marlin: 'float wk = clamp((-position.x - 0.15) / 0.55, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 4.0) * 0.1 * wk * wk;',   /* 只有後 1/3 擺動，前段和劍不動 */
 };
@@ -6544,6 +6544,7 @@ function renderFarm(body){
     body.appendChild(el('div', 'dexhead', '🌊 海底的種子')); { const u2 = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.sea)) u2.appendChild(seedLi(C)); body.appendChild(u2); body.appendChild(el('p', 'sub', '海底的種子要從小島碼頭的潛水梯下去，種在海底花園（要有潛水裝備）。不用澆水，長得比較慢。')); }
     for (const [ttl, flt] of [['🪸 海底的造景（便宜，可以緊貼著放成一片）', D => D.eco], ['🏺 海底的裝飾', D => !D.eco]]){ body.appendChild(el('div', 'dexhead', ttl)); const u3 = el('ul', 'shoplist'); for (const D of DECOS.filter(flt)){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', D.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', D.name + (decoN(D.id) ? `（有 ${decoN(D.id)} 個）` : ''))); t.appendChild(el('div', 'sub2', `一個 🪙${D.price}`)); li.appendChild(t);
         for (const n of D.eco ? [1, 10] : [1]){ const b = el('button', 'tbtn' + (n === 1 && D.eco ? ' ghost' : ''), D.eco ? `×${n}` : '買'); b.style.marginLeft = '6px'; b.disabled = rec.coins < D.price * n || Farm.busy; b.addEventListener('click', () => decoBuy(D.id, n)); li.appendChild(b); } u3.appendChild(li); } body.appendChild(u3); }
+    { const rb = el('button', 'tbtn ghost', '🏆 看本週最美海底排行'); rb.style.cssText = 'display:block;margin:8px auto'; rb.addEventListener('click', () => { Farm.view = 'sea'; seaLikeLoad().then(() => { if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }); renderTab(); }); body.appendChild(rb); }
     body.appendChild(el('p', 'sub', `買了放背包，潛到海底拿在手上，想放哪裡就放哪裡，可以緊貼著排成一片，也可以再收回來。造景和裝飾合起來最多 ${DECO_MAX} 個。住在一起的室友、家人也可以一起來佈置。`));
     body.appendChild(el('p', 'sub', '買好以後到「背包 → 🌱 種子」或走到田邊按「播種」，把種子拿在手上，再一格一格種下去。')); return; }
   if (mine){
@@ -6570,7 +6571,7 @@ function nearSeaDive(){ if (!onIsle || myBoat || mySeat || F.phase !== 'idle' ||
 const CORAL_FISH = new Set(['parrot', 'seahorse', 'lionfish']);
 function coralK(){ if (!farmMine()) return Sea.myCoral || 0; let k = 0; for (const key in Farm.plots){ const p = Farm.plots[key]; if (Number(key) >= 100 && p.c === 'coral' && farmProg(p) >= 0.5) k++; } return (Sea.myCoral = Math.min(4, k)); }   /* 在朋友的島上：用上次在自己島上算的 */
 function seaGrown(){ let k = 0; for (const key in Farm.plots){ if (Number(key) >= 100 && farmProg(Farm.plots[key]) >= 0.5) k++; } return k; }
-function seaDive(){ if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; } DIVE_SITES.isle.schoolsN = Math.min(7, 1 + seaGrown()); startDive('isle', { x: me.pos.x, z: me.pos.z }); setTimeout(() => { try { seaBuild(); } catch(e){ console.warn('sea', e); } }, 520); }
+function seaDive(){ if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; } DIVE_SITES.isle.schoolsN = Math.min(7, 1 + seaGrown()); startDive('isle', { x: me.pos.x, z: me.pos.z }); setTimeout(() => { try { seaBuild(); } catch(e){ console.warn('sea', e); } }, 520); seaLikeLoad(); }
 /* v377 海底的裝飾：種子攤買，放背包，拿在手上到海底想放哪裡就放哪裡（最多 12 個），走過去可以收回背包 */
 const DECOS = [
   { id:'amphora', name:'古陶罐', icon:'🏺', price:300 }, { id:'bubble', name:'冒泡石', icon:'🫧', price:400 }, { id:'clam', name:'大硨磲貝', icon:'🐚', price:500 }, { id:'anchor', name:'舊船錨', icon:'⚓', price:600 },
@@ -6633,6 +6634,17 @@ async function decoTake(d){ const D = DECO_BY[d.k]; if (!D || Farm.busy) return;
     if (!await farmRpc('sea_deco_take', { p_id: d.id })) return; SeaDeco.list = SeaDeco.list.filter(x => x !== d); }
   else { SeaDeco.list = SeaDeco.list.filter(x => x !== d); rec.bait['deco_' + d.k] = decoN(d.k) + 1; saveRecLocal(); farmLocalSave(); }
   seaBuild(); try { SFX.click(); } catch(e){} toast(`${D.icon} ${D.name}收回背包了`); }
+/* v386 海底花園按讚、本週最美海底：去別人的島潛下去可以按讚（一週一次），排行每週一重算（伺服器 148） */
+const SeaLike = { n:0, liked:false, pieces:0, owner:null, top:null, last:null, at:0, busy:false };
+async function seaLikeLoad(){ if (!onIsle || !farmOnline()){ SeaLike.owner = null; return; } const own = onIsle.owner; try { const { data, error } = await Cloud.sb.rpc('sea_like_info', { p_owner: own }); if (error) throw error; if (data && onIsle && onIsle.owner === own){ SeaLike.owner = own; SeaLike.n = Number(data.n) || 0; SeaLike.liked = !!data.liked; SeaLike.pieces = Number(data.pieces) || 0; } } catch(e){ SeaLike.owner = null; } }
+function seaCanLike(){ return !!onIsle && SeaLike.owner === onIsle.owner && !SeaLike.liked && !farmMine() && SeaLike.pieces >= 5; }
+async function seaLike(){ if (SeaLike.busy || !seaCanLike()) return; SeaLike.busy = true; try { const { data, error } = await Cloud.sb.rpc('sea_like', { p_owner: onIsle.owner }); if (error) throw error; SeaLike.n = Number(data.n) || SeaLike.n + 1; SeaLike.liked = true; try { SFX.catch(); } catch(e){} flash('👍 幫這片海底按讚了！', 1.4); me.say('👍', 'emote', 3); } catch(e){ toast(cloudErrMsg(e)); } SeaLike.busy = false; if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+async function seaTopLoad(force){ if (!Cloud.on || !Cloud.sb || (!force && Date.now() - SeaLike.at < 60000)) return; SeaLike.at = Date.now(); try { const { data, error } = await Cloud.sb.rpc('sea_top'); if (error) throw error; SeaLike.top = (data && data.top) || []; SeaLike.last = (data && data.last) || null; if (curTab === 'farm' && !$('#sheet').hidden && Farm.view === 'sea') renderTab(); } catch(e){ SeaLike.top = SeaLike.top || []; } }
+function renderSeaTop(body){ body.appendChild(el('div', 'dexhead', '🏆 本週最美海底')); if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端才看得到排行。')); return; } seaTopLoad();
+  body.appendChild(el('p', 'sub', '去別人的島潛下去參觀，覺得漂亮就按讚（一個人一週對同一座島一次）。每週一重新算；海底至少要放 5 樣東西才會上榜。' + (SeaLike.last ? `上週第一名：${SeaLike.last.name}（👍${SeaLike.last.n}）` : '')));
+  const ul = el('ul', 'shoplist'); if (!SeaLike.top) ul.appendChild(el('li', 'empty', '載入中…')); else if (!SeaLike.top.length) ul.appendChild(el('li', 'empty', '這週還沒有人拿到讚。把海底佈置好，邀朋友來看！'));
+  (SeaLike.top || []).forEach((r, i) => { const li = el('li', r.id === myIdOrMe() ? 'on' : ''); li.appendChild(el('span', 'dishic', ['🥇', '🥈', '🥉'][i] || String(i + 1))); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', r.name + (r.id === myIdOrMe() ? '（你）' : ''))); t.appendChild(el('div', 'sub2', `👍 ${r.n}・放了 ${r.pieces} 樣東西`)); li.appendChild(t);
+    if (r.id !== myIdOrMe()){ const b = el('button', 'tbtn ghost', '去看看'); b.addEventListener('click', () => { closeSheet(); if (Dive.on){ endDive(); setTimeout(() => visitIsle(r.id, r.name), 1000); } else visitIsle(r.id, r.name); toast('到了以後，從他的碼頭左邊的潛水梯下去'); }); li.appendChild(b); } ul.appendChild(li); }); body.appendChild(ul); }
 /* v377 玩家建議：海底不要固定的格子，拿著種子想種哪裡就種哪裡。每一株記自己的位置（相對海底中心），數量上限是 Sea.n（可以擴建）。
    舊的、沒有位置的照原本的格子畫。 */
 const SEA_STEPS = [[8, 3000], [12, 8000], [16, 15000]];
@@ -6666,11 +6678,13 @@ function seaWhyNot(sp){ if (seaCount() >= Sea.n) return `會收成的作物種�
 function seaLabel(){   /* 潛水時按鈕要顯示什麼（沒有就回 null，照原本拍照、撿東西） */
   const ns = nearSea(); if (ns){ const p = ns.p, C = CROP_BY[p.c]; if (farmProg(p) >= 1) return ns.mine ? ['收成', `${C.icon} ${C.name}`] : ['看看', `${C.icon} ${C.name}・成熟了`]; return ['看看', `${C.icon} 還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}`]; }
   const sp = seaSpot(); const DH = decoHand(); if (DH && decoSpot()) return ['放下', `${DH.icon} ${DH.name} ×${decoN(DH.id)}`]; { const nd = !DH && !(seedHand() && seedHand().sea) ? nearDeco() : null; if (nd) return ['收起來', `${DECO_BY[nd.k].icon} ${DECO_BY[nd.k].name}`]; }
+  if (seaCanLike() && !diveNearLoot() && !diveFacing()) return ['按讚', `👍 這片海底這週 ${SeaLike.n} 個讚`];
   if (!sp && !(seaCanEdit() && decoSpot())) return null; const H = seedHand(); if (sp && H && H.sea) return ['種下', `${H.icon} ${H.name} ×${seedN(H.id)}`];
   if (!diveNearLoot() && !diveFacing()) return ['海底花園', CROPS.some(C => C.sea && seedN(C.id) > 0) || DECOS.some(D => decoN(D.id) > 0) ? '🎒 拿種子、裝飾出來' : `🪸 ${seaCount()}／${Sea.n} 株`]; return null; }
 function seaAct(){ const ns = nearSea();
   if (ns){ const p = ns.p, C = CROP_BY[p.c]; if (farmProg(p) >= 1 && ns.mine){ farmHarvest(100 + ns.i); return true; } toast(farmProg(p) >= 1 ? `${C.icon} ${C.name}成熟了` : `${C.icon} ${C.name}還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}才成熟（海底的不用澆水）`); return true; }
   const sp = seaSpot(); const DH = decoHand(); { const ds = DH ? decoSpot() : null; if (ds){ decoPut(ds, DH.id); return true; } } { const nd = !DH && !(seedHand() && seedHand().sea) ? nearDeco() : null; if (nd){ decoTake(nd); return true; } }
+  if (seaCanLike() && !diveNearLoot() && !diveFacing()){ seaLike(); return true; }
   if (!sp && !(seaCanEdit() && decoSpot())) return false; const H = seedHand(); if (sp && H && H.sea){ seaPlantHere(sp, H.id); return true; }
   if (!diveNearLoot() && !diveFacing()){ Farm.view = 'sea'; openSheet('farm'); return true; } return false; }
 async function seaPlantHere(sp, id){ const C = CROP_BY[id]; if (!C || !C.sea || Farm.busy || seedN(id) < 1) return; const why = seaWhyNot(sp); if (why){ toast(why); return; }
@@ -6690,7 +6704,9 @@ function renderSea(body, mine){
   const sl = seaSlots(); body.appendChild(el('div', 'dexhead', `🌊 種在海底的（${sl.length}／${Sea.n} 株）`)); const ul = el('ul', 'shoplist'); if (!sl.length) ul.appendChild(el('li', 'empty', '還沒有種東西。'));
   for (const i of sl){ const p = Farm.plots[100 + i], C = CROP_BY[p.c]; if (!C) continue; const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'), ripe = farmProg(p) >= 1; t.appendChild(el('div', 'n', C.name));
     t.appendChild(el('div', 'sub2', ripe ? '✅ 成熟了' : `還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}`)); li.appendChild(t); if (ripe && mine){ const b = el('button', 'tbtn', '收成'); b.disabled = Farm.busy; b.addEventListener('click', () => farmHarvest(100 + i)); li.appendChild(b); } ul.appendChild(li); }
-  body.appendChild(ul); const nx = mine ? seaNextStep() : null; if (nx){ const b = el('button', 'tbtn', `擴建：可以多種 ${nx.n - Sea.n} 株　🪙${nx.cost}`); b.style.cssText = 'display:block;margin:10px auto'; b.disabled = Farm.busy || rec.coins < nx.cost; b.addEventListener('click', seaUnlock); body.appendChild(b); }
+  body.appendChild(ul); if (onIsle && SeaLike.owner === onIsle.owner){ const box = el('p', 'sub', `👍 這片海底這週有 ${SeaLike.n} 個讚` + (SeaLike.liked ? '（你按過了）' : '')); body.appendChild(box); if (seaCanLike()){ const lb = el('button', 'tbtn', '👍 幫這片海底按讚'); lb.style.cssText = 'display:block;margin:6px auto'; lb.addEventListener('click', seaLike); body.appendChild(lb); } }
+  const nx = mine ? seaNextStep() : null; if (nx){ const b = el('button', 'tbtn', `擴建：可以多種 ${nx.n - Sea.n} 株　🪙${nx.cost}`); b.style.cssText = 'display:block;margin:10px auto'; b.disabled = Farm.busy || rec.coins < nx.cost; b.addEventListener('click', seaUnlock); body.appendChild(b); }
+  try { renderSeaTop(body); } catch(e){}
 }
 /* v365 海洋記憶：海會記得你在每個釣點做過的事。在同一個地方放流（+3）、撿垃圾（+2）、釣魚（+1，一天算 20 條），那個釣點對你的「記憶」就會變深：
    熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，那裡的水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（最多快兩成）。
@@ -13418,7 +13434,7 @@ function renderTab(){
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。',
-      '🪸 小島海底花園：小島碼頭左邊有一座潛水梯（有紅色救生圈），有潛水裝備就可以下去自己小島的海底。海底的種子（海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，在菜園的種子攤買）拿在手上，游到海底想種的地方按「種下」，哪裡都可以種，可以種得很密。海底的不用澆水，照現實時間長大；長到一半以上的越多，游過來的魚群越多，可以拍照。珊瑚還會吸引珊瑚礁魚：每有一株長到一半以上的珊瑚，在小島釣魚時鸚哥魚、海馬、獅子魚這三種稀有的珊瑚礁魚多 25%（最多算 4 株，也就是最多 2 倍）。跟朋友一起從同一座島潛下去，在海底看得到彼此。一開始可以種 4 株，可以花金幣擴建到 8、12、16 株。自由打造海底：種子攤有賣海底的造景（粉紅、橘色、紫色珊瑚、腦珊瑚、海草、海帶林、海葵、海綿、海星、貝殼、大小石頭、白沙地）和裝飾（古陶罐、冒泡石、大硨磲貝、舊船錨、海底石燈、裝飾寶箱、石頭人像、石拱門）。買了放背包，潛到海底拿在手上按「放下」，會放在你面前，可以一個接一個緊貼著排成一片；靠近它按「收起來」可以收回背包。造景和裝飾合起來最多 300 個，住在一起的室友、家人也可以一起佈置。會收成賺金幣的作物另外算，還是有數量上限。去朋友的島也可以潛下去參觀他的海底花園。',
+      '🪸 小島海底花園：小島碼頭左邊有一座潛水梯（有紅色救生圈），有潛水裝備就可以下去自己小島的海底。海底的種子（海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，在菜園的種子攤買）拿在手上，游到海底想種的地方按「種下」，哪裡都可以種，可以種得很密。海底的不用澆水，照現實時間長大；長到一半以上的越多，游過來的魚群越多，可以拍照。珊瑚還會吸引珊瑚礁魚：每有一株長到一半以上的珊瑚，在小島釣魚時鸚哥魚、海馬、獅子魚這三種稀有的珊瑚礁魚多 25%（最多算 4 株，也就是最多 2 倍）。跟朋友一起從同一座島潛下去，在海底看得到彼此。一開始可以種 4 株，可以花金幣擴建到 8、12、16 株。自由打造海底：種子攤有賣海底的造景（粉紅、橘色、紫色珊瑚、腦珊瑚、海草、海帶林、海葵、海綿、海星、貝殼、大小石頭、白沙地）和裝飾（古陶罐、冒泡石、大硨磲貝、舊船錨、海底石燈、裝飾寶箱、石頭人像、石拱門）。買了放背包，潛到海底拿在手上按「放下」，會放在你面前，可以一個接一個緊貼著排成一片；靠近它按「收起來」可以收回背包。造景和裝飾合起來最多 300 個，住在一起的室友、家人也可以一起佈置。會收成賺金幣的作物另外算，還是有數量上限。去別人的島潛下去參觀，可以幫他的海底按讚（一週一次）；「海底花園」頁面最下面有「🏆 本週最美海底」排行，每週一重新算，可以直接點「去看看」。去朋友的島也可以潛下去參觀他的海底花園。',
       '🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。',
       '📍 共同海圖：打開「地圖」，可以在自己現在站的地方做記號給所有人看（🐟 魚很多、✨ 釣到稀有魚、🐋 有大魚或鯨魚、🎁 有寶箱或貝殼、📸 風景很漂亮）。點地圖上別人的記號，可以按「帶我去」跟著箭頭走過去，也可以按「👍 謝謝」。記號 24 小時後消失，每個人同時最多 3 個、一天最多做 10 個，要釣過 5 條魚才能做。走到記號附近，那個位置上面也會浮出小標籤。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
