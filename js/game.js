@@ -3492,32 +3492,129 @@ renderSoundIcon();
 $('#soundBtn').addEventListener('click', () => { soundOn = !soundOn; LS.set('tide.sound', soundOn); if (soundOn) ensureAudio(); renderSoundIcon(); });
 
 /* ================= MUSIC：程式即時演奏的背景音樂（會跟著地方和狀況換曲子）================= */
+/* v361 背景音樂重做（使用者選「用程式寫音樂」）：還是在手機上即時演奏、沒有音樂檔、沒有授權問題，
+   但改成像真的樂器的聲音（烏克麗麗、木琴、電鋼琴、鈴聲、笛子、貝斯、沙鈴、木魚、鼓），每個場景有自己寫的旋律，
+   一首歌的結構：前奏 → A 段 → A 段（換樂器） → B 段 → A 段 → 間奏，一直循環；加一點空間回音。
+   樂器的聲音是第一次用到時用數學算出來一小段（每 6 個半音算一個，其他的用變速），之後都重複用，便宜手機也跑得動。 */
+const MusicKit = (() => {
+  const SR = 22050, LEN = { pluck:1.7, marimba:1.2, epiano:2.8, bell:3.2, flute:2.4, bass:1.6, kick:0.4, shaker:0.1, clave:0.09, tom:0.6, hat:0.06 };
+  const DRUM = { kick:1, shaker:1, clave:1, tom:1, hat:1 }, HOLD = { epiano:1, flute:1 };
+  const per = new WeakMap(), hz = m => 440 * Math.pow(2, (m - 69) / 12), TAU = Math.PI * 2;
+  function render(kind, root){
+    const f = hz(root), n = Math.floor(SR * (LEN[kind] || 1)), d = new Float32Array(n); let sd = 977 + root * 131;
+    const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647) * 2 - 1;
+    if (kind === 'pluck'){ const N = Math.max(2, Math.round(SR / f)), r = new Float32Array(N); let lp = 0; for (let i = 0; i < N; i++){ lp = lp * 0.55 + rnd() * 0.45; r[i] = lp; }
+      let k = 0; for (let i = 0; i < n; i++){ const a = r[k], b = r[(k + 1) % N]; d[i] = a; r[k] = (a + b) * 0.5 * 0.9965; k = (k + 1) % N; } }   /* 撥弦（烏克麗麗、吉他） */
+    else { let ph = 0, nl = 0, pv = 0;
+      for (let i = 0; i < n; i++){ const t = i / SR; let v = 0;
+        if (kind === 'marimba') v = Math.sin(TAU * f * t) * Math.exp(-t * 6) + 0.3 * Math.sin(TAU * 4 * f * t) * Math.exp(-t * 22) + 0.06 * Math.sin(TAU * 9.8 * f * t) * Math.exp(-t * 48);
+        else if (kind === 'epiano') v = Math.sin(TAU * f * t + 1.1 * Math.exp(-t * 2.5) * Math.sin(TAU * f * t)) * Math.exp(-t * 1.2) + 0.18 * Math.sin(TAU * 2 * f * t) * Math.exp(-t * 3) + 0.05 * Math.sin(TAU * 7 * f * t) * Math.exp(-t * 14);
+        else if (kind === 'bell') v = [1, 2.76, 5.4, 8.93].reduce((s, r, j) => s + [1, 0.42, 0.2, 0.08][j] * Math.sin(TAU * r * f * t) * Math.exp(-t * [0.9, 2, 3.6, 5.5][j]), 0);
+        else if (kind === 'flute'){ ph += TAU * f * (1 + 0.0045 * Math.sin(TAU * 5.2 * t) * Math.min(1, t / 0.45)) / SR; nl = nl * 0.92 + rnd() * 0.08;
+          v = (Math.sin(ph) + 0.1 * Math.sin(2 * ph) + 0.035 * Math.sin(3 * ph)) * Math.min(1, t / 0.07) * (0.86 + 0.14 * Math.exp(-t * 5)) + nl * 0.5 * Math.exp(-t * 3); }
+        else if (kind === 'bass'){ ph += TAU * f / SR; v = (Math.sin(ph) + 0.38 * Math.sin(2 * ph) + 0.16 * Math.sin(3 * ph) + 0.05 * Math.sin(4 * ph)) * Math.exp(-t * 1.6);   /* 多一點泛音，手機喇叭才聽得到低音 */ }
+        else if (kind === 'kick'){ ph += TAU * (46 + 80 * Math.exp(-t * 32)) / SR; v = Math.sin(ph) * Math.exp(-t * 11); }
+        else if (kind === 'tom'){ ph += TAU * (92 + 45 * Math.exp(-t * 14)) / SR; v = Math.sin(ph) * Math.exp(-t * 6.5); }
+        else if (kind === 'shaker' || kind === 'hat'){ const x = rnd(), h = x - pv; pv = x; v = h * Math.min(1, t / (kind === 'shaker' ? 0.012 : 0.002)) * Math.exp(-t * (kind === 'shaker' ? 48 : 85)); }
+        else if (kind === 'clave') v = Math.sin(TAU * 2350 * t) * Math.exp(-t * 62) + 0.5 * Math.sin(TAU * 1640 * t) * Math.exp(-t * 52);
+        d[i] = v * Math.min(1, t / 0.003); } }
+    for (let i = Math.max(0, n - 600); i < n; i++) d[i] *= (n - i) / 600;   /* 尾巴淡出，不會喀一聲 */
+    let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(d[i])); if (pk > 0) for (let i = 0; i < n; i++) d[i] *= 0.9 / pk; return d; }
+  function buf(ctx, kind, root){ let C = per.get(ctx); if (!C){ C = new Map(); per.set(ctx, C); } const k = kind + root; let b = C.get(k);
+    if (!b){ const d = render(kind, root); b = ctx.createBuffer(1, d.length, SR); b.getChannelData(0).set(d); C.set(k, b); } return b; }
+  function play(ctx, out, kind, m, t, vol, dur){ if (vol <= 0.0005) return; const dr = DRUM[kind], root = dr ? 60 : Math.round(m / 6) * 6, b = buf(ctx, kind, root), rate = dr ? 1 : Math.pow(2, (m - root) / 12);
+    const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; s.playbackRate.value = rate; g.gain.setValueAtTime(vol, t);
+    let end = t + b.duration / rate; if (HOLD[kind] && dur){ const e = t + Math.max(0.08, dur); g.gain.setValueAtTime(vol, e); g.gain.linearRampToValueAtTime(0.0001, e + 0.14); end = Math.min(end, e + 0.16); }
+    s.connect(g); g.connect(out); s.start(t); s.stop(end); }
+  function impulse(ctx){ const sr = ctx.sampleRate, n = Math.floor(sr * 1.8), b = ctx.createBuffer(2, n, sr); for (let c = 0; c < 2; c++){ const d = b.getChannelData(c); let s = 7 + c * 99; for (let i = 0; i < n; i++){ s = (s * 16807) % 2147483647; d[i] = (s / 2147483647 * 2 - 1) * Math.exp(-i / sr * 3.2) * Math.min(1, i / (sr * 0.01)); } } return b; }
+  return { play, impulse, warm: (ctx, kinds) => { for (const k of kinds) if (DRUM[k]) buf(ctx, k, 60); } };
+})();
+/* 和弦：C、Am、F、G7… → 低音＋三個在中間音域的和弦音 */
+function musChord(nm){ const M = /^([A-G])([#b]?)(m?)(7?)$/.exec(nm); const pc = ({ C:0, D:2, E:4, F:5, G:7, A:9, B:11 })[M[1]] + (M[2] === '#' ? 1 : M[2] === 'b' ? -1 : 0);
+  const iv = M[3] ? [0, 3, 7] : [0, 4, 7]; if (M[4]) iv[1] = M[3] ? 3 : 4, iv.push(10);
+  const bass = 36 + ((pc % 12) + 12) % 12 - (pc % 12 >= 8 ? 12 : 0), tones = iv.map(x => { const p = (pc + x) % 12; return 55 + ((p - 55) % 12 + 12) % 12; }).sort((a, b) => a - b); return { bass, tones }; }
+/* 旋律：每小節 8 格（八分音符），「E5」＝這格開始彈 E5、「.」＝延長、「-」＝休息 */
+function musMel(str){ const tk = str.trim().split(/[\s|]+/), bars = []; let cur = null;
+  tk.forEach((x, i) => { const bar = Math.floor(i / 8), b = i % 8; if (!bars[bar]) bars[bar] = [];
+    if (x === '.'){ if (cur) cur.len++; return; } cur = null; if (x === '-') return;
+    const M = /^([A-G])([#b]?)(\d)$/.exec(x); if (!M) return; const m = 12 * (+M[3] + 1) + ({ C:0, D:2, E:4, F:5, G:7, A:9, B:11 })[M[1]] + (M[2] === '#' ? 1 : M[2] === 'b' ? -1 : 0);
+    cur = { b, m, len: 1 }; bars[bar].push(cur); }); return bars; }
+const MUS_THEMES = {
+  day: { name:'晴天的海島', bpm:96, swing:0.16, rev:0.18, comp:'strum', compI:'pluck', compV:0.12, bassPat:[[0, 0], [4, 7]], bassV:0.23, lead:['marimba', 'flute'], leadV:[0.49, 0.35],
+    drums:{ kick:[[0, 0.5]], shaker:[[0, 0.1], [1, 0.22], [2, 0.1], [3, 0.22], [4, 0.1], [5, 0.22], [6, 0.1], [7, 0.22]], clave:[[6, 0.12]] },
+    intro:'C Am F G', A:{ ch:'C Am F G C Am F G', mel:'E5 . G5 . A5 G5 E5 . | C5 . D5 E5 . . - - | F5 . A5 . C6 A5 F5 . | G5 . . . D5 . - - | E5 . G5 . A5 G5 E5 C5 | A4 . C5 . E5 . D5 C5 | D5 . F5 . E5 D5 C5 . | D5 . B4 . C5 . . .' },
+    B:{ ch:'F G Em Am F G C C', mel:'A5 . . G5 F5 . A5 . | G5 . . F5 D5 . . - | E5 . G5 . B5 . A5 G5 | A5 . . . E5 . - - | F5 . A5 . C6 . A5 . | B5 . . A5 G5 . D5 . | E5 . D5 . C5 . . . | - - - - - - - -' } },
+  twilight: { name:'海邊的黃昏', bpm:78, swing:0.1, rev:0.24, comp:'arp', compI:'pluck', compV:0.17, arpSteps:[[0, 0], [1, 1], [2, 2], [3, 3], [4, 2], [5, 1], [6, 2], [7, 3]], bassPat:[[0, 0]], bassV:0.21, lead:['flute', 'epiano'], leadV:[0.35, 0.38],
+    drums:{ shaker:[[2, 0.1], [6, 0.12]], kick:[[0, 0.28]] },
+    intro:'G Em C D', A:{ ch:'G Em C D G Em Am D', mel:'B4 . D5 . G5 . . F#5 | E5 . . . B4 . - - | C5 . E5 . G5 . A5 . | F#5 . . . . . - - | B5 . A5 . G5 . D5 . | E5 . G5 . B5 . . . | A5 . G5 . E5 . C5 . | D5 . . . . . - -' },
+    B:{ ch:'C D Bm Em C D G G', mel:'E5 . . . G5 . E5 . | F#5 . . . A5 . . - | D5 . F#5 . B5 . A5 . | G5 . . . E5 . - - | E5 . G5 . C6 . B5 . | A5 . . . F#5 . D5 . | G5 . . . . . . . | - - - - - - - -' } },
+  night: { name:'夜晚的海邊', bpm:66, swing:0.08, rev:0.32, comp:'arp', compI:'epiano', compV:0.13, arpSteps:[[0, 0], [2, 1], [4, 2], [6, 1]], pad:0.05, bassPat:[[0, 0]], bassV:0.18, lead:['flute', 'bell'], leadV:[0.32, 0.29],
+    drums:{ shaker:[[4, 0.06]] },
+    intro:'Am F C G', A:{ ch:'Am F C G Am F E Am', mel:'E5 . . . C5 . D5 E5 | F5 . . . E5 . C5 . | G5 . . . E5 . . - | D5 . . . . . - - | E5 . . . C5 . D5 E5 | A5 . . . G5 . F5 . | E5 . . . G#5 . B5 . | A5 . . . . . - -' },
+    B:{ ch:'Dm Am F C Dm Am F E', mel:'F5 . E5 . D5 . A4 . | C5 . . . E5 . . - | A5 . G5 . F5 . C5 . | E5 . . . . . - - | D5 . F5 . A5 . G5 . | E5 . . . C5 . . - | D5 . C5 . B4 . C5 . | B4 . . . . . - -' } },
+  rain: { name:'下雨天', bpm:70, swing:0.05, rev:0.34, comp:'block', compI:'epiano', compV:0.14, bassPat:[[0, 0]], bassV:0.17, lead:['epiano', 'bell'], leadV:[0.41, 0.29], drip:true,
+    drums:{}, intro:'Dm Bb F C', A:{ ch:'Dm Bb F C Dm Bb Gm A', mel:'A5 . . . F5 . D5 . | D5 . . . F5 . . - | C6 . . . A5 . F5 . | G5 . . . . . - - | A5 . . . F5 . D5 . | Bb5 . . . A5 . G5 . | G5 . F5 . E5 . D5 . | C#5 . . . E5 . A4 .' } },
+  isle: { name:'我的小島', bpm:84, swing:0.14, rev:0.2, comp:'arp', compI:'epiano', compV:0.12, arpSteps:[[0, 0], [2, 2], [3, 1], [4, 3], [6, 2], [7, 1]], strum2:0.1, bassPat:[[0, 0], [5, 7]], bassV:0.2, lead:['marimba', 'epiano'], leadV:[0.43, 0.41],
+    drums:{ kick:[[0, 0.35], [5, 0.2]], shaker:[[1, 0.14], [3, 0.14], [5, 0.14], [7, 0.14]] },
+    intro:'F Dm Bb C', A:{ ch:'F Dm Bb C F Dm Bb C', mel:'C5 . F5 . A5 . G5 F5 | A5 . . . F5 . - - | D5 . F5 . Bb5 . A5 G5 | G5 . . . E5 . - - | C5 . F5 . A5 . C6 . | D6 . C6 . A5 . F5 . | G5 . Bb5 . A5 . G5 . | F5 . . . - - - -' } },
+  dive: { name:'海底', bpm:58, swing:0, rev:0.42, comp:'arp', compI:'bell', compV:0.07, arpSteps:[[0, 0], [3, 2], [6, 1]], pad:0.06, bassPat:[[0, 0]], bassV:0.14, lead:['bell', 'flute'], leadV:[0.4, 0.33],
+    drums:{}, intro:'F C Dm C', A:{ ch:'F C Dm C F C Dm C', mel:'A5 . . . C6 . . . | G5 . . . E5 . . . | F5 . . . A5 . . . | G5 . . . . . . . | A5 . C6 . E6 . . . | D6 . . . C6 . . . | A5 . . . F5 . G5 . | E5 . . . . . . .' },
+    B:{ ch:'Am F C G Am F G G', mel:'E6 . . . C6 . . . | A5 . . . C6 . . . | G5 . . . E5 . G5 . | D6 . . . . . . . | C6 . . . E6 . . . | F6 . . . E6 . C6 . | D6 . . . B5 . . . | G5 . . . . . . .' } },
+  shrimp: { name:'釣蝦場', bpm:108, swing:0.2, rev:0.14, comp:'stab', compI:'marimba', compV:0.11, bassPat:[[0, 0], [2, 12], [4, 7], [6, 12]], bassV:0.2, lead:['marimba', 'pluck'], leadV:[0.46, 0.43],
+    drums:{ kick:[[0, 0.4], [4, 0.32]], shaker:[[1, 0.2], [3, 0.2], [5, 0.2], [7, 0.2]], clave:[[3, 0.14], [6, 0.16]] },
+    intro:'C G Am F', A:{ ch:'C G Am F C G F G', mel:'G5 . E5 G5 . E5 C5 . | D5 . G5 . F5 E5 D5 . | E5 . A5 . G5 E5 C5 . | D5 . . . - - - - | G5 . E5 G5 . E5 C5 . | D5 . G5 . B5 A5 G5 . | A5 . G5 . F5 . E5 D5 | C5 . . . - - - -' } },
+  reel: { name:'拉魚', bpm:128, swing:0, rev:0.1, comp:'drive', compI:'pluck', compV:0.24, bassPat:[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 12]], bassV:0.11, lead:null,
+    drums:{ kick:[[0, 0.38], [4, 0.38]], hat:[[1, 0.14], [3, 0.14], [5, 0.14], [7, 0.14]], clave:[[2, 0.1], [6, 0.12]] },
+    intro:'Am Am F E', A:{ ch:'Am Am F E Am Dm E Am' } },
+  boss: { name:'大魚搏鬥', bpm:142, swing:0, rev:0.12, comp:'boss', compI:'pluck', compV:0.24, bassPat:[[0, 0], [2, 0], [3, 0], [5, 0], [6, 0]], bassV:0.12, lead:null,
+    drums:{ kick:[[0, 0.42], [4, 0.38]], tom:[[0, 0.22], [3, 0.2], [6, 0.24]], hat:[[1, 0.12], [2, 0.08], [3, 0.12], [5, 0.12], [7, 0.12]], clave:[[2, 0.12], [6, 0.12]] },
+    intro:'Am F', A:{ ch:'Am F Dm E Am E Am E' } },
+};
+/* 一個演奏器：ctx 可以是手機的聲音，也可以是測試用的離線錄音 */
+function MusicEngine(ctx, out){
+  const bus = ctx.createGain(), wet = ctx.createGain(), rev = ctx.createConvolver(); rev.buffer = MusicKit.impulse(ctx); bus.connect(out); bus.connect(wet); wet.connect(rev); rev.connect(out);
+  const songs = {}; let key = null, S = null, si = 0, bar = 0, beat = 0, next = 0, lastFill = -1;
+  function song(k){ if (songs[k]) return songs[k]; const T = MUS_THEMES[k], parse = s => s.split(' ').map(musChord);
+    const A = { ch: parse(T.A.ch), mel: T.A.mel ? musMel(T.A.mel) : null }, B = T.B ? { ch: parse(T.B.ch), mel: musMel(T.B.mel) } : null, I = { ch: parse(T.intro), mel: null, intro: true };
+    const L = [I, A, Object.assign({}, A, { v: 1 })]; if (B) L.push(B); L.push(Object.assign({}, A, { v: B ? 0 : 1 })); L.push({ ch: A.ch.slice(0, 4), mel: null, brk: true });
+    return (songs[k] = { T, L }); }
+  function set(k){ if (k === key || !MUS_THEMES[k]) return; key = k; S = song(k); si = 0; bar = 0; beat = 0; wet.gain.setTargetAtTime(S.T.rev, ctx.currentTime, 0.5); }
+  function pad(tones, t, len, v){ for (const m of tones){ for (const det of [-6, 6]){ const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter(); o.type = 'triangle'; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12); o.detune.value = det; f.type = 'lowpass'; f.frequency.value = 1100;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + len * 0.35); g.gain.linearRampToValueAtTime(0.0001, t + len * 1.05); o.connect(f); f.connect(g); g.connect(bus); o.start(t); o.stop(t + len * 1.1); } } }
+  function step(t0){ const T = S.T, sec = S.L[si], ch = sec.ch[bar % sec.ch.length], SPB = 60 / T.bpm / 2, t = t0 + (beat % 2 ? T.swing * SPB : 0), P = (k, m, tt, v, d) => MusicKit.play(ctx, bus, k, m, tt + (Math.random() - 0.5) * 0.012, v * (0.88 + Math.random() * 0.24), d);
+    const intro = sec.intro && bar < 2, brk = sec.brk;
+    for (const dk in T.drums) for (const [b, v] of T.drums[dk]) if (b === beat && !(intro && dk !== 'shaker') && !(brk && dk === 'kick' && bar % 2)) P(dk, 60, t, v);
+    if (!intro) for (const [b, iv] of T.bassPat) if (b === beat) P('bass', ch.bass + iv, t, T.bassV, SPB * 2);
+    const pool = [ch.tones[0], ch.tones[1], ch.tones[2], ch.tones[0] + 12], v = T.compV;
+    if (T.comp === 'strum'){ const pat = { 0:'D', 2:'D', 3:'U', 5:'U', 6:'D', 7:'U' }[beat]; if (pat === 'D') pool.forEach((m, i) => P(T.compI, m, t + i * 0.011, v * (beat === 0 ? 1.1 : 0.85)));
+      else if (pat === 'U') pool.slice(1).reverse().forEach((m, i) => P(T.compI, m, t + i * 0.011, v * 0.55)); }
+    else if (T.comp === 'arp'){ for (const [b, j] of T.arpSteps) if (b === beat) P(T.compI, pool[j] + (T.compI === 'bell' ? 12 : 0), t, v, SPB * 3); if (T.strum2 && (beat === 0 || beat === 4)) pool.slice(0, 3).forEach((m, i) => P('pluck', m, t + i * 0.012, T.strum2)); }
+    else if (T.comp === 'block'){ if (beat === 0) pool.slice(0, 3).forEach((m, i) => P(T.compI, m, t + i * 0.02, v, SPB * 7.5)); if (beat === 4) P(T.compI, pool[2] + 12, t, v * 0.6, SPB * 3); }
+    else if (T.comp === 'stab'){ if (beat % 2 === 1) pool.slice(0, 3).forEach(m => P(T.compI, m + 12, t, v)); }
+    else if (T.comp === 'drive') P(T.compI, pool[[0, 2, 1, 2, 3, 2, 1, 2][beat]] + 12, t, v * (beat % 2 ? 0.75 : 1));
+    else if (T.comp === 'boss'){ const r = ch.tones[0] + 12, isMin = ch.tones[1] - ch.tones[0] === 3 || ch.tones[2] - ch.tones[1] === 4; P(T.compI, r + [0, 3, 7, 8, 7, 3, 11, 12][beat] - (isMin ? 0 : 0), t, v * (beat % 2 ? 0.7 : 1)); if (beat === 0) pool.slice(0, 3).forEach(m => P('epiano', m, t, 0.08, SPB * 1.5)); }
+    if (T.pad && beat === 0) pad(ch.tones, t, SPB * 8, T.pad);
+    if (T.drip && Math.random() < 0.12) P('bell', ch.tones[Math.floor(Math.random() * 3)] + 24, t, 0.05);   /* 雨滴 */
+    if (sec.mel && T.lead){ const li = sec.v ? 1 : 0, ins = T.lead[li]; for (const e of (sec.mel[bar] || [])) if (e.b === beat) P(ins, e.m + (ins === 'flute' && sec.v ? -12 : 0), t, T.leadV[li], e.len * SPB * 0.95); }
+    if (brk && bar === sec.ch.length - 1 && beat >= 4 && T.lead){ P(T.lead[0], pool[beat - 4] + 12, t, T.leadV[0] * 0.6, SPB); }   /* 間奏最後一小節往上的小過門 */
+    beat++; if (beat === 8){ beat = 0; bar++; if (bar >= sec.ch.length){ bar = 0; si++; if (si >= S.L.length) si = 1; } } return SPB; }
+  return { set, key: () => key, name: () => S ? S.T.name : '',
+    run(until){ if (!S) return; if (next < ctx.currentTime - 0.1) next = ctx.currentTime + 0.05; while (next < until) next += step(next); },
+    start(t){ next = t; },
+    jump(k){ key = null; set(k); } };
+}
+
 const MUSIC = (() => {
-  let master = null, timer = null, next = 0, step = 0, sea = null, mel = 4, section = 0, theme = 'day', want = 'day';
-  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
-  const C = [48,52,55,60], Am = [45,48,52,57], F_ = [41,45,48,53], G = [43,47,50,55], Em = [40,43,47,52], Dm = [38,41,45,50], E7 = [40,44,47,50];
-  // 每一首：速度、和弦進行、旋律音階、樂器
-  const THEMES = {
-    day:    { bpm:84,  progs:[[C, Am, F_, G], [F_, G, C, Am], [C, Em, F_, G]], scale:[60,62,64,67,69,72,74,76,79], arp:'triangle', arpV:0.055, melV:0.05, melP:0.5, bass:0.2, sea:0.22, name:'晴天的海島' },
-    night:  { bpm:64,  progs:[[Am, F_, C, G], [Dm, Am, F_, E7], [F_, G, Em, Am]], scale:[57,60,62,64,67,69,72,74], arp:'sine', arpV:0.04, melV:0.045, melP:0.3, bass:0.14, sea:0.26, soft:true, name:'夜晚的海邊' },
-    shrimp: { bpm:104, progs:[[C, G, Am, F_], [F_, C, G, C]], scale:[60,62,64,67,69,72,74,76], arp:'square', arpV:0.022, melV:0.035, melP:0.6, bass:0.18, sea:0.08, stab:true, name:'釣蝦場' },
-    dive:   { bpm:56,  progs:[[F_, C, Dm, C], [Am, F_, C, G]], scale:[65,67,69,72,74,77,79,81], arp:'sine', arpV:0.035, melV:0.05, melP:0.35, bass:0.1, sea:0.06, soft:true, bell:true, name:'海底' },
-    reel:   { bpm:126, progs:[[Am, Am, F_, E7], [Am, Dm, E7, Am]], scale:[57,60,62,64,67,69,72], arp:'sawtooth', arpV:0.018, melV:0.0, melP:0, bass:0.22, sea:0.1, drive:true, name:'拉魚' },
-    boss:   { bpm:140, progs:[[Am, F_, Dm, E7], [Am, E7, Am, E7]], scale:[57,59,60,62,64,65,68,69], arp:'sawtooth', arpV:0.022, melV:0.035, melP:0.5, bass:0.26, sea:0.1, drive:true, name:'大魚搏鬥' },
-  };
+  let master = null, timer = null, sea = null, E = null;
   function pick(){
     if (F.phase === 'reeling') return F.boss ? 'boss' : 'reel';
     if (Dive.on) return 'dive';
     if (inShrimpHall(me.pos.x, me.pos.z, 8)) return 'shrimp';
-    return DayNight.period === 'night' ? 'night' : 'day';
+    if (onIsle) return 'isle';
+    if ((Env.wx === 'rain' || Env.wx === 'storm') && !House.on) return 'rain';
+    return DayNight.period === 'night' ? 'night' : DayNight.period === 'twilight' ? 'twilight' : 'day';
   }
-  function note(m, t, dur, type, vol, cut){
-    if (vol <= 0) return;
-    const o = actx.createOscillator(), g = actx.createGain(), f = actx.createBiquadFilter();
-    o.type = type; o.frequency.value = hz(m); f.type = 'lowpass'; f.frequency.value = cut || 2400;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
-  }
+  const SEA = { day:0.22, twilight:0.24, night:0.26, rain:0.12, isle:0.18, dive:0.05, shrimp:0.06, reel:0.08, boss:0.08 };
   function seaStart(){
     const len = actx.sampleRate * 4, buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0); let b = 0;
     for (let i = 0; i < len; i++){ b = (b + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = b * 3.5; }
@@ -3528,35 +3625,17 @@ const MUSIC = (() => {
     lfo.connect(lg); lg.connect(g.gain); src.connect(f); f.connect(g); g.connect(master); src.start(); lfo.start(); sea = { src, lfo, g, f };
   }
   function tick(){
-    if (!actx || !master) return;
-    try { want = pick(); } catch(e){}
-    // 拉魚的音樂馬上換；其他的等一小節結束再換，比較自然
-    if (want !== theme && (want === 'reel' || want === 'boss' || theme === 'reel' || theme === 'boss' || step % 8 === 0)){ theme = want; step = 0; section = 0; if (sea){ sea.g.gain.setTargetAtTime(THEMES[theme].sea, actx.currentTime, 1.2); sea.f.frequency.setTargetAtTime(theme === 'dive' ? 260 : 520, actx.currentTime, 1); } }
-    const T = THEMES[theme], SPB = 60 / T.bpm / 2;
-    if (next < actx.currentTime - 0.1) next = actx.currentTime + 0.05; // 分頁切回來時不要一次補一大堆音
-    while (next < actx.currentTime + 0.3){
-      const bar = Math.floor(step / 8), beat = step % 8, t = next;
-      if (beat === 0 && bar % 8 === 0) section = Math.floor(Math.random() * T.progs.length);
-      const ch = T.progs[section][bar % 4];
-      if (T.drive){ if (beat % 2 === 0) note(ch[0] - 12, t, SPB * 0.9, 'triangle', T.bass, 700); if (beat === 0 || beat === 4) noiseHit(t, 0.05); }
-      else { if (beat === 0) note(ch[0] - 12, t, SPB * 7, 'sine', T.bass, 500); if (beat === 4 && !T.soft) note(ch[0] - 5, t, SPB * 3.5, 'sine', T.bass * 0.5, 500); }
-      if (T.soft && beat === 0) for (const n of ch.slice(1)) note(n, t, SPB * 7.5, 'sine', 0.018, 1200);   // 柔柔的和弦墊底
-      if (T.stab){ if (beat % 2 === 1) for (const n of ch.slice(1)) note(n + 12, t, SPB * 0.5, 'square', 0.012, 1800); }
-      else { const arp = [0,2,1,3,2,1,3,2][beat]; if (!T.soft || beat % 2 === 0) note(ch[arp] + 12, t, SPB * (T.soft ? 3.5 : 2.4), T.arp, T.arpV, T.drive ? 1400 : 2400); }
-      if (beat % 2 === 0 && Math.random() < T.melP * (bar % 8 < 4 ? 1.1 : 0.8)){
-        mel = clamp(mel + [-2,-1,-1,0,1,1,2][Math.floor(Math.random() * 7)], 0, T.scale.length - 1);
-        const m = T.scale[mel] + 12, d = SPB * (Math.random() < 0.3 ? 3.6 : 1.8);
-        note(m, t, d, 'sine', T.melV, 3200); if (T.bell){ note(m + 12, t, d * 1.6, 'sine', T.melV * 0.3, 5000); note(m, t + SPB * 1.5, d, 'sine', T.melV * 0.35, 2400); }   // 海底：像回音的鈴聲
-      }
-      next += SPB; step++;
-    }
+    if (!actx || !master || !E) return; let w = 'day'; try { w = pick(); } catch(e){}
+    const k = E.key(), fast = w === 'reel' || w === 'boss' || k === 'reel' || k === 'boss';   /* 拉魚的音樂馬上換；其他的等這一小節彈完 */
+    if (w !== k){ if (fast) E.jump(w); else E.set(w); if (sea) sea.g.gain.setTargetAtTime(SEA[w] || 0.2, actx.currentTime, 1.2); }
+    E.run(actx.currentTime + 0.35);
   }
-  function noiseHit(t, vol){ if (!noiseBuf){ noise(0.01, 0.0001, 1000); } if (!noiseBuf) return; const src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain(); src.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = 5000; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); src.connect(f).connect(g).connect(master); src.start(t, Math.random()); src.stop(t + 0.06); }
   return {
-    theme: () => THEMES[theme].name,
-    start(){ if (!actx || master) return; master = actx.createGain(); master.gain.value = 0.0001; master.connect(actx.destination); master.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime + 2.5); next = actx.currentTime + 0.1; seaStart(); timer = setInterval(tick, 100); },
+    theme: () => E ? E.name() : '',
+    start(){ if (!actx || master) return; master = actx.createGain(); master.gain.value = 0.0001; master.connect(actx.destination); master.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime + 2.5);
+      const mb = actx.createGain(); mb.gain.value = 0.62; mb.connect(master); E = MusicEngine(actx, mb); let w = 'day'; try { w = pick(); } catch(e){} E.set(w); E.start(actx.currentTime + 0.15); seaStart(); timer = setInterval(tick, 100); },
     vol(){ if (master && actx) master.gain.setTargetAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime, 0.1); },
-    stop(){ if (!master) return; clearInterval(timer); const m = master, s = sea; m.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(() => { try { s && s.src.stop(); s && s.lfo.stop(); m.disconnect(); } catch(e){} }, 1500); master = null; sea = null; },
+    stop(){ if (!master) return; clearInterval(timer); const m = master, s = sea; m.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(() => { try { s && s.src.stop(); s && s.lfo.stop(); m.disconnect(); } catch(e){} }, 1500); master = null; sea = null; E = null; },
     playing(){ return !!master; }
   };
 })();
@@ -12823,7 +12902,7 @@ function renderTab(){
       '訪客帳號玩到第 3 天、或升到 Lv10 時，會提醒你綁定 Email。綁好之後換手機、清掉瀏覽器資料，用同一個 Email 登入就能找回同一個角色。',
       '紀錄自動存在雲端。到「造型」分頁綁定 Email，換手機或換瀏覽器時就能接回同一份紀錄。',
       '遊戲裡的一天是現實 36 分鐘，大家看到的時間都一樣；晚上路燈、窗戶和燈塔會亮。',
-      '背景音樂會跟著地方和狀況換：白天的海島、夜晚的海邊、釣蝦場、海底、拉魚時變緊張、跟大魚搏鬥時更激烈。右上角 ♫ 可以關掉音樂，喇叭可以關掉音效。',
+      '背景音樂會跟著地方和狀況換：晴天的海島、海邊的黃昏（清晨和傍晚）、夜晚的海邊、下雨天、我的小島、海底、釣蝦場，拉魚時變緊張、跟大魚搏鬥時更激烈。每個場景有自己的旋律，用烏克麗麗、木琴、電鋼琴、笛子、鈴聲演奏（都是遊戲自己即時演奏的，不用下載）。右上角 ♫ 可以關掉音樂，喇叭可以關掉音效。',
       '右上角相機按鈕是拍照模式；畫質可以在「造型」分頁調整，舊手機選「低」會比較順。',
       '遊戲更新時畫面上方會出現「有新版本」，按「更新」就好，不會在你拉魚時突然重開。',
       '🧒 兒童安全模式（給家長看）：第一次進遊戲會問出生年份（只問年，不問真名、生日）。未滿 13 歲會自動開啟，之後不能自己關掉：聊天只能用固定的快速句子，看不到別人自己打的字；可以看留言板但不能留言；名字從「形容詞＋動物」裡選；好友只能用當面給的好友代碼加，陌生人不能直接加；設計師市集只看得到很多人買過、沒被檢舉的作品；深海驚嚇效果預設關閉；不會要求 email。',
