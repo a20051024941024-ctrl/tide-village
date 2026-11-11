@@ -4275,7 +4275,7 @@ function doCast(){
     roll(0); }   /* 伺服器抽好了，但不會告訴手機是什麼魚（072）；咬餌前大約 2 秒才用 hook_fish 問 */
   F.envB = envBonus(s.id);
   F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('🐟 浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
-  F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (F.nest ? 0.55 : 1) * (rodFit(s.id) ? ROD_FIT[rodFit(s.id)].bite : 1) * (s.id === 'shrimp' ? 0.75 : 1) * (s.id === 'mangrove' && Env.tide.lv < -0.35 ? 1.6 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1); F.nibbleAt = now() + 1.2 + Math.random()*1.5;
+  F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (F.nest ? 0.55 : 1) * (rodFit(s.id) ? ROD_FIT[rodFit(s.id)].bite : 1) * (s.id === 'shrimp' ? 0.75 : 1) * (s.id === 'mangrove' && Env.tide.lv < -0.35 ? 1.6 : 1) * (F.chumB ? F.chumB.wait : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1) * SeaMem.BITE[seaMemLv(s.id)]; F.nibbleAt = now() + 1.2 + Math.random()*1.5;
   if (F.chumB) setTimeout(() => toast(`🍚 浮標落在${F.chumB.name}的窩點裡！`), 500);
   SFX.cast(); pushPresence(true);
 }
@@ -4619,9 +4619,9 @@ function updateFishing(dt, t){
   const card = $('#spotCard');
   const showCard = near.d < 3.2 && F.phase !== 'reeling' && F.phase !== 'charging';
   if (showCard && card._s !== near.spot.id){
-    card._s = near.spot.id; $('.t', card).textContent = near.spot.label; $('.s', card).textContent = near.spot.subtitle;
+    card._s = near.spot.id; { const mp = seaMemPts(near.spot.id), ml2 = seaMemLv(near.spot.id); $('.t', card).textContent = near.spot.label + (mp ? ` · 🌊${SeaMem.NM[ml2]}${ml2 < 5 ? ' ' + mp + '／' + SeaMem.LV[ml2 + 1] : ''}` : ''); } $('.s', card).textContent = near.spot.subtitle;
     // 只顯示釣點名字；這裡有什麼魚到圖鑑看就好
-    $('.s', card).hidden = true; $('.fl', card).hidden = true;
+    { const ml = seaMemLine(near.spot.id); $('.s', card).textContent = ml || near.spot.subtitle; $('.s', card).hidden = !ml; } $('.fl', card).hidden = true;
   }
   if (!showCard) card._s = null;
   card.hidden = !showCard;
@@ -6286,12 +6286,44 @@ function spawnLitter(n){
   }
 }
 function nearLitter(){ if (!Canal.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on) return null; let best = null, bd = 1.2; for (const l of Canal.litter){ const d = Math.hypot(me.pos.x - l.x, me.pos.z - l.z); if (d < bd && Math.abs(groundHeight(l.x, l.z) - me.pos.y) < 0.8){ bd = d; best = l; } } return best; }
+/* v365 海洋記憶：海會記得你在每個釣點做過的事。在同一個地方放流（+3）、撿垃圾（+2）、釣魚（+1，一天算 20 條），那個釣點對你的「記憶」就會變深：
+   熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，那裡的水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（最多快兩成）。
+   只影響「快慢」和「好不好看」，不影響釣到什麼魚、多重（那些是伺服器抽的）。紀錄存在手機，連線時也存到伺服器（sea_mem_save，換手機不會不見）。 */
+const SeaMem = { d: (() => { const v = LS.get('tide.seaMem', null); return v && typeof v === 'object' ? v : {}; })(), LV: [0, 15, 50, 130, 300, 600], NM: ['陌生', '熟悉', '親近', '老朋友', '守護者', '海的家人'], BITE: [1, 1, 0.95, 0.9, 0.85, 0.8], vis: null, syncT: 0, pulled: false };
+function seaMemPts(id){ const e = SeaMem.d[id]; return e && e.p > 0 ? e.p : 0; }
+function seaMemLv(id){ const p = seaMemPts(id); let l = 0; for (let i = 1; i < 6; i++) if (p >= SeaMem.LV[i]) l = i; return l; }
+function seaMemHere(){ if (F.spot && F.phase !== 'idle') return F.spot.id; let best = null, bd = 30; for (const sp of SPOTS){ if (sp.hidden) continue; const d = Math.hypot(me.pos.x - sp.pos.x, me.pos.z - sp.pos.z); if (d < bd){ bd = d; best = sp; } } return best ? best.id : null; }
+function seaMemLine(id){ const p = seaMemPts(id), l = seaMemLv(id); if (!p) return ''; return `🌊 海洋記憶：${SeaMem.NM[l]}` + (l < 5 ? `（${p}／${SeaMem.LV[l + 1]}）` : '（最深了）'); }
+function seaMemAdd(id, n, why){ try { const sp = id && SPOT_BY_ID[id]; if (!sp) return; const e = SeaMem.d[id] || (SeaMem.d[id] = { p: 0 });
+  if (why === 'catch'){ const day = new Date().toDateString(); if (e.cd !== day){ e.cd = day; e.cn = 0; } if (e.cn >= 20) return; e.cn++; }
+  const l0 = seaMemLv(id); e.p = Math.min(9999, (e.p || 0) + n); LS.set('tide.seaMem', SeaMem.d); const l1 = seaMemLv(id); const card = $('#spotCard'); if (card) card._s = null;
+  if (l1 > l0){ const msg = ['', '這片水開始認得你了，水面多了一點亮光', '這裡的魚比較不怕你了，上鉤快一點', '小魚會跳出水面跟你打招呼', '你守護的這片水，魚越來越多', '這片水把你當成家人了'][l1];
+    ticker(`🌊 <b>${esc(sp.label)}</b> 對你的記憶變深了：<b>${SeaMem.NM[l1]}</b>`); toast(`🌊 海洋記憶「${SeaMem.NM[l1]}」：${msg}`); try { SFX.catch(); } catch(e2){} }
+  SeaMem.syncT = performance.now() + 15000; } catch(e){} }
+function seaMemSync(){ if (!Cloud.on || !Cloud.sb) return; SeaMem.syncT = 0; SeaMem.pulled = true; const send = {}; for (const k in SeaMem.d) send[k] = { p: seaMemPts(k) };
+  Cloud.sb.rpc('sea_mem_save', { p: send }).then(({ data, error }) => { if (error || !data || typeof data !== 'object') return; let ch = false;
+    for (const k in data){ const sv = data[k] && +data[k].p || 0; if (SPOT_BY_ID[k] && sv > seaMemPts(k)){ (SeaMem.d[k] || (SeaMem.d[k] = { p: 0 })).p = sv; ch = true; } } if (ch) LS.set('tide.seaMem', SeaMem.d); }, () => {}); }
+function seaMemTick(dt, t){ if (frameNo % 30 === 5){ if (!SeaMem.pulled && Cloud.on && Cloud.sb && frameNo > 300) seaMemSync(); else if (SeaMem.syncT && performance.now() > SeaMem.syncT) seaMemSync(); }
+  let V = SeaMem.vis;
+  if (frameNo % 45 === 9){ let best = null, bd = 42; for (const sp of SPOTS){ if (sp.hidden || !seaMemLv(sp.id) || !sp.dir) continue; const d = Math.hypot(me.pos.x - sp.pos.x, me.pos.z - sp.pos.z); if (d < bd){ bd = d; best = sp; } }
+    if (House.on || Dive.on) best = null;
+    if (best && !V){ const N = 30, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+      const pts = new THREE.Points(g, new THREE.PointsMaterial({ color:'#c8f4ff', size:0.16, transparent:true, opacity:0.9, depthWrite:false, sizeAttenuation:true })); pts.frustumCulled = false; pts.userData.dyn = true; scene.add(pts);
+      const fish = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshStandardMaterial({ color:'#cfd8e0', roughness:0.35, metalness:0.3 })); fish.scale.set(2.2, 0.8, 0.5); fish.visible = false; fish.userData.dyn = true; scene.add(fish);
+      V = SeaMem.vis = { pts, fish, off: Array.from({ length: N }, () => [Math.random() * 6.28, 0.6 + Math.random() * 3.4, Math.random() * 6.28]), id: null, jumpAt: 0, j0: -1 }; }
+    if (V){ V.sp = best; V.pts.visible = !!best; if (!best) V.fish.visible = false; if (best && V.id !== best.id){ V.id = best.id; V.jumpAt = t + 3; V.j0 = -1; } } }
+  if (!V || !V.sp) return; const sp = V.sp, lv = seaMemLv(sp.id), dl = Math.hypot(sp.dir.x, sp.dir.y) || 1, cx = sp.pos.x + sp.dir.x / dl * 6.5, cz = sp.pos.z + sp.dir.y / dl * 6.5, n = Math.min(30, 4 + lv * 5), P = V.pts.geometry.attributes.position;
+  for (let i = 0; i < n; i++){ const o = V.off[i], a = o[0] + t * 0.05, x = cx + Math.cos(a) * o[1], z = cz + Math.sin(a) * o[1]; P.setXYZ(i, x, waterY(x, z, t) + 0.04 + Math.max(0, Math.sin(t * 1.7 + o[2])) * 0.05, z); }
+  P.needsUpdate = true; V.pts.geometry.setDrawRange(0, n); V.pts.material.opacity = 0.55 + Math.sin(t * 2.3) * 0.25;
+  if (lv >= 3){ if (V.j0 < 0 && t > V.jumpAt){ V.j0 = t; V.ja = Math.random() * 6.28; V.jr = 1 + Math.random() * 2.5; }
+    if (V.j0 >= 0){ const k = (t - V.j0) / 0.9; if (k >= 1){ V.j0 = -1; V.fish.visible = false; V.jumpAt = t + (lv >= 5 ? 3 : 6) + Math.random() * 5; }
+      else { const x = cx + Math.cos(V.ja) * V.jr + Math.cos(V.ja + 1.57) * (k - 0.5) * 1.1, z = cz + Math.sin(V.ja) * V.jr + Math.sin(V.ja + 1.57) * (k - 0.5) * 1.1; V.fish.visible = true; V.fish.position.set(x, waterY(x, z, t) + Math.sin(k * Math.PI) * 0.75 - 0.05, z); V.fish.rotation.set(0, -(V.ja + 1.57), (0.5 - k) * 2.2); } } } }
 async function pickLitter(l){
   if (Canal.busy) return; Canal.busy = true; me.dip = 1;
   let ok = true; if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('pick_litter'); if (error){ ok = false; toast(String(error.message || '').includes('今天') ? '今天已經撿很多了，謝謝你！明天再來 💙' : '等一下再撿'); } else if (data) adoptRow(data); } catch(e){ ok = false; } }
   else { const day = new Date().toDateString(); if (rec.litterDay !== day){ rec.litterDay = day; rec.litterN = 0; } if (rec.litterN >= 20){ ok = false; toast('今天已經撿很多了，謝謝你！明天再來 💙'); } else { rec.litterN++; rec.love = (rec.love || 0) + 1; } }
   Canal.busy = false; if (!ok) return;
-  Canal.g.remove(l.m); Canal.litter.splice(Canal.litter.indexOf(l), 1); saveRecLocal(); SFX.chat(); flash(`${l.T.icon} 撿起${l.T.name}，丟進垃圾桶 💙 愛海 +1`, 1.4);
+  Canal.g.remove(l.m); Canal.litter.splice(Canal.litter.indexOf(l), 1); saveRecLocal(); SFX.chat(); flash(`${l.T.icon} 撿起${l.T.name}，丟進垃圾桶 💙 愛海 +1`, 1.4); seaMemAdd(seaMemHere(), 2, 'litter');
 }
 function updateCanal(dt, t){
   if (!Canal.g) return; const near = Math.hypot(me.pos.x - POND.x, me.pos.z - POND.z) < 80 && !onIsle && !House.on && !Dive.on; Canal.g.visible = near; if (!near) return;
@@ -8398,6 +8430,7 @@ function updateFerry(dt, t){
   if (frameNo % 30 === 0) try { sbTick(); } catch(e){ console.warn('sb', e); SB.state = 'off'; }
   if (frameNo % 15 === 7) try { clodTick(); } catch(e){}
   if (frameNo % 60 === 31) try { shadowTrim(); } catch(e){}
+  try { seaMemTick(dt, t); } catch(e){}
   if (frameNo % 20 === 11) try { farcTick(); } catch(e){}
   try { meteorTick(dt, t); } catch(e){}
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
@@ -10239,7 +10272,7 @@ async function mastAfterCatch(f, pfc, star0){ if (pfc && Cloud.on && Cloud.sb){ 
 function recordCatch(f, w){
   const pfc = F.pfCatch; F.pfCatch = false; const star0 = starsOf(f);
   const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
-  rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w;
+  rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w; seaMemAdd(F.spot && F.spot.id, 1, 'catch');
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
   if (f.rarity === '傳說') rec.legend++;
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
@@ -10595,6 +10628,7 @@ var ccFish = null, ccAt = 0;
 const ccEarly = () => performance.now() - ccAt < 700;
 function releaseCaught(){
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x) { closeCatch(); return; }
+  seaMemAdd(seaMemHere(), 3, 'release');
   const p = releaseLocal(x); if (me.held) me.held.until = 0;
   SFX.chat(); ticker(`💙 <b>${esc(f.name)}</b> 游回大海了！愛海點數 +${p}`); cloudCall('release_catch', { p_fish: f.id }); closeCatch();
 }
@@ -12602,7 +12636,7 @@ function renderTab(){
       const rel = el('button', 'tbtn ghost', `放流 💙${lovePts(f, x.w)}`);
       rel.addEventListener('click', () => {
         if (rel.dataset.sure !== '1'){ rel.dataset.sure = '1'; rel.textContent = '確定放流？'; setTimeout(() => { if (rel.isConnected){ rel.dataset.sure = ''; rel.textContent = `放流 💙${lovePts(f, x.w)}`; } }, 2500); return; }
-        const p = releaseLocal(x); renderTab(); toast(`${esc(f.name)} 游回大海了 💙 愛海點數 +${p}`); cloudCall('release_fish', { p_ts: x.t });
+        seaMemAdd(seaMemHere(), 3, 'release'); const p = releaseLocal(x); renderTab(); toast(`${esc(f.name)} 游回大海了 💙 愛海點數 +${p}`); cloudCall('release_fish', { p_ts: x.t });
       });
       const star = el('button', 'tbtn' + (x.k ? '' : ' ghost'), x.k ? '⭐' : '☆'); star.title = x.k ? '取消收藏' : '收藏（不能賣）'; star.setAttribute('aria-pressed', String(!!x.k)); star.style.minWidth = '42px';
       star.addEventListener('click', () => { if (setFav(x, !x.k)){ toast(x.k ? `⭐ 收藏了${esc(f.name)}，不會被賣掉` : `取消收藏${esc(f.name)}`); renderTab(); } });
@@ -12909,6 +12943,7 @@ function renderTab(){
     sec('👥 跟大家一起玩', [
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
+      '🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。',
       '💌 村民的故事（「今天」分頁 → 看故事）：村長阿土伯、阿綾、阿木、阿福、老港每天各有一個委託（交一條他想要的魚，好感 +15、🪙80），走到他旁邊打招呼好感 +3（每天一次）。好感到 15、35、60、85、100 各解鎖一章故事（🪙100～500），讀完 5 章得到稱號「○○的知己」。',
       '走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。設定 →「👋 陌生人」可以選只看認識的人和好友打的字（13～17 歲預設打開），陌生人說話只會顯示 💬。',
       `打開遊戲會自動進入公共大廳（每個大廳最多 ${LOBBY_MAX} 人），看得到其他人釣魚、聊天、穿什麼。想只跟朋友玩，可以在「玩家」分頁開私人房間。`,

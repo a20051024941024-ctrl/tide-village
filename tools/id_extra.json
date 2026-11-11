@@ -4070,5 +4070,21 @@
 "出去一下": " keluar sebentar",
 "，回來才買得到": ", bisa beli setelah dia kembali",
 "・店照常營業": " · toko tetap buka",
-"🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。": "🪧 Pemilik toko tidak ada: warga punya jadwal sendiri: istirahat di rumah, makan, tidur, jalan-jalan. Saat pemilik tidak ada, papan kecil di depan toko menulis dia ke mana, dan toko tetap bisa dipakai (barang buatan tangan mingguan Pak Gang hanya bisa dibeli saat dia kembali)."
+"🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。": "🪧 Pemilik toko tidak ada: warga punya jadwal sendiri: istirahat di rumah, makan, tidur, jalan-jalan. Saat pemilik tidak ada, papan kecil di depan toko menulis dia ke mana, dan toko tetap bisa dipakai (barang buatan tangan mingguan Pak Gang hanya bisa dibeli saat dia kembali).",
+"🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。": "🌊 Ingatan Laut: laut mengingat apa yang kamu lakukan di setiap titik mancing. Melepas ikan (+3), memungut sampah (+2), dan memancing (+1, paling banyak 20 per hari per titik) di titik yang sama membuat ingatannya padamu makin dalam: Kenal 15 → Akrab 50 → Kawan Lama 130 → Penjaga 300 → Keluarga Laut 600. Makin dalam ingatannya, makin banyak plankton berkilau di permukaan, ikan kecil melompat keluar, dan ikan lebih cepat menyambar (Akrab 5% lebih cepat, tiap naik tingkat tambah 5%, paling banyak 20%). Saat mendekati titik mancing, di samping namanya tertulis tingkat dan poin ingatanmu. Tidak mengubah ikan apa yang kamu dapat.",
+"陌生": "Asing",
+"熟悉": "Kenal",
+"親近": "Akrab",
+"老朋友": "Kawan Lama",
+"守護者": "Penjaga",
+"海的家人": "Keluarga Laut",
+"🌊 海洋記憶：": "🌊 Ingatan Laut: ",
+"🌊 海洋記憶「": "🌊 Ingatan Laut \"",
+"（最深了）": " (paling dalam)",
+" 對你的記憶變深了：": " makin mengingatmu: ",
+"這片水開始認得你了，水面多了一點亮光": "Perairan ini mulai mengenalmu; ada sedikit cahaya di permukaan",
+"這裡的魚比較不怕你了，上鉤快一點": "Ikan di sini tidak terlalu takut padamu, menyambar sedikit lebih cepat",
+"小魚會跳出水面跟你打招呼": "Ikan kecil melompat keluar menyapamu",
+"你守護的這片水，魚越來越多": "Perairan yang kamu jaga, ikannya makin banyak",
+"這片水把你當成家人了": "Perairan ini menganggapmu keluarga"
 }

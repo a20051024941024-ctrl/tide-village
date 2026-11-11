@@ -4089,5 +4089,21 @@
 "出去一下": " stepped out",
 "，回來才買得到": ", buy when he is back",
 "・店照常營業": " · shop still open",
-"🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。": "🪧 Owner away: villagers follow their own routine: resting at home, eating, sleeping, going for walks. When an owner is away a small sign at the shop door says where they went, and the shop still works (Old Gang's weekly handmade items can only be bought when he is back)."
+"🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。": "🪧 Owner away: villagers follow their own routine: resting at home, eating, sleeping, going for walks. When an owner is away a small sign at the shop door says where they went, and the shop still works (Old Gang's weekly handmade items can only be bought when he is back).",
+"🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。": "🌊 Ocean Memory: the sea remembers what you do at each fishing spot. Releasing fish (+3), picking up litter (+2) and fishing (+1, up to 20 a day per spot) at the same spot deepens its memory of you: Familiar 15 → Close 50 → Old Friend 130 → Guardian 300 → Family of the Sea 600. The deeper the memory, the more glowing plankton on the water, small fish leap out, and fish bite faster (5% at Close, 5% more per level, up to 20%). When you walk up to a spot, its name shows your memory level and points. It doesn't change which fish you catch.",
+"陌生": "Stranger",
+"熟悉": "Familiar",
+"親近": "Close",
+"老朋友": "Old Friend",
+"守護者": "Guardian",
+"海的家人": "Family of the Sea",
+"🌊 海洋記憶：": "🌊 Ocean Memory: ",
+"🌊 海洋記憶「": "🌊 Ocean Memory \"",
+"（最深了）": " (deepest)",
+" 對你的記憶變深了：": " remembers you more deeply: ",
+"這片水開始認得你了，水面多了一點亮光": "This water is starting to recognize you; a little light appears on the surface",
+"這裡的魚比較不怕你了，上鉤快一點": "The fish here fear you less and bite a bit faster",
+"小魚會跳出水面跟你打招呼": "Small fish leap out of the water to greet you",
+"你守護的這片水，魚越來越多": "More and more fish in the water you guard",
+"這片水把你當成家人了": "This water treats you as family now"
 }
