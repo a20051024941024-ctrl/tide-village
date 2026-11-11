@@ -3207,12 +3207,15 @@ function kidEmoteOn(f, t){ const E = f.emote, D = E && EMOTE_DEF[E.k]; if (!D ||
 function startEmote(f, k){ const D = EMOTE_DEF[k]; if (!D) return; f.emote = { k, until: now() + (D.dur || 9999), started: false, at: now() }; }
 /* v305 修正躺床「沒辦法馬上睡」：躺上去那一下人會瞬間移到床上，速度看起來很快，躺下的動作就被當成「走開了」取消，人變成站在床上。現在剛開始 0.8 秒內、或自己正坐著／躺著時不會因為移動被取消；躺著時動作不見了也會自動補回來 */
 // 每一格：照角色現在在做什麼，決定每個動作的比重（平滑過去，不會瞬間跳），播放速度跟移動速度一樣
+function kidPPoseOn(f){ const P = f.ppose; if (!P) return false; const moved = now() - P.at > 0.8 && ((f.aspd || 0) > 0.35 || f.air > 0.05);
+  if (moved || f.fishing || f.sitting || f.swim || now() > P.until){ f.ppose = null; return false; } return true; }
 function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
   if (f.swim) W.dive = 1;
   else if (f.sitting) W.sit = 1;
   else if (f.air > 0.05) W.jump_air = 1;
   else if (f.fishing){ if ((f.windup || 0) > 0.02 || f.castT >= 0) W.fish_cast = 1; else if ((f.bend || 0) > 0.45) W.fish_fight = 1; else if ((f.bend || 0) > 0.05) W.fish_reel = 1; else W.fish_idle = 1; }
+  else if (f.ppose && kidPPoseOn(f)){ for (const [nm, w] of f.ppose.W) if (K.acts[nm]) W[nm] = w; }   /* v359 跟寵物玩的時候人也會動（蹲下餵、伸手摸、坐地上陪牠） */
   else if (f.emote && kidEmoteOn(f, t)){ W[EMOTE_DEF[f.emote.k].anim] = 1; }
   else { const wk = smooth01((v - 0.2) / 0.8) * (1 - smooth01((v - 2.4) / 1.2)), rn = smooth01((v - 2.4) / 1.2) * (1 - smooth01((v - 4.3) / 0.6)), sp = smooth01((v - 4.3) / 0.6);   /* 走 3.8 用跑步動作、推到底 5.0 用衝刺動作 */
     W.idle = 1 - smooth01((v - 0.1) / 0.5); if (wk > 0) W.walk = wk; if (rn > 0) W.run = rn; if (sp > 0) W.sprint = sp;
@@ -3229,6 +3232,7 @@ function kidAnimate(f, dt, t){
     else if ((f.windup || 0) > 0.02){ K.casting = false; c.paused = true; c.time = d * 0.38 * Math.min(1, f.windup); }
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
+  { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
   K.mixer.update(dt);
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
@@ -7501,15 +7505,30 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
 }
 /* ===== v332 跟寵物互動：丟球（跑去撿回來）、給點心、坐下、跳一跳、轉圈；揮手、跳舞、歡呼時寵物也會跟著動；別人也看得到 ===== */
-const PET_ACTS = [['🎾', '丟球', 'ball'], ['🦴', '給點心', 'treat'], ['🐾', '坐下', 'sit'], ['🦘', '跳一跳', 'jump'], ['🌀', '轉圈', 'spin']];
+const PET_ACTS = [['🦴', '給點心', 'treat'], ['✋', '摸摸頭', 'pat'], ['🤝', '握手', 'paw'], ['🎾', '丟球', 'ball'], ['🏃', '繞圈跑', 'zoom'], ['😴', '一起休息', 'rest'], ['🐾', '坐下', 'sit'], ['🦘', '跳一跳', 'jump'], ['🌀', '轉圈', 'spin']];
+/* v359 人的動作：W＝要混的動作和比重；hold＝停在那個動作的第幾秒（蹲著不起來） */
+const PET_POSE = { treat: { W: [['pickup', 1]], hold: ['pickup', 0.55], dur: 2.9 }, pat: { W: [['pickup', 0.75], ['interact', 0.55]], hold: ['pickup', 0.5], dur: 3.3 },
+  paw: { W: [['pickup', 0.6], ['interact', 0.7]], hold: ['pickup', 0.45], dur: 2.3 }, zoom: { W: [['clap', 1]], dur: 3.2 }, rest: { W: [['sit_floor', 1]], dur: 60 } };
+/* 每種寵物吃的點心：狗啃骨頭、貓水獺海鷗吃小魚、烏龜吃菜葉、螃蟹章魚河豚吃小蝦 */
+function petTreatMesh(kind){ const g = new THREE.Group();
+  if (kind === 'shiba'){ const w = mat('#f4ead8', 0.6); g.add(box([0.16, 0.035, 0.035], '#f4ead8', [0, 0, 0])); for (const sx of [-0.085, 0.085]) for (const sz of [-0.022, 0.022]){ const k = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), w); k.position.set(sx, 0, sz); g.add(k); } }
+  else if (kind === 'pondturtle' || kind === 'turtle'){ const l = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 6), mat('#6cbf4a', 0.7)); l.scale.set(1, 0.25, 0.7); g.add(l); }
+  else if (kind === 'crab' || kind === 'octopus' || kind === 'puffer'){ const sh = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.018, 6, 10, Math.PI * 1.4), mat('#ff9a7a', 0.6)); g.add(sh); }
+  else { const b = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 6), mat('#8fb4c8', 0.4)); b.scale.set(1.7, 0.6, 0.55); g.add(b); const tl = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.06, 4), mat('#8fb4c8', 0.4)); tl.rotation.z = Math.PI / 2; tl.position.x = -0.1; g.add(tl); }
+  g.traverse(o => { if (o.isMesh){ o.castShadow = true; o.userData.dyn = true; } }); return g; }
+function petActEnd(pt){ const A = pt.act; if (!A) return; const U = pt.m.userData; if (A.ball) scene.remove(A.ball); if (A.item){ scene.remove(A.item); A.item = null; }
+  if (A.bs && U.body){ U.body.scale.copy(A.bs); U.body.rotation.x = A.brx; } if (U.head && A.hrx != null) U.head.rotation.x = A.hrx; pt.m.rotation.z = 0; pt.act = null; }
+function petFront(f, d, side){ const s = Math.sin(f.rot), c = Math.cos(f.rot); return [f.pos.x + s * d + c * (side || 0), f.pos.z + c * d - s * (side || 0)]; }
+const _pv = new THREE.Vector3();
 let myPetAct = null;
 function petBall(){ if (!PetBallM){ PetBallM = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), mat('#ffd23a', 0.45)); PetBallM.castShadow = true; PetBallM.userData.dyn = true; } return PetBallM.clone(); }
 let PetBallM = null;
-function petDo(f, k, at){ const pt = f.pet; if (!pt || pt.hug) return false; if (pt.act && pt.act.ball){ scene.remove(pt.act.ball); }
-  const t = now(); pt.act = { k, t0: t, at };
+function petDo(f, k, at){ const pt = f.pet; if (!pt || pt.hug) return false; petActEnd(pt);
+  const t = now(), U = pt.m.userData; pt.act = { k, t0: t, at, bs: U.body ? U.body.scale.clone() : null, brx: U.body ? U.body.rotation.x : 0, hrx: U.head ? U.head.rotation.x : null, a0: Math.atan2(pt.pos.x - f.pos.x, pt.pos.z - f.pos.z) };
+  const P = PET_POSE[k]; if (P && f.av && f.av.kid && !f.fishing && !f.sitting && !f.swim){ f.emote = null; f.ppose = { k, W: P.W, hold: P.hold || null, at: t, until: t + P.dur }; }
   if (k === 'ball'){ const fx = Math.sin(f.rot), fz = Math.cos(f.rot); let d = 6.5; while (d > 1.5 && !walkable(f.pos.x + fx * d, f.pos.z + fz * d)) d -= 0.5;
     const bx = f.pos.x + fx * d, bz = f.pos.z + fz * d, b = petBall(); b.position.set(f.pos.x, f.baseY + 1.2, f.pos.z); scene.add(b); Object.assign(pt.act, { ball: b, bx, bz, by: groundHeight(bx, bz) + 0.11, sx: f.pos.x, sz: f.pos.z, sy: f.baseY + 1.2, ph: 'fly' }); }
-  if (k === 'treat'){ pt.spinUntil = t + 1.4; try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 12, '#ff9ab0', 0.4, 1.2, 1.0); } catch(e){} }
+  if (k === 'treat'){ pt.act.item = petTreatMesh(pt.kind); scene.add(pt.act.item); }
   if (k === 'spin') pt.spinUntil = t + 1.6;
   return true; }
 function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = groundHeight(pt.pos.x, pt.pos.z), age = t - A.t0, faceMe = Math.atan2(f.pos.x - pt.pos.x, f.pos.z - pt.pos.z);
@@ -7521,10 +7540,42 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
   }
   if (A.k === 'sit'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); if (U.body) U.body.scale.y = age < 2.2 ? 0.82 : 1; if (age > 2.4){ if (U.body) U.body.scale.y = 1; pt.act = null; } return true; }
   if (A.k === 'jump'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); pt.pos.y = gy + Math.abs(Math.sin(age * 7)) * 0.35 * (pt.kind === 'gull' || pt.kind === 'puffer' ? 0 : 1); pt.m.position.y = pt.pos.y; if (age > 1.8) pt.act = null; return true; }
-  if (A.k === 'treat' || A.k === 'spin'){ if (age > 1.7) pt.act = null; return false; }
+  const hearts = (n) => { try { FX.emit(pt.pos.x, pt.pos.y + 0.55, pt.pos.z, n, '#ff7b9c', 0.35, 1.1, 1.0); } catch(e){} }, head = U.head || U.body;
+  if (A.k === 'treat'){ const [tx, tz] = petFront(f, pt.kind === 'puffer' || pt.kind === 'gull' ? 0.55 : 0.44), it = A.item;
+    if (it){ const B = f.av && f.av.kid && f.av.kid.B; if (B && B.handr && f.ppose){ B.handr.getWorldPosition(_pv); it.position.copy(_pv); } else it.position.set(f.pos.x + Math.sin(f.rot) * 0.4, f.baseY + 0.5, f.pos.z + Math.cos(f.rot) * 0.4); it.rotation.y = f.rot; }
+    if (age < 1.0){ petStep(pt, dt, t, tx, tz, gy, true, faceMe); return true; }
+    petStep(pt, dt, t, tx, tz, gy, false, faceMe);
+    if (age < 2.6){ const e = clamp((age - 1.1) / 1.4, 0, 1); if (it) it.scale.setScalar(Math.max(0.01, 1 - e)); if (head && age > 1.1) head.rotation.x = (A.hrx || 0) + Math.abs(Math.sin(age * 13)) * 0.32;   /* 一口一口吃 */
+      if (U.tail) U.tail.rotation.y = Math.sin(t * 16) * 0.5; if (age > 1.1 && Math.floor(age * 4) !== A.cr){ A.cr = Math.floor(age * 4); try { FX.emit(pt.pos.x + Math.sin(pt.rot) * 0.25, pt.pos.y + 0.3, pt.pos.z + Math.cos(pt.rot) * 0.25, 3, '#d9a066', 0.18, 0.6, 0.6); } catch(e){} } return true; }
+    if (!A.done){ A.done = true; if (it){ scene.remove(it); A.item = null; } if (head && A.hrx != null) head.rotation.x = A.hrx; pt.spinUntil = t + 0.9; hearts(14); if (f === me) toast(`😋 ${esc(pt.name || '寵物')}吃得好開心！`); }
+    if (age > 3.4) petActEnd(pt); return true; }
+  if (A.k === 'pat'){ const [tx, tz] = petFront(f, 0.55);
+    if (age < 0.8){ petStep(pt, dt, t, tx, tz, gy, true, faceMe); return true; }
+    petStep(pt, dt, t, tx, tz, gy, false, faceMe); const k2 = age - 0.8;
+    if (k2 < 2.4){ if (U.body && A.bs){ const puff = pt.kind === 'puffer' ? Math.sin(Math.min(1, k2 / 1.2) * Math.PI) * 0.4 : 0; U.body.scale.set(A.bs.x * (1 + puff), A.bs.y * (pt.kind === 'puffer' ? 1 + puff : 0.9), A.bs.z * (1 + puff)); }   /* 坐好；河豚被摸會鼓起來 */
+      pt.m.rotation.z = Math.sin(k2 * 4.5) * 0.13; if (head) head.rotation.x = (A.hrx || 0) - 0.22 + Math.sin(k2 * 9) * 0.06;   /* 抬頭、左右蹭手 */
+      if (U.tail) U.tail.rotation.y = Math.sin(t * 15) * 0.5; if (Math.floor(k2 / 0.45) !== A.hb){ A.hb = Math.floor(k2 / 0.45); hearts(2); } return true; }
+    if (!A.done){ A.done = true; if (U.body && A.bs) U.body.scale.copy(A.bs); pt.m.rotation.z = 0; if (head && A.hrx != null) head.rotation.x = A.hrx; hearts(10); if (f === me) toast(`💕 ${esc(pt.name || '寵物')}好喜歡被你摸頭`); }
+    if (age > 3.6) petActEnd(pt); return true; }
+  if (A.k === 'paw'){ const [tx, tz] = petFront(f, 0.6);
+    if (age < 0.7){ petStep(pt, dt, t, tx, tz, gy, true, faceMe); return true; }
+    petStep(pt, dt, t, tx, tz, gy, false, faceMe); const u = clamp((age - 0.7) / 1.3, 0, 1);
+    if (U.body && A.bs) U.body.rotation.x = A.brx - Math.sin(u * Math.PI) * 0.45;   /* 前腳抬起來搭到手上 */
+    if (U.legs && U.legs.length >= 2 && pt.kind !== 'turtle' && pt.kind !== 'pondturtle'){ U.legs[0].rotation.x = -Math.sin(u * Math.PI) * 1.1; }
+    if (age > 1.3 && !A.sp){ A.sp = true; try { FX.emit(tx, gy + 0.6, tz, 12, '#ffd23a', 0.3, 1.0, 0.9); } catch(e){} if (f === me) toast(`🤝 ${esc(pt.name || '寵物')}跟你握手！`); }
+    if (age > 2.2) petActEnd(pt); return true; }
+  if (A.k === 'zoom'){ const ang = A.a0 + age * 4.4, R = 1.7, tx = f.pos.x + Math.sin(ang) * R, tz = f.pos.z + Math.cos(ang) * R;
+    petStep(pt, dt, t, tx, tz, groundHeight(tx, tz), true, pt.rot); if (Math.floor(age * 5) !== A.du){ A.du = Math.floor(age * 5); try { FX.emit(pt.pos.x, pt.pos.y + 0.05, pt.pos.z, 2, '#d8c8a8', 0.15, 0.5, 0.5); } catch(e){} }   /* 跑兩圈、揚起一點沙 */
+    if (age > 2.9){ pt.spinUntil = t + 0.6; hearts(8); petActEnd(pt); } return true; }
+  if (A.k === 'rest'){ const [tx, tz] = petFront(f, 0.15, 0.62); const still = f.ppose && f.ppose.k === 'rest';
+    if (!still && age > 1.2 || age > 60){ petActEnd(pt); return false; }
+    if (age < 1.2){ petStep(pt, dt, t, tx, tz, gy, true, f.rot); return true; }
+    petStep(pt, dt, t, tx, tz, gy, false, f.rot); if (U.body && A.bs){ const br = 1 + Math.sin(t * 1.8) * 0.035; U.body.scale.set(A.bs.x * br, A.bs.y * 0.72, A.bs.z * br); } if (head) head.rotation.x = (A.hrx || 0) + 0.3;   /* 趴下來、慢慢呼吸 */
+    if (U.tail) U.tail.rotation.y = Math.sin(t * 1.2) * 0.15; if (Math.floor(age / 1.6) !== A.zz){ A.zz = Math.floor(age / 1.6); try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 1, '#cfd8e6', 0.12, 0.7, 1.4); } catch(e){} } return true; }
+  if (A.k === 'spin'){ if (age > 1.7) pt.act = null; return false; }
   pt.act = null; return false; }
 function petAct(k){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held && me.held.pet) return;
-  if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'treat') toast(`🦴 ${esc(pt.name || '寵物')}吃得好開心！`); } }
+  if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'rest') toast(`😴 跟${esc(pt.name || '寵物')}一起坐著休息，走開就結束`); } }
 function updatePetFor(f, want, dt, t){
   if (!want){ if (f.pet){ petFree(f.pet); f.pet = null; } return; }
   const k = petKey(want); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
@@ -7559,7 +7610,8 @@ function updatePets(dt, t){
       for (const pt of PetShop.demo) petStep(pt, dt, t, pt.wander.x, pt.wander.z, pt.wander.y, false, pt.rot); } else { PetShop.npc.av.g.visible = false; PetShop.npc.tag.style.display = 'none'; } }
 }
 function petHug(){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held) me.av.g.remove(me.held.o); pt.hug = true; if (pt.m.parent) pt.m.parent.remove(pt.m); const y = me.av.kid ? 0.62 : 0.8, z = me.av.kid ? 0.3 : 0.38; pt.m.position.set(0, y, z); pt.m.rotation.set(0, Math.PI / 2, 0); if (pt.m.userData.lb) pt.m.userData.lb.visible = false; me.av.g.add(pt.m);   /* 抱著的時候名字牌先藏起來（不然會擋到臉） */ me.held = { o: pt.m, y, z, until: now() + 4, pet: true };   /* v358 少了 z 會變成 NaN（寵物跑到看不見的地方，只剩一小塊）；橫著抱，看得到側面 */ me.say(`🤗 ${pt.name}`, 'emote', 4); closeEmotePanel(); }
-function petPat(){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } pt.pos.set(me.pos.x + Math.sin(me.rot) * 0.7, me.baseY, me.pos.z + Math.cos(me.rot) * 0.7); pt.rot = me.rot + Math.PI; FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); me.say(`✋ 摸摸 ${pt.name}`, 'emote', 3); closeEmotePanel(); }
+function petPat(){ petAct('pat'); }
+function petPatOld(){ const pt = me.pet; if (!pt) return; pt.pos.set(me.pos.x + Math.sin(me.rot) * 0.7, me.baseY, me.pos.z + Math.cos(me.rot) * 0.7); pt.rot = me.rot + Math.PI; FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); me.say(`✋ 摸摸 ${pt.name}`, 'emote', 3); closeEmotePanel(); }
 // ---- 寵物店：廣場西邊的小攤子，店長小花，攤子上有幾隻寵物在玩 ----
 const PetShop = { npc:null, demo:[] };
 function buildPetShop(){ const X = SHOPLOT.pet.x, Z = SHOPLOT.pet.z, g = new THREE.Group(), y0 = groundHeight(X, Z); g.position.set(X, y0, Z); g.rotation.y = SHOPLOT.pet.r; scene.add(g);   /* 商店街東邊最後一間 */
@@ -10560,7 +10612,7 @@ function openEmotePanel(force){ let P = $('#emotePanel'); if (!P){ P = document.
   if (!force) P.hidden = !P.hidden; if (P.hidden) return;
   P.textContent = ''; P.appendChild(el('div', 'ep-t', '😀 表情動作'));
   const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], own = emoteOwned(k), b = el('button', 'ep-b' + (own ? '' : ' lock')); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', own ? D.name : `🪙${D.buy}`)); if (!own) b.title = D.name + '（' + D.buy + ' 金幣）'; b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
-  for (const [ic, nm, fn] of [...(document.body.classList.contains('ui3') ? [['🐟', '炫耀魚', () => { closeEmotePanel(); const sb = $('#showBtn'); if (sb) sb.click(); }]] : []), ['🤗', '抱寵物', () => petHug()], ['✋', '摸摸頭', () => petPat()], ...PET_ACTS.map(([i2, n2, k2]) => [i2, n2, () => petAct(k2)])]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
+  for (const [ic, nm, fn] of [...(document.body.classList.contains('ui3') ? [['🐟', '炫耀魚', () => { closeEmotePanel(); const sb = $('#showBtn'); if (sb) sb.click(); }]] : []), ['🤗', '抱寵物', () => petHug()], ...PET_ACTS.map(([i2, n2, k2]) => [i2, n2, () => petAct(k2)])]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
   P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。有 🪙 的是新動作，點一下就能用金幣學會。'));
   const em = $('#emotes'), r = em && em.getBoundingClientRect(); if (r && r.width){ P.style.bottom = Math.round(innerHeight - r.top + 8) + 'px'; P.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; P.style.maxHeight = Math.max(160, Math.round(r.top - 16)) + 'px'; } }   /* 貼在表情按鈕列的正上方；太高就捲動，不會超出畫面 */
 /* v264 學新的表情動作：第一次點跳出確認，再點一次就買（金幣由伺服器扣） */
@@ -12577,7 +12629,7 @@ function renderTab(){
       '💇 阿萍美髮沙龍：阿綾服裝店對面開了一間美髮沙龍，門口有紅白藍的理髮燈。阿萍是超認真的工作狂：新髮色每天調出一種、永遠不會停（🪙200），新髮型每週都會發表新作品（🪙400）。剪了、染了就是你的，之後在「造型 → 外觀」也能隨時換；原本的髮型髮色一樣免費。'
     ]);
     sec('🐾 寵物', [
-      '跟寵物玩：按 😀 表情，下面有「丟球」（寵物會跑去撿回來）、「給點心」、「坐下」、「跳一跳」、「轉圈」，還有抱抱、摸摸頭。你揮手、跳舞、歡呼、拍手時寵物也會跟著動。這些動作大家都看得到。',
+      '跟寵物玩：按 😀 表情，下面有：🦴 給點心（你蹲下來餵，每種寵物吃的不一樣，牠會一口一口吃完）、✋ 摸摸頭（你蹲下來摸，牠會抬頭蹭你的手、冒愛心，河豚會鼓起來）、🤝 握手、🎾 丟球（寵物會跑去撿回來）、🏃 繞圈跑、😴 一起休息（你坐在地上，牠趴在旁邊打瞌睡，走開就結束）、坐下、跳一跳、轉圈，還有 🤗 抱抱。旁邊的人也看得到。你揮手、跳舞、歡呼、拍手時寵物也會跟著動。這些動作大家都看得到。',
       '在商店街入口西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹，每一種都有好幾種花色（隨機，⭐ 很少見）。小海龜、小章魚、河豚只能在海邊、港口、珊瑚礁、紅樹林釣魚時偶爾順便撈到；溪邊、湖邊偶爾撈到小水獺。寵物可以放到「🏷️ 寵物市集」賣（賣家拿九成，買的人要重新培養親密度）。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
