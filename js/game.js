@@ -4512,7 +4512,8 @@ const BITE_SH_MAT = new THREE.MeshBasicMaterial({ color:'#0b1d2b', transparent:t
 function updateBiteShadow(dt, t, want){ const B = BiteFish;
   if (!want){ if (B.sh){ B.lastSh = { t, ang: B.shAng, k: B.shK }; scene.remove(B.sh); B.sh = null; } return; }
   const b = me.bobPos, big = F.roll && F.roll.f ? BIG_FISH.has(F.roll.f.id) || F.roll.f.rarity === '傳說' : false, sc = big ? 1.15 : 0.62;
-  if (!B.sh || B.shBig !== big){ if (B.sh) scene.remove(B.sh); const g = fishModel({ id:'__shadow', color:'#0b1d2b' }, sc); g.traverse(o => { if (o.isMesh){ o.material = BITE_SH_MAT; o.castShadow = false; o.renderOrder = -1; } });
+  const shr = F.spot && F.spot.id === 'shrimp';   /* v409 釣蝦場裡游過來的是蝦子的影子，不是魚影 */
+  if (!B.sh || B.shBig !== big || B.shShr !== shr){ if (B.sh) scene.remove(B.sh); B.shShr = shr; const g = shr ? fishModel(FISH_BY_ID.prawn, 0.3) : fishModel({ id:'__shadow', color:'#0b1d2b' }, sc); g.traverse(o => { if (o.isMesh){ o.material = BITE_SH_MAT; o.castShadow = false; o.renderOrder = -1; } });
     scene.add(g); B.shBig = big; if (!B.sh){ B.shAng = Math.random() * Math.PI * 2; B.shK = 0; B.shAt = t + rand(0.8, 2.0); g.position.set(b.x + Math.cos(B.shAng) * 2.8, WATER_LEVEL - 1.2, b.z + Math.sin(B.shAng) * 2.8); } else g.position.copy(B.sh.position); B.sh = g; }
   const g = B.sh, bite = F.phase === 'bite', nib = F.lastNib && t - F.lastNib < 0.35;
   if (t < B.shAt && !bite){ BITE_SH_MAT.opacity = 0; return; }
@@ -8225,7 +8226,7 @@ function renderCraft(body){
       a2.appendChild(b2); li2.appendChild(a2); ul.appendChild(li2); }
     body.appendChild(ul); }
   const own = new Set(rec.owned || []);
-  for (const [kind, title] of [['hk_', '🪝 鉤子（一次裝一個，影響拉魚）'], ['rs_', '🎣 竿子造型'], ['lc_', '🧵 釣線顏色']]){
+  for (const [kind, title] of [['hk_', '🪝 鉤子（一次裝一個，影響拉魚）'], ['rs_', `🎣 竿子造型（每支竿子各自裝：現在裝在「${(RODS.find(r => r.id === rec.rod) || RODS[0]).name}」，換竿子會換成那支的造型）`], ['lc_', '🧵 釣線顏色']]){
     body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
     for (const c of CRAFT.filter(x => x.id.startsWith(kind))){ const li = el('li', own.has(c.id) ? 'on' : ''); li.appendChild(craftSwatch(c)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name));
       const cur = kind === 'rs_' ? rec.rodSkin : kind === 'hk_' ? rec.hook : rec.lineCol, using = cur === c.id;
@@ -10279,6 +10280,8 @@ function updateBobberLook(){
     const sk = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), mat('#6b6b6b', 0.4, { metalness:0.6 })); b.add(sk); b.userData.sinker = sk; }
   b.userData.lure.visible = Rig.rig === 'lure'; b.userData.sinker.visible = Rig.rig === 'bottom' && !hall; b.userData.sinker.position.y = -0.12;
 }
+/* v409 每支釣竿各自的造型：沒連雲端時在手機上記（有連雲端時伺服器 159 會自動換） */
+function rodSwitchLocal(id){ rec.rodSkins = rec.rodSkins || {}; if (rec.rod) { if (rec.rodSkin) rec.rodSkins[rec.rod] = rec.rodSkin; else delete rec.rodSkins[rec.rod]; } rec.rod = id; rec.rodSkin = rec.rodSkins[id] || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){} }
 const RODS = [
   { id:'bamboo', name:'竹釣竿',     price:0,    color:'#3b2a1e', desc:'村裡人人都有的入門竿，輕巧好用。', tension:1, reel:1, rare:1, legend:1 },
   { id:'carbon', name:'碳纖維釣竿', price:400,  color:'#2f6fb5', desc:'線比較不容易繃斷、收線快一點，稀有魚機率 ×1.2。', tension:0.85, reel:1.12, rare:1.2, legend:1.05 },
@@ -10987,7 +10990,7 @@ function renderShop(body){
         if (!owned && rec.coins < r.price){ toast(`金幣不夠，還差 🪙${(r.price - rec.coins).toLocaleString()}`); return; }
         if (Cloud.on){ b.disabled = true; b.textContent = '處理中…'; const row = await cloudCall('buy_rod', { p_rod: r.id }); if (row && !owned){ SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); } renderTab(); return; }   // 由伺服器確認金幣
         if (!owned){ rec.rods.push(r.id); addCoins(-r.price); SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); }
-        rec.rod = r.id; saveRecLocal(); me.setRod(r.id); updateBobberLook(); pushPresence(true); renderTab();
+        rodSwitchLocal(r.id); saveRecLocal(); me.setRod(r.id); updateBobberLook(); pushPresence(true); renderTab();
       });
       li.appendChild(b); ul.appendChild(li);
     }
@@ -11340,7 +11343,7 @@ function renderBag(body){
         async () => { const r = await petRpc('pet_out', { p_id: p.out ? null : p.id }); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); } renderTab(); }, p.out); } } } }
   // 釣竿
   { const ul = sec('🎣 釣竿', '點「換上」就會拿在手上'); for (const r of RODS.filter(r => r.price === 0 || (rec.rods || []).includes(r.id))){ const using = rec.rod === r.id;
-      const li = row(ul, '', `${ROD_TYPES[rodType(r)].icon} ${r.name}`, r.desc + `（手感：${(ROD_FEEL[rodType(r)] || ROD_FEEL.cast).name}）｜` + rodMemo(r.id), using ? '使用中' : '換上', using ? null : async () => { if (Cloud.on){ await cloudCall('buy_rod', { p_rod: r.id }); } else { rec.rod = r.id; saveRecLocal(); } me.setRod(rec.rod); updateBobberLook(); pushPresence(true); renderTab(); }, using);
+      const li = row(ul, '', `${ROD_TYPES[rodType(r)].icon} ${r.name}`, r.desc + `（手感：${(ROD_FEEL[rodType(r)] || ROD_FEEL.cast).name}）｜` + rodMemo(r.id) + ((rec.rodSkins || {})[r.id] && CRAFT_BY[rec.rodSkins[r.id]] ? `｜🎨 ${CRAFT_BY[rec.rodSkins[r.id]].name}` : ''), using ? '使用中' : '換上', using ? null : async () => { if (Cloud.on){ await cloudCall('buy_rod', { p_rod: r.id }); } else { rodSwitchLocal(r.id); saveRecLocal(); } me.setRod(rec.rod); updateBobberLook(); pushPresence(true); renderTab(); }, using);
       li.firstChild.textContent = ''; const dot = el('span'); dot.style.cssText = `display:inline-block;width:10px;height:34px;border-radius:5px;background:${r.color};transform:rotate(20deg)`; li.firstChild.appendChild(dot); } }
   // 魚餌和窩料
   { const ul = sec('🪱 魚餌', '一次只能掛一種；路亞釣法不用魚餌'); const cur = curBait();
@@ -12131,7 +12134,7 @@ function adoptRow(row){
   Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
-  { const keep = rec && rec.rodLog, keepDv = rec && rec.dv; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; if ('dive_trash' in row) rec.dv = { day: row.dive_day || '', trash: row.dive_trash || 0, mat: row.dive_mat || 0, crit: row.dive_crit || 0, q: row.dive_q_done || null }; else if (keepDv) rec.dv = keepDv; } rec.rodSkin = row.rod_skin || null; rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
+  { const keep = rec && rec.rodLog, keepDv = rec && rec.dv; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; if ('dive_trash' in row) rec.dv = { day: row.dive_day || '', trash: row.dive_trash || 0, mat: row.dive_mat || 0, crit: row.dive_crit || 0, q: row.dive_q_done || null }; else if (keepDv) rec.dv = keepDv; } rec.rodSkin = row.rod_skin || null; rec.rodSkins = row.rod_skins && typeof row.rod_skins === 'object' ? row.rod_skins : (rec.rodSkins || {}); rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
   try { if (row.tag_note) tagNoteShow(row.tag_note); } catch(e){}
   rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
@@ -13581,6 +13584,8 @@ function renderTab(){
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
+      '🎨 竿子造型每支竿子各自裝：在阿鐵的工坊按「裝上」只會裝在現在拿的那支，換竿子時會自動換成那支記住的造型；背包的釣竿清單會寫每支裝了什麼造型。',
+      '🦐 在釣蝦場拋竿後，游過來的是蝦子的影子，不是魚影。',
       '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
       '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',
