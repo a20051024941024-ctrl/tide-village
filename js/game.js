@@ -2337,14 +2337,14 @@ function makeAvatar(shirt, hat){
   const hair = add(G.hair, hairM, 0, 0.01, -0.02, headG); hair.rotation.x = -0.42;
   for (const sx of [-1, 1]) BODY.push(add(G.ear, skin, sx * 0.315, -0.02, -0.01, headG));
   /* 眼睛（2026-11-04 角色改版）：大大的彩色眼珠＋黑色瞳孔＋兩顆反光＋上眼線，眨眼時整組一起壓扁；眉毛跟頭髮同色 */
-  const eyes = [], shines = [], eyeM = mat('#3a2a20', 0.35), brows = [];
+  const eyes = [], shines = [], eyeM = mat('#3a2a20', 0.35), brows = [], blushes = [];
   for (const sx of [-1, 1]){
     const e = new THREE.Group(); e.position.set(sx * 0.115, 0.0, 0.285); e.scale.set(0.82, 1.15, 0.5); headG.add(e); eyes.push(e);
     add(G.eye, eyeM, 0, 0, 0, e, false); add(G.pupil, ink, 0, -0.008, 0.035, e, false);
     shines.push(add(G.shine, white, sx * 0.016 + 0.006, 0.022, 0.058, e, false)); { const s2 = add(G.shine, white, -sx * 0.012, -0.026, 0.056, e, false); s2.scale.setScalar(0.6); }
     const ls = add(G.lash, ink, 0, 0.004, 0.02, e, false); ls.scale.set(1.12, 1.05, 1);
     const br = add(G.brow, hairM, sx * 0.118, 0.098, 0.296, headG, false); br.rotation.z = Math.PI / 2 + sx * 0.12; brows.push(br);
-    const bl = add(G.blush, blushM, sx * 0.19, -0.085, 0.262, headG, false); bl.rotation.y = sx * 0.62;
+    const bl = add(G.blush, blushM, sx * 0.19, -0.085, 0.262, headG, false); bl.rotation.y = sx * 0.62; blushes.push(bl);
   }
   const smile = add(G.smile, ink, 0, -0.1, 0.305, headG, false); smile.rotation.z = Math.PI; smile.scale.set(1, 0.8, 1);
   // 漁夫帽
@@ -2362,7 +2362,7 @@ function makeAvatar(shirt, hat){
   const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), mat('#c9d6e3', 0.3, { metalness:0.6 })); reel.rotation.z = Math.PI/2; reel.position.set(0.06, 0.25, 0);
   const tip = new THREE.Object3D(); tip.position.y = 2.3;
   rod.add(pole, grip, reel, tip); rod.rotation.x = 0.95; rod.visible = false; g.add(rod);
-  return { g, legL, legR, armL, armR, rod, tip, pole, reel, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, hairM, eyeM, hair, BODY, white, blushM, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4 };
+  return { g, legL, legR, armL, armR, rod, tip, pole, reel, shirtM, hatM, eyes, shines, headG, hatG, hatBase, pantsM: pants, shoeM, skinM: skin, inkM: ink, body, hairM, eyeM, hair, BODY, white, blushM, gearMeshes: [], gearAnim: null, blinkAt: Math.random() * 4, brows, smile, blushes };
 }
 /* ================= WARDROBE：服裝（帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情）================= */
 // 價格要跟 supabase/008_wardrobe.sql 的 _item_price 一樣；價格 0 的是預設，大家都有
@@ -2390,11 +2390,116 @@ function lookOwnC(c){ return c < LOOK_FREE_C || (rec.owned || []).includes('hc' 
 const LOOK_SKIN = ['#ffe6d2', '#ffd9b8', '#f2c49a', '#d9a070', '#a8704a', '#74492f'];
 const LOOK_EYE = ['#3a2a20', '#7a4a28', '#2f6fb5', '#3a8a5a', '#8a5ac0', '#c0402a', '#3aa0b0'];
 const LOOK_DEFAULT = 'h0c1s1e0';
-function lookParse(v){ const m = /^h(\d{1,2})c(\d{1,3})s(\d)e(\d)$/.exec(v || ''); const r = m ? { h:+m[1], c:+m[2], s:+m[3], e:+m[4] } : { h:0, c:1, s:1, e:0 }; r.h = r.h < LOOK_HAIR.length ? r.h : 0; r.c = r.c < 1000 ? r.c : 1; r.s = r.s < LOOK_SKIN.length ? r.s : 1; r.e = r.e < LOOK_EYE.length ? r.e : 0; return r; }
-function lookStr(L){ return `h${L.h}c${L.c}s${L.s}e${L.e}`; }
-function applyLook(av, gear, mk){
+/* v411 每個髮型配的瀏海（B 齊、A 空氣、S 斜、P 八字、N 沒有）＋鬢角（0 沒有、1 短、2 長）。沒列到的用 S1 */
+const HAIR_FRONT = ['S1', 'B1', 'A0', 'B0', 'P2', 'A1', 'B1', 'A1', 'N0', 'N0', 'B2', 'P2', 'S1', 'A1', 'A1', 'B1', 'B1', 'B0', 'B2', 'N0', 'N0', 'N1', 'P2', 'N1', 'P0', 'S1', 'A1', 'B0', 'A0', 'S1', 'P2', 'N0', 'N0'];
+/* v411 用 3D 模型做的髮型（玩家用 Meshy 付費方案生成，本專案從 157 萬面減到約 1.5 萬面、對到頭上；模型是白色的，顏色照玩家選的髮色）。髮型編號 → 檔案；載好以前先用程式做的版本 */
+const HAIR_GLB = { 11: 'models/hair/wave.glb' }, HAIRG = { geo: {} };
+function hairGlbLoad(){ for (const [h, url] of Object.entries(HAIR_GLB)){ try { new GLTFLoader().load(url, g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); if (!geo) return; geo.computeBoundingSphere(); geo.userData.shared = true; HAIRG.geo[h] = geo;
+      try { if (typeof AvShot !== 'undefined') AvShot.cache.clear(); for (const f of CLOD.all){ if (!f.gearKey) continue; const gr = JSON.parse(f.gearKey); if (String(lookParse(gr.look).h) === String(h)){ f.gearKey = ''; f.setGear(gr); } } } catch(e){ console.warn('hair glb regear', e); } }, undefined, () => {}); } catch(e){} } }
+const LOOK_ACC = ['沒有', '蝴蝶結', '雙蝴蝶結', '髮夾', '髮箍', '小花'];
+function lookParse(v){ const m = /^h(\d{1,2})c(\d{1,3})s(\d)e(\d)(?:y(\d{1,2}))?(?:a(\d{1,2}))?$/.exec(v || ''); const r = m ? { h:+m[1], c:+m[2], s:+m[3], e:+m[4], y:+(m[5] || 0), a:+(m[6] || 0) } : { h:0, c:1, s:1, e:0, y:0, a:0 }; r.a = r.a < LOOK_ACC.length ? r.a : 0; r.y = r.y < LOOK_EYES.length ? r.y : 0;   /* v411 y＝眼型（沒寫就是 0） */ r.h = r.h < LOOK_HAIR.length ? r.h : 0; r.c = r.c < 1000 ? r.c : 1; r.s = r.s < LOOK_SKIN.length ? r.s : 1; r.e = r.e < LOOK_EYE.length ? r.e : 0; return r; }
+function lookStr(L){ return `h${L.h}c${L.c}s${L.s}e${L.e}` + (L.y ? 'y' + L.y : '') + (L.a ? 'a' + L.a : ''); }
+/* v411 新的臉：眼睛改成畫出來的貼圖（256×320，一隻眼睛連眉毛：眼白、上深下淺的瞳孔、反光、中間粗兩端細的上眼線、睫毛），玩家在「外觀」選眼型。
+   顏色照玩家選的瞳色。最後一個「經典」是以前用圓球拼的眼睛。沒鏡射＝外眼角在右邊（畫面右邊那隻眼睛）。表情（笑咪咪、想睡、愛心眼、星星眼、墨鏡）在新眼型上也是畫的 */
+const EYE_STYLES = [
+  ['明亮',   { rx:58, ry:74, sw:1.46, lash:15, wings:1, low:1, fold:1, bt:8,  ba:0.10 }],
+  ['圓圓',   { rx:68, ry:80, sw:1.3, lash:16, wings:0, low:0, bt:8,  ba:0.06, big:1 }],
+  ['星空',   { rx:60, ry:78, sw:1.44, lash:16, wings:2, low:1, bt:7,  ba:0.10, mark:'star', deep:1 }],
+  ['水汪汪', { rx:66, ry:82, sw:1.34, lash:18, wings:0, low:0, bt:8,  ba:0.05, glow:1 }],
+  ['溫柔',   { rx:58, ry:72, sw:1.46, lash:14, wings:2, low:1, fold:1, bt:7, ba:-0.10, droop:1 }],
+  ['清新',   { rx:62, ry:76, sw:1.4,  lash:11, wings:0, low:0, bt:6,  ba:0.08, glow:1 }],
+  ['動漫',   { rx:54, ry:84, sw:1.5,  lash:15, wings:3, low:1, bt:7,  ba:0.14 }],
+  ['閃亮',   { rx:60, ry:76, sw:1.44, lash:15, wings:2, low:1, bt:7,  ba:0.10, mark:'spark' }],
+  ['堅定',   { rx:60, ry:70, lash:16, wings:0, low:0, bt:15, ba:0.38, lid:0.2, lidTilt:0.12, bdy:2, sw:1.46 }],
+  ['驚訝',   { rx:40, ry:46, sw:1.9,  sh:1.75, lash:13, wings:0, low:0, bt:7, ba:0.02, bdy:-16, small:1 }],
+  ['慵懶',   { rx:60, ry:70, lash:16, wings:0, low:0, bt:11, ba:0.0, lid:0.42, lidTilt:0, bdy:6, flat:1, sw:1.46 }],
+  ['戰鬥',   { rx:54, ry:62, lash:15, wings:0, low:1, bt:14, ba:0.5, lid:0.3, lidTilt:0.2, bdy:4, sw:1.5 }],
+  ['柔霧',   { rx:66, ry:82, sw:1.22, lash:12, wings:1, low:0, bt:5, ba:0.04, soft:1, big:1 }],   /* 玩家朋友點的：髮型參考圖裡那種霧霧的、深色的大眼睛 */
+  ['夢幻',   { rx:64, ry:80, sw:1.26, lash:13, wings:2, low:1, bt:5, ba:0.06, soft:1, big:1, mark:'star' }],
+  ['無辜',   { rx:70, ry:84, sw:1.18, lash:11, wings:0, low:0, bt:5, ba:-0.06, soft:1, big:1, droop:1 }],
+];
+function eyeHsl(hex){ const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn; let h = 0, s = 0;
+  if (d > 1e-5){ s = d / (1 - Math.abs(2 * l - 1)); h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; } return [h, s, l]; }
+function eyeStar(g, x, y, r, n){ g.beginPath(); for (let i = 0; i < n * 2; i++){ const a = i * Math.PI / n - Math.PI / 2, q = i % 2 ? r * 0.3 : r; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * q, y + Math.sin(a) * q); } g.closePath(); g.fill(); }
+function eyeHeart(g, x, y, r){ g.beginPath(); g.moveTo(x, y + r * 0.9); g.bezierCurveTo(x - r * 1.5, y - r * 0.1, x - r * 0.6, y - r * 1.2, x, y - r * 0.35); g.bezierCurveTo(x + r * 0.6, y - r * 1.2, x + r * 1.5, y - r * 0.1, x, y + r * 0.9); g.fill(); }
+function eyeBrow(g, E, cx, top, INK){ const by = top - 46 + (E.bdy || 0), a = E.ba || 0, bx0 = cx - 66, bx1 = cx + 72, y0 = by + a * 62, y1 = by - a * 40;
+  g.strokeStyle = INK; g.lineCap = 'round'; g.lineWidth = E.bt || 8; g.beginPath(); g.moveTo(bx0, y0); if (E.flat) g.lineTo(bx1, y1 + 4); else g.quadraticCurveTo(cx + (a > 0.2 ? 30 : 0), Math.min(y0, y1) - (a > 0.2 ? 4 : 20), bx1, y1 + 6); g.stroke(); }
+/* face：'' 一般、'happy' 笑咪咪、'sleepy' 想睡、'heart' 愛心眼、'star' 星星眼 */
+function eyeDraw(c, style, colHex, mirror, face){ const E = EYE_STYLES[style][1], g = c.getContext('2d'), W = c.width = 256, H = c.height = 320; g.clearRect(0, 0, W, H); g.save(); if (mirror){ g.translate(W, 0); g.scale(-1, 1); }
+  const INK = '#2b1a17', cx = 128, cy = 208, rx = E.rx, ry = E.ry, sw = rx * E.sw, sh = ry * (E.sh || 0.94), [h, s] = eyeHsl(colHex), S = E.soft ? Math.min(100, s * 55 + 6) : Math.min(100, s * 125 + 14), col = l => `hsl(${h.toFixed(0)},${S.toFixed(0)}%,${l}%)`, top = cy - Math.max(ry, sh);
+  if (face === 'happy' || face === 'sleepy'){ const up = face === 'happy'; g.strokeStyle = INK; g.lineCap = 'round'; g.lineWidth = up ? 15 : 11; g.beginPath(); g.moveTo(cx - 62, cy + (up ? 14 : -10)); g.quadraticCurveTo(cx, cy + (up ? -52 : 30), cx + 62, cy + (up ? 14 : -10)); g.stroke();
+    g.lineWidth = 8; for (const k of [0, 1]){ g.beginPath(); g.moveTo(cx + 56 - k * 16, cy + (up ? 10 - k * 8 : -6 + k * 8)); g.lineTo(cx + 78 - k * 14, cy + (up ? 26 - k * 2 : 10 + k * 8)); g.stroke(); }
+    eyeBrow(g, Object.assign({}, E, { ba: 0.06, bt: 8, bdy: up ? -6 : 14, flat: 0 }), cx, cy - 60, INK); g.restore(); return; }
+  const lidY = E.lid ? cy - sh + 2 * sh * E.lid : null, tilt = E.lidTilt || 0;
+  g.save();
+  if (lidY != null){ g.beginPath(); g.moveTo(0, lidY + tilt * 128); g.lineTo(W, lidY - tilt * 128); g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.clip(); }
+  g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(cx, cy + 2, sw, sh, 0, 0, 7); g.fill();
+  { g.save(); g.beginPath(); g.ellipse(cx, cy + 2, sw, sh, 0, 0, 7); g.clip(); const sg = g.createLinearGradient(0, cy - sh, 0, cy); sg.addColorStop(0, 'rgba(70,50,80,.34)'); sg.addColorStop(1, 'rgba(70,50,80,0)'); g.fillStyle = sg; g.fillRect(0, 0, W, H); g.restore(); }
+  g.save(); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, 7); g.clip();
+  const gr = g.createLinearGradient(0, cy - ry, 0, cy + ry), d = E.deep ? -6 : 0; gr.addColorStop(0, col(E.soft ? 11 : 9 + d)); gr.addColorStop(0.5, col(E.soft ? 22 : 27 + d)); gr.addColorStop(1, col(E.soft ? 46 : E.glow ? 68 : 58)); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  if (!face){ g.fillStyle = 'rgba(14,8,10,.88)'; g.beginPath(); g.ellipse(cx, cy - ry * 0.04, rx * (E.small ? 0.5 : 0.4), ry * (E.small ? 0.5 : 0.46), 0, 0, 7); g.fill(); }
+  g.fillStyle = E.soft ? 'rgba(255,196,214,.5)' : 'rgba(255,255,255,' + (E.glow ? 0.5 : 0.32) + ')'; g.beginPath(); g.ellipse(cx, cy + ry * 0.66, rx * 0.62, ry * 0.24, 0, 0, 7); g.fill();
+  g.fillStyle = 'rgba(8,4,8,.42)'; g.fillRect(0, cy - ry, W, ry * 0.5);
+  const mark = face === 'heart' ? 'heart' : face === 'star' ? 'bigstar' : E.mark;
+  if (mark === 'star'){ g.fillStyle = '#ffffff'; eyeStar(g, cx, cy, rx * 0.36, 4); }
+  if (mark === 'spark'){ g.fillStyle = '#ffe27a'; eyeStar(g, cx, cy + 2, rx * 0.4, 4); }
+  if (mark === 'heart'){ g.fillStyle = '#ff5d8f'; eyeHeart(g, cx, cy + 2, rx * 0.5); }
+  if (mark === 'bigstar'){ g.fillStyle = '#ffd84a'; eyeStar(g, cx, cy, rx * 0.72, 4); }
+  g.restore(); g.strokeStyle = col(7); g.lineWidth = 6; g.beginPath(); g.ellipse(cx, cy, rx - 2, ry - 2, 0, 0, 7); g.stroke();
+  g.fillStyle = '#ffffff'; const hr = rx * (E.big ? 0.3 : 0.25); g.beginPath(); g.arc(cx - rx * 0.36, cy - ry * 0.4, hr, 0, 7); g.fill(); g.beginPath(); g.arc(cx + rx * 0.4, cy + ry * 0.36, rx * 0.11, 0, 7); g.fill(); if (E.big){ g.beginPath(); g.arc(cx - rx * 0.05, cy - ry * 0.68, rx * 0.08, 0, 7); g.fill(); }
+  g.restore();
+  /* 上眼線：中間粗、兩端細的月牙；半閉的眼睛是一條斜斜的粗線 */
+  g.fillStyle = INK; g.strokeStyle = INK; g.lineCap = 'round'; const dr = E.droop ? 20 : 0, L = E.lash, x0 = cx - sw - 4, x1 = cx + sw + 8;
+  let ox, oy;
+  if (lidY != null){ const ya = lidY + tilt * (cx - x0), yb = lidY - tilt * (x1 - cx); g.lineWidth = L; g.beginPath(); g.moveTo(x0 + 6, ya); g.lineTo(x1 - 2, yb); g.stroke(); ox = x1 - 2; oy = yb; }
+  else { const yi = cy - sh * 0.42, yo = cy - sh * 0.34 + dr, ty = cy - sh * 1.36; g.beginPath(); g.moveTo(x0, yi); g.quadraticCurveTo(cx - 6, ty - L * 0.7, x1, yo); g.quadraticCurveTo(cx + 2, ty + L * 0.95, x0, yi); g.fill(); ox = x1; oy = yo; }
+  for (let k = 0; k < (E.wings || 0); k++){ g.lineWidth = 9 - k; g.beginPath(); g.moveTo(ox - 8 - k * 15, oy - k * 9 - (E.droop ? 2 : 0)); g.lineTo(ox + 15 - k * 11, oy - 19 - k * 13 + (E.droop ? 12 : 0)); g.stroke(); }
+  if (E.low){ g.strokeStyle = 'rgba(43,26,23,.55)'; g.lineWidth = 5; g.beginPath(); g.moveTo(cx - sw * 0.55, cy + sh * 0.97); g.quadraticCurveTo(cx + 6, cy + sh * 1.1, cx + sw * 0.78, cy + sh * 0.9); g.stroke(); }
+  if (E.fold && lidY == null){ g.strokeStyle = 'rgba(150,90,80,.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(cx - sw * 0.75, cy - sh * 1.02); g.quadraticCurveTo(cx, cy - sh * 1.6, cx + sw * 0.9, cy - sh * 0.9 + dr * 0.6); g.stroke(); }
+  eyeBrow(g, E, cx, lidY != null ? Math.min(lidY, cy - sh * 0.6) : top, INK);
+  g.restore(); }
+/* 墨鏡：橫跨兩隻眼睛的一片（512×200） */
+function shadesDraw(c){ const g = c.getContext('2d'), W = c.width = 512, H = c.height = 200; g.clearRect(0, 0, W, H); const lens = x => { g.beginPath(); g.moveTo(x - 96, 44); g.quadraticCurveTo(x, 30, x + 96, 44); g.quadraticCurveTo(x + 104, 110, x + 60, 150); g.quadraticCurveTo(x, 172, x - 60, 150); g.quadraticCurveTo(x - 104, 110, x - 96, 44); g.closePath(); };
+  for (const x of [132, 380]){ lens(x); const gr = g.createLinearGradient(0, 30, 0, 170); gr.addColorStop(0, '#2c2f38'); gr.addColorStop(1, '#0c0d12'); g.fillStyle = gr; g.fill(); g.lineWidth = 12; g.strokeStyle = '#15161c'; g.stroke(); g.save(); lens(x); g.clip(); g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(x - 70, 40); g.lineTo(x - 30, 40); g.lineTo(x - 78, 130); g.lineTo(x - 104, 110); g.fill(); g.restore(); }
+  g.strokeStyle = '#15161c'; g.lineWidth = 14; g.lineCap = 'round'; g.beginPath(); g.moveTo(226, 58); g.quadraticCurveTo(256, 44, 286, 58); g.stroke(); }
+/* 手繪眼睛（玩家用 AI 生的灰階圖，tools 外處理成 256×320：R＝明暗、G＝瞳孔範圍、A＝透明度；cx＝瞳孔中心的 x、r＝瞳孔半徑，單位是像素）。瞳孔照玩家選的瞳色上色 */
+const EYE_IMGS = [['手繪・靈動', { img: 'eyes/e1.png', cx: 97.1, r: 48.3 }]];
+const LOOK_EYES = EYE_STYLES.concat(EYE_IMGS, [['經典', null]]);
+const EYE_IMG = new Map();   /* 路徑 → { data（ImageData）或 null、list：等圖載好要重畫的 [canvas, 貼圖, 參數] } */
+function eyeImgPaint(c, E, D, colHex, mirror, face){ const g = c.getContext('2d'), W = c.width = 256, H = c.height = 320, o = g.createImageData(W, H), a = D.data, b = o.data, [h, s] = eyeHsl(colHex), S = Math.min(1, s * 1.25 + 0.14);
+  const hue = (p, q, t) => { t = (t % 1 + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  for (let i = 0; i < a.length; i += 4){ const lum = a[i] / 255, m = a[i + 1] / 255; let r = 0.2 + 0.8 * lum, gg = 0.13 + 0.87 * lum, bb = 0.11 + 0.89 * lum;   /* 線條是深咖啡色，不是純黑（純黑在臉上太重） */
+    if (m > 0.004){ const l = 0.06 + lum * 0.62, q = l < 0.5 ? l * (1 + S) : l + S - l * S, pp = 2 * l - q, wh = Math.min(1, Math.max(0, (lum - 0.9) / 0.08)); let tr = hue(pp, q, h / 360 + 1 / 3), tg = hue(pp, q, h / 360), tb = hue(pp, q, h / 360 - 1 / 3); tr += (1 - tr) * wh; tg += (1 - tg) * wh; tb += (1 - tb) * wh; r += (tr - r) * m; gg += (tg - gg) * m; bb += (tb - bb) * m; }
+    b[i] = r * 255; b[i + 1] = gg * 255; b[i + 2] = bb * 255; b[i + 3] = a[i + 3]; }
+  const t = document.createElement('canvas'); t.width = W; t.height = H; const tg2 = t.getContext('2d'); tg2.putImageData(o, 0, 0);
+  if (face === 'heart'){ tg2.fillStyle = '#ff5d8f'; eyeHeart(tg2, E.cx, 210, E.r * 0.5); } if (face === 'star'){ tg2.fillStyle = '#ffd84a'; eyeStar(tg2, E.cx, 208, E.r * 0.72, 4); }
+  g.clearRect(0, 0, W, H); g.save(); if (mirror){ g.translate(W, 0); g.scale(-1, 1); } g.drawImage(t, 0, 0); g.restore(); }
+const EYE_TEX = new Map();
+function eyeTex(style, colIdx, mirror, face){ const key = style + '|' + colIdx + '|' + (mirror ? 1 : 0) + '|' + (face || ''); if (EYE_TEX.has(key)) return EYE_TEX.get(key);
+  const c = document.createElement('canvas'), E = LOOK_EYES[style][1], col = LOOK_EYE[colIdx] || LOOK_EYE[0], shut = face === 'happy' || face === 'sleepy';
+  if (!E.img || shut) eyeDraw(c, E.img ? 0 : style, col, mirror, face || '');
+  else { let R = EYE_IMG.get(E.img); if (!R){ R = { data: null, list: [] }; EYE_IMG.set(E.img, R); const im = new Image(); im.onload = () => { try { const k = document.createElement('canvas'); k.width = 256; k.height = 320; const kg = k.getContext('2d', { willReadFrequently: true }); kg.drawImage(im, 0, 0, 256, 320); R.data = kg.getImageData(0, 0, 256, 320); for (const [cc, tt, args] of R.list){ eyeImgPaint(cc, ...args); tt.needsUpdate = true; } R.list.length = 0; } catch(e){ console.warn('eye img', e); } }; im.src = E.img; }
+    if (R.data) eyeImgPaint(c, E, R.data, col, mirror, face || ''); else { eyeDraw(c, 0, col, mirror, face || ''); R.pend = [c, [E, null, col, mirror, face || '']]; } }
+  const t = new THREE.CanvasTexture(c); if (E.img && !shut){ const R = EYE_IMG.get(E.img); if (!R.data) R.list.push([c, t, { [Symbol.iterator]: function* (){ yield E; yield R.data; yield col; yield mirror; yield face || ''; } }]); } t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; EYE_TEX.set(key, t); return t; }
+let SHADES_TEX = null;
+const EYE_W = 0.195, EYE_H = EYE_W * 320 / 256, EYE_X = 0.135, EYE_Y = -0.045;   /* 眼睛放低、分開一點、大一點（參考圖的臉：眼睛在臉的下半部） */
+/* 套用眼型：貼圖眼睛（av.eyes2）跟圓球眼睛（av.eyes）二選一；嘴巴、腮紅跟著換成新臉的大小，眉毛畫在貼圖裡 */
+function applyEyes(av, L, faceId){ const st = LOOK_EYES[L.y] ? L.y : 0, E = LOOK_EYES[st][1], HD = av.headG; av.eyeStyle = st;
+  if (!av.eyes2){ av.eyes2 = [-1, 1].map(sx => { const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false })); pl.position.set(sx * EYE_X, EYE_Y + EYE_H * 0.15, 0.308); pl.rotation.set(-0.08, sx * 0.42, 0); pl.scale.set(EYE_W, EYE_H, 1); pl.renderOrder = 3; HD.add(pl); return pl; });
+    const sh = av.shades = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.18), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false })); sh.position.set(0, -0.04, 0.345); sh.renderOrder = 4; sh.visible = false; HD.add(sh); }
+  const fk = { face_happy: 'happy', face_sleepy: 'sleepy', face_heart: 'heart', face_star: 'star' }[faceId] || '';
+  av.eyes2.forEach((pl, i) => { pl.visible = !!E; if (E){ const sx = i ? 1 : -1, shutF = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1), w = E.img && !shutF ? EYE_W * 52 / E.r : EYE_W,   /* 手繪的眼白和睫毛畫得比較開，瞳孔縮一點，整隻眼睛才跟其他眼型一樣大 */ hh = w * 320 / 256, off = E.img && !shutF ? (128 - E.cx) / 256 * w : 0; pl.scale.set(w, hh, 1); pl.userData.h = hh; pl.position.set(sx * (EYE_X + off), EYE_Y + hh * 0.15, 0.308); pl.material.map = eyeTex(st, L.e, i === 0, faceId === 'face_wink' && i === 1 ? 'happy' : fk); pl.material.needsUpdate = true; pl.userData.shut = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1); } });
+  av.shades.visible = !!E && faceId === 'face_cool'; if (av.shades.visible && !av.shades.material.map){ if (!SHADES_TEX){ const c = document.createElement('canvas'); shadesDraw(c); SHADES_TEX = new THREE.CanvasTexture(c); SHADES_TEX.colorSpace = THREE.SRGBColorSpace; } av.shades.material.map = SHADES_TEX; av.shades.material.needsUpdate = true; }
+  if (E){ av.eyes.forEach(e => e.visible = false); av.shines.forEach(e => e.visible = false); }
+  if (av.brows) av.brows.forEach(b => { b.visible = !E; });
+  if (av.smile){ if (E){ av.smile.scale.set(0.42, 0.34, 1); av.smile.position.set(0, -0.165, 0.292); } else { av.smile.scale.set(1, 0.8, 1); av.smile.position.set(0, -0.1, 0.305); } }
+  if (av.blushM){ av.blushM.opacity = E ? 0.42 : 0.55; av.blushM.color.set(E ? '#ff9db4' : '#ff9a8f'); }
+  if (av.blushes) av.blushes.forEach((b, i) => { const sx = i ? 1 : -1; if (E){ b.position.set(sx * 0.2, -0.125, 0.246); b.scale.set(1.25, 0.72, 1); } else { b.position.set(sx * 0.19, -0.085, 0.262); b.scale.set(1, 1, 1); } }); }
+/* 新的眼睛比較大、位置低一點：眼鏡、墨鏡、笑咪咪這些畫在眼睛上的東西要跟著（回傳 [左右, 高度, 放大]） */
+function eyeXY(gear){ const L = lookParse(gear && gear.look); return LOOK_EYES[L.y] && LOOK_EYES[L.y][1] ? [EYE_X, EYE_Y, 1.3] : [0.115, 0, 1]; }
+function applyLook(av, gear, mk){ av.lookStr = gear.look;
   const L = lookParse(gear.look), HD = av.headG, hm = av.hairM, hatOn = gear.hat !== 'hat_none';
-  av.skinM.color.set(LOOK_SKIN[L.s]); hm.color.set(hcCol(L.c)); if (hm.map) hm.color.multiplyScalar(1.38);   /* 髮絲貼圖平均比較暗，顏色調亮一點，看起來跟原本的髮色一樣 */ if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
+  av.skinM.color.set(LOOK_SKIN[L.s]); av.skinM.emissive.copy(av.skinM.color).multiplyScalar(0.2);   /* v411 皮膚自己帶一點亮度：臉的下半部不會被陰影壓成灰綠色（朋友說臉看起來髒髒的） */ hm.color.set(hcCol(L.c)); if (hm.map) hm.color.multiplyScalar(1.38);   /* 髮絲貼圖平均比較暗，顏色調亮一點，看起來跟原本的髮色一樣 */ if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
   const sph = (r, x, y, z, sx, sy, sz) => { const o = mk(new THREE.SphereGeometry(r, 14, 10), hm, x, y, z, HD); o.scale.set(sx || 1, sy || 1, sz || 1); return o; };
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
   /* v350 長髮不再是一個圓筒：改成一圈垂下來的髮束（數量照長度、髮尾長短交錯） */
@@ -2419,35 +2524,41 @@ function applyLook(av, gear, mk){
     mk(hairMerged(`bt${r0}`, () => [hairLockGeo([V3(0, 0.02, 0), V3(0, -0.05, 0), V3(0, -0.11, 0.01)], r0 * 1.2, r0 * 0.8, 0.7, V3(0, 0, -1))]), hm, ex, ey, ez, HD); };
   const fr = (p0, pl, tl) => { const f = mk(new THREE.SphereGeometry(0.352, 8, 4, p0, pl, Math.PI * 0.28, tl), hm, 0, 0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; return f; };   /* 瀏海一片（p0 從哪個角度開始、pl 多寬、tl 多長；角度 0 是臉的正中間） */
   const rim = (y, r, rr, front) => { for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; if (Math.sin(a) > front) continue; sph(rr, Math.cos(a) * r, y, Math.sin(a) * r - 0.01, 1, 0.8, 1); } };   /* 髮尾一圈（臉前面空著） */
-  switch (L.h){
-    case 1: { const f = mk(new THREE.SphereGeometry(0.352, 20, 6, -1.05, 2.1, Math.PI * 0.28, Math.PI * 0.145), hm, 0, 0.0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; break; }   /* 齊瀏海 */
+  /* v411 波浪髮束（馬尾用）：從 (x,y,z) 往下垂 len，side＝-1/1 往外側飄、0 往後；n 束 */
+  const wavy = (key, x, y, z, side, len, w, n) => mk(hairMerged(`wv${key},${len},${w},${n}`, () => { const o = []; for (let k = 0; k < n; k++){ const a = k / n * Math.PI * 2, ox = Math.cos(a) * 0.035, oz = Math.sin(a) * 0.035, l = len * (0.86 + (k % 3) * 0.07), pts = [];
+      for (let i = 0; i <= 6; i++){ const t = i / 6, wv = Math.sin(t * Math.PI * 2.6 + k * 1.3) * 0.04 * t; pts.push(V3(ox * (1 + t * 2) + side * (0.05 * Math.sin(t * Math.PI) + wv), -t * l + (side ? 0 : 0.05 * Math.sin(t * Math.PI)), oz * (1 + t * 2) - (side ? 0.02 * t : 0.16 * Math.sin(t * Math.PI * 0.7)) + (side ? wv * 0.5 : wv))); }
+      o.push(hairLockGeo(pts, w * (k ? 0.8 : 1), w * 0.35, 0.6, null, { grow: 0.14 })); } return o; }), hm, x, y, z, HD);
+  const HG = HAIRG.geo[L.h]; av.hairGlb = !!HG; if (av.hair) av.hair.visible = !HG;
+  if (HG){ const m2 = av.hairM2 || (av.hairM2 = mat('#5a3d2b', 0.7, { side: THREE.DoubleSide })); m2.color.set(hcCol(L.c)); mk(HG, m2, 0, 0, 0, HD); }
+  else switch (L.h){
+    case 1: break;   /* 齊瀏海（瀏海在 HAIR_FRONT） */
     case 2: if (!hatOn) mk(hairMerged('spk', () => { const o = []; for (let i = 0; i < 11; i++){ const a = i / 11 * Math.PI * 2 + 0.3, r = i < 8 ? 0.21 : 0.07, dx = Math.sin(a), dz = Math.cos(a) - 0.2; o.push(hairLockGeo([V3(dx * r, 0.24, dz * r - 0.02), V3(dx * (r + 0.06), 0.33, dz * (r + 0.06) - 0.06), V3(dx * (r + 0.1), 0.43, dz * (r + 0.1) - 0.13)], 0.17, 0.035, 0.75, V3(dx, 0.5, dz).normalize())); } return o; }), hm, 0, 0, 0, HD); break;
     case 3: shell(0.352, 0.37, 0.3, -0.06, 0.95); break;   /* 鮑伯頭：到下巴 */
     case 4: shell(0.352, 0.34, 0.62, -0.2, 1.05); { const b = sph(0.2, 0, -0.38, -0.2, 1.4, 0.9, 0.6); } break;   /* 長髮：到肩膀 */
     case 5: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, 0.12, -0.34, HD); bd.rotation.x = 0.4; nape(0.1); const t = tail(0.075, 0.28, 0, -0.08, -0.43); t.rotation.x = 0.3; sph(0.08, 0, 0.12, -0.35); break; }   /* 馬尾 */
-    case 6: for (const sx of [-1, 1]){ sph(0.07, sx * 0.3, 0.12, -0.06); const t = tail(0.065, 0.26, sx * 0.39, -0.08, -0.08); t.rotation.set(0, sx * -Math.PI / 2, sx * 0.25); } break;   /* 雙馬尾 */
-    case 7: if (!hatOn) sph(0.13, 0, 0.36, -0.08); else sph(0.11, 0, 0.12, -0.36); break;   /* 丸子頭（戴帽子時改成在後腦勺） */
+    case 6: for (const sx of [-1, 1]){ sph(0.075, sx * 0.3, 0.14, -0.06); const bd = mk(new THREE.TorusGeometry(0.05, 0.018, 6, 12), av.inkM, sx * 0.335, 0.13, -0.06, HD); bd.rotation.set(0, Math.PI / 2, 0); bd.rotation.z = sx * 0.5; wavy('tw' + sx, sx * 0.35, 0.12, -0.06, sx, 0.52, 0.19, 5); } break;   /* 雙馬尾：v411 改成長長的波浪髮束 */
+    case 7: nape(0.12); if (!hatOn){ sph(0.15, 0, 0.37, -0.1, 1.08, 0.92, 1.08); const bd = mk(new THREE.TorusGeometry(0.085, 0.02, 6, 14), av.inkM, 0, 0.29, -0.085, HD); bd.rotation.x = Math.PI / 2 - 0.12; for (let i = 0; i < 4; i++){ const a = i * 1.57 + 0.6; sph(0.04, Math.cos(a) * 0.12, 0.44, -0.1 + Math.sin(a) * 0.12, 1, 0.6, 1); } } else sph(0.12, 0, 0.12, -0.36); break;   /* 丸子頭（戴帽子時改成在後腦勺） */
     case 8: for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, y = 0.05 + (i % 2) * 0.12; sph(0.085, Math.cos(a) * 0.31, y, Math.sin(a) * 0.31 - 0.02); } break;   /* 捲髮 */
     case 9: if (!hatOn) sph(0.16, 0, 0.27, 0.12, 1.3, 0.75, 1.4); break;   /* 飛機頭 */
     /* v270 阿萍的新髮型（頭的中心在原點，半徑大約 0.35；+z 是臉、-z 是後腦勺） */
     case 10: shell(0.352, 0.34, 0.62, -0.2, 1.05); sph(0.1, 0, 0.17, -0.34); { const bw = mk(new THREE.TorusGeometry(0.05, 0.022, 6, 12), av.inkM, 0, 0.17, -0.44, HD); bw.scale.set(1.6, 1, 1); } break;   /* 公主頭：長髮、後面上半部綁一個小髻 */
-    case 11: shell(0.352, 0.36, 0.6, -0.2, 1.05); for (let i = 0; i < 9; i++){ const a = Math.PI * (-0.42 + i / 8 * 0.84), r = 0.36; sph(0.1, Math.sin(a) * r * 1.05, -0.42 - (i % 2) * 0.07, -Math.cos(a) * r, 1, 1.25, 1); }   /* v279 修正：髮尾的捲平均分在後面左右（以前全擠在一邊） */ break;   /* 大波浪：長捲髮，髮尾一顆一顆捲起來 */
+    case 11: shell(0.352, 0.37, 0.42, -0.1, 1.05); mk(hairMerged('bigwave', () => { const o = []; for (let k = 0; k < 13; k++){ const ph = Math.PI * (0.38 + k / 12 * 1.24), dx = Math.sin(ph), dz = Math.cos(ph), ln = (k % 3) * 0.03, pts = []; for (let i = 0; i <= 6; i++){ const t = i / 6, r = 0.36 + 0.035 * Math.sin(t * Math.PI * 3 + k * 0.9) + t * 0.03; pts.push(V3(dx * r + dz * 0.03 * Math.sin(t * 9 + k), -0.12 - t * (0.5 + ln), -0.02 + dz * r)); } o.push(hairLockGeo(pts, 0.15, 0.07, 0.5, null, { v0: 0.6, v1: 0 })); } return o; }), hm, 0, 0, 0, HD); break;   /* 大波浪：v411 改成一束一束的波浪長髮（以前髮尾是一顆一顆的球） */
     case 12: sph(0.07, 0.28, 0.1, -0.2); { const t = tail(0.075, 0.34, 0.36, -0.2, -0.06); t.rotation.set(0.25, -Math.PI / 2, 0.35, 'YXZ'); } break;   /* 側馬尾：綁在右邊、垂到肩膀前面 */
-    case 13: if (!hatOn){ sph(0.08, 0, 0.3, -0.27); nape(0.25); const t = tail(0.08, 0.36, 0, 0.1, -0.42); t.rotation.x = 0.5; } else { nape(0.1); const t = tail(0.075, 0.3, 0, -0.06, -0.43); t.rotation.x = 0.3; } break;   /* 高馬尾：綁在頭頂後面、甩出去 */
+    case 13: if (!hatOn){ sph(0.085, 0, 0.3, -0.27); nape(0.25); const bd = mk(new THREE.TorusGeometry(0.055, 0.02, 6, 12), av.inkM, 0, 0.32, -0.3, HD); bd.rotation.x = 0.9; wavy('hp', 0, 0.34, -0.32, 0, 0.6, 0.2, 6); } else { nape(0.1); const t = tail(0.075, 0.3, 0, -0.06, -0.43); t.rotation.x = 0.3; } break;   /* 高馬尾：綁在頭頂後面、甩出去 */
     case 14: nape(0.05); sph(0.09, 0, 0.02, -0.34, 1.1, 0.9, 0.9); braid(0, -0.08, -0.38, 7, 0.08, 0.005, 0, -0.105, -0.008); break;   /* 麻花辮：一條辮子垂在背後 */
     case 15: for (const sx of [-1, 1]){ sph(0.075, sx * 0.31, -0.04, 0.0, 1, 0.9, 1); braid(sx * 0.315, -0.12, 0.03, 6, 0.066, 0.004, sx * 0.008, -0.092, 0.028); } break;   /* 雙辮子：兩條辮子垂在肩膀前面 */
-    case 16: if (!hatOn) for (const sx of [-1, 1]) sph(0.11, sx * 0.21, 0.31, -0.06); else for (const sx of [-1, 1]) sph(0.1, sx * 0.3, 0.1, -0.22); break;   /* 雙丸子 */
-    case 17: shell(0.352, 0.345, 0.64, -0.21, 1.15); { const f = mk(new THREE.SphereGeometry(0.352, 20, 6, -1.05, 2.1, Math.PI * 0.28, Math.PI * 0.145), hm, 0, 0.0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; } for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.06, 0.3, 0.12), hm, sx * 0.33, -0.12, 0.13, HD); break;   /* 公主切：齊瀏海、兩頰齊長的鬢髮、後面長直髮 */
-    case 18: shell(0.352, 0.35, 0.74, -0.26, 1.0); { const f = mk(new THREE.SphereGeometry(0.352, 20, 6, -1.05, 2.1, Math.PI * 0.28, Math.PI * 0.145), hm, 0, 0.0, 0, HD); f.material = hm.clone(); f.material.side = THREE.DoubleSide; } break;   /* 長直瀏海 */
+    case 16: if (!hatOn) for (const sx of [-1, 1]){ sph(0.125, sx * 0.23, 0.33, -0.06, 1, 0.95, 1); const bd = mk(new THREE.TorusGeometry(0.07, 0.018, 6, 14), av.inkM, sx * 0.19, 0.27, -0.055, HD); bd.rotation.set(Math.PI / 2, sx * -0.6, 0); } else for (const sx of [-1, 1]) sph(0.1, sx * 0.3, 0.1, -0.22); break;   /* 雙丸子 */
+    case 17: shell(0.352, 0.345, 0.64, -0.21, 1.15); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.06, 0.3, 0.12), hm, sx * 0.33, -0.12, 0.13, HD); break;   /* 公主切：齊瀏海、兩頰齊長的鬢髮、後面長直髮 */
+    case 18: shell(0.352, 0.35, 0.74, -0.26, 1.0); break;   /* 長直瀏海 */
     case 19: for (let i = 0; i < 20; i++){ const a = i / 20 * Math.PI * 2, ring = i % 2; sph(0.11, Math.cos(a) * (0.3 - ring * 0.08), 0.12 + ring * 0.14, Math.sin(a) * (0.3 - ring * 0.08) - 0.03); } if (!hatOn) sph(0.14, 0, 0.36, -0.03); break;   /* 蓬蓬捲：一整頭蓬鬆的小捲 */
     case 20: sph(0.34, 0, 0.11, -0.06, 1.05, 0.78, 1.12); break;   /* 油頭：往後梳得服服貼貼 */
     case 21: if (!hatOn) for (const sx of [-1, 1]){ const o = sph(0.2, sx * 0.15, 0.24, 0.05, 1, 0.55, 1.25); o.rotation.z = sx * -0.35; } break;   /* 中分：從中間分開往兩邊 */
     /* v279 */
-    case 22: shell(0.352, 0.34, 0.62, -0.2, 1.05); fr(-1.1, 0.95, Math.PI * 0.2); fr(0.15, 0.95, Math.PI * 0.2); break;   /* 八字瀏海＋長直髮：瀏海從中間分開、往兩邊斜下來 */
+    case 22: shell(0.352, 0.34, 0.62, -0.2, 1.05); break;   /* 八字瀏海＋長直髮：瀏海從中間分開、往兩邊斜下來 */
     case 23: shell(0.352, 0.36, 0.6, -0.2, 1.05); for (let i = 0; i < 7; i++) fr(-0.95 + i * 0.28, 0.2, Math.PI * (0.13 + (i % 2) * 0.03)); for (let i = 0; i < 7; i++){ const a = Math.PI * (-0.4 + i / 6 * 0.8); sph(0.085, Math.sin(a) * 0.37, -0.42 - (i % 2) * 0.06, -Math.cos(a) * 0.36, 1, 1.2, 1); } break;   /* 法式瀏海＋慵懶捲：一絲一絲的空氣感瀏海、髮尾微捲 */
     case 24: shell(0.352, 0.39, 0.44, -0.13, 1.0); rim(-0.34, 0.39, 0.05, 0.5); break;   /* 鎖骨髮：剛好到鎖骨、髮尾微微外翹 */
     case 25: { const bd = mk(new THREE.TorusGeometry(0.05, 0.02, 6, 12), av.inkM, 0, -0.12, -0.35, HD); bd.rotation.x = -0.2; sph(0.085, 0, -0.07, -0.32); nape(-0.05); const t = tail(0.07, 0.3, 0, -0.36, -0.38); t.rotation.x = 0.12; break; }   /* 低馬尾：綁在後頸、乖乖垂下來 */
-    case 26: shell(0.352, 0.36, 0.5, -0.15, 1.05); for (let i = 0; i < 5; i++) fr(-0.82 + i * 0.36, 0.22, Math.PI * 0.15); break;   /* 空氣瀏海＋中長髮：稀稀疏疏的薄瀏海 */
+    case 26: shell(0.352, 0.36, 0.5, -0.15, 1.05); break;   /* 空氣瀏海＋中長髮：稀稀疏疏的薄瀏海 */
     case 27: shell(0.352, 0.36, 0.3, -0.06, 0.95); rim(-0.2, 0.33, 0.065, 0.55); break;   /* 內扣髮：短髮、髮尾往內捲成一圈 */
     case 28: shell(0.352, 0.36, 0.48, -0.15, 1.05); for (let r = 0; r < 3; r++) for (let i = 0; i < 9; i++){ const a = Math.PI * (1.05 + i / 8 * 0.9) + r * 0.12; sph(0.075, Math.cos(a) * 0.37, -0.1 - r * 0.13, Math.sin(a) * 0.37 - 0.02, 1.3, 0.8, 1); } break;   /* 蛋捲頭：一層一層像蛋捲的小捲 */
     case 29: { nape(-0.05); sph(0.125, 0, -0.1, -0.39); const bd = mk(new THREE.TorusGeometry(0.075, 0.02, 6, 14), av.inkM, 0, -0.1, -0.31, HD); bd.rotation.x = 0.1; break; }   /* 低丸子頭：盤在後頸（戴帽子也看得到） */
@@ -2466,6 +2577,22 @@ function applyLook(av, gear, mk){
           o.push(hairLockGeo([onS(1.25, ph, 0.348), onS(1.55, ph, 0.362), onS(1.8, ph + sx * 0.04, 0.358)], 0.09, 0.04, 0.45, null, { grow: 0.2, v0: 0.6, v1: 0 })); }   /* 耳朵前後短短的鬢角 */
         return o; }), hm, 0, 0, 0, HD); break; }   /* 精靈短髮：整頭剪得短短的、瀏海往一邊掃 */
   }
+  /* v411 臉旁邊的頭髮（玩家給的參考圖：好看的髮型都有一撮一撮的瀏海和框住臉的鬢角）。每個髮型照 HAIR_FRONT 配一種瀏海＋鬢角，全部用髮束做，不再是光滑的一片 */
+  if (!HG){ const F = HAIR_FRONT[L.h] || 'S1', bt = F[0], sl = +F[1] || 0, onS = (th, ph, r) => V3(Math.sin(th) * Math.sin(ph) * r, 0.01 + Math.cos(th) * r, -0.02 + Math.sin(th) * Math.cos(ph) * r), t0 = hatOn ? 0.95 : 0.55;
+    if (bt !== 'N' || sl) mk(hairMerged('front' + F + (hatOn ? 'h' : ''), () => { const o = [], lock = (pts, w0, w1) => o.push(hairLockGeo(pts, w0, w1, 0.36, null, { grow: 0.12, v0: 0.72, v1: 0.08 }));
+      if (bt === 'B') for (let k = 0; k < 9; k++){ const ph = -0.84 + k * 0.21, e = 1.4 + (k % 2 ? 0.03 : -0.02) + Math.abs(ph) * 0.07; lock([onS(t0, ph * 0.55, 0.352), onS(t0 + (e - t0) * 0.45, ph * 0.9, 0.369), onS(e - 0.16, ph, 0.373), onS(e, ph, 0.362)], 0.125, 0.085); }   /* 齊瀏海：一排到眉毛 */
+      if (bt === 'A') for (let k = 0; k < 6; k++){ const ph = -0.75 + k * 0.3, e = 1.36 + (k % 2) * 0.06; lock([onS(t0, ph * 0.5, 0.352), onS(t0 + (e - t0) * 0.5, ph * 0.9, 0.368), onS(e, ph, 0.366)], 0.085, 0.035); }   /* 空氣瀏海：稀稀的幾撮 */
+      if (bt === 'S') for (let k = 0; k < 6; k++){ const p0 = 0.5 - k * 0.06; lock([onS(t0, p0, 0.352), onS(t0 + 0.2, p0 - 0.3, 0.369), onS(Math.max(t0 + 0.3, 1.18 + k * 0.03), p0 - 0.64, 0.373), onS(1.36 + k * 0.035, -0.86 - k * 0.05, 0.366)], 0.125, 0.05); }   /* 斜瀏海：往一邊掃 */
+      if (bt === 'P') for (const sx of [-1, 1]) for (let k = 0; k < 4; k++){ lock([onS(t0, sx * 0.06, 0.352), onS(t0 + 0.3, sx * (0.26 + k * 0.1), 0.37), onS(1.2 + k * 0.05, sx * (0.52 + k * 0.14), 0.373), onS(1.5 + k * 0.07, sx * (0.74 + k * 0.15), 0.364)], 0.12, 0.05); }   /* 八字瀏海：從中間往兩邊分 */
+      if (sl) for (const sx of [-1, 1]) for (let k = 0; k < 2; k++){ const ph = sx * (1.08 + k * 0.17), dx = Math.sin(ph), dz = Math.cos(ph), yb = sl > 1 ? -0.34 - k * 0.05 : -0.15 - k * 0.04; lock([onS(0.95, ph, 0.352), onS(1.4, ph, 0.37), V3(dx * 0.352, (yb - 0.02) / 2, -0.02 + dz * 0.36), V3(dx * 0.335, yb, -0.02 + dz * 0.345)], 0.1, 0.045); }   /* 鬢角：耳朵前面垂下來，框住臉 */
+      return o; }), hm, 0, 0, 0, HD); }
+  /* v411 髮飾（外觀字串的 a）：蝴蝶結、髮夾、髮箍、小花 */
+  { const A = L.a || 0, M2 = c => mat(c, 0.55), bow = (x, y, z, col, sc) => { const g = new THREE.Group(), m = M2(col); for (const sx of [-1, 1]){ const w = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), m); w.scale.set(1.15, 0.8, 0.45); w.position.x = sx * 0.06; w.rotation.z = sx * 0.35; g.add(w); const t = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.1, 0.012), m); t.position.set(sx * 0.03, -0.075, 0); t.rotation.z = sx * 0.3; g.add(t); } const k = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), m); g.add(k); g.position.set(x, y, z); g.scale.setScalar(sc || 1); g.quaternion.setFromUnitVectors(V3(0, 0, 1), V3(x, y - 0.05, z + 0.02).normalize()); HD.add(g); av.gearMeshes.push(g); return g; };
+    if (A === 1 && !hatOn) bow(0.2, 0.26, 0.2, '#c9a8f0', 1.05);
+    if (A === 2 && !hatOn) for (const sx of [-1, 1]) bow(sx * 0.27, 0.24, 0.1, '#f6a8c8', 0.9);
+    if (A === 3) for (let i = 0; i < 2; i++){ const o = mk(new THREE.BoxGeometry(0.085, 0.02, 0.014), M2(i ? '#fff3b0' : '#ffffff'), 0.25, 0.14 - i * 0.035, 0.265, HD); o.rotation.set(0, 0.75, 0.25); }
+    if (A === 4 && !hatOn){ const o = mk(new THREE.TorusGeometry(0.362, 0.022, 6, 28, Math.PI), M2('#fff1dc'), 0, 0.02, 0.03, HD); o.rotation.set(-0.25, 0, 0); }
+    if (A === 5) { const c = M2('#ffd0e0'); for (let i = 0; i < 5; i++){ const a = i / 5 * Math.PI * 2, o = mk(new THREE.SphereGeometry(0.026, 8, 6), c, 0.25 + Math.cos(a) * 0.03 * 0.7, 0.17 + Math.sin(a) * 0.03, 0.262 - Math.cos(a) * 0.02, HD); o.scale.z = 0.5; } mk(new THREE.SphereGeometry(0.018, 8, 6), M2('#ffe27a'), 0.255, 0.17, 0.275, HD); } }
 }
 const GEAR_SLOTS = [['look','外觀'],['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
 const GEAR = [
@@ -2485,7 +2612,7 @@ const GEAR = [
 function paidGear(it){ return !!it && (it.price > 0 || it.love > 0); }
 const GEAR_BY_ID = Object.fromEntries(GEAR.map(g => [g.id, g]));
 const GEAR_DEFAULT = { look:LOOK_DEFAULT, hat:'hat_sun', top:'top_tee', pants:'pants_jeans', shoes:'shoes_boots', socks:'socks_none', acc:'acc_none', back:'back_none', face:'face_normal' };
-function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ if (k === 'look'){ if (typeof v === 'string' && /^h\d{1,2}c\d{1,2}s\de\d$/.test(v)) r.look = lookStr(lookParse(v)); continue; } const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; else if (typeof v === 'string' && /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(v) && v.split('_')[0] === k) r[k] = v; } return r; }
+function cleanGear(g){ const r = Object.assign({}, GEAR_DEFAULT); if (g && typeof g === 'object') for (const [k, v] of Object.entries(g)){ if (k === 'look'){ if (typeof v === 'string' && /^h\d{1,2}c\d{1,3}s\de\d(y\d{1,2})?(a\d{1,2})?$/.test(v)) r.look = lookStr(lookParse(v)); continue; } const it = GEAR_BY_ID[v]; if (it && it.slot === k) r[k] = v; else if (typeof v === 'string' && /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(v) && v.split('_')[0] === k) r[k] = v; } return r; }
 const PANTS_COL = { pants_jeans:'#2f4b63', pants_shorts:'#3f6fa0', pants_khaki:'#c8a873', pants_skirt:'#b8443a', pants_overalls:'#4a78b0', pants_rainbow:'#f6f0e6' };
 const SHOE_COL = { shoes_boots:'#6b4a35', shoes_sandals:'#3fbf9d', shoes_sneakers:'#f4f4f4', shoes_rain:'#f6c83b', shoes_gold:'#e8b730' };
 const RAINBOW = ['#f05a4a', '#ff9f43', '#ffd36a', '#3fbf9d', '#2f89c7', '#9b7bff'];
@@ -2495,7 +2622,7 @@ function starShape(s){ const sh = new THREE.Shape(); for (let i = 0; i < 10; i++
 // 3D 角色直接掛在對應的骨頭；舊的程式角色掛在頭／身體上。模型還沒載好就先等，載好再穿一次
 const GEAR3D = { ok:false, map:null, wait:new Set(), fit:{ hat_wizard:{ y:0.17, w:0.86 }, hat_knight:{ y:0.03, w:0.84, full:true }, hat_bear:{ y:0.16, w:0.82, full:true, z:-0.03 }, back_kcape_m:{ y:0, s:0.95 }, back_kcape_r:{ y:0, s:0.95 }, back_kcape_b:{ y:0, s:0.95 }, back_kcape_g:{ y:0, s:0.95 } } };
 new GLTFLoader().loadAsync('models/kaykit_gear.glb').then(g => { GEAR3D.map = {}; g.scene.traverse(o => { if (o.isMesh && GEAR3D.fit[o.name]){ o.castShadow = true; GEAR3D.map[o.name] = o; } }); GEAR3D.ok = true; for (const [av, gear] of [...GEAR3D.wait].map(x => [x, x.gear3dWant])) { try { applyGear(av, gear); } catch(e){} } GEAR3D.wait.clear(); }).catch(e => console.warn('gear3d', e));
-function gear3dApply(av, gear){ const ids = [gear.hat, gear.back].filter(id => GEAR3D.fit[id]); if (av.hair) av.hair.visible = true; if (!ids.length) return;
+function gear3dApply(av, gear){ const ids = [gear.hat, gear.back].filter(id => GEAR3D.fit[id]); if (av.hair) av.hair.visible = !av.hairGlb; if (!ids.length) return;
   if (!GEAR3D.ok){ av.gear3dWant = gear; GEAR3D.wait.add(av); return; }
   for (const id of ids){ const src = GEAR3D.map[id], F = GEAR3D.fit[id]; if (!src) continue;
     if (id.startsWith('hat_')){
@@ -2516,7 +2643,7 @@ const TOP_STYLE = {   // [領口, 袖子, 條紋, 圖案, 布紋, 羅紋袖口�
   top_dry:[0,0,0,0,1,0,0,0], top_dryv:[1,0,0,0,1,0,0,0], top_bstripe:[0,0,1,0,0,0,0,0], top_fstripe:[0,0,2,0,0,0,0,0], top_long:[0,0,0,0,0,0,0,1], top_kid:[0,0,0,2,0,0,0,0],
   top_sweat:[3,2,0,0,1,1,0,0], top_hoodt:[3,2,0,3,0,1,0,0], top_hoodie:[4,2,0,0,0,1,0,0], top_nylon:[5,2,0,0,0,1,1,0],
 };
-const TOP_GLSL_V = 'uniform float uKidT; uniform vec4 uTopA; uniform vec4 uTopB; varying vec3 vRest;\n';
+const TOP_GLSL_V = 'uniform float uKidT; uniform vec4 uTopA; uniform vec4 uTopB; varying vec3 vRest; attribute vec3 restP;\n';   /* v411 restP＝身體變細以前的座標（kidReshape 存的），衣服的花樣照它畫；沒有這個屬性的東西（頭、手上的配件）是 0，就用自己的座標 */
 const TOP_GLSL_F = 'uniform float uKidT; uniform vec4 uTopA; uniform vec4 uTopB; uniform vec3 uTopC2; uniform vec3 uTopSkin; uniform vec3 uTopShirt; varying vec3 vRest;\n'
   + 'float tHash(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }\n';
 function topShader(av){
@@ -2525,11 +2652,11 @@ function topShader(av){
   const bind = sh => { for (const k in U) sh.uniforms[k] = U[k]; };
   av.shirtM.onBeforeCompile = sh => { bind(sh);
     sh.vertexShader = TOP_GLSL_V + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      vRest = position;
-      if (uKidT > 0.5){ bool sl = abs(position.x) > 0.27;
-        if (uTopB.z > 0.5){ if (sl){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * 1.3; if (abs(position.x) > 0.4) transformed.x += sign(position.x) * 0.05; } else transformed.xz *= 1.07; }
-        if (uTopB.w < 0.5 && !sl && position.y < 0.58){ float r = length(transformed.xz * vec2(1.0, 1.0 / 0.86)); transformed.xz *= max(1.0, mix(1.0, 0.285 / max(r, 0.01), smoothstep(0.58, 0.5, position.y))); }   /* v224：衣服下襬往外蓋住褲頭（以前褲頭會從衣服下面凸出來一圈） */
-        if (uTopB.w > 0.5 && !sl && position.y < 0.52){ float k = (0.52 - position.y) / 0.155; transformed.y -= k * 0.1; float r = length(transformed.xz * vec2(1.0, 1.0 / 0.86)); transformed.xz *= mix(1.0, 0.272 / max(r, 0.01), smoothstep(0.0, 0.35, k)); }
+      vec3 rp = dot(restP, restP) > 0.0 ? restP : position; float kS = dot(restP, restP) > 0.0 ? ${KID_SHAPE.slim} : 1.0; vRest = rp;
+      if (uKidT > 0.5){ bool sl = abs(rp.x) > 0.27;
+        if (uTopB.z > 0.5){ if (sl){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * 1.3; if (abs(rp.x) > 0.4) transformed.x += sign(rp.x) * 0.05; } else transformed.xz *= 1.07; }
+        if (uTopB.w < 0.5 && !sl && rp.y < 0.58){ float r = length(transformed.xz * vec2(1.0, 1.0 / 0.86)); transformed.xz *= max(1.0, mix(1.0, 0.285 * kS / max(r, 0.01), smoothstep(0.58, 0.5, rp.y))); }   /* v224：衣服下襬往外蓋住褲頭（以前褲頭會從衣服下面凸出來一圈） */
+        if (uTopB.w > 0.5 && !sl && rp.y < 0.52){ float k = (0.52 - rp.y) / 0.155; transformed.y -= k * 0.1; float r = length(transformed.xz * vec2(1.0, 1.0 / 0.86)); transformed.xz *= mix(1.0, 0.272 * kS / max(r, 0.01), smoothstep(0.0, 0.35, k)); }
       }`);
     sh.fragmentShader = TOP_GLSL_F + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       if (uKidT > 0.5){ vec3 P = vRest; vec3 c = diffuseColor.rgb; bool sl = abs(P.x) > 0.27; bool fr = P.z > 0.02; float ax = abs(P.x);
@@ -2549,14 +2676,14 @@ function topShader(av){
         if (n > 4.5 && !sl){ if (P.y > 1.0) c *= 0.8; if (fr && ax < 0.01) c *= 0.75; if (fr && P.x > 0.02 && P.x < 0.05 && P.y > 0.5 && P.y < 1.0 && length(vec2(P.x - 0.035, mod(P.y - 0.5, 0.1) - 0.05)) < 0.012) c = vec3(0.82, 0.84, 0.88); }
         if (uTopA.y > 0.5 && uTopA.y < 1.5){ if (sl) c = uTopSkin; else if (ax > 0.1 && P.y > 0.99) c = uTopSkin; else if (ax > 0.085 && P.y > 0.97) c *= 0.84; }
         diffuseColor.rgb = c; }`); };
-  av.shirtM.customProgramCacheKey = () => 'top222';
+  av.shirtM.customProgramCacheKey = () => 'top411';
   av.skinM.onBeforeCompile = sh => { bind(sh);
     sh.vertexShader = TOP_GLSL_V + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      vRest = position;
-      if (uKidT > 0.5 && uTopA.y > 1.5 && abs(position.x) > 0.33 && abs(position.x) < 0.615 && position.y > 0.85 && position.y < 1.03){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * (uTopB.z > 0.5 ? 1.35 : 1.14); }`);
+      vec3 rp = dot(restP, restP) > 0.0 ? restP : position; vRest = rp;
+      if (uKidT > 0.5 && uTopA.y > 1.5 && abs(rp.x) > 0.33 && abs(rp.x) < 0.615 && rp.y > 0.85 && rp.y < 1.03){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * (uTopB.z > 0.5 ? 1.35 : 1.14); }`);
     sh.fragmentShader = TOP_GLSL_F + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       if (uKidT > 0.5 && uTopA.y > 1.5){ vec3 P = vRest; float ax = abs(P.x); if (ax > 0.33 && ax < 0.615 && P.y > 0.85 && P.y < 1.03){ vec3 c = uTopShirt; if (uTopB.x > 0.5) c *= 0.93 + 0.12 * tHash(floor(P * 140.0)); if (ax > 0.565) c *= uTopB.y > 0.5 ? 0.8 + 0.06 * step(0.5, fract(atan(P.z, P.y - 0.941) * 4.0)) : 0.86; diffuseColor.rgb = c; } }`); };
-  av.skinM.customProgramCacheKey = () => 'skin222';
+  av.skinM.customProgramCacheKey = () => 'skin411';
   av.shirtM.needsUpdate = av.skinM.needsUpdate = true;
   return U; }
 function topStyle(av, top){
@@ -2683,12 +2810,14 @@ function applyGear(av, gear){
   av.pantsM.color.set(PANTS_COL[gear.pants] || PANTS_COL.pants_jeans);
   const shorts = gear.pants === 'pants_shorts' || gear.pants === 'pants_skirt';
   av.shortLegs = shorts; if (av.kid && av.kid.prim.shin) av.kid.prim.shin.material = shorts ? av.skinM : av.pantsM;   /* 3D 角色：短褲、裙子露出小腿 */
+  if (av.kid && av.kid.prim.pants && KID.shape) av.kid.prim.pants.material = gear.pants === 'pants_skirt' ? av.skinM : av.pantsM;   /* v411 穿裙子時大腿是皮膚（腿變長以後，裙子下面會露出一截大腿） */
   for (const L of [av.legL, av.legR]){
     const pm = L.userData.pants; pm.scale.y = shorts ? 0.6 : 1; pm.position.y = shorts ? -0.06 : -0.1; if (L.userData.pants2) L.userData.pants2.visible = !shorts;
     if (shorts && !av.kid) mk(new THREE.CylinderGeometry(0.062, 0.058, 0.26, 10), av.skinM, 0, -0.29, 0, L);
     if (gear.pants === 'pants_rainbow') RAINBOW.forEach((c, i) => mk(new THREE.CylinderGeometry(0.094, 0.094, 0.05, 12), M(c, 0.7), 0, -0.06 - i * 0.055, 0, L));
   }
-  if (gear.pants === 'pants_skirt'){ const sk = mk(new THREE.CylinderGeometry(0.26, 0.34, 0.24, 18), av.pantsM, 0, 0.47, 0); sk.scale.z = 0.9; for (const y of [0.41, 0.5]){ const b = mk(new THREE.CylinderGeometry(0.3 + (0.47 - y) * 0.3, 0.3 + (0.47 - y) * 0.3, 0.02, 18), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.9; } }
+  if (gear.pants === 'pants_skirt' && av.kid && KID.shape){ /* v411 新身材的裙子：腰收窄、裙襬放長蓋到大腿一半（以前在長腿上看起來像短褲外面套一圈布） */ const sk = mk(new THREE.CylinderGeometry(0.218, 0.345, 0.42, 20), av.pantsM, 0, 0.375, 0); sk.scale.z = 0.92; for (const y of [0.2, 0.275]){ const r = 0.218 + (0.585 - y) / 0.42 * 0.127 + 0.004, b = mk(new THREE.CylinderGeometry(r - 0.004, r + 0.004, 0.022, 20), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.92; } }
+  else if (gear.pants === 'pants_skirt'){ const sk = mk(new THREE.CylinderGeometry(0.26, 0.34, 0.24, 18), av.pantsM, 0, 0.47, 0); sk.scale.z = 0.9; for (const y of [0.41, 0.5]){ const b = mk(new THREE.CylinderGeometry(0.3 + (0.47 - y) * 0.3, 0.3 + (0.47 - y) * 0.3, 0.02, 18), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.9; } }
   if (gear.pants === 'pants_overalls'){ mk(new THREE.BoxGeometry(0.3, 0.24, 0.03), av.pantsM, 0, 0.74, 0.225); for (const sx of [-1, 1]){ const st = mk(new THREE.BoxGeometry(0.04, 0.34, 0.03), av.pantsM, sx * 0.11, 0.95, 0.12); st.rotation.x = -0.55; mk(new THREE.SphereGeometry(0.022, 6, 4), M('#e8b730', 0.3), sx * 0.11, 0.84, 0.245); } }
   // ---- 鞋子 ----
   av.shoeM.color.set(SHOE_COL[gear.shoes] || SHOE_COL.shoes_boots); av.shoeM.metalness = gear.shoes === 'shoes_gold' ? 0.7 : 0.04; av.shoeM.roughness = gear.shoes === 'shoes_gold' ? 0.25 : 0.7;
@@ -2724,7 +2853,7 @@ function applyGear(av, gear){
       break; }
     case 'acc_scarf': { const red = M('#e8473a', 0.75); const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), red, 0, 1.1, 0); r.rotation.x = Math.PI / 2; const tl = mk(new THREE.BoxGeometry(0.09, 0.24, 0.05), red, 0.1, 0.96, 0.2); tl.rotation.z = 0.25; for (const y of [0.9, 0.97]) mk(new THREE.BoxGeometry(0.095, 0.02, 0.055), white, 0.1 + (0.96 - y) * 0.25, y, 0.2); break; }
     case 'acc_bowtie': { const red = M('#c9302c', 0.5); for (const sx of [-1, 1]){ const c = mk(new THREE.ConeGeometry(0.05, 0.09, 4), red, sx * 0.05, 1.08, 0.2); c.rotation.z = sx * Math.PI / 2; } mk(new THREE.SphereGeometry(0.025, 8, 6), red, 0, 1.08, 0.21); break; }
-    case 'acc_glasses': { const fr = M('#5a3a24', 0.4); for (const sx of [-1, 1]) mk(new THREE.TorusGeometry(0.062, 0.011, 6, 16), fr, sx * 0.115, 0.0, 0.31, HD); mk(new THREE.BoxGeometry(0.07, 0.012, 0.012), fr, 0, 0.01, 0.315, HD); break; }
+    case 'acc_glasses': { const fr = M('#5a3a24', 0.4), [ex, ey, es] = eyeXY(gear); for (const sx of [-1, 1]){ const o = mk(new THREE.TorusGeometry(0.062, 0.011, 6, 16), fr, sx * ex * (es > 1 ? 1.06 : 1), ey, es > 1 ? 0.322 : 0.31, HD); o.scale.setScalar(es > 1 ? 1.3 : 1); o.rotation.y = es > 1 ? sx * 0.3 : 0; } mk(new THREE.BoxGeometry(es > 1 ? 0.09 : 0.07, 0.012, 0.012), fr, 0, ey + 0.01, es > 1 ? 0.335 : 0.315, HD); break; }
     case 'acc_sachet': { const s1 = mk(new THREE.SphereGeometry(0.06, 12, 10), M('#e8473a', 0.5), 0.12, 0.86, 0.22); s1.scale.set(1, 1.2, 0.6); mk(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 4), M('#f2c43d', 0.4), 0.1, 0.98, 0.2); for (let k = 0; k < 4; k++) mk(new THREE.CylinderGeometry(0.004, 0.004, 0.09, 4), M('#f2c43d', 0.4), 0.105 + (k - 1.5) * 0.012, 0.76, 0.23); mk(new THREE.TorusGeometry(0.2, 0.008, 4, 20), M('#e8473a', 0.5), 0, 1.04, 0).rotation.x = Math.PI / 2; break; }
     case 'acc_shell': { const pearl = M('#fbf3ea', 0.3); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.018, 6, 4), pearl, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); } const sh2 = mk(new THREE.ConeGeometry(0.05, 0.07, 7), M('#f5a5d8', 0.4), 0, 0.98, 0.21); sh2.rotation.x = Math.PI; break; }
     case 'acc_lei': { const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#ff9f43']; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.045, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.21, 1.06 - Math.max(0, Math.sin(a)) * 0.1, Math.sin(a) * 0.19); } break; }
@@ -2753,14 +2882,16 @@ function applyGear(av, gear){
   // ---- 表情 ----
   const eyesOn = gear.face === 'face_normal' || gear.face === 'face_wink';
   av.eyes.forEach((e, i) => e.visible = eyesOn && !(gear.face === 'face_wink' && i === 1)); av.shines.forEach((e, i) => e.visible = eyesOn && !(gear.face === 'face_wink' && i === 1));
-  const arcEye = (sx, flip) => { const a = mk(G.smile, ink, sx * 0.115, 0.0, 0.305, HD); a.scale.set(1.15, 1.15, 1); if (flip) a.rotation.z = Math.PI; return a; };
-  switch (gear.face){
+  try { applyEyes(av, lookParse(gear.look), gear.face); } catch(e){ console.warn('eyes', e); }
+  const [EX, EY, ES] = eyeXY(gear);
+  const arcEye = (sx, flip) => { const a = mk(G.smile, ink, sx * EX, EY, 0.305, HD); a.scale.set(1.15 * ES, 1.15 * ES, 1); if (flip) a.rotation.z = Math.PI; return a; };
+  if (ES === 1) switch (gear.face){   /* 新眼型的表情是畫在眼睛貼圖上的（applyEyes），這裡只有「經典」眼睛才用 */
     case 'face_happy': arcEye(-1); arcEye(1); break;
     case 'face_wink': arcEye(1); break;
-    case 'face_sleepy': for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.08, 0.014, 0.01), ink, sx * 0.115, -0.01, 0.312, HD); break;
-    case 'face_cool': { const blk = M('#141820', 0.25, { metalness:0.5 }); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.135, 0.075, 0.02), blk, sx * 0.115, 0.01, 0.31, HD); mk(new THREE.BoxGeometry(0.06, 0.015, 0.015), blk, 0, 0.03, 0.315, HD); break; }
-    case 'face_heart': { const hm = new THREE.MeshBasicMaterial({ color:'#ff4d6d' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(heartShape(0.055)), hm, sx * 0.115, 0.01, 0.318, HD); break; }
-    case 'face_star': { const sm = new THREE.MeshBasicMaterial({ color:'#ffc93c' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(starShape(0.065)), sm, sx * 0.115, 0.01, 0.318, HD); break; }
+    case 'face_sleepy': for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.08 * ES, 0.014, 0.01), ink, sx * EX, EY - 0.01, 0.312, HD); break;
+    case 'face_cool': { const blk = M('#141820', 0.25, { metalness:0.5 }); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.135 * ES, 0.075 * ES, 0.02), blk, sx * EX, EY + 0.01, 0.31, HD); mk(new THREE.BoxGeometry(0.06, 0.015, 0.015), blk, 0, EY + 0.03, 0.315, HD); break; }
+    case 'face_heart': { const hm = new THREE.MeshBasicMaterial({ color:'#ff4d6d' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(heartShape(0.055 * ES)), hm, sx * EX, EY + 0.01, 0.318, HD); break; }
+    case 'face_star': { const sm = new THREE.MeshBasicMaterial({ color:'#ffc93c' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(starShape(0.065 * ES)), sm, sx * EX, EY + 0.01, 0.318, HD); break; }
   }
   try { npcFacialHair(av, mk); } catch(e){}
   applyDesigns(av, gear);   /* 自己設計的衣服、褲子（044） */
@@ -3213,11 +3344,55 @@ function surfaceAt(x, z){
 const KID = { gltf: null, clips: null, ok: false, failed: false, wait: new Set() };
 (function loadKid(){
   if (/kid=0/.test(location.hash)) return;
-  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
+  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; try { kidReshape(g.scene); } catch(e){ console.warn('kidReshape', e); KID.shape = null; } KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
     undefined, e => { KID.failed = true; KID.wait.clear(); console.warn('3D 角色載入失敗，繼續用程式角色', e); }); } catch(e){ KID.failed = true; }
 })();
 // 動作的原始移動速度（量過：腳往後推的速度），用來讓播放速度跟真正的移動速度一樣
 const KID_SPD = { walk: 0.68, run: 1.51, sprint: 1.43 };
+/* v411 新身材（玩家選的 G 方案）：頭大、身體細、腿長。模型檔和動作都不換，載入時做兩件事——
+   (1) 把身體的點往中心收（存在綁定姿勢裡；原本的座標另外留在 restP，衣服的領口、口袋、條紋還是照舊座標畫）
+   (2) 把骨頭之間的距離拉長（腿、手）、縮短（軀幹）。腿變長以後整個人要墊高，墊多少看姿勢（站著全墊、坐椅子只墊小腿、坐地上和躺著不墊），在 kidAnimate 裡算 */
+const KID_SHAPE = { slim: 0.64, arm: 0.68, hand: 0.8, shoe: 0.8, leg: 2.1, armLen: 1.2, torso: 0.95, head: 1.05, shoulder: 0.125 };
+const _kq = new THREE.Quaternion();
+/* 腿變長以後整個人要墊高多少：每一格照現在的姿勢算——「比較低的那隻腳」離髖關節的垂直距離，新腿是舊腿的 leg 倍，差多少就墊多少。
+   站著墊最多、蹲下墊少一點，跳起來腳離地的高度也跟以前一樣。坐椅子不墊（屁股要在原本的高度；以前腳是懸空的，腿變長剛好比較接近地面）；貼地、浮在水裡的姿勢也不墊 */
+const KID_FLAT = ['sit', 'sit_floor', 'sit_floor_down', 'lie', 'lie_down', 'playdead', 'dive', 'swim', 'pushups', 'situps'];
+function kidLift(K){ if (!K.liftN) return; const B = K.B, v = K.v; let drop = 0, flat = 0; for (const n of KID_FLAT) flat += K.w[n] || 0;
+  for (const s of ['l', 'r']){ v.copy(B['foot' + s].position).applyQuaternion(B['lowerleg' + s].quaternion).add(B['lowerleg' + s].position).applyQuaternion(B['upperleg' + s].quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion); drop = Math.max(drop, -v.y); }
+  K.liftN.position.y = Math.max(0, drop) * (1 - 1 / KID_SHAPE.leg) * Math.max(0, 1 - Math.min(1, flat)); }
+function kidReshape(scene){ const S = KID_SHAPE; scene.updateMatrixWorld(true);
+  const B = {}, W = {}; scene.traverse(o => { if (o.isBone){ B[o.name] = o; W[o.name] = o.getWorldPosition(new THREE.Vector3()); } });
+  const done = new Map();
+  scene.traverse(o => { if (!o.isSkinnedMesh) return; const geo = o.geometry, pos = geo.attributes.position; if (done.has(pos)){ geo.setAttribute('restP', done.get(pos)); return; }
+    const rest = pos.clone(), si = geo.attributes.skinIndex, names = o.skeleton.bones.map(b => b.name); done.set(pos, rest); geo.setAttribute('restP', rest);
+    for (let i = 0; i < pos.count; i++){ const n = names[si.getX(i)] || ''; let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      if (n === 'head'){   /* v411 臉型（玩家給的參考圖）：臉頰圓、下巴收小收尖，不再是一顆正圓球。頭骨上方 0.255 是頭的中心，半徑 0.33 */
+        const hx = W.head.x, hy = W.head.y + 0.255, hz = W.head.z + 0.01, dx = x - hx, dy = y - hy, dz = z - hz, ny = dy / 0.31; if (dx * dx + dy * dy + dz * dz > 0.16) continue;
+        if (ny < 0){ const t = Math.min(1, -ny), jaw = t <= 0.35 ? 0 : (q => q * q * (3 - 2 * q))((t - 0.35) / 0.65), cheek = Math.exp(-Math.pow((ny + 0.32) / 0.26, 2));
+          x = hx + dx * (1 - 0.15 * jaw + 0.06 * cheek); z = hz + dz * (dz > 0 ? 1 - 0.1 * jaw + 0.03 * cheek : 1 - 0.05 * jaw); y = hy + dy * (1 - 0.06 * jaw); pos.setXYZ(i, x, y, z); }   /* 臉頰鼓一點、下巴收一點、整體短一點（太尖會像倒三角形，試過） */
+        continue; }
+      if (n.startsWith('hand')){ const c = W[n], cx = c.x + Math.sign(c.x) * 0.03; x = cx + (x - cx) * 0.95; y = c.y + (y - c.y) * 0.5; z = c.z + (z - c.z) * 0.85; }   /* 手：圓球壓成扁扁的手掌（手指、拇指在 kidUpgrade 另外接上去） */
+      else if (/^(upperarm|lowerarm|wrist)/.test(n)){ y = W.upperarml.y + (y - W.upperarml.y) * S.arm; z *= S.arm; }
+      else if (/^(foot|toes)/.test(n)){ const cx = Math.sign(x) * Math.abs(W.footl.x); x = cx * S.slim + (x - cx) * S.shoe; z = 0.033 + (z - 0.033) * 0.85; }
+      else { x *= S.slim; z *= S.slim; }
+      pos.setXYZ(i, x, y, z); }
+    pos.needsUpdate = true; geo.computeBoundingBox(); geo.computeBoundingSphere(); });
+  const L0 = B.lowerlegl.position.length() + B.footl.position.length();
+  for (const s of ['l', 'r']){ B['lowerleg' + s].position.multiplyScalar(S.leg); B['foot' + s].position.multiplyScalar(S.leg);
+    for (const n of ['lowerarm', 'wrist', 'hand']) B[n + s].position.multiplyScalar(S.armLen);
+    B['upperarm' + s].position.x = Math.sign(B['upperarm' + s].position.x) * S.shoulder; }
+  for (const n of ['spine', 'chest', 'head']) B[n].position.multiplyScalar(S.torso);
+  KID.shape = { lift: L0 * (S.leg - 1), W0: W, holder: B.root.parent.name };
+  B.root.parent.position.y = KID.shape.lift; scene.updateMatrixWorld(true); }
+/* v411 玩家說「臉型統一」：村民的身材有高矮胖瘦（整個人不等比例縮放），以前連頭也跟著被壓扁或拉長，每個人的臉型都不一樣。
+   現在頭骨反過來補回去，所有人的頭一樣大、一樣圓，五官位置完全相同；只有身體有高矮胖瘦 */
+/* v411 手指：玩家問「手掌能有嗎」。原本的手是一顆圓球，現在壓成手掌，再接四根手指和一根拇指（T-pose：手臂沿著 x、手心朝下、拇指朝前 +z）。一隻手一個合併好的模型，左右共用 */
+const HAND_GEO = {};
+function handGeo(sx){ if (HAND_GEO[sx]) return HAND_GEO[sx]; const parts = [], cap = (r, len, x, y, z, rz, ry) => { const g = new THREE.CapsuleGeometry(r, len, 3, 8); g.rotateZ(Math.PI / 2); if (rz) g.rotateZ(rz); if (ry) g.rotateY(ry); g.translate(x, y, z); parts.push(g); };
+  [-0.045, -0.015, 0.015, 0.045].forEach((z, i) => cap(0.0165, 0.04 - Math.abs(i - 1.5) * 0.008, sx * (0.085 - Math.abs(i - 1.5) * 0.006), -0.012, z, sx * -0.28, 0));   /* 四根手指：中間兩根長一點，微微往下彎 */
+  cap(0.019, 0.028, sx * 0.012, -0.008, 0.07, sx * -0.15, sx * -0.95);   /* 拇指：往前斜出去 */
+  const g = mergeGeometries(parts.map(x => x.index ? x.toNonIndexed() : x), false); g.computeBoundingSphere(); g.userData.shared = true; return HAND_GEO[sx] = g; }
+function kidHeadFix(a, B){ B = B || (a.kid && a.kid.B); if (!B || !B.head || !KID.shape) return; const g = a.g.scale, h = KID_SHAPE.head; B.head.scale.set(h / (g.x || 1), h / (g.y || 1), h / (g.z || 1)); }
 function kidUpgrade(f){
   const a = f.av; if (a.kid || !KID.ok) return;
   const m = SkeletonUtils.clone(KID.gltf.scene), prim = {}, B = {};
@@ -3228,17 +3403,22 @@ function kidUpgrade(f){
   m.traverse(o => { if (o.isSkinnedMesh){ o.computeBoundingSphere(); o.boundingSphere.radius = Math.max(o.boundingSphere.radius * 1.6, 1.2); } if (o.isMesh) o.frustumCulled = true; });   /* v299：角色不在畫面裡就不畫（以前整個世界的角色每一格都畫，約 14 萬個三角形） */
   for (const o of a.BODY) if (o.parent) o.parent.remove(o);
   // 掛點：頭、帽子 → 頭骨；腿 → 大腿／小腿／腳骨；上衣類配件 → 胸骨
-  B.head.attach(a.headG); B.head.attach(a.hatG);
+  const SH = KID.shape, S = KID_SHAPE, wp = n => B[n].getWorldPosition(new THREE.Vector3());
+  if (SH){ const dy = wp('head').y - SH.W0.head.y; a.headG.position.y += dy; a.hatG.position.y += dy; a.g.updateMatrixWorld(true); }   /* 頭骨變高了：臉、頭髮、帽子先跟上去再掛 */
+  B.head.attach(a.headG); B.head.attach(a.hatG); if (SH) kidHeadFix(a, B);
   for (const [L, s] of [[a.legL, 'r'], [a.legR, 'l']]){ const sx = s === 'l' ? 1 : -1; L.rotation.set(0, 0, 0); L.position.set(sx * 0.145, 0.441, 0); L.userData.shin.rotation.set(0, 0, 0); L.userData.shin.position.y = -0.193; L.userData.foot.rotation.set(0, 0, 0); L.userData.foot.position.y = -0.125;
-    a.g.updateMatrixWorld(true); B['upperleg' + s].attach(L); B['lowerleg' + s].attach(L.userData.shin); B['foot' + s].attach(L.userData.foot); }
-  a.torsoG = new THREE.Group(); a.g.add(a.torsoG); a.g.updateMatrixWorld(true); B.chest.attach(a.torsoG);
+    if (SH){ const u = wp('upperleg' + s), k = wp('lowerleg' + s), ft = wp('foot' + s); L.position.set(u.x * S.slim, u.y, u.z); L.userData.shin.position.set(0, k.y - u.y, k.z - u.z); L.userData.foot.position.set(0, ft.y - k.y, ft.z - k.z); }   /* 腿變細變長：掛在腿上的東西（裙子、褲管、蛙鞋）跟著新的膝蓋、腳踝位置 */
+    a.g.updateMatrixWorld(true); B['upperleg' + s].attach(L); B['lowerleg' + s].attach(L.userData.shin); B['foot' + s].attach(L.userData.foot);
+    if (SH){ L.scale.set(S.slim, 1, S.slim); L.userData.shin.scale.set(S.slim, 1, S.slim); L.userData.foot.scale.set(S.shoe, 1, 0.85); } }
+  if (SH) for (const s of ['l', 'r']){ const hb = B['hand' + s], c = wp('hand' + s), sx = Math.sign(c.x) || 1, fm = new THREE.Mesh(handGeo(sx), a.skinM); fm.position.set(c.x + sx * 0.03, c.y, c.z); fm.castShadow = false; a.g.add(fm); a.g.updateMatrixWorld(true); hb.attach(fm); }
+  a.torsoG = new THREE.Group(); a.g.add(a.torsoG); if (SH){ a.torsoG.position.y = wp('chest').y - SH.W0.chest.y; a.torsoG.scale.set(0.74, 1, 0.74); }   /* 背包、披風、氧氣瓶：跟著變高、變窄的身體 */ a.g.updateMatrixWorld(true); B.chest.attach(a.torsoG);
   for (const o of [...a.gearMeshes]) if (o.parent === a.g) a.torsoG.attach(o);
   a.armL.visible = a.armR.visible = false;
   a.g.rotation.copy(keepRot); a.g.position.copy(keepPos);
   const mixer = new THREE.AnimationMixer(m), acts = {};
   for (const [nm, c] of Object.entries(KID.clips)){ const ac = mixer.clipAction(c); ac.enabled = true; ac.setEffectiveWeight(0); ac.play(); acts[nm] = ac; }
   for (const nm of ['jump_land', 'fish_cast', 'playdead', 'surprised', 'bow', 'lie_down', 'sit_floor_down', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin']){ if (acts[nm]){ acts[nm].setLoop(THREE.LoopOnce, 1); acts[nm].clampWhenFinished = true; } }
-  a.kid = { m, B, prim, mixer, acts, w: {}, handR: B.handr, v: new THREE.Vector3(), skipT: 0 };
+  a.kid = { m, B, prim, mixer, acts, w: {}, handR: B.handr, v: new THREE.Vector3(), skipT: 0, liftN: SH ? B.root.parent : null };
   a.body = prim.shirt || a.body;
   if (f.gearKey){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); }
 }
@@ -3276,7 +3456,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt);
+  K.mixer.update(dt); kidLift(K);
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
 /* v397 玩家回報「NPC 都長得好像」：以前每個村民都是同一張臉、同一種咖啡色短髮、同樣的膚色和身材，開店的還全部戴漁夫帽＋圓框眼鏡。
@@ -3307,7 +3487,8 @@ const NPC_STYLE = [
 function npcStyle(name){ name = String(name || ''); const r = NPC_STYLE.find(([k]) => name.startsWith(k)); return r ? r[1] : null; }
 /* 鬍子：mus 八字鬍、stub 短鬍渣、beard 落腮鬍、full 白長鬍（跟頭髮同一個顏色） */
 function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG; if (!k || !hm || !HD) return;
-  const S = (r, x, y, z, sx, sy, sz, rz) => { const o = mk(new THREE.SphereGeometry(r, 12, 8), hm, x, y, z, HD); o.scale.set(sx, sy, sz); if (rz) o.rotation.z = rz; return o; };
+  const dy = eyeXY({ look: av.lookStr })[2] > 1 ? -0.07 : 0;   /* 新的臉：眼睛、嘴巴都比較低，鬍子跟著往下 */
+  const S = (r, x, y, z, sx, sy, sz, rz) => { const o = mk(new THREE.SphereGeometry(r, 12, 8), hm, x, y + dy, z - (dy ? 0.012 : 0), HD); o.scale.set(sx, sy, sz); if (rz) o.rotation.z = rz; return o; };
   if (k === 'mus' || k === 'full' || k === 'beard') for (const sx of [-1, 1]) S(0.05, sx * 0.048, -0.075, 0.292, 1.35, 0.5, 0.55, sx * 0.3);
   if (k === 'stub') S(0.15, 0, -0.14, 0.2, 1.35, 0.62, 0.72);
   if (k === 'beard') S(0.16, 0, -0.16, 0.19, 1.45, 0.82, 0.8);
@@ -3326,7 +3507,7 @@ class Fisher {
     this.tag.append(this.bub, this.nm); labelsEl.appendChild(this.tag);
     this.bubUntil = 0;
     if (!CLASSIC){ this.blob = new THREE.Mesh(BLOB_GEO, BLOB_MAT); this.blob.renderOrder = 1; scene.add(this.blob); }
-    if (this.isNpc){ const st = npcStyle(opts.name); if (st){ this.npcSt = st; this.av.npcFh = st.fh || null; if (st.sc) this.av.g.scale.set(st.sc[0], st.sc[1], st.sc[0]); this.setGear({}); } }
+    if (this.isNpc){ const st = npcStyle(opts.name); if (st){ this.npcSt = st; this.av.npcFh = st.fh || null; if (st.sc) this.av.g.scale.set(st.sc[0], st.sc[1], st.sc[0]); kidHeadFix(this.av); this.setGear({}); } }
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
   setGear(gear){ if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, { look: this.npcSt.look }); const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
@@ -3447,7 +3628,7 @@ class Fisher {
     a.g.position.y = this.baseY + P.bob;
     }
     if (a.gearAnim) a.gearAnim(t, this.speed || 0);
-    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
+    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = (pl.userData.h || EYE_H) * (bt < 0.12 && !pl.userData.shut ? 0.12 : 1); a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
     this._uf = frameNo; const showBob = this.fishing && this.bobState !== 'none' && a.g.visible && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
@@ -3472,7 +3653,7 @@ class Fisher {
     if (!this.bub.hidden && now() > this.bubUntil) this.bub.hidden = true;
   }
   placeTag(){
-    const v = tmpV.set(this.pos.x, this.pos.y + 1.95, this.pos.z);
+    const v = tmpV.set(this.pos.x, this.pos.y + (KID.shape ? (this.sitting ? 2.05 : 2.38) : 1.95), this.pos.z);   /* v411 人變高了，名字跟著往上 */
     const d = camera.position.distanceTo(v);
     v.project(camera);
     if (v.z > 1 || d > (this.isNpc ? 24 : 45) || (this === me && F.phase !== 'idle' && F.phase !== 'charging')){ this.tag.style.display = 'none'; return; }   /* v294 自己釣魚的時候不顯示自己的名字，畫面不擠 */
@@ -3486,7 +3667,7 @@ class Fisher {
     this.tag.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`;
     // 自己的名字一直清楚；別人的名字：太遠會變淡，被房子或樹擋住也會變淡（每幾格才算一次）
     if (this === me){ this.tag.style.opacity = '1'; return; }
-    if ((frameNo + (this._ofs || (this._ofs = 1 + Math.floor(Math.random() * 7)))) % 8 === 0) this._occ = tagOccluded(this.pos.x, this.pos.y + 1.95, this.pos.z);
+    if ((frameNo + (this._ofs || (this._ofs = 1 + Math.floor(Math.random() * 7)))) % 8 === 0) this._occ = tagOccluded(this.pos.x, this.pos.y + (KID.shape ? 2.3 : 1.95), this.pos.z);
     const far = d > 18 ? clamp(1 - (d - 18) / 20, 0.12, 1) : 1, op = Math.min(far, this._occ ? 0.25 : 1);
     if (Math.abs((this._op || 1) - op) > 0.02){ this._op = (this._op || 1) + (op - (this._op || 1)) * 0.35; this.tag.style.opacity = this._op.toFixed(2); }
   }
@@ -8643,7 +8824,8 @@ function renderSettings(body){
   /* v288 上架 Google Play 必備：隱私權政策、刪除帳號（115） */
   /* v404 素材來源與授權（完整版在 CREDITS.md）。v407 深藍旗魚已換成付費方案生成的模型，不再有 CC BY 的素材 */
   { const f = field('📜 素材來源與授權'); const d = document.createElement('details'); d.appendChild(el('summary', 'sub', '點開看這個遊戲用了哪些素材'));
-    for (const t of ['深藍旗魚、鯊魚、鯨魚、海獅、象龜、海鬣蜥、潛水裝備、深海擺設等 3D 模型：用 Meshy 付費方案生成後由本遊戲修改。',
+    for (const t of ['深藍旗魚、鯊魚、鯨魚、海獅、象龜、海鬣蜥、潛水裝備、深海擺設、部分髮型等 3D 模型：用 Meshy 付費方案生成後由本遊戲修改。',
+      '「手繪」系列的眼睛：作者用 ChatGPT 生成後由本遊戲去背、改成可以換瞳色。',
       '小魚、海豚、鬼蝠魟、鯨魚的基本模型：Animated Fish Pack by Quaternius（CC0）。',
       '角色動作、帽子、頭盔、披風、家具：KayKit by Kay Lousberg（www.kaylousberg.com，CC0）。',
       '字型：jf open 粉圓（Huninn）、Noto Sans TC（SIL Open Font License 1.1）。',
@@ -10555,7 +10737,7 @@ function pvLoop(){
   if (!PV.cv || !PV.cv.isConnected || $('#sheet').hidden){ PV.raf = 0; return; }
   const t = now(); if (!PV.drag && t > PV.idleAt) PV.yaw += 0.01;
   const a = PV.av; a.g.rotation.y = PV.yaw; if (a.gearAnim) a.gearAnim(t, 0);
-  if (a.eyes){ const bt = (t + a.blinkAt) % 4.2; a.eyes[0].scale.y = a.eyes[1].scale.y = bt < 0.12 ? 0.12 : 1.15; }
+  if (a.eyes){ const bt = (t + a.blinkAt) % 4.2; a.eyes[0].scale.y = a.eyes[1].scale.y = bt < 0.12 ? 0.12 : 1.15; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = (pl.userData.h || EYE_H) * (bt < 0.12 && !pl.userData.shut ? 0.12 : 1); }
   PV.r.render(PV.sc, PV.cam); PV.raf = requestAnimationFrame(pvLoop);
 }
 // ===== 自己設計衣服、褲子（044）：16×16 格子畫布，上衣有正面＋背面；放到「設計師市集」賣 =====
@@ -10800,7 +10982,7 @@ function renderPushBox(body){
 function setLook(L){ rec.gear = Object.assign(cleanGear(rec.gear), { look: lookStr(L) }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); clearTimeout(setLook.t); setLook.t = setTimeout(() => cloudCall('set_gear', { p_gear: rec.gear }), 800); AvShot.cache.clear(); renderTab(); }
 function renderLookEd(body){
   const g0 = cleanGear(rec.gear), L = lookParse(g0.look);
-  body.appendChild(el('p', 'sub', '外觀全部免費，隨時可以換。戴帽子的時候，頭頂上的頭髮（刺刺頭、飛機頭）會被帽子蓋住。'));
+  body.appendChild(el('p', 'sub', '外觀全部免費，隨時可以換：髮型、髮色、膚色、眼睛顏色、眼型、髮飾都在這一頁。大家的臉型都一樣，靠這些搭出自己的樣子。戴帽子的時候，頭頂上的頭髮（刺刺頭、飛機頭）會被帽子蓋住。'));
   body.appendChild(el('div', 'dexhead', '💇 髮型'));
   const hs = el('ul', 'shoplist cols');
   LOOK_HAIR.forEach((nm, i) => { if (!lookOwnH(i)) return; const li = el('li', L.h === i ? 'on' : ''), ic = el('img', 'gearic'); ic.alt = nm; try { ic.src = avatarShot(Object.assign({}, g0, { hat:'hat_none', look: lookStr(Object.assign({}, L, { h:i })) }), 'hat', 96); } catch(e){} li.appendChild(ic);
@@ -10814,6 +10996,11 @@ function renderLookEd(body){
     own.forEach((c, i) => { if (!c) return; const b = el('button', ''); b.setAttribute('aria-label', hcName(i)); b.title = hcName(i); b.style.cssText = `width:34px;height:34px;border-radius:50%;background:${c};padding:0;border:${L.c === i ? '3px solid #18334a' : '1px solid rgba(24,51,74,.25)'};box-shadow:${L.c === i ? '0 0 0 2px #fff inset' : 'none'}`; b.addEventListener('click', () => setLook(Object.assign({}, L, { c: i }))); r.appendChild(b); }); body.appendChild(r); }
   body.appendChild(el('p', 'sub', '💇 想要更多髮型、更特別的髮色？去找「阿綾服裝店」對面「阿萍美髮沙龍」的阿萍，她每天都在設計新的。'));
   row('🙂 膚色', LOOK_SKIN, 's'); row('👀 眼睛顏色', LOOK_EYE, 'e');
+  { body.appendChild(el('div', 'dexhead', '👁️ 眼型')); const sg = el('div', ''); sg.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin:6px 0 12px';
+    LOOK_EYES.forEach(([nm, E], i) => { const on = (L.y || 0) === i, b = el('button', 'tbtn' + (on ? '' : ' ghost')); b.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;min-height:76px'; b.setAttribute('aria-label', '眼型 ' + nm);
+      if (E){ const c = document.createElement('canvas'); c.width = 128; c.height = 80; const g = c.getContext('2d'); try { for (const m of [1, 0]) g.drawImage(eyeTex(i, L.e, !!m).image, m ? 0 : 64, 0, 64, 80); } catch(e){} c.style.cssText = 'width:76px;height:48px;background:#fbe9db;border-radius:8px'; b.appendChild(c); } else b.appendChild(el('span', '', '🙂'));
+      const t = el('span', '', nm); t.style.fontSize = '12px'; b.appendChild(t); b.addEventListener('click', () => setLook(Object.assign({}, L, { y: i }))); sg.appendChild(b); }); body.appendChild(sg); }
+  { body.appendChild(el('div', 'dexhead', '🎀 髮飾')); const sg = el('div', 'seg'); sg.style.cssText = 'flex-wrap:wrap;margin:6px 0 12px'; LOOK_ACC.forEach((nm, i) => { const b = el('button', 'tbtn' + ((L.a || 0) === i ? '' : ' ghost'), nm); b.addEventListener('click', () => setLook(Object.assign({}, L, { a: i }))); sg.appendChild(b); }); body.appendChild(sg); body.appendChild(el('p', 'sub', '戴帽子的時候，蝴蝶結和髮箍會被帽子蓋住，先收起來。')); }
 }
 /* ===== v334 頭像：自己的角色（預設）、釣過的魚、自己的寵物、一組符號。伺服器檢查（130），左上角、玩家列表、好友列表都看得到 ===== */
 const AV_EMOJI = ['🐟', '🐠', '🐡', '🦈', '🐙', '🦑', '🦀', '🦞', '🐢', '🐬', '🐳', '🦭', '🐧', '🦦', '🐚', '🪸', '⛵', '🎣', '🌊', '🏝️', '🌸', '⭐', '🌙', '☀️'];
@@ -14890,6 +15077,7 @@ requestAnimationFrame(frame);
     if ((ready && warm >= 1) || el > 14){ Boot.done = true; clearInterval(iv); try { window.__loadDone && window.__loadDone(); } catch(e){} } }, 120); }
 logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋竿。', true);
 initSocial().catch(() => {});
+try { hairGlbLoad(); } catch(e){}
 cloudInit().finally(() => { Boot.cloud = true; });
 initUpdateCheck();
 // 點左上角的頭像或名字 → 打開／收起更多功能（等級旁邊的 Lv 還是打開成就）
