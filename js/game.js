@@ -12806,6 +12806,8 @@ function renderSalon(body){
    每個角色有 60 幾個小零件（眼睛、亮點、腮紅、眉毛、釣竿的環…），離鏡頭 18 公尺以外就不畫這些小零件，
    48 公尺以外整個人都不畫（霧也看不太到了）。用「圖層」做，不會跟遊戲本來的顯示／隱藏打架。 */
 /* v290 遠一點的角色：身體那幾塊（皮膚、衣服、褲子、鞋子…）合成一塊會動的模型，5 個 draw call 變 1 個；衣服顏色或換裝變了就重做 */
+function clodMat(T){ const m = new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness == null ? 0.8 : T.roughness, metalness: 0 });
+  m.onBeforeCompile = sh => { sh.vertexShader = 'attribute float emi; varying float vEmi;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vEmi = emi;'); sh.fragmentShader = 'varying float vEmi;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * vEmi;'); }; m.customProgramCacheKey = () => 'clodEmi'; return m; }
 function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinnedMesh && o !== f._px) P.push(o); }); if (!P.length) return null;
   const vis = o => { for (let q = o; q && q !== a.g; q = q.parent) if (!q.visible) return false; return true; };
   const use = P.filter(o => vis(o) && o.material && !Array.isArray(o.material) && !o.material.transparent && !o.material.map && o.skeleton && o.skeleton.bones.length === P[0].skeleton.bones.length && o.skeleton.bones.every((b, i) => b === P[0].skeleton.bones[i]) && o.bindMatrix.equals(P[0].bindMatrix) && o.parent === P[0].parent && !(o.geometry.morphAttributes && o.geometry.morphAttributes.position));
@@ -12814,9 +12816,11 @@ function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinn
   if (f._px && f._pxKey === key) return f._px;
   if (f._px){ if (f._px.parent) f._px.parent.remove(f._px); f._px.geometry.dispose(); f._px = null; }
   const gs = []; for (const o of use){ const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k)) g.deleteAttribute(k); g.morphAttributes = {}; g.clearGroups(); if (!g.attributes.normal) g.computeVertexNormals();
-    const c = o.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); gs.push(g); }
+    const c = o.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    { const em = o.material.emissive, e = em && (c.r + c.g + c.b) > 1e-4 ? (em.r + em.g + em.b) / (c.r + c.g + c.b) : 0, ea = new Float32Array(n).fill(e); g.setAttribute('emi', new THREE.BufferAttribute(ea, 1)); }   /* 玩家回報「阿福的膚色會自動變」：近的角色皮膚自己帶一點亮度，遠的簡化版沒有，走近走遠膚色就不一樣（晚上最明顯）。簡化版也帶同樣的亮度 */
+    gs.push(g); }
   let mg = null; try { mg = mergeGeometries(gs, false); } catch(e){} gs.forEach(g => g.dispose()); if (!mg) return null;
-  const T = use[0].material, px = new THREE.SkinnedMesh(mg, CLOD.mat || (CLOD.mat = new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness == null ? 0.8 : T.roughness, metalness: 0 })));
+  const T = use[0].material, px = new THREE.SkinnedMesh(mg, CLOD.mat || (CLOD.mat = clodMat(T)));
   px.position.copy(use[0].position); px.quaternion.copy(use[0].quaternion); px.scale.copy(use[0].scale); px.bind(use[0].skeleton, use[0].bindMatrix); px.castShadow = use[0].castShadow; px.frustumCulled = use[0].frustumCulled; px.userData.keep = true;
   use[0].parent.add(px); f._px = px; f._pxKey = key; return px; }
 /* v290 遠的小東西不畫：低畫質 48 公尺（半徑 1.5 以下）、中畫質 75 公尺（半徑 1 以下）外的小東西（花、小石頭、魚、浮標…）先不畫；高畫質不動 */
