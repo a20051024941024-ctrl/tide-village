@@ -4758,6 +4758,7 @@ const ISLE_ITEMS = {
   pensea:{ name:'海水池（水獺、寄居蟹、小海龜、章魚、河豚 +5 隻）', price:1500, rad:1.8, pen:'sea' },
   pentank:{ name:'烏龜缸（小烏龜 +5 隻）', price:1500, rad:1.2, pen:'tank' },
 };
+const FEST_FISH_WHEN = { ny:'🎆 跨年夜限定（12/31 晚上～1/1）', xmas:'🎄 聖誕節限定（12/20～12/26）', cny:'🧧 春節限定（過年那一週）' };
 const PET_CAT = k => k === 'cat' || k === 'shiba' || k === 'gull' ? 'land' : k === 'pondturtle' ? 'tank' : 'sea';
 const PEN_AREA = { penland:{ hx:1.15, hz:1.15, y:0.04 }, pensea:{ hx:1.05, hz:0.62, y:0.24 }, pentank:{ hx:0.72, hz:0.32, y:0.42 } };
 /* 寵物名額：一般 3 隻什麼都能養，每一類超過圍欄名額的部分要擠在這 3 隻裡（跟伺服器 _pet_over 一樣） */
@@ -5933,7 +5934,7 @@ function useFurn(n){ const { o, m, b } = n, P = m.position, say = (x, s2) => me.
   if (b === 'toilet'){ sitDown({ x: P.x, z: P.z, face: o.r, y: P.y + 0.12, room: true }); say('🚽'); return; }
   if (b === 'tv'){ if (!m.userData.tvScreen){ m.traverse(c => { if (!m.userData.tvScreen && c.isMesh && c.material && c.material.color && c.material.color.getHexString() === '2b4a6a'){ c.material = c.material.clone(); m.userData.tvScreen = c; } }); }
     m.userData.tvOn = !m.userData.tvOn; const sc = m.userData.tvScreen; if (sc && !m.userData.tvOn){ sc.material.emissive.set('#000000'); }
-    if (m.userData.tvOn){ const L = FISH.filter(f => f.desc && !f.of); const f = L[Math.floor(Math.random() * L.length)]; toast(`📺 電視正在播海洋節目：${f.name}——${f.desc}`); try { tone(660, 0.12, 'sine', 0.04); } catch(e){} } else toast('📺 關掉電視'); return; }
+    if (m.userData.tvOn){ const L = FISH.filter(f => f.desc && !f.of && !f.fest); const f = L[Math.floor(Math.random() * L.length)]; toast(`📺 電視正在播海洋節目：${f.name}——${f.desc}`); try { tone(660, 0.12, 'sine', 0.04); } catch(e){} } else toast('📺 關掉電視'); return; }
   if (b === 'lamp'){ m.traverse(c => { if (House.lamps.includes(c)) c.userData.off = !c.userData.off; }); try { SFX.tick(); } catch(e){} return; }
   if (b === 'fire'){ m.traverse(c => { if (House.fires.includes(c)) c.userData.off = !c.userData.off; }); FX.emit(P.x, P.y + 0.6, P.z, 8, '#ffb040', 0.4, 1.2, 0.8); toast('🔥 劈哩啪啦…'); return; }
   if (b === 'piano'){ say('🎵', 4); const N = [523, 587, 659, 698, 784, 880], song = Array.from({ length: 8 }, () => N[Math.floor(Math.random() * N.length)]); song.forEach((hz, i) => setTimeout(() => { try { tone(hz, 0.35, 'triangle', 0.06); } catch(e){} FX.emit(P.x, P.y + 1.4, P.z, 2, '#ffd36a', 0.4, 1.4, 1.0); }, i * 260)); return; }
@@ -5941,7 +5942,7 @@ function useFurn(n){ const { o, m, b } = n, P = m.position, say = (x, s2) => me.
   if (b === 'fridge' || b === 'tank'){ openSheet('tank'); return; }
   if (b === 'ward'){ openSheet('closet'); return; }
   if (b === 'desk'){ openSheet('dex'); return; }
-  if (b === 'shelf'){ const L = FISH.filter(f => f.desc && !f.of), f = L[Math.floor(Math.random() * L.length)]; say('📖'); toast(`📚 書上寫著：${f.name}——${f.desc}`); return; }
+  if (b === 'shelf'){ const L = FISH.filter(f => f.desc && !f.of && !f.fest), f = L[Math.floor(Math.random() * L.length)]; say('📖'); toast(`📚 書上寫著：${f.name}——${f.desc}`); return; }
   if (b === 'clock'){ const h = gameHour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60); say('🕰️'); toast(`🕰️ 村子現在 ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`); return; }
   if (b === 'sink'){ FX.emit(P.x, P.y + 1.0, P.z, 12, '#9fe3ff', 0.3, 0.6, 0.6); try { SFX.splash(); } catch(e){} say('🫧'); return; }
   if (b === 'plant' || b === 'bigplant'){ FX.emit(P.x, P.y + 1.2, P.z, 10, '#9fe3ff', 0.4, 0.4, 0.7); const s0 = m.scale.x; m.scale.setScalar(s0 * 1.08); setTimeout(() => m.scale.setScalar(s0), 300); say('💧'); toast('💧 澆好水了，葉子看起來很開心'); return; } }
@@ -12802,7 +12803,7 @@ function npcEventLines(n){
   if (breedSeason()) L.push('現在是繁殖季，吳郭魚、鯽魚這些會自己生的魚特別多');
   if (Env.wx === 'rain') L.push('下雨天雷魚、鯰魚、鰻魚特別愛吃');
   if (Env.wx === 'storm') L.push('暴風雨的時候外海傳說魚多很多，但是拉線很吃力');
-  { const night = FISH.filter(f => f.time === 'night' && !f.of && SPOT_BY_ID[f.spot] && !SPOT_BY_ID[f.spot].hidden); if (night.length){ const f = night[Math.floor(Math.random() * night.length)]; L.push(`${f.name}只有晚上才會出來，在${SPOT_BY_ID[f.spot].short}`); } }
+  { const night = FISH.filter(f => f.time === 'night' && !f.of && (!f.fest || festOn(f.fest)) && SPOT_BY_ID[f.spot] && !SPOT_BY_ID[f.spot].hidden); if (night.length){ const f = night[Math.floor(Math.random() * night.length)]; L.push(`${f.name}只有晚上才會出來，在${SPOT_BY_ID[f.spot].short}`); } }
   if (Sev.ev && !Sev.ev.caught && FISH_BY_ID[Sev.ev.fish]) L.push(`阿忠今天放了一條${FISH_BY_ID[Sev.ev.fish].name}，還沒有人釣到喔！`);
   if (RS.n > 0 && Math.random() < 0.4) L.push(`聽說外海還有 ${RS.n} 隻赤紅霸王鯊…`);
   if (Talk.recent.length && Date.now() - Talk.recent[0].at < 20 * 60000){ const r = Talk.recent[0]; L.push(`剛剛${r.who}釣到一條${r.name}，好厲害`); }
@@ -13144,6 +13145,7 @@ function renderTab(){
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (known){ const st = starsOf(f), sd = el('div', 'stars s' + st, starStr(st)); sd.title = st >= 3 ? '已經三顆星了' : st === 2 ? `三顆星：完美搏鬥一次＋釣到 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上（${Mast.set.has(f.id) ? '完美搏鬥 ✓' : '還沒完美搏鬥'}）` : `兩顆星：釣到 10 條（現在 ${rec.count[f.id]}）或 ${fmtKg(f.min + (f.max - f.min) * 0.8)} 以上`; it.appendChild(sd); it.addEventListener('click', () => toast(`${f.name} ${starStr(st)}：${sd.title}`)); if (st >= 3) it.classList.add('gold'); }
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
+        if (f.fest) it.appendChild(el('div', 'meta fest', (FEST_FISH_WHEN[f.fest] || '🏮 節慶限定') + (festOn(f.fest) ? '・現在釣得到！' : '・現在釣不到')));   /* v388 節慶魚標清楚哪時候才有 */
         if (known && baitsFor(f).length) it.appendChild(el('div', 'meta', starsOf(f) >= 2 ? '🍽️ 喜歡：' + baitsFor(f).map(b => b.name).join('、') : '🍽️ 喜歡的餌：★★ 解鎖'));   /* v295 先自己試，釣到 10 條（兩顆星）才告訴你 */
         g.appendChild(it);
       });
@@ -13499,6 +13501,7 @@ function renderTab(){
     ]);
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、七夕（晚上天上有鵲橋、每天一份禮物、限定花冠和鵲橋）、萬聖節（10/29～10/31，南瓜燈和蝙蝠、每天拿糖果、限定南瓜帽和巫師帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
+      '圖鑑裡的節慶魚會標「🎆 跨年夜限定」「🎄 聖誕節限定」「🧧 春節限定」，節日以外的時間釣不到，只會先在圖鑑裡看到剪影。',
       '點頭像的「🏮 節慶」看現在有什麼活動、下一個節日是什麼時候。要先釣過 10 條魚才能領紅包、禮物和玩小遊戲（防止有人開一堆分身帳號來領）。限定商品過了節日就買不到，已經買到的永遠保留。節日開始的時候會推播（可以在推播開關裡關掉）。',
       '🎄 聖誕節（12/20～12/26）限定魚：小島的聖誕小丑魚、聖誕隆頭魚，珊瑚礁岸的雪花鰻，都戴著小聖誕帽；各有一種金色的傳說變種。'
     ]);

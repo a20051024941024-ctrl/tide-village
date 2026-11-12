@@ -206,6 +206,7 @@ body.touch #chatToggle{display:grid}
 .dex .it canvas{width:96px;height:60px}
 .dex .it .n{font-family:var(--f-display);font-size:15px}
 .dex .it .meta{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.dex .it .meta.fest{color:#c4553f;font-weight:700}
 .dex .it.lock .n{color:#9fb3bf}
 .dexhead{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 8px;font-family:var(--f-display);font-size:16px}
 .dexhead:first-child{margin-top:0}
