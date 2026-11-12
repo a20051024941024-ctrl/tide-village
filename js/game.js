@@ -2054,7 +2054,7 @@ Marlin2.bodyGeo = function(){ if (Marlin2.geo) return Marlin2.geo;
   for (let i = 0; i < M; i++) for (let j = 0; j < N; j++){ const a = i * (N + 1) + j, b = a + N + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); Marlin2.geo = g; return g; };
 Marlin2.finGeo = function(pts, depth){ const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) sh.lineTo(pts[k][0], pts[k][1]); sh.closePath(); return new THREE.ShapeGeometry(sh); };   /* 平面雙面，省三角形 */
-/* 深藍旗魚 v221：造型用 Meshy 生成的模型（CC BY 4.0，見 CREDITS.md），25 萬面減到約 4,000 面、自己上色（models/marlin.glb）。
+/* 深藍旗魚：造型用 Meshy 付費方案生成的模型（v407 重新生成換掉原本免費方案 CC BY 的那隻，見 CREDITS.md），30 萬面減到約 4,600 面，顏色取自原貼圖抹平後存成頂點色（models/marlin.glb）。
    頂點色：深藍背、藍側、銀白肚、深藍鰭；_alb 是白化版的顏色；_sw 標出哪裡畫直條紋（條紋在 shader 裡畫，比較清楚）。
    模型還沒載好的時候先用 v201 的做法 3，載好後換掉。 */
 const Marlin3 = { geo:null, wait:new Set(), mats:{} };
@@ -2070,7 +2070,7 @@ Marlin3.mat = function(albino){ const k = albino ? 'a' : 'n'; if (Marlin3.mats[k
 Marlin3.geoFor = function(albino){ if (!albino) return Marlin3.geo; if (Marlin3.geoA) return Marlin3.geoA;
   const g = Marlin3.geo.clone(); if (g.getAttribute('_alb')) g.setAttribute('color', g.getAttribute('_alb')); return (Marlin3.geoA = g); };
 Marlin3.eye = function(){ if (Marlin3.eyeAt) return Marlin3.eyeAt;   /* 從側面往身體打一條線，找頭側面的位置貼眼睛 */
-  const mesh = new THREE.Mesh(Marlin3.geo, new THREE.MeshBasicMaterial({ side:THREE.DoubleSide })), rc = new THREE.Raycaster(), ex = 0.5, ey = 0.0;
+  const mesh = new THREE.Mesh(Marlin3.geo, new THREE.MeshBasicMaterial({ side:THREE.DoubleSide })), rc = new THREE.Raycaster(), ex = 0.558, ey = 0.0;   /* v407 新模型的眼睛位置 */
   rc.set(new THREE.Vector3(ex, ey, 1), new THREE.Vector3(0, 0, -1)); const h = rc.intersectObject(mesh)[0];
   return (Marlin3.eyeAt = { x: ex, y: ey, z: h ? h.point.z : 0.09 }); };
 function marlin3Fill(fish){ const albino = fish.userData.m3albino;
@@ -8640,10 +8640,9 @@ function renderSettings(body){
   { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
   { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
   /* v288 上架 Google Play 必備：隱私權政策、刪除帳號（115） */
-  /* v404 素材來源與授權：深藍旗魚的模型是 CC BY 4.0，規定要在作品裡標示出處；其他是 CC0／自有／開源函式庫，一起列出來（完整版在 CREDITS.md） */
+  /* v404 素材來源與授權（完整版在 CREDITS.md）。v407 深藍旗魚已換成付費方案生成的模型，不再有 CC BY 的素材 */
   { const f = field('📜 素材來源與授權'); const d = document.createElement('details'); d.appendChild(el('summary', 'sub', '點開看這個遊戲用了哪些素材'));
-    for (const t of ['深藍旗魚的 3D 模型：Model created with Meshy (www.meshy.ai) – CC BY 4.0 License，本遊戲有減面、重新上色。',
-      '其他魚、鯨魚、海獅、象龜、海鬣蜥、潛水裝備、深海擺設的 3D 模型：用 Meshy 付費方案生成後由本遊戲修改。',
+    for (const t of ['深藍旗魚、鯊魚、鯨魚、海獅、象龜、海鬣蜥、潛水裝備、深海擺設等 3D 模型：用 Meshy 付費方案生成後由本遊戲修改。',
       '小魚、海豚、鬼蝠魟、鯨魚的基本模型：Animated Fish Pack by Quaternius（CC0）。',
       '角色動作、帽子、頭盔、披風、家具：KayKit by Kay Lousberg（www.kaylousberg.com，CC0）。',
       '字型：jf open 粉圓（Huninn）、Noto Sans TC（SIL Open Font License 1.1）。',

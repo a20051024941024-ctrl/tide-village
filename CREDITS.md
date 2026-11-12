@@ -3,7 +3,7 @@
 - **魚的 3D 模型**：[Animated Fish Pack](https://quaternius.com/packs/animatedfish.html) by Quaternius（CC0）。魚群用 Fish1～3 的形狀；海豚、鬼蝠魟、鯨魚直接用它的骨架模型和游泳動作（models/sealife/，2026-11-05，檔案取自 github.com/trebeljahr/quaternius-showcase，原作授權 CC0-1.0）
   授權：CC0 1.0（公眾領域，可自由使用）https://creativecommons.org/publicdomain/zero/1.0/
   使用全部 7 個模型（三種魚、鯊魚、鯨魚、海豚、魟魚），轉成遊戲內資料並依物種重新上色。
-- **深藍旗魚的 3D 模型**（`models/marlin.glb`）：Model created with [Meshy](https://www.meshy.ai) – [CC BY 4.0 License](https://creativecommons.org/licenses/by/4.0/)。2026-11-06 由本專案從約 25 萬面減到約 4,000 面、重新上色（藍背、銀肚、直條紋、白化版），並加上眼睛。
+- **深藍旗魚的 3D 模型**（`models/marlin.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有）。2026-11-12 重新生成，換掉原本免費方案（CC BY 4.0）的那一隻；由本專案從約 30 萬面減到約 4,600 面，顏色取自原貼圖存成頂點色，直條紋用 shader 畫，另做白化版顏色並加上眼睛。
 - **赤紅霸王鯊的 3D 模型**（`models/redshark.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有），2026-11-06 由本專案減到約 5,000 面、重新烘貼圖、做白化版顏色，身上的傷疤用 shader 畫。
 - **大白鯊、抹香鯨、藍鯨、大王魷魚、管眼魚的 3D 模型**（`models/greatwhite.glb`、`models/sperm.glb`、`models/bluewhale.glb`、`models/giantsquid.glb`、`models/barreleye.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有），2026-11-06 由本專案減面、重新烘貼圖、做白化版和螢光版顏色。
 - **斗篷、潛水鏡、潛水裝備（氧氣瓶、蛙鞋）的 3D 模型**（`models/cloak.glb`、`models/goggles.glb`、`models/scuba_tank.glb`、`models/scuba_fin.glb`、`models/fishpack.glb`、深海擺設 `models/deep_*.glb`：黑煙囪噴口、玄武岩柱、沉船、發光水母）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有），2026-11-06 由本專案減面、上色。
@@ -19,4 +19,4 @@
 - **水滴魚、小飛象章魚、海獅、象龜、海鬣蜥的 3D 模型**（`models/blobfish.glb`、`models/dumbo.glb`、`models/sealion.glb`、`models/tortoise.glb`、`models/iguana.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有，2026-11-12 作者確認），2026-11-10～11 由本專案減面、上色、加動作。
 - **字型**：[jf open 粉圓 Huninn](https://github.com/justfont/open-huninn-font)、[Noto Sans TC](https://fonts.google.com/noto/specimen/Noto+Sans+TC)，授權 SIL Open Font License 1.1，由 Google Fonts 提供。
 - **程式函式庫**：[three.js](https://threejs.org)（MIT）、[supabase-js](https://github.com/supabase/supabase-js)（MIT）、[PeerJS](https://peerjs.com)（MIT）；簡體中文對照表來自 [OpenCC](https://github.com/BYVoid/OpenCC)（Apache License 2.0）。
-- **遊戲內標示**：設定 →「📜 素材來源與授權」（v404 起），滿足深藍旗魚模型 CC BY 4.0 的標示要求。
+- **遊戲內標示**：設定 →「📜 素材來源與授權」（v404 起）。v407 起遊戲裡已經沒有 CC BY 的素材，這一欄是自願列出。
