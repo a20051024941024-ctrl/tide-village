@@ -4773,8 +4773,12 @@ const FEST_FISH_WHEN = { ny:'🎆 跨年夜限定（12/31 晚上～1/1）', xmas
 const PET_CAT = k => k === 'cat' || k === 'shiba' || k === 'gull' ? 'land' : k === 'pondturtle' ? 'tank' : 'sea';
 const PEN_AREA = { penland:{ hx:1.15, hz:1.15, y:0.04 }, pensea:{ hx:1.05, hz:0.62, y:0.24 }, pentank:{ hx:0.72, hz:0.32, y:0.42 } };
 /* 寵物名額：一般 3 隻什麼都能養，每一類超過圍欄名額的部分要擠在這 3 隻裡（跟伺服器 _pet_over 一樣） */
+/* v396 屋子裡的烏龜缸（家具 turtletank）也算名額 */
+function penCaps(items){ const cap = { land:0, sea:0, tank:0 };
+  for (const it of items || []){ const T = ISLE_ITEMS[it.t]; if (T && T.pen) cap[T.pen] += 5; if (Array.isArray(it.f)) for (const o of it.f) if (o && o.t === 'turtletank') cap.tank += 5; }
+  return cap; }
 function petOver(list, items, add){ const cap = { land:0, sea:0, tank:0 }, n = { land:0, sea:0, tank:0 };
-  for (const it of items || []){ const T = ISLE_ITEMS[it.t]; if (T && T.pen) cap[T.pen] += 5; }
+  Object.assign(cap, penCaps(items));
   for (const p of list || []) n[PET_CAT(p.kind)]++; if (add) n[PET_CAT(add)]++;
   return Object.keys(n).reduce((a, k) => a + Math.max(0, n[k] - cap[k]), 0); }
 const OLD_HOUSES = new Set(['cabin', 'beach', 'tea', 'villa']);   // 076 起不再賣（已經買的人保留）
@@ -5467,6 +5471,7 @@ const FURN = {
   cushion:{ name:'和室坐墊', price:80, rad:0.35, g:'live' },
   coffee:{ name:'茶几', price:350, rad:0.6, g:'live' },
   trophy:{ name:'魚標本牆', price:500, rad:0.45, g:'live' },
+  turtletank:{ name:'室內烏龜缸（小烏龜 +5 隻）', price:1500, rad:0.8, g:'live' },   /* v396 放在屋子裡的烏龜缸（伺服器 153），名額算法跟島上的烏龜缸一樣 */
   rodrack:{ name:'釣竿架', price:400, rad:0.5, g:'live' },
   globe:{ name:'地球儀', price:300, rad:0.3, g:'live' },
   radio:{ name:'收音機', price:250, rad:0.3, g:'live' },
@@ -5567,7 +5572,11 @@ function paintMesh(d){
   const W = 0.86, H = 0.66, y = 1.02;
   for (const [sz, p] of [[[W + 0.1, 0.06, 0.05], [0, y + H / 2 + 0.03, 0.12]], [[W + 0.1, 0.06, 0.05], [0, y - H / 2 - 0.03, 0.12]], [[0.06, H, 0.05], [-W / 2 - 0.02, y, 0.12]], [[0.06, H, 0.05], [W / 2 + 0.02, y, 0.12]]]) g.add(box(sz, shade(fr, 0.1), p));
   const cvm = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: paintTex(d), roughness: 0.95, emissive: '#ffffff', emissiveIntensity: 0.06 })); cvm.position.set(0, y, 0.125); g.add(cvm);
-  const f = d.fish && FISH_BY_ID[d.fish]; if (f){ try { const m = fishModel(f, 0.5); m.scale.z *= 0.25; m.position.set(0, y - 0.02, 0.16); g.add(m); } catch(e){} }
+  /* v396 畫會微微動：魚慢慢游、畫面上有幾道筆觸像水波一樣來回飄（只有在屋子裡才會動） */
+  const P = { fish: null, y, strokes: [], ph: (hash32('pm' + (d.id || d.pat || '')) % 628) / 100 };
+  const f = d.fish && FISH_BY_ID[d.fish]; if (f){ try { const m = fishModel(f, 0.5); m.scale.z *= 0.25; m.position.set(0, y - 0.02, 0.16); g.add(m); P.fish = m; } catch(e){} }
+  for (let i = 0; i < 3; i++){ const sm = new THREE.Mesh(new THREE.PlaneGeometry(0.2 + i * 0.05, 0.014), new THREE.MeshBasicMaterial({ color: d.pat === 'night' ? '#cfe0ff' : '#ffffff', transparent: true, opacity: 0.4, depthWrite: false })); sm.position.set(0, y - 0.24 + i * 0.07, 0.128 + i * 0.001); g.add(sm); P.strokes.push(sm); }
+  g.userData.paint = P;
   return g; }
 async function loadCai(){ if (Cai.busy || !Cloud.on || !Cloud.sb) return; Cai.busy = true; Cai.at = Date.now();
   try { const [a, b] = await Promise.all([Cloud.sb.rpc('list_paint'), Cloud.sb.rpc('cai_today')]); Cai.list = (a.data || []); for (const d of Cai.list) fzReg(d); if (b.data){ Cai.today = b.data; if (b.data.paint) fzReg(b.data.paint); if (b.data.gift) fzReg(b.data.gift); } } catch(e){ Cai.list = Cai.list || []; }
@@ -5677,6 +5686,10 @@ function furnMesh(t){
     case 'fire': { B([1.4, 1.2, 0.5], '#b7b2a4', [0, 0.6, 0]); B([0.9, 0.6, 0.1], '#2a1a14', [0, 0.45, 0.21]); B([1.6, 0.12, 0.6], '#d8d2c4', [0, 1.26, 0]);
       const fl = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 6), new THREE.MeshStandardMaterial({ color:'#ffb040', emissive:'#ff7a1a', emissiveIntensity:1.8 })); fl.position.set(0, 0.42, 0.18); g.add(fl); g.userData.fire = fl; break; }
     case 'piano': B([1.5, 1.1, 0.6], '#1e1e22', [0, 0.75, -0.1], 0.3); B([1.4, 0.06, 0.3], '#f8f8f4', [0, 0.82, 0.3]); for (let i = 0; i < 10; i++) B([0.05, 0.03, 0.16], '#1e1e22', [-0.6 + i * 0.13, 0.86, 0.26]); for (const sx of [-0.65, 0.65]) B([0.08, 0.8, 0.08], '#1e1e22', [sx, 0.4, 0.3]); B([0.8, 0.45, 0.35], '#1e1e22', [0, 0.23, 0.85]); break;
+    case 'turtletank': { B([1.6, 0.1, 0.9], wood, [0, 0.05, 0]); for (const sx of [-1, 1]) B([0.07, 0.42, 0.9], lw, [sx * 0.77, 0.26, 0]); for (const sz of [-1, 1]) B([1.6, 0.42, 0.07], lw, [0, 0.26, sz * 0.42]);
+      const wt = new THREE.Mesh(new THREE.BoxGeometry(1.46, 0.2, 0.76), new THREE.MeshStandardMaterial({ color:'#7fd0e8', transparent:true, opacity:0.55, emissive:'#2f89c7', emissiveIntensity:0.25, depthWrite:false })); wt.position.y = 0.2; g.add(wt);
+      B([0.5, 0.16, 0.36], '#9a9488', [-0.4, 0.26, 0.05]); B([0.26, 0.1, 0.22], '#aaa498', [-0.08, 0.22, -0.12]); C(0.02, 0.02, 0.36, '#4f9a55', [0.55, 0.4, -0.25], 6); B([0.2, 0.03, 0.1], '#5fb866', [0.55, 0.56, -0.2]); B([0.16, 0.03, 0.08], '#6fc878', [0.5, 0.5, -0.3]);
+      g.userData.ttank = 1; break; }
     case 'tank': { B([1.4, 0.7, 0.6], wood, [0, 0.35, 0]); const gl = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.55), new THREE.MeshStandardMaterial({ color:'#9fe3ff', transparent:true, opacity:0.35, emissive:'#2f89c7', emissiveIntensity:0.3, depthWrite:false })); gl.position.y = 1.1; g.add(gl); g.userData.tank = 1; break; }
     case 'fridge': B([0.8, 1.8, 0.7], '#eef2f4', [0, 0.9, 0], 0.4); B([0.78, 0.02, 0.02], '#b8c0c6', [0, 1.2, 0.36]); B([0.04, 0.4, 0.04], '#8a9298', [0.3, 1.45, 0.37]); B([0.04, 0.3, 0.04], '#8a9298', [0.3, 0.85, 0.37]); break;
     case 'stove': B([0.8, 0.9, 0.65], '#e6e9ec', [0, 0.45, 0], 0.4); B([0.78, 0.03, 0.62], '#2a2f3a', [0, 0.91, 0]); for (const [sx, sz] of [[-0.2, -0.15], [0.2, -0.15], [-0.2, 0.15], [0.2, 0.15]]){ const r = C(0.1, 0.1, 0.02, '#4c4c4c', [sx, 0.93, sz]); } B([0.6, 0.35, 0.02], '#2a2f3a', [0, 0.4, 0.33]); break;
@@ -5809,7 +5822,7 @@ function enterHouse(door){
 function clearHouseRoom(){
   if (House.group) scene.remove(House.group); for (const c of House.cols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } House.cols = [];
   const di = decks.indexOf(House.deck); if (di >= 0) decks.splice(di, 1); CHAIRS_ROOM.length = 0; if (mySeat && mySeat.room){ House.keepSeat = mySeat; mySeat = null; me.sitting = false; }   /* v301 房間重畫完會把人放回床上／椅子上（之前會卡在床邊） */
-  House.group = null; House.fish = []; House.fires = []; House.lamps = []; House.furnG = new Map();
+  House.group = null; House.fish = []; House.fires = []; House.lamps = []; House.paints = []; House.furnG = new Map();
 }
 // 大宅的地板（每一格照房間的地板）、壁紙（每一面牆照旁邊那一格的房間）、窗戶
 function clDecorate(g, lay, cx, cz, fy){
@@ -5895,7 +5908,7 @@ function rebuildHouseRoom(it){
   const tank = (onIsle && onIsle.tank) || [], show = (onIsle && onIsle.show) || [], shown = tank.filter(x => show.includes(x.t) && FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 4), pick = shown.length ? shown : tank.filter(x => FISH_BY_ID[x.f] && !BIG_FISH.has(x.f)).slice(0, 3);
   for (const o of f){ const F0 = FURN[o.t]; if (!F0){ fzWant(fzId(o.t)); continue; } const m = furnMesh(o.t); m.position.set(cx + o.x, fy, cz + o.z); m.rotation.y = o.r; m.userData.furn = o; g.add(m); House.furnG.set(o.id, m);
     const c = Math.cos(o.r), s = Math.sin(o.r), at = (lx, lz) => ({ x: cx + o.x + c * lx + s * lz, z: cz + o.z - s * lx + c * lz });
-    if (m.userData.fire) House.fires.push(m.userData.fire); if (m.userData.lamp) House.lamps.push(m.userData.lamp);
+    if (m.userData.fire) House.fires.push(m.userData.fire); if (m.userData.lamp) House.lamps.push(m.userData.lamp); if (m.userData.paint) House.paints.push(m.userData.paint);
     if (m.userData.tank) pick.forEach((x, i) => { try { const fm = fishModel(FISH_BY_ID[x.f], 0.2); fm.position.set(cx + o.x, fy + 1.1, cz + o.z); g.add(fm); House.fish.push({ f: fm, k: i * 1.7, x: cx + o.x, z: cz + o.z, r: o.r }); } catch(e){} });
     const bt = F0.base || o.t;
     if (bt === 'chair' || bt === 'arm'){ const p = at(0, 0.02); CHAIRS_ROOM.push({ x: p.x, z: p.z, face: o.r, y: fy + 0.02, room: true }); continue; }
@@ -5964,6 +5977,8 @@ function updateHouse(t){
   for (const m of House.furnG ? House.furnG.values() : []){ const sc = m.userData.tvScreen; if (sc && m.userData.tvOn){ const k = Math.floor(t * 2.2) % 5, cols = ['#7fd0ff', '#ffd36a', '#8de07a', '#ff9ab0', '#c8b0ff']; sc.material.emissive.set(cols[k]); sc.material.emissiveIntensity = 0.7 + Math.sin(t * 17) * 0.15; } }   /* v251 電視開著：畫面一閃一閃換顏色 */
   if (House.win && House.winTx){ const tx = House.winTx[DayNight.lamp > 0.5 ? 1 : 0]; if (House.win.map !== tx){ House.win.map = tx; House.win.needsUpdate = true; } }
   if (House.bg){ const nt = DayNight.lamp > 0.5; House.bg.color.set(nt ? '#1b2440' : '#a9d6e8'); House.lawn.color.set(nt ? '#2f4a3a' : '#7fb069'); House.pool.opacity = nt ? 1 : 0.55; }
+  for (const P of House.paints || []){ const a = t * 0.7 + P.ph; if (P.fish){ P.fish.position.x = Math.sin(a) * 0.1; P.fish.position.y = P.y - 0.02 + Math.sin(a * 1.7) * 0.025; P.fish.rotation.z = Math.sin(a * 1.7 + 1) * 0.07; }
+    P.strokes.forEach((sm, i) => { sm.position.x = Math.sin(a * 0.8 + i * 2.1) * 0.2; sm.material.opacity = 0.22 + 0.2 * (0.5 + 0.5 * Math.sin(a * 1.3 + i)); }); }
   for (const o of House.fish){ const a = t * 0.8 + o.k, c = Math.cos(o.r), s = Math.sin(o.r), lx = Math.cos(a) * 0.45, lz = Math.sin(a * 1.3) * 0.12; o.f.position.x = o.x + c * lx + s * lz; o.f.position.z = o.z - s * lx + c * lz; o.f.rotation.y = o.r + (Math.sin(a) > 0 ? Math.PI : 0); }
   updateFurn();
 }
@@ -8372,12 +8387,16 @@ function updatePetFor(f, want, dt, t){
 }
 // 小島上待在家的寵物：在島中間附近閒晃
 async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.forEach(petFree); Pets.home = []; Pets.homeKey = ''; } return; }
-  const pens = ((onIsle.owner === myIdOrMe() ? rec.island : onIsle.layout) || { items: [] }).items.filter(it => ISLE_ITEMS[it.t] && ISLE_ITEMS[it.t].pen);
+  const items0 = ((onIsle.owner === myIdOrMe() ? rec.island : onIsle.layout) || { items: [] }).items || [], pens = items0.filter(it => ISLE_ITEMS[it.t] && ISLE_ITEMS[it.t].pen);
+  /* v396 屋子裡的烏龜缸也是圍欄：住在裡面的小烏龜要進那間屋子、那一層樓才看得到 */
+  for (const h of items0) if (Array.isArray(h.f)) for (const o of h.f) if (o && o.t === 'turtletank') pens.push({ indoor: true, hid: h.id, fid: o.id, t: 'turtletank', id: 'h' + h.id + 'f' + o.id, x: o.x, z: o.z, r: o.r });
   const key = onIsle.owner + '|' + pens.map(it => it.id + ':' + it.x + ':' + it.z + ':' + it.r).join() + '|' + (Pets.list ? Pets.list.map(p => p.id + ':' + p.out + ':' + p.acc + p.name + ':' + (p.shine == null ? '' : Math.floor(p.shine / 10))).join() : ''); if (Pets.homeKey === key) return; Pets.homeKey = key;
   let list = []; if (onIsle.owner === myIdOrMe()) list = (Pets.list || []).filter(p => !p.out); else if (Cloud.on){ try { const { data } = await Cloud.sb.rpc('isle_pets', { p_owner: onIsle.owner }); if (Array.isArray(data)) list = data; } catch(e){} }
   /* v386 有圍欄就住進對的圍欄（每個 5 隻），其他的在島上閒晃；便宜手機最多畫 18 隻 */
-  const room = new Map(pens.map(it => [it, 5])), byCat = c => pens.filter(it => ISLE_ITEMS[it.t].pen === c && room.get(it) > 0)[0];
+  const penCat = it => it.indoor ? 'tank' : ISLE_ITEMS[it.t].pen;
+  const room = new Map(pens.map(it => [it, 5])), byCat = c => pens.filter(it => penCat(it) === c && room.get(it) > 0)[0];
   Pets.home.forEach(petFree); let free = 0; Pets.home = list.slice(0, 18).map(w => { const pt = petMake(w), pen = byCat(PET_CAT(w.kind));
+    if (pen && pen.indoor){ room.set(pen, room.get(pen) - 1); pt.pen = pen; pt.wander = { x: 0, z: 0, at: 0 }; return pt; }
     if (pen){ room.set(pen, room.get(pen) - 1); pt.pen = pen; const p = penSpot(pen); pt.pos.set(p.x, p.y, p.z); pt.wander = { x: p.x, z: p.z, at: 0 }; return pt; }
     const i = free++, x = ISLE.x + 3 + (i % 3) * 1.5, z = ISLE.z + 4 + Math.floor(i / 3) * 1.2; pt.pos.set(x, groundHeight(x, z), z); pt.wander = { x, z, at: 0 }; return pt; }); }
 function penSpot(it){ const A = PEN_AREA[it.t], u = (Math.random() * 2 - 1) * A.hx, v = (Math.random() * 2 - 1) * A.hz, c = Math.cos(it.r), s = Math.sin(it.r);
@@ -8386,7 +8405,11 @@ function updatePets(dt, t){
   updatePetFor(me, petMine(), dt, t);
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
-  for (const pt of Pets.home){ const vis = !!onIsle && !House.on && !Dive.on; pt.m.visible = vis; if (!vis) continue; const w = pt.wander;
+  for (const pt of Pets.home){
+    if (pt.pen && pt.pen.indoor){ const fm = House.on && House.it && House.it.id === pt.pen.hid && House.furnG.get(pt.pen.fid); pt.m.visible = !!fm; if (!fm) continue; const w = pt.wander;
+      if (t > w.at || !w.set){ w.set = 1; w.at = t + rand(3, 7); const u = (Math.random() * 2 - 1) * 0.55, v = (Math.random() * 2 - 1) * 0.24, c = Math.cos(fm.rotation.y), s = Math.sin(fm.rotation.y); w.x = fm.position.x + u * c + v * s; w.z = fm.position.z - u * s + v * c; }
+      petStep(pt, dt, t, w.x, w.z, fm.position.y + 0.24, false, pt.rot); continue; }
+    const vis = !!onIsle && !House.on && !Dive.on; pt.m.visible = vis; if (!vis) continue; const w = pt.wander;
     if (pt.pen){ if (t > w.at){ w.at = t + rand(2, 5); const p = penSpot(pt.pen); w.x = p.x; w.z = p.z; } petStep(pt, dt, t, w.x, w.z, ISLE.y + PEN_AREA[pt.pen.t].y, false, pt.rot); continue; }
     if (t > w.at){ w.at = t + rand(3, 7); for (let k = 0; k < 6; k++){ const a = Math.random() * 6.283, r = 2 + Math.random() * 7, x = ISLE.x + Math.cos(a) * r, z = ISLE.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.3)){ w.x = x; w.z = z; break; } } }
     petStep(pt, dt, t, w.x, w.z, groundHeight(pt.pos.x, pt.pos.z), false, pt.rot); }
@@ -8452,9 +8475,9 @@ function renderPets(body){
   if (!Pets.list){ body.appendChild(el('div', 'empty', '載入中…')); loadPets(true); return; }
   { const seg = el('div', 'seg'); [['mine', Pets.atShop ? '🏠 領養' : '🐾 我的寵物'], ['market', '🏷️ 寵物市集']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((Pets.tab || 'mine') === k)); b.addEventListener('click', () => { Pets.tab = k; if (k === 'market') loadPetMarket(); renderTab(); }); seg.appendChild(b); }); body.appendChild(seg); }
   if (Pets.tab === 'market'){ renderPetMarket(body); return; }
-  const L = Pets.list, pc = { land:0, sea:0, tank:0 }; for (const it of (rec.island && rec.island.items) || []){ const T = ISLE_ITEMS[it.t]; if (T && T.pen) pc[T.pen] += 5; }
+  const L = Pets.list, pc = penCaps(rec.island && rec.island.items);
   const room = 3 + pc.land + pc.sea + pc.tank, free = 3 - petOver(L, rec.island && rec.island.items);
-  body.appendChild(el('p', 'sub', `養了 ${L.length} 隻（名額：一般 3${pc.land ? `＋陸地圍欄 ${pc.land}` : ''}${pc.sea ? `＋海水池 ${pc.sea}` : ''}${pc.tank ? `＋烏龜缸 ${pc.tank}` : ''}＝${room}；一般名額還剩 ${Math.max(0, free)} 隻）。想多養：在小島的「🔨 蓋東西」買陸地圍欄、海水池、烏龜缸，每個多 5 隻那一類。同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
+  body.appendChild(el('p', 'sub', `養了 ${L.length} 隻（名額：一般 3${pc.land ? `＋陸地圍欄 ${pc.land}` : ''}${pc.sea ? `＋海水池 ${pc.sea}` : ''}${pc.tank ? `＋烏龜缸 ${pc.tank}` : ''}＝${room}；一般名額還剩 ${Math.max(0, free)} 隻）。想多養：在小島的「🔨 蓋東西」買陸地圍欄、海水池、烏龜缸，每個多 5 隻那一類；烏龜缸也有放在屋子裡的版本（屋裡的家具店買）。同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
   const ul = el('ul', 'shoplist');
   for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(el('span', 'dishic', K.icon));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}${petVarRare(p.kind, p.var) ? ' ⭐' : ''}${p.price != null ? `（市集掛賣中 🪙${p.price.toLocaleString()}）` : p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
