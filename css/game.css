@@ -1126,7 +1126,7 @@ body.ui2 .mbtn.gearbtn{grid-column:5;grid-row:1}
 body.ui2 .mbtn[data-tab="settings"]{--ic:linear-gradient(160deg,#b8c4d0,#6f8193)}
 html[lang=id] .mbtn span, html[lang=en] .mbtn span{font-size:10.5px;letter-spacing:-.2px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* v278 拍照的時候把跑馬燈、遠洋羅盤、活動條、鯨魚拍照鈕這些字都藏起來，才不會拍進去 */
-body.photo #ticker, body.photo #sailComp, body.photo #evChip, body.photo #owPhoto, body.photo #owWet, body.photo #bigMsg, body.photo #emotes, body.photo #menu, body.photo #ferryBar, body.photo #boatBar{display:none!important}
+body.photo #ticker, body.photo #sailComp, body.photo #evChip, body.photo #owPhoto, body.photo #owWet, body.photo #bigMsg, body.photo #emotes, body.photo #menu, body.photo #ferryBar, body.photo #boatBar, body.photo #isleBar, body.photo #visitBar, body.photo #diveHud, body.photo #today3, body.photo #orderPanel, body.photo #order3{display:none!important}   /* v399 拍照時小島列不再跟拍照提示疊在一起 */
 
 /* v283 活動條搬到右上角選單下面，不要擋在搖桿的地方（以前按到它會打開活動表、角色不會走） */
 

@@ -5981,12 +5981,16 @@ function exitHouse(instant){
 }
 /* v251 家具可以用：走近按按鈕。床躺下睡覺、電視開關、燈開關、壁爐生火、鋼琴彈一段、爐台做料理、冰箱和小魚缸看魚、衣櫃換衣服、書櫃看書、書桌翻圖鑑、時鐘看時間、浴缸泡澡、馬桶坐一下、流理台洗手、盆栽澆水 */
 const FURN_USE = { bed:['😴', '躺下睡覺'], dbed:['😴', '躺下睡覺'], bunk:['😴', '躺下睡覺'], tv:['📺', '開電視'], lamp:['💡', '開關燈'], fire:['🔥', '壁爐'], piano:['🎹', '彈鋼琴'],
-  stove:['🍳', '做料理'], fridge:['🧊', '打開冰箱'], tank:['🐟', '看魚'], ward:['👕', '換衣服'], shelf:['📚', '看書'], desk:['📔', '翻圖鑑'], clock:['🕰️', '看時間'], bath:['🛁', '泡澡'], toilet:['🚽', '坐一下'], sink:['🚰', '洗手'], plant:['💧', '澆水'], bigplant:['💧', '澆水'] };
+  stove:['🍳', '做料理'], fridge:['🧊', '打開冰箱'], tank:['🐟', '看魚'], ward:['👕', '換衣服'], shelf:['📚', '看書'], desk:['📔', '翻圖鑑'], clock:['🕰️', '看時間'], bath:['🛁', '泡澡'], toilet:['🚽', '坐一下'], sink:['🚰', '洗手'], plant:['💧', '澆水'], bigplant:['💧', '澆水'], turtletank:['🐢', '小烏龜'] };
 function furnBase(o){ const F0 = FURN[o.t]; return F0 ? (F0.base || o.t) : o.t; }
 function nearFurn(){ if (!House.on || !House.furnG || FB.on || mySeat) return null; let best = null, bd = 9;
   for (const m of House.furnG.values()){ const o = m.userData.furn; if (!o) continue; const b = furnBase(o), U = FURN_USE[b] || (FURN[o.t] && FURN[o.t].bed ? FURN_USE.bed : null); if (!U) continue; const r = Math.max(0.55, (FURN[o.t] || {}).rad || 0.6) + 0.9, d = Math.hypot(me.pos.x - m.position.x, me.pos.z - m.position.z); if (d < r && d < bd){ bd = d; best = { o, m, b: FURN[o.t] && FURN[o.t].bed ? 'bed' : b, U }; } }
   return best; }
 function useFurn(n){ const { o, m, b } = n, P = m.position, say = (x, s2) => me.say(x, 'emote', s2 || 3);
+  /* v399 玩家問「怎麼把小烏龜放進烏龜缸」：帶著小烏龜走到烏龜缸旁邊按「🐢 小烏龜」，牠就會回家住進缸裡 */
+  if (b === 'turtletank'){ const pm = petMine();
+    if (pm && pm.kind === 'pondturtle'){ (async () => { const r = Cloud.on && Cloud.sb ? await petRpc('pet_out', { p_id: null }) : (Pets.list || []).map(p => Object.assign({}, p, { out: false })); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); toast(`🐢 ${esc(pm.name || '小烏龜')}爬進烏龜缸了！想再帶牠出門，到「背包 → 寵物」按「帶出門」`); } })(); return; }
+    const n0 = (Pets.home || []).filter(h => h.pen && h.pen.indoor).length; toast(n0 ? `🐢 缸裡住著 ${n0} 隻小烏龜（每個缸最多 5 隻）` : '🐢 帶著小烏龜走到這裡按「🐢 小烏龜」就能放進來；在「背包 → 寵物」按「回家」的小烏龜也會住進來'); return; }
   const lieOn = (y, kind) => { const c = { x: P.x, z: P.z, face: o.r, y, room: true, furnLie: kind }; sitDown(c); if (kind !== 'bath') me.sitting = false; startEmote(me, kind === 'bath' ? 'sitdown' : 'sleep');   /* 躺著要用躺下的動作，不是坐著 */ myEmote = { k: kind === 'bath' ? 'sitdown' : 'sleep', at: Date.now() }; pushPresence(true); };
   if (b === 'bed'){ lieOn(P.y + 0.42, 'bed'); say('💤', 4); toast('😴 躺下來休息…（按「起來」或搖桿就起來）'); return; }
   if (b === 'bath'){ lieOn(P.y + 0.15, 'bath'); say('🛁', 4); for (let i = 0; i < 3; i++) setTimeout(() => FX.emit(P.x, P.y + 0.7, P.z, 10, '#ffffff', 0.5, 1.2, 1.2), i * 500); toast('🛁 好舒服～'); return; }
@@ -13640,6 +13644,7 @@ function renderTab(){
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
+      '🐢 把小烏龜放進屋子裡的烏龜缸：帶著小烏龜走到缸旁邊，按右下的「🐢 小烏龜」，牠就會爬進去住（或在「背包 → 寵物」按「回家」）。',
       '寵物名額：一般 3 隻什麼都能養。在小島「🔨 蓋東西」→「🐾 寵物圍欄」可以買陸地圍欄（貓、柴犬、海鷗）、海水池（水獺、寄居蟹、小海龜、章魚、河豚）、烏龜缸（小烏龜），各 1500 金幣、每個多 5 隻那一類的名額，數量不限（算在小島 60 件東西裡）。待在家的寵物會在圍欄裡玩，來參觀的人也看得到。圍欄裡還有寵物時不能拆。',
       '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。'
     ]);
