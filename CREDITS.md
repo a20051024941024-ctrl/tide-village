@@ -16,7 +16,7 @@
 - **家具 31 件**（床、櫃子、檯燈、沙發、扶手椅、椅子、桌子、地毯、仙人掌，models/kaykit_furn.glb）：從 [KayKit Furniture Bits 1.0](https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0) by Kay Lousberg（www.kaylousberg.com）合成（每件合成一個 mesh、縮成 0.7 倍配合遊戲的比例），授權 CC0（包內 LICENSE.txt）。2026-11-05
 - **深海鮟鱇的 3D 模型**（`models/angler.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有），2026-11-07 由本專案從約 77 萬面減到約 9,500 面、貼圖縮成 1024×1024，頭上的小燈另外用程式發光。
 - **座頭鯨的 3D 模型**（`models/humpback.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有），2026-11-07 減到約 1.27 萬面、貼圖 1536×1536。
-- **水滴魚、小飛象章魚、海獅、象龜、海鬣蜥的 3D 模型**（`models/blobfish.glb`、`models/dumbo.glb`、`models/sealion.glb`、`models/tortoise.glb`、`models/iguana.glb`）：用 [Meshy](https://www.meshy.ai) 生成，2026-11-10～11 由本專案減面、上色、加動作。（2026-11-12 補登；生成時的方案請以 Meshy 帳號紀錄為準）
+- **水滴魚、小飛象章魚、海獅、象龜、海鬣蜥的 3D 模型**（`models/blobfish.glb`、`models/dumbo.glb`、`models/sealion.glb`、`models/tortoise.glb`、`models/iguana.glb`）：用 [Meshy](https://www.meshy.ai) 付費方案生成（模型歸本專案所有，2026-11-12 作者確認），2026-11-10～11 由本專案減面、上色、加動作。
 - **字型**：[jf open 粉圓 Huninn](https://github.com/justfont/open-huninn-font)、[Noto Sans TC](https://fonts.google.com/noto/specimen/Noto+Sans+TC)，授權 SIL Open Font License 1.1，由 Google Fonts 提供。
 - **程式函式庫**：[three.js](https://threejs.org)（MIT）、[supabase-js](https://github.com/supabase/supabase-js)（MIT）、[PeerJS](https://peerjs.com)（MIT）；簡體中文對照表來自 [OpenCC](https://github.com/BYVoid/OpenCC)（Apache License 2.0）。
 - **遊戲內標示**：設定 →「📜 素材來源與授權」（v404 起），滿足深藍旗魚模型 CC BY 4.0 的標示要求。
