@@ -8640,6 +8640,16 @@ function renderSettings(body){
   { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
   { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
   /* v288 上架 Google Play 必備：隱私權政策、刪除帳號（115） */
+  /* v404 素材來源與授權：深藍旗魚的模型是 CC BY 4.0，規定要在作品裡標示出處；其他是 CC0／自有／開源函式庫，一起列出來（完整版在 CREDITS.md） */
+  { const f = field('📜 素材來源與授權'); const d = document.createElement('details'); d.appendChild(el('summary', 'sub', '點開看這個遊戲用了哪些素材'));
+    for (const t of ['深藍旗魚的 3D 模型：Model created with Meshy (www.meshy.ai) – CC BY 4.0 License，本遊戲有減面、重新上色。',
+      '其他魚、鯨魚、海獅、象龜、海鬣蜥、潛水裝備、深海擺設的 3D 模型：用 Meshy 付費方案生成後由本遊戲修改。',
+      '小魚、海豚、鬼蝠魟、鯨魚的基本模型：Animated Fish Pack by Quaternius（CC0）。',
+      '角色動作、帽子、頭盔、披風、家具：KayKit by Kay Lousberg（www.kaylousberg.com，CC0）。',
+      '字型：jf open 粉圓（Huninn）、Noto Sans TC（SIL Open Font License 1.1）。',
+      '程式函式庫：three.js（MIT）、supabase-js（MIT）、PeerJS（MIT）；簡體中文對照表來自 OpenCC（Apache License 2.0）。',
+      '玩家角色、場景、音樂音效、遊戲設計與文字：潮汐釣魚村自己製作。']) d.appendChild(el('p', 'sub', t));
+    f.appendChild(d); }
   { const f = field('📄 隱私權政策'); const a = el('a', 'tbtn ghost', '打開隱私權政策'); a.href = 'privacy.html'; a.target = '_blank'; a.rel = 'noopener'; f.appendChild(a); f.appendChild(el('p', 'sub', '我們收集什麼、用在哪裡、怎麼刪除。')); }
   if (Cloud.on && Cloud.sb){ const f = field('🗑️ 刪除我的帳號');
     f.appendChild(el('p', 'sub', '會永久刪除：你的角色、金幣、魚缸、圖鑑、衣服、家具、小島、寵物、好友、設計圖和所有紀錄；廣場留言會改成「已刪除的玩家」。刪除後不能復原。確定的話，在下面輸入「刪除」兩個字再按確認。'));
