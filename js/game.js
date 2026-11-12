@@ -8445,8 +8445,11 @@ function updatePets(dt, t){
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
   for (const pt of Pets.home){
-    if (pt.pen && pt.pen.indoor){ const fm = House.on && House.it && House.it.id === pt.pen.hid && House.furnG.get(pt.pen.fid); pt.m.visible = !!fm; if (!fm) continue; const w = pt.wander;
-      if (t > w.at || !w.set){ w.set = 1; w.at = t + rand(3, 7); const u = (Math.random() * 2 - 1) * 1.0, v = (Math.random() * 2 - 1) * 0.48, c = Math.cos(fm.rotation.y), s = Math.sin(fm.rotation.y); w.x = fm.position.x + u * c + v * s; w.z = fm.position.z - u * s + v * c; }
+    if (pt.pen && pt.pen.indoor){ const fm = House.on && House.it && House.it.id === pt.pen.hid && House.furnG.get(pt.pen.fid); pt.m.visible = !!fm; if (!fm){ pt.inFm = null; continue; } const w = pt.wander;
+      const spot = () => { const u = (Math.random() * 2 - 1) * 1.0, v = (Math.random() * 2 - 1) * 0.48, c = Math.cos(fm.rotation.y), s = Math.sin(fm.rotation.y); return [fm.position.x + u * c + v * s, fm.position.z - u * s + v * c]; };
+      /* v398 進屋的黑幕還沒掀開就先把每隻烏龜放到缸裡不同的位置、朝不同方向（以前會先擠在同一點再散開） */
+      if (pt.inFm !== fm){ pt.inFm = fm; const q = spot(); pt.pos.set(q[0], fm.position.y + 0.24, q[1]); pt.rot = Math.random() * 6.283; pt.vel = 0; w.x = q[0]; w.z = q[1]; w.at = t + rand(1, 6); }
+      if (t > w.at){ w.at = t + rand(3, 7); const q = spot(); w.x = q[0]; w.z = q[1]; }
       petStep(pt, dt, t, w.x, w.z, fm.position.y + 0.24, false, pt.rot); continue; }
     const vis = !!onIsle && !House.on && !Dive.on; pt.m.visible = vis; if (!vis) continue; const w = pt.wander;
     if (pt.pen){ if (t > w.at){ w.at = t + rand(2, 5); const p = penSpot(pt.pen); w.x = p.x; w.z = p.z; } petStep(pt, dt, t, w.x, w.z, ISLE.y + PEN_AREA[pt.pen.t].y, false, pt.rot); continue; }
