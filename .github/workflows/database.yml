@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: 安裝 psql
         run: command -v psql >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client) || (sleep 20 && sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)   # 機器上通常已經有 psql；沒有才裝，裝失敗再試一次
       - name: 依序執行 supabase/*.sql（每份都可以重複執行）
@@ -27,7 +29,17 @@ jobs:
           print('密碼長度:', len(pw), '| 有方括號:', '[' in pw or ']' in pw, '| 有空白:', ' ' in pw, '| 網址前後有空白或換行:', raw != s, '| 有 % 編碼:', '%' in pw)
           if r.username and '.' not in r.username: print('⚠️ 帳號應該是 postgres.mfaskrjcxofwkusrzkhb（pooler 一定要加專案代號）')
           PY
-          for f in supabase/schema.sql $(ls supabase/[0-9][0-9][0-9]_*.sql | sort); do
+          # 只從「這次改到的最舊那一份」開始往後跑（v405）。以前每次都從頭全部重跑，跑到中間時舊檔案會先把新的設定蓋回舊版
+          # （例如室內烏龜缸那一分多鐘伺服器不認得，玩家會一直看到「沒有這種家具」）。手動執行（workflow_dispatch）還是全部重跑。
+          ALL="supabase/schema.sql $(ls supabase/[0-9][0-9][0-9]_*.sql | sort)"; LIST="$ALL"
+          BEFORE="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -q '^0*$' && git cat-file -e "$BEFORE" 2>/dev/null; then
+            CH=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- 'supabase/*.sql' | grep -E '^supabase/[0-9]{3}_.*\.sql$' | sort | head -1)
+            if git diff --name-only "$BEFORE" "${{ github.sha }}" -- supabase/schema.sql | grep -q .; then CH=""; fi
+            if [ -n "$CH" ]; then LIST=$(for f in $(ls supabase/[0-9][0-9][0-9]_*.sql | sort); do [ "$f" \< "$CH" ] || echo "$f"; done); fi
+          fi
+          echo "這次要跑：$(echo $LIST | tr ' ' '\n' | wc -l) 份"
+          for f in $LIST; do
             echo "== 執行 $f"
             psql "$(echo "$DB_URL" | tr -d '\r\n' | sed 's/^ *//;s/ *$//')" -v ON_ERROR_STOP=1 -q -f "$f"
           done

@@ -1877,7 +1877,9 @@ function owPlan(cx, cz, W){ const ok = owCellOk(cx, cz); if (!ok) return null; c
   P.x0 = x0; P.z0 = z0; P.hd = hd; P.st = 20 + R(9) * (OW_WIN - P.dur - 40); return P; }
 function owModel(k){ const S = OW_SP[k]; let m;
   if (k === 'humpback'){ if (!MFISH.geo.humpback) return null; m = new THREE.Group(); m.userData.mf = MFISH.of.humpback || (MFISH.of.humpback = { k:'humpback', albino:false }); mfishFill(m); m.userData.tail = new THREE.Object3D(); }
-  else if (k === 'dolphin'){ m = new THREE.Group(); for (let i = 0; i < 12; i++){ const d = fishModel(FISH_BY_ID.dolphin, 1); m.add(d); } }
+  else if (k === 'dolphin'){ m = new THREE.Group(); for (let i = 0; i < 12; i++){ const d = fishModel(FISH_BY_ID.dolphin, 1); m.add(d); }
+    /* v404 玩家說每次都看不到海豚：晚上海豚整隻黑掉，身上加一點點亮，晚上也看得出輪廓 */
+    m.traverse(o => { if (o.isMesh && o.material && o.material.emissive){ o.material = o.material.clone(); o.material.emissive = o.material.color.clone().multiplyScalar(0.35); o.material.emissiveIntensity = 1; } }); }
   else m = fishModel(FISH_BY_ID[k], 1);
   const one = k === 'dolphin' ? m.children[0] : m; if (!OW.boxL[k]){ const b = new THREE.Box3().setFromObject(one); OW.boxL[k] = Math.max(0.01, b.max.x - b.min.x); OW.boxH = OW.boxH || {}; OW.boxH[k] = (b.max.y - b.min.y) / OW.boxL[k]; }   /* 身高／身長，用來決定浮在水面時露出多少 */
   const sc = S.len / OW.boxL[k]; if (k === 'dolphin') m.children.forEach(d => d.scale.setScalar(sc)); else m.scale.setScalar(sc);
@@ -1918,6 +1920,13 @@ function owWet(on, breath){ if (!on) return; let w = $('#owWet'); if (!w){ w = d
 function owSong(v){ if (!soundOn || !actx || sfxVol <= 0.01) return; const t = actx.currentTime, vol = 0.05 * v * sfxVol, f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400; f.connect(actx.destination);
   const notes = [[220, 520, 0.9], [480, 180, 0.7], [160, 300, 1.1], [600, 420, 0.5]]; let at = t;
   for (const [a, b, d] of notes){ const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(a, at); o.frequency.exponentialRampToValueAtTime(b, at + d); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, at + d); o.connect(g); g.connect(f); o.start(at); o.stop(at + d + 0.05); at += d + 0.25; } }
+/* v404 海豚、鯨魚真的出現在畫面裡才算「遇到」（以前在你背後經過也跳通知，回頭已經找不到），而且頭上浮一個標籤 8 秒，告訴你在哪裡 */
+function owOnScreen(p){ const v = new THREE.Vector3(p.x, p.y + 0.5, p.z).project(camera); return v.z < 1 && Math.abs(v.x) < 0.95 && Math.abs(v.y) < 0.95; }
+function owMark(e, txt){ if (e.mk) return; const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = 'rgba(255,255,255,0.92)'; c.beginPath(); c.roundRect ? c.roundRect(4, 6, 248, 52, 26) : c.rect(4, 6, 248, 52); c.fill();
+  c.font = 'bold 30px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#1d4f6e'; c.fillText(txt, 128, 33);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true })); sp.scale.set(4, 1, 1); sp.renderOrder = 999; scene.add(sp); e.mk = sp; e.mkT = now(); }
+function owMarkStep(e, h){ if (!e.mk) return; const a = now() - e.mkT; if (a > 8 || !e.m || !e.m.parent){ scene.remove(e.mk); e.mk.material.map.dispose(); e.mk.material.dispose(); e.mk = null; return; }
+  e.mk.position.set(e.m.position.x, e.m.position.y + h + 2 + Math.sin(a * 3) * 0.2, e.m.position.z); e.mk.material.opacity = a > 7 ? 8 - a : 1; }
 function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; toast(`${S.ic} 你遇到了${S.n}！`); shareChip(S); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
   if (Cloud.on && Cloud.sb) festRpc('sea_sighting', { p_kind: k }).then(r => { if (r && r.player) adoptRow(r.player); if (r && r.first) setTimeout(() => toast(`🔭 海上目擊：${S.ic} ${S.n}（💙 +30）`), 1600); }); }
 /* v304 遇到鯨魚、海豚時，畫面上出現「📤 分享這一刻」小按鈕（10 秒），按了用現在的畫面做分享卡片 */
@@ -1946,11 +1955,18 @@ OW.update = function(t){
       if (mine || bp) e.bow = Math.min(1, (e.bow || 0) + 1 / 90); else if (e.bow) e.bow = Math.max(0, e.bow - 1 / 120);
       if (mine !== !!e.bowMine){ e.bowMine = mine; owEmit('owbow', { k: P.cx + ',' + P.cz + ',' + P.W, on: mine ? 1 : 0 }); }
       if (e.bow){ const b = smooth01(e.bow), ox = bp ? bp.fisher.pos.x : mx, oz = bp ? bp.fisher.pos.z : mz, orr = bp ? bp.fisher.rot : me.rot, bx = ox + Math.sin(orr) * 7, bz = oz + Math.cos(orr) * 7; gx += (bx - gx) * b; gz += (bz - gz) * b; gh = gh + ((((orr - gh) % 6.283) + 9.425) % 6.283 - 3.1416) * b; if (b > 0.5 && (!bp || Math.hypot(gx - mx, gz - mz) < 50)) e.seenNear = true; }
-      m.position.set(gx, 0, gz); m.rotation.set(0, gh - Math.PI / 2, 0);
+      /* v404 從岸上看鏡頭只看得到 15 公尺左右的海面，海豚在 40 公尺外經過根本看不到：附近有人時，海豚群會游過來到你前面 9～15 公尺的水面玩一陣子再離開 */
+      { const d0 = Math.hypot(gx - mx, gz - mz), on = !e.bow && u > 4 && u < P.dur - 10 && (e.apX ? Math.hypot(e.apX - mx, e.apZ - mz) < 40 : d0 < 55), tq = now(), dtq = Math.min(0.2, tq - (e.apT || tq)); e.apT = tq;
+        if (on && e.apX == null){ const f = camera.getWorldDirection(new THREE.Vector3()); f.y = 0; if (f.lengthSq() < 1e-4) f.set(Math.sin(me.rot), 0, Math.cos(me.rot)); f.normalize();
+          for (const [a0, r0] of [[0, 9], [0.6, 9], [-0.6, 9], [0, 12], [1, 10], [-1, 10], [0, 15]]){ const c = Math.cos(a0), sn = Math.sin(a0), tx = mx + (f.x * c - f.z * sn) * r0, tz = mz + (f.x * sn + f.z * c) * r0; if (boatWater(tx, tz) && !walkable(tx, tz) && !deckAt(tx, tz)){ e.apX = tx; e.apZ = tz; break; } }
+          if (e.apX == null) e.apX = false; }
+        if (on && e.apX) e.ap = Math.min(1, (e.ap || 0) + dtq / 5); else if (e.ap) e.ap = Math.max(0, e.ap - dtq / 5);
+        if (e.ap){ const b = smooth01(e.ap); gx += (e.apX + Math.sin(u * 0.5) * 2 - gx) * b; gz += (e.apZ + Math.cos(u * 0.4) * 2 - gz) * b; } }
+      m.position.set(gx, waterY(gx, gz, now()), gz); m.rotation.set(0, gh - Math.PI / 2, 0);
       m.children.forEach((dm, i) => { if (i >= P.n){ dm.visible = false; return; } dm.visible = fade > 0.02; const ox = (owR(P.cx, P.cz, P.W, 40 + i) - 0.5) * 9, oz = (owR(P.cx, P.cz, P.W, 60 + i) - 0.5) * 7, ph = u * 2.1 + i * 1.7, arc = Math.sin(ph);
-        dm.position.set(oz, (arc > 0 ? arc * 1.7 - 0.6 : arc * 1.2 - 0.6) * fade + (fade - 1) * 2, ox); dm.rotation.set(0, 0, Math.cos(ph) * 0.65);
+        dm.position.set(oz, (arc > 0 ? arc * 2.3 - 0.45 : arc * 1.0 - 0.45) * fade + (fade - 1) * 2, ox); dm.rotation.set(0, 0, Math.cos(ph) * 0.65);
         if (Math.abs(arc) < 0.06 && Math.cos(ph) < 0 && dm.visible && d < 70 && (e.spl || 0) < u - 0.25){ e.spl = u; const wp = dm.getWorldPosition(new THREE.Vector3()); ripple(wp.x, wp.z, false); } });
-      if (d < 45 && u > 4 && u < P.dur - 4) e.seenNear = true; if (e.seenNear) owSight('dolphin'); continue; }   /* v305：看到的當下就說（以前等牠們走了才跳通知，找不到） */
+      if (d < 45 && u > 4 && u < P.dur - 4 && owOnScreen(m.position)) e.seenNear = true; if (e.seenNear){ if (!OW.seen.has('dolphin')) owMark(e, '🐬 海豚群'); owSight('dolphin'); } owMarkStep(e, 1.6); continue; }   /* v305：看到的當下就說（以前等牠們走了才跳通知，找不到） */
     const Q = owPose(e, u);
     /* 從船底下游過：路徑上 8 公尺內有船，就潛深一點從底下穿過去，船被水流輕輕推一下 */
     if (myBoat && P.k !== 'sperm'){ const bd = Math.hypot(Q.x - mx, Q.z - mz); if (bd < OW_SP[P.k].len * 0.6 + 8 && Q.surf && !e.mug){ Q.y = Math.min(Q.y, -((OW.boxH && OW.boxH[P.k]) || 0.15) * OW_SP[P.k].len * 1.3); Q.ev = Q.ev === 'land' ? null : Q.ev; me.pos.x += Math.sin(P.hd) * 0.4 * (1 / 60); me.pos.z += Math.cos(P.hd) * 0.4 * (1 / 60); } }
@@ -1965,13 +1981,13 @@ OW.update = function(t){
     m.position.set(Q.x, Q.y, Q.z); m.rotation.set(Q.roll, hdNow - Math.PI / 2, Q.pitch); m.visible = !hide;
     if (P.k === 'humpback' && d < 100 && now() - (OW.songAt || 0) > 50){ OW.songAt = now(); owSong(clamp(1 - d / 100, 0.15, 0.7)); }
     const fx = Math.sin(P.hd), fz = Math.cos(P.hd), hx = Q.x + fx * L * 0.32, hz = Q.z + fz * L * 0.32;
-    if (Q.surf && d < 90) photo = true; if (Q.surf && d < 70 && !hide){ const tq = now(); e.surfT = (e.surfT || 0) + Math.min(0.1, tq - (e.surfAt || tq)); e.surfAt = tq; if (e.surfT > 2) e.seenNear = true; }   /* v305：要真的在 70 公尺內、浮在水面 2 秒以上才算看到 */
+    if (Q.surf && d < 90) photo = true; if (Q.surf && d < 70 && !hide && owOnScreen(m.position)){ const tq = now(); e.surfT = (e.surfT || 0) + Math.min(0.1, tq - (e.surfAt || tq)); e.surfAt = tq; if (e.surfT > 2) e.seenNear = true; }   /* v305：要真的在 70 公尺內、浮在水面 2 秒以上才算看到 */
     if (Q.ev === 'blow'){ if (P.k === 'bluewhale') spoutAt(hx, 0.4, hz, 14, true); else if (P.k === 'sperm') spoutAt(Q.x + fx * L * 0.47, 0.4, Q.z + fz * L * 0.47, 8, false, P.hd + 0.6); else spoutAt(hx, 0.4, hz, 9, false); owBlowSnd(P.k, d); if (myBoat && Math.hypot(hx - mx, hz - mz) < 6) owWet(true, true); }
     else if (Q.ev === 'land'){ if (myBoat && d < 90 && !e.luck){ e.luck = true; owBreachLuck(P); } addWave(Q.x, Q.z, P.k === 'bluewhale' ? 1.4 : 1.2); owWet(d < 20, false); for (let i = 0; i < 3; i++) ripple(Q.x + (Math.random() - 0.5) * L * 0.5, Q.z + (Math.random() - 0.5) * L * 0.5, true); spoutAt(Q.x, 0.2, Q.z, 18, false); spoutAt(Q.x + fx * 3, 0.2, Q.z + fz * 3, 16, false); owSplashSnd(true, d); camShake = Math.max(camShake || 0, d < 30 ? 0.45 : d < 60 ? 0.2 : 0); try { if (navigator.vibrate) navigator.vibrate(d < 30 ? 150 : d < 60 ? 60 : 0); } catch(_){} }
     else if (Q.ev === 'slapT'){ const tx = Q.x - fx * L * 0.48, tz = Q.z - fz * L * 0.48; ripple(tx, tz, true); addWave(tx, tz, 0.5); spoutAt(tx, 0.2, tz, 8, false); owSplashSnd(false, d); }
     else if (Q.ev === 'slapP'){ const sx = Q.x + fz * L * 0.3, sz = Q.z - fx * L * 0.3; ripple(sx, sz, false); addWave(sx, sz, 0.25); spoutAt(sx, 0.2, sz, 5, false); owSplashSnd(false, d); }
     else if (Q.ev === 'dive'){ owSlick(Q.x, Q.z, L * 0.45); }
-    if (e.seenNear) owSight(P.k); }   /* v305：看到的當下就跳通知，鯨魚還在眼前 */
+    if (e.seenNear){ if (!OW.seen.has(P.k)) owMark(e, OW_SP[P.k].ic + ' ' + OW_SP[P.k].n); owSight(P.k); } owMarkStep(e, L * 0.25); }   /* v305：看到的當下就跳通知，鯨魚還在眼前 */
   for (const o of OW.slick){ if (o.t <= 0) continue; o.t -= Math.min(0.1, 1 / 30); o.m.material.opacity = 0.32 * clamp(o.t / 30, 0, 1) * clamp((30 - o.t) / 2, 0, 1); o.m.visible = o.t > 0 && !hide; }
   // 📷 鯨魚在水面而且離你不遠的時候，畫面角落出現拍照按鈕
   if (!OW.btn){ OW.btn = document.createElement('button'); OW.btn.id = 'owPhoto'; OW.btn.className = 'panel'; OW.btn.textContent = '📷'; OW.btn.setAttribute('aria-label', '拍鯨魚'); OW.btn.addEventListener('click', () => { try { enterPhoto(); } catch(e){} }); document.body.appendChild(OW.btn); }
@@ -6000,16 +6016,30 @@ function exitHouse(instant){
 }
 /* v251 家具可以用：走近按按鈕。床躺下睡覺、電視開關、燈開關、壁爐生火、鋼琴彈一段、爐台做料理、冰箱和小魚缸看魚、衣櫃換衣服、書櫃看書、書桌翻圖鑑、時鐘看時間、浴缸泡澡、馬桶坐一下、流理台洗手、盆栽澆水 */
 const FURN_USE = { bed:['😴', '躺下睡覺'], dbed:['😴', '躺下睡覺'], bunk:['😴', '躺下睡覺'], tv:['📺', '開電視'], lamp:['💡', '開關燈'], fire:['🔥', '壁爐'], piano:['🎹', '彈鋼琴'],
-  stove:['🍳', '做料理'], fridge:['🧊', '打開冰箱'], tank:['🐟', '看魚'], ward:['👕', '換衣服'], shelf:['📚', '看書'], desk:['📔', '翻圖鑑'], clock:['🕰️', '看時間'], bath:['🛁', '泡澡'], toilet:['🚽', '坐一下'], sink:['🚰', '洗手'], plant:['💧', '澆水'], bigplant:['💧', '澆水'], turtletank:['🐢', '小烏龜'] };
+  stove:['🍳', '做料理'], fridge:['🧊', '打開冰箱'], tank:['🐟', '看魚'], ward:['👕', '換衣服'], shelf:['📚', '看書'], desk:['📔', '翻圖鑑'], clock:['🕰️', '看時間'], bath:['🛁', '泡澡'], toilet:['🚽', '坐一下'], sink:['🚰', '洗手'], plant:['💧', '澆水'], bigplant:['💧', '澆水'], turtletank:['🐢', '看烏龜缸'] };
 function furnBase(o){ const F0 = FURN[o.t]; return F0 ? (F0.base || o.t) : o.t; }
 function nearFurn(){ if (!House.on || !House.furnG || FB.on || mySeat) return null; let best = null, bd = 9;
   for (const m of House.furnG.values()){ const o = m.userData.furn; if (!o) continue; const b = furnBase(o), U = FURN_USE[b] || (FURN[o.t] && FURN[o.t].bed ? FURN_USE.bed : null); if (!U) continue; const r = Math.max(0.55, (FURN[o.t] || {}).rad || 0.6) + 0.9, d = Math.hypot(me.pos.x - m.position.x, me.pos.z - m.position.z); if (d < r && d < bd){ bd = d; best = { o, m, b: FURN[o.t] && FURN[o.t].bed ? 'bed' : b, U }; } }
   return best; }
+function openTurtleTank(o){ let P = $('#ttPanel'); if (!P){ P = document.createElement('div'); P.id = 'ttPanel'; P.className = 'panel'; document.body.appendChild(P); }
+  const hid = House.it && House.it.id, inT = (Pets.home || []).filter(h => h.pen && h.pen.indoor && h.pen.hid === hid && h.pen.fid === o.id), pm = petMine(), K = PET_KINDS.pondturtle;
+  P.innerHTML = ''; const hd = el('div', 'op-h'); hd.appendChild(el('b', '', `🐢 室內烏龜缸（${inT.length} / 5 隻）`)); const x = el('button', 'op-x', '✕'); x.addEventListener('click', () => P.hidden = true); hd.appendChild(x); P.appendChild(hd);
+  const mine = onIsle && onIsle.owner === myIdOrMe();
+  if (!mine) P.appendChild(el('p', 'sub', '這是別人家的烏龜缸，只能看看喔。'));
+  else if (pm && pm.kind === 'pondturtle'){ const put = el('button', 'tbtn', `⬇️ 把身邊的「${esc(pm.name || K.name)}」放進缸裡`); put.addEventListener('click', () => ttMove(null, `🐢 ${esc(pm.name || K.name)}爬進烏龜缸了！`, o)); P.appendChild(put); }
+  else if (pm) P.appendChild(el('p', 'sub', `你現在帶著${esc(PET_KINDS[pm.kind].name)}，烏龜缸只能放小烏龜。`));
+  const ul = el('div', 'op-list');
+  if (!inT.length) ul.appendChild(el('p', 'sub', '缸裡還沒有小烏龜。帶著小烏龜走過來按「放進缸裡」，或在「背包 → 寵物」按「回家」。'));
+  for (const h of inT){ const w = (Pets.list || []).find(p => p.id === h.wid) || {}, it = el('div', 'op-it');
+    it.innerHTML = `<span class="op-ic">${K.icon}</span><span class="op-t"><b>${esc(h.name || K.name)}</b><small>${esc(petVarName('pondturtle', w.var || '') || '')}${w.love != null ? `・親密度 ${w.love}` : ''}</small></span>`;
+    if (mine){ const bt = el('button', 'tbtn', '拿出來'); bt.disabled = w.price != null; bt.title = w.price != null ? '掛在市集賣的不能帶出門' : ''; bt.addEventListener('click', () => ttMove(h.wid, `🐢 把${esc(h.name || K.name)}拿出來了，牠會跟著你走`, o)); it.appendChild(bt); }
+    ul.appendChild(it); }
+  P.appendChild(ul); P.hidden = false; }
+async function ttMove(id, msg, o){ const r = Cloud.on && Cloud.sb ? await petRpc('pet_out', { p_id: id }) : (Pets.list || []).map(p => Object.assign({}, p, { out: id != null && p.id === id }));
+  if (!r) return; Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); toast(msg); setTimeout(() => { const P = $('#ttPanel'); if (P && !P.hidden) openTurtleTank(o); }, 120); }
 function useFurn(n){ const { o, m, b } = n, P = m.position, say = (x, s2) => me.say(x, 'emote', s2 || 3);
-  /* v399 玩家問「怎麼把小烏龜放進烏龜缸」：帶著小烏龜走到烏龜缸旁邊按「🐢 小烏龜」，牠就會回家住進缸裡 */
-  if (b === 'turtletank'){ const pm = petMine();
-    if (pm && pm.kind === 'pondturtle'){ (async () => { const r = Cloud.on && Cloud.sb ? await petRpc('pet_out', { p_id: null }) : (Pets.list || []).map(p => Object.assign({}, p, { out: false })); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); toast(`🐢 ${esc(pm.name || '小烏龜')}爬進烏龜缸了！想再帶牠出門，到「背包 → 寵物」按「帶出門」`); } })(); return; }
-    const n0 = (Pets.home || []).filter(h => h.pen && h.pen.indoor).length; toast(n0 ? `🐢 缸裡住著 ${n0} 隻小烏龜（每個缸最多 5 隻）` : '🐢 帶著小烏龜走到這裡按「🐢 小烏龜」就能放進來；在「背包 → 寵物」按「回家」的小烏龜也會住進來'); return; }
+  /* v405 玩家想要：走到烏龜缸旁邊按一下，跳出一個畫面看缸裡有哪幾隻小烏龜，可以一隻一隻拿出來（帶出門），也可以把身邊的小烏龜放進去 */
+  if (b === 'turtletank'){ openTurtleTank(o); return; }
   const lieOn = (y, kind) => { const c = { x: P.x, z: P.z, face: o.r, y, room: true, furnLie: kind }; sitDown(c); if (kind !== 'bath') me.sitting = false; startEmote(me, kind === 'bath' ? 'sitdown' : 'sleep');   /* 躺著要用躺下的動作，不是坐著 */ myEmote = { k: kind === 'bath' ? 'sitdown' : 'sleep', at: Date.now() }; pushPresence(true); };
   if (b === 'bed'){ lieOn(P.y + 0.42, 'bed'); say('💤', 4); toast('😴 躺下來休息…（按「起來」或搖桿就起來）'); return; }
   if (b === 'bath'){ lieOn(P.y + 0.15, 'bath'); say('🛁', 4); for (let i = 0; i < 3; i++) setTimeout(() => FX.emit(P.x, P.y + 0.7, P.z, 10, '#ffffff', 0.5, 1.2, 1.2), i * 500); toast('🛁 好舒服～'); return; }
@@ -8453,7 +8483,7 @@ async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.for
   /* v386 有圍欄就住進對的圍欄（每個 5 隻），其他的在島上閒晃；便宜手機最多畫 18 隻 */
   const penCat = it => it.indoor ? 'tank' : ISLE_ITEMS[it.t].pen;
   const room = new Map(pens.map(it => [it, 5])), byCat = c => pens.filter(it => penCat(it) === c && room.get(it) > 0)[0];
-  Pets.home.forEach(petFree); let free = 0; Pets.home = list.slice(0, 18).map(w => { const pt = petMake(w), pen = byCat(PET_CAT(w.kind));
+  Pets.home.forEach(petFree); let free = 0; Pets.home = list.slice(0, 18).map(w => { const pt = petMake(w), pen = byCat(PET_CAT(w.kind)); pt.wid = w.id;
     if (pen && pen.indoor){ room.set(pen, room.get(pen) - 1); pt.pen = pen; pt.wander = { x: 0, z: 0, at: 0 }; return pt; }
     if (pen){ room.set(pen, room.get(pen) - 1); pt.pen = pen; const p = penSpot(pen); pt.pos.set(p.x, p.y, p.z); pt.wander = { x: p.x, z: p.z, at: 0 }; return pt; }
     const i = free++, x = ISLE.x + 3 + (i % 3) * 1.5, z = ISLE.z + 4 + Math.floor(i / 3) * 1.2; pt.pos.set(x, groundHeight(x, z), z); pt.wander = { x, z, at: 0 }; return pt; }); }
@@ -13666,7 +13696,7 @@ function renderTab(){
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
-      '🐢 把小烏龜放進屋子裡的烏龜缸：帶著小烏龜走到缸旁邊，按右下的「🐢 小烏龜」，牠就會爬進去住（或在「背包 → 寵物」按「回家」）。',
+      '🐢 室內烏龜缸：走到缸旁邊按右下的「🐢 看烏龜缸」，會跳出缸裡有哪幾隻小烏龜，按「拿出來」就帶牠出門；身邊帶著小烏龜的話，也可以按「放進缸裡」。',
       '寵物名額：一般 3 隻什麼都能養。在小島「🔨 蓋東西」→「🐾 寵物圍欄」可以買陸地圍欄（貓、柴犬、海鷗）、海水池（水獺、寄居蟹、小海龜、章魚、河豚）、烏龜缸（小烏龜），各 1500 金幣、每個多 5 隻那一類的名額，數量不限（算在小島 60 件東西裡）。待在家的寵物會在圍欄裡玩，來參觀的人也看得到。圍欄裡還有寵物時不能拆。',
       '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。'
     ]);
@@ -13695,6 +13725,7 @@ function renderTab(){
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
+      '🐬 海豚群游到附近時會靠過來，在你前面的水面跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。',
       '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨（不常見，划船在外海逛大約 20 分鐘遇到一次鯨魚），沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。'
     ]);
     sec('🌲 苔森之島', [
