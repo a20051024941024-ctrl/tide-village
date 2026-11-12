@@ -23,6 +23,22 @@
 <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
+<!-- v403 進入畫面：遊戲把村子蓋好、模型載完、連上伺服器、畫面暖機完才掀開（js/game.js 的 Boot） -->
+<div id="loadScr" style="position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:linear-gradient(#8fd3f4,#2f89c7 70%,#1d5f8a);color:#fff;font-family:system-ui,'Noto Sans TC',sans-serif;text-align:center;transition:opacity .45s;touch-action:none">
+  <img src="icons/icon-192.png" alt="" width="96" height="96" style="border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.25)">
+  <div style="font-size:26px;font-weight:800;letter-spacing:2px;text-shadow:0 2px 6px rgba(0,0,0,.25)">潮汐釣魚村</div>
+  <div style="width:min(260px,64vw);height:10px;border-radius:6px;background:rgba(255,255,255,.3);overflow:hidden"><div id="loadBar" style="width:8%;height:100%;border-radius:6px;background:#fff6c8;transition:width .35s"></div></div>
+  <div id="loadTxt" style="font-size:14px;opacity:.95;min-height:20px">正在準備釣具…</div>
+</div>
+<script>
+(function(){ var S = document.getElementById('loadScr'), B = document.getElementById('loadBar'), T = document.getElementById('loadTxt'), gone = false, top = 8;
+  window.__loadStep = function(p, t){ if (gone) return; if (p > top){ top = p; B.style.width = Math.min(100, p) + '%'; } if (t && T.textContent !== t) T.textContent = t; };
+  window.__loadDone = function(){ if (gone) return; gone = true; B.style.width = '100%'; S.style.opacity = '0'; S.style.pointerEvents = 'none'; setTimeout(function(){ if (S.parentNode) S.parentNode.removeChild(S); }, 500); };
+  /* 保險：不管發生什麼事，25 秒後一定掀開（不會把人卡在這個畫面）；遊戲出錯也馬上掀開，才看得到錯誤訊息 */
+  setTimeout(window.__loadDone, 25000); addEventListener('error', function(){ setTimeout(window.__loadDone, 300); });
+  var n = 0, iv = setInterval(function(){ if (gone || window.__gameStarted){ clearInterval(iv); return; } n++; window.__loadStep(Math.min(30, 8 + n * 2)); }, 400);
+})();
+</script>
 
 <canvas id="c" tabindex="0" aria-label="潮汐釣魚村 3D 場景"></canvas>
 <div id="labels"></div>

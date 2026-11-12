@@ -8,6 +8,10 @@ import { FISH_MESH } from './fish-models.js';
 import * as FishGen from './fish-gen.js';
 import { SPECS as FISH_SPECS } from './fish-specs.js';
 window.__gameStarted = true;
+/* v403 進入畫面（index.html 的 #loadScr）：該跑的都跑完才掀開 —— 模型載完、伺服器的紀錄讀回來、畫面先畫過幾十張（第一次畫要編譯著色器，會卡），玩家一進來就是順的 */
+const Boot = { t0: performance.now(), assets: false, cloud: false, okAt: 0, done: false, step(p, t){ try { window.__loadStep && window.__loadStep(p, t); } catch(e){} } };
+THREE.DefaultLoadingManager.onStart = () => { Boot.assets = false; Boot.sawLoad = true; }; THREE.DefaultLoadingManager.onLoad = () => { Boot.assets = true; }; THREE.DefaultLoadingManager.onError = () => {};
+Boot.step(34, '正在蓋村子…');
 // 語言（設定裡選）：簡體中文時用 OpenCC 的對照表把畫面上的字、看板上的字都轉成簡體（載不到就照原本的繁體）
 let OCC = null;
 try { const lng = localStorage.getItem('tide.lang'); if (lng === '"cn"' || lng === '"en"' || lng === '"id"'){ const m = lng === '"en"' ? await import('./en.js') : lng === '"id"' ? await import('./id.js') : await import('./zh-cn.js'); OCC = m.toCN || m.toEN || m.toID;   /* v277：印尼文（beta）用 js/id.js */   /* v214：英文（beta）用 js/en.js 的對照表 */   /* 對照表放在自己的網站上（js/zh-cn.js，OpenCC 的資料），不用連外部網站 */
@@ -14815,9 +14819,16 @@ function frame(){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+{ const fStart = () => frameNo; let f0 = null;
+  const iv = setInterval(() => { if (Boot.done){ clearInterval(iv); return; } const el = (performance.now() - Boot.t0) / 1000;
+    if (el > 1.5 && !Boot.sawLoad) Boot.assets = true;   /* 模型都在快取裡、一開始就載完的情況 */
+    const ready = Boot.assets && Boot.cloud; if (ready && f0 == null) f0 = fStart(); if (!ready) f0 = null;
+    const warm = f0 == null ? 0 : Math.min(1, (fStart() - f0) / 24);
+    Boot.step(40 + (Boot.assets ? 20 : Math.min(15, el * 3)) + (Boot.cloud ? 25 : Math.min(18, el * 2.5)) + warm * 15, !Boot.assets ? '正在搬魚和道具…' : !Boot.cloud ? '正在跟伺服器拿你的紀錄…' : '快好了，正在整理畫面…');
+    if ((ready && warm >= 1) || el > 14){ Boot.done = true; clearInterval(iv); try { window.__loadDone && window.__loadDone(); } catch(e){} } }, 120); }
 logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋竿。', true);
 initSocial().catch(() => {});
-cloudInit();
+cloudInit().finally(() => { Boot.cloud = true; });
 initUpdateCheck();
 // 點左上角的頭像或名字 → 打開／收起更多功能（等級旁邊的 Lv 還是打開成就）
 (function(){ for (const s of ['#brand .mark', '#brand h1']){ const e = document.querySelector(s); if (!e) continue; e.style.cursor = 'pointer'; e.setAttribute('role', 'button'); e.title = '更多功能';
