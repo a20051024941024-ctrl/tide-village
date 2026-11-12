@@ -6698,8 +6698,8 @@ function divePickSpawn(){ DPICK.list = []; if (!Dive.group || Dive.site === 'isl
   const q = dvQuest(); setTimeout(() => { if (Dive.on) toast(q.done ? '📋 今天的潛水委託已經完成了' : `📋 今天的潛水委託：${q.txt}（${q.have}／${q.need}），完成有 🪙300、💙2`); }, 2600); }
 function divePickTick(){ if (!DPICK.list.length || Dive.site === 'isle') return; const cs = []; for (const p of DPICK.list) if (p.c && !p.gone) cs.push(p.c); if (cs.length) critTick(cs); for (const p of DPICK.list) if (p.c){ p.x = p.c.g.position.x; p.z = p.c.g.position.z; } }
 function nearPick(){ if (!Dive.on || Dive.site === 'isle' || !DPICK.list.length) return null; let best = null, bd = 1.5; for (const p of DPICK.list){ if (p.gone) continue; const d = Math.hypot(me.pos.x - p.x, me.pos.z - p.z); if (d < bd && me.baseY - diveBed(p.x, p.z) < 2.8){ bd = d; best = p; } } return best; }
-function pickLabel(p){ return p.kind === 'trash' ? ['撿起來', '🗑️ 海底垃圾・💙+1'] : p.kind === 'mat' ? ['撿起來', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・帶回去擺`] : ['抓！', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・用手抄網`]; }
-async function pickDo(p){ if (DPICK.busy || p.gone) return; const d = dvState(); if ((d[p.kind] || 0) >= DPICK.cap[p.kind]){ toast(p.kind === 'crit' ? '今天抓夠多了，明天再來（一天最多 10 隻）' : p.kind === 'mat' ? '今天撿夠多了，明天再來（一天最多 15 個）' : '今天撿夠多了，明天再來（一天最多 20 個）'); return; }
+function pickLabel(p){ if (p.kind === 'crit' && !hasDive('dive_net')) return ['要手抄網', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・商店有賣 🪙800`]; return p.kind === 'trash' ? ['撿起來', '🗑️ 海底垃圾・💙+1'] : p.kind === 'mat' ? ['撿起來', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・帶回去擺`] : ['抓！', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・用手抄網`]; }
+async function pickDo(p){ if (DPICK.busy || p.gone) return; if (p.kind === 'crit' && !hasDive('dive_net')){ toast('🥅 要有手抄網才抓得到小生物。商店的「🤿潛水」分頁有賣（🪙800）'); return; } const d = dvState(); if ((d[p.kind] || 0) >= DPICK.cap[p.kind]){ toast(p.kind === 'crit' ? '今天抓夠多了，明天再來（一天最多 10 隻）' : p.kind === 'mat' ? '今天撿夠多了，明天再來（一天最多 15 個）' : '今天撿夠多了，明天再來（一天最多 20 個）'); return; }
   if (p.kind === 'crit' && Math.random() < 0.35){ p.c.hx += (Math.random() - 0.5) * 6; p.c.hz += (Math.random() - 0.5) * 6; p.c.ph += 2; try { SFX.fail(); } catch(e){} flash('💨 溜走了！再靠近一次', 1.1); buzz(30); return; }
   DPICK.busy = true; let ok = true;
   if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('dive_pick', { p_kind: p.kind, p_item: p.item || null }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ ok = false; toast(cloudErrMsg(e)); } }
@@ -9127,6 +9127,7 @@ const DIVE_GEAR = [
   { id:'dive_tank4', name:'專業雙氧氣瓶', icon:'🫧', price:7000, o2:220, need:'dive_tank3', desc:'氧氣變成 220 秒，可以慢慢逛整片珊瑚礁。' },
   { id:'dive_fins',  name:'競速蛙鞋',     icon:'🦶', price:900,  need:'dive_suit', desc:'在水裡游得快 35%。' },
   { id:'dive_light', name:'潛水燈',       icon:'🔦', price:600,  need:'dive_suit', desc:'晚上潛水也看得清楚。' },
+  { id:'dive_net',   name:'手抄網',       icon:'🥅', price:800,  need:'dive_suit', desc:'潛水時可以抓海底的小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶…），帶回自己小島的海底養。' },   /* v390 */
 ];
 const DIVE_BY_ID = Object.fromEntries(DIVE_GEAR.map(g => [g.id, g]));
 var Dive = { on:false, up:false, down:false, o2:0, o2max:60, group:null, fish:[], schools:[], loot:[], kelp:null, bubbles:null, shafts:[], seen:new Set(), back:null, warned:0 };
@@ -13355,7 +13356,7 @@ function renderTab(){
     sec('🎣 釣魚', [
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
-      '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，用手抄網抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
+      '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
       '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',

@@ -4400,7 +4400,6 @@
 "造景材料放在背包裡。回自己小島的海底就可以拿出來擺": "The material is in your bag. Place it on your own island seabed",
 "📋 潛水委託": "📋 Dive commission",
 "📋 潛水委託完成！🪙+300　💙+2": "📋 Dive commission complete! 🪙+300　💙+2",
-"🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，用手抄網抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。": "🤿 New things to do while diving: at the public dive sites (not your own island seabed) you can find three kinds of things on the seabed; swim to one and tap the button: 🗑️ trash (💙 +1 each, up to 20 a day), ✨ scenery materials (shell, starfish, small rock, seagrass, coral, sponge, anemone; up to 15 a day) and small creatures (little shrimp, little crab, sea slug, baby clownfish, baby seahorse, little puffer; caught with the hand net, they sometimes slip away; up to 10 a day). Materials and creatures go into your bag; place them on your own island seabed, where the creatures swim around by themselves. There is also a daily \"dive commission\" (trash, materials and creatures take turns); finishing it gives 🪙300 and 💙2.",
 "收籠子": "Collect trap",
 "🧺 有東西了！": "🧺 Something inside!",
 "籠子": "Trap",
@@ -4439,5 +4438,11 @@
 "🧺 要先往下游到貼近海底，才能放籠子": "🧺 Swim down close to the seabed to set a trap",
 "。已經放的：": ". Already set: ",
 "🧺 再按一次「籠子」，就放在這裡（🪙50，4 小時後回來收螃蟹、蝦、章魚）": "🧺 Tap \"Trap\" again to set it here (🪙50; come back in 4 hours for crabs, shrimp and octopus)",
-"🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。": "🧺 Traps: dive at a public dive site (reef, wreck, offshore, harbor, sea cave). Swim close to the seabed and tap \"🧺 Trap\" in the bottom bar twice to set it (🪙50). Four hours later go back to the same site, swim under the red float and tap \"Collect trap\": 1–3 crabs, shrimp, squid, eels, lobsters or octopus go straight into your tank. Up to 2 traps at a time."
+"🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。": "🧺 Traps: dive at a public dive site (reef, wreck, offshore, harbor, sea cave). Swim close to the seabed and tap \"🧺 Trap\" in the bottom bar twice to set it (🪙50). Four hours later go back to the same site, swim under the red float and tap \"Collect trap\": 1–3 crabs, shrimp, squid, eels, lobsters or octopus go straight into your tank. Up to 2 traps at a time.",
+"手抄網": "Hand net",
+"潛水時可以抓海底的小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶…），帶回自己小島的海底養。": "Lets you catch small seabed creatures while diving (little shrimp, crabs, sea slugs, baby clownfish…) to keep on your own island seabed.",
+"要手抄網": "Need a net",
+"・商店有賣 🪙800": "・sold in the shop 🪙800",
+"🥅 要有手抄網才抓得到小生物。商店的「🤿潛水」分頁有賣（🪙800）": "🥅 You need a hand net to catch small creatures. The shop's \"🤿 Diving\" tab sells one (🪙800)",
+"🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。": "🤿 New things to do while diving: at the public dive sites (not your own island seabed) you can find three kinds of things on the seabed; swim to one and tap the button: 🗑️ trash (💙 +1 each, up to 20 a day), ✨ scenery materials (shell, starfish, small rock, seagrass, coral, sponge, anemone; up to 15 a day) and small creatures (little shrimp, little crab, sea slug, baby clownfish, baby seahorse, little puffer; you need the hand net (🪙800, shop's Diving tab) to catch them, and they sometimes slip away; up to 10 a day). Materials and creatures go into your bag; place them on your own island seabed, where the creatures swim around by themselves. There is also a daily \"dive commission\" (trash, materials and creatures take turns); finishing it gives 🪙300 and 💙2."
 }

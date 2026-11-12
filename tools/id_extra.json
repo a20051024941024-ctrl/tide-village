@@ -4381,7 +4381,6 @@
 "造景材料放在背包裡。回自己小島的海底就可以拿出來擺": "Bahannya ada di tas. Letakkan di dasar laut pulaumu",
 "📋 潛水委託": "📋 Tugas selam",
 "📋 潛水委託完成！🪙+300　💙+2": "📋 Tugas selam selesai! 🪙+300　💙+2",
-"🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，用手抄網抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。": "🤿 Hal baru saat menyelam: di lokasi selam umum (bukan dasar laut pulaumu) ada tiga jenis benda di dasar laut; berenang mendekat lalu tekan tombol: 🗑️ sampah (💙 +1, maks. 20 sehari), ✨ bahan lanskap (kerang, bintang laut, batu kecil, lamun, karang, spons, anemon; maks. 15 sehari), dan makhluk kecil (udang kecil, kepiting kecil, siput laut, bayi ikan badut, bayi kuda laut, buntal kecil; ditangkap dengan jaring tangan, kadang lolos; maks. 10 sehari). Bahan dan makhluk masuk ke tas; letakkan di dasar laut pulaumu, makhluknya akan berenang sendiri. Ada juga \"tugas selam\" harian (sampah, bahan, makhluk bergiliran); menyelesaikannya memberi 🪙300 dan 💙2.",
 "收籠子": "Ambil perangkap",
 "🧺 有東西了！": "🧺 Ada isinya!",
 "籠子": "Perangkap",
@@ -4420,5 +4419,11 @@
 "🧺 要先往下游到貼近海底，才能放籠子": "🧺 Berenang ke dekat dasar laut untuk memasang perangkap",
 "。已經放的：": ". Sudah dipasang: ",
 "🧺 再按一次「籠子」，就放在這裡（🪙50，4 小時後回來收螃蟹、蝦、章魚）": "🧺 Tekan \"Perangkap\" lagi untuk memasang di sini (🪙50; kembali 4 jam lagi untuk kepiting, udang, dan gurita)",
-"🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。": "🧺 Perangkap: menyelam di lokasi selam umum (karang, kapal karam, lepas pantai, pelabuhan, gua laut). Berenang ke dekat dasar laut lalu tekan \"🧺 Perangkap\" di bilah bawah dua kali untuk memasang (🪙50). Empat jam kemudian kembali ke lokasi yang sama, berenang ke bawah pelampung merah lalu tekan \"Ambil perangkap\": 1–3 kepiting, udang, cumi, belut, lobster, atau gurita langsung masuk akuarium. Maks. 2 perangkap sekaligus."
+"🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。": "🧺 Perangkap: menyelam di lokasi selam umum (karang, kapal karam, lepas pantai, pelabuhan, gua laut). Berenang ke dekat dasar laut lalu tekan \"🧺 Perangkap\" di bilah bawah dua kali untuk memasang (🪙50). Empat jam kemudian kembali ke lokasi yang sama, berenang ke bawah pelampung merah lalu tekan \"Ambil perangkap\": 1–3 kepiting, udang, cumi, belut, lobster, atau gurita langsung masuk akuarium. Maks. 2 perangkap sekaligus.",
+"手抄網": "Jaring tangan",
+"潛水時可以抓海底的小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶…），帶回自己小島的海底養。": "Untuk menangkap makhluk kecil di dasar laut saat menyelam (udang kecil, kepiting, siput laut, bayi ikan badut…) dan memeliharanya di dasar laut pulaumu.",
+"要手抄網": "Perlu jaring",
+"・商店有賣 🪙800": "・dijual di toko 🪙800",
+"🥅 要有手抄網才抓得到小生物。商店的「🤿潛水」分頁有賣（🪙800）": "🥅 Perlu jaring tangan untuk menangkap makhluk kecil. Dijual di tab \"🤿 Selam\" di toko (🪙800)",
+"🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。": "🤿 Hal baru saat menyelam: di lokasi selam umum (bukan dasar laut pulaumu) ada tiga jenis benda di dasar laut; berenang mendekat lalu tekan tombol: 🗑️ sampah (💙 +1, maks. 20 sehari), ✨ bahan lanskap (kerang, bintang laut, batu kecil, lamun, karang, spons, anemon; maks. 15 sehari), dan makhluk kecil (udang kecil, kepiting kecil, siput laut, bayi ikan badut, bayi kuda laut, buntal kecil; perlu jaring tangan (🪙800, tab Selam di toko) untuk menangkapnya, dan kadang lolos; maks. 10 sehari). Bahan dan makhluk masuk ke tas; letakkan di dasar laut pulaumu, makhluknya akan berenang sendiri. Ada juga \"tugas selam\" harian (sampah, bahan, makhluk bergiliran); menyelesaikannya memberi 🪙300 dan 💙2."
 }
