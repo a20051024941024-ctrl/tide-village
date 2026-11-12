@@ -9793,14 +9793,15 @@ function toteMask(id){ if (TOTE.mask[id]) return TOTE.mask[id]; const f = FISH_B
 function toteStamp(id, col){ const m = toteMask(id); if (!m) return null; const t = document.createElement('canvas'); t.width = m.width; t.height = m.height; const x = t.getContext('2d'); x.drawImage(m, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, t.width, t.height); return t; }
 /* 畫一個袋子：W×H 的畫布，印的範圍在中間（px, py, pw, ph） */
 /* 照片的裁切：orig 原本的比例、sq 正方形、tall 直的（4:5）；cx 是主角在照片裡的左右位置 */
-function totePhotoRect(it){ const im = TOTE.photo, W = im.width, H = im.height, ar = it.crop === 'sq' ? 1 : it.crop === 'tall' ? 0.8 : W / H, sw = Math.min(W, H * ar), sh = sw / ar, sx = clamp((it.cx == null ? 0.5 : it.cx) * W - sw / 2, 0, W - sw), sy = (H - sh) / 2; return { sx, sy, sw, sh, ar }; }
+function totePhotoRect(it){ const im = TOTE.photo, W = im.width, H = im.height, ar = it.crop === 'full' ? (TOTE.P ? TOTE.P.w / TOTE.P.h : 0.96) : it.crop === 'sq' ? 1 : it.crop === 'tall' ? 0.8 : W / H, sw = Math.min(W, H * ar), sh = sw / ar, sx = clamp((it.cx == null ? 0.5 : it.cx) * W - sw / 2, 0, W - sw), sy = (H - sh) / 2; return { sx, sy, sw, sh, ar }; }
 function totePhotoPaint(c, it, w){ const im = TOTE.photo, R = totePhotoRect(it), h = w / R.ar, fr = it.fr || 0, pad = fr === 1 ? w * 0.045 : fr === 2 ? w * 0.06 : 0, bot = fr === 2 ? w * 0.2 : pad;
   if (fr === 1 || fr === 2){ c.fillStyle = '#ffffff'; c.fillRect(-w / 2 - pad, -h / 2 - pad, w + pad * 2, h + pad + bot); }
   c.save(); if (fr === 3){ c.beginPath(); c.roundRect(-w / 2, -h / 2, w, h, w * 0.08); c.clip(); } if (it.br){ try { c.filter = 'brightness(1.35) saturate(1.1)'; } catch(e){} } c.drawImage(im, R.sx, R.sy, R.sw, R.sh, -w / 2, -h / 2, w, h); c.restore(); return { w: w + pad * 2, h: h + pad + bot, oy: (bot - pad) / 2 }; }
 /* 一鍵版型：把照片、名字、日期排好 */
-const TOTE_TPL = [['大照片', 'sq', 1, 0.86, 0.4], ['拍立得', 'sq', 2, 0.74, 0.4], ['直式海報', 'tall', 3, 0.8, 0.42], ['橫幅', 'orig', 1, 0.92, 0.4]];
+const TOTE_TPL = [['大照片', 'sq', 1, 0.86, 0.4], ['拍立得', 'sq', 2, 0.74, 0.4], ['直式海報', 'tall', 3, 0.8, 0.42], ['橫幅', 'orig', 1, 0.92, 0.4], ['滿版', 'full', 0, 1, 0.5]];   /* v408 滿版：照片裁成跟可印範圍一樣的形狀，整面鋪滿（玩家問「照片能用整個的嗎」） */
 function toteTpl(k){ const st = toteState(), ph = st.items.find(it => it.k === 'p'), T = TOTE_TPL[k]; if (!ph || !T) return; const d = new Date(), date = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`, nm = (typeof nickname === 'string' && nickname) || '';
-  ph.crop = T[1]; ph.fr = T[2]; ph.x = 0.5; ph.r = 0; st.tpl = k; const ar = totePhotoRect(ph).ar, q = TOTE.P ? TOTE.P.w / TOTE.P.h : 0.96, pt = T[2] === 1 ? 0.045 : T[2] === 2 ? 0.06 : 0, pb = T[2] === 2 ? 0.2 : pt, txt = k === 1 ? 0 : (nm ? 0.11 : 0) + 0.075;
+  ph.crop = T[1]; ph.fr = T[2]; ph.x = 0.5; ph.r = 0; st.tpl = k;
+  if (T[1] === 'full'){ ph.s = 1; ph.y = 0.5; st.items = [ph]; st.sel = -1; toteSave(); if (TOTE.cv) toteDraw(TOTE.cv, true); return; } const ar = totePhotoRect(ph).ar, q = TOTE.P ? TOTE.P.w / TOTE.P.h : 0.96, pt = T[2] === 1 ? 0.045 : T[2] === 2 ? 0.06 : 0, pb = T[2] === 2 ? 0.2 : pt, txt = k === 1 ? 0 : (nm ? 0.11 : 0) + 0.075;
   let sz = T[3]; const total = z => (z / ar + (pt + pb) * z) * q + txt; while (sz > 0.3 && total(sz) > 0.92) sz *= 0.96;   /* 太高就縮小，照片、邊框和文字都要留在袋子裡 */
   const y0 = Math.max(0.04, (1 - total(sz)) / 2 - 0.03), hPhoto = sz / ar * q; ph.s = sz; ph.y = y0 + pt * sz * q + hPhoto / 2; const yb = y0 + (sz / ar + (pt + pb) * sz) * q;
   st.items = [ph];
@@ -9848,7 +9849,7 @@ function renderTote(body){ const st = toteState();
   pick('👜 袋子的顏色', TOTE.bags, 'bag'); pick('🎨 顏料的顏色', TOTE.inks, 'ink');
   { const ph = st.items.find(it => it.k === 'p'); if (TOTE.photo && ph){ const seg = (title, list, cur, fn) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); const sg = el('div', 'seg'); sg.style.flexWrap = 'wrap'; list.forEach(([n, v]) => { const b = el('button', 'tbtn' + (cur === v ? '' : ' ghost'), n); b.addEventListener('click', () => { fn(v); toteSave(); renderTab(); }); sg.appendChild(b); }); f.appendChild(sg); body.appendChild(f); return sg; };
       seg('✨ 一鍵排版', TOTE_TPL.map((t, i) => [t[0], i]), st.tpl, v => toteTpl(v));
-      const cs = seg('✂️ 照片的形狀', [['正方形', 'sq'], ['直的', 'tall'], ['原本的', 'orig']], ph.crop || 'orig', v => { ph.crop = v; });
+      const cs = seg('✂️ 照片的形狀', [['正方形', 'sq'], ['直的', 'tall'], ['原本的', 'orig'], ['滿版', 'full']], ph.crop || 'orig', v => { ph.crop = v; });
       if ((ph.crop || 'orig') !== 'orig'){ for (const [n, d] of [['← 主角往左', 0.07], ['主角往右 →', -0.07]]){ const b = el('button', 'tbtn ghost', n); b.addEventListener('click', () => { ph.cx = clamp((ph.cx == null ? 0.5 : ph.cx) + d, 0.1, 0.9); toteSave(); toteDraw(cv, true); }); cs.appendChild(b); } }
       seg('🖼️ 邊框', [['沒有', 0], ['白邊', 1], ['拍立得', 2], ['圓角', 3]], ph.fr || 0, v => { ph.fr = v; });
       seg('☀️ 亮度', [['原本', 0], ['調亮', 1]], ph.br ? 1 : 0, v => { ph.br = v; }); } }
