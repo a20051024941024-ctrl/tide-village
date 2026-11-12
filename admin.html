@@ -87,7 +87,7 @@ function playerActions(uid, name){
   return w;
 }
 
-const TABS = [['home', '總覽'], ['reports', '檢舉'], ['players', '找玩家'], ['muted', '禁言中'], ['designs', '設計'], ['board', '留言板'], ['log', '紀錄']];
+const TABS = [['home', '總覽'], ['reports', '檢舉'], ['players', '找玩家'], ['muted', '禁言中'], ['designs', '設計'], ['board', '留言板'], ['codes', '兌換碼'], ['log', '紀錄']];
 function renderTabs(){ const n = document.createElement('nav'); n.className = 'tabs';
   for (const [k, l] of TABS){ const b = document.createElement('button'); b.setAttribute('aria-pressed', String(tab === k)); b.innerHTML = esc(l) + (k === 'reports' && counts.reports_open ? `<span class="badge">${counts.reports_open}</span>` : ''); b.addEventListener('click', () => { tab = k; try { localStorage.setItem('tide.adminTab', k); } catch(e){} render(); }); n.appendChild(b); }
   return n; }
@@ -149,6 +149,13 @@ async function render(){
       for (const p of list){ const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<div class="row"><div class="grow"><span class="k">${esc(p.name)}</span> ${p.hidden ? '<span class="chip bad">收起來了</span>' : ''}${p.n ? `<span class="chip warn">檢舉 ${p.n}</span>` : ''} <span class="sub">${when(p.at)}</span></div></div><div class="chat">${esc(p.body)}</div>`;
         const r = document.createElement('div'); r.className = 'row'; const b = document.createElement('button'); b.className = 'b ' + (p.hidden ? '' : 'd'); b.textContent = p.hidden ? '放回去（清掉檢舉）' : '收起來';
         b.addEventListener('click', () => act(b, () => rpc('admin_board_hide', { p_id: p.id, p_hidden: !p.hidden, p_note: '' }), p.hidden ? '已放回' : '已收起來')); r.appendChild(b); c.appendChild(r); c.appendChild(playerActions(p.uid, p.name)); body.appendChild(c); }
+    }
+    if (tab === 'codes'){   /* v391 兌換碼：給實體活動的小卡用（玩家在遊戲的 設定 → 兌換碼 輸入） */
+      const c = document.createElement('div'); c.className = 'card'; c.innerHTML = '<b>產生新的兌換碼</b><p class="sub">每組碼給 🪙300、💙5 和一面「版畫小旗」。同一個人同一組碼只能用一次。這是單向贈送，不能拿遊戲裡的東西換實體商品或錢。</p><div class="row" style="flex-wrap:wrap;gap:8px"><label>幾組 <input id="rcN" type="number" min="1" max="200" value="10" style="width:70px"></label><label>每組可以用幾次 <input id="rcM" type="number" min="1" value="1" style="width:70px"></label><label>幾天後過期 <input id="rcD" type="number" min="0" value="90" style="width:70px"></label><label class="grow">備註 <input id="rcT" type="text" maxlength="40" placeholder="例如：實習商店 11 月" style="width:100%"></label></div><div id="rcOut"></div>';
+      const mkb = document.createElement('button'); mkb.className = 'b p'; mkb.textContent = '產生'; mkb.addEventListener('click', async () => { mkb.disabled = true; try { const codes = await rpc('admin_redeem_make', { p_n: +$('#rcN').value || 1, p_note: $('#rcT').value.trim(), p_max: +$('#rcM').value || 1, p_days: +$('#rcD').value || 0 }); $('#rcOut').innerHTML = '<p class="sub">新產生的（可以整段複製去印小卡）：</p><pre>' + codes.map(esc).join('\n') + '</pre>'; toast('產生了 ' + codes.length + ' 組'); } catch(e){ toast('失敗：' + e.message); } mkb.disabled = false; }); c.querySelector('.row').appendChild(mkb); body.appendChild(c);
+      const list = await rpc('admin_redeem_list', { p_limit: 300 }); const t = document.createElement('div'); t.className = 'card';
+      t.innerHTML = list.length ? '<table><thead><tr><th>兌換碼</th><th>用了</th><th>過期</th><th>備註</th><th></th></tr></thead><tbody>' + list.map(r => `<tr><td class="uid" style="font-size:14px">${esc(r.code)}</td><td>${r.uses}／${r.max_uses}</td><td>${r.expires ? until(r.expires) : '不會'}</td><td>${esc(r.note || '')}${r.void ? '（已作廢）' : ''}</td><td><button class="b" data-code="${esc(r.code)}" data-void="${r.void ? 0 : 1}">${r.void ? '恢復' : '作廢'}</button></td></tr>`).join('') + '</tbody></table>' : '<div class="empty">還沒有兌換碼</div>';
+      t.querySelectorAll('button[data-code]').forEach(b => b.addEventListener('click', () => act(b, () => rpc('admin_redeem_void', { p_code: b.dataset.code, p_void: b.dataset.void === '1' }), b.dataset.void === '1' ? '已作廢' : '已恢復'))); body.appendChild(t);
     }
     if (tab === 'log'){
       const list = await rpc('admin_log_list', { p_limit: 200 });

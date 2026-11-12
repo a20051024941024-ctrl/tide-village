@@ -353,7 +353,7 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:24, y:0.32 };
-const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
+const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer', 'g_printflag'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
 const GARDEN = { x:150 - 24 - 5.75, z:0, hx:6.75, hz:5, px:150 - 24 - 4.5, sx:150 - 24 - 11.3 };   /* px：田的中心；sx：種子攤 */   /* v370 小島西邊的菜園平台 */
 // 海上的釣蝦場、企鵝冰原：在主島西邊的海上（用快速傳送或渡船去）
 const SHRIMP = { x:-118, z:36, w:24, d:18, pw:14, pd:8, y:0.9 };
@@ -6574,7 +6574,7 @@ function renderFarm(body){
       body.appendChild(el('p', 'sub', `限定種子只有這週買得到，買起來放背包，之後隨時可以種。${NX ? `下週換：${NX.icon} ${NX.name}` : ''}`)); }
     body.appendChild(el('div', 'dexhead', '🛒 平常的種子')); const ul = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.lim == null && !C.sea)) ul.appendChild(seedLi(C)); body.appendChild(ul);
     body.appendChild(el('div', 'dexhead', '🌊 海底的種子')); { const u2 = el('ul', 'shoplist'); for (const C of CROPS.filter(C => C.sea)) u2.appendChild(seedLi(C)); body.appendChild(u2); body.appendChild(el('p', 'sub', '海底的種子要從小島碼頭的潛水梯下去，種在海底花園（要有潛水裝備）。不用澆水，長得比較慢。')); }
-    for (const [ttl, flt] of [['🪸 海底的造景（便宜，可以緊貼著放成一片）', D => D.eco], ['🏺 海底的裝飾', D => !D.eco && !D.live]]){ body.appendChild(el('div', 'dexhead', ttl)); const u3 = el('ul', 'shoplist'); for (const D of DECOS.filter(flt)){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', D.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', D.name + (decoN(D.id) ? `（有 ${decoN(D.id)} 個）` : ''))); t.appendChild(el('div', 'sub2', `一個 🪙${D.price}`)); li.appendChild(t);
+    for (const [ttl, flt] of [['🪸 海底的造景（便宜，可以緊貼著放成一片）', D => D.eco], ['🏺 海底的裝飾', D => !D.eco && !D.live && !D.gift]]){ body.appendChild(el('div', 'dexhead', ttl)); const u3 = el('ul', 'shoplist'); for (const D of DECOS.filter(flt)){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', D.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', D.name + (decoN(D.id) ? `（有 ${decoN(D.id)} 個）` : ''))); t.appendChild(el('div', 'sub2', `一個 🪙${D.price}`)); li.appendChild(t);
         for (const n of D.eco ? [1, 10] : [1]){ const b = el('button', 'tbtn' + (n === 1 && D.eco ? ' ghost' : ''), D.eco ? `×${n}` : '買'); b.style.marginLeft = '6px'; b.disabled = rec.coins < D.price * n || Farm.busy; b.addEventListener('click', () => decoBuy(D.id, n)); li.appendChild(b); } u3.appendChild(li); } body.appendChild(u3); }
     { const rb = el('button', 'tbtn ghost', '🏆 看本週最美海底排行'); rb.style.cssText = 'display:block;margin:8px auto'; rb.addEventListener('click', () => { Farm.view = 'sea'; seaLikeLoad().then(() => { if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }); renderTab(); }); body.appendChild(rb); }
     body.appendChild(el('p', 'sub', `買了放背包，潛到海底拿在手上，想放哪裡就放哪裡，可以緊貼著排成一片，也可以再收回來。造景和裝飾合起來最多 ${DECO_MAX} 個。住在一起的室友、家人也可以一起來佈置。`));
@@ -6615,6 +6615,8 @@ const DECOS = [
   /* v387 用手抄網抓回來的小生物：放進海底會自己游來游去（不能用買的） */
   { id:'c_shrimp', name:'小蝦', icon:'🦐', price:0, live:true, fly:0.25 }, { id:'c_crab', name:'小螃蟹', icon:'🦀', price:0, live:true, fly:0 }, { id:'c_slug', name:'海蛞蝓', icon:'🐌', price:0, live:true, fly:0 },
   { id:'c_clown', name:'小丑魚寶寶', icon:'🐠', price:0, live:true, fly:0.7 }, { id:'c_seahorse', name:'海馬寶寶', icon:'🌀', price:0, live:true, fly:0.6 }, { id:'c_puffer', name:'小河豚', icon:'🐡', price:0, live:true, fly:0.8 },
+  /* v391 兌換碼才拿得到的（實體活動的贈品） */
+  { id:'g_printflag', name:'版畫小旗', icon:'🚩', price:0, gift:true },
 ];
 const DECO_BY = Object.fromEntries(DECOS.map(d => [d.id, d])), DECO_MAX = 300;
 const SeaDeco = { list:[], hand:null, bub:[], mats:{}, t:0 };
@@ -6641,6 +6643,7 @@ function decoMesh(g, k, sd){ const st = decoMat('#8f959c'), M = c => decoMat(c),
   else if (k === 'rock_s'){ const o = add(new THREE.DodecahedronGeometry(0.24, 0), st, 0, 0.12, 0, R(1) * 3, R(2) * 3, 0); o.scale.y = 0.7; }
   else if (k === 'rock_l'){ const o = add(new THREE.DodecahedronGeometry(0.62, 0), st, 0, 0.34, 0, R(1) * 3, R(2) * 3, 0); o.scale.y = 0.75; add(new THREE.DodecahedronGeometry(0.3, 0), st, 0.5, 0.15, 0.25); }
   else if (k === 'sandtile'){ add(new THREE.CylinderGeometry(0.42, 0.44, 0.05, 8), M('#f4ecd6'), 0, 0.03, 0); }
+  else if (k === 'g_printflag'){ add(new THREE.CylinderGeometry(0.03, 0.03, 1.7, 6), M('#8a6a3c'), 0, 0.85, 0); add(new THREE.BoxGeometry(0.8, 0.55, 0.02), M('#f3ead6'), 0.43, 1.35, 0); const ink = M('#1f5d63'); for (const zz of [-0.014, 0.014]){ add(new THREE.SphereGeometry(0.15, 10, 6), ink, 0.47, 1.35, zz).scale.set(1.25, 0.75, 0.05); add(new THREE.ConeGeometry(0.11, 0.16, 3), ink, 0.25, 1.35, zz, 0, 0, -Math.PI / 2).scale.z = 0.08; } }
   else if (k === 'c_shrimp'){ const m = M('#ff9c8a'); for (let n = 0; n < 4; n++) add(new THREE.SphereGeometry(0.05 - n * 0.006, 6, 5), m, 0, 0.08 + Math.sin(n * 0.7) * 0.03, 0.09 - n * 0.06); add(new THREE.ConeGeometry(0.04, 0.07, 4), m, 0, 0.07, -0.14, -Math.PI / 2); for (const d of [-1, 1]) add(new THREE.CylinderGeometry(0.004, 0.004, 0.16, 3), m, d * 0.03, 0.13, 0.17, 1.1, 0, d * 0.3); }
   else if (k === 'c_crab'){ const m = M('#e2553d'); add(new THREE.SphereGeometry(0.09, 8, 6), m, 0, 0.07, 0).scale.set(1.3, 0.55, 1); for (const d of [-1, 1]){ add(new THREE.SphereGeometry(0.04, 6, 5), m, d * 0.13, 0.08, 0.07); for (let n = 0; n < 3; n++) add(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 3), m, d * 0.13, 0.04, -0.04 + n * 0.035, 0, 0, d * 1.0); add(new THREE.SphereGeometry(0.014, 5, 4), M('#1a1a1a'), d * 0.03, 0.13, 0.06); } }
   else if (k === 'c_slug'){ add(new THREE.SphereGeometry(0.07, 8, 6), M('#7a5bd6'), 0, 0.05, 0).scale.set(0.8, 0.6, 2.0); for (let n = 0; n < 4; n++) add(new THREE.SphereGeometry(0.02, 5, 4), M('#ffd84a'), 0, 0.09, -0.08 + n * 0.05); for (const d of [-1, 1]) add(new THREE.ConeGeometry(0.012, 0.06, 4), M('#ffd84a'), d * 0.025, 0.1, 0.11); }
@@ -8489,6 +8492,7 @@ function renderSettings(body){
     sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
   vol('🔊 音效', soundOn, sfxVol, on => { soundOn = on; LS.set('tide.sound', on); if (on) ensureAudio(); renderSoundIcon(); }, v => { sfxVol = v; LS.set('tide.sfxVol', v); clearTimeout(renderSettings.t); renderSettings.t = setTimeout(() => SFX.coin(), 120); });
   vol('🎵 背景音樂', musicOn, musicVol, on => { musicOn = on; LS.set('tide.music', on); if (on){ ensureAudio(); MUSIC.start(); } else MUSIC.stop(); renderMusicIcon(); }, v => { musicVol = v; LS.set('tide.musicVol', v); MUSIC.vol(); });
+  { const f = field('🎁 兌換碼'), inp = el('input'); inp.type = 'text'; inp.maxLength = 16; inp.placeholder = '輸入小卡上的兌換碼'; inp.autocapitalize = 'characters'; inp.autocomplete = 'off'; inp.style.cssText = 'width:60%;max-width:220px;padding:8px 10px;border-radius:10px;border:1px solid #c9c2b4;font:inherit;text-transform:uppercase'; const b = el('button', 'tbtn', '兌換'); b.style.marginLeft = '8px'; b.addEventListener('click', () => redeemCode(inp, b)); inp.addEventListener('keydown', e => { if (e.key === 'Enter') redeemCode(inp, b); }); f.appendChild(inp); f.appendChild(b); f.appendChild(el('p', 'sub', '參加實體活動拿到的小卡上有兌換碼（例如環保袋版畫體驗）。輸入後可以拿到 🪙300、💙5 和一面只有這裡拿得到的「版畫小旗」，可以插在自己小島的海底。')); }
   { const f = field('📳 震動'), on = LS.get('tide.vib', true) !== false, tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { LS.set('tide.vib', !on); if (!on) buzz(60); renderTab(); }); f.appendChild(tg); f.appendChild(el('p', 'sub', '魚咬餌、魚往外衝、魚跳起來、線斷掉、釣到魚的時候手機會震一下。電腦和 iPhone 的瀏覽器不支援震動。')); }
   /* v311 上架（34）：字體大小。標準／大／特大，選單、聊天、提示、釣到魚的卡片一起放大 */
   { const f = field('🔠 字體大小'), seg = el('div', 'seg'), cur = LS.get('tide.fs', 0); [[0, '標準'], [1, '大'], [2, '特大']].forEach(([k, l]) => { const b = el('button', '', l); b.style.fontSize = [14, 16, 18][k] + 'px'; b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.fs', k); applyFontSize(); renderTab(); }); seg.appendChild(b); });
@@ -9645,6 +9649,11 @@ function rodTier(n){ return ROD_TIERS.find(t => n >= t[0]) || null; }
 function rodMemo(id){ const o = rodLog(id); if (!o || !o.n) return '還沒用這支竿子釣到魚'; const t = rodTier(o.n), fx = o.f && FISH_BY_ID[o.f]; return `${t ? t[2] + ' ' + t[1] + '・' : ''}已釣 ${o.n.toLocaleString()} 條` + (fx ? `・最大：${fx.name} ${fmtKg(o.w)}` : ''); }
 function rodNote(f, w){ if (!rec.rodLog) rec.rodLog = {}; const id = rec.rod, o = rec.rodLog[id] || { n: 0, f: null, w: 0 }, t0 = rodTier(o.n); o.n++; if (w > (o.w || 0)){ o.w = w; o.f = f.id; } rec.rodLog[id] = o; const t1 = rodTier(o.n);
   if (t1 && t1 !== t0){ const r = RODS.find(x => x.id === id); setTimeout(() => { try { SFX.catch(); } catch(e){} flash(`${t1[2]} ${r ? r.name : '釣竿'}變成「${t1[1]}」了！`, 2.4); toast(`這支竿子已經陪你釣了 ${o.n.toLocaleString()} 條魚`); logMsg('', `${r ? r.name : '釣竿'}已經釣了 ${o.n} 條魚，成為你的「${t1[1]}」`, true); }, 2600); } }
+/* v391 兌換碼：實體活動的小卡 → 遊戲裡的小禮物（單向贈送，伺服器 152） */
+async function redeemCode(inp, btn){ const code = String(inp.value || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (code.length < 6){ toast('請輸入小卡上的兌換碼'); return; } if (!(Cloud.on && Cloud.sb)){ toast('要連上雲端才能兌換'); return; } if (btn.disabled) return; btn.disabled = true;
+  try { const { data, error } = await Cloud.sb.rpc('redeem', { p_code: code }); if (error) throw error; if (!data || !data.ok){ toast((data && data.msg) || '兌換碼不對，請再檢查一次'); }
+    else { if (data.pl){ delete data.pl.island; adoptRow(data.pl); } inp.value = ''; try { SFX.catch(); } catch(e){} closeSheet(); flash('🎁 兌換成功！', 2.0); toast('拿到 🪙300、💙5 和「🚩 版畫小旗」。小旗在背包裡，潛到自己小島的海底就可以插上去'); } }
+  catch(e){ toast(cloudErrMsg(e)); } btn.disabled = false; }
 /* v380 保養釣竿：釣竿不會壞；在釣具店花金幣保養，接下來 30 次拋竿收線快一點、線比較不容易斷。沒保養照常釣（次數存在這台裝置，跟料理的加成分開算、可以疊） */
 const CARE = { casts:30, price:200, reel:1.1, tension:0.9 };
 function careLeft(){ const c = LS.get('tide.care', null); return c && c.left > 0 ? Math.min(CARE.casts, Math.floor(c.left)) : 0; }
@@ -13356,6 +13365,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
