@@ -8478,8 +8478,8 @@ async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.for
   const items0 = ((onIsle.owner === myIdOrMe() ? rec.island : onIsle.layout) || { items: [] }).items || [], pens = items0.filter(it => ISLE_ITEMS[it.t] && ISLE_ITEMS[it.t].pen);
   /* v396 屋子裡的烏龜缸也是圍欄：住在裡面的小烏龜要進那間屋子、那一層樓才看得到 */
   for (const h of items0) if (Array.isArray(h.f)) for (const o of h.f) if (o && o.t === 'turtletank') pens.push({ indoor: true, hid: h.id, fid: o.id, t: 'turtletank', id: 'h' + h.id + 'f' + o.id, x: o.x, z: o.z, r: o.r });
-  const key = onIsle.owner + '|' + pens.map(it => it.id + ':' + it.x + ':' + it.z + ':' + it.r).join() + '|' + (Pets.list ? Pets.list.map(p => p.id + ':' + p.out + ':' + p.acc + p.name + ':' + (p.shine == null ? '' : Math.floor(p.shine / 10))).join() : ''); if (Pets.homeKey === key) return; Pets.homeKey = key;
-  let list = []; if (onIsle.owner === myIdOrMe()) list = (Pets.list || []).filter(p => !p.out); else if (Cloud.on){ try { const { data } = await Cloud.sb.rpc('isle_pets', { p_owner: onIsle.owner }); if (Array.isArray(data)) list = data; } catch(e){} }
+  const key = onIsle.owner + '|' + pens.map(it => it.id + ':' + it.x + ':' + it.z + ':' + it.r).join() + '|' + (Pets.list ? Pets.list.map(p => p.id + ':' + p.out + ':' + (p.price == null ? '' : '$') + p.acc + p.name + ':' + (p.shine == null ? '' : Math.floor(p.shine / 10))).join() : ''); if (Pets.homeKey === key) return; Pets.homeKey = key;
+  let list = []; if (onIsle.owner === myIdOrMe()) list = (Pets.list || []).filter(p => !p.out && p.price == null); else if (Cloud.on){ try { const { data } = await Cloud.sb.rpc('isle_pets', { p_owner: onIsle.owner }); if (Array.isArray(data)) list = data; } catch(e){} }
   /* v386 有圍欄就住進對的圍欄（每個 5 隻），其他的在島上閒晃；便宜手機最多畫 18 隻 */
   const penCat = it => it.indoor ? 'tank' : ISLE_ITEMS[it.t].pen;
   const room = new Map(pens.map(it => [it, 5])), byCat = c => pens.filter(it => penCat(it) === c && room.get(it) > 0)[0];
@@ -13706,6 +13706,7 @@ function renderTab(){
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
       '🐢 室內烏龜缸：走到缸旁邊按右下的「🐢 看烏龜缸」，會跳出缸裡有哪幾隻小烏龜，按「拿出來」就帶牠出門；身邊帶著小烏龜的話，也可以按「放進缸裡」。',
+      '🏪 寵物掛到市集賣的時候會先住在市集，小島上看不到牠；收回來就會回家。',
       '寵物名額：一般 3 隻什麼都能養。在小島「🔨 蓋東西」→「🐾 寵物圍欄」可以買陸地圍欄（貓、柴犬、海鷗）、海水池（水獺、寄居蟹、小海龜、章魚、河豚）、烏龜缸（小烏龜），各 1500 金幣、每個多 5 隻那一類的名額，數量不限（算在小島 60 件東西裡）。待在家的寵物會在圍欄裡玩，來參觀的人也看得到。圍欄裡還有寵物時不能拆。',
       '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。'
     ]);
