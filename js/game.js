@@ -4176,7 +4176,10 @@ function updateCamera2(dt){
   const reelOn0 = ['waiting', 'bite', 'reeling'].includes(F.phase) && me.bobPos && !Photo.on && !Dive.on && !House.on && !(typeof Sub !== 'undefined' && Sub.on);
   /* v347 玩家回報：釣魚時快速連點，畫面會突然拉近拉遠。原因：連點會「拋竿→馬上收回→再拋」，鏡頭每次都在俯瞰和肩後視角之間來回換。
      現在收竿後肩後視角多留 2.5 秒（這段時間再拋竿就不會換鏡頭）；一走動就馬上回到平常的視角 */
-  const tNow = now(); if (reelOn0) reelCam.hold = tNow + 2.5; else if ((me.aspd || 0) > 0.5 || !reelCam.bob || !(F.phase === 'idle' || F.phase === 'charging')) reelCam.hold = 0;
+  /* v391 玩家回報「畫面又會縮大縮小」：每釣完一條（看完釣到的卡片）鏡頭就從肩後拉回俯瞰，再拋又拉近。
+     現在只要站著沒走開，就一直維持肩後視角（看卡片、再拋竿都不換）；走動、離開、進屋、潛水、拍照才回到平常的視角 */
+  const tNow = now(); if (reelOn0) reelCam.hold = Infinity;
+  else if ((me.aspd || 0) > 0.5 || !reelCam.bob || Photo.on || Dive.on || House.on || (typeof Sub !== 'undefined' && Sub.on) || Math.hypot(reelCam.bob.x - me.pos.x, reelCam.bob.z - me.pos.z) > 45) reelCam.hold = 0;
   const reelOn = reelOn0 || tNow < (reelCam.hold || 0);
   reelCam.k += ((reelOn ? 1 : 0) - reelCam.k) * Math.min(1, dt * (reelOn ? 3 : 4)); if (!reelOn){ reelCam.y0 = null; reelCam.p0 = null; }
   if (me.bobPos) reelCam.bob = { x: me.bobPos.x, z: me.bobPos.z };
@@ -4601,7 +4604,7 @@ function updateFishing(dt, t){
       mk.style.transform = `translate(${sxC.toFixed(0)}px, ${syC.toFixed(0)}px)`;
       $('#fmHp').style.width = (F.S * 100).toFixed(1) + '%';
       if (F.boss){ $('#bbHp').style.width = (F.S * 100).toFixed(1) + '%'; $('#bbPct').textContent = Math.ceil(F.S * 100) + '%'; mk.classList.add('boss'); } else mk.classList.remove('boss');
-      { const bf = camBaseFov(), want = F.boss && F.jump > 0 ? bf - 11 : F.mash ? bf - 5 : bf; if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
+      { const bf = camBaseFov(), want = F.boss && F.jump > 0 ? bf - 11 : bf;   /* v391 連打時不再一縮一放（玩家說畫面縮大縮小） */ if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
       $('#fmDist').textContent = realD.toFixed(1) + 'm';
       let warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.9 ? '線太鬆！按住收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
       if (F.act && F.acts) warn = '';   /* v254 有動作提示的時候不要再疊一行 */
@@ -13701,6 +13704,7 @@ function renderTab(){
       '🧒 兒童安全模式（給家長看）：第一次進遊戲會問出生年份（只問年，不問真名、生日）。未滿 13 歲會自動開啟，之後不能自己關掉：聊天只能用固定的快速句子，看不到別人自己打的字；可以看留言板但不能留言；名字從「形容詞＋動物」裡選；好友只能用當面給的好友代碼加，陌生人不能直接加；設計師市集只看得到很多人買過、沒被檢舉的作品；深海驚嚇效果預設關閉；不會要求 email。',
       '🔒 帳號與隱私：設定最下面有「隱私權政策」和「刪除我的帳號」（輸入「刪除」兩個字確認，會刪掉所有遊戲資料，不能復原）。聊天不會存在伺服器，只有被檢舉的內容會保存 30 天給管理員處理。有問題或想刪除資料，也可以寫信到 chaoxi.fishing@gmail.com。',
       '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
+      '🎥 開始釣魚後鏡頭會移到肩膀後面看浮標，只要站著不走，看完釣到的魚、再拋竿都維持同一個鏡頭，不會一直拉近拉遠；走開就回到平常的視角。',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。'
     ]);
     body.appendChild(el('p', 'sub', '© 2026 潮汐釣魚村作者，保留所有權利；未經同意禁止複製、修改或轉載。部分魚的 3D 模型：Animated Fish Pack by Quaternius（CC0 授權，quaternius.com）。'));
