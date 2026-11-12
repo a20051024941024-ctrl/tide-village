@@ -5506,7 +5506,7 @@ const FURN = {
   cushion:{ name:'和室坐墊', price:80, rad:0.35, g:'live' },
   coffee:{ name:'茶几', price:350, rad:0.6, g:'live' },
   trophy:{ name:'魚標本牆', price:500, rad:0.45, g:'live' },
-  turtletank:{ name:'室內烏龜缸（小烏龜 +5 隻）', price:1500, rad:0.8, g:'live' },   /* v396 放在屋子裡的烏龜缸（伺服器 153），名額算法跟島上的烏龜缸一樣 */
+  turtletank:{ name:'室內烏龜缸（小烏龜 +5 隻）', price:1500, rad:1.3, g:'live' },   /* v396 放在屋子裡的烏龜缸（伺服器 153），名額算法跟島上的烏龜缸一樣 */
   rodrack:{ name:'釣竿架', price:400, rad:0.5, g:'live' },
   globe:{ name:'地球儀', price:300, rad:0.3, g:'live' },
   radio:{ name:'收音機', price:250, rad:0.3, g:'live' },
@@ -5721,9 +5721,9 @@ function furnMesh(t){
     case 'fire': { B([1.4, 1.2, 0.5], '#b7b2a4', [0, 0.6, 0]); B([0.9, 0.6, 0.1], '#2a1a14', [0, 0.45, 0.21]); B([1.6, 0.12, 0.6], '#d8d2c4', [0, 1.26, 0]);
       const fl = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 6), new THREE.MeshStandardMaterial({ color:'#ffb040', emissive:'#ff7a1a', emissiveIntensity:1.8 })); fl.position.set(0, 0.42, 0.18); g.add(fl); g.userData.fire = fl; break; }
     case 'piano': B([1.5, 1.1, 0.6], '#1e1e22', [0, 0.75, -0.1], 0.3); B([1.4, 0.06, 0.3], '#f8f8f4', [0, 0.82, 0.3]); for (let i = 0; i < 10; i++) B([0.05, 0.03, 0.16], '#1e1e22', [-0.6 + i * 0.13, 0.86, 0.26]); for (const sx of [-0.65, 0.65]) B([0.08, 0.8, 0.08], '#1e1e22', [sx, 0.4, 0.3]); B([0.8, 0.45, 0.35], '#1e1e22', [0, 0.23, 0.85]); break;
-    case 'turtletank': { B([1.6, 0.1, 0.9], wood, [0, 0.05, 0]); for (const sx of [-1, 1]) B([0.07, 0.42, 0.9], lw, [sx * 0.77, 0.26, 0]); for (const sz of [-1, 1]) B([1.6, 0.42, 0.07], lw, [0, 0.26, sz * 0.42]);
-      const wt = new THREE.Mesh(new THREE.BoxGeometry(1.46, 0.2, 0.76), new THREE.MeshStandardMaterial({ color:'#7fd0e8', transparent:true, opacity:0.55, emissive:'#2f89c7', emissiveIntensity:0.25, depthWrite:false })); wt.position.y = 0.2; g.add(wt);
-      B([0.5, 0.16, 0.36], '#9a9488', [-0.4, 0.26, 0.05]); B([0.26, 0.1, 0.22], '#aaa498', [-0.08, 0.22, -0.12]); C(0.02, 0.02, 0.36, '#4f9a55', [0.55, 0.4, -0.25], 6); B([0.2, 0.03, 0.1], '#5fb866', [0.55, 0.56, -0.2]); B([0.16, 0.03, 0.08], '#6fc878', [0.5, 0.5, -0.3]);
+    case 'turtletank': { /* v401 玩家說放 5 隻太擠：缸做大一倍（2.6×1.5 公尺） */ B([2.6, 0.1, 1.5], wood, [0, 0.05, 0]); for (const sx of [-1, 1]) B([0.08, 0.44, 1.5], lw, [sx * 1.26, 0.27, 0]); for (const sz of [-1, 1]) B([2.6, 0.44, 0.08], lw, [0, 0.27, sz * 0.71]);
+      const wt = new THREE.Mesh(new THREE.BoxGeometry(2.44, 0.2, 1.34), new THREE.MeshStandardMaterial({ color:'#7fd0e8', transparent:true, opacity:0.55, emissive:'#2f89c7', emissiveIntensity:0.25, depthWrite:false })); wt.position.y = 0.2; g.add(wt);
+      B([0.8, 0.16, 0.56], '#9a9488', [-0.7, 0.26, 0.1]); B([0.42, 0.12, 0.34], '#aaa498', [-0.15, 0.22, -0.25]); B([0.3, 0.1, 0.26], '#b4ae9f', [0.55, 0.21, 0.3]); C(0.025, 0.025, 0.42, '#4f9a55', [0.95, 0.42, -0.45], 6); B([0.24, 0.03, 0.12], '#5fb866', [0.95, 0.6, -0.4]); B([0.2, 0.03, 0.1], '#6fc878', [0.9, 0.54, -0.52]);
       g.userData.ttank = 1; break; }
     case 'tank': { B([1.4, 0.7, 0.6], wood, [0, 0.35, 0]); const gl = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.55), new THREE.MeshStandardMaterial({ color:'#9fe3ff', transparent:true, opacity:0.35, emissive:'#2f89c7', emissiveIntensity:0.3, depthWrite:false })); gl.position.y = 1.1; g.add(gl); g.userData.tank = 1; break; }
     case 'fridge': B([0.8, 1.8, 0.7], '#eef2f4', [0, 0.9, 0], 0.4); B([0.78, 0.02, 0.02], '#b8c0c6', [0, 1.2, 0.36]); B([0.04, 0.4, 0.04], '#8a9298', [0.3, 1.45, 0.37]); B([0.04, 0.3, 0.04], '#8a9298', [0.3, 0.85, 0.37]); break;
@@ -8446,7 +8446,7 @@ function updatePets(dt, t){
   if (frameNo % 30 === 0) petHomeSync();
   for (const pt of Pets.home){
     if (pt.pen && pt.pen.indoor){ const fm = House.on && House.it && House.it.id === pt.pen.hid && House.furnG.get(pt.pen.fid); pt.m.visible = !!fm; if (!fm) continue; const w = pt.wander;
-      if (t > w.at || !w.set){ w.set = 1; w.at = t + rand(3, 7); const u = (Math.random() * 2 - 1) * 0.55, v = (Math.random() * 2 - 1) * 0.24, c = Math.cos(fm.rotation.y), s = Math.sin(fm.rotation.y); w.x = fm.position.x + u * c + v * s; w.z = fm.position.z - u * s + v * c; }
+      if (t > w.at || !w.set){ w.set = 1; w.at = t + rand(3, 7); const u = (Math.random() * 2 - 1) * 1.0, v = (Math.random() * 2 - 1) * 0.48, c = Math.cos(fm.rotation.y), s = Math.sin(fm.rotation.y); w.x = fm.position.x + u * c + v * s; w.z = fm.position.z - u * s + v * c; }
       petStep(pt, dt, t, w.x, w.z, fm.position.y + 0.24, false, pt.rot); continue; }
     const vis = !!onIsle && !House.on && !Dive.on; pt.m.visible = vis; if (!vis) continue; const w = pt.wander;
     if (pt.pen){ if (t > w.at){ w.at = t + rand(2, 5); const p = penSpot(pt.pen); w.x = p.x; w.z = p.z; } petStep(pt, dt, t, w.x, w.z, ISLE.y + PEN_AREA[pt.pen.t].y, false, pt.rot); continue; }
