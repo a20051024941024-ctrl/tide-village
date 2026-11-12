@@ -1387,3 +1387,20 @@ body.chatting.histOpen #log{visibility:hidden}
 #ttPanel .op-t b{font-size:13px}
 #ttPanel .op-t small{font-size:10.5px;color:var(--ink-soft)}
 body.photo #ttPanel{display:none!important}
+
+/* v414 大頭照 */
+.avst-w{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.avst-l{display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 0 auto}
+.avst-img{width:132px;height:132px;border-radius:50%;background:#eef3f6;display:block}
+.avst-r{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:7px}
+.avst-row{display:flex;gap:8px;align-items:center}
+.avst-k{flex:0 0 2.6em;font-weight:700;font-size:.9rem;color:var(--ink2,#5b6b78)}
+.avst-o{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.avst-b{min-height:36px;padding:4px 11px;border-radius:999px;border:2px solid transparent;background:#eef3f6;font-size:.88rem;color:inherit}
+.avst-b.sw{width:36px;height:36px;padding:0;border-radius:50%;border:2px solid #dbe4ea}
+.avst-b.on{border-color:var(--sea,#2f89c7);background:#e3f1fb}
+.avst-b.sw.on{outline:3px solid var(--sea,#2f89c7);outline-offset:2px}
+.avst-s{flex:1;min-width:120px;max-width:260px}
+.avst-l button{min-height:40px;padding:6px 14px;border-radius:999px;border:0;background:var(--sea,#2f89c7);color:#fff;font-weight:700}
+.avst-l button:disabled{background:#dfe8ee;color:#5b6b78}
+.avst-b.sw{box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}

@@ -2491,7 +2491,7 @@ let SHADES_TEX = null;
 const EYE_W = 0.195, EYE_H = EYE_W * 320 / 256, EYE_X = 0.135, EYE_Y = -0.045;   /* 眼睛放低、分開一點、大一點（參考圖的臉：眼睛在臉的下半部） */
 /* 套用眼型：貼圖眼睛（av.eyes2）跟圓球眼睛（av.eyes）二選一；嘴巴、腮紅跟著換成新臉的大小，眉毛畫在貼圖裡 */
 function applyEyes(av, L, faceId){ const st = LOOK_EYES[L.y] ? L.y : 0, E = LOOK_EYES[st][1], HD = av.headG; av.eyeStyle = st;
-  if (!av.eyes2){ av.eyes2 = [-1, 1].map(sx => { const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })); pl.renderOrder = 3; pl.frustumCulled = false; HD.add(pl); return pl; });
+  if (!av.eyes2){ av.eyes2 = [-1, 1].map(sx => { const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); pl.renderOrder = 3; pl.frustumCulled = false; HD.add(pl); return pl; });
     const sh = av.shades = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.18), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false })); sh.position.set(0, -0.04, 0.345); sh.renderOrder = 4; sh.visible = false; HD.add(sh); }
   const fk = { face_happy: 'happy', face_sleepy: 'sleepy', face_heart: 'heart', face_star: 'star' }[faceId] || '';
   av.eyes2.forEach((pl, i) => { pl.visible = !!E; if (E){ const sx = i ? 1 : -1, shutF = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1), w = E.img && !shutF ? EYE_W * 52 / E.r : EYE_W,   /* 手繪的眼白和睫毛畫得比較開，瞳孔縮一點，整隻眼睛才跟其他眼型一樣大 */ hh = w * 320 / 256, off = E.img && !shutF ? (128 - E.cx) / 256 * w : 0; pl.geometry = eyeGeo(sx * (EYE_X + off), EYE_Y + hh * 0.15, w, hh); pl.position.set(sx * (EYE_X + off), EYE_Y + hh * 0.15, 0); pl.scale.set(1, 1, 1); pl.userData.h = 1; pl.material.map = eyeTex(st, L.e, i === 0, faceId === 'face_wink' && i === 1 ? 'happy' : fk); pl.material.needsUpdate = true; pl.userData.shut = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1); } });
@@ -2859,7 +2859,7 @@ function applyGear(av, gear){
       break; }
     case 'acc_scarf': { const red = M('#e8473a', 0.75); const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), red, 0, 1.1, 0); r.rotation.x = Math.PI / 2; const tl = mk(new THREE.BoxGeometry(0.09, 0.24, 0.05), red, 0.1, 0.96, 0.2); tl.rotation.z = 0.25; for (const y of [0.9, 0.97]) mk(new THREE.BoxGeometry(0.095, 0.02, 0.055), white, 0.1 + (0.96 - y) * 0.25, y, 0.2); break; }
     case 'acc_bowtie': { const red = M('#c9302c', 0.5); for (const sx of [-1, 1]){ const c = mk(new THREE.ConeGeometry(0.05, 0.09, 4), red, sx * 0.05, 1.08, 0.2); c.rotation.z = sx * Math.PI / 2; } mk(new THREE.SphereGeometry(0.025, 8, 6), red, 0, 1.08, 0.21); break; }
-    case 'acc_glasses': { const fr = M('#5a3a24', 0.4), [ex, ey, es] = eyeXY(gear); for (const sx of [-1, 1]){ const o = mk(new THREE.TorusGeometry(0.062, 0.011, 6, 16), fr, sx * ex * (es > 1 ? 1.06 : 1), ey, es > 1 ? 0.322 : 0.31, HD); o.scale.setScalar(es > 1 ? 1.3 : 1); o.rotation.y = es > 1 ? sx * 0.3 : 0; } mk(new THREE.BoxGeometry(es > 1 ? 0.09 : 0.07, 0.012, 0.012), fr, 0, ey + 0.01, es > 1 ? 0.335 : 0.315, HD); break; }
+    case 'acc_glasses': { const fr = M('#5a3a24', 0.4), [ex, ey, es] = eyeXY(gear); for (const sx of [-1, 1]){ const o = mk(new THREE.TorusGeometry(0.062, es > 1 ? 0.0065 : 0.011, 6, es > 1 ? 24 : 16), fr, sx * ex * (es > 1 ? 1.06 : 1), ey, es > 1 ? 0.35 : 0.31, HD); /* v414 大眼睛：鏡框放大到框得住整顆眼睛、再往前一點，眼睛才不會畫在眼鏡上面 */ if (es > 1){ o.scale.set(1.72, 1.9, 1.3); o.rotation.y = sx * 0.2; } } mk(new THREE.BoxGeometry(es > 1 ? 0.085 : 0.07, 0.012, 0.012), fr, 0, ey + 0.02, es > 1 ? 0.368 : 0.315, HD); break; }
     case 'acc_sachet': { const s1 = mk(new THREE.SphereGeometry(0.06, 12, 10), M('#e8473a', 0.5), 0.12, 0.86, 0.22); s1.scale.set(1, 1.2, 0.6); mk(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 4), M('#f2c43d', 0.4), 0.1, 0.98, 0.2); for (let k = 0; k < 4; k++) mk(new THREE.CylinderGeometry(0.004, 0.004, 0.09, 4), M('#f2c43d', 0.4), 0.105 + (k - 1.5) * 0.012, 0.76, 0.23); mk(new THREE.TorusGeometry(0.2, 0.008, 4, 20), M('#e8473a', 0.5), 0, 1.04, 0).rotation.x = Math.PI / 2; break; }
     case 'acc_shell': { const pearl = M('#fbf3ea', 0.3); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.018, 6, 4), pearl, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); } const sh2 = mk(new THREE.ConeGeometry(0.05, 0.07, 7), M('#f5a5d8', 0.4), 0, 0.98, 0.21); sh2.rotation.x = Math.PI; break; }
     case 'acc_lei': { const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#ff9f43']; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.045, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.21, 1.06 - Math.max(0, Math.sin(a)) * 0.1, Math.sin(a) * 0.19); } break; }
@@ -7796,7 +7796,7 @@ function renderFriends(body){
   const on = onlineUids(), ul = el('ul', 'people');
   for (const f of Fr.list.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || (b.mutual - a.mutual))){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
     const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null;
-    { const im = avatarImg(f.av); if (im) sw.replaceWith && li.append(im); }
+    { let gr = null; try { for (const p of peers.values()) if (p.pres && p.pres.u === f.id && p.fisher.gearKey){ gr = JSON.parse(p.fisher.gearKey); break; } } catch(e){} const im = avatarImg(f.av, '', gr); if (im) sw.replaceWith && li.append(im); }
     li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在這個大廳' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
     if (f.mutual){ const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
     const v = el('button', 'tbtn ghost vbtn', '水族館'); v.addEventListener('click', () => visitAquarium(f.id, f.name)); const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(v, vi);
@@ -10675,12 +10675,14 @@ function avKit(){
   return (AvShot.kit = { sc, cam, av, rt, key:'' });
 }
 const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1.3, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[0.95, 3.4, 0.45] };
+/* v414 新身材比較高（kidReshape）：商品小圖、頭像的鏡頭高度跟著改，不然臉會被切掉（玩家截圖裡左上角的頭像只拍到衣服） */
+const SHOT_VIEW2 = { hat:[1.93, 1.95, 0.35], face:[1.63, 1.4, 0.15], acc:[1.5, 1.75, 0.4], top:[1.1, 2.4, 0.5], back:[1.15, 2.5, Math.PI - 0.6], pants:[0.55, 2.3, 0.45], shoes:[0.12, 1.2, 0.5], socks:[0.2, 1.1, 0.5], full:[1.05, 4.5, 0.45] };
 function avatarShot(gear, view, size){
-  const key = JSON.stringify([gear, view, size, look.shirt, look.hat]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
+  const key = JSON.stringify([gear, view, size, look.shirt, look.hat, !!(AvShot.kit && AvShot.kit.av.kid)]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
   const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
   const gk = JSON.stringify(gear); if (K.key !== gk){ applyGear(K.av, gear); K.key = gk; }
   if (K.av.gearAnim) K.av.gearAnim(1.2, 0);
-  const [ty, dist, yaw] = SHOT_VIEW[view] || SHOT_VIEW.full; K.cam.position.set(Math.sin(yaw) * dist, ty + 0.12, Math.cos(yaw) * dist); K.cam.lookAt(0, ty, 0);
+  const SV = K.av.kid && KID.shape ? SHOT_VIEW2 : SHOT_VIEW, [ty, dist, yaw] = SV[view] || SV.full; K.cam.position.set(Math.sin(yaw) * dist, ty + 0.12, Math.cos(yaw) * dist); K.cam.lookAt(0, ty, 0);
   if (K.rt.width !== size) K.rt.setSize(size, size);
   const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
   renderer.setRenderTarget(K.rt); renderer.setClearColor('#f3efe6', 1); renderer.clear(); renderer.render(K.sc, K.cam);
@@ -11015,26 +11017,68 @@ function renderLookEd(body){
 }
 /* ===== v334 頭像：自己的角色（預設）、釣過的魚、自己的寵物、一組符號。伺服器檢查（130），左上角、玩家列表、好友列表都看得到 ===== */
 const AV_EMOJI = ['🐟', '🐠', '🐡', '🦈', '🐙', '🦑', '🦀', '🦞', '🐢', '🐬', '🐳', '🦭', '🐧', '🦦', '🐚', '🪸', '⛵', '🎣', '🌊', '🏝️', '🌸', '⭐', '🌙', '☀️'];
+/* v414 大頭照頭像：玩家想用自己的圖片當頭像；為了全年齡安全不開放上傳，改成用自己的角色擺姿勢拍。
+   頭像代碼 c:b背景 f外框 x表情 p姿勢 a角度 z遠近——只存這串代碼，每個人的手機照著對方身上穿的畫出來，沒有任何圖片被上傳 */
+const AV_C_RE = /^c:b(\d{1,2})f(\d{1,2})x(\d)p(\d)a(\d)z(\d)$/;
+const AVC = { bg: [['天空', ['#bfe6ff', '#eaf7ff']], ['海', ['#7fd0e8', '#2f89c7']], ['夕陽', ['#ffd9a0', '#ff9a8b']], ['草地', ['#d8f2b8', '#8fcf7a']], ['櫻花', ['#ffe3ee', '#ffb7d0']], ['薰衣草', ['#ece3ff', '#b9a4ee']], ['星空', ['#27356b', '#0f1736']], ['奶油', ['#fff6d8', '#ffe6a8']], ['薄荷', ['#dcf7ee', '#9be0c8']], ['珊瑚', ['#ffe0d2', '#ff9f85']], ['純白', ['#ffffff', '#f1f4f6']], ['深藍', ['#3a5a8a', '#1f3358']]],
+  frame: [['沒有', null], ['白邊', '#ffffff'], ['金邊', '#e8b730'], ['海藍', '#2f89c7'], ['粉紅', '#ff8fb3'], ['薄荷綠', '#3fbf9d'], ['木頭', '#9a6a3a'], ['彩虹', 'rainbow']],
+  face: [['跟平常一樣', null], ['微笑', 'face_normal'], ['笑咪咪', 'face_happy'], ['眨眼', 'face_wink'], ['想睡覺', 'face_sleepy'], ['墨鏡', 'face_cool'], ['愛心眼', 'face_heart'], ['星星眼', 'face_star']],
+  pose: [['站好', 'idle', 0.3], ['揮手', 'wave', 0.6], ['歡呼', 'cheer', 0.6], ['釣魚', 'fish_idle', 0.5], ['坐著', 'sit_floor', 0.5], ['跑步', 'run', 0.28]],
+  zoom: [['大頭', 1.6, 0.0], ['半身', 2.1, -0.28], ['全身', 4.6, -0.62]] };
+function avcParse(code){ const m = AV_C_RE.exec(code || ''); if (!m) return null; const n = m.slice(1).map(Number); return { b: n[0] % AVC.bg.length, f: n[1] % AVC.frame.length, x: n[2] % AVC.face.length, p: n[3] % AVC.pose.length, a: Math.min(8, n[4]), z: n[5] % AVC.zoom.length }; }
+function avcStr(c){ return `c:b${c.b}f${c.f}x${c.x}p${c.p}a${c.a}z${c.z}`; }
+/* 畫大頭照：角色用預覽用的小場景畫（透明背景），背景和外框用 2D 畫；gear 是那個人身上穿的 */
+function avatarPortrait(gear, C, size){ const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), R = size / 2, bg = AVC.bg[C.b][1];
+  c.save(); c.beginPath(); c.arc(R, R, R, 0, 7); c.clip(); const gr = c.createLinearGradient(0, 0, 0, size); gr.addColorStop(0, bg[0]); gr.addColorStop(1, bg[1]); c.fillStyle = gr; c.fillRect(0, 0, size, size);
+  if (C.b === 6){ c.fillStyle = '#ffffff'; for (let i = 0; i < 14; i++){ const a = i * 2.39996, r = (0.25 + (i * 0.618 % 1) * 0.7) * R; c.globalAlpha = 0.5 + (i % 3) * 0.2; c.beginPath(); c.arc(R + Math.cos(a) * r, R + Math.sin(a) * r * 0.9, size * (0.008 + (i % 2) * 0.006), 0, 7); c.fill(); } c.globalAlpha = 1; }
+  if (C.b === 1){ c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = size * 0.02; for (let k = 0; k < 3; k++){ c.beginPath(); for (let x = 0; x <= size; x += size / 16) c[x ? 'lineTo' : 'moveTo'](x, size * (0.66 + k * 0.1) + Math.sin(x / size * 9 + k * 2) * size * 0.018); c.stroke(); } }
+  if (gear){ try { const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } const fid = AVC.face[C.x][1], g2 = Object.assign({}, gear, fid ? { face: fid } : {}), gk = JSON.stringify(g2); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat); if (K.key !== gk){ applyGear(K.av, g2); K.key = gk; }
+      const kid = K.av.kid, P = AVC.pose[C.p], Z = AVC.zoom[C.z]; let hy = 1.33;
+      if (kid){ const nm = kid.acts[P[1]] ? P[1] : 'idle'; for (const k in kid.acts) kid.acts[k].setEffectiveWeight(k === nm ? 1 : 0); kid.acts[nm].time = 0; kid.mixer.setTime(0); kid.mixer.update(P[2]); kid.w = { [nm]: 1 }; kidLift(kid); K.av.g.updateMatrixWorld(true); hy = kid.B.head.getWorldPosition(new THREE.Vector3()).y + 0.24; }
+      const yaw = (C.a - 4) * 0.2, ty = hy + Z[2] * (hy / 1.6); K.cam.position.set(Math.sin(yaw) * Z[1], ty + 0.1, Math.cos(yaw) * Z[1]); K.cam.lookAt(0, ty, 0);
+      const S2 = Math.min(512, size * 2); if (K.rt.width !== S2) K.rt.setSize(S2, S2);
+      const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha(); renderer.setRenderTarget(K.rt); renderer.setClearColor('#000000', 0); renderer.clear(); renderer.render(K.sc, K.cam);
+      const px = new Uint8Array(S2 * S2 * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, S2, S2, px); renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA);
+      const t = document.createElement('canvas'); t.width = t.height = S2; const tc = t.getContext('2d'), id = tc.createImageData(S2, S2); for (let y = 0; y < S2; y++) id.data.set(px.subarray((S2 - 1 - y) * S2 * 4, (S2 - y) * S2 * 4), y * S2 * 4);
+      for (let i = 0; i < id.data.length; i += 4){ const al = id.data[i + 3]; if (al > 0 && al < 255){ id.data[i] = Math.min(255, id.data[i] * 255 / al); id.data[i + 1] = Math.min(255, id.data[i + 1] * 255 / al); id.data[i + 2] = Math.min(255, id.data[i + 2] * 255 / al); } }
+      tc.putImageData(id, 0, 0); c.drawImage(t, 0, 0, size, size);
+      if (kid){ for (const k in kid.acts) kid.acts[k].setEffectiveWeight(k === 'idle' ? 1 : 0); kid.mixer.setTime(0); kid.mixer.update(0.016); kid.w = { idle: 1 }; kidLift(kid); } } catch(e){ console.warn('portrait', e); } }
+  else { c.font = `${Math.round(size * 0.5)}px system-ui, "Noto Color Emoji"`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🙂', R, size * 0.54); }
+  c.restore(); const fr = AVC.frame[C.f][1]; if (fr){ const lw = size * 0.07; c.lineWidth = lw; if (fr === 'rainbow'){ const cg = c.createConicGradient ? c.createConicGradient(0, R, R) : null; if (cg){ ['#ff6b6b', '#ffd166', '#6bd68a', '#4dabf7', '#b197fc', '#ff6b6b'].forEach((k, i) => cg.addColorStop(i / 5, k)); c.strokeStyle = cg; } else c.strokeStyle = '#ffd166'; } else c.strokeStyle = fr; c.beginPath(); c.arc(R, R, R - lw / 2, 0, 7); c.stroke(); c.lineWidth = Math.max(1, size * 0.012); c.strokeStyle = 'rgba(0,0,0,.12)'; c.beginPath(); c.arc(R, R, R - lw, 0, 7); c.stroke(); }
+  return cv.toDataURL('image/png'); }
 const AV_BG = ['#cfe9f7', '#ffe3c4', '#e3f4d8', '#f6dcef', '#e8e3ff', '#fff2c2'];
 const AvCache = new Map();
 function myAvatar(){ const r = Cloud.lastRow && typeof Cloud.lastRow.avatar === 'string' ? Cloud.lastRow.avatar : null; return r != null ? r : LS.get('tide.avatar', ''); }
-function avatarOk(code){ return typeof code === 'string' && (code === '' || /^f:[a-z0-9_]{1,40}$/.test(code) && FISH_BY_ID[code.slice(2)] || /^p:[a-z]{1,20}$/.test(code) && PET_KINDS[code.slice(2)] || /^e:\d{1,2}$/.test(code) && AV_EMOJI[+code.slice(2)]); }
-function avatarSrc(code, size){ size = size || 96; if (!avatarOk(code) || code === '') return null; const key = code + '|' + size; if (AvCache.has(key)) return AvCache.get(key);
+function avatarOk(code){ return typeof code === 'string' && (code === '' || AV_C_RE.test(code) || /^f:[a-z0-9_]{1,40}$/.test(code) && FISH_BY_ID[code.slice(2)] || /^p:[a-z]{1,20}$/.test(code) && PET_KINDS[code.slice(2)] || /^e:\d{1,2}$/.test(code) && AV_EMOJI[+code.slice(2)]); }
+function avatarSrc(code, size, gear){ size = size || 96; if (!avatarOk(code) || code === '') return null; const C = avcParse(code), key = code + '|' + size + (C ? '|' + (gear ? JSON.stringify(gear) : '') + (AvShot.kit && AvShot.kit.av.kid ? 'k' : '') : ''); if (AvCache.has(key)) return AvCache.get(key);
+  if (C){ const u = avatarPortrait(gear || null, C, size); if (AvCache.size > 120) AvCache.clear(); AvCache.set(key, u); return u; }
   const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), h = [...code].reduce((a, ch) => a + ch.charCodeAt(0), 0);
   c.fillStyle = AV_BG[h % AV_BG.length]; c.beginPath(); c.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); c.fill();
   if (code.startsWith('f:')){ const f = FISH_BY_ID[code.slice(2)], fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; try { drawFish(fc, f.color, true, f.id); } catch(e){} c.drawImage(fc, size * 0.04, size * 0.2, size * 0.92, size * 0.575); }
   else { const ch = code.startsWith('p:') ? PET_KINDS[code.slice(2)].icon : AV_EMOJI[+code.slice(2)]; c.font = `${Math.round(size * 0.58)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ch, size / 2, size * 0.54); }
   const u = cv.toDataURL('image/png'); AvCache.set(key, u); if (code.startsWith('f:')) setTimeout(() => AvCache.delete(key), 4000); return u; }   /* 魚的小圖要一下下才畫好，過一會兒重畫 */
-function avatarImg(code, cls){ const src = avatarSrc(code, 64); if (!src) return null; const im = el('img', 'avimg ' + (cls || '')); im.src = src; im.alt = ''; return im; }
+function avatarImg(code, cls, gear){ const src = avatarSrc(code, 64, gear); if (!src) return null; const im = el('img', 'avimg ' + (cls || '')); im.src = src; im.alt = ''; return im; }
 async function setAvatar(code){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能換頭像'); return; }
   try { const { data, error } = await Cloud.sb.rpc('set_avatar', { p: code }); if (error) throw error; if (Cloud.lastRow) Cloud.lastRow.avatar = data || ''; LS.set('tide.avatar', data || ''); pushPresence(true); const mk = $('#brand .mark'); if (mk) mk._src = null; toast('🖼️ 頭像換好了'); renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
-function renderAvatarPick(body){ const f = el('div', 'field'); f.appendChild(el('label', '', '🖼️ 頭像')); const cur = myAvatar(), g = el('div', 'avpick');
+const AvStudio = { c: null };
+function renderAvatarStudio(body){ const f = el('div', 'field avst'); f.appendChild(el('label', '', '📸 大頭照')); const cur = myAvatar();
+  if (!AvStudio.c) AvStudio.c = avcParse(cur) || { b: 0, f: 1, x: 0, p: 0, a: 4, z: 0 }; const C = AvStudio.c, wrap = el('div', 'avst-w'), left = el('div', 'avst-l'), im = el('img', 'avst-img'), right = el('div', 'avst-r'); im.alt = '';
+  const draw = () => { try { im.src = avatarSrc(avcStr(C), 256, cleanGear(rec.gear)) || ''; } catch(e){} use.disabled = avcStr(C) === myAvatar(); use.textContent = use.disabled ? '✔ 現在的頭像' : '用這張當頭像'; };
+  const use = el('button', 'btn primary', '用這張當頭像'); use.addEventListener('click', () => setAvatar(avcStr(C)));
+  const row = (label, key, opts, paint) => { const r = el('div', 'avst-row'); r.appendChild(el('span', 'avst-k', label)); const box = el('div', 'avst-o'); opts.forEach((o, i) => { const b = el('button', 'avst-b' + (C[key] === i ? ' on' : ''), paint ? '' : o[0]); b.title = o[0]; b.setAttribute('aria-label', label + '：' + o[0]); if (paint){ b.classList.add('sw'); paint(b, o); } b.addEventListener('click', () => { C[key] = i; box.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === i)); draw(); }); box.appendChild(b); }); r.appendChild(box); right.appendChild(r); };
+  row('姿勢', 'p', AVC.pose); row('表情', 'x', AVC.face); row('遠近', 'z', AVC.zoom);
+  { const r = el('div', 'avst-row'); r.appendChild(el('span', 'avst-k', '角度')); const sl = el('input', 'avst-s'); sl.type = 'range'; sl.min = 0; sl.max = 8; sl.step = 1; sl.value = C.a; sl.setAttribute('aria-label', '角度'); sl.addEventListener('input', () => { C.a = +sl.value; draw(); }); r.appendChild(sl); right.appendChild(r); }
+  row('背景', 'b', AVC.bg, (b, o) => { b.style.background = `linear-gradient(${o[1][0]}, ${o[1][1]})`; });
+  row('外框', 'f', AVC.frame, (b, o) => { b.style.background = '#fff'; b.style.boxShadow = o[1] ? 'none' : ''; b.style.border = o[1] === 'rainbow' ? '4px solid transparent' : o[1] ? '4px solid ' + o[1] : '2px dashed #b9c6d0'; if (o[1] === 'rainbow') b.style.background = 'linear-gradient(#fff,#fff) padding-box, conic-gradient(#ff6b6b,#ffd166,#6bd68a,#4dabf7,#b197fc,#ff6b6b) border-box'; });
+  left.appendChild(im); left.appendChild(use); wrap.appendChild(left); wrap.appendChild(right); f.appendChild(wrap);
+  f.appendChild(el('p', 'sub', '用自己的角色拍一張大頭照當頭像：挑姿勢、表情、角度、背景和外框。之後換衣服、換髮型，頭像也會跟著換。為了大家的安全，這裡不能上傳自己的照片。')); body.appendChild(f); draw(); }
+function renderAvatarPick(body){ renderAvatarStudio(body); const f = el('div', 'field'); f.appendChild(el('label', '', '🖼️ 或是選一個現成的頭像')); const cur = myAvatar(), g = el('div', 'avpick');
   const opt = (code, node, title) => { const b = el('button', 'avopt' + (code === cur ? ' on' : '')); b.title = title || ''; b.appendChild(node); b.addEventListener('click', () => setAvatar(code)); g.appendChild(b); };
   { const im = el('img', 'avimg'); try { im.src = avatarShot(cleanGear(rec.gear), 'face', 96) || ''; } catch(e){} opt('', im, '我的角色'); }
   AV_EMOJI.forEach((e, i) => opt('e:' + i, avatarImg('e:' + i), e));
   for (const k of [...new Set((Pets.list || []).map(p => p.kind))]) if (PET_KINDS[k]) opt('p:' + k, avatarImg('p:' + k), PET_KINDS[k].name);
   for (const fz of FISH.filter(x => (rec.count[x.id] || 0) > 0 && !x.of).sort((a, b) => (rec.count[b.id] || 0) - (rec.count[a.id] || 0)).slice(0, 48)) opt('f:' + fz.id, avatarImg('f:' + fz.id), fz.name);
-  f.appendChild(g); f.appendChild(el('p', 'sub', '可以選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚（最常釣的 48 種）。大家在玩家列表和好友列表都看得到。')); body.appendChild(f); }
+  f.appendChild(g); f.appendChild(el('p', 'sub', '也可以直接選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚（最常釣的 48 種）。大家在玩家列表和好友列表都看得到。')); body.appendChild(f); }
 function renderWardrobe(body, only){
   const pv = el('div', 'wprev'), showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'pvbox');
   if (pvShow(box, showG)){ box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); if (Wardrobe.preview && Wardrobe.previewOf && GEAR_BY_ID[Wardrobe.previewOf] && GEAR_BY_ID[Wardrobe.previewOf].slot === 'back' && !PV.drag){ PV.yaw = Math.PI + 0.5; PV.idleAt = now() + 2.5; } }
@@ -11521,7 +11565,7 @@ if (UI2) document.body.classList.add('ui2');
 function ui2Tick(){
   if (!UI2) return;
   // 左上角的頭像：用自己的角色拍一張大頭照
-  try { const mk = $('#brand .mark'); if (mk){ const src = avatarSrc(myAvatar(), 96) || avatarShot(cleanGear(rec.gear), 'face', 96); if (src && mk._src !== src){ mk._src = src; mk.innerHTML = ''; const im = document.createElement('img'); im.src = src; im.alt = ''; mk.appendChild(im); } } } catch(e){}
+  try { const mk = $('#brand .mark'); if (mk){ const src = avatarSrc(myAvatar(), 96, cleanGear(rec.gear)) || avatarShot(cleanGear(rec.gear), 'face', 96); if (src && mk._src !== src){ mk._src = src; mk.innerHTML = ''; const im = document.createElement('img'); im.src = src; im.alt = ''; mk.appendChild(im); } } } catch(e){}
   { const h = $('#brand h1'); const nm = nickname || '潮汐釣魚村'; if (h && h._nm !== nm){ h._nm = nm; h.textContent = nm; } }   // 左上角顯示自己的名字
   // 紅點：有禮物或好友邀請、有任務可以交
   const dot = (tab, n) => { const b = $(`#menu .mbtn[data-tab="${tab}"]`); if (!b) return; let d = $('.rdot', b); if (!n){ if (d) d.remove(); return; } if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); };
@@ -11634,7 +11678,7 @@ async function shareCard(o){ if (shareCard.busy) return; shareCard.busy = true; 
   g.font = `500 38px ${font}`; g.fillStyle = '#5b7385'; { const d = new Date(Date.now() + 8 * 3600000); g.fillText([o.place ? '📍 ' + o.place : '', `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`].filter(Boolean).join('　'), W / 2, cardY + 900); }
   /* 釣客：頭像、名字、等級稱號、圖鑑和總數 */
   { const py = 1300, ph = 150; g.fillStyle = 'rgba(255,255,255,.16)'; rr(70, py, W - 140, ph, 40); g.fill(); let ax = 110; const ar = 52, ay = py + ph / 2;
-    let av = null; try { const src = avatarSrc(myAvatar(), 208); if (src){ av = new Image(); av.src = src; await new Promise(r => { av.onload = r; av.onerror = r; setTimeout(r, 600); }); } } catch(e){}
+    let av = null; try { const src = avatarSrc(myAvatar(), 208, cleanGear(rec.gear)); if (src){ av = new Image(); av.src = src; await new Promise(r => { av.onload = r; av.onerror = r; setTimeout(r, 600); }); } } catch(e){}
     g.fillStyle = '#fff'; g.beginPath(); g.arc(ax + ar, ay, ar + 5, 0, Math.PI * 2); g.fill(); if (av && av.width) g.drawImage(av, ax, ay - ar, ar * 2, ar * 2); else { g.font = `60px ${font}`; g.fillText('🧢', ax + ar, ay + 22); }
     let lv = 1, ttl = '', kinds = 0, total = 0; try { lv = lvOf(calcXP()); ttl = (typeof Lv !== 'undefined' && Lv.title) || ''; kinds = Object.keys(rec.count || {}).filter(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k]).length; total = rec.total || 0; } catch(e){}
     g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = `800 50px ${font}`; g.fillText(String(nickname || '釣客').slice(0, 12), ax + ar * 2 + 26, ay - 8); g.font = `600 34px ${font}`; g.globalAlpha = 0.92; g.fillText(`Lv.${lv}${ttl ? '・' + ttl : ''}`, ax + ar * 2 + 26, ay + 42);
@@ -13716,7 +13760,7 @@ function renderTab(){
       tb.appendChild(el('small', 'sub', '2 人以上就能玩：被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。')); body.appendChild(tb);
     }
     const ul = el('ul', 'people');
-    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { const im = avatarImg(av); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
+    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} const im = avatarImg(av, '', gr); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
