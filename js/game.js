@@ -2474,6 +2474,12 @@ function eyeImgPaint(c, E, D, colHex, mirror, face){ const g = c.getContext('2d'
   const t = document.createElement('canvas'); t.width = W; t.height = H; const tg2 = t.getContext('2d'); tg2.putImageData(o, 0, 0);
   if (face === 'heart'){ tg2.fillStyle = '#ff5d8f'; eyeHeart(tg2, E.cx, 210, E.r * 0.5); } if (face === 'star'){ tg2.fillStyle = '#ffd84a'; eyeStar(tg2, E.cx, 208, E.r * 0.72, 4); }
   g.clearRect(0, 0, W, H); g.save(); if (mirror){ g.translate(W, 0); g.scale(-1, 1); } g.drawImage(t, 0, 0); g.restore(); }
+/* 玩家說村民的「眼睛好可怕」：以前眼睛是一片平的貼圖，頭一轉、從側面看就像一塊板子凸在臉外面。改成貼著臉的弧面（把平面往頭的表面投影），正面看一樣，側面看是包在臉上的 */
+const EYE_GEO = new Map();
+function eyeGeo(cx, cy, w, h){ const key = [cx, cy, w, h].map(v => v.toFixed(3)).join(','); if (EYE_GEO.has(key)) return EYE_GEO.get(key);
+  const N = 8, P = [], UV = [], I = []; for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++){ const u = i / N, v = j / N, x = cx + (u - 0.5) * w, y = cy + (v - 0.5) * h, ck = Math.exp(-Math.pow((y / 0.31 + 0.32) / 0.26, 2)), xs = x / (1 + 0.06 * ck), r2 = 0.1089 - xs * xs - (y / 0.94) * (y / 0.94), z = 0.96 * (1 + 0.03 * ck) * Math.sqrt(Math.max(0.012, r2)) + 0.017;   /* 跟 kidReshape 裡臉頰鼓出來的量一樣，再往外 1.7 公分，才不會陷進臉裡 */ P.push(x - cx, y - cy, z); UV.push(u, v); }
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){ const a = j * (N + 1) + i, b = a + N + 1; I.push(a, a + 1, b, b, a + 1, b + 1); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); g.setIndex(I); g.computeBoundingSphere(); g.userData.shared = true; EYE_GEO.set(key, g); return g; }
 const EYE_TEX = new Map();
 function eyeTex(style, colIdx, mirror, face){ const key = style + '|' + colIdx + '|' + (mirror ? 1 : 0) + '|' + (face || ''); if (EYE_TEX.has(key)) return EYE_TEX.get(key);
   const c = document.createElement('canvas'), E = LOOK_EYES[style][1], col = LOOK_EYE[colIdx] || LOOK_EYE[0], shut = face === 'happy' || face === 'sleepy';
@@ -2485,14 +2491,14 @@ let SHADES_TEX = null;
 const EYE_W = 0.195, EYE_H = EYE_W * 320 / 256, EYE_X = 0.135, EYE_Y = -0.045;   /* 眼睛放低、分開一點、大一點（參考圖的臉：眼睛在臉的下半部） */
 /* 套用眼型：貼圖眼睛（av.eyes2）跟圓球眼睛（av.eyes）二選一；嘴巴、腮紅跟著換成新臉的大小，眉毛畫在貼圖裡 */
 function applyEyes(av, L, faceId){ const st = LOOK_EYES[L.y] ? L.y : 0, E = LOOK_EYES[st][1], HD = av.headG; av.eyeStyle = st;
-  if (!av.eyes2){ av.eyes2 = [-1, 1].map(sx => { const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false })); pl.position.set(sx * EYE_X, EYE_Y + EYE_H * 0.15, 0.308); pl.rotation.set(-0.08, sx * 0.42, 0); pl.scale.set(EYE_W, EYE_H, 1); pl.renderOrder = 3; HD.add(pl); return pl; });
+  if (!av.eyes2){ av.eyes2 = [-1, 1].map(sx => { const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })); pl.renderOrder = 3; pl.frustumCulled = false; HD.add(pl); return pl; });
     const sh = av.shades = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.18), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false })); sh.position.set(0, -0.04, 0.345); sh.renderOrder = 4; sh.visible = false; HD.add(sh); }
   const fk = { face_happy: 'happy', face_sleepy: 'sleepy', face_heart: 'heart', face_star: 'star' }[faceId] || '';
-  av.eyes2.forEach((pl, i) => { pl.visible = !!E; if (E){ const sx = i ? 1 : -1, shutF = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1), w = E.img && !shutF ? EYE_W * 52 / E.r : EYE_W,   /* 手繪的眼白和睫毛畫得比較開，瞳孔縮一點，整隻眼睛才跟其他眼型一樣大 */ hh = w * 320 / 256, off = E.img && !shutF ? (128 - E.cx) / 256 * w : 0; pl.scale.set(w, hh, 1); pl.userData.h = hh; pl.position.set(sx * (EYE_X + off), EYE_Y + hh * 0.15, 0.308); pl.material.map = eyeTex(st, L.e, i === 0, faceId === 'face_wink' && i === 1 ? 'happy' : fk); pl.material.needsUpdate = true; pl.userData.shut = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1); } });
+  av.eyes2.forEach((pl, i) => { pl.visible = !!E; if (E){ const sx = i ? 1 : -1, shutF = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1), w = E.img && !shutF ? EYE_W * 52 / E.r : EYE_W,   /* 手繪的眼白和睫毛畫得比較開，瞳孔縮一點，整隻眼睛才跟其他眼型一樣大 */ hh = w * 320 / 256, off = E.img && !shutF ? (128 - E.cx) / 256 * w : 0; pl.geometry = eyeGeo(sx * (EYE_X + off), EYE_Y + hh * 0.15, w, hh); pl.position.set(sx * (EYE_X + off), EYE_Y + hh * 0.15, 0); pl.scale.set(1, 1, 1); pl.userData.h = 1; pl.material.map = eyeTex(st, L.e, i === 0, faceId === 'face_wink' && i === 1 ? 'happy' : fk); pl.material.needsUpdate = true; pl.userData.shut = fk === 'happy' || fk === 'sleepy' || (faceId === 'face_wink' && i === 1); } });
   av.shades.visible = !!E && faceId === 'face_cool'; if (av.shades.visible && !av.shades.material.map){ if (!SHADES_TEX){ const c = document.createElement('canvas'); shadesDraw(c); SHADES_TEX = new THREE.CanvasTexture(c); SHADES_TEX.colorSpace = THREE.SRGBColorSpace; } av.shades.material.map = SHADES_TEX; av.shades.material.needsUpdate = true; }
   if (E){ av.eyes.forEach(e => e.visible = false); av.shines.forEach(e => e.visible = false); }
   if (av.brows) av.brows.forEach(b => { b.visible = !E; });
-  if (av.smile){ if (E){ av.smile.scale.set(0.42, 0.34, 1); av.smile.position.set(0, -0.165, 0.292); } else { av.smile.scale.set(1, 0.8, 1); av.smile.position.set(0, -0.1, 0.305); } }
+  if (av.smile){ if (E){ av.smile.scale.set(0.42, 0.34, 1); av.smile.position.set(0, -0.165, 0.272); } else { av.smile.scale.set(1, 0.8, 1); av.smile.position.set(0, -0.1, 0.305); } }
   if (av.blushM){ av.blushM.opacity = E ? 0.42 : 0.55; av.blushM.color.set(E ? '#ff9db4' : '#ff9a8f'); }
   if (av.blushes) av.blushes.forEach((b, i) => { const sx = i ? 1 : -1; if (E){ b.position.set(sx * 0.2, -0.125, 0.246); b.scale.set(1.25, 0.72, 1); } else { b.position.set(sx * 0.19, -0.085, 0.262); b.scale.set(1, 1, 1); } }); }
 /* 新的眼睛比較大、位置低一點：眼鏡、墨鏡、笑咪咪這些畫在眼睛上的東西要跟著（回傳 [左右, 高度, 放大]） */
@@ -2870,7 +2876,7 @@ function applyGear(av, gear){
       av.gearAnim = (t, sp) => { f.rotation.z = Math.sin(t * (2 + sp)) * 0.08; }; break; }
     case 'back_bag': { const c = M('#f17b6d', 0.7); mk(new THREE.BoxGeometry(0.3, 0.32, 0.14), c, 0, 0.84, -0.27); mk(new THREE.BoxGeometry(0.31, 0.12, 0.15), M('#d8604f', 0.7), 0, 0.96, -0.27); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.04, 0.36, 0.03), c, sx * 0.1, 0.84, 0.2).rotation.x = 0.1; break; }
     case 'back_basket': { const w = M('#c99a5b', 0.85); mk(new THREE.CylinderGeometry(0.15, 0.12, 0.3, 12), w, 0, 0.82, -0.32); for (const y of [0.74, 0.84, 0.94]) mk(new THREE.TorusGeometry(0.14, 0.012, 4, 14), M('#9b6a42', 0.8), 0, y, -0.32).rotation.x = Math.PI / 2; const tail = mk(new THREE.ConeGeometry(0.06, 0.14, 4), M('#2f6fb5', 0.6), 0.04, 1.03, -0.32); tail.rotation.z = 0.4; break; }
-    case 'back_cape': { const red = M('#c9302c', 0.65, { side:THREE.DoubleSide }); const c = mk(new THREE.PlaneGeometry(0.56, 0.8, 1, 4), red, 0, 0.72, -0.25); c.rotation.x = 0.12; mk(new THREE.TorusGeometry(0.16, 0.03, 6, 14), M('#e8b730', 0.3, { metalness:0.5 }), 0, 1.1, -0.02).rotation.x = Math.PI / 2;
+    case 'back_cape': { const red = M('#c9302c', 0.65, { side:THREE.DoubleSide }); const pv = new THREE.Group(); pv.position.set(0, 1.1, -0.2); (av.torsoG || av.g).add(pv); av.gearMeshes.push(pv); av.capeP = pv; const c = mk(new THREE.PlaneGeometry(0.56, 0.8, 1, 4), red, 0, -0.39, -0.05, pv); pv.rotation.x = 0.12;   /* 披風掛在脖子後面的一個點上：身體往前傾的時候它會自己垂下來、跑起來往後飄（kidAnimate），不再像一塊板子黏在背上 */ mk(new THREE.TorusGeometry(0.16, 0.03, 6, 14), M('#e8b730', 0.3, { metalness:0.5 }), 0, 1.1, -0.02).rotation.x = Math.PI / 2;
       av.gearAnim = (t, sp) => { c.rotation.x = 0.12 + Math.min(1, sp / 5) * 0.7 + Math.sin(t * 6) * 0.04 * (0.3 + sp / 5); }; break; }
     case 'back_wings': { const wm = M('#ffffff', 0.5, { emissive:'#fff6d8', emissiveIntensity:0.25, side:THREE.DoubleSide }), ws = [];
       for (const sx of [-1, 1]){ const pv = new THREE.Group(); pv.position.set(sx * 0.08, 0.95, -0.24); av.g.add(pv); av.gearMeshes.push(pv); for (let i = 0; i < 3; i++){ const f = new THREE.Mesh(new THREE.SphereGeometry(0.2 - i * 0.04, 10, 8), wm); f.scale.set(1, 0.42, 0.12); f.position.set(sx * (0.17 + i * 0.07), 0.05 - i * 0.09, 0); f.castShadow = true; pv.add(f); } ws.push([pv, sx]); }
@@ -3344,11 +3350,15 @@ function surfaceAt(x, z){
 const KID = { gltf: null, clips: null, ok: false, failed: false, wait: new Set() };
 (function loadKid(){
   if (/kid=0/.test(location.hash)) return;
-  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; try { kidReshape(g.scene); } catch(e){ console.warn('kidReshape', e); KID.shape = null; } KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
+  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; try { kidReshape(g.scene); kidCalmRun(g); } catch(e){ console.warn('kidReshape', e); KID.shape = null; } KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
     undefined, e => { KID.failed = true; KID.wait.clear(); console.warn('3D 角色載入失敗，繼續用程式角色', e); }); } catch(e){ KID.failed = true; }
 })();
 // 動作的原始移動速度（量過：腳往後推的速度），用來讓播放速度跟真正的移動速度一樣
 const KID_SPD = { walk: 0.68, run: 1.51, sprint: 1.43 };
+/* 腿變長以後（kidReshape）一步跨得比較遠，腳要踩慢一點才不會像在原地狂奔；跑步時腿甩的幅度、身體往前傾的角度也收小（原本是為短腿放大的） */
+function kidCalmRun(g){ if (!KID.shape) return; KID_SPD.walk *= 1.7; KID_SPD.run *= 1.75; KID_SPD.sprint *= 1.8; const B = {}; g.scene.traverse(o => { if (o.isBone) B[o.name] = o; }); const K = { walk: 0.88, run: 0.66, sprint: 0.6 }, lean = { run: 0.6, sprint: 0.55 };
+  for (const c of g.animations){ const k = K[c.name]; if (!k) continue; for (const t of c.tracks){ const bn = t.name.split('.')[0]; if (!t.name.endsWith('.quaternion') || !B[bn]) continue; const kk = /^(upperleg|lowerleg)/.test(bn) ? k : /^(spine|chest)/.test(bn) && lean[c.name] ? lean[c.name] : 0; if (!kk) continue; const R = B[bn].quaternion.clone(), Ri = R.clone().invert();
+      for (let i = 0; i < t.values.length; i += 4){ const d = Ri.clone().multiply(new THREE.Quaternion(t.values[i], t.values[i + 1], t.values[i + 2], t.values[i + 3])); if (d.w < 0){ d.x = -d.x; d.y = -d.y; d.z = -d.z; d.w = -d.w; } const ang = 2 * Math.acos(Math.min(1, d.w)), sn = Math.sqrt(Math.max(1e-9, 1 - d.w * d.w)); if (ang < 1e-4) continue; const r = R.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(d.x / sn, d.y / sn, d.z / sn), ang * kk)); t.values[i] = r.x; t.values[i + 1] = r.y; t.values[i + 2] = r.z; t.values[i + 3] = r.w; } } } }
 /* v411 新身材（玩家選的 G 方案）：頭大、身體細、腿長。模型檔和動作都不換，載入時做兩件事——
    (1) 把身體的點往中心收（存在綁定姿勢裡；原本的座標另外留在 restP，衣服的領口、口袋、條紋還是照舊座標畫）
    (2) 把骨頭之間的距離拉長（腿、手）、縮短（軀幹）。腿變長以後整個人要墊高，墊多少看姿勢（站著全墊、坐椅子只墊小腿、坐地上和躺著不墊），在 kidAnimate 裡算 */
@@ -3447,7 +3457,7 @@ function kidAnimate(f, dt, t){
   const rate = 1 - Math.exp(-dt * 10);
   for (const nm in K.acts){ const tgt = W[nm] || 0, cur = K.w[nm] || 0, nw = cur + (tgt - cur) * rate; K.w[nm] = nw < 0.002 && tgt === 0 ? 0 : nw; K.acts[nm].setEffectiveWeight(K.w[nm]); }
   // 播放速度
-  const ac = K.acts; if (ac.walk) ac.walk.timeScale = clamp(v / KID_SPD.walk, 0.6, 2.4); if (ac.run) ac.run.timeScale = clamp(v / KID_SPD.run, 0.7, 3.0); if (ac.sprint) ac.sprint.timeScale = clamp(v / KID_SPD.sprint, 0.7, 3.2);
+  const ac = K.acts; if (ac.walk) ac.walk.timeScale = clamp(v / KID_SPD.walk, 0.45, 2.4); if (ac.run) ac.run.timeScale = clamp(v / KID_SPD.run, 0.5, 3.0); if (ac.sprint) ac.sprint.timeScale = clamp(v / KID_SPD.sprint, 0.7, 3.2);
   if (ac.dive) ac.dive.timeScale = 0.6 + Math.min(1, v / 2.5) * 0.9;
   // 甩竿：蓄力時停在往後舉的那一格，放開時從那裡往前甩
   if (ac.fish_cast){ const c = ac.fish_cast, d = c.getClip().duration;
@@ -3457,6 +3467,7 @@ function kidAnimate(f, dt, t){
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
   K.mixer.update(dt); kidLift(K);
+  if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
 /* v397 玩家回報「NPC 都長得好像」：以前每個村民都是同一張臉、同一種咖啡色短髮、同樣的膚色和身材，開店的還全部戴漁夫帽＋圓框眼鏡。
@@ -3628,7 +3639,7 @@ class Fisher {
     a.g.position.y = this.baseY + P.bob;
     }
     if (a.gearAnim) a.gearAnim(t, this.speed || 0);
-    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = (pl.userData.h || EYE_H) * (bt < 0.12 && !pl.userData.shut ? 0.12 : 1); a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
+    if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
     this._uf = frameNo; const showBob = this.fishing && this.bobState !== 'none' && a.g.visible && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
@@ -10737,7 +10748,7 @@ function pvLoop(){
   if (!PV.cv || !PV.cv.isConnected || $('#sheet').hidden){ PV.raf = 0; return; }
   const t = now(); if (!PV.drag && t > PV.idleAt) PV.yaw += 0.01;
   const a = PV.av; a.g.rotation.y = PV.yaw; if (a.gearAnim) a.gearAnim(t, 0);
-  if (a.eyes){ const bt = (t + a.blinkAt) % 4.2; a.eyes[0].scale.y = a.eyes[1].scale.y = bt < 0.12 ? 0.12 : 1.15; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = (pl.userData.h || EYE_H) * (bt < 0.12 && !pl.userData.shut ? 0.12 : 1); }
+  if (a.eyes){ const bt = (t + a.blinkAt) % 4.2; a.eyes[0].scale.y = a.eyes[1].scale.y = bt < 0.12 ? 0.12 : 1.15; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; }
   PV.r.render(PV.sc, PV.cam); PV.raf = requestAnimationFrame(pvLoop);
 }
 // ===== 自己設計衣服、褲子（044）：16×16 格子畫布，上衣有正面＋背面；放到「設計師市集」賣 =====
