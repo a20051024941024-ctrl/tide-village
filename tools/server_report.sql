@@ -53,3 +53,10 @@ from (select count(*) as n, count(*) filter (where total >= 1) as c1, count(*) f
   from public.players p where created_at >= now() - interval '30 days') s
   cross join lateral (values (1, '開始玩', s.n), (2, '釣到第一條魚', s.c1), (3, '釣到 5 條', s.c5), (4, '賣過魚', s.sold), (5, '買了第二支釣竿', s.rod2),
     (6, '新手任務全部做完', s.guide), (7, '釣到 50 條', s.c50), (8, '綁定 Email', s.em), (9, '兒童模式（13 歲以下）', s.kids)) as r(ord, label, c);
+
+\echo
+\echo '## 🛋️ 家具檢查（屋子裡有沒有伺服器不認得的家具）'
+\echo
+select '室內烏龜缸設定' as 項目, (public._furn('turtletank')).price::text || ' 金幣、半徑 ' || (public._furn('turtletank')).rad::text as 值
+union all select '_furn 版本數', count(*)::text from pg_proc where proname = '_furn'
+union all select '不認得：' || coalesce(x->>'t', '(空白)'), count(*)::text from public.players p, jsonb_array_elements(case when jsonb_typeof(p.island->'items') = 'array' then p.island->'items' else '[]' end) h, jsonb_array_elements(case when jsonb_typeof(h->'f') = 'array' then h->'f' else '[]' end) x where (public._furn(x->>'t')).price is null group by x->>'t';
