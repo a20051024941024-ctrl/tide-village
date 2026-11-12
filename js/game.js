@@ -2728,6 +2728,7 @@ function applyGear(av, gear){
     case 'face_heart': { const hm = new THREE.MeshBasicMaterial({ color:'#ff4d6d' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(heartShape(0.055)), hm, sx * 0.115, 0.01, 0.318, HD); break; }
     case 'face_star': { const sm = new THREE.MeshBasicMaterial({ color:'#ffc93c' }); for (const sx of [-1, 1]) mk(new THREE.ShapeGeometry(starShape(0.065)), sm, sx * 0.115, 0.01, 0.318, HD); break; }
   }
+  try { npcFacialHair(av, mk); } catch(e){}
   applyDesigns(av, gear);   /* 自己設計的衣服、褲子（044） */
   try { mergeHeadGear(av); } catch(e){}
 }
@@ -3244,6 +3245,39 @@ function kidAnimate(f, dt, t){
   K.mixer.update(dt);
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
+/* v397 玩家回報「NPC 都長得好像」：以前每個村民都是同一張臉、同一種咖啡色短髮、同樣的膚色和身材，開店的還全部戴漁夫帽＋圓框眼鏡。
+   現在每個人有自己的髮型、髮色、膚色、眼睛顏色、高矮胖瘦、鬍子和穿搭（只改村民，玩家不受影響） */
+const NPC_STYLE = [
+  ['阿潮', { look:'h2c0s2e0', sc:[1, 1.02], gear:{ hat:'hat_cap', top:'top_polo', pants:'pants_shorts', shoes:'shoes_sneakers' } }],
+  ['小溪', { look:'h5c2s0e3', sc:[0.93, 0.93], gear:{ hat:'hat_none', top:'top_stripe', pants:'pants_skirt', shoes:'shoes_sandals' } }],
+  ['老港', { look:'h0c23s3e1', sc:[1.12, 0.98], fh:'full', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', face:'face_normal' } }],
+  ['阿蘭', { look:'h13c1s3e3', sc:[0.95, 1.03], gear:{ hat:'hat_none', top:'top_nylon', pants:'pants_khaki', shoes:'shoes_boots' } }],
+  ['阿默', { look:'h20c0s4e0', sc:[0.94, 1.1], fh:'stub', gear:{ hat:'hat_beanie', top:'top_nylon', face:'face_cool', shoes:'shoes_boots' } }],
+  ['阿嬤', { look:'h7c10s2e1', sc:[0.96, 0.86], gear:{ hat:'hat_none', acc:'acc_glasses', top:'top_long', pants:'pants_skirt', face:'face_happy' } }],
+  ['阿綾', { look:'h11c22s0e4', sc:[0.93, 1.0], gear:{ hat:'hat_none', acc:'acc_scarf_pink', top:'top_vtee', pants:'pants_skirt', face:'face_normal' } }],
+  ['阿木', { look:'h0c1s4e1', sc:[1.14, 1.05], fh:'beard', gear:{ hat:'hat_beanie', top:'top_tee', pants:'pants_overalls', shoes:'shoes_boots', face:'face_normal' } }],
+  ['阿福', { look:'h9c0s2e0', sc:[1.17, 0.96], fh:'mus', gear:{ hat:'hat_none', top:'top_hawaii', pants:'pants_shorts', shoes:'shoes_sandals', face:'face_happy' } }],
+  ['阿彩', { look:'h3c9s1e4', sc:[0.92, 0.96], gear:{ hat:'hat_beanie', acc:'acc_scarf_rainbow', top:'top_long', face:'face_normal' } }],
+  ['阿鐵', { look:'h2c30s4e0', sc:[1.1, 1.06], fh:'stub', gear:{ hat:'hat_none', top:'top_tank', pants:'pants_jeans', shoes:'shoes_boots', face:'face_normal' } }],
+  ['阿萍', { look:'h16c13s1e6', sc:[0.93, 0.98], gear:{ hat:'hat_none', top:'top_suit', face:'face_normal' } }],
+  ['阿報', { look:'h1c2s1e2', sc:[0.9, 0.85], gear:{ hat:'hat_cap', top:'top_stripe', pants:'pants_shorts', back:'back_bag', face:'face_normal' } }],
+  ['蔚博士', { look:'h21c0s0e2', sc:[0.97, 1.07], gear:{ hat:'hat_none', acc:'acc_glasses', top:'top_long', pants:'pants_khaki', face:'face_normal' } }],
+  ['阿伯', { look:'h0c10s3e1', sc:[1.0, 0.93], fh:'mus', gear:{ hat:'hat_beanie', acc:'acc_glasses', top:'top_polo', face:'face_normal' } }],
+  ['村長', { look:'h20c23s2e1', sc:[1.06, 0.95], fh:'full', gear:{ hat:'hat_none', acc:'acc_glasses', top:'top_suit', face:'face_happy' } }],
+  ['漁夫 老王', { look:'h0c1s4e0', sc:[1.08, 1.02], fh:'stub' }],
+  ['食堂 美雲姨', { look:'h7c1s1e1', sc:[1.06, 0.95], gear:{ face:'face_happy' } }],
+  ['釣蝦場老闆', { look:'h0c0s3e0', sc:[1.1, 1.0], fh:'mus' }],
+  ['館長', { look:'h4c0s0e5', sc:[0.95, 1.02] }],
+  ['寵物店', { look:'h6c6s0e3', sc:[0.92, 0.92] }],
+];
+function npcStyle(name){ name = String(name || ''); const r = NPC_STYLE.find(([k]) => name.startsWith(k)); return r ? r[1] : null; }
+/* 鬍子：mus 八字鬍、stub 短鬍渣、beard 落腮鬍、full 白長鬍（跟頭髮同一個顏色） */
+function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG; if (!k || !hm || !HD) return;
+  const S = (r, x, y, z, sx, sy, sz, rz) => { const o = mk(new THREE.SphereGeometry(r, 12, 8), hm, x, y, z, HD); o.scale.set(sx, sy, sz); if (rz) o.rotation.z = rz; return o; };
+  if (k === 'mus' || k === 'full' || k === 'beard') for (const sx of [-1, 1]) S(0.05, sx * 0.048, -0.075, 0.292, 1.35, 0.5, 0.55, sx * 0.3);
+  if (k === 'stub') S(0.15, 0, -0.14, 0.2, 1.35, 0.62, 0.72);
+  if (k === 'beard') S(0.16, 0, -0.16, 0.19, 1.45, 0.82, 0.8);
+  if (k === 'full'){ S(0.17, 0, -0.17, 0.19, 1.4, 1.0, 0.8); S(0.1, 0, -0.3, 0.23, 1.1, 1.0, 0.7); } }
 class Fisher {
   constructor(opts){
     this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; CLOD.all.add(this);
@@ -3258,9 +3292,10 @@ class Fisher {
     this.tag.append(this.bub, this.nm); labelsEl.appendChild(this.tag);
     this.bubUntil = 0;
     if (!CLASSIC){ this.blob = new THREE.Mesh(BLOB_GEO, BLOB_MAT); this.blob.renderOrder = 1; scene.add(this.blob); }
+    if (this.isNpc){ const st = npcStyle(opts.name); if (st){ this.npcSt = st; this.av.npcFh = st.fh || null; if (st.sc) this.av.g.scale.set(st.sc[0], st.sc[1], st.sc[0]); this.setGear({}); } }
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
-  setGear(gear){ const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
+  setGear(gear){ if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, { look: this.npcSt.look }); const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
   setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); if (!this.isNpc){ try { rodHD(this.av, this.rodType, r.color, this.rodSkin); } catch(e){ console.warn('rodHD', e); } } applyRodShape(this.av, this.rodType, false); } }
   setRodLook(skin, lc){ skin = CRAFT_BY[skin] ? skin : null; lc = CRAFT_BY[lc] ? lc : null; if (lc !== this.lineCol){ this.lineCol = lc; this.line.material.color.set(lc ? CRAFT_BY[lc].col : '#fbf8ef'); this.line.material.opacity = lc ? 0.95 : 0.85; }   /* v253 工坊做的竿子造型、釣線顏色 */
     if (skin !== this.rodSkin){ this.rodSkin = skin; if (!this.isNpc && this.rodId){ const r = RODS.find(x => x.id === this.rodId) || RODS[0]; try { rodHD(this.av, this.rodType, r.color, skin); applyRodShape(this.av, this.rodType, false); } catch(e){} } } }
@@ -13660,6 +13695,7 @@ function renderTab(){
     sec('🍳 潮汐食堂（料理）', [
       '🛒 買料理：食堂的「買料理」分頁可以直接跟美雲姨買現成的料理（一星），不用自己有魚。買來可以自己吃（釣魚有加成）或端給點餐的客人。價錢是料理價值的 2.5 倍，買來再賣回去會虧錢；一天最多買 6 道。',
       '潮汐食堂在廣場旁邊，跟釣蝦場一樣從門口走進去。裡面有開放式廚房、櫃台前的高腳椅和靠牆的小桌子，美雲姨在櫃台後面。走到櫃台前（或按「做料理」）就可以做菜。',
+      '🍽️ 點餐：在食堂裡坐到吧台的椅子上，右下會出現「🍽️ 點餐」，花金幣跟美雲姨點一道菜（🪙45～225），菜端到你面前吃完，馬上有那道菜的加成。自己釣魚來做比較便宜，還能做到三顆星。',
       '在食堂用魚缸裡的魚做料理，共 13 道。不同料理玩法不一樣：壽司類切魚、章魚燒翻面、燒烤和油炸控制火候、火鍋和麵記住下料順序。做得越好星星越多、越值錢。',
       '料理可以賣掉，也可以「吃掉」：接下來幾次拋竿會有加成（例如稀有魚變多、線比較不容易斷）。',
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
@@ -13693,6 +13729,7 @@ function renderTab(){
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '🍚 吃飯時間村民會去潮汐食堂，他們會站在門的兩旁，不會擋住門口。',
+      '👥 每個村民都長得不一樣：有自己的髮型、髮色、膚色、高矮胖瘦、鬍子和穿搭。',
       '🌱 小島菜園：每個人的小島西邊都有一塊菜園（從小島的草地往西走就到了）。菜園最西邊有「種子攤」，走過去買種子，種子會放進背包（除了平常的 6 種，每週還有一種「本週限定」：西瓜、胡蘿蔔、葡萄、向日葵輪流，台灣時間每週一換；限定種子買起來之後隨時可以種）；在背包或菜園點「拿在手上」，再走到空的田旁邊按「種下」，一格種一顆：番茄 2 小時、高麗菜 4 小時、玉米 6 小時（另外送玉米粒魚餌）、地瓜 8 小時、草莓 12 小時、南瓜 24 小時。作物照現實時間長大，關掉遊戲也會繼續長。澆水一次快 12%（每格最多 3 次、一小時澆一次），澆滿 2 次會「豐收」多賣五成；忘記澆水不會枯掉。一開始 4 格，可以花金幣開墾到 12 格。去朋友的島可以幫忙澆水，每次 🪙10（一天最多 10 次）。',
       '🪸 小島海底花園：小島碼頭左邊有一座潛水梯（有紅色救生圈），有潛水裝備就可以下去自己小島的海底。海底的種子（海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，在菜園的種子攤買）拿在手上，游到海底想種的地方按「種下」，哪裡都可以種，可以種得很密。海底的不用澆水，照現實時間長大；長到一半以上的越多，游過來的魚群越多，可以拍照。珊瑚還會吸引珊瑚礁魚：每有一株長到一半以上的珊瑚，在小島釣魚時鸚哥魚、海馬、獅子魚這三種稀有的珊瑚礁魚多 25%（最多算 4 株，也就是最多 2 倍）。跟朋友一起從同一座島潛下去，在海底看得到彼此。一開始可以種 4 株，可以花金幣擴建到 8、12、16 株。自由打造海底：種子攤有賣海底的造景（粉紅、橘色、紫色珊瑚、腦珊瑚、海草、海帶林、海葵、海綿、海星、貝殼、大小石頭、白沙地）和裝飾（古陶罐、冒泡石、大硨磲貝、舊船錨、海底石燈、裝飾寶箱、石頭人像、石拱門）。買了放背包，潛到海底拿在手上按「放下」，會放在你面前，可以一個接一個緊貼著排成一片；靠近它按「收起來」可以收回背包。造景和裝飾合起來最多 300 個，住在一起的室友、家人也可以一起佈置。會收成賺金幣的作物另外算，還是有數量上限。去別人的島潛下去參觀，可以幫他的海底按讚（一週一次）；「海底花園」頁面最下面有「🏆 本週最美海底」排行，每週一重新算，可以直接點「去看看」。去朋友的島也可以潛下去參觀他的海底花園。',
       '🌊 海洋記憶：海會記得你在每個釣點做過的事。在同一個釣點放流（+3）、撿垃圾（+2）、釣魚（+1，每個釣點一天算 20 條），那裡對你的記憶就會變深：熟悉 15 → 親近 50 → 老朋友 130 → 守護者 300 → 海的家人 600。記憶越深，水面會多出亮晶晶的浮游生物、小魚會跳出水面，魚也比較快上鉤（親近快 5%，每升一級再快 5%，最多快兩成）。走到釣點時，上面的名字旁邊會寫現在的記憶和點數。不影響釣到什麼魚。',
@@ -14827,14 +14864,39 @@ function ui3Chat(){ if ($('#chat3')) return; const b = document.createElement('d
 /* 右下：🐾（有帶寵物才出現）＝打開表情動作裡的寵物互動 */
 function ui3Pet(){ let pb = $('#pet3'); const row = $('#actRow'); if (!row) return; if (!pb){ pb = document.createElement('button'); pb.id = 'pet3'; pb.className = 'panel'; pb.innerHTML = '🐾<small>寵物</small>'; pb.addEventListener('click', e => { e.stopPropagation(); openEmotePanel(); setTimeout(() => { const P = $('#emotePanel'); const x = P && [...P.querySelectorAll('.ep-b')].find(b => /抱寵物/.test(b.textContent)); if (x) x.scrollIntoView({ block:'center' }); }, 50); }); row.insertBefore(pb, $('#jumpBtn')); }
   const want = !!me.pet && F.phase === 'idle' && !Dive.on; if (pb.hidden === want) pb.hidden = !want; }
+/* v397 潮汐食堂點餐：坐在食堂的椅子上會出現「🍽️ 點餐」，花金幣跟美雲姨點一道菜，菜端到你面前、吃完就有加成（伺服器 154_cafe_order.sql） */
+const CAFE_MENU = [['ayu', 45], ['tilapia', 45], ['suzuki', 55], ['saba', 60], ['sanbei', 85], ['ikayaki', 90], ['tako', 165], ['unadon', 225]];
+const CAFE_FOOD_COL = { ayu:'#d9a05a', tilapia:'#b5552f', suzuki:'#e8b25a', saba:'#e9eef2', sanbei:'#9a4a2a', ikayaki:'#c8783a', tako:'#c98a4a', unadon:'#7a3e1e' };
+function orderBtn(){ const row = $('#actRow'); if (!row) return; let b = $('#order3');
+  if (!b){ b = document.createElement('button'); b.id = 'order3'; b.className = 'panel'; b.innerHTML = '🍽️<small>點餐</small>'; b.addEventListener('click', e => { e.stopPropagation(); openOrder(); }); row.insertBefore(b, $('#jumpBtn')); }
+  const want = !!(mySeat && mySeat.cafe) && F.phase === 'idle'; if (b.hidden === want) b.hidden = !want; if (!want){ const P = $('#orderPanel'); if (P && !P.hidden) P.hidden = true; } }
+function openOrder(){ let P = $('#orderPanel'); if (!P){ P = document.createElement('div'); P.id = 'orderPanel'; P.className = 'panel'; document.body.appendChild(P); }
+  P.innerHTML = ''; const hd = el('div', 'op-h'); hd.appendChild(el('b', '', '🍽️ 美雲姨的菜單')); const x = el('button', 'op-x', '✕'); x.addEventListener('click', () => P.hidden = true); hd.appendChild(x); P.appendChild(hd);
+  P.appendChild(el('p', 'sub', '美雲姨用自己的食材現做，吃完馬上有加成。自己釣魚來做比較便宜，還能做到三顆星喔。'));
+  const cur = curBuff(); if (cur) P.appendChild(el('p', 'sub warn', `你現在還有 ${RECIPES[cur.r].icon}${RECIPES[cur.r].name} 的加成（剩 ${cur.left} 次），點新的會換掉。`));
+  const ul = el('div', 'op-list');
+  for (const [r, price] of CAFE_MENU){ const rc = RECIPES[r], bf = BUFFS[r]; if (!rc || !bf) continue; const it = el('button', 'op-it'); it.innerHTML = `<span class="op-ic">${rc.icon}</span><span class="op-t"><b>${esc(rc.name)}</b><small>${esc(bf.txt)}・${bf.casts} 次拋竿</small></span><span class="op-p">🪙${price}</span>`;
+    it.disabled = (rec.coins || 0) < price; it.addEventListener('click', () => cafeOrder(r, price)); ul.appendChild(it); }
+  P.appendChild(ul); P.hidden = false; }
+async function cafeOrder(r, price){ const P = $('#orderPanel'); if ((rec.coins || 0) < price){ toast('金幣不夠喔'); return; } if (P) P.hidden = true;
+  if (Cloud.on && Cloud.sb){ const d = await festRpc('cafe_order', { p_r: r }); if (!d || !d.player) return; adoptRow(d.player); } else addCoins(-price);
+  const bf = BUFFS[r], rc = RECIPES[r]; buff = { r, left: bf.casts }; LS.set('tide.buff', buff); renderBuff(); SFX.coin();
+  const mei = questNpcs.find(q => q.who === 'mei'); if (mei) mei.f.say(['來囉！趁熱吃～', '這道是今天的拿手菜！', '慢慢吃，不夠再跟我說'][Math.floor(Math.random() * 3)], '', 4);
+  const s = mySeat; if (s){ const g = new THREE.Group(), pl = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.03, 16), mat('#ffffff', 0.4)); g.add(pl);
+    const fd = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), mat(CAFE_FOOD_COL[r] || '#d9a05a', 0.6)); fd.scale.set(1.3, 0.5, 0.9); fd.position.y = 0.05; g.add(fd);
+    g.position.set(s.x + Math.sin(s.face) * 0.85, s.y + 0.67, s.z + Math.cos(s.face) * 0.85); scene.add(g); const t0 = now();
+    const tick = () => { const a = now() - t0; if (a > 7 || !mySeat){ scene.remove(g); return; } if (a > 1.2){ const k = Math.max(0.05, 1 - (a - 1.2) / 5); fd.scale.set(1.3 * k, 0.5 * k, 0.9 * k); } if (a > 1.2 && Math.floor(a * 2) !== Math.floor((a - 0.05) * 2)) me.say('😋', 'emote', 1); requestAnimationFrame(tick); }; tick(); }
+  toast(`點了 ${rc.icon} <b>${esc(rc.name)}</b>：接下來 ${bf.casts} 次拋竿 ${esc(bf.txt)}`); }
 function ui3Init(){ if (!UI3.on) return; document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
-  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
+  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
   (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); } catch(e){} requestAnimationFrame(loop); })(); }
 /* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
 function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
+  /* v397 玩家回報：小島上左上角「我的小島」那排把「今天」壓在下面。現在小島列、參觀列、船列也排進同一欄，「今天」接在它們下面 */
+  P.dataset.bar = ''; for (const id of ['isleBar', 'visitBar', 'ferryBar', 'diveHud']){ const e = document.getElementById(id); if (!e || e.hidden || getComputedStyle(e).display === 'none') continue; const tt = Math.round(y + 8) + 'px'; if (e.style.top !== tt) e.style.top = tt; y = Math.max(y, e.getBoundingClientRect().bottom); P.dataset.bar = 1; }
   const t = Math.round(y + 8) + 'px'; if (P.style.top !== t) P.style.top = t;
-  const B = $('#brand'), G = document.getElementById('guideCard'); P.classList.toggle('slim', !!(B && B.classList.contains('open')) || !!(G && !G.hidden && G.offsetHeight > 60)); }   /* 頭像打開或有指引卡：「今天」只剩標題，不會壓到搖桿 */
+  const B = $('#brand'), G = document.getElementById('guideCard'); P.classList.toggle('slim', !!(B && B.classList.contains('open')) || !!(G && !G.hidden && G.offsetHeight > 60) || !!P.dataset.bar); }   /* 頭像打開或有指引卡：「今天」只剩標題，不會壓到搖桿 */
 setTimeout(ui3Init, 300);
 })();

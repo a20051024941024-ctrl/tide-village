@@ -1356,3 +1356,20 @@ body.ui3 .g3i{background:none!important;box-shadow:none!important;font-size:40px
 /* v368 打字時：聊天紀錄在輸入框正上方；畫面上飄的聊天字先藏起來（紀錄裡都有） */
 body.chatting.histOpen #log{visibility:hidden}
 #chatHist{transition:none}
+/* v397 食堂點餐 */
+#order3{width:56px;height:56px;border-radius:50%;font-size:20px;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0}
+#order3 small{font-size:10px;font-weight:800}
+#order3[hidden],#orderPanel[hidden]{display:none}
+#orderPanel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;width:min(420px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto;padding:12px 14px}
+#orderPanel .op-h{display:flex;align-items:center;justify-content:space-between;font-size:16px}
+#orderPanel .op-x{border:0;background:none;font-size:18px;padding:4px 8px;cursor:pointer}
+#orderPanel .sub{margin:6px 0;font-size:12px;color:var(--ink-soft)}
+#orderPanel .sub.warn{color:#c4553f}
+#orderPanel .op-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#orderPanel .op-it{display:flex;align-items:center;gap:6px;text-align:left;border:1px solid rgba(0,0,0,.08);background:#fffaf0;border-radius:12px;padding:6px 8px;cursor:pointer;font:inherit}
+#orderPanel .op-it:disabled{opacity:.45}
+#orderPanel .op-ic{font-size:24px}
+#orderPanel .op-t{flex:1;display:flex;flex-direction:column;min-width:0}
+#orderPanel .op-t b{font-size:13px}
+#orderPanel .op-t small{font-size:10.5px;color:var(--ink-soft)}
+#orderPanel .op-p{font-size:12px;font-weight:800;white-space:nowrap}
