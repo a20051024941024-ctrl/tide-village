@@ -12699,7 +12699,7 @@ const npcs = [
   { name:'阿鐵・釣具師傅', shirt:'#5a6470', hat:'#2b2f36', x:hlAt('tackle', 1.75, 2.75)[0], z:hlAt('tackle', 1.75, 2.75)[1], y:0.02, dir:new THREE.Vector2(Math.sin(HLOT.tackle[2]), Math.cos(HLOT.tackle[2])), shopNpc:'craft',
     lines:['我會做竿子造型和釣線顏色，帶幾條魚來就好', '魚不是拿來吃的啦，是我拿來練手藝、換材料的', '金箔竿要三條稀有魚，很值得喔', '收藏的、展示中的魚我不會拿', '線換個顏色，別人一眼就認得出是你的'] },
   // v270 阿萍：美髮沙龍的設計師，超認真的工作狂，每天都在設計新髮型、調新髮色，染髮剪髮什麼都會（109_salon.sql）
-  { name:'阿萍・髮型設計師', shirt:'#2a2a2a', hat:'#7fd0c8', x:lotAt('spare', 0.3, 2.3)[0], z:lotAt('spare', 0.3, 2.3)[1],   /* v336 沙龍以前跟博物館疊在一起、阿萍站在博物館牆裡面按不到：沙龍往南移、阿萍站到店門口 */ y:0.02, dir:new THREE.Vector2(1, 0), shopNpc:'salon',
+  { name:'阿萍・髮型設計師', shirt:'#2a2a2a', hat:'#7fd0c8', x:lotAt('spare', -1.8, 2.8)[0], z:lotAt('spare', -1.8, 2.8)[1],   /* v423 玩家回報「卡在櫃檯」：(0.3, 2.3) 剛好是櫃台正中間，阿萍下半身埋在櫃台裡。改站櫃台左邊外面（跟阿彩、阿鐵一樣站櫃台旁） */   /* v336 沙龍以前跟博物館疊在一起、阿萍站在博物館牆裡面按不到：沙龍往南移、阿萍站到店門口 */ y:0.02, dir:new THREE.Vector2(Math.sin(SHOPLOT.spare.r), Math.cos(SHOPLOT.spare.r)), shopNpc:'salon',
     lines:['今天的新髮色我昨天半夜三點才調出來的，你看看！', '剪頭髮、染頭髮、燙頭髮、編辮子，跟頭髮有關的我全部都會', '我每天都在設計，不設計我會睡不著', '你這個髮型……要不要讓我修一下？', '海風很傷頭髮，釣完魚記得來護髮喔', '新髮型每兩天出一款，新髮色每天一色，我一天都沒休息過'] },
   // 阿報：廣場的報童，每天早上 7 點出《潮汐村報》（057_news.sql）
   { name:'阿報・村報記者', shirt:'#f1e3c8', hat:'#2b2f36', x:-0.6, z:1.2, y:0.02, dir:new THREE.Vector2(0.6, 0.8).normalize(), shopNpc:'news',
