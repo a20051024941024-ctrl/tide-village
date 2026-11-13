@@ -34,7 +34,7 @@ create or replace function public._cargo_info(pl public.players) returns jsonb l
         'base', round(public._fish_price(sp, (e->>'w')::numeric) * (case when e ? 'y' then 0.25 else 1 end) * coalesce(ef.mult, 1))) order by i)
       from jsonb_array_elements(pl.cargo) with ordinality x(e, i) join public.fish_species sp on sp.id = e->>'f' left join public.econ_fish ef on ef.fish = sp.id), '[]'::jsonb)) $$;
 
-create or replace function public.cargo_info() returns jsonb language plpgsql stable security definer set search_path = public as $$
+create or replace function public.cargo_info() returns jsonb language plpgsql security definer set search_path = public as $$
 declare pl public.players := public._me(); begin return public._cargo_info(pl); end $$;
 
 -- 把魚缸裡的魚裝上魚艙

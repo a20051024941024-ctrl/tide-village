@@ -53,7 +53,7 @@ drop trigger if exists team_trg on public.players;
 create trigger team_trg after update of total on public.players for each row when (new.total is distinct from old.total) execute function public._team_trg();
 
 -- 我的隊伍
-create or replace function public.team_my() returns jsonb language plpgsql stable security definer set search_path = public as $$
+create or replace function public.team_my() returns jsonb language plpgsql security definer set search_path = public as $$
 declare pl public.players := public._me(); t public.teams; w date := public._team_week(); wk public.team_week; mem jsonb; m integer;
 begin
   select tm.* into t from public.teams tm join public.team_members x on x.team = tm.id where x.uid = pl.id;
