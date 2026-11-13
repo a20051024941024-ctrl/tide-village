@@ -10522,9 +10522,16 @@ function updateSecrets(t){
   try { updateOtherSecrets(t); } catch(e){}
 }
 /* v218：大家的祕密窩點都看得到（092 secret_chum_all），別人的窩點也能釣（效果 75%） */
-var OtherSecret = { list: [], at: 0, busy: false, marks: new Map() };
+var OtherSecret = { list: [], at: 0, busy: false, marks: new Map(), live: new Map() };
+/* v432 玩家要求「祕密窩點別人也要看得到」：伺服器那邊本來就是公開的，但別人的手機每 30 秒才去問一次，而且沒連上雲端就問不到，
+   所以常常站在旁邊卻看不到。現在自己的祕密窩點也放進「我的狀態」一直帶著，附近的人馬上就看得到（跟「現在打」的窩一樣）；伺服器那份照舊，給不在線上的人的窩點用 */
+function mySecretState(){ return secretSpots.filter(sp => secretPower(sp) > 0).slice(-SECRET_MAX).map(sp => [sp.x, sp.z, CHUMS.findIndex(c => c.id === sp.type), sp.at]); }
+function syncPeerSecret(peer, sc, nick){ if (!Array.isArray(sc)) return; const mineIds = new Set(secretSpots.map(x => x.id));
+  for (const [id, v] of OtherSecret.live) if (v.peer === peer && !sc.some(q => Array.isArray(q) && +q[3] === id)){ OtherSecret.live.delete(id); OtherSecret.list = OtherSecret.list.filter(x => x.id !== id); }   /* 他把舊的換掉了 */
+  for (const q of sc.slice(0, SECRET_MAX)){ if (!Array.isArray(q)) continue; const x = +q[0], z = +q[1], C = CHUMS[+q[2]], at = +q[3]; if (!C || !isFinite(x) || !isFinite(z) || !isFinite(at) || Math.abs(x) > 400 || Math.abs(z) > 400 || at > Date.now() + 120000 || mineIds.has(at)) continue;
+    const sp = { id: at, x, z, type: C.id, at, where: '', nick: String(nick || '釣客').slice(0, 16), other: true, peer }; if (secretPower(sp) <= 0) continue; OtherSecret.live.set(at, sp); if (!OtherSecret.list.some(o => o.id === at)) OtherSecret.list.push(sp); } }
 async function loadOtherSecrets(){ if (OtherSecret.busy || !Cloud.on || !Cloud.sb) return; OtherSecret.busy = true; OtherSecret.at = Date.now();
-  try { const { data } = await Cloud.sb.rpc('secret_chum_all'); if (Array.isArray(data)) OtherSecret.list = data.filter(x => x && !x.mine && CHUM_BY_ID[x.type]).map(x => ({ id:+x.id, x:+x.x, z:+x.z, type:x.type, at:+x.at, where:x.where, nick:x.nick, other:true })); } catch(e){}
+  try { const { data } = await Cloud.sb.rpc('secret_chum_all'); if (Array.isArray(data)){ OtherSecret.list = data.filter(x => x && !x.mine && CHUM_BY_ID[x.type]).map(x => ({ id:+x.id, x:+x.x, z:+x.z, type:x.type, at:+x.at, where:x.where, nick:x.nick, other:true })); for (const [id, v] of OtherSecret.live){ if (secretPower(v) <= 0){ OtherSecret.live.delete(id); continue; } if (!OtherSecret.list.some(o => o.id === id)) OtherSecret.list.push(v); } } } catch(e){}
   OtherSecret.busy = false; }
 function updateOtherSecrets(t){ if (Cloud.on && Date.now() - OtherSecret.at > 30000) loadOtherSecrets();
   const live = new Set(); for (const sp of OtherSecret.list){ if (secretPower(sp) <= 0) continue; live.add(sp.id); let g = OtherSecret.marks.get(sp.id); if (!g){ g = secretMark(sp, true); secretMarks.delete(sp.id); OtherSecret.marks.set(sp.id, g); }
@@ -12161,6 +12168,7 @@ function presenceObj(){
   if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
   { const cz = myChumState(); if (cz.length) o.cz = cz; }   /* v431 我打的窩（還沒結束的） */
+  { const sc = mySecretState(); if (sc.length) o.sc = sc; }   /* v432 我的祕密窩點 */
   if (typeof Sub !== 'undefined' && Sub && Sub.on && Sub.pos) o.sb = [+Sub.pos.x.toFixed(1), +Sub.pos.y.toFixed(1), +Sub.pos.z.toFixed(1), +(Sub.yaw % (Math.PI * 2)).toFixed(2)];   /* v241 一起潛：潛水艇在裂縫裡的位置 */
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
@@ -12197,7 +12205,7 @@ function applyPeer(pp){
     peers.set(pp.peer, p);
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
-  p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){}
+  p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){} try { if (!isBlockedPeer(pp.peer)) syncPeerSecret(pp.peer, pr.sc || [], pr.n); } catch(e){}
   if (pos){ p.target.set(clamp(+pos[0]||0, -200, 200), 0, clamp(+pos[1]||0, -200, 200));   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
@@ -14088,7 +14096,7 @@ function renderTab(){
     sec('🍚 打窩、窩點、渡船、小船', [
       '先到釣具店的「魚餌」分頁買窩料：酒米窩料（淡水好用）、南極蝦窩料（海水好用）、黃金特製窩（哪裡都有效，傳說魚也會被吸引）。',
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到（晚一點才走過來或才上線的人也看得到，還會顯示剩下的時間），維持 2～3 分鐘；別人也可以來你的窩裡釣；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
-      '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫），別人的窩點也能去釣，效果是打窩那個人的 75%。',
+      '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫）；在線上的人一做好，附近的人馬上就看得到，別人的窩點也能去釣，效果是打窩那個人的 75%。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、東邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
       '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。',
