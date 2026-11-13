@@ -2371,7 +2371,7 @@ const LOOK_HAIR = ['短髮', '齊瀏海', '刺刺頭', '鮑伯頭', '長髮', '�
   /* v270 阿萍美髮沙龍設計的（109，要買）：從 4 款開始，每兩天多一款 */ '公主頭', '大波浪', '側馬尾', '高馬尾', '麻花辮', '雙辮子', '雙丸子', '公主切', '長直瀏海', '蓬蓬捲', '油頭', '中分',
   /* v279 阿萍又設計的（112）：照臉型挑的熱門髮型，一樣每兩天多一款 */ '八字瀏海', '法式瀏海', '鎖骨髮', '低馬尾', '空氣瀏海', '內扣髮', '蛋捲頭', '低丸子頭', '高顱頂半扎',
   /* v404 阿萍每週的新作品（157） */ '狼尾頭', '精靈短髮',
-  /* v415 玩家給的 Q 版參考（162） */ '甜心雙束'];
+  /* v415 玩家給的 Q 版參考（162） */ '甜心雙束', /* v418 玩家的 Meshy 全身公仔拆出來的頭髮 */ '清爽亂髮', '公仔長捲髮'];
 const LOOK_HC = ['#2a2422', '#5a3d2b', '#8a5a3a', '#d8a850', '#f0d890', '#c0482a', '#f2a0c0', '#4a7ad0', '#4aa070', '#8a6ad0', '#ecebe6',
   /* v270 阿萍每天發現的新髮色（109，要染）：從 3 色開始，每天多一色 */ '#f6a99a', '#b7a0e0', '#9fe0c8', '#a8d8f0', '#b8906a', '#c88a3a', '#e0a090', '#c8283c', '#f08060', '#7f98b8', '#8aa890', '#7a2236', '#a8aab0', '#f2e6c8', '#3a7a5a', '#1e2a5a', '#5a2a7a', '#f0e060', '#e0a848', '#4a2c1e', '#b0582a', '#f0b880', '#d8a8a8', '#78b8f0', '#7ab8a8', '#8aa848', '#a03a8a', '#f07838', '#ff5fa8', '#1a2850'];
 const LOOK_HC_NAME = ['蜜桃粉', '薰衣草紫', '薄荷綠', '冰川藍', '奶茶棕', '焦糖金', '玫瑰金', '櫻桃紅', '珊瑚橘', '霧霾藍', '灰綠', '酒紅', '銀灰', '白金', '海藻綠', '午夜藍', '葡萄紫', '檸檬黃', '蜂蜜色', '巧克力', '紅銅', '杏桃', '藕粉', '天空藍', '青瓷', '抹茶', '莓果紫', '落日橘', '霓虹粉', '星空藍'];
@@ -2384,7 +2384,7 @@ function hcName(i){ if (i < LOOK_FREE_C) return '髮色 ' + (i + 1); if (i < LOO
   const h = (i * 137.508) % 360, hsl = { l: 0.32 + hcHash(i, 2) * 0.4 }, nouns = [[15, '紅'], [40, '橘'], [55, '金'], [70, '檸檬黃'], [100, '青檸'], [150, '綠'], [175, '薄荷'], [195, '湖水藍'], [225, '藍'], [255, '靛'], [285, '紫'], [320, '梅'], [345, '粉'], [361, '紅']];
   const noun = (nouns.find(([m]) => h < m) || nouns[0])[1]; return HC_PLACE[Math.floor(hcHash(i, 3) * HC_PLACE.length)] + (hsl.l < 0.42 ? '深' : hsl.l > 0.62 ? '淺' : '') + noun; }
 function salonDays(){ return Math.max(0, Math.floor((bossNow() / 1000 + 8 * 3600) / 86400) - Math.floor(Date.UTC(2026, 10, 7) / 86400000)); }   /* 跟 109 的 _salon_days 一樣（台灣時間，從 2026-11-07 起算） */
-const SALON_HS_MAX = 33;   /* 阿萍最新的髮型編號（每週加新髮型時改這裡和 SQL 的 _salon_hs_max） */
+const SALON_HS_MAX = 35;   /* 阿萍最新的髮型編號（每週加新髮型時改這裡和 SQL 的 _salon_hs_max） */
 function salonOk(kind, n){ const d = salonDays(); return kind === 'hs' ? n >= 10 && n <= SALON_HS_MAX : n >= 11 && n <= 999 && n - 11 < 33 + d; }   /* v335 女玩家變多：設計好的髮型一次全部上架，髮色一次多 30 種（跟 131_salon_all.sql 一樣） */
 function lookOwnH(h){ return h < LOOK_FREE_H || (rec.owned || []).includes('hs' + h); }
 function lookOwnC(c){ return c < LOOK_FREE_C || (rec.owned || []).includes('hc' + c); }
@@ -2392,9 +2392,9 @@ const LOOK_SKIN = ['#ffe6d2', '#ffd9b8', '#f2c49a', '#d9a070', '#a8704a', '#7449
 const LOOK_EYE = ['#3a2a20', '#7a4a28', '#2f6fb5', '#3a8a5a', '#8a5ac0', '#c0402a', '#3aa0b0'];
 const LOOK_DEFAULT = 'h0c1s1e0';
 /* v411 每個髮型配的瀏海（B 齊、A 空氣、S 斜、P 八字、N 沒有）＋鬢角（0 沒有、1 短、2 長）。沒列到的用 S1 */
-const HAIR_FRONT = ['S1', 'B1', 'A0', 'B0', 'P2', 'A1', 'B1', 'A1', 'N0', 'N0', 'B2', 'P2', 'S1', 'A1', 'A1', 'B1', 'B1', 'B0', 'B2', 'N0', 'N0', 'N1', 'P2', 'N1', 'P0', 'S1', 'A1', 'B0', 'A0', 'S1', 'P2', 'N0', 'N0', 'H2'];
+const HAIR_FRONT = ['S1', 'B1', 'A0', 'B0', 'P2', 'A1', 'B1', 'A1', 'N0', 'N0', 'B2', 'P2', 'S1', 'A1', 'A1', 'B1', 'B1', 'B0', 'B2', 'N0', 'N0', 'N1', 'P2', 'N1', 'P0', 'S1', 'A1', 'B0', 'A0', 'S1', 'P2', 'N0', 'N0', 'H2', 'S1', 'H2'];
 /* v411 用 3D 模型做的髮型（玩家用 Meshy 付費方案生成，本專案從 157 萬面減到約 1.5 萬面、對到頭上；模型是白色的，顏色照玩家選的髮色）。髮型編號 → 檔案；載好以前先用程式做的版本 */
-const HAIR_GLB = { 11: 'models/hair/wave.glb', 33: 'models/hair/sweet.glb' }, HAIRG = { geo: {}, bow: {} };   /* v416 檔案裡叫 bow 的那一塊是蝴蝶結，固定粉紅色，不跟髮色 */
+const HAIR_GLB = { 11: 'models/hair/wave.glb', 33: 'models/hair/sweet.glb', 34: 'models/hair/boy.glb', 35: 'models/hair/doll.glb' }, HAIRG = { geo: {}, bow: {} };   /* v416 檔案裡叫 bow 的那一塊是蝴蝶結，固定粉紅色，不跟髮色 */
 function hairGlbLoad(){ for (const [h, url] of Object.entries(HAIR_GLB)){ try { new GLTFLoader().load(url, g => { let geo = null, bow = null; g.scene.traverse(o => { if (!o.isMesh) return; if (o.name === 'bow' || (o.parent && o.parent.name === 'bow')) bow = bow || o.geometry; else geo = geo || o.geometry; }); if (!geo) return; geo.computeBoundingSphere(); geo.userData.shared = true; HAIRG.geo[h] = geo; if (bow){ bow.computeBoundingSphere(); bow.userData.shared = true; HAIRG.bow[h] = bow; }
       try { if (typeof AvShot !== 'undefined') AvShot.cache.clear(); for (const f of CLOD.all){ if (!f.gearKey) continue; const gr = JSON.parse(f.gearKey); if (String(lookParse(gr.look).h) === String(h)){ f.gearKey = ''; f.setGear(gr); } } } catch(e){ console.warn('hair glb regear', e); } }, undefined, () => {}); } catch(e){} } }
 const LOOK_ACC = ['沒有', '蝴蝶結', '雙蝴蝶結', '髮夾', '髮箍', '小花'];
@@ -2467,7 +2467,8 @@ function shadesDraw(c){ const g = c.getContext('2d'), W = c.width = 512, H = c.h
 /* 手繪眼睛（玩家用 AI 生的灰階圖，tools 外處理成 256×320：R＝明暗、G＝瞳孔範圍、A＝透明度；cx＝瞳孔中心的 x、r＝瞳孔半徑，單位是像素）。瞳孔照玩家選的瞳色上色 */
 const EYE_IMGS = [['手繪・靈動', { img: 'eyes/e1.png', cx: 97.1, r: 48.3 }]];
 /* v415 之後新增的眼型排在「經典」後面，舊玩家存的眼型編號才不會跑掉 */
-const EYE_STYLES2 = [['娃娃', { rx:72, ry:84, sw:1.16, lash:12, wings:0, low:0, bt:5, ba:0.04, big:1, spk:1 }]];   /* 玩家給的 Q 版參考：圓圓的大眼睛、上睫毛一根一根往外翹 */
+const EYE_STYLES2 = [['娃娃', { rx:72, ry:84, sw:1.16, lash:12, wings:0, low:0, bt:5, ba:0.04, big:1, spk:1 }],
+  ['公仔', { rx:76, ry:90, sw:1.09, lash:10, wings:2, low:0, bt:4, ba:0.03, big:1, soft:1 }]];   /* v418 玩家的 Meshy 公仔：幾乎整顆都是深色瞳孔、大大的亮點、細細的睫毛 */   /* 玩家給的 Q 版參考：圓圓的大眼睛、上睫毛一根一根往外翹 */
 const LOOK_EYES = EYE_STYLES.concat(EYE_IMGS, [['經典', null]], EYE_STYLES2);
 const EYE_IMG = new Map();   /* 路徑 → { data（ImageData）或 null、list：等圖載好要重畫的 [canvas, 貼圖, 參數] } */
 function eyeImgPaint(c, E, D, colHex, mirror, face){ const g = c.getContext('2d'), W = c.width = 256, H = c.height = 320, o = g.createImageData(W, H), a = D.data, b = o.data, [h, s] = eyeHsl(colHex), S = Math.min(1, s * 1.25 + 0.14);
@@ -2492,7 +2493,7 @@ function eyeTex(style, colIdx, mirror, face){ const key = style + '|' + colIdx +
     if (R.data) eyeImgPaint(c, E, R.data, col, mirror, face || ''); else { eyeDraw(c, 0, col, mirror, face || ''); R.pend = [c, [E, null, col, mirror, face || '']]; } }
   const t = new THREE.CanvasTexture(c); if (E.img && !shut){ const R = EYE_IMG.get(E.img); if (!R.data) R.list.push([c, t, { [Symbol.iterator]: function* (){ yield E; yield R.data; yield col; yield mirror; yield face || ''; } }]); } t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; EYE_TEX.set(key, t); return t; }
 let SHADES_TEX = null;
-const EYE_W = 0.195, EYE_H = EYE_W * 320 / 256, EYE_X = 0.135, EYE_Y = -0.045;   /* 眼睛放低、分開一點、大一點（參考圖的臉：眼睛在臉的下半部） */
+const EYE_W = 0.195, EYE_H = EYE_W * 320 / 256, EYE_X = 0.138, EYE_Y = -0.068;   /* v418 照公仔再放低一點 */   /* 眼睛放低、分開一點、大一點（參考圖的臉：眼睛在臉的下半部） */
 /* 套用眼型：貼圖眼睛（av.eyes2）跟圓球眼睛（av.eyes）二選一；嘴巴、腮紅跟著換成新臉的大小，眉毛畫在貼圖裡 */
 function applyEyes(av, L, faceId){ const st = LOOK_EYES[L.y] ? L.y : 0, E = LOOK_EYES[st][1], HD = av.headG; av.eyeStyle = st;
   if (!av.eyes2){ av.eyes2 = [-1, 1].map(sx => { const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); pl.renderOrder = 3; pl.frustumCulled = false; HD.add(pl); return pl; });
@@ -2502,9 +2503,9 @@ function applyEyes(av, L, faceId){ const st = LOOK_EYES[L.y] ? L.y : 0, E = LOOK
   av.shades.visible = !!E && faceId === 'face_cool'; if (av.shades.visible && !av.shades.material.map){ if (!SHADES_TEX){ const c = document.createElement('canvas'); shadesDraw(c); SHADES_TEX = new THREE.CanvasTexture(c); SHADES_TEX.colorSpace = THREE.SRGBColorSpace; } av.shades.material.map = SHADES_TEX; av.shades.material.needsUpdate = true; }
   if (E){ av.eyes.forEach(e => e.visible = false); av.shines.forEach(e => e.visible = false); }
   if (av.brows) av.brows.forEach(b => { b.visible = !E; });
-  if (av.smile){ if (E){ av.smile.scale.set(0.42, 0.34, 1); av.smile.position.set(0, -0.158, 0.276); } else { av.smile.scale.set(1, 0.8, 1); av.smile.position.set(0, -0.1, 0.305); } }
+  if (av.smile){ if (E){ av.smile.scale.set(0.42, 0.34, 1); av.smile.position.set(0, -0.178, 0.268); } else { av.smile.scale.set(1, 0.8, 1); av.smile.position.set(0, -0.1, 0.305); } }
   if (av.blushM){ av.blushM.opacity = E ? 0.42 : 0.55; av.blushM.color.set(E ? '#ff9db4' : '#ff9a8f'); }
-  if (av.blushes) av.blushes.forEach((b, i) => { const sx = i ? 1 : -1; if (E){ b.position.set(sx * 0.2, -0.125, 0.246); b.scale.set(1.25, 0.72, 1); } else { b.position.set(sx * 0.19, -0.085, 0.262); b.scale.set(1, 1, 1); } }); }
+  if (av.blushes) av.blushes.forEach((b, i) => { const sx = i ? 1 : -1; if (E){ b.position.set(sx * 0.205, -0.15, 0.236); b.scale.set(1.25, 0.72, 1); } else { b.position.set(sx * 0.19, -0.085, 0.262); b.scale.set(1, 1, 1); } }); }
 /* 新的眼睛比較大、位置低一點：眼鏡、墨鏡、笑咪咪這些畫在眼睛上的東西要跟著（回傳 [左右, 高度, 放大]） */
 function eyeXY(gear){ const L = lookParse(gear && gear.look); return LOOK_EYES[L.y] && LOOK_EYES[L.y][1] ? [EYE_X, EYE_Y, 1.3] : [0.115, 0, 1]; }
 function applyLook(av, gear, mk){ av.lookStr = gear.look;
@@ -2539,8 +2540,8 @@ function applyLook(av, gear, mk){ av.lookStr = gear.look;
       for (let i = 0; i <= 6; i++){ const t = i / 6, wv = Math.sin(t * Math.PI * 2.6 + k * 1.3) * 0.04 * t; pts.push(V3(ox * (1 + t * 2) + side * (0.05 * Math.sin(t * Math.PI) + wv), -t * l + (side ? 0 : 0.05 * Math.sin(t * Math.PI)), oz * (1 + t * 2) - (side ? 0.02 * t : 0.16 * Math.sin(t * Math.PI * 0.7)) + (side ? wv * 0.5 : wv))); }
       o.push(hairLockGeo(pts, w * (k ? 0.8 : 1), w * 0.35, 0.6, null, { grow: 0.14 })); } return o; }), hm, x, y, z, HD);
   const HG = HAIRG.geo[L.h]; av.hairGlb = !!HG; if (av.hair) av.hair.visible = !HG;
-  if (HG){ const m2 = av.hairM2 || (av.hairM2 = mat('#5a3d2b', 0.7, { side: THREE.DoubleSide })); m2.color.set(hcCol(L.c)); mk(HG, m2, 0, 0, 0, HD); if (HAIRG.bow[L.h]) mk(HAIRG.bow[L.h], av.bowM || (av.bowM = mat('#f7a9c4', 0.6, { side: THREE.DoubleSide })), 0, 0, 0, HD); }
-  else switch (L.h){
+  if (HG){ const m2 = av.hairM2 || (av.hairM2 = mat('#5a3d2b', 0.7, { side: THREE.DoubleSide })); m2.color.set(hcCol(L.c)); mk(HG, m2, 0, 0, 0, HD); if (HAIRG.bow[L.h]) mk(HAIRG.bow[L.h], (L.h === 35 ? av.bowM2 || (av.bowM2 = mat('#8fb4dc', 0.6, { side: THREE.DoubleSide })) : av.bowM || (av.bowM = mat('#f7a9c4', 0.6, { side: THREE.DoubleSide }))), 0, 0, 0, HD); }
+  else switch (L.h === 34 ? 0 : L.h === 35 ? 33 : L.h){   /* 34、35 是 3D 模型髮型，模型還沒載好時先借短髮、甜心雙束的樣子 */
     case 1: break;   /* 齊瀏海（瀏海在 HAIR_FRONT） */
     case 2: if (!hatOn) mk(hairMerged('spk', () => { const o = []; for (let i = 0; i < 11; i++){ const a = i / 11 * Math.PI * 2 + 0.3, r = i < 8 ? 0.21 : 0.07, dx = Math.sin(a), dz = Math.cos(a) - 0.2; o.push(hairLockGeo([V3(dx * r, 0.24, dz * r - 0.02), V3(dx * (r + 0.06), 0.33, dz * (r + 0.06) - 0.06), V3(dx * (r + 0.1), 0.43, dz * (r + 0.1) - 0.13)], 0.17, 0.035, 0.75, V3(dx, 0.5, dz).normalize())); } return o; }), hm, 0, 0, 0, HD); break;
     case 3: shell(0.352, 0.37, 0.3, -0.06, 0.95); break;   /* 鮑伯頭：到下巴 */
@@ -2601,7 +2602,7 @@ function applyLook(av, gear, mk){ av.lookStr = gear.look;
       return o; }), hm, 0, 0, 0, HD); }
   /* v411 髮飾（外觀字串的 a）：蝴蝶結、髮夾、髮箍、小花 */
   { const A = L.a || 0, M2 = c => mat(c, 0.55), bow = (x, y, z, col, sc) => { const g = new THREE.Group(), m = M2(col); for (const sx of [-1, 1]){ const w = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), m); w.scale.set(1.15, 0.8, 0.45); w.position.x = sx * 0.06; w.rotation.z = sx * 0.35; g.add(w); const t = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.1, 0.012), m); t.position.set(sx * 0.03, -0.075, 0); t.rotation.z = sx * 0.3; g.add(t); } const k = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), m); g.add(k); g.position.set(x, y, z); g.scale.setScalar(sc || 1); g.quaternion.setFromUnitVectors(V3(0, 0, 1), V3(x, y - 0.05, z + 0.02).normalize()); HD.add(g); av.gearMeshes.push(g); return g; };
-    if (L.h === 33 && !HG) for (const sx of [-1, 1]) bow(sx * 0.335, 0.2, 0.09, '#f7a9c4', 1.45);   /* 甜心雙束自己帶的兩個蝴蝶結 */
+    if ((L.h === 33 || L.h === 35) && !HG) for (const sx of [-1, 1]) bow(sx * 0.335, 0.2, 0.09, L.h === 35 ? '#8fb4dc' : '#f7a9c4', 1.45);   /* 甜心雙束自己帶的兩個蝴蝶結 */
     if (A === 1 && !hatOn) bow(0.2, 0.26, 0.2, '#c9a8f0', 1.05);
     if (A === 2 && !hatOn) for (const sx of [-1, 1]) bow(sx * 0.27, 0.24, 0.1, '#f6a8c8', 0.9);
     if (A === 3) for (let i = 0; i < 2; i++){ const o = mk(new THREE.BoxGeometry(0.085, 0.02, 0.014), M2(i ? '#fff3b0' : '#ffffff'), 0.25, 0.14 - i * 0.035, 0.265, HD); o.rotation.set(0, 0.75, 0.25); }
