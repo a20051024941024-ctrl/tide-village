@@ -425,6 +425,13 @@ var HLOT = (() => { const R = 11.5, at = d => { const a = d * Math.PI / 180, x =
   return { tackle: at(60), shop: hall, fu: side(-3.0), market: side(3.0) }; })();   /* 馬蹄形：開口朝東北對著碼頭和海；150 和 200 中間是從村子進來的路 */
 /* 57 主島分區：中央＝社交生活（村長辦公室、廣場花園），森林＝自然寵物（寵物活動區） */
 const CHIEF_OFFICE = [14.5, 1.5, -Math.PI / 2], PETPARK = [-15, 21.8, 4.2], PETGATE = -2.05;   /* 入口朝西北，對著上望海丘的小步道 */
+/* v435 玩家回報：島和島之間的海有一條很硬的分界線（礁島的淺水色、紅樹林的泥水色都是一片邊緣切齊的圓）。
+   改成中間實、往外慢慢淡掉的圓（半徑放大三成，所以顏色最濃的範圍跟原來差不多），跟外面的深海自然接在一起 */
+var _softDisc = null, SEA_TINTS = [];   /* 這幾片淺水色晚上要跟著海一起變暗，不然會像在發光 */
+function seaTint(m){ SEA_TINTS.push({ m: m.material, c: m.material.color.clone() }); return m; }
+function softDiscTex(){ if (_softDisc) return _softDisc; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'), g = c.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(0.72, 'rgba(255,255,255,0.55)'); g.addColorStop(0.9, 'rgba(255,255,255,0.12)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(0, 0, 128, 128); _softDisc = new THREE.CanvasTexture(cv); return _softDisc; }
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
@@ -3189,8 +3196,8 @@ function buildNewEnvironment(){
         float foam = shore * smoothstep(0.15, 0.75, fn * 0.5 + 0.5 + shore * 0.35) * uFoam;
         foam = max(foam, shore * clamp(crest * 3.0, 0.0, 1.0) * uFoam);   /* 浪打到岸邊冒一排白色浪花 */
         /* 一道一道的浪：沿著等深線排成一排一排往岸邊推（相位跟著水深走，時間往前浪就往淺的地方跑），越靠岸越白；沿岸斷斷續續才不會像等高線 */
-        float sdw = sd; for (int i = 0; i < 8; i++){ if (uIsl[i].z > 0.0) sdw = min(sdw, length(vW.xz - uIsl[i].xy) - uIsl[i].z); }   /* 外島的岸邊也有浪推過去 */
-        float wnear = 1.0 - smoothstep(1.0, 7.0, sdw), wband = seaF * (1.0 - smoothstep(14.0, 22.0, sdw)) * step(sdw, 23.5) * step(-0.5, sdw);
+        float sdw = sd; for (int i = 0; i < 8; i++){ if (uIsl[i].z > 0.0){ float di = length(vW.xz - uIsl[i].xy) - uIsl[i].z, hh = clamp(0.5 + 0.5 * (di - sdw) / 9.0, 0.0, 1.0); sdw = mix(di, sdw, hh) - 9.0 * hh * (1.0 - hh); } }   /* v435 兩座島的浪在中間相遇的地方用圓滑的方式接起來，不要有一條折線 */   /* 外島的岸邊也有浪推過去 */
+        float wnear = 1.0 - smoothstep(1.0, 7.0, sdw), wband = seaF * (1.0 - smoothstep(9.0, 21.0, sdw)) * step(sdw, 23.5) * step(-0.5, sdw);
         float wbrk = 0.55 + 0.45 * sin(vW.x * 0.37 + vW.z * 0.29 + uTime * 0.22 + sin(vW.x * 0.11 - vW.z * 0.13) * 2.0);
         float wv = sin(sdw * 1.35 + uTime * 1.25 + sin(vW.x * 0.19 + vW.z * 0.15) * 1.6);
         col *= 1.0 + wv * (0.075 + 0.075 * wnear) * wband * min(uSurf, 1.5);   /* 浪的背面暗、正面亮，遠遠就看得到一排一排的 */
@@ -6704,7 +6711,7 @@ function buildMangrove(){
       for (const sz of [-0.05, 0.05]){ const l = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5, 3), leg); l.position.set(0, 0.3, sz); b.add(l); }
       b.position.set(x, MANG.y - 0.05, z); b.rotation.y = -a + Math.PI / 2 + rr(); b.userData.neck = [neck, head, bk]; g.add(b); Mang.birds.push(b); } }
   // 河口的水比較混濁、偏黃褐色
-  { const tw = new THREE.Mesh(new THREE.CircleGeometry(15, 40), new THREE.MeshBasicMaterial({ color:'#7a7464', transparent:true, opacity:0.32, depthWrite:false })); tw.rotation.x = -Math.PI / 2; tw.position.set(MANG.x + 1, WATER_LEVEL + 0.02, MANG.z); tw.renderOrder = 1; g.add(tw); }
+  { const tw = new THREE.Mesh(new THREE.CircleGeometry(19, 40), new THREE.MeshBasicMaterial({ map: softDiscTex(), color:'#7a7464', transparent:true, opacity:0.36, depthWrite:false })); tw.rotation.x = -Math.PI / 2; tw.position.set(MANG.x + 1, WATER_LEVEL + 0.02, MANG.z); tw.renderOrder = 1; g.add(seaTint(tw)); }
   // 木棧道（島跟島之間）和南邊的碼頭
   const plank = mat('#a87c52', 0.9), post = mat('#6e4a2f', 0.9), BY = 0.62;
   const walk = (x0, z0, x1, z1) => { const along = Math.abs(x1 - x0) > Math.abs(z1 - z0), L = Math.hypot(x1 - x0, z1 - z0), mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
@@ -6775,7 +6782,7 @@ function buildCanal(){
       if (pondIn(x, z) > 0.4) continue; if (Math.abs(x - P.bx) < 1.2 && Math.abs(z - P.z) < 3.6) continue;
       const s = 0.32 + rr() * 0.32, k = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 1), rockM[i % 3]); k.position.set(x, Math.max(0, terrainH(x, z)) + s * 0.25, z); k.scale.set(1.15, 0.6, 1); k.rotation.y = rr() * 3; k.castShadow = true; k.receiveShadow = true; g.add(k); } });
   // 水：清清的、帶一點綠
-  { const w = new THREE.Mesh(new THREE.CircleGeometry(9, 40), new THREE.MeshBasicMaterial({ color:'#3f7a5e', transparent:true, opacity:0.24, depthWrite:false })); w.rotation.x = -Math.PI / 2; w.scale.set(1, 0.62, 1); w.position.set(P.x, WATER_LEVEL + 0.012, P.z); w.renderOrder = 1; g.add(w); }
+  { const w = new THREE.Mesh(new THREE.CircleGeometry(11.5, 40), new THREE.MeshBasicMaterial({ map: softDiscTex(), color:'#3f7a5e', transparent:true, opacity:0.27, depthWrite:false })); w.rotation.x = -Math.PI / 2; w.scale.set(1, 0.62, 1); w.position.set(P.x, WATER_LEVEL + 0.012, P.z); w.renderOrder = 1; g.add(seaTint(w)); }
   for (let i = 0; i < 16; i++){ const x = P.x + (rr() - 0.5) * 10, z = P.z + (rr() - 0.5) * 6; if (pondIn(x, z) < 0.6 || Math.hypot(x - P.mound[0], z - P.mound[1]) < 1.7 || Math.abs(x - P.bx) < 1.0) continue; const k = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + rr() * 0.2, 0), rockM[i % 3]); k.position.set(x, Math.max(terrainH(x, z), -0.9) + 0.08, z); k.scale.y = 0.6; g.add(k); }
   // 睡蓮葉和花
   const padM = mat('#4f8a3e', 0.8, { side:THREE.DoubleSide }), padM2 = mat('#6aa04a', 0.8, { side:THREE.DoubleSide }), petal = mat('#f6a8c8', 0.7), petal2 = mat('#ffffff', 0.7), core = mat('#f4d050', 0.6);
@@ -7310,7 +7317,7 @@ function buildReef(){
   const ext = (shape, depth) => { const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled:false, curveSegments:4 }); geo.rotateX(-Math.PI / 2); return geo; };
   // 淺淺的礁盤（看得到底下的白沙和珊瑚）
   { const f = new THREE.Mesh(new THREE.CircleGeometry(24, 48), mat('#d8d0a4', 0.95)); f.rotation.x = -Math.PI / 2; f.position.set(R.x + 2, -0.55, R.z - 1); f.receiveShadow = true; g.add(f);
-    const sh = new THREE.Mesh(new THREE.CircleGeometry(25, 48), new THREE.MeshBasicMaterial({ color:'#5fd8c8', transparent:true, opacity:0.22, depthWrite:false })); sh.rotation.x = -Math.PI / 2; sh.position.set(R.x + 2, WATER_LEVEL + 0.015, R.z - 1); sh.renderOrder = 1; g.add(sh); }
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(32, 48), new THREE.MeshBasicMaterial({ map: softDiscTex(), color:'#5fd8c8', transparent:true, opacity:0.25, depthWrite:false })); sh.rotation.x = -Math.PI / 2; sh.position.set(R.x + 2, WATER_LEVEL + 0.015, R.z - 1); sh.renderOrder = 1; g.add(seaTint(sh)); }
   for (let i = 0; i < 70; i++){ const a = rr() * Math.PI * 2, d = R.r + 1 + rr() * 11, x = R.x + Math.cos(a) * d, z = R.z + Math.sin(a) * d; if (Math.abs(x - R.x) < 2.2 && z < R.z) continue;
     const c = ['#f08a9a', '#c87ad8', '#f0a050', '#e8d860', '#6ad0b8', '#f4f0e0'][i % 6], sz = 0.2 + rr() * 0.45, m = new THREE.Mesh(i % 3 ? new THREE.IcosahedronGeometry(sz, 0) : new THREE.ConeGeometry(sz * 0.6, sz * 2, 5), mat(c, 0.8, { flatShading:true })); m.position.set(x, -0.5 + sz * 0.4, z); m.rotation.set(rr(), rr() * 3, rr()); g.add(m); }
   // 島：灰白色的珊瑚礁岩邊、上面是草和白沙
@@ -14478,7 +14485,7 @@ function updateDayNight(t){
   lerpKey(k0, k1, f, 'hs', hemi.color); lerpKey(k0, k1, f, 'hg', hemi.groundColor); hemi.intensity = num('hi') * (MODERN ? 1 : 0.68);
   lerpKey(k0, k1, f, 'low', scene.fog.color); lerpKey(k0, k1, f, 'top', scene.background);
   if (skyDome){ const u = skyDome.material.uniforms; lerpKey(k0, k1, f, 'top', u.uTop.value); lerpKey(k0, k1, f, 'hor', u.uHor.value); lerpKey(k0, k1, f, 'low', u.uLow.value); lerpKey(k0, k1, f, 'disc', u.uSunCol.value); u.uSun.value.copy(_sunDir); }
-  if (waterSurface){ const u = waterSurface.material.uniforms; lerpKey(k0, k1, f, 'top', u.uSkyTop.value).lerp(_cB.set('#6cc4ea'), 0.25); lerpKey(k0, k1, f, 'hor', u.uSkyHor.value); lerpKey(k0, k1, f, 'wl', u.uLight.value); lerpKey(k0, k1, f, 'disc', u.uGlint.value); u.uSun.value.copy(_sunDir); }
+  if (waterSurface){ const u = waterSurface.material.uniforms; lerpKey(k0, k1, f, 'top', u.uSkyTop.value).lerp(_cB.set('#6cc4ea'), 0.25); lerpKey(k0, k1, f, 'hor', u.uSkyHor.value); lerpKey(k0, k1, f, 'wl', u.uLight.value); lerpKey(k0, k1, f, 'disc', u.uGlint.value); u.uSun.value.copy(_sunDir); for (const t of SEA_TINTS) t.m.color.copy(t.c).multiply(u.uLight.value); }
   if (sunDisc){ sunDisc.position.copy(camera.position).addScaledVector(_sunDir, 160); lerpKey(k0, k1, f, 'disc', sunDisc.material.color); sunDisc.scale.setScalar(night ? 0.7 : 1); }
   const lamp = num('lamp'), st = num('stars'); DayNight.lamp = lamp;
   stars.material.opacity = st * 0.9; stars.visible = st > 0.02; stars.position.copy(camera.position); stars.rotation.y = t * 0.004;
