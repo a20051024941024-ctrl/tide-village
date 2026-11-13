@@ -2882,7 +2882,7 @@ function applyGear(av, gear){
       break; }
     case 'acc_scarf': { const red = M('#e8473a', 0.75); const r = mk(new THREE.TorusGeometry(0.17, 0.055, 8, 18), red, 0, 1.1, 0); r.rotation.x = Math.PI / 2; const tl = mk(new THREE.BoxGeometry(0.09, 0.24, 0.05), red, 0.1, 0.96, 0.2); tl.rotation.z = 0.25; for (const y of [0.9, 0.97]) mk(new THREE.BoxGeometry(0.095, 0.02, 0.055), white, 0.1 + (0.96 - y) * 0.25, y, 0.2); break; }
     case 'acc_bowtie': { const red = M('#c9302c', 0.5); for (const sx of [-1, 1]){ const c = mk(new THREE.ConeGeometry(0.05, 0.09, 4), red, sx * 0.05, 1.08, 0.2); c.rotation.z = sx * Math.PI / 2; } mk(new THREE.SphereGeometry(0.025, 8, 6), red, 0, 1.08, 0.21); break; }
-    case 'acc_glasses': { const fr = M('#5a3a24', 0.4), [ex, ey, es] = eyeXY(gear); for (const sx of [-1, 1]){ const o = mk(new THREE.TorusGeometry(0.062, es > 1 ? 0.0065 : 0.011, 6, es > 1 ? 24 : 16), fr, sx * ex * (es > 1 ? 1.06 : 1), ey, es > 1 ? 0.35 : 0.31, HD); /* v414 大眼睛：鏡框放大到框得住整顆眼睛、再往前一點，眼睛才不會畫在眼鏡上面 */ if (es > 1){ o.scale.set(1.72, 1.9, 1.3); o.rotation.y = sx * 0.2; } } mk(new THREE.BoxGeometry(es > 1 ? 0.085 : 0.07, 0.012, 0.012), fr, 0, ey + 0.02, es > 1 ? 0.368 : 0.315, HD); break; }
+    case 'acc_glasses': { const fr = M('#5a3a24', 0.4), [ex, ey, es] = eyeXY(gear); for (const sx of [-1, 1]){ const o = mk(new THREE.TorusGeometry(0.062, es > 1 ? 0.0065 : 0.011, 6, es > 1 ? 24 : 16), fr, sx * ex * (es > 1 ? 1.06 : 1), ey, es > 1 ? 0.338 : 0.31, HD); /* v414 大眼睛：鏡框放大到框得住整顆眼睛、再往前一點，眼睛才不會畫在眼鏡上面 */ if (es > 1){ o.scale.set(1.72, 1.9, 1.3); o.rotation.y = sx * 0.3; } } mk(new THREE.BoxGeometry(es > 1 ? 0.085 : 0.07, 0.012, 0.012), fr, 0, ey + 0.02, es > 1 ? 0.362 : 0.315, HD); break; }
     case 'acc_sachet': { const s1 = mk(new THREE.SphereGeometry(0.06, 12, 10), M('#e8473a', 0.5), 0.12, 0.86, 0.22); s1.scale.set(1, 1.2, 0.6); mk(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 4), M('#f2c43d', 0.4), 0.1, 0.98, 0.2); for (let k = 0; k < 4; k++) mk(new THREE.CylinderGeometry(0.004, 0.004, 0.09, 4), M('#f2c43d', 0.4), 0.105 + (k - 1.5) * 0.012, 0.76, 0.23); mk(new THREE.TorusGeometry(0.2, 0.008, 4, 20), M('#e8473a', 0.5), 0, 1.04, 0).rotation.x = Math.PI / 2; break; }
     case 'acc_shell': { const pearl = M('#fbf3ea', 0.3); for (let i = 0; i <= 10; i++){ const a = Math.PI * (0.1 + i / 10 * 0.8); mk(new THREE.SphereGeometry(0.018, 6, 4), pearl, Math.cos(a) * 0.17, 1.07 - Math.sin(a) * 0.06, Math.sin(a) * 0.17); } const sh2 = mk(new THREE.ConeGeometry(0.05, 0.07, 7), M('#f5a5d8', 0.4), 0, 0.98, 0.21); sh2.rotation.x = Math.PI; break; }
     case 'acc_lei': { const cs = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#ff9f43']; for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2; mk(new THREE.IcosahedronGeometry(0.045, 0), M(cs[i % 5], 0.6), Math.cos(a) * 0.21, 1.06 - Math.max(0, Math.sin(a)) * 0.1, Math.sin(a) * 0.19); } break; }
@@ -3433,7 +3433,7 @@ function kidUpgrade(f){
   m.traverse(o => { if (o.isBone) B[o.name] = o; if (o.isMesh){ o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; prim[o.material.name] = o; } });
   const mapM = { skin: a.skinM, shirt: a.shirtM, pants: a.pantsM, shin: a.pantsM, shoe: a.shoeM };
   for (const k in prim){ if (mapM[k]) prim[k].material = mapM[k]; else prim[k].visible = false; }   /* 臉、頭髮用原本的（表情、髮型才換得了），身體用模型的 */
-  const keepRot = a.g.rotation.clone(), keepPos = a.g.position.clone(); a.g.rotation.set(0, 0, 0); a.g.position.set(0, 0, 0); a.g.add(m); m.updateMatrixWorld(true); a.g.updateMatrixWorld(true);
+  const keepRot = a.g.rotation.clone(), keepPos = a.g.position.clone(), keepScl = a.g.scale.clone(); a.g.rotation.set(0, 0, 0); a.g.position.set(0, 0, 0); a.g.scale.set(1, 1, 1);   /* v422 玩家回報「記者長得好奇怪」：有調過高矮胖瘦的村民（阿報 0.9×0.85）在身體已經縮放的狀態下算掛點，頭髮、帽子、眼鏡整組掛得太低，頭頂禿一塊、帽簷卡在額頭。算掛點時先把縮放拿掉 */ a.g.add(m); m.updateMatrixWorld(true); a.g.updateMatrixWorld(true);
   m.traverse(o => { if (o.isSkinnedMesh){ o.computeBoundingSphere(); o.boundingSphere.radius = Math.max(o.boundingSphere.radius * 1.6, 1.2); } if (o.isMesh) o.frustumCulled = true; });   /* v299：角色不在畫面裡就不畫（以前整個世界的角色每一格都畫，約 14 萬個三角形） */
   for (const o of a.BODY) if (o.parent) o.parent.remove(o);
   // 掛點：頭、帽子 → 頭骨；腿 → 大腿／小腿／腳骨；上衣類配件 → 胸骨
@@ -3448,7 +3448,7 @@ function kidUpgrade(f){
   a.torsoG = new THREE.Group(); a.g.add(a.torsoG); if (SH){ a.torsoG.position.y = wp('chest').y - SH.W0.chest.y; a.torsoG.scale.set(0.74, 1, 0.74); }   /* 背包、披風、氧氣瓶：跟著變高、變窄的身體 */ a.g.updateMatrixWorld(true); B.chest.attach(a.torsoG);
   for (const o of [...a.gearMeshes]) if (o.parent === a.g) a.torsoG.attach(o);
   a.armL.visible = a.armR.visible = false;
-  a.g.rotation.copy(keepRot); a.g.position.copy(keepPos);
+  a.g.rotation.copy(keepRot); a.g.position.copy(keepPos); a.g.scale.copy(keepScl); kidHeadFix(a, B);
   const mixer = new THREE.AnimationMixer(m), acts = {};
   for (const [nm, c] of Object.entries(KID.clips)){ const ac = mixer.clipAction(c); ac.enabled = true; ac.setEffectiveWeight(0); ac.play(); acts[nm] = ac; }
   for (const nm of ['jump_land', 'fish_cast', 'playdead', 'surprised', 'bow', 'lie_down', 'sit_floor_down', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin']){ if (acts[nm]){ acts[nm].setLoop(THREE.LoopOnce, 1); acts[nm].clampWhenFinished = true; } }
