@@ -2395,6 +2395,18 @@ const LOOK_DEFAULT = 'h0c1s1e0';
 const HAIR_FRONT = ['S1', 'B1', 'A0', 'B0', 'P2', 'A1', 'B1', 'A1', 'N0', 'N0', 'B2', 'P2', 'S1', 'A1', 'A1', 'B1', 'B1', 'B0', 'B2', 'N0', 'N0', 'N1', 'P2', 'N1', 'P0', 'S1', 'A1', 'B0', 'A0', 'S1', 'P2', 'N0', 'N0', 'H2', 'S1', 'H2'];
 /* v411 用 3D 模型做的髮型（玩家用 Meshy 付費方案生成，本專案從 157 萬面減到約 1.5 萬面、對到頭上；模型是白色的，顏色照玩家選的髮色）。髮型編號 → 檔案；載好以前先用程式做的版本 */
 const HAIR_GLB = { 11: 'models/hair/wave.glb', 33: 'models/hair/sweet.glb', 34: 'models/hair/boy.glb', 35: 'models/hair/doll.glb' }, HAIRG = { geo: {}, bow: {} };   /* v416 檔案裡叫 bow 的那一塊是蝴蝶結，固定粉紅色，不跟髮色 */
+/* v420 立體衣服：玩家用 Meshy 生的全身公仔，照顏色把衣服切下來、對到遊戲的骨架（tools 外處理）。檔案裡的點已經在綁定姿勢、帶好每根骨頭的權重，
+   這裡只要掛上角色自己的骨架就會跟著手腳動。穿的時候把原本貼在身上的上衣藏起來；顏色是公仔原本的，不跟玩家選的衣服顏色 */
+const CLOTH3D = { top_hoodie3d: 'models/cloth/hoodie.glb' }, CLOTHG = { geo: {}, mat: null };
+function cloth3dLoad(){ for (const [id, url] of Object.entries(CLOTH3D)){ try { new GLTFLoader().load(url, g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); const si = geo && geo.getAttribute('_skini'), sw = geo && geo.getAttribute('_skinw'); if (!si || !sw) return;
+      geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(Uint16Array.from(si.array), 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(Float32Array.from(sw.array), 4)); geo.deleteAttribute('_skini'); geo.deleteAttribute('_skinw');
+      const c = geo.getAttribute('color'); if (c){ const a = c.array; for (let i = 0; i < a.length; i++) a[i] = Math.pow(a[i], 2.2); c.needsUpdate = true; }   /* 貼圖的顏色是 sRGB，頂點色要線性的 */
+      geo.computeBoundingSphere(); geo.userData.shared = true; CLOTHG.geo[id] = geo;
+      try { if (typeof AvShot !== 'undefined'){ AvShot.cache.clear(); if (AvShot.kit) AvShot.kit.key = ''; } for (const f of CLOD.all){ if (f.gearKey && f.gearKey.includes(id)){ const gr = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(gr); } } } catch(e){ console.warn('cloth3d regear', e); } }, undefined, () => {}); } catch(e){} } }
+function cloth3dWear(av, gear){ const sh = av.kid && av.kid.prim && av.kid.prim.shirt; if (!sh) return; const g3 = CLOTH3D[gear.top] && CLOTHG.geo[gear.top];
+  if (av.c3hide && !g3){ sh.visible = true; av.c3hide = false; } if (!g3) return;
+  const m3 = CLOTHG.mat || (CLOTHG.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, side: THREE.DoubleSide })), o = new THREE.SkinnedMesh(g3, m3);
+  o.position.copy(sh.position); o.quaternion.copy(sh.quaternion); o.scale.copy(sh.scale); o.bind(sh.skeleton, sh.bindMatrix); o.frustumCulled = false; o.castShadow = true; sh.parent.add(o); av.gearMeshes.push(o); sh.visible = false; av.c3hide = true; }
 function hairGlbLoad(){ for (const [h, url] of Object.entries(HAIR_GLB)){ try { new GLTFLoader().load(url, g => { let geo = null, bow = null; g.scene.traverse(o => { if (!o.isMesh) return; if (o.name === 'bow' || (o.parent && o.parent.name === 'bow')) bow = bow || o.geometry; else geo = geo || o.geometry; }); if (!geo) return; geo.computeBoundingSphere(); geo.userData.shared = true; HAIRG.geo[h] = geo; if (bow){ bow.computeBoundingSphere(); bow.userData.shared = true; HAIRG.bow[h] = bow; }
       try { if (typeof AvShot !== 'undefined') AvShot.cache.clear(); for (const f of CLOD.all){ if (!f.gearKey) continue; const gr = JSON.parse(f.gearKey); if (String(lookParse(gr.look).h) === String(h)){ f.gearKey = ''; f.setGear(gr); } } } catch(e){ console.warn('hair glb regear', e); } }, undefined, () => {}); } catch(e){} } }
 const LOOK_ACC = ['沒有', '蝴蝶結', '雙蝴蝶結', '髮夾', '髮箍', '小花'];
@@ -2612,7 +2624,7 @@ function applyLook(av, gear, mk){ av.lookStr = gear.look;
 const GEAR_SLOTS = [['look','外觀'],['hat','帽子'],['top','衣服'],['pants','褲子'],['shoes','鞋子'],['socks','襪子'],['acc','配件'],['back','背飾'],['face','表情']];
 const GEAR = [
   ['hat_sun','草帽',0,'👒'],['hat_wizard','巫師帽',1200,'🧙'],['hat_knight','騎士頭盔',1800,'🛡️'],['hat_bear','熊熊帽',1000,'🐻'],['hat_none','不戴帽子',0,'🙂'],['hat_cap','棒球帽',250,'🧢'],['hat_beanie','毛線帽',300,'🧶'],['hat_bucket','漁夫帽',350,'🎣'],['hat_cat','貓耳朵',600,'🐱'],['hat_chef','廚師帽',800,'👨‍🍳'],['hat_flower','花環',500,'🌼'],['hat_pirate','海盜帽',1500,'🏴‍☠️'],['hat_crown','皇冠',5000,'👑'],
-  ['top_tee','素 T',0,'👕'],['top_vtee','V 領 T',150,'👕'],['top_polo','POLO 衫',300,'👔'],['top_tank','背心',150,'🎽'],['top_wide','寬版 T',200,'👕'],['top_pocket','口袋 T',180,'👕'],['top_dry','吸濕排汗 T',250,'🏃'],['top_dryv','吸濕排汗 V 領',250,'🏃'],['top_bstripe','粗條紋 T',220,'🦓'],['top_fstripe','細條紋 T',220,'📏'],['top_long','長版 T',250,'👕'],['top_kid','小魚童趣 T',150,'🐟'],['top_sweat','大學 T',450,'🎓'],['top_hoodt','連帽 T',650,'🧥'],['top_nylon','尼龍外套',900,'🧥'],['top_stripe','水手條紋衫',300,'⚓'],['top_apron','食堂圍裙',400,'🍳'],['top_vest','救生衣',500,'🦺'],['top_hoodie','連帽外套',700,'🧥'],['top_hawaii','夏威夷衫',800,'🌺'],['top_suit','帥氣西裝',2500,'🤵'],
+  ['top_tee','素 T',0,'👕'],['top_vtee','V 領 T',150,'👕'],['top_polo','POLO 衫',300,'👔'],['top_tank','背心',150,'🎽'],['top_wide','寬版 T',200,'👕'],['top_pocket','口袋 T',180,'👕'],['top_dry','吸濕排汗 T',250,'🏃'],['top_dryv','吸濕排汗 V 領',250,'🏃'],['top_bstripe','粗條紋 T',220,'🦓'],['top_fstripe','細條紋 T',220,'📏'],['top_long','長版 T',250,'👕'],['top_kid','小魚童趣 T',150,'🐟'],['top_sweat','大學 T',450,'🎓'],['top_hoodt','連帽 T',650,'🧥'],['top_nylon','尼龍外套',900,'🧥'],['top_hoodie3d','公仔帽T',800,'🧥'],['top_stripe','水手條紋衫',300,'⚓'],['top_apron','食堂圍裙',400,'🍳'],['top_vest','救生衣',500,'🦺'],['top_hoodie','連帽外套',700,'🧥'],['top_hawaii','夏威夷衫',800,'🌺'],['top_suit','帥氣西裝',2500,'🤵'],
   ['pants_jeans','牛仔褲',0,'👖'],['pants_shorts','短褲',200,'🩳'],['pants_khaki','卡其褲',250,'🟫'],['pants_skirt','格紋裙',500,'👗'],['pants_overalls','吊帶褲',600,'🧑‍🌾'],['pants_rainbow','彩虹褲',1500,'🌈'],
   ['shoes_boots','皮靴',0,'👞'],['shoes_sandals','夾腳拖',150,'🩴'],['shoes_sneakers','白球鞋',250,'👟'],['shoes_rain','黃雨靴',350,'🥾'],['shoes_gold','黃金鞋',2500,'✨'],
   ['socks_none','不穿襪子',0,'🦶'],['socks_white','白襪',80,'🧦'],['socks_stripe','條紋襪',200,'🍭'],['socks_rainbow','彩虹襪',500,'🌈'],
@@ -2656,7 +2668,7 @@ function gear3dApply(av, gear){ const ids = [gear.hat, gear.back].filter(id => G
 const TOP_STYLE = {   // [領口, 袖子, 條紋, 圖案, 布紋, 羅紋袖口下襬, 寬, 長]  領口 0 圓 1 V 2 POLO 3 羅紋圓領 4 拉鍊 5 尼龍立領；袖子 0 短 1 無 2 長；條紋 1 粗 2 細；圖案 1 口袋 2 小魚 3 袋鼠口袋
   top_tee:[0,0,0,0,0,0,0,0], top_vtee:[1,0,0,0,0,0,0,0], top_polo:[2,0,0,0,0,0,0,0], top_tank:[0,1,0,0,0,0,0,0], top_wide:[0,0,0,0,0,0,1,0], top_pocket:[0,0,0,1,0,0,0,0],
   top_dry:[0,0,0,0,1,0,0,0], top_dryv:[1,0,0,0,1,0,0,0], top_bstripe:[0,0,1,0,0,0,0,0], top_fstripe:[0,0,2,0,0,0,0,0], top_long:[0,0,0,0,0,0,0,1], top_kid:[0,0,0,2,0,0,0,0],
-  top_sweat:[3,2,0,0,1,1,0,0], top_hoodt:[3,2,0,3,0,1,0,0], top_hoodie:[4,2,0,0,0,1,0,0], top_nylon:[5,2,0,0,0,1,1,0],
+  top_sweat:[3,2,0,0,1,1,0,0], top_hoodt:[3,2,0,3,0,1,0,0], top_hoodie:[4,2,0,0,0,1,0,0], top_hoodie3d:[0,3,0,0,0,0,0,0], top_nylon:[5,2,0,0,0,1,1,0],
 };
 const TOP_GLSL_V = 'uniform float uKidT; uniform vec4 uTopA; uniform vec4 uTopB; varying vec3 vRest; attribute vec3 restP;\n';   /* v411 restP＝身體變細以前的座標（kidReshape 存的），衣服的花樣照它畫；沒有這個屬性的東西（頭、手上的配件）是 0，就用自己的座標 */
 const TOP_GLSL_F = 'uniform float uKidT; uniform vec4 uTopA; uniform vec4 uTopB; uniform vec3 uTopC2; uniform vec3 uTopSkin; uniform vec3 uTopShirt; varying vec3 vRest;\n'
@@ -2695,10 +2707,11 @@ function topShader(av){
   av.skinM.onBeforeCompile = sh => { bind(sh);
     sh.vertexShader = TOP_GLSL_V + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       vec3 rp = dot(restP, restP) > 0.0 ? restP : position; vRest = rp;
-      if (uKidT > 0.5 && uTopA.y > 1.5 && abs(rp.x) > 0.33 && abs(rp.x) < 0.615 && rp.y > 0.85 && rp.y < 1.03){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * (uTopB.z > 0.5 ? 1.35 : 1.14); }`);
+      if (uKidT > 0.5 && uTopA.y > 1.5 && uTopA.y < 2.5 && abs(rp.x) > 0.33 && abs(rp.x) < 0.615 && rp.y > 0.85 && rp.y < 1.03){ vec2 d = transformed.yz - vec2(0.941, 0.0); transformed.yz = vec2(0.941, 0.0) + d * (uTopB.z > 0.5 ? 1.35 : 1.14); }`);
     sh.fragmentShader = TOP_GLSL_F + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-      if (uKidT > 0.5 && uTopA.y > 1.5){ vec3 P = vRest; float ax = abs(P.x); if (ax > 0.33 && ax < 0.615 && P.y > 0.85 && P.y < 1.03){ vec3 c = uTopShirt; if (uTopB.x > 0.5) c *= 0.93 + 0.12 * tHash(floor(P * 140.0)); if (ax > 0.565) c *= uTopB.y > 0.5 ? 0.8 + 0.06 * step(0.5, fract(atan(P.z, P.y - 0.941) * 4.0)) : 0.86; diffuseColor.rgb = c; } }`); };
-  av.skinM.customProgramCacheKey = () => 'skin411';
+      if (uKidT > 0.5 && uTopA.y > 2.5){ float axh = abs(vRest.x); if (axh > 0.17 && axh < 0.6 && vRest.y > 0.84 && vRest.y < 1.035) discard; }   /* v420 立體衣服（袖子代號 3）：袖子裡的手臂不畫，彎手的時候才不會從袖子穿出來；手掌照常 */
+      if (uKidT > 0.5 && uTopA.y > 1.5 && uTopA.y < 2.5){ vec3 P = vRest; float ax = abs(P.x); if (ax > 0.33 && ax < 0.615 && P.y > 0.85 && P.y < 1.03){ vec3 c = uTopShirt; if (uTopB.x > 0.5) c *= 0.93 + 0.12 * tHash(floor(P * 140.0)); if (ax > 0.565) c *= uTopB.y > 0.5 ? 0.8 + 0.06 * step(0.5, fract(atan(P.z, P.y - 0.941) * 4.0)) : 0.86; diffuseColor.rgb = c; } }`); };
+  av.skinM.customProgramCacheKey = () => 'skin420';
   av.shirtM.needsUpdate = av.skinM.needsUpdate = true;
   return U; }
 function topStyle(av, top){
@@ -2756,6 +2769,7 @@ function applyGear(av, gear){
   gear = cleanGear(gear);
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
   av.gearMeshes = []; av.gearAnim = null;
+  try { cloth3dWear(av, gear); } catch(e){ console.warn('cloth3d', e); }
   const G = avGeo(), M = (c, r, ex) => mat(c, r == null ? 0.7 : r, Object.assign({ noWood: true }, ex || {}));   /* 衣服帽子不要木紋 */
   const mk = (geo, m, x, y, z, parent) => { if (parent && parent.userData.foot && y < -0.395){ parent = parent.userData.foot; y += 0.40; } else if (parent && parent.userData.shin && y < -0.22){ parent = parent.userData.shin; y += 0.22; }   /* 膝蓋以下的東西跟著小腿、腳踝以下跟著腳 */
     const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; (parent || av.torsoG || av.g).add(o); av.gearMeshes.push(o); return o; };
@@ -12879,8 +12893,8 @@ function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinn
   const key = use.map(o => o.geometry.uuid + o.material.uuid + o.material.color.getHexString()).join('|');
   if (f._px && f._pxKey === key) return f._px;
   if (f._px){ if (f._px.parent) f._px.parent.remove(f._px); f._px.geometry.dispose(); f._px = null; }
-  const gs = []; for (const o of use){ const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k)) g.deleteAttribute(k); g.morphAttributes = {}; g.clearGroups(); if (!g.attributes.normal) g.computeVertexNormals();
-    const c = o.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const gs = []; for (const o of use){ const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k) && !(k === 'color' && o.material.vertexColors)) g.deleteAttribute(k); g.morphAttributes = {}; g.clearGroups(); if (!g.attributes.normal) g.computeVertexNormals();
+    const c = o.material.color, n = g.attributes.position.count; if (!(o.material.vertexColors && g.attributes.color)){ const col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
     { const em = o.material.emissive, e = em && (c.r + c.g + c.b) > 1e-4 ? (em.r + em.g + em.b) / (c.r + c.g + c.b) : 0, ea = new Float32Array(n).fill(e); g.setAttribute('emi', new THREE.BufferAttribute(ea, 1)); }   /* 玩家回報「阿福的膚色會自動變」：近的角色皮膚自己帶一點亮度，遠的簡化版沒有，走近走遠膚色就不一樣（晚上最明顯）。簡化版也帶同樣的亮度 */
     gs.push(g); }
   let mg = null; try { mg = mergeGeometries(gs, false); } catch(e){} gs.forEach(g => g.dispose()); if (!mg) return null;
@@ -15146,6 +15160,7 @@ requestAnimationFrame(frame);
 logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋竿。', true);
 initSocial().catch(() => {});
 try { hairGlbLoad(); } catch(e){}
+try { cloth3dLoad(); } catch(e){}
 cloudInit().finally(() => { Boot.cloud = true; });
 initUpdateCheck();
 // 點左上角的頭像或名字 → 打開／收起更多功能（等級旁邊的 Lv 還是打開成就）
