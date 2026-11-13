@@ -5031,7 +5031,7 @@ function updateFishing(dt, t){
     else if (nearFarm()){ const fb = farmBtn(nearFarm()); label = fb[0]; sub = fb[1]; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'board' ? '📝 看留言・寫留言' : sh.mode === 'tboard' ? '👀 看誰領先・釣友隊' : sh.mode === 'salon' ? '✂️ 剪髮・染髮' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'board' ? '📝 看留言・寫留言' : sh.mode === 'tboard' ? '👀 看誰領先・釣友隊' : sh.mode === 'cargo' ? '🚢 賣船上的魚・裝魚' : sh.mode === 'salon' ? '✂️ 剪髮・染髮' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
@@ -10766,6 +10766,7 @@ function nearShop(){
   if (Math.hypot(me.pos.x - SUBDOCK.x, me.pos.z - SUBDOCK.z) < 2.4) return { id:'subdock', label:'🚢 潛水艇碼頭', mode:'sub' };
   if (!onIsle && !House.on && Math.hypot(me.pos.x - BOARD.x, me.pos.z - BOARD.z) < 2.5) return { id:'board', label:'📌 廣場留言板', mode:'board' };
   if (!onIsle && !House.on && Team.g && Math.hypot(me.pos.x - TBOARD.x, me.pos.z - TBOARD.z) < 3.4) return { id:'tboard', label:'🏆 村子大看板', mode:'tboard' };
+  if (!onIsle && !House.on && !myBoat && Math.hypot(me.pos.x - CARGO_AT.reef.x, me.pos.z - CARGO_AT.reef.z) < 3.2) return { id:'cargo', label:'阿嬤・收魚', mode:'cargo' };
   { const g = npcs.find(n => n.shopNpc === 'news'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'news', label:'阿報・村報', mode:'news' }; }
   { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
   { const g = npcs.find(n => n.wid === 'gang'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'gang', label:'老港・漁夫', mode:'gang' }; }
@@ -10793,7 +10794,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '海邊商店';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -11322,6 +11323,7 @@ function renderShop(body){
     if (Cloud.on && (!ECON.at || Date.now() - ECON.at > 5 * 60000)) loadEcon();
     { const E = Object.entries(ECON.m || {}).filter(([id]) => FISH_BY_ID[id] && !FISH_BY_ID[id].of).sort((a, b) => b[1].m - a[1].m); if (Cloud.on && E.length){ const hi = E.filter(e => e[1].m >= 1.08).slice(0, 3), lo = E.filter(e => e[1].m <= 0.92).slice(-3);
       const box = el('p', 'sub'); box.textContent = `📈 今日行情：${hi.length ? hi.map(([id, e]) => `${FISH_BY_ID[id].name} ×${(+e.m).toFixed(2)}`).join('、') + ' 比較缺貨，收得比較貴' : '大部分的魚價錢都正常'}${lo.length ? `；${lo.map(([id, e]) => `${FISH_BY_ID[id].name} ×${(+e.m).toFixed(2)}`).join('、')} 最近太多人賣，價錢比較低` : ''}。村民釣的魚也會賣給商店，食堂每小時會用掉一些。`; body.appendChild(box); } }
+    if (Cloud.on){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', '🚢 跑船生意：裝上船載去珊瑚礁島賣（多三成）'); b.addEventListener('click', () => { openSheet('cargo'); loadCargo(); }); r.appendChild(b); body.appendChild(r); }
     const locked = new Set(rec.show || []);
     const favN = rec.tank.filter(x => x.k).length, list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
     body.appendChild(el('p', 'sub', `${favN ? `⭐ 收藏的 ${favN} 條不會出現在這裡，也不會被賣掉。` : '在魚缸分頁按 ☆ 可以收藏魚，收藏的魚不會被賣掉。'}魚缸裡的魚可以賣掉換金幣，越重越值錢。${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
@@ -12961,6 +12963,34 @@ const BOARD = { x:-2.3, z:4.0, rot:Math.PI / 2 };
 const Board = { list:null, at:0, busy:false, g:null, tex:null, draft:'' };
 async function loadBoard(){ if (!Cloud.on || !Cloud.sb || Board.busy) return; Board.busy = true; const r = await festRpc('board_list'); Board.busy = false; if (Array.isArray(r)){ Board.list = r; Board.at = Date.now(); paintBoard(); if (!$('#sheet').hidden && curTab === 'board') renderTab(); } }
 async function boardDo(fn, args){ if (Board.busy) return; Board.busy = true; const r = await festRpc(fn, args); Board.busy = false; if (Array.isArray(r)){ Board.list = r; Board.at = Date.now(); paintBoard(); } else if (r && r.msg) toast(esc(r.msg)); if (!$('#sheet').hidden && curTab === 'board') renderTab(); return r; }
+/* ===== v433 跑船生意第一版（伺服器 166）=====
+   把魚缸裡的魚裝上魚艙（最多 10 條），開船載到另一個地方賣：村子的魚載去珊瑚礁島、礁島的魚載回村子，都多三成；在產地直接賣沒有好處。
+   魚會慢慢不新鮮（5 分鐘後每分鐘少 4%，最低 50%）；同一種魚在同一個地方賣越多越便宜。價錢全部由伺服器算 */
+const CARGO_AT = { reef: { x: 9.6, z: 83.6, r: 6, name: '珊瑚礁島・阿嬤' }, village: { x: HLOT.shop[0], z: HLOT.shop[1], r: 8, name: '村子・海邊商店' } };
+const Cargo = { info: null, at: 0, busy: false, sure: 0 };
+function cargoPlace(){ if (onIsle || House.on || Dive.on) return null; for (const k in CARGO_AT){ const P = CARGO_AT[k]; if (Math.hypot(me.pos.x - P.x, me.pos.z - P.z) < P.r) return k; } return null; }
+async function loadCargo(){ if (!Cloud.on || !Cloud.sb || Cargo.busy) return; Cargo.at = Date.now(); const r = await festRpc('cargo_info'); if (r && r.cargo){ Cargo.info = r; if (!$('#sheet').hidden && curTab === 'cargo') renderTab(); } }
+async function cargoDo(fn, args){ if (Cargo.busy) return null; Cargo.busy = true; const r = await festRpc(fn, args); Cargo.busy = false; Cargo.sure = 0;
+  if (r && r.player){ adoptRow(r.player); try { buildTank(); } catch(e){} Cargo.info = r.info; Cargo.at = Date.now(); if (r.got != null){ SFX.coin(); const more = r.got - r.base; flash(`🚢 這一趟賣了 ${r.n} 條，🪙 +${r.got}${more > 0 ? `（比直接賣多 ${more}）` : more < 0 ? `（比直接賣少 ${-more}）` : ''}`, 2.4); renderCoins(); } }
+  if (!$('#sheet').hidden && curTab === 'cargo') renderTab(); return r; }
+function renderCargo(body){
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上線（登入）才能跑船做生意。')); return; }
+  const I = Cargo.info; if (!I || Date.now() - Cargo.at > 20000) loadCargo(); if (!I){ body.appendChild(el('div', 'empty', '載入中…')); return; }
+  const here = cargoPlace(), L = I.cargo, sum = k => L.reduce((a, x) => a + x[k], 0);
+  body.appendChild(el('p', 'sub', '把魚裝上魚艙，開船載到另一個地方賣。村子的魚載去珊瑚礁島、礁島的魚載回村子，都能多賣三成；在產地直接賣沒有好處。魚放久會不新鮮，同一種魚一次賣太多也會跌價。'));
+  body.appendChild(el('div', 'dexhead', `🚢 魚艙（${L.length}／${I.cap}）`));
+  if (!L.length) body.appendChild(el('p', 'sub', '魚艙是空的。從下面挑魚裝上船。'));
+  else { const ul = el('ul', 'shoplist'); for (const x of L){ const f = FISH_BY_ID[x.f] || { name: '魚' }, li = el('li'), d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name}・${(+x.w).toFixed(2)} 公斤`)); const fr = Math.round(x.fr * 100);
+        d.appendChild(el('div', 'sub2', `${fr >= 100 ? '🧊 很新鮮' : fr > 70 ? `🙂 新鮮度 ${fr}%` : `😬 新鮮度 ${fr}%`}・村子 🪙${x.pv}${x.pv > x.pr ? ' 👍' : ''}・礁島 🪙${x.pr}${x.pr > x.pv ? ' 👍' : ''}`)); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul);
+    const row = el('div', 'tmrow'), young = L.some(x => x.age < 45);
+    if (here){ const k = here === 'reef' ? 'pr' : 'pv', got = sum(k), b = el('button', 'tbtn' + (Cargo.sure ? ' warn' : ''), Cargo.sure ? `確定在這裡賣掉 ${L.length} 條？` : `在這裡賣掉（${CARGO_AT[here].name}，🪙 +${got}）`); b.disabled = young; b.addEventListener('click', () => { if (!Cargo.sure){ Cargo.sure = 1; renderTab(); return; } cargoDo('cargo_sell', { p_place: here }); }); row.appendChild(b); }
+    { const b = el('button', 'tbtn', '全部放回魚缸'); b.addEventListener('click', () => cargoDo('cargo_unload')); row.appendChild(b); } body.appendChild(row);
+    body.appendChild(el('p', 'sub', young ? '剛裝上船的魚要過 45 秒才能賣（開船過去的時間）。' : here ? `現在在這裡賣是 🪙${sum(here === 'reef' ? 'pr' : 'pv')}；另一邊是 🪙${sum(here === 'reef' ? 'pv' : 'pr')}。直接賣給商店（不跑船）是 🪙${sum('base')}。` : `要走到「村子的海邊商店」或「珊瑚礁島的阿嬤」旁邊才能賣。村子 🪙${sum('pv')}・礁島 🪙${sum('pr')}。`)); }
+  if (L.length < I.cap){ body.appendChild(el('div', 'dexhead', '🐟 從魚缸裝上船'));
+    const locked = new Set(rec.show || []), list = rec.tank.filter(x => FISH_BY_ID[x.f] && !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => itemPrice(b) - itemPrice(a));
+    if (!list.length){ body.appendChild(el('p', 'sub', '魚缸裡沒有可以裝的魚（展示中、收藏的魚不能裝）。')); return; }
+    { const room = I.cap - L.length, b = el('button', 'tbtn', `裝最值錢的 ${Math.min(room, list.length)} 條`); b.addEventListener('click', () => cargoDo('cargo_load', { p_ts: list.slice(0, room).map(x => x.t) })); const r = el('div', 'tmrow'); r.appendChild(b); body.appendChild(r); }
+    const ul = el('ul', 'shoplist'); for (const x of list.slice(0, 40)){ const f = FISH_BY_ID[x.f], li = el('li'), d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name}・${(+x.w).toFixed(2)} 公斤`)); d.appendChild(el('div', 'sub2', `直接賣 🪙${itemPrice(x)}・${['reef', 'weir'].includes(f.spot) ? '礁島的魚，載回村子賣比較好' : '載去礁島賣比較好'}`)); li.appendChild(d); const a = el('div', 'tacts'), b = el('button', 'tbtn', '裝'); b.addEventListener('click', () => cargoDo('cargo_load', { p_ts: [x.t] })); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } body.appendChild(ul); } }
 /* ===== v429 釣友隊＋廣場大看板（伺服器 165）=====
    釣友隊：2～6 人一隊，隊名、隊徽、隊色；用 6 碼邀請碼加入。每週一起完成兩個目標（合力釣幾條、湊齊幾種），都達成每個隊員可以領一次金幣。
    大看板：立在廣場上，路過就看得到今天最大的魚、各隊本週進度、最近誰釣到好東西；走近可以打開看完整的 */
@@ -13787,7 +13817,7 @@ try { let pend = new Set(), qd = false; new MutationObserver(ms => { for (const 
     if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
-const SHEET_TITLE = { gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', tboard:'🏆 大看板・釣友隊', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 菜園', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
+const SHEET_TITLE = { gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', tboard:'🏆 大看板・釣友隊', cargo:'🚢 跑船生意', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 菜園', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
 function renderTab(){
   try { ui3Tabs(); } catch(e){}
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
@@ -13960,6 +13990,7 @@ function renderTab(){
   } else if (curTab === 'tote'){ renderTote(body);
   } else if (curTab === 'farm'){ renderFarm(body);
   } else if (curTab === 'salon'){ renderSalon(body);
+  } else if (curTab === 'cargo'){ renderCargo(body);
   } else if (curTab === 'tboard'){ renderTeamSheet(body);
   } else if (curTab === 'board'){ renderBoard(body);
   } else if (curTab === 'news'){ renderNews(body);
@@ -14204,6 +14235,7 @@ function renderTab(){
       '到港口外海按「一起拉！」加入，按住「拉！」讓張力保持在綠色區才會扣大魚的體力。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
+      '🚢 跑船生意：在海邊商店的「賣魚」裡按「跑船生意」，把魚缸裡的魚裝上魚艙（最多 10 條），開船載到另一個地方賣。村子的魚載去珊瑚礁島賣給阿嬤、礁島的魚載回村子賣給海邊商店，都多三成；在產地直接賣沒有好處（礁島的魚在礁島只有七成）。魚裝上船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半；裝上船要過 45 秒才能賣。同一種魚在礁島一次賣太多，價錢會慢慢掉，過幾個小時恢復。不想賣可以整艙放回魚缸。',
       '🎣 釣友隊和大看板：廣場南邊出口旁（商店街牌樓的左邊）有一塊大看板，寫著今天最大的魚、各隊這一週的進度、剛剛誰釣到好東西；走近可以打開。釣友隊是 2 到 6 個人一隊，在大看板或「朋友」裡建立（要釣過 20 條魚），取隊名、選隊徽和隊色，把 6 碼邀請碼給朋友輸入就能加入。每週一重新開始，全隊一起完成兩個目標：合力釣到一定數量的魚、湊齊一定種類（人越多目標越高）。兩個都達成，這一週自己釣過 5 條魚的隊員可以各領 🪙300。隊伍不會讓釣魚變強，只是一起玩。兒童安全模式的隊名由系統取。',
       '🌊 海浪和潮汐：海上有一排一排的浪往岸邊推，越靠岸越白；下雨浪比較大，暴風雨最大、整片海都是白頭浪，起霧時最平靜。滿潮時海水會淹上沙灘（踩進去有水花），乾潮時退出去、露出濕濕的沙，小螃蟹會出來橫著走，你一靠近牠就鑽回沙裡。沙灘上有貝殼、海星和海草；海岸前幾公尺是緩緩的淺灘，乾潮時海水會退出去好幾公尺；淺灘上有扁扁的礁石，乾潮時整塊露出來，上面有一窪潮池。紅樹林和珊瑚礁島的岸邊也有浪。乾潮時浮標不會丟在露出來的沙上，會自動丟遠一點。住在海邊的村民偶爾會提到現在的潮汐。靠近海邊聽得到一波一波的浪聲。河、湖、池塘不會跟著漲退。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
