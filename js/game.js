@@ -1935,7 +1935,8 @@ function shareChip(S){ let c = $('#shareChip'); if (!c){ c = document.createElem
   c.onclick = () => { c.hidden = true; let shot = null; try { renderer.render(scene, camera); const src = renderer.domElement, k = Math.min(1, 1200 / src.width), cv = document.createElement('canvas'); cv.width = Math.round(src.width * k); cv.height = Math.round(src.height * k); cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height); shot = cv; } catch(e){}
     shareCard({ kind: 'whale', title: S.n, sub: '海上目擊', place: '外海', img: shot }); }; }
 OW.update = function(t){
-  if (waterSurface && waterSurface.material.uniforms.uWaves){ const U = waterSurface.material.uniforms, tn = now(); U.uWT.value = tn; let any = false; WAVES.forEach((w, i) => { U.uWaves.value[i].set(w.x, w.z, w.t0, w.a); if (tn - w.t0 < 15) any = true; }); U.uWOn.value = any && Quality.tier !== 'low' ? 1 : 0; WAVES.on = any; }
+  if (waterSurface && waterSurface.material.uniforms.uWaves){ const U = waterSurface.material.uniforms, tn = now(); U.uWT.value = tn; let any = false; WAVES.forEach((w, i) => { U.uWaves.value[i].set(w.x, w.z, w.t0, w.a); if (tn - w.t0 < 15) any = true; }); U.uWOn.value = any && Quality.tier !== 'low' ? 1 : 0; WAVES.on = any;
+    { const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1), wx = Env.wx, surf = wx === 'storm' ? 1.9 : wx === 'rain' || wx === 'wind' ? 1.4 : wx === 'fog' ? 0.7 : 1; U.uTideD.value = Math.max(0, -lv) * TIDE_DROP; U.uTideUp.value = Math.max(0, lv) * TIDE_UP; U.uSurf.value += (surf - U.uSurf.value) * 0.02; } }
   const hide = Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || Photo.on && false;
   const ns = bossNow() / 1000, W = Math.floor(ns / OW_WIN), inW = ns - W * OW_WIN, mx = me.pos.x, mz = me.pos.z;
   if (t - OW.scanAt > 1 || hide){ OW.scanAt = t; const want = new Map();
@@ -3037,15 +3038,15 @@ function buildNewEnvironment(){
   geo.setAttribute('color', new THREE.BufferAttribute(cols, 3)); geo.computeVertexNormals();
   const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
   if (Quality.tier !== 'low') terrainMat.onBeforeCompile = sh => {   // 水底光紋（caustics）
-    sh.uniforms.uT = fishTime;
+    sh.uniforms.uT = fishTime; sh.uniforms.uShoreM = { value: mask };
     sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = 'uniform float uT;\nvarying vec3 vWP;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+    sh.fragmentShader = 'uniform float uT;\nuniform sampler2D uShoreM;\nvarying vec3 vWP;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n { vec2 suv = (vWP.xz + 75.0) / 150.0; float ssd = (suv.x < 0.0 || suv.y < 0.0 || suv.x > 1.0 || suv.y > 1.0) ? 24.0 : texture2D(uShoreM, suv).a * 32.0 - 8.0; diffuseColor.rgb *= 1.0 - 0.2 * smoothstep(-3.3, -2.3, ssd) * (1.0 - smoothstep(1.5, 3.0, ssd)); }   /* v424 海浪打得到的那一段沙灘是濕的，顏色深一點 */').replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       float under = clamp((0.02 - vWP.y) / 0.4, 0.0, 1.0) * (1.0 - smoothstep(0.8, 2.2, -vWP.y));
       if (under > 0.0){ vec2 p = vWP.xz * 0.85;
         float cc = sin(p.x * 1.7 + uT * 1.1 + sin(p.y * 1.3 + uT * 0.8)) * sin(p.y * 1.9 - uT * 0.9 + sin(p.x * 1.1 - uT * 0.7));
         totalEmissiveRadiance += vec3(0.45, 0.62, 0.62) * pow(abs(cc), 6.0) * under * 0.55; }`);
   };
-  terrainMat.customProgramCacheKey = () => 'terrain-' + (Quality.tier !== 'low');
+  terrainMat.customProgramCacheKey = () => 'terrain424-' + (Quality.tier !== 'low');
   const terrain = new THREE.Mesh(geo, terrainMat); terrain.receiveShadow = true; terrain.userData.keep = true; scene.add(terrain);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: '#3f7f8f', roughness: 1 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -3.05; floor.userData.keep = true; scene.add(floor);
@@ -3054,7 +3055,10 @@ function buildNewEnvironment(){
   const S = 360, data = new Uint8Array(S * S * 4), MH = MAP_HALF;
   for (let j = 0; j < S; j++) for (let i = 0; i < S; i++){
     const x = -MH + (i + 0.5) / S * MH * 2, z = -MH + (j + 0.5) / S * MH * 2, inf = terrainInfo(x, z), o = (j * S + i) * 4;
-    data[o] = Math.round(clamp(-inf.h / 2, 0, 1) * 255); data[o+1] = inf.water ? 255 : 0; data[o+2] = inf.region * 60; data[o+3] = 255;
+    data[o] = Math.round(clamp(-inf.h / 2, 0, 1) * 255); data[o+1] = inf.water ? 255 : 0; data[o+2] = inf.region * 60;
+    /* v424 活的海：第四格存「離海岸線幾公尺」（正的在海上、負的在岸上），浪照這個一排一排推進來、漲潮照這個淹上沙灘。
+       岸上只有平的沙灘算（石板廣場、路、山坡、河邊都不淹），其他地方記成很遠 */
+    { let sd = 2 - islandEdge(x, z); if (sd < 0 && !(inSand(x, z) && Math.abs(inf.h) < 0.05 && !inf.water && pathDist(x, z) > 2.2 && !(MAP.squares || []).some(q => Math.hypot(x - q[0], z - q[1]) < q[2] + 1.5))) sd = -8; if (sd >= 0 && inf.region !== 0) sd = Math.max(sd, 6); data[o+3] = Math.round(clamp((sd + 8) / 32, 0, 1) * 255); }
   }
   { // 區域通道模糊約 2 公尺，讓河水和海水的顏色慢慢混在一起
     const R = 6, tmp = new Float32Array(S * S);
@@ -3072,7 +3076,7 @@ function buildNewEnvironment(){
       uSkyTop: { value: new THREE.Color('#6cc4ea') }, uSkyHor: { value: new THREE.Color('#d2f1f2') },
       cSea: { value: new THREE.Color(PALETTE.sea) }, cRiver: { value: new THREE.Color(PALETTE.river) }, cCreek: { value: new THREE.Color(PALETTE.creek) }, cLake: { value: new THREE.Color('#4fb3d6') }, cPool: { value: new THREE.Color('#7fd6ec') },
       cDeep: { value: new THREE.Color('#1c5d8c') }, uFoam: { value: Quality.tier === 'low' ? 0.6 : 1.0 },
-      uWaves: { value: WAVES.map(() => new THREE.Vector4(0, 0, -99, 0)) }, uWT: { value: 0 }, uWOn: { value: 0 },
+      uWaves: { value: WAVES.map(() => new THREE.Vector4(0, 0, -99, 0)) }, uWT: { value: 0 }, uWOn: { value: 0 }, uTideD: { value: 0 }, uTideUp: { value: 0 }, uSurf: { value: 1 },   /* v424 活的海：uTideD 退潮退到多深的地方（公尺），uSurf 浪多大（跟天氣） */
       uLight: { value: new THREE.Color(1, 1, 1) }, uGlint: { value: new THREE.Color(1.0, 0.96, 0.85) },
     }),
     vertexShader: `varying vec3 vW;
@@ -3081,7 +3085,7 @@ function buildNewEnvironment(){
       #include <fog_vertex>
       }`,
     fragmentShader: `uniform sampler2D uMask; uniform float uTime; uniform vec3 uSun; uniform vec3 uSkyTop; uniform vec3 uSkyHor;
-      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint; uniform vec4 uWaves[4]; uniform float uWT; uniform float uWOn;
+      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint; uniform vec4 uWaves[4]; uniform float uWT; uniform float uWOn; uniform float uTideD; uniform float uTideUp; uniform float uSurf;
       varying vec3 vW;
       #include <common>
       #include <fog_pars_fragment>
@@ -3096,9 +3100,22 @@ function buildNewEnvironment(){
       void main(){
         vec2 uv = (vW.xz + 75.0) / 150.0;
         vec4 m = (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ? vec4(1.0, 1.0, 0.0, 1.0) : texture2D(uMask, uv);
-        if (m.g < 0.2) discard;
-        float edge = smoothstep(0.25, 0.7, m.g);
+        /* v424 活的海（只有海，河和湖不動）。水面是一整片平的、不能真的升降，所以：
+           漲潮＝海水多畫到沙灘上（沙灘比水面低 11 公分，剛好是一層淺淺的水）；退潮＝水深不到 uTideD 的地方不畫，露出濕沙；
+           每一道浪打上來再退回去＝這兩條線跟著 swash 來回擺 */
+        float sd = m.a * 32.0 - 8.0;
+        float seaF = 1.0 - smoothstep(0.03, 0.12, m.b);
+        float swash = 0.5 + 0.5 * sin(uTime * 0.8 + sin(vW.x * 0.21) * 2.0 + sin(vW.z * 0.17) * 2.0);
+        float reach = (uTideUp + swash * 0.55 * uSurf) * step(0.001, uTideUp);
+        float fl = seaF * smoothstep(-reach, -reach + 0.4, sd) * step(sd, 1.5) * step(0.05, reach);   /* 淹上沙灘的那一片 */
+        float edge = max(smoothstep(0.25, 0.7, m.g), fl);
+        if (edge < 0.01) discard;
         float depth = m.r * 2.0;
+        float cut = (uTideD + swash * 0.06 * uSurf * step(uTideUp, 0.001)) * seaF;
+        float dE = depth - cut;
+        float tideEdge = mix(1.0, smoothstep(0.0, 0.03, dE), step(0.0005, cut));
+        if (tideEdge < 0.01) discard;
+        depth = mix(depth, max(dE, 0.0), seaF);
         vec3 surf = mix(cSea, cRiver, smoothstep(0.06, 0.2, m.b)); surf = mix(surf, cCreek, smoothstep(0.3, 0.42, m.b)); surf = mix(surf, cLake, smoothstep(0.55, 0.66, m.b)); surf = mix(surf, cPool, smoothstep(0.8, 0.9, m.b));
         vec3 V = normalize(cameraPosition - vW);
         float far = smoothstep(25.0, 85.0, length(cameraPosition.xz - vW.xz));
@@ -3119,9 +3136,18 @@ function buildNewEnvironment(){
         float fn = sin(vW.x * 2.3 + uTime * 1.4 + sin(vW.z * 1.7)) * sin(vW.z * 2.1 - uTime * 1.1 + sin(vW.x * 1.3));
         float foam = shore * smoothstep(0.15, 0.75, fn * 0.5 + 0.5 + shore * 0.35) * uFoam;
         foam = max(foam, shore * clamp(crest * 3.0, 0.0, 1.0) * uFoam);   /* 浪打到岸邊冒一排白色浪花 */
+        /* 一道一道的浪：沿著等深線排成一排一排往岸邊推（相位跟著水深走，時間往前浪就往淺的地方跑），越靠岸越白；沿岸斷斷續續才不會像等高線 */
+        float wnear = 1.0 - smoothstep(1.0, 7.0, sd), wband = seaF * (1.0 - smoothstep(14.0, 22.0, sd)) * step(sd, 23.5);
+        float wbrk = 0.55 + 0.45 * sin(vW.x * 0.37 + vW.z * 0.29 + uTime * 0.22 + sin(vW.x * 0.11 - vW.z * 0.13) * 2.0);
+        float wv = sin(sd * 1.35 + uTime * 1.25 + sin(vW.x * 0.19 + vW.z * 0.15) * 1.6);
+        col *= 1.0 + wv * (0.075 + 0.075 * wnear) * wband;   /* 浪的背面暗、正面亮，遠遠就看得到一排一排的 */
+        foam = max(foam, smoothstep(0.86 - 0.3 * wnear, 0.99, wv) * wband * wbrk * (0.3 + 0.7 * wnear) * min(uSurf, 1.7) * uFoam);
+        foam = max(foam, fl * (0.25 + 0.5 * smoothstep(0.3, 1.0, sin(sd * 3.0 + uTime * 1.6 + vW.x * 0.6 + sin(vW.z * 0.9)))) * uFoam);   /* 淹在沙灘上的薄水有一絲一絲的泡沫 */
+        foam = max(foam, seaF * (1.0 - smoothstep(0.0, 0.05, depth)) * 0.85 * uFoam * step(uTideUp, 0.001));   /* 退潮時最前面那條白邊 */
+        foam = max(foam, fl * (1.0 - smoothstep(0.0, 0.45, sd + reach)) * 0.9 * uFoam);   /* 漲潮時沖上沙灘最前面的白邊 */
         col = mix(col, uLight, foam * 0.7 + clamp(crest * 0.9, 0.0, 0.55));   /* 浪峰帶一點白 */
-        float alpha = mix(0.58, 0.93, smoothstep(0.1, 1.2, depth));
-        gl_FragColor = vec4(col, max(alpha, foam * 0.8) * edge);
+        float alpha = mix(0.58, 0.93, smoothstep(0.1, 1.2, depth)) * mix(1.0, 0.62, fl * (1.0 - m.g));
+        gl_FragColor = vec4(col, max(alpha, foam * 0.8) * edge * tideEdge);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
         #include <fog_fragment>
@@ -7669,6 +7695,8 @@ function tideNow(ms){
   const st = lv > 0.8 ? 'high' : lv < -0.8 ? 'low' : d > 0 ? 'rising' : 'falling';
   return { lv, st, name: { high:'滿潮', low:'乾潮', rising:'漲潮', falling:'退潮' }[st], icon: { high:'🌊', low:'🏖️', rising:'🌊↑', falling:'🌊↓' }[st] };
 }
+/* v424 乾潮時海水退到平常水深這麼多公尺的地方（沙灘坡度緩，水平看大約退好幾公尺） */
+const TIDE_DROP = 0.36, TIDE_UP = 2.3;   /* 滿潮時海水淹上沙灘幾公尺 */
 const TIDE_FX = { rising:{ bite:0.78, rare:1.15 }, high:{ bite:0.9, rare:1.05 }, falling:{ bite:1.0, rare:1.0 }, low:{ bite:1.25, rare:0.9 } };
 function taipeiDate(){ return new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); }
 function dailyTip(){
@@ -14010,6 +14038,7 @@ function renderTab(){
       '到港口外海按「一起拉！」加入，按住「拉！」讓張力保持在綠色區才會扣大魚的體力。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
+      '🌊 海浪和潮汐：海上有一排一排的浪往岸邊推，越靠岸越白；起風、下雨浪比較大，暴風雨最大，起霧時最平靜。滿潮時海水會淹上沙灘（腳會踩在淺淺的水裡），乾潮時退出去、露出濕濕的沙。河、湖、池塘不會跟著漲退。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
       '🐬 海豚群游到附近時會靠過來，在你前面的水面跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。',
       '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨（不常見，划船在外海逛大約 20 分鐘遇到一次鯨魚），沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。'
