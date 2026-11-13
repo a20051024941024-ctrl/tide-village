@@ -2830,7 +2830,7 @@ function applyGear(av, gear){
     if (shorts && !av.kid) mk(new THREE.CylinderGeometry(0.062, 0.058, 0.26, 10), av.skinM, 0, -0.29, 0, L);
     if (gear.pants === 'pants_rainbow') RAINBOW.forEach((c, i) => mk(new THREE.CylinderGeometry(0.094, 0.094, 0.05, 12), M(c, 0.7), 0, -0.06 - i * 0.055, 0, L));
   }
-  if (gear.pants === 'pants_skirt' && av.kid && KID.shape){ /* v411 新身材的裙子：腰收窄、裙襬放長蓋到大腿一半（以前在長腿上看起來像短褲外面套一圈布） */ const sk = mk(new THREE.CylinderGeometry(0.218, 0.345, 0.42, 20), av.pantsM, 0, 0.375, 0); sk.scale.z = 0.92; for (const y of [0.2, 0.275]){ const r = 0.218 + (0.585 - y) / 0.42 * 0.127 + 0.004, b = mk(new THREE.CylinderGeometry(r - 0.004, r + 0.004, 0.022, 20), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.92; } }
+  if (gear.pants === 'pants_skirt' && av.kid && KID.shape){ /* v411 新身材的裙子：腰收窄、裙襬放長蓋到大腿一半（以前在長腿上看起來像短褲外面套一圈布） */ /* v417 Q 版身材腿短：裙長照腿長算，腰圍照身體粗細算 */ const kL = (KID_SHAPE.leg - 1) / 1.1, sh = 0.2 + 0.22 * kL, rt = 0.218 * KID_SHAPE.slim / 0.64, dr = 0.1 + 0.027 * kL, sk = mk(new THREE.CylinderGeometry(rt, rt + dr, sh, 20), av.pantsM, 0, 0.585 - sh / 2, 0); sk.scale.z = 0.92; for (const y of [0.585 - sh + 0.035, 0.585 - sh + 0.035 + sh * 0.18]){ const r = rt + (0.585 - y) / sh * dr + 0.004, b = mk(new THREE.CylinderGeometry(r - 0.004, r + 0.004, 0.022, 20), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.92; } }
   else if (gear.pants === 'pants_skirt'){ const sk = mk(new THREE.CylinderGeometry(0.26, 0.34, 0.24, 18), av.pantsM, 0, 0.47, 0); sk.scale.z = 0.9; for (const y of [0.41, 0.5]){ const b = mk(new THREE.CylinderGeometry(0.3 + (0.47 - y) * 0.3, 0.3 + (0.47 - y) * 0.3, 0.02, 18), M('#2a1a2e', 0.7), 0, y, 0); b.scale.z = 0.9; } }
   if (gear.pants === 'pants_overalls'){ mk(new THREE.BoxGeometry(0.3, 0.24, 0.03), av.pantsM, 0, 0.74, 0.225); for (const sx of [-1, 1]){ const st = mk(new THREE.BoxGeometry(0.04, 0.34, 0.03), av.pantsM, sx * 0.11, 0.95, 0.12); st.rotation.x = -0.55; mk(new THREE.SphereGeometry(0.022, 6, 4), M('#e8b730', 0.3), sx * 0.11, 0.84, 0.245); } }
   // ---- 鞋子 ----
@@ -3370,7 +3370,7 @@ function kidCalmRun(g){ if (!KID.shape) return; KID_SPD.walk *= 1.7; KID_SPD.run
 /* v411 新身材（玩家選的 G 方案）：頭大、身體細、腿長。模型檔和動作都不換，載入時做兩件事——
    (1) 把身體的點往中心收（存在綁定姿勢裡；原本的座標另外留在 restP，衣服的領口、口袋、條紋還是照舊座標畫）
    (2) 把骨頭之間的距離拉長（腿、手）、縮短（軀幹）。腿變長以後整個人要墊高，墊多少看姿勢（站著全墊、坐椅子只墊小腿、坐地上和躺著不墊），在 kidAnimate 裡算 */
-const KID_SHAPE = { slim: 0.64, arm: 0.68, hand: 0.8, shoe: 0.8, leg: 2.1, armLen: 1.2, torso: 0.95, head: 1.12, shoulder: 0.125, /* v415 玩家給的 Q 版參考：頭再大一點、臉扁圓、下巴短 */ jawX: 0.07, jawY: 0.15, cheekX: 0.1 };
+const KID_SHAPE = { slim: 0.8, arm: 0.84, hand: 0.8, shoe: 1.0, leg: 1.3, armLen: 1.0, torso: 0.92, head: 1.3, shoulder: 0.15, /* v415 玩家給的 Q 版參考：頭再大一點、臉扁圓、下巴短 */ jawX: 0.07, jawY: 0.15, cheekX: 0.1 };   /* v417 玩家用 Meshy 生的全身 Q 版公仔當參考：頭佔身高快一半、腿短、手腳圓胖（原本 slim 0.64、leg 2.1、head 1.12 是高瘦的身材） */
 const _kq = new THREE.Quaternion();
 /* 腿變長以後整個人要墊高多少：每一格照現在的姿勢算——「比較低的那隻腳」離髖關節的垂直距離，新腿是舊腿的 leg 倍，差多少就墊多少。
    站著墊最多、蹲下墊少一點，跳起來腳離地的高度也跟以前一樣。坐椅子不墊（屁股要在原本的高度；以前腳是懸空的，腿變長剛好比較接近地面）；貼地、浮在水裡的姿勢也不墊 */
@@ -3672,7 +3672,7 @@ class Fisher {
     if (!this.bub.hidden && now() > this.bubUntil) this.bub.hidden = true;
   }
   placeTag(){
-    const v = tmpV.set(this.pos.x, this.pos.y + (KID.shape ? (this.sitting ? 2.05 : 2.38) : 1.95), this.pos.z);   /* v411 人變高了，名字跟著往上 */
+    const v = tmpV.set(this.pos.x, this.pos.y + (KID.shape ? (this.sitting ? 1.95 : 2.26) : 1.95), this.pos.z);   /* v411 人變高了，名字跟著往上 */
     const d = camera.position.distanceTo(v);
     v.project(camera);
     if (v.z > 1 || d > (this.isNpc ? 24 : 45) || (this === me && F.phase !== 'idle' && F.phase !== 'charging')){ this.tag.style.display = 'none'; return; }   /* v294 自己釣魚的時候不顯示自己的名字，畫面不擠 */
@@ -3686,7 +3686,7 @@ class Fisher {
     this.tag.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`;
     // 自己的名字一直清楚；別人的名字：太遠會變淡，被房子或樹擋住也會變淡（每幾格才算一次）
     if (this === me){ this.tag.style.opacity = '1'; return; }
-    if ((frameNo + (this._ofs || (this._ofs = 1 + Math.floor(Math.random() * 7)))) % 8 === 0) this._occ = tagOccluded(this.pos.x, this.pos.y + (KID.shape ? 2.3 : 1.95), this.pos.z);
+    if ((frameNo + (this._ofs || (this._ofs = 1 + Math.floor(Math.random() * 7)))) % 8 === 0) this._occ = tagOccluded(this.pos.x, this.pos.y + (KID.shape ? 2.2 : 1.95), this.pos.z);
     const far = d > 18 ? clamp(1 - (d - 18) / 20, 0.12, 1) : 1, op = Math.min(far, this._occ ? 0.25 : 1);
     if (Math.abs((this._op || 1) - op) > 0.02){ this._op = (this._op || 1) + (op - (this._op || 1)) * 0.35; this.tag.style.opacity = this._op.toFixed(2); }
   }
@@ -10684,7 +10684,7 @@ function avKit(){
 }
 const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1.3, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[0.95, 3.4, 0.45] };
 /* v414 新身材比較高（kidReshape）：商品小圖、頭像的鏡頭高度跟著改，不然臉會被切掉（玩家截圖裡左上角的頭像只拍到衣服） */
-const SHOT_VIEW2 = { hat:[1.93, 1.95, 0.35], face:[1.63, 1.4, 0.15], acc:[1.5, 1.75, 0.4], top:[1.1, 2.4, 0.5], back:[1.15, 2.5, Math.PI - 0.6], pants:[0.55, 2.3, 0.45], shoes:[0.12, 1.2, 0.5], socks:[0.2, 1.1, 0.5], full:[1.05, 4.5, 0.45] };
+const SHOT_VIEW2 = { hat:[1.8, 2.45, 0.35], face:[1.4, 1.9, 0.15], acc:[1.3, 2.15, 0.4], top:[0.82, 2.5, 0.5], back:[0.95, 2.7, Math.PI - 0.6], pants:[0.42, 1.8, 0.45], shoes:[0.1, 1.25, 0.5], socks:[0.15, 1.15, 0.5], full:[0.95, 4.3, 0.45] };   /* v417 Q 版身材：頭大、人矮，鏡頭跟著調 */
 function avatarShot(gear, view, size){
   const key = JSON.stringify([gear, view, size, look.shirt, look.hat, !!(AvShot.kit && AvShot.kit.av.kid)]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
   const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
@@ -11032,7 +11032,7 @@ const AVC = { bg: [['天空', ['#bfe6ff', '#eaf7ff']], ['海', ['#7fd0e8', '#2f8
   frame: [['沒有', null], ['白邊', '#ffffff'], ['金邊', '#e8b730'], ['海藍', '#2f89c7'], ['粉紅', '#ff8fb3'], ['薄荷綠', '#3fbf9d'], ['木頭', '#9a6a3a'], ['彩虹', 'rainbow']],
   face: [['跟平常一樣', null], ['微笑', 'face_normal'], ['笑咪咪', 'face_happy'], ['眨眼', 'face_wink'], ['想睡覺', 'face_sleepy'], ['墨鏡', 'face_cool'], ['愛心眼', 'face_heart'], ['星星眼', 'face_star']],
   pose: [['站好', 'idle', 0.3], ['揮手', 'wave', 0.6], ['歡呼', 'cheer', 0.6], ['釣魚', 'fish_idle', 0.5], ['坐著', 'sit_floor', 0.5], ['跑步', 'run', 0.28]],
-  zoom: [['大頭', 1.6, 0.0], ['半身', 2.1, -0.28], ['全身', 4.6, -0.62]] };
+  zoom: [['大頭', 1.9, 0.0], ['半身', 2.7, -0.3], ['全身', 4.6, -0.55]] };
 function avcParse(code){ const m = AV_C_RE.exec(code || ''); if (!m) return null; const n = m.slice(1).map(Number); return { b: n[0] % AVC.bg.length, f: n[1] % AVC.frame.length, x: n[2] % AVC.face.length, p: n[3] % AVC.pose.length, a: Math.min(8, n[4]), z: n[5] % AVC.zoom.length }; }
 function avcStr(c){ return `c:b${c.b}f${c.f}x${c.x}p${c.p}a${c.a}z${c.z}`; }
 /* 畫大頭照：角色用預覽用的小場景畫（透明背景），背景和外框用 2D 畫；gear 是那個人身上穿的 */
