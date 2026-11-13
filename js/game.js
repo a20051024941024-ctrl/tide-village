@@ -2388,7 +2388,7 @@ const SALON_HS_MAX = 35;   /* 阿萍最新的髮型編號（每週加新髮型�
 function salonOk(kind, n){ const d = salonDays(); return kind === 'hs' ? n >= 10 && n <= SALON_HS_MAX : n >= 11 && n <= 999 && n - 11 < 33 + d; }   /* v335 女玩家變多：設計好的髮型一次全部上架，髮色一次多 30 種（跟 131_salon_all.sql 一樣） */
 function lookOwnH(h){ return h < LOOK_FREE_H || (rec.owned || []).includes('hs' + h); }
 function lookOwnC(c){ return c < LOOK_FREE_C || (rec.owned || []).includes('hc' + c); }
-const LOOK_SKIN = ['#ffe6d2', '#ffd9b8', '#f2c49a', '#d9a070', '#a8704a', '#74492f'];
+const LOOK_SKIN = [/* v419 玩家想要公仔那種白裡透粉的皮膚：最淺的兩個膚色調白（原本 #ffe6d2、#ffd9b8），深色的不動 */ '#fff3ec', '#ffe7d9', '#f2c49a', '#d9a070', '#a8704a', '#74492f'];
 const LOOK_EYE = ['#3a2a20', '#7a4a28', '#2f6fb5', '#3a8a5a', '#8a5ac0', '#c0402a', '#3aa0b0'];
 const LOOK_DEFAULT = 'h0c1s1e0';
 /* v411 每個髮型配的瀏海（B 齊、A 空氣、S 斜、P 八字、N 沒有）＋鬢角（0 沒有、1 短、2 長）。沒列到的用 S1 */
@@ -2510,7 +2510,7 @@ function applyEyes(av, L, faceId){ const st = LOOK_EYES[L.y] ? L.y : 0, E = LOOK
 function eyeXY(gear){ const L = lookParse(gear && gear.look); return LOOK_EYES[L.y] && LOOK_EYES[L.y][1] ? [EYE_X, EYE_Y, 1.3] : [0.115, 0, 1]; }
 function applyLook(av, gear, mk){ av.lookStr = gear.look;
   const L = lookParse(gear.look), HD = av.headG, hm = av.hairM, hatOn = gear.hat !== 'hat_none';
-  av.skinM.color.set(LOOK_SKIN[L.s]); av.skinM.emissive.copy(av.skinM.color).multiplyScalar(0.2);   /* v411 皮膚自己帶一點亮度：臉的下半部不會被陰影壓成灰綠色（朋友說臉看起來髒髒的） */ hm.color.set(hcCol(L.c)); if (hm.map) hm.color.multiplyScalar(1.38);   /* 髮絲貼圖平均比較暗，顏色調亮一點，看起來跟原本的髮色一樣 */ if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
+  av.skinM.color.set(LOOK_SKIN[L.s]); av.skinM.emissive.copy(av.skinM.color).multiplyScalar(L.s < 2 ? 0.3 : 0.2);   /* v411 皮膚自己帶一點亮度：臉的下半部不會被陰影壓成灰綠色（朋友說臉看起來髒髒的） */ hm.color.set(hcCol(L.c)); if (hm.map) hm.color.multiplyScalar(1.38);   /* 髮絲貼圖平均比較暗，顏色調亮一點，看起來跟原本的髮色一樣 */ if (av.eyeM) av.eyeM.color.set(LOOK_EYE[L.e]);
   const sph = (r, x, y, z, sx, sy, sz) => { const o = mk(new THREE.SphereGeometry(r, 14, 10), hm, x, y, z, HD); o.scale.set(sx || 1, sy || 1, sz || 1); return o; };
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
   /* v350 長髮不再是一個圓筒：改成一圈垂下來的髮束（數量照長度、髮尾長短交錯） */
