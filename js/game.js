@@ -7421,17 +7421,22 @@ function cagePut(x){ if ((rec.cage || []).length >= CAGE.max){ toast(`箱網最�
   cageCall('cage_put', { p_ts: x.t }, () => { rec.tank = rec.tank.filter(y => y.t !== x.t); rec.show = (rec.show || []).filter(t => t !== x.t); const c = Object.assign({}, x, { w0: x.w0 || x.w, at: Date.now() }); delete c.fm; rec.cage = (rec.cage || []).concat([c]); return true; }).then(ok => ok && toast(`🐟 把${esc(FISH_BY_ID[x.f].name)}放進箱網了`)); }
 function cageFeed(){ if (!(rec.cage || []).length){ toast('箱網裡還沒有魚'); return; } if (rec.cageFed === taipeiDate()){ toast('今天已經餵過了，明天再來'); return; } if (rec.coins < CAGE.feed){ toast('金幣不夠'); return; }
   const [cx, cz] = CAGE.pos[0]; for (let i = 0; i < 4; i++) setTimeout(() => FX.emit(cx + (Math.random() - 0.5) * 1.6, WATER_LEVEL + 0.4, cz + (Math.random() - 0.5) * 1.6, 8, '#c8a060', 0.4, 0.6, 0.8), i * 120);
-  cageCall('cage_feed', {}, () => { rec.cage = rec.cage.map(x => Object.assign({}, x, { w: cageGrowNext(x), fd: (x.fd || 0) + 1 })); rec.cageFed = taipeiDate(); addCoins(-CAGE.feed); return true; }).then(ok => ok && toast('🍚 餵好了！魚長大了一點')); }
+  const before = new Map((rec.cage || []).map(x => [x.t, { f: x.f, cr: !!x.cr }]));
+  cageCall('cage_feed', {}, () => { rec.cage = rec.cage.map(cageFeedOne); rec.cageFed = taipeiDate(); addCoins(-CAGE.feed); return true; }).then(ok => { if (!ok) return; let big = false;
+    for (const x of rec.cage || []){ const b = before.get(x.t); if (!b) continue; const nm = x.n || (FISH_BY_ID[b.f] || {}).name || '魚';
+      if (b.f !== x.f && FISH_BY_ID[x.f]){ big = true; SFX.catch(); flash(`✨ ${esc(nm)}變成${esc(FISH_BY_ID[x.f].name)}了！`, 3); }
+      else if (x.cr && !b.cr){ big = true; SFX.catch(); flash(`👑 ${esc(nm)}長成魚王了！`, 3); } }
+    if (!big) toast('🍚 餵好了！魚長大了一點'); }); }
 function cageTake(x){ cageCall('cage_take', { p_ts: x.t }, () => { rec.cage = rec.cage.filter(y => y.t !== x.t); const b = Object.assign({}, x, { fm: true }); delete b.at; rec.tank.unshift(b); trimTank(); return true; }).then(ok => ok && toast(`🎉 收成${esc(FISH_BY_ID[x.f].name)} ${fmtKg(x.w)}，放進魚缸了`)); }
 function renderCage(body){
   const list = rec.cage || [], fed = rec.cageFed === taipeiDate();
   if (FishCard.t){ const cx = list.find(x => x.t === FishCard.t); if (cx){ renderFishCard(body, cx, true); return; } FishCard.t = 0; }
-  const tip = el('div', 'tipbox'); tip.innerHTML = `<b>🐟 箱網養殖</b><span>把魚缸裡的魚放進來慢慢養大（最多 ${CAGE.max} 條）。每天可以餵一次飼料（🪙${CAGE.feed}），餵一次魚會長大「離最大重量還差的 ${Math.round(CAGE.k * 100)}%」，所以小魚長得快、快長到最大的時候長得慢。養大的魚收成後放回魚缸，可以賣比較多錢。可以養的魚：${[...FARM].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。</span>`; body.appendChild(tip);
+  const tip = el('div', 'tipbox'); tip.innerHTML = `<b>🐟 箱網養殖</b><span>把魚缸裡的魚放進來慢慢養大（最多 ${CAGE.max} 條）。每天可以餵一次飼料（🪙${CAGE.feed}），餵一次魚會長大「離最大重量還差的 ${Math.round(CAGE.k * 100)}%」，所以小魚長得快、快長到最大的時候長得慢。養大的魚收成後放回魚缸，可以賣比較多錢。<br>👑 餵滿 ${EVO.need} 次、體型到九成以上會長成「魚王」；${Object.keys(EVO.of).map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}的魚王繼續餵，還有機會變成變種 ✨（點魚的名字看牠的卡片）。<br>可以養的魚：${[...FARM].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。</span>`; body.appendChild(tip);
   const bar = el('div', 'tankbar'), fb = el('button', 'tbtn' + (fed || !list.length ? ' ghost' : ''), fed ? '🍚 今天餵過了' : `🍚 餵飼料（🪙${CAGE.feed}）`); fb.disabled = fed || !list.length; fb.addEventListener('click', cageFeed); bar.appendChild(fb); body.appendChild(bar);
   body.appendChild(el('div', 'dexhead', `🐟 箱網裡（${list.length} / ${CAGE.max}）`));
   if (!list.length) body.appendChild(el('div', 'empty', '箱網是空的。從下面挑魚放進來吧！'));
   else { const ul = el('ul', 'shoplist cols'); for (const x of list){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(fishCanvas(f, true, 56, 36)); const d = el('div', 'tinfo');
-      d.appendChild(el('div', 'n', `${fishTitle(x)} ${sexIcon(x)}`)); d.style.cursor = 'pointer'; d.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); }); d.appendChild(el('div', 'meta', `${fmtKg(x.w0)} → ${fmtKg(x.w)}${x.w >= f.max ? '・已經長到最大' : `・明天餵了 ${fmtKg(cageGrowNext(x))}`}・可賣 🪙${fishPrice(f, x.w)}`)); li.appendChild(d);
+      d.appendChild(el('div', 'n', `${fishTitle(x)} ${sexIcon(x)}`)); d.style.cursor = 'pointer'; d.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); }); d.appendChild(el('div', 'meta', `${fishStage(x)}・${fmtKg(x.w0)} → ${fmtKg(x.w)}${x.w >= f.max ? '・已經長到最大' : `・明天餵了 ${fmtKg(cageGrowNext(x))}`}・可賣 🪙${fishPrice(f, x.w)}`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '收成'); b.addEventListener('click', () => cageTake(x)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } body.appendChild(ul); }
   const ok = rec.tank.filter(x => FARM.has(x.f) && !x.rs);
   body.appendChild(el('div', 'dexhead', '🪣 魚缸裡可以放進來的魚'));
@@ -10653,8 +10658,17 @@ function gpyLabel(x){ const g = gpyParse(x.gp); if (!g) return ''; const [a, b] 
    n＝名字、w0＝第一次放進箱網時的重量、fd＝在箱網被餵過幾次（伺服器 168_my_fish.sql） */
 var FishCard = { t:0, edit:false, busy:false };
 const FISH_NAMES = ['小胖', '阿肥', '泡泡', '布丁', '小不點', '大頭', '阿金', '小花', '饅頭', '豆豆', '球球', '阿呆', '小勇', '閃閃', '糖糖', '老大'];
-function fishExtra(x){ const o = {}; if (typeof x.n === 'string' && x.n.trim()) o.n = x.n.trim().slice(0, 8); const w0 = Number(x.w0); if (w0 > 0) o.w0 = w0; const fd = Math.floor(Number(x.fd)); if (fd > 0) o.fd = fd; return o; }
-function fishTitle(x){ const sp = fishNameOf(x); return x && x.n ? `${x.n}（${sp}）` : sp; }
+function fishExtra(x){ const o = {}; if (typeof x.n === 'string' && x.n.trim()) o.n = x.n.trim().slice(0, 8); const w0 = Number(x.w0); if (w0 > 0) o.w0 = w0; const fd = Math.floor(Number(x.fd)); if (fd > 0) o.fd = fd; if (x.cr) o.cr = true; if (x.ev) o.ev = true; return o; }
+function fishTitle(x){ const sp = fishNameOf(x); return (x && x.cr ? '👑 ' : '') + (x && x.n ? `${x.n}（${sp}）` : sp); }
+/* v437 成長進化（伺服器 169_fish_grow.sql，數字要跟那邊一樣）：箱網裡餵滿 EVO.need 次、體型九成以上 → 魚王 👑（重量補到最大）；
+   魚王如果這種魚有變種，之後每次餵有 EVO.p 的機會變成變種 ✨，餵到第 EVO.sure 次一定變 */
+const EVO = { need:21, pct:0.9, p:0.04, sure:60, of:{ amberjack:['amberjack_gold'], girella:['girella_gold'], rabbitfish:['rabbitfish_gold'], lethrinus:['lethrinus_red'], tilapia:['tilapia_red'] } };
+function fishPct(x){ const f = FISH_BY_ID[x.f]; return Math.max(0, Math.min(1, (x.w - f.min) / Math.max(0.001, f.max - f.min))); }
+function cageFeedOne(x){ const f = FISH_BY_ID[x.f], y = Object.assign({}, x, { w: cageGrowNext(x), fd: (x.fd || 0) + 1 });
+  if (!y.cr){ if (y.fd >= EVO.need && y.w >= f.min + EVO.pct * (f.max - f.min)){ y.cr = true; y.w = f.max; } }
+  else if (!y.ev){ const vs = (EVO.of[y.f] || []).filter(id => FISH_BY_ID[id]); if (vs.length && (Math.random() < EVO.p || y.fd >= EVO.sure)){ const v = FISH_BY_ID[vs[Math.floor(Math.random() * vs.length)]]; y.f = v.id; y.ev = true; y.w = v.max; } }
+  return y; }
+function fishStage(x){ const p = fishPct(x); return x.cr ? '👑 魚王' : p >= 0.9 ? '💪 壯年' : p >= 0.5 ? '🐟 成魚' : '🌱 幼魚'; }
 async function fishRename(x, name){ name = String(name || '').trim().slice(0, 8); if (FishCard.busy) return; if (name === (x.n || '')){ FishCard.edit = false; renderTab(); return; }
   if (Cloud.on){ FishCard.busy = true; const row = await cloudCall('fish_name', { p_ts: x.t, p_name: name }); FishCard.busy = false; if (!row){ renderTab(); return; } }
   for (const y of rec.tank.concat(rec.cage || [])) if (y.t === x.t){ if (name) y.n = name; else delete y.n; }
@@ -10665,7 +10679,7 @@ function renderFishCard(body, x, inCage){
   const card = el('div', 'fcard'); body.appendChild(card);
   const top = el('div', 'fc-top'); top.appendChild(fishCanvas(gx, true, 150, 96)); const tt = el('div', 'fc-tt');
   tt.appendChild(el('div', 'fc-name', x.n || fishNameOf(x))); tt.appendChild(el('div', 'fc-sp', `${x.n ? fishNameOf(x) + '・' : ''}${sexIcon(x) ? sexIcon(x) + '・' : ''}${f.rarity}${f.of ? '・✨變種' : ''}`));
-  const tags = el('div', 'fc-tags'); for (const [on, t] of [[x.k, '⭐ 收藏'], [shown, '🏛️ 水族館展示中'], [inCage, '🐟 箱網裡'], [x.fm, '🍚 箱網養大'], [x.y, '🍼 水族館出生'], [x.b, '🐣 含著小魚'], [x.g && FISH_BY_ID[x.g], x.g && FISH_BY_ID[x.g] ? `🧬 帶著${FISH_BY_ID[x.g].name}的基因` : '']]) if (on) tags.appendChild(el('span', 'badge', t));
+  const tags = el('div', 'fc-tags'); for (const [on, t] of [[x.k, '⭐ 收藏'], [shown, '🏛️ 水族館展示中'], [x.cr, '👑 魚王'], [x.ev, '✨ 自己養出來的變種'], [inCage, '🐟 箱網裡'], [x.fm && !x.cr, '🍚 箱網養大'], [x.y, '🍼 水族館出生'], [x.b, '🐣 含著小魚'], [x.g && FISH_BY_ID[x.g], x.g && FISH_BY_ID[x.g] ? `🧬 帶著${FISH_BY_ID[x.g].name}的基因` : '']]) if (on) tags.appendChild(el('span', 'badge', t));
   tt.appendChild(tags); top.appendChild(tt); card.appendChild(top);
   const pct = Math.max(0, Math.min(1, (x.w - f.min) / Math.max(0.001, f.max - f.min)));
   const bar = el('div', 'fc-bar'); bar.innerHTML = `<i style="width:${Math.round(pct * 100)}%"></i>`; card.appendChild(el('div', 'fc-lab', `體型：${fmtKg(x.w)}（這種魚 ${fmtKg(f.min)}～${fmtKg(f.max)}，牠在 ${Math.round(pct * 100)}% 的位置${pct >= 0.999 ? '，已經是最大的了 👑' : ''}）`)); card.appendChild(bar);
@@ -10674,6 +10688,11 @@ function renderFishCard(body, x, inCage){
   R(x.y ? '出生' : '釣到', `${dt.getFullYear()}/${dt.getMonth() + 1}/${dt.getDate()}・${days ? `跟了你 ${days} 天` : '今天才來的'}`);
   if (x.w0 && (x.fm || inCage)) R('箱網紀錄', `從 ${fmtKg(x.w0)} 養到 ${fmtKg(x.w)}${x.w0 > 0 && x.w > x.w0 ? `（長大 ${Math.round((x.w / x.w0 - 1) * 100)}%）` : ''}${x.fd ? `・餵過 ${x.fd} 次` : ''}`);
   else if (FARM.has(x.f) && !x.rs) R('可以養大', '這種魚可以放進珊瑚礁島的箱網，每天餵一次會慢慢長大');
+  if ((FARM.has(x.f) && !x.rs) || x.cr || inCage){ const evo = (EVO.of[x.f] || []).filter(id => FISH_BY_ID[id]).map(id => FISH_BY_ID[id].name);
+    R('成長階段', `${fishStage(x)}（🌱 幼魚 → 🐟 成魚 → 💪 壯年 → 👑 魚王）`);
+    if (x.ev) R('進化', '牠是你從魚王一路養出來的變種 ✨');
+    else if (x.cr) R('進化', evo.length ? `魚王在箱網裡每次餵都有小小的機會變成「${evo.join('、')}」，最晚餵到第 ${EVO.sure} 次一定變（現在餵過 ${x.fd || 0} 次）` : '這種魚沒有變種，魚王就是最高的階段了');
+    else R('變成魚王', `要在箱網裡餵滿 ${EVO.need} 次（現在 ${x.fd || 0} 次），而且體型到九成以上（現在 ${Math.round(fishPct(x) * 100)}%）${evo.length ? `。魚王之後還有機會變成「${evo.join('、')}」` : ''}`); }
   R('現在價值', `🪙${itemPrice(x).toLocaleString()}・放流 💙${lovePts(f, x.w)}`);
   card.appendChild(rows);
   const nm = el('div', 'fc-nm'); card.appendChild(nm);
@@ -14221,6 +14240,7 @@ function renderTab(){
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
+      '👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。',
       '🐟 箱網養殖：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
       '🪸 珊瑚礁群島：從村子往西邊走，過一座很長的跨海大橋就到了。島邊的礁岩用磯釣竿最好，有臭肚魚、白毛、黑毛、青嘴龍占，運氣好會遇到紅甘。島東邊有兩個用咾咕石疊成的愛心石滬：退潮的時候魚被困在裡面，咬得特別快；滿潮時魚都游出去了。',
       '🪷 百年生態池：在村子東邊、往東海灘的路旁邊。兩個圓圓的池子中間有紅色拱橋，池子裡有假山和睡蓮。有吳郭魚、琵琶鼠魚、食蚊魚（大肚魚），運氣好會遇到泰國鱧（魚虎）和很大的革胡子鯰。手竿最適合。',

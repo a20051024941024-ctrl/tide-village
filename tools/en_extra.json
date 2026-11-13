@@ -4689,5 +4689,16 @@
 "魚的名字最多 8 個字": "Fish names can be up to 8 characters",
 "兒童模式只能從名單裡選名字": "In kids mode you can only pick a name from the list",
 "這個名字不行，換一個吧": "That name isn't allowed, try another",
-"🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。": "🏷️ My fish: in the tank (or the cage), tap a fish's picture or name to open its card — see how big it is for its species, where it came from, how many days it has been with you and what it is worth. You can name it (up to 8 characters; kids mode picks from a list). Names are just for fun and don't change the price. Fish raised in the cage show \"raised from X kg to Y kg, fed N times\"."
+"🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。": "🏷️ My fish: in the tank (or the cage), tap a fish's picture or name to open its card — see how big it is for its species, where it came from, how many days it has been with you and what it is worth. You can name it (up to 8 characters; kids mode picks from a list). Names are just for fun and don't change the price. Fish raised in the cage show \"raised from X kg to Y kg, fed N times\".",
+"👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。": "👑 Fish growth: fish in the cage go through four stages — 🌱 Juvenile, 🐟 Adult, 💪 Prime, 👑 King. Feed once a day; after 21 feeds and at 90% or more of the species' size, it becomes a King (weight jumps to the maximum). Kings of Amberjack, Girella, Rabbitfish, Emperor and Tilapia that stay in the cage have a 4% chance per feed to turn into their variant ✨, guaranteed by the 60th feed. Raised variants don't count for the fish book or records (those only count catches).",
+"👑 魚王": "👑 King",
+"💪 壯年": "💪 Prime",
+"🐟 成魚": "🐟 Adult",
+"🌱 幼魚": "🌱 Juvenile",
+"✨ 自己養出來的變種": "✨ Variant you raised",
+"成長階段": "Stage",
+"進化": "Evolution",
+"變成魚王": "To become King",
+"牠是你從魚王一路養出來的變種 ✨": "A variant you raised all the way from a King ✨",
+"這種魚沒有變種，魚王就是最高的階段了": "This species has no variant; King is the top stage"
 }

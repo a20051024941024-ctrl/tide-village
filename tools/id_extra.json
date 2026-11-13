@@ -4670,5 +4670,16 @@
 "魚的名字最多 8 個字": "Nama ikan maksimal 8 karakter",
 "兒童模式只能從名單裡選名字": "Di mode anak hanya bisa memilih nama dari daftar",
 "這個名字不行，換一個吧": "Nama itu tidak boleh, coba yang lain",
-"🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。": "🏷️ Ikanku: di akuarium (atau keramba), ketuk gambar atau nama ikan untuk membuka kartunya — lihat seberapa besar ia untuk jenisnya, asalnya, sudah berapa hari bersamamu, dan nilainya. Kamu bisa memberi nama (maks. 8 karakter; mode anak memilih dari daftar). Nama hanya untuk seru-seruan dan tidak mengubah harga. Ikan yang dibesarkan di keramba menampilkan \"dari X kg jadi Y kg, diberi makan N kali\"."
+"🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。": "🏷️ Ikanku: di akuarium (atau keramba), ketuk gambar atau nama ikan untuk membuka kartunya — lihat seberapa besar ia untuk jenisnya, asalnya, sudah berapa hari bersamamu, dan nilainya. Kamu bisa memberi nama (maks. 8 karakter; mode anak memilih dari daftar). Nama hanya untuk seru-seruan dan tidak mengubah harga. Ikan yang dibesarkan di keramba menampilkan \"dari X kg jadi Y kg, diberi makan N kali\".",
+"👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。": "👑 Pertumbuhan ikan: ikan di keramba punya empat tahap — 🌱 Anakan, 🐟 Dewasa, 💪 Prima, 👑 Raja. Beri makan sekali sehari; setelah 21 kali dan ukurannya 90% atau lebih dari jenisnya, ia menjadi Raja (berat langsung maksimal). Raja dari Amberjack, Girella, Baronang, Lencam, dan Nila yang tetap di keramba punya peluang 4% tiap makan untuk berubah jadi varian ✨, pasti berubah paling lambat di makan ke-60. Varian hasil pemeliharaan tidak dihitung di buku ikan dan rekor (itu hanya untuk hasil pancingan).",
+"👑 魚王": "👑 Raja",
+"💪 壯年": "💪 Prima",
+"🐟 成魚": "🐟 Dewasa",
+"🌱 幼魚": "🌱 Anakan",
+"✨ 自己養出來的變種": "✨ Varian hasil pemeliharaanmu",
+"成長階段": "Tahap",
+"進化": "Evolusi",
+"變成魚王": "Menjadi Raja",
+"牠是你從魚王一路養出來的變種 ✨": "Varian yang kamu besarkan dari Raja ✨",
+"這種魚沒有變種，魚王就是最高的階段了": "Jenis ini tidak punya varian; Raja adalah tahap tertinggi"
 }
