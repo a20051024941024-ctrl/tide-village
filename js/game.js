@@ -10451,16 +10451,21 @@ function chumTexture(){
   for (let i = 0; i < 160; i++){ c.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.5})`; const a = Math.random() * 6.28, r = Math.random() * 56; c.fillRect(64 + Math.cos(a) * r, 64 + Math.sin(a) * r, 2, 2); }
   chumTex = new THREE.CanvasTexture(cv); return chumTex;
 }
-function addChumZone(x, z, type, owner){
+function addChumZone(x, z, type, owner, left){   /* left：別人打的窩還剩幾秒（晚到的人用） */
   const C = CHUM_BY_ID[type]; if (!C) return null;
-  while (chumZones.length >= 6){ removeChumZone(chumZones[0]); }
+  while (chumZones.length >= 12){ removeChumZone(chumZones[0]); }   /* v431 6 → 12：現在會把附近每個人的窩都畫出來 */
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
   const patch = new THREE.Mesh(new THREE.CircleGeometry(2.8, 32), new THREE.MeshBasicMaterial({ map: chumTexture(), color: C.color, transparent:true, opacity:0, depthWrite:false })); patch.rotation.x = -Math.PI / 2; patch.position.y = WATER_LEVEL + 0.035; patch.renderOrder = 2; g.add(patch);
   const shadowM = new THREE.MeshBasicMaterial({ color:'#123048', transparent:true, opacity:0, depthWrite:false }), fish = [];
   for (let i = 0; i < 6; i++){ const f = new THREE.Mesh(new THREE.CircleGeometry(0.2, 12), shadowM); f.scale.set(1.9 + Math.random(), 0.8, 1); f.rotation.x = -Math.PI / 2; f.position.y = WATER_LEVEL + 0.03; g.add(f); fish.push({ m:f, r: 0.6 + Math.random() * 1.6, a: Math.random() * 6.28, sp: (0.5 + Math.random() * 0.8) * (Math.random() < 0.5 ? -1 : 1) }); }
-  const zn = { x, z, type, owner, born: now(), until: now() + C.dur, g, patch, shadowM, fish };
+  const dur = left > 0 ? Math.min(C.dur, left) : C.dur, zn = { x, z, type, owner, born: left > 0 ? now() - Math.max(0, C.dur - left) : now(), until: now() + dur, exp: Math.round(Date.now() / 1000 + dur), g, patch, shadowM, fish };
   chumZones.push(zn); ripple(x, z, true); FX.emit(x, 0.3, z, 18, C.color, 1.0, 2.0, 0.9); return zn;
 }
+/* v431 玩家回報「打窩別的玩家看不到」：以前打窩只在丟下去的那一刻通知一次，晚一點才走過來、才上線、或那一下剛好沒收到的人就永遠看不到。
+   現在自己打的窩也放進「我的狀態」裡一直帶著（位置、種類、幾點結束），別人不管什麼時候看到我，都會把我還沒結束的窩補畫出來 */
+function myChumState(){ const L = []; for (const zn of chumZones) if (zn.owner === 'me' && zn.until - now() > 3) L.push([+zn.x.toFixed(2), +zn.z.toFixed(2), CHUMS.findIndex(c => c.id === zn.type), zn.exp]); return L.slice(-3); }
+function syncPeerChum(peer, cz){ if (!Array.isArray(cz)) return; for (const q of cz.slice(0, 3)){ if (!Array.isArray(q)) continue; const x = +q[0], z = +q[1], C = CHUMS[+q[2]], left = +q[3] - Date.now() / 1000; if (!C || !isFinite(x) || !isFinite(z) || !(left > 3) || Math.abs(x) > 400 || Math.abs(z) > 400) continue;
+    if (chumZones.some(zn => zn.owner === peer && Math.hypot(zn.x - x, zn.z - z) < 0.6)) continue; if (chumZones.length >= 12) break; addChumZone(x, z, C.id, peer, Math.min(left, C.dur)); } }
 function removeChumZone(zn){ const i = chumZones.indexOf(zn); if (i >= 0) chumZones.splice(i, 1); scene.remove(zn.g); }
 function updateChum(dt, t){
   for (let i = chumZones.length - 1; i >= 0; i--){
@@ -12155,6 +12160,7 @@ function presenceObj(){
   { const pt = petMine(); if (pt) o.pt = [pt.kind, pt.name, pt.acc || 0, pt.var || 'a'].concat(pt.kind === 'pondturtle' ? [Math.round(pt.shine || 0)] : []); }   /* 080：帶出門的寵物（只放種類、名字、配件，不放親密度） */
   if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
+  { const cz = myChumState(); if (cz.length) o.cz = cz; }   /* v431 我打的窩（還沒結束的） */
   if (typeof Sub !== 'undefined' && Sub && Sub.on && Sub.pos) o.sb = [+Sub.pos.x.toFixed(1), +Sub.pos.y.toFixed(1), +Sub.pos.z.toFixed(1), +(Sub.yaw % (Math.PI * 2)).toFixed(2)];   /* v241 一起潛：潛水艇在裂縫裡的位置 */
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
   if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
@@ -12191,7 +12197,7 @@ function applyPeer(pp){
     peers.set(pp.peer, p);
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
-  p.pres = pr; p.by = pp.by;
+  p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){}
   if (pos){ p.target.set(clamp(+pos[0]||0, -200, 200), 0, clamp(+pos[1]||0, -200, 200));   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
@@ -14081,7 +14087,7 @@ function renderTab(){
     ]);
     sec('🍚 打窩、窩點、渡船、小船', [
       '先到釣具店的「魚餌」分頁買窩料：酒米窩料（淡水好用）、南極蝦窩料（海水好用）、黃金特製窩（哪裡都有效，傳說魚也會被吸引）。',
-      '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到，維持 2～3 分鐘；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
+      '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到（晚一點才走過來或才上線的人也看得到，還會顯示剩下的時間），維持 2～3 分鐘；別人也可以來你的窩裡釣；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
       '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫），別人的窩點也能去釣，效果是打窩那個人的 75%。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、東邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
