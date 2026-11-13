@@ -1421,3 +1421,23 @@ body.photo #ttPanel{display:none!important}
 .tmgoal{background:#f4f7f9;border-radius:14px;padding:12px;margin-bottom:10px}
 .tmgoal .n{font-weight:700}
 .tmleave{margin-top:14px;background:#eef1f3;color:#8a3b2e}
+
+/* v436 我的魚卡片 */
+.fcard{margin-top:10px;padding:14px;background:#fff;border:1px solid var(--line);border-radius:16px}
+.fc-top{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.fc-top canvas{width:150px;height:96px;flex:none;background:linear-gradient(#e6f5fc,#cfeaf7);border-radius:12px}
+.fc-tt{flex:1;min-width:150px}
+.fc-name{font-size:22px;font-weight:800;color:var(--ink)}
+.fc-sp{font-size:13px;opacity:.75;margin-top:2px}
+.fc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fc-lab{font-size:13px;margin-top:12px}
+.fc-bar{height:10px;border-radius:5px;background:#e3edf2;margin-top:6px;overflow:hidden}
+.fc-bar i{display:block;height:100%;background:linear-gradient(90deg,#5fb6e3,#f2c43d);border-radius:5px}
+.fc-rows{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.fc-rows li{display:flex;gap:10px;font-size:14px;padding:6px 10px;background:#f6fafc;border-radius:10px}
+.fc-rows b{flex:none;width:5em;opacity:.7;font-weight:600}
+.fc-nm{margin-top:12px}
+.fc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.fc-chips .tbtn{padding:6px 10px;font-size:13px}
+.fc-line{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.fc-line input{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:15px}

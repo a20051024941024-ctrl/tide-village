@@ -7418,19 +7418,20 @@ async function cageCall(fn, args, local){
   const ok = local(); if (ok){ saveRecLocal(); buildTank(); buildCageFish(); rt(); } return ok;
 }
 function cagePut(x){ if ((rec.cage || []).length >= CAGE.max){ toast(`箱網最多放 ${CAGE.max} 條`); return; }
-  cageCall('cage_put', { p_ts: x.t }, () => { rec.tank = rec.tank.filter(y => y.t !== x.t); rec.show = (rec.show || []).filter(t => t !== x.t); const c = Object.assign({}, x, { w0: x.w, at: Date.now() }); delete c.fm; rec.cage = (rec.cage || []).concat([c]); return true; }).then(ok => ok && toast(`🐟 把${esc(FISH_BY_ID[x.f].name)}放進箱網了`)); }
+  cageCall('cage_put', { p_ts: x.t }, () => { rec.tank = rec.tank.filter(y => y.t !== x.t); rec.show = (rec.show || []).filter(t => t !== x.t); const c = Object.assign({}, x, { w0: x.w0 || x.w, at: Date.now() }); delete c.fm; rec.cage = (rec.cage || []).concat([c]); return true; }).then(ok => ok && toast(`🐟 把${esc(FISH_BY_ID[x.f].name)}放進箱網了`)); }
 function cageFeed(){ if (!(rec.cage || []).length){ toast('箱網裡還沒有魚'); return; } if (rec.cageFed === taipeiDate()){ toast('今天已經餵過了，明天再來'); return; } if (rec.coins < CAGE.feed){ toast('金幣不夠'); return; }
   const [cx, cz] = CAGE.pos[0]; for (let i = 0; i < 4; i++) setTimeout(() => FX.emit(cx + (Math.random() - 0.5) * 1.6, WATER_LEVEL + 0.4, cz + (Math.random() - 0.5) * 1.6, 8, '#c8a060', 0.4, 0.6, 0.8), i * 120);
-  cageCall('cage_feed', {}, () => { rec.cage = rec.cage.map(x => Object.assign({}, x, { w: cageGrowNext(x) })); rec.cageFed = taipeiDate(); addCoins(-CAGE.feed); return true; }).then(ok => ok && toast('🍚 餵好了！魚長大了一點')); }
-function cageTake(x){ cageCall('cage_take', { p_ts: x.t }, () => { rec.cage = rec.cage.filter(y => y.t !== x.t); const b = Object.assign({}, x, { fm: true }); delete b.w0; delete b.at; rec.tank.unshift(b); trimTank(); return true; }).then(ok => ok && toast(`🎉 收成${esc(FISH_BY_ID[x.f].name)} ${fmtKg(x.w)}，放進魚缸了`)); }
+  cageCall('cage_feed', {}, () => { rec.cage = rec.cage.map(x => Object.assign({}, x, { w: cageGrowNext(x), fd: (x.fd || 0) + 1 })); rec.cageFed = taipeiDate(); addCoins(-CAGE.feed); return true; }).then(ok => ok && toast('🍚 餵好了！魚長大了一點')); }
+function cageTake(x){ cageCall('cage_take', { p_ts: x.t }, () => { rec.cage = rec.cage.filter(y => y.t !== x.t); const b = Object.assign({}, x, { fm: true }); delete b.at; rec.tank.unshift(b); trimTank(); return true; }).then(ok => ok && toast(`🎉 收成${esc(FISH_BY_ID[x.f].name)} ${fmtKg(x.w)}，放進魚缸了`)); }
 function renderCage(body){
   const list = rec.cage || [], fed = rec.cageFed === taipeiDate();
+  if (FishCard.t){ const cx = list.find(x => x.t === FishCard.t); if (cx){ renderFishCard(body, cx, true); return; } FishCard.t = 0; }
   const tip = el('div', 'tipbox'); tip.innerHTML = `<b>🐟 箱網養殖</b><span>把魚缸裡的魚放進來慢慢養大（最多 ${CAGE.max} 條）。每天可以餵一次飼料（🪙${CAGE.feed}），餵一次魚會長大「離最大重量還差的 ${Math.round(CAGE.k * 100)}%」，所以小魚長得快、快長到最大的時候長得慢。養大的魚收成後放回魚缸，可以賣比較多錢。可以養的魚：${[...FARM].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。</span>`; body.appendChild(tip);
   const bar = el('div', 'tankbar'), fb = el('button', 'tbtn' + (fed || !list.length ? ' ghost' : ''), fed ? '🍚 今天餵過了' : `🍚 餵飼料（🪙${CAGE.feed}）`); fb.disabled = fed || !list.length; fb.addEventListener('click', cageFeed); bar.appendChild(fb); body.appendChild(bar);
   body.appendChild(el('div', 'dexhead', `🐟 箱網裡（${list.length} / ${CAGE.max}）`));
   if (!list.length) body.appendChild(el('div', 'empty', '箱網是空的。從下面挑魚放進來吧！'));
   else { const ul = el('ul', 'shoplist cols'); for (const x of list){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(fishCanvas(f, true, 56, 36)); const d = el('div', 'tinfo');
-      d.appendChild(el('div', 'n', `${f.name} ${sexIcon(x)}`)); d.appendChild(el('div', 'meta', `${fmtKg(x.w0)} → ${fmtKg(x.w)}${x.w >= f.max ? '・已經長到最大' : `・明天餵了 ${fmtKg(cageGrowNext(x))}`}・可賣 🪙${fishPrice(f, x.w)}`)); li.appendChild(d);
+      d.appendChild(el('div', 'n', `${fishTitle(x)} ${sexIcon(x)}`)); d.style.cursor = 'pointer'; d.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); }); d.appendChild(el('div', 'meta', `${fmtKg(x.w0)} → ${fmtKg(x.w)}${x.w >= f.max ? '・已經長到最大' : `・明天餵了 ${fmtKg(cageGrowNext(x))}`}・可賣 🪙${fishPrice(f, x.w)}`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '收成'); b.addEventListener('click', () => cageTake(x)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } body.appendChild(ul); }
   const ok = rec.tank.filter(x => FARM.has(x.f) && !x.rs);
   body.appendChild(el('div', 'dexhead', '🪣 魚缸裡可以放進來的魚'));
@@ -10648,6 +10649,41 @@ function isGuppy(id){ return id === 'guppy' || id === 'guppy_albino'; }
 function gpyParse(gp){ const m = /^([wrbykp]{2})\|([dso]{2})$/.exec(gp || ''); return m ? { c: m[1].split('').sort((a, b) => 'rbykpw'.indexOf(a) - 'rbykpw'.indexOf(b)), t: m[2] } : null; }
 function gpyTail(t){ return t.includes('d') ? 'd' : t.includes('s') ? 's' : 'o'; }
 function gpyLabel(x){ const g = gpyParse(x.gp); if (!g) return ''; const [a, b] = g.c; return (a === b ? GPY_COL[a][1] + '色' : GPY_COL[a][1] + GPY_COL[b][1]) + GPY_TAIL[gpyTail(g.t)][1]; }
+/* v436 我的魚：每條魚一張卡片（名字、養了幾天、從幾公斤養到幾公斤、哪裡來的）。魚缸和箱網裡點魚的圖或名字打開。
+   n＝名字、w0＝第一次放進箱網時的重量、fd＝在箱網被餵過幾次（伺服器 168_my_fish.sql） */
+var FishCard = { t:0, edit:false, busy:false };
+const FISH_NAMES = ['小胖', '阿肥', '泡泡', '布丁', '小不點', '大頭', '阿金', '小花', '饅頭', '豆豆', '球球', '阿呆', '小勇', '閃閃', '糖糖', '老大'];
+function fishExtra(x){ const o = {}; if (typeof x.n === 'string' && x.n.trim()) o.n = x.n.trim().slice(0, 8); const w0 = Number(x.w0); if (w0 > 0) o.w0 = w0; const fd = Math.floor(Number(x.fd)); if (fd > 0) o.fd = fd; return o; }
+function fishTitle(x){ const sp = fishNameOf(x); return x && x.n ? `${x.n}（${sp}）` : sp; }
+async function fishRename(x, name){ name = String(name || '').trim().slice(0, 8); if (FishCard.busy) return; if (name === (x.n || '')){ FishCard.edit = false; renderTab(); return; }
+  if (Cloud.on){ FishCard.busy = true; const row = await cloudCall('fish_name', { p_ts: x.t, p_name: name }); FishCard.busy = false; if (!row){ renderTab(); return; } }
+  for (const y of rec.tank.concat(rec.cage || [])) if (y.t === x.t){ if (name) y.n = name; else delete y.n; }
+  saveRecLocal(); FishCard.edit = false; toast(name ? `🏷️ 牠現在叫「${esc(name)}」` : '名字拿掉了'); renderTab(); }
+function renderFishCard(body, x, inCage){
+  const f = FISH_BY_ID[x.f], gx = gpyFish(x), days = Math.max(0, Math.floor((Date.now() - x.t) / 86400000)), dt = new Date(x.t), shown = (rec.show || []).includes(x.t);
+  const back = el('button', 'tbtn ghost', inCage ? '← 回箱網' : '← 回魚缸'); back.addEventListener('click', () => { FishCard.t = 0; renderTab(); }); body.appendChild(back);
+  const card = el('div', 'fcard'); body.appendChild(card);
+  const top = el('div', 'fc-top'); top.appendChild(fishCanvas(gx, true, 150, 96)); const tt = el('div', 'fc-tt');
+  tt.appendChild(el('div', 'fc-name', x.n || fishNameOf(x))); tt.appendChild(el('div', 'fc-sp', `${x.n ? fishNameOf(x) + '・' : ''}${sexIcon(x) ? sexIcon(x) + '・' : ''}${f.rarity}${f.of ? '・✨變種' : ''}`));
+  const tags = el('div', 'fc-tags'); for (const [on, t] of [[x.k, '⭐ 收藏'], [shown, '🏛️ 水族館展示中'], [inCage, '🐟 箱網裡'], [x.fm, '🍚 箱網養大'], [x.y, '🍼 水族館出生'], [x.b, '🐣 含著小魚'], [x.g && FISH_BY_ID[x.g], x.g && FISH_BY_ID[x.g] ? `🧬 帶著${FISH_BY_ID[x.g].name}的基因` : '']]) if (on) tags.appendChild(el('span', 'badge', t));
+  tt.appendChild(tags); top.appendChild(tt); card.appendChild(top);
+  const pct = Math.max(0, Math.min(1, (x.w - f.min) / Math.max(0.001, f.max - f.min)));
+  const bar = el('div', 'fc-bar'); bar.innerHTML = `<i style="width:${Math.round(pct * 100)}%"></i>`; card.appendChild(el('div', 'fc-lab', `體型：${fmtKg(x.w)}（這種魚 ${fmtKg(f.min)}～${fmtKg(f.max)}，牠在 ${Math.round(pct * 100)}% 的位置${pct >= 0.999 ? '，已經是最大的了 👑' : ''}）`)); card.appendChild(bar);
+  const rows = el('ul', 'fc-rows'); const R = (k, v) => { const li = el('li'); li.appendChild(el('b', '', k)); li.appendChild(el('span', '', v)); rows.appendChild(li); };
+  R('哪裡來的', x.y ? '在水族館出生的小魚' : `釣來的，牠的老家是「${(SPOT_BY_ID[f.spot] || {}).label || '海邊'}」`);
+  R(x.y ? '出生' : '釣到', `${dt.getFullYear()}/${dt.getMonth() + 1}/${dt.getDate()}・${days ? `跟了你 ${days} 天` : '今天才來的'}`);
+  if (x.w0 && (x.fm || inCage)) R('箱網紀錄', `從 ${fmtKg(x.w0)} 養到 ${fmtKg(x.w)}${x.w0 > 0 && x.w > x.w0 ? `（長大 ${Math.round((x.w / x.w0 - 1) * 100)}%）` : ''}${x.fd ? `・餵過 ${x.fd} 次` : ''}`);
+  else if (FARM.has(x.f) && !x.rs) R('可以養大', '這種魚可以放進珊瑚礁島的箱網，每天餵一次會慢慢長大');
+  R('現在價值', `🪙${itemPrice(x).toLocaleString()}・放流 💙${lovePts(f, x.w)}`);
+  card.appendChild(rows);
+  const nm = el('div', 'fc-nm'); card.appendChild(nm);
+  if (!FishCard.edit){ const b = el('button', 'tbtn', x.n ? '🏷️ 改名字' : '🏷️ 幫牠取名字'); b.addEventListener('click', () => { FishCard.edit = true; renderTab(); }); nm.appendChild(b); }
+  else { nm.appendChild(el('div', 'fc-lab', Kid.on ? '選一個名字：' : '選一個名字，或自己打（最多 8 個字）：'));
+    const chips = el('div', 'fc-chips'); for (const n of FISH_NAMES){ const c = el('button', 'tbtn ghost', n); c.addEventListener('click', () => fishRename(x, n)); chips.appendChild(c); } nm.appendChild(chips);
+    const line = el('div', 'fc-line'); if (!Kid.on){ const inp = el('input'); inp.type = 'text'; inp.maxLength = 8; inp.value = x.n || ''; inp.placeholder = '自己取名字'; line.appendChild(inp); const ok = el('button', 'tbtn', '儲存'); ok.addEventListener('click', () => fishRename(x, inp.value)); line.appendChild(ok); }
+    if (x.n){ const rm = el('button', 'tbtn ghost', '拿掉名字'); rm.addEventListener('click', () => fishRename(x, '')); line.appendChild(rm); }
+    const no = el('button', 'tbtn ghost', '取消'); no.addEventListener('click', () => { FishCard.edit = false; renderTab(); }); line.appendChild(no); nm.appendChild(line); }
+}
 function fishNameOf(x){ const f = FISH_BY_ID[x.f]; return f && isGuppy(x.f) && gpyParse(x.gp) ? gpyLabel(x) + f.name : f ? f.name : ''; }
 function gpyWild(){ const c = 'wwwrby', t = 'ooosd', r = s => s[Math.floor(Math.random() * s.length)]; return r(c) + r(c) + '|' + r(t) + r(t); }
 function gpyBaby(a, b){ const A = gpyParse(a) || gpyParse('ww|oo'), B = gpyParse(b) || gpyParse('ww|oo'), h = s => s[Math.random() < 0.5 ? 0 : 1];
@@ -11440,7 +11476,7 @@ function normRec(r){
   e.breedAt = Number(r.breedAt) || 0;   /* 水族館繁殖上次算到哪 */
   e.total = Number(r.total) || 0; e.bestW = Number(r.bestW) || 0; e.bestFish = FISH_BY_ID[r.bestFish] ? r.bestFish : null; e.legend = Number(r.legend) || 0; e.updatedAt = Number(r.updatedAt) || 0;
   for (const f of FISH){ if (r.best && Number(r.best[f.id]) > 0) e.best[f.id] = Number(r.best[f.id]); if (r.count && Number(r.count[f.id]) > 0) e.count[f.id] = Number(r.count[f.id]); }
-  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}, typeof x.g === 'string' && FISH_BY_ID[x.g] ? { g:x.g } : {}, typeof x.gp === 'string' && /^[wrbykp]{2}\|[dso]{2}$/.test(x.gp) ? { gp:x.gp } : {}));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
+  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}, fishExtra(x), typeof x.g === 'string' && FISH_BY_ID[x.g] ? { g:x.g } : {}, typeof x.gp === 'string' && /^[wrbykp]{2}\|[dso]{2}$/.test(x.gp) ? { gp:x.gp } : {}));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
@@ -11456,7 +11492,7 @@ function normRec(r){
   if (r.bait && typeof r.bait === 'object') for (const id of DECO_IDS){ const n = Math.floor(Number(r.bait['deco_' + id]) || 0); if (n > 0) e.bait['deco_' + id] = Math.min(999, n); }   /* v377 海底的裝飾 */
   if (r.bait && typeof r.bait === 'object') for (const id of ['tomato', 'cabbage', 'corn', 'sweetpotato', 'strawberry', 'pumpkin', 'watermelon', 'carrot', 'grape', 'sunflower', 'kelp', 'seagrape', 'coral', 'oyster']){ const n = Math.floor(Number(r.bait['seed_' + id]) || 0); if (n > 0) e.bait['seed_' + id] = Math.min(999, n); }   /* v371 菜園的種子也放在背包 */
   e.baitOn = BAITS.some(b => b.id === r.baitOn) ? r.baitOn : null;
-  e.cage = Array.isArray(r.cage) ? r.cage.filter(x => x && FISH_BY_ID[x.f]).slice(0, CAGE.max).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, w0:Number(x.w0)||Number(x.w)||0, t:Number(x.t)||0, at:Number(x.at)||0 }, x.s === 'M' || x.s === 'F' ? { s:x.s } : {}, x.k ? { k:true } : {})) : [];
+  e.cage = Array.isArray(r.cage) ? r.cage.filter(x => x && FISH_BY_ID[x.f]).slice(0, CAGE.max).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, w0:Number(x.w0)||Number(x.w)||0, t:Number(x.t)||0, at:Number(x.at)||0 }, x.s === 'M' || x.s === 'F' ? { s:x.s } : {}, x.k ? { k:true } : {}, fishExtra(x))) : [];
   e.cageFed = typeof r.cageFed === 'string' ? r.cageFed.slice(0, 10) : null;
   return e;
 }
@@ -12533,7 +12569,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island', 'closet', 'museum'].includes(curTab) && !Cloud.ui.busy) renderTab();   /* 衣櫃也照伺服器的結果重畫（伺服器沒有你買過的紀錄時，不會一直顯示穿著） */
 }
-const CLOUD_ERR = ['要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['魚的名字最多 8 個字', '兒童模式只能從名單裡選名字', '這個名字不行，換一個吧', '要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 // 省流量（風險檢查第 3 點）：島的資料很大（房子、家具、大宅格局），常用的動作（拋竿、收線、賣魚、餵食…）都不會改到島，就不要回傳；至少每分鐘拿一次完整的（同島的人可能蓋了東西）
 function cloudSel(fn){ const L = Cloud.lastRow; if (Cloud.noSel || !L || ['place_item', 'remove_item', 'move_item'].includes(fn) || !Cloud.fullAt || Date.now() - Cloud.fullAt > 60000) return null;
@@ -13816,7 +13852,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
     if (!f || !f.av || f.av.g.visible) continue; if (f.line && f.line.visible) f.line.visible = false; if (f.bob && f.bob.visible) f.bob.visible = false; if (f.tag && f.tag.style.display !== 'none') f.tag.style.display = 'none'; } }
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
-function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
+function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
 function closeSheet(){ closeModelView(); if ($('#sheet').hidden) return; $('#sheet').hidden = true; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
@@ -13955,6 +13991,8 @@ function renderTab(){
     body.appendChild(el('p', 'sub', nShow ? `你選了 ${nShow} / ${SHOW_MAX} 條魚放進廣場東邊的大水族館。點「展示」可以放進去或拿出來，「放流」會把這條魚放回大自然。`
       : `廣場東邊的大水族館現在是空的。想讓大家看到哪條魚，就按那條魚的「展示」（最多 ${SHOW_MAX} 條）。`));
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
+    if (FishCard.t){ const cx = rec.tank.find(x => x.t === FishCard.t); if (cx){ renderFishCard(body, cx); return; } FishCard.t = 0; }
+    body.appendChild(el('p', 'sub', '👆 點魚的圖或名字，可以看牠的卡片、幫牠取名字。'));
     breedTank();
     renderBreedGuide(body);
     const bar = el('div', 'tankbar');
@@ -13968,9 +14006,10 @@ function renderTab(){
     else if (tankSort === 'rare') list.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity] || b.w - a.w);
     const ul = el('ul', 'tank');
     list.forEach(x => {
-      const f = FISH_BY_ID[x.f]; const li = el('li' , shown.has(x.t) ? 'on' : ''); li.appendChild(fishCanvas(gpyFish(x), true, 56, 36));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${fishNameOf(x)} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.g ? ' 🧬' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
+      const f = FISH_BY_ID[x.f]; const li = el('li' , shown.has(x.t) ? 'on' : ''); { const cv = fishCanvas(gpyFish(x), true, 56, 36); cv.style.cursor = 'pointer'; cv.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); }); li.appendChild(cv); }
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${fishTitle(x)} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.g ? ' 🧬' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
       d.appendChild(el('div', 'meta', `${x.g && FISH_BY_ID[x.g] ? `帶著${FISH_BY_ID[x.g].name}的基因・` : ''}${x.y ? '水族館出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
+      d.style.cursor = 'pointer'; d.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); });
       const acts = el('div', 'tacts');
       const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '展示中' : '展示'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
       show.addEventListener('click', () => {
@@ -14181,6 +14220,7 @@ function renderTab(){
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
+      '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
       '🐟 箱網養殖：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
       '🪸 珊瑚礁群島：從村子往西邊走，過一座很長的跨海大橋就到了。島邊的礁岩用磯釣竿最好，有臭肚魚、白毛、黑毛、青嘴龍占，運氣好會遇到紅甘。島東邊有兩個用咾咕石疊成的愛心石滬：退潮的時候魚被困在裡面，咬得特別快；滿潮時魚都游出去了。',
       '🪷 百年生態池：在村子東邊、往東海灘的路旁邊。兩個圓圓的池子中間有紅色拱橋，池子裡有假山和睡蓮。有吳郭魚、琵琶鼠魚、食蚊魚（大肚魚），運氣好會遇到泰國鱧（魚虎）和很大的革胡子鯰。手竿最適合。',
