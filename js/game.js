@@ -3385,7 +3385,7 @@ function kidCalmRun(g){ if (!KID.shape) return; KID_SPD.walk *= 1.7; KID_SPD.run
 /* v411 新身材（玩家選的 G 方案）：頭大、身體細、腿長。模型檔和動作都不換，載入時做兩件事——
    (1) 把身體的點往中心收（存在綁定姿勢裡；原本的座標另外留在 restP，衣服的領口、口袋、條紋還是照舊座標畫）
    (2) 把骨頭之間的距離拉長（腿、手）、縮短（軀幹）。腿變長以後整個人要墊高，墊多少看姿勢（站著全墊、坐椅子只墊小腿、坐地上和躺著不墊），在 kidAnimate 裡算 */
-const KID_SHAPE = { slim: 0.8, arm: 0.84, hand: 0.8, shoe: 1.0, leg: 1.3, armLen: 1.0, torso: 0.92, head: 1.3, shoulder: 0.15, /* v415 玩家給的 Q 版參考：頭再大一點、臉扁圓、下巴短 */ jawX: 0.07, jawY: 0.15, cheekX: 0.1 };   /* v417 玩家用 Meshy 生的全身 Q 版公仔當參考：頭佔身高快一半、腿短、手腳圓胖（原本 slim 0.64、leg 2.1、head 1.12 是高瘦的身材） */
+const KID_SHAPE = { slim: 0.8, arm: 0.84, hand: 0.8, shoe: 1.0, leg: 1.3, armLen: 1.0, torso: 0.92, head: 1.3, shoulder: 0.15, /* v415 玩家給的 Q 版參考：頭再大一點、臉扁圓、下巴短 */ jawX: 0.07, jawY: 0.15, cheekX: 0.1, headDrop: 0.085 };   /* v417 玩家用 Meshy 生的全身 Q 版公仔當參考：頭佔身高快一半、腿短、手腳圓胖（原本 slim 0.64、leg 2.1、head 1.12 是高瘦的身材） */
 const _kq = new THREE.Quaternion();
 /* 腿變長以後整個人要墊高多少：每一格照現在的姿勢算——「比較低的那隻腳」離髖關節的垂直距離，新腿是舊腿的 leg 倍，差多少就墊多少。
    站著墊最多、蹲下墊少一點，跳起來腳離地的高度也跟以前一樣。坐椅子不墊（屁股要在原本的高度；以前腳是懸空的，腿變長剛好比較接近地面）；貼地、浮在水裡的姿勢也不墊 */
@@ -3415,6 +3415,7 @@ function kidReshape(scene){ const S = KID_SHAPE; scene.updateMatrixWorld(true);
     for (const n of ['lowerarm', 'wrist', 'hand']) B[n + s].position.multiplyScalar(S.armLen);
     B['upperarm' + s].position.x = Math.sign(B['upperarm' + s].position.x) * S.shoulder; }
   for (const n of ['spine', 'chest', 'head']) B[n].position.multiplyScalar(S.torso);
+  B.head.position.y -= S.headDrop;   /* v421 玩家問「頭只能懸空嗎」：頭放大、下巴縮短之後，下巴剛好只碰到肩膀，看起來像浮著。整顆頭往下坐進肩膀裡（公仔也是這樣） */
   KID.shape = { lift: L0 * (S.leg - 1), W0: W, holder: B.root.parent.name };
   B.root.parent.position.y = KID.shape.lift; scene.updateMatrixWorld(true); }
 /* v411 玩家說「臉型統一」：村民的身材有高矮胖瘦（整個人不等比例縮放），以前連頭也跟著被壓扁或拉長，每個人的臉型都不一樣。
@@ -3687,7 +3688,7 @@ class Fisher {
     if (!this.bub.hidden && now() > this.bubUntil) this.bub.hidden = true;
   }
   placeTag(){
-    const v = tmpV.set(this.pos.x, this.pos.y + (KID.shape ? (this.sitting ? 1.95 : 2.26) : 1.95), this.pos.z);   /* v411 人變高了，名字跟著往上 */
+    const v = tmpV.set(this.pos.x, this.pos.y + (KID.shape ? (this.sitting ? 1.88 : 2.18) : 1.95), this.pos.z);   /* v411 人變高了，名字跟著往上 */
     const d = camera.position.distanceTo(v);
     v.project(camera);
     if (v.z > 1 || d > (this.isNpc ? 24 : 45) || (this === me && F.phase !== 'idle' && F.phase !== 'charging')){ this.tag.style.display = 'none'; return; }   /* v294 自己釣魚的時候不顯示自己的名字，畫面不擠 */
@@ -3701,7 +3702,7 @@ class Fisher {
     this.tag.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`;
     // 自己的名字一直清楚；別人的名字：太遠會變淡，被房子或樹擋住也會變淡（每幾格才算一次）
     if (this === me){ this.tag.style.opacity = '1'; return; }
-    if ((frameNo + (this._ofs || (this._ofs = 1 + Math.floor(Math.random() * 7)))) % 8 === 0) this._occ = tagOccluded(this.pos.x, this.pos.y + (KID.shape ? 2.2 : 1.95), this.pos.z);
+    if ((frameNo + (this._ofs || (this._ofs = 1 + Math.floor(Math.random() * 7)))) % 8 === 0) this._occ = tagOccluded(this.pos.x, this.pos.y + (KID.shape ? 2.12 : 1.95), this.pos.z);
     const far = d > 18 ? clamp(1 - (d - 18) / 20, 0.12, 1) : 1, op = Math.min(far, this._occ ? 0.25 : 1);
     if (Math.abs((this._op || 1) - op) > 0.02){ this._op = (this._op || 1) + (op - (this._op || 1)) * 0.35; this.tag.style.opacity = this._op.toFixed(2); }
   }
@@ -10699,7 +10700,7 @@ function avKit(){
 }
 const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1.3, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[0.95, 3.4, 0.45] };
 /* v414 新身材比較高（kidReshape）：商品小圖、頭像的鏡頭高度跟著改，不然臉會被切掉（玩家截圖裡左上角的頭像只拍到衣服） */
-const SHOT_VIEW2 = { hat:[1.8, 2.45, 0.35], face:[1.4, 1.9, 0.15], acc:[1.3, 2.15, 0.4], top:[0.82, 2.5, 0.5], back:[0.95, 2.7, Math.PI - 0.6], pants:[0.42, 1.8, 0.45], shoes:[0.1, 1.25, 0.5], socks:[0.15, 1.15, 0.5], full:[0.95, 4.3, 0.45] };   /* v417 Q 版身材：頭大、人矮，鏡頭跟著調 */
+const SHOT_VIEW2 = { hat:[1.72, 2.45, 0.35], face:[1.32, 1.9, 0.15], acc:[1.23, 2.15, 0.4], top:[0.82, 2.5, 0.5], back:[0.95, 2.7, Math.PI - 0.6], pants:[0.42, 1.8, 0.45], shoes:[0.1, 1.25, 0.5], socks:[0.15, 1.15, 0.5], full:[0.95, 4.3, 0.45] };   /* v417 Q 版身材：頭大、人矮，鏡頭跟著調 */
 function avatarShot(gear, view, size){
   const key = JSON.stringify([gear, view, size, look.shirt, look.hat, !!(AvShot.kit && AvShot.kit.av.kid)]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
   const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
