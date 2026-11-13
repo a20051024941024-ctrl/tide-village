@@ -773,10 +773,11 @@ function hillH(x, z){
   return h.H * smooth01((R - d) / ramp) + Math.sin(x * 0.5) * Math.sin(z * 0.43) * 0.25 * smooth01((R - ramp - d) / 3);   /* 山頂的小起伏要慢慢淡出，不然會有一道看不見的小台階卡住人 */
 }
 // 回傳 { h: 地面高度, water: 是否為水面, region }
+const SHELF_W = 3, SHELF_S = 0.1;
 function terrainInfo(x, z){
   let h = 0, water = false, region = 0;
   const e = islandEdge(x, z);
-  if (e < 2){ h = Math.max(-3, -(2 - e) * 0.32); if (h < -0.02) water = true; }
+  if (e < 2){ const sd = 2 - e; h = Math.max(-3, sd <= SHELF_W ? -sd * SHELF_S : -(SHELF_W * SHELF_S + (sd - SHELF_W) * 0.42)); if (h < -0.02) water = true; }   /* v427 海岸前 3 公尺是緩緩的淺灘（以前一離岸就每公尺深 0.32），乾潮才退得遠 */
   else h = hillH(x, z);
   const dig = (dist, max, slope, reg) => { if (dist > 0){ const dep = -Math.min(max, 0.08 + dist * slope); if (!water || dep < h){ h = Math.min(h, dep); region = reg; } water = true; } };
   // 湖（橢圓＋微彎岸線）
@@ -1055,8 +1056,10 @@ function signsTick(dt, t){
   const M = Signs.mark; if (F.phase === 'charging' && F.spot && F.spot.dir && F.spot.id !== 'icelake'){ const [dx, dz] = aimDir(F.spot), cp = castPoint(F.spot.pos.x, F.spot.pos.z, dx, dz, castDist(F.spot, F.charge)); M.visible = true; M.position.set(cp[0], waterY(cp[0], cp[1], t) + 0.05, cp[1]); M.scale.setScalar(1 + Math.sin(t * 8) * 0.08); } else M.visible = false; }
 function aimDir(s){ const L = Math.hypot(s.dir.x, s.dir.y) || 1, a = s.id === 'icelake' || s.id === 'shrimp' ? 0 : (F.aim || 0), c = Math.cos(a), sn = Math.sin(a), dx = s.dir.x / L, dz = s.dir.y / L; return [dx * c - dz * sn, dx * sn + dz * c]; }
 function castDist(s, c){ const rt = rodType(curRod()); return s.id === 'shrimp' ? 1.4 + c * 1.6 : (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1); }
+/* v427 乾潮時露出來的那一段海底（主島的淺灘）：看起來是沙，浮標不要丟在上面 */
+function seaDry(x, z){ const U = waterSurface && waterSurface.material.uniforms; if (!U || !U.uTideD || U.uTideD.value < 0.01) return false; const sd = 2 - islandEdge(x, z); if (sd <= 0 || sd > SHELF_W + 1.5) return false; const inf = terrainInfo(x, z); return inf.water && inf.region === 0 && -inf.h < U.uTideD.value + 0.09; }
 function castPoint(x, z, dx, dz, dist){
-  const ok = d => waterAt(x + dx * d, z + dz * d);
+  const ok = d => waterAt(x + dx * d, z + dz * d) && !seaDry(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
   for (let k = 0.4; k < 8; k += 0.4){ if (dist - k > 1.2 && ok(dist - k)) return [x + dx * (dist - k), z + dz * (dist - k)]; if (ok(dist + k)) return [x + dx * (dist + k), z + dz * (dist + k)]; }
   return [x + dx * dist, z + dz * dist];
@@ -1800,7 +1803,7 @@ function shoreBuild(){ Tidal.built = true; if (CLASSIC) return; const rr = mulbe
   put(new THREE.ConeGeometry(1, 2.2, 5), '#5f8f4e', spots.filter((p, i) => i % 5 === 3), 0.05, 0.02);                                         /* 海草 */
   put(new THREE.DodecahedronGeometry(1, 0), '#8d8f8a', spots.filter((p, i) => i % 5 === 4 && i % 3 === 0), 0.09, 0.02);                       /* 小石頭 */
   /* v426 潮池：岸邊淺水裡的扁礁石，滿潮時泡在水下，乾潮時整塊露出來，上面有一窪水、海膽和藻 */
-  { const pools = []; for (let k = 0; k < 700 && pools.length < 20; k++){ const a = rr() * Math.PI * 2, r = islandR(a) - 2 + 0.35 + rr() * 0.5, x = Math.cos(a) * r, z = Math.sin(a) * r, inf = terrainInfo(x, z); if (!inf.water || inf.region !== 0 || inf.h > -0.08 || inf.h < -0.34 || deckAt(x, z) || blocked(x, z, 0.9) || !shoreBeach(Math.cos(a) * (r - 1.6), Math.sin(a) * (r - 1.6)) || pools.some(q => Math.hypot(q[0] - x, q[1] - z) < 5)) continue; pools.push([x, z, 0.5 + rr() * 0.3, rr() * 6.28]); }
+  { const pools = []; for (let k = 0; k < 700 && pools.length < 20; k++){ const a = rr() * Math.PI * 2, r = islandR(a) - 2 + 0.9 + rr() * 1.7, x = Math.cos(a) * r, z = Math.sin(a) * r, inf = terrainInfo(x, z); if (!inf.water || inf.region !== 0 || inf.h > -0.08 || inf.h < -0.29 || deckAt(x, z) || blocked(x, z, 0.9) || !shoreBeach(Math.cos(a) * (islandR(a) - 2.8), Math.sin(a) * (islandR(a) - 2.8)) || pools.some(q => Math.hypot(q[0] - x, q[1] - z) < 5)) continue; pools.push([x, z, 0.5 + rr() * 0.3, rr() * 6.28]); }
     const inst = (geo, m, n, fn) => { const im = new THREE.InstancedMesh(geo, m, n); for (let i = 0; i < n; i++){ fn(i); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); } im.userData.keep = true; im.frustumCulled = false; scene.add(im); };
     if (pools.length){ const N = pools.length;
       inst(new THREE.DodecahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: '#6f746f', roughness: 0.95, flatShading: true }), N, i => { const q = pools[i]; dm.position.set(q[0], 0.02 - q[2] * 0.3, q[1]); dm.rotation.set(0, q[3], 0); dm.scale.set(q[2] * 1.35, q[2] * 0.3, q[2]); });
@@ -1981,7 +1984,8 @@ function shareChip(S){ let c = $('#shareChip'); if (!c){ c = document.createElem
     shareCard({ kind: 'whale', title: S.n, sub: '海上目擊', place: '外海', img: shot }); }; }
 OW.update = function(t){
   if (waterSurface && waterSurface.material.uniforms.uWaves){ const U = waterSurface.material.uniforms, tn = now(); U.uWT.value = tn; let any = false; WAVES.forEach((w, i) => { U.uWaves.value[i].set(w.x, w.z, w.t0, w.a); if (tn - w.t0 < 15) any = true; }); U.uWOn.value = any && Quality.tier !== 'low' ? 1 : 0; WAVES.on = any;
-    { const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1), wx = Env.wx, surf = wx === 'storm' ? 1.9 : wx === 'rain' || wx === 'wind' ? 1.4 : wx === 'fog' ? 0.7 : 1; U.uTideD.value = Math.max(0, -lv) * TIDE_DROP; U.uTideUp.value = Math.max(0, lv) * TIDE_UP; U.uSurf.value += (surf - U.uSurf.value) * 0.02; } }
+    { const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1), wx = Env.wx, surf = wx === 'storm' ? 1.9 : wx === 'rain' || wx === 'wind' ? 1.4 : wx === 'fog' ? 0.7 : 1; if (!U.uIsl.done && typeof MANG !== 'undefined' && MANG && MANG.isl){ U.uIsl.done = true; const L = [[REEF.x, REEF.z, REEF.r + 0.4], ...MANG.isl.map(q => [q[0], q[1], q[2] + 0.6])].slice(0, 8);   /* 私人小島和冰原只有去的時候才畫出來，不放進來（不然空海上會有一圈浪） */ L.forEach((q, i) => U.uIsl.value[i].set(q[0], q[1], q[2])); }
+      U.uTideD.value = Math.max(0, -lv) * TIDE_DROP; U.uTideUp.value = Math.max(0, lv) * TIDE_UP; U.uSurf.value += (surf - U.uSurf.value) * 0.02; } }
   const hide = Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || Photo.on && false;
   const ns = bossNow() / 1000, W = Math.floor(ns / OW_WIN), inW = ns - W * OW_WIN, mx = me.pos.x, mz = me.pos.z;
   if (t - OW.scanAt > 1 || hide){ OW.scanAt = t; const want = new Map();
@@ -3121,7 +3125,7 @@ function buildNewEnvironment(){
       uSkyTop: { value: new THREE.Color('#6cc4ea') }, uSkyHor: { value: new THREE.Color('#d2f1f2') },
       cSea: { value: new THREE.Color(PALETTE.sea) }, cRiver: { value: new THREE.Color(PALETTE.river) }, cCreek: { value: new THREE.Color(PALETTE.creek) }, cLake: { value: new THREE.Color('#4fb3d6') }, cPool: { value: new THREE.Color('#7fd6ec') },
       cDeep: { value: new THREE.Color('#1c5d8c') }, uFoam: { value: Quality.tier === 'low' ? 0.6 : 1.0 },
-      uWaves: { value: WAVES.map(() => new THREE.Vector4(0, 0, -99, 0)) }, uWT: { value: 0 }, uWOn: { value: 0 }, uTideD: { value: 0 }, uTideUp: { value: 0 }, uSurf: { value: 1 },   /* v424 活的海：uTideD 退潮退到多深的地方（公尺），uSurf 浪多大（跟天氣） */
+      uWaves: { value: WAVES.map(() => new THREE.Vector4(0, 0, -99, 0)) }, uWT: { value: 0 }, uWOn: { value: 0 }, uTideD: { value: 0 }, uTideUp: { value: 0 }, uSurf: { value: 1 }, uIsl: { value: Array.from({ length: 8 }, () => new THREE.Vector3(0, 0, -1)) },   /* v427 外島（圓形近似）：x、z、岸線半徑；半徑 <0 = 沒用到 */   /* v424 活的海：uTideD 退潮退到多深的地方（公尺），uSurf 浪多大（跟天氣） */
       uLight: { value: new THREE.Color(1, 1, 1) }, uGlint: { value: new THREE.Color(1.0, 0.96, 0.85) },
     }),
     vertexShader: `varying vec3 vW;
@@ -3130,7 +3134,7 @@ function buildNewEnvironment(){
       #include <fog_vertex>
       }`,
     fragmentShader: `uniform sampler2D uMask; uniform float uTime; uniform vec3 uSun; uniform vec3 uSkyTop; uniform vec3 uSkyHor;
-      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint; uniform vec4 uWaves[4]; uniform float uWT; uniform float uWOn; uniform float uTideD; uniform float uTideUp; uniform float uSurf;
+      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint; uniform vec4 uWaves[4]; uniform float uWT; uniform float uWOn; uniform float uTideD; uniform float uTideUp; uniform float uSurf; uniform vec3 uIsl[8];
       varying vec3 vW;
       #include <common>
       #include <fog_pars_fragment>
@@ -3182,9 +3186,10 @@ function buildNewEnvironment(){
         float foam = shore * smoothstep(0.15, 0.75, fn * 0.5 + 0.5 + shore * 0.35) * uFoam;
         foam = max(foam, shore * clamp(crest * 3.0, 0.0, 1.0) * uFoam);   /* 浪打到岸邊冒一排白色浪花 */
         /* 一道一道的浪：沿著等深線排成一排一排往岸邊推（相位跟著水深走，時間往前浪就往淺的地方跑），越靠岸越白；沿岸斷斷續續才不會像等高線 */
-        float wnear = 1.0 - smoothstep(1.0, 7.0, sd), wband = seaF * (1.0 - smoothstep(14.0, 22.0, sd)) * step(sd, 23.5);
+        float sdw = sd; for (int i = 0; i < 8; i++){ if (uIsl[i].z > 0.0) sdw = min(sdw, length(vW.xz - uIsl[i].xy) - uIsl[i].z); }   /* 外島的岸邊也有浪推過去 */
+        float wnear = 1.0 - smoothstep(1.0, 7.0, sdw), wband = seaF * (1.0 - smoothstep(14.0, 22.0, sdw)) * step(sdw, 23.5) * step(-0.5, sdw);
         float wbrk = 0.55 + 0.45 * sin(vW.x * 0.37 + vW.z * 0.29 + uTime * 0.22 + sin(vW.x * 0.11 - vW.z * 0.13) * 2.0);
-        float wv = sin(sd * 1.35 + uTime * 1.25 + sin(vW.x * 0.19 + vW.z * 0.15) * 1.6);
+        float wv = sin(sdw * 1.35 + uTime * 1.25 + sin(vW.x * 0.19 + vW.z * 0.15) * 1.6);
         col *= 1.0 + wv * (0.075 + 0.075 * wnear) * wband * min(uSurf, 1.5);   /* 浪的背面暗、正面亮，遠遠就看得到一排一排的 */
         /* v425 風大的時候整片海都起白頭浪：一塊一塊的白沫順著風跑，暴風雨最多；海也比較暗、比較亂 */
         float gale = clamp((uSurf - 1.15) / 0.7, 0.0, 1.0) * seaF * (1.0 - far * 0.6);
@@ -4472,7 +4477,9 @@ function updatePlayer(dt){
     const nz = me.pos.z + mz / Math.max(1e-6, Math.hypot(mx, mz)) * speed * dt;
     // 可以走上山坡，但太陡的崖爬不上去
     // 跳在空中時，只要腳比前面的地面高，就能跳上去
-    const okStep = (ax, az, bx, bz) => { if (!walkable(bx, bz) || blockedJ(bx, bz, 0.35, Jump.gy + Jump.air, ax, az)) return false; { const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); } }   /* 高高的堤防路只能從樓梯上去 */ const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh < 0.34 || dh / dl < 1.2; };   /* v199：小台階（34 公分以內）直接跨上去，不會卡在路緣、泥灘台地邊 */
+    /* v427 玩家回報「人物會穿牆」：角色改成大頭之後，頭比原本擋牆用的半徑（0.35）還寬，貼著牆走頭會陷進牆裡。戶外改成 0.48；
+       屋裡家具擺得密、維持 0.35；如果現在站的地方用大半徑算已經卡住（例如剛從門口、椅子出來），也先用小的，才不會動不了 */
+    const okStep = (ax, az, bx, bz) => { const BR = !House.on && !blocked(ax, az, 0.48) ? 0.48 : 0.35; if (!walkable(bx, bz) || blockedJ(bx, bz, BR, Jump.gy + Jump.air, ax, az)) return false; { const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); } }   /* 高高的堤防路只能從樓梯上去 */ const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh < 0.34 || dh / dl < 1.2; };   /* v199：小台階（34 公分以內）直接跨上去，不會卡在路緣、泥灘台地邊 */
     if (okStep(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx;
     if (okStep(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz;
     const target = Math.atan2(mx, mz);
@@ -7748,7 +7755,7 @@ function tideNow(ms){
   return { lv, st, name: { high:'滿潮', low:'乾潮', rising:'漲潮', falling:'退潮' }[st], icon: { high:'🌊', low:'🏖️', rising:'🌊↑', falling:'🌊↓' }[st] };
 }
 /* v424 乾潮時海水退到平常水深這麼多公尺的地方（沙灘坡度緩，水平看大約退好幾公尺） */
-const TIDE_DROP = 0.36, TIDE_UP = 2.3;   /* 滿潮時海水淹上沙灘幾公尺 */
+const TIDE_DROP = 0.3, TIDE_UP = 2.3;   /* 滿潮時海水淹上沙灘幾公尺 */
 const TIDE_FX = { rising:{ bite:0.78, rare:1.15 }, high:{ bite:0.9, rare:1.05 }, falling:{ bite:1.0, rare:1.0 }, low:{ bite:1.25, rare:0.9 } };
 function taipeiDate(){ return new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); }
 function dailyTip(){
@@ -14093,7 +14100,7 @@ function renderTab(){
       '到港口外海按「一起拉！」加入，按住「拉！」讓張力保持在綠色區才會扣大魚的體力。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
-      '🌊 海浪和潮汐：海上有一排一排的浪往岸邊推，越靠岸越白；下雨浪比較大，暴風雨最大、整片海都是白頭浪，起霧時最平靜。滿潮時海水會淹上沙灘（踩進去有水花），乾潮時退出去、露出濕濕的沙，小螃蟹會出來橫著走，你一靠近牠就鑽回沙裡。沙灘上有貝殼、海星和海草；岸邊淺水裡有扁扁的礁石，乾潮時整塊露出來，上面有一窪潮池。住在海邊的村民偶爾會提到現在的潮汐。靠近海邊聽得到一波一波的浪聲。河、湖、池塘不會跟著漲退。',
+      '🌊 海浪和潮汐：海上有一排一排的浪往岸邊推，越靠岸越白；下雨浪比較大，暴風雨最大、整片海都是白頭浪，起霧時最平靜。滿潮時海水會淹上沙灘（踩進去有水花），乾潮時退出去、露出濕濕的沙，小螃蟹會出來橫著走，你一靠近牠就鑽回沙裡。沙灘上有貝殼、海星和海草；海岸前幾公尺是緩緩的淺灘，乾潮時海水會退出去好幾公尺；淺灘上有扁扁的礁石，乾潮時整塊露出來，上面有一窪潮池。紅樹林和珊瑚礁島的岸邊也有浪。乾潮時浮標不會丟在露出來的沙上，會自動丟遠一點。住在海邊的村民偶爾會提到現在的潮汐。靠近海邊聽得到一波一波的浪聲。河、湖、池塘不會跟著漲退。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
       '🐬 海豚群游到附近時會靠過來，在你前面的水面跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。',
       '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨（不常見，划船在外海逛大約 20 分鐘遇到一次鯨魚），沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。'
