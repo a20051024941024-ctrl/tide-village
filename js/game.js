@@ -1781,7 +1781,43 @@ function seaGlbSwap(s){ const G = SEA_GLB[s.id]; if (!G || /seaglb=0/.test(locat
     const mixer = new THREE.AnimationMixer(inner); if (gl.animations[0]){ const ac = mixer.clipAction(gl.animations[0]); ac.play(); ac.time = Math.random() * ac.getClip().duration; }
     wrap.position.copy(s.m.position); wrap.rotation.copy(s.m.rotation); wrap.visible = s.m.visible; scene.remove(s.m); scene.add(wrap); s.m = wrap; s.mixer = mixer;
   }).catch(e => { console.warn('sea glb', e); }); }
-function updateSeaLife(t){
+/* ===== v425 活的海第二步：潮間帶的小東西 =====
+   沙灘上海浪打得到的那一段（滿潮會淹、乾潮露出來）撒貝殼、海星、海草；乾潮時有小螃蟹出來橫著走，人一靠近就鑽回沙裡；
+   踩在淹上來的淺水裡會有水花；靠近海邊聽得到一波一波的浪聲。全部只是好看，不影響釣魚 */
+function shoreBeach(x, z){ const inf = terrainInfo(x, z); return !inf.water && Math.abs(inf.h) < 0.05 && inSand(x, z) && pathDist(x, z) > 2.2 && !(MAP.squares || []).some(q => Math.hypot(x - q[0], z - q[1]) < q[2] + 1.5); }
+function seaSwash(x, z){ return 0.5 + 0.5 * Math.sin(fishTime.value * 0.8 + Math.sin(x * 0.21) * 2 + Math.sin(z * 0.17) * 2); }
+function seaSurf(){ return waterSurface && waterSurface.material.uniforms.uSurf ? waterSurface.material.uniforms.uSurf.value : 1; }
+/* 現在這個位置有沒有被淹上來的海水蓋住（只有岸上的沙灘） */
+function inSwash(x, z){ const U = waterSurface && waterSurface.material.uniforms; if (!U || !U.uTideUp || U.uTideUp.value < 0.001) return false; const sd = 2 - islandEdge(x, z); if (sd >= 0 || sd < -4) return false; return sd > -(U.uTideUp.value + seaSwash(x, z) * 0.55 * U.uSurf.value) + 0.25 && shoreBeach(x, z); }
+const Tidal = { built: false, crabs: [], lastT: 0 };
+function shoreBuild(){ Tidal.built = true; if (CLASSIC) return; const rr = mulberry(4251), spots = [];
+  for (let k = 0; k < 900 && spots.length < 150; k++){ const a = rr() * Math.PI * 2, d = 0.25 + rr() * 2.0, r = islandR(a) - 2 - d, x = Math.cos(a) * r, z = Math.sin(a) * r; if (!shoreBeach(x, z) || deckAt(x, z) || blocked(x, z, 0.4)) continue; spots.push([x, z, d, a]); }
+  const dm = new THREE.Object3D(), put = (geo, col, list, sc, y, flat) => { if (!list.length) return; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: col, roughness: 0.75, flatShading: true }), list.length); list.forEach((p, i) => { dm.position.set(p[0], y, p[1]); dm.rotation.set(flat ? -Math.PI / 2 : 0, rr() * 6.28, flat ? rr() * 6.28 : 0); const q = sc * (0.75 + rr() * 0.6); dm.scale.set(q, flat ? q : q * 0.55, q); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); }); im.userData.keep = true; im.frustumCulled = false; scene.add(im); };
+  const star = (() => { const sh = new THREE.Shape(); for (let i = 0; i < 10; i++){ const a = i / 10 * Math.PI * 2, r = i % 2 ? 0.42 : 1; sh[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } return new THREE.ExtrudeGeometry(sh, { depth: 0.22, bevelEnabled: false }); })();
+  put(new THREE.SphereGeometry(1, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2), '#fbe9dc', spots.filter((p, i) => i % 5 === 0), 0.075, 0.005);   /* 白貝殼 */
+  put(new THREE.SphereGeometry(1, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2), '#f3b6a6', spots.filter((p, i) => i % 5 === 1), 0.06, 0.005);    /* 粉貝殼 */
+  put(star, '#f08a4b', spots.filter((p, i) => i % 5 === 2 && i % 2 === 0), 0.09, 0.012, true);                                              /* 海星 */
+  put(new THREE.ConeGeometry(1, 2.2, 5), '#5f8f4e', spots.filter((p, i) => i % 5 === 3), 0.05, 0.02);                                         /* 海草 */
+  put(new THREE.DodecahedronGeometry(1, 0), '#8d8f8a', spots.filter((p, i) => i % 5 === 4 && i % 3 === 0), 0.09, 0.02);                       /* 小石頭 */
+  /* 小螃蟹：身體＋兩隻螯＋眼睛，合成一個小群組 */
+  const cm = new THREE.MeshStandardMaterial({ color: '#e2603a', roughness: 0.7, flatShading: true }), em = new THREE.MeshBasicMaterial({ color: '#1c1c1c' }), bg = new THREE.SphereGeometry(0.075, 8, 6), cg = new THREE.SphereGeometry(0.035, 6, 5), eg = new THREE.SphereGeometry(0.012, 5, 4);
+  const cs = spots.filter(p => p[2] > 0.5 && p[2] < 1.9); for (let i = 0; i < 16 && cs.length; i++){ const p = cs.splice(Math.floor(rr() * cs.length), 1)[0], g = new THREE.Group(), b = new THREE.Mesh(bg, cm); b.scale.set(1.25, 0.55, 0.9); g.add(b);
+    for (const sx of [-1, 1]){ const c = new THREE.Mesh(cg, cm); c.position.set(sx * 0.1, 0.01, 0.06); g.add(c); const e = new THREE.Mesh(eg, em); e.position.set(sx * 0.03, 0.05, 0.05); g.add(e); }
+    g.position.set(p[0], 0.045, p[1]); g.rotation.y = Math.PI / 2 - p[3] + Math.PI; g.userData.keep = true; g.scale.setScalar(0.001); scene.add(g);
+    Tidal.crabs.push({ g, x: p[0], z: p[1], tx: -Math.sin(p[3]), tz: Math.cos(p[3]), ph: rr() * 6.28, sp: 0.5 + rr() * 0.5, k: 0, hide: 0 }); } }
+function shoreLife(t){ if (!Tidal.built){ try { shoreBuild(); } catch(e){ console.warn('shore', e); } } const dt = Math.min(0.1, Math.max(0, t - Tidal.lastT)); Tidal.lastT = t; if (!Tidal.crabs.length) return;
+  const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1), out = lv < 0.15 && !(typeof Dive !== 'undefined' && Dive.on);
+  for (const c of Tidal.crabs){ const dx = c.x - me.pos.x, dz = c.z - me.pos.z, d2 = dx * dx + dz * dz; if (d2 > 3600){ if (c.g.visible) c.g.visible = false; continue; }
+    if (d2 < 5.3 && c.k > 0.5) c.hide = 5 + Math.random() * 5;   /* 人靠近：鑽回沙裡，過幾秒再出來 */
+    c.hide = Math.max(0, c.hide - dt); const want = out && c.hide <= 0 ? 1 : 0; c.k += (want - c.k) * Math.min(1, dt * (want ? 2.5 : 9)); const vis = c.k > 0.02; if (c.g.visible !== vis) c.g.visible = vis; if (!vis) continue;
+    const u = Math.sin(t * c.sp + c.ph) * 0.9 + Math.sin(t * c.sp * 0.37 + c.ph * 2) * 0.5; c.g.position.set(c.x + c.tx * u, 0.045 * c.k - 0.03 * (1 - c.k), c.z + c.tz * u); c.g.scale.setScalar(Math.max(0.001, c.k)); c.g.rotation.z = Math.sin(t * 14 * c.sp + c.ph) * 0.07 * Math.abs(Math.cos(t * c.sp + c.ph)); } }
+/* 一波浪打上來的聲音：白噪音慢慢變大再慢慢退掉，頻率由低到高再回來 */
+function surfSound(vol){ if (!soundOn || !actx || sfxVol <= 0.01 || vol < 0.004) return; try { if (!noiseBuf) noise(0.01, 0.0001, 400);
+    const t = actx.currentTime, src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain(), v = Math.min(0.09, vol) * sfxVol; src.buffer = noiseBuf; src.loop = true; f.type = 'lowpass'; f.Q.value = 0.4;
+    f.frequency.setValueAtTime(350, t); f.frequency.exponentialRampToValueAtTime(2400, t + 1.3); f.frequency.exponentialRampToValueAtTime(500, t + 4.2);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 1.2); g.gain.exponentialRampToValueAtTime(v * 0.35, t + 2.4); g.gain.exponentialRampToValueAtTime(0.0001, t + 4.4);
+    src.connect(f).connect(g).connect(actx.destination); src.start(t, Math.random() * 0.5); src.stop(t + 4.5); } catch(e){} }
+function updateSeaLife(t){ try { shoreLife(t); } catch(e){}
   for (const s of seaLife){
     // 偶爾才出現一次：每隔 1～2.5 分鐘出來一下（跳兩三下、滑過去、噴一口氣），其他時間躲在水裡
     if (s.showAt == null){ s.showAt = t + 15 + Math.random() * 60; s.dur = s.mode === 'jump' ? 9 : s.mode === 'whale' ? 18 : 14; }
@@ -3140,7 +3176,14 @@ function buildNewEnvironment(){
         float wnear = 1.0 - smoothstep(1.0, 7.0, sd), wband = seaF * (1.0 - smoothstep(14.0, 22.0, sd)) * step(sd, 23.5);
         float wbrk = 0.55 + 0.45 * sin(vW.x * 0.37 + vW.z * 0.29 + uTime * 0.22 + sin(vW.x * 0.11 - vW.z * 0.13) * 2.0);
         float wv = sin(sd * 1.35 + uTime * 1.25 + sin(vW.x * 0.19 + vW.z * 0.15) * 1.6);
-        col *= 1.0 + wv * (0.075 + 0.075 * wnear) * wband;   /* 浪的背面暗、正面亮，遠遠就看得到一排一排的 */
+        col *= 1.0 + wv * (0.075 + 0.075 * wnear) * wband * min(uSurf, 1.5);   /* 浪的背面暗、正面亮，遠遠就看得到一排一排的 */
+        /* v425 風大的時候整片海都起白頭浪：一塊一塊的白沫順著風跑，暴風雨最多；海也比較暗、比較亂 */
+        float gale = clamp((uSurf - 1.15) / 0.7, 0.0, 1.0) * seaF * (1.0 - far * 0.6);
+        if (gale > 0.01){ vec2 wp = vW.xz * 0.55 + vec2(uTime * 0.5, uTime * 0.28);
+          float c1 = sin(wp.x * 1.3 + sin(wp.y * 1.7 + uTime * 0.4)) * sin(wp.y * 1.9 + sin(wp.x * 1.1));
+          float c2 = sin(vW.x * 2.9 + uTime * 1.9) * sin(vW.z * 3.3 - uTime * 1.6);
+          foam = max(foam, smoothstep(0.62 - 0.22 * gale, 0.95, c1 * 0.75 + c2 * 0.25) * gale * 0.85 * uFoam * step(0.25, depth));
+          col *= 1.0 - 0.12 * gale + c2 * 0.06 * gale; }
         foam = max(foam, smoothstep(0.86 - 0.3 * wnear, 0.99, wv) * wband * wbrk * (0.3 + 0.7 * wnear) * min(uSurf, 1.7) * uFoam);
         foam = max(foam, fl * (0.25 + 0.5 * smoothstep(0.3, 1.0, sin(sd * 3.0 + uTime * 1.6 + vW.x * 0.6 + sin(vW.z * 0.9)))) * uFoam);   /* 淹在沙灘上的薄水有一絲一絲的泡沫 */
         foam = max(foam, seaF * (1.0 - smoothstep(0.0, 0.05, depth)) * 0.85 * uFoam * step(uTideUp, 0.001));   /* 退潮時最前面那條白邊 */
@@ -9314,7 +9357,7 @@ function buildIceField(){
     const geo2 = new THREE.BufferGeometry(); geo2.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pts = new THREE.Points(geo2, new THREE.PointsMaterial({ color:'#ffffff', size:0.14, transparent:true, opacity:0.85, depthWrite:false })); pts.frustumCulled = false; pts.userData.keep = true; scene.add(pts); Venue.snow = pts; }
 }
 function iceFree(x, z){ const d = deckAt(x, z); return !!d && nearIce(x, z, 0) && !blocked(x, z, 0.3); }
-const Amb = { gull: 6, wind: 3, sq: 4, step: 0, bub: 1 };
+const Amb = { gull: 6, wind: 3, sq: 4, step: 0, bub: 1, sw: 0 };
 function updateAmbient(dt, t, nearI){
   if (!soundOn || !actx || document.hidden) return;
   const shoreD = islandEdge(me.pos.x, me.pos.z);
@@ -9322,7 +9365,8 @@ function updateAmbient(dt, t, nearI){
   if (nearI && !Dive.on){ Amb.wind -= dt; if (Amb.wind < 0){ SFX.wind(); Amb.wind = 2 + Math.random() * 2; }
     Amb.sq -= dt; if (Amb.sq < 0){ if (Venue.penguins.some(p => Math.hypot(p.g.position.x - me.pos.x, p.g.position.z - me.pos.z) < 9)) SFX.squeak(); Amb.sq = 3 + Math.random() * 6; } }
   if (Dive.on){ Amb.bub -= dt; if (Amb.bub < 0){ SFX.bubble(); Amb.bub = 0.6 + Math.random() * 1.6; } }
-  if (!Dive.on && !myBoat && me.speed > 1.5 && Jump.air <= 0){ Amb.step -= dt * me.speed; if (Amb.step < 0){ SFX.step(); Amb.step = 2.3; } }
+  if (!Dive.on && !myBoat && me.speed > 1.5 && Jump.air <= 0){ Amb.step -= dt * me.speed; if (Amb.step < 0){ if (inSwash(me.pos.x, me.pos.z)){ ripple(me.pos.x, me.pos.z); noise(0.22, 0.05, 900, 2600, 0.7); } else SFX.step(); Amb.step = 2.3; } }   /* v425 踩在淹上來的淺水裡：水花和踩水聲 */
+  if (!Dive.on && !House.on && !nearI){ const sd = 2 - shoreD; if (sd > -10 && sd < 16){ const sw = Math.sin(fishTime.value * 0.8 + Math.sin(me.pos.x * 0.21) * 2 + Math.sin(me.pos.z * 0.17) * 2); if (sw > 0 && Amb.sw <= 0) surfSound(0.05 * seaSurf() * (1 - Math.min(1, Math.abs(sd - 1) / 13))); Amb.sw = sw; } }   /* v425 浪聲：跟著這一段海岸的每一道浪 */
 }
 function renderShrimpChip(ih){
   let c = $('#shrimpChip'); if (!ih){ if (c) c.hidden = true; return; }
@@ -14038,7 +14082,7 @@ function renderTab(){
       '到港口外海按「一起拉！」加入，按住「拉！」讓張力保持在綠色區才會扣大魚的體力。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
-      '🌊 海浪和潮汐：海上有一排一排的浪往岸邊推，越靠岸越白；起風、下雨浪比較大，暴風雨最大，起霧時最平靜。滿潮時海水會淹上沙灘（腳會踩在淺淺的水裡），乾潮時退出去、露出濕濕的沙。河、湖、池塘不會跟著漲退。',
+      '🌊 海浪和潮汐：海上有一排一排的浪往岸邊推，越靠岸越白；下雨浪比較大，暴風雨最大、整片海都是白頭浪，起霧時最平靜。滿潮時海水會淹上沙灘（踩進去有水花），乾潮時退出去、露出濕濕的沙，小螃蟹會出來橫著走，你一靠近牠就鑽回沙裡。沙灘上有貝殼、海星和海草。靠近海邊聽得到一波一波的浪聲。河、湖、池塘不會跟著漲退。',
       '🌊 起浪：座頭鯨躍身、拍尾、拍胸鰭會推出一圈一圈往外跑的浪，小船和浮標會跟著起伏、船會斜一下（不會翻），浪打到岸邊冒白色浪花。划船在鯨魚附近：牠們會從船底下潛過去；船停著不動，座頭鯨有時會好奇游過來繞著你、側身看你一眼，最後在船邊噴一口氣（有成就）；划船時遇到海豚，牠們會跑到船頭前面一起游。被水花或噴氣淋到畫面會濕濕的。',
       '🐬 海豚群游到附近時會靠過來，在你前面的水面跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。',
       '🐋 海上目擊：外海（離岸 40 公尺以上的深水）任何地方都可能突然遇到海豚群、座頭鯨、藍鯨、抹香鯨（不常見，划船在外海逛大約 20 分鐘遇到一次鯨魚），沒有預告，常常是先聽到「噗——嘶」的噴氣聲。大家看到的是同一隻在做同一件事。座頭鯨會躍身、拍尾、拍胸鰭；藍鯨呼吸幾次就深潛；抹香鯨在水面漂著休息、水柱斜斜往左前噴。鯨魚在水面時右邊會出現 📷 可以拍照。每一種第一次遇到記在圖鑑「海上目擊」，送 💙30 愛海點數。牠們不會撞船、不會讓你掉東西。'
