@@ -21,5 +21,6 @@
 - **程式函式庫**：[three.js](https://threejs.org)（MIT）、[supabase-js](https://github.com/supabase/supabase-js)（MIT）、[PeerJS](https://peerjs.com)（MIT）；簡體中文對照表來自 [OpenCC](https://github.com/BYVoid/OpenCC)（Apache License 2.0）。
 - **遊戲內標示**：設定 →「📜 素材來源與授權」（v404 起）。v407 起遊戲裡已經沒有 CC BY 的素材，這一欄是自願列出。
 - **髮型 3D 模型**（`models/hair/wave.glb` 大波浪）：作者用 [Meshy](https://www.meshy.ai) 付費方案生成（2026-11-13），本專案從約 157 萬面減到約 1.5 萬面、對到角色頭上；模型是白色的，遊戲裡照玩家選的髮色上色。
+- **髮型 3D 模型**（`models/hair/sweet.glb` 甜心雙束）：作者用 [Meshy](https://www.meshy.ai) 付費方案生成的「溫柔大波浪」Q 版頭像（2026-11-13，約 243 萬面）。本專案切掉臉、身體和底座只留頭髮，把瀏海往上收到眉毛，減到約 2 萬面；兩個蝴蝶結另外分成一塊，固定粉紅色。
 - **手繪眼睛**（`eyes/e1.png`）：作者用 ChatGPT 生成的灰階圖（2026-11-13），本專案去背、標出瞳孔範圍，遊戲裡照玩家選的瞳色上色。
 - **角色的新身材、臉型、其他眼型、瀏海、髮飾、手指**（v411 起）：本專案用程式做的。眼型和髮型的種類參考了作者用 ChatGPT 生成的幾張概念圖。

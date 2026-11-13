@@ -2394,8 +2394,8 @@ const LOOK_DEFAULT = 'h0c1s1e0';
 /* v411 每個髮型配的瀏海（B 齊、A 空氣、S 斜、P 八字、N 沒有）＋鬢角（0 沒有、1 短、2 長）。沒列到的用 S1 */
 const HAIR_FRONT = ['S1', 'B1', 'A0', 'B0', 'P2', 'A1', 'B1', 'A1', 'N0', 'N0', 'B2', 'P2', 'S1', 'A1', 'A1', 'B1', 'B1', 'B0', 'B2', 'N0', 'N0', 'N1', 'P2', 'N1', 'P0', 'S1', 'A1', 'B0', 'A0', 'S1', 'P2', 'N0', 'N0', 'H2'];
 /* v411 用 3D 模型做的髮型（玩家用 Meshy 付費方案生成，本專案從 157 萬面減到約 1.5 萬面、對到頭上；模型是白色的，顏色照玩家選的髮色）。髮型編號 → 檔案；載好以前先用程式做的版本 */
-const HAIR_GLB = { 11: 'models/hair/wave.glb' }, HAIRG = { geo: {} };
-function hairGlbLoad(){ for (const [h, url] of Object.entries(HAIR_GLB)){ try { new GLTFLoader().load(url, g => { let geo = null; g.scene.traverse(o => { if (o.isMesh && !geo) geo = o.geometry; }); if (!geo) return; geo.computeBoundingSphere(); geo.userData.shared = true; HAIRG.geo[h] = geo;
+const HAIR_GLB = { 11: 'models/hair/wave.glb', 33: 'models/hair/sweet.glb' }, HAIRG = { geo: {}, bow: {} };   /* v416 檔案裡叫 bow 的那一塊是蝴蝶結，固定粉紅色，不跟髮色 */
+function hairGlbLoad(){ for (const [h, url] of Object.entries(HAIR_GLB)){ try { new GLTFLoader().load(url, g => { let geo = null, bow = null; g.scene.traverse(o => { if (!o.isMesh) return; if (o.name === 'bow' || (o.parent && o.parent.name === 'bow')) bow = bow || o.geometry; else geo = geo || o.geometry; }); if (!geo) return; geo.computeBoundingSphere(); geo.userData.shared = true; HAIRG.geo[h] = geo; if (bow){ bow.computeBoundingSphere(); bow.userData.shared = true; HAIRG.bow[h] = bow; }
       try { if (typeof AvShot !== 'undefined') AvShot.cache.clear(); for (const f of CLOD.all){ if (!f.gearKey) continue; const gr = JSON.parse(f.gearKey); if (String(lookParse(gr.look).h) === String(h)){ f.gearKey = ''; f.setGear(gr); } } } catch(e){ console.warn('hair glb regear', e); } }, undefined, () => {}); } catch(e){} } }
 const LOOK_ACC = ['沒有', '蝴蝶結', '雙蝴蝶結', '髮夾', '髮箍', '小花'];
 function lookParse(v){ const m = /^h(\d{1,2})c(\d{1,3})s(\d)e(\d)(?:y(\d{1,2}))?(?:a(\d{1,2}))?$/.exec(v || ''); const r = m ? { h:+m[1], c:+m[2], s:+m[3], e:+m[4], y:+(m[5] || 0), a:+(m[6] || 0) } : { h:0, c:1, s:1, e:0, y:0, a:0 }; r.a = r.a < LOOK_ACC.length ? r.a : 0; r.y = r.y < LOOK_EYES.length ? r.y : 0;   /* v411 y＝眼型（沒寫就是 0） */ r.h = r.h < LOOK_HAIR.length ? r.h : 0; r.c = r.c < 1000 ? r.c : 1; r.s = r.s < LOOK_SKIN.length ? r.s : 1; r.e = r.e < LOOK_EYE.length ? r.e : 0; return r; }
@@ -2539,7 +2539,7 @@ function applyLook(av, gear, mk){ av.lookStr = gear.look;
       for (let i = 0; i <= 6; i++){ const t = i / 6, wv = Math.sin(t * Math.PI * 2.6 + k * 1.3) * 0.04 * t; pts.push(V3(ox * (1 + t * 2) + side * (0.05 * Math.sin(t * Math.PI) + wv), -t * l + (side ? 0 : 0.05 * Math.sin(t * Math.PI)), oz * (1 + t * 2) - (side ? 0.02 * t : 0.16 * Math.sin(t * Math.PI * 0.7)) + (side ? wv * 0.5 : wv))); }
       o.push(hairLockGeo(pts, w * (k ? 0.8 : 1), w * 0.35, 0.6, null, { grow: 0.14 })); } return o; }), hm, x, y, z, HD);
   const HG = HAIRG.geo[L.h]; av.hairGlb = !!HG; if (av.hair) av.hair.visible = !HG;
-  if (HG){ const m2 = av.hairM2 || (av.hairM2 = mat('#5a3d2b', 0.7, { side: THREE.DoubleSide })); m2.color.set(hcCol(L.c)); mk(HG, m2, 0, 0, 0, HD); }
+  if (HG){ const m2 = av.hairM2 || (av.hairM2 = mat('#5a3d2b', 0.7, { side: THREE.DoubleSide })); m2.color.set(hcCol(L.c)); mk(HG, m2, 0, 0, 0, HD); if (HAIRG.bow[L.h]) mk(HAIRG.bow[L.h], av.bowM || (av.bowM = mat('#f7a9c4', 0.6, { side: THREE.DoubleSide })), 0, 0, 0, HD); }
   else switch (L.h){
     case 1: break;   /* 齊瀏海（瀏海在 HAIR_FRONT） */
     case 2: if (!hatOn) mk(hairMerged('spk', () => { const o = []; for (let i = 0; i < 11; i++){ const a = i / 11 * Math.PI * 2 + 0.3, r = i < 8 ? 0.21 : 0.07, dx = Math.sin(a), dz = Math.cos(a) - 0.2; o.push(hairLockGeo([V3(dx * r, 0.24, dz * r - 0.02), V3(dx * (r + 0.06), 0.33, dz * (r + 0.06) - 0.06), V3(dx * (r + 0.1), 0.43, dz * (r + 0.1) - 0.13)], 0.17, 0.035, 0.75, V3(dx, 0.5, dz).normalize())); } return o; }), hm, 0, 0, 0, HD); break;
