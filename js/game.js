@@ -4721,10 +4721,13 @@ function toyBase(o, x, z, t){ const wet = !deckAt(x, z) && inWater(x, z); if (we
 const _toyQ = new THREE.Quaternion(), _toyA = new THREE.Vector3();
 function toyStep(o, dt, t){ const K = o.K; let [base, wet] = toyBase(o, o.x, o.z, t), drag = 0.05; o.vy -= 14 * dt; o.y += o.vy * dt;
   if (o.y <= base + 0.001){
-    if (wet){ if (!o.wet){ o.wet = t; if (o.vy < -1.5 || Math.hypot(o.vx, o.vz) > 2){ ripple(o.x, o.z, o.k === 'barrel'); SFX.splash(o.k === 'barrel'); FX.emit(o.x, 0.25, o.z, 10, '#e8f7ff', 0.9, 1.8, 0.7); } } o.y += (base - o.y) * Math.min(1, dt * 7); o.vy *= Math.max(0, 1 - dt * 8); drag = 2.4; }
+    if (wet){ if (!o.wet){ o.wet = t; if (o.vy < -1.5 || Math.hypot(o.vx, o.vz) > 2){ ripple(o.x, o.z, o.k === 'barrel'); SFX.splash(o.k === 'barrel'); FX.emit(o.x, 0.25, o.z, 10, '#e8f7ff', 0.9, 1.8, 0.7); } } o.y += (base - o.y) * Math.min(1, dt * 7); o.vy *= Math.max(0, 1 - dt * 8); drag = 2.4;
+      /* v443 玩家問「球會被海浪沖回來嗎」：會。漂在海上的東西被浪往岸邊推（往島的方向），推上沙灘就停住；被碼頭、堤防擋住上不了岸的，30 秒後才回原位 */
+      { const rl = Math.hypot(o.x, o.z) || 1; o.vx -= o.x / rl * 2.6 * dt; o.vz -= o.z / rl * 2.6 * dt; o.ashore = t + 3; } }
     else { o.y = base; if (o.vy < -1.6){ o.vy = -o.vy * K.e; if (o.vy > 1.2) toySound(o, o.vy * 1.5); } else o.vy = 0; drag = K.fr;
       const gx = (groundHeight(o.x + 0.4, o.z) - groundHeight(o.x - 0.4, o.z)) / 0.8, gz = (groundHeight(o.x, o.z + 0.4) - groundHeight(o.x, o.z - 0.4)) / 0.8;
-      const gm = Math.hypot(gx, gz); if (gm > 0.07 && gm < 2){ o.vx -= gx * 7 * dt; o.vz -= gz * 7 * dt; }   /* 很緩的坡不會自己滾（不然球永遠停不下來，也沒辦法跟別人對齊最後的位置） */
+      const gm = Math.hypot(gx, gz), beached = t < (o.ashore || 0); if (beached){ drag = 3.2; if (Math.hypot(o.vx, o.vz) < 0.45 && o.vy === 0){ o.vx = o.vz = 0; o.rest = true; o.ashore = 0; } }   /* 剛被浪推上岸：停在沙灘上，不會又滾回海裡 */
+      else if (gm > 0.07 && gm < 2){ o.vx -= gx * 7 * dt; o.vz -= gz * 7 * dt; }   /* 很緩的坡不會自己滾（不然球永遠停不下來，也沒辦法跟別人對齊最後的位置） */
       if (Math.hypot(o.vx, o.vz) < 0.25 && o.vy === 0 && gm < 0.16){ o.vx = o.vz = 0; o.rest = true; } } }
   if (!wet) o.wet = 0;
   const f = Math.exp(-drag * dt); o.vx *= f; o.vz *= f;
@@ -4740,7 +4743,7 @@ function toyStep(o, dt, t){ const K = o.K; let [base, wet] = toyBase(o, o.x, o.z
       flash('⚽ 進球！', 1.4); toast('⚽ × ' + Toys.goals); try { SFX.coin(); } catch(e){} buzz([30, 30, 60]); for (const c of ['#ffd23f', '#f2493d', '#3d8bf2', '#7fe08a']) FX.emit(G.x, G.h + 0.2, G.z, 16, c, 2.2, 3.2, 1.3); }
     o.plz = Math.abs(lx) < G.w + 0.5 ? lz : 0; }
   if (o.homeAt && t > o.homeAt) toyHome(o, true);
-  else if (o.wet && t - o.wet > (o.k === 'coconut' ? 6 : 10)) toyHome(o, Math.hypot(o.hx - me.pos.x, o.hz - me.pos.z) < 40);
+  else if (o.wet && t - o.wet > 30) toyHome(o, Math.hypot(o.hx - me.pos.x, o.hz - me.pos.z) < 40);
   else if (o.y < -6) toyHome(o, false); }
 /* 騎車撞到樹：掉樹葉，有時候掉一顆果子 */
 function toyTree(x, z){ if (!Toys.built) return; const t = now(); for (const c of colliders){ if (!c.tree || Math.hypot(c.x - x, c.z - z) > c.r + 0.9) continue; if (t < (c.shakeT || 0)) return; c.shakeT = t + 2.5; const g = groundHeight(c.x, c.z);
@@ -14490,8 +14493,8 @@ function renderTab(){
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
-      '🌧️ 下雨和暴風雨的時候，外面的村民會自己穿上雨衣、雨帽和雨靴，雨停了就脫掉。大家看到的都一樣。',
-      '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，過一下自己回到原位。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
+      '🌧️ 下雨和暴風雨的時候，外面的村民會自己穿上雨衣、雨帽和雨靴，雨停了就脫掉。村長、阿綾、阿木、阿福下雨不散步、不釣魚，會去涼亭或食堂躲雨、或回家休息（老港例外，他下雨也要釣）。大家看到的都一樣。',
+      '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，海浪會把它慢慢推回岸邊。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
       '🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
       '👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。',
