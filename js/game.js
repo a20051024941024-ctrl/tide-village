@@ -2826,7 +2826,7 @@ function scubaMask(){ if (!SCUBA.maskG){ const g = new THREE.Group(), blk = new 
     g.traverse(o => { if (o.isMesh){ o.castShadow = true; o.geometry.userData.shared = true; } }); SCUBA.maskG = g; }
   return SCUBA.maskG.clone(); }   /* 潛水衣：羅紋領、長袖、羅紋袖口 */
 function applyGear(av, gear){
-  gear = cleanGear(gear);
+  gear = cleanGear(gear); if (av.rainWear){ gear.hat = 'hat_none'; gear.shoes = 'shoes_rain'; if (gear.back !== 'back_none') gear.back = 'back_none'; }
   for (const m of av.gearMeshes){ if (m.parent) m.parent.remove(m); if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }
   av.gearMeshes = []; av.gearAnim = null;
   try { cloth3dWear(av, gear); } catch(e){ console.warn('cloth3d', e); }
@@ -2839,6 +2839,12 @@ function applyGear(av, gear){
   for (const b of av.hatBase) b.visible = gear.hat === 'hat_sun';
   gear3dApply(av, gear);
   const H = av.hatG, HD = av.headG;
+  if (av.rainWear){ const rc = M(av.rainCol || '#f6c83b', 0.35), rd = M(shade(av.rainCol || '#f6c83b', -0.18), 0.4);   /* 雨帽（後面帽簷比較長）＋斗篷雨衣＋雨靴 */
+    const cr = mk(new THREE.SphereGeometry(0.35, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), rc, 0, -0.07, 0, H); cr.scale.set(1.04, 0.98, 1.06);
+    const br = mk(new THREE.CylinderGeometry(0.35, 0.5, 0.07, 20), rc, 0, -0.07, -0.035, H); br.scale.z = 1.14; mk(new THREE.CylinderGeometry(0.357, 0.362, 0.035, 18), rd, 0, -0.03, 0, H).scale.z = 1.06;
+    const po = mk(new THREE.CylinderGeometry(0.2, 0.42, 0.58, 18, 1, true), rc, 0, 0.77, 0); po.material = rc.clone(); po.material.side = THREE.DoubleSide; po.scale.z = 0.92;
+    const col = mk(new THREE.TorusGeometry(0.19, 0.035, 6, 18), rd, 0, 1.06, 0); col.rotation.x = Math.PI / 2; col.scale.y = 0.92;
+    for (let i = 0; i < 3; i++) mk(new THREE.SphereGeometry(0.02, 6, 5), rd, 0, 0.97 - i * 0.12, 0.2 + i * 0.062); }
   switch (gear.hat){
     case 'hat_lion': { const red = M('#d8262a', 0.55), gold = M('#f2c43d', 0.4), wht = M('#fbf8f2', 0.7);   /* 舞獅頭：紅色大頭、金色眉毛、白色鬍鬚、大眼睛 */
       const d = mk(new THREE.SphereGeometry(0.36, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, -0.04, 0, H); d.scale.set(1.05, 0.85, 1.1);
@@ -3612,6 +3618,12 @@ const NPC_STYLE = [
   ['館長', { look:'h4c0s0e5', sc:[0.95, 1.02] }],
   ['寵物店', { look:'h6c6s0e3', sc:[0.92, 0.92] }],
 ];
+/* ============ v442 下雨天村民會穿雨衣（玩家建議） ============
+   天氣是大家一樣的，所以每個人看到的村民都同時穿上、同時脫掉。雨衣是黃色為主，也有藍、紅、綠（照名字固定，不會每次換顏色）。
+   一次只幫一個人換（每幾格一個），二十幾個村民不會同時換裝造成卡頓。屋子裡的人（釣蝦場老闆、博物館館長、食堂的美雲姨）不換。 */
+const RAIN_COATS = ['#f6c83b', '#f6c83b', '#f6c83b', '#3d8bd9', '#e2574c', '#3fae7a'];
+function rainWearTick(){ if (CLASSIC || frameNo % 8) return; const want = !!(WEATHERS[Env.wx] && WEATHERS[Env.wx].rain > 0);
+  for (const f of CLOD.all){ if (!f.isNpc || f.noRain || !!f.rainWear === want) continue; f.rainWear = want; let g = {}; try { g = f.gearKey ? JSON.parse(f.gearKey) : {}; } catch(e){} try { f.setGear(g); } catch(e){ console.warn('rainwear', e); } return; } }
 function npcStyle(name){ name = String(name || ''); const r = NPC_STYLE.find(([k]) => name.startsWith(k)); return r ? r[1] : null; }
 /* 鬍子：mus 八字鬍、stub 短鬍渣、beard 落腮鬍、full 白長鬍（跟頭髮同一個顏色） */
 function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG; if (!k || !hm || !HD) return;
@@ -3623,7 +3635,7 @@ function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG
   if (k === 'full'){ S(0.17, 0, -0.17, 0.19, 1.4, 1.0, 0.8); S(0.1, 0, -0.3, 0.23, 1.1, 1.0, 0.7); } }
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; CLOD.all.add(this);
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); this.noRain = /釣蝦場|博物館|^客人・/.test(this.npcName);   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
     if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
@@ -3638,7 +3650,8 @@ class Fisher {
     if (this.isNpc){ const st = npcStyle(opts.name); if (st){ this.npcSt = st; this.av.npcFh = st.fh || null; if (st.sc) this.av.g.scale.set(st.sc[0], st.sc[1], st.sc[0]); kidHeadFix(this.av); this.setGear({}); } }
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
-  setGear(gear){ if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, { look: this.npcSt.look }); const k = JSON.stringify(gear || {}); if (k === this.gearKey) return; this.gearKey = k; applyGear(this.av, gear || {}); }
+  setGear(gear){ if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, { look: this.npcSt.look }); const k = JSON.stringify(gear || {}), rw = !!(this.isNpc && this.rainWear); if (k === this.gearKey && rw === !!this.av.rainWear) return; this.gearKey = k;
+    this.av.rainWear = rw; if (rw && !this.av.rainCol){ let h = 0; for (const ch of String(this.npcName || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; this.av.rainCol = RAIN_COATS[h % RAIN_COATS.length]; } applyGear(this.av, gear || {}); }
   setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); if (!this.isNpc){ try { rodHD(this.av, this.rodType, r.color, this.rodSkin); } catch(e){ console.warn('rodHD', e); } } applyRodShape(this.av, this.rodType, false); } }
   setRodLook(skin, lc){ skin = CRAFT_BY[skin] ? skin : null; lc = CRAFT_BY[lc] ? lc : null; if (lc !== this.lineCol){ this.lineCol = lc; this.line.material.color.set(lc ? CRAFT_BY[lc].col : '#fbf8ef'); this.line.material.opacity = lc ? 0.95 : 0.85; }   /* v253 工坊做的竿子造型、釣線顏色 */
     if (skin !== this.rodSkin){ this.rodSkin = skin; if (!this.isNpc && this.rodId){ const r = RODS.find(x => x.id === this.rodId) || RODS[0]; try { rodHD(this.av, this.rodType, r.color, skin); applyRodShape(this.av, this.rodType, false); } catch(e){} } } }
@@ -10220,7 +10233,7 @@ function initQuestNpcs(){
   for (const [who, d] of Object.entries(QUEST_NPC)){
     const [x, z] = d.cafe ? d.at : freeSpot(d.at[0], d.at[1]), f = new Fisher({ shirt:d.shirt, hat:d.hat, name:d.name, kind:'npc' });
     f.pos.set(x, 0, z); f.baseY = d.cafe ? CAFE.y : groundHeight(x, z); f.rot = d.cafe ? 0 : d.face ? Math.atan2(d.face[0] - x, d.face[1] - z) : Math.atan2(MAP.plaza[0] - x, MAP.plaza[1] - z);   /* 美雲姨站在食堂裡的櫃台後面 */ f.setGear(d.gear); f.nm.classList.add('quest');
-    f.lines = QUEST_TALK[who] || []; if (who === 'chief') f.wid = 'chief'; questNpcs.push({ who, name:d.name, f });
+    f.lines = QUEST_TALK[who] || []; if (who === 'chief') f.wid = 'chief'; if (d.cafe) f.noRain = true; questNpcs.push({ who, name:d.name, f });
   }
 }
 function updateQuestNpcs(dt, t){
@@ -13862,7 +13875,7 @@ function npcHear(text){
 }
 /* v426 住在海邊的村民偶爾會提到現在的潮汐和浪 */
 const TIDE_TALK = { high: ['滿潮了，海水都淹到沙灘上來了', '現在滿潮，踩進去小心鞋子濕掉'], rising: ['開始漲潮了，沙灘上的螃蟹都躲起來囉', '漲潮了，潮池等一下就會被蓋住'], low: ['現在乾潮，去沙灘看看，小螃蟹都跑出來了', '乾潮的時候，岸邊的礁石會露出來，上面有潮池'], falling: ['在退潮了，等一下沙灘就露出來', '退潮了，再等一下就能看到潮池'] };
-function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (r > 0.86 && n.pos && islandEdge(n.pos.x, n.pos.z) < 16 && Math.hypot(n.pos.x, n.pos.z) < 70){ if (Env.wx === 'storm') return '今天浪好大，外海都是白頭浪'; if (Env.tide && TIDE_TALK[Env.tide.st]) return pick(TIDE_TALK[Env.tide.st]); } if (n.wid && r < 0.3){ const m = worldMemLines(n); if (m.length) return pick(m); } if (n.shopNpc === 'cai'){ const a = caiLines(); if (a.length && r < 0.55) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'sci'){ const a = sciLines(); if (a.length && r < 0.65) return pick(a); return pick(n.lines); } if (n.shopNpc === 'news'){ const a = newsLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.wid === 'gang'){ const a = gangLines(); if (a.length && r < 0.45) return pick(a); } if (n.shopNpc === 'fu'){ const a = fuLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
+function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.rainWear && Math.random() < 0.3) return pick(['下雨了，還好有帶雨衣', '下雨天魚比較好咬，淋一點雨沒關係', '雨衣穿著有點悶，不過總比淋濕好', '你沒穿雨衣啊？小心別感冒了']); if (r > 0.86 && n.pos && islandEdge(n.pos.x, n.pos.z) < 16 && Math.hypot(n.pos.x, n.pos.z) < 70){ if (Env.wx === 'storm') return '今天浪好大，外海都是白頭浪'; if (Env.tide && TIDE_TALK[Env.tide.st]) return pick(TIDE_TALK[Env.tide.st]); } if (n.wid && r < 0.3){ const m = worldMemLines(n); if (m.length) return pick(m); } if (n.shopNpc === 'cai'){ const a = caiLines(); if (a.length && r < 0.55) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'sci'){ const a = sciLines(); if (a.length && r < 0.65) return pick(a); return pick(n.lines); } if (n.shopNpc === 'news'){ const a = newsLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.wid === 'gang'){ const a = gangLines(); if (a.length && r < 0.45) return pick(a); } if (n.shopNpc === 'fu'){ const a = fuLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
 // 阿默：港口裡不會有紅鯊，所以他每一趟都開自己的紅色小船，繞著島到外海隨便一個地方釣（每一趟去哪裡大家看到的都一樣）
 // 每 7 分鐘一趟：從碼頭開到外海的環線 → 沿著環線繞到這次的釣點 → 釣魚 → 原路開回來 → 在碼頭休息一下。環線離岸邊 22 公尺，不會撞到紅樹林；不會經過往珊瑚礁群島的跨海大橋那一側
 const AMO = { dock:[35.6, -27.2], cycle:420, pier:50, speed:4.2, off:22 };
@@ -13896,6 +13909,7 @@ function updateAmo(n, dt, t){
   n.amoMode = mode;
 }
 function updateNpcs(dt, t){
+  try { rainWearTick(); } catch(e){}
   for (const n of npcs){
     if (n.wid === 'gang' && Cloud.on && (!Gang.at || Date.now() - Gang.at > 10 * 60000) && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 30) loadGang();
     if (worldDrive(n, dt, t)){ worldShopLoad(n); continue; }
@@ -14476,6 +14490,7 @@ function renderTab(){
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
+      '🌧️ 下雨和暴風雨的時候，外面的村民會自己穿上雨衣、雨帽和雨靴，雨停了就脫掉。大家看到的都一樣。',
       '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，過一下自己回到原位。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
       '🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
