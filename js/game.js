@@ -4617,7 +4617,7 @@ function jump(){ if (mySeat){ standUp(); return; }
    · 沙灘上有一個小球門，把沙灘球踢進去會放彩帶、記進球數
    · 一群一群的海鷗站在廣場、沙灘、碼頭上，人衝過去會嚇得飛起來繞一圈，等人走遠再飛回來
    · 騎車撞到樹，樹葉會掉下來，有時候掉一顆果子（可以再踢）
-   全部只在自己的手機上算（別人看不到你踢的球），不影響釣魚和金幣 */
+   v441 起大家看得到同一顆球（見下面的同步說明），不影響釣魚和金幣 */
 const Toys = { built: false, list: [], flocks: [], goal: null, lx: 0, lz: 0, pvx: 0, pvz: 0, drops: [], hint: false, goals: 0 };
 const TOY_KIND = {
   ball:    { r: 0.34, e: 0.62, fr: 0.5, kick: 1.2,  up: 0.42, fl: 1.0, name: '沙灘球' },
@@ -4638,7 +4638,7 @@ function toyFree(x, z, r, landOnly){ for (let i = 0; i < 90; i++){ const a = i *
 function toyAdd(k, x, z, free){ const p = free ? [x, z] : toyFree(x, z, TOY_KIND[k].r, k === 'ball'); if (!p) return null; const M = toyMesh(k), K = TOY_KIND[k], y = groundHeight(p[0], p[1]) + K.r;
   M.g.position.set(p[0], y, p[1]); M.g.userData.keep = true; M.g.userData.dyn = true; if (k === 'barrel') M.g.rotation.y = Math.random() * 6.28; scene.add(M.g);
   const o = { k, K, g: M.g, spin: M.spin, x: p[0], z: p[1], y, vx: 0, vz: 0, vy: 0, hx: p[0], hz: p[1], wet: 0, rest: true, hitT: 0, goalT: 0, homeAt: 0, plz: 0 }; Toys.list.push(o); return o; }
-function toyHome(o, show){ o.x = o.hx; o.z = o.hz; o.y = groundHeight(o.x, o.z) + o.K.r; o.vx = o.vz = o.vy = 0; o.wet = 0; o.rest = true; o.homeAt = 0; o.g.position.set(o.x, o.y, o.z); if (show) puff(o.x, o.y - o.K.r, o.z); }
+function toyHome(o, show){ if (o.own){ o.own = false; o.dirty = false; toyEmit({ i: o.i, h: 1 }); if (o.hm){ o.hm = false; o.off = true; o.rest = true; o.g.visible = false; return; } } o.x = o.hx; o.z = o.hz; o.y = groundHeight(o.x, o.z) + o.K.r; o.vx = o.vz = o.vy = 0; o.wet = 0; o.rest = true; o.homeAt = 0; o.g.position.set(o.x, o.y, o.z); if (show) puff(o.x, o.y - o.K.r, o.z); }
 /* 海鷗：身體（白）、嘴和腳（橘）、尾巴（灰）合成一個網格，兩片翅膀各一個（會拍） */
 function gullMake(){ const g = new THREE.Group(), parts = [], add = (geo, col, x, y, z, sx, sy, sz, rx) => { if (rx) geo.rotateX(rx); geo.scale(sx || 1, sy || 1, sz || 1); geo.translate(x, y, z); const c = new THREE.Color(col), n = geo.attributes.position.count, A = new Float32Array(n * 3); for (let i = 0; i < n; i++){ A[i * 3] = c.r; A[i * 3 + 1] = c.g; A[i * 3 + 2] = c.b; } geo.setAttribute('color', new THREE.BufferAttribute(A, 3)); parts.push(geo.index ? geo.toNonIndexed() : geo); };
   add(new THREE.SphereGeometry(0.11, 10, 8), '#f6f6f2', 0, 0.17, 0, 0.8, 0.75, 1.5);
@@ -4675,7 +4675,30 @@ function toyBuild(){ Toys.built = true; if (CLASSIC) return; Toys.goals = +LS.ge
   /* 椰子：沿著沙灘每隔一段放兩顆；另外再放一顆沙灘球、一群海鷗在別的沙灘 */
   const used = []; let far = null; for (const p of sand){ if (used.length >= 5) break; if (Toys.goal && Math.hypot(p[0] - Toys.goal.x, p[1] - Toys.goal.z) < 9) continue; if (used.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 16)) continue; used.push(p); toyAdd('coconut', p[0], p[1]); toyAdd('coconut', p[0] + 0.7, p[1] + 0.4); far = p; }
   if (far){ toyAdd('ball', far[0] + 2, far[1] - 1.5); if (!low) gullFlock(far[0] - 3, far[1] + 3, nG); }
+  /* v441 同步：每個東西要有大家都一樣的編號。從樹上掉下來的果子先做好 5 顆藏著（編號固定），要用再拿出來 */
+  for (let i = 0; i < 5; i++){ const o = toyAdd('coconut', sq[0], sq[1], true); if (o){ o.off = true; o.g.visible = false; Toys.drops.push(o); } }
+  Toys.list.forEach((o, i) => { o.i = i; });
 }
+/* ============ v441 踢的東西大家都看得到（作者：「當然要同步，以後都同步」） ============
+   做法：誰踢到，那顆東西就歸誰管（o.own）。管的人把「位置＋速度」廣播出去，其他人收到後照同樣的物理自己算下去；
+   停下來的時候再廣播一次最後的位置（把各人算出來的小誤差對齊），之後每 4 秒重報一次（給晚進來的人）。
+   回原位、進球、撞樹掉葉子也都廣播。管的人離線了（12 秒沒消息），其他人那邊的東西自己回原位。
+   每秒最多送 5 則，其餘的排隊，不會塞爆連線。海鷗不用廣播：每個人的手機上本來就有別人的位置，誰衝過去都會嚇飛。 */
+function toyEmit(d){ if (Toys.tap) Toys.tap(d); try { if (room && room.connected()) room.emit('toy', d).catch(() => {}); } catch(e){} }
+function toyPack(o, hm){ const r2 = v => Math.round(v * 100) / 100, d = { i: o.i, p: [r2(o.x), r2(o.y), r2(o.z)], v: [r2(o.vx), r2(o.vy), r2(o.vz)], r: o.rest ? 1 : 0 }; if (hm || o.hm) d.hm = [r2(o.hx), r2(o.hz)]; return d; }
+function toyFlush(tn){ if (tn < (Toys.sendAt || 0)) return; for (const o of Toys.list){ if (!o.dirty || !o.own) continue; o.dirty = false; o.hb = tn + 4; Toys.sendAt = tn + 0.2; toyEmit(toyPack(o)); return; } }
+function toyLeaves(c){ const g = groundHeight(c.x, c.z); for (const col of ['#8fd66a', '#5fae48']) FX.emit(c.x, g + 2.4, c.z, 12, col, 1.5, 0.2, 1.3); if (Math.hypot(c.x - me.pos.x, c.z - me.pos.z) < 30) noise(0.35, 0.05, 2600, 900, 0.7); }
+function toyOnMsg(msg){ try { if (!msg || msg.sameTab || !msg.data || !Toys.built || CLASSIC || isBlockedPeer(msg.peer)) return; const d = msg.data, tn = now(), fin = a => Array.isArray(a) && a.length >= 2 && a.every(v => typeof v === 'number' && isFinite(v));
+    if (fin(d.t)){ for (const c of colliders) if (c.tree && Math.hypot(c.x - d.t[0], c.z - d.t[1]) < 0.5){ if (Math.hypot(c.x - me.pos.x, c.z - me.pos.z) < 70) toyLeaves(c); break; } return; }
+    const o = Toys.list[d.i]; if (!o || !Number.isInteger(d.i)) return;
+    if (d.g){ const G = Toys.goal; if (G && o.k === 'ball' && Math.hypot(G.x - me.pos.x, G.z - me.pos.z) < 70){ for (const c of ['#ffd23f', '#f2493d', '#3d8bf2', '#7fe08a']) FX.emit(G.x, G.h + 0.2, G.z, 16, c, 2.2, 3.2, 1.3); if (Math.hypot(G.x - me.pos.x, G.z - me.pos.z) < 30){ try { SFX.coin(); } catch(e){} } } return; }
+    if (d.h){ o.own = false; o.dirty = false; if (o.hm){ o.hm = false; o.off = true; o.g.visible = false; o.rest = true; return; } toyHome(o, Math.hypot(o.hx - me.pos.x, o.hz - me.pos.z) < 40); return; }
+    if (!fin(d.p) || !fin(d.v) || d.p.length < 3 || d.v.length < 3) return;
+    if (fin(d.hm)){ if (!Toys.drops.includes(o) || !isLand(d.hm[0], d.hm[1])) return; o.hx = d.hm[0]; o.hz = d.hm[1]; o.hm = true; o.off = false; }
+    if (o.off || Math.hypot(d.p[0] - o.hx, d.p[2] - o.hz) > 90 || Math.abs(d.p[1]) > 40) return;
+    const was = o.rest; o.own = false; o.dirty = false; o.rx = tn; o.x = d.p[0]; o.y = d.p[1]; o.z = d.p[2]; o.vx = clamp(d.v[0], -30, 30); o.vy = clamp(d.v[1], -30, 30); o.vz = clamp(d.v[2], -30, 30); o.rest = !!d.r; if (o.rest) o.vx = o.vy = o.vz = 0; o.g.position.set(o.x, o.y, o.z);
+    const dm = Math.hypot(o.x - me.pos.x, o.z - me.pos.z); o.g.visible = dm < 70; if (!o.rest && was && dm < 25) toySound(o, Math.hypot(o.vx, o.vz));
+  } catch(e){} }
 function toySound(o, rel){ const t = now(); if (t < o.hitT) return; o.hitT = t + 0.14; const v = clamp(rel / 9, 0.25, 1);
   if (o.k === 'ball') tone(150 + v * 60, 0.16, 'sine', 0.05 + v * 0.06, 320);
   else if (o.k === 'coconut'){ tone(520, 0.05, 'square', 0.02 + v * 0.02, 300); noise(0.05, 0.03 * v, 1200, 400, 1); }
@@ -4688,8 +4711,8 @@ function toyStep(o, dt, t){ const K = o.K; let [base, wet] = toyBase(o, o.x, o.z
     if (wet){ if (!o.wet){ o.wet = t; if (o.vy < -1.5 || Math.hypot(o.vx, o.vz) > 2){ ripple(o.x, o.z, o.k === 'barrel'); SFX.splash(o.k === 'barrel'); FX.emit(o.x, 0.25, o.z, 10, '#e8f7ff', 0.9, 1.8, 0.7); } } o.y += (base - o.y) * Math.min(1, dt * 7); o.vy *= Math.max(0, 1 - dt * 8); drag = 2.4; }
     else { o.y = base; if (o.vy < -1.6){ o.vy = -o.vy * K.e; if (o.vy > 1.2) toySound(o, o.vy * 1.5); } else o.vy = 0; drag = K.fr;
       const gx = (groundHeight(o.x + 0.4, o.z) - groundHeight(o.x - 0.4, o.z)) / 0.8, gz = (groundHeight(o.x, o.z + 0.4) - groundHeight(o.x, o.z - 0.4)) / 0.8;
-      if (Math.abs(gx) < 1.5 && Math.abs(gz) < 1.5){ o.vx -= gx * 7 * dt; o.vz -= gz * 7 * dt; }
-      if (Math.hypot(o.vx, o.vz) < 0.1 && Math.abs(gx) < 0.04 && Math.abs(gz) < 0.04){ o.vx = o.vz = 0; o.rest = true; } } }
+      const gm = Math.hypot(gx, gz); if (gm > 0.07 && gm < 2){ o.vx -= gx * 7 * dt; o.vz -= gz * 7 * dt; }   /* 很緩的坡不會自己滾（不然球永遠停不下來，也沒辦法跟別人對齊最後的位置） */
+      if (Math.hypot(o.vx, o.vz) < 0.25 && o.vy === 0 && gm < 0.16){ o.vx = o.vz = 0; o.rest = true; } } }
   if (!wet) o.wet = 0;
   const f = Math.exp(-drag * dt); o.vx *= f; o.vz *= f;
   const feet = o.y - K.r, tryMove = (nx, nz) => { if (blockedJ(nx, nz, K.r, feet, o.x, o.z)) return false; const [b2, w2] = toyBase(o, nx, nz, t); if (!w2 && b2 - K.r > feet + 0.4) return false; return true; };
@@ -4700,7 +4723,7 @@ function toyStep(o, dt, t){ const K = o.K; let [base, wet] = toyBase(o, o.x, o.z
   o.g.position.set(o.x, o.y, o.z);
   /* 球門：沙灘球從正面穿過門線就算進球 */
   const G = Toys.goal; if (G && o.k === 'ball'){ const dx = o.x - G.x, dz = o.z - G.z, lz = dx * G.nx + dz * G.nz, lx = dx * G.nz - dz * G.nx;
-    if (o.plz > 0 && lz <= 0 && Math.abs(lx) < G.w && o.y - K.r < G.h && t > o.goalT){ o.goalT = t + 4; o.homeAt = t + 2.6; o.vx *= 0.12; o.vz *= 0.12; Toys.goals++; LS.set('tide.goals', Toys.goals);
+    if (o.own && o.plz > 0 && lz <= 0 && Math.abs(lx) < G.w && o.y - K.r < G.h && t > o.goalT){ toyEmit({ i: o.i, g: 1 }); o.goalT = t + 4; o.homeAt = t + 2.6; o.vx *= 0.12; o.vz *= 0.12; Toys.goals++; LS.set('tide.goals', Toys.goals);
       flash('⚽ 進球！', 1.4); toast('⚽ × ' + Toys.goals); try { SFX.coin(); } catch(e){} buzz([30, 30, 60]); for (const c of ['#ffd23f', '#f2493d', '#3d8bf2', '#7fe08a']) FX.emit(G.x, G.h + 0.2, G.z, 16, c, 2.2, 3.2, 1.3); }
     o.plz = Math.abs(lx) < G.w + 0.5 ? lz : 0; }
   if (o.homeAt && t > o.homeAt) toyHome(o, true);
@@ -4708,14 +4731,15 @@ function toyStep(o, dt, t){ const K = o.K; let [base, wet] = toyBase(o, o.x, o.z
   else if (o.y < -6) toyHome(o, false); }
 /* 騎車撞到樹：掉樹葉，有時候掉一顆果子 */
 function toyTree(x, z){ if (!Toys.built) return; const t = now(); for (const c of colliders){ if (!c.tree || Math.hypot(c.x - x, c.z - z) > c.r + 0.9) continue; if (t < (c.shakeT || 0)) return; c.shakeT = t + 2.5; const g = groundHeight(c.x, c.z);
-    for (const col of ['#8fd66a', '#5fae48']) FX.emit(c.x, g + 2.4, c.z, 12, col, 1.5, 0.2, 1.3); noise(0.35, 0.05, 2600, 900, 0.7);
-    if (Math.random() < 0.6){ const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz) || 1; let o = Toys.drops.length >= 5 ? Toys.drops.shift() : toyAdd('coconut', c.x + dx / d * 0.7, c.z + dz / d * 0.7, true); if (!o) return;
-      o.x = o.hx = c.x + dx / d * 0.7; o.z = o.hz = c.z + dz / d * 0.7; o.y = g + 2.6; o.vx = dx / d * 1.2; o.vz = dz / d * 1.2; o.vy = 0; o.wet = 0; o.rest = false; o.g.visible = true; o.g.position.set(o.x, o.y, o.z); Toys.drops.push(o); }
+    toyLeaves(c); toyEmit({ t: [c.x, c.z] });
+    if (Math.random() < 0.6 && Toys.drops.length){ const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz) || 1, o = Toys.drops[(Toys.dropN = (Toys.dropN || 0) + 1) % Toys.drops.length];
+      o.x = o.hx = c.x + dx / d * 0.7; o.z = o.hz = c.z + dz / d * 0.7; o.y = g + 2.6; o.vx = dx / d * 1.2; o.vz = dz / d * 1.2; o.vy = 0; o.wet = 0; o.rest = false; o.off = false; o.hm = true; o.own = true; o.dirty = true; o.g.visible = true; o.g.position.set(o.x, o.y, o.z); }
     return; } }
 function gullTick(dt, t, px, pz, psp){ for (const F0 of Toys.flocks){ const d = Math.hypot(F0.x - px, F0.z - pz); if (d > 80){ if (F0.vis !== false){ F0.vis = false; for (const b of F0.birds) b.g.visible = false; } continue; } if (F0.vis === false){ F0.vis = true; for (const b of F0.birds) b.g.visible = true; }
-    if (F0.st === 0 && ((d < 5.5 && psp > 2.4) || d < 2.0)){ F0.st = 1; F0.until = t + 8 + Math.random() * 5; const ax = F0.x - px, az = F0.z - pz, L = Math.hypot(ax, az) || 1; F0.cx = F0.x + ax / L * 5; F0.cz = F0.z + az / L * 5; F0.birds.forEach((b, i) => { b.del = t + i * 0.1 + Math.random() * 0.1; b.a = Math.atan2(b.z - F0.cz, b.x - F0.cx); });
+    let sx = px, sz = pz, scare = (d < 5.5 && psp > 2.4) || d < 2.0; if (!scare && F0.st === 0) for (const q of peers.values()){ if (q.isle || q.inHouse || q.diving || !q.fisher || !q.target) continue; const qd = Math.hypot(F0.x - q.fisher.pos.x, F0.z - q.fisher.pos.z); if (qd < 2.0 || (qd < 5.5 && Math.hypot(q.target.x - q.fisher.pos.x, q.target.z - q.fisher.pos.z) > 0.25)){ scare = true; sx = q.fisher.pos.x; sz = q.fisher.pos.z; break; } }
+    if (F0.st === 0 && scare){ F0.st = 1; F0.until = t + 8 + Math.random() * 5; const ax = F0.x - sx, az = F0.z - sz, L = Math.hypot(ax, az) || 1; F0.cx = F0.x + ax / L * 5; F0.cz = F0.z + az / L * 5; F0.birds.forEach((b, i) => { b.del = t + i * 0.1 + Math.random() * 0.1; b.a = Math.atan2(b.z - F0.cz, b.x - F0.cx); });
       try { SFX.gull(); } catch(e){} noise(0.5, 0.06, 900, 2400, 0.6); }
-    else if (F0.st === 1){ if (d < 10) F0.until = Math.max(F0.until, t + 3); if (t > F0.until) F0.st = 2; }
+    else if (F0.st === 1){ let near = d < 10; if (!near) for (const q of peers.values()) if (!q.isle && !q.inHouse && q.fisher && Math.hypot(F0.x - q.fisher.pos.x, F0.z - q.fisher.pos.z) < 10){ near = true; break; } if (near) F0.until = Math.max(F0.until, t + 3); if (t > F0.until) F0.st = 2; }
     let landed = 0;
     for (const b of F0.birds){ const W = b.g.userData.wings; let tx, ty, tz, fly;
       if (F0.st === 1 && t >= b.del){ b.a += dt * 0.75; const R = 5.5 + (b.ph % 3); tx = F0.cx + Math.cos(b.a) * R; tz = F0.cz + Math.sin(b.a) * R; ty = 5.2 + (b.ph % 2) * 1.2 + Math.sin(t * 0.8 + b.ph) * 0.4; fly = 1; }
@@ -4730,14 +4754,17 @@ function toyTick(dt, t){ if (CLASSIC) return; if (Dive.on || House.on || inIndoo
   if (!Toys.built){ try { toyBuild(); } catch(e){ console.warn('toys', e); } }
   const px = me.pos.x, pz = me.pos.z; let pvx = 0, pvz = 0; if (dt > 1e-4 && Toys.lx === Toys.lx){ pvx = (px - Toys.lx) / dt; pvz = (pz - Toys.lz) / dt; if (Math.hypot(pvx, pvz) > 22) pvx = pvz = 0; } Toys.lx = px; Toys.lz = pz;
   Toys.pvx += (pvx - Toys.pvx) * 0.6; Toys.pvz += (pvz - Toys.pvz) * 0.6; const psp = Math.hypot(Toys.pvx, Toys.pvz), feet = me.baseY - (Bike.on ? BIKE_SEAT : 0), pr = Bike.on ? 0.5 : 0.36, can = !myBoat;
-  for (const o of Toys.list){ const K = o.K, dx = o.x - px, dz = o.z - pz, d2 = dx * dx + dz * dz;
-    if (d2 > 4900){ if (o.x !== o.hx || o.z !== o.hz) toyHome(o, false); if (o.g.visible) o.g.visible = false; continue; } if (!o.g.visible) o.g.visible = true;
+  const tn = now();
+  for (const o of Toys.list){ if (o.off) continue; const K = o.K, dx = o.x - px, dz = o.z - pz, d2 = dx * dx + dz * dz, away = o.hm || Math.abs(o.x - o.hx) + Math.abs(o.z - o.hz) > 0.3;
+    if (away && !o.own && tn - (o.rx || 0) > 12){ toyHome(o, false); if (o.hm){ o.hm = false; o.off = true; o.g.visible = false; } continue; }   /* 管的人不見了 → 回原位 */
+    if (o.own && o.rest && away){ if (!o.restAt) o.restAt = tn; if (tn - o.restAt > (o.hm ? 45 : 120)){ toyHome(o, d2 < 1600); continue; } if (tn > (o.hb || 0)) o.dirty = true; } else o.restAt = 0;
+    if (d2 > 4900){ if (o.own && away) toyHome(o, false); if (o.g.visible) o.g.visible = false; continue; } if (!o.g.visible) o.g.visible = true;
     const reach = K.r + pr; if (can && d2 < reach * reach && o.y - K.r < feet + 1.5 && o.y + K.r > feet - 0.15){ const d = Math.sqrt(d2), nx = d > 1e-3 ? dx / d : Math.sin(me.rot), nz = d > 1e-3 ? dz / d : Math.cos(me.rot), rel = (Toys.pvx - o.vx) * nx + (Toys.pvz - o.vz) * nz;
-      if (rel > 0.15){ const j = rel * (1 + K.e) * K.kick; o.vx += nx * j; o.vz += nz * j; if (rel > 1.8) o.vy = Math.max(o.vy, rel * K.up); o.rest = false; toySound(o, rel);
+      if (rel > 0.15){ const j = rel * (1 + K.e) * K.kick; o.vx += nx * j; o.vz += nz * j; if (rel > 1.8) o.vy = Math.max(o.vy, rel * K.up); o.rest = false; o.own = true; o.dirty = true; toySound(o, rel);
         if (!Toys.hint){ Toys.hint = true; if (!LS.get('tide.toyhint', false)){ LS.set('tide.toyhint', true); toast('⚽ 這個可以踢！騎腳踏車撞上去會飛更遠'); } } }
-      const qx = px + nx * (reach + 0.01), qz = pz + nz * (reach + 0.01); if (!blocked(qx, qz, K.r)){ o.x = qx; o.z = qz; o.rest = false; } }
-    if (!o.rest) toyStep(o, Math.min(dt, 0.05), t); }
-  gullTick(dt, t, px, pz, psp); }
+      const qx = px + nx * (reach + 0.01), qz = pz + nz * (reach + 0.01); if (!blocked(qx, qz, K.r)){ o.x = qx; o.z = qz; if (o.rest || !o.own){ o.own = true; o.dirty = true; } o.rest = false; } }
+    if (!o.rest){ toyStep(o, Math.min(dt, 0.05), t); if (o.rest && o.own) o.dirty = true; } }
+  toyFlush(tn); gullTick(dt, t, px, pz, psp); }
 function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
 function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 0) d += Math.PI*2; return a + (d - Math.PI) * k; }
 
@@ -12575,7 +12602,7 @@ function useRoom(r){
       const p = peers.get(msg.peer); ticker(`${rc.icon} <b>${esc(p ? peerName(p) : '有人')}</b> 做出了 ${'★'.repeat(q)} ${esc(rc.name)}`);
       if (p) p.fisher.say(rc.icon, 'emote', 3);
     }, () => {});
-    room.on('tag', onTagMsg, () => {});
+    room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {});
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -14449,7 +14476,7 @@ function renderTab(){
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
-      '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，過一下自己回到原位。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。這些只有你自己看得到。',
+      '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，過一下自己回到原位。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
       '🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
       '👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。',
