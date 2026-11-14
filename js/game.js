@@ -53,12 +53,12 @@ const FISH = [
   { id:'scorpion',spot:'sea',  name:'條紋石狗公',rarity:'常見',color:'#e08f5b', min:0.3, max:1.4, power:0.42, desc:'喜歡貼著礁石，背鰭有刺，拿的時候要小心。' },
   { id:'moonbream',spot:'sea', time:'night', name:'月光鯛',   rarity:'稀有', color:'#ffd86d', min:1.0, max:3.8, power:0.64, desc:'鱗片會反射月光，晴潮燈塔一亮，牠們就會靠近岸邊。' },
   { id:'marlin', spot:'harbor',   name:'深藍旗魚', rarity:'傳說', color:'#2f5fd0', min:8.0, max:24.0,power:0.95, desc:'遠洋的王者，偶爾追著小魚游進海灣。拉線時要很有耐心。' },
-  { id:'manta',   spot:'harbor',   name:'星紋魟魚', rarity:'稀有', color:'#2f4d6b', min:12, max:45,  w:0.2, power:0.72, desc:'像披風一樣在海面下滑行，背上的星紋只有晴天才看得到。' },
-  { id:'dolphin', spot:'harbor',   name:'晴潮海豚', rarity:'稀有', color:'#7f8fa3', min:40, max:150, power:0.7,  w:0.2, desc:'喜歡追著船跑的聰明傢伙。合照之後牠會對你眨眨眼，再游回海裡。' },
+  { id:'manta',   spot:'harbor',   name:'星紋魟魚', rarity:'稀有', color:'#2f4d6b', min:12, max:45,  w:0.6, power:0.72, desc:'像披風一樣在海面下滑行，背上的星紋只有晴天才看得到。' },
+  { id:'dolphin', spot:'harbor',   name:'晴潮海豚', rarity:'稀有', color:'#7f8fa3', min:40, max:150, power:0.7,  w:0.6, desc:'喜歡追著船跑的聰明傢伙。合照之後牠會對你眨眨眼，再游回海裡。' },
   { id:'shark',   spot:'harbor',   name:'礁岩鯊',   rarity:'傳說', color:'#3f5f78', min:60, max:250, power:0.97, w:0.6, desc:'在燈塔下方的深水巡游。力氣非常大，拉線時千萬別硬拉。' },
   { id:'orca',    spot:'harbor',   name:'浪花虎鯨', rarity:'傳說', color:'#2b3138', min:1200, max:5500, power:0.98, w:0.3, desc:'黑白分明的海上獵手，常常成群在港口外繞圈。拉線時牠會突然轉向，要跟著放線。' },
-  { id:'beluga',  spot:'harbor',   name:'月白白鯨', rarity:'稀有', color:'#e4ebf0', min:400, max:1500, power:0.76, w:0.15, desc:'圓圓的額頭軟軟的，看起來一直在對你笑。聽說牠會學海鷗叫。' },
-  { id:'sunfish', spot:'harbor', time:'day',   name:'慵懶翻車魚', rarity:'稀有', color:'#8fa3b8', min:60, max:900, power:0.55, w:0.18, desc:'喜歡側躺在海面曬太陽，看起來很懶，其實是在等海鳥幫牠清潔身體。' },
+  { id:'beluga',  spot:'harbor',   name:'月白白鯨', rarity:'稀有', color:'#e4ebf0', min:400, max:1500, power:0.76, w:0.35, desc:'圓圓的額頭軟軟的，看起來一直在對你笑。聽說牠會學海鷗叫。' },
+  { id:'sunfish', spot:'harbor', time:'day',   name:'慵懶翻車魚', rarity:'稀有', color:'#8fa3b8', min:60, max:900, power:0.55, w:0.5, desc:'喜歡側躺在海面曬太陽，看起來很懶，其實是在等海鳥幫牠清潔身體。' },
   { id:'sperm',   spot:'harbor', time:'night',   name:'深潛抹香鯨', rarity:'傳說', color:'#6d7f96', min:3000, max:15000, power:1.0, w:0.18, desc:'方方的大頭可以潛到最深的海溝。能把牠拉上岸的人，手臂一定很有力。' },
   { id:'whaleshark', spot:'harbor', time:'day', name:'星斑鯨鯊', rarity:'傳說', color:'#7f8c99', min:2000, max:12000, power:0.96, w:0.22, desc:'世界上最大的魚，背上滿是白色星點。脾氣非常溫和，只吃小小的浮游生物。' },
   { id:'whale',   spot:'harbor',   name:'座頭鯨',   rarity:'傳說', color:'#34395e', min:900, max:3000, power:1.0, w:0.25, desc:'偶爾會游進海灣唱歌。能釣上牠的人，整個村子都會記住你的名字。' },
@@ -107,10 +107,10 @@ const FISH = [
   { id:'shrimp',  spot:'creek', name:'櫻花蝦', rarity:'常見', color:'#f5a5b8', min:0.01, max:0.05, power:0.2, desc:'小小的、粉紅色的，一群一群在螢光溪裡游來游去。' },
   { id:'arowana', spot:'lake',  name:'金龍魚', rarity:'傳說', color:'#e8b730', min:3.0, max:12, power:0.86, desc:'鱗片像金幣一樣閃閃發光，傳說會帶來好運和財富。' },
   { id:'tilefish', spot:'sea',  time:'day', name:'粉紅馬頭魚', rarity:'常見', color:'#f2a0a8', min:0.3, max:1.8, power:0.4, desc:'方方的額頭像一匹小馬，粉紅色的身體很可愛。' },
-  { id:'mahi',    spot:'harbor', time:'day', name:'鬼頭刀', rarity:'常見', color:'#3fbf6a', min:3.0, max:15, power:0.6, desc:'綠色和金色的身體在陽光下會變色，跳起來的樣子超帥。' },
+  { id:'mahi',    spot:'harbor', time:'day', name:'鬼頭刀', rarity:'常見', color:'#3fbf6a', min:3.0, max:15, power:0.6, w:1.3, desc:'綠色和金色的身體在陽光下會變色，跳起來的樣子超帥。' },
   { id:'butterfly', spot:'isle', time:'day', name:'蝴蝶魚', rarity:'常見', color:'#ffd23a', min:0.05, max:0.3, power:0.25, desc:'黃色的身體配上黑色條紋，在小島的珊瑚旁邊飛來飛去。' },
   { id:'angler',  spot:'harbor', time:'night', name:'深海鮟鱇', rarity:'傳說', color:'#3b3a48', min:10, max:50, power:0.88, w:0.45, desc:'頭上掛著一盞發光的小燈籠，用來騙小魚靠近。' },
-  { id:'stingray', spot:'sea',  name:'斑點魟', rarity:'稀有', color:'#7d6a52', min:2.0, max:20, power:0.62, desc:'平平地貼在沙底，身上有一圈一圈的斑點。小心尾巴的刺。' },
+  { id:'stingray', spot:'sea',  name:'斑點魟', rarity:'稀有', color:'#7d6a52', min:2.0, max:20, power:0.62, w:1.4, desc:'平平地貼在沙底，身上有一圈一圈的斑點。小心尾巴的刺。' },
   { id:'trevally', spot:'isle', name:'浪人鰺', rarity:'稀有', color:'#5f6f80', min:5.0, max:40, power:0.82, desc:'小島附近最兇猛的獵手，一咬到餌就會拚命往外衝。' },
   // 第五批：外海的小魚（外海有更多常見魚，傳說魚就比較少出現）、海邊、河、湖
   { id:'saury',     spot:'harbor', name:'秋刀魚',   rarity:'常見', color:'#4a6fa0', min:0.1, max:0.3, power:0.3, w:1.3, desc:'細長的刀子形狀，秋天成群游過外海，烤來吃最香。' },
@@ -118,7 +118,7 @@ const FISH = [
   { id:'hairtail',  spot:'harbor', name:'白帶魚',   rarity:'常見', color:'#d8dfe6', min:0.5, max:3.0, power:0.42, time:'night', desc:'銀白色、像緞帶一樣長，晚上會游到水面附近覓食。' },
   { id:'sardine',   spot:'harbor', name:'沙丁魚',   rarity:'常見', color:'#5f86a8', min:0.05, max:0.15, power:0.2, w:1.4, desc:'一大群一大群游來游去，是很多大魚的食物。' },
   { id:'flyingfish', spot:'harbor', name:'飛魚',    rarity:'常見', color:'#3f7fd0', min:0.2, max:0.5, power:0.36, time:'day', desc:'胸鰭像翅膀一樣大，會跳出水面滑翔好幾十公尺。' },
-  { id:'yellowtail', spot:'harbor', name:'青甘鰺',  rarity:'常見', color:'#8fb0a0', min:1.0, max:8.0, power:0.55, desc:'背是藍綠色、尾巴黃黃的，力氣很大，生魚片很受歡迎。' },
+  { id:'yellowtail', spot:'harbor', name:'青甘鰺',  rarity:'常見', color:'#8fb0a0', min:1.0, max:8.0, power:0.55, w:1.4, desc:'背是藍綠色、尾巴黃黃的，力氣很大，生魚片很受歡迎。' },
   { id:'milkfish',  spot:'mangrove',  name:'虱目魚',     rarity:'常見', color:'#c9d4dc', min:0.3, max:1.5, power:0.38, desc:'台灣南部最有名的魚，煮虱目魚粥是很多人的早餐。' },
   { id:'mullet',    spot:'mangrove',  name:'烏魚',       rarity:'常見', color:'#6f7a80', min:0.5, max:2.5, power:0.42, desc:'冬天會成群游過海峽，烏魚子就是牠的魚卵。' },
   { id:'zacco',     spot:'river', name:'溪哥',      rarity:'常見', color:'#7fb0c8', min:0.03, max:0.12, power:0.22, desc:'公的身上有漂亮的粉藍色條紋，河邊最常看到的小魚。' },
@@ -394,9 +394,9 @@ const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red','koi_red','koi_fuku'], legendBoost:1.4 },
   { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
-  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray'] },
+  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray','mahi','yellowtail','barracuda','trevally','manta','octopus']   /* v439 玩家回饋「釣幾條就膩」：第一個釣點以前九成都是幾百公克的小魚。加進幾種本來就有的大魚（鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚、章魚），新手也常常拉到大的 */ },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black','xclown','xclown_gold','xwrasse','xwrasse_gold'] },
-  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino','bluewhale','bluewhale_albino','fwfish','fwfish_gold'] },
+  { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino','bluewhale','bluewhale_albino','fwfish','fwfish_gold','trevally','stingray'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
   { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
@@ -4755,6 +4755,7 @@ doCast.told = {};
 function biteWait(c){
   /* v293 玩家說釣太快、沒有期待感：大部分等 5～12 秒，15% 快咬（2～4 秒），10% 慢咬（12～18 秒）；等的時候浮標會被小魚試探 */
   const r = Math.random(); let w = r < 0.15 ? rand(2, 4) : r < 0.9 ? rand(5, 12) : rand(12, 18);
+  if (rec.total < 5) w = Math.min(w, rand(2, 4));   /* v439 新手的前五條不要等：很快就咬 */
   const per = periodOf(gameHour()); w *= per === 'twilight' ? 0.85 : per === 'day' ? 1.05 : 1;
   return Math.min(18, Math.max(1.8, w - c * 1.2));
 }
@@ -14317,6 +14318,7 @@ function renderTab(){
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
+      '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
       '🚲 腳踏車：每個人一進來就有一台，不用買。按右下角的「騎車」上車，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。再按一次「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你。別的玩家看得到你在騎車。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
       '👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。',
