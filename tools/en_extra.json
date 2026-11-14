@@ -4705,5 +4705,20 @@
 "🚲 你有一台腳踏車！按右下角的「騎車」，推搖桿就衝出去": "🚲 You have a bicycle! Tap \"Ride\" at the bottom right and push the stick to take off",
 "騎車": "Ride",
 "下車": "Get off",
-"🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。": "🐟 More big fish: Clear Tide Beach (the first spot) now also has mahi-mahi, yellowtail, barracuda, giant trevally, star manta and octopus — roughly one big fish every three or four casts. At the outer harbor, star manta, dolphin, sunfish and beluga are more common, and giant trevally and spotted ray were added, so it is no longer the same two fish. A new player's first five fish bite quickly."
+"🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。": "🐟 More big fish: Clear Tide Beach (the first spot) now also has mahi-mahi, yellowtail, barracuda, giant trevally, star manta and octopus — roughly one big fish every three or four casts. At the outer harbor, star manta, dolphin, sunfish and beluga are more common, and giant trevally and spotted ray were added, so it is no longer the same two fish. A new player's first five fish bite quickly.",
+"🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。": "🚲 Bicycle: everyone has one from the start, no purchase needed. Open your Bag and take the bicycle out to hop on, then push the stick to take off — almost twice as fast as running; it coasts when you let go, skids on sharp turns and flies off hilltops, and you can also press Jump. While riding there is a \"Get off\" button at the bottom right; casting, boarding a boat, sitting or going indoors gets you off automatically and the bike waits where you left it — walk back to it and a \"Ride\" button appears. Other players can see you riding.",
+"🚲 你的背包裡有一台腳踏車！打開右上角的「背包」拿出來騎": "🚲 There's a bicycle in your bag! Open \"Bag\" at the top right to take it out",
+"🚲 交通工具": "🚲 Vehicles",
+"拿出來就能騎；下車以後車會停在原地，走回去按「騎車」": "Take it out to ride; after you get off it stays there — walk back and tap \"Ride\"",
+"正在騎": "Riding now",
+"停在外面，拿出來會直接到你身邊": "Parked outside — taking it out brings it right to you",
+"收在背包裡": "In your bag",
+"現在不能騎（在船上、屋子裡、釣魚或潛水的時候）": "Can't ride right now (on a boat, indoors, fishing or diving)",
+"拿出來騎": "Take out & ride",
+"⚽ 進球！": "⚽ Goal!",
+"沙灘球": "Beach ball",
+"椰子": "Coconut",
+"木桶": "Barrel",
+"⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，過一下自己回到原位。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。這些只有你自己看得到。": "⚽ Things you can kick: beach balls, coconuts and barrels on the plaza and beaches — walk into them to kick them, hit them on your bicycle to send them flying; they float if they land in the sea and return to their spot after a moment. There is a small goal on the east beach: kick the beach ball in to score. Flocks of seagulls take off when you charge at them. Riding into a tree shakes leaves loose and sometimes drops a fruit. Only you can see these.",
+"⚽ 這個可以踢！騎腳踏車撞上去會飛更遠": "⚽ You can kick this! Hit it on your bicycle to send it flying"
 }

@@ -3596,7 +3596,7 @@ const NPC_STYLE = [
   ['阿蘭', { look:'h13c1s3e3', sc:[0.95, 1.03], gear:{ hat:'hat_none', top:'top_nylon', pants:'pants_khaki', shoes:'shoes_boots' } }],
   ['阿默', { look:'h20c0s4e0', sc:[0.94, 1.1], fh:'stub', gear:{ hat:'hat_beanie', top:'top_nylon', face:'face_cool', shoes:'shoes_boots' } }],
   ['阿嬤', { look:'h7c10s2e1', sc:[0.96, 0.86], gear:{ hat:'hat_none', acc:'acc_glasses', top:'top_long', pants:'pants_skirt', face:'face_happy' } }],
-  ['阿綾', { look:'h11c22s0e4', sc:[0.93, 1.0], gear:{ hat:'hat_none', acc:'acc_scarf_pink', top:'top_vtee', pants:'pants_skirt', face:'face_normal' } }],
+  ['阿綾', { look:'h15c22s1e4', sc:[0.93, 1.0], gear:{ hat:'hat_none', acc:'acc_scarf_pink', top:'top_vtee', pants:'pants_skirt', face:'face_normal' } }],
   ['阿木', { look:'h0c1s4e1', sc:[1.14, 1.05], fh:'beard', gear:{ hat:'hat_beanie', top:'top_tee', pants:'pants_overalls', shoes:'shoes_boots', face:'face_normal' } }],
   ['阿福', { look:'h9c0s2e0', sc:[1.17, 0.96], fh:'mus', gear:{ hat:'hat_none', top:'top_hawaii', pants:'pants_shorts', shoes:'shoes_sandals', face:'face_happy' } }],
   ['阿彩', { look:'h3c9s1e4', sc:[0.92, 0.96], gear:{ hat:'hat_beanie', acc:'acc_scarf_rainbow', top:'top_long', face:'face_normal' } }],
@@ -4566,7 +4566,7 @@ function bikeDrive(dt, ix, iz, L){
   let hit = false; const nx = me.pos.x + B.vx * dt, nz = me.pos.z + B.vz * dt;
   if (bikeOk(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx; else { hit = true; B.vx *= -0.35; }
   if (bikeOk(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz; else { hit = true; B.vz *= -0.35; }
-  if (hit){ const v = Math.hypot(B.vx, B.vz) / 0.35; B.sp *= 0.4; if (v > 3.5 && now() > B.bumpT){ B.bumpT = now() + 0.35; tone(130, 0.14, 'sine', 0.09, 70); FX.emit(me.pos.x + hx * 0.6, Jump.gy + 0.4, me.pos.z + hz * 0.6, 10, '#f3ead2', 0.9, 1.0, 0.5); camShake = Math.max(camShake, Math.min(0.3, v * 0.03)); } }
+  if (hit){ const v = Math.hypot(B.vx, B.vz) / 0.35; B.sp *= 0.4; if (v > 3.5 && now() > B.bumpT){ B.bumpT = now() + 0.35; tone(130, 0.14, 'sine', 0.09, 70); FX.emit(me.pos.x + hx * 0.6, Jump.gy + 0.4, me.pos.z + hz * 0.6, 10, '#f3ead2', 0.9, 1.0, 0.5); camShake = Math.max(camShake, Math.min(0.3, v * 0.03)); try { toyTree(me.pos.x + hx * 0.7, me.pos.z + hz * 0.7); } catch(e){} } }
   me.rot = B.yaw; me.aspd = 0;
   B.lean += (clamp(-turnRate * B.sp * 0.028, -0.5, 0.5) - B.lean) * Math.min(1, dt * 8); me.bikeLean = B.lean;
   // 坡頂起飛、台階落下：照地面高度的變化算
@@ -4591,8 +4591,8 @@ function bikeTick(dt){
 }
 function joyMag(){ return Math.hypot(joy.x + ((keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0)), joy.z + ((keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0))); }
 function ui3Bike(){ let b = $('#bike3'); const row = $('#actRow'); if (!row) return; if (!b){ b = document.createElement('button'); b.id = 'bike3'; b.className = 'panel'; b.addEventListener('click', e => { e.stopPropagation(); if (Bike.on) bikeOff(); else bikeOn(); }); row.insertBefore(b, $('#jumpBtn')); }
-  const want = Bike.on || canRide(); if (b.hidden === want) b.hidden = !want; const lab = Bike.on ? '🚲<small>下車</small>' : '🚲<small>騎車</small>'; if (b.dataset.l !== lab){ b.dataset.l = lab; b.innerHTML = lab; b.classList.toggle('on', Bike.on); }
-  if (want && !Bike.hinted && !uiBlocked){ Bike.hinted = true; let seen = false; try { seen = localStorage.getItem('tv_bike_hint') === '1'; localStorage.setItem('tv_bike_hint', '1'); } catch(e){} if (!seen){ b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 12000); toast('🚲 你有一台腳踏車！按右下角的「騎車」，推搖桿就衝出去', 5); } } }
+  const want = Bike.on || !!(Bike.park && canRide() && Math.hypot(me.pos.x - Bike.park.x, me.pos.z - Bike.park.z) < 2.8);   /* v440 玩家建議：下面一排按鈕太擠。腳踏車平常收在背包裡，只有正在騎（下車）、或走到停著的車旁邊（騎車）才出現按鈕 */ if (b.hidden === want) b.hidden = !want; const lab = Bike.on ? '🚲<small>下車</small>' : '🚲<small>騎車</small>'; if (b.dataset.l !== lab){ b.dataset.l = lab; b.innerHTML = lab; b.classList.toggle('on', Bike.on); }
+  if (!Bike.hinted && !uiBlocked && canRide()){ Bike.hinted = true; let seen = false; try { seen = localStorage.getItem('tv_bike_hint') === '1'; localStorage.setItem('tv_bike_hint', '1'); } catch(e){} if (!seen) toast('🚲 你的背包裡有一台腳踏車！打開右上角的「背包」拿出來騎', 5); } }
 /* ---- 坐椅子：走到椅子旁邊按按鈕就能坐下，搖桿一動就站起來 ---- */
 function allChairs(){ return CHAIRS.concat(isleChairs, CHAIRS_ROOM); }
 function nearChair(){
@@ -4611,6 +4611,133 @@ function jump(){ if (mySeat){ standUp(); return; }
   Jump.gy = me.baseY - (Bike.on ? BIKE_SEAT : 0); Jump.vy = 7.6; Jump.air = 0.001;
   SFX.jump(); pushPresence(true);
 }
+/* ============ v440 世界有反應：可以踢、可以撞、會嚇跑 ============
+   玩家回饋「釣幾條就膩」＋朋友推薦 bruno-simon.com（一台小車到處撞東西就很好玩）。有了腳踏車以後，村子裡要有東西可以撞：
+   · 沙灘球、椰子、木桶：走過去會踢到，騎車撞上去會飛出去；會滾、會彈、掉進海裡會漂，過一陣子自己回到原位
+   · 沙灘上有一個小球門，把沙灘球踢進去會放彩帶、記進球數
+   · 一群一群的海鷗站在廣場、沙灘、碼頭上，人衝過去會嚇得飛起來繞一圈，等人走遠再飛回來
+   · 騎車撞到樹，樹葉會掉下來，有時候掉一顆果子（可以再踢）
+   全部只在自己的手機上算（別人看不到你踢的球），不影響釣魚和金幣 */
+const Toys = { built: false, list: [], flocks: [], goal: null, lx: 0, lz: 0, pvx: 0, pvz: 0, drops: [], hint: false, goals: 0 };
+const TOY_KIND = {
+  ball:    { r: 0.34, e: 0.62, fr: 0.5, kick: 1.2,  up: 0.42, fl: 1.0, name: '沙灘球' },
+  coconut: { r: 0.15, e: 0.3,  fr: 1.2, kick: 0.9,  up: 0.24, fl: 0.5, name: '椰子' },
+  barrel:  { r: 0.3,  e: 0.25, fr: 0.9, kick: 0.72, up: 0.06, fl: 0.8, name: '木桶' },
+};
+function toyMesh(k){
+  if (k === 'ball'){ const geo = new THREE.SphereGeometry(0.34, 18, 12), P = geo.attributes.position, C = new Float32Array(P.count * 3), cs = ['#f2493d', '#ffffff', '#ffd23f', '#ffffff', '#3d8bf2', '#ffffff'].map(c => new THREE.Color(c)), cap = new THREE.Color('#ffffff');
+    for (let i = 0; i < P.count; i++){ const x = P.getX(i), y = P.getY(i), z = P.getZ(i), c = Math.abs(y) > 0.315 ? cap : cs[Math.floor(((Math.atan2(z, x) + Math.PI) / (Math.PI * 2)) * 6 + 1e-4) % 6]; C[i * 3] = c.r; C[i * 3 + 1] = c.g; C[i * 3 + 2] = c.b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(C, 3)); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4 })); m.castShadow = true; return { g: m, spin: null }; }
+  if (k === 'coconut'){ const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 1), new THREE.MeshStandardMaterial({ color: '#6b4a2e', roughness: 0.95, flatShading: true })); m.scale.set(1, 1.15, 1); m.castShadow = true; return { g: m, spin: null }; }
+  const g = new THREE.Group(), spin = new THREE.Group(); g.add(spin); const wood = new THREE.MeshStandardMaterial({ color: '#9b6a42', roughness: 0.85 }), iron = new THREE.MeshStandardMaterial({ color: '#4a3a2e', roughness: 0.7 });
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.62, 14), wood); b.rotation.z = Math.PI / 2; b.castShadow = true; spin.add(b);
+  for (const sx of [-0.2, 0.2]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.312, 0.312, 0.06, 14, 1, true), iron); r.rotation.z = Math.PI / 2; r.position.x = sx; spin.add(r); }
+  for (const sx of [-0.311, 0.311]){ const cap = new THREE.Mesh(new THREE.CircleGeometry(0.27, 12), new THREE.MeshStandardMaterial({ color: '#7d5433', roughness: 0.9 })); cap.rotation.y = sx > 0 ? Math.PI / 2 : -Math.PI / 2; cap.position.x = sx; spin.add(cap); }
+  return { g, spin }; }
+function toyFree(x, z, r, landOnly){ for (let i = 0; i < 90; i++){ const a = i * 2.4, d = i * 0.2, px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d, dk = deckAt(px, pz); if ((dk ? !landOnly : isLand(px, pz)) && !blocked(px, pz, r + 0.3) && (!landOnly || [0, 1, 2, 3, 4, 5, 6, 7].every(q => isLand(px + Math.cos(q * 0.785) * 3.5, pz + Math.sin(q * 0.785) * 3.5)))) return [px, pz]; } return null; }
+function toyAdd(k, x, z, free){ const p = free ? [x, z] : toyFree(x, z, TOY_KIND[k].r, k === 'ball'); if (!p) return null; const M = toyMesh(k), K = TOY_KIND[k], y = groundHeight(p[0], p[1]) + K.r;
+  M.g.position.set(p[0], y, p[1]); M.g.userData.keep = true; M.g.userData.dyn = true; if (k === 'barrel') M.g.rotation.y = Math.random() * 6.28; scene.add(M.g);
+  const o = { k, K, g: M.g, spin: M.spin, x: p[0], z: p[1], y, vx: 0, vz: 0, vy: 0, hx: p[0], hz: p[1], wet: 0, rest: true, hitT: 0, goalT: 0, homeAt: 0, plz: 0 }; Toys.list.push(o); return o; }
+function toyHome(o, show){ o.x = o.hx; o.z = o.hz; o.y = groundHeight(o.x, o.z) + o.K.r; o.vx = o.vz = o.vy = 0; o.wet = 0; o.rest = true; o.homeAt = 0; o.g.position.set(o.x, o.y, o.z); if (show) puff(o.x, o.y - o.K.r, o.z); }
+/* 海鷗：身體（白）、嘴和腳（橘）、尾巴（灰）合成一個網格，兩片翅膀各一個（會拍） */
+function gullMake(){ const g = new THREE.Group(), parts = [], add = (geo, col, x, y, z, sx, sy, sz, rx) => { if (rx) geo.rotateX(rx); geo.scale(sx || 1, sy || 1, sz || 1); geo.translate(x, y, z); const c = new THREE.Color(col), n = geo.attributes.position.count, A = new Float32Array(n * 3); for (let i = 0; i < n; i++){ A[i * 3] = c.r; A[i * 3 + 1] = c.g; A[i * 3 + 2] = c.b; } geo.setAttribute('color', new THREE.BufferAttribute(A, 3)); parts.push(geo.index ? geo.toNonIndexed() : geo); };
+  add(new THREE.SphereGeometry(0.11, 10, 8), '#f6f6f2', 0, 0.17, 0, 0.8, 0.75, 1.5);
+  add(new THREE.SphereGeometry(0.062, 8, 6), '#f6f6f2', 0, 0.27, 0.13);
+  add(new THREE.ConeGeometry(0.022, 0.08, 6), '#f2a03a', 0, 0.262, 0.215, 1, 1, 1, Math.PI / 2);
+  add(new THREE.ConeGeometry(0.06, 0.16, 5), '#8f9aa3', 0, 0.185, -0.2, 1, 0.4, 1, -Math.PI / 2);
+  for (const sx of [-1, 1]){ add(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 4), '#f2a03a', sx * 0.035, 0.05, 0); add(new THREE.SphereGeometry(0.012, 5, 4), '#1c1c1c', sx * 0.04, 0.285, 0.165); }
+  const body = new THREE.Mesh(mergeGeometries(parts, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 })); body.castShadow = true; g.add(body);
+  const wm = gullMake.wm || (gullMake.wm = new THREE.MeshStandardMaterial({ color: '#a9b4bc', roughness: 0.8, side: THREE.DoubleSide })), wings = [];
+  for (const sx of [-1, 1]){ const pv = new THREE.Group(); pv.position.set(sx * 0.06, 0.2, 0); const geo = new THREE.BoxGeometry(0.34, 0.014, 0.14); geo.translate(sx * 0.17, 0, -0.01); pv.add(new THREE.Mesh(geo, wm)); g.add(pv); wings.push(pv); }
+  g.userData.wings = wings; g.userData.keep = true; g.userData.dyn = true; return g; }
+function gullFlock(x, z, n){ const birds = []; for (let i = 0; i < n; i++){ const a = i * 2.3 + x, d = 0.5 + (i % 3) * 0.55, p = toyFree(x + Math.cos(a) * d, z + Math.sin(a) * d, 0.2); if (!p) continue; const g = gullMake(), y = groundHeight(p[0], p[1]); g.position.set(p[0], y, p[1]); g.rotation.y = a * 1.7; scene.add(g);
+    birds.push({ g, hx: p[0], hz: p[1], x: p[0], y, z: p[1], k: 0, ph: i * 1.9 + z, yaw: g.rotation.y, gyaw: g.rotation.y, a: i * 2.1, del: 0 }); }
+  if (birds.length) Toys.flocks.push({ x, z, birds, st: 0, until: 0, cx: x, cz: z }); }
+function toyBuild(){ Toys.built = true; if (CLASSIC) return; Toys.goals = +LS.get('tide.goals', 0) || 0;
+  const sq = HARBOR_SQ, low = Quality.tier === 'low', nG = low ? 2 : 4;
+  toyAdd('ball', sq[0] + 1.6, sq[1] + 1.6); toyAdd('barrel', sq[0] - 5.5, sq[1] + 5.0); toyAdd('barrel', sq[0] - 6.3, sq[1] + 4.2); toyAdd('barrel', sq[0] + 7.6, sq[1] + 3.6);
+  gullFlock(sq[0] - 3.5, sq[1] - 5.5, nG);
+  { const hb = SPOT_BY_ID.harbor; if (hb){ const L = Math.hypot(hb.dir.x, hb.dir.y) || 1; gullFlock(hb.pos.x - hb.dir.x / L * 6, hb.pos.z - hb.dir.y / L * 6, nG); } }
+  /* 沙灘：找乾的沙地（海浪打不到的那一段），離東海灘碼頭近的排前面 */
+  const rr = mulberry(8807), sand = []; for (let k = 0; k < 1400 && sand.length < 120; k++){ const a = rr() * Math.PI * 2, r = islandR(a) - 2 - (2.6 + rr() * 1.6), x = Math.cos(a) * r, z = Math.sin(a) * r; if (!shoreBeach(x, z) || deckAt(x, z) || blocked(x, z, 0.8)) continue; sand.push([x, z, a]); }
+  const sp = SPOT_BY_ID.sea, sx = sp ? sp.pos.x : 0, sz = sp ? sp.pos.z : -50; sand.sort((p, q) => Math.hypot(p[0] - sx, p[1] - sz) - Math.hypot(q[0] - sx, q[1] - sz));
+  /* 球門：左右各 1.6 公尺要是空的沙地，前面 6 公尺也要是沙地（放球） */
+  for (const p of sand){ if (Math.hypot(p[0] - sx, p[1] - sz) < 5) continue; const tx = -Math.sin(p[2]), tz = Math.cos(p[2]); let ok = null;
+    for (const s of [1, -1]){ const bx = p[0] + tx * s * 6.5, bz = p[1] + tz * s * 6.5; if (shoreBeach(bx, bz) && !blocked(bx, bz, 0.8) && [1, 2, 3, 4, 5].every(i => { const qx = p[0] + tx * s * i * 1.2, qz = p[1] + tz * s * i * 1.2; return isLand(qx, qz) && !blocked(qx, qz, 0.5) && !deckAt(qx, qz); })){ ok = [s, bx, bz]; break; } }
+    const nx0 = Math.cos(p[2]), nz0 = Math.sin(p[2]); if (!ok || blocked(p[0] + nx0 * 1.6, p[1] + nz0 * 1.6, 0.4) || blocked(p[0] - nx0 * 1.6, p[1] - nz0 * 1.6, 0.4) || !isLand(p[0] + nx0 * 1.7, p[1] + nz0 * 1.7)) continue;
+    const G = { x: p[0], z: p[1], nx: tx * ok[0], nz: tz * ok[0], w: 1.5, h: 1.6 }; Toys.goal = G;
+    const g = new THREE.Group(), wm = new THREE.MeshStandardMaterial({ color: '#f4f4f0', roughness: 0.6 }), y0 = groundHeight(G.x, G.z);
+    for (const s of [-1, 1]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, G.h, 8), wm); post.position.set(s * G.w, G.h / 2, 0); post.castShadow = true; g.add(post); const back = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, Math.hypot(G.h, 1), 6), wm); back.position.set(s * G.w, G.h / 2, -0.5); back.rotation.x = -Math.atan2(1, G.h); g.add(back); }
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, G.w * 2 + 0.1, 8), wm); bar.rotation.z = Math.PI / 2; bar.position.set(0, G.h, 0); bar.castShadow = true; g.add(bar);
+    const net = new THREE.Mesh(new THREE.PlaneGeometry(G.w * 2, Math.hypot(G.h, 1), 10, 6), new THREE.MeshBasicMaterial({ color: '#ffffff', wireframe: true, transparent: true, opacity: 0.55 })); net.position.set(0, G.h / 2, -0.5); net.rotation.x = -Math.atan2(1, G.h); g.add(net);
+    g.position.set(G.x, y0, G.z); g.rotation.y = Math.atan2(G.nx, G.nz); g.userData.keep = true; g.userData.dyn = true; scene.add(g); G.g = g;
+    toyAdd('ball', ok[1], ok[2], true); gullFlock(G.x - G.nx * 9, G.z - G.nz * 9, nG); break; }
+  /* 椰子：沿著沙灘每隔一段放兩顆；另外再放一顆沙灘球、一群海鷗在別的沙灘 */
+  const used = []; let far = null; for (const p of sand){ if (used.length >= 5) break; if (Toys.goal && Math.hypot(p[0] - Toys.goal.x, p[1] - Toys.goal.z) < 9) continue; if (used.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 16)) continue; used.push(p); toyAdd('coconut', p[0], p[1]); toyAdd('coconut', p[0] + 0.7, p[1] + 0.4); far = p; }
+  if (far){ toyAdd('ball', far[0] + 2, far[1] - 1.5); if (!low) gullFlock(far[0] - 3, far[1] + 3, nG); }
+}
+function toySound(o, rel){ const t = now(); if (t < o.hitT) return; o.hitT = t + 0.14; const v = clamp(rel / 9, 0.25, 1);
+  if (o.k === 'ball') tone(150 + v * 60, 0.16, 'sine', 0.05 + v * 0.06, 320);
+  else if (o.k === 'coconut'){ tone(520, 0.05, 'square', 0.02 + v * 0.02, 300); noise(0.05, 0.03 * v, 1200, 400, 1); }
+  else { tone(95, 0.2, 'sine', 0.06 + v * 0.06, 60); noise(0.14, 0.05 * v, 500, 180, 1); }
+  if (rel > 5){ camShake = Math.max(camShake, Math.min(0.14, rel * 0.012)); buzz(18); puff(o.x, o.y - o.K.r, o.z); } }
+function toyBase(o, x, z, t){ const wet = !deckAt(x, z) && inWater(x, z); if (wet) return [waterY(x, z, t) + o.K.r * (o.K.fl * 1.2 - 1), true]; return [Math.max(groundHeight(x, z), lowTop(x, z)) + o.K.r, false]; }
+const _toyQ = new THREE.Quaternion(), _toyA = new THREE.Vector3();
+function toyStep(o, dt, t){ const K = o.K; let [base, wet] = toyBase(o, o.x, o.z, t), drag = 0.05; o.vy -= 14 * dt; o.y += o.vy * dt;
+  if (o.y <= base + 0.001){
+    if (wet){ if (!o.wet){ o.wet = t; if (o.vy < -1.5 || Math.hypot(o.vx, o.vz) > 2){ ripple(o.x, o.z, o.k === 'barrel'); SFX.splash(o.k === 'barrel'); FX.emit(o.x, 0.25, o.z, 10, '#e8f7ff', 0.9, 1.8, 0.7); } } o.y += (base - o.y) * Math.min(1, dt * 7); o.vy *= Math.max(0, 1 - dt * 8); drag = 2.4; }
+    else { o.y = base; if (o.vy < -1.6){ o.vy = -o.vy * K.e; if (o.vy > 1.2) toySound(o, o.vy * 1.5); } else o.vy = 0; drag = K.fr;
+      const gx = (groundHeight(o.x + 0.4, o.z) - groundHeight(o.x - 0.4, o.z)) / 0.8, gz = (groundHeight(o.x, o.z + 0.4) - groundHeight(o.x, o.z - 0.4)) / 0.8;
+      if (Math.abs(gx) < 1.5 && Math.abs(gz) < 1.5){ o.vx -= gx * 7 * dt; o.vz -= gz * 7 * dt; }
+      if (Math.hypot(o.vx, o.vz) < 0.1 && Math.abs(gx) < 0.04 && Math.abs(gz) < 0.04){ o.vx = o.vz = 0; o.rest = true; } } }
+  if (!wet) o.wet = 0;
+  const f = Math.exp(-drag * dt); o.vx *= f; o.vz *= f;
+  const feet = o.y - K.r, tryMove = (nx, nz) => { if (blockedJ(nx, nz, K.r, feet, o.x, o.z)) return false; const [b2, w2] = toyBase(o, nx, nz, t); if (!w2 && b2 - K.r > feet + 0.4) return false; return true; };
+  const nx = o.x + o.vx * dt; if (tryMove(nx, o.z)) o.x = nx; else { if (Math.abs(o.vx) > 2) toySound(o, Math.abs(o.vx)); o.vx *= -K.e; }
+  const nz = o.z + o.vz * dt; if (tryMove(o.x, nz)) o.z = nz; else { if (Math.abs(o.vz) > 2) toySound(o, Math.abs(o.vz)); o.vz *= -K.e; }
+  const sp = Math.hypot(o.vx, o.vz);
+  if (sp > 0.02){ if (o.spin){ o.g.rotation.y = lerpAngle(o.g.rotation.y, Math.atan2(o.vx, o.vz), Math.min(1, dt * 6)); o.spin.rotation.x += sp * dt / K.r; } else { _toyA.set(o.vz / sp, 0, -o.vx / sp); _toyQ.setFromAxisAngle(_toyA, sp * dt / K.r); o.g.quaternion.premultiply(_toyQ); } }
+  o.g.position.set(o.x, o.y, o.z);
+  /* 球門：沙灘球從正面穿過門線就算進球 */
+  const G = Toys.goal; if (G && o.k === 'ball'){ const dx = o.x - G.x, dz = o.z - G.z, lz = dx * G.nx + dz * G.nz, lx = dx * G.nz - dz * G.nx;
+    if (o.plz > 0 && lz <= 0 && Math.abs(lx) < G.w && o.y - K.r < G.h && t > o.goalT){ o.goalT = t + 4; o.homeAt = t + 2.6; o.vx *= 0.12; o.vz *= 0.12; Toys.goals++; LS.set('tide.goals', Toys.goals);
+      flash('⚽ 進球！', 1.4); toast('⚽ × ' + Toys.goals); try { SFX.coin(); } catch(e){} buzz([30, 30, 60]); for (const c of ['#ffd23f', '#f2493d', '#3d8bf2', '#7fe08a']) FX.emit(G.x, G.h + 0.2, G.z, 16, c, 2.2, 3.2, 1.3); }
+    o.plz = Math.abs(lx) < G.w + 0.5 ? lz : 0; }
+  if (o.homeAt && t > o.homeAt) toyHome(o, true);
+  else if (o.wet && t - o.wet > (o.k === 'coconut' ? 6 : 10)) toyHome(o, Math.hypot(o.hx - me.pos.x, o.hz - me.pos.z) < 40);
+  else if (o.y < -6) toyHome(o, false); }
+/* 騎車撞到樹：掉樹葉，有時候掉一顆果子 */
+function toyTree(x, z){ if (!Toys.built) return; const t = now(); for (const c of colliders){ if (!c.tree || Math.hypot(c.x - x, c.z - z) > c.r + 0.9) continue; if (t < (c.shakeT || 0)) return; c.shakeT = t + 2.5; const g = groundHeight(c.x, c.z);
+    for (const col of ['#8fd66a', '#5fae48']) FX.emit(c.x, g + 2.4, c.z, 12, col, 1.5, 0.2, 1.3); noise(0.35, 0.05, 2600, 900, 0.7);
+    if (Math.random() < 0.6){ const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz) || 1; let o = Toys.drops.length >= 5 ? Toys.drops.shift() : toyAdd('coconut', c.x + dx / d * 0.7, c.z + dz / d * 0.7, true); if (!o) return;
+      o.x = o.hx = c.x + dx / d * 0.7; o.z = o.hz = c.z + dz / d * 0.7; o.y = g + 2.6; o.vx = dx / d * 1.2; o.vz = dz / d * 1.2; o.vy = 0; o.wet = 0; o.rest = false; o.g.visible = true; o.g.position.set(o.x, o.y, o.z); Toys.drops.push(o); }
+    return; } }
+function gullTick(dt, t, px, pz, psp){ for (const F0 of Toys.flocks){ const d = Math.hypot(F0.x - px, F0.z - pz); if (d > 80){ if (F0.vis !== false){ F0.vis = false; for (const b of F0.birds) b.g.visible = false; } continue; } if (F0.vis === false){ F0.vis = true; for (const b of F0.birds) b.g.visible = true; }
+    if (F0.st === 0 && ((d < 5.5 && psp > 2.4) || d < 2.0)){ F0.st = 1; F0.until = t + 8 + Math.random() * 5; const ax = F0.x - px, az = F0.z - pz, L = Math.hypot(ax, az) || 1; F0.cx = F0.x + ax / L * 5; F0.cz = F0.z + az / L * 5; F0.birds.forEach((b, i) => { b.del = t + i * 0.1 + Math.random() * 0.1; b.a = Math.atan2(b.z - F0.cz, b.x - F0.cx); });
+      try { SFX.gull(); } catch(e){} noise(0.5, 0.06, 900, 2400, 0.6); }
+    else if (F0.st === 1){ if (d < 10) F0.until = Math.max(F0.until, t + 3); if (t > F0.until) F0.st = 2; }
+    let landed = 0;
+    for (const b of F0.birds){ const W = b.g.userData.wings; let tx, ty, tz, fly;
+      if (F0.st === 1 && t >= b.del){ b.a += dt * 0.75; const R = 5.5 + (b.ph % 3); tx = F0.cx + Math.cos(b.a) * R; tz = F0.cz + Math.sin(b.a) * R; ty = 5.2 + (b.ph % 2) * 1.2 + Math.sin(t * 0.8 + b.ph) * 0.4; fly = 1; }
+      else { tx = b.hx; tz = b.hz; ty = groundHeight(b.hx, b.hz); fly = F0.st === 2 && Math.hypot(b.x - tx, b.z - tz) + Math.abs(b.y - ty) > 0.25 ? 1 : 0; if (!fly) landed++; }
+      b.k += (fly - b.k) * Math.min(1, dt * (fly ? 7 : 4));
+      if (b.k > 0.03){ const r = Math.min(1, dt * (F0.st === 2 ? 1.5 : 1.25)), ox = b.x, oz = b.z; b.x += (tx - b.x) * r; b.z += (tz - b.z) * r; b.y += (ty - b.y) * Math.min(1, dt * (F0.st === 2 ? 1.3 : 1.8)); const mv = Math.hypot(b.x - ox, b.z - oz); if (mv > 1e-4) b.yaw = lerpAngle(b.yaw, Math.atan2(b.x - ox, b.z - oz), Math.min(1, dt * 5));
+        const fl = Math.sin(t * (F0.st === 1 && t < b.del + 1.5 ? 20 : 11) + b.ph) * 0.75; W[0].rotation.set(0, -1.3 * (1 - b.k), -fl * b.k); W[1].rotation.set(0, 1.3 * (1 - b.k), fl * b.k); b.g.rotation.set(0, b.yaw, 0); }
+      else { if (!fly){ b.x = tx; b.z = tz; b.y = ty; } b.yaw = lerpAngle(b.yaw, b.gyaw + Math.sin(t * 0.3 + b.ph) * 0.8, Math.min(1, dt * 2)); const pk = Math.max(0, Math.sin(t * 1.1 + b.ph * 3)); W[0].rotation.set(0, -1.3, 0); W[1].rotation.set(0, 1.3, 0); b.g.rotation.set(pk > 0.93 ? (pk - 0.93) * 9 : 0, b.yaw, 0); }
+      b.g.position.set(b.x, b.y, b.z); }
+    if (F0.st === 2 && landed === F0.birds.length) F0.st = 0; } }
+function toyTick(dt, t){ if (CLASSIC) return; if (Dive.on || House.on || inIndoor() || (typeof Sub !== 'undefined' && (Sub.on || Sub.cine))){ Toys.lx = NaN; return; }
+  if (!Toys.built){ try { toyBuild(); } catch(e){ console.warn('toys', e); } }
+  const px = me.pos.x, pz = me.pos.z; let pvx = 0, pvz = 0; if (dt > 1e-4 && Toys.lx === Toys.lx){ pvx = (px - Toys.lx) / dt; pvz = (pz - Toys.lz) / dt; if (Math.hypot(pvx, pvz) > 22) pvx = pvz = 0; } Toys.lx = px; Toys.lz = pz;
+  Toys.pvx += (pvx - Toys.pvx) * 0.6; Toys.pvz += (pvz - Toys.pvz) * 0.6; const psp = Math.hypot(Toys.pvx, Toys.pvz), feet = me.baseY - (Bike.on ? BIKE_SEAT : 0), pr = Bike.on ? 0.5 : 0.36, can = !myBoat;
+  for (const o of Toys.list){ const K = o.K, dx = o.x - px, dz = o.z - pz, d2 = dx * dx + dz * dz;
+    if (d2 > 4900){ if (o.x !== o.hx || o.z !== o.hz) toyHome(o, false); if (o.g.visible) o.g.visible = false; continue; } if (!o.g.visible) o.g.visible = true;
+    const reach = K.r + pr; if (can && d2 < reach * reach && o.y - K.r < feet + 1.5 && o.y + K.r > feet - 0.15){ const d = Math.sqrt(d2), nx = d > 1e-3 ? dx / d : Math.sin(me.rot), nz = d > 1e-3 ? dz / d : Math.cos(me.rot), rel = (Toys.pvx - o.vx) * nx + (Toys.pvz - o.vz) * nz;
+      if (rel > 0.15){ const j = rel * (1 + K.e) * K.kick; o.vx += nx * j; o.vz += nz * j; if (rel > 1.8) o.vy = Math.max(o.vy, rel * K.up); o.rest = false; toySound(o, rel);
+        if (!Toys.hint){ Toys.hint = true; if (!LS.get('tide.toyhint', false)){ LS.set('tide.toyhint', true); toast('⚽ 這個可以踢！騎腳踏車撞上去會飛更遠'); } } }
+      const qx = px + nx * (reach + 0.01), qz = pz + nz * (reach + 0.01); if (!blocked(qx, qz, K.r)){ o.x = qx; o.z = qz; o.rest = false; } }
+    if (!o.rest) toyStep(o, Math.min(dt, 0.05), t); }
+  gullTick(dt, t, px, pz, psp); }
 function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
 function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 0) d += Math.PI*2; return a + (d - Math.PI) * k; }
 
@@ -11860,6 +11987,9 @@ function renderBag(body){
   const row = (ul, ic, name, meta, btnTxt, fn, on) => { const li = el('li', on ? 'on' : ''); const i = el('span', 'dishic', ic); li.appendChild(i); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', name)); if (meta) d.appendChild(el('div', 'meta', meta)); li.appendChild(d);
     if (btnTxt){ const b = el('button', 'tbtn' + (on ? ' ghost' : ''), btnTxt); b.disabled = !fn; if (fn) b.addEventListener('click', () => { b.disabled = true; fn(); }); li.appendChild(b); } ul.appendChild(li); return li; };
   { const w = el('div', 'bagwallet'); w.innerHTML = `<span>🪙 <b>${rec.coins.toLocaleString()}</b> 金幣</span><span>💙 <b>${rec.love || 0}</b> 愛海點數</span>${shrimpLeft() ? `<span>🎫 釣蝦 <b>${mmss(shrimpLeft())}</b></span>` : ''}<span>🐟 魚缸 <b>${rec.tank.length}</b> 條</span>`; body.appendChild(w); }
+  /* v440 腳踏車收在背包裡：拿出來就騎上去；騎著的時候可以收起來 */
+  { const ul = sec('🚲 交通工具', '拿出來就能騎；下車以後車會停在原地，走回去按「騎車」'); const ok = Bike.on || canRide();
+    row(ul, '🚲', '腳踏車', Bike.on ? '正在騎' : ok ? (Bike.park ? '停在外面，拿出來會直接到你身邊' : '收在背包裡') : '現在不能騎（在船上、屋子裡、釣魚或潛水的時候）', Bike.on ? '收起來' : '拿出來騎', !ok ? null : () => { if (Bike.on){ bikeOff(); Bike.park = null; SFX.click(); renderTab(); } else { closeSheet(); bikeOn(); } }, Bike.on); }
   // v257 寵物：直接在包包選要帶哪一隻出門（不用跑去寵物頁）
   if (Cloud.on){ if (!Pets.list){ if (!Pets.busy) loadPets(true).then(() => { if (curTab === 'bag' && !$('#sheet').hidden) renderTab(); }); }
     else { const mine = Pets.list.filter(p => p.price == null); if (mine.length){ const ul = sec('🐾 寵物', '帶一隻出門陪你，點「回家」就收起來');
@@ -14319,7 +14449,8 @@ function renderTab(){
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
-      '🚲 腳踏車：每個人一進來就有一台，不用買。按右下角的「騎車」上車，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。再按一次「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你。別的玩家看得到你在騎車。',
+      '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，過一下自己回到原位。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。這些只有你自己看得到。',
+      '🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
       '👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。',
       '🐟 箱網養殖：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
@@ -15509,7 +15640,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
-  updatePlayer(dt); try { bikeTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); } catch(e){} try { toyTick(dt, t); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
@@ -15593,6 +15724,11 @@ function ui3Brand(){ const B = $('#brand'); if (!B) return; let xb = $('#xp3'); 
   try { const xp = calcXP(), L = lvOf(xp), a = lvNeed(L), b = lvNeed(L + 1), k = L >= 99 ? 1 : clamp((xp - a) / Math.max(1, b - a), 0, 1); xb.firstChild.style.width = Math.round(k * 100) + '%'; const t = `Lv.${L}`; if (xb.lastChild.textContent !== t) xb.lastChild.textContent = t; } catch(e){}
   let lv = $('#love3'); if (!lv){ lv = document.createElement('span'); lv.id = 'love3'; lv.title = '愛海點數（放流得到）'; const co = $('#coins'); if (co) co.after(lv); } const t2 = `💙 ${(rec.love || 0).toLocaleString()}`; if (lv.textContent !== t2) lv.textContent = t2; }
 /* 下面：一條聊天列＋😀（原本 💬 👋 🐟 😮 😀 五顆合併） */
+/* v440 下面一排按鈕（寵物、騎車、跳、撿魚餌、打窩…）變多的時候會蓋到聊天列：聊天列自己縮短，永遠停在最左邊那顆按鈕的左邊 */
+function ui3ChatFit(){ const c = $('#chat3'), row = $('#actRow'); if (!c || !row) return; c.style.width = ''; c.style.transform = ''; const a = c.getBoundingClientRect(); if (!a.width) return;
+  let left = 1e9; for (const w of [row, $('#boatRow')]){ if (!w) continue; for (const b of w.children){ if (b.hidden || b.tagName.toLowerCase() === 'svg') continue; const r = b.getBoundingClientRect(); if (r.width && r.bottom > a.top + 2 && r.top < a.bottom - 2) left = Math.min(left, r.left); } }
+  const lim = left - 10; if (a.right <= lim) return; const z = a.width / (c.offsetWidth || a.width), nw = Math.max(150, Math.min(a.width, lim - a.left)), nl = Math.max(8, Math.min(a.left, lim - nw));
+  c.style.width = (nw / z) + 'px'; c.style.transform = `translateX(${(nl - innerWidth / 2) / z}px)`; }
 function ui3Chat(){ if ($('#chat3')) return; const b = document.createElement('div'); b.id = 'chat3';
   const bar = el('button', 'c3bar panel', '💬 點這裡聊天…'); bar.addEventListener('click', () => { const t = $('#chatToggle'); if (t) t.click(); });
   const hb = el('button', 'c3em c3h panel', '📜'); hb.setAttribute('aria-label', '聊天紀錄'); hb.addEventListener('click', e => { e.stopPropagation(); chatHistToggle(); });
@@ -15629,8 +15765,8 @@ async function cafeOrder(r, price){ const P = $('#orderPanel'); if ((rec.coins |
 function ui3Init(){ if (!UI3.on) return; document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
-  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
-  (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); } catch(e){} requestAnimationFrame(loop); })(); }
+  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
+  (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); if (frameNo % 12 === 0) ui3ChatFit(); } catch(e){} requestAnimationFrame(loop); })(); }
 /* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
 function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
   /* v397 玩家回報：小島上左上角「我的小島」那排把「今天」壓在下面。現在小島列、參觀列、船列也排進同一欄，「今天」接在它們下面 */
