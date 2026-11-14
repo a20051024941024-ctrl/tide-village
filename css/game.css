@@ -1441,3 +1441,10 @@ body.photo #ttPanel{display:none!important}
 .fc-chips .tbtn{padding:6px 10px;font-size:13px}
 .fc-line{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
 .fc-line input{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:15px}
+/* v438 腳踏車按鈕 */
+#bike3{width:56px;height:56px;border-radius:50%;font-size:20px;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0}
+#bike3 small{font-size:10px;font-weight:800}
+#bike3[hidden]{display:none}
+#bike3.on{background:#ffe9a8}
+#bike3.pulse{animation:bikePulse 1s ease-in-out infinite}
+@keyframes bikePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18);box-shadow:0 0 0 6px rgba(242,196,61,.45)}}

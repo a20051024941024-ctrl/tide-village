@@ -3744,7 +3744,7 @@ class Fisher {
       // 正式 3D 角色：手腳的動作由骨架動畫負責；整個人的前傾、轉彎傾斜、上下浮動照原本的算法（前傾少一點，動畫自己會前傾）
       const far = this !== me && camera.position.distanceToSquared(this.pos) > 900; a.kid.skipT += dt;
       if (!far || a.kid.skipT > 0.1){ kidAnimate(this, far ? a.kid.skipT : dt, t); a.kid.skipT = 0; }
-      a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = this.swim ? P.pit : P.pit * 0.35; a.g.rotation.z = P.rol * 0.8;
+      a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = this.swim ? P.pit : P.pit * 0.35; a.g.rotation.z = P.rol * 0.8 + (this.bikeLean || 0);
       a.g.position.y = this.baseY + (this.swim ? P.bob : 0);
       if (this.fishing){ a.g.updateMatrixWorld(true); a.kid.handR.getWorldPosition(a.kid.v); a.g.worldToLocal(a.kid.v); a.rod.position.copy(a.kid.v); }
     } else {
@@ -4468,6 +4468,7 @@ function updatePlayer(dt){
   }
   const L = Math.hypot(ix, iz); if (L > 1){ ix /= L; iz /= L; }
   const locked = F.phase === 'bite' || F.phase === 'reeling' || F.phase === 'landing';
+  if (Bike.on && (myBoat || mySeat || Dive.on || House.on || inIndoor() || F.phase !== 'idle' || (typeof Sub !== 'undefined' && (Sub.cine || Sub.on)))) bikeOff();   /* v438 拋竿、上船、坐下、進屋子：自動下車，車停在原地 */
   if (Dive.on){ updateDiveSwim(dt, ix, iz, L); return; }
   if (typeof Sub !== 'undefined' && Sub.cine){ me.speed += ((Sub.cine.walk ? 3.2 : 0) - me.speed) * Math.min(1, dt * 12); Jump.gy = me.baseY; return; }   /* v244 上下潛水艇的過場：位置由過場決定 */
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
@@ -4476,7 +4477,8 @@ function updatePlayer(dt){
     else { me.pos.x = seatX(mySeat); me.pos.z = seatZ(mySeat); me.rot = lerpAngle(me.rot, mySeat.face, 1 - Math.exp(-10 * dt)); me.speed = 0; me.baseY = mySeat.y; Jump.gy = mySeat.y; return; }
   }
   let speed = 0;
-  if (L > 0.08 && !locked){
+  if (Bike.on) bikeDrive(dt, uiBlocked ? 0 : ix, uiBlocked ? 0 : iz, uiBlocked ? 0 : L);
+  else if (L > 0.08 && !locked){
     if (F.phase !== 'idle') cancelFishing('收竿了');
     /* v429 玩家回報（iPhone 特別容易）：釣一釣突然往前變往後、往左變往右。原因：釣魚時鏡頭會移到肩膀後面看浮標，
        但搖桿的方向一直是照「釣魚前的鏡頭角度」算的；兩個方向剛好相反時，推前面角色就往鏡頭這邊走，而且只要走不快，鏡頭就一直不換回來。
@@ -4514,8 +4516,83 @@ function updatePlayer(dt){
     if (Jump.air <= 0){ Jump.air = 0; Jump.vy = 0; Jump.land = 0.18; puff(me.pos.x, Jump.gy, me.pos.z); }
   }
   if (Jump.land > 0) Jump.land -= dt;
-  me.air = Jump.air; me.baseY = Jump.gy + Jump.air;
+  me.air = Jump.air; me.baseY = Jump.gy + Jump.air + (Bike.on ? BIKE_SEAT : 0);
 }
+
+/* ============ v438 腳踏車：一進來就有、不用買。讓「光是在村子裡移動」就好玩 ============
+   玩家回饋：朋友進來兩次、釣幾條魚就膩了，推薦參考 bruno-simon.com（一打開就在開車、光是亂開就好玩）。
+   騎車有慣性：加速要一下子、放開會滑行、急轉會甩尾（輪子揚沙）、衝過坡頂會飛起來、撞到東西會彈一下。
+   右下角「🚲 騎車」上車、再按一次下車；拋竿、上船、坐椅子、進屋子會自動下車，車停在原地。別人看得到你在騎（presence 的 bk）。 */
+const BIKE_SEAT = 0.5;
+var Bike = { on:false, sp:0, yaw:0, vx:0, vz:0, lean:0, g:null, park:null, lastG:0, lastVy:0, dustT:0, tickT:0, bumpT:0, hinted:false };
+const BIKE_MAX = 9.2;
+function makeBike(col){
+  const g = new THREE.Group(), M = c => new THREE.MeshStandardMaterial({ color:c, roughness:0.6, metalness:0.1 }), frame = M(col || '#e8563f'), dark = M('#2b2f36'), metal = M('#c9ced6'), wood = M('#b98a55');
+  const tube = (x1, y1, z1, x2, y2, z2, r, m) => { const a = new THREE.Vector3(x1, y1, z1), b = new THREE.Vector3(x2, y2, z2), L = a.distanceTo(b), t = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 6), m); t.position.copy(a).add(b).multiplyScalar(0.5); t.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); t.castShadow = true; g.add(t); return t; };
+  g.userData.wheels = [];
+  for (const z of [0.52, -0.5]){ const w = new THREE.Group(); w.position.set(0, 0.3, z); const tire = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.045, 6, 16), dark); tire.rotation.y = Math.PI / 2; tire.castShadow = true; w.add(tire);
+    for (let i = 0; i < 4; i++){ const sp = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.5, 0.012), metal); sp.rotation.x = i * Math.PI / 4; w.add(sp); } g.add(w); g.userData.wheels.push(w); }
+  tube(0, 0.3, -0.5, 0, 0.72, -0.16, 0.028, frame); tube(0, 0.72, -0.16, 0, 0.7, 0.3, 0.028, frame); tube(0, 0.32, 0.02, 0, 0.72, -0.16, 0.028, frame); tube(0, 0.32, 0.02, 0, 0.7, 0.3, 0.028, frame); tube(0, 0.3, -0.5, 0, 0.32, 0.02, 0.024, frame);
+  tube(0, 0.3, 0.52, 0, 0.98, 0.3, 0.026, metal);                                   // 前叉＋龍頭
+  tube(-0.26, 0.98, 0.28, 0.26, 0.98, 0.28, 0.022, dark);                            // 把手
+  { const seat = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.3), dark); seat.position.set(0, 0.78, -0.2); seat.castShadow = true; g.add(seat); }
+  { const bk = new THREE.Group(); bk.position.set(0, 0.78, 0.56); for (const [w, h, d, x, y, z] of [[0.36, 0.02, 0.26, 0, 0, 0], [0.36, 0.2, 0.02, 0, 0.1, 0.13], [0.36, 0.2, 0.02, 0, 0.1, -0.13], [0.02, 0.2, 0.26, 0.18, 0.1, 0], [0.02, 0.2, 0.26, -0.18, 0.1, 0]]){ const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wood); b.position.set(x, y, z); bk.add(b); } g.add(bk); }   // 前面的籃子
+  { const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.26), M('#5fb6e3')); box.position.set(0, 0.72, -0.58); box.castShadow = true; g.add(box); const lid = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.04, 0.28), M('#f4f7fa')); lid.position.set(0, 0.84, -0.58); g.add(lid); }   // 後面的小冰桶
+  tube(0.14, 0.6, -0.62, 0.14, 1.75, -0.86, 0.012, dark);                            // 插在後面的釣竿
+  { const cr = new THREE.Group(); cr.position.set(0, 0.32, 0.02); for (const sx of [-1, 1]){ const a = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.17, 0.03), metal); a.position.set(sx * 0.09, sx * 0.085, 0); cr.add(a); const pd = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.06), dark); pd.position.set(sx * 0.14, sx * 0.17, 0); cr.add(pd); } g.add(cr); g.userData.crank = cr; }
+  return g; }
+function canRide(){ return !myBoat && !mySeat && !Dive.on && !House.on && !inIndoor() && !Photo.on && F.phase === 'idle' && !(typeof Sub !== 'undefined' && Sub.on); }
+function bikeOk(ax, az, bx, bz){ const BR = blocked(ax, az, 0.5) ? 0.35 : 0.5; if (!walkable(bx, bz) || blockedJ(bx, bz, BR, Jump.gy + Jump.air, ax, az)) return false; const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); }
+  const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh < 0.34 || dh / dl < 1.2; }
+function bikeOn(){ if (Bike.on || !canRide() || uiBlocked) return; ensureAudio(); if (!Bike.g){ Bike.g = makeBike(); scene.add(Bike.g); }
+  Bike.on = true; Bike.sp = 0; Bike.vx = Bike.vz = 0; Bike.yaw = me.rot; Bike.lean = 0; Bike.park = null; Bike.lastG = groundHeight(me.pos.x, me.pos.z); Bike.lastVy = 0; me.sitting = true; me.aspd = 0;
+  tone(2100, 0.22, 'sine', 0.05); setTimeout(() => tone(2100, 0.3, 'sine', 0.045), 160); puff(me.pos.x, Jump.gy, me.pos.z); pushPresence(true); }
+function bikeOff(){ if (!Bike.on) return; Bike.on = false; me.bikeLean = 0; if (!myBoat && !mySeat) me.sitting = false;
+  Bike.park = { x: me.pos.x, z: me.pos.z, yaw: Bike.yaw };
+  if (!myBoat && !mySeat){ const rx = Math.cos(Bike.yaw), rz = -Math.sin(Bike.yaw); for (const sgn of [1, -1]){ const nx = me.pos.x + rx * 0.6 * sgn, nz = me.pos.z + rz * 0.6 * sgn; if (bikeOk(me.pos.x, me.pos.z, nx, nz)){ me.pos.x = nx; me.pos.z = nz; break; } } }
+  Bike.sp = 0; Bike.vx = Bike.vz = 0; pushPresence(true); }
+function bikeDrive(dt, ix, iz, L){
+  const B = Bike; let turnRate = 0;
+  if (L > 0.08){
+    let fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); const rx = -fz, rz = fx, mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, target = Math.atan2(mx, mz);
+    let d = ((target - B.yaw + Math.PI) % (Math.PI * 2)); if (d < 0) d += Math.PI * 2; d -= Math.PI;
+    const tr = 2.4 + 3.4 / (1 + B.sp * 0.3), st = clamp(d, -tr * dt, tr * dt); B.yaw += st; turnRate = st / Math.max(1e-4, dt);
+    const want = BIKE_MAX * Math.min(1, L) * (Math.abs(d) > 2 ? 0.35 : 1) * (Mang.onMud ? 0.7 : 1);
+    B.sp += (want - B.sp) * (1 - Math.exp(-(want > B.sp ? 1.5 : 2.5) * dt));
+  } else { B.sp *= Math.exp(-0.75 * dt); if (B.sp < 0.2) B.sp = 0; }
+  const air = Jump.air > 0.05, hx = Math.sin(B.yaw), hz = Math.cos(B.yaw), grip = 1 - Math.exp(-(air ? 0.6 : 5.5) * dt);
+  B.vx += (hx * B.sp - B.vx) * grip; B.vz += (hz * B.sp - B.vz) * grip;
+  const slip = Math.abs(B.vx * hz - B.vz * hx);                                       // 側滑的速度（甩尾）
+  let hit = false; const nx = me.pos.x + B.vx * dt, nz = me.pos.z + B.vz * dt;
+  if (bikeOk(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx; else { hit = true; B.vx *= -0.35; }
+  if (bikeOk(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz; else { hit = true; B.vz *= -0.35; }
+  if (hit){ const v = Math.hypot(B.vx, B.vz) / 0.35; B.sp *= 0.4; if (v > 3.5 && now() > B.bumpT){ B.bumpT = now() + 0.35; tone(130, 0.14, 'sine', 0.09, 70); FX.emit(me.pos.x + hx * 0.6, Jump.gy + 0.4, me.pos.z + hz * 0.6, 10, '#f3ead2', 0.9, 1.0, 0.5); camShake = Math.max(camShake, Math.min(0.3, v * 0.03)); } }
+  me.rot = B.yaw; me.aspd = 0;
+  B.lean += (clamp(-turnRate * B.sp * 0.028, -0.5, 0.5) - B.lean) * Math.min(1, dt * 8); me.bikeLean = B.lean;
+  // 坡頂起飛、台階落下：照地面高度的變化算
+  const g = groundHeight(me.pos.x, me.pos.z), vyG = (g - B.lastG) / Math.max(1e-3, dt);
+  if (!air && Jump.vy === 0){
+    if (B.lastVy > 2.0 && vyG < B.lastVy * 0.35 && B.sp > 4.5){ Jump.vy = Math.min(7.5, B.lastVy * 0.95); Jump.air = 0.001; SFX.jump(); }
+    else if (g < Jump.gy - 0.3){ Jump.air = Jump.gy - g; Jump.gy = g; Jump.vy = -0.01; }
+  }
+  B.lastG = g; B.lastVy = air ? 0 : B.lastVy + (clamp(vyG, -12, 12) - B.lastVy) * Math.min(1, dt * 10);
+  if (!air && B.sp > 1){ B.dustT -= dt * (slip > 1.6 ? 4 : 1); if (B.dustT <= 0){ B.dustT = 0.16; const big = slip > 1.6; FX.emit(me.pos.x - hx * 0.5, Jump.gy + 0.06, me.pos.z - hz * 0.5, big ? 6 : 2, '#eadfc4', big ? 0.7 : 0.3, big ? 0.7 : 0.3, big ? 0.55 : 0.3); } }
+  if (L <= 0.08 && !air && B.sp > 1){ B.tickT -= dt * B.sp; if (B.tickT <= 0){ B.tickT = 0.55; tone(2600, 0.012, 'square', 0.006); } }   // 滑行時飛輪噠噠噠
+}
+function bikeDraw(g, x, y, z, yaw, lean, sp, dt, pedal){ g.visible = true; g.position.set(x, y, z); g.rotation.order = 'YXZ'; g.rotation.y = yaw; g.rotation.z = lean; const w = g.userData.wheels; for (const m of w) m.rotation.x += sp * dt / 0.3; if (pedal) g.userData.crank.rotation.x += Math.min(sp, 6) * dt * 1.3; }
+function bikeTick(dt){
+  if (Bike.g){
+    if (Bike.on) bikeDraw(Bike.g, me.pos.x + Math.sin(Bike.yaw) * 0.14, me.baseY - BIKE_SEAT, me.pos.z + Math.cos(Bike.yaw) * 0.14, Bike.yaw, Bike.lean, Bike.sp, dt, joyMag() > 0.08);
+    else if (Bike.park && !House.on && !Dive.on){ const P = Bike.park; bikeDraw(Bike.g, P.x, groundHeight(P.x, P.z), P.z, P.yaw, 0.16, 0, dt, false); }
+    else Bike.g.visible = false; }
+  for (const p of peers.values()){ const f = p.fisher; if (!f) continue;
+    if (f.bike && f.av && f.av.g.visible){ if (!f.bikeG){ f.bikeG = makeBike('#3f8fd8'); scene.add(f.bikeG); } bikeDraw(f.bikeG, f.pos.x + Math.sin(f.rot) * 0.14, f.baseY - BIKE_SEAT, f.pos.z + Math.cos(f.rot) * 0.14, f.rot, 0, f.speed || 0, dt, (f.speed || 0) > 0.5); }
+    else if (f.bikeG) f.bikeG.visible = false; }
+}
+function joyMag(){ return Math.hypot(joy.x + ((keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0)), joy.z + ((keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0))); }
+function ui3Bike(){ let b = $('#bike3'); const row = $('#actRow'); if (!row) return; if (!b){ b = document.createElement('button'); b.id = 'bike3'; b.className = 'panel'; b.addEventListener('click', e => { e.stopPropagation(); if (Bike.on) bikeOff(); else bikeOn(); }); row.insertBefore(b, $('#jumpBtn')); }
+  const want = Bike.on || canRide(); if (b.hidden === want) b.hidden = !want; const lab = Bike.on ? '🚲<small>下車</small>' : '🚲<small>騎車</small>'; if (b.dataset.l !== lab){ b.dataset.l = lab; b.innerHTML = lab; b.classList.toggle('on', Bike.on); }
+  if (want && !Bike.hinted && !uiBlocked){ Bike.hinted = true; let seen = false; try { seen = localStorage.getItem('tv_bike_hint') === '1'; localStorage.setItem('tv_bike_hint', '1'); } catch(e){} if (!seen){ b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 12000); toast('🚲 你有一台腳踏車！按右下角的「騎車」，推搖桿就衝出去', 5); } } }
 /* ---- 坐椅子：走到椅子旁邊按按鈕就能坐下，搖桿一動就站起來 ---- */
 function allChairs(){ return CHAIRS.concat(isleChairs, CHAIRS_ROOM); }
 function nearChair(){
@@ -4531,7 +4608,7 @@ function canJump(){ return !Dive.on && !uiBlocked && !myBoat && !Photo.on && F.p
 function jump(){ if (mySeat){ standUp(); return; }
   if (!canJump()) return;
   ensureAudio();
-  Jump.gy = me.baseY; Jump.vy = 7.6; Jump.air = 0.001;
+  Jump.gy = me.baseY - (Bike.on ? BIKE_SEAT : 0); Jump.vy = 7.6; Jump.air = 0.001;
   SFX.jump(); pushPresence(true);
 }
 function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
@@ -4585,7 +4662,7 @@ function updateCamera2(dt){
   }
   const target = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);   // 用地面高度，不跟著走路的上下晃動（不然鏡頭會一直震）
   const own = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on);   /* 有自己鏡頭的地方不改 */
-  { const bf = own ? 55 : camBaseFov(); if (!Photo.on && Math.abs(camera.fov - bf) > 0.05){ camera.fov += (bf - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); } }
+  { const bf = own ? 55 : camBaseFov() + (Bike.on ? Math.min(11, Bike.sp * 1.25) : 0); if (!Photo.on && Math.abs(camera.fov - bf) > 0.05){ camera.fov += (bf - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); } }
   /* v291 俯瞰視角釣魚時：鏡頭對準角色和浮標中間，拋得遠就稍微拉遠，浮標不會跑出畫面 */
   const fishNow = !own && CAMV.mode === 'top' && ['waiting', 'bite', 'reeling', 'landing', 'land'].includes(F.phase) && me.bobPos; if (fishNow){ CAMV.fkAt = now(); CAMV.bob = { x: me.bobPos.x, z: me.bobPos.z }; }
   /* v308：一直快速點（拋竿→收竿→再拋）鏡頭會一直拉遠拉近。現在拉魚的時候也維持，結束後停 3 秒才慢慢拉回來 */
@@ -12232,6 +12309,7 @@ function presenceObj(){
   if (myId) o.u = myId;
   if (myBoat) o.bt = 1;
   if (mySeat) o.st = 1;
+  if (Bike.on) o.bk = 1;   /* v438 在騎腳踏車 */
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
   if (rec.rodSkin || rec.lineCol) o.rk = [rec.rodSkin || '', rec.lineCol || ''];   /* v253 工坊做的竿子造型、釣線顏色 */
@@ -12283,7 +12361,7 @@ function applyPeer(pp){
   p.fisher.setGear(cleanGear(pr.gr));
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
-  p.fisher.sitting = !!pr.bt || !!pr.st;
+  p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk;
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
   p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2), var: /^[a-g]$/.test(pr.pt[3]) ? pr.pt[3] : 'a', shine: pr.pt[0] === 'pondturtle' ? clamp(+pr.pt[4] || 0, 0, 100) : undefined } : null;
   p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = Number(pr.hs) || 0; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
@@ -14239,6 +14317,7 @@ function renderTab(){
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
+      '🚲 腳踏車：每個人一進來就有一台，不用買。按右下角的「騎車」上車，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。再按一次「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你。別的玩家看得到你在騎車。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
       '👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。',
       '🐟 箱網養殖：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
@@ -15428,7 +15507,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
-  updatePlayer(dt); updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
@@ -15545,10 +15624,10 @@ async function cafeOrder(r, price){ const P = $('#orderPanel'); if ((rec.coins |
     g.position.set(s.x + Math.sin(s.face) * 0.85, s.y + 0.67, s.z + Math.cos(s.face) * 0.85); scene.add(g); const t0 = now();
     const tick = () => { const a = now() - t0; if (a > 7 || !mySeat){ scene.remove(g); return; } if (a > 1.2){ const k = Math.max(0.05, 1 - (a - 1.2) / 5); fd.scale.set(1.3 * k, 0.5 * k, 0.9 * k); } if (a > 1.2 && Math.floor(a * 2) !== Math.floor((a - 0.05) * 2)) me.say('😋', 'emote', 1); requestAnimationFrame(tick); }; tick(); }
   toast(`點了 ${rc.icon} <b>${esc(rc.name)}</b>：接下來 ${bf.casts} 次拋竿 ${esc(bf.txt)}`); }
-function ui3Init(){ if (!UI3.on) return; document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet();
+function ui3Init(){ if (!UI3.on) return; document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
-  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
+  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
   (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); } catch(e){} requestAnimationFrame(loop); })(); }
 /* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
 function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
