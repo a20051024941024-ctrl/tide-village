@@ -614,7 +614,7 @@ const FIN_MOVE = 'float fph = dot(modelMatrix[3].xz, vec2(1.7, 2.3)); float ft =
   + ' float fdor = (1.0 - fside) * step(-0.48, position.x); transformed.z += sin(ft * 5.0 + position.x * 18.0) * max(0.0, abs(position.y) - 0.1) * 0.16 * fdor;'
   + ' float ftl = smoothstep(-0.5, -0.78, position.x); transformed.z += sin(uFishT * 9.0 + position.x * 5.0 - 1.4) * 0.03 * ftl;';
 const FISH_MOVES = {
-  side: 'float wk = clamp((-position.x - 0.05) / 0.75, 0.0, 1.0);\n transformed.z += sin(uFishT * 9.0 + position.x * 5.0) * 0.12 * wk * wk;',
+  side: 'float wk = clamp((0.45 - position.x) / 0.9, 0.0, 1.0);\n transformed.z += sin(uFishT * 9.0 + position.x * 5.0) * 0.13 * (0.035 + 0.13 * wk + 0.835 * wk * wk);',   /* v448 整條身體一波一波擺（頭輕輕反向帶一下、中段跟著彎、尾巴最大），以前只有後半段搖 */
   vert: 'float wk = clamp((-position.x - 0.1) / 0.7, 0.0, 1.0);\n transformed.y += sin(uFishT * 4.0 + position.x * 3.0) * 0.1 * wk * wk;',
   flap: 'float wk = clamp((abs(position.y) - 0.45) / 0.5, 0.0, 1.0);\n transformed.z += sin(uFishT * 2.6) * 0.16 * wk * sign(position.y);',
   eel:  'float wk = clamp((0.6 - position.x) / 1.3, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 7.0) * 0.07 * (0.25 + wk);',
@@ -661,6 +661,7 @@ function fishMat(id, part, color, glow, move, shape){
     }
   };
   m.customProgramCacheKey = () => 'fish-' + move + (body ? 'b' : '') + (scaly ? 's' : '') + (CLASSIC ? 'c' : '');
+  if (move === 'side' || move === 'eel' || move === 'marlin' || move === 'vert' || move === 'blob') m.userData.fmv = move === 'vert' ? 'vert' : 'side';   /* v448 這種魚的身體可以再加上掙扎的彎曲 */
   return (fishMatCache[key] = m);
 }
 function makeModelFish(f, scale){
@@ -682,35 +683,37 @@ function fishHat(fish, kind){ fish.updateMatrixWorld(true); const s = fish.scale
     const pom = new THREE.Mesh(new THREE.SphereGeometry(H * 0.065, 10, 8), wm); pom.position.y = H * 0.43; piv.add(pom); hat.add(new THREE.Mesh(new THREE.CylinderGeometry(H * 0.2, H * 0.21, H * 0.09, 14), wm));
     hat.position.set(fx - Math.min(L * 0.17, H * 0.6), top - H * 0.2, 0); hat.rotation.z = -0.35; hat.traverse(o => { if (o.isMesh) o.castShadow = true; }); fish.add(hat); }
   return fish; }
-/* ============ v447 寫實的魚（釣上來那一刻） ============
-   玩家說「釣幾條就膩」。作者看到日本開發者公開的魚模型包（ガチ釣りシミュレーターVR 的 Fish Kit，CC0，可商用、不用標示）：
-   20 種魚，照真魚的照片做的，有游泳、掙扎、離水、上岸等 10 種動作（動作在著色器裡算，不是骨架動畫）。
-   用法：卡通的世界、寫實的魚。只有「對得上的魚種」在三個地方換成寫實會動的魚：從水裡拉上來的那條、捧在手上的那條、漁獲卡片上的圖。
-   水裡游的、魚缸、圖鑑、市場還是原本的樣子。變種（黃金、白化）也維持原本的模型。
-   模型在魚咬餌的時候才下載那一種（約 0.3MB），沒下載完就用原本的模型，不會卡住。網址加 #rfish=0 可以關掉。
-   檔案在 models/fishkit/（fish-kit.js 是原作者的程式，沒有改）。 */
-const RFISH = { mackerel: 'saba', horsemack: 'aji', scorpion: 'kasago', hairtail: 'tachiuo', barracuda: 'kamasu', yellowtail: 'buri', amberjack: 'hiramasa', anchovy: 'katakuchi', grunt: 'isaki', blackbream: 'kurodai', blackgirella: 'kuchibuto' };
-const RF = { K: null, p: null, ok: {}, want: {}, live: [], card: null, cardT: 0, off: /rfish=0/.test(location.hash) };
-function rfId(f){ return (!RF.off && f && !f.hat && !f.of && RFISH[f.id]) || null; }
-function rfPre(f){ const k = rfId(f); if (!k || RF.ok[k] || RF.want[k]) return; RF.want[k] = true;
-  (RF.p = RF.p || import('../models/fishkit/fish-kit.js').then(K => (RF.K = K))).then(K => K.loadFish('models/fishkit/fish/', [k])).then(() => { RF.ok[k] = true; }).catch(e => { console.warn('rfish', e); RF.want[k] = false; if (!RF.K) RF.p = null; }); }
-/* 做一條寫實的魚（len＝畫面上的長度，公尺）。還沒下載好就回 null，呼叫的人改用原本的模型 */
-function rfMake(f, len, motion, side){ const k = rfId(f); if (!k) return null; if (!RF.ok[k] || !RF.K){ rfPre(f); return null; }
-  try { const a = RF.K.createFish(k, Math.max(6, Math.round(len * 100))); a.setMotion(motion || 'air'); const h = new THREE.Group(); if (side) a.object.rotation.y = -Math.PI / 2; h.add(a.object); h.userData.dyn = true; h.userData.keep = true; h.traverse(o => { if (o.isMesh) o.castShadow = false; }); RF.live.push({ a, h, t: now() }); return h; } catch(e){ console.warn('rfish make', e); return null; } }
-function rfTick(dt){ for (let i = RF.live.length - 1; i >= 0; i--){ const L = RF.live[i]; let p = L.h, on = false; while (p){ if (p === scene){ on = true; break; } p = p.parent; }
-    if (!on){ if (now() - L.t > 1.5){ try { L.a.dispose(); } catch(e){} RF.live.splice(i, 1); } continue; } L.t = now(); try { L.a.update(Math.min(dt, 0.05)); } catch(e){} } }
-/* 漁獲卡片：用主畫面的繪圖器把魚畫到一張小圖上，再貼到卡片的畫布（一秒 12 張，魚在卡片上游）。低畫質只畫一張 */
-function rfCardStop(){ if (RF.cardT){ clearInterval(RF.cardT); RF.cardT = 0; } const C = RF.card; if (C && C.a){ try { C.sc.remove(C.a.object); C.a.dispose(); } catch(e){} C.a = null; } }
-function rfCard(f, cv){ rfCardStop(); const k = rfId(f); if (!k || !RF.ok[k] || !RF.K || !cv) return false;
-  try { const W = 440, H = 280, C = RF.card || (RF.card = (() => { const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#9fc0d0', 1.9)); const d = new THREE.DirectionalLight('#fff6e6', 2.4); d.position.set(1.2, 3, 3); sc.add(d);
-        const rt = new THREE.WebGLRenderTarget(W, H); rt.texture.colorSpace = THREE.SRGBColorSpace; const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H; return { sc, cam: new THREE.PerspectiveCamera(24, W / H, 0.01, 30), rt, buf: new Uint8Array(W * H * 4), tmp, img: null, col: new THREE.Color() }; })());
-    const L = 0.4, a = RF.K.createFish(k, 40); a.setMotion('swim'); a.object.rotation.y = -Math.PI / 2; C.sc.add(a.object); C.a = a; C.cam.position.set(0, 0.012, (L * 0.62) / Math.tan(THREE.MathUtils.degToRad(12) * (W / H))); C.cam.lookAt(0, 0, 0);
-    const ctx = cv.getContext('2d'), tctx = C.tmp.getContext('2d'); C.img = C.img || tctx.createImageData(W, H);
-    const draw = dt => { a.update(dt); const a0 = renderer.getClearAlpha(); renderer.getClearColor(C.col); renderer.setClearColor(0x000000, 0); renderer.setRenderTarget(C.rt); renderer.clear(); renderer.render(C.sc, C.cam); renderer.readRenderTargetPixels(C.rt, 0, 0, W, H, C.buf); renderer.setRenderTarget(null); renderer.setClearColor(C.col, a0);
-      const D = C.img.data, row = W * 4; for (let y = 0; y < H; y++) D.set(C.buf.subarray((H - 1 - y) * row, (H - y) * row), y * row); tctx.putImageData(C.img, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(C.tmp, 0, 0, cv.width, cv.height); };
-    for (let i = 0; i < 12; i++) a.update(1 / 30); draw(1 / 30);
-    if (Quality.tier !== 'low') RF.cardT = setInterval(() => { const cc = $('#catchCard'); if (!cc || cc.hidden || C.a !== a){ if (C.a === a) rfCardStop(); return; } try { draw(1 / 12); } catch(e){ rfCardStop(); } }, 83);
-    return true; } catch(e){ console.warn('rfish card', e); rfCardStop(); return false; } }
+/* ============ v448 魚的動作（借用 Fish Kit 的做法，魚還是我們自己的） ============
+   v447 把 11 種魚換成寫實模型，作者試了以後決定「不換魚，只要牠的動作」——卡通世界配寫實的魚不搭。v447 整個撤掉。
+   Fish Kit（ガチ釣りシミュレーターVR，CC0）動作好看的原因有兩個，這裡照同樣的想法做在我們的魚上：
+   ① 游泳是「整條身體一波一波擺」，不是只有尾巴搖 → 所有魚平常游泳的擺動改成從頭到尾的波（FISH_MOVES 的 side）。
+   ② 動作有節奏：猛甩一陣、停一下、再甩 → 吊在線上（air）和捧在手上（hand）加了這種一陣一陣的掙扎。
+   做法：這條魚的材質複製一份，多一個 uMv（力道、相位、彎曲）在頂點著色器裡把身體彎成波和 C 形；整條魚的轉動、晃動用群組的旋轉做。
+   不是用 shader 畫的魚（最簡單的那種、外部模型）只有整條魚的轉動和晃動，身體不會彎。魚離開畫面 1.5 秒後把複製的材質丟掉。 */
+const FishActs = [];
+const FISH_MV = `{ float ms = clamp((0.45 - position.x) / 0.9, 0.0, 1.0); float mq = 0.06 + 0.2 * ms + 0.9 * ms * ms;
+  float md = uMv.x * mq * 0.105 * sin(uMv.y - ms * 4.0) + uMv.z * (ms * ms - 0.18) * 0.27;
+  #ifdef FISH_MV_VERT
+  transformed.y += md;
+  #else
+  transformed.z += md;
+  #endif
+}
+`;
+function fishAct(model, kind){ if (CLASSIC || !model) return null; const U = { value: new THREE.Vector4(0, 0, 0, 0) }, mats = [];
+  model.traverse(o => { if (!o.isMesh || !o.material || !o.material.userData || !o.material.userData.fmv) return; const m0 = o.material, mv = m0.userData.fmv, m2 = m0.clone(); m2.userData = Object.assign({}, m0.userData);
+    m2.onBeforeCompile = sh => { m0.onBeforeCompile(sh); sh.uniforms.uMv = U; sh.vertexShader = 'uniform vec4 uMv;\n' + (mv === 'vert' ? '#define FISH_MV_VERT\n' : '') + sh.vertexShader.replace('#include <project_vertex>', FISH_MV + '#include <project_vertex>'); };
+    m2.customProgramCacheKey = () => m0.customProgramCacheKey() + '-mv' + mv; o.material = m2; mats.push(m2); });
+  const A = { m: model, U, mats, kind, t: 0, ph: Math.random() * 6.28, seen: now(), burst: kind === 'air' ? 0.5 : 0, next: kind === 'air' ? 0 : 0.9 + Math.random() * 1.2, dir: 1, by: model.position.y, tw: 0 }; FishActs.push(A); return A; }
+function fishActTick(dt){ dt = Math.min(dt, 0.05); for (let i = FishActs.length - 1; i >= 0; i--){ const A = FishActs[i], m = A.m; let p = m, on = false; while (p){ if (p === scene){ on = true; break; } p = p.parent; }
+    if (!on){ if (now() - A.seen > 1.5){ for (const q of A.mats){ try { q.dispose(); } catch(e){} } FishActs.splice(i, 1); } continue; } A.seen = now(); A.t += dt;
+    /* 一陣一陣：burst 是這一陣還剩幾秒，next 是離下一陣還有幾秒 */
+    if (A.burst > 0) A.burst -= dt; else { A.next -= dt; if (A.next <= 0){ A.burst = A.kind === 'air' ? 0.38 + Math.random() * 0.25 : 0.4 + Math.random() * 0.3; A.next = A.kind === 'air' ? 0.16 + Math.random() * 0.22 : 1.5 + Math.random() * 2.2; A.dir = -A.dir; } }
+    const on2 = A.burst > 0 ? 1 : 0, k = A.k = (A.k || 0) + (on2 - (A.k || 0)) * Math.min(1, dt * (on2 ? 18 : 7));   /* k：0 休息 → 1 猛甩 */
+    A.ph += dt * (A.kind === 'air' ? 9 + 22 * k : 3 + 24 * k);
+    A.U.value.set((A.kind === 'air' ? 0.7 : 0.18) + 2.4 * k, A.ph, Math.sin(A.ph * 0.5) * k * (A.kind === 'air' ? 1.15 : 0.9), 0);
+    if (A.kind === 'air'){ A.tw += dt * (1.2 + 9 * k) * A.dir; m.rotation.set(Math.sin(A.t * 3.1 + A.ph * 0.1) * 0.16, A.tw, Math.PI / 2 * 0.9 + Math.sin(A.t * 5.3) * 0.1 + Math.sin(A.ph) * 0.22 * k); }
+    else { m.rotation.z = Math.sin(A.ph) * 0.2 * k; m.rotation.x = Math.sin(A.ph * 0.5) * 0.12 * k; m.position.y = A.by + Math.abs(Math.sin(A.ph * 0.5)) * 0.06 * k; } } }
 function fishModel(f, scale){
   if (f.hat){ const f2 = Object.assign({}, f); delete f2.hat; return fishHat(fishModel(f2, scale), f.hat); }
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
@@ -3781,9 +3784,9 @@ class Fisher {
   holdFish(f, w, secs){
     const a = this.av; if (this.held) a.g.remove(this.held.o);
     // 像拍釣魚紀念照一樣，雙手把魚捧在胸前
-    const sc = fishShowScale(w), o = new THREE.Group(), m = rfMake(f, 1.1 * sc, 'hover', true) || fishModel(f, sc);   /* v258 手上的魚照實際重量決定大小（跟從水裡飛上來的那條一樣大），大魚不會一到手上就變小 */
+    const sc = fishShowScale(w), o = new THREE.Group(), m = fishModel(f, sc);   /* v258 手上的魚照實際重量決定大小（跟從水裡飛上來的那條一樣大），大魚不會一到手上就變小 */
     const y = (a.kid ? 0.8 : 0.98) + Math.max(0, sc - 0.9) * 0.12; o.position.set(0, y, (a.kid ? 0.42 : 0.48) + Math.max(0, sc - 0.6) * 0.12); o.add(m); a.g.add(o);
-    this.held = { o, y, z: o.position.z, until: now() + (secs || 6) };
+    this.held = { o, y, z: o.position.z, until: now() + (secs || 6) }; try { fishAct(m, 'hand'); } catch(e){}   /* v448 捧在手上的魚偶爾會猛甩幾下 */
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
   dispose(){ if (this.pet){ petFree(this.pet); this.pet = null; } KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
@@ -5215,7 +5218,6 @@ function updateFishing(dt, t){
       // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
       if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; F.sex = F.roll.sex; F.brood = F.roll.brood; F.gp = F.roll.gp; F.rsTag = F.roll.rs; F.rsEscAt = F.rsTag && rsInfo(F.rsTag).esc ? rand(0.45, 0.85) : 0; }
       else { F.fish = F.pre || pickFish(F.spot, F.castCharge); const wild = breedSeason() && WILD_BREED.has(F.fish.id); F.weight = +(F.fish.min + (F.fish.max - F.fish.min) * Math.pow(Math.random(), wild ? 2.4 : 1.7)).toFixed(2); F.sex = Math.random() < 0.5 ? 'M' : 'F'; F.brood = F.sex === 'F' && wild && BROOD.has(F.fish.id) && Math.random() < 0.3; F.gp = isGuppy(F.fish.id) ? gpyWild() : null; }
-      try { rfPre(F.fish); } catch(e){}
       F.phase = 'bite'; F.biteAt = t; F.drift = 0;
       if (F.spot && F.spot.id === 'shrimp'){ F.biteUntil = t + (F.fish.rarity === '傳說' ? 1.5 : F.fish.rarity === '稀有' ? 1.7 : 1.9) + curSrod().win; ripple(me.bobPos.x, me.bobPos.z); }   // 釣蝦場：沒有「!」，浮標會慢慢沉下去
       else { rareBurst(); F.biteUntil = t + (F.fish.rarity === '傳說' ? 0.8 : F.fish.rarity === '稀有' ? 0.95 : 1.15); me.say(starsOf(F.fish) >= 2 ? `！${F.fish.name}` : '!', 'alert', 1);   /* v287 兩顆星：咬餌時認得出是什麼魚 */ SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true);
@@ -5434,9 +5436,9 @@ function landFish(){
   F.phase = 'landing'; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2; buzz(F.fish && F.fish.rarity === '傳說' ? [60, 40, 60, 40, 220] : F.fish && F.fish.rarity === '稀有' ? [50, 40, 120] : 45);
   const f = F.fish, w = F.weight;
   const from = me.bobPos.clone(); from.y = 0.1;
-  const fm = rfMake(f, 1.1 * fishShowScale(w), 'air') || fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm);   /* v447 對得上的魚種：寫實的魚吊在線上掙扎著被拉上來 */
+  const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm); const fmAct = fishAct(fm, 'air');   /* v448 吊在線上：頭朝上、整條身體猛甩 */
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
-  jumpers.push({ m: fm, from, to, t: 0, end: 0.92 });
+  jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
   setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, 900);
 }
@@ -5447,7 +5449,7 @@ function updateJumpers(dt, t){
     const k = Math.min(1, j.t / 0.9);
     j.m.position.lerpVectors(j.from, j.to, k); j.m.position.y += Math.sin(k*Math.PI) * (j.net ? 0.3 : 1.6);
     if (j.net){ const p = j.m.userData.pole, dx = me.pos.x - j.m.position.x, dy = me.pos.y + 1.3 - j.m.position.y, dz = me.pos.z - j.m.position.z, L = Math.hypot(dx, dy, dz) || 1; p.scale.y = L; p.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / L, dy / L, dz / L)); }
-    else { j.m.rotation.z = Math.sin(t*14) * 0.4; j.m.rotation.y += dt * 4; }
+    else if (!j.act){ j.m.rotation.z = Math.sin(t*14) * 0.4; j.m.rotation.y += dt * 4; }
     if (j.t > (j.end || 2.6)){ scene.remove(j.m); jumpers.splice(i, 1); }   /* end：落到手上就收掉（手上會換成 holdFish 的魚） */
   }
 }
@@ -12157,7 +12159,7 @@ function renderBag(body){
 /* ================= CATCH CARD ================= */
 function showCatch(f, w, res){
   const gx = isGuppy(f.id) && F.gp ? gpyFish({ f: f.id, gp: F.gp, s: F.sex }) : null;
-  drawFish($('#ccCanvas'), (gx || f).color, true, (gx || f).id); try { if (!gx) rfCard(f, $('#ccCanvas')); } catch(e){}
+  drawFish($('#ccCanvas'), (gx || f).color, true, (gx || f).id);
   const b = $('#ccBadges'); b.textContent = '';
   const chip = document.createElement('span'); chip.className = 'chip r-' + f.rarity; chip.textContent = f.rarity + '・' + SPOT_BY_ID[f.spot].label; b.appendChild(chip);
   if (F.sex){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = F.sex === 'M' ? '♂ 公' : '♀ 母'; b.appendChild(x); }
@@ -14587,7 +14589,7 @@ function renderTab(){
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
       '🌧️ 下雨和暴風雨的時候，外面的村民會自己穿上雨衣、雨帽和雨靴，雨停了就脫掉。村長、阿綾、阿木、阿福下雨不散步、不釣魚，會去涼亭或食堂躲雨、或回家休息（老港例外，他下雨也要釣）。大家看到的都一樣。',
-      '🐟 寫實的魚：竹莢魚、沙灘小鯖、條紋石狗公、白帶魚、銀刀梭子魚、青甘鰺、紅甘、丁香魚、黃雞魚、黑鯛、黑毛這 11 種，釣上來的那一刻會變成照真魚做的樣子 —— 吊在線上掙扎、捧在手上鰓會動，漁獲卡片上的魚也會游。水裡游的、魚缸和圖鑑還是原本的畫法；黃金、白化這些變種也是。',
+      '🐟 魚的動作：魚游泳的時候整條身體會一波一波地擺。釣上來的那一刻，魚會頭朝上吊在線上猛甩；捧在手上也會突然掙扎幾下。',
       '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，海浪會把它慢慢推回岸邊。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
       '🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。',
       '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
@@ -15779,7 +15781,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
-  updatePlayer(dt); try { bikeTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (RF.live.length) rfTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }

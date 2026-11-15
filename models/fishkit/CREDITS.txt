@@ -1,6 +1,0 @@
-models/fishkit/ 裡的魚模型、照片和 fish-kit.js 來自：
-
-Fish Kit（ガチ釣りシミュレーターVR 的魚模型）
-展示頁：https://cda-social.github.io/fish/gallery.html
-授權：CC0 1.0（公眾領域）。可以修改、轉發、商用，不需要許可、不需要標示作者。原文見同資料夾的 LICENSE.txt。
-fish-kit.js 沒有修改。雖然不需要標示，這裡還是記下來源，感謝原作者。
