@@ -1005,12 +1005,33 @@ const KAYAK_SIT = -0.17;
 function kayakRest(g){ const pd = g.userData.paddle; if (!pd) return; pd.position.set(0.25, 0.215, 0.3); pd.rotation.set(0, Math.PI / 2 - 0.05, 0); pd.userData.rest = true; }
 /* 沒人坐的船，槳放回船上 */
 function kayakTick(dt){
+  if (!myBoat && KJ.diagEl && KJ.diagEl.style.display !== 'none') KJ.diagEl.style.display = 'none';
   for (const b of boats){ const pd = b.m.userData.paddle; if (!pd) continue;
     if (b === myBoat){ if ((pd.userData.useAt || 0) < frameNo - 1) kayakDrive(me, b.m, dt); }   /* v454 保險：就算角色那邊的動作層沒跑到（出錯、被關掉、角色還沒載好），槳還是會划 */
     else if (!pd.userData.rest && (pd.userData.useAt || 0) < frameNo - 2) kayakRest(b.m); }
   for (const p of peers.values()){ const f = p.fisher, bm = f && f.boatMesh, pd = bm && bm.userData.paddle; if (pd && (pd.userData.useAt || 0) < frameNo - 1) kayakDrive(f, bm, dt); } }
+/* v459 划槳診斷：在船上的時候，畫面左下角一行小灰字，寫著各段程式有沒有跑到。兩位玩家的手機上都沒有划槳動作，我這邊卻重現不出來，
+   需要玩家截圖給我看這一行。問題解決後這行會拿掉。 */
+function kayakDiag(){ if (frameNo % 20) return; let el0 = document.getElementById('kyDiag');
+  if (!el0){ el0 = document.createElement('div'); el0.id = 'kyDiag'; el0.style.cssText = 'position:fixed;left:6px;bottom:2px;z-index:99999;color:#fff;background:rgba(0,0,0,.45);font:10px/1.3 monospace;padding:1px 5px;border-radius:5px;pointer-events:none;max-width:96vw;white-space:nowrap;overflow:hidden'; document.body.appendChild(el0); KJ.diagEl = el0; }
+  const a = me.av, K = a.kid, pd = myBoat.m.userData.paddle; let d = -1; try { if (K && pd){ const h = K.B.handl.getWorldPosition(new THREE.Vector3()); pd.worldToLocal(h); d = Math.hypot(Math.abs(h.x) - 0.24, h.y, h.z); } } catch(e){}
+  const ago = v => v == null ? 'x' : Math.min(9, frameNo - v);
+  el0.style.display = ''; el0.textContent = `槳診斷 v459 K${K ? 1 : 0}${KID.ok ? 1 : 0}${KID.failed ? 1 : 0} S${me.sitting ? 1 : 0}${me.swim ? 1 : 0}${Bike.on ? 1 : 0}${KJ.off ? 1 : 0} R${pd && pd.userData.rest ? 1 : 0} ub${ago(KJ.ub)} dj${ago(KJ.dj)} ml${ago(KJ.ml)} ik:${KJ.ikR} D${d.toFixed(2)} v${(OW.boatSpd || 0).toFixed(1)} pk${((me.kj && me.kj.pk) || 0).toFixed(1)} py${pd ? pd.position.y.toFixed(2) : '-'} ${(KJ.err || KJ.err2 || '').replace(/\s+/g, ' ').slice(0, 70)}`; }
+/* v459 握槳的姿勢獨立成一個函式：腳往前踩在船上、兩手握在槳上。原本藏在「走路彈性」那層裡面，玩家手機上那一層沒有作用（原因還沒找到），
+   所以改成主迴圈在角色更新完之後自己再呼叫一次——同一格已經做過就跳過。動到的骨頭照 kidJuice 的做法先記下來，下一格骨架動畫前還原。 */
+function kayakIK(f, kbm){ const a = f.av, K = a && a.kid, pd = kbm && kbm.userData.paddle; if (!pd) return 'nopd'; if (!K || !K.B || !K.B.hips) return 'nokid'; if (K.ikAt === frameNo) return 'done';
+  const B = K.B, J = f.kj || (f.kj = { sq: 0, st: 0, ped: 0, up: 0, by: 0 }), pk = J.pk || 0, cs = Math.cos(J.pp || 0);
+  if (!K.kjB){ K.kjB = ['hips', 'spine', 'chest', 'head', 'upperlegl', 'upperlegr', 'lowerlegl', 'lowerlegr', 'upperarml', 'upperarmr', 'lowerarml', 'lowerarmr'].map(k => B[k]).filter(Boolean); K.kjQ = K.kjB.map(() => new THREE.Quaternion()); }
+  if (!K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjQ[i].copy(K.kjB[i].quaternion); K.kjOn = true; }
+  B.spine.rotateX(0.1 + 0.06 * pk); B.chest.rotateY(-cs * 0.22 * pk); B.head.rotateX(-0.08);
+  a.g.updateMatrixWorld(true); kbm.updateMatrixWorld(true);
+  for (const sd of ['l', 'r']){ const up = B['upperleg' + sd], side = Math.sign(_kjV.copy(up.getWorldPosition(_kjA)) && a.g.worldToLocal(_kjV).x) || (sd === 'l' ? 1 : -1), sx = side > 0 ? 1 : -1;
+    _kjT.set(sx * 0.15, 0.225, 0.03); kbm.localToWorld(_kjT); _kjP.set(sx * 0.2, 1.4, -0.15); kbm.localToWorld(_kjP);
+    kidIK(up, B['lowerleg' + sd], B['foot' + sd], _kjT, _kjP);
+    if (!f.fishing){ const ua = B['upperarm' + sd]; _kjT.set(sx * 0.24, 0, 0); pd.localToWorld(_kjT); _kjP.set(sx * 0.6, -0.3, 0); kbm.localToWorld(_kjP); kidIK(ua, B['lowerarm' + sd], B['hand' + sd], _kjT, _kjP); } }
+  K.ikAt = frameNo; return 'ok'; }
 /* 槳怎麼動（跟角色用哪一種身體無關）：有在前進就左右輪流划——下水的那一邊由前往後拉；停下來槳橫放在腿上 */
-function kayakDrive(f, bm, dt){ const pd = bm.userData.paddle, J = f.kj || (f.kj = { sq: 0, st: 0, ped: 0, up: 0, by: 0 });
+function kayakDrive(f, bm, dt){ const pd = bm.userData.paddle, J = f.kj || (f.kj = { sq: 0, st: 0, ped: 0, up: 0, by: 0 }); if (pd.userData.useAt === frameNo) return pd;
   const spd = f === me ? (OW.boatSpd || 0) : (f.speed || 0), row = spd > 0.3 && !f.fishing; J.pk = (J.pk || 0) + ((row ? 1 : 0) - (J.pk || 0)) * Math.min(1, dt * 5); if (row) J.pp = (J.pp || 0) + dt * (3.4 + Math.min(spd, 9) * 0.3);
   const pk = J.pk, pp = J.pp || 0; pd.position.set(0, 0.5 + 0.14 * pk, 0.02); pd.rotation.set(0, -Math.cos(pp) * 0.38 * pk, -Math.sin(pp) * 0.58 * pk); pd.userData.rest = false; pd.userData.useAt = frameNo; return pd; }
 // 從某個位置朝某個方向，找離 dist 最近、夠深的水面點
@@ -3776,13 +3797,7 @@ function kidJuice(f, dt, t, P){ const a = f.av, K = a.kid, B = K.B, w = K.w, ac 
   const kbm = f === me ? (myBoat && !Dive.on ? myBoat.m : null) : f.boatMesh, pd = kbm && kbm.userData.paddle;   /* v454 只看「人在不在船上」，不再多看坐下的記號（玩家截圖：人站在船上、槳躺著沒動） */
   if (pd){
     /* v453 平台舟：腳往前伸踩在船上、兩手握著雙頭槳左右輪流划（槳葉下水的那一邊由前往後拉），沒在划的時候槳橫放在腿上；釣魚時手放開去拿釣竿 */
-    kayakDrive(f, kbm, dt); const pk = J.pk, pp = J.pp || 0, cs = Math.cos(pp);
-    B.spine.rotateX(0.1 + 0.06 * pk); B.chest.rotateY(-cs * 0.22 * pk); B.head.rotateX(-0.08);
-    a.g.position.y = f.baseY; a.g.updateMatrixWorld(true); kbm.updateMatrixWorld(true);
-    for (const sd of ['l', 'r']){ const up = B['upperleg' + sd], side = Math.sign(_kjV.copy(up.getWorldPosition(_kjA)) && a.g.worldToLocal(_kjV).x) || (sd === 'l' ? 1 : -1), sx = side > 0 ? 1 : -1;
-      _kjT.set(sx * 0.15, 0.225, 0.03); kbm.localToWorld(_kjT); _kjP.set(sx * 0.2, 1.4, -0.15); kbm.localToWorld(_kjP);
-      kidIK(up, B['lowerleg' + sd], B['foot' + sd], _kjT, _kjP);
-      if (!f.fishing){ const ua = B['upperarm' + sd]; _kjT.set(sx * 0.24, 0, 0); pd.localToWorld(_kjT); _kjP.set(sx * 0.6, -0.3, 0); kbm.localToWorld(_kjP); kidIK(ua, B['lowerarm' + sd], B['hand' + sd], _kjT, _kjP); } }
+    KJ.dj = frameNo; kayakDrive(f, kbm, dt); a.g.position.y = f.baseY; kayakIK(f, kbm);
   } else if (onBike && !f.swim){
     const bsp = f === me ? Bike.sp : (f.speed || 0), push = f === me ? joyMag() > 0.08 : bsp > 0.5, n = Math.min(1, bsp / 7);
     if (f === me && Bike.g && Bike.g.userData.crank) J.ped = Bike.g.userData.crank.rotation.x; else if (push) J.ped += Math.min(bsp, 6) * dt * 1.3;
@@ -4521,16 +4536,7 @@ function updateBoat(dt, ix, iz, L, locked){
   me.baseY += wh; OW.boatSpd = speed; OW.still = speed > 0.2 ? 0 : (OW.still || 0) + dt;
   myBoat.m.position.set(me.pos.x, WATER_LEVEL + bob + wh, me.pos.z); myBoat.m.rotation.set(Math.sin(t * 1.1) * 0.02 - wp, me.rot, Math.sin(t * 1.3) * 0.03 + wr);
   if (frameNo % 10 === 0) sailCompass();
-  /* v455 划槳自我檢查：玩家兩次回報「沒有拿著槳划」，但我這邊重現不出來。划了一陣子之後檢查一次：角色是不是正式骨架、手有沒有真的在槳上、動作層有沒有出錯。
-     不正常就先試著把角色重新換成正式骨架，還是不行就跳一行診斷字，請玩家截圖（只跳一次）。 */
-  if (speed > 0.3 && frameNo % 90 === 0 && !KJ.diag){ try {
-    const a = me.av, pd = myBoat.m.userData.paddle; let d = -1, up = '';
-    if (!a.kid && KID.ok){ try { kidUpgrade(me); } catch(e){ up = String(e && e.message || e).slice(0, 60); } }
-    if (a.kid && pd){ const h = a.kid.B.handl.getWorldPosition(new THREE.Vector3()); pd.worldToLocal(h); d = Math.hypot(Math.abs(h.x) - 0.24, h.y, h.z); }
-    KJ.diagN = (KJ.diagN || 0) + 1;
-    if (KJ.diagN >= 2 && (d < 0 || d > 0.12 || KJ.err)){ KJ.diag = `K${a.kid ? 1 : 0}${KID.ok ? 1 : 0}${KID.failed ? 1 : 0} S${me.sitting ? 1 : 0}${me.swim ? 1 : 0}${Bike.on ? 1 : 0}${KJ.off ? 1 : 0} D${d.toFixed(2)} F${me.fishing ? 1 : 0}${F.phase} ${up} ${(KJ.err || '').slice(0, 90)}`;
-      const el0 = document.createElement('div'); el0.style.cssText = 'position:fixed;left:8px;right:8px;top:40%;z-index:99999;background:#fff;color:#c00;font:14px/1.4 monospace;padding:8px;border-radius:8px;word-break:break-all'; el0.textContent = '🛠 划槳診斷（請截圖給作者，點一下關掉）：' + KJ.diag; el0.onclick = () => el0.remove(); document.body.appendChild(el0); }
-  } catch(e){} }
+  if (myBoat.m.userData.paddle){ KJ.ub = frameNo; kayakDrive(me, myBoat.m, dt); }   /* v459 槳直接在「船的更新」裡動，這一段確定每一格都會跑（船會前進就是它在跑） */
   const oar = myBoat.m.userData.oars; if (oar){ const k = speed > 0.3 ? Math.sin(t * 6) * 0.6 : 0; oar[0].rotation.y = k; oar[1].rotation.y = -k; }
 }
 $('#boatBtn').addEventListener('click', () => { ensureAudio(); if (myBoat) leaveBoat(); else { const b = nearBoat(); if (b) boardBoat(b); } });
@@ -12862,7 +12868,7 @@ function updatePeers(dt, t){
       if (f.hookM){ const b = f.bobPos, m = f.hookM; if (f.hookJ <= 0 && Math.random() < dt * 0.35){ f.hookJ = 1; ripple(b.x, b.z, true); } f.hookJ = Math.max(0, f.hookJ - dt * 1.6);
         const jy = Math.sin(f.hookJ * Math.PI) * 0.7; m.position.set(b.x + Math.sin(t * 3.1) * 0.25, WATER_LEVEL - 0.12 + jy + Math.sin(t * 9) * 0.03, b.z + Math.cos(t * 2.7) * 0.25); m.rotation.y = Math.atan2(f.pos.x - b.x, f.pos.z - b.z) - Math.PI / 2 + Math.sin(t * 6) * 0.5; m.rotation.z = Math.sin(t * 11) * 0.3 + (f.hookJ > 0 ? Math.sin(f.hookJ * 6) * 0.6 : 0);
         if (Math.random() < dt * 3) ripple(b.x + (Math.random() - 0.5) * 0.5, b.z + (Math.random() - 0.5) * 0.5); } }
-    f.update(dt, t); f.placeTag();
+    f.update(dt, t); if (f.boatMesh){ try { kayakDrive(f, f.boatMesh, dt); if (f.av.g.visible) kayakIK(f, f.boatMesh); } catch(e){} } f.placeTag();
   }
 }
 
@@ -16030,7 +16036,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
-  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { kayakDiag(); } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
