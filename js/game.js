@@ -10334,16 +10334,16 @@ const DIVE_BY_ID = Object.fromEntries(DIVE_GEAR.map(g => [g.id, g]));
 var Dive = { on:false, up:false, down:false, o2:0, o2max:60, group:null, fish:[], schools:[], loot:[], kelp:null, bubbles:null, shafts:[], seen:new Set(), back:null, warned:0 };
 function hasDive(id){ return (rec.dive || []).includes(id); }
 function diveO2(){ let o = 0; for (const g of DIVE_GEAR) if (g.o2 && hasDive(g.id)) o = Math.max(o, g.o2); return o; }
-/* v466 玩家給了一個開放原始碼的海底世界（Abyssal Garden，MIT 授權，作者 Maksymilian Dendura）問「潛水能不能做成這樣」。
-   那個作品是用 WebGPU 畫兩百萬片葉子，便宜手機只有 20 張／秒，不能照搬；這裡借它的做法，用我們自己的方式在「港口海底」做一個樣品：
-   ① 水的顏色改成亮的藍綠色、看得更遠，遠的東西融進霧裡 ② 海底和岩石上有會流動的光紋（公式照它的寫法，圈數從 5 減到 3）
-   ③ 一整片高高的海帶森林，跟著水流擺動（擺動公式也是照它的）④ 外圈一圈高大的岩壁、石柱和一座石拱門，當遠景的剪影
+/* v466–v467 玩家看到別人做的海底世界，問「潛水能不能做成這樣」。那個作品用 WebGPU 畫兩百萬片葉子，便宜手機跑不動，所以只學它的感覺，
+   程式全部是自己寫的（v467：光紋和海帶擺動原本參考了它的算式，玩家選擇重寫，現在沒有用到任何別人的程式碼）。先在「港口海底」做樣品：
+   ① 水的顏色改成亮的藍綠色、看得更遠，遠的東西融進霧裡 ② 海底和岩石上有會流動的光紋（幾組正弦波疊起來，取「過零」的地方當亮線，兩層交錯）
+   ③ 一整片高高的海帶森林，跟著水流擺動（兩道斜向的水流波，越高彎越多）④ 外圈一圈高大的岩壁、石柱和一座石拱門，當遠景的剪影
    ⑤ 更多更寬的光柱 ⑥ 水裡漂著金色的小亮點。低畫質：沒有光紋、海帶和亮點減半。岩壁在外圈，只是遠景，游得過去。 */
 function diveCausMat(m){ m.onBeforeCompile = sh => { sh.uniforms.uT = fishTime;
     sh.vertexShader = 'varying vec3 vWP2;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vWP2 = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = 'uniform float uT;\nvarying vec3 vWP2;\nfloat dvCaus(vec2 uv, float t){ vec2 p = uv * 6.2831853; vec2 i = p; float c = 0.0; for (int n = 1; n <= 3; n++){ float tt = t * (1.0 - 3.5 / float(n)); i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x)); float s = sin(i.x + tt), k = cos(i.y + tt); c += abs(s * k) / (1.25 * sqrt(s * s + k * k) + 1e-4); } c = 1.17 - pow(c / 3.0, 1.4); return pow(smoothstep(0.9, 1.15, c), 2.6); }\n'
-      + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(0.5, 0.8, 0.9) * dvCaus(vWP2.xz / 3.4, uT * 0.45 + 23.0) * 0.42;'); };
-  m.customProgramCacheKey = () => 'dvcaus'; m.needsUpdate = true; return m; }
+    sh.fragmentShader = 'uniform float uT;\nvarying vec3 vWP2;\nfloat dvRidge(vec2 p, float t){ vec2 q = p + 0.38 * vec2(sin(p.y * 1.7 + t * 0.6), cos(p.x * 1.3 - t * 0.5)); float v = sin(q.x * 2.1 + t * 0.7) + sin(q.y * 2.4 - t * 0.6) + sin((q.x + q.y) * 1.5 + t * 0.4) + sin((q.x - q.y) * 1.9 - t * 0.5); return pow(clamp(1.0 - abs(v) * 0.5, 0.0, 1.0), 3.2); }\nfloat dvCaus(vec2 p, float t){ return max(dvRidge(p, t), 0.7 * dvRidge(p.yx * 1.9 + 4.3, -t * 1.3)); }\n'
+      + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(0.5, 0.8, 0.9) * dvCaus(vWP2.xz * 0.8, uT * 1.1) * 0.5;'); };
+  m.customProgramCacheKey = () => 'dvcaus2'; m.needsUpdate = true; return m; }
 function diveLook2(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', top = DIVE.top;
   /* 高海帶：一根長帶子兩邊長葉子，照高度擺動 */
   { const parts = [], st = new THREE.PlaneGeometry(0.2, 10, 1, 12); st.translate(0, 5, 0); parts.push(st); { const s2 = st.clone(); s2.rotateY(Math.PI / 2); parts.push(s2); }
@@ -10351,9 +10351,10 @@ function diveLook2(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', t
     const kg = mergeParts(parts); kg.computeVertexNormals();
     const km = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.75, side: THREE.DoubleSide, emissive: '#55741a', emissiveIntensity: 0.6 });
     km.onBeforeCompile = sh => { sh.uniforms.uT = fishTime; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      { vec4 ip = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); float hh = max((instanceMatrix * vec4(0.0, transformed.y, 0.0, 1.0)).y - ip.y, 0.0); float ph = dot(ip.xz, vec2(0.31, 0.17)); float a = 0.03 * pow(hh, 1.25);
-        transformed.xz += a * (vec2(sin(uT * 0.5 + ph + hh * 0.09), cos(uT * 0.37 + ph * 1.3 + hh * 0.07)) + 0.35 * vec2(sin(uT * 1.3 + ph * 3.0 + hh * 0.3), cos(uT * 1.1 + ph * 2.0 + hh * 0.23))); }`); };
-    km.customProgramCacheKey = () => 'dvkelp2';
+      { vec4 ip = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); float hh = max((instanceMatrix * vec4(0.0, transformed.y, 0.0, 1.0)).y - ip.y, 0.0);
+        float k = hh * hh * 0.006 + hh * 0.02, w1 = sin(dot(ip.xz, vec2(0.12, 0.09)) - uT * 0.8), w2 = sin(dot(ip.xz, vec2(-0.07, 0.15)) - uT * 0.55 + hh * 0.25);
+        transformed.x += k * (0.7 * w1 + 0.3 * sin(uT * 1.7 + hh * 0.6 + ip.x)); transformed.z += k * (0.6 * w2 + 0.25 * cos(uT * 1.4 + hh * 0.5 + ip.z)); }`); };
+    km.customProgramCacheKey = () => 'dvkelp3';
     const N = low ? 60 : 150, im = new THREE.InstancedMesh(kg, km, N), d = new THREE.Object3D(), c = new THREE.Color(), cols = ['#9fb53e', '#7fa436', '#b3bb45', '#6c9638', '#c6c04e'];
     for (let i = 0; i < N; i++){ let x, z; if (i % 3){ const cl = i % 7, ca = cl * 0.9 + 0.4, cr = R * (0.28 + (cl % 3) * 0.14); x = X + Math.cos(ca) * cr + (rnd() - 0.5) * 9; z = Z + Math.sin(ca) * cr + (rnd() - 0.5) * 9; } else { const a = rnd() * 6.283, r = R * (0.2 + rnd() * 0.6); x = X + Math.cos(a) * r; z = Z + Math.sin(a) * r; }
       const H = (top - 2) * (0.5 + rnd() * 0.5); d.position.set(x, diveBed(x, z) - 0.1, z); d.rotation.set(0, rnd() * 6.283, 0); d.scale.set(0.8 + rnd() * 0.5, H / 10, 0.8 + rnd() * 0.5); d.updateMatrix(); im.setMatrixAt(i, d.matrix); im.setColorAt(i, c.set(cols[i % cols.length])); }
