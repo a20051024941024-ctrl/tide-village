@@ -977,22 +977,23 @@ function art2Sign(g, text, icon, x, z){ const chars = [...String(text)], n = cha
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, top + 0.15, 8), wood); post.position.set(x, (top + 0.15) / 2, z); post.castShadow = true; post.userData.dyn = true; g.add(post);
   const arm = new THREE.Mesh(new THREE.BoxGeometry(Wd + 0.5, 0.09, 0.09), wood); arm.position.set(x - (Wd + 0.5) / 2 + 0.12, top, z); arm.userData.dyn = true; g.add(arm);
   const pl = new THREE.Mesh(new THREE.PlaneGeometry(Wd, H), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); pl.position.set(x - Wd / 2 - 0.12, top - 0.1 - H / 2, z); pl.userData.dyn = true; g.add(pl); }
-function art2House(x, z, width, rotY, opts){ const sgn = opts.sign || '', pick = /魚市場/.test(sgn) ? ['shop', 1.5] : /釣具/.test(sgn) ? ['f_fishing_cabin', 1.45] : /村長/.test(sgn) ? ['building_2', 0.95] : /服裝|美髮/.test(sgn) ? ['building_3', 1.08] : /畫廊/.test(sgn) ? ['shop', 1.12] : /木工/.test(sgn) ? ['building_1', 0.9]
+function art2House(x, z, width, rotY, opts){ const sgn = opts.sign || '', pick = /魚市場/.test(sgn) ? ['shop', 1.9] : /釣具/.test(sgn) ? ['f_fishing_cabin', 1.45] : /村長/.test(sgn) ? ['building_2', 0.95] : /服裝|美髮/.test(sgn) ? ['building_3', 1.08] : /畫廊/.test(sgn) ? ['shop', 1.12] : /木工/.test(sgn) ? ['building_1', 0.9]
     : [['building_3', 1.02], ['building_1', 0.8], ['shop', 1.05]][Math.abs(Math.round(x * 7 + z * 3)) % 3];
   const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = rotY || 0; g.userData.keep = true; g.userData.dyn = true; const fz = 1.25, W = width;
-  art2Add(g, pick[0], { s: pick[1], front: fz + 0.2 });
+  const dim = { shop: [3.7, 3.0], building_1: [4.7, 3.0], building_2: [4.7, 3.0], building_3: [3.7, 3.0], f_fishing_cabin: [2.4, 3.1] }[pick[0]], front = opts.awning ? fz - 0.35 : fz + 0.2, mw = dim[0] * pick[1], md = dim[1] * pick[1];   /* 有櫃台的店：房子退到櫃台後面，中間留給老闆站 */
+  art2Add(g, pick[0], { s: pick[1], front }); g.userData.a2col = [Math.max(W + 0.3, mw * 0.92), md * 0.92, front - md / 2];
   if (opts.awning){ const cm = new THREE.MeshStandardMaterial({ color: '#6b3a34', roughness: 0.85 }), ct = new THREE.MeshStandardMaterial({ color: '#9a6a52', roughness: 0.8 });   /* 櫃台留著（老闆站在後面），顏色配新房子 */
     const a = new THREE.Mesh(new THREE.BoxGeometry(W * 0.8, 0.85, 0.5), cm); a.position.set(0, 0.43, fz + 0.8); a.castShadow = a.receiveShadow = true; a.userData.dyn = true; g.add(a);
     const b = new THREE.Mesh(new THREE.BoxGeometry(W * 0.84, 0.08, 0.6), ct); b.position.set(0, 0.88, fz + 0.8); b.userData.dyn = true; g.add(b); }
   if (opts.sign) art2Sign(g, opts.sign, opts.signIcon, W / 2 + 0.7, fz + 0.9);
   scene.add(g); return g; }
 /* 廣場和港邊的擺設 */
-function art2Props(){ const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col || 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };
+function art2Props(){ const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
   const hs = HLOT.shop, c = Math.cos(hs[2]), sn = Math.sin(hs[2]), loc = (lx, lz) => [hs[0] + c * lx + sn * lz, hs[1] - sn * lx + c * lz];
-  for (const lx of [-5.6, 5.6]){ const [x, z] = loc(lx, 2.0); P('stand', x, z, 1.25, hs[2], 0.9); }
+  for (const lx of [-6.6, 6.6]){ const [x, z] = loc(lx, 0.6); P('stand', x, z, 1.25, hs[2], 0.9); }   /* 攤子放在魚市場兩側、跟房子齊，不擋櫃台和冰檯 */
   P('lamp', sq[0] + 6.2, sq[1] + 6.0, 1.5, 0, 0.45); P('lamp', sq[0] - 7.2, sq[1] + 5.2, 1.5, 0, 0.45); P('lamp', sq[0] - 6.5, sq[1] - 6.5, 1.5, 0, 0.45);
   P('well', sq[0] - 5.0, sq[1] - 4.0, 0.95, 0.4, 1.05); P('statue_frog', sq[0] - 2.0, sq[1] - 7.5, 1.0, 2.6, 0.85); P('f_net', sq[0] + 6.0, sq[1] + 2.0, 1.5, 1.25, 0); P('cart', sq[0] - 8.5, sq[1] + 1.5, 1.1, 0.9, 0.9);
-  P('barrel_1', sq[0] + 4.3, sq[1] + 6.4, 0.9, 0.5, 0.55); P('pot_1', sq[0] + 5.0, sq[1] + 7.2, 0.9, 0, 0.45); P('drum', sq[0] + 8.0, sq[1] - 4.5, 0.42, -0.9, 0.9);
+  P('barrel_1', sq[0] + 4.3, sq[1] + 6.4, 0.9, 0.5, 0.55); P('pot_1', sq[0] + 5.0, sq[1] + 7.2, 0.9, 0, 0.45);
   for (const [name, x, z, ry] of [['f_boat2', 33, -20, 0.6], ['f_boat', 36.5, -27.5, -0.4], ['f_boat3', 30, -38, 1.9]]){ if (isLand(x, z) || deckAt(x, z)) continue; const g = art2World(name, x, z, { s: 1.35, ry, wy: 0 }); Art2.boats.push({ g, x, z, ry, ph: x }); } }
 function art2Tick(t){ for (const b of Art2.boats){ b.g.position.y = waterY(b.x, b.z, t) - 0.12; b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
 if (ART2) setTimeout(() => { try { art2Props(); toast('🎨 新美術試玩版（只有你看得到）。要關掉：網址後面加 #art=1', 6); } catch(e){ console.warn('art2 props', e); } }, 0);
@@ -1262,7 +1263,7 @@ function castPoint(x, z, dx, dz, dist){
     return (HT.cache.brick = mat('#ffffff', 0.95, { map: t })); };
   function house(x, z, roofColor, width, rotY, opts){
     opts = opts || {};
-    if (ART2){ const g2 = art2House(x, z, width, rotY, opts); addOBoxCol(x, z, width + 0.3, 2.8, rotY || 0); if (opts.awning){ const c = Math.cos(rotY || 0), s = Math.sin(rotY || 0), lz = 2.05; addOBoxCol(x + s * lz, z + c * lz, width * 0.84, 0.6, rotY || 0); } return g2; }   /* v444 新美術試玩版 */
+    if (ART2){ const g2 = art2House(x, z, width, rotY, opts), cc = g2.userData.a2col, c0 = Math.cos(rotY || 0), s0 = Math.sin(rotY || 0); addOBoxCol(x + s0 * cc[2], z + c0 * cc[2], cc[0], cc[1], rotY || 0); if (opts.awning){ const c = Math.cos(rotY || 0), s = Math.sin(rotY || 0), lz = 2.05; addOBoxCol(x + s * lz, z + c * lz, width * 0.84, 0.6, rotY || 0); } return g2; }   /* v444 新美術試玩版 */
     const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = rotY || 0;
     const W = width, D = 2.5, wallH = 2.0, base = 0.3, top = base + wallH;
     const dark = '#6e4a2f', wall = opts.wall || '#f6e4bd', trim = '#fffaf0';
