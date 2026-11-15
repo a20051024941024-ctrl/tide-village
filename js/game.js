@@ -967,7 +967,16 @@ function art2Load(){ if (!Art2.p) Art2.p = new GLTFLoader().loadAsync('models/ar
     Art2.lib = L; }).catch(e => { console.warn('art2', e); Art2.lib = {}; }); return Art2.p; }
 /* 把一個模型放進 parent（parent 的原點＝模型底部中心）。o: { s 放大倍數, x y z 位移, ry 轉向, front 讓模型正面對齊到 z=front } */
 function art2Add(parent, name, o){ o = o || {}; art2Load().then(() => { const src = Art2.lib[name], B = Art2.bb[name]; if (!src) return; const m = src.clone(), w = new THREE.Group(), s = o.s || 1; m.position.set(-B.cx, -B.y0, -B.cz); w.add(m); w.scale.setScalar(s);
-    w.position.set(o.x || 0, o.y || 0, o.front != null ? o.front - B.d * s / 2 : (o.z || 0)); w.rotation.y = o.ry || 0; w.userData.keep = true; w.userData.dyn = true; parent.add(w); Art2.n++; if (o.then) o.then(w, B); }); }
+    w.position.set(o.x || 0, o.y || 0, o.front != null ? o.front - B.d * s / 2 : (o.z || 0)); w.rotation.y = o.ry || 0; w.userData.keep = true; w.userData.dyn = true; if (o.tint) m.traverse(q => { if (q.isMesh) q.material = art2Tint(q.material, o.tint); }); parent.add(w); Art2.n++; if (o.then) o.then(w, B); }); }
+/* 屋瓦換色：整套素材只用一張調色盤圖，把圖裡「紅色系」的格子轉成別的色相，就得到藍瓦、金瓦、紫瓦的房子（房子只有 6 種，靠換瓦色拉開差異） */
+const ART2_TINT = { blue: 205, gold: 38, plum: 292, jade: 158 };
+function art2Tint(mat, tint){ if (!tint || !mat || !mat.map || !mat.map.image) return mat; Art2.tm = Art2.tm || {}; const key = mat.uuid + tint; if (Art2.tm[key]) return Art2.tm[key];
+  const img = mat.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const c = cv.getContext('2d', { willReadFrequently: true }); c.drawImage(img, 0, 0); const D = c.getImageData(0, 0, cv.width, cv.height), a = D.data, th = ART2_TINT[tint] / 360;
+  for (let i = 0; i < a.length; i += 4){ const r = a[i] / 255, g = a[i + 1] / 255, b = a[i + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (d < 0.18 || mx < 0.25) continue; let h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; if (!(h < 0.035 || h > 0.93)) continue;   /* 只動正紅（瓦片），不動偏棕的木頭和橘色的金屬 */
+    const l = (mx + mn) / 2, s2 = d / (1 - Math.abs(2 * l - 1) || 1), q = l < 0.5 ? l * (1 + s2 * 0.82) : l + s2 * 0.82 - l * s2 * 0.82, p2 = 2 * l - q, f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p2 + (q - p2) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p2 + (q - p2) * (2 / 3 - t) * 6 : p2; };
+    a[i] = f(th + 1 / 3) * 255; a[i + 1] = f(th) * 255; a[i + 2] = f(th - 1 / 3) * 255; }
+  c.putImageData(D, 0, 0); const tx = new THREE.CanvasTexture(cv); tx.flipY = mat.map.flipY; tx.colorSpace = mat.map.colorSpace; tx.magFilter = tx.minFilter = THREE.NearestFilter; tx.generateMipmaps = false; tx.wrapS = mat.map.wrapS; tx.wrapT = mat.map.wrapT;
+  const m2 = mat.clone(); m2.map = tx; return (Art2.tm[key] = m2); }
 function art2World(name, x, z, o){ const g = new THREE.Group(); g.position.set(x, (o && o.wy != null) ? o.wy : groundHeight(x, z), z); g.rotation.y = (o && o.ry) || 0; g.userData.keep = true; g.userData.dyn = true; scene.add(g); art2Add(g, name, Object.assign({}, o, { ry: 0 })); return g; }
 /* 直式掛牌：一根柱子伸出橫桿，掛一塊木牌，字由上往下 */
 function art2Sign(g, text, icon, x, z){ const chars = [...String(text)], n = chars.length + (icon ? 1 : 0), cv = document.createElement('canvas'); cv.width = 112; cv.height = 28 + n * 92; const c = cv.getContext('2d');
@@ -981,7 +990,8 @@ function art2House(x, z, width, rotY, opts){ const sgn = opts.sign || '', pick =
     : [['building_3', 1.02], ['building_1', 0.8], ['shop', 1.05]][Math.abs(Math.round(x * 7 + z * 3)) % 3];
   const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = rotY || 0; g.userData.keep = true; g.userData.dyn = true; const fz = 1.25, W = width;
   const dim = { shop: [3.7, 3.0], building_1: [4.7, 3.0], building_2: [4.7, 3.0], building_3: [3.7, 3.0], f_fishing_cabin: [2.4, 3.1] }[pick[0]], front = opts.awning ? fz - 0.35 : fz + 0.2, mw = dim[0] * pick[1], md = dim[1] * pick[1];   /* 有櫃台的店：房子退到櫃台後面，中間留給老闆站 */
-  art2Add(g, pick[0], { s: pick[1], front }); g.userData.a2col = [Math.max(W + 0.3, mw * 0.92), md * 0.92, front - md / 2];
+  const tint = sgn ? (/服裝/.test(sgn) ? 'plum' : /美髮/.test(sgn) ? 'blue' : /木工/.test(sgn) ? 'gold' : null) : [null, 'blue', 'gold', 'plum', 'jade'][Art2.hn = ((Art2.hn || 0) + 1) % 5];
+  art2Add(g, pick[0], { s: pick[1], front, tint }); g.userData.a2col = [Math.max(W + 0.3, mw * 0.92), md * 0.92, front - md / 2];
   if (opts.awning){ const cm = new THREE.MeshStandardMaterial({ color: '#6b3a34', roughness: 0.85 }), ct = new THREE.MeshStandardMaterial({ color: '#9a6a52', roughness: 0.8 });   /* 櫃台留著（老闆站在後面），顏色配新房子 */
     const a = new THREE.Mesh(new THREE.BoxGeometry(W * 0.8, 0.85, 0.5), cm); a.position.set(0, 0.43, fz + 0.8); a.castShadow = a.receiveShadow = true; a.userData.dyn = true; g.add(a);
     const b = new THREE.Mesh(new THREE.BoxGeometry(W * 0.84, 0.08, 0.6), ct); b.position.set(0, 0.88, fz + 0.8); b.userData.dyn = true; g.add(b); }
@@ -1015,6 +1025,14 @@ function buildTrees(trees, PX, PZ){
     birch: vgrad(mergeParts([blob(0.82, 0, 3.0, 0, 1.3, hiDet), blob(0.55, 0.38, 2.45, 0.2, 1.1), blob(0.5, -0.32, 2.6, -0.22, 1.1)]), 1.9, 4.1, 0.7, 1.12, 0.035),
     fruit: mergeParts([[0.85, 2.3, 0.6], [-0.7, 2.5, 0.55], [0.3, 2.0, 0.95], [-0.3, 3.1, 0.6], [0.95, 2.7, -0.3], [-0.95, 2.2, -0.35], [0.2, 3.3, -0.55], [0.6, 1.75, -0.5]].map(([x, y, z]) => { const g = new THREE.IcosahedronGeometry(0.11, 1); g.translate(x, y, z); return g; })),
   };
+  if (ART2){   /* v446 新美術：樹改成「雲片松」的樣子（一片一片扁扁的樹冠、粗一點的深色樹幹），針葉樹改成一層一層像小塔，顏色配新房子的瓦 */
+    const pad = (r, x, y, z, det) => blob(r, x, y, z, 0.46, det);
+    G.trunk = vgrad(trunkGeo(0.17, 0.3, 2.15, 0.7), 0, 2.15, 0.7, 1.05, 0.03);
+    G.round = vgrad(mergeParts([pad(1.15, 0, 3.05, 0, hiDet), pad(0.92, 0.85, 2.45, 0.2), pad(0.9, -0.8, 2.6, -0.25), pad(0.72, 0.1, 2.05, -0.8), pad(0.7, -0.15, 2.15, 0.85), pad(0.6, 0.15, 3.55, -0.1)]), 1.7, 3.8, 0.5, 1.18, 0.03);
+    G.pineTrunk = vgrad(trunkGeo(0.13, 0.24, 1.9, 0.6), 0, 1.9, 0.7, 1.0, 0.03);
+    G.pine = vgrad(mergeParts([0, 1, 2, 3].map(j => { const g = new THREE.ConeGeometry(1.55 - j * 0.36, 0.78, 8, 1); g.rotateY(j * 0.4); g.translate(0, 1.5 + j * 0.74, 0); return g; })), 1.1, 4.3, 0.55, 1.15, 0.03);
+    G.birch = vgrad(mergeParts([pad(0.9, 0, 3.25, 0, hiDet), pad(0.66, 0.45, 2.7, 0.2), pad(0.6, -0.4, 2.85, -0.25), pad(0.5, 0.05, 3.7, 0)]), 2.3, 4.0, 0.55, 1.18, 0.03);
+  }
   const vm = (opts) => new THREE.MeshStandardMaterial(Object.assign({ color:'#ffffff', vertexColors:true, roughness:0.85 }, opts));
   const M = { trunk: vm(), round: vm(), pine: vm({ flatShading:true }), birch: vm(), fruit: new THREE.MeshStandardMaterial({ color:'#ffffff', roughness:0.45, emissive:'#401010', emissiveIntensity:0.15 }) };
   instSway(M.round, 0.07, 1.4, 3.6, 'round', 'crown'); instSway(M.pine, 0.05, 1.4, 4.4, 'pine', 'pine'); instSway(M.birch, 0.08, 1.9, 4.0, 'birch', 'crown'); instSway(M.fruit, 0.07, 1.4, 3.6, 'round');
@@ -1028,15 +1046,15 @@ function buildTrees(trees, PX, PZ){
     const birch = !pine && z > 15 && hash(k, 1) < 0.28;
     const sc = 0.85 + k * 0.45, y = terrainH(x, z) - 0.05, ry = k * 6;
     const SP = SEASON === 'spring', AU = SEASON === 'autumn', WI = SEASON === 'winter';
-    if (pine) kinds.pine.push({ x, y, z, sc, sy: 1.08, ry, crown: C(WI ? ['#5b8f73', '#6c9a82', '#d9e6e4'][Math.floor(hash(k, 4) * 3)] : ['#4f8f4f', '#5d9c55', '#4a8a5e'][Math.floor(hash(k, 4) * 3)]), trunk: C('#7a4f33') });
+    if (pine) kinds.pine.push({ x, y, z, sc, sy: 1.08, ry, crown: C(WI ? ['#5b8f73', '#6c9a82', '#d9e6e4'][Math.floor(hash(k, 4) * 3)] : ART2 ? ['#2f9577', '#37a37f', '#2a8c80'][Math.floor(hash(k, 4) * 3)] : ['#4f8f4f', '#5d9c55', '#4a8a5e'][Math.floor(hash(k, 4) * 3)]), trunk: C(ART2 ? '#5a2f2a' : '#7a4f33') });
     else if (birch) kinds.birch.push({ x, y, z, sc, sy: 1, ry, crown: C(AU ? ['#f0c75a', '#e8b04a', '#f2d36e'][Math.floor(hash(k, 5) * 3)] : WI ? ['#c9c3a0', '#d6d0b0', '#bfc2a8'][Math.floor(hash(k, 5) * 3)] : ['#b2d46a', '#a3cc64', '#c2db78'][Math.floor(hash(k, 5) * 3)]), trunk: C('#efeae0') });
     else {
       const blossom = (village && hash(k, 2) < (SP ? 0.6 : 0.3)) || (SP && hash(k, 2) < 0.22), fruit = village && !blossom && hash(k, 3) < (AU ? 0.5 : 0.35);
       const crown = blossom && !AU && !WI ? ['#f7b6c8', '#f4a3bb', '#fbcad8'][Math.floor(hash(k, 6) * 3)]
-        : AU ? ['#e0a14a', '#d9783c', '#c9573a', '#e8c15a', '#a7a95a'][Math.floor(hash(k, 7) * 5)]
+        : AU ? (ART2 ? ['#f0a428', '#e8692a', '#d2402e', '#f4c63a', '#b9b43c'] : ['#e0a14a', '#d9783c', '#c9573a', '#e8c15a', '#a7a95a'])[Math.floor(hash(k, 7) * 5)]
         : WI ? ['#8fae86', '#9db894', '#a9bfa3', '#c5d3c8'][Math.floor(hash(k, 7) * 4)]
-        : ['#8cc46a', '#7ab85e', '#9fd27a', '#76b35f'][Math.floor(hash(k, 7) * 4)];
-      const t = { x, y, z, sc, sy: 1, ry, crown: C(crown), trunk: C(blossom ? '#7b5440' : PALETTE.wood) };
+        : (ART2 ? ['#62b24a', '#4fa356', '#78bd42', '#3f9c66'] : ['#8cc46a', '#7ab85e', '#9fd27a', '#76b35f'])[Math.floor(hash(k, 7) * 4)];
+      const t = { x, y, z, sc, sy: 1, ry, crown: C(crown), trunk: C(ART2 ? '#5a2f2a' : blossom ? '#7b5440' : PALETTE.wood) };
       kinds.round.push(t); if (fruit) fruits.push(Object.assign({}, t, { crown: C(hash(k, 8) < 0.6 ? '#ef5b4c' : '#ffb347') }));
     }
   }
