@@ -946,7 +946,7 @@ body:has(#brand.open) #joyZone{pointer-events:none}
 .volrow input[type=range]{flex:1;accent-color:#2a8fb8;height:28px}
 .volrow .volpct{min-width:3em;text-align:right;color:var(--ink-soft);font-size:13px}
 /* 全服合作大魚 */
-#bossPanel{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt, 8px) + 8px);z-index:25;width:min(340px,38vw);padding:6px 10px;border-radius:16px;display:flex;flex-direction:column;gap:5px;font-size:13px}
+#bossPanel{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt, 8px) + 62px);z-index:25;width:min(320px,36vw);padding:6px 10px;border-radius:16px;display:flex;flex-direction:column;gap:5px;font-size:13px}
 #bossPanel[hidden]{display:none}
 #bossPanel .bp-h{display:flex;justify-content:space-between;align-items:center}
 #bossPanel .bp-hp{position:relative;height:16px;border-radius:999px;background:#e8eef2;overflow:hidden}
@@ -1448,3 +1448,11 @@ body.photo #ttPanel{display:none!important}
 #bike3.on{background:#ffe9a8}
 #bike3.pulse{animation:bikePulse 1s ease-in-out infinite}
 @keyframes bikePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18);box-shadow:0 0 0 6px rgba(242,196,61,.45)}}
+
+/* v462 大魚合作戰：張力條大一點、太緊會變紅抖動；出力數字從大按鈕上方跳出來 */
+#bossPanel .bp-ten{height:16px}
+#bossPanel .bp-ten i{height:24px;top:-4px;width:5px}
+#bossPanel .bp-ten.hot{background:#f2a09a;animation:bpShake .12s linear infinite}
+@keyframes bpShake{0%{transform:translateX(-1px)}50%{transform:translateX(1px)}100%{transform:translateX(-1px)}}
+.bossHit{position:fixed;z-index:60;transform:translate(-50%,0) scale(.7);font:900 26px var(--f-display,sans-serif);color:#fff;text-shadow:0 2px 0 #c8751a,0 0 8px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:transform .8s cubic-bezier(.2,.8,.3,1),opacity .8s}
+.bossHit.go{transform:translate(-50%,-70px) scale(1.15);opacity:1}

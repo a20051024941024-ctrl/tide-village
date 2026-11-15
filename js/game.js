@@ -5227,6 +5227,8 @@ function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ a
 function actionDown(){
   if (uiBlocked) return;
   ensureAudio();
+  if (bossPulling() && F.phase === 'idle'){ $('#act').classList.add('down'); BossW.hold = true; return; }   /* v462 大魚合作戰：大按鈕就是「拉」 */
+  if (bossLive() && F.phase === 'idle' && BossW.joined !== BossW.st.id && !myBoat && !mySeat && !Dive.on){ $('#act').classList.add('down'); bossJoin(); return; }
   const act = $('#act'); act.classList.add('down');
   if (Dive.on){ diveAction(); return; }
   if (F.phase === 'idle'){
@@ -5271,7 +5273,7 @@ function actionDown(){
   }
 }
 function actionUp(){
-  $('#act').classList.remove('down');
+  $('#act').classList.remove('down'); BossW.hold = false;
   if (F.phase === 'charging') doCast();
   else if (F.phase === 'reeling') F.hold = false;
 }
@@ -5634,7 +5636,8 @@ function updateFishing(dt, t){
   let label, sub = '', cls = '';
   const near = myBoat ? { spot: boatSpot(), d: 0 } : nearestSpot();
   const pkN = Dive.on ? nearPick() : null, seaL = pkN ? pickLabel(pkN) : Dive.on ? (seaLabel() || trapLabel()) : null;
-  if (seaL){ label = seaL[0]; sub = seaL[1]; cls = 'shop'; }
+  if (F.phase === 'idle' && !Dive.on && !myBoat && !mySeat && bossLive()){ if (BossW.joined === BossW.st.id){ label = BossW.st.struggle ? '放開！' : '拉！'; sub = BossW.st.struggle ? '大魚在掙扎' : BossW.hold ? (BossW.T >= 0.75 ? '太緊了' : BossW.T > 0.35 ? '就是現在！' : '撐住') : '按住'; cls = BossW.st.struggle ? 'bite' : ''; } else { label = '一起拉！'; sub = '🐋 ' + BossW.st.name; cls = 'shop'; } }
+  else if (seaL){ label = seaL[0]; sub = seaL[1]; cls = 'shop'; }
   else if (Dive.on){ const l = diveNearLoot(), tg = !l && diveFacing(); label = l ? (l.kind === 'chest' ? '打開寶箱' : l.kind === 'pearl' ? '撿珍珠' : '撿貝殼') : tg ? '📷 拍照' : '潛水中'; sub = l ? '' : tg ? tg.f.name + ((rec.photos || []).includes(tg.f.id) ? '・拍過了' : '・新的！') : '靠近魚可以拍照'; cls = l || tg ? 'shop' : 'idle'; }
   else if (F.phase === 'idle'){ const bt = curBait(); const chNear = !mySeat && near.d >= 1.7 ? nearChair() : null, sh = near.d >= 1.7 && !mySeat && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? nearShop() : null;
     const shoreS = mySeat && mySeat.nook ? nookSpot(mySeat) : near.d >= 1.7 && !mySeat && !sh && !(chNear && Math.hypot(me.pos.x - chNear.x, me.pos.z - chNear.z) < 0.9) ? shoreSpot() : null;
@@ -5666,7 +5669,7 @@ function updateFishing(dt, t){
   else if (F.phase === 'reeling'){ label = '拉線'; sub = '按住 / 放開'; }
   else { label = '…'; cls = 'idle'; }
   const html = label + (sub ? `<small>${sub}</small>` : '');
-  if (act._h !== html){ if (F.phase === 'idle' && act._h){ if (act._pend !== html){ act._pend = html; act._pendAt = now(); } if (now() - act._pendAt < 0.5) return; }   /* v336 大按鈕的字不要一直跳：走路經過店門口時，同一個狀態要維持 0.5 秒才換 */
+  if (act._h !== html){ if (F.phase === 'idle' && act._h && !BossW.rod){ if (act._pend !== html){ act._pend = html; act._pendAt = now(); } if (now() - act._pendAt < 0.5) return; }   /* v336 大按鈕的字不要一直跳：走路經過店門口時，同一個狀態要維持 0.5 秒才換 */
     act.innerHTML = html; act._h = html; act._pend = null; }
   const c = 'act-' + cls; if (act._c !== c){ act.classList.remove('idle','bite'); if (cls) act.classList.add(cls); act._c = c; }
   // spot card
@@ -9648,31 +9651,51 @@ function bossAdopt(d){ BossW.st = d; BossW.off = d.now ? Date.parse(d.now) - Dat
     else if (d.state === 'lost'){ ticker(`💨 <b>${esc(d.name)}</b> 掙脫逃走了…下次再一起努力`); if (d.me && d.me.p > 0) setTimeout(() => cloudRefresh && cloudRefresh(), 1500); } }
   if (d.me) BossW.joined = d.id; }
 function bossNow(){ return Date.now() + (BossW.off || 0); }
+/* v462 玩家回報大魚合作戰：「拉」應該在釣魚的大按鈕、完全沒有拉的感覺也沒有任何動作、結束之後面板沒消失。
+   ① 加入和拉都搬到右下角的大按鈕（面板只剩血條、張力條、排名）。② 加入之後角色會面向大魚、拿出釣竿、釣線接到大魚身上，按住的時候竿子彎下去、
+   捲線有聲音、手機會震；大魚被拉的時候會往你這邊靠、甩得更兇、水花更多；每次伺服器算出力，按鈕上方跳一個「+數字」。③ 結束 12 秒後面板自動收起來，點一下也可以關。 */
+function bossLive(){ const st = BossW.st; return !!(st && st.id && st.state === 'live' && bossNear()); }
+function bossPulling(){ return bossLive() && BossW.joined === BossW.st.id && !myBoat && !mySeat && !Bike.on; }
+async function bossJoin(){ if (BossW.joining) return; if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能一起拉'); return; } if (myBoat || mySeat){ toast('要站在岸上或碼頭才能一起拉'); return; } BossW.joining = true;
+  try { const { data, error } = await Cloud.sb.rpc('boss_join', { p_id: BossW.st.id }); if (error) throw error; bossAdopt(data); BossW.joined = BossW.st.id; if (F.phase !== 'idle') cancelFishing(); SFX.catch(); buzz(40); flash('🎣 加入了！按住右下角「拉！」', 1.8); } catch(e){ toast(cloudErrMsg(e)); } BossW.joining = false; }
+function bossHitPop(n){ try { const a = $('#act').getBoundingClientRect(), e = document.createElement('div'); e.className = 'bossHit'; e.textContent = '+' + n; e.style.left = (a.left + a.width / 2) + 'px'; e.style.top = (a.top - 6) + 'px'; document.body.appendChild(e); requestAnimationFrame(() => e.classList.add('go')); setTimeout(() => e.remove(), 900); } catch(e){} }
+function bossRod(dt, t){ const on = bossPulling() && F.phase === 'idle';
+  if (!on){ if (BossW.rod){ BossW.rod = false; BossW.hold = false; if (F.phase === 'idle'){ me.fishing = false; me.bobState = 'none'; me.bend = 0; me.dip = 0; } pushPresence(true); } return; }
+  const m = BossW.m, bx = m ? m.position.x : bossAt()[0], bz = m ? m.position.z : bossAt()[1];
+  if (!BossW.rod){ BossW.rod = true; BossW.pullK = 0; pushPresence(true); }
+  me.rot = lerpAngle(me.rot, Math.atan2(bx - me.pos.x, bz - me.pos.z), 1 - Math.exp(-6 * dt)); me.fishing = true; me.bobState = 'water'; me.flying = null; me.bobPos.set(bx, 0.1, bz);
+  const T = BossW.T, good = BossW.hold && T > 0.35 && T < 0.75, yank = BossW.tug <= 0.45 ? 1 : 0;
+  me.bend += ((BossW.hold ? 0.5 + T * 0.45 : 0.12) + yank * 0.25 - me.bend) * Math.min(1, dt * 10); me.dip = BossW.hold ? 0.5 + Math.sin(t * 9) * 0.2 : 0;
+  BossW.pullK += ((good ? 1 : BossW.hold ? 0.4 : 0) - BossW.pullK) * Math.min(1, dt * 3);
+  if (BossW.hold){ BossW.reelT = (BossW.reelT || 0) - dt; if (BossW.reelT <= 0){ BossW.reelT = 0.1; SFX.reel(); } BossW.buzzT = (BossW.buzzT || 0) - dt; if (BossW.buzzT <= 0){ BossW.buzzT = good ? 0.35 : 0.9; buzz(good ? 14 : 8); } if (Math.random() < dt * (good ? 9 : 3)) FX.emit(bx + rand(-0.8, 0.8), 0.2, bz + rand(-0.8, 0.8), good ? 5 : 2, '#dff6ff', 1.1, 2.2, 0.7); }
+  if (yank && !BossW.yanked){ BossW.yanked = true; buzz(BossW.hold ? [30, 30, 30] : 20); camShake = Math.max(camShake, BossW.hold ? 0.05 : 0.02); SFX.splash(false); ripple(bx, bz, true); } else if (!yank) BossW.yanked = false; }
 function updateBoss(dt, t){ const st = BossW.st, live = st && st.id && st.state === 'live', near = bossNear();
   const every = live && near ? 2000 : st && st.id && (st.state === 'soon' || live) ? 10000 : 30000; if (Cloud.on && Date.now() - BossW.at > every) loadBoss();
   // 海上的大魚
   if (st && st.id && (live || (st.state === 'won' && bossNow() < Date.parse(st.end) + 60000))){ if (!BossW.m || BossW.mk !== st.kind){ if (BossW.m) scene.remove(BossW.m); const [fid, sc] = BOSS_FISH[st.kind] || BOSS_FISH.dragon; try { BossW.m = fishModel(FISH_BY_ID[fid] || FISH_BY_ID.shark, sc); scene.add(BossW.m); BossW.mk = st.kind; } catch(e){ BossW.m = null; } }
-    if (BossW.m){ const [x, z] = bossAt(), str = st.struggle, a = t * 0.25; BossW.m.visible = !onIsle && !House.on && !Dive.on; BossW.m.position.set(x + Math.cos(a) * 2.5, WATER_LEVEL - 0.35 + (str ? Math.abs(Math.sin(t * 3)) * 1.6 : Math.sin(t * 0.8) * 0.12), z + Math.sin(a) * 2.5); BossW.m.rotation.set(0, -a + (str ? Math.sin(t * 8) * 0.4 : 0), str ? Math.sin(t * 5) * 0.4 : 0);
+    if (BossW.m){ const [x, z] = bossAt(), str = st.struggle, a = t * 0.25; BossW.m.visible = !onIsle && !House.on && !Dive.on; const pk = BossW.rod ? (BossW.pullK || 0) : 0, dxm = me.pos.x - x, dzm = me.pos.z - z, dm = Math.hypot(dxm, dzm) || 1; BossW.m.position.set(x + Math.cos(a) * 2.5 + dxm / dm * pk * 2.2, WATER_LEVEL - 0.35 + (str ? Math.abs(Math.sin(t * 3)) * 1.6 : Math.sin(t * 0.8) * 0.12 + pk * 0.22 * Math.abs(Math.sin(t * 6))), z + Math.sin(a) * 2.5 + dzm / dm * pk * 2.2); BossW.m.rotation.set(0, -a + (str ? Math.sin(t * 8) * 0.4 : Math.sin(t * 11) * 0.35 * pk), str ? Math.sin(t * 5) * 0.4 : Math.sin(t * 7) * 0.3 * pk);   /* v462 你拉對的時候大魚會被扯過來一點、甩頭甩尾 */
       if (Math.random() < dt * (str ? 14 : 3)) ripple(BossW.m.position.x + rand(-1.5, 1.5), BossW.m.position.z + rand(-1.5, 1.5), str); } }
   else if (BossW.m){ scene.remove(BossW.m); BossW.m = null; }
   // 拉線：按住張力上升，放開下降；魚會一下一下扯
   const joined = live && BossW.joined === st.id; if (joined){ BossW.tug -= dt; if (BossW.tug <= 0) BossW.tug = rand(0.6, 1.8); const tug = BossW.tug > 0.45 ? 0 : 0.9;
     BossW.T = clamp(BossW.T + (BossW.hold ? 0.55 : -0.7) * dt + tug * dt * 0.6, 0, 1);
-    if (Date.now() - BossW.sent > 1000 && near){ BossW.sent = Date.now(); const good = BossW.hold && BossW.T > 0.35 && BossW.T < 0.75 ? 1 : 0; if (BossW.hold) me.bend = 0.8; Cloud.sb.rpc('boss_pull', { p_id: st.id, p_good: good }).then(({ data }) => { if (data) bossAdopt(data); }, () => {}); } }
+    if (Date.now() - BossW.sent > 1000 && near && Cloud.on && Cloud.sb){ BossW.sent = Date.now(); const good = BossW.hold && BossW.T > 0.35 && BossW.T < 0.75 ? 1 : 0, p0 = st.me ? st.me.p : 0; Cloud.sb.rpc('boss_pull', { p_id: st.id, p_good: good }).then(({ data }) => { if (data){ bossAdopt(data); const p1 = data.me ? data.me.p : 0; if (p1 > p0 && BossW.rod) bossHitPop(p1 - p0); } }, () => {}); } }
+  try { bossRod(dt, t); } catch(e){}
   renderBossPanel(near); }
-function renderBossPanel(near){ const st = BossW.st; let P = $('#bossPanel'); const show = near && st && st.id && ['soon', 'live', 'won', 'lost'].includes(st.state) && $('#sheet').hidden;
+function renderBossPanel(near){ const st = BossW.st; let P = $('#bossPanel'); const over = st && (st.state === 'won' || st.state === 'lost'); if (over){ if (BossW.overId !== st.id){ BossW.overId = st.id; BossW.overAt = Date.now(); BossW.closed = false; } } 
+  const show = near && st && st.id && ['soon', 'live', 'won', 'lost'].includes(st.state) && $('#sheet').hidden && !(over && (BossW.closed || Date.now() - BossW.overAt > 12000));   /* v462 結束 12 秒後自動收起來（以前只要站在附近就一直掛著） */
   if (!show){ if (P) P.hidden = true; BossW.hold = false; return; }
   if (!P){ P = document.createElement('div'); P.id = 'bossPanel'; P.className = 'panel'; document.body.appendChild(P);
     P.innerHTML = '<div class="bp-h"><b class="bp-n"></b><span class="bp-t"></span></div><div class="bp-hp"><i></i><span></span></div><div class="bp-s"></div><div class="bp-ten"><div class="bp-zone"></div><i></i></div><div class="bp-row"><button class="tbtn bp-join">🎣 一起拉！</button><button class="bp-pull">拉！</button></div><div class="bp-top"></div>';
     const pb = P.querySelector('.bp-pull'), on = e => { e.preventDefault(); BossW.hold = true; ensureAudio(); }, off = () => { BossW.hold = false; };
     pb.addEventListener('pointerdown', on); pb.addEventListener('pointerup', off); pb.addEventListener('pointercancel', off); pb.addEventListener('pointerleave', off);
-    P.querySelector('.bp-join').addEventListener('click', async () => { if (!Cloud.on){ toast('要連上雲端才能一起拉'); return; } try { const { data, error } = await Cloud.sb.rpc('boss_join', { p_id: BossW.st.id }); if (error) throw error; bossAdopt(data); BossW.joined = BossW.st.id; SFX.catch(); flash(`🎣 加入了！按住「拉！」讓張力在綠色區`, 1.8); } catch(e){ toast(cloudErrMsg(e)); } }); }
+    P.querySelector('.bp-join').addEventListener('click', () => bossJoin()); P.addEventListener('click', () => { const s2 = BossW.st; if (s2 && (s2.state === 'won' || s2.state === 'lost')) BossW.closed = true; }); }
   P.hidden = false; const live = st.state === 'live', joined = live && BossW.joined === st.id, left = Math.max(0, Math.ceil(((live ? Date.parse(st.end) : Date.parse(st.start)) - bossNow()) / 1000));
   P.querySelector('.bp-n').textContent = `🐋 ${st.name}`; P.querySelector('.bp-t').textContent = st.state === 'soon' ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} 後出現` : live ? `剩 ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : st.state === 'won' ? '🎉 成功了！' : '💨 逃走了';
   const k = st.hp_max ? clamp(st.hp / st.hp_max, 0, 1) : 1; P.querySelector('.bp-hp i').style.width = (k * 100).toFixed(1) + '%'; P.querySelector('.bp-hp span').textContent = `體力 ${Math.ceil(k * 100)}%・${st.n} 人一起拉`;
   const paused = st.me && st.me.pause; P.classList.toggle('struggle', !!st.struggle && live);
-  P.querySelector('.bp-s').textContent = !live ? (st.state === 'soon' ? '時間到就可以加入，人越多越好打！' : st.me && st.me.p ? `你出力 ${st.me.p}・第 ${st.me.rank} 名` : '') : paused ? '💥 斷線了！10 秒後才能再拉' : st.struggle ? '⚠️ 大魚在掙扎！放線！（放開）' : joined ? `按住「拉！」讓指針留在綠色區・你出力 ${st.me ? st.me.p : 0}（第 ${st.me ? st.me.rank : '-'} 名）` : '按「一起拉！」加入';
-  P.querySelector('.bp-join').hidden = !live || joined; P.querySelector('.bp-pull').hidden = !joined; P.querySelector('.bp-ten').hidden = !joined;
+  P.querySelector('.bp-s').textContent = !live ? (st.state === 'soon' ? '時間到就可以加入，人越多越好打！' : st.me && st.me.p ? `你出力 ${st.me.p}・第 ${st.me.rank} 名` : '') : paused ? '💥 斷線了！10 秒後才能再拉' : st.struggle ? '⚠️ 大魚在掙扎！放線！（放開）' : joined ? (myBoat || mySeat ? '要站在岸上或碼頭才能拉' : (BossW.hold && BossW.T >= 0.75 ? '太緊了！放一下' : BossW.hold && BossW.T <= 0.35 ? '再撐一下，指針進綠色區才算' : '按住右下角「拉！」讓指針留在綠色區') + `・出力 ${st.me ? st.me.p : 0}（第 ${st.me ? st.me.rank : '-'} 名）`) : '按右下角「一起拉！」加入';
+  P.querySelector('.bp-join').hidden = true; P.querySelector('.bp-pull').hidden = true; P.querySelector('.bp-ten').hidden = !joined; P.querySelector('.bp-ten').classList.toggle('hot', BossW.hold && BossW.T >= 0.75);
   P.querySelector('.bp-ten i').style.left = (BossW.T * 100).toFixed(1) + '%'; P.querySelector('.bp-pull').classList.toggle('on', BossW.hold);
   P.querySelector('.bp-top').textContent = st.top && st.top.length ? '出力：' + st.top.slice(0, 3).map((x, i) => `${['🥇', '🥈', '🥉'][i]}${x.name} ${x.p}`).join('　') : ''; }
 // 大魚的魚拓：深色木框、墨色的大魚、名字
@@ -12854,7 +12877,7 @@ function presenceObj(){
   { const sc = mySecretState(); if (sc.length) o.sc = sc; }   /* v432 我的祕密窩點 */
   if (typeof Sub !== 'undefined' && Sub && Sub.on && Sub.pos) o.sb = [+Sub.pos.x.toFixed(1), +Sub.pos.y.toFixed(1), +Sub.pos.z.toFixed(1), +(Sub.yaw % (Math.PI * 2)).toFixed(2)];   /* v241 一起潛：潛水艇在裂縫裡的位置 */
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
-  if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
+  if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && (Date.now() - myEmote.at < 4000 || (me.emote && me.emote.k === myEmote.k))) o.e = myEmote;
   if (myPetAct && Date.now() - myPetAct.at < 4000) o.pa = myPetAct;   /* v332 跟寵物玩的動作，別人也看得到 */   /* 一直在做的動作（坐著、躺著、跳舞）別人晚一點進來也看得到 */
@@ -14980,7 +15003,7 @@ function renderTab(){
     ]);
     sec('🐋 大魚、鯨魚、海上目擊', [
       '每天晚上 8:30（週六日下午 2:00 也有一次），港口外海會出現一條超大的魚：海龍王、大白鯊或皇帶魚王（輪流）。出現前 10 分鐘會跑馬燈和推播。',
-      '到港口外海按「一起拉！」加入，按住「拉！」讓張力保持在綠色區才會扣大魚的體力。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
+      '站在港口的岸上或碼頭，右下角的大按鈕會變成「一起拉！」，按下去加入；接著按住同一顆「拉！」，讓上面的指針留在綠色區才會扣大魚的體力（一直按到底會太緊，要放一下）。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
       '🚢 跑船生意：在潮汐魚市場的「賣魚」裡按「跑船生意」，把魚缸裡的魚裝上魚艙（最多 10 條），開船載到另一個地方賣。村子的魚載去珊瑚礁島賣給阿嬤、礁島的魚載回村子賣給潮汐魚市場，都多三成；在產地直接賣沒有好處（礁島的魚在礁島只有七成）。魚裝上船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半；裝上船要過 45 秒才能賣。同一種魚在礁島一次賣太多，價錢會慢慢掉，過幾個小時恢復。不想賣可以整艙放回魚缸。',
