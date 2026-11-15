@@ -4467,6 +4467,16 @@ function updateBoat(dt, ix, iz, L, locked){
   me.baseY += wh; OW.boatSpd = speed; OW.still = speed > 0.2 ? 0 : (OW.still || 0) + dt;
   myBoat.m.position.set(me.pos.x, WATER_LEVEL + bob + wh, me.pos.z); myBoat.m.rotation.set(Math.sin(t * 1.1) * 0.02 - wp, me.rot, Math.sin(t * 1.3) * 0.03 + wr);
   if (frameNo % 10 === 0) sailCompass();
+  /* v455 划槳自我檢查：玩家兩次回報「沒有拿著槳划」，但我這邊重現不出來。划了一陣子之後檢查一次：角色是不是正式骨架、手有沒有真的在槳上、動作層有沒有出錯。
+     不正常就先試著把角色重新換成正式骨架，還是不行就跳一行診斷字，請玩家截圖（只跳一次）。 */
+  if (speed > 0.3 && frameNo % 90 === 0 && !KJ.diag){ try {
+    const a = me.av, pd = myBoat.m.userData.paddle; let d = -1, up = '';
+    if (!a.kid && KID.ok){ try { kidUpgrade(me); } catch(e){ up = String(e && e.message || e).slice(0, 60); } }
+    if (a.kid && pd){ const h = a.kid.B.handl.getWorldPosition(new THREE.Vector3()); pd.worldToLocal(h); d = Math.hypot(Math.abs(h.x) - 0.24, h.y, h.z); }
+    KJ.diagN = (KJ.diagN || 0) + 1;
+    if (KJ.diagN >= 2 && (d < 0 || d > 0.12 || KJ.err)){ KJ.diag = `K${a.kid ? 1 : 0}${KID.ok ? 1 : 0}${KID.failed ? 1 : 0} S${me.sitting ? 1 : 0}${me.swim ? 1 : 0}${Bike.on ? 1 : 0}${KJ.off ? 1 : 0} D${d.toFixed(2)} F${me.fishing ? 1 : 0}${F.phase} ${up} ${(KJ.err || '').slice(0, 90)}`;
+      const el0 = document.createElement('div'); el0.style.cssText = 'position:fixed;left:8px;right:8px;top:40%;z-index:99999;background:#fff;color:#c00;font:14px/1.4 monospace;padding:8px;border-radius:8px;word-break:break-all'; el0.textContent = '🛠 划槳診斷（請截圖給作者，點一下關掉）：' + KJ.diag; el0.onclick = () => el0.remove(); document.body.appendChild(el0); }
+  } catch(e){} }
   const oar = myBoat.m.userData.oars; if (oar){ const k = speed > 0.3 ? Math.sin(t * 6) * 0.6 : 0; oar[0].rotation.y = k; oar[1].rotation.y = -k; }
 }
 $('#boatBtn').addEventListener('click', () => { ensureAudio(); if (myBoat) leaveBoat(); else { const b = nearBoat(); if (b) boardBoat(b); } });
