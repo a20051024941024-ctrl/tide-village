@@ -1013,10 +1013,10 @@ function kayakTick(dt){
 /* v459 划槳診斷：在船上的時候，畫面左下角一行小灰字，寫著各段程式有沒有跑到。兩位玩家的手機上都沒有划槳動作，我這邊卻重現不出來，
    需要玩家截圖給我看這一行。問題解決後這行會拿掉。 */
 function kayakDiag(){ if (frameNo % 20) return; let el0 = document.getElementById('kyDiag');
-  if (!el0){ el0 = document.createElement('div'); el0.id = 'kyDiag'; el0.style.cssText = 'position:fixed;left:6px;bottom:2px;z-index:99999;color:#fff;background:rgba(0,0,0,.45);font:10px/1.3 monospace;padding:1px 5px;border-radius:5px;pointer-events:none;max-width:96vw;white-space:nowrap;overflow:hidden'; document.body.appendChild(el0); KJ.diagEl = el0; }
+  if (!el0){ el0 = document.createElement('div'); el0.id = 'kyDiag'; el0.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:30%;z-index:99999;color:#fff;background:rgba(0,0,0,.6);font:12px/1.4 monospace;padding:4px 8px;border-radius:8px;pointer-events:none;max-width:92vw;white-space:normal;text-align:center'; document.body.appendChild(el0); KJ.diagEl = el0; }
   const a = me.av, K = a.kid, pd = myBoat.m.userData.paddle; let d = -1; try { if (K && pd){ const h = K.B.handl.getWorldPosition(new THREE.Vector3()); pd.worldToLocal(h); d = Math.hypot(Math.abs(h.x) - 0.24, h.y, h.z); } } catch(e){}
   const ago = v => v == null ? 'x' : Math.min(9, frameNo - v);
-  el0.style.display = ''; el0.textContent = `槳診斷 v459 K${K ? 1 : 0}${KID.ok ? 1 : 0}${KID.failed ? 1 : 0} S${me.sitting ? 1 : 0}${me.swim ? 1 : 0}${Bike.on ? 1 : 0}${KJ.off ? 1 : 0} R${pd && pd.userData.rest ? 1 : 0} ub${ago(KJ.ub)} dj${ago(KJ.dj)} ml${ago(KJ.ml)} ik:${KJ.ikR} D${d.toFixed(2)} v${(OW.boatSpd || 0).toFixed(1)} pk${((me.kj && me.kj.pk) || 0).toFixed(1)} py${pd ? pd.position.y.toFixed(2) : '-'} ${(KJ.err || KJ.err2 || '').replace(/\s+/g, ' ').slice(0, 70)}`; }
+  el0.style.display = ''; el0.textContent = `【請截圖這段字給作者】槳診斷 v463 upd${KJ.meUpd || 0} ik2:${KJ.ikR2} pr${ago(KJ.pr)} K${K ? 1 : 0}${KID.ok ? 1 : 0}${KID.failed ? 1 : 0} S${me.sitting ? 1 : 0}${me.swim ? 1 : 0}${Bike.on ? 1 : 0}${KJ.off ? 1 : 0} R${pd && pd.userData.rest ? 1 : 0} ub${ago(KJ.ub)} dj${ago(KJ.dj)} ml${ago(KJ.ml)} ik:${KJ.ikR} D${d.toFixed(2)} v${(OW.boatSpd || 0).toFixed(1)} pk${((me.kj && me.kj.pk) || 0).toFixed(1)} py${pd ? pd.position.y.toFixed(2) : '-'} ${(KJ.err || KJ.err2 || '').replace(/\s+/g, ' ').slice(0, 70)}`; }
 /* v459 握槳的姿勢獨立成一個函式：腳往前踩在船上、兩手握在槳上。原本藏在「走路彈性」那層裡面，玩家手機上那一層沒有作用（原因還沒找到），
    所以改成主迴圈在角色更新完之後自己再呼叫一次——同一格已經做過就跳過。動到的骨頭照 kidJuice 的做法先記下來，下一格骨架動畫前還原。 */
 function kayakIK(f, kbm){ const a = f.av, K = a && a.kid, pd = kbm && kbm.userData.paddle; if (!pd) return 'nopd'; if (!K || !K.B || !K.B.hips) return 'nokid'; if (K.ikAt === frameNo) return 'done';
@@ -3947,7 +3947,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt); kidLift(K);
+  K.mixer.update(dt); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
   if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
@@ -4053,7 +4053,7 @@ class Fisher {
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
   dispose(){ if (this.pet){ petFree(this.pet); this.pet = null; } KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
-  update(dt, t){
+  update(dt, t){ if (this === me){ if (KJ.muF === frameNo) KJ.muN = (KJ.muN || 1) + 1; else { KJ.meUpd = KJ.muN || 1; KJ.muN = 1; KJ.muF = frameNo; } }
     const a = this.av; dt = Math.min(dt, 0.1);
     // ===== 走路動畫（2026-11-04 改版）：Idle／Walk／Run／Sprint 依速度平滑混合；腳步照「實際走了多遠」前進，減少滑步 =====
     if (this === me && (frameNo % 10 === 0)) this.surf = surfaceAt(this.pos.x, this.pos.z);
@@ -16156,6 +16156,7 @@ function frame(){
   placeLabelsUpdate();
   if (Dive.on) diveHideWorld(); else { cullAvatars(); hideOrphanBits(); }
   if (Quality.tier !== 'high'){ renderer.shadowMap.autoUpdate = false; if (frameNo % 2 === 0) renderer.shadowMap.needsUpdate = true; }   /* v289 中畫質影子兩張更新一次 */
+  if (myBoat && !Dive.on){ try { KJ.ikR2 = kayakIK(me, myBoat.m); KJ.pr = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } }   /* v463 玩家說「別人有動作、自己沒有」：自己的角色在這一格後面可能又被別的地方更新一次，把姿勢洗掉。畫面送出去之前最後再握一次槳 */
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
