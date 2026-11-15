@@ -14068,11 +14068,60 @@ function updateAmo(n, dt, t){
   if (n.amoMode === 'pier' && mode === 'go' && camera.position.distanceTo(n.pos) < 25) n.say('我要開船出海了，港口裡不會有紅鯊的', '', 4);
   n.amoMode = mode;
 }
+/* ============ v450 村民自由走動 ============
+   玩家說「NPC 應該要能自由移動」。原本只有村長、阿綾、阿木、阿福、老港 5 位照伺服器的作息走動，其他人永遠站在原地。
+   現在另外 9 位也會走：釣魚的村民（阿潮、小溪、阿伯）每隔幾分鐘收竿，走去廣場、魚市場、釣具店、涼亭附近待一下再回來重新拋竿；
+   站著的（阿蘭、阿嬤）在附近走走；顧店的（阿彩、阿鐵、阿萍、阿報）只在店門口幾公尺內活動，店照常開。下雨不出門（留在原地穿雨衣）。
+   同步的做法：什麼時候出門、去哪、走到哪了，全部是「伺服器時間＋名字」算出來的（跟天氣一樣），不用伺服器記、不用廣播，
+   每個人的手機算出來都一樣，晚進來的人看到的位置也對。路線用跟那 5 位一樣的尋路（navFind）。
+   阿默（坐著等紅鯊）、蔚博士（每天換地方）維持原樣。網址加 #roam=0 可以關掉。 */
+const ROAM_K = { fish: { p: 0.72, ring: [7, 16], dwell: [30, 75], n: 5, C: [120, 70] }, stand: { p: 0.8, ring: [3.5, 9], dwell: [15, 40], n: 5, C: [70, 50] }, shop: { p: 0.75, ring: [1.8, 3.6], dwell: [10, 26], n: 4, C: [50, 40] } };   /* p 每一輪出門的機率、C 一輪幾秒（基本＋照名字多幾秒） */
+const ROAM_LINES = ['出來走走，等一下再回去', '站太久了，活動一下筋骨', '看看大家今天釣得怎麼樣', '今天的風很舒服'];
+const ROAM_OFF = /roam=0/.test(location.hash);
+function roamKind(n){ if (ROAM_OFF || CLASSIC || n.wid || n.amo || n.tailor || n.shopNpc === 'sci' || n.shopNpc === 'mu' || n.shopNpc === 'fu' || n.noRoam) return null; return n.shopNpc ? 'shop' : n.fishing ? 'fish' : 'stand'; }
+function roamHang(){ if (roamHang.L) return roamHang.L; const sq = HARBOR_SQ, L = [[sq[0] + 3.5, sq[1] - 3], [sq[0] - 4, sq[1] + 3.5], [sq[0] + 1, sq[1] + 5.5], [-3, 25.6], [1.6, 2.6]];
+  for (const k of ['shop', 'tackle']){ const h = HLOT[k]; if (h) L.push([h[0] + Math.sin(h[2]) * 3.6, h[1] + Math.cos(h[2]) * 3.6]); } return (roamHang.L = L); }
+/* 一次只找一個去處、算一條路（尋路比較花時間，分散在很多格做） */
+function roamGrow(n){ const R = n.roam, K = ROAM_K[R.kind], P = R.post, i = R.tries++; if (i >= 14 || R.c.length >= K.n){ R.ready = true; return; }
+  let x, z; const hang = R.kind === 'fish' ? roamHang().filter(h => Math.hypot(h[0] - P.x, h[1] - P.z) < 48).sort((a, b) => Math.hypot(a[0] - P.x, a[1] - P.z) - Math.hypot(b[0] - P.x, b[1] - P.z)).slice(0, 3) : [];
+  if (i < hang.length){ const a = ((R.h >>> 3) % 628) / 100; x = hang[i][0] + Math.cos(a) * 0.9; z = hang[i][1] + Math.sin(a) * 0.9; }
+  else { const a = (R.h % 628) / 100 + i * 2.39996, d = K.ring[0] + (K.ring[1] - K.ring[0]) * (((R.h >>> 8) + i * 37) % 100) / 100; x = P.x + Math.cos(a) * d; z = P.z + Math.sin(a) * d; }
+  if (!walkable(x, z) || blocked(x, z, 0.5) || deckAt(x, z) || groundHeight(x, z) > 6) return; if (R.c.some(c => Math.hypot(c.x - x, c.z - z) < 1.5)) return;
+  let pts = navFind(P.x, P.z, x, z); if (!pts){ pts = [[P.x, P.z], [x, z]]; const L = Math.hypot(x - P.x, z - P.z); for (let d = 0.6; d < L; d += 0.3){ const qx = P.x + (x - P.x) * d / L, qz = P.z + (z - P.z) * d / L; if (!walkable(qx, qz) || Math.abs(groundHeight(qx, qz) - P.y) > 1.2) return; } }   /* 尋路的地圖只涵蓋主島中間；外圍的人（阿蘭、阿嬤）改用「直線走得通才去」 */
+  const cum = [0]; for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+  const len = cum[cum.length - 1], str = Math.hypot(x - P.x, z - P.z); if (len < 1.2 || len > str * 2.4 + 4 || len > 60) return;
+  for (let d = 0.5; d < len; d += 0.3){ let k = 1; while (k < cum.length - 1 && cum[k] < d) k++; const u = (d - cum[k - 1]) / ((cum[k] - cum[k - 1]) || 1), qx = pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * u, qz = pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * u; if (blocked(qx, qz, 0.22)) return; }   /* 路上會穿過櫃台、牆的不要（站在櫃台後面的人，第一步常常是直接穿過櫃台） */
+  R.c.push({ x, z, pts, cum, len }); }
+/* 這個時間點他在哪：null＝在原本的位置。純粹照時間和名字算，每支手機結果一樣 */
+function roamPose(R, ms){ if (!R.c.length) return null; const K = ROAM_K[R.kind], C = K.C[0] + (R.h % K.C[1]), T = ms / 1000 + ((R.h >>> 4) % C), i = Math.floor(T / C), u = T - i * C;
+  const hx = hash32(R.id + ':' + i), r1 = (hx % 1000) / 1000, r2 = ((hx >>> 10) % 1000) / 1000, r3 = ((hx >>> 20) % 1000) / 1000;
+  if (r1 > K.p) return null; const wx = WEATHERS[weatherAt(ms - u * 1000)]; if (wx && wx.rain > 0) return null;   /* 天氣看這一輪開始的時候（走到一半才下雨的話，照樣走完，不會瞬間跳回去） */
+  const c = R.c[Math.floor(r2 * R.c.length) % R.c.length], v = 1.45, tw = c.len / v, s0 = 3 + r3 * 10, room = C - s0 - 6 - tw * 2; if (room < 6) return null;
+  const dwell = Math.min(room, K.dwell[0] + (K.dwell[1] - K.dwell[0]) * r3), a = u - s0; if (a < 0 || a > tw * 2 + dwell) return null;
+  if (a < tw){ const [x, z, h] = navAt(c, a * v); return { walk: true, x, z, rot: h }; }
+  if (a < tw + dwell){ const [x, z, h] = navAt(c, c.len); return { walk: false, x, z, rot: h + Math.sin(i * 1.7 + R.h) * 1.2, first: a - tw < 1 }; }
+  const [x, z, h] = navAt(c, c.len - (a - tw - dwell) * v); return { walk: true, x, z, rot: h + Math.PI }; }
+function roamDrive(n, dt, t){ if (!n.roam){ if (n.roam === 0) return false; const kind = roamKind(n); if (!kind){ n.roam = 0; return false; }
+    n.roam = { kind, post: { x: n.pos.x, z: n.pos.z, y: n.baseY, rot: n.rot, fishing: !!n.fishing }, c: [], tries: 0, ready: false, id: 'rm:' + n.npcName, h: hash32('rm:' + n.npcName), away: false }; }
+  const R = n.roam, P = R.post;
+  if (!R.ready){ if (frameNo % 4 === 0 && Math.hypot(camera.position.x - P.x, camera.position.z - P.z) < 110) roamGrow(n); return false; }
+  if (!R.c.length) return false;
+  const ps = roamPose(R, Cloud.on ? worldNow() : Date.now());
+  if (!ps){ if (R.away){ R.away = false; n.pos.set(P.x, P.y, P.z); n.baseY = P.y; n.rot = P.rot; n.speed = 0; if (P.fishing){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; } } return false; }   /* 回到原位：重新拋竿 */
+  if (!R.away){ R.away = true; n.fishing = false; n.bobState = 'none'; n.flying = null; n.dip = 0; n.bend = 0; n.st = 'wait'; n.next = t + 5; n.windup = 0; n.castT = -1; if (n.held){ n.av.g.remove(n.held.o); n.held = null; } }
+  const far = Math.hypot(n.pos.x - ps.x, n.pos.z - ps.z) > 6; if (far){ n.pos.x = ps.x; n.pos.z = ps.z; } else { const k = Math.min(1, dt * 8); n.pos.x += (ps.x - n.pos.x) * k; n.pos.z += (ps.z - n.pos.z) * k; }
+  n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY;
+  const pd = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
+  if (ps.walk){ n.rot = lerpAngle(n.rot, ps.rot, 1 - Math.exp(-8 * dt)); n.speed = 1.45; }
+  else { n.speed = 0; n.rot = lerpAngle(n.rot, pd < 7 ? Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z) : ps.rot, 1 - Math.exp(-3 * dt)); }
+  if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(Math.random() < 0.5 ? ROAM_LINES[Math.floor(Math.random() * ROAM_LINES.length)] : npcLine(n), '', 5); n.talkAt = t + rand(18, 34); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
+  n.update(dt, t); n.placeTag(); return true; }
 function updateNpcs(dt, t){
   try { rainWearTick(); } catch(e){}
   for (const n of npcs){
     if (n.wid === 'gang' && Cloud.on && (!Gang.at || Date.now() - Gang.at > 10 * 60000) && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 30) loadGang();
     if (worldDrive(n, dt, t)){ worldShopLoad(n); continue; }
+    try { if (roamDrive(n, dt, t)) continue; } catch(e){ if (!roamDrive.w){ roamDrive.w = 1; console.warn('roam', e); } }   /* v450 其他村民也會自己走動 */
     if (n.tailor){ updateLing(n, dt, t); continue; }
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
     if (n.shopNpc === 'cai'){ updateShopNpc(n, dt, t, () => (!Cai.at || Date.now() - Cai.at > 10 * 60000) && loadCai()); continue; }
@@ -14651,6 +14700,7 @@ function renderTab(){
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
       '🌧️ 下雨和暴風雨的時候，外面的村民會自己穿上雨衣、雨帽和雨靴，雨停了就脫掉。村長、阿綾、阿木、阿福下雨不散步、不釣魚，會去涼亭或食堂躲雨、或回家休息（老港例外，他下雨也要釣）。大家看到的都一樣。',
+      '🚶 村民會走動：釣魚的村民每隔幾分鐘會收竿，走去廣場、魚市場、涼亭附近待一下再回來；顧店的只在店門口活動，店照常開；下雨就不出門。每個人看到的位置都一樣。',
       '🏃 角色的動作：走路跑步的時候身體會隨腳步上下彈、往前傾，起步、急停、落地都有一下緩衝。騎腳踏車時腳會踩踏板、手握把手、身體前傾，剛起步用力加速時會站起來踩。',
       '🐟 魚的動作：魚游泳的時候整條身體會一波一波地擺。釣上來的那一刻，魚會頭朝上吊在線上猛甩；捧在手上也會突然掙扎幾下。',
       '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，海浪會把它慢慢推回岸邊。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
