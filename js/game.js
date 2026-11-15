@@ -1004,7 +1004,15 @@ function makeKayakMesh(ci){ ci = ((ci | 0) % KAYAK_COL.length + KAYAK_COL.length
 const KAYAK_SIT = -0.17;
 function kayakRest(g){ const pd = g.userData.paddle; if (!pd) return; pd.position.set(0.25, 0.215, 0.3); pd.rotation.set(0, Math.PI / 2 - 0.05, 0); pd.userData.rest = true; }
 /* 沒人坐的船，槳放回船上 */
-function kayakTick(){ for (const b of boats){ const pd = b.m.userData.paddle; if (pd && !pd.userData.rest && (pd.userData.useAt || 0) < frameNo - 2) kayakRest(b.m); } }
+function kayakTick(dt){
+  for (const b of boats){ const pd = b.m.userData.paddle; if (!pd) continue;
+    if (b === myBoat){ if ((pd.userData.useAt || 0) < frameNo - 1) kayakDrive(me, b.m, dt); }   /* v454 保險：就算角色那邊的動作層沒跑到（出錯、被關掉、角色還沒載好），槳還是會划 */
+    else if (!pd.userData.rest && (pd.userData.useAt || 0) < frameNo - 2) kayakRest(b.m); }
+  for (const p of peers.values()){ const f = p.fisher, bm = f && f.boatMesh, pd = bm && bm.userData.paddle; if (pd && (pd.userData.useAt || 0) < frameNo - 1) kayakDrive(f, bm, dt); } }
+/* 槳怎麼動（跟角色用哪一種身體無關）：有在前進就左右輪流划——下水的那一邊由前往後拉；停下來槳橫放在腿上 */
+function kayakDrive(f, bm, dt){ const pd = bm.userData.paddle, J = f.kj || (f.kj = { sq: 0, st: 0, ped: 0, up: 0, by: 0 });
+  const spd = f === me ? (OW.boatSpd || 0) : (f.speed || 0), row = spd > 0.3 && !f.fishing; J.pk = (J.pk || 0) + ((row ? 1 : 0) - (J.pk || 0)) * Math.min(1, dt * 5); if (row) J.pp = (J.pp || 0) + dt * (3.4 + Math.min(spd, 9) * 0.3);
+  const pk = J.pk, pp = J.pp || 0; pd.position.set(0, 0.5 + 0.14 * pk, 0.02); pd.rotation.set(0, -Math.cos(pp) * 0.38 * pk, -Math.sin(pp) * 0.58 * pk); pd.userData.rest = false; pd.userData.useAt = frameNo; return pd; }
 // 從某個位置朝某個方向，找離 dist 最近、夠深的水面點
 /* ---- 卡通樹：圓樹、松樹、白樺、村子裡的花樹和果樹（每種用 InstancedMesh 一次畫完） ---- */
 // ---- 季節：跟著現實（台灣）的月份。3～5 月春、6～8 月夏、9～11 月秋、12～2 月冬；網址加 #season=winter 可以預覽 ----
@@ -3711,12 +3719,10 @@ function kidJuice(f, dt, t, P){ const a = f.av, K = a.kid, B = K.B, w = K.w, ac 
   for (let i = 0; i < K.kjB.length; i++) K.kjQ[i].copy(K.kjB[i].quaternion); K.kjOn = true;
   const onBike = f === me ? Bike.on : !!f.bike;
   let bob = 0, sy = 1;
-  const kbm = !f.swim && f.sitting && !onBike ? (f === me ? (myBoat && myBoat.m) : f.boatMesh) : null, pd = kbm && kbm.userData.paddle;
+  const kbm = f === me ? (myBoat && !Dive.on ? myBoat.m : null) : f.boatMesh, pd = kbm && kbm.userData.paddle;   /* v454 只看「人在不在船上」，不再多看坐下的記號（玩家截圖：人站在船上、槳躺著沒動） */
   if (pd){
     /* v453 平台舟：腳往前伸踩在船上、兩手握著雙頭槳左右輪流划（槳葉下水的那一邊由前往後拉），沒在划的時候槳橫放在腿上；釣魚時手放開去拿釣竿 */
-    const spd = f === me ? (OW.boatSpd || 0) : (f.speed || 0), row = spd > 0.3 && !f.fishing; J.pk = (J.pk || 0) + ((row ? 1 : 0) - (J.pk || 0)) * Math.min(1, dt * 5); if (row) J.pp = (J.pp || 0) + dt * (3.4 + Math.min(spd, 9) * 0.3);
-    const pk = J.pk, pp = J.pp || 0, sn = Math.sin(pp), cs = Math.cos(pp);
-    pd.position.set(0, 0.5 + 0.14 * pk, 0.02); pd.rotation.set(0, -cs * 0.38 * pk, -sn * 0.58 * pk); pd.userData.rest = false; pd.userData.useAt = frameNo;
+    kayakDrive(f, kbm, dt); const pk = J.pk, pp = J.pp || 0, cs = Math.cos(pp);
     B.spine.rotateX(0.1 + 0.06 * pk); B.chest.rotateY(-cs * 0.22 * pk); B.head.rotateX(-0.08);
     a.g.position.y = f.baseY; a.g.updateMatrixWorld(true); kbm.updateMatrixWorld(true);
     for (const sd of ['l', 'r']){ const up = B['upperleg' + sd], side = Math.sign(_kjV.copy(up.getWorldPosition(_kjA)) && a.g.worldToLocal(_kjV).x) || (sd === 'l' ? 1 : -1), sx = side > 0 ? 1 : -1;
@@ -3777,7 +3783,7 @@ function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
   if (K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjB[i].quaternion.copy(K.kjQ[i]); K.kjOn = false; }   /* v452 上一格疊上去的彈性先還原（見 kidJuice 的說明） */
   if (f.swim) W.dive = 1;
-  else if (f.sitting) W.sit = 1;
+  else if (f.sitting || (f === me ? !!myBoat : !!f.boatMesh)) W.sit = 1;
   else if (f.air > 0.05) W.jump_air = 1;
   else if (f.fishing){ if ((f.windup || 0) > 0.02 || f.castT >= 0) W.fish_cast = 1; else if ((f.bend || 0) > 0.45) W.fish_fight = 1; else if ((f.bend || 0) > 0.05) W.fish_reel = 1; else W.fish_idle = 1; }
   else if (f.ppose && kidPPoseOn(f)){ for (const [nm, w] of f.ppose.W) if (K.acts[nm]) W[nm] = w; }   /* v359 跟寵物玩的時候人也會動（蹲下餵、伸手摸、坐地上陪牠） */
@@ -3967,7 +3973,7 @@ class Fisher {
       const far = this !== me && camera.position.distanceToSquared(this.pos) > 900; a.kid.skipT += dt;
       if (!far || a.kid.skipT > 0.1){ kidAnimate(this, far ? a.kid.skipT : dt, t); a.kid.skipT = 0; }
       a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = this.swim ? P.pit : P.pit * 0.35; a.g.rotation.z = P.rol * 0.8 + (this.bikeLean || 0);
-      let kjB = 0; if (!far){ try { kjB = kidJuice(this, dt, t, P); } catch(e){} }   /* v449 疊一層彈性（太遠的人不算） */
+      let kjB = 0; if (!far){ try { kjB = kidJuice(this, dt, t, P); } catch(e){ if (!KJ.err){ KJ.err = String(e && e.stack || e); console.warn('kidJuice', e); } } }   /* v449 疊一層彈性（太遠的人不算） */
       a.g.position.y = this.baseY + (this.swim ? P.bob : 0) + kjB;
       if (this.fishing){ a.g.updateMatrixWorld(true); a.kid.handR.getWorldPosition(a.kid.v); a.g.worldToLocal(a.kid.v); a.rod.position.copy(a.kid.v); }
     } else {
@@ -4442,7 +4448,7 @@ function boatSpot(){
   return Object.assign({}, SPOT_BY_ID[id], { pos: me.pos.clone(), dir: new THREE.Vector2(Math.sin(me.rot), Math.cos(me.rot)), shore: true, legendBoost: 1 });
 }
 function updateBoat(dt, ix, iz, L, locked){
-  let speed = 0; const t = now();
+  let speed = 0; const t = now(); me.sitting = true; if (me.swim && !Dive.on) me.setSwim(false);   /* v454 在船上就是坐著（不管之前是什麼狀態） */
   if (L > 0.08 && !locked){
     if (F.phase !== 'idle') cancelFishing('收竿了');
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
@@ -15949,7 +15955,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
-  updatePlayer(dt); try { bikeTick(dt); kayakTick(); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
