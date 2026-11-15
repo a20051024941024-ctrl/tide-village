@@ -3660,6 +3660,67 @@ function startEmote(f, k){ const D = EMOTE_DEF[k]; if (!D) return; f.emote = { k
 // 每一格：照角色現在在做什麼，決定每個動作的比重（平滑過去，不會瞬間跳），播放速度跟移動速度一樣
 function kidPPoseOn(f){ const P = f.ppose; if (!P) return false; const moved = now() - P.at > 0.8 && ((f.aspd || 0) > 0.35 || f.air > 0.05);
   if (moved || f.fishing || f.sitting || f.swim || now() > P.until){ f.ppose = null; return false; } return true; }
+/* ============ v449 角色的動作加「彈性」 ============
+   玩家說「人物走動看起來好死，騎腳踏車也是」。查了才發現：正式 3D 角色的手腳是骨架動畫在動，但整個人不會上下起伏、不會前傾、頭完全不動；
+   騎腳踏車是整個人僵在坐姿，腳不踩、手垂著。這裡在骨架動畫「之後」再疊一層：
+   走路跑步：身體隨腳步上下彈、落地時壓扁一點再拉長（越快越明顯）、往前傾、重心左右換、上半身反向扭、頭點一下再穩住；起步和急停有一下緩衝。
+   騎車：兩腳輪流踩踏板（跟曲柄同步）、手往前握把手、身體前傾、隨踩踏輕輕起伏，用力加速時屁股離開坐墊站起來踩。
+   站著不動：呼吸起伏。全部是疊加的小量，不改原本的動畫檔。KJ 可以整個關掉（網址加 #juice=0）。 */
+const KJ = { off: /juice=0/.test(location.hash), bob: 1, lean: 1 };
+function kidJuice(f, dt, t, P){ const a = f.av, K = a.kid, B = K.B, w = K.w, ac = K.acts; if (KJ.off || !B || !B.hips){ a.g.scale.y = a.g.scale.y; return 0; }
+  const v = f.aspd || 0, J = f.kj || (f.kj = { sq: 0, st: 0, ped: 0, up: 0, by: 0 });
+  const onBike = f === me ? Bike.on : !!f.bike;
+  let bob = 0, sy = 1;
+  if (onBike && !f.swim){
+    const bsp = f === me ? Bike.sp : (f.speed || 0), push = f === me ? joyMag() > 0.08 : bsp > 0.5, n = Math.min(1, bsp / 7);
+    if (f === me && Bike.g && Bike.g.userData.crank) J.ped = Bike.g.userData.crank.rotation.x; else if (push) J.ped += Math.min(bsp, 6) * dt * 1.3;
+    const ps = Math.sin(J.ped), eff = push ? 1 : 0.3;
+    const hard = f === me ? (push && bsp < 5.5 && bsp > 0.3) : false; J.up += ((hard ? 1 : 0) - J.up) * Math.min(1, dt * (hard ? 5 : 3));   /* 還在加速：屁股離開坐墊站起來踩 */
+    B.spine.rotateX(0.26 + n * 0.14 + J.up * 0.16); B.chest.rotateX(0.1); B.head.rotateX(-0.28 - n * 0.1 - J.up * 0.1);
+    B.chest.rotateY(ps * 0.06 * eff); B.hips.rotateZ(ps * 0.05 * eff * (1 + J.up));
+    bob = Math.abs(ps) * 0.012 * eff * (0.4 + n) + J.up * (0.07 + Math.abs(ps) * 0.025);
+    /* 腳踩在踏板上、手握住把手：照腳踏車的形狀算出踏板和把手在哪，用兩節骨頭的反算把手腳接過去（腳踏車跟人用同一個位置算，不會慢一格） */
+    a.g.position.y = f.baseY + bob; a.g.updateMatrixWorld(true);
+    for (const sd of ['l', 'r']){ const up = B['upperleg' + sd], side = Math.sign(_kjV.copy(up.getWorldPosition(_kjA)) && a.g.worldToLocal(_kjV).x) || (sd === 'l' ? 1 : -1), sx = side > 0 ? 1 : -1;
+      const py = sx * 0.1 * Math.cos(J.ped), pz = sx * 0.1 * Math.sin(J.ped);
+      _kjT.set(sx * 0.13, -BIKE_SEAT + 0.32 + py + 0.085, BIKE_FWD + 0.02 + pz - 0.03); a.g.localToWorld(_kjT); _kjP.set(sx * 0.22, 0.3, 1.2); a.g.localToWorld(_kjP);
+      kidIK(up, B['lowerleg' + sd], B['foot' + sd], _kjT, _kjP);
+      const ua = B['upperarm' + sd]; _kjT.set(sx * 0.2, -BIKE_SEAT + 0.98 + 0.02, BIKE_FWD + 0.28 - 0.02); a.g.localToWorld(_kjT); _kjP.set(sx * 0.55, -0.2, -0.1); a.g.localToWorld(_kjP);
+      kidIK(ua, B['lowerarm' + sd], B['hand' + sd], _kjT, _kjP); }
+  } else if (!f.swim && !f.sitting && !(f.air > 0.05) && !f.fishing){
+    /* 腳步的相位：拿比重最大的那個移動動畫的播放進度 */
+    let best = null, bw = 0.05; for (const k of ['walk', 'run', 'sprint']) if ((w[k] || 0) > bw && ac[k]){ bw = w[k]; best = ac[k]; }
+    const loco = Math.min(1, (w.walk || 0) + (w.run || 0) + (w.sprint || 0)), fast = Math.min(1, (w.run || 0) * 0.7 + (w.sprint || 0));
+    if (best && loco > 0.02){ const ph = best.time / best.getClip().duration * Math.PI * 2, s2 = Math.cos(ph * 2 + KJ_OFF), amp = (0.022 + 0.05 * fast) * loco * KJ.bob;
+      bob = (0.5 + 0.5 * s2) * amp * 2; sy = 1 + s2 * (0.012 + 0.03 * fast) * loco;
+      a.g.rotation.x += (0.03 + 0.15 * fast) * loco * KJ.lean + clamp(f.accL || 0, -0.12, 0.14) * 0.9;
+      a.g.rotation.z += Math.sin(ph + KJ_OFF * 0.5) * (0.035 - 0.015 * fast) * loco;
+      B.chest.rotateY(Math.sin(ph + KJ_OFF * 0.5) * (0.07 + 0.1 * fast) * loco); B.head.rotateX(-(0.02 + 0.1 * fast) * loco - s2 * 0.035 * loco); B.head.rotateY(-Math.sin(ph + KJ_OFF * 0.5) * 0.05 * loco); }
+    const idle = 1 - loco; if (idle > 0.05){ const br = Math.sin(t * 2.0 + a.blinkAt); sy *= 1 + br * 0.012 * idle; B.chest.rotateX(br * 0.025 * idle); B.head.rotateX(-br * 0.02 * idle); }
+  }
+  /* 起步拉長、急停壓扁：速度變化的一下衝擊，很快彈回來 */
+  { const acc = (v - (J.pv == null ? v : J.pv)) / Math.max(dt, 1e-3); J.pv = v; const kick = clamp(acc * 0.012, -0.09, 0.07); J.st += (kick - J.st) * Math.min(1, dt * 9); if (!onBike && !f.swim) sy *= 1 + J.st; }
+  if (f.air > 0.05 && !f.swim) sy *= 1.05;   /* 在空中拉長一點 */
+  if (f === me && Jump.land > 0 && !f.swim){ const k = Jump.land / 0.18; sy *= 1 - 0.14 * k; }   /* 落地壓扁 */
+  J.sq += (sy - 1 - J.sq) * Math.min(1, dt * 30); const q = 1 + J.sq, xz = 1 / Math.sqrt(Math.max(0.6, q));
+  const bs = a.kidBase || (a.kidBase = a.g.scale.clone()); a.g.scale.set(bs.x * xz, bs.y * q, bs.z * xz);
+  J.by += (bob - J.by) * Math.min(1, dt * 30); return J.by; }
+const KJ_OFF = 0;
+const _kjA = new THREE.Vector3(), _kjB = new THREE.Vector3(), _kjC = new THREE.Vector3(), _kjV = new THREE.Vector3(), _kjT = new THREE.Vector3(), _kjP = new THREE.Vector3(), _kjN = new THREE.Vector3(), _kjU = new THREE.Vector3(), _kjW = new THREE.Vector3(), _kjQ = new THREE.Quaternion(), _kjQ2 = new THREE.Quaternion(), _kjQ3 = new THREE.Quaternion();
+/* 讓骨頭在「世界座標」轉一個角度（qW），換算回骨頭自己的旋轉 */
+function kidRotW(bone, qW){ bone.parent.getWorldQuaternion(_kjQ2); _kjQ3.copy(_kjQ2).invert().multiply(qW).multiply(_kjQ2); bone.quaternion.premultiply(_kjQ3); bone.updateMatrixWorld(true); }
+/* 兩節骨頭的反算：up（大腿／上臂）→ lo（小腿／前臂）→ end（腳／手），讓 end 碰到 T，關節（膝蓋／手肘）朝 pole 那一邊 */
+function kidIK(up, lo, end, T, pole){
+  up.getWorldPosition(_kjA); lo.getWorldPosition(_kjB); end.getWorldPosition(_kjC);
+  const l1 = _kjA.distanceTo(_kjB), l2 = _kjB.distanceTo(_kjC), d = clamp(_kjA.distanceTo(T), Math.abs(l1 - l2) + 0.005, l1 + l2 - 0.004);
+  /* 1 關節彎到剛好的角度 */
+  _kjU.copy(_kjA).sub(_kjB).normalize(); _kjW.copy(_kjC).sub(_kjB).normalize(); const cur = Math.acos(clamp(_kjU.dot(_kjW), -1, 1)), want = Math.acos(clamp((l1 * l1 + l2 * l2 - d * d) / (2 * l1 * l2), -1, 1));
+  _kjN.crossVectors(_kjU, _kjW); if (_kjN.lengthSq() < 1e-6) _kjN.set(1, 0, 0); _kjN.normalize(); kidRotW(lo, _kjQ.setFromAxisAngle(_kjN, want - cur));
+  /* 2 整條轉過去對準目標 */
+  end.getWorldPosition(_kjC); _kjU.copy(_kjC).sub(_kjA).normalize(); _kjW.copy(T).sub(_kjA).normalize(); kidRotW(up, _kjQ.setFromUnitVectors(_kjU, _kjW));
+  /* 3 繞著「肩膀／髖到目標」這條線轉，讓關節朝 pole */
+  if (pole){ lo.getWorldPosition(_kjB); _kjN.copy(T).sub(_kjA).normalize(); _kjU.copy(_kjB).sub(_kjA); _kjU.addScaledVector(_kjN, -_kjU.dot(_kjN)); _kjW.copy(pole).sub(_kjA); _kjW.addScaledVector(_kjN, -_kjW.dot(_kjN));
+    if (_kjU.lengthSq() > 1e-6 && _kjW.lengthSq() > 1e-6){ _kjU.normalize(); _kjW.normalize(); let ang = Math.acos(clamp(_kjU.dot(_kjW), -1, 1)); if (_kjV.crossVectors(_kjU, _kjW).dot(_kjN) < 0) ang = -ang; kidRotW(up, _kjQ.setFromAxisAngle(_kjN, ang)); } } }
 function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
   if (f.swim) W.dive = 1;
@@ -3853,7 +3914,8 @@ class Fisher {
       const far = this !== me && camera.position.distanceToSquared(this.pos) > 900; a.kid.skipT += dt;
       if (!far || a.kid.skipT > 0.1){ kidAnimate(this, far ? a.kid.skipT : dt, t); a.kid.skipT = 0; }
       a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = this.swim ? P.pit : P.pit * 0.35; a.g.rotation.z = P.rol * 0.8 + (this.bikeLean || 0);
-      a.g.position.y = this.baseY + (this.swim ? P.bob : 0);
+      let kjB = 0; if (!far){ try { kjB = kidJuice(this, dt, t, P); } catch(e){} }   /* v449 疊一層彈性（太遠的人不算） */
+      a.g.position.y = this.baseY + (this.swim ? P.bob : 0) + kjB;
       if (this.fishing){ a.g.updateMatrixWorld(true); a.kid.handR.getWorldPosition(a.kid.v); a.g.worldToLocal(a.kid.v); a.rod.position.copy(a.kid.v); }
     } else {
     a.legL.rotation.x = P.lL; a.legR.rotation.x = P.lR; a.legL.userData.shin.rotation.x = P.kL; a.legR.userData.shin.rotation.x = P.kR; a.legL.userData.foot.rotation.x = P.fL; a.legR.userData.foot.rotation.x = P.fR;
@@ -4631,7 +4693,7 @@ function updatePlayer(dt){
    玩家回饋：朋友進來兩次、釣幾條魚就膩了，推薦參考 bruno-simon.com（一打開就在開車、光是亂開就好玩）。
    騎車有慣性：加速要一下子、放開會滑行、急轉會甩尾（輪子揚沙）、衝過坡頂會飛起來、撞到東西會彈一下。
    右下角「🚲 騎車」上車、再按一次下車；拋竿、上船、坐椅子、進屋子會自動下車，車停在原地。別人看得到你在騎（presence 的 bk）。 */
-const BIKE_SEAT = 0.5;
+const BIKE_SEAT = 0.29, BIKE_FWD = 0.08;   /* v449 以前 0.5：人坐得比坐墊高、腳懸空踩不到踏板。量過角色的腿（大腿 0.25＋小腿 0.16）以後，坐墊降到腳踩得到的高度 */
 var Bike = { on:false, sp:0, yaw:0, vx:0, vz:0, lean:0, g:null, park:null, lastG:0, lastVy:0, dustT:0, tickT:0, bumpT:0, hinted:false };
 const BIKE_MAX = 9.2;
 function makeBike(col){
@@ -4640,14 +4702,14 @@ function makeBike(col){
   g.userData.wheels = [];
   for (const z of [0.52, -0.5]){ const w = new THREE.Group(); w.position.set(0, 0.3, z); const tire = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.045, 6, 16), dark); tire.rotation.y = Math.PI / 2; tire.castShadow = true; w.add(tire);
     for (let i = 0; i < 4; i++){ const sp = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.5, 0.012), metal); sp.rotation.x = i * Math.PI / 4; w.add(sp); } g.add(w); g.userData.wheels.push(w); }
-  tube(0, 0.3, -0.5, 0, 0.72, -0.16, 0.028, frame); tube(0, 0.72, -0.16, 0, 0.7, 0.3, 0.028, frame); tube(0, 0.32, 0.02, 0, 0.72, -0.16, 0.028, frame); tube(0, 0.32, 0.02, 0, 0.7, 0.3, 0.028, frame); tube(0, 0.3, -0.5, 0, 0.32, 0.02, 0.024, frame);
+  tube(0, 0.3, -0.5, 0, 0.55, -0.16, 0.028, frame); tube(0, 0.55, -0.16, 0, 0.7, 0.3, 0.028, frame); tube(0, 0.32, 0.02, 0, 0.55, -0.16, 0.028, frame); tube(0, 0.32, 0.02, 0, 0.7, 0.3, 0.028, frame); tube(0, 0.3, -0.5, 0, 0.32, 0.02, 0.024, frame);
   tube(0, 0.3, 0.52, 0, 0.98, 0.3, 0.026, metal);                                   // 前叉＋龍頭
   tube(-0.26, 0.98, 0.28, 0.26, 0.98, 0.28, 0.022, dark);                            // 把手
-  { const seat = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.3), dark); seat.position.set(0, 0.78, -0.2); seat.castShadow = true; g.add(seat); }
+  { const seat = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.3), dark); seat.position.set(0, 0.59, -0.2); seat.castShadow = true; g.add(seat); }
   { const bk = new THREE.Group(); bk.position.set(0, 0.78, 0.56); for (const [w, h, d, x, y, z] of [[0.36, 0.02, 0.26, 0, 0, 0], [0.36, 0.2, 0.02, 0, 0.1, 0.13], [0.36, 0.2, 0.02, 0, 0.1, -0.13], [0.02, 0.2, 0.26, 0.18, 0.1, 0], [0.02, 0.2, 0.26, -0.18, 0.1, 0]]){ const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wood); b.position.set(x, y, z); bk.add(b); } g.add(bk); }   // 前面的籃子
   { const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.26), M('#5fb6e3')); box.position.set(0, 0.72, -0.58); box.castShadow = true; g.add(box); const lid = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.04, 0.28), M('#f4f7fa')); lid.position.set(0, 0.84, -0.58); g.add(lid); }   // 後面的小冰桶
   tube(0.14, 0.6, -0.62, 0.14, 1.75, -0.86, 0.012, dark);                            // 插在後面的釣竿
-  { const cr = new THREE.Group(); cr.position.set(0, 0.32, 0.02); for (const sx of [-1, 1]){ const a = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.17, 0.03), metal); a.position.set(sx * 0.09, sx * 0.085, 0); cr.add(a); const pd = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.06), dark); pd.position.set(sx * 0.14, sx * 0.17, 0); cr.add(pd); } g.add(cr); g.userData.crank = cr; }
+  { const cr = new THREE.Group(); cr.position.set(0, 0.32, 0.02); for (const sx of [-1, 1]){ const a = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.1, 0.03), metal); a.position.set(sx * 0.09, sx * 0.05, 0); cr.add(a); const pd = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.06), dark); pd.position.set(sx * 0.14, sx * 0.1, 0); cr.add(pd); } g.add(cr); g.userData.crank = cr; }
   return g; }
 function canRide(){ return !myBoat && !mySeat && !Dive.on && !House.on && !inIndoor() && !Photo.on && F.phase === 'idle' && !(typeof Sub !== 'undefined' && Sub.on); }
 function bikeOk(ax, az, bx, bz){ const BR = blocked(ax, az, 0.5) ? 0.35 : 0.5; if (!walkable(bx, bz) || blockedJ(bx, bz, BR, Jump.gy + Jump.air, ax, az)) return false; const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); }
@@ -4690,11 +4752,11 @@ function bikeDrive(dt, ix, iz, L){
 function bikeDraw(g, x, y, z, yaw, lean, sp, dt, pedal){ g.visible = true; g.position.set(x, y, z); g.rotation.order = 'YXZ'; g.rotation.y = yaw; g.rotation.z = lean; const w = g.userData.wheels; for (const m of w) m.rotation.x += sp * dt / 0.3; if (pedal) g.userData.crank.rotation.x += Math.min(sp, 6) * dt * 1.3; }
 function bikeTick(dt){
   if (Bike.g){
-    if (Bike.on) bikeDraw(Bike.g, me.pos.x + Math.sin(Bike.yaw) * 0.14, me.baseY - BIKE_SEAT, me.pos.z + Math.cos(Bike.yaw) * 0.14, Bike.yaw, Bike.lean, Bike.sp, dt, joyMag() > 0.08);
+    if (Bike.on) bikeDraw(Bike.g, me.pos.x + Math.sin(Bike.yaw) * BIKE_FWD, me.baseY - BIKE_SEAT, me.pos.z + Math.cos(Bike.yaw) * BIKE_FWD, Bike.yaw, Bike.lean, Bike.sp, dt, joyMag() > 0.08);
     else if (Bike.park && !House.on && !Dive.on){ const P = Bike.park; bikeDraw(Bike.g, P.x, groundHeight(P.x, P.z), P.z, P.yaw, 0.16, 0, dt, false); }
     else Bike.g.visible = false; }
   for (const p of peers.values()){ const f = p.fisher; if (!f) continue;
-    if (f.bike && f.av && f.av.g.visible){ if (!f.bikeG){ f.bikeG = makeBike('#3f8fd8'); scene.add(f.bikeG); } bikeDraw(f.bikeG, f.pos.x + Math.sin(f.rot) * 0.14, f.baseY - BIKE_SEAT, f.pos.z + Math.cos(f.rot) * 0.14, f.rot, 0, f.speed || 0, dt, (f.speed || 0) > 0.5); }
+    if (f.bike && f.av && f.av.g.visible){ if (!f.bikeG){ f.bikeG = makeBike('#3f8fd8'); scene.add(f.bikeG); } bikeDraw(f.bikeG, f.pos.x + Math.sin(f.rot) * BIKE_FWD, f.baseY - BIKE_SEAT, f.pos.z + Math.cos(f.rot) * BIKE_FWD, f.rot, 0, f.speed || 0, dt, (f.speed || 0) > 0.5); }
     else if (f.bikeG) f.bikeG.visible = false; }
 }
 function joyMag(){ return Math.hypot(joy.x + ((keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0)), joy.z + ((keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0))); }
@@ -14589,6 +14651,7 @@ function renderTab(){
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚、翻車魚、白鯨比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
       '🌧️ 下雨和暴風雨的時候，外面的村民會自己穿上雨衣、雨帽和雨靴，雨停了就脫掉。村長、阿綾、阿木、阿福下雨不散步、不釣魚，會去涼亭或食堂躲雨、或回家休息（老港例外，他下雨也要釣）。大家看到的都一樣。',
+      '🏃 角色的動作：走路跑步的時候身體會隨腳步上下彈、往前傾，起步、急停、落地都有一下緩衝。騎腳踏車時腳會踩踏板、手握把手、身體前傾，剛起步用力加速時會站起來踩。',
       '🐟 魚的動作：魚游泳的時候整條身體會一波一波地擺。釣上來的那一刻，魚會頭朝上吊在線上猛甩；捧在手上也會突然掙扎幾下。',
       '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，海浪會把它慢慢推回岸邊。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
       '🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。',
