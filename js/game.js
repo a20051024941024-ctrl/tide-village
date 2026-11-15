@@ -2109,7 +2109,14 @@ OW.update = function(t){
       const bp = !mine && e.bowPeer ? peers.get(e.bowPeer) : null; if (e.bowPeer && !bp) e.bowPeer = null;
       if (mine || bp) e.bow = Math.min(1, (e.bow || 0) + 1 / 90); else if (e.bow) e.bow = Math.max(0, e.bow - 1 / 120);
       if (mine !== !!e.bowMine){ e.bowMine = mine; owEmit('owbow', { k: P.cx + ',' + P.cz + ',' + P.W, on: mine ? 1 : 0 }); }
-      if (e.bow){ const b = smooth01(e.bow), ox = bp ? bp.fisher.pos.x : mx, oz = bp ? bp.fisher.pos.z : mz, orr = bp ? bp.fisher.rot : me.rot, bx = ox + Math.sin(orr) * 7, bz = oz + Math.cos(orr) * 7; gx += (bx - gx) * b; gz += (bz - gz) * b; gh = gh + ((((orr - gh) % 6.283) + 9.425) % 6.283 - 3.1416) * b; if (b > 0.5 && (!bp || Math.hypot(gx - mx, gz - mz) < 50)) e.seenNear = true; }
+      if (e.bow){ const b = smooth01(e.bow), ox = bp ? bp.fisher.pos.x : mx, oz = bp ? bp.fisher.pos.z : mz, orr = bp ? bp.fisher.rot : me.rot, bx = ox + Math.sin(orr) * 7, bz = oz + Math.cos(orr) * 7;
+        /* v452 玩家回報「坐船時海豚會跟隨船的方向移動」：以前海豚群是黏在「船頭前面 7 公尺」那一點、方向也直接等於船的方向，船一轉，整群海豚就像綁在竿子上一樣被甩過去。
+           現在海豚是「自己游過去」：有自己的位置和方向，朝船頭前面那一點游（最快比船快一點），方向看牠實際往哪游。船急轉時牠們會繞一個弧追上來 */
+        const tq = now(), dq = Math.min(0.1, Math.max(0, tq - (e.bT || tq))); e.bT = tq; if (e.fx == null || Math.hypot(e.fx - gx, e.fz - gz) > 60 && b < 0.2){ e.fx = gx; e.fz = gz; e.fh = gh; }
+        { const dx = bx - e.fx, dz = bz - e.fz, dd = Math.hypot(dx, dz), vmax = (bp ? 9 : (OW.boatSpd || 0)) + 4.5, st = Math.min(dd, vmax * dq * Math.min(1, 0.35 + dd / 6)); if (dd > 1e-3){ e.fx += dx / dd * st; e.fz += dz / dd * st; }
+          const want = dd > 1.2 ? Math.atan2(dx, dz) : orr; e.fh += (((want - e.fh) % 6.283 + 9.425) % 6.283 - 3.1416) * Math.min(1, dq * 2.6); }
+        gx += (e.fx - gx) * b; gz += (e.fz - gz) * b; gh = gh + ((((e.fh - gh) % 6.283) + 9.425) % 6.283 - 3.1416) * b; if (b > 0.5 && (!bp || Math.hypot(gx - mx, gz - mz) < 50)) e.seenNear = true; }
+      else if (e.fx != null){ e.fx = null; e.bT = 0; }
       /* v404 從岸上看鏡頭只看得到 15 公尺左右的海面，海豚在 40 公尺外經過根本看不到：附近有人時，海豚群會游過來到你前面 9～15 公尺的水面玩一陣子再離開 */
       { const d0 = Math.hypot(gx - mx, gz - mz), on = !e.bow && u > 4 && u < P.dur - 10 && (e.apX ? Math.hypot(e.apX - mx, e.apZ - mz) < 40 : d0 < 55), tq = now(), dtq = Math.min(0.2, tq - (e.apT || tq)); e.apT = tq;
         if (on && e.apX == null){ const f = camera.getWorldDirection(new THREE.Vector3()); f.y = 0; if (f.lengthSq() < 1e-4) f.set(Math.sin(me.rot), 0, Math.cos(me.rot)); f.normalize();
@@ -3669,6 +3676,10 @@ function kidPPoseOn(f){ const P = f.ppose; if (!P) return false; const moved = n
 const KJ = { off: /juice=0/.test(location.hash), bob: 1, lean: 1 };
 function kidJuice(f, dt, t, P){ const a = f.av, K = a.kid, B = K.B, w = K.w, ac = K.acts; if (KJ.off || !B || !B.hips){ a.g.scale.y = a.g.scale.y; return 0; }
   const v = f.aspd || 0, J = f.kj || (f.kj = { sq: 0, st: 0, ped: 0, up: 0, by: 0 });
+  /* v452 玩家回報「NPC 走路頭會掉下來」：走路的動畫檔裡沒有頭的動作，所以骨架動畫不會每格把頭擺回去，我每格多轉一點就一直累積，頭越轉越歪。
+     現在動手之前先把這些骨頭原本的角度記下來，下一格骨架動畫開始前全部還原，不管動畫檔有沒有那根骨頭都不會累積。 */
+  if (!K.kjB){ K.kjB = ['hips', 'spine', 'chest', 'head', 'upperlegl', 'upperlegr', 'lowerlegl', 'lowerlegr', 'upperarml', 'upperarmr', 'lowerarml', 'lowerarmr'].map(k => B[k]).filter(Boolean); K.kjQ = K.kjB.map(() => new THREE.Quaternion()); }
+  for (let i = 0; i < K.kjB.length; i++) K.kjQ[i].copy(K.kjB[i].quaternion); K.kjOn = true;
   const onBike = f === me ? Bike.on : !!f.bike;
   let bob = 0, sy = 1;
   if (onBike && !f.swim){
@@ -3691,10 +3702,10 @@ function kidJuice(f, dt, t, P){ const a = f.av, K = a.kid, B = K.B, w = K.w, ac 
     /* 腳步的相位：拿比重最大的那個移動動畫的播放進度 */
     let best = null, bw = 0.05; for (const k of ['walk', 'run', 'sprint']) if ((w[k] || 0) > bw && ac[k]){ bw = w[k]; best = ac[k]; }
     const loco = Math.min(1, (w.walk || 0) + (w.run || 0) + (w.sprint || 0)), fast = Math.min(1, (w.run || 0) * 0.7 + (w.sprint || 0));
-    if (best && loco > 0.02){ const ph = best.time / best.getClip().duration * Math.PI * 2, s2 = Math.cos(ph * 2 + KJ_OFF), amp = (0.022 + 0.05 * fast) * loco * KJ.bob;
+    if (best && loco > 0.02){ const ph = best.time / best.getClip().duration * Math.PI * 2, s2 = Math.cos(ph * 2 + KJ_OFF), amp = (0.02 + 0.032 * fast) * loco * KJ.bob;
       bob = (0.5 + 0.5 * s2) * amp * 2; sy = 1 + s2 * (0.012 + 0.03 * fast) * loco;
-      a.g.rotation.x += (0.03 + 0.15 * fast) * loco * KJ.lean + clamp(f.accL || 0, -0.12, 0.14) * 0.9;
-      a.g.rotation.z += Math.sin(ph + KJ_OFF * 0.5) * (0.035 - 0.015 * fast) * loco;
+      { const lean = (0.03 + 0.15 * fast) * loco * KJ.lean + clamp(f.accL || 0, -0.12, 0.14) * 0.9; B.spine.rotateX(lean * 0.6); B.chest.rotateX(lean * 0.4); }   /* v452 玩家回報「腳會卡進去」：以前是整個人以腳底為軸往前倒，跨出去的那隻腳就被壓到地面下。改成從腰往前彎，腳留在地上 */
+      B.hips.rotateZ(Math.sin(ph + KJ_OFF * 0.5) * (0.03 - 0.012 * fast) * loco);
       B.chest.rotateY(Math.sin(ph + KJ_OFF * 0.5) * (0.07 + 0.1 * fast) * loco); B.head.rotateX(-(0.02 + 0.1 * fast) * loco - s2 * 0.035 * loco); B.head.rotateY(-Math.sin(ph + KJ_OFF * 0.5) * 0.05 * loco); }
     const idle = 1 - loco; if (idle > 0.05){ const br = Math.sin(t * 2.0 + a.blinkAt); sy *= 1 + br * 0.012 * idle; B.chest.rotateX(br * 0.025 * idle); B.head.rotateX(-br * 0.02 * idle); }
   }
@@ -3723,6 +3734,7 @@ function kidIK(up, lo, end, T, pole){
     if (_kjU.lengthSq() > 1e-6 && _kjW.lengthSq() > 1e-6){ _kjU.normalize(); _kjW.normalize(); let ang = Math.acos(clamp(_kjU.dot(_kjW), -1, 1)); if (_kjV.crossVectors(_kjU, _kjW).dot(_kjN) < 0) ang = -ang; kidRotW(up, _kjQ.setFromAxisAngle(_kjN, ang)); } } }
 function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
+  if (K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjB[i].quaternion.copy(K.kjQ[i]); K.kjOn = false; }   /* v452 上一格疊上去的彈性先還原（見 kidJuice 的說明） */
   if (f.swim) W.dive = 1;
   else if (f.sitting) W.sit = 1;
   else if (f.air > 0.05) W.jump_air = 1;
