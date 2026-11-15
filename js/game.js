@@ -4544,7 +4544,7 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; actionUp
 // camera drag
 let drag = null;
 const pinch = new Map(); let pinchDist = 0;
-const camLimits = () => Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: 0.12, pmax: 1.15, dmin: 4.5, dmax: 18 };   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
+const camLimits = () => (typeof Dive !== 'undefined' && Dive.on && Dive.fp && !Photo.on) ? { pmin: -1.2, pmax: 1.2, dmin: 4.5, dmax: 18 } : Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: 0.12, pmax: 1.15, dmin: 4.5, dmax: 18 };   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
 /* v314 玩家回報：快速點畫面時會一下放大一下縮小。兩隻手指輪流快點會被當成「兩指縮放」，或手指放開的訊號漏掉、留下一隻「幽靈手指」。
    現在：手指放開在任何地方都會清掉；兩指距離要先變超過 14px 才開始縮放（快點的小抖動不算） */
 let pinchArm = 0;
@@ -5247,7 +5247,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor()) cam.pitch = 0.3; updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 function camClear(target, want, dt){
@@ -5305,6 +5305,10 @@ function updateCamera2(dt){
   if (!Dive.on && !House.on && !inIndoor()) camClear(target, want, dt); else CamK.k = 1;
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
   camera.lookAt(target); camLook.copy(target);
+  /* v468 潛水第一人稱（玩家要求）：鏡頭放在自己眼睛的位置，看不到自己的身體，拖畫面可以上下左右看；搖桿往前推會朝你看的方向游（看上面就往上、看下面就往下）。
+     潛水列的「👁 視角」可以切換，會記住。只有自己的畫面這樣，別人看你還是正常的潛水員。 */
+  { const fp = Dive.on && Dive.fp && !Dive.ending && !Photo.on; if (fp){ const p = cam.pitch, cp2 = Math.cos(p), hx = me.pos.x, hy = me.baseY + 0.75, hz = me.pos.z; camera.position.set(hx, clamp(hy, diveBed(hx, hz) + 0.4, DIVE.y + DIVE.top - 0.25), hz); camLook.set(hx - Math.sin(cam.yaw) * cp2, camera.position.y - Math.sin(p), hz - Math.cos(cam.yaw) * cp2); camera.lookAt(camLook); }
+    if (fp !== !!Dive.fpOn){ Dive.fpOn = fp; me.av.g.visible = !fp; if (me.tag) me.tag.style.visibility = fp ? 'hidden' : ''; } else if (fp && me.av.g.visible) me.av.g.visible = false; }
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
 }
 
@@ -10268,8 +10272,8 @@ function renderFerry(body){
 const DIVE = { x:60, y:-70, z:-40, r:Quality.tier === 'low' ? 40 : 48, top:15 };   /* v204：海底變大（原本半徑 30） */
 // 三個潛水點：越深越需要好裝備，寶物也越多（伺服器 022_dive_sites.sql 一樣）
 const DIVE_SITES = {
-  reef:  { name:'珊瑚礁',   icon:'🪸', need:['dive_suit'], top:15, sky:['#8ee6f7', '#0b4a78'], fog:'#2a9cc8', far:34, coral:90, lush:true, kelp:46, rocks:26, shells:14, chests:[0.55], pearls:0, legendP:0.28, desc:'淺淺的珊瑚礁，有一艘小沉船、很多魚群。' },
-  wreck: { name:'沉船深海', icon:'⚓', need:['dive_suit', 'dive_tank3'], top:24, sky:['#2f7fb0', '#04182c'], fog:'#0f4a70', far:22, coral:24, kelp:18, rocks:34, shells:8, chests:[1, 0.7, 0.4], pearls:0, legendP:0.6, big:true, desc:'更深的海底躺著一艘大帆船，寶箱比較多、也比較值錢，大魚和傳說魚常在附近。要大型氧氣瓶。',
+  reef:  { name:'珊瑚礁',   icon:'🪸', need:['dive_suit'], top:15, sky:['#8ee6f7', '#0b4a78'], fog:'#2a9cc8', far:42, look2:true, kelp2:55, coral:90, lush:true, kelp:46, rocks:26, shells:14, chests:[0.55], pearls:0, legendP:0.28, desc:'淺淺的珊瑚礁，有一艘小沉船、很多魚群。' },
+  wreck: { name:'沉船深海', icon:'⚓', need:['dive_suit', 'dive_tank3'], top:24, sky:['#2f7fb0', '#04182c'], fog:'#0f4a70', far:28, look2:true, kelp2:45, coral:24, kelp:18, rocks:34, shells:8, chests:[1, 0.7, 0.4], pearls:0, legendP:0.6, big:true, desc:'更深的海底躺著一艘大帆船，寶箱比較多、也比較值錢，大魚和傳說魚常在附近。要大型氧氣瓶。',
     fish:['grouper', 'shark', 'hammer', 'barracuda', 'moonbream', 'kingcrab', 'lobster', 'tuna', 'octopus', 'turtle', 'manta', 'stingray', 'trevally', 'scorpion', 'mackerel', 'bonito'] },
   offshore: { name:'外海', icon:'🌊', need:['dive_suit'], top:20, sky:['#3f9fd0', '#05213a'], fog:'#145a85', far:26, coral:4, kelp:10, rocks:14, shells:0, chests:[], pearls:0, legendP:0, boat:true, desc:'從船上直接潛下去，看看這一帶現在有哪些魚特別多。', get fish(){ return offshoreDiveFish(); } },
   harbor: { name:'港口海底', icon:'⚓', need:['dive_suit'], top:16, sky:['#8fe4ec', '#0a4f78'], fog:'#2b97b4', far:40, look2:true, coral:6, kelp:70, rocks:24, shells:12, chests:[0.6], pearls:0, legendP:0.15, harbor:true, desc:'從港口碼頭的梯子直接下水：防波堤的消波塊、碼頭的木樁、海藻森林、沉在海底的舊漁船、掉下去的貨櫃和大錨，越往外海越深越暗。',
@@ -10331,7 +10335,7 @@ const DIVE_GEAR = [
   { id:'dive_net',   name:'手抄網',       icon:'🥅', price:800,  need:'dive_suit', desc:'潛水時可以抓海底的小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶…），帶回自己小島的海底養。' },   /* v390 */
 ];
 const DIVE_BY_ID = Object.fromEntries(DIVE_GEAR.map(g => [g.id, g]));
-var Dive = { on:false, up:false, down:false, o2:0, o2max:60, group:null, fish:[], schools:[], loot:[], kelp:null, bubbles:null, shafts:[], seen:new Set(), back:null, warned:0 };
+var Dive = { fp: (() => { try { return localStorage.getItem('tide.divefp') === '1'; } catch(e){ return false; } })(), on:false, up:false, down:false, o2:0, o2max:60, group:null, fish:[], schools:[], loot:[], kelp:null, bubbles:null, shafts:[], seen:new Set(), back:null, warned:0 };
 function hasDive(id){ return (rec.dive || []).includes(id); }
 function diveO2(){ let o = 0; for (const g of DIVE_GEAR) if (g.o2 && hasDive(g.id)) o = Math.max(o, g.o2); return o; }
 /* v466–v467 玩家看到別人做的海底世界，問「潛水能不能做成這樣」。那個作品用 WebGPU 畫兩百萬片葉子，便宜手機跑不動，所以只學它的感覺，
@@ -10355,7 +10359,7 @@ function diveLook2(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', t
         float k = hh * hh * 0.006 + hh * 0.02, w1 = sin(dot(ip.xz, vec2(0.12, 0.09)) - uT * 0.8), w2 = sin(dot(ip.xz, vec2(-0.07, 0.15)) - uT * 0.55 + hh * 0.25);
         transformed.x += k * (0.7 * w1 + 0.3 * sin(uT * 1.7 + hh * 0.6 + ip.x)); transformed.z += k * (0.6 * w2 + 0.25 * cos(uT * 1.4 + hh * 0.5 + ip.z)); }`); };
     km.customProgramCacheKey = () => 'dvkelp3';
-    const N = low ? 60 : 150, im = new THREE.InstancedMesh(kg, km, N), d = new THREE.Object3D(), c = new THREE.Color(), cols = ['#9fb53e', '#7fa436', '#b3bb45', '#6c9638', '#c6c04e'];
+    const N = Math.max(1, Math.round((low ? 0.4 : 1) * (S.kelp2 || 150))), im = new THREE.InstancedMesh(kg, km, N)   /* 珊瑚礁和沉船的海帶少一點，不要擋住珊瑚和沉船 */, d = new THREE.Object3D(), c = new THREE.Color(), cols = ['#9fb53e', '#7fa436', '#b3bb45', '#6c9638', '#c6c04e'];
     for (let i = 0; i < N; i++){ let x, z; if (i % 3){ const cl = i % 7, ca = cl * 0.9 + 0.4, cr = R * (0.28 + (cl % 3) * 0.14); x = X + Math.cos(ca) * cr + (rnd() - 0.5) * 9; z = Z + Math.sin(ca) * cr + (rnd() - 0.5) * 9; } else { const a = rnd() * 6.283, r = R * (0.2 + rnd() * 0.6); x = X + Math.cos(a) * r; z = Z + Math.sin(a) * r; }
       const H = (top - 2) * (0.5 + rnd() * 0.5); d.position.set(x, diveBed(x, z) - 0.1, z); d.rotation.set(0, rnd() * 6.283, 0); d.scale.set(0.8 + rnd() * 0.5, H / 10, 0.8 + rnd() * 0.5); d.updateMatrix(); im.setMatrixAt(i, d.matrix); im.setColorAt(i, c.set(cols[i % cols.length])); }
     im.frustumCulled = false; g.add(im); }
@@ -10388,7 +10392,9 @@ const Intel = { seenW: -1 };
 function offshoreFish(){ const it = intelAt(Date.now()), others = SPOT_BY_ID.harbor.fish.filter(id => !it.ids.includes(id) && FISH_BY_ID[id] && FISH_BY_ID[id].rarity === '常見' && !FISH_BY_ID[id].of && !FISH_BY_ID[id].fest).sort(() => Math.random() - 0.5).slice(0, 3); return [...it.ids, ...it.ids, ...it.ids, ...others]; }
 // 外海潛水偶爾遠遠看到一道紅色影子：赤紅霸王鯊還在（海裡沒有了就不會出現）
 function offshoreDiveFish(){ const l = offshoreFish(); if (RS.n > 0 && Math.random() < 0.15) l.push('shark_red'); return l; }
-function siteSpecies(k){ const S = DIVE_SITES[k]; return S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice|^abyss|^mystic/.test(f.spot) && !f.rs && !f.fest); }   /* 紅鯊不會在一般潛點出現 */
+/* v468 玩家問「為什麼（珊瑚礁）會有大王魷魚」：牠在釣魚的設定裡是港口夜晚的傳說魚，潛水選魚時就跟著混進淺海了。大王魷魚、皇帶魚、深海鮟鱇是深海的魚，只留在深的潛點（沉船深海、洞穴）和潛水艇 */
+const DEEP_ONLY = new Set(['giantsquid', 'oarfish', 'angler']);
+function siteSpecies(k){ const S = DIVE_SITES[k], l = S.fish ? S.fish.map(id => FISH_BY_ID[id]).filter(Boolean) : FISH.filter(f => SEA_SPOTS.has(f.spot) && !/^ice|^abyss|^mystic/.test(f.spot) && !f.rs && !f.fest); return S.big || S.cave ? l : l.filter(f => !DEEP_ONLY.has(f.id)); }   /* 紅鯊不會在一般潛點出現 */
 // 把很多小東西合併成少數幾個網格（手機比較順）
 function diveMerger(){
   const parts = new Map(), tmp = new THREE.Object3D();
@@ -10398,7 +10404,7 @@ function diveMerger(){
       let g = geo.index ? geo.toNonIndexed() : geo.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
       g.applyMatrix4(tmp.matrix); const key = color + '|' + (rough == null ? 0.8 : rough); if (!parts.has(key)) parts.set(key, []); parts.get(key).push(g); geo.dispose();
     },
-    build(group){ for (const [key, gs] of parts){ const [c, r] = key.split('|'); const m = new THREE.Mesh(mergeGeometries(gs, false), mat(c, +r)); gs.forEach(g => g.dispose()); group.add(m); } }
+    build(group, caus){ for (const [key, gs] of parts){ const [c, r] = key.split('|'); const m = new THREE.Mesh(mergeGeometries(gs, false), caus ? diveCausMat(new THREE.MeshStandardMaterial({ color: c, roughness: +r, metalness: 0.04 })) : mat(c, +r)); gs.forEach(g => g.dispose()); group.add(m); } }   /* v468 新樣子的潛點：石頭、珊瑚、沉船上也有流動的光紋，跟海底連成一片 */
   };
 }
 function buildDive(){
@@ -10420,7 +10426,7 @@ function buildDive(){
     pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); pg.computeVertexNormals();
     const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed); if (S.look2 && Quality.tier !== 'low') diveCausMat(bed.material);
     Dive.caustic = null;
-    if (S.lush){ const cg = pg.clone(); cg.translate(0, 0.04, 0); const tx = causticTex(); tx.repeat.set(11, 11); const cm = new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ map: tx, transparent:true, opacity:0.2, blending:THREE.AdditiveBlending, depthWrite:false, fog:true })); cm.position.set(X, Y, Z); cm.renderOrder = 1; g.add(cm); Dive.caustic = cm; } }
+    if (S.lush && !(S.look2 && Quality.tier !== 'low')){ const cg = pg.clone(); cg.translate(0, 0.04, 0); const tx = causticTex(); tx.repeat.set(11, 11); const cm = new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ map: tx, transparent:true, opacity:0.2, blending:THREE.AdditiveBlending, depthWrite:false, fog:true })); cm.position.set(X, Y, Z); cm.renderOrder = 1; g.add(cm); Dive.caustic = cm; } }
   // 石頭
   Dive.rocks = [];
   for (let i = 0; i < S.rocks; i++){ const [x, y, z] = onBed(), s = 0.5 + rnd() * 1.8 * (S.cave ? 1.6 : 1); Dive.rocks.push([x, z, s, y + s * 0.95]); M.add(new THREE.IcosahedronGeometry(s, 0), ['#7d7a72', '#6a6f72', '#8a8170'][i % 3], x, y + s * 0.2, z, rnd(), rnd() * 6, rnd(), 1, 0.55 + rnd() * 0.3, 1, 0.95); }
@@ -10515,7 +10521,7 @@ function buildDive(){
     for (let i = 0; i < 7; i++){ const [x, y, z] = onBed(); M.add(new THREE.TorusGeometry(0.38, 0.15, 8, 14), '#26282c', x, y + 0.12, z, Math.PI / 2 + (rnd() - 0.5) * 0.6, rnd() * 3, 0, 1, 1, 1, 0.95); }   // 舊輪胎
     for (let i = 0; i < 5; i++){ const [x, y, z] = onBed(); M.add(new THREE.BoxGeometry(0.5, 0.5, 0.5), '#6b4a35', x, y + 0.25, z, 0, rnd() * 3, 0.1, 1, 1, 1, 0.9); }   // 木箱
   }
-  M.build(g);
+  M.build(g, S.look2 && Quality.tier !== 'low');
   // 海帶（InstancedMesh，會跟著水流晃）
   { const kg = new THREE.PlaneGeometry(0.34, 3.2, 1, 6); kg.translate(0, 1.6, 0); const p = kg.attributes.position; for (let i = 0; i < p.count; i++){ const yy = p.getY(i); p.setX(i, p.getX(i) * (1 - yy / 4) + Math.sin(yy * 1.6) * 0.12); } kg.computeVertexNormals();
     const N = Math.max(1, S.kelp), im = new THREE.InstancedMesh(kg, mat('#4f9a54', 0.8, { side:THREE.DoubleSide }), N), list = [];
@@ -10650,6 +10656,7 @@ async function grabLoot(l){
     flash(got > 0 ? `${LOOT_TXT[l.kind]} 🪙${got}！` : LOOT_FULL[l.kind], 1.6); return; }
   const got = l.kind === 'chest' ? (Dive.site === 'wreck' ? 300 : Dive.site === 'cave' ? 400 : Dive.site === 'harbor' ? 200 : 150) + Math.floor(Math.random() * 200) : l.kind === 'pearl' ? 80 + Math.floor(Math.random() * 81) : 5 + Math.floor(Math.random() * 16); addCoins(got); flash(`${LOOT_TXT[l.kind]} 🪙${got}！`, 1.6);
 }
+function diveFpToggle(){ Dive.fp = !Dive.fp; try { localStorage.setItem('tide.divefp', Dive.fp ? '1' : '0'); } catch(e){} if (Dive.fp){ cam.pitch = 0.1; toast('👁 第一人稱：拖畫面轉頭，搖桿往前就朝你看的方向游'); } else { cam.pitch = Math.max(cam.pitch, 0.3); toast('切回一般視角'); } const b = $('#diveFp'); if (b) b.classList.toggle('on', !!Dive.fp); }
 function updateDiveSwim(dt, ix, iz, L){
   if (Dive.ending) return;
   const fins = hasDive('dive_fins') ? 1.35 : 1;
@@ -10660,6 +10667,7 @@ function updateDiveSwim(dt, ix, iz, L){
     me.pos.x = nx; me.pos.z = nz; me.rot = lerpAngle(me.rot, Math.atan2(mx, mz), 1 - Math.exp(-6 * dt)); }
   const up = (Dive.up || keys.Space || keys.KeyE) ? 1 : 0, dn = (Dive.down || keys.KeyC || keys.KeyQ) ? 1 : 0;
   let y = me.baseY + (up - dn) * 2.4 * fins * dt - 0.08 * dt;
+  if (Dive.fp && L > 0.08 && iz < -0.2) y += -Math.sin(cam.pitch) * speed * dt * Math.min(1, -iz) * 0.9;   /* v468 第一人稱：往前游的時候跟著視線上下 */
   y = clamp(y, diveBed(me.pos.x, me.pos.z) + 0.25, DIVE.y + DIVE.top - 1.0); me.baseY = y; Jump.gy = y; Jump.air = 0;
   me.speed += (Math.max(speed, (up || dn) ? 1.6 : 0) - me.speed) * Math.min(1, dt * 6); me.swimPitch = speed > 0.3 ? 1.25 : up ? 0.5 : 0.3;
   /* 游到水面附近：按著上浮一下下就上去；停在水面不動 1.5 秒也會自己浮出去 */
@@ -10719,7 +10727,7 @@ function diveEnvFx(){
 function renderDiveHud(tick){ document.body.classList.toggle('sdive', !!Dive.on);
   let h = $('#diveHud');
   if (!Dive.on){ if (h) h.hidden = true; const dn = $('#diveDn'); if (dn) dn.hidden = true; const jb = $('#jumpBtn'); if (jb && jb.dataset.dive){ jb.textContent = '跳'; delete jb.dataset.dive; } return; }
-  if (!h){ h = document.createElement('div'); h.id = 'diveHud'; h.className = 'panel'; h.innerHTML = '<div class="o2"><span>O₂</span><div class="bar"><i></i></div><b></b></div><div class="dmeta"></div><button class="tbtn ghost" id="diveBait">🍞 撒餌</button><button class="tbtn ghost" id="diveTrap">🧺 籠子</button><button class="tbtn ghost" id="diveUp">⬆ 上岸</button>'; h.querySelector('#diveBait').addEventListener('click', () => { try { faiDiveBait(); } catch(e){ console.warn(e); } }); h.querySelector('#diveTrap').addEventListener('click', () => { try { trapBtn(); } catch(e){ console.warn(e); } }); document.body.appendChild(h);
+  if (!h){ h = document.createElement('div'); h.id = 'diveHud'; h.className = 'panel'; h.innerHTML = '<div class="o2"><span>O₂</span><div class="bar"><i></i></div><b></b></div><div class="dmeta"></div><button class="tbtn ghost" id="diveBait">🍞 撒餌</button><button class="tbtn ghost" id="diveTrap">🧺 籠子</button><button class="tbtn ghost" id="diveFp">👁 視角</button><button class="tbtn ghost" id="diveUp">⬆ 上岸</button>'; h.querySelector('#diveFp').addEventListener('click', () => diveFpToggle()); h.querySelector('#diveBait').addEventListener('click', () => { try { faiDiveBait(); } catch(e){ console.warn(e); } }); h.querySelector('#diveTrap').addEventListener('click', () => { try { trapBtn(); } catch(e){ console.warn(e); } }); document.body.appendChild(h);
     h.querySelector('#diveUp').addEventListener('click', () => endDive()); }
   if (!$('#diveDn')){ const b = document.createElement('button'); b.id = 'diveDn'; b.className = 'panel'; b.setAttribute('aria-label', '下潛'); b.textContent = '⬇'; $('#jumpBtn').before(b);
     b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Dive.down = true; b.classList.add('down'); }); const off = () => { Dive.down = false; b.classList.remove('down'); }; b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); b.addEventListener('contextmenu', e => e.preventDefault()); }
@@ -15085,6 +15093,7 @@ function renderTab(){
       '外海魚情：在外海的船上按「🤿 下潛看魚」，可以直接潛下去看這一帶現在有哪些魚。外海每 5 分鐘會有 3 種魚特別活躍（上鉤機率 ×2.5），浮上來之後跑馬燈會告訴你是哪幾種、還剩幾分鐘。',
       isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
       '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
+      '潛水列的「👁 視角」可以切換第一人稱：從自己的眼睛看出去，拖畫面轉頭，搖桿往前推就朝你看的方向游。',
       '靠近魚、讓牠在畫面中間時按「📷 拍照」，就會登錄進「水下圖鑑」（圖鑑分頁看得到數量）。傳說魚偶爾也會出現在水裡。',
       '有三個潛水點（在阿海的選單選）：🪸 珊瑚礁（有潛水裝備就能去）、⚓ 沉船深海（要大型氧氣瓶，大帆船旁邊寶箱多又值錢，大魚和傳說魚常出沒）、🕳️ 海底洞穴（要專業雙氧氣瓶＋潛水燈，有發光水晶、珍珠貝和深海怪魚）。',
       '海底有貝殼（每天最多 40 個）、寶箱（每天最多 6 個，越深越值錢）、洞穴裡的珍珠（每天最多 15 顆）。',
