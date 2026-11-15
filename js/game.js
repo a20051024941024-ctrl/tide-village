@@ -14098,15 +14098,16 @@ function roamPose(R, ms){ if (!R.c.length) return null; const K = ROAM_K[R.kind]
   if (r1 > K.p) return null; const wx = WEATHERS[weatherAt(ms - u * 1000)]; if (wx && wx.rain > 0) return null;   /* 天氣看這一輪開始的時候（走到一半才下雨的話，照樣走完，不會瞬間跳回去） */
   const c = R.c[Math.floor(r2 * R.c.length) % R.c.length], v = 1.45, tw = c.len / v, s0 = 3 + r3 * 10, room = C - s0 - 6 - tw * 2; if (room < 6) return null;
   const dwell = Math.min(room, K.dwell[0] + (K.dwell[1] - K.dwell[0]) * r3), a = u - s0; if (a < 0 || a > tw * 2 + dwell) return null;
-  if (a < tw){ const [x, z, h] = navAt(c, a * v); return { walk: true, x, z, rot: h }; }
-  if (a < tw + dwell){ const [x, z, h] = navAt(c, c.len); return { walk: false, x, z, rot: h + Math.sin(i * 1.7 + R.h) * 1.2, first: a - tw < 1 }; }
-  const [x, z, h] = navAt(c, c.len - (a - tw - dwell) * v); return { walk: true, x, z, rot: h + Math.PI }; }
+  if (a < tw){ const [x, z, h] = navAt(c, a * v); return { walk: true, x, z, rot: h, c }; }
+  if (a < tw + dwell){ const [x, z, h] = navAt(c, c.len); return { walk: false, x, z, rot: h + Math.sin(i * 1.7 + R.h) * 1.2, c }; }
+  const [x, z, h] = navAt(c, c.len - (a - tw - dwell) * v); return { walk: true, x, z, rot: h + Math.PI, c }; }
 function roamDrive(n, dt, t){ if (!n.roam){ if (n.roam === 0) return false; const kind = roamKind(n); if (!kind){ n.roam = 0; return false; }
     n.roam = { kind, post: { x: n.pos.x, z: n.pos.z, y: n.baseY, rot: n.rot, fishing: !!n.fishing }, c: [], tries: 0, ready: false, id: 'rm:' + n.npcName, h: hash32('rm:' + n.npcName), away: false }; }
   const R = n.roam, P = R.post;
-  if (!R.ready){ if (frameNo % 4 === 0 && Math.hypot(camera.position.x - P.x, camera.position.z - P.z) < 110) roamGrow(n); return false; }
+  if (!R.ready){ if (frameNo > 500 && frameNo % 4 === 0 && Math.hypot(camera.position.x - P.x, camera.position.z - P.z) < 110) roamGrow(n); return false; }   /* 等世界都蓋好（有些東西晚一點才放）再找去處 */
   if (!R.c.length) return false;
-  const ps = roamPose(R, Cloud.on ? worldNow() : Date.now());
+  let ps = roamPose(R, Cloud.on ? worldNow() : Date.now());
+  if (ps && !R.away){ const c = ps.c; if (c.ok == null || t > (c.chk || 0)){ c.chk = t + 20; c.ok = !blocked(c.x, c.z, 0.3); } if (!c.ok) ps = null; }   /* 出門前再確認一次去處沒被後來放的東西佔住；被佔住這一趟就不去 */
   if (!ps){ if (R.away){ R.away = false; n.pos.set(P.x, P.y, P.z); n.baseY = P.y; n.rot = P.rot; n.speed = 0; if (P.fishing){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; } } return false; }   /* 回到原位：重新拋竿 */
   if (!R.away){ R.away = true; n.fishing = false; n.bobState = 'none'; n.flying = null; n.dip = 0; n.bend = 0; n.st = 'wait'; n.next = t + 5; n.windup = 0; n.castT = -1; if (n.held){ n.av.g.remove(n.held.o); n.held = null; } }
   const far = Math.hypot(n.pos.x - ps.x, n.pos.z - ps.z) > 6; if (far){ n.pos.x = ps.x; n.pos.z = ps.z; } else { const k = Math.min(1, dt * 8); n.pos.x += (ps.x - n.pos.x) * k; n.pos.z += (ps.z - n.pos.z) * k; }
