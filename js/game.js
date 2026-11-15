@@ -1773,6 +1773,12 @@ function castPoint(x, z, dx, dz, dist){
     for (let j = 0; j < k; j++){ const p = new THREE.Mesh(new THREE.IcosahedronGeometry(wrand(1.4,2.4), 0), cm); p.position.set(j*1.8 - k, wrand(-0.3,0.4), wrand(-0.6,0.6)); g.add(p); }
     g.position.set(wrand(-90,90), wrand(18,28), wrand(-90,60)); scene.add(g); clouds.push({ g, v: wrand(0.4,0.9) });
   }
+  /* v456 新美術：地平線上一圈大朵的積雲（主視覺裡最顯眼的東西之一）。跟著鏡頭走，所以永遠在遠方；只有白天看得到 */
+  if (ART2){ const sky = new THREE.Group(), m2 = new THREE.MeshLambertMaterial({ color:'#ffffff', emissive:'#b9cfee', emissiveIntensity:0.62, fog:false, transparent:true, opacity:0, depthWrite:false }), sg = new THREE.SphereGeometry(1, 14, 10);
+    for (let i = 0; i < 9; i++){ const a = i / 9 * 6.283 + wrand(-0.2, 0.2), R = 150, c = new THREE.Group(), n = 6 + (i % 4), big = wrand(0.8, 1.5);
+      for (let j = 0; j < n; j++){ const u = j / (n - 1) - 0.5, r = (9 + wrand(0, 6)) * (1 - Math.abs(u) * 0.9) * big, p = new THREE.Mesh(sg, m2); p.scale.set(r * 1.15, r * 0.9, r); p.position.set(u * 44 * big, r * 0.55 + wrand(0, 3), wrand(-4, 4)); c.add(p); }
+      c.position.set(Math.cos(a) * R, 10 + wrand(0, 22), Math.sin(a) * R); c.lookAt(0, c.position.y, 0); sky.add(c); }
+    sky.renderOrder = -8; scene.add(sky); Art2.sky = sky; Art2.skyM = m2; }
 })();
 
 var tankGroup, lhLight, tuftsMesh = null, tuftsTotal = 0;
@@ -15067,6 +15073,7 @@ const lhBeam = (() => {
   const b = new THREE.Mesh(geo, m); const wp = new THREE.Vector3(); lhLight.getWorldPosition(wp); b.position.copy(wp); b.visible = false; scene.add(b); return b;
 })();
 const _cA = new THREE.Color(), _cB = new THREE.Color();
+const ART2_SEA = [new THREE.Color(PALETTE.sea), new THREE.Color('#1c5d8c')];
 function lerpKey(k0, k1, f, key, out){ _cA.set(k0[key]); _cB.set(k1[key]); return out.copy(_cA).lerp(_cB, f); }
 const _sunDir = new THREE.Vector3();
 function updateDayNight(t){
@@ -15083,6 +15090,16 @@ function updateDayNight(t){
   lerpKey(k0, k1, f, 'low', scene.fog.color); lerpKey(k0, k1, f, 'top', scene.background);
   if (skyDome){ const u = skyDome.material.uniforms; lerpKey(k0, k1, f, 'top', u.uTop.value); lerpKey(k0, k1, f, 'hor', u.uHor.value); lerpKey(k0, k1, f, 'low', u.uLow.value); lerpKey(k0, k1, f, 'disc', u.uSunCol.value); u.uSun.value.copy(_sunDir); }
   if (waterSurface){ const u = waterSurface.material.uniforms; lerpKey(k0, k1, f, 'top', u.uSkyTop.value).lerp(_cB.set('#6cc4ea'), 0.25); lerpKey(k0, k1, f, 'hor', u.uSkyHor.value); lerpKey(k0, k1, f, 'wl', u.uLight.value); lerpKey(k0, k1, f, 'disc', u.uGlint.value); u.uSun.value.copy(_sunDir); for (const t of SEA_TINTS) t.m.color.copy(t.c).multiply(u.uLight.value); }
+  /* v456 新美術試玩版：照作者選的主視覺（繽紛的台灣漁港插畫）調白天的光和顏色——天空是飽和的藍、海是亮的土耳其藍、太陽偏暖、
+     背光的那一面染一點藍紫（不要灰灰的影子）。只在白天、而且天氣好的時候靠過去；清晨黃昏和晚上、下雨天維持原本的樣子。 */
+  if (ART2){ let k = smooth01((h - 6.8) / 1.6) * (1 - smooth01((h - 15.8) / 1.6)); try { k *= clamp(((typeof Env !== 'undefined' && Env.k != null ? Env.k : 1) - 0.6) / 0.4, 0, 1); } catch(e){}
+    if (k > 0.01){ const L = (c, hex) => c.lerp(_cB.set(hex), k);
+      L(sun.color, '#ffe9bd'); sun.intensity *= 1 + 0.18 * k; L(hemi.color, '#e6f2ff'); L(hemi.groundColor, '#8c86cf'); hemi.intensity *= 1 + 0.06 * k;
+      L(scene.fog.color, '#bfe3fb'); L(scene.background, '#2f97f2');
+      if (skyDome){ const u = skyDome.material.uniforms; L(u.uTop.value, '#2a90f0'); L(u.uHor.value, '#8fd2ff'); L(u.uLow.value, '#c9ebff'); }
+      if (waterSurface){ const u = waterSurface.material.uniforms; L(u.uSkyTop.value, '#3aa6f6'); L(u.uSkyHor.value, '#c4ecff'); L(u.cSea.value.copy(ART2_SEA[0]), '#1f9fe8'); L(u.cDeep.value.copy(ART2_SEA[1]), '#1272c8'); } }
+    else if (waterSurface){ const u = waterSurface.material.uniforms; u.cSea.value.copy(ART2_SEA[0]); u.cDeep.value.copy(ART2_SEA[1]); }
+    if (Art2.sky){ Art2.skyM.opacity = k; Art2.sky.visible = k > 0.02 && !House.on && !Dive.on && !(typeof Sub !== 'undefined' && Sub.on); Art2.sky.position.set(camera.position.x, 0, camera.position.z); } }
   if (sunDisc){ sunDisc.position.copy(camera.position).addScaledVector(_sunDir, 160); lerpKey(k0, k1, f, 'disc', sunDisc.material.color); sunDisc.scale.setScalar(night ? 0.7 : 1); }
   const lamp = num('lamp'), st = num('stars'); DayNight.lamp = lamp;
   stars.material.opacity = st * 0.9; stars.visible = st > 0.02; stars.position.copy(camera.position); stars.rotation.y = t * 0.004;
