@@ -10272,7 +10272,7 @@ const DIVE_SITES = {
   wreck: { name:'沉船深海', icon:'⚓', need:['dive_suit', 'dive_tank3'], top:24, sky:['#2f7fb0', '#04182c'], fog:'#0f4a70', far:22, coral:24, kelp:18, rocks:34, shells:8, chests:[1, 0.7, 0.4], pearls:0, legendP:0.6, big:true, desc:'更深的海底躺著一艘大帆船，寶箱比較多、也比較值錢，大魚和傳說魚常在附近。要大型氧氣瓶。',
     fish:['grouper', 'shark', 'hammer', 'barracuda', 'moonbream', 'kingcrab', 'lobster', 'tuna', 'octopus', 'turtle', 'manta', 'stingray', 'trevally', 'scorpion', 'mackerel', 'bonito'] },
   offshore: { name:'外海', icon:'🌊', need:['dive_suit'], top:20, sky:['#3f9fd0', '#05213a'], fog:'#145a85', far:26, coral:4, kelp:10, rocks:14, shells:0, chests:[], pearls:0, legendP:0, boat:true, desc:'從船上直接潛下去，看看這一帶現在有哪些魚特別多。', get fish(){ return offshoreDiveFish(); } },
-  harbor: { name:'港口海底', icon:'⚓', need:['dive_suit'], top:16, sky:['#4aa0c4', '#041a2c'], fog:'#1a6488', far:28, coral:6, kelp:70, rocks:24, shells:12, chests:[0.6], pearls:0, legendP:0.15, harbor:true, desc:'從港口碼頭的梯子直接下水：防波堤的消波塊、碼頭的木樁、海藻森林、沉在海底的舊漁船、掉下去的貨櫃和大錨，越往外海越深越暗。',
+  harbor: { name:'港口海底', icon:'⚓', need:['dive_suit'], top:16, sky:['#8fe4ec', '#0a4f78'], fog:'#2b97b4', far:40, look2:true, coral:6, kelp:70, rocks:24, shells:12, chests:[0.6], pearls:0, legendP:0.15, harbor:true, desc:'從港口碼頭的梯子直接下水：防波堤的消波塊、碼頭的木樁、海藻森林、沉在海底的舊漁船、掉下去的貨櫃和大錨，越往外海越深越暗。',
     fish:['mackerel', 'moonbream', 'scorpion', 'grouper', 'octopus', 'ika', 'squid', 'stingray', 'barracuda', 'trevally', 'jelly', 'lobster', 'kingcrab', 'eel', 'bonito', 'turtle'] },
   isle:  { name:'小島海底花園', icon:'🏝️', need:['dive_suit'], top:11, sky:['#9aeaf5', '#0d5584'], fog:'#35a8cf', far:32, coral:8, kelp:10, rocks:12, shells:0, chests:[], pearls:0, legendP:0, garden:true, schoolsN:1, desc:'自己小島碼頭底下的海底，可以種海帶、海葡萄、珊瑚、珍珠貝；種得越多，游過來的魚群越多。', get fish(){ return [...new Set((SPOT_BY_ID.isle.fish || []).concat((SPOT_BY_ID.reef || {}).fish || []))]; } },
   cave:  { name:'海底洞穴', icon:'🕳️', need:['dive_suit', 'dive_tank4', 'dive_light'], top:18, sky:['#1a3550', '#02060c'], fog:'#12324c', far:22, coral:0, kelp:0, rocks:60, shells:4, chests:[0.8], pearls:7, legendP:0.55, cave:true, desc:'又暗又神祕的洞穴，有會發光的水晶和珍珠貝，住著深海的怪魚。要專業雙氧氣瓶和潛水燈。',
@@ -10334,6 +10334,45 @@ const DIVE_BY_ID = Object.fromEntries(DIVE_GEAR.map(g => [g.id, g]));
 var Dive = { on:false, up:false, down:false, o2:0, o2max:60, group:null, fish:[], schools:[], loot:[], kelp:null, bubbles:null, shafts:[], seen:new Set(), back:null, warned:0 };
 function hasDive(id){ return (rec.dive || []).includes(id); }
 function diveO2(){ let o = 0; for (const g of DIVE_GEAR) if (g.o2 && hasDive(g.id)) o = Math.max(o, g.o2); return o; }
+/* v466 玩家給了一個開放原始碼的海底世界（Abyssal Garden，MIT 授權，作者 Maksymilian Dendura）問「潛水能不能做成這樣」。
+   那個作品是用 WebGPU 畫兩百萬片葉子，便宜手機只有 20 張／秒，不能照搬；這裡借它的做法，用我們自己的方式在「港口海底」做一個樣品：
+   ① 水的顏色改成亮的藍綠色、看得更遠，遠的東西融進霧裡 ② 海底和岩石上有會流動的光紋（公式照它的寫法，圈數從 5 減到 3）
+   ③ 一整片高高的海帶森林，跟著水流擺動（擺動公式也是照它的）④ 外圈一圈高大的岩壁、石柱和一座石拱門，當遠景的剪影
+   ⑤ 更多更寬的光柱 ⑥ 水裡漂著金色的小亮點。低畫質：沒有光紋、海帶和亮點減半。岩壁在外圈，只是遠景，游得過去。 */
+function diveCausMat(m){ m.onBeforeCompile = sh => { sh.uniforms.uT = fishTime;
+    sh.vertexShader = 'varying vec3 vWP2;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vWP2 = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = 'uniform float uT;\nvarying vec3 vWP2;\nfloat dvCaus(vec2 uv, float t){ vec2 p = uv * 6.2831853; vec2 i = p; float c = 0.0; for (int n = 1; n <= 3; n++){ float tt = t * (1.0 - 3.5 / float(n)); i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x)); float s = sin(i.x + tt), k = cos(i.y + tt); c += abs(s * k) / (1.25 * sqrt(s * s + k * k) + 1e-4); } c = 1.17 - pow(c / 3.0, 1.4); return pow(smoothstep(0.9, 1.15, c), 2.6); }\n'
+      + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(0.5, 0.8, 0.9) * dvCaus(vWP2.xz / 3.4, uT * 0.45 + 23.0) * 0.42;'); };
+  m.customProgramCacheKey = () => 'dvcaus'; m.needsUpdate = true; return m; }
+function diveLook2(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', top = DIVE.top;
+  /* 高海帶：一根長帶子兩邊長葉子，照高度擺動 */
+  { const parts = [], st = new THREE.PlaneGeometry(0.2, 10, 1, 12); st.translate(0, 5, 0); parts.push(st); { const s2 = st.clone(); s2.rotateY(Math.PI / 2); parts.push(s2); }
+    for (let k = 1; k < 20; k++){ const lf = new THREE.PlaneGeometry(1.7, 0.6, 4, 1); lf.translate(0.9, 0, 0); const lp = lf.attributes.position; for (let i = 0; i < lp.count; i++){ const x = lp.getX(i); lp.setY(i, lp.getY(i) * Math.sin(Math.min(1, x / 1.75 + 0.06) * Math.PI) + x * 0.3 - x * x * 0.2); } lf.rotateX(0.5); lf.rotateY(k * 2.4); lf.translate(0, k * 0.5, 0); parts.push(lf); }
+    const kg = mergeParts(parts); kg.computeVertexNormals();
+    const km = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.75, side: THREE.DoubleSide, emissive: '#55741a', emissiveIntensity: 0.6 });
+    km.onBeforeCompile = sh => { sh.uniforms.uT = fishTime; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      { vec4 ip = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); float hh = max((instanceMatrix * vec4(0.0, transformed.y, 0.0, 1.0)).y - ip.y, 0.0); float ph = dot(ip.xz, vec2(0.31, 0.17)); float a = 0.03 * pow(hh, 1.25);
+        transformed.xz += a * (vec2(sin(uT * 0.5 + ph + hh * 0.09), cos(uT * 0.37 + ph * 1.3 + hh * 0.07)) + 0.35 * vec2(sin(uT * 1.3 + ph * 3.0 + hh * 0.3), cos(uT * 1.1 + ph * 2.0 + hh * 0.23))); }`); };
+    km.customProgramCacheKey = () => 'dvkelp2';
+    const N = low ? 60 : 150, im = new THREE.InstancedMesh(kg, km, N), d = new THREE.Object3D(), c = new THREE.Color(), cols = ['#9fb53e', '#7fa436', '#b3bb45', '#6c9638', '#c6c04e'];
+    for (let i = 0; i < N; i++){ let x, z; if (i % 3){ const cl = i % 7, ca = cl * 0.9 + 0.4, cr = R * (0.28 + (cl % 3) * 0.14); x = X + Math.cos(ca) * cr + (rnd() - 0.5) * 9; z = Z + Math.sin(ca) * cr + (rnd() - 0.5) * 9; } else { const a = rnd() * 6.283, r = R * (0.2 + rnd() * 0.6); x = X + Math.cos(a) * r; z = Z + Math.sin(a) * r; }
+      const H = (top - 2) * (0.5 + rnd() * 0.5); d.position.set(x, diveBed(x, z) - 0.1, z); d.rotation.set(0, rnd() * 6.283, 0); d.scale.set(0.8 + rnd() * 0.5, H / 10, 0.8 + rnd() * 0.5); d.updateMatrix(); im.setMatrixAt(i, d.matrix); im.setColorAt(i, c.set(cols[i % cols.length])); }
+    im.frustumCulled = false; g.add(im); }
+  /* 外圈的岩壁、石柱、石拱門：遠遠看是一層一層的剪影 */
+  { const rm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }); if (!low) diveCausMat(rm);
+    const shape = (geo, sd) => { const p = geo.attributes.position, cs = [], v = new THREE.Vector3(), cc = new THREE.Color(), a = new THREE.Color('#4a6a6c'), b = new THREE.Color('#2f4a55'), al = new THREE.Color('#6f8a4a');
+      for (let i = 0; i < p.count; i++){ v.fromBufferAttribute(p, i); const n = 1 + 0.22 * Math.sin(v.x * 3.1 + sd) * Math.cos(v.z * 2.7 + sd * 1.7) + 0.16 * Math.sin(v.y * 4.3 + v.x * 2.1 + sd * 0.6) + 0.07 * Math.sin(v.x * 9.0 + v.y * 7.0 + v.z * 8.0); v.multiplyScalar(n); p.setXYZ(i, v.x, v.y, v.z); }
+      geo.computeVertexNormals(); const nn = geo.attributes.normal; for (let i = 0; i < p.count; i++){ const up = Math.max(0, nn.getY(i)), k = 0.5 + 0.5 * Math.sin(p.getY(i) * 5 + sd); cc.copy(a).lerp(b, k).lerp(al, up * up * 0.75); cs.push(cc.r, cc.g, cc.b); } geo.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); return geo; };
+    const N = low ? 8 : 13; for (let i = 0; i < N; i++){ const a = i / N * 6.283 + rnd() * 0.3, r = R * (0.66 + rnd() * 0.26), x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, tall = i % 3 === 0;
+      const m = new THREE.Mesh(shape(new THREE.IcosahedronGeometry(1, low ? 2 : 3), i * 3.7), rm); m.position.set(x, diveBed(x, z) + (tall ? 3 : 1.2), z); m.scale.set(tall ? 3 + rnd() * 2 : 5 + rnd() * 4, tall ? 8 + rnd() * 5 : 3.5 + rnd() * 3, tall ? 3 + rnd() * 2 : 5 + rnd() * 4); m.rotation.y = rnd() * 6.283; g.add(m); }
+    const ar = new THREE.Mesh(shape(new THREE.TorusGeometry(1, 0.3, low ? 8 : 12, low ? 16 : 26, Math.PI), 11.3), rm), aa = 2.2, arR = R * 0.5; ar.position.set(X + Math.cos(aa) * arR, diveBed(X + Math.cos(aa) * arR, Z + Math.sin(aa) * arR) - 0.6, Z + Math.sin(aa) * arR); ar.scale.set(6.5, 7.5, 5); ar.rotation.y = aa + 0.5; g.add(ar); }
+  /* 寬的光幕 */
+  { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; const c = cv.getContext('2d'); let sd = 3; const rn = () => (sd = (sd * 16807) % 2147483647) / 2147483647; for (let x = 0; x < 64; x++){ const k = Math.pow(0.5 + 0.5 * Math.sin(x * 0.5 + rn() * 2), 2) * (0.4 + rn() * 0.6) * Math.sin(x / 63 * Math.PI), gr = c.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, `rgba(255,255,255,${k.toFixed(3)})`); gr.addColorStop(0.75, `rgba(200,240,255,${(k * 0.25).toFixed(3)})`); gr.addColorStop(1, 'rgba(200,240,255,0)'); c.fillStyle = gr; c.fillRect(x, 0, 1, 64); }
+    const tx = new THREE.CanvasTexture(cv), N = low ? 5 : 10; for (let i = 0; i < N; i++){ const a = rnd() * 6.283, r = 4 + rnd() * R * 0.6, m = new THREE.Mesh(new THREE.PlaneGeometry(6 + rnd() * 6, top + 4), new THREE.MeshBasicMaterial({ map: tx, color: '#dff8ff', transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+      m.position.set(X + Math.cos(a) * r, Y + top / 2 + 1, Z + Math.sin(a) * r); m.rotation.set(0, rnd() * 3.14, 0.2); m.renderOrder = 3; g.add(m); Dive.shafts.push(m); } }
+  /* 金色小亮點 */
+  { const N = low ? 110 : 280, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const a = rnd() * 6.283, r = Math.sqrt(rnd()) * R * 0.75; pos[i * 3] = X + Math.cos(a) * r; pos[i * 3 + 1] = Y + 0.5 + rnd() * (top - 1.5); pos[i * 3 + 2] = Z + Math.sin(a) * r; }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pt = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffe9a6', size: 0.09, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending })); pt.frustumCulled = false; g.add(pt); } }
 function diveBed(x, z){
   const dx = x - DIVE.x, dz = z - DIVE.z, d = Math.hypot(dx, dz);
   return DIVE.y + Math.sin(dx * 0.21) * 0.45 + Math.cos(dz * 0.17 + dx * 0.05) * 0.55 + Math.sin((dx + dz) * 0.09) * 0.8 + Math.max(0, d - DIVE.r * 0.72) * 0.55;
@@ -10378,7 +10417,7 @@ function buildDive(){
   { const pg = new THREE.PlaneGeometry(R * 2 + 24, R * 2 + 24, 56, 56); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], a = new THREE.Color(S.cave ? '#5a5a62' : S.big ? '#b8a684' : '#e2d2a4'), b = new THREE.Color(S.cave ? '#3a3c46' : S.big ? '#8f8064' : '#c7b384'), cc = new THREE.Color();
     for (let i = 0; i < p.count; i++){ const x = p.getX(i) + X, z = p.getZ(i) + Z; p.setY(i, diveBed(x, z) - Y); cc.copy(a).lerp(b, 0.5 + 0.5 * Math.sin(x * 0.7) * Math.cos(z * 0.6)); cs.push(cc.r, cc.g, cc.b); }
     pg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); pg.computeVertexNormals();
-    const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed);
+    const bed = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0 })); bed.position.set(X, Y, Z); g.add(bed); if (S.look2 && Quality.tier !== 'low') diveCausMat(bed.material);
     Dive.caustic = null;
     if (S.lush){ const cg = pg.clone(); cg.translate(0, 0.04, 0); const tx = causticTex(); tx.repeat.set(11, 11); const cm = new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ map: tx, transparent:true, opacity:0.2, blending:THREE.AdditiveBlending, depthWrite:false, fog:true })); cm.position.set(X, Y, Z); cm.renderOrder = 1; g.add(cm); Dive.caustic = cm; } }
   // 石頭
@@ -10483,9 +10522,9 @@ function buildDive(){
       list.push({ x, y: diveBed(x, z), z, s: 0.8 + rnd() * 1.1, ry: rnd() * 3, ph: rnd() * 6 }); }
     im.frustumCulled = false; g.add(im); Dive.kelp = { im, list }; }
   // 光束
-  Dive.shafts = [];
+  Dive.shafts = []; if (S.look2){ try { diveLook2(g, S, X, Y, Z, R, rnd); } catch(e){ console.warn('diveLook2', e); } }
   const rayTx = (() => { const cv = document.createElement('canvas'); cv.width = 4; cv.height = 64; const c = cv.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.6, '#8aa8b0'); gr.addColorStop(1, '#000000'); c.fillStyle = gr; c.fillRect(0, 0, 4, 64); return new THREE.CanvasTexture(cv); })();   /* 光束越往下越淡 */
-  for (let i = 0; i < (S.cave ? 0 : S.big ? 4 : S.lush ? 13 : 7); i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, S.lush ? 2.0 + rnd() * 1.4 : 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', map: rayTx, transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
+  for (let i = 0; i < (S.cave ? 0 : S.big ? 4 : S.lush || S.look2 ? 13 : 7); i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, S.lush ? 2.0 + rnd() * 1.4 : 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', map: rayTx, transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
     const a = rnd() * Math.PI * 2, r = 6 + rnd() * R * 0.7; m.position.set(X + Math.cos(a) * r, Y + DIVE.top / 2 + 0.5, Z + Math.sin(a) * r); m.rotation.z = 0.18; m.rotation.y = rnd(); g.add(m); Dive.shafts.push(m); }
   // 泡泡（往上飄）
   { const N = 90, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ pos[i * 3] = X + (rnd() - 0.5) * R * 2; pos[i * 3 + 1] = Y + rnd() * DIVE.top; pos[i * 3 + 2] = Z + (rnd() - 0.5) * R * 2; }
@@ -10655,7 +10694,7 @@ function updateDive(dt, t){
   // 泡泡、光束、水面
   if (Dive.bubbles){ const p = Dive.bubbles.geometry.attributes.position, a = p.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (0.6 + (i % 7) * 0.08); a[i] += Math.sin(t * 2 + i) * dt * 0.05; if (a[i + 1] > DIVE.y + DIVE.top) a[i + 1] = diveBed(a[i], a[i + 2]); } p.needsUpdate = true; }
   if (Math.random() < dt * 3) { const a = Dive.bubbles.geometry.attributes.position.array, k = Math.floor(Math.random() * a.length / 3) * 3; a[k] = me.pos.x + (Math.random() - 0.5) * 0.3; a[k + 1] = me.baseY + 1.2; a[k + 2] = me.pos.z + (Math.random() - 0.5) * 0.3; }
-  { const lush = (DIVE_SITES[Dive.site] || {}).lush; Dive.shafts.forEach((m, i) => { m.material.opacity = ((lush ? 0.05 : 0.022) + (lush ? 0.03 : 0.016) * Math.sin(t * 0.6 + i * 1.7)) * (DayNight.period === 'night' ? 0.3 : 1); if (lush) m.rotation.z = 0.18 + Math.sin(t * 0.25 + i) * 0.05; }); }
+  { const DS = DIVE_SITES[Dive.site] || {}, lush = DS.lush || DS.look2; Dive.shafts.forEach((m, i) => { m.material.opacity = ((lush ? 0.05 : 0.022) + (lush ? 0.03 : 0.016) * Math.sin(t * 0.6 + i * 1.7)) * (DayNight.period === 'night' ? 0.3 : 1); if (lush) m.rotation.z = 0.18 + Math.sin(t * 0.25 + i) * 0.05; }); }
   if (Dive.caustic){ const o = Dive.caustic.material.map.offset; o.x = (o.x + dt * 0.013) % 1; o.y = (o.y + dt * 0.008) % 1; Dive.caustic.material.opacity = (0.2 + Math.sin(t * 0.8) * 0.05) * (DayNight.period === 'night' ? 0.25 : 1); }
   if (Dive.surface) Dive.surface.material.opacity = 0.42 + Math.sin(t * 1.3) * 0.08;
   for (const l of Dive.loot){ if (l.kind === 'shell' && !l.got){ l.m.position.y = l.y + 0.08 + Math.sin(t * 2 + l.x) * 0.02; }
