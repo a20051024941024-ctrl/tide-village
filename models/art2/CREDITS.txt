@@ -1,0 +1,8 @@
+models/art2/village.glb 是從下面兩套素材裡挑出 22 個模型合成的：
+
+- Fishing village            作者 WizP   https://wizp.itch.io/fishing-village
+- Stylized Asian Village     作者 WizP   https://wizp.itch.io/stylized-asian-village
+
+授權（照下載頁面的說明，2026-11-15 讀到的內容）：
+"This file can be use for any propose, commercial or not, just can't be resold."
+可以用在任何用途（含商用），但不可以轉賣素材本身。上架前請再到上面的頁面確認一次。

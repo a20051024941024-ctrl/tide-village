@@ -953,6 +953,49 @@ var SEASONS = {
   autumn: { name:'秋天', icon:'🍁', desc:'樹葉變紅了，秋天的鯖魚、螃蟹、墨魚最肥。',       fish:['mackerel', 'crab', 'cuttle', 'barracuda', 'catfish', 'eel'] },
   winter: { name:'冬天', icon:'❄️', desc:'天氣變冷，馬頭魚、帝王蟹、魷魚和鮟鱇魚正是時候。', fish:['tilefish', 'kingcrab', 'ika', 'angler', 'crucian', 'grouper'] },
 };
+/* ============ v444 新美術試玩版（只有開啟的人看得到） ============
+   玩家朋友說「跟其他 AI 做的遊戲長得一樣」。試過五種濾鏡都不夠，問題在形狀（房子是方塊加三角屋頂）。作者選了「換素材包」這條路，
+   並傳來 WizP 的兩套（Fishing Village、Stylized Asian Village；itch.io，頁面寫明可商用、不可轉賣）。
+   這裡先做成開關：網址加 #art=2 開啟（會記在這支手機上，之後從主畫面開也是新美術），#art=1 關掉。沒開的人完全不受影響、也不會下載模型。
+   目前換掉的：所有房子（招牌改成直式掛牌）、廣場上加攤子、石燈籠、水井、漁網架、青蛙石像、推車、甕，港邊三艘小船。樹、角色、其他建築還沒換。
+   模型檔 models/art2/village.glb 是用 tools 外的小程式從兩包裡挑 22 個模型合成的（3.3MB，之後要壓小）。 */
+const ART2 = (() => { try { const h = location.hash; if (/art=2/.test(h)) localStorage.setItem('tide.art2', '1'); else if (/art=1/.test(h)) localStorage.removeItem('tide.art2'); return localStorage.getItem('tide.art2') === '1'; } catch(e){ return /art=2/.test(location.hash); } })();
+const Art2 = { p: null, lib: null, bb: {}, boats: [], n: 0 };
+function art2Load(){ if (!Art2.p) Art2.p = new GLTFLoader().loadAsync('models/art2/village.glb').then(gl => { const L = {}; gl.scene.updateMatrixWorld(true);
+    for (const n of [...gl.scene.children]){ n.position.set(0, 0, 0); n.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(n); Art2.bb[n.name] = { cx: (b.min.x + b.max.x) / 2, cz: (b.min.z + b.max.z) / 2, y0: b.min.y, w: b.max.x - b.min.x, h: b.max.y - b.min.y, d: b.max.z - b.min.z }; L[n.name] = n;
+      n.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; if (o.material && o.material.map){ o.material.map.magFilter = THREE.NearestFilter; o.material.map.minFilter = THREE.NearestFilter; o.material.map.generateMipmaps = false; o.material.map.needsUpdate = true; } } }); }
+    Art2.lib = L; }).catch(e => { console.warn('art2', e); Art2.lib = {}; }); return Art2.p; }
+/* 把一個模型放進 parent（parent 的原點＝模型底部中心）。o: { s 放大倍數, x y z 位移, ry 轉向, front 讓模型正面對齊到 z=front } */
+function art2Add(parent, name, o){ o = o || {}; art2Load().then(() => { const src = Art2.lib[name], B = Art2.bb[name]; if (!src) return; const m = src.clone(), w = new THREE.Group(), s = o.s || 1; m.position.set(-B.cx, -B.y0, -B.cz); w.add(m); w.scale.setScalar(s);
+    w.position.set(o.x || 0, o.y || 0, o.front != null ? o.front - B.d * s / 2 : (o.z || 0)); w.rotation.y = o.ry || 0; w.userData.keep = true; w.userData.dyn = true; parent.add(w); Art2.n++; if (o.then) o.then(w, B); }); }
+function art2World(name, x, z, o){ const g = new THREE.Group(); g.position.set(x, (o && o.wy != null) ? o.wy : groundHeight(x, z), z); g.rotation.y = (o && o.ry) || 0; g.userData.keep = true; g.userData.dyn = true; scene.add(g); art2Add(g, name, Object.assign({}, o, { ry: 0 })); return g; }
+/* 直式掛牌：一根柱子伸出橫桿，掛一塊木牌，字由上往下 */
+function art2Sign(g, text, icon, x, z){ const chars = [...String(text)], n = chars.length + (icon ? 1 : 0), cv = document.createElement('canvas'); cv.width = 112; cv.height = 28 + n * 92; const c = cv.getContext('2d');
+  c.fillStyle = '#5c2320'; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = '#f6ecd2'; c.fillRect(8, 8, cv.width - 16, cv.height - 16); c.strokeStyle = '#c9a24a'; c.lineWidth = 3; c.strokeRect(13, 13, cv.width - 26, cv.height - 26);
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#3a1c18'; let y = 14 + 46; if (icon){ c.font = '64px sans-serif'; c.fillText(icon, 56, y); y += 92; } c.font = 'bold 72px sans-serif'; for (const ch of chars){ c.fillText(ch, 56, y + 4); y += 92; }
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; const H = Math.min(2.5, 0.42 * n + 0.14), Wd = H * cv.width / cv.height, top = 3.25, wood = new THREE.MeshStandardMaterial({ color: '#5a2c26', roughness: 0.85 });
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, top + 0.15, 8), wood); post.position.set(x, (top + 0.15) / 2, z); post.castShadow = true; post.userData.dyn = true; g.add(post);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(Wd + 0.5, 0.09, 0.09), wood); arm.position.set(x - (Wd + 0.5) / 2 + 0.12, top, z); arm.userData.dyn = true; g.add(arm);
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(Wd, H), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); pl.position.set(x - Wd / 2 - 0.12, top - 0.1 - H / 2, z); pl.userData.dyn = true; g.add(pl); }
+function art2House(x, z, width, rotY, opts){ const sgn = opts.sign || '', pick = /魚市場/.test(sgn) ? ['shop', 1.5] : /釣具/.test(sgn) ? ['f_fishing_cabin', 1.45] : /村長/.test(sgn) ? ['building_2', 0.95] : /服裝|美髮/.test(sgn) ? ['building_3', 1.08] : /畫廊/.test(sgn) ? ['shop', 1.12] : /木工/.test(sgn) ? ['building_1', 0.9]
+    : [['building_3', 1.02], ['building_1', 0.8], ['shop', 1.05]][Math.abs(Math.round(x * 7 + z * 3)) % 3];
+  const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = rotY || 0; g.userData.keep = true; g.userData.dyn = true; const fz = 1.25, W = width;
+  art2Add(g, pick[0], { s: pick[1], front: fz + 0.2 });
+  if (opts.awning){ const cm = new THREE.MeshStandardMaterial({ color: '#6b3a34', roughness: 0.85 }), ct = new THREE.MeshStandardMaterial({ color: '#9a6a52', roughness: 0.8 });   /* 櫃台留著（老闆站在後面），顏色配新房子 */
+    const a = new THREE.Mesh(new THREE.BoxGeometry(W * 0.8, 0.85, 0.5), cm); a.position.set(0, 0.43, fz + 0.8); a.castShadow = a.receiveShadow = true; a.userData.dyn = true; g.add(a);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(W * 0.84, 0.08, 0.6), ct); b.position.set(0, 0.88, fz + 0.8); b.userData.dyn = true; g.add(b); }
+  if (opts.sign) art2Sign(g, opts.sign, opts.signIcon, W / 2 + 0.7, fz + 0.9);
+  scene.add(g); return g; }
+/* 廣場和港邊的擺設 */
+function art2Props(){ const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col || 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };
+  const hs = HLOT.shop, c = Math.cos(hs[2]), sn = Math.sin(hs[2]), loc = (lx, lz) => [hs[0] + c * lx + sn * lz, hs[1] - sn * lx + c * lz];
+  for (const lx of [-5.6, 5.6]){ const [x, z] = loc(lx, 2.0); P('stand', x, z, 1.25, hs[2], 0.9); }
+  P('lamp', sq[0] + 6.2, sq[1] + 6.0, 1.5, 0, 0.45); P('lamp', sq[0] - 7.2, sq[1] + 5.2, 1.5, 0, 0.45); P('lamp', sq[0] - 6.5, sq[1] - 6.5, 1.5, 0, 0.45);
+  P('well', sq[0] - 5.0, sq[1] - 4.0, 0.95, 0.4, 1.05); P('statue_frog', sq[0] - 2.0, sq[1] - 7.5, 1.0, 2.6, 0.85); P('f_net', sq[0] + 6.0, sq[1] + 2.0, 1.5, 1.25, 0); P('cart', sq[0] - 8.5, sq[1] + 1.5, 1.1, 0.9, 0.9);
+  P('barrel_1', sq[0] + 4.3, sq[1] + 6.4, 0.9, 0.5, 0.55); P('pot_1', sq[0] + 5.0, sq[1] + 7.2, 0.9, 0, 0.45); P('drum', sq[0] + 8.0, sq[1] - 4.5, 0.42, -0.9, 0.9);
+  for (const [name, x, z, ry] of [['f_boat2', 33, -20, 0.6], ['f_boat', 36.5, -27.5, -0.4], ['f_boat3', 30, -38, 1.9]]){ if (isLand(x, z) || deckAt(x, z)) continue; const g = art2World(name, x, z, { s: 1.35, ry, wy: 0 }); Art2.boats.push({ g, x, z, ry, ph: x }); } }
+function art2Tick(t){ for (const b of Art2.boats){ b.g.position.y = waterY(b.x, b.z, t) - 0.12; b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
+if (ART2) setTimeout(() => { try { art2Props(); toast('🎨 新美術試玩版（只有你看得到）。要關掉：網址後面加 #art=1', 6); } catch(e){ console.warn('art2 props', e); } }, 0);
 var SEASON = (() => { const h = (location.hash.match(/season=(\w+)/) || [])[1]; if (SEASONS[h]) return h; const m = new Date(Date.now() + 8 * 3600e3).getUTCMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; })();
 var SEASON_FISH = new Set(SEASONS[SEASON].fish);
 function buildTrees(trees, PX, PZ){
@@ -1219,6 +1262,7 @@ function castPoint(x, z, dx, dz, dist){
     return (HT.cache.brick = mat('#ffffff', 0.95, { map: t })); };
   function house(x, z, roofColor, width, rotY, opts){
     opts = opts || {};
+    if (ART2){ const g2 = art2House(x, z, width, rotY, opts); addOBoxCol(x, z, width + 0.3, 2.8, rotY || 0); if (opts.awning){ const c = Math.cos(rotY || 0), s = Math.sin(rotY || 0), lz = 2.05; addOBoxCol(x + s * lz, z + c * lz, width * 0.84, 0.6, rotY || 0); } return g2; }   /* v444 新美術試玩版 */
     const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = rotY || 0;
     const W = width, D = 2.5, wallH = 2.0, base = 0.3, top = base + wallH;
     const dark = '#6e4a2f', wall = opts.wall || '#f6e4bd', trim = '#fffaf0';
@@ -15685,7 +15729,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
-  updatePlayer(dt); try { bikeTick(dt); } catch(e){} try { toyTick(dt, t); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
