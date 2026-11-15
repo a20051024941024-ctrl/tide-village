@@ -1185,7 +1185,31 @@ function twTemple(x, z, ry){ const g = new THREE.Group(); g.position.set(x, grou
     for (const sx of [-1, 1]) add(new THREE.TorusGeometry(0.11, 0.03, 5, 10), bz, cx + sx * 0.42, y0 + 0.74, cz, false); for (let i = 0; i < 3; i++){ add(new THREE.CylinderGeometry(0.008, 0.008, 0.4, 4), M('#c94a3a'), cx + (i - 1) * 0.07, y0 + 0.93, cz + (i % 2) * 0.05, false); } }
   scene.add(g); const c = Math.cos(ry || 0), s0 = Math.sin(ry || 0), cz2 = (pf + zb) / 2; addOBoxCol(x + s0 * cz2, z + c * cz2, W + 0.7, pf - zb + 0.5, ry || 0); return g; }
 /* 廣場和港邊的擺設 */
-function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ console.warn('twTemple', e); }   /* v460 小廟：廣場西邊的空地，面向廣場 */
+/* v461 港口廣場的地面：主視覺是石板路，不是草地。以廣場為中心鋪一片石板，邊緣沿著岸邊收（每個方向往外走到快要下水就停），最外一圈顏色深一點當收邊 */
+function twPaveTex(){ return twTex('pave', 256, 256, (x, w, h) => { x.fillStyle = '#b9ab98'; x.fillRect(0, 0, w, h); const cs = ['#e6dac6', '#ddd0bb', '#eadfcd', '#d6c8b2', '#e1d3c2', '#d9cdbd']; let sd = 11; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let r = 0; r < 4; r++){ let px = -((r * 37) % 64); while (px < w){ const bw = 44 + Math.floor(rnd() * 40); x.fillStyle = cs[Math.floor(rnd() * cs.length)]; x.beginPath(); if (x.roundRect) x.roundRect(px + 2, r * 64 + 2, bw - 4, 60, 7); else x.rect(px + 2, r * 64 + 2, bw - 4, 60); x.fill(); x.fillStyle = 'rgba(255,255,255,.10)'; x.fillRect(px + 5, r * 64 + 5, bw - 10, 8); px += bw; } } }); }
+function art2Pave(){ const [cx, cz] = HARBOR_SQ, RM = 16.5, NS = 120, NR = 9, flat = (px, pz) => { const i = terrainInfo(px, pz); return !i.water && i.h > -0.015; }, R = [];
+  for (let k = 0; k < NS; k++){ const a = k / NS * 6.2832, dx = Math.sin(a), dz = Math.cos(a); let r = 0.5; while (r < RM && flat(cx + dx * (r + 0.25), cz + dz * (r + 0.25))) r += 0.25; R.push(r >= RM ? RM : Math.max(0.5, r - 0.45)); }
+  const R2 = R.map((r, k) => Math.min(r, R[(k + 1) % NS] + 0.35, R[(k + NS - 1) % NS] + 0.35, R[(k + 2) % NS] + 0.7, R[(k + NS - 2) % NS] + 0.7));
+  const pos = [], uv = [], col = [], idx = []; for (let j = 0; j <= NR; j++) for (let k = 0; k <= NS; k++){ const a = k / NS * 6.2832, r = R2[k % NS] * (j / NR), px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r; pos.push(px, terrainH(px, pz) + 0.03, pz); uv.push(px / 3.4, pz / 3.4); const e = j === NR ? 0.72 : 1; col.push(e, e, e); }
+  for (let j = 0; j < NR; j++) for (let k = 0; k < NS; k++){ const a0 = j * (NS + 1) + k, b0 = a0 + 1, c0 = a0 + NS + 1, d0 = c0 + 1; idx.push(a0, c0, b0, b0, c0, d0); }
+  const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); ge.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); ge.setIndex(idx); ge.computeVertexNormals();
+  const t = twPaveTex(); t.wrapS = t.wrapT = THREE.RepeatWrapping; const m = new THREE.Mesh(ge, new THREE.MeshStandardMaterial({ map: t, vertexColors: true, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.receiveShadow = true; m.userData.keep = true; m.renderOrder = 1; scene.add(m); Art2.pave = { R: R2, cx, cz, NS };
+  /* 鋪了石板的地方不要長草 */
+  try { if (tuftsMesh){ const M4 = new THREE.Matrix4(), v = new THREE.Vector3(), z0 = new THREE.Matrix4().makeScale(0, 0, 0); for (let i = 0; i < tuftsTotal; i++){ tuftsMesh.getMatrixAt(i, M4); v.setFromMatrixPosition(M4); const dx = v.x - cx, dz = v.z - cz, d = Math.hypot(dx, dz); if (d < RM + 1){ const k = Math.round(((Math.atan2(dx, dz) + 6.2832) % 6.2832) / 6.2832 * NS) % NS; if (d < R2[k] + 0.2) tuftsMesh.setMatrixAt(i, z0); } } tuftsMesh.instanceMatrix.needsUpdate = true; } } catch(e){} }
+/* 椰子樹：彎彎的樹幹、一圈垂下來的大葉子、幾顆椰子 */
+function twPalm(x, z, s, lean){ const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.scale.setScalar(s || 1); g.rotation.y = lean || 0; g.userData.keep = true; g.userData.dyn = true;
+  const tm = twMat('palmT', () => new THREE.MeshStandardMaterial({ color: '#b08a5c', roughness: 0.9, emissive: '#b08a5c', emissiveIntensity: 0.12 })), lm = twMat('palmL', () => new THREE.MeshStandardMaterial({ color: '#58b83f', roughness: 0.8, side: THREE.DoubleSide, emissive: '#58b83f', emissiveIntensity: 0.18 })), lm2 = twMat('palmL2', () => new THREE.MeshStandardMaterial({ color: '#8fd24a', roughness: 0.8, side: THREE.DoubleSide, emissive: '#8fd24a', emissiveIntensity: 0.18 }));
+  const H = 5.2, pts = []; for (let i = 0; i <= 6; i++){ const u = i / 6; pts.push(new THREE.Vector3(Math.sin(u * 1.3) * 0.9, u * H, 0)); } const tr = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.2, 7), tm); tr.castShadow = true; tr.userData.dyn = true; g.add(tr);
+  for (let i = 1; i < 6; i++){ const u = i / 6, r = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.025, 4, 8), tm); r.position.set(Math.sin(u * 1.3) * 0.9, u * H, 0); r.rotation.x = Math.PI / 2; r.userData.dyn = true; g.add(r); }
+  const top = pts[6]; for (let i = 0; i < 9; i++){ const a = i / 9 * 6.2832 + (i % 2) * 0.2, L = 2.5 + (i % 3) * 0.3, N = 6, pos = [], idx = []; for (let j = 0; j <= N; j++){ const u = j / N, r = u * L, y = Math.sin(u * 2.4) * 0.75 - u * u * 1.5, w = 0.48 * Math.sin(Math.min(1, u * 1.15 + 0.08) * Math.PI) + 0.03; pos.push(r, y + 0.02, -w, r, y + 0.22 * Math.sin(u * Math.PI), 0, r, y + 0.02, w); }
+      for (let j = 0; j < N; j++){ const q = j * 3; idx.push(q, q + 1, q + 3, q + 1, q + 4, q + 3, q + 1, q + 2, q + 4, q + 2, q + 5, q + 4); } const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.setIndex(idx); ge.computeVertexNormals();
+      const f = new THREE.Mesh(ge, i % 2 ? lm : lm2); f.position.copy(top); f.rotation.y = a; f.castShadow = true; f.userData.dyn = true; g.add(f); }
+  const cm = twMat('coco', () => new THREE.MeshStandardMaterial({ color: '#7a5a34', roughness: 0.7 })); for (let i = 0; i < 3; i++){ const c = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), cm); c.position.set(top.x + Math.cos(i * 2.1) * 0.2, top.y - 0.22, Math.sin(i * 2.1) * 0.2); c.userData.dyn = true; g.add(c); }
+  scene.add(g); addCircleCol(x, z, 0.32); return g; }
+function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ console.warn('twTemple', e); }
+  try { art2Pave(); } catch(e){ console.warn('art2Pave', e); }
+  try { const [cx, cz] = HARBOR_SQ; let n = 0; for (let k = 0; k < 40 && n < 7; k++){ const a = k * 2.399 + 0.6, r = 12.5 + (k % 5) * 2.2, px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r, ti = terrainInfo(px, pz); if (ti.water || ti.h < -0.01 || blocked(px, pz, 1.5) || deckAt(px, pz)) continue; twPalm(px, pz, 0.95 + (k % 3) * 0.12, a + 1.2); n++; } } catch(e){ console.warn('twPalm', e); }   /* 港口周圍種七棵椰子樹（四周要有 1.5 公尺空地才種） */   /* v460 小廟：廣場西邊的空地，面向廣場 */
   const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
   const hs = HLOT.shop, c = Math.cos(hs[2]), sn = Math.sin(hs[2]), loc = (lx, lz) => [hs[0] + c * lx + sn * lz, hs[1] - sn * lx + c * lz];
   for (const lx of [-6.6, 6.6]){ const [x, z] = loc(lx, 0.6); P('stand', x, z, 1.25, hs[2], 0.9); }   /* 攤子放在魚市場兩側、跟房子齊，不擋櫃台和冰檯 */
@@ -1214,12 +1238,11 @@ function buildTrees(trees, PX, PZ){
     fruit: mergeParts([[0.85, 2.3, 0.6], [-0.7, 2.5, 0.55], [0.3, 2.0, 0.95], [-0.3, 3.1, 0.6], [0.95, 2.7, -0.3], [-0.95, 2.2, -0.35], [0.2, 3.3, -0.55], [0.6, 1.75, -0.5]].map(([x, y, z]) => { const g = new THREE.IcosahedronGeometry(0.11, 1); g.translate(x, y, z); return g; })),
   };
   if (ART2){   /* v446 新美術：樹改成「雲片松」的樣子（一片一片扁扁的樹冠、粗一點的深色樹幹），針葉樹改成一層一層像小塔，顏色配新房子的瓦 */
-    const pad = (r, x, y, z, det) => blob(r, x, y, z, 0.46, det);
-    G.trunk = vgrad(trunkGeo(0.17, 0.3, 2.15, 0.7), 0, 2.15, 0.7, 1.05, 0.03);
-    G.round = vgrad(mergeParts([pad(1.15, 0, 3.05, 0, hiDet), pad(0.92, 0.85, 2.45, 0.2), pad(0.9, -0.8, 2.6, -0.25), pad(0.72, 0.1, 2.05, -0.8), pad(0.7, -0.15, 2.15, 0.85), pad(0.6, 0.15, 3.55, -0.1)]), 1.7, 3.8, 0.5, 1.18, 0.03);
+    /* v461 主視覺是台灣漁港：樹改回圓圓蓬蓬的闊葉樹（像榕樹），樹冠大一點、樹幹粗一點；不再用扁扁的雲片松 */
+    G.trunk = vgrad(trunkGeo(0.2, 0.34, 2.1, 0.6), 0, 2.1, 0.78, 1.05, 0.03);
+    G.round = vgrad(mergeParts([blob(1.25, 0, 2.7, 0, 0.9, hiDet), blob(0.95, 0.9, 2.3, 0.3), blob(0.98, -0.85, 2.35, -0.25), blob(0.85, 0.1, 3.4, -0.1), blob(0.8, -0.15, 2.2, 0.85), blob(0.78, 0.25, 2.3, -0.9)]), 1.3, 4.1, 0.62, 1.16, 0.035);
     G.pineTrunk = vgrad(trunkGeo(0.13, 0.24, 1.9, 0.6), 0, 1.9, 0.7, 1.0, 0.03);
     G.pine = vgrad(mergeParts([0, 1, 2, 3].map(j => { const g = new THREE.ConeGeometry(1.55 - j * 0.36, 0.78, 8, 1); g.rotateY(j * 0.4); g.translate(0, 1.5 + j * 0.74, 0); return g; })), 1.1, 4.3, 0.55, 1.15, 0.03);
-    G.birch = vgrad(mergeParts([pad(0.9, 0, 3.25, 0, hiDet), pad(0.66, 0.45, 2.7, 0.2), pad(0.6, -0.4, 2.85, -0.25), pad(0.5, 0.05, 3.7, 0)]), 2.3, 4.0, 0.55, 1.18, 0.03);
   }
   const vm = (opts) => new THREE.MeshStandardMaterial(Object.assign({ color:'#ffffff', vertexColors:true, roughness:0.85 }, opts));
   const M = { trunk: vm(), round: vm(), pine: vm({ flatShading:true }), birch: vm(), fruit: new THREE.MeshStandardMaterial({ color:'#ffffff', roughness:0.45, emissive:'#401010', emissiveIntensity:0.15 }) };
@@ -1239,10 +1262,11 @@ function buildTrees(trees, PX, PZ){
     else {
       const blossom = (village && hash(k, 2) < (SP ? 0.6 : 0.3)) || (SP && hash(k, 2) < 0.22), fruit = village && !blossom && hash(k, 3) < (AU ? 0.5 : 0.35);
       const crown = blossom && !AU && !WI ? ['#f7b6c8', '#f4a3bb', '#fbcad8'][Math.floor(hash(k, 6) * 3)]
-        : AU ? (ART2 ? ['#f0a428', '#e8692a', '#d2402e', '#f4c63a', '#b9b43c'] : ['#e0a14a', '#d9783c', '#c9573a', '#e8c15a', '#a7a95a'])[Math.floor(hash(k, 7) * 5)]
+        : AU && ART2 ? ['#4fae4a', '#3f9f52', '#63b944', '#48a85e', '#8fbf3c', '#d9b33a'][Math.floor(hash(k, 7) * 6)]   /* v461 新美術：亞熱帶的漁港秋天樹還是綠的，只有少數轉黃 */
+        : AU ? ['#e0a14a', '#d9783c', '#c9573a', '#e8c15a', '#a7a95a'][Math.floor(hash(k, 7) * 5)]
         : WI ? ['#8fae86', '#9db894', '#a9bfa3', '#c5d3c8'][Math.floor(hash(k, 7) * 4)]
-        : (ART2 ? ['#62b24a', '#4fa356', '#78bd42', '#3f9c66'] : ['#8cc46a', '#7ab85e', '#9fd27a', '#76b35f'])[Math.floor(hash(k, 7) * 4)];
-      const t = { x, y, z, sc, sy: 1, ry, crown: C(crown), trunk: C(ART2 ? '#5a2f2a' : blossom ? '#7b5440' : PALETTE.wood) };
+        : (ART2 ? ['#4fae4a', '#3f9f52', '#63b944', '#48a85e'] : ['#8cc46a', '#7ab85e', '#9fd27a', '#76b35f'])[Math.floor(hash(k, 7) * 4)];
+      const t = { x, y, z, sc, sy: 1, ry, crown: C(crown), trunk: C(ART2 ? '#8a5a3a' : blossom ? '#7b5440' : PALETTE.wood) };
       kinds.round.push(t); if (fruit) fruits.push(Object.assign({}, t, { crown: C(hash(k, 8) < 0.6 ? '#ef5b4c' : '#ffb347') }));
     }
   }
