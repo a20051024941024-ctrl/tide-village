@@ -1602,7 +1602,7 @@ function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ conso
       TWP.crate(b, x - 0.35, y, z, null, r0); TWP.crate(b, x - 0.35, y + 0.36, z, null, r0 + 0.1); TWP.crate(b, x - 0.35, y + 0.72, z, '#f0c54a', r0 - 0.08); TWP.crate(b, x + 0.36, y, z + 0.1, null, r0 + 0.2); TWP.crate(b, x + 0.36, y + 0.36, z + 0.1, '#3fb5b0', r0); TWP.icebox(b, x + 0.05, y, z - 0.55, r0 + 0.15); TWP.icebox(b, x + 0.1, y, z + 0.68, r0 - 0.3); }
     { const [x, z] = loc(4.3, 3.6); if (put(x, z, 0.5, 0.42)) TWP.board(b, x, gy(x, z), z, hs[2] + 0.2); const [x2, z2] = loc(-3.6, 3.8); if (put(x2, z2, 0.4)) { TWP.stool(b, x2, gy(x2, z2), z2, '#4f8fe0'); TWP.stool(b, x2 + 0.6, gy(x2, z2), z2 + 0.25, '#e8566a'); } }
     /* 岸邊一排纜樁：石板鋪到快下水的那一段就是碼頭邊，每隔一段放一個；有的靠著救生圈、有的旁邊躺著舊輪胎或立著三角錐 */
-    if (Art2.pave){ const { R, cx, cz, NS } = Art2.pave; let last = -99, k2 = 0; for (let k = 0; k < NS; k++){ if (R[k] > 15.5 || k - last < 7) continue; const a = k / NS * 6.2832, r = R[k] - 0.75, x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r; if (!put(x, z, 0.3, 0.3)) continue; last = k; const y = gy(x, z); TWP.bollard(b, x, y, z);
+    if (Art2.pave){ const { R, cx, cz, NS } = Art2.pave; let last = -99, k2 = 0; for (let k = 0; k < NS; k++){ if (R[k] > 15.5 || k - last < 7) continue; const a = k / NS * 6.2832, r = R[k] - 0.75, x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r; { let nearDeck = false; for (let q = 0; q < 12 && !nearDeck; q++){ const qa = q * 0.5236; for (const qr of [1.3, 2.6, 3.8]) if (deckAt(x + Math.sin(qa) * qr, z + Math.cos(qa) * qr)){ nearDeck = true; break; } } if (nearDeck) continue; }   /* v480 作者說棧橋邊的纜樁不自然：離木棧橋 4 公尺內不放 */ if (!put(x, z, 0.3, 0.3)) continue; last = k; const y = gy(x, z); TWP.bollard(b, x, y, z);
         const m = k2++ % 4, ox = Math.sin(a + 1.57) * 0.75, oz = Math.cos(a + 1.57) * 0.75; if (m === 0) TWP.buoy(b, x - Math.sin(a) * 0.32, y + 0.3, z - Math.cos(a) * 0.32, -0.35, a + Math.PI); else if (m === 1) TWP.tire(b, x + ox, y + 0.12, z + oz, Math.PI / 2, 0); else if (m === 2 && ok(x + ox, z + oz, 0.3)) TWP.cone(b, x + ox, y, z + oz); } }
     for (const [dx, dz, ry] of [[-11.5, 5.5, 0.6], [-12.4, 6.4, 0.75], [9.5, -9.5, 2.2]]){ const x = sq[0] + dx, z = sq[1] + dz; if (put(x, z, 0.6, 0.55)) TWP.scooter(b, x, gy(x, z), z, ry); }   /* 機車 */
     for (const [dx, dz, s2] of [[4.6, 7.0, 1.2], [-8.6, 2.2, 1.1], [-2.5, -8.2, 1.25], [8.4, 3.4, 1]]){ const x = sq[0] + dx, z = sq[1] + dz; if (put(x, z, 0.3, 0.3)) TWP.plant(b, x, gy(x, z), z, s2); }   /* 盆栽 */
@@ -1797,7 +1797,7 @@ function castPoint(x, z, dx, dz, dist){
   for (const z of [18.24, 19.76]) scene.add(box([5, 0.06, 0.06], '#6e4a2f', [26.5, 0.92, z]));
   deck(ISLE.x - 1.4, ISLE.x + 1.4, ISLE.z + ISLE.r - 0.5, ISLE.z + ISLE.r + 5.4, 0.36);   // 私人小島的碼頭
   // 港口的小船（裝飾）與漁網架
-  for (const [x, z, r] of [[30.5, -37.5, 0.3], [35.5, -30.2, -0.2]]){ const b = makeBoatMesh('#f6e4bd'); b.position.set(x, WATER_LEVEL, z); b.rotation.y = r; scene.add(b); }
+  if (!ART2) for (const [x, z, r] of [[30.5, -37.5, 0.3], [35.5, -30.2, -0.2]]){ const b = makeBoatMesh('#f6e4bd');   /* v480 新美術：米白小木船被藍白漁船壓到，作者說不要了 */ b.position.set(x, WATER_LEVEL, z); b.rotation.y = r; scene.add(b); }
 
   // ---- 瀑布（山丘的崖 → 瀑布潭）----
   const H = MAP.hill, fd = H.face, fx = H.x + fd[0] * (H.R - 1.4), fz = H.z + fd[1] * (H.R - 1.4);
