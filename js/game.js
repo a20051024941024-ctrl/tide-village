@@ -976,6 +976,35 @@ function makeBoatMesh(color){
   g.add(hull, inner, stripe, seat); g.userData.oars = oars;
   return g;
 }
+/* v453 玩家傳來一張平台舟的照片：「船可以改成這種的」。可以划的船（碼頭兩艘、別的玩家划的船）從木頭小船換成平台舟：
+   細長、兩頭尖、人坐在上面腳往前伸，一支兩頭都有槳葉的槳拿在手上左右輪流划（手真的握在槳上，見 kidJuice）。
+   港口停著當裝飾的木船、阿默的漁船不變（漁夫用的是漁船）。顏色照碼頭編號固定，別人看到的顏色跟你一樣。 */
+const KAYAK_COL = [['#e0353b', null], ['#f6a23e', ['#ffe14d', '#f25d57', '#ffc24a']], ['#2f8fd8', null], ['#8fcf3a', ['#f3e75a', '#39b58a']]];
+const _kayTex = {};
+function kayakTex(ci){ if (_kayTex[ci]) return _kayTex[ci]; const [base, spots] = KAYAK_COL[ci], c = document.createElement('canvas'); c.width = 128; c.height = 256; const x = c.getContext('2d'); x.fillStyle = base; x.fillRect(0, 0, 128, 256);
+  if (spots){ let sd = 7 + ci * 13; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647; for (let i = 0; i < 46; i++){ const px = rnd() * 128, py = rnd() * 256, r = 14 + rnd() * 30, col = spots[i % spots.length], gr = x.createRadialGradient(px, py, 0, px, py, r); gr.addColorStop(0, col); gr.addColorStop(0.55, col + 'cc'); gr.addColorStop(1, col + '00'); x.fillStyle = gr; x.save(); x.translate(px, py); x.scale(1, 1.8); x.translate(-px, -py); x.beginPath(); x.arc(px, py, r, 0, 6.283); x.fill(); x.restore(); } }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.9, 0.28); t.offset.set(0.5, 0.5); if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; return _kayTex[ci] = t; }
+function makeKayakMesh(ci){ ci = ((ci | 0) % KAYAK_COL.length + KAYAK_COL.length) % KAYAK_COL.length;
+  const g = new THREE.Group(), sh = new THREE.Shape(); sh.moveTo(0, -1.66); sh.bezierCurveTo(0.2, -1.45, 0.4, -0.9, 0.4, -0.1); sh.bezierCurveTo(0.4, 0.75, 0.22, 1.42, 0, 1.72); sh.bezierCurveTo(-0.22, 1.42, -0.4, 0.75, -0.4, -0.1); sh.bezierCurveTo(-0.4, -0.9, -0.2, -1.45, 0, -1.66);
+  const hg = new THREE.ExtrudeGeometry(sh, { depth: 0.13, bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.05, bevelSegments: 3, curveSegments: 10 }); hg.rotateX(Math.PI / 2); hg.translate(0, 0.11, 0);   /* 形狀的 y 變成船頭方向（+z），船身從水下 0.09 到水上 0.18 */
+  const hm = new THREE.MeshStandardMaterial({ color: 0xffffff, map: kayakTex(ci), roughness: 0.42, metalness: 0 }); const hull = new THREE.Mesh(hg, hm); hull.castShadow = true; g.add(hull);
+  const dk = mat('#2a2d33', 0.8), dark = new THREE.Color(KAYAK_COL[ci][0]).multiplyScalar(0.72), dm = new THREE.MeshStandardMaterial({ color: dark, roughness: 0.6 });
+  /* 座位凹槽、椅背、兩個踩腳的凹槽、前後的置物凹槽 */
+  const well = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.012, 16), dm); well.scale.set(1, 1, 1.25); well.position.set(0, 0.187, -0.3); g.add(well);
+  const back = box([0.44, 0.26, 0.05], null, [0, 0.32, -0.55], dk); back.rotation.x = -0.22; g.add(back);
+  for (const sx of [-1, 1]) for (let k = 0; k < 3; k++){ const fw = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.012, 10), dm); fw.scale.set(1, 1, 1.3); fw.position.set(sx * 0.15, 0.187, 0.06 + k * 0.17); g.add(fw); }
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.012, 14), dm); tank.scale.set(1, 1, 1.25); tank.position.set(0, 0.187, -1.08); g.add(tank);
+  for (const sx of [-1, 1]){ const bl = box([0.015, 0.012, 0.5], null, [sx * 0.1, 0.2, -1.08], dk); bl.rotation.y = sx * 0.35; g.add(bl); }
+  for (const z of [-1.5, 1.55]){ const hd = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.014, 6, 10), dk); hd.rotation.x = Math.PI / 2; hd.position.set(0, 0.2, z); g.add(hd); }
+  for (const sx of [-1, 1]){ const sideH = box([0.02, 0.03, 0.16], null, [sx * 0.42, 0.14, -0.2], dk); g.add(sideH); }
+  /* 雙頭槳 */
+  const pd = new THREE.Group(), shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 1.72, 8), dk); shaft.rotation.z = Math.PI / 2; pd.add(shaft);
+  const bm = mat('#ffd21f', 0.5); for (const sx of [-1, 1]){ const bl = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 8), bm); bl.scale.set(0.46, 0.02, 0.18); bl.position.x = sx * 0.98; bl.rotation.x = sx * 0.5; bl.castShadow = true; pd.add(bl); }
+  g.add(pd); g.userData.paddle = pd; g.userData.sitY = KAYAK_SIT; g.userData.kayak = true; kayakRest(g); return g; }
+const KAYAK_SIT = -0.17;
+function kayakRest(g){ const pd = g.userData.paddle; if (!pd) return; pd.position.set(0.25, 0.215, 0.3); pd.rotation.set(0, Math.PI / 2 - 0.05, 0); pd.userData.rest = true; }
+/* 沒人坐的船，槳放回船上 */
+function kayakTick(){ for (const b of boats){ const pd = b.m.userData.paddle; if (pd && !pd.userData.rest && (pd.userData.useAt || 0) < frameNo - 2) kayakRest(b.m); } }
 // 從某個位置朝某個方向，找離 dist 最近、夠深的水面點
 /* ---- 卡通樹：圓樹、松樹、白樺、村子裡的花樹和果樹（每種用 InstancedMesh 一次畫完） ---- */
 // ---- 季節：跟著現實（台灣）的月份。3～5 月春、6～8 月夏、9～11 月秋、12～2 月冬；網址加 #season=winter 可以預覽 ----
@@ -3682,7 +3711,19 @@ function kidJuice(f, dt, t, P){ const a = f.av, K = a.kid, B = K.B, w = K.w, ac 
   for (let i = 0; i < K.kjB.length; i++) K.kjQ[i].copy(K.kjB[i].quaternion); K.kjOn = true;
   const onBike = f === me ? Bike.on : !!f.bike;
   let bob = 0, sy = 1;
-  if (onBike && !f.swim){
+  const kbm = !f.swim && f.sitting && !onBike ? (f === me ? (myBoat && myBoat.m) : f.boatMesh) : null, pd = kbm && kbm.userData.paddle;
+  if (pd){
+    /* v453 平台舟：腳往前伸踩在船上、兩手握著雙頭槳左右輪流划（槳葉下水的那一邊由前往後拉），沒在划的時候槳橫放在腿上；釣魚時手放開去拿釣竿 */
+    const spd = f === me ? (OW.boatSpd || 0) : (f.speed || 0), row = spd > 0.3 && !f.fishing; J.pk = (J.pk || 0) + ((row ? 1 : 0) - (J.pk || 0)) * Math.min(1, dt * 5); if (row) J.pp = (J.pp || 0) + dt * (3.4 + Math.min(spd, 9) * 0.3);
+    const pk = J.pk, pp = J.pp || 0, sn = Math.sin(pp), cs = Math.cos(pp);
+    pd.position.set(0, 0.5 + 0.14 * pk, 0.02); pd.rotation.set(0, -cs * 0.38 * pk, -sn * 0.58 * pk); pd.userData.rest = false; pd.userData.useAt = frameNo;
+    B.spine.rotateX(0.1 + 0.06 * pk); B.chest.rotateY(-cs * 0.22 * pk); B.head.rotateX(-0.08);
+    a.g.position.y = f.baseY; a.g.updateMatrixWorld(true); kbm.updateMatrixWorld(true);
+    for (const sd of ['l', 'r']){ const up = B['upperleg' + sd], side = Math.sign(_kjV.copy(up.getWorldPosition(_kjA)) && a.g.worldToLocal(_kjV).x) || (sd === 'l' ? 1 : -1), sx = side > 0 ? 1 : -1;
+      _kjT.set(sx * 0.15, 0.225, 0.03); kbm.localToWorld(_kjT); _kjP.set(sx * 0.2, 1.4, -0.15); kbm.localToWorld(_kjP);
+      kidIK(up, B['lowerleg' + sd], B['foot' + sd], _kjT, _kjP);
+      if (!f.fishing){ const ua = B['upperarm' + sd]; _kjT.set(sx * 0.24, 0, 0); pd.localToWorld(_kjT); _kjP.set(sx * 0.6, -0.3, 0); kbm.localToWorld(_kjP); kidIK(ua, B['lowerarm' + sd], B['hand' + sd], _kjT, _kjP); } }
+  } else if (onBike && !f.swim){
     const bsp = f === me ? Bike.sp : (f.speed || 0), push = f === me ? joyMag() > 0.08 : bsp > 0.5, n = Math.min(1, bsp / 7);
     if (f === me && Bike.g && Bike.g.userData.crank) J.ped = Bike.g.userData.crank.rotation.x; else if (push) J.ped += Math.min(bsp, 6) * dt * 1.3;
     const ps = Math.sin(J.ped), eff = push ? 1 : 0.3;
@@ -4360,7 +4401,7 @@ $('#photoView').addEventListener('click', e => { if (e.target.id === 'photoView'
 
 
 /* ================= 小船 ================= */
-const boats = BOAT_DOCKS.map(d => { const m = makeBoatMesh('#c98b55'); m.position.set(d.x, WATER_LEVEL, d.z); m.rotation.y = d.rot; scene.add(m); return { dock: d, m }; });
+const boats = BOAT_DOCKS.map((d, i) => { const m = makeKayakMesh(i); m.position.set(d.x, WATER_LEVEL, d.z); m.rotation.y = d.rot; scene.add(m); return { dock: d, m }; });
 let myBoat = null;
 function nearBoat(){ for (const b of boats){ if (b === myBoat) continue; if (Math.hypot(me.pos.x - b.m.position.x, me.pos.z - b.m.position.z) < 3.4) return b; } return null; }
 function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return false;   /* v258 小船可以一路划到冰封群島、深海浮台、神秘島、苔森之島（以前只能在本島附近 85 公尺內） */
@@ -4415,7 +4456,7 @@ function updateBoat(dt, ix, iz, L, locked){
   }
   me.speed = 0;
   const bob = Math.sin(t * 1.6) * 0.04;
-  me.baseY = WATER_LEVEL - 0.08 + bob;
+  me.baseY = WATER_LEVEL + (myBoat.m.userData.sitY != null ? myBoat.m.userData.sitY : -0.08) + bob;
   let wh = 0, wp = 0, wr = 0; if (WAVES.on){ const tn = now(), x = me.pos.x, z = me.pos.z, fx = Math.sin(me.rot), fz = Math.cos(me.rot); wh = waveH(x, z, tn); wp = clamp(Math.atan((waveH(x + fx, z + fz, tn) - waveH(x - fx, z - fz, tn)) / 2), -0.35, 0.35); wr = clamp(Math.atan((waveH(x + fz, z - fx, tn) - waveH(x - fz, z + fx, tn)) / 2), -0.35, 0.35); }   /* v269 浪來的時候船跟著起伏、依坡度傾斜（最多 20 度，不會翻） */
   me.baseY += wh; OW.boatSpd = speed; OW.still = speed > 0.2 ? 0 : (OW.still || 0) + dt;
   myBoat.m.position.set(me.pos.x, WATER_LEVEL + bob + wh, me.pos.z); myBoat.m.rotation.set(Math.sin(t * 1.1) * 0.02 - wp, me.rot, Math.sin(t * 1.3) * 0.03 + wr);
@@ -12650,7 +12691,7 @@ function presenceObj(){
   if (nickname) o.n = nickname;
   { const av = myAvatar(); if (av) o.av = av; }   /* v334 頭像 */
   if (myId) o.u = myId;
-  if (myBoat) o.bt = 1;
+  if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat));   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
   if (mySeat) o.st = 1;
   if (Bike.on) o.bk = 1;   /* v438 在騎腳踏車 */
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
@@ -12713,7 +12754,8 @@ function applyPeer(pp){
     if (p.subInit && !was && p.sub && !(typeof Sub !== 'undefined' && Sub.on) && Date.now() - (p.subTold || 0) > 300000){ p.subTold = Date.now(); ticker(`🚢 <b>${esc(peerName(p))}</b> 開潛水艇下去黑淵裂縫了！搭船到深海浮台的潛水艇碼頭就能一起潛`); } p.subInit = 1; }
   p.fisher.setRodLook(Array.isArray(pr.rk) ? String(pr.rk[0] || '') : null, Array.isArray(pr.rk) ? String(pr.rk[1] || '') : null);
   p.fisher.setRod(typeof pr.rd === 'string' ? pr.rd : 'bamboo');
-  if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeBoatMesh('#c98b55'); scene.add(p.fisher.boatMesh); }
+  if (pr.bt && !p.fisher.boatMesh){ p.fisher.boatMesh = makeKayakMesh((pr.bt | 0) - 1); p.fisher.boatMesh.userData.ci = pr.bt | 0; scene.add(p.fisher.boatMesh); }
+  else if (pr.bt && p.fisher.boatMesh && p.fisher.boatMesh.userData.ci !== (pr.bt | 0)){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
   const fi = pr.f && typeof pr.f === 'object' ? pr.f : null;
   p.fisher.fishing = !!fi;
@@ -15907,7 +15949,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
-  updatePlayer(dt); try { bikeTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); kayakTick(); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
