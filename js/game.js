@@ -5212,14 +5212,21 @@ function toyTree(x, z){ if (!Toys.built) return; const t = now(); for (const c o
     if (Math.random() < 0.6 && Toys.drops.length){ const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz) || 1, o = Toys.drops[(Toys.dropN = (Toys.dropN || 0) + 1) % Toys.drops.length];
       o.x = o.hx = c.x + dx / d * 0.7; o.z = o.hz = c.z + dz / d * 0.7; o.y = g + 2.6; o.vx = dx / d * 1.2; o.vz = dz / d * 1.2; o.vy = 0; o.wet = 0; o.rest = false; o.off = false; o.hm = true; o.own = true; o.dirty = true; o.g.visible = true; o.g.position.set(o.x, o.y, o.z); }
     return; } }
-function gullTick(dt, t, px, pz, psp){ for (const F0 of Toys.flocks){ const d = Math.hypot(F0.x - px, F0.z - pz); if (d > 80){ if (F0.vis !== false){ F0.vis = false; for (const b of F0.birds) b.g.visible = false; } continue; } if (F0.vis === false){ F0.vis = true; for (const b of F0.birds) b.g.visible = true; }
+/* v471 玩家問「鳥類雨天會出來嗎」（截圖：半夜下著雨，海鷗還站在碼頭上）。真的海鷗下雨會找地方躲、晚上回去睡覺。
+   現在下雨、暴風雨或晚上，海鷗會飛走不見；雨停而且天亮之後才飛回原本的地方。天氣和時間每個玩家都一樣，所以大家看到的一致。 */
+function gullAway(){ try { const W = WEATHERS[Env.wx] || {}; return DayNight.period === 'night' || (W.rain || 0) > 0 || !!W.storm; } catch(e){ return false; } }
+function gullTick(dt, t, px, pz, psp){ const away = gullAway(); for (const F0 of Toys.flocks){
+    if (away){ if (F0.gone){ continue; } if (!F0.leaving){ F0.leaving = true; F0.leaveT = t; F0.until = t + 99; if (F0.vis === false || F0.st !== 1){ F0.st = 1; F0.cx = F0.x; F0.cz = F0.z; F0.birds.forEach((b, i) => { b.del = t + i * 0.12; b.a = Math.atan2(b.z - F0.cz, b.x - F0.cx); }); } }
+      if (t - F0.leaveT > 6 || F0.vis === false){ F0.gone = true; F0.leaving = false; for (const b of F0.birds) b.g.visible = false; continue; } }
+    else if (F0.gone || F0.leaving){ F0.gone = false; F0.leaving = false; F0.st = 2; F0.vis = null; for (const b of F0.birds){ b.g.visible = true; b.x = b.hx + 6; b.z = b.hz + 4; b.y = groundHeight(b.hx, b.hz) + 14; b.k = 1; } }
+    const d = Math.hypot(F0.x - px, F0.z - pz); if (d > 80){ if (F0.vis !== false){ F0.vis = false; for (const b of F0.birds) b.g.visible = false; } continue; } if (F0.vis === false){ F0.vis = true; for (const b of F0.birds) b.g.visible = true; }
     let sx = px, sz = pz, scare = (d < 5.5 && psp > 2.4) || d < 2.0; if (!scare && F0.st === 0) for (const q of peers.values()){ if (q.isle || q.inHouse || q.diving || !q.fisher || !q.target) continue; const qd = Math.hypot(F0.x - q.fisher.pos.x, F0.z - q.fisher.pos.z); if (qd < 2.0 || (qd < 5.5 && Math.hypot(q.target.x - q.fisher.pos.x, q.target.z - q.fisher.pos.z) > 0.25)){ scare = true; sx = q.fisher.pos.x; sz = q.fisher.pos.z; break; } }
     if (F0.st === 0 && scare){ F0.st = 1; F0.until = t + 8 + Math.random() * 5; const ax = F0.x - sx, az = F0.z - sz, L = Math.hypot(ax, az) || 1; F0.cx = F0.x + ax / L * 5; F0.cz = F0.z + az / L * 5; F0.birds.forEach((b, i) => { b.del = t + i * 0.1 + Math.random() * 0.1; b.a = Math.atan2(b.z - F0.cz, b.x - F0.cx); });
       try { SFX.gull(); } catch(e){} noise(0.5, 0.06, 900, 2400, 0.6); }
     else if (F0.st === 1){ let near = d < 10; if (!near) for (const q of peers.values()) if (!q.isle && !q.inHouse && q.fisher && Math.hypot(F0.x - q.fisher.pos.x, F0.z - q.fisher.pos.z) < 10){ near = true; break; } if (near) F0.until = Math.max(F0.until, t + 3); if (t > F0.until) F0.st = 2; }
     let landed = 0;
     for (const b of F0.birds){ const W = b.g.userData.wings; let tx, ty, tz, fly;
-      if (F0.st === 1 && t >= b.del){ b.a += dt * 0.75; const R = 5.5 + (b.ph % 3); tx = F0.cx + Math.cos(b.a) * R; tz = F0.cz + Math.sin(b.a) * R; ty = 5.2 + (b.ph % 2) * 1.2 + Math.sin(t * 0.8 + b.ph) * 0.4; fly = 1; }
+      if (F0.st === 1 && t >= b.del){ b.a += dt * 0.75; const lv = F0.leaving ? Math.max(0, t - F0.leaveT) : 0, R = 5.5 + (b.ph % 3) + lv * 3.5; tx = F0.cx + Math.cos(b.a) * R; tz = F0.cz + Math.sin(b.a) * R; ty = 5.2 + (b.ph % 2) * 1.2 + Math.sin(t * 0.8 + b.ph) * 0.4 + lv * 4.5; fly = 1; }
       else { tx = b.hx; tz = b.hz; ty = groundHeight(b.hx, b.hz); fly = F0.st === 2 && Math.hypot(b.x - tx, b.z - tz) + Math.abs(b.y - ty) > 0.25 ? 1 : 0; if (!fly) landed++; }
       b.k += (fly - b.k) * Math.min(1, dt * (fly ? 7 : 4));
       if (b.k > 0.03){ const r = Math.min(1, dt * (F0.st === 2 ? 1.5 : 1.25)), ox = b.x, oz = b.z; b.x += (tx - b.x) * r; b.z += (tz - b.z) * r; b.y += (ty - b.y) * Math.min(1, dt * (F0.st === 2 ? 1.3 : 1.8)); const mv = Math.hypot(b.x - ox, b.z - oz); if (mv > 1e-4) b.yaw = lerpAngle(b.yaw, Math.atan2(b.x - ox, b.z - oz), Math.min(1, dt * 5));
