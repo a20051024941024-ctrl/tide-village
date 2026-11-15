@@ -1135,8 +1135,58 @@ function twHouse(g, o){ const w = o.w, d = o.d, fl = o.fl || 2, FH = 1.7, H = fl
     plane(0.8, 0.78, wt, -w * 0.2, y, zf - d - 0.012, Math.PI); if (w > 3.6) plane(0.5, 0.78, wt, w * 0.26, y + 0.1, zf - d - 0.012, Math.PI); }
   add(new THREE.CylinderGeometry(0.035, 0.035, H - 0.2, 6), grey, w / 2 - 0.3, H / 2, zf - d - 0.05, false);
   return { w, d, h: H }; }
+/* v460 漁村小廟（照作者用 ChatGPT 畫的設計圖用程式做）：石頭台基和三階石階、下半紅磚上半白牆、四根紅柱子、紅色大門、橘黃色琉璃瓦的彎屋頂
+   （屋簷四個角往上翹）、兩頭翹起來的燕尾屋脊、屋簷下一排紅燈籠、門口一座銅香爐。屋頂是自己算的曲面，瓦片和磚是畫在小圖上貼的。 */
+function twBrickTex(){ return twTex('brick', 128, 128, (x, w, h) => { x.fillStyle = '#c9a48c'; x.fillRect(0, 0, w, h); const cs = ['#d2603f', '#c8553a', '#dc6c48', '#cf5c3c']; let k = 0; for (let r = 0; r < 8; r++) for (let c = -1; c < 4; c++){ x.fillStyle = cs[(k++ * 7 + r) % 4]; x.fillRect(c * 32 + (r % 2 ? 16 : 0) + 1, r * 16 + 1, 30, 14); } }); }
+function twTileTex(){ return twTex('tile', 128, 128, (x, w, h) => { for (let c = 0; c < 8; c++){ const g = x.createLinearGradient(c * 16, 0, c * 16 + 16, 0); g.addColorStop(0, '#e8872a'); g.addColorStop(0.5, '#ffb33e'); g.addColorStop(1, '#e07a22'); x.fillStyle = g; x.fillRect(c * 16, 0, 16, h); } x.fillStyle = 'rgba(190,90,20,.55)'; for (let r = 0; r < 8; r++) x.fillRect(0, r * 16 + 13, w, 3); x.fillStyle = 'rgba(255,225,150,.35)'; for (let r = 0; r < 8; r++) x.fillRect(0, r * 16, w, 2); }); }
+function twGateTex(){ return twTex('gate', 128, 160, (x, w, h) => { x.fillStyle = '#b3282a'; x.fillRect(0, 0, w, h); x.fillStyle = '#d43a36'; x.fillRect(6, 6, w / 2 - 9, h - 6); x.fillRect(w / 2 + 3, 6, w / 2 - 9, h - 6); x.strokeStyle = '#e9b84a'; x.lineWidth = 5; for (const cx of [w / 2 - 16, w / 2 + 16]){ x.beginPath(); x.arc(cx, h * 0.52, 9, 0, 6.283); x.stroke(); x.fillStyle = '#e9b84a'; x.beginPath(); x.arc(cx, h * 0.52 - 9, 4, 0, 6.283); x.fill(); } }); }
+function twTemple(x, z, ry){ const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = ry || 0; g.userData.keep = true; g.userData.dyn = true; g.userData.tw = true;
+  const M = (c, r, em) => twMat('c' + c + (em || ''), () => new THREE.MeshStandardMaterial({ color: c, roughness: r == null ? 0.85 : r, emissive: c, emissiveIntensity: em || 0.2 }));
+  const TM = (key, tex, rx, ry2, o) => twMat(key, () => { const t = tex.clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry2); t.needsUpdate = true; return new THREE.MeshStandardMaterial(Object.assign({ map: t, roughness: 0.8, emissive: '#ffffff', emissiveMap: t, emissiveIntensity: 0.2 }, o || {})); });
+  const add = (geo, m, px, py, pz, sh) => { const k = new THREE.Mesh(geo, m); k.position.set(px, py, pz); if (sh !== false){ k.castShadow = true; k.receiveShadow = true; } k.userData.dyn = true; g.add(k); return k; }, B = (sx, sy, sz, m, px, py, pz, sh) => add(new THREE.BoxGeometry(sx, sy, sz), m, px, py, pz, sh);
+  const stone = M('#cfcac2'), stone2 = M('#b9b4ac'), red = M('#d8362f', 0.6), white = M('#f4efe4'), gold = M('#f2b532', 0.5, 0.35), blue = M('#3f6fb8', 0.6);
+  const W = 5.2, D = 4.0, PH = 0.5, WH = 2.7, zb = -2.6, zf = zb + D, pf = zf + 1.9;                               /* 屋身寬、深、台基高、牆高；屋身從 zb 到 zf，前廊到 pf */
+  B(W + 0.7, PH, pf - zb + 0.5, stone, 0, PH / 2, (pf + zb) / 2); for (let i = 0; i < 3; i++) B(W - 0.2 - i * 0.0, PH / 3, 0.42, i % 2 ? stone : stone2, 0, PH - PH / 3 * (i + 0.5) - PH / 3 + PH / 3, pf + 0.25 + 0.21 + i * 0.42).position.y = PH - PH / 3 * (i + 1) + PH / 6;   /* 台基＋三階石階 */
+  const brick = TM('brickA', twBrickTex(), 2.2, 0.62), brickS = TM('brickB', twBrickTex(), 1.7, 0.62);
+  for (const sx of [-1, 1]){ B(0.12, WH * 0.48, D, brickS, sx * (W / 2 - 0.06), PH + WH * 0.24, zb + D / 2); B(0.12, WH * 0.52, D, white, sx * (W / 2 - 0.06), PH + WH * 0.74, zb + D / 2); }     /* 兩側牆：下半紅磚、上半白牆 */
+  B(W, WH * 0.48, 0.12, brick, 0, PH + WH * 0.24, zb + 0.06); B(W, WH * 0.52, 0.12, white, 0, PH + WH * 0.74, zb + 0.06);
+  for (const sx of [-1, 1]) for (const zz of [zb + 0.1, zf - 0.1]) B(0.34, WH, 0.34, brickS, sx * (W / 2 - 0.12), PH + WH / 2, zz);   /* 四個角的磚柱 */
+  B(W - 0.2, 0.1, D - 0.2, M('#8a6a52'), 0, PH + WH - 0.05, zb + D / 2, false);
+  /* 正面牆：中間紅色大門，兩邊下半紅磚上半白牆 */
+  const gw = 1.7, gh = 2.2; { const gm = twMat('gate', () => new THREE.MeshStandardMaterial({ map: twGateTex(), roughness: 0.6, emissive: '#ffffff', emissiveMap: twGateTex(), emissiveIntensity: 0.22 })); const k = add(new THREE.PlaneGeometry(gw, gh), gm, 0, PH + gh / 2, zf + 0.012, false); B(gw + 0.24, 0.16, 0.2, red, 0, PH + gh + 0.08, zf); }
+  for (const sx of [-1, 1]){ const pw = (W - gw) / 2 - 0.1, px = sx * (gw / 2 + pw / 2 + 0.05); B(pw, WH * 0.48, 0.12, brickS, px, PH + WH * 0.24, zf - 0.06); B(pw, WH * 0.52, 0.12, white, px, PH + WH * 0.74, zf - 0.06); }
+  B(gw, WH - gh, 0.12, white, 0, PH + gh + (WH - gh) / 2, zf - 0.06);
+  /* 四根紅柱子＋石鼓柱礎 */
+  for (const cx of [-W / 2 + 0.3, -gw / 2 - 0.35, gw / 2 + 0.35, W / 2 - 0.3]){ add(new THREE.CylinderGeometry(0.19, 0.19, WH - 0.3, 12), red, cx, PH + 0.3 + (WH - 0.3) / 2, pf - 0.35); const b0 = add(new THREE.SphereGeometry(0.3, 12, 8), stone, cx, PH + 0.2, pf - 0.35); b0.scale.y = 0.62; B(0.6, 0.08, 0.6, stone2, cx, PH + 0.04, pf - 0.35, false); }
+  B(W + 0.3, 0.24, 0.22, blue, 0, PH + WH - 0.1, pf - 0.35); B(W + 0.3, 0.07, 0.24, gold, 0, PH + WH - 0.26, pf - 0.35, false);   /* 屋簷下彩繪的橫樑 */
+  /* 兩側的小窗 */
+  for (const sx of [-1, 1]){ const k = add(new THREE.PlaneGeometry(0.7, 0.8), twMat('t' + twWinTex().uuid, () => new THREE.MeshStandardMaterial({ map: twWinTex(), roughness: 0.55 })), sx * (W / 2 + 0.012), PH + 1.15, zb + D * 0.45, false); k.rotation.y = sx * Math.PI / 2; }
+  /* 彎屋頂：前後兩片往下凹的曲面，屋簷四個角往上翹；瓦片貼圖 */
+  const RW = W + 1.7, rz0 = pf + 0.55, rz1 = zb - 0.6, rzr = (rz0 + rz1) / 2 - 0.2, ey = PH + WH + 0.05, ry0 = ey + 1.75, tileM = TM('tileA', twTileTex(), 2.6, 1.4, { side: THREE.DoubleSide, roughness: 0.55 });
+  const roofGeo = (za, zr) => { const NX = 12, NZ = 8, pos = [], uv = [], idx = []; for (let j = 0; j <= NZ; j++){ const v = j / NZ, zz = za + (zr - za) * v, yy = ey + (ry0 - ey) * (0.35 * v + 0.65 * v * v);
+      for (let i = 0; i <= NX; i++){ const u = i / NX, xx = (u - 0.5) * RW, e = Math.pow(Math.abs(u - 0.5) * 2, 3), lift = e * (0.55 * (1 - v) + 0.5 * v); pos.push(xx * (1 - 0.1 * v), yy + lift, zz + (za > zr ? 1 : -1) * e * 0.25 * (1 - v)); uv.push(u, v); } }
+    for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++){ const a0 = j * (NX + 1) + i, b0 = a0 + 1, c0 = a0 + NX + 1, d0 = c0 + 1; if (za > zr) idx.push(a0, b0, c0, b0, d0, c0); else idx.push(a0, c0, b0, b0, c0, d0); }
+    const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); ge.setIndex(idx); ge.computeVertexNormals(); return ge; };
+  add(roofGeo(rz0, rzr), tileM, 0, 0, 0); add(roofGeo(rz1, rzr), tileM, 0, 0, 0);
+  for (const zz of [rz0, rz1]){ const pts = []; for (let i = 0; i <= 12; i++){ const u = i / 12, e = Math.pow(Math.abs(u - 0.5) * 2, 3); pts.push(new THREE.Vector3((u - 0.5) * RW, ey + e * 0.55 - 0.02, zz + (zz > rzr ? 1 : -1) * e * 0.25)); } add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.085, 6), gold, 0, 0, 0, false); }   /* 屋簷邊的金色滴水 */
+  /* 燕尾屋脊：中間低、兩頭高高翹起；紅藍金三層，中間一朵花 */
+  { const hw = RW * 0.9 / 2, ridge = (dy, r, m) => { const pts = []; for (let i = 0; i <= 14; i++){ const u = i / 14 * 2 - 1, e = Math.pow(Math.abs(u), 2.6); pts.push(new THREE.Vector3(u * hw * (1 + 0.06 * e), ry0 + 0.02 + dy + e * 0.95, rzr)); } return add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 28, r, 7), m, 0, 0, 0, false); };
+    ridge(0, 0.2, red); ridge(0.2, 0.13, blue); ridge(0.34, 0.08, gold);
+    for (const sx of [-1, 1]){ const tip = add(new THREE.ConeGeometry(0.12, 0.6, 7), gold, sx * hw * 1.09, ry0 + 1.5, rzr, false); tip.rotation.z = -sx * 0.5; }
+    add(new THREE.SphereGeometry(0.3, 10, 8), blue, 0, ry0 + 0.5, rzr, false).scale.set(1.5, 1, 0.5); add(new THREE.SphereGeometry(0.2, 10, 8), gold, 0, ry0 + 0.62, rzr, false).scale.set(1, 1.1, 0.7); for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.16, 8, 6), red, sx * 0.42, ry0 + 0.5, rzr, false).scale.z = 0.7; }
+  /* 山牆（側面屋頂下的三角形）白底藍邊 */
+  for (const sx of [-1, 1]){ const sh = new THREE.Shape(); sh.moveTo(zb, 0); sh.lineTo(zf, 0); sh.lineTo(rzr, 1.5); sh.lineTo(zb, 0); const k = add(new THREE.ShapeGeometry(sh), twMat('gab', () => new THREE.MeshStandardMaterial({ color: '#f4efe4', roughness: 0.85, side: THREE.DoubleSide, emissive: '#f4efe4', emissiveIntensity: 0.2 })), sx * (W / 2 - 0.02), ey - 0.05, 0, false); k.rotation.y = -Math.PI / 2; }
+  /* 一排紅燈籠（會微微發亮，晚上更亮） */
+  const lm = twMat('lantern', () => new THREE.MeshStandardMaterial({ color: '#e8392f', roughness: 0.5, emissive: '#ff5a3a', emissiveIntensity: 0.45 })); g.userData.lanternM = lm;
+  for (let i = 0; i < 8; i++){ const lx = -W / 2 + 0.25 + (W - 0.5) * i / 7, ly = PH + WH - 0.62, lz = pf + 0.05; const b0 = add(new THREE.SphereGeometry(0.2, 10, 8), lm, lx, ly, lz, false); b0.scale.y = 0.86; add(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 8), gold, lx, ly + 0.19, lz, false); add(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 8), gold, lx, ly - 0.19, lz, false); add(new THREE.CylinderGeometry(0.012, 0.012, 0.2, 4), gold, lx, ly + 0.32, lz, false); add(new THREE.CylinderGeometry(0.03, 0.018, 0.16, 5), gold, lx, ly - 0.3, lz, false); }
+  /* 銅香爐：三隻腳、兩個耳、插著香 */
+  { const bz = M('#9a7a3a', 0.45), cx = -0.9, cz = pf - 1.0, y0 = PH; for (let i = 0; i < 3; i++){ const a = i / 3 * 6.283 + 0.5; add(new THREE.CylinderGeometry(0.06, 0.045, 0.3, 6), bz, cx + Math.cos(a) * 0.24, y0 + 0.15, cz + Math.sin(a) * 0.24); }
+    const bowl = add(new THREE.SphereGeometry(0.4, 14, 10, 0, 6.283, Math.PI * 0.35, Math.PI * 0.65), bz, cx, y0 + 0.62, cz); add(new THREE.TorusGeometry(0.36, 0.05, 6, 16), bz, cx, y0 + 0.74, cz, false).rotation.x = Math.PI / 2; add(new THREE.CylinderGeometry(0.33, 0.33, 0.03, 14), M('#d9c9a0'), cx, y0 + 0.73, cz, false);
+    for (const sx of [-1, 1]) add(new THREE.TorusGeometry(0.11, 0.03, 5, 10), bz, cx + sx * 0.42, y0 + 0.74, cz, false); for (let i = 0; i < 3; i++){ add(new THREE.CylinderGeometry(0.008, 0.008, 0.4, 4), M('#c94a3a'), cx + (i - 1) * 0.07, y0 + 0.93, cz + (i % 2) * 0.05, false); } }
+  scene.add(g); const c = Math.cos(ry || 0), s0 = Math.sin(ry || 0), cz2 = (pf + zb) / 2; addOBoxCol(x + s0 * cz2, z + c * cz2, W + 0.7, pf - zb + 0.5, ry || 0); return g; }
 /* 廣場和港邊的擺設 */
-function art2Props(){ const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
+function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ console.warn('twTemple', e); }   /* v460 小廟：廣場西邊的空地，面向廣場 */
+  const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
   const hs = HLOT.shop, c = Math.cos(hs[2]), sn = Math.sin(hs[2]), loc = (lx, lz) => [hs[0] + c * lx + sn * lz, hs[1] - sn * lx + c * lz];
   for (const lx of [-6.6, 6.6]){ const [x, z] = loc(lx, 0.6); P('stand', x, z, 1.25, hs[2], 0.9); }   /* 攤子放在魚市場兩側、跟房子齊，不擋櫃台和冰檯 */
   P('lamp', sq[0] + 6.2, sq[1] + 6.0, 1.5, 0, 0.45); P('lamp', sq[0] - 7.2, sq[1] + 5.2, 1.5, 0, 0.45); P('lamp', sq[0] - 6.5, sq[1] - 6.5, 1.5, 0, 0.45);
