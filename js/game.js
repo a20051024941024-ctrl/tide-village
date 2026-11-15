@@ -5308,6 +5308,7 @@ function updateCamera2(dt){
   /* v468 潛水第一人稱（玩家要求）：鏡頭放在自己眼睛的位置，看不到自己的身體，拖畫面可以上下左右看；搖桿往前推會朝你看的方向游（看上面就往上、看下面就往下）。
      潛水列的「👁 視角」可以切換，會記住。只有自己的畫面這樣，別人看你還是正常的潛水員。 */
   { const fp = Dive.on && Dive.fp && !Dive.ending && !Photo.on; if (fp){ const p = cam.pitch, cp2 = Math.cos(p), hx = me.pos.x, hy = me.baseY + 0.75, hz = me.pos.z; camera.position.set(hx, clamp(hy, diveBed(hx, hz) + 0.4, DIVE.y + DIVE.top - 0.25), hz); camLook.set(hx - Math.sin(cam.yaw) * cp2, camera.position.y - Math.sin(p), hz - Math.cos(cam.yaw) * cp2); camera.lookAt(camLook); }
+    if (!fp && Dive.on && Dive.inTun && !Photo.on){ const hx = me.pos.x, hy = me.baseY + 0.7, hz = me.pos.z, fx2 = Math.sin(me.rot), fz2 = Math.cos(me.rot); camera.position.set(hx - fx2 * 1.5, hy + 0.25, hz - fz2 * 1.5); camLook.set(hx + fx2 * 3, hy, hz + fz2 * 3); camera.lookAt(camLook); }   /* v469 一般視角進隧道：鏡頭貼到背後，不然會被岩壁擋住 */
     if (fp !== !!Dive.fpOn){ Dive.fpOn = fp; me.av.g.visible = !fp; if (me.tag) me.tag.style.visibility = fp ? 'hidden' : ''; } else if (fp && me.av.g.visible) me.av.g.visible = false; }
   if (camShake > 0.002){ camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; camShake *= Math.pow(0.03, dt); }
 }
@@ -10361,7 +10362,7 @@ function diveLook2(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', t
     km.customProgramCacheKey = () => 'dvkelp3';
     const N = Math.max(1, Math.round((low ? 0.4 : 1) * (S.kelp2 || 150))), im = new THREE.InstancedMesh(kg, km, N)   /* 珊瑚礁和沉船的海帶少一點，不要擋住珊瑚和沉船 */, d = new THREE.Object3D(), c = new THREE.Color(), cols = ['#9fb53e', '#7fa436', '#b3bb45', '#6c9638', '#c6c04e'];
     for (let i = 0; i < N; i++){ let x, z; if (i % 3){ const cl = i % 7, ca = cl * 0.9 + 0.4, cr = R * (0.28 + (cl % 3) * 0.14); x = X + Math.cos(ca) * cr + (rnd() - 0.5) * 9; z = Z + Math.sin(ca) * cr + (rnd() - 0.5) * 9; } else { const a = rnd() * 6.283, r = R * (0.2 + rnd() * 0.6); x = X + Math.cos(a) * r; z = Z + Math.sin(a) * r; }
-      const H = (top - 2) * (0.5 + rnd() * 0.5); d.position.set(x, diveBed(x, z) - 0.1, z); d.rotation.set(0, rnd() * 6.283, 0); d.scale.set(0.8 + rnd() * 0.5, H / 10, 0.8 + rnd() * 0.5); d.updateMatrix(); im.setMatrixAt(i, d.matrix); im.setColorAt(i, c.set(cols[i % cols.length])); }
+      const H = (top - 2) * (0.5 + rnd() * 0.5) * (Dive.tun && Dive.tun.pts.some(q => Math.hypot(x - q.x, z - q.z) < 5.2) ? 0.001 : 1); d.position.set(x, diveBed(x, z) - 0.1, z); d.rotation.set(0, rnd() * 6.283, 0); d.scale.set(0.8 + rnd() * 0.5, H / 10, 0.8 + rnd() * 0.5); d.updateMatrix(); im.setMatrixAt(i, d.matrix); im.setColorAt(i, c.set(cols[i % cols.length])); }
     im.frustumCulled = false; g.add(im); }
   /* 外圈的岩壁、石柱、石拱門：遠遠看是一層一層的剪影 */
   { const rm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }); if (!low) diveCausMat(rm);
@@ -10378,6 +10379,52 @@ function diveLook2(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', t
   /* 金色小亮點 */
   { const N = low ? 110 : 280, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const a = rnd() * 6.283, r = Math.sqrt(rnd()) * R * 0.75; pos[i * 3] = X + Math.cos(a) * r; pos[i * 3 + 1] = Y + 0.5 + rnd() * (top - 1.5); pos[i * 3 + 2] = Z + Math.sin(a) * r; }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pt = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffe9a6', size: 0.09, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending })); pt.frustumCulled = false; g.add(pt); } }
+/* v469 玩家要海底洞穴，兩種都做：
+   ① 珊瑚礁和港口海底多一條可以游進去的岩石隧道（diveTunnel）：一座長長的岩丘，兩頭有洞口，裡面彎彎的大約 20 公尺，長著會發光的水晶和小亮點。
+      岩壁是實心的：只能從兩頭的洞口進出，在裡面會貼著洞壁游，不會穿牆。一般視角進洞時鏡頭會自動貼到背後（不然會被岩壁擋住）；第一人稱最有感覺。
+   ② 原本的「海底洞穴」潛水點加細節（diveCaveLook）：從地板頂到洞頂的石柱、地上的石筍、整片洞頂的鐘乳石、水晶在地上照出一圈光、
+      洞頂透光的洞口下面一道光柱和地上的亮斑、光柱裡飄的灰塵、整個洞裡漂著藍色的小光點、岩壁上一叢一叢會發光的東西。 */
+function diveRockGeo(geo, sd, ca, cb, ctop, out){ const p = geo.attributes.position, cs = [], v = new THREE.Vector3(), cc = new THREE.Color(), a = new THREE.Color(ca), b = new THREE.Color(cb), al = new THREE.Color(ctop);
+  for (let i = 0; i < p.count; i++){ v.fromBufferAttribute(p, i); let n = 0.22 * Math.sin(v.x * 1.3 + sd) * Math.cos(v.z * 1.1 + sd * 1.7) + 0.16 * Math.sin(v.y * 1.7 + v.x * 0.9 + sd * 0.6) + 0.07 * Math.sin(v.x * 3.6 + v.y * 2.8 + v.z * 3.2); if (out) n = Math.abs(n) * out; p.setXYZ(i, v.x * (1 + n * (out ? 0 : 1)), v.y * (1 + n * (out ? 0 : 1)), v.z * (1 + n * (out ? 0 : 1))); if (out) geo.userData.push = (geo.userData.push || []).concat([n]); }
+  geo.computeVertexNormals(); const nn = geo.attributes.normal; if (out){ const ps = geo.userData.push; for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + nn.getX(i) * ps[i], p.getY(i) + nn.getY(i) * ps[i], p.getZ(i) + nn.getZ(i) * ps[i]); geo.computeVertexNormals(); }
+  for (let i = 0; i < p.count; i++){ const up = Math.max(0, nn.getY(i)), k = 0.5 + 0.5 * Math.sin(p.getY(i) * 1.6 + p.getX(i) * 0.7 + sd); cc.copy(a).lerp(b, k).lerp(al, up * up * 0.7); cs.push(cc.r, cc.g, cc.b); } geo.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); return geo; }
+function diveGlowTex(){ if (diveGlowTex.t) return diveGlowTex.t; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'), gr = c.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, 64, 64); return diveGlowTex.t = new THREE.CanvasTexture(cv); }
+function diveGlow(g, x, y, z, r, col, op){ const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), new THREE.MeshBasicMaterial({ map: diveGlowTex(), color: col, transparent: true, opacity: op == null ? 0.5 : op, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.renderOrder = 2; g.add(m); return m; }
+function diveTunCtrl(S, X, Z, R){ const a0 = S.harbor ? 3.5 : 3.7, ctrl = []; for (let i = 0; i < 6; i++){ const u = i / 5, a = a0 + u * 0.62, r = R * (0.36 + u * 0.2) + Math.sin(u * 6.283) * 2.2, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; ctrl.push(new THREE.Vector3(x, diveBed(x, z) + 2.4, z)); } return ctrl; }
+function diveTunnel(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', RIN = 2.15, ROUT = 3.5, ctrl = diveTunCtrl(S, X, Z, R);
+  const curve = new THREE.CatmullRomCurve3(ctrl), SEG = low ? 22 : 34;
+  const wallIn = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, side: THREE.BackSide }), wallOut = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }); if (!low) diveCausMat(wallOut);
+  g.add(new THREE.Mesh(diveRockGeo(new THREE.TubeGeometry(curve, SEG, RIN, low ? 8 : 12, false), 2.1, '#3a4a50', '#263238', '#2f3d42', 0.9), wallIn));
+  g.add(new THREE.Mesh(diveRockGeo(new THREE.TubeGeometry(curve, SEG, ROUT, low ? 10 : 14, false), 5.3, S.harbor ? '#566e70' : '#6a7a78', '#3a5258', '#7c9455', 3.2), wallOut));
+  for (const u of [0, 1]){ const P = curve.getPointAt(u), T = curve.getTangentAt(u), ring = new THREE.Mesh(diveRockGeo(new THREE.RingGeometry(RIN * 0.96, ROUT * 1.5, low ? 12 : 18, 3), 7.7 + u, '#4f6466', '#34484e', '#6f8a52', 0), wallOut); ring.position.copy(P); ring.lookAt(P.x + T.x * (u ? 1 : -1), P.y + T.y * (u ? 1 : -1), P.z + T.z * (u ? 1 : -1)); ring.material.side = THREE.DoubleSide; g.add(ring); }
+  /* 洞裡：發光水晶、地上的光暈、漂浮的小光點 */
+  const cm = [mat('#8ff4ff', 0.2, { emissive: '#3fd8ff', emissiveIntensity: 2.6, fog: false }), mat('#e0b4ff', 0.2, { emissive: '#a56bff', emissiveIntensity: 2.6, fog: false }), mat('#b6ffb0', 0.2, { emissive: '#4fe07a', emissiveIntensity: 2.2, fog: false })];
+  const NC = low ? 6 : 11; for (let i = 0; i < NC; i++){ const u = 0.08 + 0.84 * (i + 0.5) / NC, P = curve.getPointAt(u), T = curve.getTangentAt(u), sx = (i % 2 ? 1 : -1), ox = -T.z * sx * 1.25, oz = T.x * sx * 1.25, by = P.y - RIN * 0.78, k = i % 3;
+      for (let j = 0; j < 4; j++){ const h = 0.35 + rnd() * 0.7, c = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), cm[k]); c.scale.set(1, h * 3, 1); c.position.set(P.x + ox + (rnd() - 0.5) * 0.4, by + h * 0.35, P.z + oz + (rnd() - 0.5) * 0.4); c.rotation.set((rnd() - 0.5) * 0.7, rnd() * 3, (rnd() - 0.5) * 0.7); g.add(c); }
+      diveGlow(g, P.x + ox * 0.7, by + 0.12, P.z + oz * 0.7, 2.0, ['#4fdcff', '#b07bff', '#5fe88a'][k], 0.5); }
+  { const N = low ? 50 : 120, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const P = curve.getPointAt(rnd()), a = rnd() * 6.283, r = Math.sqrt(rnd()) * RIN * 0.8; pos[i * 3] = P.x + Math.cos(a) * r; pos[i * 3 + 1] = P.y + Math.sin(a) * r * 0.8; pos[i * 3 + 2] = P.z + Math.sin(a * 1.7) * r * 0.5; }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pt = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#9ff4ff', size: 0.08, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); pt.frustumCulled = false; g.add(pt); }
+  Dive.tun = { pts: curve.getSpacedPoints(48), rin: RIN - 0.55, rout: ROUT * 1.2 }; }
+/* 隧道的實心岩壁：找出離隧道中心線最近的點，在洞裡就不能超出洞壁，在外面就不能鑽進岩石；只有兩頭可以進出 */
+function diveTunClamp(){ const U = Dive.tun; if (!U) return; const px = me.pos.x, py = me.baseY + 0.45, pz = me.pos.z, P = U.pts; let bd = 1e9, bi = 0, bt = 0;
+  for (let i = 0; i < P.length - 1; i++){ const a = P[i], b = P[i + 1], abx = b.x - a.x, aby = b.y - a.y, abz = b.z - a.z, t = clamp(((px - a.x) * abx + (py - a.y) * aby + (pz - a.z) * abz) / (abx * abx + aby * aby + abz * abz), 0, 1), dx = px - (a.x + abx * t), dy = py - (a.y + aby * t), dz = pz - (a.z + abz * t), d = Math.hypot(dx, dy, dz); if (d < bd){ bd = d; bi = i; bt = t; } }
+  if (bd > U.rout + 1){ Dive.inTun = false; return; }
+  const a = P[bi], b = P[bi + 1], cx = a.x + (b.x - a.x) * bt, cy = a.y + (b.y - a.y) * bt, cz = a.z + (b.z - a.z) * bt, g = (bi + bt) / (P.length - 1), end = g < 0.035 || g > 0.965;
+  if (end){ Dive.inTun = bd < U.rin + 0.3; return; }
+  const dx = px - cx, dy = py - cy, dz = pz - cz, d = bd || 1e-3;
+  if (Dive.inTun){ if (d > U.rin){ const k = U.rin / d; me.pos.x = cx + dx * k; me.pos.z = cz + dz * k; me.baseY = cy + dy * k - 0.45; } }
+  else if (d < U.rout){ const k = U.rout / d; me.pos.x = cx + dx * k; me.pos.z = cz + dz * k; if (Math.abs(dy) > Math.hypot(dx, dz)) me.baseY = cy + dy * k - 0.45; } }
+function diveCaveLook(g, S, X, Y, Z, R, rnd){ const low = Quality.tier === 'low', top = DIVE.top, rm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
+  for (let i = 0; i < (low ? 5 : 9); i++){ const a = rnd() * 6.283, r = R * (0.25 + rnd() * 0.5), x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, by = diveBed(x, z), h = Y + top - by + 1.5, m = new THREE.Mesh(diveRockGeo(new THREE.CylinderGeometry(0.75, 1.15, 1, low ? 8 : 12, 8), i * 2.9, '#4a4c58', '#30323c', '#565a66'), rm); m.scale.set(1.2 + rnd() * 0.9, h, 1.2 + rnd() * 0.9); m.position.set(x, by + h / 2 - 0.4, z); m.rotation.y = rnd() * 6; g.add(m); }   /* 石柱 */
+  { const gs = [], add = (x, y, z, r, h, down) => { const c = new THREE.ConeGeometry(r, h, 6); if (down) c.rotateX(Math.PI); c.translate(x, y + (down ? -h / 2 : h / 2), z); gs.push(c); };
+    for (let i = 0; i < (low ? 16 : 34); i++){ const a = rnd() * 6.283, r = 4 + rnd() * R * 0.78, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, s = 0.5 + rnd() * 1.3; add(x, diveBed(x, z) - 0.1, z, 0.28 * s, 1.5 * s, false); }   /* 石筍 */
+    for (let i = 0; i < (low ? 22 : 50); i++){ const a = rnd() * 6.283, r = 3 + rnd() * R * 0.8, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, s = 0.6 + rnd() * 1.6; add(x, Y + top + 0.3, z, 0.26 * s, 1.9 * s, true); }   /* 鐘乳石 */
+    const mg = mergeGeometries(gs, false); gs.forEach(q => q.dispose()); g.add(new THREE.Mesh(mg, mat('#43454f', 0.95))); }
+  if (Dive.crystals) Dive.crystals.forEach((c, i) => diveGlow(g, c.position.x, c.position.y + 0.1, c.position.z, 2.6, i % 2 ? '#a87bff' : '#4fdcff', 0.55));   /* 水晶在地上照出一圈光 */
+  { const by = diveBed(X, Z); diveGlow(g, X, by + 0.12, Z, 5.5, '#cfeeff', 0.75); const sh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 3.2, top + 2, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#d8f2ff', transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })); sh.position.set(X, Y + top / 2, Z); g.add(sh);
+    const N = low ? 50 : 130, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const h = rnd(), a = rnd() * 6.283, r = Math.sqrt(rnd()) * (1 + (1 - h) * 2.1); pos[i * 3] = X + Math.cos(a) * r; pos[i * 3 + 1] = by + h * top; pos[i * 3 + 2] = Z + Math.sin(a) * r; } geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pt = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.07, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); pt.frustumCulled = false; g.add(pt); }
+  { const N = low ? 90 : 240, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const a = rnd() * 6.283, r = Math.sqrt(rnd()) * R * 0.8; pos[i * 3] = X + Math.cos(a) * r; pos[i * 3 + 1] = Y + 0.5 + rnd() * (top - 1); pos[i * 3 + 2] = Z + Math.sin(a) * r; } geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pt = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#7fe6ff', size: 0.09, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); pt.frustumCulled = false; g.add(pt); }
+  { const gm = [mat('#7ff0c0', 0.3, { emissive: '#3fe0a0', emissiveIntensity: 2.2, fog: false }), mat('#ffb0e8', 0.3, { emissive: '#ff6fd0', emissiveIntensity: 2.0, fog: false })]; for (let i = 0; i < (low ? 12 : 28); i++){ const a = rnd() * 6.283, r = R * (0.7 + rnd() * 0.1), x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r, y = diveBed(x, z) + 1 + rnd() * (top - 3); for (let j = 0; j < 4; j++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.1 + rnd() * 0.12, 6, 5), gm[i % 2]); b.position.set(x + (rnd() - 0.5) * 0.7, y + (rnd() - 0.5) * 0.7, z + (rnd() - 0.5) * 0.7); g.add(b); } } } }
 function diveBed(x, z){
   const dx = x - DIVE.x, dz = z - DIVE.z, d = Math.hypot(dx, dz);
   return DIVE.y + Math.sin(dx * 0.21) * 0.45 + Math.cos(dz * 0.17 + dx * 0.05) * 0.55 + Math.sin((dx + dz) * 0.09) * 0.8 + Math.max(0, d - DIVE.r * 0.72) * 0.55;
@@ -10412,7 +10459,8 @@ function buildDive(){
   const g = new THREE.Group(); g.name = 'dive'; scene.add(g); Dive.group = g;
   const X = DIVE.x, Y = DIVE.y, Z = DIVE.z, R = DIVE.r, M = diveMerger(), rnd = mulberry(Math.floor(Date.now() / 60000));
   const AK = Quality.tier === 'low' ? 1.2 : 1.7; S = Object.assign({}, S, { coral: Math.round(S.coral * AK), kelp: Math.round(S.kelp * AK), rocks: Math.round(S.rocks * AK), shells: Math.round(S.shells * 1.4) });   /* 海底變大，東西也多放一點 */
-  const onBed = () => { for (let k = 0; k < 8; k++){ const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * R * 0.92, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; if (S.garden && k < 7 && Math.abs(x - (X - 4)) < 8 && Math.abs(z - (Z + R * 0.45 - 5)) < 8) continue;   /* v374 小島海底花園：海床那一塊不要放石頭、海藻 */ return [x, diveBed(x, z), z]; } };
+  const TUNP = S.look2 && !S.big ? new THREE.CatmullRomCurve3(diveTunCtrl(S, X, Z, R)).getSpacedPoints(24) : null;   /* v469 隧道經過的地方不要放石頭、珊瑚、貝殼 */
+  const onBed = () => { for (let k = 0; k < 8; k++){ const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * R * 0.92, x = X + Math.cos(a) * r, z = Z + Math.sin(a) * r; if (TUNP && k < 7 && TUNP.some(q => Math.hypot(x - q.x, z - q.z) < 5.4)) continue; if (S.garden && k < 7 && Math.abs(x - (X - 4)) < 8 && Math.abs(z - (Z + R * 0.45 - 5)) < 8) continue;   /* v374 小島海底花園：海床那一塊不要放石頭、海藻 */ return [x, diveBed(x, z), z]; } };
   // 外面的大球（上亮下暗）和水面
   { const sg = new THREE.SphereGeometry(R + 16, 28, 16), cs = [], p = sg.attributes.position, c1 = new THREE.Color(S.sky[0]), c0 = new THREE.Color(S.sky[1]), cc = new THREE.Color();
     for (let i = 0; i < p.count; i++){ const k = clamp(p.getY(i) / (R + 16) * 0.5 + 0.5, 0, 1); cc.copy(c0).lerp(c1, Math.pow(k, 1.6)); cs.push(cc.r, cc.g, cc.b); }
@@ -10529,7 +10577,8 @@ function buildDive(){
       list.push({ x, y: diveBed(x, z), z, s: 0.8 + rnd() * 1.1, ry: rnd() * 3, ph: rnd() * 6 }); }
     im.frustumCulled = false; g.add(im); Dive.kelp = { im, list }; }
   // 光束
-  Dive.shafts = []; if (S.look2){ try { diveLook2(g, S, X, Y, Z, R, rnd); } catch(e){ console.warn('diveLook2', e); } }
+  Dive.shafts = []; Dive.tun = null; Dive.inTun = false; if (S.look2 && !S.big){ try { diveTunnel(g, S, X, Y, Z, R, rnd); } catch(e){ console.warn('diveTunnel', e); } } if (S.cave){ try { diveCaveLook(g, S, X, Y, Z, R, rnd); } catch(e){ console.warn('diveCaveLook', e); } }
+  if (S.look2){ try { diveLook2(g, S, X, Y, Z, R, rnd); } catch(e){ console.warn('diveLook2', e); } }
   const rayTx = (() => { const cv = document.createElement('canvas'); cv.width = 4; cv.height = 64; const c = cv.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.6, '#8aa8b0'); gr.addColorStop(1, '#000000'); c.fillStyle = gr; c.fillRect(0, 0, 4, 64); return new THREE.CanvasTexture(cv); })();   /* 光束越往下越淡 */
   for (let i = 0; i < (S.cave ? 0 : S.big ? 4 : S.lush || S.look2 ? 13 : 7); i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, S.lush ? 2.0 + rnd() * 1.4 : 2.4, DIVE.top + 2, 10, 1, true), new THREE.MeshBasicMaterial({ color:'#e8fbff', map: rayTx, transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
     const a = rnd() * Math.PI * 2, r = 6 + rnd() * R * 0.7; m.position.set(X + Math.cos(a) * r, Y + DIVE.top / 2 + 0.5, Z + Math.sin(a) * r); m.rotation.z = 0.18; m.rotation.y = rnd(); g.add(m); Dive.shafts.push(m); }
@@ -10668,7 +10717,7 @@ function updateDiveSwim(dt, ix, iz, L){
   const up = (Dive.up || keys.Space || keys.KeyE) ? 1 : 0, dn = (Dive.down || keys.KeyC || keys.KeyQ) ? 1 : 0;
   let y = me.baseY + (up - dn) * 2.4 * fins * dt - 0.08 * dt;
   if (Dive.fp && L > 0.08 && iz < -0.2) y += -Math.sin(cam.pitch) * speed * dt * Math.min(1, -iz) * 0.9;   /* v468 第一人稱：往前游的時候跟著視線上下 */
-  y = clamp(y, diveBed(me.pos.x, me.pos.z) + 0.25, DIVE.y + DIVE.top - 1.0); me.baseY = y; Jump.gy = y; Jump.air = 0;
+  y = clamp(y, diveBed(me.pos.x, me.pos.z) + 0.25, DIVE.y + DIVE.top - 1.0); me.baseY = y; if (Dive.tun){ try { diveTunClamp(); } catch(e){} me.baseY = clamp(me.baseY, diveBed(me.pos.x, me.pos.z) + 0.25, DIVE.y + DIVE.top - 1.0); y = me.baseY; } Jump.gy = y; Jump.air = 0;
   me.speed += (Math.max(speed, (up || dn) ? 1.6 : 0) - me.speed) * Math.min(1, dt * 6); me.swimPitch = speed > 0.3 ? 1.25 : up ? 0.5 : 0.3;
   /* 游到水面附近：按著上浮一下下就上去；停在水面不動 1.5 秒也會自己浮出去 */
   if (y >= DIVE.y + DIVE.top - 1.7 && !dn && now() - Dive.startAt > 2){ Dive.surfHold = (Dive.surfHold || 0) + dt * (up ? 2.5 : 1); if (Dive.surfHold > 1.5){ Dive.surfHold = 0; endDive(); } } else Dive.surfHold = 0;
@@ -15093,6 +15142,7 @@ function renderTab(){
       '外海魚情：在外海的船上按「🤿 下潛看魚」，可以直接潛下去看這一帶現在有哪些魚。外海每 5 分鐘會有 3 種魚特別活躍（上鉤機率 ×2.5），浮上來之後跑馬燈會告訴你是哪幾種、還剩幾分鐘。',
       isTouch ? '水裡：搖桿游泳，⬆ 往上、⬇ 往下。一直往上浮到水面就會上岸，也可以按左上「⬆ 上岸」。' : '水裡：WASD 游泳，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上浮到水面就會上岸。',
       '氧氣用完會自動浮上來。氧氣瓶可以升級：60 → 100 → 150 → 220 秒。競速蛙鞋游得更快，潛水燈讓晚上也看得清楚。',
+      '珊瑚礁和港口海底各有一條岩石隧道：找到岩丘上的洞口游進去，裡面有會發光的水晶，從另一頭出來。岩壁是實心的，只能從兩頭進出。',
       '潛水列的「👁 視角」可以切換第一人稱：從自己的眼睛看出去，拖畫面轉頭，搖桿往前推就朝你看的方向游。',
       '靠近魚、讓牠在畫面中間時按「📷 拍照」，就會登錄進「水下圖鑑」（圖鑑分頁看得到數量）。傳說魚偶爾也會出現在水裡。',
       '有三個潛水點（在阿海的選單選）：🪸 珊瑚礁（有潛水裝備就能去）、⚓ 沉船深海（要大型氧氣瓶，大帆船旁邊寶箱多又值錢，大魚和傳說魚常出沒）、🕳️ 海底洞穴（要專業雙氧氣瓶＋潛水燈，有發光水晶、珍珠貝和深海怪魚）。',
