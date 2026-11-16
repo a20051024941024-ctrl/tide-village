@@ -4603,7 +4603,9 @@ class Fisher {
       const back = Math.max(0, -pz), fwd = Math.max(0, pz); T.zR = CS.raise && back > 0 ? -back * CS.raise * 0.4 : 0;   /* 遠投：手舉高一點 */
       T.aR = -1.0 - this.bend * 0.3 - back * 0.55 + fwd * 0.3; T.aL = -0.7 - this.bend * 0.2 - back * 0.4 + fwd * 0.2; T.zL = 0.08 * 0;   /* 手不要舉太高：主要是竿子往後倒 */
       T.tw = -back * 0.12 + fwd * 0.08; T.pit += fwd * 0.06 - back * 0.03;
-      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.1 + fwd * 0.5; if (a.hd) rodHDAnim(this, dt, t);
+      /* v508 作者：「打大白鯊動作好奇怪、沒有拉竿的感覺」→ 用力拉（tug）的時候整個人往後仰、竿子往後扳、手往上提；被魚扯（yank）的時候往前一傾 */
+      const tg = this.tug || 0, yk = this.yank || 0; T.pit += -tg * (a.kid ? 0.95 : 0.32) + yk * (a.kid ? 0.45 : 0.15); T.aR -= tg * 0.35; T.aL -= tg * 0.3; T.bob = (T.bob || 0) - tg * 0.04;
+      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.1 + fwd * 0.5 - tg * 0.55 + yk * 0.35 + (tg > 0.3 ? Math.sin(t * 23) * 0.025 * tg : 0); if (a.hd) rodHDAnim(this, dt, t);
       this.castSnap = this.castT >= 0 || (this.windup || 0) > 0;
     } else this.castSnap = false;
     if (this.held){
@@ -10655,13 +10657,19 @@ async function bossJoin(){ if (BossW.joining) return; if (!Cloud.on || !Cloud.sb
   try { const { data, error } = await Cloud.sb.rpc('boss_join', { p_id: BossW.st.id }); if (error) throw error; bossAdopt(data); BossW.joined = BossW.st.id; if (F.phase !== 'idle') cancelFishing(); SFX.catch(); buzz(40); flash('🎣 加入了！按住右下角「拉！」', 1.8); } catch(e){ toast(cloudErrMsg(e)); } BossW.joining = false; }
 function bossHitPop(n){ try { const a = $('#act').getBoundingClientRect(), e = document.createElement('div'); e.className = 'bossHit'; e.textContent = '+' + n; e.style.left = (a.left + a.width / 2) + 'px'; e.style.top = (a.top - 6) + 'px'; document.body.appendChild(e); requestAnimationFrame(() => e.classList.add('go')); setTimeout(() => e.remove(), 900); } catch(e){} }
 function bossRod(dt, t){ const on = bossPulling() && F.phase === 'idle';
-  if (!on){ if (BossW.rod){ BossW.rod = false; BossW.hold = false; if (F.phase === 'idle'){ me.fishing = false; me.bobState = 'none'; me.bend = 0; me.dip = 0; } pushPresence(true); } return; }
+  if (!on){ const w = F.phase === 'reeling' && F.hold ? 0.6 : 0; me.tug = (me.tug || 0) + (w - (me.tug || 0)) * Math.min(1, dt * 6); me.yank = (me.yank || 0) * Math.max(0, 1 - dt * 8); }   /* 一般拉魚按住收線時也往後仰一點 */
+  if (!on){ if (BossW.rod){ BossW.rod = false; BossW.hold = false; me.tug = 0; me.yank = 0; if (F.phase === 'idle'){ me.fishing = false; me.bobState = 'none'; me.bend = 0; me.dip = 0; } pushPresence(true); } return; }
   const m = BossW.m, bx = m ? m.position.x : bossAt()[0], bz = m ? m.position.z : bossAt()[1];
-  if (!BossW.rod){ BossW.rod = true; BossW.pullK = 0; pushPresence(true); }
-  me.rot = lerpAngle(me.rot, Math.atan2(bx - me.pos.x, bz - me.pos.z), 1 - Math.exp(-6 * dt)); me.fishing = true; me.bobState = 'water'; me.flying = null; me.bobPos.set(bx, 0.1, bz);
+  /* v508 作者：「線都沒丟到水裡」→ 加入的時候先真的甩一竿：浮標飛出去、落在大魚前面的水裡，線從那裡沒入水中（大魚在水面下） */
+  const dmx = me.pos.x - bx, dmz = me.pos.z - bz, dmm = Math.hypot(dmx, dmz) || 1, ex = bx + dmx / dmm * 1.6, ez = bz + dmz / dmm * 1.6;
+  if (!BossW.rod){ BossW.rod = true; BossW.pullK = 0; me.fishing = true; me.castT = 0; me.windup = 0; const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from); me.bobPos.set(ex, 0.1, ez); me.bobState = 'fly';
+    me.flying = { from, to: me.bobPos.clone(), t:0, delay:0.17, dur:0.85, h:2.4, done(){ SFX.plop(); ripple(ex, ez, true); FX.emit(ex, 0.2, ez, 10, '#e8f7ff', 1.0, 2.0, 0.7); } }; pushPresence(true); }
+  me.rot = lerpAngle(me.rot, Math.atan2(bx - me.pos.x, bz - me.pos.z), 1 - Math.exp(-6 * dt)); me.fishing = true;
+  if (!me.flying){ me.bobState = 'water'; me.bobPos.set(ex, 0.1, ez); }
   const T = BossW.T, good = BossW.hold && T > 0.35 && T < 0.75, yank = BossW.tug <= 0.45 ? 1 : 0;
   me.bend += ((BossW.hold ? 0.5 + T * 0.45 : 0.12) + yank * 0.25 - me.bend) * Math.min(1, dt * 10); me.dip = BossW.hold ? 0.5 + Math.sin(t * 9) * 0.2 : 0;
   BossW.pullK += ((good ? 1 : BossW.hold ? 0.4 : 0) - BossW.pullK) * Math.min(1, dt * 3);
+  me.tug = (me.tug || 0) + ((me.flying ? 0 : BossW.hold ? (good ? 1 : 0.75) : 0) - (me.tug || 0)) * Math.min(1, dt * 7); me.yank = (me.yank || 0) + ((yank && !BossW.hold ? 1 : 0) - (me.yank || 0)) * Math.min(1, dt * 9);
   if (BossW.hold){ BossW.reelT = (BossW.reelT || 0) - dt; if (BossW.reelT <= 0){ BossW.reelT = 0.1; SFX.reel(); } BossW.buzzT = (BossW.buzzT || 0) - dt; if (BossW.buzzT <= 0){ BossW.buzzT = good ? 0.35 : 0.9; buzz(good ? 14 : 8); } if (Math.random() < dt * (good ? 9 : 3)) FX.emit(bx + rand(-0.8, 0.8), 0.2, bz + rand(-0.8, 0.8), good ? 5 : 2, '#dff6ff', 1.1, 2.2, 0.7); }
   if (yank && !BossW.yanked){ BossW.yanked = true; buzz(BossW.hold ? [30, 30, 30] : 20); camShake = Math.max(camShake, BossW.hold ? 0.05 : 0.02); SFX.splash(false); ripple(bx, bz, true); } else if (!yank) BossW.yanked = false; }
 function updateBoss(dt, t){ const st = BossW.st, live = st && st.id && st.state === 'live', near = bossNear();
@@ -14074,7 +14082,7 @@ function updatePeers(dt, t){
     { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on && !p.sub && !poolHides(f.pos.x, f.pos.z); if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04 + (WAVES.on ? waveH(f.pos.x, f.pos.z, now()) : 0), f.pos.z); f.boatMesh.rotation.y = f.rot; }   /* 別人的船也被同一圈浪晃 */
     f.dip = p.ph === 'bite' ? 3 + Math.sin(t*30)*0.15 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
-    f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9;
+    f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9; f.tug = (f.tug || 0) + ((p.ph === 'reel' ? 0.7 + Math.sin(t * 2.3) * 0.25 : 0) - (f.tug || 0)) * Math.min(1, dt * 5);   /* v508 別人在拉魚／拉大魚：往後仰 */
     { const rf = p.ph === 'reel' && f.av.g.visible && camera.position.distanceTo(f.pos) < 35 ? p.reelFish : null;   /* 別人上鉤的魚在浮標那裡掙扎、偶爾跳出水面 */
       if (rf && (!f.hookM || f.hookM.userData.id !== rf.id)){ if (f.hookM) scene.remove(f.hookM); let m = null; try { m = fishModel(rf, clamp(0.45 + Math.log(1 + (rf.min + rf.max) / 2) * 0.25, 0.45, 1.3)); } catch(e){} if (m){ m.userData.id = rf.id; scene.add(m); } f.hookM = m; f.hookJ = 0; }
       if (!rf && f.hookM){ scene.remove(f.hookM); f.hookM = null; }
@@ -16130,7 +16138,7 @@ function renderTab(){
     ]);
     sec('🐋 大魚、鯨魚、海上目擊', [
       '每天晚上 8:30（週六日下午 2:00 也有一次），港口外海會出現一條超大的魚：海龍王、大白鯊或皇帶魚王（輪流）。出現前 10 分鐘會跑馬燈和推播。',
-      '站在港口的岸上或碼頭，右下角的大按鈕會變成「一起拉！」，按下去加入；接著按住同一顆「拉！」，讓上面的指針留在綠色區才會扣大魚的體力（一直按到底會太緊，要放一下）。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
+      '站在港口的岸上或碼頭，右下角的大按鈕會變成「一起拉！」，按下去加入（角色會轉向大魚、先甩一竿把線拋到大魚前面的水裡）；接著按住同一顆「拉！」（角色會往後仰、把竿子往後扳；放開或大魚一扯，會被拖得往前傾），讓上面的指針留在綠色區才會扣大魚的體力（一直按到底會太緊，要放一下）。大魚掙扎的時候（畫面變紅、寫「放線！」）要放開，不然會斷線 10 秒不能出力。好的釣竿一次拉得比較多。',
       '大家一起出力，10 分鐘內把體力拉到 0 就成功：有出力的人都拿金幣，前 3 名拿那條大魚的魚拓（可以擺在家裡），第 1 名拿稱號。人越多大魚體力越多，3 個人也有機會贏。失敗了也有一點參加獎。',
       '🐋 在外海划船時看到座頭鯨或藍鯨跳出水面，會得到 3 分鐘好運：在船上釣，稀有魚、傳說魚比較好釣（30 分鐘最多一次，一天最多 4 次）。別人船邊的鯨魚靠近、海豚跟著別人的船頭游，你也看得到。',
       '🚢 跑船生意：在潮汐魚市場的「賣魚」裡按「跑船生意」，把魚缸裡的魚裝上魚艙（最多 10 條），開船載到另一個地方賣。村子的魚載去珊瑚礁島賣給阿嬤、礁島的魚載回村子賣給潮汐魚市場，都多三成；在產地直接賣沒有好處（礁島的魚在礁島只有七成）。魚裝上船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半；裝上船要過 45 秒才能賣。同一種魚在礁島一次賣太多，價錢會慢慢掉，過幾個小時恢復。不想賣可以整艙放回魚缸。',
