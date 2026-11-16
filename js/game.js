@@ -1786,15 +1786,16 @@ function castPoint(x, z, dx, dz, dist){
       for (const x of [x0 + 0.15, x1 - 0.15]){ const h = terrainH(x, z); if (h < -0.05){ const len = y - h; scene.add(box([0.2, len, 0.2], '#6e4a2f', [x, h + len / 2 - 0.1, z])); } }
   }
   deck(-1.8, 1.8, -52.2, -42.4, 0.28);                 // 北海灘碼頭
-  deck(22, 34.2, -28.2, -25.8, 0.3);                    // 港口碼頭 1
-  deck(23, 32, -35.2, -32.8, 0.3);                      // 港口碼頭 2
-  /* v481 石頭防波堤（作者傳了一張想要的島嶼圖：「碼頭做成這樣很讚」）：港口北邊多一道 L 形的石頭堤防，從岸邊往東伸出去再往南彎，尾端一座紅白燈標（晚上紅燈一閃一閃）。
-     所有玩家都看得到、都可以走上去釣魚；獨木舟不能穿過去（跟木棧橋一樣）。原本兩條木棧橋、渡船、獨木舟停的位置都沒動。 */
-  { const QY = 0.46, body = '#a9a69e', top1 = '#cfcbc0', top2 = '#c2beb2', kerb = '#8f8c85';
-    const seg = (x0, x1, z0, z1) => { const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2; addDeck(cx, cz, w, d, QY);
+  /* v482 石頭棧橋／堤防：灰色石頭堤身一路到海底、上面兩色石板、兩邊深色收邊 */
+  function stoneDeck(x0, x1, z0, z1, QY){ const body = '#a9a69e', top1 = '#cfcbc0', top2 = '#c2beb2', kerb = '#8f8c85'; const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2; addDeck(cx, cz, w, d, QY);
       scene.add(box([w, 3.4, d], body, [cx, QY - 1.78, cz])); const along = w >= d, len = along ? w : d, n = Math.round(len / 1.3), st = len / n;
       for (let i = 0; i < n; i++){ const o = (along ? x0 : z0) + st * (i + 0.5); for (const e of [-1, 1]){ const k = (i + (e > 0 ? 1 : 0)) % 2 ? top1 : top2; scene.add(along ? box([st - 0.04, 0.08, d / 2 - 0.22], k, [o, QY - 0.04, cz + e * (d / 4 - 0.09)]) : box([w / 2 - 0.22, 0.08, st - 0.04], k, [cx + e * (w / 4 - 0.09), QY - 0.04, o])); } }
-      for (const e of [-1, 1]) scene.add(along ? box([w, 0.16, 0.34], kerb, [cx, QY - 0.02, cz + e * (d / 2 - 0.17)]) : box([0.34, 0.16, d], kerb, [cx + e * (w / 2 - 0.17), QY - 0.02, cz])); };
+      for (const e of [-1, 1]) scene.add(along ? box([w, 0.16, 0.34], kerb, [cx, QY - 0.02, cz + e * (d / 2 - 0.17)]) : box([0.34, 0.16, d], kerb, [cx + e * (w / 2 - 0.17), QY - 0.02, cz])); }
+  stoneDeck(22, 34.2, -28.2, -25.8, 0.3);               // 港口碼頭 1（v482 作者：「碼頭的橋也換成石板橋」，從木棧橋換成石頭的，位置、高度不變）
+  stoneDeck(23, 32, -35.2, -32.8, 0.3);                 // 港口碼頭 2
+  /* v481 石頭防波堤（作者傳了一張想要的島嶼圖：「碼頭做成這樣很讚」）：港口北邊多一道 L 形的石頭堤防，從岸邊往東伸出去再往南彎，尾端一座紅白燈標（晚上紅燈一閃一閃）。
+     所有玩家都看得到、都可以走上去釣魚；獨木舟不能穿過去（跟木棧橋一樣）。原本兩條木棧橋、渡船、獨木舟停的位置都沒動。 */
+  { const QY = 0.46, seg = (x0, x1, z0, z1) => stoneDeck(x0, x1, z0, z1, QY);
     const AX0 = 21, AX1 = 43.4, AZ0 = -45.2, AZ1 = -42.2, BZ1 = -34.6, BX0 = 40.4;
     seg(AX0, AX1, AZ0, AZ1); seg(BX0, AX1, AZ1, BZ1);
     for (const [x, z] of [[29, AZ1 - 0.5], [34, AZ1 - 0.5], [39, AZ1 - 0.5], [BX0 + 0.5, AZ1 + 2.6], [BX0 + 0.5, AZ1 + 5.4]]){ const bl = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.18, 0.42, 8), mat('#3d434b', 0.6)); bl.position.set(x, QY + 0.21, z); bl.castShadow = true; scene.add(bl); const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.08, 8), mat('#3d434b', 0.6)); cap.position.set(x, QY + 0.44, z); scene.add(cap); }
