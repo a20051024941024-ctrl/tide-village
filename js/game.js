@@ -1611,7 +1611,7 @@ function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ conso
       pts(TW.gLamp, '#fff0c0', 3.4, 1); pts(TW.gLan, '#ff9a5a', 2.3, 1);
       for (let i = 0; i < (TW.gLamp || []).length; i += 3){ const d = diveGlow(G, TW.gLamp[i], groundHeight(TW.gLamp[i], TW.gLamp[i + 2]) + 0.08, TW.gLamp[i + 2], 6.5, '#ffd98a', 0); d.userData.op = 0.75; }
       scene.add(G); Art2.glow = G; Art2.nk = null; } catch(e){ console.warn('twGlow', e); } }
-  for (const [x, z, ry, sc] of [[33, -20, 0.6, 1], [36.5, -27.5, -0.4, 1.12], [30, -38, 1.9, 0.94]]){ if (isLand(x, z) || deckAt(x, z)) continue; try { const g = twBoat(x, z, ry, sc); Art2.boats.push({ g, x, z, ry, ph: x, dy: -0.34 * sc }); } catch(e){ console.warn('twBoat', e); } } }
+  for (const [x, z, ry, sc] of [[30.5, -40.3, Math.PI / 2, 1], [36.4, -40.2, Math.PI / 2, 1.08], [38.3, -36.4, 0.05, 0.94]]){ if (isLand(x, z) || deckAt(x, z)) continue;   /* v481 漁船改成靠著石頭堤防停 */ try { const g = twBoat(x, z, ry, sc); Art2.boats.push({ g, x, z, ry, ph: x, dy: -0.34 * sc }); } catch(e){ console.warn('twBoat', e); } } }
 function art2Tick(t){ if (Art2.fx) for (const f of Art2.fx){ try { f(t); } catch(e){} } for (const b of Art2.boats){ b.g.position.y = waterY(b.x, b.z, t) + (b.dy != null ? b.dy : -0.12); b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
 if (ART2) setTimeout(() => { try { art2Props(); toast('🎨 新美術試玩版（只有你看得到）。要關掉：網址後面加 #art=1', 6); } catch(e){ console.warn('art2 props', e); } }, 0);
 var SEASON = (() => { const h = (location.hash.match(/season=(\w+)/) || [])[1]; if (SEASONS[h]) return h; const m = new Date(Date.now() + 8 * 3600e3).getUTCMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; })();
@@ -1788,6 +1788,23 @@ function castPoint(x, z, dx, dz, dist){
   deck(-1.8, 1.8, -52.2, -42.4, 0.28);                 // 北海灘碼頭
   deck(22, 34.2, -28.2, -25.8, 0.3);                    // 港口碼頭 1
   deck(23, 32, -35.2, -32.8, 0.3);                      // 港口碼頭 2
+  /* v481 石頭防波堤（作者傳了一張想要的島嶼圖：「碼頭做成這樣很讚」）：港口北邊多一道 L 形的石頭堤防，從岸邊往東伸出去再往南彎，尾端一座紅白燈標（晚上紅燈一閃一閃）。
+     所有玩家都看得到、都可以走上去釣魚；獨木舟不能穿過去（跟木棧橋一樣）。原本兩條木棧橋、渡船、獨木舟停的位置都沒動。 */
+  { const QY = 0.46, body = '#a9a69e', top1 = '#cfcbc0', top2 = '#c2beb2', kerb = '#8f8c85';
+    const seg = (x0, x1, z0, z1) => { const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2; addDeck(cx, cz, w, d, QY);
+      scene.add(box([w, 3.4, d], body, [cx, QY - 1.78, cz])); const along = w >= d, len = along ? w : d, n = Math.round(len / 1.3), st = len / n;
+      for (let i = 0; i < n; i++){ const o = (along ? x0 : z0) + st * (i + 0.5); for (const e of [-1, 1]){ const k = (i + (e > 0 ? 1 : 0)) % 2 ? top1 : top2; scene.add(along ? box([st - 0.04, 0.08, d / 2 - 0.22], k, [o, QY - 0.04, cz + e * (d / 4 - 0.09)]) : box([w / 2 - 0.22, 0.08, st - 0.04], k, [cx + e * (w / 4 - 0.09), QY - 0.04, o])); } }
+      for (const e of [-1, 1]) scene.add(along ? box([w, 0.16, 0.34], kerb, [cx, QY - 0.02, cz + e * (d / 2 - 0.17)]) : box([0.34, 0.16, d], kerb, [cx + e * (w / 2 - 0.17), QY - 0.02, cz])); };
+    const AX0 = 21, AX1 = 43.4, AZ0 = -45.2, AZ1 = -42.2, BZ1 = -34.6, BX0 = 40.4;
+    seg(AX0, AX1, AZ0, AZ1); seg(BX0, AX1, AZ1, BZ1);
+    for (const [x, z] of [[29, AZ1 - 0.5], [34, AZ1 - 0.5], [39, AZ1 - 0.5], [BX0 + 0.5, AZ1 + 2.6], [BX0 + 0.5, AZ1 + 5.4]]){ const bl = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.18, 0.42, 8), mat('#3d434b', 0.6)); bl.position.set(x, QY + 0.21, z); bl.castShadow = true; scene.add(bl); const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.08, 8), mat('#3d434b', 0.6)); cap.position.set(x, QY + 0.44, z); scene.add(cap); }
+    for (const [x, z, ry] of [[31.5, AZ1 + 0.06, 0], [36.5, AZ1 + 0.06, 0], [BX0 - 0.06, AZ1 + 3.6, Math.PI / 2]]){ const ty = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.11, 6, 12), mat('#2b2d31', 0.9)); ty.position.set(x, QY - 0.42, z); ty.rotation.y = ry; scene.add(ty); }
+    { const bx = AX1 - 1.5, bz = BZ1 + 1.4 - 1.4 - 1.3, g = new THREE.Group(); g.position.set(bx, QY, bz); g.userData.keep = true; g.userData.dyn = true;   /* 紅白燈標 */
+      const cyl = (r0, r1, h, c, y, o2) => { const k = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, 12), mat(c, 0.7, o2)); k.position.y = y; k.castShadow = true; g.add(k); return k; };
+      cyl(0.75, 0.85, 0.3, '#9a968f', 0.15); cyl(0.42, 0.5, 0.9, '#d8412f', 0.75); cyl(0.36, 0.42, 0.8, '#f4f1e6', 1.6); cyl(0.3, 0.36, 0.8, '#d8412f', 2.4); cyl(0.42, 0.42, 0.08, '#3d434b', 2.84); cyl(0.2, 0.2, 0.36, '#f4f1e6', 3.06);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), new THREE.MeshStandardMaterial({ color: '#ff5a4a', emissive: '#ff2a1a', emissiveIntensity: 0.4 })); lamp.position.y = 3.34; g.add(lamp); const capc = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.22, 10), mat('#d8412f', 0.7)); capc.position.y = 3.62; g.add(capc);
+      scene.add(g); addCircleCol(bx, bz, 0.9); window.__quayLamp = lamp; }
+    for (const [x, z, c, s2] of [[26.5, AZ0 + 0.7, '#4f86c6', 1], [27.3, AZ0 + 0.75, '#4f86c6', 1], [26.9, AZ0 + 0.72, '#f4f1e6', 0.8]]){ const k = box([0.62 * s2, 0.4 * s2, 0.46 * s2], c, [x, QY + (c === '#f4f1e6' ? 0.56 : 0.2), z]); scene.add(k); } addBoxCol(26.9, AZ0 + 0.72, 1.5, 0.6); }
   deck(-23.2, -16, -3, -1, 0.28);                       // 鏡湖棧道
   deck(-24.6, -16.2, -18.7, -16.5, 0.42, '#a8754a');    // 河上的木橋
   for (const z of [-18.62, -16.58]) scene.add(box([8.4, 0.08, 0.08], '#6e4a2f', [-20.4, 1.05, z]));   // 橋欄杆
@@ -16657,6 +16674,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
+  if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
   updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
