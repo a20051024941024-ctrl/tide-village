@@ -24,7 +24,7 @@
 }
 html,body{height:100%;overflow:hidden}
 body{background:#8bd8e8;color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;padding-left:var(--gl);padding-right:var(--gr)}
-html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}
+html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}   /* v518 只准捲動，不准瀏覽器自己把整頁放大（兩指按在按鈕上、連點都不會放大整頁） */
 button{touch-action:manipulation}
 #c{position:fixed;inset:0;width:100vw;height:100%;display:block;touch-action:none;outline:none}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}

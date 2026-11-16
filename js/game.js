@@ -901,6 +901,13 @@ addEventListener('resize', resize); resize();
 // iOS：擋掉雙指放大與連點放大（Safari 不理會 user-scalable=no）；萬一已經被放大，畫面也會照版面大小重畫
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive:false });
 document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
+/* v518 作者：「釣的時候一直點，畫面會自動放大，然後就縮不回去」→ 截圖看是瀏覽器把「整個網頁」放大了（上面的按鈕都被切到畫面外），不是遊戲鏡頭。
+   兩隻手指同時按在按鈕／介面上稍微一動，瀏覽器就當成兩指放大網頁。現在：兩指在畫面上移動一律不交給瀏覽器；萬一還是被放大了，馬上自動縮回去。 */
+document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive:false });
+if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visualViewport; if (!(v.scale > 1.01) || Date.now() - zfAt < 400) return; zfAt = Date.now();
+    const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
+    m.setAttribute('content', 'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'); setTimeout(() => m.setAttribute('content', c), 60); };
+  visualViewport.addEventListener('resize', unzoom); visualViewport.addEventListener('scroll', unzoom); setInterval(unzoom, 1500); }
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 320 && !(e.target && e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
