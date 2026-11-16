@@ -214,7 +214,7 @@ begin
       * (case when rainy and cfg->'rain' ? fid then 2 else 1 end)
       * (case when cfg->'seasons'->season ? fid and f->>'r' <> '傳說' then 2 else 1 end)
       * (case when f->>'t' is null then 1 when f->>'t' = per then 1.5 else 0.15 end)
-      * (case when p_spot = 'harbor' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
+      * (case when p_spot = 'mystic' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
       * (case when evm is not null and (evm->>'active')::boolean and p_spot = evm->>'spot' and fid = evm->>'fish' then 4 else 1 end)
       * (case when cor_k > 0 and fid in ('parrot', 'seahorse', 'lionfish') then 1 + 0.25 * cor_k else 1 end)   -- 142 珊瑚吸引珊瑚礁魚
       * (case when rum_f is not null and fid = rum_f then 4 else 1 end)   -- 111 魚群洄游：那種魚在那個釣點 ×4
