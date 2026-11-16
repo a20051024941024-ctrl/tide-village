@@ -1510,3 +1510,9 @@ body.pooling #duelBar, body.subbing #duelBar{display:none}
 #duelCard .dc-col li.none{color:#8a96a3;text-align:center}
 /* v507 作者：拉魚時不要那個圓圈魚圖示，直接看水裡的魚 */
 #fishMark .fm-ico{display:none!important}
+/* v516 對決排隊條、結果卡的段位 */
+#duelQ{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt, 8px) + 64px);z-index:9;display:flex;align-items:center;gap:10px;padding:5px 6px 5px 14px;border-radius:999px;font-size:13px;font-weight:800;color:#18334a}
+#duelQ[hidden]{display:none}
+#duelQ .dq-x{padding:4px 12px;font-size:12px}
+body.pooling #duelQ, body.subbing #duelQ{display:none}
+#duelCard .dc-tier{font-weight:800;color:#c98a00;font-size:14px}
