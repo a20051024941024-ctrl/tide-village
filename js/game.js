@@ -9772,6 +9772,64 @@ function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Poo
 function poolHudTick(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !T) return; const f = $('.pl-powfill', h), cu = $('.pl-powcue', h), pw = Pool.pw; f.style.height = `calc(${pw.toFixed(3)} * (100% - 28px) + 14px)`; cu.style.top = `calc(${pw.toFixed(3)} * (100% - 28px))`;
   const tm = $('.pl-time', h); if (T.mode === 'vs' && !T.sim && (T.ph === 'aim' || T.ph === 'hand')){ const s = Math.max(0, Math.ceil(T.dl - now())); const tx = s + ' 秒'; if (tm.textContent !== tx) tm.textContent = tx; tm.classList.toggle('low', s <= 8); } else if (tm.textContent) tm.textContent = '';
   const k = `${T.seq}|${T.ph}|${T.sim ? 1 : 0}|${T.turn}|${T.mode}|${T.shots}`; if (k !== Pool.hudKey){ Pool.hudKey = k; poolHud(); } }
+/* ================= v502 ⚔️ 釣魚對決（作者 11/16：對戰遊戲「一局很短、跟真人比」會讓人想一直玩 → 釣魚也來一個） =================
+   兩個人、3 分鐘、比這段時間釣到的魚的總重量。分數全部在伺服器算（supabase/172_duel.sql：釣到魚時伺服器自己把重量記進對決），手機只負責顯示。
+   第一步：在「玩家」分頁按別人旁邊的「⚔️ 對決」邀請 → 對方接受 → 倒數 → 上面出現比分條 → 時間到跳結果卡（勝敗、連勝）。
+   通知：邀請、回應、對手釣到魚都用大廳訊息 room.emit('duel') 提醒對方「去問伺服器」；訊息掉了也沒關係，手機本來就會定時問。 */
+const Duel = { d: null, off: 0, polled: 0, busy: false, asked: 0, shown: 0, startTold: 0, goTold: 0, stats: null, statsAt: 0, bar: null, card: null, subKey: '' };
+function duelOn(){ return !!(Cloud.on && Cloud.sb && Cloud.userId); }
+async function duelRpc(fn, args){ if (!duelOn()) return undefined; try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) return undefined; return data === undefined ? null : data; } catch(e){ return undefined; } }   /* undefined＝連不上；null＝沒有對決 */
+function duelSrvNow(){ return Date.now() + Duel.off; }
+function duelSide(d, mine){ const a = (d.me === 'a') === mine; return a ? { id: d.a, name: d.a_name || '釣客', w: +d.a_w || 0, n: d.a_n || 0, log: Array.isArray(d.a_log) ? d.a_log : [] } : { id: d.b, name: d.b_name || '釣客', w: +d.b_w || 0, n: d.b_n || 0, log: Array.isArray(d.b_log) ? d.b_log : [] }; }
+function duelSay(k, to, extra){ try { if (room && room.connected()) room.emit('duel', Object.assign({ k, to }, extra || {})).catch(() => {}); } catch(e){} }
+function duelLive(){ const d = Duel.d; return !!d && (d.status === 'invited' || d.status === 'active'); }
+async function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
+  const r = await duelRpc('duel_invite', { p_to: uid }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
+  duelAdopt(r); duelSay('inv', uid); toast(`⚔️ 已經邀請 ${esc(name || '對方')} 釣魚對決，等對方回應…`); }
+function duelAdopt(d){ const prev = Duel.d; if (d && (d.status === 'declined' || d.status === 'cancelled')) d = null; Duel.d = d || null;
+  if (d){ if (isFinite(+d.now)) Duel.off = +d.now - Date.now(); if (d.stats) Duel.stats = d.stats; }
+  if (!d){ if (prev && prev.status === 'invited'){ if (prev.me === 'a') toast('⚔️ 對方沒有接受對決'); duelCardClose('ask'); } duelBar(); return; }
+  if (d.status === 'invited'){ if (d.me === 'b' && Duel.asked !== d.id){ Duel.asked = d.id; duelAsk(d); } }
+  else if (d.status === 'active'){ duelCardClose('ask'); if (Duel.startTold !== d.id){ Duel.startTold = d.id; if (duelSrvNow() < d.start + 2000){ flash('⚔️ 釣魚對決！準備…', 1.6); try { SFX.coin(); } catch(e){} } } }
+  else if (d.status === 'done'){ duelCardClose('ask'); if (Duel.shown !== d.id){ Duel.shown = d.id; duelResult(d); } }
+  duelBar(); }
+async function duelPoll(){ if (Duel.busy || !duelOn()) return; Duel.busy = true; Duel.polled = performance.now(); const r = await duelRpc('duel_now'); Duel.busy = false; if (r === undefined) return; duelAdopt(r); }
+function duelTick(){ if (!duelOn()) return; const t = performance.now(), d = Duel.d; let gap;
+  if (d && d.status === 'invited') gap = 2000; else if (d && d.status === 'active') gap = d.end - duelSrvNow() <= 0 ? 1500 : 5000; else gap = (room && room.connected() && peers.size) ? 45000 : 300000;
+  if (!Duel.polled) Duel.polled = t - gap + 8000;   /* 剛開遊戲 8 秒後問第一次（重新整理以後接回進行中的對決） */
+  if (t - Duel.polled > gap && !Duel.busy) duelPoll();
+  if (!Duel.statsAt){ Duel.statsAt = t; duelRpc('duel_my_stats').then(s => { if (s && typeof s === 'object') Duel.stats = s; }); }
+  duelBarTick(); }
+function duelOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const m = msg.data; if (!duelOn() || m.to !== Cloud.userId) return;
+  if (m.k === 'c' && Duel.d && Duel.d.status === 'active'){ const f = FISH_BY_ID[m.f], w = +m.w; if (f && isFinite(w) && w > 0 && w < 5000) ticker(`⚔️ 對手釣到 <b>${esc(f.name)}</b> ${w.toFixed(2)} 公斤`); }
+  if (!Duel.busy) duelPoll(); else Duel.polled = 1; }
+function duelAfterCatch(f, w){ const d = Duel.d; if (!d || d.status !== 'active') return; const n = duelSrvNow(); if (n < d.start || n > d.end + 2000) return; duelSay('c', duelSide(d, false).id, { f: f.id, w }); if (!Duel.busy) duelPoll(); else Duel.polled = 1; }
+/* ---- 畫面 ---- */
+function duelBar(){ const d = Duel.d, show = !!d && d.status === 'active'; let b = Duel.bar;
+  if (!b){ if (!show) return; b = Duel.bar = el('div', 'panel'); b.id = 'duelBar'; b.innerHTML = '<div class="db-sc"><b class="db-me"></b><span>⚔️</span><b class="db-op"></b></div><div class="db-sub"></div>'; document.body.appendChild(b); }
+  b.hidden = !show; if (!show) return; const me = duelSide(d, true), op = duelSide(d, false); $('.db-me', b).textContent = me.w.toFixed(2); $('.db-op', b).textContent = op.w.toFixed(2); b.classList.toggle('lead', me.w > op.w); b.classList.toggle('behind', me.w < op.w); Duel.subKey = ''; duelBarTick(); }
+function duelBarTick(){ const b = Duel.bar, d = Duel.d; if (!b || b.hidden || !d || d.status !== 'active') return; const n = duelSrvNow(); let tx, low = false;
+  if (n < d.start) tx = `準備… ${Math.max(1, Math.ceil((d.start - n) / 1000))}`;
+  else { const s = Math.max(0, Math.ceil((d.end - n) / 1000)); low = s <= 15; tx = s > 0 ? `對 ${duelSide(d, false).name}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '時間到！結算中…';
+    if (Duel.goTold !== d.id){ Duel.goTold = d.id; if (n - d.start < 3000){ flash('⚔️ 開始！', 1.2); try { SFX.catch(); } catch(e){} } } }
+  if (tx !== Duel.subKey){ Duel.subKey = tx; $('.db-sub', b).textContent = tx; b.classList.toggle('low', low); } }
+function duelCardClose(kind){ const c = Duel.card; if (!c || (kind && c.dataset.kind !== kind)) return; clearInterval(c._iv); c.remove(); Duel.card = null; }
+function duelCardOpen(kind){ duelCardClose(); const c = el('div', 'panel'); c.id = 'duelCard'; c.dataset.kind = kind; document.body.appendChild(c); Duel.card = c; return c; }
+function duelAsk(d){ if (blockList && blockList[d.a]){ duelRpc('duel_answer', { p_id: d.id, p_ok: false }); Duel.d = null; return; }
+  const c = duelCardOpen('ask'); c.appendChild(el('h3', '', '⚔️ 釣魚對決')); c.appendChild(el('p', '', `${d.a_name || '釣客'} 想跟你比一場：3 分鐘內誰釣到的魚加起來比較重。`)); const tm = el('p', 'sub', ''); c.appendChild(tm);
+  const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); c.appendChild(row);
+  const left = () => Math.max(0, Math.ceil(((+d.created || Date.now()) + 24000 - duelSrvNow()) / 1000)); const upd = () => { const s = left(); tm.textContent = `${s} 秒內回應`; if (s <= 0) duelCardClose('ask'); }; upd(); c._iv = setInterval(upd, 500);
+  const ans = async yes => { ok.disabled = no.disabled = true; const r = await duelRpc('duel_answer', { p_id: d.id, p_ok: yes }); duelCardClose('ask'); if (r && r.err){ toast('⚔️ ' + esc(r.err)); Duel.d = null; duelBar(); return; } if (r === undefined || r === null){ toast('暫時連不上雲端'); return; } duelAdopt(r); duelSay('ans', d.a); };
+  ok.addEventListener('click', () => ans(true)); no.addEventListener('click', () => ans(false)); try { SFX.chat(); } catch(e){} }
+function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), win = d.winner ? d.winner === me.id : null, s = d.stats || Duel.stats || {};
+  const c = duelCardOpen('res'); c.classList.add(win === true ? 'win' : win === false ? 'lose' : 'draw'); c.appendChild(el('h3', '', win === true ? '🏆 你贏了！' : win === false ? '這場輸了' : '🤝 平手'));
+  const sc = el('div', 'dc-sc'); for (const [who, x] of [['你', me], [op.name, op]]){ const col = el('div', 'dc-col'); col.appendChild(el('b', '', who)); col.appendChild(el('strong', '', x.w.toFixed(2) + ' 公斤')); col.appendChild(el('small', '', `${x.n} 條`)); const ul = el('ul', '');
+      for (const it of x.log.slice(0, 12)){ const f = FISH_BY_ID[it && it.f]; ul.appendChild(el('li', '', `${f ? f.name : '魚'} ${(+it.w || 0).toFixed(2)}`)); } if (x.log.length > 12) ul.appendChild(el('li', '', `…還有 ${x.log.length - 12} 條`)); if (!x.log.length) ul.appendChild(el('li', 'none', '沒釣到')); col.appendChild(ul); sc.appendChild(col); }
+  c.appendChild(sc);
+  c.appendChild(el('p', 'sub', d.counted === false ? '今天跟這位對手已經打滿 3 局，這一局不算進戰績。' : `你的對決戰績：${s.wins || 0} 勝 ${s.losses || 0} 敗${s.draws ? ` ${s.draws} 平` : ''}${(s.streak || 0) >= 2 ? `・${s.streak} 連勝中 🔥` : ''}`));
+  const row = el('div', 'dc-btns'), again = el('button', 'tbtn', '再來一局'), x = el('button', 'tbtn ghost', '關閉'); row.append(again, x); c.appendChild(row);
+  again.addEventListener('click', () => { duelCardClose('res'); duelInvite(op.id, op.name); }); x.addEventListener('click', () => duelCardClose('res'));
+  try { if (win === true) SFX.coin(); else SFX.click(); } catch(e){} if (win === true) flash('🏆 對決勝利！', 1.6); }
 function enterPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🎱 歡迎來到潮汐撞球館！', 1.4); }, 260); }
 function exitPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (Pool.on) poolLeave();
@@ -10904,6 +10962,7 @@ function updateVenues(dt, t){
   if (Venue.snow){ Venue.snow.visible = nearI && !Dive.on; if (nearI && frameNo % 2 === 0){ const a = Venue.snow.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] -= dt * 2 * 1.2; a[i] += Math.sin(t + i) * dt * 0.3; if (a[i + 1] < 0) a[i + 1] = 14; } Venue.snow.geometry.attributes.position.needsUpdate = true; } }
   try { updateMuseumHall(dt, t); } catch(e){}
   try { updateStadium(dt, t); } catch(e){}
+  try { duelTick(); } catch(e){}
   try { updatePoolHall(dt, t); } catch(e){ if (!window.__poolErr){ window.__poolErr = 1; console.warn('pool', e); } }
   { const ic = inCafe(); if (Venue.cafe && Venue.cafe.visible !== ic) Venue.cafe.visible = ic; if (ic && Venue.cafeCoal) Venue.cafeCoal.material.emissiveIntensity = 1 + Math.sin(t * 7) * 0.25; }
   { const ih = inHall(); if (Venue.hall && Venue.hall.visible !== ih) Venue.hall.visible = ih; if (Venue.boss){ Venue.boss.av.g.visible = ih; if (ih){ Venue.boss.update(dt, t); Venue.boss.placeTag(); } else Venue.boss.tag.style.display = 'none'; }
@@ -13142,7 +13201,7 @@ function recordCatch(f, w){
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
-  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); if (r) rumorAfterCatch(F.spot && F.spot.id); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
+  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) duelAfterCatch(f, w); if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); if (r) rumorAfterCatch(F.spot && F.spot.id); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
   if (Tny.on){ Tny.myW += w; Tny.myN++; }
   return { isNew, isBest: isBest && !isNew };
 }
@@ -13975,7 +14034,8 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {});
-    room.on('pool', poolOnMsg, () => {});   /* v497 撞球：出桿、球的位置、輪到誰 */
+    room.on('pool', poolOnMsg, () => {});
+    room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
     room.on('sail', onSail, () => {}); room.on('sailjoin', onSailJoin, () => {});
@@ -15741,9 +15801,11 @@ function renderTab(){
       b.disabled = Tag.st !== 'idle'; b.addEventListener('click', () => { closeSheet(); tagOpen(); }); tb.appendChild(b);
       tb.appendChild(el('small', 'sub', '2 人以上就能玩：被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。')); body.appendChild(tb);
     }
+    if (Cloud.on){ const ds = Duel.stats; body.appendChild(el('p', 'sub', '⚔️ 釣魚對決：按玩家旁邊的「對決」，比 3 分鐘內誰釣到的魚加起來比較重。' + (ds ? `你的戰績 ${ds.wins || 0} 勝 ${ds.losses || 0} 敗${(ds.streak || 0) >= 2 ? `・${ds.streak} 連勝中 🔥` : ''}` : ''))); }
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} const im = avatarImg(av, '', gr); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
+      if (uid && Cloud.on && !isMe && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); li.appendChild(dz); }
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
           const box = el('div', 'rpbox'); box.appendChild(el('span', '', '檢舉原因：'));
@@ -16055,6 +16117,7 @@ function renderTab(){
       '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。'
     ]);
     sec('👥 跟大家一起玩', [
+      '⚔️ 釣魚對決：打開「朋友」裡的玩家名單，在同一個大廳的人旁邊按「⚔️ 對決」。對方按接受以後倒數幾秒就開始，一場 3 分鐘，比這段時間釣到的魚加起來的總重量——用自己的釣竿和魚餌、去哪裡釣都可以（釣蝦場的蝦不算）。畫面上面會出現比分條（左邊是你、右邊是對手）和剩下的時間，對手釣到魚會跳通知。時間到會跳結果，可以按「再來一局」。贏了會累積勝場和連勝，沒有金幣獎勵；分數是伺服器算的。跟同一個人一天只有前 3 局算進戰績。中途斷線或關掉遊戲，時間到照樣結算。',
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '🍚 吃飯時間村民會去潮汐食堂，他們會站在門的兩旁，不會擋住門口。',
