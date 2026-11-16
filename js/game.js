@@ -908,6 +908,16 @@ if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visua
     const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
     m.setAttribute('content', 'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'); setTimeout(() => m.setAttribute('content', c), 60); };
   visualViewport.addEventListener('resize', unzoom); visualViewport.addEventListener('scroll', unzoom); setInterval(unzoom, 1500); }
+/* v520 作者說 v518 以後「還是一樣」，但我這邊重現不了 → 畫面被放大的時候，在看得到的左上角顯示一行小字（版本和幾個數字），截圖給我就能知道是誰放大的 */
+{ let zd = null, ver = '?'; try { caches.keys().then(ks => { const k = ks.filter(x => /^tide-v\d+$/.test(x)).sort((a, b) => +b.slice(6) - +a.slice(6))[0]; if (k) ver = k.slice(5); }).catch(() => {}); } catch (e) {}
+  setInterval(() => { try { const v = window.visualViewport, de = document.documentElement, sc = v ? v.scale : 1, vw = v ? v.width : innerWidth, ol = v ? v.offsetLeft : 0, ot = v ? v.offsetTop : 0;
+      const cvs = document.getElementById('c'), cw = cvs ? cvs.getBoundingClientRect().width : 0;
+      const bad = sc > 1.01 || Math.abs(vw - de.clientWidth) > 3 || ol > 2 || ot > 2 || scrollX > 1 || scrollY > 1 || Math.abs(cw - de.clientWidth) > 3;
+      if (!bad){ if (zd) zd.style.display = 'none'; return; }
+      if (!zd){ zd = document.createElement('div'); zd.style.cssText = 'position:absolute;z-index:99999;pointer-events:none;font:11px/1.2 monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 5px;border-radius:5px;white-space:nowrap'; document.body.appendChild(zd); }
+      zd.style.display = 'block'; zd.style.left = (ol + scrollX + 6) + 'px'; zd.style.top = (ot + scrollY + 6) + 'px'; zd.style.transform = 'scale(' + (1 / sc) + ')'; zd.style.transformOrigin = '0 0';
+      zd.textContent = ver + ' s' + sc.toFixed(2) + ' vv' + Math.round(vw) + 'x' + Math.round(v ? v.height : innerHeight) + ' o' + Math.round(ol) + ',' + Math.round(ot) + ' in' + innerWidth + 'x' + innerHeight + ' de' + de.clientWidth + 'x' + de.clientHeight + ' c' + Math.round(cw) + ' sy' + Math.round(scrollX) + ',' + Math.round(scrollY) + ' dpr' + (+devicePixelRatio).toFixed(2);
+    } catch (e) {} }, 700); }
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 320 && !(e.target && e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
