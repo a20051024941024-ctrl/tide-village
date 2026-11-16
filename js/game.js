@@ -411,7 +411,8 @@ const SPOTS = [
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','guppy','trout_golden'], legendBoost:1.8 },
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
-const AQUA = [23.5, -6];   /* v197：移到廣場東北邊，不再擋在廣場和港口商店街中間 */
+const AQUA = [-7, -31];   /* v484 地圖重新分區（作者 11/16）：水族館搬到西北草地的「水族館區」，原本東邊那塊地留給運動區。原位置 [23.5, -6] */
+const AQUA_SQ = [-6, -20.5, 5];   /* 水族館區的小廣場（石板地＋噴水池），水族館在北邊、博物館在西邊 */
 const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過去）
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
 /* 潮汐商店街（2026-11-04 使用者：NPC 的店分開一點、整齊一點）：往珊瑚礁群島那條路的兩邊，一排一排的店，門口都朝著路 */
@@ -435,7 +436,7 @@ function softDiscTex(){ if (_softDisc) return _softDisc; const cv = document.cre
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
-var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:27.3, r:-Math.PI / 2 }, museum:{ x:9.5, z:35.2, r:-Math.PI / 2 }, pet:{ x:-8, z:22.5, r:Math.PI / 2 } };   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
+var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:27.3, r:-Math.PI / 2 }, museum:{ x:-12.5, z:-22.5, r:Math.PI / 2 }, pet:{ x:-8, z:22.5, r:Math.PI / 2 } };   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
 var Mkt = { tab:'new', list:null, mine:null, stats:null, at:0, busy:false, sell:null, fish:null };
 function lotAt(k, lx, lz){ const L = SHOPLOT[k], c = Math.cos(L.r), s = Math.sin(L.r); return [L.x + c * lx + s * lz, L.z - s * lx + c * lz]; }
 const LANDMARKS = [
@@ -778,7 +779,7 @@ const MAP = {
   lake: [-30, -6, 11, 9],                                // 中心 x, z、半徑 rx, rz
   pool: [-26.3, 9.9, 3.4],                               // 瀑布潭
   hill: { x: -29, z: 24, R: 13, H: 5, face: [0.184, -0.983] },
-  squares: [HARBOR_SQ],   /* 44 鋪石頭的廣場 [x, z, 半徑] */
+  squares: [HARBOR_SQ, AQUA_SQ],   /* 44 鋪石頭的廣場 [x, z, 半徑] */
   /* 44 第二區：只留三條大路（往港邊廣場、往鏡湖、往跨海大橋），其他的改成細細的小步道 */
   paths: [
     [[4, 4], [12, -5], [8, -14], [8, -23], [14.5, -24], [22.5, -24.5], [29, -27.5]],   // 往港口（44：從西邊的開口走進港邊廣場，穿過廣場到碼頭）
@@ -788,7 +789,7 @@ const MAP = {
   trails: [
     [[8, -14], [2, -22], [0, -40]],                      // 往北海灘碼頭（從港口大路分出去）
     [[-8, 1], [-16, -15], [-24.5, -17.6]],               // 往木橋（從鏡湖大路分出去）
-    [[12, -5], [17.5, -4], [19, -0.8]],                   // 往水族館門口
+    [[2, -22], [-1.5, -21.5]],                            // 往水族館區的小廣場（v484：水族館、博物館搬到西北）
     [[3, 14], [10, 15], [18, 20], [23, 22]],             // 往螢光溪
     [[-8, 1], [-19, 6], [-24, 5.2]],                     // 往瀑布潭
     [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
@@ -1763,6 +1764,12 @@ function castPoint(x, z, dx, dz, dist){
     const fw = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.22, 0.05, 20), mat('#67c9d0', 0.15, { emissive:'#4fc2cf', emissiveIntensity:0.35 })); fw.position.set(FX, FY + 0.42, FZ); scene.add(fw);
     const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.9, 10), mat('#e9e2cf', 0.7)); spout.position.set(FX, FY + 0.8, FZ); spout.castShadow = true; scene.add(spout);
     addCircleCol(FX, FZ, 1.6); }
+  { const [FX, FZ] = AQUA_SQ, FY = groundHeight(FX, FZ);   /* v484 水族館區小廣場的噴水池（小一點） */
+    const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.12, 0.4, 18), mat('#e9e2cf', 0.7)); basin.position.set(FX, FY + 0.2, FZ); basin.castShadow = basin.receiveShadow = true; scene.add(basin);
+    const fw = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 0.86, 0.05, 18), mat('#67c9d0', 0.15, { emissive:'#4fc2cf', emissiveIntensity:0.35 })); fw.position.set(FX, FY + 0.38, FZ); scene.add(fw);
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.17, 0.75, 10), mat('#e9e2cf', 0.7)); spout.position.set(FX, FY + 0.7, FZ); spout.castShadow = true; scene.add(spout);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.2, 0.14, 12), mat('#e9e2cf', 0.7)); bowl.position.set(FX, FY + 1.1, FZ); scene.add(bowl);
+    addCircleCol(FX, FZ, 1.15); }
   { const bed = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.3, 20), mat('#a8754a', 0.8)); bed.position.set(PX, 0.15, PZ); bed.castShadow = bed.receiveShadow = true; scene.add(bed);
     const soil = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.05, 20), mat('#6b4a32', 0.9)); soil.position.set(PX, 0.31, PZ); scene.add(soil);
     const cols = ['#f17b6d', '#ffd36a', '#f5a5d8', '#ffffff', '#9b7bff']; for (let i = 0; i < 14; i++){ const a = i * 2.4, r = 0.35 + (i % 3) * 0.35, f = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), mat(cols[i % 5], 0.8)); f.position.set(PX + Math.cos(a) * r, 0.45, PZ + Math.sin(a) * r); scene.add(f); }
@@ -15562,7 +15569,7 @@ function renderTab(){
       '村子分區：港邊廣場是熱鬧、買賣和出海的地方；島中央的潮汐廣場是大家集合聊天的地方，東邊是村長辦公室（村長阿土伯在門口），外圈有花園和長椅；寵物店後面的森林邊有「🐾 寵物樂園」，帶寵物走進去站著，寵物會自己在裡面跑；南方沙灘可以休息。',
       '一進遊戲會站在「港邊廣場」：中間有噴水池；港口的兩間店（釣具店、潮汐魚市場）圍著廣場，往前走就是碼頭。島中央的「潮汐廣場」是三條大路交會的地方，節慶活動也在那裡。',
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、瀑布潭、望海丘走細細的小步道。',
-      '照功能分區：🎣 港邊廣場（水族館北邊，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位）；🍜 廣場旁是潮汐食堂、水族館、釣蝦場；👗 商店街（往北走過牌樓）是阿綾服裝店、阿木木工坊、阿彩畫廊、寵物店、海洋博物館。',
+      '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 廣場旁是潮汐食堂、釣蝦場；👗 商店街（往南走）是阿綾服裝店、阿木木工坊、阿彩畫廊、美髮沙龍、寵物店。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
@@ -15571,7 +15578,7 @@ function renderTab(){
       '「🎒 背包 → 魚缸」每條魚旁邊有「🖋️」：一張 🪙200，把那條魚做成墨色的魚拓（和紙上印著魚，寫著魚名、重量、釣到的日期、地點、你的名字，蓋紅色印章）。魚還是留在魚缸裡；同一條魚只能做一次，最多 40 張。',
       '做好的魚拓在「📖 圖鑑 → 魚拓」：可以存成圖片、分享給朋友，或在自己家「🏠 家具 → 🖋️ 我的魚拓」掛起來（不用錢），來玩的人也看得到。丟掉的魚拓金幣不會退。' ]);
     sec('🏛️ 海洋博物館', [
-      '博物館在商店街最裡面東邊（白色石柱的建築，旁邊就是海），走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
+      '博物館在西北邊的水族館區（水族館南邊小廣場的西側，旁邊就是河和木橋），走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
       '每一格會刻上「首位捐贈者」的名字、日期和那條魚的重量；之後別人捐更重的，另外記「最大展示」。同一種魚自己只能捐一次。箱網、儲物箱的魚不能捐，蔚博士發現的新品種也不收。',
       '每一個釣點的一般魚都捐齊了，可以領一次獎勵：金幣，加上那一區專屬的「魚拓」家具（只有集滿才拿得到，擺在家裡不用錢）。變種是加分的格子，不用捐也能集滿。每一區都集滿會得到稱號「博物館榮譽館長」。',
       '你是第一個捐出某種魚的人時，會收到推播（可以在設定裡關掉）。',
