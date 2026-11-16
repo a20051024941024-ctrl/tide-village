@@ -790,17 +790,17 @@ const MAP = {
   squares: [HARBOR_SQ, AQUA_SQ, RES_SQ],   /* 44 鋪石頭的廣場 [x, z, 半徑] */
   /* 44 第二區：只留三條大路（往港邊廣場、往鏡湖、往跨海大橋），其他的改成細細的小步道 */
   paths: [
-    [[4, 4], [12, -5], [8, -14], [8, -23], [14.5, -24], [22.5, -24.5], [29, -27.5]],   // 往港口（44：從西邊的開口走進港邊廣場，穿過廣場到碼頭）
-    [[4, 4], [-8, 1], [-16, -2]],                        // 往鏡湖棧道
+    [[4, 4], [12, -5], [7.3, -14], [7.3, -23], [14.5, -24], [22.5, -24.5], [29, -27.5]],   /* v493 作者：「都擋到路了」→ 這條路往西挪 0.7 公尺，避開魚市場的屋角 */   // 往港口（44：從西邊的開口走進港邊廣場，穿過廣場到碼頭）
+    [[4, 4], [-2.2, 1.1], [-8, 0.6], [-16, -2]],         // 往鏡湖棧道（v493 往南彎一點，避開廣場西邊的大看板）
     [[4, 4], [3, 18], [1, 32], [0, 43.6]],               // 往跨海大橋（珊瑚礁群島）
   ],
   trails: [
-    [[8, -23], [2, -23.6], [0, -40]],                    // 往北海灘碼頭（從港口大路分出去；v487 起點往北移，讓出魚市場區的地）
-    [[-8, 1], [-16, -15], [-24.5, -17.6]],               // 往木橋（從鏡湖大路分出去）
+    [[7.3, -23], [2, -23.6], [0, -40]],                    // 往北海灘碼頭（從港口大路分出去；v487 起點往北移，讓出魚市場區的地）
+    [[-8, 0.6], [-16, -15], [-24.5, -17.6]],               // 往木橋（從鏡湖大路分出去）
     [[2, -23.6], [-1.5, -21.5]],                          // 往水族館區的小廣場（v484：水族館、博物館搬到西北）
     [[3, 14], [10, 15], [18, 20], [23, 22]],             // 往螢光溪
     [[-24.5, -17.6], [-27.5, -19.6]],                    // 往清溪潭（過木橋以後）
-    [[-8, 1], [-17, 9], [-22, 18], [-28, 23.5]],         // 往居民區
+    [[-8, 0.6], [-17, 9], [-22, 18], [-28, 23.5]],       // 往居民區
     [[-18.2, 16.4], [PETPARK[0] + Math.cos(PETGATE) * (PETPARK[2] - 0.5), PETPARK[1] + Math.sin(PETGATE) * (PETPARK[2] - 0.5)]],   // 57 往寵物樂園入口
   ],
 };
@@ -1528,7 +1528,7 @@ function twCottage(g, o){ const w = o.w, d = o.d, zf = o.front, zb = zf - d, zc 
    立式小黑板、彎頭路燈、藍白三角旗。每一樣都把零件合成一塊（一樣東西只畫一次），顏色寫在頂點上。 */
 function twPB(){ const parts = []; const add = (geo, col, x, y, z, rx, ry, rz, sx, sy, sz) => { if (sx != null) geo.scale(sx, sy == null ? sx : sy, sz == null ? sx : sz); if (rx) geo.rotateX(rx); if (rz) geo.rotateZ(rz); if (ry) geo.rotateY(ry); geo.translate(x || 0, y || 0, z || 0); const c = new THREE.Color(col), n = geo.attributes.position.count, A = new Float32Array(n * 3); for (let i = 0; i < n; i++){ A[i * 3] = c.r; A[i * 3 + 1] = c.g; A[i * 3 + 2] = c.b; } geo.setAttribute('color', new THREE.BufferAttribute(A, 3)); geo.deleteAttribute('uv'); if (!geo.attributes.normal) geo.computeVertexNormals(); parts.push(geo.index ? geo.toNonIndexed() : geo); return add; };
   return { add, raw: geo => { geo.deleteAttribute('uv'); if (!geo.attributes.normal) geo.computeVertexNormals(); parts.push(geo.index ? geo.toNonIndexed() : geo); }, box: (sx, sy, sz, col, x, y, z, rx, ry, rz) => add(new THREE.BoxGeometry(sx, sy, sz), col, x, y, z, rx, ry, rz), cyl: (r0, r1, h, col, x, y, z, rx, ry, rz, seg) => add(new THREE.CylinderGeometry(r0, r1, h, seg || 10), col, x, y, z, rx, ry, rz),
-    mesh(){ const g = mergeGeometries(parts, false); parts.forEach(q => q.dispose()); g.computeVertexNormals(); const m = new THREE.Mesh(g, twMat('propM', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0, emissive: '#ffffff', emissiveIntensity: 0.06 }))); m.castShadow = true; m.receiveShadow = true; m.userData.dyn = true; return m; } }; }
+    mesh(){ const g = mergeGeometries(parts, false); parts.forEach(q => q.dispose()); { const pa = g.attributes.position.array; for (let i = 0; i < pa.length; i++) if (pa[i] !== pa[i]) pa[i] = 0; }   /* v493 有零件算出壞掉的座標（漁船），會一直跳警告；壞的點歸零 */ g.computeVertexNormals(); const m = new THREE.Mesh(g, twMat('propM', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0, emissive: '#ffffff', emissiveIntensity: 0.06 }))); m.castShadow = true; m.receiveShadow = true; m.userData.dyn = true; return m; } }; }
 const TWP = {
   crate(b, x, y, z, col, ry){ const c = col || '#3f86d6', d = new THREE.Color(c).multiplyScalar(0.8).getStyle(), W = 0.62, H = 0.34, D = 0.44, t = 0.03, R = (lx, lz) => [x + lx * Math.cos(ry || 0) + lz * Math.sin(ry || 0), z - lx * Math.sin(ry || 0) + lz * Math.cos(ry || 0)];
     b.box(W, t, D, d, x, y + t / 2, z, 0, ry); for (const s2 of [-1, 1]){ let q = R(0, s2 * (D / 2 - t / 2)); b.box(W, H, t, c, q[0], y + H / 2, q[1], 0, ry); q = R(s2 * (W / 2 - t / 2), 0); b.box(t, H, D, c, q[0], y + H / 2, q[1], 0, ry); } b.box(W + 0.05, 0.04, D + 0.05, d, x, y + H - 0.02, z, 0, ry); b.box(W - 0.08, 0.02, D - 0.08, '#2a5fa8', x, y + H - 0.1, z, 0, ry); },
@@ -1614,12 +1614,12 @@ function paved(x, z, m){ m = m || 0; for (const d of Pave.discs){ const dx = x -
 function paveAll(){ if (Pave.done) return; Pave.done = true;
   const h = paveDisc(HARBOR_SQ[0], HARBOR_SQ[1], 16.5); Art2.pave = h; paveDisc(AQUA_SQ[0], AQUA_SQ[1], AQUA_SQ[2] + 0.6); paveDisc(RES_SQ[0], RES_SQ[1], RES_SQ[2] + 0.4);
   for (const pth of MAP.paths) paveRibbon(pth, 1.25);
-  paveRibbon([[8, -23], [2, -23.6], [-1.5, -21.5], [-4, -21]], 1.0);          /* 往水族館區 */
+  paveRibbon([[7.3, -23], [2, -23.6], [-1.5, -21.5], [-4, -21]], 1.0);          /* 往水族館區 */
   paveRibbon([[12, -5], [17.4, -5.2]], 1.0);                                   /* 往運動公園 */
-  paveRibbon([[-8, 1], [-17, 9], [-22, 18], [-27, 22.6]], 1.0);                /* 往居民區 */
+  paveRibbon([[-8, 0.6], [-17, 9], [-22, 18], [-27, 22.6]], 1.0);                /* 往居民區 */
   try { if (tuftsMesh){ const M4 = new THREE.Matrix4(), v = new THREE.Vector3(), z0 = new THREE.Matrix4().makeScale(0, 0, 0); for (let i = 0; i < tuftsTotal; i++){ tuftsMesh.getMatrixAt(i, M4); v.setFromMatrixPosition(M4); if (paved(v.x, v.z, 0.2)) tuftsMesh.setMatrixAt(i, z0); } tuftsMesh.instanceMatrix.needsUpdate = true; } } catch(e){} }
 function art2Pave(){ paveAll(); }
-function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ console.warn('twTemple', e); }
+function art2Props(){ try { twTemple(6.4, -28.4, Math.PI / 2); }   /* v493 廟往北挪 2 公尺，原本壓在往水族館區的路上 */ catch(e){ console.warn('twTemple', e); }
   try { art2Pave(); } catch(e){ console.warn('art2Pave', e); }
   try { const [cx, cz] = HARBOR_SQ; let n = 0; for (let k = 0; k < 40 && n < 7; k++){ const a = k * 2.399 + 0.6, r = 12.5 + (k % 5) * 2.2, px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r, ti = terrainInfo(px, pz); if (ti.water || ti.h < -0.01 || blocked(px, pz, 1.5) || deckAt(px, pz) || inSport(px, pz, 1.2)) continue; twPalm(px, pz, 0.95 + (k % 3) * 0.12, a + 1.2); n++; } } catch(e){ console.warn('twPalm', e); }   /* 港口周圍種七棵椰子樹（四周要有 1.5 公尺空地才種） */   /* v460 小廟：廣場西邊的空地，面向廣場 */
   const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r) && !inSport(x, z, 0.8), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
@@ -2034,7 +2034,7 @@ function castPoint(x, z, dx, dz, dist){
   const faceTo = (x, z) => Math.atan2(PX - x, PZ - z);
   /* 阿綾服裝店（2026-11-04）：原本的粉紅色民宅改成服裝店；門口一個衣架，掛著阿綾最新設計的三件衣服 */
   /* v489 居民區（島的西南，原本的山丘）：六棟民宅圍著中間的小空地，門口都朝空地。原本散在廣場邊的兩棟 (-9,15)、(16,14) 也搬過來 */
-  for (const [hx, hz, hc, hw] of [[-21.5, 15, '#d896c3', 3.1], [-30, 14.5, '#7db7d7', 3.6], [-36.5, 20, '#ecc46a', 3.2], [-36, 28, '#9fc7a8', 3.4], [-29.5, 32, '#e89a7a', 3.2], [-21.5, 30, '#a9b7e0', 3.3]]) house(hx, hz, hc, hw, Math.atan2(RES_SQ[0] - hx, RES_SQ[1] - hz));
+  for (const [hx, hz, hc, hw] of [[-25.5, 11.2, '#d896c3', 3.1], [-32.5, 15.5, '#7db7d7', 3.6], [-36.5, 20, '#ecc46a', 3.2], [-36, 28, '#9fc7a8', 3.4], [-29.5, 32, '#e89a7a', 3.2], [-21.5, 30, '#a9b7e0', 3.3]]) house(hx, hz, hc, hw, Math.atan2(RES_SQ[0] - hx, RES_SQ[1] - hz));
   { const gx = -32.6, gz = 24.6, gy = Math.max(0, terrainH(gx, gz));   /* 菜園、晒魚架 */
     scene.add(box([3.6, 0.1, 2.6], '#7a5a3c', [gx, gy + 0.05, gz])); for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++){ const k = new THREE.Mesh(new THREE.IcosahedronGeometry(0.17, 0), mat(['#4f9a45', '#6fb552', '#3f8a4a'][(r + c) % 3], 0.9)); k.position.set(gx - 1.45 + c * 0.58, gy + 0.2, gz - 0.95 + r * 0.63); k.scale.y = 0.8; scene.add(k); } for (const sx of [-1, 1]) for (const sz of [-1, 1]) scene.add(box([0.08, 0.5, 0.08], '#8a6a4a', [gx + sx * 1.85, gy + 0.25, gz + sz * 1.35])); addBoxCol(gx, gz, 3.6, 2.6);
     const rx = -24.2, rz = 26.4, ry = Math.max(0, terrainH(rx, rz)); for (const sx of [-1, 1]){ scene.add(box([0.1, 1.7, 0.1], '#8a6a4a', [rx + sx * 1.3, ry + 0.85, rz])); addCircleCol(rx + sx * 1.3, rz, 0.15); } for (const yy of [1.6, 1.05]){ scene.add(box([2.7, 0.06, 0.06], '#8a6a4a', [rx, ry + yy, rz])); for (let i = 0; i < 6; i++){ const f = box([0.3, 0.14, 0.03], ['#c9b08a', '#b8c4cc', '#d2a070'][i % 3], [rx - 1.05 + i * 0.42, ry + yy - 0.16, rz]); f.rotation.z = 0.2; scene.add(f); } } }
