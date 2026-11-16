@@ -6233,7 +6233,7 @@ function landFish(){
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
   const fpc = FP.act; if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
-  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, fpc ? 2500 : 900);   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
+  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, fpc ? 3600 : 900);   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
 const jumpers = [];
 function updateJumpers(dt, t){
@@ -9865,21 +9865,30 @@ function fpCatch(f, w, from){ fpCatchEnd(); const m = fishModel(f, fishShowScale
   const st = from.clone(); st.y = WATER_LEVEL - 0.1; camera.updateMatrixWorld(); FP.g.worldToLocal(st); if (!isFinite(st.x + st.y + st.z)) st.set(0, -0.6, -3); if (st.z > -1.2) st.z = -1.2;
   const two = L > 0.36, hands = two ? [fpHand(-1), fpHand(1)] : [fpHand(-1)]; for (const x of hands){ x.visible = false; x.scale.setScalar(two ? 1.25 : 1.1); FP.g.add(x); }
   FP.c = { f, w, m, h, L, H: H0 * k, t: 0, st, act: fishAct(m, 'air'), hands, two, held: false, hang: new THREE.Vector3(0.0, 0.03, -0.72 - L * 0.55), hold: new THREE.Vector3(two ? 0 : -0.04, -0.07, -0.5 - L * 0.42) }; h.position.copy(st); }
-function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T = c.t, h = c.h, e = x => 1 - (1 - x) * (1 - x);
-  if (T < 0.8){ const u = e(T / 0.8); h.position.lerpVectors(c.st, c.hang, u); h.position.y += Math.sin(u * Math.PI) * 0.12; }
-  else if (T < 1.75){ h.position.copy(c.hang); h.position.x += Math.sin((T - 0.8) * 5.2) * 0.035 * Math.max(0, 1 - (T - 0.8) * 0.7); }
+function fpTipLocal(out){ const rp = FP.rodP; rp.updateMatrix(); return out.set(0, 2.3, 0).applyMatrix4(rp.matrix); }   /* 竿尖在鏡頭前面的位置（FP.g 沒有自己的位移，所以就是鏡頭座標） */
+/* v505 作者：「魚釣起來的動作很怪，沒有長長的線勾著魚的畫面」→ 竿子往上舉，魚吊在竿尖下面一條長線上、像鐘擺一樣晃、一邊甩，再拉過來用手拿 */
+const FP_LN = 0.95;   /* 竿尖到魚嘴的線有多長（公尺） */
+function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T = c.t, h = c.h, e = x => 1 - (1 - x) * (1 - x), tip = fpTipLocal(c.tipV || (c.tipV = new THREE.Vector3()));
+  const hangAt = out => { const k = Math.max(0, T - 0.45), amp = 0.42 * Math.exp(-k * 0.75), ax = amp * Math.sin(k * 3.6 + 0.6), az = amp * 0.45 * Math.sin(k * 2.7); return out.set(tip.x + FP_LN * Math.sin(ax), tip.y - FP_LN * Math.cos(ax) * Math.cos(az) - c.L * 0.46, tip.z + FP_LN * Math.sin(az)); };
+  /* 0～0.6 秒出水 → 0.6～1.2 吊在竿尖下面晃 → 1.2～1.7 抓住線把魚拉到眼前 → 1.7～2.6 魚吊在眼前甩（像秤魚的時候那樣看清楚）→ 2.6 以後用手拿 */
+  const near = c.near || (c.near = new THREE.Vector3()); near.set(Math.sin(T * 2.3) * 0.035 * Math.exp(-Math.max(0, T - 1.7) * 0.9), 0.02 - c.L * 0.1, -0.5 - c.L * 0.5);
+  if (T < 0.6){ const u = e(T / 0.6); hangAt(c.hang); h.position.lerpVectors(c.st, c.hang, u); h.position.y += Math.sin(u * Math.PI) * 0.25; }
+  else if (T < 2.6){ hangAt(c.hang); const u = T < 1.2 ? 0 : e(Math.min(1, (T - 1.2) / 0.5)); h.position.lerpVectors(c.hang, near, u); c.from = c.from || new THREE.Vector3(); c.from.copy(h.position);
+    if (u > 0 && !c.pulled){ c.pulled = true; try { noise(0.25, 0.03, 900, 500, 1.5); } catch(e2){} } }
   else { if (!c.held){ c.held = true; const A = c.act; if (A){ A.kind = 'hand'; A.burst = 0.5; A.next = 1.2; A.by = 0; } c.m.rotation.set(0, 0, 0); c.m.position.y = 0; for (const x of c.hands) x.visible = true; try { tone(520, 0.05, 'triangle', 0.05); buzz(30); } catch(e2){} }
-    const u = e(Math.min(1, (T - 1.75) / 0.45)); h.position.lerpVectors(c.hang, c.hold, u); h.rotation.y = -0.18 * u; h.rotation.x = 0.1 * u;
+    const u = e(Math.min(1, (T - 2.6) / 0.45)); h.position.lerpVectors(c.from, c.hold, u); h.rotation.y = -0.18 * u; h.rotation.x = 0.1 * u;
     const by = c.hold.y - c.H / 2 - 0.012, drop = (1 - u) * 0.45; c.hands.forEach((x, i) => { const sx = c.two ? (i ? 1 : -1) * c.L * 0.27 : 0; x.position.set(c.hold.x + sx, by - drop + Math.sin(t * 2.1 + i) * 0.003, c.hold.z + 0.02); x.rotation.set(0.12, (c.two ? (i ? -0.35 : 0.35) : 0.25), 0); }); }
-  /* 雙手拿魚時竿子先放下（往下收出畫面） */
-  const wantY = c.two && T > 1.6 ? -0.75 : 0; FP.rodY += (wantY - FP.rodY) * Math.min(1, dt * 5);
-  /* 線：竿尖 → 魚嘴（魚掛著的時候頭朝上，嘴在最上面）；拿在手上以後就解下來了 */
-  const ln = FP.line; if (T < 1.75){ const a = ln.geometry.attributes.position, p0 = FP.tgt; FP.tip.getWorldPosition(p0); a.setXYZ(0, p0.x, p0.y, p0.z); p0.set(h.position.x, h.position.y + c.L * 0.46, h.position.z); FP.g.localToWorld(p0); a.setXYZ(1, p0.x, p0.y, p0.z); a.needsUpdate = true; ln.visible = true; } else ln.visible = false; }
+  /* 竿子：魚出水的時候往上舉（竿身被拉彎的感覺用往下壓一點表示），掛著的時候跟著魚晃，要拿魚了就放下來；雙手拿魚時竿子收到畫面外 */
+  c.lift = T < 2.6 ? Math.min(1, T / 0.35) : Math.max(0, 1 - (T - 2.6) / 0.4);
+  const wantY = c.two && T > 2.55 ? -0.75 : 0; FP.rodY += (wantY - FP.rodY) * Math.min(1, dt * 5);
+  /* 線：竿尖 → 魚嘴（魚掛著的時候頭朝上，嘴在最上面）；拿到手上以後就解下來了 */
+  const ln = FP.line; if (T < 2.65){ camera.updateMatrixWorld(); const a = ln.geometry.attributes.position, p0 = FP.tgt; p0.copy(tip); FP.g.localToWorld(p0); a.setXYZ(0, p0.x, p0.y, p0.z); p0.set(h.position.x, h.position.y + c.L * 0.46, h.position.z); FP.g.localToWorld(p0); a.setXYZ(1, p0.x, p0.y, p0.z); a.needsUpdate = true; ln.visible = true; } else ln.visible = false; }
 /* 每一格：決定要不要第一人稱、擺鏡頭、動竿子。回傳 true 表示鏡頭已經擺好，原本的鏡頭程式不用跑 */
 function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now();
   FP.eye.set(me.pos.x, me.baseY + (me.sitting ? 0.85 : 1.16), me.pos.z);
   const bobOK = !FP.c && me.fishing && me.bobState !== 'none' && me.bob && me.bob.visible;
-  if (bobOK && isFinite(me.bob.position.x + me.bob.position.y + me.bob.position.z)){ const B = me.bob.position; FP.tgt.set(B.x, Math.max(WATER_LEVEL, B.y), B.z); const d = Math.hypot(B.x - me.pos.x, B.z - me.pos.z); if (d < 2.2){ const k = 2.2 / Math.max(0.2, d); FP.tgt.x = me.pos.x + (B.x - me.pos.x) * k; FP.tgt.z = me.pos.z + (B.z - me.pos.z) * k; } FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
+  if (bobOK && isFinite(me.bob.position.x + me.bob.position.y + me.bob.position.z)){ const B = me.bob.position; FP.tgt.set(B.x, clamp(B.y, WATER_LEVEL, WATER_LEVEL + 1.2), B.z);   /* 浮標飛在空中的時候鏡頭只跟一點點，不會整個抬頭看天空 */ const d = Math.hypot(B.x - me.pos.x, B.z - me.pos.z); if (d < 2.2){ const k = 2.2 / Math.max(0.2, d); FP.tgt.x = me.pos.x + (B.x - me.pos.x) * k; FP.tgt.z = me.pos.z + (B.z - me.pos.z) * k; } FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
+  else if (FP.c){ const fx = FP.look.x - FP.eye.x, fz = FP.look.z - FP.eye.z, fl = Math.hypot(fx, fz) || 1; FP.tgt.set(FP.eye.x + fx / fl * 4, FP.eye.y - (FP.c.t < 1.25 ? 0.05 : FP.c.t < 2.6 ? 0.45 : 0.9), FP.eye.z + fz / fl * 4); FP.look.lerp(FP.tgt, 1 - Math.exp(-4 * dt)); }   /* 魚出水：抬頭看竿尖和吊著的魚；要拿魚了再低頭看手 */
   else if (!FP.c && F.phase === 'charging'){ FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
   if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
   if (!isFinite(camera.position.x + camera.position.y + camera.position.z)) camera.position.copy(FP.eye);
@@ -9888,7 +9897,11 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (me.av.g.visible) poolMeVis(false);
   /* 竿子：平常微微晃；拉魚的時候竿尖被往下拉、抖；蓄力的時候往後舉 */
   const rp = FP.rodP, reel = F.phase === 'reeling', bend = clamp(me.bend || 0, 0, 1.2), wind = F.phase === 'charging' ? clamp(F.charge || 0, 0, 1) : 0;
-  rp.position.set(0.3, -0.34 + FP.rodY + Math.sin(t * 1.3) * 0.004, -0.34); rp.rotation.set(-(Math.PI / 2 - 0.2) - bend * 0.17 + wind * 0.75 + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.105 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0);
+  /* v505 甩竿：蓄力時竿子往後舉，放開的一瞬間往前甩（甩過頭一點，竿尖往下），再回到前面指著浮標 */
+  if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
+  if (FP.castT && t - FP.castT < 0.75){ const s2 = (t - FP.castT) / 0.75; if (s2 < 0.32){ const u = s2 / 0.32; cast = (FP.castW * 0.75 + 0.25) * (1 - u * u) - 0.42 * u * u; } else { const u = (s2 - 0.32) / 0.68; cast = -0.42 * (1 - u) * (1 - u); } }
+  const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
+  rp.position.set(0.3 - lift * 0.06, -0.34 + FP.rodY + lift * 0.1 + Math.sin(t * 1.3) * 0.004, -0.34); rp.rotation.set(-(Math.PI / 2 - 0.2) - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.105 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0);
   FP.line.visible = false; fpCatchTick(dt, t); return true; }
 function enterPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🎱 歡迎來到潮汐撞球館！', 1.4); }, 260); }
@@ -11642,9 +11655,10 @@ function updateDive(dt, t){
   // 泡泡、光束、水面
   if (Dive.bubbles){ const p = Dive.bubbles.geometry.attributes.position, a = p.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (0.6 + (i % 7) * 0.08); a[i] += Math.sin(t * 2 + i) * dt * 0.05; if (a[i + 1] > DIVE.y + DIVE.top) a[i + 1] = diveBed(a[i], a[i + 2]); } p.needsUpdate = true; }
   if (Math.random() < dt * 3) { const a = Dive.bubbles.geometry.attributes.position.array, k = Math.floor(Math.random() * a.length / 3) * 3; a[k] = me.pos.x + (Math.random() - 0.5) * 0.3; a[k + 1] = me.baseY + 1.2; a[k + 2] = me.pos.z + (Math.random() - 0.5) * 0.3; }
-  { const DS = DIVE_SITES[Dive.site] || {}, lush = DS.lush || DS.look2; Dive.shafts.forEach((m, i) => { m.material.opacity = ((lush ? 0.05 : 0.022) + (lush ? 0.03 : 0.016) * Math.sin(t * 0.6 + i * 1.7)) * (DayNight.period === 'night' ? 0.3 : 1); if (lush) m.rotation.z = 0.18 + Math.sin(t * 0.25 + i) * 0.05; }); }
-  if (Dive.caustic){ const o = Dive.caustic.material.map.offset; o.x = (o.x + dt * 0.013) % 1; o.y = (o.y + dt * 0.008) % 1; Dive.caustic.material.opacity = (0.2 + Math.sin(t * 0.8) * 0.05) * (DayNight.period === 'night' ? 0.25 : 1); }
+  { const DS = DIVE_SITES[Dive.site] || {}, lush = DS.lush || DS.look2; Dive.shafts.forEach((m, i) => { m.material.opacity = ((lush ? 0.05 : 0.022) + (lush ? 0.03 : 0.016) * Math.sin(t * 0.6 + i * 1.7)) * (1 - 0.94 * clamp(DayNight.lamp || 0, 0, 1)); if (lush) m.rotation.z = 0.18 + Math.sin(t * 0.25 + i) * 0.05; }); }
+  if (Dive.caustic){ const o = Dive.caustic.material.map.offset; o.x = (o.x + dt * 0.013) % 1; o.y = (o.y + dt * 0.008) % 1; Dive.caustic.material.opacity = (0.2 + Math.sin(t * 0.8) * 0.05) * (1 - 0.85 * clamp(DayNight.lamp || 0, 0, 1)); }
   if (Dive.surface) Dive.surface.material.opacity = 0.42 + Math.sin(t * 1.3) * 0.08;
+  if (Dive.surface && Dive.surface.material.color){ const dk = clamp(DayNight.lamp || 0, 0, 1), sc = Dive._sc0 || (Dive._sc0 = Dive.surface.material.color.clone()); Dive.surface.material.color.copy(sc).multiplyScalar(1 - dk * 0.75); }   /* 從水底往上看的水面：晚上也變暗 */
   for (const l of Dive.loot){ if (l.kind === 'shell' && !l.got){ l.m.position.y = l.y + 0.08 + Math.sin(t * 2 + l.x) * 0.02; }
     if (l.kind === 'chest'){ const k = l.open ? clamp((now() - l.open) / 0.8, 0, 1) : 0; l.lid.rotation.x = -k * 1.6; l.glow.material.opacity = l.got ? 0 : 0.25 + Math.sin(t * 3) * 0.15; } }
   renderDiveHud(true);
@@ -11659,9 +11673,13 @@ function diveHideWorld(start){
 function diveShowWorld(){ for (const o of Dive.restore || []) o.visible = true; Dive.restore = null; }
 function diveEnvFx(){
   // 水下的顏色和霧
-  const S = DIVE_SITES[Dive.site] || DIVE_SITES.reef, light = hasDive('dive_light'), dark = DayNight.period === 'night' && !light;
-  scene.fog.color.set(dark ? '#06223a' : S.fog); scene.fog.near = 2.5; scene.fog.far = dark ? 16 : S.far;
-  hemi.color.set(S.cave ? '#6fb4e0' : '#9fe6ff'); hemi.groundColor.set(S.cave ? '#0c1620' : '#2b6f8f'); hemi.intensity = Math.max(hemi.intensity * (S.big ? 0.8 : 1), light ? (S.cave ? 1.35 : 1.0) : 0.45); sun.color.set('#d8f6ff'); if (S.cave){ hemi.intensity = 0.5; sun.intensity *= 0.12; } else if (S.big) sun.intensity *= 0.7;   /* v470 洞穴不再整片一樣亮：環境光壓暗，亮的地方只有你的潛水燈、水晶和洞頂的光 */
+  /* v505 作者：「潛水的海底也要隨著時間變黑變亮」→ 以前只有「晚上而且沒有潛水燈」才變暗，而且是一下子切換；有燈的話半夜也跟白天一樣亮。
+     現在跟著岸上的天色慢慢變：dk 0 是白天、1 是半夜（DayNight.lamp 黃昏、清晨會慢慢變）。有潛水燈只是晚上看得比較遠、旁邊有燈照，海水本身還是黑的 */
+  const S = DIVE_SITES[Dive.site] || DIVE_SITES.reef, light = hasDive('dive_light'), dk = clamp(DayNight.lamp || 0, 0, 1);
+  const fc = (Dive._fc || (Dive._fc = new THREE.Color())).set(S.fog).lerp(Dive._fn || (Dive._fn = new THREE.Color('#031627')), dk * 0.88);
+  scene.fog.color.copy(fc); scene.fog.near = 2.5; scene.fog.far = S.far + ((light ? Math.min(S.far, 22) : 12) - S.far) * dk;
+  const floor = (light ? (S.cave ? 1.35 : 1.0) : 0.45) * (1 - dk) + (light ? 0.42 : 0.16) * dk;
+  hemi.color.set(S.cave ? '#6fb4e0' : '#9fe6ff'); hemi.groundColor.set(S.cave ? '#0c1620' : '#2b6f8f'); hemi.intensity = Math.max(hemi.intensity * (S.big ? 0.8 : 1) * (1 - dk * 0.7), floor); sun.color.set('#d8f6ff'); if (S.cave){ hemi.intensity = 0.5; sun.intensity *= 0.12; } else if (S.big) sun.intensity *= 0.7;   /* v470 洞穴不再整片一樣亮：環境光壓暗，亮的地方只有你的潛水燈、水晶和洞頂的光 */
 }
 function renderDiveHud(tick){ document.body.classList.toggle('sdive', !!Dive.on);
   let h = $('#diveHud');
@@ -15932,7 +15950,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
-      '👀 第一人稱釣魚：「設定 → 🎣 釣魚視角」選「第一人稱」，從拋竿開始就是從自己的眼睛看出去：右下是自己的手握著竿子、竿尖指向浮標。釣到的時候，魚會掛在線上被拉出水面甩幾下，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
+      '👀 第一人稱釣魚：「設定 → 🎣 釣魚視角」選「第一人稱」，從拋竿開始就是從自己的眼睛看出去：右下是自己的手握著竿子、竿尖指向浮標；按住蓄力時竿子往後舉，放開就往前甩出去。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
@@ -16012,6 +16030,7 @@ function renderTab(){
       '🚢 深海三層：潛水艇從有陽光的淺海出發。0～200 公尺是☀️ 透光層（藍綠色、看得到從上面照下來的光束、沙地上有水波光斑）；200～1000 公尺是🌘 暮光層（越來越暗，600 公尺以下就沒有光束了）；1000 公尺以下是🌑 午夜層（全黑，只剩潛水艇的燈和會發光的生物）。一路上都有海雪慢慢往下飄。從深海浮回透光層，音樂會換回明亮的。'
     ]);
     sec('🤿 潛水（進階玩法）', [
+      '🌗 海底也有白天晚上：潛水時海裡的亮度跟著岸上的時間慢慢變。白天陽光照下來有光柱、海底有波光；黃昏開始變暗、看得比較近；半夜幾乎沒有光柱，只看得到身邊。帶潛水燈晚上還是暗，但看得比較遠、身邊有燈照著。',
       '海底很大，到處游看看：海底邊緣有發光的石拱門「往○○」，游進去就直接到隔壁的海域，不用浮上去（要有那個海域需要的裝備）。海底有冒泡泡的「氣泡口」，游進泡泡柱裡會慢慢補氧氣。',
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '👥 一起蓋島：同一座島上有人蓋、拆、搬東西，大家的畫面會馬上（最慢 20 秒）跟著更新，不用重新進遊戲。有人邀請你搬進他家時，畫面中間會跳出邀請卡片，可以直接回覆。',
