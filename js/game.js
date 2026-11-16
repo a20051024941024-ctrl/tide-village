@@ -412,6 +412,8 @@ const SPOTS = [
 ];
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [-7, -31];   /* v484 地圖重新分區（作者 11/16）：水族館搬到西北草地的「水族館區」，原本東邊那塊地留給運動區。原位置 [23.5, -6] */
+const SPORT = { x0: 17, x1: 37.4, z0: -11.6, z1: 3.6 };   /* v485 運動公園（島的東邊，原本水族館那塊地）：這個範圍不長樹和草叢 */
+function inSport(x, z, m){ m = m || 0; return x > SPORT.x0 - m && x < SPORT.x1 + m && z > SPORT.z0 - m && z < SPORT.z1 + m; }
 const AQUA_SQ = [-6, -20.5, 5];   /* 水族館區的小廣場（石板地＋噴水池），水族館在北邊、博物館在西邊 */
 const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過去）
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
@@ -455,6 +457,7 @@ const LANDMARKS = [
   { id:'fu',         label:'阿福海產', pos:V3(...hlAt('fu', 0, 2.6)), color:'#5fb6e3', ly:2.6, ...hlOff('fu', 0, 1.2) },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
   { id:'hill',       label:'望海丘',   pos:V3(-28, 25),         color:'#a6d37d', ly:2.6 },
+  { id:'sport',      label:'運動公園', pos:V3(30.6, -4.6),      color:'#e0564f', ly:2.6 },
   { id:'beach',      label:'南方沙灘', pos:V3(40, -6),          color:'#f2d69a', ly:2.2 },
 ];
 // 小船停靠點
@@ -841,7 +844,7 @@ function terrainInfo(x, z){
 function terrainH(x, z){ return terrainInfo(x, z).h; }
 function isLand(x, z){ return !terrainInfo(x, z).water; }
 function trailDist(x, z){ let d = 1e9; for (const p of MAP.trails || []) d = Math.min(d, lineDist(x, z, p)); return d; }
-function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); return d; }
+function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); { const S = SPORT, dx = Math.max(S.x0 - x, 0, x - S.x1), dz = Math.max(S.z0 - z, 0, z - S.z1); d = Math.min(d, dx || dz ? Math.hypot(dx, dz) : -Math.min(x - S.x0, S.x1 - x, z - S.z0, S.z1 - z)); } return d; }
 function inSand(x, z){ const e = islandEdge(x, z); return e < 4.5 + wobble(x + z, 2) * 1.2; }
 // 地面顏色（0～1 的 sRGB）
 function terrainColor(x, z, info, out){
@@ -1591,8 +1594,8 @@ function twPalm(x, z, s, lean){ const g = new THREE.Group(); g.position.set(x, g
   scene.add(g); addCircleCol(x, z, 0.32); return g; }
 function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ console.warn('twTemple', e); }
   try { art2Pave(); } catch(e){ console.warn('art2Pave', e); }
-  try { const [cx, cz] = HARBOR_SQ; let n = 0; for (let k = 0; k < 40 && n < 7; k++){ const a = k * 2.399 + 0.6, r = 12.5 + (k % 5) * 2.2, px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r, ti = terrainInfo(px, pz); if (ti.water || ti.h < -0.01 || blocked(px, pz, 1.5) || deckAt(px, pz)) continue; twPalm(px, pz, 0.95 + (k % 3) * 0.12, a + 1.2); n++; } } catch(e){ console.warn('twPalm', e); }   /* 港口周圍種七棵椰子樹（四周要有 1.5 公尺空地才種） */   /* v460 小廟：廣場西邊的空地，面向廣場 */
-  const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
+  try { const [cx, cz] = HARBOR_SQ; let n = 0; for (let k = 0; k < 40 && n < 7; k++){ const a = k * 2.399 + 0.6, r = 12.5 + (k % 5) * 2.2, px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r, ti = terrainInfo(px, pz); if (ti.water || ti.h < -0.01 || blocked(px, pz, 1.5) || deckAt(px, pz) || inSport(px, pz, 1.2)) continue; twPalm(px, pz, 0.95 + (k % 3) * 0.12, a + 1.2); n++; } } catch(e){ console.warn('twPalm', e); }   /* 港口周圍種七棵椰子樹（四周要有 1.5 公尺空地才種） */   /* v460 小廟：廣場西邊的空地，面向廣場 */
+  const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r) && !inSport(x, z, 0.8), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
   const hs = HLOT.shop, c = Math.cos(hs[2]), sn = Math.sin(hs[2]), loc = (lx, lz) => [hs[0] + c * lx + sn * lz, hs[1] - sn * lx + c * lz];
   /* v474 換成台灣漁港的小東西；之前古風的石燈籠、水井、青蛙石像、木推車、木桶、木攤子撤掉，只留魚網架 */
   P('f_net', sq[0] + 6.0, sq[1] + 2.0, 1.5, 1.25, 0);
@@ -2174,6 +2177,46 @@ function castPoint(x, z, dx, dz, dist){
   pav.add(bench, bench2, floor); scene.add(pav);
   if (ART2){ try { pav.clear(); pav.rotation.y = Math.PI / 6; pav.userData.keep = true; pav.userData.dyn = true; pav.userData.tw = true; twPavilion(pav); addCircleCol(CX, CZ, 0.75); } catch(e){ console.warn('twPavilion', e); } }
 
+  /* ---- v485 運動公園（作者 11/16：「把運動區加進去，至少要有籃球場、撞球場、羽毛球、沙灘排球、體育場」）----
+     放在島的東邊、原本水族館那塊地：北邊是小體育場（紅色跑道圍著草地球場、旁邊一排看台和兩支旗子），南邊是籃球場，東邊是羽球場和撞球棚，沙灘上是沙灘排球。
+     第一版是場地（所有玩家都看得到、可以走進去）；旗子會飄、球網會輕輕晃。還不能真的打球。 */
+  { const gyAt = (x, z) => Math.max(0, terrainH(x, z)), M = (c, r, o) => mat(c, r == null ? 0.85 : r, o), put = k => { scene.add(k); return k; }, FX = (window.__sportFx = []);
+    const slab = (x0, x1, z0, z1, c, h, y) => { const k = box([x1 - x0, h, z1 - z0], c, [(x0 + x1) / 2, y + h / 2, (z0 + z1) / 2]); k.castShadow = false; return put(k); };
+    const line = (x0, z0, x1, z1, y, c, w) => { const L = Math.hypot(x1 - x0, z1 - z0), k = box([w || 0.07, 0.012, L], c || '#ffffff', [(x0 + x1) / 2, y, (z0 + z1) / 2]); k.rotation.y = Math.atan2(x1 - x0, z1 - z0); k.castShadow = false; return put(k); };
+    const ring = (x, z, r, y, c, a0, a1) => { const k = new THREE.Mesh(new THREE.RingGeometry(r - 0.035, r + 0.035, 28, 1, a0 || 0, a1 == null ? Math.PI * 2 : a1), M(c || '#ffffff')); k.rotation.x = -Math.PI / 2; k.position.set(x, y, z); return put(k); };
+    const rrect = (w, h, r) => { const sh = new THREE.Shape(), hw = w / 2, hh = h / 2; sh.moveTo(-hw + r, -hh); sh.lineTo(hw - r, -hh); sh.absarc(hw - r, -hh + r, r, -Math.PI / 2, 0, false); sh.lineTo(hw, hh - r); sh.absarc(hw - r, hh - r, r, 0, Math.PI / 2, false); sh.lineTo(-hw + r, hh); sh.absarc(-hw + r, hh - r, r, Math.PI / 2, Math.PI, false); sh.lineTo(-hw, -hh + r); sh.absarc(-hw + r, -hh + r, r, Math.PI, Math.PI * 1.5, false); return sh; };
+    const flat = (sh, c, x, y, z) => { const k = new THREE.Mesh(new THREE.ShapeGeometry(sh, 10), M(c)); k.rotation.x = -Math.PI / 2; k.position.set(x, y, z); k.receiveShadow = true; return put(k); };
+    const net = (x0, z0, x1, z1, y0, y1, c) => { const L = Math.hypot(x1 - x0, z1 - z0), g = new THREE.Group(), cv = document.createElement('canvas'); cv.width = 64; cv.height = 32; const cx = cv.getContext('2d'); cx.strokeStyle = c || '#ffffff'; cx.lineWidth = 1.5; for (let i = 0; i <= 16; i++){ cx.beginPath(); cx.moveTo(i * 4, 0); cx.lineTo(i * 4, 32); cx.stroke(); } for (let j = 0; j <= 8; j++){ cx.beginPath(); cx.moveTo(0, j * 4); cx.lineTo(64, j * 4); cx.stroke(); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(Math.max(1, Math.round(L / 1.2)), 1);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(L, y1 - y0, 6, 1), new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide })); m.position.y = (y0 + y1) / 2; g.add(m); const tape = box([L, 0.06, 0.03], '#ffffff', [0, y1, 0]); tape.castShadow = false; g.add(tape); g.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2); g.rotation.y = Math.atan2(z0 - z1, x1 - x0); g.userData.keep = true; g.userData.dyn = true; put(g); const ph = x0 * 1.7; FX.push(t2 => { g.rotation.x = Math.sin(t2 * 1.3 + ph) * 0.035; }); return g; };
+    const pole = (x, z, y, h, c, r) => { const k = new THREE.Mesh(new THREE.CylinderGeometry(r || 0.05, r || 0.05, h, 8), M(c || '#9aa3ad', 0.5)); k.position.set(x, y + h / 2, z); k.castShadow = true; put(k); addCircleCol(x, z, 0.16); return k; };
+    /* 小體育場：跑道＋草地球場 */
+    { const cx = 22.6, cz = -7.6, W = 10.2, D = 6.8, y = gyAt(cx, cz) + 0.03; flat(rrect(W, D, 3.3), '#c8553d', cx, y, cz); flat(rrect(W - 2.0, D - 2.0, 2.3), '#5fae55', cx, y + 0.012, cz);
+      for (const k of [0.5, 1.0, 1.5]){ const sh = rrect(W - k * 1.0 - 0.2, D - k * 1.0 - 0.2, 3.3 - k * 0.5 - 0.1), pts = sh.getPoints(10), g = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(p.x, 0, -p.y)).concat([new THREE.Vector3(pts[0].x, 0, -pts[0].y)])), l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: '#ffffff' })); l.position.set(cx, y + 0.02, cz); put(l); }
+      line(cx, cz - (D - 2.0) / 2, cx, cz + (D - 2.0) / 2, y + 0.022); ring(cx, cz, 0.8, y + 0.022);
+      for (const sx of [-1, 1]){ const gx = cx + sx * (W / 2 - 1.25); for (const sz of [-1, 1]){ const pp = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 6), M('#ffffff')); pp.position.set(gx, y + 0.4, cz + sz * 0.8); put(pp); } const bar = box([0.06, 0.06, 1.66], '#ffffff', [gx, y + 0.8, cz]); put(bar); }
+      /* 看台（三階，面向球場）＋兩支旗子 */
+      const bz = cz + D / 2 + 0.25, by = gyAt(cx, bz + 0.6); for (let i = 0; i < 3; i++){ put(box([7.2, 0.3 * (i + 1), 0.42], '#c9ccd2', [cx, by + 0.15 * (i + 1), bz + 0.21 + i * 0.42])); const st = box([7.0, 0.05, 0.3], ['#4f8fe0', '#f2b532', '#e0564f'][i], [cx, by + 0.3 * (i + 1) + 0.025, bz + 0.19 + i * 0.42]); st.castShadow = false; put(st); } put(box([7.2, 0.5, 0.06], '#9aa3ad', [cx, by + 1.15, bz + 1.29])); addBoxCol(cx, bz + 0.63, 7.2, 1.3);
+      for (const sx of [-1, 1]){ const fx = cx + sx * 4.1, fz = bz + 0.6; pole(fx, fz, by, 3.2, '#e9eef2', 0.04); const fl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55, 6, 1), new THREE.MeshStandardMaterial({ color: sx < 0 ? '#e0564f' : '#3f8fd8', side: THREE.DoubleSide, roughness: 0.8 })); fl.geometry.translate(0.45, 0, 0); fl.position.set(fx, by + 2.85, fz); fl.userData.keep = true; fl.userData.dyn = true; put(fl); const P = fl.geometry.attributes.position, base = P.array.slice(); FX.push(t2 => { for (let i = 0; i < P.count; i++){ const x = base[i * 3]; P.setZ(i, Math.sin(t2 * 3.2 + x * 5 + sx) * 0.09 * x); } P.needsUpdate = true; fl.rotation.y = Math.sin(t2 * 0.4 + sx) * 0.25; }); } }
+    /* 籃球場 */
+    { const x0 = 19.3, x1 = 29.3, z0 = -2.5, z1 = 3.1, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03, ly = y + 0.075; slab(x0 - 0.4, x1 + 0.4, z0 - 0.4, z1 + 0.4, '#3f8a6a', 0.04, y - 0.01); slab(x0, x1, z0, z1, '#d98a4e', 0.06, y);
+      line(x0, z0, x1, z0, ly); line(x0, z1, x1, z1, ly); line(x0, z0, x0, z1, ly); line(x1, z0, x1, z1, ly); line(cx, z0, cx, z1, ly); ring(cx, cz, 0.75, ly);
+      for (const sx of [-1, 1]){ const ex = sx < 0 ? x0 : x1, kx = ex - sx * 0.95; const key = box([1.9, 0.012, 1.7], '#4f86c6', [kx, ly - 0.004, cz]); key.castShadow = false; put(key); line(ex - sx * 1.9, cz - 0.85, ex - sx * 1.9, cz + 0.85, ly); line(ex, cz - 0.85, ex - sx * 1.9, cz - 0.85, ly); line(ex, cz + 0.85, ex - sx * 1.9, cz + 0.85, ly); ring(ex - sx * 0.55, cz, 2.35, ly, '#ffffff', sx < 0 ? -Math.PI / 2 : Math.PI / 2, Math.PI);
+        const px = ex + sx * 0.35; pole(px, cz, y, 2.5, '#6f7882', 0.07); put(box([0.5, 0.06, 0.06], '#6f7882', [px - sx * 0.25, y + 2.45, cz])); put(box([0.05, 0.75, 1.15], '#f4f1e6', [ex - sx * 0.12, y + 2.5, cz])); const sq = box([0.02, 0.32, 0.42], '#e0564f', [ex - sx * 0.15, y + 2.38, cz]); sq.castShadow = false; put(sq);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.022, 6, 16), M('#f2772c')); rim.rotation.x = Math.PI / 2; rim.position.set(ex - sx * 0.36, y + 2.2, cz); put(rim); const nt = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.12, 0.3, 10, 2, true), new THREE.MeshBasicMaterial({ color: '#ffffff', wireframe: true })); nt.position.set(ex - sx * 0.36, y + 2.04, cz); nt.userData.keep = true; nt.userData.dyn = true; put(nt); FX.push(t2 => { nt.rotation.z = Math.sin(t2 * 1.7 + sx) * 0.06; }); }
+      const bb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), M('#e8762c', 0.7)); bb.position.set(cx + 1.6, y + 0.22, cz + 1.1); bb.castShadow = true; put(bb); }
+    /* 羽球場 */
+    { const x0 = 30.1, x1 = 32.7, z0 = -2.6, z1 = 2.8, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03, ly = y + 0.075; slab(x0 - 0.3, x1 + 0.3, z0 - 0.3, z1 + 0.3, '#2f7d5a', 0.04, y - 0.01); slab(x0, x1, z0, z1, '#3fa06e', 0.06, y);
+      line(x0, z0, x1, z0, ly, null, 0.05); line(x0, z1, x1, z1, ly, null, 0.05); line(x0, z0, x0, z1, ly, null, 0.05); line(x1, z0, x1, z1, ly, null, 0.05); line(cx, z0, cx, cz - 0.8, ly, null, 0.05); line(cx, cz + 0.8, cx, z1, ly, null, 0.05); for (const s of [-1, 1]){ line(x0, cz + s * 0.8, x1, cz + s * 0.8, ly, null, 0.05); line(x0, cz + s * 2.4, x1, cz + s * 2.4, ly, null, 0.05); }
+      pole(x0 - 0.12, cz, y, 1.25, '#e9eef2', 0.035); pole(x1 + 0.12, cz, y, 1.25, '#e9eef2', 0.035); net(x0 - 0.12, cz, x1 + 0.12, cz, y + 0.75, y + 1.22); const sc = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 8), M('#ffffff')); sc.position.set(cx + 0.5, y + 0.14, cz + 1.4); sc.rotation.z = 2.2; put(sc); }
+    /* 撞球棚：四根柱子、藍色棚頂、兩張球桌 */
+    { const x0 = 28.6, x1 = 32.8, z0 = -11.2, z1 = -6.9, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03; slab(x0, x1, z0, z1, '#c9a678', 0.07, y); for (const sx of [0, 1]) for (const sz of [0, 1]){ const px = sx ? x1 - 0.2 : x0 + 0.2, pz = sz ? z1 - 0.2 : z0 + 0.2; put(box([0.18, 2.5, 0.18], '#e6e2d6', [px, y + 1.3, pz])); addCircleCol(px, pz, 0.2); }
+      const rf = box([x1 - x0 + 0.7, 0.1, z1 - z0 + 0.7], '#5fa3e0', [cx, y + 2.62, cz]); put(rf); put(box([x1 - x0 + 0.4, 0.16, z1 - z0 + 0.4], '#e6e2d6', [cx, y + 2.5, cz]));
+      for (const tz of [cz - 1.05, cz + 1.05]){ put(box([2.0, 0.14, 1.1], '#7a4a2a', [cx, y + 0.78, tz])); const felt = box([1.78, 0.02, 0.88], '#2f9a5f', [cx, y + 0.86, tz]); felt.castShadow = false; put(felt); for (const a of [-1, 1]) for (const b2 of [-1, 1]) put(box([0.12, 0.72, 0.12], '#5f3a22', [cx + a * 0.85, y + 0.36, tz + b2 * 0.42])); addBoxCol(cx, tz, 2.0, 1.1);
+        ['#f2c94c', '#3f7fd6', '#e0564f', '#8e5bd0', '#f2772c', '#2f9a5f', '#1c1c20', '#ffffff'].forEach((c, i) => { const bl = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M(c, 0.4)); const row = i < 3 ? 0 : i < 5 ? 1 : i < 6 ? 2 : 9; bl.position.set(row === 9 ? cx - 0.55 + (i - 6) * 0.9 * (tz > cz ? 0.6 : 1) : cx + 0.3 + row * 0.09, y + 0.915, row === 9 ? tz + (i - 6.5) * 0.3 : tz + ((i < 3 ? i - 1 : i < 5 ? i - 3.5 : 0)) * 0.1); put(bl); }); const cue = box([1.3, 0.025, 0.025], '#d9b27a', [cx - 0.2, y + 0.9, tz + 0.3]); cue.rotation.y = 0.5; cue.castShadow = false; put(cue); }
+      const lamp = box([1.2, 0.08, 0.3], '#f4f1e6', [cx, y + 2.1, cz]); lamp.material = new THREE.MeshStandardMaterial({ color: '#fff3c9', emissive: '#ffd98a', emissiveIntensity: 0.6 }); put(lamp); put(box([0.03, 0.4, 0.03], '#6f7882', [cx, y + 2.32, cz])); }
+    /* 沙灘排球（在沙灘上）：藍色邊繩、兩根柱子、球網、一顆排球 */
+    { const x0 = 33.4, x1 = 37.0, z0 = -3.8, z1 = 3.0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.02; for (const [a, b2, c, d2] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) line(a, b2, c, d2, y + 0.02, '#3f7fd6', 0.08);
+      pole(x0 - 0.25, cz, y, 1.9, '#f2b532', 0.05); pole(x1 + 0.25, cz, y, 1.9, '#f2b532', 0.05); net(x0 - 0.25, cz, x1 + 0.25, cz, y + 1.05, y + 1.85); const vb = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), M('#fbf4d0', 0.7)); vb.position.set(cx - 0.6, y + 0.16, cz + 1.5); vb.castShadow = true; put(vb); const st = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.02, 5, 14), M('#3f7fd6')); st.position.copy(vb.position); st.rotation.x = 1.1; put(st); } }
   // ---- 水族館（大型玻璃魚缸，正面朝南）----
   const [AX, AZ] = AQUA;
   const aq = new THREE.Group(); aq.position.set(AX, 0, AZ); scene.add(aq);
@@ -15569,7 +15612,7 @@ function renderTab(){
       '村子分區：港邊廣場是熱鬧、買賣和出海的地方；島中央的潮汐廣場是大家集合聊天的地方，東邊是村長辦公室（村長阿土伯在門口），外圈有花園和長椅；寵物店後面的森林邊有「🐾 寵物樂園」，帶寵物走進去站著，寵物會自己在裡面跑；南方沙灘可以休息。',
       '一進遊戲會站在「港邊廣場」：中間有噴水池；港口的兩間店（釣具店、潮汐魚市場）圍著廣場，往前走就是碼頭。島中央的「潮汐廣場」是三條大路交會的地方，節慶活動也在那裡。',
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、瀑布潭、望海丘走細細的小步道。',
-      '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 廣場旁是潮汐食堂、釣蝦場；👗 商店街（往南走）是阿綾服裝店、阿木木工坊、阿彩畫廊、美髮沙龍、寵物店。',
+      '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 廣場旁是潮汐食堂、釣蝦場；🏀 運動公園（島的東邊、沙灘旁）有小體育場、籃球場、羽球場、撞球棚和沙灘排球場，目前是可以逛的場地，還不能打球；👗 商店街（往南走）是阿綾服裝店、阿木木工坊、阿彩畫廊、美髮沙龍、寵物店。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
@@ -16682,6 +16725,7 @@ function frame(){
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
+  if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
   updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
