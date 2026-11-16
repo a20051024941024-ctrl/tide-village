@@ -1516,3 +1516,6 @@ body.pooling #duelBar, body.subbing #duelBar{display:none}
 #duelQ .dq-x{padding:4px 12px;font-size:12px}
 body.pooling #duelQ, body.subbing #duelQ{display:none}
 #duelCard .dc-tier{font-weight:800;color:#c98a00;font-size:14px}
+
+/* v521 名字旁邊的排位賽段位 */
+.tag .nm[data-duel]::after{content:attr(data-duel);margin-left:5px;padding:0 6px;border-radius:999px;background:rgba(24,51,74,.78);color:#ffe9a8;font-size:10px;font-weight:800;white-space:nowrap;vertical-align:1px}
