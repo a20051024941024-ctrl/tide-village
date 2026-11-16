@@ -1456,3 +1456,31 @@ body.photo #ttPanel{display:none!important}
 @keyframes bpShake{0%{transform:translateX(-1px)}50%{transform:translateX(1px)}100%{transform:translateX(-1px)}}
 .bossHit{position:fixed;z-index:60;transform:translate(-50%,0) scale(.7);font:900 26px var(--f-display,sans-serif);color:#fff;text-shadow:0 2px 0 #c8751a,0 0 8px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:transform .8s cubic-bezier(.2,.8,.3,1),opacity .8s}
 .bossHit.go{transform:translate(-50%,-70px) scale(1.15);opacity:1}
+/* v497 撞球館：打球時從正上方看球桌，左邊是力道條 */
+#poolHud{display:none;position:fixed;inset:0;z-index:30;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+body.pooling #poolHud{display:block}
+body.pooling > *:not(canvas):not(script):not(style):not(#poolHud):not(#toasts):not(#bigMsg):not(#fadeFx):not(#flashFx):not(#rotate):not(#loadScr){display:none!important}
+#poolHud .pl-pad{position:absolute;inset:0;touch-action:none}
+#poolHud .pl-top{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--gt, 8px) + 2px);display:flex;gap:8px;align-items:stretch;padding:6px 8px;border-radius:14px;max-width:calc(100vw - 12px);pointer-events:none;font-size:13px;color:#18334a}
+#poolHud .pl-p{min-width:86px;max-width:32vw;padding:2px 8px;border-radius:10px;border:2px solid transparent;display:flex;flex-direction:column;gap:3px}
+#poolHud .pl-p[hidden]{display:none}
+#poolHud .pl-p.on{border-color:#f2b532;background:#fff6d8}
+#poolHud .pl-p b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#poolHud .pl-p i{font-style:normal;font-size:11px;color:#5a6a7a;display:flex;gap:3px;flex-wrap:wrap;min-height:13px;align-items:center}
+#poolHud .pl-p i em{font-style:normal}
+#poolHud .pl-p i u{width:11px;height:11px;border-radius:50%;background:var(--c);border:1px solid rgba(0,0,0,.35);display:inline-block;text-decoration:none}
+#poolHud .pl-p i u.st{background:linear-gradient(#fbfaf2 0 24%,var(--c) 24% 76%,#fbfaf2 76%)}
+#poolHud .pl-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:76px;max-width:36vw;text-align:center;font-weight:800;font-size:12px;line-height:1.25}
+#poolHud .pl-time{font-variant-numeric:tabular-nums;font-size:12px;color:#5a6a7a}
+#poolHud .pl-time.low{color:#d8262a}
+#poolHud .pl-pow{position:absolute;left:calc(var(--gl, 8px) + 2px);top:50%;transform:translateY(-42%);width:46px;height:min(50vh,340px);border-radius:23px;background:rgba(24,51,74,.72);border:2px solid #fff;overflow:hidden;touch-action:none}
+#poolHud .pl-pow.off{opacity:.3;pointer-events:none}
+#poolHud.spec .pl-pow{display:none}
+#poolHud .pl-powfill{position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(#ffe27a,#ff9f43 55%,#e0452f)}
+#poolHud .pl-powcue{position:absolute;left:50%;width:32px;height:28px;margin-left:-16px;top:0;border-radius:10px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.4);pointer-events:none}
+#poolHud .pl-pow span{position:absolute;left:0;right:0;bottom:6px;text-align:center;color:#fff;font-size:11px;font-weight:800;pointer-events:none}
+#poolHud .pl-btns{position:absolute;right:var(--gr, 8px);bottom:calc(var(--gb, 8px) + 4px);display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+#poolHud .pl-btns button{font:inherit;font-weight:800;font-size:14px;padding:10px 16px;border-radius:999px;border:2px solid #18334a;background:#fff;color:#18334a;box-shadow:0 3px 0 #18334a}
+#poolHud .pl-btns button[hidden]{display:none}
+#poolHud .pl-btns .pl-again{background:#ffd23f}
+#poolHud .pl-tip{position:absolute;left:calc(var(--gl, 8px) + 58px);right:calc(var(--gr, 8px) + 118px);bottom:calc(var(--gb, 8px) + 6px);text-align:center;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.7);pointer-events:none}
