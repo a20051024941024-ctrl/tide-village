@@ -5912,7 +5912,7 @@ function startReel(){
   $('#mashFx').hidden = true;
   me.say('!', 'alert', 0.6);
   const shr = F.spot && F.spot.id === 'shrimp'; F.shr = shr;
-  $('#fhName').textContent = rec.count[F.fish.id] ? `${F.fish.name}上鉤了！` : shr ? (F.fish.rarity === '傳說' ? '這隻蝦超有力！' : F.fish.rarity === '稀有' ? '好大的鉗子！' : '沒見過的蝦上鉤了！') : F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : '沒見過的魚上鉤了！';   /* 釣過的魚會直接說是什麼魚 */
+  $('#fhName').textContent = shr ? (F.fish.rarity === '傳說' ? '這隻蝦超有力！' : F.fish.rarity === '稀有' ? '好大的鉗子！' : '沒見過的蝦上鉤了！') : F.fish.rarity === '傳說' ? '超大的拉力！' : F.fish.rarity === '稀有' ? '好重的手感！' : rec.count[F.fish.id] ? '有魚上鉤了！' : '沒見過的魚上鉤了！';   /* v506 不再直接說是什麼魚：拉出水才知道（只透露手感、有沒有見過） */
   const rc = $('#fhRar'); rc.className = 'chip r-' + F.fish.rarity; rc.textContent = F.fish.rarity;
   $('#fishMark').className = 'r-' + F.fish.rarity; { const ic = $('#fmIco'); ic.textContent = ''; const cv = fishCanvas(F.fish, !!rec.count[F.fish.id], 40, 26); cv.className = 'fmpic'; ic.appendChild(cv); }   /* 拉魚時顯示這條魚的樣子（沒釣過的只有黑影） */ F.S0 = 1; F.dmgAcc = 0; F.dmgT = 0;
   pushPresence(true);
@@ -5936,8 +5936,9 @@ function updateBiteFish(dt, t){
   if (BiteFish.id !== f.id){
     if (BiteFish.m) scene.remove(BiteFish.m);
     const w = F.roll && F.roll.f ? F.roll.w : (f.min + f.max) / 2, m = fishModel(f, clamp(0.42 + Math.log(1 + w) * 0.3, 0.42, 0.9));
-    const mats = []; if (!rec.count[f.id]){ const sm = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0, depthWrite:false }); mats.push([sm, 0.5]); m.traverse(o => { if (o.isMesh) o.material = sm; }); }
-    else m.traverse(o => { if (o.isMesh){ o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0; o.material.depthWrite = false; mats.push([o.material, 0.75]); } });
+    /* v506 作者：「原本魚影是黑的，為什麼突然改成那條魚的樣子」→ 以前釣過的魚會在咬餌前用原本的顏色現身，等於先爆雷。
+       現在不管釣過沒有，在水裡一律是黑色的影子（看得出大小和形狀），顏色和花紋要等拉出水面才揭曉 */
+    const mats = [], sm = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0, depthWrite:false }); mats.push([sm, 0.5]); m.traverse(o => { if (o.isMesh) o.material = sm; });
     m.traverse(o => { if (o.isMesh){ o.castShadow = false; o.renderOrder = -1; } });   /* 先畫魚、再畫水面：看起來在水裡 */
     m.visible = false; scene.add(m); BiteFish.m = m; BiteFish.mats = mats; BiteFish.id = f.id; BiteFish.ang = Math.random() * Math.PI * 2; BiteFish.k = 0; BiteFish.fade = 0; BiteFish.showAt = t + rand(1.2, 3.5);
     if (BiteFish.lastSh && t - BiteFish.lastSh.t < 0.5){ const L = BiteFish.lastSh; BiteFish.ang = L.ang; BiteFish.k = L.k; BiteFish.showAt = t; }   /* 從魚影接著游上來現身 */   /* 等一下才游過來，不會一丟下去就出現 */ m.position.set(me.bobPos.x + Math.cos(BiteFish.ang) * 2.4, WATER_LEVEL - 0.06, me.bobPos.z + Math.sin(BiteFish.ang) * 2.4);
@@ -15957,6 +15958,7 @@ function renderTab(){
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🎨 竿子造型每支竿子各自裝：在阿鐵的工坊按「裝上」只會裝在現在拿的那支，換竿子時會自動換成那支記住的造型；背包的釣竿清單會寫每支裝了什麼造型。',
+      '🌑 水裡的魚影：拋竿以後水底會有黑色的影子游過來咬餌，看得出大概多大、什麼形狀，但看不出顏色和花紋；拉魚的時候上面也只會說手感（例如「好重的手感！」），不會說是什麼魚。要等拉出水面才知道釣到什麼。',
       '🦐 在釣蝦場拋竿後，游過來的是蝦子的影子，不是魚影。',
       '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
