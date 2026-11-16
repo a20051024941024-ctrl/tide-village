@@ -13856,7 +13856,8 @@ const NEAR_R = 28; let chatNear = !!LS.get('tide.chatNear', false);
 function chatArea(){ return onIsle ? 'i' + onIsle.owner : ''; }
 function myPlaceKey(){ let k = ''; if (onIsle) k += 'i' + onIsle.owner; if (House.on) k += 'h' + ((House.it ? House.it.id : 1) + (House.floor || 0) * 1000); return k; }
 function peerPlaceKey(pr){ let k = ''; if (pr && pr.is) k += 'i' + pr.is; if (pr && pr.hs) k += 'h' + pr.hs; return k; }
-function nearListeners(){ let n = 0; const pk = myPlaceKey(); for (const p of peers.values()){ if (!p.pres || peerPlaceKey(p.pres) !== pk) continue; if (Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z) < NEAR_R) n++; } return n; }
+function nearListeners(){ let n = 0, ps; try { ps = peers; } catch (e) { return 0; }   /* v516 開機時 peers 還沒準備好（聊天設成「附近」的人一開遊戲就整個壞掉） */
+  const pk = myPlaceKey(); for (const p of ps.values()){ if (!p.pres || peerPlaceKey(p.pres) !== pk) continue; if (Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z) < NEAR_R) n++; } return n; }
 function renderChatMode(){ const b = $('#chatMode'); if (!b) return; b.textContent = chatNear ? '📍 附近' : '🌐 全部'; b.classList.toggle('near', chatNear); const i = $('#chatIn'); if (i) i.placeholder = chatNear ? `跟附近的人說（${nearListeners()} 人聽得到）…` : (isTouch ? '點這裡跟大家聊天…' : '按 Enter 跟大家聊天…'); }
 if ($('#chatMode')){ $('#chatMode').addEventListener('pointerdown', e => e.preventDefault());   /* 按切換的時候不要讓輸入框失去焦點（手機鍵盤不會收起來） */
   $('#chatMode').addEventListener('click', e => { e.preventDefault(); chatNear = !chatNear; LS.set('tide.chatNear', chatNear); renderChatMode(); toast(chatNear ? '📍 附近聊天：只有旁邊 28 公尺內的人看得到你說的話' : '🌐 全部聊天：大廳裡的人都看得到'); $('#chatIn').focus(); }); }
@@ -13882,7 +13883,7 @@ if (isTouch && $('#chatIn')) $('#chatIn').placeholder = '點這裡跟大家聊�
 if ($('#chatIn')){ $('#chatIn').addEventListener('focus', () => document.body.classList.add('chatting')); $('#chatIn').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('#chatIn')) document.body.classList.remove('chatting'); }, 150)); }
 $('#chatToggle').addEventListener('click', () => { document.body.classList.toggle('chatting'); if (document.body.classList.contains('chatting')) $('#chatIn').focus(); });
 $('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = false; renderChatMode(); });
-renderChatMode();
+try { renderChatMode(); } catch (e) {}
 
 let myEmote = null;
 /* v313 安全認識陌生人（41）：跟 Sky 一樣，先「互相揮手」才算認識。開了「只看認識的人打的字」之後，
