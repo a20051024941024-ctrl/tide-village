@@ -7321,7 +7321,18 @@ function homeInviteCard(iv){ try { let c = $('#invCard'); if (c) c.remove(); c =
   v.addEventListener('click', () => { c.remove(); try { visitIsle(iv.owner); } catch(e){ openSheet('island'); } });
   x.addEventListener('click', () => c.remove()); a.append(y, v, n, x); c.appendChild(a); document.body.appendChild(c); SFX.catch(); } catch(e){} }
 async function homeRpc(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能用家的功能'); return null; } try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; adoptHome(data); return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
-function cloudErrMsg(e){ const m = String(e && (e.message || e) || ''); return /[一-龥]/.test(m) ? m.replace(/^.*?([一-龥])/, '$1') : '暫時連不上雲端'; }
+function cloudErrMsg(e){ const m = String(e && (e.message || e) || ''); return /[一-龥]/.test(m) ? m.replace(/^.*?([一-龥])/, '$1') : netErrText(m); }
+/* v5xx 不再只說「暫時連不上雲端」：分清楚是網路斷了、連不到伺服器，還是伺服器那邊出錯（已經自動回報） */
+function netErrText(m){ m = String(m || ''); if (typeof navigator !== 'undefined' && navigator.onLine === false) return '網路好像斷了，連上網路再試一次';
+  if (/fetch|network|timeout|timed out|Load failed|aborted|502|503|504|ECONN|Failed to/i.test(m)) return '連不到伺服器，可能是網路不穩，等一下再試';
+  return '伺服器出了點問題，已經自動回報，等一下再試'; }
+const ErrQ = { at:0 };
+function errReport(fn, err){ const m = String((err && (err.message || err.details || err.code)) || err || '').slice(0, 300); if (!m || /[一-龥]/.test(m)) return;
+  const net = /fetch|network|timeout|timed out|Load failed|aborted|Failed to/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false);
+  if (net){ try { const q = LS.get('tide.errq', []); q.push([fn, m, Date.now()]); LS.set('tide.errq', q.slice(-10)); } catch(e){} return; }
+  try { console.warn('[雲端錯誤]', fn, m); Cloud.sb.rpc('log_client_error', { p_fn: fn, p_msg: m, p_ver: (navigator.userAgent.match(/Android [0-9.]+|iPhone OS [0-9_]+|Windows|Mac OS X/) || [''])[0] }).then(() => {}, () => {}); } catch(e){} }
+function errFlush(){ const t = Date.now(); if (t - ErrQ.at < 60000) return; ErrQ.at = t; let q = []; try { q = LS.get('tide.errq', []); } catch(e){} if (!q || !q.length) return; try { LS.set('tide.errq', []); } catch(e){}
+  for (const [fn, m, at] of q) try { Cloud.sb.rpc('log_client_error', { p_fn: fn, p_msg: `${m}（離線時 ${new Date(at).toLocaleString()}）`, p_ver: '' }).then(() => {}, () => {}); } catch(e){} }
 async function goHome(){
   const meId = myIdOrMe(); if (!Home.owner || Home.owner === meId){ closeSheet(); goMyIsle(); return; }
   const o = Home.people.find(p => p.id === Home.owner); await visitIsle(Home.owner, (o && o.name) || '家');
@@ -9055,7 +9066,7 @@ function friendNameOf(uid){ if (!uid || !Fr || !Array.isArray(Fr.list)) return '
 function onlineUids(){ const s = new Set(); for (const p of peers.values()) if (typeof p.pres.u === 'string') s.add(p.pres.u); return s; }
 async function frRpc(fn, args){
   if (!Cloud.on || !Cloud.sb) return null;
-  try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error){ const m = String(error.message || error), k = CLOUD_ERR.find(x => m.includes(x)); toast(k ? `伺服器：${esc(k)}` : '暫時連不上雲端'); return null; } return data; } catch(e){ toast('暫時連不上雲端'); return null; }
+  try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error){ const m = String(error.message || error), k = CLOUD_ERR.find(x => m.includes(x)); toast(k ? `伺服器：${esc(k)}` : netErrText(m)); return null; } return data; } catch(e){ toast('暫時連不上雲端'); return null; }
 }
 function adoptFriends(d){
   if (!d || typeof d !== 'object') return; Fr.list = Array.isArray(d.friends) ? d.friends : []; Fr.req = Array.isArray(d.requests) ? d.requests : []; Fr.gifts = Array.isArray(d.gifts) ? d.gifts : []; Fr.at = Date.now();
@@ -14487,7 +14498,7 @@ function cloudCall(fn, args){
     Cloud.pending--;
     if (error){
       const m = String(error.message || error); const known = CLOUD_ERR.find(k => m.includes(k));
-      toast(known ? `伺服器：${esc(known)}` : '暫時連不上雲端，這個動作沒有存到。');
+      toast(known ? `伺服器：${esc(known)}` : netErrText(m) + '（這個動作沒有存到）');
       console.warn('cloud', fn, m);
       if (Cloud.pending === 0) cloudRefresh();
       return null;
@@ -14565,6 +14576,9 @@ async function cloudInit(){
   try {
     const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm');
     const sb = mod.createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:'implicit', storageKey:'tide.auth' } });
+    /* 自動回報：伺服器回了不是中文的錯（程式的錯）、或連不上，就記下「哪個動作、什麼錯」送到伺服器（176_client_errors.sql），我們才查得到真正原因。
+       故意擋下來的錯（中文訊息，例如「金幣不夠」）不送。連不上的先存在手機，下次連得上再一起送。 */
+    try { const raw = sb.rpc.bind(sb); sb.rpc = (fn, args, opts) => { const q = raw(fn, args, opts); if (fn !== 'log_client_error' && q && typeof q.then === 'function'){ const t = q.then.bind(q); q.then = (ok, bad) => t(r => { try { if (r && r.error) errReport(fn, r.error); else errFlush(); } catch(e){} return ok ? ok(r) : r; }, bad); } return q; }; } catch(e){}
     Cloud.sb = sb;
     const fromLink = /access_token=|error_description=/.test(location.hash);
     const linkErr = (location.hash.match(/error_description=([^&]+)/) || [])[1];

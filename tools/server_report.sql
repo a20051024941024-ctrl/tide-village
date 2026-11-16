@@ -60,3 +60,9 @@ from (select count(*) as n, count(*) filter (where total >= 1) as c1, count(*) f
 select '室內烏龜缸設定' as 項目, (public._furn('turtletank')).price::text || ' 金幣、半徑 ' || (public._furn('turtletank')).rad::text as 值
 union all select '_furn 版本數', count(*)::text from pg_proc where proname = '_furn'
 union all select '不認得：' || coalesce(x->>'t', '(空白)'), count(*)::text from public.players p, jsonb_array_elements(case when jsonb_typeof(p.island->'items') = 'array' then p.island->'items' else '[]' end) h, jsonb_array_elements(case when jsonb_typeof(h->'f') = 'array' then h->'f' else '[]' end) x where (public._furn(x->>'t')).price is null group by x->>'t';
+
+\echo
+\echo '## ⚠️ 玩家遇到的伺服器錯誤（最近 24 小時，最多的 15 種）'
+\echo
+select fn as 動作, left(msg, 120) as 錯誤, sum(n) as 次數, count(distinct uid) as 人數, max(at) at time zone 'Asia/Taipei' as 最近一次
+  from public.client_errors where at > now() - interval '24 hours' group by fn, left(msg, 120) order by 3 desc limit 15;
