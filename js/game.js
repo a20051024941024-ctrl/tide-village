@@ -6149,7 +6149,7 @@ function updateFishing(dt, t){
       mk.style.transform = `translate(${sxC.toFixed(0)}px, ${syC.toFixed(0)}px)`;
       $('#fmHp').style.width = (F.S * 100).toFixed(1) + '%';
       if (F.boss){ $('#bbHp').style.width = (F.S * 100).toFixed(1) + '%'; $('#bbPct').textContent = Math.ceil(F.S * 100) + '%'; mk.classList.add('boss'); } else mk.classList.remove('boss');
-      { const bf = camBaseFov(), want = F.boss && F.jump > 0 ? bf - 11 : bf;   /* v391 連打時不再一縮一放（玩家說畫面縮大縮小） */ if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
+      if (!FP.act){ const bf = camBaseFov(), want = F.boss && F.jump > 0 ? bf - 11 : bf;   /* v391 連打時不再一縮一放（玩家說畫面縮大縮小） */ if (Math.abs(camera.fov - want) > 0.05){ camera.fov += (want - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix(); } }
       $('#fmDist').textContent = realD.toFixed(1) + 'm';
       let warn = F.mash ? '' : F.run > 0 ? '往外衝！先放開' : F.slack > 0.9 ? '線太鬆！按住收線' : F.jump > 0 ? '跳起來了！放開！' : T > 0.8 ? '張力太高！' : wrong ? '方向錯了！' : F.S < 0.25 ? '快拉上來！' : '';
       if (F.act && F.acts) warn = '';   /* v254 有動作提示的時候不要再疊一行 */
@@ -9874,8 +9874,16 @@ function fpHand(side){ const g = new THREE.Group(), B = (w, h, d, m, x, y, z, p)
   const arm = new THREE.Group(); arm.position.set(0, -0.004, 0.045); arm.rotation.x = 0.62; g.add(arm);
   { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.034, 0.07, 10), FP.skin); w.rotation.x = Math.PI / 2; w.position.z = 0.035; arm.add(w); const s = new THREE.Mesh(new THREE.CylinderGeometry(0.043, 0.05, 0.5, 10), FP.sleeve); s.rotation.x = Math.PI / 2; s.position.z = 0.32; arm.add(s); const cf = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.03, 10), FP.sleeve); cf.rotation.x = Math.PI / 2; cf.position.z = 0.075; arm.add(cf); }
   return g; }
+/* v514 作者：「手掌是歪的」→ 握竿、抓把手的手改成「握拳」的樣子（不再有一根一根翹起來的手指），手腕和袖子往後下方接到畫面外 */
+function fpFist(side){ const g = new THREE.Group(), B = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); g.add(o); return o; };
+  B(0.07, 0.055, 0.075, FP.skin, 0, 0, 0); B(0.072, 0.03, 0.025, FP.skin, 0, -0.012, -0.042);   /* 拳頭和彎起來的指節 */
+  for (let i = 0; i < 4; i++){ const k = B(0.016, 0.012, 0.006, FP.skin, -0.026 + i * 0.0175, 0.012, -0.0395); k.material = FP.skinD; }   /* 指節的線（深一點的膚色） */
+  B(0.02, 0.022, 0.045, FP.skin, -side * 0.038, 0.006, -0.02).rotation.y = side * 0.4;   /* 大拇指壓在上面 */
+  const arm = new THREE.Group(); arm.position.set(0, -0.004, 0.04); arm.rotation.x = 0.55; g.add(arm);
+  { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.031, 0.07, 10), FP.skin); w.rotation.x = Math.PI / 2; w.position.z = 0.035; arm.add(w); const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.047, 0.5, 10), FP.sleeve); sl.rotation.x = Math.PI / 2; sl.position.z = 0.32; arm.add(sl); const cf = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.03, 10), FP.sleeve); cf.rotation.x = Math.PI / 2; cf.position.z = 0.075; arm.add(cf); }
+  return g; }
 function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); const g = FP.g = new THREE.Group(); g.visible = false; g.userData.keep = true; g.userData.dyn = true; camera.add(g);
-  FP.skin = new THREE.MeshStandardMaterial({ color: '#ffd9b8', roughness: 0.75 }); FP.sleeve = new THREE.MeshStandardMaterial({ color: '#4f8fe0', roughness: 0.85 });
+  FP.skin = new THREE.MeshStandardMaterial({ color: '#ffd9b8', roughness: 0.75 }); FP.skinD = new THREE.MeshStandardMaterial({ color: '#e8b896', roughness: 0.8 }); FP.sleeve = new THREE.MeshStandardMaterial({ color: '#4f8fe0', roughness: 0.85 });
   /* v509 作者傳了一張第一人稱海釣遊戲的圖：竿子被魚拉彎、竿子下面掛著捲線器、一隻手握竿一隻手轉把手
      → 竿子改成一節一節的（可以彎），竿身下面有導線環；握把上掛一個紡車式捲線器；左手握竿、右手抓著捲線器的把手，收線的時候把手會轉 */
   const rp = FP.rodP = new THREE.Group(); rp.position.set(0.17, -0.37, -0.3); rp.rotation.order = 'YXZ'; g.add(rp);
@@ -9894,9 +9902,9 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
       FP.segs.push(sg); par = sg; }
     FP.tip = new THREE.Object3D(); FP.tip.position.y = L; par.add(FP.tip); }
   /* 手：左手握竿（在捲線器上面一點），右手抓捲線器的把手；手掛在鏡頭上，每一格跟著竿子的位置擺 */
-  FP.handL = fpHand(1); FP.handL.scale.setScalar(0.75); g.add(FP.handL); FP.handR = fpHand(-1); FP.handR.scale.setScalar(0.75); g.add(FP.handR);   /* v512 作者：「手是不是反了」→ 手背朝上的右手，大拇指在左邊（fpHand 的 side 是給托魚、手心朝上用的，這裡要反過來） */ FP.crankA = 0; FP.bendNow = 0;
+  FP.handL = fpFist(-1); FP.handL.scale.setScalar(0.8); g.add(FP.handL); FP.handR = fpFist(1); FP.handR.scale.setScalar(0.8); g.add(FP.handR);   /* v512 作者：「手是不是反了」→ 手背朝上的右手，大拇指在左邊（fpHand 的 side 是給托魚、手心朝上用的，這裡要反過來） */ FP.crankA = 0; FP.bendNow = 0;
   FP.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f8fb', transparent: true, opacity: 0.85 })); FP.line.frustumCulled = false; FP.line.visible = false; FP.line.userData.keep = true; scene.add(FP.line); }
-function fpStart(){ fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
+function fpStart(){ fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.skinD.color.copy(me.av.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
 function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
 function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
@@ -9935,7 +9943,7 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
   if (!isFinite(camera.position.x + camera.position.y + camera.position.z)) camera.position.copy(FP.eye);
   FP.inT = (FP.inT || 0) + dt; camera.up.set(0, 1, 0); camera.position.lerp(FP.eye, 1 - Math.exp(-(3 + 11 * Math.min(1, FP.inT / 0.7)) * dt)); camera.lookAt(FP.look); camLook.copy(FP.look);   /* 剛切進來的 0.7 秒慢慢移過去 */
-  if (Math.abs(camera.fov - 62) > 0.05){ camera.fov += (62 - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
+  { const bf = camBaseFov(); if (Math.abs(camera.fov - bf) > 0.05){ camera.fov += (bf - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); } }   /* v514 作者：「一直點的時候畫面還是會突然放大」→ 第一人稱以前用自己的視角大小（62），跟拉魚時的視角大小互相拉扯，一拉魚／一放開就縮放；現在跟平常用同一個，不會變 */
   if (me.av.g.visible) poolMeVis(false);
   /* 竿子：平常微微晃；拉魚的時候竿尖被往下拉、抖；蓄力的時候往後舉 */
   const rp = FP.rodP, reel = F.phase === 'reeling', bend = clamp(me.bend || 0, 0, 1.2), wind = F.phase === 'charging' ? clamp(F.charge || 0, 0, 1) : 0;
@@ -9943,7 +9951,7 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
   if (FP.castT && t - FP.castT < 0.9){ const s2 = (t - FP.castT) / 0.9; if (s2 < 0.24){ const u = s2 / 0.24, e3 = u * u * u; cast = (FP.castW * 0.75 + 0.35) * (1 - e3) - 0.3 * e3; } else { const u = (s2 - 0.24) / 0.76; cast = -0.3 * (1 - u) * (1 - u) * (1 - u); } }   /* 往前甩是越甩越快（加速），在前面停住、竿尖指向遠方，然後慢慢放下來對著浮標 */
   const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
-  rp.position.set(0.03 - lift * 0.02, -0.3 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.42);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0)   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
+  rp.position.set(0.11 - lift * 0.02, -0.21 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.48);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0)   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
   /* 竿子彎：拉魚的時候照張力彎（越緊越彎），魚咬的時候竿尖抖，魚吊在竿尖時被魚的重量拉彎；甩竿往前的瞬間竿尖往後甩（彈性） */
   const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; let wantB = reel ? 0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25 : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
   if (c) wantB = c.t < 0.6 ? 0.9 * cw : c.t < 1.2 ? 0.55 * cw + Math.sin(c.t * 9) * 0.06 : c.t < 2.6 ? 0.3 * cw : 0.02;
@@ -9957,7 +9965,7 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (fly){ FP.spool.position.y = 0.04 + Math.sin(t * 60) * 0.001; }
   /* 手跟著竿子：左手握在捲線器上面那段，右手抓把手 */
   camera.updateMatrixWorld(true); const hp = FP.tgt; hp.set(0, -0.12, 0.006); rp.localToWorld(hp); FP.g.worldToLocal(hp); FP.handL.position.copy(hp); FP.handL.position.x -= 0.03; FP.handL.position.y -= 0.012; FP.handL.rotation.set(0.12, -0.4, 0);
-  FP.knob.getWorldPosition(hp); FP.g.worldToLocal(hp); FP.handR.position.set(hp.x + 0.018, hp.y - 0.008, hp.z + 0.03); FP.handR.rotation.set(0.12, 0.4, 0); FP.handR.visible = !(c && c.held);
+  FP.knob.getWorldPosition(hp); FP.g.worldToLocal(hp); FP.handR.position.set(hp.x + 0.018, hp.y - 0.008, hp.z + 0.03); FP.handR.rotation.set(0.1, 0.35, 0); FP.handR.visible = !(c && c.held);
   FP.line.visible = false; fpCatchTick(dt, t); return true; }
 function enterPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🎱 歡迎來到潮汐撞球館！', 1.4); }, 260); }
