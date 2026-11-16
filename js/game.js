@@ -904,9 +904,9 @@ document.addEventListener('dblclick', e => e.preventDefault(), { passive:false }
 /* v518 作者：「釣的時候一直點，畫面會自動放大，然後就縮不回去」→ 截圖看是瀏覽器把「整個網頁」放大了（上面的按鈕都被切到畫面外），不是遊戲鏡頭。
    兩隻手指同時按在按鈕／介面上稍微一動，瀏覽器就當成兩指放大網頁。現在：兩指在畫面上移動一律不交給瀏覽器；萬一還是被放大了，馬上自動縮回去。 */
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive:false });
-if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visualViewport; if (!(v.scale > 1.01) || Date.now() - zfAt < 400) return; zfAt = Date.now();
-    const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
-    m.setAttribute('content', 'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'); setTimeout(() => m.setAttribute('content', c), 60); };
+if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visualViewport; /* v524 診斷小字顯示：放大的時候「版面」變成 980 寬、但螢幕只有 741 寬（縮放倍率還是 1）→ 是瀏覽器把版面撐大了，不是縮放 */ if (!(v.scale > 1.01 || v.width < document.documentElement.clientWidth - 3) || Date.now() - zfAt < 400) return; zfAt = Date.now();
+    const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = 'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
+    m.setAttribute('content', 'width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover'); setTimeout(() => m.setAttribute('content', c), 60); };
   visualViewport.addEventListener('resize', unzoom); visualViewport.addEventListener('scroll', unzoom); setInterval(unzoom, 1500); }
 /* v520 作者說 v518 以後「還是一樣」，但我這邊重現不了 → 畫面被放大的時候，在看得到的左上角顯示一行小字（版本和幾個數字），截圖給我就能知道是誰放大的 */
 { let zd = null, ver = '?'; try { caches.keys().then(ks => { const k = ks.filter(x => /^tide-v\d+$/.test(x)).sort((a, b) => +b.slice(6) - +a.slice(6))[0]; if (k) ver = k.slice(5); }).catch(() => {}); } catch (e) {}
@@ -5127,7 +5127,7 @@ function leaveBoat(){
 /* v258 遠洋羅盤：坐自己的船離開本島後，上面會指出最近的島在哪個方向、還有多遠 */
 const SAIL_ISLES = [ { n:'🏝️ 潮汐釣魚村', x:6, z:6, r:58 }, { n:'❄️ 冰封群島', x:FROST.dock[0] - 1, z:FROST.dock[1], r:3 }, { n:'🌌 深海浮台', x:ABYSS.x, z:ABYSS.z + ABYSS.d / 2 + 1.5, r:3 }, { n:'🌋 神秘島', x:MYST.x, z:MYST.z - MYST.r - 2, r:3 }, { n:'🌲 苔森之島', x:GREEN.x + 6, z:GREEN.z - 33, r:3 } ];
 function sailCompass(){
-  let el0 = document.getElementById('sailComp'); const far0 = myBoat && !Dive.on && !onIsle && Math.hypot(me.pos.x, me.pos.z) > 62;
+  let el0 = document.getElementById('sailComp'); const far0 = myBoat && !Dive.on && !onIsle && Math.hypot(me.pos.x, me.pos.z) > 62 && F.phase === 'idle';   /* v524 作者：「釣魚的時候字會擋到」→ 釣魚中不顯示「某某島 幾公尺」 */
   if (!far0){ if (el0 && !el0.hidden) el0.hidden = true; return; }
   if (!el0){ el0 = document.createElement('div'); el0.id = 'sailComp'; document.body.appendChild(el0); }
   const L = SAIL_ISLES.map(i => ({ i, d: Math.max(0, Math.hypot(i.x - me.pos.x, i.z - me.pos.z) - i.r) })).sort((a, b) => a.d - b.d).slice(0, 2);
@@ -9851,17 +9851,19 @@ function duelLive(){ const d = Duel.d; return !!d && (d.status === 'invited' || 
 async function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
   const r = await duelRpc('duel_invite', { p_to: uid }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
   duelAdopt(r); duelSay('inv', uid); toast(`⚔️ 已經邀請 ${esc(name || '對方')} 釣魚對決，等對方回應…`); }
+function duelFishingNow(){ try { return ['bite', 'reeling', 'landing', 'land', 'result'].includes(F.phase) || !$('#catchCard').hidden; } catch(e){ return false; } }
 function duelAdopt(d){ const prev = Duel.d; if (d && (d.status === 'declined' || d.status === 'cancelled')) d = null; Duel.d = d || null;
   if (d){ if (isFinite(+d.now)) Duel.off = +d.now - Date.now(); if (d.stats){ Duel.stats = d.stats; try { refreshMyName(); } catch(e){} } }
   if (!d){ if (prev && prev.status === 'invited'){ if (prev.me === 'a') toast('⚔️ 對方沒有接受對決'); duelCardClose('ask'); } duelBar(); return; }
   if (d.status === 'invited'){ if (d.me === 'b' && Duel.asked !== d.id){ Duel.asked = d.id; duelAsk(d); } }
   else if (d.status === 'active'){ duelCardClose('ask'); if (Duel.startTold !== d.id){ Duel.startTold = d.id; if (d.stats) Duel.prevStars = d.stats.stars; if (duelSrvNow() < d.start + 2000){ flash('⚔️ 釣魚對決！準備…', 1.6); try { SFX.coin(); } catch(e){} } } }
-  else if (d.status === 'done'){ duelCardClose('ask'); if (Duel.shown !== d.id){ Duel.shown = d.id; duelResult(d); } }
+  else if (d.status === 'done'){ duelCardClose('ask'); if (Duel.shown !== d.id){ if (duelFishingNow() && (!Duel.pend || Duel.pend.id !== d.id || performance.now() - Duel.pendAt < 60000)){ if (!Duel.pend || Duel.pend.id !== d.id) Duel.pendAt = performance.now(); Duel.pend = d; } else { Duel.pend = null; Duel.shown = d.id; duelResult(d); } } }   /* v524 手上還有魚、或正在看釣到的魚：結果等一下再跳 */
   duelBar(); }
 async function duelPoll(){ if (Duel.busy || !duelOn()) return; Duel.busy = true; Duel.polled = performance.now(); const r = await duelRpc('duel_now'); Duel.busy = false; if (r === undefined) return; duelAdopt(r); }
 function duelTick(){ if (!duelOn()) return; const t = performance.now(), d = Duel.d; let gap;
   if (d && d.status === 'invited') gap = 2000; else if (d && d.status === 'active') gap = d.end - duelSrvNow() <= 0 ? 1500 : 4000; else gap = (room && room.connected() && peers.size) ? 45000 : 300000;
   if (!Duel.polled) Duel.polled = t - gap + 8000;   /* 剛開遊戲 8 秒後問第一次（重新整理以後接回進行中的對決） */
+  if (Duel.pend && Duel.shown !== Duel.pend.id && (!duelFishingNow() || t - Duel.pendAt > 60000)){ const pd = Duel.pend; Duel.pend = null; Duel.shown = pd.id; duelResult(pd); }
   if (t - Duel.polled > gap && !Duel.busy) duelPoll();
   if (!Duel.statsAt){ Duel.statsAt = t; duelRpc('duel_my_stats').then(s => { if (s && typeof s === 'object'){ Duel.stats = s; try { refreshMyName(); } catch(e){} } }); }
   duelQTick(); duelBarTick(); }
@@ -9875,7 +9877,7 @@ function duelBar(){ const d = Duel.d, show = !!d && d.status === 'active'; let b
   b.hidden = !show; if (!show) return; const me = duelSide(d, true), op = duelSide(d, false); $('.db-me', b).textContent = me.w.toFixed(2); $('.db-op', b).textContent = op.w.toFixed(2); b.classList.toggle('lead', me.w > op.w); b.classList.toggle('behind', me.w < op.w); Duel.subKey = ''; duelBarTick(); }
 function duelBarTick(){ const b = Duel.bar, d = Duel.d; if (!b || b.hidden || !d || d.status !== 'active') return; const n = duelSrvNow(); let tx, low = false;
   if (n < d.start) tx = `${d.ranked ? '排位賽' : '友誼賽'}・準備… ${Math.max(1, Math.ceil((d.start - n) / 1000))}`;
-  else { const s = Math.max(0, Math.ceil((d.end - n) / 1000)); low = s <= 15; tx = s > 0 ? `對 ${duelSide(d, false).name}${(d.me === 'a' ? d.b_tier : d.a_tier) ? '（' + (d.me === 'a' ? d.b_tier : d.a_tier) + '）' : ''}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '時間到！結算中…';
+  else { const s = Math.max(0, Math.ceil((d.end - n) / 1000)); low = s <= 15; tx = s > 0 ? `對 ${duelSide(d, false).name}${(d.me === 'a' ? d.b_tier : d.a_tier) ? '（' + (d.me === 'a' ? d.b_tier : d.a_tier) + '）' : ''}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '時間到！手上這條 12 秒內拉上來還算';
     if (Duel.goTold !== d.id){ Duel.goTold = d.id; if (n - d.start < 3000){ flash('⚔️ 開始！', 1.2); try { SFX.catch(); } catch(e){} } } }
   if (tx !== Duel.subKey){ Duel.subKey = tx; $('.db-sub', b).textContent = tx; b.classList.toggle('low', low); } }
 function duelCardClose(kind){ const c = Duel.card; if (!c || (kind && c.dataset.kind !== kind)) return; clearInterval(c._iv); c.remove(); Duel.card = null; }
@@ -16338,7 +16340,7 @@ function renderTab(){
       '🏝️ 小島和家具的清單：點一下圖片或名字，會跳出 3D 模型，可以用手指轉著看、兩指放大，看喜歡再按「拿去擺」。'
     ]);
     sec('👥 跟大家一起玩', [
-      '⚔️ 釣魚對決：打開「朋友」裡的玩家名單，在同一個大廳的人旁邊按「⚔️ 對決」。對方按接受以後倒數幾秒就開始，一場 3 分鐘，比這段時間釣到的魚加起來的總重量——用自己的釣竿和魚餌、去哪裡釣都可以（釣蝦場的蝦不算）。畫面上面會出現比分條（左邊是你、右邊是對手）和剩下的時間，對手釣到魚會跳通知。時間到會跳結果，可以按「再來一局」。這樣邀請的是「友誼賽」，不算星星也不算戰績，純粹比好玩；分數是伺服器算的。中途斷線或關掉遊戲，時間到照樣結算。',
+      '⚔️ 釣魚對決：打開「朋友」裡的玩家名單，在同一個大廳的人旁邊按「⚔️ 對決」。對方按接受以後倒數幾秒就開始，一場 3 分鐘，比這段時間釣到的魚加起來的總重量——用自己的釣竿和魚餌、去哪裡釣都可以（釣蝦場的蝦不算）。畫面上面會出現比分條（左邊是你、右邊是對手）和剩下的時間，對手釣到魚會跳通知。時間到會跳結果，可以按「再來一局」。這樣邀請的是「友誼賽」，不算星星也不算戰績，純粹比好玩；分數是伺服器算的。時間到的時候如果魚還在線上，12 秒內拉上來的還是算；結果會等你把這條魚拉上來、看完才跳出來。中途斷線或關掉遊戲，時間到照樣結算。',
       '⚔️ 排位賽和段位：只有自動配對到的才是排位賽，贏輸才會動星星、勝敗和連勝（跟同一個人一天只有前 3 局算）。有打過排位賽的人，名字旁邊會掛著段位。在「朋友」分頁、「背包」或廣場大看板的「⚔️ 對決排行」按「找對手」，系統會幫你找另一個也在找對手的人（不用在同一個大廳，會先找段位接近的），找到就直接開始；畫面上面會顯示「找對手中…」，隨時可以取消，兩分鐘沒找到會自動取消。贏一局 +1⭐，連勝第 3 場起每場 +2⭐；輸一局 -1⭐（3⭐ 以下不扣）。段位：🐟對決新手、🎣釣竿好手（3⭐）、🏅釣魚高手（8⭐）、🌊海上名人（15⭐）、👑傳說釣手（25⭐）。廣場大看板有「⚔️ 對決排行」前 20 名。',
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
