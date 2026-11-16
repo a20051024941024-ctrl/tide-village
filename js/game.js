@@ -3867,7 +3867,7 @@ function rodHD(av, type, color, skin){
   av.hd = { root, segs, tip, reelG, handle, flex:0 }; av.tipReal = av.tip; av.tip = tip; }
 function rodHDAnim(f, dt, t){ const H = f.av.hd; if (!H) return;
   let B = (f.bend || 0) * 0.9 + Math.max(0, f.dip || 0) * 0.03;
-  if (f.castT >= 0){ const k = f.castT / 0.5; B += -Math.sin(k * Math.PI * 2) * 0.55; }   /* 甩竿：竿尖慢半拍再甩出去 */
+  if (f.castT >= 0){ const k = f.castT / 0.5; B += -Math.sin(k * Math.PI * 2) * 0.12; }   /* 甩竿：竿尖慢半拍再甩出去 */
   else if ((f.windup || 0) > 0.05) B += -0.25 * f.windup;
   H.flex += (B - H.flex) * Math.min(1, dt * 14);
   for (let i = 0; i < H.segs.length; i++) H.segs[i].rotation.x = i ? H.flex * Math.pow(i / (H.segs.length - 1), 1.6) * 0.42 : 0;   /* 越靠竿尖彎越多 */
@@ -4669,11 +4669,12 @@ class Fisher {
       const B = this.bob.position; const arr = this.line.geometry.attributes.position.array;
       const dist = tip.distanceTo(B); const sag = this.flying ? 0.05 : (0.35 - this.bend*0.3) * Math.min(1, dist/4);
       for (let i = 0; i < LINE_PTS; i++){ const k = i/(LINE_PTS-1); arr[i*3] = tip.x + (B.x - tip.x)*k; arr[i*3+1] = tip.y + (B.y + 0.1 - tip.y)*k - Math.sin(k*Math.PI)*sag; arr[i*3+2] = tip.z + (B.z - tip.z)*k; }
-      const fl = this.flying, tr = fl && fl.delay <= 0 && fl.trail, wl = WATER_LEVEL + 0.02, tn = now();
+      const fl = this.flying, tr = false && fl && fl.delay <= 0 && fl.trail,   /* v519 飛行中的線改成從竿尖到浮標一條直線（只微微下垂）；以前沿著飛過的路線畫，會在竿尖上面繞一圈 */
+      wl = WATER_LEVEL + 0.02, tn = now();
       if (tr && tr.length > 1){   /* 飛行中：線沿著浮標飛過的路線，從竿尖一路拖到浮標；越早放出去的線掉得越低（重力） */
         const n = tr.length;
         for (let i = 1; i < LINE_PTS; i++){ const k = i / (LINE_PTS - 1), u = k * (n - 1), j = Math.min(n - 2, Math.floor(u)), f2 = u - j, A = tr[j], C = tr[j + 1];
-          let x = A.x + (C.x - A.x) * f2, y = A.y + (C.y - A.y) * f2, z = A.z + (C.z - A.z) * f2; const age = tn - (A.t + (C.t - A.t) * f2); y = Math.max(wl, y - Math.min(3, 2.2 * age * age));
+          let x = A.x + (C.x - A.x) * f2, y = A.y + (C.y - A.y) * f2, z = A.z + (C.z - A.z) * f2; const age = tn - (A.t + (C.t - A.t) * f2); y = Math.max(wl, y - Math.min(0.5, 0.5 * age * age));   /* v519 飛在空中的線幾乎是直的，只往下垂一點點 */
           const near = Math.max(0, 1 - k / 0.18); x += (tip.x - x) * near * near; y += (tip.y - y) * near * near; z += (tip.z - z) * near * near;   /* 靠近竿尖那一段跟著竿尖走 */
           if (i === LINE_PTS - 1){ x = B.x; y = B.y + 0.05; z = B.z; } arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z; }
       } else if (this.lineLand && tn - this.lineLand.t < 1.6 && !this.flying){   /* 落水後：空中的線先慢慢落到水面上（鬆鬆的一條弧），再被收緊成平常的樣子 */
@@ -5861,7 +5862,7 @@ function doCast(){
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
   F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`💨 砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了！要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`🎯 落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
-  me.flying = { from, to, t:0, delay:0.17, dur: 0.55 + c*0.25, h: 1.4 + c*1.4, done(){ SFX.plop(); } }; me.windup = 0; me.castT = 0;
+  me.flying = { from, to, t:0, delay:0.17, dur: 0.5 + c*0.3, h: 0.5 + c*0.7, done(){ SFX.plop(); } };   /* v519 作者：「甩竿出去線應該直直往前飛」→ 拋物線壓低（以前最高 2.8 公尺，現在 1.2），線往前射出去 */ me.windup = 0; me.castT = 0;
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.roll = null; F.rollWait = 0; F.pre = null; F.probe = null; F.lastNib = 0;
   if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
@@ -6136,7 +6137,7 @@ function updateFishing(dt, t){
     if (F.run > 0 || (F.act && !F.act.tele) || F.jump > 0) F.slackOK = t + 1.6;   /* v341 玩家說線太容易鬆掉脫鉤：魚衝、跳、做動作的時候和剛結束的 1.6 秒，放開是對的，不算線鬆（喘氣的時候另外算） */
     if (!F.shr && !F.mash && t > (F.slackOK || 0) && !F.hold && F.T < 0.16 && F.S > 0.12) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2.5);   /* 線太鬆：魚會甩掉魚鉤 */
     F.S = Math.max(0, F.S - dt * (0.04 + (F.hold && inZone ? 0.09 : 0) + (counter ? 0.12 : 0)) / (0.6 + p * 0.8));
-    me.bend = clamp(F.T, 0, 1); me.dip = 0.5 + pull*0.4; fxReel(dt);
+    me.bend = clamp(F.T, 0, 1) * clamp(0.3 + 0.24 * Math.log(1 + (F.weight || 0.3)), 0.3, 1); me.dip = 0.5 + pull*0.4; fxReel(dt);
     // 浮標：越收越近，魚往哪邊衝就往哪邊偏
     F.lat += (F.dir * 1.8 * (counter ? 0.35 : 1) - F.lat) * Math.min(1, dt * 1.6);
     const s = F.spot; const dist = Math.max(1.3, F.castD * (1 - F.P) / 0.7), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);   /* 線放出去多少，浮標就真的在多遠（魚衝出去看得到） */
@@ -9982,14 +9983,15 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
   if (FP.castT && t - FP.castT < 0.9){ const s2 = (t - FP.castT) / 0.9; if (s2 < 0.24){ const u = s2 / 0.24, e3 = u * u * u; cast = (FP.castW * 0.75 + 0.35) * (1 - e3) - 0.3 * e3; } else { const u = (s2 - 0.24) / 0.76; cast = -0.3 * (1 - u) * (1 - u) * (1 - u); } }   /* 往前甩是越甩越快（加速），在前面停住、竿尖指向遠方，然後慢慢放下來對著浮標 */
   const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
-  rp.position.set(0.11 - lift * 0.02, -0.21 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.48);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0)   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
+  rp.position.set(0.11 - lift * 0.02, -0.21 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.48);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 * (reel ? clamp(0.12 + 0.27 * Math.log(1 + (F.weight || 0.3)), 0.15, 1) : 1) + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0)   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
   /* 竿子彎：拉魚的時候照張力彎（越緊越彎），魚咬的時候竿尖抖，魚吊在竿尖時被魚的重量拉彎；甩竿往前的瞬間竿尖往後甩（彈性） */
-  const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; let wantB = reel ? 0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25 : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
+  const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; const wf = clamp(0.12 + 0.27 * Math.log(1 + (F.weight || 0.3)), 0.15, 1);   /* v519 作者：「魚很小，竿子也彎得很厲害，不真實」→ 竿子彎多少看魚多重：0.3 公斤幾乎不彎、3 公斤彎一半、25 公斤以上才整支彎 */
+  let wantB = reel ? (0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25) * wf : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
   if (c) wantB = c.t < 0.6 ? 0.9 * cw : c.t < 1.2 ? 0.55 * cw + Math.sin(c.t * 9) * 0.06 : c.t < 2.6 ? 0.3 * cw : 0.02;
   FP.bendNow += (wantB - FP.bendNow) * Math.min(1, dt * 9);
   /* v513 甩竿的彈性：竿子往前甩的時候竿尖會被甩在後面（往後彎），竿子一停竿尖就往前彈出去，再來回抖幾下停住 */
-  const cv = dt > 0 ? (cast - (FP.castPrev || 0)) / dt : 0; FP.castPrev = cast; const ftg = clamp(cv * 0.09, -0.75, 0.75); FP.fxV = (FP.fxV || 0) + ((ftg - (FP.fx || 0)) * 160 - (FP.fxV || 0) * 9) * dt; FP.fx = clamp((FP.fx || 0) + FP.fxV * dt, -0.9, 0.9);
-  const flex = FP.fx, N = FP.segs.length; for (let i = 0; i < N; i++){ const wgt = (0.6 + i / N) / (N * 0.6 + (N - 1) / 2); FP.segs[i].rotation.x = -clamp(FP.bendNow - flex, -0.5, 1.0) * wgt * 1.1 + (reel ? Math.sin(t * 27 + i) * 0.004 * FP.bendNow : 0); }
+  const cv = dt > 0 ? (cast - (FP.castPrev || 0)) / dt : 0; FP.castPrev = cast; const ftg = clamp(cv * 0.02, -0.15, 0.15); FP.fxV = (FP.fxV || 0) + ((ftg - (FP.fx || 0)) * 160 - (FP.fxV || 0) * 26) * dt; FP.fx = clamp((FP.fx || 0) + FP.fxV * dt, -0.2, 0.2);   /* v519 作者：「丟線出去很彈…不是竿子頭彎一下」→ 甩竿時竿尖幾乎不彎、不會來回彈 */
+  const flex = FP.fx, N = FP.segs.length; for (let i = 0; i < N; i++){ const wgt = (0.6 + i / N) / (N * 0.6 + (N - 1) / 2); FP.segs[i].rotation.x = -clamp(FP.bendNow - flex, -0.5, 0.72) * wgt * 1.1 + (reel ? Math.sin(t * 27 + i) * 0.004 * FP.bendNow : 0); }
   /* v517 作者：「釣竿都會彎到插進水裡」→ 站得低（船上、沙灘）又拉得很緊的時候竿尖會沉到水面下。現在算一下竿尖的高度，太低就把整支竿子抬起來，竿尖永遠在水面上面 */
   if (!c){ const V = FP._tv || (FP._tv = new THREE.Vector3()), V2 = FP._tv2 || (FP._tv2 = new THREE.Vector3()); camera.updateMatrixWorld(true);
     for (let k = 0; k < 2; k++){ FP.tip.getWorldPosition(V); const lack = WATER_LEVEL + 0.45 - V.y; if (!(lack > 0.005)) break; rp.getWorldPosition(V2); const L = Math.max(0.6, V.distanceTo(V2)); rp.rotation.x += Math.min(0.9, lack / L * 1.15); rp.updateMatrixWorld(true); } }
