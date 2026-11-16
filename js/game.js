@@ -441,13 +441,13 @@ function softDiscTex(){ if (_softDisc) return _softDisc; const cv = document.cre
 function hlAt(k, lx, lz){ const [x, z, r] = HLOT[k], c = Math.cos(r), s = Math.sin(r); return [x + c * lx + s * lz, z - s * lx + c * lz]; }
 function hlOff(k, mx, mz){ const r = HLOT[k][2], c = Math.cos(r), s = Math.sin(r); return { mx: c * mx + s * mz, mz: -s * mx + c * mz }; }
 var Salon = { poleTex:null };   /* v270 阿萍美髮沙龍（蓋房子的時候就要用到） */
-var SHOPLOT = { ling:{ x:-7, z:30.5, r:Math.PI / 2 }, mu:{ x:9.5, z:22.5, r:-Math.PI / 2 }, cai:{ x:-7, z:38.5, r:Math.PI / 2 }, spare:{ x:9, z:27.3, r:-Math.PI / 2 }, museum:{ x:-12.5, z:-22.5, r:Math.PI / 2 }, pet:{ x:-8, z:22.5, r:Math.PI / 2 } };   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
+var SHOPLOT = { ling:{ x:-7.5, z:28.8, r:Math.PI / 2 }, mu:{ x:9.5, z:21.6, r:-Math.PI / 2 }, cai:{ x:-7.5, z:36, r:Math.PI / 2 }, spare:{ x:9.5, z:28.8, r:-Math.PI / 2 }, cafe:{ x:9.5, z:36, r:-Math.PI / 2 }, museum:{ x:-12.5, z:-22.5, r:Math.PI / 2 }, pet:{ x:-9, z:21.6, r:Math.PI / 2 } };   /* v488 地圖分區第 4 步：商店街重排，兩排各三間、每 7.2 公尺一間（原本木工坊和美髮沙龍只隔 4.8 公尺會黏在一起；博物館搬走空出來的那格給咖啡店）。原：ling(-7,30.5) mu(9.5,22.5) cai(-7,38.5) spare(9,27.3) pet(-8,22.5) */   /* 商店街：西邊一排、東邊一排，每 8 公尺一間 */
 var Mkt = { tab:'new', list:null, mine:null, stats:null, at:0, busy:false, sell:null, fish:null };
 function lotAt(k, lx, lz){ const L = SHOPLOT[k], c = Math.cos(L.r), s = Math.sin(L.r); return [L.x + c * lx + s * lz, L.z - s * lx + c * lz]; }
 const LANDMARKS = [
   { id:'plaza',      label:'潮汐廣場', pos:V3(4, 4),            color:PALETTE.gold, ly:1.8 },
   { id:'aquarium',   label:'水族館',   pos:V3(AQUA[0], AQUA[1]), color:PALETTE.coral, ly:6.8, mx:7.6, mz:4.6 },
-  { id:'chat',       label:'聊天亭',   pos:V3(-3, 22),          color:'#f5a5d8', ly:3.8 },
+  { id:'chat',       label:'涼亭',     pos:V3(-2.6, 22),          color:'#f5a5d8', ly:3.8 },
   { id:'tackle',     label:'釣具店',   pos:V3(HLOT.tackle[0], HLOT.tackle[1]), color:'#f6a96b', ly:5.5, ...hlOff('tackle', 2.4, 2.8) },
   { id:'shop',       label:'潮汐魚市場', pos:V3(HLOT.shop[0], HLOT.shop[1]), color:'#5fb6e3', ly:5.5, ...hlOff('shop', 0, 3.4) },
   { id:'cook',       label:'潮汐食堂', pos:V3(CANTEEN[0], CANTEEN[1]),       color:'#f17b6d', ly:3.6 },
@@ -1094,7 +1094,7 @@ function art2House(x, z, width, rotY, opts){ const sgn = opts.sign || '', pick =
   if (/釣具/.test(sgn)){ const S = 1.34, tw = clamp(W + 1.5, 4.6, 5.6), td = 4.1, sub = new THREE.Group(); sub.scale.setScalar(S); sub.userData.dyn = true; g.add(sub); twHouse(sub, { w: tw / S, d: td / S, fl: 2, front: front / S, seed: 0, kind: 'tackle', wall: '#a9d4f2' }); g.userData.a2col = [tw + 0.1, td + 0.1, front - td / 2]; g.userData.tw = true;
     if (opts.awning){ const cm = new THREE.MeshStandardMaterial({ color: '#7fb4e6', roughness: 0.85 }), ct = new THREE.MeshStandardMaterial({ color: '#e9eef2', roughness: 0.6 }); const a = new THREE.Mesh(new THREE.BoxGeometry(W * 0.8, 0.85, 0.5), cm); a.position.set(0, 0.43, fz + 0.8); a.castShadow = a.receiveShadow = true; a.userData.dyn = true; g.add(a); const b = new THREE.Mesh(new THREE.BoxGeometry(W * 0.84, 0.08, 0.6), ct); b.position.set(0, 0.88, fz + 0.8); b.userData.dyn = true; g.add(b); }
     if (opts.sign) art2Sign(g, opts.sign, opts.signIcon, tw / 2 + 0.75, fz + 0.9); scene.add(g); return g; }
-  if (opts.awning && /服裝|美髮|木工|畫廊/.test(sgn)){ const tight = /美髮|木工/.test(sgn), cw = tight ? 3.6 : clamp(W + 1.9, 5.0, 5.8), cd = 4.3;   /* v479 玩家回報「會連在一起」：木工坊和美髮沙龍兩塊地只隔 4.8 公尺，5 公尺多寬的房子屋頂疊在一起。這兩間改窄 */ twCottage(g, { w: cw, d: cd, front, awn: typeof opts.awning === 'string' ? opts.awning : null, kind: /服裝/.test(sgn) ? 'cloth' : /美髮/.test(sgn) ? 'hair' : /木工/.test(sgn) ? 'wood' : 'art' }); g.userData.a2col = [cw + 0.2, cd + 0.2, front - cd / 2]; g.userData.tw = true;
+  if (opts.awning && /服裝|美髮|木工|畫廊/.test(sgn)){ const tight = false, cw = tight ? 3.6 : clamp(W + 1.9, 5.0, 5.8), cd = 4.3;   /* v479 玩家回報「會連在一起」：木工坊和美髮沙龍兩塊地只隔 4.8 公尺，5 公尺多寬的房子屋頂疊在一起。這兩間改窄 */ twCottage(g, { w: cw, d: cd, front, awn: typeof opts.awning === 'string' ? opts.awning : null, kind: /服裝/.test(sgn) ? 'cloth' : /美髮/.test(sgn) ? 'hair' : /木工/.test(sgn) ? 'wood' : 'art' }); g.userData.a2col = [cw + 0.2, cd + 0.2, front - cd / 2]; g.userData.tw = true;
     { const cm = new THREE.MeshStandardMaterial({ color: '#a9d3b4', roughness: 0.85 }), ct = new THREE.MeshStandardMaterial({ color: '#e9dcc4', roughness: 0.7 }); const a = new THREE.Mesh(new THREE.BoxGeometry(W * 0.8, 0.85, 0.5), cm); a.position.set(0, 0.43, fz + 0.8); a.castShadow = a.receiveShadow = true; a.userData.dyn = true; g.add(a); const b = new THREE.Mesh(new THREE.BoxGeometry(W * 0.84, 0.08, 0.6), ct); b.position.set(0, 0.88, fz + 0.8); b.userData.dyn = true; g.add(b); }
     if (opts.sign) art2Sign(g, opts.sign, opts.signIcon, cw / 2 + 0.75, fz + 0.9); scene.add(g); return g; }
   if (/村長/.test(sgn)){ const ow = clamp(W + 2.0, 5.6, 6.0), od = 4.4, opd = 1.2; twOffice(g, { w: ow, d: od, front }); g.userData.a2col = [ow + 0.15, od + opd + 0.15, front + (opd - od) / 2]; g.userData.tw = true;   /* v477 門廊蓋在原本櫃台的位置，所以辦公室不再擺櫃台 */
@@ -1103,7 +1103,7 @@ function art2House(x, z, width, rotY, opts){ const sgn = opts.sign || '', pick =
     if (opts.awning){ const cm = new THREE.MeshStandardMaterial({ color: '#7fb4e6', roughness: 0.85 }), ct = new THREE.MeshStandardMaterial({ color: '#dfe6ea', roughness: 0.6 }); const a = new THREE.Mesh(new THREE.BoxGeometry(W * 0.8, 0.85, 0.5), cm); a.position.set(0, 0.43, fz + 0.8); a.castShadow = a.receiveShadow = true; a.userData.dyn = true; g.add(a); const b = new THREE.Mesh(new THREE.BoxGeometry(W * 0.84, 0.08, 0.6), ct); b.position.set(0, 0.88, fz + 0.8); b.userData.dyn = true; g.add(b); }
     if (opts.sign) art2Sign(g, opts.sign, opts.signIcon, mw2 / 2 + 0.75, fz + 0.9); scene.add(g); return g; }
   if (!sgn && !opts.awning && Math.hypot(x - 22, z - 7) < 0.5){ const S = 1.34, tw = 5.2, td = 4.1, sub = new THREE.Group(); sub.scale.setScalar(S); sub.userData.dyn = true; g.add(sub); twHouse(sub, { w: tw / S, d: td / S, fl: 2, front: front / S, seed: 2, kind: 'ice', wall: '#a9e6d4', awn: '#f2b532' }); g.userData.a2col = [tw + 0.1, td + 0.1, front - td / 2]; g.userData.tw = true; art2Sign(g, '阿嬤冰店', '🍧', tw / 2 + 0.75, fz + 0.9); scene.add(g); return g; }   /* v478 村長辦公室後面那棟民宅改成冰店（只是街景） */
-  if (!sgn && !opts.awning && Math.hypot(x + 14, z + 9) < 0.5){ const cw = 5.0, cd = 3.8; twCafeHouse(g, { w: cw, d: cd, front }); g.userData.a2col = [cw + 0.1, cd + 0.1, front - cd / 2]; g.userData.tw = true; art2Sign(g, '海風咖啡', '☕', cw / 2 + 0.85, fz + 0.4); scene.add(g); return g; }   /* v478 西邊碼頭旁那棟民宅改成咖啡店（只是街景） */
+  if (!sgn && !opts.awning && Math.hypot(x - SHOPLOT.cafe.x, z - SHOPLOT.cafe.z) < 0.5){ const cw = 5.0, cd = 3.8; twCafeHouse(g, { w: cw, d: cd, front }); g.userData.a2col = [cw + 0.1, cd + 0.1, front - cd / 2]; g.userData.tw = true; art2Sign(g, '海風咖啡', '☕', cw / 2 + 0.85, fz + 0.4); scene.add(g); return g; }   /* v478 西邊碼頭旁那棟民宅改成咖啡店（只是街景） */
   if (!sgn && !opts.awning){ const sd = Math.abs(Math.round(x * 7 + z * 3)), S = 1.34, tw = clamp(W + 1.3, 4.3, 5.5), td = 4.0 + (sd % 3) * 0.3, sub = new THREE.Group(); sub.scale.setScalar(S); sub.userData.dyn = true; g.add(sub);   /* v458 玩家說「比例有點奇怪」：一層樓只有 1.7 公尺，跟大頭的角色、旁邊的食堂比起來像模型屋。整棟放大 1.34 倍（一層 2.3 公尺、門比人高） */
     const homeK = (Art2.hk = (Art2.hk || 0) + 1) % 2 === 0; twHouse(sub, { w: tw / S, d: td / S, fl: homeK ? 3 : 2 + (sd % 5 === 0 ? 1 : 0), front: front / S, seed: sd, kind: homeK ? 'home' : 'shop', wall: homeK ? ['#f2b6c0', '#f4d9a0', '#c7e3c0', '#f6c9a8'][(Art2.hk >> 1) % 4] : null });   /* v465 一半民宅是三層樓透天，一半是有店面的街屋 */ g.userData.a2col = [tw + 0.1, td + 0.1, front - td / 2]; g.userData.tw = true; scene.add(g); return g; }   /* v457 沒有招牌的民宅先換成台灣街屋（樣品），店家等作者看過再換 */
   art2Add(g, pick[0], { s: pick[1], front, tint }); g.userData.a2col = [Math.max(W + 0.3, mw * 0.92), md * 0.92, front - md / 2];
@@ -2042,7 +2042,7 @@ function castPoint(x, z, dx, dz, dist){
   { const mg = new THREE.Group(); mg.position.set(HLOT.market[0], groundHeight(HLOT.market[0], HLOT.market[1]), HLOT.market[1]); mg.rotation.y = HLOT.market[2]; scene.add(mg);   /* v434 不再是自己一棟，是魚市場門口右邊的櫃位 */
     for (const sx of [0.2, 1.1]){ const b = new THREE.Group(); b.position.set(sx, 0, 2.75); mg.add(b); b.add(box([0.75, 0.55, 0.5], '#e8f4f8', [0, 0.28, 0])); b.add(box([0.78, 0.06, 0.53], '#2f89c7', [0, 0.57, 0])); }
     const c = Math.cos(mg.rotation.y), sn = Math.sin(mg.rotation.y); addOBoxCol(mg.position.x + c * 0.65 + sn * 2.75, mg.position.z - sn * 0.65 + c * 2.75, 1.8, 0.6, mg.rotation.y); }
-  house(-14, -9, '#ec8b68', 3.3, faceTo(-14, -9));
+  house(SHOPLOT.cafe.x, SHOPLOT.cafe.z, '#ec8b68', 3.3, SHOPLOT.cafe.r);   /* v488 這棟（試玩版是咖啡店）從西邊碼頭旁 (-14,-9) 搬進商店街東排最南邊 */
   house(22, 7, '#9fc7a8', 3.2, faceTo(22, 7));
   /* v190 照功能分區：釣具店、海邊商店（賣魚）、阿福海產店、釣客魚市都在港口；吃的在廣場；衣服家具寵物在商店街 */
   house(HLOT.tackle[0], HLOT.tackle[1], '#f6a96b', 3.6, HLOT.tackle[2], { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店（港口）
@@ -2169,7 +2169,7 @@ function castPoint(x, z, dx, dz, dist){
 
 
   // ---- 聊天亭 ----
-  const [CX, CZ] = [-3, 22];
+  const [CX, CZ] = [-2.6, 22];
   const pav = new THREE.Group(); pav.position.set(CX, 0, CZ);
   for (const [px,pz] of [[-1.4,-1.4],[1.4,-1.4],[-1.4,1.4],[1.4,1.4]]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,2.3,8), mat(PALETTE.wood)); p.position.set(px,1.15,pz); p.castShadow = true; pav.add(p); }
   const proof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.2, 6), mat('#f5a5d8')); proof.position.y = 2.85; proof.castShadow = true; pav.add(proof);
@@ -15656,7 +15656,7 @@ function renderTab(){
       '村子分區：港邊廣場是熱鬧、買賣和出海的地方；島中央的潮汐廣場是大家集合聊天的地方，東邊是村長辦公室（村長阿土伯在門口），外圈有花園和長椅；寵物店後面的森林邊有「🐾 寵物樂園」，帶寵物走進去站著，寵物會自己在裡面跑；南方沙灘可以休息。',
       '一進遊戲會站在「港邊廣場」：中間有噴水池；港口的兩間店（釣具店、潮汐魚市場）圍著廣場，往前走就是碼頭。島中央的「潮汐廣場」是三條大路交會的地方，節慶活動也在那裡。',
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、瀑布潭、望海丘走細細的小步道。',
-      '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 魚市場區（港邊廣場西邊、往港口的大路旁）是潮汐食堂；中央廣場北邊是釣蝦場；🏀 運動公園（島的東邊、沙灘旁）有籃球場、羽球場、撞球棚、沙灘排球場和體育場的大門——走到大門口按按鈕會進到完整大小的潮汐體育場（跑道、足球場、看台），出口在南邊看台中間；目前是可以逛的場地，還不能比賽；👗 商店街（往南走）是阿綾服裝店、阿木木工坊、阿彩畫廊、美髮沙龍、寵物店。',
+      '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 魚市場區（港邊廣場西邊、往港口的大路旁）是潮汐食堂；中央廣場北邊是釣蝦場；🏀 運動公園（島的東邊、沙灘旁）有籃球場、羽球場、撞球棚、沙灘排球場和體育場的大門——走到大門口按按鈕會進到完整大小的潮汐體育場（跑道、足球場、看台），出口在南邊看台中間；目前是可以逛的場地，還不能比賽；👗 商店街（往南走，過了涼亭兩邊各三間）：西邊是寵物店、阿綾服裝店、阿彩畫廊，東邊是阿木木工坊、阿萍美髮沙龍，最南邊一間是街景的咖啡店。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
