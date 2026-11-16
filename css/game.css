@@ -1519,3 +1519,6 @@ body.pooling #duelQ, body.subbing #duelQ{display:none}
 
 /* v521 名字旁邊的排位賽段位 */
 .tag .nm[data-duel]::after{content:attr(data-duel);margin-left:5px;padding:0 6px;border-radius:999px;background:rgba(24,51,74,.78);color:#ffe9a8;font-size:10px;font-weight:800;white-space:nowrap;vertical-align:1px}
+/* v526 作者：iPhone 打字的時候，「寵物」「跳」「找釣點」按鈕和搖桿會蓋在聊天輸入框上面（送出按鈕被擋住）→ 打字時把這些先藏起來，關掉鍵盤就回來 */
+body.touch.chatting #actWrap, body.touch.chatting #joyZone, body.touch.chatting #joy, body.touch.chatting #emotes{visibility:hidden!important;pointer-events:none!important}
+body.touch.chatting #chatForm{z-index:40}
