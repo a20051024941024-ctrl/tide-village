@@ -1579,25 +1579,35 @@ function twString(b, x0, z0, x1, z1, y, kind){ const L = Math.hypot(x1 - x0, z1 
 /* v461 港口廣場的地面：主視覺是石板路，不是草地。以廣場為中心鋪一片石板，邊緣沿著岸邊收（每個方向往外走到快要下水就停），最外一圈顏色深一點當收邊 */
 function twPaveTex(){ return twTex('pave', 256, 256, (x, w, h) => { x.fillStyle = '#b9ab98'; x.fillRect(0, 0, w, h); const cs = ['#e6dac6', '#ddd0bb', '#eadfcd', '#d6c8b2', '#e1d3c2', '#d9cdbd']; let sd = 11; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   for (let r = 0; r < 4; r++){ let px = -((r * 37) % 64); while (px < w){ const bw = 44 + Math.floor(rnd() * 40); x.fillStyle = cs[Math.floor(rnd() * cs.length)]; x.beginPath(); if (x.roundRect) x.roundRect(px + 2, r * 64 + 2, bw - 4, 60, 7); else x.rect(px + 2, r * 64 + 2, bw - 4, 60); x.fill(); x.fillStyle = 'rgba(255,255,255,.10)'; x.fillRect(px + 5, r * 64 + 5, bw - 10, 8); px += bw; } } }); }
-function art2Pave(){ const [cx, cz] = HARBOR_SQ, RM = 16.5, NS = 120, NR = 9, flat = (px, pz) => { const i = terrainInfo(px, pz); return !i.water && i.h > -0.015; }, R = [];
+/* v490 地圖分區第 6 步：石板地變成所有玩家的地板（以前只有新美術試玩版的港邊廣場有），再鋪石板路把各區接起來。
+   paveDisc：以一點為中心往外鋪到碰到水或半徑上限（港邊廣場、水族館區小廣場、居民區空地）。
+   paveRibbon：沿著一條路鋪一條石板帶（三條大路＋通往水族館區、運動公園、居民區的路）；碰到水和棧橋就斷開。
+   石板是用程式畫的圖，不靠素材包，所以新舊美術都看得到。鋪了石板的地方不長草。 */
+const Pave = { discs: [], ribs: [] };
+function paveMat(){ const t = twPaveTex(); t.wrapS = t.wrapT = THREE.RepeatWrapping; return twMat('paveM', () => new THREE.MeshStandardMaterial({ map: t, vertexColors: true, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); }
+function paveMesh(pos, uv, col, idx){ const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); ge.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); ge.setIndex(idx); ge.computeVertexNormals(); const m = new THREE.Mesh(ge, paveMat()); m.receiveShadow = true; m.userData.keep = true; m.userData.dyn = true; m.renderOrder = 1; scene.add(m); return m; }
+function paveDisc(cx, cz, RM){ const NS = 120, NR = Math.max(3, Math.round(RM / 1.8)), flat = (px, pz) => { const i = terrainInfo(px, pz); return !i.water && i.h > -0.015; }, R = [];
   for (let k = 0; k < NS; k++){ const a = k / NS * 6.2832, dx = Math.sin(a), dz = Math.cos(a); let r = 0.5; while (r < RM && flat(cx + dx * (r + 0.25), cz + dz * (r + 0.25))) r += 0.25; R.push(r >= RM ? RM : Math.max(0.5, r - 0.45)); }
   const R2 = R.map((r, k) => Math.min(r, R[(k + 1) % NS] + 0.35, R[(k + NS - 1) % NS] + 0.35, R[(k + 2) % NS] + 0.7, R[(k + NS - 2) % NS] + 0.7));
-  const pos = [], uv = [], col = [], idx = []; for (let j = 0; j <= NR; j++) for (let k = 0; k <= NS; k++){ const a = k / NS * 6.2832, r = R2[k % NS] * (j / NR), px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r; pos.push(px, terrainH(px, pz) + 0.03, pz); uv.push(px / 3.4, pz / 3.4); const e = j === NR ? 0.72 : 1; col.push(e, e, e); }
+  const pos = [], uv = [], col = [], idx = []; for (let j = 0; j <= NR; j++) for (let k = 0; k <= NS; k++){ const a = k / NS * 6.2832, r = R2[k % NS] * (j / NR), px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r; pos.push(px, Math.max(0, terrainH(px, pz)) + 0.03, pz); uv.push(px / 3.4, pz / 3.4); const e = j === NR ? 0.72 : 1; col.push(e, e, e); }
   for (let j = 0; j < NR; j++) for (let k = 0; k < NS; k++){ const a0 = j * (NS + 1) + k, b0 = a0 + 1, c0 = a0 + NS + 1, d0 = c0 + 1; idx.push(a0, c0, b0, b0, c0, d0); }
-  const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); ge.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); ge.setIndex(idx); ge.computeVertexNormals();
-  const t = twPaveTex(); t.wrapS = t.wrapT = THREE.RepeatWrapping; const m = new THREE.Mesh(ge, new THREE.MeshStandardMaterial({ map: t, vertexColors: true, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); m.receiveShadow = true; m.userData.keep = true; m.renderOrder = 1; scene.add(m); Art2.pave = { R: R2, cx, cz, NS };
-  /* 鋪了石板的地方不要長草 */
-  try { if (tuftsMesh){ const M4 = new THREE.Matrix4(), v = new THREE.Vector3(), z0 = new THREE.Matrix4().makeScale(0, 0, 0); for (let i = 0; i < tuftsTotal; i++){ tuftsMesh.getMatrixAt(i, M4); v.setFromMatrixPosition(M4); const dx = v.x - cx, dz = v.z - cz, d = Math.hypot(dx, dz); if (d < RM + 1){ const k = Math.round(((Math.atan2(dx, dz) + 6.2832) % 6.2832) / 6.2832 * NS) % NS; if (d < R2[k] + 0.2) tuftsMesh.setMatrixAt(i, z0); } } tuftsMesh.instanceMatrix.needsUpdate = true; } } catch(e){} }
-/* 椰子樹：彎彎的樹幹、一圈垂下來的大葉子、幾顆椰子 */
-function twPalm(x, z, s, lean){ const g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.scale.setScalar(s || 1); g.rotation.y = lean || 0; g.userData.keep = true; g.userData.dyn = true;
-  const tm = twMat('palmT', () => new THREE.MeshStandardMaterial({ color: '#b08a5c', roughness: 0.9, emissive: '#b08a5c', emissiveIntensity: 0.12 })), lm = twMat('palmL', () => new THREE.MeshStandardMaterial({ color: '#58b83f', roughness: 0.8, side: THREE.DoubleSide, emissive: '#58b83f', emissiveIntensity: 0.18 })), lm2 = twMat('palmL2', () => new THREE.MeshStandardMaterial({ color: '#8fd24a', roughness: 0.8, side: THREE.DoubleSide, emissive: '#8fd24a', emissiveIntensity: 0.18 }));
-  const H = 5.2, pts = []; for (let i = 0; i <= 6; i++){ const u = i / 6; pts.push(new THREE.Vector3(Math.sin(u * 1.3) * 0.9, u * H, 0)); } const tr = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.2, 7), tm); tr.castShadow = true; tr.userData.dyn = true; g.add(tr);
-  for (let i = 1; i < 6; i++){ const u = i / 6, r = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.025, 4, 8), tm); r.position.set(Math.sin(u * 1.3) * 0.9, u * H, 0); r.rotation.x = Math.PI / 2; r.userData.dyn = true; g.add(r); }
-  const top = pts[6]; for (let i = 0; i < 9; i++){ const a = i / 9 * 6.2832 + (i % 2) * 0.2, L = 2.5 + (i % 3) * 0.3, N = 6, pos = [], idx = []; for (let j = 0; j <= N; j++){ const u = j / N, r = u * L, y = Math.sin(u * 2.4) * 0.75 - u * u * 1.5, w = 0.48 * Math.sin(Math.min(1, u * 1.15 + 0.08) * Math.PI) + 0.03; pos.push(r, y + 0.02, -w, r, y + 0.22 * Math.sin(u * Math.PI), 0, r, y + 0.02, w); }
-      for (let j = 0; j < N; j++){ const q = j * 3; idx.push(q, q + 1, q + 3, q + 1, q + 4, q + 3, q + 1, q + 2, q + 4, q + 2, q + 5, q + 4); } const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.setIndex(idx); ge.computeVertexNormals();
-      const f = new THREE.Mesh(ge, i % 2 ? lm : lm2); f.position.copy(top); f.rotation.y = a; f.castShadow = true; f.userData.dyn = true; g.add(f); }
-  const cm = twMat('coco', () => new THREE.MeshStandardMaterial({ color: '#7a5a34', roughness: 0.7 })); for (let i = 0; i < 3; i++){ const c = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), cm); c.position.set(top.x + Math.cos(i * 2.1) * 0.2, top.y - 0.22, Math.sin(i * 2.1) * 0.2); c.userData.dyn = true; g.add(c); }
-  scene.add(g); addCircleCol(x, z, 0.32); return g; }
+  paveMesh(pos, uv, col, idx); const d = { R: R2, cx, cz, NS, RM }; Pave.discs.push(d); return d; }
+function paveRibbon(pts, hw){ const P = []; for (let i = 0; i < pts.length - 1; i++){ const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 0.7)); for (let k = i ? 1 : 0; k <= n; k++) P.push([x0 + (x1 - x0) * k / n, z0 + (z1 - z0) * k / n]); }
+  const ok = (x, z) => { const ti = terrainInfo(x, z); return !ti.water && ti.h > -0.12 && !deckAt(x, z); }; let pos = [], uv = [], col = [], idx = [], run = 0; const flush = () => { if (run > 1) paveMesh(pos, uv, col, idx); pos = []; uv = []; col = []; idx = []; run = 0; };
+  for (let i = 0; i < P.length; i++){ const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)], tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.hypot(tx, tz) || 1, nx = -tz / tl, nz = tx / tl, [x, z] = P[i];
+    if (!ok(x, z) || !ok(x + nx * hw, z + nz * hw) || !ok(x - nx * hw, z - nz * hw)){ flush(); continue; }
+    for (const [o, e] of [[-1, 0.72], [-0.82, 1], [0.82, 1], [1, 0.72]]){ const px = x + nx * hw * o, pz = z + nz * hw * o; pos.push(px, Math.max(0, terrainH(px, pz)) + 0.036, pz); uv.push(px / 3.4, pz / 3.4); col.push(e, e, e); }
+    if (run > 0){ const b0 = (run - 1) * 4, c0 = run * 4; for (let q = 0; q < 3; q++) idx.push(b0 + q, b0 + q + 1, c0 + q, b0 + q + 1, c0 + q + 1, c0 + q); } run++; }
+  flush(); Pave.ribs.push({ pts, hw }); }
+function paved(x, z, m){ m = m || 0; for (const d of Pave.discs){ const dx = x - d.cx, dz = z - d.cz, r = Math.hypot(dx, dz); if (r < d.RM + 1){ const k = Math.round(((Math.atan2(dx, dz) + 6.2832) % 6.2832) / 6.2832 * d.NS) % d.NS; if (r < d.R[k] + m) return true; } } for (const rb of Pave.ribs) if (lineDist(x, z, rb.pts) < rb.hw + m) return true; return false; }
+function paveAll(){ if (Pave.done) return; Pave.done = true;
+  const h = paveDisc(HARBOR_SQ[0], HARBOR_SQ[1], 16.5); Art2.pave = h; paveDisc(AQUA_SQ[0], AQUA_SQ[1], AQUA_SQ[2] + 0.6); paveDisc(RES_SQ[0], RES_SQ[1], RES_SQ[2] + 0.4);
+  for (const pth of MAP.paths) paveRibbon(pth, 1.25);
+  paveRibbon([[8, -23], [2, -23.6], [-1.5, -21.5], [-4, -21]], 1.0);          /* 往水族館區 */
+  paveRibbon([[12, -5], [17.4, -5.2]], 1.0);                                   /* 往運動公園 */
+  paveRibbon([[-8, 1], [-17, 9], [-22, 18], [-27, 22.6]], 1.0);                /* 往居民區 */
+  try { if (tuftsMesh){ const M4 = new THREE.Matrix4(), v = new THREE.Vector3(), z0 = new THREE.Matrix4().makeScale(0, 0, 0); for (let i = 0; i < tuftsTotal; i++){ tuftsMesh.getMatrixAt(i, M4); v.setFromMatrixPosition(M4); if (paved(v.x, v.z, 0.2)) tuftsMesh.setMatrixAt(i, z0); } tuftsMesh.instanceMatrix.needsUpdate = true; } } catch(e){} }
+function art2Pave(){ paveAll(); }
 function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ console.warn('twTemple', e); }
   try { art2Pave(); } catch(e){ console.warn('art2Pave', e); }
   try { const [cx, cz] = HARBOR_SQ; let n = 0; for (let k = 0; k < 40 && n < 7; k++){ const a = k * 2.399 + 0.6, r = 12.5 + (k % 5) * 2.2, px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r, ti = terrainInfo(px, pz); if (ti.water || ti.h < -0.01 || blocked(px, pz, 1.5) || deckAt(px, pz) || inSport(px, pz, 1.2)) continue; twPalm(px, pz, 0.95 + (k % 3) * 0.12, a + 1.2); n++; } } catch(e){ console.warn('twPalm', e); }   /* 港口周圍種七棵椰子樹（四周要有 1.5 公尺空地才種） */   /* v460 小廟：廣場西邊的空地，面向廣場 */
@@ -1623,6 +1633,7 @@ function art2Props(){ try { twTemple(5.6, -26.4, Math.PI / 2); } catch(e){ conso
       scene.add(G); Art2.glow = G; Art2.nk = null; } catch(e){ console.warn('twGlow', e); } }
   for (const [x, z, ry, sc] of [[30.5, -40.3, Math.PI / 2, 1], [36.4, -40.2, Math.PI / 2, 1.08], [38.3, -36.4, 0.05, 0.94]]){ if (isLand(x, z) || deckAt(x, z)) continue;   /* v481 漁船改成靠著石頭堤防停 */ try { const g = twBoat(x, z, ry, sc); Art2.boats.push({ g, x, z, ry, ph: x, dy: -0.34 * sc }); } catch(e){ console.warn('twBoat', e); } } }
 function art2Tick(t){ if (Art2.fx) for (const f of Art2.fx){ try { f(t); } catch(e){} } for (const b of Art2.boats){ b.g.position.y = waterY(b.x, b.z, t) + (b.dy != null ? b.dy : -0.12); b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
+if (!ART2) setTimeout(() => { try { paveAll(); } catch(e){ console.warn('paveAll', e); } }, 0);
 if (ART2) setTimeout(() => { try { art2Props(); toast('🎨 新美術試玩版（只有你看得到）。要關掉：網址後面加 #art=1', 6); } catch(e){ console.warn('art2 props', e); } }, 0);
 var SEASON = (() => { const h = (location.hash.match(/season=(\w+)/) || [])[1]; if (SEASONS[h]) return h; const m = new Date(Date.now() + 8 * 3600e3).getUTCMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; })();
 var SEASON_FISH = new Set(SEASONS[SEASON].fish);
