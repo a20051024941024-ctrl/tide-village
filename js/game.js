@@ -5945,9 +5945,14 @@ function updateBiteFish(dt, t){
   }
   const m = BiteFish.m, b = me.bobPos, nib = F.lastNib && t - F.lastNib < 0.35, bite = F.phase === 'bite';
   if (F.phase === 'reeling'){   // 拉魚時：魚就在浮標底下掙扎，往外衝的方向擺頭
-    if (!m.visible) m.visible = true; BiteFish.fade = Math.min(1, BiteFish.fade + dt * 1.5); for (const [mt, op] of BiteFish.mats) mt.opacity = op * BiteFish.fade;
-    const dx = b.x - me.pos.x, dz = b.z - me.pos.z, ang = Math.atan2(-dz, dx), thr = Math.sin(t * 14) * 0.45 * (0.5 + (F.T || 0));
-    m.position.set(b.x + Math.cos(ang) * 0.25, WATER_LEVEL - 0.12 + Math.sin(t * 9) * 0.04 + (F.jump > 0 ? 0.3 : 0), b.z - Math.sin(ang) * 0.25); m.rotation.y = ang + thr; m.rotation.z = Math.sin(t * 11) * 0.25; return; }
+    if (!m.visible) m.visible = true; BiteFish.fade = Math.min(1, BiteFish.fade + dt * 1.5);
+    /* v507 作者：「加魚往下跑的畫面」→ 魚往外衝（F.run）的時候頭朝下往深處鑽、離浮標遠一點，浮標被拖進水裡、冒泡；沒在衝的時候在水面下掙扎，偶爾也往下沉一下 */
+    const wantD = F.jump > 0 ? 0 : F.run > 0 ? 1 : 0.18 + 0.18 * Math.max(0, Math.sin(t * 0.9)); BiteFish.dive = (BiteFish.dive || 0) + (wantD - (BiteFish.dive || 0)) * Math.min(1, dt * (wantD > (BiteFish.dive || 0) ? 3.5 : 2)); const dv = BiteFish.dive;
+    for (const [mt, op] of BiteFish.mats) mt.opacity = Math.min(0.85, op * 1.45) * BiteFish.fade * (1 - dv * 0.12);   /* 拉魚的時候影子深一點，才看得到牠往下鑽 */
+    const dx = b.x - me.pos.x, dz = b.z - me.pos.z, ang = Math.atan2(-dz, dx), thr = Math.sin(t * (14 + dv * 8)) * 0.45 * (0.5 + (F.T || 0)) * (1 - dv * 0.4), off = 0.25 + dv * 0.95;
+    m.position.set(b.x + Math.cos(ang) * off, WATER_LEVEL - 0.12 - dv * 0.38 + Math.sin(t * 9) * 0.04 * (1 - dv) + (F.jump > 0 ? 0.3 : 0), b.z - Math.sin(ang) * off); m.rotation.y = ang + thr; m.rotation.z = -dv * 0.75 + Math.sin(t * 11) * 0.25 * (1 - dv * 0.6);
+    if (dv > 0.3){ me.dip = Math.max(me.dip || 0, dv * 2.4); if (Math.random() < dt * 9 * dv) FX.emit(b.x + rand(-0.15, 0.15), WATER_LEVEL + 0.03, b.z + rand(-0.15, 0.15), 2, '#e8f7ff', 0.4, 0.9, 0.5); if (Math.random() < dt * 7 * dv) FX.emit(m.position.x, WATER_LEVEL + 0.02, m.position.z, 2, '#e8f7ff', 0.35, 0.7, 0.45); }   /* 魚鑽下去的地方也冒泡 */   /* 浮標被拖下去、水面冒泡 */
+    return; }
   if (t < BiteFish.showAt && !bite) return; if (!m.visible){ m.visible = true; }
   BiteFish.fade = Math.min(1, BiteFish.fade + dt * 0.9); for (const [mt, op] of BiteFish.mats) mt.opacity = op * BiteFish.fade;   // 從深處慢慢浮現
   // 慢慢靠近：一開始在 2.2 公尺外繞圈，越等越近；試探時衝過來碰一下；咬下去時頭頂著浮標
@@ -15958,7 +15963,7 @@ function renderTab(){
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🎨 竿子造型每支竿子各自裝：在阿鐵的工坊按「裝上」只會裝在現在拿的那支，換竿子時會自動換成那支記住的造型；背包的釣竿清單會寫每支裝了什麼造型。',
-      '🌑 水裡的魚影：拋竿以後水底會有黑色的影子游過來咬餌，看得出大概多大、什麼形狀，但看不出顏色和花紋；拉魚的時候上面也只會說手感（例如「好重的手感！」），不會說是什麼魚。要等拉出水面才知道釣到什麼。',
+      '🌑 水裡的魚影：拋竿以後水底會有黑色的影子游過來咬餌，看得出大概多大、什麼形狀，但看不出顏色和花紋；拉魚的時候上面也只會說手感（例如「好重的手感！」），不會說是什麼魚。要等拉出水面才知道釣到什麼。拉魚時看得到牠在浮標底下掙扎；魚往外衝的時候會頭朝下往深處鑽、把浮標拖進水裡、一路冒泡，這時候要先放開。',
       '🦐 在釣蝦場拋竿後，游過來的是蝦子的影子，不是魚影。',
       '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
