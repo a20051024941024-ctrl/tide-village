@@ -2345,7 +2345,7 @@ function castPoint(x, z, dx, dz, dist){
 
   // ---- 樹：南邊的森林、山丘，加上村子周圍零星幾棵 ----
   const nearThing = (x, z) => Math.hypot(x - PX, z - PZ) < 10 || Math.hypot(x - CX, z - CZ) < 4.5 || Math.hypot(x - AX, z - AZ) < 9 || Math.hypot(x - LX, z - LZ) < 4 || SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 4.5) || Math.hypot(x - HX, z - HZ) < 4 || BOAT_DOCKS.some(b => Math.hypot(x - b.x, z - b.z) < 4);
-  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && Math.hypot(x - PETPARK[0], z - PETPARK[1]) > PETPARK[2] + 1.6 && Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) > 4.5 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && (!waterfall || Math.hypot(x - waterfall.x, z - waterfall.z) > 4);
+  const treeOK = (x, z) => !(x > -61 && x < -36 && z > 6 && z < 46) && isLand(x, z) && islandEdge(x, z) > 4 &&   /* v495 作者：居民區不要有樹 */ pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && Math.hypot(x - PETPARK[0], z - PETPARK[1]) > PETPARK[2] + 1.6 && Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) > 4.5 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && (!waterfall || Math.hypot(x - waterfall.x, z - waterfall.z) > 4);
   const trees = [];
   const TREE_CLUMPS = []; { let g2 = 0; while (TREE_CLUMPS.length < 13 && g2++ < 600){ const x = wrand(-46, 46), z = wrand(-44, 14), r = 3.2 + wr() * 2.2; if (!isLand(x, z) || islandEdge(x, z) < 6 || pathDist(x, z) < r + 1.5 || trailDist(x, z) < r || Math.hypot(x - PX, z - PZ) < 14 || TREE_CLUMPS.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + r + 5)) continue; TREE_CLUMPS.push([x, z, r]); } }
   const OKC = (x, z) => treeOK(x, z) && !(x > 24 && x < 37 && z > -25 && z < -14) && Math.hypot(x - HARBOR_SQ[0], z - HARBOR_SQ[1]) > HARBOR_SQ[2] + 5.5 && !(Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) && Math.hypot((x - 40), (z + 6) / 1.5) > 11 && Math.hypot(x - MAP.hill.x, z - MAP.hill.z) > 7;
@@ -15566,6 +15566,7 @@ function renderTab(){
       '愛海點數在商店的「💙愛海」分頁換限定服飾（海龜帽、海洋守護衫、珊瑚項鍊、鯊魚背鰭），金幣買不到。',
     ]);
     sec('🚢 潛水艇與黑淵裂縫', [
+      '🪸 潛水艇一出發的那片大陸棚是珊瑚礁：白沙、一叢一叢的珊瑚和海綿、會擺動的海帶林，還有一群一群的小魚，其中兩群會跟著潛水艇繞著游，潛到大約 400 公尺以下牠們就不跟了。',
       '潛水艇碼頭在「深海浮台」（搭阿海的船去）東邊：跟蔚博士租潛水艇（Lv.15 以上、4500 金幣，租一次以後免費）。按「出發」會走上潛水艇、關上艙門，冒著泡泡沉進浮台底下的深海；回港時潛水艇會浮上來，你從艙門走回棧橋。',
       '搖桿往哪邊推，潛水艇就慢慢轉過去往那邊開；手指拖畫面可以轉鏡頭看四周。按住 ⬇ 下潛、⬆ 上浮：壓艙水要慢慢灌、慢慢排，所以會慢慢加速，放開也會再滑一下（深度旁邊會顯示上下的速度）。深海很暗，只看得到前燈照到的地方。往前開到大陸棚的盡頭，看看會發現什麼。',
       '停下來（深度 200 公尺以下）可以按「🎣 放線」釣深海魚：按住收線，張力太高線會斷、太鬆魚會脫鉤。釣到的魚先放在船艙，按「⚓ 回港」才放進魚缸。',
@@ -16194,7 +16195,7 @@ function subTerrain(){
   const rowsOf = x => { const e = subEdge(x), w = subWidth(x), out = [], seg = (a, b, n) => { for (let k = 0; k < n; k++) out.push(a + (b - a) * k / n); };
     seg(-70, e - 0.6, 28); seg(e - 0.6, e + 8.6, 16); seg(e + 8.6, e + w - 8.6, 14); seg(e + w - 8.6, e + w + 0.6, 16); seg(e + w + 0.6, 90, 10); out.push(90); return out; };
   const NZ = rowsOf(0).length, pos = new Float32Array((NX + 1) * NZ * 3), col = new Float32Array((NX + 1) * NZ * 3), C = new THREE.Color();
-  const sand = new THREE.Color('#6e6650'), rock = new THREE.Color('#25282e'), ledge = new THREE.Color('#3d3c3a'), floorC = new THREE.Color('#4a4238');
+  const sand = new THREE.Color('#c9bf9f'), rock = new THREE.Color('#25282e'), ledge = new THREE.Color('#3d3c3a'), floorC = new THREE.Color('#4a4238');
   for (let i = 0; i <= NX; i++){ const x = xs[i], zs = rowsOf(x), e = subEdge(x), w = subWidth(x);
     for (let j = 0; j < NZ; j++){ const z = zs[j], y = subH(x, z), p = (i * NZ + j) * 3; pos[p] = x; pos[p + 1] = y; pos[p + 2] = z;
       const n = Math.min(z - e, e + w - z), k = n > 0 ? subWallK(n) : 0;
@@ -16247,10 +16248,43 @@ function subModel(){   /* v244 研究用的小潛水艇：黃色艇身＋白色�
 function subGlowTex(){ if (Sub.glowTex) return Sub.glowTex; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'), gr = c.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, 64, 64); return (Sub.glowTex = new THREE.CanvasTexture(cv)); }
 function subGlow(color, s, fog){ const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: subGlowTex(), color, blending:THREE.AdditiveBlending, depthWrite:false, fog: !!fog, transparent:true })); sp.scale.setScalar(s); return sp; }
 
+/* v495 潛水艇出發的那片大陸棚做成珊瑚礁（作者傳了一支影片：黃色潛水艇在白沙、珊瑚、海草上面，一群一群的魚繞著游）。
+   · 珊瑚礁：六十幾叢，每叢有腦珊瑚、分枝珊瑚、管狀海綿、海扇，底下墊幾顆大礁石；另外十幾片海帶林和一大片矮海草，會跟著水流擺。
+   · 魚群：五群共一百五十條小魚。兩群會跟著潛水艇繞著游，潛到大約 400 公尺以下就不跟了（深海還是黑的、安靜的）；另外三群在大陸棚上自己巡游。
+   · 全部用程式做的小模型，同一種只畫一次（instanced），不影響裂縫裡原本的東西。 */
+function subReef(g){ const rnd = mulberry(4242), R = Sub.reef = { schools: [], u: { value: 0 } }, D4 = new THREE.Object3D(), C4 = new THREE.Color(), pick = a => a[Math.floor(rnd() * a.length)];
+  const inst = (geo, mat, list) => { if (!list.length) return null; const m = new THREE.InstancedMesh(geo, mat, list.length); list.forEach((q, i) => { D4.position.set(q.x, q.y, q.z); D4.rotation.set(q.rx || 0, q.ry || 0, q.rz || 0); D4.scale.set(q.sx || q.s, q.sy || q.s, q.sz || q.sx || q.s); D4.updateMatrix(); m.setMatrixAt(i, D4.matrix); m.setColorAt(i, C4.set(q.c || '#ffffff')); }); m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.frustumCulled = false; g.add(m); return m; };
+  const L = { brain: [], branch: [], tube: [], fan: [], rock: [], kelp: [], grass: [] }, onShelf = (x, z) => z > -68 && z < subEdge(x) - 3.5 && Math.abs(x) < 78;
+  for (let k = 0; k < 66; k++){ const cx = -76 + rnd() * 152, cz = -66 + rnd() * 62; if (!onShelf(cx, cz)) continue; const big = rnd() < 0.4, y0 = subH(cx, cz);
+    if (big) for (let i = 0; i < 2; i++){ const s2 = 1.3 + rnd() * 1.8; L.rock.push({ x: cx + (rnd() - 0.5) * 2.4, y: y0 + s2 * 0.25, z: cz + (rnd() - 0.5) * 2.4, s: s2, sy: s2 * (0.55 + rnd() * 0.5), ry: rnd() * 6, c: pick(['#7d8a90', '#8a8f86', '#6f7c84']) }); }
+    const top = big ? 1.1 + rnd() * 1.2 : 0;
+    for (let i = 0, n = 1 + Math.floor(rnd() * 3); i < n; i++){ const s2 = 0.45 + rnd() * 1.0, x = cx + (rnd() - 0.5) * 3.4, z = cz + (rnd() - 0.5) * 3.4; L.brain.push({ x, y: subH(x, z) + s2 * 0.3 + top * rnd(), z, s: s2, sy: s2 * 0.62, ry: rnd() * 6, c: pick(['#e86a8a', '#f2a13c', '#b07be0', '#f2d04a', '#5fc7c0', '#ff8f6a']) }); }
+    for (let i = 0, n = 4 + Math.floor(rnd() * 6); i < n; i++){ const x = cx + (rnd() - 0.5) * 3, z = cz + (rnd() - 0.5) * 3, s2 = 0.7 + rnd() * 1.1; L.branch.push({ x, y: subH(x, z) + top * 0.6, z, s: s2, rx: (rnd() - 0.5) * 0.9, rz: (rnd() - 0.5) * 0.9, ry: rnd() * 6, c: pick(['#ff7a6a', '#f29ac0', '#ffd27a', '#c59af0', '#ff9a4a']) }); }
+    for (let i = 0, n = 2 + Math.floor(rnd() * 4); i < n; i++){ const x = cx + (rnd() - 0.5) * 2.6, z = cz + (rnd() - 0.5) * 2.6, h = 0.6 + rnd() * 1.5; L.tube.push({ x, y: subH(x, z) + top * 0.5, z, sx: 0.8 + rnd() * 0.6, sy: h, ry: rnd() * 6, rx: (rnd() - 0.5) * 0.3, c: pick(['#4f9ae8', '#f2c94c', '#9a6be0', '#3fb8c8', '#f08a5a']) }); }
+    if (rnd() < 0.6){ const x = cx + (rnd() - 0.5) * 3, z = cz + (rnd() - 0.5) * 3, s2 = 0.8 + rnd() * 1.0; L.fan.push({ x, y: subH(x, z) + s2 * 0.75 + top * 0.5, z, s: s2, ry: rnd() * 3.1, c: pick(['#e0453f', '#f08ab0', '#f2a13c', '#b05be0']) }); } }
+  for (let k = 0; k < 20; k++){ const cx = -76 + rnd() * 152, cz = -66 + rnd() * 62; if (!onShelf(cx, cz)) continue; for (let i = 0, n = 8 + Math.floor(rnd() * 8); i < n; i++){ const x = cx + (rnd() - 0.5) * 5, z = cz + (rnd() - 0.5) * 5; if (!onShelf(x, z)) continue; L.kelp.push({ x, y: subH(x, z) - 0.05, z, sx: 0.8 + rnd() * 0.7, sy: 2.6 + rnd() * 4.2, ry: rnd() * 6, c: pick(['#3f8f4a', '#56a85a', '#2f7a52', '#6fb048']) }); } }
+  for (let k = 0; k < 340; k++){ const x = -78 + rnd() * 156, z = -68 + rnd() * 66; if (!onShelf(x, z)) continue; L.grass.push({ x, y: subH(x, z) - 0.03, z, sx: 0.5 + rnd() * 0.5, sy: 0.35 + rnd() * 0.7, ry: rnd() * 6, c: pick(['#4fa85a', '#3f9a6a', '#7ac05a']) }); }
+  const lam = () => new THREE.MeshLambertMaterial({ color: '#ffffff' }), sway = () => { const m = lam(); m.onBeforeCompile = sh => { sh.uniforms.uT = R.u; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  { float ph = instanceMatrix[3][0] * 0.7 + instanceMatrix[3][2] * 0.5; transformed.x += sin(uT * 1.4 + ph + position.y * 1.6) * 0.16 * position.y; transformed.z += cos(uT * 1.1 + ph) * 0.09 * position.y; }'); }; m.customProgramCacheKey = () => 'subkelp'; return m; };
+  const cone = new THREE.ConeGeometry(0.16, 1.2, 5); cone.translate(0, 0.6, 0); const tube = new THREE.CylinderGeometry(0.17, 0.12, 1, 7, 1, true); tube.translate(0, 0.5, 0); const blade = new THREE.ConeGeometry(0.17, 1, 5, 6); blade.translate(0, 0.5, 0);
+  inst(new THREE.IcosahedronGeometry(1, 1), lam(), L.brain); inst(cone, lam(), L.branch); { const tm = lam(); tm.side = THREE.DoubleSide; inst(tube, tm, L.tube); } { const fm = lam(); fm.side = THREE.DoubleSide; inst(new THREE.CircleGeometry(0.8, 9, 0, Math.PI), fm, L.fan); }
+  inst(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: '#ffffff', flatShading: true }), L.rock); inst(blade, sway(), L.kelp); inst(blade, sway(), L.grass);
+  /* 魚群 */
+  const body = new THREE.SphereGeometry(0.2, 8, 6); body.scale(0.42, 0.78, 1.5); const tail = new THREE.ConeGeometry(0.15, 0.26, 4); tail.rotateX(Math.PI / 2); tail.scale(0.3, 1, 1); tail.translate(0, 0, -0.38); const fg = mergeGeometries([body, tail], false);
+  [[34, '#3f7fe8', '#f2d04a', 1, 0.9], [30, '#ff8a3a', '#fff2e0', 1, 0.75], [28, '#f2d04a', '#f2d04a', 0, 0.85], [28, '#dfe6ee', '#3a4250', 0, 1.0], [30, '#3fc0d8', '#8fe8f0', 0, 0.7]].forEach(([n, c1, c2, follow, size], k) => { const m = new THREE.InstancedMesh(fg, new THREE.MeshLambertMaterial({ color: '#ffffff' }), n); for (let i = 0; i < n; i++) m.setColorAt(i, C4.set(i % 4 === 3 ? c2 : c1)); m.instanceColor.needsUpdate = true; m.frustumCulled = false; g.add(m);
+    R.schools.push({ m, n, follow, size, ph: k * 1.9, c: new THREE.Vector3(-20 + k * 14, 4 + k % 3, -44 + (k % 3) * 9), pc: new THREE.Vector3(), base: [-40 + k * 20, -42 + (k % 3) * 8], r: [2.6 + k % 2, 1.1, 2.2 + (k + 1) % 2] }); });
+  return R; }
+function subReefTick(dt, t){ const R = Sub.reef; if (!R) return; R.u.value = t; const P = Sub.pos, depth = subDepth(P.y), D4 = subReefTick.d || (subReefTick.d = new THREE.Object3D()), near = 1 - smooth01((depth - 380) / 260);
+  for (const S of R.schools){ let vis = 1; S.pc.copy(S.c);
+    if (S.follow){ vis = near; const a = t * 0.22 + S.ph, tx = P.x + Math.cos(a) * 5.2, ty = P.y + Math.sin(t * 0.31 + S.ph) * 1.6 + 0.4, tz = P.z + Math.sin(a) * 5.2 + 2.5, k = Math.min(1, dt * 1.1); S.c.x += (tx - S.c.x) * k; S.c.y += (ty - S.c.y) * k; S.c.z += (tz - S.c.z) * k; }
+    else { const a = t * 0.05 + S.ph, x = S.base[0] + Math.sin(a) * 22, z = Math.min(S.base[1] + Math.cos(a * 0.8) * 12, subEdge(x) - 6); S.c.set(x, subH(x, z) + 3 + Math.sin(a * 2.3) * 1.2, z); vis = Math.hypot(S.c.x - P.x, S.c.z - P.z) < 110 ? 1 : 0; }
+    if (vis < 0.02){ if (S.m.visible) S.m.visible = false; continue; } S.m.visible = true; const vx = S.c.x - S.pc.x, vz = S.c.z - S.pc.z, mv = Math.hypot(vx, vz) > 1e-4;
+    for (let i = 0; i < S.n; i++){ const h1 = (i * 0.618) % 1, h2 = (i * 0.381 + 0.3) % 1, a = t * (0.5 + h1 * 0.5) + i * 2.399 + S.ph, rx = S.r[0] * (0.35 + h2), rz = S.r[2] * (0.35 + h1), ox = Math.cos(a) * rx, oz = Math.sin(a) * rz, oy = Math.sin(a * 1.3 + i) * S.r[1] * (0.4 + h2);
+      D4.position.set(S.c.x + ox, S.c.y + oy, S.c.z + oz); const dx = -Math.sin(a) * rx + (mv ? vx * 40 : 0), dz = Math.cos(a) * rz + (mv ? vz * 40 : 0); D4.rotation.set(0, Math.atan2(dx, dz) + Math.sin(t * 9 + i) * 0.2, 0); D4.scale.setScalar(S.size * (0.8 + h1 * 0.5) * vis); D4.updateMatrix(); S.m.setMatrixAt(i, D4.matrix); }
+    S.m.instanceMatrix.needsUpdate = true; } }
 function subBuild(){
   const g = new THREE.Group(); g.position.set(SUBW.x, SUBW.y, SUBW.z); Sub.group = g; scene.add(g);
   Sub.terr = subTerrain(); g.add(Sub.terr);
-  const hemi = new THREE.HemisphereLight('#3a6a9a', '#0a1018', 0.7); g.add(hemi); Sub.hemi = hemi;
+  const hemi = new THREE.HemisphereLight('#3a6a9a', '#0a1018', 0.7); hemi.position.set(0, 2000, 0);   /* v495 這盞「天光」的方向是照它在世界裡的位置算的；整個深海場景放在地底下 1000 公尺，結果光變成從下面來，海底朝上的那一面一直是黑的。把它擺到上面，白沙和珊瑚才看得到顏色 */ g.add(hemi); Sub.hemi = hemi;
   // 潛水艇和前燈
   const m = subModel(); g.add(m); Sub.m = m;
   const L = new THREE.SpotLight('#d8ecff', 90, 40, 0.62, 0.5, 1.0); L.position.set(0, -0.2, 1.3); m.add(L); const tg = new THREE.Object3D(); tg.position.set(0, -4.5, 8); m.add(tg); L.target = tg; Sub.light = L;
@@ -16285,6 +16319,7 @@ function subBuild(){
   const kelpM = new THREE.MeshLambertMaterial({ color:'#3a6a3a' }); for (let i = 0; i < 40; i++){ const x = -70 + rnd() * 140, z = -60 + rnd() * 50; if (z > subEdge(x) - 3) continue; const h = 1 + rnd() * 2.5, k = new THREE.Mesh(new THREE.ConeGeometry(0.12, h, 4), kelpM); k.position.set(x, subH(x, z) + h / 2, z); g.add(k); }
   for (let i = 0; i < 18; i++){ const x = -70 + rnd() * 140, z = -60 + rnd() * 55; if (z > subEdge(x) - 3) continue; const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 + rnd() * 0.8, 0), rockM); r.position.set(x, subH(x, z) + 0.2, z); r.scale.y = 0.6; g.add(r); }
   Sub.shelfFish = []; for (let i = 0; i < 2; i++){ try { const f = fishModel(FISH_BY_ID[['moonbream', 'mackerel'][i]], 0.6); f.position.set(-30 + i * 9, 3, -40 + (i % 3) * 8); g.add(f); Sub.shelfFish.push({ m:f, cx:f.position.x, cz:f.position.z, r:3 + i % 3, ph:i, y:2 + (i % 3) }); } catch(e){} }
+  try { subReef(g); } catch(e){ console.warn('subReef', e); }
   // 傳說：皇帶魚直直地立在岩壁中段（1000～1500 公尺）、大王魷魚在溝底、偶爾從頭頂游過的抹香鯨
   try { const of = fishModel(FISH_BY_ID.oarfish, 4.5); of.rotation.z = Math.PI / 2; const x = -14, z = subEdge(x) + 3.2; of.position.set(x, -44, z + 2.5); g.add(of); Sub.oar = { m:of, x, z: z + 2.5, y:-44, dy:0 }; } catch(e){}
   try { const sq = fishModel(FISH_BY_ID.giantsquid, 7); const x = 6, z = subEdge(x) + subWidth(x) * 0.5; sq.position.set(x, -112, z); g.add(sq); Sub.squid = { m:sq, cx:x, cz:z }; } catch(e){}
@@ -16399,8 +16434,8 @@ function subMsg(text, secs){ const m = subHud().querySelector('.sh-msg'); m.text
    200～1000 m 暮光層：越來越深的藍，光束越來越淡、到 600 m 完全不見
    1000 m 以下 午夜層：全黑，只剩潛水艇的燈和生物自己的光
    整段都有海雪（細小的白點慢慢往下飄，越深越明顯）。全部用最便宜的做法：幾片平面、一個 Points，沒有後製特效。 */
-const SUB_FOG_C = [[30, '#3d9cc4'], [200, '#2a7fa8'], [600, '#0f3352'], [1000, '#0a2238'], [1300, '#020a14']];
-const SUB_HEMI = [[30, 1.7], [200, 1.4], [1000, 0.6], [1300, 0.25]];
+const SUB_FOG_C = [[30, '#56b8de'], [200, '#3391c0'], [600, '#0f3352'], [1000, '#0a2238'], [1300, '#020a14']];
+const SUB_HEMI = [[30, 1.5], [200, 1.2], [600, 0.42], [1000, 0.12], [1300, 0.05]];   /* 天光方向修正後，深的地方要調暗才會跟以前一樣黑 */
 function subKey(L, d){ if (d <= L[0][0]) return L[0][1]; for (let i = 1; i < L.length; i++) if (d <= L[i][0]){ const k = smooth01((d - L[i - 1][0]) / (L[i][0] - L[i - 1][0])); return [L[i - 1][1], L[i][1], k]; } return L[L.length - 1][1]; }
 function subKeyN(L, d){ const r = subKey(L, d); return Array.isArray(r) ? r[0] + (r[1] - r[0]) * r[2] : r; }
 function subKeyC(L, d, out){ const r = subKey(L, d); if (!Array.isArray(r)) return out.set(r); return out.set(r[0]).lerp((Sub._kc || (Sub._kc = new THREE.Color())).set(r[1]), r[2]); }
@@ -16436,7 +16471,7 @@ function subLightTick(dt, t, depth){
   subKeyC(SUB_FOG_C, depth, L.fogC); if (dark > 0) L.fogC.multiplyScalar(1 - dark * 0.85);
   Sub.evFogK = (Sub.evFogK || 0) + ((Sub.evFog || 0) - (Sub.evFogK || 0)) * Math.min(1, dt * 2); scene.fog.color.copy(L.fogC); scene.background.copy(L.fogC); scene.fog.far = far * (1 + 0.8 * Sub.evFogK);   /* 嚇人的東西進到燈光裡的時候，看得遠一點（不然被霧吃掉） */ scene.fog.near = depth < 600 ? 6 : 2; Sub.viewR = far;
   const off = Sub.darkK || 0; if (off > 0) L.fogC.multiplyScalar(1 - off * 0.9), scene.fog.color.copy(L.fogC), scene.background.copy(L.fogC);
-  Sub.hemi.intensity = subKeyN(SUB_HEMI, depth) * (1 - dark) * (1 - off * 0.85); Sub.hemi.color.set(depth < 600 ? '#6ab4d8' : '#3a6a9a');
+  Sub.hemi.intensity = subKeyN(SUB_HEMI, depth) * (1 - dark) * (1 - off * 0.85); Sub.hemi.color.set(depth < 600 ? '#6ab4d8' : '#3a6a9a'); Sub.hemi.groundColor.set(depth < 600 ? '#44708c' : '#0a1018');
   Sub.light.distance = Math.max(Sub.range * 1.5, far * 0.6);
   // 光束：跟著潛水艇（在附近的固定位置，不會黏在畫面上），朝鏡頭轉，慢慢晃
   L.rayM.opacity = 0.22 * sun * (1 - dark); L.rayG.visible = L.rayM.opacity > 0.004;
@@ -16633,6 +16668,7 @@ function subFrame(dt, t){
     for (let i = 0; i < S.n; i++){ const [a0, dy, r, sp] = S.off[i], a = a0 + t * 0.6 * sp; e.set(0, -a - Math.PI / 2, 0); q.setFromEuler(e); M.compose(new THREE.Vector3(cx + Math.cos(a) * r, S.cy + dy + Math.sin(t + a0) * 0.2, cz + Math.sin(a) * r), q, new THREE.Vector3(1, 1, 1)); S.im.setMatrixAt(i, M); } S.im.instanceMatrix.needsUpdate = true; }
   if (Sub.swarm && frameNo % 3 === 0){ const a = Sub.swarm.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i] += (Math.random() - 0.5) * 0.08; a[i + 1] = clamp(a[i + 1] + (Math.random() - 0.5) * 0.06, 0, 1.8); a[i + 2] += (Math.random() - 0.5) * 0.06; a[i] = clamp(a[i], -4.6, 4.6); a[i + 2] = clamp(a[i + 2], -1.5, 1.5); } Sub.swarm.geometry.attributes.position.needsUpdate = true; }
   for (const j of Sub.jelly){ j.m.position.y = j.y0 + Math.sin(t * 0.5 + j.ph) * 1.5; j.m.scale.y = 1 + Math.sin(t * 2 + j.ph) * 0.15; }
+  try { subReefTick(dt, t); } catch(e){}
   for (const f of Sub.shelfFish){ const a = t * 0.35 + f.ph; f.m.position.set(f.cx + Math.cos(a) * f.r, f.y, f.cz + Math.sin(a) * f.r); f.m.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)) + Math.PI / 2; }
   if (Sub.oar){ const O = Sub.oar, d = Math.hypot(P.x - O.x, P.y - O.m.position.y, P.z - O.z), lit = d < 12 && ((O.x - P.x) * fx + (O.z - P.z) * fz) > 0; O.dy += ((lit ? -1.2 : 0.15) - O.dy) * dt; O.m.position.y = clamp(O.m.position.y + O.dy * dt, -56, -34); O.m.position.x = O.x + Math.sin(t * 0.3) * 0.6; }   /* 被燈照到會慢慢往下躲 */
   if (Sub.squid){ const S = Sub.squid, a = t * 0.06; S.m.position.set(S.cx + Math.cos(a) * 9, -112 + Math.sin(t * 0.4) * 1.5, S.cz + Math.sin(a) * 6); S.m.rotation.y = -a; }
