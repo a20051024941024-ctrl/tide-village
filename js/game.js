@@ -3877,7 +3877,7 @@ function makeBobber(){
   const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 4), mat(PALETTE.ink)); stick.position.y = 0.14;
   g.add(top, bot, stick); g.visible = false; scene.add(g); return g;
 }
-const LINE_PTS = 18;
+const LINE_PTS = 28;
 function makeLine(){
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(LINE_PTS*3), 3));
   const l = new THREE.Line(geo, new THREE.LineBasicMaterial({ color:'#fbf8ef', transparent:true, opacity:0.85 })); l.frustumCulled = false; l.visible = false; scene.add(l); return l;
@@ -4650,7 +4650,9 @@ class Fisher {
       else if (this.flying){
         const f = this.flying; f.t += dt / f.dur; const k = Math.min(1, f.t);
         this.bob.position.lerpVectors(f.from, f.to, k); this.bob.position.y += Math.sin(k * Math.PI) * f.h;
-        if (k >= 1){ this.flying = null; this.bobState = 'water'; ripple(f.to.x, f.to.z); if (f.done) f.done(); }
+        /* v513 作者：「甩出去的時候，線會因為慣性往前飛也沒有做出來」→ 記下浮標飛過的路線，線會沿著這條路被拖出去（不是一條直線），飛在空中的線也會慢慢往下掉 */
+        if (!f.trail){ f.trail = [{ x: f.from.x, y: f.from.y, z: f.from.z, t: now() }]; } const tn = now(), lp = f.trail[f.trail.length - 1]; if (tn - lp.t > 0.025) f.trail.push({ x: this.bob.position.x, y: this.bob.position.y, z: this.bob.position.z, t: tn });
+        if (k >= 1){ this.flying = null; this.bobState = 'water'; ripple(f.to.x, f.to.z); this.lineLand = { t: now(), snap: Float32Array.from(this.line.geometry.attributes.position.array) }; if (f.done) f.done(); }
       } else {
         const wy = waterY(this.bobPos.x, this.bobPos.z, t);
         const jt = this === me && F.phase === 'bite' ? (this.bobJit || 0) : 0; this.bob.position.set(this.bobPos.x + Math.sin(t * 37) * jt, wy - this.dip * 0.16 + (this.dip < 0 ? this.dip * 0.06 : 0) + Math.sin(t*3)*0.01, this.bobPos.z + Math.cos(t * 41) * jt);
@@ -4660,6 +4662,21 @@ class Fisher {
       const B = this.bob.position; const arr = this.line.geometry.attributes.position.array;
       const dist = tip.distanceTo(B); const sag = this.flying ? 0.05 : (0.35 - this.bend*0.3) * Math.min(1, dist/4);
       for (let i = 0; i < LINE_PTS; i++){ const k = i/(LINE_PTS-1); arr[i*3] = tip.x + (B.x - tip.x)*k; arr[i*3+1] = tip.y + (B.y + 0.1 - tip.y)*k - Math.sin(k*Math.PI)*sag; arr[i*3+2] = tip.z + (B.z - tip.z)*k; }
+      const fl = this.flying, tr = fl && fl.delay <= 0 && fl.trail, wl = WATER_LEVEL + 0.02, tn = now();
+      if (tr && tr.length > 1){   /* 飛行中：線沿著浮標飛過的路線，從竿尖一路拖到浮標；越早放出去的線掉得越低（重力） */
+        const n = tr.length;
+        for (let i = 1; i < LINE_PTS; i++){ const k = i / (LINE_PTS - 1), u = k * (n - 1), j = Math.min(n - 2, Math.floor(u)), f2 = u - j, A = tr[j], C = tr[j + 1];
+          let x = A.x + (C.x - A.x) * f2, y = A.y + (C.y - A.y) * f2, z = A.z + (C.z - A.z) * f2; const age = tn - (A.t + (C.t - A.t) * f2); y = Math.max(wl, y - Math.min(3, 2.2 * age * age));
+          const near = Math.max(0, 1 - k / 0.18); x += (tip.x - x) * near * near; y += (tip.y - y) * near * near; z += (tip.z - z) * near * near;   /* 靠近竿尖那一段跟著竿尖走 */
+          if (i === LINE_PTS - 1){ x = B.x; y = B.y + 0.05; z = B.z; } arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z; }
+      } else if (this.lineLand && tn - this.lineLand.t < 1.6 && !this.flying){   /* 落水後：空中的線先慢慢落到水面上（鬆鬆的一條弧），再被收緊成平常的樣子 */
+        const L = this.lineLand, s = (tn - L.t) / 1.6, sn = L.snap, dx = B.x - tip.x, dz = B.z - tip.z, dl = Math.hypot(dx, dz) || 1, px = -dz / dl, pz = dx / dl;
+        for (let i = 1; i < LINE_PTS; i++){ const k = i / (LINE_PTS - 1), bow = Math.sin(k * Math.PI) * Math.min(1.2, dl * 0.12) * (1 - s);
+          const wx = tip.x + dx * k + px * bow, wz = tip.z + dz * k + pz * bow, wy = k < 0.2 ? tip.y + (wl - tip.y) * Math.sqrt(k / 0.2) : wl;   /* 躺在水面上的線（往旁邊鬆鬆彎一點） */
+          const a1 = Math.min(1, s / 0.3), ox = sn && sn.length >= (i + 1) * 3 ? sn[i * 3] : wx, oy = sn && sn.length >= (i + 1) * 3 ? sn[i * 3 + 1] : wy, oz = sn && sn.length >= (i + 1) * 3 ? sn[i * 3 + 2] : wz;
+          let x = ox + (wx - ox) * a1, y = oy + (wy - oy) * a1, z = oz + (wz - oz) * a1; const a2 = Math.max(0, (s - 0.55) / 0.45); x += (arr[i * 3] - x) * a2; y += (arr[i * 3 + 1] - y) * a2; z += (arr[i * 3 + 2] - z) * a2;
+          arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z; }
+      } else if (this.lineLand && tn - this.lineLand.t >= 1.6) this.lineLand = null;
       this.line.geometry.attributes.position.needsUpdate = true;
     }
     if (!this.bub.hidden && now() > this.bubUntil) this.bub.hidden = true;
@@ -9924,13 +9941,16 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   const rp = FP.rodP, reel = F.phase === 'reeling', bend = clamp(me.bend || 0, 0, 1.2), wind = F.phase === 'charging' ? clamp(F.charge || 0, 0, 1) : 0;
   /* v505 甩竿：蓄力時竿子往後舉，放開的一瞬間往前甩（甩過頭一點，竿尖往下），再回到前面指著浮標 */
   if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
-  if (FP.castT && t - FP.castT < 0.75){ const s2 = (t - FP.castT) / 0.75; if (s2 < 0.32){ const u = s2 / 0.32; cast = (FP.castW * 0.75 + 0.25) * (1 - u * u) - 0.42 * u * u; } else { const u = (s2 - 0.32) / 0.68; cast = -0.42 * (1 - u) * (1 - u); } }
+  if (FP.castT && t - FP.castT < 0.9){ const s2 = (t - FP.castT) / 0.9; if (s2 < 0.24){ const u = s2 / 0.24, e3 = u * u * u; cast = (FP.castW * 0.75 + 0.35) * (1 - e3) - 0.3 * e3; } else { const u = (s2 - 0.24) / 0.76; cast = -0.3 * (1 - u) * (1 - u) * (1 - u); } }   /* 往前甩是越甩越快（加速），在前面停住、竿尖指向遠方，然後慢慢放下來對著浮標 */
   const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
   rp.position.set(0.03 - lift * 0.02, -0.3 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.42);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0)   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
   /* 竿子彎：拉魚的時候照張力彎（越緊越彎），魚咬的時候竿尖抖，魚吊在竿尖時被魚的重量拉彎；甩竿往前的瞬間竿尖往後甩（彈性） */
   const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; let wantB = reel ? 0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25 : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
   if (c) wantB = c.t < 0.6 ? 0.9 * cw : c.t < 1.2 ? 0.55 * cw + Math.sin(c.t * 9) * 0.06 : c.t < 2.6 ? 0.3 * cw : 0.02;
-  FP.bendNow += (wantB - FP.bendNow) * Math.min(1, dt * 9); const flex = cast * 0.55, N = FP.segs.length; for (let i = 0; i < N; i++){ const wgt = (0.6 + i / N) / (N * 0.6 + (N - 1) / 2); FP.segs[i].rotation.x = -clamp(FP.bendNow - flex, -0.5, 1.0) * wgt * 1.1 + (reel ? Math.sin(t * 27 + i) * 0.004 * FP.bendNow : 0); }
+  FP.bendNow += (wantB - FP.bendNow) * Math.min(1, dt * 9);
+  /* v513 甩竿的彈性：竿子往前甩的時候竿尖會被甩在後面（往後彎），竿子一停竿尖就往前彈出去，再來回抖幾下停住 */
+  const cv = dt > 0 ? (cast - (FP.castPrev || 0)) / dt : 0; FP.castPrev = cast; const ftg = clamp(cv * 0.09, -0.75, 0.75); FP.fxV = (FP.fxV || 0) + ((ftg - (FP.fx || 0)) * 160 - (FP.fxV || 0) * 9) * dt; FP.fx = clamp((FP.fx || 0) + FP.fxV * dt, -0.9, 0.9);
+  const flex = FP.fx, N = FP.segs.length; for (let i = 0; i < N; i++){ const wgt = (0.6 + i / N) / (N * 0.6 + (N - 1) / 2); FP.segs[i].rotation.x = -clamp(FP.bendNow - flex, -0.5, 1.0) * wgt * 1.1 + (reel ? Math.sin(t * 27 + i) * 0.004 * FP.bendNow : 0); }
   /* 捲線器：按住收線時把手轉、線杯跟著轉；魚剛出水那一下轉很快；甩竿的時候線從線杯放出去（線杯抖） */
   const crankV = c ? (c.t < 1.2 ? 20 : 0) : reel && F.hold ? 14 : FP.castT && t - FP.castT < 1.4 && t - FP.castT > 0.9 ? 9 : 0; FP.crankA += crankV * dt; FP.crank.rotation.x = -FP.crankA; FP.spool.rotation.y = FP.crankA * 1.6;
   if (crankV > 0){ FP.clk = (FP.clk || 0) - dt; if (FP.clk <= 0){ FP.clk = 0.09; try { tone(2200 + Math.random() * 300, 0.012, 'square', 0.012); } catch(e2){} } }
@@ -15994,6 +16014,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
       '👀 第一人稱釣魚：「設定 → 🎣 釣魚視角」選「第一人稱」，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
