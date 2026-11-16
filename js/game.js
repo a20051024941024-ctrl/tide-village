@@ -4641,10 +4641,10 @@ class Fisher {
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
-    this._uf = frameNo; const showBob = this.fishing && this.bobState !== 'none' && a.g.visible && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
+    this._uf = frameNo; const fpMe = this === me && FP.act && FP.tip, showBob = this.fishing && this.bobState !== 'none' && (a.g.visible || fpMe) && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
     this.bob.visible = showBob; this.line.visible = showBob;
     if (showBob){
-      if (this.flying && this.flying.delay > 0){ this.flying.delay -= dt; this.av.tip.getWorldPosition(this.flying.from); this.bob.position.copy(this.flying.from); }   // 甩到一半浮標才飛出去
+      if (this.flying && this.flying.delay > 0){ this.flying.delay -= dt; (fpMe ? FP.tip : this.av.tip).getWorldPosition(this.flying.from); this.bob.position.copy(this.flying.from); }   // 甩到一半浮標才飛出去
       else if (this.flying){
         const f = this.flying; f.t += dt / f.dur; const k = Math.min(1, f.t);
         this.bob.position.lerpVectors(f.from, f.to, k); this.bob.position.y += Math.sin(k * Math.PI) * f.h;
@@ -4654,7 +4654,7 @@ class Fisher {
         const jt = this === me && F.phase === 'bite' ? (this.bobJit || 0) : 0; this.bob.position.set(this.bobPos.x + Math.sin(t * 37) * jt, wy - this.dip * 0.16 + (this.dip < 0 ? this.dip * 0.06 : 0) + Math.sin(t*3)*0.01, this.bobPos.z + Math.cos(t * 41) * jt);
       }
       // line
-      const tip = new THREE.Vector3(); a.tip.getWorldPosition(tip);
+      const tip = new THREE.Vector3(); (fpMe ? FP.tip : a.tip).getWorldPosition(tip);
       const B = this.bob.position; const arr = this.line.geometry.attributes.position.array;
       const dist = tip.distanceTo(B); const sag = this.flying ? 0.05 : (0.35 - this.bend*0.3) * Math.min(1, dist/4);
       for (let i = 0; i < LINE_PTS; i++){ const k = i/(LINE_PTS-1); arr[i*3] = tip.x + (B.x - tip.x)*k; arr[i*3+1] = tip.y + (B.y + 0.1 - tip.y)*k - Math.sin(k*Math.PI)*sag; arr[i*3+2] = tip.z + (B.z - tip.z)*k; }
@@ -5663,7 +5663,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 function camClear(target, want, dt){
@@ -6231,9 +6231,9 @@ function landFish(){
   const from = me.bobPos.clone(); from.y = 0.1;
   const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm); const fmAct = fishAct(fm, 'air');   /* v448 吊在線上：頭朝上、整條身體猛甩 */
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
-  jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });
+  const fpc = FP.act; if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
-  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, 900);
+  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, fpc ? 2500 : 900);   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
 const jumpers = [];
 function updateJumpers(dt, t){
@@ -9830,6 +9830,66 @@ function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), w
   const row = el('div', 'dc-btns'), again = el('button', 'tbtn', '再來一局'), x = el('button', 'tbtn ghost', '關閉'); row.append(again, x); c.appendChild(row);
   again.addEventListener('click', () => { duelCardClose('res'); duelInvite(op.id, op.name); }); x.addEventListener('click', () => duelCardClose('res'));
   try { if (win === true) SFX.coin(); else SFX.click(); } catch(e){} if (win === true) flash('🏆 對決勝利！', 1.6); }
+/* ================= v503 🎣 第一人稱釣魚（作者 11/16：傳了三張自己釣魚的照片——竿子伸向水面、魚掛在線上被拉出水、戴手套把魚拿在手上
+   「以前釣魚的時候覺得這樣很有成就感」→ 全程第一人稱、可以切換；手照角色的膚色和袖子） =================
+   開關在「設定 → 🎣 釣魚視角」。打開以後，從拋竿到看完魚都是從自己眼睛看出去：
+   - 畫面右下是自己的手握著竿子，竿尖指向浮標，線從竿尖連到浮標（別人看到的你還是原本的樣子，這只改自己的鏡頭）
+   - 釣到：魚從水裡被拉出來、掛在線上甩 → 手伸過來把魚拿起來（小魚單手，大魚雙手，竿子先放下）→ 才跳出重量卡
+   掛在鏡頭上的東西（竿子、手、魚）都放在 FP.g 這個群組裡，是 camera 的子物件 */
+const FP = { pref: LS.get('tide.fpFish', false) === true, act: false, g: null, tip: null, rodP: null, handR: null, look: new THREE.Vector3(), eye: new THREE.Vector3(), tgt: new THREE.Vector3(), c: null, line: null, skin: null, sleeve: null, rodY: 0 };
+function fpSet(v){ FP.pref = !!v; LS.set('tide.fpFish', FP.pref); if (!FP.pref) fpStop(); }
+function fpWant(){ return FP.pref && F.phase !== 'idle' && !F.boss && !Dive.on && !House.on && !Photo.on && !Pool.on && !(typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) && !CLASSIC; }
+function fpHand(side){ const g = new THREE.Group(), B = (w, h, d, m, x, y, z, p) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); (p || g).add(o); return o; };
+  B(0.085, 0.03, 0.09, FP.skin, 0, 0, 0);
+  for (let i = 0; i < 4; i++){ const k = new THREE.Group(); k.position.set(-0.032 + i * 0.0215, 0.004, -0.045); k.rotation.x = 1.05; g.add(k); B(0.018, 0.02, 0.042, FP.skin, 0, 0, -0.021, k); const k2 = new THREE.Group(); k2.position.set(0, 0, -0.042); k2.rotation.x = 0.7; k.add(k2); B(0.017, 0.019, 0.034, FP.skin, 0, 0, -0.017, k2); }
+  { const k = new THREE.Group(); k.position.set(side * 0.046, 0.004, 0.012); k.rotation.set(0.5, 0, side * -0.9); g.add(k); B(0.02, 0.05, 0.022, FP.skin, 0, 0.025, 0, k); }
+  const arm = new THREE.Group(); arm.position.set(0, -0.004, 0.045); arm.rotation.x = 0.62; g.add(arm);
+  { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.034, 0.07, 10), FP.skin); w.rotation.x = Math.PI / 2; w.position.z = 0.035; arm.add(w); const s = new THREE.Mesh(new THREE.CylinderGeometry(0.043, 0.05, 0.5, 10), FP.sleeve); s.rotation.x = Math.PI / 2; s.position.z = 0.32; arm.add(s); const cf = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.03, 10), FP.sleeve); cf.rotation.x = Math.PI / 2; cf.position.z = 0.075; arm.add(cf); }
+  return g; }
+function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); const g = FP.g = new THREE.Group(); g.visible = false; g.userData.keep = true; g.userData.dyn = true; camera.add(g);
+  FP.skin = new THREE.MeshStandardMaterial({ color: '#ffd9b8', roughness: 0.75 }); FP.sleeve = new THREE.MeshStandardMaterial({ color: '#4f8fe0', roughness: 0.85 });
+  const rp = FP.rodP = new THREE.Group(); rp.position.set(0.3, -0.34, -0.34); rp.rotation.order = 'YXZ'; g.add(rp);
+  { const geo = new THREE.CylinderGeometry(0.0035, 0.016, 2.3, 8); geo.translate(0, 1.15, 0); rp.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#20252b', roughness: 0.4, metalness: 0.3 })));
+    const grip = new THREE.CylinderGeometry(0.02, 0.022, 0.34, 8); grip.translate(0, -0.05, 0); rp.add(new THREE.Mesh(grip, new THREE.MeshStandardMaterial({ color: '#3a2a20', roughness: 0.9 })));
+    for (const [y, r] of [[0.42, 0.0145], [1.12, 0.0105], [1.75, 0.007]]){ const bd = new THREE.Mesh(new THREE.CylinderGeometry(r, r + 0.0006, 0.06, 8), new THREE.MeshStandardMaterial({ color: '#d8352f', roughness: 0.5 })); bd.position.y = y; rp.add(bd); }
+    FP.tip = new THREE.Object3D(); FP.tip.position.y = 2.3; rp.add(FP.tip);
+    const h = FP.handR = fpHand(1); h.position.set(0.0, 0.06, 0.03); h.rotation.set(1.35, 0, 1.45); h.scale.setScalar(1.05); rp.add(h); }
+  FP.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f8fb', transparent: true, opacity: 0.85 })); FP.line.frustumCulled = false; FP.line.visible = false; FP.line.userData.keep = true; scene.add(FP.line); }
+function fpStart(){ fpBuild(); FP.act = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
+  poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
+function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
+function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
+/* 釣到魚：from 是浮標的位置（世界座標） */
+function fpCatch(f, w, from){ fpCatchEnd(); const m = fishModel(f, fishShowScale(w)), box = new THREE.Box3().setFromObject(m), sz = box.getSize(new THREE.Vector3()), L0 = Math.max(0.05, sz.x), H0 = Math.max(0.02, sz.y);
+  const L = clamp(0.12 + 0.135 * Math.log(1 + 6 * Math.max(0, +w || 0)), 0.14, 0.86), k = L / L0, h = new THREE.Group();   /* 眼前的魚多長（公尺）照重量算：0.15 公斤約 21 公分、1 公斤約 38 公分、9 公斤約 66 公分；遊戲裡的魚模型本來就畫得比真的大，不能直接用 */ h.scale.setScalar(k); h.add(m); FP.g.add(h);
+  const st = from.clone(); st.y = WATER_LEVEL - 0.1; camera.updateMatrixWorld(); FP.g.worldToLocal(st); if (!isFinite(st.x + st.y + st.z)) st.set(0, -0.6, -3); if (st.z > -1.2) st.z = -1.2;
+  const two = L > 0.36, hands = two ? [fpHand(-1), fpHand(1)] : [fpHand(-1)]; for (const x of hands){ x.visible = false; x.scale.setScalar(two ? 1.25 : 1.1); FP.g.add(x); }
+  FP.c = { f, w, m, h, L, H: H0 * k, t: 0, st, act: fishAct(m, 'air'), hands, two, held: false, hang: new THREE.Vector3(0.0, 0.03, -0.72 - L * 0.55), hold: new THREE.Vector3(two ? 0 : -0.04, -0.07, -0.5 - L * 0.42) }; h.position.copy(st); }
+function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T = c.t, h = c.h, e = x => 1 - (1 - x) * (1 - x);
+  if (T < 0.8){ const u = e(T / 0.8); h.position.lerpVectors(c.st, c.hang, u); h.position.y += Math.sin(u * Math.PI) * 0.12; }
+  else if (T < 1.75){ h.position.copy(c.hang); h.position.x += Math.sin((T - 0.8) * 5.2) * 0.035 * Math.max(0, 1 - (T - 0.8) * 0.7); }
+  else { if (!c.held){ c.held = true; const A = c.act; if (A){ A.kind = 'hand'; A.burst = 0.5; A.next = 1.2; A.by = 0; } c.m.rotation.set(0, 0, 0); c.m.position.y = 0; for (const x of c.hands) x.visible = true; try { tone(520, 0.05, 'triangle', 0.05); buzz(30); } catch(e2){} }
+    const u = e(Math.min(1, (T - 1.75) / 0.45)); h.position.lerpVectors(c.hang, c.hold, u); h.rotation.y = -0.18 * u; h.rotation.x = 0.1 * u;
+    const by = c.hold.y - c.H / 2 - 0.012, drop = (1 - u) * 0.45; c.hands.forEach((x, i) => { const sx = c.two ? (i ? 1 : -1) * c.L * 0.27 : 0; x.position.set(c.hold.x + sx, by - drop + Math.sin(t * 2.1 + i) * 0.003, c.hold.z + 0.02); x.rotation.set(0.12, (c.two ? (i ? -0.35 : 0.35) : 0.25), 0); }); }
+  /* 雙手拿魚時竿子先放下（往下收出畫面） */
+  const wantY = c.two && T > 1.6 ? -0.75 : 0; FP.rodY += (wantY - FP.rodY) * Math.min(1, dt * 5);
+  /* 線：竿尖 → 魚嘴（魚掛著的時候頭朝上，嘴在最上面）；拿在手上以後就解下來了 */
+  const ln = FP.line; if (T < 1.75){ const a = ln.geometry.attributes.position, p0 = FP.tgt; FP.tip.getWorldPosition(p0); a.setXYZ(0, p0.x, p0.y, p0.z); p0.set(h.position.x, h.position.y + c.L * 0.46, h.position.z); FP.g.localToWorld(p0); a.setXYZ(1, p0.x, p0.y, p0.z); a.needsUpdate = true; ln.visible = true; } else ln.visible = false; }
+/* 每一格：決定要不要第一人稱、擺鏡頭、動竿子。回傳 true 表示鏡頭已經擺好，原本的鏡頭程式不用跑 */
+function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now();
+  FP.eye.set(me.pos.x, me.baseY + (me.sitting ? 0.85 : 1.16), me.pos.z);
+  const bobOK = !FP.c && me.fishing && me.bobState !== 'none' && me.bob && me.bob.visible;
+  if (bobOK && isFinite(me.bob.position.x + me.bob.position.y + me.bob.position.z)){ const B = me.bob.position; FP.tgt.set(B.x, Math.max(WATER_LEVEL, B.y), B.z); const d = Math.hypot(B.x - me.pos.x, B.z - me.pos.z); if (d < 2.2){ const k = 2.2 / Math.max(0.2, d); FP.tgt.x = me.pos.x + (B.x - me.pos.x) * k; FP.tgt.z = me.pos.z + (B.z - me.pos.z) * k; } FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
+  else if (!FP.c && F.phase === 'charging'){ FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
+  if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
+  if (!isFinite(camera.position.x + camera.position.y + camera.position.z)) camera.position.copy(FP.eye);
+  camera.up.set(0, 1, 0); camera.position.lerp(FP.eye, 1 - Math.exp(-14 * dt)); camera.lookAt(FP.look); camLook.copy(FP.look);
+  if (Math.abs(camera.fov - 62) > 0.05){ camera.fov += (62 - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
+  if (me.av.g.visible) poolMeVis(false);
+  /* 竿子：平常微微晃；拉魚的時候竿尖被往下拉、抖；蓄力的時候往後舉 */
+  const rp = FP.rodP, reel = F.phase === 'reeling', bend = clamp(me.bend || 0, 0, 1.2), wind = F.phase === 'charging' ? clamp(F.charge || 0, 0, 1) : 0;
+  rp.position.set(0.3, -0.34 + FP.rodY + Math.sin(t * 1.3) * 0.004, -0.34); rp.rotation.set(-(Math.PI / 2 - 0.2) - bend * 0.17 + wind * 0.75 + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.105 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0);
+  FP.line.visible = false; fpCatchTick(dt, t); return true; }
 function enterPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🎱 歡迎來到潮汐撞球館！', 1.4); }, 260); }
 function exitPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (Pool.on) poolLeave();
@@ -10479,6 +10539,8 @@ function renderSettings(body){
     f.appendChild(seg); f.appendChild(el('p', 'sub', '跟著手指：按在左半邊哪裡，搖桿就出現在哪裡。固定：搖桿一直在左下角不會動，按左半邊任何地方都是從那裡推。')); }
   { const f = field('🎥 視角'), seg = el('div', 'seg'); [['top', '俯瞰（預設）'], ['near', '貼近（舊的）']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(CAMV.mode === k)); b.addEventListener('click', () => { setCamView(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '俯瞰：從斜上方往下看，看得比較遠、比較整齊。貼近：從角色背後看，比較有臨場感。兩種都可以用手指拖動、兩指縮放。')); }
+  { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（原本）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
@@ -15587,7 +15649,7 @@ function cullAvatars(){
 // 人被藏起來（太遠、回家、不同島）時，釣線、浮標、名字也一起藏（有些角色離太遠就不更新，線會留在空中）
 function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...questNpcs.map(q => q.f)]; if (ferryNpc) L.push(ferryNpc.f); try { for (const h of IsleH.fishers || []) L.push(h); } catch(e){} try { for (const p of peers.values()) L.push(p.fisher); } catch(e){} L.push(me);
   for (const f of L){ if (f && f.line && f.line.visible && f._uf != null && f._uf < frameNo - 2){ f.line.visible = false; if (f.bob) f.bob.visible = false; }   /* v230：好幾幀沒更新的角色（離太遠就不算）線會停在空中，藏起來 */
-    if (!f || !f.av || f.av.g.visible) continue; if (f.line && f.line.visible) f.line.visible = false; if (f.bob && f.bob.visible) f.bob.visible = false; if (f.tag && f.tag.style.display !== 'none') f.tag.style.display = 'none'; } }
+    if (!f || !f.av || f.av.g.visible || (f === me && FP.act)) continue; if (f.line && f.line.visible) f.line.visible = false; if (f.bob && f.bob.visible) f.bob.visible = false; if (f.tag && f.tag.style.display !== 'none') f.tag.style.display = 'none'; } }
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
@@ -15870,6 +15932,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
+      '👀 第一人稱釣魚：「設定 → 🎣 釣魚視角」選「第一人稱」，從拋竿開始就是從自己的眼睛看出去：右下是自己的手握著竿子、竿尖指向浮標。釣到的時候，魚會掛在線上被拉出水面甩幾下，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
