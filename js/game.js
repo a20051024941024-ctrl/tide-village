@@ -9216,7 +9216,7 @@ function buildSeasonFx(){
 }
 function updateSeasonFx(dt, t, raining){
   if (!SeasonFx) buildSeasonFx(); const F2 = SeasonFx, S = F2.S;
-  const show = !House.on && !Dive.on && !raining && !(S.glow && DayNight.lamp < 0.5) && Quality.tier !== 'low';
+  const show = !House.on && !Dive.on && !inIndoor() && !raining && !(S.glow && DayNight.lamp < 0.5) && Quality.tier !== 'low';   /* v499 室內（食堂、博物館、撞球館）不飄落葉 */
   F2.pts.visible = show; if (!show) return;
   F2.pts.position.set(Math.round(camera.position.x / 4) * 4, 0, Math.round(camera.position.z / 4) * 4);
   if (frameNo % 2) return; const a = F2.pts.geometry.attributes.position.array, k = dt * 2;
@@ -9648,7 +9648,10 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
   for (const sx of [-1, 1]){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.4, 10), mat('#c9a678', 0.8, { noWood: true })); pot.position.set(S.x + sx * 1.7, Y + 0.2, S.z + S.d / 2 - 0.8); g.add(pot); const lf = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 6), mat('#3f9a5f', 0.9, { noWood: true })); lf.scale.y = 1.3; lf.position.set(S.x + sx * 1.7, Y + 0.85, S.z + S.d / 2 - 0.8); lf.castShadow = true; g.add(lf); addCircleCol(S.x + sx * 1.7, S.z + S.d / 2 - 0.8, 0.25); }
   /* 吊燈和橫樑：打球的時候鏡頭在正上方，會把它們藏起來 */
   const top = new THREE.Group(); g.add(top); Venue.poolTop = top; Venue.poolLamps = [];
-  { const al = new THREE.AmbientLight('#ffe6c0', 0); g.add(al); Venue.poolAmb = al; }   /* v498：晚上球館裡太暗（外面天黑裡面也跟著黑）→ 室內補一盞暖色的光，天越黑越亮 */
+  { const al = new THREE.AmbientLight('#ffe6c0', 0); g.add(al); Venue.poolAmb = al; }
+  /* v499 作者：「裡面長這樣…天空」→ 球館是室內，不該看到天空和海。加天花板（只有朝下那一面，鏡頭拉高到上面時會穿過去看進來），外面再包一個很大的深色罩子把天空、海、雲都擋掉 */
+  { const cl = new THREE.Mesh(new THREE.PlaneGeometry(S.w - 0.8, S.d - 0.8), mat('#e9dfc8', 0.95, { noWood: true })); cl.rotation.x = Math.PI / 2; cl.position.set(S.x, Y + 3.32, S.z); g.add(cl);
+    const vd = new THREE.Mesh(new THREE.BoxGeometry(70, 16, 70), new THREE.MeshBasicMaterial({ color: '#1a130e', side: THREE.BackSide, fog: false })); vd.position.set(S.x, Y - 0.61 + 8, S.z); vd.frustumCulled = false; g.add(vd); }   /* v498：晚上球館裡太暗（外面天黑裡面也跟著黑）→ 室內補一盞暖色的光，天越黑越亮 */
   const texs = []; for (let n = 0; n < 16; n++) texs.push(poolBallTex(n));
   const ballGeo = new THREE.SphereGeometry(PB.R, 20, 14), feltC = '#1f7f6a';
   [[-3.4, 0.3], [3.4, 0.3]].forEach(([tx, tz], ti) => { const T = poolNewTable(ti, S.x + tx, S.z + tz); Pool.tables[ti] = T; const HL = PB.HL, HW = PB.HW, ty = Y + PB.TOP, tg = new THREE.Group(); tg.position.set(T.ox, 0, T.oz); g.add(tg);
