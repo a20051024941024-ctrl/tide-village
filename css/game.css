@@ -1522,3 +1522,6 @@ body.pooling #duelQ, body.subbing #duelQ{display:none}
 /* v526 作者：iPhone 打字的時候，「寵物」「跳」「找釣點」按鈕和搖桿會蓋在聊天輸入框上面（送出按鈕被擋住）→ 打字時把這些先藏起來，關掉鍵盤就回來 */
 body.touch.chatting #actWrap, body.touch.chatting #joyZone, body.touch.chatting #joy, body.touch.chatting #emotes{visibility:hidden!important;pointer-events:none!important}
 body.touch.chatting #chatForm{z-index:40}
+
+/* v527 撞球：邀請旁邊的人對打 */
+#poolHud .pl-btns .pl-inv{background:#bfe7ff}
