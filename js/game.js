@@ -9846,7 +9846,10 @@ function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), w
    掛在鏡頭上的東西（竿子、手、魚）都放在 FP.g 這個群組裡，是 camera 的子物件 */
 const FP = { pref: LS.get('tide.fpFish', false) === true, act: false, g: null, tip: null, rodP: null, handR: null, look: new THREE.Vector3(), eye: new THREE.Vector3(), tgt: new THREE.Vector3(), c: null, line: null, skin: null, sleeve: null, rodY: 0 };
 function fpSet(v){ FP.pref = !!v; LS.set('tide.fpFish', FP.pref); if (!FP.pref) fpStop(); }
-function fpWant(){ return FP.pref && F.phase !== 'idle' && !F.boss && !Dive.on && !House.on && !Photo.on && !Pool.on && !(typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) && !CLASSIC; }
+/* v510 作者：「還是會突然放大」→ 以前每釣一條：拋竿時鏡頭一下子拉到眼睛（放大），看完魚又一下子拉回背後（縮小），一直縮放。
+   現在只要站著沒走開，看完魚以後還是留在第一人稱（再拋竿也不換）；一走動、坐船、進屋、潛水才回到背後視角。進出第一人稱的鏡頭也放慢，不會一下子跳過去 */
+function fpWant(){ if (FP.act && FP.stay && F.phase === 'idle' && ((me.aspd || 0) > 0.5 || me.sitting || myBoat || bossPulling())) FP.stay = false;
+  return FP.pref && (F.phase !== 'idle' || (FP.act && FP.stay)) && !F.boss && !Dive.on && !House.on && !Photo.on && !Pool.on && !(typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) && !CLASSIC; }
 function fpHand(side){ const g = new THREE.Group(), B = (w, h, d, m, x, y, z, p) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); (p || g).add(o); return o; };
   B(0.085, 0.03, 0.09, FP.skin, 0, 0, 0);
   for (let i = 0; i < 4; i++){ const k = new THREE.Group(); k.position.set(-0.032 + i * 0.0215, 0.004, -0.045); k.rotation.x = 1.05; g.add(k); B(0.018, 0.02, 0.042, FP.skin, 0, 0, -0.021, k); const k2 = new THREE.Group(); k2.position.set(0, 0, -0.042); k2.rotation.x = 0.7; k.add(k2); B(0.017, 0.019, 0.034, FP.skin, 0, 0, -0.017, k2); }
@@ -9863,7 +9866,7 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
   { const grip = new THREE.CylinderGeometry(0.019, 0.022, 0.42, 10); grip.translate(0, -0.11, 0); rp.add(new THREE.Mesh(grip, cork)); const cap = new THREE.Mesh(new THREE.SphereGeometry(0.023, 10, 8), cork); cap.position.y = -0.32; rp.add(cap);
     const seat = new THREE.CylinderGeometry(0.021, 0.021, 0.1, 10); seat.translate(0, 0.08, 0); rp.add(new THREE.Mesh(seat, met)); }
   /* 捲線器：掛在竿子下面（竿子往前倒的時候，竿子座標的 +z 是上面，所以 -z 是下面） */
-  { const R = FP.reel = new THREE.Group(); R.position.set(0, 0.07, -0.02); R.scale.setScalar(1.5); rp.add(R); const M = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); R.add(o); return o; };
+  { const R = FP.reel = new THREE.Group(); R.position.set(0, 0.07, -0.02); R.scale.setScalar(1.5); R.rotation.y = -0.95; rp.add(R); const M = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); R.add(o); return o; };
     M(new THREE.BoxGeometry(0.012, 0.03, 0.06), met, 0, 0, -0.03); const body = M(new THREE.SphereGeometry(0.034, 12, 10), blk, 0, -0.005, -0.075); body.scale.set(0.85, 1.15, 0.85);
     const spool = new THREE.Group(); spool.position.set(0, 0.04, -0.075); R.add(spool); FP.spool = spool; { const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.026, 0.035, 14), met); spool.add(sp); const ln = new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.031, 0.022, 14), new THREE.MeshStandardMaterial({ color: '#f4f8fb', roughness: 0.6 })); spool.add(ln); const lip = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.006, 14), red); lip.position.y = 0.019; spool.add(lip); const bail = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.0025, 6, 16, Math.PI), met); bail.rotation.y = Math.PI / 2; bail.position.y = 0.005; spool.add(bail); }
     const ck = FP.crank = new THREE.Group(); ck.position.set(0.036, -0.005, -0.075); R.add(ck); { const ax = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.02, 8), met); ax.rotation.z = Math.PI / 2; ck.add(ax); const arm = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.075, 0.012), met); arm.position.set(0.012, -0.034, 0); ck.add(arm); const kn = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.03, 10), blk); kn.rotation.z = Math.PI / 2; kn.position.set(0.028, -0.07, 0); ck.add(kn); FP.knob = new THREE.Object3D(); FP.knob.position.set(0.04, -0.07, 0); ck.add(FP.knob); } }
@@ -9876,7 +9879,7 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
   /* 手：左手握竿（在捲線器上面一點），右手抓捲線器的把手；手掛在鏡頭上，每一格跟著竿子的位置擺 */
   FP.handL = fpHand(-1); g.add(FP.handL); FP.handR = fpHand(1); g.add(FP.handR); FP.crankA = 0; FP.bendNow = 0;
   FP.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f8fb', transparent: true, opacity: 0.85 })); FP.line.frustumCulled = false; FP.line.visible = false; FP.line.userData.keep = true; scene.add(FP.line); }
-function fpStart(){ fpBuild(); FP.act = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
+function fpStart(){ fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
 function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
 function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
@@ -9913,7 +9916,7 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   else if (!FP.c && F.phase === 'charging'){ FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
   if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
   if (!isFinite(camera.position.x + camera.position.y + camera.position.z)) camera.position.copy(FP.eye);
-  camera.up.set(0, 1, 0); camera.position.lerp(FP.eye, 1 - Math.exp(-14 * dt)); camera.lookAt(FP.look); camLook.copy(FP.look);
+  FP.inT = (FP.inT || 0) + dt; camera.up.set(0, 1, 0); camera.position.lerp(FP.eye, 1 - Math.exp(-(3 + 11 * Math.min(1, FP.inT / 0.7)) * dt)); camera.lookAt(FP.look); camLook.copy(FP.look);   /* 剛切進來的 0.7 秒慢慢移過去 */
   if (Math.abs(camera.fov - 62) > 0.05){ camera.fov += (62 - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
   if (me.av.g.visible) poolMeVis(false);
   /* 竿子：平常微微晃；拉魚的時候竿尖被往下拉、抖；蓄力的時候往後舉 */
@@ -9922,7 +9925,7 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
   if (FP.castT && t - FP.castT < 0.75){ const s2 = (t - FP.castT) / 0.75; if (s2 < 0.32){ const u = s2 / 0.32; cast = (FP.castW * 0.75 + 0.25) * (1 - u * u) - 0.42 * u * u; } else { const u = (s2 - 0.32) / 0.68; cast = -0.42 * (1 - u) * (1 - u); } }
   const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
-  rp.position.set(0.07 - lift * 0.03, -0.16 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.34);   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-(Math.PI / 2 - 0.2) - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.04 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0.5);   /* 竿子往右轉一點，掛在下面的捲線器才會從左下露出來 */
+  rp.position.set(0.07 - lift * 0.03, -0.16 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.34);   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-(Math.PI / 2 - 0.2) - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.03 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0);   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
   /* 竿子彎：拉魚的時候照張力彎（越緊越彎），魚咬的時候竿尖抖，魚吊在竿尖時被魚的重量拉彎；甩竿往前的瞬間竿尖往後甩（彈性） */
   const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; let wantB = reel ? 0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25 : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
   if (c) wantB = c.t < 0.6 ? 0.9 * cw : c.t < 1.2 ? 0.55 * cw + Math.sin(c.t * 9) * 0.06 : c.t < 2.6 ? 0.3 * cw : 0.02;
@@ -15988,7 +15991,7 @@ function renderTab(){
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
-      '👀 第一人稱釣魚：「設定 → 🎣 釣魚視角」選「第一人稱」，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
+      '👀 第一人稱釣魚：「設定 → 🎣 釣魚視角」選「第一人稱」，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
