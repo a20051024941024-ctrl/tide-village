@@ -2351,7 +2351,7 @@ function castPoint(x, z, dx, dz, dist){
 
   // ---- 樹：南邊的森林、山丘，加上村子周圍零星幾棵 ----
   const nearThing = (x, z) => Math.hypot(x - PX, z - PZ) < 10 || Math.hypot(x - CX, z - CZ) < 4.5 || Math.hypot(x - AX, z - AZ) < 9 || Math.hypot(x - LX, z - LZ) < 4 || SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 4.5) || Math.hypot(x - HX, z - HZ) < 4 || BOAT_DOCKS.some(b => Math.hypot(x - b.x, z - b.z) < 4);
-  const treeOK = (x, z) => !(x > -61 && x < -36 && z > 6 && z < 46) && isLand(x, z) && islandEdge(x, z) > 4 &&   /* v495 作者：居民區不要有樹 */ pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && Math.hypot(x - PETPARK[0], z - PETPARK[1]) > PETPARK[2] + 1.6 && Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) > 4.5 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && (!waterfall || Math.hypot(x - waterfall.x, z - waterfall.z) > 4);
+  const treeOK = (x, z) => !(x > -61 && x < -36 && z > 6 && z < 46) && !(x > -9 && x < 8 && z > -23 && z < -1) &&   /* v512 作者：「釣蝦場都被樹擋住了」→ 釣蝦場和食堂前面那片不長樹 */ isLand(x, z) && islandEdge(x, z) > 4 &&   /* v495 作者：居民區不要有樹 */ pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && Math.hypot(x - PETPARK[0], z - PETPARK[1]) > PETPARK[2] + 1.6 && Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) > 4.5 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && (!waterfall || Math.hypot(x - waterfall.x, z - waterfall.z) > 4);
   const trees = [];
   const TREE_CLUMPS = []; { let g2 = 0; while (TREE_CLUMPS.length < 13 && g2++ < 600){ const x = wrand(-46, 46), z = wrand(-44, 14), r = 3.2 + wr() * 2.2; if (!isLand(x, z) || islandEdge(x, z) < 6 || pathDist(x, z) < r + 1.5 || trailDist(x, z) < r || Math.hypot(x - PX, z - PZ) < 14 || TREE_CLUMPS.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + r + 5)) continue; TREE_CLUMPS.push([x, z, r]); } }
   const OKC = (x, z) => treeOK(x, z) && !(x > 24 && x < 37 && z > -25 && z < -14) && Math.hypot(x - HARBOR_SQ[0], z - HARBOR_SQ[1]) > HARBOR_SQ[2] + 5.5 && !(Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) && Math.hypot((x - 40), (z + 6) / 1.5) > 11 && Math.hypot(x - MAP.hill.x, z - MAP.hill.z) > 7;
@@ -9877,7 +9877,7 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
       FP.segs.push(sg); par = sg; }
     FP.tip = new THREE.Object3D(); FP.tip.position.y = L; par.add(FP.tip); }
   /* 手：左手握竿（在捲線器上面一點），右手抓捲線器的把手；手掛在鏡頭上，每一格跟著竿子的位置擺 */
-  FP.handL = fpHand(-1); FP.handL.scale.setScalar(0.75); g.add(FP.handL); FP.handR = fpHand(1); FP.handR.scale.setScalar(0.75); g.add(FP.handR); FP.crankA = 0; FP.bendNow = 0;
+  FP.handL = fpHand(1); FP.handL.scale.setScalar(0.75); g.add(FP.handL); FP.handR = fpHand(-1); FP.handR.scale.setScalar(0.75); g.add(FP.handR);   /* v512 作者：「手是不是反了」→ 手背朝上的右手，大拇指在左邊（fpHand 的 side 是給托魚、手心朝上用的，這裡要反過來） */ FP.crankA = 0; FP.bendNow = 0;
   FP.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f8fb', transparent: true, opacity: 0.85 })); FP.line.frustumCulled = false; FP.line.visible = false; FP.line.userData.keep = true; scene.add(FP.line); }
 function fpStart(){ fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
@@ -9926,7 +9926,7 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
   if (FP.castT && t - FP.castT < 0.75){ const s2 = (t - FP.castT) / 0.75; if (s2 < 0.32){ const u = s2 / 0.32; cast = (FP.castW * 0.75 + 0.25) * (1 - u * u) - 0.42 * u * u; } else { const u = (s2 - 0.32) / 0.68; cast = -0.42 * (1 - u) * (1 - u); } }
   const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
-  rp.position.set(0.15 - lift * 0.03, -0.3 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.42);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0.3);   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
+  rp.position.set(0.03 - lift * 0.02, -0.3 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.42);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0)   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
   /* 竿子彎：拉魚的時候照張力彎（越緊越彎），魚咬的時候竿尖抖，魚吊在竿尖時被魚的重量拉彎；甩竿往前的瞬間竿尖往後甩（彈性） */
   const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; let wantB = reel ? 0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25 : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
   if (c) wantB = c.t < 0.6 ? 0.9 * cw : c.t < 1.2 ? 0.55 * cw + Math.sin(c.t * 9) * 0.06 : c.t < 2.6 ? 0.3 * cw : 0.02;
@@ -9936,8 +9936,8 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (crankV > 0){ FP.clk = (FP.clk || 0) - dt; if (FP.clk <= 0){ FP.clk = 0.09; try { tone(2200 + Math.random() * 300, 0.012, 'square', 0.012); } catch(e2){} } }
   if (fly){ FP.spool.position.y = 0.04 + Math.sin(t * 60) * 0.001; }
   /* 手跟著竿子：左手握在捲線器上面那段，右手抓把手 */
-  camera.updateMatrixWorld(true); const hp = FP.tgt; hp.set(0, -0.12, 0.006); rp.localToWorld(hp); FP.g.worldToLocal(hp); FP.handL.position.copy(hp); FP.handL.position.x -= 0.03; FP.handL.position.y -= 0.012; FP.handL.rotation.set(0.25 + rp.rotation.x * 0.25, -0.35, 1.25);
-  FP.knob.getWorldPosition(hp); FP.g.worldToLocal(hp); FP.handR.position.set(hp.x + 0.018, hp.y - 0.008, hp.z + 0.03); FP.handR.rotation.set(0.15, 0.55, -0.35); FP.handR.visible = !(c && c.held);
+  camera.updateMatrixWorld(true); const hp = FP.tgt; hp.set(0, -0.12, 0.006); rp.localToWorld(hp); FP.g.worldToLocal(hp); FP.handL.position.copy(hp); FP.handL.position.x -= 0.03; FP.handL.position.y -= 0.012; FP.handL.rotation.set(0.12, -0.4, 0);
+  FP.knob.getWorldPosition(hp); FP.g.worldToLocal(hp); FP.handR.position.set(hp.x + 0.018, hp.y - 0.008, hp.z + 0.03); FP.handR.rotation.set(0.12, 0.4, 0); FP.handR.visible = !(c && c.held);
   FP.line.visible = false; fpCatchTick(dt, t); return true; }
 function enterPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🎱 歡迎來到潮汐撞球館！', 1.4); }, 260); }
