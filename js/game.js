@@ -416,7 +416,8 @@ const SPOTS = [
 const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [-7, -31];   /* v484 地圖重新分區（作者 11/16）：水族館搬到西北草地的「水族館區」，原本東邊那塊地留給運動區。原位置 [23.5, -6] */
 const SPORT = { x0: 17, x1: 37.4, z0: -11.6, z1: 3.6 };   /* v485 運動公園（島的東邊，原本水族館那塊地）：這個範圍不長樹和草叢 */
-function inSport(x, z, m){ m = m || 0; return x > SPORT.x0 - m && x < SPORT.x1 + m && z > SPORT.z0 - m && z < SPORT.z1 + m; }
+const SPORT2 = { x0: 25, x1: 31.6, z0: 3.6, z1: 9.2 };   /* v491 羽球場搬到籃球場南邊（作者：三個球場太擠） */
+function inSport(x, z, m){ m = m || 0; return [SPORT, SPORT2].some(S => x > S.x0 - m && x < S.x1 + m && z > S.z0 - m && z < S.z1 + m); }
 const RES_SQ = [-28, 23.5, 3.4];   /* v489 居民區中間的小空地 */
 const AQUA_SQ = [-6, -20.5, 5];   /* 水族館區的小廣場（石板地＋噴水池），水族館在北邊、博物館在西邊 */
 const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過去）
@@ -848,7 +849,7 @@ function terrainInfo(x, z){
 function terrainH(x, z){ return terrainInfo(x, z).h; }
 function isLand(x, z){ return !terrainInfo(x, z).water; }
 function trailDist(x, z){ let d = 1e9; for (const p of MAP.trails || []) d = Math.min(d, lineDist(x, z, p)); return d; }
-function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); { const S = SPORT, dx = Math.max(S.x0 - x, 0, x - S.x1), dz = Math.max(S.z0 - z, 0, z - S.z1); d = Math.min(d, dx || dz ? Math.hypot(dx, dz) : -Math.min(x - S.x0, S.x1 - x, z - S.z0, S.z1 - z)); } return d; }
+function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); for (const S of [SPORT, SPORT2]){ const dx = Math.max(S.x0 - x, 0, x - S.x1), dz = Math.max(S.z0 - z, 0, z - S.z1); d = Math.min(d, dx || dz ? Math.hypot(dx, dz) : -Math.min(x - S.x0, S.x1 - x, z - S.z0, S.z1 - z)); } return d; }
 function inSand(x, z){ const e = islandEdge(x, z); return e < 4.5 + wobble(x + z, 2) * 1.2; }
 // 地面顏色（0～1 的 sRGB）
 function terrainColor(x, z, info, out){
@@ -2226,10 +2227,10 @@ function castPoint(x, z, dx, dz, dist){
         const px = ex + sx * 0.35; pole(px, cz, y, 2.5, '#6f7882', 0.07); put(box([0.5, 0.06, 0.06], '#6f7882', [px - sx * 0.25, y + 2.45, cz])); put(box([0.05, 0.75, 1.15], '#f4f1e6', [ex - sx * 0.12, y + 2.5, cz])); const sq = box([0.02, 0.32, 0.42], '#e0564f', [ex - sx * 0.15, y + 2.38, cz]); sq.castShadow = false; put(sq);
         const rim = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.022, 6, 16), M('#f2772c')); rim.rotation.x = Math.PI / 2; rim.position.set(ex - sx * 0.36, y + 2.2, cz); put(rim); const nt = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.12, 0.3, 10, 2, true), new THREE.MeshBasicMaterial({ color: '#ffffff', wireframe: true })); nt.position.set(ex - sx * 0.36, y + 2.04, cz); nt.userData.keep = true; nt.userData.dyn = true; put(nt); FX.push(t2 => { nt.rotation.z = Math.sin(t2 * 1.7 + sx) * 0.06; }); }
       const bb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), M('#e8762c', 0.7)); bb.position.set(cx + 1.6, y + 0.22, cz + 1.1); bb.castShadow = true; put(bb); }
-    /* 羽球場 */
-    { const x0 = 30.1, x1 = 32.7, z0 = -2.6, z1 = 2.8, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03, ly = y + 0.075; slab(x0 - 0.3, x1 + 0.3, z0 - 0.3, z1 + 0.3, '#2f7d5a', 0.04, y - 0.01); slab(x0, x1, z0, z1, '#3fa06e', 0.06, y);
-      line(x0, z0, x1, z0, ly, null, 0.05); line(x0, z1, x1, z1, ly, null, 0.05); line(x0, z0, x0, z1, ly, null, 0.05); line(x1, z0, x1, z1, ly, null, 0.05); line(cx, z0, cx, cz - 0.8, ly, null, 0.05); line(cx, cz + 0.8, cx, z1, ly, null, 0.05); for (const s of [-1, 1]){ line(x0, cz + s * 0.8, x1, cz + s * 0.8, ly, null, 0.05); line(x0, cz + s * 2.4, x1, cz + s * 2.4, ly, null, 0.05); }
-      pole(x0 - 0.12, cz, y, 1.25, '#e9eef2', 0.035); pole(x1 + 0.12, cz, y, 1.25, '#e9eef2', 0.035); net(x0 - 0.12, cz, x1 + 0.12, cz, y + 0.75, y + 1.22); const sc = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 8), M('#ffffff')); sc.position.set(cx + 0.5, y + 0.14, cz + 1.4); sc.rotation.z = 2.2; put(sc); }
+    /* 羽球場（v491 搬到籃球場南邊，橫著放） */
+    { const x0 = 25.6, x1 = 31.0, z0 = 5.9, z1 = 8.5, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03, ly = y + 0.075; slab(x0 - 0.3, x1 + 0.3, z0 - 0.3, z1 + 0.3, '#2f7d5a', 0.04, y - 0.01); slab(x0, x1, z0, z1, '#3fa06e', 0.06, y);
+      line(x0, z0, x1, z0, ly, null, 0.05); line(x0, z1, x1, z1, ly, null, 0.05); line(x0, z0, x0, z1, ly, null, 0.05); line(x1, z0, x1, z1, ly, null, 0.05); line(x0, cz, cx - 0.8, cz, ly, null, 0.05); line(cx + 0.8, cz, x1, cz, ly, null, 0.05); for (const sd of [-1, 1]){ line(cx + sd * 0.8, z0, cx + sd * 0.8, z1, ly, null, 0.05); line(cx + sd * 2.4, z0, cx + sd * 2.4, z1, ly, null, 0.05); }
+      pole(cx, z0 - 0.12, y, 1.25, '#e9eef2', 0.035); pole(cx, z1 + 0.12, y, 1.25, '#e9eef2', 0.035); net(cx, z0 - 0.12, cx, z1 + 0.12, y + 0.75, y + 1.22); const sc = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 8), M('#ffffff')); sc.position.set(cx + 1.4, y + 0.14, cz + 0.5); sc.rotation.z = 2.2; put(sc); }
     /* 撞球棚：四根柱子、藍色棚頂、兩張球桌 */
     { const x0 = 28.6, x1 = 32.8, z0 = -11.2, z1 = -6.9, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03; slab(x0, x1, z0, z1, '#c9a678', 0.07, y); for (const sx of [0, 1]) for (const sz of [0, 1]){ const px = sx ? x1 - 0.2 : x0 + 0.2, pz = sz ? z1 - 0.2 : z0 + 0.2; put(box([0.18, 2.5, 0.18], '#e6e2d6', [px, y + 1.3, pz])); addCircleCol(px, pz, 0.2); }
       const rf = box([x1 - x0 + 0.7, 0.1, z1 - z0 + 0.7], '#5fa3e0', [cx, y + 2.62, cz]); put(rf); put(box([x1 - x0 + 0.4, 0.16, z1 - z0 + 0.4], '#e6e2d6', [cx, y + 2.5, cz]));
@@ -2237,7 +2238,7 @@ function castPoint(x, z, dx, dz, dist){
         ['#f2c94c', '#3f7fd6', '#e0564f', '#8e5bd0', '#f2772c', '#2f9a5f', '#1c1c20', '#ffffff'].forEach((c, i) => { const bl = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M(c, 0.4)); const row = i < 3 ? 0 : i < 5 ? 1 : i < 6 ? 2 : 9; bl.position.set(row === 9 ? cx - 0.55 + (i - 6) * 0.9 * (tz > cz ? 0.6 : 1) : cx + 0.3 + row * 0.09, y + 0.915, row === 9 ? tz + (i - 6.5) * 0.3 : tz + ((i < 3 ? i - 1 : i < 5 ? i - 3.5 : 0)) * 0.1); put(bl); }); const cue = box([1.3, 0.025, 0.025], '#d9b27a', [cx - 0.2, y + 0.9, tz + 0.3]); cue.rotation.y = 0.5; cue.castShadow = false; put(cue); }
       const lamp = box([1.2, 0.08, 0.3], '#f4f1e6', [cx, y + 2.1, cz]); lamp.material = new THREE.MeshStandardMaterial({ color: '#fff3c9', emissive: '#ffd98a', emissiveIntensity: 0.6 }); put(lamp); put(box([0.03, 0.4, 0.03], '#6f7882', [cx, y + 2.32, cz])); }
     /* 沙灘排球（在沙灘上）：藍色邊繩、兩根柱子、球網、一顆排球 */
-    { const x0 = 33.4, x1 = 37.0, z0 = -3.8, z1 = 3.0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.02; for (const [a, b2, c, d2] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) line(a, b2, c, d2, y + 0.02, '#3f7fd6', 0.08);
+    { const x0 = 33.6, x1 = 37.2, z0 = -4.2, z1 = 2.6, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.02; for (const [a, b2, c, d2] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) line(a, b2, c, d2, y + 0.02, '#3f7fd6', 0.08);
       pole(x0 - 0.25, cz, y, 1.9, '#f2b532', 0.05); pole(x1 + 0.25, cz, y, 1.9, '#f2b532', 0.05); net(x0 - 0.25, cz, x1 + 0.25, cz, y + 1.05, y + 1.85); const vb = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), M('#fbf4d0', 0.7)); vb.position.set(cx - 0.6, y + 0.16, cz + 1.5); vb.castShadow = true; put(vb); const st = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.02, 5, 14), M('#3f7fd6')); st.position.copy(vb.position); st.rotation.x = 1.1; put(st); } }
   // ---- 水族館（大型玻璃魚缸，正面朝南）----
   const [AX, AZ] = AQUA;
