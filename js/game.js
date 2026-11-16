@@ -396,7 +396,7 @@ function frostHole(x, z, r){ for (const h of FROST.holes) if (Math.hypot(x - h[0
 const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red','koi_red','koi_fuku'], legendBoost:1.4 },
-  { id:'pool',   label:'瀑布潭',   short:'瀑布潭', subtitle:'瀑布底下的深潭，水很冰',         pos:V3(-26.2, 5.4),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
+  { id:'pool',   label:'清溪潭',   short:'清溪潭', subtitle:'河西岸的小深潭，水很冰',         pos:V3(-29.5, -29),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
   { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray','mahi','yellowtail','barracuda','trevally','manta','octopus']   /* v439 玩家回饋「釣幾條就膩」：第一個釣點以前九成都是幾百公克的小魚。加進幾種本來就有的大魚（鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚、章魚），新手也常常拉到大的 */ },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black','xclown','xclown_gold','xwrasse','xwrasse_gold'] },
   { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','sunfish','dolphin','beluga','marlin','shark','orca','whaleshark','whale','sperm','tuna','octopus','ika','giantsquid','barracuda','hammer','oarfish','kingcrab','mahi','angler','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','baskingshark','greatwhite','baskingshark_albino','greatwhite_albino','bluewhale','bluewhale_albino','fwfish','fwfish_gold','trevally','stingray'] },
@@ -417,6 +417,7 @@ const SPOT_BY_ID = Object.fromEntries(SPOTS.map(s => [s.id, s]));
 const AQUA = [-7, -31];   /* v484 地圖重新分區（作者 11/16）：水族館搬到西北草地的「水族館區」，原本東邊那塊地留給運動區。原位置 [23.5, -6] */
 const SPORT = { x0: 17, x1: 37.4, z0: -11.6, z1: 3.6 };   /* v485 運動公園（島的東邊，原本水族館那塊地）：這個範圍不長樹和草叢 */
 function inSport(x, z, m){ m = m || 0; return x > SPORT.x0 - m && x < SPORT.x1 + m && z > SPORT.z0 - m && z < SPORT.z1 + m; }
+const RES_SQ = [-28, 23.5, 3.4];   /* v489 居民區中間的小空地 */
 const AQUA_SQ = [-6, -20.5, 5];   /* 水族館區的小廣場（石板地＋噴水池），水族館在北邊、博物館在西邊 */
 const TANK_ROCKS = [];   // 水族館裡石頭的位置（魚會從上面游過去）
 const LIGHTHOUSE = (() => { const r = islandR(-1.2) - 3.2; return [Math.cos(-1.2) * r, Math.sin(-1.2) * r]; })();
@@ -459,7 +460,7 @@ const LANDMARKS = [
   { id:'cai',        label:'阿彩畫廊', pos:V3(SHOPLOT.cai.x, SHOPLOT.cai.z), color:'#9b7bff', ly:5.5, mx:2.4, mz:-2.6 },
   { id:'fu',         label:'阿福海產', pos:V3(...hlAt('fu', 0, 2.6)), color:'#5fb6e3', ly:2.6, ...hlOff('fu', 0, 1.2) },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
-  { id:'hill',       label:'望海丘',   pos:V3(-28, 25),         color:'#a6d37d', ly:2.6 },
+  { id:'hill',       label:'居民區',   pos:V3(-28, 22),         color:'#a6d37d', ly:2.6 },
   { id:'sport',      label:'運動公園', pos:V3(30.6, -4.6),      color:'#e0564f', ly:2.6 },
   { id:'beach',      label:'南方沙灘', pos:V3(40, -6),          color:'#f2d69a', ly:2.2 },
 ];
@@ -473,7 +474,7 @@ const TRAVEL = [
   { id:'plaza', label:'潮汐廣場', x:4, z:9.6, rot:Math.PI, color:PALETTE.gold },
   { id:'harborsq', label:'港邊廣場', x:HARBOR_SQ[0], z:HARBOR_SQ[1] + 4, rot:Math.PI, color:'#cfc6b4' },
   ...SPOTS.filter(s => s.id !== 'isle' && !s.hidden).map(s => s.id === 'shrimp' ? { id:s.id, label:'釣蝦場門口', x:-1, z:-6.4, rot:Math.PI, color:s.color } : ({ id:s.id, label:s.label, x:s.pos.x, z:s.pos.z, rot:Math.atan2(s.dir.x, s.dir.y), color:s.color })),   /* 釣蝦場在村子裡，傳送到門口（SHRIMP_DOOR 往外 2.6） */
-  { id:'hill', label:'望海丘', x:-26, z:27, rot:-2.6, color:'#a6d37d' },
+  { id:'hill', label:'居民區', x:-27, z:21, rot:-2.6, color:'#a6d37d' },
   { id:'lighthouse', label:'晴潮燈塔', x:LIGHTHOUSE[0] - 2.4, z:LIGHTHOUSE[1] + 3.2, rot:2.6, color:'#ffe5a4' },
   { id:'frostdock', label:'冰封群島碼頭', x:-141.2, z:-10, rot:-Math.PI / 2, color:'#bfe6f5' },
   { id:'abyssdock', label:'深海浮台', x:64, z:-143.5, rot:Math.PI, color:'#1d3a6a' },
@@ -783,9 +784,9 @@ const MAP = {
   creek: [[26, 40], [27, 32], [25, 27], [25, 22], [28, 16], [33, 9], [40, 4], [52, 2]],
   creekHalf: 1.5, creekPool: [25, 27.5, 3.1],
   lake: [-30, -6, 11, 9],                                // 中心 x, z、半徑 rx, rz
-  pool: [-26.3, 9.9, 3.4],                               // 瀑布潭
-  hill: { x: -29, z: 24, R: 13, H: 5, face: [0.184, -0.983] },
-  squares: [HARBOR_SQ, AQUA_SQ],   /* 44 鋪石頭的廣場 [x, z, 半徑] */
+  pool: [-29.5, -24.5, 3.4],                             // 清溪潭（v489：原本是山丘底下的瀑布潭 [-26.3, 9.9]；山丘鏟平蓋居民區，水潭搬到河的西岸，釣點代號還是 pool、魚不變）
+  hill: { x: -29, z: 24, R: 13, H: 0, face: [0.184, -0.983] },   /* v489 作者：「瀑布那裡可以鏟平，因為那裡沒人去」「水潭也不要了」→ 高度改 0（平地），瀑布不蓋，這塊地變成居民區 */
+  squares: [HARBOR_SQ, AQUA_SQ, RES_SQ],   /* 44 鋪石頭的廣場 [x, z, 半徑] */
   /* 44 第二區：只留三條大路（往港邊廣場、往鏡湖、往跨海大橋），其他的改成細細的小步道 */
   paths: [
     [[4, 4], [12, -5], [8, -14], [8, -23], [14.5, -24], [22.5, -24.5], [29, -27.5]],   // 往港口（44：從西邊的開口走進港邊廣場，穿過廣場到碼頭）
@@ -797,8 +798,8 @@ const MAP = {
     [[-8, 1], [-16, -15], [-24.5, -17.6]],               // 往木橋（從鏡湖大路分出去）
     [[2, -23.6], [-1.5, -21.5]],                          // 往水族館區的小廣場（v484：水族館、博物館搬到西北）
     [[3, 14], [10, 15], [18, 20], [23, 22]],             // 往螢光溪
-    [[-8, 1], [-19, 6], [-24, 5.2]],                     // 往瀑布潭
-    [[-19, 6], [-17, 14], [-21, 22], [-27, 26]],         // 上山丘
+    [[-24.5, -17.6], [-27.5, -19.6]],                    // 往清溪潭（過木橋以後）
+    [[-8, 1], [-17, 9], [-22, 18], [-28, 23.5]],         // 往居民區
     [[-18.2, 16.4], [PETPARK[0] + Math.cos(PETGATE) * (PETPARK[2] - 0.5), PETPARK[1] + Math.sin(PETGATE) * (PETPARK[2] - 0.5)]],   // 57 往寵物樂園入口
   ],
 };
@@ -1832,7 +1833,9 @@ function castPoint(x, z, dx, dz, dist){
   // 港口的小船（裝飾）與漁網架
   if (!ART2) for (const [x, z, r] of [[30.5, -37.5, 0.3], [35.5, -30.2, -0.2]]){ const b = makeBoatMesh('#f6e4bd');   /* v480 新美術：米白小木船被藍白漁船壓到，作者說不要了 */ b.position.set(x, WATER_LEVEL, z); b.rotation.y = r; scene.add(b); }
 
-  // ---- 瀑布（山丘的崖 → 瀑布潭）----
+  // ---- 瀑布（山丘的崖 → 瀑布潭）----  v489：山丘鏟平以後不蓋
+  const rockM = mat('#9d998d', 0.95, { flatShading: true });
+  if (MAP.hill.H > 0){
   const H = MAP.hill, fd = H.face, fx = H.x + fd[0] * (H.R - 1.4), fz = H.z + fd[1] * (H.R - 1.4);
   const fallTop = H.H + 0.15, fallLen = fallTop - WATER_LEVEL;
   const wfMat = new THREE.ShaderMaterial({
@@ -1886,9 +1889,9 @@ function castPoint(x, z, dx, dz, dist){
     rb.position.set(fx + fd[0] * 1.6, WATER_LEVEL + 0.1, fz + fd[1] * 1.6); rb.rotation.y = Math.atan2(lat[0], lat[1]) + Math.PI / 2; rb.userData.keep = true; scene.add(rb); rainbow = rb;
   }
   waterfall = { x: fx + fd[0] * 0.6, z: fz + fd[1] * 0.6 };
-  const rockM = mat('#9d998d', 0.95, { flatShading: true });
   for (let i = 0; i < 9; i++){ const a = -1.2 + i * 0.3, r = 2.2 + wr() * 0.6; const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55 + wr() * 0.5, 0), rockM); const rx = fx + Math.cos(a + Math.atan2(fd[1], fd[0]) + Math.PI / 2) * r * 0.9, rz = fz + Math.sin(a + Math.atan2(fd[1], fd[0]) + Math.PI / 2) * r * 0.9; rk.position.set(rx, Math.max(terrainH(rx, rz), -0.3) + 0.2, rz); rk.rotation.set(wr() * 3, wr() * 3, 0); rk.castShadow = true; scene.add(rk); }
 
+  }
   // ---- 螢光石（溪邊）----
   const glowM = mat('#9bf3d6', 0.4, { emissive:'#6bd6b0', emissiveIntensity:0.9 });
   const CP = MAP.creekPool;
@@ -2008,8 +2011,11 @@ function castPoint(x, z, dx, dz, dist){
   // 門都朝向廣場
   const faceTo = (x, z) => Math.atan2(PX - x, PZ - z);
   /* 阿綾服裝店（2026-11-04）：原本的粉紅色民宅改成服裝店；門口一個衣架，掛著阿綾最新設計的三件衣服 */
-  house(-9, 15, '#d896c3', 3.1, faceTo(-9, 15));
-  house(16, 14, '#7db7d7', 3.6, faceTo(16, 14));
+  /* v489 居民區（島的西南，原本的山丘）：六棟民宅圍著中間的小空地，門口都朝空地。原本散在廣場邊的兩棟 (-9,15)、(16,14) 也搬過來 */
+  for (const [hx, hz, hc, hw] of [[-21.5, 15, '#d896c3', 3.1], [-30, 14.5, '#7db7d7', 3.6], [-36.5, 20, '#ecc46a', 3.2], [-36, 28, '#9fc7a8', 3.4], [-29.5, 32, '#e89a7a', 3.2], [-21.5, 30, '#a9b7e0', 3.3]]) house(hx, hz, hc, hw, Math.atan2(RES_SQ[0] - hx, RES_SQ[1] - hz));
+  { const gx = -32.6, gz = 24.6, gy = Math.max(0, terrainH(gx, gz));   /* 菜園、晒魚架 */
+    scene.add(box([3.6, 0.1, 2.6], '#7a5a3c', [gx, gy + 0.05, gz])); for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++){ const k = new THREE.Mesh(new THREE.IcosahedronGeometry(0.17, 0), mat(['#4f9a45', '#6fb552', '#3f8a4a'][(r + c) % 3], 0.9)); k.position.set(gx - 1.45 + c * 0.58, gy + 0.2, gz - 0.95 + r * 0.63); k.scale.y = 0.8; scene.add(k); } for (const sx of [-1, 1]) for (const sz of [-1, 1]) scene.add(box([0.08, 0.5, 0.08], '#8a6a4a', [gx + sx * 1.85, gy + 0.25, gz + sz * 1.35])); addBoxCol(gx, gz, 3.6, 2.6);
+    const rx = -24.2, rz = 26.4, ry = Math.max(0, terrainH(rx, rz)); for (const sx of [-1, 1]){ scene.add(box([0.1, 1.7, 0.1], '#8a6a4a', [rx + sx * 1.3, ry + 0.85, rz])); addCircleCol(rx + sx * 1.3, rz, 0.15); } for (const yy of [1.6, 1.05]){ scene.add(box([2.7, 0.06, 0.06], '#8a6a4a', [rx, ry + yy, rz])); for (let i = 0; i < 6; i++){ const f = box([0.3, 0.14, 0.03], ['#c9b08a', '#b8c4cc', '#d2a070'][i % 3], [rx - 1.05 + i * 0.42, ry + yy - 0.16, rz]); f.rotation.z = 0.2; scene.add(f); } } }
   /* v270 阿萍美髮沙龍：阿綾服裝店對面；門口一根紅白藍旋轉的理髮燈、一張理髮椅 */
   { const sg = house(SHOPLOT.spare.x, SHOPLOT.spare.z, '#8fd0c8', 3.2, SHOPLOT.spare.r, { awning: '#7fd0c8', sign: '阿萍美髮沙龍', signIcon: '💇', signInk: '#1f6a64' });
     const pole = new THREE.Group(); pole.position.set(2.2, 0, -1.55); sg.add(pole); pole.add(box([0.08, 1.5, 0.08], '#d8dde2', [0, 0.75, 0]));
@@ -2303,7 +2309,7 @@ function castPoint(x, z, dx, dz, dist){
   lh.add(lhLight); scene.add(lh); addCircleCol(LX, LZ, 1.5);
 
   // ---- 山頂的觀景長椅與旗子 ----
-  const [HX, HZ] = [MAP.hill.x + 1, MAP.hill.z + 1];
+  const [HX, HZ] = MAP.hill.H > 0 ? [MAP.hill.x + 1, MAP.hill.z + 1] : [-28, 23.5];
   const hy = terrainH(HX, HZ);
   scene.add(box([1.8, 0.12, 0.5], PALETTE.wood, [HX, hy + 0.45, HZ]));
   for (const dx of [-0.75, 0.75]) scene.add(box([0.12, 0.45, 0.4], PALETTE.wood, [HX + dx, hy + 0.22, HZ]));
@@ -2312,7 +2318,7 @@ function castPoint(x, z, dx, dz, dist){
 
   // ---- 樹：南邊的森林、山丘，加上村子周圍零星幾棵 ----
   const nearThing = (x, z) => Math.hypot(x - PX, z - PZ) < 10 || Math.hypot(x - CX, z - CZ) < 4.5 || Math.hypot(x - AX, z - AZ) < 9 || Math.hypot(x - LX, z - LZ) < 4 || SPOTS.some(s => Math.hypot(x - s.pos.x, z - s.pos.z) < 4.5) || Math.hypot(x - HX, z - HZ) < 4 || BOAT_DOCKS.some(b => Math.hypot(x - b.x, z - b.z) < 4);
-  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && Math.hypot(x - PETPARK[0], z - PETPARK[1]) > PETPARK[2] + 1.6 && Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) > 4.5 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && Math.hypot(x - waterfall.x, z - waterfall.z) > 4;
+  const treeOK = (x, z) => isLand(x, z) && islandEdge(x, z) > 4 && pathDist(x, z) > 3.0 && trailDist(x, z) > 1.8 && Math.hypot(x - PETPARK[0], z - PETPARK[1]) > PETPARK[2] + 1.6 && Math.hypot(x - CHIEF_OFFICE[0], z - CHIEF_OFFICE[1]) > 4.5 && lineDist(x, z, MAP.creek) > 3.2 && Math.hypot(x - MAP.creekPool[0], z - MAP.creekPool[1]) > 5.2 && !nearThing(x, z) && !blocked(x, z, 1.2) && (!waterfall || Math.hypot(x - waterfall.x, z - waterfall.z) > 4);
   const trees = [];
   const TREE_CLUMPS = []; { let g2 = 0; while (TREE_CLUMPS.length < 13 && g2++ < 600){ const x = wrand(-46, 46), z = wrand(-44, 14), r = 3.2 + wr() * 2.2; if (!isLand(x, z) || islandEdge(x, z) < 6 || pathDist(x, z) < r + 1.5 || trailDist(x, z) < r || Math.hypot(x - PX, z - PZ) < 14 || TREE_CLUMPS.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + r + 5)) continue; TREE_CLUMPS.push([x, z, r]); } }
   const OKC = (x, z) => treeOK(x, z) && !(x > 24 && x < 37 && z > -25 && z < -14) && Math.hypot(x - HARBOR_SQ[0], z - HARBOR_SQ[1]) > HARBOR_SQ[2] + 5.5 && !(Math.abs(x - POND.x) < 11 && Math.abs(z - POND.z) < 8) && Math.hypot((x - 40), (z + 6) / 1.5) > 11 && Math.hypot(x - MAP.hill.x, z - MAP.hill.z) > 7;
@@ -15479,7 +15485,7 @@ function renderTab(){
       '🏅 釣竿的紀念：每支釣竿都會記得自己釣過幾條魚、釣過最大的是哪一條，在背包和商店的釣竿上看得到。釣滿 100 條叫「順手」、500 條叫「老夥伴」、2,000 條叫「傳家寶」。這是紀念，不影響釣魚；釣蝦場的蝦不算。',
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
       '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',
-      '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、瀑布潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
+      '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、清溪潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
       '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
       '⚔️ 怎麼對付魚的動作：拉魚的時候魚會輪流做動作，動作前畫面中間會先跳出黃色的提示（大約半秒），接著變紅色告訴你要怎麼做 —— 💨 衝刺：放開不要收，等牠跑完｜😮‍💨 停住喘氣：連續快速點按鈕（這時候收最多）｜⬅➡ 往左／右竄：搖桿往反方向拉｜⬆️ 跳出水面：放開，落水以後再收｜⬇️ 往下鑽：按著但不要全力，拉力條停在中間｜🪨 纏到礁石（只有礁石多的地方）：放開等 3 秒讓牠自己游出來，硬拉會斷線。做對了魚會掉很多體力、連擊 +1。',
@@ -15655,7 +15661,7 @@ function renderTab(){
     sec('🗺️ 村子怎麼逛', [
       '村子分區：港邊廣場是熱鬧、買賣和出海的地方；島中央的潮汐廣場是大家集合聊天的地方，東邊是村長辦公室（村長阿土伯在門口），外圈有花園和長椅；寵物店後面的森林邊有「🐾 寵物樂園」，帶寵物走進去站著，寵物會自己在裡面跑；南方沙灘可以休息。',
       '一進遊戲會站在「港邊廣場」：中間有噴水池；港口的兩間店（釣具店、潮汐魚市場）圍著廣場，往前走就是碼頭。島中央的「潮汐廣場」是三條大路交會的地方，節慶活動也在那裡。',
-      '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、瀑布潭、望海丘走細細的小步道。',
+      '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、居民區走細細的小步道；清溪潭（以前的瀑布潭，魚都一樣）搬到河的西岸，過木橋就到。',
       '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 魚市場區（港邊廣場西邊、往港口的大路旁）是潮汐食堂；中央廣場北邊是釣蝦場；🏀 運動公園（島的東邊、沙灘旁）有籃球場、羽球場、撞球棚、沙灘排球場和體育場的大門——走到大門口按按鈕會進到完整大小的潮汐體育場（跑道、足球場、看台），出口在南邊看台中間；目前是可以逛的場地，還不能比賽；👗 商店街（往南走，過了涼亭兩邊各三間）：西邊是寵物店、阿綾服裝店、阿彩畫廊，東邊是阿木木工坊、阿萍美髮沙龍，最南邊一間是街景的咖啡店。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
