@@ -9541,7 +9541,9 @@ function poolRespot(T, n, x, y){ const b = T.b[n], R2 = 4.2 * PB.R * PB.R; let t
   for (let k = 0; k < 80; k++){ let ok = true; for (let i = 0; i < 16; i++){ if (i === n || !T.b[i].on) continue; const dx = T.b[i].x - tx, dy = T.b[i].y - ty; if (dx * dx + dy * dy < R2){ ok = false; break; } } if (ok) break; tx += (x > 0 ? -1 : 1) * PB.R * 0.7; if (tx > PB.HL - PB.R * 2 || tx < -PB.HL + PB.R * 2){ tx = x; ty += PB.R * 2.2; } }
   b.on = 1; b.x = tx; b.y = ty; b.vx = b.vy = 0; }
 function poolResolve(T){ const S = T.sim, pot = S.pot, cueIn = pot.includes(0), eightIn = pot.includes(8), first = S.first; T.sim = null; T.ev = '';
-  if (T.mode === 'solo'){ if (cueIn){ poolRespot(T, 0, -PB.HL / 2, 0); T.ph = 'hand'; T.ev = 'scratch'; } else { T.ph = 'aim'; T.ev = pot.length ? 'in' : ''; }
+  if (T.mode === 'solo'){ let others = 0; for (let i = 1; i < 16; i++) if (i !== 8 && T.b[i].on) others++;
+    if (eightIn && others){ poolRespot(T, 8, PB.HL / 2, 0); T.ev = 'back8'; }   /* v500 作者：練習時黑球也要留到最後 → 提早打進去就擺回桌上 */
+    if (cueIn){ poolRespot(T, 0, -PB.HL / 2, 0); T.ph = 'hand'; if (!T.ev) T.ev = 'scratch'; } else { T.ph = 'aim'; if (!T.ev) T.ev = pot.length ? 'in' : ''; }
     T.brk = false; let left = 0; for (let i = 1; i < 16; i++) if (T.b[i].on) left++; if (!left){ T.ph = 'over'; T.win = 0; T.ev = 'clear'; } }
   else if (T.mode === 'vs'){ const me2 = T.turn, opp = 1 - me2, g = poolGrpOf(T, me2), wasClear = g ? poolLeftBefore(T, g, pot) === 0 : false; T.miss[me2] = 0;
     let foul = cueIn || !first;
@@ -9558,6 +9560,7 @@ function poolLeftBefore(T, g, pot){ let n = poolLeft(T, g); for (const i of pot)
 function poolSay(T){ if (!inPoolHall()) return; const mi = poolMyIdx(T), e = T.ev; if (mi < 0 && !(Pool.on && Pool.ti === T.i)) return; const mine = T.mode === 'solo' || (T.ph === 'over' ? T.win === mi : T.turn === mi);
   if (e === 'clear'){ flash(`🎱 清台！用了 ${T.shots} 桿`, 2.2); SFX.coin(); }
   else if (e === 'win8' || e === 'lose8' || e === 'afk' || e === 'left'){ if (mi < 0) flash(`🎱 ${T.nm[T.win] || '玩家'} 贏了`, 2); else if (T.win === mi){ flash(e === 'left' ? '🎱 對手離開了，你贏了' : e === 'afk' ? '🎱 對手沒有出桿，你贏了' : '🎱 你贏了！', 2.2); SFX.coin(); } else flash(e === 'lose8' && T.win !== mi ? '😵 黑八進錯了，這局輸了' : '這局輸了，再來一局！', 2.2); }
+  else if (e === 'back8') flash('黑球要留到最後，先擺回桌上', 1.8);
   else if (e === 'scratch') flash(T.mode === 'solo' ? '母球進袋了，重新擺' : mine ? '對手把母球打進袋：自由球！' : '母球進袋，犯規！', 1.6);
   else if (e === 'foul') flash(mine ? '對手犯規：自由球！' : '犯規！換對手打', 1.6);
   else if (e === 'time') flash(mine ? '對手超過時間：自由球！' : '超過時間，換對手打', 1.6);
@@ -15999,7 +16002,7 @@ function renderTab(){
     ]);
     sec('🎱 潮汐撞球館', [
       '在哪裡：運動公園西南角、屋頂上有一顆黑八的小屋。走到門口按按鈕就進去，裡面有兩張球桌、果汁吧和記分黑板（寫著每張桌子現在誰在打）；出口在南邊。',
-      '怎麼開始：走到球桌旁邊按「打撞球」。一個人是練習（把 15 顆球都打進去，看用了幾桿）；別人走到你的桌子按「對打」，就會重新排球變成兩個人的八號球，先坐下的人開球。桌子已經有兩個人在打，按「觀戰」可以從上面看。',
+      '怎麼開始：走到球桌旁邊按「打撞球」。一個人是練習（把 15 顆球都打進去，看用了幾桿；黑色 8 號要留到最後，提早打進去會擺回桌上）；別人走到你的桌子按「對打」，就會重新排球變成兩個人的八號球，先坐下的人開球。桌子已經有兩個人在打，按「觀戰」可以從上面看。',
       '怎麼打：畫面會變成從球桌正上方往下看。在桌面上滑動手指，球桿會繞著母球（白球）轉；點一下桌面會直接對準那裡。白線是母球會走的路，白圈是母球碰到東西時的位置，短線是被撞的球大概會往哪裡走。瞄好以後，把左邊的力道條往下拉（拉越多越大力），放開就出桿；拉回最上面再放開是取消。',
       '八號球規則：開球以後，誰先打進一顆球，就打那一種——全色球（1～7 號）或花色球（9～15 號，有白邊），對手打另一種。打進自己的球可以繼續打，沒進就換人。自己的 7 顆都進了以後，再把黑色 8 號打進去就贏了。',
       '犯規（換對手打，而且對手可以把母球拖到桌上任何地方，叫「自由球」）：母球進袋、沒有碰到任何球、母球先碰到對手的球、還有自己的球沒打完就先碰黑八。',
