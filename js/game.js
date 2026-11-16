@@ -1796,11 +1796,11 @@ function castPoint(x, z, dx, dz, dist){
   /* v481 石頭防波堤（作者傳了一張想要的島嶼圖：「碼頭做成這樣很讚」）：港口北邊多一道 L 形的石頭堤防，從岸邊往東伸出去再往南彎，尾端一座紅白燈標（晚上紅燈一閃一閃）。
      所有玩家都看得到、都可以走上去釣魚；獨木舟不能穿過去（跟木棧橋一樣）。原本兩條木棧橋、渡船、獨木舟停的位置都沒動。 */
   { const QY = 0.46, seg = (x0, x1, z0, z1) => stoneDeck(x0, x1, z0, z1, QY);
-    const AX0 = 21, AX1 = 43.4, AZ0 = -45.2, AZ1 = -42.2, BZ1 = -34.6, BX0 = 40.4;
-    seg(AX0, AX1, AZ0, AZ1); seg(BX0, AX1, AZ1, BZ1);
+    const AX0 = 21, AX1 = 44.6, AZ0 = -47.4, AZ1 = -42.2, BZ1 = -33.4, BX0 = 39.6;   /* v483 作者：「跟剛剛傳的圖一樣的碼頭」→ 堤防加寬到 5 公尺、燈標移到東北外角、岸邊補一條石頭岸壁把堤防和兩條棧橋連成一個 U 形的港 */
+    seg(AX0, AX1, AZ0, AZ1); seg(BX0, AX1, AZ1, BZ1); seg(25.4, 27.5, AZ1, -35.2); seg(25.4, 27.5, -32.8, -28.2);
     for (const [x, z] of [[29, AZ1 - 0.5], [34, AZ1 - 0.5], [39, AZ1 - 0.5], [BX0 + 0.5, AZ1 + 2.6], [BX0 + 0.5, AZ1 + 5.4]]){ const bl = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.18, 0.42, 8), mat('#3d434b', 0.6)); bl.position.set(x, QY + 0.21, z); bl.castShadow = true; scene.add(bl); const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.08, 8), mat('#3d434b', 0.6)); cap.position.set(x, QY + 0.44, z); scene.add(cap); }
     for (const [x, z, ry] of [[31.5, AZ1 + 0.06, 0], [36.5, AZ1 + 0.06, 0], [BX0 - 0.06, AZ1 + 3.6, Math.PI / 2]]){ const ty = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.11, 6, 12), mat('#2b2d31', 0.9)); ty.position.set(x, QY - 0.42, z); ty.rotation.y = ry; scene.add(ty); }
-    { const bx = AX1 - 1.5, bz = BZ1 + 1.4 - 1.4 - 1.3, g = new THREE.Group(); g.position.set(bx, QY, bz); g.userData.keep = true; g.userData.dyn = true;   /* 紅白燈標 */
+    { const bx = AX1 - 1.5, bz = AZ0 + 1.5, g = new THREE.Group(); g.position.set(bx, QY, bz); g.userData.keep = true; g.userData.dyn = true;   /* 紅白燈標 */
       const cyl = (r0, r1, h, c, y, o2) => { const k = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, 12), mat(c, 0.7, o2)); k.position.y = y; k.castShadow = true; g.add(k); return k; };
       cyl(0.75, 0.85, 0.3, '#9a968f', 0.15); cyl(0.42, 0.5, 0.9, '#d8412f', 0.75); cyl(0.36, 0.42, 0.8, '#f4f1e6', 1.6); cyl(0.3, 0.36, 0.8, '#d8412f', 2.4); cyl(0.42, 0.42, 0.08, '#3d434b', 2.84); cyl(0.2, 0.2, 0.36, '#f4f1e6', 3.06);
       const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), new THREE.MeshStandardMaterial({ color: '#ff5a4a', emissive: '#ff2a1a', emissiveIntensity: 0.4 })); lamp.position.y = 3.34; g.add(lamp); const capc = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.22, 10), mat('#d8412f', 0.7)); capc.position.y = 3.62; g.add(capc);
