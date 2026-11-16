@@ -6207,7 +6207,7 @@ function updateFishing(dt, t){
   const c = 'act-' + cls; if (act._c !== c){ act.classList.remove('idle','bite'); if (cls) act.classList.add(cls); act._c = c; }
   // spot card
   const card = $('#spotCard');
-  const showCard = near.d < 3.2 && F.phase !== 'reeling' && F.phase !== 'charging';
+  const showCard = near.d < 3.2 && F.phase === 'idle' && !FP.act;   /* v511 作者：「港口外海這排會擋到」→ 釣點名字只在還沒拋竿的時候顯示；一拋竿就收起來，等魚、拉魚、看魚都不擋畫面 */
   if (showCard && card._s !== near.spot.id){
     card._s = near.spot.id; { const mp = seaMemPts(near.spot.id), ml2 = seaMemLv(near.spot.id); $('.t', card).textContent = near.spot.label + (mp ? ` · 🌊${SeaMem.NM[ml2]}${ml2 < 5 ? ' ' + mp + '／' + SeaMem.LV[ml2 + 1] : ''}` : ''); } $('.s', card).textContent = near.spot.subtitle;
     // 只顯示釣點名字；這裡有什麼魚到圖鑑看就好
@@ -9866,7 +9866,7 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
   { const grip = new THREE.CylinderGeometry(0.019, 0.022, 0.42, 10); grip.translate(0, -0.11, 0); rp.add(new THREE.Mesh(grip, cork)); const cap = new THREE.Mesh(new THREE.SphereGeometry(0.023, 10, 8), cork); cap.position.y = -0.32; rp.add(cap);
     const seat = new THREE.CylinderGeometry(0.021, 0.021, 0.1, 10); seat.translate(0, 0.08, 0); rp.add(new THREE.Mesh(seat, met)); }
   /* 捲線器：掛在竿子下面（竿子往前倒的時候，竿子座標的 +z 是上面，所以 -z 是下面） */
-  { const R = FP.reel = new THREE.Group(); R.position.set(0, 0.07, -0.02); R.scale.setScalar(1.5); R.rotation.y = -0.95; rp.add(R); const M = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); R.add(o); return o; };
+  { const R = FP.reel = new THREE.Group(); R.position.set(0, 0.07, -0.02); R.scale.setScalar(1.15); R.rotation.y = -0.95; rp.add(R); const M = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); R.add(o); return o; };
     M(new THREE.BoxGeometry(0.012, 0.03, 0.06), met, 0, 0, -0.03); const body = M(new THREE.SphereGeometry(0.034, 12, 10), blk, 0, -0.005, -0.075); body.scale.set(0.85, 1.15, 0.85);
     const spool = new THREE.Group(); spool.position.set(0, 0.04, -0.075); R.add(spool); FP.spool = spool; { const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.026, 0.035, 14), met); spool.add(sp); const ln = new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.031, 0.022, 14), new THREE.MeshStandardMaterial({ color: '#f4f8fb', roughness: 0.6 })); spool.add(ln); const lip = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.006, 14), red); lip.position.y = 0.019; spool.add(lip); const bail = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.0025, 6, 16, Math.PI), met); bail.rotation.y = Math.PI / 2; bail.position.y = 0.005; spool.add(bail); }
     const ck = FP.crank = new THREE.Group(); ck.position.set(0.036, -0.005, -0.075); R.add(ck); { const ax = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.02, 8), met); ax.rotation.z = Math.PI / 2; ck.add(ax); const arm = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.075, 0.012), met); arm.position.set(0.012, -0.034, 0); ck.add(arm); const kn = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.03, 10), blk); kn.rotation.z = Math.PI / 2; kn.position.set(0.028, -0.07, 0); ck.add(kn); FP.knob = new THREE.Object3D(); FP.knob.position.set(0.04, -0.07, 0); ck.add(FP.knob); } }
@@ -9877,7 +9877,7 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
       FP.segs.push(sg); par = sg; }
     FP.tip = new THREE.Object3D(); FP.tip.position.y = L; par.add(FP.tip); }
   /* 手：左手握竿（在捲線器上面一點），右手抓捲線器的把手；手掛在鏡頭上，每一格跟著竿子的位置擺 */
-  FP.handL = fpHand(-1); g.add(FP.handL); FP.handR = fpHand(1); g.add(FP.handR); FP.crankA = 0; FP.bendNow = 0;
+  FP.handL = fpHand(-1); FP.handL.scale.setScalar(0.75); g.add(FP.handL); FP.handR = fpHand(1); FP.handR.scale.setScalar(0.75); g.add(FP.handR); FP.crankA = 0; FP.bendNow = 0;
   FP.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f8fb', transparent: true, opacity: 0.85 })); FP.line.frustumCulled = false; FP.line.visible = false; FP.line.userData.keep = true; scene.add(FP.line); }
 function fpStart(){ fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
@@ -9909,9 +9909,10 @@ function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T 
   const ln = FP.line; if (T < 2.65){ camera.updateMatrixWorld(); const a = ln.geometry.attributes.position, p0 = FP.tgt; p0.copy(tip); FP.g.localToWorld(p0); a.setXYZ(0, p0.x, p0.y, p0.z); p0.set(h.position.x, h.position.y + c.L * 0.46, h.position.z); FP.g.localToWorld(p0); a.setXYZ(1, p0.x, p0.y, p0.z); a.needsUpdate = true; ln.visible = true; } else ln.visible = false; }
 /* 每一格：決定要不要第一人稱、擺鏡頭、動竿子。回傳 true 表示鏡頭已經擺好，原本的鏡頭程式不用跑 */
 function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now();
+  if (FP.c && F.phase === 'idle'){ fpCatchEnd(); FP.rodY = 0; }   /* v511 留在第一人稱的時候，看完卡片要把手上的魚放掉（以前會一直拿著） */
   FP.eye.set(me.pos.x, me.baseY + (me.sitting ? 0.85 : 1.16), me.pos.z);
   const bobOK = !FP.c && me.fishing && me.bobState !== 'none' && me.bob && me.bob.visible;
-  if (bobOK && isFinite(me.bob.position.x + me.bob.position.y + me.bob.position.z)){ const B = me.bob.position; FP.tgt.set(B.x, clamp(B.y, WATER_LEVEL, WATER_LEVEL + 1.2), B.z);   /* 浮標飛在空中的時候鏡頭只跟一點點，不會整個抬頭看天空 */ const d = Math.hypot(B.x - me.pos.x, B.z - me.pos.z); if (d < 2.2){ const k = 2.2 / Math.max(0.2, d); FP.tgt.x = me.pos.x + (B.x - me.pos.x) * k; FP.tgt.z = me.pos.z + (B.z - me.pos.z) * k; } FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
+  if (bobOK && isFinite(me.bob.position.x + me.bob.position.y + me.bob.position.z)){ const B = me.bob.position; FP.tgt.set(B.x, clamp(B.y, WATER_LEVEL, WATER_LEVEL + 1.2), B.z);   /* 浮標飛在空中的時候鏡頭只跟一點點，不會整個抬頭看天空 */ const d = Math.hypot(B.x - me.pos.x, B.z - me.pos.z); FP.tgt.y = Math.max(FP.tgt.y, FP.eye.y - Math.max(2.2, d) * 0.2); if (d < 2.2){ const k = 2.2 / Math.max(0.2, d); FP.tgt.x = me.pos.x + (B.x - me.pos.x) * k; FP.tgt.z = me.pos.z + (B.z - me.pos.z) * k; } FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
   else if (FP.c){ const fx = FP.look.x - FP.eye.x, fz = FP.look.z - FP.eye.z, fl = Math.hypot(fx, fz) || 1; FP.tgt.set(FP.eye.x + fx / fl * 4, FP.eye.y - (FP.c.t < 1.25 ? 0.05 : FP.c.t < 2.6 ? 0.45 : 0.9), FP.eye.z + fz / fl * 4); FP.look.lerp(FP.tgt, 1 - Math.exp(-4 * dt)); }   /* 魚出水：抬頭看竿尖和吊著的魚；要拿魚了再低頭看手 */
   else if (!FP.c && F.phase === 'charging'){ FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
   if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
@@ -9925,11 +9926,11 @@ function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else
   if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
   if (FP.castT && t - FP.castT < 0.75){ const s2 = (t - FP.castT) / 0.75; if (s2 < 0.32){ const u = s2 / 0.32; cast = (FP.castW * 0.75 + 0.25) * (1 - u * u) - 0.42 * u * u; } else { const u = (s2 - 0.32) / 0.68; cast = -0.42 * (1 - u) * (1 - u); } }
   const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
-  rp.position.set(0.07 - lift * 0.03, -0.16 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.34);   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-(Math.PI / 2 - 0.2) - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.03 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0);   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
+  rp.position.set(0.15 - lift * 0.03, -0.3 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.42);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ rp.rotation.set(-1.12 - bend * 0.17 + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0), 0.3);   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
   /* 竿子彎：拉魚的時候照張力彎（越緊越彎），魚咬的時候竿尖抖，魚吊在竿尖時被魚的重量拉彎；甩竿往前的瞬間竿尖往後甩（彈性） */
   const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; let wantB = reel ? 0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25 : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
   if (c) wantB = c.t < 0.6 ? 0.9 * cw : c.t < 1.2 ? 0.55 * cw + Math.sin(c.t * 9) * 0.06 : c.t < 2.6 ? 0.3 * cw : 0.02;
-  FP.bendNow += (wantB - FP.bendNow) * Math.min(1, dt * 9); const flex = cast * 0.55, N = FP.segs.length; for (let i = 0; i < N; i++){ const wgt = (0.6 + i / N) / (N * 0.6 + (N - 1) / 2); FP.segs[i].rotation.x = -clamp(FP.bendNow - flex, -0.6, 1.25) * wgt * 1.25 + (reel ? Math.sin(t * 27 + i) * 0.004 * FP.bendNow : 0); }
+  FP.bendNow += (wantB - FP.bendNow) * Math.min(1, dt * 9); const flex = cast * 0.55, N = FP.segs.length; for (let i = 0; i < N; i++){ const wgt = (0.6 + i / N) / (N * 0.6 + (N - 1) / 2); FP.segs[i].rotation.x = -clamp(FP.bendNow - flex, -0.5, 1.0) * wgt * 1.1 + (reel ? Math.sin(t * 27 + i) * 0.004 * FP.bendNow : 0); }
   /* 捲線器：按住收線時把手轉、線杯跟著轉；魚剛出水那一下轉很快；甩竿的時候線從線杯放出去（線杯抖） */
   const crankV = c ? (c.t < 1.2 ? 20 : 0) : reel && F.hold ? 14 : FP.castT && t - FP.castT < 1.4 && t - FP.castT > 0.9 ? 9 : 0; FP.crankA += crankV * dt; FP.crank.rotation.x = -FP.crankA; FP.spool.rotation.y = FP.crankA * 1.6;
   if (crankV > 0){ FP.clk = (FP.clk || 0) - dt; if (FP.clk <= 0){ FP.clk = 0.09; try { tone(2200 + Math.random() * 300, 0.012, 'square', 0.012); } catch(e2){} } }
@@ -11079,6 +11080,8 @@ function updateVenues(dt, t){
   try { updateMuseumHall(dt, t); } catch(e){}
   try { updateStadium(dt, t); } catch(e){}
   try { duelTick(); } catch(e){}
+  /* v511 作者：「畫面都被切掉了」→ 整頁偶爾會被捲動（上面的選單跑到畫面外面）；沒在打字的時候一律捲回最上面 */
+  { const se = document.scrollingElement || document.documentElement, ae = document.activeElement; if ((se.scrollTop || document.body.scrollTop || window.scrollY || se.scrollLeft) && !(ae && /INPUT|TEXTAREA/.test(ae.tagName))){ se.scrollTop = 0; se.scrollLeft = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); } }
   try { updatePoolHall(dt, t); } catch(e){ if (!window.__poolErr){ window.__poolErr = 1; console.warn('pool', e); } }
   { const ic = inCafe(); if (Venue.cafe && Venue.cafe.visible !== ic) Venue.cafe.visible = ic; if (ic && Venue.cafeCoal) Venue.cafeCoal.material.emissiveIntensity = 1 + Math.sin(t * 7) * 0.25; }
   { const ih = inHall(); if (Venue.hall && Venue.hall.visible !== ih) Venue.hall.visible = ih; if (Venue.boss){ Venue.boss.av.g.visible = ih; if (ih){ Venue.boss.update(dt, t); Venue.boss.placeTag(); } else Venue.boss.tag.style.display = 'none'; }
