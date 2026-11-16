@@ -9669,14 +9669,19 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
     for (const [px, pz, r] of [[-HW, -HL, 0.07], [HW, -HL, 0.07], [-HW, HL, 0.07], [HW, HL, 0.07], [-HW - 0.025, 0, 0.06], [HW + 0.025, 0, 0.06]]){ const pk = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.012, 16), new THREE.MeshBasicMaterial({ color: '#07090b' })); pk.position.set(px, ty + 0.002, pz); tg.add(pk); }
     for (const sx of [-1, 1]) for (let i = 1; i < 8; i++){ if (i === 4) continue; P(0.014, 0.004, 0.014, '#f4e9c8', sx * (HW + cw + 0.065), ty + 0.062, -HL + i * HL / 4, false); }
     { const ln = P(2 * HW, 0.002, 0.006, '#3fa58e', 0, ty + 0.0015, -HL / 2, false); ln.receiveShadow = false; }
-    addBoxCol(T.ox, T.oz, 2 * HW + 0.4, 2 * HL + 0.4);
+    addBoxCol(T.ox - 0.06, T.oz, 2 * HW + 0.52, 2 * HL + 0.4);
     const balls = []; for (let n = 0; n < 16; n++){ const m = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ map: texs[n], roughness: 0.25, metalness: 0.05 })); m.castShadow = true; m.rotation.set(n * 1.7, n * 2.3, n * 0.9); m.userData.dyn = true; tg.add(m); balls.push(m); }
     const cg = new THREE.CylinderGeometry(0.0055, 0.0125, 1.45, 8); cg.rotateX(Math.PI / 2); cg.translate(0, 0, -0.725); const cue = new THREE.Mesh(cg, mat('#d9b27a', 0.5, { noWood: true })); cue.rotation.order = 'YXZ'; cue.visible = false; cue.castShadow = true; tg.add(cue);
     { const tg2 = new THREE.CylinderGeometry(0.0058, 0.0058, 0.02, 8); tg2.rotateX(Math.PI / 2); tg2.translate(0, 0, -0.01); const tip = new THREE.Mesh(tg2, new THREE.MeshBasicMaterial({ color: '#3f7fd6' })); cue.add(tip); const bt = new THREE.CylinderGeometry(0.0128, 0.0128, 0.4, 8); bt.rotateX(Math.PI / 2); bt.translate(0, 0, -1.25); cue.add(new THREE.Mesh(bt, mat('#2a1a10', 0.6, { noWood: true }))); }
     const lm = new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9 }), mk = () => { const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, 1)]), lm); l.frustumCulled = false; l.visible = false; tg.add(l); return l; };
     const l1 = mk(), l2 = mk(), l3 = mk(), ghost = new THREE.Mesh(new THREE.RingGeometry(PB.R * 0.82, PB.R, 28), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, side: THREE.DoubleSide })); ghost.rotation.x = -Math.PI / 2; ghost.visible = false; tg.add(ghost);
     const hand = new THREE.Mesh(new THREE.RingGeometry(PB.R * 1.5, PB.R * 1.8, 28), new THREE.MeshBasicMaterial({ color: '#ffd23f', transparent: true, opacity: 0.9, side: THREE.DoubleSide })); hand.rotation.x = -Math.PI / 2; hand.visible = false; tg.add(hand);
-    T.m = { tg, balls, cue, l1, l2, l3, ghost, hand, ty, pots: [] };
+    /* v501 回球槽：進袋的球從桌子底下滾出來，沿著桌邊這條槽滾到一頭排好（作者：「要有球進球袋的動畫，然後有撞球桌底下滾的動畫」） */
+    const TRX = -(HW + 0.24), TRY = ty - 0.07 + PB.R; P(0.1, 0.02, 2 * HL + 0.1, '#3a2416', TRX, ty - 0.08, 0, false); for (const sx of [-1, 1]) P(0.014, 0.05, 2 * HL + 0.1, '#6b4226', TRX + sx * 0.052, ty - 0.055, 0, false); for (const sz of [-1, 1]) P(0.118, 0.05, 0.014, '#6b4226', TRX, ty - 0.055, sz * (HL + 0.057), false);
+    P(0.16, 0.05, 0.2, '#4a2c18', TRX + 0.05, ty - 0.06, HL - 0.06, false);                                   /* 球從桌子底下出來的口 */
+    for (const zz of [-HL + 0.3, 0, HL - 0.3]) P(0.12, 0.03, 0.05, '#4a2c18', TRX + 0.08, ty - 0.1, zz, false);     /* 把槽撐在桌邊的小支架 */
+    { const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 2 * HL - 0.2, 10), mat('#2a1a10', 0.7, { noWood: true })); pipe.rotation.x = Math.PI / 2; pipe.position.set(0, ty - 0.3, 0); tg.add(pipe); const el2 = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, HW + 0.24, 10), mat('#2a1a10', 0.7, { noWood: true })); el2.rotation.z = Math.PI / 2; el2.position.set(-(HW + 0.24) / 2, ty - 0.3, HL - 0.1); tg.add(el2); }   /* 桌子底下的回球管（從旁邊看得到） */
+    T.m = { tg, balls, cue, l1, l2, l3, ghost, hand, ty, pots: [], tray: [], TRX, TRY };
     /* 吊燈 */
     const lp = new THREE.MeshStandardMaterial({ color: '#fff3c9', emissive: '#ffd98a', emissiveIntensity: 0.9 }); Venue.poolLamps.push(lp);
     const add = (w, h, d, c, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'string' ? mat(c, 0.8, { noWood: true }) : c); o.position.set(T.ox + x, y, T.oz + z); top.add(o); return o; };
@@ -9687,8 +9692,12 @@ function poolBoard(){ const cv = Pool.boardCv; if (!cv) return; const c = cv.get
   Pool.tables.forEach((T, i) => { const y = 108 + i * 78; c.fillStyle = '#ffd23f'; c.font = '900 30px "Noto Sans TC", "PingFang TC", sans-serif'; c.fillText(`${i + 1} 號桌`, 24, y); c.fillStyle = '#f4f1e6'; c.font = '700 28px "Noto Sans TC", "PingFang TC", sans-serif';
     c.fillText(T.mode === 'vs' ? `${T.nm[0] || '玩家'} vs ${T.nm[1] || '玩家'}` : T.mode === 'solo' ? `${T.nm[0] || '玩家'} 練習中，可以挑戰` : '空桌，歡迎來打', 150, y); });
   if (Pool.boardTx) Pool.boardTx.needsUpdate = true; }
-function poolRefresh(T){ const M = T.m; if (!M) return; for (let n = 0; n < 16; n++){ const b = T.b[n], m = M.balls[n]; m.visible = !!b.on; if (b.on){ m.position.set(b.y, M.ty + PB.R, b.x); m.scale.setScalar(1); } } }
-function updatePoolHall(dt, t){ const ih = inPoolHall(); if (Venue.pool && Venue.pool.visible !== ih) Venue.pool.visible = ih; if (ih && Venue.poolAmb) Venue.poolAmb.intensity = 2.2 * (DayNight.lamp || 0);
+function poolTrayZ(k){ return -PB.HL + 0.04 + k * PB.R * 2.04; }
+function poolRefresh(T){ const M = T.m; if (!M) return; M.tray = M.tray.filter(n => !T.b[n].on); for (let n = 1; n < 16; n++) if (!T.b[n].on && !M.tray.includes(n)) M.tray.push(n);
+  for (let n = 0; n < 16; n++){ const b = T.b[n], m = M.balls[n]; if (b.on){ m.visible = true; m.position.set(b.y, M.ty + PB.R, b.x); m.scale.setScalar(1); continue; }
+    if (M.pots.some(p => p.i === n)) continue;   /* 正在播進袋、滾回球槽的動畫 */
+    if (n === 0){ m.visible = false; continue; } m.visible = true; m.scale.setScalar(1); m.position.set(M.TRX, M.TRY, poolTrayZ(M.tray.indexOf(n))); } }
+function updatePoolHall(dt, t){ const ih = inPoolHall(); if (Venue.pool && Venue.pool.visible !== ih){ Venue.pool.visible = ih; for (const T of Pool.tables){ if (T.m) T.m.pots.length = 0; poolRefresh(T); } } if (ih && Venue.poolAmb) Venue.poolAmb.intensity = 2.2 * (DayNight.lamp || 0);
   if (Pool.on && (!ih || !Pool.tables[Pool.ti])) poolExitLocal();
   if (ih && !Pool.asked && room && room.connected()){ Pool.asked = true; poolSend({ k: 'q' }); }   /* 剛走進來：問一下每張桌子現在的狀況 */
   if (!ih) Pool.asked = false;
@@ -9699,12 +9708,21 @@ function poolTickTable(T, dt, t, ih){ const M = T.m, S = T.sim;
     else { S.acc += dt * (T.pend ? 3 : 1); S.t += dt; S.cue = Math.max(0, S.cue - dt); let n = Math.min(60, Math.floor(S.acc / PB.H)), moving = true; S.acc -= n * PB.H; const px = T.b.map(b => b.x), py = T.b.map(b => b.y);
       while (n-- > 0 && moving) moving = poolStep(T); if (S.t > 25){ for (const b of T.b) b.vx = b.vy = 0; moving = false; }
       if (M && ih){ for (let i = 0; i < 16; i++){ const b = T.b[i], m = M.balls[i]; if (!b.on) continue; const dx = b.x - px[i], dy = b.y - py[i], d = Math.sqrt(dx * dx + dy * dy); m.position.set(b.y, M.ty + PB.R, b.x); if (d > 1e-6){ Pool.ax = Pool.ax || new THREE.Vector3(); Pool.ax.set(dx / d, 0, -dy / d); m.rotateOnWorldAxis(Pool.ax, d / PB.R); } }
-        let hv = 0, rv = 0; for (const f of S.fx){ if (f.k === 'hit') hv = Math.max(hv, f.v); else if (f.k === 'rail') rv = Math.max(rv, f.v); else if (f.k === 'pot'){ M.pots.push({ i: f.i, t: 0, x: f.x, y: f.y }); try { tone(150, 0.12, 'sine', 0.09, 80); } catch(e){} } }
+        let hv = 0, rv = 0; for (const f of S.fx){ if (f.k === 'hit') hv = Math.max(hv, f.v); else if (f.k === 'rail') rv = Math.max(rv, f.v); else if (f.k === 'pot'){ const sx = f.x < 0 ? -1 : 1, sy = f.y < 0 ? -1 : 1, side = Math.abs(f.x) < 0.3; M.pots = M.pots.filter(q => q.i !== f.i); M.pots.push({ i: f.i, t: 0, x: f.x, y: f.y, px: side ? 0 : sx * (PB.HL + 0.01), py: sy * (PB.HW + (side ? 0.035 : 0.01)), lz: 0 }); if (f.i > 0 && !M.tray.includes(f.i)) M.tray.push(f.i); try { tone(150, 0.12, 'sine', 0.09, 80); } catch(e){} } }
         if (hv > 0.15){ try { tone(1900 + Math.random() * 500, 0.03, 'square', Math.min(0.09, 0.012 + hv * 0.02)); } catch(e){} } else if (rv > 0){ try { tone(240, 0.05, 'triangle', Math.min(0.06, 0.01 + rv * 0.012)); } catch(e){} } }
       S.fx.length = 0;
       if (!moving){ if (S.auth) poolResolve(T); else if (T.pend){ const d = T.pend; T.pend = null; T.sim = null; poolApply(T, d, T.pendFrom || ''); } else { T.sim = null; T.ph = 'aim'; T.waitSt = now(); } } } }
   if (!ih || !M) return;
-  for (let k = M.pots.length - 1; k >= 0; k--){ const p = M.pots[k], m = M.balls[p.i]; p.t += dt; if (T.b[p.i].on || p.t > 0.3){ M.pots.splice(k, 1); if (!T.b[p.i].on) m.visible = false; else { m.scale.setScalar(1); } continue; } m.visible = true; const s = 1 - p.t / 0.3; m.scale.setScalar(Math.max(0.05, s)); m.position.set(p.y, M.ty + PB.R - p.t * 0.25, p.x); }
+  /* 進袋動畫：球滑進袋口往下掉（0.28 秒）→ 在桌子底下滾（看不到，0.45 秒）→ 從回球槽的一頭滾出來，滾到排隊的位置停下 */
+  for (let k = M.pots.length - 1; k >= 0; k--){ const p = M.pots[k], m = M.balls[p.i]; p.t += dt;
+    if (T.b[p.i].on){ M.pots.splice(k, 1); m.visible = true; m.scale.setScalar(1); m.position.set(T.b[p.i].y, M.ty + PB.R, T.b[p.i].x); continue; }
+    if (p.t < 0.28){ const u = p.t / 0.28; m.visible = true; m.scale.setScalar(1 - u * 0.2); m.position.set(p.y + (p.py - p.y) * u, M.ty + PB.R - u * u * 0.12, p.x + (p.px - p.x) * u); m.rotateX(dt * 14); continue; }
+    if (p.i === 0){ m.visible = false; m.scale.setScalar(1); M.pots.splice(k, 1); continue; }
+    if (p.t < 0.73){ m.visible = false; continue; }
+    const slot = Math.max(0, M.tray.indexOf(p.i)), z1 = poolTrayZ(slot), z0 = PB.HL - 0.06, dur = 0.5 + (z0 - z1) * 0.45, u = Math.min(1, (p.t - 0.73) / dur), e = 1 - (1 - u) * (1 - u), z = z0 + (z1 - z0) * e;
+    if (!p.rolled){ p.rolled = true; p.lz = z0; try { noise(Math.min(1.2, dur), 0.03, 420, 260, 1.2, 'lowpass'); } catch(e2){} }
+    m.visible = true; m.scale.setScalar(1); m.position.set(M.TRX, M.TRY, z); m.rotateX((z - p.lz) / PB.R); p.lz = z;
+    if (u >= 1){ M.pots.splice(k, 1); try { tone(1500 + Math.random() * 300, 0.03, 'square', 0.03); } catch(e2){} } }
   /* 對打時超過時間：輪到的人自己宣布；對方如果一直沒消息（斷線），另一個人過 8 秒幫忙宣布 */
   if (T.mode === 'vs' && !T.sim && (T.ph === 'aim' || T.ph === 'hand')){ const left = T.dl - now(), mi = poolMyIdx(T); if (mi >= 0 && ((mi === T.turn && left <= 0) || (mi !== T.turn && left <= -8))) poolTimeout(T); }
   /* 球桿、瞄準線 */
@@ -9723,8 +9741,8 @@ function poolTickTable(T, dt, t, ih){ const M = T.m, S = T.sim;
     if (tt < 1e8){ const wx = T.ox + c.y + by * tt, wz = T.oz + c.x + bx * tt, k = Math.min(1, dt * 6); me.pos.x += (wx - me.pos.x) * k; me.pos.z += (wz - me.pos.z) * k; me.baseY = POOLH.y; me.rot = Math.atan2(ay, ax); } } }
 function poolAimSend(){ const T = Pool.tables[Pool.ti]; if (Pool.spec || !poolMyTurn(T)) return; const tn = now(); if (tn - Pool.aimAt < 0.3) return; const d = { k: 'aim', t: T.i, a: [Math.round(Pool.aim.x * 1e3) / 1e3, Math.round(Pool.aim.y * 1e3) / 1e3], pw: Math.round(Pool.pw * 20) / 20 }; if (T.ph === 'hand') d.c = [Math.round(T.b[0].x * 1e4) / 1e4, Math.round(T.b[0].y * 1e4) / 1e4]; const s = JSON.stringify(d); if (s === Pool.aimSent) return; Pool.aimSent = s; Pool.aimAt = tn; poolSend(d); }
 /* 鏡頭：打球（或觀戰）時從球桌正上方往下看；直的螢幕球桌直著放、橫的螢幕橫著放 */
-function poolCam(){ const T = Pool.tables[Pool.ti]; if (!Pool.on || !T) return false; const asp = camera.aspect || 1, th = Math.tan(camera.fov * Math.PI / 360), port = asp < 1, needV = port ? PB.HL + 0.8 : PB.HW + 0.48, needH = port ? PB.HW + 0.5 : PB.HL + 0.5, H = Math.max(needV / th, needH / (th * asp));
-  const ty = POOLH.y + PB.TOP; camera.up.set(port ? 0 : 1, 0, port ? 1 : 0); const ofx = port ? 0 : 0.07, ofz = port ? 0.08 : 0; camera.position.set(T.ox + ofx, ty + H, T.oz + ofz); camera.lookAt(T.ox + ofx, ty, T.oz + ofz);   /* 球桌往下挪一點，上面留給名字和提示 */ camLook.set(T.ox, ty, T.oz); Pool.upDirty = true; return true; }
+function poolCam(){ const T = Pool.tables[Pool.ti]; if (!Pool.on || !T) return false; const asp = camera.aspect || 1, th = Math.tan(camera.fov * Math.PI / 360), port = asp < 1, needV = port ? PB.HL + 0.8 : PB.HW + 0.56, needH = port ? PB.HW + 0.5 : PB.HL + 0.5, H = Math.max(needV / th, needH / (th * asp));
+  const ty = POOLH.y + PB.TOP; camera.up.set(port ? 0 : 1, 0, port ? 1 : 0); const ofx = 0, ofz = port ? 0.08 : 0; camera.position.set(T.ox + ofx, ty + H, T.oz + ofz); camera.lookAt(T.ox + ofx, ty, T.oz + ofz);   /* 球桌往下挪一點，上面留給名字和提示 */ camLook.set(T.ox, ty, T.oz); Pool.upDirty = true; return true; }
 function poolPick(e){ const T = Pool.tables[Pool.ti]; if (!T) return null; Pool.rc = Pool.rc || new THREE.Raycaster(); Pool.pl = Pool.pl || new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); Pool.v2 = Pool.v2 || new THREE.Vector2(); Pool.v3 = Pool.v3 || new THREE.Vector3();
   Pool.v2.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); Pool.rc.setFromCamera(Pool.v2, camera); Pool.pl.constant = -(POOLH.y + PB.TOP + PB.R); if (!Pool.rc.ray.intersectPlane(Pool.pl, Pool.v3)) return null; return { x: Pool.v3.z - T.oz, y: Pool.v3.x - T.ox }; }
 function poolHudBuild(){ if (Pool.hud) return; const h = el('div'); h.id = 'poolHud';
@@ -16008,6 +16026,7 @@ function renderTab(){
       '犯規（換對手打，而且對手可以把母球拖到桌上任何地方，叫「自由球」）：母球進袋、沒有碰到任何球、母球先碰到對手的球、還有自己的球沒打完就先碰黑八。',
       '馬上輸掉：自己的球還沒打完就把黑八打進去，或是打進黑八的那一桿同時犯規（例如母球也進袋）。開球那一桿把黑八打進去不算輸，黑八會擺回桌上。',
       '時間：對打時每一桿有 35 秒，超過時間算犯規換對手；連續三次沒出桿就算輸。打到一半按「離開球桌」或斷線，對手直接贏。',
+      '進袋的球：球會滑進袋口掉下去，在桌子底下滾一段，再從桌邊的「回球槽」滾出來排成一排，看槽裡有哪些球就知道哪些已經進了。',
       '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
