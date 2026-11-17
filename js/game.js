@@ -9127,6 +9127,7 @@ function renderFriends(body){
     const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null;
     { let gr = null; try { for (const p of peers.values()) if (p.pres && p.pres.u === f.id && p.fisher.gearKey){ gr = JSON.parse(p.fisher.gearKey); break; } } catch(e){} const im = avatarImg(f.av, '', gr); if (im) sw.replaceWith && li.append(im); }
     li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在這個大廳' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
+    { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} cardTap(li, f.id, f.name || '釣客', pk); }
     if (f.mutual){ const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
     const v = el('button', 'tbtn ghost vbtn', '水族館'); v.addEventListener('click', () => visitAquarium(f.id, f.name)); const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(v, vi);
     const rm = el('button', 'tbtn ghost vbtn bk', '刪除'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); li.appendChild(rm);
@@ -10129,6 +10130,8 @@ function duelWantBar(r){ let b = Duel.wb; if (!r){ if (b && !b.hidden) b.hidden 
 async function openCard(uid, name, peerId){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能看名片'); return; } if (!uid) return; closeSheet(); const c = duelCardOpen('pcard'); c.classList.add('pcard'); c.appendChild(el('h3', '', `🪪 ${name || '玩家'}`)); c.appendChild(el('p', 'sub', '載入中…'));
   const r = await festRpc('player_card', { p_uid: uid }); if (!Duel.card || Duel.card !== c) return; if (!r || r.err){ c.innerHTML = ''; c.appendChild(el('p', '', (r && r.err) || '讀不到這張名片')); const x = el('button', 'tbtn ghost', '關閉'); x.addEventListener('click', () => duelCardClose('pcard')); c.appendChild(x); return; }
   cardDraw(c, r, peerId); }
+/* v537 作者：「點好友看得到嗎，然後應該在頭像那裡」→ 名單裡的頭像、名字點下去就是名片 */
+function cardTap(li, uid, name, peerId){ if (!uid || !Cloud.on) return; for (const e of li.querySelectorAll(':scope > img.avimg, :scope > .sw, :scope > span:not(.st)')){ e.style.cursor = 'pointer'; e.title = '看名片'; e.addEventListener('click', ev => { ev.stopPropagation(); openCard(uid, name, peerId); }); } }
 function cardPick(c, r, peerId){ c.innerHTML = ''; c.appendChild(el('h3', '', '選最得意的三種魚')); const best = (rec && rec.best) || {}, ids = Object.keys(best).filter(k => FISH_BY_ID[k] && +best[k] > 0).sort((a, b) => best[b] - best[a]); const sel = (r.picked ? r.top.map(x => x.f) : []).filter(k => ids.includes(k)).slice(0, 3);
   const tip = el('p', 'sub', ''); c.appendChild(tip); const box = el('div', 'pc-pick'); c.appendChild(box); const upd = () => { tip.textContent = `點魚選起來，最多 3 種，照你點的順序排（已選 ${sel.length}／3）`; for (const b of box.children){ const i = sel.indexOf(b.dataset.f); b.classList.toggle('on', i >= 0); b.querySelector('i').textContent = i >= 0 ? ['🥇', '🥈', '🥉'][i] : ''; } };
   if (!ids.length) box.appendChild(el('p', 'sub', '還沒有釣到魚，先去釣幾條再來選'));
@@ -16337,7 +16340,7 @@ function renderTab(){
     if (Cloud.on){ const ds = Duel.stats; body.appendChild(el('p', 'sub', '⚔️ 釣魚對決：按玩家旁邊的「對決」是友誼賽（不算星星）；按下面的「排位賽・找對手」（背包和廣場大看板的「對決排行」也有）是排位賽（贏輸會動星星和段位）。都是比 3 分鐘內誰釣到的魚加起來比較重。' + (ds ? `你的戰績 ${ds.wins || 0} 勝 ${ds.losses || 0} 敗・${duelTierTxt(ds)}${(ds.streak || 0) >= 2 ? `・${ds.streak} 連勝中 🔥` : ''}` : '')));
       { const qb = el('button', 'tbtn', duelLive() ? '正在對決中' : Duel.q ? '取消排隊' : '⚔️ 排位賽・找對手'); qb.disabled = duelLive(); qb.style.marginBottom = '8px'; qb.addEventListener('click', () => { if (Duel.q){ duelQueueStop('已經取消排隊'); renderTab(); } else { closeSheet(); duelQueueStart(); } }); body.appendChild(qb); } }   /* v522 作者：「只能在背包開排位賽嗎」→ 朋友分頁也放一顆 */
     const ul = el('ul', 'people');
-    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} const im = avatarImg(av, '', gr); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
+    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} const im = avatarImg(av, '', gr); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st)); cardTap(li, isMe ? myId : uid, name, peerId);
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
       if ((uid || (isMe && myId)) && Cloud.on){ const cb = el('button', 'tbtn vbtn', isMe ? '🪪 我的名片' : '🪪 名片'); cb.addEventListener('click', () => openCard(isMe ? myId : uid, name, peerId)); li.appendChild(cb); }   /* v534 */
       if (uid && Cloud.on && !isMe && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); li.appendChild(dz); }
@@ -16621,9 +16624,9 @@ function renderTab(){
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
     ]);
     sec('🪪 個人名片', [
-      '怎麼看：打開「朋友」分頁，每個玩家旁邊有「🪪 名片」，自己那一列是「🪪 我的名片」。',
+      '怎麼看：點左上角自己的頭像就是「我的名片」。看別人的：打開「朋友」分頁，點名單裡任何人的頭像或名字（好友不在線上也看得到），或按旁邊的「🪪 名片」。',
       '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最得意的三種魚（自己的名片上按「自己選三種魚」挑，沒挑就先放最重的三種）、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
-      '自己的名片可以按「✏️ 改一句話」寫一句話給別人看（最多 30 個字）。',
+      '自己的名片可以按「✏️ 改一句話」寫一句話給別人看（最多 30 個字）；點名片上的大頭照可以去換照片。',
       '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
     ]);
     sec('⚽ 體育場足球', [
@@ -17862,7 +17865,7 @@ cloudInit().finally(() => { Boot.cloud = true; });
 initUpdateCheck();
 // 點左上角的頭像或名字 → 打開／收起更多功能（等級旁邊的 Lv 還是打開成就）
 (function(){ for (const s of ['#brand .mark', '#brand h1']){ const e = document.querySelector(s); if (!e) continue; e.style.cursor = 'pointer'; e.setAttribute('role', 'button'); e.title = '更多功能';
-  e.addEventListener('click', ev => { if (ev.target.closest('#lvChip')) return; ev.stopPropagation(); if (s === '#brand .mark'){ openSheet('style'); return; }   /* v536 作者：「點頭像，然後就跳出這個畫面」→ 點左上角的頭像直接打開大頭照；點名字還是打開更多功能 */ const B = document.getElementById('brand'); if (B) B.classList.toggle('open'); }); } })();   /* 點頭像打開／收起：好友代碼、任務、成就、玩法、帳號、拍照、全螢幕、音樂、音效 */
+  e.addEventListener('click', ev => { if (ev.target.closest('#lvChip')) return; ev.stopPropagation(); if (s === '#brand .mark'){ if (Cloud.on && myId) openCard(myId, myDisplayName() === '你' ? '我' : myDisplayName(), null); else openSheet('style'); return; }   /* v537 點左上角自己的頭像 → 我的名片（名片上的大頭照再點一下可以換照片）；點名字還是打開更多功能 */ const B = document.getElementById('brand'); if (B) B.classList.toggle('open'); }); } })();   /* 點頭像打開／收起：好友代碼、任務、成就、玩法、帳號、拍照、全螢幕、音樂、音效 */
 
 /* ===== v336 介面重排（58）：右上 6 個大按鈕＋分頁、右上小地圖（點了開大地圖）、左邊常駐「今天」、下面一條聊天列（表情收進 😀）、右下 🐾、
    左上頭像列多經驗條和愛海點數。只換位置，原本的功能都在。網址加 #ui2 可以看舊版 ===== */
