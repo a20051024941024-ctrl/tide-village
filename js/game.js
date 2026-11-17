@@ -9974,6 +9974,16 @@ function duelQTick(){ const Q = Duel.q; if (!Q) return; const t = performance.no
   if (t - Q.t0 > 120000){ duelQueueStop('⚔️ 兩分鐘內沒有找到對手，等一下再試，或直接邀請身邊的人'); return; }
   if (t - Q.at > 3000) duelQueuePing(); if (!Q.ui || t - Q.ui > 1000){ Q.ui = t; duelQBar(); } }
 async function duelLoadTop(){ if (Duel.topBusy) return; Duel.topBusy = true; Duel.topAt = Date.now(); const r = await duelRpc('duel_top'); Duel.topBusy = false; if (Array.isArray(r)){ Duel.top = r; if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); } }
+/* v530 作者：「自從加了對決之後，上線的人變多了」→ 最卡的地方是排位賽要兩個人同時在找才配得到。
+   現在每 15 秒問一次伺服器「有沒有別人在排」，有的話畫面上面跳一顆「⚔️ 某某 在找對手　跟他打」，按下去馬上配到。按 ✕ 會安靜 5 分鐘。 */
+function duelWantTick(){ const t = performance.now(); if (t - (Duel.wAt || 0) < 15000) return; Duel.wAt = t;
+  if (!duelOn() || duelLive() || Duel.q || document.visibilityState !== 'visible' || t < (Duel.wMute || 0)){ duelWantBar(null); return; }
+  duelRpc('duel_queue_peek').then(r => { if (duelLive() || Duel.q){ duelWantBar(null); return; } duelWantBar(r && r.n > 0 ? r : null); }); }
+function duelWantBar(r){ let b = Duel.wb; if (!r){ if (b && !b.hidden) b.hidden = true; Duel.wOn = false; return; }
+  if (!b){ b = el('div', 'panel'); b.id = 'duelWant'; b.innerHTML = '<span class="dw-t"></span><button class="tbtn dw-go">跟他打</button><button class="tbtn ghost dw-x">✕</button>'; document.body.appendChild(b); Duel.wb = b;
+    $('.dw-go', b).addEventListener('click', () => { duelWantBar(null); duelQueueStart(); }); $('.dw-x', b).addEventListener('click', () => { Duel.wMute = performance.now() + 300000; duelWantBar(null); }); }
+  let nm = String(r.name || '有人').slice(0, 12); try { nm = clean(nm); } catch(e){} const tx = `⚔️ ${nm}${r.tier ? `（${String(r.tier).slice(0, 8)}）` : ''} 在找排位賽對手${r.n > 1 ? `（共 ${r.n} 人）` : ''}`; const sp = $('.dw-t', b); if (sp.textContent !== tx) sp.textContent = tx;
+  b.hidden = false; if (!Duel.wOn){ Duel.wOn = true; try { SFX.chat(); } catch(e){} } }
 function duelLive(){ const d = Duel.d; return !!d && (d.status === 'invited' || d.status === 'active'); }
 async function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
   const r = await duelRpc('duel_invite', { p_to: uid }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
@@ -9992,6 +10002,7 @@ function duelTick(){ if (!duelOn()) return; const t = performance.now(), d = Due
   if (!Duel.polled) Duel.polled = t - gap + 8000;   /* 剛開遊戲 8 秒後問第一次（重新整理以後接回進行中的對決） */
   if (Duel.pend && Duel.shown !== Duel.pend.id && (!duelFishingNow() || t - Duel.pendAt > 60000)){ const pd = Duel.pend; Duel.pend = null; Duel.shown = pd.id; duelResult(pd); }
   if (t - Duel.polled > gap && !Duel.busy) duelPoll();
+  try { duelWantTick(); } catch(e){}
   if (!Duel.statsAt){ Duel.statsAt = t; duelRpc('duel_my_stats').then(s => { if (s && typeof s === 'object'){ Duel.stats = s; try { refreshMyName(); } catch(e){} } }); }
   duelQTick(); duelBarTick(); }
 function duelOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const m = msg.data; if (!duelOn() || m.to !== Cloud.userId) return;
@@ -16480,6 +16491,7 @@ function renderTab(){
     ]);
     sec('👥 跟大家一起玩', [
       '⚔️ 釣魚對決：打開「朋友」裡的玩家名單，在同一個大廳的人旁邊按「⚔️ 對決」。對方按接受以後倒數幾秒就開始，一場 3 分鐘，比這段時間釣到的魚加起來的總重量——用自己的釣竿和魚餌、去哪裡釣都可以（釣蝦場的蝦不算）。畫面上面會出現比分條（左邊是你、右邊是對手）和剩下的時間，對手釣到魚會跳通知。時間到會跳結果，可以按「再來一局」。這樣邀請的是「友誼賽」，不算星星也不算戰績，純粹比好玩；分數是伺服器算的。時間到的時候如果魚還在線上，12 秒內拉上來的還是算；結果會等你把這條魚拉上來、看完才跳出來。中途斷線或關掉遊戲，時間到照樣結算。',
+      '⚔️ 有人在找對手的提示：別人按了「找對手」在排隊的時候，你的畫面上面會跳出「某某 在找排位賽對手」，按「跟他打」馬上配到；不想打按 ✕，5 分鐘內不會再跳。',
       '⚔️ 排位賽和段位：只有自動配對到的才是排位賽，贏輸才會動星星、勝敗和連勝（跟同一個人一天只有前 3 局算）。有打過排位賽的人，名字旁邊會掛著段位。在「朋友」分頁、「背包」或廣場大看板的「⚔️ 對決排行」按「找對手」，系統會幫你找另一個也在找對手的人（不用在同一個大廳，會先找段位接近的），找到就直接開始；畫面上面會顯示「找對手中…」，隨時可以取消，兩分鐘沒找到會自動取消。贏一局 +1⭐，連勝第 3 場起每場 +2⭐；輸一局 -1⭐（3⭐ 以下不扣）。段位：🐟對決新手、🎣釣竿好手（3⭐）、🏅釣魚高手（8⭐）、🌊海上名人（15⭐）、👑傳說釣手（25⭐）。廣場大看板有「⚔️ 對決排行」前 20 名。',
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
