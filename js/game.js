@@ -10116,6 +10116,30 @@ function duelWantBar(r){ let b = Duel.wb; if (!r){ if (b && !b.hidden) b.hidden 
     $('.dw-go', b).addEventListener('click', () => { duelWantBar(null); duelQueueStart(); }); $('.dw-x', b).addEventListener('click', () => { Duel.wMute = performance.now() + 300000; duelWantBar(null); }); }
   const tx = `⚔️ ${r.n > 1 ? `有 ${r.n} 個人` : '有人'}在找排位賽對手`;   /* v531 作者：「一定要顯示名字嗎」→ 不顯示是誰，配到才知道 */ const sp = $('.dw-t', b); if (sp.textContent !== tx) sp.textContent = tx;
   b.hidden = false; if (!Duel.wOn){ Duel.wOn = true; try { SFX.chat(); } catch(e){} } }
+/* ===== v534 🪪 個人名片（作者 11/17：「我們是不是該加入像傳說對決，玩家個人展示系統」）=====
+   在「朋友」分頁按玩家旁邊的「名片」（最上面有「我的名片」）。內容都是自己玩出來的：釣了幾條、圖鑑幾種、最大的魚、最重的三種魚、對決段位和戰績、釣友隊、一句自己寫的話。
+   名片上可以直接邀對決、加好友、參觀小島。 */
+async function openCard(uid, name, peerId){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能看名片'); return; } if (!uid) return; closeSheet(); const c = duelCardOpen('pcard'); c.classList.add('pcard'); c.appendChild(el('h3', '', `🪪 ${name || '玩家'}`)); c.appendChild(el('p', 'sub', '載入中…'));
+  const r = await festRpc('player_card', { p_uid: uid }); if (!Duel.card || Duel.card !== c) return; if (!r || r.err){ c.innerHTML = ''; c.appendChild(el('p', '', (r && r.err) || '讀不到這張名片')); const x = el('button', 'tbtn ghost', '關閉'); x.addEventListener('click', () => duelCardClose('pcard')); c.appendChild(x); return; }
+  cardDraw(c, r, peerId); }
+function cardDraw(c, r, peerId){ c.innerHTML = ''; let nm = String(r.name || '玩家').slice(0, 16); try { nm = clean(nm); } catch(e){} const isMe = !!r.me;
+  const pr = peerId && peers.get(peerId) ? peers.get(peerId).pres || {} : null; let title = ''; try { title = isMe ? curTitle() : pr && typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti) ? pr.ti : ''; } catch(e){}
+  c.appendChild(el('h3', '', `🪪 ${nm}`)); { const bits = []; if (isMe){ try { bits.push('Lv.' + lvOf(calcXP())); } catch(e){} } if (title) bits.push(title); if (r.team){ bits.push(`${TEAM_BADGE[r.team.badge] || '🎣'} ${String(r.team.name).slice(0, 12)}`); } if (bits.length) c.appendChild(el('p', 'pc-sub', bits.join('・'))); }
+  { let mt = String(r.motto || '').slice(0, 30); try { mt = clean(mt); } catch(e){} const q = el('p', 'pc-motto', mt ? `「${mt}」` : isMe ? '（還沒寫一句話）' : ''); if (mt || isMe) c.appendChild(q);
+    if (isMe){ const eb = el('button', 'tbtn ghost pc-edit', '✏️ 改一句話'); eb.addEventListener('click', async () => { const v = prompt('寫一句話放在名片上（最多 30 個字，留空就是不寫）', r.motto || ''); if (v == null) return; const o = await festRpc('player_set_motto', { p_text: v }); if (o && o.ok){ r.motto = o.motto; cardDraw(c, r, peerId); } }); c.appendChild(eb); } }
+  const grid = el('div', 'pc-grid'); const cell = (ic, big, small) => { const d = el('div', 'pc-cell'); d.appendChild(el('b', '', `${ic} ${big}`)); d.appendChild(el('span', '', small)); grid.appendChild(d); };
+  cell('🎣', (r.total || 0).toLocaleString(), '總共釣到（條）'); cell('📖', r.dex || 0, '圖鑑（種）');
+  { const f = r.best_fish && FISH_BY_ID[r.best_fish]; cell('🏆', f ? `${(+r.best_w).toFixed(2)} kg` : '—', f ? `最大的魚：${f.name}` : '最大的魚'); }
+  if (r.duel){ const D = r.duel, tt = duelTierOf(D.stars); cell(tt[2], `${tt[1]} ${D.stars}⭐`, `排位賽 ${D.wins} 勝 ${D.losses} 敗・最多 ${D.best} 連勝`); } else cell('⚔️', '—', '還沒打過排位賽');
+  if (r.legend) cell('✨', r.legend, '傳說魚（條）'); if (r.likes) cell('❤', r.likes, '小島被按讚');
+  c.appendChild(grid);
+  if (Array.isArray(r.top) && r.top.length){ c.appendChild(el('p', 'pc-h', '最得意的三種魚')); const ul = el('div', 'pc-top'); r.top.slice(0, 3).forEach((x, i) => { const f = FISH_BY_ID[x.f]; if (!f) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); d.appendChild(el('b', '', f.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); }); c.appendChild(ul); }
+  if (r.since){ const d = new Date(+r.since); c.appendChild(el('p', 'sub', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); }
+  const row = el('div', 'dc-btns pc-btns');
+  if (!isMe){ if (peerId && peers.get(peerId)){ const dz = el('button', 'tbtn', '⚔️ 邀對決'); dz.addEventListener('click', () => { duelCardClose('pcard'); duelInvite(r.id, nm); }); row.appendChild(dz); }
+    if (!Kid.on && !isFriend(r.id)){ const af = el('button', 'tbtn ghost', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(r.id, nm); }); row.appendChild(af); }
+    const vi = el('button', 'tbtn ghost', '參觀小島'); vi.addEventListener('click', () => { duelCardClose('pcard'); visitIsle(r.id, nm); }); row.appendChild(vi); }
+  const x = el('button', 'tbtn ghost', '關閉'); x.addEventListener('click', () => duelCardClose('pcard')); row.appendChild(x); c.appendChild(row); }
 function duelLive(){ const d = Duel.d; return !!d && (d.status === 'invited' || d.status === 'active'); }
 async function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
   const r = await duelRpc('duel_invite', { p_to: uid }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
@@ -16299,6 +16323,7 @@ function renderTab(){
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} const im = avatarImg(av, '', gr); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st));
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
+      if ((uid || (isMe && myId)) && Cloud.on){ const cb = el('button', 'tbtn vbtn', isMe ? '🪪 我的名片' : '🪪 名片'); cb.addEventListener('click', () => openCard(isMe ? myId : uid, name, peerId)); li.appendChild(cb); }   /* v534 */
       if (uid && Cloud.on && !isMe && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); li.appendChild(dz); }
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
@@ -16578,6 +16603,12 @@ function renderTab(){
       '在食堂用魚缸裡的魚做料理，共 13 道。不同料理玩法不一樣：壽司類切魚、章魚燒翻面、燒烤和油炸控制火候、火鍋和麵記住下料順序。做得越好星星越多、越值錢。',
       '料理可以賣掉，也可以「吃掉」：接下來幾次拋竿會有加成（例如稀有魚變多、線比較不容易斷）。',
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
+    ]);
+    sec('🪪 個人名片', [
+      '怎麼看：打開「朋友」分頁，每個玩家旁邊有「🪪 名片」，自己那一列是「🪪 我的名片」。',
+      '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最重的三種魚、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
+      '自己的名片可以按「✏️ 改一句話」寫一句話給別人看（最多 30 個字）。',
+      '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
     ]);
     sec('⚽ 體育場足球', [
       '在哪裡：運動公園的體育場大門走進去，中間就是足球場，場上有一顆大家共用的球。',

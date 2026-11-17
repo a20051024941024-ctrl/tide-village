@@ -1553,3 +1553,19 @@ body.pooling #duelWant, body.subbing #duelWant, body.chatting #duelWant{display:
 
 /* v533 籃球 1 對 1：誰拿球誰的名字亮起來 */
 #bkBar span.on{color:#c85a12}
+
+/* v534 個人名片 */
+#duelCard.pcard{width:min(460px,calc(100vw - 28px));text-align:center}
+#duelCard .pc-sub{margin:2px 0 4px;font-weight:800;color:#b3541e;font-size:14px}
+#duelCard .pc-motto{margin:4px 0;font-size:15px;color:#33566f;font-style:italic}
+#duelCard .pc-edit{padding:3px 10px;font-size:12px;margin-bottom:4px}
+#duelCard .pc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+#duelCard .pc-cell{background:rgba(24,51,74,.07);border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;gap:2px}
+#duelCard .pc-cell b{font-size:17px;font-weight:900;color:#18334a}
+#duelCard .pc-cell span{font-size:11.5px;color:#5a6b7a}
+#duelCard .pc-h{margin:8px 0 4px;font-weight:800;font-size:13px;color:#5a6b7a}
+#duelCard .pc-top{display:flex;gap:6px;justify-content:center}
+#duelCard .pc-fish{flex:1;background:#fff6dc;border-radius:12px;padding:6px 4px;display:flex;flex-direction:column;font-size:12px}
+#duelCard .pc-fish i{font-style:normal;font-size:16px}#duelCard .pc-fish b{font-size:13px}
+#duelCard .pc-btns{flex-wrap:wrap}
+#duelCard .pc-btns button{min-width:84px}
