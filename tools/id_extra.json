@@ -5474,5 +5474,9 @@
 "成績：滑完會跳出這一場的名次（一起滑的人都會列出來），有今天最快和歷來排行（找教練小嵐看），最快時間記到玩家資料頁的「📰 動態」。成績是手機回報的，所以沒有金幣獎勵。": "Hasil: setelah meluncur muncul urutannya (semua yang ikut ditampilkan); ada tercepat hari ini dan peringkat sepanjang masa (tanya pelatih Lan), dan waktu terbaik dicatat di \"📰 Aktivitas\" pada profil pemain. Waktu dilaporkan oleh ponsel, jadi tidak ada hadiah koin.",
 "；還有滑雪的最快時間。": "; serta waktu ski terbaik.",
 "找對手中…": "mencari lawan…",
-"個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）；還有滑雪的最快時間。": "), peringkat lomba mancing terbaik dan jumlah ikut lomba (dicatat sejak v546; lomba sebelumnya tidak tercatat), 4 kejadian terakhir (tangkapan bagus, duel selesai, pertandingan bola, peringkat lomba), serta waktu ski terbaik."
+"個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）；還有滑雪的最快時間。": "), peringkat lomba mancing terbaik dan jumlah ikut lomba (dicatat sejak v546; lomba sebelumnya tidak tercatat), 4 kejadian terakhir (tangkapan bagus, duel selesai, pertandingan bola, peringkat lomba), serta waktu ski terbaik.",
+"👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後": "👀 Memancing kini otomatis beralih ke sudut pandang orang pertama. Tidak terbiasa? Pengaturan → 🎣 Sudut pandang memancing → Belakang",
+"第一人稱（預設）": "Orang pertama (bawaan)",
+"一拋竿就會自動換成第一人稱（不習慣可以到「設定 → 🎣 釣魚視角」改成「背後」）": "tampilan otomatis beralih ke orang pertama begitu kamu melempar (bisa diubah ke “Belakang” di Pengaturan → 🎣 Sudut pandang memancing)",
+"🎥 釣魚視角選「背後」的時候，鏡頭不會自己放大縮小：留在你自己擺的角度和距離，只會稍微往浮標那邊移一點": "🎥 Dengan sudut pandang “Belakang”, kamera tidak memperbesar sendiri: tetap pada sudut dan jarak yang kamu atur, hanya bergeser sedikit ke arah pelampung"
 }

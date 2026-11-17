@@ -10561,7 +10561,9 @@ function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), w
    - 畫面右下是自己的手握著竿子，竿尖指向浮標，線從竿尖連到浮標（別人看到的你還是原本的樣子，這只改自己的鏡頭）
    - 釣到：魚從水裡被拉出來、掛在線上甩 → 手伸過來把魚拿起來（小魚單手，大魚雙手，竿子先放下）→ 才跳出重量卡
    掛在鏡頭上的東西（竿子、手、魚）都放在 FP.g 這個群組裡，是 camera 的子物件 */
-const FP = { pref: LS.get('tide.fpFish', false) === true, act: false, g: null, tip: null, rodP: null, handR: null, look: new THREE.Vector3(), eye: new THREE.Vector3(), tgt: new THREE.Vector3(), c: null, line: null, skin: null, sleeve: null, rodY: 0 };
+/* v552 作者 11/18：「釣魚時自動切到第一人稱」→ 第一人稱變成預設。每支手機只改一次（tide.fpAuto），之後玩家自己在設定選「背後」就照他的 */
+if (LS.get('tide.fpAuto', 0) !== 1){ LS.set('tide.fpAuto', 1); LS.set('tide.fpFish', true); LS.set('tide.fpTold', 0); }
+const FP = { pref: LS.get('tide.fpFish', true) === true, act: false, g: null, tip: null, rodP: null, handR: null, look: new THREE.Vector3(), eye: new THREE.Vector3(), tgt: new THREE.Vector3(), c: null, line: null, skin: null, sleeve: null, rodY: 0 };
 function fpSet(v){ FP.pref = !!v; LS.set('tide.fpFish', FP.pref); if (!FP.pref) fpStop(); }
 /* v510 作者：「還是會突然放大」→ 以前每釣一條：拋竿時鏡頭一下子拉到眼睛（放大），看完魚又一下子拉回背後（縮小），一直縮放。
    現在只要站著沒走開，看完魚以後還是留在第一人稱（再拋竿也不換）；一走動、坐船、進屋、潛水才回到背後視角。進出第一人稱的鏡頭也放慢，不會一下子跳過去 */
@@ -10604,7 +10606,7 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
   /* 手：左手握竿（在捲線器上面一點），右手抓捲線器的把手；手掛在鏡頭上，每一格跟著竿子的位置擺 */
   FP.handL = fpFist(-1); FP.handL.scale.setScalar(0.8); g.add(FP.handL); FP.handR = fpFist(1); FP.handR.scale.setScalar(0.8); g.add(FP.handR);   /* v512 作者：「手是不是反了」→ 手背朝上的右手，大拇指在左邊（fpHand 的 side 是給托魚、手心朝上用的，這裡要反過來） */ FP.crankA = 0; FP.bendNow = 0;
   FP.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f8fb', transparent: true, opacity: 0.85 })); FP.line.frustumCulled = false; FP.line.visible = false; FP.line.userData.keep = true; scene.add(FP.line); }
-function fpStart(){ fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.skinD.color.copy(me.av.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
+function fpStart(){ if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.skinD.color.copy(me.av.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
 function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
 function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
@@ -11324,7 +11326,7 @@ function renderSettings(body){
     f.appendChild(seg); f.appendChild(el('p', 'sub', '跟著手指：按在左半邊哪裡，搖桿就出現在哪裡。固定：搖桿一直在左下角不會動，按左半邊任何地方都是從那裡推。')); }
   { const f = field('🎥 視角'), seg = el('div', 'seg'); [['top', '俯瞰（預設）'], ['near', '貼近（舊的）']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(CAMV.mode === k)); b.addEventListener('click', () => { setCamView(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '俯瞰：從斜上方往下看，看得比較遠、比較整齊。貼近：從角色背後看，比較有臨場感。兩種都可以用手指拖動、兩指縮放。')); }
-  { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（原本）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
+  { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[true, '第一人稱（預設）'], [false, '背後']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
@@ -16782,7 +16784,7 @@ function renderTab(){
     const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
     sec('🎣 釣魚', [
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
-      '👀 第一人稱釣魚：「設定 → 🎣 釣魚視角」選「第一人稱」，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
+      '👀 第一人稱釣魚：一拋竿就會自動換成第一人稱（不習慣可以到「設定 → 🎣 釣魚視角」改成「背後」），從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
@@ -17120,7 +17122,7 @@ function renderTab(){
       '🧒 兒童安全模式（給家長看）：第一次進遊戲會問出生年份（只問年，不問真名、生日）。未滿 13 歲會自動開啟，之後不能自己關掉：聊天只能用固定的快速句子，看不到別人自己打的字；可以看留言板但不能留言；名字從「形容詞＋動物」裡選；好友只能用當面給的好友代碼加，陌生人不能直接加；設計師市集只看得到很多人買過、沒被檢舉的作品；深海驚嚇效果預設關閉；不會要求 email。',
       '🔒 帳號與隱私：設定最下面有「隱私權政策」和「刪除我的帳號」（輸入「刪除」兩個字確認，會刪掉所有遊戲資料，不能復原）。聊天不會存在伺服器，只有被檢舉的內容會保存 30 天給管理員處理。有問題或想刪除資料，也可以寫信到 chaoxi.fishing@gmail.com。',
       '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
-      '🎥 釣魚的時候鏡頭不會自己放大縮小：留在你自己擺的角度和距離，只會稍微往浮標那邊移一點。想近看就到「設定」打開「釣魚視角：第一人稱」',
+      '🎥 釣魚視角選「背後」的時候，鏡頭不會自己放大縮小：留在你自己擺的角度和距離，只會稍微往浮標那邊移一點',
       '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。'
     ]);
     body.appendChild(el('p', 'sub', '© 2026 潮汐釣魚村作者，保留所有權利；未經同意禁止複製、修改或轉載。部分魚的 3D 模型：Animated Fish Pack by Quaternius（CC0 授權，quaternius.com）。'));

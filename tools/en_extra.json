@@ -5489,5 +5489,9 @@
 "成績：滑完會跳出這一場的名次（一起滑的人都會列出來），有今天最快和歷來排行（找教練小嵐看），最快時間記到玩家資料頁的「📰 動態」。成績是手機回報的，所以沒有金幣獎勵。": "Results: after a run the order pops up (everyone who skied together is listed); there's today's fastest and an all-time ranking (ask coach Lan), and your best time goes under \"📰 Activity\" on your player profile. Times are reported by phones, so there are no coin rewards.",
 "；還有滑雪的最快時間。": "; plus your best ski time.",
 "找對手中…": "finding opponent…",
-"個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）；還有滑雪的最快時間。": "), your best fishing-contest rank and contests joined (recorded from v546; earlier contests have no record), your last 4 events (notable catches, finished duels, ball games, contest ranks), and your best ski time."
+"個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）；還有滑雪的最快時間。": "), your best fishing-contest rank and contests joined (recorded from v546; earlier contests have no record), your last 4 events (notable catches, finished duels, ball games, contest ranks), and your best ski time.",
+"👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後": "👀 Fishing now switches to first-person automatically. Prefer the old view? Settings → 🎣 Fishing view → Behind",
+"第一人稱（預設）": "First-person (default)",
+"一拋竿就會自動換成第一人稱（不習慣可以到「設定 → 🎣 釣魚視角」改成「背後」）": "the view switches to first-person as soon as you cast (you can change it to “Behind” in Settings → 🎣 Fishing view)",
+"🎥 釣魚視角選「背後」的時候，鏡頭不會自己放大縮小：留在你自己擺的角度和距離，只會稍微往浮標那邊移一點": "🎥 With the “Behind” fishing view, the camera never zooms by itself: it stays at the angle and distance you set and only shifts slightly toward the float"
 }
