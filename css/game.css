@@ -1718,3 +1718,19 @@ details.help details.helpmore summary{font-family:inherit;font-size:13px;padding
 details.help details.helpmore summary::after{content:'▾';float:none;margin-left:6px}
 details.help details.helpmore[open] summary::after{content:'▴'}
 details.help details.helpmore ul{margin-top:4px}
+/* v556 潮汐表 */
+#duelCard.tidecard{text-align:left}
+#duelCard.tidecard h3{text-align:center}
+.tidecard .td-now{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
+.tidecard .td-now b{font-size:17px;white-space:nowrap}
+.tidecard .td-bar{flex:1;height:10px;border-radius:6px;background:rgba(24,51,74,.12);overflow:hidden}
+.tidecard .td-bar i{display:block;height:100%;background:linear-gradient(90deg,#7cc4ea,#2f89c7);transition:width .6s}
+.tidecard .td-fish{display:flex;flex-direction:column;gap:2px;margin:8px 0;font-size:13px}
+.tidecard .td-fish .ok{color:#1f7a4d;font-weight:700}
+.tidecard .td-fish .no{color:#7a8794}
+.tidecard .td-list{list-style:none;margin:6px 0 8px;padding:0;border-top:1px solid rgba(24,51,74,.12)}
+.tidecard .td-list li{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid rgba(24,51,74,.08);font-size:14px}
+.tidecard .td-list li i{font-style:normal;width:34px}
+.tidecard .td-list li span{flex:1}
+.tidecard .td-list li b{font-variant-numeric:tabular-nums}
+.tidecard .td-list li small{color:#7a8794;width:44px;text-align:right;font-variant-numeric:tabular-nums}

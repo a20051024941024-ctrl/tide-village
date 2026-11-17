@@ -5947,7 +5947,7 @@ function pickFish(spot, charge){
   const corK = spot.id === 'isle' ? coralK() : 0;   /* v376 自己種的珊瑚吸引珊瑚礁魚（跟伺服器 142 一樣） */
   const mudK = f => spot.id !== 'mudflat' ? 1 : ((Rig.rig === 'bottom') === BOTTOM_FISH.has(f.id) ? 1 : 0);   /* 泥灘：抓招潮蟹就是蟹、抓彈塗魚就是魚 */
   const wildK = f => breedSeason() && WILD_BREED.has(f.id) ? 1.5 : 1;   /* 野外繁殖季 */
-  const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (corK && CORAL_FISH.has(f.id) ? 1 + 0.25 * corK : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * tideFishK(f, spot.id) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (corK && CORAL_FISH.has(f.id) ? 1 + 0.25 * corK : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -6583,7 +6583,7 @@ function buildFrost(){
     for (const h of F0.holes){ const hx = h[0] - F0.x, hz = h[1] - F0.z; const rim = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.07, 6, 18), mat('#e8f4fa', 0.5)); rim.rotation.x = Math.PI / 2; rim.position.set(hx, L.y, hz); g.add(rim);
       for (let k = 0; k < 4; k++){ const a = rr() * 6.28; g.add(box([0.12 + rr() * 0.15, 0.06, 0.1 + rr() * 0.12], '#dff2fa', [hx + Math.cos(a) * 0.62, L.y + 0.03, hz + Math.sin(a) * 0.62])); } } }
   // 冰釣帳篷（兩頂）、小板凳
-  for (const [i, h] of [[0, F0.holes[1]], [1, F0.holes[3]]]){ const tg = new THREE.Group(), c = ['#e8473a', '#2f89c7'][i]; const tent = new THREE.Mesh(new THREE.ConeGeometry(1.3, 1.9, 4, 1, true), mat(c, 0.8, { side: THREE.DoubleSide })); tent.position.y = 0.95; tent.rotation.y = Math.PI / 4; tg.add(tent);
+  for (const [i, h] of [[0, F0.holes[1]], [1, F0.holes[3]]]){ const tg = new THREE.Group(), c = ['#e8473a', '#2f89c7'][i]; const tent = new THREE.Mesh(new THREE.ConeGeometry(1.3, 1.9, 4, 1, true), mat(c, 0.8, { side: THREE.DoubleSide })); tent.position.y = 0.95; tent.rotation.y = Math.PI / 4; tg.add(tent); (FROST.tents || (FROST.tents = [])).push([tent, h[0], h[1]]);
     tg.position.set(h[0] - F0.x + (i ? -1.6 : 1.6), L.y, h[1] - F0.z + 0.8); g.add(tg); addCircleCol(h[0] + (i ? -1.6 : 1.6), h[1] + 0.8, 0.9); }
   // 雪松
   const tree = (x, z, s) => { const tg = new THREE.Group(); tg.add(box([0.22 * s, 0.6 * s, 0.22 * s], '#5a4030', [0, 0.3 * s, 0])); for (let k = 0; k < 3; k++){ const c = new THREE.Mesh(new THREE.ConeGeometry((1.15 - k * 0.3) * s, 1.2 * s, 8), mat('#2f5a48', 0.9)); c.position.y = (0.9 + k * 0.7) * s; tg.add(c); const sn = new THREE.Mesh(new THREE.ConeGeometry((0.85 - k * 0.24) * s, 0.5 * s, 8), mat('#f6fafc', 0.8)); sn.position.y = (1.3 + k * 0.7) * s; tg.add(sn); }
@@ -9010,6 +9010,31 @@ function tideNow(ms){
 /* v424 乾潮時海水退到平常水深這麼多公尺的地方（沙灘坡度緩，水平看大約退好幾公尺） */
 const TIDE_DROP = 0.3, TIDE_UP = 2.3;   /* 滿潮時海水淹上沙灘幾公尺 */
 const TIDE_FX = { rising:{ bite:0.78, rare:1.15 }, high:{ bite:0.9, rare:1.05 }, falling:{ bite:1.0, rare:1.0 }, low:{ bite:1.25, rare:0.9 } };
+/* ================= v556 🌊 潮汐表＋潮汐魚（作者 11/18 選的） =================
+   潮汐魚：六種本來就有的海魚跟著潮水走（不加新魚種，圖鑑和博物館的收集不會被打亂）。
+   ・跟著漲潮進來（漲潮、滿潮）：浪人鰺、黑鯛、烏魚　・退潮才好抓（退潮、乾潮）：比目魚、章魚、青蟳
+   ・對的潮位明顯變多（只跟同樣稀有度的魚換），錯的潮位幾乎不咬（伺服器 189 在每一竿的結果上換魚；這裡的數字只給離線時和提示用） */
+const TIDE_FISH = { trevally: 'in', blackbream: 'in', mullet: 'in', flounder: 'out', octopus: 'out', mudcrab: 'out' };
+function tideSide(st){ return st === 'rising' || st === 'high' ? 'in' : 'out'; }
+function tideFishK(f, spotId){ const sd = TIDE_FISH[f.id]; if (!sd || !SEA_SPOTS.has(spotId) || spotId === 'mudflat') return 1; return sd === tideSide(Env.tide.st) ? 2.5 : 0.12; }
+/* 接下來幾次潮位變化：[時間(ms), 狀態]。滿潮 = 水位在最高的兩成、乾潮 = 最低的兩成（跟 tideNow 一樣） */
+function tideEvents(ms, n){ const a = Math.asin(0.8) / (Math.PI * 2), B = [[a, 'high'], [0.5 - a, 'falling'], [0.5 + a, 'low'], [1 - a, 'rising']], c0 = Math.floor(ms / TIDE_PERIOD) * TIDE_PERIOD, out = [];
+  for (let k = 0; out.length < n && k < 4; k++) for (const [ph, st] of B){ const t = c0 + (k + ph) * TIDE_PERIOD; if (t > ms && out.length < n) out.push([t, st]); } return out; }
+const TIDE_NOW_TXT = { rising: '海邊、外海、小島的魚咬得最快，稀有魚也多一點。', high: '海邊的魚咬得比平常快一點。', falling: '海邊的魚口普通。', low: '海邊的魚咬得慢。紅樹林的泥灘露出來可以下去抓，石滬的魚咬得特別快，沙灘可以挖沙蠶。' };
+const TIDE_EV_TXT = { high: ['🌊', '滿潮'], falling: ['🌊↓', '開始退潮'], low: ['🏖️', '乾潮'], rising: ['🌊↑', '開始漲潮'] };
+function tideCard(){ const card = duelCardOpen('tide'); card.classList.add('tidecard');
+  const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('tide')); card.appendChild(X); card.appendChild(el('h3', '', '🌊 潮汐表'));
+  const now = el('div', 'td-now'), bar = el('div', 'td-bar'), fill = el('i'); bar.appendChild(fill); const nowT = el('b'), nowS = el('p', 'sub'); now.append(nowT, bar); card.append(now, nowS);
+  const fishP = el('p', 'td-fish'); card.appendChild(fishP);
+  const ul = el('ul', 'td-list'); card.appendChild(ul);
+  { const W2 = WEATHERS[Env.wx]; card.appendChild(el('p', 'sub', `${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}`)); card.appendChild(el('p', 'sub', `${W2.icon} ${W2.name}：${W2.desc}`)); card.appendChild(el('p', 'sub', `🧔 ${dailyTip().text}`)); }
+  const hm = t => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const draw = () => { const ms = Date.now(), T = tideNow(ms), key = T.st + Math.floor(ms / 1000); if (card._k === key) return; card._k = key;
+    nowT.textContent = `${T.icon} 現在：${T.name}`; fill.style.width = Math.round((T.lv + 1) * 50) + '%'; nowS.textContent = TIDE_NOW_TXT[T.st];
+    const sd = tideSide(T.st), nm = k => Object.keys(TIDE_FISH).filter(id => TIDE_FISH[id] === k && FISH_BY_ID[id]).map(id => FISH_BY_ID[id].name).join('、');
+    fishP.textContent = ''; fishP.append(el('span', 'ok', `🎣 現在比較常咬：${nm(sd)}`), el('span', 'no', `💤 現在幾乎不咬：${nm(sd === 'in' ? 'out' : 'in')}`));
+    ul.textContent = ''; for (const [t, st] of tideEvents(ms, 4)){ const li = el('li'), left = Math.max(0, t - ms), m = Math.floor(left / 60000), sc = Math.floor(left / 1000) % 60; li.append(el('i', '', TIDE_EV_TXT[st][0]), el('span', '', TIDE_EV_TXT[st][1]), el('b', '', m > 0 ? `再 ${m} 分 ${sc} 秒` : `再 ${sc} 秒`), el('small', '', hm(t))); ul.appendChild(li); } };
+  draw(); card._iv = setInterval(draw, 1000); }
 function taipeiDate(){ return new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); }
 function dailyTip(){
   const d = taipeiDate(); if (dailyTip.c && dailyTip.c.d === d) return dailyTip.c;
@@ -9037,7 +9062,7 @@ function updateEnv(dt, t){
   const wx = (location.hash.match(/wx=(\w+)/) || [])[1]; Env.wx = WEATHERS[wx] ? wx : weatherAt(ms);
   const W = WEATHERS[Env.wx];
   if (Env.lastWx !== Env.wx){ if (Env.lastWx) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
-      const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { const W2 = WEATHERS[Env.wx]; toast(`${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}<br>${W2.icon} ${W2.name}：${W2.desc}<br>${Env.tide.icon} ${Env.tide.name}：海邊、外海、小島在漲潮時最好釣，乾潮時比較難。<br>🧔 ${esc(dailyTip().text)}`); }); }
+      const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { try { SFX.click(); } catch(e){} tideCard(); }); }
     Env.lastWx = Env.wx; }
   // 畫面：光線變暗、下雨、起霧、打雷
   const dim = House.on || inHall() || inIndoor() ? 1 : (W.light || 1); Env.k += (dim - Env.k) * Math.min(1, dt * 0.6);
@@ -10727,13 +10752,17 @@ function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T 
   /* 線：竿尖 → 魚嘴（魚掛著的時候頭朝上，嘴在最上面）；拿到手上以後就解下來了 */
   const ln = FP.line; if (T < 2.65){ camera.updateMatrixWorld(); const a = ln.geometry.attributes.position, p0 = FP.tgt; p0.copy(tip); FP.g.localToWorld(p0); a.setXYZ(0, p0.x, p0.y, p0.z); p0.set(h.position.x, h.position.y + c.L * 0.46, h.position.z); FP.g.localToWorld(p0); a.setXYZ(1, p0.x, p0.y, p0.z); a.needsUpdate = true; ln.visible = true; } else ln.visible = false; }
 /* 每一格：決定要不要第一人稱、擺鏡頭、動竿子。回傳 true 表示鏡頭已經擺好，原本的鏡頭程式不用跑 */
-function fpTick(dt){ const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now();
+function fpTick(dt){ if (FROST.tents) for (const [m, tx, tz] of FROST.tents) m.visible = !(FP.act && Math.hypot(me.pos.x - tx, me.pos.z - tz) < 2.6);   /* v556 第一人稱坐在冰釣帳篷裡，帳篷布會擋住半個畫面 → 靠近時先不畫 */
+  const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now();
   if (FP.c && F.phase === 'idle'){ fpCatchEnd(); FP.rodY = 0; }   /* v511 留在第一人稱的時候，看完卡片要把手上的魚放掉（以前會一直拿著） */
   FP.eye.set(me.pos.x, me.baseY + (me.sitting ? 0.85 : 1.16), me.pos.z);
   const bobOK = !FP.c && me.fishing && me.bobState !== 'none' && me.bob && me.bob.visible;
-  if (bobOK && isFinite(me.bob.position.x + me.bob.position.y + me.bob.position.z)){ const B = me.bob.position; FP.tgt.set(B.x, clamp(B.y, WATER_LEVEL, WATER_LEVEL + 1.2), B.z);   /* 浮標飛在空中的時候鏡頭只跟一點點，不會整個抬頭看天空 */ const d = Math.hypot(B.x - me.pos.x, B.z - me.pos.z); FP.tgt.y = Math.max(FP.tgt.y, FP.eye.y - Math.max(2.2, d) * 0.2); if (d < 2.2){ const k = 2.2 / Math.max(0.2, d); FP.tgt.x = me.pos.x + (B.x - me.pos.x) * k; FP.tgt.z = me.pos.z + (B.z - me.pos.z) * k; } FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
+  if (bobOK && isFinite(me.bob.position.x + me.bob.position.y + me.bob.position.z)){ const B = me.bob.position; FP.tgt.set(B.x, clamp(B.y, WATER_LEVEL, WATER_LEVEL + 1.2), B.z);   /* 浮標飛在空中的時候鏡頭只跟一點點，不會整個抬頭看天空 */ const d = Math.hypot(B.x - me.pos.x, B.z - me.pos.z); FP.tgt.y = Math.max(FP.tgt.y, FP.eye.y - Math.max(2.2, d) * 0.2); if (d < 2.2){ const k = 2.2 / Math.max(0.2, d); FP.tgt.x = me.pos.x + (B.x - me.pos.x) * k; FP.tgt.z = me.pos.z + (B.z - me.pos.z) * k; }
+    /* v556 作者 11/18 截圖：「冰洞釣魚會看不到洞」→ 冰洞就在腳邊，以前鏡頭硬是看向 2 公尺外的水平線。冰洞釣魚時直接低頭看洞 */
+    if (F.spot && F.spot.id === 'icelake'){ const k2 = d < 0.75 ? 0.75 / Math.max(0.2, d) : 1; FP.tgt.set(me.pos.x + (B.x - me.pos.x) * k2, me.baseY + 0.02, me.pos.z + (B.z - me.pos.z) * k2); }
+    FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
   else if (FP.c){ const fx = FP.look.x - FP.eye.x, fz = FP.look.z - FP.eye.z, fl = Math.hypot(fx, fz) || 1; FP.tgt.set(FP.eye.x + fx / fl * 4, FP.eye.y - (FP.c.t < 1.25 ? 0.05 : FP.c.t < 2.6 ? 0.45 : 0.9), FP.eye.z + fz / fl * 4); FP.look.lerp(FP.tgt, 1 - Math.exp(-4 * dt)); }   /* 魚出水：抬頭看竿尖和吊著的魚；要拿魚了再低頭看手 */
-  else if (!FP.c && F.phase === 'charging'){ FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
+  else if (!FP.c && F.phase === 'charging'){ const ih = F.spot && F.spot.id === 'icelake' && F.spot.hole; if (ih) FP.tgt.set(ih[0], me.baseY + 0.02, ih[1]); else FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
   if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
   if (!isFinite(camera.position.x + camera.position.y + camera.position.z)) camera.position.copy(FP.eye);
   FP.inT = (FP.inT || 0) + dt; camera.up.set(0, 1, 0); camera.position.lerp(FP.eye, 1 - Math.exp(-(3 + 11 * Math.min(1, FP.inT / 0.7)) * dt)); camera.lookAt(FP.look); camLook.copy(FP.look);   /* 剛切進來的 0.7 秒慢慢移過去 */
@@ -16616,7 +16645,7 @@ try { let pend = new Set(), qd = false; new MutationObserver(ms => { for (const 
     if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
 /* v553 玩法說明每一段的重點（兩三句）。原本的長說明還在，收在「看詳細規則」裡 */
 const HELP_SHORT = {
-  '🎣 釣魚': ['水邊按住右下按鈕蓄力、放開拋竿；浮標猛沉出現「!」就再按一次。', '拉魚：按住收線、放開放線，張力條留在黃色。', '拋得遠、站在發光圈、看水面徵兆，稀有魚比較多。天氣、潮汐、時間也有影響。'],
+  '🎣 釣魚': ['水邊按住右下按鈕蓄力、放開拋竿；浮標猛沉出現「!」就再按一次。', '拉魚：按住收線、放開放線，張力條留在黃色。', '拋得遠、站在發光圈、看水面徵兆，稀有魚比較多。天氣、潮汐、時間也有影響；點右上角的潮汐可以看潮汐表。'],
   '🦐 室內釣蝦場': ['在廣場東邊的街上，走到門口按按鈕進去。', '先跟櫃台的阿忠買時段，蝦竿和餌都附。', '坐到池邊的板凳就能拋竿。'],
   '🍚 打窩、窩點、渡船、小船': ['在釣具店買窩料，到水邊按「🍚 打窩」，魚咬得快、稀有魚變多。', '「提前打」的窩點 10 分鐘後最強，可以維持 1 小時。', '港口和鏡湖可以上船，划到水上釣。'],
   '💙 尺寸限制、放流、愛海點數': ['太小的魚會標「未達尺寸」，帶走只能賣半價。', '放流可以拿愛海點數，換金幣買不到的限定服飾。'],
@@ -16693,6 +16722,7 @@ function renderTab(){
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (known){ const st = starsOf(f), sd = el('div', 'stars s' + st, starStr(st)); sd.title = st >= 3 ? '已經三顆星了' : st === 2 ? `三顆星：完美搏鬥一次＋釣到 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上（${Mast.set.has(f.id) ? '完美搏鬥 ✓' : '還沒完美搏鬥'}）` : `兩顆星：釣到 10 條（現在 ${rec.count[f.id]}）或 ${fmtKg(f.min + (f.max - f.min) * 0.8)} 以上`; it.appendChild(sd); it.addEventListener('click', () => toast(`${f.name} ${starStr(st)}：${sd.title}`)); if (st >= 3) it.classList.add('gold'); }
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
+        if (TIDE_FISH[f.id]) it.appendChild(el('div', 'meta tm', TIDE_FISH[f.id] === 'in' ? '🌊 漲潮、滿潮時常出現' : '🏖️ 退潮、乾潮時常出現'));
         if (f.fest) it.appendChild(el('div', 'meta fest', (FEST_FISH_WHEN[f.fest] || '🏮 節慶限定') + (festOn(f.fest) ? '・現在釣得到！' : '・現在釣不到')));   /* v388 節慶魚標清楚哪時候才有 */
         if (known && baitsFor(f).length) it.appendChild(el('div', 'meta', starsOf(f) >= 2 ? '🍽️ 喜歡：' + baitsFor(f).map(b => b.name).join('、') : '🍽️ 喜歡的餌：★★ 解鎖'));   /* v295 先自己試，釣到 10 條（兩顆星）才告訴你 */
         g.appendChild(it);
@@ -16952,7 +16982,9 @@ function renderTab(){
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
-      '潮汐（左上角）：大約 18 分鐘漲退一次。海邊、外海、小島在漲潮時最好釣，乾潮時比較難。',
+      '潮汐（右上角）：大約 18 分鐘漲退一次。海邊、外海、小島在漲潮時最好釣，乾潮時比較難。',
+      '🌊 潮汐表：點右上角的天氣和潮汐那一格，會看到現在是什麼潮、再幾分幾秒滿潮或乾潮（旁邊是現實的時間），還有現在哪些魚比較常咬。',
+      '🐟 潮汐魚：有六種海魚跟著潮水走。浪人鰺、黑鯛、烏魚在「漲潮、滿潮」時明顯變多，「退潮、乾潮」時幾乎不咬；沙底比目魚、紅石章魚、鋸緣青蟳剛好相反，退潮和乾潮才好抓。圖鑑裡這幾種魚會標出來。想釣牠們就先看潮汐表。',
       `季節跟著現實的月份（台灣）：3～5 月春天 🌸、6～8 月夏天 🌻、9～11 月秋天 🍁、12～2 月冬天 ❄️。每季有 6 種「當季魚」比平常多一倍（圖鑑會標「當季」），樹的顏色、飄落的花瓣落葉雪花、廣場旁邊的裝飾也會跟著換。現在是${SEASONS[SEASON].name}。`,
       '釣具店老闆每天會給「今日情報」：說哪個釣點的哪種魚今天特別多（機率 2.5 倍）。',
       '魚上鉤的快慢跟現實一樣有快有慢：大多幾秒鐘，偶爾一丟下去就咬，偶爾要等很久。清晨和黃昏「魚口」最好；海邊乾潮時咬得快、漲潮時慢一點但稀有魚多；下雨天也比較好釣。',
