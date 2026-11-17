@@ -1686,3 +1686,16 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .pc-fi i{font-style:normal;text-align:center}
 #duelCard .pc-fi span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
 #duelCard .pc-fi small{color:#6b7d8c;font-size:11px;white-space:nowrap}
+
+/* v548 划船賽／滑雪：上面的計時條、成績卡 */
+#raceBar{gap:10px;font-weight:800}
+#raceBar .sb-x{border:0;border-radius:10px;background:rgba(24,51,74,.1);color:#18334a;font-weight:800;font-size:12px;padding:4px 8px}
+#duelCard.racecard{width:min(460px,92vw);max-height:92vh;overflow:auto}
+#duelCard .rc-list{list-style:none;margin:4px 0;padding:0;display:flex;flex-direction:column;gap:3px}
+#duelCard .rc-list li{display:grid;grid-template-columns:26px 1fr auto;gap:6px;align-items:center;background:rgba(255,255,255,.7);border-radius:9px;padding:3px 8px;font-size:13px;color:#18334a}
+#duelCard .rc-list li.me{background:#ffe9a8}
+#duelCard .rc-list li i{font-style:normal;text-align:center}
+#duelCard .rc-list li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+#duelCard .rc-my{font-weight:800;color:#18334a;margin:4px 0}
+#duelCard .rc-top{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:420px){ #duelCard .rc-top{grid-template-columns:1fr} }

@@ -375,6 +375,7 @@ let MUSEUM_DOOR = { x:8, z:-2 };   // 村子裡食堂門口（蓋門面的時候
 const ICE = { x:-120, z:-72, w:30, d:22, y:0.45 };
 // 北方冰封群島（2026-11-05）：主島北邊（-x）的雪島，中間一座結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。坐港口阿海的船去
 const FROST = { x:-160, z:-10, r:22, y:0.36, lake:{ x:-156, z:-8, r:8.5, y:0.37 }, holes:[[-158.4, -9.6], [-153.6, -5.8], [-155.2, -11.6], [-159.6, -4.6], [-152.4, -9.8]], dock:[-139.2, -10] };
+const MTN = { x: -160, z0: 9, base: 12, len: 96, top: 10, H: 26, y: FROST.y + 0.02 };   /* 位置是算過的：東邊是地圖外的場館（釣蝦場、食堂、博物館都在 x ≥ -130），南邊 z ≥ 143 是體育場，西邊 x < -175 有流冰 */ MTN.L = MTN.base + MTN.len + MTN.top;   /* v548 雪松山（冰封群島南邊的滑雪山）：地形函式 mtnH 在「雪松山」那一段；這個常數要放前面，蓋世界的時候就會問到地面高度 */
 // 深海浮台（2026-11-05）：遠洋上一座浮台；遠洋神秘島：火山島
 const ABYSS = { x:64, z:-145, w:12, d:8, y:0.55 };
 const MYST = { x:-60, z:162, r:16, y:0.5 };
@@ -483,6 +484,8 @@ const TRAVEL = [
   { id:'abyssdock', label:'深海浮台', x:64, z:-143.5, rot:Math.PI, color:'#1d3a6a' },
   { id:'mystdock', label:'神秘島碼頭', x:-60, z:150.5, rot:0, color:'#3a8a7a' },
   { id:'greendock', label:'苔森之島碼頭', x:GREEN.x + 6, z:GREEN.z - 31, rot:0, color:'#4e9a52' },
+  { id:'boatrace', label:'划船賽浮台', x:47.6, z:-37.6, rot:Math.PI / 2, color:'#e0564f' },   /* v548 */
+  { id:'skimtn', label:'雪松山滑雪場', x:MTN.x - 2.5, z:MTN.z0 + 9.2, rot:0, color:'#dfeaf5' },
 ];
 const SHIRTS = ['#f17b6d','#2f89c7','#3fbf9d','#ffd36a','#9b7bff','#f5a5d8','#ff9f43','#5b6b7a'];
 const HATS = ['#ffd36a','#f6f0dd','#18334a','#f17b6d','#3fbf9d','#8c5d3b'];
@@ -1744,7 +1747,7 @@ function buildTrees(trees, PX, PZ){
 }
 
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
-function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
+function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); { const sh = mtnH(px, pz); if (sh !== null && sh > -0.12) return false; } if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castBlocked(x, z, px, pz){
   const L = Math.hypot(px - x, pz - z); if (L < 2.2) return false;
   let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
@@ -2512,8 +2515,8 @@ function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of wate
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
 function isleH(x, z){ if (Math.abs(x - GARDEN.x) <= GARDEN.hx && Math.abs(z - GARDEN.z) <= GARDEN.hz) return ISLE.y; const d = Math.hypot(x - ISLE.x, z - ISLE.z); if (d > ISLE.r + 2.2) return null; return d <= ISLE.r ? ISLE.y : ISLE.y - (d - ISLE.r) / 2.2 * 0.3; }
 function frostH(x, z){ const d = Math.hypot(x - FROST.x, z - FROST.z); if (d > FROST.r + 2.2) return null; if (Math.hypot(x - FROST.lake.x, z - FROST.lake.z) < FROST.lake.r) return FROST.lake.y; return d <= FROST.r ? FROST.y : FROST.y - (d - FROST.r) / 2.2 * 0.3; }
-function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } return Math.max(0, terrainH(x, z)); }
-function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } return Math.max(0, terrainH(x, z)); }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
 function blocked(x, z, r){
   let L = colliders; try { if (House.on && House.cols) L = House.cols; } catch(e){}   /* 房間蓋在小島正下方：在屋裡只看房間自己的牆和家具，不然島上的樹、石頭、別棟房子會變成看不到的障礙物（卡住） */
   for (const c of L){
@@ -4454,12 +4457,15 @@ function sportFx(f, k, dur){ if (f) f.sportFx = { k, at: now(), dur: dur || 0.4 
 function sportPose(f, K){ const B = K.B; if (!B || !B.upperlegr) return; const tn = now(), X = f.sportFx;
   if (X){ const u = (tn - X.at) / X.dur; if (u >= 1 || u < 0){ f.sportFx = null; } else if (X.k === 'kick'){ const sw = u < 0.28 ? -0.55 * Math.sin(u / 0.28 * Math.PI / 2) : -0.55 + 2.0 * Math.sin((u - 0.28) / 0.72 * Math.PI) * (u < 0.64 ? 1 : 0.9); B.upperlegr.rotation.x -= sw * SPX.leg; B.lowerlegr.rotation.x += (u < 0.3 ? 0.9 * (u / 0.3) : 0.9 * Math.max(0, 1 - (u - 0.3) / 0.25)) * SPX.leg; if (B.spine) B.spine.rotation.x -= 0.16 * Math.sin(u * Math.PI); if (B.upperarml) B.upperarml.rotation.x -= 0.5 * Math.sin(u * Math.PI) * SPX.arm; }
     else if (X.k === 'follow'){ const a = Math.sin(u * Math.PI); if (B.lowerarmr) B.lowerarmr.rotation.x -= 0.6 * a * SPX.arm; if (B.wristr) B.wristr.rotation.x += 0.7 * a * SPX.arm; } }
+  if (f.ski && !f.skiFall){ const k = SPX.leg, tk = f === me && joy.z < -0.45 ? 1.35 : 1; B.upperlegr.rotation.x -= 0.55 * k * tk; if (B.upperlegl) B.upperlegl.rotation.x -= 0.55 * k * tk; B.lowerlegr.rotation.x += 0.95 * k * tk; if (B.lowerlegl) B.lowerlegl.rotation.x += 0.95 * k * tk; if (B.spine) B.spine.rotation.x += 0.38 * tk; if (B.upperarmr) B.upperarmr.rotation.x += 0.5 * SPX.arm; if (B.upperarml) B.upperarml.rotation.x += 0.5 * SPX.arm; if (B.lowerarmr) B.lowerarmr.rotation.x -= 0.5 * SPX.arm; if (B.lowerarml) B.lowerarml.rotation.x -= 0.5 * SPX.arm; }   /* v548 滑雪：膝蓋彎、上身前傾、手在前面握雪杖；搖桿往前＝蹲更低 */
   if (f.bkArm){ const v = f.aspd || 0, ph = (tn * (2.4 + Math.min(2, v) * 0.5)) % 1, a = Math.sin(ph * Math.PI * 2); if (B.spine) B.spine.rotation.x += 0.2; if (B.upperarmr) B.upperarmr.rotation.x += (0.25 + a * 0.3) * SPX.arm; if (B.lowerarmr) B.lowerarmr.rotation.x += (0.2 - a * 0.45) * SPX.arm; if (B.upperarml) B.upperarml.rotation.x += 0.55 * SPX.arm; } }
 function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
   if (K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjB[i].quaternion.copy(K.kjQ[i]); K.kjOn = false; }   /* v452 上一格疊上去的彈性先還原（見 kidJuice 的說明） */
   if (f.swim) W.dive = 1;
   else if (f.sitting || (f === me ? !!myBoat : !!f.boatMesh)) W.sit = 1;
+  else if (f.skiFall && K.acts.playdead) W.playdead = 1;
+  else if (f.ski) W.idle = 1;   /* v548 滑雪：站姿由 sportPose 壓成蹲低 */
   else if (f.air > 0.05) W.jump_air = 1;
   else if (f.fishing){ if ((f.windup || 0) > 0.02 || f.castT >= 0) W.fish_cast = 1; else if ((f.bend || 0) > 0.45) W.fish_fight = 1; else if ((f.bend || 0) > 0.05) W.fish_reel = 1; else W.fish_idle = 1; }
   else if (f.ppose && kidPPoseOn(f)){ for (const [nm, w] of f.ppose.W) if (K.acts[nm]) W[nm] = w; }   /* v359 跟寵物玩的時候人也會動（蹲下餵、伸手摸、坐地上陪牠） */
@@ -4480,7 +4486,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt); if (f.sportFx || f.bkArm) sportPose(f, K); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
+  K.mixer.update(dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
   if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
@@ -5113,7 +5119,7 @@ function nearBoat(){ for (const b of boats){ if (b === myBoat) continue; if (Mat
 function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return false;   /* v258 小船可以一路划到冰封群島、深海浮台、神秘島、苔森之島（以前只能在本島附近 85 公尺內） */
   if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 16) return false;   /* 大家的小島是另外進去的，船不能划過去 */
   if (greenNear(x, z, 6)){ const lx = x - GREEN.x, lz = z - GREEN.z; return Math.hypot(lx, lz) > greenEdge(lx, lz) + 1.2; }
-  if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 2.6 || Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 2.2) return false;
+  if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 2.6 || Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 2.2) return false; if (mtnH(x, z) !== null || mtnH(x + 1.5, z) !== null || mtnH(x - 1.5, z) !== null || mtnH(x, z + 1.5) !== null || mtnH(x, z - 1.5) !== null) return false;
   if (nearReef(x, z) && reefE(x, z) > -0.8) return false; { const e = mangE(x, z); if (e > -1.0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(x, z); return i.water && i.h < -0.3 && !deckAt(x, z); }
 function boardBoat(b){
   if (F.phase !== 'idle') cancelFishing();
@@ -5121,7 +5127,7 @@ function boardBoat(b){
   toast('上船了！用搖桿划船，在水上任何地方都可以拋竿。'); pushPresence(true);
 }
 function leaveBoat(){
-  if (!myBoat) return;
+  if (!myBoat) return; if (RACE.cur && RACE.cur.kind === 'boat' && RACE.cur.st !== 'done') raceQuit(true);
   let best = null;
   for (let r = 1.2; r <= 3.6 && !best; r += 0.6) for (let k = 0; k < 16; k++){ const a = k / 16 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)){ best = [x, z]; break; } }
   if (!best){ toast('要靠近岸邊或碼頭才能下船。'); return; }
@@ -5149,7 +5155,8 @@ function boatSpot(){
 }
 function updateBoat(dt, ix, iz, L, locked){
   let speed = 0; const t = now(); me.sitting = true; if (me.swim && !Dive.on) me.setSwim(false);   /* v454 在船上就是坐著（不管之前是什麼狀態） */
-  if (L > 0.08 && !locked){
+  if (brDrive(dt, uiBlocked ? 0 : ix, uiBlocked ? 0 : iz, uiBlocked ? 0 : L)){ speed = BR.v; }   /* v548 划船賽：比賽用的小艇有慣性 */
+  else if (L > 0.08 && !locked){
     if (F.phase !== 'idle') cancelFishing('收竿了');
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, ml = Math.max(1e-6, Math.hypot(mx, mz));
@@ -5179,7 +5186,7 @@ function updateBoatButton(){
   { const d = $('#boatDive'), show = !!(myBoat && !Ferry.on && F.phase === 'idle' && !Dive.on && boatDiveSite()); if (d.hidden === show) d.hidden = !show; }
   const btn = $('#boatBtn'); let label = '';
   if (myBoat){ if (F.phase === 'idle') label = '下船'; }
-  else if (F.phase === 'idle' && nearBoat()) label = '上船';
+  else if (F.phase === 'idle' && !SKI.on && !SKI.lift && nearBoat()) label = '上船';
   btn.hidden = !label; if (label && btn.textContent !== label) btn.textContent = label;
 }
 
@@ -5408,6 +5415,8 @@ function updatePlayer(dt){
   if (Bike.on && (myBoat || mySeat || Dive.on || House.on || inIndoor() || F.phase !== 'idle' || (typeof Sub !== 'undefined' && (Sub.cine || Sub.on)))) bikeOff();   /* v438 拋竿、上船、坐下、進屋子：自動下車，車停在原地 */
   if (Dive.on){ updateDiveSwim(dt, ix, iz, L); return; }
   if (typeof Sub !== 'undefined' && Sub.cine){ me.speed += ((Sub.cine.walk ? 3.2 : 0) - me.speed) * Math.min(1, dt * 12); Jump.gy = me.baseY; return; }   /* v244 上下潛水艇的過場：位置由過場決定 */
+  if (SKI.lift){ skiLiftTick(dt); return; }   /* v548 坐纜車 */
+  if (SKI.on){ skiDrive(dt, uiBlocked ? 0 : ix, uiBlocked ? 0 : iz, L); return; }   /* v548 滑雪 */
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
   if (mySeat){
     if (L > 0.08 && !locked) standUp();
@@ -5717,7 +5726,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (cam.pitch < 0.12 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 function camClear(target, want, dt){
@@ -10230,6 +10239,245 @@ async function openCard(uid, name, peerId){ if (!Cloud.on || !Cloud.sb){ toast('
 function cardTap(li, uid, name, peerId){ if (!uid || !Cloud.on) return; for (const e of li.querySelectorAll(':scope > img.avimg, :scope > .sw, :scope > span:not(.st)')){ e.style.cursor = 'pointer'; e.title = '看名片'; e.addEventListener('click', ev => { ev.stopPropagation(); openCard(uid, name, peerId); }); } }
 /* v540 作者：「可以把這個（大頭照）也合進來嗎」→ 在玩家資料頁點大頭照，就在同一個視窗裡換照片，換完回到資料頁 */
 /* v544 作者：「自尊」那一層先補 → 直接點世界裡的玩家（頭上的名字，或點他的身體）就打開他的玩家資料頁，不用再去朋友名單找 */
+/* ===== v548 🚣 阿海的港口划船賽、🎿 雪松山滑雪場（作者 11/17：「有人說可以加入賽船跟滑雪」「但不要憑空出現，要好好設計」）=====
+   兩個都是「穿過一道一道的門、比誰最快」，所以共用同一套比賽流程（RACE）：
+   ・在起點按「出發」＝6 秒後開始；這 6 秒內旁邊的人按「一起出發」就一起比。只有自己也可以，就是計時賽。
+   ・每個人的時間都是自己的手機算的（從自己的倒數結束算到衝過終點），沒穿過的門每道加罰秒。衝線時把成績廣播給同一場的人。
+   ・成績是手機回報的（跟球類一樣），所以只記最快紀錄和排行，不發金幣（伺服器 186）。
+   🚣 划船賽：港口石頭堤防外面多一座浮動平台（起點拱門、小艇架、計時看板），浮標一直漂在海上。比賽用的小艇有慣性：直線越划越快、急轉會掉速；海上有三段順流帶。
+   🎿 滑雪：冰封群島南邊多一座真的雪山「雪松山」（地形是真的，走得上去），山腳有小木屋、教練、滑雪板架；纜車把人載到山頂；從山頂的出發門滑到小木屋前面的終點。 */
+const RKIND = { boat: { ic: '🚣', nm: '划船賽', pen: 8 }, ski: { ic: '🎿', nm: '滑雪賽', pen: 3 } };
+const RACE = { cur: null, inv: null, bar: null, last: null, best: (() => { try { const b = LS.get('tide.raceBest', {}); return b && typeof b === 'object' ? b : {}; } catch(e){ return {}; } })(), top: {} };
+setTimeout(() => { try { if (!LS.get('tide.raceTold', 0)){ LS.set('tide.raceTold', 1); toast('🚣 阿海在港口石頭堤防外面辦了划船賽；🎿 冰封群島南邊的雪松山開了滑雪場（看「說明」）'); } } catch(e){} }, 15000);
+function raceSend(d){ try { if (RACE.tap) RACE.tap(d); if (room) room.emit('race', d).catch(() => {}); } catch(e){} }
+function raceFmt(ms){ ms = Math.max(0, Math.round(ms)); const s = ms / 1000; return s >= 60 ? `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}` : s.toFixed(2) + ' 秒'; }
+function raceGates(kind){ return kind === 'boat' ? BR.gates : SKI.gates; }
+function raceBarEl(){ if (!RACE.bar){ const b = el('div', 'panel sbar'); b.id = 'raceBar'; b.hidden = true; document.body.appendChild(b); RACE.bar = b; } return RACE.bar; }
+function raceBarDraw(){ const b = raceBarEl(), c = RACE.cur; if (!c){ if (!b.hidden) b.hidden = true; return; } const K = RKIND[c.kind], G = raceGates(c.kind); let tx;
+  if (c.st === 'wait'){ const left = Math.max(0, Math.ceil((c.t0 - Date.now()) / 1000)); tx = `${K.ic} ${left} 秒後出發${c.n > 1 ? `・${c.n} 人一起` : ''}`; }
+  else if (c.st === 'run') tx = `${K.ic} ${raceFmt((now() - c.ts) * 1000 + c.miss * K.pen * 1000)}・第 ${Math.min(c.gi + 1, G.length)}／${G.length} 道門${c.miss ? `・漏 ${c.miss} 道門` : ''}`;
+  else tx = `${K.ic} 完成 ${raceFmt(c.ms)}`;
+  if (b._tx !== tx){ b._tx = tx; b.innerHTML = ''; b.appendChild(el('span', '', tx)); if (c.st !== 'done'){ const x = el('button', 'sb-x', '✕ 放棄'); x.addEventListener('click', () => raceQuit(true)); b.appendChild(x); } } b.hidden = false; }
+function raceSeg(ax, az, bx, bz, cx, cz, dx, dz){ const d = (bx - ax) * (dz - cz) - (bz - az) * (dx - cx); if (Math.abs(d) < 1e-9) return false; const t = ((cx - ax) * (dz - cz) - (cz - az) * (dx - cx)) / d, u = ((cx - ax) * (bz - az) - (cz - az) * (bx - ax)) / d; return t >= 0 && t <= 1 && u >= 0 && u <= 1; }
+/* 按「出發」：有人剛喊出發就加入他那一場，不然自己開一場 */
+function raceCall(kind){ if (RACE.cur) return; const iv = RACE.inv; let id, t0, n = 1;
+  if (iv && iv.kind === kind && iv.t0 - Date.now() > 1200){ id = iv.id; t0 = iv.t0; n = (iv.n || 1) + 1; RACE.inv = null; raceSend({ k: 'join', id, kind, f: poolKey() }); }
+  else { id = (poolKey() + '-' + Date.now().toString(36)).slice(-40); t0 = Date.now() + 6000; raceSend({ k: 'go', id, kind, left: 6000, f: poolKey(), nm: bkMyName() });   /* 送「還有幾毫秒出發」，不送絕對時間：每支手機的時鐘可能差好幾秒 */ }
+  if (kind === 'boat'){ if (!brEnter()) return; } else { if (!skiEnter()) return; }
+  RACE.cur = { kind, id, t0, st: 'wait', gi: 0, miss: 0, ts: 0, ms: 0, n, res: [], px: me.pos.x, pz: me.pos.z, beep: 4 }; raceBarDraw(); }
+function raceQuit(say){ const c = RACE.cur; if (!c) return; RACE.cur = null; raceBarDraw(); if (c.kind === 'ski') skiStop(); else brStop(); if (say) toast(`${RKIND[c.kind].ic} 這一趟放棄了`); }
+function raceTick(dt){ const c = RACE.cur; if (RACE.inv && RACE.inv.t0 < Date.now()) RACE.inv = null; if (!c) return; const K = RKIND[c.kind], G = raceGates(c.kind);
+  if (c.st === 'wait'){ const left = (c.t0 - Date.now()) / 1000; if (left <= 3 && Math.ceil(left) < c.beep && left > 0){ c.beep = Math.ceil(left); flash(String(c.beep), 0.7); try { SFX.tick(); } catch(e){} }
+    if (left <= 0){ c.st = 'run'; c.ts = now(); c.px = me.pos.x; c.pz = me.pos.z; flash('出發！', 0.8); try { SFX.jump(); } catch(e){} } }
+  else if (c.st === 'run'){ const x = me.pos.x, z = me.pos.z;
+    for (let j = c.gi; j < G.length; j++){   /* 漏掉的門直接算漏（加罰秒），不用回頭 */ const g = G[j]; if (raceSeg(c.px, c.pz, x, z, g.ax, g.az, g.bx, g.bz)){ c.miss += j - c.gi; c.gi = j + 1; try { SFX.tick(); } catch(e){} break; } }
+    c.px = x; c.pz = z;
+    if (c.gi >= G.length) raceFinish();
+    else if (now() - c.ts > 300){ raceQuit(false); toast(`${K.ic} 超過 5 分鐘，這一趟不算`); return; } }
+  else if (c.st === 'done' && now() - c.doneAt > 14){ RACE.cur = null; }
+  if (frameNo % 6 === 0) raceBarDraw(); }
+function raceFinish(){ const c = RACE.cur, K = RKIND[c.kind]; c.st = 'done'; c.doneAt = now(); c.ms = Math.round((now() - c.ts) * 1000 + c.miss * K.pen * 1000);
+  const old = +RACE.best[c.kind] || 0, pb = !old || c.ms < old; if (pb){ RACE.best[c.kind] = c.ms; LS.set('tide.raceBest', RACE.best); }
+  c.res.push({ k: poolKey(), nm: bkMyName(), ms: c.ms, me: true }); RACE.last = c;
+  raceSend({ k: 'fin', id: c.id, kind: c.kind, ms: c.ms, f: poolKey(), nm: bkMyName() });
+  try { SFX.catch(); } catch(e){} flash(`${K.ic} ${raceFmt(c.ms)}${pb ? '　新紀錄！' : ''}`, 2.4);
+  try { if (Cloud.on && Cloud.sb) Cloud.sb.rpc('race_report', { p_kind: c.kind, p_ms: c.ms }).then(r => { if (r && r.data && r.data.ok) RACE.top[c.kind] = null; }, () => {}); } catch(e){}
+  if (c.kind === 'ski') skiFinish(); else brFinish(); raceBarDraw(); setTimeout(() => { if (RACE.last === c) raceCard(c.kind, c); }, 1500); }
+function raceOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || isBlockedPeer(msg.peer)) return; const d = msg.data, kind = d.kind === 'ski' ? 'ski' : 'boat', id = fbStr(d.id, 40), peer = fbStr(d.f, 40) || String(msg.peer || ''); if (!id || !peer || peer === poolKey()) return; let nm = fbStr(d.nm, 16) || '玩家'; try { nm = clean(nm); } catch(e){}
+  if (d.k === 'go'){ const left = +d.left; if (!(left > 2000 && left <= 8000) || RACE.cur) return; const t0 = Date.now() + left - 150; const near = kind === 'boat' ? Math.hypot(me.pos.x - BR.START.x, me.pos.z - BR.START.z) < 14 : skiAtTop(8); if (!near) return; RACE.inv = { kind, id, t0, nm, n: 1 }; toast(`${RKIND[kind].ic} <b>${esc(nm)}</b> 要出發了，按「一起出發」就能一起比`); }
+  else if (d.k === 'join'){ if (RACE.cur && RACE.cur.id === id) RACE.cur.n++; else if (RACE.inv && RACE.inv.id === id) RACE.inv.n++; }
+  else if (d.k === 'fin'){ const ms = Math.round(+d.ms); if (!(ms > 3000 && ms < 400000)) return; const c = RACE.cur && RACE.cur.id === id ? RACE.cur : RACE.last && RACE.last.id === id ? RACE.last : null; if (!c || c.res.some(r => r.k === peer)) return; c.res.push({ k: peer, nm, ms }); if (Duel.card && Duel.card.dataset.kind === 'race' && Duel.card._c === c) raceCard(kind, c); } }
+/* 成績卡／排行卡：c 有值＝剛比完那一場的名次；沒有＝看板（我的最快、今天前幾名、歷來前幾名） */
+async function raceCard(kind, c){ const K = RKIND[kind], card = duelCardOpen('race'); card._c = c || null; card.classList.add('racecard');
+  const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('race')); card.appendChild(X);
+  card.appendChild(el('h3', '', c ? `${K.ic} ${K.nm}成績` : `${K.ic} ${K.nm}排行`));
+  if (c){ const ul = el('ol', 'rc-list'); c.res.slice().sort((a, b) => a.ms - b.ms).forEach((r, i) => { const li = el('li', r.me ? 'me' : ''); li.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i] || String(i + 1))); li.appendChild(el('span', '', r.me ? '你' : r.nm)); li.appendChild(el('b', '', raceFmt(r.ms))); ul.appendChild(li); }); card.appendChild(ul);
+    if (c.miss) card.appendChild(el('p', 'sub', `漏了 ${c.miss} 道門，每道加 ${K.pen} 秒`));
+    if (kind === 'boat' && myBoat === BR.boat){ const ag = el('button', 'tbtn', '🚣 再比一次'); ag.addEventListener('click', () => { duelCardClose('race'); raceCall('boat'); }); card.appendChild(ag); } }
+  const my = +RACE.best[kind] || 0; card.appendChild(el('p', 'rc-my', my ? `我的最快：${raceFmt(my)}` : '還沒有完成過'));
+  const box = el('div', 'rc-top'); card.appendChild(box); box.appendChild(el('p', 'sub', Cloud.on ? '載入排行…' : '連上雲端才有排行'));
+  if (!c) card.appendChild(el('p', 'sub', kind === 'boat' ? '在浮台的小艇架旁邊按「出發」。照順序穿過每一對浮標，漏掉一道加 8 秒。直線越划越快、急轉會掉速，划進順流帶會加速。' : '坐纜車上山，在山頂的出發門按「出發」。穿過每一道旗門，漏掉一道加 3 秒。搖桿左右轉彎、往前蹲低加速、往後煞車；撞到雪松會摔倒。'));
+  if (!Cloud.on || !Cloud.sb) return; let T = RACE.top[kind]; if (!T || Date.now() - T.at > 30000){ try { const { data } = await Cloud.sb.rpc('race_top', { p_kind: kind }); if (data && typeof data === 'object'){ T = RACE.top[kind] = { at: Date.now(), d: data }; } } catch(e){} }
+  if (Duel.card !== card) return; box.innerHTML = ''; if (!T){ box.appendChild(el('p', 'sub', '排行暫時讀不到')); return; }
+  if (T.d.me && +T.d.me.best && (!my || +T.d.me.best < my)){ RACE.best[kind] = +T.d.me.best; LS.set('tide.raceBest', RACE.best); const q = card.querySelector('.rc-my'); if (q) q.textContent = `我的最快：${raceFmt(+T.d.me.best)}`; }
+  for (const [key, title] of [['day', '今天最快'], ['all', '歷來最快']]){ const col = el('div', 'rc-col'); col.appendChild(el('div', 'pc-st', title)); const ol = el('ol', 'rc-list'); (Array.isArray(T.d[key]) ? T.d[key] : []).slice(0, key === 'day' ? 5 : 8).forEach((r, i) => { let nm = String(r.n || '釣客').slice(0, 12); try { nm = clean(nm); } catch(e){} const li = el('li', r.me ? 'me' : ''); li.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i] || String(i + 1))); li.appendChild(el('span', '', nm)); li.appendChild(el('b', '', raceFmt(+r.ms))); ol.appendChild(li); }); if (!ol.children.length) col.appendChild(el('p', 'sub', key === 'day' ? '今天還沒有人完成' : '還沒有紀錄')); else col.appendChild(ol); box.appendChild(col); } }
+function raceGateMesh(kind, g, i, last){ const grp = new THREE.Group(); grp.userData.keep = true; grp.userData.dyn = true; const col = last ? '#f2c94c' : i % 2 ? '#2f89c7' : '#e0564f';
+  for (const [x, z] of [[g.ax, g.az], [g.bx, g.bz]]){ const p = new THREE.Group(); p.position.set(x, 0, z);
+    if (kind === 'boat'){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 0.5, 10), mat(col, 0.6)); b.position.y = 0.2; p.add(b); const s = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 6), mat('#f4f1e6', 0.6)); s.position.y = 1.1; p.add(s); const f = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.02), mat(col, 0.7)); f.position.set(0.27, 1.65, 0); p.add(f); }
+    else { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.7, 6), mat(col, 0.6)); s.position.y = 0.85; p.add(s); const f = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.42, 0.6), mat(col, 0.7, { side: THREE.DoubleSide })); f.position.set(0, 1.42, 0); f.rotation.y = Math.atan2(g.bx - g.ax, g.bz - g.az); p.add(f); }
+    grp.add(p); }
+  return grp; }
+
+/* ---------- 🚣 划船賽 ---------- */
+const BR = { built: false, v: 0, boat: null, g: null, marks: [], flows: [],
+  DECK: { x0: 44.6, x1: 50.4, z0: -41.4, z1: -34.2, y: 0.4 },   /* 浮動平台：貼著石頭堤防往南那一段的外側（東邊） */
+  START: { x: 49.3, z: -37.2 }, BOARD: { x: 45.6, z: -35.2 }, SLOT: { x: 52.8, z: -38.4, rot: 2.25 },
+  PTS: [[58, -43], [72, -47], [88, -58], [86, -78], [68, -90], [46, -88], [34, -74], [45, -61], [55, -52.5], [58, -43]],   /* 每道門的中心；最後一道回到起點＝終點 */
+  FLOW: [],   /* 順流帶：x, z, 流向（下面照第 1、3、6 段賽道算） */
+  gates: [] };
+{ const P = BR.PTS; for (let i = 0; i < P.length; i++){ const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)], [x, z] = P[i]; let dx = b[0] - a[0], dz = b[1] - a[1]; if (i === 0 || i === P.length - 1){ dx = 12; dz = -4; } const l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l, hw = 3.4; BR.gates.push({ x, z, ax: x + nx * hw, az: z + nz * hw, bx: x - nx * hw, bz: z - nz * hw }); }
+  for (const i of [1, 4, 7]){ const a = P[i], b = P[i + 1]; BR.FLOW.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.atan2(b[0] - a[0], b[1] - a[1])]); } }
+function brNearDock(){ return Math.abs(me.pos.x) < 130 && Math.hypot(me.pos.x - 60, me.pos.z + 62) < 100; }
+function brBuild(){ if (BR.built) return; BR.built = true; { const D0 = BR.DECK; addDeck((D0.x0 + D0.x1) / 2, (D0.z0 + D0.z1) / 2, D0.x1 - D0.x0, D0.z1 - D0.z0, D0.y); const S0 = BR.SLOT; BR.boat = { dock: { id: 'race', x: S0.x, z: S0.z, rot: S0.rot }, m: makeKayakMesh(2) }; BR.boat.m.position.set(S0.x, WATER_LEVEL, S0.z); BR.boat.m.rotation.y = S0.rot; scene.add(BR.boat.m); boats.push(BR.boat); } const g = new THREE.Group(); g.userData.keep = true; g.userData.dyn = true; scene.add(g); BR.g = g; const D = BR.DECK, cx = (D.x0 + D.x1) / 2, cz = (D.z0 + D.z1) / 2, w = D.x1 - D.x0, d = D.z1 - D.z0;
+  /* 浮台：木板面、下面一排藍色浮筒、角落四根繫船柱 */
+  g.add(box([w, 0.16, d], '#b88a5a', [cx, D.y - 0.08, cz])); for (let i = 0; i < 4; i++) for (const sx of [-1, 1]){ const f = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, w / 2 - 0.3, 10), mat('#2f6ea8', 0.6)); f.rotation.z = Math.PI / 2; f.position.set(cx + sx * w / 4, D.y - 0.36, D.z0 + 0.9 + i * (d - 1.8) / 3); g.add(f); }
+  for (const [x, z] of [[D.x1 - 0.25, D.z0 + 0.25], [D.x1 - 0.25, D.z1 - 0.25]]) g.add(box([0.16, 0.5, 0.16], '#5b4630', [x, D.y + 0.25, z]));
+  /* 起點拱門（浮台東邊水面上）：兩根柱子＋橫幅 */
+  { const G0 = BR.gates[0], a = new THREE.Group(); for (const [x, z] of [[G0.ax, G0.az], [G0.bx, G0.bz]]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.4, 8), mat('#f4f1e6', 0.6)); p.position.set(x, 1.7, z); a.add(p); }
+    for (const fl of [0, Math.PI]){ const bn = new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(G0.bx - G0.ax, G0.bz - G0.az), 0.8), new THREE.MeshBasicMaterial({ map: signTex('阿海的划船賽　起點・終點', '#e0564f', '#fff7e0', 1024, 128) })); bn.position.set(G0.x, 3.1, G0.z); bn.rotation.y = Math.atan2(G0.bx - G0.ax, G0.bz - G0.az) - Math.PI / 2 + fl; bn.translateZ(0.02); a.add(bn); } g.add(a); }
+  /* 小艇架：斜放的 4 艘小艇（有人在比就少一艘） */
+  BR.rack = []; { const rx = D.x0 + 1.5, rz = D.z0 + 1.2; g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx - 0.9, D.y + 0.6, rz])); g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx + 0.9, D.y + 0.6, rz])); g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx - 0.9, D.y + 0.6, rz + 1.4])); g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx + 0.9, D.y + 0.6, rz + 1.4]));
+    for (let i = 0; i < 4; i++){ const k = makeKayakMesh(i + 2); if (k.userData.paddle) k.userData.paddle.visible = false; k.scale.setScalar(0.8); k.rotation.set(0, Math.PI / 2, 0.5); k.position.set(rx, D.y + 0.28 + i * 0.3, rz + 0.7); g.add(k); BR.rack.push(k); } }
+  /* 計時看板 */
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 320; BR.cv = cv; const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; BR.tex = t; const bd = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.5), new THREE.MeshBasicMaterial({ map: t })); bd.position.set(BR.BOARD.x - 0.75, D.y + 1.55, BR.BOARD.z); bd.rotation.y = Math.PI / 2; g.add(bd); g.add(box([0.1, 2.3, 0.1], '#5b4630', [BR.BOARD.x - 0.8, D.y + 1.15, BR.BOARD.z - 1.1])); g.add(box([0.1, 2.3, 0.1], '#5b4630', [BR.BOARD.x - 0.8, D.y + 1.15, BR.BOARD.z + 1.1])); brBoard(); }
+  /* 浮標門、順流帶 */
+  BR.gates.forEach((G, i) => { if (i === 0) return; const m = raceGateMesh('boat', G, i, i === BR.gates.length - 1); if (i === BR.gates.length - 1) m.visible = false; g.add(m); BR.marks[i] = m; });
+  for (const [x, z, a] of BR.FLOW){ const f = new THREE.Group(); f.position.set(x, 0.06, z); f.rotation.y = a; for (let k = 0; k < 5; k++){ const ar = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 3), new THREE.MeshBasicMaterial({ color: '#bff3ff', transparent: true, opacity: 0.5, depthWrite: false })); ar.rotation.x = Math.PI / 2; ar.scale.y = 1; ar.scale.z = 0.08; ar.position.z = -5 + k * 2.5; f.add(ar); } g.add(f); BR.flows.push(f); }
+  { const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 4), new THREE.MeshBasicMaterial({ color: '#ffe066' })); arrow.rotation.x = Math.PI; arrow.visible = false; g.add(arrow); BR.arrow = arrow; } }
+function brBoard(){ const cv = BR.cv; if (!cv) return; const c = cv.getContext('2d'); c.fillStyle = '#18334a'; c.fillRect(0, 0, 512, 320); c.fillStyle = '#ffe08a'; c.font = '800 40px sans-serif'; c.textAlign = 'center'; c.fillText('🚣 阿海的划船賽', 256, 54); c.font = '700 28px sans-serif'; c.fillStyle = '#ffffff'; const T = RACE.top.boat && RACE.top.boat.d, L = T && Array.isArray(T.day) ? T.day.slice(0, 4) : [];
+  if (!L.length){ c.fillText('今天還沒有人完成', 256, 150); c.fillStyle = '#bfe6f5'; c.fillText('走過來按「出發」', 256, 200); } else { c.textAlign = 'left'; c.fillStyle = '#bfe6f5'; c.fillText('今天最快', 30, 104); c.fillStyle = '#ffffff'; L.forEach((r, i) => { let nm = String(r.n || '釣客').slice(0, 8); try { nm = clean(nm); } catch(e){} c.fillText(`${i + 1}. ${nm}`, 30, 150 + i * 42); c.textAlign = 'right'; c.fillText(raceFmt(+r.ms), 482, 150 + i * 42); c.textAlign = 'left'; }); }
+  if (BR.tex) BR.tex.needsUpdate = true; }
+function brTopLoad(kind, cb){ const T = RACE.top[kind]; if (!Cloud.on || !Cloud.sb || (T && Date.now() - T.at < 120000) || RACE['ld' + kind]) return; RACE['ld' + kind] = 1; Cloud.sb.rpc('race_top', { p_kind: kind }).then(r => { RACE['ld' + kind] = 0; if (r && r.data && typeof r.data === 'object'){ RACE.top[kind] = { at: Date.now(), d: r.data }; if (cb) cb(); } else RACE.top[kind] = { at: Date.now() - 60000, d: {} }; }, () => { RACE['ld' + kind] = 0; }); }
+function brOn(){ const c = RACE.cur; return !!(c && c.kind === 'boat' && c.st !== 'done' && myBoat === BR.boat); }
+function brEnter(){ brBuild(); if (myBoat && myBoat !== BR.boat) { toast('先下船，再到浮台按「出發」'); return false; } if (F.phase !== 'idle') cancelFishing(); if (Bike.on) bikeOff(); const S = BR.SLOT, b = BR.boat; const off = (Math.random() - 0.5) * 3; b.m.position.set(S.x + Math.cos(S.rot) * off * 0.4, WATER_LEVEL, S.z - Math.sin(S.rot) * off); b.m.rotation.set(0, S.rot, 0); if (myBoat !== b) boardBoat(b); me.pos.x = b.m.position.x; me.pos.z = b.m.position.z; me.rot = S.rot; cam.yaw = S.rot + Math.PI; BR.v = 0; return true; }
+function brStop(){ BR.v = 0; }
+function brFinish(){ toast('🚣 划回浮台旁邊按「下船」，或再按一次「出發」'); }
+/* 比賽中的小艇：有慣性。回傳 true＝這一格由這裡負責移動 */
+function brDrive(dt, ix, iz, L){ if (!brOn()) return false; const c = RACE.cur; cam.yaw = lerpAngle(cam.yaw, me.rot + Math.PI, 1 - Math.exp(-1.6 * dt));
+  if (c.st === 'wait'){ BR.v = 0; return true; }
+  let vmax = 5.8, acc = 3.0; for (const [x, z, a] of BR.FLOW){ if (Math.hypot(me.pos.x - x, me.pos.z - z) < 6.5){ const al = Math.cos(a - me.rot); if (al > 0.3){ vmax = 8.0; acc = 5.5; } } }
+  if (L > 0.08){ const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw), mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, want = Math.atan2(mx, mz); let d = ((want - me.rot + Math.PI) % (Math.PI * 2)); if (d < 0) d += Math.PI * 2; d -= Math.PI;
+    const rate = 2.3 - 0.9 * Math.min(1, BR.v / 8), st = clamp(d, -rate * dt, rate * dt); me.rot += st; BR.v *= 1 - Math.min(0.5, Math.abs(st) * 0.55); if (Math.abs(d) < 1.2) BR.v = Math.min(vmax, BR.v + acc * Math.min(1, L) * dt); else BR.v = Math.max(0, BR.v - 3 * dt); }
+  else BR.v = Math.max(0, BR.v - 1.4 * dt);
+  if (BR.v > vmax) BR.v = Math.max(vmax, BR.v - 4 * dt);
+  const nx = me.pos.x + Math.sin(me.rot) * BR.v * dt, nz = me.pos.z + Math.cos(me.rot) * BR.v * dt; let hit = false;
+  if (boatWater(nx, me.pos.z)) me.pos.x = nx; else hit = true; if (boatWater(me.pos.x, nz)) me.pos.z = nz; else hit = true; if (hit) BR.v *= 0.4;
+  if (BR.v > 2 && Math.random() < dt * 9) ripple(me.pos.x - Math.sin(me.rot) * 1.4, me.pos.z - Math.cos(me.rot) * 1.4);
+  return true; }
+function brTick(dt, t){ if (!brNearDock()){ if (BR.g && BR.g.visible) BR.g.visible = false; return; } brBuild(); BR.g.visible = !onIsle && !House.on && !Dive.on; const tn = now(), c = RACE.cur && RACE.cur.kind === 'boat' ? RACE.cur : null;
+  BR.marks.forEach((m, i) => { if (!m) return; const G = BR.gates[i]; m.children.forEach((p, k) => { const x = k ? G.bx : G.ax, z = k ? G.bz : G.az; p.position.y = waterY(x, z, tn) - WATER_LEVEL + Math.sin(tn * 1.3 + i + k) * 0.03; p.rotation.z = Math.sin(tn * 0.9 + i * 2 + k) * 0.06; }); });
+  BR.flows.forEach((f, i) => f.children.forEach((a, k) => { const u = ((tn * 0.45 + k / 5) % 1); a.position.z = -6 + u * 12; a.material.opacity = 0.55 * Math.sin(u * Math.PI); }));
+  if (BR.arrow){ const on = !!(c && c.st !== 'done' && c.gi < BR.gates.length); BR.arrow.visible = on; if (on){ const G = BR.gates[Math.max(1, c.gi)]; BR.arrow.position.set(G.x, 3.2 + Math.sin(tn * 4) * 0.25, G.z); BR.arrow.rotation.y = tn * 2; } }
+  if (frameNo % 30 === 0){ let n = 0; for (const p of peers.values()) if (p.pres && (p.pres.bt | 0) === 3 && p.fisher && Math.hypot(p.fisher.pos.x - 60, p.fisher.pos.z + 58) < 90) n++; if (myBoat === BR.boat) n++; BR.rack.forEach((k, i) => { k.visible = i < 4 - n; }); }
+  if (frameNo % 120 === 7) brTopLoad('boat', brBoard); }
+function brNear(){ if (!BR.built) return null; const D = BR.DECK; if (me.pos.x < D.x0 - 0.5 || me.pos.x > D.x1 + 0.5 || me.pos.z < D.z0 - 0.5 || me.pos.z > D.z1 + 0.5) return null;
+  if (Math.hypot(me.pos.x - BR.BOARD.x, me.pos.z - BR.BOARD.z) < 1.7) return { id: 'raceboard', label: '計時看板', mode: 'raceboard', sub: '🚣 看划船賽排行' };
+  if (Math.hypot(me.pos.x - BR.START.x, me.pos.z - BR.START.z) < 2.6 && !RACE.cur){ const iv = RACE.inv && RACE.inv.kind === 'boat' ? RACE.inv : null; return { id: 'racego', label: iv ? '一起出發' : '出發', mode: 'racego', kind: 'boat', sub: iv ? `🚣 跟 ${iv.nm} 一起比` : '🚣 阿海的划船賽・6 秒後開始' }; }
+  return null; }
+
+/* ---------- 🎿 雪松山 ---------- */
+function mtnT(lz){ return clamp((lz - MTN.base) / MTN.len, 0, 1); }
+function mtnHW(lz){ return 16 - 5 * mtnT(lz); }
+function mtnC(lz){ const t = mtnT(lz); return 6 * (1 - 0.35 * t) * Math.sin(t * Math.PI * 3); }   /* 滑雪道中線（左右彎一個半 S） */
+function mtnTopH(lx, lz){ const t = mtnT(lz), s = 0.6 * t + 0.4 * t * t * (3 - 2 * t); let h = MTN.y + MTN.H * s;
+  if (t > 0.02 && t < 0.985){ const off = Math.abs(lx - mtnC(lz)); h += 0.7 * smooth01((off - 5) / 3.5) * Math.min(1, t * 12, (0.985 - t) * 20);   /* 雪道兩邊的雪堤 */
+    const kd = lz - 62; if (kd >= 0 && kd < 5 && off < 2.6) h += 0.9 * (1 - kd / 5) * smooth01((2.6 - off) / 0.8); }   /* 小跳台 */
+  return h; }
+function mtnH(x, z){ const lx = x - MTN.x, lz = z - MTN.z0; if (lz < -5 || lz > MTN.L + 24 || lx < -42 || lx > 42) return null;
+  const cz = clamp(lz, 0, MTN.L), hw = mtnHW(cz), cx = clamp(lx, -hw, hw), d = Math.hypot(lx - cx, lz - cz); if (d <= 0) return mtnTopH(lx, lz);
+  const he = mtnTopH(cx, cz), sk = 2.4 + (he - MTN.y) * 0.45; if (d > sk) return null; const u = d / sk; return he + (-0.5 - he) * u * u * (3 - 2 * u); }
+function mtnOn(x, z, m){ const lx = x - MTN.x, lz = z - MTN.z0; return lz > -(m || 0) && lz < MTN.L + (m || 0) && Math.abs(lx) < mtnHW(clamp(lz, 0, MTN.L)) - 0.3 + (m || 0); }
+function mtnW(lx, lz){ return [MTN.x + lx, MTN.z0 + lz]; }
+const SKI = { built: false, on: false, v: 0, vy: 0, y: 0, air: 0, fall: 0, lift: null, g: null, trees: [], gates: [], npc: null, chairs: [], lean: 0, doneT: 0,
+  LODGE: { lx: -10, lz: 5.2 }, COACH: { lx: -5.4, lz: 7.6 }, LIFT0: { lx: 13, lz: 6 }, LIFT1: { lx: 7.6, lz: MTN.L - 5.5 }, STARTZ: MTN.base + MTN.len - 1.5, FINZ: 17, LSPD: 8, GAP: 14 };
+{ const zs = [MTN.base + MTN.len - 1.5, 97, 88, 79, 70, 57, 47, 37, 27, 17]; zs.forEach((lz, i) => { const first = i === 0, last = i === zs.length - 1, c = mtnC(lz), off = first || last ? 0 : (i % 2 ? 1.6 : -1.6), hw = last ? 9 : first ? 4.2 : 2.5, [ax, az] = mtnW(c + off - hw, lz), [bx, bz] = mtnW(c + off + hw, lz); SKI.gates.push({ x: (ax + bx) / 2, z: az, ax, az, bx, bz }); }); }
+function skiNearMtn(){ return Math.hypot(me.pos.x - MTN.x, me.pos.z - (MTN.z0 + 60)) < 175; }
+function skiAtTop(r){ const [x, z] = mtnW(mtnC(SKI.STARTZ), SKI.STARTZ + 2.2); return Math.hypot(me.pos.x - x, me.pos.z - z) < (r || 3); }
+function skiLiftPos(u){ const A = SKI.LIFT0, B = SKI.LIFT1, up = u < 0.5, k = up ? u * 2 : (1 - u) * 2, lx = A.lx + (B.lx - A.lx) * k, lz = A.lz + (B.lz - A.lz) * k, [x, z] = mtnW(lx + (up ? 0.9 : -0.9), lz), ya = MTN.y + 4.6, yb = MTN.y + MTN.H + 4.6; return [x, ya + (yb - ya) * k, z, up]; }
+function skiLiftU(i){ const len = Math.hypot(SKI.LIFT1.lx - SKI.LIFT0.lx, SKI.LIFT1.lz - SKI.LIFT0.lz) * 2, n = SKI.nChair || 1; return (((Date.now() / 1000 * SKI.LSPD) / len + i / n) % 1 + 1) % 1; }
+function mtnBuild(){ if (SKI.built) return; SKI.built = true; const g = new THREE.Group(); g.userData.keep = true; g.userData.dyn = true; scene.add(g); SKI.g = g; let sd = 77; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  /* 山的地形：一張網格，每個頂點照 mtnH 的高度；雪道偏藍白、兩邊雪地、邊坡是石頭色 */
+  { const ST = 1.5, X0 = -42, X1 = 42, Z0 = -5, Z1 = MTN.L + 24, nx = Math.round((X1 - X0) / ST), nz = Math.round((Z1 - Z0) / ST), pos = new Float32Array((nx + 1) * (nz + 1) * 3), col = new Float32Array((nx + 1) * (nz + 1) * 3), idx = [], cS = new THREE.Color('#f7fafd'), cP = new THREE.Color('#e3eef9'), cR = new THREE.Color('#8e99a6'), cT = new THREE.Color();
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++){ const lx = X0 + i * ST, lz = Z0 + j * ST, [x, z] = mtnW(lx, lz), h = mtnH(x, z), k = (j * (nx + 1) + i) * 3; pos[k] = x; pos[k + 1] = h === null ? -1.6 : h; pos[k + 2] = z;
+      const cz = clamp(lz, 0, MTN.L), hw = mtnHW(cz), out = Math.hypot(lx - clamp(lx, -hw, hw), lz - cz), t = mtnT(lz), onP = out <= 0 && t > 0.01 && t < 0.99 && Math.abs(lx - mtnC(lz)) < 5;
+      if (out > 0.4) cT.copy(cR).lerp(cS, 0.25 + 0.3 * (((i * 7 + j * 13) % 5) / 5)); else cT.copy(onP ? cP : cS); col[k] = cT.r; col[k + 1] = cT.g; col[k + 2] = cT.b; }
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++){ const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1; if (pos[a * 3 + 1] < -1 && pos[b * 3 + 1] < -1 && pos[c * 3 + 1] < -1 && pos[d * 3 + 1] < -1) continue; idx.push(a, c, b, b, c, d); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 })); m.receiveShadow = true; g.add(m); }
+  const Y = (lx, lz) => { const [x, z] = mtnW(lx, lz); return mtnH(x, z) || 0; }, put = (o, lx, lz, dy) => { const [x, z] = mtnW(lx, lz); o.position.set(x, Y(lx, lz) + (dy || 0), z); g.add(o); return o; };
+  /* 雪松：雪道外面一大片，雪道邊也有幾棵（撞到會摔倒） */
+  { const T = []; for (let n = 0; n < 420 && T.length < 78; n++){ const lz = 14 + rr() * (MTN.L - 26), hw = mtnHW(lz), lx = (rr() * 2 - 1) * (hw - 1.2), off = Math.abs(lx - mtnC(lz)), lk = SKI.LIFT0.lx + (SKI.LIFT1.lx - SKI.LIFT0.lx) * ((lz - SKI.LIFT0.lz) / (SKI.LIFT1.lz - SKI.LIFT0.lz)); if (off < 6.4 || Math.abs(lx - lk) < 2.6 || T.some(q => Math.hypot(q.lx - lx, q.lz - lz) < 2.4)) continue; T.push({ lx, lz, s: 0.8 + rr() * 0.7 }); }
+    const cone = new THREE.ConeGeometry(1, 1.5, 7), im = new THREE.InstancedMesh(cone, mat('#3f6f5a', 0.9), T.length * 3), sn = new THREE.InstancedMesh(cone, mat('#f4f8fc', 0.9), T.length * 3), tk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.2, 0.9, 6), mat('#6b4a32', 0.9), T.length), M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3();
+    T.forEach((q, n) => { const [x, z] = mtnW(q.lx, q.lz), y = Y(q.lx, q.lz); SKI.trees.push({ x, z, r: 0.55 * q.s }); addCircleCol(x, z, 0.4 * q.s);
+      M4.compose(V.set(x, y + 0.45 * q.s, z), Q, S.set(q.s, q.s, q.s)); tk.setMatrixAt(n, M4);
+      for (let k = 0; k < 3; k++){ const r = (1.25 - k * 0.33) * q.s, yy = y + (1.3 + k * 0.85) * q.s; M4.compose(V.set(x, yy, z), Q, S.set(r, q.s, r)); im.setMatrixAt(n * 3 + k, M4); M4.compose(V.set(x, yy + 0.42 * q.s, z), Q, S.set(r * 0.62, q.s * 0.5, r * 0.62)); sn.setMatrixAt(n * 3 + k, M4); } });
+    im.castShadow = true; g.add(im, sn, tk); }
+  /* 小木屋（山腳西邊）：木牆、積雪的斜屋頂、煙囪、門朝東、窗戶透黃光 */
+  { const L = SKI.LODGE, h = new THREE.Group(); put(h, L.lx, L.lz); const wood = mat('#8a5a3c', 0.85), dark = mat('#5b3a26', 0.9), snow = mat('#f6f9fc', 0.9);
+    h.add(box([5.6, 2.8, 4.6], null, [0, 1.4, 0], wood)); for (const sz of [-1, 1]){ const r = box([6.4, 0.3, 3.1], null, [0, 3.55, sz * 1.25], dark); r.rotation.x = sz * 0.62; h.add(r); const s2 = box([6.5, 0.22, 3.15], null, [0, 3.78, sz * 1.25], snow); s2.rotation.x = sz * 0.62; h.add(s2); }
+    for (const sx of [-1, 1]){ const sh = new THREE.Shape(); sh.moveTo(-2.3, 0); sh.lineTo(2.3, 0); sh.lineTo(0, 1.62); sh.lineTo(-2.3, 0); const gb = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshStandardMaterial({ color: '#8a5a3c', roughness: 0.85, side: THREE.DoubleSide })); gb.rotation.y = Math.PI / 2; gb.position.set(sx * 2.79, 2.8, 0); h.add(gb); }   /* 山牆的三角形 */
+    h.add(box([0.12, 2.0, 1.1], '#4a2f1e', [2.84, 1.0, 0.6])); const wm = new THREE.MeshStandardMaterial({ color: '#ffe9a8', emissive: '#ffcf6a', emissiveIntensity: 0.9 }); h.add(box([0.1, 0.9, 1.0], null, [2.84, 1.6, -1.1], wm)); h.add(box([1.2, 0.9, 0.1], null, [-1, 1.6, 2.33], wm));
+    h.add(box([0.7, 1.6, 0.7], '#7d7f86', [-1.6, 4.6, -0.6])); h.add(box([0.8, 0.18, 0.8], null, [-1.6, 5.45, -0.6], snow));
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.7), new THREE.MeshBasicMaterial({ map: signTex('🎿 雪松山滑雪場', '#2b4a6a', '#f6fafc', 768, 128) })); sg.position.set(2.9, 3.05, 0); sg.rotation.y = Math.PI / 2; h.add(sg);
+    { const [x, z] = mtnW(L.lx, L.lz); addBoxCol(x, z, 5.8, 4.8); }
+    /* 滑雪板架：門口南邊，五雙立著的滑雪板 */
+    const rk = new THREE.Group(); rk.position.set(3.6, 0, 2.6); h.add(rk); rk.add(box([0.1, 1.2, 2.2], '#5b3a26', [0, 0.6, 0])); rk.add(box([0.5, 0.08, 2.3], '#5b3a26', [0.15, 1.0, 0])); ['#e0564f', '#2f89c7', '#f2c94c', '#3fbf9d', '#9b7bff'].forEach((c, i) => { for (const dz of [-0.07, 0.07]){ const s = box([0.03, 1.6, 0.1], c, [0.32, 0.82, -0.85 + i * 0.42 + dz]); s.rotation.z = -0.16; rk.add(s); } });
+    /* 火爐 */
+    const fp = new THREE.Group(); fp.position.set(6.2, 0, -1.6); h.add(fp); for (let k = 0; k < 8; k++){ const st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2, 0), mat('#7d7f86', 0.9)); st.position.set(Math.cos(k / 8 * 6.283) * 0.55, 0.12, Math.sin(k / 8 * 6.283) * 0.55); fp.add(st); } const fl = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), new THREE.MeshBasicMaterial({ color: '#ffb23f' })); fl.position.y = 0.5; fp.add(fl); SKI.flame = fl; { const pl = new THREE.PointLight('#ffb060', 1.2, 7); pl.position.y = 0.9; fp.add(pl); SKI.fireL = pl; }
+    for (const a of [0.6, 2.2, 3.9]) { const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.1, 8), dark); lg.rotation.z = Math.PI / 2; lg.rotation.y = a; lg.position.set(Math.cos(a) * 1.5, 0.22, Math.sin(a) * 1.5); fp.add(lg); }
+    /* 成績看板（屋子東牆） */
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 320; SKI.cv = cv; const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; SKI.tex = tx; const bd = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.25), new THREE.MeshBasicMaterial({ map: tx })); bd.position.set(2.88, 1.55, -1.1 + 2.9); bd.rotation.y = Math.PI / 2; bd.position.z = 1.9; h.add(bd); skiBoard(); }
+  /* 終點拱門、出發門、出發小屋 */
+  for (const [lz, txt, bg] of [[SKI.FINZ, '終點', '#e0564f'], [SKI.STARTZ, '出發', '#2f89c7']]){ const c = mtnC(lz), a = new THREE.Group(); put(a, c, lz); for (const sx of [-1, 1]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.2, 8), mat('#f4f1e6', 0.6)); p.position.set(sx * 4.2, 1.6 + (Y(c + sx * 4.2, lz) - Y(c, lz)), 0); a.add(p); } for (const ry of [0, Math.PI]){ const bn = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 0.8), new THREE.MeshBasicMaterial({ map: signTex(txt, bg, '#fff7e0', 1024, 96) })); bn.position.set(0, 3.2, ry ? -0.02 : 0.02); bn.rotation.y = ry; a.add(bn); } }
+  { const hut = new THREE.Group(); put(hut, -6.5, MTN.L - 4); hut.add(box([2.6, 2.2, 2.4], '#8a5a3c', [0, 1.1, 0])); const rf = box([3.0, 0.25, 2.8], '#f6f9fc', [0, 2.4, 0]); rf.rotation.z = 0.12; hut.add(rf); const [x, z] = mtnW(-6.5, MTN.L - 4); addBoxCol(x, z, 2.8, 2.6); }
+  /* 旗門 */
+  SKI.gates.forEach((G, i) => { if (i === 0 || i === SKI.gates.length - 1) return; const m = raceGateMesh('ski', G, i, false); m.children.forEach((p, k) => { p.position.y = mtnH(k ? G.bx : G.ax, G.az) || 0; }); g.add(m); });
+  /* 纜車：上下兩個站、中間的塔、兩條鋼索、一圈吊椅 */
+  { const A = SKI.LIFT0, B = SKI.LIFT1, steel = mat('#5d6670', 0.5), len = Math.hypot(B.lx - A.lx, B.lz - A.lz), ang = Math.atan2(B.lx - A.lx, B.lz - A.lz);
+    for (const [S0, top] of [[A, 0], [B, 1]]){ const st = new THREE.Group(); put(st, S0.lx, S0.lz); st.rotation.y = ang; st.add(box([0.4, 4.6, 0.4], null, [0, 2.3, top ? 1.2 : -1.2], steel)); const wh = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.16, 16), mat('#e0564f', 0.5)); wh.position.set(0, 4.6, 0); st.add(wh); st.add(box([0.3, 0.3, 2.6], null, [0, 4.75, top ? 0.2 : -0.2], steel)); st.add(box([3.2, 0.12, 2.6], '#b88a5a', [0, 0.06, 0])); const [x, z] = mtnW(S0.lx, S0.lz + (top ? 1.2 : -1.2)); addCircleCol(x, z, 0.4); }
+    const nT = 4; for (let k = 1; k <= nT; k++){ const u = k / (nT + 1), lx = A.lx + (B.lx - A.lx) * u, lz = A.lz + (B.lz - A.lz) * u, gy = Y(lx, lz), cy = MTN.y + 4.6 + MTN.H * u, tw = new THREE.Group(); put(tw, lx, lz); tw.rotation.y = ang; tw.add(box([0.34, cy - gy + 0.2, 0.34], null, [0, (cy - gy + 0.2) / 2, 0], steel)); tw.add(box([2.4, 0.2, 0.3], null, [0, cy - gy + 0.15, 0], steel)); const [x, z] = mtnW(lx, lz); addCircleCol(x, z, 0.35); }
+    for (const sx of [-0.9, 0.9]){ const [x0, z0] = mtnW(A.lx, A.lz), [x1, z1] = mtnW(B.lx, B.lz), y0 = MTN.y + 4.6, y1 = y0 + MTN.H, cl = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, Math.hypot(len, MTN.H), 5), mat('#2b2f36', 0.6)); cl.position.set((x0 + x1) / 2 + Math.cos(ang) * sx, (y0 + y1) / 2, (z0 + z1) / 2 - Math.sin(ang) * sx); cl.lookAt(x1 + Math.cos(ang) * sx, y1, z1 - Math.sin(ang) * sx); cl.rotateX(Math.PI / 2); g.add(cl); }
+    SKI.nChair = Math.max(6, Math.round(len * 2 / SKI.GAP)); for (let i = 0; i < SKI.nChair; i++){ const c = new THREE.Group(); c.add(box([0.06, 2.2, 0.06], null, [0, -1.1, 0], steel)); c.add(box([1.3, 0.08, 0.5], '#e0564f', [0, -2.2, 0])); c.add(box([1.3, 0.5, 0.06], '#e0564f', [0, -1.95, -0.25])); c.add(box([1.3, 0.05, 0.05], null, [0, -1.75, 0.3], steel)); g.add(c); SKI.chairs.push(c); } SKI.liftAng = ang; }
+  /* 教練 */
+  try { const [x, z] = mtnW(SKI.COACH.lx, SKI.COACH.lz), f = new Fisher({ shirt: '#e0564f', hat: '#2f89c7', name: '滑雪教練 小嵐', kind: 'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.nm.classList.add('quest'); f.say('🎿', 'emote', 99999); SKI.npc = f; } catch(e){} }
+function skiBoard(){ const cv = SKI.cv; if (!cv) return; const c = cv.getContext('2d'); c.fillStyle = '#2b4a6a'; c.fillRect(0, 0, 512, 320); c.fillStyle = '#ffe08a'; c.font = '800 40px sans-serif'; c.textAlign = 'center'; c.fillText('🎿 雪松山・今天最快', 256, 54); c.font = '700 28px sans-serif'; c.fillStyle = '#ffffff'; const T = RACE.top.ski && RACE.top.ski.d, L = T && Array.isArray(T.day) ? T.day.slice(0, 5) : [];
+  if (!L.length){ c.fillText('今天還沒有人滑完', 256, 150); c.fillStyle = '#bfe6f5'; c.fillText('坐纜車上山試試看', 256, 200); } else { c.textAlign = 'left'; L.forEach((r, i) => { let nm = String(r.n || '釣客').slice(0, 8); try { nm = clean(nm); } catch(e){} c.fillText(`${i + 1}. ${nm}`, 30, 110 + i * 42); c.textAlign = 'right'; c.fillText(raceFmt(+r.ms), 482, 110 + i * 42); c.textAlign = 'left'; }); }
+  if (SKI.tex) SKI.tex.needsUpdate = true; }
+/* 滑雪板：掛在角色腳下的兩片板子＋兩支雪杖（自己和別人都用這個） */
+function skiGear(f, on, pose){ if (!f || !f.av || !f.av.g) return; f.skiM = on ? (pose ? 1 : 2) : 0; if (on && !f.skiG){ const g = new THREE.Group(); for (const sx of [-1, 1]){ const s = box([0.1, 0.025, 1.55], '#e0564f', [sx * 0.12, 0.02, 0.12]); g.add(s); const tip = box([0.1, 0.025, 0.2], '#e0564f', [sx * 0.12, 0.06, 0.95]); tip.rotation.x = -0.45; g.add(tip); const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.05, 5), mat('#3a3f46', 0.5)); pole.position.set(sx * 0.34, 0.55, -0.12); pole.rotation.x = -0.5; g.add(pole); } f.av.g.add(g); f.skiG = g; }
+  else if (!on && f.skiG){ try { f.skiG.parent.remove(f.skiG); } catch(e){} f.skiG = null; } f.ski = !!(on && pose); }
+function skiEnter(){ if (!skiAtTop(4)){ toast('要到山頂的出發門才能出發（坐纜車上去）'); return false; } if (F.phase !== 'idle') cancelFishing(); if (Bike.on) bikeOff(); const lz = SKI.STARTZ + 1.6, c = mtnC(lz), [x, z] = mtnW(c + (Math.random() - 0.5) * 5, lz); me.pos.x = x; me.pos.z = z; me.rot = Math.PI; cam.yaw = 0; SKI.on = true; SKI.v = 0; SKI.vy = 0; SKI.air = 0; SKI.fall = 0; SKI.doneT = 0; SKI.y = groundHeight(x, z); skiGear(me, true, true); pushPresence(true); return true; }
+function skiStop(){ if (!SKI.on) return; SKI.on = false; SKI.v = 0; me.bikeLean = 0; me.skiFall = false; if (SKI.camP){ cam.pitch = SKI.camP[0]; cam.dist = SKI.camP[1]; SKI.camP = null; } skiGear(me, false); me.speed = 0; pushPresence(true); }
+function skiFinish(){ SKI.doneT = now(); }
+/* 滑行：重力沿著面向的方向往下拉；搖桿左右轉、往前蹲低（阻力小）、往後煞車；離開雪道是深雪（很慢）；撞樹摔倒 */
+function skiDrive(dt, ix, iz, L){ if (F.phase !== 'idle') cancelFishing(); const c = RACE.cur, tn = now(), wait = c && c.kind === 'ski' && c.st === 'wait'; dt = Math.min(dt, 0.05); cam.yaw = lerpAngle(cam.yaw, me.rot + Math.PI, 1 - Math.exp(-5 * dt)); me.sitting = false;
+  if (!SKI.camP) SKI.camP = [cam.pitch, cam.dist]; cam.pitch += (0.5 - cam.pitch) * Math.min(1, dt * 3); cam.dist += (8.5 - cam.dist) * Math.min(1, dt * 3);   /* 滑雪時鏡頭壓低在背後，看得到前面的旗門；滑完還原 */
+  if (wait){ SKI.v = 0; me.speed = 0; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; SKI.y = me.baseY; return; }
+  if (SKI.fall > 0){ SKI.fall -= dt; SKI.v = Math.max(0, SKI.v - 14 * dt); me.skiFall = SKI.fall > 0.35; if (SKI.fall <= 0) me.skiFall = false; }
+  const steer = SKI.fall > 0 ? 0 : clamp(ix, -1, 1), rate = 1.9 - 0.6 * Math.min(1, SKI.v / 12); let a = me.rot - steer * rate * dt, da = ((a - Math.PI + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; da = clamp(da, -1.3, 1.3); me.rot = Math.PI + da;
+  SKI.lean += (clamp(steer * 0.38 * Math.min(1, SKI.v / 5), -0.4, 0.4) - SKI.lean) * Math.min(1, dt * 8); me.bikeLean = SKI.lean;
+  const fx = Math.sin(me.rot), fz = Math.cos(me.rot), x = me.pos.x, z = me.pos.z, h0 = groundHeight(x, z), h1 = groundHeight(x + fx * 0.6, z + fz * 0.6), grade = (h0 - h1) / 0.6;   /* 正的＝往下 */
+  const lx = x - MTN.x, lz = z - MTN.z0, off = Math.abs(lx - mtnC(lz)), deep = off > 5.6 && mtnT(lz) > 0.02 && mtnT(lz) < 0.98, tuck = iz < -0.45 && SKI.fall <= 0, brake = iz > 0.45, flat = lz < MTN.base + 1 || lz > MTN.base + MTN.len - 0.5;
+  if (SKI.air <= 0){ let acc = 9.8 * 0.9 * clamp(grade, -0.5, 0.9) - (tuck ? 0.017 : 0.028) * SKI.v * SKI.v - 0.35 - Math.abs(steer) * rate * SKI.v * 0.13 - (brake ? 6.5 : 0) - (deep ? 3 + SKI.v * 0.6 : 0) - (flat && !c ? 2.2 : 0) - (SKI.doneT ? 5.5 : 0);
+    if (SKI.v < 1.3 && !brake && SKI.fall <= 0 && !SKI.doneT && c && c.st === 'run') acc = Math.max(acc, 1.6);   /* 卡在深雪或坡度太小：用雪杖撐著慢慢走，不會停死 */
+    if (flat && c && c.st === 'run' && SKI.v < 2.5 && lz > MTN.base + MTN.len - 0.5) acc = 3;   /* 出發門前面是平的：自動滑出去 */
+    SKI.v = clamp(SKI.v + acc * dt, 0, 15); }
+  let nx = x + fx * SKI.v * dt, nz = z + fz * SKI.v * dt; if (!mtnOn(nx, nz, 0)){ if (mtnOn(x, nz, 0)){ nx = x; SKI.v *= 0.9; } else if (mtnOn(nx, z, 0)){ nz = z; SKI.v *= 0.9; } else { SKI.v *= 0.3; nx = x; nz = z; } }   /* 滑到山的邊緣：沿著邊滑，不會卡死 */
+  if (SKI.fall <= 0 && SKI.v > 2.5) for (const t of SKI.trees){ if (Math.abs(t.x - nx) < 1.4 && Math.hypot(t.x - nx, t.z - nz) < t.r + 0.35){ SKI.fall = 1.5; SKI.v *= 0.2; nx = x - fx * 0.3; nz = z - fz * 0.3; flash('💥 撞到雪松了！', 1.1); try { SFX.fail(); buzz([60, 40, 120]); } catch(e){} break; } }
+  me.pos.x = nx; me.pos.z = nz; const gh = groundHeight(nx, nz);
+  if (SKI.air > 0 || gh < SKI.y - 0.12){ if (SKI.air <= 0){ SKI.air = 0.001; SKI.vy = Math.min(2.6, SKI.v * 0.22); } SKI.vy -= 14 * dt; SKI.y += SKI.vy * dt; SKI.air += dt; if (SKI.y <= gh){ SKI.y = gh; if (SKI.air > 0.25){ try { SFX.plop(); } catch(e){} FX.emit(nx, gh + 0.2, nz, 14, '#ffffff', 1.4, 2.2, 0.6); } SKI.air = 0; SKI.vy = 0; } } else SKI.y = gh;
+  me.baseY = SKI.y; Jump.gy = SKI.y; me.speed = SKI.v;
+  if (SKI.v > 3 && SKI.air <= 0 && Math.random() < dt * (10 + Math.abs(steer) * 20)) FX.emit(nx - fx * 0.5, gh + 0.1, nz - fz * 0.5, 2, '#ffffff', 0.5, 1.0 + Math.abs(steer), 0.5);
+  /* 滑完了：衝過終點以後在山腳平地停下來，自動脫掉滑雪板；沒在比賽時停太久也脫掉 */
+  if (SKI.doneT && (SKI.v < 0.6 || tn - SKI.doneT > 6)) skiStop(); else if (!c && !SKI.doneT){ SKI.idle = SKI.v < 0.4 ? (SKI.idle || 0) + dt : 0; if (SKI.idle > 3 || lz < MTN.base - 2) skiStop(); } }
+/* 纜車：等下一張吊椅到站 → 坐上去 → 到山頂下來 */
+function skiLiftGo(){ if (SKI.lift || SKI.on) return; if (F.phase !== 'idle') cancelFishing(); if (Bike.on) bikeOff(); let bi = 0, bu = -1; for (let i = 0; i < SKI.nChair; i++){ const u = skiLiftU(i); if (u > bu){ bu = u; bi = i; } } SKI.lift = { i: bi, st: 'wait', t: now() }; toast('🚡 跟小木屋借了滑雪板，下一張吊椅來了就坐上去'); }
+function skiLiftTick(dt){ if (F.phase !== 'idle') cancelFishing(); const Lf = SKI.lift, u = skiLiftU(Lf.i); me.speed = 0;
+  if (Lf.st === 'wait'){ const [x, z] = mtnW(SKI.LIFT0.lx + 0.9, SKI.LIFT0.lz); me.pos.x += (x - me.pos.x) * Math.min(1, dt * 6); me.pos.z += (z - me.pos.z) * Math.min(1, dt * 6); me.rot = lerpAngle(me.rot, SKI.liftAng, Math.min(1, dt * 8)); me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; if (u < 0.3 || now() - Lf.t > 4){ Lf.st = 'ride'; me.sitting = true; skiGear(me, true, false); pushPresence(true); } return; }
+  if (u >= 0.495 || now() - Lf.t > 40){ const [x, z] = mtnW(SKI.LIFT1.lx - 2.2, SKI.LIFT1.lz - 1.5); me.pos.x = x; me.pos.z = z; me.sitting = false; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; SKI.lift = null; skiGear(me, false); pushPresence(true); toast('🎿 到山頂了！走到「出發」的門按「出發」'); return; }
+  const [x, y, z] = skiLiftPos(u); me.pos.x = x; me.pos.z = z; me.baseY = y - 2.2 - 0.42; Jump.gy = me.baseY; me.rot = SKI.liftAng; me.sitting = true; cam.yaw = lerpAngle(cam.yaw, SKI.liftAng + Math.PI, 1 - Math.exp(-2 * dt)); }
+function skiTick(dt, t){ if (!skiNearMtn()){ if (SKI.g && SKI.g.visible){ SKI.g.visible = false; if (SKI.npc){ SKI.npc.av.g.visible = false; SKI.npc.tag.style.display = 'none'; } } if (SKI.on) skiStop(); return; } mtnBuild(); const vis = !onIsle && !House.on && !Dive.on && !inIndoor() && !inHall() && !inStad(); SKI.g.visible = vis; const tn = now();
+  for (let i = 0; i < SKI.chairs.length; i++){ const [x, y, z] = skiLiftPos(skiLiftU(i)), c = SKI.chairs[i]; c.position.set(x, y, z); c.rotation.y = SKI.liftAng; c.rotation.x = Math.sin(tn * 1.3 + i) * 0.03; }
+  if (SKI.flame){ SKI.flame.scale.set(1 + Math.sin(tn * 11) * 0.12, 1 + Math.sin(tn * 7.3) * 0.2, 1 + Math.cos(tn * 9) * 0.12); if (SKI.fireL) SKI.fireL.intensity = 1.1 + Math.sin(tn * 13) * 0.25; }
+  if (SKI.npc){ const f = SKI.npc, d = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z); if (d < 45 && vis){ f.av.g.visible = true; f.update(0.016, tn); f.placeTag(); } else { f.av.g.visible = false; f.tag.style.display = 'none'; } }
+  for (const p of peers.values()){ const f = p.fisher; if (!f) continue; const want = p.pres ? (p.pres.sk | 0) : 0; if (want !== (f.skiM | 0)) skiGear(f, want > 0, want === 1); }
+  if (frameNo % 120 === 11) brTopLoad('ski', skiBoard); }
+function skiNear(){ if (!SKI.built) return null;
+  if (SKI.npc && Math.hypot(me.pos.x - SKI.npc.pos.x, me.pos.z - SKI.npc.pos.z) < 2.4) return { id: 'skicoach', label: '滑雪教練 小嵐', mode: 'skicoach', sub: '🎿 排行・怎麼滑' };
+  { const [x, z] = mtnW(SKI.LIFT0.lx, SKI.LIFT0.lz + 1.2); if (Math.hypot(me.pos.x - x, me.pos.z - z) < 2.6) return { id: 'skilift', label: '坐纜車', mode: 'skilift', sub: '🚡 上山頂（大約 13 秒）' }; }
+  if (skiAtTop(3.4) && !RACE.cur){ const iv = RACE.inv && RACE.inv.kind === 'ski' ? RACE.inv : null; return { id: 'racego', label: iv ? '一起出發' : '出發', mode: 'racego', kind: 'ski', sub: iv ? `🎿 跟 ${iv.nm} 一起比` : '🎿 滑到山腳的終點・6 秒後開始' }; }
+  return null; }
+
 /* v544 球類比賽結束回報戰績（只當紀錄和排行，沒有獎勵） */
 function sportReport(sport, mid, res, team){ try { if (!Cloud.on || !Cloud.sb || !mid) return; Cloud.sb.rpc('sport_report', { p_sport: sport, p_mid: String(mid).slice(0, 64), p_res: res, p_team: !!team }).then(() => {}, () => {}); } catch(e){} }
 function peerCardOpen(pk, q){ const u = q && q.pres && typeof q.pres.u === 'string' ? q.pres.u : ''; if (!u){ toast('這位玩家沒有登入，沒有資料頁'); return; } if (!Cloud.on){ toast('要連上雲端才能看別人的資料'); return; } try { SFX.click(); } catch(e){} openCard(u, String(peerName(q) || '玩家').slice(0, 16), pk); }
@@ -10270,9 +10518,9 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   { const nav = el('div', 'pc-nav'); for (const [k, lab] of tabs){ const b = el('button', 'pc-tab' + (c._tab === k ? ' on' : ''), lab); b.addEventListener('click', () => { c._tab = k; cardDraw(c, r, peerId); }); nav.appendChild(b); } left.appendChild(nav); }
   { const D = r.duel, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '⚔️ 釣魚對決（排位賽）')); const g = el('div', 'pc-stats pc-sport'); const tt = duelTierOf(D ? D.stars : 0); for (const [ic, lab, val] of [[tt[2], '段位', D ? `${tt[1]} ${D.stars}⭐` : '—'], ['📊', '勝敗', D ? `${D.wins} 勝 ${D.losses} 敗` : '—'], ['🔥', '最多連勝', D ? String(D.best) : '—']]){ const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }
   /* v546 動態頁：探索進度、釣魚大賽名次、最近動態（作者：參考圖裡還沒做的三樣） */
-  { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🧭 探索和釣魚大賽')); const g = el('div', 'pc-stats pc-sport'); const cell = (ic, lab, val, sub) => { const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); if (sub) d.appendChild(el('span', '', sub)); g.appendChild(d); };
+  { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🧭 探索和比賽')); const g = el('div', 'pc-stats'); const cell = (ic, lab, val, sub) => { const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); if (sub) d.appendChild(el('span', '', sub)); g.appendChild(d); };
     const ex = new Set(isMe ? [...visited] : Array.isArray(r.explore) ? r.explore : []); const nEx = TRAVEL.filter(x => ex.has(x.id)).length, T = r.tourney || {};
-    cell('🧭', '去過的地點', `${nEx}／${TRAVEL.length}`, nEx >= TRAVEL.length ? '全部走遍了' : ''); cell('🏆', '大賽最佳名次', T.best ? `第 ${T.best} 名` : '—'); cell('🎏', '大賽參加', `${T.plays || 0} 場`, T.top3 ? `前三名 ${T.top3} 次` : ''); sec.appendChild(g); P4.appendChild(sec); }
+    cell('🧭', '去過的地點', `${nEx}／${TRAVEL.length}`, nEx >= TRAVEL.length ? '全部走遍了' : ''); cell('🏆', '大賽最佳名次', T.best ? `第 ${T.best} 名` : '—'); cell('🎏', '大賽參加', `${T.plays || 0} 場`, T.top3 ? `前三名 ${T.top3} 次` : ''); { const R = r.race || {}, mine = isMe ? RACE.best : {}; for (const [k, ic, lab] of [['boat', '🚣', '划船最快'], ['ski', '🎿', '滑雪最快']]){ const b = Math.min(+(R[k] && R[k].best) || Infinity, +mine[k] || Infinity); cell(ic, lab, isFinite(b) ? raceFmt(b) : '—'); } } sec.appendChild(g); P4.appendChild(sec); }   /* v548 划船賽、滑雪的最快時間 */
   { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '📰 最近動態')); const ul = el('div', 'pc-feed'); const RES = { w: '贏了', l: '輸了', d: '平手' }, SP = { soccer: ['⚽', '足球'], basket: ['🏀', '籃球'], badminton: ['🏸', '羽球'] };
     for (const x of (Array.isArray(r.recent) ? r.recent : [])){ if (ul.children.length >= 4) break; let ic = '', tx = ''; try {
         if (x.k === 'c'){ const fz = FISH_BY_ID[x.f]; if (!fz) continue; ic = x.r === '傳說' ? '✨' : '🐟'; tx = `釣到 ${fz.name} ${(+x.w).toFixed(1)} kg`; }
@@ -11616,6 +11864,7 @@ function updateVenues(dt, t){
   try { fbTick(dt, t); } catch(e){}
   try { bkTick(dt, t); } catch(e){}
   try { bdTick(dt, t); } catch(e){}
+  try { raceTick(dt); brTick(dt, t); skiTick(dt, t); } catch(e){ if (!window.__raceErr){ window.__raceErr = 1; console.warn('race', e); } }
   try { duelTick(); } catch(e){}
   /* v511 作者：「畫面都被切掉了」→ 整頁偶爾會被捲動（上面的選單跑到畫面外面）；沒在打字的時候一律捲回最上面 */
   { const se = document.scrollingElement || document.documentElement, ae = document.activeElement; if ((se.scrollTop || document.body.scrollTop || window.scrollY || se.scrollLeft) && !(ae && /INPUT|TEXTAREA/.test(ae.tagName))){ se.scrollTop = 0; se.scrollLeft = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); } }
@@ -11693,7 +11942,7 @@ function renderFerry(body){
     tb.append(cb, el('span', '', '👥 組隊出海：邀請大廳裡的人一起去（祕密窩點不會邀請，別人不會知道）')); body.appendChild(tb);
     body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。')); }
   { body.appendChild(el('div', 'dexhead', '⛴️ 海上的好地方')); const ul = el('ul', 'shoplist');
-    for (const [id, ic, nm, ds] of [['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜'], ['greendock', '🌲', '苔森之島', '很大的森林島：長滿青苔的巨木、北邊的瀑布、中間的湖、流進海裡的溪，南邊是沙灘。地方很大，到處有長椅，適合找個角落慢慢釣、跟朋友聊天。有鹿和猴子']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
+    for (const [id, ic, nm, ds] of [['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰，南邊是雪松山滑雪場（坐纜車上山、滑下來比誰快）。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜'], ['greendock', '🌲', '苔森之島', '很大的森林島：長滿青苔的巨木、北邊的瀑布、中間的湖、流進海裡的溪，南邊是沙灘。地方很大，到處有長椅，適合找個角落慢慢釣、跟朋友聊天。有鹿和猴子']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); travelTo(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
@@ -11729,6 +11978,7 @@ function renderFerry(body){
   cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(), [x, z] = toW((e.clientX - r.left) / r.width * S, (e.clientY - r.top) / r.height * S), ok = waterAt(x, z) && Math.hypot(x - ISLE.x, z - ISLE.z) > 40;
     pick = [x, z, ok]; draw(pick); go.disabled = !ok; lbl.textContent = ok ? `選好了：${spotName(x, z)}（${x.toFixed(0)}, ${z.toFixed(0)}）` : '那裡不是水面，換一個地方'; });
   go.addEventListener('click', () => { if (pick && pick[2]) ferryTo(pick[0], pick[1], `自選地點（${spotName(pick[0], pick[1])}）`); });
+  body.appendChild(el('p', 'sub', '🚣 阿海：「我在石頭堤防外面的浮台辦了划船賽，有空來比一場！冰封群島南邊的雪松山也開了滑雪場。」'));   /* v548 */
   body.appendChild(el('div', 'dexhead', '🌊 外海'));
   const u2 = el('ul', 'shoplist');
   for (const d0 of FERRY.dest){ const li = el('li'); li.appendChild(el('span', 'dishic', '🌊')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', d0.name)); d.appendChild(el('div', 'sub2', d0.desc)); li.appendChild(d);
@@ -13144,6 +13394,8 @@ function sellFish(ts, batch){
 const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', label:'魚市場・賣魚', mode:'sell' }, { id:'cook', label:'潮汐食堂', mode:'cook' }, { id:'tailor', label:'阿綾服裝店', mode:'tailor' }, { id:'mu', label:'阿木木工坊', mode:'mu' }, { id:'fu', label:'魚市場・阿福海產', mode:'fu' }, { id:'cai', label:'阿彩畫廊', mode:'cai' }, { id:'market', label:'魚市場・釣客擺攤', mode:'market' } ];
 function nearShop(){
   if (myBoat) return null;
+  if (SKI.on || SKI.lift) return null;   /* 滑雪中、坐纜車時不跳其他按鈕 */
+  if (!onIsle && !House.on){ const rr = brNear() || skiNear(); if (rr) return rr; }   /* v548 划船賽浮台、雪松山 */
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
   if (ferryNpc && Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z) < 2.3) return { id:'ferry', label:FERRY.name, mode:'ferry' };
   if (Math.hypot(me.pos.x - SUBDOCK.x, me.pos.z - SUBDOCK.z) < 2.4) return { id:'subdock', label:'🚢 潛水艇碼頭', mode:'sub' };
@@ -13184,7 +13436,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '魚市場・賣魚';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'racego'){ raceCall(sh.kind); return; } if (sh.mode === 'raceboard'){ raceCard('boat'); return; } if (sh.mode === 'skicoach'){ raceCard('ski'); return; } if (sh.mode === 'skilift'){ skiLiftGo(); return; } if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -14567,6 +14819,7 @@ function presenceObj(){
   { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }   /* v521 排位賽段位（名字旁邊掛稱號用） */
   if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat));   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
   if (mySeat) o.st = 1;
+  try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
   if (Bike.on) o.bk = 1;   /* v438 在騎腳踏車 */
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
@@ -14707,7 +14960,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {});
-    room.on('pool', poolOnMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {});
+    room.on('pool', poolOnMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -16792,7 +17045,7 @@ function renderTab(){
     sec('🪪 個人名片', [
       '怎麼看：點左上角自己的頭像就是自己的資料頁。看別人的：直接點他的角色或頭上的名字；或打開「朋友」分頁，點名單裡任何人的頭像或名字（好友不在線上也看得到）。',
       '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最得意的三種魚（自己的名片上按「自己選三種魚」挑，沒挑就先放最重的三種）、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
-      '「📰 動態」那一頁：去過的地點（走到新地點就會記下來，總共 ' + TRAVEL.length + ' 個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）。',
+      '「📰 動態」那一頁：去過的地點（走到新地點就會記下來，總共 ' + TRAVEL.length + ' 個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）；還有划船賽和滑雪的最快時間。',
       '自己的資料頁可以按 ✏️ 寫一句話給別人看（最多 30 個字）；點大頭照（或旁邊的 📸）可以直接在同一頁換大頭照：選遠近、姿勢、角度、背景、外框，臉和衣服就是你現在的造型。',
       '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
     ]);
@@ -16817,6 +17070,22 @@ function renderTab(){
       '怎麼打：球飛過來的時候，你那一邊的地上會出現一個黃色圈圈，那就是球會掉下來的地方。跑到圈圈旁邊（1.7 公尺內），等球飛過一半以後按右下角「揮拍」。站得離圈圈越近、越接近球落地前一點點才打，打得越好；非常準的時候會變成「殺球」，球飛得很快。按太早或離太遠會揮空，要等一下才能再揮。',
       '打去哪裡：揮拍那一下你正在往左或往右跑，球就往那一邊飛；往網子跑是短球，往後退是長球；站著不動是隨機。球掉在你這邊的地上，對方得分。',
       '打完的勝敗會記到玩家資料頁（🏸 幾勝幾敗），沒有獎勵。',
+    ]);
+    sec('🚣 阿海的划船賽', [
+      '在哪裡：港口北邊的石頭堤防，走到往南那一段的外側（東邊），有一座木頭浮台：上面有小艇架、計時看板，海上有起點拱門。浮標一直漂在港口外面，平常划船經過也看得到。',
+      '怎麼開始：站到浮台靠海那一邊按「出發」，會坐上比賽用的小艇，6 秒後開始。這 6 秒內旁邊的人按「一起出發」就一起比；只有自己也可以，就是計時賽。',
+      '怎麼划：比賽用的小艇有慣性——直線會越划越快，急轉彎會掉速，所以轉彎要提早、畫大一點的弧。海面上有三段淺藍色箭頭的順流帶，順著划進去會加速。鏡頭會自己跟在船後面。',
+      '規則：照順序穿過每一對浮標（黃色箭頭指著下一道），最後回到起點拱門就是終點。漏掉的門不用回頭，每道加 8 秒。超過 5 分鐘不算。按上面的「✕ 放棄」可以中途結束。',
+      '成績：比完會跳出這一場的名次（一起比的人都會列出來）。計時看板寫今天最快的人，走過去按按鈕可以看今天和歷來的排行。最快時間會記到玩家資料頁的「📰 動態」。成績是手機回報的，所以沒有金幣獎勵。',
+    ]);
+    sec('🎿 雪松山滑雪場', [
+      '在哪裡：冰封群島（找港口的阿海坐船，或自己划船）南邊多了一座雪山。從冰湖往南走就到山腳：有一間小木屋、滑雪板架、火爐、成績看板，還有滑雪教練小嵐。',
+      '上山：走到山腳東邊的纜車站按「坐纜車」，會跟小木屋借滑雪板、坐上下一張吊椅，大約 13 秒到山頂。也可以自己慢慢走上去。',
+      '出發：走到山頂寫著「出發」的門按「出發」，6 秒後開始；這 6 秒內旁邊的人按「一起出發」就一起比。',
+      '怎麼滑：會自己往下滑。搖桿左右＝轉彎（轉太急會掉速），往前推＝蹲低（比較快），往後拉＝煞車。鏡頭會壓低跟在背後。',
+      '規則：穿過每一道旗門（一紅一藍兩支旗子中間），漏掉一道加 3 秒，不用回頭。滑出雪道是深雪，會變很慢；撞到雪松會摔倒，要等一下才爬得起來。中間有一個小跳台，衝過去會飛起來。終點在小木屋前面。',
+      '成績：跟划船賽一樣，有這一場的名次、今天最快和歷來排行（找教練小嵐看），最快時間記到玩家資料頁。沒有金幣獎勵。',
+      '滑完以後滑雪板會自動還回去。別人看得到你坐在纜車上、從山上滑下來。',
     ]);
     sec('🎱 潮汐撞球館', [
       '邀請對打：你在練習的時候，如果有別的玩家站在球桌旁邊，右下角會出現「邀請 某某 對打」，按下去對方會收到邀請，按接受就開始對打。也可以自己走到別人正在練習的球桌旁邊按「對打」直接加入。',
