@@ -1699,3 +1699,8 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .rc-my{font-weight:800;color:#18334a;margin:4px 0}
 #duelCard .rc-top{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media (max-width:420px){ #duelCard .rc-top{grid-template-columns:1fr} }
+
+/* v551 排位賽：選「一般」或「指定釣點賽」 */
+#duelCard .dq-pick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;margin:6px 0;padding:9px 12px;text-align:left}
+#duelCard .dq-pick b{font-size:14px}
+#duelCard .dq-pick small{font-size:11.5px;font-weight:600;opacity:.8}
