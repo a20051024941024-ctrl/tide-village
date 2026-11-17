@@ -9527,7 +9527,6 @@ function buildStadium(){ const S = STAD, g = new THREE.Group(); scene.add(g); Ve
       for (const sz of [-1, 1]){ const pp = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.7, 8), mat('#ffffff', 0.6)); pp.position.set(S.x + ex, Y + 0.85, S.z + sz * 1.9); pp.castShadow = true; g.add(pp); addCircleCol(S.x + ex, S.z + sz * 1.9, 0.14); } B(0.14, 0.14, 3.94, '#ffffff', ex, Y + 1.7, 0);
       const cv = document.createElement('canvas'); cv.width = cv.height = 32; const c2 = cv.getContext('2d'); c2.strokeStyle = '#ffffff'; c2.lineWidth = 1.5; for (let i = 0; i <= 8; i++){ c2.beginPath(); c2.moveTo(i * 4, 0); c2.lineTo(i * 4, 32); c2.moveTo(0, i * 4); c2.lineTo(32, i * 4); c2.stroke(); } const nt = new THREE.CanvasTexture(cv); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(6, 3); const nm = new THREE.MeshBasicMaterial({ map: nt, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
       const back = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 1.9), nm); back.position.set(S.x + ex + sx * 1.0, Y + 0.85, S.z); back.rotation.y = Math.PI / 2; back.rotation.z = 0; g.add(back); const topn = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 3.8), nm); topn.rotation.x = -Math.PI / 2; topn.rotation.z = Math.PI / 2; topn.position.set(S.x + ex + sx * 0.5, Y + 1.7, S.z); g.add(topn); FX.push(t2 => { back.position.x = S.x + ex + sx * (1.0 + Math.sin(t2 * 1.1 + sx) * 0.03); }); } }
-  { const bl = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), mat('#fbfbf6', 0.6)); bl.position.set(S.x, Y + 0.24, S.z); bl.castShadow = true; g.add(bl); }
   /* 南北看台（五階）；南邊中間留一個缺口當出入口 */
   const seatC = ['#4f8fe0', '#f2b532', '#e0564f', '#4fb07a', '#8e6bd0'];
   const stand = (x0, x1, sz) => { const L = x1 - x0, cx = (x0 + x1) / 2; for (let i = 0; i < 5; i++){ const z = sz * (13.4 + i * 0.75); B(L, 0.45 * (i + 1) + 0.3, 0.75, '#c9ccd2', cx, Y + (0.45 * (i + 1) + 0.3) / 2, z); B(L - 0.2, 0.08, 0.5, seatC[i], cx, Y + 0.45 * (i + 1) + 0.34, z - sz * 0.05, false); } B(L, 1.0, 0.12, '#8f98a3', cx, Y + 3.2, sz * 16.8, false); addBoxCol(S.x + cx, S.z + sz * 15.1, L, 3.9); };
@@ -9535,12 +9534,112 @@ function buildStadium(){ const S = STAD, g = new THREE.Group(); scene.add(g); Ve
   /* 東西兩端圍牆、計分板 */
   for (const sx of [-1, 1]){ B(0.5, 3.4, S.d - 1, '#e9e6dc', sx * (S.w / 2 - 0.6), Y + 1.7, 0); B(0.56, 0.5, S.d - 1, '#3f7fc8', sx * (S.w / 2 - 0.6), Y + 3.4, 0, false); addBoxCol(S.x + sx * (S.w / 2 - 0.6), S.z, 1.0, S.d); for (let i = 0; i < 5; i++) B(0.06, 1.3, 3.2, ['#e0564f', '#f2b532', '#4f8fe0', '#4fb07a', '#f4f1e6'][i], sx * (S.w / 2 - 0.92), Y + 1.9, -8.4 + i * 4.2, false); }
   for (const sz of [-1, 1]){ addBoxCol(S.x, S.z + sz * (S.d / 2 - 0.1), S.w, 0.6); for (const sx of [-1, 1]) B(4.4, 3.4, 0.4, '#e9e6dc', sx * 22.3, Y + 1.7, sz * (S.d / 2 - 0.4)); }
-  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192; const c2 = cv.getContext('2d'); c2.fillStyle = '#16202c'; c2.fillRect(0, 0, 512, 192); c2.fillStyle = '#ffd23f'; c2.font = '900 46px "Noto Sans TC", sans-serif'; c2.textAlign = 'center'; c2.fillText('潮汐體育場', 256, 60); c2.fillStyle = '#ff6a4a'; c2.font = '900 84px monospace'; c2.fillText('0  :  0', 256, 158); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sb = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 2.7), new THREE.MeshBasicMaterial({ map: tx })); sb.position.set(S.x - S.w / 2 + 0.95, Y + 5.4, S.z); sb.rotation.y = Math.PI / 2; g.add(sb); B(0.3, 3.1, 7.6, '#2a3644', -S.w / 2 + 0.75, Y + 5.4, 0); for (const sz of [-1, 1]) B(0.25, 4.2, 0.25, '#6f7882', -S.w / 2 + 0.75, Y + 2.1, sz * 3); }
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192; const c2 = cv.getContext('2d'); c2.fillStyle = '#16202c'; c2.fillRect(0, 0, 512, 192); c2.fillStyle = '#ffd23f'; c2.font = '900 46px "Noto Sans TC", sans-serif'; c2.textAlign = 'center'; c2.fillText('潮汐體育場', 256, 60); c2.fillStyle = '#ff6a4a'; c2.font = '900 84px monospace'; c2.fillText('0  :  0', 256, 158); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; Venue.stSb = { cv, c2, tx }; const sb = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 2.7), new THREE.MeshBasicMaterial({ map: tx })); sb.position.set(S.x - S.w / 2 + 0.95, Y + 5.4, S.z); sb.rotation.y = Math.PI / 2; g.add(sb); B(0.3, 3.1, 7.6, '#2a3644', -S.w / 2 + 0.75, Y + 5.4, 0); for (const sz of [-1, 1]) B(0.25, 4.2, 0.25, '#6f7882', -S.w / 2 + 0.75, Y + 2.1, sz * 3); }
   /* 照明燈柱（晚上亮）、看台上的旗子 */
   Venue.stLamps = []; for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const px = sx * 22.6, pz = sz * 13.0; const po = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 9.5, 8), mat('#8f98a3', 0.6)); po.position.set(S.x + px, Y + 4.75, S.z + pz); po.castShadow = true; g.add(po); addCircleCol(S.x + px, S.z + pz, 0.3); const hm = new THREE.MeshStandardMaterial({ color: '#fff6d8', emissive: '#ffe9a8', emissiveIntensity: 0.3 }); const hd = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.25), hm); hd.position.set(S.x + px - sx * 0.3, Y + 9.6, S.z + pz - sz * 0.2); hd.rotation.y = Math.atan2(-px, -pz); hd.rotation.x = 0; g.add(hd); Venue.stLamps.push(hm); }
   for (let i = 0; i < 8; i++){ const sz = i < 4 ? -1 : 1, fx = -15 + (i % 4) * 10, fz = sz * 16.8; B(0.07, 2.4, 0.07, '#e9eef2', fx, Y + 4.9, fz, false); const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.65, 6, 1), new THREE.MeshStandardMaterial({ color: seatC[i % 5], side: THREE.DoubleSide, roughness: 0.8 })); fl.geometry.translate(0.55, 0, 0); fl.position.set(S.x + fx, Y + 5.7, S.z + fz); g.add(fl); const P = fl.geometry.attributes.position, base = P.array.slice(); FX.push(t2 => { for (let k = 0; k < P.count; k++){ const x = base[k * 3]; P.setZ(k, Math.sin(t2 * 3.2 + x * 5 + i) * 0.1 * x); } P.needsUpdate = true; fl.rotation.y = Math.sin(t2 * 0.4 + i) * 0.3; }); }
   Venue.stExit = { x: S.x, z: S.z + 15.6 }; }
 function updateStadium(dt, t){ const im = inStad(); if (Venue.stad && Venue.stad.visible !== im) Venue.stad.visible = im; if (!im) return; for (const f of Venue.stFx || []) f(t); const L = 0.3 + 2.4 * (DayNight.lamp || 0); for (const m of Venue.stLamps || []) m.emissiveIntensity = L; }
+/* ===== v529 體育場足球（作者 11/17：「足球變成可以踢」「比賽，就用釣友隊」）=====
+   ・足球場上有一顆大家共用的球：跑過去碰到就踢出去（跑越快踢越遠），靠近按「射門」是大腳。
+   ・同步：最後碰到球的人負責算球怎麼滾、每秒送 8 次給大家；別人照同一套物理自己接著算，收到新的就對齊。
+   ・比賽：走到場邊的比賽台按「開始比賽」。場上有兩支以上不同的釣友隊 → 人最多的兩隊對打；不然就自動分紅藍兩邊（練習賽）。
+     3 分鐘，進球後回中圈，比分在計分板和畫面上面。開始比賽的人當裁判（送比分和時間）；他離開的話場上代號最小的人接手。
+   ・西邊球門是 0 號隊（左邊那隊）守的，球進東邊球門 = 0 號隊得分。 */
+const SOC = { b: { x: 0, z: 0, y: 0, vx: 0, vz: 0, vy: 0 }, r: { x: 0, z: 0, y: 0 }, q: 0, own: '', sendAt: 0, rxAt: 0, kickAt: 0, hold: 0, mesh: null, px: 0, pz: 0, spd: 0, asked: false,
+  m: { st: 'idle', q: 0, from: '', a: { n: '', c: '' }, b: { n: '', c: '' }, sa: 0, sb: 0, end: 0, sides: {}, team: false, rx: 0, tx: 0, overAt: 0 }, bar: null, FW: 13.5, FD: 7.6, GW: 1.9, GH: 1.7, R: 0.26, TABLE: { x: 4.2, z: 9.3 } };
+function fbStr(s, n){ return typeof s === 'string' ? s.slice(0, n) : ''; }
+function fbSend(d){ d.f = poolKey(); if (SOC.tap){ try { SOC.tap(d); } catch(e){} } try { if (room && room.connected()) room.emit('fb', d).catch(() => {}); } catch(e){} }
+function fbMyTeam(){ try { const t = Team.my && Team.my.team; return t && t.name ? { n: String(t.name).slice(0, 12), c: fbStr(t.color, 9) } : null; } catch(e){ return null; } }
+function fbMySide(){ const m = SOC.m; if (m.st !== 'play') return -2;   /* -2 沒有比賽（誰都能踢）、-1 觀眾、0／1 兩邊 */
+  const k = poolKey(); let s = m.sides[k]; if (s == null && myId) s = m.sides[myId]; if (s === 0 || s === 1) return s;
+  if (m.team){ const t = fbMyTeam(); if (t){ if (t.n === m.a.n) return 0; if (t.n === m.b.n) return 1; } } return -1; }
+function fbBuild(){ if (SOC.mesh || !Venue.stad) return; const S = STAD, Y = S.y;
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 32; const c2 = cv.getContext('2d'); c2.fillStyle = '#fbfbf6'; c2.fillRect(0, 0, 64, 32); c2.fillStyle = '#20252c'; for (const [x, y] of [[8, 8], [24, 24], [40, 8], [56, 24], [24, 4], [56, 6], [8, 26], [40, 28]]){ c2.beginPath(); c2.arc(x, y, 4.2, 0, 7); c2.fill(); }
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const bl = new THREE.Mesh(new THREE.SphereGeometry(SOC.R, 16, 12), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.55 })); bl.castShadow = true; bl.position.set(S.x, Y + 0.04 + SOC.R, S.z); Venue.stad.add(bl); SOC.mesh = bl;
+  /* 比賽台：一張小桌子＋哨子牌 */
+  const T = SOC.TABLE, g = new THREE.Group(); g.position.set(S.x + T.x, Y, S.z + T.z); Venue.stad.add(g);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.7), mat('#f4f1e6', 0.8)); top.position.y = 0.78; top.castShadow = true; g.add(top); for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const lg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.76, 0.07), mat('#6f7882', 0.7)); lg.position.set(sx * 0.56, 0.38, sz * 0.27); g.add(lg); }
+  const cv2 = document.createElement('canvas'); cv2.width = 256; cv2.height = 96; const d2 = cv2.getContext('2d'); d2.fillStyle = '#e0564f'; d2.fillRect(0, 0, 256, 96); d2.fillStyle = '#fff'; d2.font = '900 46px "Noto Sans TC", sans-serif'; d2.textAlign = 'center'; d2.fillText('⚽ 比賽台', 128, 64);
+  const tx2 = new THREE.CanvasTexture(cv2); tx2.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.5), new THREE.MeshBasicMaterial({ map: tx2, side: THREE.DoubleSide })); sg.position.set(0, 1.25, 0); g.add(sg); const cone = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.3, 10), mat('#f2772c', 0.7)); cone.position.set(0.4, 0.97, 0); g.add(cone);
+  addCircleCol(S.x + T.x, S.z + T.z, 0.6); }
+function fbBoard(){ const B = Venue.stSb; if (!B) return; const m = SOC.m, c2 = B.c2; c2.fillStyle = '#16202c'; c2.fillRect(0, 0, 512, 192); c2.textAlign = 'center';
+  if (m.st === 'idle'){ c2.fillStyle = '#ffd23f'; c2.font = '900 46px "Noto Sans TC", sans-serif'; c2.fillText('潮汐體育場', 256, 60); c2.fillStyle = '#ff6a4a'; c2.font = '900 84px monospace'; c2.fillText('0  :  0', 256, 158); }
+  else { c2.font = '900 34px "Noto Sans TC", sans-serif'; c2.fillStyle = '#ff8a7a'; c2.fillText(m.a.n.slice(0, 6), 128, 52); c2.fillStyle = '#8ec5ff'; c2.fillText(m.b.n.slice(0, 6), 384, 52); c2.fillStyle = '#ffd23f'; c2.font = '900 28px "Noto Sans TC", sans-serif'; c2.fillText('VS', 256, 50); c2.fillStyle = '#ff6a4a'; c2.font = '900 84px monospace'; c2.fillText(`${m.sa}  :  ${m.sb}`, 256, 158); }
+  B.tx.needsUpdate = true; }
+function fbBarEl(){ if (!SOC.bar){ const b = el('div', 'panel'); b.id = 'fbBar'; b.hidden = true; document.body.appendChild(b); SOC.bar = b; } return SOC.bar; }
+function fbBarDraw(){ const b = fbBarEl(), m = SOC.m; if (m.st === 'idle' || !inStad()){ if (!b.hidden) b.hidden = true; return; } b.hidden = false; const left = Math.max(0, Math.ceil((m.end - Date.now()) / 1000)), s = fbMySide();
+  const tx = `<span class="fb-a">🔴 ${esc(m.a.n)}</span><b>${m.sa} : ${m.sb}</b><span class="fb-b">${esc(m.b.n)} 🔵</span><i>${m.st === 'over' ? '比賽結束' : Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0')}</i><em>${s === 0 ? '你是 🔴，往右邊（東邊）球門進攻' : s === 1 ? '你是 🔵，往左邊（西邊）球門進攻' : m.st === 'play' ? '你在看比賽（這場沒有分到隊）' : ''}</em>`; if (b._tx !== tx){ b._tx = tx; b.innerHTML = tx; } }
+function fbTags(){ const m = SOC.m, on = m.st === 'play'; for (const [k, p] of peers){ if (!p || !p.fisher || !p.fisher.nm) continue; let s = on ? m.sides[k] : null; if (s == null && on && p.pres && p.pres.u) s = m.sides[p.pres.u]; if (s == null && on && m.team && p.pres){ const tn = fbStr(p.pres.tn, 12); if (tn && tn === m.a.n) s = 0; else if (tn && tn === m.b.n) s = 1; }
+    if (s === 0 || s === 1) p.fisher.nm.dataset.fb = s ? '🔵' : '🔴'; else delete p.fisher.nm.dataset.fb; }
+  try { const s = fbMySide(); if (s === 0 || s === 1) me.nm.dataset.fb = s ? '🔵' : '🔴'; else delete me.nm.dataset.fb; } catch(e){} }
+/* ---- 球的物理（每個人的手機算的是同一套） ---- */
+function fbStep(dt){ const b = SOC.b, FW = SOC.FW, FD = SOC.FD; let goal = -1;
+  b.vy -= 14 * dt; b.x += b.vx * dt; b.z += b.vz * dt; b.y += b.vy * dt;
+  if (b.y <= 0){ b.y = 0; if (b.vy < -1.2){ b.vy = -b.vy * 0.5; } else b.vy = 0; const k = Math.exp(-0.95 * dt); b.vx *= k; b.vz *= k; const sp = Math.hypot(b.vx, b.vz); if (sp < 0.12){ b.vx = b.vz = 0; } else { const dr = 0.5 * dt / sp; b.vx -= b.vx * Math.min(1, dr); b.vz -= b.vz * Math.min(1, dr); } }
+  else { const k = Math.exp(-0.12 * dt); b.vx *= k; b.vz *= k; }
+  const inMouth = Math.abs(b.z) < SOC.GW - SOC.R && b.y < SOC.GH - SOC.R;
+  if (Math.abs(b.x) > FW + 0.25 && inMouth && Math.abs(b.x) < FW + 1.3){ goal = b.x > 0 ? 0 : 1; }
+  if (Math.abs(b.x) > FW + 1.0 && inMouth){ b.x = Math.sign(b.x) * (FW + 1.0); b.vx *= -0.15; b.vz *= 0.4; }   /* 球網 */
+  else if (Math.abs(b.x) > FW + 1.1 && !inMouth){ b.x = Math.sign(b.x) * (FW + 1.1); b.vx = -b.vx * 0.6; }        /* 底線外面的擋板 */
+  if (Math.abs(b.x) > FW && Math.abs(b.x) < FW + 1.1 && Math.abs(b.z) > SOC.GW - SOC.R && Math.abs(b.z) < SOC.GW + 0.25 && b.y < SOC.GH){ b.vz = -b.vz * 0.5; b.z = Math.sign(b.z) * (Math.abs(b.z) < SOC.GW ? SOC.GW - SOC.R - 0.01 : SOC.GW + 0.26); }   /* 球門側面的網 */
+  if (Math.abs(b.z) > FD + 1.1){ b.z = Math.sign(b.z) * (FD + 1.1); b.vz = -b.vz * 0.6; }
+  return goal; }
+function fbReset(){ const b = SOC.b; b.x = b.z = b.y = 0; b.vx = b.vz = b.vy = 0; }
+function fbBallMsg(){ const b = SOC.b, r = v => Math.round(v * 100) / 100; return { k: 'b', q: SOC.q, p: [r(b.x), r(b.z), r(b.y)], v: [r(b.vx), r(b.vz), r(b.vy)], h: SOC.hold > now() ? 1 : 0 }; }
+function fbTouch(vx, vz, vy){ const b = SOC.b; SOC.q++; SOC.own = poolKey(); b.vx = vx; b.vz = vz; b.vy = vy; if (b.y < 0.02) b.y = 0.02; SOC.kickAt = now(); SOC.sendAt = 0; fbSend(fbBallMsg()); try { tone(170, 0.06, 'sine', 0.09, 90); } catch(e){} }
+function fbCanPlay(){ const s = fbMySide(); return s !== -1 && SOC.hold <= now() && SOC.m.st !== 'over'; }
+function fbShoot(){ if (!inStad() || !fbCanPlay()) return; const b = SOC.b, S = STAD, dx = S.x + b.x - me.pos.x, dz = S.z + b.z - me.pos.z; if (Math.hypot(dx, dz) > 1.9 || b.y > 1.2) return;
+  const fx = Math.sin(me.rot), fz = Math.cos(me.rot); fbTouch(fx * 13.5, fz * 13.5, 3.4); try { me.av && me.av.playEmote && me.av.playEmote('cheer'); } catch(e){} }
+/* ---- 比賽 ---- */
+function fbPlayers(){ const out = [{ k: poolKey(), u: myId || '', t: fbMyTeam() }]; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!inStad(p.target.x, p.target.z)) continue; const tn = fbStr(p.pres.tn, 12); out.push({ k, u: fbStr(p.pres.u, 40), t: tn ? { n: tn, c: fbStr(p.pres.tc, 9) } : null }); } return out; }
+function fbStart(){ const m = SOC.m; if (m.st === 'play'){ toast('⚽ 比賽進行中'); return; } const P = fbPlayers(); if (P.length < 2){ toast('⚽ 要兩個人以上才能比賽（先自己練習踢踢看）'); return; }
+  const cnt = new Map(); for (const p of P) if (p.t) cnt.set(p.t.n, (cnt.get(p.t.n) || 0) + 1); const teams = [...cnt.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)); const sides = {};
+  if (teams.length >= 2){ const A = teams[0][0], Bn = teams[1][0]; m.team = true; m.a = { n: A, c: (P.find(p => p.t && p.t.n === A).t.c) || '' }; m.b = { n: Bn, c: (P.find(p => p.t && p.t.n === Bn).t.c) || '' }; for (const p of P){ const s = p.t && p.t.n === A ? 0 : p.t && p.t.n === Bn ? 1 : null; if (s != null){ sides[p.k] = s; if (p.u) sides[p.u] = s; } } }
+  else { m.team = false; m.a = { n: '紅隊', c: '#e0564f' }; m.b = { n: '藍隊', c: '#4f8fe0' }; P.sort((a, b) => a.k < b.k ? -1 : 1).forEach((p, i) => { sides[p.k] = i % 2; if (p.u) sides[p.u] = i % 2; }); }
+  m.st = 'play'; m.q++; m.from = poolKey(); m.sa = m.sb = 0; m.end = Date.now() + 180000; m.sides = sides; m.rx = now(); fbReset(); SOC.q++; SOC.own = poolKey(); SOC.hold = now() + 3; fbSend(fbBallMsg()); fbMatchSend(); fbMatchChanged('start'); }
+function fbMatchSend(){ const m = SOC.m; m.tx = now(); fbSend({ k: 'm', q: m.q, st: m.st, a: m.a, b: m.b, sa: m.sa, sb: m.sb, left: Math.max(0, m.end - Date.now()), sd: m.sides, tm: m.team ? 1 : 0 }); }
+function fbMatchChanged(why){ const m = SOC.m; fbBoard(); fbTags(); fbBarDraw(); if (!inStad()) return;
+  if (why === 'start'){ flash(m.team ? `⚽ ${m.a.n} 對 ${m.b.n}，開始！` : '⚽ 練習賽開始！', 2); try { SFX.tick(); } catch(e){} }
+  else if (why === 'over'){ const s = fbMySide0(); const w = m.sa > m.sb ? 0 : m.sb > m.sa ? 1 : -1; flash(w < 0 ? `⚽ 比賽結束，${m.sa} : ${m.sb} 平手` : (s === w ? '🎉 你們贏了！' : s === 1 - w ? '這場輸了，再來一場！' : `⚽ ${(w ? m.b : m.a).n} 贏了`) + `（${m.sa} : ${m.sb}）`, 3); try { if (s === w) SFX.coin(); } catch(e){} } }
+function fbMySide0(){ const m = SOC.m, k = poolKey(); let s = m.sides[k]; if (s == null && myId) s = m.sides[myId]; if (s == null && m.team){ const t = fbMyTeam(); if (t){ if (t.n === m.a.n) s = 0; else if (t.n === m.b.n) s = 1; } } return s === 0 || s === 1 ? s : -1; }
+function fbGoal(side){ const m = SOC.m; SOC.hold = now() + 2.6; if (m.st === 'play'){ const n = m.sa + m.sb + 1; fbSend({ k: 'g', s: side, n, mq: m.q }); fbGoalApply(side, n); } else { fbSend({ k: 'g', s: side, n: 0 }); fbGoalFx(side); } SOC.goalAt = now(); }
+function fbGoalApply(side, n){ const m = SOC.m; if (m.st !== 'play' || n !== m.sa + m.sb + 1) return; if (side === 0) m.sa++; else m.sb++; fbBoard(); fbBarDraw(); fbGoalFx(side); if (m.from === poolKey()) fbMatchSend(); }
+function fbGoalFx(side){ if (!inStad()) return; const m = SOC.m; flash(m.st === 'play' ? `⚽ ${(side ? m.b : m.a).n} 進球！` : '⚽ 進球！', 1.8); try { SFX.coin(); } catch(e){} }
+function fbOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || isBlockedPeer(msg.peer)) return; const d = msg.data, peer = fbStr(d.f, 40) || String(msg.peer || ''), m = SOC.m; if (!peer || peer === poolKey()) return;
+  if (d.k === 'q'){ if (SOC.own === poolKey() || (!SOC.own && SOC.q > 0)) setTimeout(() => fbSend(fbBallMsg()), 100 + Math.random() * 200); if (m.st !== 'idle' && m.from === poolKey()) setTimeout(fbMatchSend, 150 + Math.random() * 200); return; }
+  if (d.k === 'b'){ const q = Math.floor(+d.q); if (!isFinite(q) || !Array.isArray(d.p) || !Array.isArray(d.v) || d.p.length !== 3 || d.v.length !== 3 || ![...d.p, ...d.v].every(isFinite)) return;
+    if (q < SOC.q || (q === SOC.q && SOC.own && peer !== SOC.own && !(peer < SOC.own))) return; if (q === SOC.q && SOC.own === poolKey() && !(peer < poolKey())) return;
+    const b = SOC.b; SOC.q = q; SOC.own = peer; SOC.rxAt = now(); b.x = clamp(+d.p[0], -16, 16); b.z = clamp(+d.p[1], -10, 10); b.y = clamp(+d.p[2], 0, 12); b.vx = clamp(+d.v[0], -25, 25); b.vz = clamp(+d.v[1], -25, 25); b.vy = clamp(+d.v[2], -25, 25); if (d.h) SOC.hold = Math.max(SOC.hold, now() + 0.4); return; }
+  if (d.k === 'g'){ const s = d.s === 1 ? 1 : 0, n = Math.floor(+d.n) || 0; if (n > 0) fbGoalApply(s, n); else if (m.st !== 'play') fbGoalFx(s); SOC.hold = Math.max(SOC.hold, now() + 2.4); return; }
+  if (d.k === 'm'){ const q = Math.floor(+d.q); if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st)) return; if (q < m.q || (q === m.q && m.from && peer !== m.from && !(peer < m.from))) return;
+    const was = m.st, wq = m.q; m.q = q; m.from = peer; m.rx = now(); m.st = d.st; m.a = { n: fbStr(d.a && d.a.n, 12) || '紅隊', c: fbStr(d.a && d.a.c, 9) }; m.b = { n: fbStr(d.b && d.b.n, 12) || '藍隊', c: fbStr(d.b && d.b.c, 9) }; try { m.a.n = clean(m.a.n); m.b.n = clean(m.b.n); } catch(e){}
+    m.sa = clamp(Math.floor(+d.sa || 0), 0, 99); m.sb = clamp(Math.floor(+d.sb || 0), 0, 99); m.end = Date.now() + clamp(+d.left || 0, 0, 600000);   /* 送「還剩多久」，不送幾點結束：每支手機的時鐘會差幾秒 */ m.team = !!d.tm; const sd = {}; if (d.sd && typeof d.sd === 'object'){ let c = 0; for (const k in d.sd){ if (c++ > 60) break; if (d.sd[k] === 0 || d.sd[k] === 1) sd[fbStr(k, 40)] = d.sd[k]; } } m.sides = sd;
+    if (m.st === 'over' && was !== 'over') m.overAt = now();
+    fbMatchChanged(m.st === 'play' && (was !== 'play' || q !== wq) ? 'start' : m.st === 'over' && was === 'play' ? 'over' : ''); return; } }
+function fbPeerLeft(peer){ const m = SOC.m; if (SOC.own === peer) SOC.own = ''; if (m.st === 'play' && m.from === peer) m.rx = -1e9; }
+function fbTick(dt, t){ const im = inStad(); if (!im){ if (SOC.asked){ SOC.asked = false; fbBarDraw(); } return; } fbBuild(); if (!SOC.mesh) return; const S = STAD, b = SOC.b, m = SOC.m, tn = now(), me2 = poolKey();
+  if (!SOC.asked){ SOC.asked = true; fbSend({ k: 'q' }); fbBoard(); }
+  /* 我的速度（踢球力道用） */
+  { const vx = (me.pos.x - SOC.px) / Math.max(dt, 1e-3), vz = (me.pos.z - SOC.pz) / Math.max(dt, 1e-3); SOC.px = me.pos.x; SOC.pz = me.pos.z; SOC.mvx = Math.abs(vx) < 20 ? vx : 0; SOC.mvz = Math.abs(vz) < 20 ? vz : 0; }
+  /* 球 */
+  if (SOC.hold > tn){ if (SOC.own === me2 && SOC.hold - tn < 1.0 && (b.x || b.z || b.vx || b.vz)){ fbReset(); SOC.q++; fbSend(fbBallMsg()); } }
+  else { let n = Math.min(6, Math.max(1, Math.ceil(dt / 0.012))), goal = -1; for (let i = 0; i < n; i++){ const g = fbStep(dt / n); if (g >= 0) goal = g; }
+    if (goal >= 0 && (SOC.own === me2 || !SOC.own || tn - SOC.rxAt > 2.5) && !(SOC.goalAt && tn - SOC.goalAt < 2)){ SOC.own = me2; SOC.q++; fbGoal(goal); }
+    /* 碰到球 = 踢出去 */
+    if (fbCanPlay() && b.y < 0.9 && tn - SOC.kickAt > 0.28 && !Pool.on){ const dx = S.x + b.x - me.pos.x, dz = S.z + b.z - me.pos.z, d = Math.hypot(dx, dz); if (d < 0.62){ const sp = Math.hypot(SOC.mvx || 0, SOC.mvz || 0), nx = d > 1e-3 ? dx / d : Math.sin(me.rot), nz = d > 1e-3 ? dz / d : Math.cos(me.rot), mx = sp > 0.3 ? SOC.mvx / sp : nx, mz = sp > 0.3 ? SOC.mvz / sp : nz; let kx = nx * 0.45 + mx * 0.55, kz = nz * 0.45 + mz * 0.55; const kl = Math.hypot(kx, kz) || 1; kx /= kl; kz /= kl; const pw = 2.2 + sp * 1.45; if (sp > 0.3 || Math.hypot(b.vx, b.vz) > 0.5) fbTouch(kx * pw, kz * pw, sp > 3 ? 0.8 : 0.2); } } }
+  if (SOC.own === me2 && tn - SOC.sendAt > 0.125 && (b.vx || b.vz || b.vy || tn - SOC.sendAt > 2)){ SOC.sendAt = tn; fbSend(fbBallMsg()); }
+  /* 畫球：平滑跟上 */
+  { const r = SOC.r, k = 1 - Math.exp(-22 * dt), ox = r.x, oz = r.z; if (Math.hypot(b.x - r.x, b.z - r.z) > 6){ r.x = b.x; r.z = b.z; r.y = b.y; } else { r.x += (b.x - r.x) * k; r.z += (b.z - r.z) * k; r.y += (b.y - r.y) * k; }
+    SOC.mesh.position.set(S.x + r.x, S.y + 0.04 + SOC.R + r.y, S.z + r.z); const dx = r.x - ox, dz = r.z - oz, dd = Math.hypot(dx, dz); if (dd > 1e-5){ SOC.ax = SOC.ax || new THREE.Vector3(); SOC.ax.set(dz / dd, 0, -dx / dd); SOC.mesh.rotateOnWorldAxis(SOC.ax, dd / SOC.R); } }
+  /* 比賽：裁判負責結束、定時重送；裁判不見了由場上代號最小的人接手 */
+  if (m.st === 'play'){ if (m.from === me2){ if (Date.now() >= m.end){ m.st = 'over'; m.q++; m.overAt = tn; fbMatchSend(); fbMatchChanged('over'); } else if (tn - m.tx > 3) fbMatchSend(); }
+    else if (tn - m.rx > 9){ const ks = fbPlayers().map(p => p.k).sort(); if (ks[0] === me2){ m.from = me2; m.q++; m.rx = tn; fbMatchSend(); } else m.rx = tn - 4; } }
+  else if (m.st === 'over'){ if (tn - (m.overAt || 0) > 9){ if (m.from === me2){ m.st = 'idle'; m.q++; m.sides = {}; fbMatchSend(); fbMatchChanged(''); } else if (tn - (m.overAt || 0) > 15){ m.st = 'idle'; m.sides = {}; fbMatchChanged(''); } } }
+  if (frameNo % 20 === 0){ fbBarDraw(); if (frameNo % 60 === 0) fbTags(); } }
+function fbNear(){ const S = STAD, b = SOC.b; if (SOC.mesh && fbCanPlay() && b.y < 1.2 && Math.hypot(S.x + b.x - me.pos.x, S.z + b.z - me.pos.z) < 1.8) return { id: 'fbkick', label: '射門', mode: 'fbkick', sub: '⚽ 朝你面對的方向大腳踢' };
+  if (Math.hypot(S.x + SOC.TABLE.x - me.pos.x, S.z + SOC.TABLE.z - me.pos.z) < 1.9){ const m = SOC.m; return m.st === 'play' ? { id: 'fbtable', label: '比賽中', mode: 'fbstart', sub: `⚽ ${m.a.n} ${m.sa} : ${m.sb} ${m.b.n}` } : { id: 'fbtable', label: '開始比賽', mode: 'fbstart', sub: '⚽ 3 分鐘，照釣友隊分邊' }; }
+  return null; }
 function enterStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.stExit.x; me.pos.z = Venue.stExit.z - 2.6; me.baseY = STAD.y; Jump.gy = STAD.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🏟️ 歡迎來到潮汐體育場！', 1.4); }, 260); }
 function exitStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door();
@@ -11187,6 +11286,7 @@ function updateVenues(dt, t){
   if (Venue.snow){ Venue.snow.visible = nearI && !Dive.on; if (nearI && frameNo % 2 === 0){ const a = Venue.snow.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] -= dt * 2 * 1.2; a[i] += Math.sin(t + i) * dt * 0.3; if (a[i + 1] < 0) a[i + 1] = 14; } Venue.snow.geometry.attributes.position.needsUpdate = true; } }
   try { updateMuseumHall(dt, t); } catch(e){}
   try { updateStadium(dt, t); } catch(e){}
+  try { fbTick(dt, t); } catch(e){}
   try { duelTick(); } catch(e){}
   /* v511 作者：「畫面都被切掉了」→ 整頁偶爾會被捲動（上面的選單跑到畫面外面）；沒在打字的時候一律捲回最上面 */
   { const se = document.scrollingElement || document.documentElement, ae = document.activeElement; if ((se.scrollTop || document.body.scrollTop || window.scrollY || se.scrollLeft) && !(ae && /INPUT|TEXTAREA/.test(ae.tagName))){ se.scrollTop = 0; se.scrollLeft = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); } }
@@ -12732,7 +12832,7 @@ function nearShop(){
     if (Venue.exit && Math.hypot(me.pos.x - Venue.exit.x, me.pos.z - Venue.exit.z) < 1.3) return { id:'shrimpexit', label:'出去', mode:'shrimpexit' };
     return null; }
   if (inPoolHall()) return poolNear();
-  if (inStad()){ if (Venue.stExit && Math.hypot(me.pos.x - Venue.stExit.x, me.pos.z - Venue.stExit.z) < 1.6) return { id:'stadexit', label:'出去', mode:'stadexit' }; return null; }
+  if (inStad()){ if (Venue.stExit && Math.hypot(me.pos.x - Venue.stExit.x, me.pos.z - Venue.stExit.z) < 1.6) return { id:'stadexit', label:'出去', mode:'stadexit' }; return fbNear(); }
   if (inMuseum()){
     if (Venue.mzExit && Math.hypot(me.pos.x - Venue.mzExit.x, me.pos.z - Venue.mzExit.z) < 1.3) return { id:'museumexit', label:'出去', mode:'museumexit' };
     if (Venue.mzDesk && Math.hypot(me.pos.x - Venue.mzDesk.x, me.pos.z - Venue.mzDesk.z) < 2.4) return { id:'museum', label:'館長 海音', mode:'museum' };
@@ -12755,7 +12855,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '魚市場・賣魚';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -14130,6 +14230,7 @@ function presenceObj(){
   if (nickname) o.n = nickname;
   { const av = myAvatar(); if (av) o.av = av; }   /* v334 頭像 */
   if (myId) o.u = myId;
+  { const ft = typeof fbMyTeam === 'function' && fbMyTeam(); if (ft){ o.tn = ft.n; if (ft.c) o.tc = ft.c; } }   /* v529 釣友隊名（體育場足球分邊用） */
   { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }   /* v521 排位賽段位（名字旁邊掛稱號用） */
   if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat));   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
   if (mySeat) o.st = 1;
@@ -14241,7 +14342,7 @@ let pjMode = false, roomTimer = null, roomJoinAt = 0, roomGreeted = false; const
 function useRoom(r){
   room = r; tagReset(); roomJoinAt = Date.now(); roomGreeted = false; try { poolRoomReset(); } catch(e){}
     room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp); if (ch.joined.length || ch.left.length) neighborsRefresh();
-      for (const pp of ch.left){ try { poolPeerLeft(pp.peer); } catch(e){} const p = peers.get(pp.peer); if (p){ seenPeers.set((p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, Date.now()); visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
+      for (const pp of ch.left){ try { poolPeerLeft(pp.peer); } catch(e){} try { fbPeerLeft(pp.peer); } catch(e){} const p = peers.get(pp.peer); if (p){ seenPeers.set((p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, Date.now()); visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
       for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (!p) return; visitLog(p);
         const key = (p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, last = seenPeers.get(key); seenPeers.set(key, Date.now());
         if (Date.now() - roomJoinAt < 6000) return;                  // 我剛進來：他們本來就在了
@@ -14272,7 +14373,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {});
-    room.on('pool', poolOnMsg, () => {});
+    room.on('pool', poolOnMsg, () => {}); room.on('fb', fbOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -16333,6 +16434,12 @@ function renderTab(){
       '在食堂用魚缸裡的魚做料理，共 13 道。不同料理玩法不一樣：壽司類切魚、章魚燒翻面、燒烤和油炸控制火候、火鍋和麵記住下料順序。做得越好星星越多、越值錢。',
       '料理可以賣掉，也可以「吃掉」：接下來幾次拋竿會有加成（例如稀有魚變多、線比較不容易斷）。',
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
+    ]);
+    sec('⚽ 體育場足球', [
+      '在哪裡：運動公園的體育場大門走進去，中間就是足球場，場上有一顆大家共用的球。',
+      '怎麼踢：跑過去碰到球就會踢出去，跑越快踢越遠；靠近球的時候右下角會變成「射門」，按下去朝你面對的方向大腳踢。沒有比賽的時候誰都可以隨便踢，踢進球門會喊進球。',
+      '比賽：走到場邊的「⚽ 比賽台」（南邊看台前面的小桌子）按「開始比賽」，要兩個人以上。場上如果有兩支不同的釣友隊，就是人最多的那兩隊對打；如果大家都同一隊或沒有隊，會自動分成紅隊、藍隊打練習賽。',
+      '規則：一場 3 分鐘，進球以後球回到中圈。🔴 那一隊往右邊（東邊）球門進攻，🔵 那一隊往左邊（西邊）進攻，名字前面會有顏色圓點。比分在畫面上面和體育場的計分板上。沒分到隊的人只能看、踢不到球。目前只比輸贏，沒有獎勵、也還不會記到釣友隊的戰績裡。',
     ]);
     sec('🎱 潮汐撞球館', [
       '邀請對打：你在練習的時候，如果有別的玩家站在球桌旁邊，右下角會出現「邀請 某某 對打」，按下去對方會收到邀請，按接受就開始對打。也可以自己走到別人正在練習的球桌旁邊按「對打」直接加入。',

@@ -1525,3 +1525,12 @@ body.touch.chatting #chatForm{z-index:40}
 
 /* v527 撞球：邀請旁邊的人對打 */
 #poolHud .pl-btns .pl-inv{background:#bfe7ff}
+
+/* v529 體育場足球：畫面上面的比分條、名字前面的隊伍顏色 */
+#fbBar{position:fixed;left:50%;top:calc(var(--st,0px) + 8px);transform:translateX(-50%);z-index:14;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 12px;padding:6px 14px;border-radius:16px;font-size:14px;max-width:min(92vw,560px);pointer-events:none}
+#fbBar[hidden]{display:none}
+#fbBar b{font-size:20px;font-weight:900;color:#18334a}
+#fbBar .fb-a{color:#c0392b;font-weight:800}#fbBar .fb-b{color:#2c6fb7;font-weight:800}
+#fbBar i{font-style:normal;font-weight:800;color:#b3541e}
+#fbBar em{flex-basis:100%;text-align:center;font-style:normal;font-size:12px;color:#5a6b7a}
+.tag .nm[data-fb]::before{content:attr(data-fb);margin-right:3px;font-size:11px}
