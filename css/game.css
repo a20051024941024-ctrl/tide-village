@@ -1704,3 +1704,17 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .dq-pick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;margin:6px 0;padding:9px 12px;text-align:left}
 #duelCard .dq-pick b{font-size:14px}
 #duelCard .dq-pick small{font-size:11.5px;font-weight:600;opacity:.8}
+/* v553 釣到卡片最多五顆按鈕（放流、展示、分享、魚拓、放進魚缸）：一排擠不下就換行，不要擠成直的一長條 */
+#catchCard .ccbtns{flex-wrap:wrap}
+#catchCard .ccbtns .pbtn{flex:1 1 84px}
+/* v553 玩法說明簡化：新手卡、每段重點、收起來的詳細規則、搜尋框 */
+.helpqs{margin:10px 0;padding:12px 14px;border-radius:12px;background:#fff6dc;border:1px solid #ecd9a0;color:var(--ink)}
+.helpqs b{font-family:var(--f-display);font-size:16px}
+.helpqs ol{margin:8px 0 0;padding-left:22px;font-size:14px;line-height:1.7}
+.helpq{width:100%;box-sizing:border-box;margin:8px 0 2px;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.18);font-size:15px;background:#fff;color:#222}
+details.help ul.hshort{font-size:14px;line-height:1.7;margin-bottom:6px}
+details.help details.helpmore{margin:0 0 10px}
+details.help details.helpmore summary{font-family:inherit;font-size:13px;padding:6px 0;color:var(--ink-soft)}
+details.help details.helpmore summary::after{content:'▾';float:none;margin-left:6px}
+details.help details.helpmore[open] summary::after{content:'▴'}
+details.help details.helpmore ul{margin-top:4px}

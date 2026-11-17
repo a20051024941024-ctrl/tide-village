@@ -10848,7 +10848,7 @@ function gkView(d, opts){ opts = opts || {}; let ov = $('#gkView'); if (ov) ov.r
   const acts = el('div', 'gkacts');
   if (opts.make){ const b = el('button', 'tbtn', `做成魚拓 🪙${GK_COST}`); b.disabled = rec.coins < GK_COST; if (b.disabled) b.title = '金幣不夠';
     b.addEventListener('click', async () => { if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能做魚拓'); return; } b.disabled = true;
-      try { const { data, error } = await Cloud.sb.rpc('gyotaku_make', { p_t: opts.make }); if (error) throw error; adoptRow(data.player); gkReg(data.item); if (GK.mine) GK.mine.unshift(data.item); SFX.catch(); ov.remove(); flash('🖋️ 魚拓做好了！在「📖 圖鑑 → 魚拓」', 2); gkView(data.item); if (!$('#sheet').hidden) renderTab(); }
+      try { const { data, error } = await Cloud.sb.rpc('gyotaku_make', { p_t: typeof opts.make === 'function' ? opts.make() : opts.make }); if (error) throw error; adoptRow(data.player); gkReg(data.item); if (GK.mine) GK.mine.unshift(data.item); SFX.catch(); ov.remove(); flash('🖋️ 魚拓做好了！回家打開「🏠 家具」就能掛起來', 2.4); gkView(data.item); if (!$('#sheet').hidden) renderTab(); }
       catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); acts.appendChild(b); }
   else { const sh = el('button', 'tbtn', '📤 存圖片／分享'); sh.addEventListener('click', () => gkShare(d)); acts.appendChild(sh);
     if (d.mine){ const hang = el('button', 'tbtn ghost', House.on && canEditIsle() ? '🏠 拿去掛' : '🏠 回家掛'); hang.addEventListener('click', () => { if (House.on && canEditIsle()){ ov.remove(); closeSheet(); startFurn('gk' + d.id); } else toast('回到自己家，打開「🏠 家具」就看得到你的魚拓'); }); acts.appendChild(hang);
@@ -14374,6 +14374,11 @@ function showCatch(f, w, res){
   ccFish = f; const rb = $('#ccRel'); rb.innerHTML = `放流 💙+${lp}`; rb.classList.toggle('hot', small);
   $('#ccOk').textContent = small ? '還是帶走' : '放進魚缸';
   { const sb = $('#ccShare'), big = f.rarity !== '常見' || !!f.of || res.isNew || res.isBest; sb.hidden = !big; sb.onclick = () => shareCard({ kind: 'fish', fish: gx || f, title: gx ? gx.name : f.name, sub: `${w.toFixed(2)} kg・${f.rarity}`, place: SPOT_BY_ID[f.spot].label, img: $('#ccCanvas'), badges: [res.isNew ? '📖 圖鑑新登錄' : '', res.isBest ? '🏆 個人新紀錄' : '', f.of ? '✨ 罕見變種' : ''].filter(Boolean) }); }
+  /* v553 魚拓早就有（132），但入口藏在「背包 → 魚缸 → 🖋️」，釣到的當下沒人知道 → 釣到個人新紀錄、傳說魚、變種時，卡片上直接多一顆「🖋️ 魚拓」。
+     規則沒變（🪙200、最多 40 張、魚要留在魚缸）；魚缸那條的編號以伺服器的為準，所以按下去那一刻才去找 */
+  { const gb = $('#ccGk'), ok = (res.isBest || f.rarity === '傳說' || !!f.of) && Cloud.on && !small; gb.hidden = !ok;
+    gb.onclick = () => { if (ccEarly()) return; const find = () => { const x = rec.tank.find(y => y.f === f.id && Math.abs(y.w - w) < 0.006); return x ? x.t : 0; };
+      if (!find()){ toast('這條魚不在魚缸裡了'); return; } closeCatch(); gkView({ id: 0, fish: f.id, w, t: find(), name: myDisplayName() }, { make: find }); }; }
   $('#catchCard').hidden = false; uiBlocked = true; ccAt = performance.now();
   /* v307：拉魚時一直快速點，卡片跳出來那一下會被誤按（直接帶走／放流）。卡片出現後 0.7 秒內的點擊不算；手機不要自動選中按鈕（那圈藍框會讓人以為按到了） */
   if (!matchMedia('(pointer:coarse)').matches) setTimeout(() => $('#ccOk').focus(), 700);
@@ -16516,6 +16521,39 @@ function coinify(root){ if (!root || !root.ownerDocument && root !== document) r
   for (const t of L){ const parts = t.nodeValue.split('🪙'), f = document.createDocumentFragment(); parts.forEach((p, i) => { if (i){ const im = document.createElement('img'); im.src = COIN_SRC; im.className = 'coin-ic'; im.alt = '金幣'; im.draggable = false; f.appendChild(im); } if (p) f.appendChild(document.createTextNode(p)); }); if (t.parentNode) t.parentNode.replaceChild(f, t); } }
 try { let pend = new Set(), qd = false; new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData'){ if (m.target.nodeValue && m.target.nodeValue.indexOf('🪙') >= 0) pend.add(m.target.parentNode); } else for (const n of m.addedNodes){ if (n.nodeType === 3 ? n.nodeValue.indexOf('🪙') >= 0 : n.nodeType === 1 && (n.textContent || '').indexOf('🪙') >= 0) pend.add(n.nodeType === 3 ? n.parentNode : n); } }
     if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
+/* v553 玩法說明每一段的重點（兩三句）。原本的長說明還在，收在「看詳細規則」裡 */
+const HELP_SHORT = {
+  '🎣 釣魚': ['水邊按住右下按鈕蓄力、放開拋竿；浮標猛沉出現「!」就再按一次。', '拉魚：按住收線、放開放線，張力條留在黃色。', '拋得遠、站在發光圈、看水面徵兆，稀有魚比較多。天氣、潮汐、時間也有影響。'],
+  '🦐 室內釣蝦場': ['在廣場東邊的街上，走到門口按按鈕進去。', '先跟櫃台的阿忠買時段，蝦竿和餌都附。', '坐到池邊的板凳就能拋竿。'],
+  '🍚 打窩、窩點、渡船、小船': ['在釣具店買窩料，到水邊按「🍚 打窩」，魚咬得快、稀有魚變多。', '「提前打」的窩點 10 分鐘後最強，可以維持 1 小時。', '港口和鏡湖可以上船，划到水上釣。'],
+  '💙 尺寸限制、放流、愛海點數': ['太小的魚會標「未達尺寸」，帶走只能賣半價。', '放流可以拿愛海點數，換金幣買不到的限定服飾。'],
+  '🚢 潛水艇與黑淵裂縫': ['搭阿海的船到「深海浮台」，跟蔚博士租潛水艇（Lv.15、4500 金幣，只付一次）。', '按住 ⬇ 下潛、⬆ 上浮；停下來可以放線釣深海魚。', '釣到的魚要按「回港」才會放進魚缸。'],
+  '🤿 潛水（進階玩法）': ['在商店買「潛水裝備組」，找港口的阿海按「去潛水」。', '注意氧氣：快沒了要浮上去，或游進冒泡泡的氣泡口補氧。', '海底可以拍照、撿貝殼、開寶箱，也看得到少見的變種魚。'],
+  '🐠 魚缸、水族館、圖鑑': ['釣到的魚放進魚缸，滿了最舊的會被擠掉。', '按「🏛️ 展示」可以把魚放進廣場的水族館給大家看。', '「🎒 背包」看身上的東西，「📖 圖鑑」看收集了幾種。'],
+  '🪙 金幣與商店': ['港邊廣場的魚市場賣魚：越稀有、越重越值錢。', '釣具店買釣竿、魚餌、窩料；好的釣竿比較不會斷線。', '服飾可以先試穿，大家都看得到你的打扮。'],
+  '🐾 寵物': ['到寵物店找小花領養；有些寵物只能在釣魚時偶爾撈到。', '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物。', '按 😀 表情可以跟寵物玩。每人最多養 3 隻。'],
+  '⚓ 港口海底潛水': ['有潛水裝備組，走到港口碼頭旁的「🤿 潛水點」梯子就能直接下水。'],
+  '🦈 魚的生態': ['鯨魚不在港口外海了：要到深海浮台、流冰海岸、神秘島礁岩才遇得到。', '藍鯨每小時浮上來一分半鐘，那段時間比較容易釣到。'],
+  '🏮 節慶活動': ['台灣的節日村子會換裝飾，有限定的魚和商品。', '點頭像的「🏮 節慶」看現在有什麼活動。', '限定商品過了節日買不到，買到的永遠保留。'],
+  '🐋 大魚、鯨魚、海上目擊': ['每天晚上 8:30（週六日下午 2:00 也有）港口外海會出現一條超大的魚。', '站在港口按「一起拉！」，大家一起把牠拉上來，有出力就有獎勵。', '在外海看到鯨魚跳出水面，會有 3 分鐘好運。'],
+  '🌲 苔森之島': ['找港口的阿海，選「苔森之島」。很大的森林島，湖、溪、海邊都能釣。'],
+  '🗺️ 村子怎麼逛': ['一進遊戲站在「港邊廣場」：釣具店、魚市場、碼頭都在這裡。', '島中央的「潮汐廣場」是大家集合聊天的地方。', '找不到路就打開「🗺️ 地圖」，點「找人、找店」會帶路。'],
+  '🖋️ 魚拓': ['釣到個人新紀錄、傳說魚或變種時，卡片上按「🖋️ 魚拓」（🪙200）。', '回自己家打開「🏠 家具」就能掛起來，來玩的人也看得到。'],
+  '🏛️ 海洋博物館': ['在西北邊的水族館區。可以從魚缸捐一條魚，第一個捐的人會刻上名字。', '一個釣點的魚都捐齊，可以領金幣和專屬的魚拓家具。'],
+  '🍳 潮汐食堂（料理）': ['在魚市場區，從門口走進去。', '用魚缸裡的魚做料理，做得越好星星越多。', '吃了料理，釣魚會有加成；也可以直接花金幣點餐。'],
+  '🪪 個人名片': ['點左上角自己的頭像看自己的；點別人的角色或名字看別人的。', '上面都是自己玩出來的成績，可以寫一句話、換大頭照。'],
+  '⚽ 體育場足球': ['在運動公園的體育場裡。跑過去碰到球就會踢出去。', '到場邊的「⚽ 比賽台」按「開始比賽」，兩個人以上，一場 3 分鐘。'],
+  '🏀 體育場籃球 1 對 1': ['體育場進門往左走到底。按「投籃」，力道條停在綠色區就進。', '場上有別人時，到「🏀 1 對 1」小桌子邀請，先拿 11 分的人贏。'],
+  '🏸 體育場羽球 1 對 1': ['體育場進門往右走到底。兩個人到「🏸 1 對 1」小桌子開始，先拿 7 分的人贏。', '跑到地上的黃色圈圈旁邊，等球過來按「揮拍」。'],
+  '🎿 雪松山滑雪場': ['在冰封群島南邊的雪山。坐纜車上山，到山頂按「出發」。', '搖桿左右轉彎、往前蹲低加速、往後煞車；要通過旗門。'],
+  '🎱 潮汐撞球館': ['運動公園西南角，屋頂有一顆黑八的小屋。', '走到球桌按「打撞球」：在桌面滑動瞄準，拉左邊的力道條出桿。', '一個人是練習；別人按「對打」就變成兩個人的八號球。'],
+  '📜 每日任務、釣魚活動': ['右上的「🎁 今天」把今天能做的事整理成一張清單。', '村長、漁夫老王、美雲姨每天各有一個請求，頭上有 ❗ 就是還沒做。', '每天半夜 12 點（台灣時間）換新任務。'],
+  '🏆 每週比賽與排行榜': ['每週換一種比賽魚，比誰釣到最重的。', '每天還有定時的釣魚大賽，比總重量。'],
+  '🏝️ 私人小島': ['選單的「小島」可以去自己的島。', '在「買東西擺島上」挑房子和家具，走到想放的地方按「✔」。', '按「🔨 建造」可以移動或拆掉。'],
+  '👥 跟大家一起玩': ['⚔️ 釣魚對決：一場 3 分鐘，比釣到的魚的總重量。', '按「找對手」是排位賽，贏了加星星、升段位；每個月是一季。', '可以加好友、組釣友隊、聊天、去別人的島玩。'],
+  '⭐ 等級、稱號、成就': ['釣魚、放流、拍水下照片都有經驗值，升級送金幣。', '成就和等級會給稱號，在「成就」分頁選一個掛在名字上。'],
+  '⚙️ 設定、帳號、存檔、其他': ['右上的 ⚙️ 是設定：語言、字體大小、畫質、搖桿、釣魚視角。', '用帳號登入，換手機資料也不會不見。', '遇到不禮貌的人：點他的名字 →「檢舉」。']
+};
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
 const SHEET_TITLE = { gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', tboard:'🏆 大看板・釣友隊', cargo:'🚢 跑船生意', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 菜園', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
@@ -16771,7 +16809,10 @@ function renderTab(){
   } else if (curTab === 'ach'){
     renderAch(body);
   } else if (curTab === 'help'){
-    body.appendChild(el('p', 'sub', '歡迎來到潮汐釣魚村！下面是全部的玩法，點標題可以打開或收起來。'));
+    body.appendChild(el('p', 'sub', '歡迎來到潮汐釣魚村！每一段打開先看重點；想知道細節再按「看詳細規則」。'));
+    /* v553 作者 11/18：「把玩法說明做成簡單一點」→ 最上面一張新手卡；每一段先給兩三句重點，原本的長說明收在「看詳細規則」裡（一個字都沒刪）；再加一個搜尋框 */
+    { const q = el('div', 'helpqs'); q.appendChild(el('b', '', '🔰 新手先看這 6 件事')); const ol = el('ol');
+      ['走到水邊，按住右下的按鈕蓄力，放開就拋竿。', '浮標猛沉、出現「!」的時候，馬上再按一次。', '拉魚時按住是收線、放開是放線；讓下面的張力條停在黃色，不要到紅色。', '魚會放進魚缸。到港邊廣場的魚市場賣掉換金幣，再去釣具店買更好的釣竿和魚餌。', '不知道要做什麼：跟著左上角的新手任務，或按右上的「🎁 今天」。', '想去遠一點的地方：找港口的船夫阿海，或打開「🗺️ 地圖」。'].forEach(t => ol.appendChild(el('li', '', t))); q.appendChild(ol); body.appendChild(q); }
     const k = el('div', 'kbd');
     [['移動', isTouch ? '左下搖桿（推到底會跑步）' : 'WASD / 方向鍵（Shift 跑步）'], ['轉視角', isTouch ? '在畫面上拖曳・兩指縮放' : '拖曳滑鼠・滾輪縮放'], ['跳', isTouch ? '「跳」按鈕' : '空白鍵或 J'],
      ['拋竿', '走到水邊，按住右下按鈕蓄力、放開拋出；拋越遠越容易遇到稀有魚'], ['提竿', '浮標猛沉、出現「!」時馬上按'], ['拉線', '按住收線、放開卸力，讓下面的張力條停在黃色、不要到紅色'],
@@ -16781,7 +16822,18 @@ function renderTab(){
     const HCAT = [['all', '全部'], ['fish', '🎣 釣魚'], ['event', '📅 活動'], ['home', '🏠 商店和家'], ['pet', '🐾 寵物'], ['social', '👥 社交'], ['other', '⚙️ 其他']];
     const catOf = t => /^(🎣|🦐|🍚|💙|🤿|⚓|🚢|🦈)/.test(t) ? 'fish' : /^(🏮|🐋|📜|🏆|🌲)/.test(t) ? 'event' : /^(🪙|🍳|🏝️|🐠|🏛️|🗺️)/.test(t) ? 'home' : /^🐾/.test(t) ? 'pet' : /^(👥|⭐)/.test(t) ? 'social' : 'other';
     const hbar = el('div', 'mapbar'), cur = renderTab.helpCat || 'all'; HCAT.forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { renderTab.helpCat = k; renderTab(); }); hbar.appendChild(b); }); body.appendChild(hbar);
-    const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l)); d.appendChild(ul); body.appendChild(d); };
+    { const inp = document.createElement('input'); inp.type = 'search'; inp.className = 'helpq'; inp.placeholder = '🔍 搜尋說明（例如：魚拓、窩料、段位）'; inp.setAttribute('aria-label', '搜尋說明'); const none = el('p', 'sub helpnone', '找不到，換個詞試試看。'); none.hidden = true;
+      inp.addEventListener('input', () => { const q = inp.value.trim().toLowerCase(); let hit = 0;
+        body.querySelectorAll('details.help').forEach(d => { const more = d.querySelector('details.helpmore'), sh = d.querySelector('ul.hshort'); let n = 0;
+          if (!q){ d.hidden = false; d.open = !!d._open0; if (more) more.open = false; if (sh) sh.hidden = false; d.querySelectorAll('li').forEach(li => { li.hidden = false; }); return; }
+          const tHit = d.querySelector('summary').textContent.toLowerCase().includes(q);
+          d.querySelectorAll('li').forEach(li => { const ok = tHit || li.textContent.toLowerCase().includes(q); li.hidden = !ok; if (ok) n++; });
+          d.hidden = !n; if (n){ d.open = true; if (more) more.open = true; hit++; } });
+        none.hidden = !q || hit > 0; });
+      body.appendChild(inp); body.appendChild(none); }
+    const sec = (title, lines, open) => { const c = catOf(title); if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (open || cur !== 'all') d.open = true; d._open0 = d.open; d.appendChild(el('summary', '', title)); const ul = el('ul'); for (const l of lines) ul.appendChild(el('li', '', l));
+      const sh = HELP_SHORT[title]; if (sh){ const u0 = el('ul', 'hshort'); for (const l of sh) u0.appendChild(el('li', '', l)); d.appendChild(u0); const m = el('details', 'helpmore'); m.appendChild(el('summary', '', `看詳細規則 (${lines.length})`)); m.appendChild(ul); d.appendChild(m); } else d.appendChild(ul);
+      body.appendChild(d); };
     sec('🎣 釣魚', [
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
       '👀 第一人稱釣魚：一拋竿就會自動換成第一人稱（不習慣可以到「設定 → 🎣 釣魚視角」改成「背後」），從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
@@ -16984,7 +17036,7 @@ function renderTab(){
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
     ]);
     sec('🖋️ 魚拓', [
-      '「🎒 背包 → 魚缸」每條魚旁邊有「🖋️」：一張 🪙200，把那條魚做成墨色的魚拓（和紙上印著魚，寫著魚名、重量、釣到的日期、地點、你的名字，蓋紅色印章）。魚還是留在魚缸裡；同一條魚只能做一次，最多 40 張。',
+      '釣到個人新紀錄、傳說魚或變種時，魚的卡片上會多一顆「🖋️ 魚拓」，按下去就能做。平常也可以到「🎒 背包 → 魚缸」，每條魚旁邊有「🖋️」：一張 🪙200，把那條魚做成墨色的魚拓（和紙上印著魚，寫著魚名、重量、釣到的日期、地點、你的名字，蓋紅色印章）。魚還是留在魚缸裡；同一條魚只能做一次，最多 40 張。',
       '做好的魚拓在「📖 圖鑑 → 魚拓」：可以存成圖片、分享給朋友，或在自己家「🏠 家具 → 🖋️ 我的魚拓」掛起來（不用錢），來玩的人也看得到。丟掉的魚拓金幣不會退。' ]);
     sec('🏛️ 海洋博物館', [
       '博物館在西北邊的水族館區（水族館南邊小廣場的西側，旁邊就是河和木橋），走進去找館長海音，或走到展示缸前面。可以從魚缸挑一條魚捐出來（魚會從魚缸拿走），每一種魚、每一種變種、白化都是一格展示。',
