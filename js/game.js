@@ -10152,7 +10152,7 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   const X = el('button', 'pc-x', '✕'); X.setAttribute('aria-label', '關閉'); X.addEventListener('click', () => duelCardClose('pcard')); c.appendChild(X);
   const wrap = el('div', 'pc-wrap'), left = el('div', 'pc-left'), right = el('div', 'pc-right'); c.appendChild(wrap); wrap.append(left, right);
   /* 左：全身照 */
-  try { const src = avatarSrc('c:b1f0x0p' + (isMe ? 2 : 1) + 'a4z2', 384, gr); if (src){ const im = el('img', 'pc-body'); im.src = src; im.alt = ''; left.appendChild(im); } } catch(e){}
+  { const im = el('img', 'pc-body'); im.alt = ''; left.appendChild(im); setTimeout(() => { if (!im.isConnected) return; try { const src = avatarSrc('c:b1f0x0p' + (isMe ? 2 : 1) + 'a4z2', 384, gr); if (src) im.src = src; } catch(e){} }, 40); }   /* v543 全身照、魚的圖晚一點點再畫，資料頁先出來 */
   if (r.team) left.appendChild(el('div', 'pc-team', `${TEAM_BADGE[r.team.badge] || '🎣'} ${String(r.team.name).slice(0, 12)}`));
   if (r.since){ const d = new Date(+r.since); left.appendChild(el('p', 'sub', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); }
   /* 右上：頭像＋名字＋等級＋一句話｜段位徽章 */
@@ -10169,7 +10169,7 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
     if (isMe){ let nf = 0; try { nf = (Fr.list || []).filter(x => x.mutual).length; } catch(e){} cell('👥', '好友', String(nf)); } else cell('❤', '小島被讚', String(r.likes || 0)); sec.appendChild(g); right.appendChild(sec); }
   /* 最得意的三種魚 */
   { const sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', '🐟 最得意的三種魚' + (r.picked ? '' : '（還沒選，先放最重的）')); if (isMe){ const pb = el('button', 'pc-more', r.picked ? '重選 ›' : '自己選 ›'); pb.addEventListener('click', () => cardPick(c, r, peerId)); st.appendChild(pb); } sec.appendChild(st);
-    const ul = el('div', 'pc-top'); (Array.isArray(r.top) ? r.top : []).slice(0, 3).forEach((x, i) => { const fz = FISH_BY_ID[x.f]; if (!fz) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); try { const fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; fc.className = 'pc-fc'; drawFish(fc, fz.color, true, fz.id); d.appendChild(fc); } catch(e){} d.appendChild(el('b', '', fz.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); });
+    const ul = el('div', 'pc-top'); (Array.isArray(r.top) ? r.top : []).slice(0, 3).forEach((x, i) => { const fz = FISH_BY_ID[x.f]; if (!fz) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); try { const fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; fc.className = 'pc-fc'; d.appendChild(fc); setTimeout(() => { if (fc.isConnected){ try { drawFish(fc, fz.color, true, fz.id); } catch(e){} } }, 90 + i * 30); } catch(e){} d.appendChild(el('b', '', fz.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); });
     if (!ul.children.length) ul.appendChild(el('p', 'sub', '還沒有釣到魚')); sec.appendChild(ul); right.appendChild(sec); }
   /* 稱號、成就（自己的看得到全部；別人的只看得到他現在掛的稱號） */
   if (isMe){ try { const ts = myTitles(), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🎖 稱號　${ts.length} 個`); const mb = el('button', 'pc-more', '換稱號 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-chips'); for (const t of ts.slice(-8).reverse()) box.appendChild(el('span', 'pc-chip' + (t.name === title ? ' on' : ''), t.name)); if (!ts.length) box.appendChild(el('span', 'sub', '還沒有稱號')); sec.appendChild(box); right.appendChild(sec); } catch(e){}
@@ -13477,11 +13477,13 @@ function renderAvatarStudio(body){ const f = el('div', 'field avst'); f.appendCh
   left.appendChild(im); left.appendChild(use); wrap.appendChild(left); wrap.appendChild(right); f.appendChild(wrap);
   f.appendChild(el('p', 'sub', '用自己的角色拍一張大頭照當頭像：挑遠近、姿勢、角度、背景和外框。臉和衣服就是你現在的造型，之後換造型，頭像也會跟著換。為了大家的安全，這裡不能上傳自己的照片。')); body.appendChild(f); draw(); }
 function renderAvatarPick(body){ renderAvatarStudio(body); const f = el('div', 'field'); f.appendChild(el('label', '', '🖼️ 或是選一個現成的頭像')); const cur = myAvatar(), g = el('div', 'avpick');
-  const opt = (code, node, title) => { const b = el('button', 'avopt' + (code === cur ? ' on' : '')); b.title = title || ''; b.appendChild(node); b.addEventListener('click', () => setAvatar(code)); g.appendChild(b); };
-  { const im = el('img', 'avimg'); try { im.src = avatarShot(cleanGear(rec.gear), 'face', 96) || ''; } catch(e){} opt('', im, '我的角色'); }
-  AV_EMOJI.forEach((e, i) => opt('e:' + i, avatarImg('e:' + i), e));
-  for (const k of [...new Set((Pets.list || []).map(p => p.kind))]) if (PET_KINDS[k]) opt('p:' + k, avatarImg('p:' + k), PET_KINDS[k].name);
-  for (const fz of FISH.filter(x => (rec.count[x.id] || 0) > 0 && !x.of).sort((a, b) => (rec.count[b.id] || 0) - (rec.count[a.id] || 0)).slice(0, 48)) opt('f:' + fz.id, avatarImg('f:' + fz.id), fz.name);
+  /* v543 作者：「點這個畫面時，畫面都會卡一下」→ 這一排有一百多個小圖（符號、寵物、48 種魚），以前一打開就一口氣全部畫完才顯示；現在先顯示上面的大頭照，小圖每一格畫 6 個慢慢補上 */
+  const Q = [], opt = (code, mk, title) => Q.push([code, mk, title]);
+  opt('', () => { const im = el('img', 'avimg'); try { im.src = avatarShot(cleanGear(rec.gear), 'face', 96) || ''; } catch(e){} return im; }, '我的角色');
+  AV_EMOJI.forEach((e, i) => opt('e:' + i, () => avatarImg('e:' + i), e));
+  for (const k of [...new Set((Pets.list || []).map(p => p.kind))]) if (PET_KINDS[k]) opt('p:' + k, () => avatarImg('p:' + k), PET_KINDS[k].name);
+  for (const fz of FISH.filter(x => (rec.count[x.id] || 0) > 0 && !x.of).sort((a, b) => (rec.count[b.id] || 0) - (rec.count[a.id] || 0)).slice(0, 48)) opt('f:' + fz.id, () => avatarImg('f:' + fz.id), fz.name);
+  { let qi = 0; const pump = () => { if (qi && !g.isConnected) return; for (let n = 0; n < 6 && qi < Q.length; n++, qi++){ const [code, mk, title] = Q[qi]; let node = null; try { node = mk(); } catch(e){} if (!node) continue; const b = el('button', 'avopt' + (code === cur ? ' on' : '')); b.title = title || ''; b.appendChild(node); b.addEventListener('click', () => setAvatar(code)); g.appendChild(b); } if (qi < Q.length) setTimeout(pump, 24); }; setTimeout(pump, 60); }
   f.appendChild(g); f.appendChild(el('p', 'sub', '也可以直接選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚（最常釣的 48 種）。大家在玩家列表和好友列表都看得到。')); body.appendChild(f); }
 function renderWardrobe(body, only){
   const pv = el('div', 'wprev'), showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'pvbox');

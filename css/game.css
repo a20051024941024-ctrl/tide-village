@@ -1638,3 +1638,5 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .pc-stbody label{font-weight:800;display:block;margin-bottom:4px}
 #duelCard .pc-hb{position:relative}
 #duelCard .pc-cam{position:absolute;left:58px;top:54px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#2f89c7;font-size:12px;padding:0;line-height:1}
+
+#duelCard .pc-body{background:linear-gradient(#bfe6ff,#7fd0e8)}
