@@ -1541,3 +1541,12 @@ body.touch.chatting #chatForm{z-index:40}
 #duelWant .dw-t{overflow:hidden;text-overflow:ellipsis}
 #duelWant .tbtn{padding:4px 12px;font-size:12px}
 body.pooling #duelWant, body.subbing #duelWant, body.chatting #duelWant{display:none}
+
+/* v532 體育場籃球：力道條、比分條 */
+#bkMeter{position:fixed;right:calc(var(--sr,0px) + 18px);bottom:calc(var(--sb,0px) + 150px);width:150px;height:18px;border-radius:999px;z-index:14;padding:0;overflow:hidden;background:rgba(24,51,74,.82);pointer-events:none}
+#bkMeter[hidden]{display:none}
+#bkMeter .bk-z{position:absolute;top:0;bottom:0;background:#5fd08a}
+#bkMeter .bk-m{position:absolute;top:-2px;bottom:-2px;width:5px;margin-left:-2.5px;background:#fff;border-radius:3px;box-shadow:0 0 4px rgba(0,0,0,.5)}
+#bkBar{position:fixed;left:50%;top:calc(var(--st,0px) + 8px);transform:translateX(-50%);z-index:14;display:flex;align-items:center;gap:12px;padding:6px 14px;border-radius:16px;font-size:14px;font-weight:800;color:#18334a;pointer-events:none;white-space:nowrap}
+#bkBar[hidden]{display:none}
+#bkBar b{font-size:20px;font-weight:900}#bkBar i{font-style:normal;color:#b3541e}
