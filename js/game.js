@@ -5186,8 +5186,15 @@ function updateBoatButton(){
 /* ================= 快速傳送與地圖 ================= */
 const visited = new Set(LS.get('tide.visited', ['plaza']));
 let discoverAt = 0;
+/* v546 探索進度（作者：參考圖裡的「探索進度」）：去過的地點也存到伺服器，別人在你的資料頁看得到；換手機登入也會拿回來。沒有獎勵，只是紀錄 */
+const EXP = { sent: -1, busy: false, at: 0 };
+async function exploreSync(){ if (EXP.busy || !Cloud.on || !Cloud.sb) return; EXP.busy = true;
+  try { const { data, error } = await Cloud.sb.rpc('player_set_explore', { p_ids: [...visited].slice(0, 60) });
+    if (!error && data && Array.isArray(data.list)){ let ch = false; for (const id of data.list) if (!visited.has(id) && TRAVEL.some(x => x.id === id)){ visited.add(id); ch = true; } if (ch) LS.set('tide.visited', [...visited]); EXP.sent = visited.size; } } catch(e){}
+  EXP.busy = false; }
 function discover(t){
   if (t - discoverAt < 0.5) return; discoverAt = t;
+  if (EXP.sent !== visited.size && t - EXP.at > 20 && t > 12){ EXP.at = t; exploreSync(); }
   for (const tp of TRAVEL){
     if (!visited.has(tp.id) && Math.hypot(me.pos.x - tp.x, me.pos.z - tp.z) < 7){
       visited.add(tp.id); LS.set('tide.visited', [...visited]);
@@ -10258,10 +10265,22 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   { let mt = String(r.motto || '').slice(0, 30); try { mt = clean(mt); } catch(e){} const q = el('p', 'pc-motto', mt ? `「${mt}」` : isMe ? '（還沒寫一句話）' : ''); if (isMe){ const eb = el('button', 'pc-pen', '✏️'); eb.title = '改一句話'; eb.addEventListener('click', async () => { const v = prompt('寫一句話放在名片上（最多 30 個字，留空就是不寫）', r.motto || ''); if (v == null) return; const o = await festRpc('player_set_motto', { p_text: v }); if (o && o.ok){ r.motto = o.motto; cardDraw(c, r, peerId); } }); q.appendChild(eb); } if (mt || isMe) info.appendChild(q); }
   { const rk = el('div', 'pc-rank'); const D = r.duel, tt = duelTierOf(D ? D.stars : 0); rk.appendChild(el('div', 'pc-rk-ic', tt[2])); rk.appendChild(el('b', '', D ? tt[1] : '還沒打排位賽')); rk.appendChild(el('span', '', D ? `${D.stars}⭐・${D.wins} 勝 ${D.losses} 敗` : '背包 → 排位賽')); if (D && D.best >= 2) rk.appendChild(el('small', '', `最多 ${D.best} 連勝`)); head.appendChild(rk); }
   /* v544 作者：「變成不要上下滑動的」→ 內容分成三頁（總覽／戰績／稱號成就），用左邊的按鈕切換，每一頁都剛好一個畫面，不用捲 */
-  const tabs = [['main', '👤 總覽'], ['rec', '🏟 戰績']]; if (isMe) tabs.push(['ach', '🎖 稱號成就']); if (!tabs.some(x => x[0] === c._tab)) c._tab = 'main';
-  const P1 = el('div', 'pc-pane'), P2 = el('div', 'pc-pane'), P3 = el('div', 'pc-pane'); P1.hidden = c._tab !== 'main'; P2.hidden = c._tab !== 'rec'; P3.hidden = c._tab !== 'ach'; right.append(P1, P2, P3);
+  const tabs = [['main', '👤 總覽'], ['rec', '🏟 戰績'], ['news', '📰 動態']]; if (isMe) tabs.push(['ach', '🎖 稱號成就']); if (!tabs.some(x => x[0] === c._tab)) c._tab = 'main';
+  const P1 = el('div', 'pc-pane'), P2 = el('div', 'pc-pane'), P3 = el('div', 'pc-pane'), P4 = el('div', 'pc-pane'); P1.hidden = c._tab !== 'main'; P2.hidden = c._tab !== 'rec'; P3.hidden = c._tab !== 'ach'; P4.hidden = c._tab !== 'news'; right.append(P1, P2, P4, P3);
   { const nav = el('div', 'pc-nav'); for (const [k, lab] of tabs){ const b = el('button', 'pc-tab' + (c._tab === k ? ' on' : ''), lab); b.addEventListener('click', () => { c._tab = k; cardDraw(c, r, peerId); }); nav.appendChild(b); } left.appendChild(nav); }
   { const D = r.duel, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '⚔️ 釣魚對決（排位賽）')); const g = el('div', 'pc-stats pc-sport'); const tt = duelTierOf(D ? D.stars : 0); for (const [ic, lab, val] of [[tt[2], '段位', D ? `${tt[1]} ${D.stars}⭐` : '—'], ['📊', '勝敗', D ? `${D.wins} 勝 ${D.losses} 敗` : '—'], ['🔥', '最多連勝', D ? String(D.best) : '—']]){ const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }
+  /* v546 動態頁：探索進度、釣魚大賽名次、最近動態（作者：參考圖裡還沒做的三樣） */
+  { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🧭 探索和釣魚大賽')); const g = el('div', 'pc-stats pc-sport'); const cell = (ic, lab, val, sub) => { const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); if (sub) d.appendChild(el('span', '', sub)); g.appendChild(d); };
+    const ex = new Set(isMe ? [...visited] : Array.isArray(r.explore) ? r.explore : []); const nEx = TRAVEL.filter(x => ex.has(x.id)).length, T = r.tourney || {};
+    cell('🧭', '去過的地點', `${nEx}／${TRAVEL.length}`, nEx >= TRAVEL.length ? '全部走遍了' : ''); cell('🏆', '大賽最佳名次', T.best ? `第 ${T.best} 名` : '—'); cell('🎏', '大賽參加', `${T.plays || 0} 場`, T.top3 ? `前三名 ${T.top3} 次` : ''); sec.appendChild(g); P4.appendChild(sec); }
+  { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '📰 最近動態')); const ul = el('div', 'pc-feed'); const RES = { w: '贏了', l: '輸了', d: '平手' }, SP = { soccer: ['⚽', '足球'], basket: ['🏀', '籃球'], badminton: ['🏸', '羽球'] };
+    for (const x of (Array.isArray(r.recent) ? r.recent : [])){ if (ul.children.length >= 4) break; let ic = '', tx = ''; try {
+        if (x.k === 'c'){ const fz = FISH_BY_ID[x.f]; if (!fz) continue; ic = x.r === '傳說' ? '✨' : '🐟'; tx = `釣到 ${fz.name} ${(+x.w).toFixed(1)} kg`; }
+        else if (x.k === 'd'){ let o = String(x.o || '').slice(0, 12); try { o = clean(o); } catch(e){} ic = '⚔️'; tx = `${x.rk ? '排位賽' : '友誼賽'}${RES[x.res] || ''}${o ? `（對 ${o}）` : ''}`; }
+        else if (x.k === 's'){ const q = SP[x.s]; if (!q) continue; ic = q[0]; tx = `${q[1]}比賽${RES[x.res] || ''}`; }
+        else if (x.k === 't'){ ic = '🏆'; tx = `釣魚大賽第 ${x.rk | 0} 名`; } else continue; } catch(e){ continue; }
+      const li = el('div', 'pc-fi'); li.appendChild(el('i', '', ic)); li.appendChild(el('span', '', tx)); li.appendChild(el('small', '', agoText(+x.t || 0))); ul.appendChild(li); }
+    if (!ul.children.length) ul.appendChild(el('p', 'sub', isMe ? '最近還沒有動態，去釣一條好魚或打一場比賽吧' : '最近還沒有動態')); sec.appendChild(ul); P4.appendChild(sec); }
   /* 綜合數據 */
   { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '⭐ 綜合數據')); const g = el('div', 'pc-stats'); const cell = (ic, lab, val) => { const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); g.appendChild(d); };
     let tot = 0; try { tot = FISH.filter(x => !x.of).length; } catch(e){} const f = r.best_fish && FISH_BY_ID[r.best_fish];
@@ -16772,6 +16791,7 @@ function renderTab(){
     sec('🪪 個人名片', [
       '怎麼看：點左上角自己的頭像就是自己的資料頁。看別人的：直接點他的角色或頭上的名字；或打開「朋友」分頁，點名單裡任何人的頭像或名字（好友不在線上也看得到）。',
       '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最得意的三種魚（自己的名片上按「自己選三種魚」挑，沒挑就先放最重的三種）、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
+      '「📰 動態」那一頁：去過的地點（走到新地點就會記下來，總共 ' + TRAVEL.length + ' 個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）。',
       '自己的資料頁可以按 ✏️ 寫一句話給別人看（最多 30 個字）；點大頭照（或旁邊的 📸）可以直接在同一頁換大頭照：選遠近、姿勢、角度、背景、外框，臉和衣服就是你現在的造型。',
       '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
     ]);

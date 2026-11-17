@@ -1679,3 +1679,10 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .pc-since{margin:2px 0 0;text-align:right}
 @media (max-width:560px){ #duelCard.pcard2{overflow:auto} #duelCard.pcard2 .pc-wrap{grid-template-columns:1fr} #duelCard .pc-nav{flex-direction:row} #duelCard.pcard2 .pc-btns{flex-direction:row} }
 @media (max-height:330px){ #duelCard.pcard2{overflow:auto} }
+
+/* v546 玩家資料頁「動態」頁：最近動態清單 */
+#duelCard .pc-feed{display:flex;flex-direction:column;gap:3px}
+#duelCard .pc-fi{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:6px;background:rgba(255,255,255,.7);border-radius:9px;padding:3px 8px;font-size:12.5px;color:#18334a;min-width:0}
+#duelCard .pc-fi i{font-style:normal;text-align:center}
+#duelCard .pc-fi span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+#duelCard .pc-fi small{color:#6b7d8c;font-size:11px;white-space:nowrap}
