@@ -13423,7 +13423,8 @@ function nearShop(){
     if (Venue.cafeExit && Math.hypot(me.pos.x - Venue.cafeExit.x, me.pos.z - Venue.cafeExit.z) < 1.3) return { id:'cafeexit', label:'出去', mode:'cafeexit' };
     if (Venue.cafeCounter && Math.abs(me.pos.x - Venue.cafeCounter.x) < 5 && Math.abs(me.pos.z - Venue.cafeCounter.z) < 1.6) return SHOPS.find(s => s.id === 'cook');
     return null; }
-  if (Math.hypot(me.pos.x - SHRIMP_DOOR.x, me.pos.z - (SHRIMP_DOOR.z + 1.9)) < 1.6) return { id:'shrimpdoor', label:'釣蝦場', mode:'shrimpdoor' };
+  /* v549 玩家說釣蝦場的涼亭四面都開著、看起來從哪邊都能進，卻只能從正面進：現在走到涼亭任何一邊（1.6 公尺內）都可以按「進去釣蝦」 */
+  { const dx = Math.max(0, Math.abs(me.pos.x - SHRIMP_DOOR.x) - 3.2), dz = Math.max(0, Math.abs(me.pos.z - (SHRIMP_DOOR.z - 0.6)) - 2.1); if (Math.hypot(dx, dz) < 1.6 && !onIsle) return { id:'shrimpdoor', label:'釣蝦場', mode:'shrimpdoor' }; }
   if (Math.hypot(me.pos.x - CAFE_DOOR.x, me.pos.z - CAFE_DOOR.z) < 1.7) return { id:'cafedoor', label:'潮汐食堂', mode:'cafedoor' };
   if (Math.hypot(me.pos.x - MUSEUM_DOOR.x, me.pos.z - MUSEUM_DOOR.z) < 1.7) return { id:'museumdoor', label:'海洋博物館', mode:'museumdoor' };
   if (Math.hypot(me.pos.x - STAD_DOOR.x, me.pos.z - STAD_DOOR.z) < 1.8) return { id:'staddoor', label:'潮汐體育場', mode:'staddoor' };
