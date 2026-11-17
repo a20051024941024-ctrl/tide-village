@@ -15935,6 +15935,18 @@ function roamDrive(n, dt, t){ if (!n.roam){ if (n.roam === 0) return false; cons
   else { n.speed = 0; n.rot = lerpAngle(n.rot, pd < 7 ? Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z) : ps.rot, 1 - Math.exp(-3 * dt)); }
   if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(Math.random() < 0.5 ? ROAM_LINES[Math.floor(Math.random() * ROAM_LINES.length)] : npcLine(n), '', 5); n.talkAt = t + rand(18, 34); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
   n.update(dt, t); n.placeTag(); return true; }
+/* v542 作者：「讓 NPC 看到玩家，會自動避開」→ 站著或在釣魚的村民，玩家走到他 1.6 公尺內，他會自己往旁邊讓開（最多挪 1.8 公尺，不會走進水裡、不會掉下碼頭），人走了再慢慢走回原位。
+   每個人的手機各自算（看的是自己和畫面上其他玩家的位置），所以大家看到的大致一樣。坐在船上的、顧店的村民不會動。 */
+function npcAvoid(n, dt, t){ if (n.sitting || n.wHide || n.st === 'show') return; const A = n.avA || (n.avA = { x: n.pos.x, z: n.pos.z, ox: 0, oz: 0 });
+  if (Math.hypot(n.pos.x - (A.x + A.ox), n.pos.z - (A.z + A.oz)) > 0.06){ A.x = n.pos.x; A.z = n.pos.z; A.ox = A.oz = 0; }   /* 被別的程式搬過位置（回碼頭、換地方）：重新認原位 */
+  let px = 0, pz = 0, bd = 1e9; const see = (x, z) => { const d = Math.hypot(x - A.x, z - A.z); if (d < bd){ bd = d; px = x; pz = z; } };
+  if (!House.on && !Dive.on && !onIsle) see(me.pos.x, me.pos.z); if (frameNo % 3 === 0 || n.avPeer){ n.avPeer = null; for (const p of peers.values()){ if (!p || !p.target || peerPlaceKey(p.pres)) continue; const d = Math.hypot(p.target.x - A.x, p.target.z - A.z); if (d < 2.4){ n.avPeer = p; if (d < bd){ bd = d; px = p.target.x; pz = p.target.z; } } } }
+  let tx = 0, tz = 0; const R = 1.6;
+  if (bd < R){ let ux = A.x - px, uz = A.z - pz; const ul = Math.hypot(ux, uz); if (ul < 0.05){ ux = Math.cos(n.rot || 0); uz = -Math.sin(n.rot || 0); } else { ux /= ul; uz /= ul; } const need = Math.min(1.8, R - bd + 0.5), gy = groundHeight(A.x, A.z);
+    const ok = (dx, dz) => { for (const k of [1, 0.5]){ const x = A.x + dx * k, z = A.z + dz * k; if (inWater(x, z) && Math.abs(groundHeight(x, z) - gy) > 0.12) return false; if (Math.abs(groundHeight(x, z) - gy) > 0.25) return false; } return true; };
+    for (const [cx, cz] of [[ux, uz], [-uz, ux], [uz, -ux], [ux * 0.7 - uz * 0.7, uz * 0.7 + ux * 0.7], [ux * 0.7 + uz * 0.7, uz * 0.7 - ux * 0.7]]){ if (ok(cx * need, cz * need)){ tx = cx * need; tz = cz * need; break; } }
+    if ((tx || tz) && t > (n.avSay || 0) && camera.position.distanceTo(n.pos) < 14){ n.avSay = t + 45; try { n.say(['我讓一下，你站這裡吧', '借過借過～這邊給你', '喔，你要站這裡啊，我挪一下'][Math.floor(Math.random() * 3)], '', 3); } catch(e){} } }
+  const dx = tx - A.ox, dz = tz - A.oz, dl = Math.hypot(dx, dz), sp = (tx || tz) ? 2.2 : 1.1, st = Math.min(dl, sp * dt); if (dl > 0.01){ A.ox += dx / dl * st; A.oz += dz / dl * st; n.pos.x = A.x + A.ox; n.pos.z = A.z + A.oz; n.aspd = dl > 0.05 ? sp : 0; } else if (n.aspd && !n.avKeep) n.aspd = 0; }
 function updateNpcs(dt, t){
   try { rainWearTick(); } catch(e){}
   for (const n of npcs){
@@ -15968,6 +15980,7 @@ function updateNpcs(dt, t){
     if (st === 'windup'){ n.windup = Math.min(1, (n.windup || 0) + dt / 0.6);
       if (t > n.stT){ n.windup = 0; n.castT = 0; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
     if (st === 'wait'){ n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); }
+    try { npcAvoid(n, dt, t); } catch(e){}
     n.update(dt, t); n.placeTag();
   }
 }
@@ -16621,6 +16634,7 @@ function renderTab(){
       '湖邊釣得到湖的魚、溪裡釣得到河的魚、四周的海釣得到海邊的魚。湖邊、溪邊、海邊都有長椅，坐下來就能拋竿。森林裡有鹿和猴子，鹿很怕人，靠太近會跑開。',
     ]);
     sec('🗺️ 村子怎麼逛', [
+      '村民會讓位：站著或在釣魚的村民，你走到他身邊（大約 1.6 公尺內），他會自己往旁邊挪開讓你站，你走了他再走回原位。顧店的、坐在船上的不會動。',
       '村子分區：港邊廣場是熱鬧、買賣和出海的地方；島中央的潮汐廣場是大家集合聊天的地方，東邊是村長辦公室（村長阿土伯在門口），外圈有花園和長椅；寵物店後面的森林邊有「🐾 寵物樂園」，帶寵物走進去站著，寵物會自己在裡面跑；南方沙灘可以休息。',
       '一進遊戲會站在「港邊廣場」：中間有噴水池；港口的兩間店（釣具店、潮汐魚市場）圍著廣場，往前走就是碼頭。島中央的「潮汐廣場」是三條大路交會的地方，節慶活動也在那裡。',
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、居民區走細細的小步道；清溪潭（以前的瀑布潭，魚都一樣）搬到河的西岸，過木橋就到。',
