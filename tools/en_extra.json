@@ -5382,5 +5382,7 @@
 "排位賽平手": "Ranked duel: draw",
 "友誼賽贏了": "Friendly duel: won",
 "友誼賽輸了": "Friendly duel: lost",
-"友誼賽平手": "Friendly duel: draw"
+"友誼賽平手": "Friendly duel: draw",
+"傳說魚很少見：用最基本的竹釣竿，港口外海每一竿大約 0.2%～0.5%，其他地方大約 0.1%～0.2%（滿力拋比輕輕拋高一倍以上）。好的釣竿、魚餌、窩料和料理加成都能提高機率。機率是每個人每一竿各抽各的，別人釣到不會影響你。": "Legendary fish are rare: with the basic bamboo rod, about 0.2%–0.5% per cast at Harbor Offshore and about 0.1%–0.2% elsewhere (a full-power cast is more than twice a light one). Better rods, bait, chum and food bonuses all raise the odds. Each player's every cast is rolled separately; other people's catches don't affect you.",
+"🍀 保底：連續 150 條都沒釣到傳說魚以後，每拋一竿會多一個額外的機會直接遇到那個釣點的傳說魚，越久沒中越高（250 條時 +0.4%、400 條 +1%、最高 +3%），釣到任何一條傳說魚就重新算。釣蝦場的蝦不算，變種和節慶限定魚不在保底裡。": "🍀 Pity: after 150 catches in a row without a legendary, every cast gets an extra chance to meet a legendary of that spot directly, growing the longer you go (+0.4% at 250, +1% at 400, up to +3%); catching any legendary resets it. Shrimp from the Shrimp Pond don't count, and variants and festival fish aren't in the pity pool."
 }
