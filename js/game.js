@@ -4670,10 +4670,12 @@ class Fisher {
         this.bob.position.lerpVectors(f.from, f.to, k); this.bob.position.y += Math.sin(k * Math.PI) * f.h;
         /* v513 作者：「甩出去的時候，線會因為慣性往前飛也沒有做出來」→ 記下浮標飛過的路線，線會沿著這條路被拖出去（不是一條直線），飛在空中的線也會慢慢往下掉 */
         if (!f.trail){ f.trail = [{ x: f.from.x, y: f.from.y, z: f.from.z, t: now() }]; } const tn = now(), lp = f.trail[f.trail.length - 1]; if (tn - lp.t > 0.025) f.trail.push({ x: this.bob.position.x, y: this.bob.position.y, z: this.bob.position.z, t: tn });
-        if (k >= 1){ this.flying = null; this.bobState = 'water'; ripple(f.to.x, f.to.z); this.lineLand = { t: now(), snap: Float32Array.from(this.line.geometry.attributes.position.array) }; if (f.done) f.done(); }
+        if (k >= 1){ this.flying = null; this.bobState = 'water'; this.sinkK = 0; ripple(f.to.x, f.to.z); this.lineLand = { t: now(), snap: Float32Array.from(this.line.geometry.attributes.position.array) }; if (f.done) f.done(); }
       } else {
         const wy = waterY(this.bobPos.x, this.bobPos.z, t);
         const jt = this === me && F.phase === 'bite' ? (this.bobJit || 0) : 0; this.bob.position.set(this.bobPos.x + Math.sin(t * 37) * jt, wy - this.dip * 0.16 + (this.dip < 0 ? this.dip * 0.06 : 0) + Math.sin(t*3)*0.01, this.bobPos.z + Math.cos(t * 41) * jt);
+        /* v539 作者：「這個沉底釣，但它浮在水面上」→ 沉底釣的鉛錘落水以後真的往下沉到水底（最深沉 2.2 公尺），線跟著拉進水裡；浮標釣、路亞不變 */
+        { const sk = this.bob.userData && this.bob.userData.sinker; if (sk && sk.visible){ let gy = wy - 2.2; try { const g = groundHeight(this.bobPos.x, this.bobPos.z); if (isFinite(g)) gy = Math.max(gy, Math.min(g + 0.08, wy - 0.35)); } catch(e){} this.sinkK = Math.min(1, (this.sinkK || 0) + dt * 0.9); const e2 = 1 - (1 - this.sinkK) * (1 - this.sinkK); this.bob.position.y = wy + (gy - wy) * e2 - (this.dip > 0 ? this.dip * 0.05 : 0); } else this.sinkK = 0; }
       }
       // line
       const tip = new THREE.Vector3(); (fpMe ? FP.tip : a.tip).getWorldPosition(tip);
