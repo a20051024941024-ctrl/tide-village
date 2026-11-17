@@ -484,7 +484,6 @@ const TRAVEL = [
   { id:'abyssdock', label:'深海浮台', x:64, z:-143.5, rot:Math.PI, color:'#1d3a6a' },
   { id:'mystdock', label:'神秘島碼頭', x:-60, z:150.5, rot:0, color:'#3a8a7a' },
   { id:'greendock', label:'苔森之島碼頭', x:GREEN.x + 6, z:GREEN.z - 31, rot:0, color:'#4e9a52' },
-  { id:'boatrace', label:'划船賽浮台', x:47.6, z:-37.6, rot:Math.PI / 2, color:'#e0564f' },   /* v548 */
   { id:'skimtn', label:'雪松山滑雪場', x:MTN.x - 2.5, z:MTN.z0 + 9.2, rot:0, color:'#dfeaf5' },
 ];
 const SHIRTS = ['#f17b6d','#2f89c7','#3fbf9d','#ffd36a','#9b7bff','#f5a5d8','#ff9f43','#5b6b7a'];
@@ -5127,7 +5126,7 @@ function boardBoat(b){
   toast('上船了！用搖桿划船，在水上任何地方都可以拋竿。'); pushPresence(true);
 }
 function leaveBoat(){
-  if (!myBoat) return; if (RACE.cur && RACE.cur.kind === 'boat' && RACE.cur.st !== 'done') raceQuit(true);
+  if (!myBoat) return;
   let best = null;
   for (let r = 1.2; r <= 3.6 && !best; r += 0.6) for (let k = 0; k < 16; k++){ const a = k / 16 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)){ best = [x, z]; break; } }
   if (!best){ toast('要靠近岸邊或碼頭才能下船。'); return; }
@@ -5155,8 +5154,7 @@ function boatSpot(){
 }
 function updateBoat(dt, ix, iz, L, locked){
   let speed = 0; const t = now(); me.sitting = true; if (me.swim && !Dive.on) me.setSwim(false);   /* v454 在船上就是坐著（不管之前是什麼狀態） */
-  if (brDrive(dt, uiBlocked ? 0 : ix, uiBlocked ? 0 : iz, uiBlocked ? 0 : L)){ speed = BR.v; }   /* v548 划船賽：比賽用的小艇有慣性 */
-  else if (L > 0.08 && !locked){
+  if (L > 0.08 && !locked){
     if (F.phase !== 'idle') cancelFishing('收竿了');
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, ml = Math.max(1e-6, Math.hypot(mx, mz));
@@ -10246,12 +10244,12 @@ function cardTap(li, uid, name, peerId){ if (!uid || !Cloud.on) return; for (con
    ・成績是手機回報的（跟球類一樣），所以只記最快紀錄和排行，不發金幣（伺服器 186）。
    🚣 划船賽：港口石頭堤防外面多一座浮動平台（起點拱門、小艇架、計時看板），浮標一直漂在海上。比賽用的小艇有慣性：直線越划越快、急轉會掉速；海上有三段順流帶。
    🎿 滑雪：冰封群島南邊多一座真的雪山「雪松山」（地形是真的，走得上去），山腳有小木屋、教練、滑雪板架；纜車把人載到山頂；從山頂的出發門滑到小木屋前面的終點。 */
-const RKIND = { boat: { ic: '🚣', nm: '划船賽', pen: 8 }, ski: { ic: '🎿', nm: '滑雪賽', pen: 3 } };
+const RKIND = { ski: { ic: '🎿', nm: '滑雪賽', pen: 3 } };
 const RACE = { cur: null, inv: null, bar: null, last: null, best: (() => { try { const b = LS.get('tide.raceBest', {}); return b && typeof b === 'object' ? b : {}; } catch(e){ return {}; } })(), top: {} };
-setTimeout(() => { try { if (!LS.get('tide.raceTold', 0)){ LS.set('tide.raceTold', 1); toast('🚣 阿海在港口石頭堤防外面辦了划船賽；🎿 冰封群島南邊的雪松山開了滑雪場（看「說明」）'); } } catch(e){} }, 15000);
+setTimeout(() => { try { if (!LS.get('tide.raceTold', 0)){ LS.set('tide.raceTold', 1); toast('🎿 冰封群島南邊的雪松山開了滑雪場（看「說明」）'); } } catch(e){} }, 15000);
 function raceSend(d){ try { if (RACE.tap) RACE.tap(d); if (room) room.emit('race', d).catch(() => {}); } catch(e){} }
 function raceFmt(ms){ ms = Math.max(0, Math.round(ms)); const s = ms / 1000; return s >= 60 ? `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}` : s.toFixed(2) + ' 秒'; }
-function raceGates(kind){ return kind === 'boat' ? BR.gates : SKI.gates; }
+function raceGates(kind){ return SKI.gates; }
 function raceBarEl(){ if (!RACE.bar){ const b = el('div', 'panel sbar'); b.id = 'raceBar'; b.hidden = true; document.body.appendChild(b); RACE.bar = b; } return RACE.bar; }
 function raceBarDraw(){ const b = raceBarEl(), c = RACE.cur; if (!c){ if (!b.hidden) b.hidden = true; return; } const K = RKIND[c.kind], G = raceGates(c.kind); let tx;
   if (c.st === 'wait'){ const left = Math.max(0, Math.ceil((c.t0 - Date.now()) / 1000)); tx = `${K.ic} ${left} 秒後出發${c.n > 1 ? `・${c.n} 人一起` : ''}`; }
@@ -10263,9 +10261,9 @@ function raceSeg(ax, az, bx, bz, cx, cz, dx, dz){ const d = (bx - ax) * (dz - cz
 function raceCall(kind){ if (RACE.cur) return; const iv = RACE.inv; let id, t0, n = 1;
   if (iv && iv.kind === kind && iv.t0 - Date.now() > 1200){ id = iv.id; t0 = iv.t0; n = (iv.n || 1) + 1; RACE.inv = null; raceSend({ k: 'join', id, kind, f: poolKey() }); }
   else { id = (poolKey() + '-' + Date.now().toString(36)).slice(-40); t0 = Date.now() + 6000; raceSend({ k: 'go', id, kind, left: 6000, f: poolKey(), nm: bkMyName() });   /* 送「還有幾毫秒出發」，不送絕對時間：每支手機的時鐘可能差好幾秒 */ }
-  if (kind === 'boat'){ if (!brEnter()) return; } else { if (!skiEnter()) return; }
+  if (kind !== 'ski' || !skiEnter()) return;
   RACE.cur = { kind, id, t0, st: 'wait', gi: 0, miss: 0, ts: 0, ms: 0, n, res: [], px: me.pos.x, pz: me.pos.z, beep: 4 }; raceBarDraw(); }
-function raceQuit(say){ const c = RACE.cur; if (!c) return; RACE.cur = null; raceBarDraw(); if (c.kind === 'ski') skiStop(); else brStop(); if (say) toast(`${RKIND[c.kind].ic} 這一趟放棄了`); }
+function raceQuit(say){ const c = RACE.cur; if (!c) return; RACE.cur = null; raceBarDraw(); skiStop(); if (say) toast(`${RKIND[c.kind].ic} 這一趟放棄了`); }
 function raceTick(dt){ const c = RACE.cur; if (RACE.inv && RACE.inv.t0 < Date.now()) RACE.inv = null; if (!c) return; const K = RKIND[c.kind], G = raceGates(c.kind);
   if (c.st === 'wait'){ const left = (c.t0 - Date.now()) / 1000; if (left <= 3 && Math.ceil(left) < c.beep && left > 0){ c.beep = Math.ceil(left); flash(String(c.beep), 0.7); try { SFX.tick(); } catch(e){} }
     if (left <= 0){ c.st = 'run'; c.ts = now(); c.px = me.pos.x; c.pz = me.pos.z; flash('出發！', 0.8); try { SFX.jump(); } catch(e){} } }
@@ -10282,9 +10280,9 @@ function raceFinish(){ const c = RACE.cur, K = RKIND[c.kind]; c.st = 'done'; c.d
   raceSend({ k: 'fin', id: c.id, kind: c.kind, ms: c.ms, f: poolKey(), nm: bkMyName() });
   try { SFX.catch(); } catch(e){} flash(`${K.ic} ${raceFmt(c.ms)}${pb ? '　新紀錄！' : ''}`, 2.4);
   try { if (Cloud.on && Cloud.sb) Cloud.sb.rpc('race_report', { p_kind: c.kind, p_ms: c.ms }).then(r => { if (r && r.data && r.data.ok) RACE.top[c.kind] = null; }, () => {}); } catch(e){}
-  if (c.kind === 'ski') skiFinish(); else brFinish(); raceBarDraw(); setTimeout(() => { if (RACE.last === c) raceCard(c.kind, c); }, 1500); }
-function raceOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || isBlockedPeer(msg.peer)) return; const d = msg.data, kind = d.kind === 'ski' ? 'ski' : 'boat', id = fbStr(d.id, 40), peer = fbStr(d.f, 40) || String(msg.peer || ''); if (!id || !peer || peer === poolKey()) return; let nm = fbStr(d.nm, 16) || '玩家'; try { nm = clean(nm); } catch(e){}
-  if (d.k === 'go'){ const left = +d.left; if (!(left > 2000 && left <= 8000) || RACE.cur) return; const t0 = Date.now() + left - 150; const near = kind === 'boat' ? Math.hypot(me.pos.x - BR.START.x, me.pos.z - BR.START.z) < 14 : skiAtTop(8); if (!near) return; RACE.inv = { kind, id, t0, nm, n: 1 }; toast(`${RKIND[kind].ic} <b>${esc(nm)}</b> 要出發了，按「一起出發」就能一起比`); }
+  skiFinish(); raceBarDraw(); setTimeout(() => { if (RACE.last === c) raceCard(c.kind, c); }, 1500); }
+function raceOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || msg.data.kind !== 'ski' || isBlockedPeer(msg.peer)) return; const d = msg.data, kind = 'ski', id = fbStr(d.id, 40), peer = fbStr(d.f, 40) || String(msg.peer || ''); if (!id || !peer || peer === poolKey()) return; let nm = fbStr(d.nm, 16) || '玩家'; try { nm = clean(nm); } catch(e){}
+  if (d.k === 'go'){ const left = +d.left; if (!(left > 2000 && left <= 8000) || RACE.cur) return; const t0 = Date.now() + left - 150; if (!skiAtTop(8)) return; RACE.inv = { kind, id, t0, nm, n: 1 }; toast(`${RKIND[kind].ic} <b>${esc(nm)}</b> 要出發了，按「一起出發」就能一起比`); }
   else if (d.k === 'join'){ if (RACE.cur && RACE.cur.id === id) RACE.cur.n++; else if (RACE.inv && RACE.inv.id === id) RACE.inv.n++; }
   else if (d.k === 'fin'){ const ms = Math.round(+d.ms); if (!(ms > 3000 && ms < 400000)) return; const c = RACE.cur && RACE.cur.id === id ? RACE.cur : RACE.last && RACE.last.id === id ? RACE.last : null; if (!c || c.res.some(r => r.k === peer)) return; c.res.push({ k: peer, nm, ms }); if (Duel.card && Duel.card.dataset.kind === 'race' && Duel.card._c === c) raceCard(kind, c); } }
 /* 成績卡／排行卡：c 有值＝剛比完那一場的名次；沒有＝看板（我的最快、今天前幾名、歷來前幾名） */
@@ -10292,11 +10290,10 @@ async function raceCard(kind, c){ const K = RKIND[kind], card = duelCardOpen('ra
   const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('race')); card.appendChild(X);
   card.appendChild(el('h3', '', c ? `${K.ic} ${K.nm}成績` : `${K.ic} ${K.nm}排行`));
   if (c){ const ul = el('ol', 'rc-list'); c.res.slice().sort((a, b) => a.ms - b.ms).forEach((r, i) => { const li = el('li', r.me ? 'me' : ''); li.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i] || String(i + 1))); li.appendChild(el('span', '', r.me ? '你' : r.nm)); li.appendChild(el('b', '', raceFmt(r.ms))); ul.appendChild(li); }); card.appendChild(ul);
-    if (c.miss) card.appendChild(el('p', 'sub', `漏了 ${c.miss} 道門，每道加 ${K.pen} 秒`));
-    if (kind === 'boat' && myBoat === BR.boat){ const ag = el('button', 'tbtn', '🚣 再比一次'); ag.addEventListener('click', () => { duelCardClose('race'); raceCall('boat'); }); card.appendChild(ag); } }
+    if (c.miss) card.appendChild(el('p', 'sub', `漏了 ${c.miss} 道門，每道加 ${K.pen} 秒`)); }
   const my = +RACE.best[kind] || 0; card.appendChild(el('p', 'rc-my', my ? `我的最快：${raceFmt(my)}` : '還沒有完成過'));
   const box = el('div', 'rc-top'); card.appendChild(box); box.appendChild(el('p', 'sub', Cloud.on ? '載入排行…' : '連上雲端才有排行'));
-  if (!c) card.appendChild(el('p', 'sub', kind === 'boat' ? '在浮台的小艇架旁邊按「出發」。照順序穿過每一對浮標，漏掉一道加 8 秒。直線越划越快、急轉會掉速，划進順流帶會加速。' : '坐纜車上山，在山頂的出發門按「出發」。穿過每一道旗門，漏掉一道加 3 秒。搖桿左右轉彎、往前蹲低加速、往後煞車；撞到雪松會摔倒。'));
+  if (!c) card.appendChild(el('p', 'sub', '坐纜車上山，在山頂的出發門按「出發」。穿過每一道旗門，漏掉一道加 3 秒。搖桿左右轉彎、往前蹲低加速、往後煞車；撞到雪松會摔倒。'));
   if (!Cloud.on || !Cloud.sb) return; let T = RACE.top[kind]; if (!T || Date.now() - T.at > 30000){ try { const { data } = await Cloud.sb.rpc('race_top', { p_kind: kind }); if (data && typeof data === 'object'){ T = RACE.top[kind] = { at: Date.now(), d: data }; } } catch(e){} }
   if (Duel.card !== card) return; box.innerHTML = ''; if (!T){ box.appendChild(el('p', 'sub', '排行暫時讀不到')); return; }
   if (T.d.me && +T.d.me.best && (!my || +T.d.me.best < my)){ RACE.best[kind] = +T.d.me.best; LS.set('tide.raceBest', RACE.best); const q = card.querySelector('.rc-my'); if (q) q.textContent = `我的最快：${raceFmt(+T.d.me.best)}`; }
@@ -10308,63 +10305,8 @@ function raceGateMesh(kind, g, i, last){ const grp = new THREE.Group(); grp.user
     grp.add(p); }
   return grp; }
 
-/* ---------- 🚣 划船賽 ---------- */
-const BR = { built: false, v: 0, boat: null, g: null, marks: [], flows: [],
-  DECK: { x0: 44.6, x1: 50.4, z0: -41.4, z1: -34.2, y: 0.4 },   /* 浮動平台：貼著石頭堤防往南那一段的外側（東邊） */
-  START: { x: 49.3, z: -37.2 }, BOARD: { x: 45.6, z: -35.2 }, SLOT: { x: 52.8, z: -38.4, rot: 2.25 },
-  PTS: [[58, -43], [72, -47], [88, -58], [86, -78], [68, -90], [46, -88], [34, -74], [45, -61], [55, -52.5], [58, -43]],   /* 每道門的中心；最後一道回到起點＝終點 */
-  FLOW: [],   /* 順流帶：x, z, 流向（下面照第 1、3、6 段賽道算） */
-  gates: [] };
-{ const P = BR.PTS; for (let i = 0; i < P.length; i++){ const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)], [x, z] = P[i]; let dx = b[0] - a[0], dz = b[1] - a[1]; if (i === 0 || i === P.length - 1){ dx = 12; dz = -4; } const l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l, hw = 3.4; BR.gates.push({ x, z, ax: x + nx * hw, az: z + nz * hw, bx: x - nx * hw, bz: z - nz * hw }); }
-  for (const i of [1, 4, 7]){ const a = P[i], b = P[i + 1]; BR.FLOW.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.atan2(b[0] - a[0], b[1] - a[1])]); } }
-function brNearDock(){ return Math.abs(me.pos.x) < 130 && Math.hypot(me.pos.x - 60, me.pos.z + 62) < 100; }
-function brBuild(){ if (BR.built) return; BR.built = true; { const D0 = BR.DECK; addDeck((D0.x0 + D0.x1) / 2, (D0.z0 + D0.z1) / 2, D0.x1 - D0.x0, D0.z1 - D0.z0, D0.y); const S0 = BR.SLOT; BR.boat = { dock: { id: 'race', x: S0.x, z: S0.z, rot: S0.rot }, m: makeKayakMesh(2) }; BR.boat.m.position.set(S0.x, WATER_LEVEL, S0.z); BR.boat.m.rotation.y = S0.rot; scene.add(BR.boat.m); boats.push(BR.boat); } const g = new THREE.Group(); g.userData.keep = true; g.userData.dyn = true; scene.add(g); BR.g = g; const D = BR.DECK, cx = (D.x0 + D.x1) / 2, cz = (D.z0 + D.z1) / 2, w = D.x1 - D.x0, d = D.z1 - D.z0;
-  /* 浮台：木板面、下面一排藍色浮筒、角落四根繫船柱 */
-  g.add(box([w, 0.16, d], '#b88a5a', [cx, D.y - 0.08, cz])); for (let i = 0; i < 4; i++) for (const sx of [-1, 1]){ const f = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, w / 2 - 0.3, 10), mat('#2f6ea8', 0.6)); f.rotation.z = Math.PI / 2; f.position.set(cx + sx * w / 4, D.y - 0.36, D.z0 + 0.9 + i * (d - 1.8) / 3); g.add(f); }
-  for (const [x, z] of [[D.x1 - 0.25, D.z0 + 0.25], [D.x1 - 0.25, D.z1 - 0.25]]) g.add(box([0.16, 0.5, 0.16], '#5b4630', [x, D.y + 0.25, z]));
-  /* 起點拱門（浮台東邊水面上）：兩根柱子＋橫幅 */
-  { const G0 = BR.gates[0], a = new THREE.Group(); for (const [x, z] of [[G0.ax, G0.az], [G0.bx, G0.bz]]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.4, 8), mat('#f4f1e6', 0.6)); p.position.set(x, 1.7, z); a.add(p); }
-    for (const fl of [0, Math.PI]){ const bn = new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(G0.bx - G0.ax, G0.bz - G0.az), 0.8), new THREE.MeshBasicMaterial({ map: signTex('阿海的划船賽　起點・終點', '#e0564f', '#fff7e0', 1024, 128) })); bn.position.set(G0.x, 3.1, G0.z); bn.rotation.y = Math.atan2(G0.bx - G0.ax, G0.bz - G0.az) - Math.PI / 2 + fl; bn.translateZ(0.02); a.add(bn); } g.add(a); }
-  /* 小艇架：斜放的 4 艘小艇（有人在比就少一艘） */
-  BR.rack = []; { const rx = D.x0 + 1.5, rz = D.z0 + 1.2; g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx - 0.9, D.y + 0.6, rz])); g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx + 0.9, D.y + 0.6, rz])); g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx - 0.9, D.y + 0.6, rz + 1.4])); g.add(box([0.1, 1.2, 0.1], '#5b4630', [rx + 0.9, D.y + 0.6, rz + 1.4]));
-    for (let i = 0; i < 4; i++){ const k = makeKayakMesh(i + 2); if (k.userData.paddle) k.userData.paddle.visible = false; k.scale.setScalar(0.8); k.rotation.set(0, Math.PI / 2, 0.5); k.position.set(rx, D.y + 0.28 + i * 0.3, rz + 0.7); g.add(k); BR.rack.push(k); } }
-  /* 計時看板 */
-  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 320; BR.cv = cv; const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; BR.tex = t; const bd = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.5), new THREE.MeshBasicMaterial({ map: t })); bd.position.set(BR.BOARD.x - 0.75, D.y + 1.55, BR.BOARD.z); bd.rotation.y = Math.PI / 2; g.add(bd); g.add(box([0.1, 2.3, 0.1], '#5b4630', [BR.BOARD.x - 0.8, D.y + 1.15, BR.BOARD.z - 1.1])); g.add(box([0.1, 2.3, 0.1], '#5b4630', [BR.BOARD.x - 0.8, D.y + 1.15, BR.BOARD.z + 1.1])); brBoard(); }
-  /* 浮標門、順流帶 */
-  BR.gates.forEach((G, i) => { if (i === 0) return; const m = raceGateMesh('boat', G, i, i === BR.gates.length - 1); if (i === BR.gates.length - 1) m.visible = false; g.add(m); BR.marks[i] = m; });
-  for (const [x, z, a] of BR.FLOW){ const f = new THREE.Group(); f.position.set(x, 0.06, z); f.rotation.y = a; for (let k = 0; k < 5; k++){ const ar = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 3), new THREE.MeshBasicMaterial({ color: '#bff3ff', transparent: true, opacity: 0.5, depthWrite: false })); ar.rotation.x = Math.PI / 2; ar.scale.y = 1; ar.scale.z = 0.08; ar.position.z = -5 + k * 2.5; f.add(ar); } g.add(f); BR.flows.push(f); }
-  { const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 4), new THREE.MeshBasicMaterial({ color: '#ffe066' })); arrow.rotation.x = Math.PI; arrow.visible = false; g.add(arrow); BR.arrow = arrow; } }
-function brBoard(){ const cv = BR.cv; if (!cv) return; const c = cv.getContext('2d'); c.fillStyle = '#18334a'; c.fillRect(0, 0, 512, 320); c.fillStyle = '#ffe08a'; c.font = '800 40px sans-serif'; c.textAlign = 'center'; c.fillText('🚣 阿海的划船賽', 256, 54); c.font = '700 28px sans-serif'; c.fillStyle = '#ffffff'; const T = RACE.top.boat && RACE.top.boat.d, L = T && Array.isArray(T.day) ? T.day.slice(0, 4) : [];
-  if (!L.length){ c.fillText('今天還沒有人完成', 256, 150); c.fillStyle = '#bfe6f5'; c.fillText('走過來按「出發」', 256, 200); } else { c.textAlign = 'left'; c.fillStyle = '#bfe6f5'; c.fillText('今天最快', 30, 104); c.fillStyle = '#ffffff'; L.forEach((r, i) => { let nm = String(r.n || '釣客').slice(0, 8); try { nm = clean(nm); } catch(e){} c.fillText(`${i + 1}. ${nm}`, 30, 150 + i * 42); c.textAlign = 'right'; c.fillText(raceFmt(+r.ms), 482, 150 + i * 42); c.textAlign = 'left'; }); }
-  if (BR.tex) BR.tex.needsUpdate = true; }
-function brTopLoad(kind, cb){ const T = RACE.top[kind]; if (!Cloud.on || !Cloud.sb || (T && Date.now() - T.at < 120000) || RACE['ld' + kind]) return; RACE['ld' + kind] = 1; Cloud.sb.rpc('race_top', { p_kind: kind }).then(r => { RACE['ld' + kind] = 0; if (r && r.data && typeof r.data === 'object'){ RACE.top[kind] = { at: Date.now(), d: r.data }; if (cb) cb(); } else RACE.top[kind] = { at: Date.now() - 60000, d: {} }; }, () => { RACE['ld' + kind] = 0; }); }
-function brOn(){ const c = RACE.cur; return !!(c && c.kind === 'boat' && c.st !== 'done' && myBoat === BR.boat); }
-function brEnter(){ brBuild(); if (myBoat && myBoat !== BR.boat) { toast('先下船，再到浮台按「出發」'); return false; } if (F.phase !== 'idle') cancelFishing(); if (Bike.on) bikeOff(); const S = BR.SLOT, b = BR.boat; const off = (Math.random() - 0.5) * 3; b.m.position.set(S.x + Math.cos(S.rot) * off * 0.4, WATER_LEVEL, S.z - Math.sin(S.rot) * off); b.m.rotation.set(0, S.rot, 0); if (myBoat !== b) boardBoat(b); me.pos.x = b.m.position.x; me.pos.z = b.m.position.z; me.rot = S.rot; cam.yaw = S.rot + Math.PI; BR.v = 0; return true; }
-function brStop(){ BR.v = 0; }
-function brFinish(){ toast('🚣 划回浮台旁邊按「下船」，或再按一次「出發」'); }
-/* 比賽中的小艇：有慣性。回傳 true＝這一格由這裡負責移動 */
-function brDrive(dt, ix, iz, L){ if (!brOn()) return false; const c = RACE.cur; cam.yaw = lerpAngle(cam.yaw, me.rot + Math.PI, 1 - Math.exp(-1.6 * dt));
-  if (c.st === 'wait'){ BR.v = 0; return true; }
-  let vmax = 5.8, acc = 3.0; for (const [x, z, a] of BR.FLOW){ if (Math.hypot(me.pos.x - x, me.pos.z - z) < 6.5){ const al = Math.cos(a - me.rot); if (al > 0.3){ vmax = 8.0; acc = 5.5; } } }
-  if (L > 0.08){ const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw), mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, want = Math.atan2(mx, mz); let d = ((want - me.rot + Math.PI) % (Math.PI * 2)); if (d < 0) d += Math.PI * 2; d -= Math.PI;
-    const rate = 2.3 - 0.9 * Math.min(1, BR.v / 8), st = clamp(d, -rate * dt, rate * dt); me.rot += st; BR.v *= 1 - Math.min(0.5, Math.abs(st) * 0.55); if (Math.abs(d) < 1.2) BR.v = Math.min(vmax, BR.v + acc * Math.min(1, L) * dt); else BR.v = Math.max(0, BR.v - 3 * dt); }
-  else BR.v = Math.max(0, BR.v - 1.4 * dt);
-  if (BR.v > vmax) BR.v = Math.max(vmax, BR.v - 4 * dt);
-  const nx = me.pos.x + Math.sin(me.rot) * BR.v * dt, nz = me.pos.z + Math.cos(me.rot) * BR.v * dt; let hit = false;
-  if (boatWater(nx, me.pos.z)) me.pos.x = nx; else hit = true; if (boatWater(me.pos.x, nz)) me.pos.z = nz; else hit = true; if (hit) BR.v *= 0.4;
-  if (BR.v > 2 && Math.random() < dt * 9) ripple(me.pos.x - Math.sin(me.rot) * 1.4, me.pos.z - Math.cos(me.rot) * 1.4);
-  return true; }
-function brTick(dt, t){ if (!brNearDock()){ if (BR.g && BR.g.visible) BR.g.visible = false; return; } brBuild(); BR.g.visible = !onIsle && !House.on && !Dive.on; const tn = now(), c = RACE.cur && RACE.cur.kind === 'boat' ? RACE.cur : null;
-  BR.marks.forEach((m, i) => { if (!m) return; const G = BR.gates[i]; m.children.forEach((p, k) => { const x = k ? G.bx : G.ax, z = k ? G.bz : G.az; p.position.y = waterY(x, z, tn) - WATER_LEVEL + Math.sin(tn * 1.3 + i + k) * 0.03; p.rotation.z = Math.sin(tn * 0.9 + i * 2 + k) * 0.06; }); });
-  BR.flows.forEach((f, i) => f.children.forEach((a, k) => { const u = ((tn * 0.45 + k / 5) % 1); a.position.z = -6 + u * 12; a.material.opacity = 0.55 * Math.sin(u * Math.PI); }));
-  if (BR.arrow){ const on = !!(c && c.st !== 'done' && c.gi < BR.gates.length); BR.arrow.visible = on; if (on){ const G = BR.gates[Math.max(1, c.gi)]; BR.arrow.position.set(G.x, 3.2 + Math.sin(tn * 4) * 0.25, G.z); BR.arrow.rotation.y = tn * 2; } }
-  if (frameNo % 30 === 0){ let n = 0; for (const p of peers.values()) if (p.pres && (p.pres.bt | 0) === 3 && p.fisher && Math.hypot(p.fisher.pos.x - 60, p.fisher.pos.z + 58) < 90) n++; if (myBoat === BR.boat) n++; BR.rack.forEach((k, i) => { k.visible = i < 4 - n; }); }
-  if (frameNo % 120 === 7) brTopLoad('boat', brBoard); }
-function brNear(){ if (!BR.built) return null; const D = BR.DECK; if (me.pos.x < D.x0 - 0.5 || me.pos.x > D.x1 + 0.5 || me.pos.z < D.z0 - 0.5 || me.pos.z > D.z1 + 0.5) return null;
-  if (Math.hypot(me.pos.x - BR.BOARD.x, me.pos.z - BR.BOARD.z) < 1.7) return { id: 'raceboard', label: '計時看板', mode: 'raceboard', sub: '🚣 看划船賽排行' };
-  if (Math.hypot(me.pos.x - BR.START.x, me.pos.z - BR.START.z) < 2.6 && !RACE.cur){ const iv = RACE.inv && RACE.inv.kind === 'boat' ? RACE.inv : null; return { id: 'racego', label: iv ? '一起出發' : '出發', mode: 'racego', kind: 'boat', sub: iv ? `🚣 跟 ${iv.nm} 一起比` : '🚣 阿海的划船賽・6 秒後開始' }; }
-  return null; }
-
+/* v549 作者 11/17：「感覺又偏離釣魚遊戲了」「原本的划船也不要」→ 港口的划船賽整個拿掉（浮台、浮標、比賽小艇），只留滑雪。 */
+function raceTopLoad(kind, cb){ const T = RACE.top[kind]; if (!Cloud.on || !Cloud.sb || (T && Date.now() - T.at < 120000) || RACE['ld' + kind]) return; RACE['ld' + kind] = 1; Cloud.sb.rpc('race_top', { p_kind: kind }).then(r => { RACE['ld' + kind] = 0; if (r && r.data && typeof r.data === 'object'){ RACE.top[kind] = { at: Date.now(), d: r.data }; if (cb) cb(); } else RACE.top[kind] = { at: Date.now() - 60000, d: {} }; }, () => { RACE['ld' + kind] = 0; }); }
 /* ---------- 🎿 雪松山 ---------- */
 function mtnT(lz){ return clamp((lz - MTN.base) / MTN.len, 0, 1); }
 function mtnHW(lz){ return 16 - 5 * mtnT(lz); }
@@ -10471,7 +10413,7 @@ function skiTick(dt, t){ if (!skiNearMtn()){ if (SKI.g && SKI.g.visible){ SKI.g.
   if (SKI.flame){ SKI.flame.scale.set(1 + Math.sin(tn * 11) * 0.12, 1 + Math.sin(tn * 7.3) * 0.2, 1 + Math.cos(tn * 9) * 0.12); if (SKI.fireL) SKI.fireL.intensity = 1.1 + Math.sin(tn * 13) * 0.25; }
   if (SKI.npc){ const f = SKI.npc, d = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z); if (d < 45 && vis){ f.av.g.visible = true; f.update(0.016, tn); f.placeTag(); } else { f.av.g.visible = false; f.tag.style.display = 'none'; } }
   for (const p of peers.values()){ const f = p.fisher; if (!f) continue; const want = p.pres ? (p.pres.sk | 0) : 0; if (want !== (f.skiM | 0)) skiGear(f, want > 0, want === 1); }
-  if (frameNo % 120 === 11) brTopLoad('ski', skiBoard); }
+  if (frameNo % 120 === 11) raceTopLoad('ski', skiBoard); }
 function skiNear(){ if (!SKI.built) return null;
   if (SKI.npc && Math.hypot(me.pos.x - SKI.npc.pos.x, me.pos.z - SKI.npc.pos.z) < 2.4) return { id: 'skicoach', label: '滑雪教練 小嵐', mode: 'skicoach', sub: '🎿 排行・怎麼滑' };
   { const [x, z] = mtnW(SKI.LIFT0.lx, SKI.LIFT0.lz + 1.2); if (Math.hypot(me.pos.x - x, me.pos.z - z) < 2.6) return { id: 'skilift', label: '坐纜車', mode: 'skilift', sub: '🚡 上山頂（大約 13 秒）' }; }
@@ -10520,7 +10462,7 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   /* v546 動態頁：探索進度、釣魚大賽名次、最近動態（作者：參考圖裡還沒做的三樣） */
   { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🧭 探索和比賽')); const g = el('div', 'pc-stats'); const cell = (ic, lab, val, sub) => { const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); if (sub) d.appendChild(el('span', '', sub)); g.appendChild(d); };
     const ex = new Set(isMe ? [...visited] : Array.isArray(r.explore) ? r.explore : []); const nEx = TRAVEL.filter(x => ex.has(x.id)).length, T = r.tourney || {};
-    cell('🧭', '去過的地點', `${nEx}／${TRAVEL.length}`, nEx >= TRAVEL.length ? '全部走遍了' : ''); cell('🏆', '大賽最佳名次', T.best ? `第 ${T.best} 名` : '—'); cell('🎏', '大賽參加', `${T.plays || 0} 場`, T.top3 ? `前三名 ${T.top3} 次` : ''); { const R = r.race || {}, mine = isMe ? RACE.best : {}; for (const [k, ic, lab] of [['boat', '🚣', '划船最快'], ['ski', '🎿', '滑雪最快']]){ const b = Math.min(+(R[k] && R[k].best) || Infinity, +mine[k] || Infinity); cell(ic, lab, isFinite(b) ? raceFmt(b) : '—'); } } sec.appendChild(g); P4.appendChild(sec); }   /* v548 划船賽、滑雪的最快時間 */
+    cell('🧭', '去過的地點', `${nEx}／${TRAVEL.length}`, nEx >= TRAVEL.length ? '全部走遍了' : ''); cell('🏆', '大賽最佳名次', T.best ? `第 ${T.best} 名` : '—'); cell('🎏', '大賽參加', `${T.plays || 0} 場`, T.top3 ? `前三名 ${T.top3} 次` : ''); { const R = r.race || {}, mine = isMe ? RACE.best : {}; for (const [k, ic, lab] of [['ski', '🎿', '滑雪最快']]){ const b = Math.min(+(R[k] && R[k].best) || Infinity, +mine[k] || Infinity); cell(ic, lab, isFinite(b) ? raceFmt(b) : '—'); } } sec.appendChild(g); P4.appendChild(sec); }   /* v548 划船賽、滑雪的最快時間 */
   { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '📰 最近動態')); const ul = el('div', 'pc-feed'); const RES = { w: '贏了', l: '輸了', d: '平手' }, SP = { soccer: ['⚽', '足球'], basket: ['🏀', '籃球'], badminton: ['🏸', '羽球'] };
     for (const x of (Array.isArray(r.recent) ? r.recent : [])){ if (ul.children.length >= 4) break; let ic = '', tx = ''; try {
         if (x.k === 'c'){ const fz = FISH_BY_ID[x.f]; if (!fz) continue; ic = x.r === '傳說' ? '✨' : '🐟'; tx = `釣到 ${fz.name} ${(+x.w).toFixed(1)} kg`; }
@@ -11864,7 +11806,7 @@ function updateVenues(dt, t){
   try { fbTick(dt, t); } catch(e){}
   try { bkTick(dt, t); } catch(e){}
   try { bdTick(dt, t); } catch(e){}
-  try { raceTick(dt); brTick(dt, t); skiTick(dt, t); } catch(e){ if (!window.__raceErr){ window.__raceErr = 1; console.warn('race', e); } }
+  try { raceTick(dt); skiTick(dt, t); } catch(e){ if (!window.__raceErr){ window.__raceErr = 1; console.warn('race', e); } }
   try { duelTick(); } catch(e){}
   /* v511 作者：「畫面都被切掉了」→ 整頁偶爾會被捲動（上面的選單跑到畫面外面）；沒在打字的時候一律捲回最上面 */
   { const se = document.scrollingElement || document.documentElement, ae = document.activeElement; if ((se.scrollTop || document.body.scrollTop || window.scrollY || se.scrollLeft) && !(ae && /INPUT|TEXTAREA/.test(ae.tagName))){ se.scrollTop = 0; se.scrollLeft = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); } }
@@ -11978,7 +11920,7 @@ function renderFerry(body){
   cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(), [x, z] = toW((e.clientX - r.left) / r.width * S, (e.clientY - r.top) / r.height * S), ok = waterAt(x, z) && Math.hypot(x - ISLE.x, z - ISLE.z) > 40;
     pick = [x, z, ok]; draw(pick); go.disabled = !ok; lbl.textContent = ok ? `選好了：${spotName(x, z)}（${x.toFixed(0)}, ${z.toFixed(0)}）` : '那裡不是水面，換一個地方'; });
   go.addEventListener('click', () => { if (pick && pick[2]) ferryTo(pick[0], pick[1], `自選地點（${spotName(pick[0], pick[1])}）`); });
-  body.appendChild(el('p', 'sub', '🚣 阿海：「我在石頭堤防外面的浮台辦了划船賽，有空來比一場！冰封群島南邊的雪松山也開了滑雪場。」'));   /* v548 */
+  body.appendChild(el('p', 'sub', '🎿 阿海：「冰封群島南邊的雪松山開了滑雪場，想去的話我載你。」'));   /* v548 */
   body.appendChild(el('div', 'dexhead', '🌊 外海'));
   const u2 = el('ul', 'shoplist');
   for (const d0 of FERRY.dest){ const li = el('li'); li.appendChild(el('span', 'dishic', '🌊')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', d0.name)); d.appendChild(el('div', 'sub2', d0.desc)); li.appendChild(d);
@@ -13395,7 +13337,7 @@ const SHOPS = [ { id:'tackle', label:'釣具店', mode:'rod' }, { id:'shop', lab
 function nearShop(){
   if (myBoat) return null;
   if (SKI.on || SKI.lift) return null;   /* 滑雪中、坐纜車時不跳其他按鈕 */
-  if (!onIsle && !House.on){ const rr = brNear() || skiNear(); if (rr) return rr; }   /* v548 划船賽浮台、雪松山 */
+  if (!onIsle && !House.on){ const rr = skiNear(); if (rr) return rr; }   /* v548 雪松山 */
   for (const q of questNpcs){ if (Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z) < 2.3) return { id:'quest', label:q.name, mode:'quest', who:q.who }; }
   if (ferryNpc && Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z) < 2.3) return { id:'ferry', label:FERRY.name, mode:'ferry' };
   if (Math.hypot(me.pos.x - SUBDOCK.x, me.pos.z - SUBDOCK.z) < 2.4) return { id:'subdock', label:'🚢 潛水艇碼頭', mode:'sub' };
@@ -13437,7 +13379,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '魚市場・賣魚';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'racego'){ raceCall(sh.kind); return; } if (sh.mode === 'raceboard'){ raceCard('boat'); return; } if (sh.mode === 'skicoach'){ raceCard('ski'); return; } if (sh.mode === 'skilift'){ skiLiftGo(); return; } if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'racego'){ raceCall(sh.kind); return; } if (sh.mode === 'skicoach'){ raceCard('ski'); return; } if (sh.mode === 'skilift'){ skiLiftGo(); return; } if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -17046,7 +16988,7 @@ function renderTab(){
     sec('🪪 個人名片', [
       '怎麼看：點左上角自己的頭像就是自己的資料頁。看別人的：直接點他的角色或頭上的名字；或打開「朋友」分頁，點名單裡任何人的頭像或名字（好友不在線上也看得到）。',
       '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最得意的三種魚（自己的名片上按「自己選三種魚」挑，沒挑就先放最重的三種）、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
-      '「📰 動態」那一頁：去過的地點（走到新地點就會記下來，總共 ' + TRAVEL.length + ' 個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）；還有划船賽和滑雪的最快時間。',
+      '「📰 動態」那一頁：去過的地點（走到新地點就會記下來，總共 ' + TRAVEL.length + ' 個）、釣魚大賽的最佳名次和參加場數（從 v546 開始記，以前的場次沒有紀錄）、還有最近 4 件事（上報的好魚、打完的對決、球類比賽、大賽名次）；還有滑雪的最快時間。',
       '自己的資料頁可以按 ✏️ 寫一句話給別人看（最多 30 個字）；點大頭照（或旁邊的 📸）可以直接在同一頁換大頭照：選遠近、姿勢、角度、背景、外框，臉和衣服就是你現在的造型。',
       '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
     ]);
@@ -17072,20 +17014,13 @@ function renderTab(){
       '打去哪裡：揮拍那一下你正在往左或往右跑，球就往那一邊飛；往網子跑是短球，往後退是長球；站著不動是隨機。球掉在你這邊的地上，對方得分。',
       '打完的勝敗會記到玩家資料頁（🏸 幾勝幾敗），沒有獎勵。',
     ]);
-    sec('🚣 阿海的划船賽', [
-      '在哪裡：港口北邊的石頭堤防，走到往南那一段的外側（東邊），有一座木頭浮台：上面有小艇架、計時看板，海上有起點拱門。浮標一直漂在港口外面，平常划船經過也看得到。',
-      '怎麼開始：站到浮台靠海那一邊按「出發」，會坐上比賽用的小艇，6 秒後開始。這 6 秒內旁邊的人按「一起出發」就一起比；只有自己也可以，就是計時賽。',
-      '怎麼划：比賽用的小艇有慣性——直線會越划越快，急轉彎會掉速，所以轉彎要提早、畫大一點的弧。海面上有三段淺藍色箭頭的順流帶，順著划進去會加速。鏡頭會自己跟在船後面。',
-      '規則：照順序穿過每一對浮標（黃色箭頭指著下一道），最後回到起點拱門就是終點。漏掉的門不用回頭，每道加 8 秒。超過 5 分鐘不算。按上面的「✕ 放棄」可以中途結束。',
-      '成績：比完會跳出這一場的名次（一起比的人都會列出來）。計時看板寫今天最快的人，走過去按按鈕可以看今天和歷來的排行。最快時間會記到玩家資料頁的「📰 動態」。成績是手機回報的，所以沒有金幣獎勵。',
-    ]);
     sec('🎿 雪松山滑雪場', [
       '在哪裡：冰封群島（找港口的阿海坐船，或自己划船）南邊多了一座雪山。從冰湖往南走就到山腳：有一間小木屋、滑雪板架、火爐、成績看板，還有滑雪教練小嵐。',
       '上山：走到山腳東邊的纜車站按「坐纜車」，會跟小木屋借滑雪板、坐上下一張吊椅，大約 13 秒到山頂。也可以自己慢慢走上去。',
       '出發：走到山頂寫著「出發」的門按「出發」，6 秒後開始；這 6 秒內旁邊的人按「一起出發」就一起比。',
       '怎麼滑：會自己往下滑。搖桿左右＝轉彎（轉太急會掉速），往前推＝蹲低（比較快），往後拉＝煞車。鏡頭會壓低跟在背後。',
       '規則：穿過每一道旗門（一紅一藍兩支旗子中間），漏掉一道加 3 秒，不用回頭。滑出雪道是深雪，會變很慢；撞到雪松會摔倒，要等一下才爬得起來。中間有一個小跳台，衝過去會飛起來。終點在小木屋前面。',
-      '成績：跟划船賽一樣，有這一場的名次、今天最快和歷來排行（找教練小嵐看），最快時間記到玩家資料頁。沒有金幣獎勵。',
+      '成績：滑完會跳出這一場的名次（一起滑的人都會列出來），有今天最快和歷來排行（找教練小嵐看），最快時間記到玩家資料頁的「📰 動態」。成績是手機回報的，所以沒有金幣獎勵。',
       '滑完以後滑雪板會自動還回去。別人看得到你坐在纜車上、從山上滑下來。',
     ]);
     sec('🎱 潮汐撞球館', [
