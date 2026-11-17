@@ -894,10 +894,17 @@ scene.background = new THREE.Color(PALETTE.sky);
 scene.fog = new THREE.Fog('#b7e5df', 45, 140);
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 220);
 // 畫面大小用「版面」寬高，不用 innerWidth：iOS Safari 被放大時 innerWidth 會變小，畫面會變糊、標籤會跑掉
-function viewW(){ return document.documentElement.clientWidth || innerWidth; }
+function viewW(){ const de = document.documentElement; if (de.classList.contains('vvfix') && canvas && canvas.clientWidth) return canvas.clientWidth;   /* v535 版面被撐大時用畫布自己的寬度 */ return de.clientWidth || innerWidth; }
 function viewH(){ return (canvas && canvas.clientHeight) || document.documentElement.clientHeight || innerHeight; }
 function resize(){ const w = viewW(), h = viewH(); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
+/* v535 作者第三次回報「又這樣了」，小白字每次都是 in980 vv741 s1.00：瀏覽器把「版面」算成 980 寬（比螢幕 741 寬），但倍率是 1，所以只看得到右下角。
+   版面為什麼變 980 我從這邊查不出來，改成不管它：一發現版面比看得到的範圍寬，就把整個遊戲（畫面和所有按鈕）直接塞進「看得到的那一塊」裡。恢復正常就自動拿掉。 */
+function vvFix(){ const v = window.visualViewport, de = document.documentElement; if (!v) return; const bad = innerWidth - v.width > 3, on = de.classList.contains('vvfix');
+  if (bad){ if (v.offsetLeft > 1 || v.offsetTop > 1){ try { window.scrollTo(0, 0); } catch(e){} } const st = de.style, L = Math.round(v.offsetLeft) + 'px', T = Math.round(v.offsetTop) + 'px', W = Math.round(v.width) + 'px', H = Math.round(v.height) + 'px';
+    if (!on || st.left !== L || st.top !== T || st.width !== W || st.height !== H){ de.classList.add('vvfix'); st.position = 'fixed'; st.left = L; st.top = T; st.right = 'auto'; st.bottom = 'auto'; st.width = W; st.height = H; st.transform = 'translateZ(0)'; try { resize(); } catch(e){} } }
+  else if (on){ de.classList.remove('vvfix'); const st = de.style; st.position = st.left = st.top = st.right = st.bottom = st.width = st.height = st.transform = ''; try { resize(); } catch(e){} } }
+if (window.visualViewport){ visualViewport.addEventListener('resize', vvFix); visualViewport.addEventListener('scroll', vvFix); setInterval(vvFix, 400); }
 // iOS：擋掉雙指放大與連點放大（Safari 不理會 user-scalable=no）；萬一已經被放大，畫面也會照版面大小重畫
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive:false });
 document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
@@ -912,11 +919,11 @@ if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visua
 { let zd = null, ver = '?'; try { caches.keys().then(ks => { const k = ks.filter(x => /^tide-v\d+$/.test(x)).sort((a, b) => +b.slice(6) - +a.slice(6))[0]; if (k) ver = k.slice(5); }).catch(() => {}); } catch (e) {}
   setInterval(() => { try { const v = window.visualViewport, de = document.documentElement, sc = v ? v.scale : 1, vw = v ? v.width : innerWidth, ol = v ? v.offsetLeft : 0, ot = v ? v.offsetTop : 0;
       const cvs = document.getElementById('c'), cw = cvs ? cvs.getBoundingClientRect().width : 0;
-      const bad = sc > 1.01 || Math.abs(vw - de.clientWidth) > 3 || ol > 2 || ot > 2 || scrollX > 1 || scrollY > 1 || Math.abs(cw - de.clientWidth) > 3;
+      const bad = sc > 1.01 || innerWidth - vw > 3 || Math.abs(vw - de.clientWidth) > 3 || ol > 2 || ot > 2 || scrollX > 1 || scrollY > 1 || Math.abs(cw - de.clientWidth) > 3;
       if (!bad){ if (zd) zd.style.display = 'none'; return; }
       if (!zd){ zd = document.createElement('div'); zd.style.cssText = 'position:absolute;z-index:99999;pointer-events:none;font:11px/1.2 monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 5px;border-radius:5px;white-space:nowrap'; document.body.appendChild(zd); }
-      zd.style.display = 'block'; zd.style.left = (ol + scrollX + 6) + 'px'; zd.style.top = (ot + scrollY + 6) + 'px'; zd.style.transform = 'scale(' + (1 / sc) + ')'; zd.style.transformOrigin = '0 0';
-      zd.textContent = ver + ' s' + sc.toFixed(2) + ' vv' + Math.round(vw) + 'x' + Math.round(v ? v.height : innerHeight) + ' o' + Math.round(ol) + ',' + Math.round(ot) + ' in' + innerWidth + 'x' + innerHeight + ' de' + de.clientWidth + 'x' + de.clientHeight + ' c' + Math.round(cw) + ' sy' + Math.round(scrollX) + ',' + Math.round(scrollY) + ' dpr' + (+devicePixelRatio).toFixed(2);
+      zd.style.display = 'block'; { const fx = de.classList.contains('vvfix'); zd.style.left = ((fx ? 0 : ol) + scrollX + 6) + 'px'; zd.style.top = ((fx ? 0 : ot) + scrollY + 6) + 'px'; } zd.style.transform = 'scale(' + (1 / sc) + ')'; zd.style.transformOrigin = '0 0';
+      zd.textContent = ver + (de.classList.contains('vvfix') ? ' FIX' : '') + ' s' + sc.toFixed(2) + ' vv' + Math.round(vw) + 'x' + Math.round(v ? v.height : innerHeight) + ' o' + Math.round(ol) + ',' + Math.round(ot) + ' in' + innerWidth + 'x' + innerHeight + ' de' + de.clientWidth + 'x' + de.clientHeight + ' c' + Math.round(cw) + ' sy' + Math.round(scrollX) + ',' + Math.round(scrollY) + ' dpr' + (+devicePixelRatio).toFixed(2);
     } catch (e) {} }, 700); }
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 320 && !(e.target && e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
@@ -10122,6 +10129,12 @@ function duelWantBar(r){ let b = Duel.wb; if (!r){ if (b && !b.hidden) b.hidden 
 async function openCard(uid, name, peerId){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能看名片'); return; } if (!uid) return; closeSheet(); const c = duelCardOpen('pcard'); c.classList.add('pcard'); c.appendChild(el('h3', '', `🪪 ${name || '玩家'}`)); c.appendChild(el('p', 'sub', '載入中…'));
   const r = await festRpc('player_card', { p_uid: uid }); if (!Duel.card || Duel.card !== c) return; if (!r || r.err){ c.innerHTML = ''; c.appendChild(el('p', '', (r && r.err) || '讀不到這張名片')); const x = el('button', 'tbtn ghost', '關閉'); x.addEventListener('click', () => duelCardClose('pcard')); c.appendChild(x); return; }
   cardDraw(c, r, peerId); }
+function cardPick(c, r, peerId){ c.innerHTML = ''; c.appendChild(el('h3', '', '選最得意的三種魚')); const best = (rec && rec.best) || {}, ids = Object.keys(best).filter(k => FISH_BY_ID[k] && +best[k] > 0).sort((a, b) => best[b] - best[a]); const sel = (r.picked ? r.top.map(x => x.f) : []).filter(k => ids.includes(k)).slice(0, 3);
+  const tip = el('p', 'sub', ''); c.appendChild(tip); const box = el('div', 'pc-pick'); c.appendChild(box); const upd = () => { tip.textContent = `點魚選起來，最多 3 種，照你點的順序排（已選 ${sel.length}／3）`; for (const b of box.children){ const i = sel.indexOf(b.dataset.f); b.classList.toggle('on', i >= 0); b.querySelector('i').textContent = i >= 0 ? ['🥇', '🥈', '🥉'][i] : ''; } };
+  if (!ids.length) box.appendChild(el('p', 'sub', '還沒有釣到魚，先去釣幾條再來選'));
+  for (const k of ids){ const b = el('button', 'pc-opt'); b.dataset.f = k; b.appendChild(el('i', '', '')); b.appendChild(el('b', '', FISH_BY_ID[k].name)); b.appendChild(el('span', '', `${(+best[k]).toFixed(2)} kg`)); b.addEventListener('click', () => { const i = sel.indexOf(k); if (i >= 0) sel.splice(i, 1); else if (sel.length < 3) sel.push(k); else { toast('最多 3 種，先點掉一種'); return; } upd(); }); box.appendChild(b); } upd();
+  const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '存起來'), no = el('button', 'tbtn ghost', '取消'); row.append(ok, no); c.appendChild(row); no.addEventListener('click', () => cardDraw(c, r, peerId));
+  ok.addEventListener('click', async () => { ok.disabled = true; const o = await festRpc('player_set_card_fish', { p_ids: sel }); if (!o || !o.ok){ ok.disabled = false; return; } const r2 = await festRpc('player_card', { p_uid: r.id }); if (Duel.card !== c) return; cardDraw(c, r2 && !r2.err ? r2 : r, peerId); }); }
 function cardDraw(c, r, peerId){ c.innerHTML = ''; let nm = String(r.name || '玩家').slice(0, 16); try { nm = clean(nm); } catch(e){} const isMe = !!r.me;
   const pr = peerId && peers.get(peerId) ? peers.get(peerId).pres || {} : null; let title = ''; try { title = isMe ? curTitle() : pr && typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti) ? pr.ti : ''; } catch(e){}
   c.appendChild(el('h3', '', `🪪 ${nm}`)); { const bits = []; if (isMe){ try { bits.push('Lv.' + lvOf(calcXP())); } catch(e){} } if (title) bits.push(title); if (r.team){ bits.push(`${TEAM_BADGE[r.team.badge] || '🎣'} ${String(r.team.name).slice(0, 12)}`); } if (bits.length) c.appendChild(el('p', 'pc-sub', bits.join('・'))); }
@@ -10133,7 +10146,8 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; let nm = String(r.name || '�
   if (r.duel){ const D = r.duel, tt = duelTierOf(D.stars); cell(tt[2], `${tt[1]} ${D.stars}⭐`, `排位賽 ${D.wins} 勝 ${D.losses} 敗・最多 ${D.best} 連勝`); } else cell('⚔️', '—', '還沒打過排位賽');
   if (r.legend) cell('✨', r.legend, '傳說魚（條）'); if (r.likes) cell('❤', r.likes, '小島被按讚');
   c.appendChild(grid);
-  if (Array.isArray(r.top) && r.top.length){ c.appendChild(el('p', 'pc-h', '最得意的三種魚')); const ul = el('div', 'pc-top'); r.top.slice(0, 3).forEach((x, i) => { const f = FISH_BY_ID[x.f]; if (!f) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); d.appendChild(el('b', '', f.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); }); c.appendChild(ul); }
+  if (isMe){ const pb = el('button', 'tbtn ghost pc-edit', r.picked ? '✏️ 重選三種魚' : '✏️ 自己選三種魚'); pb.addEventListener('click', () => cardPick(c, r, peerId)); c.appendChild(pb); }   /* v535 作者：「應該是要能自己選吧」 */
+  if (Array.isArray(r.top) && r.top.length){ c.appendChild(el('p', 'pc-h', r.picked ? '最得意的三種魚' : '最得意的三種魚（還沒選，先放最重的）')); const ul = el('div', 'pc-top'); r.top.slice(0, 3).forEach((x, i) => { const f = FISH_BY_ID[x.f]; if (!f) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); d.appendChild(el('b', '', f.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); }); c.appendChild(ul); }
   if (r.since){ const d = new Date(+r.since); c.appendChild(el('p', 'sub', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); }
   const row = el('div', 'dc-btns pc-btns');
   if (!isMe){ if (peerId && peers.get(peerId)){ const dz = el('button', 'tbtn', '⚔️ 邀對決'); dz.addEventListener('click', () => { duelCardClose('pcard'); duelInvite(r.id, nm); }); row.appendChild(dz); }
@@ -16606,7 +16620,7 @@ function renderTab(){
     ]);
     sec('🪪 個人名片', [
       '怎麼看：打開「朋友」分頁，每個玩家旁邊有「🪪 名片」，自己那一列是「🪪 我的名片」。',
-      '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最重的三種魚、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
+      '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最得意的三種魚（自己的名片上按「自己選三種魚」挑，沒挑就先放最重的三種）、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
       '自己的名片可以按「✏️ 改一句話」寫一句話給別人看（最多 30 個字）。',
       '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
     ]);
