@@ -1580,3 +1580,6 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .pc-opt.on{border-color:#e9b23a;background:#fff6dc}
 #duelCard .pc-opt i{font-style:normal;height:18px;font-size:15px}
 #duelCard .pc-opt b{font-size:13px}
+
+/* v536 名片上的大頭照 */
+#duelCard .pc-av{width:92px;height:92px;border-radius:50%;display:block;margin:0 auto 4px;box-shadow:0 3px 10px rgba(24,51,74,.2)}
