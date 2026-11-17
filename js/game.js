@@ -4454,7 +4454,7 @@ function kidAnimate(f, dt, t){
   else if (f.emote && kidEmoteOn(f, t)){ W[EMOTE_DEF[f.emote.k].anim] = 1; }
   else { const wk = smooth01((v - 0.2) / 0.8) * (1 - smooth01((v - 2.4) / 1.2)), rn = smooth01((v - 2.4) / 1.2) * (1 - smooth01((v - 4.3) / 0.6)), sp = smooth01((v - 4.3) / 0.6);   /* 走 3.8 用跑步動作、推到底 5.0 用衝刺動作 */
     W.idle = 1 - smooth01((v - 0.1) / 0.5); if (wk > 0) W.walk = wk; if (rn > 0) W.run = rn; if (sp > 0) W.sprint = sp;
-    if (f.held) W.hold_arms = 5; }   /* 上半身捧著魚的比重大很多，手幾乎都是捧魚的樣子 */
+    if (f.held) W.hold_arms = 5; else if (f.bkArm && K.acts.hold_arms) W.hold_arms = 2.4; }   /* v533 籃球運球：上半身雙手在前面，球在手邊彈 */   /* 上半身捧著魚的比重大很多，手幾乎都是捧魚的樣子 */
   if (f === me && Jump.land > 0 && !f.swim && !f.fishing){ W.jump_land = 1; for (const k of ['idle', 'walk', 'run', 'sprint']) if (W[k]) W[k] *= 0.3; }
   const rate = 1 - Math.exp(-dt * 10);
   for (const nm in K.acts){ const tgt = W[nm] || 0, cur = K.w[nm] || 0, nw = cur + (tgt - cur) * rate; K.w[nm] = nw < 0.002 && tgt === 0 ? 0 : nw; K.acts[nm].setEffectiveWeight(K.w[nm]); }
@@ -9641,7 +9641,7 @@ function fbNear(){ const S = STAD, b = SOC.b; if (SOC.mesh && fbCanPlay() && b.y
    ・1 對 1：球場上有別人的時候，走到「🏀 比賽台」按「找他 1 對 1」，對方按接受 → 60 秒內兩個人同時投，分數高的贏。
    ・同步：每一次出手都送出去（從哪裡投、進不進、我現在幾分），別人看得到球飛出去；比賽的時間由發邀請的人送。 */
 const BK = { HX: -36.6, HZ: 0, HY: 2.35, X0: -37.6, X1: -27.4, Z0: -4.6, Z1: 4.6, ARC: 4.3, TABLE: { x: -29.2, z: 6.2 }, built: false, balls: [], meter: null, cd: 0, streak: 0, el: null, bar: null,
-  m: { st: 'idle', q: 0, from: '', p: ['', ''], nm: ['', ''], sc: [0, 0], end: 0, rx: 0, tx: 0, overAt: 0 }, invAt: 0 };
+  m: { st: 'idle', q: 0, from: '', p: ['', ''], nm: ['', ''], sc: [0, 0], n: 1, pos: 0, ph: 'check', phEnd: 0, clk: 0, clear: false, aim: false, jumpAt: 0, last: null, over: false, rx: 0, tx: 0, overAt: 0 }, invAt: 0 };
 function bkOnCourt(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } const rx = x - STAD.x, rz = z - STAD.z; return rx > BK.X0 && rx < BK.X1 + 0.6 && rz > BK.Z0 - 0.6 && rz < BK.Z1 + 0.6; }
 function bkSend(d){ d.f = poolKey(); if (BK.tap){ try { BK.tap(d); } catch(e){} } try { if (room && room.connected()) room.emit('bk', d).catch(() => {}); } catch(e){} }
 function bkMyIdx(){ const m = BK.m, k = poolKey(); return m.p[0] === k ? 0 : m.p[1] === k ? 1 : -1; }
@@ -9665,54 +9665,113 @@ function bkBuild(){ if (BK.built || !Venue.stad) return; BK.built = true; const 
   for (const sz of [-1, 1]) for (const sx of [-1, 1]) B(14.4, 3.4, 0.4, '#e9e6dc', sx * 31.6, Y + 1.7, sz * (S.d / 2 - 0.4));
   for (let i = 0; i < 4; i++){ const bl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), mat('#e8762c', 0.7)); bl.castShadow = true; bl.visible = false; g.add(bl); BK.balls.push({ m: bl, t: -1 }); }
   { const bl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), mat('#e8762c', 0.7)); bl.position.set(S.x + X1 - 1, Y + 0.22, S.z + Z0 + 1); bl.castShadow = true; g.add(bl); } }
+/* ---- v533 街頭籃球式 1 對 1（作者 11/17：「我想要對決」「輪流一攻一守」「參考街頭籃球，要有運球投籃抄球那些動作跟動畫」）----
+   一顆球、輪流進攻。先拿到 11 分的人贏。
+   進攻的人：帶著球跑（球在手邊彈＝運球）。拿到球要先帶出三分線才能投。按「投籃」出現力道條、再按「出手」；力道條跑的時候推搖桿＝假動作（收球不投）。一次進攻 14 秒。
+   防守的人：靠近（1.3 公尺內）按「抄球」，站在對方正面最容易抄到；沒抄到會踉蹌 2 秒。對方舉球要投的時候按鈕變成「蓋火鍋」，跳起來 0.6 秒內對方出手就被蓋掉；太早跳（被假動作騙）對方就是空檔。
+   防守的人貼在 1.5 公尺內，進攻那邊的綠色區會變窄。投進得分、沒進／被蓋／被抄／超過時間 → 換對方進攻。
+   同步：誰做動作誰決定結果（投的人決定進不進、抄的人決定抄沒抄到），用「第幾次進攻」的號碼對齊；發邀請的人每 2 秒再送一次完整比分，掉訊息也補得回來。 */
 function bkZone(){ const rx = me.pos.x - STAD.x, rz = me.pos.z - STAD.z, d = Math.hypot(rx - BK.HX, rz - BK.HZ); return d < 2.2 ? { d, pts: 2, tol: 0.2, nm: '籃下' } : d < BK.ARC ? { d, pts: 2, tol: 0.13, nm: '2 分球' } : { d, pts: 3, tol: 0.085, nm: '3 分球' }; }
 function bkMeterEl(){ if (!BK.el){ const e = el('div', 'panel'); e.id = 'bkMeter'; e.hidden = true; e.innerHTML = '<div class="bk-z"></div><div class="bk-m"></div>'; document.body.appendChild(e); BK.el = e; } return BK.el; }
-function bkPress(){ if (!inStad() || !bkOnCourt() || !BK.balls.length) return; const tn = now(); if (BK.m.st === 'over') return;
-  if (!BK.meter){ if (tn < BK.cd) return; const z = bkZone(); BK.meter = { t0: tn, z }; const e = bkMeterEl(); e.hidden = false; $('.bk-z', e).style.cssText = `left:${(0.5 - z.tol) * 100}%;width:${z.tol * 200}%`; try { SFX.tick(); } catch(e2){} return; }
-  const M = BK.meter, v = bkMeterVal(tn), made = Math.abs(v - 0.5) <= M.z.tol; BK.meter = null; bkMeterEl().hidden = true; BK.cd = tn + 1.15;
-  const rx = me.pos.x - STAD.x, rz = me.pos.z - STAD.z, mi = bkMyIdx(), m = BK.m; me.rot = Math.atan2(BK.HX - rx, BK.HZ - rz);
-  if (made) BK.streak++; else BK.streak = 0; if (m.st === 'play' && mi >= 0 && made) m.sc[mi] += M.z.pts;
-  bkBallFly(rx, rz, made, (v - 0.5) / Math.max(0.05, M.z.tol)); bkSend({ k: 's', p: [Math.round(rx * 10) / 10, Math.round(rz * 10) / 10], ok: made ? 1 : 0, pt: M.z.pts, sc: m.st === 'play' && mi >= 0 ? m.sc[mi] : -1 });
-  setTimeout(() => { if (!inStad()) return; if (made){ flash(m.st === 'play' && mi >= 0 ? `🏀 進了！+${M.z.pts}` : BK.streak >= 2 ? `🏀 連進 ${BK.streak} 球！` : `🏀 進了！（${M.z.nm}）`, 1.0); try { SFX.coin(); } catch(e){} } else { try { tone(210, 0.09, 'triangle', 0.07); } catch(e){} } bkBarDraw(); }, 850); }
 function bkMeterVal(tn){ const u = ((tn - BK.meter.t0) * 1.25) % 2; return u < 1 ? u : 2 - u; }
-function bkBallFly(rx, rz, made, off){ if (!BK.balls.length) return; const tn = now(); let s = BK.balls.find(b => b.t < 0) || BK.balls[0]; s.t = 0; s.x0 = rx; s.z0 = rz; s.made = made; s.off = clamp(off || 0, -2.5, 2.5); s.m.visible = true; }
-function bkBallsTick(dt){ const S = STAD, Y = S.y, HY = BK.HY; for (const s of BK.balls){ if (s.t < 0) continue; s.t += dt; const T1 = 0.85;
-    if (s.t < T1){ const u = s.t / T1, tx = s.made ? BK.HX : BK.HX + s.off * 0.16, tz = BK.HZ + (s.made ? 0 : (s.off > 0 ? 0.24 : -0.24)), x = s.x0 + (tx - s.x0) * u, z = s.z0 + (tz - s.z0) * u, y0 = 1.0, y1 = HY + (s.made ? 0.05 : 0.12), y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * (1.3 + Math.hypot(tx - s.x0, tz - s.z0) * 0.16); s.m.position.set(S.x + x, Y + y, S.z + z); s.m.rotation.x -= dt * 9; s.lx = x; s.lz = z; s.ly = y; }
-    else { const u = s.t - T1; if (s.made){ s.m.position.set(S.x + BK.HX, Y + Math.max(0.17, HY - u * u * 7), S.z + BK.HZ + 0); if (BK.net) BK.net.scale.y = 1 + Math.max(0, 0.35 - u) * 0.9; } else { const dx = (s.off >= 0 ? 1 : -0.4) * 1.5, dz = (s.off > 0 ? 1 : -1) * 1.1; s.m.position.set(S.x + s.lx + dx * u, Y + Math.max(0.17, s.ly + 1.4 * u - u * u * 7), S.z + s.lz + dz * u); }
-      if (u > 1.1){ s.t = -1; s.m.visible = false; } } } }
-/* ---- 1 對 1 ---- */
+function bkPeerOf(k){ if (!k) return null; let p = peers.get(k); if (p) return p; for (const [, q] of peers) if (q && q.pres && q.pres.u && q.pres.u === k) return q; return null; }
+function bkFisher(k){ if (k === poolKey()) return me; const p = bkPeerOf(k); return p ? p.fisher : null; }
+function bkPosOf(k){ if (k === poolKey()) return { x: me.pos.x, z: me.pos.z, rot: me.rot }; const p = bkPeerOf(k); return p && p.target ? { x: p.target.x, z: p.target.z, rot: p.fisher && p.fisher.rot != null ? p.fisher.rot : 0 } : null; }
+function bkPose(k, clip, dur, holdAt){ const f = bkFisher(k); if (!f || !f.av || !f.av.kid) return; f.emote = null; f.ppose = { k: 'bk', W: [[clip, 1]], hold: holdAt ? [clip, holdAt] : null, at: now(), until: now() + dur }; }
+function bkPoseEnd(k){ const f = bkFisher(k); if (f && f.ppose && f.ppose.k === 'bk') f.ppose = null; }
+function bkLive(){ const m = BK.m; return m.st === 'play' && m.ph === 'live'; }
+function bkOppDist(){ const m = BK.m, mi = bkMyIdx(); if (mi < 0) return 99; const o = bkPosOf(m.p[1 - mi]); return o ? Math.hypot(o.x - me.pos.x, o.z - me.pos.z) : 99; }
+function bkMeterStop(fake){ if (!BK.meter) return; BK.meter = null; bkMeterEl().hidden = true; bkPoseEnd(poolKey()); if (BK.m.st === 'play' && bkMyIdx() === BK.m.pos){ bkSend({ k: 'aim', on: 0 }); if (fake){ BK.cd = now() + 0.35; } } }
+function bkPress(){ if (!inStad() || !bkOnCourt() || !BK.balls.length) return; const tn = now(), m = BK.m, mi = bkMyIdx(); if (m.st === 'over') return;
+  if (m.st === 'play' && mi >= 0){ if (m.pos !== mi){ bkDefend(); return; } if (m.ph !== 'live'){ return; } if (!m.clear){ toast('🏀 先把球帶出三分線，才能開始進攻'); return; } }
+  else if (m.st === 'play'){ toast('🏀 有人正在比賽，等這場打完再練投'); return; }
+  if (!BK.meter){ if (tn < BK.cd) return; const z = bkZone(); if (m.st === 'play'){ const od = bkOppDist(); z.tol *= od < 1.5 && !(m.jumpAt && tn - m.jumpAt > 0.6 && tn - m.jumpAt < 1.6) ? 0.6 : 1; } BK.meter = { t0: tn, z, x: me.pos.x, zz: me.pos.z }; const e = bkMeterEl(); e.hidden = false; $('.bk-z', e).style.cssText = `left:${(0.5 - z.tol) * 100}%;width:${z.tol * 200}%`; try { SFX.tick(); } catch(e2){} bkPose(poolKey(), 'throw', 6.5, 0.32);   /* 舉球：停在投籃動作往上舉的那一格 */ if (m.st === 'play') bkSend({ k: 'aim', on: 1 }); return; }
+  const M = BK.meter, v = bkMeterVal(tn); let made = Math.abs(v - 0.5) <= M.z.tol, blk = false; BK.meter = null; bkMeterEl().hidden = true; BK.cd = tn + 1.15;
+  const rx = me.pos.x - STAD.x, rz = me.pos.z - STAD.z; me.rot = Math.atan2(BK.HX - rx, BK.HZ - rz);
+  if (m.st === 'play'){ if (m.jumpAt && tn - m.jumpAt >= 0 && tn - m.jumpAt < 0.6 && bkOppDist() < 1.7){ blk = true; made = false; } const ev = { k: 'e', n: m.n, t: 'shot', ok: made ? 1 : 0, pt: M.z.pts, blk: blk ? 1 : 0, p: [Math.round(rx * 10) / 10, Math.round(rz * 10) / 10] }; bkSend(ev); bkEvent(ev, poolKey()); return; }
+  if (made) BK.streak++; else BK.streak = 0; bkPose(poolKey(), 'throw', 0.7);
+  bkBallFly(rx, rz, made, (v - 0.5) / Math.max(0.05, M.z.tol)); bkSend({ k: 's', p: [Math.round(rx * 10) / 10, Math.round(rz * 10) / 10], ok: made ? 1 : 0 });
+  setTimeout(() => { if (!inStad()) return; if (made){ flash(BK.streak >= 2 ? `🏀 連進 ${BK.streak} 球！` : `🏀 進了！（${M.z.nm}）`, 1.0); try { SFX.coin(); } catch(e){} } else { try { tone(210, 0.09, 'triangle', 0.07); } catch(e){} } }, 850); }
+function bkDefend(){ const m = BK.m, tn = now(), mi = bkMyIdx(); if (m.st !== 'play' || mi < 0 || m.pos === mi || m.ph !== 'live') return; if (tn < (BK.dcd || 0)) return; const a = bkPosOf(m.p[m.pos]); if (!a) return; const d = Math.hypot(a.x - me.pos.x, a.z - me.pos.z);
+  if (m.aim && d < 1.9){ BK.dcd = tn + 1.5; me.rot = Math.atan2(a.x - me.pos.x, a.z - me.pos.z); try { jump(); } catch(e){} bkSend({ k: 'jump' }); m.myJump = tn; return; }   /* 蓋火鍋：跳起來 */
+  if (d > 1.35){ toast('🏀 再靠近一點才抄得到球'); return; }
+  me.rot = Math.atan2(a.x - me.pos.x, a.z - me.pos.z); bkPose(poolKey(), 'interact', 0.55); const fx = Math.sin(a.rot || 0), fz = Math.cos(a.rot || 0), dot = (fx * (me.pos.x - a.x) + fz * (me.pos.z - a.z)) / Math.max(0.1, d), ch = m.aim ? 0 : dot > 0.2 ? 0.45 : dot > -0.3 ? 0.25 : 0.1, ok = Math.random() < ch;
+  if (ok){ BK.dcd = tn + 0.8; const ev = { k: 'e', n: m.n, t: 'steal' }; bkSend(ev); bkEvent(ev, poolKey()); } else { BK.dcd = tn + 2.0; bkSend({ k: 'try' }); flash('沒抄到！', 0.7); try { tone(180, 0.08, 'triangle', 0.06); } catch(e){} } }
+/* 一次進攻的結果（投籃／被抄／超過時間）：每個人收到都照同樣的方式算 */
+function bkEvent(d, peer){ const m = BK.m; if (m.st !== 'play' || Math.floor(+d.n) !== m.n) return; const att = m.pos, def = 1 - att, mi = bkMyIdx(), tn = now();
+  if (d.t === 'shot'){ if (peer !== m.p[att]) return; const ok = !!d.ok && !d.blk, pt = d.pt === 3 ? 3 : 2, px = Array.isArray(d.p) ? clamp(+d.p[0] || 0, BK.X0 - 1, BK.X1 + 1) : BK.HX + 3, pz = Array.isArray(d.p) ? clamp(+d.p[1] || 0, BK.Z0 - 1, BK.Z1 + 1) : 0;
+    bkPose(m.p[att], 'throw', 0.7); if (inStad() && BK.balls.length) bkBallFly(px, pz, ok, d.blk ? 2.5 : 1.2, d.blk ? 0.35 : 0); if (ok) m.sc[att] += pt; m.last = { t: 'shot', ok, pt, blk: !!d.blk, who: att }; m.ph = 'shot'; m.phEnd = tn + 1.05; }
+  else if (d.t === 'steal'){ if (peer !== m.p[def]) return; bkPose(m.p[def], 'interact', 0.55); m.last = { t: 'steal', who: def }; m.ph = 'shot'; m.phEnd = tn + 0.35; }
+  else if (d.t === 'clock'){ if (peer !== m.p[att]) return; m.last = { t: 'clock', who: att }; m.ph = 'shot'; m.phEnd = tn + 0.2; }
+  else return;
+  m.n++; m.pos = def; m.aim = false; m.jumpAt = 0; m.clear = false; if (BK.meter){ BK.meter = null; bkMeterEl().hidden = true; }
+  if (m.sc[0] >= 11 || m.sc[1] >= 11){ m.over = true; }
+  if (m.from === poolKey()) bkMatchSend(); bkBarDraw(); }
+function bkAfterShot(){ const m = BK.m, L = m.last, mi = bkMyIdx(), tn = now(); m.last = null;
+  if (L && inStad() && (mi >= 0 || bkOnCourt())){ const nm = m.nm[L.who], mine = mi === L.who;
+    if (L.t === 'shot'){ if (L.ok){ flash(mine ? `🏀 進了！+${L.pt}` : `🏀 ${nm} 進球 +${L.pt}`, 1.2); bkPose(m.p[L.who], 'cheer', 1.2); try { SFX.coin(); } catch(e){} } else if (L.blk){ flash(mine ? '🖐 被蓋火鍋了！' : mi >= 0 ? '🖐 蓋火鍋！' : `🖐 ${nm} 被蓋掉`, 1.2); bkPose(m.p[1 - L.who], 'cheer', 1.0); } else flash(mine ? '沒進，換對手進攻' : mi >= 0 ? '沒進！換你進攻' : '沒進', 1.0); }
+    else if (L.t === 'steal') flash(mine ? '🤏 抄到球了！換你進攻' : mi >= 0 ? '球被抄走了！' : `🤏 ${nm} 抄到球`, 1.2);
+    else if (L.t === 'clock') flash(mine ? '⏱ 超過 14 秒，換對手進攻' : mi >= 0 ? '⏱ 對手超過時間，換你進攻' : '⏱ 超過時間', 1.2); }
+  if (m.over){ m.st = 'over'; m.overAt = tn; if (m.from === poolKey()){ m.q++; bkMatchSend(); } bkChanged('over'); return; }
+  m.ph = 'check'; m.phEnd = tn + 1.6; bkBarDraw(); }
+/* ---- 邀請、開始、同步 ---- */
 function bkNearPeer(){ let best = null, bd = 1e9; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!bkOnCourt(p.target.x, p.target.z)) continue; const d = Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z); if (d < bd){ bd = d; best = { k, u: fbStr(p.pres.u, 40), n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
 function bkMyName(){ try { return poolName(); } catch(e){ return '玩家'; } }
 function bkInvite(){ const m = BK.m, tn = now(); if (m.st === 'play'){ toast('🏀 有人正在比賽，等這場打完'); return; } const P = bkNearPeer(); if (!P){ toast('🏀 球場上要有另一個人才能 1 對 1（自己可以先練投）'); return; } if (tn - BK.invAt < 6){ toast('剛邀請過，等對方回應'); return; } BK.invAt = tn; bkSend({ k: 'inv', to: P.k, tu: P.u, n: bkMyName() }); toast(`🏀 已經邀請 ${esc(P.n)}，等對方回應`); }
-function bkStart(peer, nm){ const m = BK.m; m.st = 'play'; m.q++; m.from = poolKey(); m.p = [poolKey(), peer]; m.nm = [bkMyName(), nm]; m.sc = [0, 0]; m.end = Date.now() + 63000; m.rx = now(); bkMatchSend(); bkChanged('start'); }
-function bkMatchSend(){ const m = BK.m; m.tx = now(); bkSend({ k: 'st', q: m.q, st: m.st, p: m.p, nm: m.nm, sc: m.sc, left: Math.max(0, m.end - Date.now()) }); }
+function bkStart(peer, nm){ const m = BK.m; m.st = 'play'; m.q++; m.from = poolKey(); m.p = [poolKey(), peer]; m.nm = [bkMyName(), nm]; m.sc = [0, 0]; m.n = 1; m.pos = Math.random() < 0.5 ? 0 : 1; m.ph = 'check'; m.phEnd = now() + 2.5; m.over = false; m.aim = false; m.jumpAt = 0; m.clear = false; m.last = null; m.rx = now(); m.t0 = now(); bkMatchSend(); bkChanged('start'); }
+function bkMatchSend(){ const m = BK.m; m.tx = now(); bkSend({ k: 'st', q: m.q, st: m.st, p: m.p, nm: m.nm, sc: m.sc, n: m.n, pos: m.pos }); }
 function bkChanged(why){ const m = BK.m, mi = bkMyIdx(); bkBarDraw(); if (!inStad()) return;
-  if (why === 'start'){ if (mi >= 0){ flash('🏀 1 對 1：60 秒內誰投進的分數多！', 2.2); BK.streak = 0; } try { SFX.tick(); } catch(e){} }
-  else if (why === 'over'){ const w = m.sc[0] > m.sc[1] ? 0 : m.sc[1] > m.sc[0] ? 1 : -1; if (mi >= 0 || bkOnCourt()){ flash(w < 0 ? `🏀 ${m.sc[0]} : ${m.sc[1]} 平手` : mi === w ? `🎉 你贏了！（${m.sc[0]} : ${m.sc[1]}）` : mi >= 0 ? `這場輸了（${m.sc[0]} : ${m.sc[1]}），再來一場！` : `🏀 ${m.nm[w]} 贏了（${m.sc[0]} : ${m.sc[1]}）`, 3); try { if (mi === w) SFX.coin(); } catch(e){} } } }
+  if (why === 'start'){ if (mi >= 0){ flash(m.pos === mi ? '🏀 1 對 1 開始：你先進攻！' : '🏀 1 對 1 開始：你先防守！', 2.2); BK.streak = 0; } try { SFX.tick(); } catch(e){} }
+  else if (why === 'over'){ const w = m.sc[0] > m.sc[1] ? 0 : m.sc[1] > m.sc[0] ? 1 : -1; if (mi >= 0 || bkOnCourt()){ flash(w < 0 ? `🏀 ${m.sc[0]} : ${m.sc[1]} 平手` : mi === w ? `🎉 你贏了！（${m.sc[0]} : ${m.sc[1]}）` : mi >= 0 ? `這場輸了（${m.sc[0]} : ${m.sc[1]}），再來一場！` : `🏀 ${m.nm[w]} 贏了（${m.sc[0]} : ${m.sc[1]}）`, 3); try { if (mi === w){ SFX.coin(); bkPose(poolKey(), 'cheer', 2); } } catch(e){} } } }
 function bkBarEl(){ if (!BK.bar){ const b = el('div', 'panel'); b.id = 'bkBar'; b.hidden = true; document.body.appendChild(b); BK.bar = b; } return BK.bar; }
-function bkBarDraw(){ const b = bkBarEl(), m = BK.m, show = inStad() && m.st !== 'idle' && (bkMyIdx() >= 0 || bkOnCourt()); if (!show){ if (!b.hidden) b.hidden = true; return; } b.hidden = false; const left = Math.max(0, Math.ceil((m.end - Date.now()) / 1000));
-  const tx = `<span>${esc(m.nm[0])}</span><b>${m.sc[0]} : ${m.sc[1]}</b><span>${esc(m.nm[1])}</span><i>${m.st === 'over' ? '比賽結束' : left > 60 ? '準備…' : left + ' 秒'}</i>`; if (b._tx !== tx){ b._tx = tx; b.innerHTML = tx; } }
+function bkBarDraw(){ const b = bkBarEl(), m = BK.m, mi = bkMyIdx(), show = inStad() && m.st !== 'idle' && (mi >= 0 || bkOnCourt()); if (!show){ if (!b.hidden) b.hidden = true; return; } b.hidden = false;
+  let tip = ''; if (m.st === 'over') tip = '比賽結束'; else if (mi < 0) tip = `${m.nm[m.pos]} 進攻`; else if (m.ph !== 'live') tip = m.pos === mi ? '準備進攻…' : '準備防守…'; else if (m.pos === mi) tip = !m.clear ? '先把球帶出三分線' : `你進攻・${Math.max(0, Math.ceil((m.clk || 0) - now()))} 秒`; else tip = m.aim ? '對手要投了！按「蓋火鍋」' : '你防守：靠近按「抄球」';
+  const tx = `<span class="${m.pos === 0 && m.st === 'play' ? 'on' : ''}">${m.pos === 0 && m.st === 'play' ? '🏀 ' : ''}${esc(m.nm[0])}</span><b>${m.sc[0]} : ${m.sc[1]}</b><span class="${m.pos === 1 && m.st === 'play' ? 'on' : ''}">${esc(m.nm[1])}${m.pos === 1 && m.st === 'play' ? ' 🏀' : ''}</span><i>${tip}</i>`; if (b._tx !== tx){ b._tx = tx; b.innerHTML = tx; } }
 function bkOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || isBlockedPeer(msg.peer)) return; const d = msg.data, peer = fbStr(d.f, 40) || String(msg.peer || ''), m = BK.m, me2 = poolKey(); if (!peer || peer === me2) return;
-  if (d.k === 's'){ if (!Array.isArray(d.p) || d.p.length !== 2 || !d.p.every(isFinite)) return; if (inStad() && BK.built) bkBallFly(clamp(+d.p[0], BK.X0 - 1, BK.X1 + 1), clamp(+d.p[1], BK.Z0 - 1, BK.Z1 + 1), !!d.ok, d.ok ? 0 : 1); const i = m.p[0] === peer ? 0 : m.p[1] === peer ? 1 : -1; if (i >= 0 && m.st === 'play' && isFinite(+d.sc) && +d.sc >= 0){ const v = clamp(Math.floor(+d.sc), 0, 300); if (v > m.sc[i]){ m.sc[i] = v; setTimeout(bkBarDraw, 850); } } return; }
-  if (d.k === 'inv'){ const mine = d.to === me2 || (myId && d.tu && d.tu === myId); if (!mine || !inStad() || !bkOnCourt() || m.st === 'play' || Duel.card) return; const nm = fbStr(d.n, 12) || '玩家'; const c = duelCardOpen('bkinv'); c.appendChild(el('h3', '', '🏀 1 對 1 邀請')); c.appendChild(el('p', '', `${nm} 想跟你比投籃：60 秒內誰投進的分數多。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); let n = 20; const tm = el('p', 'sub', ''); c.append(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('bkinv'); }; upd(); c._iv = setInterval(upd, 1000);
+  if (d.k === 's'){ if (!Array.isArray(d.p) || d.p.length !== 2 || !d.p.every(isFinite)) return; if (inStad() && BK.balls.length){ bkBallFly(clamp(+d.p[0], BK.X0 - 1, BK.X1 + 1), clamp(+d.p[1], BK.Z0 - 1, BK.Z1 + 1), !!d.ok, d.ok ? 0 : 1); bkPose(peer, 'throw', 0.7); } return; }
+  if (d.k === 'e'){ bkEvent(d, peer); return; }
+  if (d.k === 'aim'){ if (m.st === 'play' && peer === m.p[m.pos]){ m.aim = !!d.on; if (m.aim){ m.aimAt = now(); bkPose(peer, 'throw', 6.5, 0.32); } else bkPoseEnd(peer); bkBarDraw(); } return; }
+  if (d.k === 'jump'){ if (m.st === 'play' && peer === m.p[1 - m.pos]) m.jumpAt = now(); return; }
+  if (d.k === 'try'){ if (m.st === 'play' && peer === m.p[1 - m.pos]){ bkPose(peer, 'interact', 0.55); if (bkMyIdx() === m.pos) flash('對手抄球沒抄到！', 0.7); } return; }
+  if (d.k === 'inv'){ const mine = d.to === me2 || (myId && d.tu && d.tu === myId); if (!mine || !inStad() || !bkOnCourt() || m.st === 'play' || Duel.card) return; const nm = fbStr(d.n, 12) || '玩家'; const c = duelCardOpen('bkinv'); c.appendChild(el('h3', '', '🏀 1 對 1 邀請')); c.appendChild(el('p', '', `${nm} 想跟你打 1 對 1：輪流進攻，先拿到 11 分的人贏。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); let n = 20; const tm = el('p', 'sub', ''); c.append(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('bkinv'); }; upd(); c._iv = setInterval(upd, 1000);
     ok.addEventListener('click', () => { duelCardClose('bkinv'); bkSend({ k: 'ok', to: peer, n: bkMyName() }); }); no.addEventListener('click', () => { duelCardClose('bkinv'); bkSend({ k: 'no', to: peer, n: bkMyName() }); }); try { SFX.chat(); } catch(e){} return; }
   if (d.k === 'ok'){ if (d.to !== me2 || m.st === 'play' || now() - BK.invAt > 30) return; bkStart(peer, fbStr(d.n, 12) || '玩家'); return; }
   if (d.k === 'no'){ if (d.to === me2) toast(`🏀 ${esc(fbStr(d.n, 12) || '對方')} 現在不想比`); return; }
   if (d.k === 'q'){ if (m.st !== 'idle' && m.from === me2) setTimeout(bkMatchSend, 150 + Math.random() * 200); return; }
-  if (d.k === 'st'){ const q = Math.floor(+d.q); if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st) || !Array.isArray(d.p) || !Array.isArray(d.nm) || !Array.isArray(d.sc)) return; if (q < m.q || (q === m.q && m.from && peer !== m.from)) return; if (peer !== fbStr(d.p[0], 40)) return;
-    const was = m.st, wq = m.q; m.q = q; m.from = peer; m.rx = now(); m.st = d.st; m.p = [fbStr(d.p[0], 40), fbStr(d.p[1], 40)]; m.nm = [0, 1].map(i => { let s = fbStr(d.nm[i], 12) || '玩家'; try { s = clean(s); } catch(e){} return s; }); const mi = bkMyIdx(); for (const i of [0, 1]){ const v = clamp(Math.floor(+d.sc[i] || 0), 0, 300); m.sc[i] = (i === mi && q === wq) ? Math.max(m.sc[i], v) : (q === wq ? Math.max(m.sc[i], v) : v); }
-    m.end = Date.now() + clamp(+d.left || 0, 0, 120000); if (m.st === 'over' && was !== 'over') m.overAt = now(); bkChanged(m.st === 'play' && (was !== 'play' || q !== wq) ? 'start' : m.st === 'over' && was === 'play' ? 'over' : ''); return; } }
+  if (d.k === 'st'){ const q = Math.floor(+d.q), n = Math.floor(+d.n) || 1; if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st) || !Array.isArray(d.p) || !Array.isArray(d.nm) || !Array.isArray(d.sc)) return; if (peer !== fbStr(d.p[0], 40)) return; if (q < m.q) return;
+    const was = m.st, wq = m.q, fresh = q !== wq || was === 'idle'; m.q = q; m.from = peer; m.rx = now(); m.p = [fbStr(d.p[0], 40), fbStr(d.p[1], 40)]; m.nm = [0, 1].map(i => { let s = fbStr(d.nm[i], 12) || '玩家'; try { s = clean(s); } catch(e){} return s; });
+    if (fresh || n > m.n){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.n = n; m.pos = d.pos === 1 ? 1 : 0; m.aim = false; m.jumpAt = 0; m.clear = false; m.last = null; m.over = false; if (d.st === 'play'){ m.ph = 'check'; m.phEnd = now() + (fresh ? 2.5 : 1.0); } }
+    if (d.st === 'play' && was !== 'play'){ m.st = 'play'; bkChanged(fresh ? 'start' : ''); } else if (d.st === 'over' && was === 'play' && !m.last){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.st = 'over'; m.overAt = now(); bkChanged('over'); } else if (d.st === 'idle' && was !== 'idle'){ m.st = 'idle'; bkChanged(''); } else if (d.st === 'play') m.st = 'play';
+    bkBarDraw(); return; } }
 function bkPeerLeft(peer){ const m = BK.m; if (m.st === 'play' && (m.p[0] === peer || m.p[1] === peer)){ m.st = 'idle'; m.q++; bkChanged(''); if (bkMyIdx() >= 0 && inStad()) toast('🏀 對手離開了，比賽取消'); } }
-function bkTick(dt, t){ const im = inStad(); if (!im){ if (BK.asked){ BK.asked = false; BK.meter = null; if (BK.el) BK.el.hidden = true; bkBarDraw(); } return; } bkBuild(); const m = BK.m, tn = now(), me2 = poolKey();
+function bkBallCarry(dt, tn){ const m = BK.m, S = STAD, cb = BK.carry; if (!cb) return; const show = m.st === 'play' && (m.ph === 'live' || m.ph === 'check'); for (const k of m.p){ const f = bkFisher(k); if (f) f.bkArm = show && k === m.p[m.pos] && !(k === poolKey() && BK.meter) && !m.aim; }
+  if (!show){ cb.visible = false; return; } const k = m.p[m.pos], f = bkFisher(k), pos = bkPosOf(k); if (!f || !pos){ cb.visible = false; return; } cb.visible = true;
+  const aiming = (k === poolKey() && !!BK.meter) || m.aim, v = f.aspd || 0, hx = pos.x + Math.sin(pos.rot) * 0.32 + Math.cos(pos.rot) * 0.2, hz = pos.z + Math.cos(pos.rot) * 0.32 - Math.sin(pos.rot) * 0.2, baseY = (f === me ? me.baseY : (f.pos ? f.pos.y : S.y)) || S.y;
+  let y; if (aiming){ /* 舉球的時候球跟著手 */ y = baseY + 1.15; try { const B = f.av && f.av.kid && f.av.kid.B; if (B && B.handr){ const v = BK._v || (BK._v = new THREE.Vector3()); B.handr.getWorldPosition(v); if (isFinite(v.y) && Math.hypot(v.x - pos.x, v.z - pos.z) < 1.5){ cb.position.set(v.x, v.y + 0.12, v.z); cb.rotation.x += dt * 2; return; } } } catch(e){} } else if (m.ph === 'check') y = baseY + 0.62; else { const ph = (tn * (2.4 + Math.min(2, v) * 0.5)) % 1, u = ph < 0.5 ? ph * 2 : 2 - ph * 2; y = baseY + 0.17 + (1 - u * u) * 0.5; if (ph < 0.06 && !BK.bnc && inStad() && Math.hypot(pos.x - me.pos.x, pos.z - me.pos.z) < 9){ BK.bnc = true; try { tone(95, 0.045, 'sine', 0.05); } catch(e){} } if (ph > 0.3) BK.bnc = false; }
+  const kk = 1 - Math.exp(-25 * dt); cb.position.x += (hx - cb.position.x) * kk; cb.position.z += (hz - cb.position.z) * kk; cb.position.y = y; cb.rotation.x += dt * 6; }
+function bkTick(dt, t){ const im = inStad(); if (!im){ if (BK.asked){ BK.asked = false; BK.meter = null; if (BK.el) BK.el.hidden = true; bkBarDraw(); } return; } bkBuild(); const m = BK.m, tn = now(), me2 = poolKey(), mi = bkMyIdx();
   if (!BK.asked){ BK.asked = true; bkSend({ k: 'q' }); }
-  bkBallsTick(dt); if (BK.net && BK.net.scale.y > 1) BK.net.scale.y = Math.max(1, BK.net.scale.y - dt * 0.8);
-  if (BK.meter){ if (!bkOnCourt() || tn - BK.meter.t0 > 6){ BK.meter = null; bkMeterEl().hidden = true; } else { const mk = $('.bk-m', bkMeterEl()); mk.style.left = (bkMeterVal(tn) * 100) + '%'; } }
-  if (m.st === 'play'){ if (m.from === me2){ if (Date.now() >= m.end){ m.st = 'over'; m.q++; m.overAt = tn; bkMatchSend(); bkChanged('over'); } else if (tn - m.tx > 2) bkMatchSend(); } else if (tn - m.rx > 12){ m.st = 'idle'; bkChanged(''); } }
+  if (!BK.carry && BK.balls.length){ const bl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), mat('#e8762c', 0.7)); bl.castShadow = true; bl.visible = false; scene.add(bl); bl.userData.keep = true; BK.carry = bl; }
+  bkBallsTick(dt); if (BK.net && BK.net.scale.y > 1) BK.net.scale.y = Math.max(1, BK.net.scale.y - dt * 0.8); bkBallCarry(dt, tn);
+  if (BK.meter){ if (!bkOnCourt() || tn - BK.meter.t0 > 6) bkMeterStop(false); else if (m.st === 'play' && tn - BK.meter.t0 > 0.25 && Math.hypot(me.pos.x - BK.meter.x, me.pos.z - BK.meter.zz) > 0.35){ bkMeterStop(true); flash('假動作！', 0.5); } else { const mk = $('.bk-m', bkMeterEl()); mk.style.left = (bkMeterVal(tn) * 100) + '%'; } }
+  if (m.st === 'play'){
+    if (m.ph === 'shot' && tn >= m.phEnd) bkAfterShot();
+    else if (m.ph === 'check' && tn >= m.phEnd){ m.ph = 'live'; m.clk = tn + 14; m.clear = false; bkBarDraw(); if (mi === m.pos) flash('🏀 你的球！先帶出三分線', 1.1); else if (mi >= 0) flash('🛡 防守！', 0.9); }
+    else if (m.ph === 'live' && mi === m.pos){ if (!m.clear && Math.hypot(me.pos.x - STAD.x - BK.HX, me.pos.z - STAD.z - BK.HZ) > BK.ARC + 0.1){ m.clear = true; m.clk = tn + 14; bkBarDraw(); try { SFX.tick(); } catch(e){} } if (tn > m.clk && !BK.meter){ const ev = { k: 'e', n: m.n, t: 'clock' }; bkSend(ev); bkEvent(ev, me2); } }
+    if (m.from === me2){ if (tn - m.tx > 2) bkMatchSend(); if (tn - (m.t0 || tn) > 420){ m.over = true; if (m.ph !== 'shot'){ m.st = 'over'; m.overAt = tn; m.q++; bkMatchSend(); bkChanged('over'); } } } else if (tn - m.rx > 12){ m.st = 'idle'; bkChanged(''); toast('🏀 連不上對手，比賽取消'); } }
   else if (m.st === 'over' && tn - (m.overAt || 0) > 7){ m.st = 'idle'; if (m.from === me2){ m.q++; bkMatchSend(); } bkChanged(''); }
-  if (frameNo % 15 === 0) bkBarDraw(); }
-function bkNear(){ const S = STAD; if (Math.hypot(S.x + BK.TABLE.x - me.pos.x, S.z + BK.TABLE.z - me.pos.z) < 1.9){ const m = BK.m; if (m.st === 'play') return { id: 'bktable', label: '比賽中', mode: 'bkinv', sub: `🏀 ${m.nm[0]} ${m.sc[0]} : ${m.sc[1]} ${m.nm[1]}` }; const P = bkNearPeer(); return { id: 'bktable', label: '1 對 1', mode: 'bkinv', sub: P ? `🏀 找 ${P.n} 比投籃` : '🏀 球場上要有另一個人' }; }
-  if (bkOnCourt()){ if (BK.meter) return { id: 'bkshoot', label: '出手！', mode: 'bkshoot', sub: '🏀 停在綠色區裡就進' }; const z = bkZone(); return { id: 'bkshoot', label: '投籃', mode: 'bkshoot', sub: `🏀 ${z.nm}` }; }
+  if (frameNo % 12 === 0) bkBarDraw(); }
+function bkNear(){ const S = STAD, m = BK.m; if (Math.hypot(S.x + BK.TABLE.x - me.pos.x, S.z + BK.TABLE.z - me.pos.z) < 1.9 && !(m.st === 'play' && bkMyIdx() >= 0)){ if (m.st === 'play') return { id: 'bktable', label: '比賽中', mode: 'bkinv', sub: `🏀 ${m.nm[0]} ${m.sc[0]} : ${m.sc[1]} ${m.nm[1]}` }; const P = bkNearPeer(); return { id: 'bktable', label: '1 對 1', mode: 'bkinv', sub: P ? `🏀 找 ${P.n} 打 1 對 1` : '🏀 球場上要有另一個人' }; }
+  if (bkOnCourt()){ const mi = bkMyIdx(); if (m.st === 'play' && mi >= 0){ if (m.ph !== 'live') return { id: 'bkshoot', label: m.pos === mi ? '準備' : '防守', mode: 'bkshoot', sub: m.pos === mi ? '🏀 馬上換你進攻' : '🛡 站到對手和籃框中間' };
+      if (m.pos === mi){ if (BK.meter) return { id: 'bkshoot', label: '出手！', mode: 'bkshoot', sub: '🏀 推搖桿＝假動作' }; return { id: 'bkshoot', label: '投籃', mode: 'bkshoot', sub: m.clear ? `🏀 ${bkZone().nm}` : '🏀 先帶出三分線' }; }
+      const d = bkOppDist(); if (m.aim && d < 1.9) return { id: 'bkshoot', label: '蓋火鍋', mode: 'bkshoot', sub: '🖐 抓對手出手的時機跳' }; return { id: 'bkshoot', label: '抄球', mode: 'bkshoot', sub: d < 1.35 ? '🤏 站在正面最容易抄到' : '🛡 再靠近一點' }; }
+    if (m.st === 'play') return null; if (BK.meter) return { id: 'bkshoot', label: '出手！', mode: 'bkshoot', sub: '🏀 停在綠色區裡就進' }; const z = bkZone(); return { id: 'bkshoot', label: '投籃', mode: 'bkshoot', sub: `🏀 ${z.nm}` }; }
   return null; }
+function bkBallFly(rx, rz, made, off, blk){ if (!BK.balls.length) return; const tn = now(); let s = BK.balls.find(b => b.t < 0) || BK.balls[0]; s.blk = blk || 0; s.t = 0; s.x0 = rx; s.z0 = rz; s.made = made; s.off = clamp(off || 0, -2.5, 2.5); s.m.visible = true; }
+function bkBallsTick(dt){ const S = STAD, Y = S.y, HY = BK.HY; for (const s of BK.balls){ if (s.t < 0) continue; s.t += dt; const T1 = s.blk ? 0.85 * s.blk : 0.85;
+    if (s.t < T1){ const u = s.t / T1, tx = s.made ? BK.HX : BK.HX + s.off * 0.16, tz = BK.HZ + (s.made ? 0 : (s.off > 0 ? 0.24 : -0.24)), x = s.x0 + (tx - s.x0) * u, z = s.z0 + (tz - s.z0) * u, y0 = 1.0, y1 = HY + (s.made ? 0.05 : 0.12), y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * (1.3 + Math.hypot(tx - s.x0, tz - s.z0) * 0.16); s.m.position.set(S.x + x, Y + y, S.z + z); s.m.rotation.x -= dt * 9; s.lx = x; s.lz = z; s.ly = y; if (s.blk){ const ub = s.t / 0.85; const tx2 = BK.HX, x2 = s.x0 + (tx2 - s.x0) * ub, z2 = s.z0 + (BK.HZ - s.z0) * ub; s.m.position.set(S.x + x2, Y + 1.0 + ub * 2.2, S.z + z2); s.lx = x2; s.lz = z2; s.ly = 1.0 + ub * 2.2; s.off = -1.5; } }
+    else { const u = s.t - T1; if (s.made){ s.m.position.set(S.x + BK.HX, Y + Math.max(0.17, HY - u * u * 7), S.z + BK.HZ + 0); if (BK.net) BK.net.scale.y = 1 + Math.max(0, 0.35 - u) * 0.9; } else { const dx = (s.off >= 0 ? 1 : -0.4) * 1.5, dz = (s.off > 0 ? 1 : -1) * 1.1; s.m.position.set(S.x + s.lx + dx * u, Y + Math.max(0.17, s.ly + 1.4 * u - u * u * 7), S.z + s.lz + dz * u); }
+      if (u > 1.1){ s.t = -1; s.m.visible = false; } } } }
 function enterStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.stExit.x; me.pos.z = Venue.stExit.z - 2.6; me.baseY = STAD.y; Jump.gy = STAD.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🏟️ 歡迎來到潮汐體育場！', 1.4); }, 260); }
 function exitStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door();
@@ -16530,7 +16589,10 @@ function renderTab(){
       '在哪裡：體育場裡面最西邊（進門以後往左走到底），有一個籃球半場。島上運動公園原本那個露天籃球場拆掉了。',
       '投籃：站在球場上，右下角按「投籃」，按鈕上面會出現一條來回跑的力道條，再按一次「出手！」。白色記號停在綠色區裡就進；離籃框越遠綠色區越窄。弧線裡面進球 2 分，弧線外面 3 分。',
       '自己練：隨時都可以投，會數你連進幾球。',
-      '1 對 1：球場上有另一個人的時候，走到球場旁邊的「🏀 1 對 1」小桌子按按鈕，對方會收到邀請；按接受就開始，60 秒內兩個人同時投，分數高的贏。目前只比輸贏，沒有獎勵。',
+      '1 對 1（街頭籃球那種，一攻一守）：球場上有另一個人的時候，走到球場旁邊的「🏀 1 對 1」小桌子按按鈕，對方按接受就開始。一顆球、輪流進攻，先拿到 11 分的人贏。',
+      '進攻：你帶著球跑，球會在手邊彈（運球）。拿到球要先帶出三分線，才能回頭進攻。按「投籃」出現力道條，再按「出手！」。力道條在跑的時候推一下搖桿＝假動作（把球收回來不投），可以騙對手跳起來。一次進攻有 14 秒。',
+      '防守：站到對手和籃框中間。貼近對手（1.5 公尺內）他的綠色區會變窄。靠到 1.3 公尺內按「抄球」，站在他正面最容易抄到，沒抄到會有 2 秒不能再抄。對手舉球要投的時候按鈕會變成「蓋火鍋」：你跳起來 0.6 秒內他出手，球就被蓋掉；跳太早（被假動作騙），他就是空檔。',
+      '換邊：投進得分以後換對方進攻；沒進、被蓋、被抄、超過 14 秒也是換對方。目前只比輸贏，沒有獎勵。',
     ]);
     sec('🎱 潮汐撞球館', [
       '邀請對打：你在練習的時候，如果有別的玩家站在球桌旁邊，右下角會出現「邀請 某某 對打」，按下去對方會收到邀請，按接受就開始對打。也可以自己走到別人正在練習的球桌旁邊按「對打」直接加入。',

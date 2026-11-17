@@ -1550,3 +1550,6 @@ body.pooling #duelWant, body.subbing #duelWant, body.chatting #duelWant{display:
 #bkBar{position:fixed;left:50%;top:calc(var(--st,0px) + 8px);transform:translateX(-50%);z-index:14;display:flex;align-items:center;gap:12px;padding:6px 14px;border-radius:16px;font-size:14px;font-weight:800;color:#18334a;pointer-events:none;white-space:nowrap}
 #bkBar[hidden]{display:none}
 #bkBar b{font-size:20px;font-weight:900}#bkBar i{font-style:normal;color:#b3541e}
+
+/* v533 籃球 1 對 1：誰拿球誰的名字亮起來 */
+#bkBar span.on{color:#c85a12}
