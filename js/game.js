@@ -102,6 +102,11 @@ const FISH = [
   { id:'turtle',  spot:'isle', time:'day', name:'綠蠵龜', rarity:'傳說', color:'#5f8f5a', min:40, max:180, power:0.85, w:0.5, desc:'慢慢游到小島來曬太陽的海龜。拍完照記得放牠回大海。' },
   // 2026-11 第四批：蝦蟹和熱帶魚
   { id:'crab',    spot:'sea',   name:'沙灘螃蟹', rarity:'常見', color:'#e06a3a', min:0.1, max:0.8, power:0.35, desc:'橫著走路的沙灘居民，被釣起來時還會揮著鉗子抗議。' },
+  /* v557 第一批「真的新魚」（作者 11/18：「慢慢也能加新魚啊，怎麼一堆變種，只是換顏色而已」）：四種都只在對的潮位才咬（伺服器 190），外形各自不同 */
+  { id:'whiting',   spot:'sea', name:'沙鮻',         rarity:'常見', color:'#d9cfae', min:0.05, max:0.45, power:0.3, w:1.2, desc:'細細長長的銀白色小魚，台灣叫「沙腸仔」。平常躲在遠一點的沙底，漲潮時才跟著潮水游到岸邊找沙蠶吃。' },
+  { id:'tidegoby',  spot:'sea', name:'潮池蝦虎',     rarity:'常見', color:'#b9a37a', min:0.01, max:0.06, power:0.15, w:1.2, desc:'手指那麼長的小魚，肚子上的鰭像吸盤，可以黏在石頭上。乾潮時被留在沙灘的潮池裡，一有影子靠近就咻地躲進石頭縫。' },
+  { id:'groupie',   spot:'sea', name:'點帶石斑幼魚', rarity:'稀有', color:'#8a6a44', min:0.4, max:2.6, power:0.55, desc:'還沒長大的石斑，全身咖啡色的斑點。漲潮、滿潮時躲進岸邊的礁石縫裡等小魚經過，用沉底釣比較容易釣到；再過好幾年才會變成傳說中的大石斑。' },
+  { id:'horseshoe', spot:'sea', name:'三棘鱟',       rarity:'稀有', color:'#6f6c44', min:1.0, max:4.2, power:0.4, keep:true, desc:'四億年前就長這個樣子的「活化石」，血是藍色的。退潮時會爬到淺灘的沙泥地上。現在已經很少見了，釣到會自動收藏起來，可以養在魚缸、放進水族館。' },
   { id:'kingcrab', spot:'harbor', time:'night', name:'帝王蟹', rarity:'稀有', color:'#c9302c', min:2.0, max:8.0, power:0.66, desc:'腳張開比一個人還寬，冰冷的深海是牠的家。' },
   { id:'lobster', spot:'isle',  time:'night', name:'藍紋龍蝦', rarity:'稀有', color:'#3f6fb5', min:0.5, max:4.0, power:0.58, desc:'晚上才從礁石洞裡出來散步，藍色的殼煮熟會變紅色。' },
   { id:'shrimp',  spot:'creek', name:'櫻花蝦', rarity:'常見', color:'#f5a5b8', min:0.01, max:0.05, power:0.2, desc:'小小的、粉紅色的，一群一群在螢光溪裡游來游去。' },
@@ -400,18 +405,18 @@ const SPOTS = [
   { id:'river',  label:'月灣河岸', short:'河岸',   subtitle:'木橋下的河灣，河魚最多',         pos:V3(-20.4, -17.6), color:PALETTE.river, dir:V2(0.25, -1),  fish:['perch','crucian','catfish','koi','tilapia','eel','snakehead','zacco','acro','pseudorasbora','koi_sanke','koi_showa','koi_ogon','catfish_albino','tilapia_red'] },
   { id:'lake',   label:'鏡湖',     short:'湖邊',   subtitle:'平靜如鏡的湖，錦鯉偶爾會浮上來', pos:V3(-21.8, -2),    color:'#62c9e0',     dir:V2(-1, 0.05),  fish:['crucian','perch','koi','carp','bass','goldfish','sturgeon','arowana','bighead','koi_sanke','koi_showa','koi_ogon','goldfish_ranchu','goldfish_telescope','goldfish_pearl','carp_mirror','arowana_red','koi_red','koi_fuku'], legendBoost:1.4 },
   { id:'pool',   label:'清溪潭',   short:'清溪潭', subtitle:'河西岸的小深潭，水很冰',         pos:V3(-29.5, -29),   color:'#9fe3ff',     dir:V2(0, 1),      fish:['ayu','kuhua','goby','trout','loach','salmon','hillstream','candidia','trout_golden'] },
-  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray','mahi','yellowtail','barracuda','trevally','manta','octopus']   /* v439 玩家回饋「釣幾條就膩」：第一個釣點以前九成都是幾百公克的小魚。加進幾種本來就有的大魚（鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚、章魚），新手也常常拉到大的 */ },
+  { id:'sea',    label:'晴潮海邊', short:'海邊',   subtitle:'東海灘的木碼頭，近海魚很多',     pos:V3(0, -50.8),     color:PALETTE.sea,   dir:V2(0, -1),     fish:['mackerel','scorpion','moonbream','puffer','squid','bonito','cuttle','jelly','flounder','grouper','crab','tilefish','stingray','mahi','yellowtail','barracuda','trevally','manta','octopus','whiting','tidegoby','groupie','horseshoe']   /* v439 玩家回饋「釣幾條就膩」：第一個釣點以前九成都是幾百公克的小魚。加進幾種本來就有的大魚（鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚、章魚），新手也常常拉到大的 */ },
   { id:'isle', label:'小島碼頭', short:'小島', subtitle:'自己小島的木碼頭，海風很舒服', pos:V3(ISLE.x, ISLE.z + ISLE.r + 5.4), color:'#5fb6e3', dir:V2(0, 1), fish:['clown','parrot','puffer','squid','sunfish','tuna','cuttle','octopus','seahorse','lionfish','turtle','lobster','butterfly','trevally','sergeant','rabbitfish','bluetang','moonwrasse','clown_black','xclown','xclown_gold','xwrasse','xwrasse_gold'] },
   { id:'harbor', label:'港口外海', short:'外海',   subtitle:'港口盡頭，大型魚出沒的深海',     pos:V3(33.2, -27),    color:'#1c5d8c',     dir:V2(1, -0.25),  fish:['mackerel','moonbream','manta','dolphin','marlin','shark','tuna','octopus','ika','barracuda','hammer','kingcrab','mahi','saury','horsemack','hairtail','sardine','flyingfish','yellowtail','pomfret','grunt','roundscad','anchovy','filefish','threadfin','greatwhite','greatwhite_albino','fwfish','fwfish_gold','trevally','stingray'] },
   { id:'shrimp', label:'室內釣蝦場', short:'釣蝦場', subtitle:'買時段、坐板凳，看浮標整個沉下去才拉！', pos:V3(SHRIMP.x, SHRIMP.z + SHRIMP.pd / 2 + 0.75), color:'#ff9f43', dir:V2(0, -1), fish:['prawn','whiteshrimp','tigerprawn','crayfish','blueclaw','goldprawn','crayfish_blue'] },
-  { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','scat_red'] },
+  { id:'mangrove', label:'紅樹林碼頭', short:'紅樹林', subtitle:'南方沙灘再往南的紅樹林，漲潮時魚會游進樹根之間', pos:V3(67.8, 10), color:'#4f9a5a', dir:V2(1, 0), late:true, fish:['mullet','milkfish','scat','terapon','blackbream','mudcrab','mangsnapper','barramundi','bullshark','sawfish','horseshoe','scat_red'] },
   { id:'mudflat', label:'紅樹林泥灘', short:'泥灘', subtitle:'退潮時露出來的泥灘，慢慢靠近、徒手抓', pos:V3(9999, 9999), color:'#8a6a4a', dir:V2(0, 1), hidden:true, fish:['mudskipper','fiddler','bigskipper','mudskipper_albino','fiddler_blue'] },
   { id:'canal', label:'百年生態池', short:'生態池', subtitle:'百年生態池：石頭砌的池邊、紅色拱橋、假山和睡蓮', pos:V3(13.0, -41.1), color:'#5aa070', dir:V2(0, 1), late:true, fish:['tilapia','crucian','carp','snakehead','pseudorasbora','mosquitofish','guppy','pleco','giantsnake','clarias','tilapia_red','mosquitofish_gold','pleco_albino','giantsnake_red','clarias_albino','guppy_albino'] },
   { id:'abyss', label:'深海浮台', short:'深海', subtitle:'遠洋上的浮台，底下是幾百公尺深的海溝，放長長的線下去釣', pos:V3(64.2, -148.4), color:'#1d3a6a', dir:V2(0, -1), late:true, fish:['mehikari','rattail','blackthroat','blobfish','fangtooth','goblinshark','sixgill','mehikari_gold','rattail_albino','blackthroat_gold','blobfish_albino','fangtooth_gold','goblinshark_albino','sixgill_albino','sperm','giantsquid','oarfish','angler'] },
   { id:'mystic', label:'神秘島礁岩', short:'神秘島', subtitle:'遠洋火山島的黑色礁岩，寒流和暖流在這裡交會', pos:V3(-60, 178.6), color:'#3a8a7a', dir:V2(0, 1), late:true, fish:['creolefish','razorsurgeon','idol','batfish','galapagosshark','creolefish_gold','razorsurgeon_albino','idol_gold','batfish_albino','galapagosshark_albino','bluewhale','bluewhale_albino','whaleshark','sunfish'] },
   { id:'icelake', label:'冰湖冰洞', short:'冰湖', subtitle:'結冰的湖上鑿好的小洞，用手竿垂直放線下去', pos:V3(-157.2, -10.8), color:'#9fd8f0', dir:V2(-0.7, 0.7).normalize(), late:true, fish:['wakasagi','shirauo','dolly','himemasu','ito','wakasagi_gold','shirauo_gold','dolly_gold','himemasu_albino','ito_gold'] },
   { id:'icesea', label:'流冰海岸', short:'流冰', subtitle:'冰封群島北邊的海岸，流冰一塊一塊漂過來', pos:V3(-179.4, -10), color:'#5f9fc8', dir:V2(-1, 0), late:true, fish:['capelin','hokke','cod','sleepershark','capelin_gold','hokke_albino','cod_albino','sleepershark_albino','beluga','orca','whale','baskingshark','baskingshark_albino'] },
-  { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島，站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold','snowmoray','snowmoray_gold'] },
+  { id:'reef', label:'珊瑚礁岸', short:'珊瑚礁', subtitle:'本島西邊走長橋過去的珊瑚礁島，站在礁岩上用磯釣竿最好', pos:V3(-9.0, 87.5), color:'#2fb0a8', dir:V2(-1, 0.1), late:true, fish:['rabbitfish','girella','blackgirella','lethrinus','amberjack','parrot','butterfly','sergeant','lionfish','octopus','trevally','grouper','groupie','rabbitfish_gold','girella_gold','blackgirella_albino','lethrinus_red','amberjack_gold','snowmoray','snowmoray_gold'] },
   { id:'weir', label:'雙心石滬', short:'石滬', subtitle:'珊瑚礁島東邊用咾咕石疊成的愛心石滬，退潮時魚被困在裡面、咬得特別快', pos:V3(11.0, 82.0), color:'#e86a8a', dir:V2(1, 0), late:true, fish:['rabbitfish','sergeant','butterfly','girella','octopus','puffer','rabbitfish_gold','girella_gold'] },
   { id:'moss', label:'苔森溪澗', short:'苔森', subtitle:'苔森之島長滿青苔的溪流和湖，有很多島上才有的魚', pos:V3(GREEN.x + GREEN.lake[0], GREEN.z + GREEN.lake[1] + GREEN.lake[2] + 1.2), color:'#4e9a52', dir:V2(0, -1), late:true, fish:['sicyo','eleotris','kuhlia','mokuzu','marmorata','sicyo_blue','eleotris_albino','kuhlia_gold','mokuzu_blue','marmorata_gold','ayu','kuhua','eel'] },
   { id:'creek',  label:'螢光溪間', short:'溪間',   subtitle:'森林深處的秘密水潭',             pos:V3(20.8, 27.4),   color:PALETTE.creek, dir:V2(1, 0.05),   fish:['kuhua','goby','trout','lantern','shrimp','medaka','candidia','guppy','trout_golden'], legendBoost:1.8 },
@@ -516,6 +521,9 @@ const FISH_STYLE = {
   moonbream:{ shape:'Fish2', c:{ Body:'#f2c14e', Front:'#fff0b8', Fins:'#e59a2f' } },
   kuhua:    { shape:'Fish1', c:{ Top:'#6fae9a', Bottom:'#e6f4ee', Fins:'#a8d8c4' } },
   ayu:      { shape:'Fish1', c:{ Top:'#8fae5a', Bottom:'#eef4dc', Fins:'#d8c46a' } },
+  whiting:  { shape:'Fish1', c:{ Top:'#c9b98a', Bottom:'#f6f1e2', Fins:'#e8d27a' }, sc:[1.22, 0.62, 0.8] },   /* v557 沙鮻：細細長長 */
+  tidegoby: { shape:'Goby', c:{ Top:'#9c8a62', Bottom:'#e9dfc6', Fins:'#c9b48a', Spots:'#4a3d2a', Ring:'#f3ead2', Eye:'#1d1a14' }, sc:[0.9, 0.9, 1] },   /* 潮池蝦虎：蝦虎的身形，沙色帶深色斑（不發光） */
+  groupie:  { shape:'Scorpion', c:{ Top:'#8a6a44', Bottom:'#d9c39a', Fins:'#6b5030', Spots:'#3a2a18', Eye:'#1d1410' }, sc:[1.05, 1.12, 1] },   /* 石斑幼魚：胖胖的、滿身深色斑點 */
   goby:     { shape:'Goby', c:{ Top:'#7a54d8', Bottom:'#d9ccff', Fins:'#a98cf2', Spots:'#f1e6ff', Ring:'#f6f0ff', Eye:'#1d1430' }, glow:true },
   trout:    { shape:'Fish1', c:{ Top:'#9b5de5', Bottom:'#efe6ff', Fins:'#c084ff' }, glow:true },
   tilapia:  { shape:'Fish2', c:{ Body:'#7d8f78', Front:'#c9d4bf', Fins:'#5f7060' } },
@@ -653,7 +661,7 @@ function fishMat(id, part, color, glow, move, shape){
   const finMove = !CLASSIC && part === 'Fins' && !/^Marlin/.test(shape || '') && (move === 'side' || move === 'vert' || move === 'eel');   /* v267 鰭自己會動（螃蟹、龍蝦、魟魚、旗魚不用） */
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
   if (glow && (part === 'Top' || part === 'Body')){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.35; }
-  if (shape === 'Goby' && part === 'Spots'){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.9; }
+  if (shape === 'Goby' && part === 'Spots' && glow){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.9; }
   m.onBeforeCompile = sh => {
     sh.uniforms.uFishT = fishTime; sh.uniforms.uFinS = finSpd;
     sh.vertexShader = 'uniform float uFishT;\nuniform float uFinS;\nvarying vec3 vFishP;\n' + sh.vertexShader.replace('#include <begin_vertex>',
@@ -679,7 +687,7 @@ function fishMat(id, part, color, glow, move, shape){
 }
 function makeModelFish(f, scale){
   const st = FISH_STYLE[f.id]; const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
-  const inner = new THREE.Group(); if (/^Fish/.test(st.shape)) inner.scale.z = 1.5; fish.add(inner);   // 稍微加厚，從上往下看比較清楚
+  const inner = new THREE.Group(); if (/^Fish/.test(st.shape)) inner.scale.z = 1.5; if (st.sc){ inner.scale.x *= st.sc[0]; inner.scale.y *= st.sc[1]; inner.scale.z *= st.sc[2]; } fish.add(inner);   // 稍微加厚，從上往下看比較清楚
   for (const part of Object.keys(FISH_MESH[st.shape])){
     const mt = fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape); if (st.glowParts && st.glowParts.includes(part) && !mt.userData.gl){ mt.userData.gl = 1; mt.emissive = new THREE.Color(st.c[part] || f.color); mt.emissiveIntensity = 0.9; }
     const mesh = new THREE.Mesh(fishGeo(st.shape, part), mt);
@@ -727,12 +735,26 @@ function fishActTick(dt){ dt = Math.min(dt, 0.05); for (let i = FishActs.length 
     A.U.value.set((A.kind === 'air' ? 0.7 : 0.18) + 2.4 * k, A.ph, Math.sin(A.ph * 0.5) * k * (A.kind === 'air' ? 1.15 : 0.9), 0);
     if (A.kind === 'air'){ A.tw += dt * (1.2 + 9 * k) * A.dir; m.rotation.set(Math.sin(A.t * 3.1 + A.ph * 0.1) * 0.16, A.tw, Math.PI / 2 * 0.9 + Math.sin(A.t * 5.3) * 0.1 + Math.sin(A.ph) * 0.22 * k); }
     else { m.rotation.z = Math.sin(A.ph) * 0.2 * k; m.rotation.x = Math.sin(A.ph * 0.5) * 0.12 * k; m.position.y = A.by + Math.abs(Math.sin(A.ph * 0.5)) * 0.06 * k; } } }
+/* v557 三棘鱟：圓頂的頭胸甲（馬蹄形）、後面一塊比較小帶刺的腹甲、一根又長又尖的尾劍。頭朝 +x */
+function makeHorseshoe(scale){ const g = new THREE.Group(); g.scale.setScalar(scale || 1); const sh = mat('#77734a', 0.5), dk = mat('#4f4d30', 0.6), ey = mat('#17150e', 0.3);
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  const dome = add(new THREE.SphereGeometry(0.27, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), sh, 0.13, -0.09, 0); dome.scale.set(1.0, 0.56, 1.08);
+  const rim = add(new THREE.TorusGeometry(0.262, 0.022, 6, 24, Math.PI * 1.25), dk, 0.13, -0.085, 0); rim.rotation.x = Math.PI / 2; rim.rotation.z = -Math.PI * 0.625; rim.scale.set(1, 1.08, 1);
+  add(new THREE.CircleGeometry(0.262, 20).rotateX(Math.PI / 2), dk, 0.13, -0.088, 0).scale.set(1, 1, 1.08);
+  for (const sz of [-1, 0, 1]){ const r = add(new THREE.BoxGeometry(0.3, 0.02, 0.014), dk, 0.1, sz ? 0.02 : 0.055, sz * 0.12); r.rotation.z = -0.12; r.rotation.y = sz * -0.18; }
+  for (const sz of [-1, 1]) add(new THREE.SphereGeometry(0.02, 8, 6), ey, 0.14, 0.01, sz * 0.2);
+  const ab = add(new THREE.SphereGeometry(0.19, 6, 6, 0, Math.PI * 2, 0, Math.PI / 2), sh, -0.14, -0.09, 0); ab.scale.set(1.0, 0.42, 0.98); ab.rotation.y = Math.PI / 6;
+  add(new THREE.CircleGeometry(0.185, 6).rotateX(Math.PI / 2), dk, -0.14, -0.088, 0);
+  for (const sz of [-1, 1]) for (let i = 0; i < 5; i++){ const sp = add(new THREE.ConeGeometry(0.012, 0.07, 5), dk, -0.04 - i * 0.05, -0.07, sz * (0.18 - i * 0.018)); sp.rotation.x = sz * 1.25; sp.rotation.z = 0.5; }
+  const tl = add(new THREE.ConeGeometry(0.02, 0.5, 6), dk, -0.56, -0.07, 0); tl.rotation.z = Math.PI / 2;
+  g.userData.tail = new THREE.Object3D(); return g; }
 function fishModel(f, scale){
   if (f.hat){ const f2 = Object.assign({}, f); delete f2.hat; return fishHat(fishModel(f2, scale), f.hat); }
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
   if (f.id === 'octopus') return makeOctopus(scale);
   if (/^seacuc/.test(f.id)) return makeSeacuc(scale, f.id !== 'seacuc');
+  if (f.id === 'horseshoe') return makeHorseshoe(scale);
   if (MFISH && MFISH.of[f.id]) return makeMFish(f.id, scale);
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
@@ -9014,9 +9036,10 @@ const TIDE_FX = { rising:{ bite:0.78, rare:1.15 }, high:{ bite:0.9, rare:1.05 },
    潮汐魚：六種本來就有的海魚跟著潮水走（不加新魚種，圖鑑和博物館的收集不會被打亂）。
    ・跟著漲潮進來（漲潮、滿潮）：浪人鰺、黑鯛、烏魚　・退潮才好抓（退潮、乾潮）：比目魚、章魚、青蟳
    ・對的潮位明顯變多（只跟同樣稀有度的魚換），錯的潮位幾乎不咬（伺服器 189 在每一竿的結果上換魚；這裡的數字只給離線時和提示用） */
-const TIDE_FISH = { trevally: 'in', blackbream: 'in', mullet: 'in', flounder: 'out', octopus: 'out', mudcrab: 'out' };
+const TIDE_FISH = { trevally: 'in', blackbream: 'in', mullet: 'in', flounder: 'out', octopus: 'out', mudcrab: 'out', whiting: 'in', groupie: 'in', tidegoby: 'out', horseshoe: 'out' };
+const TIDE_ONLY = new Set(['whiting', 'groupie', 'tidegoby', 'horseshoe']);   /* v557 新魚：潮位不對就完全不咬（舊的六種是「幾乎不咬」） */
 function tideSide(st){ return st === 'rising' || st === 'high' ? 'in' : 'out'; }
-function tideFishK(f, spotId){ const sd = TIDE_FISH[f.id]; if (!sd || !SEA_SPOTS.has(spotId) || spotId === 'mudflat') return 1; return sd === tideSide(Env.tide.st) ? 2.5 : 0.12; }
+function tideFishK(f, spotId){ const sd = TIDE_FISH[f.id]; if (!sd || !SEA_SPOTS.has(spotId) || spotId === 'mudflat') return 1; return sd === tideSide(Env.tide.st) ? (TIDE_ONLY.has(f.id) ? 1.3 : 2.5) : TIDE_ONLY.has(f.id) ? 0 : 0.12; }
 /* 接下來幾次潮位變化：[時間(ms), 狀態]。滿潮 = 水位在最高的兩成、乾潮 = 最低的兩成（跟 tideNow 一樣） */
 function tideEvents(ms, n){ const a = Math.asin(0.8) / (Math.PI * 2), B = [[a, 'high'], [0.5 - a, 'falling'], [0.5 + a, 'low'], [1 - a, 'rising']], c0 = Math.floor(ms / TIDE_PERIOD) * TIDE_PERIOD, out = [];
   for (let k = 0; out.length < n && k < 4; k++) for (const [ph, st] of B){ const t = c0 + (k + ph) * TIDE_PERIOD; if (t > ms && out.length < n) out.push([t, st]); } return out; }
@@ -13248,7 +13271,7 @@ const LINES = {
   thick:  { name:'粗線',   icon:'🪢', desc:'線不容易斷，適合大魚，但魚比較少咬。', bite:1.25, tension:0.75, rare:0.92 },
 };
 const LURE_FISH = new Set(['barramundi', 'mangsnapper', 'bullshark', 'yellowtail', 'hairtail', 'cod', 'toothfish', 'bass', 'snakehead', 'mackerel', 'bonito', 'barracuda', 'mahi', 'tuna', 'trevally', 'marlin', 'perch', 'trout', 'salmon', 'arowana', 'shark', 'hammer', 'squid', 'ika']);
-const BOTTOM_FISH = new Set(['fiddler', 'fiddler_blue', 'mudcrab', 'sawfish', 'cod', 'toothfish', 'crayfish', 'prawn', 'tigerprawn', 'catfish', 'eel', 'flounder', 'scorpion', 'crab', 'kingcrab', 'lobster', 'stingray', 'grouper', 'sturgeon', 'loach', 'goby', 'octopus', 'angler', 'cuttle', 'shrimp', 'crucian', 'carp']);
+const BOTTOM_FISH = new Set(['groupie', 'horseshoe', 'fiddler', 'fiddler_blue', 'mudcrab', 'sawfish', 'cod', 'toothfish', 'crayfish', 'prawn', 'tigerprawn', 'catfish', 'eel', 'flounder', 'scorpion', 'crab', 'kingcrab', 'lobster', 'stingray', 'grouper', 'sturgeon', 'loach', 'goby', 'octopus', 'angler', 'cuttle', 'shrimp', 'crucian', 'carp']);
 const Rig = Object.assign({ rig:'float', line:'normal' }, LS.get('tide.rig', {}));
 if (!RIGS[Rig.rig]) Rig.rig = 'float'; if (!LINES[Rig.line]) Rig.line = 'normal';
 function saveRig(){ LS.set('tide.rig', Rig); updateBobberLook(); }
@@ -14194,7 +14217,7 @@ function recordCatch(f, w){
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w; seaMemAdd(F.spot && F.spot.id, 1, 'catch'); try { if (!(F.spot && F.spot.id === 'shrimp')) rodNote(f, w); } catch(e){}
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
   if (f.rarity === '傳說') rec.legend++;
-  rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
+  rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of || f.keep ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
   cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) duelAfterCatch(f, w); if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); if (r) rumorAfterCatch(F.spot && F.spot.id); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
@@ -14227,7 +14250,7 @@ function drawHat2D(cv, kind){ const ctx = cv.getContext('2d'), W = cv.width, H =
   ctx.fillStyle = '#d81e2c'; ctx.beginPath(); ctx.moveTo(-r, 0); ctx.quadraticCurveTo(-r * 0.6, -r * 2.4, -r * 2.2, -r * 2.1); ctx.quadraticCurveTo(-r * 0.2, -r * 2.6, r, 0); ctx.closePath(); ctx.fill(); ctx.lineWidth = Math.max(1, r * 0.18); ctx.strokeStyle = '#6a0a12'; ctx.stroke();
   ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(0, 0, r * 1.15, r * 0.38, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(-r * 2.2, -r * 2.1, r * 0.38, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 function drawFish(cv, color, known, id){
-  if (id && /^(octopus|dumbo|seacuc|shark_red|lobster|bluelobster|crayfish)/.test(id) && FISH_BY_ID[id]){ try { if (drawMFishGL(cv, id, known, () => fishModel(FISH_BY_ID[id], 1))) return; } catch(e){} }   /* v310 手工做的模型（小飛象章魚、海參、章魚、紅鯊、龍蝦），小圖直接用遊戲裡的 3D 模型畫，兩邊才會一樣 */
+  if (id && /^(octopus|dumbo|seacuc|shark_red|lobster|bluelobster|crayfish|horseshoe)/.test(id) && FISH_BY_ID[id]){ try { if (drawMFishGL(cv, id, known, () => fishModel(FISH_BY_ID[id], 1))) return; } catch(e){} }   /* v310 手工做的模型（小飛象章魚、海參、章魚、紅鯊、龍蝦），小圖直接用遊戲裡的 3D 模型畫，兩邊才會一樣 */
   if (id){ try { if (drawMFishGL(cv, id, known)) return; } catch(e){} }
   if (id === 'marlin' || id === 'marlin_albino') return drawMarlin2(cv, known, id !== 'marlin');
   if (id && FISH_STYLE[id]){ try { drawModelFish(cv, FISH_BY_ID[id], known); if (known && FISH_BY_ID[id].hat) drawHat2D(cv, FISH_BY_ID[id].hat); return; } catch(e){} }
@@ -14342,7 +14365,7 @@ function drawMarlin(cv, known){
 // 水族館最多 100 條魚：同一種魚的同一個部位用一個 InstancedMesh 一次畫完，手機才撐得住
 let tankInst = [];      // 這次建出來的 InstancedMesh／一般模型，重建時要拿掉
 // 水族館裡住在底下的：螃蟹、龍蝦、蝦子、章魚、比目魚、魟魚…會貼著沙子慢慢爬，不會在水中間游
-const TANK_BOTTOM = new Set(['mudcrab', 'fiddler', 'fiddler_blue', 'sawfish', 'mudskipper', 'bigskipper', 'mudskipper_albino', 'crab', 'kingcrab', 'lobster', 'bluelobster', 'crayfish', 'prawn', 'blueclaw', 'goldprawn', 'whiteshrimp', 'tigerprawn', 'octopus', 'flounder', 'stingray', 'hillstream', 'loach', 'angler', 'catfish']);
+const TANK_BOTTOM = new Set(['horseshoe', 'tidegoby', 'mudcrab', 'fiddler', 'fiddler_blue', 'sawfish', 'mudskipper', 'bigskipper', 'mudskipper_albino', 'crab', 'kingcrab', 'lobster', 'bluelobster', 'crayfish', 'prawn', 'blueclaw', 'goldprawn', 'whiteshrimp', 'tigerprawn', 'octopus', 'flounder', 'stingray', 'hillstream', 'loach', 'angler', 'catfish']);
 // 水族館裡魚的大小：不同種類照真實的大小差很多（壓縮過），同一種也會因為重量不同有大有小
 function tankScale(f, w){ const avg = (f.min + f.max) / 2, base = 0.2 + 0.13 * Math.log(1 + avg * 4), k = clamp(Math.cbrt(Math.max(0.0001, w) / avg), 0.7, 1.35); return clamp(base * k, 0.16, 1.2); }
 // 模型在 1 倍大小時的範圍：水平半徑（會轉向所以前後左右都要算）、上下
@@ -14377,7 +14400,7 @@ function buildTank(){
       ph: i * 1.7 + Math.random() * 3, ph2: Math.random() * 6, sp: rand(0.15, 0.36), ax: rand(2.4, 4.5), az: rand(0.4, 1.1), y: rand(-0.9, 0.95), cx: rand(-0.4, 0.4), slots: [] };
     if (TANK_BOTTOM.has(f.id)){ fish.bottom = true; fish.y = -1.22; fish.sp *= 0.35; fish.az = rand(0.3, 1.0); }
     tankFish.push(fish);
-    if (!FISH_STYLE[f.id] || x.rs || /^marlin/.test(f.id) || f.id === 'octopus' || /^(dumbo|seacuc)/.test(f.id) || (MFISH && MFISH.of[f.id])){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
+    if (!FISH_STYLE[f.id] || x.rs || /^marlin/.test(f.id) || f.id === 'octopus' || /^(dumbo|seacuc|horseshoe)/.test(f.id) || (MFISH && MFISH.of[f.id])){ fish.m = fishModel(f, fish.scale);   // 旗魚：專屬模型；紅鯊每一隻身上的叉叉不一樣，也單獨畫
       const bb = new THREE.Box3().setFromObject(fish.m), k = 1 / fish.scale;
       const ext = { r: Math.max(Math.abs(bb.min.x), bb.max.x, Math.abs(bb.min.z), bb.max.z) * k * 1.05, y0: bb.min.y * k, y1: bb.max.y * k };
       tankFit(fish, ext); fish.m.scale.multiplyScalar(fish.scale * k); if (x.rs) addScars(fish.m, rsInfo(x.rs).scars); tankGroup.add(fish.m); tankInst.push(fish.m); return; }
@@ -15569,7 +15592,7 @@ const npcs = [
     lines:['號外號外！今天的《潮汐村報》出來了', '每天早上 7 點出報，昨天發生什麼事都寫在上面，全服大魚、博物館新展品、節慶活動也會寫', '釣到稀有的魚，明天就會上報喔，名字還是金色的', '報紙我都留 7 天，想看以前的也可以', '我到處跑新聞，村民的八卦我最清楚了'] },
   // 蔚博士：海洋科學家，每天跑到世界上的一個釣點調查，發現一種新品種（070_sci.sql）；站在今天調查的釣點旁邊
   { name:'蔚博士・海洋科學家', shirt:'#f4f6f8', hat:'#2f7fa8', x:2.4, z:3.2, y:0.02, dir:new THREE.Vector2(-0.6, 0.8).normalize(), shopNpc:'sci',
-    lines:['我是海洋科學家，每天都會到不同的地方做調查', '世界上還有好多沒被發現的魚，每天都有新驚喜', '我發現的新品種，會放進大家的圖鑑裡', '我研究站的探測潛水艇需要人幫忙採樣，深海浮台上的潛水艇碼頭可以借你（Lv.15 以上，搭阿海的船去）', '新品種剛發現的那天最容易遇到，之後也一直都在那裡', '每一種新品種都有很少見的白化或黑化個體，我也還沒看過'] },
+    lines:['我在晴潮海邊確認了四種以前沒記錄的魚：沙鮻、石斑幼魚、潮池蝦虎，還有活化石「鱟」。牠們只在特定的潮位出現，先看潮汐表再去', '我是海洋科學家，每天都會到不同的地方做調查', '世界上還有好多沒被發現的魚，每天都有新驚喜', '我發現的新品種，會放進大家的圖鑑裡', '我研究站的探測潛水艇需要人幫忙採樣，深海浮台上的潛水艇碼頭可以借你（Lv.15 以上，搭阿海的船去）', '新品種剛發現的那天最容易遇到，之後也一直都在那裡', '每一種新品種都有很少見的白化或黑化個體，我也還沒看過'] },
   { name:'阿伯・老校工', shirt:'#c8b48a', hat:'#5a6a3a', x:21.6, z:-41.0, y:0.02, dir:new THREE.Vector2(-0.2, 1).normalize(), lines:['這個池子比我年紀還大，學校一百多年前就有了', '以前的學生下課都蹲在池邊看魚', '琵琶鼠魚是有人亂放生的，現在池子裡到處都是', '大肚魚是以前放來吃孑孓的', '紅色的拱橋走上去看魚最清楚', '看到垃圾就順手撿一下啦', '假山上的蕨類是老師們一棵一棵種的'] },
 ].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.tailor = !!n.tailor; f.shopNpc = n.shopNpc || null; if (n.tailor || n.shopNpc){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 for (const n of npcs){ const nm = n.nm.textContent; n.wid = nm.startsWith('阿綾') ? 'ling' : nm.startsWith('阿木') ? 'mu' : nm.startsWith('阿福') ? 'fu' : nm.startsWith('老港') ? 'gang' : null; }
@@ -16722,7 +16745,7 @@ function renderTab(){
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
         if (known){ const st = starsOf(f), sd = el('div', 'stars s' + st, starStr(st)); sd.title = st >= 3 ? '已經三顆星了' : st === 2 ? `三顆星：完美搏鬥一次＋釣到 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上（${Mast.set.has(f.id) ? '完美搏鬥 ✓' : '還沒完美搏鬥'}）` : `兩顆星：釣到 10 條（現在 ${rec.count[f.id]}）或 ${fmtKg(f.min + (f.max - f.min) * 0.8)} 以上`; it.appendChild(sd); it.addEventListener('click', () => toast(`${f.name} ${starStr(st)}：${sd.title}`)); if (st >= 3) it.classList.add('gold'); }
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
-        if (TIDE_FISH[f.id]) it.appendChild(el('div', 'meta tm', TIDE_FISH[f.id] === 'in' ? '🌊 漲潮、滿潮時常出現' : '🏖️ 退潮、乾潮時常出現'));
+        if (TIDE_FISH[f.id]) it.appendChild(el('div', 'meta tm', TIDE_ONLY.has(f.id) ? (TIDE_FISH[f.id] === 'in' ? '🌊 只在漲潮、滿潮出現' : '🏖️ 只在退潮、乾潮出現') : (TIDE_FISH[f.id] === 'in' ? '🌊 漲潮、滿潮時常出現' : '🏖️ 退潮、乾潮時常出現')));
         if (f.fest) it.appendChild(el('div', 'meta fest', (FEST_FISH_WHEN[f.fest] || '🏮 節慶限定') + (festOn(f.fest) ? '・現在釣得到！' : '・現在釣不到')));   /* v388 節慶魚標清楚哪時候才有 */
         if (known && baitsFor(f).length) it.appendChild(el('div', 'meta', starsOf(f) >= 2 ? '🍽️ 喜歡：' + baitsFor(f).map(b => b.name).join('、') : '🍽️ 喜歡的餌：★★ 解鎖'));   /* v295 先自己試，釣到 10 條（兩顆星）才告訴你 */
         g.appendChild(it);
@@ -16984,6 +17007,7 @@ function renderTab(){
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
       '潮汐（右上角）：大約 18 分鐘漲退一次。海邊、外海、小島在漲潮時最好釣，乾潮時比較難。',
       '🌊 潮汐表：點右上角的天氣和潮汐那一格，會看到現在是什麼潮、再幾分幾秒滿潮或乾潮（旁邊是現實的時間），還有現在哪些魚比較常咬。',
+      '🆕 四種新魚（都在晴潮海邊）：沙鮻、點帶石斑幼魚只在「漲潮、滿潮」咬；潮池蝦虎、三棘鱟只在「退潮、乾潮」咬，潮位不對完全釣不到，要先看潮汐表。石斑幼魚和鱟用沉底釣比較容易；石斑幼魚在珊瑚礁島的礁岩也有，鱟在紅樹林也有。鱟釣到會自動收藏（不會被不小心賣掉），可以養在魚缸、放進水族館、做成魚拓。',
       '🐟 潮汐魚：有六種海魚跟著潮水走。浪人鰺、黑鯛、烏魚在「漲潮、滿潮」時明顯變多，「退潮、乾潮」時幾乎不咬；沙底比目魚、紅石章魚、鋸緣青蟳剛好相反，退潮和乾潮才好抓。圖鑑裡這幾種魚會標出來。想釣牠們就先看潮汐表。',
       `季節跟著現實的月份（台灣）：3～5 月春天 🌸、6～8 月夏天 🌻、9～11 月秋天 🍁、12～2 月冬天 ❄️。每季有 6 種「當季魚」比平常多一倍（圖鑑會標「當季」），樹的顏色、飄落的花瓣落葉雪花、廣場旁邊的裝飾也會跟著換。現在是${SEASONS[SEASON].name}。`,
       '釣具店老闆每天會給「今日情報」：說哪個釣點的哪種魚今天特別多（機率 2.5 倍）。',
