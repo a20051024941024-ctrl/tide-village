@@ -2264,10 +2264,7 @@ function castPoint(x, z, dx, dz, dist){
       for (const sx of [-1, 1]){ const fx = cx + sx * 4.4, fz = cz + F * 0.4, by = y + 3.9; put(box([0.07, 2.2, 0.07], '#e9eef2', [fx, by + 1.1, fz])); const fl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55, 6, 1), new THREE.MeshStandardMaterial({ color: sx < 0 ? '#e0564f' : '#f2b532', side: THREE.DoubleSide, roughness: 0.8 })); fl.geometry.translate(0.45, 0, 0); fl.position.set(fx, by + 1.9, fz); fl.userData.keep = true; fl.userData.dyn = true; put(fl); const P = fl.geometry.attributes.position, base = P.array.slice(); FX.push(t2 => { for (let i = 0; i < P.count; i++){ const x = base[i * 3]; P.setZ(i, Math.sin(t2 * 3.2 + x * 5 + sx) * 0.09 * x); } P.needsUpdate = true; fl.rotation.y = Math.sin(t2 * 0.4 + sx) * 0.25; }); }
       STAD_DOOR = { x: cx, z: cz + F * 2.4, face: F < 0 ? Math.PI : 0 }; }
     /* v532 露天籃球場拆掉了（作者：籃球蓋進體育場，外面的拆掉）；空地先留著 */
-    /* 羽球場（v491 搬到籃球場南邊，橫著放） */
-    { const x0 = -27.6, x1 = -22.2, z0 = 28.2, z1 = 30.8, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03, ly = y + 0.075; slab(x0 - 0.3, x1 + 0.3, z0 - 0.3, z1 + 0.3, '#2f7d5a', 0.04, y - 0.01); slab(x0, x1, z0, z1, '#3fa06e', 0.06, y);
-      line(x0, z0, x1, z0, ly, null, 0.05); line(x0, z1, x1, z1, ly, null, 0.05); line(x0, z0, x0, z1, ly, null, 0.05); line(x1, z0, x1, z1, ly, null, 0.05); line(x0, cz, cx - 0.8, cz, ly, null, 0.05); line(cx + 0.8, cz, x1, cz, ly, null, 0.05); for (const sd of [-1, 1]){ line(cx + sd * 0.8, z0, cx + sd * 0.8, z1, ly, null, 0.05); line(cx + sd * 2.4, z0, cx + sd * 2.4, z1, ly, null, 0.05); }
-      pole(cx, z0 - 0.12, y, 1.25, '#e9eef2', 0.035); pole(cx, z1 + 0.12, y, 1.25, '#e9eef2', 0.035); net(cx, z0 - 0.12, cx, z1 + 0.12, y + 0.75, y + 1.22); const sc = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 8), M('#ffffff')); sc.position.set(cx + 1.4, y + 0.14, cz + 0.5); sc.rotation.z = 2.2; put(sc); }
+    /* v544 露天羽球場拆掉了（羽球蓋進體育場）；空地先留著 */
     /* 撞球館的門面（v497：作者說撞球場也做成像潮汐食堂一樣走進去的場館 → 原本的撞球棚改成一間小屋，門朝東，走到門口進去是完整的撞球館） */
     { const x0 = -34.2, x1 = -30, z0 = 27, z1 = 31.3, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = gyAt(cx, cz) + 0.03, W = x1 - x0, D = z1 - z0; slab(x0 - 0.2, x1 + 1.4, z0 - 0.2, z1 + 0.2, '#c9c6bc', 0.07, y);
       put(box([W, 3.0, D], '#2f6f72', [cx, y + 1.5, cz])); put(box([W + 0.06, 0.9, D + 0.06], '#5b3d27', [cx, y + 0.45, cz])); put(box([W + 0.5, 0.22, D + 0.5], '#e0564f', [cx, y + 3.11, cz])); put(box([W + 0.2, 0.3, D + 0.2], '#f4f1e6', [cx, y + 2.9, cz]));
@@ -4450,6 +4447,14 @@ function kidIK(up, lo, end, T, pole){
   /* 3 繞著「肩膀／髖到目標」這條線轉，讓關節朝 pole */
   if (pole){ lo.getWorldPosition(_kjB); _kjN.copy(T).sub(_kjA).normalize(); _kjU.copy(_kjB).sub(_kjA); _kjU.addScaledVector(_kjN, -_kjU.dot(_kjN)); _kjW.copy(pole).sub(_kjA); _kjW.addScaledVector(_kjN, -_kjW.dot(_kjN));
     if (_kjU.lengthSq() > 1e-6 && _kjW.lengthSq() > 1e-6){ _kjU.normalize(); _kjW.normalize(); let ang = Math.acos(clamp(_kjU.dot(_kjW), -1, 1)); if (_kjV.crossVectors(_kjU, _kjW).dot(_kjN) < 0) ang = -ang; kidRotW(up, _kjQ.setFromAxisAngle(_kjN, ang)); } } }
+/* v544 作者：「動作」→ 球類的動作疊在原本的走路跑步上面（骨架動畫每一格都會重算，所以每一格再往上加一點角度）：
+   踢球：右腳先往後收一下再往前踢出去，身體稍微往後仰；運球：身體壓低、右手一上一下拍球；投籃出手後手往前壓。別人的動作也看得到。 */
+const SPX = { leg: 1, arm: 1 };
+function sportFx(f, k, dur){ if (f) f.sportFx = { k, at: now(), dur: dur || 0.4 }; }
+function sportPose(f, K){ const B = K.B; if (!B || !B.upperlegr) return; const tn = now(), X = f.sportFx;
+  if (X){ const u = (tn - X.at) / X.dur; if (u >= 1 || u < 0){ f.sportFx = null; } else if (X.k === 'kick'){ const sw = u < 0.28 ? -0.55 * Math.sin(u / 0.28 * Math.PI / 2) : -0.55 + 2.0 * Math.sin((u - 0.28) / 0.72 * Math.PI) * (u < 0.64 ? 1 : 0.9); B.upperlegr.rotation.x -= sw * SPX.leg; B.lowerlegr.rotation.x += (u < 0.3 ? 0.9 * (u / 0.3) : 0.9 * Math.max(0, 1 - (u - 0.3) / 0.25)) * SPX.leg; if (B.spine) B.spine.rotation.x -= 0.16 * Math.sin(u * Math.PI); if (B.upperarml) B.upperarml.rotation.x -= 0.5 * Math.sin(u * Math.PI) * SPX.arm; }
+    else if (X.k === 'follow'){ const a = Math.sin(u * Math.PI); if (B.lowerarmr) B.lowerarmr.rotation.x -= 0.6 * a * SPX.arm; if (B.wristr) B.wristr.rotation.x += 0.7 * a * SPX.arm; } }
+  if (f.bkArm){ const v = f.aspd || 0, ph = (tn * (2.4 + Math.min(2, v) * 0.5)) % 1, a = Math.sin(ph * Math.PI * 2); if (B.spine) B.spine.rotation.x += 0.2; if (B.upperarmr) B.upperarmr.rotation.x += (0.25 + a * 0.3) * SPX.arm; if (B.lowerarmr) B.lowerarmr.rotation.x += (0.2 - a * 0.45) * SPX.arm; if (B.upperarml) B.upperarml.rotation.x += 0.55 * SPX.arm; } }
 function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
   if (K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjB[i].quaternion.copy(K.kjQ[i]); K.kjOn = false; }   /* v452 上一格疊上去的彈性先還原（見 kidJuice 的說明） */
@@ -4475,7 +4480,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
+  K.mixer.update(dt); if (f.sportFx || f.bkArm) sportPose(f, K); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
   if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
@@ -9591,21 +9596,21 @@ function fbStep(dt){ const b = SOC.b, FW = SOC.FW, FD = SOC.FD; let goal = -1;
   return goal; }
 function fbReset(){ const b = SOC.b; b.x = b.z = b.y = 0; b.vx = b.vz = b.vy = 0; }
 function fbBallMsg(){ const b = SOC.b, r = v => Math.round(v * 100) / 100; return { k: 'b', q: SOC.q, p: [r(b.x), r(b.z), r(b.y)], v: [r(b.vx), r(b.vz), r(b.vy)], h: SOC.hold > now() ? 1 : 0 }; }
-function fbTouch(vx, vz, vy){ const b = SOC.b; SOC.q++; SOC.own = poolKey(); b.vx = vx; b.vz = vz; b.vy = vy; if (b.y < 0.02) b.y = 0.02; SOC.kickAt = now(); SOC.sendAt = 0; fbSend(fbBallMsg()); try { tone(170, 0.06, 'sine', 0.09, 90); } catch(e){} }
+function fbTouch(vx, vz, vy){ const b = SOC.b; SOC.q++; SOC.own = poolKey(); b.vx = vx; b.vz = vz; b.vy = vy; if (b.y < 0.02) b.y = 0.02; SOC.kickAt = now(); SOC.sendAt = 0; const m0 = fbBallMsg(); if (Math.hypot(vx, vz) > 5.5){ m0.kk = 1; sportFx(me, 'kick', 0.42); } fbSend(m0); try { tone(170, 0.06, 'sine', 0.09, 90); } catch(e){} }
 function fbCanPlay(){ const s = fbMySide(); return s !== -1 && SOC.hold <= now() && SOC.m.st !== 'over'; }
 function fbShoot(){ if (!inStad() || !fbCanPlay()) return; const b = SOC.b, S = STAD, dx = S.x + b.x - me.pos.x, dz = S.z + b.z - me.pos.z; if (Math.hypot(dx, dz) > 1.9 || b.y > 1.2) return;
-  const fx = Math.sin(me.rot), fz = Math.cos(me.rot); fbTouch(fx * 13.5, fz * 13.5, 3.4); try { me.av && me.av.playEmote && me.av.playEmote('cheer'); } catch(e){} }
+  const fx = Math.sin(me.rot), fz = Math.cos(me.rot); fbTouch(fx * 13.5, fz * 13.5, 3.4); }
 /* ---- 比賽 ---- */
 function fbPlayers(){ const out = [{ k: poolKey(), u: myId || '', t: fbMyTeam() }]; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!inStad(p.target.x, p.target.z)) continue; const tn = fbStr(p.pres.tn, 12); out.push({ k, u: fbStr(p.pres.u, 40), t: tn ? { n: tn, c: fbStr(p.pres.tc, 9) } : null }); } return out; }
 function fbStart(){ const m = SOC.m; if (m.st === 'play'){ toast('⚽ 比賽進行中'); return; } const P = fbPlayers(); if (P.length < 2){ toast('⚽ 要兩個人以上才能比賽（先自己練習踢踢看）'); return; }
   const cnt = new Map(); for (const p of P) if (p.t) cnt.set(p.t.n, (cnt.get(p.t.n) || 0) + 1); const teams = [...cnt.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)); const sides = {};
   if (teams.length >= 2){ const A = teams[0][0], Bn = teams[1][0]; m.team = true; m.a = { n: A, c: (P.find(p => p.t && p.t.n === A).t.c) || '' }; m.b = { n: Bn, c: (P.find(p => p.t && p.t.n === Bn).t.c) || '' }; for (const p of P){ const s = p.t && p.t.n === A ? 0 : p.t && p.t.n === Bn ? 1 : null; if (s != null){ sides[p.k] = s; if (p.u) sides[p.u] = s; } } }
   else { m.team = false; m.a = { n: '紅隊', c: '#e0564f' }; m.b = { n: '藍隊', c: '#4f8fe0' }; P.sort((a, b) => a.k < b.k ? -1 : 1).forEach((p, i) => { sides[p.k] = i % 2; if (p.u) sides[p.u] = i % 2; }); }
-  m.st = 'play'; m.q++; m.from = poolKey(); m.sa = m.sb = 0; m.end = Date.now() + 180000; m.sides = sides; m.rx = now(); fbReset(); SOC.q++; SOC.own = poolKey(); SOC.hold = now() + 3; fbSend(fbBallMsg()); fbMatchSend(); fbMatchChanged('start'); }
-function fbMatchSend(){ const m = SOC.m; m.tx = now(); fbSend({ k: 'm', q: m.q, st: m.st, a: m.a, b: m.b, sa: m.sa, sb: m.sb, left: Math.max(0, m.end - Date.now()), sd: m.sides, tm: m.team ? 1 : 0 }); }
+  m.st = 'play'; m.q++; m.from = poolKey(); m.sa = m.sb = 0; m.end = Date.now() + 180000; m.sides = sides; m.mid = 'fb' + Date.now().toString(36) + poolKey().slice(0, 12); m.rx = now(); fbReset(); SOC.q++; SOC.own = poolKey(); SOC.hold = now() + 3; fbSend(fbBallMsg()); fbMatchSend(); fbMatchChanged('start'); }
+function fbMatchSend(){ const m = SOC.m; m.tx = now(); fbSend({ k: 'm', q: m.q, st: m.st, a: m.a, b: m.b, sa: m.sa, sb: m.sb, left: Math.max(0, m.end - Date.now()), sd: m.sides, tm: m.team ? 1 : 0, mid: m.mid || '' }); }
 function fbMatchChanged(why){ const m = SOC.m; fbBoard(); fbTags(); fbBarDraw(); if (!inStad()) return;
   if (why === 'start'){ flash(m.team ? `⚽ ${m.a.n} 對 ${m.b.n}，開始！` : '⚽ 練習賽開始！', 2); try { SFX.tick(); } catch(e){} }
-  else if (why === 'over'){ const s = fbMySide0(); const w = m.sa > m.sb ? 0 : m.sb > m.sa ? 1 : -1; flash(w < 0 ? `⚽ 比賽結束，${m.sa} : ${m.sb} 平手` : (s === w ? '🎉 你們贏了！' : s === 1 - w ? '這場輸了，再來一場！' : `⚽ ${(w ? m.b : m.a).n} 贏了`) + `（${m.sa} : ${m.sb}）`, 3); try { if (s === w) SFX.coin(); } catch(e){} } }
+  else if (why === 'over'){ const s = fbMySide0(); const w = m.sa > m.sb ? 0 : m.sb > m.sa ? 1 : -1; if (s >= 0 && m.mid && m.rep !== m.mid){ m.rep = m.mid; sportReport('soccer', m.mid, w < 0 ? 'd' : s === w ? 'w' : 'l', m.team); } flash(w < 0 ? `⚽ 比賽結束，${m.sa} : ${m.sb} 平手` : (s === w ? '🎉 你們贏了！' : s === 1 - w ? '這場輸了，再來一場！' : `⚽ ${(w ? m.b : m.a).n} 贏了`) + `（${m.sa} : ${m.sb}）`, 3); try { if (s === w) SFX.coin(); } catch(e){} } }
 function fbMySide0(){ const m = SOC.m, k = poolKey(); let s = m.sides[k]; if (s == null && myId) s = m.sides[myId]; if (s == null && m.team){ const t = fbMyTeam(); if (t){ if (t.n === m.a.n) s = 0; else if (t.n === m.b.n) s = 1; } } return s === 0 || s === 1 ? s : -1; }
 function fbGoal(side){ const m = SOC.m; SOC.hold = now() + 2.6; if (m.st === 'play'){ const n = m.sa + m.sb + 1; fbSend({ k: 'g', s: side, n, mq: m.q }); fbGoalApply(side, n); } else { fbSend({ k: 'g', s: side, n: 0 }); fbGoalFx(side); } SOC.goalAt = now(); }
 function fbGoalApply(side, n){ const m = SOC.m; if (m.st !== 'play' || n !== m.sa + m.sb + 1) return; if (side === 0) m.sa++; else m.sb++; fbBoard(); fbBarDraw(); fbGoalFx(side); if (m.from === poolKey()) fbMatchSend(); }
@@ -9614,11 +9619,11 @@ function fbOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !
   if (d.k === 'q'){ if (SOC.own === poolKey() || (!SOC.own && SOC.q > 0)) setTimeout(() => fbSend(fbBallMsg()), 100 + Math.random() * 200); if (m.st !== 'idle' && m.from === poolKey()) setTimeout(fbMatchSend, 150 + Math.random() * 200); return; }
   if (d.k === 'b'){ const q = Math.floor(+d.q); if (!isFinite(q) || !Array.isArray(d.p) || !Array.isArray(d.v) || d.p.length !== 3 || d.v.length !== 3 || ![...d.p, ...d.v].every(isFinite)) return;
     if (q < SOC.q || (q === SOC.q && SOC.own && peer !== SOC.own && !(peer < SOC.own))) return; if (q === SOC.q && SOC.own === poolKey() && !(peer < poolKey())) return;
-    const b = SOC.b; SOC.q = q; SOC.own = peer; SOC.rxAt = now(); b.x = clamp(+d.p[0], -16, 16); b.z = clamp(+d.p[1], -10, 10); b.y = clamp(+d.p[2], 0, 12); b.vx = clamp(+d.v[0], -25, 25); b.vz = clamp(+d.v[1], -25, 25); b.vy = clamp(+d.v[2], -25, 25); if (d.h) SOC.hold = Math.max(SOC.hold, now() + 0.4); return; }
+    const b = SOC.b; SOC.q = q; SOC.own = peer; SOC.rxAt = now(); b.x = clamp(+d.p[0], -16, 16); b.z = clamp(+d.p[1], -10, 10); b.y = clamp(+d.p[2], 0, 12); b.vx = clamp(+d.v[0], -25, 25); b.vz = clamp(+d.v[1], -25, 25); b.vy = clamp(+d.v[2], -25, 25); if (d.h) SOC.hold = Math.max(SOC.hold, now() + 0.4); if (d.kk){ try { sportFx(bkFisher(peer), 'kick', 0.42); } catch(e){} } return; }
   if (d.k === 'g'){ const s = d.s === 1 ? 1 : 0, n = Math.floor(+d.n) || 0; if (n > 0) fbGoalApply(s, n); else if (m.st !== 'play') fbGoalFx(s); SOC.hold = Math.max(SOC.hold, now() + 2.4); return; }
   if (d.k === 'm'){ const q = Math.floor(+d.q); if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st)) return; if (q < m.q || (q === m.q && m.from && peer !== m.from && !(peer < m.from))) return;
     const was = m.st, wq = m.q; m.q = q; m.from = peer; m.rx = now(); m.st = d.st; m.a = { n: fbStr(d.a && d.a.n, 12) || '紅隊', c: fbStr(d.a && d.a.c, 9) }; m.b = { n: fbStr(d.b && d.b.n, 12) || '藍隊', c: fbStr(d.b && d.b.c, 9) }; try { m.a.n = clean(m.a.n); m.b.n = clean(m.b.n); } catch(e){}
-    m.sa = clamp(Math.floor(+d.sa || 0), 0, 99); m.sb = clamp(Math.floor(+d.sb || 0), 0, 99); m.end = Date.now() + clamp(+d.left || 0, 0, 600000);   /* 送「還剩多久」，不送幾點結束：每支手機的時鐘會差幾秒 */ m.team = !!d.tm; const sd = {}; if (d.sd && typeof d.sd === 'object'){ let c = 0; for (const k in d.sd){ if (c++ > 60) break; if (d.sd[k] === 0 || d.sd[k] === 1) sd[fbStr(k, 40)] = d.sd[k]; } } m.sides = sd;
+    m.sa = clamp(Math.floor(+d.sa || 0), 0, 99); m.sb = clamp(Math.floor(+d.sb || 0), 0, 99); m.end = Date.now() + clamp(+d.left || 0, 0, 600000);   /* 送「還剩多久」，不送幾點結束：每支手機的時鐘會差幾秒 */ m.team = !!d.tm; m.mid = fbStr(d.mid, 40); const sd = {}; if (d.sd && typeof d.sd === 'object'){ let c = 0; for (const k in d.sd){ if (c++ > 60) break; if (d.sd[k] === 0 || d.sd[k] === 1) sd[fbStr(k, 40)] = d.sd[k]; } } m.sides = sd;
     if (m.st === 'over' && was !== 'over') m.overAt = now();
     fbMatchChanged(m.st === 'play' && (was !== 'play' || q !== wq) ? 'start' : m.st === 'over' && was === 'play' ? 'over' : ''); return; } }
 function fbPeerLeft(peer){ const m = SOC.m; if (SOC.own === peer) SOC.own = ''; if (m.st === 'play' && m.from === peer) m.rx = -1e9; }
@@ -9687,7 +9692,7 @@ function bkMeterVal(tn){ const u = ((tn - BK.meter.t0) * 1.25) % 2; return u < 1
 function bkPeerOf(k){ if (!k) return null; let p = peers.get(k); if (p) return p; for (const [, q] of peers) if (q && q.pres && q.pres.u && q.pres.u === k) return q; return null; }
 function bkFisher(k){ if (k === poolKey()) return me; const p = bkPeerOf(k); return p ? p.fisher : null; }
 function bkPosOf(k){ if (k === poolKey()) return { x: me.pos.x, z: me.pos.z, rot: me.rot }; const p = bkPeerOf(k); return p && p.target ? { x: p.target.x, z: p.target.z, rot: p.fisher && p.fisher.rot != null ? p.fisher.rot : 0 } : null; }
-function bkPose(k, clip, dur, holdAt){ const f = bkFisher(k); if (!f || !f.av || !f.av.kid) return; f.emote = null; f.ppose = { k: 'bk', W: [[clip, 1]], hold: holdAt ? [clip, holdAt] : null, at: now(), until: now() + dur }; }
+function bkPose(k, clip, dur, holdAt){ const f = bkFisher(k); if (!f || !f.av || !f.av.kid) return; if (clip === 'throw' && !holdAt) sportFx(f, 'follow', 0.6); f.emote = null; f.ppose = { k: 'bk', W: [[clip, 1]], hold: holdAt ? [clip, holdAt] : null, at: now(), until: now() + dur }; }
 function bkPoseEnd(k){ const f = bkFisher(k); if (f && f.ppose && f.ppose.k === 'bk') f.ppose = null; }
 function bkLive(){ const m = BK.m; return m.st === 'play' && m.ph === 'live'; }
 function bkOppDist(){ const m = BK.m, mi = bkMyIdx(); if (mi < 0) return 99; const o = bkPosOf(m.p[1 - mi]); return o ? Math.hypot(o.x - me.pos.x, o.z - me.pos.z) : 99; }
@@ -9728,11 +9733,11 @@ function bkAfterShot(){ const m = BK.m, L = m.last, mi = bkMyIdx(), tn = now(); 
 function bkNearPeer(){ let best = null, bd = 1e9; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!bkOnCourt(p.target.x, p.target.z)) continue; const d = Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z); if (d < bd){ bd = d; best = { k, u: fbStr(p.pres.u, 40), n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
 function bkMyName(){ try { return poolName(); } catch(e){ return '玩家'; } }
 function bkInvite(){ const m = BK.m, tn = now(); if (m.st === 'play'){ toast('🏀 有人正在比賽，等這場打完'); return; } const P = bkNearPeer(); if (!P){ toast('🏀 球場上要有另一個人才能 1 對 1（自己可以先練投）'); return; } if (tn - BK.invAt < 6){ toast('剛邀請過，等對方回應'); return; } BK.invAt = tn; bkSend({ k: 'inv', to: P.k, tu: P.u, n: bkMyName() }); toast(`🏀 已經邀請 ${esc(P.n)}，等對方回應`); }
-function bkStart(peer, nm){ const m = BK.m; m.st = 'play'; m.q++; m.from = poolKey(); m.p = [poolKey(), peer]; m.nm = [bkMyName(), nm]; m.sc = [0, 0]; m.n = 1; m.pos = Math.random() < 0.5 ? 0 : 1; m.ph = 'check'; m.phEnd = now() + 2.5; m.over = false; m.aim = false; m.jumpAt = 0; m.clear = false; m.last = null; m.rx = now(); m.t0 = now(); bkMatchSend(); bkChanged('start'); }
-function bkMatchSend(){ const m = BK.m; m.tx = now(); bkSend({ k: 'st', q: m.q, st: m.st, p: m.p, nm: m.nm, sc: m.sc, n: m.n, pos: m.pos }); }
+function bkStart(peer, nm){ const m = BK.m; m.st = 'play'; m.q++; m.from = poolKey(); m.p = [poolKey(), peer]; m.nm = [bkMyName(), nm]; m.sc = [0, 0]; m.n = 1; m.pos = Math.random() < 0.5 ? 0 : 1; m.ph = 'check'; m.phEnd = now() + 2.5; m.over = false; m.aim = false; m.jumpAt = 0; m.clear = false; m.last = null; m.rx = now(); m.t0 = now(); m.mid = 'bk' + Date.now().toString(36) + poolKey().slice(0, 12); bkMatchSend(); bkChanged('start'); }
+function bkMatchSend(){ const m = BK.m; m.tx = now(); bkSend({ k: 'st', q: m.q, st: m.st, p: m.p, nm: m.nm, sc: m.sc, n: m.n, pos: m.pos, mid: m.mid || '' }); }
 function bkChanged(why){ const m = BK.m, mi = bkMyIdx(); bkBarDraw(); if (!inStad()) return;
   if (why === 'start'){ if (mi >= 0){ flash(m.pos === mi ? '🏀 1 對 1 開始：你先進攻！' : '🏀 1 對 1 開始：你先防守！', 2.2); BK.streak = 0; } try { SFX.tick(); } catch(e){} }
-  else if (why === 'over'){ const w = m.sc[0] > m.sc[1] ? 0 : m.sc[1] > m.sc[0] ? 1 : -1; if (mi >= 0 || bkOnCourt()){ flash(w < 0 ? `🏀 ${m.sc[0]} : ${m.sc[1]} 平手` : mi === w ? `🎉 你贏了！（${m.sc[0]} : ${m.sc[1]}）` : mi >= 0 ? `這場輸了（${m.sc[0]} : ${m.sc[1]}），再來一場！` : `🏀 ${m.nm[w]} 贏了（${m.sc[0]} : ${m.sc[1]}）`, 3); try { if (mi === w){ SFX.coin(); bkPose(poolKey(), 'cheer', 2); } } catch(e){} } } }
+  else if (why === 'over'){ const w = m.sc[0] > m.sc[1] ? 0 : m.sc[1] > m.sc[0] ? 1 : -1; if (mi >= 0 && m.mid && m.rep !== m.mid){ m.rep = m.mid; sportReport('basket', m.mid, w < 0 ? 'd' : mi === w ? 'w' : 'l', false); } if (mi >= 0 || bkOnCourt()){ flash(w < 0 ? `🏀 ${m.sc[0]} : ${m.sc[1]} 平手` : mi === w ? `🎉 你贏了！（${m.sc[0]} : ${m.sc[1]}）` : mi >= 0 ? `這場輸了（${m.sc[0]} : ${m.sc[1]}），再來一場！` : `🏀 ${m.nm[w]} 贏了（${m.sc[0]} : ${m.sc[1]}）`, 3); try { if (mi === w){ SFX.coin(); bkPose(poolKey(), 'cheer', 2); } } catch(e){} } } }
 function bkBarEl(){ if (!BK.bar){ const b = el('div', 'panel'); b.id = 'bkBar'; b.hidden = true; document.body.appendChild(b); BK.bar = b; } return BK.bar; }
 function bkBarDraw(){ const b = bkBarEl(), m = BK.m, mi = bkMyIdx(), show = inStad() && m.st !== 'idle' && (mi >= 0 || bkOnCourt()); if (!show){ if (!b.hidden) b.hidden = true; return; } b.hidden = false;
   let tip = ''; if (m.st === 'over') tip = '比賽結束'; else if (mi < 0) tip = `${m.nm[m.pos]} 進攻`; else if (m.ph !== 'live') tip = m.pos === mi ? '準備進攻…' : '準備防守…'; else if (m.pos === mi) tip = !m.clear ? '先把球帶出三分線' : `你進攻・${Math.max(0, Math.ceil((m.clk || 0) - now()))} 秒`; else tip = m.aim ? '對手要投了！按「蓋火鍋」' : '你防守：靠近按「抄球」';
@@ -9749,7 +9754,7 @@ function bkOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !
   if (d.k === 'no'){ if (d.to === me2) toast(`🏀 ${esc(fbStr(d.n, 12) || '對方')} 現在不想比`); return; }
   if (d.k === 'q'){ if (m.st !== 'idle' && m.from === me2) setTimeout(bkMatchSend, 150 + Math.random() * 200); return; }
   if (d.k === 'st'){ const q = Math.floor(+d.q), n = Math.floor(+d.n) || 1; if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st) || !Array.isArray(d.p) || !Array.isArray(d.nm) || !Array.isArray(d.sc)) return; if (peer !== fbStr(d.p[0], 40)) return; if (q < m.q) return;
-    const was = m.st, wq = m.q, fresh = q !== wq || was === 'idle'; m.q = q; m.from = peer; m.rx = now(); m.p = [fbStr(d.p[0], 40), fbStr(d.p[1], 40)]; m.nm = [0, 1].map(i => { let s = fbStr(d.nm[i], 12) || '玩家'; try { s = clean(s); } catch(e){} return s; });
+    const was = m.st, wq = m.q, fresh = q !== wq || was === 'idle'; m.q = q; m.from = peer; m.rx = now(); if (d.mid) m.mid = fbStr(d.mid, 40); m.p = [fbStr(d.p[0], 40), fbStr(d.p[1], 40)]; m.nm = [0, 1].map(i => { let s = fbStr(d.nm[i], 12) || '玩家'; try { s = clean(s); } catch(e){} return s; });
     if (fresh || n > m.n){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.n = n; m.pos = d.pos === 1 ? 1 : 0; m.aim = false; m.jumpAt = 0; m.clear = false; m.last = null; m.over = false; if (d.st === 'play'){ m.ph = 'check'; m.phEnd = now() + (fresh ? 2.5 : 1.0); } }
     if (d.st === 'play' && was !== 'play'){ m.st = 'play'; bkChanged(fresh ? 'start' : ''); } else if (d.st === 'over' && was === 'play' && !m.last){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.st = 'over'; m.overAt = now(); bkChanged('over'); } else if (d.st === 'idle' && was !== 'idle'){ m.st = 'idle'; bkChanged(''); } else if (d.st === 'play') m.st = 'play';
     bkBarDraw(); return; } }
@@ -9782,6 +9787,88 @@ function bkBallsTick(dt){ const S = STAD, Y = S.y, HY = BK.HY; for (const s of B
     if (s.t < T1){ const u = s.t / T1, tx = s.made ? BK.HX : BK.HX + s.off * 0.16, tz = BK.HZ + (s.made ? 0 : (s.off > 0 ? 0.24 : -0.24)), x = s.x0 + (tx - s.x0) * u, z = s.z0 + (tz - s.z0) * u, y0 = 1.0, y1 = HY + (s.made ? 0.05 : 0.12), y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * (1.3 + Math.hypot(tx - s.x0, tz - s.z0) * 0.16); s.m.position.set(S.x + x, Y + y, S.z + z); s.m.rotation.x -= dt * 9; s.lx = x; s.lz = z; s.ly = y; if (s.blk){ const ub = s.t / 0.85; const tx2 = BK.HX, x2 = s.x0 + (tx2 - s.x0) * ub, z2 = s.z0 + (BK.HZ - s.z0) * ub; s.m.position.set(S.x + x2, Y + 1.0 + ub * 2.2, S.z + z2); s.lx = x2; s.lz = z2; s.ly = 1.0 + ub * 2.2; s.off = -1.5; } }
     else { const u = s.t - T1; if (s.made){ s.m.position.set(S.x + BK.HX, Y + Math.max(0.17, HY - u * u * 7), S.z + BK.HZ + 0); if (BK.net) BK.net.scale.y = 1 + Math.max(0, 0.35 - u) * 0.9; } else { const dx = (s.off >= 0 ? 1 : -0.4) * 1.5, dz = (s.off > 0 ? 1 : -1) * 1.1; s.m.position.set(S.x + s.lx + dx * u, Y + Math.max(0.17, s.ly + 1.4 * u - u * u * 7), S.z + s.lz + dz * u); }
       if (u > 1.1){ s.t = -1; s.m.visible = false; } } } }
+/* ===== v544 體育場羽球 1 對 1（作者 11/17：羽球場也要能打、蓋進體育場、比賽一對一）=====
+   體育場最東邊（進門往右走到底）。球網在中間，西半場是 0 號、東半場是 1 號。先拿到 7 分的人贏，贏那一分的人發球。
+   ・球飛過來的時候，你那一邊的地上會有一個圈圈＝球會掉在哪裡。跑到圈圈附近，等球快到的時候按「揮拍」。
+   ・離球越近打得越好（球回去得越快）；非常準的時候是「殺球」。按太早或離太遠＝揮空，要等一下才能再揮。
+   ・打回去的方向：揮拍那一下你正在往左／右跑，球就往那一邊；往網子跑＝短球，往後退＝長球；站著不動＝隨機。
+   ・球掉在你這邊的地上＝對方得分。
+   同步：誰打到球誰送「從哪裡打、會掉在哪、飛多久」；沒接到的人自己宣布失分（他沒宣布的話，打的人 1.5 秒後幫忙宣布）。 */
+const BD = { CX: 31.6, HL: 5.2, HW: 2.6, NET: 1.25, TABLE: { x: 29.4, z: 6.4 }, built: false, sh: null, ring: null, f: null, cd: 0, bar: null, invAt: 0, px: 0, pz: 0, mvx: 0, mvz: 0,
+  m: { st: 'idle', q: 0, from: '', p: ['', ''], nm: ['', ''], sc: [0, 0], pn: 1, srv: 0, ph: 'serve', phEnd: 0, hn: 0, last: -1, rx: 0, tx: 0, overAt: 0, mid: '' } };
+function bdSideOf(rx){ return rx < BD.CX ? 0 : 1; }
+function bdOnCourt(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } const rx = x - STAD.x, rz = z - STAD.z; return Math.abs(rx - BD.CX) < BD.HL + 1.2 && Math.abs(rz) < BD.HW + 1.2; }
+function bdSend(d){ d.f = poolKey(); if (BD.tap){ try { BD.tap(d); } catch(e){} } try { if (room && room.connected()) room.emit('bd', d).catch(() => {}); } catch(e){} }
+function bdMyIdx(){ const m = BD.m, k = poolKey(); return m.p[0] === k ? 0 : m.p[1] === k ? 1 : -1; }
+function bdBuild(){ if (BD.built || !Venue.stad) return; BD.built = true; const S = STAD, Y = S.y, g = Venue.stad, CX = BD.CX, HL = BD.HL, HW = BD.HW;
+  const B = (w, h, d, c, x, y, z, sh) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'string' ? mat(c, 0.85) : c); o.position.set(S.x + x, y, S.z + z); o.receiveShadow = true; o.castShadow = sh !== false; g.add(o); return o; };
+  const line = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), k = B(0.06, 0.012, L, '#ffffff', (x0 + x1) / 2, Y + 0.075, (z0 + z1) / 2, false); k.rotation.y = Math.atan2(x1 - x0, z1 - z0); return k; };
+  B(HL * 2 + 1.4, 0.05, HW * 2 + 1.4, '#2f7d5a', CX, Y + 0.02, 0, false); B(HL * 2, 0.06, HW * 2, '#3fa06e', CX, Y + 0.035, 0, false);
+  line(CX - HL, -HW, CX + HL, -HW); line(CX - HL, HW, CX + HL, HW); line(CX - HL, -HW, CX - HL, HW); line(CX + HL, -HW, CX + HL, HW); for (const sx of [-1, 1]){ line(CX + sx * 1.5, -HW, CX + sx * 1.5, HW); line(CX + sx * 1.5, 0, CX + sx * HL, 0); }
+  for (const sz of [-1, 1]){ const po = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, BD.NET + 0.05, 8), mat('#e9eef2', 0.6)); po.position.set(S.x + CX, Y + (BD.NET + 0.05) / 2, S.z + sz * (HW + 0.15)); po.castShadow = true; g.add(po); addCircleCol(S.x + CX, S.z + sz * (HW + 0.15), 0.12); }
+  { const cv = document.createElement('canvas'); cv.width = cv.height = 32; const c2 = cv.getContext('2d'); c2.strokeStyle = '#ffffff'; c2.lineWidth = 1.2; for (let i = 0; i <= 8; i++){ c2.beginPath(); c2.moveTo(i * 4, 0); c2.lineTo(i * 4, 32); c2.moveTo(0, i * 4); c2.lineTo(32, i * 4); c2.stroke(); } const nt = new THREE.CanvasTexture(cv); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(14, 2); const nm = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2 + 0.3, 0.5), new THREE.MeshBasicMaterial({ map: nt, transparent: true, opacity: 0.75, side: THREE.DoubleSide })); nm.rotation.y = Math.PI / 2; nm.position.set(S.x + CX, Y + BD.NET - 0.25, S.z); g.add(nm); B(0.04, 0.05, HW * 2 + 0.3, '#ffffff', CX, Y + BD.NET, 0, false); }
+  { const T = BD.TABLE, tg = new THREE.Group(); tg.position.set(S.x + T.x, Y, S.z + T.z); g.add(tg); const top = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.7), mat('#f4f1e6', 0.8)); top.position.y = 0.78; top.castShadow = true; tg.add(top); for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const lg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.76, 0.07), mat('#6f7882', 0.7)); lg.position.set(sx * 0.56, 0.38, sz * 0.27); tg.add(lg); }
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c2 = cv.getContext('2d'); c2.fillStyle = '#3fa06e'; c2.fillRect(0, 0, 256, 96); c2.fillStyle = '#fff'; c2.font = '900 44px "Noto Sans TC", sans-serif'; c2.textAlign = 'center'; c2.fillText('🏸 1 對 1', 128, 64); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.5), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sg.position.set(0, 1.25, 0); tg.add(sg); addCircleCol(S.x + T.x, S.z + T.z, 0.6); }
+  { const sh = new THREE.Group(), hd = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), mat('#f2b532', 0.6)), sk = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.2, 10, 1, true), new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide, roughness: 0.8 })); sk.position.y = 0.13; sk.rotation.x = Math.PI; sh.add(hd, sk); sh.visible = false; g.add(sh); BD.sh = sh;
+    const rg = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.55, 28), new THREE.MeshBasicMaterial({ color: '#ffe066', transparent: true, opacity: 0.9, side: THREE.DoubleSide })); rg.rotation.x = -Math.PI / 2; rg.visible = false; g.add(rg); BD.ring = rg; } }
+function bdRacket(k, on){ const f = bkFisher(k); if (!f || !f.av || !f.av.kid || !f.av.kid.B || !f.av.kid.B.handr) return; const B = f.av.kid.B; if (on && !f.bdRk){ const rk = new THREE.Group(), hd = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), mat('#3a3f46', 0.5)), ring = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.012, 6, 16), mat('#e0564f', 0.5)), net = new THREE.Mesh(new THREE.CircleGeometry(0.105, 14), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, side: THREE.DoubleSide })); hd.position.y = 0.15; ring.position.y = 0.41; net.position.y = 0.41; rk.add(hd, ring, net); rk.rotation.x = -Math.PI / 2; B.handr.add(rk); f.bdRk = rk; } else if (!on && f.bdRk){ try { f.bdRk.parent.remove(f.bdRk); } catch(e){} f.bdRk = null; } }
+/* 一次擊球：從 (x0,z0,y0) 飛到 (x1,z1) 花 T 秒 */
+function bdFly(d, by){ const m = BD.m; BD.f = { n: d.n, by, x0: +d.a[0], z0: +d.a[1], y0: +d.a[2], x1: +d.b[0], z1: +d.b[1], T: clamp(+d.T || 1.2, 0.5, 2.2), t0: now(), sm: !!d.sm, done: false }; m.hn = d.n; m.ph = 'rally'; if (inStad()){ try { tone(d.sm ? 1500 : 980, 0.05, 'triangle', 0.08, d.sm ? 700 : 500); } catch(e){} } }
+function bdPosAt(F, tn){ const u = clamp((tn - F.t0) / F.T, 0, 1), H = (F.sm ? 0.9 : 2.4) + Math.max(0, 1.6 - F.y0) * 0.5, x = F.x0 + (F.x1 - F.x0) * u, z = F.z0 + (F.z1 - F.z0) * u, y = F.y0 * (1 - u) + H * 4 * u * (1 - u) * (F.sm ? 0.6 : 1) + (F.sm ? (1 - u) * 0.4 : 0); return { x, z, y: Math.max(0.05, y), u }; }
+function bdAim(mi, q){ const sgn = mi === 0 ? 1 : -1, sp = Math.hypot(BD.mvx, BD.mvz), toNet = BD.mvx * sgn, side = BD.mvz; let depth = 2.6 + Math.random() * 1.6, tz = (Math.random() * 2 - 1) * (BD.HW - 0.5);
+  if (sp > 0.8){ if (Math.abs(side) > 0.6) tz = Math.sign(side) * (BD.HW - 0.55 - Math.random() * 0.5); if (toNet > 0.6) depth = 1.5 + Math.random() * 0.5; else if (toNet < -0.6) depth = 4.3 + Math.random() * 0.5; }
+  return [BD.CX + sgn * depth, tz]; }
+function bdSwing(){ const m = BD.m, mi = bdMyIdx(), tn = now(); if (m.st !== 'play' || mi < 0 || !inStad()) return; if (tn < BD.cd) return; const rx = me.pos.x - STAD.x, rz = me.pos.z - STAD.z;
+  if (bdSideOf(rx) !== mi){ toast('🏸 要站在自己那一邊才能打'); return; }
+  bkPose(poolKey(), 'throw', 0.5); bdSend({ k: 'sw' });
+  if (m.ph === 'serve'){ if (m.srv !== mi || tn < m.phEnd) return; BD.cd = tn + 0.5; const b = bdAim(mi, 0.3), d = { k: 'h', n: m.hn + 1, pn: m.pn, a: [Math.round(rx * 100) / 100, Math.round(rz * 100) / 100, 1.1], b: [Math.round(b[0] * 100) / 100, Math.round(b[1] * 100) / 100], T: 1.45 }; bdSend(d); bdFly(d, mi); return; }
+  const F = BD.f; if (m.ph !== 'rally' || !F || F.done || F.by === mi){ BD.cd = tn + 0.3; return; }
+  const P = bdPosAt(F, tn), dist = Math.hypot(F.x1 - rx, F.z1 - rz);   /* 看的是「離圈圈多遠」＋「球是不是快到了」（飛過一半以後），手機上比較好按 */ if (P.u < 0.5 || dist > 1.75){ BD.cd = tn + 0.55; flash(P.u < 0.5 ? '太早了！' : '太遠了，揮空！', 0.5); return; }
+  BD.cd = tn + 0.35; const q = clamp(1 - dist / 1.75, 0, 1) * (0.6 + 0.4 * clamp(1 - Math.abs(P.u - 0.82) / 0.3, 0, 1)), sm = q > 0.8, b = bdAim(mi, q), d = { k: 'h', n: F.n + 1, pn: m.pn, a: [Math.round(P.x * 100) / 100, Math.round(P.z * 100) / 100, Math.round(Math.max(0.5, P.y) * 100) / 100], b: [Math.round(b[0] * 100) / 100, Math.round(b[1] * 100) / 100], T: sm ? 0.78 : Math.round((1.4 - 0.4 * q) * 100) / 100, sm: sm ? 1 : 0 };
+  me.rot = Math.atan2(b[0] - rx, b[1] - rz); bdSend(d); bdFly(d, mi); if (sm) flash('💥 殺球！', 0.6); }
+function bdPoint(win, n){ const m = BD.m; if (m.st !== 'play' || n !== m.pn) return; m.pn++; m.sc[win]++; m.srv = win; m.ph = 'serve'; m.phEnd = now() + 1.6; m.last = win; if (BD.f) BD.f.done = true; const mi = bdMyIdx();
+  if (inStad() && (mi >= 0 || bdOnCourt())){ flash(mi === win ? '🏸 得分！' : mi >= 0 ? '沒接到…' : `🏸 ${m.nm[win]} 得分`, 0.9); try { if (mi === win) SFX.coin(); else tone(200, 0.09, 'triangle', 0.06); } catch(e){} }
+  if (m.sc[0] >= 7 || m.sc[1] >= 7){ m.st = 'over'; m.overAt = now(); if (m.from === poolKey()){ m.q++; bdMatchSend(); } bdChanged('over'); } else if (m.from === poolKey()) bdMatchSend(); bdBarDraw(); }
+function bdNearPeer(){ let best = null, bd = 1e9; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!bdOnCourt(p.target.x, p.target.z)) continue; const d = Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z); if (d < bd){ bd = d; best = { k, u: fbStr(p.pres.u, 40), n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
+function bdInvite(){ const m = BD.m, tn = now(); if (m.st === 'play'){ toast('🏸 有人正在比賽，等這場打完'); return; } const P = bdNearPeer(); if (!P){ toast('🏸 球場上要有另一個人才能 1 對 1'); return; } if (tn - BD.invAt < 6){ toast('剛邀請過，等對方回應'); return; } BD.invAt = tn; bdSend({ k: 'inv', to: P.k, tu: P.u, n: bkMyName() }); toast(`🏸 已經邀請 ${esc(P.n)}，等對方回應`); }
+function bdStart(peer, nm){ const m = BD.m, mine = bdSideOf(me.pos.x - STAD.x); m.st = 'play'; m.q++; m.from = poolKey(); m.p = mine === 0 ? [poolKey(), peer] : [peer, poolKey()]; m.nm = mine === 0 ? [bkMyName(), nm] : [nm, bkMyName()]; m.sc = [0, 0]; m.pn = 1; m.hn = 0; m.srv = Math.random() < 0.5 ? 0 : 1; m.ph = 'serve'; m.phEnd = now() + 2.5; m.last = -1; m.rx = now(); m.t0 = now(); m.mid = 'bd' + Date.now().toString(36) + poolKey().slice(0, 12); BD.f = null; bdMatchSend(); bdChanged('start'); }
+function bdMatchSend(){ const m = BD.m; m.tx = now(); bdSend({ k: 'st', q: m.q, st: m.st, p: m.p, nm: m.nm, sc: m.sc, pn: m.pn, srv: m.srv, mid: m.mid || '' }); }
+function bdChanged(why){ const m = BD.m, mi = bdMyIdx(); bdBarDraw(); for (const k of m.p) if (k) bdRacket(k, m.st === 'play'); if (!inStad()) return;
+  if (why === 'start'){ if (mi >= 0) flash(`🏸 1 對 1 開始！你在${mi === 0 ? '西' : '東'}邊半場，${m.srv === mi ? '你先發球' : '對手先發球'}`, 2.4); try { SFX.tick(); } catch(e){} }
+  else if (why === 'over'){ const w = m.sc[0] > m.sc[1] ? 0 : 1; if (mi >= 0 && m.mid && m.rep !== m.mid){ m.rep = m.mid; sportReport('badminton', m.mid, mi === w ? 'w' : 'l', false); } if (mi >= 0 || bdOnCourt()){ flash(mi === w ? `🎉 你贏了！（${m.sc[0]} : ${m.sc[1]}）` : mi >= 0 ? `這場輸了（${m.sc[0]} : ${m.sc[1]}），再來一場！` : `🏸 ${m.nm[w]} 贏了（${m.sc[0]} : ${m.sc[1]}）`, 3); try { if (mi === w){ SFX.coin(); bkPose(poolKey(), 'cheer', 2); } } catch(e){} } } }
+function bdBarEl(){ if (!BD.bar){ const b = el('div', 'panel'); b.id = 'bdBar'; b.className = 'panel sbar'; b.hidden = true; document.body.appendChild(b); BD.bar = b; } return BD.bar; }
+function bdBarDraw(){ const b = bdBarEl(), m = BD.m, mi = bdMyIdx(), show = inStad() && m.st !== 'idle' && (mi >= 0 || bdOnCourt()); if (!show){ if (!b.hidden) b.hidden = true; return; } b.hidden = false;
+  const tip = m.st === 'over' ? '比賽結束' : m.ph === 'serve' ? (mi === m.srv ? '你發球：按「發球」' : mi >= 0 ? '對手發球，準備接' : `${m.nm[m.srv]} 發球`) : mi >= 0 ? (BD.f && BD.f.by !== mi ? '球來了！跑到圈圈按「揮拍」' : '打過去了，回到中間') : '對打中';
+  const tx = `<span class="${m.srv === 0 && m.st === 'play' ? 'on' : ''}">${esc(m.nm[0])}</span><b>${m.sc[0]} : ${m.sc[1]}</b><span class="${m.srv === 1 && m.st === 'play' ? 'on' : ''}">${esc(m.nm[1])}</span><i>${tip}</i>`; if (b._tx !== tx){ b._tx = tx; b.innerHTML = tx; } }
+function bdOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || isBlockedPeer(msg.peer)) return; const d = msg.data, peer = fbStr(d.f, 40) || String(msg.peer || ''), m = BD.m, me2 = poolKey(); if (!peer || peer === me2) return; const pi = m.p[0] === peer ? 0 : m.p[1] === peer ? 1 : -1;
+  if (d.k === 'sw'){ if (pi >= 0) bkPose(peer, 'throw', 0.5); return; }
+  if (d.k === 'h'){ if (m.st !== 'play' || pi < 0 || Math.floor(+d.pn) !== m.pn || !Array.isArray(d.a) || !Array.isArray(d.b) || d.a.length !== 3 || d.b.length !== 2 || ![...d.a, ...d.b].every(isFinite)) return; const n = Math.floor(+d.n); if (!(n > m.hn)) return; if (bdSideOf(+d.b[0]) === pi) return;
+    bdFly({ n, a: [clamp(+d.a[0], BD.CX - BD.HL - 1.5, BD.CX + BD.HL + 1.5), clamp(+d.a[1], -BD.HW - 1.5, BD.HW + 1.5), clamp(+d.a[2], 0.3, 3)], b: [clamp(+d.b[0], BD.CX - BD.HL, BD.CX + BD.HL), clamp(+d.b[1], -BD.HW, BD.HW)], T: d.T, sm: d.sm }, pi); bdBarDraw(); return; }
+  if (d.k === 'pt'){ if (pi < 0) return; const w = d.w === 1 ? 1 : 0; bdPoint(w, Math.floor(+d.pn)); return; }
+  if (d.k === 'inv'){ const mine = d.to === me2 || (myId && d.tu && d.tu === myId); if (!mine || !inStad() || !bdOnCourt() || m.st === 'play' || Duel.card) return; const nm = fbStr(d.n, 12) || '玩家'; const c = duelCardOpen('bdinv'); c.appendChild(el('h3', '', '🏸 1 對 1 邀請')); c.appendChild(el('p', '', `${nm} 想跟你打羽球：先拿到 7 分的人贏。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); let n = 20; const tm = el('p', 'sub', ''); c.append(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('bdinv'); }; upd(); c._iv = setInterval(upd, 1000);
+    ok.addEventListener('click', () => { duelCardClose('bdinv'); bdSend({ k: 'ok', to: peer, n: bkMyName(), sd: bdSideOf(me.pos.x - STAD.x) }); }); no.addEventListener('click', () => { duelCardClose('bdinv'); bdSend({ k: 'no', to: peer, n: bkMyName() }); }); try { SFX.chat(); } catch(e){} return; }
+  if (d.k === 'ok'){ if (d.to !== me2 || m.st === 'play' || now() - BD.invAt > 30) return; if (d.sd === bdSideOf(me.pos.x - STAD.x)){ me.pos.x = STAD.x + BD.CX + (d.sd === 0 ? 3 : -3); me.pos.z = STAD.z; try { pushPresence(true); } catch(e){} } bdStart(peer, fbStr(d.n, 12) || '玩家'); return; }
+  if (d.k === 'no'){ if (d.to === me2) toast(`🏸 ${esc(fbStr(d.n, 12) || '對方')} 現在不想打`); return; }
+  if (d.k === 'q'){ if (m.st !== 'idle' && m.from === me2) setTimeout(bdMatchSend, 150 + Math.random() * 200); return; }
+  if (d.k === 'st'){ const q = Math.floor(+d.q), pn = Math.floor(+d.pn) || 1; if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st) || !Array.isArray(d.p) || !Array.isArray(d.nm) || !Array.isArray(d.sc)) return; if (q < m.q) return; const p2 = [fbStr(d.p[0], 40), fbStr(d.p[1], 40)]; if (peer !== p2[0] && peer !== p2[1]) return; if (m.from && q === m.q && peer !== m.from) return;
+    const was = m.st, wq = m.q, fresh = q !== wq || was === 'idle'; m.q = q; m.from = peer; m.rx = now(); m.p = p2; m.nm = [0, 1].map(i => { let s = fbStr(d.nm[i], 12) || '玩家'; try { s = clean(s); } catch(e){} return s; }); if (d.mid) m.mid = fbStr(d.mid, 40);
+    if (fresh || pn > m.pn){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.pn = pn; m.srv = d.srv === 1 ? 1 : 0; if (fresh){ m.hn = 0; BD.f = null; } m.ph = 'serve'; m.phEnd = now() + (fresh ? 2.5 : 1.2); if (BD.f) BD.f.done = true; }
+    if (d.st === 'play' && was !== 'play'){ m.st = 'play'; bdChanged(fresh ? 'start' : ''); } else if (d.st === 'over' && was === 'play'){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.st = 'over'; m.overAt = now(); bdChanged('over'); } else if (d.st === 'idle' && was !== 'idle'){ m.st = 'idle'; bdChanged(''); } else if (d.st === 'play') m.st = 'play';
+    bdBarDraw(); return; } }
+function bdPeerLeft(peer){ const m = BD.m; if (m.st === 'play' && (m.p[0] === peer || m.p[1] === peer)){ m.st = 'idle'; m.q++; bdChanged(''); if (bdMyIdx() >= 0 && inStad()) toast('🏸 對手離開了，比賽取消'); } }
+function bdTick(dt, t){ const im = inStad(); if (!im){ if (BD.asked){ BD.asked = false; bdBarDraw(); } return; } bdBuild(); const m = BD.m, tn = now(), me2 = poolKey(), mi = bdMyIdx(), S = STAD;
+  if (!BD.asked){ BD.asked = true; bdSend({ k: 'q' }); }
+  { const vx = (me.pos.x - BD.px) / Math.max(dt, 1e-3), vz = (me.pos.z - BD.pz) / Math.max(dt, 1e-3); BD.px = me.pos.x; BD.pz = me.pos.z; if (Math.abs(vx) < 20 && Math.abs(vz) < 20){ BD.mvx += (vx - BD.mvx) * 0.3; BD.mvz += (vz - BD.mvz) * 0.3; } }
+  const F = BD.f, sh = BD.sh, rg = BD.ring; if (!sh) return;
+  if (m.st === 'play' && F && !F.done){ const P = bdPosAt(F, tn); sh.visible = true; sh.position.set(S.x + P.x, S.y + P.y, S.z + P.z); sh.rotation.z = Math.atan2(F.x1 - F.x0, 1) * 0.2; rg.visible = true; rg.position.set(S.x + F.x1, S.y + 0.09, S.z + F.z1); const k = 1 + (1 - P.u) * 1.3; rg.scale.set(k, k, 1); rg.material.color.set(mi >= 0 && F.by !== mi ? '#ffe066' : '#ffffff'); rg.material.opacity = mi >= 0 && F.by !== mi ? 0.95 : 0.4;
+    if (P.u >= 1){ const loser = 1 - F.by; if (mi === loser){ F.done = true; bdSend({ k: 'pt', w: F.by, pn: m.pn }); bdPoint(F.by, m.pn); } else if (tn - F.t0 > F.T + 1.5 && mi === F.by){ F.done = true; bdSend({ k: 'pt', w: F.by, pn: m.pn }); bdPoint(F.by, m.pn); } else if (tn - F.t0 > F.T + 4){ F.done = true; } } }
+  else { rg.visible = false; if (m.st === 'play' && m.ph === 'serve'){ const pos = bkPosOf(m.p[m.srv]); if (pos){ sh.visible = true; sh.position.set(pos.x + Math.sin(pos.rot) * 0.35, S.y + 1.0, pos.z + Math.cos(pos.rot) * 0.35); } else sh.visible = false; } else sh.visible = false; }
+  if (m.st === 'play'){ if (m.from === me2){ if (tn - m.tx > 2) bdMatchSend(); if (tn - (m.t0 || tn) > 480){ m.st = 'over'; m.overAt = tn; m.q++; bdMatchSend(); bdChanged('over'); } } else if (tn - m.rx > 12){ m.st = 'idle'; bdChanged(''); toast('🏸 連不上對手，比賽取消'); } }
+  else if (m.st === 'over' && tn - (m.overAt || 0) > 7){ m.st = 'idle'; if (m.from === me2){ m.q++; bdMatchSend(); } bdChanged(''); }
+  if (frameNo % 12 === 0) bdBarDraw(); }
+function bdNear(){ const S = STAD, m = BD.m, mi = bdMyIdx(); if (Math.hypot(S.x + BD.TABLE.x - me.pos.x, S.z + BD.TABLE.z - me.pos.z) < 1.9 && !(m.st === 'play' && mi >= 0)){ if (m.st === 'play') return { id: 'bdtable', label: '比賽中', mode: 'bdinv', sub: `🏸 ${m.nm[0]} ${m.sc[0]} : ${m.sc[1]} ${m.nm[1]}` }; const P = bdNearPeer(); return { id: 'bdtable', label: '1 對 1', mode: 'bdinv', sub: P ? `🏸 找 ${P.n} 打羽球` : '🏸 球場上要有另一個人' }; }
+  if (m.st === 'play' && mi >= 0 && bdOnCourt()){ if (m.ph === 'serve') return m.srv === mi ? { id: 'bdswing', label: '發球', mode: 'bdswing', sub: '🏸 往哪邊跑就打哪邊' } : { id: 'bdswing', label: '準備', mode: 'bdswing', sub: '🏸 對手要發球了' }; return { id: 'bdswing', label: '揮拍', mode: 'bdswing', sub: BD.f && BD.f.by !== mi ? '🏸 跑到圈圈，球快到再按' : '🏸 回到中間等球' }; }
+  return null; }
 function enterStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.stExit.x; me.pos.z = Venue.stExit.z - 2.6; me.baseY = STAD.y; Jump.gy = STAD.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🏟️ 歡迎來到潮汐體育場！', 1.4); }, 260); }
 function exitStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door();
@@ -10135,6 +10222,15 @@ async function openCard(uid, name, peerId){ if (!Cloud.on || !Cloud.sb){ toast('
 /* v537 作者：「點好友看得到嗎，然後應該在頭像那裡」→ 名單裡的頭像、名字點下去就是名片 */
 function cardTap(li, uid, name, peerId){ if (!uid || !Cloud.on) return; for (const e of li.querySelectorAll(':scope > img.avimg, :scope > .sw, :scope > span:not(.st)')){ e.style.cursor = 'pointer'; e.title = '看名片'; e.addEventListener('click', ev => { ev.stopPropagation(); openCard(uid, name, peerId); }); } }
 /* v540 作者：「可以把這個（大頭照）也合進來嗎」→ 在玩家資料頁點大頭照，就在同一個視窗裡換照片，換完回到資料頁 */
+/* v544 作者：「自尊」那一層先補 → 直接點世界裡的玩家（頭上的名字，或點他的身體）就打開他的玩家資料頁，不用再去朋友名單找 */
+/* v544 球類比賽結束回報戰績（只當紀錄和排行，沒有獎勵） */
+function sportReport(sport, mid, res, team){ try { if (!Cloud.on || !Cloud.sb || !mid) return; Cloud.sb.rpc('sport_report', { p_sport: sport, p_mid: String(mid).slice(0, 64), p_res: res, p_team: !!team }).then(() => {}, () => {}); } catch(e){} }
+function peerCardOpen(pk, q){ const u = q && q.pres && typeof q.pres.u === 'string' ? q.pres.u : ''; if (!u){ toast('這位玩家沒有登入，沒有資料頁'); return; } if (!Cloud.on){ toast('要連上雲端才能看別人的資料'); return; } try { SFX.click(); } catch(e){} openCard(u, String(peerName(q) || '玩家').slice(0, 16), pk); }
+{ let dn = null; const cvs = document.getElementById('c'); if (cvs){ cvs.addEventListener('pointerdown', e => { dn = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+    cvs.addEventListener('pointerup', e => { const d = dn; dn = null; if (!d || performance.now() - d.t > 350 || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 9) return; try { if (uiBlocked || Pool.on || F.phase !== 'idle' || Duel.card || (typeof Photo !== 'undefined' && Photo.on) || Dive.on) return;
+        const r = cvs.getBoundingClientRect(), v = peerCardOpen.v || (peerCardOpen.v = new THREE.Vector3()); let best = null, bd = 44; const pk0 = myPlaceKey();
+        for (const [k, q] of peers){ if (!q || !q.fisher || !q.fisher.av || !q.fisher.av.g.visible || peerPlaceKey(q.pres) !== pk0) continue; v.set(q.fisher.pos.x, (q.fisher.pos.y || 0) + 0.75, q.fisher.pos.z); if (v.distanceTo(camera.position) > 26) continue; v.project(camera); if (v.z > 1) continue; const sx = r.left + (v.x + 1) / 2 * r.width, sy = r.top + (1 - v.y) / 2 * r.height, dd = Math.hypot(sx - e.clientX, sy - e.clientY); if (dd < bd){ bd = dd; best = [k, q]; } }
+        if (best) peerCardOpen(best[0], best[1]); } catch(err){} }); } }
 function cardStudio(c, r, peerId){ c.innerHTML = ''; c.classList.remove('pcard2'); c.classList.add('pcst'); const back = () => { AvStudio.onSet = null; c.classList.remove('pcst'); cardDraw(c, r, peerId); };
   const hd = el('div', 'pc-sthd'); const bk = el('button', 'tbtn ghost', '‹ 回我的資料'); bk.addEventListener('click', back); hd.appendChild(bk); hd.appendChild(el('h3', '', '📸 換大頭照')); c.appendChild(hd);
   const body = el('div', 'pc-stbody'); c.appendChild(body); AvStudio.c = null; AvStudio.onSet = back; try { renderAvatarPick(body); } catch(e){ body.appendChild(el('p', 'sub', '大頭照載入失敗')); } }
@@ -10154,7 +10250,6 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   /* 左：全身照 */
   { const im = el('img', 'pc-body'); im.alt = ''; left.appendChild(im); setTimeout(() => { if (!im.isConnected) return; try { const src = avatarSrc('c:b1f0x0p' + (isMe ? 2 : 1) + 'a4z2', 384, gr); if (src) im.src = src; } catch(e){} }, 40); }   /* v543 全身照、魚的圖晚一點點再畫，資料頁先出來 */
   if (r.team) left.appendChild(el('div', 'pc-team', `${TEAM_BADGE[r.team.badge] || '🎣'} ${String(r.team.name).slice(0, 12)}`));
-  if (r.since){ const d = new Date(+r.since); left.appendChild(el('p', 'sub', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); }
   /* 右上：頭像＋名字＋等級＋一句話｜段位徽章 */
   const head = el('div', 'pc-head'), hb = el('div', 'pc-hb'), info = el('div', 'pc-info'); right.appendChild(head); head.appendChild(hb);
   try { const av = isMe ? myAvatar() : r.avatar, src = avatarSrc(av, 192, gr) || avatarSrc('c:b0f1x0p0a4z0', 192, gr); if (src){ const im = el('img', 'pc-av'); im.src = src; im.alt = ''; if (isMe){ im.style.cursor = 'pointer'; im.title = '換大頭照'; im.addEventListener('click', () => cardStudio(c, r, peerId)); } hb.appendChild(im); if (isMe){ const cam = el('button', 'pc-cam', '📸'); cam.title = '換大頭照'; cam.addEventListener('click', () => cardStudio(c, r, peerId)); hb.appendChild(cam); } } } catch(e){}
@@ -10162,24 +10257,30 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   { const lv = el('div', 'pc-lv'); lv.appendChild(el('b', '', `Lv.${L || 1}`)); if (isMe){ const bar = el('span', 'pc-xp'), fill = el('i', ''); fill.style.width = Math.round(clamp(xk, 0, 1) * 100) + '%'; bar.appendChild(fill); lv.appendChild(bar); lv.appendChild(el('small', '', xpTx)); } info.appendChild(lv); }
   { let mt = String(r.motto || '').slice(0, 30); try { mt = clean(mt); } catch(e){} const q = el('p', 'pc-motto', mt ? `「${mt}」` : isMe ? '（還沒寫一句話）' : ''); if (isMe){ const eb = el('button', 'pc-pen', '✏️'); eb.title = '改一句話'; eb.addEventListener('click', async () => { const v = prompt('寫一句話放在名片上（最多 30 個字，留空就是不寫）', r.motto || ''); if (v == null) return; const o = await festRpc('player_set_motto', { p_text: v }); if (o && o.ok){ r.motto = o.motto; cardDraw(c, r, peerId); } }); q.appendChild(eb); } if (mt || isMe) info.appendChild(q); }
   { const rk = el('div', 'pc-rank'); const D = r.duel, tt = duelTierOf(D ? D.stars : 0); rk.appendChild(el('div', 'pc-rk-ic', tt[2])); rk.appendChild(el('b', '', D ? tt[1] : '還沒打排位賽')); rk.appendChild(el('span', '', D ? `${D.stars}⭐・${D.wins} 勝 ${D.losses} 敗` : '背包 → 排位賽')); if (D && D.best >= 2) rk.appendChild(el('small', '', `最多 ${D.best} 連勝`)); head.appendChild(rk); }
+  /* v544 作者：「變成不要上下滑動的」→ 內容分成三頁（總覽／戰績／稱號成就），用左邊的按鈕切換，每一頁都剛好一個畫面，不用捲 */
+  const tabs = [['main', '👤 總覽'], ['rec', '🏟 戰績']]; if (isMe) tabs.push(['ach', '🎖 稱號成就']); if (!tabs.some(x => x[0] === c._tab)) c._tab = 'main';
+  const P1 = el('div', 'pc-pane'), P2 = el('div', 'pc-pane'), P3 = el('div', 'pc-pane'); P1.hidden = c._tab !== 'main'; P2.hidden = c._tab !== 'rec'; P3.hidden = c._tab !== 'ach'; right.append(P1, P2, P3);
+  { const nav = el('div', 'pc-nav'); for (const [k, lab] of tabs){ const b = el('button', 'pc-tab' + (c._tab === k ? ' on' : ''), lab); b.addEventListener('click', () => { c._tab = k; cardDraw(c, r, peerId); }); nav.appendChild(b); } left.appendChild(nav); }
+  { const D = r.duel, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '⚔️ 釣魚對決（排位賽）')); const g = el('div', 'pc-stats pc-sport'); const tt = duelTierOf(D ? D.stars : 0); for (const [ic, lab, val] of [[tt[2], '段位', D ? `${tt[1]} ${D.stars}⭐` : '—'], ['📊', '勝敗', D ? `${D.wins} 勝 ${D.losses} 敗` : '—'], ['🔥', '最多連勝', D ? String(D.best) : '—']]){ const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }
   /* 綜合數據 */
   { const sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '⭐ 綜合數據')); const g = el('div', 'pc-stats'); const cell = (ic, lab, val) => { const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); g.appendChild(d); };
     let tot = 0; try { tot = FISH.filter(x => !x.of).length; } catch(e){} const f = r.best_fish && FISH_BY_ID[r.best_fish];
     cell('🎣', '總共釣到', (r.total || 0).toLocaleString()); cell('📖', '圖鑑', tot && r.dex <= tot ? `${r.dex}／${tot}` : String(r.dex || 0)); cell('🏆', f ? `最大：${f.name}` : '最大的魚', f ? `${(+r.best_w).toFixed(1)} kg` : '—'); cell('✨', '傳說魚', String(r.legend || 0));
-    if (isMe){ let nf = 0; try { nf = (Fr.list || []).filter(x => x.mutual).length; } catch(e){} cell('👥', '好友', String(nf)); } else cell('❤', '小島被讚', String(r.likes || 0)); sec.appendChild(g); right.appendChild(sec); }
+    if (isMe){ let nf = 0; try { nf = (Fr.list || []).filter(x => x.mutual).length; } catch(e){} cell('👥', '好友', String(nf)); } else cell('❤', '小島被讚', String(r.likes || 0)); sec.appendChild(g); P1.appendChild(sec); }
   /* 最得意的三種魚 */
   { const sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', '🐟 最得意的三種魚' + (r.picked ? '' : '（還沒選，先放最重的）')); if (isMe){ const pb = el('button', 'pc-more', r.picked ? '重選 ›' : '自己選 ›'); pb.addEventListener('click', () => cardPick(c, r, peerId)); st.appendChild(pb); } sec.appendChild(st);
     const ul = el('div', 'pc-top'); (Array.isArray(r.top) ? r.top : []).slice(0, 3).forEach((x, i) => { const fz = FISH_BY_ID[x.f]; if (!fz) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); try { const fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; fc.className = 'pc-fc'; d.appendChild(fc); setTimeout(() => { if (fc.isConnected){ try { drawFish(fc, fz.color, true, fz.id); } catch(e){} } }, 90 + i * 30); } catch(e){} d.appendChild(el('b', '', fz.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); });
-    if (!ul.children.length) ul.appendChild(el('p', 'sub', '還沒有釣到魚')); sec.appendChild(ul); right.appendChild(sec); }
+    if (!ul.children.length) ul.appendChild(el('p', 'sub', '還沒有釣到魚')); sec.appendChild(ul); P1.appendChild(sec); }
+  { const sp = r.sports || {}, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🏟 球類戰績')); const g = el('div', 'pc-stats pc-sport'); for (const [k, ic, lab] of [['soccer', '⚽', '足球'], ['basket', '🏀', '籃球'], ['badminton', '🏸', '羽球']]){ const x = sp[k], d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', x ? `${x.w} 勝 ${x.l} 敗` : '—')); if (x && x.d) d.appendChild(el('span', '', `${x.d} 平`)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }   /* v544 */
   /* 稱號、成就（自己的看得到全部；別人的只看得到他現在掛的稱號） */
-  if (isMe){ try { const ts = myTitles(), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🎖 稱號　${ts.length} 個`); const mb = el('button', 'pc-more', '換稱號 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-chips'); for (const t of ts.slice(-8).reverse()) box.appendChild(el('span', 'pc-chip' + (t.name === title ? ' on' : ''), t.name)); if (!ts.length) box.appendChild(el('span', 'sub', '還沒有稱號')); sec.appendChild(box); right.appendChild(sec); } catch(e){}
-    try { const done = ACH.filter(a => { try { return a.cur() >= a.goal; } catch(e){ return false; } }), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🏅 成就　${done.length}／${ACH.length}`); const mb = el('button', 'pc-more', '看全部 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-ach'); for (const a of done.slice(-8).reverse()){ const b = el('span', 'pc-medal', a.icon || '🏅'); b.title = a.name; box.appendChild(b); } if (!done.length) box.appendChild(el('span', 'sub', '還沒有完成的成就')); sec.appendChild(box); right.appendChild(sec); } catch(e){} }
+  if (isMe){ try { const ts = myTitles(), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🎖 稱號　${ts.length} 個`); const mb = el('button', 'pc-more', '換稱號 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-chips'); for (const t of ts.slice(-8).reverse()) box.appendChild(el('span', 'pc-chip' + (t.name === title ? ' on' : ''), t.name)); if (!ts.length) box.appendChild(el('span', 'sub', '還沒有稱號')); sec.appendChild(box); P3.appendChild(sec); } catch(e){}
+    try { const done = ACH.filter(a => { try { return a.cur() >= a.goal; } catch(e){ return false; } }), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🏅 成就　${done.length}／${ACH.length}`); const mb = el('button', 'pc-more', '看全部 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-ach'); for (const a of done.slice(-8).reverse()){ const b = el('span', 'pc-medal', a.icon || '🏅'); b.title = a.name; box.appendChild(b); } if (!done.length) box.appendChild(el('span', 'sub', '還沒有完成的成就')); sec.appendChild(box); P3.appendChild(sec); } catch(e){} }
   const row = el('div', 'dc-btns pc-btns');
   if (!isMe){ if (peerId && peers.get(peerId)){ const dz = el('button', 'tbtn', '⚔️ 邀對決'); dz.addEventListener('click', () => { duelCardClose('pcard'); duelInvite(r.id, nm); }); row.appendChild(dz); }
     if (!Kid.on && !isFriend(r.id)){ const af = el('button', 'tbtn ghost', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(r.id, nm); }); row.appendChild(af); }
     const vi = el('button', 'tbtn ghost', '參觀小島'); vi.addEventListener('click', () => { duelCardClose('pcard'); visitIsle(r.id, nm); }); row.appendChild(vi); }
   else { for (const [lab, tab] of [['👕 造型', 'closet'], ['📖 圖鑑', 'dex']]){ const b = el('button', 'tbtn ghost', lab); b.addEventListener('click', () => { duelCardClose('pcard'); openSheet(tab); }); row.appendChild(b); } }
-  const x = el('button', 'tbtn ghost', '關閉'); x.addEventListener('click', () => duelCardClose('pcard')); row.appendChild(x); right.appendChild(row); }
+  left.appendChild(row); if (r.since){ const d = new Date(+r.since); P2.appendChild(el('p', 'sub pc-since', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); } }
 function duelLive(){ const d = Duel.d; return !!d && (d.status === 'invited' || d.status === 'active'); }
 async function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
   const r = await duelRpc('duel_invite', { p_to: uid }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
@@ -11495,6 +11596,7 @@ function updateVenues(dt, t){
   try { updateStadium(dt, t); } catch(e){}
   try { fbTick(dt, t); } catch(e){}
   try { bkTick(dt, t); } catch(e){}
+  try { bdTick(dt, t); } catch(e){}
   try { duelTick(); } catch(e){}
   /* v511 作者：「畫面都被切掉了」→ 整頁偶爾會被捲動（上面的選單跑到畫面外面）；沒在打字的時候一律捲回最上面 */
   { const se = document.scrollingElement || document.documentElement, ae = document.activeElement; if ((se.scrollTop || document.body.scrollTop || window.scrollY || se.scrollLeft) && !(ae && /INPUT|TEXTAREA/.test(ae.tagName))){ se.scrollTop = 0; se.scrollLeft = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); } }
@@ -13040,7 +13142,7 @@ function nearShop(){
     if (Venue.exit && Math.hypot(me.pos.x - Venue.exit.x, me.pos.z - Venue.exit.z) < 1.3) return { id:'shrimpexit', label:'出去', mode:'shrimpexit' };
     return null; }
   if (inPoolHall()) return poolNear();
-  if (inStad()){ if (Venue.stExit && Math.hypot(me.pos.x - Venue.stExit.x, me.pos.z - Venue.stExit.z) < 1.6) return { id:'stadexit', label:'出去', mode:'stadexit' }; return bkNear() || fbNear(); }
+  if (inStad()){ if (Venue.stExit && Math.hypot(me.pos.x - Venue.stExit.x, me.pos.z - Venue.stExit.z) < 1.6) return { id:'stadexit', label:'出去', mode:'stadexit' }; return bkNear() || bdNear() || fbNear(); }
   if (inMuseum()){
     if (Venue.mzExit && Math.hypot(me.pos.x - Venue.mzExit.x, me.pos.z - Venue.mzExit.z) < 1.3) return { id:'museumexit', label:'出去', mode:'museumexit' };
     if (Venue.mzDesk && Math.hypot(me.pos.x - Venue.mzDesk.x, me.pos.z - Venue.mzDesk.z) < 2.4) return { id:'museum', label:'館長 海音', mode:'museum' };
@@ -13063,7 +13165,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '魚市場・賣魚';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+function openShop(sh){ ensureAudio(); if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -14489,6 +14591,7 @@ function applyPeer(pp){
     f.pos.set(+pos[0]||0, 0, +pos[1]||0); f.rot = +pr.r || 0;
     p = { fisher: f, by: pp.by, target: new THREE.Vector3(+pos[0]||0, 0, +pos[1]||0), rot: +pr.r || 0, y:+pos[2]||0, lastEmote: 0, pres: pr, guest: pp.guest };
     peers.set(pp.peer, p);
+    try { const nmE = p.fisher.nm, pk = pp.peer; nmE.style.pointerEvents = 'auto'; nmE.style.cursor = 'pointer'; nmE.addEventListener('click', ev => { ev.stopPropagation(); const q = peers.get(pk); if (q) peerCardOpen(pk, q); }); } catch(e){}   /* v544 點別人頭上的名字 → 他的玩家資料頁 */
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){} try { if (!isBlockedPeer(pp.peer)) syncPeerSecret(pp.peer, pr.sc || [], pr.n); } catch(e){}
@@ -14554,7 +14657,7 @@ let pjMode = false, roomTimer = null, roomJoinAt = 0, roomGreeted = false; const
 function useRoom(r){
   room = r; tagReset(); roomJoinAt = Date.now(); roomGreeted = false; try { poolRoomReset(); } catch(e){}
     room.onPeers(ch => { for (const pp of ch.joined) applyPeer(pp); for (const pp of ch.updated) applyPeer(pp); if (ch.joined.length || ch.left.length) neighborsRefresh();
-      for (const pp of ch.left){ try { poolPeerLeft(pp.peer); } catch(e){} try { fbPeerLeft(pp.peer); } catch(e){} try { bkPeerLeft(pp.peer); } catch(e){} const p = peers.get(pp.peer); if (p){ seenPeers.set((p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, Date.now()); visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
+      for (const pp of ch.left){ try { poolPeerLeft(pp.peer); } catch(e){} try { fbPeerLeft(pp.peer); } catch(e){} try { bkPeerLeft(pp.peer); } catch(e){} try { bdPeerLeft(pp.peer); } catch(e){} const p = peers.get(pp.peer); if (p){ seenPeers.set((p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, Date.now()); visitLog(p, true); p.fisher.dispose(); peers.delete(pp.peer); } }
       for (const pp of ch.joined){ if (!pp.isMe && pp.kind === 'viewer') setTimeout(() => { const p = peers.get(pp.peer); if (!p) return; visitLog(p);
         const key = (p.pres && typeof p.pres.u === 'string' && p.pres.u) || pp.peer, last = seenPeers.get(key); seenPeers.set(key, Date.now());
         if (Date.now() - roomJoinAt < 6000) return;                  // 我剛進來：他們本來就在了
@@ -14585,7 +14688,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {});
-    room.on('pool', poolOnMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {});
+    room.on('pool', poolOnMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -15330,9 +15433,13 @@ function teamTick(){ if (!Team.g && typeof houseBuilder !== 'undefined' && house
   if (Cloud.on && !Team.my && Date.now() - Team.at > 60000){ Team.at = Date.now(); loadTeam(); } }
 function renderTeamSheet(body){
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上線（登入）才看得到大看板和釣友隊。')); return; }
-  const seg = el('div', 'seg'); for (const [k, t] of [['board', '🏆 大看板'], ['duel', '⚔️ 對決排行'], ['team', '🎣 我的釣友隊']]){ const b = el('button', '', t); b.setAttribute('aria-pressed', String(Team.view === k)); b.addEventListener('click', () => { Team.view = k; renderTab(); }); seg.appendChild(b); } body.appendChild(seg);
+  const seg = el('div', 'seg'); for (const [k, t] of [['board', '🏆 大看板'], ['duel', '⚔️ 對決排行'], ['tsport', '⚽ 隊伍足球'], ['team', '🎣 我的釣友隊']]){ const b = el('button', '', t); b.setAttribute('aria-pressed', String(Team.view === k)); b.addEventListener('click', () => { Team.view = k; renderTab(); }); seg.appendChild(b); } body.appendChild(seg);
   const bar = (n, g) => { const o = el('div', 'tmbar'), i = el('i'); i.style.width = Math.round(Math.min(1, n / Math.max(1, g)) * 100) + '%'; if (n >= g) o.classList.add('ok'); o.appendChild(i); return o; };
   const chip = (t) => { const s = el('span', 'tmchip', TEAM_BADGE[t.badge % 16]); s.style.background = TEAM_COL[t.color % 8]; return s; };
+  if (Team.view === 'tsport'){ if (!Team.sp || Date.now() - (Team.spAt || 0) > 20000){ Team.spAt = Date.now(); festRpc('team_sport_top').then(r => { if (Array.isArray(r)){ Team.sp = r; if (!$('#sheet').hidden && curTab === 'tboard' && Team.view === 'tsport') renderTab(); } }); }   /* v544 「社會」那一層：釣友隊對釣友隊的足球排行 */
+    body.appendChild(el('p', 'sub', '釣友隊對釣友隊的足球賽（體育場的比賽台開始，場上有兩支不同的釣友隊才算）。贏一場隊伍就多一勝；隊內的紅藍練習賽不算。'));
+    body.appendChild(el('div', 'dexhead', '⚽ 隊伍足球排行（前 20 隊）')); const T = Team.sp; if (!T){ body.appendChild(el('div', 'empty', '載入中…')); return; } if (!T.length){ body.appendChild(el('p', 'sub', '還沒有隊伍打過隊對隊的足球賽，約另一隊去體育場踢一場吧！')); return; }
+    const ul = el('ul', 'shoplist'); T.forEach((r, i) => { const li = el('li', r.me ? 'on' : ''), d = el('div', 'tinfo'); li.appendChild(el('span', 'dishic', ['🥇', '🥈', '🥉'][i] || String(i + 1))); let nm = String(r.name || '').slice(0, 12); try { nm = clean(nm); } catch(e){} d.appendChild(el('div', 'n', `${TEAM_BADGE[r.badge] || '🎣'} ${nm}${r.me ? '（你的隊）' : ''}`)); d.appendChild(el('div', 'sub2', `${r.w} 勝 ${r.l} 敗${r.d ? ` ${r.d} 平` : ''}・${r.m} 人`)); li.appendChild(d); ul.appendChild(li); }); body.appendChild(ul); return; }
   if (Team.view === 'duel'){ if (!Duel.top || Date.now() - (Duel.topAt || 0) > 20000) duelLoadTop(); const T = Duel.top, ds = Duel.stats;
     body.appendChild(el('p', 'sub', '贏一局 +1⭐（連勝第 3 場起每場 +2⭐），輸一局 -1⭐（3⭐ 以下不扣）。段位：🐟對決新手 → 🎣釣竿好手（3⭐）→ 🏅釣魚高手（8⭐）→ 🌊海上名人（15⭐）→ 👑傳說釣手（25⭐）。'));
     if (ds) body.appendChild(el('p', 'sub', `你：${duelTierTxt(ds)}・${ds.wins || 0} 勝 ${ds.losses || 0} 敗・最多 ${ds.best || 0} 連勝`));
@@ -16380,7 +16487,7 @@ function renderTab(){
     const ul = el('ul', 'people');
     const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} const im = avatarImg(av, '', gr); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st)); cardTap(li, isMe ? myId : uid, name, peerId);
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
-      if ((uid || (isMe && myId)) && Cloud.on){ const cb = el('button', 'tbtn vbtn', isMe ? '🪪 我的名片' : '🪪 名片'); cb.addEventListener('click', () => openCard(isMe ? myId : uid, name, peerId)); li.appendChild(cb); }   /* v534 */
+      if (uid && Cloud.on && !isMe){ const cb = el('button', 'tbtn vbtn', '🪪 資料'); cb.addEventListener('click', () => openCard(uid, name, peerId)); li.appendChild(cb); }   /* v544 作者：「我的名片移除」→ 自己那一列不放按鈕（點左上角頭像就是自己的資料頁） */   /* v534 */
       if (uid && Cloud.on && !isMe && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); li.appendChild(dz); }
       if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
@@ -16663,7 +16770,7 @@ function renderTab(){
       '食堂裡會有客人從門口走進來坐下點餐，端給他可以拿到 1.5 倍的錢（每天最多 60 位）。每天最多做 150 道。',
     ]);
     sec('🪪 個人名片', [
-      '怎麼看：點左上角自己的頭像就是「我的名片」。看別人的：打開「朋友」分頁，點名單裡任何人的頭像或名字（好友不在線上也看得到），或按旁邊的「🪪 名片」。',
+      '怎麼看：點左上角自己的頭像就是自己的資料頁。看別人的：直接點他的角色或頭上的名字；或打開「朋友」分頁，點名單裡任何人的頭像或名字（好友不在線上也看得到）。',
       '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最得意的三種魚（自己的名片上按「自己選三種魚」挑，沒挑就先放最重的三種）、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
       '自己的資料頁可以按 ✏️ 寫一句話給別人看（最多 30 個字）；點大頭照（或旁邊的 📸）可以直接在同一頁換大頭照：選遠近、姿勢、角度、背景、外框，臉和衣服就是你現在的造型。',
       '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
@@ -16672,7 +16779,7 @@ function renderTab(){
       '在哪裡：運動公園的體育場大門走進去，中間就是足球場，場上有一顆大家共用的球。',
       '怎麼踢：跑過去碰到球就會踢出去，跑越快踢越遠；靠近球的時候右下角會變成「射門」，按下去朝你面對的方向大腳踢。沒有比賽的時候誰都可以隨便踢，踢進球門會喊進球。',
       '比賽：走到場邊的「⚽ 比賽台」（南邊看台前面的小桌子）按「開始比賽」，要兩個人以上。場上如果有兩支不同的釣友隊，就是人最多的那兩隊對打；如果大家都同一隊或沒有隊，會自動分成紅隊、藍隊打練習賽。',
-      '規則：一場 3 分鐘，進球以後球回到中圈。🔴 那一隊往右邊（東邊）球門進攻，🔵 那一隊往左邊（西邊）進攻，名字前面會有顏色圓點。比分在畫面上面和體育場的計分板上。沒分到隊的人只能看、踢不到球。目前只比輸贏，沒有獎勵、也還不會記到釣友隊的戰績裡。',
+      '規則：一場 3 分鐘，進球以後球回到中圈。🔴 那一隊往右邊（東邊）球門進攻，🔵 那一隊往左邊（西邊）進攻，名字前面會有顏色圓點。比分在畫面上面和體育場的計分板上。沒分到隊的人只能看、踢不到球。比賽結果會記到你的玩家資料頁（⚽ 幾勝幾敗）；釣友隊對釣友隊的比賽還會算進隊伍戰績，廣場大看板的「⚽ 隊伍足球」看得到隊伍排行。隊內紅藍練習賽只記個人、不算隊伍。沒有獎勵。',
     ]);
     sec('🏀 體育場籃球 1 對 1', [
       '在哪裡：體育場裡面最西邊（進門以後往左走到底），有一個籃球半場。島上運動公園原本那個露天籃球場拆掉了。',
@@ -16681,7 +16788,14 @@ function renderTab(){
       '1 對 1（街頭籃球那種，一攻一守）：球場上有另一個人的時候，走到球場旁邊的「🏀 1 對 1」小桌子按按鈕，對方按接受就開始。一顆球、輪流進攻，先拿到 11 分的人贏。',
       '進攻：你帶著球跑，球會在手邊彈（運球）。拿到球要先帶出三分線，才能回頭進攻。按「投籃」出現力道條，再按「出手！」。力道條在跑的時候推一下搖桿＝假動作（把球收回來不投），可以騙對手跳起來。一次進攻有 14 秒。',
       '防守：站到對手和籃框中間。貼近對手（1.5 公尺內）他的綠色區會變窄。靠到 1.3 公尺內按「抄球」，站在他正面最容易抄到，沒抄到會有 2 秒不能再抄。對手舉球要投的時候按鈕會變成「蓋火鍋」：你跳起來 0.6 秒內他出手，球就被蓋掉；跳太早（被假動作騙），他就是空檔。',
-      '換邊：投進得分以後換對方進攻；沒進、被蓋、被抄、超過 14 秒也是換對方。目前只比輸贏，沒有獎勵。',
+      '換邊：投進得分以後換對方進攻；沒進、被蓋、被抄、超過 14 秒也是換對方。打完的勝敗會記到玩家資料頁（🏀 幾勝幾敗），沒有獎勵。',
+    ]);
+    sec('🏸 體育場羽球 1 對 1', [
+      '在哪裡：體育場裡面最東邊（進門以後往右走到底）。島上運動公園原本那個露天羽球場拆掉了。',
+      '怎麼開始：兩個人都站到羽球場上，其中一個人走到旁邊的「🏸 1 對 1」小桌子按按鈕，對方按接受就開始。球網西邊、東邊各一個人。先拿到 7 分的人贏，贏那一分的人發球。',
+      '怎麼打：球飛過來的時候，你那一邊的地上會出現一個黃色圈圈，那就是球會掉下來的地方。跑到圈圈旁邊（1.7 公尺內），等球飛過一半以後按右下角「揮拍」。站得離圈圈越近、越接近球落地前一點點才打，打得越好；非常準的時候會變成「殺球」，球飛得很快。按太早或離太遠會揮空，要等一下才能再揮。',
+      '打去哪裡：揮拍那一下你正在往左或往右跑，球就往那一邊飛；往網子跑是短球，往後退是長球；站著不動是隨機。球掉在你這邊的地上，對方得分。',
+      '打完的勝敗會記到玩家資料頁（🏸 幾勝幾敗），沒有獎勵。',
     ]);
     sec('🎱 潮汐撞球館', [
       '邀請對打：你在練習的時候，如果有別的玩家站在球桌旁邊，右下角會出現「邀請 某某 對打」，按下去對方會收到邀請，按接受就開始對打。也可以自己走到別人正在練習的球桌旁邊按「對打」直接加入。',

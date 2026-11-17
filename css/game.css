@@ -1640,3 +1640,42 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .pc-cam{position:absolute;left:58px;top:54px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#2f89c7;font-size:12px;padding:0;line-height:1}
 
 #duelCard .pc-body{background:linear-gradient(#bfe6ff,#7fd0e8)}
+
+/* v544 玩家資料頁：球類戰績 */
+#duelCard .pc-sport{grid-template-columns:repeat(3,1fr)}
+
+/* v544 羽球比分條（跟籃球同一種樣子） */
+.sbar{position:fixed;left:50%;top:calc(var(--st,0px) + 8px);transform:translateX(-50%);z-index:14;display:flex;align-items:center;gap:12px;padding:6px 14px;border-radius:16px;font-size:14px;font-weight:800;color:#18334a;pointer-events:none;white-space:nowrap}
+.sbar[hidden]{display:none}
+.sbar b{font-size:20px;font-weight:900}.sbar i{font-style:normal;color:#b3541e}.sbar span.on{color:#c85a12}
+
+/* v544 玩家資料頁：分頁、不用上下捲（設計給橫拿的手機：內容高度大約 330px） */
+#duelCard.pcard2{overflow:hidden;padding:8px 12px}
+#duelCard.pcard2 .pc-wrap{grid-template-columns:minmax(128px,22%) 1fr;gap:10px;align-items:stretch}
+#duelCard.pcard2 .pc-left{position:static;gap:5px;justify-content:flex-start}
+#duelCard.pcard2 .pc-body{max-width:112px;width:112px}
+#duelCard.pcard2 .pc-team{margin-top:2px;font-size:11.5px;padding:2px 9px}
+#duelCard .pc-nav{display:flex;flex-direction:column;gap:4px;width:100%;margin-top:2px}
+#duelCard .pc-tab{border:0;border-radius:10px;background:rgba(24,51,74,.08);color:#18334a;font-weight:800;font-size:12.5px;padding:5px 6px;text-align:left}
+#duelCard .pc-tab.on{background:linear-gradient(#ffe08a,#f2b532);color:#5a3a00}
+#duelCard.pcard2 .pc-btns{flex-direction:column;gap:4px;width:100%;margin-top:auto;justify-content:flex-end}
+#duelCard.pcard2 .pc-btns button{min-width:0;width:100%;padding:4px 6px;font-size:12px}
+#duelCard.pcard2 .pc-right{gap:6px}
+#duelCard.pcard2 .pc-hb{padding:5px 9px}
+#duelCard.pcard2 .pc-av{width:58px;height:58px}
+#duelCard.pcard2 .pc-cam{left:46px;top:42px;width:22px;height:22px;font-size:10px}
+#duelCard.pcard2 .pc-info h3{font-size:17px}
+#duelCard.pcard2 .pc-rank{padding:4px 12px;min-width:96px}
+#duelCard.pcard2 .pc-rk-ic{font-size:24px}
+#duelCard .pc-pane{display:flex;flex-direction:column;gap:6px;min-height:0}
+#duelCard .pc-pane[hidden]{display:none}
+#duelCard.pcard2 .pc-sec{padding:5px 9px}
+#duelCard.pcard2 .pc-st{margin-bottom:3px;font-size:12.5px}
+#duelCard.pcard2 .pc-stat i{font-size:16px}
+#duelCard.pcard2 .pc-stat b{font-size:14.5px}
+#duelCard.pcard2 .pc-fish{padding:2px 4px;font-size:11.5px}
+#duelCard.pcard2 .pc-fish b{font-size:12.5px}
+#duelCard.pcard2 .pc-fc{width:70px;height:44px}
+#duelCard .pc-since{margin:2px 0 0;text-align:right}
+@media (max-width:560px){ #duelCard.pcard2{overflow:auto} #duelCard.pcard2 .pc-wrap{grid-template-columns:1fr} #duelCard .pc-nav{flex-direction:row} #duelCard.pcard2 .pc-btns{flex-direction:row} }
+@media (max-height:330px){ #duelCard.pcard2{overflow:auto} }
