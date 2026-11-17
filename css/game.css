@@ -1628,3 +1628,13 @@ html.vvfix #c{width:100%!important;height:100%!important}
 #duelCard .pc-medal{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3c9,#f2b532);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 2px 0 #c98f1e}
 #duelCard.pcard2 .pc-btns{justify-content:flex-end;margin-top:2px}
 @media (max-width:560px){ #duelCard .pc-wrap{grid-template-columns:1fr} #duelCard .pc-left{position:static} #duelCard .pc-body{max-width:150px} #duelCard .pc-head{grid-template-columns:1fr;padding-right:0} #duelCard .pc-stats{grid-template-columns:repeat(3,1fr)} }
+
+/* v540 玩家資料頁裡的大頭照編輯 */
+#duelCard.pcst{width:min(820px,calc(100vw - 16px));max-height:calc(100% - 12px);text-align:left;padding:10px 14px}
+#duelCard .pc-sthd{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+#duelCard .pc-sthd h3{margin:0;font-size:17px}
+#duelCard .pc-sthd .tbtn{padding:4px 12px;font-size:13px}
+#duelCard .pc-stbody .field{margin:0 0 8px}
+#duelCard .pc-stbody label{font-weight:800;display:block;margin-bottom:4px}
+#duelCard .pc-hb{position:relative}
+#duelCard .pc-cam{position:absolute;left:58px;top:54px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#2f89c7;font-size:12px;padding:0;line-height:1}

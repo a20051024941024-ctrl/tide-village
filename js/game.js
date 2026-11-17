@@ -10134,6 +10134,10 @@ async function openCard(uid, name, peerId){ if (!Cloud.on || !Cloud.sb){ toast('
   cardDraw(c, r, peerId); }
 /* v537 作者：「點好友看得到嗎，然後應該在頭像那裡」→ 名單裡的頭像、名字點下去就是名片 */
 function cardTap(li, uid, name, peerId){ if (!uid || !Cloud.on) return; for (const e of li.querySelectorAll(':scope > img.avimg, :scope > .sw, :scope > span:not(.st)')){ e.style.cursor = 'pointer'; e.title = '看名片'; e.addEventListener('click', ev => { ev.stopPropagation(); openCard(uid, name, peerId); }); } }
+/* v540 作者：「可以把這個（大頭照）也合進來嗎」→ 在玩家資料頁點大頭照，就在同一個視窗裡換照片，換完回到資料頁 */
+function cardStudio(c, r, peerId){ c.innerHTML = ''; c.classList.remove('pcard2'); c.classList.add('pcst'); const back = () => { AvStudio.onSet = null; c.classList.remove('pcst'); cardDraw(c, r, peerId); };
+  const hd = el('div', 'pc-sthd'); const bk = el('button', 'tbtn ghost', '‹ 回我的資料'); bk.addEventListener('click', back); hd.appendChild(bk); hd.appendChild(el('h3', '', '📸 換大頭照')); c.appendChild(hd);
+  const body = el('div', 'pc-stbody'); c.appendChild(body); AvStudio.c = null; AvStudio.onSet = back; try { renderAvatarPick(body); } catch(e){ body.appendChild(el('p', 'sub', '大頭照載入失敗')); } }
 function cardPick(c, r, peerId){ c.innerHTML = ''; c.classList.remove('pcard2'); c.appendChild(el('h3', '', '選最得意的三種魚')); const best = (rec && rec.best) || {}, ids = Object.keys(best).filter(k => FISH_BY_ID[k] && +best[k] > 0).sort((a, b) => best[b] - best[a]); const sel = (r.picked ? r.top.map(x => x.f) : []).filter(k => ids.includes(k)).slice(0, 3);
   const tip = el('p', 'sub', ''); c.appendChild(tip); const box = el('div', 'pc-pick'); c.appendChild(box); const upd = () => { tip.textContent = `點魚選起來，最多 3 種，照你點的順序排（已選 ${sel.length}／3）`; for (const b of box.children){ const i = sel.indexOf(b.dataset.f); b.classList.toggle('on', i >= 0); b.querySelector('i').textContent = i >= 0 ? ['🥇', '🥈', '🥉'][i] : ''; } };
   if (!ids.length) box.appendChild(el('p', 'sub', '還沒有釣到魚，先去釣幾條再來選'));
@@ -10153,7 +10157,7 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   if (r.since){ const d = new Date(+r.since); left.appendChild(el('p', 'sub', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); }
   /* 右上：頭像＋名字＋等級＋一句話｜段位徽章 */
   const head = el('div', 'pc-head'), hb = el('div', 'pc-hb'), info = el('div', 'pc-info'); right.appendChild(head); head.appendChild(hb);
-  try { const av = isMe ? myAvatar() : r.avatar, src = avatarSrc(av, 192, gr) || avatarSrc('c:b0f1x0p0a4z0', 192, gr); if (src){ const im = el('img', 'pc-av'); im.src = src; im.alt = ''; if (isMe){ im.style.cursor = 'pointer'; im.title = '換大頭照'; im.addEventListener('click', () => { duelCardClose('pcard'); openSheet('style'); }); } hb.appendChild(im); } } catch(e){}
+  try { const av = isMe ? myAvatar() : r.avatar, src = avatarSrc(av, 192, gr) || avatarSrc('c:b0f1x0p0a4z0', 192, gr); if (src){ const im = el('img', 'pc-av'); im.src = src; im.alt = ''; if (isMe){ im.style.cursor = 'pointer'; im.title = '換大頭照'; im.addEventListener('click', () => cardStudio(c, r, peerId)); } hb.appendChild(im); if (isMe){ const cam = el('button', 'pc-cam', '📸'); cam.title = '換大頭照'; cam.addEventListener('click', () => cardStudio(c, r, peerId)); hb.appendChild(cam); } } } catch(e){}
   hb.appendChild(info); info.appendChild(el('h3', '', nm)); if (title) info.appendChild(el('div', 'pc-title', title));
   { const lv = el('div', 'pc-lv'); lv.appendChild(el('b', '', `Lv.${L || 1}`)); if (isMe){ const bar = el('span', 'pc-xp'), fill = el('i', ''); fill.style.width = Math.round(clamp(xk, 0, 1) * 100) + '%'; bar.appendChild(fill); lv.appendChild(bar); lv.appendChild(el('small', '', xpTx)); } info.appendChild(lv); }
   { let mt = String(r.motto || '').slice(0, 30); try { mt = clean(mt); } catch(e){} const q = el('p', 'pc-motto', mt ? `「${mt}」` : isMe ? '（還沒寫一句話）' : ''); if (isMe){ const eb = el('button', 'pc-pen', '✏️'); eb.title = '改一句話'; eb.addEventListener('click', async () => { const v = prompt('寫一句話放在名片上（最多 30 個字，留空就是不寫）', r.motto || ''); if (v == null) return; const o = await festRpc('player_set_motto', { p_text: v }); if (o && o.ok){ r.motto = o.motto; cardDraw(c, r, peerId); } }); q.appendChild(eb); } if (mt || isMe) info.appendChild(q); }
@@ -10210,7 +10214,7 @@ function duelBarTick(){ const b = Duel.bar, d = Duel.d; if (!b || b.hidden || !d
   else { const s = Math.max(0, Math.ceil((d.end - n) / 1000)); low = s <= 15; tx = s > 0 ? `對 ${duelSide(d, false).name}${(d.me === 'a' ? d.b_tier : d.a_tier) ? '（' + (d.me === 'a' ? d.b_tier : d.a_tier) + '）' : ''}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '時間到！手上這條 12 秒內拉上來還算';
     if (Duel.goTold !== d.id){ Duel.goTold = d.id; if (n - d.start < 3000){ flash('⚔️ 開始！', 1.2); try { SFX.catch(); } catch(e){} } } }
   if (tx !== Duel.subKey){ Duel.subKey = tx; $('.db-sub', b).textContent = tx; b.classList.toggle('low', low); } }
-function duelCardClose(kind){ const c = Duel.card; if (!c || (kind && c.dataset.kind !== kind)) return; clearInterval(c._iv); c.remove(); Duel.card = null; }
+function duelCardClose(kind){ const c = Duel.card; if (!c || (kind && c.dataset.kind !== kind)) return; if (c.dataset.kind === 'pcard') AvStudio.onSet = null; clearInterval(c._iv); c.remove(); Duel.card = null; }
 function duelCardOpen(kind){ duelCardClose(); const c = el('div', 'panel'); c.id = 'duelCard'; c.dataset.kind = kind; document.body.appendChild(c); Duel.card = c; return c; }
 function duelAsk(d){ if (blockList && blockList[d.a]){ duelRpc('duel_answer', { p_id: d.id, p_ok: false }); Duel.d = null; return; }
   const c = duelCardOpen('ask'); c.appendChild(el('h3', '', '⚔️ 釣魚對決')); c.appendChild(el('p', '', `${d.a_name || '釣客'} 想跟你打一場友誼賽：3 分鐘內誰釣到的魚加起來比較重。（友誼賽不算星星和戰績）`)); const tm = el('p', 'sub', ''); c.appendChild(tm);
@@ -13457,7 +13461,7 @@ function avatarSrc(code, size, gear){ size = size || 96; if (!avatarOk(code) || 
   const u = cv.toDataURL('image/png'); AvCache.set(key, u); if (code.startsWith('f:')) setTimeout(() => AvCache.delete(key), 4000); return u; }   /* 魚的小圖要一下下才畫好，過一會兒重畫 */
 function avatarImg(code, cls, gear){ const src = avatarSrc(code, 64, gear); if (!src) return null; const im = el('img', 'avimg ' + (cls || '')); im.src = src; im.alt = ''; return im; }
 async function setAvatar(code){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能換頭像'); return; }
-  try { const { data, error } = await Cloud.sb.rpc('set_avatar', { p: code }); if (error) throw error; if (Cloud.lastRow) Cloud.lastRow.avatar = data || ''; LS.set('tide.avatar', data || ''); pushPresence(true); const mk = $('#brand .mark'); if (mk) mk._src = null; toast('🖼️ 頭像換好了'); renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
+  try { const { data, error } = await Cloud.sb.rpc('set_avatar', { p: code }); if (error) throw error; if (Cloud.lastRow) Cloud.lastRow.avatar = data || ''; LS.set('tide.avatar', data || ''); pushPresence(true); const mk = $('#brand .mark'); if (mk) mk._src = null; toast('🖼️ 頭像換好了'); if (AvStudio.onSet){ try { AvStudio.onSet(); } catch(e){} } else renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
 const AvStudio = { c: null };
 function renderAvatarStudio(body){ const f = el('div', 'field avst'); f.appendChild(el('label', '', '📸 大頭照')); const cur = myAvatar();
   if (!AvStudio.c) AvStudio.c = avcParse(cur) || { b: 0, f: 1, x: 0, p: 0, a: 4, z: 0 }; const C = AvStudio.c, wrap = el('div', 'avst-w'), left = el('div', 'avst-l'), im = el('img', 'avst-img'), right = el('div', 'avst-r'); im.alt = '';
@@ -13465,12 +13469,13 @@ function renderAvatarStudio(body){ const f = el('div', 'field avst'); f.appendCh
   const use = el('button', 'btn primary', '用這張當頭像'); use.addEventListener('click', () => setAvatar(avcStr(C)));
   const row = (label, key, opts, paint) => { const r = el('div', 'avst-row'); r.appendChild(el('span', 'avst-k', label)); const box = el('div', 'avst-o'); opts.forEach((o, i) => { const b = el('button', 'avst-b' + (C[key] === i ? ' on' : ''), paint ? '' : o[0]); b.title = o[0]; b.setAttribute('aria-label', label + '：' + o[0]); if (paint){ b.classList.add('sw'); paint(b, o); } b.addEventListener('click', () => { C[key] = i; box.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === i)); if (key === 'p' && i > 0 && C.z === 0){ C.z = 1; const zb = right.querySelector('.avst-o[data-k="z"]'); if (zb) zb.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === 1)); toast('📸 姿勢要拍半身才看得到，已經幫你換成「半身」'); } poseNote(); draw(); }); box.appendChild(b); }); box.dataset.k = key; r.appendChild(box); right.appendChild(r); return r; };   /* v536 作者：「你那個動作其實很沒用」→ 大頭照只拍到臉，姿勢根本看不出來；現在選了姿勢會自動換成半身，選大頭的時候姿勢那排會變淡並說明 */
   let poseRow = null; const poseNote = () => { if (!poseRow) return; const off = C.z === 0; poseRow.style.opacity = off ? '0.5' : ''; let n = poseRow.querySelector('.avst-n'); if (!n){ n = el('small', 'avst-n', ''); n.style.cssText = 'display:block;font-size:11px;color:#5a6b7a;margin-top:2px'; poseRow.querySelector('.avst-o').appendChild(n); } n.textContent = off ? '（「大頭」只拍到臉，看不到姿勢；選姿勢會自動換成半身）' : ''; };
-  row('表情', 'x', AVC.face); row('遠近', 'z', AVC.zoom); poseRow = row('姿勢', 'p', AVC.pose); poseNote();
+  C.x = 0;   /* v540 作者：「表情這種的讓玩家用自己造型就好了」→ 拿掉表情那一排，大頭照的臉就是你造型裡選的臉 */
+  row('遠近', 'z', AVC.zoom); poseRow = row('姿勢', 'p', AVC.pose); poseNote();
   { const r = el('div', 'avst-row'); r.appendChild(el('span', 'avst-k', '角度')); const sl = el('input', 'avst-s'); sl.type = 'range'; sl.min = 0; sl.max = 8; sl.step = 1; sl.value = C.a; sl.setAttribute('aria-label', '角度'); sl.addEventListener('input', () => { C.a = +sl.value; draw(); }); r.appendChild(sl); right.appendChild(r); }
   row('背景', 'b', AVC.bg, (b, o) => { b.style.background = `linear-gradient(${o[1][0]}, ${o[1][1]})`; });
   row('外框', 'f', AVC.frame, (b, o) => { b.style.background = '#fff'; b.style.boxShadow = o[1] ? 'none' : ''; b.style.border = o[1] === 'rainbow' ? '4px solid transparent' : o[1] ? '4px solid ' + o[1] : '2px dashed #b9c6d0'; if (o[1] === 'rainbow') b.style.background = 'linear-gradient(#fff,#fff) padding-box, conic-gradient(#ff6b6b,#ffd166,#6bd68a,#4dabf7,#b197fc,#ff6b6b) border-box'; });
   left.appendChild(im); left.appendChild(use); wrap.appendChild(left); wrap.appendChild(right); f.appendChild(wrap);
-  f.appendChild(el('p', 'sub', '用自己的角色拍一張大頭照當頭像：挑姿勢、表情、角度、背景和外框。之後換衣服、換髮型，頭像也會跟著換。為了大家的安全，這裡不能上傳自己的照片。')); body.appendChild(f); draw(); }
+  f.appendChild(el('p', 'sub', '用自己的角色拍一張大頭照當頭像：挑遠近、姿勢、角度、背景和外框。臉和衣服就是你現在的造型，之後換造型，頭像也會跟著換。為了大家的安全，這裡不能上傳自己的照片。')); body.appendChild(f); draw(); }
 function renderAvatarPick(body){ renderAvatarStudio(body); const f = el('div', 'field'); f.appendChild(el('label', '', '🖼️ 或是選一個現成的頭像')); const cur = myAvatar(), g = el('div', 'avpick');
   const opt = (code, node, title) => { const b = el('button', 'avopt' + (code === cur ? ' on' : '')); b.title = title || ''; b.appendChild(node); b.addEventListener('click', () => setAvatar(code)); g.appendChild(b); };
   { const im = el('img', 'avimg'); try { im.src = avatarShot(cleanGear(rec.gear), 'face', 96) || ''; } catch(e){} opt('', im, '我的角色'); }
@@ -16644,7 +16649,7 @@ function renderTab(){
     sec('🪪 個人名片', [
       '怎麼看：點左上角自己的頭像就是「我的名片」。看別人的：打開「朋友」分頁，點名單裡任何人的頭像或名字（好友不在線上也看得到），或按旁邊的「🪪 名片」。',
       '上面有什麼：總共釣了幾條、圖鑑收集幾種、最大的魚、最得意的三種魚（自己的名片上按「自己選三種魚」挑，沒挑就先放最重的三種）、排位賽的段位和戰績、釣友隊，還有一句自己寫的話。全部都是自己玩出來的成績。',
-      '自己的名片可以按「✏️ 改一句話」寫一句話給別人看（最多 30 個字）；點名片上的大頭照可以去換照片。',
+      '自己的資料頁可以按 ✏️ 寫一句話給別人看（最多 30 個字）；點大頭照（或旁邊的 📸）可以直接在同一頁換大頭照：選遠近、姿勢、角度、背景、外框，臉和衣服就是你現在的造型。',
       '別人的名片上可以直接按「邀對決」「加好友」「參觀小島」。',
     ]);
     sec('⚽ 體育場足球', [
