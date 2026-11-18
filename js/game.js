@@ -739,18 +739,19 @@ function fishActTick(dt){ dt = Math.min(dt, 0.05); for (let i = FishActs.length 
     if (A.kind === 'air'){ A.tw += dt * (1.2 + 9 * k) * A.dir; m.rotation.set(Math.sin(A.t * 3.1 + A.ph * 0.1) * 0.16, A.tw, Math.PI / 2 * 0.9 + Math.sin(A.t * 5.3) * 0.1 + Math.sin(A.ph) * 0.22 * k); }
     else { m.rotation.z = Math.sin(A.ph) * 0.2 * k; m.rotation.x = Math.sin(A.ph * 0.5) * 0.12 * k; m.position.y = A.by + Math.abs(Math.sin(A.ph * 0.5)) * 0.06 * k; } } }
 /* v557 三棘鱟：圓頂的頭胸甲（馬蹄形）、後面一塊比較小帶刺的腹甲、一根又長又尖的尾劍。頭朝 +x */
-function makeHorseshoe(scale){ const g = new THREE.Group(); g.scale.setScalar(scale || 1); const sh = mat('#77734a', 0.5), dk = mat('#4f4d30', 0.6), ey = mat('#17150e', 0.3);
+function makeHorseshoe(scale){ const g = new THREE.Group(); g.scale.setScalar(scale || 1); const sh = mat('#8f8a5c', 0.5), dk = mat('#5c5938', 0.6), ey = mat('#17150e', 0.3), wh = new THREE.MeshBasicMaterial({ color:'#ffffff' });
   const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
   const dome = add(new THREE.SphereGeometry(0.27, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), sh, 0.13, -0.09, 0); dome.scale.set(1.0, 0.56, 1.08);
   const rim = add(new THREE.TorusGeometry(0.262, 0.022, 6, 24, Math.PI * 1.25), dk, 0.13, -0.085, 0); rim.rotation.x = Math.PI / 2; rim.rotation.z = -Math.PI * 0.625; rim.scale.set(1, 1.08, 1);
   add(new THREE.CircleGeometry(0.262, 20).rotateX(Math.PI / 2), dk, 0.13, -0.088, 0).scale.set(1, 1, 1.08);
   for (const sz of [-1, 0, 1]){ const r = add(new THREE.BoxGeometry(0.3, 0.02, 0.014), dk, 0.1, sz ? 0.02 : 0.055, sz * 0.12); r.rotation.z = -0.12; r.rotation.y = sz * -0.18; }
-  for (const sz of [-1, 1]) add(new THREE.SphereGeometry(0.02, 8, 6), ey, 0.14, 0.01, sz * 0.2);
+  for (const sz of [-1, 1]){ add(new THREE.SphereGeometry(0.03, 10, 8), ey, 0.16, 0.012, sz * 0.19).scale.set(1.3, 0.7, 0.8); add(new THREE.SphereGeometry(0.008, 6, 5), wh, 0.175, 0.03, sz * 0.195); }   /* 殼兩側的複眼＋亮點 */
+  for (let i = 0; i < 3; i++) add(new THREE.SphereGeometry(0.016, 6, 5), dk, 0.2 - i * 0.1, 0.062 - i * 0.004, 0).scale.set(1, 0.6, 1);   /* 中脊上的小突起 */
   const ab = add(new THREE.SphereGeometry(0.19, 6, 6, 0, Math.PI * 2, 0, Math.PI / 2), sh, -0.14, -0.09, 0); ab.scale.set(1.0, 0.42, 0.98); ab.rotation.y = Math.PI / 6;
   add(new THREE.CircleGeometry(0.185, 6).rotateX(Math.PI / 2), dk, -0.14, -0.088, 0);
   for (const sz of [-1, 1]) for (let i = 0; i < 5; i++){ const sp = add(new THREE.ConeGeometry(0.012, 0.07, 5), dk, -0.04 - i * 0.05, -0.07, sz * (0.18 - i * 0.018)); sp.rotation.x = sz * 1.25; sp.rotation.z = 0.5; }
   const tl = add(new THREE.ConeGeometry(0.02, 0.5, 6), dk, -0.56, -0.07, 0); tl.rotation.z = Math.PI / 2;
-  g.userData.tail = new THREE.Object3D(); return g; }
+  g.userData.tail = new THREE.Object3D(); g.userData.view = [0.85, -0.55]; return g; }
 /* v561 中華鱉：扁圓的軟殼（邊緣一圈薄薄的裙邊）、長脖子、吸管一樣的鼻子、四隻有蹼的腳 */
 function makeSoftshell(scale){ const g = new THREE.Group(); g.scale.setScalar(scale || 1); const sh = mat('#5f6440', 0.55), rim = mat('#8a8c5c', 0.6), sk = mat('#7c7e52', 0.7), bl = mat('#ece6c6', 0.7), ey = mat('#14140e', 0.3), wh = new THREE.MeshBasicMaterial({ color:'#ffffff' });
   const add = (geo, m, x, y, z, sx, sy, sz) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (sx) o.scale.set(sx, sy, sz); o.castShadow = true; g.add(o); return o; };
@@ -761,7 +762,7 @@ function makeSoftshell(scale){ const g = new THREE.Group(); g.scale.setScalar(sc
   for (const sz of [-1, 1]){ add(new THREE.SphereGeometry(0.015, 10, 8), ey, 0.525, 0.052, sz * 0.036); add(new THREE.SphereGeometry(0.005, 6, 5), wh, 0.533, 0.058, sz * 0.045); add(new THREE.SphereGeometry(0.01, 6, 5), rim, 0.47, 0.03, sz * 0.05, 3.5, 0.5, 0.5); }   /* 眼睛、亮點、脖子上的淡色條紋 */
   for (const [x, z, r] of [[0.2, 0.27, 0.5], [0.2, -0.27, -0.5], [-0.3, 0.24, -0.6], [-0.3, -0.24, 0.6]]){ const ft = add(new THREE.SphereGeometry(0.075, 10, 8), sk, x, -0.03, z, 1.25, 0.26, 0.8); ft.rotation.y = r; }
   const tl = add(new THREE.ConeGeometry(0.03, 0.12, 8), sk, -0.44, -0.02, 0); tl.rotation.z = Math.PI / 2;
-  g.userData.tail = new THREE.Object3D(); return g; }
+  g.userData.tail = new THREE.Object3D(); g.userData.view = [0.8, -0.5]; return g; }
 function fishModel(f, scale){
   if (f.hat){ const f2 = Object.assign({}, f); delete f2.hat; return fishHat(fishModel(f2, scale), f.hat); }
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
@@ -939,7 +940,17 @@ function resize(){ const w = viewW(), h = viewH(); renderer.setSize(w, h, false)
 addEventListener('resize', resize); resize();
 /* v535 作者第三次回報「又這樣了」，小白字每次都是 in980 vv741 s1.00：瀏覽器把「版面」算成 980 寬（比螢幕 741 寬），但倍率是 1，所以只看得到右下角。
    版面為什麼變 980 我從這邊查不出來，改成不管它：一發現版面比看得到的範圍寬，就把整個遊戲（畫面和所有按鈕）直接塞進「看得到的那一塊」裡。恢復正常就自動拿掉。 */
-function vvFix(){ const v = window.visualViewport, de = document.documentElement; if (!v) return; const bad = innerWidth - v.width > 3, on = de.classList.contains('vvfix');
+/* v562 作者第四次截圖（v560 FIX in980 vv741 s1.00 o239,117）：v535 的做法只把遊戲搬進看得到的那一塊，但按鈕的大小是照「版面寬度」算的，
+   版面還是 980，所以按鈕全部大了三成、疊在一起。這次改成從源頭處理：版面比螢幕寬的時候，把網頁的縮放倍率設成「螢幕寬 ÷ 版面寬」（例如 0.76），
+   讓整個 980 寬的版面剛好縮進螢幕裡，按鈕比例就對了（整體會小一點）。倍率設了 1.2 秒還沒生效，才退回 v535 的做法。版面恢復正常會自動改回 1 倍。 */
+const VP = { k: 1, at: 0, n: 0, base: 'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover' };
+function vpFit(){ const v = window.visualViewport, m = document.querySelector('meta[name=viewport]'); if (!v || !m) return false; const nowT = Date.now();
+  if (VP.k !== 1 && v.width - innerWidth > 3){ VP.k = 1; m.setAttribute('content', VP.base); return false; }   /* 版面變回正常了：改回 1 倍 */
+  if (VP.k === 1 && innerWidth - v.width > 3 && v.scale < 1.01 && nowT - VP.at > 4000 && VP.n < 4){ VP.at = nowT; VP.n++; const k = Math.max(0.5, Math.floor(v.width / innerWidth * 1000) / 1000); VP.k = k;
+    m.setAttribute('content', `width=device-width,initial-scale=${k},minimum-scale=${k},maximum-scale=${k},user-scalable=no,viewport-fit=cover`); try { window.scrollTo(0, 0); } catch(e){} return true; }
+  if (VP.k !== 1 && innerWidth - v.width > 3 && nowT - VP.at > 1200){ VP.k = 1; m.setAttribute('content', VP.base); return false; }   /* 沒生效：放棄，交給下面的舊做法 */
+  return VP.k !== 1 && nowT - VP.at < 1200; }
+function vvFix(){ const v = window.visualViewport, de = document.documentElement; if (!v) return; let wait = false; try { wait = vpFit(); } catch(e){} if (wait) return; const bad = innerWidth - v.width > 3, on = de.classList.contains('vvfix');
   if (bad){ if (v.offsetLeft > 1 || v.offsetTop > 1){ try { window.scrollTo(0, 0); } catch(e){} } const st = de.style, L = Math.round(v.offsetLeft) + 'px', T = Math.round(v.offsetTop) + 'px', W = Math.round(v.width) + 'px', H = Math.round(v.height) + 'px';
     if (!on || st.left !== L || st.top !== T || st.width !== W || st.height !== H){ de.classList.add('vvfix'); st.position = 'fixed'; st.left = L; st.top = T; st.right = 'auto'; st.bottom = 'auto'; st.width = W; st.height = H; st.transform = 'translateZ(0)'; try { resize(); } catch(e){} } }
   else if (on){ de.classList.remove('vvfix'); const st = de.style; st.position = st.left = st.top = st.right = st.bottom = st.width = st.height = st.transform = ''; try { resize(); } catch(e){} } }
@@ -950,7 +961,7 @@ document.addEventListener('dblclick', e => e.preventDefault(), { passive:false }
 /* v518 作者：「釣的時候一直點，畫面會自動放大，然後就縮不回去」→ 截圖看是瀏覽器把「整個網頁」放大了（上面的按鈕都被切到畫面外），不是遊戲鏡頭。
    兩隻手指同時按在按鈕／介面上稍微一動，瀏覽器就當成兩指放大網頁。現在：兩指在畫面上移動一律不交給瀏覽器；萬一還是被放大了，馬上自動縮回去。 */
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive:false });
-if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visualViewport; /* v524 診斷小字顯示：放大的時候「版面」變成 980 寬、但螢幕只有 741 寬（縮放倍率還是 1）→ 是瀏覽器把版面撐大了，不是縮放 */ if (!(v.scale > 1.01 || v.width < document.documentElement.clientWidth - 3) || Date.now() - zfAt < 400) return; zfAt = Date.now();
+if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visualViewport; /* v524 診斷小字顯示：放大的時候「版面」變成 980 寬、但螢幕只有 741 寬（縮放倍率還是 1）→ 是瀏覽器把版面撐大了，不是縮放 */ if (VP.k !== 1 || !(v.scale > 1.01) || Date.now() - zfAt < 400) return; zfAt = Date.now();   /* v562 只處理真的被放大（倍率 > 1）；版面被撐寬交給 vpFit */
     const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = 'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
     m.setAttribute('content', 'width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover'); setTimeout(() => m.setAttribute('content', c), 60); };
   visualViewport.addEventListener('resize', unzoom); visualViewport.addEventListener('scroll', unzoom); setInterval(unzoom, 1500); }
@@ -962,7 +973,7 @@ if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visua
       if (!bad){ if (zd) zd.style.display = 'none'; return; }
       if (!zd){ zd = document.createElement('div'); zd.style.cssText = 'position:absolute;z-index:99999;pointer-events:none;font:11px/1.2 monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 5px;border-radius:5px;white-space:nowrap'; document.body.appendChild(zd); }
       zd.style.display = 'block'; { const fx = de.classList.contains('vvfix'); zd.style.left = ((fx ? 0 : ol) + scrollX + 6) + 'px'; zd.style.top = ((fx ? 0 : ot) + scrollY + 6) + 'px'; } zd.style.transform = 'scale(' + (1 / sc) + ')'; zd.style.transformOrigin = '0 0';
-      zd.textContent = ver + (de.classList.contains('vvfix') ? ' FIX' : '') + ' s' + sc.toFixed(2) + ' vv' + Math.round(vw) + 'x' + Math.round(v ? v.height : innerHeight) + ' o' + Math.round(ol) + ',' + Math.round(ot) + ' in' + innerWidth + 'x' + innerHeight + ' de' + de.clientWidth + 'x' + de.clientHeight + ' c' + Math.round(cw) + ' sy' + Math.round(scrollX) + ',' + Math.round(scrollY) + ' dpr' + (+devicePixelRatio).toFixed(2);
+      zd.textContent = ver + (de.classList.contains('vvfix') ? ' FIX' : '') + (VP.k !== 1 ? ' Z' + VP.k : VP.n ? ' z' + VP.n : '') + ' s' + sc.toFixed(2) + ' vv' + Math.round(vw) + 'x' + Math.round(v ? v.height : innerHeight) + ' o' + Math.round(ol) + ',' + Math.round(ot) + ' in' + innerWidth + 'x' + innerHeight + ' de' + de.clientWidth + 'x' + de.clientHeight + ' c' + Math.round(cw) + ' sy' + Math.round(scrollX) + ',' + Math.round(scrollY) + ' dpr' + (+devicePixelRatio).toFixed(2);
     } catch (e) {} }, 700); }
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 320 && !(e.target && e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
@@ -2551,8 +2562,8 @@ function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of wate
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
 function isleH(x, z){ if (Math.abs(x - GARDEN.x) <= GARDEN.hx && Math.abs(z - GARDEN.z) <= GARDEN.hz) return ISLE.y; const d = Math.hypot(x - ISLE.x, z - ISLE.z); if (d > ISLE.r + 2.2) return null; return d <= ISLE.r ? ISLE.y : ISLE.y - (d - ISLE.r) / 2.2 * 0.3; }
 function frostH(x, z){ const d = Math.hypot(x - FROST.x, z - FROST.z); if (d > FROST.r + 2.2) return null; if (Math.hypot(x - FROST.lake.x, z - FROST.lake.z) < FROST.lake.r) return FROST.lake.y; return d <= FROST.r ? FROST.y : FROST.y - (d - FROST.r) / 2.2 * 0.3; }
-function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } return Math.max(0, terrainH(x, z)); }
-function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && isLand(x, z); }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } { const th = terrainH(x, z); return th < 0 && seaDry(x, z) ? th : Math.max(0, th); } }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && (isLand(x, z) || seaDry(x, z))   /* v562 作者：乾潮露出來的沙灘「走不過去」→ 退潮時水退掉的濕沙可以走上去；漲回來會被推回岸上（5505 那段） */; }
 function blocked(x, z, r){
   let L = colliders; try { if (House.on && House.cols) L = House.cols; } catch(e){}   /* 房間蓋在小島正下方：在屋裡只看房間自己的牆和家具，不然島上的樹、石頭、別棟房子會變成看不到的障礙物（卡住） */
   for (const c of L){
@@ -6023,7 +6034,7 @@ function startReel(){
   F.bossScale = F.boss ? clamp(0.55 + Math.log10(Math.max(1, F.weight || 1)) * 0.6, 0.65, 3.4) : (BIG_FISH.has(F.fish.id) ? 0.7 : 0.55);
   try { F.leap = fishModel(F.fish, F.bossScale); if (F.fish.rs && F.rsTag) addScars(F.leap, rsInfo(F.rsTag).scars); F.leap.visible = false; scene.add(F.leap); } catch(e){ F.leap = null; }
   { const bb = $('#bossBar'); bb.hidden = !F.boss; if (F.boss){ bb.className = 'r-' + F.fish.rarity; $('#bbName').textContent = `？？？・${F.fish.rarity}`; $('#bbHp').style.width = '100%'; $('#bbPct').textContent = '100%';
-    F.eaten = Math.random() < 0.45;   /* v378 朋友建議：有時候是小魚先上鉤，再被更大的魚一口吞掉（只是演出，釣到什麼魚的機率沒有變） */
+    F.eaten = eatPlanFor(F.fish); F.eatT0 = now();   /* v378 朋友建議：有時候是小魚先上鉤，再被更大的魚一口吞掉（只是演出，釣到什麼魚的機率沒有變） */
     if (F.eaten){ flash('🐟 小魚上鉤了…', 0.9); buzz(40); const tk = F.t0; setTimeout(() => { if (F.phase !== 'reeling' || F.t0 !== tk) return; flash('😱 被更大的魚一口吞掉了！', 1.9); camShake = Math.max(camShake, 0.6); SFX.bite(); buzz([60, 50, 260]); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 46, '#e8f7ff', 2.2, 3.6, 1.2); FX.emit(me.bobPos.x, 0.2, me.bobPos.z, 10, '#ff6b5a', 0.8, 1.6, 0.9); $('#fhName').textContent = '小魚被大魚吞掉了！超大的拉力！'; }, 950); }
     else { flash('⚠️ 巨大魚影！', 1.8); buzz([80, 40, 160]); camShake = Math.max(camShake, 0.35); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 36, '#e8f7ff', 1.8, 3.2, 1.1); } } }
   $('#mashFx').hidden = true;
@@ -6045,14 +6056,20 @@ function fishHook(){ if (!Cloud.on || F.roll !== 'cast' || F.hookReq) return; co
     if (row && /^nx\d{6}v?$/.test(row.cast_fish || '') && !FISH_BY_ID[row.cast_fish]) await loadSci(true); if (F.castId !== id) return;
     F.roll = row && FISH_BY_ID[row.cast_fish] && row.cast_w != null ? { f: FISH_BY_ID[row.cast_fish], w: Number(row.cast_w), rs: row.cast_rs || null, sex: row.cast_sex || null, brood: !!row.cast_brood, gp: row.cast_gp || null } : 'fail'; },
     () => { if (F.castId !== id) return; if ((F.hookTry = (F.hookTry || 0) + 1) <= 2){ F.roll = 'cast'; F.hookReq = 0; F.rollWait = 0; } else F.roll = 'fail'; }); }
-function biteFishOf(){ if (F.phase === 'reeling') return F.fish; if (Rig.rig === 'bottom') return null; if (F.phase === 'waiting' && now() < F.waitUntil - 2.0) return null; const f = F.roll && F.roll.f ? F.roll.f : F.pre; return f && !BIG_FISH.has(f.id) && !BOTTOM_FISH.has(f.id) ? f : null; }   /* 沉底釣、底棲魚在很深的地方吃餌，看不到牠游過來 */
+/* v562 作者：「先釣到小魚再被吃掉那個，一開始就看到大魚影了」→ 會不會演「小魚被大魚吞掉」改成拋竿時就決定（每一竿一次）。
+   要演的話：咬餌前游過來的是一條小魚的影子（這個釣點的常見魚），大魚要等到吞掉的那一下才現身 */
+function eatPlanFor(f){ if (F.eatFor !== F.castAt){ F.eatFor = F.castAt; F.eatWill = Math.random() < 0.45; F.decoy = undefined; } return !!(F.eatWill && f && (BIG_FISH.has(f.id) || f.rarity === '傳說') && !(F.spot && F.spot.id === 'shrimp')); }
+function eatDecoy(){ if (F.decoy === undefined){ const L = ((F.spot && F.spot.fish) || []).map(id => FISH_BY_ID[id]).filter(x => x && x.rarity === '常見' && !x.of && x.max <= 3 && !BIG_FISH.has(x.id) && !BOTTOM_FISH.has(x.id) && FISH_STYLE[x.id]); F.decoy = L.length ? L[Math.floor(Math.random() * L.length)] : null; } return F.decoy; }
+function biteFishOf(){ if (F.phase === 'reeling') return F.eaten && F.decoy && now() - (F.eatT0 || 0) < 0.95 ? F.decoy : F.fish; const rf = F.roll && F.roll.f ? F.roll.f : null;
+  if (rf && eatPlanFor(rf)){ if (F.phase === 'waiting' && now() < F.waitUntil - 2.0) return null; return eatDecoy(); }
+  if (Rig.rig === 'bottom') return null; if (F.phase === 'waiting' && now() < F.waitUntil - 2.0) return null; const f = rf || F.pre; return f && !BIG_FISH.has(f.id) && !BOTTOM_FISH.has(f.id) ? f : null; }   /* 沉底釣、底棲魚在很深的地方吃餌，看不到牠游過來 */
 function updateBiteFish(dt, t){
   const on = ((F.phase === 'waiting' || F.phase === 'bite') && me.bobState === 'water' && !me.flying || F.phase === 'reeling') && !Dive.on, f = on ? biteFishOf() : null;
   updateBiteShadow(dt, t, on && !f && F.phase !== 'reeling');
   if (!f){ if (BiteFish.m){ scene.remove(BiteFish.m); BiteFish.m = null; BiteFish.id = null; } return; }
   if (BiteFish.id !== f.id){
     if (BiteFish.m) scene.remove(BiteFish.m);
-    const w = F.roll && F.roll.f ? F.roll.w : (f.min + f.max) / 2, m = fishModel(f, clamp(0.42 + Math.log(1 + w) * 0.3, 0.42, 0.9));
+    const w = F.roll && F.roll.f && f === F.roll.f ? F.roll.w : f === F.fish && F.weight ? F.weight : (f.min + f.max) / 2, m = fishModel(f, clamp(0.42 + Math.log(1 + w) * 0.3, 0.42, 0.9));
     /* v506 作者：「原本魚影是黑的，為什麼突然改成那條魚的樣子」→ 以前釣過的魚會在咬餌前用原本的顏色現身，等於先爆雷。
        現在不管釣過沒有，在水裡一律是黑色的影子（看得出大小和形狀），顏色和花紋要等拉出水面才揭曉 */
     const mats = [], sm = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0, depthWrite:false }); mats.push([sm, 0.5]); m.traverse(o => { if (o.isMesh) o.material = sm; });
@@ -6084,7 +6101,7 @@ function updateBiteFish(dt, t){
 const BITE_SH_MAT = new THREE.MeshBasicMaterial({ color:'#0b1d2b', transparent:true, opacity:0, depthWrite:false });
 function updateBiteShadow(dt, t, want){ const B = BiteFish;
   if (!want){ if (B.sh){ B.lastSh = { t, ang: B.shAng, k: B.shK }; scene.remove(B.sh); B.sh = null; } return; }
-  const b = me.bobPos, big = F.roll && F.roll.f ? BIG_FISH.has(F.roll.f.id) || F.roll.f.rarity === '傳說' : false, sc = big ? 1.15 : 0.62;
+  const b = me.bobPos, big = F.roll && F.roll.f && !eatPlanFor(F.roll.f) ? BIG_FISH.has(F.roll.f.id) || F.roll.f.rarity === '傳說' : false, sc = big ? 1.15 : 0.62;
   const shr = F.spot && F.spot.id === 'shrimp';   /* v409 釣蝦場裡游過來的是蝦子的影子，不是魚影 */
   if (!B.sh || B.shBig !== big || B.shShr !== shr){ if (B.sh) scene.remove(B.sh); B.shShr = shr; const g = shr ? fishModel(FISH_BY_ID.prawn, 0.3) : fishModel({ id:'__shadow', color:'#0b1d2b' }, sc); g.traverse(o => { if (o.isMesh){ o.material = BITE_SH_MAT; o.castShadow = false; o.renderOrder = -1; } });
     scene.add(g); B.shBig = big; if (!B.sh){ B.shAng = Math.random() * Math.PI * 2; B.shK = 0; B.shAt = t + rand(0.8, 2.0); g.position.set(b.x + Math.cos(B.shAng) * 2.8, WATER_LEVEL - 1.2, b.z + Math.sin(B.shAng) * 2.8); } else g.position.copy(B.sh.position); B.sh = g; }
@@ -10284,7 +10301,15 @@ const Duel = { d: null, off: 0, polled: 0, busy: false, asked: 0, shown: 0, star
 function duelOn(){ return !!(Cloud.on && Cloud.sb && Cloud.userId); }
 async function duelRpc(fn, args){ if (!duelOn()) return undefined; try { const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) return undefined; return data === undefined ? null : data; } catch(e){ return undefined; } }   /* undefined＝連不上；null＝沒有對決 */
 function duelSrvNow(){ return Date.now() + Duel.off; }
-function duelSide(d, mine){ const a = (d.me === 'a') === mine; return a ? { id: d.a, name: d.a_name || '釣客', w: +d.a_w || 0, n: d.a_n || 0, log: Array.isArray(d.a_log) ? d.a_log : [] } : { id: d.b, name: d.b_name || '釣客', w: +d.b_w || 0, n: d.b_n || 0, log: Array.isArray(d.b_log) ? d.b_log : [] }; }
+function duelSide(d, mine){ const a = (d.me === 'a') === mine; return a ? { id: d.a, name: d.a_name || '釣客', w: +d.a_w || 0, n: d.a_n || 0, big: +d.a_big || 0, log: Array.isArray(d.a_log) ? d.a_log : [] } : { id: d.b, name: d.b_name || '釣客', w: +d.b_w || 0, n: d.b_n || 0, big: +d.b_big || 0, log: Array.isArray(d.b_log) ? d.b_log : [] }; }
+/* v562 對決的變化玩法（伺服器 194）：mode 空的＝一般（比總重量）、spot＝指定釣點賽、big＝大魚賽（只比最大的一條）、count＝多魚賽（比條數）
+   排隊只有「一般」和「今天的特別賽」兩種（特別賽每天輪一種）；友誼賽邀請的人自己選 */
+const DUEL_MODES = { spot:['📍', '指定釣點賽'], big:['🐋', '大魚賽'], count:['🔢', '多魚賽'] };
+function duelModeName(m, spot){ const M = DUEL_MODES[m]; return !M ? '' : M[0] + ' ' + M[1] + (m === 'spot' && spot ? '（' + duelSpotName(spot) + '）' : ''); }
+function duelModeSub(m, spot){ return m === 'spot' ? `只有在${duelSpotName(spot)}釣到的才算分，比總重量；配到以後有 12 秒走位` : m === 'big' ? '3 分鐘內只比「最大的一條」，釣再多條也只看最重的那條' : m === 'count' ? '3 分鐘內比「釣到幾條」，大小不管；一樣多才比總重量' : '3 分鐘比總重量，在哪裡釣都算'; }
+function duelScore(d, x){ return d.mode === 'big' ? x.big : d.mode === 'count' ? x.n : x.w; }
+function duelScoreTxt(d, x, unit){ return d.mode === 'count' ? x.n + (unit ? ' 條' : '') : duelScore(d, x).toFixed(2) + (unit ? ' 公斤' : ''); }
+function duelDayMode(){ return (Duel.stats && Duel.stats.mode) || Duel.dayMode || (duelDaySpot() ? 'spot' : null); }
 function duelSay(k, to, extra){ try { if (room && room.connected()) room.emit('duel', Object.assign({ k, to }, extra || {})).catch(() => {}); } catch(e){} }
 /* v516 第二步：自動配對（不用跟對方在同一個大廳）、段位星星、排行 */
 const DUEL_TIERS = [[0, '對決新手', '🐟'], [3, '釣竿好手', '🎣'], [8, '釣魚高手', '🏅'], [15, '海上名人', '🌊'], [25, '傳說釣手', '👑']];
@@ -10292,24 +10317,25 @@ function duelTierOf(st){ let r = DUEL_TIERS[0]; for (const t of DUEL_TIERS) if (
 function duelTierTxt(s){ if (!s) return ''; const t = duelTierOf(s.stars); return `${t[2]} ${t[1]}・⭐${s.stars || 0}`; }
 /* v551 指定釣點賽（作者 11/17：「然後指定釣點賽也加」）：每天輪一個本島釣點，選這個排隊只會配到也選這個的人；只有在那個釣點釣到的才算分（伺服器判斷）。一樣算星星。 */
 function duelSpotName(id){ const sp = id && SPOT_BY_ID[id]; return sp ? sp.label : '指定釣點'; }
-function duelDaySpot(){ return (Duel.stats && Duel.stats.spot) || Duel.daySpot || null; }
+function duelDaySpot(){ return (Duel.stats && Duel.stats.spot) || Duel.daySpot || null; }   /* 只有今天是指定釣點賽才有值 */
 function duelSeasonTxt(se){ const m = /^\d{4}-(\d{2})$/.exec(se || ''); return m ? `${+m[1]} 月賽季` : '本季'; }
 /* 按「找對手」先選哪一種 */
-function duelQueueAsk(){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; } if (Duel.q) return; const sp = duelDaySpot(); if (!sp){ duelQueueStart(null); return; }
+function duelQueueAsk(){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; } if (Duel.q) return; const md = duelDayMode(), sp = duelDaySpot(); if (!md || (md === 'spot' && !sp)){ duelQueueStart(null); return; }
   const card = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); card.appendChild(X); card.appendChild(el('h3', '', '⚔️ 排位賽・要比哪一種？'));
-  const mk = (title, sub, spot) => { const b = el('button', 'tbtn dq-pick'); b.appendChild(el('b', '', title)); b.appendChild(el('small', '', sub)); b.addEventListener('click', () => { duelCardClose('ask'); duelQueueStart(spot); }); card.appendChild(b); };
-  mk('⚔️ 一般排位賽', '3 分鐘比總重量，在哪裡釣都算', null); mk(`📍 指定釣點賽・今天在「${duelSpotName(sp)}」`, `只有在${duelSpotName(sp)}釣到的才算分；配到以後有 12 秒走位`, sp);
-  card.appendChild(el('p', 'sub', '兩種都算星星和段位。指定釣點每天換一個，先走到那裡再排比較不吃虧。')); }
-async function duelQueueStart(spot){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; } if (Duel.q) return;
-  Duel.q = { t0: performance.now(), at: 0, busy: false, n: 0, spot: spot || null }; duelQBar(); await duelQueuePing(); }
-async function duelQueuePing(){ const Q = Duel.q; if (!Q || Q.busy) return; Q.busy = true; Q.at = performance.now(); const r = await duelRpc('duel_queue_join2', { p_spot: Q.spot || null }); Q.busy = false; if (Duel.q !== Q) return;
+  const mk = (title, sub, mode) => { const b = el('button', 'tbtn dq-pick'); b.appendChild(el('b', '', title)); b.appendChild(el('small', '', sub)); b.addEventListener('click', () => { duelCardClose('ask'); duelQueueStart(mode); }); card.appendChild(b); };
+  mk('⚔️ 一般排位賽', duelModeSub(null), null); mk(`今日特別賽・${duelModeName(md, sp)}`, duelModeSub(md, sp), md);
+  card.appendChild(el('p', 'sub', '兩種都算星星和段位。特別賽每天換一種：指定釣點賽、大魚賽、多魚賽輪流。')); }
+async function duelQueueStart(mode){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; } if (Duel.q) return;
+  if (mode && !DUEL_MODES[mode]) mode = SPOT_BY_ID[mode] ? 'spot' : null;
+  Duel.q = { t0: performance.now(), at: 0, busy: false, n: 0, mode: mode || null, spot: mode === 'spot' ? duelDaySpot() : null }; duelQBar(); await duelQueuePing(); }
+async function duelQueuePing(){ const Q = Duel.q; if (!Q || Q.busy) return; Q.busy = true; Q.at = performance.now(); const r = await duelRpc('duel_queue_join3', { p_mode: Q.mode || null }); Q.busy = false; if (Duel.q !== Q) return;
   if (r === undefined || r === null){ return; } if (r.err){ toast('⚔️ ' + esc(r.err)); duelQueueStop(false); return; }
   if (r.queued){ Q.n = r.n || 1; duelQBar(); return; }
   if (r.status){ Duel.q = null; duelQBar(); duelAdopt(r); try { SFX.coin(); } catch(e){} toast(`⚔️ 找到對手了：${esc(duelSide(r, false).name)}`); } }
 function duelQueueStop(tell){ if (!Duel.q) return; Duel.q = null; duelRpc('duel_queue_leave'); duelQBar(); if (tell) toast(tell); }
 function duelQBar(){ let b = Duel.qb; const Q = Duel.q;
   if (!b){ if (!Q) return; b = Duel.qb = el('div', 'panel'); b.id = 'duelQ'; b.innerHTML = '<span class="dq-t"></span><button class="tbtn ghost dq-x">取消</button>'; document.body.appendChild(b); $('.dq-x', b).addEventListener('click', () => duelQueueStop('已經取消排隊')); }
-  b.hidden = !Q; if (!Q) return; const sec = Math.floor((performance.now() - Q.t0) / 1000); $('.dq-t', b).textContent = `${Q.spot ? '📍 指定釣點賽（' + duelSpotName(Q.spot) + '）' : '⚔️'} 找對手中… ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}${Q.n > 1 ? `（${Q.n} 人在排）` : ''}`; }
+  b.hidden = !Q; if (!Q) return; const sec = Math.floor((performance.now() - Q.t0) / 1000); $('.dq-t', b).textContent = `${Q.mode ? duelModeName(Q.mode, Q.spot) : '⚔️'} 找對手中… ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}${Q.n > 1 ? `（${Q.n} 人在排）` : ''}`; }
 function duelQTick(){ const Q = Duel.q; if (!Q) return; const t = performance.now(); if (duelLive()){ Duel.q = null; duelQBar(); return; }
   if (t - Q.t0 > 120000){ duelQueueStop('⚔️ 兩分鐘內沒有找到對手，等一下再試，或直接邀請身邊的人'); return; }
   if (t - Q.at > 3000) duelQueuePing(); if (!Q.ui || t - Q.ui > 1000){ Q.ui = t; duelQBar(); } }
@@ -10318,12 +10344,12 @@ async function duelLoadTop(){ if (Duel.topBusy) return; Duel.topBusy = true; Due
    現在每 15 秒問一次伺服器「有沒有別人在排」，有的話畫面上面跳一顆「⚔️ 某某 在找對手　跟他打」，按下去馬上配到。按 ✕ 會安靜 5 分鐘。 */
 function duelWantTick(){ const t = performance.now(); if (t - (Duel.wAt || 0) < 15000) return; Duel.wAt = t;
   if (!duelOn() || duelLive() || Duel.q || document.visibilityState !== 'visible' || t < (Duel.wMute || 0)){ duelWantBar(null); return; }
-  duelRpc('duel_queue_peek').then(r => { if (r && r.spot) Duel.daySpot = r.spot; if (duelLive() || Duel.q){ duelWantBar(null); return; } duelWantBar(r && (r.n > 0 || r.sn > 0) ? r : null); }); }
+  duelRpc('duel_queue_peek').then(r => { if (r){ Duel.daySpot = r.spot || null; if (r.mode) Duel.dayMode = r.mode; if (r.dspot) Duel.dspot = r.dspot; } if (duelLive() || Duel.q){ duelWantBar(null); return; } duelWantBar(r && (r.n > 0 || r.sn > 0) ? r : null); }); }
 function duelWantBar(r){ let b = Duel.wb; if (!r){ if (b && !b.hidden) b.hidden = true; Duel.wOn = false; return; }
   if (!b){ b = el('div', 'panel'); b.id = 'duelWant'; b.innerHTML = '<span class="dw-t"></span><button class="tbtn dw-go">我來打</button><button class="tbtn ghost dw-x">✕</button>'; document.body.appendChild(b); Duel.wb = b;
-    $('.dw-go', b).addEventListener('click', () => { const sp = Duel.wSpot; duelWantBar(null); duelQueueStart(sp || null); }); $('.dw-x', b).addEventListener('click', () => { Duel.wMute = performance.now() + 300000; duelWantBar(null); }); }
-  Duel.wSpot = r.n > 0 ? null : (r.spot || null);   /* 一般的有人排就先配一般的；只有指定釣點賽有人在排，就接那一種 */
-  const tx = r.n > 0 ? `⚔️ ${r.n > 1 ? `有 ${r.n} 個人` : '有人'}在找排位賽對手` : `📍 有人在找指定釣點賽對手（${duelSpotName(r.spot)}）`;   /* v531 作者：「一定要顯示名字嗎」→ 不顯示是誰，配到才知道 */ const sp = $('.dw-t', b); if (sp.textContent !== tx) sp.textContent = tx;
+    $('.dw-go', b).addEventListener('click', () => { const sp = Duel.wMode; duelWantBar(null); duelQueueStart(sp || null); }); $('.dw-x', b).addEventListener('click', () => { Duel.wMute = performance.now() + 300000; duelWantBar(null); }); }
+  Duel.wMode = r.n > 0 ? null : (r.mode || (r.spot ? 'spot' : null));   /* 一般的有人排就先配一般的；只有指定釣點賽有人在排，就接那一種 */
+  const tx = r.n > 0 ? `⚔️ ${r.n > 1 ? `有 ${r.n} 個人` : '有人'}在找排位賽對手` : `${duelModeName(r.mode || 'spot', r.spot)}：有人在找今天特別賽的對手`;   /* v531 作者：「一定要顯示名字嗎」→ 不顯示是誰，配到才知道 */ const sp = $('.dw-t', b); if (sp.textContent !== tx) sp.textContent = tx;
   b.hidden = false; if (!Duel.wOn){ Duel.wOn = true; try { SFX.chat(); } catch(e){} } }
 /* ===== v534 🪪 個人名片（作者 11/17：「我們是不是該加入像傳說對決，玩家個人展示系統」）=====
    在「朋友」分頁按玩家旁邊的「名片」（最上面有「我的名片」）。內容都是自己玩出來的：釣了幾條、圖鑑幾種、最大的魚、最重的三種魚、對決段位和戰績、釣友隊、一句自己寫的話。
@@ -10667,8 +10693,13 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   else { for (const [lab, tab] of [['👕 造型', 'closet'], ['📖 圖鑑', 'dex']]){ const b = el('button', 'tbtn ghost', lab); b.addEventListener('click', () => { duelCardClose('pcard'); openSheet(tab); }); row.appendChild(b); } }
   left.appendChild(row); if (r.since){ const d = new Date(+r.since); P2.appendChild(el('p', 'sub pc-since', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); } }
 function duelLive(){ const d = Duel.d; return !!d && (d.status === 'invited' || d.status === 'active'); }
-async function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
-  const r = await duelRpc('duel_invite', { p_to: uid }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
+function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
+  const card = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); card.appendChild(X); card.appendChild(el('h3', '', `🤝 邀 ${name || '對方'} 打友誼賽・比哪一種？`));
+  const sp = (Duel.dspot || duelDaySpot());
+  for (const m of [null, 'big', 'count'].concat(sp ? ['spot'] : [])){ const b = el('button', 'tbtn dq-pick'); b.appendChild(el('b', '', m ? duelModeName(m, sp) : '⚔️ 比總重量')); b.appendChild(el('small', '', duelModeSub(m, sp))); b.addEventListener('click', () => { duelCardClose('ask'); duelInviteGo(uid, name, m); }); card.appendChild(b); }
+  card.appendChild(el('p', 'sub', '友誼賽不算星星和戰績。')); }
+async function duelInviteGo(uid, name, mode){ if (!duelOn() || duelLive()) return;
+  const r = await duelRpc('duel_invite2', { p_to: uid, p_mode: mode || null }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
   duelAdopt(r); duelSay('inv', uid); toast(`⚔️ 已經邀請 ${esc(name || '對方')} 釣魚對決，等對方回應…`); }
 function duelFishingNow(){ try { return ['bite', 'reeling', 'landing', 'land', 'result'].includes(F.phase) || !$('#catchCard').hidden; } catch(e){ return false; } }
 function duelAdopt(d){ const prev = Duel.d; if (d && (d.status === 'declined' || d.status === 'cancelled')) d = null; Duel.d = d || null;
@@ -10694,30 +10725,30 @@ function duelAfterCatch(f, w){ const d = Duel.d; if (!d || d.status !== 'active'
 /* ---- 畫面 ---- */
 function duelBar(){ const d = Duel.d, show = !!d && d.status === 'active'; let b = Duel.bar;
   if (!b){ if (!show) return; b = Duel.bar = el('div', 'panel'); b.id = 'duelBar'; b.innerHTML = '<div class="db-sc"><b class="db-me"></b><span>⚔️</span><b class="db-op"></b></div><div class="db-sub"></div>'; document.body.appendChild(b); }
-  b.hidden = !show; if (!show) return; const me = duelSide(d, true), op = duelSide(d, false); $('.db-me', b).textContent = me.w.toFixed(2); $('.db-op', b).textContent = op.w.toFixed(2); b.classList.toggle('lead', me.w > op.w); b.classList.toggle('behind', me.w < op.w); Duel.subKey = ''; duelBarTick(); }
+  b.hidden = !show; if (!show) return; const me = duelSide(d, true), op = duelSide(d, false); $('.db-me', b).textContent = duelScoreTxt(d, me); $('.db-op', b).textContent = duelScoreTxt(d, op); b.classList.toggle('lead', duelScore(d, me) > duelScore(d, op)); b.classList.toggle('behind', duelScore(d, me) < duelScore(d, op)); Duel.subKey = ''; duelBarTick(); }
 function duelBarTick(){ const b = Duel.bar, d = Duel.d; if (!b || b.hidden || !d || d.status !== 'active') return; const n = duelSrvNow(); let tx, low = false;
-  if (n < d.start) tx = d.spot ? `📍 指定釣點賽・快到「${duelSpotName(d.spot)}」… ${Math.max(1, Math.ceil((d.start - n) / 1000))}` : `${d.ranked ? '排位賽' : '友誼賽'}・準備… ${Math.max(1, Math.ceil((d.start - n) / 1000))}`;
-  else { const s = Math.max(0, Math.ceil((d.end - n) / 1000)); low = s <= 15; tx = s > 0 ? `${d.spot ? '📍' + duelSpotName(d.spot) + '・' : ''}對 ${duelSide(d, false).name}${(d.me === 'a' ? d.b_tier : d.a_tier) ? '（' + (d.me === 'a' ? d.b_tier : d.a_tier) + '）' : ''}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '時間到！手上這條 12 秒內拉上來還算';
+  if (n < d.start) tx = d.spot ? `📍 指定釣點賽・快到「${duelSpotName(d.spot)}」… ${Math.max(1, Math.ceil((d.start - n) / 1000))}` : `${d.mode ? duelModeName(d.mode) + '・' : ''}${d.ranked ? '排位賽' : '友誼賽'}・準備… ${Math.max(1, Math.ceil((d.start - n) / 1000))}`;
+  else { const s = Math.max(0, Math.ceil((d.end - n) / 1000)); low = s <= 15; tx = s > 0 ? `${d.spot ? '📍' + duelSpotName(d.spot) + '・' : d.mode === 'big' ? '🐋 比最大一條・' : d.mode === 'count' ? '🔢 比條數・' : ''}對 ${duelSide(d, false).name}${(d.me === 'a' ? d.b_tier : d.a_tier) ? '（' + (d.me === 'a' ? d.b_tier : d.a_tier) + '）' : ''}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '時間到！手上這條 12 秒內拉上來還算';
     if (Duel.goTold !== d.id){ Duel.goTold = d.id; if (n - d.start < 3000){ flash('⚔️ 開始！', 1.2); try { SFX.catch(); } catch(e){} } } }
   if (tx !== Duel.subKey){ Duel.subKey = tx; $('.db-sub', b).textContent = tx; b.classList.toggle('low', low); } }
 function duelCardClose(kind){ const c = Duel.card; if (!c || (kind && c.dataset.kind !== kind)) return; if (c.dataset.kind === 'pcard') AvStudio.onSet = null; clearInterval(c._iv); c.remove(); Duel.card = null; }
 function duelCardOpen(kind){ duelCardClose(); const c = el('div', 'panel'); c.id = 'duelCard'; c.dataset.kind = kind; document.body.appendChild(c); Duel.card = c; return c; }
 function duelAsk(d){ if (blockList && blockList[d.a]){ duelRpc('duel_answer', { p_id: d.id, p_ok: false }); Duel.d = null; return; }
-  const c = duelCardOpen('ask'); c.appendChild(el('h3', '', '⚔️ 釣魚對決')); c.appendChild(el('p', '', `${d.a_name || '釣客'} 想跟你打一場友誼賽：3 分鐘內誰釣到的魚加起來比較重。（友誼賽不算星星和戰績）`)); const tm = el('p', 'sub', ''); c.appendChild(tm);
+  const c = duelCardOpen('ask'); c.appendChild(el('h3', '', '⚔️ 釣魚對決')); c.appendChild(el('p', '', `${d.a_name || '釣客'} 想跟你打一場友誼賽${d.mode ? '「' + duelModeName(d.mode, d.spot) + '」' : ''}：${d.mode ? duelModeSub(d.mode, d.spot) : '3 分鐘內誰釣到的魚加起來比較重'}。（友誼賽不算星星和戰績）`)); const tm = el('p', 'sub', ''); c.appendChild(tm);
   const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); c.appendChild(row);
   const left = () => Math.max(0, Math.ceil(((+d.created || Date.now()) + 24000 - duelSrvNow()) / 1000)); const upd = () => { const s = left(); tm.textContent = `${s} 秒內回應`; if (s <= 0) duelCardClose('ask'); }; upd(); c._iv = setInterval(upd, 500);
   const ans = async yes => { ok.disabled = no.disabled = true; const r = await duelRpc('duel_answer', { p_id: d.id, p_ok: yes }); duelCardClose('ask'); if (r && r.err){ toast('⚔️ ' + esc(r.err)); Duel.d = null; duelBar(); return; } if (r === undefined || r === null){ toast('暫時連不上雲端'); return; } duelAdopt(r); duelSay('ans', d.a); };
   ok.addEventListener('click', () => ans(true)); no.addEventListener('click', () => ans(false)); try { SFX.chat(); } catch(e){} }
 function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), win = d.winner ? d.winner === me.id : null, s = d.stats || Duel.stats || {};
   const c = duelCardOpen('res'); c.classList.add(win === true ? 'win' : win === false ? 'lose' : 'draw'); c.appendChild(el('h3', '', win === true ? '🏆 你贏了！' : win === false ? '這場輸了' : '🤝 平手'));
-  const sc = el('div', 'dc-sc'); for (const [who, x] of [['你', me], [op.name, op]]){ const col = el('div', 'dc-col'); col.appendChild(el('b', '', who)); col.appendChild(el('strong', '', x.w.toFixed(2) + ' 公斤')); col.appendChild(el('small', '', `${x.n} 條`)); const ul = el('ul', '');
+  const sc = el('div', 'dc-sc'); for (const [who, x] of [['你', me], [op.name, op]]){ const col = el('div', 'dc-col'); col.appendChild(el('b', '', who)); col.appendChild(el('strong', '', duelScoreTxt(d, x, true))); col.appendChild(el('small', '', d.mode === 'big' ? `最大的一條・共 ${x.n} 條` : d.mode === 'count' ? `共 ${x.w.toFixed(2)} 公斤` : `${x.n} 條`)); const ul = el('ul', '');
       for (const it of x.log.slice(0, 12)){ const f = FISH_BY_ID[it && it.f]; ul.appendChild(el('li', '', `${f ? f.name : '魚'} ${(+it.w || 0).toFixed(2)}`)); } if (x.log.length > 12) ul.appendChild(el('li', '', `…還有 ${x.log.length - 12} 條`)); if (!x.log.length) ul.appendChild(el('li', 'none', '沒釣到')); col.appendChild(ul); sc.appendChild(col); }
-  c.appendChild(sc);
+  c.appendChild(sc); if (d.mode) c.appendChild(el('p', 'sub', `${duelModeName(d.mode, d.spot)}：${duelModeSub(d.mode, d.spot)}`));
   c.appendChild(el('p', 'sub', d.ranked === false ? '🤝 友誼賽：不算星星和戰績。想打排位賽到「背包」按「找對手」。' : d.counted === false ? '今天跟這位對手已經打滿 3 局，這一局不算進戰績。' : `你的對決戰績：${s.wins || 0} 勝 ${s.losses || 0} 敗${s.draws ? ` ${s.draws} 平` : ''}${(s.streak || 0) >= 2 ? `・${s.streak} 連勝中 🔥` : ''}`));
   if (s.stars != null && d.ranked !== false){ const pv = Duel.prevStars, dl = pv != null && d.counted !== false ? (s.stars || 0) - pv : 0; c.appendChild(el('p', 'dc-tier', `段位：${duelTierTxt(s)}${dl > 0 ? `（+${dl}⭐）` : dl < 0 ? `（${dl}⭐）` : ''}`)); if (pv != null && duelTierOf(s.stars)[1] !== duelTierOf(pv)[1] && dl > 0){ flash(`⬆️ 升上「${duelTierOf(s.stars)[1]}」！`, 2); } }
   Duel.prevStars = s.stars;
   const row = el('div', 'dc-btns'), again = el('button', 'tbtn' + (d.ranked ? ' ghost' : ''), d.ranked ? '邀他打友誼賽' : '再來一局'), x = el('button', 'tbtn ghost', '關閉'); row.append(again, x); c.appendChild(row);
-  again.addEventListener('click', () => { duelCardClose('res'); duelInvite(op.id, op.name); }); { const qb = el('button', 'tbtn' + (d.ranked ? '' : ' ghost'), d.ranked ? '再排一場' : '打排位賽'); if (d.ranked) row.insertBefore(qb, again); qb.addEventListener('click', () => { duelCardClose('res'); if (d.ranked) duelQueueStart(d.spot || null); else duelQueueAsk(); }); if (!d.ranked) row.insertBefore(qb, x); } x.addEventListener('click', () => duelCardClose('res'));
+  again.addEventListener('click', () => { duelCardClose('res'); duelInvite(op.id, op.name); }); { const qb = el('button', 'tbtn' + (d.ranked ? '' : ' ghost'), d.ranked ? '再排一場' : '打排位賽'); if (d.ranked) row.insertBefore(qb, again); qb.addEventListener('click', () => { duelCardClose('res'); if (d.ranked) duelQueueStart(d.mode && d.mode === duelDayMode() ? d.mode : null); else duelQueueAsk(); }); if (!d.ranked) row.insertBefore(qb, x); } x.addEventListener('click', () => duelCardClose('res'));
   try { if (win === true) SFX.coin(); else SFX.click(); } catch(e){} if (win === true) flash('🏆 對決勝利！', 1.6); }
 /* ================= v503 🎣 第一人稱釣魚（作者 11/16：傳了三張自己釣魚的照片——竿子伸向水面、魚掛在線上被拉出水、戴手套把魚拿在手上
    「以前釣魚的時候覺得這樣很有成就感」→ 全程第一人稱、可以切換；手照角色的膚色和袖子） =================
@@ -14323,7 +14354,7 @@ const MShot = { kit:null };
 function drawMFishGL(cv, id, known, mk){ const o = MFISH && MFISH.of[id]; if (!mk && (!o || !MFISH.geo[o.k] || MFISH.defs[o.k].nofish)) return false;
   if (!MShot.kit){ const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#8a9aa8', 1.7)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(1, 3, 4); sc.add(dl);
     MShot.kit = { sc, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100), rt: new THREE.WebGLRenderTarget(4, 4, { samples: 4 }) }; MShot.kit.rt.texture.colorSpace = THREE.SRGBColorSpace; }
-  const K = MShot.kit, W = cv.width, H = cv.height, fish = mk ? mk() : makeMFish(id, 1); fish.rotation.set(0.12, -0.32, 0); K.sc.add(fish); fish.updateMatrixWorld(true);
+  const K = MShot.kit, W = cv.width, H = cv.height, fish = mk ? mk() : makeMFish(id, 1); { const vw = fish.userData.view; fish.rotation.set(vw ? vw[0] : 0.12, vw ? vw[1] : -0.32, 0); }   /* v562 扁的動物（鱟、鱉）從斜上方看才認得出來 */ K.sc.add(fish); fish.updateMatrixWorld(true);
   const bb = new THREE.Box3().setFromObject(fish), c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3()), asp = W / H, half = Math.max(sz.x / 2 / asp, sz.y / 2) * 1.12;
   K.cam.left = -half * asp; K.cam.right = half * asp; K.cam.top = half; K.cam.bottom = -half; K.cam.position.set(c.x, c.y, c.z + 20); K.cam.lookAt(c); K.cam.updateProjectionMatrix();
   if (K.rt.width !== W || K.rt.height !== H) K.rt.setSize(W, H);
@@ -15933,7 +15964,7 @@ function renderTeamSheet(body){
     const ul = el('ul', 'shoplist'); T.forEach((r, i) => { const li = el('li', r.me ? 'on' : ''), d = el('div', 'tinfo'); li.appendChild(el('span', 'dishic', ['🥇', '🥈', '🥉'][i] || String(i + 1))); let nm = String(r.name || '').slice(0, 12); try { nm = clean(nm); } catch(e){} d.appendChild(el('div', 'n', `${TEAM_BADGE[r.badge] || '🎣'} ${nm}${r.me ? '（你的隊）' : ''}`)); d.appendChild(el('div', 'sub2', `${r.w} 勝 ${r.l} 敗${r.d ? ` ${r.d} 平` : ''}・${r.m} 人`)); li.appendChild(d); ul.appendChild(li); }); body.appendChild(ul); return; }
   if (Team.view === 'duel'){ if (!Duel.top || Date.now() - (Duel.topAt || 0) > 20000) duelLoadTop(); const T = Duel.top, ds = Duel.stats;
     body.appendChild(el('p', 'sub', '贏一局 +1⭐（連勝第 3 場起每場 +2⭐），輸一局 -1⭐（3⭐ 以下不扣）。段位：🐟對決新手 → 🎣釣竿好手（3⭐）→ 🏅釣魚高手（8⭐）→ 🌊海上名人（15⭐）→ 👑傳說釣手（25⭐）。'));
-    body.appendChild(el('p', 'sub', `🗓 ${duelSeasonTxt(ds && ds.season)}：每個月是一季，換月時星星保留一半、重新往上打；上一季打到的最高段位會留在玩家資料頁。${duelDaySpot() ? `📍 今天的指定釣點：${duelSpotName(duelDaySpot())}。` : ''}`));
+    body.appendChild(el('p', 'sub', `🗓 ${duelSeasonTxt(ds && ds.season)}：每個月是一季，換月時星星保留一半、重新往上打；上一季打到的最高段位會留在玩家資料頁。${duelDayMode() ? `今日特別賽：${duelModeName(duelDayMode(), duelDaySpot())}。` : ''}`));
     if (ds) body.appendChild(el('p', 'sub', `你：${duelTierTxt(ds)}・本季 ${ds.s_wins != null ? ds.s_wins : (ds.wins || 0)} 勝 ${ds.s_losses != null ? ds.s_losses : (ds.losses || 0)} 敗・最多 ${ds.best || 0} 連勝${ds.prev ? `・上一季最高：${ds.prev.tier}` : ''}`));
     { const qb = el('button', 'tbtn', duelLive() ? '正在對決中' : Duel.q ? '取消排隊' : '⚔️ 找對手'); qb.disabled = duelLive(); qb.addEventListener('click', () => { if (Duel.q){ duelQueueStop('已經取消排隊'); renderTab(); } else { closeSheet(); duelQueueAsk(); } }); body.appendChild(qb); }
     body.appendChild(el('div', 'dexhead', `⚔️ ${duelSeasonTxt(ds && ds.season)}排行（前 20 名）`)); if (!T){ body.appendChild(el('div', 'empty', '載入中…')); return; } if (!T.length){ body.appendChild(el('p', 'sub', '這一季還沒有人打過排位賽，當第一個吧！')); return; }
@@ -17399,7 +17430,7 @@ function renderTab(){
       '⚔️ 有人在找對手的提示：別人按了「找對手」在排隊的時候，你的畫面上面會跳出「有人在找排位賽對手」（不會顯示是誰，配到才知道），按「我來打」馬上配到；不想打按 ✕，5 分鐘內不會再跳。',
       '⚔️ 排位賽和段位：只有自動配對到的才是排位賽，贏輸才會動星星、勝敗和連勝（跟同一個人一天只有前 3 局算）。有打過排位賽的人，名字旁邊會掛著段位。在「朋友」分頁、「背包」或廣場大看板的「⚔️ 對決排行」按「找對手」，系統會幫你找另一個也在找對手的人（不用在同一個大廳，會先找段位接近的），找到就直接開始；畫面上面會顯示「找對手中…」，隨時可以取消，兩分鐘沒找到會自動取消。贏一局 +1⭐，連勝第 3 場起每場 +2⭐；輸一局 -1⭐（3⭐ 以下不扣）。段位：🐟對決新手、🎣釣竿好手（3⭐）、🏅釣魚高手（8⭐）、🌊海上名人（15⭐）、👑傳說釣手（25⭐）。廣場大看板有「⚔️ 對決排行」前 20 名。',
       '🗓 賽季：每個月（台灣時間）是一季。換月以後星星保留一半（例如 9⭐ 變 4⭐），再重新往上打；總勝敗和最多連勝不會變。上一季打到的最高段位會留在玩家資料頁的段位牌下面。大看板的對決排行只列這一季打過的人。',   /* v551 */
-      '📍 指定釣點賽：按「找對手」會問你要比哪一種。選「指定釣點賽」的話，只會配到也選這個的人，而且只有在今天的指定釣點釣到的魚才算分（在別的地方拋竿會提醒你）。指定釣點每天換一個，在月灣河岸、鏡湖、清溪潭、晴潮海邊、港口外海之間輪。配到以後有 12 秒可以走位，所以先走到那裡再排比較好。一樣算星星和段位。',
+      '🎲 今日特別賽：按「找對手」會問你要比「一般排位賽」還是「今日特別賽」。特別賽每天換一種，輪流是 📍 指定釣點賽（只有在當天指定的釣點釣到才算，配到後有 12 秒走位）、🐋 大魚賽（只比最大的一條）、🔢 多魚賽（比釣到幾條，一樣多才比總重量）。都算星星和段位，只會配到選同一種的人。邀朋友打友誼賽時可以自己選要比哪一種。',
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
       '🪧 老闆不在店裡：村民會照自己的作息回家休息、吃飯、睡覺、出去走走。老闆不在的時候店門口會立一塊小牌子寫他去哪了，店照常可以買賣（老港的每週手作要等他本人回來才買得到）。',
       '🍚 吃飯時間村民會去潮汐食堂，他們會站在門的兩旁，不會擋住門口。',

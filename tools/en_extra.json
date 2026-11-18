@@ -5696,5 +5696,22 @@
 "台灣特有的淡水螃蟹，紫褐色的圓殼配上橘紅色的螯。白天躲在溪邊的石頭底下，晚上才出來找東西吃。用沉底釣。": "A freshwater crab found only in Taiwan, with a purple-brown shell and orange-red claws. It hides under streamside rocks by day and comes out at night. Use a bottom rig.",
 "只吃素的大魚，一天可以吃掉跟自己一樣重的水草。對蟲和小魚完全沒興趣，要用玉米粒或麵包糰才釣得到。力氣很大，上鉤後會一直往前衝。": "A big vegetarian fish that can eat its own weight in water plants a day. It ignores worms and small fish; only corn or bread dough will catch it. Very strong, it keeps charging after the hook-up.",
 "白天常常一群疊在岩石下面睡覺，晚上才出來用嘴巴旁邊的兩條小鬚找螃蟹和章魚。脾氣溫和，但被打擾還是會咬人。趴在海底不會跳，用沉底釣。": "By day they pile up asleep under rocks; at night they come out and use the two little barbels by the mouth to find crabs and octopus. Gentle, but will bite if disturbed. It stays on the bottom and never jumps.",
-"全身金橘色，像被人塗了油漆，眼睛幾乎是白的。這是一種很少見的色素異常，叫「黃化症」。2024 年在哥斯大黎加第一次被正式記錄，拍照後就放回大海了。": "Golden-orange all over as if painted, with almost white eyes. This rare pigment condition is called xanthism. First formally recorded in Costa Rica in 2024, photographed and released."
+"全身金橘色，像被人塗了油漆，眼睛幾乎是白的。這是一種很少見的色素異常，叫「黃化症」。2024 年在哥斯大黎加第一次被正式記錄，拍照後就放回大海了。": "Golden-orange all over as if painted, with almost white eyes. This rare pigment condition is called xanthism. First formally recorded in Costa Rica in 2024, photographed and released.",
+"🎲 今日特別賽：按「找對手」會問你要比「一般排位賽」還是「今日特別賽」。特別賽每天換一種，輪流是 📍 指定釣點賽（只有在當天指定的釣點釣到才算，配到後有 12 秒走位）、🐋 大魚賽（只比最大的一條）、🔢 多魚賽（比釣到幾條，一樣多才比總重量）。都算星星和段位，只會配到選同一種的人。邀朋友打友誼賽時可以自己選要比哪一種。": "🎲 Daily special: Find Opponent asks whether you want a normal ranked match or today's special. The special changes daily: 📍 Spot match (only catches at the day's spot count, 12 s to get there), 🐋 Big-fish match (only your single biggest fish counts), 🔢 Count match (most fish wins; total weight breaks ties). All count for stars and tiers, and you are only matched with people who chose the same one. When inviting a friend you can pick the type yourself.",
+"指定釣點賽": "Spot match",
+"大魚賽": "Big-fish match",
+"多魚賽": "Count match",
+"今日特別賽・": "Today's special · ",
+"今日特別賽：": "Today's special: ",
+"3 分鐘內只比「最大的一條」，釣再多條也只看最重的那條": "Only your single biggest fish in 3 minutes counts",
+"3 分鐘內比「釣到幾條」，大小不管；一樣多才比總重量": "Most fish in 3 minutes wins, size doesn't matter; total weight breaks ties",
+"兩種都算星星和段位。特別賽每天換一種：指定釣點賽、大魚賽、多魚賽輪流。": "Both count for stars and tiers. The special rotates daily: Spot, Big-fish, Count.",
+"⚔️ 比總重量": "⚔️ Total weight",
+"友誼賽不算星星和戰績。": "Friendly matches don't count for stars or record.",
+"打友誼賽・比哪一種？": " to a friendly · which type?",
+"🐋 比最大一條・": "🐋 Biggest fish · ",
+"🔢 比條數・": "🔢 Fish count · ",
+"：有人在找今天特別賽的對手": ": someone is looking for a special-match opponent",
+"最大的一條・共 ": "Biggest fish · total ",
+" 條": " fish"
 }
