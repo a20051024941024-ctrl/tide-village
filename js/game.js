@@ -9198,6 +9198,61 @@ function resTick(dt){ if (!RES.built){ if (frameNo < 40) return; try { resBuild(
   if (!RES.g) return; const show = !House.on && !inIndoor() && !Dive.on && !onIsle; if (RES.g.visible !== show) RES.g.visible = show; if (!show) return;
   const night = DayNight.lamp || 0;
   for (const H of RES_HOMES){ if (!H.bm) continue; const want = night > 0.25 && resHomeIn(H) ? 1 : 0; H.lit += (want - H.lit) * Math.min(1, dt * 2); H.bm.emissiveIntensity = H.lit * 1.6; H.gl.material.opacity = H.lit * 0.22; H.gl.visible = H.lit > 0.02; } }
+/* ================= v570 🐋 虎鯨圍獵、座頭鯨來擋（作者 11/19 問「虎鯨會攻擊座頭鯨是真的嗎」→「做」） =================
+   真實的行為：虎鯨會成群圍獵座頭鯨的幼鯨；成年座頭鯨會用胸鰭拍、尾巴甩把牠們趕走，聽到虎鯨在獵海豹也會從遠處衝過來擋（Pitman 等人 2017）。
+   遊戲裡發生在流冰海岸外面（冰封群島西邊，那裡本來就有流冰、海豹，也是浪花虎鯨和座頭鯨的釣點），從流冰釣點的岸邊就看得到。
+   ・每 30 分鐘一格，大約 45% 的格子會發生一次，一次約 2 分鐘。時間用伺服器對過的時鐘算，大家看到的是同一場。
+   ・兩種：calf＝三隻虎鯨圍著座頭鯨媽媽和小鯨，媽媽把小鯨護在身邊拍水趕走牠們；seal＝虎鯨繞著一塊浮冰上的海豹，座頭鯨從遠處趕來擋在中間。
+   ・全年齡：沒有動物受傷，最後虎鯨都放棄游走。只是風景，不給獎勵；看過記一個成就。 */
+const OH = { WIN: 1800, DUR: 118, x: FROST.x - 44, z: FROST.z + 2, e: null, told: {} };
+function ohPlan(ms){ const ns = ms / 1000, W = Math.floor(ns / OH.WIN), fz = (location.hash.match(/oh=(calf|seal)/) || [])[1]; if (fz){ const u = ns % (OH.DUR + 6); return u < OH.DUR ? { W: 'T' + Math.floor(ns / (OH.DUR + 6)), u, kind: fz } : null; }
+  const h = hash32('oh' + W); if (h % 100 >= 45) return null; const st = W * OH.WIN + 60 + Math.floor(h / 100) % (OH.WIN - OH.DUR - 120), u = ns - st; return u >= 0 && u < OH.DUR ? { W, u, kind: Math.floor(h / 7) % 2 ? 'calf' : 'seal' } : null; }
+function ohNext(ms){ const ns = ms / 1000, W0 = Math.floor(ns / OH.WIN); for (let W = W0; W < W0 + 12; W++){ const h = hash32('oh' + W); if (h % 100 >= 45) continue; const st = W * OH.WIN + 60 + Math.floor(h / 100) % (OH.WIN - OH.DUR - 120); if (st > ns) return st * 1000; } return null; }
+function ohFit(m, len){ const b = new THREE.Box3().setFromObject(m), L = Math.max(0.01, b.max.x - b.min.x), k = len / L; m.scale.multiplyScalar(k); m.rotation.order = 'YXZ'; m.userData.oy = (b.max.y + b.min.y) / 2 * k; return (b.max.y - b.min.y) * k / 2; }   /* 回傳半個身高；oy＝模型中心離原點多高（有的模型原點不在正中間） */
+function ohBuild(P){ const e = { W: P.W, kind: P.kind, g: new THREE.Group(), orcas: [], ev: {} };
+  for (let i = 0; i < 3; i++){ const m = fishModel(FISH_BY_ID.orca, 1), hh = ohFit(m, i === 0 ? 7.2 : 6.2); e.g.add(m); e.orcas.push({ m, hh, ph: i * 2.094 }); }
+  const mkH = len => { let m = null; try { if (MFISH.geo.humpback){ m = new THREE.Group(); m.userData.mf = MFISH.of.humpback || (MFISH.of.humpback = { k:'humpback', albino:false }); mfishFill(m); m.userData.tail = new THREE.Object3D(); } } catch(er){ m = null; } if (!m) m = fishModel(FISH_BY_ID.whale, 1); const hh = ohFit(m, len); e.g.add(m); return { m, hh, L: len }; };
+  e.mom = mkH(13.5); if (P.kind === 'calf') e.calf = mkH(5.2);
+  else { const fl = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.3, 0.34, 8), mat('#f2f8fc', 0.6)); fl.scale.z = 0.8; e.g.add(fl); e.floe = fl;
+    const se = new THREE.Group(), sm = mat('#7a7f86', 0.6), b = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 4, 10), sm); b.rotation.z = Math.PI / 2; b.position.y = 0.32; se.add(b); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), sm); hd.position.set(0.55, 0.45, 0); se.add(hd); for (const ez of [-0.08, 0.08]) se.add(box([0.04, 0.04, 0.04], '#111', [0.74, 0.5, ez])); fl.add(se); se.position.y = 0.2; e.seal = se; e.sealHd = hd; }
+  scene.add(e.g); return e; }
+function ohClear(){ const e = OH.e; if (!e) return; scene.remove(e.g); OH.e = null; }   /* 魚的形狀是共用的快取，不能在這裡釋放 */
+function ohOnce(e, key, fn){ if (e.ev[key]) return; e.ev[key] = 1; try { fn(); } catch(er){} }
+function ohTick(dt){ const ms = bossNow(), P = ohPlan(ms), dC = Math.hypot(me.pos.x - OH.x, me.pos.z - OH.z), hide = House.on || inIndoor() || Dive.on || onIsle;
+  if (!P || dC > 190 || hide){ if (OH.e) ohClear(); return; }
+  if (OH.e && OH.e.W !== P.W) ohClear(); if (!OH.e){ try { OH.e = ohBuild(P); } catch(er){ console.warn('ohBuild', er); return; } }
+  const e = OH.e, u = P.u, tn = now(), near = dC < 110, cx = OH.x, cz = OH.z, calf = P.kind === 'calf';
+  /* 座頭鯨：什麼時候到、在做什麼 */
+  const T0 = calf ? 10 : 32, arrive = calf ? 1 : smooth01((u - 8) / 22), hm = 0.6 + u * 0.035, M = e.mom, sY = -M.hh * 0.62;
+  let mx = cx + Math.sin(u * 0.11) * 1.6, mz = cz + Math.cos(u * 0.09) * 1.6, my = sY, roll = 0, pitch = 0, mh = hm;
+  if (!calf){ const fx = cx + 62, fz = cz - 30; mx = fx + (cx + 3.2 - fx) * arrive; mz = fz + (cz - 2.4 - fz) * arrive; if (arrive < 1){ mh = Math.atan2(cx - fx, cz - fz); my = sY - M.L * 0.05 * Math.max(0, Math.sin(u * 0.9)); } else mh = Math.atan2(cx - fx, cz - fz) + (u - 30) * 0.03; }
+  const seg = (a, b) => u >= a && u < b ? smooth01(Math.min(u - a, 2) / 2) * (1 - smooth01((u - b + 2) / 2)) : 0;
+  const pA = seg(T0, T0 + 14), tA = seg(T0 + 16, T0 + 28), pB = seg(T0 + 30, T0 + 40), end = smooth01((u - 100) / 14);
+  const fxm = Math.sin(mh), fzm = Math.cos(mh);
+  const slap = (a, kind) => { const q = u - a - 2; if (q > 0){ const i = Math.floor(q / 2), w = q % 2; if (w < 0.15) ohOnce(e, kind + a + '_' + i, () => { const sx = kind === 'p' ? mx + fzm * M.L * 0.3 : mx - fxm * M.L * 0.45, sz = kind === 'p' ? mz - fxm * M.L * 0.3 : mz - fzm * M.L * 0.45; ripple(sx, sz, kind === 't'); addWave(sx, sz, kind === 't' ? 0.5 : 0.25); spoutAt(sx, 0.2, sz, kind === 't' ? 7 : 5, false); if (near) owSplashSnd(kind === 't', dC); }); return Math.sin(w / 2 * Math.PI * 2); } return 0; };
+  if (pA > 0){ roll = 1.35 * pA + 0.35 * slap(T0, 'p') * pA; } else if (tA > 0){ pitch = -1.22 * tA - 0.25 * slap(T0 + 16, 't') * tA; my = sY - M.L * 0.28 * tA; } else if (pB > 0){ roll = -1.35 * pB - 0.35 * slap(T0 + 30, 'p') * pB; }
+  if (end > 0){ pitch = -1.45 * Math.sin(Math.min(1, end / 0.55) * Math.PI / 2) * (end < 0.9 ? 1 : 1 - (end - 0.9) * 10); my = sY - (end < 0.35 ? 0 : (end - 0.35) / 0.65 * M.L * 0.9); }
+  M.m.position.set(mx, my + 0.12 - (M.m.userData.oy || 0), mz); M.m.rotation.set(roll, mh - Math.PI / 2, pitch); M.m.visible = calf || u > 8;
+  { const bi = Math.floor(u / 9); if (u > (calf ? 2 : 10) && u < 100 && roll === 0 && pitch === 0) ohOnce(e, 'blow' + bi, () => { spoutAt(mx + fxm * M.L * 0.3, 0.4, mz + fzm * M.L * 0.3, 9, false); if (near) owBlowSnd('humpback', dC); }); }
+  if (u > T0 + 42 && u < T0 + 52){ const bi = Math.floor((u - T0 - 42) / 2.5); ohOnce(e, 'trump' + bi, () => { spoutAt(mx + fxm * M.L * 0.3, 0.4, mz + fzm * M.L * 0.3, 12, true); if (near){ owBlowSnd('bluewhale', dC); owSong(clamp(1 - dC / 110, 0.2, 0.7)); } }); }   /* 大聲噴氣、吼叫 */
+  if (e.calf){ const C = e.calf, side = pA > 0 ? -1 : 1, kx = mx + fzm * 2.6 * side - fxm * 1.2, kz = mz - fxm * 2.6 * side - fzm * 1.2; C.x = C.x == null ? kx : C.x + (kx - C.x) * Math.min(1, dt * 1.5); C.z = C.z == null ? kz : C.z + (kz - C.z) * Math.min(1, dt * 1.5);
+    const cy = -C.hh * 0.6 - 0.25 * Math.max(0, Math.sin(u * 1.4)) - end * 4; C.m.position.set(C.x, cy + 0.12 - (C.m.userData.oy || 0), C.z); C.m.rotation.set(0, mh - Math.PI / 2 + Math.sin(u * 0.8) * 0.15, -0.1 * Math.cos(u * 1.4)); ohOnce(e, 'cb' + Math.floor(u / 6), () => { if (u < 100) spoutAt(C.x + fxm * 1.6, 0.3, C.z + fzm * 1.6, 4, false); }); }
+  if (e.floe){ const rock = (u < T0 + 44 ? 0.05 + 0.11 * Math.max(0, Math.sin((u - 9) / 11 * Math.PI * 2)) : 0.03); e.floe.position.set(cx, WATER_LEVEL + 0.06 + Math.sin(tn * 1.3) * 0.03, cz); e.floe.rotation.set(Math.sin(tn * 2.1) * rock, 0.4, Math.cos(tn * 1.7) * rock);
+    e.seal.rotation.y = u < T0 + 44 ? Math.sin(tn * 2.6) * 0.5 : Math.sin(tn * 0.6) * 0.15; e.sealHd.position.y = 0.45 + (u < T0 + 44 ? Math.abs(Math.sin(tn * 5)) * 0.06 : 0);   /* 緊張地左看右看 */
+    if (u > 9 && u < T0) ohOnce(e, 'wash' + Math.floor((u - 9) / 11), () => { addWave(cx, cz, 0.4); ripple(cx + 2, cz, true); }); }
+  /* 虎鯨：繞圈 → 被拍水逼退 → 再靠近 → 放棄游走 */
+  const scare = Math.max(pA, tA, pB), leave = smooth01((u - (T0 + 46)) / 10), R0 = 12 - 5.5 * smooth01(u / 20) + scare * 6.5 + leave * 4;
+  e.orcas.forEach((o, i) => { const om = 0.34 - 0.1 * leave, a = o.ph + u * om + Math.sin(u * 0.3 + i) * 0.25; let ox = cx + Math.cos(a) * R0, oz = cz + Math.sin(a) * R0, oh = Math.atan2(-Math.sin(a), Math.cos(a));
+    if (leave >= 1){ const q = u - (T0 + 56), a1 = o.ph + (T0 + 56) * om, d = q * 4.2; if (o.lx == null){ o.lx = cx + Math.cos(a1) * R0; o.lz = cz + Math.sin(a1) * R0; } const hx = -0.9, hz = 0.44 - i * 0.2, hl = Math.hypot(hx, hz); ox = o.lx + hx / hl * d - i * 3 * Math.min(1, q / 4); oz = o.lz + hz / hl * d + i * 2.4 * Math.min(1, q / 4); oh = Math.atan2(hx, hz); }
+    const por = Math.sin(u * 1.5 + i * 2.2), oy = -o.hh * 0.62 - 0.6 * Math.max(0, -por) - (leave >= 1 ? Math.max(0, u - (T0 + 66)) * 0.5 : 0);
+    o.m.position.set(ox, oy + 0.12 - (o.m.userData.oy || 0), oz); o.m.rotation.set(0, oh - Math.PI / 2, 0.14 * Math.cos(u * 1.5 + i * 2.2)); o.m.visible = oy > -8;
+    if (por > 0.95 && u < T0 + 62) ohOnce(e, 'ob' + i + '_' + Math.floor((u * 1.5 + i * 2.2) / 6.283), () => { spoutAt(ox, 0.3, oz, 4, false); if (near && Math.random() < 0.4) owBlowSnd('dolphin', dC); }); });
+  /* 給在附近的人的說明 */
+  if (near && !Dive.on){ const k = e.W + ':'; const say = (id, msg, f) => { if (OH.told[k + id]) return; OH.told[k + id] = 1; f ? flash(msg, 2.8) : toast(msg); };
+    if (u < T0 - 2) say('a', calf ? '🐋 流冰外面有三隻虎鯨，圍著一對座頭鯨母子！' : '🐋 流冰外面有三隻虎鯨，繞著浮冰上的海豹轉！', true);
+    if (!calf && u > 10 && u < 30) say('b', '🐋 遠處有座頭鯨噴氣……牠朝這邊游過來了');
+    if (u > T0 && u < T0 + 40) say('c', calf ? '💦 座頭鯨媽媽把小鯨護在身邊，用胸鰭和尾巴拍水趕虎鯨' : '💦 座頭鯨擋在海豹和虎鯨中間，用胸鰭和尾巴拍水');
+    if (u > T0 + 56 && u < 110){ say('d', calf ? '🐋 虎鯨放棄了，母子平安' : '🐋 虎鯨放棄了，海豹得救了', true); if (!LS.get('tide.orcaHunt', false)){ LS.set('tide.orcaHunt', true); setTimeout(() => toast('🏅 你親眼看到座頭鯨趕走虎鯨！'), 3200); } } } }
 function tyTick(ms, dt, t){ const ty = tyAt(ms), ph = ty ? ty.phase : null, prev = Env.tyPh || null; Env.ty = ty;
   if (ph !== prev){ Env.tyPh = ph; const first = Env.tyInit !== 1; Env.tyInit = 1;
     if (ph === 'pre') ticker(`🌀 <b>颱風警報</b>：颱風大約 ${Math.max(1, Math.ceil((ty.land - ms) / 60000))} 分鐘後登陸潮汐村！風浪變大了，魚咬得特別兇。登陸後不能開船、潛水。`);
@@ -9215,7 +9270,7 @@ function tyTick(ms, dt, t){ const ty = tyAt(ms), ph = ty ? ty.phase : null, prev
 function updateEnv(dt, t){
   const ms = Date.now(); Env.tide = tideNow(ms);
   const wx = (location.hash.match(/wx=(\w+)/) || [])[1]; Env.wx = WEATHERS[wx] ? wx : weatherAt(ms);
-  const W = WEATHERS[Env.wx]; try { tyTick(ms, dt, t); } catch(e){} try { resTick(dt); } catch(e){}
+  const W = WEATHERS[Env.wx]; try { tyTick(ms, dt, t); } catch(e){} try { resTick(dt); } catch(e){} try { ohTick(dt); } catch(e){}
   if (Env.lastWx !== Env.wx){ if (Env.lastWx){ if (!/^ty/.test(Env.wx)) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); } else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
       const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { try { SFX.click(); } catch(e){} tideCard(); }); }
     Env.lastWx = Env.wx; }
@@ -9385,6 +9440,7 @@ const spotDone = id => FISH.filter(f => f.spot === id).every(f => rec.count[f.id
 const STORY_WHO_A = { chief:'阿土伯', ling:'阿綾', mu:'阿木', fu:'阿福', gang:'老港' };   /* v330 村民的故事：讀完 5 章得到稱號 */
 const ACH = [
   { id:'mug', icon:'👁️', name:'與座頭鯨對望', desc:'划船停在外海，讓好奇的座頭鯨游過來看你', cur:() => { try { return LS.get('tide.mugged', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
+  { id:'orcahunt', icon:'🛡️', name:'海上的保鑣', desc:'在流冰海岸看到虎鯨圍獵，座頭鯨把牠們趕走', cur:() => { try { return LS.get('tide.orcaHunt', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
   { id:'whalesleep', icon:'💤', name:'鯨群的午睡', desc:'在外海看到抹香鯨漂在水面休息時潛下去，看到一整群直立睡覺的抹香鯨', cur:() => { try { return LS.get('tide.whaleSleep', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
   { id:'seasight', icon:'🐋', name:'海上目擊者', desc:'划船在外海遇過海豚、座頭鯨、藍鯨、抹香鯨', cur:() => { try { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a.length : 0; } catch(e){ return 0; } }, goal:4 },
   { id:'sight', icon:'🔭', name:'深海目擊者', desc:'開潛水艇看過全部 5 種深海相遇', cur:() => { try { return subSeen().length; } catch(e){ return 0; } }, goal:5 },
@@ -17410,6 +17466,7 @@ function renderTab(){
       '🐋 藍鯨：每小時有一分半鐘會浮到神秘島礁岩外，所有人同時看得到。牠會連續噴好幾口又直又高的水柱、偶爾側身衝向一團磷蝦吞下去，靠近還聽得到鯨歌。藍鯨浮上來的這一分半鐘，在港口外海釣到藍鯨（和超稀有的白化藍鯨）的機率是平常的 5 倍。',
       '🤿 在外海潛水，偶爾會有巨大的藍鯨從頭頂慢慢游過。座頭鯨也會在遠處浮上來噴水。',
       '🦀 螃蟹、龍蝦的腳會一隻一隻輪流動；章魚的八隻腳會一波一波地扭。',
+      '🛡️ 虎鯨和座頭鯨：流冰海岸（冰封群島西邊）的流冰外面，大約每一個多小時會有三隻虎鯨來圍獵，一次兩分鐘左右，站在流冰釣點的岸邊就看得到。有時候牠們圍的是一對座頭鯨母子，媽媽會把小鯨護在身邊，用胸鰭和尾巴拍水把虎鯨趕走；有時候圍的是浮冰上的海豹，會有座頭鯨從遠處趕過來擋在中間。這是真的會發生的事：虎鯨會獵座頭鯨的幼鯨，而成年座頭鯨是少數敢反過來趕虎鯨的動物。最後虎鯨都會放棄，沒有動物受傷。大家看到的是同一場。',
       '💤 睡覺的抹香鯨群：划船在外海看到抹香鯨漂在水面休息（或「🤿 下潛」按鈕旁邊出現 💤🐋）時潛下去，會看到一整群抹香鯨頭朝上、直直立在水裡睡覺。牠們會輪流浮上去換氣，大約幾分鐘後一隻一隻醒來游走。貼到牠身上、或在旁邊游很快會把那一隻吵醒；搖桿輕輕推、漂著看就不會。可以開相機拍下來，一起潛的朋友看到的是同一群。',
       '🦑 在沉船深海潛水，偶爾會目擊抹香鯨和大王魷魚纏鬥（真的抹香鯨身上常有魷魚吸盤留下的圓形疤痕，遊戲裡的抹香鯨也有）。',
       '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
