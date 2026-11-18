@@ -248,6 +248,7 @@ begin
   begin if rs is null and random() < 0.5 and public._mastery3(pl.id, pick) then fw := greatest(fw, round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), 1.3))::numeric, 2)); end if; exception when undefined_function then null; end;   -- 114 三顆星的魚：大尺寸機率小幅提高
   if rs is not null then fw := public._rs_w(rsh); end if;
   gpv := case when pick in ('guppy', 'guppy_albino') then public._gpy_wild() end;
+  perform set_config('tide.bait', case when bait is not null then coalesce(p_bait, '') else '' end, true);   -- 193 這一竿用的魚餌：casts 的觸發器要看（草魚只吃玉米粒、麵包糰）
   insert into public.casts (uid, spot, fish, w, rs, sex, brood, gp, at, shown_at) values (pl.id, p_spot, pick, fw, rs, sx, brood, gpv, now(), null)
   on conflict (uid) do update set spot = excluded.spot, fish = excluded.fish, w = excluded.w, rs = excluded.rs, sex = excluded.sex, brood = excluded.brood, gp = excluded.gp, at = excluded.at, shown_at = null;
   update public.players set cast_fish = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null, cast_gp = null, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()

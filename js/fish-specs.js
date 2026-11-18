@@ -837,6 +837,53 @@ Object.assign(SPECS, {
   koi_fuku: VAR('koi', { Top:'#d8231c', Bottom:'#e83a2a', Accent:'#ffd36a', Fins:'#f2c040' }, { pat:[{ k:'ell', t:0.1, y:0.7, rt:0.07, ry:0.45, part:'Accent' }, { k:'ell', t:0.5, y:0.8, rt:0.12, ry:0.3, part:'Accent' }] }, { glow:true }),
 });
 
+/* ---------------- v561 新魚（作者 11/18：「你不能做的更精緻一點嗎，連眼睛都沒有」→ 新魚一律寫外形參數，不再拿舊的簡單模型拉長） ---------------- */
+Object.assign(SPECS, {
+  // 沙鮻 Sillago sihama：細長圓筒身、尖吻；背沙黃、身體銀白；第一背鰭高而尖、第二背鰭和臀鰭又長又低；尾鰭淺凹
+  whiting: { c:{ Top:'#b7aa7e', Mid:'#e4e0cc', Bottom:'#f8f8f2', Stripes:'#cfc08a', Fins:'#e6e0c2', Fins2:'#efe2a0', Eye:'#15181c', EyeW:'#f2f0e2' }, p:{
+    bl:0.86, depth:0.16, wr:0.78, tm:0.33, nose:1.25, ped:0.2, cs:0.2, up:[[0,0.18],[0.1,0.58],[0.3,1],[0.6,0.8],[1,0.3]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.4, y1:0.3, part:'Mid' }, { k:'bars', bars:[[0.16, 0.95, 0.04, 0.1]], part:'Stripes' }],
+    dorsal:[{ s:0.3, e:0.43, h:0.55, shape:'spiny', back:0.3 }, { s:0.46, e:0.82, h:0.26, shape:'flat' }], anal:{ s:0.5, e:0.82, h:0.2, part:'Fins2' },
+    pect:{ t:0.24, y:-0.1, size:0.36 }, pelv:{ t:0.28, size:0.28, part:'Fins2' }, caudal:{ type:'emarginate', hk:1.2 }, eye:EYE(0.085, 0.32, 0.1, { ring:true }) } },
+  // 潮池蝦虎（深鰕虎類 Bathygobius）：頭大而鈍、眼睛在頭頂；沙褐色身體上有深色雲斑；兩個背鰭、扇形大胸鰭、圓尾
+  tidegoby: { c:{ Top:'#a8966a', Mid:'#ccb88a', Bottom:'#f0e8d0', Spots:'#5e5038', Stripes:'#86744e', Fins:'#a89870', Fins2:'#c8b890', Eye:'#15181c', EyeW:'#d8c898' }, p:{
+    bl:0.85, depth:0.2, wr:0.95, tm:0.3, nose:0.35, ped:0.32, n:1.9, cs:0.0, up:[[0,0.6],[0.08,0.92],[0.22,1],[0.6,0.78],[1,0.45]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.55, y1:0.2, part:'Mid' }, { k:'bars', bars:BARS(5, 0.24, 0.86, 0.07, 0.1, 1.1), part:'Stripes' }, { k:'spots', gt:0.09, gy:0.42, r:0.03, ar:5, t0:0.1, t1:0.92, y0:-0.5, y1:0.3, part:'Spots', fill:0.45 }],
+    dorsal:[{ s:0.3, e:0.44, h:0.48, shape:'round', part:'Fins2' }, { s:0.5, e:0.8, h:0.38, shape:'flat', part:'Fins2' }], anal:{ s:0.56, e:0.8, h:0.26 },
+    pect:{ t:0.22, y:-0.4, size:0.65, shape:'round' }, pelv:{ t:0.26, size:0.42, shape:'round' }, caudal:{ type:'rounded', hk:1.15 }, eye:EYE(0.075, 0.6, 0.1, { ring:true }) } },
+  // 點帶石斑幼魚 Epinephelus coioides（幼魚）：比成魚修長一點；黃褐色底、全身橘褐色小圓點，身上幾道斜斜的深色寬帶
+  groupie: { c:{ Top:'#9a7e52', Mid:'#c8ac78', Bottom:'#efe4c4', Spots:'#b8743a', Stripes:'#7a5e3a', Fins:'#a88a58', Eye:'#15181c', EyeW:'#d8b868' }, p:{
+    bl:0.8, depth:0.31, wr:0.62, tm:0.35, nose:0.65, ped:0.3, cs:0.2, yc:[[0,-0.15],[0.2,0],[1,0]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, { k:'bars', bars:BARS(4, 0.3, 0.84, 0.09, -0.2, 1.1), part:'Stripes' }, { k:'spots', gt:0.07, gy:0.36, r:0.026, ar:6, t0:0.08, t1:0.95, y0:-0.7, y1:0.95, part:'Spots', fill:0.8 }],
+    dorsal:[{ s:0.3, e:0.6, h:0.3, shape:'spiny', back:0.9 }, { s:0.6, e:0.82, h:0.36, shape:'round' }], anal:{ s:0.64, e:0.8, h:0.33, shape:'round' },
+    pect:{ t:0.3, y:-0.3, size:0.5, shape:'round' }, pelv:{ t:0.34, size:0.35 }, caudal:{ type:'rounded', hk:1.0 }, eye:EYE(0.1, 0.45, 0.075, { ring:true }) } },
+  // 攀鱸 Anabas testudineus：長橢圓、頭大；橄欖褐色，鰓蓋後面和尾柄各有一個黑斑；背鰭很長、前面全是硬棘；圓尾。下雨天會撐著鰓蓋和胸鰭爬上岸
+  climbperch: { c:{ Top:'#7a7e4e', Mid:'#b0ac6c', Bottom:'#e8e2b8', Spots:'#1c1c14', Stripes:'#6a6c40', Fins:'#8a8a52', Fins2:'#c0a45a', Eye:'#15181c', EyeW:'#e0b85a' }, p:{
+    bl:0.8, depth:0.33, wr:0.6, tm:0.36, nose:0.5, ped:0.42, cs:0.2, up:[[0,0.3],[0.1,0.75],[0.3,1],[0.7,0.85],[1,0.5]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }, { k:'wave', f:60, fy:8, t0:0.2, t1:0.92, y0:-0.5, y1:0.9, th:0.88, part:'Stripes' }, { k:'ell', t:0.24, y:0.15, rt:0.022, ry:0.14, part:'Spots' }, { k:'ell', t:0.93, y:0.0, rt:0.03, ry:0.3, part:'Spots' }],
+    dorsal:[{ s:0.28, e:0.68, h:0.24, shape:'spiny', back:0.95 }, { s:0.68, e:0.84, h:0.34, shape:'round' }], anal:{ s:0.5, e:0.84, h:0.26, shape:'round', part:'Fins2' },
+    pect:{ t:0.27, y:-0.25, size:0.48, shape:'round', part:'Fins2' }, pelv:{ t:0.3, size:0.32, part:'Fins2' }, caudal:{ type:'rounded', hk:1.05, part:'Fins2' }, eye:EYE(0.09, 0.4, 0.09, { ring:true }) } },
+  // 草魚 Ctenopharyngodon idella：長圓筒身、頭寬而平、沒有鬚；背橄欖綠、體側金黃，每一片大鱗片邊緣深色像網子；背鰭短、尾鰭深叉
+  grasscarp: { c:{ Top:'#6a7644', Mid:'#c8b860', Bottom:'#f4f0d8', Stripes:'#8a8648', Fins:'#5a5a3a', Fins2:'#7a7248', Eye:'#15181c', EyeW:'#e8d070' }, p:{
+    bl:0.84, depth:0.21, wr:0.82, tm:0.36, nose:0.55, ped:0.3, n:2.2, cs:0.3, up:[[0,0.35],[0.1,0.75],[0.3,1],[0.7,0.75],[1,0.32]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.35, part:'Mid' }, { k:'wave', f:46, fy:6, t0:0.16, t1:0.95, y0:-0.65, y1:0.95, th:0.8, part:'Stripes' }],
+    dorsal:{ s:0.44, e:0.58, h:0.4, shape:'tri', peak:0.25 }, anal:{ s:0.72, e:0.8, h:0.26, part:'Fins2' }, pect:{ t:0.24, y:-0.5, size:0.42, part:'Fins2' }, pelv:{ t:0.48, size:0.32, part:'Fins2' },
+    caudal:{ type:'forked', notch:0.5, hk:1.3 }, eye:EYE(0.075, 0.2, 0.07, { ring:true }) } },
+  // 護士鯊 Ginglymostoma cirratum：頭寬而圓、嘴在頭下面、嘴邊兩條短鬚；兩個圓圓的背鰭都很後面、大小差不多；尾鰭長而低；全身黃褐色
+  nurseshark: { c:{ Top:'#a88a5c', Mid:'#c0a474', Bottom:'#f4ecd4', Accent:'#7a6240', Gill:'#7a6444', Fins:'#9a7e52', Eye:'#15181c', EyeW:'#d8c8a0' }, p:{
+    bl:0.74, depth:0.19, wr:1.05, tm:0.3, nose:0.38, ped:0.2, n:2.1, cs:-0.1, yc:[[0,0.05],[0.12,0],[1,0.1]], up:[[0,0.5],[0.08,0.85],[0.25,1],[0.6,0.8],[1,0.4]],
+    pat:[{ k:'band', t0:0.1, t1:0.9, y0:-0.4, y1:-0.05, part:'Mid' }, GILLS(0.2)],
+    dorsal:[{ s:0.5, e:0.64, h:0.5, shape:'round' }, { s:0.7, e:0.82, h:0.42, shape:'round' }], anal:{ s:0.8, e:0.88, h:0.24, shape:'round' },
+    pect:{ t:0.24, y:-0.75, size:1.0, shape:'round', ang:-0.5, out:0.6, w:0.5 }, pelv:{ t:0.56, size:0.45, shape:'round' }, caudal:{ type:'hetero', hk:1.15 }, eye:EYE(0.085, 0.3, 0.03, { ring:true }),
+    extra:[{ k:'limb', sym:true, pts:[{ t:0.025, yn:-0.75, z:0.045 }, { x:0.715, y:-0.065, z:0.055 }, { x:0.705, y:-0.085, z:0.06 }], r0:0.008, r1:0.004, part:'Accent' }] } },
+  // 拉氏清溪蟹 Candidiopotamon rathbunae：台灣特有的淡水蟹；圓圓的紫褐色殼、橘紅色的螯和腳尖，右螯比較大
+  creekcrab: { gen:'crab', c:{ Top:'#8a5a6a', Bottom:'#f0e2cc', Spots:'#a87480', Fins:'#d07a4a', Claw:'#f08a48', Eye:'#141418' }, move:'vert', p:{
+    cd:0.27, cr:0.29, ch:0.15, pairs:4, span:0.6, legR:0.026, eyeH:0.07, spots:4, claw:{ size:0.7, right:1.5 },
+    shell:v => [v[0] * 1.02, v[1] * 1.05, v[2] * 0.98] } },
+});
+// 黃化護士鯊：2024 年在哥斯大黎加真的記錄到的個體，全身金橘色、眼睛幾乎是白的
+SPECS.nurseshark_xanthic = VAR('nurseshark', { Top:'#f6a640', Mid:'#fbc066', Bottom:'#fff0cc', Accent:'#e89030', Gill:'#e08a2a', Fins:'#f29a3a', Eye:'#f2efe6', EyeW:'#ffffff' });
+
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {
@@ -852,6 +899,7 @@ const MOUTH = {
   puffer:{ t:0.025, y:-0.05, th:1.4 }, parrot:{ t:0.035, y:-0.1, th:1.6, part:'EyeW' }, sunfish:{ t:0.03, y:-0.05, open:0.4 }, milkfish:{ t:0.035, y:-0.15 }, mullet:{ t:0.035, y:-0.2 },
   mudskipper:{ t:0.06, y:-0.35, th:1.2 }, bigskipper:{ t:0.06, y:-0.35, th:1.2 }, anchovy:{ type:'sub', t:0.09, y:-0.4, t0:0.02 }, loach:{ type:'sub', t:0.05, y:-0.6, t0:0.02 },
   hillstream:{ type:'sub', t:0.06, y:-0.8, t0:0.05 }, salmon:{ t:0.08, y:-0.15 }, trout:{ t:0.08, y:-0.15 }, ayu:{ t:0.06, y:-0.2 }, tilapia:{ t:0.05, y:-0.1, lip:'Mid' }, bonito:{ t:0.06, y:-0.15 },
+  whiting:{ t:0.045, y:-0.3 }, tidegoby:{ t:0.08, y:-0.3, th:1.2 }, groupie:{ t:0.1, y:-0.15, th:1.3 }, climbperch:{ t:0.06, y:-0.1 }, grasscarp:{ t:0.045, y:-0.15 }, nurseshark:{ type:'sub', t:0.1, y:-0.7, t0:0.03 }, nurseshark_xanthic:{ type:'sub', t:0.1, y:-0.7, t0:0.03 },
   mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 }, sicyo:{ type:'sub', t:0.06, y:-0.55, t0:0.03 }, eleotris:{ t:0.1, y:-0.05, open:0.25 }, kuhlia:{ t:0.06, y:-0.1 },
   dolphin:{ t:0.11, y:-0.3, th:1.1 }, orca:{ t:0.13, y:-0.3, th:1.2 }, beluga:{ t:0.08, y:-0.25 }, sperm:{ type:'sub', t:0.24, y:-0.65, t0:0.04, th:1.3 }, whale:{ t:0.2, y:-0.2, th:1.4 }, bluewhale:{ t:0.2, y:-0.2, th:1.4 }, bluewhale_albino:{ t:0.2, y:-0.2, th:1.4 },
 };
