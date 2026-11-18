@@ -9169,6 +9169,35 @@ async function tyPick(){ const it = tyNearItem(), gb = $('#gatherBtn'); if (!it 
   if (!Cloud.on || !Cloud.sb){ take(); flash(`${N[0]} 撿到${N[1]}！`, 1.4); done(); return; }
   try { const { data, error } = await Cloud.sb.rpc('typhoon_pick', { p_i: it.i }); if (error) throw error; adoptRow(data.player); take(); SFX.catch(); flash(`${N[0]} 撿到${N[1]}！${data.coins ? '🪙+' + data.coins : ''}${data.love ? '💙+' + data.love : ''}`, 1.8); const left = TY.items.filter(o => !TY.picked.has(o.i)).length; if (!left) setTimeout(() => toast('🌈 這次颱風沖上來的東西你都撿完了！'), 1900); }
   catch(e){ const em = cloudErrMsg(e); toast(em); if (/撿過/.test(em)) take(); } done(); }
+/* ================= v569 🏘️ 居民區是村民的家（作者 11/18：「居民區是專門給 NPC 住的」） =================
+   以前那八棟只是佈景，村民的家還設在地圖改版前的舊位置（走到空地上「回家」）。伺服器 197 把五個家搬到居民區的門口。
+   這裡做看得到的部分：每一棟門口一塊門牌、一盞門燈。門燈晚上亮＝屋主在家（照伺服器的作息算，大家看到的一樣）；人還沒回來就是暗的。
+   沒連線的時候不知道作息：晚上有住人的都亮。空屋不亮。 */
+const RES_HOMES = [{ id:'home_chief', who:'chief', name:'村長家', x:-53, z:16 }, { id:'home_ling', who:'ling', name:'阿綾家', x:-41, z:16 }, { id:'home_mu', who:'mu', name:'阿木家', x:-53, z:24 }, { id:'home_fu', who:'fu', name:'阿福家', x:-41, z:24 },
+  { id:'home_gang', who:'gang', name:'老港家', x:-53, z:32 }, { id:null, who:null, name:'空屋', x:-41, z:32 }, { id:null, who:null, name:'空屋', x:-53, z:40 }, { id:null, who:null, name:'空屋', x:-41, z:40 }];
+const RES = { built:false, at:0 };
+function resBuild(){ RES.built = true; const g = new THREE.Group();
+  for (const H of RES_HOMES){ const s = H.x < -47 ? 1 : -1, px = H.x + s * 3.0, y = groundHeight(px, H.z);   /* 新美術的房子有遮雨棚，往巷子挪出來一點才不會被擋住 */
+    /* 門牌：門的一邊一根小木樁、一塊木牌 */
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = H.who ? '#f4e6c4' : '#d8d4c8'; c.fillRect(0, 0, 256, 96); c.strokeStyle = '#6e4a2f'; c.lineWidth = 8; c.strokeRect(4, 4, 248, 88);
+    c.fillStyle = H.who ? '#4a3220' : '#8a8478'; c.font = '700 46px "Noto Sans TC", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(H.name, 128, 50);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+    const post = box([0.09, 1.15, 0.09], '#7a5a3c', [px, y + 0.575, H.z + 1.25]); g.add(post);
+    const bd = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.34, 0.9), [new THREE.MeshLambertMaterial({ map: tx, emissive:'#ffffff', emissiveMap: tx, emissiveIntensity:0.4 }), new THREE.MeshLambertMaterial({ map: tx, emissive:'#ffffff', emissiveMap: tx, emissiveIntensity:0.4 }), mat('#7a5a3c'), mat('#7a5a3c'), mat('#7a5a3c'), mat('#7a5a3c')]); bd.position.set(px + s * 0.06, y + 1.02, H.z + 1.25); g.add(bd);
+    /* 門燈：門的另一邊一根燈柱 */
+    g.add(box([0.07, 1.7, 0.07], '#3a3a40', [px, y + 0.85, H.z - 1.25]));
+    const bm = new THREE.MeshStandardMaterial({ color:'#fff3c8', emissive:'#ffb648', emissiveIntensity:0, roughness:0.4 }), bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), bm); bulb.position.set(px, y + 1.78, H.z - 1.25); g.add(bulb);
+    g.add(box([0.3, 0.05, 0.3], '#3a3a40', [px, y + 1.94, H.z - 1.25]));
+    const gl = new THREE.Mesh(new THREE.CircleGeometry(1.9, 20), new THREE.MeshBasicMaterial({ color:'#ffc870', transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending })); gl.rotation.x = -Math.PI / 2; gl.position.set(px + s * 0.5, y + 0.04, H.z - 0.6); gl.renderOrder = 2; g.add(gl);
+    H.bm = bm; H.gl = gl; H.lit = 0; H.door = [px + s * 0.3, H.z];
+    try { addCircleCol(px, H.z + 1.25, 0.12); addCircleCol(px, H.z - 1.25, 0.12); } catch(e){} }
+  scene.add(g); RES.g = g; }
+function resHomeIn(H){ if (!H.who) return false; if (H.who === 'chief') return true;   /* 村長要發任務，人一直在廣場（v250），家裡的燈晚上照樣留著 */ const r = World.rows && World.rows[H.who]; if (!Cloud.on || !r) return true;   /* 沒連線：不知道作息，當成在家 */
+  return r.place === H.id && (r.act === 'sleep' || r.act === 'rest') && (r.from === r.place || worldNow() >= Date.parse(r.arr)); }
+function resTick(dt){ if (!RES.built){ if (frameNo < 40) return; try { resBuild(); } catch(e){ RES.built = true; console.warn('resBuild', e); return; } }
+  if (!RES.g) return; const show = !House.on && !inIndoor() && !Dive.on && !onIsle; if (RES.g.visible !== show) RES.g.visible = show; if (!show) return;
+  const night = DayNight.lamp || 0;
+  for (const H of RES_HOMES){ if (!H.bm) continue; const want = night > 0.25 && resHomeIn(H) ? 1 : 0; H.lit += (want - H.lit) * Math.min(1, dt * 2); H.bm.emissiveIntensity = H.lit * 1.6; H.gl.material.opacity = H.lit * 0.22; H.gl.visible = H.lit > 0.02; } }
 function tyTick(ms, dt, t){ const ty = tyAt(ms), ph = ty ? ty.phase : null, prev = Env.tyPh || null; Env.ty = ty;
   if (ph !== prev){ Env.tyPh = ph; const first = Env.tyInit !== 1; Env.tyInit = 1;
     if (ph === 'pre') ticker(`🌀 <b>颱風警報</b>：颱風大約 ${Math.max(1, Math.ceil((ty.land - ms) / 60000))} 分鐘後登陸潮汐村！風浪變大了，魚咬得特別兇。登陸後不能開船、潛水。`);
@@ -9186,7 +9215,7 @@ function tyTick(ms, dt, t){ const ty = tyAt(ms), ph = ty ? ty.phase : null, prev
 function updateEnv(dt, t){
   const ms = Date.now(); Env.tide = tideNow(ms);
   const wx = (location.hash.match(/wx=(\w+)/) || [])[1]; Env.wx = WEATHERS[wx] ? wx : weatherAt(ms);
-  const W = WEATHERS[Env.wx]; try { tyTick(ms, dt, t); } catch(e){}
+  const W = WEATHERS[Env.wx]; try { tyTick(ms, dt, t); } catch(e){} try { resTick(dt); } catch(e){}
   if (Env.lastWx !== Env.wx){ if (Env.lastWx){ if (!/^ty/.test(Env.wx)) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); } else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
       const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { try { SFX.click(); } catch(e){} tideCard(); }); }
     Env.lastWx = Env.wx; }
@@ -17414,6 +17443,7 @@ function renderTab(){
       '村子分區：港邊廣場是熱鬧、買賣和出海的地方；島中央的潮汐廣場是大家集合聊天的地方，東邊是村長辦公室（村長阿土伯在門口），外圈有花園和長椅；寵物店後面的森林邊有「🐾 寵物樂園」，帶寵物走進去站著，寵物會自己在裡面跑；南方沙灘可以休息。',
       '一進遊戲會站在「港邊廣場」：中間有噴水池；港口的兩間店（釣具店、潮汐魚市場）圍著廣場，往前走就是碼頭。島中央的「潮汐廣場」是三條大路交會的地方，節慶活動也在那裡。',
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、居民區走細細的小步道；清溪潭（以前的瀑布潭，魚都一樣）搬到河的西岸，過木橋就到。',
+      '🏘️ 居民區是村民住的地方（島的西南）：村長、阿綾、阿木、阿福、老港一人一棟，門口有門牌。他們下班、累了會沿著巷子走回自己家；晚上門口的燈亮著，就是那一家的人在家。還有三棟空屋，留給以後搬來的新村民。玩家的家在自己的小島上。',
       '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 魚市場區（港邊廣場西邊、往港口的大路旁）是潮汐食堂；中央廣場北邊是釣蝦場；🏀 運動公園（島的西南邊，從廣場往西走過鏡湖南岸）有潮汐撞球館（屋頂有一顆黑八的小屋，走進去可以真的打撞球）和體育場的大門，沙灘排球場在東邊沙灘上——走到大門口按按鈕會進到潮汐體育場（跑道、看台，中間是足球場、最西邊是籃球半場、最東邊是羽球場，都可以真的比賽），出口在南邊看台中間；👗 商店街（往南走，過了涼亭兩邊各三間）：西邊是寵物店、阿綾服裝店、阿彩畫廊，東邊是阿木木工坊、阿萍美髮沙龍，最南邊一間是街景的咖啡店。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
