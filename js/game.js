@@ -9752,7 +9752,24 @@ function fbTags(){ const m = SOC.m, on = m.st === 'play'; for (const [k, p] of p
     if (s === 0 || s === 1) p.fisher.nm.dataset.fb = s ? '🔵' : '🔴'; else delete p.fisher.nm.dataset.fb; }
   try { const s = fbMySide(); if (s === 0 || s === 1) me.nm.dataset.fb = s ? '🔵' : '🔴'; else delete me.nm.dataset.fb; } catch(e){} }
 /* ---- 球的物理（每個人的手機算的是同一套） ---- */
-function fbStep(dt){ const b = SOC.b, FW = SOC.FW, FD = SOC.FD; let goal = -1;
+/* v564 作者 11/18：「這些也沒有發角球那些的」→ 球整顆出界就停下來重新開球（照真的足球簡化）：
+   ・出邊線＝界外球：放在出界的那一點，給「不是最後碰球」的那一隊
+   ・出底線（沒進球門）：進攻方最後碰的＝球門球（放在小禁區）；防守方最後碰的＝角球（放在那一邊的角落）
+   ・開球前球不會動，只有拿到球權的那一隊可以碰；8 秒沒人開，誰都可以踢（不會卡住）。沒在比賽的時候也會擺好球，誰都可以踢。
+   ・由負責算球的人（最後碰球的人）判定、送 'o' 給大家；球的訊息裡也帶著，晚進場的人看到的是一樣的 */
+const FB_RS = { throw:['界外球', '🙌'], corner:['角球', '🚩'], gk:['球門球', '🥅'] };
+function fbOutCheck(){ const b = SOC.b, FW = SOC.FW, FD = SOC.FD, R = SOC.R; if (SOC.rs) return null;
+  if (Math.abs(b.z) > FD + R && Math.abs(b.x) <= FW + R) return { k: 'throw', x: clamp(b.x, -FW + 0.3, FW - 0.3), z: Math.sign(b.z) * FD };
+  if (Math.abs(b.x) > FW + R && !(Math.abs(b.z) < SOC.GW && b.y < SOC.GH)) return { k: 'line', x: Math.sign(b.x), z: b.z >= 0 ? 1 : -1 };
+  return null; }
+function fbOut(o){ const m = SOC.m, last = SOC.lastSide; let k = o.k, x = o.x, z = o.z, side = -1;
+  if (k === 'line'){ const def = o.x > 0 ? 1 : 0;   /* 東邊球門是 1 號隊守的 */ if (m.st === 'play' && last === def){ k = 'corner'; side = 1 - def; x = o.x * (SOC.FW - 0.25); z = o.z * (SOC.FD - 0.25); } else { k = 'gk'; side = m.st === 'play' ? def : -1; x = o.x * (SOC.FW - 1.7); z = o.z * 1.1; } }
+  else if (m.st === 'play' && (last === 0 || last === 1)) side = 1 - last;
+  SOC.q++; SOC.own = poolKey(); fbRsSet({ k, side, x, z, q: SOC.q }, true); fbSend(Object.assign(fbBallMsg(), { k: 'o' })); }
+function fbRsSet(rs, tell){ const b = SOC.b; SOC.rs = { k: rs.k, side: rs.side, x: rs.x, z: rs.z, q: rs.q, free: now() + 8 }; b.x = rs.x; b.z = rs.z; b.y = 0; b.vx = b.vz = b.vy = 0;
+  if (tell && inStad()){ const m = SOC.m, N = FB_RS[rs.k], who = m.st === 'play' && rs.side >= 0 ? `${rs.side ? '🔵' : '🔴'} ${(rs.side ? m.b : m.a).n} ` : ''; flash(`${N[1]} ${who}${N[0]}！`, 1.6); try { SFX.tick(); } catch(e){} } }
+function fbRsOk(){ const rs = SOC.rs; if (!rs) return true; const s = fbMySide(); return rs.side < 0 || s === -2 || s === rs.side || now() > rs.free; }
+function fbStep(dt){ const b = SOC.b, FW = SOC.FW, FD = SOC.FD; let goal = -1; if (SOC.rs){ b.x = SOC.rs.x; b.z = SOC.rs.z; b.y = 0; b.vx = b.vz = b.vy = 0; return -1; }
   b.vy -= 14 * dt; b.x += b.vx * dt; b.z += b.vz * dt; b.y += b.vy * dt;
   if (b.y <= 0){ b.y = 0; if (b.vy < -1.2){ b.vy = -b.vy * 0.5; } else b.vy = 0; const k = Math.exp(-0.95 * dt); b.vx *= k; b.vz *= k; const sp = Math.hypot(b.vx, b.vz); if (sp < 0.12){ b.vx = b.vz = 0; } else { const dr = 0.5 * dt / sp; b.vx -= b.vx * Math.min(1, dr); b.vz -= b.vz * Math.min(1, dr); } }
   else { const k = Math.exp(-0.12 * dt); b.vx *= k; b.vz *= k; }
@@ -9763,10 +9780,10 @@ function fbStep(dt){ const b = SOC.b, FW = SOC.FW, FD = SOC.FD; let goal = -1;
   if (Math.abs(b.x) > FW && Math.abs(b.x) < FW + 1.1 && Math.abs(b.z) > SOC.GW - SOC.R && Math.abs(b.z) < SOC.GW + 0.25 && b.y < SOC.GH){ b.vz = -b.vz * 0.5; b.z = Math.sign(b.z) * (Math.abs(b.z) < SOC.GW ? SOC.GW - SOC.R - 0.01 : SOC.GW + 0.26); }   /* 球門側面的網 */
   if (Math.abs(b.z) > FD + 1.1){ b.z = Math.sign(b.z) * (FD + 1.1); b.vz = -b.vz * 0.6; }
   return goal; }
-function fbReset(){ const b = SOC.b; b.x = b.z = b.y = 0; b.vx = b.vz = b.vy = 0; }
-function fbBallMsg(){ const b = SOC.b, r = v => Math.round(v * 100) / 100; return { k: 'b', q: SOC.q, p: [r(b.x), r(b.z), r(b.y)], v: [r(b.vx), r(b.vz), r(b.vy)], h: SOC.hold > now() ? 1 : 0 }; }
-function fbTouch(vx, vz, vy){ const b = SOC.b; SOC.q++; SOC.own = poolKey(); b.vx = vx; b.vz = vz; b.vy = vy; if (b.y < 0.02) b.y = 0.02; SOC.kickAt = now(); SOC.sendAt = 0; const m0 = fbBallMsg(); if (Math.hypot(vx, vz) > 5.5){ m0.kk = 1; sportFx(me, 'kick', 0.42); } fbSend(m0); try { tone(170, 0.06, 'sine', 0.09, 90); } catch(e){} }
-function fbCanPlay(){ const s = fbMySide(); return s !== -1 && SOC.hold <= now() && SOC.m.st !== 'over'; }
+function fbReset(){ const b = SOC.b; b.x = b.z = b.y = 0; b.vx = b.vz = b.vy = 0; SOC.rs = null; SOC.lastSide = -1; }
+function fbBallMsg(){ const b = SOC.b, r = v => Math.round(v * 100) / 100, o = { k: 'b', q: SOC.q, p: [r(b.x), r(b.z), r(b.y)], v: [r(b.vx), r(b.vz), r(b.vy)], h: SOC.hold > now() ? 1 : 0 }; if (SOC.rs) o.rs = [SOC.rs.k, SOC.rs.side]; if (SOC.lastSide === 0 || SOC.lastSide === 1) o.ls = SOC.lastSide; return o; }
+function fbTouch(vx, vz, vy){ const b = SOC.b; SOC.rs = null; { const s = fbMySide(); SOC.lastSide = s === 0 || s === 1 ? s : -1; } SOC.q++; SOC.own = poolKey(); b.vx = vx; b.vz = vz; b.vy = vy; if (b.y < 0.02) b.y = 0.02; SOC.kickAt = now(); SOC.sendAt = 0; const m0 = fbBallMsg(); if (Math.hypot(vx, vz) > 5.5){ m0.kk = 1; sportFx(me, 'kick', 0.42); } fbSend(m0); try { tone(170, 0.06, 'sine', 0.09, 90); } catch(e){} }
+function fbCanPlay(){ const s = fbMySide(); return s !== -1 && SOC.hold <= now() && SOC.m.st !== 'over' && fbRsOk(); }
 function fbShoot(){ if (!inStad() || !fbCanPlay()) return; const b = SOC.b, S = STAD, dx = S.x + b.x - me.pos.x, dz = S.z + b.z - me.pos.z; if (Math.hypot(dx, dz) > 1.9 || b.y > 1.2) return;
   const fx = Math.sin(me.rot), fz = Math.cos(me.rot); fbTouch(fx * 13.5, fz * 13.5, 3.4); }
 /* ---- 比賽 ---- */
@@ -9786,9 +9803,11 @@ function fbGoalApply(side, n){ const m = SOC.m; if (m.st !== 'play' || n !== m.s
 function fbGoalFx(side){ if (!inStad()) return; const m = SOC.m; flash(m.st === 'play' ? `⚽ ${(side ? m.b : m.a).n} 進球！` : '⚽ 進球！', 1.8); try { SFX.coin(); } catch(e){} }
 function fbOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || isBlockedPeer(msg.peer)) return; const d = msg.data, peer = fbStr(d.f, 40) || String(msg.peer || ''), m = SOC.m; if (!peer || peer === poolKey()) return;
   if (d.k === 'q'){ if (SOC.own === poolKey() || (!SOC.own && SOC.q > 0)) setTimeout(() => fbSend(fbBallMsg()), 100 + Math.random() * 200); if (m.st !== 'idle' && m.from === poolKey()) setTimeout(fbMatchSend, 150 + Math.random() * 200); return; }
-  if (d.k === 'b'){ const q = Math.floor(+d.q); if (!isFinite(q) || !Array.isArray(d.p) || !Array.isArray(d.v) || d.p.length !== 3 || d.v.length !== 3 || ![...d.p, ...d.v].every(isFinite)) return;
+  if (d.k === 'b' || d.k === 'o'){ const q = Math.floor(+d.q); if (!isFinite(q) || !Array.isArray(d.p) || !Array.isArray(d.v) || d.p.length !== 3 || d.v.length !== 3 || ![...d.p, ...d.v].every(isFinite)) return;
     if (q < SOC.q || (q === SOC.q && SOC.own && peer !== SOC.own && !(peer < SOC.own))) return; if (q === SOC.q && SOC.own === poolKey() && !(peer < poolKey())) return;
-    const b = SOC.b; SOC.q = q; SOC.own = peer; SOC.rxAt = now(); b.x = clamp(+d.p[0], -16, 16); b.z = clamp(+d.p[1], -10, 10); b.y = clamp(+d.p[2], 0, 12); b.vx = clamp(+d.v[0], -25, 25); b.vz = clamp(+d.v[1], -25, 25); b.vy = clamp(+d.v[2], -25, 25); if (d.h) SOC.hold = Math.max(SOC.hold, now() + 0.4); if (d.kk){ try { sportFx(bkFisher(peer), 'kick', 0.42); } catch(e){} } return; }
+    const b = SOC.b; SOC.q = q; SOC.own = peer; SOC.rxAt = now(); b.x = clamp(+d.p[0], -16, 16); b.z = clamp(+d.p[1], -10, 10); b.y = clamp(+d.p[2], 0, 12); b.vx = clamp(+d.v[0], -25, 25); b.vz = clamp(+d.v[1], -25, 25); b.vy = clamp(+d.v[2], -25, 25); if (d.h) SOC.hold = Math.max(SOC.hold, now() + 0.4); SOC.lastSide = d.ls === 0 || d.ls === 1 ? d.ls : -1;
+    if (Array.isArray(d.rs) && FB_RS[d.rs[0]]){ const sd = d.rs[1] === 0 || d.rs[1] === 1 ? d.rs[1] : -1; if (!SOC.rs || SOC.rs.q !== q) fbRsSet({ k: d.rs[0], side: sd, x: b.x, z: b.z, q }, d.k === 'o'); } else SOC.rs = null;
+    if (d.kk){ try { sportFx(bkFisher(peer), 'kick', 0.42); } catch(e){} } return; }
   if (d.k === 'g'){ const s = d.s === 1 ? 1 : 0, n = Math.floor(+d.n) || 0; if (n > 0) fbGoalApply(s, n); else if (m.st !== 'play') fbGoalFx(s); SOC.hold = Math.max(SOC.hold, now() + 2.4); return; }
   if (d.k === 'm'){ const q = Math.floor(+d.q); if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st)) return; if (q < m.q || (q === m.q && m.from && peer !== m.from && !(peer < m.from))) return;
     const was = m.st, wq = m.q; m.q = q; m.from = peer; m.rx = now(); m.st = d.st; m.a = { n: fbStr(d.a && d.a.n, 12) || '紅隊', c: fbStr(d.a && d.a.c, 9) }; m.b = { n: fbStr(d.b && d.b.n, 12) || '藍隊', c: fbStr(d.b && d.b.c, 9) }; try { m.a.n = clean(m.a.n); m.b.n = clean(m.b.n); } catch(e){}
@@ -9804,6 +9823,7 @@ function fbTick(dt, t){ const im = inStad(); if (!im){ if (SOC.asked){ SOC.asked
   if (SOC.hold > tn){ if (SOC.own === me2 && SOC.hold - tn < 1.0 && (b.x || b.z || b.vx || b.vz)){ fbReset(); SOC.q++; fbSend(fbBallMsg()); } }
   else { let n = Math.min(6, Math.max(1, Math.ceil(dt / 0.012))), goal = -1; for (let i = 0; i < n; i++){ const g = fbStep(dt / n); if (g >= 0) goal = g; }
     if (goal >= 0 && (SOC.own === me2 || !SOC.own || tn - SOC.rxAt > 2.5) && !(SOC.goalAt && tn - SOC.goalAt < 2)){ SOC.own = me2; SOC.q++; fbGoal(goal); }
+    else if (goal < 0 && (SOC.own === me2 || !SOC.own || tn - SOC.rxAt > 2.5)){ const o = fbOutCheck(); if (o) fbOut(o); }
     /* 碰到球 = 踢出去 */
     if (fbCanPlay() && b.y < 0.9 && tn - SOC.kickAt > 0.28 && !Pool.on){ const dx = S.x + b.x - me.pos.x, dz = S.z + b.z - me.pos.z, d = Math.hypot(dx, dz); if (d < 0.62){ const sp = Math.hypot(SOC.mvx || 0, SOC.mvz || 0), nx = d > 1e-3 ? dx / d : Math.sin(me.rot), nz = d > 1e-3 ? dz / d : Math.cos(me.rot), mx = sp > 0.3 ? SOC.mvx / sp : nx, mz = sp > 0.3 ? SOC.mvz / sp : nz; let kx = nx * 0.45 + mx * 0.55, kz = nz * 0.45 + mz * 0.55; const kl = Math.hypot(kx, kz) || 1; kx /= kl; kz /= kl; const pw = 2.2 + sp * 1.45; if (sp > 0.3 || Math.hypot(b.vx, b.vz) > 0.5) fbTouch(kx * pw, kz * pw, sp > 3 ? 0.8 : 0.2); } } }
   if (SOC.own === me2 && tn - SOC.sendAt > 0.125 && (b.vx || b.vz || b.vy || tn - SOC.sendAt > 2)){ SOC.sendAt = tn; fbSend(fbBallMsg()); }
@@ -17414,6 +17434,7 @@ function renderTab(){
       '怎麼踢：跑過去碰到球就會踢出去，跑越快踢越遠；靠近球的時候右下角會變成「射門」，按下去朝你面對的方向大腳踢。沒有比賽的時候誰都可以隨便踢，踢進球門會喊進球。',
       '比賽：走到場邊的「⚽ 比賽台」（南邊看台前面的小桌子）按「開始比賽」，要兩個人以上。場上如果有兩支不同的釣友隊，就是人最多的那兩隊對打；如果大家都同一隊或沒有隊，會自動分成紅隊、藍隊打練習賽。',
       '規則：一場 3 分鐘，進球以後球回到中圈。🔴 那一隊往右邊（東邊）球門進攻，🔵 那一隊往左邊（西邊）進攻，名字前面會有顏色圓點。比分在畫面上面和體育場的計分板上。沒分到隊的人只能看、踢不到球。比賽結果會記到你的玩家資料頁（⚽ 幾勝幾敗）；釣友隊對釣友隊的比賽還會算進隊伍戰績，廣場大看板的「⚽ 隊伍足球」看得到隊伍排行。隊內紅藍練習賽只記個人、不算隊伍。沒有獎勵。',
+      '出界：球整顆出邊線是 🙌 界外球，放在出界的地方，給不是最後碰球的那一隊。出底線沒進球門的話，進攻方最後碰的是 🥅 球門球（放在小禁區），防守方最後碰的是 🚩 角球（放在那一邊的角落）。開球前球不會動，只有拿到球權的那一隊能碰；8 秒沒人開，誰都可以踢。沒在比賽的時候出界也會把球擺好，誰都可以踢。',
     ]);
     sec('🏀 體育場籃球 1 對 1', [
       '在哪裡：體育場裡面最西邊（進門以後往左走到底），有一個籃球半場。島上運動公園原本那個露天籃球場拆掉了。',

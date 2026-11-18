@@ -5731,5 +5731,9 @@
 "🌊 海邊恢復平靜了。": "🌊 The shore is calm again.",
 "🌈 這次颱風沖上來的東西你都撿完了！": "🌈 You've picked up everything this typhoon washed ashore!",
 "現在沒有東西可以撿，要等颱風過後": "Nothing to pick up now; wait until after a typhoon",
-"這個你已經撿過了": "You already picked this one up"
+"這個你已經撿過了": "You already picked this one up",
+"出界：球整顆出邊線是 🙌 界外球，放在出界的地方，給不是最後碰球的那一隊。出底線沒進球門的話，進攻方最後碰的是 🥅 球門球（放在小禁區），防守方最後碰的是 🚩 角球（放在那一邊的角落）。開球前球不會動，只有拿到球權的那一隊能碰；8 秒沒人開，誰都可以踢。沒在比賽的時候出界也會把球擺好，誰都可以踢。": "Out of play: when the whole ball crosses a touchline it's a 🙌 throw-in at that spot for the team that didn't touch it last. Over the goal line without scoring: last touched by the attackers is a 🥅 goal kick (placed in the six-yard area); last touched by the defenders is a 🚩 corner kick (placed at that corner). The ball stays still until the awarded team touches it; after 8 seconds anyone may kick. Outside matches the ball is still placed and anyone can kick.",
+"界外球": "Throw-in",
+"角球": "Corner kick",
+"球門球": "Goal kick"
 }
