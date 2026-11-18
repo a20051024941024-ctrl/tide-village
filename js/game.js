@@ -5997,7 +5997,7 @@ function pickFish(spot, charge){
   const corK = spot.id === 'isle' ? coralK() : 0;   /* v376 自己種的珊瑚吸引珊瑚礁魚（跟伺服器 142 一樣） */
   const mudK = f => spot.id !== 'mudflat' ? 1 : ((Rig.rig === 'bottom') === BOTTOM_FISH.has(f.id) ? 1 : 0);   /* 泥灘：抓招潮蟹就是蟹、抓彈塗魚就是魚 */
   const wildK = f => breedSeason() && WILD_BREED.has(f.id) ? 1.5 : 1;   /* 野外繁殖季 */
-  const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * tideFishK(f, spot.id) * condFishK(f) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && sigClass(f) === F.sig ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (corK && CORAL_FISH.has(f.id) ? 1 + 0.25 * corK : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
+  const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * tideFishK(f, spot.id) * condFishK(f) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig && (sigClass(f) === F.sig || (F.sig === 'shadow' && (f.max || 0) >= 3)) ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (corK && CORAL_FISH.has(f.id) ? 1 + 0.25 * corK : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
   let r = Math.random() * w.reduce((a,b) => a+b, 0);
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0) return list[i]; }
   return list[0];
@@ -17212,7 +17212,7 @@ function renderTab(){
       '🧴 保養釣竿：釣竿不會壞，也不用修。想要多一點幫助，可以在釣具店花 🪙200 保養一次，接下來 30 次拋竿收線快 10%、線比較不容易斷；可以跟料理的加成一起用。沒保養也照常釣。',
       '🐟 被大魚吞掉：大型魚、傳說魚上鉤的時候，有時候會先看到「小魚上鉤了」，接著被更大的魚一口吞掉，變成跟大魚搏鬥。這只是演出，釣到什麼魚的機率沒有變。手機會跟著震動（設定裡可以關掉震動）。',
       '水邊哪裡都能釣：面前幾公尺內有水，按鈕就會變成「拋竿」。每一片水的魚都不一樣（河岸、鏡湖、清溪潭、螢光溪、晴潮海邊、港口外海、小島碼頭）。',
-      '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
+      '👀 看水面再拋：釣點前面的水面會出現徵兆，每 45 秒換一批 —— 〰️ 一圈圈漣漪是小魚群、🌑 水下一團深色影子是中大型魚（能長到 3 公斤以上的都算，不管是哪一類）、🐦 海鳥在上面盤旋是掠食魚（旗魚、鬼頭刀、鮪魚這類）、🫧 一串氣泡是底棲魚（石斑、螃蟹、鯰魚這類）。按住「拋竿」時手指左右滑可以瞄準方向（電腦用 A／D），水面上的黃色圈圈是會落下去的地方。走近徵兆，上面會標出是哪一類魚。浮標落在徵兆旁邊，那一類魚比較容易上鉤；直接砸在上面會把魚嚇跑，要拋在旁邊一點。',
       '🎣 看浮標：魚咬之前會先「試探」—— 小魚群會點很多下、中大型魚重重點一下、掠食魚（旗魚、鮪魚、鯊魚）不試探直接把浮標拖走、底棲魚（石斑、螃蟹）會把浮標往上頂、鬼頭刀和魷魚這類狡猾的點一下就停很久。試探的時候按會把魚嚇跑；等浮標整個沉下去、手機震一下、出現「!」才按「提竿」。最多等 8 秒左右就會有魚來。',
       '⚔️ 怎麼對付魚的動作：拉魚的時候魚會輪流做動作，動作前畫面中間會先跳出黃色的提示（大約半秒），接著變紅色告訴你要怎麼做 —— 💨 衝刺：放開不要收，等牠跑完｜😮‍💨 停住喘氣：連續快速點按鈕（這時候收最多）｜⬅➡ 往左／右竄：搖桿往反方向拉｜⬆️ 跳出水面：放開，落水以後再收｜⬇️ 往下鑽：按著但不要全力，拉力條停在中間｜🪨 纏到礁石（只有礁石多的地方）：放開等 3 秒讓牠自己游出來，硬拉會斷線。做對了魚會掉很多體力、連擊 +1。',
       '🐟 每種魚的習性：小魚只會喘氣和小衝刺，幾秒就拉上來｜旗魚、鯊魚這類掠食魚：衝刺 → 跳 → 衝刺 → 跳，衝很久｜石斑、螃蟹這類底棲魚：愛往下鑽、纏礁石，幾乎不跳｜鬼頭刀、魷魚：一直左右竄，方向換很快｜鮪魚：一直衝刺不停，拚耐心｜傳說魚：會假裝累了停下來，突然又衝刺，看到「騙你的！」趕快放開。',
