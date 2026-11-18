@@ -5217,7 +5217,9 @@ function boatDiveSite(){ if (!myBoat) return null; const w = waterSpotId(me.pos.
 (() => { let d = $('#boatDive'); if (!d){ const bb = $('#boatBtn'); d = document.createElement('button'); d.id = 'boatDive'; d.className = 'panel'; d.hidden = true; d.textContent = '🤿 下潛'; if (bb && bb.parentNode){ let row = bb.parentNode; if (row.id !== 'boatRow'){ row = document.createElement('div'); row.id = 'boatRow'; bb.parentNode.insertBefore(row, bb); row.appendChild(bb); } row.insertBefore(d, bb); } else document.body.appendChild(d); }
   d.addEventListener('click', () => { ensureAudio(); const ds = boatDiveSite(); if (ds) startDive(ds); }); })();
 function updateBoatButton(){
-  { const d = $('#boatDive'), show = !!(myBoat && !Ferry.on && F.phase === 'idle' && !Dive.on && boatDiveSite()); if (d.hidden === show) d.hidden = !show; }
+  { const d = $('#boatDive'), site = myBoat && !Ferry.on && F.phase === 'idle' && !Dive.on ? boatDiveSite() : null, show = !!site; if (d.hidden === show) d.hidden = !show;
+    if (show && now() - (OW.wsAt || 0) > 2){ OW.wsAt = now(); let ws = null; try { ws = site === 'offshore' ? wsFind(me.pos.x, me.pos.z, 90) : null; } catch(e){} const tx = ws ? '🤿 下潛 💤🐋' : '🤿 下潛'; if (d.textContent !== tx) d.textContent = tx;
+      if (ws && OW.wsTold !== ws.key){ OW.wsTold = ws.key; flash('🐋 水面下有好幾個巨大的影子，一動也不動……', 2.6); setTimeout(() => toast(hasDive('dive_suit') ? '💤 是睡覺的抹香鯨群！按「🤿 下潛」下去看，動作要輕' : '💤 是睡覺的抹香鯨群！要有潛水裝備才能下去看（商店的「🤿潛水」）'), 2900); } } }
   const btn = $('#boatBtn'); let label = '';
   if (myBoat){ if (F.phase === 'idle') label = '下船'; }
   else if (F.phase === 'idle' && !SKI.on && !SKI.lift && nearBoat()) label = '上船';
@@ -9253,6 +9255,7 @@ const spotDone = id => FISH.filter(f => f.spot === id).every(f => rec.count[f.id
 const STORY_WHO_A = { chief:'阿土伯', ling:'阿綾', mu:'阿木', fu:'阿福', gang:'老港' };   /* v330 村民的故事：讀完 5 章得到稱號 */
 const ACH = [
   { id:'mug', icon:'👁️', name:'與座頭鯨對望', desc:'划船停在外海，讓好奇的座頭鯨游過來看你', cur:() => { try { return LS.get('tide.mugged', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
+  { id:'whalesleep', icon:'💤', name:'鯨群的午睡', desc:'在外海看到抹香鯨漂在水面休息時潛下去，看到一整群直立睡覺的抹香鯨', cur:() => { try { return LS.get('tide.whaleSleep', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
   { id:'seasight', icon:'🐋', name:'海上目擊者', desc:'划船在外海遇過海豚、座頭鯨、藍鯨、抹香鯨', cur:() => { try { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a.length : 0; } catch(e){ return 0; } }, goal:4 },
   { id:'sight', icon:'🔭', name:'深海目擊者', desc:'開潛水艇看過全部 5 種深海相遇', cur:() => { try { return subSeen().length; } catch(e){ return 0; } }, goal:5 },
   { id:'trench', icon:'🕳️', name:'發現黑淵裂縫', desc:'開潛水艇找到深海浮台底下的黑淵裂縫', cur:() => (typeof Sub !== 'undefined' && Sub.st && Sub.st.found) ? 1 : 0, goal:1 },
@@ -12130,7 +12133,8 @@ function diveExtras(){ const g = Dive.group; if (!g) return; const X = DIVE.x, Z
     const fg = new THREE.Group(), wh = fishModel(FISH_BY_ID.sperm, 9), sq = fishModel(FISH_BY_ID.giantsquid, 5); fg.add(wh); wh.position.x = -3.5; fg.add(sq); sq.position.set(4.6, 0.4, 0); sq.rotation.y = Math.PI; sq.rotation.z = 0.25;   /* 魷魚面對鯨魚的頭，腳纏上去 */
     const a = Math.random() * 6.28, r = DIVE.r * 0.45; fg.position.set(DIVE.x + Math.cos(a) * r, DIVE.y + DIVE.top * 0.45, DIVE.z + Math.sin(a) * r); fg.rotation.order = 'YXZ'; fg.rotation.y = a + 1.2; g.add(fg); Dive.fight = { g: fg, sq, y0: fg.position.y, told: false };
   } catch(e){} }
-  Dive.bw = null; if (Dive.site === 'offshore' && (bwWin(bossNow()) >= 0 || Math.random() < 0.4)){ try { const a = Math.random() * 6.28, m = fishModel(FISH_BY_ID.bluewhale, 14); m.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a)); g.add(m); m.rotation.order = 'YXZ'; m.visible = false; Dive.bw = { m, dx: Math.cos(a), dz: Math.sin(a), t0: fishTime.value + 12 + Math.random() * 25 }; } catch(e){} }
+  Dive.pod = null; if (Dive.site === 'offshore' && Dive.wsWant){ try { wsBuild(Dive.wsWant); } catch(e){ console.warn('wsBuild', e); } } Dive.wsWant = null;
+  Dive.bw = null; if (!Dive.pod && Dive.site === 'offshore' && (bwWin(bossNow()) >= 0 || Math.random() < 0.4)){ try { const a = Math.random() * 6.28, m = fishModel(FISH_BY_ID.bluewhale, 14); m.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a)); g.add(m); m.rotation.order = 'YXZ'; m.visible = false; Dive.bw = { m, dx: Math.cos(a), dz: Math.sin(a), t0: fishTime.value + 12 + Math.random() * 25 }; } catch(e){} }
   Dive.portals = []; Dive.vents = [];
   links.forEach((to, i) => { const a = (i === 0 ? -0.6 : 2.4) + (Dive.site.length % 3) * 0.3, x = X + Math.cos(a) * (R - 3.5), z = Z + Math.sin(a) * (R - 3.5), y = diveBed(x, z), S2 = DIVE_SITES[to], ok = diveSiteOk(to);
     const pg = new THREE.Group(); pg.position.set(x, y, z); pg.rotation.y = -a + Math.PI / 2; g.add(pg);
@@ -12144,7 +12148,51 @@ function diveExtras(){ const g = Dive.group; if (!g) return; const X = DIVE.x, Z
     const vg = new THREE.Group(); vg.position.set(x, y, z); g.add(vg); vg.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 0.5, 9), mat('#5a5850', 0.95))); 
     const N = 40, bg = new THREE.BufferGeometry(), bp = new Float32Array(N * 3); for (let i = 0; i < N; i++){ bp[i * 3] = (Math.random() - 0.5) * 0.6; bp[i * 3 + 1] = Math.random() * DIVE.top; bp[i * 3 + 2] = (Math.random() - 0.5) * 0.6; } bg.setAttribute('position', new THREE.BufferAttribute(bp, 3));
     const pts = new THREE.Points(bg, new THREE.PointsMaterial({ color:'#e8fbff', size:0.22, transparent:true, opacity:0.85, depthWrite:false })); vg.add(pts); Dive.vents.push({ x, z, y, pts }); } }
+/* ===== v560 💤 抹香鯨群直立睡覺（作者 11/18 貼了自由潛水員游在睡覺鯨群中間的影片） =====
+   外海本來就有抹香鯨漂在水面休息（owPlan 的 sperm）。牠底下其實是一整群在睡覺：頭朝上、直直立在水裡。
+   ・什麼時候有：水面那隻出現前 4 分鐘到離開後 4 分鐘（同一個 20 分鐘視窗、同一格，大家算出來一樣）
+   ・怎麼看：划船到牠附近 90 公尺內按「🤿 下潛」（外海潛水點），鯨群就在海底場景中間
+   ・會動：慢慢漂、輪流浮上去換氣；時間快到時一隻一隻醒來轉成水平游走
+   ・靠太近（貼到身上）或在旁邊游很快會吵醒那一隻；搖桿輕推、漂著看就不會
+   ・同步：鯨群的 key 和「哪幾隻被吵醒了」放在 presence（ws），一起潛的人看到同一群、同樣幾隻醒著 */
+const WSLEEP = { pre:240, post:240, span:45 };
+function wsLeft(P, inW){ const u = inW - P.st, end = 6 + P.log + WSLEEP.post; return u > -WSLEEP.pre && u < end ? end - u : 0; }
+function wsFind(x, z, R){ const ns = bossNow() / 1000, W = Math.floor(ns / OW_WIN), inW = ns - W * OW_WIN; let best = null;
+  for (let cx = Math.floor((x - R) / OW_CELL) - 1; cx <= Math.floor((x + R) / OW_CELL) + 1; cx++) for (let cz = Math.floor((z - R) / OW_CELL) - 1; cz <= Math.floor((z + R) / OW_CELL) + 1; cz++){ const P = owPlan(cx, cz, W); if (!P || P.k !== 'sperm') continue; const left = wsLeft(P, inW); if (left <= 0) continue;
+    const u = clamp(inW - P.st, 0, P.dur), px = P.x0 + Math.sin(P.hd) * P.spd * u, pz = P.z0 + Math.cos(P.hd) * P.spd * u, d = Math.hypot(px - x, pz - z); if (d < R && (!best || d < best.d)) best = { P, d, left, x: px, z: pz, key: cx + ',' + cz + ',' + W }; }
+  return best; }
+function wsByKey(key){ const a = String(key || '').split(',').map(Number); if (a.length !== 3 || !a.every(Number.isFinite)) return null; const ns = bossNow() / 1000, W = Math.floor(ns / OW_WIN); if (a[2] !== W) return null;
+  const P = owPlan(a[0], a[1], W); if (!P || P.k !== 'sperm') return null; const left = wsLeft(P, ns - W * OW_WIN); return left > 0 ? { P, left, key: a.join(',') } : null; }
+function wsBuild(ws){ const g = Dive.group; if (!g || Dive.pod || !ws) return; const P = ws.P, R = i => owR(P.cx, P.cz, P.W, 200 + i), n = Quality.tier === 'low' ? 4 : 4 + Math.floor(R(0) * 3), surf = DIVE.y + DIVE.top, L0 = Math.min(15, DIVE.top - 4.5), cx = DIVE.x + 1, cz = DIVE.z + 3;
+  const pod = { key: ws.key, end: P.W * OW_WIN + P.st + 6 + P.log + WSLEEP.post, w: [], mask: 0, told: false, over: false }; let bx = null;
+  for (let i = 0; i < n; i++){ const calf = i === n - 1, len = calf ? L0 * 0.42 : L0 * (1 - i * 0.06 - R(10 + i) * 0.05), a = calf ? R(20) * 6.28 + 0.9 : i / (n - 1) * Math.PI * 2 + R(20 + i) * 0.7, rad = i === 0 ? 0 : calf ? 3.4 : 5.5 + R(30 + i) * 4.5;
+    const h = new THREE.Group(), m = fishModel(FISH_BY_ID.sperm, 1); if (!bx) bx = new THREE.Box3().setFromObject(m); const sc = len / Math.max(0.01, bx.max.x - bx.min.x); m.scale.setScalar(sc); m.position.set(-(bx.min.x + bx.max.x) / 2 * sc, -(bx.min.y + bx.max.y) / 2 * sc, -(bx.min.z + bx.max.z) / 2 * sc); h.add(m); h.rotation.order = 'YXZ';
+    const x = cx + Math.cos(a) * rad, z = cz + Math.sin(a) * rad, y0 = Math.max(diveBed(x, z) + 1.2 + len / 2, surf - (1.6 + R(50 + i) * 2.2) - len / 2);
+    g.add(h); pod.w.push({ h, len, x, z, y0, yaw: R(60 + i) * 6.28, down: !calf && i > 0 && R(40 + i) < 0.2, ph: R(70 + i) * 100, rad: len * 0.1, alert: 0, wake: 0, gone: false }); }
+  Dive.pod = pod; try { wsUpdate(0.016); } catch(e){} try { pushPresence(true); } catch(e){} }
+function wsUpdate(dt){ const pod = Dive.pod, ns = bossNow() / 1000, surf = DIVE.y + DIVE.top, N = pod.w.length; let near = 1e9, gone = 0;
+  for (const p of peers.values()){ const f = p.fisher; if (f && f.wsK === pod.key && f.wsM) pod.mask |= f.wsM; }
+  pod.w.forEach((w, i) => { if (w.gone){ gone++; return; }
+    const nat = pod.end - WSLEEP.span + i * (WSLEEP.span - 12) / N; if (!w.wake && ns >= nat) w.wake = Math.max(nat, ns - 70); if (!w.wake && (pod.mask >> i) & 1) w.wake = ns;
+    const sgn = w.down ? -1 : 1;
+    if (!w.wake){ const br = (ns + w.ph * 3) % 170, up = br < 6 ? smooth01(br / 6) : br < 11 ? 1 : br < 19 ? 1 - smooth01((br - 11) / 8) : 0, rise = up * Math.max(0, surf + 0.6 - (w.y0 + w.len / 2));   /* 輪流浮上去換氣 */
+      w.h.position.set(w.x + Math.sin(ns * 0.07 + w.ph) * 0.5, w.y0 + rise + Math.sin(ns * 0.3 + w.ph) * 0.25, w.z + Math.cos(ns * 0.06 + w.ph) * 0.5);
+      w.h.rotation.set(Math.sin(ns * 0.11 + w.ph) * 0.06, w.yaw + Math.sin(ns * 0.04 + w.ph) * 0.35, sgn * Math.PI / 2 + Math.sin(ns * 0.09 + w.ph * 2) * 0.07 + (w.alert > 1 ? Math.sin(ns * 7) * 0.03 : 0));
+      if (up >= 1 && !w.blown){ w.blown = true; try { FX.emit(w.h.position.x, surf - 0.4, w.h.position.z, 14, '#e8fbff', 0.5, 1.4, 1.6); } catch(e){} } else if (up < 1) w.blown = false;
+      const dx = me.pos.x - w.h.position.x, dz = me.pos.z - w.h.position.z, d = Math.hypot(dx, dz), inY = Math.abs(me.baseY + 0.8 - w.h.position.y) < w.len / 2 + 1.2; if (inY) near = Math.min(near, d); else near = Math.min(near, d + 6);
+      if (inY && d < w.rad + 1.1) w.alert += dt * 1.1; else if (inY && d < w.rad + 6 && (me.speed || 0) > 2.4) w.alert += dt * 0.7; else w.alert = Math.max(0, w.alert - dt * 0.35);
+      if (w.alert > 1 && !w.warned){ w.warned = true; toast('🤫 太近、太快了，牠的身體動了一下……慢慢退開'); } if (w.alert < 0.2) w.warned = false;
+      if (w.alert > 2.6){ w.wake = ns; pod.mask |= 1 << i; try { pushPresence(true); } catch(e){} toast('🐋 牠被吵醒了，慢慢游走了'); }
+      if (inY && d < w.rad + 0.45 && d > 0.01){ const k = (w.rad + 0.45 - d) / d; me.pos.x += dx * k; me.pos.z += dz * k; } }   /* 不會游進鯨魚身體裡 */
+    else { const q = ns - w.wake, turn = smooth01((q - 1.5) / 6), sw = Math.max(0, q - 4), dist = sw < 6 ? sw * sw * 1.6 / 12 : 4.8 + (sw - 6) * 1.6, fx = Math.cos(w.yaw), fz = -Math.sin(w.yaw);   /* 醒來：抖一下 → 轉成水平 → 擺著尾巴游走 */
+      const x = w.x + fx * dist, z = w.z + fz * dist; w.h.position.set(x, Math.max(diveBed(x, z) + w.len * 0.16 + 0.6, w.y0 - turn * 1.5 - sw * 0.1), z);
+      w.h.rotation.set(Math.sin(q * 1.3) * 0.06 * turn, w.yaw + Math.sin(q * 1.3 + 1) * 0.05 * turn, sgn * Math.PI / 2 * (1 - turn) + (q < 1.5 ? Math.sin(q * 9) * 0.05 : 0));
+      if (Math.hypot(x - DIVE.x, z - DIVE.z) > DIVE.r + w.len || q > 70){ if (w.h.parent) w.h.parent.remove(w.h); w.gone = true; } } });
+  if (!pod.told && near < 26){ pod.told = true; flash('💤 一群抹香鯨直立著在睡覺……安靜地漂在旁邊，不要吵醒牠們', 3.4); if (!LS.get('tide.whaleSleep', false)){ LS.set('tide.whaleSleep', true); setTimeout(() => toast('🏅 第一次看到睡覺的抹香鯨群！可以開相機拍下來'), 3800); } }
+  if (gone === N && !pod.over){ pod.over = true; toast('🐋 鯨群都醒了，游回深海去了'); } }
 function diveExtrasUpdate(dt, t){
+  if (Dive.pod){ try { wsUpdate(dt); } catch(e){} }
+  else if (Dive.site === 'offshore' && t - (Dive.podScan || 0) > 2){ Dive.podScan = t; for (const p of peers.values()){ const f = p.fisher, ws = f && f.wsK ? wsByKey(f.wsK) : null; if (ws){ wsBuild(ws); break; } } }   /* 一起潛的人有鯨群：我也看得到同一群 */
   if (Dive.fight){ const F = Dive.fight, k = t * 0.9; F.g.rotation.x = Math.sin(k) * 0.55 + Math.sin(k * 2.3) * 0.15; F.g.rotation.z = Math.sin(k * 0.7) * 0.25; F.g.position.y = F.y0 + Math.sin(k * 0.5) * 1.2; F.sq.rotation.z = 0.25 + Math.sin(t * 3.1) * 0.12;   /* 鯨魚甩頭翻滾、魷魚死命纏住 */
     if (!F.told && Math.hypot(me.pos.x - F.g.position.x, me.pos.z - F.g.position.z) < 22){ F.told = true; flash('🐋🦑 你目擊了抹香鯨大戰大王魷魚！快拍照', 2.6); } }
   if (Dive.bw){ const B = Dive.bw;   /* v230：一次潛水只游過一次（以前每 110 秒繞回來一次），從玩家旁邊 16 公尺外經過，不會穿過人；慢慢上下起伏、微微側身 */
@@ -12489,6 +12537,7 @@ function startDive(site, back){
   site = DIVE_SITES[site] ? site : 'reef'; Dive.back = back || null;   /* back：從岸邊下水的話，浮上來回到這裡 */
   if (Dive.on) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
   if (!diveSiteOk(site)){ toast(`${DIVE_SITES[site].name}要先買：${DIVE_SITES[site].need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); return; }
+  Dive.wsWant = null; if (site === 'offshore'){ try { Dive.wsWant = wsFind(me.pos.x, me.pos.z, 90); } catch(e){} }   /* v560 船底下有沒有睡覺的抹香鯨群 */
   Dive.site = site; Dive.ret = myBoat && Ferry.on ? { x: me.pos.x, z: me.pos.z, label: Ferry.label || '外海' } : null;
   Dive.boat = myBoat && !Ferry.on ? myBoat : null;   /* 自己划的小船：船留在原地，浮上來直接回到船上 */
   if (site === 'offshore' && !Dive.ret && !Dive.boat){ toast('要在外海的船上才能從這裡潛水'); return; }
@@ -12508,7 +12557,7 @@ function endDive(reason, instant){
     Dive.ending = false;
     Dive.on = false; Dive.up = Dive.down = false;
     if (Dive.group){ Dive.group.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); scene.remove(Dive.group); Dive.group = null; }
-    Dive.fish = []; Dive.schools = []; Dive.loot = []; Dive.kelp = null; diveShowWorld();
+    Dive.fish = []; Dive.schools = []; Dive.loot = []; Dive.kelp = null; Dive.pod = null; diveShowWorld();
     me.setSwim(false); const [fx0, fz0] = Dive.back ? [Dive.back.x, Dive.back.z] : freeSpot(FERRY.at[0] - 1.2, FERRY.at[1] + 0.8); Dive.back = null; me.pos.x = fx0; me.pos.z = fz0; me.baseY = groundHeight(fx0, fz0); Jump.gy = me.baseY; me.rot = -Math.PI / 2; cam.yaw = me.rot + Math.PI; if (Dive.savedDist) cam.dist = Dive.savedDist;
     renderDiveHud(); pushPresence(true); if (!instant) setTimeout(() => fx.classList.remove('on'), 120); try { if (onIsle) renderIsleBar(); } catch(e){}
     const n = Dive.seen.size; if (!instant) toast(`${reason || '🤿 浮上水面了'}${n ? `　這次看到 ${n} 種魚` : ''}`);
@@ -12523,6 +12572,7 @@ function endDive(reason, instant){
 function diveTargets(){
   const out = []; for (const s of Dive.schools) out.push({ f: s.f, p: s.pos }); for (const o of Dive.fish) out.push({ f: o.f, p: o.pos });
   if (Dive.bw && Dive.bw.m.visible) out.push({ f: FISH_BY_ID.bluewhale, p: Dive.bw.m.position, r: 10 });   /* v230：游過的藍鯨、深海大戰也拍得到（大的東西從身體邊緣開始算距離） */
+  if (Dive.pod) for (const w of Dive.pod.w) if (!w.gone) out.push({ f: FISH_BY_ID.sperm, p: w.h.position, r: w.len * 0.3 });
   if (Dive.fight){ out.push({ f: FISH_BY_ID.sperm, p: Dive.fight.g.position, r: 9 }); out.push({ f: FISH_BY_ID.giantsquid, p: Dive.fight.sq.getWorldPosition(new THREE.Vector3()), r: 4 }); }
   return out;
 }
@@ -12629,7 +12679,7 @@ function diveEnvFx(){
      現在跟著岸上的天色慢慢變：dk 0 是白天、1 是半夜（DayNight.lamp 黃昏、清晨會慢慢變）。有潛水燈只是晚上看得比較遠、旁邊有燈照，海水本身還是黑的 */
   const S = DIVE_SITES[Dive.site] || DIVE_SITES.reef, light = hasDive('dive_light'), dk = clamp(DayNight.lamp || 0, 0, 1);
   const fc = (Dive._fc || (Dive._fc = new THREE.Color())).set(S.fog).lerp(Dive._fn || (Dive._fn = new THREE.Color('#031627')), dk * 0.88);
-  scene.fog.color.copy(fc); scene.fog.near = 2.5; scene.fog.far = S.far + ((light ? Math.min(S.far, 22) : 12) - S.far) * dk;
+  scene.fog.color.copy(fc); scene.fog.near = 2.5; scene.fog.far = S.far + ((light ? Math.min(S.far, 22) : 12) - S.far) * dk + (Dive.pod ? 14 - 5 * dk : 0);   /* v560 有睡覺的鯨群時海水清一點，遠遠就看得到巨大的影子（晚上也多看得到一些） */
   const floor = (light ? (S.cave ? 1.35 : 1.0) : 0.45) * (1 - dk) + (light ? 0.42 : 0.16) * dk;
   hemi.color.set(S.cave ? '#6fb4e0' : '#9fe6ff'); hemi.groundColor.set(S.cave ? '#0c1620' : '#2b6f8f'); hemi.intensity = Math.max(hemi.intensity * (S.big ? 0.8 : 1) * (1 - dk * 0.7), floor); sun.color.set('#d8f6ff'); if (S.cave){ hemi.intensity = 0.5; sun.intensity *= 0.12; } else if (S.big) sun.intensity *= 0.7;   /* v470 洞穴不再整片一樣亮：環境光壓暗，亮的地方只有你的潛水燈、水晶和洞頂的光 */
 }
@@ -14952,6 +15002,7 @@ function presenceObj(){
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
   if (rec.rodSkin || rec.lineCol) o.rk = [rec.rodSkin || '', rec.lineCol || ''];   /* v253 工坊做的竿子造型、釣線顏色 */
+  if (Dive.on && Dive.pod) o.ws = [Dive.pod.key, Dive.pod.mask];   /* v560 睡覺的鯨群：哪一群、哪幾隻醒了 */
   { const pt = petMine(); if (pt) o.pt = [pt.kind, pt.name, pt.acc || 0, pt.var || 'a'].concat(pt.kind === 'pondturtle' ? [Math.round(pt.shine || 0)] : []); }   /* 080：帶出門的寵物（只放種類、名字、配件，不放親密度） */
   if (House.on) o.hs = (House.it ? House.it.id : 1) + (House.floor || 0) * 1000;   /* 076：樓上加 1000、2000（不同樓層的人互相看不到） */   /* 在哪一棟房子裡（不同房子的人互相看不到） */
   if (Dive.on) o.dv = 1;
@@ -15004,6 +15055,7 @@ function applyPeer(pp){
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk;
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
+  p.fisher.wsK = Array.isArray(pr.ws) && typeof pr.ws[0] === 'string' && pr.ws[0].length < 40 ? pr.ws[0] : null; p.fisher.wsM = p.fisher.wsK ? (+pr.ws[1] || 0) & 63 : 0;
   p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2), var: /^[a-g]$/.test(pr.pt[3]) ? pr.pt[3] : 'a', shine: pr.pt[0] === 'pondturtle' ? clamp(+pr.pt[4] || 0, 0, 100) : undefined } : null;
   p.isle = typeof pr.is === 'string' ? pr.is : null; p.inHouse = Number(pr.hs) || 0; p.diving = !!pr.dv; p.fisher.setSwim(p.diving);   // 不在同一座島上的人看不到
   { const a = Array.isArray(pr.sb) && pr.sb.length >= 4 && pr.sb.every(v => Number.isFinite(+v)) ? pr.sb : null, was = !!p.sub;   /* v241 開潛水艇的人（村子裡看不到他，裂縫裡看得到他的潛水艇） */
@@ -17186,6 +17238,7 @@ function renderTab(){
       '🐋 藍鯨：每小時有一分半鐘會浮到神秘島礁岩外，所有人同時看得到。牠會連續噴好幾口又直又高的水柱、偶爾側身衝向一團磷蝦吞下去，靠近還聽得到鯨歌。藍鯨浮上來的這一分半鐘，在港口外海釣到藍鯨（和超稀有的白化藍鯨）的機率是平常的 5 倍。',
       '🤿 在外海潛水，偶爾會有巨大的藍鯨從頭頂慢慢游過。座頭鯨也會在遠處浮上來噴水。',
       '🦀 螃蟹、龍蝦的腳會一隻一隻輪流動；章魚的八隻腳會一波一波地扭。',
+      '💤 睡覺的抹香鯨群：划船在外海看到抹香鯨漂在水面休息（或「🤿 下潛」按鈕旁邊出現 💤🐋）時潛下去，會看到一整群抹香鯨頭朝上、直直立在水裡睡覺。牠們會輪流浮上去換氣，大約幾分鐘後一隻一隻醒來游走。貼到牠身上、或在旁邊游很快會把那一隻吵醒；搖桿輕輕推、漂著看就不會。可以開相機拍下來，一起潛的朋友看到的是同一群。',
       '🦑 在沉船深海潛水，偶爾會目擊抹香鯨和大王魷魚纏鬥（真的抹香鯨身上常有魷魚吸盤留下的圓形疤痕，遊戲裡的抹香鯨也有）。',
       '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
       '水面上的魚群（沙丁魚、丁香魚這些）大家看到的是同一群：同一個時間、同一個地方，朋友也會看到一樣的魚群在一樣的位置游，可以約一起去追。',
