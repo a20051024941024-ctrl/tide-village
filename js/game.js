@@ -11019,10 +11019,12 @@ const PET_KINDS = {
   turtle:  { name:'小海龜', icon:'🐢', fish:true, desc:'只能在海邊、港口、珊瑚礁釣魚時偶爾撈到。慢慢爬，很療癒。' },
   octopus: { name:'小章魚', icon:'🐙', fish:true, desc:'只能在海邊、港口、珊瑚礁釣魚時偶爾撈到。八隻腳一扭一扭地跟著你。' },
   puffer:  { name:'河豚',   icon:'🐡', fish:true, desc:'只能在海邊、紅樹林釣魚時偶爾撈到。在你身邊飄著，嚇到會鼓起來。' },
+  horseshoe: { name:'小鱟', icon:'🦀', fish:true, desc:'只有在晴潮海邊、紅樹林退潮時釣到「三棘鱟」，才有機會發現跟在旁邊的小鱟。慢慢爬，長長的尾劍一擺一擺；偶爾會翻過來，再用尾劍把自己撐回去。' },
   pondturtle: { name:'小烏龜', icon:'🐢', price:600, desc:'台灣溪邊、池塘常見的斑龜，脖子有黃色細條紋。要好好照顧：多曬太陽、吃得均衡、水保持乾淨，殼會越來越亮。河邊、池塘釣魚偶爾也會撿到被棄養的小烏龜。' },
 };
 // 花色（081，跟伺服器 _pet_vars 一樣；最後一個最少見）
 const PET_VARS = {
+  horseshoe: { a:['小鱟', '#8a8a52', '#5c5a3a'] },   /* v559 只有一種，不做花色（作者：不要只是換顏色） */
   pondturtle: { a:['斑龜', '#5d6a3c', '#e2cf6a'], b:['深色斑龜', '#3c4430', '#d8c35a'], c:['金黃斑龜', '#9a8a3a', '#f2df7a'] },
   cat:     { a:['橘貓', '#e8a35a', '#fbf5ea'], b:['虎斑', '#a89a86', '#efe9dd'], c:['三花', '#fbf5ea', '#e8a35a'], d:['黑貓', '#2a2a30', '#2a2a30'], e:['白貓', '#f7f4ee', '#ffffff'], f:['賓士貓', '#26262c', '#fbf8f2'], g:['暹羅', '#efe3cf', '#6b4a35'] },
   shiba:   { a:['赤柴', '#d9924a', '#fbf5ea'], b:['芝麻柴', '#b07a46', '#f2e6d4'], c:['黑柴', '#2f2a28', '#f2e6d4'], d:['白柴', '#f4ecdc', '#ffffff'] },
@@ -11037,8 +11039,10 @@ function petVarName(k, v){ const V = PET_VARS[k] && PET_VARS[k][v]; return V ? V
 function petFull(k, v){ const vn = petVarName(k, v), kn = (PET_KINDS[k] || {}).name || ''; return vn && [...kn].some(ch => vn.includes(ch)) ? vn : vn + kn; }   /* 「橘貓」不要變成「橘貓貓」 */
 function petVarRare(k, v){ const keys = Object.keys(PET_VARS[k] || {}); return keys.length > 2 && v === keys[keys.length - 1]; }
 const Pets = { list:null, at:0, busy:false, atShop:false, feedFor:null, home:[], homeKey:'', meowAt:0, newName:'' };
-async function petLuckyTry(){ if (!Cloud.on || !Cloud.sb) return; let r = null; try { const { data } = await Cloud.sb.rpc('pet_lucky'); r = data; } catch(e){ return; } if (!r || !r.got) return;
+async function petLuckyTry(fid){ if (!Cloud.on || !Cloud.sb) return; let r = null; try { const { data } = await Cloud.sb.rpc(fid === 'horseshoe' ? 'pet_horseshoe' : 'pet_lucky'); r = data; }   /* v559 釣到三棘鱟：改問伺服器有沒有小鱟跟著（192） */ catch(e){ return; } if (!r || !r.got) return;
   const K = PET_KINDS[r.kind], vn = petFull(r.kind, r.var);
+  if (r.kind === 'horseshoe'){ setTimeout(() => { if (r.full){ flash('🦀 沙地上有一隻小鱟跟著牠！可是寵物名額滿了，只好讓牠留在海邊（小島買海水池可以多養）', 2.8); return; }
+      SFX.catch(); flash('🦀 沙地上還有一隻小鱟跟著牠！牠爬到你腳邊，決定跟你回家了', 3.2); setTimeout(() => toast('🦀 小鱟住在小島的海水池最舒服。到「寵物」可以幫牠取名字'), 3600); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); return; }
   setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是寵物名額滿了，只好放牠回去了（小島買圍欄、海水池、烏龜缸可以多養）`, 2.6); return; }
     SFX.catch(); flash(r.kind === 'pondturtle' ? `${K.icon} 撿到一隻${vn}！這是被棄養的烏龜，帶回家好好照顧吧` : `${K.icon} 哇！順便撈到一隻${vn}${petVarRare(r.kind, r.var) ? '（很少見的花色！）' : ''}，牠決定跟你回家了`, 3); if (r.kind === 'pondturtle') setTimeout(() => toast('🐢 養了就要一直照顧，不要棄養。烏龜可以活幾十年喔'), 3400); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); }
 /* v253 阿鐵師傅的工坊 */
@@ -11163,6 +11167,16 @@ function petModel(kind, acc, v, shineLv){
     arms = []; for (let k = 0; k < 8; k++){ const a = k / 8 * Math.PI * 2, arm = new THREE.Group(); arm.position.set(Math.cos(a) * 0.07, 0.15, Math.sin(a) * 0.07); arm.rotation.y = -a; body.add(arm);
       for (let q = 0; q < 4; q++) S(0.028 - q * 0.005, sk, 0.04 + q * 0.04, -0.03 - q * 0.025, 0, 1.2, 1, 1, arm, 10); arms.push(arm); }
     neckY = 0.17; neckZ = 0.09; hatY = 0.42; hatZ = -0.02; }
+  else if (kind === 'horseshoe'){ /* v559 小鱟：圓頂的頭胸甲＋小一節的腹甲（邊緣有刺）＋長尾劍；腳縮在殼下面；翻過來看得到底面和腳 */ const sh = c1, dk = shade(c1, -0.22), ud = c2;
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.17, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), M(sh, 0.5)); dome.scale.set(1.05, 0.62, 1); dome.position.set(0, 0.035, 0.03); dome.castShadow = true; body.add(dome);
+    S(0.02, dk, 0, 0.128, 0.02, 0.6, 0.6, 5.2, null, 8); for (const sx of [-1, 1]) S(0.014, dk, sx * 0.078, 0.106, 0.01, 0.6, 0.6, 4.6, null, 8);   /* 中脊、側脊 */
+    S(0.105, sh, 0, 0.05, -0.135, 1, 0.5, 1, null, 16); S(0.016, dk, 0, 0.098, -0.14, 0.6, 0.6, 3.4, null, 8);
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++){ const sp = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.05, 5), M(dk)); sp.position.set(sx * (0.1 - k * 0.014), 0.05, -0.12 - k * 0.04); sp.rotation.set(-0.5, 0, -sx * 1.25); body.add(sp); }   /* 腹甲邊緣的刺 */
+    C(0.172, 0.172, 0.012, ud, 0, 0.032, 0.03, null, 20).scale.set(1.05, 1, 1); C(0.1, 0.1, 0.012, ud, 0, 0.032, -0.135, null, 14);   /* 底面 */
+    for (let k = 0; k < 4; k++) for (const sx of [-1, 1]) leg(sx * 0.07, 0.11 - k * 0.05, 0.034, shade(ud, 0.12));
+    eyes(body, 0.115, 0.118, 0.078, 0.017);
+    tail = new THREE.Group(); tail.position.set(0, 0.05, -0.22); body.add(tail); const ts = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.3, 6), M(dk)); ts.rotation.x = -Math.PI / 2; ts.position.z = -0.15; ts.castShadow = true; tail.add(ts);
+    neckY = 0.1; neckZ = 0.1; hatY = 0.15; hatZ = 0.02; }
   else { // 河豚
     const bd = S(0.13, c1, 0, 0.3, 0, 1.05, 0.95, 1.1, null, 22); S(0.1, c2, 0, 0.26, 0.03, 1, 0.75, 1, null, 16);
     if (v === 'b') for (let k = 0; k < 10; k++) S(0.014, '#6b5a3a', Math.cos(k * 2.4) * 0.09, 0.33 + Math.sin(k * 1.7) * 0.06, Math.sin(k * 2.4) * 0.08, 1, 1, 0.4, null, 6);
@@ -11171,8 +11185,8 @@ function petModel(kind, acc, v, shineLv){
     tail = new THREE.Group(); tail.position.set(0, 0.3, -0.14); body.add(tail); const tf = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.08, 4), M(c1)); tf.rotation.x = Math.PI / 2; tf.scale.set(1, 1, 0.3); tail.add(tf);
     wings = []; for (const sx of [-1, 1]){ const fn = new THREE.Group(); fn.position.set(sx * 0.12, 0.3, 0.02); body.add(fn); S(0.03, shade(c1, 0.1), sx * 0.02, 0, 0, 1.2, 0.3, 0.8, fn, 8); wings.push(fn); }
     neckY = 0.22; neckZ = 0.1; hatY = 0.44; hatZ = 0.0; }
-  if (acc >= 1 && !['crab', 'turtle', 'pondturtle', 'octopus', 'puffer'].includes(kind)){ const col = new THREE.Mesh(new THREE.TorusGeometry(kind === 'gull' ? 0.055 : 0.075, 0.014, 8, 16), M('#e8473a', 0.5)); col.rotation.x = Math.PI / 2; col.position.set(0, neckY, neckZ); body.add(col); S(0.018, M('#ffd36a', 0.3), 0, neckY - 0.03, neckZ + 0.07, 1, 1, 1, null, 8); }
-  if (acc >= 1 && ['crab', 'turtle', 'pondturtle', 'octopus', 'puffer'].includes(kind)){ const bw = new THREE.Group(); bw.position.set(0.06, hatY - 0.06, hatZ); body.add(bw); for (const sx of [-1, 1]) S(0.025, M('#ff7aa8', 0.5), sx * 0.025, 0, 0, 1, 0.7, 0.5, bw, 8); S(0.012, M('#ff7aa8', 0.5), 0, 0, 0, 1, 1, 1, bw, 6); }   /* 不會戴項圈的就戴蝴蝶結 */
+  if (acc >= 1 && !['crab', 'turtle', 'pondturtle', 'octopus', 'puffer', 'horseshoe'].includes(kind)){ const col = new THREE.Mesh(new THREE.TorusGeometry(kind === 'gull' ? 0.055 : 0.075, 0.014, 8, 16), M('#e8473a', 0.5)); col.rotation.x = Math.PI / 2; col.position.set(0, neckY, neckZ); body.add(col); S(0.018, M('#ffd36a', 0.3), 0, neckY - 0.03, neckZ + 0.07, 1, 1, 1, null, 8); }
+  if (acc >= 1 && ['crab', 'turtle', 'pondturtle', 'octopus', 'puffer', 'horseshoe'].includes(kind)){ const bw = new THREE.Group(); bw.position.set(0.06, hatY - 0.06, hatZ); body.add(bw); for (const sx of [-1, 1]) S(0.025, M('#ff7aa8', 0.5), sx * 0.025, 0, 0, 1, 0.7, 0.5, bw, 8); S(0.012, M('#ff7aa8', 0.5), 0, 0, 0, 1, 1, 1, bw, 6); }   /* 不會戴項圈的就戴蝴蝶結 */
   if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, hatY, hatZ); body.add(hat); C(0.07, 0.07, 0.012, '#f2d48a', 0, 0, 0, hat, 16); C(0.04, 0.045, 0.05, '#f2d48a', 0, 0.03, 0, hat, 14); C(0.046, 0.046, 0.012, '#e8473a', 0, 0.012, 0, hat, 14); }
   g.userData = { body, head, tail, wings, legs, arms, kind };
   rigidMerge(g);   /* v290 同一塊會一起動的小零件合成一個，寵物從 30 幾個 draw call 變十個左右 */
@@ -11205,7 +11219,7 @@ function petFree(pt){ if (pt && pt.m){ if (pt.m.parent) pt.m.parent.remove(pt.m)
 function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   const dx = tx - pt.pos.x, dz = tz - pt.pos.z, d = Math.hypot(dx, dz), U = pt.m.userData;
   if (d > 14){ pt.pos.x = tx; pt.pos.z = tz; }
-  const sp = d > 0.12 ? Math.min(7, d * 2.6 + (moving ? 1.2 : 0)) * (pt.kind === 'crab' || pt.kind === 'turtle' ? 0.75 : pt.kind === 'pondturtle' ? 0.6 : 1) : 0; pt.vel += (sp - pt.vel) * Math.min(1, dt * 6);
+  const sp = d > 0.12 ? Math.min(7, d * 2.6 + (moving ? 1.2 : 0)) * (pt.kind === 'crab' || pt.kind === 'turtle' ? 0.75 : pt.kind === 'pondturtle' || pt.kind === 'horseshoe' ? 0.6 : 1) : 0; pt.vel += (sp - pt.vel) * Math.min(1, dt * 6);
   if (d > 0.05){ const k = Math.min(d, pt.vel * dt) / d, mx = dx * k, mz = dz * k, st = Math.hypot(mx, mz), R = 0.2, x0 = pt.pos.x, z0 = pt.pos.z;
     let hit = false; try { if (blocked(x0, z0, R) || !blocked(x0 + mx, z0 + mz, R)){ pt.pos.x += mx; pt.pos.z += mz; pt.side = 0; }   /* 已經在東西裡面就讓牠走出來 */
       else { hit = true; if (!pt.side) pt.side = (Math.abs(mx) >= Math.abs(mz) ? Math.sign(mz) : Math.sign(mx)) || (Math.random() < 0.5 ? -1 : 1); const sx = Math.abs(mx) >= Math.abs(mz) ? Math.sign(mx) || 1 : pt.side, sz = Math.abs(mx) >= Math.abs(mz) ? pt.side : Math.sign(mz) || 1;   /* 撞到牆就固定往一邊繞，不會左右晃 */
@@ -11227,6 +11241,13 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   pt.pos.y = y; pt.m.position.copy(pt.pos); pt.m.rotation.y = pt.rot;
   if (pt.spinUntil && now() < pt.spinUntil) U.body.rotation.y += 0.12;   /* 吃到點心開心地轉圈 */ else if (pt.spinUntil){ U.body.rotation.y = 0; pt.spinUntil = 0; }
   if (pt.kind === 'turtle' || pt.kind === 'pondturtle') U.legs.forEach((l, i) => { l.rotation.y = Math.sin(pt.ph + i) * 0.5 * mv; }); else U.legs.forEach((l, i) => { l.rotation.x = Math.sin(pt.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.6 * mv; });
+  if (pt.kind === 'horseshoe'){ /* 小鱟每 26 秒左右翻過來一次，腳亂踢，用尾劍把自己撐回去（真的鱟就是這樣翻身）。時間用大家一樣的時鐘＋名字算，別人看到的是同一下 */
+    if (pt.sd == null){ let h = 0; for (const ch of String(pt.name || '')) h = (h * 31 + ch.charCodeAt(0)) % 2600; pt.sd = h / 100; }
+    const cy = (Date.now() / 1000 + pt.sd) % 26, on = mv < 0.05 && !moving && !pt.act && cy < 3.4, rz = !on ? 0 : cy < 0.5 ? cy / 0.5 * Math.PI : cy < 2.6 ? Math.PI + Math.sin(cy * 9) * 0.12 : Math.PI + (cy - 2.6) / 0.8 * Math.PI;
+    if (on){ U.legs.forEach((l, i) => { l.rotation.x = Math.sin(t * 16 + i * 1.3) * 0.7; }); }
+    if (U.tail) U.tail.rotation.x = on && cy > 0.5 && cy < 2.6 ? 0.5 + Math.abs(Math.sin(cy * 4)) * 0.5 : 0;
+    const hop = !on ? 0 : cy < 0.5 ? Math.sin(cy / 0.5 * Math.PI) : cy > 2.6 ? Math.sin((cy - 2.6) / 0.8 * Math.PI) : 0;
+    U.body.rotation.z = rz; U.body.position.y = 0.17 * (1 - Math.cos(rz)) / 2 + hop * 0.12; }
   if (U.tail) U.tail.rotation.y = Math.sin(t * (pt.kind === 'shiba' ? 9 : 2.5)) * (pt.kind === 'shiba' ? 0.3 : 0.4);
   if (U.head) U.head.rotation.y = mv < 0.1 ? Math.sin(t * 0.7 + pt.ph * 0.01) * 0.35 : 0;
   if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
@@ -11240,7 +11261,7 @@ const PET_POSE = { treat: { W: [['pickup', 1]], hold: ['pickup', 0.55], dur: 2.9
 function petTreatMesh(kind){ const g = new THREE.Group();
   if (kind === 'shiba'){ const w = mat('#f4ead8', 0.6); g.add(box([0.16, 0.035, 0.035], '#f4ead8', [0, 0, 0])); for (const sx of [-0.085, 0.085]) for (const sz of [-0.022, 0.022]){ const k = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), w); k.position.set(sx, 0, sz); g.add(k); } }
   else if (kind === 'pondturtle' || kind === 'turtle'){ const l = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 6), mat('#6cbf4a', 0.7)); l.scale.set(1, 0.25, 0.7); g.add(l); }
-  else if (kind === 'crab' || kind === 'octopus' || kind === 'puffer'){ const sh = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.018, 6, 10, Math.PI * 1.4), mat('#ff9a7a', 0.6)); g.add(sh); }
+  else if (kind === 'crab' || kind === 'octopus' || kind === 'puffer' || kind === 'horseshoe'){ const sh = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.018, 6, 10, Math.PI * 1.4), mat('#ff9a7a', 0.6)); g.add(sh); }
   else { const b = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 6), mat('#8fb4c8', 0.4)); b.scale.set(1.7, 0.6, 0.55); g.add(b); const tl = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.06, 4), mat('#8fb4c8', 0.4)); tl.rotation.z = Math.PI / 2; tl.position.x = -0.1; g.add(tl); }
   g.traverse(o => { if (o.isMesh){ o.castShadow = true; o.userData.dyn = true; } }); return g; }
 function petActEnd(pt){ const A = pt.act; if (!A) return; const U = pt.m.userData; if (A.ball) scene.remove(A.ball); if (A.item){ scene.remove(A.item); A.item = null; }
@@ -14220,7 +14241,7 @@ function recordCatch(f, w){
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of || f.keep ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
-  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) duelAfterCatch(f, w); if (r) petLuckyTry(); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); if (r) rumorAfterCatch(F.spot && F.spot.id); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
+  cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) duelAfterCatch(f, w); if (r) petLuckyTry(f.id); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); if (r) rumorAfterCatch(F.spot && F.spot.id); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
   if (Tny.on){ Tny.myW += w; Tny.myN++; }
   return { isNew, isBest: isBest && !isNew };
 }
@@ -17025,6 +17046,7 @@ function renderTab(){
       '潮汐（右上角）：大約 18 分鐘漲退一次。海邊、外海、小島在漲潮時最好釣，乾潮時比較難。',
       '🌊 潮汐表：點右上角的天氣和潮汐那一格，會看到現在是什麼潮、再幾分幾秒滿潮或乾潮（旁邊是現實的時間），還有現在哪些魚比較常咬。',
       '🆕 四種新魚（都在晴潮海邊）：沙鮻、點帶石斑幼魚只在「漲潮、滿潮」咬；潮池蝦虎、三棘鱟只在「退潮、乾潮」咬，潮位不對完全釣不到，要先看潮汐表。石斑幼魚和鱟用沉底釣比較容易；石斑幼魚在珊瑚礁島的礁岩也有，鱟在紅樹林也有。鱟釣到會自動收藏（不會被不小心賣掉），可以養在魚缸、放進水族館、做成魚拓。',
+      '🦀 小鱟（寵物）：釣到三棘鱟的時候，有兩成機會發現旁邊跟著一隻小鱟，牠會跟你回家。只有一種樣子，店裡不賣。牠偶爾會翻過來，再用尾劍把自己撐回去。住在小島的海水池。',
       '🐟 潮汐魚：有六種海魚跟著潮水走。浪人鰺、黑鯛、烏魚在「漲潮、滿潮」時明顯變多，「退潮、乾潮」時幾乎不咬；沙底比目魚、紅石章魚、鋸緣青蟳剛好相反，退潮和乾潮才好抓。圖鑑裡這幾種魚會標出來。想釣牠們就先看潮汐表。',
       `季節跟著現實的月份（台灣）：3～5 月春天 🌸、6～8 月夏天 🌻、9～11 月秋天 🍁、12～2 月冬天 ❄️。每季有 6 種「當季魚」比平常多一倍（圖鑑會標「當季」），樹的顏色、飄落的花瓣落葉雪花、廣場旁邊的裝飾也會跟著換。現在是${SEASONS[SEASON].name}。`,
       '釣具店老闆每天會給「今日情報」：說哪個釣點的哪種魚今天特別多（機率 2.5 倍）。',

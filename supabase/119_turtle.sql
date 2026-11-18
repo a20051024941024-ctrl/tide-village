@@ -6,7 +6,7 @@
 -- 小海龜（turtle，保育類）維持原樣，不加入養殖。
 
 alter table public.pets drop constraint if exists pets_kind_check;
-alter table public.pets add constraint pets_kind_check check (kind in ('cat', 'shiba', 'otter', 'gull', 'crab', 'turtle', 'octopus', 'puffer', 'pondturtle'));
+alter table public.pets add constraint pets_kind_check check (kind in ('cat', 'shiba', 'otter', 'gull', 'crab', 'turtle', 'octopus', 'puffer', 'pondturtle', 'horseshoe'));
 
 create table if not exists public.pet_turtle (
   pet_id bigint primary key references public.pets(id) on delete cascade,
