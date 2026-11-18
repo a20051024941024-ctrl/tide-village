@@ -49,8 +49,13 @@ end $$;
 
 -- 現在的天氣（9 分鐘一段）
 create or replace function public._weather(ms bigint) returns jsonb language plpgsql stable as $$
-declare cfg jsonb := public._fishcfg(); r integer; acc integer := 0; w jsonb;
+declare cfg jsonb := public._fishcfg(); r integer; acc integer := 0; w jsonb; ty text;
 begin
+  -- 195 颱風：前一小時當成「下雨」（魚咬得特別快）、登陸的 40 分鐘當成更強的「暴風雨」、過後一小時放晴。k 還是 rain／storm／sunny，其他地方不用改
+  begin ty := public._typhoon(ms)->>'phase'; exception when undefined_function then ty := null; end;
+  if ty = 'pre' then return jsonb_build_object('k', 'rain', 'w', 0, 'bite', 0.6, 'rare', 1.15, 'legend', 1, 'legendSea', false, 'ty', 'pre'); end if;
+  if ty = 'mid' then return jsonb_build_object('k', 'storm', 'w', 0, 'bite', 0.85, 'rare', 1.3, 'legend', 2.0, 'legendSea', true, 'ty', 'mid'); end if;
+  if ty = 'post' then return (cfg->'weathers'->0) || jsonb_build_object('ty', 'post'); end if;
   r := public._fnv('wx' || floor(ms / (cfg->>'wxBlock')::numeric)::bigint::text) % 100;
   for w in select * from jsonb_array_elements(cfg->'weathers') loop acc := acc + (w->>'w')::integer; if r < acc then return w; end if; end loop;
   return cfg->'weathers'->0;

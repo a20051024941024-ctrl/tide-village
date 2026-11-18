@@ -2850,7 +2850,7 @@ function shareChip(S){ let c = $('#shareChip'); if (!c){ c = document.createElem
     shareCard({ kind: 'whale', title: S.n, sub: '海上目擊', place: '外海', img: shot }); }; }
 OW.update = function(t){
   if (waterSurface && waterSurface.material.uniforms.uWaves){ const U = waterSurface.material.uniforms, tn = now(); U.uWT.value = tn; let any = false; WAVES.forEach((w, i) => { U.uWaves.value[i].set(w.x, w.z, w.t0, w.a); if (tn - w.t0 < 15) any = true; }); U.uWOn.value = any && Quality.tier !== 'low' ? 1 : 0; WAVES.on = any;
-    { const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1), wx = Env.wx, surf = wx === 'storm' ? 1.9 : wx === 'rain' || wx === 'wind' ? 1.4 : wx === 'fog' ? 0.7 : 1; if (!U.uIsl.done && typeof MANG !== 'undefined' && MANG && MANG.isl){ U.uIsl.done = true; const L = [[REEF.x, REEF.z, REEF.r + 0.4], ...MANG.isl.map(q => [q[0], q[1], q[2] + 0.6])].slice(0, 8);   /* 私人小島和冰原只有去的時候才畫出來，不放進來（不然空海上會有一圈浪） */ L.forEach((q, i) => U.uIsl.value[i].set(q[0], q[1], q[2])); }
+    { const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1), wx = Env.wx, surf = wx === 'tymid' ? 2.6 : wx === 'storm' || wx === 'typre' ? 1.9 : wx === 'rain' || wx === 'wind' ? 1.4 : wx === 'fog' ? 0.7 : 1; if (!U.uIsl.done && typeof MANG !== 'undefined' && MANG && MANG.isl){ U.uIsl.done = true; const L = [[REEF.x, REEF.z, REEF.r + 0.4], ...MANG.isl.map(q => [q[0], q[1], q[2] + 0.6])].slice(0, 8);   /* 私人小島和冰原只有去的時候才畫出來，不放進來（不然空海上會有一圈浪） */ L.forEach((q, i) => U.uIsl.value[i].set(q[0], q[1], q[2])); }
       U.uTideD.value = Math.max(0, -lv) * TIDE_DROP; U.uTideUp.value = Math.max(0, lv) * TIDE_UP; U.uSurf.value += (surf - U.uSurf.value) * 0.02; } }
   const hide = Dive.on || onIsle || House.on || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || Photo.on && false;
   const ns = bossNow() / 1000, W = Math.floor(ns / OW_WIN), inW = ns - W * OW_WIN, mx = me.pos.x, mz = me.pos.z;
@@ -4993,7 +4993,7 @@ const MUSIC = (() => {
     if (Dive.on) return 'dive';
     if (inShrimpHall(me.pos.x, me.pos.z, 8)) return 'shrimp';
     if (onIsle) return 'isle';
-    if ((Env.wx === 'rain' || Env.wx === 'storm') && !House.on) return 'rain';
+    if ((Env.wx === 'rain' || Env.wx === 'storm' || Env.wx === 'typre' || Env.wx === 'tymid') && !House.on) return 'rain';
     return DayNight.period === 'night' ? 'night' : DayNight.period === 'twilight' ? 'twilight' : 'day';
   }
   const SEA = { day:0.22, twilight:0.24, night:0.26, rain:0.12, isle:0.18, dive:0.05, shrimp:0.06, reel:0.08, boss:0.08 };
@@ -5182,7 +5182,7 @@ function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return fal
   if (greenNear(x, z, 6)){ const lx = x - GREEN.x, lz = z - GREEN.z; return Math.hypot(lx, lz) > greenEdge(lx, lz) + 1.2; }
   if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 2.6 || Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 2.2) return false; if (mtnH(x, z) !== null || mtnH(x + 1.5, z) !== null || mtnH(x - 1.5, z) !== null || mtnH(x, z + 1.5) !== null || mtnH(x, z - 1.5) !== null) return false;
   if (nearReef(x, z) && reefE(x, z) > -0.8) return false; { const e = mangE(x, z); if (e > -1.0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(x, z); return i.water && i.h < -0.3 && !deckAt(x, z); }
-function boardBoat(b){
+function boardBoat(b){ if (tyBlock('開船')) return;
   if (F.phase !== 'idle') cancelFishing();
   myBoat = b; me.pos.x = b.m.position.x; me.pos.z = b.m.position.z; me.rot = b.m.rotation.y; me.sitting = true; cam.yaw = me.rot + Math.PI;
   toast('上船了！用搖桿划船，在水上任何地方都可以拋竿。'); pushPresence(true);
@@ -6290,7 +6290,7 @@ function updateFishing(dt, t){
   }
   // HUD + button
   $('#chargeHud').hidden = F.phase !== 'charging';
-  { const gk = gatherKind(), gb = $('#gatherBtn'); if (gb && gb.dataset.k !== (gk || '')){ gb.dataset.k = gk || ''; gb.hidden = !gk; if (gk) gb.innerHTML = gk === 'lugworm' ? '🪱<small>挖沙蠶</small>' : '🦀<small>撿螃蟹</small>'; } }
+  { const gk = gatherKind(), gb = $('#gatherBtn'); if (gb && gb.dataset.k !== (gk || '')){ gb.dataset.k = gk || ''; gb.hidden = !gk; if (gk) gb.innerHTML = gk.startsWith('ty_') ? `${TY_ITEM[gk.slice(3)][0]}<small>撿${TY_ITEM[gk.slice(3)][1]}</small>` : gk === 'lugworm' ? '🪱<small>挖沙蠶</small>' : '🦀<small>撿螃蟹</small>'; } }
   if (frameNo % 15 === 3) baitFavChip();
   if (frameNo % 10 === 5) try { guideTick(); } catch(e){}
   if (mySeat && mySeat.furnLie && !me.emote) startEmote(me, mySeat.furnLie === 'bath' ? 'sitdown' : 'sleep');   /* v305 躺著的時候動作不見了就補回來 */
@@ -9050,11 +9050,26 @@ const WEATHERS = {
   cloudy: { name:'多雲',   icon:'⛅', w:25, desc:'雲多一點，稀有魚稍微多一些。', rare:1.05, light:0.82 },
   rain:   { name:'下雨',   icon:'🌧️', w:15, desc:'下雨天魚比較好咬，雷魚、鯰魚、鰻魚、黑鱸特別多。', bite:0.8, rare:1.15, light:0.62, rain:700 },
   fog:    { name:'起霧',   icon:'🌫️', w:8,  desc:'霧很濃，看不遠，但稀有魚比較多。', rare:1.25, light:0.75, fog:true },
+  /* v563 颱風的三個階段（w:0＝平常抽不到，只有 tyAt 說是颱風才會用）。伺服器那邊還是叫 rain／storm／sunny，數字一樣（195） */
+  typre:  { name:'颱風前夕', icon:'🌀', w:0, desc:'颱風快登陸了，風浪越來越大，魚咬得特別兇。', bite:0.6, rare:1.15, light:0.6, rain:500 },
+  tymid:  { name:'颱風', icon:'🌀', w:0, desc:'狂風暴雨！不能開船、潛水。海邊和港口釣得到被大浪翻上來的深海魚，傳說魚多很多，拉線很吃力。', bite:0.85, rare:1.3, legend:2.0, legendSea:true, tension:1.22, light:0.34, rain:1400, storm:true },
+  typost: { name:'颱風過後', icon:'🌈', w:0, desc:'放晴了！海邊沖上來好多東西，快去沙灘撿。' },
   storm:  { name:'暴風雨', icon:'⛈️', w:7,  desc:'外海和海邊的傳說魚多很多，但拉線比較吃力。', bite:0.9, rare:1.2, legend:1.6, legendSea:true, tension:1.12, light:0.42, rain:1400, storm:true },
 };
 const RAIN_FISH = new Set(['catfish', 'eel', 'snakehead', 'tilapia', 'bass', 'loach']);
 function hash32(str){ let h = 2166136261; for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+/* ================= v563 🌀 颱風來襲（作者 11/18：大約一到兩週一次） =================
+   每 10 天一輪，每輪登陸一次：第 2～9 天的 12:00～21:00 某個整點（跟伺服器 195 的 _typhoon_land 同一個公式）。
+   登陸前 60 分鐘＝颱風前夕、登陸後 40 分鐘＝颱風、再 60 分鐘＝颱風過後。網址加 #ty=pre／mid／post 可以強制測試。 */
+const TY = { EP: 864000e3, PRE: 3600e3, MID: 2400e3, POST: 3600e3, items: null, itemsFor: null, picked: new Set(), g: null, bow: null, loadFor: null };
+function tyLand(ep){ const h = hash32('ty' + ep); return ep * TY.EP - 8 * 3600e3 + (1 + h % 8) * 86400e3 + (12 + Math.floor(h / 256) % 10) * 3600e3; }
+function tyAt(ms){ const fz = (location.hash.match(/ty=(pre|mid|post)/) || [])[1]; if (fz) return { id: 0, land: fz === 'pre' ? ms + 1800e3 : fz === 'mid' ? ms - 600e3 : ms - TY.MID - 600e3, phase: fz, test: true };
+  const ep = Math.floor((ms + 8 * 3600e3) / TY.EP), L = tyLand(ep); return ms >= L - TY.PRE && ms < L + TY.MID + TY.POST ? { id: ep, land: L, phase: ms < L ? 'pre' : ms < L + TY.MID ? 'mid' : 'post' } : null; }
+function tyNext(ms){ const ep = Math.floor((ms + 8 * 3600e3) / TY.EP); for (let e = ep; e < ep + 3; e++){ const L = tyLand(e); if (L > ms) return L; } return null; }
+function tyOn(){ return !!(Env.ty && Env.ty.phase === 'mid'); }
+function tyBlock(what){ if (!tyOn()) return false; toast(`🌀 颱風天不能${what}，等風雨過了再說（還有 ${Math.max(1, Math.ceil((Env.ty.land + TY.MID - Date.now()) / 60000))} 分鐘）`); return true; }
 function weatherAt(ms){
+  { const ty = tyAt(ms); if (ty) return ty.phase === 'pre' ? 'typre' : ty.phase === 'mid' ? 'tymid' : 'typost'; }
   const b = Math.floor(ms / WX_BLOCK), r = hash32('wx' + b) % 100; let acc = 0;
   for (const [k, v] of Object.entries(WEATHERS)){ acc += v.w; if (r < acc) return k; } return 'sunny';
 }
@@ -9076,7 +9091,7 @@ const TIDE_ONLY = new Set(['whiting', 'groupie', 'tidegoby', 'horseshoe']);   /*
    sunny＝只有晴天　rain＝只有下雨、暴風雨　night＝只有晚上　veg＝只吃玉米粒、麵包糰 */
 const COND_FISH = { softshell:'sunny', climbperch:'rain', creekcrab:'night', grasscarp:'veg' };
 const COND_TXT = { sunny:'☀️ 只在晴天出現', rain:'🌧️ 只在下雨、暴風雨時出現', night:'🌙 只在晚上出現', veg:'🌽 只吃玉米粒、麵包糰' };
-function condOk(c){ try { if (c === 'sunny') return Env.wx === 'sunny'; if (c === 'rain') return Env.wx === 'rain' || Env.wx === 'storm'; if (c === 'night') return periodOf(gameHour()) === 'night'; if (c === 'veg'){ const b = Rig.rig === 'lure' ? null : curBait(); return !!b && (b.id === 'corn' || b.id === 'bread'); } } catch(e){} return true; }
+function condOk(c){ try { if (c === 'sunny') return Env.wx === 'sunny' || Env.wx === 'typost'; if (c === 'rain') return Env.wx === 'rain' || Env.wx === 'storm' || Env.wx === 'typre' || Env.wx === 'tymid'; if (c === 'night') return periodOf(gameHour()) === 'night'; if (c === 'veg'){ const b = Rig.rig === 'lure' ? null : curBait(); return !!b && (b.id === 'corn' || b.id === 'bread'); } } catch(e){} return true; }
 function condFishK(f){ const c = COND_FISH[f.id]; return !c ? 1 : condOk(c) ? 1.3 : 0; }
 function tideSide(st){ return st === 'rising' || st === 'high' ? 'in' : 'out'; }
 function tideFishK(f, spotId){ const sd = TIDE_FISH[f.id]; if (!sd || !SEA_SPOTS.has(spotId) || spotId === 'mudflat') return 1; return sd === tideSide(Env.tide.st) ? (TIDE_ONLY.has(f.id) ? 1.3 : 2.5) : TIDE_ONLY.has(f.id) ? 0 : 0.12; }
@@ -9090,7 +9105,8 @@ function tideCard(){ const card = duelCardOpen('tide'); card.classList.add('tide
   const now = el('div', 'td-now'), bar = el('div', 'td-bar'), fill = el('i'); bar.appendChild(fill); const nowT = el('b'), nowS = el('p', 'sub'); now.append(nowT, bar); card.append(now, nowS);
   const fishP = el('p', 'td-fish'); card.appendChild(fishP);
   const ul = el('ul', 'td-list'); card.appendChild(ul);
-  { const W2 = WEATHERS[Env.wx]; card.appendChild(el('p', 'sub', `${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}`)); card.appendChild(el('p', 'sub', `${W2.icon} ${W2.name}：${W2.desc}`)); card.appendChild(el('p', 'sub', `🧔 ${dailyTip().text}`)); }
+  { const W2 = WEATHERS[Env.wx]; card.appendChild(el('p', 'sub', `${SEASONS[SEASON].icon} ${SEASONS[SEASON].name}：${SEASONS[SEASON].desc}`)); card.appendChild(el('p', 'sub', `${W2.icon} ${W2.name}：${W2.desc}`)); card.appendChild(el('p', 'sub', `🧔 ${dailyTip().text}`));
+    { const ms = Date.now(), ty = tyAt(ms), nx = tyNext(ms), d = nx ? new Date(nx) : null; card.appendChild(el('p', 'sub', ty ? (ty.phase === 'pre' ? `🌀 颱風警報：大約 ${Math.max(1, Math.ceil((ty.land - ms) / 60000))} 分鐘後登陸` : ty.phase === 'mid' ? `🌀 颱風中：還有 ${Math.max(1, Math.ceil((ty.land + TY.MID - ms) / 60000))} 分鐘` : `🌈 颱風過後：沙灘上的東西還可以撿 ${Math.max(1, Math.ceil((ty.land + TY.MID + TY.POST - ms) / 60000))} 分鐘`) : d ? `🌀 氣象預報：下一個颱風大約 ${d.getMonth() + 1}/${d.getDate()} ${d.getHours()} 點登陸（登陸前一小時會發警報）` : '')); } }
   const hm = t => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   const draw = () => { const ms = Date.now(), T = tideNow(ms), key = T.st + Math.floor(ms / 1000); if (card._k === key) return; card._k = key;
     nowT.textContent = `${T.icon} 現在：${T.name}`; fill.style.width = Math.round((T.lv + 1) * 50) + '%'; nowS.textContent = TIDE_NOW_TXT[T.st];
@@ -9120,11 +9136,46 @@ function buildRain(){
   const m = new THREE.LineBasicMaterial({ color:'#cfe6f5', transparent:true, opacity:0.45, depthWrite:false });
   const l = new THREE.LineSegments(g, m); l.frustumCulled = false; l.visible = false; scene.add(l); return l;
 }
+/* 颱風：階段變化的通知、颱風中把人從船上和海底請回來、颱風過後沙灘上的東西和彩虹 */
+function tyItemKind(ty, i){ const h = hash32('typ' + ty + ':' + i) % 100; return h < 45 ? 'wood' : h < 75 ? 'shell' : h < 93 ? 'float' : 'chest'; }
+const TY_ITEM = { wood:['🪵', '漂流木'], shell:['🐚', '大貝殼'], float:['🔮', '玻璃浮球'], chest:['🧰', '漂來的寶箱'] };
+function tyItemMesh(k){ const g = new THREE.Group(), add = (geo, c, x, y, z, r) => { const m = new THREE.Mesh(geo, mat(c, r == null ? 0.7 : r)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  if (k === 'wood'){ const a = add(new THREE.CylinderGeometry(0.09, 0.11, 0.9, 8), '#9a8468', 0, 0.1, 0); a.rotation.z = Math.PI / 2; a.rotation.y = 0.4; const b = add(new THREE.CylinderGeometry(0.04, 0.06, 0.35, 6), '#8a7458', 0.15, 0.2, 0.08); b.rotation.set(0.3, 0, 0.9); }
+  else if (k === 'shell'){ const a = add(new THREE.ConeGeometry(0.16, 0.3, 10), '#f4e2cc', 0, 0.12, 0, 0.4); a.rotation.z = 1.2; for (let i = 0; i < 4; i++){ const r = add(new THREE.TorusGeometry(0.14 - i * 0.03, 0.012, 5, 14), '#e8b89a', -0.02 + i * 0.05, 0.12 + i * 0.012, 0, 0.5); r.rotation.y = Math.PI / 2; r.rotation.x = 0.35; } }
+  else if (k === 'float'){ const s = add(new THREE.SphereGeometry(0.17, 16, 12), '#5fd0c8', 0, 0.17, 0, 0.12); s.material = s.material.clone(); s.material.transparent = true; s.material.opacity = 0.75; s.material.emissive = new THREE.Color('#2a8a84'); s.material.emissiveIntensity = 0.35; for (let i = 0; i < 3; i++){ const r = add(new THREE.TorusGeometry(0.175, 0.008, 5, 18), '#7a6a4a', 0, 0.17, 0); r.rotation.set(i * 1.05, i * 0.7, 0); } }
+  else { add(new THREE.BoxGeometry(0.42, 0.24, 0.3), '#8a5a2e', 0, 0.12, 0); add(new THREE.BoxGeometry(0.44, 0.08, 0.32), '#a06a36', 0, 0.28, 0); add(new THREE.BoxGeometry(0.46, 0.04, 0.06), '#e8c04a', 0, 0.2, 0.14, 0.3); add(new THREE.BoxGeometry(0.08, 0.1, 0.03), '#e8c04a', 0, 0.2, 0.16, 0.3); g.rotation.z = 0.12; }
+  g.rotation.y = Math.random() * 6.28; return g; }
+function tyItemsFor(ty){ if (TY.itemsFor === ty && TY.items) return TY.items; const out = []; let k = 0;
+  while (out.length < 12 && k < 4000){ const hx = hash32('tyx' + ty + ':' + k), hz = hash32('tyz' + ty + ':' + k); k++; const x = (hx % 15000) / 100 - 75, z = (hz % 15000) / 100 - 75;
+    try { if (!isLand(x, z) || surfaceAt(x, z) !== 'sand' || islandEdge(x, z) > 7 || islandEdge(x, z) < 0.8 || blocked(x, z, 0.5) || deckAt(x, z)) continue; } catch(e){ continue; }
+    if (out.some(o => Math.hypot(o.x - x, o.z - z) < 4)) continue; out.push({ i: out.length, x, z, k: tyItemKind(ty, out.length) }); }
+  TY.itemsFor = ty; TY.items = out; return out; }
+function tyClear(){ if (TY.g){ scene.remove(TY.g); TY.g.traverse(o => { if (o.isMesh) o.geometry.dispose(); }); TY.g = null; } if (TY.bow){ TY.bow.visible = false; } }
+function tyNearItem(){ if (!Env.ty || Env.ty.phase !== 'post' || !TY.items) return null; let best = null, bd = 1.5; for (const it of TY.items){ if (TY.picked.has(it.i)) continue; const d = Math.hypot(it.x - me.pos.x, it.z - me.pos.z); if (d < bd){ bd = d; best = it; } } return best; }
+async function tyPick(){ const it = tyNearItem(), gb = $('#gatherBtn'); if (!it || gb.disabled) return; gb.disabled = true; me.bend = 0.6; try { SFX.tick(); } catch(e){} const done = () => setTimeout(() => { gb.disabled = false; }, 600), N = TY_ITEM[it.k];
+  const take = () => { TY.picked.add(it.i); if (it.m){ it.m.visible = false; } try { FX.emit(it.x, groundHeight(it.x, it.z) + 0.4, it.z, 14, '#ffe9a0', 0.4, 1.2, 0.9); } catch(e){} };
+  if (!Cloud.on || !Cloud.sb){ take(); flash(`${N[0]} 撿到${N[1]}！`, 1.4); done(); return; }
+  try { const { data, error } = await Cloud.sb.rpc('typhoon_pick', { p_i: it.i }); if (error) throw error; adoptRow(data.player); take(); SFX.catch(); flash(`${N[0]} 撿到${N[1]}！${data.coins ? '🪙+' + data.coins : ''}${data.love ? '💙+' + data.love : ''}`, 1.8); const left = TY.items.filter(o => !TY.picked.has(o.i)).length; if (!left) setTimeout(() => toast('🌈 這次颱風沖上來的東西你都撿完了！'), 1900); }
+  catch(e){ const em = cloudErrMsg(e); toast(em); if (/撿過/.test(em)) take(); } done(); }
+function tyTick(ms, dt, t){ const ty = tyAt(ms), ph = ty ? ty.phase : null, prev = Env.tyPh || null; Env.ty = ty;
+  if (ph !== prev){ Env.tyPh = ph; const first = Env.tyInit !== 1; Env.tyInit = 1;
+    if (ph === 'pre') ticker(`🌀 <b>颱風警報</b>：颱風大約 ${Math.max(1, Math.ceil((ty.land - ms) / 60000))} 分鐘後登陸潮汐村！風浪變大了，魚咬得特別兇。登陸後不能開船、潛水。`);
+    if (ph === 'mid'){ flash('🌀 颱風登陸了！', 2.6); ticker('🌀 <b>颱風登陸</b>：狂風暴雨 40 分鐘。船和潛水都停了；到晴潮海邊、港口外海的岸邊釣，有機會釣到被大浪翻上來的深海魚。'); camShake = Math.max(camShake, 0.5);
+      try { if (Dive.on) endDive('🌀 颱風來了，先上岸'); } catch(e){} try { if (myBoat && !Ferry.on){ leaveBoat(); toast('🌀 颱風來了，小船先靠岸'); } else if (myBoat && Ferry.on){ leaveFerry(true); toast('🌀 颱風來了，阿海把船開回港口了'); } } catch(e){} }
+    if (ph === 'post'){ flash('🌈 颱風過了！', 2.4); ticker('🌈 <b>颱風過後</b>：放晴了。沙灘上沖上來漂流木、貝殼、玻璃浮球，還有寶箱，走過去按「撿」（一小時內，每樣一次）。'); TY.picked = new Set(); TY.loadFor = null; }
+    if (!ph){ tyClear(); if (prev === 'post' && !first) ticker('🌊 海邊恢復平靜了。'); } }
+  if (ph === 'pre'){ const m = Math.ceil((ty.land - ms) / 60000); if ((m === 30 || m === 10) && Env.tyWarn !== ty.id + ':' + m){ Env.tyWarn = ty.id + ':' + m; ticker(`🌀 颱風還有 <b>${m} 分鐘</b>登陸。要出海、潛水的趁現在回來。`); } }
+  if (ph === 'mid' && !House.on && !inIndoor() && !Dive.on && Math.random() < dt * 0.12) camShake = Math.max(camShake, 0.1);   /* 一陣一陣的強風 */
+  if (ph === 'post'){ if (TY.loadFor !== ty.id){ TY.loadFor = ty.id; if (Cloud.on && Cloud.sb && !ty.test) Cloud.sb.rpc('typhoon_my').then(({ data }) => { if (data && Array.isArray(data.picked)) for (const i of data.picked){ TY.picked.add(+i); const it = TY.items && TY.items[+i]; if (it && it.m) it.m.visible = false; } }, () => {}); }
+    if (!TY.g && frameNo % 20 === 0){ const L = tyItemsFor(ty.id); TY.g = new THREE.Group(); for (const it of L){ it.m = tyItemMesh(it.k); it.m.position.set(it.x, groundHeight(it.x, it.z), it.z); it.m.visible = !TY.picked.has(it.i); TY.g.add(it.m); } scene.add(TY.g); }
+    if (!TY.bow){ const bw = new THREE.Group(); ['#e8504a', '#f09a3a', '#f2d84a', '#5ac06a', '#4a90e0', '#8a6ad0'].forEach((c, i) => { const m = new THREE.Mesh(new THREE.TorusGeometry(70 - i * 1.6, 0.8, 4, 48, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.32, depthWrite: false, fog: false })); bw.add(m); }); bw.position.set(0, -6, -150); bw.renderOrder = -2; scene.add(bw); TY.bow = bw; }
+    TY.bow.visible = !House.on && !inIndoor() && !Dive.on && !(DayNight.period === 'night'); }
+  else if (TY.bow && TY.bow.visible) TY.bow.visible = false; }
 function updateEnv(dt, t){
   const ms = Date.now(); Env.tide = tideNow(ms);
   const wx = (location.hash.match(/wx=(\w+)/) || [])[1]; Env.wx = WEATHERS[wx] ? wx : weatherAt(ms);
-  const W = WEATHERS[Env.wx];
-  if (Env.lastWx !== Env.wx){ if (Env.lastWx) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
+  const W = WEATHERS[Env.wx]; try { tyTick(ms, dt, t); } catch(e){}
+  if (Env.lastWx !== Env.wx){ if (Env.lastWx){ if (!/^ty/.test(Env.wx)) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); } else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
       const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { try { SFX.click(); } catch(e){} tideCard(); }); }
     Env.lastWx = Env.wx; }
   // 畫面：光線變暗、下雨、起霧、打雷
@@ -12089,7 +12140,7 @@ function updateFerry(dt, t){
   if (Ferry.on && !myBoat){ Ferry.on = false; renderFerryBar(); }
   if (Ferry.on && frameNo % 60 === 0){ const n = crewNear(); if (n !== Ferry.crewN){ Ferry.crewN = n; renderFerryBar(); } }
 }
-function ferryTo(x, z, label){
+function ferryTo(x, z, label){ if (tyBlock('出海')) return;
   closeSheet(); const b = boats.find(b => b.dock.id === 'harbor'); if (!b) return;
   // 找附近夠深的水
   let px = x, pz = z; if (!waterAt(px, pz)){ for (let r = 1; r < 12; r += 1){ let ok = false; for (let k = 0; k < 12; k++){ const a = k / 12 * Math.PI * 2, qx = x + Math.cos(a) * r, qz = z + Math.sin(a) * r; if (waterAt(qx, qz)){ px = qx; pz = qz; ok = true; break; } } if (ok) break; } }
@@ -12587,7 +12638,7 @@ function causticTex(){ if (CAUSTIC) return CAUSTIC; const N = 128, cv = document
 function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function startDive(site, back){
   site = DIVE_SITES[site] ? site : 'reef'; Dive.back = back || null;   /* back：從岸邊下水的話，浮上來回到這裡 */
-  if (Dive.on) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
+  if (Dive.on) return; if (tyBlock('潛水')) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
   if (!diveSiteOk(site)){ toast(`${DIVE_SITES[site].name}要先買：${DIVE_SITES[site].need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); return; }
   Dive.wsWant = null; if (site === 'offshore'){ try { Dive.wsWant = wsFind(me.pos.x, me.pos.z, 90); } catch(e){} }   /* v560 船底下有沒有睡覺的抹香鯨群 */
   Dive.site = site; Dive.ret = myBoat && Ferry.on ? { x: me.pos.x, z: me.pos.z, label: Ferry.label || '外海' } : null;
@@ -14775,13 +14826,14 @@ function fingerTip(){ let c = Guide.fin; if (!c){ c = Guide.fin = document.creat
   if (c._t !== t){ c._t = t; c.innerHTML = t; c.className = F.phase === 'bite' ? 'hot' : ''; } c.hidden = !t; }
 /* v295 自己拿餌：退潮時在沙灘挖沙蠶、在珊瑚礁島撿小螃蟹（伺服器 gather_bait 算次數和潮汐） */
 function gatherKind(){ if (F.phase !== 'idle' || Dive.on || myBoat || mySeat || House.on || inIndoor() || onIsle) return null; if (typeof Sub !== 'undefined' && Sub.on) return null;
+  { const it = tyNearItem(); if (it) return 'ty_' + it.k; }
   if (REEF && Math.hypot(me.pos.x - REEF.x, me.pos.z - REEF.z) < REEF.r + 1 && walkable(me.pos.x, me.pos.z)) return 'crabbait';
   if (Math.abs(me.pos.x) < 80 && Math.abs(me.pos.z) < 80 && surfaceAt(me.pos.x, me.pos.z) === 'sand' && Env.tide && Env.tide.lv < -0.3) return 'lugworm'; return null; }
 async function doGather(k){ const B = BAITS.find(b => b.id === k), gb = $('#gatherBtn'); if (gb.disabled) return; gb.disabled = true; me.bend = 0.6; puff(me.pos.x, me.baseY, me.pos.z); try { SFX.tick(); } catch(e){}
   if (!Cloud.on || !Cloud.sb){ rec.bait[k] = (rec.bait[k] || 0) + B.pack; saveRecLocal(); flash(`${B.icon} ${B.name} +${B.pack}`, 1.4); setTimeout(() => { gb.disabled = false; }, 900); return; }
   try { const { data, error } = await Cloud.sb.rpc('gather_bait', { p_kind: k }); if (error) throw error; adoptRow(data.player); SFX.catch(); flash(`${B.icon} ${k === 'lugworm' ? '挖到' : '撿到'} ${B.name} ×${data.got}！今天還可以 ${data.left} 次`, 1.8); if (!rec.baitOn){ rec.baitOn = k; cloudCall('set_bait', { p_bait: k }); } }
   catch(e){ toast(cloudErrMsg(e)); } setTimeout(() => { gb.disabled = false; }, 900); }
-$('#gatherBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const k = gatherKind(); if (k) doGather(k); });
+$('#gatherBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); const k = gatherKind(); if (k && k.startsWith('ty_')) tyPick(); else if (k) doGather(k); });
 /* v295 換上針對特定魚的餌時，旁邊寫「這個餌：愛吃的魚 ○○、○○」（只寫這個釣點有的） */
 function baitFavChip(){ let c = $('#baitFav'); if (!c){ c = document.createElement('div'); c.id = 'baitFav'; document.body.appendChild(c); }
   const b = Rig.rig === 'lure' ? null : curBait(); let txt = '';
@@ -16444,6 +16496,7 @@ function npcEventLines(n){
   if (breedSeason()) L.push('現在是繁殖季，吳郭魚、鯽魚這些會自己生的魚特別多');
   if (Env.wx === 'rain') L.push('下雨天雷魚、鯰魚、鰻魚特別愛吃');
   if (Env.wx === 'storm') L.push('暴風雨的時候外海傳說魚多很多，但是拉線很吃力');
+  if (Env.wx === 'typre') L.push('颱風要來了，船都綁好了。這種時候魚咬得特別兇'); if (Env.wx === 'tymid') L.push('颱風天別靠海邊太近！不過聽說大浪會把深海的怪魚打上來'); if (Env.wx === 'typost') L.push('颱風過了，沙灘上沖上來一堆東西，快去撿');
   { const night = FISH.filter(f => f.time === 'night' && !f.of && (!f.fest || festOn(f.fest)) && SPOT_BY_ID[f.spot] && !SPOT_BY_ID[f.spot].hidden); if (night.length){ const f = night[Math.floor(Math.random() * night.length)]; L.push(`${f.name}只有晚上才會出來，在${SPOT_BY_ID[f.spot].short}`); } }
   if (Sev.ev && !Sev.ev.caught && FISH_BY_ID[Sev.ev.fish]) L.push(`阿忠今天放了一條${FISH_BY_ID[Sev.ev.fish].name}，還沒有人釣到喔！`);
   if (RS.n > 0 && Math.random() < 0.4) L.push(`聽說外海還有 ${RS.n} 隻赤紅霸王鯊…`);
@@ -17153,6 +17206,7 @@ function renderTab(){
       '🌊 潮汐表：點右上角的天氣和潮汐那一格，會看到現在是什麼潮、再幾分幾秒滿潮或乾潮（旁邊是現實的時間），還有現在哪些魚比較常咬。',
       '🆕 四種新魚（都在晴潮海邊）：沙鮻、點帶石斑幼魚只在「漲潮、滿潮」咬；潮池蝦虎、三棘鱟只在「退潮、乾潮」咬，潮位不對完全釣不到，要先看潮汐表。石斑幼魚和鱟用沉底釣比較容易；石斑幼魚在珊瑚礁島的礁岩也有，鱟在紅樹林也有。鱟釣到會自動收藏（不會被不小心賣掉），可以養在魚缸、放進水族館、做成魚拓。',
       '🆕 第二批新魚（看天氣、時間、魚餌）：中華鱉在鏡湖，只有晴天出現，沉底釣；攀鱸在百年生態池，只有下雨或暴風雨時出現；拉氏清溪蟹在螢光溪間，只有晚上出現，沉底釣；草魚在月灣河岸，只吃玉米粒或麵包糰，換上才釣得到。護士鯊在珊瑚礁岸，晚上比較多，沉底釣；牠有一種極少見的金橘色「黃化護士鯊」。條件不對就完全釣不到，圖鑑裡每一種都有標。',
+      '🌀 颱風來襲：大約一到兩週一次，全村同時發生，一定在中午到晚上之間。點右上角的天氣可以看「氣象預報」，會寫下一個颱風哪一天幾點登陸。登陸前一小時發警報，這段時間魚咬得特別兇。颱風登陸的 40 分鐘不能開船、潛水、開潛水艇；在晴潮海邊、港口外海的岸邊釣，有機會釣到被大浪翻上來的深海魚（大眼青眼魚、鼠尾鱈、赤鯥、水滴魚，運氣好還有皇帶魚、翻車魚），傳說魚也多很多，但拉線很吃力。颱風過後的一小時放晴、出彩虹，沙灘上會沖上來 12 樣東西（漂流木、貝殼、玻璃浮球、寶箱），走過去按「撿」，每樣一次，給金幣或愛海點數。颱風不會弄壞你任何東西。',
       '🦀 小鱟（寵物）：釣到三棘鱟的時候，有兩成機會發現旁邊跟著一隻小鱟，牠會跟你回家。只有一種樣子，店裡不賣。牠偶爾會翻過來，再用尾劍把自己撐回去。住在小島的海水池。',
       '🐟 潮汐魚：有六種海魚跟著潮水走。浪人鰺、黑鯛、烏魚在「漲潮、滿潮」時明顯變多，「退潮、乾潮」時幾乎不咬；沙底比目魚、紅石章魚、鋸緣青蟳剛好相反，退潮和乾潮才好抓。圖鑑裡這幾種魚會標出來。想釣牠們就先看潮汐表。',
       `季節跟著現實的月份（台灣）：3～5 月春天 🌸、6～8 月夏天 🌻、9～11 月秋天 🍁、12～2 月冬天 ❄️。每季有 6 種「當季魚」比平常多一倍（圖鑑會標「當季」），樹的顏色、飄落的花瓣落葉雪花、廣場旁邊的裝飾也會跟著換。現在是${SEASONS[SEASON].name}。`,
@@ -18113,7 +18167,7 @@ function subHud(){ let h = $('#subHud'); if (h) return h;
   h.querySelectorAll('.sh-q > button').forEach(b => b.addEventListener('click', () => { h.querySelector('.sh-q').hidden = true; if (now() - (Sub.sayAt || 0) < 1.5) return; Sub.sayAt = now(); if (room && room.connected()) room.emit('subq', { k: +b.dataset.k }).catch(() => {}); }));
   return h; }
 
-async function subStart(){
+async function subStart(){ if (tyBlock('開潛水艇')) return;
   if (Sub.on || Sub.starting) return; if (!Cloud.on || !Cloud.sb){ toast('潛水艇要連上雲端才能開'); return; } Sub.starting = true;
   const r = await subRpc('sub_dive_start'); Sub.starting = false; if (!r) return; closeSubPanel();
   if (Sub.dockM && !Sub.cine){ Sub.cineBusy = true; subCineStart('go', () => { Sub.cineBusy = false; subEnter(r); }); return; } subEnter(r); }
