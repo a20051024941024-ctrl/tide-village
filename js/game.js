@@ -351,6 +351,11 @@ const DEEP_Q = [
   { id:'yeticrab_albino', spot:'abyss', of:'yeticrab', sub:true, name:'白化雪人蟹', rarity:'稀有', color:'#f4f2f2', min:0.05, max:0.3, power:0.3, w:0.03, depth:2200, desc:'連手臂上的毛都是雪白的，毛的根部透著淡淡的粉紅。' },
   { id:'yeticrab_glow', spot:'abyss', of:'yeticrab', sub:true, name:'螢光雪人蟹', rarity:'稀有', color:'#7affc8', min:0.05, max:0.3, power:0.3, w:0.02, depth:2200, desc:'手臂上的長毛發出青綠色的光，揮起手來像兩把發光的毛刷。' },
   { id:'yeticrab_dance', spot:'abyss', of:'yeticrab', sub:true, name:'跳舞雪人蟹', rarity:'稀有', color:'#e8c89a', min:0.05, max:0.25, power:0.3, w:0.05, depth:1000, desc:'雪人蟹的近親，住在海底冒出氣泡的地方。牠會一直有節奏地揮動毛茸茸的大螯，像在跳舞，其實是在幫毛上的小小細菌「搧風」，再把細菌吃掉。' },
+  /* 每週新增：線鰻（Nemichthys scolopaceus） */
+  { id:'snipeeel', spot:'abyss', sub:true, name:'線鰻', rarity:'常見', color:'#888888', min:0.02, max:0.1, power:0.25, depth:300, desc:'身體細得像一條長長的鞋帶，可以長到一百多公分卻輕得不得了；嘴巴像鳥嘴一樣又細又長，上下兩片往外彎、合不起來，上面長滿細細的小刺，專門勾住小蝦的長腳和觸鬚。' },
+  { id:'snipeeel_albino', spot:'abyss', of:'snipeeel', sub:true, name:'白化線鰻', rarity:'常見', color:'#f4f2f2', min:0.02, max:0.1, power:0.25, w:0.03, depth:300, desc:'全身白白的，像一條漂在黑暗裡的白色緞帶，眼睛是淡淡的粉紅色。' },
+  { id:'snipeeel_glow', spot:'abyss', of:'snipeeel', sub:true, name:'螢光線鰻', rarity:'常見', color:'#5af0ff', min:0.02, max:0.1, power:0.25, w:0.02, depth:300, desc:'長長的鳥嘴和身體下緣發出藍綠色的光，游起來像一條會動的霓虹燈管。' },
+  { id:'snipeeel_black', spot:'abyss', of:'snipeeel', sub:true, name:'黑鷸鰻', rarity:'常見', color:'#2a2220', min:0.02, max:0.08, power:0.25, w:0.05, depth:500, desc:'線鰻的近親，全身深褐到黑色，一樣有細長的鳥嘴，住得比線鰻再深一點。' },
 ];
 var DeepQ = { got:new Set(), at:0 };
 for (const d of DEEP_Q) FISH_BY_ID[d.id] = d;   /* 查得到（魚缸裡已經有的不會被當成不認識的魚丟掉），但還不在 FISH 名單裡（圖鑑、清單看不到） */
