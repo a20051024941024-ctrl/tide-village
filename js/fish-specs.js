@@ -886,6 +886,55 @@ Object.assign(SPECS, {
     cd:0.27, cr:0.29, ch:0.15, pairs:4, span:0.6, legR:0.026, eyeH:0.07, spots:4, claw:{ size:0.7, right:1.5 },
     shell:v => [v[0] * 1.02, v[1] * 1.05, v[2] * 0.98] } },
 });
+/* ---------------- v568 新的傳說魚（作者 11/18：「應該是要加新的傳說魚吧」） ---------------- */
+Object.assign(SPECS, {
+  // 大海鰱 Megalops cyprinoides：側扁的長身、整身大片銀鱗；下巴往上翹；背鰭最後一根拖成長絲；尾鰭深叉
+  tarpon: { c:{ Top:'#6a8c98', Mid:'#dce6ea', Bottom:'#f8fafa', Stripes:'#b8c8d0', Fins:'#7a909a', Accent:'#5a7480', Eye:'#15181c', EyeW:'#f0f0e0' }, p:{
+    bl:0.8, depth:0.27, wr:0.5, tm:0.36, nose:0.55, ped:0.24, cs:0.25, yc:[[0,0.25],[0.15,0],[1,0]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.6, y1:0.45, part:'Mid' }, { k:'wave', f:34, fy:5, t0:0.2, t1:0.95, y0:-0.7, y1:0.95, th:0.82, part:'Stripes' }],
+    dorsal:{ s:0.46, e:0.58, h:0.48, shape:'tri', peak:0.2 }, anal:{ s:0.64, e:0.8, h:0.36, shape:'falcate' }, pect:{ t:0.24, y:-0.7, size:0.5, shape:'long', ang:-0.5 }, pelv:{ t:0.46, size:0.34 },
+    caudal:{ type:'forked', notch:0.6, hk:1.55 }, eye:EYE(0.11, 0.35, 0.09, { ring:true }),
+    extra:[{ k:'limb', pts:[{ t:0.58, yn:1.0, z:0 }, { x:-0.1, y:0.2, z:0 }, { x:-0.24, y:0.13, z:0 }], r0:0.008, r1:0.003, part:'Accent' }] } },
+  // 海鱺 Rachycentron canadum：長筒身、頭又寬又扁；深褐色，體側兩條白色縱帶；第二背鰭和臀鰭很長；新月形尾。常被誤認成鯊魚
+  cobia: { c:{ Top:'#6a5844', Mid:'#8e7a60', Bottom:'#f4eedc', Stripes:'#f4ecd8', Fins:'#5a4a38', Eye:'#15181c', EyeW:'#c8b890' }, p:{
+    bl:0.82, depth:0.17, wr:0.95, tm:0.34, nose:0.7, ped:0.16, n:2.1, cs:0.1, yc:[[0,-0.2],[0.12,0],[1,0]], up:[[0,0.4],[0.08,0.78],[0.25,1],[0.6,0.8],[1,0.3]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.6, part:'Mid' }, { k:'line', t0:0.06, t1:0.98, y:[[0,0.3],[1,0.2]], w:0.09, part:'Stripes' }, { k:'line', t0:0.2, t1:0.95, y:[[0,-0.3],[1,-0.2]], w:0.07, part:'Stripes' }],
+    dorsal:[{ s:0.3, e:0.42, h:0.12, shape:'spiny', back:0.9 }, { s:0.45, e:0.86, h:0.42, shape:'rampd' }], anal:{ s:0.56, e:0.86, h:0.32, shape:'rampd' },
+    pect:{ t:0.24, y:-0.5, size:0.6, shape:'long', ang:-0.45 }, pelv:{ t:0.26, size:0.3 }, caudal:{ type:'lunate', hk:1.45 }, eye:EYE(0.07, 0.25, 0.06, { ring:true }) } },
+  // 雨傘旗魚 Istiophorus platypterus：比身體還高的大背鰭像一面帆，帆上有深色圓點；細長的吻劍；身體深藍、體側淡藍色直條
+  sailfish: { c:{ Top:'#24489a', Mid:'#7aa0d8', Bottom:'#eef2f6', Stripes:'#b8dcff', Fins:'#3a5ad0', Spots:'#0c1430', Fins2:'#2a3a6a', Eye:'#15181c', EyeW:'#c8d8f0' }, p:{
+    bl:0.78, depth:0.18, wr:0.55, tm:0.32, nose:1.15, ped:0.06, cs:0.1, pat:[{ k:'band', t0:0, t1:1, y0:-0.35, y1:0.1, part:'Mid' }, { k:'bars', bars:BARS(14, 0.25, 0.82, 0.012, -0.3, 0.6), part:'Stripes' }],
+    dorsal:[{ s:0.14, e:0.7, h:1.75, shape:'sail', sweep:0.12 }, { s:0.82, e:0.85, h:0.16, part:'Fins2' }], anal:[{ s:0.58, e:0.66, h:0.34, shape:'falcate', part:'Fins2' }, { s:0.82, e:0.85, h:0.14, part:'Fins2' }],
+    pect:{ t:0.22, y:-0.5, size:0.7, shape:'long', ang:-0.55, part:'Fins2' }, pelv:{ t:0.26, size:0.85, shape:'long', part:'Fins2' }, caudal:{ type:'lunate', hk:1.9, part:'Fins2' }, eye:EYE(0.075, 0.15, 0.08, { ring:true }),
+    extra:[{ k:'cone', a:{ t:0.02, yn:0.0 }, b:{ x:1.2, y:0.0, z:0 }, r:0.02, n:6, part:'Top' }] } },
+  // 劍旗魚 Xiphias gladius：身體粗壯；又長又扁的劍佔了快三分之一；沒有腹鰭；背鰭高而硬像鐮刀、很前面；眼睛特別大；背部黑褐色
+  swordfish: { c:{ Top:'#5a4e62', Mid:'#9a90a2', Bottom:'#f0ece6', Fins:'#4a4054', Accent:'#6a5e72', Eye:'#15181c', EyeW:'#9ab8d8' }, p:{
+    bl:0.72, depth:0.24, wr:0.72, tm:0.3, nose:0.9, ped:0.07, n:2.1, cs:0.05, pat:[{ k:'band', t0:0, t1:1, y0:-0.4, y1:0.15, part:'Mid' }],
+    dorsal:[{ s:0.2, e:0.34, h:0.95, shape:'falcate' }, { s:0.84, e:0.87, h:0.12 }], anal:[{ s:0.62, e:0.7, h:0.42, shape:'falcate' }, { s:0.84, e:0.87, h:0.1 }],
+    pect:{ t:0.22, y:-0.75, size:0.8, shape:'long', ang:-0.7 }, caudal:{ type:'lunate', hk:2.0 }, eye:EYE(0.13, 0.25, 0.085, { ring:true }),
+    extra:[{ k:'cone', a:{ t:0.02, yn:0.1 }, b:{ x:1.32, y:0.03, z:0 }, r:0.038, n:6, part:'Accent' }] } },
+  // 鱤魚 Elopichthys bambusa：像魚雷一樣又長又尖，嘴裂很大；銀白色，鰓蓋金黃（所以也叫黃頰魚）；背鰭在身體後半；尾鰭深叉
+  yellowcheek: { c:{ Top:'#7a8a7c', Mid:'#d4dad0', Bottom:'#f4f4ee', Accent:'#e8c040', Fins:'#7a7a5a', Fins2:'#c8a84a', Eye:'#15181c', EyeW:'#f0d870' }, p:{
+    bl:0.86, depth:0.16, wr:0.72, tm:0.4, nose:1.35, ped:0.2, n:2.1, cs:0.3, yc:[[0,-0.15],[0.12,0],[1,0]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.35, part:'Mid' }, { k:'ell', t:0.17, y:-0.05, rt:0.035, ry:0.5, part:'Accent' }],
+    dorsal:{ s:0.56, e:0.66, h:0.5, shape:'tri', peak:0.25 }, anal:{ s:0.72, e:0.82, h:0.36, shape:'falcate', part:'Fins2' }, pect:{ t:0.24, y:-0.6, size:0.4, part:'Fins2' }, pelv:{ t:0.5, size:0.3, part:'Fins2' },
+    caudal:{ type:'forked', notch:0.6, hk:1.5 }, eye:EYE(0.07, 0.2, 0.1, { ring:true }) } },
+  // 鱷雀鱔 Atractosteus spatula：鱷魚一樣又寬又長的嘴；身體像一根圓木，全身菱形硬鱗像盔甲；背鰭和臀鰭都擠在尾巴前面；圓尾；鰭上有黑點
+  alligatorgar: { c:{ Top:'#7a7a52', Mid:'#a8a474', Bottom:'#ece4c8', Stripes:'#5c5c3a', Spots:'#1e1c12', Fins:'#9a8454', Accent:'#8a865c', Eye:'#15181c', EyeW:'#c8a850' }, p:{
+    bl:0.76, depth:0.15, wr:0.95, tm:0.5, nose:0.9, ped:0.42, n:2.2, cs:0.0, up:[[0,0.45],[0.08,0.7],[0.3,1],[0.75,0.95],[1,0.55]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }, { k:'wave', f:70, fy:9, t0:0.16, t1:0.97, y0:-0.6, y1:0.95, th:0.84, part:'Stripes' }, { k:'spots', gt:0.05, gy:0.4, r:0.02, ar:5, t0:0.78, t1:0.98, y0:-0.8, y1:0.8, part:'Spots', fill:0.5 }],
+    dorsal:{ s:0.8, e:0.9, h:0.55, shape:'round' }, anal:{ s:0.78, e:0.88, h:0.5, shape:'round' }, pect:{ t:0.2, y:-0.8, size:0.45, shape:'round' }, pelv:{ t:0.5, size:0.38, shape:'round' },
+    caudal:{ type:'rounded', hk:1.25 }, eye:EYE(0.06, 0.45, 0.1, { ring:true }),
+    extra:[{ k:'cone', a:{ t:0.03, yn:0.15 }, b:{ x:1.06, y:0.012, z:0 }, r:0.05, n:8, part:'Accent' }, { k:'cone', a:{ t:0.04, yn:-0.55 }, b:{ x:1.04, y:-0.012, z:0 }, r:0.04, n:8, part:'Bottom' }] } },
+  // 蘇眉魚（曲紋唇魚）Cheilinus undulatus：身體又高又厚，額頭一個大腫包、厚厚的嘴唇；藍綠色，每片鱗有深色直紋，臉上是橘色的迷宮花紋；眼睛後面兩條黑線
+  napoleon: { c:{ Top:'#2f8a9a', Mid:'#48b8ac', Bottom:'#a8e0c8', Stripes:'#2a6a80', Accent:'#f0a850', Spots:'#12222e', Fins:'#3a9aaa', Fins2:'#58c8b8', Beak:'#8ad4c4', Eye:'#15181c', EyeW:'#f0d060' }, p:{
+    bl:0.76, depth:0.42, wr:0.55, tm:0.4, nose:0.42, ped:0.36, cs:0.15, up:[[0,0.55],[0.06,0.85],[0.2,1],[0.6,0.9],[1,0.5]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.6, y1:0.4, part:'Mid' }, { k:'wave', f:58, fy:3, t0:0.3, t1:0.95, y0:-0.8, y1:0.95, th:0.86, part:'Stripes' }, { k:'wave', f:26, fy:14, t0:0.02, t1:0.28, y0:-0.7, y1:0.6, th:0.72, part:'Accent' },
+      { k:'line', t0:0.17, t1:0.3, y:[[0,0.32],[0.3,0.5]], w:0.035, part:'Spots' }, { k:'line', t0:0.17, t1:0.29, y:[[0,0.2],[0.29,0.3]], w:0.03, part:'Spots' }],
+    dorsal:{ s:0.3, e:0.86, h:0.24, shape:'flat', sweep:0.2 }, anal:{ s:0.6, e:0.86, h:0.24, shape:'flat', sweep:0.2 }, pect:{ t:0.32, y:-0.15, size:0.5, shape:'round', part:'Fins2' }, pelv:{ t:0.36, size:0.32, part:'Fins2' },
+    caudal:{ type:'rounded', hk:1.1, part:'Fins2' }, eye:EYE(0.065, 0.42, 0.11, { ring:true }),
+    extra:[{ k:'ellip', c:{ t:0.13, yn:0.8 }, r:[0.11, 0.075, 0.075], part:'Top', seg:12, rings:8 }, { k:'ellip', c:{ t:0.0, yn:-0.2 }, r:[0.03, 0.05, 0.06], part:'Beak', seg:10, rings:6 }] } },
+});
 // 黃化護士鯊：2024 年在哥斯大黎加真的記錄到的個體，全身金橘色、眼睛幾乎是白的
 SPECS.nurseshark_xanthic = VAR('nurseshark', { Top:'#f6a640', Mid:'#fbc066', Bottom:'#fff0cc', Accent:'#e89030', Gill:'#e08a2a', Fins:'#f29a3a', Eye:'#f2efe6', EyeW:'#ffffff' });
 
@@ -904,6 +953,7 @@ const MOUTH = {
   puffer:{ t:0.025, y:-0.05, th:1.4 }, parrot:{ t:0.035, y:-0.1, th:1.6, part:'EyeW' }, sunfish:{ t:0.03, y:-0.05, open:0.4 }, milkfish:{ t:0.035, y:-0.15 }, mullet:{ t:0.035, y:-0.2 },
   mudskipper:{ t:0.06, y:-0.35, th:1.2 }, bigskipper:{ t:0.06, y:-0.35, th:1.2 }, anchovy:{ type:'sub', t:0.09, y:-0.4, t0:0.02 }, loach:{ type:'sub', t:0.05, y:-0.6, t0:0.02 },
   hillstream:{ type:'sub', t:0.06, y:-0.8, t0:0.05 }, salmon:{ t:0.08, y:-0.15 }, trout:{ t:0.08, y:-0.15 }, ayu:{ t:0.06, y:-0.2 }, tilapia:{ t:0.05, y:-0.1, lip:'Mid' }, bonito:{ t:0.06, y:-0.15 },
+  tarpon:{ t:0.07, y:0.15, th:1.2 }, cobia:{ t:0.07, y:-0.25 }, sailfish:{ t:0.05, y:-0.3 }, swordfish:{ t:0.05, y:-0.35 }, yellowcheek:{ t:0.1, y:-0.1, th:1.2 }, alligatorgar:{ t:0.03, y:-0.3 }, napoleon:{ t:0.045, y:-0.2, th:1.4 },
   whiting:{ t:0.045, y:-0.3 }, tidegoby:{ t:0.08, y:-0.3, th:1.2 }, groupie:{ t:0.1, y:-0.15, th:1.3 }, climbperch:{ t:0.06, y:-0.1 }, grasscarp:{ t:0.045, y:-0.15 }, nurseshark:{ type:'sub', t:0.1, y:-0.7, t0:0.03 }, nurseshark_xanthic:{ type:'sub', t:0.1, y:-0.7, t0:0.03 },
   mackerel:{ t:0.06, y:-0.15 }, oarfish:{ t:0.04, y:0.0 }, sicyo:{ type:'sub', t:0.06, y:-0.55, t0:0.03 }, eleotris:{ t:0.1, y:-0.05, open:0.25 }, kuhlia:{ t:0.06, y:-0.1 },
   dolphin:{ t:0.11, y:-0.3, th:1.1 }, orca:{ t:0.13, y:-0.3, th:1.2 }, beluga:{ t:0.08, y:-0.25 }, sperm:{ type:'sub', t:0.24, y:-0.65, t0:0.04, th:1.3 }, whale:{ t:0.2, y:-0.2, th:1.4 }, bluewhale:{ t:0.2, y:-0.2, th:1.4 }, bluewhale_albino:{ t:0.2, y:-0.2, th:1.4 },

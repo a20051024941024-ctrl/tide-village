@@ -199,7 +199,7 @@ begin
   kl := (rod->>'legend')::numeric * coalesce((bait->>'legend')::numeric, 1) * coalesce((bf->>'legend')::numeric, 1) * cb_l
         * (case when (w->>'legendSea')::boolean then (case when sea then (w->>'legend')::numeric else 1 end) else (w->>'legend')::numeric end);
   select count(*) into nleg from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'r' = '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false);   -- 變種不算
-  legk := (case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);
+  legk := coalesce((cfg->'legKs'->>p_spot)::numeric, case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);   -- v568 加了新傳說魚的釣點有自己的總機率（legKs），原本的傳說魚才不會被分掉
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
   sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl, bait->>'k') end;
   begin evm := public._ev_mig(); if public._ev_meteor() then kl := kl * 1.6; end if; exception when undefined_function then evm := null; end;
@@ -224,7 +224,7 @@ begin
       * (case when cor_k > 0 and fid in ('parrot', 'seahorse', 'lionfish') then 1 + 0.25 * cor_k else 1 end)   -- 142 珊瑚吸引珊瑚礁魚
       * (case when rum_f is not null and fid = rum_f then 4 else 1 end)   -- 111 魚群洄游：那種魚在那個釣點 ×4
       * (case when sg_k is not null and (f->>'k' = sg_k or (sg_k = 'shadow' and (f->>'max')::numeric >= 3)) then   -- v565 魚影（中大型魚）：以前只認「shadow」那一類，海邊只有魟魚、外海只有魟魚和海豚，所以對著魚影拋永遠是那兩種。改成最大能長到 3 公斤以上的都算
-        (case when f->>'r' = '傳說' then (case when sg_k = bait->>'k' then 1.5 else 1.3 end) else (case when sg_k = bait->>'k' then 4 else 2.5 end) end) else 1 end)   -- 247 徵兆（255：餌對上徵兆加成更大）
+        (case when f->>'r' = '傳說' then (case when coalesce((f->>'follow')::boolean, false) and sg_k = 'shadow' then 3.0 when sg_k = bait->>'k' then 1.5 else 1.3 end) else (case when sg_k = bait->>'k' then 4 else 2.5 end) end) else 1 end)   -- 247 徵兆（255：餌對上徵兆加成更大）
       * (case when bait ? 'fav' then (case when bait->'fav' ? coalesce(f->>'of', fid) then (case when f->>'r' = '傳說' then 1.3 else 1.8 end) else 0.88 end) else 1 end)   -- 118 針對特定魚的餌：愛吃的魚 ×1.8（傳說 ×1.3），其他 ×0.88
       * (case when bait->>'k' is not null and f->>'k' = bait->>'k' then 1.5 else 1 end)   -- 255 餌吸引的那一類魚   -- 藍鯨浮上來的 90 秒（228）：港口外海釣到藍鯨的機率 ×5
       * (case f->>'r' when '常見' then 1 when '稀有' then 0.34 * (1 + charge * 0.8) * kr * ring else 0.07 * (1 + charge * 1.6) * lb * kl * ring * legk end);
@@ -254,6 +254,7 @@ begin
   begin if rs is null and random() < 0.5 and public._mastery3(pl.id, pick) then fw := greatest(fw, round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), 1.3))::numeric, 2)); end if; exception when undefined_function then null; end;   -- 114 三顆星的魚：大尺寸機率小幅提高
   if rs is not null then fw := public._rs_w(rsh); end if;
   gpv := case when pick in ('guppy', 'guppy_albino') then public._gpy_wild() end;
+  perform set_config('tide.rig', coalesce(p_rig, ''), true);   -- 196 鱤魚只追路亞
   perform set_config('tide.bait', case when bait is not null then coalesce(p_bait, '') else '' end, true);   -- 193 這一竿用的魚餌：casts 的觸發器要看（草魚只吃玉米粒、麵包糰）
   insert into public.casts (uid, spot, fish, w, rs, sex, brood, gp, at, shown_at) values (pl.id, p_spot, pick, fw, rs, sx, brood, gpv, now(), null)
   on conflict (uid) do update set spot = excluded.spot, fish = excluded.fish, w = excluded.w, rs = excluded.rs, sex = excluded.sex, brood = excluded.brood, gp = excluded.gp, at = excluded.at, shown_at = null;
