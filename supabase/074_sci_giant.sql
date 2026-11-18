@@ -13,6 +13,7 @@ create or replace function public._sci_make(p_day date) returns public.sci_finds
 declare r public.sci_finds; h bigint; spots text[]; prev text; sp text; pool text[]; b public.fish_species; hue int; hue2 int; part text; nm text; nid text; k numeric; kind text; st text; lbl text; giant boolean; rar text;
 begin
   select * into r from public.sci_finds where day = p_day; if r.day is not null then return r; end if;
+  if p_day > date '2026-11-18' then return null; end if;   -- v558：不再每天自動產生換顏色的新品種（191_sci_real.sql）；已經發現的都留著
   h := public._fnv('sci' || p_day::text);
   spots := array(select s from jsonb_object_keys(public._sci_pool()) s order by s);
   select spot into prev from public.sci_finds where day = p_day - 1;

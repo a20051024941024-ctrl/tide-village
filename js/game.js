@@ -13456,7 +13456,7 @@ const BAITS = [
   { id:'lugworm', name:'沙蠶', icon:'🪱', price:0, pack:2, gather:'lugworm', desc:'退潮時在沙灘自己挖（一天 6 次）。海邊沙底的魚最愛。', rare:1.05, legend:1, fav:['flounder', 'tilefish', 'scorpion', 'stingray', 'crab', 'mudskipper', 'bigskipper', 'cod'] },
   { id:'crabbait', name:'小螃蟹', icon:'🦀', price:0, pack:1, gather:'crabbait', desc:'在珊瑚礁島的礁岩上撿（一天 6 次）。石斑、黑鯛最愛。', rare:1.15, legend:1, fav:['grouper', 'blackbream', 'lethrinus', 'octopus', 'blackgirella', 'cod'] },
   { id:'saurychunk', name:'秋刀魚切塊', icon:'🔪', price:0, pack:4, craft:true, desc:'阿鐵師傅用秋刀魚切的（1 條秋刀魚＋🪙20 → 4 個）。鯊魚和大型掠食魚最愛。', rare:1.2, legend:1.1, fav:['shark', 'hammer', 'greatwhite', 'bullshark', 'galapagosshark', 'yellowtail', 'amberjack', 'trevally', 'barracuda', 'mahi', 'tuna', 'barramundi'] },
-  { id:'nightbug', name:'夜光蟲餌', icon:'✨', price:0, pack:3, craft:true, desc:'蔚博士的委託獎勵（把今天的新品種釣上來給他看）。晚上才出現的魚最愛。', rare:1.1, legend:1, fav:['catfish', 'eel', 'moonbream', 'squid', 'jelly', 'ika', 'hairtail', 'octopus', 'goby', 'lantern', 'trout', 'lobster', 'kingcrab', 'marmorata', 'sturgeon'] },
+  { id:'nightbug', name:'夜光蟲餌', icon:'✨', price:0, pack:3, craft:true, desc:'蔚博士的委託獎勵（把他今天調查的魚釣上來給他看）。晚上才出現的魚最愛。', rare:1.1, legend:1, fav:['catfish', 'eel', 'moonbream', 'squid', 'jelly', 'ika', 'hairtail', 'octopus', 'goby', 'lantern', 'trout', 'lobster', 'kingcrab', 'marmorata', 'sturgeon'] },
 ];
 const baitFavK = (b, f) => !b || !b.fav ? 1 : b.fav.includes(f.of || f.id) ? (f.rarity === '傳說' ? 1.3 : 1.8) : 0.88;   /* 跟伺服器 020 一樣 */
 function baitFavNames(b, spotId){ if (!b || !b.fav) return []; return b.fav.map(id => FISH_BY_ID[id]).filter(f => f && (!spotId || f.spot === spotId)).map(f => rec.count[f.id] ? f.name : '？？？'); }
@@ -14618,7 +14618,7 @@ function navList(){ const L = [], byName = p => { const n = npcs.find(n => n.sho
   const ICON = { aquarium:'🐠', chat:'💬', tackle:'🎣', shop:'🏪', cook:'🍲', museum:'🏛️', tailor:'👗', mu:'🪚', market:'🐟', salon:'💇', cai:'🎨', fu:'🦐' };
   for (const l of LANDMARKS) if (ICON[l.id]) L.push([ICON[l.id], l.label, [l.pos.x, l.pos.z]]);
   L.push(['🦐', '釣蝦場', [SHRIMP_DOOR.x, SHRIMP_DOOR.z]]); if (SHOPLOT.pet) L.push(['🐾', '小花寵物店', [SHOPLOT.pet.x, SHOPLOT.pet.z]]);
-  for (const [ic, p, lab] of [['🔧', 'craft', '阿鐵（做魚餌、釣竿造型）'], ['🔬', 'sci', '蔚博士（潛水艇、新品種）']]){ const q = byName(p); if (q) L.push([ic, lab, q]); }
+  for (const [ic, p, lab] of [['🔧', 'craft', '阿鐵（做魚餌、釣竿造型）'], ['🔬', 'sci', '蔚博士（潛水艇、每日調查）']]){ const q = byName(p); if (q) L.push([ic, lab, q]); }
   L.push(['⚓', '老港（每週限量）', [31.4, -34.4]]);
   return L; }
 function guideMark(k){ if (k === 'sell') LS.set('tide.guideSold', true); if (k === 'isle') LS.set('tide.guideIsle', true); if (k === 'dive') LS.set('tide.guideDive', true); }
@@ -15592,7 +15592,7 @@ const npcs = [
     lines:['號外號外！今天的《潮汐村報》出來了', '每天早上 7 點出報，昨天發生什麼事都寫在上面，全服大魚、博物館新展品、節慶活動也會寫', '釣到稀有的魚，明天就會上報喔，名字還是金色的', '報紙我都留 7 天，想看以前的也可以', '我到處跑新聞，村民的八卦我最清楚了'] },
   // 蔚博士：海洋科學家，每天跑到世界上的一個釣點調查，發現一種新品種（070_sci.sql）；站在今天調查的釣點旁邊
   { name:'蔚博士・海洋科學家', shirt:'#f4f6f8', hat:'#2f7fa8', x:2.4, z:3.2, y:0.02, dir:new THREE.Vector2(-0.6, 0.8).normalize(), shopNpc:'sci',
-    lines:['我在晴潮海邊確認了四種以前沒記錄的魚：沙鮻、石斑幼魚、潮池蝦虎，還有活化石「鱟」。牠們只在特定的潮位出現，先看潮汐表再去', '我是海洋科學家，每天都會到不同的地方做調查', '世界上還有好多沒被發現的魚，每天都有新驚喜', '我發現的新品種，會放進大家的圖鑑裡', '我研究站的探測潛水艇需要人幫忙採樣，深海浮台上的潛水艇碼頭可以借你（Lv.15 以上，搭阿海的船去）', '新品種剛發現的那天最容易遇到，之後也一直都在那裡', '每一種新品種都有很少見的白化或黑化個體，我也還沒看過'] },
+    lines:['我在晴潮海邊確認了四種以前沒記錄的魚：沙鮻、石斑幼魚、潮池蝦虎，還有活化石「鱟」。牠們只在特定的潮位出現，先看潮汐表再去', '我是海洋科學家，每天都會到不同的地方做調查', '每天我會挑一種魚仔細研究，你釣到的話拿來給我看，我有謝禮', '以後確認了真的沒記錄過的魚，我會第一個告訴大家', '我研究站的探測潛水艇需要人幫忙採樣，深海浮台上的潛水艇碼頭可以借你（Lv.15 以上，搭阿海的船去）', '以前我記錄的那些花色不一樣的魚，還住在原來的釣點', '同一種魚也有很少見的白化或黑化個體，我也還沒全部看過'] },
   { name:'阿伯・老校工', shirt:'#c8b48a', hat:'#5a6a3a', x:21.6, z:-41.0, y:0.02, dir:new THREE.Vector2(-0.2, 1).normalize(), lines:['這個池子比我年紀還大，學校一百多年前就有了', '以前的學生下課都蹲在池邊看魚', '琵琶鼠魚是有人亂放生的，現在池子裡到處都是', '大肚魚是以前放來吃孑孓的', '紅色的拱橋走上去看魚最清楚', '看到垃圾就順手撿一下啦', '假山上的蕨類是老師們一棵一棵種的'] },
 ].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.tailor = !!n.tailor; f.shopNpc = n.shopNpc || null; if (n.tailor || n.shopNpc){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 for (const n of npcs){ const nm = n.nm.textContent; n.wid = nm.startsWith('阿綾') ? 'ling' : nm.startsWith('阿木') ? 'mu' : nm.startsWith('阿福') ? 'fu' : nm.startsWith('老港') ? 'gang' : null; }
@@ -15671,7 +15671,14 @@ function renderMarketFish(body){ fishHallSeg(body, 'market');
 // ---- 蔚博士：海洋科學家（070_sci.sql）：每天到世界上的一個釣點調查，發現一種新品種，放進大家的圖鑑 ----
 // 新品種＝那個釣點本來就有的一種魚的近親：同一套照維基百科做的模型產生方式，換成伺服器給的顏色（hue／hue2），身體高矮差一點點。
 // 每一種都有一個很少見的變種（白化或黑化），跟其他變種一樣釣到才會出現在圖鑑。
-var Sci = { list:null, at:0, busy:null, reg:new Set(), gear:null };
+var Sci = { list:null, at:0, busy:null, reg:new Set(), gear:null, quest:null };
+/* v558 蔚博士不再每天「發現」換顏色的新品種（作者：「只是換顏色而已」）。改成：
+   ・每天換一個釣點，調查那裡一種真的魚（伺服器 191 sci_quest，用日期算、全伺服器一樣）；委託 = 把那種魚釣上來給他看
+   ・真的新魚（自己的外形＋習性）一批一批由他公布：SCI_NEW，新的放最前面
+   ・以前發現的換色魚全部留著（還釣得到、圖鑑也在），在面板最下面的「以前的花色紀錄」 */
+const SCI_NEW = [{ day:'2026-11-18', spot:'sea', ids:['whiting', 'groupie', 'tidegoby', 'horseshoe'], note:'這四種只在特定的潮位出現，先看潮汐表再去。' }];
+function sciQuest(){ const Q = Sci.quest; if (!Q || Q.day !== sciToday()) return null; const f = FISH_BY_ID[Q.fish], S = SPOT_BY_ID[Q.spot]; return f && S ? { f, S, done: !!Q.done } : null; }
+function sciTideNote(f){ const sd = TIDE_FISH[f.id]; return !sd ? '' : (TIDE_ONLY.has(f.id) ? '只在' : '') + (sd === 'in' ? '漲潮、滿潮' : '退潮、乾潮') + (TIDE_ONLY.has(f.id) ? '出現' : '比較多'); }
 function sciToday(){ return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); }
 function sciRecolor(c, hue, hue2, kind){ const out = {}, col = new THREE.Color(), o = {};
   for (const [k, v] of Object.entries(c)){ out[k] = v; if (typeof v !== 'string' || /^(Eye|EyeW|Mouth|Teeth|Pupil|Iris)/.test(k)) continue;
@@ -15690,12 +15697,14 @@ function sciReg(d){ if (!d || Sci.reg.has(d.id)) return; const B = FISH_BY_ID[d.
     if (of) f.of = of; if (d.giant || BIG_FISH.has(d.base)) BIG_FISH.add(id); FISH.push(f); FISH_BY_ID[id] = f; };   /* 深海巨魚：跟大型魚一樣（王者對決、只看得到魚影） */
   mk(d.id, d.name, null, null); mk(d.vid, d.vname, d.vkind, d.id); Sci.reg.add(d.id); }
 function loadSci(force){ if (Sci.busy) return Sci.busy; if (!Cloud.on || !Cloud.sb) return Promise.resolve(); if (!force && Sci.at && Date.now() - Sci.at < 60000) return Promise.resolve(); Sci.at = Date.now();
-  Sci.busy = (async () => { try { const { data, error } = await Cloud.sb.rpc('sci_list'); if (!error && Array.isArray(data)){ Sci.list = data; for (const d of data.slice().reverse()) sciReg(d); sciPlace();
+  Sci.busy = (async () => { try { const [{ data, error }, qr] = await Promise.all([Cloud.sb.rpc('sci_list'), Cloud.sb.rpc('sci_quest').then(r => r, () => ({}))]); if (qr && !qr.error && qr.data && qr.data.fish) Sci.quest = qr.data;
+      if (!error && Array.isArray(data)){ Sci.list = data; for (const d of data.slice().reverse()) sciReg(d); sciPlace();
+      { const Q = sciQuest(); if (Q){ let seen = null; try { seen = localStorage.getItem('tide.sciQSeen'); } catch(e){} if (seen !== Sci.quest.day){ try { localStorage.setItem('tide.sciQSeen', Sci.quest.day); } catch(e){} setTimeout(() => toast(`🔬 蔚博士今天在${Q.S.label}調查「${Q.f.name}」，釣到拿給他看有謝禮`), 2500); } } }
       const T = data[0]; if (T && T.day === sciToday()){ let seen = null; try { seen = localStorage.getItem('tide.sciSeen'); } catch(e){} if (seen !== T.day){ try { localStorage.setItem('tide.sciSeen', T.day); } catch(e){} setTimeout(() => { if (T.giant){ flash(`🐋 蔚博士在${SPOT_BY_ID[T.spot].label}發現了深海巨魚「${T.name}」！`, 3.2); SFX.catch(); } else toast(`🔬 蔚博士今天在${SPOT_BY_ID[T.spot].label}發現了新品種「${T.name}」！`); }, 2500); } } } } catch(e){}
     Sci.busy = null; if (!$('#sheet').hidden && (curTab === 'sci' || curTab === 'dex')) renderTab(); })();
   return Sci.busy; }
 // 蔚博士站在今天調查的釣點旁邊，身邊放著水下攝影機、保冷箱和調查旗
-function sciPlace(){ const n = npcs.find(x => x.shopNpc === 'sci'), T = Sci.list && Sci.list[0], S = T && SPOT_BY_ID[T.spot]; if (!n || !S) return;
+function sciPlace(){ const n = npcs.find(x => x.shopNpc === 'sci'), T = Sci.list && Sci.list[0], Q = sciQuest(), S = Q ? Q.S : T && SPOT_BY_ID[T.spot]; if (!n || !S) return;
   const dx = S.dir.x, dz = S.dir.y, sx = dz, sz = -dx; let best = null;
   for (const [a, b] of [[-2.2, 2.0], [-2.2, -2.0], [-1.4, 2.6], [-1.4, -2.6], [-3.2, 0.8], [-3.2, -0.8], [-1, 1.6], [-1, -1.6]]){ const x = S.pos.x + dx * a + sx * b, z = S.pos.z + dz * a + sz * b; if (walkable(x, z) && !waterAt(x, z)){ best = [x, z]; break; } }
   Sci.ok = !!best; if (!best) best = [S.pos.x - dx * 1.6, S.pos.z - dz * 1.6];   /* 遠方的浮台、島要玩家靠近才蓋出來：先站釣點旁邊，玩家靠近時再重新找位置 */
@@ -15707,23 +15716,31 @@ function sciPlace(){ const n = npcs.find(x => x.shopNpc === 'sci'), T = Sci.list
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.6, 6), m('#d8dde2')); pole.position.set(-0.7, 0.8, -0.3); g.add(pole); g.add(box([0.45, 0.28, 0.02], null, [-0.47, 1.45, -0.3], m('#4fb8d8')));
     g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g); Sci.gear = g; }
   const fx = best[0] + dx * 0.9 + sx * 0.9, fz = best[1] + dz * 0.9 + sz * 0.9; Sci.gear.position.set(fx, groundHeight(fx, fz), fz); Sci.gear.rotation.y = Math.atan2(dx, dz); }
-function sciLines(){ const L = Sci.list || [], T = L[0]; if (!T) return []; const S = SPOT_BY_ID[T.spot], B = FISH_BY_ID[T.base], out = [];
+function sciLines(){ const Q = sciQuest(); if (Q){ const out = [`今天我在${Q.S.label}調查「${Q.f.name}」`], tn = sciTideNote(Q.f); if (Q.f.desc) out.push(Q.f.desc); if (tn) out.push(`「${Q.f.name}」${tn}，先看潮汐表`);
+    out.push(Q.done ? '謝謝你今天帶來的魚，資料很有幫助！明天我會換一個地方' : `你釣到「${Q.f.name}」的話放在魚缸裡拿來給我看，我送你夜光蟲餌`);
+    const N = SCI_NEW[0]; if (N) out.push(`我最近在${SPOT_BY_ID[N.spot].label}確認的新魚：${N.ids.map(id => FISH_BY_ID[id].name).join('、')}`); return out; }
+  const L = Sci.list || [], T = L[0]; if (!T) return []; const S = SPOT_BY_ID[T.spot], B = FISH_BY_ID[T.base], out = [];
   out.push(T.giant ? `不得了！我在${S.label}發現了深海巨魚「${T.name}」！` : `今天我在${S.label}發現了「${T.name}」！`); if (T.giant) out.push('巨魚很難釣，拋遠一點、魚竿和魚線要夠強，祝你好運！'); out.push(T.story); if (B) out.push(`「${T.name}」是${B.name}的親戚，今天在${S.label}特別容易遇到`);
   out.push(T.first ? `${T.first} 是第一個釣到「${T.name}」的人，好厲害！` : `還沒有人釣到「${T.name}」，你要不要當第一個？`);
   if (L.length > 1) out.push(`到今天為止，我已經發現 ${L.length} 種新品種了`); return out; }
 function renderSci(body){
-  const head = el('div', 'shophead'); head.innerHTML = '<b>🔬 蔚博士的新品種調查</b>'; body.appendChild(head);
+  const head = el('div', 'shophead'); head.innerHTML = '<b>🔬 蔚博士的調查</b>'; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能看蔚博士的調查。')); return; }
-  const L = Sci.list; if (!L){ body.appendChild(el('div', 'empty', '載入中…')); loadSci(); return; } if (!L.length){ body.appendChild(el('div', 'empty', '蔚博士還在做第一次調查。')); return; }
-  body.appendChild(el('p', 'sub', '蔚博士每天到世界上的一個釣點調查，發現一種新品種，馬上放進大家的圖鑑。新品種從發現那天起就住在那個釣點，發現當天最容易釣到。聽說每一種都有很少見的白化或黑化個體。'));
-  const T = L[0], S = SPOT_BY_ID[T.spot], isToday = T.day === sciToday(), card = el('div', 'scicard');
-  card.appendChild(el('div', 'scit', `${T.giant ? '🐋 深海巨魚・' : ''}${isToday ? '📍 今天' : '📍 最近'}在${S.label}`)); if (T.giant) card.classList.add('giant'); const cv = fishCanvas(FISH_BY_ID[T.id] || FISH_BY_ID[T.base], true, 220, 120); cv.className = 'scicv'; card.appendChild(cv);
-  card.appendChild(el('div', 'scin', T.name)); card.appendChild(el('div', 'sub2', `${FISH_BY_ID[T.base] ? FISH_BY_ID[T.base].name + '的近親・' : ''}${T.giant ? '傳說' : '稀有'}・${(+T.min).toFixed(2)}～${(+T.max).toFixed(2)} kg`));
-  card.appendChild(el('p', 'scis', T.story)); card.appendChild(el('div', 'sub2', rec.count[T.id] ? `✅ 你已經釣到 ${rec.count[T.id]} 條了` : T.first ? `🏅 第一個釣到的人：${T.first}` : '還沒有人釣到，去當第一個吧！')); body.appendChild(card);
-  if (isToday){ /* v295 蔚博士的委託：把今天的新品種釣上來給他看 → 3 個夜光蟲餌（一天一次） */ const q = el('div', 'scicard'); q.appendChild(el('div', 'scit', '📋 蔚博士的委託')); q.appendChild(el('p', 'scis', `「幫我把今天的新品種「${T.name}」釣上來，放在魚缸裡給我看看！我用實驗室養的夜光蟲做了魚餌當謝禮。」→ ✨ 夜光蟲餌 ×3（晚上才出現的魚最愛），一天一次。`));
-    const bb = el('button', 'tbtn', '給蔚博士看'); bb.addEventListener('click', async () => { bb.disabled = true; try { const { data, error } = await Cloud.sb.rpc('sci_bug'); if (error) throw error; adoptRow(data.player); SFX.catch(); flash('✨ 拿到 3 個夜光蟲餌！', 2); } catch(e){ toast(cloudErrMsg(e)); } bb.disabled = false; }); q.appendChild(bb); body.appendChild(q); }
-  if (L.length > 1){ body.appendChild(el('div', 'dexhead', `📒 調查筆記（${L.length} 種）`)); const ul = el('ul', 'shoplist');
-    for (const d of L.slice(1, 60)){ const li = el('li'), f = FISH_BY_ID[d.id], got = !!rec.count[d.id]; const c2 = fishCanvas(f || FISH_BY_ID[d.base], true, 64, 40); c2.className = 'dishic'; li.appendChild(c2);
+  const L = Sci.list; if (!L){ body.appendChild(el('div', 'empty', '載入中…')); loadSci(); return; }
+  body.appendChild(el('p', 'sub', '蔚博士每天換一個釣點，仔細調查那裡的一種魚。把那種魚釣上來給他看，他會送你夜光蟲餌。確認了真的沒記錄過的新魚，他也會在這裡公布。'));
+  const Q = sciQuest();
+  if (Q){ const f = Q.f, card = el('div', 'scicard'), tn = sciTideNote(f); card.appendChild(el('div', 'scit', `📍 今天在${Q.S.label}`)); const cv = fishCanvas(f, true, 220, 120); cv.className = 'scicv'; card.appendChild(cv);
+    card.appendChild(el('div', 'scin', f.name)); card.appendChild(el('div', 'sub2', `${f.rarity}・${(+f.min).toFixed(2)}～${(+f.max).toFixed(2)} kg${tn ? '・🌊 ' + tn : ''}${BOTTOM_FISH.has(f.id) ? '・沉底釣比較容易' : ''}`));
+    if (f.desc) card.appendChild(el('p', 'scis', f.desc)); card.appendChild(el('div', 'sub2', rec.count[f.id] ? `✅ 你一共釣過 ${rec.count[f.id]} 條` : '你還沒釣過這種魚')); body.appendChild(card);
+    const q = el('div', 'scicard'); q.appendChild(el('div', 'scit', '📋 蔚博士的委託')); q.appendChild(el('p', 'scis', `「幫我釣一條「${f.name}」，要今天釣的，放在魚缸裡給我看看！我用實驗室養的夜光蟲做了魚餌當謝禮。」→ ✨ 夜光蟲餌 ×3（晚上才出現的魚最愛），一天一次。`));
+    const bb = el('button', 'tbtn', Q.done ? '✅ 今天給他看過了' : '給蔚博士看'); bb.disabled = Q.done; bb.addEventListener('click', async () => { bb.disabled = true; try { const { data, error } = await Cloud.sb.rpc('sci_bug'); if (error) throw error; adoptRow(data.player); if (Sci.quest) Sci.quest.done = true; SFX.catch(); flash('✨ 拿到 3 個夜光蟲餌！', 2); renderTab(); return; } catch(e){ toast(cloudErrMsg(e)); } bb.disabled = false; }); q.appendChild(bb); body.appendChild(q); }
+  else body.appendChild(el('div', 'empty', '蔚博士正在準備今天的調查，等一下再來。'));
+  for (const N of SCI_NEW){ body.appendChild(el('div', 'dexhead', `🆕 蔚博士確認的新魚（${N.day.slice(5).replace('-', '/')}・${SPOT_BY_ID[N.spot].label}）`)); if (N.note) body.appendChild(el('p', 'sub', N.note)); const ul = el('ul', 'shoplist');
+    for (const id of N.ids){ const f = FISH_BY_ID[id]; if (!f) continue; const li = el('li'), got = !!rec.count[id], c2 = fishCanvas(f, true, 64, 40), tn = sciTideNote(f); c2.className = 'dishic'; li.appendChild(c2);
+      const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${got ? '✅ ' : ''}${f.name}`)); inf.appendChild(el('div', 'sub2', `${f.rarity}${tn ? '・🌊 ' + tn : ''}${BOTTOM_FISH.has(id) ? '・沉底釣' : ''}`)); li.appendChild(inf); ul.appendChild(li); }
+    body.appendChild(ul); }
+  if (L.length){ body.appendChild(el('div', 'dexhead', `📒 以前的花色紀錄（${L.length} 種）`)); body.appendChild(el('p', 'sub', '以前記錄的魚，是原有魚種花色不同的個體。牠們還住在原來的釣點，一樣釣得到，圖鑑也還在；之後不會再增加。')); const ul = el('ul', 'shoplist');
+    for (const d of L.slice(0, 60)){ const li = el('li'), f = FISH_BY_ID[d.id], got = !!rec.count[d.id]; const c2 = fishCanvas(f || FISH_BY_ID[d.base], true, 64, 40); c2.className = 'dishic'; li.appendChild(c2);
       const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', `${got ? '✅ ' : ''}${d.giant ? '🐋 ' : ''}${d.name}`)); inf.appendChild(el('div', 'sub2', `${d.day.slice(5).replace('-', '/')}・${SPOT_BY_ID[d.spot] ? SPOT_BY_ID[d.spot].label : ''}${d.first ? '・🏅' + d.first : ''}`)); li.appendChild(inf); ul.appendChild(li); }
     body.appendChild(ul); }
 }
@@ -17024,7 +17041,7 @@ function renderTab(){
       '📤 分享卡片：釣到稀有魚、傳說魚、變種、新紀錄，或圖鑑新登錄時，結果卡片上會有「📤 分享」；在海上遇到鯨魚、海豚，畫面上會跳出「分享這一刻」。按了會做一張直式的圖：有魚的大圖、重量、地點、日期，你的頭像、等級、稱號、圖鑑種數，下面還有 QR 碼（朋友用相機掃一下就能進遊戲）。可以直接傳到 IG、LINE，或存在手機裡。',
       '🧭 新手任務：剛開始玩時，左上角有一張小卡片帶你一步一步玩 —— 釣第一條魚、到潮汐魚市場賣魚、到釣具店買新釣竿、去自己的小島、潛一次水。要去的地方地上會有黃色光柱，卡片上的箭頭指方向。按「－」可以收起來。全部完成送 🪙300。釣到 3 條魚以前，右下角還會有手指提示教你怎麼拋竿、提竿、收線。',
       '⏳ 釣魚節奏：拋竿後大多要等 5～12 秒才咬（偶爾很快、偶爾要等更久）；等的時候小魚會來碰浮標，那不是真的咬。搏鬥時間看魚的大小：小魚大約 6～10 秒、中型 15～25 秒、大魚 30～50 秒、傳說魚 1～2 分鐘。釣蝦場維持快節奏。',
-      '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。'
+      '🍽️ 針對特定魚的餌（愛吃的魚 ×1.8，其他魚少一點）：🌽 玉米粒（鯽魚、鯉魚等雜食魚）、紅蟲（溪裡的小魚）、🍞 麵包糰（吳郭魚、表層的魚）、🦐 蝦仁（鯛類）、南極蝦（鯖、鰺、沙丁）在釣具店買；🪱 沙蠶在退潮時的沙灘挖、🦀 小螃蟹在珊瑚礁島的礁岩撿（各一天 6 次）；🔪 秋刀魚切塊找阿鐵師傅做；✨ 夜光蟲餌是蔚博士的委託獎勵（他每天換一個釣點調查一種魚，把那種魚釣上來、放在魚缸裡給他看，一天一次）。換上以後，右上角會寫這個釣點有哪些愛吃的魚。圖鑑裡的魚釣到 10 條（★★）會寫「喜歡的餌」。'
     ], true);
     sec('🦐 室內釣蝦場', [
       '在村子廣場東邊的街上，招牌寫「🦐 釣蝦場」，走到門口按按鈕就能進去。也可以從「地圖」傳送到門口。',
