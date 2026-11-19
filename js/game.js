@@ -1881,7 +1881,7 @@ function flkTick(dt, t){
    這一版（第一步，沒有動伺服器、沒有改釣魚機率）：
    1. 航道浮標：港口到四座島各一條，紅綠浮標每 22 公尺一顆，晚上頂上的燈會亮。
    2. 八個海上地標（SEA_LM）：都在島跟島中間。岩石、沙洲、箱網會擋船（seaBlock），其他可以划過去。
-   3. 發現：靠近地標 16 公尺內就記下來（手機裡 tide.seaSeen），跳出名字和一句介紹；八個都找到有成就。
+   3. 發現：靠近地標 16 公尺內就記下來（手機裡 tide.seaLm），跳出名字和一句介紹；八個都找到有成就。
    4. 航海圖：地圖分頁最下面，整片海、島、航道、找到的地標（沒找到的是問號）、自己的位置。
    5. 坐阿海的船去四座島：真的坐一段（voyStart／voyDrive，9～22 秒，沿著航道），右上可以按「跳過」。到了以後照原本的 travelTo 上岸。
       別人看到的是你坐在小船上沿著航道走（presence 的 bt）。地圖的快速傳送沒有改，還是一按就到。
@@ -1896,7 +1896,10 @@ const SEA_LM = [
   { id:'wx',     ic:'📡', n:'氣象浮標',     x:40,   z:150,  r:1.4, d:'量風和浪的浮標。颱風要來的消息，就是從這裡知道的。' },
   { id:'cage',   ic:'🕸️', n:'舊箱網',       x:150,  z:-110, r:3.6, d:'以前養魚用的箱網，現在沒人管，木板都歪了。' },
   { id:'arch',   ic:'🪨', n:'海蝕門',       x:-8,   z:176,  r:0,   d:'海浪花了很久很久，把岩石打穿成一道門。小船可以從中間划過去。', solid:[[-4.6, 0, 2.3], [4.6, 0, 2.3]] } ];
-const SeaMap = { built:false, buoys:[], lm:{}, seen:new Set((() => { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a : []; })()), chk:0, birds:[], chart:null };
+/* v580 修正：v579 把找到的地標存在 'tide.seaSeen'，那個名字「🐋 海上目擊」（遇過哪幾種鯨魚，v268）早就在用了，兩邊混在一起，找到 4 個地標就會讓「海上目擊者」成就誤亮。
+   現在地標改存 'tide.seaLm'；開遊戲時把混進 'tide.seaSeen' 的地標代號搬過來，鯨魚的紀錄原樣留著。 */
+const SeaMap = { built:false, buoys:[], lm:{}, seen:new Set((() => { try { const ids = new Set(SEA_LM.map(L => L.id)), mine = LS.get('tide.seaLm', []), out = new Set(Array.isArray(mine) ? mine.filter(k => ids.has(k)) : []), old = LS.get('tide.seaSeen', []);
+    if (Array.isArray(old) && old.some(k => ids.has(k))){ for (const k of old) if (ids.has(k)) out.add(k); LS.set('tide.seaSeen', old.filter(k => !ids.has(k))); LS.set('tide.seaLm', [...out]); } return [...out]; } catch(e){ return []; } })()), chk:0, birds:[], chart:null };
 function seaSeenN(){ let n = 0; for (const L of SEA_LM) if (SeaMap.seen.has(L.id)) n++; return n; }
 function seaBlock(x, z){ for (const L of SEA_LM){ const dx = x - L.x, dz = z - L.z; if (dx > 14 || dx < -14 || dz > 14 || dz < -14) continue; if (L.r && dx * dx + dz * dz < (L.r + 1.1) * (L.r + 1.1)) return true; if (L.solid) for (const q of L.solid){ const ex = dx - q[0], ez = dz - q[1]; if (ex * ex + ez * ez < (q[2] + 1.0) * (q[2] + 1.0)) return true; } } return false; }
 function seaBuoyList(){ const out = [], seenK = new Set(); for (const id in SEA_LANES){ const P = SEA_LANES[id]; let acc = 11, n = 0; for (let i = 0; i < P.length - 1; i++){ const [ax, az] = P[i], [bx, bz] = P[i + 1], d = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / d, uz = (bz - az) / d; while (acc <= d){ const side = n % 2 ? 1 : -1, x = ax + ux * acc - uz * side * 3.2, z = az + uz * acc + ux * side * 3.2, k = Math.round(x / 6) + ':' + Math.round(z / 6); if (!seenK.has(k)){ seenK.add(k); out.push({ x, z, red: side > 0 }); } acc += 22; n++; } acc -= d; } } return out; }
@@ -1926,7 +1929,7 @@ function smTick(dt, t){ const ok = !onIsle && !House.on && !inIndoor() && !Dive.
   if (SeaMap.wxG){ SeaMap.wxG.position.y = Math.sin(t * 1.3) * 0.07; SeaMap.wxG.rotation.z = Math.sin(t * 0.9) * 0.06; SeaMap.wxG.rotation.x = Math.cos(t * 1.1) * 0.05; } if (SeaMap.cageG){ SeaMap.cageG.position.y = Math.sin(t * 1.0 + 1) * 0.05; SeaMap.cageG.rotation.z = Math.sin(t * 0.7) * 0.025; }
   { const away = gullAway(); for (const b of SeaMap.birds){ b.visible = !away; if (away) continue; const u = b.userData, a = u.p + t * 0.5; b.position.set(Math.cos(a) * u.r, u.h + Math.sin(t * 0.8 + u.p) * 0.5, Math.sin(a) * u.r); b.rotation.y = -a; const fl = Math.sin(t * 7 + u.p * 3) * 0.5; b.children[1].rotation.z = -0.3 - fl; b.children[2].rotation.z = 0.3 + fl; } }
   /* 發現 */
-  SeaMap.chk -= dt; if (SeaMap.chk <= 0){ SeaMap.chk = 0.3; for (const L of SEA_LM){ if (SeaMap.seen.has(L.id)) continue; const dx = L.x - px, dz = L.z - pz; if (dx * dx + dz * dz > 256) continue; SeaMap.seen.add(L.id); LS.set('tide.seaSeen', [...SeaMap.seen]); SeaMap.chart = null; const n = seaSeenN(); try { SFX.coin(); } catch(e){} flash(`🧭 發現：${L.n}`, 2.4); toast(`${L.ic} ${L.n}：${L.d}（海上地標 ${n} / ${SEA_LM.length}，地圖最下面有航海圖）`, 9); if (n >= SEA_LM.length) setTimeout(() => { flash('🧭 八個海上地標都找到了！', 2.6); }, 2800); } } }
+  SeaMap.chk -= dt; if (SeaMap.chk <= 0){ SeaMap.chk = 0.3; for (const L of SEA_LM){ if (SeaMap.seen.has(L.id)) continue; const dx = L.x - px, dz = L.z - pz; if (dx * dx + dz * dz > 256) continue; SeaMap.seen.add(L.id); LS.set('tide.seaLm', [...SeaMap.seen]); SeaMap.chart = null; const n = seaSeenN(); try { SFX.coin(); } catch(e){} flash(`🧭 發現：${L.n}`, 2.4); toast(`${L.ic} ${L.n}：${L.d}（海上地標 ${n} / ${SEA_LM.length}，地圖最下面有航海圖）`, 9); if (n >= SEA_LM.length) setTimeout(() => { flash('🧭 八個海上地標都找到了！', 2.6); }, 2800); } } }
 /* 航海圖（地圖分頁最下面）：上面是世界的 -x、右邊是世界的 -z（跟上面的村子地圖同一個方向） */
 function seaChart(body){ try { body.appendChild(el('div', 'dexhead', `🧭 航海圖（海上地標 ${seaSeenN()} / ${SEA_LM.length}）`)); body.appendChild(el('p', 'sub', '整片可以划船的海。紅綠浮標是航道，照著划就到得了。問號是還沒去過的地標，划船靠近就會記下來。找港口的阿海坐船，沿路也看得到。'));
     const N = 560, cv = document.createElement('canvas'); cv.width = cv.height = N; cv.style.cssText = 'width:100%;max-width:560px;display:block;margin:6px auto 4px;border-radius:14px;border:2px solid #18334a'; const c = cv.getContext('2d'), W = 192, X = z => (W - z) / (2 * W) * N, Y = x => (x + W) / (2 * W) * N;
