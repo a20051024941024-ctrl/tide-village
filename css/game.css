@@ -1525,6 +1525,7 @@ body.touch.chatting #chatForm{z-index:40}
 
 /* v527 撞球：邀請旁邊的人對打 */
 #poolHud .pl-btns .pl-inv{background:#bfe7ff}
+#poolHud .pl-btns .pl-zhe{background:#ffe7a8}
 
 /* v529 體育場足球：畫面上面的比分條、名字前面的隊伍顏色 */
 #fbBar{position:fixed;left:50%;top:calc(var(--st,0px) + 8px);transform:translateX(-50%);z-index:14;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 12px;padding:6px 14px;border-radius:16px;font-size:14px;max-width:min(92vw,560px);pointer-events:none}
