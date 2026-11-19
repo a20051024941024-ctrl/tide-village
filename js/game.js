@@ -1875,6 +1875,89 @@ function flkTick(dt, t){
     o.position.set(g.x + Math.sin(ph * 0.3) * 0.35, waterY(g.x, g.z, t) + 0.03, g.z + Math.cos(ph * 0.23) * 0.35);
     o.children.forEach(b => { const a = b.userData.a + ph * 0.9; b.position.set(Math.cos(a) * 1.3 * k, 3.0 + (k - 1) * 1.7 + Math.sin(ph * 1.3 + a) * 0.25, Math.sin(a) * 1.3 * k); b.rotation.y = -a; b.scale.setScalar(k); const fl = Math.sin(ph * 9 + a * 3) * 0.5; b.children[0].rotation.z = -0.35 - fl; b.children[1].rotation.z = 0.35 + fl; }); });
 }
+/* ===== v579 🧭 把海變成地圖（作者 11/20：「感覺我們地圖就是太小」→ 選了「把海變成地圖」；「坐船那個一起做」）=====
+   動工前查到：能划船的海有 384×384 公尺，海上已經有冰封群島、深海浮台、神秘島、苔森之島，船也划得到。問題是
+   (1) 大家都找阿海一按就到，中間的海整個跳過 (2) 自己划出去，島跟島之間什麼都沒有、也不知道划到哪了。
+   這一版（第一步，沒有動伺服器、沒有改釣魚機率）：
+   1. 航道浮標：港口到四座島各一條，紅綠浮標每 22 公尺一顆，晚上頂上的燈會亮。
+   2. 八個海上地標（SEA_LM）：都在島跟島中間。岩石、沙洲、箱網會擋船（seaBlock），其他可以划過去。
+   3. 發現：靠近地標 16 公尺內就記下來（手機裡 tide.seaSeen），跳出名字和一句介紹；八個都找到有成就。
+   4. 航海圖：地圖分頁最下面，整片海、島、航道、找到的地標（沒找到的是問號）、自己的位置。
+   5. 坐阿海的船去四座島：真的坐一段（voyStart／voyDrive，9～22 秒，沿著航道），右上可以按「跳過」。到了以後照原本的 travelTo 上岸。
+      別人看到的是你坐在小船上沿著航道走（presence 的 bt）。地圖的快速傳送沒有改，還是一按就到。
+   位置都是寫死的，每支手機一樣，不用同步。 */
+const SEA_LANES = { frostdock: [[68, -56], [20, -92], [-60, -96], [-133, -13]], abyssdock: [[68, -56], [66, -134]], greendock: [[68, -56], [95, -20], [105, 40], [128, 93]], mystdock: [[68, -56], [95, -20], [105, 40], [60, 105], [-20, 140], [-47, 144]] };
+const SEA_LM = [
+  { id:'wreck',  ic:'⚓', n:'老福號的桅杆', x:100,  z:-95,  r:0,   d:'很多年前沉在這裡的漁船，只剩桅杆露出水面。聽老港說，下面就是沉船深海。' },
+  { id:'beacon', ic:'🚨', n:'北礁燈標',     x:-20,  z:-114, r:3.4, d:'礁岩上的小燈標，晚上會亮，提醒船不要撞上暗礁。' },
+  { id:'nets',   ic:'🟠', n:'定置網',       x:-70,  z:-150, r:0,   d:'漁夫圍在海裡的網，浮球排成一圈。魚群會沿著網子游。' },
+  { id:'birds',  ic:'🐦', n:'海鳥岩',       x:-125, z:-140, r:3.2, d:'海鳥住在這根岩柱上，天氣好的白天會看到牠們繞著飛。' },
+  { id:'sand',   ic:'🏝️', n:'月牙沙洲',     x:172,  z:62,   r:5.2, d:'海中間一小片淺淺的沙洲，上面有漂流木和海星。' },
+  { id:'wx',     ic:'📡', n:'氣象浮標',     x:40,   z:150,  r:1.4, d:'量風和浪的浮標。颱風要來的消息，就是從這裡知道的。' },
+  { id:'cage',   ic:'🕸️', n:'舊箱網',       x:150,  z:-110, r:3.6, d:'以前養魚用的箱網，現在沒人管，木板都歪了。' },
+  { id:'arch',   ic:'🪨', n:'海蝕門',       x:-8,   z:176,  r:0,   d:'海浪花了很久很久，把岩石打穿成一道門。小船可以從中間划過去。', solid:[[-4.6, 0, 2.3], [4.6, 0, 2.3]] } ];
+const SeaMap = { built:false, buoys:[], lm:{}, seen:new Set((() => { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a : []; })()), chk:0, birds:[], chart:null };
+function seaSeenN(){ let n = 0; for (const L of SEA_LM) if (SeaMap.seen.has(L.id)) n++; return n; }
+function seaBlock(x, z){ for (const L of SEA_LM){ const dx = x - L.x, dz = z - L.z; if (dx > 14 || dx < -14 || dz > 14 || dz < -14) continue; if (L.r && dx * dx + dz * dz < (L.r + 1.1) * (L.r + 1.1)) return true; if (L.solid) for (const q of L.solid){ const ex = dx - q[0], ez = dz - q[1]; if (ex * ex + ez * ez < (q[2] + 1.0) * (q[2] + 1.0)) return true; } } return false; }
+function seaBuoyList(){ const out = [], seenK = new Set(); for (const id in SEA_LANES){ const P = SEA_LANES[id]; let acc = 11, n = 0; for (let i = 0; i < P.length - 1; i++){ const [ax, az] = P[i], [bx, bz] = P[i + 1], d = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / d, uz = (bz - az) / d; while (acc <= d){ const side = n % 2 ? 1 : -1, x = ax + ux * acc - uz * side * 3.2, z = az + uz * acc + ux * side * 3.2, k = Math.round(x / 6) + ':' + Math.round(z / 6); if (!seenK.has(k)){ seenK.add(k); out.push({ x, z, red: side > 0 }); } acc += 22; n++; } acc -= d; } } return out; }
+function smBuild(){ if (SeaMap.built) return; SeaMap.built = true; const root = new THREE.Group(); root.userData.keep = root.userData.dyn = true; scene.add(root); SeaMap.root = root;
+  const M = (c, extra) => mat(c, 0.85, Object.assign({ noWood: true, flatShading: true }, extra || {})), add = (g, geo, m, x, y, z, rx, ry, rz, sx, sy, sz) => { const o = new THREE.Mesh(geo, m); o.position.set(x || 0, y || 0, z || 0); o.rotation.set(rx || 0, ry || 0, rz || 0); if (sx != null) o.scale.set(sx, sy == null ? sx : sy, sz == null ? sx : sz); o.castShadow = false; g.add(o); return o; };
+  /* 浮標 */
+  const gBody = new THREE.CylinderGeometry(0.34, 0.42, 0.55, 8), gTop = new THREE.ConeGeometry(0.34, 0.75, 8), gPole = new THREE.CylinderGeometry(0.035, 0.035, 0.7, 5), gLamp = new THREE.SphereGeometry(0.11, 8, 6), mR = M('#d9412f'), mG = M('#2f9b57'), mP = M('#e8e6de');
+  SeaMap.lampR = new THREE.MeshBasicMaterial({ color: '#ff5a48' }); SeaMap.lampG = new THREE.MeshBasicMaterial({ color: '#58f09a' });
+  for (const b of seaBuoyList()){ const g = new THREE.Group(); g.position.set(b.x, WATER_LEVEL, b.z); add(g, gBody, b.red ? mR : mG, 0, 0.12); add(g, gTop, b.red ? mR : mG, 0, 0.75); add(g, gPole, mP, 0, 1.4); add(g, gLamp, b.red ? SeaMap.lampR : SeaMap.lampG, 0, 1.8); g.userData.ph = b.x * 0.37 + b.z * 0.21; root.add(g); SeaMap.buoys.push(g); }
+  /* 地標 */
+  const rockG = new THREE.DodecahedronGeometry(1, 0), boxG = new THREE.BoxGeometry(1, 1, 1), cylG = new THREE.CylinderGeometry(1, 1, 1, 8), sphG = new THREE.SphereGeometry(1, 8, 6), mRock = M('#6d7376'), mRock2 = M('#858a86'), mWood = M('#7a5a3c'), mWoodD = M('#553d28'), mSand = M('#e6d3a3'), mWhite = M('#f1efe8'), mRed = M('#d9412f'), mOrange = M('#f08a2c'), mYellow = M('#f2c63a'), mNet = M('#31555c', { transparent: true, opacity: 0.55 }), mMoss = M('#4c7a55');
+  const B = {};
+  B.wreck = g => { add(g, cylG, mWoodD, 0, 2.6, 0, 0, 0, 0.2, 0.16, 5.6, 0.16); add(g, cylG, mWoodD, -0.55, 3.6, 0, 0, 0, 0.2 + Math.PI / 2, 0.09, 2.6, 0.09); add(g, cylG, mWood, -0.72, 4.5, 0, 0, 0, 0.2, 0.42, 0.34, 0.42); add(g, boxG, M('#b9b2a0'), -0.2, 3.0, 0.02, 0, 0, 0.2, 1.5, 1.0, 0.03); add(g, boxG, mWoodD, 2.6, 0.25, 0.6, 0.1, 0.5, -0.5, 2.2, 0.5, 0.9); add(g, boxG, mWoodD, 3.2, 0.5, 1.0, 0.1, 0.5, -0.85, 1.3, 0.3, 0.5); };
+  B.beacon = g => { add(g, rockG, mRock, 0, 0.2, 0, 0.3, 0.4, 0, 3.2, 1.3, 2.7); add(g, rockG, mRock2, 1.9, 0.1, 1.2, 0.8, 1.2, 0, 1.5, 0.9, 1.3); add(g, rockG, mRock2, -2.0, 0.0, -1.0, 0.2, 2.2, 0, 1.3, 0.7, 1.6); add(g, cylG, mWhite, 0, 2.3, 0, 0, 0, 0, 0.42, 2.4, 0.42); add(g, cylG, mRed, 0, 2.0, 0, 0, 0, 0, 0.44, 0.6, 0.44); add(g, cylG, mRed, 0, 3.1, 0, 0, 0, 0, 0.44, 0.5, 0.44); add(g, cylG, M('#2b3138'), 0, 3.75, 0, 0, 0, 0, 0.3, 0.45, 0.3); SeaMap.beaconL = add(g, sphG, new THREE.MeshBasicMaterial({ color: '#ffe9a0' }), 0, 3.75, 0, 0, 0, 0, 0.24); add(g, new THREE.ConeGeometry(0.4, 0.4, 8), mRed, 0, 4.2, 0); };
+  B.nets = g => { const N = 12, R = 6.5; for (let i = 0; i < N; i++){ const a = i / N * Math.PI * 2; add(g, sphG, i % 3 ? mOrange : mWhite, Math.cos(a) * R, 0.12, Math.sin(a) * R, 0, 0, 0, 0.28); } for (const a of [0.4, 2.5, 4.6]){ add(g, cylG, mWoodD, Math.cos(a) * R, 0.9, Math.sin(a) * R, 0, 0, 0.06, 0.06, 2.2, 0.06); add(g, boxG, mRed, Math.cos(a) * R + 0.22, 1.8, Math.sin(a) * R, 0, 0, 0, 0.42, 0.28, 0.02); } const ring = new THREE.Mesh(new THREE.TorusGeometry(R, 0.03, 4, 36), M('#c9c2ad')); ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring); const net = new THREE.Mesh(new THREE.CylinderGeometry(R, R * 0.8, 1.6, 18, 1, true), mNet); net.position.y = -0.75; g.add(net); };
+  B.birds = g => { add(g, rockG, mRock, 0, 2.6, 0, 0.2, 0.7, 0.06, 2.0, 4.6, 1.8); add(g, rockG, mRock2, 0.5, 5.6, 0.2, 0.9, 0.2, 0, 1.5, 1.4, 1.3); add(g, rockG, mRock2, -1.8, 0.3, 1.3, 0.3, 1.9, 0, 1.6, 1.0, 1.2); add(g, rockG, mMoss, 0.3, 6.7, 0.1, 0.2, 0.5, 0, 0.9, 0.3, 0.8); add(g, boxG, mWhite, 0.9, 5.2, 1.0, 0, 0, 0, 0.5, 0.9, 0.05); add(g, boxG, mWhite, -0.8, 4.1, 1.35, 0, 0.3, 0, 0.4, 1.1, 0.05);
+    for (let i = 0; i < 5; i++){ const b = flkBird('#f3f5f7', 1.1); b.userData.p = i * 1.26; b.userData.r = 4 + (i % 3) * 1.6; b.userData.h = 6.5 + (i % 4) * 1.1; g.add(b); SeaMap.birds.push(b); } };
+  B.sand = g => { add(g, sphG, mSand, 0, -0.42, 0, 0, 0, 0, 5.2, 0.62, 3.4); add(g, sphG, mSand, 2.4, -0.4, -1.6, 0, 0, 0, 2.6, 0.55, 1.9); add(g, cylG, mWood, -1.2, 0.26, 0.6, 0, 0.7, Math.PI / 2, 0.14, 2.6, 0.14); add(g, cylG, mWoodD, -0.2, 0.4, 0.9, 0.5, 0.7, 1.1, 0.07, 1.1, 0.07); add(g, new THREE.ConeGeometry(0.22, 0.08, 5), mOrange, 1.6, 0.2, 0.7); add(g, new THREE.ConeGeometry(0.16, 0.07, 5), mRed, 0.6, 0.2, -1.0, 0, 0.6); add(g, rockG, mRock2, 3.2, 0.1, 0.8, 0.4, 0.2, 0, 0.5, 0.35, 0.45); };
+  B.wx = g => { const f = new THREE.Group(); g.add(f); SeaMap.wxG = f; add(f, cylG, mYellow, 0, 0.2, 0, 0, 0, 0, 1.15, 0.7, 1.15); add(f, cylG, M('#2b3138'), 0, 0.6, 0, 0, 0, 0, 1.2, 0.1, 1.2); add(f, cylG, mWhite, 0, 2.0, 0, 0, 0, 0, 0.06, 2.8, 0.06); add(f, boxG, M('#22364f'), 0.45, 1.5, 0, 0, 0, -0.5, 0.7, 0.04, 0.5); add(f, cylG, mWhite, 0, 3.0, 0, Math.PI / 2, 0, 0, 0.03, 0.9, 0.03); add(f, sphG, mWhite, 0, 3.0, 0.45, 0, 0, 0, 0.09); add(f, sphG, mWhite, 0, 3.0, -0.45, 0, 0, 0, 0.09); SeaMap.wxL = add(f, sphG, new THREE.MeshBasicMaterial({ color: '#fff3a6' }), 0, 3.5, 0, 0, 0, 0, 0.12); };
+  B.cage = g => { const f = new THREE.Group(); g.add(f); SeaMap.cageG = f; const S2 = 3.0; for (const [x, z, ry] of [[0, S2, 0], [0, -S2, 0], [S2, 0, Math.PI / 2], [-S2, 0, Math.PI / 2]]){ add(f, cylG, M('#2a4f8f'), x, 0.16, z, 0, ry, Math.PI / 2, 0.22, S2 * 2 + 0.4, 0.22); add(f, boxG, mWood, x * 0.93, 0.42, z * 0.93, 0, ry, 0.03, S2 * 2, 0.06, 0.55); } add(f, boxG, mWoodD, 1.2, 0.5, 2.7, 0.2, 0.3, 0.25, 1.6, 0.06, 0.5); for (const [x, z] of [[S2, S2], [-S2, S2], [S2, -S2], [-S2, -S2]]){ add(f, cylG, mWoodD, x, 0.75, z, 0, 0, 0, 0.07, 1.3, 0.07); add(f, sphG, mOrange, x, 0.05, z, 0, 0, 0, 0.36); } const net = new THREE.Mesh(new THREE.BoxGeometry(S2 * 2, 1.6, S2 * 2), mNet); net.position.y = -0.7; f.add(net); };
+  B.arch = g => { add(g, rockG, mRock, -4.6, 2.4, 0, 0.2, 0.5, 0.05, 2.1, 4.4, 2.3); add(g, rockG, mRock, 4.6, 2.2, 0, 0.6, 1.4, -0.05, 2.2, 4.2, 2.1); add(g, rockG, mRock2, 0, 6.0, 0, 0.3, 0.2, 0, 6.4, 1.5, 2.2); add(g, rockG, mRock2, -2.6, 5.3, 0.2, 0.9, 0.7, 0, 2.2, 1.5, 1.9); add(g, rockG, mRock2, 2.7, 5.2, -0.1, 0.1, 1.9, 0, 2.3, 1.4, 1.8); add(g, rockG, mMoss, 0.4, 7.0, 0, 0.3, 0.9, 0, 3.2, 0.3, 1.4); add(g, rockG, mRock2, -6.6, 0.2, 1.5, 0.5, 1.1, 0, 1.2, 0.9, 1.1); };
+  for (const L of SEA_LM){ const g = new THREE.Group(); g.position.set(L.x, WATER_LEVEL, L.z); g.rotation.y = (L.x * 0.13 + L.z * 0.07) % 6.283; if (L.id === 'arch') g.rotation.y = 0; try { B[L.id](g); } catch(e){ console.warn('sea lm', L.id, e); } root.add(g); SeaMap.lm[L.id] = g; } }
+function smTick(dt, t){ const ok = !onIsle && !House.on && !inIndoor() && !Dive.on; if (!SeaMap.built){ if (!ok) return; smBuild(); } SeaMap.root.visible = ok; if (!ok) return;
+  const px = me.pos.x, pz = me.pos.z, lamp = (typeof DayNight !== 'undefined' && DayNight.lamp) || 0, bl = 0.55 + 0.45 * Math.sin(t * 2.4);
+  if (frameNo % 6 === 0){ const k = 0.35 + lamp * 0.65 * bl; SeaMap.lampR.color.setRGB(1.0 * k, 0.35 * k, 0.28 * k); SeaMap.lampG.color.setRGB(0.34 * k, 0.94 * k, 0.6 * k); if (SeaMap.beaconL) SeaMap.beaconL.material.color.setRGB(1 * (0.3 + lamp * 0.7 * bl), 0.91 * (0.3 + lamp * 0.7 * bl), 0.63 * (0.3 + lamp * 0.7 * bl)); if (SeaMap.wxL) SeaMap.wxL.visible = (t % 2.4) < 0.25; }
+  for (const g of SeaMap.buoys){ const dx = g.position.x - px, dz = g.position.z - pz; if (dx * dx + dz * dz > 8100) continue; const ph = g.userData.ph; g.position.y = WATER_LEVEL + Math.sin(t * 1.5 + ph) * 0.05 + (WAVES.on ? waveH(g.position.x, g.position.z, now()) : 0); g.rotation.x = Math.sin(t * 1.1 + ph) * 0.07; g.rotation.z = Math.cos(t * 0.9 + ph * 1.7) * 0.07; }
+  if (SeaMap.wxG){ SeaMap.wxG.position.y = Math.sin(t * 1.3) * 0.07; SeaMap.wxG.rotation.z = Math.sin(t * 0.9) * 0.06; SeaMap.wxG.rotation.x = Math.cos(t * 1.1) * 0.05; } if (SeaMap.cageG){ SeaMap.cageG.position.y = Math.sin(t * 1.0 + 1) * 0.05; SeaMap.cageG.rotation.z = Math.sin(t * 0.7) * 0.025; }
+  { const away = gullAway(); for (const b of SeaMap.birds){ b.visible = !away; if (away) continue; const u = b.userData, a = u.p + t * 0.5; b.position.set(Math.cos(a) * u.r, u.h + Math.sin(t * 0.8 + u.p) * 0.5, Math.sin(a) * u.r); b.rotation.y = -a; const fl = Math.sin(t * 7 + u.p * 3) * 0.5; b.children[1].rotation.z = -0.3 - fl; b.children[2].rotation.z = 0.3 + fl; } }
+  /* 發現 */
+  SeaMap.chk -= dt; if (SeaMap.chk <= 0){ SeaMap.chk = 0.3; for (const L of SEA_LM){ if (SeaMap.seen.has(L.id)) continue; const dx = L.x - px, dz = L.z - pz; if (dx * dx + dz * dz > 256) continue; SeaMap.seen.add(L.id); LS.set('tide.seaSeen', [...SeaMap.seen]); SeaMap.chart = null; const n = seaSeenN(); try { SFX.coin(); } catch(e){} flash(`🧭 發現：${L.n}`, 2.4); toast(`${L.ic} ${L.n}：${L.d}（海上地標 ${n} / ${SEA_LM.length}，地圖最下面有航海圖）`, 9); if (n >= SEA_LM.length) setTimeout(() => { flash('🧭 八個海上地標都找到了！', 2.6); }, 2800); } } }
+/* 航海圖（地圖分頁最下面）：上面是世界的 -x、右邊是世界的 -z（跟上面的村子地圖同一個方向） */
+function seaChart(body){ try { body.appendChild(el('div', 'dexhead', `🧭 航海圖（海上地標 ${seaSeenN()} / ${SEA_LM.length}）`)); body.appendChild(el('p', 'sub', '整片可以划船的海。紅綠浮標是航道，照著划就到得了。問號是還沒去過的地標，划船靠近就會記下來。找港口的阿海坐船，沿路也看得到。'));
+    const N = 560, cv = document.createElement('canvas'); cv.width = cv.height = N; cv.style.cssText = 'width:100%;max-width:560px;display:block;margin:6px auto 4px;border-radius:14px;border:2px solid #18334a'; const c = cv.getContext('2d'), W = 192, X = z => (W - z) / (2 * W) * N, Y = x => (x + W) / (2 * W) * N;
+    if (!SeaMap.land){ const G = 96, lc = document.createElement('canvas'); lc.width = lc.height = G; const lx = lc.getContext('2d'), im = lx.createImageData(G, G); for (let j = 0; j < G; j++) for (let i = 0; i < G; i++){ const z = W - (i + 0.5) / G * 2 * W, x = -W + (j + 0.5) / G * 2 * W, o = (j * G + i) * 4; let land = !boatWater(x, z) && !seaBlock(x, z); for (const V of [SHRIMP, CAFE, MUSEUM, STAD, POOLH]) if (Math.abs(x - V.x) < V.w / 2 + 4 && Math.abs(z - V.z) < V.d / 2 + 4) land = false;   /* 場館的平台在地圖外，不畫 */ if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 16) land = Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r; const snow = x < -128 && z < 135; im.data[o] = land ? (snow ? 236 : 150) : 0; im.data[o + 1] = land ? (snow ? 242 : 196) : 0; im.data[o + 2] = land ? (snow ? 246 : 128) : 0; im.data[o + 3] = land ? 255 : 0; } lx.putImageData(im, 0, 0); SeaMap.land = lc; }
+    { const g = c.createLinearGradient(0, 0, 0, N); g.addColorStop(0, '#2f7fb8'); g.addColorStop(1, '#2a6ea8'); c.fillStyle = g; c.fillRect(0, 0, N, N); } c.imageSmoothingEnabled = true; c.drawImage(SeaMap.land, 0, 0, N, N);
+    c.setLineDash([5, 6]); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.75)'; for (const id in SEA_LANES){ const P = SEA_LANES[id]; c.beginPath(); P.forEach((q, i) => { if (i) c.lineTo(X(q[1]), Y(q[0])); else c.moveTo(X(q[1]), Y(q[0])); }); c.stroke(); } c.setLineDash([]);
+    const label = (tx, x, z, col, sz) => { c.font = `bold ${sz || 15}px sans-serif`; c.textAlign = 'center'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,30,50,.75)'; c.strokeText(tx, X(z), Y(x)); c.fillStyle = col || '#fff'; c.fillText(tx, X(z), Y(x)); };
+    label(i18nT('潮汐釣魚村'), 0, 0, '#fff', 17); label(i18nT('冰封群島'), FROST.x + 4, FROST.z + 40); label(i18nT('深海浮台'), ABYSS.x - 12, ABYSS.z); label(i18nT('神秘島'), MYST.x - 22, MYST.z); label(i18nT('苔森之島'), GREEN.x, GREEN.z); label(i18nT('小島'), ISLE.x, ISLE.z, '#fff', 13);
+    for (const L of SEA_LM){ const on = SeaMap.seen.has(L.id), x = X(L.z), y = Y(L.x); c.beginPath(); c.arc(x, y, on ? 7 : 9, 0, 6.283); c.fillStyle = on ? '#ffd23f' : 'rgba(255,255,255,.28)'; c.fill(); c.lineWidth = 2; c.strokeStyle = on ? '#18334a' : 'rgba(255,255,255,.6)'; c.stroke(); if (on) label(i18nT(L.n), L.x - 9, L.z, '#ffe9a0', 13); else { c.font = 'bold 13px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff'; c.fillText('?', x, y + 5); } }
+    if (!onIsle && Math.abs(me.pos.x) < W && Math.abs(me.pos.z) < W){ const x = X(me.pos.z), y = Y(me.pos.x); c.beginPath(); c.arc(x, y, 6, 0, 6.283); c.fillStyle = '#ff5a48'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.stroke(); label(i18nT('你'), me.pos.x - 8, me.pos.z, '#fff', 12); }
+    body.appendChild(cv);
+    const ul = el('ul', 'dish'); for (const L of SEA_LM){ const on = SeaMap.seen.has(L.id), li = el('li', on ? 'on' : 'lock'); li.appendChild(el('span', 'dishic', on ? L.ic : '❔')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', on ? L.n : '還沒找到的地標')); d.appendChild(el('div', 'sub2', on ? L.d : '划船到海上找找看')); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul); } catch(e){ console.warn('seaChart', e); } }
+function i18nT(s){ try { return typeof tr === 'function' ? tr(s) : s; } catch(e){ return s; } }
+/* 坐阿海的船：真的坐一段 */
+const Voy = { on:false, m:null, btn:null };
+function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
+  closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true); if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } if (F.phase !== 'idle') cancelFishing(); try { if (Bike.on) bikeOff(); } catch(e){} if (mySeat) try { standUp(); } catch(e){}
+  const P = [[44, -38]].concat(lane), cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); const len = cum[cum.length - 1];
+  if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 0.82); Voy.m.visible = false; }
+  if (!Voy.btn){ const b = el('button', 'tbtn', '跳過 ▶'); b.id = 'voySkip'; b.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; b.addEventListener('click', () => voyEnd(true)); document.body.appendChild(b); Voy.btn = b; }
+  const fx = $('#fadeFx'); fx.classList.add('on'); try { SFX.cast(); } catch(e){}
+  setTimeout(() => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, dur: clamp(len / 13.5, 9, 22), hd: null }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); cam.yaw = me.rot + Math.PI; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 150); flash(`🚤 出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('🚤 現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } }, 420); }
+function voyDrive(dt){ const V = Voy, t = now(); V.t += dt; const u0 = clamp(V.t / V.dur, 0, 1), u = u0 < 0.1 ? u0 * u0 * 5.2632 : u0 > 0.9 ? 1 - (1 - u0) * (1 - u0) * 5.2632 : (u0 - 0.05) * 1.0526, s = clamp(u, 0, 1) * V.len;   /* 頭尾慢、中間等速 */
+  let i = 1; while (i < V.cum.length - 1 && V.cum[i] < s) i++; const a = V.P[i - 1], b = V.P[i], seg = V.cum[i] - V.cum[i - 1] || 1, k = clamp((s - V.cum[i - 1]) / seg, 0, 1), x = a[0] + (b[0] - a[0]) * k, z = a[1] + (b[1] - a[1]) * k, want = Math.atan2(b[0] - a[0], b[1] - a[1]);
+  const prev = V.hd == null ? want : V.hd; V.hd = lerpAngle(prev, want, 1 - Math.exp(-1.8 * dt)); let dh = V.hd - prev; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); cam.yaw += dh;   /* 船轉彎，鏡頭跟著轉；玩家自己拖的角度會留著 */
+  const bob = Math.sin(t * 1.7) * 0.05, wh = WAVES.on ? waveH(x, z, t) : 0, fx = Math.sin(V.hd), fz = Math.cos(V.hd), sc = V.m.scale.x;
+  V.m.position.set(x, WATER_LEVEL - 0.25 * sc + bob + wh, z); V.m.rotation.set(Math.sin(t * 1.2) * 0.03, V.hd, Math.sin(t * 1.5) * 0.04);
+  me.pos.x = x - fx * 1.5 * sc; me.pos.z = z - fz * 1.5 * sc; me.baseY = WATER_LEVEL + (1.1 - 0.25) * sc + bob + wh; Jump.gy = me.baseY; me.rot = V.hd; me.speed = 0; me.sitting = false;
+  if (u0 > 0.02 && u0 < 0.98 && Math.random() < dt * 14) ripple(x - fx * 2.6 + (Math.random() - 0.5) * 1.2, z - fz * 2.6 + (Math.random() - 0.5) * 1.2, Math.random() < 0.3);
+  if (V.t >= V.dur) voyEnd(false); }
+function voyEnd(skip){ if (!Voy.on) return; Voy.on = false; if (Voy.m) Voy.m.visible = false; if (Voy.btn) Voy.btn.hidden = true; const tp = Voy.tp; Voy.tp = null; travelTo(tp); }
 function signsTick(dt, t){
   const sp = F.spot && signSpotOk(F.spot) ? F.spot : (() => { const ns = nearestSpot(); return ns.spot && ns.d < 14 && signSpotOk(ns.spot) ? ns.spot : null; })();
   const show = sp && !onIsle && !House.on && !inIndoor() && !Dive.on, list = show ? signsAt(sp, signSlot()).filter(g => !Signs.scared.has(g.key)) : [];
@@ -5252,7 +5335,7 @@ $('#photoView').addEventListener('click', e => { if (e.target.id === 'photoView'
 const boats = BOAT_DOCKS.map((d, i) => { const m = makeKayakMesh(i); m.position.set(d.x, WATER_LEVEL, d.z); m.rotation.y = d.rot; scene.add(m); return { dock: d, m }; });
 let myBoat = null;
 function nearBoat(){ for (const b of boats){ if (b === myBoat) continue; if (Math.hypot(me.pos.x - b.m.position.x, me.pos.z - b.m.position.z) < 3.4) return b; } return null; }
-function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return false;   /* v258 小船可以一路划到冰封群島、深海浮台、神秘島、苔森之島（以前只能在本島附近 85 公尺內） */
+function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return false; if (seaBlock(x, z)) return false;   /* v579 海上的岩石、沙洲、箱網會擋船 */   /* v258 小船可以一路划到冰封群島、深海浮台、神秘島、苔森之島（以前只能在本島附近 85 公尺內） */
   if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 16) return false;   /* 大家的小島是另外進去的，船不能划過去 */
   if (greenNear(x, z, 6)){ const lx = x - GREEN.x, lz = z - GREEN.z; return Math.hypot(lx, lz) > greenEdge(lx, lz) + 1.2; }
   if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 2.6 || Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 2.2) return false; if (mtnH(x, z) !== null || mtnH(x + 1.5, z) !== null || mtnH(x - 1.5, z) !== null || mtnH(x, z + 1.5) !== null || mtnH(x, z - 1.5) !== null) return false;
@@ -5554,6 +5637,7 @@ function updatePlayer(dt){
   if (typeof Sub !== 'undefined' && Sub.cine){ me.speed += ((Sub.cine.walk ? 3.2 : 0) - me.speed) * Math.min(1, dt * 12); Jump.gy = me.baseY; return; }   /* v244 上下潛水艇的過場：位置由過場決定 */
   if (SKI.lift){ skiLiftTick(dt); return; }   /* v548 坐纜車 */
   if (SKI.on){ skiDrive(dt, uiBlocked ? 0 : ix, uiBlocked ? 0 : iz, L); return; }   /* v548 滑雪 */
+  if (Voy.on){ voyDrive(dt); return; }   /* v579 坐阿海的船 */
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
   if (mySeat){
     if (L > 0.08 && !locked) standUp();
@@ -6191,6 +6275,7 @@ function updateBiteShadow(dt, t, want){ const B = BiteFish;
 function updateFishing(dt, t){
   try { signsTick(dt, t); } catch(e){}
   try { flkTick(dt, t); } catch(e){ if (!flkTick.err){ flkTick.err = 1; console.warn('flk', e); } }
+  try { smTick(dt, t); } catch(e){ if (!smTick.err){ smTick.err = 1; console.warn('sea', e); } }
   { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
   const act = $('#act');
   if (F.phase === 'charging'){
@@ -9507,6 +9592,7 @@ const STORY_WHO_A = { chief:'阿土伯', ling:'阿綾', mu:'阿木', fu:'阿福'
 const ACH = [
   { id:'mug', icon:'👁️', name:'與座頭鯨對望', desc:'划船停在外海，讓好奇的座頭鯨游過來看你', cur:() => { try { return LS.get('tide.mugged', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
   { id:'orcahunt', icon:'🛡️', name:'海上的保鑣', desc:'在流冰海岸看到虎鯨圍獵，座頭鯨把牠們趕走', cur:() => { try { return LS.get('tide.orcaHunt', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
+  { id:'sea8', icon:'🧭', name:'航海家', desc:'找到 8 個海上地標（划船或坐阿海的船到海上找）', cur:() => { try { return seaSeenN(); } catch(e){ return 0; } }, goal:8, title:'航海家' },
   { id:'whalesleep', icon:'💤', name:'鯨群的午睡', desc:'在外海看到抹香鯨漂在水面休息時潛下去，看到一整群直立睡覺的抹香鯨', cur:() => { try { return LS.get('tide.whaleSleep', false) ? 1 : 0; } catch(e){ return 0; } }, goal:1 },
   { id:'seasight', icon:'🐋', name:'海上目擊者', desc:'划船在外海遇過海豚、座頭鯨、藍鯨、抹香鯨', cur:() => { try { const a = LS.get('tide.seaSeen', []); return Array.isArray(a) ? a.length : 0; } catch(e){ return 0; } }, goal:4 },
   { id:'sight', icon:'🔭', name:'深海目擊者', desc:'開潛水艇看過全部 5 種深海相遇', cur:() => { try { return subSeen().length; } catch(e){ return 0; } }, goal:5 },
@@ -12448,7 +12534,7 @@ function renderFerry(body){
   { body.appendChild(el('div', 'dexhead', '⛴️ 海上的好地方')); const ul = el('ul', 'shoplist');
     for (const [id, ic, nm, ds] of [['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰，南邊是雪松山滑雪場（坐纜車上山、滑下來比誰快）。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜'], ['greendock', '🌲', '苔森之島', '很大的森林島：長滿青苔的巨木、北邊的瀑布、中間的湖、流進海裡的溪，南邊是沙灘。地方很大，到處有長椅，適合找個角落慢慢釣、跟朋友聊天。有鹿和猴子']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
-      const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); travelTo(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+      const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); voyStart(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
   { body.appendChild(el('div', 'dexhead', `🤿 潛水（進階）${hasDive('dive_suit') ? `・氧氣 ${diveO2()} 秒` : ''}`)); const ul = el('ul', 'shoplist');
     for (const [k, S] of Object.entries(DIVE_SITES)){ if (S.boat) continue; const ok = diveSiteOk(k), li = el('li', ok ? '' : 'lock'); li.appendChild(el('span', 'dishic', S.icon));
@@ -15377,7 +15463,7 @@ function presenceObj(){
   if (myId) o.u = myId;
   { const ft = typeof fbMyTeam === 'function' && fbMyTeam(); if (ft){ o.tn = ft.n; if (ft.c) o.tc = ft.c; } }   /* v529 釣友隊名（體育場足球分邊用） */
   { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }   /* v521 排位賽段位（名字旁邊掛稱號用） */
-  if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat));   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
+  if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat)); else if (Voy.on) o.bt = 1;   /* v579 坐阿海的船：別人看到你坐在小船上沿著航道走 */   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
   if (mySeat) o.st = 1;
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
   if (Bike.on) o.bk = 1;   /* v438 在騎腳踏車 */
@@ -17421,7 +17507,7 @@ function renderTab(){
     /* v515 作者：「誰來逛過」「最近來過村子的人」可以不要了，看起來很亂 → 玩家分頁不再列這兩段 */
     body.appendChild(el('p', 'sub', '有人講話不禮貌，按「封鎖」後就看不到他的角色、聊天和動態（只對你自己有效）。'));
   } else if (curTab === 'map'){
-    renderMap(body);
+    renderMap(body); seaChart(body);
   } else if (curTab === 'style'){
     renderAvatarPick(body);
     renderCloudBox(body);
@@ -17762,6 +17848,9 @@ function renderTab(){
     sec('📜 每日任務、釣魚活動', [
       '🐦 到處逛的時候看海面：遠遠看到幾隻海鳥在水面上繞，那裡就有掠食魚，走過去把浮標拋在鳥的旁邊比較容易上鉤（下雨和晚上鳥不出來）。',
       '💬 村長、阿綾、阿木、阿福、老港會提起你最近做的事：釣到傳說魚、釣到自己最重的一條、一天放流 5 條、一天撿 5 個垃圾、好幾天沒來。',
+      '🧭 海上：港口到冰封群島、深海浮台、神秘島、苔森之島各有一條航道，紅綠浮標一路排過去，晚上頂上的燈會亮，照著划就到得了。島跟島中間有八個海上地標（沉船的桅杆、礁岩燈標、定置網、海鳥岩、沙洲、氣象浮標、舊箱網、海蝕門），划船靠近就會記下來。岩石、沙洲和箱網會擋船，海蝕門可以從中間划過去。',
+      '🧭 航海圖：打開「地圖」拉到最下面，可以看到整片海、航道、找到的地標（沒找到的是問號）和自己的位置。八個都找到有成就「航海家」。',
+      '🚤 找港口的阿海去別的島，現在會真的坐一段船（9 到 22 秒），沿著航道開過去，可以拖畫面看看四周；不想等就按右上的「跳過」。從地圖按快速傳送還是一按就到。',
       '選單的「今天」分頁：把今天可以做的事整理成一張清單（每日任務、本週傳聞、洄游、懸賞、大賽、流星雨、差一點升星的魚），按旁邊的按鈕可以直接過去。',
       '🔍 本週傳聞（每週一換）：有人在某個釣點看到很大的影子。在那裡釣到 5 條魚會發現牠出現的時段；再去港口問追紅鯊的阿默，他會告訴你要用哪種釣法。三條線索都找到，在對的釣點、時段、釣法，那條傳說魚比較好釣（4 倍）。本週第一個釣到的人 🪙500，之後釣到的人 🪙150。進度在「活動」頁。',
       '村長阿土伯（潮汐廣場東邊、村長辦公室門口）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',

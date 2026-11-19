@@ -5805,5 +5805,16 @@
 "沒有人陪的時候可以找常客阿喆對打。": "When nobody is around, you can play the regular, A-Zhe.",
 "微調": "Fine",
 "在桌面上滑動瞄準（點一下直接對準），右邊微調條上下滑可以慢慢對準 → 左邊力道條往下拉再放開就出桿": "Slide on the table to aim (tap to aim there). Slide the fine bar on the right for small adjustments → pull the power bar on the left down and release to shoot",
-"拖母球擺位置 → 在桌面上滑動瞄準（右邊微調條可以慢慢對準）→ 左邊力道條往下拉再放開": "Drag the cue ball → slide on the table to aim (fine bar on the right for small adjustments) → pull the power bar down and release"
+"拖母球擺位置 → 在桌面上滑動瞄準（右邊微調條可以慢慢對準）→ 左邊力道條往下拉再放開": "Drag the cue ball → slide on the table to aim (fine bar on the right for small adjustments) → pull the power bar down and release",
+"🧭 海上：港口到冰封群島、深海浮台、神秘島、苔森之島各有一條航道，紅綠浮標一路排過去，晚上頂上的燈會亮，照著划就到得了。島跟島中間有八個海上地標（沉船的桅杆、礁岩燈標、定置網、海鳥岩、沙洲、氣象浮標、舊箱網、海蝕門），划船靠近就會記下來。岩石、沙洲和箱網會擋船，海蝕門可以從中間划過去。": "🧭 At sea: buoyed channels run from the harbor to the Frozen Isles, the Deep-sea Platform, Mystery Island and Mossy Island. Red and green buoys mark the way and light up at night. Between the islands are eight sea landmarks; row close to record them. Rocks, the sandbar and the old fish cage block boats; you can row through the sea arch.",
+"🧭 航海圖：打開「地圖」拉到最下面，可以看到整片海、航道、找到的地標（沒找到的是問號）和自己的位置。八個都找到有成就「航海家」。": "🧭 Sea chart: open the Map and scroll to the bottom to see the whole sea, the channels, the landmarks you found (unknown ones show a question mark) and where you are. Find all eight for the “Navigator” achievement.",
+"🚤 找港口的阿海去別的島，現在會真的坐一段船（9 到 22 秒），沿著航道開過去，可以拖畫面看看四周；不想等就按右上的「跳過」。從地圖按快速傳送還是一按就到。": "🚤 Asking A-Hai at the harbor to take you to another island is now a real boat ride (9–22 seconds) along the channel. Drag the screen to look around, or tap Skip at the top right. Fast travel from the map is still instant.",
+"跳過 ▶": "Skip ▶",
+"航海家": "Navigator",
+"找到 8 個海上地標（划船或坐阿海的船到海上找）": "Find the 8 sea landmarks (row out or ride A-Hai’s boat)",
+"還沒找到的地標": "Undiscovered landmark",
+"划船到海上找找看": "Row out to sea and look for it",
+"整片可以划船的海。紅綠浮標是航道，照著划就到得了。問號是還沒去過的地標，划船靠近就會記下來。找港口的阿海坐船，沿路也看得到。": "The whole sea you can row on. Red and green buoys mark the channels. Question marks are landmarks you have not visited; row close to record them.",
+"🚤 現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」": "🚤 A-Hai’s boat now really sails for a bit. Look around on the way, or tap Skip at the top right.",
+"🧭 八個海上地標都找到了！": "🧭 You found all eight sea landmarks!"
 }
