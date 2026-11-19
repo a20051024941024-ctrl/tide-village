@@ -10574,15 +10574,23 @@ function poolCam(){ const T = Pool.tables[Pool.ti]; if (!Pool.on || !T) return f
 function poolPick(e){ const T = Pool.tables[Pool.ti]; if (!T) return null; Pool.rc = Pool.rc || new THREE.Raycaster(); Pool.pl = Pool.pl || new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); Pool.v2 = Pool.v2 || new THREE.Vector2(); Pool.v3 = Pool.v3 || new THREE.Vector3();
   Pool.v2.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); Pool.rc.setFromCamera(Pool.v2, camera); Pool.pl.constant = -(POOLH.y + PB.TOP + PB.R); if (!Pool.rc.ray.intersectPlane(Pool.pl, Pool.v3)) return null; return { x: Pool.v3.z - T.oz, y: Pool.v3.x - T.ox }; }
 function poolHudBuild(){ if (Pool.hud) return; const h = el('div'); h.id = 'poolHud';
-  h.innerHTML = '<div class="pl-pad"></div><div class="pl-top panel"><div class="pl-p pl-p0"><b></b><i></i></div><div class="pl-mid"><span class="pl-msg"></span><span class="pl-time"></span></div><div class="pl-p pl-p1"><b></b><i></i></div></div><div class="pl-pow"><div class="pl-powfill"></div><div class="pl-powcue"></div><span>力道</span></div><div class="pl-btns"><button class="pl-inv" hidden></button><button class="pl-zhe" hidden>跟阿喆對打</button><button class="pl-again" hidden>再來一局</button><button class="pl-leave">離開球桌</button></div><div class="pl-tip"></div>';
+  h.innerHTML = '<div class="pl-pad"></div><div class="pl-top panel"><div class="pl-p pl-p0"><b></b><i></i></div><div class="pl-mid"><span class="pl-msg"></span><span class="pl-time"></span></div><div class="pl-p pl-p1"><b></b><i></i></div></div><div class="pl-pow"><div class="pl-powfill"></div><div class="pl-powcue"></div><span>力道</span></div><div class="pl-fine"><span>微調</span></div><div class="pl-btns"><button class="pl-inv" hidden></button><button class="pl-zhe" hidden>跟阿喆對打</button><button class="pl-again" hidden>再來一局</button><button class="pl-leave">離開球桌</button></div><div class="pl-tip"></div>';
   document.body.appendChild(h); Pool.hud = h; const pad = $('.pl-pad', h), pow = $('.pl-pow', h);
   $('.pl-leave', h).addEventListener('click', () => { poolLeave(); }); $('.pl-again', h).addEventListener('click', () => { poolAgain(); }); $('.pl-inv', h).addEventListener('click', () => { poolInvite(); }); $('.pl-zhe', h).addEventListener('click', () => { poolVsZhe(); });
   pad.addEventListener('pointerdown', e => { const T = Pool.tables[Pool.ti]; if (!T || Pool.spec || !poolMyTurn(T)) return; const p = poolPick(e); if (!p) return; try { pad.setPointerCapture(e.pointerId); } catch(_){} const c = T.b[0], near = T.ph === 'hand' && (p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y) < 0.14 * 0.14; Pool.drag = { id: e.pointerId, ball: near, sx: e.clientX, sy: e.clientY, moved: false, ang: Math.atan2(p.y - c.y, p.x - c.x) }; e.preventDefault(); });
   pad.addEventListener('pointermove', e => { const D = Pool.drag, T = Pool.tables[Pool.ti]; if (!D || D.id !== e.pointerId || !T || !poolMyTurn(T)) return; const p = poolPick(e); if (!p) return; if (Math.abs(e.clientX - D.sx) + Math.abs(e.clientY - D.sy) > 8) D.moved = true; const c = T.b[0];
     if (D.ball){ if (poolCuePosOK(T, p.x, p.y)){ c.x = p.x; c.y = p.y; c.on = 1; poolRefresh(T); } return; }
-    if (!D.moved) return; const a = Math.atan2(p.y - c.y, p.x - c.x); let da = a - D.ang; if (da > Math.PI) da -= 2 * Math.PI; else if (da < -Math.PI) da += 2 * Math.PI; D.ang = a; const cur = Math.atan2(Pool.aim.y, Pool.aim.x) + da; Pool.aim.x = Math.cos(cur); Pool.aim.y = Math.sin(cur); });
+    const a = Math.atan2(p.y - c.y, p.x - c.x); if (!D.moved) return;
+    let da = a - D.ang; if (da > Math.PI) da -= 2 * Math.PI; else if (da < -Math.PI) da += 2 * Math.PI; D.ang = a;
+    /* v578 作者：「撞球操作卡卡的」→ 以前手指繞著母球轉幾度、球桿就轉幾度，手指離母球很近時滑一點點球桿就甩一大圈。現在手指離母球 0.5 公尺內會照距離放慢（最慢四分之一），每次事件最多轉 0.35 弧度 */
+    { const fd = Math.sqrt((p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y)); da = clamp(da * clamp(fd / 0.5, 0.25, 1), -0.35, 0.35); }
+    const cur = Math.atan2(Pool.aim.y, Pool.aim.x) + da; Pool.aim.x = Math.cos(cur); Pool.aim.y = Math.sin(cur); });
   const up = e => { const D = Pool.drag, T = Pool.tables[Pool.ti]; if (!D || D.id !== e.pointerId) return; Pool.drag = null; if (!T || !poolMyTurn(T) || D.ball || D.moved) return; const p = poolPick(e); if (!p) return; const c = T.b[0], dx = p.x - c.x, dy = p.y - c.y, L = Math.sqrt(dx * dx + dy * dy); if (L > 0.02){ Pool.aim.x = dx / L; Pool.aim.y = dy / L; } };
   pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', e => { if (Pool.drag && Pool.drag.id === e.pointerId) Pool.drag = null; });
+  /* v578 微調條（右邊）：上下滑，球桿很慢地轉（滑 100px 約 3 度），用來對準最後那一點點 */
+  { const fine = $('.pl-fine', h); let fid = null, fy = 0; fine.addEventListener('pointerdown', e => { const T = Pool.tables[Pool.ti]; if (!T || Pool.spec || !poolMyTurn(T)) return; fid = e.pointerId; fy = e.clientY; try { fine.setPointerCapture(fid); } catch(_){} e.preventDefault(); });
+    fine.addEventListener('pointermove', e => { if (fid !== e.pointerId) return; const T = Pool.tables[Pool.ti]; if (!T || !poolMyTurn(T)) return; const dy = e.clientY - fy; fy = e.clientY; const cur = Math.atan2(Pool.aim.y, Pool.aim.x) + dy * 0.00055; Pool.aim.x = Math.cos(cur); Pool.aim.y = Math.sin(cur); Pool.fineY = ((Pool.fineY || 0) + dy) % 11; fine.style.backgroundPositionY = Pool.fineY + 'px'; });
+    const fup = e => { if (fid === e.pointerId) fid = null; }; fine.addEventListener('pointerup', fup); fine.addEventListener('pointercancel', fup); }
   let pid = null; const setPw = e => { const r = pow.getBoundingClientRect(); Pool.pw = clamp((e.clientY - r.top - 14) / (r.height - 28), 0, 1); };
   pow.addEventListener('pointerdown', e => { const T = Pool.tables[Pool.ti]; if (!T || Pool.spec || !poolMyTurn(T)) return; pid = e.pointerId; try { pow.setPointerCapture(pid); } catch(_){} setPw(e); e.preventDefault(); });
   pow.addEventListener('pointermove', e => { if (pid !== e.pointerId) return; setPw(e); });
@@ -10595,8 +10603,8 @@ function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Poo
   if (T.ph === 'over') msg = T.mode === 'solo' && T.ev === 'clear' ? `清台！用了 ${T.shots} 桿` : T.win < 0 ? '這一局結束了' : Pool.spec ? `${T.nm[T.win] || '玩家'} 贏了` : (vs ? T.win === mi : true) ? '你贏了！' : '這局輸了';
   else if (T.sim) msg = '球在跑…'; else if (Pool.spec) msg = `觀戰中：輪到 ${T.nm[T.turn] || '玩家'}`;
   else if (my) msg = T.ph === 'hand' ? (T.brk ? '開球：母球可以在線後面拖著擺' : '自由球：母球可以拖到任何地方') : '輪到你了'; else msg = vs ? '對手瞄準中…' : '';
-  $('.pl-msg', h).textContent = msg; $('.pl-again', h).hidden = !(T.ph === 'over' && mi >= 0 && !Pool.spec); $('.pl-pow', h).classList.toggle('off', !my); h.classList.toggle('spec', Pool.spec);
-  $('.pl-tip', h).textContent = my ? (T.ph === 'hand' ? '拖母球擺位置 → 在桌面上滑動瞄準 → 左邊力道條往下拉再放開' : '在桌面上滑動瞄準（點一下直接對準）→ 左邊力道條往下拉再放開就出桿') : ''; }
+  $('.pl-msg', h).textContent = msg; $('.pl-again', h).hidden = !(T.ph === 'over' && mi >= 0 && !Pool.spec); $('.pl-pow', h).classList.toggle('off', !my); $('.pl-fine', h).classList.toggle('off', !my); h.classList.toggle('spec', Pool.spec);
+  $('.pl-tip', h).textContent = my ? (T.ph === 'hand' ? '拖母球擺位置 → 在桌面上滑動瞄準（右邊微調條可以慢慢對準）→ 左邊力道條往下拉再放開' : '在桌面上滑動瞄準（點一下直接對準），右邊微調條上下滑可以慢慢對準 → 左邊力道條往下拉再放開就出桿') : ''; }
 /* v527 作者：「應該要兩個人都在桌子旁邊然後可以按邀請一起打」→ 你在練習、旁邊（球桌 4 公尺內）站著別的玩家時，右下角出現「邀請 某某 對打」；對方按接受就開始對打 */
 function poolNearPeer(T){ let best = null, bd = 4; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; const d = Math.max(Math.abs(p.target.x - T.ox) - PB.HW, 0) + Math.max(Math.abs(p.target.z - T.oz) - PB.HL, 0); if (d < bd && !Pool.tables.some(X => X.p[0] === k || X.p[1] === k)){ bd = d; best = { k, u: p.pres.u || '', n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
 function poolInvite(){ const T = Pool.tables[Pool.ti]; if (!T || T.mode !== 'solo' || poolMyIdx(T) !== 0) return; const P = poolNearPeer(T); if (!P){ toast('旁邊沒有人可以邀請（要站在球桌附近）'); return; } const tn = now(); if (Pool.invAt && tn - Pool.invAt < 6){ toast('剛邀請過，等對方回應'); return; } Pool.invAt = tn; poolSend({ k: 'inv', t: T.i, to: P.k, tu: P.u, n: poolName() }); toast(`🎱 已經邀請 ${esc(P.n)}，等對方回應`); }
@@ -17742,6 +17750,7 @@ function renderTab(){
       '邀請對打：你在練習的時候，如果有別的玩家站在球桌旁邊，右下角會出現「邀請 某某 對打」，按下去對方會收到邀請，按接受就開始對打。也可以自己走到別人正在練習的球桌旁邊按「對打」直接加入。',
       '在哪裡：運動公園西南角、屋頂上有一顆黑八的小屋。走到門口按按鈕就進去，裡面有兩張球桌、果汁吧和記分黑板（寫著每張桌子現在誰在打）；出口在南邊。',
       '怎麼開始：走到球桌旁邊按「打撞球」。一個人是練習（把 15 顆球都打進去，看用了幾桿；黑色 8 號要留到最後，提早打進去會擺回桌上）；別人走到你的桌子按「對打」，就會重新排球變成兩個人的八號球，先坐下的人開球。桌子已經有兩個人在打，按「觀戰」可以從上面看。',
+      '瞄不準的時候：右邊有一條「微調」，手指在上面上下滑，球桿會很慢地轉，用來對準最後那一點點。手指在桌面上離母球越遠，滑動時球桿轉得越細；離母球很近的時候也會自動放慢。',
       '怎麼打：畫面會變成從球桌正上方往下看。在桌面上滑動手指，球桿會繞著母球（白球）轉；點一下桌面會直接對準那裡。白線是母球會走的路，白圈是母球碰到東西時的位置，短線是被撞的球大概會往哪裡走。瞄好以後，把左邊的力道條往下拉（拉越多越大力），放開就出桿；拉回最上面再放開是取消。',
       '八號球規則：開球以後，誰先打進一顆球，就打那一種——全色球（1～7 號）或花色球（9～15 號，有白邊），對手打另一種。打進自己的球可以繼續打，沒進就換人。自己的 7 顆都進了以後，再把黑色 8 號打進去就贏了。',
       '犯規（換對手打，而且對手可以把母球拖到桌上任何地方，叫「自由球」）：母球進袋、沒有碰到任何球、母球先碰到對手的球、還有自己的球沒打完就先碰黑八。',

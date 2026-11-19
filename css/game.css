@@ -1479,6 +1479,10 @@ body.pooling > *:not(canvas):not(script):not(style):not(#poolHud):not(#toasts):n
 #poolHud .pl-powfill{position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(#ffe27a,#ff9f43 55%,#e0452f)}
 #poolHud .pl-powcue{position:absolute;left:50%;width:32px;height:28px;margin-left:-16px;top:0;border-radius:10px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.4);pointer-events:none}
 #poolHud .pl-pow span{position:absolute;left:0;right:0;bottom:6px;text-align:center;color:#fff;font-size:11px;font-weight:800;pointer-events:none}
+#poolHud .pl-fine{position:absolute;right:calc(var(--gr, 8px) + 2px);top:calc(var(--gt, 8px) + 74px);width:46px;height:min(34vh,220px);border-radius:23px;background:rgba(24,51,74,.72) repeating-linear-gradient(0deg,transparent 0 9px,rgba(255,255,255,.5) 9px 11px);border:2px solid #fff;overflow:hidden;touch-action:none}
+#poolHud .pl-fine.off{opacity:.3;pointer-events:none}
+#poolHud.spec .pl-fine{display:none}
+#poolHud .pl-fine span{position:absolute;left:0;right:0;bottom:6px;text-align:center;color:#fff;font-size:11px;font-weight:800;pointer-events:none;text-shadow:0 1px 2px #000}
 #poolHud .pl-btns{position:absolute;right:var(--gr, 8px);bottom:calc(var(--gb, 8px) + 4px);display:flex;flex-direction:column;gap:8px;align-items:flex-end}
 #poolHud .pl-btns button{font:inherit;font-weight:800;font-size:14px;padding:10px 16px;border-radius:999px;border:2px solid #18334a;background:#fff;color:#18334a;box-shadow:0 3px 0 #18334a}
 #poolHud .pl-btns button[hidden]{display:none}
