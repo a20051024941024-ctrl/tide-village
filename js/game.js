@@ -1841,6 +1841,40 @@ function signObj(){ const g = new THREE.Group(), C = {};
   C.birds = new THREE.Group(); const bm = new THREE.MeshBasicMaterial({ color:'#2b2f36' }); for (let j = 0; j < 3; j++){ const b = new THREE.Group(); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.14), bm); w.position.x = sd * 0.26; w.rotation.z = sd * 0.35; b.add(w); } b.userData.a = j / 3 * Math.PI * 2; C.birds.add(b); } g.add(C.birds);
   C.bub = []; const wm = new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.8 }); for (let j = 0; j < 6; j++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), wm); g.add(b); C.bub.push(b); }
   g.userData.C = C; scene.add(g); return g; }
+/* ===== v574 亂逛的時候，遠遠就看得到哪裡有魚（作者：想學 GTA 的「亂逛」跟「世界有反應」）=====
+   動工前查到兩樣東西其實早就有，只是「看不見」：
+   1. 🐦 海鳥徵兆（v247）：鳥在哪片水面上盤旋，那裡就有掠食魚 —— 但要走到釣點 14 公尺內才畫出來。
+      現在 95 公尺內的釣點只要有海鳥徵兆，遠遠就看得到鳥在水面上繞（越遠畫得越大、越高，走近時跟原本的一模一樣，接得起來）。
+   2. 🐟 魚群洄游（v276，每 3 小時一次、25 分鐘）：只有跑馬燈和選單會講，世界裡什麼都沒有。
+      現在洄游的那個釣點外面，會有一大群海鳥盤旋、輪流俯衝，水面一直冒水花，從很遠就看得到。
+   都只是「把已經有的東西畫出來」：位置和時間照伺服器時間算（大家看到的一樣），沒有改任何機率。
+   下雨、暴風雨、晚上鳥不出來（v471 的規則）；洄游的水花還是會有。 */
+const FLK = { mig:null, birds:[], far:[], list:[], scan:0, rip:0 };
+function flkBird(col, sc){ const b = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color: col }); b.add(new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.5), m)); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.04, 0.2), m); w.position.x = sd * 0.3; b.add(w); } b.scale.setScalar(sc); return b; }
+function flkFar(){ const g = new THREE.Group(), bm = new THREE.MeshBasicMaterial({ color:'#2b2f36' }); for (let j = 0; j < 3; j++){ const b = new THREE.Group(); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.14), bm); w.position.x = sd * 0.26; b.add(w); } b.userData.a = j / 3 * Math.PI * 2; g.add(b); } g.userData.dyn = g.userData.keep = true; g.visible = false; scene.add(g); return g; }   /* 跟 signObj 的鳥同一個樣子 */
+function flkMigAt(sp){ if (!sp || !sp.dir || !sp.pos) return null; const L = Math.hypot(sp.dir.x, sp.dir.y) || 1; for (const d of [9, 6.5, 4.5]){ const x = sp.pos.x + sp.dir.x / L * d, z = sp.pos.z + sp.dir.y / L * d; if (waterAt(x, z)) return [x, z]; } return [sp.pos.x + sp.dir.x / L * 5, sp.pos.z + sp.dir.y / L * 5, 1]; }
+function flkTick(dt, t){
+  const ok = !onIsle && !House.on && !inIndoor() && !Dive.on, away = gullAway();
+  /* 1 洄游的大鳥群 */
+  if (!FLK.mig){ FLK.mig = new THREE.Group(); FLK.mig.userData.dyn = FLK.mig.userData.keep = true; FLK.mig.visible = false; scene.add(FLK.mig); const n = Quality.tier === 'low' ? 8 : 16;
+    for (let i = 0; i < n; i++){ const b = flkBird(i % 3 ? '#f3f5f7' : '#c3ccd5', 1.25), u = b.userData; u.p = i * 2.399; u.r = 3.5 + ((i * 0.618) % 1) * 6; u.h = 5 + ((i * 0.37) % 1) * 6; u.w = (0.5 + ((i * 0.71) % 1) * 0.5) * (i % 2 ? 1 : -1); u.dv = false; FLK.mig.add(b); FLK.birds.push(b); } }
+  const m = evtMig(bossNow()), sp = ok && m.active ? SPOT_BY_ID[m.spot] : null, at = sp ? flkMigAt(sp) : null;
+  FLK.migOn = !!at; FLK.mig.visible = !!at && !away;
+  if (at){ const cx = at[0], cz = at[1], d = Math.hypot(me.pos.x - cx, me.pos.z - cz), wy = at[2] ? groundHeight(cx, cz) : waterY(cx, cz, t);
+    if (FLK.mig.visible){ FLK.mig.position.set(cx, wy, cz);
+      for (const b of FLK.birds){ const u = b.userData, a = u.p + t * u.w * 0.55, q = (t * 0.13 + u.p * 0.31) % 1, k = q > 0.86 && !at[2] ? Math.sin((q - 0.86) / 0.14 * Math.PI) : 0, y = u.h * (1 - k * 0.92) + 0.35;
+        b.position.set(Math.cos(a) * u.r, y, Math.sin(a) * u.r); b.rotation.y = -a + (u.w > 0 ? 0 : Math.PI); b.rotation.x = k > 0.05 && q < 0.93 ? 0.7 : 0;
+        const fl = k > 0.3 ? -0.9 : Math.sin(t * 8 + u.p * 3) * 0.5; b.children[1].rotation.z = -0.3 - fl; b.children[2].rotation.z = 0.3 + fl;
+        if (k > 0.96 && !u.dv){ u.dv = true; if (d < 70){ const wx = cx + b.position.x, wz = cz + b.position.z; ripple(wx, wz); FX.emit(wx, wy + 0.1, wz, 6, '#ffffff', 0.8, 1.6, 0.6); } } else if (k < 0.2) u.dv = false; } }
+    FLK.rip -= dt; if (FLK.rip <= 0 && d < 80 && !at[2]){ FLK.rip = 0.3 + Math.random() * 0.35; const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * 6, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (waterAt(x, z)){ ripple(x, z); if (Math.random() < 0.35) FX.emit(x, wy + 0.08, z, 3, '#dff4ff', 0.5, 1.5, 0.5); } } }
+  /* 2 遠處釣點的海鳥徵兆 */
+  FLK.scan -= dt; if (FLK.scan <= 0){ FLK.scan = 0.5; const L = [];
+    if (ok && !away){ const sl = signSlot(); for (const s of SPOTS){ if (!signSpotOk(s) || s === F.spot) continue; const d = Math.hypot(me.pos.x - s.pos.x, me.pos.z - s.pos.z); if (d < 14 || d > 95) continue; for (const g of signsAt(s, sl)) if (g.k === 'pred') L.push({ g, d: Math.hypot(me.pos.x - g.x, me.pos.z - g.z) }); } L.sort((a, b) => a.d - b.d); L.length = Math.min(L.length, 5); }
+    FLK.list = L; while (FLK.far.length < L.length) FLK.far.push(flkFar()); }
+  FLK.far.forEach((o, i) => { const e = FLK.list[i]; o.visible = !!e; if (!e) return; const g = e.g, ph = t + g.i * 1.7, k = clamp(e.d / 14, 1, 3.2);
+    o.position.set(g.x + Math.sin(ph * 0.3) * 0.35, waterY(g.x, g.z, t) + 0.03, g.z + Math.cos(ph * 0.23) * 0.35);
+    o.children.forEach(b => { const a = b.userData.a + ph * 0.9; b.position.set(Math.cos(a) * 1.3 * k, 3.0 + (k - 1) * 1.7 + Math.sin(ph * 1.3 + a) * 0.25, Math.sin(a) * 1.3 * k); b.rotation.y = -a; b.scale.setScalar(k); const fl = Math.sin(ph * 9 + a * 3) * 0.5; b.children[0].rotation.z = -0.35 - fl; b.children[1].rotation.z = 0.35 + fl; }); });
+}
 function signsTick(dt, t){
   const sp = F.spot && signSpotOk(F.spot) ? F.spot : (() => { const ns = nearestSpot(); return ns.spot && ns.d < 14 && signSpotOk(ns.spot) ? ns.spot : null; })();
   const show = sp && !onIsle && !House.on && !inIndoor() && !Dive.on, list = show ? signsAt(sp, signSlot()).filter(g => !Signs.scared.has(g.key)) : [];
@@ -6155,6 +6189,7 @@ function updateBiteShadow(dt, t, want){ const B = BiteFish;
   g.rotation.y = Math.atan2(-(b.z - g.position.z), b.x - g.position.x) + Math.sin(t * 2.5) * 0.12; }
 function updateFishing(dt, t){
   try { signsTick(dt, t); } catch(e){}
+  try { flkTick(dt, t); } catch(e){ if (!flkTick.err){ flkTick.err = 1; console.warn('flk', e); } }
   { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
   const act = $('#act');
   if (F.phase === 'charging'){
@@ -8620,7 +8655,7 @@ function seaMemTick(dt, t){ if (frameNo % 30 === 5){ if (!SeaMem.pulled && Cloud
 async function pickLitter(l){
   if (Canal.busy) return; Canal.busy = true; me.dip = 1;
   let ok = true; if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('pick_litter'); if (error){ ok = false; toast(String(error.message || '').includes('今天') ? '今天已經撿很多了，謝謝你！明天再來 💙' : '等一下再撿'); } else if (data) adoptRow(data); } catch(e){ ok = false; } }
-  else { const day = new Date().toDateString(); if (rec.litterDay !== day){ rec.litterDay = day; rec.litterN = 0; } if (rec.litterN >= 20){ ok = false; toast('今天已經撿很多了，謝謝你！明天再來 💙'); } else { rec.litterN++; rec.love = (rec.love || 0) + 1; } }
+  else { const day = new Date().toDateString(); if (rec.litterDay !== day){ rec.litterDay = day; rec.litterN = 0; } if (rec.litterN >= 20){ ok = false; toast('今天已經撿很多了，謝謝你！明天再來 💙'); } else { rec.litterN++; rec.love = (rec.love || 0) + 1; deedCount('lit'); } }
   Canal.busy = false; if (!ok) return;
   Canal.g.remove(l.m); Canal.litter.splice(Canal.litter.indexOf(l), 1); saveRecLocal(); SFX.chat(); flash(`${l.T.icon} 撿起${l.T.name}，丟進垃圾桶 💙 愛海 +1`, 1.4); seaMemAdd(seaMemHere(), 2, 'litter');
 }
@@ -13797,7 +13832,7 @@ function lovePts(f, w){ if (f.rs) return 100; if (f.sev) return 50; return Math.
 function releaseLocal(x){
   const f = FISH_BY_ID[x.f], p = lovePts(f, x.w) + (x.b ? 5 : 0);   /* 嘴裡含著小魚的母魚 */
   rec.tank = rec.tank.filter(y => y.t !== x.t); if (rec.show) rec.show = rec.show.filter(t => t !== x.t);
-  rec.love = (rec.love || 0) + p; rec.released = (rec.released || 0) + 1; saveRecLocal(); buildTank();
+  rec.love = (rec.love || 0) + p; rec.released = (rec.released || 0) + 1; deedCount('rel'); saveRecLocal(); buildTank();
   if (f.sev) sevReleased(f);
   return p;
 }
@@ -14543,6 +14578,7 @@ function recordCatch(f, w){
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w; seaMemAdd(F.spot && F.spot.id, 1, 'catch'); try { if (!(F.spot && F.spot.id === 'shrimp')) rodNote(f, w); } catch(e){}
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
   if (f.rarity === '傳說') rec.legend++;
+  try { if (f.rarity === '傳說') deedAdd('legend', { f: f.id }); else if (isTop && w >= 5) deedAdd('top', { f: f.id, w }); } catch(e){}   /* v574 村民之後會提起 */
   rec.tank.unshift(Object.assign({ f: f.id, w, t: Date.now() }, f.rs && F.rsTag ? { rs: F.rsTag } : {}, F.sex ? { s: F.sex } : {}, F.brood ? { b: true } : {}, f.of || f.keep ? { k: true } : {}, isGuppy(f.id) && F.gp ? { gp: F.gp } : {})); trimTank();   /* 變種超級稀有：釣到自動打星號收藏 */
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
@@ -16345,7 +16381,7 @@ function renderEvtChip(force){ if (!Evt.chip){ Evt.chip = document.createElement
   const txt = parts.join(' · '); if (Evt.chip.textContent !== txt) Evt.chip.textContent = txt;
   Evt.chip.hidden = !!(Dive.on || (typeof Sub !== 'undefined' && Sub.on) || House.on || inIndoor()); }
 function evtTick(t){ if (!Kid.applied){ Kid.applied = true; kidApply(); } if (Cloud.on && !Rumor.busy && (!Rumor.at || Date.now() - Rumor.at > 5 * 60000)) rumorLoad(); const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms);
-  if (Evt.lastMig !== null && m.active && Evt.lastMig !== m.id + ':1') ticker(`🐟 魚群洄游！一大群${(FISH_BY_ID[m.fish] || {}).name}游到了${(SPOT_BY_ID[m.spot] || {}).label}，接下來 25 分鐘特別好釣，釣到 4 條送 200 金幣`);
+  if (Evt.lastMig !== null && m.active && Evt.lastMig !== m.id + ':1') ticker(`🐟 魚群洄游！一大群${(FISH_BY_ID[m.fish] || {}).name}游到了${(SPOT_BY_ID[m.spot] || {}).label}，接下來 25 分鐘特別好釣，釣到 4 條送 200 金幣。到那附近看，海鳥聚在水面上的地方就是`);
   Evt.lastMig = m.id + ':' + (m.active ? 1 : 0);
   if (Evt.lastB !== null && Evt.lastB !== b.id) ticker(`🎯 新的懸賞：釣到 ${b.minw} 公斤以上的${(FISH_BY_ID[b.fish] || {}).name}，送 300 金幣（2 小時內）`); Evt.lastB = b.id;
   if (Evt.lastMet === false && met) ticker('🌠 流星雨來了！接下來 30 分鐘，所有釣點的傳說魚都比較好釣'); Evt.lastMet = met;
@@ -16945,7 +16981,7 @@ function worldDrive(n, dt, t){
   const pd = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
   if (mode !== 'home'){
     if (pd < 7 && !wp.walk && !n.fishing) n.rot = lerpAngle(n.rot, Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z), 1 - Math.exp(-3 * dt));
-    if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(Math.random() < 0.6 ? worldLine(n, wp) : npcLine(n), '', 5); n.talkAt = t + rand(16, 30); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
+    if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ { const yl = n.wid && Math.random() < 0.75 ? youLine(n) : null; n.say(yl || (Math.random() < 0.6 ? worldLine(n, wp) : npcLine(n)), '', yl ? 7 : 5); } n.talkAt = t + rand(16, 30); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
     // 一起聊天的人：偶爾互相講一句
     if (wp.r.act === 'chat' && !wp.walk && pd < 30 && t > (n.chatAt || 0)){ n.chatAt = t + rand(9, 20); const others = Object.values(World.rows).filter(o => o.id !== n.wid && o.place === wp.r.place && o.act === 'chat'); if (others.length && Math.random() < 0.7){ const o = others[Math.floor(Math.random() * others.length)], nm = WORLD_WHO[o.id] || '';
       const rl = worldRel(n.wid, o.id), lb = rl ? rl.label : '不熟', A = lb === '不合' ? ['哼', `${nm}，你又來了`, '我不想跟你說話'] : lb === '競爭對手' ? [`${nm}，今天釣得過我嗎？`, '這次我一定贏你', '哼，運氣好而已'] : lb === '家人' ? [`${nm}，晚餐回家吃嗎？`, '媽打電話來說想我們了', `${nm}，今天的魚很新鮮喔`] : lb === '好友' || lb === '朋友' || lb === '同事・朋友' ? [`${nm}，最近好嗎？`, `${nm}你看今天的海`, '哈哈哈，你太好笑了', '真的假的！', '下次一起去釣魚吧'] : [`${nm}……你好`, '今天天氣不錯呢', '嗯嗯'];
@@ -16955,6 +16991,26 @@ function worldDrive(n, dt, t){
   if (mode !== 'home') n.update(dt, t);
   n.placeTag(); return true;
 }
+/* ===== v574 村子會提到你做過的事（世界有反應）=====
+   動工前查到：村民本來就記得「聊過幾次、送過什麼魚」（伺服器記的，worldMemLines）。缺的是你在村子裡「做了什麼」沒有人提。
+   現在這幾件事會記在手機裡（tide.deeds，最多 10 件、只留兩天），之後走到村長、阿綾、阿木、阿福、老港旁邊，他們會提起：
+   釣到傳說魚｜釣到自己最重的一條（5 公斤以上）｜一天放流 5 條｜一天撿 5 個垃圾｜三天以上沒來。
+   同一件事最多三位村民各講一次，剛發生的一分鐘內不講（「聽說」要有時間傳開）。只是台詞，不給獎勵，所以不經過伺服器。 */
+const Deeds = { L: (() => { const a = LS.get('tide.deeds', []); return Array.isArray(a) ? a.filter(d => d && d.k && d.at) : []; })(), day: LS.get('tide.deedDay', null) };
+function deedSave(){ const lim = Date.now() - 48 * 3600000; Deeds.L = Deeds.L.filter(d => d.at > lim).slice(0, 10); LS.set('tide.deeds', Deeds.L); }
+function deedAdd(k, o){ try { Deeds.L.unshift(Object.assign({ k, at: Date.now(), by: [] }, o || {})); deedSave(); } catch(e){} }
+function deedCount(k){ try { const day = new Date().toDateString(); if (!Deeds.day || Deeds.day.d !== day) Deeds.day = { d: day }; Deeds.day[k] = (Deeds.day[k] || 0) + 1; LS.set('tide.deedDay', Deeds.day); if (Deeds.day[k] === 5) deedAdd(k); } catch(e){} }
+const DEED_LINES = {
+  legend: { chief:(nm, d) => `${nm}聽說你釣到${d.fn}了！整個村子都在講`, fu:(nm, d) => `你釣到${d.fn}？那種魚我賣魚這麼多年只看過幾次`, gang:(nm, d) => `${d.fn}……我年輕的時候也釣過一條。不簡單啊`, ling:(nm, d) => `${nm}你釣到${d.fn}的事我聽說了，好厲害！`, mu:(nm, d) => `${d.fn}耶！下次帶我去看你在哪裡釣的` },
+  top:    { chief:(nm, d) => `${nm}聽說你釣到一條 ${d.kg} 的${d.fn}，是你釣過最重的吧？`, fu:(nm, d) => `${d.kg} 的${d.fn}？那一條夠我店裡賣一整天了`, gang:(nm, d) => `${d.kg} 的${d.fn}，手很痠吧？我懂`, ling:(nm, d) => `聽說你拉上來一條 ${d.kg} 的${d.fn}，你力氣好大`, mu:(nm, d) => `${d.kg}！我的竿子大概會直接斷掉` },
+  rel:    { chief:(nm) => `${nm}你今天放流了好多魚，海會記得的`, fu:() => `你把魚放回去我是少賺啦……不過這樣以後才有魚賣，謝謝你`, gang:() => `肯把魚放回去的人，海才會一直有魚。謝啦`, ling:() => `我看到你把魚放回海裡，牠們游走的時候好像在跟你說再見`, mu:() => `你今天放了好多魚！我也要學你` },
+  lit:    { chief:(nm) => `${nm}謝謝你幫忙撿垃圾，村子有你真好`, fu:() => `海邊今天乾淨多了，我看到是你在撿`, gang:() => `垃圾少一點，魚就多一點。你做得對`, ling:() => `沙灘今天好乾淨！是你撿的對不對`, mu:() => `我剛剛去海邊都找不到垃圾了，你好厲害` },
+  back:   { chief:(nm, d) => `${nm}好久不見！${d.n} 天沒看到你了，村子還是老樣子`, fu:(nm, d) => `你 ${d.n} 天沒來了，我還留了好魚等你`, gang:() => `你去哪了？海邊少了你怪安靜的`, ling:(nm) => `${nm}你回來了！我還以為你搬走了`, mu:() => `你終於回來了！我有好多事要跟你講` } };
+function youLine(n){ try { const id = n && n.wid, now0 = Date.now(); if (!id || !DEED_LINES.legend[id]) return null;
+    const d = Deeds.L.find(d => now0 - d.at > 60000 && now0 - d.at < 48 * 3600000 && DEED_LINES[d.k] && !(d.by || []).includes(id) && (d.by || []).length < 3); if (!d) return null;
+    const nm0 = myDisplayName && myDisplayName() !== '你' ? myDisplayName() : '', f = d.f ? FISH_BY_ID[d.f] : null; if ((d.k === 'legend' || d.k === 'top') && !f) return null;
+    const tx = DEED_LINES[d.k][id](nm0 ? nm0 + '，' : '', { fn: f ? f.name : '', kg: d.w ? fmtKg(d.w) : '', n: d.n || 0 }); (d.by = d.by || []).push(id); deedSave(); return tx; } catch(e){ return null; } }
+setTimeout(() => { try { const today = Math.floor((Date.now() + 8 * 3600000) / 86400000), last = LS.get('tide.seenDay', 0); if (last && today - last >= 3) deedAdd('back', { n: today - last, at: Date.now() - 61000 }); LS.set('tide.seenDay', today); } catch(e){} }, 4000);
 // ---- 第三階段：記憶和關係變成台詞（全部照伺服器記得的事講） ----
 function worldRel(x, y){ return (World.rel || []).find(r => (r.a === x && r.b === y) || (r.a === y && r.b === x)); }
 function worldMemLines(n){
@@ -17612,11 +17668,13 @@ function renderTab(){
       '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
+      '🐦 到處逛的時候看海面：遠遠看到幾隻海鳥在水面上繞，那裡就有掠食魚，走過去把浮標拋在鳥的旁邊比較容易上鉤（下雨和晚上鳥不出來）。',
+      '💬 村長、阿綾、阿木、阿福、老港會提起你最近做的事：釣到傳說魚、釣到自己最重的一條、一天放流 5 條、一天撿 5 個垃圾、好幾天沒來。',
       '選單的「今天」分頁：把今天可以做的事整理成一張清單（每日任務、本週傳聞、洄游、懸賞、大賽、流星雨、差一點升星的魚），按旁邊的按鈕可以直接過去。',
       '🔍 本週傳聞（每週一換）：有人在某個釣點看到很大的影子。在那裡釣到 5 條魚會發現牠出現的時段；再去港口問追紅鯊的阿默，他會告訴你要用哪種釣法。三條線索都找到，在對的釣點、時段、釣法，那條傳說魚比較好釣（4 倍）。本週第一個釣到的人 🪙500，之後釣到的人 🪙150。進度在「活動」頁。',
       '村長阿土伯（潮汐廣場東邊、村長辦公室門口）、漁夫老王（港口）、食堂美雲姨（食堂旁）每天各有一個請求，頭上有 ❗ 的就是還沒完成。',
       '走到他們旁邊、或在選單的「任務」分頁交付魚或料理，就能拿到金幣。每天台灣時間半夜 12 點換新任務。',
-      '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣，洄游期間在那裡釣到 4 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。'
+      '📅 釣魚活動（左上角的活動條，點一下看全部）：🐟 魚群洄游每 3 小時一次（30 分開始、25 分鐘），某個釣點來一大群某種魚，特別好釣（那個釣點外面的水面上會有一大群海鳥盤旋、俯衝，遠遠就看得到），洄游期間在那裡釣到 4 條送 200 金幣；🎯 懸賞魚每 2 小時換一種，釣到夠重的送 300 金幣；🌠 每天晚上 23:00～23:30 流星雨，所有釣點的傳說魚比較好釣。每次活動一個人領一次。'
     ]);
     sec('🏆 每週比賽與排行榜', [
       '每週一半夜 12 點（台灣時間）換一種比賽魚，比誰釣到最重的那一條。排行榜第一個分頁就是本週比賽。',
