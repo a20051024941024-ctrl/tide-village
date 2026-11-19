@@ -3306,7 +3306,8 @@ const LOOK_HAIR = ['短髮', '齊瀏海', '刺刺頭', '鮑伯頭', '長髮', '�
   /* v270 阿萍美髮沙龍設計的（109，要買）：從 4 款開始，每兩天多一款 */ '公主頭', '大波浪', '側馬尾', '高馬尾', '麻花辮', '雙辮子', '雙丸子', '公主切', '長直瀏海', '蓬蓬捲', '油頭', '中分',
   /* v279 阿萍又設計的（112）：照臉型挑的熱門髮型，一樣每兩天多一款 */ '八字瀏海', '法式瀏海', '鎖骨髮', '低馬尾', '空氣瀏海', '內扣髮', '蛋捲頭', '低丸子頭', '高顱頂半扎',
   /* v404 阿萍每週的新作品（157） */ '狼尾頭', '精靈短髮',
-  /* v415 玩家給的 Q 版參考（162） */ '甜心雙束', /* v418 玩家的 Meshy 全身公仔拆出來的頭髮 */ '清爽亂髮', '公仔長捲髮'];
+  /* v415 玩家給的 Q 版參考（162） */ '甜心雙束', /* v418 玩家的 Meshy 全身公仔拆出來的頭髮 */ '清爽亂髮', '公仔長捲髮',
+  /* v572 阿萍每週的新作品 */ '髒辮', '紳士側分'];
 const LOOK_HC = ['#2a2422', '#5a3d2b', '#8a5a3a', '#d8a850', '#f0d890', '#c0482a', '#f2a0c0', '#4a7ad0', '#4aa070', '#8a6ad0', '#ecebe6',
   /* v270 阿萍每天發現的新髮色（109，要染）：從 3 色開始，每天多一色 */ '#f6a99a', '#b7a0e0', '#9fe0c8', '#a8d8f0', '#b8906a', '#c88a3a', '#e0a090', '#c8283c', '#f08060', '#7f98b8', '#8aa890', '#7a2236', '#a8aab0', '#f2e6c8', '#3a7a5a', '#1e2a5a', '#5a2a7a', '#f0e060', '#e0a848', '#4a2c1e', '#b0582a', '#f0b880', '#d8a8a8', '#78b8f0', '#7ab8a8', '#8aa848', '#a03a8a', '#f07838', '#ff5fa8', '#1a2850'];
 const LOOK_HC_NAME = ['蜜桃粉', '薰衣草紫', '薄荷綠', '冰川藍', '奶茶棕', '焦糖金', '玫瑰金', '櫻桃紅', '珊瑚橘', '霧霾藍', '灰綠', '酒紅', '銀灰', '白金', '海藻綠', '午夜藍', '葡萄紫', '檸檬黃', '蜂蜜色', '巧克力', '紅銅', '杏桃', '藕粉', '天空藍', '青瓷', '抹茶', '莓果紫', '落日橘', '霓虹粉', '星空藍'];
@@ -3319,7 +3320,7 @@ function hcName(i){ if (i < LOOK_FREE_C) return '髮色 ' + (i + 1); if (i < LOO
   const h = (i * 137.508) % 360, hsl = { l: 0.32 + hcHash(i, 2) * 0.4 }, nouns = [[15, '紅'], [40, '橘'], [55, '金'], [70, '檸檬黃'], [100, '青檸'], [150, '綠'], [175, '薄荷'], [195, '湖水藍'], [225, '藍'], [255, '靛'], [285, '紫'], [320, '梅'], [345, '粉'], [361, '紅']];
   const noun = (nouns.find(([m]) => h < m) || nouns[0])[1]; return HC_PLACE[Math.floor(hcHash(i, 3) * HC_PLACE.length)] + (hsl.l < 0.42 ? '深' : hsl.l > 0.62 ? '淺' : '') + noun; }
 function salonDays(){ return Math.max(0, Math.floor((bossNow() / 1000 + 8 * 3600) / 86400) - Math.floor(Date.UTC(2026, 10, 7) / 86400000)); }   /* 跟 109 的 _salon_days 一樣（台灣時間，從 2026-11-07 起算） */
-const SALON_HS_MAX = 35;   /* 阿萍最新的髮型編號（每週加新髮型時改這裡和 SQL 的 _salon_hs_max） */
+const SALON_HS_MAX = 37;   /* 阿萍最新的髮型編號（每週加新髮型時改這裡和 SQL 的 _salon_hs_max） */
 function salonOk(kind, n){ const d = salonDays(); return kind === 'hs' ? n >= 10 && n <= SALON_HS_MAX : n >= 11 && n <= 999 && n - 11 < 33 + d; }   /* v335 女玩家變多：設計好的髮型一次全部上架，髮色一次多 30 種（跟 131_salon_all.sql 一樣） */
 function lookOwnH(h){ return h < LOOK_FREE_H || (rec.owned || []).includes('hs' + h); }
 function lookOwnC(c){ return c < LOOK_FREE_C || (rec.owned || []).includes('hc' + c); }
@@ -3327,7 +3328,7 @@ const LOOK_SKIN = [/* v419 玩家想要公仔那種白裡透粉的皮膚：最�
 const LOOK_EYE = ['#3a2a20', '#7a4a28', '#2f6fb5', '#3a8a5a', '#8a5ac0', '#c0402a', '#3aa0b0'];
 const LOOK_DEFAULT = 'h0c1s1e0';
 /* v411 每個髮型配的瀏海（B 齊、A 空氣、S 斜、P 八字、N 沒有）＋鬢角（0 沒有、1 短、2 長）。沒列到的用 S1 */
-const HAIR_FRONT = ['S1', 'B1', 'A0', 'B0', 'P2', 'A1', 'B1', 'A1', 'N0', 'N0', 'B2', 'P2', 'S1', 'A1', 'A1', 'B1', 'B1', 'B0', 'B2', 'N0', 'N0', 'N1', 'P2', 'N1', 'P0', 'S1', 'A1', 'B0', 'A0', 'S1', 'P2', 'N0', 'N0', 'H2', 'S1', 'H2'];
+const HAIR_FRONT = ['S1', 'B1', 'A0', 'B0', 'P2', 'A1', 'B1', 'A1', 'N0', 'N0', 'B2', 'P2', 'S1', 'A1', 'A1', 'B1', 'B1', 'B0', 'B2', 'N0', 'N0', 'N1', 'P2', 'N1', 'P0', 'S1', 'A1', 'B0', 'A0', 'S1', 'P2', 'N0', 'N0', 'H2', 'S1', 'H2', 'N0', 'N0'];
 /* v411 用 3D 模型做的髮型（玩家用 Meshy 付費方案生成，本專案從 157 萬面減到約 1.5 萬面、對到頭上；模型是白色的，顏色照玩家選的髮色）。髮型編號 → 檔案；載好以前先用程式做的版本 */
 const HAIR_GLB = { 11: 'models/hair/wave.glb', 33: 'models/hair/sweet.glb', 34: 'models/hair/boy.glb', 35: 'models/hair/doll.glb' }, HAIRG = { geo: {}, bow: {} };   /* v416 檔案裡叫 bow 的那一塊是蝴蝶結，固定粉紅色，不跟髮色 */
 /* v420 立體衣服：玩家用 Meshy 生的全身公仔，照顏色把衣服切下來、對到遊戲的骨架（tools 外處理）。檔案裡的點已經在綁定姿勢、帶好每根骨頭的權重，
@@ -3536,6 +3537,26 @@ function applyLook(av, gear, mk){ av.lookStr = gear.look;
         for (const sx of [-1, 1]) for (let k = 0; k < 2; k++){ const ph = sx * (Math.PI * 0.5 + 0.12 + k * 0.22);
           o.push(hairLockGeo([onS(1.25, ph, 0.348), onS(1.55, ph, 0.362), onS(1.8, ph + sx * 0.04, 0.358)], 0.09, 0.04, 0.45, null, { grow: 0.2, v0: 0.6, v1: 0 })); }   /* 耳朵前後短短的鬢角 */
         return o; }), hm, 0, 0, 0, HD); break; }   /* 精靈短髮：整頭剪得短短的、瀏海往一邊掃 */
+    /* v572 每週新髮型 */
+    case 36: { const onS = (th, ph, r) => V3(Math.sin(th) * Math.sin(ph) * r, 0.01 + Math.cos(th) * r, -0.02 + Math.sin(th) * Math.cos(ph) * r);
+      mk(hairMerged('dread' + (hatOn ? 'h' : ''), () => { const o = [], dl = (k, th, ph, len, top) => { const dx = Math.sin(ph), dz = Math.cos(ph), wg = 0.018 * Math.sin(k * 2.3), pts = top ? [onS(th, ph, 0.34), onS(th + 0.35, ph, 0.375), onS(1.2, ph, 0.385)] : [onS(th, ph, 0.34), onS(th + 0.25, ph, 0.372)];
+          for (const [y, rr] of [[-0.12, 0.39], [-0.3 - len * 0.4, 0.405], [-0.5 - len, 0.42]]) pts.push(V3(dx * rr + dz * wg, y, -0.02 + dz * rr - dx * wg));
+          o.push(hairLockGeo(pts, 0.072, 0.058, 1, null, { grow: 0.08, v0: 0.7, v1: 0.05 })); };
+        for (let k = 0; k < 15; k++) dl(k, 1.05, Math.PI * (0.43 + k / 14 * 1.14), (k * 7 % 5) * 0.035, false);   /* 一圈從髮際線垂下來的辮子 */
+        for (let k = 0; k < 11; k++) dl(k + 20, 1.32, Math.PI * (0.5 + (k + 0.5) / 11 * 1.0), (k * 3 % 4) * 0.04 + 0.03, false);   /* 下面再一層，比較密 */
+        if (!hatOn) for (let k = 0; k < 9; k++) dl(k + 40, 0.42, Math.PI * (0.55 + k / 8 * 0.9), (k % 3) * 0.04, true);   /* 頭頂長出來、越過頭往後垂（戴帽子就收起來） */
+        return o; }), hm, 0, 0, 0, HD);
+      const bm = av.beadM || (av.beadM = mat('#e2b84a', 0.4, { metalness: 0.5 })); for (const k of [1, 4, 10, 13]){ const ph = Math.PI * (0.43 + k / 14 * 1.14), len = (k * 7 % 5) * 0.035, wg = 0.018 * Math.sin(k * 2.3), dx = Math.sin(ph), dz = Math.cos(ph), rr = 0.405;
+        mk(new THREE.CylinderGeometry(0.042, 0.042, 0.04, 10, 1, true), bm, dx * rr + dz * wg, -0.3 - len * 0.4, -0.02 + dz * rr - dx * wg, HD); }   /* 幾條辮子上套金色的髮環（套在第一圈辮子中間） */
+      break; }   /* 髒辮：一整頭一條一條圓圓的辮子垂到肩膀，掛幾個金色髮環 */
+    case 37: { const onU = (u, w, r) => V3(u * r, 0.01 + Math.sqrt(Math.max(0, 1 - u * u - w * w)) * r, -0.02 + w * r), onS = (th, ph, r) => V3(Math.sin(th) * Math.sin(ph) * r, 0.01 + Math.cos(th) * r, -0.02 + Math.sin(th) * Math.cos(ph) * r);
+      mk(hairMerged('sidepart' + (hatOn ? 'h' : ''), () => { const o = [], up = V3(-0.35, 1, 0).normalize(), upR = V3(0.45, 1, 0).normalize();
+        if (!hatOn) for (let k = 0; k < 9; k++){ const w = 0.64 - k * 0.15, lift = k === 0 ? 0.03 : k === 1 ? 0.015 : 0;   /* 從分線（偏右）往左梳過整個頭頂，前面一撮微微翹起來 */
+          o.push(hairLockGeo([onU(0.3, w, 0.345), onU(0.12, w + 0.03, 0.378 + lift), onU(-0.38, w * 0.96, 0.382 + lift * 0.5), onU(-0.8, w * 0.6, 0.372), onU(-0.93, w * 0.3, 0.36)], 0.15, 0.07, 0.38, up, { grow: 0.1, v0: 0.72, v1: 0.1 }));
+          if (k < 8) o.push(hairLockGeo([onU(0.33, w, 0.345), onU(0.55, w * 0.95, 0.362), onU(0.86, w * 0.5, 0.358), onU(0.95, w * 0.28, 0.352)], 0.14, 0.06, 0.38, upR, { grow: 0.12, v0: 0.72, v1: 0.1 })); }   /* 分線另一邊短短的往下梳 */
+        for (const sx of [-1, 1]) for (let k = 0; k < 3; k++){ const ph = sx * (Math.PI * 0.5 + 0.05 + k * 0.24);
+          o.push(hairLockGeo([onS(1.1, ph, 0.348), onS(1.42, ph, 0.362), onS(1.7, ph + sx * 0.03, 0.356)], 0.11, 0.05, 0.42, null, { grow: 0.2, v0: 0.6, v1: 0 })); }   /* 兩邊鬢角剪短、修得乾乾淨淨 */
+        return o; }), hm, 0, 0, 0, HD); break; }   /* 紳士側分：七三分、往一邊梳得整整齊齊，前面微微蓬起 */
   }
   /* v411 臉旁邊的頭髮（玩家給的參考圖：好看的髮型都有一撮一撮的瀏海和框住臉的鬢角）。每個髮型照 HAIR_FRONT 配一種瀏海＋鬢角，全部用髮束做，不再是光滑的一片 */
   if (!HG){ const F = HAIR_FRONT[L.h] || 'S1', bt = F[0], sl = +F[1] || 0, onS = (th, ph, r) => V3(Math.sin(th) * Math.sin(ph) * r, 0.01 + Math.cos(th) * r, -0.02 + Math.sin(th) * Math.cos(ph) * r), t0 = hatOn ? 0.95 : 0.55;
@@ -7232,6 +7253,8 @@ function fzTex(pat, col, base){ const k = pat + col + base; let t = FZ.tex.get(k
   else if (pat === 'dots'){ c.fillStyle = lt; for (let y = 8; y < 64; y += 16) for (let x = (y / 16 % 2) * 8 + 8; x < 64; x += 16){ c.beginPath(); c.arc(x, y, 3.5, 0, 7); c.fill(); } }
   else if (pat === 'grain'){ c.strokeStyle = dk; c.globalAlpha = 0.45; c.lineWidth = 1.5; for (let y = 4; y < 64; y += 6){ c.beginPath(); for (let x = 0; x <= 64; x += 4) c.lineTo(x, y + Math.sin(x / 9 + y) * 1.5); c.stroke(); } c.globalAlpha = 1; }
   else if (pat === 'star'){ c.fillStyle = lt; for (let y = 8; y < 64; y += 16) for (let x = (y / 16 % 2) * 8 + 8; x < 64; x += 16){ c.beginPath(); for (let i = 0; i < 10; i++){ const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.2 : 5.2; c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } c.closePath(); c.fill(); } }   /* v404 阿木的新花樣：小星星（157_weekly_designs.sql） */
+  else if (pat === 'herring'){ c.strokeStyle = lt; c.lineWidth = 3; c.lineCap = 'butt'; for (let i = 0; i < 4; i++){ const x0 = i * 16, d = i % 2 ? 1 : -1; c.save(); c.beginPath(); c.rect(x0, 0, 16, 64); c.clip(); for (let y = -16; y < 80; y += 8){ c.beginPath(); c.moveTo(x0, y); c.lineTo(x0 + 16, y + d * 8); c.stroke(); } c.restore(); }
+    c.globalAlpha = 0.3; c.fillStyle = dk; for (let x = 0; x < 64; x += 16) c.fillRect(x, 0, 1, 64); c.globalAlpha = 1; }   /* v572 阿木的新花樣：人字紋（一排一排斜線左右交錯，198_weekly_designs.sql） */
   t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2); FZ.tex.set(k, t); return t; }
 // ---- 阿彩的畫（058_cai.sql）：畫架上一幅畫；背景照畫的風格用筆觸畫出來，魚是遊戲裡同一隻魚的模型，扁扁的貼在畫布上 ----
 function paintTex(d){ const k = d.pat + d.main; let t = Cai.tex.get(k); if (t) return t; const cv = document.createElement('canvas'); cv.width = 128; cv.height = 96; const c = cv.getContext('2d');
