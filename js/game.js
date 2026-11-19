@@ -4796,6 +4796,7 @@ class Fisher {
     a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = P.pit; a.g.rotation.z = P.rol;
     a.g.position.y = this.baseY + P.bob;
     }
+    if (this.poolAt != null){ try { poolPose(this, dt); } catch(e){ if (!poolPose.err){ poolPose.err = 1; console.warn('poolPose', e); } } }   /* v576 撞球：彎腰出桿 */
     if (a.gearAnim) a.gearAnim(t, this.speed || 0);
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
@@ -10385,6 +10386,27 @@ function zheAvTick(dt, t, ih){ const f = Venue.zhe; if (!f) return; if (!ih){ if
   if (d > 0.04){ const st = Math.min(d, sp * dt); f.pos.x += dx / d * st; f.pos.z += dz / d * st; f.speed = d > 0.12 ? sp * 0.8 : 0; if (d > 0.12 && !(direct && T && T.turn === 1)) rot = Math.atan2(dx, dz); } else f.speed = 0;
   f.rot = lerpAngle(f.rot, rot, 1 - Math.exp(-8 * dt)); f.baseY = S.y; f.pos.y = S.y;
   const vis = !poolHides(f.pos.x, f.pos.z); f.av.g.visible = vis; if (vis){ f.update(dt, t); f.placeTag(); } else { try { f.tag.style.display = 'none'; } catch(e){} } }
+/* ===== v576 🎱 彎腰出桿的姿勢（作者：「補」——玩家和阿喆都要）=====
+   輪到誰瞄準，誰就彎腰趴向球桌：上半身前傾、抬頭看球，一隻手伸到前面架桿、另一隻手在後面握住球桿（手跟著球桿走，所以拉桿、出桿時手會動）。
+   每支手機照球桌的狀態自己判斷是誰在瞄準（1 號位、2 號位的玩家或阿喆），所以不用另外傳訊息，旁邊的人都看得到。
+   注意：自己打球時鏡頭在球桌正上方，桌邊的人都先藏起來了，所以自己看不到自己彎腰；是給球館裡其他人看的。
+   球離桌邊太遠時手搆不到球桿（人站在桌子外面），手會伸直朝球桿的方向，不會硬拉長。 */
+const _ppA = new THREE.Vector3(), _ppB = new THREE.Vector3(), _ppC = new THREE.Vector3(), _ppD = new THREE.Vector3();
+function poolPoseMark(T){ const S = T.sim, act = (T.mode === 'solo' || T.mode === 'vs') && ((!S && (T.ph === 'aim' || T.ph === 'hand') && T.b[0].on) || (S && S.cue > 0)); if (!act || !T.m) return; const k = T.p[poolShooter(T)]; let f = null; if (k === poolKey()) f = me; else if (k === ZHE) f = Venue.zhe; else { const p = k && peers.get(k); f = p && p.fisher; } if (f){ f.poolAt = frameNo; f.poolT = T; } }
+function poolPose(f, dt){ const on = frameNo - f.poolAt <= 2; f.poolK = (f.poolK || 0) + ((on ? 1 : 0) - (f.poolK || 0)) * Math.min(1, dt * 7); if (f.poolK < 0.02){ f.poolK = 0; if (!on) f.poolAt = null; return; }
+  const k = f.poolK, a = f.av, K = a.kid, T = f.poolT;
+  if (!K || !K.B || !K.B.hips){ a.g.rotation.x += 0.5 * k; if (a.armL && a.armR){ a.armL.rotation.x += (-1.9 - a.armL.rotation.x) * k; a.armR.rotation.x += (0.45 - a.armR.rotation.x) * k; } return; }   /* 舊的方塊角色：整個人前傾、一手往前一手往後 */
+  if (!a.g.visible) return; const B = K.B;
+  if (!K.kjB){ K.kjB = ['hips', 'spine', 'chest', 'head', 'upperlegl', 'upperlegr', 'lowerlegl', 'lowerlegr', 'upperarml', 'upperarmr', 'lowerarml', 'lowerarmr'].map(n => B[n]).filter(Boolean); K.kjQ = K.kjB.map(() => new THREE.Quaternion()); }
+  if (!K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjQ[i].copy(K.kjB[i].quaternion); K.kjOn = true; }   /* 下一格骨架動畫開始前會還原，不會累積 */
+  if (B.spine) B.spine.rotateX(0.3 * k); if (B.chest) B.chest.rotateX(0.2 * k); if (B.head) B.head.rotateX(-0.42 * k);
+  const cue = T && T.m && T.m.cue; if (!cue || !cue.visible) return; a.g.updateMatrixWorld(true); cue.updateMatrixWorld(true);
+  for (const sd of ['l', 'r']){ const up = B['upperarm' + sd], lo = B['lowerarm' + sd], hd = B['hand' + sd]; if (!up || !lo || !hd) continue;
+    up.getWorldPosition(_ppA); const lx = a.g.worldToLocal(_ppB.copy(_ppA)).x, front = lx > 0;   /* 角色左邊（x 正的那邊）的手在前面架桿，另一隻手在後面握桿 */
+    cue.worldToLocal(_ppB.copy(_ppA)); const s0 = clamp(-_ppB.z, front ? 0.16 : 0.95, front ? 0.5 : 1.38); _ppC.set(0, front ? -0.02 : 0, -s0); cue.localToWorld(_ppC);
+    hd.getWorldPosition(_ppD); _ppC.lerp(_ppD, 1 - k);   /* 姿勢還在轉換時，手從原本的位置慢慢移過去 */
+    _ppB.set(front ? 0.5 : -0.55, front ? 0.9 : 1.5, front ? 0.25 : -0.45); a.g.localToWorld(_ppB);   /* 手肘往外、往上彎 */
+    kidIK(up, lo, hd, _ppC, _ppB); } }
 /* ---- 連線訊息 ---- */
 function poolStr(s, n){ return typeof s === 'string' ? s.slice(0, n) : ''; }
 function poolOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !== 'object' || isBlockedPeer(msg.peer)) return; const d = msg.data, peer = poolStr(d.f, 40) || String(msg.peer || '');   /* 每則訊息都帶自己的球桌代號（私人房間的連線代號跟大廳不一樣） */
@@ -10500,7 +10522,7 @@ function updatePoolHall(dt, t){ const ih = inPoolHall(); if (Venue.pool && Venue
   if (Pool.on && (!ih || !Pool.tables[Pool.ti])) poolExitLocal();
   if (ih && !Pool.asked && room && room.connected()){ Pool.asked = true; poolSend({ k: 'q' }); }   /* 剛走進來：問一下每張桌子現在的狀況 */
   if (!ih) Pool.asked = false;
-  for (const T of Pool.tables){ try { poolZheTick(T, dt); } catch(e){ if (!poolZheTick.err){ poolZheTick.err = 1; console.warn('zhe', e); } } poolTickTable(T, dt, t, ih); }
+  for (const T of Pool.tables){ try { poolZheTick(T, dt); } catch(e){ if (!poolZheTick.err){ poolZheTick.err = 1; console.warn('zhe', e); } } poolTickTable(T, dt, t, ih); if (ih){ try { poolPoseMark(T); } catch(e){} } }
   try { if (ih && !Venue.zhe) zheBuild(); zheAvTick(dt, t, ih); } catch(e){ if (!zheAvTick.err){ zheAvTick.err = 1; console.warn('zheAv', e); } }
   if (Pool.on){ uiBlocked = true; joy.x = joy.z = 0; poolHudTick(); poolAimSend(); } }
 function poolTickTable(T, dt, t, ih){ const M = T.m, S = T.sim;
@@ -17726,7 +17748,7 @@ function renderTab(){
       '馬上輸掉：自己的球還沒打完就把黑八打進去，或是打進黑八的那一桿同時犯規（例如母球也進袋）。開球那一桿把黑八打進去不算輸，黑八會擺回桌上。',
       '時間：對打時每一桿有 35 秒，超過時間算犯規換對手；連續三次沒出桿就算輸。打到一半按「離開球桌」或斷線，對手直接贏。',
       '進袋的球：球會滑進袋口掉下去，在桌子底下滾一段，再從桌邊的「回球槽」滾出來排成一排，看槽裡有哪些球就知道哪些已經進了。',
-      '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊。撞球目前沒有金幣獎勵，純粹好玩。',
+      '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊；輪到誰瞄準，那個人（玩家或阿喆）會彎腰趴向球桌、一手架桿一手握桿。自己打的時候鏡頭在球桌正上方，所以看不到自己的姿勢。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
       '🐦 到處逛的時候看海面：遠遠看到幾隻海鳥在水面上繞，那裡就有掠食魚，走過去把浮標拋在鳥的旁邊比較容易上鉤（下雨和晚上鳥不出來）。',
