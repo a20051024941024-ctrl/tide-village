@@ -4660,7 +4660,7 @@ function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG
   if (k === 'full'){ S(0.17, 0, -0.17, 0.19, 1.4, 1.0, 0.8); S(0.1, 0, -0.3, 0.23, 1.1, 1.0, 0.7); } }
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); this.noRain = /釣蝦場|博物館|^客人・/.test(this.npcName);   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
     if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
