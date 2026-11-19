@@ -5670,5 +5670,17 @@
 "白": "Putih",
 "髒辮": "Rambut gimbal",
 "紳士側分": "Belah samping klasik",
-"人字紋": "Motif tulang ikan"
+"人字紋": "Motif tulang ikan",
+"🔭 鏡頭遠近": "🔭 Jarak kamera",
+"鏡頭遠近": "Jarak kamera",
+"很近": "Sangat dekat",
+"近": "Dekat",
+"遠": "Jauh",
+"很遠": "Sangat jauh",
+"往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。": "Geser ke kanan untuk melihat lebih jauh dan luas. Bisa juga dicubit dengan dua jari di layar. Pilihanmu akan diingat.",
+"（現在在室內或水裡，這裡調的只是暫時的。）": " (Kamu sedang di dalam ruangan atau di air, jadi ini hanya sementara.)",
+"🔭 鏡頭可以拉得更遠了：在畫面上用兩隻手指捏合，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住": "🔭 Kamera kini bisa lebih jauh: cubit dengan dua jari, atau buka Pengaturan → 🔭 Jarak kamera. Pilihanmu akan diingat.",
+"🔭 鏡頭可以拉得更遠了：滾輪，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住": "🔭 Kamera kini bisa lebih jauh: roda mouse, atau Pengaturan → 🔭 Jarak kamera. Pilihanmu akan diingat.",
+"在畫面上拖曳・兩指捏合拉遠拉近（也可以到設定調「鏡頭遠近」）": "Seret di layar · cubit untuk zoom (atau Pengaturan → Jarak kamera)",
+"拖曳滑鼠・滾輪拉遠拉近（也可以到設定調「鏡頭遠近」）": "Seret mouse · roda untuk zoom (atau Pengaturan → Jarak kamera)"
 }

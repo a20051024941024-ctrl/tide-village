@@ -5777,5 +5777,17 @@
 "白": "White",
 "髒辮": "Dreadlocks",
 "紳士側分": "Gentleman side part",
-"人字紋": "Herringbone"
+"人字紋": "Herringbone",
+"🔭 鏡頭遠近": "🔭 Camera distance",
+"鏡頭遠近": "Camera distance",
+"很近": "Very close",
+"近": "Close",
+"遠": "Far",
+"很遠": "Very far",
+"往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。": "Slide right to see farther and wider. You can also pinch with two fingers on the screen. Your choice is remembered.",
+"（現在在室內或水裡，這裡調的只是暫時的。）": " (You are indoors or underwater now, so this is only temporary.)",
+"🔭 鏡頭可以拉得更遠了：在畫面上用兩隻手指捏合，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住": "🔭 You can now zoom out farther: pinch with two fingers, or use Settings → 🔭 Camera distance. Your choice is remembered.",
+"🔭 鏡頭可以拉得更遠了：滾輪，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住": "🔭 You can now zoom out farther: mouse wheel, or Settings → 🔭 Camera distance. Your choice is remembered.",
+"在畫面上拖曳・兩指捏合拉遠拉近（也可以到設定調「鏡頭遠近」）": "Drag on screen · pinch to zoom (or Settings → Camera distance)",
+"拖曳滑鼠・滾輪拉遠拉近（也可以到設定調「鏡頭遠近」）": "Drag mouse · wheel to zoom (or Settings → Camera distance)"
 }

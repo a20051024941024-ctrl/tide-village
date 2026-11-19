@@ -5072,7 +5072,7 @@ try { let v = localStorage.getItem('tide.camView'); try { v = JSON.parse(v); } c
 const camBaseFov = () => CAMV.P[CAMV.mode].fov;
 const cam = { yaw: 0, pitch: CAMV.P[CAMV.mode].pitch, dist: CAMV.P[CAMV.mode].dist };
 camera.fov = camBaseFov(); camera.updateProjectionMatrix();
-function setCamView(m){ if (m !== 'top' && m !== 'near') return; CAMV.mode = m; try { localStorage.setItem('tide.camView', JSON.stringify(m)); } catch(e){} const P = CAMV.P[m]; cam.pitch = P.pitch; cam.dist = P.dist; }
+function setCamView(m){ if (m !== 'top' && m !== 'near') return; CAMV.mode = m; try { localStorage.setItem('tide.camView', JSON.stringify(m)); } catch(e){} const P = CAMV.P[m]; cam.pitch = P.pitch; cam.dist = P.dist; try { localStorage.removeItem('tide.camDist'); } catch(e){} }   /* 換視角＝回到那個視角的預設遠近 */
 
 const keys = {};
 const joy = { x: 0, z: 0 };
@@ -5097,8 +5097,15 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; actionUp
 
 // camera drag
 let drag = null;
+/* v573 玩家：「視野太小，要能自由伸縮」→ 戶外鏡頭最遠從 18 拉到 28；拉好的遠近會記住（tide.camDist），下次開遊戲一樣；設定裡多一條「🔭 鏡頭遠近」拉桿
+   只記「平常在戶外」的遠近：室內、潛水、拍照、滑雪時的鏡頭是暫時的，不記 */
+const CAM_FAR = 28;
+let camDistT = 0;
+function camDistSave(){ if (!camLimits().out || (typeof SKI !== 'undefined' && SKI.on)) return; clearTimeout(camDistT); camDistT = setTimeout(() => { try { localStorage.setItem('tide.camDist', String(Math.round(cam.dist * 10) / 10)); } catch(e){} }, 400); }
+try { const v = parseFloat(localStorage.getItem('tide.camDist')); if (v >= 4.5 && v <= CAM_FAR) cam.dist = v; } catch(e){}
+setTimeout(() => { try { if (!LS.get('tide.camFarTold', 0)){ LS.set('tide.camFarTold', 1); toast(isTouch ? '🔭 鏡頭可以拉得更遠了：在畫面上用兩隻手指捏合，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住' : '🔭 鏡頭可以拉得更遠了：滾輪，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住', 9); } } catch(e){} }, 9000);
 const pinch = new Map(); let pinchDist = 0;
-const camLimits = () => (typeof Dive !== 'undefined' && Dive.on && Dive.fp && !Photo.on) ? { pmin: -1.2, pmax: 1.2, dmin: 4.5, dmax: 18 } : Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: 0.12, pmax: 1.15, dmin: 4.5, dmax: 18 };   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
+const camLimits = () => (typeof Dive !== 'undefined' && Dive.on && Dive.fp && !Photo.on) ? { pmin: -1.2, pmax: 1.2, dmin: 4.5, dmax: 18 } : Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: 0.12, pmax: 1.15, dmin: 4.5, dmax: CAM_FAR, out: true };   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
 /* v314 玩家回報：快速點畫面時會一下放大一下縮小。兩隻手指輪流快點會被當成「兩指縮放」，或手指放開的訊號漏掉、留下一隻「幽靈手指」。
    現在：手指放開在任何地方都會清掉；兩指距離要先變超過 14px 才開始縮放（快點的小抖動不算） */
 let pinchArm = 0;
@@ -5106,12 +5113,12 @@ addEventListener('pointerup', e => { pinch.delete(e.pointerId); if (pinch.size <
 canvas.addEventListener('pointerdown', e => { ensureAudio(); if (F.phase === 'idle' && CAMV.snap) CAMV.snap = null; if (pinch.size >= 2) pinch.clear(); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); pinchArm = pinchDist; for (const v of pinch.values()){ v.sx = v.x; v.sy = v.y; } drag = null; } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
 /* v516 作者：「玩的時候有時候會突然放大縮小，真的很煩」→ 一隻手指在轉鏡頭、另一隻手指只是剛好按在畫面上（按按鈕沒按準），兩指距離一變就被當成縮放。
    現在要「兩隻手指都有移動」（真的在捏）才縮放；只有一隻在動就不縮放 */
-canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; const pv = pinch.get(e.pointerId); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: pv.sx ?? e.clientX, sy: pv.sy ?? e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchArm){ const ma = Math.hypot(a.x - (a.sx ?? a.x), a.y - (a.sy ?? a.y)), mb = Math.hypot(b.x - (b.sx ?? b.x), b.y - (b.sy ?? b.y)); if (Math.abs(d - pinchArm) < 14 || ma < 10 || mb < 10) return; pinchArm = 0; pinchDist = d; return; } const L = camLimits(); if (pinchDist > 0) cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); pinchDist = d; } });
+canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; const pv = pinch.get(e.pointerId); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: pv.sx ?? e.clientX, sy: pv.sy ?? e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchArm){ const ma = Math.hypot(a.x - (a.sx ?? a.x), a.y - (a.sy ?? a.y)), mb = Math.hypot(b.x - (b.sx ?? b.x), b.y - (b.sy ?? b.y)); if (Math.abs(d - pinchArm) < 14 || ma < 10 || mb < 10) return; pinchArm = 0; pinchDist = d; return; } const L = camLimits(); if (pinchDist > 0){ cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); camDistSave(); } pinchDist = d; } });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
 canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
 const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
-canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); }, { passive:false });
+canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); camDistSave(); }, { passive:false });
 
 // joystick（浮動：按在左半邊哪裡，搖桿中心就在哪裡；v314 設定可以改成固定在左下角）
 function joyFixed(){ return LS.get('tide.joyFixed', false) === true; }
@@ -5157,7 +5164,7 @@ function enterPhoto(){
 }
 function exitPhoto(){
   if (!Photo.on) return; Photo.on = false;
-  if (Photo.saved){ cam.dist = clamp(cam.dist, 4.5, 18); cam.pitch = clamp(cam.pitch, 0.12, 1.15); }
+  if (Photo.saved){ cam.dist = clamp(cam.dist, 4.5, CAM_FAR); cam.pitch = clamp(cam.pitch, 0.12, 1.15); }
   document.body.classList.remove('photo', 'nonames'); $('#photoUI').hidden = true; uiBlocked = !$('#sheet').hidden || !$('#catchCard').hidden;
 }
 function stamp(){ const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
@@ -11737,6 +11744,11 @@ function renderSettings(body){
     f.appendChild(seg); f.appendChild(el('p', 'sub', '跟著手指：按在左半邊哪裡，搖桿就出現在哪裡。固定：搖桿一直在左下角不會動，按左半邊任何地方都是從那裡推。')); }
   { const f = field('🎥 視角'), seg = el('div', 'seg'); [['top', '俯瞰（預設）'], ['near', '貼近（舊的）']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(CAMV.mode === k)); b.addEventListener('click', () => { setCamView(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '俯瞰：從斜上方往下看，看得比較遠、比較整齊。貼近：從角色背後看，比較有臨場感。兩種都可以用手指拖動、兩指縮放。')); }
+  { const f = field('🔭 鏡頭遠近'), L = camLimits(), row = el('div', 'volrow'), sl = el('input'), pct = el('span', 'volpct', '');   /* v573 */
+    sl.type = 'range'; sl.min = L.dmin; sl.max = L.dmax; sl.step = 0.5; sl.value = clamp(cam.dist, L.dmin, L.dmax); sl.setAttribute('aria-label', '鏡頭遠近');
+    const show = () => { const k = (+sl.value - L.dmin) / (L.dmax - L.dmin); pct.textContent = k < 0.2 ? '很近' : k < 0.45 ? '近' : k < 0.7 ? '遠' : '很遠'; }; show();
+    sl.addEventListener('input', () => { cam.dist = clamp(+sl.value, L.dmin, L.dmax); camDistSave(); show(); });
+    row.appendChild(sl); row.appendChild(pct); f.appendChild(row); f.appendChild(el('p', 'sub', '往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。' + (L.out ? '' : '（現在在室內或水裡，這裡調的只是暫時的。）'))); }
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[true, '第一人稱（預設）'], [false, '背後']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
@@ -17298,7 +17310,7 @@ function renderTab(){
     { const q = el('div', 'helpqs'); q.appendChild(el('b', '', '🔰 新手先看這 6 件事')); const ol = el('ol');
       ['走到水邊，按住右下的按鈕蓄力，放開就拋竿。', '浮標猛沉、出現「!」的時候，馬上再按一次。', '拉魚時按住是收線、放開是放線；讓下面的張力條停在黃色，不要到紅色。', '魚會放進魚缸。到港邊廣場的魚市場賣掉換金幣，再去釣具店買更好的釣竿和魚餌。', '不知道要做什麼：跟著左上角的新手任務，或按右上的「🎁 今天」。', '想去遠一點的地方：找港口的船夫阿海，或打開「🗺️ 地圖」。'].forEach(t => ol.appendChild(el('li', '', t))); q.appendChild(ol); body.appendChild(q); }
     const k = el('div', 'kbd');
-    [['移動', isTouch ? '左下搖桿（推到底會跑步）' : 'WASD / 方向鍵（Shift 跑步）'], ['轉視角', isTouch ? '在畫面上拖曳・兩指縮放' : '拖曳滑鼠・滾輪縮放'], ['跳', isTouch ? '「跳」按鈕' : '空白鍵或 J'],
+    [['移動', isTouch ? '左下搖桿（推到底會跑步）' : 'WASD / 方向鍵（Shift 跑步）'], ['轉視角', isTouch ? '在畫面上拖曳・兩指捏合拉遠拉近（也可以到設定調「鏡頭遠近」）' : '拖曳滑鼠・滾輪拉遠拉近（也可以到設定調「鏡頭遠近」）'], ['跳', isTouch ? '「跳」按鈕' : '空白鍵或 J'],
      ['拋竿', '走到水邊，按住右下按鈕蓄力、放開拋出；拋越遠越容易遇到稀有魚'], ['提竿', '浮標猛沉、出現「!」時馬上按'], ['拉線', '按住收線、放開卸力，讓下面的張力條停在黃色、不要到紅色'],
      ['聊天', isTouch ? '💬 按鈕' : 'Enter'], ['互動', '走到商店、NPC、椅子、門口旁邊，右下按鈕會變成對應的動作']].forEach(([a, b]) => k.append(el('kbd', '', a), el('span', '', b)));
     body.appendChild(k);
