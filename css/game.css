@@ -1739,3 +1739,25 @@ details.help details.helpmore ul{margin-top:4px}
 .tidecard .td-list li span{flex:1}
 .tidecard .td-list li b{font-variant-numeric:tabular-nums}
 .tidecard .td-list li small{color:#7a8794;width:44px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* v581 📱 遊戲裡的手機 */
+#phBack{border:0;background:#17696b;color:#fff;font-weight:900;font-size:15px;border-radius:12px;padding:6px 11px;margin-right:8px;cursor:pointer;flex:none}
+#phBack[hidden]{display:none}
+.ph-home{background:#f6f1e7;border-radius:22px;padding:6px 6px 12px;max-width:560px;margin:0 auto}
+.ph-top{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:700;color:#3e5563;padding:4px 10px 2px}
+.ph-sec{font-size:13px;font-weight:900;color:#17696b;letter-spacing:2px;padding:10px 10px 2px}
+.ph-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 4px;padding:6px 4px}
+@media (orientation:landscape){.ph-grid{grid-template-columns:repeat(6,1fr)}.ph-home{max-width:760px}}
+.ph-app{position:relative;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:0;color:#173042;font:inherit}
+.ph-ic{width:56px;height:56px;border-radius:17px;background:#fff;border:2px solid #d9cfbb;display:grid;place-items:center;font-size:29px;line-height:1;box-shadow:0 2px 0 rgba(24,51,74,.12);transition:transform .12s}
+.ph-app.new .ph-ic{background:#17696b;border-color:#17696b}
+.ph-app:active .ph-ic{transform:scale(.9)}
+.ph-lab{font-size:13px;font-weight:700;white-space:nowrap}
+.ph-dot{position:absolute;top:-5px;left:calc(50% + 16px);background:#e2503a;color:#fff;border-radius:11px;min-width:20px;height:20px;line-height:20px;font-size:12px;font-style:normal;font-weight:900;text-align:center;padding:0 4px;box-shadow:0 0 0 2px #fff}
+.ph-h{font-size:14px;font-weight:900;color:#e2703a;margin:4px 2px 8px}
+.ph-card{background:#fff;border:2px solid #d9cfbb;border-radius:14px;padding:10px 12px;margin:0 0 8px;font-size:14px;line-height:1.5;overflow:hidden}
+.ph-card.hot{border-color:#e2703a;background:#fff6ee}
+.ph-card .tbtn{float:right;margin:0 0 4px 8px}
+.ph-d{color:#3e5563;margin-top:2px}
+.ph-t{font-size:12px;color:#6b7c86;margin-top:3px}
+.ph-x b{font-weight:900}

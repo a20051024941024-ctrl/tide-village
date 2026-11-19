@@ -4882,6 +4882,7 @@ class Fisher {
     a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = P.pit; a.g.rotation.z = P.rol;
     a.g.position.y = this.baseY + P.bob;
     }
+    if (this === me || this.phone || this.phK){ try { phonePose(this, dt); } catch(e){ if (!phonePose.err){ phonePose.err = 1; console.warn('phonePose', e); } } }   /* v581 拿手機滑 */
     if (this.poolAt != null){ try { poolPose(this, dt); } catch(e){ if (!poolPose.err){ poolPose.err = 1; console.warn('poolPose', e); } } }   /* v576 撞球：彎腰出桿 */
     if (a.gearAnim) a.gearAnim(t, this.speed || 0);
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
@@ -15147,7 +15148,7 @@ const GUIDE = [
   { t:'釣到第一條魚', h:'走到水邊（地上有光柱的地方），按住右下的「拋竿」蓄力，放開就拋出去。', at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 1 },
   { t:'把魚賣掉換金幣', h:'到港邊的「潮汐魚市場」，按「賣魚」把魚賣掉（也可以先放在魚缸收藏）。', at:() => LANDMARKS.find(l => l.id === 'shop').pos, ok:() => !!LS.get('tide.guideSold', false) },
   { t:'買一根新的釣竿', h:'到「釣具店」，在「釣竿」挑一根買下來。好的竿子比較不容易斷線。', at:() => LANDMARKS.find(l => l.id === 'tackle').pos, ok:() => (rec.rods || []).length > 1 },
-  { t:'去自己的小島看看', h:'按右上角的「小島」，再按「前往我的小島」。小島可以蓋房子、擺家具。', at:() => null, ok:() => !!LS.get('tide.guideIsle', false) },
+  { t:'去自己的小島看看', h:'按右上「📱 手機」裡的「🏝️ 小島」，再按「前往我的小島」。小島可以蓋房子、擺家具。', at:() => null, ok:() => !!LS.get('tide.guideIsle', false) },
   { t:'潛一次水', h:'存到 🪙1,500 在「釣具店」的「🤿 潛水」買潛水裝備，再到港口碼頭旁邊的潛水點按「潛水」。', at:() => hasDive('dive_suit') ? (() => { const a = harborDiveAt(); return new THREE.Vector3(a[0], 0, a[1]); })() : LANDMARKS.find(l => l.id === 'tackle').pos, ok:() => !!LS.get('tide.guideDive', false) },
 ];
 const Guide = { i: null, el: null, beacon: null, fin: null, hide: false };
@@ -15248,7 +15249,14 @@ function chatHistToggle(force){ let P = ChatH.el; if (!P){ P = ChatH.el = docume
   P.hidden = force != null ? !force : !P.hidden; document.body.classList.toggle('histOpen', !P.hidden); if (!P.hidden){ chatHistRender(); chatBadge(0); chatHistPlace(); setTimeout(chatHistPlace, 350); } }
 // 跑馬燈：大家的動態（誰釣到什麼、誰在炫耀、天色變化）從右往左飄過去；排隊一則接一則，不會疊在一起
 const Ticker = { q:[], nextAt:0, busy:false, speed:110 };
+var Phone = { via:false, cat:'all', seen: +LS.get('tide.phSeen', 0) || 0, feed: (() => { try { const L = LS.get('tide.phFeed', []); return Array.isArray(L) ? L.filter(e => e && e.t > Date.now() - 864e5 && typeof e.h === 'string') : []; } catch(e){ return []; } })() };
+/* v581 📱 快訊：跑馬燈的每一則也記到手機裡（同樣的內容 10 分鐘內不重複），分成 世界／大家／我的 */
+function phFeedAdd(html){ if (!Phone || typeof html !== 'string') return; const t = Date.now(); if (Phone.feed.some(e => e.h === html && t - e.t < 6e5)) return;
+  const me1 = /<b>你<\/b>|你的|^[^<]{0,4}你|歡迎回到你|你不在的時候|潛水艇帶回/.test(html), ppl = /來到了村子|村子裡有|在炫耀|參觀|釣到了?|做出了|發起了|加入了|抓到了|要出海|放回釣蝦場|邀請你/.test(html);
+  Phone.feed.push({ t, h: html, c: me1 ? 'me' : ppl ? 'people' : 'world' }); while (Phone.feed.length > 60 || (Phone.feed.length && Phone.feed[0].t < t - 864e5)) Phone.feed.shift();
+  LS.set('tide.phFeed', Phone.feed); try { if (!$('#sheet').hidden && (curTab === 'phfeed' || curTab === 'phone')) renderTab(); } catch(e){} }
 function ticker(html){
+  try { phFeedAdd(html); } catch(e){}
   if (Ticker.q.length > 12) Ticker.q.shift();
   Ticker.q.push(html); runTicker();
 }
@@ -15469,7 +15477,8 @@ function presenceObj(){
   if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat)); else if (Voy.on) o.bt = 1;   /* v579 坐阿海的船：別人看到你坐在小船上沿著航道走 */   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
   if (mySeat) o.st = 1;
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
-  if (Bike.on) o.bk = 1;   /* v438 在騎腳踏車 */
+  if (Bike.on) o.bk = 1;
+  if (phoneMine()) o.ph = 1;   /* v581 正在滑手機（別人看到你拿手機） */   /* v438 在騎腳踏車 */
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
   if (rec.rodSkin || rec.lineCol) o.rk = [rec.rodSkin || '', rec.lineCol || ''];   /* v253 工坊做的竿子造型、釣線顏色 */
@@ -15524,7 +15533,7 @@ function applyPeer(pp){
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { const st = pr.dr; if (Number.isInteger(st) && st >= 0 && st <= 999){ const tt = duelTierOf(st); p.fisher.nm.dataset.duel = tt[2] + tt[1]; } else delete p.fisher.nm.dataset.duel; }
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
-  p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk;
+  p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph;
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
   p.fisher.wsK = Array.isArray(pr.ws) && typeof pr.ws[0] === 'string' && pr.ws[0].length < 40 ? pr.ws[0] : null; p.fisher.wsM = p.fisher.wsK ? (+pr.ws[1] || 0) & 63 : 0;
   p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2), var: /^[a-g]$/.test(pr.pt[3]) ? pr.pt[3] : 'a', shine: pr.pt[0] === 'pondturtle' ? clamp(+pr.pt[4] || 0, 0, 100) : undefined } : null;
@@ -17236,7 +17245,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
-function closeSheet(){ closeModelView(); if ($('#sheet').hidden) return; $('#sheet').hidden = true; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
+function closeSheet(){ closeModelView(); if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
 $('#closeSheet').addEventListener('click', closeSheet);
@@ -17276,7 +17285,7 @@ const HELP_SHORT = {
   '🏸 體育場羽球 1 對 1': ['體育場進門往右走到底。兩個人到「🏸 1 對 1」小桌子開始，先拿 7 分的人贏。', '跑到地上的黃色圈圈旁邊，等球過來按「揮拍」。'],
   '🎿 雪松山滑雪場': ['在冰封群島南邊的雪山。坐纜車上山，到山頂按「出發」。', '搖桿左右轉彎、往前蹲低加速、往後煞車；要通過旗門。', '滑完一趟送毛球帽，滑得夠快再送滑雪鏡，都是買不到的。'],
   '🎱 潮汐撞球館': ['運動公園西南角，屋頂有一顆黑八的小屋。', '走到球桌按「打撞球」：在桌面滑動瞄準，拉左邊的力道條出桿。', '一個人是練習；別人按「對打」就變成兩個人的八號球。', '沒有人陪的時候可以找常客阿喆對打。'],
-  '📜 每日任務、釣魚活動': ['右上的「🎁 今天」把今天能做的事整理成一張清單。', '村長、漁夫老王、美雲姨每天各有一個請求，頭上有 ❗ 就是還沒做。', '每天半夜 12 點（台灣時間）換新任務。'],
+  '📜 每日任務、釣魚活動': ['右上「📱 手機」裡的「📅 今天」把今天能做的事整理成一張清單。', '村長、漁夫老王、美雲姨每天各有一個請求，頭上有 ❗ 就是還沒做。', '每天半夜 12 點（台灣時間）換新任務。'],
   '🏆 每週比賽與排行榜': ['每週換一種比賽魚，比誰釣到最重的。', '每天還有定時的釣魚大賽，比總重量。'],
   '🏝️ 私人小島': ['選單的「小島」可以去自己的島。', '在「買東西擺島上」挑房子和家具，走到想放的地方按「✔」。', '按「🔨 建造」可以移動或拆掉。'],
   '👥 跟大家一起玩': ['⚔️ 釣魚對決：一場 3 分鐘，比釣到的魚的總重量。', '按「找對手」是排位賽，贏了加星星、升段位；每個月是一季。', '可以加好友、組釣友隊、聊天、去別人的島玩。'],
@@ -17292,7 +17301,10 @@ function renderTab(){
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
   const body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
-  $('#sheet').classList.toggle('closet', curTab === 'closet');
+  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('phone', curTab === 'phone');
+  try { phoneHdr(); } catch(e){}
+  if (curTab === 'phone'){ renderPhone(body); return; }
+  if (curTab === 'phfeed'){ renderPhFeed(body); return; }
   if (curTab === 'closet'){ renderCloset(body); return; }
   if (curTab === 'museum'){ renderMuseum(body); return; }
   if (curTab === 'pets'){ renderPets(body); return; }
@@ -17543,7 +17555,7 @@ function renderTab(){
     body.appendChild(el('p', 'sub', '歡迎來到潮汐釣魚村！每一段打開先看重點；想知道細節再按「看詳細規則」。'));
     /* v553 作者 11/18：「把玩法說明做成簡單一點」→ 最上面一張新手卡；每一段先給兩三句重點，原本的長說明收在「看詳細規則」裡（一個字都沒刪）；再加一個搜尋框 */
     { const q = el('div', 'helpqs'); q.appendChild(el('b', '', '🔰 新手先看這 6 件事')); const ol = el('ol');
-      ['走到水邊，按住右下的按鈕蓄力，放開就拋竿。', '浮標猛沉、出現「!」的時候，馬上再按一次。', '拉魚時按住是收線、放開是放線；讓下面的張力條停在黃色，不要到紅色。', '魚會放進魚缸。到港邊廣場的魚市場賣掉換金幣，再去釣具店買更好的釣竿和魚餌。', '不知道要做什麼：跟著左上角的新手任務，或按右上的「🎁 今天」。', '想去遠一點的地方：找港口的船夫阿海，或打開「🗺️ 地圖」。'].forEach(t => ol.appendChild(el('li', '', t))); q.appendChild(ol); body.appendChild(q); }
+      ['走到水邊，按住右下的按鈕蓄力，放開就拋竿。', '浮標猛沉、出現「!」的時候，馬上再按一次。', '拉魚時按住是收線、放開是放線；讓下面的張力條停在黃色，不要到紅色。', '魚會放進魚缸。到港邊廣場的魚市場賣掉換金幣，再去釣具店買更好的釣竿和魚餌。', '不知道要做什麼：跟著左上角的新手任務，或按右上「📱 手機」裡的「📅 今天」。', '想去遠一點的地方：找港口的船夫阿海，或打開「🗺️ 地圖」。'].forEach(t => ol.appendChild(el('li', '', t))); q.appendChild(ol); body.appendChild(q); }
     const k = el('div', 'kbd');
     [['移動', isTouch ? '左下搖桿（推到底會跑步）' : 'WASD / 方向鍵（Shift 跑步）'], ['轉視角', isTouch ? '在畫面上拖曳・兩指捏合拉遠拉近（也可以到設定調「鏡頭遠近」）' : '拖曳滑鼠・滾輪拉遠拉近（也可以到設定調「鏡頭遠近」）'], ['跳', isTouch ? '「跳」按鈕' : '空白鍵或 J'],
      ['拋竿', '走到水邊，按住右下按鈕蓄力、放開拋出；拋越遠越容易遇到稀有魚'], ['提竿', '浮標猛沉、出現「!」時馬上按'], ['拉線', '按住收線、放開卸力，讓下面的張力條停在黃色、不要到紅色'],
@@ -17661,7 +17673,7 @@ function renderTab(){
       '先在商店的「🤿潛水」分頁買「潛水裝備組」，再到港口找船夫阿海按「去潛水」，就能潛到珊瑚礁。也可以走到珊瑚礁群島北邊沙灘的「🤿 浮潛」牌子，直接從岸邊下水。潛水時偶爾會看到很少見的變種魚。',
       '👥 一起蓋島：同一座島上有人蓋、拆、搬東西，大家的畫面會馬上（最慢 20 秒）跟著更新，不用重新進遊戲。有人邀請你搬進他家時，畫面中間會跳出邀請卡片，可以直接回覆。',
       '🔋 省電：手機預設每秒最多畫 45 張，超過 30 秒沒碰畫面會降到 30 張；手機還是很燙，可以在「⚙️ 設定」選 30 張或把畫質調低。',
-      '📋 選單：右上角每顆按鈕只打開那一頁（地圖、圖鑑、排行榜、魚缸、包包、小島、玩家、造型），要換頁就關掉再點另一顆。任務、成就、玩法、設定在左上角的頭像裡。寵物可以直接在「包包」裡選要帶哪一隻出門。',
+      '📋 選單：右上角只有 地圖、背包、手機 三顆按鈕，其他頁面都在 📱 手機裡；從手機打開的頁面，左上角「‹ 📱」回到手機，頁面上面的分頁可以切換同一類的頁面。',
       '🛋️ 家具可以用：在家裡走近家具，按鈕就會變成能做的事 —— 床躺下睡覺、沙發和椅子坐下、電視開關（會播海洋節目）、燈開關、壁爐生火、鋼琴彈一段、爐台做料理、冰箱和小魚缸看魚、衣櫃換衣服、書櫃看書、書桌翻圖鑑、時鐘看時間、浴缸泡澡、流理台洗手、盆栽澆水。',
       '🏠 家：走進小島上的房子，按「🛋️ 擺家具」可以買家具、移動、收掉，按「🏠 格局」可以換成一房一廳、兩房一廳、三房一廳。到「小島」分頁的「🏠 我的家」可以邀請互相加好友的人搬進來一起住（含島主最多 6 人），住戶可以一起蓋島、一起擺家具、認領自己的床（房門上會掛名字），也可以選自己是室友、家人還是情侶，取一個稱呼（例如哥哥、媽媽）。',
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
@@ -17912,7 +17924,10 @@ function renderTab(){
       '✏️ 改名字：點左上角的等級（Lv）打開「成就」，最上面就能改名字和換稱號。'
     ]);
     sec('⚙️ 設定、帳號、存檔、其他', [
-      '🧭 畫面怎麼看：右上 7 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎁 今天（今天可以做的事、村民、活動、節慶）、🎒 背包（包包、魚缸、寵物）、📖 圖鑑（圖鑑、排行榜、成就）、👥 朋友（玩家、小島）、👕 造型（衣櫃、頭像和帳號）、⚙️ 設定（設定、玩法）。打開後上面有分頁可以切換。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，打字的時候會出現在輸入框上面；有新訊息會出現紅色數字）。在小島上說的話只有同一座小島的人看得到，😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「找釣點」，點了會告訴你最近的釣點在哪個方向、多遠。',
+      '📱 手機：右上角的「手機」打開就是手機主畫面，分三區──村子裡（🔔 快訊、今天、活動、村報、村民、節慶）、大家（玩家、釣友隊、留言板、排行榜）、我的（圖鑑、魚拓、魚缸、寵物、小島、造型、成就、航海圖、玩法、設定）。從手機打開的頁面，左上角有「‹ 📱」可以回到手機。有新消息或好友邀請時，手機按鈕上有紅色數字。',
+      '🔔 快訊：最上面是「現在正在發生」的事（颱風、全服大魚、釣魚大賽、魚群洄游、流星雨、懸賞魚），有按鈕的點了會帶你過去；下面是畫面上方跑馬燈飄過的每一則消息，分成 世界／大家／我的，留 24 小時（記在這支手機上，換手機不會跟過去）。',
+      '📱 滑手機的動作：從手機打開頁面的時候，你的角色會拿出手機、低頭用拇指滑，附近的人也看得到。在釣魚、騎車、滑雪、游泳、打撞球的時候不會拿出來。',
+      '🧭 畫面怎麼看：右上 3 個大按鈕──🗺️ 地圖（點「找人、找店」會帶路：左上出現箭頭和距離、地上有光柱）、🎒 背包（包包、魚缸、寵物）、📱 手機（其他所有頁面都在手機裡，見下一條）。按鈕下面一小條是時間、天氣、潮汐。左邊是「今天」的小清單（可以收起來），下面一條是聊天，左邊 📜 是聊天紀錄（大家說過的話，打字的時候會出現在輸入框上面；有新訊息會出現紅色數字）。在小島上說的話只有同一座小島的人看得到，😀 是表情和跟寵物玩。右下大按鈕在沒事做的時候是「找釣點」，點了會告訴你最近的釣點在哪個方向、多遠。',
       '移動搖桿想固定在左下角：設定 →「🕹️ 移動搖桿」選「固定在左下角」。',
       '檢舉不禮貌的人（點他的名字 →「檢舉」）會送到管理員那裡處理，管理員可以禁言或把不適合的名字改掉；被改名的人 30 天內不能自己改回來。',
       '字太小看不清楚：設定 →「🔠 字體大小」選「大」或「特大」，選單、聊天、提示和釣到魚的卡片都會放大。',
@@ -17926,7 +17941,7 @@ function renderTab(){
       '🔒 帳號與隱私：設定最下面有「隱私權政策」和「刪除我的帳號」（輸入「刪除」兩個字確認，會刪掉所有遊戲資料，不能復原）。聊天不會存在伺服器，只有被檢舉的內容會保存 30 天給管理員處理。有問題或想刪除資料，也可以寫信到 chaoxi.fishing@gmail.com。',
       '🎥 視角：預設是「俯瞰」，從斜上方往下看；喜歡以前從背後看的，可以在「⚙️ 設定 → 視角」換成「貼近」。釣魚等咬餌時，鏡頭會自動對準你和浮標中間，拋得遠會稍微拉遠。',
       '🎥 釣魚視角選「背後」的時候，鏡頭不會自己放大縮小：留在你自己擺的角度和距離，只會稍微往浮標那邊移一點',
-      '⚙️ 設定：右上角選單最右邊的齒輪按鈕。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。'
+      '⚙️ 設定：右上角的「📱 手機」→「我的」→「⚙️ 設定」。語言可以選繁體中文、简体中文、English（測試版）、Bahasa Indonesia（印尼文測試版）。'
     ]);
     body.appendChild(el('p', 'sub', '© 2026 潮汐釣魚村作者，保留所有權利；未經同意禁止複製、修改或轉載。部分魚的 3D 模型：Animated Fish Pack by Quaternius（CC0 授權，quaternius.com）。'));
   }
@@ -19085,8 +19100,84 @@ function ui3Tabs(){ if (!UI3.on) return; const T = $('#tabs'); if (!T) return; c
   if (T._g !== key){ T._g = key; T.innerHTML = ''; if (g) for (const [tab, lab] of g.tabs){ const b = document.createElement('button'); b.setAttribute('role', 'tab'); b.dataset.tab = tab; b.textContent = lab; b.addEventListener('click', () => { ui3Open(tab); curTab = tab; renderTab(); }); T.appendChild(b); } }
   T.hidden = !g || g.tabs.length < 2; }
 function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
-  for (const g of UI_GROUPS){ const b = document.createElement('button'); b.className = 'mbtn panel g3'; b.dataset.group = g.k; b.dataset.tabs = g.tabs.map(t => t[0]).join(' '); b.setAttribute('aria-label', g.lab);
-    b.innerHTML = `<span class="g3i">${g.ic}</span><span class="g3l">${g.lab}</span>`; b.addEventListener('click', () => ui3OpenGroup(g.k)); M.appendChild(b); } }
+  /* v581 作者：上面只留 地圖、背包、手機，其他都收進 📱 手機 */
+  for (const g of [UI_GROUPS.find(x => x.k === 'map'), UI_GROUPS.find(x => x.k === 'bag'), { k:'ph', ic:'📱', lab:'手機', tabs:[] }]){ const b = document.createElement('button'); b.className = 'mbtn panel g3'; b.dataset.group = g.k; b.dataset.tabs = g.tabs.map(t => t[0]).join(' '); b.setAttribute('aria-label', g.lab);
+    b.innerHTML = `<span class="g3i">${g.ic}</span><span class="g3l">${g.lab}</span>`; b.addEventListener('click', () => { if (g.k === 'ph') phoneOpen(); else ui3OpenGroup(g.k); }); M.appendChild(b); }
+  if (!LS.get('tide.phTold', false)) setTimeout(() => { LS.set('tide.phTold', true); toast('📱 圖鑑、排行榜、玩家、造型、設定……都搬進右上角的「手機」了'); }, 4000); }
+
+/* ===== v581 📱 遊戲裡的手機（作者：「我想要手機與社群」「大部分都能放進手機裡」「玩家用手機時有動作」）
+   手機主畫面＝所有選單頁面的入口；新的「🔔 快訊」＝正在發生的事＋跑馬燈飄過去的消息（存在這支手機，留 24 小時）。
+   從手機打開頁面時，角色會拿出手機低頭滑，別人也看得到（presence 的 ph）。 ===== */
+const PHONE_APPS = [
+  ['村子裡', [['phfeed', '🔔', '快訊'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
+  ['大家', [['people', '👥', '玩家'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
+  ['我的', [['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
+SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.phfeed = '🔔 快訊';
+function phoneOpen(){ Phone.via = true; openSheet('phone'); }
+function phoneGo(tab){ Phone.via = true;
+  if (tab === 'seachart'){ openSheet('map'); setTimeout(() => { const h = [...$$('#sheetBody .dexhead')].find(x => /航海圖/.test(x.textContent)); if (h) h.scrollIntoView({ block:'start', behavior:'smooth' }); }, 60); return; }
+  try { ui3Open(tab); } catch(e){}
+  if (tab === 'news'){ News.pick = 0; loadNews(); } if (tab === 'board') loadBoard(); if (tab === 'tboard'){ Team.view = 'team'; loadTeam(); loadTeamBoard(); }
+  if (tab === 'phfeed'){ Phone.seen = Date.now(); LS.set('tide.phSeen', Phone.seen); }
+  openSheet(tab); }
+function phoneUnread(){ return Phone.feed.filter(e => e.t > Phone.seen && e.c !== 'me').length; }
+function phoneFrN(){ return (Fr.gifts || []).length + (Fr.req || []).length; }
+function phoneHdr(){ const hd = $('#sheet header'); if (!hd) return; let b = $('#phBack');
+  if (!b){ b = document.createElement('button'); b.id = 'phBack'; b.innerHTML = '‹ 📱'; b.setAttribute('aria-label', '回手機'); b.addEventListener('click', () => { SFX.click(); Phone.via = true; curTab = 'phone'; renderTab(); }); hd.insertBefore(b, hd.firstChild); }
+  b.hidden = !Phone.via || curTab === 'phone'; }
+function renderPhone(body){ const scr = el('div', 'ph-home');
+  { const top = el('div', 'ph-top'), ck = $('#clock'), wx = $('#wxChip'); top.appendChild(el('span', '', ((ck && ck.textContent) || '').trim())); top.appendChild(el('span', '', ((wx && wx.textContent) || '').trim())); scr.appendChild(top); }
+  const un = phoneUnread(), fr = phoneFrN();
+  for (const [sec, apps] of PHONE_APPS){ scr.appendChild(el('div', 'ph-sec', sec)); const g = el('div', 'ph-grid');
+    for (const [tab, ic, lab] of apps){ const b = el('button', 'ph-app' + (tab === 'phfeed' ? ' new' : '')); b.innerHTML = `<span class="ph-ic">${ic}</span><span class="ph-lab">${lab}</span>`;
+      const n = tab === 'phfeed' ? un : tab === 'people' ? fr : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
+      b.addEventListener('click', () => { SFX.click(); phoneGo(tab); }); g.appendChild(b); }
+    scr.appendChild(g); }
+  body.appendChild(scr); }
+function phAgo(t){ const s = Math.max(0, (Date.now() - t) / 1000); return s < 60 ? '剛剛' : s < 3600 ? `${Math.floor(s / 60)} 分鐘前` : `${Math.floor(s / 3600)} 小時前`; }
+function phLive(){ const L = [], ms = bossNow(), s = Math.floor(ms / 1000), left = en => `還有 ${Math.max(1, Math.ceil((en - s) / 60))} 分鐘`;
+  try { const ty = Env.ty, ph = Env.tyPh; if (ph === 'pre') L.push({ ic:'🌀', t:'颱風快來了', d:`大約 ${Math.max(1, Math.ceil((ty.land - ms) / 60000))} 分鐘後登陸，風浪變大、魚咬得兇` }); else if (ph === 'mid') L.push({ ic:'🌀', t:'颱風登陸中', d:'船和潛水都停了，到岸邊釣' }); else if (ph === 'post') L.push({ ic:'🌈', t:'颱風過了', d:'沙灘上沖上來好多東西，去撿' }); } catch(e){}
+  try { const B = BossW.st; if (B && B.state === 'live') L.push({ ic:'🐋', t:`${B.name || '大魚'}出現在港口外海`, d:'大家一起拉！', go:() => { const [x, z] = bossAt(); navTo('港口外海', x, z); } }); } catch(e){}
+  try { if (Tny.on) L.push({ ic:'🏆', t:'釣魚大賽進行中', d:'比總重量，前三名有獎', go:() => { lbMode = 'tny'; openSheet('rank'); }, gl:'看名次' }); } catch(e){}
+  try { const m = evtMig(ms); if (m.active){ const sp = SPOT_BY_ID[m.spot]; L.push({ ic:'🐟', t:'魚群洄游', d:`${sp ? sp.label : ''}：一大群${(FISH_BY_ID[m.fish] || {}).name || '魚'}・${left(m.en)}`, go: sp ? () => navTo(sp.label, sp.pos.x, sp.pos.z) : null }); } } catch(e){}
+  try { if (evtMeteor(ms)) L.push({ ic:'🌠', t:'流星雨', d:'所有釣點的傳說魚比較好釣（到 23:30）' }); } catch(e){}
+  try { const b = evtBounty(ms); L.push({ ic:'🎯', t:'懸賞魚', d:`${(FISH_BY_ID[b.fish] || {}).name} ${b.minw} 公斤以上送 🪙300・${left(b.en)}`, go:() => phoneGo('events'), gl:'看活動' }); } catch(e){}
+  return L; }
+function renderPhFeed(body){ Phone.seen = Date.now(); LS.set('tide.phSeen', Phone.seen);
+  const live = phLive(); if (live.length){ body.appendChild(el('div', 'ph-h', '現在正在發生')); for (const it of live){ const c = el('div', 'ph-card hot'); if (it.go){ const b = el('button', 'tbtn', it.gl || '帶我去'); b.addEventListener('click', it.go); c.appendChild(b); } c.appendChild(el('b', '', `${it.ic} ${it.t}`)); c.appendChild(el('div', 'ph-d', it.d)); body.appendChild(c); } }
+  const seg = el('div', 'seg'); for (const [k, lab] of [['all', '全部'], ['world', '世界'], ['people', '大家'], ['me', '我的']]){ const b = el('button', '', lab); b.setAttribute('aria-pressed', String(Phone.cat === k)); b.addEventListener('click', () => { Phone.cat = k; renderTab(); }); seg.appendChild(b); } body.appendChild(seg);
+  const L = Phone.feed.filter(e => Phone.cat === 'all' || e.c === Phone.cat).slice().reverse();
+  if (!L.length) body.appendChild(el('div', 'empty', '還沒有消息。村子裡發生的事（天氣、活動、誰釣到好魚、誰來了）都會記在這裡，留 24 小時。'));
+  for (const e of L.slice(0, 40)){ const c = el('div', 'ph-card'); const tx = el('div', 'ph-x'); tx.innerHTML = e.h; c.appendChild(tx); c.appendChild(el('div', 'ph-t', phAgo(e.t))); body.appendChild(c); }
+  body.appendChild(el('p', 'sub', '快訊記在這支手機上（換手機不會跟過去）。上面「現在正在發生」是即時的，點按鈕會帶你過去。')); }
+
+/* 拿手機的動作：頭低下來、兩手把手機拿在胸前，右手拇指一直點；從收起到拿出來大約半秒 */
+const _phA = new THREE.Vector3(), _phB = new THREE.Vector3(), _phP = new THREE.Vector3();
+let PH_MAT = null;
+function phoneMesh(){ if (!PH_MAT){ const cv = document.createElement('canvas'); cv.width = 32; cv.height = 64; const g = cv.getContext('2d'); g.fillStyle = '#bfe6f5'; g.fillRect(0, 0, 32, 64); const C = ['#e2703a', '#17696b', '#3a6fd8', '#f0a020', '#e8589a', '#4fa838'];
+    for (let i = 0; i < 9; i++){ g.fillStyle = C[i % C.length]; g.fillRect(4 + (i % 3) * 9, 8 + Math.floor(i / 3) * 11, 6, 6); } g.fillStyle = '#fff'; g.fillRect(4, 46, 24, 10);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; PH_MAT = { body: new THREE.MeshStandardMaterial({ color:0x1d242b, roughness:0.4, metalness:0.3 }), scr: new THREE.MeshBasicMaterial({ map:tx }), geo: new THREE.BoxGeometry(0.075, 0.145, 0.012), sg: new THREE.PlaneGeometry(0.066, 0.132) }; }
+  const g = new THREE.Group(); g.userData.dyn = 1; const b = new THREE.Mesh(PH_MAT.geo, PH_MAT.body), s = new THREE.Mesh(PH_MAT.sg, PH_MAT.scr); s.position.z = -0.0065; s.rotation.y = Math.PI; g.add(b, s);   /* 螢幕朝向拿手機的人 */ g.visible = false; return g; }
+function phoneMine(){ try { return !!Phone.via && !$('#sheet').hidden && F.phase === 'idle' && !Dive.on && !Bike.on && !SKI.on && !me.swim && me.poolAt == null; } catch(e){ return false; } }
+function phonePose(f, dt){ const want = f === me ? phoneMine() : (!!f.phone && !f.fishing && !f.swim && !f.bike && f.poolAt == null);
+  f.phK = (f.phK || 0) + ((want ? 1 : 0) - (f.phK || 0)) * Math.min(1, dt * 6); const a = f.av; let m = a && a.phM;
+  if (f.phK < 0.03){ f.phK = 0; if (m) m.visible = false; return; }
+  if (!a || !a.g || !a.g.visible || (f !== me && camera.position.distanceToSquared(f.pos) > 900)){ if (m) m.visible = false; return; }
+  const k = f.phK, K = a.kid, tap = Math.sin(now() * 10) * 0.007;
+  if (!m){ m = a.phM = phoneMesh(); a.g.add(m); }
+  if (!K || !K.B || !K.B.hips){ if (a.armL && a.armR){ a.armL.rotation.x += (-1.1 - a.armL.rotation.x) * k; a.armR.rotation.x += (-1.1 + tap * 8 - a.armR.rotation.x) * k; a.armL.rotation.z += (0.35 - a.armL.rotation.z) * k; a.armR.rotation.z += (-0.35 - a.armR.rotation.z) * k; }
+    if (a.headG) a.headG.rotation.x += 0.3 * k; m.position.set(0, 0.95, 0.42); m.rotation.set(-0.95, 0, 0); m.visible = k > 0.3; return; }   /* 舊的方塊角色：兩手往前舉 */
+  const B = K.B;
+  if (!K.kjB){ K.kjB = ['hips', 'spine', 'chest', 'head', 'upperlegl', 'upperlegr', 'lowerlegl', 'lowerlegr', 'upperarml', 'upperarmr', 'lowerarml', 'lowerarmr'].map(n => B[n]).filter(Boolean); K.kjQ = K.kjB.map(() => new THREE.Quaternion()); }
+  if (!K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjQ[i].copy(K.kjB[i].quaternion); K.kjOn = true; }   /* 下一格骨架動畫開始前會還原 */
+  if (B.spine) B.spine.rotateX(0.08 * k); if (B.head) B.head.rotateX(PH.head * k);
+  a.g.updateMatrixWorld(true); (B.chest || B.spine).getWorldPosition(_phA); a.g.worldToLocal(_phA);
+  const cy = _phA.y + PH.y - (1 - k) * 0.3, cz = _phA.z + PH.z * k + 0.04;
+  m.position.set(0, cy, cz); m.rotation.set(PH.tilt, 0, 0); m.scale.setScalar(PH.sc); m.visible = k > 0.35;
+  for (const sd of ['l', 'r']){ const up = B['upperarm' + sd], lo = B['lowerarm' + sd], hd = B['hand' + sd]; if (!up || !lo || !hd) continue; const sx = sd === 'l' ? 1 : -1;
+    _phB.set(sx * PH.hx, cy - 0.03 + (sd === 'r' ? tap : 0), cz - 0.01); a.g.localToWorld(_phB); _phP.set(sx * 0.4, cy - 0.35, cz - 0.15); a.g.localToWorld(_phP); kidIK(up, lo, hd, _phB, _phP); } }
+const PH = { head: 0.5, y: -0.14, z: 0.3, tilt: 0.75, hx: 0.06, sc: 1.5 };
+
 /* 右上一小條：時間、天氣、潮汐 */
 function ui3Mini(){ if (UI3.mini) return; const w = document.createElement('div'); w.id = 'mini3'; w.className = 'panel'; w.innerHTML = '<div class="m3info"></div>'; document.body.appendChild(w); UI3.mini = w;   /* v339 玩家說小地圖會擋到：拿掉小地圖，只留時間天氣；地圖回到大按鈕 */
   const info = w.querySelector('.m3info'); for (const id of ['clock', 'wxChip']){ const e = document.getElementById(id); if (e) info.appendChild(e); } }
@@ -19146,7 +19237,7 @@ async function cafeOrder(r, price){ const P = $('#orderPanel'); if ((rec.coins |
 function ui3Init(){ if (!UI3.on) return; document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
-  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length; const b = $('#menu .mbtn[data-group="fr"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
+  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length + phoneUnread(); const b = $('#menu .mbtn[data-group="ph"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
   (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); if (frameNo % 12 === 0) ui3ChatFit(); } catch(e){} requestAnimationFrame(loop); })(); }
 /* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
 function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
