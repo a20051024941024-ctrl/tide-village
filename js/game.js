@@ -10910,7 +10910,8 @@ const Pool = { on:false, spec:false, ti:-1, tables:[], key:null, aim:{ x:1, y:0 
 /* v608 🐡 用釣到的魚換「特技母球」（作者：撞球跟釣魚結合）：圖鑑裡釣過那種魚就解鎖，每局每人最多用 2 次；用了特技的對打不算排行（休閒局） */
 const POOL_SP = { puff:{ ic:'🐡', n:'河豚球', d:'母球撞擊範圍變大', need:['puffer'] }, octo:{ ic:'🐙', n:'章魚球', d:'母球會往左彎', need:['octopus', 'dumbo'] },
   dolph:{ ic:'🐬', n:'海豚球', d:'被撞的球互撞更有力，容易連鎖', need:['dolphin'] }, whale:{ ic:'🐋', n:'鯨魚球', d:'力道 1.45 倍', need:['whale', 'bluewhale', 'sperm', 'orca', 'beluga', 'whaleshark'] } };
-function poolSpOK(k){ const S = POOL_SP[k]; return !!S && S.need.some(id => rec.count && rec.count[id]); }
+const POOL_SP_ON = false;   /* 作者 11/20：「特技母球先不要」→ 先關掉（程式留著，之後要再開就改成 true） */
+function poolSpOK(k){ if (!POOL_SP_ON) return false; const S = POOL_SP[k]; return !!S && S.need.some(id => rec.count && rec.count[id]); }
 function poolKey(){ return (room && room.key) || Pool.key || (Pool.key = 'me' + Math.random().toString(36).slice(2, 8)); }
 function poolBallCol(n){ return n === 0 ? PB_COL[0] : n <= 8 ? PB_COL[n] : PB_COL[n - 8]; }
 function poolGrp(n){ return n >= 1 && n <= 7 ? 1 : n >= 9 ? 2 : 0; }   /* 1 全色球、2 花色球 */
@@ -11097,7 +11098,7 @@ function poolOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data
     if (T.sim && !T.sim.auth && inPoolHall() && d.m !== 'idle' && T.p[0] === p[0]){ T.pend = d; T.pendFrom = peer; return; }
     poolApply(T, d, peer); return; }
   if (d.k === 'shot'){ const sh = T.p[poolShooter(T)]; if ((sh !== peer && !(poolNpc(sh) && T.p[0] === peer)) || T.mode === 'idle') return; const q = Math.floor(+d.q); if (!(q >= T.seq)) return; if (!Array.isArray(d.d) || !isFinite(+d.d[0]) || !isFinite(+d.d[1])) return; const pw = clamp(+d.pw || 0, 0, 1), dx = clamp(+d.d[0], -1.01, 1.01), dy = clamp(+d.d[1], -1.01, 1.01);
-    if (!poolSetBalls(T, d.b) || !T.b[0].on) return; T.seq = q; T.from = peer; T.shots++; const psp = POOL_SP[d.sp] ? d.sp : null; if (psp) T.spU = T.mode === 'vs' || T.spU; if (inPoolHall()) poolStartSim(T, dx, dy, pw, false, psp); else T.ph = 'aim'; poolHud(); return; }
+    if (!poolSetBalls(T, d.b) || !T.b[0].on) return; T.seq = q; T.from = peer; T.shots++; const psp = POOL_SP_ON && POOL_SP[d.sp] ? d.sp : null; if (psp) T.spU = T.mode === 'vs' || T.spU; if (inPoolHall()) poolStartSim(T, dx, dy, pw, false, psp); else T.ph = 'aim'; poolHud(); return; }
   if (d.k === 'aim'){ { const sh = T.p[poolShooter(T)]; if ((sh !== peer && !(poolNpc(sh) && T.p[0] === peer)) || T.sim) return; } if (Array.isArray(d.a) && isFinite(+d.a[0]) && isFinite(+d.a[1])){ T.aim.tx = clamp(+d.a[0], -1, 1); T.aim.ty = clamp(+d.a[1], -1, 1); T.aim.tpw = clamp(+d.pw || 0, 0, 1); if (!T.aim.at || now() - T.aim.at > 2){ T.aim.x = T.aim.tx; T.aim.y = T.aim.ty; T.aim.pw = T.aim.tpw; } T.aim.at = now(); }   /* v527 記目標，畫的時候每一格慢慢轉過去 */
     if (Array.isArray(d.c) && T.ph === 'hand' && isFinite(+d.c[0]) && isFinite(+d.c[1])){ T.b[0].x = clamp(+d.c[0], -PB.HL + PB.R, PB.HL - PB.R); T.b[0].y = clamp(+d.c[1], -PB.HW + PB.R, PB.HW - PB.R); const was = T.b[0].on; T.b[0].on = 1; if (!was) poolRefresh(T); } } }
 function poolApply(T, d, peer){ const M = ['idle', 'solo', 'vs'], PH = ['idle', 'aim', 'hand', 'over']; if (!M.includes(d.m) || !PH.includes(d.ph)) return; const sv = poolBalls(T); if (!poolSetBalls(T, d.b)){ poolSetBalls(T, sv); return; }
@@ -11343,7 +11344,7 @@ function poolHudBuild(){ if (Pool.hud) return; const h = el('div'); h.id = 'pool
   pow.addEventListener('pointercancel', e => { if (pid === e.pointerId){ pid = null; Pool.pw = 0; } }); }
 function poolDots(T, who){ const g = poolGrpOf(T, who); if (T.mode !== 'vs') return ''; if (!g) return '<em>還沒分組</em>'; let s = ''; for (let n = g === 1 ? 1 : 9; n <= (g === 1 ? 7 : 15); n++) if (T.b[n].on) s += `<u class="${g === 2 ? 'st' : ''}" style="--c:${poolBallCol(n)}"></u>`; if (!s) s = '<u style="--c:#17171b"></u>'; return s; }
 function poolSpRender(){ const h = Pool.hud, T = Pool.tables[Pool.ti], box = h && $('.pl-sp', h); if (!box) return; const my = !!T && poolMyTurn(T), mi = T ? Math.max(0, poolMyIdx(T)) : 0, left = T && T.spLeft ? T.spLeft[mi] : 2;
-  const ks = Object.keys(POOL_SP); box.hidden = !my; if (!my) return;
+  const ks = Object.keys(POOL_SP); box.hidden = !my || !POOL_SP_ON; if (box.hidden) return;
   const cur = POOL_SP[Pool.sp]; box.innerHTML = `<div class="pl-sph">${cur ? `${cur.ic} ${cur.n}：${cur.d}（下一桿用）` : `特技母球・這局還能用 ${left} 次${T.mode === 'vs' ? '（用了不算排行）' : ''}`}</div>` + ks.map(k => { const S = POOL_SP[k], ok = poolSpOK(k); return `<button data-sp="${k}" class="${Pool.sp === k ? 'on' : ''}" ${ok && left > 0 ? '' : 'disabled'} title="${ok ? S.d : '釣到' + S.need.map(id => FISH_BY_ID[id] ? FISH_BY_ID[id].name : id).slice(0, 2).join('或') + '就解鎖'}">${ok ? S.ic : '🔒'} ${S.n}</button>`; }).join(''); }
 function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Pool.on || !T) return; poolSpRender(); const mi = poolMyIdx(T), vs = T.mode === 'vs';
   for (const i of [0, 1]){ const p = $('.pl-p' + i, h); p.hidden = !vs && i === 1; $('b', p).textContent = (T.nm[i] || (i === 0 ? '玩家' : '')) + (vs && i === mi ? '（你）' : ''); $('i', p).innerHTML = vs ? poolDots(T, i) : `已經打了 ${T.shots} 桿`; p.classList.toggle('on', (vs ? T.turn === i : i === 0) && T.ph !== 'over'); }
@@ -18305,7 +18306,7 @@ function renderTab(){
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
-      '🎱 撞球×釣魚：在撞球桌輪到你時，下面有「特技母球」：🐡河豚球（撞擊範圍變大）、🐙章魚球（母球往左彎）、🐬海豚球（球互撞更有力）、🐋鯨魚球（力道 1.45 倍），圖鑑裡釣過那種魚才解鎖，每局每人最多 2 次；用了特技的對打不算排行。左上「🐠 魚花色」可以把球換成你釣過的魚的花色、桌面變成水族箱，你魚缸裡的魚在下面游（只有你看得到）。',
+      '🎱 撞球×釣魚：撞球畫面左上「🐠 魚花色」可以把球換成你釣過的魚的花色、桌面變成水族箱，你魚缸裡的魚在下面游（只有你看得到）；「🔍 近看」鏡頭拉近、跟著母球。',
       '🧬 全服共養：整個伺服器共用一片海，每種魚有族群量（圖鑑每格下面的條）。大家釣太多那種魚會變少、變難釣、偏小（最低 30%，不會絕種）；放流會變多（標記放流算兩條），多的時候比較好釣、偶爾特別大。每天會慢慢回到 100%。連續 3 天 115% 以上，那種魚會演化出新花色（✨演化・），之後一直留著。',
       '🎨 竿子造型每支竿子各自裝：在阿鐵的工坊按「裝上」只會裝在現在拿的那支，換竿子時會自動換成那支記住的造型；背包的釣竿清單會寫每支裝了什麼造型。',
       '🌑 水裡的魚影：拋竿以後水底會有黑色的影子游過來咬餌，看得出大概多大、什麼形狀，但看不出顏色和花紋；拉魚的時候上面也只會說手感（例如「好重的手感！」），不會說是什麼魚。要等拉出水面才知道釣到什麼。拉魚時看得到牠在浮標底下掙扎；魚往外衝的時候會頭朝下往深處鑽、把浮標拖進水裡、一路冒泡，這時候要先放開。',
