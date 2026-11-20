@@ -1741,7 +1741,118 @@ function art2Props(){ try { twTemple(6.4, -28.4, Math.PI / 2); }   /* v493 廟�
       for (let i = 0; i < (TW.gLamp || []).length; i += 3){ const d = diveGlow(G, TW.gLamp[i], groundHeight(TW.gLamp[i], TW.gLamp[i + 2]) + 0.08, TW.gLamp[i + 2], 6.5, '#ffd98a', 0); d.userData.op = 0.75; }
       scene.add(G); Art2.glow = G; Art2.nk = null; } catch(e){ console.warn('twGlow', e); } }
   for (const [x, z, ry, sc] of [[30.5, -40.3, Math.PI / 2, 1], [36.4, -40.2, Math.PI / 2, 1.08], [38.3, -36.4, 0.05, 0.94]]){ if (isLand(x, z) || deckAt(x, z)) continue;   /* v481 漁船改成靠著石頭堤防停 */ try { const g = twBoat(x, z, ry, sc); Art2.boats.push({ g, x, z, ry, ph: x, dy: -0.34 * sc }); } catch(e){ console.warn('twBoat', e); } } }
-function art2Tick(t){ if (Art2.fx) for (const f of Art2.fx){ try { f(t); } catch(e){} } for (const b of Art2.boats){ b.g.position.y = waterY(b.x, b.z, t) + (b.dy != null ? b.dy : -0.12); b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
+/* ===== v584 🌊 活的世界（作者：「做」）=====
+   ① 港口那三艘藍白漁船（Art2.boats）照遊戲時間出港、作業、回港：清晨一艘接一艘鳴笛出去，開到 舊箱網／定置網／海鳥岩 旁邊作業（海鷗在上面繞、船長收網），
+      傍晚開回來。位置只跟時間有關，所以每個人看到的都在同一個地方，不用伺服器。颱風天不出海。船不會撞人（直接穿過去）。
+   ② 南方沙灘白天、沒下雨的時候有 6 個遊客：2 個坐在海灘巾上曬太陽、2 個套著泳圈在淺水玩、2 個丟沙灘球（走過去會把球踢飛，只有你看得到）。
+      下雨、颱風、晚上會收東西走掉。剛釣到大魚的人走過去，遊客會提起來。
+   作者 11/20：「如果太遠就乾脆不要畫人在那裡，因為都只看到線而已」→ 船長、遊客離你 60 公尺以上就不畫。 */
+const LW = { fleet: null, beach: null, lastPh: null, talkAt: 0 };
+const LW_ROUTES = [   /* 從停船的位置往北出港口（南邊是堤防）→ 港口外 (68,-56) → 漁場 */
+  { berth:[30.5, -40.3], to:'cage',  name:'船長・阿財', look:['#e8473a', '#18334a'], P:[[30.5, -40.3], [32, -36], [34, -30.5], [52, -30], [56, -50], [68, -56], [110, -80], [140, -100]] },
+  { berth:[36.4, -40.2], to:'nets',  name:'船長・阿春', look:['#3a6fd8', '#f6f0dd'], P:[[36.4, -40.2], [35.5, -36], [36.5, -31], [54, -31], [57, -50], [68, -56], [20, -92], [-60, -96], [-62, -138]] },
+  { berth:[38.3, -36.4], to:'birds', name:'船長・海伯', look:['#f0a020', '#5a4030'], P:[[38.3, -36.4], [38.5, -31.5], [56, -32], [58, -50], [68, -56], [20, -92], [-60, -96], [-104, -124]] } ];
+const LW_SAY = ['今天海況不錯！', '網子拉起來沉甸甸的', '你也出海啊？浪大要小心', '嘿咻——收網囉', '海鷗跟著我們一整天了', '划船的時候離我的網遠一點喔'];
+const LW_SPEED = 6;   /* 公尺／秒（現實時間）；遊戲 1 小時＝90 秒 */
+function lwHourDiff(a, b){ return ((a - b) % 24 + 24) % 24; }
+function lwFleetInit(){ if (LW.fleet || !Art2.boats.length) return; LW.fleet = [];
+  Art2.boats.forEach((b, i) => { const R = LW_ROUTES.find(r => Math.hypot(r.berth[0] - b.x, r.berth[1] - b.z) < 0.6); if (!R) return; const cum = [0]; for (let k = 1; k < R.P.length; k++) cum.push(cum[k - 1] + Math.hypot(R.P[k][0] - R.P[k - 1][0], R.P[k][1] - R.P[k - 1][1]));
+    const L = cum[cum.length - 1], T = L / LW_SPEED / (DAY_LEN / 24), dep = 5.0 + i * 0.6, ret = 16.6 + i * 0.6;
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: lwGlowTex(), color: '#fff3c0', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); gl.scale.setScalar(2.2); gl.position.set(0, 3.3, -0.75); gl.material.opacity = 0.75; gl.visible = false; b.g.add(gl);
+    const gulls = []; for (let j = 0; j < 3; j++){ const gb = flkBird('#f4f4f0', 1.1); gb.userData.dyn = gb.userData.keep = true; gb.visible = false; scene.add(gb); gulls.push(gb); }
+    LW.fleet.push({ b, R, cum, L, T, dep, ret, ry0: b.ry, gl, gulls, cap: null, i, talkAt: 0, st: 'dock' }); }); }
+function lwGlowTex(){ if (lwGlowTex.t) return lwGlowTex.t; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,230,1)'); gr.addColorStop(0.3, 'rgba(255,240,170,.55)'); gr.addColorStop(1, 'rgba(255,230,150,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return (lwGlowTex.t = new THREE.CanvasTexture(c)); }
+function lwAlong(F, s){ const P = F.R.P, cum = F.cum; s = clamp(s, 0, F.L); let k = 1; while (k < cum.length - 1 && cum[k] < s) k++; const a = P[k - 1], b = P[k], u = (s - cum[k - 1]) / Math.max(0.001, cum[k] - cum[k - 1]); return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
+/* 某個遊戲時間，這艘船在哪、在做什麼（只跟時間有關） */
+function lwFleetAt(F, h, storm){ if (storm) return { st:'dock' }; const sOut = lwHourDiff(h, F.dep), sBack = lwHourDiff(h, F.ret), work = lwHourDiff(F.ret, F.dep);
+  if (sOut < F.T) return { st:'out', s: F.L * (sOut / F.T) };
+  if (sOut < work) return { st:'work', w: sOut };
+  if (sBack < F.T) return { st:'back', s: F.L * (1 - sBack / F.T) };
+  return { st:'dock' }; }
+function lwStorm(){ try { return Env.tyPh === 'pre' || Env.tyPh === 'mid'; } catch(e){ return false; } }
+function lwFleetTick(dt, t){ lwFleetInit(); if (!LW.fleet) return; const h = gameHour(), storm = lwStorm(), night = DayNight.period !== 'day';
+  let anyOut = false;
+  for (const F of LW.fleet){ const b = F.b, S = lwFleetAt(F, h, storm); let x, z, hd;
+    if (S.st === 'dock'){ x = F.R.berth[0]; z = F.R.berth[1]; hd = F.ry0; }
+    else if (S.st === 'work'){ const e = F.R.P[F.R.P.length - 1], a = t * 0.05 + F.i * 2; x = e[0] + Math.cos(a) * 2.2; z = e[1] + Math.sin(a) * 2.2; hd = Math.atan2(-Math.sin(a), Math.cos(a)); }
+    else { const p = lwAlong(F, S.s); x = p[0]; z = p[1]; hd = p[2] + (S.st === 'back' ? Math.PI : 0); }
+    if (S.st !== 'dock') anyOut = true;
+    if (F.st !== S.st){ if (F.st && (S.st === 'out' || S.st === 'dock' && F.st === 'back') && Math.hypot(me.pos.x - x, me.pos.z - z) < 110) lwHorn(); F.st = S.st; }
+    b.x = x; b.z = z; const tgt = hd + LW_BOW; b.ry = lerpAngle(b.ry, tgt, 1 - Math.exp(-dt * 1.6));
+    const d = Math.hypot(me.pos.x - x, me.pos.z - z);
+    F.gl.visible = night && S.st !== 'dock' && d < 220;
+    const gullOn = S.st === 'work' && !gullAway() && d < 90; F.gulls.forEach((g, j) => { g.visible = gullOn; if (!gullOn) return; const a = t * (0.7 + j * 0.15) + j * 2.1, r = 3 + j; g.position.set(x + Math.cos(a) * r, 5 + j * 0.8 + Math.sin(t * 1.3 + j) * 0.4, z + Math.sin(a) * r); g.rotation.set(0, -a, 0.35); g.children[1].rotation.z = Math.sin(t * 9 + j) * 0.5; g.children[2].rotation.z = -Math.sin(t * 9 + j) * 0.5; if (j === 0 && Math.random() < dt * 0.08 && d < 40) try { SFX.gull(); } catch(e){} });
+    lwCaptain(F, S, x, z, d, dt, t); }
+  /* 出港、回港寫進手機快訊（剛打開遊戲那一下不算） */
+  if (LW.lastPh != null && LW.lastPh !== anyOut){ try { phFeedAdd(anyOut ? '🚢 漁船出港了，往舊箱網、定置網、海鳥岩去作業' : '🚢 漁船都回港了，今天辛苦了'); } catch(e){} }
+  LW.lastPh = anyOut; }
+const LW_BOW = 0;   /* 船頭朝向的修正（模型的船頭在 +z） */
+function lwHorn(){ try { tone(146, 0.9, 'sawtooth', 0.035, 140); setTimeout(() => tone(146, 1.3, 'sawtooth', 0.035, 138), 1050); } catch(e){} }
+function lwCaptain(F, S, x, z, d, dt, t){ const show = d < 60 && !onIsle && !Dive.on && !House.on && !inIndoor();
+  if (!show){ if (F.cap){ F.cap.av.g.visible = false; try { F.cap.tag.style.display = 'none'; } catch(e){} } return; }
+  if (!F.cap){ const c = new Fisher({ shirt: F.R.look[0], hat: F.R.look[1], name: F.R.name, kind: 'npc' }); F.cap = c; }
+  const c = F.cap, b = F.b, ry = b.g.rotation.y, lx = 0, lz = 0.2, s = b.g.scale.x;   /* 站在駕駛艙前面的甲板（船頭在 +z） */
+  c.av.g.visible = true; c.pos.x = x + (Math.sin(ry) * lz + Math.cos(ry) * lx) * s; c.pos.z = z + (Math.cos(ry) * lz - Math.sin(ry) * lx) * s; c.baseY = b.g.position.y + LW_DECK * s;
+  c.speed = 0; c.sitting = false;
+  if (S.st === 'work'){ c.rot = ry + Math.PI / 2; c.bend = 0.35 + Math.max(0, Math.sin(t * 1.6 + F.i)) * 0.45; }   /* 往船邊彎腰收網 */
+  else { c.bend = 0; c.rot = d < 14 ? lerpAngle(c.rot, Math.atan2(me.pos.x - c.pos.x, me.pos.z - c.pos.z), 1 - Math.exp(-dt * 3)) : ry; }
+  if (d < 14 && t > F.talkAt){ F.talkAt = t + rand(18, 30); c.say(S.st === 'back' ? '收工回家囉！' : S.st === 'dock' ? '明天一早再出海' : LW_SAY[Math.floor(Math.random() * LW_SAY.length)], '', 4); }
+  c.update(dt, t); if (d < 40) c.placeTag(); else c.tag.style.display = 'none'; }
+const LW_DECK = 1.1;
+
+/* ---- 南方沙灘的遊客（沙灘、陽傘是 buildBeach 本來就有的） ---- */
+const LW_BEACH = { c:[40, -6], exit:[33.5, -19.5],
+  P:[ { k:'sun',  x:39.4, z:-2.1, r:1.9, look:['#f5a5d8', '#ffffff'] }, { k:'sun', x:42.4, z:-10.6, r:1.6, look:['#7db7d7', '#ffd36a'] },
+      { k:'swim', x:49.6, z:-11.5, look:['#f6a96b', '#3fbf9d'], ring:'#ff6a5a' }, { k:'swim', x:50.2, z:-4.5, look:['#9fc7a8', '#f17b6d'], ring:'#ffd34a' },
+      { k:'ball', x:34.6, z:-12.5, look:['#b9a4ff', '#f6f0dd'] }, { k:'ball', x:35.2, z:-4.2, look:['#e8473a', '#18334a'] } ] };
+const LW_TSAY = ['今天天氣好好！', '水好涼～', '你也來玩水嗎？', '這裡的夕陽很漂亮喔', '剛剛有一群小魚從我腳邊游過去', '我是坐船來這個村子玩的'];
+function lwBeachOpen(){ try { const W = WEATHERS[Env.wx] || {}; const h = gameHour(); return h >= 8 && h < 17.5 && !(W.rain > 0) && !W.storm && !lwStorm(); } catch(e){ return false; } }
+function lwBeachBuild(){ const B = { T: [], ball: null, k: 0, kick: null, said: 0 };
+  for (const q of LW_BEACH.P){ const f = new Fisher({ shirt: q.look[0], hat: q.look[1], name: '遊客', kind: 'npc' }); f.av.g.visible = false; f.pos.x = q.x; f.pos.z = q.z; const o = { q, f, st: lwBeachOpen() ? 'here' : 'gone', ring: null };
+    if (q.k === 'swim'){ const r = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.13, 8, 18), mat(q.ring, 0.5)); r.rotation.x = Math.PI / 2; r.userData.dyn = r.userData.keep = true; r.visible = false; scene.add(r); o.ring = r; }
+    B.T.push(o); }
+  { const c = document.createElement('canvas'); c.width = 64; c.height = 32; const g = c.getContext('2d'); ['#ffffff', '#e8473a', '#ffffff', '#3a6fd8', '#ffffff', '#f0c020'].forEach((col, i) => { g.fillStyle = col; g.fillRect(i * 64 / 6, 0, 64 / 6 + 1, 32); }); const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace;
+    B.ball = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.5 })); B.ball.userData.dyn = B.ball.userData.keep = true; B.ball.visible = false; scene.add(B.ball); }
+  LW.beach = B; }
+function lwBeachTick(dt, t){ const C = LW_BEACH.c, d0 = Math.hypot(me.pos.x - C[0], me.pos.z - C[1]), near = d0 < 70 && !onIsle && !Dive.on && !House.on && !inIndoor();
+  if (!LW.beach){ if (!near) return; lwBeachBuild(); } const B = LW.beach, open = lwBeachOpen();
+  for (const o of B.T){ const f = o.f, q = o.q;
+    if (!near){ f.av.g.visible = false; if (o.ring) o.ring.visible = false; try { f.tag.style.display = 'none'; } catch(e){} o.st = open ? 'here' : 'gone'; continue; }
+    /* 來／走：在你附近時用走的（從北邊的小路），你不在時直接出現或消失 */
+    if (open && o.st === 'gone'){ o.st = 'in'; f.pos.x = LW_BEACH.exit[0]; f.pos.z = LW_BEACH.exit[1]; }
+    if (!open && (o.st === 'here' || o.st === 'in')){ o.st = 'out'; f.sitting = false; if (Math.random() < 0.5) f.say(['要下雨了，快收！', '回去囉～', '明天再來玩'][Math.floor(Math.random() * 3)], '', 3); }
+    let tx = q.x, tz = q.z; if (o.st === 'out'){ tx = LW_BEACH.exit[0]; tz = LW_BEACH.exit[1]; }
+    if (o.st === 'gone'){ f.av.g.visible = false; if (o.ring) o.ring.visible = false; f.tag.style.display = 'none'; continue; }
+    f.av.g.visible = true; const dx = tx - f.pos.x, dz = tz - f.pos.z, dd = Math.hypot(dx, dz);
+    if ((o.st === 'in' || o.st === 'out') && dd > 0.2){ const sp = 1.9; f.pos.x += dx / dd * Math.min(dd, sp * dt); f.pos.z += dz / dd * Math.min(dd, sp * dt); f.speed = sp; f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 1 - Math.exp(-8 * dt)); f.baseY = groundHeight(f.pos.x, f.pos.z); f.sitting = false; if (o.ring) o.ring.visible = false; }
+    else if (o.st === 'out'){ o.st = 'gone'; f.av.g.visible = false; f.tag.style.display = 'none'; continue; }
+    else { o.st = 'here'; f.speed = 0; lwTouristPose(o, B, dt, t); }
+    const dm = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z);
+    if (o.st === 'here' && dm < 4.5 && t > LW.talkAt){ LW.talkAt = t + rand(14, 24); f.rot = lerpAngle(f.rot, Math.atan2(me.pos.x - f.pos.x, me.pos.z - f.pos.z), 0.6); f.say(lwTouristLine(), '', 4.5); }
+    f.update(dt, t); if (dm < 16) f.placeTag(); else f.tag.style.display = 'none'; }
+  lwBall(B, dt, t, near && open); }
+function lwTouristPose(o, B, dt, t){ const f = o.f, q = o.q;
+  if (q.k === 'sun'){ f.pos.x = q.x; f.pos.z = q.z; f.sitting = true; f.baseY = groundHeight(q.x, q.z); f.rot = q.r; }
+  else if (q.k === 'swim'){ const a = t * 0.25 + q.x; f.pos.x = q.x + Math.cos(a) * 1.2; f.pos.z = q.z + Math.sin(a) * 1.2; const wy = waterY(f.pos.x, f.pos.z, t); f.baseY = wy - 0.62 + Math.sin(t * 1.7 + q.z) * 0.06; f.rot = lerpAngle(f.rot, Math.PI * 1.5 + Math.sin(t * 0.4 + q.x) * 0.8, 1 - Math.exp(-dt * 2)); f.sitting = false;
+    o.ring.visible = true; o.ring.position.set(f.pos.x, wy + 0.04 + Math.sin(t * 1.7 + q.z) * 0.06, f.pos.z); o.ring.rotation.z = t * 0.2; if (Math.random() < dt * 0.25) try { ripple(f.pos.x + rand(-0.4, 0.4), f.pos.z + rand(-0.4, 0.4)); } catch(e){} }
+  else { f.pos.x = q.x; f.pos.z = q.z; f.baseY = groundHeight(q.x, q.z); f.sitting = false; const other = B.T.find(x => x.q.k === 'ball' && x !== o); if (other) f.rot = Math.atan2(other.q.x - q.x, other.q.z - q.z);
+    const hop = B.kick ? 0 : Math.max(0, Math.sin((B.k % 1) * Math.PI * 2 - (o === B.T.find(x => x.q.k === 'ball') ? 0 : Math.PI))) * 0.12; f.baseY += hop; } }
+function lwTouristLine(){ try { const now0 = Date.now(), d = Deeds.L.find(d => (d.k === 'legend' || d.k === 'top') && now0 - d.at > 60000 && now0 - d.at < 48 * 3600000 && d.f && FISH_BY_ID[d.f]);
+    if (d && Math.random() < 0.6){ const fn = FISH_BY_ID[d.f].name; return d.k === 'legend' ? `欸！你就是釣到${fn}的那個人嗎？村子裡都在講！` : `聽說你釣到一條 ${fmtKg(d.w)} 的${fn}，可以教我嗎？`; }
+    const lit = Deeds.L.find(d => d.k === 'lit' && now0 - d.at < 48 * 3600000); if (lit && Math.random() < 0.4) return '沙灘好乾淨，聽說是你撿的垃圾？謝謝你！';
+  } catch(e){} return LW_TSAY[Math.floor(Math.random() * LW_TSAY.length)]; }
+/* 沙灘球：兩個人丟來丟去；你走過去碰到球（球低的時候）就會被踢飛，只有你看得到 */
+function lwBall(B, dt, t, on){ const ball = B.ball; if (!on){ ball.visible = false; B.kick = null; return; }
+  const A = B.T.filter(o => o.q.k === 'ball'); if (A.length < 2 || A.some(o => o.st !== 'here')){ ball.visible = false; return; } ball.visible = true;
+  if (B.kick){ const K = B.kick; K.vy -= 9.8 * dt; ball.position.x += K.vx * dt; ball.position.z += K.vz * dt; ball.position.y += K.vy * dt; ball.rotation.x += dt * 8; const gy = Math.max(groundHeight(ball.position.x, ball.position.z), waterY(ball.position.x, ball.position.z, t)) + 0.2;
+    if (ball.position.y < gy){ ball.position.y = gy; K.vy = Math.abs(K.vy) * 0.45; K.vx *= 0.7; K.vz *= 0.7; if (Math.abs(K.vy) < 0.6) K.vy = 0; }
+    K.t += dt; if (K.t > 1.2 && !K.said){ K.said = 1; A[0].f.say('哈哈哈，好球！', '', 3); A[1].f.say('欸——我的球！', '', 3); }
+    if (K.t > 4.5){ B.kick = null; B.k = 0; A[1].f.say('再來一次！', '', 2.5); } return; }
+  B.k += dt / 1.7; const n = Math.floor(B.k), u = B.k - n, from = A[n % 2], to = A[(n + 1) % 2];
+  const x = from.q.x + (to.q.x - from.q.x) * u, z = from.q.z + (to.q.z - from.q.z) * u, y0 = groundHeight(x, z) + 1.25; ball.position.set(x, y0 + Math.sin(u * Math.PI) * 2.6, z); ball.rotation.y += dt * 4;
+  const dm = Math.hypot(me.pos.x - x, me.pos.z - z); if (dm < 1.0 && ball.position.y - groundHeight(x, z) < 2.0 && !myBoat){ const a = Math.atan2(x - me.pos.x, z - me.pos.z); B.kick = { vx: Math.sin(a) * 7, vz: Math.cos(a) * 7, vy: 5, t: 0 }; try { SFX.jump(); } catch(e){} } }
+function lwTick(dt, t){ try { lwFleetTick(dt, t); } catch(e){ if (!lwTick.e1){ lwTick.e1 = 1; console.warn('lwFleet', e); } } try { lwBeachTick(dt, t); } catch(e){ if (!lwTick.e2){ lwTick.e2 = 1; console.warn('lwBeach', e); } } }
+function art2Tick(t){ if (Art2.fx) for (const f of Art2.fx){ try { f(t); } catch(e){} } for (const b of Art2.boats){ b.g.position.x = b.x; b.g.position.z = b.z; b.g.position.y = waterY(b.x, b.z, t) + (b.dy != null ? b.dy : -0.12); b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
 if (!ART2) setTimeout(() => { try { paveAll(); } catch(e){ console.warn('paveAll', e); } }, 0);
 if (ART2) setTimeout(() => { try { art2Props(); twMergeAll(); if (!LS.get('tide.art2Told', 0)){ LS.set('tide.art2Told', 1); toast('🎨 村子換新樣子了：港口、商店街、居民區的房子都重畫過，地圖也重新分區了（看「說明」）', 8); } } catch(e){ console.warn('art2 props', e); } }, 0);
 var SEASON = (() => { const h = (location.hash.match(/season=(\w+)/) || [])[1]; if (SEASONS[h]) return h; const m = new Date(Date.now() + 8 * 3600e3).getUTCMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; })();
@@ -17887,6 +17998,8 @@ function renderTab(){
       '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊；輪到誰瞄準，那個人（玩家或阿喆）會彎腰趴向球桌、一手架桿一手握桿。自己打的時候鏡頭在球桌正上方，所以看不到自己的姿勢。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
+      '🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。',
+      '🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人坐在海灘巾上曬太陽、有人套著泳圈在淺水玩、有人在丟沙灘球（走過去碰到低低的球會把它踢飛，只有你自己看得到）。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。',
       '🐦 到處逛的時候看海面：遠遠看到幾隻海鳥在水面上繞，那裡就有掠食魚，走過去把浮標拋在鳥的旁邊比較容易上鉤（下雨和晚上鳥不出來）。',
       '💬 村長、阿綾、阿木、阿福、老港會提起你最近做的事：釣到傳說魚、釣到自己最重的一條、一天放流 5 條、一天撿 5 個垃圾、好幾天沒來。',
       '🧭 海上：港口到冰封群島、深海浮台、神秘島、苔森之島各有一條航道，紅綠浮標一路排過去，晚上頂上的燈會亮，照著划就到得了。島跟島中間有八個海上地標（沉船的桅杆、礁岩燈標、定置網、海鳥岩、沙洲、氣象浮標、舊箱網、海蝕門），划船靠近就會記下來。岩石、沙洲和箱網會擋船，海蝕門可以從中間划過去。',
@@ -19061,7 +19174,7 @@ function frame(){
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
-  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2) art2Tick(t); } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
