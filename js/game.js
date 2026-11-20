@@ -19967,9 +19967,10 @@ function frame(){
 requestAnimationFrame(frame);
 /* v622 作者：「每次走過來都會卡一下」→ 量到走近博物館那幾步，一格要好幾秒，全花在 three.js 第一次編譯著色器（getProgramInfoLog），一路上新編了 41 種。
    改成載入時把場景裡所有東西（包含現在藏起來的）的著色器先在背景編好：手機支援平行編譯時用 compileAsync，不會卡畫面；載入後 10 秒再補一次（後來才蓋的村民、看板）。 */
-function shaderWarm(tag){ try { const hid = []; scene.traverse(o => { if (!o.visible){ hid.push(o); o.visible = true; } });
+function shaderWarm(tag){ try { const lit = new Set(); scene.traverseVisible(o => { if (o.isLight) lit.add(o); });   /* 燈的數量要跟平常一樣，不然編出來的著色器（NUM_POINT_LIGHTS 不同）根本用不到 */
+    const hid = [], off = []; scene.traverse(o => { if (o.isLight){ if (!lit.has(o) && o.visible){ off.push(o); o.visible = false; } return; } if (!o.visible){ hid.push(o); o.visible = true; } });
     const t0 = performance.now(), n0 = renderer.info.programs ? renderer.info.programs.length : 0;
-    let pr = null; try { pr = renderer.compileAsync ? renderer.compileAsync(scene, camera) : (renderer.compile(scene, camera), null); } finally { for (const o of hid) o.visible = false; }
+    let pr = null; try { pr = renderer.compileAsync ? renderer.compileAsync(scene, camera) : (renderer.compile(scene, camera), null); } finally { for (const o of hid) o.visible = false; for (const o of off) o.visible = true; }
     const done = () => { shaderWarm.log = (shaderWarm.log || '') + ` ${tag}:${n0}->${renderer.info.programs ? renderer.info.programs.length : '?'}/${Math.round(performance.now() - t0)}ms`; };
     if (pr && pr.then) pr.then(done, done); else done(); } catch(e){ shaderWarm.err = String(e); } }
 { const fStart = () => frameNo; let f0 = null;
