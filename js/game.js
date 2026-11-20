@@ -1857,16 +1857,19 @@ const LW_DECK = 1.1;
 
 /* ---- 南方沙灘的遊客（沙灘、陽傘是 buildBeach 本來就有的） ---- */
 const LW_BEACH = { c:[40, -6],
-  P:[ { k:'sun', towel:0, look:['#f5a5d8', '#ffffff'] }, { k:'sun', towel:2, look:['#7db7d7', '#ffd36a'] },
-      { k:'swim', x:49.6, z:-11.5, look:['#f6a96b', '#3fbf9d'], ring:'#ff6a5a' }, { k:'swim', x:50.2, z:-4.5, look:['#9fc7a8', '#f17b6d'], ring:'#ffd34a' },
+  /* v605 作者：「那四個要加，就必須讓他們有回家的動畫，而且也不要同時回去，然後要有名字」→ 每個人有名字和自己的長相（眼睛、髮型、衣服，NPC_STYLE），來和走的時間錯開（i×0.45 遊戲小時≈40 秒），下雨也一個一個收東西走 */
+  P:[ { k:'sun', towel:0, name:'小葵・觀光客', look:['#f5a5d8', '#ffffff'] }, { k:'sun', towel:2, name:'阿哲・觀光客', look:['#7db7d7', '#ffd36a'] },
+      { k:'swim', x:49.6, z:-11.5, name:'美美・觀光客', look:['#f6a96b', '#3fbf9d'], ring:'#ff6a5a' }, { k:'swim', x:50.2, z:-4.5, name:'大頭・觀光客', look:['#9fc7a8', '#f17b6d'], ring:'#ffd34a' },
     ] };   /* v604 作者：「打排球的兩個 NPC 如果動作還是很假就不要了」→ 拿掉（只有站著把球丟來丟去，沒有真的打排球的動作） */
 /* v585 曬太陽的人坐在海灘巾上（跟 buildBeach 的陽傘位置一樣算） */
 (() => { const R = Math.atan2(0.93, -0.37), sx = Math.sin(R), sz = Math.cos(R), U = [[37.6, -15.2], [39.6, -11.2], [41.4, -7.2]]; for (const q of LW_BEACH.P) if (q.towel != null){ const [x, z] = U[q.towel]; q.x = x + sx * 0.2 + (-sz) * 1.0; q.z = z + sz * 0.2 + sx * 1.0; q.r = R; } })();
 const LW_TSAY = ['今天天氣好好！', '水好涼～', '你也來玩水嗎？', '這裡的夕陽很漂亮喔', '剛剛有一群小魚從我腳邊游過去', '我是坐船來這個村子玩的'];
 function lwTPath(){ return navPath({ id:'lwtF', x: FERRY.at[0] + 1.2, z: FERRY.at[1] - 1.2 }, { id:'lwtE', x: 38.5, z: -13.5 }); }   /* 港口阿海那裡 → 沙灘入口 */
+function lwBeachOpenFor(o, i, t){ let ok = false; try { const W = WEATHERS[Env.wx] || {}, h = gameHour(); ok = h >= 8 + i * 0.45 && h < 17.5 - (3 - i) * 0.45 && !(W.rain > 0) && !W.storm && !lwStorm(); } catch(e){}   /* 早上一個一個來、傍晚一個一個走（最後一個 17:30） */
+  if (ok){ o.rainAt = null; return true; } if (o.st === 'here' || o.st === 'in'){ if (o.rainAt == null) o.rainAt = t + i * 7 + Math.random() * 4; return t < o.rainAt; } return false; }   /* 突然下雨也不會同時走：間隔大約 7 秒 */
 function lwBeachOpen(){ try { const W = WEATHERS[Env.wx] || {}; const h = gameHour(); return h >= 8 && h < 17.5 && !(W.rain > 0) && !W.storm && !lwStorm(); } catch(e){ return false; } }
 function lwBeachBuild(){ const B = { T: [], ball: null, k: 0, kick: null, said: 0 };
-  for (const q of LW_BEACH.P){ const f = new Fisher({ shirt: q.look[0], hat: q.look[1], name: '遊客', kind: 'npc' }); f.av.g.visible = false; f.pos.x = q.x; f.pos.z = q.z; const o = { q, f, st: lwBeachOpen() ? 'here' : 'gone', ring: null };
+  for (const q of LW_BEACH.P){ const f = new Fisher({ shirt: q.look[0], hat: q.look[1], name: q.name || '遊客', kind: 'npc' }); f.av.g.visible = false; f.pos.x = q.x; f.pos.z = q.z; const o = { q, f, st: lwBeachOpen() ? 'here' : 'gone', ring: null };
     if (q.k === 'swim'){ const r = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.13, 8, 18), mat(q.ring, 0.5)); r.rotation.x = Math.PI / 2; r.userData.dyn = r.userData.keep = true; r.visible = false; scene.add(r); o.ring = r; }
     B.T.push(o); }
   { const c = document.createElement('canvas'); c.width = 64; c.height = 32; const g = c.getContext('2d'); ['#ffffff', '#e8473a', '#ffffff', '#3a6fd8', '#ffffff', '#f0c020'].forEach((col, i) => { g.fillStyle = col; g.fillRect(i * 64 / 6, 0, 64 / 6 + 1, 32); }); const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace;
@@ -1874,7 +1877,7 @@ function lwBeachBuild(){ const B = { T: [], ball: null, k: 0, kick: null, said: 
   LW.beach = B; }
 function lwBeachTick(dt, t){ const C = LW_BEACH.c, d0 = Math.hypot(me.pos.x - C[0], me.pos.z - C[1]), near = d0 < 70 && !onIsle && !Dive.on && !House.on && !inIndoor();
   if (!LW.beach){ if (!near && !(Boot.done && performance.now() - Boot.t0 > 20000)) return; lwBeachBuild(); } const B = LW.beach, open = lwBeachOpen();   /* v604 作者：「這區的 NPC 臉都很慢才畫」→ 以前走到附近才做遊客，眼睛圖片那時候才開始下載；現在進遊戲 20 秒後就先做好藏著 */
-  for (const o of B.T){ const f = o.f, q = o.q;
+  for (const o of B.T){ const f = o.f, q = o.q, open = lwBeachOpenFor(o, B.T.indexOf(o), t);
     if (!near){ f.av.g.visible = false; if (o.ring) o.ring.visible = false; try { f.tag.style.display = 'none'; } catch(e){} o.st = open ? 'here' : 'gone'; continue; }
     /* 來／走：在你附近時用走的──遊客是坐阿海的船來玩的，從港口那邊沿著路走過來，走的時候走回港口（v585 作者：「NPC們都要有走路回家的動畫」）；你不在附近時直接出現或消失 */
     const TP = lwTPath(), sp = 1.9;
@@ -1885,7 +1888,7 @@ function lwBeachTick(dt, t){ const C = LW_BEACH.c, d0 = Math.hypot(me.pos.x - C[
     const goTo = (tx, tz) => { const dx = tx - f.pos.x, dz = tz - f.pos.z, dd = Math.hypot(dx, dz); if (dd < 0.2) return true; f.pos.x += dx / dd * Math.min(dd, sp * dt); f.pos.z += dz / dd * Math.min(dd, sp * dt); f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 1 - Math.exp(-8 * dt)); return false; };
     if (o.st === 'in'){ walking = true; if (o.s < 0){ o.s += sp * dt; f.av.g.visible = false; f.tag.style.display = 'none'; continue; } if (o.s < TP.len){ o.s += sp * dt; const [x, z, hd] = navAt(TP, o.s); f.pos.x = x; f.pos.z = z; f.rot = lerpAngle(f.rot, hd, 1 - Math.exp(-8 * dt)); } else if (goTo(q.x, q.z)){ o.st = 'here'; walking = false; } }
     else if (o.st === 'out'){ walking = true; if (o.s == null){ const e = TP.pts[TP.pts.length - 1]; if (goTo(e[0], e[1])) o.s = TP.len; } else { o.s -= sp * dt; const [x, z, hd] = navAt(TP, Math.max(0, o.s)); f.pos.x = x; f.pos.z = z; f.rot = lerpAngle(f.rot, hd + Math.PI, 1 - Math.exp(-8 * dt)); if (o.s <= 0){ o.st = 'gone'; f.av.g.visible = false; f.tag.style.display = 'none'; continue; } } }
-    if (walking){ f.speed = sp; f.sitting = false; f.emote = null; f.baseY = groundHeight(f.pos.x, f.pos.z); if (o.ring) o.ring.visible = false; }
+    if (walking){ f.speed = sp; f.sitting = false; f.emote = null; f.baseY = Math.max(groundHeight(f.pos.x, f.pos.z), WATER_LEVEL - 0.55); if (o.ring){ o.ring.visible = true; o.ring.position.set(f.pos.x, f.baseY + 0.62, f.pos.z); o.ring.rotation.z = 0; } }   /* v605 走路回去的時候泳圈套在腰上帶著走 */
     else { o.st = 'here'; f.speed = 0; lwTouristPose(o, B, dt, t); }
     const dm = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z);
     if (o.st === 'here' && dm < 4.5 && t > LW.talkAt){ LW.talkAt = t + rand(14, 24); f.rot = lerpAngle(f.rot, Math.atan2(me.pos.x - f.pos.x, me.pos.z - f.pos.z), 0.6); f.say(lwTouristLine(), '', 4.5); }
@@ -4904,6 +4907,10 @@ const NPC_STYLE = [
   ['釣蝦場老闆', { look:'h0c0s3e0', sc:[1.1, 1.0], fh:'mus' }],
   ['館長', { look:'h4c0s0e5', sc:[0.95, 1.02] }],
   ['寵物店', { look:'h6c6s0e3', sc:[0.92, 0.92] }],
+  ['小葵・觀光客', { look:'h15c2s0e4', sc:[0.93, 0.95], gear:{ hat:'hat_none', top:'top_vtee', pants:'pants_shorts', shoes:'shoes_sandals', face:'face_happy' } }],   /* v605 沙灘遊客有名字、有臉（以前叫「遊客」，用預設的小圓點眼睛，遠一點就看不到眼睛） */
+  ['阿哲・觀光客', { look:'h1c0s1e2', sc:[1.02, 1.0], gear:{ hat:'hat_bucket', top:'top_hawaii', pants:'pants_shorts', shoes:'shoes_sandals', face:'face_normal' } }],
+  ['美美・觀光客', { look:'h3c9s0e3', sc:[0.9, 0.9], gear:{ hat:'hat_none', top:'top_tank', pants:'pants_shorts', face:'face_normal' } }],
+  ['大頭・觀光客', { look:'h2c1s2e0', sc:[1.05, 0.95], gear:{ hat:'hat_cap', top:'top_tank', pants:'pants_shorts', face:'face_normal' } }],
 ];
 /* ============ v442 下雨天村民會穿雨衣（玩家建議） ============
    天氣是大家一樣的，所以每個人看到的村民都同時穿上、同時脫掉。雨衣是黃色為主，也有藍、紅、綠（照名字固定，不會每次換顏色）。
