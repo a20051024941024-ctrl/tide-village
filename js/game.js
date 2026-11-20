@@ -5080,8 +5080,8 @@ class Fisher {
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
-    this._uf = frameNo; const fpMe = this === me && FP.act && FP.tip && !this.heldTip, showBob = (this.fishing || this.heldTip) && this.bobState !== 'none' && !(this === me && F.phase === 'idle') && (a.g.visible || fpMe) && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
-    this.bob.visible = showBob; this.line.visible = showBob;
+    this._uf = frameNo; const fpMe = this === me && FP.act && FP.tip && !this.heldTip, showBob = !!(this.fishing || this.heldTip) && this.bobState !== 'none' && !(this === me && F.phase === 'idle') && (a.g.visible || fpMe) && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
+    this.bob.visible = !!showBob; this.line.visible = !!showBob;   /* v632 作者：「下來再拉桿就變這樣」→ showBob 是 null 時 three.js 當成看得到（它只認 === false），線和浮標就留在水上。一定要是 true/false */
     if (showBob){
       if (this.flying && this.flying.delay > 0){ this.flying.delay -= dt; (fpMe ? FP.tip : this.av.tip).getWorldPosition(this.flying.from); this.bob.position.copy(this.flying.from); }   // 甩到一半浮標才飛出去
       else if (this.flying){
