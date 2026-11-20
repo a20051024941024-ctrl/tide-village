@@ -11118,7 +11118,7 @@ function poolTrace(T, dx, dy){ const c = T.b[0], R = PB.R; let best = 1e9, hit =
    球：原本的顏色和號碼不變（才分得出全色、花色），兩個號碼中間各畫一條你圖鑑裡釣過的魚；桌面：變成水面，你魚缸裡的魚的影子在下面慢慢游 */
 function poolSkinOn(){ try { return LS.get('tide.poolSkin', '') === 'fish'; } catch(e){ return false; } }
 function poolFishIds(){ const L = Object.keys(rec.count || {}).filter(k => FISH_BY_ID[k] && !FISH_BY_ID[k].of && !FISH_BY_ID[k].fest).sort((a, b) => (rec.count[b] || 0) - (rec.count[a] || 0)); return L.length ? L : ['tilapia', 'carp', 'ayu']; }
-/* v610 作者：「魚花色的球看不清楚，水族桌面也完全不行」→ 重做：
+/* v611 作者：「魚花色的球看不清楚，水族桌面也完全不行」→ 重做：
    球：解析度加倍，球身就是那條魚的顏色（全色球整顆、花色球是中間那一圈），正面和背面各畫一條大大的魚（白色描邊），號碼改到兩側的小白圓
    桌面：清澈淺海（中間亮、邊緣深），兩層會流動的水光網紋，下面游的是你魚缸裡那些魚「真正的形狀」的影子 */
 function poolFishTex(n, fid){ const W = 256, H = 128, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), f = FISH_BY_ID[fid] || {}, base = poolBallCol(n), fc = f.color || base;
@@ -11303,7 +11303,7 @@ function poolAimSend(){ const T = Pool.tables[Pool.ti]; if (Pool.spec || !poolMy
 /* 鏡頭：打球（或觀戰）時從球桌正上方往下看；直的螢幕球桌直著放、橫的螢幕橫著放 */
 function poolCam(){ const T = Pool.tables[Pool.ti]; if (!Pool.on || !T) return false; const asp = camera.aspect || 1, th = Math.tan(camera.fov * Math.PI / 360), port = asp < 1, needV = port ? PB.HL + 0.8 : PB.HW + 0.56, needH = port ? PB.HW + 0.5 : PB.HL + 0.5, H = Math.max(needV / th, needH / (th * asp));
   const ty = POOLH.y + PB.TOP; camera.up.set(port ? 0 : 1, 0, port ? 1 : 0); let ofx = 0, ofz = port ? 0.08 : 0, HH = H;
-  /* v610「🔍 近看」：鏡頭拉近一倍、跟著母球，看得清楚球上的魚，也比較好瞄 */
+  /* v611「🔍 近看」：鏡頭拉近一倍、跟著母球，看得清楚球上的魚，也比較好瞄 */
   if (Pool.zoom){ const c = T.b[0], tx = clamp(c.on ? c.y : 0, -PB.HW * 0.5, PB.HW * 0.5), tz = clamp(c.on ? c.x : 0, -PB.HL * 0.5, PB.HL * 0.5); Pool.zx = Pool.zx == null ? tx : Pool.zx + (tx - Pool.zx) * 0.08; Pool.zz = Pool.zz == null ? tz : Pool.zz + (tz - Pool.zz) * 0.08; ofx = Pool.zx; ofz = Pool.zz; HH = H * 0.5; } else { Pool.zx = Pool.zz = null; }
   camera.position.set(T.ox + ofx, ty + HH, T.oz + ofz); camera.lookAt(T.ox + ofx, ty, T.oz + ofz);   /* 球桌往下挪一點，上面留給名字和提示 */ camLook.set(T.ox, ty, T.oz); Pool.upDirty = true; return true; }
 function poolPick(e){ const T = Pool.tables[Pool.ti]; if (!T) return null; Pool.rc = Pool.rc || new THREE.Raycaster(); Pool.pl = Pool.pl || new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); Pool.v2 = Pool.v2 || new THREE.Vector2(); Pool.v3 = Pool.v3 || new THREE.Vector3();
