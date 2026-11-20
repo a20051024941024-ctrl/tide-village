@@ -15293,7 +15293,7 @@ function fkBuild(mask, len, y0, nz){ const g = new THREE.Group(), parts = [];
     for (let i = 0; i < 6; i++) fkBox(p, 1.25, 0.06, (len + 0.6) / 6 - 0.03, wood, 0, -0.03, -len / 2 - 0.3 + (i + 0.5) * (len + 0.6) / 6);
     for (const sx of [-0.55, 0.55]) for (const sz of [-len / 2 + 0.2, len / 2 - 0.1]){ const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.4, 6), dark); leg.position.set(sx, -1.2, sz); p.add(leg); }
     for (const sx of [-0.6, 0.6]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.7, 6), dark); post.position.set(sx, 0.35, len / 2 - 0.1); p.add(post); } }
-  { const p = P(); p.position.set(0, cy, cz);   /* 摺疊椅：鋁管 X 形腳、藍色布面、靠背 */
+  { const p = P(); p.position.set(0, cy, cz - 0.3);   /* v627 作者：「腳在屁股坐的位置」→ 量到坐下時屁股在座位中心後面 0.34，椅子往後移 0.3 讓屁股坐在椅面上 */   /* 摺疊椅：鋁管 X 形腳、藍色布面、靠背 */
     /* v622 作者：「可以讓角色真的坐在椅子上嗎」→ 椅子高一點（座面 0.48，腳踩得到地），坐的高度照公園長椅量的：屁股比座面低 0.23 */
     for (const sx of [-0.24, 0.24]) for (const s of [1, -1]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.64, 6), alu); r.position.set(sx, 0.25, 0); r.rotation.x = s * 0.72; p.add(r); }
     fkBox(p, 0.5, 0.04, 0.44, cloth, 0, 0.46, 0);
@@ -15335,7 +15335,7 @@ function fkPlace(){ const why = fkWhy(); if (why){ toast(why); return false; } c
   if (mask & 2){ const dx = Math.sin(w.face), dz = Math.cos(w.face); for (const d of [1.2, 2.0, 2.6]) if (!waterAt(w.x + dx * d, w.z + dz * d)){ toast('前面的水不夠寬，釣台伸不出去，換個地方'); return false; } }
   fkClear(true); const g = fkBuild(mask, len, y0 - w.y, w.nz); g.position.set(w.x, w.y, w.z); g.rotation.y = w.face; scene.add(g); FK.g = g; FK.at = now(); FK.net = [];
   const dx = Math.sin(w.face), dz = Math.cos(w.face), sl = mask & 2 ? len : 0;
-  const seat = { x: w.x + dx * (sl + 0.05), z: w.z + dz * (sl + 0.05), face: w.face, y: (mask & 2 ? y0 : w.y) + 0.25, nook: true, gear: true, reach: mask & 2 ? 3.4 : 1.4, ret: [w.x - dx * 0.5, w.z - dz * 0.5] };
+  const seat = { x: w.x + dx * (sl + 0.05), z: w.z + dz * (sl + 0.05), face: w.face, y: (mask & 2 ? y0 : w.y) + 0.2, nook: true, gear: true, reach: mask & 2 ? 3.4 : 1.4, ret: [w.x - dx * 0.5, w.z - dz * 0.5] };
   FK.seat = seat; CHAIRS.push(seat); FK.set = { x: w.x, z: w.z, face: w.face, y: w.y, mask, y0, isle: !!onIsle, nz: w.nz };
   try { SFX.door(); } catch(e){} fkPop(g, FK.at); sitDown(seat); FK.sitT = now();
   setTimeout(() => toast(`🎣 裝備擺好了！${mask & 4 ? '等魚的時候可以按「跳」站起來走開，竿子會插在竿架上。' : '按「拋竿」就能坐著釣。'}`), 500);
