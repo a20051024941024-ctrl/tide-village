@@ -1789,7 +1789,28 @@ function lwFleetTick(dt, t){ lwFleetInit(); if (!LW.fleet) return; const h = gam
   LW.lastPh = anyOut; }
 const LW_BOW = 0;   /* 船頭朝向的修正（模型的船頭在 +z） */
 function lwHorn(){ try { tone(146, 0.9, 'sawtooth', 0.035, 140); setTimeout(() => tone(146, 1.3, 'sawtooth', 0.035, 138), 1050); } catch(e){} }
-function lwCaptain(F, S, x, z, d, dt, t){ const show = S.st !== 'dock' && d < 60 && !onIsle && !Dive.on && !House.on && !inIndoor();
+/* v585 船長走路上下班：家在居民區（RES_HOMES 的 cap0～2），出港前從家走到碼頭上船，回港後下船走回家。也是只看時間算，大家看到的一樣 */
+function lwCapPath(F){ if (F.walk) return F.walk; const [bx, bz] = F.R.berth; let on = null; for (let r = 0.5; r < 6 && !on; r += 0.5) for (let a = 0; a < 6.28; a += 0.2){ const x = bx + Math.cos(a) * r, z = bz + Math.sin(a) * r; if (isLand(x, z) || deckAt(x, z)){ on = [x, z]; break; } }
+  const H = RES_HOMES.find(q => q.who === 'cap' + F.i), sd = H.x < -47 ? 1 : -1, hx = H.x + sd * 3.3, hz = H.z;
+  const c = navPath({ id: 'lwb' + F.i, x: on ? on[0] : bx, z: on ? on[1] : bz }, { id: 'lwh' + F.i, x: hx, z: hz });
+  return (F.walk = { c, T: c.len / 1.4 / (DAY_LEN / 24) }); }
+function lwCapAt(F, h, storm){ const W = lwCapPath(F), S = lwFleetAt(F, h, storm), A = F.ret + F.T, g = 0.03;
+  if (S.st !== 'dock') return { on: true };
+  if (storm) return { home: true };
+  const m = lwHourDiff(h, F.dep - g - W.T); if (m < W.T) return { walk: true, s: W.c.len * (1 - m / W.T), toBoat: true };   /* 早上：家 → 碼頭 */
+  if (m < W.T + g) return { on: true };   /* 上了船，等出港 */
+  const e = lwHourDiff(h, A); if (e < g) return { on: true };   /* 剛靠岸 */
+  if (e < g + W.T) return { walk: true, s: W.c.len * ((e - g) / W.T) };   /* 傍晚：碼頭 → 家 */
+  return { home: true }; }
+function lwCapHome(i){ try { const F = LW.fleet && LW.fleet.find(q => q.i === i); if (!F) return true; return !!lwCapAt(F, gameHour(), lwStorm()).home; } catch(e){ return true; } }
+function lwCaptain(F, S, x, z, d, dt, t){ const P = lwCapAt(F, gameHour(), lwStorm()), vis0 = !onIsle && !Dive.on && !House.on && !inIndoor();
+  if (P.walk){ const [wx, wz, hd] = navAt(F.walk.c, P.s), dw = Math.hypot(me.pos.x - wx, me.pos.z - wz);
+    if (!(vis0 && dw < 60)){ if (F.cap){ F.cap.av.g.visible = false; try { F.cap.tag.style.display = 'none'; } catch(e){} } return; }
+    if (!F.cap) F.cap = new Fisher({ shirt: F.R.look[0], hat: F.R.look[1], name: F.R.name, kind: 'npc' });
+    const c = F.cap; c.av.g.visible = true; c.pos.x = wx; c.pos.z = wz; c.baseY = groundHeight(wx, wz); c.sitting = false; c.bend = 0; c.speed = 1.4; c.rot = lerpAngle(c.rot, hd + (P.toBoat ? Math.PI : 0), 1 - Math.exp(-dt * 8));
+    if (dw < 10 && t > F.talkAt){ F.talkAt = t + rand(20, 34); c.say(P.toBoat ? '早啊！要出海囉' : '今天收工，回家吃飯囉', '', 3.5); }
+    c.update(dt, t); if (dw < 40) c.placeTag(); else c.tag.style.display = 'none'; return; }
+  const show = !!P.on && d < 60 && vis0;
   if (!show){ if (F.cap){ F.cap.av.g.visible = false; try { F.cap.tag.style.display = 'none'; } catch(e){} } return; }
   if (!F.cap){ const c = new Fisher({ shirt: F.R.look[0], hat: F.R.look[1], name: F.R.name, kind: 'npc' }); F.cap = c; }
   const c = F.cap, b = F.b, ry = b.g.rotation.y, lx = 0, lz = 0.2, s = b.g.scale.x;   /* 站在駕駛艙前面的甲板（船頭在 +z） */
@@ -1802,13 +1823,14 @@ function lwCaptain(F, S, x, z, d, dt, t){ const show = S.st !== 'dock' && d < 60
 const LW_DECK = 1.1;
 
 /* ---- 南方沙灘的遊客（沙灘、陽傘是 buildBeach 本來就有的） ---- */
-const LW_BEACH = { c:[40, -6], exit:[33.5, -19.5],
+const LW_BEACH = { c:[40, -6],
   P:[ { k:'sun', towel:0, look:['#f5a5d8', '#ffffff'] }, { k:'sun', towel:2, look:['#7db7d7', '#ffd36a'] },
       { k:'swim', x:49.6, z:-11.5, look:['#f6a96b', '#3fbf9d'], ring:'#ff6a5a' }, { k:'swim', x:50.2, z:-4.5, look:['#9fc7a8', '#f17b6d'], ring:'#ffd34a' },
       { k:'ball', x:35.4, z:-3.1, look:['#b9a4ff', '#f6f0dd'] }, { k:'ball', x:35.4, z:1.5, look:['#e8473a', '#18334a'] } ] };   /* v585 丟球的兩個人改在排球場上，隔著網打 */
 /* v585 曬太陽的人坐在海灘巾上（跟 buildBeach 的陽傘位置一樣算） */
 (() => { const R = Math.atan2(0.93, -0.37), sx = Math.sin(R), sz = Math.cos(R), U = [[37.6, -15.2], [39.6, -11.2], [41.4, -7.2]]; for (const q of LW_BEACH.P) if (q.towel != null){ const [x, z] = U[q.towel]; q.x = x + sx * 0.2 + (-sz) * 1.0; q.z = z + sz * 0.2 + sx * 1.0; q.r = R; } })();
 const LW_TSAY = ['今天天氣好好！', '水好涼～', '你也來玩水嗎？', '這裡的夕陽很漂亮喔', '剛剛有一群小魚從我腳邊游過去', '我是坐船來這個村子玩的'];
+function lwTPath(){ return navPath({ id:'lwtF', x: FERRY.at[0] + 1.2, z: FERRY.at[1] - 1.2 }, { id:'lwtE', x: 38.5, z: -13.5 }); }   /* 港口阿海那裡 → 沙灘入口 */
 function lwBeachOpen(){ try { const W = WEATHERS[Env.wx] || {}; const h = gameHour(); return h >= 8 && h < 17.5 && !(W.rain > 0) && !W.storm && !lwStorm(); } catch(e){ return false; } }
 function lwBeachBuild(){ const B = { T: [], ball: null, k: 0, kick: null, said: 0 };
   for (const q of LW_BEACH.P){ const f = new Fisher({ shirt: q.look[0], hat: q.look[1], name: '遊客', kind: 'npc' }); f.av.g.visible = false; f.pos.x = q.x; f.pos.z = q.z; const o = { q, f, st: lwBeachOpen() ? 'here' : 'gone', ring: null };
@@ -1821,14 +1843,16 @@ function lwBeachTick(dt, t){ const C = LW_BEACH.c, d0 = Math.hypot(me.pos.x - C[
   if (!LW.beach){ if (!near) return; lwBeachBuild(); } const B = LW.beach, open = lwBeachOpen();
   for (const o of B.T){ const f = o.f, q = o.q;
     if (!near){ f.av.g.visible = false; if (o.ring) o.ring.visible = false; try { f.tag.style.display = 'none'; } catch(e){} o.st = open ? 'here' : 'gone'; continue; }
-    /* 來／走：在你附近時用走的（從北邊的小路），你不在時直接出現或消失 */
-    if (open && o.st === 'gone'){ o.st = 'in'; f.pos.x = LW_BEACH.exit[0]; f.pos.z = LW_BEACH.exit[1]; }
-    if (!open && (o.st === 'here' || o.st === 'in')){ o.st = 'out'; f.sitting = false; if (Math.random() < 0.5) f.say(['要下雨了，快收！', '回去囉～', '明天再來玩'][Math.floor(Math.random() * 3)], '', 3); }
-    let tx = q.x, tz = q.z; if (o.st === 'out'){ tx = LW_BEACH.exit[0]; tz = LW_BEACH.exit[1]; }
+    /* 來／走：在你附近時用走的──遊客是坐阿海的船來玩的，從港口那邊沿著路走過來，走的時候走回港口（v585 作者：「NPC們都要有走路回家的動畫」）；你不在附近時直接出現或消失 */
+    const TP = lwTPath(), sp = 1.9;
+    if (open && o.st === 'gone'){ o.st = 'in'; o.s = -B.T.indexOf(o) * 2.4; }   /* 一個一個走過來，不要疊在一起 */
+    if (!open && (o.st === 'here' || o.st === 'in')){ o.s = o.st === 'in' && o.s < TP.len ? o.s : null; o.st = 'out'; f.sitting = false; if (Math.random() < 0.5) f.say(['要下雨了，快收！', '回去囉～', '明天再來玩'][Math.floor(Math.random() * 3)], '', 3); }
     if (o.st === 'gone'){ f.av.g.visible = false; if (o.ring) o.ring.visible = false; f.tag.style.display = 'none'; continue; }
-    f.av.g.visible = true; const dx = tx - f.pos.x, dz = tz - f.pos.z, dd = Math.hypot(dx, dz);
-    if ((o.st === 'in' || o.st === 'out') && dd > 0.2){ const sp = 1.9; f.pos.x += dx / dd * Math.min(dd, sp * dt); f.pos.z += dz / dd * Math.min(dd, sp * dt); f.speed = sp; f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 1 - Math.exp(-8 * dt)); f.baseY = groundHeight(f.pos.x, f.pos.z); f.sitting = false; if (o.ring) o.ring.visible = false; }
-    else if (o.st === 'out'){ o.st = 'gone'; f.av.g.visible = false; f.tag.style.display = 'none'; continue; }
+    f.av.g.visible = true; let walking = false;
+    const goTo = (tx, tz) => { const dx = tx - f.pos.x, dz = tz - f.pos.z, dd = Math.hypot(dx, dz); if (dd < 0.2) return true; f.pos.x += dx / dd * Math.min(dd, sp * dt); f.pos.z += dz / dd * Math.min(dd, sp * dt); f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 1 - Math.exp(-8 * dt)); return false; };
+    if (o.st === 'in'){ walking = true; if (o.s < 0){ o.s += sp * dt; f.av.g.visible = false; f.tag.style.display = 'none'; continue; } if (o.s < TP.len){ o.s += sp * dt; const [x, z, hd] = navAt(TP, o.s); f.pos.x = x; f.pos.z = z; f.rot = lerpAngle(f.rot, hd, 1 - Math.exp(-8 * dt)); } else if (goTo(q.x, q.z)){ o.st = 'here'; walking = false; } }
+    else if (o.st === 'out'){ walking = true; if (o.s == null){ const e = TP.pts[TP.pts.length - 1]; if (goTo(e[0], e[1])) o.s = TP.len; } else { o.s -= sp * dt; const [x, z, hd] = navAt(TP, Math.max(0, o.s)); f.pos.x = x; f.pos.z = z; f.rot = lerpAngle(f.rot, hd + Math.PI, 1 - Math.exp(-8 * dt)); if (o.s <= 0){ o.st = 'gone'; f.av.g.visible = false; f.tag.style.display = 'none'; continue; } } }
+    if (walking){ f.speed = sp; f.sitting = false; f.baseY = groundHeight(f.pos.x, f.pos.z); if (o.ring) o.ring.visible = false; }
     else { o.st = 'here'; f.speed = 0; lwTouristPose(o, B, dt, t); }
     const dm = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z);
     if (o.st === 'here' && dm < 4.5 && t > LW.talkAt){ LW.talkAt = t + rand(14, 24); f.rot = lerpAngle(f.rot, Math.atan2(me.pos.x - f.pos.x, me.pos.z - f.pos.z), 0.6); f.say(lwTouristLine(), '', 4.5); }
@@ -9452,7 +9476,7 @@ async function tyPick(){ const it = tyNearItem(), gb = $('#gatherBtn'); if (!it 
    這裡做看得到的部分：每一棟門口一塊門牌、一盞門燈。門燈晚上亮＝屋主在家（照伺服器的作息算，大家看到的一樣）；人還沒回來就是暗的。
    沒連線的時候不知道作息：晚上有住人的都亮。空屋不亮。 */
 const RES_HOMES = [{ id:'home_chief', who:'chief', name:'村長家', x:-53, z:16 }, { id:'home_ling', who:'ling', name:'阿綾家', x:-41, z:16 }, { id:'home_mu', who:'mu', name:'阿木家', x:-53, z:24 }, { id:'home_fu', who:'fu', name:'阿福家', x:-41, z:24 },
-  { id:'home_gang', who:'gang', name:'老港家', x:-53, z:32 }, { id:null, who:null, name:'空屋', x:-41, z:32 }, { id:null, who:null, name:'空屋', x:-53, z:40 }, { id:null, who:null, name:'空屋', x:-41, z:40 }];
+  { id:'home_gang', who:'gang', name:'老港家', x:-53, z:32 }, { id:null, who:'cap0', name:'阿財家', x:-41, z:32 }, { id:null, who:'cap1', name:'阿春家', x:-53, z:40 }, { id:null, who:'cap2', name:'海伯家', x:-41, z:40 }];   /* v585 三間空屋給三位漁船船長住（作者：「他們沒有自己的家嗎」「NPC們都要有走路回家的動畫」） */
 const RES = { built:false, at:0 };
 function resBuild(){ RES.built = true; const g = new THREE.Group();
   for (const H of RES_HOMES){ const s = H.x < -47 ? 1 : -1, px = H.x + s * 3.0, y = groundHeight(px, H.z);   /* 新美術的房子有遮雨棚，往巷子挪出來一點才不會被擋住 */
@@ -9470,7 +9494,7 @@ function resBuild(){ RES.built = true; const g = new THREE.Group();
     H.bm = bm; H.gl = gl; H.lit = 0; H.door = [px + s * 0.3, H.z];
     try { addCircleCol(px, H.z + 1.25, 0.12); addCircleCol(px, H.z - 1.25, 0.12); } catch(e){} }
   scene.add(g); RES.g = g; }
-function resHomeIn(H){ if (!H.who) return false; if (H.who === 'chief') return true;   /* 村長要發任務，人一直在廣場（v250），家裡的燈晚上照樣留著 */ const r = World.rows && World.rows[H.who]; if (!Cloud.on || !r) return true;   /* 沒連線：不知道作息，當成在家 */
+function resHomeIn(H){ if (!H.who) return false; if (H.who === 'chief') return true; if (/^cap\d$/.test(H.who)) return lwCapHome(+H.who.slice(3));   /* 村長要發任務，人一直在廣場（v250），家裡的燈晚上照樣留著 */ const r = World.rows && World.rows[H.who]; if (!Cloud.on || !r) return true;   /* 沒連線：不知道作息，當成在家 */
   return r.place === H.id && (r.act === 'sleep' || r.act === 'rest') && (r.from === r.place || worldNow() >= Date.parse(r.arr)); }
 function resTick(dt){ if (!RES.built){ if (frameNo < 40) return; try { resBuild(); } catch(e){ RES.built = true; console.warn('resBuild', e); return; } }
   if (!RES.g) return; const show = !House.on && !inIndoor() && !Dive.on && !onIsle; if (RES.g.visible !== show) RES.g.visible = show; if (!show) return;
@@ -18019,6 +18043,7 @@ function renderTab(){
     ]);
     sec('📜 每日任務、釣魚活動', [
       '🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。',
+      '🏠 三位船長住在居民區（阿財家、阿春家、海伯家）：天亮前從家裡走到碼頭上船，傍晚靠岸後下船走回家，到家門燈就會亮；颱風天待在家。沙灘的遊客是坐阿海的船來玩的，會從港口沿著路走到沙灘，要走的時候走回港口。',
       '🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人坐在海灘巾上曬太陽、有人套著泳圈在淺水玩、有人在丟沙灘球（走過去碰到低低的球會把它踢飛，只有你自己看得到）。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。',
       '🐦 到處逛的時候看海面：遠遠看到幾隻海鳥在水面上繞，那裡就有掠食魚，走過去把浮標拋在鳥的旁邊比較容易上鉤（下雨和晚上鳥不出來）。',
       '💬 村長、阿綾、阿木、阿福、老港會提起你最近做的事：釣到傳說魚、釣到自己最重的一條、一天放流 5 條、一天撿 5 個垃圾、好幾天沒來。',
