@@ -6220,6 +6220,7 @@ function actionDown(){
    /* 紅樹林泥灘：徒手抓 */
     { const lt = nearLitter(); if (lt){ act.classList.remove('down'); pickLitter(lt); return; } }   /* 水圳：撿垃圾 */
     { const wn = nearWildNode(); if (wn){ act.classList.remove('down'); wildGather(wn); return; } }   /* v590 漂流島：撿材料 */
+    { const wf = !Wild.busy && !Wild.build && nearWildFire(); if (wf){ act.classList.remove('down'); wildFireAdd(wf); return; } }   /* v591 營火：加木頭 */
     if (nearCage()){ act.classList.remove('down'); openSheet('cage'); return; }   /* 箱網 */
     if (nearSeedShop()){ act.classList.remove('down'); Farm.view = 'shop'; openSheet('farm'); return; }   /* 種子攤 */
     if (nearSeaDive()){ act.classList.remove('down'); seaDive(); return; }   /* 小島碼頭的潛水梯：下去海底花園 */
@@ -6644,7 +6645,9 @@ function updateFishing(dt, t){
     const crN = nearCritter();
     const ltN = !crN && nearLitter();
     const wnN = !crN && !ltN && nearWildNode();
+    const wfN = !crN && !ltN && !wnN && !Wild.build && nearWildFire();
     if (crN){ label = '抓！'; sub = crN.kind === 'crab' ? '🦀 招潮蟹' : '🐟 彈塗魚'; cls = 'bite'; }
+    else if (wfN){ const lt = Math.max(0, (wfN.fuel || 0) - Date.now()); label = '加木頭'; sub = lt > 0 ? `🔥 還能燒 ${Math.ceil(lt / 60000)} 分鐘・🪵 ${wildSt().bag.wood | 0}` : `🔥 火熄了・🪵 ${wildSt().bag.wood | 0}`; cls = 'shop'; }
     else if (wnN){ const I = WILD_ITEMS[wnN.n.k]; label = I.verb; sub = `${I.ic} ${I.n}・荒島背包 ${wildSlots(wildSt().bag)}/${WILD_BAG}`; cls = 'shop'; }
     else if (ltN){ label = '撿起來'; sub = `${ltN.T.icon} ${ltN.T.name}・💙+1`; cls = 'shop'; }
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
@@ -7297,7 +7300,16 @@ const WILD_ITEMS = {
   grass:  { n:'草',     ic:'🌾', verb:'割草',     get:[2, 3], cd:240, anim:'farmplant' },
   bamboo: { n:'竹子',   ic:'🎋', verb:'砍竹子',   get:[1, 1], cd:420, anim:'farmwater' },
   leaf:   { n:'大葉子', ic:'🍃', verb:'摘大葉子', get:[1, 2], cd:300, anim:'farmplant' },
-  coco:   { n:'椰子',   ic:'🥥', verb:'搖椰子樹', get:[1, 1], cd:600, anim:'farmwater' } };
+  coco:   { n:'椰子',   ic:'🥥', verb:'搖椰子樹', get:[1, 1], cd:600, anim:'farmwater' },
+  rope:   { n:'草繩',   ic:'🪢' }, bone: { n:'魚骨', ic:'🦴' }, hook: { n:'骨頭魚鉤', ic:'🪝' }, rod: { n:'手作竹竿', ic:'🎣' } };
+/* v591 荒島 B：製作。東西做好放背包；營火、遮雨棚、小木屋做好會蓋在你面前（要站在島上的空地） */
+const WILD_RECIPES = [
+  { id:'rope',    k:'item', n:'草繩',     ic:'🪢', need:{ grass:3 }, d:'綁東西都要用。' },
+  { id:'hook',    k:'item', n:'骨頭魚鉤', ic:'🪝', need:{ bone:2 }, d:'吃完魚剩下的魚骨磨成的（吃東西下一次更新開放）。' },
+  { id:'rod',     k:'item', n:'手作竹竿', ic:'🎣', need:{ bamboo:3, rope:2, hook:1 }, d:'荒島上唯一的釣竿，只能在岸邊釣（荒島的魚之後開放）。', one:true },
+  { id:'fire',    k:'camp', n:'營火',     ic:'🔥', need:{ wood:5, stone:3 }, d:'一塊漂流木燒 4 分鐘，靠近按「加木頭」。晚上取暖、烤魚（之後開放）。', max:3, rad:1.0, bt:3 },
+  { id:'shelter', k:'camp', n:'遮雨棚',   ic:'⛺', need:{ wood:8, leaf:6, rope:2 }, d:'下雨時站在下面不會淋濕。', max:2, rad:1.7, bt:5 },
+  { id:'cabin',   k:'camp', n:'小木屋',   ic:'🛖', need:{ wood:20, bamboo:10, leaf:12, rope:6, stone:6 }, d:'有門、有床。之後可以在裡面睡覺跳過黑夜、倒下時在這裡醒來。', max:1, rad:2.6, bt:9 } ];
 const WILD_BAG = 12, WILD_STACK = 20;
 var Wild = { built:false, g:null, nodes:[], st:null, busy:false, saveT:0, loaded:false, loading:false };
 function wildDefault(){ return { v:1, t:0, bag:{}, node:{}, camp:[], hun:100, sta:100 }; }
@@ -7306,7 +7318,7 @@ function wildSlots(bag){ let n = 0; for (const k in bag) n += Math.ceil((bag[k] 
 function wildSave(){ const S = wildSt(); S.t = Date.now(); LS.set('tide.wild', S); clearTimeout(Wild.saveT); Wild.saveT = setTimeout(wildPush, 4000); }
 async function wildPush(){ if (!Cloud.on || !Cloud.sb) return; try { await Cloud.sb.rpc('wild_save', { p_data: wildSt() }); } catch(e){} }
 async function wildPull(){ if (Wild.loaded || Wild.loading || !Cloud.on || !Cloud.sb) return; Wild.loading = true;
-  try { const { data, error } = await Cloud.sb.rpc('wild_load'); if (!error){ Wild.loaded = true; const S = wildSt(); if (data && typeof data === 'object' && data.v === 1 && (data.t || 0) > (S.t || 0)){ Wild.st = Object.assign(wildDefault(), data); LS.set('tide.wild', Wild.st); wildNodeVis(); } else if ((S.t || 0) > ((data && data.t) || 0)) wildPush(); } } catch(e){}
+  try { const { data, error } = await Cloud.sb.rpc('wild_load'); if (!error){ Wild.loaded = true; const S = wildSt(); if (data && typeof data === 'object' && data.v === 1 && (data.t || 0) > (S.t || 0)){ Wild.st = Object.assign(wildDefault(), data); LS.set('tide.wild', Wild.st); wildNodeVis(); if (Wild.campG && Wild.g){ Wild.g.remove(Wild.campG); Wild.campG = null; } } else if ((S.t || 0) > ((data && data.t) || 0)) wildPush(); } } catch(e){}
   Wild.loading = false; }
 /* 可以撿的地方：位置固定（每支手機算出來一樣），種子 590 */
 function wildNodeList(){ if (Wild.nodeL) return Wild.nodeL; let sd = 590; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647, L = [], W = WILD;
@@ -7331,7 +7343,7 @@ function buildWild(){ Wild.built = true; const W = WILD, g = new THREE.Group(); 
     for (const [px, pz] of [[x0 + 0.3, -1.25], [x0 + 0.3, 1.25], [x0 + 4.5, -1.25], [x0 + 4.5, 1.25]]){ const po = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 2.2, 7), mat('#6f5236', 0.95)); po.position.set(px, y - 0.7, pz); g.add(po); }
     const sg = signTex('漂流島', '#5a4030', '#f4e6c4', 256, 80), sm = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.4), new THREE.MeshBasicMaterial({ map: sg, side: THREE.DoubleSide })); sm.position.set(x1 - 0.3, y + 1.35, -1.5); sm.rotation.y = -Math.PI / 2; g.add(sm); g.add(box([0.1, 1.5, 0.1], '#6f5236', [x1 - 0.3, y + 0.6, -1.5])); }
   /* 不能撿的景物：小山上的大石頭、岸邊的礁岩、灌木 */
-  { const parts = []; for (let i = 0; i < 12; i++){ const a = rr() * 6.28, d = rr() * W.r * 0.9, lx = Math.cos(a) * d, lz = Math.sin(a) * d, R = wildEdge(lx, lz); if (R - d < 2 || (lx < -W.r + 9 && Math.abs(lz) < 3)) continue; const sz = 0.45 + rr() * 0.8, rg = lavaRockGeo(sz, i * 11 + 3, ['#8d8678', '#7a7466', '#9a9384']); rg.translate(lx, H(lx, lz) - 0.15, lz); parts.push(rg); addCircleCol(W.x + lx, W.z + lz, sz * 0.7); }
+  { const parts = []; for (let i = 0; i < 12; i++){ const a = rr() * 6.28, d = rr() * W.r * 0.9, lx = Math.cos(a) * d, lz = Math.sin(a) * d, R = wildEdge(lx, lz); if (R - d < 2 || (lx < -W.r + 9 && Math.abs(lz) < 3)) continue; const sz = 0.45 + rr() * 0.8, rg = lavaRockGeo(sz, i * 11 + 3, ['#8d8678', '#7a7466', '#9a9384']); (Wild.rocks = Wild.rocks || []).push([W.x + lx, W.z + lz, sz]); rg.translate(lx, H(lx, lz) - 0.15, lz); parts.push(rg); addCircleCol(W.x + lx, W.z + lz, sz * 0.7); }
     if (parts.length){ const rm = new THREE.Mesh(mergeGeometries(parts, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true })); g.add(rm); } }
   { const bm = mat('#4f8a3c', 0.9, { flatShading: true }); for (let i = 0; i < 14; i++){ const a = rr() * 6.28, d = rr() * W.r * 0.8, lx = Math.cos(a) * d, lz = Math.sin(a) * d; if (wildEdge(lx, lz) - d < 5 || (lx < -W.r + 9 && Math.abs(lz) < 3)) continue; const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + rr() * 0.5, 0), bm); b.scale.y = 0.7; b.position.set(lx, H(lx, lz) + 0.25, lz); g.add(b); } }
   /* 可以撿的東西 */
@@ -7359,8 +7371,57 @@ function wildGather(N){ const I = WILD_ITEMS[N.n.k], S = wildSt(); if (!I || Wil
   if (N.n.k === 'coco'){ const t0 = now(), pt = N.top; Wild.shake = { N, t0 }; }   /* 搖椰子樹：樹葉晃、椰子掉下來 */
   setTimeout(() => { Wild.busy = false; Wild.shake = null; S.bag = nb; S.node[N.n.id] = Date.now() + I.cd * 1000; wildSave(); wildNodeVis(); try { puff(N.n.x, groundHeight(N.n.x, N.n.z), N.n.z); SFX.plop(); } catch(e){}
     flash(`${I.ic} ${I.n} +${got}`, 1.0); if (!LS.get('tide.wildTip1', false)){ LS.set('tide.wildTip1', true); setTimeout(() => toast('🎒 撿到的東西放在「背包 → 🏝️ 荒島」。製作、生火、蓋小木屋下一次更新開放'), 1300); } }, N.n.k === 'stone' || N.n.k === 'bamboo' || N.n.k === 'coco' ? 1500 : 1000); }
+function wildHas(need, bag){ for (const k in need) if ((bag[k] | 0) < need[k]) return false; return true; }
+function wildCanPlace(x, z, rad){ if (!wildNear(x, z, -1) || wildWater(x, z) || wildWater(x + rad, z) || wildWater(x - rad, z) || wildWater(x, z + rad) || wildWater(x, z - rad)) return '要蓋在島上的空地'; if (deckAt(x, z)) return '不能蓋在碼頭上';
+  const lx = x - WILD.x, lz = z - WILD.z; if (lx < -WILD.r + 9 && Math.abs(lz) < 3.2) return '碼頭前面要留路';
+  for (const c of wildSt().camp){ const R = (WILD_RECIPES.find(r => r.id === c.t) || {}).rad || 1; if (Math.hypot(c.x - x, c.z - z) < R + rad + 0.6) return '離別的東西太近了'; }
+  for (const N of Wild.nodes) if ((N.n.k === 'coco' || N.n.k === 'bamboo') && Math.hypot(N.n.x - x, N.n.z - z) < rad + 0.7) return '旁邊有樹或竹子，換個地方';   /* 草、漂流木、石頭堆、大葉子會被清掉 */
+  for (const q of Wild.rocks || []) if (Math.hypot(q[0] - x, q[1] - z) < rad + q[2]) return '旁邊有大石頭，換個地方';
+  { const h0 = wildH(x, z), hs = [wildH(x + rad, z), wildH(x - rad, z), wildH(x, z + rad), wildH(x, z - rad)]; if (hs.some(h => h == null || Math.abs(h - h0) > 0.2 + rad * 0.3)) return '地太斜了'; }
+  return null; }
+function wildCraft(R){ const S = wildSt(); if (!wildHas(R.need, S.bag)){ toast('材料不夠'); return; }
+  if (R.one && (S.bag[R.id] | 0) >= 1){ toast(`已經有${R.n}了`); return; }
+  if (R.k === 'camp'){ if (!onWild()){ toast('要在漂流島上才能蓋'); return; } if (S.camp.filter(c => c.t === R.id).length >= R.max){ toast(`${R.n}最多 ${R.max} 個`); return; }
+    const x = me.pos.x + Math.sin(me.rot) * (R.rad + 1.0), z = me.pos.z + Math.cos(me.rot) * (R.rad + 1.0), why = wildCanPlace(x, z, R.rad); if (why){ toast(`🚧 ${why}（面向空地再試一次）`); return; }
+    const nb = Object.assign({}, S.bag); for (const k in R.need){ nb[k] -= R.need[k]; if (!nb[k]) delete nb[k]; } S.bag = nb;
+    const c = { t: R.id, x: +x.toFixed(2), z: +z.toFixed(2), r: +(me.rot + Math.PI).toFixed(3), at: Date.now() }; if (R.id === 'fire') c.fuel = Date.now() + 240000; S.camp.push(c); for (const N of Wild.nodes) if (N.n.k !== 'coco' && N.n.k !== 'bamboo' && Math.hypot(N.n.x - x, N.n.z - z) < R.rad + 0.5) S.node[N.n.id] = 4e12;   /* 蓋房子的地方清乾淨，不會再長 */ wildNodeVis(); wildSave(); closeSheet();
+    Wild.build = { c, t0: now(), dur: R.bt }; startEmote(me, 'farmwater'); toast(`🔨 開始蓋${R.n}……`); wildCampMesh(c, 0.01); return; }
+  const nb = Object.assign({}, S.bag); for (const k in R.need){ nb[k] -= R.need[k]; if (!nb[k]) delete nb[k]; } nb[R.id] = (nb[R.id] | 0) + 1;
+  if (wildSlots(nb) > WILD_BAG){ toast(`🎒 荒島背包滿了（${WILD_BAG} 格）`); return; } S.bag = nb; wildSave(); startEmote(me, 'farmplant'); try { SFX.coin(); } catch(e){} flash(`${R.ic} 做好了：${R.n}`, 1.2); renderTab(); }
+/* 營地的樣子：營火（石頭圍一圈、木頭、會動的火焰）、遮雨棚（四根竹竿＋葉子屋頂）、小木屋（原木牆、草屋頂、門口、裡面一張床） */
+function wildCampMesh(c, k){ if (!Wild.g) return null; const g = new THREE.Group(), lx = c.x - WILD.x, lz = c.z - WILD.z, y = wildH(c.x, c.z) ?? WILD.y; g.position.set(lx, y, lz); g.rotation.y = c.r || 0; g.userData.c = c;
+  const W = mat('#9a7a52', 0.9), Wd = mat('#7d5f3e', 0.9), L = mat('#4f9a4a', 0.75, { side: THREE.DoubleSide }), St = mat('#8f8a80', 0.9, { flatShading: true }), Bm = mat('#a7c454', 0.6);
+  if (c.t === 'fire'){ for (let i = 0; i < 8; i++){ const a = i / 8 * 6.283, st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16, 0), St); st.position.set(Math.cos(a) * 0.55, 0.08, Math.sin(a) * 0.55); st.rotation.set(i, i * 2, 0); g.add(st); }
+    for (let i = 0; i < 4; i++){ const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.8, 6), Wd); lg.rotation.set(0.9, i * 1.57, 0); lg.position.y = 0.22; g.add(lg); }
+    const fl = new THREE.Group(); for (let i = 0; i < 4; i++){ const f = new THREE.Mesh(new THREE.ConeGeometry(0.14 - i * 0.02, 0.5 - i * 0.06, 6), new THREE.MeshBasicMaterial({ color: i % 2 ? '#ffb030' : '#ff6a20', transparent: true, opacity: 0.85 })); f.position.set((i - 1.5) * 0.06, 0.4, (i % 2 - 0.5) * 0.08); fl.add(f); } g.add(fl); g.userData.flame = fl;
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: lwGlowTex(), color: '#ffb060', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); gl.scale.setScalar(2.6); gl.position.y = 0.5; g.add(gl); g.userData.glow = gl; }
+  else if (c.t === 'shelter'){ for (const [sx, sz] of [[-1.1, -0.9], [1.1, -0.9], [-1.1, 0.9], [1.1, 0.9]]){ const po = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, sz < 0 ? 2.1 : 1.6, 6), Bm); po.position.set(sx, (sz < 0 ? 2.1 : 1.6) / 2, sz); g.add(po); }
+    const rf = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.2), L); rf.rotation.x = -Math.PI / 2 - 0.24; rf.position.y = 1.88; g.add(rf); for (let i = 0; i < 6; i++){ const lf = new THREE.Mesh(new THREE.SphereGeometry(0.42, 7, 4), L); lf.scale.set(1, 0.1, 0.5); lf.position.set(-1.0 + i * 0.4, 1.95 - (i % 2) * 0.05, (i % 3 - 1) * 0.5); lf.rotation.set(0.24, i, 0); g.add(lf); }
+    const mt = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.03, 1.6), mat('#c8b07a', 0.95)); mt.position.y = 0.02; g.add(mt); }
+  else if (c.t === 'cabin'){ const w = 3.6, d = 3.0, h = 2.0; for (let i = 0; i < 7; i++){ const yy = 0.15 + i * 0.28;
+      for (const sd of [-1, 1]){ const lgS = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, d + 0.2, 7), i % 2 ? W : Wd); lgS.rotation.x = Math.PI / 2; lgS.position.set(sd * w / 2, yy, 0); g.add(lgS); }
+      const lgB = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, w + 0.2, 7), i % 2 ? Wd : W); lgB.rotation.z = Math.PI / 2; lgB.position.set(0, yy, -d / 2); g.add(lgB);
+      for (const sd of [-1, 1]){ if (i < 6){ const lgF = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.1, 7), i % 2 ? Wd : W); lgF.rotation.z = Math.PI / 2; lgF.position.set(sd * 1.3, yy, d / 2); g.add(lgF); } } }
+    { const lgT = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, w + 0.2, 7), W); lgT.rotation.z = Math.PI / 2; lgT.position.set(0, 0.15 + 6 * 0.28, d / 2); g.add(lgT); }
+    const sh = new THREE.Shape(); sh.moveTo(-w / 2 - 0.45, 0); sh.lineTo(0, 1.3); sh.lineTo(w / 2 + 0.45, 0); sh.lineTo(-w / 2 - 0.45, 0); const rg = new THREE.ExtrudeGeometry(sh, { depth: d + 0.7, bevelEnabled: false }); rg.translate(0, 0, -(d + 0.7) / 2); const roof = new THREE.Mesh(rg, mat('#c9a95a', 0.95, { flatShading: true })); roof.position.y = h; g.add(roof);
+    const bed = new THREE.Group(); bed.add(box([0.95, 0.3, 1.9], '#8c6a4a', [0, 0.15, 0])); bed.add(box([0.85, 0.08, 1.4], '#d8c79a', [0, 0.34, 0.2])); bed.add(box([0.6, 0.12, 0.35], '#f2eadb', [0, 0.36, -0.7])); bed.position.set(-1.0, 0, -0.35); g.add(bed);
+    const dr = box([0.08, 0.04, 0.6], '#6f5236', [0, 0.02, d / 2 + 0.5]); g.add(dr); g.add(box([w + 0.3, 0.9, d + 0.3], '#8a6a48', [0, -0.42, 0])); }   /* 底下墊一層木頭地基，蓋在斜坡上也不會懸空 */
+  g.traverse(o => { if (o.isMesh) o.castShadow = false; }); g.scale.setScalar(k == null ? 1 : k); Wild.campG = Wild.campG || (() => { const cg = new THREE.Group(); Wild.g.add(cg); return cg; })(); Wild.campG.add(g); return g; }
+function wildCampCols(c){ const R = WILD_RECIPES.find(r => r.id === c.t); if (!R) return; if (c.t === 'fire') addCircleCol(c.x, c.z, 0.65);
+  else if (c.t === 'shelter'){ for (const [sx, sz] of [[-1.1, -0.9], [1.1, -0.9], [-1.1, 0.9], [1.1, 0.9]]){ const cs = Math.cos(c.r), sn = Math.sin(c.r); addCircleCol(c.x + sx * cs + sz * sn, c.z - sx * sn + sz * cs, 0.12); } }
+  else if (c.t === 'cabin'){ const cs = Math.cos(c.r), sn = Math.sin(c.r), P = (lx, lz) => [c.x + lx * cs + lz * sn, c.z - lx * sn + lz * cs]; for (let t = -1.5; t <= 1.5; t += 0.5){ for (const p of [P(-1.8, t), P(1.8, t)]) addCircleCol(p[0], p[1], 0.26); } for (let t = -1.8; t <= 1.8; t += 0.5){ const p = P(t, -1.5); addCircleCol(p[0], p[1], 0.26); } for (const t of [-1.8, -1.3, -0.8, 0.8, 1.3, 1.8]){ const p = P(t, 1.5); addCircleCol(p[0], p[1], 0.26); } } }
+function wildCampBuildAll(){ if (!Wild.g) return; if (Wild.campG){ Wild.g.remove(Wild.campG); Wild.campG = null; } Wild.campMesh = []; for (const c of wildSt().camp){ const m = wildCampMesh(c, 1); Wild.campMesh.push(m); if (!c.colOn){ wildCampCols(c); Object.defineProperty(c, 'colOn', { value: true, enumerable: false }); } } }
+function nearWildFire(){ if (!onWild()) return null; let best = null, bd = 1.9; for (const c of wildSt().camp) if (c.t === 'fire'){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd){ bd = d; best = c; } } return best; }
+function wildFireAdd(c){ const S = wildSt(); if (!(S.bag.wood | 0)){ toast('沒有漂流木了，去海邊撿'); return; } const left = Math.max(0, (c.fuel || 0) - Date.now()); if (left > 16 * 60000){ toast('火已經夠旺了'); return; }
+  S.bag.wood--; if (!S.bag.wood) delete S.bag.wood; c.fuel = Date.now() + left + 240000; wildSave(); startEmote(me, 'farmplant'); try { SFX.plop(); } catch(e){} flash(`🔥 加了一塊木頭，還能燒 ${Math.round((left + 240000) / 60000)} 分鐘`, 1.4); }
 function wildTick(dt, t){ if (!Wild.built) return; if (wildNear(me.pos.x, me.pos.z, 30)) wildPull();
   if (frameNo % 60 === 7) wildNodeVis();
+  if (Wild.g && !Wild.campG) wildCampBuildAll();
+  { const B = Wild.build; if (B){ const k = clamp((now() - B.t0) / B.dur, 0, 1), m = Wild.campG && Wild.campG.children.find(o => o.userData.c === B.c); if (m) m.scale.setScalar(0.05 + 0.95 * (1 - Math.pow(1 - k, 2)));
+      if (!me.emote && k < 1) startEmote(me, 'farmwater'); if (Math.random() < dt * 3) try { puff(B.c.x + (Math.random() - 0.5), groundHeight(B.c.x, B.c.z), B.c.z + (Math.random() - 0.5)); SFX.tick(); } catch(e){}
+      if (k >= 1){ Wild.build = null; wildCampCols(B.c); Object.defineProperty(B.c, 'colOn', { value: true, enumerable: false }); const R = WILD_RECIPES.find(r => r.id === B.c.t); flash(`${R.ic} ${R.n}蓋好了！`, 1.8); try { SFX.coin(); } catch(e){} } } }
+  if (Wild.campG && frameNo % 2 === 0){ const T = Date.now(); for (const m of Wild.campG.children){ const fl = m.userData.flame; if (!fl) continue; const lit = (m.userData.c.fuel || 0) > T, far = Math.hypot(me.pos.x - m.userData.c.x, me.pos.z - m.userData.c.z) > 80; fl.visible = lit && !far; m.userData.glow.visible = lit && !far;
+      if (lit && !far) fl.children.forEach((f, i) => { f.scale.y = 0.8 + Math.sin(t * (9 + i * 2) + i) * 0.25; f.rotation.y = t * (1 + i * 0.3); }); } }
   const sh = Wild.shake; if (sh && sh.N.top){ const k = now() - sh.t0; sh.N.g.rotation.z = Math.sin(k * 18) * 0.03 * (1 - Math.min(1, k / 1.5)); } }
 function renderWildBag(body){ const S = wildSt(), keys = Object.keys(WILD_ITEMS);
   body.appendChild(el('div', 'dexhead', `🏝️ 荒島背包（${wildSlots(S.bag)}／${WILD_BAG} 格）`));
@@ -7369,7 +7430,14 @@ function renderWildBag(body){ const S = wildSt(), keys = Object.keys(WILD_ITEMS)
   for (const k of keys){ const n = S.bag[k] | 0; if (!n) continue; any = true; const I = WILD_ITEMS[k], li = el('li'); li.appendChild(el('span', 'ic', I.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${I.n} ×${n}`)); d.appendChild(el('div', 'sub2', `佔 ${Math.ceil(n / WILD_STACK)} 格`)); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '丟掉 1 個'); b.addEventListener('click', () => { S.bag[k] = Math.max(0, (S.bag[k] | 0) - 1); if (!S.bag[k]) delete S.bag[k]; wildSave(); renderTab(); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
   if (!any) body.appendChild(el('div', 'empty', '還是空的。找港口的阿海，選「遠方荒島・漂流島」坐船過去，走到漂流木、石頭、草、竹子、大葉子、椰子樹旁邊按大按鈕就能撿。')); else body.appendChild(ul);
-  body.appendChild(el('p', 'sub', '🛠️ 下一次更新：用這些材料做草繩、竹竿、營火、遮雨棚和小木屋。')); }
+  body.appendChild(el('div', 'dexhead', '🛠️ 製作'));
+  body.appendChild(el('p', 'sub', onWild() ? '營火、遮雨棚、小木屋會蓋在你面前：先面向一塊空地再按「做」。' : '營火、遮雨棚、小木屋要在漂流島上才能蓋；草繩、竹竿在哪裡都能做。'));
+  const ul2 = el('ul', 'shoplist');
+  for (const R of WILD_RECIPES){ const li = el('li'), ok = wildHas(R.need, S.bag), cnt = R.k === 'camp' ? S.camp.filter(c => c.t === R.id).length : 0; li.appendChild(el('span', 'ic', R.ic)); const d = el('div', 'tinfo');
+    d.appendChild(el('div', 'n', R.n + (R.k === 'camp' ? `（已蓋 ${cnt}／${R.max}）` : (S.bag[R.id] | 0) ? `（有 ${S.bag[R.id]}）` : '')));
+    d.appendChild(el('div', 'sub2', Object.keys(R.need).map(k => `${WILD_ITEMS[k].ic}${WILD_ITEMS[k].n} ${S.bag[k] | 0}/${R.need[k]}`).join('　'))); d.appendChild(el('div', 'sub2', R.d)); li.appendChild(d);
+    const a = el('div', 'tacts'), b = el('button', 'tbtn', R.k === 'camp' ? '蓋' : '做'); b.disabled = !ok || (R.k === 'camp' && cnt >= R.max) || (R.one && (S.bag[R.id] | 0) >= 1); b.addEventListener('click', () => wildCraft(R)); a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
+  body.appendChild(ul2); }
 function updateFar(dt, t){
   if (frameNo % 30 === 0){ const vis = (G, x, z, R) => { if (G) G.visible = Math.hypot(camera.position.x - x, camera.position.z - z) < R; };   /* 手機效能：離很遠的區域先不畫（走近再出現） */
     vis(Frost.g, FROST.x, FROST.z, 130); vis(Far.ag, ABYSS.x, ABYSS.z, 120); if (Sub.dockG && !Sub.cine) vis(Sub.dockG, ABYSS.x, ABYSS.z, 120); vis(Far.mg, MYST.x, MYST.z, 130); vis(Far.gg, GREEN.x, GREEN.z, 150); vis(Wild.g, WILD.x, WILD.z, 150); }
@@ -18180,7 +18248,8 @@ function renderTab(){
       '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊；輪到誰瞄準，那個人（玩家或阿喆）會彎腰趴向球桌、一手架桿一手握桿。自己打的時候鏡頭在球桌正上方，所以看不到自己的姿勢。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
-      '🏝️ 遠方荒島・漂流島（求生，陸續開放中）：找港口的阿海選「遠方荒島・漂流島」，坐船到東南外海一座沒有人住的島。走到漂流木、石頭、草叢、竹子、大葉子、椰子樹旁邊按大按鈕就能撿，東西放「背包 → 🏝️ 荒島」（12 格，一格最多 20 個，跟村子的背包分開、不能拿回村子賣）。撿過的地方過幾分鐘會再長出來。村子的釣竿在島上不能用。接下來會開放：做草繩和竹竿、生火烤魚、蓋遮雨棚和小木屋，還有飽足度和體力。',
+      '🏝️ 遠方荒島・漂流島（求生，陸續開放中）：找港口的阿海選「遠方荒島・漂流島」，坐船到東南外海一座沒有人住的島。走到漂流木、石頭、草叢、竹子、大葉子、椰子樹旁邊按大按鈕就能撿，東西放「背包 → 🏝️ 荒島」（12 格，一格最多 20 個，跟村子的背包分開、不能拿回村子賣）。撿過的地方過幾分鐘會再長出來。村子的釣竿在島上不能用。',
+      '🛠️ 荒島製作（背包 → 🏝️ 荒島 → 製作）：草繩（3 把草）、骨頭魚鉤（2 根魚骨，吃魚之後才有）、手作竹竿（3 竹子＋2 草繩＋1 魚鉤）。營火（5 漂流木＋3 石頭）、遮雨棚（8 漂流木＋6 大葉子＋2 草繩）、小木屋（20 漂流木＋10 竹子＋12 大葉子＋6 草繩＋6 石頭）會蓋在你面前：先面向一塊空地再按「蓋」，角色會敲敲打打幾秒鐘蓋起來。蓋的地方的草和漂流木會被清掉；旁邊有椰子樹、竹子、大石頭、太斜或在碼頭前面就不能蓋。營火一塊漂流木燒 4 分鐘，靠近按「加木頭」（最多 20 分鐘）。營火最多 3 個、遮雨棚 2 個、小木屋 1 間，只有自己看得到。接下來會開放：飽足度和體力、烤魚、在小木屋睡覺、荒島的魚。',
       '🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。',
       '🏠 三位船長住在居民區（阿財家、阿春家、海伯家）：天亮前從家裡走到碼頭、蹲一下跳上船，傍晚靠岸後跳下船走回家，到家門燈就會亮；颱風天待在家。沙灘的遊客是坐阿海的船來玩的，會從港口沿著路走到沙灘，要走的時候走回港口。',
       '🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人坐在海灘巾上曬太陽、有人套著泳圈在淺水玩、有人在丟沙灘球（走過去碰到低低的球會把它踢飛，只有你自己看得到）。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。',
