@@ -10850,10 +10850,14 @@ const PB = { HL:1.27, HW:0.635, R:0.0325, TOP:0.86, A:0.7, E:0.95, ER:0.72, H:1 
 const PB_COL = ['#f6f3e8', '#f2c21a', '#2a62c9', '#d8352f', '#6a3fb0', '#ee7a1c', '#1f8a52', '#8a2a2a', '#17171b'];
 const PB_RACK = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 6, 13, 14, 7, 15];
 const Pool = { on:false, spec:false, ti:-1, tables:[], key:null, aim:{ x:1, y:0 }, pw:0, aimAt:0, aimSent:'', drag:null, hud:null, upDirty:false, askedAt:0 };
+/* v608 🐡 用釣到的魚換「特技母球」（作者：撞球跟釣魚結合）：圖鑑裡釣過那種魚就解鎖，每局每人最多用 2 次；用了特技的對打不算排行（休閒局） */
+const POOL_SP = { puff:{ ic:'🐡', n:'河豚球', d:'母球撞擊範圍變大', need:['puffer'] }, octo:{ ic:'🐙', n:'章魚球', d:'母球會往左彎', need:['octopus', 'dumbo'] },
+  dolph:{ ic:'🐬', n:'海豚球', d:'被撞的球互撞更有力，容易連鎖', need:['dolphin'] }, whale:{ ic:'🐋', n:'鯨魚球', d:'力道 1.45 倍', need:['whale', 'bluewhale', 'sperm', 'orca', 'beluga', 'whaleshark'] } };
+function poolSpOK(k){ const S = POOL_SP[k]; return !!S && S.need.some(id => rec.count && rec.count[id]); }
 function poolKey(){ return (room && room.key) || Pool.key || (Pool.key = 'me' + Math.random().toString(36).slice(2, 8)); }
 function poolBallCol(n){ return n === 0 ? PB_COL[0] : n <= 8 ? PB_COL[n] : PB_COL[n - 8]; }
 function poolGrp(n){ return n >= 1 && n <= 7 ? 1 : n >= 9 ? 2 : 0; }   /* 1 全色球、2 花色球 */
-function poolRack(T){ const s = PB.R * 2 + 0.0008, ax = PB.HL / 2; let k = 0; T.b = []; T.b[0] = { x: -PB.HL / 2, y: 0, on: 1, vx: 0, vy: 0 };
+function poolRack(T){ T.spLeft = [2, 2]; T.spU = false; const s = PB.R * 2 + 0.0008, ax = PB.HL / 2; let k = 0; T.b = []; T.b[0] = { x: -PB.HL / 2, y: 0, on: 1, vx: 0, vy: 0 };
   for (let row = 0; row < 5; row++) for (let j = 0; j <= row; j++){ const n = PB_RACK[k++]; T.b[n] = { x: ax + row * s * 0.8660254, y: (j - row / 2) * s, on: 1, vx: 0, vy: 0 }; } }
 function poolNewTable(i, ox, oz){ const T = { i, ox, oz, b: [], p: [null, null], nm: ['', ''], mode: 'idle', turn: 0, g0: 0, ph: 'idle', brk: true, seq: 0, from: '', win: -1, shots: 0, miss: [0, 0], ev: '', dl: 0, sim: null, pend: null, aim: { x: 1, y: 0, pw: 0, at: 0 }, m: null }; poolRack(T); return T; }
 function poolQuant(T){ for (const b of T.b){ b.x = Math.round(b.x * 1e4) / 1e4; b.y = Math.round(b.y * 1e4) / 1e4; b.vx = b.vy = 0; } }
@@ -10871,7 +10875,8 @@ function poolGrpOf(T, who){ return !T.g0 ? 0 : who === 0 ? T.g0 : 3 - T.g0; }
 function poolLeft(T, g){ let n = 0; for (let i = 1; i < 16; i++) if (T.b[i].on && poolGrp(i) === g) n++; return n; }
 function poolName(){ const n = myDisplayName(); return n === '你' ? '釣客' : String(n).slice(0, 12); }
 /* ---- 物理：固定每步 1/240 秒 ---- */
-function poolStep(T){ const S = T.sim, B = T.b, h = PB.H, R = PB.R, HL = PB.HL, HW = PB.HW; let moving = false;
+function poolStep(T){ const S = T.sim, B = T.b, h = PB.H, R = PB.R, HL = PB.HL, HW = PB.HW, sp = S.sp; let moving = false;
+  if (sp === 'octo' && B[0].on && (S.n = (S.n || 0) + 1) * h < 1.6){ const a = 1.5 * h, c = Math.cos(a), sn = Math.sin(a), vx = B[0].vx, vy = B[0].vy; B[0].vx = vx * c - vy * sn; B[0].vy = vx * sn + vy * c; }   /* 章魚球：前 1.6 秒一直往左彎 */
   for (let i = 0; i < 16; i++){ const b = B[i]; if (!b.on) continue; const s2 = b.vx * b.vx + b.vy * b.vy; if (s2 === 0) continue;
     const s = Math.sqrt(s2), ns = s - PB.A * h; if (ns <= 0){ b.vx = b.vy = 0; continue; } const k = ns / s; b.vx *= k; b.vy *= k; b.x += b.vx * h; b.y += b.vy * h; moving = true;
     const ax = b.x < 0 ? -b.x : b.x, ay = b.y < 0 ? -b.y : b.y; let pk = false;
@@ -10881,13 +10886,13 @@ function poolStep(T){ const S = T.sim, B = T.b, h = PB.H, R = PB.R, HL = PB.HL, 
     if (pk){ b.on = 0; b.vx = b.vy = 0; S.pot.push(i); S.fx.push({ k: 'pot', i, x: b.x, y: b.y }); continue; }
     if (ax > HL - R && ay < HW - 0.075){ if ((b.x > 0 && b.vx > 0) || (b.x < 0 && b.vx < 0)){ if (b.vx > 0.6 || b.vx < -0.6) S.fx.push({ k: 'rail', v: b.vx < 0 ? -b.vx : b.vx }); b.vx = -b.vx * PB.ER; b.vy *= 0.98; } b.x = b.x > 0 ? HL - R : -(HL - R); }
     if (ay > HW - R && ax > 0.062 && ax < HL - 0.075){ if ((b.y > 0 && b.vy > 0) || (b.y < 0 && b.vy < 0)){ if (b.vy > 0.6 || b.vy < -0.6) S.fx.push({ k: 'rail', v: b.vy < 0 ? -b.vy : b.vy }); b.vy = -b.vy * PB.ER; b.vx *= 0.98; } b.y = b.y > 0 ? HW - R : -(HW - R); } }
-  const D2 = 4 * R * R;
-  for (let i = 0; i < 15; i++){ const a = B[i]; if (!a.on) continue; for (let j = i + 1; j < 16; j++){ const c = B[j]; if (!c.on) continue; const dx = c.x - a.x, dy = c.y - a.y, d2 = dx * dx + dy * dy; if (d2 >= D2 || d2 === 0) continue;
+  const D2 = 4 * R * R, RC = sp === 'puff' ? R * 1.8 : R, D2c = (RC + R) * (RC + R);   /* 河豚球：母球撞擊範圍 1.8 倍 */
+  for (let i = 0; i < 15; i++){ const a = B[i]; if (!a.on) continue; for (let j = i + 1; j < 16; j++){ const c = B[j]; if (!c.on) continue; const dx = c.x - a.x, dy = c.y - a.y, d2 = dx * dx + dy * dy; if (d2 >= (i === 0 ? D2c : D2) || d2 === 0) continue;
       const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, rel = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
-      if (rel > 0){ const imp = (1 + PB.E) / 2 * rel; a.vx -= imp * nx; a.vy -= imp * ny; c.vx += imp * nx; c.vy += imp * ny; if (i === 0 && !S.first) S.first = j; S.fx.push({ k: 'hit', v: rel }); moving = true; }
-      const ov = (2 * R - d) / 2; a.x -= nx * ov; a.y -= ny * ov; c.x += nx * ov; c.y += ny * ov; } }
+      if (rel > 0){ const imp = (1 + PB.E) / 2 * rel * (sp === 'dolph' && i > 0 ? 1.3 : 1);   /* 海豚球：球跟球互撞更有力 */ a.vx -= imp * nx; a.vy -= imp * ny; c.vx += imp * nx; c.vy += imp * ny; if (i === 0 && !S.first) S.first = j; S.fx.push({ k: 'hit', v: rel }); moving = true; }
+      const ov = ((i === 0 ? RC + R : 2 * R) - d) / 2; a.x -= nx * ov; a.y -= ny * ov; c.x += nx * ov; c.y += ny * ov; } }
   return moving; }
-function poolStartSim(T, dx, dy, pw, auth){ const v = PB.VMIN + pw * (PB.VMAX - PB.VMIN), c = T.b[0]; c.vx = dx * v; c.vy = dy * v; T.ph = 'sim'; T.pend = null; T.sim = { auth, t: 0, acc: 0, first: 0, pot: [], fx: [], cue: 0.16, dx, dy }; T.aim.x = dx; T.aim.y = dy; T.aim.pw = 0;
+function poolStartSim(T, dx, dy, pw, auth, sp){ sp = POOL_SP[sp] ? sp : null; const v = (PB.VMIN + pw * (PB.VMAX - PB.VMIN)) * (sp === 'whale' ? 1.45 : 1), c = T.b[0]; c.vx = dx * v; c.vy = dy * v; T.ph = 'sim'; T.pend = null; T.sim = { auth, t: 0, acc: 0, first: 0, pot: [], fx: [], cue: 0.16, dx, dy, sp }; if (sp){ if (T.mode === 'vs') T.spU = true; if (inPoolHall()) toast(`${POOL_SP[sp].ic} ${POOL_SP[sp].n}！${POOL_SP[sp].d}`); } T.aim.x = dx; T.aim.y = dy; T.aim.pw = 0;
   if (inPoolHall()){ try { tone(260 + pw * 240, 0.05, 'triangle', 0.05 + pw * 0.07); } catch(e){} } }
 /* ---- 規則 ---- */
 function poolRespot(T, n, x, y){ const b = T.b[n], R2 = 4.2 * PB.R * PB.R; let tx = x, ty = y;
@@ -11035,7 +11040,7 @@ function poolOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data
     if (T.sim && !T.sim.auth && inPoolHall() && d.m !== 'idle' && T.p[0] === p[0]){ T.pend = d; T.pendFrom = peer; return; }
     poolApply(T, d, peer); return; }
   if (d.k === 'shot'){ const sh = T.p[poolShooter(T)]; if ((sh !== peer && !(poolNpc(sh) && T.p[0] === peer)) || T.mode === 'idle') return; const q = Math.floor(+d.q); if (!(q >= T.seq)) return; if (!Array.isArray(d.d) || !isFinite(+d.d[0]) || !isFinite(+d.d[1])) return; const pw = clamp(+d.pw || 0, 0, 1), dx = clamp(+d.d[0], -1.01, 1.01), dy = clamp(+d.d[1], -1.01, 1.01);
-    if (!poolSetBalls(T, d.b) || !T.b[0].on) return; T.seq = q; T.from = peer; T.shots++; if (inPoolHall()) poolStartSim(T, dx, dy, pw, false); else T.ph = 'aim'; poolHud(); return; }
+    if (!poolSetBalls(T, d.b) || !T.b[0].on) return; T.seq = q; T.from = peer; T.shots++; const psp = POOL_SP[d.sp] ? d.sp : null; if (psp) T.spU = T.mode === 'vs' || T.spU; if (inPoolHall()) poolStartSim(T, dx, dy, pw, false, psp); else T.ph = 'aim'; poolHud(); return; }
   if (d.k === 'aim'){ { const sh = T.p[poolShooter(T)]; if ((sh !== peer && !(poolNpc(sh) && T.p[0] === peer)) || T.sim) return; } if (Array.isArray(d.a) && isFinite(+d.a[0]) && isFinite(+d.a[1])){ T.aim.tx = clamp(+d.a[0], -1, 1); T.aim.ty = clamp(+d.a[1], -1, 1); T.aim.tpw = clamp(+d.pw || 0, 0, 1); if (!T.aim.at || now() - T.aim.at > 2){ T.aim.x = T.aim.tx; T.aim.y = T.aim.ty; T.aim.pw = T.aim.tpw; } T.aim.at = now(); }   /* v527 記目標，畫的時候每一格慢慢轉過去 */
     if (Array.isArray(d.c) && T.ph === 'hand' && isFinite(+d.c[0]) && isFinite(+d.c[1])){ T.b[0].x = clamp(+d.c[0], -PB.HL + PB.R, PB.HL - PB.R); T.b[0].y = clamp(+d.c[1], -PB.HW + PB.R, PB.HW - PB.R); const was = T.b[0].on; T.b[0].on = 1; if (!was) poolRefresh(T); } } }
 function poolApply(T, d, peer){ const M = ['idle', 'solo', 'vs'], PH = ['idle', 'aim', 'hand', 'over']; if (!M.includes(d.m) || !PH.includes(d.ph)) return; const sv = poolBalls(T); if (!poolSetBalls(T, d.b)){ poolSetBalls(T, sv); return; }
@@ -11049,7 +11054,8 @@ function poolApply(T, d, peer){ const M = ['idle', 'solo', 'vs'], PH = ['idle', 
 /* ---- 我出桿 ---- */
 function poolShoot(){ const T = Pool.tables[Pool.ti]; if (!Pool.on || Pool.spec || !poolMyTurn(T)) return; const pw = Math.round(clamp(Pool.pw, 0, 1) * 100) / 100; if (pw < 0.04){ Pool.pw = 0; return; }
   const L = Math.sqrt(Pool.aim.x * Pool.aim.x + Pool.aim.y * Pool.aim.y) || 1, dx = Math.round(Pool.aim.x / L * 1e5) / 1e5, dy = Math.round(Pool.aim.y / L * 1e5) / 1e5; poolQuant(T); T.seq++; T.from = poolKey(); T.shots++;
-  poolSend({ k: 'shot', t: T.i, q: T.seq, d: [dx, dy], pw, b: poolBalls(T) }); poolStartSim(T, dx, dy, pw, true); Pool.pw = 0; poolHud(); }
+  let sp = Pool.sp && poolSpOK(Pool.sp) ? Pool.sp : null; const mi = Math.max(0, poolMyIdx(T)); T.spLeft = T.spLeft || [2, 2]; if (sp && T.spLeft[mi] > 0) T.spLeft[mi]--; else sp = null; Pool.sp = null;
+  poolSend(Object.assign({ k: 'shot', t: T.i, q: T.seq, d: [dx, dy], pw, b: poolBalls(T) }, sp ? { sp } : {})); poolStartSim(T, dx, dy, pw, true, sp); Pool.pw = 0; poolHud(); }
 function poolCuePosOK(T, x, y){ if (Math.abs(x) > PB.HL - PB.R || Math.abs(y) > PB.HW - PB.R) return false; if (T.brk && x > -PB.HL / 2) return false; const R2 = 4.05 * PB.R * PB.R; for (let i = 1; i < 16; i++){ const b = T.b[i]; if (!b.on) continue; const dx = b.x - x, dy = b.y - y; if (dx * dx + dy * dy < R2) return false; } return true; }
 /* 瞄準線：母球沿著方向走，先碰到哪顆球或哪個邊 */
 function poolTrace(T, dx, dy){ const c = T.b[0], R = PB.R; let best = 1e9, hit = -1;
@@ -11058,6 +11064,29 @@ function poolTrace(T, dx, dy){ const c = T.b[0], R = PB.R; let best = 1e9, hit =
   if (dy > 1e-6) { const t = (PB.HW - R - c.y) / dy; if (t < best){ best = t; hit = -1; } } else if (dy < -1e-6){ const t = (-PB.HW + R - c.y) / dy; if (t < best){ best = t; hit = -1; } }
   if (best > 1e8) best = 0; const gx = c.x + dx * best, gy = c.y + dy * best; let nx = 0, ny = 0; if (hit > 0){ const b = T.b[hit]; nx = (b.x - gx) / (2 * R); ny = (b.y - gy) / (2 * R); } return { gx, gy, hit, nx, ny }; }
 /* ---- 畫面：球桌、球、球桿 ---- */
+/* v608 🎱 魚花色球組＋🐠 水族撞球桌（作者選的 2、5）：在撞球畫面按「🐠 魚花色」切換，只改你自己看到的樣子。
+   球：原本的顏色和號碼不變（才分得出全色、花色），兩個號碼中間各畫一條你圖鑑裡釣過的魚；桌面：變成水面，你魚缸裡的魚的影子在下面慢慢游 */
+function poolSkinOn(){ try { return LS.get('tide.poolSkin', '') === 'fish'; } catch(e){ return false; } }
+function poolFishIds(){ const L = Object.keys(rec.count || {}).filter(k => FISH_BY_ID[k] && !FISH_BY_ID[k].of && !FISH_BY_ID[k].fest).sort((a, b) => (rec.count[b] || 0) - (rec.count[a] || 0)); return L.length ? L : ['tilapia', 'carp', 'ayu']; }
+function poolFishTex(n, fid){ const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; const c = cv.getContext('2d'); try { c.drawImage(poolBallTex(n).image, 0, 0); } catch(e){}
+  try { const f = FISH_BY_ID[fid], fc = fishCanvas(f, true, 54, 34, true); for (const u of [0, 64]){ c.save(); c.fillStyle = n === 8 ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.7)'; c.beginPath(); c.ellipse(u === 0 ? 0 : 64, 32, 20, 13, 0, 0, 6.2832); c.fill(); if (u === 0){ c.beginPath(); c.ellipse(128, 32, 20, 13, 0, 0, 6.2832); c.fill(); } c.restore();
+      c.drawImage(fc, (u === 0 ? 0 : 64) - 18, 32 - 11, 36, 22); if (u === 0) c.drawImage(fc, 128 - 18, 32 - 11, 36, 22); } } catch(e){}
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
+function poolApplySkin(){ const on = poolSkinOn(), ids = on ? poolFishIds() : null;
+  if (on && !Pool.texF){ Pool.texF = []; for (let n = 0; n < 16; n++) Pool.texF.push(n === 0 ? Pool.texC[0] : poolFishTex(n, ids[(n - 1) % ids.length])); }
+  for (const T of Pool.tables){ if (!T.m) continue; T.m.balls.forEach((m, n) => { const t = on ? Pool.texF[n] : Pool.texC[n]; if (m.material.map !== t){ m.material.map = t; m.material.needsUpdate = true; } });
+    if (T.feltM){ if (on){ if (!Pool.feltT){ Pool.feltCv = document.createElement('canvas'); Pool.feltCv.width = 256; Pool.feltCv.height = 512; Pool.feltT = new THREE.CanvasTexture(Pool.feltCv); Pool.feltT.colorSpace = THREE.SRGBColorSpace; poolFeltDraw(0); }
+        if (!T.feltOrig) T.feltOrig = T.feltM.material; if (!Pool.feltMat) Pool.feltMat = new THREE.MeshStandardMaterial({ map: Pool.feltT, roughness: 0.55, metalness: 0.05 }); T.feltM.material = Pool.feltMat; }
+      else if (T.feltOrig) T.feltM.material = T.feltOrig; } } }
+function poolFeltDraw(t){ const cv = Pool.feltCv, c = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#1d8fb0'); g.addColorStop(1, '#1576a0'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.strokeStyle = 'rgba(255,255,255,0.10)'; c.lineWidth = 2; for (let i = 0; i < 9; i++){ c.beginPath(); for (let y = 0; y <= H; y += 16){ const x = (i + 0.5) * W / 9 + Math.sin(y * 0.03 + t * 0.9 + i) * 9; y ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); }
+  if (!Pool.feltFish){ const tk = (rec.tank || []).map(x => FISH_BY_ID[x.f]).filter(Boolean), src = tk.length ? tk : poolFishIds().map(id => FISH_BY_ID[id]); Pool.feltFish = src.slice(0, 6).map((f, i) => ({ s: clamp(14 + Math.log10(1 + (f.max || 1)) * 9, 14, 40), x: (i * 53) % W, y: (i * 97 + 40) % H, v: 6 + (i % 3) * 4, d: i % 2 ? 1 : -1 })); }
+  c.fillStyle = 'rgba(8,40,70,0.38)';
+  for (const F of Pool.feltFish){ const y = ((F.y + F.d * F.v * t) % (H + 80) + H + 80) % (H + 80) - 40, x = F.x + Math.sin(t * 0.6 + F.y) * 14, s = F.s; c.save(); c.translate(x, y); c.rotate(F.d > 0 ? Math.PI / 2 : -Math.PI / 2);
+    c.beginPath(); c.ellipse(0, 0, s, s * 0.38, 0, 0, 6.2832); c.fill(); c.beginPath(); c.moveTo(-s * 0.9, 0); c.lineTo(-s * 1.45, -s * 0.4); c.lineTo(-s * 1.45, s * 0.4); c.closePath(); c.fill(); c.restore(); }
+  if (Pool.feltT) Pool.feltT.needsUpdate = true; }
+setInterval(() => { try { if (Pool.feltT && poolSkinOn() && inPoolHall() && !document.hidden) poolFeltDraw(performance.now() / 1000); } catch(e){} }, 120);
 function poolBallTex(n){ const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; const c = cv.getContext('2d'), col = poolBallCol(n); c.fillStyle = n > 8 || n === 0 ? '#f6f3e8' : col; c.fillRect(0, 0, 128, 64);
   if (n > 8){ c.fillStyle = col; c.fillRect(0, 17, 128, 30); }
   if (n > 0){ for (const u of [32, 96]){ c.fillStyle = '#fbfaf2'; c.beginPath(); c.arc(u, 32, 11, 0, 6.2832); c.fill(); c.fillStyle = '#16161a'; c.font = '900 15px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(n), u, 33); } }
@@ -11092,13 +11121,13 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
   /* v499 作者：「裡面長這樣…天空」→ 球館是室內，不該看到天空和海。加天花板（只有朝下那一面，鏡頭拉高到上面時會穿過去看進來），外面再包一個很大的深色罩子把天空、海、雲都擋掉 */
   { const cl = new THREE.Mesh(new THREE.PlaneGeometry(S.w - 0.8, S.d - 0.8), mat('#e9dfc8', 0.95, { noWood: true })); cl.rotation.x = Math.PI / 2; cl.position.set(S.x, Y + 3.32, S.z); g.add(cl);
     const vd = new THREE.Mesh(new THREE.BoxGeometry(70, 16, 70), new THREE.MeshBasicMaterial({ color: '#1a130e', side: THREE.BackSide, fog: false })); vd.position.set(S.x, Y - 0.61 + 8, S.z); vd.frustumCulled = false; g.add(vd); }   /* v498：晚上球館裡太暗（外面天黑裡面也跟著黑）→ 室內補一盞暖色的光，天越黑越亮 */
-  const texs = []; for (let n = 0; n < 16; n++) texs.push(poolBallTex(n));
+  const texs = []; for (let n = 0; n < 16; n++) texs.push(poolBallTex(n)); Pool.texC = texs;
   const ballGeo = new THREE.SphereGeometry(PB.R, 20, 14), feltC = '#1f7f6a';
   [[-3.4, 0.3], [3.4, 0.3]].forEach(([tx, tz], ti) => { const T = poolNewTable(ti, S.x + tx, S.z + tz); Pool.tables[ti] = T; const HL = PB.HL, HW = PB.HW, ty = Y + PB.TOP, tg = new THREE.Group(); tg.position.set(T.ox, 0, T.oz); g.add(tg);
     const P = (w, h, d, c, x, y, z, sh) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'string' ? mat(c, 0.8, { noWood: true }) : c); o.position.set(x, y, z); o.receiveShadow = true; o.castShadow = sh !== false; tg.add(o); return o; };
     P(2 * HW + 1.7, 0.02, 2 * HL + 1.7, '#7a2f3a', 0, Y + 0.012, 0, false);                                   /* 地毯 */
     for (const a of [-1, 1]) for (const b of [-1, 1]) P(0.16, PB.TOP - 0.2, 0.16, '#4a2c18', a * (HW - 0.02), Y + (PB.TOP - 0.2) / 2, b * (HL - 0.12));
-    P(2 * HW + 0.3, 0.2, 2 * HL + 0.3, '#5f3a22', 0, ty - 0.12, 0); P(2 * HW + 0.02, 0.02, 2 * HL + 0.02, feltC, 0, ty - 0.01, 0, false);
+    P(2 * HW + 0.3, 0.2, 2 * HL + 0.3, '#5f3a22', 0, ty - 0.12, 0); T.feltM = P(2 * HW + 0.02, 0.02, 2 * HL + 0.02, feltC, 0, ty - 0.01, 0, false);
     /* 顆星（庫邊）：六段，中間和四個角留袋口 */
     const cu = '#17604f', rl = '#6b4226', ch = 0.045, cw = 0.05;
     for (const sx of [-1, 1]){ for (const sz of [-1, 1]){ const z0 = 0.085, z1 = HL - 0.09, L = z1 - z0; P(cw, ch, L, cu, sx * (HW + cw / 2), ty + ch / 2 - 0.004, sz * (z0 + L / 2), false); } P(0.13, 0.06, 2 * HL + 0.34, rl, sx * (HW + cw + 0.065), ty + 0.03, 0); }
@@ -11129,7 +11158,7 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
    八號球打完，雙方各自回報輸贏（sport_report，跟真人＝'pool'、跟阿喆＝'zhe'；200_pool_rank.sql）。阿喆的戰績記在伺服器的 pool_zhe。
    東邊牆上一塊木框黑板：前 6 名玩家＋阿喆（照勝場排進去）＋你自己的名次。進球館、打完一局時重新抓。不發獎勵（輸贏是手機自己報的）。 */
 var PoolRank = { cv: null, tx: null, d: null, at: 0, busy: false };
-function poolRankReport(T, mi, e){ try { if (T.repd || mi < 0 || T.mode !== 'vs' || T.ph !== 'over' || T.win < 0 || !(e === 'win8' || e === 'lose8' || e === 'afk' || e === 'left')) return; T.repd = true;
+function poolRankReport(T, mi, e){ try { if (T.spU){ T.repd = true; return; } if (T.repd || mi < 0 || T.mode !== 'vs' || T.ph !== 'over' || T.win < 0 || !(e === 'win8' || e === 'lose8' || e === 'afk' || e === 'left')) return; T.repd = true;
     const zhe = poolNpc(T.p[1 - mi]); sportReport(zhe ? 'zhe' : 'pool', 'pool' + T.i + '-' + Date.now().toString(36), T.win === mi ? 'w' : 'l', false); setTimeout(() => poolRankLoad(true), 1800); } catch(e){} }
 async function poolRankLoad(force){ if (PoolRank.busy || !Cloud.on || !Cloud.sb) return; if (!force && Date.now() - PoolRank.at < 60000) return; PoolRank.busy = true; PoolRank.at = Date.now();
   try { const { data, error } = await Cloud.sb.rpc('pool_top'); if (!error && data && Array.isArray(data.top)){ PoolRank.d = data; poolRankDraw(); } } catch(e){} PoolRank.busy = false; }
@@ -11211,6 +11240,8 @@ function poolPick(e){ const T = Pool.tables[Pool.ti]; if (!T) return null; Pool.
 function poolHudBuild(){ if (Pool.hud) return; const h = el('div'); h.id = 'poolHud';
   h.innerHTML = '<div class="pl-pad"></div><div class="pl-top panel"><div class="pl-p pl-p0"><b></b><i></i></div><div class="pl-mid"><span class="pl-msg"></span><span class="pl-time"></span></div><div class="pl-p pl-p1"><b></b><i></i></div></div><div class="pl-pow"><div class="pl-powfill"></div><div class="pl-powcue"></div><span>力道</span></div><div class="pl-fine"><span>微調</span></div><div class="pl-btns"><button class="pl-inv" hidden></button><button class="pl-zhe" hidden>跟阿喆對打</button><button class="pl-again" hidden>再來一局</button><button class="pl-leave">離開球桌</button></div><div class="pl-tip"></div>';
   document.body.appendChild(h); Pool.hud = h; const pad = $('.pl-pad', h), pow = $('.pl-pow', h);
+  { const sk = el('button', 'pl-skin panel', poolSkinOn() ? '🎱 經典球' : '🐠 魚花色'); h.appendChild(sk); sk.addEventListener('click', () => { const on = !poolSkinOn(); try { LS.set('tide.poolSkin', on ? 'fish' : ''); } catch(e){} sk.textContent = on ? '🎱 經典球' : '🐠 魚花色'; poolApplySkin(); toast(on ? '🐠 換成魚花色球組，桌面變成水族箱（只有你看得到）' : '🎱 換回經典球組'); }); }
+  { const sp = el('div', 'pl-sp panel'); h.appendChild(sp); sp.addEventListener('click', e => { const b = e.target.closest('button[data-sp]'); if (!b) return; const k = b.dataset.sp; Pool.sp = Pool.sp === k ? null : k; poolSpRender(); }); }
   $('.pl-leave', h).addEventListener('click', () => { poolLeave(); }); $('.pl-again', h).addEventListener('click', () => { poolAgain(); }); $('.pl-inv', h).addEventListener('click', () => { poolInvite(); }); $('.pl-zhe', h).addEventListener('click', () => { poolVsZhe(); });
   pad.addEventListener('pointerdown', e => { const T = Pool.tables[Pool.ti]; if (!T || Pool.spec || !poolMyTurn(T)) return; const p = poolPick(e); if (!p) return; try { pad.setPointerCapture(e.pointerId); } catch(_){} const c = T.b[0], near = T.ph === 'hand' && (p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y) < 0.14 * 0.14; Pool.drag = { id: e.pointerId, ball: near, sx: e.clientX, sy: e.clientY, moved: false, ang: Math.atan2(p.y - c.y, p.x - c.x) }; e.preventDefault(); });
   pad.addEventListener('pointermove', e => { const D = Pool.drag, T = Pool.tables[Pool.ti]; if (!D || D.id !== e.pointerId || !T || !poolMyTurn(T)) return; const p = poolPick(e); if (!p) return; if (Math.abs(e.clientX - D.sx) + Math.abs(e.clientY - D.sy) > 8) D.moved = true; const c = T.b[0];
@@ -11232,7 +11263,10 @@ function poolHudBuild(){ if (Pool.hud) return; const h = el('div'); h.id = 'pool
   pow.addEventListener('pointerup', e => { if (pid !== e.pointerId) return; pid = null; setPw(e); if (Pool.pw >= 0.04) poolShoot(); else Pool.pw = 0; });
   pow.addEventListener('pointercancel', e => { if (pid === e.pointerId){ pid = null; Pool.pw = 0; } }); }
 function poolDots(T, who){ const g = poolGrpOf(T, who); if (T.mode !== 'vs') return ''; if (!g) return '<em>還沒分組</em>'; let s = ''; for (let n = g === 1 ? 1 : 9; n <= (g === 1 ? 7 : 15); n++) if (T.b[n].on) s += `<u class="${g === 2 ? 'st' : ''}" style="--c:${poolBallCol(n)}"></u>`; if (!s) s = '<u style="--c:#17171b"></u>'; return s; }
-function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Pool.on || !T) return; const mi = poolMyIdx(T), vs = T.mode === 'vs';
+function poolSpRender(){ const h = Pool.hud, T = Pool.tables[Pool.ti], box = h && $('.pl-sp', h); if (!box) return; const my = !!T && poolMyTurn(T), mi = T ? Math.max(0, poolMyIdx(T)) : 0, left = T && T.spLeft ? T.spLeft[mi] : 2;
+  const ks = Object.keys(POOL_SP); box.hidden = !my; if (!my) return;
+  const cur = POOL_SP[Pool.sp]; box.innerHTML = `<div class="pl-sph">${cur ? `${cur.ic} ${cur.n}：${cur.d}（下一桿用）` : `特技母球・這局還能用 ${left} 次${T.mode === 'vs' ? '（用了不算排行）' : ''}`}</div>` + ks.map(k => { const S = POOL_SP[k], ok = poolSpOK(k); return `<button data-sp="${k}" class="${Pool.sp === k ? 'on' : ''}" ${ok && left > 0 ? '' : 'disabled'} title="${ok ? S.d : '釣到' + S.need.map(id => FISH_BY_ID[id] ? FISH_BY_ID[id].name : id).slice(0, 2).join('或') + '就解鎖'}">${ok ? S.ic : '🔒'} ${S.n}</button>`; }).join(''); }
+function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Pool.on || !T) return; poolSpRender(); const mi = poolMyIdx(T), vs = T.mode === 'vs';
   for (const i of [0, 1]){ const p = $('.pl-p' + i, h); p.hidden = !vs && i === 1; $('b', p).textContent = (T.nm[i] || (i === 0 ? '玩家' : '')) + (vs && i === mi ? '（你）' : ''); $('i', p).innerHTML = vs ? poolDots(T, i) : `已經打了 ${T.shots} 桿`; p.classList.toggle('on', (vs ? T.turn === i : i === 0) && T.ph !== 'over'); }
   let msg = ''; const my = poolMyTurn(T);
   if (T.ph === 'over') msg = T.mode === 'solo' && T.ev === 'clear' ? `清台！用了 ${T.shots} 桿` : T.win < 0 ? '這一局結束了' : Pool.spec ? `${T.nm[T.win] || '玩家'} 贏了` : (vs ? T.win === mi : true) ? '你贏了！' : '這局輸了';
@@ -11833,7 +11867,7 @@ function fpTick(dt){ if (FROST.tents) for (const [m, tx, tz] of FROST.tents) m.v
   camera.updateMatrixWorld(true); const hp = FP.tgt; hp.set(0, -0.12, 0.006); rp.localToWorld(hp); FP.g.worldToLocal(hp); FP.handL.position.copy(hp); FP.handL.position.x -= 0.03; FP.handL.position.y -= 0.012; FP.handL.rotation.set(0.12, -0.4, -(FP.lean || 0));
   FP.knob.getWorldPosition(hp); FP.g.worldToLocal(hp); FP.handR.position.set(hp.x + 0.018, hp.y - 0.008, hp.z + 0.03); FP.handR.rotation.set(0.1, 0.35, -(FP.lean || 0) * 0.6); FP.handR.visible = !(c && c.held);
   FP.line.visible = false; fpCatchTick(dt, t); return true; }
-function enterPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
+function enterPoolHall(){ try { if (Pool.texF){ Pool.texF.forEach((t, n) => { if (n) t.dispose(); }); Pool.texF = null; } Pool.feltFish = null; setTimeout(() => { try { poolApplySkin(); } catch(e){} }, 900); } catch(e){} const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🎱 歡迎來到潮汐撞球館！', 1.4); }, 260); }
 function exitPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (Pool.on) poolLeave();
   setTimeout(() => { const f = POOL_DOOR.face || 0; me.pos.x = POOL_DOOR.x + Math.sin(f) * 0.6; me.pos.z = POOL_DOOR.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; if (Venue.poolDist) cam.dist = Venue.poolDist; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260); }
@@ -18184,6 +18218,7 @@ function renderTab(){
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
+      '🎱 撞球×釣魚：在撞球桌輪到你時，下面有「特技母球」：🐡河豚球（撞擊範圍變大）、🐙章魚球（母球往左彎）、🐬海豚球（球互撞更有力）、🐋鯨魚球（力道 1.45 倍），圖鑑裡釣過那種魚才解鎖，每局每人最多 2 次；用了特技的對打不算排行。左上「🐠 魚花色」可以把球換成你釣過的魚的花色、桌面變成水族箱，你魚缸裡的魚在下面游（只有你看得到）。',
       '🧬 全服共養：整個伺服器共用一片海，每種魚有族群量（圖鑑每格下面的條）。大家釣太多那種魚會變少、變難釣、偏小（最低 30%，不會絕種）；放流會變多（標記放流算兩條），多的時候比較好釣、偶爾特別大。每天會慢慢回到 100%。連續 3 天 115% 以上，那種魚會演化出新花色（✨演化・），之後一直留著。',
       '🎨 竿子造型每支竿子各自裝：在阿鐵的工坊按「裝上」只會裝在現在拿的那支，換竿子時會自動換成那支記住的造型；背包的釣竿清單會寫每支裝了什麼造型。',
       '🌑 水裡的魚影：拋竿以後水底會有黑色的影子游過來咬餌，看得出大概多大、什麼形狀，但看不出顏色和花紋；拉魚的時候上面也只會說手感（例如「好重的手感！」），不會說是什麼魚。要等拉出水面才知道釣到什麼。拉魚時看得到牠在浮標底下掙扎；魚往外衝的時候會頭朝下往深處鑽、把浮標拖進水裡、一路冒泡，這時候要先放開。',
