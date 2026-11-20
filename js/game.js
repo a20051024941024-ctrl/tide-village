@@ -10546,7 +10546,7 @@ function poolResolve(T){ const S = T.sim, pot = S.pot, cueIn = pot.includes(0), 
     T.brk = false; }
   T.dl = now() + PB.TURN; poolEmit(T); poolSay(T); }
 function poolLeftBefore(T, g, pot){ let n = poolLeft(T, g); for (const i of pot) if (poolGrp(i) === g) n++; return n; }   /* 這一桿之前這一組還剩幾顆 */
-function poolSay(T){ if (!inPoolHall()) return; const mi = poolMyIdx(T), e = T.ev; if (mi < 0 && !(Pool.on && Pool.ti === T.i)) return; const mine = T.mode === 'solo' || (T.ph === 'over' ? T.win === mi : T.turn === mi);
+function poolSay(T){ if (!inPoolHall()) return; const mi = poolMyIdx(T), e = T.ev; if (mi < 0 && !(Pool.on && Pool.ti === T.i)) return; poolRankReport(T, mi, e); const mine = T.mode === 'solo' || (T.ph === 'over' ? T.win === mi : T.turn === mi);
   if (e === 'clear'){ flash(`🎱 清台！用了 ${T.shots} 桿`, 2.2); SFX.coin(); }
   else if (e === 'win8' || e === 'lose8' || e === 'afk' || e === 'left'){ if (mi < 0) flash(`🎱 ${T.nm[T.win] || '玩家'} 贏了`, 2); else if (T.win === mi){ flash(e === 'left' ? '🎱 對手離開了，你贏了' : e === 'afk' ? '🎱 對手沒有出桿，你贏了' : '🎱 你贏了！', 2.2); SFX.coin(); } else flash(e === 'lose8' && T.win !== mi ? '😵 黑八進錯了，這局輸了' : '這局輸了，再來一局！', 2.2); }
   else if (e === 'back8') flash('黑球要留到最後，先擺回桌上', 1.8);
@@ -10713,6 +10713,7 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
   { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#1b2530'; c.fillRect(0, 0, 512, 128); c.strokeStyle = '#ffd23f'; c.lineWidth = 6; c.strokeRect(8, 8, 496, 112); c.fillStyle = '#ffd23f'; c.font = '900 70px "Noto Sans TC", "PingFang TC", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('潮汐撞球館', 256, 68); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const m = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.1), new THREE.MeshBasicMaterial({ map: tx })); m.position.set(S.x, Y + 2.45, S.z - S.d / 2 + 0.42); g.add(m); }
   /* 記分板（黑板）：寫每張桌子現在誰在打 */
   { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256; Pool.boardCv = cv; const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; Pool.boardTx = tx; const m = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.5), new THREE.MeshBasicMaterial({ map: tx })); m.position.set(S.x + 5.2, Y + 1.95, S.z - S.d / 2 + 0.42); g.add(m); B(3.2, 1.7, 0.06, '#6f4e30', 5.2, Y + 1.95, -S.d / 2 + 0.4, false); }
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 384; PoolRank.cv = cv; const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; PoolRank.tx = tx; const m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.8), new THREE.MeshBasicMaterial({ map: tx })); m.position.set(S.x + S.w / 2 - 0.665, Y + 1.85, S.z - 2.2); m.rotation.y = -Math.PI / 2; g.add(m); B(0.06, 2.0, 2.6, '#6f4e30', S.w / 2 - 0.6, Y + 1.85, -2.2, false); poolRankDraw(); }   /* v589 東邊牆上的「球館排行」 */
   /* 果汁吧（北邊牆左邊）、球桿架（西牆）、沙發（東牆） */
   B(3.6, 1.05, 0.7, '#6f4e30', -5.2, Y + 0.525, -S.d / 2 + 1.3); B(3.8, 0.08, 0.9, '#e8dcc0', -5.2, Y + 1.09, -S.d / 2 + 1.3, false); addBoxCol(S.x - 5.2, S.z - S.d / 2 + 1.3, 3.8, 0.9);
   for (let i = 0; i < 3; i++){ const st = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.07, 12), mat('#d8352f', 0.6, { noWood: true })); st.position.set(S.x - 6.3 + i * 1.1, Y + 0.72, S.z - S.d / 2 + 2.2); st.castShadow = true; g.add(st); const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.7, 8), mat('#8f98a3', 0.5, { noWood: true })); lg.position.set(S.x - 6.3 + i * 1.1, Y + 0.35, S.z - S.d / 2 + 2.2); g.add(lg); addCircleCol(S.x - 6.3 + i * 1.1, S.z - S.d / 2 + 2.2, 0.2); }
@@ -10760,6 +10761,25 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
     add(0.5, 0.05, 1.9, lp, 0, Y + 2.02, 0); add(0.62, 0.16, 2.02, '#1f5f4f', 0, Y + 2.12, 0); for (const sz of [-1, 1]) add(0.025, 1.0, 0.025, '#3d2817', 0, Y + 2.7, sz * 0.7); add(0.22, 0.2, S.d - 0.8, '#4a2c18', 0, Y + 3.2, -tz);
     poolRefresh(T); });
   Venue.poolExit = { x: S.x, z: S.z + S.d / 2 - 0.95 }; poolBoard(); }
+/* ===== v589 🎱 球館排行（作者：「感覺撞球館要裝一個小小的排名，然後阿喆也可以算」）=====
+   八號球打完，雙方各自回報輸贏（sport_report，跟真人＝'pool'、跟阿喆＝'zhe'；200_pool_rank.sql）。阿喆的戰績記在伺服器的 pool_zhe。
+   東邊牆上一塊木框黑板：前 6 名玩家＋阿喆（照勝場排進去）＋你自己的名次。進球館、打完一局時重新抓。不發獎勵（輸贏是手機自己報的）。 */
+var PoolRank = { cv: null, tx: null, d: null, at: 0, busy: false };
+function poolRankReport(T, mi, e){ try { if (T.repd || mi < 0 || T.mode !== 'vs' || T.ph !== 'over' || T.win < 0 || !(e === 'win8' || e === 'lose8' || e === 'afk' || e === 'left')) return; T.repd = true;
+    const zhe = poolNpc(T.p[1 - mi]); sportReport(zhe ? 'zhe' : 'pool', 'pool' + T.i + '-' + Date.now().toString(36), T.win === mi ? 'w' : 'l', false); setTimeout(() => poolRankLoad(true), 1800); } catch(e){} }
+async function poolRankLoad(force){ if (PoolRank.busy || !Cloud.on || !Cloud.sb) return; if (!force && Date.now() - PoolRank.at < 60000) return; PoolRank.busy = true; PoolRank.at = Date.now();
+  try { const { data, error } = await Cloud.sb.rpc('pool_top'); if (!error && data && Array.isArray(data.top)){ PoolRank.d = data; poolRankDraw(); } } catch(e){} PoolRank.busy = false; }
+function poolRankDraw(){ const cv = PoolRank.cv; if (!cv) return; const c = cv.getContext('2d'), F = (w, z) => `${w} ${z}px "Noto Sans TC", "PingFang TC", sans-serif`;
+  c.fillStyle = '#20392f'; c.fillRect(0, 0, 512, 384); c.strokeStyle = 'rgba(244,241,230,.25)'; c.lineWidth = 2; c.strokeRect(10, 10, 492, 364);
+  c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = '#ffd23f'; c.font = F(900, 34); c.fillText('🏆 球館排行', 24, 40); c.fillStyle = 'rgba(244,241,230,.7)'; c.font = F(700, 18); c.textAlign = 'right'; c.fillText('八號球・勝場', 488, 42); c.textAlign = 'left';
+  const D = PoolRank.d; if (!D){ c.fillStyle = '#f4f1e6'; c.font = F(700, 24); c.fillText(Cloud.on ? '讀取中……' : '登入以後才看得到排行', 24, 120); c.fillText('阿喆在記分板前面等你挑戰', 24, 170); if (PoolRank.tx) PoolRank.tx.needsUpdate = true; return; }
+  const L = (D.top || []).map(r => ({ n: String(r.name || '釣客').slice(0, 8), w: r.w | 0, l: r.l | 0, me: !!r.me }));
+  if (D.zhe){ const z = { n: '阿喆', w: D.zhe.w | 0, l: D.zhe.l | 0, zhe: true }; let k = L.findIndex(r => z.w > r.w || (z.w === r.w && z.l < r.l)); if (k < 0) k = L.length; L.splice(k, 0, z); }
+  L.slice(0, 7).forEach((r, i) => { const y = 92 + i * 38; c.fillStyle = r.zhe ? '#ffd23f' : r.me ? '#7fe0b0' : '#f4f1e6'; c.font = F(900, 24); c.fillText(i < 3 ? ['🥇', '🥈', '🥉'][i] : `${i + 1}.`, 24, y); c.font = F(700, 25); c.fillText(r.n + (r.zhe ? '（常客）' : r.me ? '（你）' : ''), 76, y); c.textAlign = 'right'; c.fillText(`${r.w} 勝 ${r.l} 敗`, 488, y); c.textAlign = 'left'; });
+  if (!L.length || (L.length === 1 && L[0].zhe && !L[0].w && !L[0].l)){ c.fillStyle = '#f4f1e6'; c.font = F(700, 22); c.fillText('還沒有人打完一局，第一名等你來拿', 24, 140); }
+  c.fillStyle = '#7fe0b0'; c.font = F(700, 20); const zA = D.me && D.zhe && ((D.zhe.w | 0) > D.me.w || ((D.zhe.w | 0) === D.me.w && (D.zhe.l | 0) < D.me.l)) ? 1 : 0;   /* 阿喆排在你前面，名次要加一 */
+  c.fillText(D.me ? `你：第 ${D.me.rk + zA} 名，${D.me.w} 勝 ${D.me.l} 敗` : '你還沒有戰績：跟朋友或阿喆打一局八號球', 24, 356);
+  if (PoolRank.tx) PoolRank.tx.needsUpdate = true; }
 function poolBoard(){ const cv = Pool.boardCv; if (!cv) return; const c = cv.getContext('2d'); c.fillStyle = '#20392f'; c.fillRect(0, 0, 512, 256); c.fillStyle = '#f4f1e6'; c.font = '900 34px "Noto Sans TC", "PingFang TC", sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText('🎱 今天的球桌', 24, 40);
   Pool.tables.forEach((T, i) => { const y = 108 + i * 78; c.fillStyle = '#ffd23f'; c.font = '900 30px "Noto Sans TC", "PingFang TC", sans-serif'; c.fillText(`${i + 1} 號桌`, 24, y); c.fillStyle = '#f4f1e6'; c.font = '700 28px "Noto Sans TC", "PingFang TC", sans-serif';
     c.fillText(T.mode === 'vs' ? `${T.nm[0] || '玩家'} vs ${T.nm[1] || '玩家'}` : T.mode === 'solo' ? `${T.nm[0] || '玩家'} 練習中，可以挑戰` : '空桌，歡迎來打', 150, y); });
@@ -10769,14 +10789,14 @@ function poolRefresh(T){ const M = T.m; if (!M) return; M.tray = M.tray.filter(n
   for (let n = 0; n < 16; n++){ const b = T.b[n], m = M.balls[n]; if (b.on){ m.visible = true; m.position.set(b.y, M.ty + PB.R, b.x); m.scale.setScalar(1); continue; }
     if (M.pots.some(p => p.i === n)) continue;   /* 正在播進袋、滾回球槽的動畫 */
     if (n === 0){ m.visible = false; continue; } m.visible = true; m.scale.setScalar(1); m.position.set(M.TRX, M.TRY, poolTrayZ(M.tray.indexOf(n))); } }
-function updatePoolHall(dt, t){ const ih = inPoolHall(); if (Venue.pool && Venue.pool.visible !== ih){ Venue.pool.visible = ih; for (const T of Pool.tables){ if (T.m) T.m.pots.length = 0; poolRefresh(T); } } if (ih && Venue.poolAmb) Venue.poolAmb.intensity = 2.2 * (DayNight.lamp || 0);
+function updatePoolHall(dt, t){ const ih = inPoolHall(); if (ih) poolRankLoad(false); if (Venue.pool && Venue.pool.visible !== ih){ Venue.pool.visible = ih; for (const T of Pool.tables){ if (T.m) T.m.pots.length = 0; poolRefresh(T); } } if (ih && Venue.poolAmb) Venue.poolAmb.intensity = 2.2 * (DayNight.lamp || 0);
   if (Pool.on && (!ih || !Pool.tables[Pool.ti])) poolExitLocal();
   if (ih && !Pool.asked && room && room.connected()){ Pool.asked = true; poolSend({ k: 'q' }); }   /* 剛走進來：問一下每張桌子現在的狀況 */
   if (!ih) Pool.asked = false;
   for (const T of Pool.tables){ try { poolZheTick(T, dt); } catch(e){ if (!poolZheTick.err){ poolZheTick.err = 1; console.warn('zhe', e); } } poolTickTable(T, dt, t, ih); if (ih){ try { poolPoseMark(T); } catch(e){} } }
   try { if (ih && !Venue.zhe) zheBuild(); zheAvTick(dt, t, ih); } catch(e){ if (!zheAvTick.err){ zheAvTick.err = 1; console.warn('zheAv', e); } }
   if (Pool.on){ uiBlocked = true; joy.x = joy.z = 0; poolHudTick(); poolAimSend(); } }
-function poolTickTable(T, dt, t, ih){ const M = T.m, S = T.sim;
+function poolTickTable(T, dt, t, ih){ const M = T.m, S = T.sim; if (T.ph !== 'over') T.repd = false;
   if (S){ if (!S.auth && !ih){ T.sim = null; T.ph = 'aim'; if (T.pend){ const d = T.pend; T.pend = null; poolApply(T, d, T.pendFrom || ''); } }
     else { S.acc += dt * (T.pend ? 3 : 1); S.t += dt; S.cue = Math.max(0, S.cue - dt); let n = Math.min(60, Math.floor(S.acc / PB.H)), moving = true; S.acc -= n * PB.H; const px = T.b.map(b => b.x), py = T.b.map(b => b.y);
       while (n-- > 0 && moving) moving = poolStep(T); if (S.t > 25){ for (const b of T.b) b.vx = b.vy = 0; moving = false; }
@@ -11255,7 +11275,7 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   { const sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', '🐟 最得意的三種魚' + (r.picked ? '' : '（還沒選，先放最重的）')); if (isMe){ const pb = el('button', 'pc-more', r.picked ? '重選 ›' : '自己選 ›'); pb.addEventListener('click', () => cardPick(c, r, peerId)); st.appendChild(pb); } sec.appendChild(st);
     const ul = el('div', 'pc-top'); (Array.isArray(r.top) ? r.top : []).slice(0, 3).forEach((x, i) => { const fz = FISH_BY_ID[x.f]; if (!fz) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); try { const fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; fc.className = 'pc-fc'; d.appendChild(fc); setTimeout(() => { if (fc.isConnected){ try { drawFish(fc, fz.color, true, fz.id); } catch(e){} } }, 90 + i * 30); } catch(e){} d.appendChild(el('b', '', fz.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); });
     if (!ul.children.length) ul.appendChild(el('p', 'sub', '還沒有釣到魚')); sec.appendChild(ul); P1.appendChild(sec); }
-  { const sp = r.sports || {}, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🏟 球類戰績')); const g = el('div', 'pc-stats pc-sport'); for (const [k, ic, lab] of [['soccer', '⚽', '足球'], ['basket', '🏀', '籃球'], ['badminton', '🏸', '羽球']]){ const x = sp[k], d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', x ? `${x.w} 勝 ${x.l} 敗` : '—')); if (x && x.d) d.appendChild(el('span', '', `${x.d} 平`)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }   /* v544 */
+  { const sp = r.sports || {}, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🏟 球類戰績')); const g = el('div', 'pc-stats pc-sport'); for (const [k, ic, lab] of [['soccer', '⚽', '足球'], ['basket', '🏀', '籃球'], ['badminton', '🏸', '羽球'], ['pool', '🎱', '撞球']]){ const x = k === 'pool' && (sp.pool || sp.zhe) ? { w: ((sp.pool || {}).w || 0) + ((sp.zhe || {}).w || 0), l: ((sp.pool || {}).l || 0) + ((sp.zhe || {}).l || 0) } : sp[k], d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', x ? `${x.w} 勝 ${x.l} 敗` : '—')); if (x && x.d) d.appendChild(el('span', '', `${x.d} 平`)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }   /* v544 */
   /* 稱號、成就（自己的看得到全部；別人的只看得到他現在掛的稱號） */
   if (isMe){ try { const ts = myTitles(), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🎖 稱號　${ts.length} 個`); const mb = el('button', 'pc-more', '換稱號 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-chips'); for (const t of ts.slice(-8).reverse()) box.appendChild(el('span', 'pc-chip' + (t.name === title ? ' on' : ''), t.name)); if (!ts.length) box.appendChild(el('span', 'sub', '還沒有稱號')); sec.appendChild(box); P3.appendChild(sec); } catch(e){}
     try { const done = ACH.filter(a => { try { return a.cur() >= a.goal; } catch(e){ return false; } }), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🏅 成就　${done.length}／${ACH.length}`); const mb = el('button', 'pc-more', '看全部 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-ach'); for (const a of done.slice(-8).reverse()){ const b = el('span', 'pc-medal', a.icon || '🏅'); b.title = a.name; box.appendChild(b); } if (!done.length) box.appendChild(el('span', 'sub', '還沒有完成的成就')); sec.appendChild(box); P3.appendChild(sec); } catch(e){} }
@@ -18042,6 +18062,7 @@ function renderTab(){
       '滑完以後滑雪板會自動還回去。別人看得到你坐在纜車上、從山上滑下來。',
     ]);
     sec('🎱 潮汐撞球館', [
+      '🏆 球館排行：東邊牆上有一塊排行黑板，八號球打完（跟朋友或阿喆都算）會記一勝或一敗，照勝場排前幾名；阿喆也在上面，他的戰績是所有人跟他打的結果加起來。最下面一行是你自己的名次。練習（一個人打）不算。要登入才會記。只是排行，沒有獎勵。你的資料頁「球類戰績」也多了撞球。',
       '跟阿喆對打：球館裡多了一位常客阿喆，平常站在北邊記分板前面。走到他旁邊按「跟阿喆打一局」，或是自己在練習的時候按右下的「跟阿喆對打」，就會重新排球開始一局八號球，你先開球。他會自己走到桌邊、輪到他時繞到母球後面瞄準，有時候會失手。規則跟真人對打一樣（每桿 35 秒也一樣）。阿喆一次只能跟一個人打；你按「離開球桌」這一局就收掉。',
       '邀請對打：你在練習的時候，如果有別的玩家站在球桌旁邊，右下角會出現「邀請 某某 對打」，按下去對方會收到邀請，按接受就開始對打。也可以自己走到別人正在練習的球桌旁邊按「對打」直接加入。',
       '在哪裡：運動公園西南角、屋頂上有一顆黑八的小屋。走到門口按按鈕就進去，裡面有兩張球桌、果汁吧和記分黑板（寫著每張桌子現在誰在打）；出口在南邊。',
