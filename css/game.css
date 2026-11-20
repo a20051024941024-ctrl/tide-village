@@ -1802,3 +1802,5 @@ body.wildOn #today3{display:none!important}
 #wildHud .wh-w:empty{display:none}
 @keyframes whBlink{50%{opacity:.45}}
 body.wildOn #guideCard{display:none!important}   /* 在荒島上，飽足度和體力條放在新手任務卡的位置 */
+#wildHud .wh-g{font-size:12px;color:#17696b;font-weight:800;line-height:1.35;border-top:1px dashed rgba(24,51,74,.2);padding-top:4px}
+#wildHud .wh-g:empty{display:none}

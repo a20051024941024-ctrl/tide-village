@@ -7309,7 +7309,7 @@ const WILD_ITEMS = {
   wood:   { n:'漂流木', ic:'🪵', verb:'撿漂流木', get:[1, 2], cd:300, anim:'farmplant' },
   stone:  { n:'石頭',   ic:'🪨', verb:'敲石頭',   get:[1, 2], cd:360, anim:'farmwater' },
   grass:  { n:'草',     ic:'🌾', verb:'割草',     get:[2, 3], cd:240, anim:'farmplant' },
-  bamboo: { n:'竹子',   ic:'🎋', verb:'砍竹子',   get:[1, 1], cd:420, anim:'farmwater' },
+  bamboo: { n:'竹子',   ic:'🎋', verb:'砍竹子',   get:[1, 2], cd:420, anim:'farmwater' },
   leaf:   { n:'大葉子', ic:'🍃', verb:'摘大葉子', get:[1, 2], cd:300, anim:'farmplant' },
   coco:   { n:'椰子',   ic:'🥥', verb:'搖椰子樹', get:[1, 1], cd:600, anim:'farmwater' },
   rope:   { n:'草繩',   ic:'🪢' }, bone: { n:'魚骨', ic:'🦴' }, hook: { n:'骨頭魚鉤', ic:'🪝' }, rod: { n:'手作竹竿', ic:'🎣' },
@@ -7466,13 +7466,13 @@ function wildWarm(){ const T = Date.now(); for (const c of wildSt().camp){ if (c
 function wildDrain(){ const W = WEATHERS[Env.wx] || {}, night = DayNight.period === 'night', rain = (W.rain || 0) > 0 || Env.wx === 'typre' || Env.wx === 'tymid', hard = Env.wx === 'storm' || Env.wx === 'typre' || Env.wx === 'tymid', roof = wildUnderRoof(), S = wildSt();
   const L = []; if (S.hun <= 0) L.push(['餓', 1 / 3]); if (night && !wildWarm()) L.push(['冷', 1 / 6]); if (rain && !roof) L.push([hard ? '暴風雨' : '淋雨', hard ? 1 / 3 : 1 / 6]); return L; }
 function wildSurvTick(dt){ const S = wildSt(); if (!onWild() || Wild.down){ Wild.trip = Wild.trip && onWild() ? Wild.trip : null; return; }
-  if (!Wild.trip){ Wild.trip = Date.now(); if (S.rested){ S.max = 120; S.rested = false; S.sta = Math.max(S.sta, 100); toast('😴 在家睡飽了：這一趟體力上限 120'); } else S.max = 100; S.sta = Math.min(S.sta, S.max); wildSave(); }
+  if (!Wild.trip){ Wild.trip = Date.now(); if (!LS.get('tide.wildIntro', false)){ LS.set('tide.wildIntro', true); setTimeout(() => { flash('🏝️ 漂流島：這裡什麼都沒有，要靠自己活下去', 2.6); setTimeout(() => toast('左上角是飽足度和體力，下面一行是「下一步」。先去沙灘撿漂流木吧！'), 2800); }, 600); } if (S.rested){ S.max = 120; S.rested = false; S.sta = Math.max(S.sta, 100); toast('😴 在家睡飽了：這一趟體力上限 120'); } else S.max = 100; S.sta = Math.min(S.sta, S.max); wildSave(); }
   const sleep = Wild.sleep, k = sleep ? 0.35 : 1; S.hun = Math.max(0, S.hun - dt / 9 * k); const L = sleep ? [] : wildDrain(); let d = 0; for (const q of L) d += q[1];
   if (sleep){ S.sta = Math.min(wildStaMax(), S.sta + dt * 2); } else if (d > 0) S.sta = Math.max(0, S.sta - dt * d); else if (S.hun >= 50) S.sta = Math.min(wildStaMax(), S.sta + dt / 4);
   Wild.why = L.map(q => q[0]); if ((Wild.svT = (Wild.svT || 0) + dt) > 30){ Wild.svT = 0; wildSave(); }
   if (S.sta <= 0) wildCollapse(); }
 function wildEat(k){ const S = wildSt(), I = WILD_ITEMS[k]; if (!I || !(S.bag[k] | 0)) return; if (S.hun >= 99){ toast('現在吃不下了'); return; }
-  S.bag[k]--; if (!S.bag[k]) delete S.bag[k]; S.hun = Math.min(100, S.hun + (I.food || 0)); if (I.sta) S.sta = Math.min(wildStaMax(), S.sta + I.sta);
+  S.bag[k]--; if (!S.bag[k]) delete S.bag[k]; S.hun = Math.min(100, S.hun + (I.food || 0)); (S.ate = S.ate || {})[k] = 1; if (I.sta) S.sta = Math.min(wildStaMax(), S.sta + I.sta);
   if (I.bone){ S.bag.bone = (S.bag.bone | 0) + I.bone; if (wildSlots(S.bag) > WILD_BAG){ S.bag.bone--; if (!S.bag.bone) delete S.bag.bone; } }
   wildSave(); startEmote(me, 'farmplant'); try { SFX.coin(); } catch(e){} flash(`${I.ic} 吃了${I.n}　飽足 +${I.food || 0}${I.bone ? '・🦴 魚骨 +1' : ''}`, 1.4); if (!$('#sheet').hidden) renderTab(); }
 function wildRawFood(){ const S = wildSt(); return ['fishS', 'crab'].find(k => (S.bag[k] | 0) > 0) || null; }
@@ -7488,11 +7488,26 @@ function wildCollapse(){ if (Wild.down) return; Wild.down = true; const S = wild
     Wild.down = false; Wild.trip = null; if (lost.length) setTimeout(() => toast(`🎒 荒島背包掉了一半：${lost.join('　')}`), 2400); }, 3000); }
 function nearWildBed(){ if (!onWild()) return null; const r = wildUnderRoof(); return r && r.t === 'cabin' ? r : null; }
 function wildSleepToggle(c){ if (Wild.sleep){ Wild.sleep = null; me.emote = null; toast('☀️ 起床了'); return; } Wild.sleep = { c, t0: now() }; const cs = Math.cos(c.r), sn = Math.sin(c.r), bx = -1.0, bz = -0.35; me.pos.x = c.x + bx * cs + bz * sn; me.pos.z = c.z - bx * sn + bz * cs; startEmote(me, 'sleep'); toast('😴 在小木屋裡睡覺：體力慢慢回滿，晚上不會冷。再按一次起床'); }
+/* v594 荒島 E：第一次上島的一步一步引導（狀態條下面一行「下一步」，做完一步跳下一步，全部做完就不再出現） */
+const WILD_GUIDE = [
+  { t:'在沙灘撿 5 塊漂流木', ok: S => (S.bag.wood | 0) >= 5 || S.camp.some(c => c.t === 'fire') },
+  { t:'在島上敲 3 顆石頭', ok: S => (S.bag.stone | 0) >= 3 || S.camp.some(c => c.t === 'fire') },
+  { t:'背包 → 荒島 → 製作：蓋一個營火', ok: S => S.camp.some(c => c.t === 'fire') },
+  { t:'找吃的：搖椰子樹，或退潮時撿東邊潮池的小魚、小螃蟹', ok: S => !!(S.ate && Object.keys(S.ate).length) || ['coco', 'fishS', 'crab', 'fishSC', 'crabC'].some(k => (S.bag[k] | 0) > 0) },
+  { t:'站在營火旁邊把小魚烤熟，吃掉', ok: S => !!(S.ate && (S.ate.fishSC || S.ate.fishBC)) },
+  { t:'吃魚會剩魚骨：湊 2 根魚骨，做一個骨頭魚鉤', ok: S => (S.bag.hook | 0) > 0 || (S.bag.rod | 0) > 0 },
+  { t:'割草做草繩、砍竹子，做出手作竹竿', ok: S => (S.bag.rod | 0) > 0 },
+  { t:'在岸邊面向海拋竿，釣到第一條荒島的魚', ok: S => !!(S.notes && Object.keys(S.notes).length) },
+  { t:'蓋一間小木屋：以後倒下在這裡醒來，也可以睡覺', ok: S => S.camp.some(c => c.t === 'cabin') } ];
+function wildGuideStep(){ const S = wildSt(); if (S.gDone) return null; let i = 0; while (i < WILD_GUIDE.length && WILD_GUIDE[i].ok(S)) i++;
+  if (i !== Wild.gI){ if (Wild.gI != null && i > Wild.gI){ try { SFX.catch(); } catch(e){} flash(i >= WILD_GUIDE.length ? '🎉 荒島求生的基本都會了！接下來想怎麼活就怎麼活' : `✅ 完成！下一步：${WILD_GUIDE[i].t}`, 2.2); } Wild.gI = i; }
+  if (i >= WILD_GUIDE.length){ S.gDone = 1; wildSave(); return null; } return { i, t: WILD_GUIDE[i].t }; }
 function wildHud(){ let h = $('#wildHud'); const on = onWild() && !Wild.down && $('#sheet').hidden; document.body.classList.toggle('wildOn', on);
-  if (!h){ h = document.createElement('div'); h.id = 'wildHud'; h.className = 'panel'; h.innerHTML = '<div class="wh-r"><span>🍗</span><i><b></b></i><em></em></div><div class="wh-r"><span>💪</span><i><b></b></i><em></em></div><div class="wh-w"></div>'; h.addEventListener('click', () => { ui3Open('wild'); openSheet('wild'); }); document.body.appendChild(h); }
+  if (!h){ h = document.createElement('div'); h.id = 'wildHud'; h.className = 'panel'; h.innerHTML = '<div class="wh-r"><span>🍗</span><i><b></b></i><em></em></div><div class="wh-r"><span>💪</span><i><b></b></i><em></em></div><div class="wh-w"></div><div class="wh-g"></div>'; h.addEventListener('click', () => { ui3Open('wild'); openSheet('wild'); }); document.body.appendChild(h); }
   h.hidden = !on; if (!on) return; const S = wildSt(), R = h.querySelectorAll('.wh-r'), mx = wildStaMax();
   R[0].querySelector('b').style.width = Math.round(S.hun) + '%'; R[0].querySelector('em').textContent = Math.round(S.hun); R[0].classList.toggle('low', S.hun < 25);
   R[1].querySelector('b').style.width = Math.round(S.sta / mx * 100) + '%'; R[1].querySelector('em').textContent = Math.round(S.sta); R[1].classList.toggle('low', S.sta < 25);
+  { const G = wildGuideStep(), gd = h.querySelector('.wh-g'), tx = G ? `🧭 ${G.i + 1}/${WILD_GUIDE.length}：${G.t}` : ''; if (gd.textContent !== tx) gd.textContent = tx; }
   const why = Wild.sleep ? '😴 睡覺中' : (Wild.why || []).length ? '⚠️ ' + Wild.why.join('、') + '：體力在掉' : S.hun < 25 ? '🍗 肚子餓了，找東西吃' : ''; const w = h.querySelector('.wh-w'); if (w.textContent !== why) w.textContent = why; }
 function wildHomeRest(dt){ if (typeof House === 'undefined' || !House.on || !mySeat || !mySeat.bed){ Wild.homeT = 0; return; } Wild.homeT = (Wild.homeT || 0) + dt; if (Wild.homeT > 5 && !wildSt().rested){ wildSt().rested = true; wildSave(); toast('😴 睡飽了：下一趟去漂流島，體力上限 120'); } }
 function nearWildBoat(){ if (!onWild()) return false; return Math.hypot(me.pos.x - (WILD.x - WILD_RE - 6.5), me.pos.z - WILD.z) < 1.8; }
