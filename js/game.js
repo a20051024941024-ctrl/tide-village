@@ -1794,16 +1794,30 @@ function lwCapPath(F){ if (F.walk) return F.walk; const [bx, bz] = F.R.berth; le
   const H = RES_HOMES.find(q => q.who === 'cap' + F.i), sd = H.x < -47 ? 1 : -1, hx = H.x + sd * 3.3, hz = H.z;
   const c = navPath({ id: 'lwb' + F.i, x: on ? on[0] : bx, z: on ? on[1] : bz }, { id: 'lwh' + F.i, x: hx, z: hz });
   return (F.walk = { c, T: c.len / 1.4 / (DAY_LEN / 24) }); }
-function lwCapAt(F, h, storm){ const W = lwCapPath(F), S = lwFleetAt(F, h, storm), A = F.ret + F.T, g = 0.03;
+function lwCapAt(F, h, storm){ const W = lwCapPath(F), S = lwFleetAt(F, h, storm), A = F.ret + F.T, g = 0.03, hp = 0.035;   /* hp：跳上船／跳下船的時間（遊戲小時，約 3 秒） */
   if (S.st !== 'dock') return { on: true };
   if (storm) return { home: true };
-  const m = lwHourDiff(h, F.dep - g - W.T); if (m < W.T) return { walk: true, s: W.c.len * (1 - m / W.T), toBoat: true };   /* 早上：家 → 碼頭 */
-  if (m < W.T + g) return { on: true };   /* 上了船，等出港 */
-  const e = lwHourDiff(h, A); if (e < g) return { on: true };   /* 剛靠岸 */
-  if (e < g + W.T) return { walk: true, s: W.c.len * ((e - g) / W.T) };   /* 傍晚：碼頭 → 家 */
+  const m = lwHourDiff(h, F.dep - g - hp - W.T); if (m < W.T) return { walk: true, s: W.c.len * (1 - m / W.T), toBoat: true };   /* 早上：家 → 碼頭 */
+  if (m < W.T + hp) return { hop: true, up: true, u: (m - W.T) / hp };   /* v588 作者：「船長要有上船的動作」→ 蹲一下、跳上船、落地 */
+  if (m < W.T + hp + g) return { on: true };   /* 上了船，等出港 */
+  const e = lwHourDiff(h, A); if (e < g) return { on: true };   /* 剛靠岸，綁好船 */
+  if (e < g + hp) return { hop: true, up: false, u: (e - g) / hp };   /* 跳下船 */
+  if (e < g + hp + W.T) return { walk: true, s: W.c.len * ((e - g - hp) / W.T) };   /* 傍晚：碼頭 → 家 */
   return { home: true }; }
+function lwDeck(F){ const b = F.b, ry = b.g.rotation.y, lx = 0, lz = 0.2, s = b.g.scale.x; return [b.x + (Math.sin(ry) * lz + Math.cos(ry) * lx) * s, b.z + (Math.cos(ry) * lz - Math.sin(ry) * lx) * s, b.g.position.y + LW_DECK * s]; }
 function lwCapHome(i){ try { const F = LW.fleet && LW.fleet.find(q => q.i === i); if (!F) return true; return !!lwCapAt(F, gameHour(), lwStorm()).home; } catch(e){ return true; } }
 function lwCaptain(F, S, x, z, d, dt, t){ const P = lwCapAt(F, gameHour(), lwStorm()), vis0 = !onIsle && !Dive.on && !House.on && !inIndoor();
+  if (P.hop){ const pier = F.walk.c.pts[0], [dx, dz, dy] = lwDeck(F), py = groundHeight(pier[0], pier[1]), dh = Math.hypot(me.pos.x - dx, me.pos.z - dz);
+    if (!(vis0 && dh < 60)){ if (F.cap){ F.cap.av.g.visible = false; try { F.cap.tag.style.display = 'none'; } catch(e){} } return; }
+    if (!F.cap) F.cap = new Fisher({ shirt: F.R.look[0], hat: F.R.look[1], name: F.R.name, kind: 'npc' });
+    const c = F.cap, A0 = P.up ? [pier[0], pier[1], py] : [dx, dz, dy], B0 = P.up ? [dx, dz, dy] : [pier[0], pier[1], py], u = P.u;
+    /* 0～0.35 蹲下準備、0.35～0.75 跳過去（拋物線）、0.75～1 落地彎膝 */
+    const k = clamp((u - 0.35) / 0.4, 0, 1), e = k * k * (3 - 2 * k);
+    c.av.g.visible = true; c.pos.x = A0[0] + (B0[0] - A0[0]) * e; c.pos.z = A0[1] + (B0[1] - A0[1]) * e; c.baseY = A0[2] + (B0[2] - A0[2]) * e + Math.sin(k * Math.PI) * 0.55;
+    c.bend = u < 0.35 ? Math.sin(u / 0.35 * Math.PI / 2) * 0.5 : u > 0.75 ? Math.sin((1 - (u - 0.75) / 0.25) * Math.PI / 2) * 0.45 : 0.05;
+    c.speed = 0; c.sitting = false; c.rot = lerpAngle(c.rot, Math.atan2(B0[0] - A0[0], B0[1] - A0[1]), 1 - Math.exp(-dt * 10));
+    if (k > 0 && !F.hopS){ F.hopS = 1; if (dh < 25) try { SFX.jump(); } catch(e){} } if (k <= 0) F.hopS = 0;
+    c.update(dt, t); if (dh < 40) c.placeTag(); else c.tag.style.display = 'none'; return; }
   if (P.walk){ const [wx, wz, hd] = navAt(F.walk.c, P.s), dw = Math.hypot(me.pos.x - wx, me.pos.z - wz);
     if (!(vis0 && dw < 60)){ if (F.cap){ F.cap.av.g.visible = false; try { F.cap.tag.style.display = 'none'; } catch(e){} } return; }
     if (!F.cap) F.cap = new Fisher({ shirt: F.R.look[0], hat: F.R.look[1], name: F.R.name, kind: 'npc' });
@@ -18043,7 +18057,7 @@ function renderTab(){
     ]);
     sec('📜 每日任務、釣魚活動', [
       '🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。',
-      '🏠 三位船長住在居民區（阿財家、阿春家、海伯家）：天亮前從家裡走到碼頭上船，傍晚靠岸後下船走回家，到家門燈就會亮；颱風天待在家。沙灘的遊客是坐阿海的船來玩的，會從港口沿著路走到沙灘，要走的時候走回港口。',
+      '🏠 三位船長住在居民區（阿財家、阿春家、海伯家）：天亮前從家裡走到碼頭、蹲一下跳上船，傍晚靠岸後跳下船走回家，到家門燈就會亮；颱風天待在家。沙灘的遊客是坐阿海的船來玩的，會從港口沿著路走到沙灘，要走的時候走回港口。',
       '🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人坐在海灘巾上曬太陽、有人套著泳圈在淺水玩、有人在丟沙灘球（走過去碰到低低的球會把它踢飛，只有你自己看得到）。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。',
       '🐦 到處逛的時候看海面：遠遠看到幾隻海鳥在水面上繞，那裡就有掠食魚，走過去把浮標拋在鳥的旁邊比較容易上鉤（下雨和晚上鳥不出來）。',
       '💬 村長、阿綾、阿木、阿福、老港會提起你最近做的事：釣到傳說魚、釣到自己最重的一條、一天放流 5 條、一天撿 5 個垃圾、好幾天沒來。',
