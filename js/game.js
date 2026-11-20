@@ -5030,7 +5030,7 @@ class Fisher {
     if (this.sitting){ T.lL = T.lR = -1.45; T.kL = T.kR = 1.35; T.fL = T.fR = 0.1; T.pit = 0; T.bob = 0; T.tw = 0; T.rol = 0; }
     else if (this.air > 0.05){ T.lL = -0.55; T.lR = 0.35; T.kL = 0.9; T.kR = 0.5; T.fL = 0.2; T.fR = 0.3; T.bob = 0; T.aL = T.aR = -0.6; T.zL = -0.35; T.zR = 0.35; }
     else if (this === me && Jump.land > 0){ const k = Jump.land / 0.18; T.lL = T.lR = -0.35 * k; T.kL = T.kR = 0.75 * k; T.fL = T.fR = -0.4 * k; T.bob -= 0.08 * k; }   /* 落地：膝蓋微彎緩衝 */
-    a.rod.visible = this.fishing;
+    a.rod.visible = this.fishing || !!this.restRod;   /* v621 坐在釣魚裝備的椅子上還沒拋：竿子拿在手上（沒有竿架時） */
     if (this.fishing){
       // 甩竿動畫：蓄力時把竿子往後舉到肩膀上（windup），放開時用力往前甩（castT），竿尖甩過頭再回來
       const CS = CAST_STYLE[this.rodType || 'cast'] || CAST_STYLE.cast; let pz = -(this.windup || 0) * CS.w;
@@ -5065,7 +5065,7 @@ class Fisher {
       a.g.rotation.order = 'YXZ'; a.g.rotation.y = this.rot; a.g.rotation.x = this.swim ? P.pit : P.pit * 0.35; a.g.rotation.z = P.rol * 0.8 + (this.bikeLean || 0);
       let kjB = 0; if (!far){ try { kjB = kidJuice(this, dt, t, P); } catch(e){ if (!KJ.err){ KJ.err = String(e && e.stack || e); console.warn('kidJuice', e); } } }   /* v449 疊一層彈性（太遠的人不算） */
       a.g.position.y = this.baseY + (this.swim ? P.bob : 0) + kjB;
-      if (this.fishing){ a.g.updateMatrixWorld(true); a.kid.handR.getWorldPosition(a.kid.v); a.g.worldToLocal(a.kid.v); a.rod.position.copy(a.kid.v); }
+      if (this.fishing || this.restRod){ a.g.updateMatrixWorld(true); a.kid.handR.getWorldPosition(a.kid.v); a.g.worldToLocal(a.kid.v); a.rod.position.copy(a.kid.v); }
     } else {
     a.legL.rotation.x = P.lL; a.legR.rotation.x = P.lR; a.legL.userData.shin.rotation.x = P.kL; a.legR.userData.shin.rotation.x = P.kR; a.legL.userData.foot.rotation.x = P.fL; a.legR.userData.foot.rotation.x = P.fR;
     a.armL.rotation.x = P.aL; a.armR.rotation.x = P.aR; a.armL.rotation.z = P.zL; a.armR.rotation.z = P.zR;
@@ -15336,21 +15336,33 @@ function fkPlace(){ const why = fkWhy(); if (why){ toast(why); return false; } c
   setTimeout(() => toast(`🎣 裝備擺好了！${mask & 4 ? '等魚的時候可以按「跳」站起來走開，竿子會插在竿架上。' : '按「拋竿」就能坐著釣。'}`), 500);
   pushPresence(true); renderTabIf('fkit'); return true; }
 function renderTabIf(tab){ try { if (!$('#sheet').hidden && curTab === tab) renderTab(); } catch(e){} }
-function fkClear(quiet){ if (FK.seat){ if (mySeat === FK.seat) standUp(); const i = CHAIRS.indexOf(FK.seat); if (i >= 0) CHAIRS.splice(i, 1); FK.seat = null; }
+function fkClear(quiet){ me.restRod = false; if (FK.seat){ if (mySeat === FK.seat) standUp(); const i = CHAIRS.indexOf(FK.seat); if (i >= 0) CHAIRS.splice(i, 1); FK.seat = null; }
   if (F.held) cancelFishing(); if (FK.g){ const g = FK.g, t0 = now(); FK.g = null; if (quiet){ scene.remove(g); } else { FK.out = { g, t0 }; } } FK.set = null; FK.netM = null; }
 function fkPack(msg){ if (!FK.set) return; fkClear(false); try { SFX.click(); } catch(e){} if (msg) toast(msg); pushPresence(true); renderTabIf('fkit'); }
 /* 魚護裡的魚（自己的：釣到就加；別人的：照 presence） */
 function fkNetFish(g, ids){ const np = g && g.userData.net; if (!np) return; const key = ids.join(','); if (np.userData.key === key) return; np.userData.key = key;
   for (const o of (np.userData.fish || [])) np.remove(o); np.userData.fish = [];
   ids.slice(-6).forEach((id, i) => { const f = FISH_BY_ID[id]; if (!f) return; let m; try { m = fishModel(f, 0.32); } catch(e){ m = makeFish(f.color || '#8ab', 0.32); } m.userData.ph = i * 1.1; m.position.y = -0.3; np.add(m); np.userData.fish.push(m); }); }
-function fkNetAnim(g, t){ const np = g && g.userData.net; if (!np || !np.userData.fish) return; np.position.y = (g.userData.netY || 0) + WATER_LEVEL - g.position.y + 0.05; np.userData.fish.forEach((m, i) => { const a = t * 0.7 + m.userData.ph * 2.2; m.position.set(Math.cos(a) * 0.22, -0.38 + Math.sin(t * 1.3 + i) * 0.12, Math.sin(a) * 0.22); m.rotation.y = -a; }); }
+function fkNetAnim(g, t){ const np = g && g.userData.net; if (!np || !np.userData.fish) return; np.position.y = (g.userData.netY || 0) + WATER_LEVEL - g.position.y + 0.05;
+  /* v621 作者：「魚在魚護裡會一直繞圈圈」→ 每條魚自己慢慢游到網子裡隨便一個地方，有時候停下來、尾巴輕輕擺，轉彎是慢慢轉 */
+  const dt = Math.min(0.1, Math.max(0, t - (np.userData.lt || t))); np.userData.lt = t;
+  np.userData.fish.forEach((m, i) => { const u = m.userData; if (u.tx === undefined){ u.tx = (Math.random() - 0.5) * 0.4; u.tz = (Math.random() - 0.5) * 0.4; u.ty = -0.5 + Math.random() * 0.3; u.h = Math.random() * 6.28; m.position.set(u.tx, u.ty, u.tz); u.rest = 0; }
+    const dx = u.tx - m.position.x, dz = u.tz - m.position.z, d = Math.hypot(dx, dz);
+    if (u.rest > t){ m.rotation.y = u.h + Math.sin(t * 2.2 + i) * 0.05; m.position.y += (u.ty - m.position.y) * dt; return; }
+    if (d < 0.04){ u.rest = t + 1 + Math.random() * 3.5; const a = Math.random() * 6.28, r = Math.sqrt(Math.random()) * 0.27; u.tx = Math.cos(a) * r; u.tz = Math.sin(a) * r; u.ty = -0.55 + Math.random() * 0.35; return; }
+    const want = Math.atan2(dx, dz); let dh = want - u.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); u.h += clamp(dh, -1.6 * dt, 1.6 * dt);
+    const sp = 0.07 * (Math.abs(dh) > 1 ? 0.4 : 1); m.position.x += Math.sin(u.h) * sp * dt; m.position.z += Math.cos(u.h) * sp * dt; m.position.y += (u.ty - m.position.y) * dt * 0.8;
+    const rr = Math.hypot(m.position.x, m.position.z); if (rr > 0.3){ m.position.x *= 0.3 / rr; m.position.z *= 0.3 / rr; }
+    m.rotation.y = u.h + Math.sin(t * 7 + i) * 0.12; });
+}
 function fkCaught(f){ if (!FK.set || !(FK.set.mask & 4) || !f) return; if (Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z) > 6) return; FK.net.push(f.id); if (FK.net.length > 6) FK.net.shift(); fkNetFish(FK.g, FK.net); pushPresence(true); }
 function fkRing(t){ const g = FK.g; if (!g || !g.userData.rod) return; const k = Math.sin(t * 38) * 0.06 * (Math.sin(t * 5) > 0 ? 1 : 0.4); g.userData.rod.rotation.z = k; g.userData.rod.rotation.x = 0.6 + Math.abs(k) * 1.2; }
 function fkTick(dt){ const t = now();
   if (FK.out){ fkPop(FK.out.g, FK.out.t0, true); if (t - FK.out.t0 > 0.9){ scene.remove(FK.out.g); FK.out = null; } }
   if (!FK.set) return; const g = FK.g; if (g && t - FK.at < 1.2) fkPop(g, FK.at);
   if (g) fkNetAnim(g, t);
-  if (g && g.userData.rod) g.userData.rod.visible = !!F.held;
+  if (g && g.userData.rod) g.userData.rod.visible = !!F.held || F.phase === 'idle';   /* v621 作者：「沒有竿子」→ 沒在釣的時候竿子靠在竿架上 */
+  me.restRod = !!(mySeat && mySeat.gear && F.phase === 'idle' && !(FK.set.mask & 4));
   if (g && g.userData.rod && !F.heldRing){ g.userData.rod.rotation.z *= 0.8; g.userData.rod.rotation.x += (0.6 - g.userData.rod.rotation.x) * 0.2; }
   const d = Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z);
   if (d > 15 || Dive.on || House.on || myBoat || (onIsle ? 1 : 0) !== (FK.set.isle ? 1 : 0)) fkPack(F.held ? '走太遠了，竿子和裝備都收回背包了' : '🎣 走遠了，釣魚裝備收回背包'); }
@@ -15373,7 +15385,7 @@ function fkPeer(p, pr){ const f = p.fisher, a = Array.isArray(pr.fk) ? pr.fk : n
   if (!f.fkG || f.fkG.userData.mask !== mask || f.fkG.userData.y0 !== +a[5] || f.fkG.userData.nz !== nz){ if (f.fkG) scene.remove(f.fkG); f.fkG = fkBuild(mask, 2.4, clamp(+a[5], 0, 3), nz); f.fkG.userData.y0 = +a[5]; f.fkG.userData.nz = nz; scene.add(f.fkG); f.fkG.userData.t0 = now(); }
   f.fkG.position.set(+a[0], clamp(+a[3], -2, 30), +a[1]); f.fkG.rotation.y = +a[2];
   fkNetFish(f.fkG, a.slice(6, 13).filter(id => typeof id === 'string' && FISH_BY_ID[id]));
-  f.heldTip = pr.f && pr.f.h && f.fkG.userData.tip ? f.fkG.userData.tip : null; if (f.fkG.userData.rod) f.fkG.userData.rod.visible = !!f.heldTip; }
+  f.heldTip = pr.f && pr.f.h && f.fkG.userData.tip ? f.fkG.userData.tip : null; if (f.fkG.userData.rod) f.fkG.userData.rod.visible = !!f.heldTip || !pr.f; }
 function fkPeersTick(t){ for (const p of peers.values()){ const g = p.fisher.fkG; if (!g) continue; g.visible = !!(p.fisher.av && p.fisher.av.g.visible); if (!g.visible) continue; if (now() - (g.userData.t0 || 0) < 1.2) fkPop(g, g.userData.t0); fkNetAnim(g, t); if (p.fisher.heldTip && p.ph === 'bite') fkRingG(g, t); } }
 function fkRingG(g, t){ if (!g.userData.rod) return; const k = Math.sin(t * 38) * 0.06; g.userData.rod.rotation.z = k; }
 /* 背包「🎣 釣具」 */
