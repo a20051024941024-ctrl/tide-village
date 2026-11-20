@@ -11105,7 +11105,11 @@ function poolOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data
     const p = d.p.map(x => x == null ? null : poolStr(x, 40) || null); if (p[0] !== peer && p[1] !== peer && T.p[0] !== peer && T.p[1] !== peer) return;   /* 只有球桌上的人（或剛離開的人）可以改這張桌子 */
     if (!(T.mode === 'idle' || q > T.seq || (q === T.seq && peer < T.from))) return;
     if (T.sim && !T.sim.auth && inPoolHall() && d.m !== 'idle' && T.p[0] === p[0]){ T.pend = d; T.pendFrom = peer; return; }
-    poolApply(T, d, peer); return; }
+    { const was = T.mode === 'solo' ? T.p[0] : null; poolApply(T, d, peer);
+      if (T.mode === 'solo' && T.p[0] === peer && was !== peer && inPoolHall() && !Pool.on && !Duel.card && !T.sim){   /* v619 作者：「我在他旁邊，他開打了，但系統沒邀請我」→ 旁邊的人開始一個人打，直接問你要不要一起打 */
+        const dx = Math.max(Math.abs(me.pos.x - T.ox) - PB.HW, 0), dz = Math.max(Math.abs(me.pos.z - T.oz) - PB.HL, 0);
+        if (dx + dz < 4) poolInviteAsk(T, { n: T.nm[0], f: peer }, true); } }
+    return; }
   if (d.k === 'shot'){ const sh = T.p[poolShooter(T)]; if ((sh !== peer && !(poolNpc(sh) && T.p[0] === peer)) || T.mode === 'idle') return; const q = Math.floor(+d.q); if (!(q >= T.seq)) return; if (!Array.isArray(d.d) || !isFinite(+d.d[0]) || !isFinite(+d.d[1])) return; const pw = clamp(+d.pw || 0, 0, 1), dx = clamp(+d.d[0], -1.01, 1.01), dy = clamp(+d.d[1], -1.01, 1.01);
     if (!poolSetBalls(T, d.b) || !T.b[0].on) return; T.seq = q; T.from = peer; T.shots++; const psp = POOL_SP_ON && POOL_SP[d.sp] ? d.sp : null; if (psp) T.spU = T.mode === 'vs' || T.spU; if (inPoolHall()) poolStartSim(T, dx, dy, pw, false, psp); else T.ph = 'aim'; poolHud(); return; }
   if (d.k === 'aim'){ { const sh = T.p[poolShooter(T)]; if ((sh !== peer && !(poolNpc(sh) && T.p[0] === peer)) || T.sim) return; } if (Array.isArray(d.a) && isFinite(+d.a[0]) && isFinite(+d.a[1])){ T.aim.tx = clamp(+d.a[0], -1, 1); T.aim.ty = clamp(+d.a[1], -1, 1); T.aim.tpw = clamp(+d.pw || 0, 0, 1); if (!T.aim.at || now() - T.aim.at > 2){ T.aim.x = T.aim.tx; T.aim.y = T.aim.ty; T.aim.pw = T.aim.tpw; } T.aim.at = now(); }   /* v527 記目標，畫的時候每一格慢慢轉過去 */
@@ -11366,9 +11370,9 @@ function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Poo
 /* v527 作者：「應該要兩個人都在桌子旁邊然後可以按邀請一起打」→ 你在練習、旁邊（球桌 4 公尺內）站著別的玩家時，右下角出現「邀請 某某 對打」；對方按接受就開始對打 */
 function poolNearPeer(T){ let best = null, bd = 4; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; const d = Math.max(Math.abs(p.target.x - T.ox) - PB.HW, 0) + Math.max(Math.abs(p.target.z - T.oz) - PB.HL, 0); if (d < bd && !Pool.tables.some(X => X.p[0] === k || X.p[1] === k)){ bd = d; best = { k, u: p.pres.u || '', n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
 function poolInvite(){ const T = Pool.tables[Pool.ti]; if (!T || T.mode !== 'solo' || poolMyIdx(T) !== 0) return; const P = poolNearPeer(T); if (!P){ toast('旁邊沒有人可以邀請（要站在球桌附近）'); return; } const tn = now(); if (Pool.invAt && tn - Pool.invAt < 6){ toast('剛邀請過，等對方回應'); return; } Pool.invAt = tn; poolSend({ k: 'inv', t: T.i, to: P.k, tu: P.u, n: poolName() }); toast(`🎱 已經邀請 ${esc(P.n)}，等對方回應`); }
-function poolInviteAsk(T, d){ const nm = poolStr(d.n, 12) || '玩家'; const c = duelCardOpen('pinv'); c.appendChild(el('h3', '', '🎱 撞球邀請')); c.appendChild(el('p', '', `${nm} 邀請你一起打一局 8 號球。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); c.appendChild(row); let n = 20; const tm = el('p', 'sub', ''); c.insertBefore(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('pinv'); }; upd(); c._iv = setInterval(upd, 1000);
+function poolInviteAsk(T, d, auto){ const nm = poolStr(d.n, 12) || '玩家'; const c = duelCardOpen('pinv'); c.appendChild(el('h3', '', '🎱 撞球邀請')); c.appendChild(el('p', '', auto ? `${nm} 在你旁邊開始打撞球了，要一起打一局 8 號球嗎？` : `${nm} 邀請你一起打一局 8 號球。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); c.appendChild(row); let n = 20; const tm = el('p', 'sub', ''); c.insertBefore(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('pinv'); }; upd(); c._iv = setInterval(upd, 1000);
   ok.addEventListener('click', () => { duelCardClose('pinv'); if (!inPoolHall() || Pool.on){ return; } if (T.mode === 'solo' && T.p[0] && T.p[0] !== poolKey()) poolSit(T.i); else toast('對方已經不在那張球桌了'); });
-  no.addEventListener('click', () => { duelCardClose('pinv'); poolSend({ k: 'invno', t: T.i, to: poolStr(d.f, 40), n: poolName() }); }); try { SFX.chat(); } catch(e){} }
+  no.addEventListener('click', () => { duelCardClose('pinv'); if (auto) return; poolSend({ k: 'invno', t: T.i, to: poolStr(d.f, 40), n: poolName() }); }); try { SFX.chat(); } catch(e){} }
 function poolHudTick(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !T) return;
   { const tn = now(); if (!Pool.invChk || tn - Pool.invChk > 0.5){ Pool.invChk = tn; const ib = $('.pl-inv', h), P = T.mode === 'solo' && !Pool.spec && poolMyIdx(T) === 0 && !T.sim ? poolNearPeer(T) : null, tx = P ? `邀請 ${P.n} 對打` : ''; if (ib.textContent !== tx) ib.textContent = tx; ib.hidden = !P; $('.pl-zhe', h).hidden = !(T.mode === 'solo' && !Pool.spec && poolMyIdx(T) === 0 && !T.sim && !poolZheBusy()); } } const f = $('.pl-powfill', h), cu = $('.pl-powcue', h), pw = Pool.pw; f.style.height = `calc(${pw.toFixed(3)} * (100% - 28px) + 14px)`; cu.style.top = `calc(${pw.toFixed(3)} * (100% - 28px))`;
   const tm = $('.pl-time', h); if (T.mode === 'vs' && !T.sim && (T.ph === 'aim' || T.ph === 'hand')){ const s = Math.max(0, Math.ceil(T.dl - now())); const tx = s + ' 秒'; if (tm.textContent !== tx) tm.textContent = tx; tm.classList.toggle('low', s <= 8); } else if (tm.textContent) tm.textContent = '';
@@ -16388,7 +16392,7 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){} try { if (!isBlockedPeer(pp.peer)) syncPeerSecret(pp.peer, pr.sc || [], pr.n); } catch(e){}
-  if (pos){ p.target.set(clamp(+pos[0]||0, -200, 200), 0, clamp(+pos[1]||0, -200, 200));   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
+  if (pos){ p.target.set(clamp(+pos[0]||0, -400, 400), 0, clamp(+pos[1]||0, -400, 400));   /* v619 撞球館在 z 199.5～212.5，以前別人的位置被切在 200 → 在你畫面上全部擠在北邊牆、果汁吧那裡，進門也不是從門口出現，站在球桌旁也算「太遠」不能邀請 */   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
@@ -18463,6 +18467,7 @@ function renderTab(){
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🎱 撞球×釣魚：撞球畫面左上「🐠 魚花色」可以把球換成你釣過的魚的花色、桌面變成水族箱，你魚缸裡的魚在下面游（只有你看得到）；「🔍 近看」鏡頭拉近、跟著母球。',
+      '🎱 一起打：你站在球桌旁邊時，有人在那張桌子開始一個人打，會跳出來問你要不要一起打；按「接受」就變成兩個人對打。',
       '🧬 全服共養：整個伺服器共用一片海，每種魚有族群量（圖鑑每格下面的條）。大家釣太多那種魚會變少、變難釣、偏小（最低 30%，不會絕種）；放流會變多（標記放流算兩條），多的時候比較好釣、偶爾特別大。每天會慢慢回到 100%。連續 3 天 115% 以上，那種魚會演化出新花色（✨演化・），之後一直留著。',
       '🎨 竿子造型每支竿子各自裝：在阿鐵的工坊按「裝上」只會裝在現在拿的那支，換竿子時會自動換成那支記住的造型；背包的釣竿清單會寫每支裝了什麼造型。',
       '🌑 水裡的魚影：拋竿以後水底會有黑色的影子游過來咬餌，看得出大概多大、什麼形狀，但看不出顏色和花紋；拉魚的時候上面也只會說手感（例如「好重的手感！」），不會說是什麼魚。要等拉出水面才知道釣到什麼。拉魚時看得到牠在浮標底下掙扎；魚往外衝的時候會頭朝下往深處鑽、把浮標拖進水裡、一路冒泡，這時候要先放開。',
