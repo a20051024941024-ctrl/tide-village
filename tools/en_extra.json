@@ -5174,7 +5174,6 @@
 "時間：對打時每一桿有 35 秒，超過時間算犯規換對手；連續三次沒出桿就算輸。打到一半按「離開球桌」或斷線，對手直接贏。": "Time: in a match each shot has 35 seconds; running out is a foul and the turn passes; three missed shots in a row is a loss. If you press \"Leave table\" or disconnect mid-game, the opponent wins.",
 "圖鑑裡的節慶魚會標「🎆 跨年夜限定」「🎄 聖誕節限定」「🧧 春節限定」，節日以外的時間釣不到，只會先在圖鑑裡看到剪影。": "Festival fish in the Fishdex are marked \"🎆 New Year's Eve limited\", \"🎄 Christmas limited\" or \"🧧 Lunar New Year limited\". Outside the festival they can't be caught and only show as silhouettes.",
 "進袋的球：球會滑進袋口掉下去，在桌子底下滾一段，再從桌邊的「回球槽」滾出來排成一排，看槽裡有哪些球就知道哪些已經進了。": "Potted balls: a ball slides into the pocket, rolls under the table and comes out in the \"ball return\" at the side in a row, so you can see which ones are down.",
-"🐬 海豚群游到附近時會靠過來，在你前面的水面跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。": "🐬 When a dolphin pod swims near, it comes over, leaps in front of you for a while and leaves; a \"🐬 Dolphin pod\" tag floats above them. It only counts as met when they're actually on screen.",
 "跟朋友組一隊（2 到 6 個人），每週一起完成兩個目標：合力釣到一定數量的魚、湊齊一定種類。兩個都達成，每個隊員可以領 🪙": "Team up with friends (2 to 6 people) and finish two goals together each week: catch a set number of fish, and collect a set number of kinds. With both done, each member can claim 🪙",
 "珊瑚礁和港口海底各有一條岩石隧道：找到岩丘上的洞口游進去，裡面有會發光的水晶，從另一頭出來。岩壁是實心的，只能從兩頭進出。": "The coral reef and the harbour seabed each have a rock tunnel: find the opening in the rocky mound and swim in; glowing crystals are inside and you come out the other end. The rock walls are solid, so you can only enter from the ends.",
 "字型：jf open 粉圓（Huninn）、Noto Sans TC（SIL Open Font License 1.1）。": "Fonts: jf open Huninn, Noto Sans TC (SIL Open Font License 1.1).",
@@ -5959,5 +5958,6 @@
 "會顯示在頭上，大家都看得到。不要用真名喔！": "It shows above your head for everyone to see. Don't use your real name!",
 "就叫這個名字！": "That's my name!",
 "這個名字不能用，換一個吧": "That name isn't allowed, try another one",
-"返回": "Back"
+"返回": "Back",
+"🐬 海豚群游到附近時會靠過來，在你前面比較開闊的海面（離岸十幾公尺以上，港口裡和岸邊淺水不會去）跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。": "🐬 When a dolphin pod swims near, it comes over, leaps in open water in front of you (at least a dozen meters from shore, never inside the harbor or in the shallows) for a while and leaves; a \"🐬 Dolphin pod\" tag floats above them. It only counts as met when they're actually on screen."
 }
