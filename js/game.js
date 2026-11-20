@@ -2160,7 +2160,9 @@ function signsTick(dt, t){
 function aimDir(s){ const L = Math.hypot(s.dir.x, s.dir.y) || 1, a = s.id === 'icelake' || s.id === 'shrimp' ? 0 : (F.aim || 0), c = Math.cos(a), sn = Math.sin(a), dx = s.dir.x / L, dz = s.dir.y / L; return [dx * c - dz * sn, dx * sn + dz * c]; }
 function castDist(s, c){ const rt = rodType(curRod()); return s.id === 'shrimp' ? 1.4 + c * 1.6 : (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1); }
 /* v427 乾潮時露出來的那一段海底（主島的淺灘）：看起來是沙，浮標不要丟在上面 */
-function seaDry(x, z){ const U = waterSurface && waterSurface.material.uniforms; if (!U || !U.uTideD || U.uTideD.value < 0.01) return false; const sd = 2 - islandEdge(x, z); if (sd <= 0 || sd > SHELF_W + 1.5) return false; const inf = terrainInfo(x, z); return inf.water && inf.region === 0 && -inf.h < U.uTideD.value + 0.09; }
+function seaDry(x, z){ const U = waterSurface && waterSurface.material.uniforms; if (!U || !U.uTideD || U.uTideD.value < 0.01) return false; const sd = 2 - islandEdge(x, z); if (sd <= 0 || sd > SHELF_W + 1.5) return false; const inf = terrainInfo(x, z); if (!(inf.water && inf.region === 0 && -inf.h < U.uTideD.value + 0.09)) return false;
+  for (let k = 0; k < 8; k++){ const q = k * Math.PI / 4; for (const r of [2.5, 5]) if (deckAt(x + Math.cos(q) * r, z + Math.sin(q) * r)) return false; }   /* v608 作者：「這邊竟然可以下去」→ 碼頭、堤岸旁邊退潮也不算露出來的沙（那裡畫面上還是水，以前會走進水裡） */
+  return true; }
 function castPoint(x, z, dx, dz, dist){
   const ok = d => waterAt(x + dx * d, z + dz * d) && !seaDry(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
@@ -6140,6 +6142,31 @@ const camLook = new THREE.Vector3();
 function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
+/* v608 作者：「很多地方其實都會被樹擋視野，就算換了方向還是會被房子擋」→ 擋在鏡頭和你中間的樹、房子、牆變半透明（像很多第三人稱遊戲）。
+   每 4 格從你的頭往鏡頭打一條線，碰到的東西換成自己的半透明材質；不擋了 0.3 秒後換回原本的。地面、水、天空、太大的東西（整片地形）、角色不變。 */
+var CamFade = { cur: new Map(), ray: new THREE.Raycaster() };
+function camFadeOk(o){ if (!o.isMesh || !o.visible || o.userData.noFade) return false; let q = o; for (let i = 0; i < 8 && q; i++, q = q.parent){ if (q.userData && (q.userData.isAvatar || q.userData.noFade)) return false; if (me.av && q === me.av.g) return false; }
+  const g = o.geometry; if (!g) return false; if (!g.boundingSphere) g.computeBoundingSphere(); const sc = Math.max(o.scale.x, o.scale.y, o.scale.z) || 1; if (!g.boundingSphere || g.boundingSphere.radius * sc > 40) return false;
+  const m = Array.isArray(o.material) ? o.material[0] : o.material; if (!m || m.isSpriteMaterial || m.isLineBasicMaterial || (m.transparent && !o.userData.fadeOrig && m.opacity < 0.95)) return false; return true; }
+/* 整個場景有七千多個東西，每次都整個打一遍太慢（電腦上一條線 11ms）：每 2 秒挑一次「你附近 35 公尺、不是整片地形」的候選，平常只對它們打線 */
+function camFadeCand(){ const C = CamFade, T = now(); if (C.cand && T - C.candAt < 2 && Math.hypot(me.pos.x - C.cx, me.pos.z - C.cz) < 8) return C.cand; C.candAt = T; C.cx = me.pos.x; C.cz = me.pos.z; const L = [], v = new THREE.Vector3();
+  scene.traverseVisible(o => { if (!o.isMesh || o.isSkinnedMesh || o.userData.noFade || o === me.av.g) return; if (o.isInstancedMesh){ L.push(o); return; } const g = o.geometry; if (!g) return; if (!g.boundingSphere) g.computeBoundingSphere(); if (!g.boundingSphere) return;
+    const sc = Math.max(o.scale.x, o.scale.y, o.scale.z) || 1, r = g.boundingSphere.radius * sc; if (r > 40) return; v.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld); if (Math.hypot(v.x - me.pos.x, v.z - me.pos.z) - r > 35) return; L.push(o); });
+  return (C.cand = L); }
+function camFadeTick(target){ const T = now(), C = CamFade;
+  if (frameNo % 5 === 0 && !Dive.on && !House.on && !inIndoor() && !FP.act){ for (const hy of [0.2, -0.75]){ const from = new THREE.Vector3(target.x, target.y + hy, target.z), dir = camera.position.clone().sub(from), L = dir.length();   /* 頭和身體各打一條（樹幹擋到身體也算） */
+    if (L > 1.5){ dir.divideScalar(L); C.ray.set(from, dir); C.ray.far = L - 0.2; C.ray.camera = camera; const hits = C.ray.intersectObjects(camFadeCand(), false);
+      for (const h of hits){ const o = h.object;
+        if (o.isInstancedMesh && h.instanceId != null){ if (!o.visible || o.count < 1) continue; const key = o.uuid + ':' + h.instanceId; let e = C.cur.get(key);   /* 村裡的樹是一大批一起畫的（InstancedMesh）：把擋到的那一棵拿出來單獨畫成半透明，原本那一格先縮成 0 */
+          if (!e){ const M = new THREE.Matrix4(); o.getMatrixAt(h.instanceId, M); const m0 = Array.isArray(o.material) ? o.material[0] : o.material, mm = m0.clone(); mm.transparent = true; mm.depthWrite = false; mm.opacity = 0.28;
+            if (o.instanceColor){ const c = new THREE.Color(); o.getColorAt(h.instanceId, c); mm.color.multiply(c); }
+            const gm = new THREE.Mesh(o.geometry, mm); gm.matrixAutoUpdate = false; gm.matrix.multiplyMatrices(o.matrixWorld, M); gm.userData.noFade = true; scene.add(gm);
+            o.setMatrixAt(h.instanceId, new THREE.Matrix4().makeScale(0, 0, 0)); o.instanceMatrix.needsUpdate = true; e = { inst: o, id: h.instanceId, M, gm }; C.cur.set(key, e); }
+          e.t = T; continue; }
+        if (!camFadeOk(o)) continue; let e = C.cur.get(o);
+        if (!e){ const orig = o.material, mk = m => { const c = m.clone(); c.transparent = true; c.depthWrite = false; c.opacity = 0.28 * (m.opacity || 1); return c; }; o.userData.fadeOrig = orig; o.material = Array.isArray(orig) ? orig.map(mk) : mk(orig); e = { o, orig }; C.cur.set(o, e); }
+        e.t = T; } } } }
+  for (const [k, e] of C.cur) if (T - e.t > 0.3 || Dive.on || House.on || FP.act){ if (e.inst){ e.inst.setMatrixAt(e.id, e.M); e.inst.instanceMatrix.needsUpdate = true; scene.remove(e.gm); e.gm.material.dispose(); C.cur.delete(k); continue; } const o = e.o, fm = o.material; o.material = e.orig; delete o.userData.fadeOrig; (Array.isArray(fm) ? fm : [fm]).forEach(m => m.dispose()); C.cur.delete(k); } }
 function camClear(target, want, dt){
   const bad = (x, y, z) => { const g = groundHeight(x, z); if (y < g + 0.5) return true; for (const c of BigCols) if (Math.hypot(x - c.x, z - c.z) < c.r + 0.4 && y < g + 7) return true; return false; };   /* 地形，加上很粗的東西（千年大杉）；一般的樹不算 */   /* v199：只檢查地形（樹不再讓鏡頭拉近，使用者說會忽遠忽近） */
   const dx = want.x - target.x, dy = want.y - target.y, dz = want.z - target.z; let good = 1;
@@ -6201,6 +6228,7 @@ function updateCamera2(dt){
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
   const lookT = up > 0 ? target.clone().add(new THREE.Vector3(0, up * dist * 1.6, 0)) : target;
   camera.lookAt(lookT); camLook.copy(lookT);
+  try { camFadeTick(target); } catch(e){}
   /* v468 潛水第一人稱（玩家要求）：鏡頭放在自己眼睛的位置，看不到自己的身體，拖畫面可以上下左右看；搖桿往前推會朝你看的方向游（看上面就往上、看下面就往下）。
      潛水列的「👁 視角」可以切換，會記住。只有自己的畫面這樣，別人看你還是正常的潛水員。 */
   { const fp = Dive.on && Dive.fp && !Dive.ending && !Photo.on; if (fp){ const p = cam.pitch, cp2 = Math.cos(p), hx = me.pos.x, hy = me.baseY + 0.75, hz = me.pos.z; camera.position.set(hx, clamp(hy, diveBed(hx, hz) + 0.4, DIVE.y + DIVE.top - 0.25), hz); camLook.set(hx - Math.sin(cam.yaw) * cp2, camera.position.y - Math.sin(p), hz - Math.cos(cam.yaw) * cp2); camera.lookAt(camLook); }
@@ -8724,6 +8752,28 @@ function buildNests(){
 }
 function nestNear(x, z){ return Nests.some(n => Math.hypot(n.x - x, n.z - z) < 1.6); }
 function updateNests(t){ for (const n of Nests){ if (!n.m) continue; const a = t * 0.6 + n.ph; n.m.position.x = n.x + Math.cos(a) * 0.45; n.m.position.z = n.z + Math.sin(a) * 0.45; n.m.rotation.y = -a; } }
+/* v608 作者：「這裡沒東西」（海風咖啡旁邊、往海邊那塊空地）→ 咖啡店的戶外露台：木頭平台、三張小圓桌和陽傘、每張兩把可以坐的椅子、四個角落的花盆、
+   頭上一串小燈泡（晚上會亮）。椅子跟廣場長椅一樣走過去按「坐下」，坐著看海。 */
+function buildCafeTerrace(){ const cx = 16, cz = 36.3, W = 4.8, D = 4.6, gy = (x, z) => groundHeight(x, z), y0 = gy(cx, cz), g = new THREE.Group(); scene.add(g);
+  const wood = mat('#b98a5c', 0.8), wood2 = mat('#8f6440', 0.85); const deck = box([W, 0.14, D], null, [cx, y0 + 0.07, cz], wood); deck.receiveShadow = true; g.add(deck);
+  for (let k = -2; k <= 2; k++){ const ln = box([W, 0.005, 0.02], null, [cx, y0 + 0.145, cz + k * 0.9], wood2); g.add(ln); }
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]){ const px = cx + sx * (W / 2 - 0.3), pz = cz + sz * (D / 2 - 0.3), pot = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 0.38, 10), mat('#c96f4a', 0.8)); pot.position.set(px, y0 + 0.33, pz); g.add(pot);
+    for (let i = 0; i < 4; i++){ const fl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), mat(['#f5a5d8', '#ffd36a', '#ffffff', '#8a7bff'][i], 0.8, { flatShading: true })); fl.position.set(px + Math.cos(i * 1.6) * 0.12, y0 + 0.6 + (i % 2) * 0.06, pz + Math.sin(i * 1.6) * 0.12); g.add(fl); } addCircleCol(px, pz, 0.3); }
+  const T = [[cx - 1.25, cz - 1.0, '#3fbf9d'], [cx + 1.25, cz - 0.6, '#f17b6d'], [cx - 0.2, cz + 1.25, '#7db7d7']];
+  for (const [tx, tz, col] of T){ const y = y0 + 0.14; g.add(box([0.06, 0.72, 0.06], '#4a4a4a', [tx, y + 0.36, tz])); const top = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.04, 16), mat('#f6efe2', 0.6)); top.position.set(tx, y + 0.74, tz); g.add(top);
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.08, 8), mat('#ffffff', 0.4)); cup.position.set(tx + 0.12, y + 0.8, tz - 0.05); g.add(cup);
+    const pole = box([0.04, 2.0, 0.04], '#f6efe2', [tx, y + 1.0, tz]); g.add(pole);
+    const um = new THREE.Mesh(new THREE.ConeGeometry(1.05, 0.42, 8, 1, true), mat(col, 0.75, { side: THREE.DoubleSide, flatShading: true })); um.position.set(tx, y + 2.05, tz); um.castShadow = true; g.add(um);
+    addCircleCol(tx, tz, 0.45);
+    for (const a of [0.6, 0.6 + Math.PI]){ const sx = tx + Math.sin(a) * 0.78, sz = tz + Math.cos(a) * 0.78, face = Math.atan2(tx - sx, tz - sz), ch = new THREE.Group(); ch.position.set(sx, y, sz); ch.rotation.y = face; g.add(ch);
+      ch.add(box([0.42, 0.05, 0.42], '#e9e2cf', [0, 0.44, 0])); ch.add(box([0.42, 0.42, 0.05], '#e9e2cf', [0, 0.68, -0.2])); for (const lx of [-0.18, 0.18]) for (const lz of [-0.18, 0.18]) ch.add(box([0.03, 0.44, 0.03], '#b8b0a0', [lx, 0.22, lz]));
+      CHAIRS.push({ x: sx, z: sz, face, y: y + 0.42, back: true }); } }
+  /* 小燈泡：兩根柱子拉一條垂下來的線，晚上亮 */
+  const p1 = [cx - W / 2 + 0.1, cz + D / 2 - 0.1], p2 = [cx + W / 2 - 0.1, cz - D / 2 + 0.1]; for (const [px, pz] of [p1, p2]){ g.add(box([0.07, 2.6, 0.07], '#6f5236', [px, y0 + 1.37, pz])); addCircleCol(px, pz, 0.12); }
+  const bulbM = new THREE.MeshStandardMaterial({ color: '#fff3c4', emissive: '#ffd36a', emissiveIntensity: 0.2 }); for (let i = 1; i < 12; i++){ const k = i / 12, b = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), bulbM); b.position.set(p1[0] + (p2[0] - p1[0]) * k, y0 + 2.62 - Math.sin(k * Math.PI) * 0.45, p1[1] + (p2[1] - p1[1]) * k); g.add(b); }
+  CafeTer.bulb = bulbM; CafeTer.g = g; }
+var CafeTer = { bulb: null };
+function cafeTerTick(){ if (!CafeTer.bulb || frameNo % 30) return; let night = false; try { night = periodOf(gameHour()) !== 'day'; } catch(e){} CafeTer.bulb.emissiveIntensity = night ? 1.6 : 0.15; }
 function buildBeach(){
   const g = new THREE.Group(); scene.add(g); let sd = 5; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const gy = (x, z) => groundHeight(x, z);
@@ -11775,7 +11825,7 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
   /* v509 作者傳了一張第一人稱海釣遊戲的圖：竿子被魚拉彎、竿子下面掛著捲線器、一隻手握竿一隻手轉把手
      → 竿子改成一節一節的（可以彎），竿身下面有導線環；握把上掛一個紡車式捲線器；左手握竿、右手抓著捲線器的把手，收線的時候把手會轉 */
   const rp = FP.rodP = new THREE.Group(); rp.position.set(0.17, -0.37, -0.3); rp.rotation.order = 'YXZ'; g.add(rp);
-  const blk = new THREE.MeshStandardMaterial({ color: '#1d2a33', roughness: 0.35, metalness: 0.35 }), red = new THREE.MeshStandardMaterial({ color: '#d8352f', roughness: 0.5 }), met = new THREE.MeshStandardMaterial({ color: '#c9d1d8', roughness: 0.3, metalness: 0.8 }), cork = new THREE.MeshStandardMaterial({ color: '#3a2a20', roughness: 0.9 });
+  const blk = FP.blk = new THREE.MeshStandardMaterial({ color: '#1d2a33', roughness: 0.35, metalness: 0.35 }),   /* v608 竿身顏色跟著你換的竿子、竿子造型（fpRodLook） */ red = new THREE.MeshStandardMaterial({ color: '#d8352f', roughness: 0.5 }), met = new THREE.MeshStandardMaterial({ color: '#c9d1d8', roughness: 0.3, metalness: 0.8 }), cork = new THREE.MeshStandardMaterial({ color: '#3a2a20', roughness: 0.9 });
   { const grip = new THREE.CylinderGeometry(0.019, 0.022, 0.42, 10); grip.translate(0, -0.11, 0); rp.add(new THREE.Mesh(grip, cork)); const cap = new THREE.Mesh(new THREE.SphereGeometry(0.023, 10, 8), cork); cap.position.y = -0.32; rp.add(cap);
     const seat = new THREE.CylinderGeometry(0.021, 0.021, 0.1, 10); seat.translate(0, 0.08, 0); rp.add(new THREE.Mesh(seat, met)); }
   /* 捲線器：掛在竿子下面（竿子往前倒的時候，竿子座標的 +z 是上面，所以 -z 是下面） */
@@ -11792,7 +11842,13 @@ function fpBuild(){ if (FP.g) return; if (!camera.parent) scene.add(camera); con
   /* 手：左手握竿（在捲線器上面一點），右手抓捲線器的把手；手掛在鏡頭上，每一格跟著竿子的位置擺 */
   FP.handL = fpFist(-1); FP.handL.scale.setScalar(0.8); g.add(FP.handL); FP.handR = fpFist(1); FP.handR.scale.setScalar(0.8); g.add(FP.handR);   /* v512 作者：「手是不是反了」→ 手背朝上的右手，大拇指在左邊（fpHand 的 side 是給托魚、手心朝上用的，這裡要反過來） */ FP.crankA = 0; FP.bendNow = 0;
   FP.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#f4f8fb', transparent: true, opacity: 0.85 })); FP.line.frustumCulled = false; FP.line.visible = false; FP.line.userData.keep = true; scene.add(FP.line); }
-function fpStart(){ if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.skinD.color.copy(me.av.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
+/* v608 作者：「我明明已經換了藍色的竿子，但第一人稱還是用這個（黑色的）」→ 第一人稱的竿身照你手上那支竿子的顏色；有竿子造型（金色、花紋）也照著換 */
+function fpRodLook(){ const m = FP.blk; if (!m) return; const r = RODS.find(x => x.id === me.rodId) || RODS[0], sk = me.rodSkin || '', key = r.id + '|' + sk; if (FP.rodKey === key) return; FP.rodKey = key;
+  if (sk === 'rs_gold'){ m.map = null; m.color.set('#e0b84a'); m.metalness = 0.85; m.roughness = 0.25; }
+  else if (sk && typeof CRAFT_BY !== 'undefined' && CRAFT_BY[sk]){ try { m.map = rodSkinTex(sk); m.color.set('#ffffff'); } catch(e){ m.map = null; m.color.set(r.color); } m.metalness = 0.2; m.roughness = 0.4; }
+  else { m.map = null; m.color.set(r.color); m.metalness = 0.35; m.roughness = 0.35; }
+  m.needsUpdate = true; }
+function fpStart(){ try { fpRodLook(); } catch(e){} if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.skinD.color.copy(me.av.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
 function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
 function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
@@ -11822,7 +11878,7 @@ function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T 
   const ln = FP.line; if (T < 2.65){ camera.updateMatrixWorld(); const a = ln.geometry.attributes.position, p0 = FP.tgt; p0.copy(tip); FP.g.localToWorld(p0); a.setXYZ(0, p0.x, p0.y, p0.z); p0.set(h.position.x, h.position.y + c.L * 0.46, h.position.z); FP.g.localToWorld(p0); a.setXYZ(1, p0.x, p0.y, p0.z); a.needsUpdate = true; ln.visible = true; } else ln.visible = false; }
 /* 每一格：決定要不要第一人稱、擺鏡頭、動竿子。回傳 true 表示鏡頭已經擺好，原本的鏡頭程式不用跑 */
 function fpTick(dt){ if (FROST.tents) for (const [m, tx, tz] of FROST.tents) m.visible = !(FP.act && Math.hypot(me.pos.x - tx, me.pos.z - tz) < 2.6);   /* v556 第一人稱坐在冰釣帳篷裡，帳篷布會擋住半個畫面 → 靠近時先不畫 */
-  const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now();
+  const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now(); fpRodLook();
   if (FP.c && F.phase === 'idle'){ fpCatchEnd(); FP.rodY = 0; }   /* v511 留在第一人稱的時候，看完卡片要把手上的魚放掉（以前會一直拿著） */
   FP.eye.set(me.pos.x, me.baseY + (me.sitting ? 0.85 : 1.16), me.pos.z);
   const bobOK = !FP.c && me.fishing && me.bobState !== 'none' && me.bob && me.bob.visible;
@@ -18420,6 +18476,8 @@ function renderTab(){
       '村子有三條大路：從廣場往港邊廣場、往鏡湖、往跨海大橋（珊瑚礁群島）；去北邊碼頭、木橋、水族館、螢光溪、居民區走細細的小步道；清溪潭（以前的瀑布潭，魚都一樣）搬到河的西岸，過木橋就到。',
       '🏘️ 居民區是村民住的地方（島的西南）：村長、阿綾、阿木、阿福、老港一人一棟，門口有門牌。他們下班、累了會沿著巷子走回自己家；晚上門口的燈亮著，就是那一家的人在家。還有三棟空屋，留給以後搬來的新村民。玩家的家在自己的小島上。',
       '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 魚市場區（港邊廣場西邊、往港口的大路旁）是潮汐食堂；中央廣場北邊是釣蝦場；🏀 運動公園（島的西南邊，從廣場往西走過鏡湖南岸）有潮汐撞球館（屋頂有一顆黑八的小屋，走進去可以真的打撞球）和體育場的大門，沙灘排球場在東邊沙灘上——走到大門口按按鈕會進到潮汐體育場（跑道、看台，中間是足球場、最西邊是籃球半場、最東邊是羽球場，都可以真的比賽），出口在南邊看台中間；👗 商店街（往南走，過了涼亭兩邊各三間）：西邊是寵物店、阿綾服裝店、阿彩畫廊，東邊是阿木木工坊、阿萍美髮沙龍，最南邊一間是街景的咖啡店。',
+      '☕ 商店街尾巴的咖啡店旁邊、往海邊那塊地有戶外露台：三張小圓桌和陽傘，每張兩把椅子可以坐下來看海，晚上頭上的小燈泡會亮。',
+      '🌳 走到樹、房子後面時，擋在鏡頭和你中間的東西會變成半透明，不會再被擋住看不到自己。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
@@ -19671,6 +19729,7 @@ async function openSubPanel(){
 
 addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildStadium(); } catch(e){ console.warn('stadium', e); } try { buildPoolHall(); } catch(e){ console.warn('poolhall', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); } try { buildPetShop(); } catch(e){ console.warn('petshop', e); } try { buildNooks(); } catch(e){ console.warn('nooks', e); } try { buildStreetLamps(); } catch(e){ console.warn('lamps', e); }
 try { buildMangrove(); buildBeach(); buildNests(); buildCanal(); } catch(e){ console.warn('mangrove', e); }
+try { buildCafeTerrace(); } catch(e){ console.warn('cafeTerrace', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 try { buildSubDock(); } catch(e){ console.warn('subdock', e); }
 camera.position.set(4, 5, 18);
@@ -19681,7 +19740,7 @@ function frame(){
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
-  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); } catch(e){} try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
