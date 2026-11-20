@@ -5781,7 +5781,7 @@ function waterSpotId(x, z){
 }
 const Shore = { x:1e9, z:1e9, r:0, at:0, res:null };
 function shoreSpot(){
-  if (wildNear(me.pos.x, me.pos.z, 12)) return null;   /* v590 漂流島：村子的釣竿不能用，要用手作竹竿（之後的版本） */
+  const onW = wildNear(me.pos.x, me.pos.z, 12); if (onW && !(wildSt().bag.rod | 0)) return null;   /* v590 漂流島：村子的釣竿不能用；v593 有手作竹竿就能在岸邊釣 */
   const t = performance.now();
   if (Math.hypot(me.pos.x - Shore.x, me.pos.z - Shore.z) < 0.25 && Math.abs(lerpAngle(me.rot, Shore.r, 1) - me.rot) < 0.01 && t - Shore.at < 600) return Shore.res;
   Shore.x = me.pos.x; Shore.z = me.pos.z; Shore.r = me.rot; Shore.at = t; Shore.res = null;
@@ -5792,7 +5792,7 @@ function shoreSpot(){
   const dirs = [me.rot]; for (let k = 1; k <= 6; k++){ dirs.push(me.rot + k * 0.45); dirs.push(me.rot - k * 0.45); }
   for (const a of dirs){ const dx = Math.sin(a), dz = Math.cos(a);
     for (let d = 1.2; d <= 4.6; d += 0.55){ const px = me.pos.x + dx * d, pz = me.pos.z + dz * d;
-      if (waterAt(px, pz) && waterAt(px + dx * 1.5, pz + dz * 1.5)){ const id = waterSpotId(px, pz), base = SPOT_BY_ID[id];
+      if (waterAt(px, pz) && waterAt(px + dx * 1.5, pz + dz * 1.5)){ const id = onW ? 'wild' : waterSpotId(px, pz), base = onW ? WILD_SPOT : SPOT_BY_ID[id];
         Shore.res = Object.assign({}, base, { pos: me.pos.clone(), dir: new THREE.Vector2(dx, dz), shore: true, legendBoost: 1 }); return Shore.res; } } }
   return null;
 }
@@ -6287,11 +6287,11 @@ function doCast(){
     if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
   { const fit = rodFit(s && s.id); if (fit === 'bad' && !doCast.told[s.id]){ doCast.told[s.id] = 1; const best = Object.entries(ROD_TYPES).find(([, T]) => T.fit && T.fit.includes(s.id)); setTimeout(() => toast(`${ROD_TYPES[rodType(curRod())].name}在這裡不太好用${best ? `，${s.short}比較適合用${best[1].icon}${best[1].name}（包包裡可以換）` : '，換成甩竿試試'}`), 900); } }
   if (liftHeight() > LIFT_H && !hasNet() && !doCast.netTold){ doCast.netTold = 1; setTimeout(() => toast(`🥅 這裡比水面高很多：1.5 公斤以上的魚沒有撈網會拉不上來（釣具店「🧰工具」有賣）`), 400); }
-  F.buffAt = curBuff(); useBuffCast(); F.careAt = careLeft() > 0; useCareCast();
+  if (!(s && s.wild)){ F.buffAt = curBuff(); useBuffCast(); F.careAt = careLeft() > 0; useCareCast(); } else { F.buffAt = null; F.careAt = false; }   /* v593 荒島：村子的料理加成、餌都不能用 */
   // 用掉一個魚餌
-  const bt = Rig.rig === 'lure' ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
+  const bt = Rig.rig === 'lure' || (s && s.wild) ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
   if (bt){ if (!Cloud.on) cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
-  const rt = rodType(curRod()), dist = s.id === 'shrimp' ? 1.4 + c * 1.6 : (3.5 + c * 8) *   /* v516 作者：「釣竿的線丟不遠」→ 滿力從 7.5 公尺拉到 11.5 公尺 */ (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1);   /* 手竿拋不遠、遠投竿拋很遠 */   /* 蝦竿很短，拋近近的 */
+  const rt = s.wild ? 'pole' : rodType(curRod()), dist = s.id === 'shrimp' ? 1.4 + c * 1.6 : (3.5 + c * 8) *   /* v516 作者：「釣竿的線丟不遠」→ 滿力從 7.5 公尺拉到 11.5 公尺 */ (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1);   /* 手竿拋不遠、遠投竿拋很遠 */   /* 蝦竿很短，拋近近的 */
   const hole = s.id === 'icelake' ? (s.hole || FROST.holes.slice().sort((a, b) => Math.hypot(me.pos.x - a[0], me.pos.z - a[1]) - Math.hypot(me.pos.x - b[0], me.pos.z - b[1]))[0]) : null;   /* 冰洞：直接放進洞裡 */
   const cp = hole ? hole : castPoint(s.pos.x, s.pos.z, ...aimDir(s), dist);
   const to = new THREE.Vector3(cp[0] + (hole ? 0 : rand(-0.3,0.3)), 0.12, cp[1] + (hole ? 0 : rand(-0.3,0.3)));
@@ -6301,8 +6301,9 @@ function doCast(){
   me.flying = { from, to, t:0, delay:0.17, dur: 0.5 + c*0.3, h: 0.5 + c*0.7, done(){ SFX.plop(); } };   /* v519 作者：「甩竿出去線應該直直往前飛」→ 拋物線壓低（以前最高 2.8 公尺，現在 1.2），線往前射出去 */ me.windup = 0; me.castT = 0;
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.roll = null; F.rollWait = 0; F.pre = null; F.probe = null; F.lastNib = 0;
-  if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
-  if (Cloud.on){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending'; F.rollErr = ''; F.hookTry = 0;
+  if (s.wild){ F.pre = wildPickFish(); }   /* v593 荒島：手機自己抽（不經過伺服器、不進村子的紀錄） */
+  else if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
+  if (Cloud.on && !s.wild){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending'; F.rollErr = ''; F.hookTry = 0;
     const args = { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat, p_bx: +to.x.toFixed(2), p_bz: +to.z.toFixed(2), p_sl: F.castSlot || signSlot() };
     const roll = n => cloudCall('roll_fish', args).then(row => { if (F.castId !== id) return;
       if (!row && n === 0 && netErr(Cloud.lastErr)){ F.rollWait = 0; setTimeout(() => { if (F.castId === id && F.phase === 'waiting') roll(1); }, 2600); return; }   /* v320 網路問題就等 2.6 秒再試一次 */
@@ -6388,7 +6389,7 @@ function reelCleanup(){ fightCue(''); F.act = null; document.body.classList.remo
 /* ---- 來吃餌的魚：等魚的時候看得到牠從旁邊游過來、試探、咬下去（大魚不顯示）。沒釣過的魚只看得到黑影 ---- */
 const BiteFish = { m:null, id:null, ang:0, k:0, shadowM:null };
 // 咬餌前大約 2 秒（伺服器規定拋竿 2 秒後才能問）：問伺服器這一竿是什麼魚，魚才游上來現身
-function fishHook(){ if (!Cloud.on || F.roll !== 'cast' || F.hookReq) return; const nt = now(); if (nt < F.castAt + 2.1 || nt < F.waitUntil - 2.0) return;
+function fishHook(){ if (!Cloud.on || (F.spot && F.spot.wild) || F.roll !== 'cast' || F.hookReq) return; const nt = now(); if (nt < F.castAt + 2.1 || nt < F.waitUntil - 2.0) return;
   const id = F.castId; F.hookReq = 1; F.roll = 'hooking';
   Cloud.sb.rpc('hook_fish').then(async ({ data: row, error }) => { if (F.castId !== id) return;
     if (error){ const em = String(error.message || ''); if (/還沒游過來/.test(em)){ F.roll = 'cast'; F.hookReq = 0; F.castAt = now() - 1.6; } else if (netErr(em) && (F.hookTry = (F.hookTry || 0) + 1) <= 2){ F.roll = 'cast'; F.hookReq = 0; F.rollWait = 0; } else { F.rollErr = em; F.roll = 'fail'; } return; }   /* v320 網路問題重試兩次 */
@@ -6474,8 +6475,8 @@ function updateFishing(dt, t){
     } else {
       /* v249 第 2 段：試探。知道是什麼魚以後（伺服器在咬之前大約 2 秒才說），浮標照那種魚的習慣動：
          小魚群點很多下才咬、中大型魚重重點一下、掠食魚不試探直接拖走、底棲魚會把浮標頂起來、鬼頭刀這類狡猾的點一下停很久。試探的時候按會把魚嚇跑 */
-      const kf = (F.roll && F.roll.f) || (!Cloud.on ? F.pre : null);
-      if (kf && !F.probe && (Cloud.on || t > F.waitUntil - PROBES[probeKind(kf)].len)){ const pk = probeKind(kf), now0 = t, P = PROBES[pk], lk = Rig.line === 'thick' ? 1.5 : Rig.line === 'thin' ? 0.75 : 1;   /* v255 粗線：魚比較警覺，試探久一點（多點一下）；細線：試探快 */
+      const fLoc = !Cloud.on || !!(F.spot && F.spot.wild), kf = (F.roll && F.roll.f) || (fLoc ? F.pre : null);
+      if (kf && !F.probe && (!fLoc || t > F.waitUntil - PROBES[probeKind(kf)].len)){ const pk = probeKind(kf), now0 = t, P = PROBES[pk], lk = Rig.line === 'thick' ? 1.5 : Rig.line === 'thin' ? 0.75 : 1;   /* v255 粗線：魚比較警覺，試探久一點（多點一下）；細線：試探快 */
         const taps = P.taps.map(o => now0 + o * lk); if (Rig.line === 'thick' && taps.length) taps.push(now0 + P.len * lk - 0.25); F.probe = { k:pk, taps, i:0 }; F.waitUntil = Math.max(F.waitUntil, now0 + P.len * lk + (Rig.line === 'thick' ? 0.2 : 0)); }
       if (!F.probe && me.bobState === 'water' && t > F.nibbleAt && t < F.waitUntil - 2.5){ F.nibbleAt = t + rand(1.6, 3.8); F.idleNib = t; F.idleK = Math.random() < 0.3 ? rand(0.45, 0.7) : rand(0.18, 0.35); ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} }   /* v293 等的時候小魚來碰一下浮標（不是真的咬，按了只會收竿） */
       if (!F.probe && F.idleNib && t - F.idleNib < 0.18 && me.dip < F.idleK) me.dip = F.idleK;
@@ -6483,8 +6484,9 @@ function updateFishing(dt, t){
       if (PR && PR.i < PR.taps.length && t >= PR.taps[PR.i]){ PR.i++; F.lastNib = t; const P = PROBES[PR.k]; F.nibK = P.dip; ripple(me.bobPos.x, me.bobPos.z); try { SFX.tick(); } catch(e){} if (P.dip > 0.8) try { buzz(25); } catch(e){} }
       const tgt = PR && F.lastNib && t - F.lastNib < (PROBES[PR.k].hold || 0.2) ? F.nibK : 0; me.dip += (tgt - me.dip) * Math.min(1, dt * 16); }
     fishHook();
-    if (t > F.waitUntil && Cloud.on && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash(rollFailMsg(), 1.4); } }
-    else if (t > F.waitUntil && Cloud.on && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash(rollFailMsg(), 1.6); }
+    const fSrv = Cloud.on && !(F.spot && F.spot.wild);
+    if (t > F.waitUntil && fSrv && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash(rollFailMsg(), 1.4); } }
+    else if (t > F.waitUntil && fSrv && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash(rollFailMsg(), 1.6); }
     else if (t > F.waitUntil){
       // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
       if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; F.sex = F.roll.sex; F.brood = F.roll.brood; F.gp = F.roll.gp; F.ev = !!F.roll.ev; F.rsTag = F.roll.rs; F.rsEscAt = F.rsTag && rsInfo(F.rsTag).esc ? rand(0.45, 0.85) : 0; }
@@ -6663,6 +6665,7 @@ function updateFishing(dt, t){
     else if (nearSeedShop()){ const L = CROPS.find(C => C.lim === farmWeek()); label = '種子攤'; sub = L ? `${L.icon} 本週限定：${L.name}` : '🌱 買種子'; cls = 'shop'; }
     else if (nearFarm()){ const fb = farmBtn(nearFarm()); label = fb[0]; sub = fb[1]; cls = 'shop'; }
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
+    else if (shoreS && shoreS.wild){ label = '拋竿'; sub = '🎣 手作竹竿・荒島岸邊'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
     else if (sh){ label = sh.label; sub = sh.sub ? sh.sub : /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'board' ? '📝 看留言・寫留言' : sh.mode === 'tboard' ? '👀 看誰領先・釣友隊' : sh.mode === 'cargo' ? '🚢 賣船上的魚・裝魚' : sh.mode === 'salon' ? '✂️ 剪髮・染髮' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
@@ -6722,6 +6725,7 @@ function landFish(){
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
   const fpc = FP.act; if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
+  if (F.spot && F.spot.wild){ setTimeout(() => wildLanded(f, w), fpc ? 3600 : 1100); return; }   /* v593 荒島的魚：變成食物、記進荒島筆記，不進村子的紀錄 */
   setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, fpc ? 3600 : 900);   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
 const jumpers = [];
@@ -7311,7 +7315,25 @@ const WILD_ITEMS = {
   rope:   { n:'草繩',   ic:'🪢' }, bone: { n:'魚骨', ic:'🦴' }, hook: { n:'骨頭魚鉤', ic:'🪝' }, rod: { n:'手作竹竿', ic:'🎣' },
   pool:   { n:'潮池', ic:'🫧', verb:'撿潮池', get:[1, 1], cd:180, anim:'farmplant' },
   fishS:  { n:'生的小魚', ic:'🐟', food:8,  cook:'fishSC', bone:1 }, fishSC: { n:'烤小魚', ic:'🍢', food:20, bone:1 },
-  crab:   { n:'生的小螃蟹', ic:'🦀', food:5, cook:'crabC' },       crabC:  { n:'烤螃蟹', ic:'🦞', food:12 } };
+  crab:   { n:'生的小螃蟹', ic:'🦀', food:5, cook:'crabC' },       crabC:  { n:'烤螃蟹', ic:'🦞', food:12 },
+  fishB:  { n:'生的大魚', ic:'🐠', food:15, cook:'fishBC', bone:2 }, fishBC: { n:'烤大魚', ic:'🍖', food:45, bone:2 } };
+/* v593 荒島 D：漂流島的魚（只在荒島用手作竹竿釣得到；釣到的魚變成食物，種類和最重紀錄記在「荒島筆記」，不進村子的圖鑑和魚缸） */
+const WILD_FISH = [
+  { id:'wcardinal', spot:'wild', name:'條紋天竺鯛', rarity:'常見', color:'#e8d2a8', min:0.02, max:0.09, power:0.2,  w:30, time:'night', desc:'大眼睛的小魚，白天躲在礁石縫裡，晚上出來吃浮游生物。' },
+  { id:'wgoat',     spot:'wild', name:'條斑副緋鯉', rarity:'常見', color:'#f0c0a8', min:0.12, max:0.9,  power:0.35, w:34, desc:'下巴有兩根觸鬚，在沙底一邊走一邊摸找小蟲吃，身上一條黑線接一個黑點。' },
+  { id:'wneedle',   spot:'wild', name:'扁鶴鱵',     rarity:'稀有', color:'#9fc8cc', min:0.4,  max:2.6,  power:0.55, w:15, time:'day', desc:'又細又長、嘴巴像一把尖鉗子，會貼著水面衝刺，上鉤後常常跳出水面。' },
+  { id:'wmoray',    spot:'wild', name:'波紋裸胸鯙', rarity:'稀有', color:'#5a4630', min:0.6,  max:4.2,  power:0.7,  w:12, time:'night', desc:'躲在岩洞裡的海鱔，晚上出來找食物，咬住就往洞裡鑽，要用力拉。' },
+  { id:'wbluejack', spot:'wild', name:'藍鰭鰺',     rarity:'傳說', color:'#3a8ae0', min:1.5,  max:8.5,  power:0.85, w:6,  desc:'亮藍色的鰭，成群在礁邊追小魚，力氣很大，是漂流島最難釣的魚。' } ];
+const WILD_FISH_BY_ID = Object.fromEntries(WILD_FISH.map(f => [f.id, f]));
+const WILD_SPOT = { id:'wild', wild:true, label:'漂流島岸邊', short:'荒島', subtitle:'用手作竹竿在岸邊釣', color:'#d8b878', fish: WILD_FISH.map(f => f.id), pos: new THREE.Vector3(WILD.x, 0, WILD.z) };
+function wildPickFish(){ const per = periodOf(gameHour()), L = WILD_FISH.map(f => [f, f.w * (f.time === 'night' ? (per === 'night' ? 2 : 0.5) : f.time === 'day' ? (per === 'day' ? 1.4 : 0.5) : 1)]); let tot = 0; for (const q of L) tot += q[1]; let r = Math.random() * tot; for (const q of L){ r -= q[1]; if (r <= 0) return q[0]; } return L[0][0]; }
+function wildLanded(f, w){ const S = wildSt(), big = w >= 1, k = big ? 'fishB' : 'fishS', nb = Object.assign({}, S.bag); nb[k] = (nb[k] | 0) + 1; let lost = false;
+  if (wildSlots(nb) > WILD_BAG) lost = true; else S.bag = nb;
+  S.notes = S.notes || {}; const N = S.notes[f.id] = S.notes[f.id] || { n: 0, best: 0 }; const first = !N.n; N.n++; const rec0 = w > N.best; if (rec0) N.best = +w.toFixed(2); wildSave();
+  me.holdFish(f, w, 4); try { SFX.coin(); } catch(e){}
+  flash(`${first ? '🆕 ' : ''}🎣 ${f.name} ${fmtKg(w)}${rec0 && !first ? '・最重紀錄！' : ''}`, 2.2);
+  setTimeout(() => toast(lost ? '🎒 荒島背包滿了，這條魚放回海裡' : `${WILD_ITEMS[k].ic} 荒島背包：${WILD_ITEMS[k].n} +1（烤了才吃得飽）`), 900);
+  F.phase = 'idle'; me.fishing = false; pushPresence(true); }
 /* v592 荒島 C：吃東西（椰子另外算：+10 飽足、+5 體力） */
 WILD_ITEMS.coco.food = 10; WILD_ITEMS.coco.sta = 5;
 /* v591 荒島 B：製作。東西做好放背包；營火、遮雨棚、小木屋做好會蓋在你面前（要站在島上的空地） */
@@ -7492,6 +7514,9 @@ function renderWildBag(body){ const S = wildSt(), keys = Object.keys(WILD_ITEMS)
   for (const k of keys){ const n = S.bag[k] | 0; if (!n) continue; any = true; const I = WILD_ITEMS[k], li = el('li'); li.appendChild(el('span', 'ic', I.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${I.n} ×${n}`)); d.appendChild(el('div', 'sub2', `佔 ${Math.ceil(n / WILD_STACK)} 格`)); li.appendChild(d);
     const a = el('div', 'tacts'); if (I.food){ const e2 = el('button', 'tbtn', `吃（+${I.food}）`); e2.addEventListener('click', () => wildEat(k)); a.appendChild(e2); } const b = el('button', 'tbtn', '丟掉 1 個'); b.addEventListener('click', () => { S.bag[k] = Math.max(0, (S.bag[k] | 0) - 1); if (!S.bag[k]) delete S.bag[k]; wildSave(); renderTab(); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
   if (!any) body.appendChild(el('div', 'empty', '還是空的。找港口的阿海，選「遠方荒島・漂流島」坐船過去，走到漂流木、石頭、草、竹子、大葉子、椰子樹旁邊按大按鈕就能撿。')); else body.appendChild(ul);
+  { const N = S.notes || {}; body.appendChild(el('div', 'dexhead', `📒 荒島筆記（${WILD_FISH.filter(f => N[f.id]).length}／${WILD_FISH.length} 種）`)); const ul3 = el('ul', 'shoplist');
+    for (const f of WILD_FISH){ const q = N[f.id], li = el('li'); li.appendChild(el('span', 'ic', q ? '🐟' : '❔')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', q ? `${f.name}（${f.rarity}）` : '？？？')); d.appendChild(el('div', 'sub2', q ? `釣過 ${q.n} 條・最重 ${fmtKg(q.best)}・${f.desc}` : f.time === 'night' ? '晚上比較常出現' : f.time === 'day' ? '白天比較常出現' : '還沒釣過')); li.appendChild(d); ul3.appendChild(li); }
+    body.appendChild(ul3); body.appendChild(el('p', 'sub', '有手作竹竿就能在漂流島的岸邊拋竿。荒島的魚不進村子的圖鑑和魚缸，釣到就變成食物（1 公斤以上算大魚）。')); }
   body.appendChild(el('div', 'dexhead', '🛠️ 製作'));
   body.appendChild(el('p', 'sub', onWild() ? '營火、遮雨棚、小木屋會蓋在你面前：先面向一塊空地再按「做」。' : '營火、遮雨棚、小木屋要在漂流島上才能蓋；草繩、竹竿在哪裡都能做。'));
   const ul2 = el('ul', 'shoplist');
@@ -18312,6 +18337,7 @@ function renderTab(){
     sec('📜 每日任務、釣魚活動', [
       '🏝️ 遠方荒島・漂流島（求生，陸續開放中）：找港口的阿海選「遠方荒島・漂流島」，坐船到東南外海一座沒有人住的島。走到漂流木、石頭、草叢、竹子、大葉子、椰子樹旁邊按大按鈕就能撿，東西放「背包 → 🏝️ 荒島」（12 格，一格最多 20 個，跟村子的背包分開、不能拿回村子賣）。撿過的地方過幾分鐘會再長出來。村子的釣竿在島上不能用。',
       '🍗 荒島求生：在漂流島上左上角會出現飽足度和體力（點一下打開荒島背包）。飽足度每 9 秒少 1；餓到 0 體力就開始掉。晚上離點著的營火 6 公尺外、又不在小木屋裡會冷；下雨沒站在遮雨棚或小木屋下面會淋濕，暴風雨更傷，這些都會掉體力。吃飽（50 以上）又沒在掉的時候體力會慢慢回來。吃東西：在荒島背包按「吃」——椰子 +10、生的小魚 +8、烤小魚 +20、生的小螃蟹 +5、烤螃蟹 +12，吃魚會剩一根魚骨（2 根可以磨成骨頭魚鉤）。退潮的時候東邊沙灘的潮池可以撿小魚、小螃蟹。站在點著的營火旁邊按「烤」。小木屋裡的床可以「睡覺」：體力回得快、晚上不會冷，但不能讓天變亮（全村是同一個時間）。體力 0 會倒下：荒島背包的東西掉一半（竹竿、魚鉤不會掉），有小木屋在小木屋醒來，沒有就被阿海載回港邊。在村子自己家的床上躺 5 秒，下一趟上島體力上限變 120。碼頭最前面按「回村子」坐船回去。',
+      '🎣 荒島釣魚：做好手作竹竿以後，在漂流島的岸邊面向海就能拋竿（村子的釣竿、魚餌、料理加成在島上都不能用）。島上有 5 種魚：條紋天竺鯛、條斑副緋鯉、扁鶴鱵、波紋裸胸鯙、藍鰭鰺（有的白天多、有的晚上多）。釣到的魚變成食物放進荒島背包（1 公斤以上算大魚：生的 +15、烤過 +45，吃完剩 2 根魚骨），不進村子的圖鑑和魚缸；種類和最重紀錄記在「荒島背包 → 📒 荒島筆記」。',
       '🛠️ 荒島製作（背包 → 🏝️ 荒島 → 製作）：草繩（3 把草）、骨頭魚鉤（2 根魚骨，吃魚之後才有）、手作竹竿（3 竹子＋2 草繩＋1 魚鉤）。營火（5 漂流木＋3 石頭）、遮雨棚（8 漂流木＋6 大葉子＋2 草繩）、小木屋（20 漂流木＋10 竹子＋12 大葉子＋6 草繩＋6 石頭）會蓋在你面前：先面向一塊空地再按「蓋」，角色會敲敲打打幾秒鐘蓋起來。蓋的地方的草和漂流木會被清掉；旁邊有椰子樹、竹子、大石頭、太斜或在碼頭前面就不能蓋。營火一塊漂流木燒 4 分鐘，靠近按「加木頭」（最多 20 分鐘）。營火最多 3 個、遮雨棚 2 個、小木屋 1 間，只有自己看得到。接下來會開放：飽足度和體力、烤魚、在小木屋睡覺、荒島的魚。',
       '🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。',
       '🏠 三位船長住在居民區（阿財家、阿春家、海伯家）：天亮前從家裡走到碼頭、蹲一下跳上船，傍晚靠岸後跳下船走回家，到家門燈就會亮；颱風天待在家。沙灘的遊客是坐阿海的船來玩的，會從港口沿著路走到沙灘，要走的時候走回港口。',

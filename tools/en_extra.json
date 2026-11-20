@@ -5927,5 +5927,14 @@
 "撿潮池": "Search tide pool",
 "回村子": "Back to village",
 "烤": "Grill",
-"起床": "Get up"
+"起床": "Get up",
+"🎣 荒島釣魚：做好手作竹竿以後，在漂流島的岸邊面向海就能拋竿（村子的釣竿、魚餌、料理加成在島上都不能用）。島上有 5 種魚：條紋天竺鯛、條斑副緋鯉、扁鶴鱵、波紋裸胸鯙、藍鰭鰺（有的白天多、有的晚上多）。釣到的魚變成食物放進荒島背包（1 公斤以上算大魚：生的 +15、烤過 +45，吃完剩 2 根魚骨），不進村子的圖鑑和魚缸；種類和最重紀錄記在「荒島背包 → 📒 荒島筆記」。": "🎣 Island fishing: once you've made a handmade bamboo rod, face the sea from the Driftwood Isle shore to cast (village rods, bait and food buffs don't work there). The island has 5 fish: ring-tailed cardinalfish, dash-and-dot goatfish, houndfish, undulated moray and bluefin trevally (some prefer day, some night). Catches become food in your island bag (1 kg+ counts as a big fish: raw +15, grilled +45, leaves 2 bones) and don't go into the village Fishdex or tank; species and best weights are kept in \"Island bag → 📒 Island notes\".",
+"條紋天竺鯛": "Ring-tailed cardinalfish",
+"條斑副緋鯉": "Dash-and-dot goatfish",
+"扁鶴鱵": "Houndfish",
+"波紋裸胸鯙": "Undulated moray",
+"藍鰭鰺": "Bluefin trevally",
+"生的大魚": "Raw big fish",
+"烤大魚": "Grilled big fish",
+"漂流島岸邊": "Driftwood Isle shore"
 }

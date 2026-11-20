@@ -938,9 +938,46 @@ Object.assign(SPECS, {
 // 黃化護士鯊：2024 年在哥斯大黎加真的記錄到的個體，全身金橘色、眼睛幾乎是白的
 SPECS.nurseshark_xanthic = VAR('nurseshark', { Top:'#f6a640', Mid:'#fbc066', Bottom:'#fff0cc', Accent:'#e89030', Gill:'#e08a2a', Fins:'#f29a3a', Eye:'#f2efe6', EyeW:'#ffffff' });
 
+/* ---------------- v593 🏝️ 漂流島（遠方荒島）的魚：只有在荒島用手作竹竿釣得到，不進村子的圖鑑 ---------------- */
+Object.assign(SPECS, {
+  // 條紋天竺鯛：小小一條、大眼睛、身上幾條黑色直條紋，兩個背鰭分開，尾巴微凹（Ostorhinchus 屬）
+  wcardinal: { c:{ Top:'#c8a87a', Mid:'#e8d2a8', Bottom:'#f6eedc', Stripes:'#2a2420', Fins:'#e0c898', Eye:'#15181c', EyeW:'#e8c060' }, p:{
+    bl:0.74, depth:0.36, wr:0.5, tm:0.36, nose:0.5, ped:0.22, cs:0.2, up:[[0,0.3],[0.12,0.75],[0.32,1],[0.62,0.8],[1,0.25]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.3, part:'Mid' }, { k:'line', t0:0.02, t1:1, y:[[0,0.05],[1,0.05]], w:0.05, part:'Stripes' }, { k:'line', t0:0.05, t1:0.9, y:[[0,0.45],[1,0.4]], w:0.04, part:'Stripes' }, { k:'line', t0:0.1, t1:0.8, y:[[0,-0.35],[1,-0.3]], w:0.035, part:'Stripes' }],
+    dorsal:[{ s:0.28, e:0.42, h:0.45, shape:'spiny' }, { s:0.5, e:0.68, h:0.42, shape:'tri', peak:0.3 }], anal:{ s:0.56, e:0.72, h:0.36 },
+    pect:{ t:0.26, y:-0.1, size:0.4 }, pelv:{ t:0.3, size:0.32 }, caudal:{ type:'emarginate', hk:1.2 }, eye:EYE(0.1, 0.32, 0.14, { ring:true }) } },
+  // 條斑副緋鯉（鬚鯛）：長長的身體、下巴兩根觸鬚、側線上一條黑線接一個黑點，紅白帶黃
+  wgoat: { c:{ Top:'#c86a5a', Mid:'#f0c0a8', Bottom:'#faeee4', Stripes:'#1e1a1a', Accent:'#f2cc3a', Fins:'#e8b090', Eye:'#15181c', EyeW:'#e8d090' }, p:{
+    bl:0.84, depth:0.27, wr:0.55, tm:0.38, nose:0.95, ped:0.22, cs:0.2, yc:[[0,-0.15],[0.15,0],[1,0]], up:[[0,0.25],[0.12,0.65],[0.3,1],[0.65,0.75],[1,0.25]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.25, part:'Mid' }, { k:'line', t0:0.05, t1:0.62, y:[[0,0.05],[1,0.05]], w:0.07, part:'Stripes' }, { k:'line', t0:0.3, t1:0.62, y:[[0,0.38],[1,0.38]], w:0.05, part:'Accent' }],
+    dots:{ n:1, t0:0.8, t1:0.81, y0:0.0, y1:0.05, r:0.06, part:'Stripes' },
+    dorsal:[{ s:0.3, e:0.42, h:0.5, shape:'spiny' }, { s:0.56, e:0.66, h:0.38, shape:'tri', peak:0.3 }], anal:{ s:0.6, e:0.7, h:0.32 },
+    pect:{ t:0.27, y:-0.15, size:0.42 }, pelv:{ t:0.32, size:0.34 }, caudal:{ type:'forked', notch:0.3, hk:1.3 }, eye:EYE(0.11, 0.35, 0.08, { ring:true }),
+    extra:[{ k:'limb', sym:true, pts:[{ t:0.03, yn:-0.75, z:0.02 }, { x:0.95, y:-0.1, z:0.03 }, { x:0.88, y:-0.17, z:0.045 }], r0:0.009, r1:0.004, part:'Accent' }] } },
+  // 扁鶴鱵：又細又長、上下顎變成尖尖的長嘴（滿嘴小牙），背鰭和臀鰭都在很後面，背藍綠、肚子銀白
+  wneedle: { c:{ Top:'#2f6a7a', Mid:'#9fc8cc', Bottom:'#f2f4f2', Stripes:'#3a8ab0', Fins:'#2f5a6a', Eye:'#15181c', EyeW:'#e0e8e8' }, p:{
+    bl:0.95, depth:0.075, wr:0.75, tm:0.5, nose:2.6, ped:0.12, tailK:1.0, cs:0.2, ns:44, yc:[[0,-0.1],[0.1,0],[1,0]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.4, y1:0.25, part:'Mid' }, { k:'line', t0:0.15, t1:0.95, y:[[0,0.15],[1,0.1]], w:0.05, part:'Stripes' }],
+    dorsal:{ s:0.76, e:0.88, h:0.6, shape:'falcate' }, anal:{ s:0.74, e:0.87, h:0.55, shape:'falcate' },
+    pect:{ t:0.2, y:0.1, size:0.4, shape:'long', ang:-0.1, w:0.3 }, pelv:{ t:0.58, size:0.3 }, caudal:{ type:'forked', notch:0.35, hk:1.6 }, eye:EYE(0.06, 0.35, 0.16, { ring:true }) } },
+  // 波紋裸胸鯙（海鱔）：沒有胸鰭、背鰭從頭後一路連到尾巴，深褐色身體布滿淡色波浪紋，嘴大有尖牙
+  wmoray: { c:{ Top:'#3e2e1e', Mid:'#5a4630', Bottom:'#8a7458', Spots:'#e8dca8', Fins:'#3a2a1c', Eye:'#15181c', EyeW:'#d8c070' }, move:'eel', p:{
+    bl:0.97, depth:0.09, wr:0.75, tm:0.25, nose:0.8, ped:0.05, tailK:1.0, cs:0.0, ns:56, pat:[{ k:'band', t0:0, t1:1, y0:-0.5, y1:0.3, part:'Mid' }, { k:'wave', f:46, fy:4, t0:0.06, t1:0.98, y0:-0.9, y1:0.95, part:'Spots' }],
+    up:[[0,0.4],[0.05,0.85],[0.12,1],[0.6,0.9],[0.9,0.45],[1,0.12]], lo:[[0,0.35],[0.06,0.85],[0.14,1],[0.6,0.85],[0.9,0.4],[1,0.12]],
+    dorsal:{ s:0.1, e:1.0, h:0.45, shape:'flat', sweep:0.05, seg:28 }, anal:{ s:0.5, e:1.0, h:0.4, shape:'flat', sweep:0.05, seg:20 },
+    caudal:{ type:'rounded', hk:1.6, len:0.6 }, eye:EYE(0.045, 0.45, 0.08) } },
+  // 藍鰭鰺：銀藍色、背上有細小黑點、鰭是亮藍色，尾柄有一排硬鱗（稜鱗），島上最大的魚
+  wbluejack: { c:{ Top:'#3a5a7a', Mid:'#9ab8c8', Bottom:'#e4ecef', Accent:'#2a3a48', Spots:'#1a2430', Fins:'#3a8ae0', Eye:'#15181c', EyeW:'#e0e8f0' }, p:{
+    bl:0.8, depth:0.36, wr:0.42, tm:0.3, nose:0.5, ped:0.06, tailK:1.1, cs:0.25, up:[[0,0.4],[0.08,0.75],[0.25,1],[0.55,0.8],[0.8,0.3],[1,0.06]],
+    pat:[{ k:'band', t0:0, t1:1, y0:-0.45, y1:0.25, part:'Mid' }, { k:'line', t0:0.62, t1:1, y:[[0,0],[1,0]], w:0.09, part:'Accent' }], dots:{ n:40, t0:0.15, t1:0.75, y0:0.0, y1:0.9, r:0.01, part:'Spots' },
+    dorsal:[{ s:0.3, e:0.4, h:0.25, shape:'spiny' }, { s:0.43, e:0.75, h:0.42, shape:'falcate' }], anal:{ s:0.5, e:0.75, h:0.38, shape:'falcate' },
+    pect:{ t:0.27, y:-0.1, size:0.85, shape:'long', ang:-0.2, w:0.3 }, pelv:{ t:0.3, size:0.3 }, caudal:{ type:'forked', notch:0.3, hk:1.5 }, eye:EYE(0.1, 0.35, 0.07, { ring:true }) } },
+});
+
 // ---- 嘴巴（2026-11-04）：照每種魚真正的嘴型。term＝嘴在吻端、sub＝嘴在頭的下面（鯊魚、鱘龍）、sup＝嘴往上翹（龍魚、鮟鱇）
 // t＝嘴角往後延伸到哪裡（越大嘴越大），y＝嘴在吻端的高度（負的＝偏下），open＝張開的大小，lip＝嘴唇（用哪個顏色）
 const MOUTH = {
+  wcardinal:{ type:'sup', t:0.06, y:0.05 }, wgoat:{ type:'sub', t:0.04, y:-0.5, t0:0.03 }, wneedle:{ t:0.05, y:0.0 }, wmoray:{ t:0.09, y:-0.05, open:0.35 }, wbluejack:{ t:0.07, y:-0.15 },
   guppy:{ type:'sup', t:0.04, y:0.25 }, gpy:{ type:'sup', t:0.04, y:0.25 },
   rabbitfish:{ t:0.025, y:-0.1 }, girella:{ t:0.03, y:-0.1 }, blackgirella:{ t:0.03, y:-0.1 }, lethrinus:{ t:0.06, y:-0.2 }, amberjack:{ t:0.08, y:-0.05 },
   mosquitofish:{ type:'sup', t:0.04, y:0.3 }, pleco:{ type:'sub', t:0.06, y:-0.85, t0:0.04 }, giantsnake:{ t:0.12, y:-0.15 }, clarias:{ t:0.06, y:-0.1, open:0.3 },
