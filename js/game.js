@@ -13187,7 +13187,7 @@ function renderFerry(body){
   if (!secretSpots.length) ul.appendChild(el('li', '', '還沒有祕密窩點。在水邊按「🍚 打窩」→「🤫 提前打」，就能做一個慢慢發酵的窩點（大家都看得到）。'));
   for (const sp of secretSpots){ const pw = secretPower(sp), li = el('li'), mins = Math.max(0, Math.round((secretLife(sp) - (Date.now() - sp.at)) / 60000));
     li.appendChild(el('span', 'dishic', '🍚')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${sp.where}・${CHUM_BY_ID[sp.type].name}`)); d.appendChild(el('div', 'sub2', pw >= 1 ? `🔥 效果最強！還剩 ${mins} 分鐘` : `發酵中 ${Math.round(pw * 100)}%・還剩 ${mins} 分鐘`)); li.appendChild(d);
-    const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(sp.x, sp.z, `祕密窩點（${sp.where}）`)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+    const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => ferryTo(sp.x, sp.z, `祕密窩點（${sp.where}）`)); a.appendChild(b); const iv = el('button', 'tbtn ghost', '📣 約朋友'); iv.addEventListener('click', () => chumInviteOpen(sp)); a.appendChild(iv); li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
   // 在地圖上自己選地點：點哪塊海面就載你去哪裡（到了再自己打窩）
   body.appendChild(el('div', 'dexhead', '🗺️ 自己選地點'));
@@ -17995,6 +17995,8 @@ function renderTab(){
   if (curTab === 'craft'){ renderCraft(body); return; }
   if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'dm'){ renderDM(body); return; }
+  if (curTab === 'chumhot'){ renderChumHot(body); return; }
+  if (curTab === 'chuminv'){ renderChumInvite(body); return; }
   if (curTab === 'fest'){ renderFest(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'cldesign'){ renderClDesign(body); return; }
@@ -18334,6 +18336,7 @@ function renderTab(){
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到（晚一點才走過來或才上線的人也看得到，還會顯示剩下的時間），維持 2～3 分鐘；別人也可以來你的窩裡釣；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
       '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫）；在線上的人一做好，附近的人馬上就看得到，別人的窩點也能去釣，效果是打窩那個人的 75%。',
       '🔥 熱窩：人越多窩越旺。同一個窩（12 公尺內）每多一個人一起釣，稀有魚 +10%、傳說魚 +12%、魚咬得快 8%（最多算 4 個人）；窩上面會浮出「🔥 3 人在釣」、水面的魚影也變多。別人在你打的窩釣到魚，你會拿到 2 金幣謝禮（一天最多 60），祕密窩點還會延長 1 分鐘（最多多 30 分鐘）。約朋友一起來窩裡釣吧！',
+      '🍚 熱門窩點：手機「🍚 熱門窩點」看得到大家現在打的窩（幾個人在釣、還剩多久），按「⛵ 過去」阿海就載你去。自己的祕密窩點可以按「📣 約朋友」，選互相加好友的朋友，他們會收到一則私訊，按訊息裡的「⛵ 坐阿海的船過去」就能直接過來（阿海的祕密窩點清單也有「📣 約朋友」）。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、東邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
       '👥 組隊出海：在阿海的選單勾「組隊出海」再選目的地，大廳裡的人會收到邀請，按「一起去」就會一起到那裡（祕密窩點不會邀請別人）。在船上釣魚時，附近每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。',
@@ -19815,7 +19818,7 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
    從手機打開頁面時，角色會拿出手機低頭滑，別人也看得到（presence 的 ph）。 ===== */
 const PHONE_APPS = [
   ['村子裡', [['phfeed', '🔔', '快訊'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
-  ['大家', [['dm', '💬', '訊息'], ['people', '👥', '玩家'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
+  ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
   ['我的', [['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
 SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.wild = '🏝️ 荒島背包'; SHEET_TITLE.phfeed = '🔔 快訊';
 function phoneOpen(){ Phone.via = true; openSheet('phone'); }
@@ -19860,7 +19863,9 @@ function dmTime(t){ const d = new Date(t), n = new Date(); const hm = `${String(
 function dmRenderList(scroll){ const box = $('#dmList'); if (!box) return; box.innerHTML = '';
   if (!DM.msgs.length) box.appendChild(el('div', 'empty', DM.busy ? '載入中…' : `還沒有訊息，跟 ${DM.with.name} 打聲招呼吧！`));
   let lastDay = ''; for (const m of DM.msgs){ const day = new Date(m.at).toDateString(); if (day !== lastDay){ lastDay = day; box.appendChild(el('div', 'dm-day', new Date(m.at).toDateString() === new Date().toDateString() ? '今天' : `${new Date(m.at).getMonth() + 1} 月 ${new Date(m.at).getDate()} 日`)); }
-    const row = el('div', 'dm-row' + (m.me ? ' me' : '')), bub = el('div', 'dm-bub'); bub.textContent = m.t; row.appendChild(bub); row.appendChild(el('span', 'dm-t', dmTime(m.at) + (m.me && m.rd ? ' 已讀' : ''))); box.appendChild(row); }
+    const row = el('div', 'dm-row' + (m.me ? ' me' : '')), bub = el('div', 'dm-bub'), inv = /\[\[chum:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\]\]/.exec(m.t); bub.textContent = m.t.replace(/\s*\[\[chum:[^\]]*\]\]/, '');
+    if (inv){ const go = el('button', 'tbtn dm-go', m.me ? '⛵ 我的窩點' : '⛵ 坐阿海的船過去'); go.addEventListener('click', () => { closeSheet(); ferryTo(+inv[1], +inv[2], '朋友的窩點'); }); bub.appendChild(el('br')); bub.appendChild(go); }   /* v610 約朋友來窩：私訊裡有按鈕直接坐船過去 */
+    row.appendChild(bub); row.appendChild(el('span', 'dm-t', dmTime(m.at) + (m.me && m.rd ? ' 已讀' : ''))); box.appendChild(row); }
   if (scroll) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; }); }
 function renderDM(body){ if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端以後就能跟好友私訊。')); return; }
   if (!DM.with){   /* 對話清單：互相是好友的人，有未讀的排前面 */
@@ -19887,6 +19892,40 @@ function renderDM(body){ if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上
   const go = el('button', 'tbtn', '傳送'); go.addEventListener('click', () => dmSend(inp, go)); inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); dmSend(inp, go); } });
   row.append(inp, go); body.appendChild(row); body.appendChild(el('p', 'sub', '私訊只有你們兩個看得到，訊息留 30 天。不要告訴別人你的真名、地址、電話、學校。'));
   dmRenderList(true); }
+/* ===== v610 約朋友來我的窩、今天最熱的窩（伺服器 205）=====
+   約朋友：選互加好友（可以選好幾個）→ 每個人收到一則私訊「🍚 我在〔地點〕打好窩了，快來一起釣！」，私訊裡有「⛵ 坐阿海的船過去」。
+   熱門窩點：手機「🍚 熱門窩點」——大家的祕密窩點（現在幾個人在釣、誰打的、還剩多久）和「現在打」的熱窩，點「⛵ 過去」阿海載你去。 */
+var ChumInv = { sp: null, pick: new Set(), busy: false };
+SHEET_TITLE.chumhot = '🍚 熱門窩點'; SHEET_TITLE.chuminv = '📣 約朋友來窩';
+function chumInviteOpen(sp){ if (!Cloud.on){ toast('要連上雲端才能約朋友'); return; } ChumInv.sp = sp; ChumInv.pick = new Set(); Phone.via = true; openSheet('chuminv'); }
+function renderChumInvite(body){ const sp = ChumInv.sp; if (!sp){ body.appendChild(el('p', 'sub', '先選一個窩點。')); return; }
+  if (Date.now() - Fr.at > 15000 && !Fr.loading){ Fr.loading = true; loadFriends().finally(() => { Fr.loading = false; if (curTab === 'chuminv') renderTab(); }); }
+  body.appendChild(el('p', 'sub', `🍚 ${sp.where || '我的窩點'}・${(CHUM_BY_ID[sp.type] || {}).name || '窩料'}：選要約的好友（要互相加好友），他們會收到一則私訊，按一下就能坐阿海的船過來。`));
+  const mu = (Fr.list || []).filter(f => f.mutual && !dmBlocked(f.id)), on = onlineUids();
+  if (!mu.length){ body.appendChild(el('div', 'empty', '還沒有互相加好友的人。手機 → 👥 玩家 可以加好友。')); return; }
+  const ul = el('ul', 'people'); for (const f of mu){ const li = el('li', 'dm-li'), ck = el('span', 'sw'); ck.textContent = ChumInv.pick.has(f.id) ? '✅' : '⬜'; ck.style.background = 'none';
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', clean(String(f.name || '釣客').slice(0, 16)))); d.appendChild(el('div', 'sub2', on.has(f.id) ? '🟢 在這個大廳' : '不在這個大廳（上線就會看到）')); li.append(ck, d);
+    li.addEventListener('click', () => { if (ChumInv.pick.has(f.id)) ChumInv.pick.delete(f.id); else ChumInv.pick.add(f.id); renderTab(); }); ul.appendChild(li); }
+  body.appendChild(ul);
+  const go = el('button', 'tbtn', ChumInv.pick.size ? `📣 約 ${ChumInv.pick.size} 個人` : '先選人'); go.disabled = !ChumInv.pick.size || ChumInv.busy; go.style.width = '100%'; go.style.marginTop = '8px';
+  go.addEventListener('click', async () => { ChumInv.busy = true; go.disabled = true; let ok = 0; const where = clean(String(sp.where || '我的窩點').slice(0, 12)), msg = `🍚 我在〔${where}〕打好窩了，快來一起釣！ [[chum:${(+sp.x).toFixed(1)},${(+sp.z).toFixed(1)}]]`;
+    for (const id of ChumInv.pick){ try { const { error } = await Cloud.sb.rpc('dm_send', { p_to: id, p_text: msg }); if (!error) ok++; } catch(e){} await new Promise(r => setTimeout(r, 1100)); }   /* 伺服器一秒只收一則 */
+    ChumInv.busy = false; toast(ok ? `📣 約了 ${ok} 個朋友，等他們來！` : '沒送出去，等一下再試'); if (ok){ ChumInv.pick = new Set(); closeSheet(); } else renderTab(); });
+  body.appendChild(go); }
+var ChumHotL = { d: null, at: 0, busy: false };
+async function chumHotLoad(){ if (ChumHotL.busy || !Cloud.on) return; ChumHotL.busy = true; try { const { data, error } = await Cloud.sb.rpc('chum_hot'); if (!error && data) ChumHotL.d = data; } catch(e){} ChumHotL.at = Date.now(); ChumHotL.busy = false; if (!$('#sheet').hidden && curTab === 'chumhot') renderTab(); }
+function renderChumHot(body){ if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端以後就能看到大家的窩點。')); return; }
+  if (Date.now() - ChumHotL.at > 20000) chumHotLoad();
+  body.appendChild(el('p', 'sub', '大家打的窩點，人越多越旺（每多一個人一起釣，稀有魚、傳說魚更多、咬得更快）。點「⛵ 過去」阿海就載你去；自己的窩點可以「📣 約朋友」。'));
+  const D = ChumHotL.d; if (!D){ body.appendChild(el('div', 'empty', '載入中…')); return; }
+  const rows = []; for (const s of D.secret || []){ const left = Math.max(0, Math.round((SECRET_LIFE + Math.min(1800000, +s.ext || 0) - (Date.now() - +s.at)) / 60000)); if (left <= 0) continue; rows.push({ n: +s.n || 0, ic: s.mine ? '🟡' : '🔵', t: `${clean(String(s.where || '祕密窩點').slice(0, 12))}・${s.mine ? '我的窩' : clean(String(s.nick || '一位釣客').slice(0, 16)) + ' 的窩'}`, sub: `${(CHUM_BY_ID[s.type] || {}).name || '窩料'}・還剩 ${left} 分鐘`, x: +s.x, z: +s.z, mine: s.mine, sp: s }); }
+  for (const l of D.live || []) rows.push({ n: +l.n || 0, ic: '🍚', t: '現在打的窩', sub: `${(CHUM_BY_ID[l.type] || {}).name || '窩料'}・2～3 分鐘就散`, x: +l.x, z: +l.z });
+  rows.sort((a, b) => b.n - a.n); if (!rows.length){ body.appendChild(el('div', 'empty', '現在沒有人打窩。到水邊按「🍚 打窩」→「🤫 提前打」做一個，再約朋友來！')); return; }
+  const ul = el('ul', 'shoplist'); for (const r of rows.slice(0, 15)){ const li = el('li'); li.appendChild(el('span', 'dishic', r.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.t)); d.appendChild(el('div', 'sub2', `${r.n ? `🔥 ${r.n} 人在釣・` : '還沒人在釣・'}${r.sub}`)); li.appendChild(d);
+    const a = el('div', 'tacts'), b = el('button', 'tbtn', '⛵ 過去'); b.addEventListener('click', () => { closeSheet(); ferryTo(r.x, r.z, r.t); }); a.appendChild(b);
+    if (r.mine){ const iv = el('button', 'tbtn ghost', '📣 約朋友'); iv.addEventListener('click', () => chumInviteOpen(r.sp)); a.appendChild(iv); }
+    li.appendChild(a); ul.appendChild(li); }
+  body.appendChild(ul); }
 function dmTick(){ if (!Cloud.on) return; const T = Date.now(); if (dmViewing() && T - DM.pullAt > 4000) dmPull(); if (T - DM.at > 25000) dmUnreadLoad(); }
 function phoneHdr(){ const hd = $('#sheet header'); if (!hd) return; let b = $('#phBack');
   if (!b){ b = document.createElement('button'); b.id = 'phBack'; b.innerHTML = '‹ 📱'; b.setAttribute('aria-label', '回手機'); b.addEventListener('click', () => { SFX.click(); Phone.via = true; curTab = 'phone'; renderTab(); }); hd.insertBefore(b, hd.firstChild); }
