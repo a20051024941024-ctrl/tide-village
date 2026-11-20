@@ -15294,10 +15294,11 @@ function fkBuild(mask, len, y0, nz){ const g = new THREE.Group(), parts = [];
     for (const sx of [-0.55, 0.55]) for (const sz of [-len / 2 + 0.2, len / 2 - 0.1]){ const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.4, 6), dark); leg.position.set(sx, -1.2, sz); p.add(leg); }
     for (const sx of [-0.6, 0.6]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.7, 6), dark); post.position.set(sx, 0.35, len / 2 - 0.1); p.add(post); } }
   { const p = P(); p.position.set(0, cy, cz);   /* 摺疊椅：鋁管 X 形腳、藍色布面、靠背 */
-    for (const sx of [-0.24, 0.24]) for (const s of [1, -1]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.5, 6), alu); r.position.set(sx, 0.2, 0); r.rotation.x = s * 0.75; p.add(r); }
-    fkBox(p, 0.5, 0.04, 0.42, cloth, 0, 0.36, 0);
-    const back = fkBox(p, 0.5, 0.42, 0.04, cloth, 0, 0.6, -0.22); back.rotation.x = -0.18;
-    for (const sx of [-0.26, 0.26]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.5, 6), alu); r.position.set(sx, 0.6, -0.23); r.rotation.x = -0.18; p.add(r); fkBox(p, 0.05, 0.04, 0.4, alu, sx, 0.5, -0.02); } }
+    /* v622 作者：「可以讓角色真的坐在椅子上嗎」→ 椅子高一點（座面 0.48，腳踩得到地），坐的高度照公園長椅量的：屁股比座面低 0.23 */
+    for (const sx of [-0.24, 0.24]) for (const s of [1, -1]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.64, 6), alu); r.position.set(sx, 0.25, 0); r.rotation.x = s * 0.72; p.add(r); }
+    fkBox(p, 0.5, 0.04, 0.44, cloth, 0, 0.46, 0);
+    const back = fkBox(p, 0.5, 0.44, 0.04, cloth, 0, 0.74, -0.23); back.rotation.x = -0.18;
+    for (const sx of [-0.26, 0.26]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.56, 6), alu); r.position.set(sx, 0.72, -0.24); r.rotation.x = -0.18; p.add(r); fkBox(p, 0.05, 0.04, 0.42, alu, sx, 0.62, -0.02); } }
   if (mask & 4){ const p = P(); p.position.set(0.55, cy, cz + 0.25);   /* 竿架：插在地上的支架＋斜斜的竿子，竿尖掛一顆小鈴鐺 */
     const st = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 6), alu); st.position.y = 0.35; p.add(st); fkBox(p, 0.14, 0.03, 0.03, alu, 0, 0.7, 0);
     const rod = new THREE.Group(); rod.position.set(0, 0.7, 0); rod.rotation.x = 0.6; rod.visible = false; p.add(rod);   /* v620 竿子真的插在竿架上（站起來走開）才看得到，平常竿子在你手上 */
@@ -15334,7 +15335,7 @@ function fkPlace(){ const why = fkWhy(); if (why){ toast(why); return false; } c
   if (mask & 2){ const dx = Math.sin(w.face), dz = Math.cos(w.face); for (const d of [1.2, 2.0, 2.6]) if (!waterAt(w.x + dx * d, w.z + dz * d)){ toast('前面的水不夠寬，釣台伸不出去，換個地方'); return false; } }
   fkClear(true); const g = fkBuild(mask, len, y0 - w.y, w.nz); g.position.set(w.x, w.y, w.z); g.rotation.y = w.face; scene.add(g); FK.g = g; FK.at = now(); FK.net = [];
   const dx = Math.sin(w.face), dz = Math.cos(w.face), sl = mask & 2 ? len : 0;
-  const seat = { x: w.x + dx * (sl + 0.05), z: w.z + dz * (sl + 0.05), face: w.face, y: (mask & 2 ? y0 : w.y) + 0.36, nook: true, back: true, gear: true, reach: mask & 2 ? 3.4 : 1.4, ret: [w.x - dx * 0.5, w.z - dz * 0.5] };
+  const seat = { x: w.x + dx * (sl + 0.05), z: w.z + dz * (sl + 0.05), face: w.face, y: (mask & 2 ? y0 : w.y) + 0.25, nook: true, gear: true, reach: mask & 2 ? 3.4 : 1.4, ret: [w.x - dx * 0.5, w.z - dz * 0.5] };
   FK.seat = seat; CHAIRS.push(seat); FK.set = { x: w.x, z: w.z, face: w.face, y: w.y, mask, y0, isle: !!onIsle, nz: w.nz };
   try { SFX.door(); } catch(e){} fkPop(g, FK.at); sitDown(seat); FK.sitT = now();
   setTimeout(() => toast(`🎣 裝備擺好了！${mask & 4 ? '等魚的時候可以按「跳」站起來走開，竿子會插在竿架上。' : '按「拋竿」就能坐著釣。'}`), 500);
@@ -19964,10 +19965,17 @@ function frame(){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+/* v622 作者：「每次走過來都會卡一下」→ 量到走近博物館那幾步，一格要好幾秒，全花在 three.js 第一次編譯著色器（getProgramInfoLog），一路上新編了 41 種。
+   改成載入時把場景裡所有東西（包含現在藏起來的）的著色器先在背景編好：手機支援平行編譯時用 compileAsync，不會卡畫面；載入後 10 秒再補一次（後來才蓋的村民、看板）。 */
+function shaderWarm(tag){ try { const hid = []; scene.traverse(o => { if (!o.visible){ hid.push(o); o.visible = true; } });
+    const t0 = performance.now(), n0 = renderer.info.programs ? renderer.info.programs.length : 0;
+    let pr = null; try { pr = renderer.compileAsync ? renderer.compileAsync(scene, camera) : (renderer.compile(scene, camera), null); } finally { for (const o of hid) o.visible = false; }
+    const done = () => { shaderWarm.log = (shaderWarm.log || '') + ` ${tag}:${n0}->${renderer.info.programs ? renderer.info.programs.length : '?'}/${Math.round(performance.now() - t0)}ms`; };
+    if (pr && pr.then) pr.then(done, done); else done(); } catch(e){ shaderWarm.err = String(e); } }
 { const fStart = () => frameNo; let f0 = null;
   const iv = setInterval(() => { if (Boot.done){ clearInterval(iv); return; } const el = (performance.now() - Boot.t0) / 1000;
     if (el > 1.5 && !Boot.sawLoad) Boot.assets = true;   /* 模型都在快取裡、一開始就載完的情況 */
-    const ready = Boot.assets && Boot.cloud; if (ready && f0 == null) f0 = fStart(); if (!ready) f0 = null;
+    const ready = Boot.assets && Boot.cloud; if (ready && f0 == null){ f0 = fStart(); if (!shaderWarm.at){ shaderWarm.at = 1; shaderWarm('boot'); setTimeout(() => shaderWarm('late'), 10000); } } if (!ready) f0 = null;
     const warm = f0 == null ? 0 : Math.min(1, (fStart() - f0) / 24);
     Boot.step(40 + (Boot.assets ? 20 : Math.min(15, el * 3)) + (Boot.cloud ? 25 : Math.min(18, el * 2.5)) + warm * 15, !Boot.assets ? '正在搬魚和道具…' : !Boot.cloud ? '正在跟伺服器拿你的紀錄…' : '快好了，正在整理畫面…');
     if ((ready && warm >= 1) || el > 14){ Boot.done = true; clearInterval(iv); try { window.__loadDone && window.__loadDone(); } catch(e){} } }, 120); }
