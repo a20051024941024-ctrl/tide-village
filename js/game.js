@@ -15281,7 +15281,7 @@ function fkHas(id){ return (rec.owned || []).includes(id); }
 function fkMask(){ let m = 0; for (const k of FKIT) if (fkHas(k.id)) m |= k.bit; return m; }
 function fkBox(g, w, h, d, m, x, y, z, ry){ const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); if (ry) o.rotation.y = ry; o.castShadow = true; g.add(o); return o; }
 /* 一組裝備的模型：原點在椅子底下，+z 朝水；stand 時椅子往前 len 公尺 */
-function fkBuild(mask, len, y0){ const g = new THREE.Group(), parts = [];
+function fkBuild(mask, len, y0, nz){ const g = new THREE.Group(), parts = [];
   const alu = mat('#c9d0d6', 0.35, { metalness:0.6 }), cloth = mat('#2f6f9a', 0.85), wood = mat('#a8794c', 0.8), dark = mat('#4b3424', 0.85);
   const P = () => { const p = new THREE.Group(); g.add(p); parts.push(p); return p; };
   const cz = mask & 2 ? len : 0, cy = mask & 2 ? y0 : 0;
@@ -15296,37 +15296,42 @@ function fkBuild(mask, len, y0){ const g = new THREE.Group(), parts = [];
     for (const sx of [-0.26, 0.26]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.5, 6), alu); r.position.set(sx, 0.6, -0.23); r.rotation.x = -0.18; p.add(r); fkBox(p, 0.05, 0.04, 0.4, alu, sx, 0.5, -0.02); } }
   if (mask & 4){ const p = P(); p.position.set(0.55, cy, cz + 0.25);   /* 竿架：插在地上的支架＋斜斜的竿子，竿尖掛一顆小鈴鐺 */
     const st = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 6), alu); st.position.y = 0.35; p.add(st); fkBox(p, 0.14, 0.03, 0.03, alu, 0, 0.7, 0);
-    const rod = new THREE.Group(); rod.position.set(0, 0.7, 0); rod.rotation.x = 0.95; p.add(rod);
+    const rod = new THREE.Group(); rod.position.set(0, 0.7, 0); rod.rotation.x = 0.6; rod.visible = false; p.add(rod);   /* v620 竿子真的插在竿架上（站起來走開）才看得到，平常竿子在你手上 */
     const rm = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.022, 2.6, 6), mat('#2b3b52', 0.5)); rm.position.y = 0.9; rod.add(rm);
     fkBox(rod, 0.06, 0.07, 0.06, mat('#d33', 0.5), 0, -0.25, 0.04);
     const tip = new THREE.Object3D(); tip.position.y = 2.2; rod.add(tip); const bell = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), mat('#f2c84b', 0.3, { metalness:0.7 })); bell.position.y = -0.06; tip.add(bell);
     g.userData.tip = tip; g.userData.rod = rod;
-    const np = P(); np.position.set(-0.75, 0, cz + (mask & 2 ? 0.2 : 1.4));   /* 魚護：泡在水裡的網子 */
+    const np = P(); np.position.set(-0.8, 0, cz + (mask & 2 ? 0.2 : (nz || 1.4)));   /* 魚護：泡在水裡的網子 */
     const net = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.1, 14, 1, true), new THREE.MeshLambertMaterial({ color:'#2d5a3a', transparent:true, opacity:0.45, side:THREE.DoubleSide, depthWrite:false })); net.position.y = -0.35; np.add(net);
     for (const yy of [0.18, -0.35, -0.88]){ const ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.02, 4, 18), mat('#334', 0.6)); ring.rotation.x = Math.PI / 2; ring.position.y = yy; np.add(ring); }
     g.userData.net = np; g.userData.netY = np.position.y; }
-  if (mask & 8){ const p = P(); p.position.set(-0.5, cy, cz - 0.35);   /* 遮陽傘＋釣箱 */
+  if (mask & 8){ const p = P(); p.position.set(1.3, cy, cz - 0.75);   /* v620 傘移到旁邊後面一點、小一點：以前整個蓋在頭上，鏡頭看不到人 */   /* 遮陽傘＋釣箱 */
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.1, 6), alu); pole.position.y = 1.05; pole.rotation.z = 0.12; p.add(pole);
-    const top = new THREE.Group(); top.position.set(0.12, 2.05, 0); top.rotation.z = 0.12; p.add(top);
+    const top = new THREE.Group(); top.position.set(0.12, 2.05, 0); top.rotation.z = 0.12; top.scale.setScalar(0.78); p.add(top);
     for (let i = 0; i < 8; i++){ const seg = new THREE.Mesh(new THREE.ConeGeometry(1.25, 0.42, 3, 1, true, i * Math.PI / 4, Math.PI / 4), mat(i % 2 ? '#f4f1e6' : '#e0564f', 0.8, { side:THREE.DoubleSide })); top.add(seg); }
-    const bp = P(); bp.position.set(0.5, cy, cz - 0.45);
+    const bp = P(); bp.position.set(-0.6, cy, cz - 0.4);
     fkBox(bp, 0.42, 0.24, 0.26, mat('#3f8f5a', 0.6), 0, 0.12, 0); fkBox(bp, 0.43, 0.04, 0.27, mat('#2f7048', 0.6), 0, 0.25, 0); fkBox(bp, 0.16, 0.05, 0.03, alu, 0, 0.29, 0); g.userData.box = bp; }
   g.userData.parts = parts; g.userData.mask = mask; return g; }
 function fkPop(g, t0, out){ const ps = g.userData.parts || []; ps.forEach((p, i) => { const k = clamp((now() - t0 - i * 0.12) / 0.38, 0, 1), e = out ? 1 - k : (k < 1 ? 1 + Math.sin(k * Math.PI) * 0.18 - (1 - k) * (1 - k) * 1.0 : 1); p.scale.setScalar(Math.max(0.001, e)); }); }
 /* 找擺的位置：你站的地方往前 0.6～3.2 公尺內要有水 */
-function fkWhere(){ const dx = Math.sin(me.rot), dz = Math.cos(me.rot); let d0 = 0; for (let d = 0.6; d <= 3.2; d += 0.2){ if (waterAt(me.pos.x + dx * d, me.pos.z + dz * d)){ d0 = d; break; } } if (!d0) return null;
-  if (!waterAt(me.pos.x + dx * (d0 + 1.6), me.pos.z + dz * (d0 + 1.6))) return null;
-  const sx = me.pos.x + dx * Math.max(0, d0 - 0.75), sz = me.pos.z + dz * Math.max(0, d0 - 0.75);
-  return { x: sx, z: sz, face: me.rot, y: groundHeight(sx, sz), d0 }; }
+/* v620 作者：「很奇怪」（港口潛水梯旁擺下去，按鈕變「站起來」，不能拋竿）→ 你面向的方向不行就往左右轉著找（最多 90 度），而且要椅子真的拋得出去才擺 */
+function fkWhere(){ for (const da of [0, 0.39, -0.39, 0.79, -0.79, 1.18, -1.18, 1.57, -1.57]){ const face = me.rot + da, dx = Math.sin(face), dz = Math.cos(face); let d0 = 0;
+    for (let d = 0.6; d <= 3.2; d += 0.2){ if (waterAt(me.pos.x + dx * d, me.pos.z + dz * d)){ d0 = d; break; } } if (!d0) continue;
+    if (!waterAt(me.pos.x + dx * (d0 + 1.6), me.pos.z + dz * (d0 + 1.6))) continue;
+    const sx = me.pos.x + dx * Math.max(0, d0 - 0.75), sz = me.pos.z + dz * Math.max(0, d0 - 0.75);
+    if (!nookSpot({ x: sx, z: sz, face })) continue;
+    let nz = 1.4; for (let k = 0.6; k <= 4; k += 0.2){ const lx = -0.8, wx = sx + dx * k + Math.cos(face) * lx, wz = sz + dz * k - Math.sin(face) * lx; if (waterAt(wx, wz) && !deckAt(wx, wz)){ nz = k + 0.25; break; } }   /* 魚護一定要泡在水裡 */
+    return { x: sx, z: sz, face, y: groundHeight(sx, sz), d0, nz }; }
+  return null; }
 function fkWhy(){ if (!fkHas('tool_chair')) return '要先在釣具店「🧰工具」買摺疊椅'; if (myBoat || Voy.on) return '在船上不能擺'; if (Dive.on || House.on || inIndoor() || inHall()) return '這裡不能擺'; if (onIsle && onIsle.wild) return '荒島上不能擺';
   if (F.phase !== 'idle') return '先收竿'; if (mySeat) return '先站起來'; if (Bike.on) return '先下腳踏車'; return ''; }
 function fkPlace(){ const why = fkWhy(); if (why){ toast(why); return false; } const w = fkWhere(); if (!w){ toast('走到水邊、面向水再擺（前面 3 公尺內要有水）'); return false; }
   const mask = fkMask(), len = 2.4, y0 = Math.max(w.y, WATER_LEVEL + 0.35);
   if (mask & 2){ const dx = Math.sin(w.face), dz = Math.cos(w.face); for (const d of [1.2, 2.0, 2.6]) if (!waterAt(w.x + dx * d, w.z + dz * d)){ toast('前面的水不夠寬，釣台伸不出去，換個地方'); return false; } }
-  fkClear(true); const g = fkBuild(mask, len, y0 - w.y); g.position.set(w.x, w.y, w.z); g.rotation.y = w.face; scene.add(g); FK.g = g; FK.at = now(); FK.net = [];
+  fkClear(true); const g = fkBuild(mask, len, y0 - w.y, w.nz); g.position.set(w.x, w.y, w.z); g.rotation.y = w.face; scene.add(g); FK.g = g; FK.at = now(); FK.net = [];
   const dx = Math.sin(w.face), dz = Math.cos(w.face), sl = mask & 2 ? len : 0;
   const seat = { x: w.x + dx * (sl + 0.05), z: w.z + dz * (sl + 0.05), face: w.face, y: (mask & 2 ? y0 : w.y) + 0.36, nook: true, back: true, gear: true, reach: mask & 2 ? 3.4 : 1.4, ret: [w.x - dx * 0.5, w.z - dz * 0.5] };
-  FK.seat = seat; CHAIRS.push(seat); FK.set = { x: w.x, z: w.z, face: w.face, y: w.y, mask, y0, isle: !!onIsle };
+  FK.seat = seat; CHAIRS.push(seat); FK.set = { x: w.x, z: w.z, face: w.face, y: w.y, mask, y0, isle: !!onIsle, nz: w.nz };
   try { SFX.door(); } catch(e){} fkPop(g, FK.at); sitDown(seat); FK.sitT = now();
   setTimeout(() => toast(`🎣 裝備擺好了！${mask & 4 ? '等魚的時候可以按「跳」站起來走開，竿子會插在竿架上。' : '按「拋竿」就能坐著釣。'}`), 500);
   pushPresence(true); renderTabIf('fkit'); return true; }
@@ -15340,12 +15345,13 @@ function fkNetFish(g, ids){ const np = g && g.userData.net; if (!np) return; con
   ids.slice(-6).forEach((id, i) => { const f = FISH_BY_ID[id]; if (!f) return; let m; try { m = fishModel(f, 0.32); } catch(e){ m = makeFish(f.color || '#8ab', 0.32); } m.userData.ph = i * 1.1; m.position.y = -0.3; np.add(m); np.userData.fish.push(m); }); }
 function fkNetAnim(g, t){ const np = g && g.userData.net; if (!np || !np.userData.fish) return; np.position.y = (g.userData.netY || 0) + WATER_LEVEL - g.position.y + 0.05; np.userData.fish.forEach((m, i) => { const a = t * 0.7 + m.userData.ph * 2.2; m.position.set(Math.cos(a) * 0.22, -0.38 + Math.sin(t * 1.3 + i) * 0.12, Math.sin(a) * 0.22); m.rotation.y = -a; }); }
 function fkCaught(f){ if (!FK.set || !(FK.set.mask & 4) || !f) return; if (Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z) > 6) return; FK.net.push(f.id); if (FK.net.length > 6) FK.net.shift(); fkNetFish(FK.g, FK.net); pushPresence(true); }
-function fkRing(t){ const g = FK.g; if (!g || !g.userData.rod) return; const k = Math.sin(t * 38) * 0.06 * (Math.sin(t * 5) > 0 ? 1 : 0.4); g.userData.rod.rotation.z = k; g.userData.rod.rotation.x = 0.95 + Math.abs(k) * 1.2; }
+function fkRing(t){ const g = FK.g; if (!g || !g.userData.rod) return; const k = Math.sin(t * 38) * 0.06 * (Math.sin(t * 5) > 0 ? 1 : 0.4); g.userData.rod.rotation.z = k; g.userData.rod.rotation.x = 0.6 + Math.abs(k) * 1.2; }
 function fkTick(dt){ const t = now();
   if (FK.out){ fkPop(FK.out.g, FK.out.t0, true); if (t - FK.out.t0 > 0.9){ scene.remove(FK.out.g); FK.out = null; } }
   if (!FK.set) return; const g = FK.g; if (g && t - FK.at < 1.2) fkPop(g, FK.at);
   if (g) fkNetAnim(g, t);
-  if (g && g.userData.rod && !F.heldRing){ g.userData.rod.rotation.z *= 0.8; g.userData.rod.rotation.x += (0.95 - g.userData.rod.rotation.x) * 0.2; }
+  if (g && g.userData.rod) g.userData.rod.visible = !!F.held;
+  if (g && g.userData.rod && !F.heldRing){ g.userData.rod.rotation.z *= 0.8; g.userData.rod.rotation.x += (0.6 - g.userData.rod.rotation.x) * 0.2; }
   const d = Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z);
   if (d > 15 || Dive.on || House.on || myBoat || (onIsle ? 1 : 0) !== (FK.set.isle ? 1 : 0)) fkPack(F.held ? '走太遠了，竿子和裝備都收回背包了' : '🎣 走遠了，釣魚裝備收回背包'); }
 /* 竿架：站起來時把竿子留在竿架上 */
@@ -15363,10 +15369,11 @@ function fkPeer(p, pr){ const f = p.fisher, a = Array.isArray(pr.fk) ? pr.fk : n
   const ok = a && a.length >= 6 && a.slice(0, 6).every(v => Number.isFinite(+v)) && Math.hypot(+a[0] - p.target.x, +a[1] - p.target.z) < 16 && (+a[4] | 0) >= 1 && (+a[4] | 0) <= 15;
   if (!ok){ if (f.fkG){ scene.remove(f.fkG); f.fkG = null; } f.heldTip = null; return; }
   const mask = +a[4] | 0;
-  if (!f.fkG || f.fkG.userData.mask !== mask || f.fkG.userData.y0 !== +a[5]){ if (f.fkG) scene.remove(f.fkG); f.fkG = fkBuild(mask, 2.4, clamp(+a[5], 0, 3)); f.fkG.userData.y0 = +a[5]; scene.add(f.fkG); f.fkG.userData.t0 = now(); }
+  const nz = Number.isFinite(+a[6]) && typeof a[6] !== 'string' ? clamp(+a[6], 0.5, 4.5) : 1.4;
+  if (!f.fkG || f.fkG.userData.mask !== mask || f.fkG.userData.y0 !== +a[5] || f.fkG.userData.nz !== nz){ if (f.fkG) scene.remove(f.fkG); f.fkG = fkBuild(mask, 2.4, clamp(+a[5], 0, 3), nz); f.fkG.userData.y0 = +a[5]; f.fkG.userData.nz = nz; scene.add(f.fkG); f.fkG.userData.t0 = now(); }
   f.fkG.position.set(+a[0], clamp(+a[3], -2, 30), +a[1]); f.fkG.rotation.y = +a[2];
-  fkNetFish(f.fkG, a.slice(6, 12).filter(id => typeof id === 'string' && FISH_BY_ID[id]));
-  f.heldTip = pr.f && pr.f.h && f.fkG.userData.tip ? f.fkG.userData.tip : null; }
+  fkNetFish(f.fkG, a.slice(6, 13).filter(id => typeof id === 'string' && FISH_BY_ID[id]));
+  f.heldTip = pr.f && pr.f.h && f.fkG.userData.tip ? f.fkG.userData.tip : null; if (f.fkG.userData.rod) f.fkG.userData.rod.visible = !!f.heldTip; }
 function fkPeersTick(t){ for (const p of peers.values()){ const g = p.fisher.fkG; if (!g) continue; g.visible = !!(p.fisher.av && p.fisher.av.g.visible); if (!g.visible) continue; if (now() - (g.userData.t0 || 0) < 1.2) fkPop(g, g.userData.t0); fkNetAnim(g, t); if (p.fisher.heldTip && p.ph === 'bite') fkRingG(g, t); } }
 function fkRingG(g, t){ if (!g.userData.rod) return; const k = Math.sin(t * 38) * 0.06; g.userData.rod.rotation.z = k; }
 /* 背包「🎣 釣具」 */
@@ -16331,7 +16338,7 @@ function presenceObj(){
   { const sc = mySecretState(); if (sc.length) o.sc = sc; }   /* v432 我的祕密窩點 */
   if (typeof Sub !== 'undefined' && Sub && Sub.on && Sub.pos) o.sb = [+Sub.pos.x.toFixed(1), +Sub.pos.y.toFixed(1), +Sub.pos.z.toFixed(1), +(Sub.yaw % (Math.PI * 2)).toFixed(2)];   /* v241 一起潛：潛水艇在裂縫裡的位置 */
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
-  if (FK.set) o.fk = [+FK.set.x.toFixed(2), +FK.set.z.toFixed(2), +FK.set.face.toFixed(2), +FK.set.y.toFixed(2), FK.set.mask, +(FK.set.y0 - FK.set.y).toFixed(2)].concat(FK.net.slice(-6));   /* v618 釣魚裝備 */
+  if (FK.set) o.fk = [+FK.set.x.toFixed(2), +FK.set.z.toFixed(2), +FK.set.face.toFixed(2), +FK.set.y.toFixed(2), FK.set.mask, +(FK.set.y0 - FK.set.y).toFixed(2), +(FK.set.nz || 1.4).toFixed(2)].concat(FK.net.slice(-6));   /* v618 釣魚裝備 */
   if (F.held && me.bobState === 'water') o.f = { ph:'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)], h:1 };
   else if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
