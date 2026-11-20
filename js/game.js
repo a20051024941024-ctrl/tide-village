@@ -2906,8 +2906,11 @@ function colWork(n){ if (!_colQ.size) return; for (const c of _colQ){ if (Math.h
     return; } }
 function blockedJ(x, z, r, feet, ax, az){
   let L = colliders; try { if (House.on && House.cols) L = House.cols; } catch(e){}
-  for (const c of L){ if (!colIn(c, x, z, r)) continue; const t = colTop(c); if (t != null && (feet >= t - 0.05 || colIn(c, ax, az, r))) continue; return true; }
+  for (const c of L){ if (!colIn(c, x, z, r)) continue; const t = colTop(c); if (t != null && (feet >= t - 0.05 || colIn(c, ax, az, r))) continue; if (ax != null && colIn(c, ax, az, 0.3) && colGap(c, x, z) > colGap(c, ax, az) + 1e-4) continue; return true; }
   return false; }
+/* v617 玩家回報撞球館「人都卡進去了」：人一旦被放進（或擠進）櫃台、牆的範圍裡，以前每個方向都算擋住，就永遠出不來。
+   現在如果你已經在某個東西裡面，往「離開它」的方向走是可以的（往更裡面走還是不行） */
+function colGap(c, x, z){ if (c.t === 'b') return Math.max(Math.abs(x - c.x) - c.hw, Math.abs(z - c.z) - c.hd); if (c.t === 'o'){ const dx = x - c.x, dz = z - c.z; return Math.max(Math.abs(dx * c.c - dz * c.s) - c.hw, Math.abs(dx * c.s + dz * c.c) - c.hd); } return Math.hypot(x - c.x, z - c.z) - c.r; }
 function lowTop(x, z){ let L = colliders, best = -1e9; try { if (House.on && House.cols) L = House.cols; } catch(e){} for (const c of L){ if (c.top == null || !colIn(c, x, z, 0.05)) continue; if (c.top > best) best = c.top; } return best; }
 
 /* ================= ASSETS（外部 3D 模型：載入、快取、失敗時用程式模型代替） ================= */
@@ -5872,6 +5875,10 @@ function updatePlayer(dt){
   if (!myBoat && !mySeat && !Dive.on && !House.on && !inIndoor() && frameNo % 30 === 0 && !walkable(me.pos.x, me.pos.z)){   /* v197：不管怎麼進到水裡（下船、傳送、舊版本留下的位置），都推回最近的岸上 */
     let best = null, bd = 1e9; for (let r = 0.8; r <= 14 && !best; r += 0.8) for (let k = 0; k < 24; k++){ const a = k / 24 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)){ const d = r; if (d < bd){ bd = d; best = [x, z]; } } }
     if (best){ me.pos.x = best[0]; me.pos.z = best[1]; me.baseY = groundHeight(best[0], best[1]); Jump.gy = me.baseY; } }
+  if (!myBoat && !mySeat && !Dive.on && !House.on && !Pool.on && frameNo % 30 === 15 && Jump.air <= 0 && walkable(me.pos.x, me.pos.z)){   /* v617 被卡在櫃台、牆裡面（撞球館「人都卡進去了」）→ 自動推到旁邊最近的空地 */
+    const inside = colliders.some(c => colIn(c, me.pos.x, me.pos.z, 0.25) && colTop(c) == null);
+    if (inside){ let best = null; for (let r = 0.3; r <= 4 && !best; r += 0.3) for (let k = 0; k < 24; k++){ const a = k / 24 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.4) && Math.abs(groundHeight(x, z) - groundHeight(me.pos.x, me.pos.z)) < 0.4){ best = [x, z]; break; } }
+      if (best){ me.pos.x = best[0]; me.pos.z = best[1]; pushPresence(true); } } }
   try { if (frameNo % 30 === 7){ let L = colliders; try { if (House.on && House.cols) L = House.cols; } catch(e){} for (const c of L) if (c.top === undefined && !c.tree && Math.abs(c.x - me.pos.x) < 12 && Math.abs(c.z - me.pos.z) < 12) _colQ.add(c); } colWork(2); } catch(e){}
   const gy = Math.max(groundHeight(me.pos.x, me.pos.z), Dive.on || House.on ? -1e9 : lowTop(me.pos.x, me.pos.z));   /* v338 站在跳上去的石頭、長椅上 */
   if (Math.abs(gy - Jump.gy) > 1.5 && Jump.air <= 0) Jump.gy = gy; else Jump.gy += (gy - Jump.gy) * Math.min(1, dt * 14);
