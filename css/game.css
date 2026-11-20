@@ -1761,3 +1761,22 @@ details.help details.helpmore ul{margin-top:4px}
 .ph-d{color:#3e5563;margin-top:2px}
 .ph-t{font-size:12px;color:#6b7c86;margin-top:3px}
 .ph-x b{font-weight:900}
+
+/* v582 新手教學重做 */
+body.guideOn #today3{display:none}   /* 任務卡在的時候，左邊「今天」先收起來，不要蓋住半個畫面 */
+body.ui3 #guideCard{max-width:min(280px,38vw);font-size:13px;padding:7px 11px}
+#menu .mbtn.gpulse{animation:gpulse 1.1s ease-in-out infinite;box-shadow:0 0 0 3px #ffd36a}
+@keyframes gpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+#guideFree{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(10,30,45,.45);animation:gfin .3s ease-out}
+#guideFree.out{opacity:0;transition:opacity .25s}
+@keyframes gfin{from{opacity:0}to{opacity:1}}
+.gf-card{width:min(92vw,560px);max-height:88vh;overflow:auto;background:#fffaee;color:#18334a;border:3px solid #ffd36a;border-radius:20px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:gfpop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes gfpop{from{transform:scale(.7) translateY(30px)}to{transform:none}}
+.gf-t{font-size:20px;font-weight:900}
+.gf-s{font-size:13px;color:#33506a;margin:4px 0 8px;line-height:1.5}
+.gf-l{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gf-i{display:flex;gap:10px;align-items:center;text-align:left;border:2px solid #e8d8a8;background:#fff;border-radius:14px;padding:8px 10px;font:inherit;color:inherit;cursor:pointer}
+.gf-i:active{transform:scale(.96)}
+.gf-i b{display:block;font-size:15px}.gf-i small{display:block;font-size:12px;color:#5a6f80;line-height:1.35}
+.gf-ic{font-size:28px;flex:none}
+.gf-x{display:block;margin:6px auto 0;border:0;background:#17696b;color:#fff;font:inherit;font-weight:800;border-radius:12px;padding:8px 20px;cursor:pointer}
