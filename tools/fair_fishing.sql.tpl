@@ -123,6 +123,7 @@ declare
   season text; mo integer; kr numeric; kl numeric; nleg integer; legk numeric; rainy boolean;
   fid text; f jsonb; wt numeric; tot numeric := 0; ids text[] := '{}'; wts numeric[] := '{}'; pick text; r numeric; i integer;
   rsh public.red_sharks; rs text; gpv text; fitk numeric := 1; sx text; brood boolean := false; wild boolean := false;
+  crowd integer := 0; ch_own uuid; ch_sid text;   -- 204：熱窩（窩裡一起釣的人數、窩主、哪一個祕密窩點）
   c jsonb; ctype text; cat timestamptz; left_k numeric; fit numeric; k numeric; sc jsonb; age numeric; pw numeric; nb integer; fw numeric;
   sf record;   -- 蔚博士的新品種（070）
   sg_k text;   -- 247：浮標落在哪一種徵兆旁邊
@@ -159,12 +160,19 @@ begin
       order by (s.owner = pl.id) desc limit 1;
     if sc is not null and cfg->'chums' ? (sc->>'type') then
       c := cfg->'chums'->(sc->>'type'); age := ms - (sc->>'at')::bigint;
-      if age >= 0 and age <= (cfg->>'secretLife')::numeric then
+      if age >= 0 and age <= (cfg->>'secretLife')::numeric + coalesce((sc->>'ext')::numeric, 0) then   -- 204：有人在窩裡釣到魚，窩點會延長（ext）
         pw := least(1, greatest(0.15, 0.15 + 0.85 * age / (cfg->>'secretGrow')::numeric));
         fit := case when (c->>'fresh')::boolean then (case when sea then 0.45 else 1 end) when (c->>'sea')::boolean then (case when sea then 1 else 0.5 end) else 1 end;
         k := pw * fit * (case when sc_mine then 1 else 0.75 end); cb_r := 1 + ((c->>'rare')::numeric * 1.25 - 1) * k; cb_l := 1 + ((c->>'legend')::numeric * 1.35 - 1) * k;
       end if;
     end if;
+  end if;
+  -- 204 熱窩：這一竿有窩料加成的話，12 公尺內最近 90 秒也在窩裡拋竿的其他玩家每多一個，稀有 +10%、傳說 +12%（最多算 3 個）；記下窩主，釣到魚時給窩主謝禮
+  if cb_r > 1 or cb_l > 1 then
+    begin
+      crowd := public._chum_crowd(pl.id, p_x, p_z); cb_r := cb_r * (1 + 0.10 * crowd); cb_l := cb_l * (1 + 0.12 * crowd);
+      ch_own := public._chum_owner(p_chum, pl.id, p_x, p_z); if p_chum like 'secret:%' then ch_sid := substr(p_chum, 8); end if;
+    exception when undefined_function then crowd := 0; end;
   end if;
   -- 天氣、潮汐
   w := public._weather(ms);
@@ -271,6 +279,10 @@ begin
   on conflict (uid) do update set spot = excluded.spot, fish = excluded.fish, w = excluded.w, rs = excluded.rs, sex = excluded.sex, brood = excluded.brood, gp = excluded.gp, ev = excluded.ev, at = excluded.at, shown_at = null;
   update public.players set cast_fish = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null, cast_gp = null, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()
   where id = pl.id returning * into pl;
+  begin   -- 204：記下這一竿在不在窩裡（別人算熱度用）、窩主是誰
+    update public.players set cast_x = p_x, cast_z = p_z, cast_chum = case when cb_r > 1 or cb_l > 1 then p_chum else null end where id = pl.id;
+    update public.casts set chum_owner = ch_own, chum_sid = ch_sid where uid = pl.id;
+  exception when undefined_column then null; end;
   return pl;
 end $$;
 
@@ -313,12 +325,13 @@ declare
   w  numeric := round(p_weight, 2);
   ts bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
   c  record;
-  tid bigint := public._tourney_at(now()); v_spot text; v_ev boolean;
+  tid bigint := public._tourney_at(now()); v_spot text; v_ev boolean; v_co uuid; v_cs text;
 begin
   select * into sp from public.fish_species where id = p_fish;
   if not found then raise exception '沒有這種魚'; end if;
   select cs.fish, cs.w, cs.rs, cs.sex, cs.brood, cs.gp, cs.spot into pl.cast_fish, pl.cast_w, pl.cast_rs, pl.cast_sex, pl.cast_brood, pl.cast_gp, v_spot from public.casts cs where cs.uid = pl.id;
-  begin select cs.ev into v_ev from public.casts cs where cs.uid = pl.id; exception when undefined_column then v_ev := null; end;   -- 這一竿的結果（不公開的表）
+  begin select cs.ev into v_ev from public.casts cs where cs.uid = pl.id; exception when undefined_column then v_ev := null; end;
+  begin select cs.chum_owner, cs.chum_sid into v_co, v_cs from public.casts cs where cs.uid = pl.id; exception when undefined_column then v_co := null; end;   -- 204 熱窩的窩主   -- 這一竿的結果（不公開的表）
   if pl.cast_fish is null or pl.cast_fish <> p_fish or pl.cast_w is distinct from w then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
   if now() - pl.cast_at < interval '1.5 seconds' then raise exception '釣太快了'; end if;
   if now() - pl.cast_at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
@@ -346,7 +359,8 @@ begin
   delete from public.casts where uid = pl.id;
   begin perform public._ev_on_catch(pl.id, v_spot, p_fish, w); select * into pl from public.players where id = pl.id; exception when undefined_function then null; end;   -- 111 洄游、懸賞的獎勵
   if v_spot is distinct from 'shrimp' then begin perform public._rod_note(pl.id, p_fish, w); select * into pl from public.players where id = pl.id; exception when undefined_function then null; end; end if;   -- 145 釣竿的紀念：這支竿子釣過幾條、最大的是哪一條
-  begin perform public._tag_hit(pl.id, p_fish, w); select * into pl from public.players where id = pl.id; exception when undefined_function then null; end;   -- 150 標記放流：有機會釣到別人標記過的那一條
+  begin perform public._tag_hit(pl.id, p_fish, w); select * into pl from public.players where id = pl.id; exception when undefined_function then null; end;
+  if v_co is not null and v_co <> pl.id then begin perform public._chum_thank(v_co, pl.id, p_fish, v_cs); exception when undefined_function then null; end; end if;   -- 204：在別人的窩釣到魚，窩主拿謝禮、祕密窩點延長   -- 150 標記放流：有機會釣到別人標記過的那一條
   return pl;
 end $$;
 

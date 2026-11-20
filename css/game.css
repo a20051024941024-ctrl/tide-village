@@ -710,6 +710,7 @@ body.touch #log .m:nth-last-child(n+4){display:none}
 #online #tnyPill[hidden]{display:none}
 /* 畫面不要被拖得左右移動 */
 html,body{position:fixed;inset:0;width:100%;overscroll-behavior:none}
+body{box-sizing:border-box}   /* v607 畫面被放大的元兇：body 寬 100% 再加左右留白（--gl/--gr，橫拿手機有瀏海時大約 32px），整頁比螢幕寬一點，Android Chrome 就把版面撐成 980 寬。改成留白算在 100% 裡面 */
 #top{overflow:hidden}
 #brand{pointer-events:auto}
 @media (orientation:landscape) and (max-height:540px){ #menu{gap:4px} .mbtn{padding:6px} .mbtn svg{width:16px;height:16px} }
@@ -1839,3 +1840,7 @@ body.welcomeOn > *:not(#welcome):not(#c):not(canvas):not(#toasts):not(#bigMsg):n
 @keyframes wcUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 @keyframes wcBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-6px) rotate(6deg)}}
 @media (orientation:landscape) and (max-height:500px){#welcome{align-items:center}.wc-card{padding:12px 16px;gap:6px}.wc-logo{font-size:30px}.wc-t{font-size:24px}}
+/* v607 熱窩：窩上面的「🔥 3 人在釣」 */
+.chumHot{position:absolute;left:0;top:0;padding:3px 10px;border-radius:999px;background:rgba(255,120,40,.88);color:#fff;font-weight:800;font-size:13px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25);animation:chumHotPulse 1.6s ease-in-out infinite}
+.chumHot.hot{background:rgba(230,40,40,.92);font-size:15px}
+@keyframes chumHotPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
