@@ -503,7 +503,7 @@ const LANDMARKS = [
   { id:'market',     label:'釣客擺攤', pos:V3(...hlAt('market', 0, 2.6)), color:'#5fb6e3', ly:2.6, ...hlOff('market', 0, 1.2) },
   { id:'salon',      label:'阿萍美髮沙龍', pos:V3(SHOPLOT.spare.x, SHOPLOT.spare.z), color:'#7fd0c8', ly:5.5, mx:-2.4, mz:2.6 },
   { id:'cai',        label:'阿彩畫廊', pos:V3(SHOPLOT.cai.x, SHOPLOT.cai.z), color:'#9b7bff', ly:5.5, mx:2.4, mz:-2.6 },
-  { id:'fu',         label:'阿福海產', pos:V3(...hlAt('fu', 0, 2.6)), color:'#5fb6e3', ly:2.6, ...hlOff('fu', 0, 1.2) },
+  { id:'fu',         label:'阿福海產', pos:V3(...hlAt('fu', 1.0, 2.7)), color:'#5fb6e3', ly:2.6, ...hlOff('fu', 0, 1.2) },
   { id:'lighthouse', label:'晴潮燈塔', pos:V3(LIGHTHOUSE[0], LIGHTHOUSE[1]), color:'#ffe5a4', ly:7.4 },
   { id:'hill',       label:'居民區',   pos:V3(-47, 14),         color:'#a6d37d', ly:2.6 },
   { id:'sport',      label:'運動公園', pos:V3(-20.8, 15),      color:'#e0564f', ly:2.6 },
@@ -2464,7 +2464,7 @@ function castPoint(x, z, dx, dz, dist){
   house(HLOT.tackle[0], HLOT.tackle[1], '#f6a96b', 3.6, HLOT.tackle[2], { awning: '#f17b6d', sign: '釣具店', signIcon: '🎣' });      // 釣具店（港口）
   /* 阿福海產店（2026-11-04）：碼頭邊的小海產店，櫃台上一個冰櫃，擺著今天高價收購的魚 */
   { const fg = new THREE.Group(); fg.position.set(HLOT.fu[0], groundHeight(HLOT.fu[0], HLOT.fu[1]), HLOT.fu[1]); fg.rotation.y = HLOT.fu[2]; scene.add(fg);   /* v434 魚市場門口左邊的櫃位（冰櫃擺在大樓的櫃台上） */
-    const ice = new THREE.Group(); ice.position.set(0, 0.92, 1.25 + 0.8); fg.add(ice);
+    const ice = new THREE.Group(); ice.position.set(1.0, 0.92, 1.25 + 0.8); fg.add(ice);   /* v599 作者：「放反了而且還放出來了」→ 冰櫃往櫃台裡面挪 1 公尺（以前一半超出櫃台的尾巴） */
     ice.add(box([2.3, 0.1, 0.46], '#e8f4f8', [0, 0.05, 0])); { const gl = new THREE.Mesh(new THREE.BoxGeometry(2.36, 0.32, 0.5), new THREE.MeshStandardMaterial({ color:'#cfefff', transparent:true, opacity:0.28, roughness:0.1, depthWrite:false })); gl.position.y = 0.22; ice.add(gl); }
     for (let i = 0; i < 14; i++){ const c = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), mat('#f4fbff', 0.3)); c.position.set(-1.05 + (i % 7) * 0.35, 0.12, i < 7 ? -0.12 : 0.12); c.rotation.y = i * 0.7; ice.add(c); }
     Fu.ice = ice; }
@@ -16652,7 +16652,7 @@ const npcs = [
   (() => { const r = SHOPLOT.mu.r, [x, z] = lotAt('mu', -2.55, 0.55); return { name:'阿木・家具木匠', shirt:'#8a6a4a', hat:'#5a3d2b', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'mu',
     lines:['歡迎來阿木木工坊！每一件家具都是我親手做的', '我每天早上和傍晚都會做一件新的，做過的都會留在店裡', '木頭要曬過、磨過，坐起來才舒服', '買了以後回家按「擺家具」，在「阿木的作品」裡面就找得到', '漂流木是我在南方沙灘撿的，每一塊紋路都不一樣'] }; })(),
   // 阿福：碼頭邊海產店的老闆，每天早上 6 點公布今日收購、傍晚 6 點做特餐（053_fu.sql）
-  (() => { const r = HLOT.fu[2], [x, z] = hlAt('fu', -1.75, 2.75); return { name:'阿福・海產店老闆', shirt:'#2f89c7', hat:'#ffffff', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'fu',
+  (() => { const r = HLOT.fu[2], [x, z] = hlAt('fu', 1.0, 1.4); return { name:'阿福・海產店老闆', shirt:'#2f89c7', hat:'#ffffff', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'fu',
     lines:['來來來，今天的收購單貼在櫃台上囉！', '箱網養的和魚缸生的我不收，我只要海裡、河裡釣上來的', '前一天大家都釣很多的魚，我今天就不收了', '傍晚 6 點我會用今天收最多的魚做特餐，吃了釣魚有加成', '魚要新鮮！釣到了就快拿來'] }; })(),
   // 阿彩：畫廊的畫家，每天早上 8 點畫一幅魚（058_cai.sql）
   (() => { const r = SHOPLOT.cai.r, [x, z] = lotAt('cai', -1.75, 2.75); return { name:'阿彩・畫家', shirt:'#9b7bff', hat:'#2b2f36', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), shopNpc:'cai',
