@@ -6388,7 +6388,7 @@ const LEG_K = { harbor: 2.6, other: 0.35, sea: 1.05, river: 0.7 };   /* v568 加
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(f => f && (!f.fest || festOn(f.fest)));   /* 節慶限定魚：節日期間才有 */
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
-  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare * LINES[Rig.line].rare, kl = rod.legend * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
+  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * rodSp(rod, spot.id)[0] * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare * LINES[Rig.line].rare, kl = rod.legend * rodSp(rod, spot.id)[1] * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const rfit = rodFit(spot.id); const krFit = rfit ? ROD_FIT[rfit].rare : 1;   /* 專用竿用在對的地方 */
   const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
@@ -14586,11 +14586,12 @@ function updateBobberLook(){
 function rodSwitchLocal(id){ rec.rodSkins = rec.rodSkins || {}; if (rec.rod) { if (rec.rodSkin) rec.rodSkins[rec.rod] = rec.rodSkin; else delete rec.rodSkins[rec.rod]; } rec.rod = id; rec.rodSkin = rec.rodSkins[id] || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){} }
 const RODS = [
   { id:'bamboo', name:'竹釣竿',     price:0,    color:'#3b2a1e', desc:'村裡人人都有的入門竿，輕巧好用。', tension:1, reel:1, rare:1, legend:1 },
-  { id:'carbon', name:'碳纖維釣竿', price:400,  color:'#2f6fb5', desc:'線比較不容易繃斷、收線快一點，稀有魚機率 ×1.2。', tension:0.85, reel:1.12, rare:1.2, legend:1.05 },
-  { id:'lure',   name:'路亞輕竿',   price:1200, color:'#3fbf9d', desc:'輕巧好甩，收線快 30%，稀有魚機率 ×1.25。', tension:0.9, reel:1.3, rare:1.25, legend:1.1 },
-  { id:'deep',   name:'深海巨物竿', price:2500, color:'#c9302c', desc:'對付大型魚的專用竿：拉力大減、收線更快，傳說魚機率 ×1.25。', tension:0.72, reel:1.22, rare:1.3, legend:1.25 },
-  { id:'moon',   name:'月光夜釣竿', price:5000, color:'#8a7bff', desc:'竿尖會發出淡淡月光，稀有魚機率 ×1.5、傳說魚 ×1.5。', tension:0.75, reel:1.2, rare:1.5, legend:1.3 },
-  { id:'king',   name:'黃金王者竿', price:12000, color:'#e8b730', desc:'村裡最強的釣竿：線幾乎不會斷、收線最快，傳說魚機率 ×1.5。', tension:0.6, reel:1.38, rare:1.45, legend:1.5 },
+  /* v634 作者：「商店裡的竿子太多…大家也一定只拿黃金王者釣竿」→ 每支有自己最強的時候：路亞竿配假餌、深海竿在海上、月光竿在晚上都比王者竿好；王者竿是最穩的全能竿（線最不會斷、收線最快）。sp＝特別加成 [稀有, 傳說]（伺服器 fishcfg rods 一樣） */
+  { id:'carbon', name:'碳纖維釣竿', price:400,  color:'#2f6fb5', best:'💪 平價全能', desc:'便宜好用的全能竿：線比較不容易繃斷、收線快一點，稀有魚 ×1.15，哪裡都一樣。', tension:0.85, reel:1.12, rare:1.15, legend:1.0 },
+  { id:'lure',   name:'路亞輕竿',   price:1200, color:'#3fbf9d', best:'🐟 配路亞（假餌）最強', desc:'輕巧好甩，收線快 30%。用路亞（假餌）的時候稀有魚 ×1.54、傳說魚 ×1.2，比王者竿還好；用浮標、沉底就普通（稀有 ×1.1）。', tension:0.9, reel:1.3, rare:1.1, legend:1.0, sp:{ lure:[1.4, 1.2] } },
+  { id:'deep',   name:'深海巨物竿', price:2500, color:'#c9302c', best:'🌊 在海上最強', desc:'對付大型魚的專用竿，拉力大減。在海邊、港口、外海、小島、深海這些海水的地方：傳說魚 ×1.68、稀有 ×1.2，比王者竿還好；在河、湖就普通（×1.05）。', tension:0.72, reel:1.22, rare:1.05, legend:1.05, sp:{ sea:[1.15, 1.6] } },
+  { id:'moon',   name:'月光夜釣竿', price:5000, color:'#8a7bff', best:'🌙 晚上最強', desc:'竿尖會發出淡淡月光。晚上（19:36～05:00）稀有魚 ×1.68、傳說魚 ×1.58，比王者竿還好；白天就普通（×1.05）。', tension:0.75, reel:1.2, rare:1.05, legend:1.05, sp:{ night:[1.6, 1.5] } },
+  { id:'king',   name:'黃金王者竿', price:12000, color:'#e8b730', best:'👑 最穩的全能竿', desc:'線幾乎不會斷、收線最快，什麼時候、什麼地方都是稀有 ×1.3、傳說 ×1.3。但晚上不如月光竿、海上的傳說魚不如深海竿、配假餌不如路亞竿。', tension:0.6, reel:1.38, rare:1.3, legend:1.3 },
   // ---- 專用竿（2026-11-04）：在對的地方用，稀有魚多一點、魚咬得快一點；在不對的地方用就差一點 ----
   { id:'pole_bamboo', type:'pole', name:'竹手竿', price:300, color:'#b8924a', desc:'台灣溪釣、池釣用的手竿，沒有捲線器。往前輕輕一放、拋不遠，在河、湖、溪、瀑布潭最好用。', tension:0.95, reel:1, rare:1.05, legend:1 },
   { id:'pole_carbon', type:'pole', name:'碳纖維手竿', price:1800, color:'#2a2f3a', desc:'又輕又韌的高級手竿，溪流、湖泊專用，稀有魚機率 ×1.3。', tension:0.8, reel:1.15, rare:1.3, legend:1.1 },
@@ -14734,6 +14735,8 @@ var ECON = { m:{}, at:0, busy:false };
 async function loadEcon(){ if (ECON.busy || !Cloud.on || !Cloud.sb) return; ECON.busy = true; ECON.at = Date.now(); try { const { data } = await Cloud.sb.rpc('econ_prices'); if (data) ECON.m = data; } catch(e){} ECON.busy = false; if (!$('#sheet').hidden && curTab === 'shop' && shopMode === 'sell') renderTab(); }
 function econMult(id){ const e = Cloud.on && ECON.m[id]; return e ? +e.m || 1 : 1; }
 function itemPrice(x){ const f = FISH_BY_ID[x.f]; return Math.round(fishPrice(f, x.w) * (x.y ? 0.25 : 1) * econMult(x.f)); }   /* 水族館生的小魚只值四分之一 */
+/* v634 竿子的特別加成：[稀有, 傳說]（伺服器 020 roll_fish 一樣算） */
+function rodSp(r, spotId){ const sp = r && r.sp; if (!sp) return [1, 1]; let a = 1, b = 1; if (sp.night && periodOf(gameHour()) === 'night'){ a *= sp.night[0]; b *= sp.night[1]; } if (sp.sea && SEA_SPOTS.has(spotId)){ a *= sp.sea[0]; b *= sp.sea[1]; } if (sp.lure && Rig.rig === 'lure'){ a *= sp.lure[0]; b *= sp.lure[1]; } return [a, b]; }
 function rodFit(spotId, r){ const T = ROD_TYPES[rodType(r || curRod())]; if (!T.fit || !spotId || spotId === 'shrimp' || spotId === 'mudflat') return null; return T.fit.includes(spotId) ? 'good' : 'bad'; }
 const BAITS = [
   { id:'worm', name:'蚯蚓',   price:20,  pack:10, desc:'最便宜的魚餌，稀有魚機率 ×1.25。蟲餌：🫧底棲魚特別愛（底棲魚 ×1.5，落在氣泡旁邊加成更大）。', rare:1.25, legend:1, k:'bottom' },
@@ -15543,13 +15546,13 @@ function renderShop(body){
       body.appendChild(u2); }
   } else if (shopMode === 'rod'){
     { const k = careLeft(), box = el('div', 'field'); box.appendChild(el('label', '', '🧴 保養釣竿')); box.appendChild(el('p', 'sub', k ? `保養的效果還有 ${k} 次拋竿（收線快 10%、線比較不容易斷）。用完再來。` : `幫釣竿上油、換導環。接下來 ${CARE.casts} 次拋竿收線快 10%、線比較不容易斷。釣竿不會壞，沒保養也可以照常釣。`)); const b = el('button', 'tbtn', k ? `還有 ${k} 次` : `保養　🪙${CARE.price}`); b.disabled = k > 0 || rec.coins < CARE.price; b.addEventListener('click', rodCare); box.appendChild(b); body.appendChild(box); }
-    body.appendChild(el('p', 'sub', '換一支好竿子，拉線時比較不容易斷，也更容易遇到稀有魚。甩竿哪裡都能用；手竿、遠投竿、磯釣竿在對的地方用，稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都放在包包裡，隨時可以換。'));
+    body.appendChild(el('p', 'sub', '每支竿子都有自己最強的時候：月光竿晚上、深海竿在海上、路亞竿配假餌，都比黃金王者竿好；王者竿是最穩的全能竿。甩竿哪裡都能用；手竿、遠投竿、磯釣竿在對的地方用，稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都放在包包裡，隨時可以換。'));
     let ul = null, lastT = null;
     for (const r of RODS){
       if (rodType(r) !== lastT){ lastT = rodType(r); const T = ROD_TYPES[lastT]; const h = el('div', 'dexhead', `${T.icon} ${T.name}`); h.appendChild(el('small', '', T.fit ? '最適合：' + T.fit.map(id => SPOT_BY_ID[id].label).join('、') : '哪裡都可以用')); body.appendChild(h); ul = el('ul', 'shoplist'); body.appendChild(ul); }
       const owned = rec.rods.includes(r.id), using = rec.rod === r.id, li = el('li', using ? 'on' : '');
       const sw = el('span', 'rodsw'); sw.style.background = r.color; li.appendChild(sw);
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name)); d.appendChild(el('div', 'meta', r.desc)); if (owned){ const mm = el('div', 'meta', rodMemo(r.id)); mm.style.color = '#b2783a'; d.appendChild(mm); } li.appendChild(d);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name)); if (r.best){ const bt = el('div', 'meta', r.best); bt.style.cssText = 'color:#2f7d5b;font-weight:700'; d.appendChild(bt); } d.appendChild(el('div', 'meta', r.desc)); if (owned){ const mm = el('div', 'meta', rodMemo(r.id)); mm.style.color = '#b2783a'; d.appendChild(mm); } li.appendChild(d);
       const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '使用中' : owned ? '換上' : `買 🪙${r.price.toLocaleString()}`);
       b.disabled = using;
       b.addEventListener('click', async () => {

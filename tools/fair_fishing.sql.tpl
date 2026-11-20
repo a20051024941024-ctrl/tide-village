@@ -208,6 +208,12 @@ begin
   kr := fitk * (rod->>'rare')::numeric * coalesce((bait->>'rare')::numeric, 1) * coalesce((bf->>'rare')::numeric, 1) * cb_r * (w->>'rare')::numeric * tr * (ln->>'rare')::numeric;
   kl := (rod->>'legend')::numeric * coalesce((bait->>'legend')::numeric, 1) * coalesce((bf->>'legend')::numeric, 1) * cb_l
         * (case when (w->>'legendSea')::boolean then (case when sea then (w->>'legend')::numeric else 1 end) else (w->>'legend')::numeric end);
+  -- v634 竿子的特別加成（月光竿晚上、深海竿在海上、路亞竿配假餌；跟 js/game.js 的 rodSp 一樣）
+  if rod ? 'sp' then
+    if rod->'sp' ? 'night' and per = 'night' then kr := kr * (rod->'sp'->'night'->>0)::numeric; kl := kl * (rod->'sp'->'night'->>1)::numeric; end if;
+    if rod->'sp' ? 'sea' and sea then kr := kr * (rod->'sp'->'sea'->>0)::numeric; kl := kl * (rod->'sp'->'sea'->>1)::numeric; end if;
+    if rod->'sp' ? 'lure' and rig = 'lure' then kr := kr * (rod->'sp'->'lure'->>0)::numeric; kl := kl * (rod->'sp'->'lure'->>1)::numeric; end if;
+  end if;
   select count(*) into nleg from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'r' = '傳說' and not coalesce((cfg->'fish'->x->>'v')::boolean, false);   -- 變種不算
   legk := coalesce((cfg->'legKs'->>p_spot)::numeric, case when p_spot = 'harbor' then (cfg->'legK'->>'harbor')::numeric else (cfg->'legK'->>'other')::numeric end) / greatest(1, nleg);   -- v568 加了新傳說魚的釣點有自己的總機率（legKs），原本的傳說魚才不會被分掉
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;

@@ -6031,5 +6031,16 @@
 "！在背包「🎣 釣具」，走到水邊就能擺出來": "! It's in Bag → \"🎣 Gear\"; go to the water to set it up",
 "🪑 釣魚裝備：釣具店「🧰工具」可以買摺疊椅（🪙600）、小釣台（🪙1500）、竿架＋魚護（🪙900）、遮陽傘＋釣箱（🪙800），後三樣要先有摺疊椅，買了放在背包「🎣 釣具」。走到水邊、面向水，在「🎣 釣具」按「擺出來」，裝備會擺在你前面的岸邊，你會自動坐下，坐著就能拋竿、拉魚。有小釣台的話椅子擺在伸到水上的平台尾端，可以多拋 3 公尺左右。有竿架的話，等魚的時候按「跳」站起來，竿子會插在竿架上，你可以先去旁邊做別的事；魚咬了鈴鐺會響、竿尖會抖，25 秒內回去坐下就能拉，沒回去魚會吃掉餌跑走。魚護泡在水裡，這次擺出來以後釣到的魚會在網子裡游。遮陽傘撐在椅子旁邊，釣箱可以在背包「🎣 釣具」直接打開買魚餌。走開 15 公尺、上船、潛水或按「收起來」，裝備就收回背包。別人看得到你擺的裝備和魚護裡的魚。裝備不會改變釣到稀有魚的機率。": "🪑 Fishing gear: the tackle shop's \"🧰 Tools\" sells a folding chair (🪙600), fishing platform (🪙1500), rod holder + keepnet (🪙900) and umbrella + tackle box (🪙800); the last three need the chair first. They go in Bag → \"🎣 Gear\". Stand at the water facing it and tap \"Set up\": the gear goes on the shore in front of you and you sit down, so you can cast and reel while seated. With the platform, the chair sits at the end of a deck over the water and you cast about 3 m farther. With the rod holder, tap \"Jump\" while waiting to stand up: the rod stays in the holder and you can do other things; when a fish bites the bell rings and the tip shakes, and you have 25 seconds to sit back down and reel, or the fish takes the bait. The keepnet sits in the water and the fish you catch this time swim in it. The umbrella stands next to the chair, and the tackle box (in Bag → \"🎣 Gear\") lets you buy bait on the spot. Walk 15 m away, board a boat, dive or tap \"Pack up\" and it all goes back into your bag. Others see your gear and the fish in your keepnet. Gear doesn't change your chances of rare fish.",
 "背後（預設）": "Behind (default)",
-"拍照": "Camera"
+"拍照": "Camera",
+"💪 平價全能": "💪 Budget all-rounder",
+"🐟 配路亞（假餌）最強": "🐟 Best with lures",
+"🌊 在海上最強": "🌊 Best at sea",
+"🌙 晚上最強": "🌙 Best at night",
+"👑 最穩的全能竿": "👑 The steadiest all-rounder",
+"便宜好用的全能竿：線比較不容易繃斷、收線快一點，稀有魚 ×1.15，哪裡都一樣。": "A cheap all-rounder: the line snaps less and reels a bit faster. Rare fish ×1.15 everywhere.",
+"輕巧好甩，收線快 30%。用路亞（假餌）的時候稀有魚 ×1.54、傳說魚 ×1.2，比王者竿還好；用浮標、沉底就普通（稀有 ×1.1）。": "Light and easy to cast, reels 30% faster. With a lure: rare fish ×1.54 and legendary ×1.2, better than the King rod; with a float or bottom rig it is ordinary (rare ×1.1).",
+"對付大型魚的專用竿，拉力大減。在海邊、港口、外海、小島、深海這些海水的地方：傳說魚 ×1.68、稀有 ×1.2，比王者竿還好；在河、湖就普通（×1.05）。": "Built for big fish, much less pull. In salt water (beach, harbor, open sea, island, deep sea): legendary ×1.68 and rare ×1.2, better than the King rod; in rivers and lakes it is ordinary (×1.05).",
+"竿尖會發出淡淡月光。晚上（19:36～05:00）稀有魚 ×1.68、傳說魚 ×1.58，比王者竿還好；白天就普通（×1.05）。": "The tip glows with soft moonlight. At night (19:36–05:00): rare fish ×1.68 and legendary ×1.58, better than the King rod; by day it is ordinary (×1.05).",
+"線幾乎不會斷、收線最快，什麼時候、什麼地方都是稀有 ×1.3、傳說 ×1.3。但晚上不如月光竿、海上的傳說魚不如深海竿、配假餌不如路亞竿。": "The line almost never snaps and it reels fastest. Rare ×1.3 and legendary ×1.3 anytime, anywhere. But the Moonlight rod beats it at night, the Deep Sea rod beats it for legendaries at sea, and the Lure rod beats it with lures.",
+"每支竿子都有自己最強的時候：月光竿晚上、深海竿在海上、路亞竿配假餌，都比黃金王者竿好；王者竿是最穩的全能竿。甩竿哪裡都能用；手竿、遠投竿、磯釣竿在對的地方用，稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都放在包包裡，隨時可以換。": "Every rod has its moment: the Moonlight rod at night, the Deep Sea rod at sea and the Lure rod with lures all beat the Golden King rod; the King rod is the steadiest all-rounder. Casting rods work anywhere; hand rods, surf rods and rock rods give a few more rare fish and faster bites in the right places, and a bit less in the wrong ones. Rods you buy stay in your bag and you can switch anytime."
 }
