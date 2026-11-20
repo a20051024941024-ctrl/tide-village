@@ -1804,3 +1804,38 @@ body.wildOn #today3{display:none!important}
 body.wildOn #guideCard{display:none!important}   /* 在荒島上，飽足度和體力條放在新手任務卡的位置 */
 #wildHud .wh-g{font-size:12px;color:#17696b;font-weight:800;line-height:1.35;border-top:1px dashed rgba(24,51,74,.2);padding-top:4px}
 #wildHud .wh-g:empty{display:none}
+/* v601 好友私訊 */
+.dm-head{display:flex;align-items:center;gap:8px;margin:2px 0 8px}
+.dm-head b{flex:1;font-size:16px;text-align:center}
+.dm-list{height:min(46vh,380px);overflow-y:auto;background:#eef4f7;border:1px solid var(--line);border-radius:14px;padding:10px 8px;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
+.dm-row{display:flex;align-items:flex-end;gap:6px;max-width:100%}
+.dm-row.me{flex-direction:row-reverse}
+.dm-bub{max-width:76%;padding:7px 11px;border-radius:16px 16px 16px 4px;background:#fff;border:1px solid var(--line);font-size:15px;line-height:1.35;word-break:break-word;white-space:pre-wrap;animation:dmPop .18s ease-out}
+.dm-row.me .dm-bub{background:#4fb3a0;color:#fff;border-color:#4fb3a0;border-radius:16px 16px 4px 16px}
+.dm-t{font-size:11px;color:#7d8b94;flex:0 0 auto}
+.dm-day{align-self:center;font-size:12px;color:#7d8b94;background:#fff;border-radius:10px;padding:1px 10px;margin:4px 0}
+.dm-in{display:flex;gap:8px;margin-top:8px}
+.dm-in .txt{flex:1 1 auto;min-width:0}
+.dm-li{cursor:pointer;position:relative}
+.dm-li .tinfo{flex:1;min-width:0}
+.dm-li .sub2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-li .ph-dot{position:static}
+@keyframes dmPop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+/* v601 開始畫面 */
+#welcome{position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:16px 16px max(18px,env(safe-area-inset-bottom));background:linear-gradient(to bottom,rgba(10,40,60,0) 30%,rgba(10,40,60,.55) 100%);animation:wcIn .5s ease-out}
+#welcome.out{opacity:0;transition:opacity .35s}
+body.welcomeOn > *:not(#welcome):not(#c):not(canvas):not(#toasts):not(#bigMsg):not(script){visibility:hidden!important}
+.wc-card{width:min(420px,100%);background:rgba(255,255,255,.96);border-radius:22px;padding:18px 18px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:center;display:flex;flex-direction:column;gap:8px;animation:wcUp .45s cubic-bezier(.2,.9,.3,1.2)}
+.wc-logo{font-size:40px;line-height:1;animation:wcBob 2.2s ease-in-out infinite}
+.wc-t{margin:0;font-size:28px;letter-spacing:2px;color:#1f5f73}
+.wc-t2{margin:0;font-size:20px;color:#1f5f73}
+.wc-s{margin:0;color:#56707c;font-size:14px}
+.wc-f{margin:2px 0 0;color:#8a9aa3;font-size:12px}
+.wc-go{font-size:18px;padding:12px}
+.wc-b{font-size:14px}
+.wc-row{display:flex;gap:8px}.wc-row .txt{flex:1;min-width:0;font-size:18px;text-align:center}
+.wc-err{margin:0;min-height:1.2em;color:#d0563a;font-size:13px}
+@keyframes wcIn{from{opacity:0}to{opacity:1}}
+@keyframes wcUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes wcBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-6px) rotate(6deg)}}
+@media (orientation:landscape) and (max-height:500px){#welcome{align-items:center}.wc-card{padding:12px 16px;gap:6px}.wc-logo{font-size:30px}.wc-t{font-size:24px}}

@@ -10068,7 +10068,8 @@ function renderFriends(body){
     { let gr = null; try { for (const p of peers.values()) if (p.pres && p.pres.u === f.id && p.fisher.gearKey){ gr = JSON.parse(p.fisher.gearKey); break; } } catch(e){} const im = avatarImg(f.av, '', gr); if (im) sw.replaceWith && li.append(im); }
     li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在這個大廳' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
     { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} cardTap(li, f.id, f.name || '釣客', pk); }
-    if (f.mutual){ const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
+    if (f.mutual){ const ch = el('button', 'tbtn vbtn', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.textContent = `💬 ${u.n}`; ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); li.appendChild(ch);
+      const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
     const v = el('button', 'tbtn ghost vbtn', '水族館'); v.addEventListener('click', () => visitAquarium(f.id, f.name)); const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(v, vi);
     const rm = el('button', 'tbtn ghost vbtn bk', '刪除'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); li.appendChild(rm);
     ul.appendChild(li); }
@@ -17243,7 +17244,7 @@ async function kidSay(i){ const text = KID_Q[i], nowT = performance.now(); myCha
   if (room && room.connected() && chatAllowed){ try { await room.emit('chat', chatNear ? { t: text, q: i, nr: 1, x: +me.pos.x.toFixed(1), z: +me.pos.z.toFixed(1), pk: myPlaceKey() } : { t: text, q: i, a: chatArea() }); } catch(e){ me.say(text); logMsg('你', text); } }
   else { me.say(text); logMsg('你', text); } npcHear(text); }
 async function kidLoad(){ if (!Cloud.on || !Cloud.sb || Kid.busy) return; Kid.busy = true; try { const { data, error } = await Cloud.sb.rpc('my_age_mode'); if (!error && data){ Kid.loaded = true; Kid.on = !!data.kid; Kid.asked = !!data.asked; Kid.teen = !!data.teen; LS.set('tide.kid', Kid.on); LS.set('tide.teen', Kid.teen); LS.set('tide.ageAsked', Kid.asked); kidApply(); if (!Kid.asked) ageGate(); } } catch(e){} Kid.busy = false; }
-function ageGate(){ if ($('#ageGate')) return; const y = new Date().getFullYear(), g = document.createElement('div'); g.id = 'ageGate';
+function ageGate(){ if ($('#ageGate')) return; if ($('#welcome')){ Welcome.age = true; return; }   /* v601 開始畫面還開著：等取好名字再問 */ const y = new Date().getFullYear(), g = document.createElement('div'); g.id = 'ageGate';
   g.innerHTML = `<div class="ag panel"><h2>歡迎來到潮汐釣魚村！</h2><p>你是哪一年出生的？</p><select id="agY" aria-label="出生年份"><option value="">請選擇年份</option>${Array.from({ length: 100 }, (_, i) => `<option value="${y - i}">${y - i} 年</option>`).join('')}</select>
     <p class="sub">只用來決定要不要開「兒童安全模式」，不會給別人看，選了之後就不能改。不用填真名、生日。</p><button id="agOk" class="tbtn">確定</button><a class="sub" href="privacy.html" target="_blank" rel="noopener">隱私權政策</a></div>`;
   document.body.appendChild(g); g.querySelector('#agOk').addEventListener('click', async () => { const v = +g.querySelector('#agY').value; if (!v){ toast('請選你的出生年份'); return; } const b = g.querySelector('#agOk'); b.disabled = true;
@@ -17874,6 +17875,7 @@ function renderTab(){
   if (curTab === 'pets'){ renderPets(body); return; }
   if (curTab === 'craft'){ renderCraft(body); return; }
   if (curTab === 'settings'){ renderSettings(body); return; }
+  if (curTab === 'dm'){ renderDM(body); return; }
   if (curTab === 'fest'){ renderFest(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
   if (curTab === 'cldesign'){ renderClDesign(body); return; }
@@ -18487,6 +18489,8 @@ function renderTab(){
       '跑馬燈會報出大家釣到的稀有魚和傳說魚，還有做出來的料理。',
       '鬼抓人：在「玩家」分頁發起，2 個人以上就能玩。被鬼碰到就換你當鬼，3 分鐘後還是鬼的人輸。',
       '好友：在「玩家」分頁按「加好友」，或輸入朋友的 8 碼好友代碼。互相加好友以後可以送魚缸裡的魚（每天 10 條；金幣不能送人；帳號滿 3 天或綁 Email、釣過 30 條魚才能送），對方在玩家分頁打開禮物就會收到。也可以從好友名單去參觀他的水族館和小島。',
+      '💬 私訊：互相加好友以後，可以一對一聊天。打開「手機 → 💬 訊息」，或在好友名單按名字旁的「💬」。一則最多 120 個字，會過濾髒話；有新私訊手機上會有紅點、畫面上方會跳通知。訊息只有你們兩個看得到，伺服器留 30 天。有人讓你不舒服，在對話右上角「⋯」可以檢舉或封鎖。',
+      '✏️ 第一次玩會先看到開始畫面：按「開始新的冒險」幫角色取名字（🎲 可以隨機）；換手機的話按「我玩過了，用 Email 找回角色」。之後打開就直接進村子，名字隨時可以在「成就」最上面改。',
       '遇到不友善的人可以在「玩家」分頁封鎖或檢舉。聊天會自動過濾不雅字。',
       '別人的名字被房子、樹擋住或離太遠時會變淡。',
       '💬 聊天框左邊的按鈕可以切換「🌐 全部」和「📍 附近」：附近聊天只有旁邊 28 公尺內、在同一個地方（同一座小島、同一棟房子）的人看得到，紀錄前面會有 📍。🐟 炫耀魚的時候角色會把魚舉過頭歡呼；捧在手上的魚會照重量變大，大魚看起來就是大。',
@@ -19687,7 +19691,7 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
    從手機打開頁面時，角色會拿出手機低頭滑，別人也看得到（presence 的 ph）。 ===== */
 const PHONE_APPS = [
   ['村子裡', [['phfeed', '🔔', '快訊'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
-  ['大家', [['people', '👥', '玩家'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
+  ['大家', [['dm', '💬', '訊息'], ['people', '👥', '玩家'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
   ['我的', [['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
 SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.wild = '🏝️ 荒島背包'; SHEET_TITLE.phfeed = '🔔 快訊';
 function phoneOpen(){ Phone.via = true; openSheet('phone'); }
@@ -19699,6 +19703,67 @@ function phoneGo(tab){ Phone.via = true;
   openSheet(tab); }
 function phoneUnread(){ return Phone.feed.filter(e => e.t > Phone.seen && e.c !== 'me').length; }
 function phoneFrN(){ return (Fr.gifts || []).length + (Fr.req || []).length; }
+/* ===== v601 好友私訊（作者：「還有好友聊天」；伺服器 202_dm.sql）=====
+   只有互相加好友的人能傳。手機「💬 訊息」看全部對話，好友名單每個人旁邊有「💬」。
+   一則最多 120 字，送出前跟大家聊天一樣過濾髒話；對方傳來的也會再過濾一次。封鎖的人傳的看不到。訊息伺服器只留 30 天。
+   沒有一直連線：打開對話時每 4 秒問一次新訊息，平常每 25 秒問一次有沒有未讀（手機上的紅點、跳通知）。 */
+var DM = { with: null, msgs: [], last: 0, unread: [], at: 0, pullAt: 0, busy: false, draft: '' };
+SHEET_TITLE.dm = '💬 訊息';
+function dmUnreadN(){ return DM.unread.reduce((a, u) => a + (u.n | 0), 0); }
+function dmBlocked(uid){ return !!(blockList[uid] || mutedSet.has(uid)); }
+async function dmUnreadLoad(){ if (!Cloud.on || !Cloud.sb || DM.uBusy) return; DM.uBusy = true; DM.at = Date.now();
+  try { const { data, error } = await Cloud.sb.rpc('dm_unread'); if (!error && Array.isArray(data)){ const old = new Map(DM.unread.map(u => [u.from, u.n | 0]));
+      DM.unread = data.filter(u => !dmBlocked(u.from) && !(DM.with && DM.with.id === u.from && dmViewing()));
+      for (const u of DM.unread) if ((u.n | 0) > (old.get(u.from) || 0)){ const nm = clean(String(u.name || '朋友').slice(0, 16)), tx = clean(String(u.last || '').slice(0, 40)); toast(`💬 ${nm}：${tx}`); try { SFX.click(); } catch(e){} phFeedAdd(`💬 <b>${esc(nm)}</b> 傳了私訊給你`); break; }
+      if (!$('#sheet').hidden && !dmViewing() && (curTab === 'dm' || curTab === 'people' || curTab === 'phone')) renderTab(); } } catch(e){}   /* 正在打字的對話不重畫（不然字會不見、鍵盤會收起來） */
+  DM.uBusy = false; }
+function dmViewing(){ return !$('#sheet').hidden && curTab === 'dm' && !!DM.with; }
+function dmOpen(id, name){ if (!Cloud.on){ toast('要連上雲端才能私訊'); return; } const f = (Fr.list || []).find(x => x.id === id); if (f && !f.mutual){ toast('要等對方也加你好友，才能私訊'); return; }
+  if (!DM.with || DM.with.id !== id){ DM.with = { id, name: clean(String(name || (f && f.name) || '朋友').slice(0, 16)) }; DM.msgs = []; DM.last = 0; DM.draft = ''; }
+  DM.unread = DM.unread.filter(u => u.from !== id); Phone.via = true; openSheet('dm'); dmPull(); }
+async function dmPull(){ const w = DM.with; if (!w || DM.busy || !Cloud.on) return; DM.busy = true; DM.pullAt = Date.now();
+  try { const { data, error } = await Cloud.sb.rpc('dm_list', { p_with: w.id, p_after: DM.last }); if (!error && Array.isArray(data) && DM.with === w){ let add = 0;
+      for (const m of data){ if (DM.msgs.some(x => x.id === m.id)) continue; DM.msgs.push({ id: m.id, me: !!m.me, t: clean(String(m.t || '').slice(0, 120)), at: Date.parse(m.at) || Date.now(), rd: !!m.rd }); add++; }
+      DM.msgs.sort((a, b) => a.id - b.id); if (DM.msgs.length > 120) DM.msgs = DM.msgs.slice(-120); DM.last = DM.msgs.length ? DM.msgs[DM.msgs.length - 1].id : DM.last;
+      if (add && dmViewing()) dmRenderList(true); } } catch(e){}
+  DM.busy = false; }
+async function dmSend(inp, btn){ const w = DM.with; if (!w) return; const raw = String(inp.value || '').trim(); if (!raw) return; const t = clean(raw).slice(0, 120); btn.disabled = true;
+  try { const { data, error } = await Cloud.sb.rpc('dm_send', { p_to: w.id, p_text: t }); if (error) throw error;
+    inp.value = ''; DM.draft = ''; DM.msgs.push({ id: data.id, me: true, t: clean(String(data.t || t)), at: Date.parse(data.at) || Date.now(), rd: false }); DM.last = Math.max(DM.last, data.id); dmRenderList(true); try { SFX.click(); } catch(e){} }
+  catch(e){ const m = String((e && e.message) || ''); toast(/互相/.test(m) ? '要互相加好友才能私訊' : /禁言/.test(m) ? '你被禁言中，暫時不能傳訊息' : /太快|太多/.test(m) ? m : '沒傳出去，等一下再試'); }
+  btn.disabled = false; inp.focus(); }
+function dmTime(t){ const d = new Date(t), n = new Date(); const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; return d.toDateString() === n.toDateString() ? hm : `${d.getMonth() + 1}/${d.getDate()} ${hm}`; }
+function dmRenderList(scroll){ const box = $('#dmList'); if (!box) return; box.innerHTML = '';
+  if (!DM.msgs.length) box.appendChild(el('div', 'empty', DM.busy ? '載入中…' : `還沒有訊息，跟 ${DM.with.name} 打聲招呼吧！`));
+  let lastDay = ''; for (const m of DM.msgs){ const day = new Date(m.at).toDateString(); if (day !== lastDay){ lastDay = day; box.appendChild(el('div', 'dm-day', new Date(m.at).toDateString() === new Date().toDateString() ? '今天' : `${new Date(m.at).getMonth() + 1} 月 ${new Date(m.at).getDate()} 日`)); }
+    const row = el('div', 'dm-row' + (m.me ? ' me' : '')), bub = el('div', 'dm-bub'); bub.textContent = m.t; row.appendChild(bub); row.appendChild(el('span', 'dm-t', dmTime(m.at) + (m.me && m.rd ? ' 已讀' : ''))); box.appendChild(row); }
+  if (scroll) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; }); }
+function renderDM(body){ if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端以後就能跟好友私訊。')); return; }
+  if (!DM.with){   /* 對話清單：互相是好友的人，有未讀的排前面 */
+    if (Date.now() - Fr.at > 15000 && !Fr.loading){ Fr.loading = true; loadFriends().finally(() => { Fr.loading = false; if (curTab === 'dm' && !DM.with) renderTab(); }); }
+    body.appendChild(el('p', 'sub', '只有「互相加好友」的人可以私訊。加好友：手機 → 👥 玩家。'));
+    const mu = (Fr.list || []).filter(f => f.mutual && !dmBlocked(f.id)), un = new Map(DM.unread.map(u => [u.from, u])), on = onlineUids();
+    mu.sort((a, b) => ((un.get(b.id) || {}).n | 0) - ((un.get(a.id) || {}).n | 0) || (on.has(b.id) - on.has(a.id)));
+    if (!mu.length){ body.appendChild(el('div', 'empty', '還沒有可以私訊的好友。')); return; }
+    const ul = el('ul', 'people'); for (const f of mu){ const li = el('li', 'dm-li'), u = un.get(f.id), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', clean(String(f.name || '釣客').slice(0, 16)))); d.appendChild(el('div', 'sub2', u ? clean(String(u.last || '').slice(0, 30)) : on.has(f.id) ? '在這個大廳' : '點一下開始聊'));
+      li.append(sw, d); if (u) li.appendChild(el('i', 'ph-dot', (u.n | 0) > 9 ? '9+' : String(u.n | 0)));
+      li.addEventListener('click', () => dmOpen(f.id, f.name)); ul.appendChild(li); }
+    body.appendChild(ul); return; }
+  const w = DM.with, head = el('div', 'dm-head'), bk = el('button', 'tbtn ghost', '‹ 全部對話'); bk.addEventListener('click', () => { DM.with = null; renderTab(); });
+  head.append(bk, el('b', '', w.name));
+  const more = el('button', 'tbtn ghost', '⋯'); more.addEventListener('click', () => { DM.menu = !DM.menu; renderTab(); }); head.appendChild(more); body.appendChild(head);
+  if (DM.menu){ const r = el('div', 'tankbar'), rp = el('button', 'tbtn ghost', '🚩 檢舉'), bl = el('button', 'tbtn ghost bk', '🚫 封鎖');
+    rp.addEventListener('click', async () => { if (rp.dataset.sure !== '1'){ rp.dataset.sure = '1'; rp.textContent = '確定檢舉？'; return; } rp.disabled = true;
+      try { const { error } = await Cloud.sb.rpc('report_player', { p_target: w.id, p_name: w.name, p_reason: '私訊', p_chat: DM.msgs.filter(m => !m.me).slice(-20).map(m => m.t).join('\n') }); toast(error ? (/太多/.test(error.message) ? '今天檢舉太多次了' : '檢舉沒有送出，等一下再試') : '已送出檢舉，謝謝你。管理者會看過再處理'); } catch(e){ toast('檢舉沒有送出，等一下再試'); } DM.menu = false; renderTab(); });
+    bl.addEventListener('click', () => { if (bl.dataset.sure !== '1'){ bl.dataset.sure = '1'; bl.textContent = '確定封鎖？'; return; } blockList[w.id] = w.name; LS.set('tide.blocked', blockList); toast(`已封鎖 ${w.name}：看不到他的角色、聊天和私訊`); DM.with = null; DM.menu = false; renderTab(); });
+    r.append(rp, bl); body.appendChild(r); body.appendChild(el('p', 'sub', '有人讓你不舒服：檢舉會把他最近傳的話送給管理員；封鎖之後就看不到他的私訊。')); }
+  const list = el('div', 'dm-list'); list.id = 'dmList'; body.appendChild(list);
+  const row = el('div', 'dm-in'), inp = el('input', 'txt'); inp.maxLength = 120; inp.placeholder = `傳給 ${w.name}…`; inp.enterKeyHint = 'send'; inp.value = DM.draft || ''; inp.addEventListener('input', () => { DM.draft = inp.value; });
+  const go = el('button', 'tbtn', '傳送'); go.addEventListener('click', () => dmSend(inp, go)); inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); dmSend(inp, go); } });
+  row.append(inp, go); body.appendChild(row); body.appendChild(el('p', 'sub', '私訊只有你們兩個看得到，訊息留 30 天。不要告訴別人你的真名、地址、電話、學校。'));
+  dmRenderList(true); }
+function dmTick(){ if (!Cloud.on) return; const T = Date.now(); if (dmViewing() && T - DM.pullAt > 4000) dmPull(); if (T - DM.at > 25000) dmUnreadLoad(); }
 function phoneHdr(){ const hd = $('#sheet header'); if (!hd) return; let b = $('#phBack');
   if (!b){ b = document.createElement('button'); b.id = 'phBack'; b.innerHTML = '‹ 📱'; b.setAttribute('aria-label', '回手機'); b.addEventListener('click', () => { SFX.click(); Phone.via = true; curTab = 'phone'; renderTab(); }); hd.insertBefore(b, hd.firstChild); }
   b.hidden = !Phone.via || curTab === 'phone'; }
@@ -19707,7 +19772,7 @@ function renderPhone(body){ const scr = el('div', 'ph-home');
   const un = phoneUnread(), fr = phoneFrN();
   for (const [sec, apps] of PHONE_APPS){ scr.appendChild(el('div', 'ph-sec', sec)); const g = el('div', 'ph-grid');
     for (const [tab, ic, lab] of apps){ const b = el('button', 'ph-app' + (tab === 'phfeed' ? ' new' : '')); b.innerHTML = `<span class="ph-ic">${ic}</span><span class="ph-lab">${lab}</span>`;
-      const n = tab === 'phfeed' ? un : tab === 'people' ? fr : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
+      const n = tab === 'phfeed' ? un : tab === 'people' ? fr : tab === 'dm' ? dmUnreadN() : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
       b.addEventListener('click', () => { SFX.click(); phoneGo(tab); }); g.appendChild(b); }
     scr.appendChild(g); }
   body.appendChild(scr); }
@@ -19811,10 +19876,35 @@ async function cafeOrder(r, price){ const P = $('#orderPanel'); if ((rec.coins |
     g.position.set(s.x + Math.sin(s.face) * 0.85, s.y + 0.67, s.z + Math.cos(s.face) * 0.85); scene.add(g); const t0 = now();
     const tick = () => { const a = now() - t0; if (a > 7 || !mySeat){ scene.remove(g); return; } if (a > 1.2){ const k = Math.max(0.05, 1 - (a - 1.2) / 5); fd.scale.set(1.3 * k, 0.5 * k, 0.9 * k); } if (a > 1.2 && Math.floor(a * 2) !== Math.floor((a - 0.05) * 2)) me.say('😋', 'emote', 1); requestAnimationFrame(tick); }; tick(); }
   toast(`點了 ${rc.icon} <b>${esc(rc.name)}</b>：接下來 ${bf.casts} 次拋竿 ${esc(bf.txt)}`); }
-function ui3Init(){ if (!UI3.on) return; document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
+/* ===== v601 開始畫面＋取名字（作者：「應該做遊戲登錄介面，然後要可以取名字」）=====
+   只有第一次玩（NEWBIE、沒看過 tide.welcomed）會出現；之後打開就直接進村子（作者選的）。
+   背景就是村子，鏡頭慢慢繞。兩個按鈕：「開始新的冒險」→ 取名字；「我玩過了，用 Email 找回角色」→ 打開造型頁的 Email 登入。
+   名字最多 16 個字，跟改名一樣過濾髒話；🎲 可以隨機。未滿 13 歲的出生年份是取完名字後才問，兒童安全模式會照規定換成「形容詞＋動物」的名字。 */
+var Welcome = { age: false };
+const WN_A = ['小', '阿', '大', '老', ''], WN_B = ['海', '潮', '浪', '帆', '鯨', '蝦', '貝', '礁', '星', '風', '漁', '鷗', '珊', '湯圓', '飯糰', '布丁'], WN_C = ['', '仔', '哥', '妹', '丸', '王', '船長'];
+function welcomeRandName(){ const p = a => a[Math.floor(Math.random() * a.length)]; let n = p(WN_A) + p(WN_B) + p(WN_C); if (n.length < 2) n += p(WN_B); return n.slice(0, 16); }
+function welcomeOpen(){ if ($('#welcome')) return; const w = document.createElement('div'); w.id = 'welcome'; document.body.appendChild(w); document.body.classList.add('welcomeOn'); welcomeStep('title');
+  Welcome.cam = { p: cam.pitch, d: cam.dist }; try { cam.pitch = 0.32; cam.dist = Math.min(camLimits().dmax, 16); } catch(e){}   /* 拉遠一點看得到村子和海 */
+  const spin = () => { if (!$('#welcome')) return; try { cam.yaw += 0.0016; } catch(e){} requestAnimationFrame(spin); }; requestAnimationFrame(spin); }
+function welcomeStep(st){ const w = $('#welcome'); if (!w) return; w.innerHTML = ''; const c = el('div', 'wc-card');
+  if (st === 'title'){ c.appendChild(el('div', 'wc-logo', '🎣')); c.appendChild(el('h1', 'wc-t', i18nT('潮汐釣魚村'))); c.appendChild(el('p', 'wc-s', i18nT('在海邊的小村子釣魚、交朋友、出海冒險')));
+    const a = el('button', 'tbtn wc-go', i18nT('開始新的冒險')); a.addEventListener('click', () => { SFX.click(); welcomeStep('name'); });
+    const b = el('button', 'tbtn ghost wc-b', i18nT('我玩過了，用 Email 找回角色')); b.addEventListener('click', () => { SFX.click(); welcomeDone(true); Cloud.ui.step = 'email'; Cloud.ui.mode = 'login'; Cloud.ui.msg = ''; openSheet('style'); setTimeout(() => { const x = $('#sheetBody .cloudbox'); if (x) x.scrollIntoView({ block: 'center' }); }, 120); });
+    c.append(a, b); c.appendChild(el('p', 'wc-f', i18nT('不用註冊就能玩，之後在「造型」可以綁定 Email 保存紀錄'))); }
+  else { c.appendChild(el('div', 'wc-logo', '✏️')); c.appendChild(el('h2', 'wc-t2', i18nT('幫你的角色取個名字'))); c.appendChild(el('p', 'wc-s', i18nT('會顯示在頭上，大家都看得到。不要用真名喔！')));
+    const row = el('div', 'wc-row'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = welcomeRandName(); inp.setAttribute('aria-label', '名字'); const dice = el('button', 'tbtn ghost', '🎲'); dice.setAttribute('aria-label', '隨機名字'); dice.addEventListener('click', () => { SFX.click(); inp.value = welcomeRandName(); dice.animate && dice.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg)' }], { duration: 350 }); });
+    row.append(inp, dice); c.appendChild(row); const msg = el('p', 'wc-err', ''); c.appendChild(msg);
+    const ok = el('button', 'tbtn wc-go', i18nT('就叫這個名字！')); const save = () => { const v = inp.value.trim().slice(0, 16); if (!v){ msg.textContent = i18nT('名字不能是空的'); return; } if (clean(v) !== v){ msg.textContent = i18nT('這個名字不能用，換一個吧'); return; }
+      nickname = v; LS.set('tide.nick', v); try { refreshMyName(); pushPresence(true); cloudProfile(); } catch(e){} SFX.coin && SFX.coin(); welcomeDone(false); flash(`👋 ${v}，歡迎來到潮汐釣魚村！`, 2.2); };
+    ok.addEventListener('click', save); inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) save(); }); c.appendChild(ok);
+    const bk = el('button', 'tbtn ghost wc-b', '‹ ' + i18nT('返回')); bk.addEventListener('click', () => welcomeStep('title')); c.appendChild(bk); setTimeout(() => { try { inp.select(); } catch(e){} }, 60); }
+  w.appendChild(c); }
+function welcomeDone(login){ LS.set('tide.welcomed', true); if (Welcome.cam){ cam.pitch = Welcome.cam.p; cam.dist = Welcome.cam.d; Welcome.cam = null; } const w = $('#welcome'); if (w){ w.classList.add('out'); setTimeout(() => w.remove(), 380); } document.body.classList.remove('welcomeOn'); if (Welcome.age && !login) setTimeout(() => { Welcome.age = false; ageGate(); }, 450); }
+if (!NEWBIE) LS.set('tide.welcomed', true);
+function ui3Init(){ if (!UI3.on) return; if (NEWBIE && !LS.get('tide.welcomed', false)){ const wt = () => { if (!Boot.done) return setTimeout(wt, 250); setTimeout(() => { if (!LS.get('tide.welcomed', false)) welcomeOpen(); }, 600); }; wt(); }   /* 進入畫面掀開以後才出現，背景才看得到村子 */ document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
-  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length + phoneUnread(); const b = $('#menu .mbtn[data-group="ph"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
+  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length + phoneUnread() + dmUnreadN(); try { dmTick(); } catch(e){} const b = $('#menu .mbtn[data-group="ph"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
   (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); if (frameNo % 12 === 0) ui3ChatFit(); } catch(e){} requestAnimationFrame(loop); })(); }
 /* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
 function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
