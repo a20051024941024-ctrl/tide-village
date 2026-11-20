@@ -1780,3 +1780,9 @@ body.ui3 #guideCard{max-width:min(280px,38vw);font-size:13px;padding:7px 11px}
 .gf-i b{display:block;font-size:15px}.gf-i small{display:block;font-size:12px;color:#5a6f80;line-height:1.35}
 .gf-ic{font-size:28px;flex:none}
 .gf-x{display:block;margin:6px auto 0;border:0;background:#17696b;color:#fff;font:inherit;font-weight:800;border-radius:12px;padding:8px 20px;cursor:pointer}
+/* v6xx 全服共養：圖鑑的族群條 */
+.dex .it .meta.pop{display:flex;align-items:center;gap:4px;font-size:10.5px}
+.dex .it .meta.pop .pbar{flex:0 0 38px;height:5px;border-radius:3px;background:rgba(0,0,0,.12);overflow:hidden}
+.dex .it .meta.pop .pbar i{display:block;height:100%;border-radius:3px;background:#5fb866}
+.dex .it .meta.pop.lo .pbar i{background:#e8473a}.dex .it .meta.pop.mid .pbar i{background:#f0b13a}
+.dex .it .meta.pop.lo{color:#c4553f}.dex .it .meta.pop.hi{color:#2f8a4a;font-weight:700}

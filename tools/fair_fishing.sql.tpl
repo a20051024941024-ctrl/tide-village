@@ -20,6 +20,7 @@ alter table public.players add column if not exists cast_sex text;      -- 這�
 create table if not exists public.casts (
   uid uuid primary key references public.players(id) on delete cascade, spot text, fish text not null, w numeric(10,2) not null,
   rs text, sex text, brood boolean, gp text, at timestamptz not null default now(), shown_at timestamptz);
+alter table public.casts add column if not exists ev boolean;   -- v586 全服共養：這條魚是不是「演化花色」
 alter table public.casts enable row level security;
 revoke all on public.casts from anon, authenticated;
 alter table public.players add column if not exists last_fish text;            -- 剛剛釣到的魚（村報、蔚博士的觸發器用；已經釣上來了，不是秘密）
@@ -125,6 +126,7 @@ declare
   c jsonb; ctype text; cat timestamptz; left_k numeric; fit numeric; k numeric; sc jsonb; age numeric; pw numeric; nb integer; fw numeric;
   sf record;   -- 蔚博士的新品種（070）
   sg_k text;   -- 247：浮標落在哪一種徵兆旁邊
+  popm jsonb := '{}'; pp numeric; evo boolean := false;   -- v586 全服共養的魚種族群（199_fish_pop）
 begin
   if sp is null then raise exception '沒有這個釣點'; end if;
   if pl.cast_at is not null and now() - pl.cast_at < interval '2.5 seconds' then raise exception '拋太快了'; end if;
@@ -203,7 +205,8 @@ begin
   begin select coalesce(jsonb_object_agg(e.fish, e.mult), '{}') into eco from public.ocean_eco e where e.spot = p_spot and e.until > now(); exception when undefined_table then eco := '{}'; end;
   sg_k := case when p_boat then null else public._sign_hit(p_spot, p_bx, p_bz, p_sl, bait->>'k') end;
   begin evm := public._ev_mig(); if public._ev_meteor() then kl := kl * 1.6; end if; exception when undefined_function then evm := null; end;
-  begin cor_k := public._coral_k(pl.id, p_spot); exception when undefined_function then cor_k := 0; end;   -- 142 小島海底花園：自己種的珊瑚長到一半以上，在小島釣稀有的珊瑚礁魚（鸚哥魚、海馬、獅子魚）比較容易（每株 +25%，最多 4 株）
+  begin cor_k := public._coral_k(pl.id, p_spot); exception when undefined_function then cor_k := 0; end;
+  begin popm := public._pop_map(); exception when undefined_function or undefined_table then popm := '{}'; end;   -- v586 族群量：少的魚難釣（最低 ×0.5）、多的好釣（最高 ×1.3）   -- 142 小島海底花園：自己種的珊瑚長到一半以上，在小島釣稀有的珊瑚礁魚（鸚哥魚、海馬、獅子魚）比較容易（每株 +25%，最多 4 株）
   begin rum_f := public._rumor_hit(pl.id, p_spot, rig, per); exception when undefined_function then rum_f := null; end;   -- 128 傳說魚的線索：三條線索都找到、在對的釣點時段釣法，那條傳說魚 ×4   -- 111 釣魚活動：魚群洄游、流星雨
   if p_boat then begin if public._breach_luck(pl.id) then kr := kr * 1.4; kl := kl * 1.25; end if; exception when undefined_function then null; end; end if;   -- 113 在外海看到鯨魚跳出水面：3 分鐘內在船上釣稀有 ×1.4、傳說 ×1.25
   for fid in select x from jsonb_array_elements_text(sp->'fish') with ordinality t(x, n) order by n loop
@@ -222,6 +225,7 @@ begin
       * (case when p_spot = 'mystic' and fid in ('bluewhale', 'bluewhale_albino') and public._bw_up() then 5 else 1 end)
       * (case when evm is not null and (evm->>'active')::boolean and p_spot = evm->>'spot' and fid = evm->>'fish' then 4 else 1 end)
       * (case when cor_k > 0 and fid in ('parrot', 'seahorse', 'lionfish') then 1 + 0.25 * cor_k else 1 end)   -- 142 珊瑚吸引珊瑚礁魚
+      * coalesce((popm->coalesce(f->>'of', fid)->>'m')::numeric, 1)
       * (case when rum_f is not null and fid = rum_f then 4 else 1 end)   -- 111 魚群洄游：那種魚在那個釣點 ×4
       * (case when sg_k is not null and (f->>'k' = sg_k or (sg_k = 'shadow' and (f->>'max')::numeric >= 3)) then   -- v565 魚影（中大型魚）：以前只認「shadow」那一類，海邊只有魟魚、外海只有魟魚和海豚，所以對著魚影拋永遠是那兩種。改成最大能長到 3 公斤以上的都算
         (case when f->>'r' = '傳說' then (case when coalesce((f->>'follow')::boolean, false) and sg_k = 'shadow' then 3.0 when sg_k = bait->>'k' then 1.5 else 1.3 end) else (case when sg_k = bait->>'k' then 4 else 2.5 end) end) else 1 end)   -- 247 徵兆（255：餌對上徵兆加成更大）
@@ -253,11 +257,18 @@ begin
   brood := sx = 'F' and season in ('spring', 'summer') and cfg->'brood' ? pick and random() < 0.3;
   begin if rs is null and random() < 0.5 and public._mastery3(pl.id, pick) then fw := greatest(fw, round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), 1.3))::numeric, 2)); end if; exception when undefined_function then null; end;   -- 114 三顆星的魚：大尺寸機率小幅提高
   if rs is not null then fw := public._rs_w(rsh); end if;
+  -- v586 族群量影響大小：族群少的魚偏小，族群很多的偶爾特別大；演化過的魚種有 15% 是演化花色
+  pp := (popm->coalesce(f->>'of', pick)->>'p')::numeric;
+  if rs is null and pp is not null then
+    if pp < 100 then fw := greatest((f->>'min')::numeric, round(fw * (0.85 + 0.15 * (pp - 30) / 70), 2));
+    elsif pp > 110 and random() < 0.1 then fw := greatest(fw, round(((f->>'min')::numeric + ((f->>'max')::numeric - (f->>'min')::numeric) * power(random(), 1.2))::numeric, 2)); end if;
+    evo := coalesce((popm->coalesce(f->>'of', pick)->>'e')::boolean, false) and random() < 0.15;
+  end if;
   gpv := case when pick in ('guppy', 'guppy_albino') then public._gpy_wild() end;
   perform set_config('tide.rig', coalesce(p_rig, ''), true);   -- 196 鱤魚只追路亞
   perform set_config('tide.bait', case when bait is not null then coalesce(p_bait, '') else '' end, true);   -- 193 這一竿用的魚餌：casts 的觸發器要看（草魚只吃玉米粒、麵包糰）
-  insert into public.casts (uid, spot, fish, w, rs, sex, brood, gp, at, shown_at) values (pl.id, p_spot, pick, fw, rs, sx, brood, gpv, now(), null)
-  on conflict (uid) do update set spot = excluded.spot, fish = excluded.fish, w = excluded.w, rs = excluded.rs, sex = excluded.sex, brood = excluded.brood, gp = excluded.gp, at = excluded.at, shown_at = null;
+  insert into public.casts (uid, spot, fish, w, rs, sex, brood, gp, ev, at, shown_at) values (pl.id, p_spot, pick, fw, rs, sx, brood, gpv, evo, now(), null)
+  on conflict (uid) do update set spot = excluded.spot, fish = excluded.fish, w = excluded.w, rs = excluded.rs, sex = excluded.sex, brood = excluded.brood, gp = excluded.gp, ev = excluded.ev, at = excluded.at, shown_at = null;
   update public.players set cast_fish = null, cast_w = null, cast_rs = null, cast_sex = null, cast_brood = null, cast_gp = null, cast_at = now(), bait = pl.bait, bait_on = pl.bait_on, buff_left = pl.buff_left, updated_at = now()
   where id = pl.id returning * into pl;
   return pl;
@@ -302,11 +313,12 @@ declare
   w  numeric := round(p_weight, 2);
   ts bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
   c  record;
-  tid bigint := public._tourney_at(now()); v_spot text;
+  tid bigint := public._tourney_at(now()); v_spot text; v_ev boolean;
 begin
   select * into sp from public.fish_species where id = p_fish;
   if not found then raise exception '沒有這種魚'; end if;
-  select cs.fish, cs.w, cs.rs, cs.sex, cs.brood, cs.gp, cs.spot into pl.cast_fish, pl.cast_w, pl.cast_rs, pl.cast_sex, pl.cast_brood, pl.cast_gp, v_spot from public.casts cs where cs.uid = pl.id;   -- 這一竿的結果（不公開的表）
+  select cs.fish, cs.w, cs.rs, cs.sex, cs.brood, cs.gp, cs.spot into pl.cast_fish, pl.cast_w, pl.cast_rs, pl.cast_sex, pl.cast_brood, pl.cast_gp, v_spot from public.casts cs where cs.uid = pl.id;
+  begin select cs.ev into v_ev from public.casts cs where cs.uid = pl.id; exception when undefined_column then v_ev := null; end;   -- 這一竿的結果（不公開的表）
   if pl.cast_fish is null or pl.cast_fish <> p_fish or pl.cast_w is distinct from w then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
   if now() - pl.cast_at < interval '1.5 seconds' then raise exception '釣太快了'; end if;
   if now() - pl.cast_at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
@@ -321,7 +333,7 @@ begin
     fish_best  = case when coalesce((fish_best ->> p_fish)::numeric, 0) < w then jsonb_set(fish_best, array[p_fish], to_jsonb(w)) else fish_best end,
     best_fish  = case when w > best_w then p_fish else best_fish end,
     best_w     = greatest(best_w, w),
-    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' or p_fish ~ '^nx[0-9]{6}v$' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when pl.cast_gp is not null then jsonb_build_object('gp', pl.cast_gp) else '{}'::jsonb end || case when p_fish in ('shark_red', 'shark_red_albino') then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
+    tank       = public._trim_tank(jsonb_build_array(jsonb_build_object('f', p_fish, 'w', w, 't', ts) || case when (public._fishcfg()->'fish'->p_fish) ? 'v' or p_fish ~ '^nx[0-9]{6}v$' then jsonb_build_object('k', true) else '{}'::jsonb end || case when pl.cast_sex in ('M', 'F') then jsonb_build_object('s', pl.cast_sex) else '{}'::jsonb end || case when pl.cast_brood then jsonb_build_object('b', true) else '{}'::jsonb end || case when pl.cast_gp is not null then jsonb_build_object('gp', pl.cast_gp) else '{}'::jsonb end || case when v_ev then jsonb_build_object('ev', true) else '{}'::jsonb end || case when p_fish in ('shark_red', 'shark_red_albino') then jsonb_build_object('rs', pl.cast_rs) else '{}'::jsonb end) || tank, show),
     week_best_w = case when p_fish <> c.fish then (case when week_id = c.week_id then week_best_w else 0 end)
                        when week_id = c.week_id then greatest(week_best_w, w) else w end,
     week_id    = case when p_fish = c.fish or week_id = c.week_id then c.week_id else week_id end,
@@ -347,7 +359,7 @@ begin
   if now() - c.at > interval '20 minutes' then raise exception '這條魚對不上伺服器，請重新整理遊戲'; end if;
   if c.spot is distinct from 'mudflat' and now() - c.at < interval '1.9 seconds' then raise exception '魚還沒游過來'; end if;
   update public.casts set shown_at = coalesce(shown_at, now()) where uid = c.uid;
-  return jsonb_build_object('cast_fish', c.fish, 'cast_w', c.w, 'cast_rs', c.rs, 'cast_sex', c.sex, 'cast_brood', c.brood, 'cast_gp', c.gp);
+  return jsonb_build_object('cast_fish', c.fish, 'cast_w', c.w, 'cast_rs', c.rs, 'cast_sex', c.sex, 'cast_brood', c.brood, 'cast_gp', c.gp, 'cast_ev', coalesce(c.ev, false));
 end $$;
 
 do $$ declare f text; begin
