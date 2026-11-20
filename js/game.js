@@ -4997,7 +4997,7 @@ class Fisher {
     this.held = { o, y, z: o.position.z, until: now() + (secs || 6) }; try { fishAct(m, 'hand'); } catch(e){}   /* v448 捧在手上的魚偶爾會猛甩幾下 */
     this.say(`${f.name} ${fmtKg(w)}`, 'emote', secs || 6);
   }
-  dispose(){ if (this.pet){ petFree(this.pet); this.pet = null; } KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
+  dispose(){ if (this.fkG){ scene.remove(this.fkG); this.fkG = null; } if (this.pet){ petFree(this.pet); this.pet = null; } KID.wait.delete(this); if (this.hookM){ scene.remove(this.hookM); this.hookM = null; } if (this.boatMesh) scene.remove(this.boatMesh); scene.remove(this.av.g, this.bob, this.line); if (this.blob) scene.remove(this.blob); this.tag.remove(); }
   update(dt, t){ if (this === me){ if (KJ.muF === frameNo) KJ.muN = (KJ.muN || 1) + 1; else { KJ.meUpd = KJ.muN || 1; KJ.muN = 1; KJ.muF = frameNo; } }
     const a = this.av; dt = Math.min(dt, 0.1);
     // ===== 走路動畫（2026-11-04 改版）：Idle／Walk／Run／Sprint 依速度平滑混合；腳步照「實際走了多遠」前進，減少滑步 =====
@@ -5080,7 +5080,7 @@ class Fisher {
     if (a.eyes){ const bt = (t + a.blinkAt) % 4.2, sy = bt < 0.12 ? 0.12 : 1.15; a.eyes[0].scale.y = a.eyes[1].scale.y = sy; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; a.headG.rotation.z = Math.sin(t * 1.3 + a.blinkAt) * 0.03 * idle; a.headG.rotation.y = P.hy; }
     if (this.blob){ this.blob.position.set(this.pos.x, this.baseY + 0.025, this.pos.z); this.blob.visible = a.g.visible && !this.swim; }
     // bobber
-    this._uf = frameNo; const fpMe = this === me && FP.act && FP.tip, showBob = this.fishing && this.bobState !== 'none' && (a.g.visible || fpMe) && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
+    this._uf = frameNo; const fpMe = this === me && FP.act && FP.tip, showBob = (this.fishing || this.heldTip) && this.bobState !== 'none' && (a.g.visible || fpMe) && (this.flying || Math.hypot(this.bobPos.x - this.pos.x, this.bobPos.z - this.pos.z) < 40);   /* v230：浮標離人超過 40 公尺一定是舊的狀態，不畫線 */   /* 人被藏起來（太遠、不同島）時，線和浮標也一起藏，不會留一條線在空中 */
     this.bob.visible = showBob; this.line.visible = showBob;
     if (showBob){
       if (this.flying && this.flying.delay > 0){ this.flying.delay -= dt; (fpMe ? FP.tip : this.av.tip).getWorldPosition(this.flying.from); this.bob.position.copy(this.flying.from); }   // 甩到一半浮標才飛出去
@@ -5097,7 +5097,7 @@ class Fisher {
         { const sk = this.bob.userData && this.bob.userData.sinker; if (sk && sk.visible){ let gy = wy - 2.2; try { const g = groundHeight(this.bobPos.x, this.bobPos.z); if (isFinite(g)) gy = Math.max(gy, Math.min(g + 0.08, wy - 0.35)); } catch(e){} this.sinkK = Math.min(1, (this.sinkK || 0) + dt * 0.9); const e2 = 1 - (1 - this.sinkK) * (1 - this.sinkK); this.bob.position.y = wy + (gy - wy) * e2 - (this.dip > 0 ? this.dip * 0.05 : 0); } else this.sinkK = 0; }
       }
       // line
-      const tip = new THREE.Vector3(); (fpMe ? FP.tip : a.tip).getWorldPosition(tip);
+      const tip = new THREE.Vector3(); (this.heldTip || (fpMe ? FP.tip : a.tip)).getWorldPosition(tip);
       const B = this.bob.position; const arr = this.line.geometry.attributes.position.array;
       const dist = tip.distanceTo(B); const sag = this.flying ? 0.05 : (0.35 - this.bend*0.3) * Math.min(1, dist/4);
       for (let i = 0; i < LINE_PTS; i++){ const k = i/(LINE_PTS-1); arr[i*3] = tip.x + (B.x - tip.x)*k; arr[i*3+1] = tip.y + (B.y + 0.1 - tip.y)*k - Math.sin(k*Math.PI)*sag; arr[i*3+2] = tip.z + (B.z - tip.z)*k; }
@@ -5846,7 +5846,7 @@ function updatePlayer(dt){
   let speed = 0;
   if (Bike.on) bikeDrive(dt, uiBlocked ? 0 : ix, uiBlocked ? 0 : iz, uiBlocked ? 0 : L);
   else if (L > 0.08 && !locked){
-    if (F.phase !== 'idle') cancelFishing('收竿了');
+    if (F.phase !== 'idle' && !F.held) cancelFishing('收竿了');
     /* v429 玩家回報（iPhone 特別容易）：釣一釣突然往前變往後、往左變往右。原因：釣魚時鏡頭會移到肩膀後面看浮標，
        但搖桿的方向一直是照「釣魚前的鏡頭角度」算的；兩個方向剛好相反時，推前面角色就往鏡頭這邊走，而且只要走不快，鏡頭就一直不換回來。
        現在：一推搖桿鏡頭就開始換回平常的視角；換回來之前，搖桿照畫面上真正看到的方向算（往前永遠是往畫面裡面走） */
@@ -5968,11 +5968,11 @@ function ui3Bike(){ let b = $('#bike3'); const row = $('#actRow'); if (!row) ret
 function allChairs(){ return CHAIRS.concat(isleChairs, CHAIRS_ROOM); }
 function nearChair(){
   let best = null, bd = 1.1;
-  for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
+  for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z) - (c.reach ? c.reach - 1.1 : 0); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
   return best;
 }
-function sitDown(c){ if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
-function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
+function sitDown(c){ if (F.held && c && c.gear) fkUnhold(); else if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
+function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (fkHoldOk(mySeat)) fkHold(); else if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; if (c.ret){ me.pos.x = c.ret[0]; me.pos.z = c.ret[1]; }   /* v618 釣魚裝備的椅子：站起來回到岸上（釣台在水上） */ Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
 function canJump(){ return !Dive.on && !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
@@ -6353,7 +6353,7 @@ function doCast(){
   // 用掉一個魚餌
   const bt = Rig.rig === 'lure' || (s && s.wild) ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
   if (bt){ if (!Cloud.on) cloudCall('use_bait', { p_bait: bt.id }); rec.bait[bt.id]--; if (rec.bait[bt.id] <= 0){ delete rec.bait[bt.id]; rec.baitOn = null; toast(`${bt.name}用完了，換回普通魚餌`); } saveRecLocal(); }
-  const rt = s.wild ? 'pole' : rodType(curRod()), dist = s.id === 'shrimp' ? 1.4 + c * 1.6 : (3.5 + c * 8) *   /* v516 作者：「釣竿的線丟不遠」→ 滿力從 7.5 公尺拉到 11.5 公尺 */ (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1);   /* 手竿拋不遠、遠投竿拋很遠 */   /* 蝦竿很短，拋近近的 */
+  const rt = s.wild ? 'pole' : rodType(curRod()), dist = s.id === 'shrimp' ? 1.4 + c * 1.6 : (3.5 + c * 8) *   /* v516 作者：「釣竿的線丟不遠」→ 滿力從 7.5 公尺拉到 11.5 公尺 */ (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1) + (s.id !== 'shrimp' && mySeat && mySeat.gear && FK.set && (FK.set.mask & 2) ? 3 : 0);   /* v618 小釣台：多拋 3 公尺 */   /* 手竿拋不遠、遠投竿拋很遠 */   /* 蝦竿很短，拋近近的 */
   const hole = s.id === 'icelake' ? (s.hole || FROST.holes.slice().sort((a, b) => Math.hypot(me.pos.x - a[0], me.pos.z - a[1]) - Math.hypot(me.pos.x - b[0], me.pos.z - b[1]))[0]) : null;   /* 冰洞：直接放進洞裡 */
   const cp = hole ? hole : castPoint(s.pos.x, s.pos.z, ...aimDir(s), dist);
   const to = new THREE.Vector3(cp[0] + (hole ? 0 : rand(-0.3,0.3)), 0.12, cp[1] + (hole ? 0 : rand(-0.3,0.3)));
@@ -6379,7 +6379,7 @@ function doCast(){
 }
 function cancelFishing(msg){
   if (F.phase === 'reeling' && F.fish && F.fish.rs && F.rsTag && !F.rsDone && !rsInfo(F.rsTag).esc && Cloud.on && Cloud.sb) Cloud.sb.rpc('rs_escaped').then(() => {}, () => {});   /* 自己沒拉好讓牠跑了：伺服器也記一道叉叉 */
-  F.rsDone = 0;
+  F.rsDone = 0; F.held = false; F.heldRing = 0; me.heldTip = null;
   reelCleanup(); F.phase = 'idle'; F.hold = false; me.fishing = false; me.bobState = 'none'; me.flying = null; me.dip = 0; me.bend = 0; me.windup = 0; me.castT = -1;
   if (msg && msg !== '收竿了') flash(msg);
   pushPresence(true);
@@ -6549,6 +6549,7 @@ function updateFishing(dt, t){
     const fSrv = Cloud.on && !(F.spot && F.spot.wild);
     if (t > F.waitUntil && fSrv && (F.roll === 'pending' || F.roll === 'cast' || F.roll === 'hooking')){ F.waitUntil = t + 0.4; F.rollWait = (F.rollWait || 0) + 0.4; if (F.rollWait > 12){ cancelFishing(); flash(rollFailMsg(), 1.4); } }
     else if (t > F.waitUntil && fSrv && (!F.roll || F.roll === 'fail')){ cancelFishing(); flash(rollFailMsg(), 1.6); }
+    else if (t > F.waitUntil && F.held) fkHeldBite(t);   /* v618 竿子在竿架上：鈴鐺響，等你回來坐下 */
     else if (t > F.waitUntil){
       // 連上雲端時，上鉤的魚由伺服器決定（拋竿時就抽好了，見 roll_fish）；沒連線時在這裡抽
       if (F.roll && F.roll.f){ F.fish = F.roll.f; F.weight = F.roll.w; F.sex = F.roll.sex; F.brood = F.roll.brood; F.gp = F.roll.gp; F.ev = !!F.roll.ev; F.rsTag = F.roll.rs; F.rsEscAt = F.rsTag && rsInfo(F.rsTag).esc ? rand(0.45, 0.85) : 0; }
@@ -6744,6 +6745,7 @@ function updateFishing(dt, t){
     else { label = '找釣點'; sub = '告訴你最近的釣點'; cls = 'idle'; } }
   else if (F.phase === 'charging'){ label = '放開'; sub = '拋出去'; }
   else if ((F.phase === 'waiting' || F.phase === 'bite') && F.spot && F.spot.id === 'shrimp' && Rig.rig !== 'lure'){ label = '提竿'; sub = '浮標整個沉下去才拉'; cls = ''; }
+  else if (F.phase === 'waiting' && F.held){ label = '收竿'; sub = F.heldRing ? '🔔 魚咬了！回去坐下拉' : '🎣 竿子在竿架上'; cls = F.heldRing ? 'bite' : 'idle'; }
   else if (F.phase === 'waiting'){ label = Rig.rig === 'lure' ? '抽竿' : '等待中'; sub = Rig.rig === 'lure' ? '點一下讓假餌動・搖桿收竿' : '點一下收竿'; cls = 'idle'; }
   else if (F.phase === 'bite'){ label = '提竿！'; cls = 'bite'; }
   else if (F.phase === 'reeling'){ label = '拉線'; sub = '按住 / 放開'; }
@@ -6789,7 +6791,7 @@ function landFish(){
   const fpc = FP.act; if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
   if (F.spot && F.spot.wild){ setTimeout(() => wildLanded(f, w), fpc ? 3600 : 1100); return; }   /* v593 荒島的魚：變成食物、記進荒島筆記，不進村子的紀錄 */
-  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, fpc ? 3600 : 900);   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
+  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); try { fkCaught(f); } catch(e){} if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, fpc ? 3600 : 900);   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
 const jumpers = [];
 function updateJumpers(dt, t){
@@ -11841,7 +11843,7 @@ function fpSet(v){ FP.pref = !!v; LS.set('tide.fpFish', FP.pref); if (!FP.pref) 
 /* v510 作者：「還是會突然放大」→ 以前每釣一條：拋竿時鏡頭一下子拉到眼睛（放大），看完魚又一下子拉回背後（縮小），一直縮放。
    現在只要站著沒走開，看完魚以後還是留在第一人稱（再拋竿也不換）；一走動、坐船、進屋、潛水才回到背後視角。進出第一人稱的鏡頭也放慢，不會一下子跳過去 */
 function fpWant(){ if (FP.act && FP.stay && F.phase === 'idle' && ((me.aspd || 0) > 0.5 || me.sitting || myBoat || bossPulling())) FP.stay = false;
-  return FP.pref && (F.phase !== 'idle' || (FP.act && FP.stay)) && !F.boss && !Dive.on && !House.on && !Photo.on && !Pool.on && !(typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) && !CLASSIC; }
+  return FP.pref && !F.held && (F.phase !== 'idle' || (FP.act && FP.stay)) && !F.boss && !Dive.on && !House.on && !Photo.on && !Pool.on && !(typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) && !CLASSIC; }
 function fpHand(side){ const g = new THREE.Group(), B = (w, h, d, m, x, y, z, p) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); (p || g).add(o); return o; };
   B(0.085, 0.03, 0.09, FP.skin, 0, 0, 0);
   for (let i = 0; i < 4; i++){ const k = new THREE.Group(); k.position.set(-0.032 + i * 0.0215, 0.004, -0.045); k.rotation.x = 1.05; g.add(k); B(0.018, 0.02, 0.042, FP.skin, 0, 0, -0.021, k); const k2 = new THREE.Group(); k2.position.set(0, 0, -0.042); k2.rotation.x = 0.7; k.add(k2); B(0.017, 0.019, 0.034, FP.skin, 0, 0, -0.017, k2); }
@@ -15264,6 +15266,130 @@ function renderCloset(body){
   list.scrollTop = Closet.scroll[Closet.slot] || 0; list.addEventListener('scroll', () => { Closet.scroll[Closet.slot] = list.scrollTop; });
   requestAnimationFrame(() => { list.scrollTop = Closet.scroll[Closet.slot] || 0; });
 }
+/* ===== v618 釣魚裝備（作者：「這個是我想要的，可以坐著可以用自己的裝備」，四樣都要）=====
+   在釣具店「🧰工具」買（伺服器 206 buy_tool），放在背包「🎣 釣具」。走到水邊、面向水按「擺出來」：摺疊椅擺在岸邊（有小釣台就擺在釣台尾端，伸到水上），
+   自動坐下、坐著拋竿拉魚。竿架：等魚的時候站起來走開，竿子插在竿架上，魚咬了鈴鐺響、竿尖抖，25 秒內坐回去就能拉。魚護：這次擺出來以後釣到的魚會在網子裡游。
+   遮陽傘＋釣箱：坐在傘下，釣箱可以直接買魚餌。離開 15 公尺或按「收起來」就收回背包。別人看得到（presence 的 fk）。加成只有釣台多拋 3 公尺，不改機率。 */
+const FKIT = [
+  { id:'tool_chair',  bit:1, icon:'🪑', name:'摺疊椅',     price:600,  desc:'擺在水邊坐著釣：坐下以後直接拋竿、拉魚都不用站起來。第一人稱的視線也比較低。' },
+  { id:'tool_stand',  bit:2, icon:'🪵', name:'小釣台',     price:1500, need:'tool_chair', desc:'一塊伸到水面上的木平台，椅子擺在平台尾端：坐在上面往外拋，多 3 公尺左右。' },
+  { id:'tool_holder', bit:4, icon:'🎣', name:'竿架＋魚護', price:900,  need:'tool_chair', desc:'等魚的時候可以站起來走開，竿子插在竿架上；魚咬了鈴鐺會響。魚護泡在水裡，這次釣到的魚會在裡面游，大家都看得到。' },
+  { id:'tool_shade',  bit:8, icon:'⛱️', name:'遮陽傘＋釣箱', price:800, need:'tool_chair', desc:'大陽傘撐在椅子旁邊；釣箱打開就能直接買魚餌，不用跑回店裡。' } ];
+const FKIT_BY = Object.fromEntries(FKIT.map(k => [k.id, k]));
+const FK = { set:null, g:null, seat:null, net:[], at:0, msgAt:0 };
+function fkHas(id){ return (rec.owned || []).includes(id); }
+function fkMask(){ let m = 0; for (const k of FKIT) if (fkHas(k.id)) m |= k.bit; return m; }
+function fkBox(g, w, h, d, m, x, y, z, ry){ const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); if (ry) o.rotation.y = ry; o.castShadow = true; g.add(o); return o; }
+/* 一組裝備的模型：原點在椅子底下，+z 朝水；stand 時椅子往前 len 公尺 */
+function fkBuild(mask, len, y0){ const g = new THREE.Group(), parts = [];
+  const alu = mat('#c9d0d6', 0.35, { metalness:0.6 }), cloth = mat('#2f6f9a', 0.85), wood = mat('#a8794c', 0.8), dark = mat('#4b3424', 0.85);
+  const P = () => { const p = new THREE.Group(); g.add(p); parts.push(p); return p; };
+  const cz = mask & 2 ? len : 0, cy = mask & 2 ? y0 : 0;
+  if (mask & 2){ const p = P(); p.position.set(0, y0, len / 2);   /* 小釣台：木板、四根腳插到水裡、兩邊的繩子欄杆 */
+    for (let i = 0; i < 6; i++) fkBox(p, 1.25, 0.06, (len + 0.6) / 6 - 0.03, wood, 0, -0.03, -len / 2 - 0.3 + (i + 0.5) * (len + 0.6) / 6);
+    for (const sx of [-0.55, 0.55]) for (const sz of [-len / 2 + 0.2, len / 2 - 0.1]){ const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.4, 6), dark); leg.position.set(sx, -1.2, sz); p.add(leg); }
+    for (const sx of [-0.6, 0.6]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.7, 6), dark); post.position.set(sx, 0.35, len / 2 - 0.1); p.add(post); } }
+  { const p = P(); p.position.set(0, cy, cz);   /* 摺疊椅：鋁管 X 形腳、藍色布面、靠背 */
+    for (const sx of [-0.24, 0.24]) for (const s of [1, -1]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.5, 6), alu); r.position.set(sx, 0.2, 0); r.rotation.x = s * 0.75; p.add(r); }
+    fkBox(p, 0.5, 0.04, 0.42, cloth, 0, 0.36, 0);
+    const back = fkBox(p, 0.5, 0.42, 0.04, cloth, 0, 0.6, -0.22); back.rotation.x = -0.18;
+    for (const sx of [-0.26, 0.26]){ const r = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.5, 6), alu); r.position.set(sx, 0.6, -0.23); r.rotation.x = -0.18; p.add(r); fkBox(p, 0.05, 0.04, 0.4, alu, sx, 0.5, -0.02); } }
+  if (mask & 4){ const p = P(); p.position.set(0.55, cy, cz + 0.25);   /* 竿架：插在地上的支架＋斜斜的竿子，竿尖掛一顆小鈴鐺 */
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 6), alu); st.position.y = 0.35; p.add(st); fkBox(p, 0.14, 0.03, 0.03, alu, 0, 0.7, 0);
+    const rod = new THREE.Group(); rod.position.set(0, 0.7, 0); rod.rotation.x = 0.95; p.add(rod);
+    const rm = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.022, 2.6, 6), mat('#2b3b52', 0.5)); rm.position.y = 0.9; rod.add(rm);
+    fkBox(rod, 0.06, 0.07, 0.06, mat('#d33', 0.5), 0, -0.25, 0.04);
+    const tip = new THREE.Object3D(); tip.position.y = 2.2; rod.add(tip); const bell = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), mat('#f2c84b', 0.3, { metalness:0.7 })); bell.position.y = -0.06; tip.add(bell);
+    g.userData.tip = tip; g.userData.rod = rod;
+    const np = P(); np.position.set(-0.75, 0, cz + (mask & 2 ? 0.2 : 1.4));   /* 魚護：泡在水裡的網子 */
+    const net = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.1, 14, 1, true), new THREE.MeshLambertMaterial({ color:'#2d5a3a', transparent:true, opacity:0.45, side:THREE.DoubleSide, depthWrite:false })); net.position.y = -0.35; np.add(net);
+    for (const yy of [0.18, -0.35, -0.88]){ const ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.02, 4, 18), mat('#334', 0.6)); ring.rotation.x = Math.PI / 2; ring.position.y = yy; np.add(ring); }
+    g.userData.net = np; g.userData.netY = np.position.y; }
+  if (mask & 8){ const p = P(); p.position.set(-0.5, cy, cz - 0.35);   /* 遮陽傘＋釣箱 */
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.1, 6), alu); pole.position.y = 1.05; pole.rotation.z = 0.12; p.add(pole);
+    const top = new THREE.Group(); top.position.set(0.12, 2.05, 0); top.rotation.z = 0.12; p.add(top);
+    for (let i = 0; i < 8; i++){ const seg = new THREE.Mesh(new THREE.ConeGeometry(1.25, 0.42, 3, 1, true, i * Math.PI / 4, Math.PI / 4), mat(i % 2 ? '#f4f1e6' : '#e0564f', 0.8, { side:THREE.DoubleSide })); top.add(seg); }
+    const bp = P(); bp.position.set(0.5, cy, cz - 0.45);
+    fkBox(bp, 0.42, 0.24, 0.26, mat('#3f8f5a', 0.6), 0, 0.12, 0); fkBox(bp, 0.43, 0.04, 0.27, mat('#2f7048', 0.6), 0, 0.25, 0); fkBox(bp, 0.16, 0.05, 0.03, alu, 0, 0.29, 0); g.userData.box = bp; }
+  g.userData.parts = parts; g.userData.mask = mask; return g; }
+function fkPop(g, t0, out){ const ps = g.userData.parts || []; ps.forEach((p, i) => { const k = clamp((now() - t0 - i * 0.12) / 0.38, 0, 1), e = out ? 1 - k : (k < 1 ? 1 + Math.sin(k * Math.PI) * 0.18 - (1 - k) * (1 - k) * 1.0 : 1); p.scale.setScalar(Math.max(0.001, e)); }); }
+/* 找擺的位置：你站的地方往前 0.6～3.2 公尺內要有水 */
+function fkWhere(){ const dx = Math.sin(me.rot), dz = Math.cos(me.rot); let d0 = 0; for (let d = 0.6; d <= 3.2; d += 0.2){ if (waterAt(me.pos.x + dx * d, me.pos.z + dz * d)){ d0 = d; break; } } if (!d0) return null;
+  if (!waterAt(me.pos.x + dx * (d0 + 1.6), me.pos.z + dz * (d0 + 1.6))) return null;
+  const sx = me.pos.x + dx * Math.max(0, d0 - 0.75), sz = me.pos.z + dz * Math.max(0, d0 - 0.75);
+  return { x: sx, z: sz, face: me.rot, y: groundHeight(sx, sz), d0 }; }
+function fkWhy(){ if (!fkHas('tool_chair')) return '要先在釣具店「🧰工具」買摺疊椅'; if (myBoat || Voy.on) return '在船上不能擺'; if (Dive.on || House.on || inIndoor() || inHall()) return '這裡不能擺'; if (onIsle && onIsle.wild) return '荒島上不能擺';
+  if (F.phase !== 'idle') return '先收竿'; if (mySeat) return '先站起來'; if (Bike.on) return '先下腳踏車'; return ''; }
+function fkPlace(){ const why = fkWhy(); if (why){ toast(why); return false; } const w = fkWhere(); if (!w){ toast('走到水邊、面向水再擺（前面 3 公尺內要有水）'); return false; }
+  const mask = fkMask(), len = 2.4, y0 = Math.max(w.y, WATER_LEVEL + 0.35);
+  if (mask & 2){ const dx = Math.sin(w.face), dz = Math.cos(w.face); for (const d of [1.2, 2.0, 2.6]) if (!waterAt(w.x + dx * d, w.z + dz * d)){ toast('前面的水不夠寬，釣台伸不出去，換個地方'); return false; } }
+  fkClear(true); const g = fkBuild(mask, len, y0 - w.y); g.position.set(w.x, w.y, w.z); g.rotation.y = w.face; scene.add(g); FK.g = g; FK.at = now(); FK.net = [];
+  const dx = Math.sin(w.face), dz = Math.cos(w.face), sl = mask & 2 ? len : 0;
+  const seat = { x: w.x + dx * (sl + 0.05), z: w.z + dz * (sl + 0.05), face: w.face, y: (mask & 2 ? y0 : w.y) + 0.36, nook: true, back: true, gear: true, reach: mask & 2 ? 3.4 : 1.4, ret: [w.x - dx * 0.5, w.z - dz * 0.5] };
+  FK.seat = seat; CHAIRS.push(seat); FK.set = { x: w.x, z: w.z, face: w.face, y: w.y, mask, y0, isle: !!onIsle };
+  try { SFX.door(); } catch(e){} fkPop(g, FK.at); sitDown(seat); FK.sitT = now();
+  setTimeout(() => toast(`🎣 裝備擺好了！${mask & 4 ? '等魚的時候可以按「跳」站起來走開，竿子會插在竿架上。' : '按「拋竿」就能坐著釣。'}`), 500);
+  pushPresence(true); renderTabIf('fkit'); return true; }
+function renderTabIf(tab){ try { if (!$('#sheet').hidden && curTab === tab) renderTab(); } catch(e){} }
+function fkClear(quiet){ if (FK.seat){ if (mySeat === FK.seat) standUp(); const i = CHAIRS.indexOf(FK.seat); if (i >= 0) CHAIRS.splice(i, 1); FK.seat = null; }
+  if (F.held) cancelFishing(); if (FK.g){ const g = FK.g, t0 = now(); FK.g = null; if (quiet){ scene.remove(g); } else { FK.out = { g, t0 }; } } FK.set = null; FK.netM = null; }
+function fkPack(msg){ if (!FK.set) return; fkClear(false); try { SFX.click(); } catch(e){} if (msg) toast(msg); pushPresence(true); renderTabIf('fkit'); }
+/* 魚護裡的魚（自己的：釣到就加；別人的：照 presence） */
+function fkNetFish(g, ids){ const np = g && g.userData.net; if (!np) return; const key = ids.join(','); if (np.userData.key === key) return; np.userData.key = key;
+  for (const o of (np.userData.fish || [])) np.remove(o); np.userData.fish = [];
+  ids.slice(-6).forEach((id, i) => { const f = FISH_BY_ID[id]; if (!f) return; let m; try { m = fishModel(f, 0.32); } catch(e){ m = makeFish(f.color || '#8ab', 0.32); } m.userData.ph = i * 1.1; m.position.y = -0.3; np.add(m); np.userData.fish.push(m); }); }
+function fkNetAnim(g, t){ const np = g && g.userData.net; if (!np || !np.userData.fish) return; np.position.y = (g.userData.netY || 0) + WATER_LEVEL - g.position.y + 0.05; np.userData.fish.forEach((m, i) => { const a = t * 0.7 + m.userData.ph * 2.2; m.position.set(Math.cos(a) * 0.22, -0.38 + Math.sin(t * 1.3 + i) * 0.12, Math.sin(a) * 0.22); m.rotation.y = -a; }); }
+function fkCaught(f){ if (!FK.set || !(FK.set.mask & 4) || !f) return; if (Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z) > 6) return; FK.net.push(f.id); if (FK.net.length > 6) FK.net.shift(); fkNetFish(FK.g, FK.net); pushPresence(true); }
+function fkRing(t){ const g = FK.g; if (!g || !g.userData.rod) return; const k = Math.sin(t * 38) * 0.06 * (Math.sin(t * 5) > 0 ? 1 : 0.4); g.userData.rod.rotation.z = k; g.userData.rod.rotation.x = 0.95 + Math.abs(k) * 1.2; }
+function fkTick(dt){ const t = now();
+  if (FK.out){ fkPop(FK.out.g, FK.out.t0, true); if (t - FK.out.t0 > 0.9){ scene.remove(FK.out.g); FK.out = null; } }
+  if (!FK.set) return; const g = FK.g; if (g && t - FK.at < 1.2) fkPop(g, FK.at);
+  if (g) fkNetAnim(g, t);
+  if (g && g.userData.rod && !F.heldRing){ g.userData.rod.rotation.z *= 0.8; g.userData.rod.rotation.x += (0.95 - g.userData.rod.rotation.x) * 0.2; }
+  const d = Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z);
+  if (d > 15 || Dive.on || House.on || myBoat || (onIsle ? 1 : 0) !== (FK.set.isle ? 1 : 0)) fkPack(F.held ? '走太遠了，竿子和裝備都收回背包了' : '🎣 走遠了，釣魚裝備收回背包'); }
+/* 竿架：站起來時把竿子留在竿架上 */
+function fkHoldOk(c){ return c && c.gear && FK.set && (FK.set.mask & 4) && F.phase === 'waiting' && !me.flying && me.bobState === 'water' && !(F.spot && F.spot.id === 'shrimp') && FK.g && FK.g.userData.tip; }
+function fkHold(){ F.held = true; F.heldRing = 0; me.fishing = false; me.heldTip = FK.g.userData.tip; F.waitUntil = Math.max(F.waitUntil, now() + 1.5); toast('🎣 竿子插在竿架上了。魚咬了鈴鐺會響，回來坐下就能拉'); pushPresence(true); }
+function fkUnhold(){ if (!F.held) return; F.held = false; me.heldTip = null; me.fishing = true; if (F.heldRing){ F.waitUntil = now() + 0.5; F.heldRing = 0; } pushPresence(true); }
+function fkBell(){ try { tone(2093, 0.35, 'sine', 0.07); setTimeout(() => tone(2637, 0.4, 'sine', 0.06), 120); } catch(e){} }
+/* 等魚的時候（竿子在竿架上）：輪到魚咬了 → 鈴鐺響、竿尖抖，25 秒內回來坐下；沒回來魚就跑了 */
+function fkHeldBite(t){ if (!F.heldRing){ F.heldRing = t; fkBell(); try { buzz([60, 60, 60]); } catch(e){} flash('🔔 竿架的鈴鐺響了！快回去坐下拉魚', 2); FK.ringAt = t; }
+  if (t - FK.ringAt > 1.6){ FK.ringAt = t; fkBell(); }
+  fkRing(t); F.waitUntil = t + 0.3;
+  if (t - F.heldRing > 25){ cancelFishing(); flash('魚吃掉餌跑了…（鈴鐺響的時候要回去坐下）', 2); } }
+/* 別人的裝備（presence 的 fk：[x, z, 方向, 地面高, 有哪些, 釣台高, 魚護裡的魚…]） */
+function fkPeer(p, pr){ const f = p.fisher, a = Array.isArray(pr.fk) ? pr.fk : null;
+  const ok = a && a.length >= 6 && a.slice(0, 6).every(v => Number.isFinite(+v)) && Math.hypot(+a[0] - p.target.x, +a[1] - p.target.z) < 16 && (+a[4] | 0) >= 1 && (+a[4] | 0) <= 15;
+  if (!ok){ if (f.fkG){ scene.remove(f.fkG); f.fkG = null; } f.heldTip = null; return; }
+  const mask = +a[4] | 0;
+  if (!f.fkG || f.fkG.userData.mask !== mask || f.fkG.userData.y0 !== +a[5]){ if (f.fkG) scene.remove(f.fkG); f.fkG = fkBuild(mask, 2.4, clamp(+a[5], 0, 3)); f.fkG.userData.y0 = +a[5]; scene.add(f.fkG); f.fkG.userData.t0 = now(); }
+  f.fkG.position.set(+a[0], clamp(+a[3], -2, 30), +a[1]); f.fkG.rotation.y = +a[2];
+  fkNetFish(f.fkG, a.slice(6, 12).filter(id => typeof id === 'string' && FISH_BY_ID[id]));
+  f.heldTip = pr.f && pr.f.h && f.fkG.userData.tip ? f.fkG.userData.tip : null; }
+function fkPeersTick(t){ for (const p of peers.values()){ const g = p.fisher.fkG; if (!g) continue; g.visible = !!(p.fisher.av && p.fisher.av.g.visible); if (!g.visible) continue; if (now() - (g.userData.t0 || 0) < 1.2) fkPop(g, g.userData.t0); fkNetAnim(g, t); if (p.fisher.heldTip && p.ph === 'bite') fkRingG(g, t); } }
+function fkRingG(g, t){ if (!g.userData.rod) return; const k = Math.sin(t * 38) * 0.06; g.userData.rod.rotation.z = k; }
+/* 背包「🎣 釣具」 */
+function renderFkit(body){ const own = FKIT.filter(k => fkHas(k.id));
+  body.appendChild(el('p', 'sub', '在釣具店「🧰工具」買的釣魚裝備。走到水邊、面向水按「擺出來」，就會擺在你前面的岸邊，自動坐下；走開 15 公尺會自己收回來。'));
+  if (!own.length){ body.appendChild(el('div', 'empty', '還沒有釣魚裝備。到釣具店「🧰工具」先買一張 🪑 摺疊椅吧！')); return; }
+  const ul = el('ul', 'shoplist'); for (const k of own){ const li = el('li', FK.set ? 'on' : ''); li.appendChild(el('span', 'dishic', k.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', k.name)); d.appendChild(el('div', 'meta', k.desc)); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul);
+  const a = el('div', 'tacts'); a.style.marginTop = '10px';
+  if (FK.set){ const b = el('button', 'tbtn ghost', '收起來'); b.addEventListener('click', () => fkPack('🎣 裝備收回背包了')); a.appendChild(b);
+    if (FK.set.mask & 8){ const bx = el('button', 'tbtn', '🧰 打開釣箱（買魚餌）'); bx.addEventListener('click', () => { if (Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z) > 4){ toast('要在釣箱旁邊才能打開'); return; } shopName = '釣具店'; shopMode = 'bait'; sellConfirm = 0; openSheet('shop'); }); a.appendChild(bx); } }
+  else { const why = fkWhy(), b = el('button', 'tbtn', '🎣 擺出來'); if (why) b.title = why; b.addEventListener('click', () => { if (fkPlace()) closeSheet(); }); a.appendChild(b); }
+  body.appendChild(a); }
+/* 釣具店「🧰工具」裡的四樣 */
+function renderFkitShop(body){ body.appendChild(el('div', 'dexhead', '🎣 釣魚裝備（放在背包「🎣 釣具」）')); const ul = el('ul', 'shoplist');
+  for (const k of FKIT){ const own = fkHas(k.id), lock = k.need && !fkHas(k.need), li = el('li', own ? 'on' : ''); li.appendChild(el('span', 'dishic', k.icon));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', k.name)); d.appendChild(el('div', 'meta', k.desc + (lock ? '（要先有摺疊椅）' : ''))); li.appendChild(d);
+    const b = el('button', 'tbtn' + (own ? ' ghost' : ''), own ? '已經有了' : `買 🪙${k.price.toLocaleString()}`); b.disabled = own || lock;
+    b.addEventListener('click', async () => { if (rec.coins < k.price){ toast(`金幣不夠，還差 🪙${(k.price - rec.coins).toLocaleString()}`); return; }
+      const done = () => { SFX.catch(); toast(`買到了 ${k.icon}<b>${k.name}</b>！在背包「🎣 釣具」，走到水邊就能擺出來`); if (FK.set) pushPresence(true); };
+      if (Cloud.on){ b.disabled = true; const row = await cloudCall('buy_tool', { p_tool: k.id }); if (row) done(); renderTab(); return; }
+      rec.owned.push(k.id); addCoins(-k.price); saveRecLocal(); done(); renderTab(); });
+    li.appendChild(b); ul.appendChild(li); }
+  body.appendChild(ul); }
 function renderShop(body){
   if (shopMode === 'sell' && shopName === '魚市場・賣魚') fishHallSeg(body, 'shop');
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
@@ -15289,6 +15415,7 @@ function renderShop(body){
         if (Cloud.on){ b.disabled = true; const row = await cloudCall('buy_tool', { p_tool: NET.id }); if (row){ SFX.catch(); toast(`買到了 ${NET.icon}<b>${NET.name}</b>！`); } renderTab(); return; }
         rec.owned.push(NET.id); addCoins(-NET.price); saveRecLocal(); SFX.catch(); toast(`買到了 ${NET.icon}<b>${NET.name}</b>！`); renderTab(); });
       li.appendChild(b); ul.appendChild(li); body.appendChild(ul); }
+    renderFkitShop(body);
     return;
   }
   if (shopMode === 'rig'){
@@ -16204,7 +16331,9 @@ function presenceObj(){
   { const sc = mySecretState(); if (sc.length) o.sc = sc; }   /* v432 我的祕密窩點 */
   if (typeof Sub !== 'undefined' && Sub && Sub.on && Sub.pos) o.sb = [+Sub.pos.x.toFixed(1), +Sub.pos.y.toFixed(1), +Sub.pos.z.toFixed(1), +(Sub.yaw % (Math.PI * 2)).toFixed(2)];   /* v241 一起潛：潛水艇在裂縫裡的位置 */
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
-  if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
+  if (FK.set) o.fk = [+FK.set.x.toFixed(2), +FK.set.z.toFixed(2), +FK.set.face.toFixed(2), +FK.set.y.toFixed(2), FK.set.mask, +(FK.set.y0 - FK.set.y).toFixed(2)].concat(FK.net.slice(-6));   /* v618 釣魚裝備 */
+  if (F.held && me.bobState === 'water') o.f = { ph:'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)], h:1 };
+  else if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && (Date.now() - myEmote.at < 4000 || (me.emote && me.emote.k === myEmote.k))) o.e = myEmote;
   if (myPetAct && Date.now() - myPetAct.at < 4000) o.pa = myPetAct;   /* v332 跟寵物玩的動作，別人也看得到 */   /* 一直在做的動作（坐著、躺著、跳舞）別人晚一點進來也看得到 */
@@ -16261,7 +16390,7 @@ function applyPeer(pp){
   else if (pr.bt && p.fisher.boatMesh && p.fisher.boatMesh.userData.ci !== (pr.bt | 0)){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
   if (!pr.bt && p.fisher.boatMesh){ scene.remove(p.fisher.boatMesh); p.fisher.boatMesh = null; }
   const fi = pr.f && typeof pr.f === 'object' ? pr.f : null;
-  p.fisher.fishing = !!fi;
+  p.fisher.fishing = !!fi && !fi.h; try { fkPeer(p, pr); } catch(e){}
   if (fi && Array.isArray(fi.b)){
     const tx = p.target.x, tz = p.target.z, nb = new THREE.Vector3(clamp(+fi.b[0]||tx, tx - 30, tx + 30), 0.12, clamp(+fi.b[1]||tz, tz - 30, tz + 30));   // 浮標一定在這個人附近（以前限制在 ±36 公尺，船划到外海時線會拉得很長）
     if (p.fisher.bobState === 'none'){ const from = new THREE.Vector3(); p.fisher.av.tip.getWorldPosition(from); p.fisher.bobPos.copy(nb); p.fisher.bobState = 'fly'; p.fisher.flying = { from, to: nb.clone(), t:0, dur:0.6, h:1.8 }; }
@@ -18033,6 +18162,7 @@ function renderTab(){
   if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'dm'){ renderDM(body); return; }
   if (curTab === 'chumhot'){ renderChumHot(body); return; }
+  if (curTab === 'fkit'){ renderFkit(body); return; }
   if (curTab === 'chuminv'){ renderChumInvite(body); return; }
   if (curTab === 'fest'){ renderFest(body); return; }
   if (curTab === 'wgift'){ renderWorldGift(body); return; }
@@ -18373,6 +18503,7 @@ function renderTab(){
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到（晚一點才走過來或才上線的人也看得到，還會顯示剩下的時間），維持 2～3 分鐘；別人也可以來你的窩裡釣；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
       '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫）；在線上的人一做好，附近的人馬上就看得到，別人的窩點也能去釣，效果是打窩那個人的 75%。',
       '🔥 熱窩：人越多窩越旺。同一個窩（12 公尺內）每多一個人一起釣，稀有魚 +10%、傳說魚 +12%、魚咬得快 8%（最多算 4 個人）；窩上面會浮出「🔥 3 人在釣」、水面的魚影也變多。別人在你打的窩釣到魚，你會拿到 2 金幣謝禮（一天最多 60），祕密窩點還會延長 1 分鐘（最多多 30 分鐘）。約朋友一起來窩裡釣吧！',
+      '🪑 釣魚裝備：釣具店「🧰工具」可以買摺疊椅（🪙600）、小釣台（🪙1500）、竿架＋魚護（🪙900）、遮陽傘＋釣箱（🪙800），後三樣要先有摺疊椅，買了放在背包「🎣 釣具」。走到水邊、面向水，在「🎣 釣具」按「擺出來」，裝備會擺在你前面的岸邊，你會自動坐下，坐著就能拋竿、拉魚。有小釣台的話椅子擺在伸到水上的平台尾端，可以多拋 3 公尺左右。有竿架的話，等魚的時候按「跳」站起來，竿子會插在竿架上，你可以先去旁邊做別的事；魚咬了鈴鐺會響、竿尖會抖，25 秒內回去坐下就能拉，沒回去魚會吃掉餌跑走。魚護泡在水裡，這次擺出來以後釣到的魚會在網子裡游。遮陽傘撐在椅子旁邊，釣箱可以在背包「🎣 釣具」直接打開買魚餌。走開 15 公尺、上船、潛水或按「收起來」，裝備就收回背包。別人看得到你擺的裝備和魚護裡的魚。裝備不會改變釣到稀有魚的機率。',
       '🍚 熱門窩點：手機「🍚 熱門窩點」看得到大家現在打的窩（幾個人在釣、還剩多久），按「⛵ 過去」阿海就載你去。自己的祕密窩點可以按「📣 約朋友」，選互相加好友的朋友，他們會收到一則私訊，按訊息裡的「⛵ 坐阿海的船過去」就能直接過來（阿海的祕密窩點清單也有「📣 約朋友」）。',
       '祕密窩點就是你自己走到或划船到一個地方，在那裡「🤫 提前打」。',
       '港口的船夫阿海可以用小船載你到祕密窩點、外海深處、燈塔外的礁岩、東邊外海，也可以「在地圖上選地點」：點任何一片水，他就載你過去，到了再自己打窩。按「回港口」就會載你回來。',
@@ -19780,7 +19911,7 @@ function frame(){
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
-  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
@@ -19832,7 +19963,7 @@ var UI3 = { on: !/ui2\b/.test(location.hash) && document.body.classList.contains
 const UI_GROUPS = [
   { k:'map',   ic:'🗺️', lab:'地圖',  tabs:[['map', '地圖']] },
   { k:'today', ic:'🎁', lab:'今天',  tabs:[['quest', '今天'], ['story', '村民'], ['events', '活動'], ['fest', '節慶']] },
-  { k:'bag',   ic:'🎒', lab:'背包',  tabs:[['bag', '包包'], ['tank', '魚缸'], ['pets', '寵物'], ['wild', '🏝️ 荒島']] },
+  { k:'bag',   ic:'🎒', lab:'背包',  tabs:[['bag', '包包'], ['tank', '魚缸'], ['pets', '寵物'], ['fkit', '🎣 釣具'], ['wild', '🏝️ 荒島']] },
   { k:'dex',   ic:'📖', lab:'圖鑑',  tabs:[['dex', '圖鑑'], ['gyotaku', '魚拓'], ['rank', '排行榜'], ['ach', '成就']] },
   { k:'fr',    ic:'👥', lab:'朋友',  tabs:[['people', '玩家'], ['island', '小島']] },
   { k:'style', ic:'👕', lab:'造型',  tabs:[['closet', '衣櫃'], ['style', '頭像・帳號']] },
