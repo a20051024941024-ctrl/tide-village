@@ -11841,8 +11841,8 @@ function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), w
    - 釣到：魚從水裡被拉出來、掛在線上甩 → 手伸過來把魚拿起來（小魚單手，大魚雙手，竿子先放下）→ 才跳出重量卡
    掛在鏡頭上的東西（竿子、手、魚）都放在 FP.g 這個群組裡，是 camera 的子物件 */
 /* v552 作者 11/18：「釣魚時自動切到第一人稱」→ 第一人稱變成預設。每支手機只改一次（tide.fpAuto），之後玩家自己在設定選「背後」就照他的 */
-if (LS.get('tide.fpAuto', 0) !== 1){ LS.set('tide.fpAuto', 1); LS.set('tide.fpFish', true); LS.set('tide.fpTold', 0); }
-const FP = { pref: LS.get('tide.fpFish', true) === true, act: false, g: null, tip: null, rodP: null, handR: null, look: new THREE.Vector3(), eye: new THREE.Vector3(), tgt: new THREE.Vector3(), c: null, line: null, skin: null, sleeve: null, rodY: 0 };
+if (LS.get('tide.fpAuto', 0) !== 2){ LS.set('tide.fpAuto', 2); LS.set('tide.fpFish', false); LS.set('tide.fpTold', 1); }   /* v626 作者 11/21：「還是不要直接第一人稱好了，變成跟之前一樣，第一人稱要另外開」→ 每支手機改回背後一次；之後自己在設定打開第一人稱就照他的 */
+const FP = { pref: LS.get('tide.fpFish', false) === true, act: false, g: null, tip: null, rodP: null, handR: null, look: new THREE.Vector3(), eye: new THREE.Vector3(), tgt: new THREE.Vector3(), c: null, line: null, skin: null, sleeve: null, rodY: 0 };
 function fpSet(v){ FP.pref = !!v; LS.set('tide.fpFish', FP.pref); if (!FP.pref) fpStop(); }
 /* v510 作者：「還是會突然放大」→ 以前每釣一條：拋竿時鏡頭一下子拉到眼睛（放大），看完魚又一下子拉回背後（縮小），一直縮放。
    現在只要站著沒走開，看完魚以後還是留在第一人稱（再拋竿也不換）；一走動、坐船、進屋、潛水才回到背後視角。進出第一人稱的鏡頭也放慢，不會一下子跳過去 */
@@ -12642,7 +12642,7 @@ function renderSettings(body){
     const show = () => { const k = (+sl.value - L.dmin) / (L.dmax - L.dmin); pct.textContent = k < 0.2 ? '很近' : k < 0.45 ? '近' : k < 0.7 ? '遠' : '很遠'; }; show();
     sl.addEventListener('input', () => { cam.dist = clamp(+sl.value, L.dmin, L.dmax); camDistSave(); show(); });
     row.appendChild(sl); row.appendChild(pct); f.appendChild(row); f.appendChild(el('p', 'sub', '往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。' + (L.out ? '' : '（現在在室內或水裡，這裡調的只是暫時的。）'))); }
-  { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[true, '第一人稱（預設）'], [false, '背後']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
+  { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
@@ -18461,7 +18461,7 @@ function renderTab(){
       body.appendChild(d); };
     sec('🎣 釣魚', [
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
-      '👀 第一人稱釣魚：一拋竿就會自動換成第一人稱（不習慣可以到「設定 → 🎣 釣魚視角」改成「背後」），從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
+      '👀 第一人稱釣魚：到「設定 → 🎣 釣魚視角」選「第一人稱」打開（預設是背後），打開以後一拋竿就會換成第一人稱，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
