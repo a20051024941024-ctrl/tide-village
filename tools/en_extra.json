@@ -5917,5 +5917,15 @@
 "蓋": "Build",
 "做": "Make",
 "加木頭": "Add wood",
-"材料不夠": "Not enough materials"
+"材料不夠": "Not enough materials",
+"🍗 荒島求生：在漂流島上左上角會出現飽足度和體力（點一下打開荒島背包）。飽足度每 9 秒少 1；餓到 0 體力就開始掉。晚上離點著的營火 6 公尺外、又不在小木屋裡會冷；下雨沒站在遮雨棚或小木屋下面會淋濕，暴風雨更傷，這些都會掉體力。吃飽（50 以上）又沒在掉的時候體力會慢慢回來。吃東西：在荒島背包按「吃」——椰子 +10、生的小魚 +8、烤小魚 +20、生的小螃蟹 +5、烤螃蟹 +12，吃魚會剩一根魚骨（2 根可以磨成骨頭魚鉤）。退潮的時候東邊沙灘的潮池可以撿小魚、小螃蟹。站在點著的營火旁邊按「烤」。小木屋裡的床可以「睡覺」：體力回得快、晚上不會冷，但不能讓天變亮（全村是同一個時間）。體力 0 會倒下：荒島背包的東西掉一半（竹竿、魚鉤不會掉），有小木屋在小木屋醒來，沒有就被阿海載回港邊。在村子自己家的床上躺 5 秒，下一趟上島體力上限變 120。碼頭最前面按「回村子」坐船回去。": "🍗 Island survival: on Driftwood Isle, fullness and stamina bars appear at the top left (tap to open the island bag). Fullness drops 1 every 9 seconds; at 0, stamina starts dropping. At night, more than 6 m from a lit campfire and not in your cabin, you get cold; in rain without a shelter or cabin overhead you get soaked (storms are worse) — both drain stamina. When you're fed (50+) and nothing is draining, stamina slowly recovers. Eat from the island bag: coconut +10, raw small fish +8, grilled small fish +20, raw small crab +5, grilled crab +12; fish leave a bone (2 bones make a bone hook). At low tide, the tide pools on the east beach have small fish and crabs. Stand by a lit fire and press \"Grill\". Sleep in your cabin bed: stamina recovers fast and you stay warm at night, but it doesn't make morning come sooner (the whole village shares one clock). At 0 stamina you collapse: half of your island bag is lost (rods and hooks are kept); you wake in your cabin if you have one, otherwise A-Hai brings you back to the harbor. Lie on your own bed at home for 5 seconds and your next island trip has 120 max stamina. Press \"Back to village\" at the end of the pier to sail home.",
+"生的小魚": "Raw small fish",
+"烤小魚": "Grilled small fish",
+"生的小螃蟹": "Raw small crab",
+"烤螃蟹": "Grilled crab",
+"潮池": "Tide pool",
+"撿潮池": "Search tide pool",
+"回村子": "Back to village",
+"烤": "Grill",
+"起床": "Get up"
 }
