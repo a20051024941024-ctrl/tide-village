@@ -1852,4 +1852,8 @@ body.welcomeOn > *:not(#welcome):not(#c):not(canvas):not(#toasts):not(#bigMsg):n
 #poolHud .pl-sp button.on{border-color:#2f89c7;background:#e3f2fb;box-shadow:0 0 0 2px #2f89c7 inset}
 #poolHud .pl-sp button:disabled{opacity:.45}
 #poolHud .pl-skin{position:fixed;left:calc(var(--gl, 8px) + 58px);top:calc(var(--gt, 8px) + 74px);z-index:31;border:0;padding:6px 10px;border-radius:14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;pointer-events:auto}
+<<<<<<< Updated upstream
 .dm-go{margin-top:6px;padding:6px 12px;font-size:14px}
+=======
+#poolHud .pl-zoom{position:fixed;left:calc(var(--gl, 8px) + 58px);top:calc(var(--gt, 8px) + 112px);z-index:31;border:0;padding:6px 10px;border-radius:14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;pointer-events:auto}
+>>>>>>> Stashed changes

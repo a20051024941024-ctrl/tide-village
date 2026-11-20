@@ -11118,23 +11118,41 @@ function poolTrace(T, dx, dy){ const c = T.b[0], R = PB.R; let best = 1e9, hit =
    球：原本的顏色和號碼不變（才分得出全色、花色），兩個號碼中間各畫一條你圖鑑裡釣過的魚；桌面：變成水面，你魚缸裡的魚的影子在下面慢慢游 */
 function poolSkinOn(){ try { return LS.get('tide.poolSkin', '') === 'fish'; } catch(e){ return false; } }
 function poolFishIds(){ const L = Object.keys(rec.count || {}).filter(k => FISH_BY_ID[k] && !FISH_BY_ID[k].of && !FISH_BY_ID[k].fest).sort((a, b) => (rec.count[b] || 0) - (rec.count[a] || 0)); return L.length ? L : ['tilapia', 'carp', 'ayu']; }
-function poolFishTex(n, fid){ const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; const c = cv.getContext('2d'); try { c.drawImage(poolBallTex(n).image, 0, 0); } catch(e){}
-  try { const f = FISH_BY_ID[fid], fc = fishCanvas(f, true, 54, 34, true); for (const u of [0, 64]){ c.save(); c.fillStyle = n === 8 ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.7)'; c.beginPath(); c.ellipse(u === 0 ? 0 : 64, 32, 20, 13, 0, 0, 6.2832); c.fill(); if (u === 0){ c.beginPath(); c.ellipse(128, 32, 20, 13, 0, 0, 6.2832); c.fill(); } c.restore();
-      c.drawImage(fc, (u === 0 ? 0 : 64) - 18, 32 - 11, 36, 22); if (u === 0) c.drawImage(fc, 128 - 18, 32 - 11, 36, 22); } } catch(e){}
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
+/* v610 作者：「魚花色的球看不清楚，水族桌面也完全不行」→ 重做：
+   球：解析度加倍，球身就是那條魚的顏色（全色球整顆、花色球是中間那一圈），正面和背面各畫一條大大的魚（白色描邊），號碼改到兩側的小白圓
+   桌面：清澈淺海（中間亮、邊緣深），兩層會流動的水光網紋，下面游的是你魚缸裡那些魚「真正的形狀」的影子 */
+function poolFishTex(n, fid){ const W = 256, H = 128, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), f = FISH_BY_ID[fid] || {}, base = poolBallCol(n), fc = f.color || base;
+  c.fillStyle = n > 8 ? '#f6f3e8' : base; c.fillRect(0, 0, W, H);
+  if (n > 8){ c.fillStyle = base; c.fillRect(0, 30, W, 68); }
+  if (n === 8){ c.fillStyle = '#17171b'; c.fillRect(0, 0, W, H); }
+  try { const img = fishCanvas(f, true, 92, 58, true), put = (u, v, w) => { c.save(); if (n === 8){ c.fillStyle = 'rgba(255,255,255,.9)'; c.beginPath(); c.ellipse(u, v, w * 0.56, w * 0.36, 0, 0, 6.2832); c.fill(); } c.shadowColor = n === 8 || n > 8 ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.95)'; c.shadowBlur = 6; c.drawImage(img, u - w / 2, v - w * 0.315, w, w * 0.63); c.restore(); };
+    for (const u of [64, 192]) put(u, 64, 92); for (const u of [0, 128, 256]) for (const v of [24, 104]) put(u, v, 66); } catch(e){}   /* 赤道兩條大的＋上下各一圈小的：球滾到哪一面朝上都看得到魚 */
+  for (const u of [0, 128, 256]){ c.fillStyle = '#fbfaf2'; c.beginPath(); c.arc(u, 64, 15, 0, 6.2832); c.fill(); c.fillStyle = '#16161a'; c.font = '900 17px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(n), u, 65); }
+  void fc; const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
 function poolApplySkin(){ const on = poolSkinOn(), ids = on ? poolFishIds() : null;
   if (on && !Pool.texF){ Pool.texF = []; for (let n = 0; n < 16; n++) Pool.texF.push(n === 0 ? Pool.texC[0] : poolFishTex(n, ids[(n - 1) % ids.length])); }
   for (const T of Pool.tables){ if (!T.m) continue; T.m.balls.forEach((m, n) => { const t = on ? Pool.texF[n] : Pool.texC[n]; if (m.material.map !== t){ m.material.map = t; m.material.needsUpdate = true; } });
-    if (T.feltM){ if (on){ if (!Pool.feltT){ Pool.feltCv = document.createElement('canvas'); Pool.feltCv.width = 256; Pool.feltCv.height = 512; Pool.feltT = new THREE.CanvasTexture(Pool.feltCv); Pool.feltT.colorSpace = THREE.SRGBColorSpace; poolFeltDraw(0); }
-        if (!T.feltOrig) T.feltOrig = T.feltM.material; if (!Pool.feltMat) Pool.feltMat = new THREE.MeshStandardMaterial({ map: Pool.feltT, roughness: 0.55, metalness: 0.05 }); T.feltM.material = Pool.feltMat; }
+    if (T.feltM){ if (on){ if (!Pool.feltT){ Pool.feltCv = document.createElement('canvas'); Pool.feltCv.width = 384; Pool.feltCv.height = 768; Pool.feltT = new THREE.CanvasTexture(Pool.feltCv); Pool.feltT.colorSpace = THREE.SRGBColorSpace; Pool.feltT.anisotropy = 4; poolFeltDraw(0); }
+        if (!T.feltOrig) T.feltOrig = T.feltM.material; if (!Pool.feltMat) Pool.feltMat = new THREE.MeshBasicMaterial({ map: Pool.feltT }); T.feltM.material = Pool.feltMat; }
       else if (T.feltOrig) T.feltM.material = T.feltOrig; } } }
+/* 水光網紋：先畫一張可以無縫重複的圖，之後每一格只是移動位置疊兩層 */
+function poolCaustic(){ if (Pool.caus) return Pool.caus; const S = 256, cv = document.createElement('canvas'); cv.width = S; cv.height = S; const c = cv.getContext('2d'); c.lineCap = 'round';
+  for (let k = 0; k < 3; k++){ c.strokeStyle = `rgba(255,255,255,${0.05 + k * 0.03})`; c.lineWidth = 3 - k; for (let i = 0; i < 7; i++){ c.beginPath(); for (let x = -8; x <= S + 8; x += 8){ const y = (i + 0.5) * S / 7 + Math.sin(x / S * 6.2832 * (2 + k) + i * 1.7) * 9 + Math.sin(x / S * 6.2832 * 3 + k) * 5; x < 0 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke();
+      c.beginPath(); for (let y = -8; y <= S + 8; y += 8){ const x = (i + 0.5) * S / 7 + Math.sin(y / S * 6.2832 * (2 + k) + i * 2.3) * 9 + Math.cos(y / S * 6.2832 * 3 + k) * 5; y < 0 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke(); } }
+  return (Pool.caus = cv); }
+/* 魚的影子：用那條魚真正的圖案，填成深藍色 */
+function poolShadowOf(f){ Pool.shd = Pool.shd || {}; if (Pool.shd[f.id]) return Pool.shd[f.id]; const src = fishCanvas(f, true, 90, 56, true), cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height; const c = cv.getContext('2d');
+  c.drawImage(src, 0, 0); c.globalCompositeOperation = 'source-in'; c.fillStyle = '#0b3a5c'; c.fillRect(0, 0, cv.width, cv.height); return (Pool.shd[f.id] = cv); }
 function poolFeltDraw(t){ const cv = Pool.feltCv, c = cv.getContext('2d'), W = cv.width, H = cv.height;
-  const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#1d8fb0'); g.addColorStop(1, '#1576a0'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  c.strokeStyle = 'rgba(255,255,255,0.10)'; c.lineWidth = 2; for (let i = 0; i < 9; i++){ c.beginPath(); for (let y = 0; y <= H; y += 16){ const x = (i + 0.5) * W / 9 + Math.sin(y * 0.03 + t * 0.9 + i) * 9; y ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); }
-  if (!Pool.feltFish){ const tk = (rec.tank || []).map(x => FISH_BY_ID[x.f]).filter(Boolean), src = tk.length ? tk : poolFishIds().map(id => FISH_BY_ID[id]); Pool.feltFish = src.slice(0, 6).map((f, i) => ({ s: clamp(14 + Math.log10(1 + (f.max || 1)) * 9, 14, 40), x: (i * 53) % W, y: (i * 97 + 40) % H, v: 6 + (i % 3) * 4, d: i % 2 ? 1 : -1 })); }
-  c.fillStyle = 'rgba(8,40,70,0.38)';
-  for (const F of Pool.feltFish){ const y = ((F.y + F.d * F.v * t) % (H + 80) + H + 80) % (H + 80) - 40, x = F.x + Math.sin(t * 0.6 + F.y) * 14, s = F.s; c.save(); c.translate(x, y); c.rotate(F.d > 0 ? Math.PI / 2 : -Math.PI / 2);
-    c.beginPath(); c.ellipse(0, 0, s, s * 0.38, 0, 0, 6.2832); c.fill(); c.beginPath(); c.moveTo(-s * 0.9, 0); c.lineTo(-s * 1.45, -s * 0.4); c.lineTo(-s * 1.45, s * 0.4); c.closePath(); c.fill(); c.restore(); }
+  const g = c.createRadialGradient(W / 2, H / 2, W * 0.15, W / 2, H / 2, H * 0.62); g.addColorStop(0, '#6fe0ea'); g.addColorStop(0.55, '#36b8d6'); g.addColorStop(1, '#1d86b4'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  if (!Pool.feltFish){ const tk = (rec.tank || []).map(x => FISH_BY_ID[x.f]).filter(Boolean), src = tk.length ? tk : poolFishIds().map(id => FISH_BY_ID[id]).filter(Boolean); const seen = new Set(), L = src.filter(f => !seen.has(f.id) && seen.add(f.id)).slice(0, 7);
+    Pool.feltFish = L.map((f, i) => ({ f, s: clamp(70 + Math.log10(1 + (f.max || 1)) * 30, 70, 150), x: 50 + (i * 97) % (W - 100), y: (i * 211 + 60) % H, v: 10 + (i % 3) * 6, d: i % 2 ? 1 : -1, ph: i * 1.3 })); }
+  c.globalAlpha = 0.45;
+  for (const F of Pool.feltFish){ const y = ((F.y + F.d * F.v * t) % (H + 200) + H + 200) % (H + 200) - 100, x = F.x + Math.sin(t * 0.5 + F.ph) * 18, s = F.s, im = poolShadowOf(F.f); c.save(); c.translate(x, y); c.rotate((F.d > 0 ? Math.PI / 2 : -Math.PI / 2) + Math.sin(t * 2 + F.ph) * 0.06); c.drawImage(im, -s / 2, -s * 0.31, s, s * 0.62); c.restore(); }
+  c.globalAlpha = 1; const ca = poolCaustic(); c.globalCompositeOperation = 'lighter';
+  for (const [sx, sy, sc] of [[t * 9, t * 6, 1], [-t * 7, t * 11, 1.6]]){ c.save(); c.scale(sc, sc); const ox = ((sx % 256) + 256) % 256, oy = ((sy % 256) + 256) % 256; for (let x = -256; x < W / sc + 256; x += 256) for (let y = -256; y < H / sc + 256; y += 256) c.drawImage(ca, x + ox, y + oy); c.restore(); }
+  c.globalCompositeOperation = 'source-over';
+  const v = c.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75); v.addColorStop(0, 'rgba(0,30,60,0)'); v.addColorStop(1, 'rgba(0,30,60,0.35)'); c.fillStyle = v; c.fillRect(0, 0, W, H);
   if (Pool.feltT) Pool.feltT.needsUpdate = true; }
 setInterval(() => { try { if (Pool.feltT && poolSkinOn() && inPoolHall() && !document.hidden) poolFeltDraw(performance.now() / 1000); } catch(e){} }, 120);
 function poolBallTex(n){ const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; const c = cv.getContext('2d'), col = poolBallCol(n); c.fillStyle = n > 8 || n === 0 ? '#f6f3e8' : col; c.fillRect(0, 0, 128, 64);
@@ -11284,12 +11302,16 @@ function poolTickTable(T, dt, t, ih){ const M = T.m, S = T.sim; if (T.ph !== 'ov
 function poolAimSend(){ const T = Pool.tables[Pool.ti]; if (Pool.spec || !poolMyTurn(T)) return; const tn = now(); if (tn - Pool.aimAt < 0.16) return; const d = { k: 'aim', t: T.i, a: [Math.round(Pool.aim.x * 1e3) / 1e3, Math.round(Pool.aim.y * 1e3) / 1e3], pw: Math.round(Pool.pw * 20) / 20 }; if (T.ph === 'hand') d.c = [Math.round(T.b[0].x * 1e4) / 1e4, Math.round(T.b[0].y * 1e4) / 1e4]; const s = JSON.stringify(d); if (s === Pool.aimSent) return; Pool.aimSent = s; Pool.aimAt = tn; poolSend(d); }
 /* 鏡頭：打球（或觀戰）時從球桌正上方往下看；直的螢幕球桌直著放、橫的螢幕橫著放 */
 function poolCam(){ const T = Pool.tables[Pool.ti]; if (!Pool.on || !T) return false; const asp = camera.aspect || 1, th = Math.tan(camera.fov * Math.PI / 360), port = asp < 1, needV = port ? PB.HL + 0.8 : PB.HW + 0.56, needH = port ? PB.HW + 0.5 : PB.HL + 0.5, H = Math.max(needV / th, needH / (th * asp));
-  const ty = POOLH.y + PB.TOP; camera.up.set(port ? 0 : 1, 0, port ? 1 : 0); const ofx = 0, ofz = port ? 0.08 : 0; camera.position.set(T.ox + ofx, ty + H, T.oz + ofz); camera.lookAt(T.ox + ofx, ty, T.oz + ofz);   /* 球桌往下挪一點，上面留給名字和提示 */ camLook.set(T.ox, ty, T.oz); Pool.upDirty = true; return true; }
+  const ty = POOLH.y + PB.TOP; camera.up.set(port ? 0 : 1, 0, port ? 1 : 0); let ofx = 0, ofz = port ? 0.08 : 0, HH = H;
+  /* v610「🔍 近看」：鏡頭拉近一倍、跟著母球，看得清楚球上的魚，也比較好瞄 */
+  if (Pool.zoom){ const c = T.b[0], tx = clamp(c.on ? c.y : 0, -PB.HW * 0.5, PB.HW * 0.5), tz = clamp(c.on ? c.x : 0, -PB.HL * 0.5, PB.HL * 0.5); Pool.zx = Pool.zx == null ? tx : Pool.zx + (tx - Pool.zx) * 0.08; Pool.zz = Pool.zz == null ? tz : Pool.zz + (tz - Pool.zz) * 0.08; ofx = Pool.zx; ofz = Pool.zz; HH = H * 0.5; } else { Pool.zx = Pool.zz = null; }
+  camera.position.set(T.ox + ofx, ty + HH, T.oz + ofz); camera.lookAt(T.ox + ofx, ty, T.oz + ofz);   /* 球桌往下挪一點，上面留給名字和提示 */ camLook.set(T.ox, ty, T.oz); Pool.upDirty = true; return true; }
 function poolPick(e){ const T = Pool.tables[Pool.ti]; if (!T) return null; Pool.rc = Pool.rc || new THREE.Raycaster(); Pool.pl = Pool.pl || new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); Pool.v2 = Pool.v2 || new THREE.Vector2(); Pool.v3 = Pool.v3 || new THREE.Vector3();
   Pool.v2.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); Pool.rc.setFromCamera(Pool.v2, camera); Pool.pl.constant = -(POOLH.y + PB.TOP + PB.R); if (!Pool.rc.ray.intersectPlane(Pool.pl, Pool.v3)) return null; return { x: Pool.v3.z - T.oz, y: Pool.v3.x - T.ox }; }
 function poolHudBuild(){ if (Pool.hud) return; const h = el('div'); h.id = 'poolHud';
   h.innerHTML = '<div class="pl-pad"></div><div class="pl-top panel"><div class="pl-p pl-p0"><b></b><i></i></div><div class="pl-mid"><span class="pl-msg"></span><span class="pl-time"></span></div><div class="pl-p pl-p1"><b></b><i></i></div></div><div class="pl-pow"><div class="pl-powfill"></div><div class="pl-powcue"></div><span>力道</span></div><div class="pl-fine"><span>微調</span></div><div class="pl-btns"><button class="pl-inv" hidden></button><button class="pl-zhe" hidden>跟阿喆對打</button><button class="pl-again" hidden>再來一局</button><button class="pl-leave">離開球桌</button></div><div class="pl-tip"></div>';
   document.body.appendChild(h); Pool.hud = h; const pad = $('.pl-pad', h), pow = $('.pl-pow', h);
+  { const zb = el('button', 'pl-zoom panel', '🔍 近看'); h.appendChild(zb); zb.addEventListener('click', () => { Pool.zoom = !Pool.zoom; zb.textContent = Pool.zoom ? '🔭 看全桌' : '🔍 近看'; }); }
   { const sk = el('button', 'pl-skin panel', poolSkinOn() ? '🎱 經典球' : '🐠 魚花色'); h.appendChild(sk); sk.addEventListener('click', () => { const on = !poolSkinOn(); try { LS.set('tide.poolSkin', on ? 'fish' : ''); } catch(e){} sk.textContent = on ? '🎱 經典球' : '🐠 魚花色'; poolApplySkin(); toast(on ? '🐠 換成魚花色球組，桌面變成水族箱（只有你看得到）' : '🎱 換回經典球組'); }); }
   { const sp = el('div', 'pl-sp panel'); h.appendChild(sp); sp.addEventListener('click', e => { const b = e.target.closest('button[data-sp]'); if (!b) return; const k = b.dataset.sp; Pool.sp = Pool.sp === k ? null : k; poolSpRender(); }); }
   $('.pl-leave', h).addEventListener('click', () => { poolLeave(); }); $('.pl-again', h).addEventListener('click', () => { poolAgain(); }); $('.pl-inv', h).addEventListener('click', () => { poolInvite(); }); $('.pl-zhe', h).addEventListener('click', () => { poolVsZhe(); });
