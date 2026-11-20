@@ -11183,14 +11183,14 @@ function poolBallTex(n){ const cv = document.createElement('canvas'); cv.width =
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
 function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); Venue.pool = g; g.visible = false; g.userData.keep = true; g.userData.dyn = true; const Y = S.y;
   const B = (w, h, d, c, x, y, z, sh) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'string' ? mat(c, 0.85, { noWood: true }) : c); o.position.set(S.x + x, y, S.z + z); o.receiveShadow = true; o.castShadow = sh !== false; g.add(o); return o; };
-  B(S.w, 0.6, S.d, '#8a6340', 0, Y - 0.3, 0, false); for (let i = 0; i < 12; i++) B(0.03, 0.004, S.d - 0.6, '#6f4e30', -S.w / 2 + 0.75 + i * 1.5, Y + 0.003, 0, false);
+  B(S.w, 0.6, S.d, '#a57a4e', 0, Y - 0.3, 0, false); for (let i = 0; i < 12; i++) B(0.03, 0.004, S.d - 0.6, '#5e4129', -S.w / 2 + 0.75 + i * 1.5, Y + 0.003, 0, false);
   /* 牆（下半木板、上半深綠），南邊中間是門。牆只有「朝裡面」那一面（從外面看是透明的），所以鏡頭可以退到牆外面看進來，不會被牆擠到貼在角色頭上 */
   const WP = (len, h, c, x, y, z, ry) => { const o = new THREE.Mesh(new THREE.PlaneGeometry(len, h), mat(c, 0.9, { noWood: true })); o.position.set(S.x + x, y, S.z + z); o.rotation.y = ry; o.receiveShadow = true; g.add(o); return o; };
-  const wall = (len, x, z, ry, cw, cd) => { const nx = Math.sin(ry) * 0.012, nz = Math.cos(ry) * 0.012; WP(len, 1.0, '#5b3d27', x, Y + 0.5, z, ry); WP(len, 0.09, '#3d2817', x + nx, Y + 1.03, z + nz, ry); WP(len, 2.2, '#2f5f62', x, Y + 2.1, z, ry); addBoxCol(S.x + x - Math.sin(ry) * 0.2, S.z + z - Math.cos(ry) * 0.2, cw, cd); };
+  const wall = (len, x, z, ry, cw, cd) => { const nx = Math.sin(ry) * 0.012, nz = Math.cos(ry) * 0.012; WP(len, 1.0, '#6a4a2e', x, Y + 0.5, z, ry); WP(len, 0.09, '#d9bf8a', x + nx, Y + 1.03, z + nz, ry); WP(len, 2.2, '#1d4a6b', x, Y + 2.1, z, ry); addBoxCol(S.x + x - Math.sin(ry) * 0.2, S.z + z - Math.cos(ry) * 0.2, cw, cd); };
   const IW = S.w / 2 - 0.4, ID = S.d / 2 - 0.4;
   wall(S.w - 0.8, 0, -ID, 0, S.w, 0.4); wall(S.d - 0.8, -IW, 0, Math.PI / 2, 0.4, S.d); wall(S.d - 0.8, IW, 0, -Math.PI / 2, 0.4, S.d);
   { const L = IW - 1.1; wall(L, -1.1 - L / 2, ID, Math.PI, L, 0.4); wall(L, 1.1 + L / 2, ID, Math.PI, L, 0.4); }
-  WP(2.2, 0.9, '#2f5f62', 0, Y + 2.75, ID, Math.PI); WP(2.2, 2.3, '#1b2530', 0, Y + 1.15, ID, Math.PI); addBoxCol(S.x, S.z + S.d / 2 - 0.1, 2.4, 0.3);
+  WP(2.2, 0.9, '#1d4a6b', 0, Y + 2.75, ID, Math.PI); WP(2.2, 2.3, '#1b2530', 0, Y + 1.15, ID, Math.PI); addBoxCol(S.x, S.z + S.d / 2 - 0.1, 2.4, 0.3);
   { const tx = signTex('出口 EXIT', '#1f8a52', '#ffffff', 256, 64), m = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.32), new THREE.MeshBasicMaterial({ map: tx })); m.position.set(S.x, Y + 2.55, S.z + S.d / 2 - 0.42); m.rotation.y = Math.PI; g.add(m); }
   { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#1b2530'; c.fillRect(0, 0, 512, 128); c.strokeStyle = '#ffd23f'; c.lineWidth = 6; c.strokeRect(8, 8, 496, 112); c.fillStyle = '#ffd23f'; c.font = '900 70px "Noto Sans TC", "PingFang TC", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('潮汐撞球館', 256, 68); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const m = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.1), new THREE.MeshBasicMaterial({ map: tx })); m.position.set(S.x, Y + 2.45, S.z - S.d / 2 + 0.42); g.add(m); }
   /* 記分板（黑板）：寫每張桌子現在誰在打 */
@@ -11202,8 +11202,23 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
   B(3.4, 0.06, 0.28, '#3d2817', -5.2, Y + 1.75, -S.d / 2 + 0.52, false); ['#f2772c', '#f2c21a', '#d8352f', '#4fb07a', '#8e5bd0', '#3f7fd6', '#f2772c', '#f6f3e8'].forEach((c, i) => { B(0.14, 0.34, 0.14, c, -6.6 + i * 0.4, Y + 1.95, -S.d / 2 + 0.52, false); });
   { const tx = signTex('果汁吧', '#f2772c', '#fff8e0', 256, 80), m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.46), new THREE.MeshBasicMaterial({ map: tx })); m.position.set(S.x - 5.2, Y + 2.65, S.z - S.d / 2 + 0.42); g.add(m); }
   B(0.08, 1.5, 2.2, '#3d2817', -S.w / 2 + 0.45, Y + 1.5, 2.2, false); for (let i = 0; i < 6; i++){ const cu = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.016, 1.4, 6), mat(i % 2 ? '#d9b27a' : '#b8854a', 0.6, { noWood: true })); cu.position.set(S.x - S.w / 2 + 0.53, Y + 1.5, S.z + 1.3 + i * 0.36); g.add(cu); }
-  B(0.9, 0.42, 3.6, '#7a2f3a', S.w / 2 - 0.9, Y + 0.21, 2.6); B(0.25, 0.95, 3.6, '#8a3744', S.w / 2 - 0.55, Y + 0.48, 2.6); addBoxCol(S.x + S.w / 2 - 0.9, S.z + 2.6, 0.9, 3.6);
-  for (const sx of [-1, 1]){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.4, 10), mat('#c9a678', 0.8, { noWood: true })); pot.position.set(S.x + sx * 1.7, Y + 0.2, S.z + S.d / 2 - 0.8); g.add(pot); const lf = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 6), mat('#3f9a5f', 0.9, { noWood: true })); lf.scale.y = 1.3; lf.position.set(S.x + sx * 1.7, Y + 0.85, S.z + S.d / 2 - 0.8); lf.castShadow = true; g.add(lf); addCircleCol(S.x + sx * 1.7, S.z + S.d / 2 - 0.8, 0.25); }
+  B(0.9, 0.42, 3.6, '#24476b', S.w / 2 - 0.9, Y + 0.21, 2.6); B(0.25, 0.95, 3.6, '#ece6d6', S.w / 2 - 0.55, Y + 0.48, 2.6); for (const zz of [-1.2, 0, 1.2]) B(0.26, 0.95, 0.12, '#2f6fa8', S.w / 2 - 0.55, Y + 0.48, 2.6 + zz, false); addBoxCol(S.x + S.w / 2 - 0.9, S.z + 2.6, 0.9, 3.6);
+  for (const sx of [-1, 1]){ const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.4, 10), mat('#c9a678', 0.8, { noWood: true })); pot.position.set(S.x + sx * 1.7, Y + 0.2, S.z + S.d / 2 - 0.8); g.add(pot); for (let k = 0; k < 7; k++){ const a = k * 2.4 + sx, h = 0.45 + (k % 3) * 0.18, br = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.06, h, 6), mat(k % 2 ? '#ff7f6e' : '#ffa25a', 0.8, { noWood: true })); br.position.set(S.x + sx * 1.7 + Math.cos(a) * 0.1, Y + 0.38 + h / 2, S.z + S.d / 2 - 0.8 + Math.sin(a) * 0.1); br.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45); g.add(br); const tip = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), br.material); br.updateMatrix(); tip.position.copy(new THREE.Vector3(0, h / 2, 0).applyMatrix4(br.matrix)); g.add(tip); }   /* v623 盆栽換成珊瑚 */ addCircleCol(S.x + sx * 1.7, S.z + S.d / 2 - 0.8, 0.25); }
+  /* v623 作者：「撞球還能改的更海洋一點嗎」→ 牆上開圓形舷窗（窗外是會動的海底，魚游過去）、救生圈、船舵、天花板掛漁網和玻璃浮球 */
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; Pool.seaCv = cv; const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; Pool.seaTx = tx; poolSeaDraw(0);
+    const wm = new THREE.MeshBasicMaterial({ map: tx, fog: false }), brass = mat('#c9a24a', 0.35, { noWood: true }), rg = new THREE.TorusGeometry(0.44, 0.07, 8, 24);
+    const PH = [[-IW, -4.0, Math.PI / 2], [-IW, -1.4, Math.PI / 2], [IW, 1.0, -Math.PI / 2], [IW, 4.0, -Math.PI / 2], [-4.6, ID, Math.PI], [4.6, ID, Math.PI], [-IW, 5.0, Math.PI / 2]];
+    PH.forEach(([x, z, ry], i) => { const cg = new THREE.CircleGeometry(0.42, 24), uv = cg.attributes.uv, u0 = (i * 0.137) % 0.75; for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) * 0.25, uv.getY(k)); const nx = Math.sin(ry), nz = Math.cos(ry);
+      const w = new THREE.Mesh(cg, wm); w.position.set(S.x + x + nx * 0.02, Y + 2.15, S.z + z + nz * 0.02); w.rotation.y = ry; g.add(w); const r = new THREE.Mesh(rg, brass); r.position.set(S.x + x + nx * 0.04, Y + 2.15, S.z + z + nz * 0.04); r.rotation.y = ry; g.add(r);
+      for (let k = 0; k < 8; k++){ const a = k / 8 * Math.PI * 2, b = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), brass); b.position.set(r.position.x + Math.cos(ry) * Math.cos(a) * 0.44 + nx * 0.06, Y + 2.15 + Math.sin(a) * 0.44, r.position.z - Math.sin(ry) * Math.cos(a) * 0.44 + nz * 0.06); g.add(b); } });
+    /* 救生圈（南牆門兩邊） */
+    for (const sx of [-1, 1]){ const lb = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.09, 8, 20), mat('#e8402f', 0.6, { noWood: true })); lb.position.set(S.x + sx * 2.3, Y + 1.75, S.z + ID - 0.1); g.add(lb); for (let k = 0; k < 4; k++){ const a = k * Math.PI / 2 + Math.PI / 4, st = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.19, 0.2), mat('#f7f4ea', 0.6, { noWood: true })); st.position.set(lb.position.x + Math.cos(a) * 0.3, lb.position.y + Math.sin(a) * 0.3, lb.position.z); st.rotation.z = a; g.add(st); } }
+    /* 船舵（西牆、球桿架上面） */
+    { const wd = mat('#7a4f2a', 0.7, { noWood: true }), wx = S.x - IW + 0.1, wz = S.z + 2.2, wy = Y + 2.75; const rim = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.035, 6, 20), wd); rim.position.set(wx, wy, wz); rim.rotation.y = Math.PI / 2; g.add(rim);
+      for (let k = 0; k < 8; k++){ const a = k / 8 * Math.PI * 2, sp = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.92, 5), wd); sp.position.set(wx, wy, wz); sp.rotation.x = a; g.add(sp); } const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 10), brass); hub.rotation.z = Math.PI / 2; hub.position.set(wx + 0.02, wy, wz); g.add(hub); }
+    /* 牆角的船錨（北牆、記分板和招牌中間） */
+    { const am = mat('#3a4652', 0.5, { noWood: true }), ax = S.x + 3.0, az = S.z - ID + 0.08, ay = Y + 1.6; const sh = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.9, 0.05), am); sh.position.set(ax, ay, az); g.add(sh); const cb = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.05), am); cb.position.set(ax, ay + 0.32, az); g.add(cb); const ri = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 6, 12), am); ri.position.set(ax, ay + 0.5, az); g.add(ri); const ar = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 6, 16, Math.PI), am); ar.rotation.z = Math.PI; ar.position.set(ax, ay - 0.15, az); g.add(ar); for (const s2 of [-1, 1]){ const fl = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.16, 4), am); fl.position.set(ax + s2 * 0.3, ay - 0.1, az); fl.rotation.z = -s2 * 0.5; g.add(fl); } }
+  }
   /* 吊燈和橫樑：打球的時候鏡頭在正上方，會把它們藏起來 */
   const top = new THREE.Group(); g.add(top); Venue.poolTop = top; Venue.poolLamps = [];
   { const al = new THREE.AmbientLight('#ffe6c0', 0); g.add(al); Venue.poolAmb = al; }
@@ -11211,19 +11226,19 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
   { const cl = new THREE.Mesh(new THREE.PlaneGeometry(S.w - 0.8, S.d - 0.8), mat('#e9dfc8', 0.95, { noWood: true })); cl.rotation.x = Math.PI / 2; cl.position.set(S.x, Y + 3.32, S.z); g.add(cl);
     const vd = new THREE.Mesh(new THREE.BoxGeometry(70, 16, 70), new THREE.MeshBasicMaterial({ color: '#1a130e', side: THREE.BackSide, fog: false })); vd.position.set(S.x, Y - 0.61 + 8, S.z); vd.frustumCulled = false; g.add(vd); }   /* v498：晚上球館裡太暗（外面天黑裡面也跟著黑）→ 室內補一盞暖色的光，天越黑越亮 */
   const texs = []; for (let n = 0; n < 16; n++) texs.push(poolBallTex(n)); Pool.texC = texs;
-  const ballGeo = new THREE.SphereGeometry(PB.R, 20, 14), feltC = '#1f7f6a';
+  const ballGeo = new THREE.SphereGeometry(PB.R, 20, 14), feltC = '#1b6f8c';
   [[-3.4, 0.3], [3.4, 0.3]].forEach(([tx, tz], ti) => { const T = poolNewTable(ti, S.x + tx, S.z + tz); Pool.tables[ti] = T; const HL = PB.HL, HW = PB.HW, ty = Y + PB.TOP, tg = new THREE.Group(); tg.position.set(T.ox, 0, T.oz); g.add(tg);
     const P = (w, h, d, c, x, y, z, sh) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'string' ? mat(c, 0.8, { noWood: true }) : c); o.position.set(x, y, z); o.receiveShadow = true; o.castShadow = sh !== false; tg.add(o); return o; };
-    P(2 * HW + 1.7, 0.02, 2 * HL + 1.7, '#7a2f3a', 0, Y + 0.012, 0, false);                                   /* 地毯 */
+    P(2 * HW + 1.84, 0.018, 2 * HL + 1.84, '#d6be8c', 0, Y + 0.011, 0, false); P(2 * HW + 1.7, 0.02, 2 * HL + 1.7, '#1e3f5c', 0, Y + 0.012, 0, false);                                   /* 地毯 */
     for (const a of [-1, 1]) for (const b of [-1, 1]) P(0.16, PB.TOP - 0.2, 0.16, '#4a2c18', a * (HW - 0.02), Y + (PB.TOP - 0.2) / 2, b * (HL - 0.12));
     P(2 * HW + 0.3, 0.2, 2 * HL + 0.3, '#5f3a22', 0, ty - 0.12, 0); T.feltM = P(2 * HW + 0.02, 0.02, 2 * HL + 0.02, feltC, 0, ty - 0.01, 0, false);
     /* 顆星（庫邊）：六段，中間和四個角留袋口 */
-    const cu = '#17604f', rl = '#6b4226', ch = 0.045, cw = 0.05;
+    const cu = '#155a73', rl = '#7a5434', ch = 0.045, cw = 0.05;
     for (const sx of [-1, 1]){ for (const sz of [-1, 1]){ const z0 = 0.085, z1 = HL - 0.09, L = z1 - z0; P(cw, ch, L, cu, sx * (HW + cw / 2), ty + ch / 2 - 0.004, sz * (z0 + L / 2), false); } P(0.13, 0.06, 2 * HL + 0.34, rl, sx * (HW + cw + 0.065), ty + 0.03, 0); }
     for (const sz of [-1, 1]){ const L = 2 * (HW - 0.09); P(L, ch, cw, cu, 0, ty + ch / 2 - 0.004, sz * (HL + cw / 2), false); P(2 * HW + 0.36, 0.06, 0.13, rl, 0, ty + 0.03, sz * (HL + cw + 0.065)); }
     for (const [px, pz, r] of [[-HW, -HL, 0.07], [HW, -HL, 0.07], [-HW, HL, 0.07], [HW, HL, 0.07], [-HW - 0.025, 0, 0.06], [HW + 0.025, 0, 0.06]]){ const pk = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.012, 16), new THREE.MeshBasicMaterial({ color: '#07090b' })); pk.position.set(px, ty + 0.002, pz); tg.add(pk); }
     for (const sx of [-1, 1]) for (let i = 1; i < 8; i++){ if (i === 4) continue; P(0.014, 0.004, 0.014, '#f4e9c8', sx * (HW + cw + 0.065), ty + 0.062, -HL + i * HL / 4, false); }
-    { const ln = P(2 * HW, 0.002, 0.006, '#3fa58e', 0, ty + 0.0015, -HL / 2, false); ln.receiveShadow = false; }
+    { const ln = P(2 * HW, 0.002, 0.006, '#5fb4cf', 0, ty + 0.0015, -HL / 2, false); ln.receiveShadow = false; }
     addBoxCol(T.ox - 0.06, T.oz, 2 * HW + 0.52, 2 * HL + 0.4);
     const balls = []; for (let n = 0; n < 16; n++){ const m = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ map: texs[n], roughness: 0.25, metalness: 0.05 })); m.castShadow = true; m.rotation.set(n * 1.7, n * 2.3, n * 0.9); m.userData.dyn = true; tg.add(m); balls.push(m); }
     const cg = new THREE.CylinderGeometry(0.0055, 0.0125, 1.45, 8); cg.rotateX(Math.PI / 2); cg.translate(0, 0, -0.725); const cue = new THREE.Mesh(cg, mat('#d9b27a', 0.5, { noWood: true })); cue.rotation.order = 'YXZ'; cue.visible = false; cue.castShadow = true; tg.add(cue);
@@ -11240,9 +11255,26 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
     /* 吊燈 */
     const lp = new THREE.MeshStandardMaterial({ color: '#fff3c9', emissive: '#ffd98a', emissiveIntensity: 0.9 }); Venue.poolLamps.push(lp);
     const add = (w, h, d, c, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'string' ? mat(c, 0.8, { noWood: true }) : c); o.position.set(T.ox + x, y, T.oz + z); top.add(o); return o; };
-    add(0.5, 0.05, 1.9, lp, 0, Y + 2.02, 0); add(0.62, 0.16, 2.02, '#1f5f4f', 0, Y + 2.12, 0); for (const sz of [-1, 1]) add(0.025, 1.0, 0.025, '#3d2817', 0, Y + 2.7, sz * 0.7); add(0.22, 0.2, S.d - 0.8, '#4a2c18', 0, Y + 3.2, -tz);
+    add(0.5, 0.05, 1.9, lp, 0, Y + 2.02, 0); add(0.62, 0.16, 2.02, '#1d4a6b', 0, Y + 2.12, 0); add(0.66, 0.03, 2.06, '#c9a24a', 0, Y + 2.04, 0); for (const sz of [-1, 1]) add(0.025, 1.0, 0.025, '#3d2817', 0, Y + 2.7, sz * 0.7); add(0.22, 0.2, S.d - 0.8, '#4a2c18', 0, Y + 3.2, -tz);
     poolRefresh(T); });
+  { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.strokeStyle = 'rgba(214,190,140,0.85)'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, 32); c.lineTo(32, 0); c.lineTo(64, 32); c.lineTo(32, 64); c.closePath(); c.stroke(); const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(14, 10); tx.colorSpace = THREE.SRGBColorSpace;
+    const net = new THREE.Mesh(new THREE.PlaneGeometry(S.w - 1, S.d - 1), new THREE.MeshBasicMaterial({ map: tx, transparent: true, alphaTest: 0.3 })); net.rotation.x = Math.PI / 2; net.position.set(S.x, Y + 3.05, S.z); top.add(net);   /* v623 天花板的漁網 */
+    const FC = ['#5fc8b0', '#7fb8e8', '#9fe0a8', '#e8c35f'];
+    [[-6.5, -3], [-1.2, -4.2], [1.4, 3.6], [6.6, -0.5], [-6.8, 3.4], [0, 0.6], [5.6, 4.6], [-0.6, -1.8]].forEach(([x, z], i) => { const fm = new THREE.MeshStandardMaterial({ color: FC[i % 4], roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85, emissive: FC[i % 4], emissiveIntensity: 0.15 }); const f = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 9), fm); const h = 0.18 + (i % 3) * 0.08; f.position.set(S.x + x, Y + 3.05 - h, S.z + z); top.add(f); const rp = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, h, 4), mat('#d6be8c', 0.9, { noWood: true })); rp.position.set(S.x + x, Y + 3.05 - h / 2, S.z + z); top.add(rp); });   /* 玻璃浮球 */
+  }
   Venue.poolExit = { x: S.x, z: S.z + S.d / 2 - 0.95 }; poolBoard(); }
+/* v623 舷窗外的海：一張 512×128 的長圖，每個舷窗看其中一段。在球館裡才更新 */
+function poolSeaDraw(t){ const cv = Pool.seaCv; if (!cv) return; const c = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2f8fc0'); g.addColorStop(0.55, '#145a86'); g.addColorStop(1, '#0a3352'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.globalAlpha = 0.12; c.fillStyle = '#d8f4ff'; for (let k = 0; k < 6; k++){ const x = ((k * 97 + t * 6) % (W + 80)) - 40; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 26, 0); c.lineTo(x - 30, H); c.lineTo(x - 50, H); c.fill(); } c.globalAlpha = 1;
+  c.fillStyle = '#c9b48a'; c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W; x += 16) c.lineTo(x, H - 12 - Math.sin(x * 0.03) * 5); c.lineTo(W, H); c.fill();
+  c.strokeStyle = '#2f8f5a'; c.lineWidth = 3; for (let k = 0; k < 14; k++){ const x = k * 37 + 10, hh = 22 + (k % 4) * 8; c.beginPath(); c.moveTo(x, H - 10); for (let y = 0; y <= hh; y += 4) c.lineTo(x + Math.sin(y * 0.2 + t * 1.6 + k) * 3, H - 10 - y); c.stroke(); }
+  const FS = [['#ffb347', 14, 18, 0], ['#ffd23f', 10, 26, 40], ['#7fd1ff', 12, -20, 70], ['#ff7f9e', 9, 32, 30], ['#e8f0f4', 22, 10, 55], ['#9fe0a8', 8, -28, 85], ['#ffb347', 11, 22, 95]];
+  FS.forEach(([col, sz, sp, y0], i) => { const dir = sp > 0 ? 1 : -1, x = (((i * 131 + t * sp) % (W + 80)) + W + 80) % (W + 80) - 40, y = y0 + Math.sin(t * 1.3 + i) * 4;
+    c.fillStyle = col; c.beginPath(); c.ellipse(x, y, sz, sz * 0.45, 0, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(x - dir * sz * 0.8, y); c.lineTo(x - dir * sz * 1.5, y - sz * 0.45); c.lineTo(x - dir * sz * 1.5, y + sz * 0.45); c.fill(); c.fillStyle = '#123'; c.beginPath(); c.arc(x + dir * sz * 0.55, y - sz * 0.1, Math.max(1.2, sz * 0.09), 0, Math.PI * 2); c.fill(); });
+  c.fillStyle = 'rgba(230,248,255,0.6)'; for (let k = 0; k < 12; k++){ const x = (k * 43) % W, y = H - ((t * 14 + k * 23) % H); c.beginPath(); c.arc(x + Math.sin(t * 2 + k) * 2, y, 1.6, 0, Math.PI * 2); c.fill(); }
+  if (Pool.seaTx) Pool.seaTx.needsUpdate = true; }
+setInterval(() => { try { if (Pool.seaCv && inPoolHall() && !document.hidden) poolSeaDraw(performance.now() / 1000); } catch(e){} }, 150);
 /* ===== v589 🎱 球館排行（作者：「感覺撞球館要裝一個小小的排名，然後阿喆也可以算」）=====
    八號球打完，雙方各自回報輸贏（sport_report，跟真人＝'pool'、跟阿喆＝'zhe'；200_pool_rank.sql）。阿喆的戰績記在伺服器的 pool_zhe。
    東邊牆上一塊木框黑板：前 6 名玩家＋阿喆（照勝場排進去）＋你自己的名次。進球館、打完一局時重新抓。不發獎勵（輸贏是手機自己報的）。 */
@@ -18468,6 +18500,7 @@ function renderTab(){
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🎱 撞球×釣魚：撞球畫面左上「🐠 魚花色」可以把球換成你釣過的魚的花色、桌面變成水族箱，你魚缸裡的魚在下面游（只有你看得到）；「🔍 近看」鏡頭拉近、跟著母球。',
+      '🎱 撞球館是海洋風的：牆上的圓形舷窗看出去是海底，魚會游過去。',
       '🎱 一起打：你站在球桌旁邊時，有人在那張桌子開始一個人打，會跳出來問你要不要一起打；按「接受」就變成兩個人對打。',
       '🧬 全服共養：整個伺服器共用一片海，每種魚有族群量（圖鑑每格下面的條）。大家釣太多那種魚會變少、變難釣、偏小（最低 30%，不會絕種）；放流會變多（標記放流算兩條），多的時候比較好釣、偶爾特別大。每天會慢慢回到 100%。連續 3 天 115% 以上，那種魚會演化出新花色（✨演化・），之後一直留著。',
       '🎨 竿子造型每支竿子各自裝：在阿鐵的工坊按「裝上」只會裝在現在拿的那支，換竿子時會自動換成那支記住的造型；背包的釣竿清單會寫每支裝了什麼造型。',
