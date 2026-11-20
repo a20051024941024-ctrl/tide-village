@@ -980,9 +980,10 @@ addEventListener('resize', resize); resize();
    第一次出問題時記下當時在做什麼（診斷字最後的「@」），下次截圖就知道是誰觸發的。 */
 const VP = { k: 1, at: 0, n: 0, first: '', base: 'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover' };
 function vpFirst(){ if (VP.first) return; try { const t = Math.round(performance.now() / 1000), fp = (typeof FP !== 'undefined' && FP.act) ? 'fp' : '', ph = (typeof F !== 'undefined' && F.phase) || '', sh = document.getElementById('sheet'), so = sh && !sh.hidden ? 'sheet' : '', ae = document.activeElement, ai = ae && ae !== document.body ? (ae.id || ae.tagName.toLowerCase()) : '', vk = (window.visualViewport && visualViewport.height < innerHeight - 80) ? 'kb' : '', or = (screen.orientation && screen.orientation.type || '').slice(0, 4);
-    VP.first = '@' + t + 's ' + [ph, fp, so, ai, vk, or, document.fullscreenElement ? 'fs' : ''].filter(Boolean).join(','); } catch(e){ VP.first = '@?'; } }
+    let wd = ''; try { const vw = (window.visualViewport && visualViewport.width) || innerWidth, L = []; for (const e of document.querySelectorAll('body *')){ const r = e.getBoundingClientRect(); if (r.width > 0 && r.right > vw + 4) L.push([r.right, (e.id ? '#' + e.id : e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className ? '.' + e.className.split(' ')[0] : '')) + ':' + Math.round(r.right)]); } L.sort((a, b) => b[0] - a[0]); wd = L.slice(0, 3).map(x => x[1]).join(' '); } catch(e){}   /* v616 出問題的那一刻誰最寬（包含固定在畫面上的） */
+    VP.first = '@' + t + 's ' + [ph, fp, so, ai, vk, or, document.fullscreenElement ? 'fs' : ''].filter(Boolean).join(',') + (wd ? ' w:' + wd : ''); } catch(e){ VP.first = '@?'; } }
 function vpFit(){ const v = window.visualViewport, m = document.querySelector('meta[name=viewport]'); if (!v || !m) return false; const nowT = Date.now();
-  if (innerWidth - v.width > 3){ vpFirst(); if (VP.n < 6 && nowT - VP.at > 2500){ VP.at = nowT; VP.n++; const m2 = document.createElement('meta'); m2.name = 'viewport'; m2.content = VP.base; m.replaceWith(m2); try { window.scrollTo(0, 0); } catch(e){} return true; } }
+  if (innerWidth - v.width > 3){ vpFirst(); if (VP.n < 6 && nowT - VP.at > 2500){ VP.at = nowT; VP.n++; const m2 = document.createElement('meta'); m2.name = 'viewport'; m2.content = VP.n % 2 === 0 && v.width > 200 ? VP.base.replace('width=device-width', 'width=' + Math.round(v.width * v.scale)) : VP.base;   /* v616 偶數次改用「明確寫出螢幕寬度」的設定 */ m.replaceWith(m2); try { window.scrollTo(0, 0); } catch(e){} return true; } }
   return nowT - VP.at < 700; }
 function vvFix(){ const v = window.visualViewport, de = document.documentElement; if (!v) return; let wait = false; try { wait = vpFit(); } catch(e){} if (wait) return; const bad = innerWidth - v.width > 3, on = de.classList.contains('vvfix');
   if (bad){ if (v.offsetLeft > 1 || v.offsetTop > 1){ try { window.scrollTo(0, 0); } catch(e){} } const st = de.style, L = Math.round(v.offsetLeft) + 'px', T = Math.round(v.offsetTop) + 'px', W = Math.round(v.width) + 'px', H = Math.round(v.height) + 'px';
@@ -5123,6 +5124,7 @@ class Fisher {
     v.project(camera);
     if (v.z > 1 || d > (this.isNpc ? 24 : 45) || (this === me && F.phase !== 'idle' && F.phase !== 'charging')){ this.tag.style.display = 'none'; return; }   /* v294 自己釣魚的時候不顯示自己的名字，畫面不擠 */
     const sx = (v.x*0.5+0.5)*viewW(), sy = (-v.y*0.5+0.5)*viewH();
+    if (sx < -160 || sx > viewW() + 160 || sy < -80 || sy > viewH() + 80){ this.tag.style.display = 'none'; return; }   /* v616 畫面外的名字不要擺到兩三千像素外（可能是把網頁撐寬的元兇之一） */
     /* v195：村民的名字跟別的名字牌疊到就先不顯示（玩家自己和其他玩家的名字一直顯示） */
     if (this.tag.style.display === 'none' || !this._tw || (frameNo + (this._ofs || 0)) % 120 === 0){ this.tag.style.display = ''; this._tw = this.tag.offsetWidth || 60; this._th = this.tag.offsetHeight || 22; }
     const r = [sx - this._tw / 2, sy - this._th, sx + this._tw / 2, sy];
@@ -5171,7 +5173,7 @@ function placeLabelsUpdate(){
     const d = L.d; tmpV.copy(L.p).project(camera);
     let sx = (tmpV.x*0.5+0.5)*viewW(); const sy = (-tmpV.y*0.5+0.5)*viewH();
     const atSpot = L.spot && Math.hypot(me.pos.x - L.spot.pos.x, me.pos.z - L.spot.pos.z) < 4;
-    if (L.off || tmpV.z > 1 || d > (L.max || 45) || atSpot || sy < topBarBottom + 26){ L.el.style.display = 'none'; continue; }
+    if (L.off || tmpV.z > 1 || d > (L.max || 45) || atSpot || sy < topBarBottom + 26 || sy > viewH() + 80 || (!L.max && (sx < -200 || sx > viewW() + 200))){ L.el.style.display = 'none'; continue; }
     if (L.el.style.display === 'none' || !L.w){ L.el.style.display = ''; L.w = L.el.offsetWidth || 80; L.h = L.el.offsetHeight || 22; }
     if (L.max && L.w) sx = clamp(sx, L.w / 2 + 8, viewW() - L.w / 2 - 8);   /* 老闆不在的牌子：字不要被螢幕邊邊切掉 */
     const r = [sx - L.w / 2 - 4, sy - L.h - 2, sx + L.w / 2 + 4, sy + 2];
@@ -18710,7 +18712,7 @@ function saveLook(){ LS.set('tide.look', look); me.setLook(look.shirt, look.hat)
 const portraitMQ = matchMedia('(orientation: portrait)');
 function syncOrient(){ document.body.classList.toggle('portrait', portraitMQ.matches); setTimeout(resize, 120); }
 (portraitMQ.addEventListener ? portraitMQ.addEventListener('change', syncOrient) : portraitMQ.addListener(syncOrient)); syncOrient();
-addEventListener('orientationchange', () => setTimeout(resize, 250));
+addEventListener('orientationchange', () => { try { const m = document.querySelector('meta[name=viewport]'); if (m && m.content !== VP.base) m.content = VP.base; } catch(e){} setTimeout(resize, 250); });   /* v616 轉方向時把寫死的螢幕寬度改回 device-width */
 const fsEl = document.documentElement;
 const canFS = !!(fsEl.requestFullscreen || fsEl.webkitRequestFullscreen);
 if (canFS) $('#fsBtn').classList.add('ok');

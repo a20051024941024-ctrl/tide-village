@@ -26,7 +26,7 @@ html,body{height:100%;overflow:hidden}
 body{background:#8bd8e8;color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;padding-left:var(--gl);padding-right:var(--gr)}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}   /* v518 只准捲動，不准瀏覽器自己把整頁放大（兩指按在按鈕上、連點都不會放大整頁） */
 button{touch-action:manipulation}
-#c{position:fixed;inset:0;width:100vw;height:100%;display:block;touch-action:none;outline:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
 .panel{background:rgba(246,252,251,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.7);box-shadow:0 6px 20px rgba(24,51,74,.16);border-radius:16px}
@@ -1856,3 +1856,4 @@ body.welcomeOn > *:not(#welcome):not(#c):not(canvas):not(#toasts):not(#bigMsg):n
 #poolHud .pl-skin{position:fixed;left:calc(var(--gl, 8px) + 58px);top:calc(var(--gt, 8px) + 74px);z-index:31;border:0;padding:6px 10px;border-radius:14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;pointer-events:auto}
 .dm-go{margin-top:6px;padding:6px 12px;font-size:14px}
 #poolHud .pl-zoom{position:fixed;left:calc(var(--gl, 8px) + 58px);top:calc(var(--gt, 8px) + 112px);z-index:31;border:0;padding:6px 10px;border-radius:14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;pointer-events:auto}
+/* v616 作者截圖 @122s reeling,fp r6：畫布用 100vw，Android Chrome 版面一被撐到 980，100vw 也跟著變 980，畫布又把版面撐住，永遠縮不回來 → 改 100%（跟著 inset:0） */
