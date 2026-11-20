@@ -1746,6 +1746,7 @@ function art2Props(){ try { twTemple(6.4, -28.4, Math.PI / 2); }   /* v493 廟�
       傍晚開回來。位置只跟時間有關，所以每個人看到的都在同一個地方，不用伺服器。颱風天不出海。船不會撞人（直接穿過去）。
    ② 南方沙灘白天、沒下雨的時候有 6 個遊客：2 個坐在海灘巾上曬太陽、2 個套著泳圈在淺水玩、2 個丟沙灘球（走過去會把球踢飛，只有你看得到）。
       下雨、颱風、晚上會收東西走掉。剛釣到大魚的人走過去，遊客會提起來。
+   v585 作者：「他們沒有自己的家嗎」→ 船停在港裡（晚上、颱風）的時候船長回家了，船上不站人。
    作者 11/20：「如果太遠就乾脆不要畫人在那裡，因為都只看到線而已」→ 船長、遊客離你 60 公尺以上就不畫。 */
 const LW = { fleet: null, beach: null, lastPh: null, talkAt: 0 };
 const LW_ROUTES = [   /* 從停船的位置往北出港口（南邊是堤防）→ 港口外 (68,-56) → 漁場 */
@@ -1788,7 +1789,7 @@ function lwFleetTick(dt, t){ lwFleetInit(); if (!LW.fleet) return; const h = gam
   LW.lastPh = anyOut; }
 const LW_BOW = 0;   /* 船頭朝向的修正（模型的船頭在 +z） */
 function lwHorn(){ try { tone(146, 0.9, 'sawtooth', 0.035, 140); setTimeout(() => tone(146, 1.3, 'sawtooth', 0.035, 138), 1050); } catch(e){} }
-function lwCaptain(F, S, x, z, d, dt, t){ const show = d < 60 && !onIsle && !Dive.on && !House.on && !inIndoor();
+function lwCaptain(F, S, x, z, d, dt, t){ const show = S.st !== 'dock' && d < 60 && !onIsle && !Dive.on && !House.on && !inIndoor();
   if (!show){ if (F.cap){ F.cap.av.g.visible = false; try { F.cap.tag.style.display = 'none'; } catch(e){} } return; }
   if (!F.cap){ const c = new Fisher({ shirt: F.R.look[0], hat: F.R.look[1], name: F.R.name, kind: 'npc' }); F.cap = c; }
   const c = F.cap, b = F.b, ry = b.g.rotation.y, lx = 0, lz = 0.2, s = b.g.scale.x;   /* 站在駕駛艙前面的甲板（船頭在 +z） */
@@ -1796,15 +1797,17 @@ function lwCaptain(F, S, x, z, d, dt, t){ const show = d < 60 && !onIsle && !Div
   c.speed = 0; c.sitting = false;
   if (S.st === 'work'){ c.rot = ry + Math.PI / 2; c.bend = 0.35 + Math.max(0, Math.sin(t * 1.6 + F.i)) * 0.45; }   /* 往船邊彎腰收網 */
   else { c.bend = 0; c.rot = d < 14 ? lerpAngle(c.rot, Math.atan2(me.pos.x - c.pos.x, me.pos.z - c.pos.z), 1 - Math.exp(-dt * 3)) : ry; }
-  if (d < 14 && t > F.talkAt){ F.talkAt = t + rand(18, 30); c.say(S.st === 'back' ? '收工回家囉！' : S.st === 'dock' ? '明天一早再出海' : LW_SAY[Math.floor(Math.random() * LW_SAY.length)], '', 4); }
+  if (d < 14 && t > F.talkAt){ F.talkAt = t + rand(18, 30); c.say(S.st === 'back' ? '收工回家囉！' : LW_SAY[Math.floor(Math.random() * LW_SAY.length)], '', 4); }
   c.update(dt, t); if (d < 40) c.placeTag(); else c.tag.style.display = 'none'; }
 const LW_DECK = 1.1;
 
 /* ---- 南方沙灘的遊客（沙灘、陽傘是 buildBeach 本來就有的） ---- */
 const LW_BEACH = { c:[40, -6], exit:[33.5, -19.5],
-  P:[ { k:'sun',  x:39.4, z:-2.1, r:1.9, look:['#f5a5d8', '#ffffff'] }, { k:'sun', x:42.4, z:-10.6, r:1.6, look:['#7db7d7', '#ffd36a'] },
+  P:[ { k:'sun', towel:0, look:['#f5a5d8', '#ffffff'] }, { k:'sun', towel:2, look:['#7db7d7', '#ffd36a'] },
       { k:'swim', x:49.6, z:-11.5, look:['#f6a96b', '#3fbf9d'], ring:'#ff6a5a' }, { k:'swim', x:50.2, z:-4.5, look:['#9fc7a8', '#f17b6d'], ring:'#ffd34a' },
-      { k:'ball', x:34.6, z:-12.5, look:['#b9a4ff', '#f6f0dd'] }, { k:'ball', x:35.2, z:-4.2, look:['#e8473a', '#18334a'] } ] };
+      { k:'ball', x:35.4, z:-3.1, look:['#b9a4ff', '#f6f0dd'] }, { k:'ball', x:35.4, z:1.5, look:['#e8473a', '#18334a'] } ] };   /* v585 丟球的兩個人改在排球場上，隔著網打 */
+/* v585 曬太陽的人坐在海灘巾上（跟 buildBeach 的陽傘位置一樣算） */
+(() => { const R = Math.atan2(0.93, -0.37), sx = Math.sin(R), sz = Math.cos(R), U = [[37.6, -15.2], [39.6, -11.2], [41.4, -7.2]]; for (const q of LW_BEACH.P) if (q.towel != null){ const [x, z] = U[q.towel]; q.x = x + sx * 0.2 + (-sz) * 1.0; q.z = z + sz * 0.2 + sx * 1.0; q.r = R; } })();
 const LW_TSAY = ['今天天氣好好！', '水好涼～', '你也來玩水嗎？', '這裡的夕陽很漂亮喔', '剛剛有一群小魚從我腳邊游過去', '我是坐船來這個村子玩的'];
 function lwBeachOpen(){ try { const W = WEATHERS[Env.wx] || {}; const h = gameHour(); return h >= 8 && h < 17.5 && !(W.rain > 0) && !W.storm && !lwStorm(); } catch(e){ return false; } }
 function lwBeachBuild(){ const B = { T: [], ball: null, k: 0, kick: null, said: 0 };
@@ -8324,16 +8327,20 @@ function buildBeach(){
   const g = new THREE.Group(); scene.add(g); let sd = 5; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const gy = (x, z) => groundHeight(x, z);
   const sand = new THREE.Mesh(new THREE.CircleGeometry(9, 32), mat('#f8ecc8', 0.95)); sand.rotation.x = -Math.PI / 2; sand.scale.set(1, 1.6, 1); sand.position.set(40, gy(40, -6) + 0.03, -6); sand.receiveShadow = true; g.add(sand);
-  [['#f17b6d', 37, -9], ['#3fbf9d', 41.5, -11], ['#ffd36a', 38.5, -2.5], ['#5fb6e3', 43, -5]].forEach(([c, x, z]) => { const y = gy(x, z);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), mat('#f6efe2')); pole.position.set(x, y + 1.1, z); pole.rotation.z = 0.12; g.add(pole);
-    const top = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.5, 10, 1, true), mat(c, 0.75, { side:THREE.DoubleSide, flatShading:true })); top.position.set(x + 0.13, y + 2.2, z); top.castShadow = true; g.add(top);
-    const towel = box([0.8, 0.02, 1.7], ['#ffffff', '#ffd36a', '#f5a5d8', '#7db7d7'][Math.floor(rr() * 4)], [x + 0.9, y + 0.02, z + 0.4]); towel.rotation.y = rr(); towel.castShadow = false; g.add(towel);
-    const ch = new THREE.Group(); ch.position.set(x - 0.9, y, z + 0.3); ch.rotation.y = rr() * 2; g.add(ch); ch.add(box([0.6, 0.06, 1.5], '#e9e2cf', [0, 0.32, 0])); const bk = box([0.6, 0.06, 0.6], '#e9e2cf', [0, 0.55, -0.68]); bk.rotation.x = -0.9; ch.add(bk); for (const sx of [-0.25, 0.25]) for (const sz of [-0.6, 0.6]) ch.add(box([0.04, 0.3, 0.04], '#c9c2b2', [sx, 0.15, sz]));
+  /* v585 作者：「東西擺得很亂」→ 重新排：陽傘沿著海岸排一排（離水 4～5 公尺，漲潮淹不到），每支傘旁邊一張海灘巾、一張躺椅，全部面向海；
+     救生員台在傘的北邊、面向海；黑色礁岩集中在沙灘南端的岬角，不再散在水邊。排球場（SPORT2）不動。 */
+  const SEA_RY = Math.atan2(0.93, -0.37);   /* 這一段海岸往海的方向 */
+  const sx0 = Math.sin(SEA_RY), sz0 = Math.cos(SEA_RY), ax = -sz0, az = sx0;   /* 往海、沿著海岸 */
+  [['#f17b6d', 37.6, -15.2], ['#3fbf9d', 39.6, -11.2], ['#ffd36a', 41.4, -7.2]].forEach(([c, x, z], i) => { const y = gy(x, z);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), mat('#f6efe2')); pole.position.set(x, y + 1.1, z); pole.rotation.z = 0.08; g.add(pole);
+    const top = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.5, 10, 1, true), mat(c, 0.75, { side:THREE.DoubleSide, flatShading:true })); top.position.set(x + 0.09, y + 2.2, z); top.castShadow = true; g.add(top);
+    const tx = x + sx0 * 0.2 + ax * 1.0, tz = z + sz0 * 0.2 + az * 1.0, towel = box([0.8, 0.02, 1.7], ['#ffffff', '#f5a5d8', '#7db7d7'][i], [tx, gy(tx, tz) + 0.02, tz]); towel.rotation.y = SEA_RY; towel.castShadow = false; g.add(towel);
+    const cx = x - ax * 1.0, cz = z - az * 1.0, ch = new THREE.Group(); ch.position.set(cx, gy(cx, cz), cz); ch.rotation.y = SEA_RY; g.add(ch); ch.add(box([0.6, 0.06, 1.5], '#e9e2cf', [0, 0.32, 0])); const bk = box([0.6, 0.06, 0.6], '#e9e2cf', [0, 0.55, -0.68]); bk.rotation.x = -0.9; ch.add(bk); for (const sx of [-0.25, 0.25]) for (const sz of [-0.6, 0.6]) ch.add(box([0.04, 0.3, 0.04], '#c9c2b2', [sx, 0.15, sz]));
     addCircleCol(x, z, 0.25); });
-  // 救生員高台
-  { const x = 44.5, z = -9, y = gy(x, z); for (const sx of [-0.45, 0.45]) for (const sz of [-0.45, 0.45]) g.add(box([0.1, 2.0, 0.1], '#e9e2cf', [x + sx, y + 1.0, z + sz])); g.add(box([1.1, 0.1, 1.1], '#e9e2cf', [x, y + 2.0, z])); g.add(box([1.1, 0.7, 0.08], '#e8473a', [x, y + 2.4, z - 0.55])); addBoxCol(x, z, 1.1, 1.1); }
-  // 珊瑚礁岩（墾丁海邊那種黑灰色、坑坑洞洞的石頭）
-  for (let i = 0; i < 9; i++){ const x = 45 + rr() * 3.5, z = -13 + rr() * 14; if (!isLand(x, z) && terrainH(x, z) < -0.6) continue; const r = 0.4 + rr() * 0.6, k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat('#6a665e', 0.98, { flatShading:true })); k.position.set(x, Math.max(gy(x, z), 0) + r * 0.3, z); k.rotation.set(rr() * 3, rr() * 3, 0); k.scale.y = 0.7; k.castShadow = true; g.add(k); if (isLand(x, z)) addCircleCol(x, z, r * 0.8); }
+  // 救生員高台（面向海，紅色靠背在陸地那一邊）
+  { const x = 43.2, z = -2.6, y = gy(x, z), t = new THREE.Group(); t.position.set(x, y, z); t.rotation.y = SEA_RY; g.add(t); for (const sx of [-0.45, 0.45]) for (const sz of [-0.45, 0.45]) t.add(box([0.1, 2.0, 0.1], '#e9e2cf', [sx, 1.0, sz])); t.add(box([1.1, 0.1, 1.1], '#e9e2cf', [0, 2.0, 0])); t.add(box([1.1, 0.7, 0.08], '#e8473a', [0, 2.4, -0.55])); for (let k = 0; k < 4; k++) t.add(box([0.6, 0.05, 0.12], '#e9e2cf', [0, 0.4 + k * 0.42, -0.62])); addBoxCol(x, z, 1.1, 1.1); }
+  // 珊瑚礁岩：集中在沙灘南端的岬角（墾丁海邊那種黑灰色、坑坑洞洞的石頭）
+  for (const [x, z, r] of [[41.8, -18.2, 0.9], [43.0, -17.2, 0.7], [40.9, -19.0, 0.6], [43.6, -18.6, 0.55], [42.3, -19.5, 0.5], [43.3, -16.2, 0.4]]){ const k = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat('#6a665e', 0.98, { flatShading:true })); k.position.set(x, Math.max(gy(x, z), -0.2) + r * 0.3, z); k.rotation.set(rr() * 3, rr() * 3, 0); k.scale.y = 0.7; k.castShadow = true; g.add(k); if (isLand(x, z)) addCircleCol(x, z, r * 0.8); }
   // 牌子
   { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d'); c.fillStyle = '#2f89c7'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 40px sans-serif'; c.fillText('🏖️ 南方沙灘', 128, 62);
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshBasicMaterial({ map: tx })); const x = 35, z = -6, y = gy(x, z); sg.position.set(x, y + 1.7, z); sg.rotation.y = Math.PI / 2; g.add(sg); { const bk = sg.clone(); bk.rotation.y += Math.PI; g.add(bk); }   /* 兩面都看得懂（以前背面是反的字） */ for (const sz of [-0.8, 0.8]) g.add(box([0.08, 1.6, 0.08], '#8c5d3b', [x, y + 0.8, z + sz])); }
