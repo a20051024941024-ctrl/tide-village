@@ -5529,7 +5529,7 @@ function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return fal
   if (greenNear(x, z, 6)){ const lx = x - GREEN.x, lz = z - GREEN.z; return Math.hypot(lx, lz) > greenEdge(lx, lz) + 1.2; }
   if (wildNear(x, z, 6)){ const lx = x - WILD.x, lz = z - WILD.z; return Math.hypot(lx, lz) > wildEdge(lx, lz) + 1.2 && !deckAt(x, z); }   /* v590 漂流島 */
   if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 2.6 || Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 2.2) return false; if (mtnH(x, z) !== null || mtnH(x + 1.5, z) !== null || mtnH(x - 1.5, z) !== null || mtnH(x, z + 1.5) !== null || mtnH(x, z - 1.5) !== null) return false;
-  if (nearReef(x, z) && reefE(x, z) > -0.8) return false; { const e = mangE(x, z); if (e > -1.0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(x, z); return i.water && i.h < -0.3 && !deckAt(x, z); }
+  if (nearReef(x, z) && reefE(x, z) > -0.8) return false; { const e = mangE(x, z); if (e > -1.0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(x, z); if (!(i.water && i.h < -0.3) || deckAt(x, z)) return false; for (let k = 0; k < 8; k++){ const q = k * Math.PI / 4; if (deckAt(x + Math.cos(q) * 0.8, z + Math.sin(q) * 0.8)) return false; } return true; }   /* v613 作者：「可以開進去」→ 以前只看船的中心點，半艘獨木舟會開到碼頭石頭上；現在離碼頭、堤岸要留 0.8 公尺 */
 function boardBoat(b){ if (tyBlock('開船')) return;
   if (F.phase !== 'idle') cancelFishing();
   myBoat = b; me.pos.x = b.m.position.x; me.pos.z = b.m.position.z; me.rot = b.m.rotation.y; me.sitting = true; cam.yaw = me.rot + Math.PI;
