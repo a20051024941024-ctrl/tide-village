@@ -1847,7 +1847,7 @@ function signObj(){ const g = new THREE.Group(), C = {};
 /* ===== v574 亂逛的時候，遠遠就看得到哪裡有魚（作者：想學 GTA 的「亂逛」跟「世界有反應」）=====
    動工前查到兩樣東西其實早就有，只是「看不見」：
    1. 🐦 海鳥徵兆（v247）：鳥在哪片水面上盤旋，那裡就有掠食魚 —— 但要走到釣點 14 公尺內才畫出來。
-      現在 95 公尺內的釣點只要有海鳥徵兆，遠遠就看得到鳥在水面上繞（越遠畫得越大、越高，走近時跟原本的一模一樣，接得起來）。
+      現在 50 公尺內（v583 從 95 改小）的釣點只要有海鳥徵兆，遠遠就看得到鳥在水面上繞（越遠畫得越大、越高，走近時跟原本的一模一樣，接得起來）。
    2. 🐟 魚群洄游（v276，每 3 小時一次、25 分鐘）：只有跑馬燈和選單會講，世界裡什麼都沒有。
       現在洄游的那個釣點外面，會有一大群海鳥盤旋、輪流俯衝，水面一直冒水花，從很遠就看得到。
    都只是「把已經有的東西畫出來」：位置和時間照伺服器時間算（大家看到的一樣），沒有改任何機率。
@@ -1872,9 +1872,9 @@ function flkTick(dt, t){
     FLK.rip -= dt; if (FLK.rip <= 0 && d < 80 && !at[2]){ FLK.rip = 0.3 + Math.random() * 0.35; const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * 6, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (waterAt(x, z)){ ripple(x, z); if (Math.random() < 0.35) FX.emit(x, wy + 0.08, z, 3, '#dff4ff', 0.5, 1.5, 0.5); } } }
   /* 2 遠處釣點的海鳥徵兆 */
   FLK.scan -= dt; if (FLK.scan <= 0){ FLK.scan = 0.5; const L = [];
-    if (ok && !away){ const sl = signSlot(); for (const s of SPOTS){ if (!signSpotOk(s) || s === F.spot) continue; const d = Math.hypot(me.pos.x - s.pos.x, me.pos.z - s.pos.z); if (d < 14 || d > 95) continue; for (const g of signsAt(s, sl)) if (g.k === 'pred') L.push({ g, d: Math.hypot(me.pos.x - g.x, me.pos.z - g.z) }); } L.sort((a, b) => a.d - b.d); L.length = Math.min(L.length, 5); }
+    if (ok && !away){ const sl = signSlot(); for (const s of SPOTS){ if (!signSpotOk(s) || s === F.spot) continue; const d = Math.hypot(me.pos.x - s.pos.x, me.pos.z - s.pos.z); if (d < 14 || d > 50) continue; for (const g of signsAt(s, sl)) if (g.k === 'pred') L.push({ g, d: Math.hypot(me.pos.x - g.x, me.pos.z - g.z) }); } L.sort((a, b) => a.d - b.d); L.length = Math.min(L.length, 5); }
     FLK.list = L; while (FLK.far.length < L.length) FLK.far.push(flkFar()); }
-  FLK.far.forEach((o, i) => { const e = FLK.list[i]; o.visible = !!e; if (!e) return; const g = e.g, ph = t + g.i * 1.7, k = clamp(e.d / 14, 1, 3.2);
+  FLK.far.forEach((o, i) => { const e = FLK.list[i]; o.visible = !!e; if (!e) return; const g = e.g, ph = t + g.i * 1.7, k = clamp(e.d / 14, 1, 2);   /* v583 太遠的鳥只剩一條線（作者截圖）→ 最遠 50 公尺、放大最多 2 倍 */
     o.position.set(g.x + Math.sin(ph * 0.3) * 0.35, waterY(g.x, g.z, t) + 0.03, g.z + Math.cos(ph * 0.23) * 0.35);
     o.children.forEach(b => { const a = b.userData.a + ph * 0.9; b.position.set(Math.cos(a) * 1.3 * k, 3.0 + (k - 1) * 1.7 + Math.sin(ph * 1.3 + a) * 0.25, Math.sin(a) * 1.3 * k); b.rotation.y = -a; b.scale.setScalar(k); const fl = Math.sin(ph * 9 + a * 3) * 0.5; b.children[0].rotation.z = -0.35 - fl; b.children[1].rotation.z = 0.35 + fl; }); });
 }
@@ -7053,7 +7053,7 @@ function buildMyst(){ Far.myst = true; const M = MYST, g = new THREE.Group(); g.
     const sp = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sp.position.set(7, M.y + 2.4, -11); sp.rotation.y = Math.PI - 0.5; g.add(sp); for (const sx of [-1.4, 1.4]) g.add(box([0.14, 2.6, 0.14], '#5a4030', [7 + sx * Math.cos(0.5), M.y + 1.3, -11 + sx * Math.sin(0.5)])); }
   g.traverse(o => { if (o.isMesh) o.castShadow = false; }); }
 function buildGreen(){ Far.green = true; const G = GREEN, g = new THREE.Group(); g.position.set(G.x, 0, G.z); scene.add(g); Far.gg = g; let sd = 77; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-  const H = (lx, lz) => greenH(G.x + lx, G.z + lz) ?? G.y, Rmax = G.r + 10;
+  const H = (lx, lz) => greenH(G.x + lx, G.z + lz) ?? (G.y - 3.2), Rmax = G.r + 10;   /* v583 修：網格四個角超出島的範圍，以前高度用島的高度（0.5，浮在水面上），看起來像一大片灰色沙地、船卻會直接開進去 → 改成海底的深度 */
   // 地面：一張大網格，照高度上色（沙灘、苔綠、深綠森林、山上的岩石、湖底、溪底）
   { const pg = new THREE.PlaneGeometry(Rmax * 2, Rmax * 2, 110, 110); pg.rotateX(-Math.PI / 2); const p = pg.attributes.position, cs = [], c = new THREE.Color(), c2 = new THREE.Color();
     for (let i = 0; i < p.count; i++){ const x = p.getX(i), z = p.getZ(i), h = H(x, z), d = Math.hypot(x, z), R = greenEdge(x, z), n = (Math.sin(x * 1.7 + z * 0.4) * Math.cos(z * 1.3 - x * 0.3) * 0.5 + 0.5) * 0.6 + (Math.sin(x * 5.1) * Math.cos(z * 4.7) * 0.5 + 0.5) * 0.4; p.setY(i, h);
