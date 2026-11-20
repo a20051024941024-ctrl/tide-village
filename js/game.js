@@ -5553,7 +5553,7 @@ function leaveBoat(){
 /* v258 遠洋羅盤：坐自己的船離開本島後，上面會指出最近的島在哪個方向、還有多遠 */
 const SAIL_ISLES = [ { n:'🏝️ 潮汐釣魚村', x:6, z:6, r:58 }, { n:'❄️ 冰封群島', x:FROST.dock[0] - 1, z:FROST.dock[1], r:3 }, { n:'🌌 深海浮台', x:ABYSS.x, z:ABYSS.z + ABYSS.d / 2 + 1.5, r:3 }, { n:'🌋 神秘島', x:MYST.x, z:MYST.z - MYST.r - 2, r:3 }, { n:'🌲 苔森之島', x:GREEN.x + 6, z:GREEN.z - 33, r:3 } ];
 function sailCompass(){
-  let el0 = document.getElementById('sailComp'); const far0 = myBoat && !Dive.on && !onIsle && Math.hypot(me.pos.x, me.pos.z) > 62 && F.phase === 'idle';   /* v524 作者：「釣魚的時候字會擋到」→ 釣魚中不顯示「某某島 幾公尺」 */
+  let el0 = document.getElementById('sailComp'); const far0 = myBoat && !Dive.on && !onIsle && Math.hypot(me.pos.x, me.pos.z) > 62 && F.phase === 'idle' && !uiBlocked;   /* v615 作者：「我都點其他的，那個距離幾公尺的就不要了」→ 開著手機、背包、魚缸等畫面時不顯示 */   /* v524 作者：「釣魚的時候字會擋到」→ 釣魚中不顯示「某某島 幾公尺」 */
   if (!far0){ if (el0 && !el0.hidden) el0.hidden = true; return; }
   if (!el0){ el0 = document.createElement('div'); el0.id = 'sailComp'; document.body.appendChild(el0); }
   const L = SAIL_ISLES.map(i => ({ i, d: Math.max(0, Math.hypot(i.x - me.pos.x, i.z - me.pos.z) - i.r) })).sort((a, b) => a.d - b.d).slice(0, 2);

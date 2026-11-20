@@ -361,6 +361,8 @@ body.photo.nonames #labels{display:none}
 .tank .tinfo{flex:1;min-width:0}
 .tank .tacts{display:flex;gap:6px;margin-left:auto}
 .tank .tacts .tbtn{padding:6px 10px;font-size:12px}
+.tank .tacts{flex-wrap:wrap;justify-content:flex-end;max-width:100%}   /* v615 作者截圖：五顆按鈕擠在一張卡片裡，字被擠成直的、最後一顆「🏷️」跑出卡片外 → 不夠寬就換行，字不折 */
+.tank .tacts .tbtn{white-space:nowrap;flex:none}
 .tbtn{padding:7px 14px;border-radius:10px;background:var(--ink);color:#fff;font-size:13px;font-weight:700}
 .tbtn.ghost{background:var(--paper-2);color:var(--ink)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
