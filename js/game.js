@@ -15422,8 +15422,8 @@ function fkTick(dt){ const t = now();
   if (FK.out){ fkPop(FK.out.g, FK.out.t0, true); if (t - FK.out.t0 > 0.9){ scene.remove(FK.out.g); FK.out = null; } }
   if (!FK.set) return; const g = FK.g; if (g && t - FK.at < 1.2) fkPop(g, FK.at);
   if (g) fkNetAnim(g, t);
-  if (g && g.userData.rod) g.userData.rod.visible = !!F.held || F.phase === 'idle';   /* v621 作者：「沒有竿子」→ 沒在釣的時候竿子靠在竿架上 */
-  me.restRod = !!(mySeat && mySeat.gear && F.phase === 'idle' && !(FK.set.mask & 4));
+  if (g && g.userData.rod) g.userData.rod.visible = !!F.held;   /* v633 作者：「竿子太多反而太亂」→ 任何時候只看得到一支竿子：竿架上的只有你站起來走開時才有 */
+  me.restRod = !!(mySeat && mySeat.gear && F.phase === 'idle');   /* 坐著還沒拋：竿子拿在手上 */
   if (g && g.userData.rod && !F.heldRing){ g.userData.rod.rotation.z *= 0.8; g.userData.rod.rotation.x += (0.6 - g.userData.rod.rotation.x) * 0.2; }
   const d = Math.hypot(me.pos.x - FK.set.x, me.pos.z - FK.set.z);
   if (d > 15 || Dive.on || House.on || myBoat || (onIsle ? 1 : 0) !== (FK.set.isle ? 1 : 0)) fkPack(F.held ? '走太遠了，竿子和裝備都收回背包了' : '🎣 走遠了，釣魚裝備收回背包'); }
@@ -15446,7 +15446,7 @@ function fkPeer(p, pr){ const f = p.fisher, a = Array.isArray(pr.fk) ? pr.fk : n
   if (!f.fkG || f.fkG.userData.mask !== mask || f.fkG.userData.y0 !== +a[5] || f.fkG.userData.nz !== nz){ if (f.fkG) scene.remove(f.fkG); f.fkG = fkBuild(mask, 2.4, clamp(+a[5], 0, 3), nz); f.fkG.userData.y0 = +a[5]; f.fkG.userData.nz = nz; scene.add(f.fkG); f.fkG.userData.t0 = now(); }
   f.fkG.position.set(+a[0], clamp(+a[3], -2, 30), +a[1]); f.fkG.rotation.y = +a[2];
   fkNetFish(f.fkG, a.slice(6, 13).filter(id => typeof id === 'string' && FISH_BY_ID[id]));
-  f.heldTip = pr.f && pr.f.h && f.fkG.userData.tip ? f.fkG.userData.tip : null; if (f.fkG.userData.rod) f.fkG.userData.rod.visible = !!f.heldTip || !pr.f; }
+  f.heldTip = pr.f && pr.f.h && f.fkG.userData.tip ? f.fkG.userData.tip : null; if (f.fkG.userData.rod) f.fkG.userData.rod.visible = !!f.heldTip; }
 function fkPeersTick(t){ for (const p of peers.values()){ const g = p.fisher.fkG; if (!g) continue; g.visible = !!(p.fisher.av && p.fisher.av.g.visible); if (!g.visible) continue; if (now() - (g.userData.t0 || 0) < 1.2) fkPop(g, g.userData.t0); fkNetAnim(g, t); if (p.fisher.heldTip && p.ph === 'bite') fkRingG(g, t); } }
 function fkRingG(g, t){ if (!g.userData.rod) return; const k = Math.sin(t * 38) * 0.06; g.userData.rod.rotation.z = k; }
 /* 背包「🎣 釣具」 */
