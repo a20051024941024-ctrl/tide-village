@@ -1058,6 +1058,7 @@ function mat(color, roughness=0.8, extra){ const noWood = extra && extra.noWood;
   return m; }
 const woodCache = new Map();
 function isWoodColor(hex){ if (woodCache.has(hex)) return woodCache.get(hex); let r = false; try { const c = new THREE.Color(hex), h = {}; c.getHSL(h); r = h.h > 0.04 && h.h < 0.12 && h.s > 0.22 && h.s < 0.75 && h.l > 0.18 && h.l < 0.62; } catch(e){} woodCache.set(hex, r); return r; }
+function beachTowelMat(col){ const c = document.createElement('canvas'); c.width = 32; c.height = 64; const g = c.getContext('2d'); g.fillStyle = col; g.fillRect(0, 0, 32, 64); g.fillStyle = '#fffaf0'; for (let k = 0; k < 4; k++) g.fillRect(0, 8 + k * 14, 32, 5); g.fillRect(0, 0, 32, 3); g.fillRect(0, 61, 32, 3); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; return new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 }); }
 function box(size, color, pos, material){ const m = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material || mat(color)); m.position.set(pos[0], pos[1], pos[2]); m.castShadow = true; m.receiveShadow = true; return m; }
 const addBoxCol = (x, z, w, d) => colliders.push({ t:'b', x, z, hw:w/2, hd:d/2 });
 /* 斜放的房子、攤子：照它真正的方向擋（原本用外框方塊，斜的東西四個角會多擋一大塊，走不過去） */
@@ -1858,7 +1859,7 @@ const LW_DECK = 1.1;
 const LW_BEACH = { c:[40, -6],
   P:[ { k:'sun', towel:0, look:['#f5a5d8', '#ffffff'] }, { k:'sun', towel:2, look:['#7db7d7', '#ffd36a'] },
       { k:'swim', x:49.6, z:-11.5, look:['#f6a96b', '#3fbf9d'], ring:'#ff6a5a' }, { k:'swim', x:50.2, z:-4.5, look:['#9fc7a8', '#f17b6d'], ring:'#ffd34a' },
-      { k:'ball', x:35.4, z:-3.1, look:['#b9a4ff', '#f6f0dd'] }, { k:'ball', x:35.4, z:1.5, look:['#e8473a', '#18334a'] } ] };   /* v585 丟球的兩個人改在排球場上，隔著網打 */
+    ] };   /* v604 作者：「打排球的兩個 NPC 如果動作還是很假就不要了」→ 拿掉（只有站著把球丟來丟去，沒有真的打排球的動作） */
 /* v585 曬太陽的人坐在海灘巾上（跟 buildBeach 的陽傘位置一樣算） */
 (() => { const R = Math.atan2(0.93, -0.37), sx = Math.sin(R), sz = Math.cos(R), U = [[37.6, -15.2], [39.6, -11.2], [41.4, -7.2]]; for (const q of LW_BEACH.P) if (q.towel != null){ const [x, z] = U[q.towel]; q.x = x + sx * 0.2 + (-sz) * 1.0; q.z = z + sz * 0.2 + sx * 1.0; q.r = R; } })();
 const LW_TSAY = ['今天天氣好好！', '水好涼～', '你也來玩水嗎？', '這裡的夕陽很漂亮喔', '剛剛有一群小魚從我腳邊游過去', '我是坐船來這個村子玩的'];
@@ -1872,7 +1873,7 @@ function lwBeachBuild(){ const B = { T: [], ball: null, k: 0, kick: null, said: 
     B.ball = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.5 })); B.ball.userData.dyn = B.ball.userData.keep = true; B.ball.visible = false; scene.add(B.ball); }
   LW.beach = B; }
 function lwBeachTick(dt, t){ const C = LW_BEACH.c, d0 = Math.hypot(me.pos.x - C[0], me.pos.z - C[1]), near = d0 < 70 && !onIsle && !Dive.on && !House.on && !inIndoor();
-  if (!LW.beach){ if (!near) return; lwBeachBuild(); } const B = LW.beach, open = lwBeachOpen();
+  if (!LW.beach){ if (!near && !(Boot.done && performance.now() - Boot.t0 > 20000)) return; lwBeachBuild(); } const B = LW.beach, open = lwBeachOpen();   /* v604 作者：「這區的 NPC 臉都很慢才畫」→ 以前走到附近才做遊客，眼睛圖片那時候才開始下載；現在進遊戲 20 秒後就先做好藏著 */
   for (const o of B.T){ const f = o.f, q = o.q;
     if (!near){ f.av.g.visible = false; if (o.ring) o.ring.visible = false; try { f.tag.style.display = 'none'; } catch(e){} o.st = open ? 'here' : 'gone'; continue; }
     /* 來／走：在你附近時用走的──遊客是坐阿海的船來玩的，從港口那邊沿著路走過來，走的時候走回港口（v585 作者：「NPC們都要有走路回家的動畫」）；你不在附近時直接出現或消失 */
@@ -8727,7 +8728,7 @@ function buildBeach(){
   [['#f17b6d', 37.6, -15.2], ['#3fbf9d', 39.6, -11.2], ['#ffd36a', 41.4, -7.2]].forEach(([c, x, z], i) => { const y = gy(x, z);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), mat('#f6efe2')); pole.position.set(x, y + 1.1, z); pole.rotation.z = 0.08; g.add(pole);
     const top = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.5, 10, 1, true), mat(c, 0.75, { side:THREE.DoubleSide, flatShading:true })); top.position.set(x + 0.09, y + 2.2, z); top.castShadow = true; g.add(top);
-    const tx = x + sx0 * 0.2 + ax * 1.0, tz = z + sz0 * 0.2 + az * 1.0, towel = box([0.8, 0.02, 1.7], ['#ffffff', '#f5a5d8', '#7db7d7'][i], [tx, gy(tx, tz) + 0.02, tz]); towel.rotation.y = SEA_RY; towel.castShadow = false; g.add(towel);
+    const tx = x + sx0 * 0.2 + ax * 1.0, tz = z + sz0 * 0.2 + az * 1.0, towel = box([0.8, 0.025, 1.7], '#fff', [tx, gy(tx, tz) + 0.02, tz], beachTowelMat(['#f0a13c', '#f5a5d8', '#7db7d7'][i])); towel.rotation.y = SEA_RY; towel.castShadow = false; g.add(towel);   /* v604 作者：「太陽傘底下粉紅色的東西是不是沒做好」→ 以前用的材質會自動加木紋，看起來像一塊奇怪的花布；改成真的海灘巾：白色和顏色的寬條紋、兩頭有流蘇白邊 */
     const cx = x - ax * 1.0, cz = z - az * 1.0, ch = new THREE.Group(); ch.position.set(cx, gy(cx, cz), cz); ch.rotation.y = SEA_RY; g.add(ch); ch.add(box([0.6, 0.06, 1.5], '#e9e2cf', [0, 0.32, 0])); const bk = box([0.6, 0.06, 0.6], '#e9e2cf', [0, 0.55, -0.68]); bk.rotation.x = -0.9; ch.add(bk); for (const sx of [-0.25, 0.25]) for (const sz of [-0.6, 0.6]) ch.add(box([0.04, 0.3, 0.04], '#c9c2b2', [sx, 0.15, sz]));
     addCircleCol(x, z, 0.25); });
   // 救生員高台（面向海，紅色靠背在陸地那一邊）
@@ -18443,7 +18444,7 @@ function renderTab(){
       '🛠️ 荒島製作（背包 → 🏝️ 荒島 → 製作）：草繩（3 把草）、骨頭魚鉤（2 根魚骨，吃魚會剩，漂流木堆裡偶爾也有）、手作竹竿（3 竹子＋2 草繩＋1 魚鉤）。營火（5 漂流木＋3 石頭）、遮雨棚（8 漂流木＋6 大葉子＋2 草繩）、小木屋（20 漂流木＋10 竹子＋12 大葉子＋6 草繩＋6 石頭）先做好收在荒島背包，再走到想放的地方放下來：畫面上有一個半透明的樣子跟著你，綠圈就按大按鈕「放這裡」，角色會敲敲打打幾秒鐘蓋起來；紅圈會寫為什麼不能放，不想放可以按右上的「不放了」，之後在荒島背包按「放置」再拿出來。蓋的地方的草和漂流木會被清掉；旁邊有椰子樹、竹子、大石頭、太斜或在碼頭前面就不能蓋。營火一塊漂流木燒 4 分鐘，靠近按「加木頭」（最多 20 分鐘）。營火最多 3 個、遮雨棚 2 個、小木屋 1 間（做好還沒放的也算），只有自己看得到。',
       '🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。',
       '🏠 三位船長住在居民區（阿財家、阿春家、海伯家）：天亮前從家裡走到碼頭、蹲一下跳上船，傍晚靠岸後跳下船走回家，到家門燈就會亮；颱風天待在家。沙灘的遊客是坐阿海的船來玩的，會從港口沿著路走到沙灘，要走的時候走回港口。',
-      '🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人坐在海灘巾上曬太陽、有人套著泳圈在淺水玩、有人在丟沙灘球（走過去碰到低低的球會把它踢飛，只有你自己看得到）。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。',
+      '🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人躺在海灘巾上曬太陽、有人直接坐在沙灘上、有人套著泳圈在淺水玩。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。',
       '🐦 到處逛的時候看海面：遠遠看到幾隻海鳥在水面上繞，那裡就有掠食魚，走過去把浮標拋在鳥的旁邊比較容易上鉤（下雨和晚上鳥不出來）。',
       '💬 村長、阿綾、阿木、阿福、老港會提起你最近做的事：釣到傳說魚、釣到自己最重的一條、一天放流 5 條、一天撿 5 個垃圾、好幾天沒來。',
       '🧭 海上：港口到冰封群島、深海浮台、神秘島、苔森之島各有一條航道，紅綠浮標一路排過去，晚上頂上的燈會亮，照著划就到得了。島跟島中間有八個海上地標（沉船的桅杆、礁岩燈標、定置網、海鳥岩、沙洲、氣象浮標、舊箱網、海蝕門），划船靠近就會記下來。岩石、沙洲和箱網會擋船，海蝕門可以從中間划過去。',

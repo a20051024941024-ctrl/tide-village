@@ -5865,7 +5865,6 @@
 "我自己逛逛": "I will explore",
 "🧭 新手任務：剛開始玩時，左上角有一張小卡片帶你一步一步玩，一共 5 步：釣到第一條魚 → 用 📱 手機看圖鑑 → 到潮汐魚市場賣魚 → 找港口的阿海坐船出海 → 在島上釣滿 5 條。地上有光柱、卡片上有箭頭和距離帶路；卡片可以按「－」收起來。做完送 🪙300，還會跳出「你現在可以自由玩了」，給你四個可以自己選的方向（蓋小島、潛水、打撞球、滑雪）。": "🧭 Starter quests: a small card at the top left guides you through 5 steps — catch your first fish → check the Fishdex on your 📱 phone → sell fish at the Tide Fish Market → take A-Hai's boat out to sea → catch 5 fish on an island. A light beam and an arrow with distance show the way; tap \"－\" to fold the card. Finishing gives 🪙300 and a \"You are free to play\" card with four ideas (island, diving, pool, skiing).",
 "🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。": "🚢 The three blue-and-white fishing boats leave the harbor one by one at dawn with a horn, work beside the Old Fish Cage, the Set Net and Seabird Rock (the captain hauls nets, gulls circle, lamps glow after dark), and sail back at dusk; departures and returns appear in your phone feed. No sailing in typhoons. Paddle close and the captain says hi. The boats pass through you instead of bumping.",
-"🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人坐在海灘巾上曬太陽、有人套著泳圈在淺水玩、有人在丟沙灘球（走過去碰到低低的球會把它踢飛，只有你自己看得到）。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。": "🏖️ On sunny or cloudy days the South Beach has visitors: sunbathing on towels, floating in swim rings, and tossing a beach ball (touch the ball when it is low and you kick it away — only you see that). They pack up in rain, typhoons and at night. If you just caught a big fish or picked up litter, passing visitors mention it.",
 "船長・阿財": "Captain A-Tsai",
 "船長・阿春": "Captain A-Chun",
 "船長・海伯": "Captain Uncle Hai",
@@ -5959,5 +5958,6 @@
 "就叫這個名字！": "That's my name!",
 "這個名字不能用，換一個吧": "That name isn't allowed, try another one",
 "返回": "Back",
-"🐬 海豚群游到附近時會靠過來，在你前面比較開闊的海面（離岸十幾公尺以上，港口裡和岸邊淺水不會去）跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。": "🐬 When a dolphin pod swims near, it comes over, leaps in open water in front of you (at least a dozen meters from shore, never inside the harbor or in the shallows) for a while and leaves; a \"🐬 Dolphin pod\" tag floats above them. It only counts as met when they're actually on screen."
+"🐬 海豚群游到附近時會靠過來，在你前面比較開闊的海面（離岸十幾公尺以上，港口裡和岸邊淺水不會去）跳一陣子再離開；頭上會浮出「🐬 海豚群」的標籤，真的出現在畫面裡才算遇到。": "🐬 When a dolphin pod swims near, it comes over, leaps in open water in front of you (at least a dozen meters from shore, never inside the harbor or in the shallows) for a while and leaves; a \"🐬 Dolphin pod\" tag floats above them. It only counts as met when they're actually on screen.",
+"🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人躺在海灘巾上曬太陽、有人直接坐在沙灘上、有人套著泳圈在淺水玩。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。": "🏖️ On sunny or cloudy days the South Beach has visitors: lying on towels in the sun, sitting on the sand, and floating in swim rings. They pack up in rain, typhoons and at night. If you just caught a big fish or picked up litter, passing visitors mention it."
 }
