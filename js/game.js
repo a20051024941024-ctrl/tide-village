@@ -6802,9 +6802,9 @@ const ISLE_ITEMS = {
   stonepath:{ name:'石板路', price:40, rad:0.6 },
   hedge:{ name:'矮樹籬', price:100, rad:0.9 },
   /* v386 寵物圍欄（伺服器 149）：每一個多 5 隻那一類寵物的名額，待在家的寵物會在裡面玩 */
-  penland:{ name:'陸地圍欄（貓、柴犬、海鷗 +5 隻）', price:1500, rad:2.0, pen:'land' },
-  pensea:{ name:'海水池（水獺、寄居蟹、小海龜、章魚、河豚 +5 隻）', price:1500, rad:1.8, pen:'sea' },
-  pentank:{ name:'烏龜缸（小烏龜 +5 隻）', price:1500, rad:1.2, pen:'tank' },
+  penland:{ name:'陸地圍欄（貓、柴犬、海鷗的家，一個住 5 隻）', price:1500, rad:2.0, pen:'land' },
+  pensea:{ name:'海水池（水獺、寄居蟹、小海龜、章魚、河豚的家，一個住 5 隻）', price:1500, rad:1.8, pen:'sea' },
+  pentank:{ name:'烏龜缸（小烏龜的家，一個住 5 隻）', price:1500, rad:1.2, pen:'tank' },
 };
 const FEST_FISH_WHEN = { ny:'🎆 跨年夜限定（12/31 晚上～1/1）', xmas:'🎄 聖誕節限定（12/20～12/26）', cny:'🧧 春節限定（過年那一週）' };
 const PET_CAT = k => k === 'cat' || k === 'shiba' || k === 'gull' ? 'land' : k === 'pondturtle' ? 'tank' : 'sea';
@@ -7818,7 +7818,7 @@ const FURN = {
   cushion:{ name:'和室坐墊', price:80, rad:0.35, g:'live' },
   coffee:{ name:'茶几', price:350, rad:0.6, g:'live' },
   trophy:{ name:'魚標本牆', price:500, rad:0.45, g:'live' },
-  turtletank:{ name:'室內烏龜缸（小烏龜 +5 隻）', price:1500, rad:1.3, g:'live' },   /* v396 放在屋子裡的烏龜缸（伺服器 153），名額算法跟島上的烏龜缸一樣 */
+  turtletank:{ name:'室內烏龜缸（小烏龜的家，一個住 5 隻）', price:1500, rad:1.3, g:'live' },   /* v396 放在屋子裡的烏龜缸（伺服器 153），名額算法跟島上的烏龜缸一樣 */
   rodrack:{ name:'釣竿架', price:400, rad:0.5, g:'live' },
   globe:{ name:'地球儀', price:300, rad:0.3, g:'live' },
   radio:{ name:'收音機', price:250, rad:0.3, g:'live' },
@@ -12054,9 +12054,9 @@ function petVarRare(k, v){ const keys = Object.keys(PET_VARS[k] || {}); return k
 const Pets = { list:null, at:0, busy:false, atShop:false, feedFor:null, home:[], homeKey:'', meowAt:0, newName:'' };
 async function petLuckyTry(fid){ if (!Cloud.on || !Cloud.sb) return; let r = null; try { const { data } = await Cloud.sb.rpc(fid === 'horseshoe' ? 'pet_horseshoe' : 'pet_lucky'); r = data; }   /* v559 釣到三棘鱟：改問伺服器有沒有小鱟跟著（192） */ catch(e){ return; } if (!r || !r.got) return;
   const K = PET_KINDS[r.kind], vn = petFull(r.kind, r.var);
-  if (r.kind === 'horseshoe'){ setTimeout(() => { if (r.full){ flash('🦀 沙地上有一隻小鱟跟著牠！可是寵物名額滿了，只好讓牠留在海邊（小島買海水池可以多養）', 2.8); return; }
+  if (r.kind === 'horseshoe'){ setTimeout(() => { if (r.full){ flash('🦀 沙地上有一隻小鱟跟著牠！可是你的寵物已經太多了（200 隻），只好讓牠留在海邊', 2.8); return; }
       SFX.catch(); flash('🦀 沙地上還有一隻小鱟跟著牠！牠爬到你腳邊，決定跟你回家了', 3.2); setTimeout(() => toast('🦀 小鱟住在小島的海水池最舒服。到「寵物」可以幫牠取名字'), 3600); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); return; }
-  setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是寵物名額滿了，只好放牠回去了（小島買圍欄、海水池、烏龜缸可以多養）`, 2.6); return; }
+  setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是你的寵物已經太多了（200 隻），只好放牠回去了`, 2.6); return; }
     SFX.catch(); flash(r.kind === 'pondturtle' ? `${K.icon} 撿到一隻${vn}！這是被棄養的烏龜，帶回家好好照顧吧` : `${K.icon} 哇！順便撈到一隻${vn}${petVarRare(r.kind, r.var) ? '（很少見的花色！）' : ''}，牠決定跟你回家了`, 3); if (r.kind === 'pondturtle') setTimeout(() => toast('🐢 養了就要一直照顧，不要棄養。烏龜可以活幾十年喔'), 3400); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); }
 /* v253 阿鐵師傅的工坊 */
 function craftUse(c){ const shown = new Set((rec.show || []).map(String)); return (rec.tank || []).filter(x => { const f = FISH_BY_ID[x.f]; return f && f.rarity === c.r && !f.of && !x.k && !shown.has(String(x.t)); }).sort((a, b) => a.w - b.w).slice(0, c.n); }
@@ -12444,8 +12444,8 @@ function renderPets(body){
   { const seg = el('div', 'seg'); [['mine', Pets.atShop ? '🏠 領養' : '🐾 我的寵物'], ['market', '🏷️ 寵物市集']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((Pets.tab || 'mine') === k)); b.addEventListener('click', () => { Pets.tab = k; if (k === 'market') loadPetMarket(); renderTab(); }); seg.appendChild(b); }); body.appendChild(seg); }
   if (Pets.tab === 'market'){ renderPetMarket(body); return; }
   const L = Pets.list, pc = penCaps(rec.island && rec.island.items);
-  const room = 3 + pc.land + pc.sea + pc.tank, free = 3 - petOver(L, rec.island && rec.island.items);
-  body.appendChild(el('p', 'sub', `養了 ${L.length} 隻（名額：一般 3${pc.land ? `＋陸地圍欄 ${pc.land}` : ''}${pc.sea ? `＋海水池 ${pc.sea}` : ''}${pc.tank ? `＋烏龜缸 ${pc.tank}` : ''}＝${room}；一般名額還剩 ${Math.max(0, free)} 隻）。想多養：在小島的「🔨 蓋東西」買陸地圍欄、海水池、烏龜缸，每個多 5 隻那一類；烏龜缸也有放在屋子裡的版本（屋裡的家具店買）。同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
+  /* v606 作者：「不應該限制包包裡寵物的數量吧」→ 不限數量（伺服器 203），圍欄只是寵物的家 */
+  body.appendChild(el('p', 'sub', `養了 ${L.length} 隻（v606 起想養幾隻都可以）。在小島蓋陸地圍欄、海水池、烏龜缸，待在家的寵物會住進去玩。同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
   const ul = el('ul', 'shoplist');
   for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(el('span', 'dishic', K.icon));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}${petVarRare(p.kind, p.var) ? ' ⭐' : ''}${p.price != null ? `（市集掛賣中 🪙${p.price.toLocaleString()}）` : p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
@@ -18319,7 +18319,7 @@ function renderTab(){
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
       '🐢 室內烏龜缸：走到缸旁邊按右下的「🐢 看烏龜缸」，會跳出缸裡有哪幾隻小烏龜，按「拿出來」就帶牠出門；身邊帶著小烏龜的話，也可以按「放進缸裡」。',
       '🏪 寵物掛到市集賣的時候會先住在市集，小島上看不到牠；收回來就會回家。',
-      '寵物名額：一般 3 隻什麼都能養。在小島「🔨 蓋東西」→「🐾 寵物圍欄」可以買陸地圍欄（貓、柴犬、海鷗）、海水池（水獺、寄居蟹、小海龜、章魚、河豚）、烏龜缸（小烏龜），各 1500 金幣、每個多 5 隻那一類的名額，數量不限（算在小島 60 件東西裡）。待在家的寵物會在圍欄裡玩，來參觀的人也看得到。圍欄裡還有寵物時不能拆。',
+      '寵物想養幾隻都可以（v606 起不限數量）。在小島「🔨 蓋東西」→「🐾 寵物圍欄」可以買陸地圍欄（貓、柴犬、海鷗）、海水池（水獺、寄居蟹、小海龜、章魚、河豚）、烏龜缸（小烏龜），各 1500 金幣，一個住 5 隻那一類的寵物（算在小島 60 件東西裡）。待在家的寵物會在圍欄裡玩，來參觀的人也看得到；沒住進圍欄的就在島上閒晃。',
       '🐢 小烏龜（斑龜）：在寵物店小花那裡領養，或在河邊、池塘釣魚偶爾撿到被棄養的小烏龜（養了就不要棄養，烏龜可以活幾十年）。在「寵物」按「🧽 照顧」：☀️ 晴天在小島石頭上曬太陽最有效、🥬 每天均衡飲食（飼料、葉菜、小魚換著吃）、🥚 蛋黃是點心一週一次就好、🧽 換水刷殼保持光澤、🧴 龜殼保養一個月最多一次。光澤度 80 殼上有花紋，100 有金色殼邊，隔天《潮汐村報》會登「本週最美烏龜」。真的養烏龜也是這樣：龜殼漂亮靠曬太陽（紫外線）、鈣質、均衡飲食和乾淨的水。小海龜是保育類，只能拍照、放回大海。'
     ]);
     sec('⚓ 港口海底潛水', [
