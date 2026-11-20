@@ -2120,7 +2120,7 @@ const Voy = { on:false, m:null, btn:null };
 function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
   closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true); if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } if (F.phase !== 'idle') cancelFishing(); try { if (Bike.on) bikeOff(); } catch(e){} if (mySeat) try { standUp(); } catch(e){}
   const P = [[44, -38]].concat(lane), cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); const len = cum[cum.length - 1];
-  if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 0.82); Voy.m.visible = false; }
+  if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 1.7); Voy.m.visible = false; }   /* v596 作者：「船的比例不對」→ 0.82 倍的船比人還小，放大到 1.7 倍（船長大約 10 公尺、駕駛艙比人高） */
   if (!Voy.btn){ const b = el('button', 'tbtn', '跳過 ▶'); b.id = 'voySkip'; b.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; b.addEventListener('click', () => voyEnd(true)); document.body.appendChild(b); Voy.btn = b; }
   const fx = $('#fadeFx'); fx.classList.add('on'); try { SFX.cast(); } catch(e){}
   setTimeout(() => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, dur: clamp(len / 13.5, 9, 22), hd: null }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); cam.yaw = me.rot + Math.PI; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 150); flash(`🚤 出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('🚤 現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } }, 420); }
@@ -2129,8 +2129,8 @@ function voyDrive(dt){ const V = Voy, t = now(); V.t += dt; const u0 = clamp(V.t
   const prev = V.hd == null ? want : V.hd; V.hd = lerpAngle(prev, want, 1 - Math.exp(-1.8 * dt)); let dh = V.hd - prev; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); cam.yaw += dh;   /* 船轉彎，鏡頭跟著轉；玩家自己拖的角度會留著 */
   const bob = Math.sin(t * 1.7) * 0.05, wh = WAVES.on ? waveH(x, z, t) : 0, fx = Math.sin(V.hd), fz = Math.cos(V.hd), sc = V.m.scale.x;
   V.m.position.set(x, WATER_LEVEL - 0.25 * sc + bob + wh, z); V.m.rotation.set(Math.sin(t * 1.2) * 0.03, V.hd, Math.sin(t * 1.5) * 0.04);
-  me.pos.x = x - fx * 1.5 * sc; me.pos.z = z - fz * 1.5 * sc; me.baseY = WATER_LEVEL + (1.1 - 0.25) * sc + bob + wh; Jump.gy = me.baseY; me.rot = V.hd; me.speed = 0; me.sitting = false;
-  if (u0 > 0.02 && u0 < 0.98 && Math.random() < dt * 14) ripple(x - fx * 2.6 + (Math.random() - 0.5) * 1.2, z - fz * 2.6 + (Math.random() - 0.5) * 1.2, Math.random() < 0.3);
+  me.pos.x = x - fx * 1.95 * sc; me.pos.z = z - fz * 1.95 * sc;   /* 站在駕駛艙後面、捲網機前面的甲板 */ me.baseY = WATER_LEVEL + (1.1 - 0.25) * sc + bob + wh; Jump.gy = me.baseY; me.rot = V.hd; me.speed = 0; me.sitting = false;
+  if (u0 > 0.02 && u0 < 0.98 && Math.random() < dt * 14) ripple(x - fx * 3.2 * sc + (Math.random() - 0.5) * 1.2 * sc, z - fz * 3.2 * sc + (Math.random() - 0.5) * 1.2 * sc, Math.random() < 0.3);
   if (V.t >= V.dur) voyEnd(false); }
 function voyEnd(skip){ if (!Voy.on) return; Voy.on = false; if (Voy.m) Voy.m.visible = false; if (Voy.btn) Voy.btn.hidden = true; const tp = Voy.tp; Voy.tp = null; travelTo(tp); }
 function signsTick(dt, t){
