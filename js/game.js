@@ -6153,6 +6153,8 @@ function camFadeCand(){ const C = CamFade, T = now(); if (C.cand && T - C.candAt
   scene.traverseVisible(o => { if (!o.isMesh || o.isSkinnedMesh || o.userData.noFade || o === me.av.g) return; if (o.isInstancedMesh){ L.push(o); return; } const g = o.geometry; if (!g) return; if (!g.boundingSphere) g.computeBoundingSphere(); if (!g.boundingSphere) return;
     const sc = Math.max(o.scale.x, o.scale.y, o.scale.z) || 1, r = g.boundingSphere.radius * sc; if (r > 40) return; v.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld); if (Math.hypot(v.x - me.pos.x, v.z - me.pos.z) - r > 35) return; L.push(o); });
   return (C.cand = L); }
+/* v611 作者截圖：坐阿海的船，整艘船變半透明。你站在上面、裡面的東西（船、碼頭、浮台）不算擋視野：把你的位置換到那個東西自己的座標，看有沒有在它的範圍裡 */
+function camFadeUnder(o){ const g = o.geometry; if (!g) return false; if (!g.boundingBox) g.computeBoundingBox(); const b = g.boundingBox; if (!b) return false; const v = (CamFade.pv || (CamFade.pv = new THREE.Vector3())).set(me.pos.x, me.pos.y + 0.5, me.pos.z); o.worldToLocal(v); return v.x > b.min.x - 0.2 && v.x < b.max.x + 0.2 && v.z > b.min.z - 0.2 && v.z < b.max.z + 0.2 && v.y > b.min.y - 1.5 && v.y < b.max.y + 0.5; }
 function camFadeTick(target){ const T = now(), C = CamFade;
   if (frameNo % 5 === 0 && !Dive.on && !House.on && !inIndoor() && !FP.act){ for (const hy of [0.2, -0.75]){ const from = new THREE.Vector3(target.x, target.y + hy, target.z), dir = camera.position.clone().sub(from), L = dir.length();   /* 頭和身體各打一條（樹幹擋到身體也算） */
     if (L > 1.5){ dir.divideScalar(L); C.ray.set(from, dir); C.ray.far = L - 0.2; C.ray.camera = camera; const hits = C.ray.intersectObjects(camFadeCand(), false);
@@ -6163,7 +6165,7 @@ function camFadeTick(target){ const T = now(), C = CamFade;
             const gm = new THREE.Mesh(o.geometry, mm); gm.matrixAutoUpdate = false; gm.matrix.multiplyMatrices(o.matrixWorld, M); gm.userData.noFade = true; scene.add(gm);
             o.setMatrixAt(h.instanceId, new THREE.Matrix4().makeScale(0, 0, 0)); o.instanceMatrix.needsUpdate = true; e = { inst: o, id: h.instanceId, M, gm }; C.cur.set(key, e); }
           e.t = T; continue; }
-        if (!camFadeOk(o)) continue; let e = C.cur.get(o);
+        if (!camFadeOk(o) || camFadeUnder(o)) continue; let e = C.cur.get(o);
         if (!e){ const orig = o.material, mk = m => { const c = m.clone(); c.transparent = true; c.depthWrite = false; c.opacity = 0.28 * (m.opacity || 1); return c; }; o.userData.fadeOrig = orig; o.material = Array.isArray(orig) ? orig.map(mk) : mk(orig); e = { o, orig }; C.cur.set(o, e); }
         e.t = T; } } } }
   for (const [k, e] of C.cur) if (T - e.t > 0.3 || Dive.on || House.on || FP.act){ if (e.inst){ e.inst.setMatrixAt(e.id, e.M); e.inst.instanceMatrix.needsUpdate = true; scene.remove(e.gm); e.gm.material.dispose(); C.cur.delete(k); continue; } const o = e.o, fm = o.material; o.material = e.orig; delete o.userData.fadeOrig; (Array.isArray(fm) ? fm : [fm]).forEach(m => m.dispose()); C.cur.delete(k); } }
@@ -18502,7 +18504,7 @@ function renderTab(){
       '🏘️ 居民區是村民住的地方（島的西南）：村長、阿綾、阿木、阿福、老港一人一棟，門口有門牌。他們下班、累了會沿著巷子走回自己家；晚上門口的燈亮著，就是那一家的人在家。還有三棟空屋，留給以後搬來的新村民。玩家的家在自己的小島上。',
       '照功能分區：🎣 港邊廣場（島的東北，兩間店圍著船錨紀念碑，開口對著碼頭）是釣具店、潮汐魚市場（賣魚、阿福海產、釣客擺攤三個櫃位），港口北邊有石頭堤防和紅白燈標，可以走上去釣魚；🐠 水族館區（島的西北，往北海灘的小路左手邊）是水族館和海洋博物館，中間一個小噴水池；🍜 魚市場區（港邊廣場西邊、往港口的大路旁）是潮汐食堂；中央廣場北邊是釣蝦場；🏀 運動公園（島的西南邊，從廣場往西走過鏡湖南岸）有潮汐撞球館（屋頂有一顆黑八的小屋，走進去可以真的打撞球）和體育場的大門，沙灘排球場在東邊沙灘上——走到大門口按按鈕會進到潮汐體育場（跑道、看台，中間是足球場、最西邊是籃球半場、最東邊是羽球場，都可以真的比賽），出口在南邊看台中間；👗 商店街（往南走，過了涼亭兩邊各三間）：西邊是寵物店、阿綾服裝店、阿彩畫廊，東邊是阿木木工坊、阿萍美髮沙龍，最南邊一間是街景的咖啡店。',
       '☕ 商店街尾巴的咖啡店旁邊、往海邊那塊地有戶外露台：三張小圓桌和陽傘，每張兩把椅子可以坐下來看海，晚上頭上的小燈泡會亮。',
-      '🌳 走到樹、房子後面時，擋在鏡頭和你中間的東西會變成半透明，不會再被擋住看不到自己。',
+      '🌳 走到樹、房子後面時，擋在鏡頭和你中間的東西會變成半透明，不會再被擋住看不到自己（你站在上面的船、碼頭不會變）。',
       '🧭 找不到人或店？打開「地圖」，往下有「找人、找店」，點一下（或點地圖上的商店圖示）就會帶路：左上角出現箭頭和距離、地上有一道光柱，走到了自動結束，按「取消」可以停。',
       '🦘 矮的東西可以跳過去：石頭、長椅、花台、矮柵欄這類大約 1 公尺以下的，按「跳」可以跳過去，也可以跳上去站著。樹、燈柱、房子還是會擋住。',
       '🗺️ 地圖：上面的按鈕可以只看釣點、商店或村民；兩根手指（或＋－）放大縮小、一根手指拖動；還沒去過的地點是灰色「？」小點；冰封群島、深海浮台這些外島在地圖四邊，點一下會說怎麼去。'
