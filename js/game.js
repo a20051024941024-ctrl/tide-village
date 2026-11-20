@@ -6228,6 +6228,7 @@ function actionDown(){
     { const cr = nearCritter(); if (cr){ act.classList.remove('down'); grabCritter(cr); return; } }
    /* 紅樹林泥灘：徒手抓 */
     { const lt = nearLitter(); if (lt){ act.classList.remove('down'); pickLitter(lt); return; } }   /* 水圳：撿垃圾 */
+    if (Wild.place){ act.classList.remove('down'); wildPlaceConfirm(); return; }   /* v600 放營火、遮雨棚、小木屋 */
     { const wn = nearWildNode(); if (wn){ act.classList.remove('down'); wildGather(wn); return; } }   /* v590 漂流島：撿材料 */
     if (nearWildBoat()){ act.classList.remove('down'); Wild.trip = null; travelTo(TRAVEL.find(t => t.id === 'harborsq')); return; }   /* v592 漂流島碼頭：坐船回村子 */
     { const wb = !Wild.busy && nearWildBed(); if (wb && (Wild.sleep || !nearWildFire())){ act.classList.remove('down'); wildSleepToggle(wb); return; } }   /* v592 小木屋：睡覺 */
@@ -6661,7 +6662,8 @@ function updateFishing(dt, t){
     const wnN = !crN && !ltN && nearWildNode();
     const wfN = !crN && !ltN && !wnN && !Wild.build && nearWildFire();
     const wbtN = !crN && !ltN && !wnN && nearWildBoat(), wbdN = !crN && !ltN && !wnN && !wfN && nearWildBed();
-    if (crN){ label = '抓！'; sub = crN.kind === 'crab' ? '🦀 招潮蟹' : '🐟 彈塗魚'; cls = 'bite'; }
+    if (Wild.place){ label = '放這裡'; sub = Wild.place.why ? `🚧 ${Wild.place.why}` : `${Wild.place.R.ic} 綠圈可以放`; cls = Wild.place.why ? '' : 'shop'; }
+    else if (crN){ label = '抓！'; sub = crN.kind === 'crab' ? '🦀 招潮蟹' : '🐟 彈塗魚'; cls = 'bite'; }
     else if (wbtN){ label = '回村子'; sub = '🚤 坐船回潮汐釣魚村'; cls = 'shop'; }
     else if (wbdN || Wild.sleep){ label = Wild.sleep ? '起床' : '睡覺'; sub = Wild.sleep ? '😴 體力回復中' : '🛏️ 小木屋的床'; cls = 'shop'; }
     else if (wfN && wildRawFood()){ const k = wildRawFood(); label = '烤'; sub = `🔥 ${WILD_ITEMS[k].n} ×${wildSt().bag[k]}`; cls = 'shop'; }
@@ -7323,6 +7325,7 @@ const WILD_ITEMS = {
   coco:   { n:'椰子',   ic:'🥥', verb:'搖椰子樹', get:[1, 1], cd:600, anim:'farmwater' },
   rope:   { n:'草繩',   ic:'🪢' }, bone: { n:'魚骨', ic:'🦴' }, hook: { n:'骨頭魚鉤', ic:'🪝' }, rod: { n:'手作竹竿', ic:'🎣' },
   pool:   { n:'潮池', ic:'🫧', verb:'撿潮池', get:[1, 1], cd:180, anim:'farmplant' },
+  rock:   { n:'石頭', ic:'🪨', verb:'敲大石頭', get:[1, 2], cd:360, anim:'farmwater', give:'stone' },   /* v600 作者：「石頭應該要分，這個也是石頭」→ 島上的大石頭也敲得出石頭（大石頭不會消失） */
   fishS:  { n:'生的小魚', ic:'🐟', food:8,  cook:'fishSC', bone:1 }, fishSC: { n:'烤小魚', ic:'🍢', food:20, bone:1 },
   crab:   { n:'生的小螃蟹', ic:'🦀', food:5, cook:'crabC' },       crabC:  { n:'烤螃蟹', ic:'🦞', food:12 },
   fishB:  { n:'生的大魚', ic:'🐠', food:15, cook:'fishBC', bone:2 }, fishBC: { n:'烤大魚', ic:'🍖', food:45, bone:2 } };
@@ -7348,11 +7351,11 @@ WILD_ITEMS.coco.food = 10; WILD_ITEMS.coco.sta = 5;
 /* v591 荒島 B：製作。東西做好放背包；營火、遮雨棚、小木屋做好會蓋在你面前（要站在島上的空地） */
 const WILD_RECIPES = [
   { id:'rope',    k:'item', n:'草繩',     ic:'🪢', need:{ grass:3 }, d:'綁東西都要用。' },
-  { id:'hook',    k:'item', n:'骨頭魚鉤', ic:'🪝', need:{ bone:2 }, d:'吃完魚剩下的魚骨磨成的（吃東西下一次更新開放）。' },
-  { id:'rod',     k:'item', n:'手作竹竿', ic:'🎣', need:{ bamboo:3, rope:2, hook:1 }, d:'荒島上唯一的釣竿，只能在岸邊釣（荒島的魚之後開放）。', one:true },
-  { id:'fire',    k:'camp', n:'營火',     ic:'🔥', need:{ wood:5, stone:3 }, d:'一塊漂流木燒 4 分鐘，靠近按「加木頭」。晚上取暖、烤魚（之後開放）。', max:3, rad:1.0, bt:3 },
+  { id:'hook',    k:'item', n:'骨頭魚鉤', ic:'🪝', need:{ bone:2 }, d:'吃完魚剩下的魚骨磨成的；漂流木堆裡偶爾也撿得到魚骨。' },
+  { id:'rod',     k:'item', n:'手作竹竿', ic:'🎣', need:{ bamboo:3, rope:2, hook:1 }, d:'荒島上唯一的釣竿，在島的岸邊面向海就能拋竿。', one:true },
+  { id:'fire',    k:'camp', n:'營火',     ic:'🔥', need:{ wood:5, stone:3 }, d:'一塊漂流木燒 4 分鐘，靠近按「加木頭」。晚上取暖、烤魚。', max:3, rad:1.0, bt:3 },
   { id:'shelter', k:'camp', n:'遮雨棚',   ic:'⛺', need:{ wood:8, leaf:6, rope:2 }, d:'下雨時站在下面不會淋濕。', max:2, rad:1.7, bt:5 },
-  { id:'cabin',   k:'camp', n:'小木屋',   ic:'🛖', need:{ wood:20, bamboo:10, leaf:12, rope:6, stone:6 }, d:'有門、有床。之後可以在裡面睡覺跳過黑夜、倒下時在這裡醒來。', max:1, rad:2.6, bt:9 } ];
+  { id:'cabin',   k:'camp', n:'小木屋',   ic:'🛖', need:{ wood:20, bamboo:10, leaf:12, rope:6, stone:6 }, d:'有門、有床。晚上睡在裡面不會冷、體力會回來；倒下時在這裡醒來。', max:1, rad:2.6, bt:9 } ];
 const WILD_BAG = 12, WILD_STACK = 20;
 var Wild = { built:false, g:null, nodes:[], st:null, busy:false, saveT:0, loaded:false, loading:false };
 function wildDefault(){ return { v:1, t:0, bag:{}, node:{}, camp:[], hun:100, sta:100 }; }
@@ -7377,7 +7380,7 @@ function wildNodeList(){ if (Wild.nodeL) return Wild.nodeL; let sd = 590; const 
   const S = WILD_S, hill = (lx, lz) => Math.hypot(lx / S - 4, lz / S - 5) < 11;
   put('coco', 14, r => r > 3.5 && r < 9); put('wood', 18, r => r > 1.2 && r < 4.5); put('bamboo', 14, (r, lx, lz) => r > 6 && Math.hypot(lx / S + 9, lz / S - 12) < 8);
   put('stone', 10, (r, lx, lz) => r > 5 && hill(lx, lz)); put('stone', 6, r => r > 5); put('leaf', 14, (r, lx, lz) => r > 6 && !hill(lx, lz)); put('grass', 24, r => r > 4.5);
-  put('pool', 8, (r, lx, lz) => r > 0.4 && r < 2.8 && lx > 4 * S);   /* v592 潮池：東邊的沙灘邊，退潮才撿得到 */
+  put('pool', 8, (r, lx, lz) => r > 0.5 && r < 1.7 && lx > 4 * S);   /* v600 往海邊靠，漲潮時跟海連在一起 */   /* v592 潮池：東邊的沙灘邊，退潮才撿得到 */
   return (Wild.nodeL = L); }
 /* v595 島變大、可以撿的東西變成 108 個：每個東西裡面同一種材質的小零件合成一個，手機少畫很多次 */
 function wildMergeKids(grp){ const by = new Map(), keep = []; for (const o of grp.children){ if (!o.isMesh){ keep.push(o); continue; } o.updateMatrix(); let geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); geo.applyMatrix4(o.matrix); const k = o.material.uuid; if (!by.has(k)) by.set(k, { m: o.material, L: [] }); by.get(k).L.push(geo); }
@@ -7398,7 +7401,7 @@ function wildScenery(g, H, rr){ const W = WILD, S = WILD_S;
     P(1.4, 0.06, 0.25, 0.3, 0.32, 0.05, 0, 0.3, 0, wd2);              /* 座板 */
     P(0.12, 0.12, 2.8, 1.2, 0.2, 1.8, 0, 0.4, 0, wd2);                /* 斷掉躺在沙上的桅杆 */
     wildMergeKids(b); g.add(b); addCircleCol(W.x + lx, W.z + lz, 1.6); Wild.rocks = Wild.rocks || []; Wild.rocks.push([W.x + lx, W.z + lz, 2.4]); }
-  { const [lx, lz] = WILD_POI.look, rg = lavaRockGeo(1.6, 595, ['#8d8678', '#7a7466', '#9a9384']); rg.translate(lx, H(lx, lz) - 0.4, lz); const m = new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true })); g.add(m); addCircleCol(W.x + lx, W.z + lz, 1.3); Wild.rocks = Wild.rocks || []; Wild.rocks.push([W.x + lx, W.z + lz, 1.8]); }
+  { const [lx, lz] = WILD_POI.look; (Wild.rockN = Wild.rockN || []).push({ id: 'rockL', k: 'rock', lx, lz, x: W.x + lx, z: W.z + lz, sz: 1.6 }); const rg = lavaRockGeo(1.6, 595, ['#8d8678', '#7a7466', '#9a9384']); rg.translate(lx, H(lx, lz) - 0.4, lz); const m = new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true })); g.add(m); addCircleCol(W.x + lx, W.z + lz, 1.3); Wild.rocks = Wild.rocks || []; Wild.rocks.push([W.x + lx, W.z + lz, 1.8]); }
   { const [lx, lz] = WILD_POI.pond, y = H(lx, lz), w = new THREE.Mesh(new THREE.CircleGeometry(1.7, 18), new THREE.MeshStandardMaterial({ color: '#5aa6a8', roughness: 0.1, transparent: true, opacity: 0.85 })); w.rotation.x = -Math.PI / 2; w.scale.set(1, 0.7, 1); w.position.set(lx, y + 0.04, lz); g.add(w); Wild.pond = { x: W.x + lx, z: W.z + lz, m: w }; Wild.rocks = Wild.rocks || []; Wild.rocks.push([W.x + lx, W.z + lz, 1.9]); } }
 function buildWild(){ Wild.built = true; const W = WILD, g = new THREE.Group(); g.position.set(W.x, 0, W.z); g.userData.keep = true; scene.add(g); Wild.g = g; let sd = 77; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const H = (lx, lz) => wildH(W.x + lx, W.z + lz) ?? (W.y - 3.2), Rm = W.r + 11;
@@ -7416,7 +7419,7 @@ function buildWild(){ Wild.built = true; const W = WILD, g = new THREE.Group(); 
     for (const [px, pz] of [[x0 + 0.3, -1.25], [x0 + 0.3, 1.25], [x0 + 4.5, -1.25], [x0 + 4.5, 1.25]]){ const po = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 2.2, 7), mat('#6f5236', 0.95)); po.position.set(px, y - 0.7, pz); g.add(po); }
     const sg = signTex('漂流島', '#5a4030', '#f4e6c4', 256, 80), sm = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.4), new THREE.MeshBasicMaterial({ map: sg, side: THREE.DoubleSide })); sm.position.set(x1 - 0.3, y + 1.35, -1.5); sm.rotation.y = -Math.PI / 2; g.add(sm); g.add(box([0.1, 1.5, 0.1], '#6f5236', [x1 - 0.3, y + 0.6, -1.5])); }
   /* 不能撿的景物：小山上的大石頭、岸邊的礁岩、灌木 */
-  { const parts = []; for (let i = 0; i < 30; i++){ const a = rr() * 6.28, d = rr() * W.r * 0.9, lx = Math.cos(a) * d, lz = Math.sin(a) * d, R = wildEdge(lx, lz); if (R - d < 2 || (lx < -W.r + 9 && Math.abs(lz) < 3) || wildPoiNear(lx, lz, 1)) continue; const sz = 0.45 + rr() * 0.8, rg = lavaRockGeo(sz, i * 11 + 3, ['#8d8678', '#7a7466', '#9a9384']); (Wild.rocks = Wild.rocks || []).push([W.x + lx, W.z + lz, sz]); rg.translate(lx, H(lx, lz) - 0.15, lz); parts.push(rg); addCircleCol(W.x + lx, W.z + lz, sz * 0.7); }
+  { const parts = []; for (let i = 0; i < 30; i++){ const a = rr() * 6.28, d = rr() * W.r * 0.9, lx = Math.cos(a) * d, lz = Math.sin(a) * d, R = wildEdge(lx, lz); if (R - d < 2 || (lx < -W.r + 9 && Math.abs(lz) < 3) || wildPoiNear(lx, lz, 1)) continue; const sz = 0.45 + rr() * 0.8, rg = lavaRockGeo(sz, i * 11 + 3, ['#8d8678', '#7a7466', '#9a9384']); (Wild.rocks = Wild.rocks || []).push([W.x + lx, W.z + lz, sz]); (Wild.rockN = Wild.rockN || []).push({ id: 'rock' + i, k: 'rock', lx, lz, x: W.x + lx, z: W.z + lz, sz }); rg.translate(lx, H(lx, lz) - 0.15, lz); parts.push(rg); addCircleCol(W.x + lx, W.z + lz, sz * 0.7); }
     if (parts.length){ const rm = new THREE.Mesh(mergeGeometries(parts, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true })); g.add(rm); } }
   { const bp = []; for (let i = 0; i < 36; i++){ const a = rr() * 6.28, d = rr() * W.r * 0.85, lx = Math.cos(a) * d, lz = Math.sin(a) * d; if (wildEdge(lx, lz) - d < 5 || (lx < -W.r + 9 && Math.abs(lz) < 3) || wildPoiNear(lx, lz, 0.6)) continue; const bg = new THREE.IcosahedronGeometry(0.5 + rr() * 0.5, 0); bg.scale(1, 0.7, 1); bg.translate(lx, H(lx, lz) + 0.25, lz); bp.push(bg); }
     if (bp.length) g.add(new THREE.Mesh(mergeGeometries(bp, false), mat('#4f8a3c', 0.9, { flatShading: true }))); }
@@ -7441,22 +7444,54 @@ function buildWild(){ Wild.built = true; const W = WILD, g = new THREE.Group(); 
       top = new THREE.Group(); for (let j = 0; j < 3; j++){ const cc = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), M.coco); const a = j * 2.1; cc.position.set(Math.cos(a) * 0.16, -0.12, Math.sin(a) * 0.16); top.add(cc); } pg.computeBoundingBox(); const bb = pg.boundingBox; top.position.set((bb.min.x + bb.max.x) / 2, bb.max.y - 0.55, (bb.min.z + bb.max.z) / 2); ng.add(top); addCircleCol(n.x, n.z, 0.3); }
     if (n.k === 'stone' || n.k === 'bamboo') addCircleCol(n.x, n.z, n.k === 'bamboo' ? 0.45 : 0.3);
     wildMergeKids(ng); if (top) wildMergeKids(top); g.add(ng); Wild.nodes.push({ n, g: ng, top }); }
+  for (const n of Wild.rockN || []){ const ng = new THREE.Group(); ng.userData.keepVis = true; Wild.nodes.push({ n, g: ng, top: null }); }   /* v600 大石頭也能敲（畫面上的石頭是上面合起來的那一塊，這裡只登記位置） */
+  for (const N of Wild.nodes) if (N.n.k === 'pool') wildPoolDeco(N, H);
   g.traverse(o => { if (o.isMesh) o.castShadow = false; }); wildNodeVis(); }
 /* 撿過的東西：還沒長回來就藏起來（椰子樹只藏椰子） */
 function wildNodeVis(){ const S = wildSt(), T = Date.now(); for (const N of Wild.nodes){ const ok = !(S.node[N.n.id] > T); if (N.g.userData.keepVis) continue; if (N.top) N.top.visible = ok; else N.g.visible = ok; } }
 function wildNodeReady(id){ const S = wildSt(); return !(S.node[id] > Date.now()); }
 function onWild(){ return wildNear(me.pos.x, me.pos.z, 2) && !myBoat && !Dive.on; }
-function nearWildNode(){ if (!Wild.built || Wild.busy || F.phase !== 'idle' || myBoat || mySeat || Dive.on || !onWild()) return null; let best = null, bd = 1.6; for (const N of Wild.nodes){ if (!wildNodeReady(N.n.id)) continue; const d = Math.hypot(me.pos.x - N.n.x, me.pos.z - N.n.z) - (N.n.k === 'coco' || N.n.k === 'bamboo' ? 0.5 : 0); if (d < bd){ bd = d; best = N; } } return best; }
+function nearWildNode(){ if (!Wild.built || Wild.busy || F.phase !== 'idle' || myBoat || mySeat || Dive.on || !onWild()) return null; let best = null, bd = 1.6; for (const N of Wild.nodes){ if (!wildNodeReady(N.n.id)) continue; const d = Math.hypot(me.pos.x - N.n.x, me.pos.z - N.n.z) - (N.n.k === 'coco' || N.n.k === 'bamboo' ? 0.5 : N.n.k === 'rock' ? N.n.sz * 0.8 : 0); if (d < bd){ bd = d; best = N; } } return best; }
+/* v600 作者：「潮池沒泡在裡面」→ 每個潮池上面蓋一片海水：漲潮慢慢漫上來蓋住潮池和石頭，退潮慢慢退掉；退潮時看得到裡面有兩條小魚在繞、一隻小螃蟹在橫著走（撿過還沒長回來就沒有） */
+function wildFadeTex(){ if (Wild.fadeT) return Wild.fadeT; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'), g = c.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, '#fff'); g.addColorStop(0.55, '#fff'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fillRect(0, 0, 128, 128); return (Wild.fadeT = new THREE.CanvasTexture(cv)); }   /* 中間實、邊緣慢慢淡掉（alphaMap 看的是顏色的亮度） */
+function wildPoolDeco(N, H){ const ng = N.g, L = Math.hypot(N.n.lx, N.n.lz) || 1, ox = N.n.lx / L, oz = N.n.lz / L, cov = new THREE.Mesh(new THREE.CircleGeometry(1, 24), new THREE.MeshStandardMaterial({ color: '#4a93c4', roughness: 0.15, transparent: true, opacity: 0, depthWrite: false, alphaMap: wildFadeTex() }));
+  cov.rotation.x = -Math.PI / 2; cov.rotation.z = Math.atan2(-oz, ox); cov.scale.set(3.2, 2.2, 1); cov.position.set(N.n.lx + ox * 1.6, 0, N.n.lz + oz * 1.6); N.covY = H(N.n.lx, N.n.lz); cov.renderOrder = 2; Wild.g.add(cov);   /* 往海那邊拉長一片，看起來是海水漫上來 */
+  const life = new THREE.Group(), fm = mat('#d9a35a', 0.6), cm = mat('#d0563a', 0.6); for (let i = 0; i < 2; i++){ const f = new THREE.Group(), b = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), fm); b.scale.set(0.6, 0.7, 1.6); f.add(b); const t = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 4), fm); t.rotation.x = -Math.PI / 2; t.position.z = -0.1; f.add(t); life.add(f); }
+  { const c = new THREE.Group(), b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 7, 4), cm); b.scale.set(1.3, 0.5, 1); c.add(b); for (const sx of [-1, 1]){ const cl = new THREE.Mesh(new THREE.SphereGeometry(0.025, 5, 4), cm); cl.position.set(sx * 0.06, 0, 0.07); c.add(cl); } life.add(c); }
+  life.position.y = 0.09; ng.add(life); N.cov = cov; N.life = life; }
+function wildPoolTick(dt, t){ const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1), k = clamp((lv - 0.05) / 0.3, 0, 1), S = wildSt(), T = Date.now();
+  for (const N of Wild.nodes){ if (!N.cov) continue; const near = Math.hypot(me.pos.x - N.n.x, me.pos.z - N.n.z) < 40; N.cov.visible = k > 0.01; N.cov.material.opacity = 0.82 * k; N.cov.position.y = N.covY - 0.05 + k * 0.33 + Math.sin(t * 1.3 + N.n.lx) * 0.015 * k;
+    const ok = !(S.node[N.n.id] > T) && k < 0.5; N.life.visible = ok && near; if (!N.life.visible) continue; const P = N.life.children, ph = t * 0.9 + N.n.lz;
+    for (let i = 0; i < 2; i++){ const a = ph * (i ? -1.3 : 1) + i * 2.4, r = 0.32 + i * 0.12, f = P[i]; f.position.set(Math.cos(a) * r, 0, Math.sin(a) * r * 0.8); f.rotation.y = -a + (i ? 0 : Math.PI) ; f.children[1].rotation.y = Math.sin(t * 12 + i) * 0.5; }
+    { const c = P[2], u = Math.sin(t * 0.7 + N.n.lx); c.position.set(u * 0.35, 0, 0.3); c.rotation.y = Math.PI / 2; } } }
+/* v600 作者：「營火這種東西應該是做出來，讓玩家自行決定放哪裡」→ 營火、遮雨棚、小木屋先做好收在荒島背包（S.kit），再自己走到想放的地方，畫面上會有一個半透明的樣子跟著你：綠圈可以放、紅圈不行，按大按鈕「放這裡」才開始蓋 */
+function wildKit(S, id){ return ((S.kit || {})[id]) | 0; }
+function wildPlaceStart(id){ const R = WILD_RECIPES.find(r => r.id === id), S = wildSt(); if (!R || wildKit(S, id) < 1) return; if (!onWild()){ toast(`${R.ic} ${R.n}要到漂流島上才能放`); return; } if (Wild.build){ toast('等上一個蓋好再放'); return; }
+  wildPlaceEnd(); closeSheet(); const c = { t: id, x: me.pos.x, z: me.pos.z, r: 0 }, gm = wildCampMesh(c, 1); if (!gm) return; Wild.campG.remove(gm); Wild.g.add(gm);
+  gm.traverse(o => { if (o.isSprite) o.visible = false; else if (o.isMesh){ o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.5; o.material.depthWrite = false; } });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(R.rad + 0.05, R.rad + 0.25, 40), new THREE.MeshBasicMaterial({ color: '#4ade80', transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; Wild.g.add(ring);
+  let bx = $('#wildPlaceX'); if (!bx){ bx = el('button', 'tbtn', '✖ 不放了'); bx.id = 'wildPlaceX'; bx.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; bx.addEventListener('click', () => { wildPlaceEnd(); toast('先收著，背包 → 🏝️ 荒島 可以再拿出來放'); }); document.body.appendChild(bx); }
+  bx.hidden = false; Wild.place = { id, R, gm, ring, why: '' }; toast(`${R.ic} 走到想放${R.n}的地方，綠圈就按「放這裡」`, 4); }
+function wildPlaceEnd(){ const P = Wild.place; if (P){ Wild.g.remove(P.gm); Wild.g.remove(P.ring); } Wild.place = null; const bx = $('#wildPlaceX'); if (bx) bx.hidden = true; }
+function wildPlaceSpot(){ const P = Wild.place, d = P.R.rad + 1.0; return [me.pos.x + Math.sin(me.rot) * d, me.pos.z + Math.cos(me.rot) * d, me.rot + Math.PI]; }
+function wildPlaceTick(){ const P = Wild.place; if (!P) return; if (!onWild() || !Wild.g){ wildPlaceEnd(); return; } const [x, z, r] = wildPlaceSpot(), y = wildH(x, z) ?? WILD.y;
+  P.why = wildCanPlace(x, z, P.R.rad) || ''; P.gm.position.set(x - WILD.x, y, z - WILD.z); P.gm.rotation.y = r; P.ring.position.set(x - WILD.x, y + 0.06, z - WILD.z); P.ring.material.color.set(P.why ? '#f87171' : '#4ade80'); }
+function wildPlaceConfirm(){ const P = Wild.place, S = wildSt(); if (!P) return; if (P.why){ toast(`🚧 ${P.why}`); return; } if (wildKit(S, P.id) < 1){ wildPlaceEnd(); return; }
+  const [x, z, r] = wildPlaceSpot(), R = P.R; wildPlaceEnd(); S.kit[P.id]--; if (!S.kit[P.id]) delete S.kit[P.id];
+  const c = { t: R.id, x: +x.toFixed(2), z: +z.toFixed(2), r: +r.toFixed(3), at: Date.now() }; if (R.id === 'fire') c.fuel = Date.now() + 240000; S.camp.push(c);
+  for (const N of Wild.nodes) if (N.n.k !== 'coco' && N.n.k !== 'bamboo' && N.n.k !== 'rock' && N.n.k !== 'pool' && Math.hypot(N.n.x - x, N.n.z - z) < R.rad + 0.5) S.node[N.n.id] = 4e12;   /* 蓋房子的地方清乾淨，不會再長 */
+  wildNodeVis(); wildSave(); Wild.build = { c, t0: now(), dur: R.bt }; me.rot = Math.atan2(x - me.pos.x, z - me.pos.z); startEmote(me, 'farmwater'); toast(`🔨 開始蓋${R.n}……`); wildCampMesh(c, 0.01); }
+function wildLowIn(){ const t0 = Date.now(); for (let k = 1; k <= 120; k++) if (tideNow(t0 + k * 10000).lv < 0.2) return Math.max(1, Math.ceil(k / 6)); return 9; }
 function wildTideLow(){ const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1); return lv < 0.2; }
 function wildGather(N){ const I = WILD_ITEMS[N.n.k], S = wildSt(); if (!I || Wild.busy) return;
-  if (N.n.k === 'pool' && !wildTideLow()){ toast('🌊 漲潮了，潮池泡在水裡，退潮再來'); return; }
-  const gk = N.n.k === 'pool' ? (Math.random() < 0.6 ? 'fishS' : 'crab') : N.n.k, GI = WILD_ITEMS[gk];
-  const got = I.get[0] + Math.floor(Math.random() * (I.get[1] - I.get[0] + 1)), nb = Object.assign({}, S.bag); nb[gk] = (nb[gk] | 0) + got;
+  if (N.n.k === 'pool' && !wildTideLow()){ toast(`🌊 漲潮了，潮池泡在水裡，大約 ${wildLowIn()} 分鐘後退潮。先搖椰子樹吃`); return; }
+  const gk = N.n.k === 'pool' ? (Math.random() < 0.6 ? 'fishS' : 'crab') : (I.give || N.n.k), GI = WILD_ITEMS[gk];
+  const got = I.get[0] + Math.floor(Math.random() * (I.get[1] - I.get[0] + 1)), nb = Object.assign({}, S.bag); nb[gk] = (nb[gk] | 0) + got; const boneX = N.n.k === 'wood' && Math.random() < 0.22; if (boneX) nb.bone = (nb.bone | 0) + 1;   /* v600 漂流木堆裡偶爾卡著被沖上岸的魚骨（漲潮撿不到魚的時候也能慢慢湊魚鉤） */
   if (wildSlots(nb) > WILD_BAG){ toast(`🎒 荒島背包滿了（${WILD_BAG} 格）`); return; }
   Wild.busy = true; me.rot = Math.atan2(N.n.x - me.pos.x, N.n.z - me.pos.z); startEmote(me, I.anim);
   if (N.n.k === 'coco'){ const t0 = now(), pt = N.top; Wild.shake = { N, t0 }; }   /* 搖椰子樹：樹葉晃、椰子掉下來 */
   setTimeout(() => { Wild.busy = false; Wild.shake = null; S.bag = nb; S.node[N.n.id] = Date.now() + I.cd * 1000; wildSave(); wildNodeVis(); try { puff(N.n.x, groundHeight(N.n.x, N.n.z), N.n.z); SFX.plop(); } catch(e){}
-    flash(`${GI.ic} ${GI.n} +${got}`, 1.0); if (!LS.get('tide.wildTip1', false)){ LS.set('tide.wildTip1', true); setTimeout(() => toast('🎒 撿到的東西放在「背包 → 🏝️ 荒島」。製作、生火、蓋小木屋下一次更新開放'), 1300); } }, N.n.k === 'stone' || N.n.k === 'bamboo' || N.n.k === 'coco' ? 1500 : 1000); }
+    flash(`${GI.ic} ${GI.n} +${got}${boneX ? '・🦴 魚骨 +1' : ''}`, 1.2); if (!LS.get('tide.wildTip1', false)){ LS.set('tide.wildTip1', true); setTimeout(() => toast('🎒 撿到的東西放在「背包 → 🏝️ 荒島」，在那裡也可以製作'), 1300); } }, N.n.k === 'stone' || N.n.k === 'rock' || N.n.k === 'bamboo' || N.n.k === 'coco' ? 1500 : 1000); }
 function wildHas(need, bag){ for (const k in need) if ((bag[k] | 0) < need[k]) return false; return true; }
 function wildCanPlace(x, z, rad){ if (!wildNear(x, z, -1) || wildWater(x, z) || wildWater(x + rad, z) || wildWater(x - rad, z) || wildWater(x, z + rad) || wildWater(x, z - rad)) return '要蓋在島上的空地'; if (deckAt(x, z)) return '不能蓋在碼頭上';
   const lx = x - WILD.x, lz = z - WILD.z; if (lx < -WILD.r + 9 && Math.abs(lz) < 3.2) return '碼頭前面要留路';
@@ -7467,11 +7502,9 @@ function wildCanPlace(x, z, rad){ if (!wildNear(x, z, -1) || wildWater(x, z) || 
   return null; }
 function wildCraft(R){ const S = wildSt(); if (!wildHas(R.need, S.bag)){ toast('材料不夠'); return; }
   if (R.one && (S.bag[R.id] | 0) >= 1){ toast(`已經有${R.n}了`); return; }
-  if (R.k === 'camp'){ if (!onWild()){ toast('要在漂流島上才能蓋'); return; } if (S.camp.filter(c => c.t === R.id).length >= R.max){ toast(`${R.n}最多 ${R.max} 個`); return; }
-    const x = me.pos.x + Math.sin(me.rot) * (R.rad + 1.0), z = me.pos.z + Math.cos(me.rot) * (R.rad + 1.0), why = wildCanPlace(x, z, R.rad); if (why){ toast(`🚧 ${why}（面向空地再試一次）`); return; }
-    const nb = Object.assign({}, S.bag); for (const k in R.need){ nb[k] -= R.need[k]; if (!nb[k]) delete nb[k]; } S.bag = nb;
-    const c = { t: R.id, x: +x.toFixed(2), z: +z.toFixed(2), r: +(me.rot + Math.PI).toFixed(3), at: Date.now() }; if (R.id === 'fire') c.fuel = Date.now() + 240000; S.camp.push(c); for (const N of Wild.nodes) if (N.n.k !== 'coco' && N.n.k !== 'bamboo' && Math.hypot(N.n.x - x, N.n.z - z) < R.rad + 0.5) S.node[N.n.id] = 4e12;   /* 蓋房子的地方清乾淨，不會再長 */ wildNodeVis(); wildSave(); closeSheet();
-    Wild.build = { c, t0: now(), dur: R.bt }; startEmote(me, 'farmwater'); toast(`🔨 開始蓋${R.n}……`); wildCampMesh(c, 0.01); return; }
+  if (R.k === 'camp'){ if (S.camp.filter(c => c.t === R.id).length + wildKit(S, R.id) >= R.max){ toast(`${R.n}最多 ${R.max} 個（做好還沒放的也算）`); return; }
+    const nb = Object.assign({}, S.bag); for (const k in R.need){ nb[k] -= R.need[k]; if (!nb[k]) delete nb[k]; } S.bag = nb; S.kit = Object.assign({}, S.kit); S.kit[R.id] = wildKit(S, R.id) + 1; wildSave();
+    flash(`${R.ic} ${R.n}做好了！`, 1.4); try { SFX.coin(); } catch(e){} if (onWild()) wildPlaceStart(R.id); else { toast(`${R.ic} 收在荒島背包，到了漂流島再拿出來放`); renderTab(); } return; }
   const nb = Object.assign({}, S.bag); for (const k in R.need){ nb[k] -= R.need[k]; if (!nb[k]) delete nb[k]; } nb[R.id] = (nb[R.id] | 0) + 1;
   if (wildSlots(nb) > WILD_BAG){ toast(`🎒 荒島背包滿了（${WILD_BAG} 格）`); return; } S.bag = nb; wildSave(); startEmote(me, 'farmplant'); try { SFX.coin(); } catch(e){} flash(`${R.ic} 做好了：${R.n}`, 1.2); renderTab(); }
 /* 營地的樣子：營火（石頭圍一圈、木頭、會動的火焰）、遮雨棚（四根竹竿＋葉子屋頂）、小木屋（原木牆、草屋頂、門口、裡面一張床） */
@@ -7538,9 +7571,9 @@ function wildSleepToggle(c){ if (Wild.sleep){ Wild.sleep = null; me.emote = null
 const WILD_GUIDE = [
   { t:'在沙灘撿 5 塊漂流木', ok: S => (S.bag.wood | 0) >= 5 || S.camp.some(c => c.t === 'fire') },
   { t:'在島上敲 3 顆石頭', ok: S => (S.bag.stone | 0) >= 3 || S.camp.some(c => c.t === 'fire') },
-  { t:'背包 → 荒島 → 製作：蓋一個營火', ok: S => S.camp.some(c => c.t === 'fire') },
+  { t:'背包 → 荒島 → 製作：做一個營火，走到空地放下來', ok: S => S.camp.some(c => c.t === 'fire') },
   { t:'找吃的：搖椰子樹，或退潮時撿東邊潮池的小魚、小螃蟹', ok: S => !!(S.ate && Object.keys(S.ate).length) || ['coco', 'fishS', 'crab', 'fishSC', 'crabC'].some(k => (S.bag[k] | 0) > 0) },
-  { t:'站在營火旁邊把小魚烤熟，吃掉', ok: S => !!(S.ate && (S.ate.fishSC || S.ate.fishBC)) },
+  { t:'站在營火旁邊把小魚或小螃蟹烤熟，吃掉（漲潮時先吃椰子，等退潮）', ok: S => !!(S.ate && (S.ate.fishSC || S.ate.fishBC || S.ate.crabC)) },
   { t:'吃魚會剩魚骨：湊 2 根魚骨，做一個骨頭魚鉤', ok: S => (S.bag.hook | 0) > 0 || (S.bag.rod | 0) > 0 },
   { t:'割草做草繩、砍竹子，做出手作竹竿', ok: S => (S.bag.rod | 0) > 0 },
   { t:'在岸邊面向海拋竿，釣到第一條荒島的魚', ok: S => !!(S.notes && Object.keys(S.notes).length) },
@@ -7557,7 +7590,7 @@ function wildHud(){ let h = $('#wildHud'); const on = onWild() && !Wild.down && 
   const why = Wild.sleep ? '😴 睡覺中' : (Wild.why || []).length ? '⚠️ ' + Wild.why.join('、') + '：體力在掉' : S.hun < 25 ? '🍗 肚子餓了，找東西吃' : ''; const w = h.querySelector('.wh-w'); if (w.textContent !== why) w.textContent = why; }
 function wildHomeRest(dt){ if (typeof House === 'undefined' || !House.on || !mySeat || !mySeat.bed){ Wild.homeT = 0; return; } Wild.homeT = (Wild.homeT || 0) + dt; if (Wild.homeT > 5 && !wildSt().rested){ wildSt().rested = true; wildSave(); toast('😴 睡飽了：下一趟去漂流島，體力上限 120'); } }
 function nearWildBoat(){ if (!onWild()) return false; return Math.hypot(me.pos.x - (WILD.x - WILD_RE - 6.5), me.pos.z - WILD.z) < 1.8; }
-function wildTick(dt, t){ wildHomeRest(dt); if (!Wild.built) return; if (Wild.migMsg && onWild()){ toast(Wild.migMsg); Wild.migMsg = null; } if (wildNear(me.pos.x, me.pos.z, 30)) wildPull();
+function wildTick(dt, t){ wildHomeRest(dt); if (!Wild.built) return; wildPlaceTick(); if (onWild() || wildNear(me.pos.x, me.pos.z, 30)) wildPoolTick(dt, t); if (Wild.migMsg && onWild()){ toast(Wild.migMsg); Wild.migMsg = null; } if (wildNear(me.pos.x, me.pos.z, 30)) wildPull();
   if (frameNo % 60 === 7) wildNodeVis();
   wildSurvTick(dt); if (frameNo % 6 === 0) wildHud(); if (Wild.sleep && (!onWild() || Math.hypot(me.pos.x - Wild.sleep.c.x, me.pos.z - Wild.sleep.c.z) > 2.5)) Wild.sleep = null;
   if (Wild.g && !Wild.campG) wildCampBuildAll();
@@ -7574,17 +7607,19 @@ function renderWildBag(body){ const S = wildSt(), keys = Object.keys(WILD_ITEMS)
   const ul = el('ul', 'shoplist'); let any = false;
   for (const k of keys){ const n = S.bag[k] | 0; if (!n) continue; any = true; const I = WILD_ITEMS[k], li = el('li'); li.appendChild(el('span', 'ic', I.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${I.n} ×${n}`)); d.appendChild(el('div', 'sub2', `佔 ${Math.ceil(n / WILD_STACK)} 格`)); li.appendChild(d);
     const a = el('div', 'tacts'); if (I.food){ const e2 = el('button', 'tbtn', `吃（+${I.food}）`); e2.addEventListener('click', () => wildEat(k)); a.appendChild(e2); } const b = el('button', 'tbtn', '丟掉 1 個'); b.addEventListener('click', () => { S.bag[k] = Math.max(0, (S.bag[k] | 0) - 1); if (!S.bag[k]) delete S.bag[k]; wildSave(); renderTab(); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+  { const K = S.kit || {}; for (const R of WILD_RECIPES){ const n = K[R.id] | 0; if (!n) continue; any = true; const li = el('li'); li.appendChild(el('span', 'ic', R.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${R.n}（做好了）×${n}`)); d.appendChild(el('div', 'sub2', '還沒放下來，不佔格子')); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn', '放置'); b.disabled = !onWild(); b.addEventListener('click', () => wildPlaceStart(R.id)); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } }   /* v600 做好還沒放的營火、遮雨棚、小木屋 */
   if (!any) body.appendChild(el('div', 'empty', '還是空的。找港口的阿海，選「遠方荒島・漂流島」坐船過去，走到漂流木、石頭、草、竹子、大葉子、椰子樹旁邊按大按鈕就能撿。')); else body.appendChild(ul);
   { const N = S.notes || {}; body.appendChild(el('div', 'dexhead', `📒 荒島筆記（${WILD_FISH.filter(f => N[f.id]).length}／${WILD_FISH.length} 種）`)); const ul3 = el('ul', 'shoplist');
     for (const f of WILD_FISH){ const q = N[f.id], li = el('li'); li.appendChild(el('span', 'ic', q ? '🐟' : '❔')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', q ? `${f.name}（${f.rarity}）` : '？？？')); d.appendChild(el('div', 'sub2', q ? `釣過 ${q.n} 條・最重 ${fmtKg(q.best)}・${f.desc}` : f.time === 'night' ? '晚上比較常出現' : f.time === 'day' ? '白天比較常出現' : '還沒釣過')); li.appendChild(d); ul3.appendChild(li); }
     body.appendChild(ul3); body.appendChild(el('p', 'sub', '有手作竹竿就能在漂流島的岸邊拋竿。荒島的魚不進村子的圖鑑和魚缸，釣到就變成食物（1 公斤以上算大魚）。')); }
   body.appendChild(el('div', 'dexhead', '🛠️ 製作'));
-  body.appendChild(el('p', 'sub', onWild() ? '營火、遮雨棚、小木屋會蓋在你面前：先面向一塊空地再按「做」。' : '營火、遮雨棚、小木屋要在漂流島上才能蓋；草繩、竹竿在哪裡都能做。'));
+  body.appendChild(el('p', 'sub', '營火、遮雨棚、小木屋先做好收著，再走到想放的地方放下來：畫面上會有一個半透明的樣子跟著你，綠圈就按「放這裡」。'));
   const ul2 = el('ul', 'shoplist');
-  for (const R of WILD_RECIPES){ const li = el('li'), ok = wildHas(R.need, S.bag), cnt = R.k === 'camp' ? S.camp.filter(c => c.t === R.id).length : 0; li.appendChild(el('span', 'ic', R.ic)); const d = el('div', 'tinfo');
-    d.appendChild(el('div', 'n', R.n + (R.k === 'camp' ? `（已蓋 ${cnt}／${R.max}）` : (S.bag[R.id] | 0) ? `（有 ${S.bag[R.id]}）` : '')));
+  for (const R of WILD_RECIPES){ const li = el('li'), ok = wildHas(R.need, S.bag), cnt = R.k === 'camp' ? S.camp.filter(c => c.t === R.id).length + wildKit(S, R.id) : 0; li.appendChild(el('span', 'ic', R.ic)); const d = el('div', 'tinfo');
+    d.appendChild(el('div', 'n', R.n + (R.k === 'camp' ? `（已做 ${cnt}／${R.max}）` : (S.bag[R.id] | 0) ? `（有 ${S.bag[R.id]}）` : '')));
     d.appendChild(el('div', 'sub2', Object.keys(R.need).map(k => `${WILD_ITEMS[k].ic}${WILD_ITEMS[k].n} ${S.bag[k] | 0}/${R.need[k]}`).join('　'))); d.appendChild(el('div', 'sub2', R.d)); li.appendChild(d);
-    const a = el('div', 'tacts'), b = el('button', 'tbtn', R.k === 'camp' ? '蓋' : '做'); b.disabled = !ok || (R.k === 'camp' && cnt >= R.max) || (R.one && (S.bag[R.id] | 0) >= 1); b.addEventListener('click', () => wildCraft(R)); a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
+    const a = el('div', 'tacts'), b = el('button', 'tbtn', '做'); b.disabled = !ok || (R.k === 'camp' && cnt >= R.max) || (R.one && (S.bag[R.id] | 0) >= 1); b.addEventListener('click', () => wildCraft(R)); a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
   body.appendChild(ul2); }
 function updateFar(dt, t){
   if (frameNo % 30 === 0){ const vis = (G, x, z, R) => { if (G) G.visible = Math.hypot(camera.position.x - x, camera.position.z - z) < R; };   /* 手機效能：離很遠的區域先不畫（走近再出現） */
@@ -18396,10 +18431,10 @@ function renderTab(){
       '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊；輪到誰瞄準，那個人（玩家或阿喆）會彎腰趴向球桌、一手架桿一手握桿。自己打的時候鏡頭在球桌正上方，所以看不到自己的姿勢。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
-      '🏝️ 遠方荒島・漂流島（求生）：找港口的阿海選「遠方荒島・漂流島」，坐船到東南外海一座沒有人住的大島（v595 變大了：西邊碼頭和沙灘、西北邊的竹林小丘、中間偏東南的小山和瞭望大石、東邊岩岸的潮池，另一頭沙灘上有一艘破船）。走到漂流木、石頭、草叢、竹子、大葉子、椰子樹旁邊按大按鈕就能撿，東西放「背包 → 🏝️ 荒島」（12 格，一格最多 20 個，跟村子的背包分開、不能拿回村子賣）。撿過的地方過幾分鐘會再長出來。村子的釣竿在島上不能用。',
-      '🍗 荒島求生：在漂流島上左上角會出現飽足度和體力（點一下打開荒島背包）。飽足度每 9 秒少 1；餓到 0 體力就開始掉。晚上離點著的營火 6 公尺外、又不在小木屋裡會冷；下雨沒站在遮雨棚或小木屋下面會淋濕，暴風雨更傷，這些都會掉體力。吃飽（50 以上）又沒在掉的時候體力會慢慢回來。吃東西：在荒島背包按「吃」——椰子 +10、生的小魚 +8、烤小魚 +20、生的小螃蟹 +5、烤螃蟹 +12，吃魚會剩一根魚骨（2 根可以磨成骨頭魚鉤）。退潮的時候東邊沙灘的潮池可以撿小魚、小螃蟹。站在點著的營火旁邊按「烤」。小木屋裡的床可以「睡覺」：體力回得快、晚上不會冷，但不能讓天變亮（全村是同一個時間）。體力 0 會倒下：荒島背包的東西掉一半（竹竿、魚鉤不會掉），有小木屋在小木屋醒來，沒有就被阿海載回港邊。在村子自己家的床上躺 5 秒，下一趟上島體力上限變 120。碼頭最前面按「回村子」坐船回去。',
+      '🏝️ 遠方荒島・漂流島（求生）：找港口的阿海選「遠方荒島・漂流島」，坐船到東南外海一座沒有人住的大島（v595 變大了：西邊碼頭和沙灘、西北邊的竹林小丘、中間偏東南的小山和瞭望大石、東邊岩岸的潮池，另一頭沙灘上有一艘破船）。走到漂流木、石頭、草叢、竹子、大葉子、椰子樹旁邊按大按鈕就能撿（島上的大石頭也敲得出石頭；漂流木堆裡偶爾有魚骨），東西放「背包 → 🏝️ 荒島」（12 格，一格最多 20 個，跟村子的背包分開、不能拿回村子賣）。撿過的地方過幾分鐘會再長出來。村子的釣竿在島上不能用。',
+      '🍗 荒島求生：在漂流島上左上角會出現飽足度和體力（點一下打開荒島背包）。飽足度每 9 秒少 1；餓到 0 體力就開始掉。晚上離點著的營火 6 公尺外、又不在小木屋裡會冷；下雨沒站在遮雨棚或小木屋下面會淋濕，暴風雨更傷，這些都會掉體力。吃飽（50 以上）又沒在掉的時候體力會慢慢回來。吃東西：在荒島背包按「吃」——椰子 +10、生的小魚 +8、烤小魚 +20、生的小螃蟹 +5、烤螃蟹 +12，吃魚會剩一根魚骨（2 根可以磨成骨頭魚鉤）。退潮的時候東邊沙灘的潮池可以撿小魚、小螃蟹（看得到裡面有小魚在游）；漲潮時潮池會整個泡在海水下面，要等退潮。站在點著的營火旁邊按「烤」。小木屋裡的床可以「睡覺」：體力回得快、晚上不會冷，但不能讓天變亮（全村是同一個時間）。體力 0 會倒下：荒島背包的東西掉一半（竹竿、魚鉤不會掉），有小木屋在小木屋醒來，沒有就被阿海載回港邊。在村子自己家的床上躺 5 秒，下一趟上島體力上限變 120。碼頭最前面按「回村子」坐船回去。',
       '🎣 荒島釣魚：做好手作竹竿以後，在漂流島的岸邊面向海就能拋竿（村子的釣竿、魚餌、料理加成在島上都不能用）。島上有 5 種魚：條紋天竺鯛、條斑副緋鯉、扁鶴鱵、波紋裸胸鯙、藍鰭鰺（有的白天多、有的晚上多）。釣到的魚變成食物放進荒島背包（1 公斤以上算大魚：生的 +15、烤過 +45，吃完剩 2 根魚骨），不進村子的圖鑑和魚缸；種類和最重紀錄記在「荒島背包 → 📒 荒島筆記」。',
-      '🛠️ 荒島製作（背包 → 🏝️ 荒島 → 製作）：草繩（3 把草）、骨頭魚鉤（2 根魚骨，吃魚之後才有）、手作竹竿（3 竹子＋2 草繩＋1 魚鉤）。營火（5 漂流木＋3 石頭）、遮雨棚（8 漂流木＋6 大葉子＋2 草繩）、小木屋（20 漂流木＋10 竹子＋12 大葉子＋6 草繩＋6 石頭）會蓋在你面前：先面向一塊空地再按「蓋」，角色會敲敲打打幾秒鐘蓋起來。蓋的地方的草和漂流木會被清掉；旁邊有椰子樹、竹子、大石頭、太斜或在碼頭前面就不能蓋。營火一塊漂流木燒 4 分鐘，靠近按「加木頭」（最多 20 分鐘）。營火最多 3 個、遮雨棚 2 個、小木屋 1 間，只有自己看得到。接下來會開放：飽足度和體力、烤魚、在小木屋睡覺、荒島的魚。',
+      '🛠️ 荒島製作（背包 → 🏝️ 荒島 → 製作）：草繩（3 把草）、骨頭魚鉤（2 根魚骨，吃魚會剩，漂流木堆裡偶爾也有）、手作竹竿（3 竹子＋2 草繩＋1 魚鉤）。營火（5 漂流木＋3 石頭）、遮雨棚（8 漂流木＋6 大葉子＋2 草繩）、小木屋（20 漂流木＋10 竹子＋12 大葉子＋6 草繩＋6 石頭）先做好收在荒島背包，再走到想放的地方放下來：畫面上有一個半透明的樣子跟著你，綠圈就按大按鈕「放這裡」，角色會敲敲打打幾秒鐘蓋起來；紅圈會寫為什麼不能放，不想放可以按右上的「不放了」，之後在荒島背包按「放置」再拿出來。蓋的地方的草和漂流木會被清掉；旁邊有椰子樹、竹子、大石頭、太斜或在碼頭前面就不能蓋。營火一塊漂流木燒 4 分鐘，靠近按「加木頭」（最多 20 分鐘）。營火最多 3 個、遮雨棚 2 個、小木屋 1 間（做好還沒放的也算），只有自己看得到。',
       '🚢 港口的三艘藍白漁船每天清晨一艘接一艘鳴笛出港，開到舊箱網、定置網、海鳥岩旁邊作業（船長在甲板上收網、海鷗在上面繞，天暗了會亮集魚燈），傍晚開回來；出港、回港會寫進手機的快訊。颱風天不出海。划船靠近，船長會跟你打招呼。漁船不會撞你，會直接穿過去。',
       '🏠 三位船長住在居民區（阿財家、阿春家、海伯家）：天亮前從家裡走到碼頭、蹲一下跳上船，傍晚靠岸後跳下船走回家，到家門燈就會亮；颱風天待在家。沙灘的遊客是坐阿海的船來玩的，會從港口沿著路走到沙灘，要走的時候走回港口。',
       '🏖️ 南方沙灘白天、沒下雨的時候有遊客：有人坐在海灘巾上曬太陽、有人套著泳圈在淺水玩、有人在丟沙灘球（走過去碰到低低的球會把它踢飛，只有你自己看得到）。下雨、颱風、天黑會收東西走掉。你剛釣到大魚或幫忙撿垃圾，經過的遊客會提起來。',
