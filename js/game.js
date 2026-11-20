@@ -20053,10 +20053,11 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
 const PHONE_APPS = [
   ['村子裡', [['phfeed', '🔔', '快訊'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
   ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
-  ['我的', [['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
+  ['我的', [['photo', '📷', '拍照'], ['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
 SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.wild = '🏝️ 荒島背包'; SHEET_TITLE.phfeed = '🔔 快訊';
 function phoneOpen(){ Phone.via = true; openSheet('phone'); }
 function phoneGo(tab){ Phone.via = true;
+  if (tab === 'photo'){ closeSheet(); setTimeout(() => { try { enterPhoto(); } catch(e){} }, 80); return; }   /* v628 作者：「拍照功能去哪了」→ 頭像選單裡的📷被「今天」擋住看不到，手機也放一個 */
   if (tab === 'seachart'){ openSheet('map'); setTimeout(() => { const h = [...$$('#sheetBody .dexhead')].find(x => /航海圖/.test(x.textContent)); if (h) h.scrollIntoView({ block:'start', behavior:'smooth' }); }, 60); return; }
   try { ui3Open(tab); } catch(e){}
   if (tab === 'news'){ News.pick = 0; loadNews(); } if (tab === 'board') loadBoard(); if (tab === 'tboard'){ Team.view = 'team'; loadTeam(); loadTeamBoard(); }
