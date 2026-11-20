@@ -1857,3 +1857,5 @@ body.welcomeOn > *:not(#welcome):not(#c):not(canvas):not(#toasts):not(#bigMsg):n
 .dm-go{margin-top:6px;padding:6px 12px;font-size:14px}
 #poolHud .pl-zoom{position:fixed;left:calc(var(--gl, 8px) + 58px);top:calc(var(--gt, 8px) + 112px);z-index:31;border:0;padding:6px 10px;border-radius:14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;pointer-events:auto}
 /* v616 作者截圖 @122s reeling,fp r6：畫布用 100vw，Android Chrome 版面一被撐到 980，100vw 也跟著變 980，畫布又把版面撐住，永遠縮不回來 → 改 100%（跟著 inset:0） */
+.lookbox{margin:6px 0 10px;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(24,51,74,.15)}
+.lookbox canvas{display:block;width:100%;height:auto}
