@@ -1859,3 +1859,67 @@ body.welcomeOn > *:not(#welcome):not(#c):not(canvas):not(#toasts):not(#bigMsg):n
 /* v616 作者截圖 @122s reeling,fp r6：畫布用 100vw，Android Chrome 版面一被撐到 980，100vw 也跟著變 980，畫布又把版面撐住，永遠縮不回來 → 改 100%（跟著 inset:0） */
 .lookbox{margin:6px 0 10px;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(24,51,74,.15)}
 .lookbox canvas{display:block;width:100%;height:auto}
+
+/* ===== v639 介面換皮（作者：「整個都很 AI」）：店家＝港邊木頭招牌（th-wood），自己的東西＝手寫釣魚筆記本（th-note）
+   只換外框、按鈕、卡片、標題的樣子；內容和排列不動。手機（phone）、造型間（closet）有自己的樣子，不套 ===== */
+#sheet.th-note .box,#sheet.th-wood .box{position:relative}
+/* --- 筆記本 --- */
+#sheet.th-note .box{background-color:#fdfaf1;border-radius:4px 14px 14px 4px;box-shadow:-7px 0 0 #2c5d73,-7px 3px 0 #1f4556,0 14px 34px rgba(10,30,45,.38);
+  background-image:linear-gradient(90deg,transparent 30px,rgba(232,140,130,.55) 30px,rgba(232,140,130,.55) 32px,transparent 32px),repeating-linear-gradient(180deg,transparent 0 27px,#dbe7ee 27px 28px);background-attachment:local,local}
+#sheet.th-note .box::before{content:"";position:absolute;top:-7px;left:42%;width:78px;height:20px;background:rgba(238,206,112,.8);transform:rotate(-4deg);z-index:2;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+#sheet.th-note header{padding:12px 12px 4px 42px}
+#sheet.th-note #sheetTitle{font-family:var(--f-display)!important;font-weight:400!important;color:#2c5d73!important;font-size:22px!important;transform:rotate(-1.2deg);letter-spacing:.04em}
+#sheet.th-note #sheetBody{padding-left:44px}
+body.ui3 #sheet.th-note #tabs button{border-radius:8px 8px 3px 3px;background:#ece2c6;color:#6b5a3a;font-family:var(--f-display);font-weight:400;box-shadow:inset 0 -2px 0 rgba(107,90,58,.18)}
+body.ui3 #sheet.th-note #tabs button[aria-selected="true"]{background:#2c5d73;color:#fff;box-shadow:none;transform:translateY(-2px)}
+#sheet.th-note #closeSheet{color:#2c5d73}
+#sheet.th-note .dexhead{font-family:var(--f-display);color:#2c5d73;font-size:17px}
+#sheet.th-note .dexhead>:first-child,#sheet.th-note .dexhead{background-image:none}
+#sheet.th-note .dexhead{display:flex}
+#sheet.th-note .dexhead::after{content:none}
+#sheet.th-note .sub{color:#7a5a3a}
+#sheet.th-note .shoplist li{background:transparent;border:0;border-bottom:1.5px dashed #b9cdd8;border-radius:0;box-shadow:none;padding:9px 4px}
+#sheet.th-note .shoplist li.on{background:rgba(255,226,140,.35);border-radius:6px;box-shadow:none;border-bottom-color:transparent}
+#sheet.th-note .shoplist li .n{font-family:var(--f-display);font-size:16px;color:#203a48}
+#sheet.th-note .shoplist li .meta{color:#5d6d74}
+#sheet.th-note .tbtn{background:#ffd36a;color:#203a48;border:2px solid #203a48;border-radius:18px;font-family:var(--f-display);font-weight:400;font-size:14px;padding:5px 14px}
+#sheet.th-note .tbtn.ghost{background:#fff}
+#sheet.th-note .tbtn.warn{background:#f6a28f}
+#sheet.th-note .tbtn.danger{background:#e07a6c;color:#fff}
+#sheet.th-note .tbtn:disabled{opacity:.5}
+#sheet.th-note .seg{background:#ece2c6;border-radius:8px}
+#sheet.th-note .seg button{font-family:var(--f-display)}
+#sheet.th-note .seg button[aria-pressed="true"]{background:#fdfaf1;color:#2c5d73}
+#sheet.th-note .tipbox{background:#fff6cf;border-radius:2px;box-shadow:2px 3px 0 rgba(0,0,0,.08);transform:rotate(-.4deg)}
+#sheet.th-note .pbtn{background:#2c5d73;border-radius:18px;font-family:var(--f-display);font-weight:400}
+/* --- 港邊木頭招牌 --- */
+#sheet.th-wood .box{background-color:#e9d6b0;border:6px solid #6b4426;border-radius:8px;box-shadow:0 6px 0 #3e2615,0 14px 34px rgba(10,20,30,.45);
+  background-image:repeating-linear-gradient(90deg,rgba(120,80,40,.06) 0 2px,transparent 2px 9px),radial-gradient(circle at 20% 0%,rgba(255,255,255,.35),transparent 60%);background-attachment:local}
+#sheet.th-wood header{background:#7a4d2b;padding:9px 10px 9px 14px;border-bottom:3px solid #4b2d17;background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.08) 0 1px,transparent 1px 6px)}
+#sheet.th-wood #sheetTitle{font-family:var(--f-display)!important;font-weight:400!important;color:#f6e7c8!important;text-shadow:0 2px 0 #3e2615;letter-spacing:.08em}
+#sheet.th-wood #closeSheet{color:#f6e7c8}
+body.ui3 #sheet.th-wood #tabs button{border-radius:4px;background:#5b381f;color:#d9c29a;font-family:var(--f-display);font-weight:400}
+body.ui3 #sheet.th-wood #tabs button[aria-selected="true"]{background:#f1dfb8;color:#5b381f}
+#sheet.th-wood #sheetBody{color:#3e2615}
+#sheet.th-wood .shophead{font-family:var(--f-display);color:#4b2d17;font-size:21px;letter-spacing:.06em}
+#sheet.th-wood .coinpill{background:#fbf1dc;border:2px solid #8a6038;color:#6b4426;border-radius:4px}
+#sheet.th-wood .dexhead{font-family:var(--f-display);color:#4b2d17}
+#sheet.th-wood .sub{color:#6b4a2e}
+#sheet.th-wood .shoplist li{background:#fbf1dc;border:2px solid #8a6038;border-radius:4px;box-shadow:2px 3px 0 rgba(75,45,23,.35)}
+#sheet.th-wood .shoplist li.on{background:#fff7e0;border-color:#c0892f;box-shadow:2px 3px 0 rgba(75,45,23,.35),0 0 0 2px rgba(224,163,46,.35)}
+#sheet.th-wood .shoplist li .n{font-family:var(--f-display);font-size:16px;color:#3e2615}
+#sheet.th-wood .shoplist li .meta{color:#6b4a2e}
+#sheet.th-wood .tbtn{background:#3f7a5a;color:#fff;border:2px solid #24493a;border-radius:4px;box-shadow:0 3px 0 #24493a;font-family:var(--f-display);font-weight:400;font-size:14px}
+#sheet.th-wood .tbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #24493a}
+#sheet.th-wood .tbtn.ghost{background:#f1dfb8;color:#5b381f;border-color:#8a6038;box-shadow:0 3px 0 #8a6038}
+#sheet.th-wood .tbtn.warn{background:#c8553d;border-color:#7a2e1f;box-shadow:0 3px 0 #7a2e1f}
+#sheet.th-wood .tbtn.danger{background:#b23a2a;border-color:#6e1f15;box-shadow:0 3px 0 #6e1f15}
+#sheet.th-wood .tbtn:disabled{opacity:.55;box-shadow:none}
+#sheet.th-wood .seg{background:#cdb488;border-radius:4px}
+#sheet.th-wood .seg button{font-family:var(--f-display);color:#4b2d17}
+#sheet.th-wood .seg button[aria-pressed="true"]{background:#fbf1dc;color:#3e2615;box-shadow:0 2px 0 #8a6038}
+#sheet.th-wood .tipbox{background:#fff8e6;border-radius:10px;box-shadow:none;border:2px solid #4b2d17;color:#4b2d17}
+#sheet.th-wood .pbtn{background:#3f7a5a;border:2px solid #24493a;border-radius:6px;box-shadow:0 3px 0 #24493a;font-family:var(--f-display);font-weight:400}
+#sheet.th-wood .shophead,#sheet.th-note .shophead{justify-content:flex-end;gap:8px}
+#sheet.th-wood .shophead:not(:has(> :not(b[style*="none"]))){display:none}
+#sheet.th-wood header:has(#sheetTitle:empty){padding:4px 8px;justify-content:flex-end}

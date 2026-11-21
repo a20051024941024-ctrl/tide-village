@@ -18359,6 +18359,15 @@ const HELP_SHORT = {
 };
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
+/* v639 標題、分頁、段落標題不放表情符號（作者：太 AI）。只拿掉這幾個地方的，內容裡的照舊 */
+const EMO_RE = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D\u20E3]/gu;
+function deEmoji(s){ return String(s).replace(EMO_RE, '').replace(/^[\s・|｜]+/, '').replace(/\s{2,}/g, ' ').trim(); }
+function sheetDeco(){ const sh = $('#sheet'); if (!sh || sh.hidden || !(sh.classList.contains('th-note') || sh.classList.contains('th-wood'))) return;
+  const fix = el => { for (const n of el.childNodes){ if (n.nodeType === 3 && EMO_RE.test(n.nodeValue)){ EMO_RE.lastIndex = 0; const t = deEmoji(n.nodeValue); n.nodeValue = t ? (n.previousSibling ? ' ' : '') + t + (n.nextSibling ? ' ' : '') : ''; } EMO_RE.lastIndex = 0; } };
+  const t = $('#sheetTitle'); if (t){ if (!t.textContent.trim()){ const f0 = sh.querySelector('#sheetBody > :first-child'), hb = sh.querySelector('#sheetBody .shophead > b') || (f0 && (f0.matches('.dexhead, h2, h3') && !f0.querySelector('button, small')) ? f0 : null); if (hb){ t.textContent = deEmoji(hb.textContent); hb.style.display = 'none'; } } fix(t); }   /* 店名放到上面的木招牌 */
+  sh.querySelectorAll('#tabs button, .dexhead, .seg button, .shophead, #sheetBody > .tabs button').forEach(fix); }
+{ let q = 0; const mo = new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { sheetDeco(); } catch(e){} }); }); const go = () => { const sh = document.getElementById('sheet'); if (sh) mo.observe(sh, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] }); else setTimeout(go, 200); }; go(); }
+const SHEET_WOOD = new Set(['shop', 'shrimp', 'cook', 'cargo', 'salon', 'market', 'mu', 'fu', 'gang', 'cai', 'craft', 'ferry', 'board', 'tboard', 'tote', 'cage', 'museum', 'sci', 'news', 'fest', 'cldesign']);
 const SHEET_TITLE = { rig2:'🎣 釣組', look:'🎨 外觀', gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🏝️ 小島', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', tboard:'🏆 大看板・釣友隊', cargo:'🚢 跑船生意', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 菜園', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
 /* v586 全服共養的魚種族群（伺服器 199_fish_pop）：圖鑑打開時讀，5 分鐘更新一次 */
 const Pop = { d:{}, at:0, busy:false };
@@ -18371,6 +18380,7 @@ function renderTab(){
   const body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
   $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('phone', curTab === 'phone');
+  { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
   try { phoneHdr(); } catch(e){}
   if (curTab === 'dex' && !LS.get('tide.guideDex', false)) LS.set('tide.guideDex', true);   /* v582 新手任務第 2 步 */
   if (curTab === 'phone'){ renderPhone(body); return; }
