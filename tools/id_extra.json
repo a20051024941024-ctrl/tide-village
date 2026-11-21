@@ -6051,7 +6051,6 @@
  "體育場加油": "Sorak Stadion",
  "雪松山": "Gunung Cedar",
  "小烏龜的殼是一片一片的鱗甲，光澤 80 以上鱗甲中間會出現黃色花紋、100 有金色殼邊。牠走路頭會一點一點，停下來會眨眼，偶爾把頭縮進殼裡再伸出來。": "Cangkang kura-kura kecil terdiri dari sisik-sisik. Kilau 80+ memberi corak kuning, 100 memberi tepi emas. Kepalanya mengangguk saat berjalan, berkedip saat berhenti, dan sesekali masuk ke cangkang.",
- "📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一件只有集章拿得到的造型（郵差帽、郵差包，之後還會再加）。": "📮 Kartu cap kepala desa: pertama kali main setiap hari, kartu muncul dan kamu dapat satu cap. 7 cap per kartu, cap ke-7 paling bagus. Bolos sehari tidak mengulang dari awal. Setiap 4 kartu penuh dapat pakaian khusus (topi tukang pos, tas pos, nanti ditambah).",
  "📦 郵差的包裹：每天有在玩（走路、釣魚、按畫面）滿 10、30、60 分鐘，郵差阿信會走過來送包裹。站著不動不算時間。在室內、海底、船上或島上的時候，包裹會先放在「手機 → 今天」，到那裡收。": "📦 Paket tukang pos: kalau sudah benar-benar main (jalan, mancing, sentuh layar) 10, 30 dan 60 menit sehari, tukang pos datang membawa paket. Diam saja tidak dihitung. Di dalam ruangan, bawah laut, di perahu atau di pulau, paket disimpan di Ponsel → Hari ini.",
  "📮 村長的集章卡": "📮 Kartu cap",
  "郵差帽": "Topi tukang pos",
@@ -6062,5 +6061,8 @@
  "蓋今天的章": "Cap hari ini",
  "有你的包裹喔～": "Ada paket untukmu~",
  "📮 集章卡獎勵": "📮 Hadiah cap",
- "📮 集章": "📮 Cap"
+ "📮 集章": "📮 Cap",
+ "📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一個只有集章拿得到的造型：先送竿子造型（郵票竿、潮汐月光竿），再送郵差帽、郵差包，之後出新的造型會再加進來。": "📮 Kartu cap kepala desa: pertama kali main setiap hari, kartu muncul dan kamu dapat satu cap. 7 cap per kartu, cap ke-7 paling bagus. Bolos sehari tidak mengulang dari awal. Setiap 4 kartu penuh dapat skin khusus: skin joran dulu (Joran Perangko, Joran Bulan Pasang), lalu topi tukang pos dan tas pos, nanti ditambah.",
+ "郵票竿": "Joran Perangko",
+ "潮汐月光竿": "Joran Bulan Pasang"
 }

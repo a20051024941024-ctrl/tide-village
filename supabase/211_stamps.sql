@@ -17,7 +17,7 @@ create table if not exists public.stamp_card (
 alter table public.stamp_card enable row level security;
 
 -- 集章才拿得到的造型（依順序送）。以後出新造型就往後面加。
-create or replace function public._stamp_gear() returns text[] language sql immutable as $$ select array['hat_mail', 'back_mailbag'] $$;
+create or replace function public._stamp_gear() returns text[] language sql immutable as $$ select array['rs_postage', 'rs_tidemoon', 'hat_mail', 'back_mailbag'] $$;
 
 -- 獎勵品可以穿（set_gear 會檢查要先擁有）
 create or replace function public._reward_item(p text) returns boolean language sql immutable as $$ select p in ('hat_skipom', 'acc_skigog') or p = any(public._stamp_gear()) $$;

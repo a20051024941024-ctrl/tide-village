@@ -4353,6 +4353,8 @@ const CRAFT = [
   { id:'rs_stripe', name:'紅白條紋竿', c:800, n:4, r:'常見', desc:'像燈塔一樣的紅白斜條紋' }, { id:'rs_wave', name:'海浪竿', c:1200, n:5, r:'常見', desc:'從深藍到淺藍，上面有白色浪花' },
   { id:'rs_coral', name:'珊瑚竿', c:1200, n:5, r:'常見', desc:'粉紅珊瑚色，點點小泡泡' }, { id:'rs_carbon', name:'碳纖維竿', c:2000, n:2, r:'稀有', desc:'黑色編織格紋，看起來很專業' },
   { id:'rs_gold', name:'金箔竿', c:4000, n:3, r:'稀有', desc:'整支閃亮的金色' }, { id:'rs_rainbow', name:'彩虹竿', c:6000, n:4, r:'稀有', desc:'從竿底到竿尖七種顏色' },
+  /* v664 集章卡限定的竿子造型（作者：「我說的造型是皮膚，比如釣竿的皮膚」）：工坊做不出來，每蓋滿 4 張集章卡送一支（STAMP_GEAR、211 的 _stamp_gear） */
+  { id:'rs_postage', name:'郵票竿', c:0, n:0, r:'集章', stamp:true, desc:'米白色竿身貼滿一張張小郵票，還蓋了郵戳' }, { id:'rs_tidemoon', name:'潮汐月光竿', c:0, n:0, r:'集章', stamp:true, desc:'深夜的海，竿身上一彎一彎的潮水和金色月亮' },
   { id:'lc_red', name:'紅色釣線', c:200, n:2, r:'常見', col:'#ff4a4a' }, { id:'lc_yellow', name:'螢光黃釣線', c:200, n:2, r:'常見', col:'#f2ff3a' },
   { id:'lc_green', name:'螢光綠釣線', c:300, n:2, r:'常見', col:'#4aff8a' }, { id:'lc_pink', name:'粉紅釣線', c:300, n:2, r:'常見', col:'#ff8ad8' },
   { id:'lc_blue', name:'夜光藍釣線', c:800, n:1, r:'稀有', col:'#5ad8ff' }, { id:'lc_gold', name:'金色釣線', c:1500, n:2, r:'稀有', col:'#ffd36a' },
@@ -4369,6 +4371,14 @@ function rodSkinTex(k){ if (RSKIN_TEX[k]) return RSKIN_TEX[k]; const cv = docume
   else if (k === 'rs_coral'){ const g = c.createLinearGradient(0, H, 0, 0); g.addColorStop(0, '#e8507a'); g.addColorStop(1, '#ffb0a0'); c.fillStyle = g; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 40; i++){ c.beginPath(); c.arc((i * 37) % W, (i * 53) % H, 1.5 + (i % 3), 0, 6.3); c.fill(); } }
   else if (k === 'rs_carbon'){ c.fillStyle = '#16181c'; c.fillRect(0, 0, W, H); for (let y = 0; y < H; y += 8) for (let x = 0; x < W; x += 8){ c.fillStyle = ((x + y) / 8) % 2 ? '#2a2e36' : '#0e1014'; c.fillRect(x, y, 8, 8); } }
   else if (k === 'rs_rainbow'){ for (let y = 0; y < H; y++){ c.fillStyle = `hsl(${(1 - y / H) * 300},85%,55%)`; c.fillRect(0, y, W, 1); } }
+  else if (k === 'rs_postage'){ c.fillStyle = '#f3ead3'; c.fillRect(0, 0, W, H); const cols = ['#d2453a', '#2f7fc1', '#3f9a5a', '#e0a020'];   /* 郵票：彩色小方塊＋白色鋸齒邊＋中間一個小圖案，斜斜的郵戳波浪線 */
+    for (let i = 0; i < 8; i++){ const y = 6 + i * 31, x = i % 2 ? 26 : 6, w = 30, h = 26; c.fillStyle = '#fffdf6'; c.fillRect(x - 3, y - 3, w + 6, h + 6); c.fillStyle = '#f3ead3'; for (let q = 0; q <= w + 6; q += 5){ c.beginPath(); c.arc(x - 3 + q, y - 3, 1.4, 0, 7); c.arc(x - 3 + q, y + h + 3, 1.4, 0, 7); c.fill(); }
+      c.fillStyle = cols[i % 4]; c.fillRect(x, y, w, h); c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); if (i % 2){ c.moveTo(x + 6, y + 15); c.quadraticCurveTo(x + 15, y + 6, x + 24, y + 13); c.lineTo(x + 20, y + 18); c.closePath(); } else c.arc(x + 15, y + 13, 6, 0, 7); c.fill(); }
+    c.strokeStyle = 'rgba(40,40,60,.55)'; c.lineWidth = 2; for (let j = 0; j < 3; j++){ const y0 = 60 + j * 70; c.beginPath(); for (let x = 0; x <= W; x += 4) c.lineTo(x, y0 + Math.sin(x / 6 + j) * 3); c.stroke(); c.beginPath(); c.arc(W * 0.7, y0 - 8, 9, 0, 7); c.stroke(); } }
+  else if (k === 'rs_tidemoon'){ const g = c.createLinearGradient(0, H, 0, 0); g.addColorStop(0, '#071a33'); g.addColorStop(1, '#1d4f7a'); c.fillStyle = g; c.fillRect(0, 0, W, H);   /* 潮汐月光：深藍夜海、一層層白色潮水線、金色彎月和小星星 */
+    for (let j = 0; j < 9; j++){ const y0 = 18 + j * 28; c.strokeStyle = `rgba(150,220,255,${0.35 + (j % 3) * 0.15})`; c.lineWidth = 2.5; c.beginPath(); for (let x = 0; x <= W; x += 3) c.lineTo(x, y0 + Math.sin(x / 8 + j * 1.3) * 4); c.stroke(); }
+    for (let j = 0; j < 3; j++){ const cy = 40 + j * 85; c.fillStyle = '#ffd86a'; c.beginPath(); c.arc(32, cy, 11, 0, 7); c.fill(); c.fillStyle = '#0d2a4d'; c.beginPath(); c.arc(37, cy - 3, 10, 0, 7); c.fill(); }
+    c.fillStyle = '#fff6c8'; for (let i = 0; i < 26; i++){ c.fillRect((i * 37) % W, (i * 71) % H, 2, 2); } }
   else { c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 0.5); return (RSKIN_TEX[k] = t); }
 function rodHD(av, type, color, skin){
@@ -12530,10 +12540,11 @@ function renderCraft(body){
     body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
     for (const c of CRAFT.filter(x => x.id.startsWith(kind))){ const li = el('li', own.has(c.id) ? 'on' : ''); li.appendChild(craftSwatch(c)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name));
       const cur = kind === 'rs_' ? rec.rodSkin : kind === 'hk_' ? rec.hook : rec.lineCol, using = cur === c.id;
-      d.appendChild(el('div', 'sub2', own.has(c.id) ? (using ? '使用中' : '已經有了') : `🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條${c.desc ? '・' + c.desc : ''}`)); li.appendChild(d);
+      d.appendChild(el('div', 'sub2', own.has(c.id) ? (using ? '使用中' : '已經有了') : c.stamp ? `📮 做不出來：村長的集章卡每蓋滿 4 張送一支・${c.desc}` : `🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條${c.desc ? '・' + c.desc : ''}`)); li.appendChild(d);
       const a = el('div', 'tacts');
       if (own.has(c.id) && kind === 'hk_'){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上'); b.addEventListener('click', async () => { const row = await craftRpc('set_hook', { p_hook: using ? null : c.id }); if (row){ adoptRow(row); renderTab(); } }); a.appendChild(b); }
       else if (own.has(c.id)){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上'); b.addEventListener('click', async () => { const sk = kind === 'rs_' ? (using ? null : c.id) : rec.rodSkin || null, lc = kind === 'lc_' ? (using ? null : c.id) : rec.lineCol || null; const row = await craftRpc('set_rod_look', { p_skin: sk, p_line: lc }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } }); a.appendChild(b); }
+      else if (c.stamp){ }
       else { const use = craftUse(c), ok = use.length >= c.n && rec.coins >= c.c, b = el('button', 'tbtn', '做'); b.disabled = !ok; if (!ok) d.appendChild(el('div', 'sub2', use.length < c.n ? `魚缸裡能用的${c.r}魚只有 ${use.length} 條` : '金幣不夠'));
         b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; b.classList.add('warn'); d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
           b.disabled = true; const r = await craftRpc('craft_item', { p_id: c.id }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash(`🔧 阿鐵師傅做好了：${c.name}！`, 1.8); const n = npcs.find(x => x.shopNpc === 'craft'); if (n) n.say('做好了！拿去用吧', 'emote', 3); try { renderTab(); } catch(e){} } else b.disabled = false; }); a.appendChild(b); }
@@ -14260,7 +14271,8 @@ function completeQuest(q){
    ・集章卡：每天第一次進來，村長的集章卡跳出來蓋一個章（7 格一張，漏掉一天不會歸零）；每蓋滿 4 張送一件只有這裡拿得到的造型（STAMP_GEAR，以後出新造型往後加，伺服器 211 的 _stamp_gear 也要加）。
    ・郵差的包裹：有在玩（摸螢幕、按鍵、釣魚）才算時間，每分鐘回報一次；滿 10、30、60 分鐘郵差阿信會從你後面走過來把包裹交給你。在室內、海底、船上、島上就直接放進「手機 → 今天」，到那裡收。
    ・蓋過沒、玩了幾分鐘都是伺服器記的（211_stamps.sql）。 */
-const STAMP_GEAR = ['hat_mail', 'back_mailbag'];
+const STAMP_GEAR = ['rs_postage', 'rs_tidemoon', 'hat_mail', 'back_mailbag'];   /* v664 先送竿子造型 */
+function stampGI(id){ const g = GEAR_BY_ID[id]; if (g) return { ic: g.icon, nm: g.name, where: '「👕 造型」穿上' }; const c = CRAFT_BY[id]; return c ? { ic: '🎣', nm: c.name, where: '「背包 → 🎨 外觀」裝上' } : { ic: '🎁', nm: id, where: '' }; }
 const STAMP_REW = [[['coins', 150]], [['worm', 10]], [['chum_rice', 3]], [['coins', 250]], [['glow', 5]], [['chum_krill', 3]]];
 const STAMP_SEVEN = [[['gold', 3], ['coins', 300]], [['seed_coral', 2], ['coins', 300]], [['chum_gold', 2], ['coins', 300]], [['rainbow', 2], ['coins', 300]]];
 const PLAY_STEPS = [10, 30, 60], PLAY_REW = [[['coins', 120]], [['glow', 5], ['coins', 100]], [['chum_krill', 3], ['coins', 200]]];
@@ -14284,14 +14296,14 @@ function stampPop(){ if (Stamp.busy) return; Stamp.shown = true; const st = Stam
   pn.appendChild(el('div', 'sttitle', `📮 村長的集章卡・第 ${card} 張`));
   pn.appendChild(el('p', 'stsay', `村長：「${['今天也來啦！來，蓋個章。', '欸，你來了！章給你蓋。', '每天來村子走走很好喔，蓋章！', '來來來，今天的章。'][n0 % 4]}」`));
   pn.appendChild(stampCells(n0, n0));
-  pn.appendChild(el('p', 'stsub', ng ? `漏掉一天也不會歸零。再蓋 ${left} 個章送「${GEAR_BY_ID[ng].name}」。` : '漏掉一天也不會歸零。每蓋滿 4 張再送 🪙1000。'));
+  pn.appendChild(el('p', 'stsub', ng ? `漏掉一天也不會歸零。再蓋 ${left} 個章送限定造型「${stampGI(ng).ic} ${stampGI(ng).nm}」。` : '漏掉一天也不會歸零。每蓋滿 4 張再送 🪙1000。'));
   const res = el('p', 'stres', ''); pn.appendChild(res); const btn = el('button', 'tbtn buy', '蓋章'); pn.appendChild(btn); document.body.appendChild(ov);
   try { SFX.chat(); } catch(e){}
   btn.addEventListener('click', async () => { if (Stamp.busy) return; if (btn.dataset.done){ ov.classList.add('out'); setTimeout(() => ov.remove(), 260); return; } Stamp.busy = true; btn.disabled = true;
     try { const { data, error } = await Cloud.sb.rpc('stamp_claim'); if (error) throw error; adoptRow(data.player); st.n = data.n; st.today = true;
       const cell = pn.querySelector(`.stcell[data-n="${data.n}"]`); if (cell){ const m = el('div', 'stmark new', '潮'); cell.appendChild(m); cell.classList.add('done'); }
       setTimeout(() => { try { SFX.coin(); } catch(e){} }, 260);
-      let msg = '拿到 ' + stampTxt(data.got); if (data.gear){ const it = GEAR_BY_ID[data.gear]; if (it){ if (!rec.owned.includes(it.id)) rec.owned.push(it.id); msg += `，還有限定造型「${it.icon} ${it.name}」！到「👕 造型」穿上`; } }
+      let msg = '拿到 ' + stampTxt(data.got); if (data.gear){ if (!rec.owned.includes(data.gear)) rec.owned.push(data.gear);  { const I = stampGI(data.gear); msg += `，還有限定造型「${I.ic} ${I.nm}」！到${I.where}`; } }
       res.textContent = msg; btn.textContent = '收下'; btn.dataset.done = '1'; saveRecLocal(); if (!$('#sheet').hidden) renderTab();
       if (data.gear) setTimeout(() => { try { SFX.catch(); } catch(e){} }, 700);
     } catch(e){ res.textContent = cloudErrMsg(e); btn.textContent = '關閉'; btn.dataset.done = '1'; if (/蓋過/.test(String(e && e.message))) st.today = true; }
@@ -14328,7 +14340,7 @@ function renderStampPanel(body){ if (!Cloud.on) return; if (!Stamp.st){ stampLoa
   const st = Stamp.st, box = el('div', 'stpanel'), ng = stampNextGear(), left = 28 - (st.n % 28) || 28;
   box.appendChild(el('div', 'n', `📮 村長的集章卡・已經蓋了 ${st.n} 個章` + (st.today ? '（今天蓋過了 ✅）' : '')));
   box.appendChild(stampCells(st.today && st.n % 7 === 0 && st.n ? st.n - 1 : st.n, st.n));
-  box.appendChild(el('div', 'sub2', ng ? `每天進來蓋一個，漏掉一天也不會歸零。再蓋 ${left} 個章送限定造型「${GEAR_BY_ID[ng].icon} ${GEAR_BY_ID[ng].name}」。` : '集章限定的造型你都拿到了，之後出新的會再加進來。現在每蓋滿 4 張送 🪙1000。'));
+  box.appendChild(el('div', 'sub2', ng ? `每天進來蓋一個，漏掉一天也不會歸零。再蓋 ${left} 個章送限定造型「${stampGI(ng).ic} ${stampGI(ng).nm}」。` : '集章限定的造型你都拿到了，之後出新的會再加進來。現在每蓋滿 4 張送 🪙1000。'));
   if (!st.today){ const b = el('button', 'tbtn buy', '蓋今天的章'); b.addEventListener('click', () => { Stamp.shown = false; stampPop(); }); box.appendChild(b); }
   const pl = el('div', 'stplay'), m = st.mins || 0, cl = st.claim || 0; pl.appendChild(el('div', 'n', `📦 郵差的包裹・今天玩了 ${m} 分鐘`));
   const bar = el('div', 'stbar'); const fill = el('i'); fill.style.width = Math.min(100, m / 60 * 100) + '%'; bar.appendChild(fill);
@@ -16410,7 +16422,7 @@ function renderLook(body){ const own = new Set(rec.owned || []);
     const d0 = el('div', 'tinfo'); d0.appendChild(el('div', 'n', kind === 'rs_' ? '不裝（竿子原本的顏色）' : '白色（原本的）')); none.appendChild(d0); const a0 = el('div', 'tacts'), b0 = el('button', 'tbtn ghost', '用這個');
     b0.disabled = kind === 'rs_' ? !rec.rodSkin : !rec.lineCol; b0.addEventListener('click', async () => { const row = await craftRpc('set_rod_look', { p_skin: kind === 'rs_' ? null : rec.rodSkin || null, p_line: kind === 'lc_' ? null : rec.lineCol || null }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } }); a0.appendChild(b0); none.appendChild(a0); ul.appendChild(none);
     for (const c of CRAFT.filter(x => x.id.startsWith(kind))){ const has = own.has(c.id), cur = kind === 'rs_' ? rec.rodSkin : rec.lineCol, using = cur === c.id, li = el('li', using ? 'on' : ''); li.appendChild(craftSwatch(c));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name)); d.appendChild(el('div', 'sub2', has ? (using ? '使用中' : '已經有了') : `還沒有・工坊做：🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條`)); li.appendChild(d);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name)); d.appendChild(el('div', 'sub2', has ? (using ? '使用中' : '已經有了') : c.stamp ? '還沒有・📮 集章卡限定（每蓋滿 4 張送）' : `還沒有・工坊做：🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條`)); li.appendChild(d);
       const a = el('div', 'tacts');
       if (has){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上'); b.addEventListener('click', async () => { const sk = kind === 'rs_' ? (using ? null : c.id) : rec.rodSkin || null, lc = kind === 'lc_' ? (using ? null : c.id) : rec.lineCol || null; const row = await craftRpc('set_rod_look', { p_skin: sk, p_line: lc }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } }); a.appendChild(b); }
       else { const b = el('button', 'tbtn ghost', '看一下'); b.addEventListener('click', () => { pv.innerHTML = ''; pv.appendChild(lookPreview(kind === 'rs_' ? c.id : rec.rodSkin, kind === 'lc_' ? c.id : rec.lineCol)); pv.scrollIntoView({ block:'nearest', behavior:'smooth' }); }); a.appendChild(b); }
@@ -19309,7 +19321,7 @@ function renderTab(){
       '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊；輪到誰瞄準，那個人（玩家或阿喆）會彎腰趴向球桌、一手架桿一手握桿。自己打的時候鏡頭在球桌正上方，所以看不到自己的姿勢。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
-      '📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一件只有集章拿得到的造型（郵差帽、郵差包，之後還會再加）。',
+      '📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一個只有集章拿得到的造型：先送竿子造型（郵票竿、潮汐月光竿），再送郵差帽、郵差包，之後出新的造型會再加進來。',
       '📦 郵差的包裹：每天有在玩（走路、釣魚、按畫面）滿 10、30、60 分鐘，郵差阿信會走過來送包裹。站著不動不算時間。在室內、海底、船上或島上的時候，包裹會先放在「手機 → 今天」，到那裡收。',
       '🏝️ 遠方荒島・漂流島（求生）：找港口的阿海選「遠方荒島・漂流島」，坐船到東南外海一座沒有人住的大島（v595 變大了：西邊碼頭和沙灘、西北邊的竹林小丘、中間偏東南的小山和瞭望大石、東邊岩岸的潮池，另一頭沙灘上有一艘破船）。走到漂流木、石頭、草叢、竹子、大葉子、椰子樹旁邊按大按鈕就能撿（島上的大石頭也敲得出石頭；漂流木堆裡偶爾有魚骨），東西放「背包 → 🏝️ 荒島」（12 格，一格最多 20 個，跟村子的背包分開、不能拿回村子賣）。撿過的地方過幾分鐘會再長出來。村子的釣竿在島上不能用。',
       '🍗 荒島求生：在漂流島上左上角會出現飽足度和體力（點一下打開荒島背包）。飽足度每 9 秒少 1；餓到 0 體力就開始掉。晚上離點著的營火 6 公尺外、又不在小木屋裡會冷；下雨沒站在遮雨棚或小木屋下面會淋濕，暴風雨更傷，這些都會掉體力。吃飽（50 以上）又沒在掉的時候體力會慢慢回來。吃東西：在荒島背包按「吃」——椰子 +10、生的小魚 +8、烤小魚 +20、生的小螃蟹 +5、烤螃蟹 +12，吃魚會剩一根魚骨（2 根可以磨成骨頭魚鉤）。退潮的時候東邊沙灘的潮池可以撿小魚、小螃蟹（看得到裡面有小魚在游）；漲潮時潮池會整個泡在海水下面，要等退潮。站在點著的營火旁邊按「烤」。小木屋裡的床可以「睡覺」：體力回得快、晚上不會冷，但不能讓天變亮（全村是同一個時間）。體力 0 會倒下：荒島背包的東西掉一半（竹竿、魚鉤不會掉），有小木屋在小木屋醒來，沒有就被阿海載回港邊。在村子自己家的床上躺 5 秒，下一趟上島體力上限變 120。碼頭最前面按「回村子」坐船回去。',
