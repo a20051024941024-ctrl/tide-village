@@ -6409,15 +6409,36 @@ function pickFish(spot, charge){
    做對：魚掉很多體力、連擊 +1；做錯：拉力爆衝或線鬆掉，連擊歸零。小魚只會喘氣和小衝刺，10 秒內解決。
    重量照舊由伺服器決定（連擊不改重量，避免被改數字作弊），連擊高的會有「🏅 完美搏鬥」的紀錄。 */
 const FIGHT_ACT = { run:{ ico:'💨', cue:'要衝了！', how:'放開！讓牠跑' }, pause:{ ico:'😮‍💨', cue:'牠停下來喘氣', how:'連續快速點！' }, left:{ ico:'⬅', cue:'往左竄！', how:'搖桿往右拉' }, right:{ ico:'➡', cue:'往右竄！', how:'搖桿往左拉' },
-  jump:{ ico:'⬆️', cue:'要跳出水面了！', how:'放開！落水再收' }, dive:{ ico:'⬇️', cue:'往下鑽！', how:'按著但不要全力' }, snag:{ ico:'🪨', cue:'卡到礁石了！', how:'放開等 3 秒' }, feint:{ ico:'😮‍💨', cue:'牠好像累了…', how:'連續快速點！' } };
+  jump:{ ico:'⬆️', cue:'要跳出水面了！', how:'放開！落水再收' }, dive:{ ico:'⬇️', cue:'往下鑽！', how:'按著但不要全力' }, snag:{ ico:'🪨', cue:'卡到礁石了！', how:'放開等 3 秒' }, feint:{ ico:'😮‍💨', cue:'牠好像累了…', how:'連續快速點！' },
+  shake:{ ico:'🌀', cue:'猛甩頭！', how:'放一下再收！別硬拉' }, twist:{ ico:'〰️', cue:'扭來扭去！', how:'搖桿左右輪流輕輕帶' } };   /* v636 釣具改版第二次：甩頭（鯊魚、鱸魚、旗魚）、扭動（鰻、海蛇） */
 const FIGHT_PROF = { school:{ acts:['pause', 'run'], gap:0.5, quick:1.9, dmg:1.4, runK:0.6 }, shadow:{ acts:['run', 'left', 'pause', 'right', 'jump'], gap:1 }, pred:{ acts:['run', 'jump', 'run', 'jump', 'pause'], gap:0.9, runK:1.5 },
   bottom:{ acts:['dive', 'pause', 'snag', 'dive'], gap:1 }, cunning:{ acts:['left', 'right', 'left', 'pause', 'right'], gap:0.45 }, tuna:{ acts:['run', 'run', 'pause', 'run'], gap:0.7, runK:1.7 } };
 /* v255 第 4 段：裝備改變手感 —— 硬竿（遠投竿）：做對時魚掉更多體力，但魚動作更快、預兆更短；軟竿（手竿、磯釣竿）：容錯高（判定寬鬆、硬拉爆衝少）、預兆長、魚比較慢；甩竿在中間 */
 const ROD_FEEL = { surf:{ name:'硬竿', dmg:1.35, spd:0.8, tele:0.38, soft:0 }, cast:{ name:'中等', dmg:1, spd:1, tele:0.5, soft:0 }, iso:{ name:'軟竿', dmg:0.85, spd:1.2, tele:0.7, soft:1 }, pole:{ name:'軟竿', dmg:0.85, spd:1.2, tele:0.7, soft:1 } };
 function rodFeel(){ return ROD_FEEL[rodType(curRod())] || ROD_FEEL.cast; }
-function fightProf(f){ const b = f.of || f.id; let k = /tuna|bonito/.test(b) ? 'tuna' : CUNNING.has(b) ? 'cunning' : sigClass(f); if (k === 'school' && f.rarity !== '常見') k = 'shadow'; const P = Object.assign({ gap:1, quick:1, dmg:1, runK:1 }, FIGHT_PROF[k]); P.k = k;
+/* ===== v636 釣具改版第二次「加深搏鬥」（作者的計畫）=====
+   打法名字、甩頭／扭動給哪些魚、稀有和傳說魚的招牌動作、竿對上打法的加成、圖鑑寫出打法和推薦的竿 */
+const FIGHT_NAME = { school:'🐟 魚群', shadow:'🌑 魚影', pred:'🦈 掠食魚', bottom:'🪨 底棲魚', cunning:'🦊 狡猾魚', tuna:'🐋 鮪魚' };
+const FIGHT_STYLE_FIX = { blackgirella:'bottom' };   /* 計畫：黑毛是底棲魚（會纏礁石） */
+function fightStyleK(f){ const b = f.of || f.id; if (FIGHT_STYLE_FIX[b]) return FIGHT_STYLE_FIX[b]; let k = /tuna|bonito/.test(b) ? 'tuna' : CUNNING.has(b) ? 'cunning' : sigClass(f); if (k === 'school' && f.rarity !== '常見') k = 'shadow'; return FIGHT_PROF[k] ? k : 'shadow'; }
+function fightExtra(f){ const n = (FISH_BY_ID[f.of] || f).name || ''; if (/鰻|海蛇/.test(n)) return 'twist'; if ((/鯊/.test(n) && !/禿頭鯊/.test(n)) || /鱸$|旗魚/.test(n)) return 'shake'; return null; }
+/* 招牌動作：每種稀有、傳說魚一個最像牠的動作（出現特別多、特別強）；有幾種照計畫指定 */
+const FIGHT_SIG_FIX = { tarpon:['jump', 'jump'], blackgirella:['snag'], marlin:['jump', 'run'], sailfish:['jump', 'run'], swordfish:['jump', 'run'] };
+const FIGHT_SIG_TXT = { 'jump,jump':'連跳兩次', snag:'纏礁石纏很久', 'jump,run':'先跳再衝', run:'衝很遠', jump:'跳很高', dive:'一直往下鑽', left:'左右亂竄', right:'左右亂竄', pause:'裝累騙你收線', shake:'瘋狂甩頭', twist:'扭得特別兇' };
+function fightSig(f){ if (f.rarity === '常見') return null; const b = f.of || f.id; if (FIGHT_SIG_FIX[b]) return FIGHT_SIG_FIX[b]; const ex = fightExtra(f); if (ex) return [ex];
+  const acts = FIGHT_PROF[fightStyleK(f)].acts.filter(a => a !== 'pause'); let h = 0; for (const c of b) h = (h * 31 + c.charCodeAt(0)) | 0; return [acts[Math.abs(h) % acts.length]]; }
+/* 竿對上打法：預兆多 0.15 秒、做對時魚掉的體力 ×1.3、做錯的怒衝減半；對不上只是普通（不扣分）。黃金王者竿全部中等 */
+const FIGHT_ROD = { bottom:['iso'], shadow:['lure'], pred:['lure'], cunning:['lure', 'pole'], tuna:['surf'], school:['pole'] };
+const FIGHT_ROD_TXT = { iso:'磯釣竿', lure:'路亞輕竿、月光夜釣竿', surf:'遠投竿、深海巨物竿', pole:'手竿' };
+function rodFam(r){ r = r || curRod(); if (r.id === 'king') return 'king'; if (r.id === 'lure' || r.id === 'moon') return 'lure'; if (r.id === 'deep') return 'surf'; const t = rodType(r); return t === 'cast' ? 'none' : t; }
+function fightRodOk(f, r){ return (FIGHT_ROD[fightStyleK(f)] || []).includes(rodFam(r)); }
+function fightRodRec(f){ return (FIGHT_ROD[fightStyleK(f)] || []).map(x => FIGHT_ROD_TXT[x]).join('、') || '哪支都可以'; }
+function fightProf(f){ const k = fightStyleK(f); const P = Object.assign({ gap:1, quick:1, dmg:1, runK:1 }, FIGHT_PROF[k]); P.k = k;
   { const R = rodFeel(); P.dmg *= R.dmg; P.gap *= R.spd; P.spd = R.spd; P.tele = R.tele; P.soft = R.soft; }
-  let acts = P.acts.slice(); if (!['reef', 'harbor', 'isle', 'abyss', 'kelp'].includes(F.spot && F.spot.id)) acts = acts.map(a => a === 'snag' ? 'dive' : a); if (f.rarity === '傳說') acts = acts.concat(['feint']); P.list = acts; return P; }
+  let acts = P.acts.slice(); const ex = fightExtra(f); if (ex) acts.splice(1, 0, ex);   /* 甩頭、扭動 */
+  const sig = fightSig(f); if (sig){ const ss = sig.map(a => a + '*'); acts.splice(Math.min(2, acts.length), 0, ...ss); acts.push(...ss); }   /* 招牌動作：一輪出現兩次 */
+  const reefy = ['reef', 'harbor', 'isle', 'abyss', 'kelp'].includes(F.spot && F.spot.id); if (!reefy) acts = acts.map(a => a.replace(/^snag/, 'dive'));
+  if (f.rarity === '傳說') acts = acts.concat(['feint']); P.list = acts; P.sig = sig; P.match = fightRodOk(f); if (P.match) P.tele = (P.tele || 0.5) + 0.15; return P; }
 /* v378 朋友建議：加震動。魚衝、魚跳、線快斷、線斷、釣到都會震（設定裡可以關；電腦和 iPhone 的瀏覽器不支援震動） */
 function buzz(p){ if (LS.get('tide.vib', true) === false) return; try { navigator.vibrate && navigator.vibrate(p); } catch(e){} }
 function fightCue(txt, cls){ let c = $('#fhCue'); if (!c){ c = document.createElement('div'); c.id = 'fhCue'; document.body.appendChild(c); } c.textContent = txt; c.className = cls || ''; c.hidden = !txt; }
@@ -6428,7 +6449,7 @@ function fightTarget(f, w){ const [lo, hi] = FIGHT_T[fightSize(f, w)], k = f.max
 function startReel(){
   F.phase = 'reeling'; F.T = 0.35; F.P = 0.3; F.surge = 0; F.seed = Math.random()*10;
   F.t0 = now(); F.g = 1; F.Td = F.spot && F.spot.id === 'shrimp' ? 0 : fightTarget(F.fish, F.weight);
-  F.act = null; F.combo = 0; F.bestCombo = 0; F.circleUsed = false; F.pf = true; F.actN = 0; F.Tmax = 0; F.pfCatch = false; F.prof = F.spot && F.spot.id !== 'shrimp' ? fightProf(F.fish) : null; F.acts = !!F.prof; F.actI = 0; F.nextActAt = now() + 0.8; fightCue('');
+  F.act = null; F.combo = 0; F.bestCombo = 0; F.circleUsed = false; F.pf = true; F.actN = 0; F.Tmax = 0; F.pfCatch = false; F.prof = F.spot && F.spot.id !== 'shrimp' ? fightProf(F.fish) : null; F.acts = !!F.prof; F.actI = 0; F.nextActAt = now() + 0.8; fightCue(F.prof && F.prof.match ? `🎣 竿子對上${FIGHT_NAME[F.prof.k]}的打法！` : ''); if (F.prof && F.prof.match) setTimeout(() => { if (F.phase === 'reeling' && !F.act) fightCue(''); }, 1400);
   F.S = 1; F.dir = 0; F.dirUntil = now() + rand(1.2, 2.2); F.lat = 0; F.jump = 0; F.maxDist = 4 + (F.castCharge || 0) * 6 + (BIG_FISH.has(F.fish.id) ? 6 : 0);
   F.castD = clamp(F.spot && F.spot.pos ? Math.hypot(me.bobPos.x - F.spot.pos.x, me.bobPos.z - F.spot.pos.z) : 5, 2, 22); F.slack = 0; F.run = 0; F.runAt = now() + rand(1.8, 3.5); F.dragT = 0;   /* 遛魚：魚會往外衝（線被拉出去、浮標越來越遠），線太鬆會脫鉤 */
   if (F.leap){ scene.remove(F.leap); F.leap = null; }
@@ -6574,9 +6595,9 @@ function updateFishing(dt, t){
     const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
     let actPull = 0;
     if (F.acts && !F.mash){ const P = F.prof; let A = F.act;
-      if (!A && t > F.nextActAt && F.S > 0.06){ const k = P.list[F.actI % P.list.length]; F.actI++; const dur = (k === 'run' ? rand(1.1, 1.9) * P.runK * (0.7 + p * 0.5) : k === 'pause' || k === 'feint' ? rand(1.6, 2.2) : k === 'jump' ? 1.4 : k === 'snag' ? 3.0 : k === 'dive' ? rand(2.0, 2.8) : rand(1.3, 2.0)) * (k === 'jump' || k === 'snag' ? 1 : P.spd || 1);
-        A = F.act = { k, t0: t + (P.tele || 0.5), end: t + (P.tele || 0.5) + dur, tele: true, hold: 0, tot: 0, taps: 0, good: 0 }; const D = FIGHT_ACT[k]; fightCue(`${D.ico} ${D.cue}`, 'tele'); try { SFX.tick(); } catch(e){} camShake = Math.max(camShake, 0.04); }   /* 預兆：先提示 0.5 秒 */
-      if (A && A.tele && t >= A.t0){ A.tele = false; const D = FIGHT_ACT[A.k]; fightCue(`${D.ico} ${D.how}`, 'go');
+      if (!A && t > F.nextActAt && F.S > 0.06){ const raw = P.list[F.actI % P.list.length], isSig = raw.endsWith('*'), k = raw.replace('*', ''); F.actI++; const dur = (isSig ? 1.3 : 1) * (k === 'twist' ? 1.25 : 1) * (k === 'run' ? rand(1.1, 1.9) * P.runK * (0.7 + p * 0.5) : k === 'pause' || k === 'feint' ? rand(1.6, 2.2) : k === 'jump' ? 1.4 : k === 'snag' ? 3.0 : k === 'dive' ? rand(2.0, 2.8) : rand(1.3, 2.0)) * (k === 'jump' || k === 'snag' ? 1 : P.spd || 1);
+        A = F.act = { k, sig: isSig, t0: t + (P.tele || 0.5), end: t + (P.tele || 0.5) + dur, tele: true, hold: 0, tot: 0, taps: 0, good: 0 }; const D = FIGHT_ACT[k]; fightCue(`${isSig ? '★招牌 ' : ''}${D.ico} ${D.cue}`, 'tele'); try { SFX.tick(); } catch(e){} camShake = Math.max(camShake, 0.04); }   /* 預兆：先提示 0.5 秒 */
+      if (A && A.tele && t >= A.t0){ A.tele = false; const D = FIGHT_ACT[A.k]; fightCue(`${A.sig ? '★ ' : ''}${D.ico} ${D.how}`, 'go'); if (A.k === 'shake'){ buzz([30, 40, 30, 40, 30]); A.rel = 0; } if (A.k === 'twist'){ A.flips = 0; A.sgn = 0; A.hard = 0; }
         if (A.k === 'run'){ F.run = A.end - t; buzz(35); } else if (A.k === 'jump'){ F.jump = 1.0; buzz(60); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 20, '#e8f7ff', 1.4, 2.6, 0.9); SFX.plop(); }
         else if (A.k === 'left' || A.k === 'right'){ F.dir = A.k === 'left' ? -1 : 1; const d = $('#fhDir'); d.hidden = false; d.className = F.dir < 0 ? 'l' : 'r'; d.innerHTML = F.dir < 0 ? '<span>往右拉</span><b>➡</b>' : '<b>⬅</b><span>往左拉</span>'; }
         else if (A.k === 'dive') document.body.classList.add('fdive'); }
@@ -6586,13 +6607,18 @@ function updateFishing(dt, t){
         else if (A.k === 'dive'){ me.dip = 1.6; actPull = 0.35 * p; if (F.T > 0.3 && F.T < 0.7) A.good += dt; }
         else if (A.k === 'snag'){ if (F.hold){ F.T += dt * 0.9; F.P -= dt * 0.02; } F.lat *= 0.9; }
         else if (A.k === 'jump' && A.tot < 1.0 && F.hold) A.bad = (A.bad || 0) + dt;
+        else if (A.k === 'shake'){ actPull = p * (Math.sin(t * 26) > 0 ? 0.55 : -0.15); camShake = Math.max(camShake, 0.05); me.bend = Math.min(1, (me.bend || 0) + Math.abs(Math.sin(t * 26)) * 0.15);   /* 竿尖一直抖：要短短放鬆一下再收 */
+          if (!F.hold) A.rel += dt; else { if (A.rel > 0.15 && A.rel < 1.3) A.goodRel = true; A.rel = 0; } }
+        else if (A.k === 'twist'){ actPull = p * 0.25 * Math.sin(t * 9); const sv = (!uiBlocked ? joy.x + ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0) : 0);   /* 左右輪流穩穩地帶，太用力會滑掉 */
+          if (Math.abs(sv) > 0.25){ const sg = Math.sign(sv); if (A.sgn && sg !== A.sgn) A.flips++; A.sgn = sg; } if (Math.abs(sv) > 0.92) A.hard += dt; }
         if (t >= A.end){ let ok = false; const sf = P.soft ? 1 : 0; if (A.k === 'run') ok = A.hold / Math.max(0.01, A.tot) < 0.3 + sf * 0.15; else if (A.k === 'pause' || A.k === 'feint') ok = A.taps >= 3 - sf; else if (A.k === 'left' || A.k === 'right') ok = A.good / Math.max(0.01, A.tot) > 0.5 - sf * 0.12;
           else if (A.k === 'jump') ok = (A.bad || 0) < 0.25; else if (A.k === 'dive') ok = A.good / Math.max(0.01, A.tot) > 0.55; else if (A.k === 'snag') ok = A.hold / Math.max(0.01, A.tot) < 0.2;
+          else if (A.k === 'shake') ok = !!A.goodRel && A.hold / Math.max(0.01, A.tot) > 0.25; else if (A.k === 'twist') ok = A.flips >= 2 - sf && A.hard / Math.max(0.01, A.tot) < 0.4 + sf * 0.15;
           if (!ok && rec.hook === 'hk_circle' && !F.circleUsed){ F.circleUsed = true; ok = 'forgive'; }   /* 圓形鉤：原諒一次 */
           if (ok && ok !== 'forgive') F.actN++; else F.pf = false;   /* v287 完美搏鬥：每個動作都對上 */
           if (ok === 'forgive'){ fightCue(`⭕ 圓形鉤撐住了！連擊 ×${F.combo}`, 'ok'); }
-          else if (ok){ F.combo++; F.bestCombo = Math.max(F.bestCombo, F.combo); F.S = Math.max(0, F.S - 0.13 * P.dmg * (rec.hook === 'hk_gold' ? 1.2 : 1)); F.P += 0.05 * P.quick; fightCue(`👍 漂亮！連擊 ×${F.combo}`, 'ok'); try { SFX.tick(); } catch(e){} }
-          else { F.combo = 0; fightCue('😣 沒對上', 'bad'); if (A.k === 'snag' || A.k === 'run') F.T += P.soft ? 0.12 : 0.25; }
+          else if (ok){ F.combo++; F.bestCombo = Math.max(F.bestCombo, F.combo); F.S = Math.max(0, F.S - 0.13 * P.dmg * (rec.hook === 'hk_gold' ? 1.2 : 1) * (P.match ? 1.3 : 1) * (A.sig ? 1.4 : 1)); F.P += 0.05 * P.quick; fightCue(`👍 ${A.sig ? '破解招牌動作！' : '漂亮！'}連擊 ×${F.combo}${P.match ? '・🎣竿子對上了' : ''}`, 'ok'); try { SFX.tick(); } catch(e){} }
+          else { F.combo = 0; const half = P.match ? 0.5 : 1; fightCue(A.k === 'shake' ? '😣 硬拉，鉤子鬆了！' : A.k === 'twist' ? '😣 太用力，滑掉了' : '😣 沒對上', 'bad'); if (A.k === 'snag' || A.k === 'run') F.T += (P.soft ? 0.12 : 0.25) * half; if (A.k === 'shake') F.slack += 1.2 * half; if (A.k === 'twist') F.S = Math.min(1, F.S + 0.04 * half); }
           setTimeout(() => { if (F.act === null && F.phase === 'reeling') fightCue(''); }, 700);
           if (A.k === 'left' || A.k === 'right'){ F.dir = 0; $('#fhDir').hidden = true; } if (A.k === 'dive') document.body.classList.remove('fdive');
           F.act = null; F.nextActAt = t + rand(0.9, 2.0) * P.gap; } } }
@@ -18326,6 +18352,9 @@ function renderTab(){
         if (Cloud.on && !f.of && !f.rs && !f.fest){ popFetch(); const pv = Pop.d[f.id], pp = pv ? pv[0] : 100, pc = pp < 70 ? 'lo' : pp < 90 ? 'mid' : pp > 110 ? 'hi' : 'ok', pb = el('div', 'meta pop ' + pc);   /* v586 全服共養：族群條 */
           pb.innerHTML = `<span class="pbar"><i style="width:${Math.round(Math.max(0, Math.min(130, pp)) / 1.3)}%"></i></span>🧬 ${pp}%${pv && pv[1] ? '・✨已演化' : ''}`; pb.title = '整個伺服器共用的族群量：大家釣太多會變少、放流會變多；連續 3 天 115% 以上會演化出新花色'; it.appendChild(pb); }
         if (f.fest) it.appendChild(el('div', 'meta fest', (FEST_FISH_WHEN[f.fest] || '🏮 節慶限定') + (festOn(f.fest) ? '・現在釣得到！' : '・現在釣不到')));   /* v388 節慶魚標清楚哪時候才有 */
+        if (known){ const fk = fightStyleK(f), n5 = (rec.count[f.id] || 0) >= 5, sg = fightSig(f), ex = fightExtra(f);   /* v636 圖鑑教你：第一次釣到寫打法；釣到 5 條寫招牌動作和推薦的竿 */
+          it.appendChild(el('div', 'meta', `⚔️ 打法：${FIGHT_NAME[fk]}${ex ? (ex === 'shake' ? '・會甩頭' : '・會扭動') : ''}`));
+          it.appendChild(el('div', 'meta', n5 ? `${sg ? `★ 招牌：${FIGHT_SIG_TXT[sg.join(',')] || FIGHT_SIG_TXT[sg[0]] || ''}・` : ''}🎣 推薦：${fightRodRec(f)}` : `🎣 推薦的竿：釣到 5 條解鎖（${Math.min(5, rec.count[f.id] || 0)}/5）`)); }
         if (known && baitsFor(f).length) it.appendChild(el('div', 'meta', starsOf(f) >= 2 ? '🍽️ 喜歡：' + baitsFor(f).map(b => b.name).join('、') : '🍽️ 喜歡的餌：★★ 解鎖'));   /* v295 先自己試，釣到 10 條（兩顆星）才告訴你 */
         g.appendChild(it);
       });
@@ -18630,6 +18659,7 @@ function renderTab(){
       '在水邊按「🍚 打窩」：「現在打」馬上有效，大家都看得到（晚一點才走過來或才上線的人也看得到，還會顯示剩下的時間），維持 2～3 分鐘；別人也可以來你的窩裡釣；在窩點裡下竿，魚更快上鉤、稀有魚更多。',
       '「🤫 提前打」是慢慢發酵的窩點：窩料 10 分鐘後最強，可以維持 1 小時，最多 3 個。大家都看得到每個人的窩點（水面上的浮標：你的是黃旗、別人的是藍旗加名字；地圖上的 🤫）；在線上的人一做好，附近的人馬上就看得到，別人的窩點也能去釣，效果是打窩那個人的 75%。',
       '🔥 熱窩：人越多窩越旺。同一個窩（12 公尺內）每多一個人一起釣，稀有魚 +10%、傳說魚 +12%、魚咬得快 8%（最多算 4 個人）；窩上面會浮出「🔥 3 人在釣」、水面的魚影也變多。別人在你打的窩釣到魚，你會拿到 2 金幣謝禮（一天最多 60），祕密窩點還會延長 1 分鐘（最多多 30 分鐘）。約朋友一起來窩裡釣吧！',
+      '⚔️ 搏鬥打法：每種魚屬於一種打法（🐟 魚群、🌑 魚影、🦈 掠食魚、🪨 底棲魚、🦊 狡猾魚、🐋 鮪魚），圖鑑第一次釣到就會寫出來；同一種魚釣到 5 條，圖鑑會寫出牠的★招牌動作和推薦的竿。新動作「🌀 甩頭」（鯊魚、鱸魚、旗魚）：竿尖會一直抖，要短短放開一下再收，一直硬拉鉤子會鬆掉；「〰️ 扭動」（鰻、海蛇）：搖桿左右輪流輕輕帶，推到底會滑掉。稀有和傳說魚有自己的★招牌動作，出現得比較多、時間比較長，破解了魚會掉更多體力。竿子對上打法（磯釣竿對底棲魚、路亞竿和月光竿對魚影、掠食魚、狡猾魚、遠投竿和深海竿對鮪魚、手竿對魚群和狡猾魚）：預兆多 0.15 秒、做對時魚掉的體力 ×1.3、做錯的懲罰減半；對不上只是普通，不會扣分。黃金王者竿全部中等。',
       '🎒 釣組和外觀：包包裡的「🎣 釣組」放會影響釣魚的東西（釣竿、釣法和釣線、鉤子、魚餌、蝦竿、釣魚裝備），「🎨 外觀」放只是好看的東西（竿子造型、釣線顏色），上面有預覽，還沒做的造型可以按「看一下」先看看。造型跟著你走：做好一個造型，換哪支竿子都還在；不裝造型的時候，竿子是那個種類的顏色（竹黃是一般竿、青綠是路亞竿和月光竿、深藍是遠投竿和深海竿、深棕是磯釣竿、木色是手竿、金色是黃金王者竿）。',
       '🪑 釣魚裝備：釣具店「🧰工具」可以買摺疊椅（🪙600）、小釣台（🪙1500）、竿架＋魚護（🪙900）、遮陽傘＋釣箱（🪙800），後三樣要先有摺疊椅，買了放在背包「🎣 釣組」。走到水邊、面向水，在「🎣 釣組」按「擺出來」，裝備會擺在你前面的岸邊，你會自動坐下，坐著就能拋竿、拉魚。有小釣台的話椅子擺在伸到水上的平台尾端，可以多拋 3 公尺左右。有竿架的話，等魚的時候按「跳」站起來，竿子會插在竿架上，你可以先去旁邊做別的事；魚咬了鈴鐺會響、竿尖會抖，25 秒內回去坐下就能拉，沒回去魚會吃掉餌跑走。魚護泡在水裡，這次擺出來以後釣到的魚會在網子裡游。遮陽傘撐在椅子旁邊，釣箱可以在背包「🎣 釣組」直接打開買魚餌。走開 15 公尺、上船、潛水或按「收起來」，裝備就收回背包。別人看得到你擺的裝備和魚護裡的魚。裝備不會改變釣到稀有魚的機率。',
       '🍚 熱門窩點：手機「🍚 熱門窩點」看得到大家現在打的窩（幾個人在釣、還剩多久），按「⛵ 過去」阿海就載你去。自己的祕密窩點可以按「📣 約朋友」，選互相加好友的朋友，他們會收到一則私訊，按訊息裡的「⛵ 坐阿海的船過去」就能直接過來（阿海的祕密窩點清單也有「📣 約朋友」）。',
