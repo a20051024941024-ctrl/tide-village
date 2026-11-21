@@ -1923,3 +1923,4 @@ body.ui3 #sheet.th-wood #tabs button[aria-selected="true"]{background:#f1dfb8;co
 #sheet.th-wood .shophead,#sheet.th-note .shophead{justify-content:flex-end;gap:8px}
 #sheet.th-wood .shophead:not(:has(> :not(b[style*="none"]))){display:none}
 #sheet.th-wood header:has(#sheetTitle:empty){padding:4px 8px;justify-content:flex-end}
+#sheet .shoplist .meta{white-space:pre-line}
