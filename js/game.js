@@ -9388,7 +9388,44 @@ function seaBuild(){ if (!Dive.on || Dive.site !== 'isle' || !Dive.group) return
     for (let n = 0; n < 5; n++){ const a = n / 5 * Math.PI * 2 + i, rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.14, 0), mat('#8d8f96', 0.95, { flatShading:true })); rk.position.set(Math.cos(a) * 0.8, 0.07, Math.sin(a) * 0.8); pg.add(rk); }
     const k = farmProg(p); seaPlantMesh(pg, p, k); if (k >= 1){ const sp = farmSprite(CROP_BY[p.c].icon); sp.position.set(0, 2.0, 0); pg.add(sp); } }
   try { decoBuild(g); } catch(e){ console.warn('deco', e); } }
-function seaTick(){ if (!Dive.on || Dive.site !== 'isle') return; { const ib = $('#isleBar'); if (ib && !ib.hidden) ib.hidden = true; } if (frameNo % 30 === 11) seedChip(); decoTick(); if (frameNo % 120 === 9 && Sea.g && seaKey() !== Sea.vis) seaBuild(); }
+/* ===== v650 我的海：放進「我的海」的魚，在小島海底花園自己游（作者：「如果能將釣到的魚放在小島海底下」）=====
+   自己的島用 rec.show；在朋友的島上用伺服器的 visit_aqua 拿對方的清單。魚用真的 3D 模型，不參加潛水的魚 AI（不會被大魚追著吃）。
+   習性：螃蟹、比目魚、魟魚、章魚、龍蝦趴在海底慢慢爬；鯊魚、鯨魚、大魚在外圈繞大圈；其他的在中間到處游。傳說魚身邊有一點光。游近一條魚，下面會寫牠是誰釣的、多重 */
+const MySea = { g:null, key:'', fish:[], other:null, otherFor:null, loading:false, t:0 };
+function mySeaList(){ const own = typeof farmMine === 'function' && farmMine(); if (own){ const set = new Set(rec.show || []); return { name: '', list: rec.tank.filter(x => set.has(x.t)) }; }
+  const owner = onIsle && onIsle.owner; if (!owner) return { name: '', list: [] };
+  if (MySea.otherFor !== owner && !MySea.loading && Cloud.sb){ MySea.loading = true; Cloud.sb.rpc('visit_aqua', { p_id: owner }).then(({ data }) => { MySea.loading = false; MySea.otherFor = owner; if (data){ const r = normRec({ tank: data.tank, show: data.show }), set = new Set(r.show || []); MySea.other = { name: data.nickname || '', list: r.tank.filter(x => set.has(x.t)) }; } else MySea.other = { name: '', list: [] }; MySea.key = ''; }, () => { MySea.loading = false; }); }
+  return MySea.otherFor === owner && MySea.other ? MySea.other : { name: '', list: [] }; }
+function mySeaBuild(){ const L = mySeaList(), cap = 60, list = L.list.slice().sort((a, b) => (RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity]) || b.w - a.w).slice(0, cap);
+  const key = (onIsle && onIsle.owner || '') + ':' + list.map(x => x.t).join(','); if (key === MySea.key && MySea.g) return; MySea.key = key;
+  if (MySea.g){ MySea.g.parent && MySea.g.parent.remove(MySea.g); } MySea.fish = []; const g = MySea.g = new THREE.Group(); Dive.group.add(g);
+  const rr = mulberry(list.length * 97 + 7), R = Math.min(DIVE.r * 0.5, 20);
+  for (const x of list){ const f = FISH_BY_ID[x.f]; if (!f) continue; let m; const size = clamp(0.45 + Math.log10(1 + x.w) * 0.95, 0.4, 6);
+    try { m = fishModel(gpyFish ? (gpyFish(x) || f) : f, size); } catch(e){ continue; }
+    const bottom = ['crab', 'flounder', 'stingray', 'octopus', 'lobster', 'seahorse', 'horseshoe', 'kingcrab', 'mudcrab', 'yeticrab', 'isopod'].includes(f.id) || /crab|lobster|octo|flounder|ray$/.test(f.id);
+    const big = !bottom && (f.max >= 60 || /shark|whale|orca|marlin|tuna|sailfish|swordfish/.test(f.id));
+    const a = rr() * Math.PI * 2, r = big ? R * (0.75 + rr() * 0.25) : bottom ? rr() * R * 0.7 : rr() * R * 0.8;
+    const o = { x, f, m, bottom, big, a, r, cx: DIVE.x, cz: DIVE.z, y: bottom ? 0.15 + size * 0.05 : 1.2 + rr() * 5, sp: (bottom ? 0.12 : big ? 0.9 : 0.5 + rr() * 0.6) / Math.max(1, size * 0.5), pos: new THREE.Vector3(), tgt: new THREE.Vector3(), vel: new THREE.Vector3(), wait: 0, ph: rr() * 6 };
+    o.pos.set(DIVE.x + Math.cos(a) * r, diveBed(DIVE.x + Math.cos(a) * r, DIVE.z + Math.sin(a) * r) + o.y, DIVE.z + Math.sin(a) * r); o.tgt.copy(o.pos); m.position.copy(o.pos);
+    if (f.rarity === '傳說'){ try { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: diveGlowTex(), color: '#ffe9a0', transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.setScalar(size * 2.4); m.add(sp); } catch(e){} }
+    g.add(m); MySea.fish.push(o); } }
+function mySeaPick(o){ const R = Math.min(DIVE.r * 0.5, 20);
+  if (o.big){ o.a += (0.5 + Math.random() * 0.6) * (o.ph > 3 ? 1 : -1); const r = R * (0.75 + Math.random() * 0.25); o.tgt.set(DIVE.x + Math.cos(o.a) * r, 0, DIVE.z + Math.sin(o.a) * r); }
+  else { const a = Math.random() * Math.PI * 2, r = Math.random() * R * (o.bottom ? 0.7 : 0.85), nx = o.bottom ? o.pos.x + Math.cos(a) * (1 + Math.random() * 3) : DIVE.x + Math.cos(a) * r, nz = o.bottom ? o.pos.z + Math.sin(a) * (1 + Math.random() * 3) : DIVE.z + Math.sin(a) * r;
+    o.tgt.set(Math.hypot(nx - DIVE.x, nz - DIVE.z) < R ? nx : DIVE.x, 0, Math.hypot(nx - DIVE.x, nz - DIVE.z) < R ? nz : DIVE.z); }
+  o.tgt.y = diveBed(o.tgt.x, o.tgt.z) + (o.bottom ? o.y : 1 + Math.random() * 6); if (o.bottom && Math.random() < 0.4) o.wait = 2 + Math.random() * 5; }
+function mySeaTick(){ if (!Dive.on || Dive.site !== 'isle' || !Dive.group) return; const t = now(), dt = Math.min(0.1, t - (MySea.t || t)); MySea.t = t; if (frameNo % 20 === 0 || !MySea.g) mySeaBuild();
+  let near = null, nd = 3.2;
+  for (const o of MySea.fish){ if (o.wait > 0){ o.wait -= dt; } else { const dx = o.tgt.x - o.pos.x, dy = o.tgt.y - o.pos.y, dz = o.tgt.z - o.pos.z, d = Math.hypot(dx, dy, dz); if (d < 0.6) mySeaPick(o); else { const k = Math.min(1, dt * 1.6); o.vel.x += (dx / d * o.sp - o.vel.x) * k; o.vel.y += (dy / d * o.sp * 0.5 - o.vel.y) * k; o.vel.z += (dz / d * o.sp - o.vel.z) * k; } }
+    if (o.wait > 0) o.vel.multiplyScalar(Math.max(0, 1 - dt * 3)); o.pos.addScaledVector(o.vel, dt);
+    const bed = diveBed(o.pos.x, o.pos.z) + (o.bottom ? o.y : 0.6); if (o.pos.y < bed) o.pos.y = bed;
+    o.m.position.copy(o.pos); o.m.position.y += o.bottom ? 0 : Math.sin(t * 1.3 + o.ph) * 0.05; const hs = Math.hypot(o.vel.x, o.vel.z); if (hs > 0.02) o.m.rotation.y = lerpAngle(o.m.rotation.y, Math.atan2(-o.vel.z, o.vel.x), Math.min(1, dt * 4)); o.m.rotation.z = o.bottom ? 0 : clamp(Math.atan2(o.vel.y, hs + 0.01) * 0.6, -0.4, 0.4);
+    const pd = Math.hypot(me.pos.x - o.pos.x, me.pos.z - o.pos.z, (me.baseY - o.pos.y) * 0.6);   /* 潛水時人的高度在 me.baseY */ if (pd < nd){ nd = pd; near = o; } }
+  let chip = $('#mySeaChip'); if (!chip){ chip = document.createElement('div'); chip.id = 'mySeaChip'; chip.className = 'panel'; document.body.appendChild(chip); }
+  if (near){ const x = near.x, d = new Date(x.t), sp = SPOT_BY_ID[near.f.spot], who = typeof farmMine === 'function' && farmMine() ? '你' : (MySea.other && MySea.other.name) || '島主'; chip.hidden = false; const tx = `${fishTitle ? fishTitle(x) : near.f.name}・${x.w.toFixed(2)}kg・${who}在 ${d.getMonth() + 1}/${d.getDate()} 於${sp ? sp.label : '海裡'}釣到`; if (chip.textContent !== tx) chip.textContent = tx; }
+  else if (!chip.hidden) chip.hidden = true; }
+function mySeaOff(){ const c = $('#mySeaChip'); if (c) c.hidden = true; if (MySea.g && MySea.g.parent) MySea.g.parent.remove(MySea.g); MySea.g = null; MySea.key = ''; MySea.fish = []; }
+function seaTick(){ if (!Dive.on || Dive.site !== 'isle'){ if (MySea.g || ($('#mySeaChip') && !$('#mySeaChip').hidden)) mySeaOff(); return; } try { mySeaTick(); } catch(e){ console.warn('mySea', e); } { const ib = $('#isleBar'); if (ib && !ib.hidden) ib.hidden = true; } if (frameNo % 30 === 11) seedChip(); decoTick(); if (frameNo % 120 === 9 && Sea.g && seaKey() !== Sea.vis) seaBuild(); }
 function nearSea(){ if (!Dive.on || Dive.site !== 'isle' || !Sea.g || !onIsle) return null; let best = -1, bd = 1.0; for (const i of seaSlots()){ const [x, z, y] = seaPos(i), d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd && me.baseY - y < 3){ bd = d; best = i; } } if (best < 0) return null; return { i: best, p: Farm.plots[100 + best], mine: farmMine() }; }
 /* 現在這個位置可以種嗎：要貼近海底、自己的島、手上有海底的種子 */
 function seaSpot(){ if (!Dive.on || Dive.site !== 'isle' || !onIsle || !farmMine()) return null; const y = diveBed(me.pos.x, me.pos.z); if (me.baseY - y > 2.6) return null; return { x: +(me.pos.x - DIVE.x).toFixed(2), z: +(me.pos.z - DIVE.z).toFixed(2) }; }
@@ -13885,7 +13922,7 @@ function startDive(site, back){
     flash(`${DIVE_SITES[site].icon} ${DIVE_SITES[site].name}・氧氣 ${Dive.o2max} 秒`, 1.6);
   }, 380);
 }
-function endDive(reason, instant){
+function endDive(reason, instant){ try { mySeaOff(); } catch(e){}
   if (!Dive.on || Dive.ending) return; Dive.ending = true; const fx = $('#fadeFx');
   const done = () => {
     Dive.ending = false;
@@ -14787,7 +14824,7 @@ function renderFishCard(body, x, inCage){
   const card = el('div', 'fcard'); body.appendChild(card);
   const top = el('div', 'fc-top'); top.appendChild(fishCanvas(gx, true, 150, 96)); const tt = el('div', 'fc-tt');
   tt.appendChild(el('div', 'fc-name', x.n || fishNameOf(x))); tt.appendChild(el('div', 'fc-sp', `${x.n ? fishNameOf(x) + '・' : ''}${sexIcon(x) ? sexIcon(x) + '・' : ''}${f.rarity}${f.of ? '・✨變種' : ''}`));
-  const tags = el('div', 'fc-tags'); for (const [on, t] of [[x.k, '⭐ 收藏'], [shown, '🏛️ 水族館展示中'], [x.cr, '👑 魚王'], [x.ev, '✨ 自己養出來的變種'], [inCage, '🐟 箱網裡'], [x.fm && !x.cr, '🍚 箱網養大'], [x.y, '🍼 水族館出生'], [x.b, '🐣 含著小魚'], [x.g && FISH_BY_ID[x.g], x.g && FISH_BY_ID[x.g] ? `🧬 帶著${FISH_BY_ID[x.g].name}的基因` : '']]) if (on) tags.appendChild(el('span', 'badge', t));
+  const tags = el('div', 'fc-tags'); for (const [on, t] of [[x.k, '⭐ 收藏'], [shown, '🐠 在我的海'], [x.cr, '👑 魚王'], [x.ev, '✨ 自己養出來的變種'], [inCage, '🐟 箱網裡'], [x.fm && !x.cr, '🍚 箱網養大'], [x.y, '🍼 水族館出生'], [x.b, '🐣 含著小魚'], [x.g && FISH_BY_ID[x.g], x.g && FISH_BY_ID[x.g] ? `🧬 帶著${FISH_BY_ID[x.g].name}的基因` : '']]) if (on) tags.appendChild(el('span', 'badge', t));
   tt.appendChild(tags); top.appendChild(tt); card.appendChild(top);
   const pct = Math.max(0, Math.min(1, (x.w - f.min) / Math.max(0.001, f.max - f.min)));
   const bar = el('div', 'fc-bar'); bar.innerHTML = `<i style="width:${Math.round(pct * 100)}%"></i>`; card.appendChild(el('div', 'fc-lab', `體型：${fmtKg(x.w)}（這種魚 ${fmtKg(f.min)}～${fmtKg(f.max)}，牠在 ${Math.round(pct * 100)}% 的位置${pct >= 0.999 ? '，已經是最大的了 👑' : ''}）`)); card.appendChild(bar);
@@ -15783,6 +15820,9 @@ function afterSell(got, n){ if (got > 0) SFX.coin();
 
 function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0, love:0, released:0, dive:[], photos:[] }; }
 const SHOW_MAX = 100, KEEP_MAX = 200, FAV_MAX = 100;
+/* v650 我的海：放進小島海底的魚（用原本「展示」的清單 rec.show）。起始 30 條，海底花園每一株長到一半以上的珊瑚 +2，最多 60 條（作者選的） */
+function mySeaCap(){ let k = null; try { if (typeof farmMine === 'function' && farmMine() && Farm && Farm.plots){ k = 0; for (const key in Farm.plots){ const p = Farm.plots[key]; if (Number(key) >= 100 && p.c === 'coral' && farmProg(p) >= 0.5) k++; } LS.set('tide.seaCoral', k); } } catch(e){} if (k == null) k = LS.get('tide.seaCoral', 0) | 0; return Math.min(60, 30 + k * 2); }
+function mySeaFull(){ const cap = mySeaCap(); if ((rec.show || []).length >= cap){ toast(`我的海最多放 ${cap} 條${cap < 60 ? '（海底花園多種珊瑚，可以放更多）' : ''}，先拿出一條再放`); return true; } return false; }
 // 箱網養殖（參考澎湖的圓形箱網；伺服器 041）：一個人一個箱網、最多 6 條；每天餵一次（20 金幣），每條魚往最大重量長 12%
 var CAGE = { x:-17.6, z:92.8, max:6, feed:20, k:0.12, pos:[[-15.6, 90.6], [-15.6, 95.0], [-20.0, 90.6], [-20.0, 95.0]], r:1.7 };
 const FARM = new Set(['grouper','amberjack','blackbream','girella','rabbitfish','lethrinus','milkfish','tilapia','mullet','barramundi','scat','mangsnapper','trevally']);   /* FAV：打星號收藏的魚（不能賣、不會被擠掉；伺服器 039） */
@@ -16271,8 +16311,8 @@ $('#ccOk').addEventListener('click', () => { if (!ccEarly()) closeCatch(); });
 $('#ccRel').addEventListener('click', () => { if (!ccEarly()) releaseCaught(); });
 $('#ccShow').addEventListener('click', () => { if (ccEarly()) return;   // 釣到時直接選「放進水族館展示」
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x){ closeCatch(); return; }
-  rec.show = (rec.show || []).filter(t => t !== x.t); if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先到魚缸拿出一條`); return; }
-  rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); ticker(`🏛️ <b>${esc(f.name)}</b> 放進廣場的水族館展示了`); closeCatch(); });
+  rec.show = (rec.show || []).filter(t => t !== x.t); if (mySeaFull()) return;
+  rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); MySea.key = ''; toast(`🐠 <b>${esc(f.name)}</b> 放進你的海了。到小島碼頭的潛水梯下去就看得到牠`); closeCatch(); });
 /* ===== v304 新手主線：釣第一條魚 → 賣魚 → 買竿子 → 去自己的小島 → 潛一次水（長輩、小孩都看得懂；左上角一張小卡片＋地上的光柱指路）＋第一次釣魚的手指教學 ===== */
 /* v582 作者：「新手教學那些再去重做」→ 五步、大約 10 分鐘：釣魚 → 手機看圖鑑 → 賣魚 → 坐阿海的船出海 → 在島上釣滿 5 條（伺服器的新手獎勵本來就要 5 條）。做完跳「你現在可以自由玩了」 */
 const GUIDE = [
@@ -18609,8 +18649,8 @@ function renderTab(){
   } else if (curTab === 'bag'){ renderBag(body);
   } else if (curTab === 'tank'){
     const nShow = (rec.show || []).length;
-    body.appendChild(el('p', 'sub', nShow ? `你選了 ${nShow} / ${SHOW_MAX} 條魚放進廣場東邊的大水族館。點「展示」可以放進去或拿出來，「放流」會把這條魚放回大自然。`
-      : `廣場東邊的大水族館現在是空的。想讓大家看到哪條魚，就按那條魚的「展示」（最多 ${SHOW_MAX} 條）。`));
+    body.appendChild(el('p', 'sub', nShow ? `你的海裡有 ${nShow} / ${mySeaCap()} 條魚，從小島碼頭的潛水梯下去就看得到，來你島上的朋友也看得到。按「放進我的海」或「拿出來」。`
+      : `你的海還是空的。最喜歡的魚按「放進我的海」，牠就會在你小島底下的海裡游（最多 ${mySeaCap()} 條，多種珊瑚可以放更多）。`));
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
     if (FishCard.t){ const cx = rec.tank.find(x => x.t === FishCard.t); if (cx){ renderFishCard(body, cx); return; } FishCard.t = 0; }
     body.appendChild(el('p', 'sub', '👆 點魚的圖或名字，可以看牠的卡片、幫牠取名字。'));
@@ -18632,13 +18672,13 @@ function renderTab(){
       d.appendChild(el('div', 'meta', `${x.g && FISH_BY_ID[x.g] ? `帶著${FISH_BY_ID[x.g].name}的基因・` : ''}${x.y ? '水族館出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
       d.style.cursor = 'pointer'; d.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); });
       const acts = el('div', 'tacts');
-      const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '展示中' : '展示'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
+      const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '拿出來' : '放進我的海'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
       show.addEventListener('click', () => {
         if (!rec.show) rec.show = [];
         const i = rec.show.indexOf(x.t);
         if (i >= 0) rec.show.splice(i, 1);
-        else { if (rec.show.length >= SHOW_MAX){ toast(`水族館最多放 ${SHOW_MAX} 條，先拿出一條再放。`); return; } rec.show.push(x.t); }
-        saveRecLocal(); buildTank(); renderTab(); cloudCall('set_show', { p_show: rec.show.slice() });
+        else { if (mySeaFull()) return; rec.show.push(x.t); }
+        saveRecLocal(); buildTank(); renderTab(); cloudCall('set_show', { p_show: rec.show.slice() }); MySea.key = '';
       });
       const rel = el('button', 'tbtn ghost', `放流 💙${lovePts(f, x.w)}`);
       rel.addEventListener('click', () => {
@@ -18913,7 +18953,7 @@ function renderTab(){
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
-      `廣場東邊的大水族館只放你自己選的魚（最多 ${SHOW_MAX} 條）：釣到時按「🏛️ 展示」，或在「魚缸」分頁按「展示」。展示中的魚不會被賣掉或拿去做菜。`,
+      `🐠 我的海：最喜歡的魚可以放進自己小島底下的海。釣到時按「🐠 我的海」，或在「魚缸」按「放進我的海」。從小島碼頭的潛水梯下去，就看得到牠們照自己的習性游（螃蟹、比目魚趴在海底，鯊魚在外圈繞，傳說魚身邊有一點光）；游近一條魚，下面會寫是誰、哪天在哪裡釣到的。一開始可以放 30 條，海底花園每一株長大的珊瑚多 2 條，最多 60 條。放在我的海的魚不會被賣掉或拿去做菜，來你島上潛水的朋友也看得到。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）。主要在港口外海出沒，偶爾也會到珊瑚礁群島外側的深水邊巡游（機率更低）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
       '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低。圖鑑裡會先顯示影子，釣到才看得到樣子（赤紅霸王鯊例外，要釣到才會出現）。',

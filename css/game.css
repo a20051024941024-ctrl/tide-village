@@ -1993,3 +1993,5 @@ body.ui3 #sheet #tabs button[aria-selected="true"],#sheet .seg button[aria-press
 #guideCard,#today3{background:#fffaf0!important;border:3px solid #2b8fe6!important;border-radius:16px!important;box-shadow:0 0 0 2px #0d4a8c,0 5px 0 2px #0d4a8c,0 8px 16px rgba(0,0,0,.2)!important}
 #guideCard .gx{background:linear-gradient(#8fdcff,#2b8fe6)!important;color:#fff!important;border:2px solid #0d4a8c!important;border-radius:999px!important;text-shadow:0 1px 0 #0d4a8c}
 body.ui3 #mini3{background:linear-gradient(#f4fbff,#d4eeff)!important;border:3px solid #2b8fe6!important;box-shadow:0 0 0 2px #0d4a8c,0 4px 0 2px #0d4a8c!important;backdrop-filter:none!important}
+#mySeaChip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb,0px) + 70px);z-index:7;padding:6px 14px;font-size:13px;font-weight:700;color:#203a48;background:#fff!important;border:3px solid #2b8fe6!important;border-radius:999px!important;box-shadow:0 0 0 2px #0d4a8c,0 4px 0 2px #0d4a8c!important;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+#mySeaChip[hidden]{display:none}
