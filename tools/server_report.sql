@@ -66,3 +66,8 @@ union all select '不認得：' || coalesce(x->>'t', '(空白)'), count(*)::text
 \echo
 select fn as 動作, left(msg, 120) as 錯誤, sum(n) as 次數, count(distinct uid) as 人數, max(at) at time zone 'Asia/Taipei' as 最近一次
   from public.client_errors where at > now() - interval '24 hours' group by fn, left(msg, 120) order by 3 desc limit 15;
+
+\echo
+\echo '## 📱 畫面被放大（viewport）的診斷，最近 3 天最新 12 筆'
+\echo
+select at at time zone 'Asia/Taipei' as 時間, left(msg, 400) as 診斷 from public.client_errors where fn = 'viewport' and at > now() - interval '3 days' order by at desc limit 12;
