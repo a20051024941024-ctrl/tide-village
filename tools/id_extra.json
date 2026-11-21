@@ -6082,7 +6082,6 @@
  "太好了": "Hebat!",
  "往季紀念徽章": "Lencana musim lalu",
  "最近 10 場": "10 pertandingan terakhir",
- "🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「拆」再點，可以拆掉，自己放的退一半。一座島最多 400 塊，跟一起住的人共用。": "🧱 Balok dan sekat: di pulaumu ketuk Bangun → 🧱 Balok & sekat. Pilih bahan, lalu ketuk tanah untuk menaruh balok, ketuk atas balok untuk menumpuk, atau ketuk sisi untuk menaruh di sebelahnya; tahan setengah detik lalu geser untuk satu baris. Balok 50 cm, maksimal 6 tingkat, satu-dua tingkat bisa dinaiki. Bahan: kayu, batu, bata, kaca, rumput, pasir dan enam warna cat, plus lima sekat (papan kayu, pagar bambu, dinding batu rendah, dinding kaca, jendela kisi) yang bisa diputar. Ketuk Bongkar lalu balok untuk melepas; milikmu kembali setengah harga. Maksimal 400 per pulau, dibagi dengan teman serumah.",
  "🧱 方塊和隔板": "🧱 Balok & sekat",
  "拆": "Bongkar",
  "放": "Taruh",
@@ -6106,7 +6105,6 @@
  "🎣 釣友隊等級：隊員每釣一條 +1 經驗、每週目標達成 +300、同隊兩個人一起打小組對決打贏 +50。Lv2 名字旁邊掛隊徽、Lv3 隊員的小島插上隊旗、Lv4 每個隊員都拿到隊服（顏色是隊色）。每週目標達成領獎時，除了金幣再開一個隊伍寶箱（隨機魚餌、打窩料或珊瑚苗）。大看板有「本週小組勝場」。": "🎣 Level klub: anggota dapat 1 XP per ikan, target mingguan +300, dan dua anggota klub yang menang duel tim bersama +50. Lv2: lencana klub di samping nama; Lv3: bendera klub di pulau setiap anggota; Lv4: setiap anggota dapat baju klub (warna klub). Saat mengambil hadiah mingguan kamu juga membuka peti klub (umpan, umpan tabur atau bibit karang acak). Papan alun-alun menampilkan kemenangan duel tim minggu ini.",
  "這週的隊伍寶箱": "Peti klub minggu ini",
  "隊服": "Baju klub",
- "🏝️ 小島的「買東西擺島上」分成房子、寵物圍欄、花草樹、家具、擺飾、方塊、隔板幾類；最後一個「島上的東西」列出島上每一件，可以直接移動或拆掉（拆掉退一半）。": "🏝️ Toko pulau dibagi jadi rumah, kandang hewan, tanaman, perabot, hiasan, balok dan sekat. Tab terakhir, 'Barang di pulau', menampilkan semua yang sudah kamu taruh untuk dipindah atau dibongkar (kembali setengah harga).",
  "花草樹": "Tanaman",
  "家具": "Perabot",
  "擺飾": "Hiasan",
@@ -6115,5 +6113,9 @@
  "拿去蓋": "Bangun",
  "去拆": "Bongkar",
  "房子": "Rumah",
- "寵物圍欄": "Kandang hewan"
+ "寵物圍欄": "Kandang hewan",
+ "🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「收」再點，可以收回包包（自己放的），之後再拿出來不用錢。一座島最多 400 塊，跟一起住的人共用。": "🧱 Balok dan sekat: di pulaumu ketuk Bangun → 🧱 Balok & sekat. Pilih bahan, lalu ketuk tanah untuk menaruh balok, ketuk atas balok untuk menumpuk, atau ketuk sisi untuk menaruh di sebelahnya; tahan setengah detik lalu geser untuk satu baris. Balok 50 cm, maksimal 6 tingkat, satu-dua tingkat bisa dinaiki. Bahan: kayu, batu, bata, kaca, rumput, pasir dan enam warna cat, plus lima sekat (papan kayu, pagar bambu, dinding batu rendah, dinding kaca, jendela kisi) yang bisa diputar. Ketuk Simpan lalu balok untuk memasukkannya ke tas (milikmu); menaruhnya lagi gratis. Maksimal 400 per pulau, dibagi dengan teman serumah.",
+ "拿出來擺": "Taruh dari tas",
+ "收": "Simpan",
+ "🏝️ 小島的「買東西擺島上」分成房子、寵物圍欄、花草樹、家具、擺飾、方塊、隔板幾類；最後一個「島上的東西」列出島上每一件，可以直接移動或收起來（收回包包，之後拿出來擺不用再付錢；房子還是拆掉退一半）。": "🏝️ Toko pulau dibagi jadi rumah, kandang hewan, tanaman, perabot, hiasan, balok dan sekat. Tab terakhir, 'Barang di pulau', menampilkan semua yang sudah kamu taruh untuk dipindah atau disimpan ke tas (menaruhnya lagi gratis; rumah tetap dibongkar dengan kembali setengah harga)."
 }
