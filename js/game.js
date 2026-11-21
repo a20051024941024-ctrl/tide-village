@@ -11771,33 +11771,33 @@ function renderDuelHub(body){ if (!Cloud.on){ body.appendChild(el('p', 'sub', '�
   const st = H.stars || 0, ti = DUEL_TIERS.findIndex(t => t === duelTierOf(st)), tt = DUEL_TIERS[ti], nx = DUEL_TIERS[ti + 1];
   const card = el('div', 'dh-card t' + ti); card.appendChild(el('div', 'dh-ic', tt[2])); const info = el('div', 'dh-info'); info.appendChild(el('div', 'dh-tier', tt[1])); info.appendChild(el('div', 'dh-stars', `⭐ ${st}`));
   const bar = el('div', 'dh-bar'), fill = el('i'); fill.style.width = (nx ? Math.min(100, (st - tt[0]) / (nx[0] - tt[0]) * 100) : 100) + '%'; bar.appendChild(fill); info.appendChild(bar);
-  info.appendChild(el('div', 'dh-next', nx ? `再 ${nx[0] - st}⭐ 升到 ${nx[2]} ${nx[1]}` : '已經是最高段位了！')); card.appendChild(info); body.appendChild(card);
+  info.appendChild(el('div', 'dh-next', nx ? `再 ${nx[0] - st}⭐ 升到 ${nx[2]} ${nx[1]}` : '已經到頂了')); card.appendChild(info); body.appendChild(card);
   body.appendChild(el('div', 'dh-season', `${duelSeasonTxt(H.season)}・還剩 ${H.days_left} 天・本季 ${H.s_wins} 勝 ${H.s_losses} 敗${H.rank ? `・本季第 ${H.rank} 名` : ''}${(H.streak || 0) >= 2 ? `・🔥 ${H.streak} 連勝中` : ''}`));
   { const row = el('div', 'dh-btns'); const a = el('button', 'tbtn buy', Duel.q ? '取消排隊' : '⚔️ 排位賽・找對手'), b = el('button', 'tbtn', '👥 小組對決'); a.disabled = b.disabled = duelLive();
     a.addEventListener('click', () => { if (Duel.q){ duelQueueStop('已經取消排隊'); renderTab(); return; } closeSheet(); duelQueueAsk(); }); b.addEventListener('click', () => { closeSheet(); if (lobbyPeople().length >= 3) duelTeamPick(null); else duelTeamQueueAsk(); }); row.append(a, b); body.appendChild(row);
     body.appendChild(el('p', 'sub', `今日特別賽：${H.mode ? duelModeName(H.mode, H.spot) : '—'}（按「排位賽」可以選）`)); }
-  body.appendChild(el('div', 'dh-day' + (H.day_win ? ' ok' : ''), H.day_win ? '✅ 今天的第一場勝利獎勵拿過了（✨ 亮光餌 ×5），明天再來' : '🎁 今天第一場排位勝利：送 ✨ 亮光餌 ×5'));
+  body.appendChild(el('div', 'dh-day' + (H.day_win ? ' ok' : ''), H.day_win ? '今天第一勝的亮光餌拿過了，明天再來' : '今天打贏第一場排位，送你亮光餌 5 顆'));
   /* 這一季的段位獎勵 */
-  body.appendChild(el('div', 'dexhead', `🏆 ${duelSeasonTxt(H.season)}的段位獎勵（每季換新）`)); { const ul = el('div', 'dh-rew'), got = new Set(H.got || []), own = new Set(rec.owned || []);
+  body.appendChild(el('div', 'dexhead', `${duelSeasonTxt(H.season)}・升段送的東西`)); { const ul = el('div', 'dh-rew'), got = new Set(H.got || []), own = new Set(rec.owned || []);
     for (const [id, k] of seasonItemsFor(H.season)){ const c = CRAFT_BY[id], T = DUEL_TIERS[k], ok = got.has(H.season + ':' + k) || own.has(id), li = el('div', 'dh-ri' + (ok ? ' ok' : '') + (k === 4 ? ' leg' : '')); if (!c) continue;
       li.appendChild(craftSwatch(c)); li.appendChild(el('b', '', c.name)); li.appendChild(el('small', '', ok ? '✅ 拿到了' : `${T[2]} ${T[1]}（${T[0]}⭐）`)); ul.appendChild(li); }
-    body.appendChild(ul); body.appendChild(el('p', 'sub', '這一季第一次升到那個段位就送，馬上可以用：釣線和竿子在「背包 → 🎨 外觀」裝上，名牌框會自動掛在名字外面。下一季會換一套新的。'));
+    body.appendChild(ul); body.appendChild(el('p', 'sub', '這個月第一次升上去就給你。線和竿子到背包的外觀換，名牌框會自己掛上。下個月換一套新的。'));
     if ((rec.owned || []).some(x => /^nf_\d{6}$/.test(x))){ const on = !LS.get('tide.nfOff', false), b = el('button', 'tbtn ghost', on ? '🪪 名牌框：顯示中（按一下收起來）' : '🪪 名牌框：收起來了（按一下顯示）'); b.addEventListener('click', () => { LS.set('tide.nfOff', on); try { refreshMyName(); } catch(e){} renderTab(); }); body.appendChild(b); } }
   /* 紀念徽章 */
-  if ((H.badges || []).length){ body.appendChild(el('div', 'dexhead', '🎖️ 往季紀念徽章')); const ul = el('div', 'dh-badges'); for (const b of H.badges.slice().reverse()){ const t = duelTierOf(b.p), S = seasonOf(String(b.s || '').replace('-', '')); const x = el('div', 'dh-bg'); if (S) x.style.setProperty('--bc', S.T[1]); x.appendChild(el('span', '', t[2])); x.appendChild(el('b', '', duelSeasonTxt(b.s).replace('賽季', '') + (S ? '・' + S.T[0] : ''))); x.appendChild(el('small', '', t[1])); ul.appendChild(x); } body.appendChild(ul); }
+  if ((H.badges || []).length){ body.appendChild(el('div', 'dexhead', '以前的賽季')); const ul = el('div', 'dh-badges'); for (const b of H.badges.slice().reverse()){ const t = duelTierOf(b.p), S = seasonOf(String(b.s || '').replace('-', '')); const x = el('div', 'dh-bg'); if (S) x.style.setProperty('--bc', S.T[1]); x.appendChild(el('span', '', t[2])); x.appendChild(el('b', '', duelSeasonTxt(b.s).replace('賽季', '') + (S ? '・' + S.T[0] : ''))); x.appendChild(el('small', '', t[1])); ul.appendChild(x); } body.appendChild(ul); }
   /* 最近 10 場 */
-  body.appendChild(el('div', 'dexhead', '📜 最近 10 場')); if (!(H.hist || []).length) body.appendChild(el('p', 'sub', '還沒打過，按上面的「排位賽」打第一場吧！'));
+  body.appendChild(el('div', 'dexhead', '最近打的 10 場')); if (!(H.hist || []).length) body.appendChild(el('p', 'sub', '還沒打過。'));
   else { const ul = el('ul', 'dh-hist'); for (const h of H.hist){ const li = el('li', 'r-' + h.res); const sc = h.mode === 'big' ? `${(+h.me_big).toFixed(2)} : ${(+h.op_big).toFixed(2)}` : h.mode === 'count' ? `${h.me_n} : ${h.op_n} 條` : `${(+h.me_w).toFixed(2)} : ${(+h.op_w).toFixed(2)}`;
       li.appendChild(el('b', '', h.res === 'w' ? '勝' : h.res === 'l' ? '敗' : '平')); li.appendChild(el('span', 'nm', `${h.team ? '👥 ' : ''}對 ${h.op || '釣客'}`)); li.appendChild(el('span', 'sc', sc)); li.appendChild(el('small', '', (h.ranked ? '排位' : '友誼') + (h.mode ? '・' + DUEL_MODES[h.mode][1] : ''))); ul.appendChild(li); } body.appendChild(ul); }
   /* 本季排行 */
-  body.appendChild(el('div', 'dexhead', `👑 ${duelSeasonTxt(H.season)}排行`)); { const ul = el('ul', 'dh-top'); (H.top || []).forEach((r, i) => { const li = el('li', r.me ? 'me' : ''); const t = duelTierOf(r.stars); li.appendChild(el('b', '', i < 3 ? ['🥇', '🥈', '🥉'][i] : String(i + 1))); li.appendChild(el('span', 'nm', r.n)); li.appendChild(el('span', '', `${t[2]} ⭐${r.stars}`)); li.appendChild(el('small', '', `${r.wins}勝${r.losses}敗`)); ul.appendChild(li); });
+  body.appendChild(el('div', 'dexhead', `${duelSeasonTxt(H.season)}排行`)); { const ul = el('ul', 'dh-top'); (H.top || []).forEach((r, i) => { const li = el('li', r.me ? 'me' : ''); const t = duelTierOf(r.stars); li.appendChild(el('b', '', i < 3 ? ['🥇', '🥈', '🥉'][i] : String(i + 1))); li.appendChild(el('span', 'nm', r.n)); li.appendChild(el('span', '', `${t[2]} ⭐${r.stars}`)); li.appendChild(el('small', '', `${r.wins}勝${r.losses}敗`)); ul.appendChild(li); });
     if (!(H.top || []).length) ul.appendChild(el('li', '', '這一季還沒有人打排位賽')); body.appendChild(ul);
     if (H.rank && !(H.top || []).some(r => r.me)) body.appendChild(el('div', 'dh-mine', `你：第 ${H.rank} 名・⭐${st}`)); } }
 /* 升段的時候：全螢幕跳一下新段位牌（有拿到賽季造型也一起秀） */
 function duelTierUp(tier, se){ const ti = DUEL_TIERS.findIndex(t => t[1] === tier); if (ti < 1) return; const T = DUEL_TIERS[ti], id = (seasonItemsFor(se || (Duel.hub && Duel.hub.season) || duelSeasonNow())[ti - 1] || [])[0], c = id && CRAFT_BY[id];
-  const ov = el('div', 'dh-up'); const bx = el('div', 'dh-upbox t' + ti); bx.appendChild(el('div', 'dh-upic', T[2])); bx.appendChild(el('div', 'dh-upt', `升上「${T[1]}」！`));
-  if (c){ bx.appendChild(el('div', 'dh-upr', `獲得賽季造型：${c.name}`)); if (!(rec.owned || []).includes(id)){ rec.owned = (rec.owned || []).concat(id); try { saveRecLocal(); } catch(e){} } }
-  const ok = el('button', 'tbtn buy', '太好了'); bx.appendChild(ok); ov.appendChild(bx); document.body.appendChild(ov); ok.addEventListener('click', () => { ov.remove(); try { refreshMyName(); } catch(e){} });
+  const ov = el('div', 'dh-up'); const bx = el('div', 'dh-upbox t' + ti); bx.appendChild(el('div', 'dh-upic', T[2])); bx.appendChild(el('div', 'dh-upt', `升上${T[1]}`));
+  if (c){ bx.appendChild(el('div', 'dh-upr', `這個月的「${c.name}」給你`)); if (!(rec.owned || []).includes(id)){ rec.owned = (rec.owned || []).concat(id); try { saveRecLocal(); } catch(e){} } }
+  const ok = el('button', 'tbtn buy', '收下'); bx.appendChild(ok); ov.appendChild(bx); document.body.appendChild(ov); ok.addEventListener('click', () => { ov.remove(); try { refreshMyName(); } catch(e){} });
   try { SFX.catch(); setTimeout(() => SFX.coin(), 350); } catch(e){} }
 function duelSeasonNow(){ const d = new Date(Date.now() + 8 * 3600e3); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; }
 /* ===== v668 👥 小組對決（2 對 2）（作者：「對決能有小組對決嗎」→ 同意設計：2 對 2、先不算星星。伺服器 212_duel_team.sql）
@@ -14440,10 +14440,10 @@ function stampCells(n0, stamped){ const box = el('div', 'stgrid'), base = Math.f
   return box; }
 function stampPop(){ if (Stamp.busy) return; Stamp.shown = true; const st = Stamp.st, n0 = st.n, card = Math.floor(n0 / 7) + 1, ng = stampNextGear(), left = 28 - (n0 % 28);
   const ov = el('div', 'stpop'); ov.id = 'stampPop'; const pn = el('div', 'stcard panel th-note'); ov.appendChild(pn);
-  pn.appendChild(el('div', 'sttitle', `📮 村長的集章卡・第 ${card} 張`));
-  pn.appendChild(el('p', 'stsay', `村長：「${['今天也來啦！來，蓋個章。', '欸，你來了！章給你蓋。', '每天來村子走走很好喔，蓋章！', '來來來，今天的章。'][n0 % 4]}」`));
+  pn.appendChild(el('div', 'sttitle', `村長的集章卡・第 ${card} 張`));
+  pn.appendChild(el('p', 'stsay', `村長：「${['來啦，章給你蓋。', '今天也有來喔。', '欸，卡片拿出來。', '來，今天的。'][n0 % 4]}」`));
   pn.appendChild(stampCells(n0, n0));
-  pn.appendChild(el('p', 'stsub', ng ? `漏掉一天也不會歸零。再蓋 ${left} 個章送限定造型「${stampGI(ng).ic} ${stampGI(ng).nm}」。` : '漏掉一天也不會歸零。每蓋滿 4 張再送 🪙1000。'));
+  pn.appendChild(el('p', 'stsub', ng ? `沒來的那天不會重算。再蓋 ${left} 個，送「${stampGI(ng).nm}」。` : '漏掉一天也不會歸零。每蓋滿 4 張再送 🪙1000。'));
   const res = el('p', 'stres', ''); pn.appendChild(res); const btn = el('button', 'tbtn buy', '蓋章'); pn.appendChild(btn); document.body.appendChild(ov);
   try { SFX.chat(); } catch(e){}
   btn.addEventListener('click', async () => { if (Stamp.busy) return; if (btn.dataset.done){ ov.classList.add('out'); setTimeout(() => ov.remove(), 260); return; } Stamp.busy = true; btn.disabled = true;
