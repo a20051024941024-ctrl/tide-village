@@ -1939,3 +1939,42 @@ body.ui3 #sheet.th-wood #tabs button[aria-selected="true"]{background:#f1dfb8;co
 #catchCard .pbtn{background:#2c5d73;border-radius:18px;font-family:var(--f-display);font-weight:400}
 #catchCard .pbtn.ghost{background:#fff;color:#203a48;border:2px solid #203a48}
 #catchCard .pbtn.hot{background:#3f7a5a;color:#fff;border-color:#24493a}
+
+/* ===== v647 作者給的參考圖：亮亮的手遊風（藍色圓角亮面按鈕＋深藍粗邊、店家用繩子木框、自己的東西用藍色亮面框）
+   圖示和繩子木框是從作者自己做的參考圖剪下來的（icons/ui/）。蓋在 v639 的筆記本／木招牌上面 ===== */
+#sheet .tbtn,#catchCard .pbtn{background:linear-gradient(#79d2ff,#2b8fe6)!important;color:#fff!important;border:2.5px solid #0d4a8c!important;border-radius:999px!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 3px 0 #0d4a8c!important;text-shadow:0 1px 0 #0d4a8c;font-family:var(--f-display)!important;font-weight:400!important}
+#sheet .tbtn:active,#catchCard .pbtn:active{transform:translateY(2px);box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 1px 0 #0d4a8c!important}
+#sheet .tbtn.buy,#catchCard #ccOk{background:linear-gradient(#ffd25a,#ff9a1f)!important;border-color:#9a4f00!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 3px 0 #9a4f00!important;text-shadow:0 1px 0 #9a4f00}
+#sheet .tbtn.ghost,#catchCard .pbtn.ghost{background:linear-gradient(#fffaf0,#ecdcb6)!important;color:#6b4426!important;border-color:#8a6038!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 3px 0 #8a6038!important;text-shadow:none}
+#sheet .tbtn.warn,#sheet .tbtn.danger{background:linear-gradient(#ff8a7a,#e2412f)!important;border-color:#7a1c12!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 3px 0 #7a1c12!important;text-shadow:0 1px 0 #7a1c12}
+#catchCard .pbtn.hot{background:linear-gradient(#8ee08a,#3fae4a)!important;border-color:#1f5e26!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 3px 0 #1f5e26!important;text-shadow:0 1px 0 #1f5e26}
+#sheet .tbtn:disabled{filter:grayscale(.75) brightness(1.05);opacity:.75}
+body.ui3 #sheet #tabs button,#sheet .seg button{border-radius:999px!important;font-family:var(--f-display)!important;font-weight:400!important;background:linear-gradient(#fffaf0,#e3d3ad)!important;color:#6b4426!important;border:2.5px solid #8a6038!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 2px 0 #8a6038!important;transform:none!important;padding:4px 13px!important}
+body.ui3 #sheet #tabs button[aria-selected="true"],#sheet .seg button[aria-pressed="true"]{background:linear-gradient(#79d2ff,#2b8fe6)!important;color:#fff!important;border-color:#0d4a8c!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 2px 0 #0d4a8c!important;text-shadow:0 1px 0 #0d4a8c}
+#sheet .seg{background:transparent!important;gap:6px;padding:2px 0 4px!important;display:inline-flex;flex-wrap:wrap}
+#sheet #closeSheet{width:42px;height:42px;padding:0;background:url(../icons/ui/close.png) center/contain no-repeat;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+#sheet #closeSheet svg{display:none}
+#sheet .box::before,#sheet .box::after{content:none!important}
+/* 店家：繩子木框 */
+#sheet.th-wood .box{background:transparent!important;border:34px solid transparent!important;border-image:url(../icons/ui/rope.png) 62 74 62 74 fill stretch!important;border-radius:0!important;box-shadow:none!important;filter:drop-shadow(0 10px 18px rgba(0,0,0,.4))}
+#sheet.th-wood header{background:none!important;border:0!important;padding:0 0 6px!important;margin:-8px -10px 0}
+#sheet.th-wood #sheetTitle{align-self:center;flex:0 1 auto!important;background:linear-gradient(#c98a4b,#9a5f2c);border:3px solid #5a3417;border-radius:10px;padding:2px 20px!important;color:#fff7e0!important;font-size:19px!important;text-shadow:0 2px 0 #5a3417!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.3),0 3px 0 #5a3417}
+#sheet.th-wood #sheetBody{padding:4px 6px 6px!important}
+#sheet.th-wood .shoplist li{background:rgba(255,250,235,.92)!important;border:2px solid #c9a46c!important;border-radius:12px!important;box-shadow:0 2px 0 rgba(138,96,56,.35)!important}
+#sheet.th-wood .tipbox{background:#fff!important;border:2.5px solid #2b8fe6!important;border-radius:14px!important;color:#3e2615}
+/* 自己的東西：藍色亮面框 */
+#sheet.th-note .box{background:#eef8ff!important;background-image:none!important;border:5px solid #2b8fe6!important;border-radius:24px!important;box-shadow:inset 0 0 0 3px #c4e8ff,0 0 0 3px #0d4a8c,0 7px 0 #0d4a8c,0 16px 30px rgba(0,0,0,.35)!important}
+#sheet.th-note header{padding:10px 10px 4px 14px!important}
+#sheet.th-note #sheetTitle{flex:0 1 auto!important;background:linear-gradient(#79d2ff,#2b8fe6);border:3px solid #0d4a8c;border-radius:999px;padding:1px 18px!important;color:#fff!important;font-size:18px!important;transform:none!important;text-shadow:0 2px 0 #0d4a8c;box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 3px 0 #0d4a8c}
+#sheet.th-note #sheetBody{padding-left:16px!important}
+#sheet.th-note .shoplist li{background:#fff!important;border:2px solid #bfe0f7!important;border-radius:14px!important;padding:8px 10px!important;box-shadow:0 2px 0 #bfe0f7!important;margin-bottom:6px}
+#sheet.th-note .shoplist li.on{background:#fff8dc!important;border-color:#ffc21f!important;box-shadow:0 2px 0 #e8a800!important}
+#sheet.th-note .dexhead{color:#1d5c96!important}
+#sheet.th-note .sub{color:#4a6377!important}
+#sheet.th-note .tipbox{background:#fff!important;border:2.5px solid #ffc21f!important;border-radius:14px!important;transform:none!important;box-shadow:none!important}
+/* 釣到魚的卡片：藍色亮面框 */
+#catchCard .card{background:#f4fbff!important;background-image:none!important;transform:none!important;border:5px solid #2b8fe6;border-radius:24px!important;box-shadow:inset 0 0 0 3px #c4e8ff,0 0 0 3px #0d4a8c,0 7px 0 #0d4a8c,0 16px 34px rgba(0,0,0,.4)!important}
+#catchCard .card::before{border-color:#bfe0f7!important;border-radius:16px!important}
+#catchCard .card::after{content:none!important}
+@media (max-height:420px){ #sheet.th-wood .box{border-width:26px!important} }
