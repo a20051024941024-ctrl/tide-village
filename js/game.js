@@ -10077,9 +10077,9 @@ function renderIsland(body){
     for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([k2, v]) => catOf(k2, v) === C && !OLD_HOUSES.has(k2))){   /* 076：房子只賣大宅 */
       const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・島上 ${items.filter(i => i.t === k).length} 個`)); li.appendChild(d);
-      const nb = isleBagN(k); if (nb) d.appendChild(el('div', 'sub2 bagn', `包包裡收著 ${nb} 個`));
+      const nb = isleBagN(k); if (nb) d.appendChild(el('div', 'sub2 bagn', `包包裡收著 ${nb} 個（用完才會再收錢）`));
       const a = el('div', 'tacts'); if (nb){ const bb = el('button', 'tbtn', '拿出來擺'); bb.addEventListener('click', () => startPlace(k, null, true)); a.appendChild(bb); }
-      const b = el('button', 'tbtn' + (rec.coins < v.price || nb ? ' ghost' : ''), nb ? '再買一個' : '拿去擺'), place = () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }; b.addEventListener('click', place); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
+      const b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'), place = () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }; b.addEventListener('click', place); if (!nb) a.appendChild(b); li.appendChild(a); ul.appendChild(li);
       li.classList.add('viewable'); d.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); const look = () => viewModel(v.name, `🪙 ${v.price.toLocaleString()}${v.house ? '・房子，可以走進去擺家具' : ''}`, () => itemMesh(k, { lite: !!v.house }), { label: `拿去擺（🪙${v.price.toLocaleString()}）`, fn: place }); ic.addEventListener('click', look); d.addEventListener('click', look);
     }
     body.appendChild(ul); }
