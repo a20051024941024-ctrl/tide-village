@@ -5417,6 +5417,17 @@ const MUS_THEMES = {
   shrimp: { name:'釣蝦場', bpm:108, swing:0.2, rev:0.14, comp:'stab', compI:'marimba', compV:0.11, bassPat:[[0, 0], [2, 12], [4, 7], [6, 12]], bassV:0.2, lead:['marimba', 'pluck'], leadV:[0.46, 0.43],
     drums:{ kick:[[0, 0.4], [4, 0.32]], shaker:[[1, 0.2], [3, 0.2], [5, 0.2], [7, 0.2]], clave:[[3, 0.14], [6, 0.16]] },
     intro:'C G Am F', A:{ ch:'C G Am F C G F G', mel:'G5 . E5 G5 . E5 C5 . | D5 . G5 . F5 E5 D5 . | E5 . A5 . G5 E5 C5 . | D5 . . . - - - - | G5 . E5 G5 . E5 C5 . | D5 . G5 . B5 A5 G5 . | A5 . G5 . F5 . E5 D5 | C5 . . . - - - -' } },
+  /* v657 作者：「每個場地加專屬音樂，比如撞球場、體育館」 */
+  pool: { name:'撞球館的爵士', bpm:96, swing:0.33, rev:0.18, comp:'block', compI:'epiano', compV:0.13, bassPat:[[0, 0], [2, 4], [4, 7], [6, 10]], bassV:0.24, lead:['epiano', 'flute'], leadV:[0.4, 0.3],
+    drums:{ hat:[[0, 0.09], [2, 0.11], [3, 0.06], [4, 0.09], [6, 0.11], [7, 0.06]], kick:[[0, 0.16]], shaker:[[2, 0.05], [6, 0.05]] },
+    intro:'Dm7 G7 C Am7', A:{ ch:'Dm7 G7 C Am7 Dm7 G7 C C', mel:'F5 . A5 . C6 . A5 G5 | F5 . . D5 . B4 . - | E5 . G5 . B5 . A5 G5 | E5 . . . C5 . - - | D5 F5 A5 C6 . A5 F5 . | G5 . F5 . D5 . B4 . | C5 . E5 . G5 . E5 . | C5 . . . - - - -' },
+    B:{ ch:'F F Em7 A7 Dm7 G7 C C', mel:'A5 . C6 . A5 . F5 . | E5 . . . C5 . - - | G5 . B5 . D6 . B5 . | C#6 . . . A5 . - - | F5 . A5 . C6 . B5 A5 | G5 . F5 . D5 . B4 . | C5 . E5 . G5 . B5 . | C6 . . . - - - -' } },
+  stad: { name:'體育場加油', bpm:138, swing:0, rev:0.1, comp:'stab', compI:'pluck', compV:0.14, bassPat:[[0, 0], [2, 0], [4, 0], [6, 0], [7, 12]], bassV:0.22, lead:['marimba', 'flute'], leadV:[0.48, 0.36], hi:true,
+    drums:{ kick:[[0, 0.5], [2, 0.36], [4, 0.5], [6, 0.36]], clap:[[2, 0.36], [6, 0.36]], hat:[[1, 0.12], [3, 0.12], [5, 0.12], [7, 0.12]], tom:[[7, 0.16]] },
+    intro:'C F G C', A:{ ch:'C F G C Am F G G', mel:'C5 . C5 . E5 . G5 . | A5 . . . F5 . - - | G5 . G5 . B5 . D6 . | C6 . . . - - - - | E5 . E5 . A5 . C6 . | A5 . . . F5 . - - | G5 . A5 . B5 . D6 . | C6 . . . G5 . - -' } },
+  ski: { name:'雪松山', bpm:116, swing:0.12, rev:0.26, comp:'arp', compI:'bell', compV:0.08, arpSteps:[[0, 0], [1, 1], [2, 2], [3, 3], [4, 2], [5, 1], [6, 2], [7, 1]], bassPat:[[0, 0], [4, 7]], bassV:0.2, lead:['flute', 'bell'], leadV:[0.38, 0.3],
+    drums:{ shaker:[[0, 0.22], [1, 0.14], [2, 0.18], [3, 0.14], [4, 0.22], [5, 0.14], [6, 0.18], [7, 0.14]], kick:[[0, 0.3], [4, 0.26]], clave:[[2, 0.07], [6, 0.07]] },
+    intro:'G C D G', A:{ ch:'G Em C D G Em C D', mel:'D5 . G5 . B5 . A5 G5 | E5 . . . G5 . - - | C5 . E5 . G5 . E5 . | D5 . . . F#5 . - - | D5 . G5 . B5 . D6 . | E6 . D6 . C6 . B5 . | A5 . . . F#5 . A5 . | G5 . . . - - - -' } },
   reel: { name:'拉魚', bpm:128, swing:0, rev:0.1, comp:'drive', compI:'pluck', compV:0.24, bassPat:[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 12]], bassV:0.11, lead:null,
     drums:{ kick:[[0, 0.38], [4, 0.38]], hat:[[1, 0.14], [3, 0.14], [5, 0.14], [7, 0.14]], clave:[[2, 0.1], [6, 0.12]] },
     intro:'Am Am F E', A:{ ch:'Am Am F E Am Dm E Am' } },
@@ -5465,11 +5476,14 @@ const MUSIC = (() => {
     if (F.phase === 'reeling') return F.boss ? 'boss' : 'reel';
     if (Dive.on) return 'dive';
     if (inShrimpHall(me.pos.x, me.pos.z, 8)) return 'shrimp';
+    if (inPoolHall()) return 'pool';   /* v657 場館自己的音樂 */
+    if (inStad() || inSport(me.pos.x, me.pos.z, 2)) return 'stad';
+    if ((typeof SKI !== 'undefined' && SKI.on) || (Math.abs(me.pos.x - MTN.x) < 26 && me.pos.z > MTN.z0 - 6 && me.pos.z < MTN.z0 + MTN.len + 6)) return 'ski';
     if (onIsle) return 'isle';
     if ((Env.wx === 'rain' || Env.wx === 'storm' || Env.wx === 'typre' || Env.wx === 'tymid') && !House.on) return 'rain';
     return DayNight.period === 'night' ? 'night' : DayNight.period === 'twilight' ? 'twilight' : 'day';
   }
-  const SEA = { day:0.22, twilight:0.24, night:0.26, rain:0.12, isle:0.18, dive:0.05, shrimp:0.06, reel:0.08, boss:0.08 };
+  const SEA = { day:0.22, twilight:0.24, night:0.26, rain:0.12, isle:0.18, dive:0.05, shrimp:0.06, reel:0.08, boss:0.08, pool:0.0001, stad:0.02, ski:0.05 };
   function seaStart(){
     const len = actx.sampleRate * 4, buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0); let b = 0;
     for (let i = 0; i < len; i++){ b = (b + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = b * 3.5; }
@@ -18993,6 +19007,7 @@ function renderTab(){
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；我的海裡的不算）。`,
+      '🎵 場館有自己的音樂：走進撞球館是慢慢的爵士鋼琴，體育場和運動公園是有拍手、鼓聲的加油曲，雪松山滑雪場是鈴鐺和長笛的冬天曲子；走出來會換回原本的音樂。',
       `🐠 我的海：最喜歡的魚可以放進自己小島底下的海。釣到時按「🐠 我的海」，或在「魚缸」按「放進我的海」。從小島碼頭的潛水梯下去，就看得到牠們照自己的習性游（螃蟹、比目魚趴在海底，鯊魚在外圈繞，傳說魚身邊有一點光）；游近一條魚，下面會寫是誰、哪天在哪裡釣到的。一開始可以放 30 條，海底花園每一株長大的珊瑚多 2 條，最多 60 條。放在我的海的魚不會被賣掉或拿去做菜，來你島上潛水的朋友也看得到。一起住的人共用同一片海、也共用上限（整個家加起來 30～60 條，照島上的珊瑚）：每個人放自己的魚，游近會寫是誰的，只能拿出自己的。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）。主要在港口外海出沒，偶爾也會到珊瑚礁群島外側的深水邊巡游（機率更低）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
