@@ -109,7 +109,7 @@ const FISH = [
   { id:'whiting',   spot:'sea', name:'沙鮻',         rarity:'常見', color:'#d9cfae', min:0.05, max:0.45, power:0.3, w:1.2, desc:'細細長長的銀白色小魚，台灣叫「沙腸仔」。平常躲在遠一點的沙底，漲潮時才跟著潮水游到岸邊找沙蠶吃。' },
   { id:'tidegoby',  spot:'sea', name:'潮池蝦虎',     rarity:'常見', color:'#b9a37a', min:0.01, max:0.06, power:0.15, w:1.2, desc:'手指那麼長的小魚，肚子上的鰭像吸盤，可以黏在石頭上。乾潮時被留在沙灘的潮池裡，一有影子靠近就咻地躲進石頭縫。' },
   { id:'groupie',   spot:'sea', name:'點帶石斑幼魚', rarity:'稀有', color:'#8a6a44', min:0.4, max:2.6, power:0.55, desc:'還沒長大的石斑，全身咖啡色的斑點。漲潮、滿潮時躲進岸邊的礁石縫裡等小魚經過，用沉底釣比較容易釣到；再過好幾年才會變成傳說中的大石斑。' },
-  { id:'horseshoe', spot:'sea', name:'三棘鱟',       rarity:'稀有', color:'#6f6c44', min:1.0, max:4.2, power:0.4, keep:true, desc:'四億年前就長這個樣子的「活化石」，血是藍色的。退潮時會爬到淺灘的沙泥地上。現在已經很少見了，釣到會自動收藏起來，可以養在魚缸、放進水族館。' },
+  { id:'horseshoe', spot:'sea', name:'三棘鱟',       rarity:'稀有', color:'#6f6c44', min:1.0, max:4.2, power:0.4, keep:true, desc:'四億年前就長這個樣子的「活化石」，血是藍色的。退潮時會爬到淺灘的沙泥地上。現在已經很少見了，釣到會自動收藏起來，可以養在魚缸、放進我的海。' },
   { id:'softshell',  spot:'lake',  name:'中華鱉',     rarity:'稀有', color:'#6a6e42', min:0.6, max:4.5, power:0.6, desc:'殼是軟的、邊緣像裙子一樣薄，脖子可以伸得很長，鼻子像一根小吸管。平常埋在湖底的泥裡，只有晴天才爬到淺的地方曬太陽。咬住東西就不放，用沉底釣。' },
   { id:'climbperch', spot:'canal', name:'攀鱸',       rarity:'常見', color:'#6a6a40', min:0.05, max:0.3, power:0.35, w:1.2, desc:'台灣叫「過山鯽」。鰓裡有特別的構造可以直接呼吸空氣，下雨天會撐著鰓蓋和胸鰭爬上岸，從一個池子走到另一個池子。只有下雨的時候才出來活動。' },
   { id:'creekcrab',  spot:'creek', time:'night', name:'拉氏清溪蟹', rarity:'常見', color:'#5a3e4a', min:0.02, max:0.12, power:0.2, w:1.2, desc:'台灣特有的淡水螃蟹，紫褐色的圓殼配上橘紅色的螯。白天躲在溪邊的石頭底下，晚上才出來找東西吃。用沉底釣。' },
@@ -122,7 +122,7 @@ const FISH = [
   { id:'swordfish',   spot:'harbor', time:'night', name:'劍旗魚', rarity:'傳說', color:'#2a2630', min:60, max:250, power:0.98, w:0.6, desc:'又長又扁的劍佔了身體快三分之一，沒有腹鰭，眼睛大得像拳頭。白天待在幾百公尺深的地方，晚上才浮上來，用劍左右揮砍魚群。' },
   { id:'yellowcheek', spot:'river',  name:'鱤魚', rarity:'傳說', color:'#c8cfc4', min:5, max:35, power:0.9, w:0.25, desc:'淡水裡的掠食王，身體像一枚魚雷，鰓蓋是金黃色的，所以也叫「黃頰魚」。只追會動的東西，對不會動的餌完全沒興趣，要用路亞才釣得到。' },
   { id:'alligatorgar', spot:'canal', time:'night', name:'鱷雀鱔', rarity:'傳說', color:'#7c7a56', min:10, max:80, power:0.88, w:0.4, norel:true, desc:'鱷魚一樣的長嘴、全身硬鱗像盔甲，一億年前就長這樣。牠是有人養膩了丟進池塘的外來種，會把池裡的魚吃光，所以釣起來不能放回去。晚上才出來活動。' },
-  { id:'napoleon',    spot:'weir',   name:'蘇眉魚', rarity:'傳說', color:'#2f9a94', min:15, max:120, power:0.9, w:0.3, keep:true, desc:'額頭一個大腫包、厚厚的嘴唇，臉上的花紋像迷宮，每一條都不一樣。可以活三十年以上，是保育類。退潮時偶爾會被困在石滬裡；釣到會自動收藏起來，可以養在魚缸、放進水族館。' },
+  { id:'napoleon',    spot:'weir',   name:'蘇眉魚', rarity:'傳說', color:'#2f9a94', min:15, max:120, power:0.9, w:0.3, keep:true, desc:'額頭一個大腫包、厚厚的嘴唇，臉上的花紋像迷宮，每一條都不一樣。可以活三十年以上，是保育類。退潮時偶爾會被困在石滬裡；釣到會自動收藏起來，可以養在魚缸、放進我的海。' },
   { id:'kingcrab', spot:'harbor', time:'night', name:'帝王蟹', rarity:'稀有', color:'#c9302c', min:2.0, max:8.0, power:0.66, desc:'腳張開比一個人還寬，冰冷的深海是牠的家。' },
   { id:'lobster', spot:'isle',  time:'night', name:'藍紋龍蝦', rarity:'稀有', color:'#3f6fb5', min:0.5, max:4.0, power:0.58, desc:'晚上才從礁石洞裡出來散步，藍色的殼煮熟會變紅色。' },
   { id:'shrimp',  spot:'creek', name:'櫻花蝦', rarity:'常見', color:'#f5a5b8', min:0.01, max:0.05, power:0.2, desc:'小小的、粉紅色的，一群一群在螢光溪裡游來游去。' },
@@ -6243,7 +6243,7 @@ function toyTick(dt, t){ if (CLASSIC) return; if (Dive.on || House.on || inIndoo
         if (!Toys.hint){ Toys.hint = true; if (!LS.get('tide.toyhint', false)){ LS.set('tide.toyhint', true); toast('⚽ 這個可以踢！騎腳踏車撞上去會飛更遠'); } } }
       const qx = px + nx * (reach + 0.01), qz = pz + nz * (reach + 0.01); if (!blocked(qx, qz, K.r)){ o.x = qx; o.z = qz; if (o.rest || !o.own){ o.own = true; o.dirty = true; } o.rest = false; } }
     if (!o.rest){ toyStep(o, Math.min(dt, 0.05), t); if (o.rest && o.own) o.dirty = true; } }
-  toyFlush(tn); gullTick(dt, t, px, pz, psp); }
+  toyFlush(tn); gullTick(dt, t, px, pz, psp); try { aquaChipTick(); } catch(e){} }
 function puff(x, y, z){ FX.emit(x, y + 0.05, z, 8, '#f3ead2', 0.6, 0.8, 0.45); }
 function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 0) d += Math.PI*2; return a + (d - Math.PI) * k; }
 
@@ -8785,7 +8785,7 @@ function renderIslePerms(body, meId){
       const a = el('div', 'tacts'), b = el('button', 'tbtn ghost vbtn', '拿出來'); b.disabled = !(my >= 2 || x.mine); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_withdraw', { p_id: x.id }, '🐟 放回你的魚缸了'); }); a.appendChild(b); li.appendChild(a); u2.appendChild(li); } body.appendChild(u2); }
   else body.appendChild(el('div', 'empty', '儲物箱是空的。'));
   if (IsleP.me){ const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.rs && !x.k && !(rec.show || []).includes(x.t)).slice(0, 30); if (cand.length){   /* v384 原本是下拉選單（只有字），改成有魚的圖、一條一條按 */
-    body.appendChild(el('p', 'sub', '從你的魚缸放進去（收藏的、展示中的魚不會出現在這裡）：')); const u3 = el('ul', 'shoplist cols');
+    body.appendChild(el('p', 'sub', '從你的魚缸放進去（收藏的、我的海裡的魚不會出現在這裡）：')); const u3 = el('ul', 'shoplist cols');
     for (const x of cand){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(fishCanvas(f, true, 56, 36)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name} ${fmtKg(x.w)}`)); d.appendChild(el('div', 'sub2', f.rarity)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn vbtn', '放進去'); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_deposit', { p_t: x.t }, '📦 放進公共儲物箱了'); }); a.appendChild(b); li.appendChild(a); u3.appendChild(li); }
     body.appendChild(u3); } }
@@ -9581,7 +9581,7 @@ function buildReef(){
 function updateReef(dt, t){ if (!Reef.g) return; Reef.g.visible = Math.hypot(me.pos.x - REEF.x, me.pos.z - REEF.z) < 95 && !onIsle && !House.on && !Dive.on; if (Reef.g.visible) updateCages(dt, t); }
 // ---- 箱網養殖（參考澎湖的圓形箱網）：島的西邊有一排浮在海上的圓形箱網，用浮動步道連到島上 ----
 var CageV = { g:null, fish:[] };
-function buildCages(){
+function buildCages(){ return;   /* v651 作者：箱網拿掉（魚由伺服器 209 退回魚缸）；最喜歡的魚改放「我的海」 */
   const g = new THREE.Group(); Reef.g.add(g); CageV.g = g; const C = CAGE, Y = 0.32;
   const hdpe = mat('#2a2c2e', 0.6), yel = mat('#f0c020', 0.6), netM = new THREE.MeshBasicMaterial({ color:'#3a5a5a', wireframe:true, transparent:true, opacity:0.35 }), plank = mat('#b88a5a', 0.9);
   const deck = (x0, x1, z0, z1) => { const w = x1 - x0, d = z1 - z0; const m = box([w, 0.12, d], '', [(x0 + x1) / 2, Y - 0.06, (z0 + z1) / 2], plank); m.castShadow = false; g.add(m); addDeck((x0 + x1) / 2, (z0 + z1) / 2, w, d, Y);
@@ -9618,7 +9618,7 @@ function buildHarborLadder(){ const [x, z] = harborDiveAt(), [sx, sz] = HarborDi
   const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.5), new THREE.MeshBasicMaterial({ map: signTex('🤿 潛水點', '#1f4f6e', '#ffe9a8', 256, 100), side:THREE.DoubleSide })); sg.position.set(0, 1.85, -0.2); sg.rotation.y = Math.PI; g.add(sg);
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 6), mat('#6e4a2f', 0.8)); post.position.set(0, 0.85, -0.25); g.add(post); }
 function nearSnorkel(){ return !!(Reef.diveAt && !myBoat && !mySeat && F.phase === 'idle' && !Dive.on && Math.hypot(me.pos.x - Reef.diveAt[0], me.pos.z - Reef.diveAt[1]) < 1.8); }
-function nearCage(){ if (!CageV.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on) return false; return Math.hypot(me.pos.x - CAGE.pos[0][0], me.pos.z - CAGE.pos[0][1]) < CAGE.r + 1.6 && !!deckAt(me.pos.x, me.pos.z); }
+function nearCage(){ return false; if (!CageV.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on) return false; return Math.hypot(me.pos.x - CAGE.pos[0][0], me.pos.z - CAGE.pos[0][1]) < CAGE.r + 1.6 && !!deckAt(me.pos.x, me.pos.z); }
 function cageGrowNext(x){ const f = FISH_BY_ID[x.f]; return Math.min(f.max, +(x.w + (f.max - x.w) * CAGE.k).toFixed(2)); }
 async function cageCall(fn, args, local){
   const rt = () => { if (!$('#sheet').hidden) renderTab(); };
@@ -10280,7 +10280,7 @@ function renderFriends(body){
   // 送禮畫面
   if (Fr.giftTo){ const to = Fr.giftTo;
     const head = el('div', 'tankbar'); head.appendChild(el('b', '', `🎁 送禮給 ${to.name || '朋友'}`)); const bk = el('button', 'tbtn ghost', '返回'); bk.addEventListener('click', () => { Fr.giftTo = null; renderTab(); }); head.appendChild(bk); body.appendChild(head);
-    body.appendChild(el('p', 'sub', '可以送魚缸裡的魚，每天最多 10 條（展示中的魚不能送）。對方打開禮物就會收到。金幣不能送人。帳號要滿 3 天（或綁定 Email）、釣過 30 條魚才能送禮。'));   /* v197：拿掉送金幣（086） */
+    body.appendChild(el('p', 'sub', '可以送魚缸裡的魚，每天最多 10 條（我的海裡的魚不能送）。對方打開禮物就會收到。金幣不能送人。帳號要滿 3 天（或綁定 Email）、釣過 30 條魚才能送禮。'));   /* v197：拿掉送金幣（086） */
     body.appendChild(el('div', 'dexhead', '🐟 魚缸裡的魚')); const locked = new Set(rec.show || []);
     const list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w)).slice(0, 24);
     if (!list.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以送的魚。'));
@@ -10311,7 +10311,7 @@ function renderFriends(body){
     { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} cardTap(li, f.id, f.name || '釣客', pk); }
     if (f.mutual){ const ch = el('button', 'tbtn vbtn', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.textContent = `💬 ${u.n}`; ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); li.appendChild(ch);
       const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
-    const v = el('button', 'tbtn ghost vbtn', '水族館'); v.addEventListener('click', () => visitAquarium(f.id, f.name)); const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(v, vi);
+    const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(vi);
     const rm = el('button', 'tbtn ghost vbtn bk', '刪除'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); li.appendChild(rm);
     ul.appendChild(li); }
   body.appendChild(ul);
@@ -12422,7 +12422,7 @@ function craftSwatch(c){ const cv = document.createElement('canvas'); cv.width =
 async function craftRpc(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能找阿鐵師傅'); return null; } try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
 function renderCraft(body){
   body.appendChild(el('div', 'dexhead', '🔧 阿鐵師傅的工坊'));
-  body.appendChild(el('p', 'sub', '「帶魚跟金幣來，我幫你做竿子的花樣、線的顏色。用的是你魚缸裡最輕的那幾條，收藏⭐、展示中跟變種的我不碰。一天最多做 10 件。」'));
+  body.appendChild(el('p', 'sub', '「帶魚跟金幣來，我幫你做竿子的花樣、線的顏色。用的是你魚缸裡最輕的那幾條，收藏⭐、我的海裡跟變種的我不碰。一天最多做 10 件。」'));
   { body.appendChild(el('div', 'dexhead', '🪱 自製魚餌')); const ul = el('ul', 'shoplist'), li = el('li'); li.appendChild(el('span', 'rodsw bait-live'));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `活餌（現在有 ${(rec.bait || {}).live || 0} 個）`)); const use = craftUse({ r:'常見', n:2 });
     d.appendChild(el('div', 'sub2', '🪙30＋常見魚 2 條，換 4 個活餌。「掠食魚看到活的就追，往有海鳥的地方丟最好。」一天最多做 8 次。')); li.appendChild(d);
@@ -14346,7 +14346,7 @@ function renderCook(body){
     body.appendChild(box);
   }
   if (cookMode === 'make'){
-    body.appendChild(el('p', 'sub', '「把你釣的魚拿來，做成料理再賣，比直接賣魚好賺。切魚的時候抓準時機，星星越多賣越貴。展示中的魚我不會拿。」'));
+    body.appendChild(el('p', 'sub', '「把你釣的魚拿來，做成料理再賣，比直接賣魚好賺。切魚的時候抓準時機，星星越多賣越貴。我的海裡的魚我不會拿。」'));
     const ul = el('ul', 'shoplist cols');
     for (const [key, rc] of Object.entries(RECIPES)){
       const { have } = pickIngredients(key), can = have >= rc.need, li = el('li', can ? '' : 'dim');
@@ -14910,7 +14910,7 @@ async function breedTank(){
   else { if (!rec.breedAt){ rec.breedAt = Date.now(); saveRecLocal(); return; } const days = Math.min(3, Math.floor((Date.now() - rec.breedAt) / 86400000)); if (days < 1) return;
     for (let d = 0; d < days; d++) for (const p of tankPairs()) for (let k = 0; k < p.pairs && born.length < 3 * days; k++) if (Math.random() < 0.5){ const f = FISH_BY_ID[p.f], [ga, pa] = p.list[k][0].split('#'), [gb, pb] = p.list[k][1].split('#'), g = babyGeno(ga, gb), v = g[0] === 'V' ? g.slice(2) : null; born.push(Object.assign({ f: v || p.f, w: +f.min.toFixed(2), t: Date.now() + born.length, s: Math.random() < 0.5 ? 'M' : 'F', y: true }, g[0] === 'C' ? { g: g.slice(2) } : {}, v ? { k: true } : {}, p.f === 'guppy' ? { gp: gpyBaby(pa, pb) } : {})); }
     rec.breedAt += days * 86400000; if (born.length){ rec.tank = born.concat(rec.tank); trimTank(); buildTank(); } saveRecLocal(); }
-  for (const x of born){ const f = FISH_BY_ID[x.f]; if (!f) continue; if (f.of) ticker(`✨ 水族館生出了變種小魚 <b>${esc(f.name)}</b>！（${sexIcon(x)}，自動收藏）`); else ticker(`🐣 水族館裡的<b>${esc(fishNameOf(x))}</b>出生了！（${sexIcon(x)}${x.g && FISH_BY_ID[x.g] ? `・🧬 帶著${esc(FISH_BY_ID[x.g].name)}的基因` : ''}）`); }
+  for (const x of born){ const f = FISH_BY_ID[x.f]; if (!f) continue; if (f.of) ticker(`✨ 我的海生出了變種小魚 <b>${esc(f.name)}</b>！（${sexIcon(x)}，自動收藏）`); else ticker(`🐣 水族館裡的<b>${esc(fishNameOf(x))}</b>出生了！（${sexIcon(x)}${x.g && FISH_BY_ID[x.g] ? `・🧬 帶著${esc(FISH_BY_ID[x.g].name)}的基因` : ''}）`); }
   if (born.length && !$('#sheet').hidden && curTab === 'tank') renderTab();
 }
 // 公共魚市行情（063_economy.sql）：海邊商店收魚的價錢 × 行情（0.6～1.6 倍，跟伺服器同一份）
@@ -15751,9 +15751,9 @@ function renderShop(body){
     }
     body.appendChild(ul);
     if (shownList.length){   // 展示中的魚也能賣：先從水族館拿出來再賣（不用跑去魚缸分頁）
-      body.appendChild(el('div', 'dexhead', '🏛️ 水族館展示中')); const u2 = el('ul', 'shoplist cols');
+      body.appendChild(el('div', 'dexhead', '🐠 在我的海')); const u2 = el('ul', 'shoplist cols');
       for (const x of shownList){ const f = FISH_BY_ID[x.f], price = itemPrice(x), li = el('li', 'on'); li.appendChild(fishCanvas(f, true, 56, 36));
-        const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name)); d.appendChild(el('div', 'meta', `${fmtKg(x.w)}・${f.rarity}・展示中`)); li.appendChild(d);
+        const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name)); d.appendChild(el('div', 'meta', `${fmtKg(x.w)}・${f.rarity}・在我的海`)); li.appendChild(d);
         const acts = el('div', 'tacts'), b = el('button', 'tbtn', `賣 🪙${price}`);
         b.addEventListener('click', () => { rec.show = (rec.show || []).filter(t => t !== x.t); saveRecLocal(); cloudCall('set_show', { p_show: rec.show.slice() }); buildTank(); afterSell(sellFish(x.t), 1); });
         acts.appendChild(b); li.appendChild(acts); u2.appendChild(li); }
@@ -15828,7 +15828,15 @@ var CAGE = { x:-17.6, z:92.8, max:6, feed:20, k:0.12, pos:[[-15.6, 90.6], [-15.6
 const FARM = new Set(['grouper','amberjack','blackbream','girella','rabbitfish','lethrinus','milkfish','tilapia','mullet','barramundi','scat','mangsnapper','trevally']);   /* FAV：打星號收藏的魚（不能賣、不會被擠掉；伺服器 039） */
 // 魚缸保留最新 200 條；有被選去展示的魚不會被擠掉
 function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.tank = rec.tank.filter(x => keep.has(x.t) || x.rs || x.k || ++others <= KEEP_MAX); }   /* 赤紅霸王鯊不會被擠掉 */
-function shownFish(){ if (visiting) return visiting.list; const set = new Set(rec.show || []); return rec.tank.filter(x => set.has(x.t)); }   /* 只放玩家自己選的魚（不再自動展示最新的魚） */
+/* v651 廣場水族館：自動展示這 7 天全村釣到的大魚（伺服器 aqua_week，每種最重的一條、最多 24 條）。沒連線時放自己「我的海」的魚 */
+const AquaWeek = { list:null, at:0 };
+function aquaList(){ if (AquaWeek.list && AquaWeek.list.length) return AquaWeek.list; return shownFish(); }
+async function aquaLoad(){ if (!Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('aqua_week'); if (error || !Array.isArray(data)) return; AquaWeek.at = Date.now(); AquaWeek.list = data.filter(r => FISH_BY_ID[r.f]).map((r, i) => ({ f: r.f, w: Number(r.w) || 0, t: -(i + 1), nick: r.n || '釣客' })); buildTank(); } catch(e){} }
+setInterval(() => { if (Cloud.sb && Date.now() - AquaWeek.at > 10 * 60000) aquaLoad(); }, 30000);
+function aquaChipTick(){ if (frameNo % 15) return; let chip = $('#aquaChip'); const near = !Dive.on && !onIsle && typeof AQUA !== 'undefined' && Math.hypot(me.pos.x - AQUA[0], me.pos.z - AQUA[1]) < 9 && AquaWeek.list && AquaWeek.list.length;
+  if (!near){ if (chip && !chip.hidden) chip.hidden = true; return; } if (!chip){ chip = document.createElement('div'); chip.id = 'aquaChip'; chip.className = 'panel'; document.body.appendChild(chip); }
+  const top = AquaWeek.list[0], tx = `這禮拜全村的大魚・${AquaWeek.list.length} 條・最厲害的：${top.nick} 的${FISH_BY_ID[top.f].name} ${top.w.toFixed(2)}kg`; chip.hidden = false; if (chip.textContent !== tx) chip.textContent = tx; }
+function shownFish(){ const set = new Set(rec.show || []); return rec.tank.filter(x => set.has(x.t)); }   /* 只放玩家自己選的魚（不再自動展示最新的魚） */
 function saveRecLocal(){ rec.updatedAt = Date.now(); LS.set('tide.rec', rec); }
 function normRec(r){
   const e = emptyRec(); if (!r || typeof r !== 'object') return e;
@@ -16053,7 +16061,7 @@ function tankFit(fish, ext){
 function buildTank(){
   if (!tankGroup) return;
   for (const m of tankInst){ tankGroup.remove(m); if (m.isInstancedMesh) m.dispose(); } tankInst = []; tankFish = [];
-  const list = shownFish();
+  const list = aquaList();
   const bySpecies = new Map();
   list.forEach((x, i) => {
     const f = gpyFish(x); const big = BIG_FISH.has(f.id);   /* 孔雀魚每個品系顏色不一樣 */
@@ -16157,7 +16165,7 @@ function renderRig2(body){
           const b = el('button', 'tbtn', `升一級（🪙${c.toLocaleString()}＋${rr}魚 ${n} 條）`); b.disabled = !ok; b.title = `稀有 ×${ROD_LV.rare[L]}、傳說 ×${ROD_LV.legend[L]}`;
           b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定？會用掉：${use.map(x => FISH_BY_ID[x.f].name).join('、')}`; b.classList.add('warn'); return; }
             b.disabled = true; const res = await craftRpc('rod_upgrade', { p_rod: r.id }); if (res && res.player){ adoptRow(res.player); SFX.catch(); flash(`⬆️ ${r.name} 升到 Lv.${res.lv}！稀有 ×${ROD_LV.rare[res.lv - 1]}、傳說 ×${ROD_LV.legend[res.lv - 1]}`, 2.2); } renderTab(); });
-          ac.appendChild(b); if (!ok) li.querySelector('.tinfo').appendChild(el('div', 'meta', use.length < n ? `升級要${rr}魚 ${n} 條（魚缸裡能用的只有 ${use.length} 條，收藏、展示中的不算）` : '升級的金幣不夠')); }
+          ac.appendChild(b); if (!ok) li.querySelector('.tinfo').appendChild(el('div', 'meta', use.length < n ? `升級要${rr}魚 ${n} 條（魚缸裡能用的只有 ${use.length} 條，收藏、我的海裡的不算）` : '升級的金幣不夠')); }
         if (r.old && ROD_SWAP[r.id]){ const [nw, nl] = ROD_SWAP[r.id], N = RODS.find(x => x.id === nw), b = el('button', 'tbtn ghost', `免費換成 ${N.name} ${'★'.repeat(Math.max(nl, rec.rods.includes(nw) ? rodLv(N) : 1))}`);
           b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定換？${r.name}會變成 ${N.name}（紀錄一起帶過去）`; b.classList.add('warn'); return; }
             b.disabled = true; const row = await cloudCall('rod_swap', { p_old: r.id }); if (row){ me.setRod(rec.rod); updateBobberLook(); pushPresence(true); SFX.catch(); flash(`🔁 換好了：${N.name} Lv.${rodLv(N)}`, 1.8); } renderTab(); }); ac.appendChild(b); }
@@ -16577,7 +16585,7 @@ function openShowPick(){
   const list = pick.querySelector('.splist'); list.innerHTML = '';
   for (const id of ids){
     const f = FISH_BY_ID[id], x = top[id], b = el('button', 'spbtn');
-    b.innerHTML = `<span class="chip r-${f.rarity}">${f.rarity}</span><b>${esc(f.name)}</b><small>${shown.has(String(x.t)) ? '⭐展示中 ' : ''}${fmtKg(x.w)}</small>`;
+    b.innerHTML = `<span class="chip r-${f.rarity}">${f.rarity}</span><b>${esc(f.name)}</b><small>${shown.has(String(x.t)) ? '🐠我的海 ' : ''}${fmtKg(x.w)}</small>`;
     b.addEventListener('click', () => { pick.hidden = true; showOff(id, x.w); });
     list.appendChild(b);
   }
@@ -17037,7 +17045,7 @@ function adoptRow(row){ setTimeout(() => { try { refreshMyName(); } catch(e){} }
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island', 'closet', 'museum'].includes(curTab) && !Cloud.ui.busy) renderTab();   /* 衣櫃也照伺服器的結果重畫（伺服器沒有你買過的紀錄時，不會一直顯示穿著） */
 }
-const CLOUD_ERR = ['這支釣竿已經停賣了', '你沒有這支釣竿', '這支釣竿不用換', '已經是最高的 5 級了', '這支釣竿不能升級', '你還沒有這支釣竿', '魚的名字最多 8 個字', '兒童模式只能從名單裡選名字', '這個名字不行，換一個吧', '要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['箱網已經拆掉了，最喜歡的魚可以放進「我的海」', '這支釣竿已經停賣了', '你沒有這支釣竿', '這支釣竿不用換', '已經是最高的 5 級了', '這支釣竿不能升級', '你還沒有這支釣竿', '魚的名字最多 8 個字', '兒童模式只能從名單裡選名字', '這個名字不行，換一個吧', '要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '我的海裡的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 // 省流量（風險檢查第 3 點）：島的資料很大（房子、家具、大宅格局），常用的動作（拋竿、收線、賣魚、餵食…）都不會改到島，就不要回傳；至少每分鐘拿一次完整的（同島的人可能蓋了東西）
 function cloudSel(fn){ const L = Cloud.lastRow; if (Cloud.noSel || !L || ['place_item', 'remove_item', 'move_item'].includes(fn) || !Cloud.fullAt || Date.now() - Cloud.fullAt > 60000) return null;
@@ -17072,21 +17080,8 @@ function cloudCall(fn, args){
 }
 /* ---- 參觀別人的水族館：把廣場東邊的大水族館換成對方展示的魚 ---- */
 var visiting = null;   // { id, name, list }（用 var：水族館在這之前就會先建一次）
-async function visitAquarium(id, name){
-  if (!Cloud.sb || !id){ toast('要連上雲端才能參觀別人的水族館'); return; }
-  if (id === Cloud.userId){ leaveVisit(); return; }
-  try {
-    const { data, error } = await Cloud.sb.rpc('visit_aqua', { p_id: id });
-    if (error || !data){ toast('找不到這位玩家的水族館'); return; }
-    const r = normRec({ tank:data.tank, show:data.show });
-    const set = new Set(r.show || []), list = r.tank.filter(x => set.has(x.t));
-    visiting = { id, name: data.nickname || name || '釣客', list }; Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'aqua' }).then(() => {}, () => {});
-    buildTank(); renderVisitBar();
-    travelTo({ id:'aquarium', label:'水族館', x: AQUA[0] + 1.2, z: AQUA[1] + 6.2, rot: Math.PI });
-    if (room && room.connected()) room.emit('visit', { to: id }).catch(() => {});
-    ticker(`🐠 正在參觀 <b>${esc(visiting.name)}</b> 的水族館（${list.length} 條魚）`);
-  } catch(e){ toast('暫時連不上雲端'); }
-}
+async function visitAquarium(id, name){   /* v651 水族館改成自動展示全村的大魚 → 「參觀水族館」改成去對方的小島，從碼頭潛水梯下去看他的海 */
+  if (!id || id === Cloud.userId) return; try { closeSheet(); } catch(e){} toast(`去 ${esc(name || '朋友')} 的小島，從碼頭的潛水梯下去就看得到他的海`); visitIsle(id, name); }
 function leaveVisit(){ if (!visiting) return; visiting = null; buildTank(); renderVisitBar(); }
 function renderVisitBar(){
   let bar = $('#visitBar');
@@ -17158,7 +17153,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    await loadContest(); loadBoard(); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
+    await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
@@ -17331,7 +17326,7 @@ const npcs = [
     lines:['歡迎來阿彩畫廊！每一幅都是我親手畫的', '我每天早上 8 點，會畫昨天全村最厲害的那條魚', '被我畫的人，我會送他一幅喔', '畫可以擺在家裡，像家具一樣', '清晨、晚霞、月夜……同一條魚，顏色不一樣感覺就不一樣'] }; })(),
   // 阿鐵師傅：釣具店旁邊擺攤的工匠，用魚和金幣做竿子造型、釣線顏色（102_craft.sql）
   { name:'阿鐵・釣具師傅', shirt:'#5a6470', hat:'#2b2f36', x:hlAt('tackle', 1.75, 2.75)[0], z:hlAt('tackle', 1.75, 2.75)[1], y:0.02, dir:new THREE.Vector2(Math.sin(HLOT.tackle[2]), Math.cos(HLOT.tackle[2])), shopNpc:'craft',
-    lines:['我會做竿子造型和釣線顏色，帶幾條魚來就好', '魚不是拿來吃的啦，是我拿來練手藝、換材料的', '金箔竿要三條稀有魚，很值得喔', '收藏的、展示中的魚我不會拿', '線換個顏色，別人一眼就認得出是你的'] },
+    lines:['我會做竿子造型和釣線顏色，帶幾條魚來就好', '魚不是拿來吃的啦，是我拿來練手藝、換材料的', '金箔竿要三條稀有魚，很值得喔', '收藏的、我的海裡的魚我不會拿', '線換個顏色，別人一眼就認得出是你的'] },
   // v270 阿萍：美髮沙龍的設計師，超認真的工作狂，每天都在設計新髮型、調新髮色，染髮剪髮什麼都會（109_salon.sql）
   { name:'阿萍・髮型設計師', shirt:'#2a2a2a', hat:'#7fd0c8', x:lotAt('spare', -1.8, 2.8)[0], z:lotAt('spare', -1.8, 2.8)[1],   /* v423 玩家回報「卡在櫃檯」：(0.3, 2.3) 剛好是櫃台正中間，阿萍下半身埋在櫃台裡。改站櫃台左邊外面（跟阿彩、阿鐵一樣站櫃台旁） */   /* v336 沙龍以前跟博物館疊在一起、阿萍站在博物館牆裡面按不到：沙龍往南移、阿萍站到店門口 */ y:0.02, dir:new THREE.Vector2(Math.sin(SHOPLOT.spare.r), Math.cos(SHOPLOT.spare.r)), shopNpc:'salon',
     lines:['今天的新髮色我昨天半夜三點才調出來的，你看看！', '剪頭髮、染頭髮、燙頭髮、編辮子，跟頭髮有關的我全部都會', '我每天都在設計，不設計我會睡不著', '你這個髮型……要不要讓我修一下？', '海風很傷頭髮，釣完魚記得來護髮喔', '新髮型每兩天出一款，新髮色每天一色，我一天都沒休息過'] },
@@ -17397,7 +17392,7 @@ function renderMarketFish(body){ fishHallSeg(body, 'market');
       row.appendChild(inp); for (const k of [1, 1.5, 2, 3]){ const q = el('button', 'tbtn ghost', `×${k}`); q.addEventListener('click', () => { inp.value = Math.min(hi, Math.max(lo, Math.round(base * k))); }); row.appendChild(q); } body.appendChild(row);
       const bar = el('div', 'tankbar'), ok = el('button', 'tbtn', '擺上去'), bk = el('button', 'tbtn ghost', '返回'); ok.addEventListener('click', () => { const v = Math.round(+inp.value); if (!(v >= lo && v <= hi)){ toast(`價錢要在 ${lo}～${hi} 之間`); return; } ok.disabled = true; mktCall('market_list', { p_t: x.t, p_price: v }, `🏷️ 擺上魚市了！🪙${v}`); });
       bk.addEventListener('click', () => { Mkt.sell = null; renderTab(); }); bar.append(ok, bk); body.appendChild(bar); return; }
-    body.appendChild(el('p', 'sub', '選一條魚擺上魚市，自己訂價（收購價的 0.5～5 倍）。魚會先交給魚市保管，3 天沒賣掉會退回你的魚缸，也可以隨時收回來。每人最多同時擺 6 條。展示中的魚、紅鯊不能賣。'));
+    body.appendChild(el('p', 'sub', '選一條魚擺上魚市，自己訂價（收購價的 0.5～5 倍）。魚會先交給魚市保管，3 天沒賣掉會退回你的魚缸，也可以隨時收回來。每人最多同時擺 6 條。我的海裡的魚、紅鯊不能賣。'));
     const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.rs && !(rec.show || []).includes(x.t)).sort((a, b) => (RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity]) || b.w - a.w).slice(0, 80);
     if (!cand.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以賣的魚。'));
     const ul = el('ul', 'shoplist cols'); for (const x of cand){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(mktIc(f, x.k ? '⭐' : '')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${mktFishName(x)} ${fmtKg(x.w)}`)); d.appendChild(el('div', 'sub2', `${f.rarity}・收購 🪙${fishPrice(f, x.w)}`)); li.appendChild(d); li.addEventListener('click', () => { Mkt.sell = x; renderTab(); }); ul.appendChild(li); }
@@ -17531,7 +17526,7 @@ function renderCargo(body){
     body.appendChild(el('p', 'sub', young ? '剛裝上船的魚要過 45 秒才能賣（開船過去的時間）。' : here ? `現在在這裡賣是 🪙${sum(here === 'reef' ? 'pr' : 'pv')}；另一邊是 🪙${sum(here === 'reef' ? 'pv' : 'pr')}。直接賣給商店（不跑船）是 🪙${sum('base')}。` : `要走到「村子的潮汐魚市場」或「珊瑚礁島的阿嬤」旁邊才能賣。村子 🪙${sum('pv')}・礁島 🪙${sum('pr')}。`)); }
   if (L.length < I.cap){ body.appendChild(el('div', 'dexhead', '🐟 從魚缸裝上船'));
     const locked = new Set(rec.show || []), list = rec.tank.filter(x => FISH_BY_ID[x.f] && !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => itemPrice(b) - itemPrice(a));
-    if (!list.length){ body.appendChild(el('p', 'sub', '魚缸裡沒有可以裝的魚（展示中、收藏的魚不能裝）。')); return; }
+    if (!list.length){ body.appendChild(el('p', 'sub', '魚缸裡沒有可以裝的魚（我的海裡、收藏的魚不能裝）。')); return; }
     { const room = I.cap - L.length, b = el('button', 'tbtn', `裝最值錢的 ${Math.min(room, list.length)} 條`); b.addEventListener('click', () => cargoDo('cargo_load', { p_ts: list.slice(0, room).map(x => x.t) })); const r = el('div', 'tmrow'); r.appendChild(b); body.appendChild(r); }
     const ul = el('ul', 'shoplist'); for (const x of list.slice(0, 40)){ const f = FISH_BY_ID[x.f], li = el('li'), d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name}・${(+x.w).toFixed(2)} 公斤`)); d.appendChild(el('div', 'sub2', `直接賣 🪙${itemPrice(x)}・${['reef', 'weir'].includes(f.spot) ? '礁島的魚，載回村子賣比較好' : '載去礁島賣比較好'}`)); li.appendChild(d); const a = el('div', 'tacts'), b = el('button', 'tbtn', '裝'); b.addEventListener('click', () => cargoDo('cargo_load', { p_ts: [x.t] })); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } body.appendChild(ul); } }
 /* ===== v429 釣友隊＋廣場大看板（伺服器 165）=====
@@ -17972,7 +17967,7 @@ function renderFuShop(body){ fishHallSeg(body, 'fu');
   const head = el('div', 'shophead'); head.innerHTML = `<b>🧊 魚市場・阿福海產</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能賣魚給阿福。')); return; }
   const D = Fu.data; if (!D){ body.appendChild(el('div', 'empty', '載入中…')); return; }
-  body.appendChild(el('p', 'sub', '「收購單每天早上 6 點換。我只收野生的：箱網養的、魚缸生的、收藏⭐跟展示中的都不要。每一樣一人一天交一次。」'));
+  body.appendChild(el('p', 'sub', '「收購單每天早上 6 點換。我只收野生的：魚缸生的、收藏⭐跟我的海裡的都不要。每一樣一人一天交一次。」'));
   const P = Fu.pick;
   if (P){ const o = (D.orders || []).find(x => x.idx === P.idx); if (!o){ Fu.pick = null; renderTab(); return; }
     body.appendChild(el('div', 'dexhead', fuDesc(o)));
@@ -18036,7 +18031,7 @@ const NPC_TIPS = [
   '手竿適合河、湖、溪、池塘；海邊用遠投竿；外海用磯釣竿',
   '太小的魚放流，愛海點數比較多',
   '愛海點數可以去商店換限定的衣服',
-  '水族館裡同一種魚一公一母，每天有機會生小魚',
+  '我的海裡同一種魚一公一母，每天有機會生小魚',
   '在高高的岸上釣大魚要有撈網，釣具店「🧰工具」那裡有賣',
   '窩料丟下去，附近的魚會聚過來',
   '去港口找船夫阿海，可以出海或去潛水',
@@ -18414,7 +18409,7 @@ async function worldGift(k, t){ try { const { data, error } = await Cloud.sb.rpc
     const n = npcs.concat(questNpcs.map(q => q.f)).find(f => f.wid === k); if (n) n.say('哇！謝謝你～我會好好珍惜的', 'emote', 4); World.at = 0; loadWorld(); } catch(e){ toast(cloudErrMsg(e)); } }
 function worldNear(k){ const n = npcs.concat(questNpcs.map(q => q.f)).find(f => f.wid === k); return n && !n.wHide && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 8; }
 function renderWorldGift(body){ const k = World.giftTo; body.appendChild(el('div', 'dexhead', `🎁 送一條魚給${WORLD_WHO[k] || ''}`));
-  body.appendChild(el('p', 'sub', '每個村民每天收一條。要野生的魚（收藏⭐、展示中、箱網養的、魚缸生的不行）。越稀有的魚，他會越開心、越記得你。'));
+  body.appendChild(el('p', 'sub', '每個村民每天收一條。要野生的魚（收藏⭐、我的海裡的、魚缸生的不行）。越稀有的魚，他會越開心、越記得你。'));
   const cand = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !x.fm && !x.y && !x.rs && !x.k && !(rec.show || []).includes(x.t)).sort((a, b) => b.w - a.w).slice(0, 60);
   if (!cand.length) body.appendChild(el('div', 'empty', '魚缸裡沒有可以送的魚。'));
   const ul = el('ul', 'shoplist cols'); for (const x of cand){ const f = FISH_BY_ID[x.f], li = el('li'); li.appendChild(el('span', 'dishic', '🐟')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name} ${fmtKg(x.w)}`)); d.appendChild(el('div', 'sub2', f.rarity)); li.appendChild(d);
@@ -18600,7 +18595,7 @@ function renderTab(){
       const ul = el('ol', 'rank'); rows.slice(0, 20).forEach((r, i) => { const f = FISH_BY_ID[r.f]; if (!f) return; const isMe = r.id === myId, li = el('li', 'rk4' + (isMe ? ' me' : ''));
         li.appendChild(el('span', 'pos', String(i + 1))); const known = rec.count[f.id] > 0; const cv = fishCanvas(f, known, 56, 36); cv.className = 'rkfish'; li.appendChild(cv);   /* 自己沒釣過的只看得到黑影（變種也不會被看光） */
         const who = el('span', 'who', isMe ? `${myDisplayName() === '你' ? '你' : myDisplayName() + '（你）'}` : (r.name || '釣客')); who.appendChild(el('small', '', known ? `${f.name}・${f.rarity}${f.of ? '・✨變種' : ''}` : `？？？・${f.rarity}${f.of ? '・✨神秘變種' : ''}`));
-        if (!isMe && r.id){ who.classList.add('canvisit'); who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); }
+        if (!isMe && r.id){ who.classList.add('canvisit'); who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🏝️ 點一下去他的小島')); }
         li.appendChild(who); li.appendChild(el('span', 'val', r.n <= 1 ? '全服唯一' : `全服 ${r.n} 條`)); ul.appendChild(li); });
       body.appendChild(ul); return;
     }
@@ -18639,7 +18634,7 @@ function renderTab(){
       const bf = r.bestFish && FISH_BY_ID[r.bestFish];
       who.appendChild(el('small', '', lbMode === 'week' ? (i === 0 ? '👑 目前第一名' : '') : lbMode === 'best' ? (bf ? `${bf.name}・${bf.rarity}` : '') : `收集 ${r.species || Object.keys(r.count || {}).length} 種・傳說 ${r.legend || 0} 條`));
       li.appendChild(who);
-      if (Cloud.on && !isMe && r.id){ who.classList.add('canvisit'); who.title = '參觀水族館'; who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); const vi = el('button', 'tbtn ghost vbtn', '🏝️ 小島'); vi.addEventListener('click', e => { e.stopPropagation(); visitIsle(r.id, r.name); }); who.appendChild(vi); }
+      if (Cloud.on && !isMe && r.id){ who.classList.add('canvisit'); who.title = '去他的小島'; who.addEventListener('click', () => visitAquarium(r.id, r.name)); who.appendChild(el('small', 'vlink', '🐠 點一下參觀他的水族館')); const vi = el('button', 'tbtn ghost vbtn', '🏝️ 小島'); vi.addEventListener('click', e => { e.stopPropagation(); visitIsle(r.id, r.name); }); who.appendChild(vi); }
       li.appendChild(el('span', 'val', lbMode === 'week' ? (r.weekW || 0).toFixed(2) + ' kg' : lbMode === 'best' ? r.bestW.toFixed(2) + ' kg' : lbMode === 'earned' ? '🪙' + (r.earned || 0).toLocaleString() : r.total + ' 條'));
       ul.appendChild(li);
     });
@@ -18669,7 +18664,7 @@ function renderTab(){
     list.forEach(x => {
       const f = FISH_BY_ID[x.f]; const li = el('li' , shown.has(x.t) ? 'on' : ''); { const cv = fishCanvas(gpyFish(x), true, 56, 36); cv.style.cursor = 'pointer'; cv.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); }); li.appendChild(cv); }
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${x.k ? '⭐ ' : ''}${fishTitle(x)} ${sexIcon(x)}${f.of ? ' ✨變種' : ''}${x.g ? ' 🧬' : ''}${x.b ? ' 🐣' : ''}${x.y ? ' 🍼' : ''}`)); const dt = new Date(x.t);
-      d.appendChild(el('div', 'meta', `${x.g && FISH_BY_ID[x.g] ? `帶著${FISH_BY_ID[x.g].name}的基因・` : ''}${x.y ? '水族館出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
+      d.appendChild(el('div', 'meta', `${x.g && FISH_BY_ID[x.g] ? `帶著${FISH_BY_ID[x.g].name}的基因・` : ''}${x.y ? '我的海出生・' : x.b ? '嘴裡含著小魚・' : ''}${x.w.toFixed(2)}kg・${f.rarity}・${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`)); li.appendChild(d);
       d.style.cursor = 'pointer'; d.addEventListener('click', () => { FishCard.t = x.t; FishCard.edit = false; renderTab(); });
       const acts = el('div', 'tacts');
       const show = el('button', 'tbtn' + (shown.has(x.t) ? '' : ' ghost'), shown.has(x.t) ? '拿出來' : '放進我的海'); show.setAttribute('aria-pressed', String(shown.has(x.t)));
@@ -18731,7 +18726,7 @@ function renderTab(){
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
       if (uid && Cloud.on && !isMe){ const cb = el('button', 'tbtn vbtn', '🪪 資料'); cb.addEventListener('click', () => openCard(uid, name, peerId)); li.appendChild(cb); }   /* v544 作者：「我的名片移除」→ 自己那一列不放按鈕（點左上角頭像就是自己的資料頁） */   /* v534 */
       if (uid && Cloud.on && !isMe && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); li.appendChild(dz); }
-      if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀水族館'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
+      if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀小島'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
       if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
           const box = el('div', 'rpbox'); box.appendChild(el('span', '', '檢舉原因：'));
           for (const r of ['罵人／不禮貌', '洗版', '取不雅的名字', '其他']){ const b = el('button', 'tbtn ghost vbtn', r); b.addEventListener('click', () => { reportPeer(peerId, name, r); box.remove(); }); box.appendChild(b); }
@@ -18834,7 +18829,7 @@ function renderTab(){
       '🐟 每種魚的習性：小魚只會喘氣和小衝刺，幾秒就拉上來｜旗魚、鯊魚這類掠食魚：衝刺 → 跳 → 衝刺 → 跳，衝很久｜石斑、螃蟹這類底棲魚：愛往下鑽、纏礁石，幾乎不跳｜鬼頭刀、魷魚：一直左右竄，方向換很快｜鮪魚：一直衝刺不停，拚耐心｜傳說魚：會假裝累了停下來，突然又衝刺，看到「騙你的！」趕快放開。',
       '🧰 裝備改變手感：硬竿（遠投竿）—— 做對時魚掉更多體力，但魚的動作更快、提示更短；軟竿（手竿、磯釣竿）—— 比較能容錯（判定寬鬆、硬拉時拉力爆衝少），提示比較長；甩竿在中間。粗線不容易斷，但魚比較警覺，咬之前會試探比較久；細線試探快但容易斷。餌決定吸引哪一種徵兆的魚：蚯蚓（蟲餌）→ 🫧底棲魚、活餌（阿鐵師傅做）→ 🐦掠食魚，那一類魚比較容易上鉤，落在對應的徵兆旁邊加成更大、範圍更寬。',
       '🎣 釣竿：竿子分好幾節，魚拉得越用力竿尖彎得越厲害；甩竿時竿尖會慢半拍再甩出去；按住收線時捲線器的搖臂會轉。換不同的竿子，長短、粗細、顏色都不一樣（手竿沒有捲線器，有竹節）。',
-      '🔧 阿鐵師傅（釣具店旁邊）：帶魚和金幣去，可以做活餌（吸引掠食魚）、鉤子（倒刺鉤：線鬆比較不會脫鉤｜圓形鉤：每條魚原諒一次失誤｜鍛造重鉤：硬拉拉力升得慢｜金鉤：做對時魚多掉體力）、竿子造型（竹紋、木紋、紅白條紋、海浪、珊瑚、碳纖維、金箔、彩虹）和釣線顏色（紅、螢光黃、螢光綠、粉紅、夜光藍、金色）。會用掉魚缸裡同稀有度最輕的魚，收藏⭐、展示中、變種的不會用；一天最多做 10 件。做好按「裝上」，別人也看得到。只是外觀，不影響釣魚。',
+      '🔧 阿鐵師傅（釣具店旁邊）：帶魚和金幣去，可以做活餌（吸引掠食魚）、鉤子（倒刺鉤：線鬆比較不會脫鉤｜圓形鉤：每條魚原諒一次失誤｜鍛造重鉤：硬拉拉力升得慢｜金鉤：做對時魚多掉體力）、竿子造型（竹紋、木紋、紅白條紋、海浪、珊瑚、碳纖維、金箔、彩虹）和釣線顏色（紅、螢光黃、螢光綠、粉紅、夜光藍、金色）。會用掉魚缸裡同稀有度最輕的魚，收藏⭐、我的海裡、變種的不會用；一天最多做 10 件。做好按「裝上」，別人也看得到。只是外觀，不影響釣魚。',
       '地上的發光圈是「好釣點」：稀有魚和傳說魚比較多。',
       '有些魚只在白天、清晨黃昏或晚上比較常出現，圖鑑會標出來。',
       '天氣（左上角）：晴天、多雲、下雨、起霧、暴風雨，大約每 9 分鐘換一次，大家看到的都一樣。下雨魚比較好咬、雷魚鯰魚鰻魚特別多；起霧稀有魚多；暴風雨時海邊和外海的傳說魚多很多，但拉線比較吃力。',
@@ -18920,9 +18915,9 @@ function renderTab(){
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
       '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 32×32 的格子、48 種顏色上畫圖案（上衣有正面和背面；有直線、方框、填色、吸色、左右對稱、粗細筆、復原重做，也可以用自己的圖片），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
-      '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
+      '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在我的海，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 新的釣竿陣容：釣具店只賣 6 支 —— 竹竿（免費入門）、🎣 路亞軟竿（🪙800，最適合掠食魚、狡猾魚）、🎋 手竿（🪙500，河、湖、溪）、🏖️ 遠投竿（🪙800，海邊）、🪨 磯釣硬竿（🪙800，港口外海、小島碼頭）、👑 黃金王者竿（🪙12000，什麼時候、什麼地方都是稀有 ×1.3、傳說 ×1.3）。',
-      '⬆️ 釣竿升級：四支專用竿（路亞、手竿、遠投、磯釣）可以在背包「🎣 釣組」升級，1～5 級。每升一級要金幣＋魚缸裡的魚（Lv.2：🪙800＋常見魚 3 條；Lv.3：🪙2,000＋稀有魚 2 條；Lv.4：🪙4,500＋稀有魚 4 條；Lv.5：🪙9,000＋傳說魚 1 條）。用的是魚缸裡最輕的那幾條，⭐收藏和展示中的不會被拿走；按一下會先列出要用掉哪幾條，再按一次才真的升。等級越高稀有、傳說越多、線越不容易斷（Lv.5 稀有 ×1.5、傳說 ×1.4）。4～5 級的專用竿用在對的地方、對的魚，會贏過王者竿。Lv.5 的竿子拉對的魚時竿尖會閃光。',
+      '⬆️ 釣竿升級：四支專用竿（路亞、手竿、遠投、磯釣）可以在背包「🎣 釣組」升級，1～5 級。每升一級要金幣＋魚缸裡的魚（Lv.2：🪙800＋常見魚 3 條；Lv.3：🪙2,000＋稀有魚 2 條；Lv.4：🪙4,500＋稀有魚 4 條；Lv.5：🪙9,000＋傳說魚 1 條）。用的是魚缸裡最輕的那幾條，⭐收藏和我的海裡的不會被拿走；按一下會先列出要用掉哪幾條，再按一次才真的升。等級越高稀有、傳說越多、線越不容易斷（Lv.5 稀有 ×1.5、傳說 ×1.4）。4～5 級的專用竿用在對的地方、對的魚，會贏過王者竿。Lv.5 的竿子拉對的魚時竿尖會閃光。',
       '🔁 舊竿停賣：以前的 10 支竿子（碳纖維釣竿、路亞輕竿、月光夜釣竿、深海巨物竿、竹手竿、碳纖維手竿、舊遠投竿、職人遠投竿、磯釣竿、黑鯛磯釣竿）不再賣了，買過的照樣可以用。也可以在背包「🎣 釣組」免費換成對應的專用竿和等級（例如月光夜釣竿 → 路亞軟竿 Lv.4、黑鯛磯釣竿 → 磯釣硬竿 Lv.4），這支竿子的釣魚紀錄會一起帶過去；如果你已經有那支專用竿，等級取比較高的那個。',
       '👑 黃金王者竿的特別待遇：有王者竿的人，名字旁邊會有 👑（大家都看得到），拿著王者竿拋竿時竿尖有一圈金色光暈。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
@@ -18933,9 +18928,7 @@ function renderTab(){
       '🐟 魚的動作：魚游泳的時候整條身體會一波一波地擺。釣上來的那一刻，魚會頭朝上吊在線上猛甩；捧在手上也會突然掙扎幾下。',
       '⚽ 可以踢的東西：廣場和沙灘上的沙灘球、椰子、木桶，走過去會踢到，騎腳踏車撞上去會飛出去；掉進海裡會漂，海浪會把它慢慢推回岸邊。東海灘有一個小球門，把沙灘球踢進去就算進球。一群一群的海鷗被你衝過去會嚇得飛起來。騎車撞到樹會掉樹葉，有時候掉一顆果子。你踢的球、滾的木桶，旁邊的玩家也看得到，可以一起踢。',
       '🚲 腳踏車：每個人一進來就有一台，不用買。打開「背包」把腳踏車拿出來就騎上去，推搖桿就衝出去 —— 比跑步快將近一倍，放開會滑行、急轉會甩尾、衝過坡頂會飛起來，也可以按「跳」。騎的時候右下角有「下車」；拋竿、上船、坐椅子、進屋子會自動下車，車會停在原地等你，走回車旁邊就會出現「騎車」。別的玩家看得到你在騎車。',
-      '🏷️ 我的魚：在魚缸（或箱網）裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
-      '👑 魚的成長：箱網裡的魚有四個階段 —— 🌱 幼魚、🐟 成魚、💪 壯年、👑 魚王。每天餵一次，餵滿 21 次、體型到這種魚的九成以上，就會長成魚王（重量直接到最大）。紅甘、白毛、臭肚魚、青嘴龍占、河口吳郭魚的魚王繼續留在箱網餵，每次有 4% 的機會變成變種 ✨（黃金紅甘、金黃白毛、金色臭肚魚、赤龍占、紅色吳郭魚），最晚餵到第 60 次一定會變。養出來的變種不算進圖鑑和紀錄（那些只算釣到的）。',
-      '🐟 箱網養殖：珊瑚礁島西邊有一排浮在海上的箱網，走浮動步道過去，在「你的箱網」旁邊按「箱網」。可以把魚缸裡的臭肚魚、白毛、虱目魚、吳郭魚、石斑、紅甘這些放進去（最多 6 條），每天餵一次飼料，魚就會慢慢長大；收成後放回魚缸，可以賣比較多錢。',
+      '🏷️ 我的魚：在魚缸裡點魚的圖或名字，會打開牠的卡片 —— 看得到牠的體型在這種魚裡排在哪裡、哪裡來的、跟了你幾天、現在值多少。可以幫牠取名字（最多 8 個字；兒童模式從名單裡選），名字只是好玩，不影響價錢。箱網養過的魚，卡片上會寫「從幾公斤養到幾公斤、餵過幾次」。',
       '🪸 珊瑚礁群島：從村子往西邊走，過一座很長的跨海大橋就到了。島邊的礁岩用磯釣竿最好，有臭肚魚、白毛、黑毛、青嘴龍占，運氣好會遇到紅甘。島東邊有兩個用咾咕石疊成的愛心石滬：退潮的時候魚被困在裡面，咬得特別快；滿潮時魚都游出去了。',
       '🪷 百年生態池：在村子東邊、往東海灘的路旁邊。兩個圓圓的池子中間有紅色拱橋，池子裡有假山和睡蓮。有吳郭魚、琵琶鼠魚、食蚊魚（大肚魚），運氣好會遇到泰國鱧（魚虎）和很大的革胡子鯰。手竿最適合。',
       '🥅 撈網：站在比水面高很多的地方（例如高高的岸壁）釣到 1.5 公斤以上的魚，要用撈網撈上來，不然硬拔線會斷（在釣具店「🧰工具」分頁買，買了會自動用）。',
@@ -18952,12 +18945,12 @@ function renderTab(){
       '一起潛水的人在水裡看得到彼此。',
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
-      `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；展示中的不算）。`,
+      `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；我的海裡的不算）。`,
       `🐠 我的海：最喜歡的魚可以放進自己小島底下的海。釣到時按「🐠 我的海」，或在「魚缸」按「放進我的海」。從小島碼頭的潛水梯下去，就看得到牠們照自己的習性游（螃蟹、比目魚趴在海底，鯊魚在外圈繞，傳說魚身邊有一點光）；游近一條魚，下面會寫是誰、哪天在哪裡釣到的。一開始可以放 30 條，海底花園每一株長大的珊瑚多 2 條，最多 60 條。放在我的海的魚不會被賣掉或拿去做菜，來你島上潛水的朋友也看得到。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）。主要在港口外海出沒，偶爾也會到珊瑚礁群島外側的深水邊巡游（機率更低）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
       '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低。圖鑑裡會先顯示影子，釣到才看得到樣子（赤紅霸王鯊例外，要釣到才會出現）。',
-      '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚缸裡的魚捧起來炫耀給大家看（展示中的也可以；賣掉、捐給博物館的就不行了）。',
+      '「圖鑑」記錄你釣過的每一種魚和最重紀錄。按 🐟 可以把魚缸裡的魚捧起來炫耀給大家看（我的海裡的也可以；賣掉、捐給博物館的就不行了）。',
       '可以參觀別人的水族館（玩家分頁或排行榜點他的名字）。',
     ]);
     sec('🪙 金幣與商店', [
@@ -18998,7 +18991,7 @@ function renderTab(){
       '🦑 在沉船深海潛水，偶爾會目擊抹香鯨和大王魷魚纏鬥（真的抹香鯨身上常有魷魚吸盤留下的圓形疤痕，遊戲裡的抹香鯨也有）。',
       '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
       '水面上的魚群（沙丁魚、丁香魚這些）大家看到的是同一群：同一個時間、同一個地方，朋友也會看到一樣的魚群在一樣的位置游，可以約一起去追。',
-      '魚缸、箱網、水族館裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
+      '魚缸、我的海裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
     ]);
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、七夕（晚上天上有鵲橋、每天一份禮物、限定花冠和鵲橋）、萬聖節（10/29～10/31，南瓜燈和蝙蝠、每天拿糖果、限定南瓜帽和巫師帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
