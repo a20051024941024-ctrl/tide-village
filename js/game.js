@@ -1991,7 +1991,7 @@ function lwBall(B, dt, t, on){ const ball = B.ball; if (!on){ ball.visible = fal
   B.k += dt / 1.7; const n = Math.floor(B.k), u = B.k - n, from = A[n % 2], to = A[(n + 1) % 2];
   const x = from.q.x + (to.q.x - from.q.x) * u, z = from.q.z + (to.q.z - from.q.z) * u, y0 = groundHeight(x, z) + 1.25; ball.position.set(x, y0 + Math.sin(u * Math.PI) * 2.6, z); ball.rotation.y += dt * 4;
   const dm = Math.hypot(me.pos.x - x, me.pos.z - z); if (dm < 1.0 && ball.position.y - groundHeight(x, z) < 2.0 && !myBoat){ const a = Math.atan2(x - me.pos.x, z - me.pos.z); B.kick = { vx: Math.sin(a) * 7, vz: Math.cos(a) * 7, vy: 5, t: 0 }; try { SFX.jump(); } catch(e){} } }
-function lwTick(dt, t){ try { lwFleetTick(dt, t); } catch(e){ if (!lwTick.e1){ lwTick.e1 = 1; console.warn('lwFleet', e); } } try { lwBeachTick(dt, t); } catch(e){ if (!lwTick.e2){ lwTick.e2 = 1; console.warn('lwBeach', e); } } }
+function lwTick(dt, t){ try { lwFleetTick(dt, t); } catch(e){ if (!lwTick.e1){ lwTick.e1 = 1; console.warn('lwFleet', e); } } try { lwBeachTick(dt, t); } catch(e){ if (!lwTick.e2){ lwTick.e2 = 1; console.warn('lwBeach', e); } } try { stampTick(dt, t); } catch(e){} }
 function art2Tick(t){ if (Art2.fx) for (const f of Art2.fx){ try { f(t); } catch(e){} } for (const b of Art2.boats){ b.g.position.x = b.x; b.g.position.z = b.z; b.g.position.y = waterY(b.x, b.z, t) + (b.dy != null ? b.dy : -0.12); b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
 if (!ART2) setTimeout(() => { try { paveAll(); } catch(e){ console.warn('paveAll', e); } }, 0);
 if (ART2) setTimeout(() => { try { art2Props(); twMergeAll(); if (!LS.get('tide.art2Told', 0)){ LS.set('tide.art2Told', 1); toast('🎨 村子換新樣子了：港口、商店街、居民區的房子都重畫過，地圖也重新分區了（看「說明」）', 8); } } catch(e){ console.warn('art2 props', e); } }, 0);
@@ -4010,7 +4010,7 @@ const GEAR = [
   // 節慶限定（083）：只有節日期間買得到（第 6 欄是哪個節日），買到的永遠保留
   ['hat_lion','舞獅帽',800,'🦁',0,'cny'],['hat_party','跨年派對帽',300,'🎉',0,'ny'],['hat_pomelo','柚子帽',300,'🍈',0,'moon'],['acc_sachet','端午香包',300,'🧧',0,'duanwu'],['hat_santa','聖誕帽',300,'🎅',0,'xmas'],['hat_flowerc','七夕花冠',300,'💐',0,'qixi'],['hat_pumpkin','南瓜帽',300,'🎃',0,'halloween'],['hat_witch','巫師尖帽',400,'🧙',0,'halloween'],['hat_antler','麋鹿角',350,'🦌',0,'xmas'],
   /* v555 滑雪場獎勵：買不到，只有在雪松山滑完才拿得到（第 7 欄 rw；伺服器 188 發） */
-  ['hat_skipom','雪松山毛球帽',0,'🎿',0,null,'ski'],['acc_skigog','滑雪鏡',0,'🥽',0,null,'ski'],
+  ['hat_skipom','雪松山毛球帽',0,'🎿',0,null,'ski'],['acc_skigog','滑雪鏡',0,'🥽',0,null,'ski'],['hat_mail','郵差帽',0,'📮',0,null,'stamp'],['back_mailbag','郵差包',0,'✉️',0,null,'stamp'],
   ['hat_turtle','海龜帽',0,'🐢',30],['top_ocean','海洋守護衫',0,'🌊',40],['acc_coral','珊瑚項鍊',0,'🪸',20],['back_fin','鯊魚背鰭',0,'🦈',60],
 ].map(([id, name, price, icon, love, fest, rw]) => ({ id, slot: id.split('_')[0], name, price, icon, love: love || 0, fest: fest || null, rw: rw || null }));
 function paidGear(it){ return !!it && (it.price > 0 || it.love > 0 || !!it.rw); }
@@ -4191,6 +4191,11 @@ function applyGear(av, gear){
       const hd = mk(new THREE.SphereGeometry(0.075, 10, 8), sk, 0, 0.0, 0.37, H); hd.scale.set(1, 0.8, 1.1);
       for (const sx of [-1, 1]) mk(new THREE.SphereGeometry(0.014, 6, 4), ink, sx * 0.035, 0.02, 0.44, H);
       break; }
+    case 'hat_mail': { const gr = M('#2f5a40', 0.75), rd = M('#c9453a', 0.7), gd = M('#e8b94a', 0.3, { metalness:0.5 });   /* v662 郵差帽（集章卡送的）：墨綠色大盤帽、紅色帽帶、前面一個金色的信封徽章、黑色亮面帽簷 */
+      const c = mk(G.crown, gr, 0, -0.02, 0, H); c.scale.set(1.06, 0.58, 1.06); const top = mk(new THREE.CylinderGeometry(0.37, 0.33, 0.06, 22), gr, 0, 0.13, 0.02, H); top.rotation.x = -0.12;
+      const band = mk(new THREE.TorusGeometry(0.33, 0.022, 6, 26), rd, 0, 0.02, 0, H); band.rotation.x = Math.PI / 2;
+      const v = mk(new THREE.CylinderGeometry(0.2, 0.2, 0.025, 16, 1, false, Math.PI / 2, Math.PI), M('#1d1d24', 0.25), 0, -0.01, 0.24, H); v.scale.set(1.15, 1, 0.75); v.rotation.x = 0.14;
+      mk(new THREE.BoxGeometry(0.09, 0.06, 0.02), gd, 0, 0.08, 0.335, H); const fl = mk(new THREE.ConeGeometry(0.05, 0.03, 3), M('#b8862e', 0.35, { metalness:0.5 }), 0, 0.092, 0.347, H); fl.rotation.set(Math.PI / 2, 0, Math.PI); fl.scale.set(1, 0.4, 1); break; }
     case 'hat_cap': { const c = mk(G.crown, hatC, 0, -0.02, 0, H); c.scale.set(1.02, 0.62, 1.02); const v = mk(new THREE.BoxGeometry(0.4, 0.03, 0.26), hatC, 0, -0.01, 0.33, H); v.rotation.x = 0.12; mk(new THREE.SphereGeometry(0.03, 8, 6), hatC, 0, 0.18, 0, H); break; }
     case 'hat_skipom': { const rd = M('#d8483f', 0.85), wh = M('#f6f3ea', 0.9), nv = M('#2b4a6a', 0.85);   /* v555 雪松山毛球帽：紅底、白色雪花帶、深藍反摺、頂上一顆大毛球、兩邊護耳垂下來 */
       const c = mk(new THREE.SphereGeometry(0.335, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), rd, 0, -0.06, 0, H); c.scale.set(1, 1.02, 1);
@@ -4293,6 +4298,10 @@ function applyGear(av, gear){
       f.scale.set(1.35, 1.35, 1);
       av.gearAnim = (t, sp) => { f.rotation.z = Math.sin(t * (2 + sp)) * 0.08; }; break; }
     case 'back_bag': { const c = M('#f17b6d', 0.7); mk(new THREE.BoxGeometry(0.3, 0.32, 0.14), c, 0, 0.84, -0.27); mk(new THREE.BoxGeometry(0.31, 0.12, 0.15), M('#d8604f', 0.7), 0, 0.96, -0.27); for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.04, 0.36, 0.03), c, sx * 0.1, 0.84, 0.2).rotation.x = 0.1; break; }
+    case 'back_mailbag': { const cv = M('#b9844c', 0.85), fl = M('#8f5f33', 0.8), lt = M('#5a3a20', 0.7);   /* v662 郵差包（集章卡送的）：斜背的帆布信差包，掛在右邊屁股後面，蓋子上有皮扣、上面露出兩封信 */
+      const bg = new THREE.Group(); bg.position.set(0.2, 0.72, -0.2); bg.rotation.y = -0.7; (av.torsoG || av.g).add(bg); av.gearMeshes.push(bg); mk(new THREE.BoxGeometry(0.3, 0.26, 0.12), cv, 0, 0, 0, bg); const f2 = mk(new THREE.BoxGeometry(0.31, 0.15, 0.13), fl, 0, 0.07, -0.005, bg); f2.rotation.x = 0.04; mk(new THREE.BoxGeometry(0.04, 0.07, 0.02), lt, 0, 0.03, -0.072, bg);
+      for (const [dz, c] of [[-0.06, '#f6f0dd'], [0.03, '#f2d6c2']]){ const e = mk(new THREE.BoxGeometry(0.14, 0.1, 0.008), M(c, 0.8), dz, 0.16, 0.02, bg); e.rotation.z = dz * 2; }
+      for (const z of [0.2, -0.22]){ const st = mk(new THREE.BoxGeometry(0.045, 0.62, 0.02), lt, 0.04, 1.05, z); st.rotation.z = 0.72; } break; }
     case 'back_basket': { const w = M('#c99a5b', 0.85); mk(new THREE.CylinderGeometry(0.15, 0.12, 0.3, 12), w, 0, 0.82, -0.32); for (const y of [0.74, 0.84, 0.94]) mk(new THREE.TorusGeometry(0.14, 0.012, 4, 14), M('#9b6a42', 0.8), 0, y, -0.32).rotation.x = Math.PI / 2; const tail = mk(new THREE.ConeGeometry(0.06, 0.14, 4), M('#2f6fb5', 0.6), 0.04, 1.03, -0.32); tail.rotation.z = 0.4; break; }
     case 'back_cape': { const red = M('#c9302c', 0.65, { side:THREE.DoubleSide }); const pv = new THREE.Group(); pv.position.set(0, 1.1, -0.2); (av.torsoG || av.g).add(pv); av.gearMeshes.push(pv); av.capeP = pv; const c = mk(new THREE.PlaneGeometry(0.56, 0.8, 1, 4), red, 0, -0.39, -0.05, pv); pv.rotation.x = 0.12;   /* 披風掛在脖子後面的一個點上：身體往前傾的時候它會自己垂下來、跑起來往後飄（kidAnimate），不再像一塊板子黏在背上 */ mk(new THREE.TorusGeometry(0.16, 0.03, 6, 14), M('#e8b730', 0.3, { metalness:0.5 }), 0, 1.1, -0.02).rotation.x = Math.PI / 2;
       av.gearAnim = (t, sp) => { c.rotation.x = 0.12 + Math.min(1, sp / 5) * 0.7 + Math.sin(t * 6) * 0.04 * (0.3 + sp / 5); }; break; }
@@ -5032,6 +5041,7 @@ const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
 /* v397 玩家回報「NPC 都長得好像」：以前每個村民都是同一張臉、同一種咖啡色短髮、同樣的膚色和身材，開店的還全部戴漁夫帽＋圓框眼鏡。
    現在每個人有自己的髮型、髮色、膚色、眼睛顏色、高矮胖瘦、鬍子和穿搭（只改村民，玩家不受影響） */
 const NPC_STYLE = [
+  ['郵差', { look:'h0c0s1e0', sc:[1, 1.02], gear:{ hat:'hat_mail', top:'top_polo', pants:'pants_khaki', shoes:'shoes_sneakers', back:'back_mailbag' } }],   /* v662 送包裹的郵差阿信 */
   ['阿潮', { look:'h2c0s2e0', sc:[1, 1.02], gear:{ hat:'hat_cap', top:'top_polo', pants:'pants_shorts', shoes:'shoes_sneakers' } }],
   ['小溪', { look:'h5c2s0e3', sc:[0.93, 0.93], gear:{ hat:'hat_none', top:'top_stripe', pants:'pants_skirt', shoes:'shoes_sandals' } }],
   ['老港', { look:'h0c23s3e1', sc:[1.12, 0.98], fh:'full', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', face:'face_normal' } }],
@@ -14246,6 +14256,86 @@ function completeQuest(q){
   SFX.catch(); flash(`📜 任務完成！+${q.reward} 金幣`, 1.6); const npc = questNpcs.find(n => n.who === q.who); if (npc){ npc.f.say('謝謝你！😄', 'emote', 3); npc.mark = null; FX.emit(npc.f.pos.x, 2, npc.f.pos.z, 18, '#ffd36a', 1, 2, 1); }
   renderTab();
 }
+/* ===== v662 📮 集章卡（登入獎勵）＋ 郵差的包裹（在線獎勵）（作者：「兩個都做，不歸零，都要有，而且我們以後一定會出造型」）
+   ・集章卡：每天第一次進來，村長的集章卡跳出來蓋一個章（7 格一張，漏掉一天不會歸零）；每蓋滿 4 張送一件只有這裡拿得到的造型（STAMP_GEAR，以後出新造型往後加，伺服器 211 的 _stamp_gear 也要加）。
+   ・郵差的包裹：有在玩（摸螢幕、按鍵、釣魚）才算時間，每分鐘回報一次；滿 10、30、60 分鐘郵差阿信會從你後面走過來把包裹交給你。在室內、海底、船上、島上就直接放進「手機 → 今天」，到那裡收。
+   ・蓋過沒、玩了幾分鐘都是伺服器記的（211_stamps.sql）。 */
+const STAMP_GEAR = ['hat_mail', 'back_mailbag'];
+const STAMP_REW = [[['coins', 150]], [['worm', 10]], [['chum_rice', 3]], [['coins', 250]], [['glow', 5]], [['chum_krill', 3]]];
+const STAMP_SEVEN = [[['gold', 3], ['coins', 300]], [['seed_coral', 2], ['coins', 300]], [['chum_gold', 2], ['coins', 300]], [['rainbow', 2], ['coins', 300]]];
+const PLAY_STEPS = [10, 30, 60], PLAY_REW = [[['coins', 120]], [['glow', 5], ['coins', 100]], [['chum_krill', 3], ['coins', 200]]];
+const Stamp = { st: null, shown: false, busy: false, lastIn: Date.now(), pinging: false, cour: null, pend: false, popAt: 0 };
+function stampRew(n){ const p = (n - 1) % 7, c = Math.floor((n - 1) / 7); return p < 6 ? STAMP_REW[p] : STAMP_SEVEN[c % 4]; }
+function stampItem(k){ if (k === 'coins') return { ic: '🪙', nm: '金幣' }; if (k === 'seed_coral') return { ic: '🪸', nm: '珊瑚苗' };
+  const b = BAITS.find(x => x.id === k); if (b) return { ic: b.icon || (k === 'glow' ? '✨' : k === 'gold' ? '🟡' : k === 'rainbow' ? '🌈' : '🪱'), nm: b.name };
+  const c = CHUMS.find(x => x.id === k); if (c) return { ic: '🫙', nm: c.name }; return { ic: '🎁', nm: k }; }
+function stampTxt(got){ return (got || []).map(([k, q]) => { const I = stampItem(k); return k === 'coins' ? `🪙${q}` : `${I.ic} ${I.nm} ×${q}`; }).join('、'); }
+function stampNextGear(){ return STAMP_GEAR.find(id => !(rec.owned || []).includes(id)) || null; }
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { Stamp.lastIn = Date.now(); }, { passive: true, capture: true }));
+async function stampLoad(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('stamp_state'); if (error || !data) return; Stamp.st = data; Stamp.pend = data.claim < 3 && data.mins >= PLAY_STEPS[data.claim]; } catch(e){} }
+function stampCanPop(){ return Cloud.on && Stamp.st && !Stamp.st.today && !Stamp.shown && LS.get('tide.welcomed') && $('#sheet').hidden && !$('#welcome') && !$('#ageGate') && !(typeof F !== 'undefined' && F.phase && F.phase !== 'idle') && !Photo.on; }
+function stampCells(n0, stamped){ const box = el('div', 'stgrid'), base = Math.floor(n0 / 7) * 7;
+  for (let i = 1; i <= 7; i++){ const n = base + i, c = el('div', 'stcell' + (i === 7 ? ' big' : '') + (n <= stamped ? ' done' : '')); c.appendChild(el('div', 'stday', i === 7 ? '第 7 天' : `第 ${i} 天`)); const R = stampRew(n);
+    c.appendChild(el('div', 'stic', R.map(([k]) => stampItem(k).ic).join(''))); c.appendChild(el('div', 'stq', R.map(([k, q]) => k === 'coins' ? q : '×' + q).join(' ')));
+    if (n <= stamped) c.appendChild(el('div', 'stmark', '潮')); c.dataset.n = n; box.appendChild(c); }
+  return box; }
+function stampPop(){ if (Stamp.busy) return; Stamp.shown = true; const st = Stamp.st, n0 = st.n, card = Math.floor(n0 / 7) + 1, ng = stampNextGear(), left = 28 - (n0 % 28);
+  const ov = el('div', 'stpop'); ov.id = 'stampPop'; const pn = el('div', 'stcard panel th-note'); ov.appendChild(pn);
+  pn.appendChild(el('div', 'sttitle', `📮 村長的集章卡・第 ${card} 張`));
+  pn.appendChild(el('p', 'stsay', `村長：「${['今天也來啦！來，蓋個章。', '欸，你來了！章給你蓋。', '每天來村子走走很好喔，蓋章！', '來來來，今天的章。'][n0 % 4]}」`));
+  pn.appendChild(stampCells(n0, n0));
+  pn.appendChild(el('p', 'stsub', ng ? `漏掉一天也不會歸零。再蓋 ${left} 個章送「${GEAR_BY_ID[ng].name}」。` : '漏掉一天也不會歸零。每蓋滿 4 張再送 🪙1000。'));
+  const res = el('p', 'stres', ''); pn.appendChild(res); const btn = el('button', 'tbtn buy', '蓋章'); pn.appendChild(btn); document.body.appendChild(ov);
+  try { SFX.chat(); } catch(e){}
+  btn.addEventListener('click', async () => { if (Stamp.busy) return; if (btn.dataset.done){ ov.classList.add('out'); setTimeout(() => ov.remove(), 260); return; } Stamp.busy = true; btn.disabled = true;
+    try { const { data, error } = await Cloud.sb.rpc('stamp_claim'); if (error) throw error; adoptRow(data.player); st.n = data.n; st.today = true;
+      const cell = pn.querySelector(`.stcell[data-n="${data.n}"]`); if (cell){ const m = el('div', 'stmark new', '潮'); cell.appendChild(m); cell.classList.add('done'); }
+      setTimeout(() => { try { SFX.coin(); } catch(e){} }, 260);
+      let msg = '拿到 ' + stampTxt(data.got); if (data.gear){ const it = GEAR_BY_ID[data.gear]; if (it){ if (!rec.owned.includes(it.id)) rec.owned.push(it.id); msg += `，還有限定造型「${it.icon} ${it.name}」！到「👕 造型」穿上`; } }
+      res.textContent = msg; btn.textContent = '收下'; btn.dataset.done = '1'; saveRecLocal(); if (!$('#sheet').hidden) renderTab();
+      if (data.gear) setTimeout(() => { try { SFX.catch(); } catch(e){} }, 700);
+    } catch(e){ res.textContent = cloudErrMsg(e); btn.textContent = '關閉'; btn.dataset.done = '1'; if (/蓋過/.test(String(e && e.message))) st.today = true; }
+    btn.disabled = false; Stamp.busy = false; }); }
+/* 郵差：從你後面（看不到的地方）走過來，交包裹，再走回去 */
+function courierCanWalk(){ try { return !onIsle && !Dive.on && !House.on && !inIndoor() && !myBoat && !(typeof SKI !== 'undefined' && SKI.on) && !(typeof inStad === 'function' && inStad()) && !Photo.on; } catch(e){ return false; } }
+function courierSpawn(){ const back = cam.yaw + (Math.random() < 0.5 ? 1 : -1) * Math.PI / 2;   /* 從畫面旁邊走進來，看得到他走過來 */
+  for (let k = 0; k < 14; k++){ const a = back + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.35, d = 9, x = me.pos.x + Math.sin(a) * d, z = me.pos.z + Math.cos(a) * d; let ok = true;
+    for (let j = 1; j <= 8 && ok; j++){ const u = j / 8, sx = me.pos.x + (x - me.pos.x) * u, sz = me.pos.z + (z - me.pos.z) * u; try { if ((j < 8 && blocked(sx, sz, 0.3)) || groundHeight(sx, sz) < WATER_LEVEL - 0.2) ok = false; } catch(e){ ok = false; } }
+    if (ok) return [x, z]; } return null; }
+function courierStart(){ if (Stamp.cour) return; if (!courierCanWalk()){ stampPendNote(); return; } const p = courierSpawn(); if (!p){ stampPendNote(); return; }
+  const f = new Fisher({ shirt: '#3d6b4f', hat: '#2f5a40', name: '郵差 阿信', kind: 'npc' }); f.pos.x = p[0]; f.pos.z = p[1]; f.baseY = groundHeight(p[0], p[1]);
+  Stamp.cour = { f, st: 'in', t: 0, sx: p[0], sz: p[1] }; }
+function stampPendNote(){ if (Stamp.noteAt && Date.now() - Stamp.noteAt < 5 * 60000) return; Stamp.noteAt = Date.now(); toast('📮 郵差阿信送包裹來了，先放在「📱 手機 → 今天」，到那裡收'); }
+async function playClaim(f){ if (Stamp.busy) return null; Stamp.busy = true; try { const { data, error } = await Cloud.sb.rpc('play_claim'); if (error) throw error; adoptRow(data.player); Stamp.st.claim = data.step; Stamp.pend = Stamp.st.claim < 3 && Stamp.st.mins >= PLAY_STEPS[Stamp.st.claim]; saveRecLocal();
+    try { SFX.coin(); } catch(e){} flash(`📦 包裹：${stampTxt(data.got)}`, 2.4); if (!$('#sheet').hidden) renderTab(); return data; } catch(e){ if (!f) toast(cloudErrMsg(e)); return null; } finally { Stamp.busy = false; } }
+function courierTick(dt, t){ const C = Stamp.cour; if (!C) return; const f = C.f; C.t += dt;
+  const end = () => { try { f.dispose(); CLOD.all.delete(f); } catch(e){} Stamp.cour = null; };
+  if (C.st !== 'out' && (!courierCanWalk() || C.t > 40)){ end(); if (Stamp.pend) stampPendNote(); return; }
+  const tx = C.st === 'out' ? C.sx : me.pos.x, tz = C.st === 'out' ? C.sz : me.pos.z, dx = tx - f.pos.x, dz = tz - f.pos.z, dd = Math.hypot(dx, dz), sp = C.st === 'out' ? 2.2 : 3.4;
+  if (C.st === 'in' || C.st === 'out'){ const stop = C.st === 'in' ? 1.3 : 0.3;
+    if (dd > stop + 0.05){ const k = Math.min(dd - stop, sp * dt) / dd; f.pos.x += dx * k; f.pos.z += dz * k; f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 1 - Math.exp(-8 * dt)); f.speed = sp; f.baseY = groundHeight(f.pos.x, f.pos.z); if (C.st === 'in' && dd < 4 && !C.called){ C.called = 1; f.say('有你的包裹喔～', '', 2.5); } }
+    else if (C.st === 'in'){ C.st = 'give'; C.g = 0; f.speed = 0; f.rot = Math.atan2(dx, dz); try { startEmote(f, 'wave'); } catch(e){} f.say(['你玩好久了耶，這是你的包裹！', '包裹到了～簽收一下！', '喏，給你的，玩得開心！'][Stamp.st.claim] || '包裹到了！', '', 3);
+      playClaim(f).then(d => { C.ok = !!d; }); }
+    else { end(); return; } }
+  else if (C.st === 'give'){ C.g += dt; f.speed = 0; f.rot = lerpAngle(f.rot, Math.atan2(dx, dz), 0.2); if (C.g > 2.6){ C.st = 'out'; f.say('掰掰～', '', 1.6); } }
+  f.update(dt, t); if (Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z) < 16) f.placeTag(); else f.tag.style.display = 'none'; }
+async function playPing(){ if (!Cloud.on || !Cloud.sb || document.hidden || Stamp.pinging) return; const busy = (typeof F !== 'undefined' && F.phase && F.phase !== 'idle') || me.fishing; if (!busy && Date.now() - Stamp.lastIn > 75000) return;
+  Stamp.pinging = true; try { const { data, error } = await Cloud.sb.rpc('play_ping'); if (!error && data){ if (!Stamp.st) Stamp.st = { n: 0, today: true }; Stamp.st.mins = data.mins; Stamp.st.claim = data.claim; Stamp.pend = data.claim < 3 && data.mins >= PLAY_STEPS[data.claim]; if (Stamp.pend) courierStart(); if (!$('#sheet').hidden && curTab === 'quest') renderTab(); } } catch(e){} Stamp.pinging = false; }
+function stampTick(dt, t){ try { courierTick(dt, t); } catch(e){ if (!stampTick.e){ stampTick.e = 1; console.warn('courier', e); } }
+  if (performance.now() - Stamp.popAt > 2500){ Stamp.popAt = performance.now(); if (stampCanPop()) stampPop(); } }
+setInterval(playPing, 60000);
+function renderStampPanel(body){ if (!Cloud.on) return; if (!Stamp.st){ stampLoad().then(() => { if (Stamp.st && curTab === 'quest' && !$('#sheet').hidden) renderTab(); }); return; }
+  const st = Stamp.st, box = el('div', 'stpanel'), ng = stampNextGear(), left = 28 - (st.n % 28) || 28;
+  box.appendChild(el('div', 'n', `📮 村長的集章卡・已經蓋了 ${st.n} 個章` + (st.today ? '（今天蓋過了 ✅）' : '')));
+  box.appendChild(stampCells(st.today && st.n % 7 === 0 && st.n ? st.n - 1 : st.n, st.n));
+  box.appendChild(el('div', 'sub2', ng ? `每天進來蓋一個，漏掉一天也不會歸零。再蓋 ${left} 個章送限定造型「${GEAR_BY_ID[ng].icon} ${GEAR_BY_ID[ng].name}」。` : '集章限定的造型你都拿到了，之後出新的會再加進來。現在每蓋滿 4 張送 🪙1000。'));
+  if (!st.today){ const b = el('button', 'tbtn buy', '蓋今天的章'); b.addEventListener('click', () => { Stamp.shown = false; stampPop(); }); box.appendChild(b); }
+  const pl = el('div', 'stplay'), m = st.mins || 0, cl = st.claim || 0; pl.appendChild(el('div', 'n', `📦 郵差的包裹・今天玩了 ${m} 分鐘`));
+  const bar = el('div', 'stbar'); const fill = el('i'); fill.style.width = Math.min(100, m / 60 * 100) + '%'; bar.appendChild(fill);
+  PLAY_STEPS.forEach((s, i) => { const k = el('b', i < cl ? 'got' : m >= s ? 'ready' : '', i < cl ? '✅' : '📦'); k.style.left = (s / 60 * 100) + '%'; k.title = `${s} 分鐘：${stampTxt(PLAY_REW[i])}`; bar.appendChild(k); }); pl.appendChild(bar);
+  pl.appendChild(el('div', 'sub2', cl >= 3 ? '今天三個包裹都拿到了，明天再來。' : `有在玩才算時間（站著不動不算）。玩到 ${PLAY_STEPS[cl]} 分鐘郵差阿信會送來：${stampTxt(PLAY_REW[cl])}`));
+  if (Stamp.pend && !Stamp.cour){ const b = el('button', 'tbtn buy', '收包裹'); b.addEventListener('click', () => playClaim()); pl.appendChild(b); }
+  box.appendChild(pl); body.appendChild(box); }
 /* v328「今天可以做的事」（27）：把今天能做的事整理成一張清單，每一項都有按鈕直接過去 */
 function todayItems(){ const L = [], ms = bossNow(), tp = new Date(ms + 8 * 3600000), hm = tp.getUTCHours() * 60 + tp.getUTCMinutes();
   const go = (id) => () => { closeSheet(); const t = TRAVEL.find(x => x.id === id); if (t) travelTo(t); };
@@ -14268,6 +14358,7 @@ function renderToday(body){ const L = todayItems(); if (!L.length) return; const
 function renderQuests(body){
   body.appendChild(el('div', 'shophead')).innerHTML = `<b>📋 今天可以做的事</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
   if (Cloud.on && (!Rumor.st || !Story.list)) Promise.all([Rumor.st ? 0 : rumorLoad(true), Story.list ? 0 : storyLoad(true)]).then(() => { if (curTab === 'quest' && Rumor.st && Story.list) renderTab(); });
+  renderStampPanel(body);
   renderToday(body);
   body.appendChild(el('div', 'dexhead', '📜 村民的請求')).id = 'questList';
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '任務要連上雲端才能接，等一下再試試看。')); return; }
@@ -15196,7 +15287,7 @@ function wearGear(id){
 }
 function buyGear(id){
   const it = GEAR_BY_ID[id]; if (!it || ownsGear(id)) return;
-  if (it.rw){ toast(it.id === 'hat_skipom' ? '🎿 這頂帽子買不到：到雪松山滑雪場滑完一趟就送' : `🎿 這副雪鏡買不到：在雪松山 ${SKI_GOG_S} 秒內滑完就送`); return; }
+  if (it.rw === 'stamp'){ toast('📮 這個買不到：村長的集章卡每蓋滿 4 張送一件'); return; } if (it.rw){ toast(it.id === 'hat_skipom' ? '🎿 這頂帽子買不到：到雪松山滑雪場滑完一趟就送' : `🎿 這副雪鏡買不到：在雪松山 ${SKI_GOG_S} 秒內滑完就送`); return; }
   if (it.love) return redeemLove(id);
   if (rec.coins < it.price){ toast(`金幣不夠，還差 🪙${(it.price - rec.coins).toLocaleString()}`); return; }
   endTryOn(); rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); addCoins(-it.price); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
@@ -15209,7 +15300,7 @@ function redeemLove(id){
   endTryOn(); rec.love -= it.love; rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
   cloudCall('redeem_love', { p_item: id }); SFX.catch(); flash(`${it.icon} 換到了${it.name}！`, 1.4); renderTab();
 }
-const gearCost = it => it.rw ? '🎿 滑雪場獎勵' : it.love ? `💙 ${it.love}` : `🪙 ${it.price.toLocaleString()}`;
+const gearCost = it => it.rw === 'stamp' ? '📮 集章卡獎勵' : it.rw ? '🎿 滑雪場獎勵' : it.love ? `💙 ${it.love}` : `🪙 ${it.price.toLocaleString()}`;
 // 試穿：只在上面的預覽圖換上（不會移動鏡頭，也不會讓別人看到）
 function tryOn(id){ const it = GEAR_BY_ID[id]; if (!it) return; Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: id }); Wardrobe.previewOf = id; renderTab(); }
 function endTryOn(){ Wardrobe.preview = null; Wardrobe.previewOf = null; }
@@ -15635,7 +15726,7 @@ function renderCloset(body){
   else { const grid = el('div', 'cl-grid'), cur = cleanGear(rec.gear), pv = cleanGear(Wardrobe.preview || rec.gear);
     const tile = (id, name, icon, badge, on, onClick) => { const b = el('button', 'cl-it' + (on ? ' on' : '')); const im = el('img'); im.alt = name; im.loading = 'lazy'; if (icon) im.src = icon; b.appendChild(im); b.appendChild(el('span', 'n', name)); if (badge) b.appendChild(el('span', 'b', badge)); b.addEventListener('click', onClick); grid.appendChild(b); };
     for (const it of GEAR.filter(g => g.slot === Closet.slot && (!g.fest || ownsGear(g.id) || festOn(g.fest)))){ const own = ownsGear(it.id), wearing = cur[it.slot] === it.id, trying = pv[it.slot] === it.id && !wearing; let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){}
-      tile(it.id, it.name, ic, wearing ? '✔ 穿著' : own ? '' : it.rw ? '🎿 滑雪' : it.love ? `💙${it.love}` : `🪙${it.price.toLocaleString()}`, wearing || trying, () => { const none = GEAR.find(g => g.slot === it.slot && /_none$/.test(g.id));   /* v244 再點一次已經穿著的就拿掉（帽子、配件、背飾…有「不戴」的分類） */
+      tile(it.id, it.name, ic, wearing ? '✔ 穿著' : own ? '' : it.rw === 'stamp' ? '📮 集章' : it.rw ? '🎿 滑雪' : it.love ? `💙${it.love}` : `🪙${it.price.toLocaleString()}`, wearing || trying, () => { const none = GEAR.find(g => g.slot === it.slot && /_none$/.test(g.id));   /* v244 再點一次已經穿著的就拿掉（帽子、配件、背飾…有「不戴」的分類） */
         if (wearing && none && none.id !== it.id){ endTryOn(); wearGear(none.id); return; }
         if (trying){ Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: cur[it.slot] }); if (Object.keys(cleanGear(rec.gear)).every(k => cleanGear(Wardrobe.preview)[k] === cleanGear(rec.gear)[k])) endTryOn(); renderTab(); return; }
         if (own){ endTryOn(); wearGear(it.id); } else { Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: it.id }); Wardrobe.previewOf = it.id; renderTab(); } }); }
@@ -17266,7 +17357,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
+    await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(stampLoad, 3500); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
   } catch(e){
@@ -19218,6 +19309,8 @@ function renderTab(){
       '大家看得到：球館裡的其他人會看到球桿在瞄準、球在滾、誰站在桌邊；輪到誰瞄準，那個人（玩家或阿喆）會彎腰趴向球桌、一手架桿一手握桿。自己打的時候鏡頭在球桌正上方，所以看不到自己的姿勢。撞球目前沒有金幣獎勵，純粹好玩。',
     ]);
     sec('📜 每日任務、釣魚活動', [
+      '📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一件只有集章拿得到的造型（郵差帽、郵差包，之後還會再加）。',
+      '📦 郵差的包裹：每天有在玩（走路、釣魚、按畫面）滿 10、30、60 分鐘，郵差阿信會走過來送包裹。站著不動不算時間。在室內、海底、船上或島上的時候，包裹會先放在「手機 → 今天」，到那裡收。',
       '🏝️ 遠方荒島・漂流島（求生）：找港口的阿海選「遠方荒島・漂流島」，坐船到東南外海一座沒有人住的大島（v595 變大了：西邊碼頭和沙灘、西北邊的竹林小丘、中間偏東南的小山和瞭望大石、東邊岩岸的潮池，另一頭沙灘上有一艘破船）。走到漂流木、石頭、草叢、竹子、大葉子、椰子樹旁邊按大按鈕就能撿（島上的大石頭也敲得出石頭；漂流木堆裡偶爾有魚骨），東西放「背包 → 🏝️ 荒島」（12 格，一格最多 20 個，跟村子的背包分開、不能拿回村子賣）。撿過的地方過幾分鐘會再長出來。村子的釣竿在島上不能用。',
       '🍗 荒島求生：在漂流島上左上角會出現飽足度和體力（點一下打開荒島背包）。飽足度每 9 秒少 1；餓到 0 體力就開始掉。晚上離點著的營火 6 公尺外、又不在小木屋裡會冷；下雨沒站在遮雨棚或小木屋下面會淋濕，暴風雨更傷，這些都會掉體力。吃飽（50 以上）又沒在掉的時候體力會慢慢回來。吃東西：在荒島背包按「吃」——椰子 +10、生的小魚 +8、烤小魚 +20、生的小螃蟹 +5、烤螃蟹 +12，吃魚會剩一根魚骨（2 根可以磨成骨頭魚鉤）。退潮的時候東邊沙灘的潮池可以撿小魚、小螃蟹（看得到裡面有小魚在游）；漲潮時潮池會整個泡在海水下面，要等退潮。站在點著的營火旁邊按「烤」。小木屋裡的床可以「睡覺」：體力回得快、晚上不會冷，但不能讓天變亮（全村是同一個時間）。體力 0 會倒下：荒島背包的東西掉一半（竹竿、魚鉤不會掉），有小木屋在小木屋醒來，沒有就被阿海載回港邊。在村子自己家的床上躺 5 秒，下一趟上島體力上限變 120。碼頭最前面按「回村子」坐船回去。',
       '🎣 荒島釣魚：做好手作竹竿以後，在漂流島的岸邊面向海就能拋竿（村子的釣竿、魚餌、料理加成在島上都不能用）。島上有 5 種魚：條紋天竺鯛、條斑副緋鯉、扁鶴鱵、波紋裸胸鯙、藍鰭鰺（有的白天多、有的晚上多）。釣到的魚變成食物放進荒島背包（1 公斤以上算大魚：生的 +15、烤過 +45，吃完剩 2 根魚骨），不進村子的圖鑑和魚缸；種類和最重紀錄記在「荒島背包 → 📒 荒島筆記」。',

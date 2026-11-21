@@ -6258,5 +6258,17 @@
  "撞球館的爵士": "Billiard Hall Jazz",
  "體育場加油": "Stadium Cheer",
  "雪松山": "Cedar Mountain",
- "小烏龜的殼是一片一片的鱗甲，光澤 80 以上鱗甲中間會出現黃色花紋、100 有金色殼邊。牠走路頭會一點一點，停下來會眨眼，偶爾把頭縮進殼裡再伸出來。": "The little turtle's shell is made of separate scutes. At shine 80+ the scutes get yellow patterns, at 100 a gold rim. It bobs its head as it walks, blinks when it stops, and now and then pulls its head into its shell."
+ "小烏龜的殼是一片一片的鱗甲，光澤 80 以上鱗甲中間會出現黃色花紋、100 有金色殼邊。牠走路頭會一點一點，停下來會眨眼，偶爾把頭縮進殼裡再伸出來。": "The little turtle's shell is made of separate scutes. At shine 80+ the scutes get yellow patterns, at 100 a gold rim. It bobs its head as it walks, blinks when it stops, and now and then pulls its head into its shell.",
+ "📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一件只有集章拿得到的造型（郵差帽、郵差包，之後還會再加）。": "📮 Village chief's stamp card: the first time you play each day, the card pops up and you get a stamp. 7 stamps per card, and stamp 7 is the best. Missing a day doesn't reset it. Every 4 full cards gives you an outfit you can only get from stamps (mail carrier cap, mail bag, more later).",
+ "📦 郵差的包裹：每天有在玩（走路、釣魚、按畫面）滿 10、30、60 分鐘，郵差阿信會走過來送包裹。站著不動不算時間。在室內、海底、船上或島上的時候，包裹會先放在「手機 → 今天」，到那裡收。": "📦 Mail carrier's parcels: when you've actually played (walking, fishing, tapping) for 10, 30 and 60 minutes in a day, the mail carrier walks over with a parcel. Standing still doesn't count. Indoors, underwater, on a boat or on an island, the parcel waits in Phone → Today.",
+ "📮 村長的集章卡": "📮 Stamp card",
+ "郵差帽": "Mail carrier cap",
+ "郵差包": "Mail bag",
+ "蓋章": "Stamp it",
+ "收下": "Take it",
+ "收包裹": "Get parcel",
+ "蓋今天的章": "Get today's stamp",
+ "有你的包裹喔～": "Parcel for you~",
+ "📮 集章卡獎勵": "📮 Stamp reward",
+ "📮 集章": "📮 Stamps"
 }

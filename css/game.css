@@ -1996,3 +1996,34 @@ body.ui3 #mini3{background:linear-gradient(#f4fbff,#d4eeff)!important;border:3px
 #mySeaChip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb,0px) + 70px);z-index:7;padding:6px 14px;font-size:13px;font-weight:700;color:#203a48;background:#fff!important;border:3px solid #2b8fe6!important;border-radius:999px!important;box-shadow:0 0 0 2px #0d4a8c,0 4px 0 2px #0d4a8c!important;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 #mySeaChip[hidden]{display:none}
 #aquaChip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb,0px) + 70px);z-index:7;padding:6px 14px;font-size:13px;font-weight:700;color:#203a48;background:#fff!important;border:3px solid #2b8fe6!important;border-radius:999px!important;box-shadow:0 0 0 2px #0d4a8c,0 4px 0 2px #0d4a8c!important;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis;pointer-events:none}#aquaChip[hidden]{display:none}
+/* ===== v662 📮 集章卡、郵差的包裹 ===== */
+.stpop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(8,24,36,.45);animation:stFade .25s ease-out}
+.stpop.out{opacity:0;transition:opacity .25s}
+@keyframes stFade{from{opacity:0}to{opacity:1}}
+.stcard{width:min(92vw,420px);padding:16px 14px 14px;background:#fdfaf1;border:3px solid #2c5d73;border-radius:16px;box-shadow:0 0 0 3px #bfe3f2 inset,0 16px 40px rgba(0,0,0,.4);color:#3b2b1a;text-align:center;animation:stIn .38s cubic-bezier(.2,1.5,.4,1)}
+@keyframes stIn{from{transform:translateY(30px) scale(.85) rotate(-3deg);opacity:0}to{transform:none;opacity:1}}
+.sttitle{font-weight:800;font-size:18px;color:#1f4556;margin-bottom:6px}
+.stsay{margin:4px 0 10px;font-size:14px}
+.stsub{margin:10px 0 4px;font-size:12.5px;color:#6b5a45}
+.stres{min-height:1.2em;margin:6px 0;font-weight:700;color:#b5521a;font-size:14px}
+.stgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stcell{position:relative;background:#f3ead2;border:2px dashed #c9b48a;border-radius:10px;padding:5px 2px 4px;min-height:58px;overflow:hidden}
+.stcell.big{grid-column:span 1;background:#ffe9b3;border:2px solid #e0a83a}
+.stcell.done{background:#efe3c4}.stcell.done .stic,.stcell.done .stq{opacity:.55}
+.stday{font-size:11px;color:#7a6a52}
+.stic{font-size:20px;line-height:1.3}
+.stq{font-size:11px;font-weight:700;color:#5b4a33}
+.stmark{position:absolute;right:2px;top:2px;width:26px;height:26px;border:2.5px solid #d2342a;border-radius:50%;color:#d2342a;font:900 13px/21px serif;transform:rotate(-14deg);opacity:.85;background:rgba(255,240,235,.55)}
+.stmark.new{animation:stStamp .42s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes stStamp{0%{transform:scale(2.6) rotate(-40deg);opacity:0}60%{transform:scale(.9) rotate(-10deg);opacity:1}100%{transform:scale(1) rotate(-14deg);opacity:.82}}
+.stcard .tbtn{margin-top:6px;min-width:130px;font-size:16px;padding:9px 18px;border-radius:12px;border:2px solid #9a4f00;background:linear-gradient(#ffd25a,#ff9a1f);color:#4a2400;font-weight:800;box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 3px 0 #9a4f00}
+.stpanel{margin:8px 0 12px;padding:10px;border-radius:12px;background:#f8f1de;border:2px solid #e2d3ad}
+.stpanel>.n,.stplay>.n{font-weight:800;margin-bottom:6px}
+.stpanel .sub2{margin:6px 0}
+.stplay{margin-top:10px;padding-top:8px;border-top:2px dashed #e2d3ad}
+.stbar{position:relative;height:12px;margin:12px 10px 14px;border-radius:7px;background:#e6dcc2;box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
+.stbar i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:linear-gradient(#7fd3f0,#2f8fc0)}
+.stbar b{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:18px;filter:grayscale(.8);opacity:.7}
+.stbar b.ready{filter:none;opacity:1;animation:stBob 1s ease-in-out infinite}
+.stbar b.got{filter:none;opacity:1;font-size:15px}
+@keyframes stBob{50%{transform:translate(-50%,-70%)}}
