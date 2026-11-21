@@ -9349,7 +9349,7 @@ async function trapTake(t){ if (Trap.busy) return; Trap.busy = true; let got = [
 /* v389 標記放流：幫魚掛上標籤再放走；之後別人釣到牠，兩邊都有獎勵、都會收到通知 */
 function tagNoteShow(n){ if (!n || !n.id || !n.k) return; const key = n.k + n.id; if (LS.get('tide.tagSeen', '') === key) return; LS.set('tide.tagSeen', key); const f = FISH_BY_ID[n.f], fn = f ? f.name : '魚';
   setTimeout(() => { try { SFX.catch(); } catch(e){} if (n.k === 'catch'){ flash('🏷️ 這條魚身上有標籤！', 2.2);
-      { const cc = $('#catchCard'), bb = $('#ccBadges'); if (cc && !cc.hidden && bb){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `🏷️ 這條魚的故事：${n.name || '釣客'} ${n.days ? n.days + ' 天前' : '今天'}放流牠時只有 ${fmtKg(n.w)}`; bb.appendChild(x); } }   /* v586 漁獲卡片上直接寫出這條魚的故事 */ toast(`是 ${esc(n.name || '釣客')} ${n.days ? n.days + ' 天前' : '今天'}標記放流的${esc(fn)}（當時 ${fmtKg(n.w)}）。謝謝你找到牠　🪙+50`); }
+      { const cc = $('#catchCard'), bb = $('#ccBadges'); if (cc && !cc.hidden && bb){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `這條魚的故事：${n.name || '釣客'} ${n.days ? n.days + ' 天前' : '今天'}放流牠時只有 ${fmtKg(n.w)}`; bb.appendChild(x); } }   /* v586 漁獲卡片上直接寫出這條魚的故事 */ toast(`是 ${esc(n.name || '釣客')} ${n.days ? n.days + ' 天前' : '今天'}標記放流的${esc(fn)}（當時 ${fmtKg(n.w)}）。謝謝你找到牠　🪙+50`); }
     else { flash('🏷️ 你標記的魚被釣到了！', 2.2); toast(`${esc(n.name || '釣客')} 釣到了你標記放流的${esc(fn)}（現在 ${fmtKg(n.w)}）　💙+5`); } logMsg('', n.k === 'catch' ? `你釣到 ${n.name || '釣客'} 標記放流的${fn}` : `${n.name || '釣客'} 釣到了你標記放流的${fn}`, true); }, 2800); }
 async function tagRelease(x, f){ const p = releaseLocal(x) + 1; rec.love = (rec.love || 0) + 1; saveRecLocal(); renderTab(); toast(`🏷️ ${esc(f.name)} 掛上標籤游回大海了 💙 愛海點數 +${p}。以後有人釣到牠，會通知你`);
   if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('tag_release', { p_ts: x.t }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ toast(cloudErrMsg(e)); } } }
@@ -9929,6 +9929,7 @@ function renderTagBar(timeOnly){
 
 /* ================= 天氣、潮汐、今日情報（全服同步：都用真實時間算，大家看到的一樣）================= */
 const WX_BLOCK = 9 * 60 * 1000, TIDE_PERIOD = 18 * 60 * 1000;
+const WX_SAY = { sunny:'天氣好，出去走走吧。', cloudy:'今天雲多，好魚反而比較敢出來。', rain:'下雨天魚比較貪吃，雷魚、鯰魚、鰻魚都會出來。', fog:'霧這麼濃，看不遠，不過稀有的魚喜歡這種天。', typre:'颱風要來了，這種時候魚咬得最兇，但別待太晚。', tymid:'颱風天別開船！在岸邊釣，運氣好會撈到被浪翻上來的深海魚。', typost:'颱風走了，沙灘上沖上來一堆東西，快去撿。', storm:'風浪這麼大，海上的大傢伙都醒了，拉的時候小心。' };   /* v645／v646 釣具店老闆對天氣的說法（店裡和天氣通知共用） */
 const WEATHERS = {
   sunny:  { name:'晴天',   icon:'☀️', w:45, desc:'天氣很好，一切正常。' },
   cloudy: { name:'多雲',   icon:'⛅', w:25, desc:'雲多一點，稀有魚稍微多一些。', rare:1.05, light:0.82 },
@@ -10143,7 +10144,7 @@ function updateEnv(dt, t){
   const ms = Date.now(); Env.tide = tideNow(ms);
   const wx = (location.hash.match(/wx=(\w+)/) || [])[1]; Env.wx = WEATHERS[wx] ? wx : weatherAt(ms);
   const W = WEATHERS[Env.wx]; try { tyTick(ms, dt, t); } catch(e){} try { resTick(dt); } catch(e){} try { ohTick(dt); } catch(e){}
-  if (Env.lastWx !== Env.wx){ if (Env.lastWx){ if (!/^ty/.test(Env.wx)) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了：${W.desc}`); } else { Env.k = W.light || 1; setTimeout(() => ticker(`🧔 釣具店老闆的今日情報：${esc(dailyTip().text)}　現在 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}`), 4000);
+  if (Env.lastWx !== Env.wx){ if (Env.lastWx){ if (!/^ty/.test(Env.wx)) ticker(`${W.icon} 天氣變成<b>${W.name}</b>了。老闆說：「${WX_SAY[Env.wx] || W.desc}」`); } else { Env.k = W.light || 1; setTimeout(() => ticker(`釣具店老闆：「${esc(dailyTip().text)}」`), 4000);
       const chip = $('#wxChip'); if (chip) chip.addEventListener('click', () => { try { SFX.click(); } catch(e){} tideCard(); }); }
     Env.lastWx = Env.wx; }
   // 畫面：光線變暗、下雨、起霧、打雷
@@ -15650,7 +15651,7 @@ function renderShop(body){
   if (shopMode === 'sell' && shopName === '魚市場・賣魚') fishHallSeg(body, 'shop');
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
   if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'), T = dailyTip(), sp = SPOT_BY_ID[T.spot], tf = FISH_BY_ID[T.fish], sf = SEASONS[SEASON].fish.map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).slice(0, 3);   /* v645 文字口氣：老闆用講的，不是天氣預報 */
-    const wx = { sunny:'天氣好，出去走走吧。', cloudy:'今天雲多，好魚反而比較敢出來。', rain:'下雨天魚比較貪吃，雷魚、鯰魚、鰻魚都會出來。', fog:'霧這麼濃，看不遠，不過稀有的魚喜歡這種天。', typre:'颱風要來了，這種時候魚咬得最兇，但別待太晚。', tymid:'颱風天別開船！在岸邊釣，運氣好會撈到被浪翻上來的深海魚。', typost:'颱風走了，沙灘上沖上來一堆東西，快去撿。', storm:'風浪這麼大，海上的大傢伙都醒了，拉的時候小心。' }[Env.wx] || esc(W.desc);
+    const wx = WX_SAY[Env.wx] || esc(W.desc);
     const td = /乾|退/.test(Env.tide.name) ? '水在退，海邊不太好釣，河邊湖邊比較穩。' : '正在漲潮，海邊、外海最好釣。';
     tip.innerHTML = `<b>老闆說</b><span>「今天${sp ? esc(sp.label) : ''}那邊${tf ? '的' + esc(tf.name) : ''}特別多，晚了就被釣光囉。」</span><span>「${esc(SEASONS[SEASON].name)}了，${sf.map(esc).join('、')}這幾種現在最多。」</span><span>「${wx}${SEA_SPOTS.size ? td : ''}」</span>`; body.appendChild(tip); }
   const seg = el('div', 'seg'), tailor = shopName === '阿綾服裝店';
@@ -16173,17 +16174,20 @@ function showCatch(f, w, res){
   if (F.brood){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = '🐣 嘴裡含著小魚・放流多 💙5'; b.appendChild(x); }
   if (f.rs && F.rsTag){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `🦈 ${rsLabel(F.rsTag)}・身上 ${rsInfo(F.rsTag).scars} 道叉叉・整片海只有一小群`; b.appendChild(x); }
   if (f.of){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `✨ 罕見變種（${FISH_BY_ID[f.of].name}）`; b.appendChild(x); if (res.isNew){ SFX.catch(); flash(`✨ 發現新的變種：${f.name}！`, 2.4); } }
-  if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '圖鑑新登錄'; b.appendChild(x); }
-  if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '個人新紀錄'; b.appendChild(x); }
+  if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '第一次釣到'; b.appendChild(x); }
+  if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '你釣過最大的'; b.appendChild(x); }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
   if (Tny.on){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `⏱️ 大賽 +${w.toFixed(2)}kg`; b.appendChild(x); }
   $('#ccName').textContent = (F.ev ? '✨演化・' : '') + (gx ? gx.name : f.name);
+  { let sy = $('#ccSay'); if (!sy){ sy = document.createElement('div'); sy.id = 'ccSay'; sy.className = 'say'; $('#ccName').before(sy); }   /* v646 文字口氣：釣起來的那一刻，角色自己嘀咕一句（不同情況不同句子，隨機挑） */
+    const smallF = undersized(f, w), P = smallF ? ['哎呀，好小一隻', '小不點，下次再見', '這條還沒長大呢'] : f.rarity === '傳說' ? ['……真的假的？', '手在抖', '這要拍照才有人信', '今天是我的日子'] : res.isBest ? ['手好痠，但值得', '這條是目前最大的！', '終於破紀錄了'] : res.isNew ? ['欸？這是什麼魚', '第一次看到這種', '要記下來'] : f.rarity === '稀有' ? ['喔！不錯喔', '今天運氣不錯', '這條漂亮'] : ['好，收工……再一竿', '晚餐有著落了', '不錯的一條', '手感來了', '小魚也是魚'];
+    sy.textContent = P[Math.floor(Math.random() * P.length)]; }
   if (F.ev){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = '🧬 演化花色・大家一起把這種魚養得很好才會出現'; b.appendChild(x); }
   if (gx){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `🧬 ${gpyLabel({ gp: F.gp })}・可以配種`; b.appendChild(x); }
   const small = undersized(f, w), lp = lovePts(f, w);
   if (small){ const x = document.createElement('span'); x.className = 'badge small'; x.textContent = `📏 未達尺寸（${sizeMin(f).toFixed(2)}kg 以上）`; b.appendChild(x); }
   $('#ccW').innerHTML = w.toFixed(2) + '<small>kg</small>' + (f.rs ? `<small class="ccp">・不能賣</small>` : `<small class="ccp">・可賣 🪙${fishPrice(f, w)}${small ? '（半價）' : ''}</small>`);
-  $('#ccDesc').textContent = small ? '這條還太小，放牠回去長大吧！放流可以得到比較多愛海點數，帶走只能賣半價。' : f.desc;
+  $('#ccDesc').textContent = small ? '還是小不點，放牠回去長大吧。放流拿的愛海點數比較多，帶走只能賣半價。' : f.desc;
   ccFish = f; const rb = $('#ccRel'); rb.innerHTML = f.norel ? '🚫 外來種不能放流' : `放流 💙+${lp}`; rb.disabled = !!f.norel; rb.classList.toggle('hot', small && !f.norel);
   $('#ccOk').textContent = small ? '還是帶走' : '放進魚缸';
   { const sb = $('#ccShare'), big = f.rarity !== '常見' || !!f.of || res.isNew || res.isBest; sb.hidden = !big; sb.onclick = () => shareCard({ kind: 'fish', fish: gx || f, title: gx ? gx.name : f.name, sub: `${w.toFixed(2)} kg・${f.rarity}`, place: SPOT_BY_ID[f.spot].label, img: $('#ccCanvas'), badges: [res.isNew ? '📖 圖鑑新登錄' : '', res.isBest ? '🏆 個人新紀錄' : '', f.of ? '✨ 罕見變種' : ''].filter(Boolean) }); }

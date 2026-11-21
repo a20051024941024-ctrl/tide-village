@@ -1925,3 +1925,17 @@ body.ui3 #sheet.th-wood #tabs button[aria-selected="true"]{background:#f1dfb8;co
 #sheet.th-wood header:has(#sheetTitle:empty){padding:4px 8px;justify-content:flex-end}
 #sheet .shoplist .meta{white-space:pre-line}
 #sheet.th-wood .empty{background:#fbf1dc;border-color:#8a6038;color:#6b4a2e} #sheet.th-note .empty{background:transparent;border-color:#b9cdd8;color:#5d6d74}
+/* ===== v646 釣到魚的卡片：一張紙做的釣魚紀錄卡（作者：太 AI） ===== */
+#catchCard .card{background:#fdf8ea;border-radius:6px;box-shadow:0 3px 0 #d8caa4,0 18px 40px rgba(10,25,40,.4);position:relative;transform:rotate(-.6deg);
+  background-image:repeating-linear-gradient(180deg,transparent 0 25px,rgba(44,93,115,.08) 25px 26px)}
+#catchCard .card::before{content:"";position:absolute;inset:7px;border:1.5px dashed #c9b88e;border-radius:4px;pointer-events:none}
+#catchCard .card::after{content:"";position:absolute;top:-9px;left:50%;width:84px;height:20px;margin-left:-42px;background:rgba(238,206,112,.8);transform:rotate(3deg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+#catchCard .say{font-family:var(--f-display);font-size:14px;color:#a0663a;margin-top:2px;transform:rotate(-1deg)}
+#catchCard .nm{color:#203a48}
+#catchCard .w{color:#2c5d73}
+#catchCard .d{color:#5d6d74}
+#catchCard .badge,#catchCard .chip{border-radius:3px}
+#catchCard .badge.new{background:transparent;color:#b23a2a;border:2px solid #b23a2a;font-family:var(--f-display);font-weight:400;transform:rotate(-3deg)}
+#catchCard .pbtn{background:#2c5d73;border-radius:18px;font-family:var(--f-display);font-weight:400}
+#catchCard .pbtn.ghost{background:#fff;color:#203a48;border:2px solid #203a48}
+#catchCard .pbtn.hot{background:#3f7a5a;color:#fff;border-color:#24493a}
