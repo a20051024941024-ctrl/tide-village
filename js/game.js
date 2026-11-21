@@ -4899,6 +4899,9 @@ function kidFidget(f, K, W, v){ const T = now(); let busy = false; if (f === me)
 /* v640 小動作第二批：① 坐著（碼頭邊、長椅）的時候兩隻小腿會輪流慢慢晃；② 下雨天在外面、沒穿雨衣、站著或走路時，肩膀縮起來、頭低低的，偶爾抖一下。
    都是在骨架動畫算完以後再疊一點點旋轉，所以不用新的動作檔。 */
 function kidPostPose(f, K, dt){ const B = K.B; if (!B || !B.lowerlegl) return; const T = now(), k = Math.min(1, dt * 3);
+  if (f.fishing && B.chest && ((f.windup || 0) > 0.02 || f.castT >= 0) && !f.sitting){ const pw = f.castPow == null ? 0.7 : f.castPow, cd = 0.42 + 0.22 * pw;   /* v660 甩竿時身體也跟著：蓄力往後仰、身體轉開；放開時往前壓，力越大壓越多 */
+    let bk = (f.windup || 0), fw = 0; if (f.castT >= 0){ const u = f.castT / cd; bk = u < 0.25 ? 1 - u / 0.25 : 0; fw = u < 0.25 ? u / 0.25 : Math.max(0, 1 - (u - 0.25) / 0.75); fw *= 0.5 + pw; }
+    B.chest.rotation.x += -0.22 * bk + 0.28 * fw; B.chest.rotation.y += 0.35 * bk - 0.15 * fw; if (B.spine) B.spine.rotation.x += 0.12 * fw - 0.08 * bk; }
   const sitOn = f.sitting && !f.fishing && !(f === me ? myBoat : f.boatMesh) && (K.w.sit || 0) > 0.6;   /* 坐著釣魚的時候不晃（專心釣） */
   f.swA = (f.swA || 0) + ((sitOn ? 1 : 0) - (f.swA || 0)) * k;
   if (f.swA > 0.01){ const ph = T * 2.1 + (f.av.blinkAt || 0), kick = (q, b) => b > 0.6 ? -(0.5 + 0.5 * Math.sin(q)) * Math.min(0.45, b - 0.4) * f.swA : 0;   /* v654 作者：「你的腳是反方向的」→ 以前前後都晃，往後晃小腿會縮到椅子底下，從背後看像腳反過來。現在只往前踢、再放回原本坐姿，膝蓋彎不夠的時候不晃 */
@@ -5017,7 +5020,7 @@ function kidAnimate(f, dt, t){
   if (ac.dive) ac.dive.timeScale = 0.6 + Math.min(1, v / 2.5) * 0.9;
   // 甩竿：蓄力時停在往後舉的那一格，放開時從那裡往前甩
   if (ac.fish_cast){ const c = ac.fish_cast, d = c.getClip().duration;
-    if (f.castT >= 0){ if (!K.casting){ K.casting = true; c.reset(); c.time = d * 0.38; c.paused = false; c.timeScale = 1.8; } }
+    if (f.castT >= 0){ if (!K.casting){ K.casting = true; c.reset(); c.time = d * 0.38; c.paused = false; c.timeScale = 1.2 + 1.1 * (f.castPow == null ? 0.7 : f.castPow); } }
     else if ((f.windup || 0) > 0.02){ K.casting = false; c.paused = true; c.time = d * 0.38 * Math.min(1, f.windup); }
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
@@ -5167,14 +5170,15 @@ class Fisher {
     a.rod.visible = this.fishing || !!this.restRod;   /* v621 坐在釣魚裝備的椅子上還沒拋：竿子拿在手上（沒有竿架時） */
     if (this.fishing){
       // 甩竿動畫：蓄力時把竿子往後舉到肩膀上（windup），放開時用力往前甩（castT），竿尖甩過頭再回來
-      const CS = CAST_STYLE[this.rodType || 'cast'] || CAST_STYLE.cast; let pz = -(this.windup || 0) * CS.w;
-      if (this.castT >= 0){ this.castT += dt; const k = this.castT / 0.5; if (k >= 1) this.castT = -1; else pz = k < 0.4 ? (-1 + (k / 0.4) * 2.25) * (k < 0.2 ? CS.w : CS.f) : (1.25 - ((k - 0.4) / 0.6) * 1.25) * CS.f; }
+      const CS0 = CAST_STYLE[this.rodType || 'cast'] || CAST_STYLE.cast, pw = this.castPow == null ? 0.7 : this.castPow, CS = { w: CS0.w * 1.35, f: CS0.f * (0.7 + 0.9 * pw), raise: CS0.raise };   /* v660 作者：「甩竿的幅度不夠大」→ 往後舉更多；往前甩多大看出多少力 */
+      let pz = -(this.windup || 0) * CS.w; const cd = 0.42 + 0.22 * pw;   /* 全力的甩法比較久、比較大 */
+      if (this.castT >= 0){ this.castT += dt; const k = this.castT / cd; if (k >= 1) this.castT = -1; else pz = k < 0.4 ? (-1 + (k / 0.4) * 2.25) * (k < 0.2 ? CS.w : CS.f) : (1.25 - ((k - 0.4) / 0.6) * 1.25) * CS.f; }
       const back = Math.max(0, -pz), fwd = Math.max(0, pz); T.zR = CS.raise && back > 0 ? -back * CS.raise * 0.4 : 0;   /* 遠投：手舉高一點 */
       T.aR = -1.0 - this.bend * 0.3 - back * 0.55 + fwd * 0.3; T.aL = -0.7 - this.bend * 0.2 - back * 0.4 + fwd * 0.2; T.zL = 0.08 * 0;   /* 手不要舉太高：主要是竿子往後倒 */
       T.tw = -back * 0.12 + fwd * 0.08; T.pit += fwd * 0.06 - back * 0.03;
       /* v508 作者：「打大白鯊動作好奇怪、沒有拉竿的感覺」→ 用力拉（tug）的時候整個人往後仰、竿子往後扳、手往上提；被魚扯（yank）的時候往前一傾 */
       const tg = this.tug || 0, yk = this.yank || 0; T.pit += -tg * (a.kid ? 0.95 : 0.32) + yk * (a.kid ? 0.45 : 0.15); T.aR -= tg * 0.35; T.aL -= tg * 0.3; T.bob = (T.bob || 0) - tg * 0.04;
-      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.1 + fwd * 0.5 - tg * 0.55 + yk * 0.35 + (tg > 0.3 ? Math.sin(t * 23) * 0.025 * tg : 0); if (a.hd) rodHDAnim(this, dt, t);
+      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.25 + fwd * 0.7 - tg * 0.55 + yk * 0.35 + (tg > 0.3 ? Math.sin(t * 23) * 0.025 * tg : 0); if (a.hd) rodHDAnim(this, dt, t);
       this.castSnap = this.castT >= 0 || (this.windup || 0) > 0;
     } else this.castSnap = false;
     if (this.held){
@@ -6500,8 +6504,16 @@ function biteWait(c){
 }
 /* v637 王者竿甩竿的金色光暈、5 級專用竿對上打法時竿尖發光 */
 function rodTipFx(col, n){ try { const a = (FP.act && FP.tip) ? null : me.av; const v = new THREE.Vector3(); (a ? a.tip : FP.tip).getWorldPosition(v); FX.emit(v.x, v.y, v.z, n, col, 0.35, 0.9, 0.7); } catch(e){} }
+/* v660 作者：「如果一個人在拉魚的時候還會坐在椅子上嗎」→「要」：坐著釣，中大型的魚（3 公斤以上）、稀有、傳說上鉤，或線繃很緊的時候會站起來拉
+   （往前或往後半步踩穩），拉上來捧著魚歡呼完、再拋竿或收竿時坐回椅子。 */
+function fishStandTick(){ if (!mySeat){ if (me.standFish) me.standFish = false; return; } if (mySeat.furnLie || mySeat.bed || mySeat.room) return;
+  const ph = F.phase, big = (F.weight || 0) >= 3 || (F.fish && (F.fish.rarity === '稀有' || F.fish.rarity === '傳說')) || (F.T || 0) > 0.85;
+  if (!me.standFish && ph === 'reeling' && big){ const S = { x: me.pos.x, z: me.pos.z, y: me.baseY }; me._seatS = S;
+    let tx = S.x, tz = S.z; for (const d of [0.38, -0.38]){ const x = S.x + Math.sin(me.rot) * d, z = S.z + Math.cos(me.rot) * d; if (walkable(x, z) && !blocked(x, z, 0.2)){ tx = x; tz = z; break; } }
+    me.standFish = true; me.sitting = false; me.pos.x = tx; me.pos.z = tz; me.baseY = groundHeight(tx, tz); try { Jump.gy = me.baseY; } catch(e){} pushPresence(true); return; }
+  if (me.standFish && (ph === 'idle' || ph === 'waiting' || ph === 'charging')){ const S = me._seatS; me.standFish = false; if (S){ me.pos.x = S.x; me.pos.z = S.z; me.baseY = S.y; try { Jump.gy = S.y; } catch(e){} } me.sitting = true; pushPresence(true); } }
 function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a', 22); setTimeout(() => rodTipFx('#fff1b0', 14), 120); }, 60);
-  const s = F.spot; const c = F.charge; F.castCharge = c;
+  const s = F.spot; const c = F.charge; F.castCharge = c; me.castPow = c;
   if (s && s.id !== 'shrimp' && s.id !== 'icelake' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, ...aimDir(s), d0);
     if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
   { const fit = rodFit(s && s.id); if (fit === 'bad' && !doCast.told[s.id]){ doCast.told[s.id] = 1; const best = Object.entries(ROD_TYPES).find(([, T]) => T.fit && T.fit.includes(s.id)); setTimeout(() => toast(`${ROD_TYPES[rodType(curRod())].name}在這裡不太好用${best ? `，${s.short}比較適合用${best[1].icon}${best[1].name}（包包裡可以換）` : '，換成甩竿試試'}`), 900); } }
@@ -6517,7 +6529,7 @@ function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a'
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
   F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`💨 砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了！要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`🎯 落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
-  me.flying = { from, to, t:0, delay:0.17, dur: 0.5 + c*0.3, h: 0.5 + c*0.7, done(){ SFX.plop(); } };   /* v519 作者：「甩竿出去線應該直直往前飛」→ 拋物線壓低（以前最高 2.8 公尺，現在 1.2），線往前射出去 */ me.windup = 0; me.castT = 0;
+  me.flying = { from, to, t:0, delay:0.17, dur: 0.42 + c * 0.6, h: 0.35 + c * 1.0, done(){ SFX.plop(); } };   /* v660 作者：「線不能依據出力決定丟多遠或動畫嗎」→ 輕拋飛得快又低、全力一甩飛比較久、弧線高一點 */   /* v519 作者：「甩竿出去線應該直直往前飛」→ 拋物線壓低（以前最高 2.8 公尺，現在 1.2），線往前射出去 */ me.windup = 0; me.castT = 0;
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.roll = null; F.rollWait = 0; F.pre = null; F.probe = null; F.lastNib = 0;
   if (s.wild){ F.pre = wildPickFish(); }   /* v593 荒島：手機自己抽（不經過伺服器、不進村子的紀錄） */
@@ -6698,12 +6710,13 @@ function updateFishing(dt, t){
   try { flkTick(dt, t); } catch(e){ if (!flkTick.err){ flkTick.err = 1; console.warn('flk', e); } }
   try { smTick(dt, t); } catch(e){ if (!smTick.err){ smTick.err = 1; console.warn('sea', e); } }
   { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
+  fishStandTick();
   const act = $('#act');
   if (F.phase === 'charging'){
     F.chargeT += dt; F.charge = 1 - Math.abs(((F.chargeT / 1.3) % 2) - 1);
     { const k = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0); if (k) F.aim = clamp((F.aim || 0) + k * dt * 0.9, -0.6, 0.6); if (F.spot && F.spot.dir){ const [ax, az] = aimDir(F.spot); me.rot = Math.atan2(ax, az); } }   /* 左右瞄準 */
     $('#chargeFill').style.width = (F.charge*100).toFixed(1) + '%';
-    me.bend = F.charge * 0.25; me.windup += (0.8 - me.windup) * Math.min(1, dt * 6);   /* 蓄力時竿子往後舉一次就停住（不會跟著力量條一直上下） */
+    me.bend = F.charge * 0.25; me.windup += (1.0 - me.windup) * Math.min(1, dt * 6);   /* 蓄力時竿子往後舉一次就停住（不會跟著力量條一直上下） */
   }
   if (F.phase === 'waiting' && !me.flying){
     me.bend *= 0.9;
@@ -12225,13 +12238,13 @@ function fpTick(dt){ if (FROST.tents) for (const [m, tx, tz] of FROST.tents) m.v
   const rp = FP.rodP, reel = F.phase === 'reeling', bend = clamp(me.bend || 0, 0, 1.2), wind = F.phase === 'charging' ? clamp(F.charge || 0, 0, 1) : 0;
   /* v505 甩竿：蓄力時竿子往後舉，放開的一瞬間往前甩（甩過頭一點，竿尖往下），再回到前面指著浮標 */
   if (F.phase === 'charging') FP.wind = wind; const fly = !!me.flying; if (fly && !FP.wasFly){ FP.castT = t; FP.castW = FP.wind || 0.5; } FP.wasFly = fly; let cast = 0;
-  if (FP.castT && t - FP.castT < 0.9){ const s2 = (t - FP.castT) / 0.9; if (s2 < 0.24){ const u = s2 / 0.24, e3 = u * u * u; cast = (FP.castW * 0.75 + 0.35) * (1 - e3) - 0.62 * e3; } else { const u = (s2 - 0.24) / 0.76; cast = -0.62 * (1 - u) * (1 - u) * (1 - u); } }   /* 往前甩是越甩越快（加速），在前面停住、竿尖指向遠方，然後慢慢放下來對著浮標 */
+  if (FP.castT && t - FP.castT < 0.9){ const s2 = (t - FP.castT) / 0.9; if (s2 < 0.24){ const u = s2 / 0.24, e3 = u * u * u; cast = (FP.castW * 1.05 + 0.35) * (1 - e3) - (0.4 + 0.45 * FP.castW) * e3; } else { const u = (s2 - 0.24) / 0.76; cast = -(0.4 + 0.45 * FP.castW) * (1 - u) * (1 - u) * (1 - u); } }   /* 往前甩是越甩越快（加速），在前面停住、竿尖指向遠方，然後慢慢放下來對著浮標 */
   const lift = FP.c ? (FP.c.lift || 0) : 0, sway = FP.c && FP.c.t < 1.2 ? Math.sin(Math.max(0, FP.c.t - 0.45) * 3.6 + 0.6) * 0.05 * Math.exp(-Math.max(0, FP.c.t - 0.45) * 0.75) : 0;
   rp.position.set(0.11 - lift * 0.02 + (FP.lean || 0) * 0.1, -0.16 + FP.rodY + lift * 0.06 + Math.sin(t * 1.3) * 0.003, -0.48);   /* v511 作者：「也太畸形」→ 竿子從右下斜斜往上伸（不再直直插進畫面裡），看得到整支竿子和它彎的樣子 */   /* v509 握把和捲線器拉進畫面左下（像參考圖） */ /* v523 作者傳了「Fishing Go!」的三張圖：平常竿子是斜斜往上舉的（竿尖在海平線上面），線從竿尖往下拉到遠方水面；拉魚時整支竿子往旁邊倒、上半段彎向魚。
      → 竿子平常舉高（以前幾乎平平指著水面）；拉魚時往魚的反方向倒，魚越重倒越多 */
   { const wfL = reel ? clamp(0.12 + 0.27 * Math.log(1 + (F.weight || 0.3)), 0.15, 1) : 0, side = F.dir ? -Math.sign(F.dir) : (FP.leanS || 1); if (reel && F.dir) FP.leanS = side; else if (!reel) FP.leanS = 0; if (reel && !FP.leanS) FP.leanS = Math.sin(F.seed || 0) >= 0 ? 1 : -1;
     const wantL = reel ? (FP.leanS || side) * (0.18 + 0.5 * wfL) * (0.55 + 0.45 * clamp(F.T || 0, 0, 1)) : 0; FP.lean = (FP.lean || 0) + (wantL - (FP.lean || 0)) * Math.min(1, dt * 2.2); }
-  rp.rotation.set(-0.98 - bend * 0.1 * (reel ? clamp(0.12 + 0.27 * Math.log(1 + (F.weight || 0.3)), 0.15, 1) : 1) + wind * 0.75 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0) + (FP.lean || 0) * 0.35, -(FP.lean || 0))   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
+  rp.rotation.set(-0.98 - bend * 0.1 * (reel ? clamp(0.12 + 0.27 * Math.log(1 + (F.weight || 0.3)), 0.15, 1) : 1) + wind * 1.0 + cast + lift * 0.42 + sway + (reel ? Math.sin(t * 31) * 0.006 : 0) + Math.sin(t * 0.9) * 0.006, 0.0 + (reel ? Math.sin(t * 2.3) * 0.03 : 0) + (FP.lean || 0) * 0.35, -(FP.lean || 0))   /* v512 作者：「歪歪的」→ 竿子不再斜，從畫面下方正中間直直往前伸 */;   /* v510 作者：「為什麼是歪的」→ 竿子不再整支轉歪（之前為了讓捲線器露出來把整支竿子轉了 0.5），改成只把捲線器轉到竿子左下；竿尖對著前面的浮標，彎的方向也是往下（往線那邊） */
   /* 竿子彎：拉魚的時候照張力彎（越緊越彎），魚咬的時候竿尖抖，魚吊在竿尖時被魚的重量拉彎；甩竿往前的瞬間竿尖往後甩（彈性） */
   const c = FP.c, cw = c ? Math.min(1, 0.25 + c.L) : 0; const wf = clamp(0.12 + 0.27 * Math.log(1 + (F.weight || 0.3)), 0.15, 1);   /* v519 作者：「魚很小，竿子也彎得很厲害，不真實」→ 竿子彎多少看魚多重：0.3 公斤幾乎不彎、3 公斤彎一半、25 公斤以上才整支彎 */
   let wantB = reel ? (0.25 + clamp(F.T || 0, 0, 1) * 0.95 + bend * 0.25) * wf : F.phase === 'bite' ? 0.12 + Math.abs(Math.sin(t * 13)) * 0.1 : 0.03;
@@ -16745,7 +16758,7 @@ function presenceObj(){
   { const ft = typeof fbMyTeam === 'function' && fbMyTeam(); if (ft){ o.tn = ft.n; if (ft.c) o.tc = ft.c; } }   /* v529 釣友隊名（體育場足球分邊用） */
   { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }   /* v521 排位賽段位（名字旁邊掛稱號用） */
   if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat)); else if (Voy.on) o.bt = 1;   /* v579 坐阿海的船：別人看到你坐在小船上沿著航道走 */   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
-  if (mySeat) o.st = 1;
+  if (mySeat && !me.standFish) o.st = 1;   /* v660 拉大魚時站起來：別人看你也是站著 */
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
   if (Bike.on) o.bk = 1;
   if (phoneMine()) o.ph = 1;   /* v581 正在滑手機（別人看到你拿手機） */   /* v438 在騎腳踏車 */
@@ -18876,6 +18889,7 @@ function renderTab(){
       body.appendChild(d); };
     sec('🎣 釣魚', [
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
+      '🎣 拋竿看出力：力量條越滿，竿子甩得越大、線飛得越遠越高；坐著釣到 3 公斤以上或稀有的魚，角色會站起來拉。',
       '👀 第一人稱釣魚：到「設定 → 🎣 釣魚視角」選「第一人稱」打開（預設是背後），打開以後一拋竿就會換成第一人稱，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
@@ -20358,7 +20372,7 @@ function frame(){
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
-  updatePlayer(dt); try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { fishStandTick(); } catch(e){} try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
