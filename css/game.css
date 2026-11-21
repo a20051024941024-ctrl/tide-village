@@ -2134,3 +2134,8 @@ body:has(#blkBar:not([hidden])) #today3{visibility:hidden}
 .tmun{display:flex;flex-direction:column;gap:3px;margin:6px 0}
 .tmu{font-size:13px;color:#7a8a94} .tmu.on{color:#2f6b3f;font-weight:700}
 .tag .nm[data-team]::before{content:attr(data-team);margin-right:4px}
+/* v675 小島商店的分類 */
+.isl-cats{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.isl-cats .tbtn{padding:6px 12px;font-size:13.5px}
+.shoplist .blk-sw{flex:none;display:block;width:48px;height:48px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.shoplist .blk-sw.pn{height:16px;margin:16px 0}

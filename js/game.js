@@ -10034,18 +10034,43 @@ function renderIsland(body){
     return;
   }
   const items = isleItems(), nh = items.filter(i => ISLE_ITEMS[i.t].house).length;   /* 住在別人家時就是那座島 */
+  /* v675 作者：「方塊和隔板也都加進來這裡，然後要加分類」「把原本的東西拆掉，這裡也不清楚」→ 分類按鈕；方塊、隔板也在這裡買；多一個「島上的東西」看得到每一件，可以移動、拆掉 */
+  const CATS = [['house', '房子'], ['pen', '寵物圍欄'], ['plant', '花草樹'], ['furn', '家具'], ['deco', '擺飾'], ['block', '方塊'], ['panel', '隔板'], ['mine', `島上的東西（${items.length + Blk.b.length}）`]];
+  const PLANT = new Set(['flower', 'palm', 'tree', 'bush', 'hydrangea', 'sunflower', 'cherry', 'maple', 'hedge']), FURN = new Set(['bench', 'lamp', 'picnic', 'parasol', 'swing', 'hammock', 'sunbed', 'bbq', 'campfire', 'tent', 'pergola', 'mailbox', 'fence', 'stonepath']);
+  const catOf = (k, v) => v.house ? 'house' : v.pen ? 'pen' : PLANT.has(k) ? 'plant' : FURN.has(k) ? 'furn' : 'deco';
+  if (!CATS.some(c => c[0] === Isle2.cat)) Isle2.cat = 'house';
+  { const row = el('div', 'isl-cats'); for (const [k, l] of CATS){ const b = el('button', 'tbtn' + (Isle2.cat === k ? '' : ' ghost'), l); b.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); row.appendChild(b); } body.appendChild(row); }
+  const C = Isle2.cat;
+  if (C === 'block' || C === 'panel'){
+    body.appendChild(el('p', 'sub', `一格 50 公分，可以疊 6 層，一座島最多 400 塊（現在 ${Blk.b.length} 塊）。按「拿去蓋」以後：點地面放、點上面疊、點側邊接旁邊，按住再滑放一排。${C === 'panel' ? '隔板可以轉向。' : ''}`));
+    const ul = el('ul', 'shoplist cols'); for (const [k, v] of Object.entries(BLK).filter(([, v]) => !!v[4] === (C === 'panel'))){ const li = el('li'), sw = el('i', 'blk-sw' + (v[4] ? ' pn' : '')); sw.style.background = `url(${blkTex(v[3] || 'paint', v[2]).image.toDataURL()}) center/cover, ${v[2]}`; li.appendChild(sw);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v[0])); d.appendChild(el('div', 'sub2', `🪙 ${v[1]} 一塊・島上 ${Blk.b.filter(x => x[3] === k).length} 塊`)); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn', '拿去蓋'); b.addEventListener('click', () => { Blk.t = k; if (!onIsle || !canEditIsle()){ closeSheet(); goMyIsle(); setTimeout(blkStart, 1200); return; } blkStart(); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+    body.appendChild(ul); return; }
+  if (C === 'mine'){
+    body.appendChild(el('p', 'sub', `東西 ${items.length} / ${ISLE_MAX} 件、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟、方塊和隔板 ${Blk.b.length} / 400 塊。拆掉退一半金幣（別人放的不退給你）。`));
+    if (!items.length && !Blk.b.length) body.appendChild(el('p', 'empty', '島上還沒有東西。'));
+    const ul = el('ul', 'shoplist cols'); for (const it of items){ const v = ISLE_ITEMS[it.t]; if (!v) continue; const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(it.t, 96); } catch(e){} li.appendChild(ic);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', it.by && it.by !== myIdOrMe() ? '別人放的' : `拆掉退 🪙${Math.floor(v.price / 2).toLocaleString()}`)); li.appendChild(d);
+      const a = el('div', 'tacts'); if (canTouch(it)){ const mv = el('button', 'tbtn ghost', '移動'); mv.addEventListener('click', () => startPlace(it.t, it.id)); a.appendChild(mv); }
+      if (isleRank() >= 2){ const rm = el('button', 'tbtn ghost', '拆掉'); rm.addEventListener('click', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定？'; rm.classList.add('warn'); return; } removeIsleItem(it.id); setTimeout(renderTab, 600); }); a.appendChild(rm); }
+      li.appendChild(a); ul.appendChild(li); }
+    const cnt = {}; for (const x of Blk.b) cnt[x[3]] = (cnt[x[3]] || 0) + 1;
+    for (const [k, n] of Object.entries(cnt)){ const v = BLK[k]; if (!v) continue; const li = el('li'), sw = el('i', 'blk-sw' + (v[4] ? ' pn' : '')); sw.style.background = `url(${blkTex(v[3] || 'paint', v[2]).image.toDataURL()}) center/cover, ${v[2]}`; li.appendChild(sw);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${v[0]} ×${n}`)); d.appendChild(el('div', 'sub2', '要拆的話到島上點「拆」再點那一塊')); li.appendChild(d);
+      const a = el('div', 'tacts'), b = el('button', 'tbtn ghost', '去拆'); b.addEventListener('click', () => { Blk.t = k; blkStart(); Blk.erase = true; blkBar(); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+    body.appendChild(ul); return; }
   body.appendChild(el('p', 'sub', `島上有 ${items.length} / ${ISLE_MAX} 件東西、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟。按「拿去擺」之後走路調整位置、「⟲」轉方向、「✔」放下。走到房子門口可以進去！拆掉退一半金幣。`));
-  for (const [title, filt] of [['🏠 房子', v => v.house], ['🐾 寵物圍欄（每個多養 5 隻那一類的寵物）', v => v.pen], ['🌷 裝飾和家具', v => !v.house && !v.pen]]){
-    body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
-    for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([k2, v]) => filt(v) && !OLD_HOUSES.has(k2))){   /* 076：房子只賣大宅 */
+  { const ul = el('ul', 'shoplist cols');
+    for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([k2, v]) => catOf(k2, v) === C && !OLD_HOUSES.has(k2))){   /* 076：房子只賣大宅 */
       const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・島上 ${items.filter(i => i.t === k).length} 個`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'), place = () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }; b.addEventListener('click', place); a.appendChild(b); li.appendChild(a); ul.appendChild(li);
       li.classList.add('viewable'); d.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); const look = () => viewModel(v.name, `🪙 ${v.price.toLocaleString()}${v.house ? '・房子，可以走進去擺家具' : ''}`, () => itemMesh(k, { lite: !!v.house }), { label: `拿去擺（🪙${v.price.toLocaleString()}）`, fn: place }); ic.addEventListener('click', look); d.addEventListener('click', look);
     }
-    body.appendChild(ul);
-  }
+    body.appendChild(ul); }
 }
+var Isle2 = { cat: 'house' };
 
 /* ================= 有新版本時提醒（玩家自己按才重新整理，不會在拉魚時突然重開）================= */
 const Upd = { base:null, ready:false, shown:false, snooze:0 };
@@ -19535,6 +19560,7 @@ function renderTab(){
       '魚缸、我的海裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
       '🐠 在自己小島的海底，點一下魚就會在上面顯示這條魚是誰、什麼時候、在哪裡釣到的，6 秒後自己收起來（不會一靠近就跳出來擋畫面）。',
       '🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「拆」再點，可以拆掉，自己放的退一半。一座島最多 400 塊，跟一起住的人共用。',
+      '🏝️ 小島的「買東西擺島上」分成房子、寵物圍欄、花草樹、家具、擺飾、方塊、隔板幾類；最後一個「島上的東西」列出島上每一件，可以直接移動或拆掉（拆掉退一半）。',
       '👕 穿搭：每個人可以跟阿萍免費挑一套入門衣服（只能挑一次，造型頁也有按鈕）。每週一換一個穿搭主題（海邊度假、漁夫日常、運動風、文青散步、冬天暖暖、冒險家輪流），身上穿到主題裡 2 件以上，釣到魚多一成經驗，村民也會稱讚你。點別人的名片，「👕 穿搭」頁看得到他穿什麼，「我也想要」會帶你去那件衣服，也可以按「穿得好看」幫他按讚（一週最多讚 30 次）。造型頁看得到這週被讚最多的人。',
       '🎣 釣友隊等級：隊員每釣一條 +1 經驗、每週目標達成 +300、同隊兩個人一起打小組對決打贏 +50。Lv2 名字旁邊掛隊徽、Lv3 隊員的小島插上隊旗、Lv4 每個隊員都拿到隊服（顏色是隊色）。每週目標達成領獎時，除了金幣再開一個隊伍寶箱（隨機魚餌、打窩料或珊瑚苗）。大看板有「本週小組勝場」。',
     ]);

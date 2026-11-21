@@ -6105,5 +6105,15 @@
  "換上": "Pakai",
  "🎣 釣友隊等級：隊員每釣一條 +1 經驗、每週目標達成 +300、同隊兩個人一起打小組對決打贏 +50。Lv2 名字旁邊掛隊徽、Lv3 隊員的小島插上隊旗、Lv4 每個隊員都拿到隊服（顏色是隊色）。每週目標達成領獎時，除了金幣再開一個隊伍寶箱（隨機魚餌、打窩料或珊瑚苗）。大看板有「本週小組勝場」。": "🎣 Level klub: anggota dapat 1 XP per ikan, target mingguan +300, dan dua anggota klub yang menang duel tim bersama +50. Lv2: lencana klub di samping nama; Lv3: bendera klub di pulau setiap anggota; Lv4: setiap anggota dapat baju klub (warna klub). Saat mengambil hadiah mingguan kamu juga membuka peti klub (umpan, umpan tabur atau bibit karang acak). Papan alun-alun menampilkan kemenangan duel tim minggu ini.",
  "這週的隊伍寶箱": "Peti klub minggu ini",
- "隊服": "Baju klub"
+ "隊服": "Baju klub",
+ "🏝️ 小島的「買東西擺島上」分成房子、寵物圍欄、花草樹、家具、擺飾、方塊、隔板幾類；最後一個「島上的東西」列出島上每一件，可以直接移動或拆掉（拆掉退一半）。": "🏝️ Toko pulau dibagi jadi rumah, kandang hewan, tanaman, perabot, hiasan, balok dan sekat. Tab terakhir, 'Barang di pulau', menampilkan semua yang sudah kamu taruh untuk dipindah atau dibongkar (kembali setengah harga).",
+ "花草樹": "Tanaman",
+ "家具": "Perabot",
+ "擺飾": "Hiasan",
+ "方塊": "Balok",
+ "隔板": "Sekat",
+ "拿去蓋": "Bangun",
+ "去拆": "Bongkar",
+ "房子": "Rumah",
+ "寵物圍欄": "Kandang hewan"
 }
