@@ -2128,3 +2128,9 @@ body:has(#blkBar:not([hidden])) #today3{visibility:hidden}
 .sty-head .sty-tg{margin:6px 6px 0 0;padding:5px 10px;font-size:12.5px}
 @media (max-height:420px){ .sty-head{padding:6px 8px;margin-bottom:6px} .sty-s{margin-bottom:4px} .sty-i{padding:2px 6px;font-size:11px} }
 .kit-c .kit-ic{font-size:10.5px;color:#7a6a52;line-height:1.2}
+/* v674 釣友隊：等級、解鎖、名字旁的隊徽 */
+.tmlv{margin:6px 0 10px;padding:10px;border-radius:12px;background:#eef6fb;border:2px solid #bcd8e8}
+.tmlv>.n{font-weight:800;margin-bottom:4px}
+.tmun{display:flex;flex-direction:column;gap:3px;margin:6px 0}
+.tmu{font-size:13px;color:#7a8a94} .tmu.on{color:#2f6b3f;font-weight:700}
+.tag .nm[data-team]::before{content:attr(data-team);margin-right:4px}

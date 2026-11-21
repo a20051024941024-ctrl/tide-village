@@ -4010,7 +4010,7 @@ const GEAR = [
   // 節慶限定（083）：只有節日期間買得到（第 6 欄是哪個節日），買到的永遠保留
   ['hat_lion','舞獅帽',800,'🦁',0,'cny'],['hat_party','跨年派對帽',300,'🎉',0,'ny'],['hat_pomelo','柚子帽',300,'🍈',0,'moon'],['acc_sachet','端午香包',300,'🧧',0,'duanwu'],['hat_santa','聖誕帽',300,'🎅',0,'xmas'],['hat_flowerc','七夕花冠',300,'💐',0,'qixi'],['hat_pumpkin','南瓜帽',300,'🎃',0,'halloween'],['hat_witch','巫師尖帽',400,'🧙',0,'halloween'],['hat_antler','麋鹿角',350,'🦌',0,'xmas'],
   /* v555 滑雪場獎勵：買不到，只有在雪松山滑完才拿得到（第 7 欄 rw；伺服器 188 發） */
-  ['hat_skipom','雪松山毛球帽',0,'🎿',0,null,'ski'],['acc_skigog','滑雪鏡',0,'🥽',0,null,'ski'],['hat_mail','郵差帽',0,'📮',0,null,'stamp'],['back_mailbag','郵差包',0,'✉️',0,null,'stamp'],
+  ['hat_skipom','雪松山毛球帽',0,'🎿',0,null,'ski'],['acc_skigog','滑雪鏡',0,'🥽',0,null,'ski'],['hat_mail','郵差帽',0,'📮',0,null,'stamp'],['top_team','隊服',0,'🎽',0,null,'team'],['back_mailbag','郵差包',0,'✉️',0,null,'stamp'],
   ['hat_turtle','海龜帽',0,'🐢',30],['top_ocean','海洋守護衫',0,'🌊',40],['acc_coral','珊瑚項鍊',0,'🪸',20],['back_fin','鯊魚背鰭',0,'🦈',60],
 ].map(([id, name, price, icon, love, fest, rw]) => ({ id, slot: id.split('_')[0], name, price, icon, love: love || 0, fest: fest || null, rw: rw || null }));
 function paidGear(it){ return !!it && (it.price > 0 || it.love > 0 || !!it.rw); }
@@ -4042,7 +4042,8 @@ function gear3dApply(av, gear){ const ids = [gear.hat, gear.back].filter(id => G
 /* v222 衣服款式：同一件 3D 上衣，用 shader 畫出不同的領口（V 領、POLO 領、羅紋領）、袖子（背心沒袖子、長袖）、條紋、口袋、吸濕排汗布紋，
    寬版、長版直接把衣服的點往外、往下推（在骨架綁定前的姿勢上算，動作照樣跟著）。只有正式 3D 角色（tide_kid.glb）有，程式角色不畫。
    座標是角色 T-pose：身體 y 0.37～1.09、正面 +z；袖子在 |x| 0.18～0.45、y≈0.94；前臂（皮膚）|x| 0.33～0.62。 */
-const TOP_STYLE = {   // [領口, 袖子, 條紋, 圖案, 布紋, 羅紋袖口下襬, 寬, 長]  領口 0 圓 1 V 2 POLO 3 羅紋圓領 4 拉鍊 5 尼龍立領；袖子 0 短 1 無 2 長；條紋 1 粗 2 細；圖案 1 口袋 2 小魚 3 袋鼠口袋
+const TOP_STYLE = { top_team:[1,0,0,0,0,1,0,0],   /* v674 釣友隊 Lv4 的隊服：V 領、羅紋袖口，顏色是隊色 */
+    // [領口, 袖子, 條紋, 圖案, 布紋, 羅紋袖口下襬, 寬, 長]  領口 0 圓 1 V 2 POLO 3 羅紋圓領 4 拉鍊 5 尼龍立領；袖子 0 短 1 無 2 長；條紋 1 粗 2 細；圖案 1 口袋 2 小魚 3 袋鼠口袋
   top_tee:[0,0,0,0,0,0,0,0], top_vtee:[1,0,0,0,0,0,0,0], top_polo:[2,0,0,0,0,0,0,0], top_tank:[0,1,0,0,0,0,0,0], top_wide:[0,0,0,0,0,0,1,0], top_pocket:[0,0,0,1,0,0,0,0],
   top_dry:[0,0,0,0,1,0,0,0], top_dryv:[1,0,0,0,1,0,0,0], top_bstripe:[0,0,1,0,0,0,0,0], top_fstripe:[0,0,2,0,0,0,0,0], top_long:[0,0,0,0,0,0,0,1], top_kid:[0,0,0,2,0,0,0,0],
   top_sweat:[3,2,0,0,1,1,0,0], top_hoodt:[3,2,0,3,0,1,0,0], top_hoodie:[4,2,0,0,0,1,0,0], top_hoodie3d:[0,3,0,0,0,0,0,0], top_nylon:[5,2,0,0,0,1,1,0],
@@ -7288,6 +7289,7 @@ function buildIsle(layout, ownerName){
   isleGroup.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
   if (!Build.on) isleBatch(isleGroup);
   try { if (onIsle && Blk.owner !== onIsle.owner) blkLoad(onIsle.owner); else blkCols(); } catch(e){ console.warn('blk', e); }
+  try { if (onIsle) teamFlag(onIsle.owner); } catch(e){}
 }
 // ---- 北方冰封群島的樣子（第一次走近才蓋，手機比較省）：雪島、結冰的湖和冰洞、冰釣帳篷、雪松、雪屋、雪人、流冰、海豹、一直下的小雪 ----
 const Frost = { built:false, snow:null, floes:[], seals:[] };
@@ -15536,7 +15538,7 @@ function wearGear(id){
 }
 function buyGear(id){
   const it = GEAR_BY_ID[id]; if (!it || ownsGear(id)) return;
-  if (it.rw === 'stamp'){ toast('📮 這個買不到：村長的集章卡每蓋滿 4 張送一件'); return; } if (it.rw){ toast(it.id === 'hat_skipom' ? '🎿 這頂帽子買不到：到雪松山滑雪場滑完一趟就送' : `🎿 這副雪鏡買不到：在雪松山 ${SKI_GOG_S} 秒內滑完就送`); return; }
+  if (it.rw === 'stamp'){ toast('📮 這個買不到：村長的集章卡每蓋滿 4 張送一件'); return; } if (it.rw === 'team'){ toast('🎽 釣友隊升到 Lv4，隊員都會拿到隊服'); return; } if (it.rw){ toast(it.id === 'hat_skipom' ? '🎿 這頂帽子買不到：到雪松山滑雪場滑完一趟就送' : `🎿 這副雪鏡買不到：在雪松山 ${SKI_GOG_S} 秒內滑完就送`); return; }
   if (it.love) return redeemLove(id);
   if (rec.coins < it.price){ toast(`金幣不夠，還差 🪙${(it.price - rec.coins).toLocaleString()}`); return; }
   endTryOn(); rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); addCoins(-it.price); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
@@ -15549,7 +15551,7 @@ function redeemLove(id){
   endTryOn(); rec.love -= it.love; rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
   cloudCall('redeem_love', { p_item: id }); SFX.catch(); flash(`${it.icon} 換到了${it.name}！`, 1.4); renderTab();
 }
-const gearCost = it => it.rw === 'stamp' ? '📮 集章卡獎勵' : it.rw ? '🎿 滑雪場獎勵' : it.love ? `💙 ${it.love}` : `🪙 ${it.price.toLocaleString()}`;
+const gearCost = it => it.rw === 'team' ? '🎽 釣友隊 Lv4' : it.rw === 'stamp' ? '📮 集章卡獎勵' : it.rw ? '🎿 滑雪場獎勵' : it.love ? `💙 ${it.love}` : `🪙 ${it.price.toLocaleString()}`;
 // 試穿：只在上面的預覽圖換上（不會移動鏡頭，也不會讓別人看到）
 function tryOn(id){ const it = GEAR_BY_ID[id]; if (!it) return; Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: id }); Wardrobe.previewOf = id; renderTab(); }
 function endTryOn(){ Wardrobe.preview = null; Wardrobe.previewOf = null; }
@@ -16026,7 +16028,7 @@ function renderCloset(body){
   else { const grid = el('div', 'cl-grid'), cur = cleanGear(rec.gear), pv = cleanGear(Wardrobe.preview || rec.gear);
     const tile = (id, name, icon, badge, on, onClick) => { const b = el('button', 'cl-it' + (on ? ' on' : '')); const im = el('img'); im.alt = name; im.loading = 'lazy'; if (icon) im.src = icon; b.appendChild(im); b.appendChild(el('span', 'n', name)); if (badge) b.appendChild(el('span', 'b', badge)); b.addEventListener('click', onClick); grid.appendChild(b); };
     for (const it of GEAR.filter(g => g.slot === Closet.slot && (!g.fest || ownsGear(g.id) || festOn(g.fest)))){ const own = ownsGear(it.id), wearing = cur[it.slot] === it.id, trying = pv[it.slot] === it.id && !wearing; let ic = ''; try { ic = avatarShot(Object.assign(cleanGear(rec.gear), { [it.slot]: it.id }), it.slot, 96); } catch(e){}
-      tile(it.id, it.name, ic, wearing ? '✔ 穿著' : own ? '' : it.rw === 'stamp' ? '📮 集章' : it.rw ? '🎿 滑雪' : it.love ? `💙${it.love}` : `🪙${it.price.toLocaleString()}`, wearing || trying, () => { const none = GEAR.find(g => g.slot === it.slot && /_none$/.test(g.id));   /* v244 再點一次已經穿著的就拿掉（帽子、配件、背飾…有「不戴」的分類） */
+      tile(it.id, it.name, ic, wearing ? '✔ 穿著' : own ? '' : it.rw === 'team' ? '🎽 釣友隊' : it.rw === 'stamp' ? '📮 集章' : it.rw ? '🎿 滑雪' : it.love ? `💙${it.love}` : `🪙${it.price.toLocaleString()}`, wearing || trying, () => { const none = GEAR.find(g => g.slot === it.slot && /_none$/.test(g.id));   /* v244 再點一次已經穿著的就拿掉（帽子、配件、背飾…有「不戴」的分類） */
         if (wearing && none && none.id !== it.id){ endTryOn(); wearGear(none.id); return; }
         if (trying){ Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: cur[it.slot] }); if (Object.keys(cleanGear(rec.gear)).every(k => cleanGear(Wardrobe.preview)[k] === cleanGear(rec.gear)[k])) endTryOn(); renderTab(); return; }
         if (own){ endTryOn(); wearGear(it.id); } else { Wardrobe.preview = Object.assign(cleanGear(Wardrobe.preview || rec.gear), { [it.slot]: it.id }); Wardrobe.previewOf = it.id; renderTab(); } }); }
@@ -17175,7 +17177,7 @@ function myDisplayName(){ return nickname || (myId && profileNames[myId]) || '�
 
 let lastPres = '', lastPresAt = 0;
 function presenceObj(){
-  const o = { p:[+me.pos.x.toFixed(2), +me.pos.z.toFixed(2), +me.baseY.toFixed(2)], r:+me.rot.toFixed(2), sh:look.shirt, ht:look.hat };
+  const o = { p:[+me.pos.x.toFixed(2), +me.pos.z.toFixed(2), +me.baseY.toFixed(2)], r:+me.rot.toFixed(2), sh:(rec && rec.gear && rec.gear.top === 'top_team' && myTeamColor()) || look.shirt, ht:look.hat }; { const tb = myTeamBadge(); if (tb) o.tb = TEAM_BADGE.indexOf(tb); }
   if (nickname) o.n = nickname;
   { const av = myAvatar(); if (av) o.av = av; }   /* v334 頭像 */
   if (myId) o.u = myId;
@@ -17244,6 +17246,7 @@ function applyPeer(pp){
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { const st = pr.dr; if (Number.isInteger(st) && st >= 0 && st <= 999){ const tt = duelTierOf(st); p.fisher.nm.dataset.duel = tt[2] + tt[1]; } else delete p.fisher.nm.dataset.duel; }
   nameFrame(p.fisher.nm, typeof pr.nf === 'string' && /^nf_\d{6}$/.test(pr.nf) ? pr.nf : null);
+  { const tb = Number.isInteger(pr.tb) ? TEAM_BADGE[pr.tb] : null; if ((p.fisher.nm.dataset.team || '') !== (tb || '')){ if (tb) p.fisher.nm.dataset.team = tb; else delete p.fisher.nm.dataset.team; } }
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph;
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
@@ -18046,9 +18049,27 @@ const TEAM_BADGE = ['🐟', '🦀', '🐙', '🦈', '🐢', '🐳', '🦐', '�
 const TBOARD = { x: 6.8, z: 14.6, rot: -2.883 };   /* v430 玩家回報「擋到了」：原本放在廣場東南角，剛好擋在潮汐食堂的門口。改到廣場南邊出口旁的空草地，面向廣場，後面沒有房子 */
 const Team = { my: null, board: null, at: 0, bat: 0, busy: false, g: null, cv: null, tex: null, pb: 0, pc: 0, name: '', code: '', view: 'board', flashT: 0, lastTop: '' };
 const teamFish = id => (FISH_BY_ID[id] && FISH_BY_ID[id].name) || '魚';
-async function loadTeam(){ if (!Cloud.on || !Cloud.sb) return; const r = await festRpc('team_my'); if (r && 'team' in r){ Team.my = r; Team.at = Date.now(); if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); } }
-async function teamDo(fn, args){ if (Team.busy) return null; Team.busy = true; const r = await festRpc(fn, args); Team.busy = false; if (r && r.player){ adoptRow(r.player); Team.my = r.team; SFX.coin(); flash(`🎉 釣友隊這一週的目標達成！🪙 +${r.pay}`, 2); } else if (r && 'team' in r) Team.my = r; if (r){ Team.at = Date.now(); loadTeamBoard(); } if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); return r; }
-async function loadTeamBoard(){ if (!Cloud.on || !Cloud.sb) return; Team.bat = Date.now(); const r = await festRpc('team_board'); if (r && r.best){ const top = r.best[0] ? r.best[0].n + r.best[0].f + r.best[0].w : ''; if (Team.board && top && top !== Team.lastTop) Team.flashT = now(); Team.lastTop = top; Team.board = r; paintTeamBoard(); if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); } }
+/* v674 釣友隊的獎勵（伺服器 216）：每週寶箱、名字旁的隊徽（Lv2）、小島隊旗（Lv3）、隊服的顏色（Lv4） */
+function teamChest(pay, ch){ const [k, q] = ch || []; const I = stampItem(k); const ov = el('div', 'dh-up'); const bx = el('div', 'dh-upbox t2'); bx.appendChild(el('div', 'dh-upic', '🧰'));
+  bx.appendChild(el('div', 'dh-upt', '這週的隊伍寶箱')); bx.appendChild(el('div', 'dh-upr', `🪙${pay}，還有 ${I.nm} ×${q}`)); const ok = el('button', 'tbtn buy', '收下'); bx.appendChild(ok); ov.appendChild(bx); document.body.appendChild(ov); ok.addEventListener('click', () => ov.remove()); try { SFX.catch(); } catch(e){} }
+function myTeamBadge(){ const M = Team.my; return M && M.team && (M.lv || 1) >= 2 ? (TEAM_BADGE[M.team.badge] || null) : null; }
+function myTeamColor(){ const M = Team.my; return M && M.team && (M.lv || 1) >= 4 ? TEAM_COL[M.team.color] || null : null; }
+setInterval(() => { try { if (!Cloud.on) return; if (!Team.my && !Team.at){ Team.at = 1; loadTeam(); }
+    const tc = rec && rec.gear && rec.gear.top === 'top_team' ? myTeamColor() : null; if (tc && me.av && me.av.shirtM && '#' + me.av.shirtM.color.getHexString() !== tc.toLowerCase()) me.av.shirtM.color.set(tc);
+    const b = myTeamBadge(); if (me.nm && (me.nm.dataset.team || '') !== (b || '')){ if (b) me.nm.dataset.team = b; else delete me.nm.dataset.team; } } catch(e){} }, 2000);
+async function teamFlag(owner){ if (!Cloud.on || !owner || !isleGroup) return; const r = await festRpc('team_of', { p_uid: owner }); if (!r || (r.lv || 1) < 3 || !isleGroup || !onIsle || onIsle.owner !== owner) return;
+  const g = new THREE.Group(); g.position.set(ISLE.x - 2.6, ISLE.y, ISLE.z + 18.6); const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.2, 8), mat('#d8d2c4', 0.5, { metalness:0.4 })); pole.position.y = 1.6; g.add(pole);
+  const top = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), mat('#e0b84a', 0.3, { metalness:0.6 })); top.position.y = 3.25; g.add(top);
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160; const c = cv.getContext('2d'), col = TEAM_COL[r.color] || '#2f89c7'; c.fillStyle = col; c.fillRect(0, 0, 256, 160); c.fillStyle = 'rgba(255,255,255,.9)'; c.fillRect(0, 128, 256, 10);
+  c.font = '72px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(TEAM_BADGE[r.badge] || '🎣', 128, 62); c.font = 'bold 22px sans-serif'; c.fillStyle = '#fff'; c.fillText(String(r.name || '').slice(0, 10), 128, 112);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; const geo = new THREE.PlaneGeometry(1.4, 0.88, 12, 1); geo.translate(0.7, 0, 0);
+  const fl = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.8 })); fl.position.set(0.05, 2.75, 0); g.add(fl); g.userData.flag = fl; g.userData.base = geo.attributes.position.array.slice();
+  isleGroup.add(g); { const c = { t:'c', x: g.position.x, z: g.position.z, r: 0.15 }; colliders.push(c); isleCols.push(c); }
+  (function wave(){ if (!g.parent) return; const P = geo.attributes.position, B = g.userData.base, t = performance.now() / 1000; for (let i = 0; i < P.count; i++){ const x = B[i * 3]; P.array[i * 3 + 2] = Math.sin(x * 3 - t * 3) * 0.08 * x; } P.needsUpdate = true; requestAnimationFrame(wave); })(); }   /* 旗子會飄 */
+
+async function loadTeam(){ if (!Cloud.on || !Cloud.sb) return; const r = await festRpc('team_my2'); if (r && 'team' in r){ Team.my = r; Team.at = Date.now(); if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); } }
+async function teamDo(fn, args){ if (Team.busy) return null; Team.busy = true; const r = await festRpc(fn, args); Team.busy = false; if (r && r.player){ adoptRow(r.player); Team.my = Object.assign({}, Team.my || {}, r.team); SFX.coin(); if (r.chest) teamChest(r.pay, r.chest); else flash(`🎉 釣友隊這一週的目標達成！🪙 +${r.pay}`, 2); setTimeout(loadTeam, 800); } else if (r && 'team' in r) Team.my = r; if (r){ Team.at = Date.now(); loadTeamBoard(); } if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); return r; }
+async function loadTeamBoard(){ if (!Cloud.on || !Cloud.sb) return; Team.bat = Date.now(); festRpc('team_wins_top').then(w => { if (Array.isArray(w)){ Team.wins = w; } }); const r = await festRpc('team_board'); if (r && r.best){ const top = r.best[0] ? r.best[0].n + r.best[0].f + r.best[0].w : ''; if (Team.board && top && top !== Team.lastTop) Team.flashT = now(); Team.lastTop = top; Team.board = r; paintTeamBoard(); if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); } }
 function paintTeamBoard(){ const cv = Team.cv; if (!cv) return; const c = cv.getContext('2d'), W = 1024, H = 600, B = Team.board;
   c.fillStyle = '#23364a'; c.fillRect(0, 0, W, H); c.fillStyle = '#f6c453'; c.fillRect(0, 0, W, 78); c.fillStyle = '#23364a'; c.font = 'bold 50px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🏆 潮汐村大看板', W / 2, 42);
   c.textBaseline = 'alphabetic'; c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(W / 2 - 1, 96, 2, 400);
@@ -18103,6 +18124,7 @@ function renderTeamSheet(body){
     else { const ul = el('ul', 'shoplist'); B.best.forEach((r, i) => { const li = el('li'), t = el('div', 'tinfo'); li.appendChild(el('span', 'dishic', ['🥇', '🥈', '🥉', '4', '5'][i])); t.appendChild(el('div', 'n', r.n)); t.appendChild(el('div', 'sub2', `${teamFish(r.f)}・${(+r.w).toFixed(2)} 公斤`)); li.appendChild(t); ul.appendChild(li); }); body.appendChild(ul); }
     body.appendChild(el('div', 'dexhead', '🎣 本週釣友隊')); if (!B.teams.length) body.appendChild(el('p', 'sub', B.nteams ? '這一週還沒有隊伍釣到魚。' : '村子裡還沒有釣友隊。到「我的釣友隊」組第一隊吧！'));
     else { const ul = el('ul', 'shoplist'); B.teams.forEach(t => { const li = el('li', t.me ? 'on' : ''), d = el('div', 'tinfo'); li.appendChild(chip(t)); d.appendChild(el('div', 'n', `${t.name}（${t.m} 人）${t.me ? '・你的隊' : ''}`)); d.appendChild(el('div', 'sub2', `釣到 ${t.n}／${t.ng} 條・湊齊 ${t.k}／${t.kg} 種`)); d.appendChild(bar(t.n / t.ng + t.k / t.kg, 2)); li.appendChild(d); ul.appendChild(li); }); body.appendChild(ul); }
+    if ((Team.wins || []).length){ body.appendChild(el('div', 'dexhead', '👥 本週小組勝場')); const ul = el('ul', 'shoplist'); Team.wins.forEach(t => { const li = el('li'), d = el('div', 'tinfo'); li.appendChild(chip(t)); d.appendChild(el('div', 'n', `${t.name}・Lv.${t.lv}`)); d.appendChild(el('div', 'sub2', `這週一起打贏 ${t.wins} 場小組對決`)); li.appendChild(d); ul.appendChild(li); }); body.appendChild(ul); }
     body.appendChild(el('div', 'dexhead', '📣 剛剛')); if (!B.recent.length) body.appendChild(el('p', 'sub', '還沒有消息。')); else { const ul = el('ul', 'shoplist'); B.recent.forEach(r => { const li = el('li'), d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${r.n} 釣到 ${teamFish(r.f)}`)); d.appendChild(el('div', 'sub2', `${r.r}・${(+r.w).toFixed(2)} 公斤`)); li.appendChild(d); ul.appendChild(li); }); body.appendChild(ul); }
     return; }
   const M = Team.my; if (!M || Date.now() - Team.at > 20000){ Team.at = Date.now(); loadTeam(); } if (!M){ body.appendChild(el('div', 'empty', '載入中…')); return; }
@@ -18119,10 +18141,13 @@ function renderTeamSheet(body){
     return; }
   const T = M.team, Wk = M.week, head = el('div', 'tmhead'); head.appendChild(chip(T)); head.appendChild(el('b', '', T.name)); head.appendChild(el('span', 'sub2', `${T.m}／6 人`)); body.appendChild(head);
   { const r = el('div', 'tmrow'); r.appendChild(el('span', 'sub', '邀請碼（給朋友輸入）：')); const cd = el('b', 'tmcode', T.code); r.appendChild(cd); const b = el('button', 'tbtn', '複製'); b.addEventListener('click', async () => { try { await navigator.clipboard.writeText(T.code); toast('邀請碼複製好了'); } catch(e){ toast('邀請碼：' + T.code); } }); r.appendChild(b); body.appendChild(r); }
+  { const lv = M.lv || 1, xp = M.xp || 0, need = [0, 500, 1500, 3000], nx = need[lv] , box = el('div', 'tmlv'); box.appendChild(el('div', 'n', `隊伍 Lv.${lv}${nx ? `・經驗 ${xp}／${nx}` : `・經驗 ${xp}（最高級）`}・本週小組勝場 ${M.wins || 0}`)); if (nx) box.appendChild(bar(xp - need[lv - 1], nx - need[lv - 1]));
+    const ul = el('div', 'tmun'); for (const [l, t] of [[2, `名字旁邊掛隊徽 ${TEAM_BADGE[T.badge] || ''}`], [3, '大家的小島插上隊旗'], [4, '隊服（顏色是隊色，造型頁的衣服裡）']]) ul.appendChild(el('div', 'tmu' + (lv >= l ? ' on' : ''), `${lv >= l ? '✔' : 'Lv.' + l} ${t}`)); box.appendChild(ul);
+    box.appendChild(el('div', 'sub2', '隊員每釣一條 +1、每週目標達成 +300、同隊兩個人一起打小組對決打贏 +50。')); body.appendChild(box); }
   body.appendChild(el('div', 'dexhead', '📅 這一週的目標（每週一重新開始）'));
   { const box = el('div', 'tmgoal'); box.appendChild(el('div', 'n', `🎣 全隊合力釣到 ${Wk.n}／${Wk.ng} 條`)); box.appendChild(bar(Wk.n, Wk.ng)); box.appendChild(el('div', 'n', `📖 全隊湊齊 ${Wk.k}／${Wk.kg} 種不同的魚`)); box.appendChild(bar(Wk.k, Wk.kg));
     if (Wk.bf) box.appendChild(el('div', 'sub2', `這一週全隊最大：${Wk.bn} 的 ${teamFish(Wk.bf)}（${(+Wk.bw).toFixed(2)} 公斤）`));
-    const mine = (M.members.find(m => m.me) || {}).c || 0, b = el('button', 'tbtn', Wk.claimed ? '✔ 這一週領過了' : Wk.done ? `領獎勵 🪙${M.reward}` : '兩個目標都達成就能領'); b.disabled = Wk.claimed || !Wk.done; b.addEventListener('click', () => { if (mine < 5){ toast('這一週你要自己釣到 5 條魚才能領'); return; } teamDo('team_claim'); }); box.appendChild(b);
+    const mine = (M.members.find(m => m.me) || {}).c || 0, b = el('button', 'tbtn', Wk.claimed ? '✔ 這一週領過了' : Wk.done ? `領獎勵 🪙${M.reward}＋寶箱` : '兩個目標都達成就能領'); b.disabled = Wk.claimed || !Wk.done; b.addEventListener('click', () => { if (mine < 5){ toast('這一週你要自己釣到 5 條魚才能領'); return; } teamDo('team_claim'); }); box.appendChild(b);
     if (Wk.done && !Wk.claimed && mine < 5) box.appendChild(el('div', 'sub2', `你這一週釣了 ${mine} 條，再釣 ${5 - mine} 條就能領。`)); body.appendChild(box); }
   body.appendChild(el('div', 'dexhead', '👥 隊員（這一週釣了幾條）'));
   { const ul = el('ul', 'shoplist'); M.members.forEach(m => { const li = el('li', m.me ? 'on' : ''), d = el('div', 'tinfo'); li.appendChild(el('span', 'dishic', m.own ? '👑' : '🎣')); d.appendChild(el('div', 'n', m.n + (m.me ? '（你）' : ''))); d.appendChild(el('div', 'sub2', `這一週 ${m.c} 條${m.own ? '・隊長' : ''}`)); li.appendChild(d);
@@ -19511,6 +19536,7 @@ function renderTab(){
       '🐠 在自己小島的海底，點一下魚就會在上面顯示這條魚是誰、什麼時候、在哪裡釣到的，6 秒後自己收起來（不會一靠近就跳出來擋畫面）。',
       '🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「拆」再點，可以拆掉，自己放的退一半。一座島最多 400 塊，跟一起住的人共用。',
       '👕 穿搭：每個人可以跟阿萍免費挑一套入門衣服（只能挑一次，造型頁也有按鈕）。每週一換一個穿搭主題（海邊度假、漁夫日常、運動風、文青散步、冬天暖暖、冒險家輪流），身上穿到主題裡 2 件以上，釣到魚多一成經驗，村民也會稱讚你。點別人的名片，「👕 穿搭」頁看得到他穿什麼，「我也想要」會帶你去那件衣服，也可以按「穿得好看」幫他按讚（一週最多讚 30 次）。造型頁看得到這週被讚最多的人。',
+      '🎣 釣友隊等級：隊員每釣一條 +1 經驗、每週目標達成 +300、同隊兩個人一起打小組對決打贏 +50。Lv2 名字旁邊掛隊徽、Lv3 隊員的小島插上隊旗、Lv4 每個隊員都拿到隊服（顏色是隊色）。每週目標達成領獎時，除了金幣再開一個隊伍寶箱（隨機魚餌、打窩料或珊瑚苗）。大看板有「本週小組勝場」。',
     ]);
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、七夕（晚上天上有鵲橋、每天一份禮物、限定花冠和鵲橋）、萬聖節（10/29～10/31，南瓜燈和蝙蝠、每天拿糖果、限定南瓜帽和巫師帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
