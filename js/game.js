@@ -657,8 +657,24 @@ function fishGeo(shape, part){
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
   if (shape === 'Marlin' && part === 'Body'){ const idx = [], map = new Map(), pos = []; for (let i = 0; i < arr.length; i += 3){ const k = arr[i].toFixed(3) + ',' + arr[i + 1].toFixed(3) + ',' + arr[i + 2].toFixed(3); let j = map.get(k); if (j === undefined){ j = pos.length / 3; map.set(k, j); pos.push(arr[i], arr[i + 1], arr[i + 2]); } idx.push(j); } g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setIndex(idx); }   /* 旗魚身體把重複的點接起來，才會有平滑的光（不然每一面都是硬邊） */
   g.computeVertexNormals();
+  if (!CLASSIC && fishGenBody(shape) && (part === 'Top' || part === 'Bottom' || part === 'Spots')) fishSmoothN(shape, g, part === 'Spots' ? ['Spots'] : ['Top', 'Bottom']);
   return (fishGeoCache[key] = g);
 }
+/* v632 魚的表面精緻化（作者 11/21「3D 模型呢」→「好」）：
+   照參數產生的魚（大約 230 種）以前每一面都是硬邊、身體沒有鱗片。現在：
+   ① 身體的上半、下半一起算平滑的光（接縫也平順），看起來圓潤有光澤；
+   ② 鱗片照「沿著身體繞一圈」的角度排，背深肚淺、肚子帶銀白、側面有一條淡淡的側線，斜看會有一點珠光；
+   ③ 魚鰭越往外越透明，看得到一條一條的鰭條；④ 眼睛亮亮的會反光。
+   低畫質不做鱗片和鰭條（省手機），平滑的光照樣有。 */
+function fishGenBody(shape){ if (!/^G_/.test(shape || '')) return false; const S = FISH_SPECS[shape.slice(2)]; return !!S && !S.gen; }
+function fishSmoothN(shape, g, plist){ const acc = new Map(), q = v => Math.round(v * 400), key = (x, y, z) => q(x) + ',' + q(y) + ',' + q(z);
+  const A = plist.filter(p => FISH_MESH[shape][p]).map(p => FISH_MESH[shape][p]);
+  const va = new THREE.Vector3(), vb = new THREE.Vector3(), vc = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
+  for (const raw of A){ for (let i = 0; i < raw.length; i += 9){ va.set(raw[i], raw[i + 1], raw[i + 2]).multiplyScalar(0.001); vb.set(raw[i + 3], raw[i + 4], raw[i + 5]).multiplyScalar(0.001); vc.set(raw[i + 6], raw[i + 7], raw[i + 8]).multiplyScalar(0.001);
+      e1.subVectors(vb, va); e2.subVectors(vc, va); const n = e1.cross(e2); for (const v of [va, vb, vc]){ const k = key(v.x, v.y, v.z); const o = acc.get(k); if (o) o.add(n); else acc.set(k, n.clone()); } } }
+  const P = g.attributes.position, N = g.attributes.normal, t = new THREE.Vector3();
+  for (let i = 0; i < P.count; i++){ const o = acc.get(key(P.getX(i), P.getY(i), P.getZ(i))); if (!o || o.lengthSq() < 1e-12) continue; t.copy(o).normalize(); N.setXYZ(i, t.x, t.y, t.z); }
+  N.needsUpdate = true; g.userData.smooth = true; }
 /* v267 鰭自己會動（只動 Fins 這個部位；頭朝 +x，身體大約 x -0.5～0.8，尾鰭在 -0.5 後面）：
    胸鰭、腹鰭（往兩側伸出去的）以根部為軸前後划，左右兩片錯開一點；背鰭、臀鰭（上下、很薄的）一波一波往後傳；尾鰭尖端比根部慢一點跟上，看起來軟軟的。
    每條魚用自己的位置當相位，魚缸裡不會整齊劃一。 */
@@ -692,6 +708,9 @@ function fishMat(id, part, color, glow, move, shape){
   if (marlinBody){ m.metalness = 0.55; m.roughness = 0.32; m.flatShading = false; }
   if (shape === 'Marlin' && part === 'Fins'){ m.metalness = 0.2; m.roughness = 0.5; }
   const marlinFin = shape === 'Marlin' && part === 'Fins', m2 = shape === 'Marlin2';
+  const gb = !CLASSIC && fishGenBody(shape), gBody = gb && (part === 'Top' || part === 'Bottom' || part === 'Spots'), fine = gb && Quality.tier !== 'low', gScale = gBody && fine && move !== 'eel', gFin = gb && fine && part === 'Fins';
+  if (gBody){ m.flatShading = false; m.roughness = 0.36; m.metalness = 0.12; }
+  if (gb && part === 'Eye'){ m.roughness = 0.06; m.metalness = 0.0; m.flatShading = false; }
   const finMove = !CLASSIC && part === 'Fins' && !/^Marlin/.test(shape || '') && (move === 'side' || move === 'vert' || move === 'eel');   /* v267 鰭自己會動（螃蟹、龍蝦、魟魚、旗魚不用） */
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
   if (glow && (part === 'Top' || part === 'Body')){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.35; }
@@ -709,13 +728,20 @@ function fishMat(id, part, color, glow, move, shape){
           + 'float sx = (vFishP.x + 0.42) / 0.84 * 12.0; float sb = smoothstep(0.5, 0.36, abs(fract(sx) - 0.5)) * smoothstep(-0.05, -0.01, my) * step(-0.42, vFishP.x) * step(vFishP.x, 0.42);'
           + 'mc = mix(mc, mStr, sb * 0.9); diffuseColor.rgb = mc;\n'
           : m2 ? '' : marlinFin ? 'float fsx = (vFishP.x + 0.42 - vFishP.y * 0.35) / 0.84 * 12.0; float fsb = smoothstep(0.5, 0.36, abs(fract(fsx) - 0.5)) * step(-0.4, vFishP.x) * step(0.1, abs(vFishP.y)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.35, 0.6, 1.0), fsb * 0.8);\n'
+          : gBody ? 'float gy = vFishP.y; float gfr = smoothstep(-0.18, 0.2, gy); vec3 gc = diffuseColor.rgb; gc = mix(mix(gc, vec3(0.97, 0.97, 0.94), 0.28) * 1.06, gc * vec3(0.78, 0.82, 0.88), gfr); diffuseColor.rgb = gc;'
+            + 'float gll = smoothstep(0.012, 0.0, abs(gy - 0.02 - vFishP.x * 0.03)) * step(-0.45, vFishP.x) * step(vFishP.x, 0.45); diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.25 + 0.04, gll * 0.5);\n'
+            + (gScale ? 'float gang = atan(vFishP.y, vFishP.z * 1.5); vec2 gsp = vec2(vFishP.x * 30.0, gang * 6.0); gsp.y += mod(floor(gsp.x), 2.0) * 0.5; vec2 gq = fract(gsp) - 0.5; float gs = smoothstep(0.55, 0.15, length(gq * vec2(1.2, 1.0))); float gedge = smoothstep(0.32, 0.5, length(gq * vec2(1.2, 1.0))) * step(gq.x, 0.0); float gw = step(-0.5, vFishP.x) * step(vFishP.x, 0.5) * (1.0 - smoothstep(0.38, 0.5, vFishP.x));'
+              + 'diffuseColor.rgb *= 1.0 + gw * (0.07 * gs - 0.12 * gedge);\n' : '')
+          : gFin ? 'float gtl = step(vFishP.x, -0.5); float gra = gtl > 0.5 ? atan(vFishP.y, -(vFishP.x + 0.5)) * 9.0 : vFishP.x * 70.0; float grs = smoothstep(0.35, 0.0, abs(fract(gra) - 0.5)); float gout = gtl > 0.5 ? smoothstep(0.0, 0.32, -(vFishP.x + 0.5)) : smoothstep(0.08, 0.3, max(abs(vFishP.y), abs(vFishP.z)));'
+            + 'diffuseColor.rgb *= 1.0 - grs * 0.18; diffuseColor.a *= mix(1.0, 0.58, gout);\n'
           : body ? 'diffuseColor.rgb *= mix(1.08, 0.88, smoothstep(-0.2, 0.22, vFishP.y));\n' : '') +
         (scaly ? 'vec2 sp = vFishP.xy * vec2(30.0, 34.0); sp.y += mod(floor(sp.x), 2.0) * 0.5; vec2 fq = fract(sp) - 0.5; diffuseColor.rgb *= 0.9 + 0.14 * smoothstep(0.52, 0.2, length(fq * vec2(1.0, 1.3)));\n' : ''));
       const outChunk = sh.fragmentShader.includes('#include <opaque_fragment>') ? '#include <opaque_fragment>' : '#include <output_fragment>';
-      sh.fragmentShader = sh.fragmentShader.replace(outChunk, 'outgoingLight += vec3(0.85, 0.95, 1.0) * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0) * 0.28;\n' + outChunk);
+      sh.fragmentShader = sh.fragmentShader.replace(outChunk, 'outgoingLight += vec3(0.85, 0.95, 1.0) * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0) * 0.28;\n'
+        + (gBody ? '{ float gfz = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.0); outgoingLight += (0.5 + 0.5 * cos(6.2832 * (gfz * 0.8 + vec3(0.0, 0.33, 0.67)))) * gfz * 0.07; }\n' : '') + outChunk);
     }
   };
-  m.customProgramCacheKey = () => 'fish-' + move + (body ? 'b' : '') + (scaly ? 's' : '') + (CLASSIC ? 'c' : '');
+  m.customProgramCacheKey = () => 'fish-' + move + (body ? 'b' : '') + (scaly ? 's' : '') + (CLASSIC ? 'c' : '') + (gBody ? 'G' : '') + (gScale ? 'S' : '') + (gFin ? 'F' : '');
   if (move === 'side' || move === 'eel' || move === 'marlin' || move === 'vert' || move === 'blob') m.userData.fmv = move === 'vert' ? 'vert' : 'side';   /* v448 這種魚的身體可以再加上掙扎的彎曲 */
   return (fishMatCache[key] = m);
 }
@@ -1007,10 +1033,15 @@ if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visua
       const bad = sc > 1.01 || innerWidth - vw > 3 || Math.abs(vw - de.clientWidth) > 3 || ol > 2 || ot > 2 || scrollX > 1 || scrollY > 1 || Math.abs(cw - de.clientWidth) > 3;
       if (!bad){ if (zd) zd.style.display = 'none'; return; }
       if (!zd){ zd = document.createElement('div'); zd.style.cssText = 'position:absolute;z-index:99999;pointer-events:none;font:9px/1.15 monospace;color:#fff;background:rgba(0,0,0,.45);padding:2px 5px;border-radius:5px;white-space:normal;word-break:break-all;max-width:min(420px,60vw);box-sizing:border-box'; document.body.appendChild(zd); }   /* v598 小字自己不能太寬（以前一長串不換行，自己就把版面撐出去） */
-      zd.style.display = 'block'; { const fx = de.classList.contains('vvfix'); zd.style.left = ((fx ? 0 : ol) + scrollX + 6) + 'px'; zd.style.top = ((fx ? 0 : ot) + scrollY + 6) + 'px'; } zd.style.transform = 'scale(' + (1 / sc) + ')'; zd.style.transformOrigin = '0 0';
+      zd.style.display = vpDiagShow() ? 'block' : 'none'; vpDiagRep(zd); { const fx = de.classList.contains('vvfix'); zd.style.left = ((fx ? 0 : ol) + scrollX + 6) + 'px'; zd.style.top = ((fx ? 0 : ot) + scrollY + 6) + 'px'; } zd.style.transform = 'scale(' + (1 / sc) + ')'; zd.style.transformOrigin = '0 0';
       let wide = ''; { const vwL = Math.round((window.visualViewport && visualViewport.width) || innerWidth), L = [];   /* v603 改用看得到的寬（741）來比：上一張圖 body 撐到 773，可是用 980 比就找不到人 */ for (const e of document.body.querySelectorAll('*')){ if (e === zd || e.closest('#labels')) continue; const r = e.getBoundingClientRect(); if (r.width > 0 && r.right > vwL + 4){ let fx = false; for (let q = e; q && q !== document.body; q = q.parentElement){ if (getComputedStyle(q).position === 'fixed'){ fx = true; break; } } L.push([r.right + (fx ? -1e5 : 0),   /* 固定在畫面上的東西不會撐寬版面，排到後面 */ (fx ? '~' : '') + (e.id ? '#' + e.id : e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className ? '.' + e.className.split(' ')[0] : '')) + ':' + Math.round(r.left) + '-' + Math.round(r.right)]); } } L.sort((a, b) => b[0] - a[0]); wide = L.slice(0, 3).map(q => q[1]).join(' '); }   /* v598 哪個東西超出版面右邊（截圖給作者就知道是誰把版面撐寬的） */
       zd.textContent = ver + (de.classList.contains('vvfix') ? ' FIX' : '') + (VP.n ? ' r' + VP.n : '') + ' s' + sc.toFixed(2) + ' vv' + Math.round(vw) + 'x' + Math.round(v ? v.height : innerHeight) + ' o' + Math.round(ol) + ',' + Math.round(ot) + ' in' + innerWidth + 'x' + innerHeight + ' de' + de.clientWidth + 'x' + de.clientHeight + ' c' + Math.round(cw) + ' sy' + Math.round(scrollX) + ',' + Math.round(scrollY) + ' dpr' + (+devicePixelRatio).toFixed(2) + ' sw' + de.scrollWidth + ',' + document.body.scrollWidth + (wide ? ' W ' + wide : '') + (VP.first ? ' ' + VP.first : '');
     } catch (e) {} }, 700); }
+/* v637 作者截圖又看到左上角一串小白字（v635 FIX r1 … @328s reeling,kb,land）：版面被撐寬時，遊戲已經會自己縮回看得到的範圍，
+   但這串診斷字一般玩家也看得到，很礙眼。現在只有網址加 #debug 才顯示；一般玩家改成悄悄送一筆到伺服器的錯誤紀錄（client_errors，fn = viewport），每次開遊戲最多一筆，
+   之後看 tools/server_report.sql 就知道大家是在做什麼的時候出問題、是哪些手機。 */
+function vpDiagShow(){ return /debug|vpdiag/.test(location.hash); }
+function vpDiagRep(zd){ if (zd._rep) return; zd._rep = 1; setTimeout(() => { try { errReport('viewport', (zd.textContent || '').slice(0, 290) + ' ua:' + (navigator.userAgent.match(/Android [\d.]+|Chrome\/\d+|SamsungBrowser\/[\d.]+|Version\/[\d.]+ Mobile/g) || []).join(' ')); } catch(e){} }, 1500); }
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 320 && !(e.target && e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
