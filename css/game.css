@@ -2139,3 +2139,22 @@ body:has(#blkBar:not([hidden])) #today3{visibility:hidden}
 .isl-cats .tbtn{padding:6px 12px;font-size:13.5px}
 .shoplist .blk-sw{flex:none;display:block;width:48px;height:48px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
 .shoplist .blk-sw.pn{height:16px;margin:16px 0}
+
+/* v680 蓋房子第二版 */
+#blkBar .bk-md{display:flex;gap:5px;align-items:center;overflow-x:auto;margin-bottom:5px}
+#blkBar .bk-md .tbtn{flex:none;padding:5px 9px;font-size:12.5px}
+#blkBar .bk-h{flex:none;font-size:12px;font-weight:700;min-width:34px;text-align:center}
+#blkBar .bk-cats{display:flex;gap:4px;margin-bottom:4px}
+#blkBar .bk-cat{flex:none;padding:3px 10px;border-radius:999px;border:0;background:rgba(0,0,0,.06);font-size:12px;font-weight:700}
+#blkBar .bk-cat.on{background:#ff9a1f;color:#fff}
+#blkBar .bk-sw i.shp{display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;background:rgba(255,255,255,.7);text-shadow:0 1px 0 rgba(0,0,0,.25)}
+#blkBar .bk-col{display:flex;gap:4px;overflow-x:auto;padding-top:5px}
+#blkBar .bk-c{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid rgba(0,0,0,.15)}
+#blkBar .bk-c.on{border:3px solid #ff9a1f;transform:scale(1.12)}
+@media (max-height:420px){ #blkBar .bk-md{margin-bottom:3px} #blkBar .bk-c{width:20px;height:20px} #blkBar .bk-cats{margin-bottom:2px} }
+#isleTop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(92vw,420px);max-height:80vh;overflow:auto;padding:12px 14px;border-radius:16px}
+#isleTop .it-hd{display:flex;align-items:center;justify-content:space-between;font-size:16px;margin-bottom:4px}
+#isleTop .it-ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+#isleTop .it-ul li{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;background:rgba(0,0,0,.04)}
+#isleTop .it-n{width:28px;text-align:center;font-weight:800}
+#isleTop .it-nm{flex:1;min-width:0;font-weight:700;font-size:13.5px}
