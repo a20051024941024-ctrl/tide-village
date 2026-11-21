@@ -6411,7 +6411,7 @@ function updateCamera2(dt){
   const fishNow = !own && CAMV.mode === 'top' && ['waiting', 'bite', 'reeling', 'landing', 'land'].includes(F.phase) && me.bobPos; if (fishNow){ CAMV.fkAt = now(); CAMV.bob = { x: me.bobPos.x, z: me.bobPos.z }; }
   /* v308：一直快速點（拋竿→收竿→再拋）鏡頭會一直拉遠拉近。現在拉魚的時候也維持，結束後停 3 秒才慢慢拉回來 */
   const fishOn = fishNow || (CAMV.fkAt && now() - CAMV.fkAt < 3 && CAMV.bob && F.phase !== 'charging'); CAMV.fk += ((fishOn ? 1 : 0) - CAMV.fk) * Math.min(1, dt * (fishOn ? 1.6 : 0.8));
-  let dist = cam.dist; const bob = me.bobPos || CAMV.bob; if (CAMV.fk > 0.001 && bob){ const bx = bob.x - me.pos.x, bz = bob.z - me.pos.z, bl = Math.min(30, Math.hypot(bx, bz)); target.x += bx * 0.42 * CAMV.fk; target.z += bz * 0.42 * CAMV.fk; target.y -= 0.5 * CAMV.fk; }
+  let dist = cam.dist; const bob = me.bobPos || CAMV.bob; if (CAMV.fk > 0.001 && bob){ const bx = bob.x - me.pos.x, bz = bob.z - me.pos.z, bl = Math.min(30, Math.hypot(bx, bz)), nk = CAMV.fk * clamp((dist - 6) / 7, 0, 1); target.x += bx * 0.42 * nk; target.z += bz * 0.42 * nk; target.y -= 0.5 * nk; }   /* v667 作者截圖：「按收竿之後畫面會跑掉」→ 鏡頭拉得很近的時候還把畫面中心移到人和浮標中間，人就跑到畫面最左邊、鏡頭貼在臉旁邊，收竿後還要好幾秒才回來。現在鏡頭越近移得越少，近到 6 公尺以內就不移 */
   /* v597 往上看：鏡頭往下拖過水平以後，鏡頭不再往地下鑽，而是停在角色後面、差不多頭的高度，改成抬頭往上看（像 GTA）；拖越多看越高，最多大約 45 度 */
   const up = (!Dive.on && !House.on && !inIndoor() && !Photo.on) ? Math.max(0, -cam.pitch) : 0, pit = up > 0 ? 0.03 : cam.pitch;
   const cp = Math.cos(pit), sp = Math.sin(pit);
