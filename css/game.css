@@ -1978,3 +1978,4 @@ body.ui3 #sheet #tabs button[aria-selected="true"],#sheet .seg button[aria-press
 #catchCard .card::before{border-color:#bfe0f7!important;border-radius:16px!important}
 #catchCard .card::after{content:none!important}
 @media (max-height:420px){ #sheet.th-wood .box{border-width:26px!important} }
+.coin-ic.emo-blue{filter:hue-rotate(205deg) saturate(1.3) brightness(1.05)}

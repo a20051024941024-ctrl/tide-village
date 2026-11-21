@@ -18409,10 +18409,16 @@ $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet' && perf
 
 // 金幣圖示：畫面上所有的 🪙 換成 icons/coin.svg（3D 招牌上的字還是 emoji）
 const COIN_SRC = 'icons/coin.svg';
-function coinify(root){ if (!root || !root.ownerDocument && root !== document) return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.nodeValue.indexOf('🪙') >= 0 && n.parentNode && !/^(OPTION|TEXTAREA|SCRIPT|STYLE|TITLE)$/.test(n.parentNode.nodeName) ? 1 : 3 }), L = [];
+/* v648 作者：「太 AI」→ 常見的表情符號換成從作者自己做的參考圖剪下來的圖示（金幣照舊用 coin.svg） */
+const EMO_IMG = { '🪙':COIN_SRC, '⭐':'icons/ui/star.png', '🌟':'icons/ui/star.png', '🐚':'icons/ui/shell.png', '⚓':'icons/ui/anchor.png', '🎁':'icons/ui/giftbox.png', '🔥':'icons/ui/fire.png', '💎':'icons/ui/gem.png', '⚡':'icons/ui/bolt.png', '🏁':'icons/ui/flag.png', '❤':'icons/ui/heart.png', '💙':'icons/ui/heart.png', '🫧':'icons/ui/pearl.png', '🧰':'icons/ui/chest.png' };
+const EMO_RE2 = new RegExp('(' + Object.keys(EMO_IMG).join('|') + ')️?', 'u'), EMO_ALT = { '🪙':'金幣', '💙':'愛海點數' };
+function coinify(root){ if (!root || !root.ownerDocument && root !== document) return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => EMO_RE2.test(n.nodeValue) && n.parentNode && !/^(OPTION|TEXTAREA|SCRIPT|STYLE|TITLE|INPUT)$/.test(n.parentNode.nodeName) && !(n.parentNode.closest && n.parentNode.closest('[contenteditable],.noemo')) ? 1 : 3 }), L = [];
   while (w.nextNode()) L.push(w.currentNode);
-  for (const t of L){ const parts = t.nodeValue.split('🪙'), f = document.createDocumentFragment(); parts.forEach((p, i) => { if (i){ const im = document.createElement('img'); im.src = COIN_SRC; im.className = 'coin-ic'; im.alt = '金幣'; im.draggable = false; f.appendChild(im); } if (p) f.appendChild(document.createTextNode(p)); }); if (t.parentNode) t.parentNode.replaceChild(f, t); } }
-try { let pend = new Set(), qd = false; new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData'){ if (m.target.nodeValue && m.target.nodeValue.indexOf('🪙') >= 0) pend.add(m.target.parentNode); } else for (const n of m.addedNodes){ if (n.nodeType === 3 ? n.nodeValue.indexOf('🪙') >= 0 : n.nodeType === 1 && (n.textContent || '').indexOf('🪙') >= 0) pend.add(n.nodeType === 3 ? n.parentNode : n); } }
+  const RG = new RegExp(EMO_RE2.source, 'gu');
+  for (const t of L){ const f = document.createDocumentFragment(), str = t.nodeValue; let last = 0, m; RG.lastIndex = 0;
+    while ((m = RG.exec(str))){ if (m.index > last) f.appendChild(document.createTextNode(str.slice(last, m.index))); const e = m[1], im = document.createElement('img'); im.src = EMO_IMG[e]; im.className = 'coin-ic' + (e === '💙' ? ' emo-blue' : ''); im.alt = EMO_ALT[e] || e; im.draggable = false; f.appendChild(im); last = m.index + m[0].length; }
+    if (last < str.length) f.appendChild(document.createTextNode(str.slice(last))); if (t.parentNode) t.parentNode.replaceChild(f, t); } }
+try { let pend = new Set(), qd = false; const has = s => !!s && EMO_RE2.test(s); new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData'){ if (has(m.target.nodeValue)) pend.add(m.target.parentNode); } else for (const n of m.addedNodes){ if (n.nodeType === 3 ? has(n.nodeValue) : n.nodeType === 1 && has(n.textContent || '')) pend.add(n.nodeType === 3 ? n.parentNode : n); } }
     if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
 /* v553 玩法說明每一段的重點（兩三句）。原本的長說明還在，收在「看詳細規則」裡 */
 const HELP_SHORT = {
