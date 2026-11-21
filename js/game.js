@@ -5152,7 +5152,7 @@ class Fisher {
     // 船上：身體反過來抵消搖晃（之後在船上站著時用）
     if (this.surf === 'boat' && this.boatRoll != null) T.rol -= this.boatRoll * 0.6;
     // ---- 特殊姿勢（目標姿勢，下面再平滑過去，不會瞬間跳動）----
-    if (this.sitting){ T.lL = T.lR = -1.45; T.kL = T.kR = 1.35; T.fL = T.fR = 0.1; T.pit = 0; T.bob = 0; T.tw = 0; T.rol = 0; }
+    if (this.sitting){ T.lL = T.lR = -1.45; T.kL = T.kR = 1.9; T.fL = T.fR = -0.3; T.pit = 0; T.bob = 0; T.tw = 0; T.rol = 0; }   /* v654 作者：「玩家的腳是往後的」→ 膝蓋多彎一點、腳尖往下，小腿垂下來，從前面看不會像腳底朝前、腳往後折 */
     else if (this.air > 0.05){ T.lL = -0.55; T.lR = 0.35; T.kL = 0.9; T.kR = 0.5; T.fL = 0.2; T.fR = 0.3; T.bob = 0; T.aL = T.aR = -0.6; T.zL = -0.35; T.zR = 0.35; }
     else if (this === me && Jump.land > 0){ const k = Jump.land / 0.18; T.lL = T.lR = -0.35 * k; T.kL = T.kR = 0.75 * k; T.fL = T.fR = -0.4 * k; T.bob -= 0.08 * k; }   /* 落地：膝蓋微彎緩衝 */
     a.rod.visible = this.fishing || !!this.restRod;   /* v621 坐在釣魚裝備的椅子上還沒拋：竿子拿在手上（沒有竿架時） */
