@@ -5230,7 +5230,11 @@ class Fisher {
       T.tw = -back * 0.12 + fwd * 0.08; T.pit += fwd * 0.06 - back * 0.03;
       /* v508 作者：「打大白鯊動作好奇怪、沒有拉竿的感覺」→ 用力拉（tug）的時候整個人往後仰、竿子往後扳、手往上提；被魚扯（yank）的時候往前一傾 */
       const tg = this.tug || 0, yk = this.yank || 0; T.pit += -tg * (a.kid ? 0.95 : 0.32) + yk * (a.kid ? 0.45 : 0.15); T.aR -= tg * 0.35; T.aL -= tg * 0.3; T.bob = (T.bob || 0) - tg * 0.04;
-      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.25 + fwd * 0.7 - tg * 0.55 + yk * 0.35 + (tg > 0.3 ? Math.sin(t * 23) * 0.025 * tg : 0); if (a.hd) rodHDAnim(this, dt, t);
+      /* v678 作者：「釣魚的動作不夠明顯，手也都沒在動」→ 拉魚時左手一圈一圈轉捲線器（越用力轉越快）、身體跟著往後一頓一頓；等魚的時候右手每隔幾秒輕輕抽一下竿 */
+      const spin = this.reelSpin != null ? this.reelSpin : (this.bend > 0.08 ? 0.8 : 0); this.crankPh = (this.crankPh || 0) + dt * (6 + 8 * spin) * (spin > 0.02 ? 1 : 0);
+      if (spin > 0.02){ const c = this.crankPh; T.aL += Math.sin(c) * 0.32 * Math.min(1, spin + 0.3); T.zL += Math.cos(c) * 0.22 * Math.min(1, spin + 0.3); T.aR -= 0.12 * spin; T.pit -= (0.06 + Math.max(0, Math.sin(c * 0.5)) * 0.05) * spin; T.tw += Math.sin(c) * 0.03 * spin; }
+      else if (!this.castSnap && this.castT < 0 && !(this.windup > 0)){ const ph = t * 1.4 + (this.blinkPh || 0), jig = Math.pow(Math.max(0, Math.sin(ph)), 12); T.aR -= jig * 0.38; T.aL -= jig * 0.18; this._jig = jig; } else this._jig = 0;
+      a.rod.rotation.x = 0.95 - this.bend * 0.45 + Math.sin(t*9) * this.bend * 0.04 - back * 1.25 + fwd * 0.7 - tg * 0.55 + yk * 0.35 - (this._jig || 0) * 0.3 + (tg > 0.3 ? Math.sin(t * 23) * 0.025 * tg : 0); if (a.hd) rodHDAnim(this, dt, t);
       this.castSnap = this.castT >= 0 || (this.windup || 0) > 0;
     } else this.castSnap = false;
     if (this.held){
@@ -6401,7 +6405,15 @@ function camClear(target, want, dt){
   const k = CamK.k; if (k >= 0.999) return;
   const x = target.x + dx * k, z = target.z + dz * k; let y = Math.max(target.y + dy * k, groundHeight(x, z) + 0.6);
   want.set(x, y, z); }
+const ShowCam = { on: false, until: 0, y0: 0, d0: 0, p0: 0, back: 0 };
+/* v678 作者：「炫耀這個動作，玩家本人看不到只能看到背影」→ 炫耀時鏡頭慢慢繞到前面看你舉魚，6 秒後再繞回原本的位置；中途自己拖畫面就停 */
+function showCamStart(){ if (FP.act || Dive.on || Photo.on) return; ShowCam.on = true; ShowCam.until = now() + 6; ShowCam.back = 0; ShowCam.y0 = cam.yaw; ShowCam.d0 = cam.dist; ShowCam.p0 = cam.pitch; }
+function showCamTick(dt){ if (!ShowCam.on) return; const t = now(), k = 1 - Math.exp(-dt * 2.2);
+  if (t < ShowCam.until){ cam.yaw = lerpAngle(cam.yaw, me.rot, k); cam.dist += (Math.min(ShowCam.d0, 6) - cam.dist) * k; cam.pitch += (0.3 - cam.pitch) * k; }
+  else { cam.yaw = lerpAngle(cam.yaw, ShowCam.y0, k); cam.dist += (ShowCam.d0 - cam.dist) * k; cam.pitch += (ShowCam.p0 - cam.pitch) * k; if (Math.abs(Math.atan2(Math.sin(cam.yaw - ShowCam.y0), Math.cos(cam.yaw - ShowCam.y0))) < 0.02){ cam.yaw = ShowCam.y0; cam.dist = ShowCam.d0; cam.pitch = ShowCam.p0; ShowCam.on = false; } } }
+canvas.addEventListener('pointerdown', () => { ShowCam.on = false; });
 function updateCamera2(dt){
+  try { showCamTick(dt); } catch(e){}
   /* v323 玩家回報：快速點、釣完魚鏡頭就變了。拉魚連打的時候另一隻手指碰到畫面，會被當成拖動或縮放鏡頭。
      開始釣魚時記住鏡頭的角度和距離，釣完就慢慢回到原本的樣子（釣完以後自己再拖、再縮放就照你的意思） */
   { const fishing = ['charging', 'waiting', 'bite', 'reeling', 'landing', 'land'].includes(F.phase);
@@ -6758,6 +6770,7 @@ function updateBiteShadow(dt, t, want){ const B = BiteFish;
   const ty = shallow ? WATER_LEVEL - 0.2 : WATER_LEVEL - (bite ? 0.4 : 1.1 - 0.45 * B.shK); g.position.y += (ty - g.position.y) * Math.min(1, dt * 2);
   g.rotation.y = Math.atan2(-(b.z - g.position.z), b.x - g.position.x) + Math.sin(t * 2.5) * 0.12; }
 function updateFishing(dt, t){
+  me.reelSpin = F.phase === 'reeling' ? (F.hold ? 1 : 0.18) : 0;   /* v678 自己：按住收線時左手轉得快，放開時慢慢轉 */
   try { signsTick(dt, t); } catch(e){}
   try { flkTick(dt, t); } catch(e){ if (!flkTick.err){ flkTick.err = 1; console.warn('flk', e); } }
   try { smTick(dt, t); } catch(e){ if (!smTick.err){ smTick.err = 1; console.warn('sea', e); } }
@@ -17142,7 +17155,7 @@ function openShowPick(){
 }
 function showOff(id, w){
   const f = FISH_BY_ID[id]; if (!f) return;
-  emote('cheer'); me.holdFish(f, w, 6);   /* v258 炫耀的時候歡呼（先歡呼，頭上的泡泡再換成魚的名字和重量） */
+  emote('cheer'); me.holdFish(f, w, 6); try { showCamStart(); } catch(e){}   /* v258 炫耀的時候歡呼（先歡呼，頭上的泡泡再換成魚的名字和重量） */
   myShow = { f: id, w: +(+w).toFixed(2), at: Date.now() }; pushPresence(true);
   const p = me.av.g.position; FX.emit(p.x, p.y + 2.5, p.z, f.rarity === '傳說' ? 40 : 18, f.rarity === '傳說' ? '#ffd36a' : '#9fe3ff', 1.2, 2.2, 1.0);
   SFX.catch();
@@ -19575,6 +19588,7 @@ function renderTab(){
       '🐠 在自己小島的海底，點一下魚就會在上面顯示這條魚是誰、什麼時候、在哪裡釣到的，6 秒後自己收起來（不會一靠近就跳出來擋畫面）。',
       '🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「收」再點，可以收回包包（自己放的），之後再拿出來不用錢。一座島最多 400 塊，跟一起住的人共用。',
       '🏝️ 小島的「買東西擺島上」分成房子、寵物圍欄、花草樹、家具、擺飾、方塊、隔板幾類；最後一個「島上的東西」列出島上每一件，可以直接移動或收起來（收回包包，之後拿出來擺不用再付錢；房子還是拆掉退一半）。',
+      '🐟 炫耀魚的時候，鏡頭會慢慢繞到前面讓你看到自己舉著魚，6 秒後繞回去（中途拖畫面就停）。拉魚時左手會一圈一圈轉捲線器，等魚時右手會每隔幾秒輕輕抽一下竿。',
       '👕 穿搭：每個人可以跟阿萍免費挑一套入門衣服（只能挑一次，造型頁也有按鈕）。每週一換一個穿搭主題（海邊度假、漁夫日常、運動風、文青散步、冬天暖暖、冒險家輪流），身上穿到主題裡 2 件以上，釣到魚多一成經驗，村民也會稱讚你。點別人的名片，「👕 穿搭」頁看得到他穿什麼，「我也想要」會帶你去那件衣服，也可以按「穿得好看」幫他按讚（一週最多讚 30 次）。造型頁看得到這週被讚最多的人。',
       '🎣 釣友隊等級：隊員每釣一條 +1 經驗、每週目標達成 +300、同隊兩個人一起打小組對決打贏 +50。Lv2 名字旁邊掛隊徽、Lv3 隊員的小島插上隊旗、Lv4 每個隊員都拿到隊服（顏色是隊色）。每週目標達成領獎時，除了金幣再開一個隊伍寶箱（隨機魚餌、打窩料或珊瑚苗）。大看板有「本週小組勝場」。',
     ]);
