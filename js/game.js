@@ -6893,7 +6893,7 @@ function updateFishing(dt, t){
   card.hidden = !showCard;
 }
 // ---- 拔魚（城市水圳）：站在比水面高很多的地方（堤防路），魚要從水面整條「拔」上來。小魚直接拉；大魚太重，沒有撈網硬拔線會斷 ----
-const LIFT_H = 1.6, LIFT_KG = 1.5, NET = { id:'tool_net', name:'撈網', icon:'🥅', price:800, desc:'長柄的撈網。在高高的堤防、岸壁上釣到大魚（超過 1.5 公斤）時，要用撈網從水面撈起來，不然硬拔線會斷。' };
+const LIFT_H = 1.6, LIFT_KG = 1.5, NET = { id:'tool_net', name:'撈網', icon:'🥅', price:800, desc:'長柄的撈網。在高高的堤防上釣到大魚，要用它從水面撈上來，硬拔的話線會斷。' };
 function hasNet(){ return (rec.owned || []).includes(NET.id); }
 function liftHeight(){ return myBoat || mySeat ? 0 : groundHeight(me.pos.x, me.pos.z) - WATER_LEVEL; }
 function landFish(){
@@ -12384,17 +12384,17 @@ function craftSwatch(c){ const cv = document.createElement('canvas'); cv.width =
 async function craftRpc(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能找阿鐵師傅'); return null; } try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
 function renderCraft(body){
   body.appendChild(el('div', 'dexhead', '🔧 阿鐵師傅的工坊'));
-  body.appendChild(el('p', 'sub', '帶魚和金幣來，阿鐵師傅幫你做竿子造型和釣線顏色。會用掉魚缸裡同稀有度最輕的魚（收藏⭐、展示中、變種的不會用），一天最多做 10 件。只是外觀，別人也看得到。'));
+  body.appendChild(el('p', 'sub', '「帶魚跟金幣來，我幫你做竿子的花樣、線的顏色。用的是你魚缸裡最輕的那幾條，收藏⭐、展示中跟變種的我不碰。一天最多做 10 件。」'));
   { body.appendChild(el('div', 'dexhead', '🪱 自製魚餌')); const ul = el('ul', 'shoplist'), li = el('li'); li.appendChild(el('span', 'rodsw bait-live'));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `活餌（現在有 ${(rec.bait || {}).live || 0} 個）`)); const use = craftUse({ r:'常見', n:2 });
-    d.appendChild(el('div', 'sub2', '🪙30＋常見魚 2 條 → 4 個活餌。🐦掠食魚特別愛：掠食魚 ×1.5，落在海鳥旁邊加成更大、範圍更寬。一天最多做 8 次。')); li.appendChild(d);
+    d.appendChild(el('div', 'sub2', '🪙30＋常見魚 2 條，換 4 個活餌。「掠食魚看到活的就追，往有海鳥的地方丟最好。」一天最多做 8 次。')); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '做'); b.disabled = use.length < 2 || rec.coins < 30;
     b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
       b.disabled = true; const r = await craftRpc('craft_bait', { p_id:'live' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('🪱 做好 4 個活餌了！到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b.disabled = false; });
     a.appendChild(b); li.appendChild(a); ul.appendChild(li);
     { /* v295 秋刀魚切塊：1 條秋刀魚＋🪙20 → 4 個；鯊魚和大型掠食魚最愛 */ const li2 = el('li'); li2.appendChild(el('span', 'rodsw bait-saurychunk'));
       const shown = new Set((rec.show || []).map(String)), use2 = (rec.tank || []).filter(x => x.f === 'saury' && !x.k && !shown.has(String(x.t))).sort((p, q) => p.w - q.w).slice(0, 1);
-      const d2 = el('div', 'tinfo'); d2.appendChild(el('div', 'n', `秋刀魚切塊（現在有 ${(rec.bait || {}).saurychunk || 0} 個）`)); d2.appendChild(el('div', 'sub2', '🪙20＋秋刀魚 1 條 → 4 個。鯊魚、鮪魚、浪人鰺這些大型掠食魚最愛（愛吃的魚 ×1.8）。跟活餌加起來一天最多做 8 次。')); li2.appendChild(d2);
+      const d2 = el('div', 'tinfo'); d2.appendChild(el('div', 'n', `秋刀魚切塊（現在有 ${(rec.bait || {}).saurychunk || 0} 個）`)); d2.appendChild(el('div', 'sub2', '🪙20＋秋刀魚 1 條，換 4 個。「鯊魚、鮪魚、浪人鰺聞到這個味道就來了。」跟活餌加起來一天最多做 8 次。')); li2.appendChild(d2);
       const a2 = el('div', 'tacts'), b2 = el('button', 'tbtn', '做'); b2.disabled = !use2.length || rec.coins < 20;
       b2.addEventListener('click', async () => { if (b2.dataset.sure !== '1'){ b2.dataset.sure = '1'; b2.textContent = '確定？'; d2.appendChild(el('div', 'sub2', '會用掉：' + use2.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
         b2.disabled = true; const r = await craftRpc('craft_bait', { p_id:'saurychunk' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('🔪 切好 4 個秋刀魚切塊了！到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b2.disabled = false; });
@@ -12761,7 +12761,7 @@ function renderPets(body){
   if (Pets.tab === 'market'){ renderPetMarket(body); return; }
   const L = Pets.list, pc = penCaps(rec.island && rec.island.items);
   /* v606 作者：「不應該限制包包裡寵物的數量吧」→ 不限數量（伺服器 203），圍欄只是寵物的家 */
-  body.appendChild(el('p', 'sub', `養了 ${L.length} 隻（v606 起想養幾隻都可以）。在小島蓋陸地圍欄、海水池、烏龜缸，待在家的寵物會住進去玩。同時只能帶 1 隻出門。一天第一次餵牠親密度加比較多；親密度 10 以上每天會帶一份小禮物，60 戴項圈、150 再戴小帽子。`));
+  body.appendChild(el('p', 'sub', `養了 ${L.length} 隻，一次帶 1 隻出門。在小島蓋圍欄、海水池、烏龜缸，留在家的會住進去玩。每天第一次餵最開心；跟你越熟，會帶小禮物給你，還會戴上項圈、小帽子。`));
   const ul = el('ul', 'shoplist');
   for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(el('span', 'dishic', K.icon));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}${petVarRare(p.kind, p.var) ? ' ⭐' : ''}${p.price != null ? `（市集掛賣中 🪙${p.price.toLocaleString()}）` : p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
@@ -12789,7 +12789,7 @@ function renderPets(body){
   body.appendChild(el('div', 'dexhead', '🏠 領養'));
   const f1 = el('div', 'field'); f1.appendChild(el('label', '', '幫牠取名字（1～8 個字）')); const ni = el('input', 'txt'); ni.maxLength = 8; ni.value = Pets.newName; ni.placeholder = '例如：小咪'; ni.addEventListener('input', () => { Pets.newName = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
   const ul2 = el('ul', 'shoplist cols');
-  body.appendChild(el('p', 'sub', '每一種都有好幾種花色，領養的時候隨機，⭐ 是很少見的花色。小海龜、小章魚、河豚店裡沒有賣，要在海邊釣魚時碰運氣撈到（寄居蟹、水獺也撈得到）。'));
+  body.appendChild(el('p', 'sub', '「每一種都有好幾種花色，領養的時候隨機挑，有⭐的很少見喔。小海龜、小章魚、河豚我這裡沒有，要在海邊釣魚的時候碰運氣。」'));
   for (const [k, K] of Object.entries(PET_KINDS).filter(([, K]) => !K.fish)){ const li = el('li'); li.appendChild(el('span', 'dishic', K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc + '　花色：' + Object.values(PET_VARS[k]).map(x => x[0]).join('、'))); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < K.price ? ' ghost' : ''), '領養'); b.addEventListener('click', async () => { const nm = (Pets.newName || '').trim() || K.name; if (rec.coins < K.price){ toast(`金幣不夠，還差 🪙${(K.price - rec.coins).toLocaleString()}`); return; } b.disabled = true;
       const r = await petRpc('pet_adopt', { p_kind: k, p_name: nm }); if (r){ adoptRow(r.player); Pets.list = r.pets; Pets.newName = ''; SFX.catch(); flash(`${K.icon} ${nm}（${petVarName(k, r.var)}${petVarRare(k, r.var) ? '⭐很少見！' : ''}）成為你的家人了！`, 2.2); if (!petMine()){ const np = r.pets[r.pets.length - 1]; const o = await petRpc('pet_out', { p_id: np.id }); if (o) Pets.list = o; } pushPresence(true); renderTab(); } else b.disabled = false; });
@@ -13546,11 +13546,11 @@ function diveMoveTo(site){ if (Dive.moving) return; Dive.moving = true; const fx
     me.baseY = Math.max(me.baseY, diveBed(me.pos.x, me.pos.z) + 1.5); Jump.gy = me.baseY; renderDiveHud(); setTimeout(() => { fx.classList.remove('on'); Dive.moving = false; }, 150);
     flash(`${DIVE_SITES[site].icon} 游到了${DIVE_SITES[site].name}`, 1.6); }, 380); }
 const DIVE_GEAR = [
-  { id:'dive_suit',  name:'潛水裝備組',   icon:'🤿', price:1500, o2:60,  desc:'潛水衣、面鏡、蛙鞋和小氧氣瓶。有了它才能請船夫阿海帶你去潛水，氧氣 60 秒。' },
-  { id:'dive_tank2', name:'中型氧氣瓶',   icon:'🫧', price:1200, o2:100, need:'dive_suit',  desc:'氧氣變成 100 秒。' },
-  { id:'dive_tank3', name:'大型氧氣瓶',   icon:'🫧', price:3000, o2:150, need:'dive_tank2', desc:'氧氣變成 150 秒。' },
-  { id:'dive_tank4', name:'專業雙氧氣瓶', icon:'🫧', price:7000, o2:220, need:'dive_tank3', desc:'氧氣變成 220 秒，可以慢慢逛整片珊瑚礁。' },
-  { id:'dive_fins',  name:'競速蛙鞋',     icon:'🦶', price:900,  need:'dive_suit', desc:'在水裡游得快 35%。' },
+  { id:'dive_suit',  name:'潛水裝備組',   icon:'🤿', price:1500, o2:60,  desc:'潛水衣、面鏡、蛙鞋跟一支小氧氣瓶。有了這套，阿海才肯帶你下水。可以在水下待 60 秒。' },
+  { id:'dive_tank2', name:'中型氧氣瓶',   icon:'🫧', price:1200, o2:100, need:'dive_suit',  desc:'大一號的氧氣瓶，可以在水下待 100 秒。' },
+  { id:'dive_tank3', name:'大型氧氣瓶',   icon:'🫧', price:3000, o2:150, need:'dive_tank2', desc:'再大一號，可以在水下待 150 秒。' },
+  { id:'dive_tank4', name:'專業雙氧氣瓶', icon:'🫧', price:7000, o2:220, need:'dive_tank3', desc:'兩支一起背，可以在水下待 220 秒，整片珊瑚礁慢慢逛。' },
+  { id:'dive_fins',  name:'競速蛙鞋',     icon:'🦶', price:900,  need:'dive_suit', desc:'長長的競速蛙鞋，游起來快很多。' },
   { id:'dive_light', name:'潛水燈',       icon:'🔦', price:600,  need:'dive_suit', desc:'晚上潛水也看得清楚。' },
   { id:'dive_net',   name:'手抄網',       icon:'🥅', price:800,  need:'dive_suit', desc:'潛水時可以抓海底的小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶…），帶回自己小島的海底養。' },   /* v390 */
 ];
@@ -14308,7 +14308,7 @@ function renderCook(body){
     body.appendChild(box);
   }
   if (cookMode === 'make'){
-    body.appendChild(el('p', 'sub', '用魚缸裡的魚做料理，賣給食堂比直接賣魚更值錢。切魚時抓準時機，星星越多越貴（★★★ ×1.6）。展示中的魚不會被拿來用。'));
+    body.appendChild(el('p', 'sub', '「把你釣的魚拿來，做成料理再賣，比直接賣魚好賺。切魚的時候抓準時機，星星越多賣越貴。展示中的魚我不會拿。」'));
     const ul = el('ul', 'shoplist cols');
     for (const [key, rc] of Object.entries(RECIPES)){
       const { have } = pickIngredients(key), can = have >= rc.need, li = el('li', can ? '' : 'dim');
@@ -14321,7 +14321,7 @@ function renderCook(body){
     }
     body.appendChild(ul);
   } else if (cookMode === 'buy'){   /* v377 玩家建議：沒有魚、不想自己做，也可以直接跟美雲姨買現成的 */
-    const left = dishBuyLeft(); body.appendChild(el('p', 'sub', `不想自己做，也可以直接跟美雲姨買現成的（一星 ★）。買來可以自己吃（釣魚有加成）或端給點餐的客人。價錢比自己做貴，買來再賣回去會虧錢。今天還可以買 ${left} 道（一天最多 6 道）。`));
+    const left = dishBuyLeft(); body.appendChild(el('p', 'sub', `「懶得自己做，就跟我買現成的吧。可以自己吃，釣起魚來會順一點；也可以端給點餐的客人。不過買來再賣回去會虧喔。」今天還能買 ${left} 道。`));
     const ul = el('ul', 'shoplist cols');
     for (const [key, rc] of Object.entries(RECIPES)){ const price = dishBuyPrice(key), bf = BUFFS[key], li = el('li', ''); li.appendChild(el('span', 'dishic', rc.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', rc.name)); d.appendChild(el('div', 'meta', bf ? `吃了：${bf.txt}・${bf.casts} 次拋竿` : rc.desc)); li.appendChild(d);
       const b = el('button', 'tbtn', `🪙${price}`); b.disabled = left <= 0 || rec.coins < price || rec.dishes.length >= 100; b.addEventListener('click', () => buyDish(key)); li.appendChild(b); ul.appendChild(li); }
@@ -15627,7 +15627,7 @@ function fkPeersTick(t){ for (const p of peers.values()){ const g = p.fisher.fkG
 function fkRingG(g, t){ if (!g.userData.rod) return; const k = Math.sin(t * 38) * 0.06; g.userData.rod.rotation.z = k; }
 /* 背包「🎣 釣組」 */
 function renderFkit(body){ const own = FKIT.filter(k => fkHas(k.id));
-  body.appendChild(el('p', 'sub', '在釣具店「🧰工具」買的釣魚裝備。走到水邊、面向水按「擺出來」，就會擺在你前面的岸邊，自動坐下；走開 15 公尺會自己收回來。'));
+  body.appendChild(el('p', 'sub', '走到水邊、面向水按「擺出來」，就會擺在岸邊讓你坐下；走開 15 公尺會自己收起來。'));
   if (!own.length){ body.appendChild(el('div', 'empty', '還沒有釣魚裝備。到釣具店「🧰工具」先買一張 🪑 摺疊椅吧！')); return; }
   const ul = el('ul', 'shoplist'); for (const k of own){ const li = el('li', FK.set ? 'on' : ''); li.appendChild(el('span', 'dishic', k.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', k.name)); d.appendChild(el('div', 'meta', k.desc)); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul);
   const a = el('div', 'tacts'); a.style.marginTop = '10px';
@@ -15649,7 +15649,10 @@ function renderFkitShop(body){ body.appendChild(el('div', 'dexhead', '🎣 釣�
 function renderShop(body){
   if (shopMode === 'sell' && shopName === '魚市場・賣魚') fishHallSeg(body, 'shop');
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
-  if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'); tip.innerHTML = `<b>🧔 老闆的今日情報</b><span>${esc(dailyTip().text)}</span><span>${SEASONS[SEASON].icon} 現在是${SEASONS[SEASON].name}：當季魚有 ${SEASONS[SEASON].fish.map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}（比平常多一倍）。</span><span>現在是 ${W.icon} ${W.name}、${Env.tide.icon} ${Env.tide.name}：${esc(W.desc)}${SEA_SPOTS.size ? ' 海邊、外海、小島在漲潮時最好釣，乾潮時比較難。' : ''}</span>`; body.appendChild(tip); }
+  if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'), T = dailyTip(), sp = SPOT_BY_ID[T.spot], tf = FISH_BY_ID[T.fish], sf = SEASONS[SEASON].fish.map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).slice(0, 3);   /* v645 文字口氣：老闆用講的，不是天氣預報 */
+    const wx = { sunny:'天氣好，出去走走吧。', cloudy:'今天雲多，好魚反而比較敢出來。', rain:'下雨天魚比較貪吃，雷魚、鯰魚、鰻魚都會出來。', fog:'霧這麼濃，看不遠，不過稀有的魚喜歡這種天。', typre:'颱風要來了，這種時候魚咬得最兇，但別待太晚。', tymid:'颱風天別開船！在岸邊釣，運氣好會撈到被浪翻上來的深海魚。', typost:'颱風走了，沙灘上沖上來一堆東西，快去撿。', storm:'風浪這麼大，海上的大傢伙都醒了，拉的時候小心。' }[Env.wx] || esc(W.desc);
+    const td = /乾|退/.test(Env.tide.name) ? '水在退，海邊不太好釣，河邊湖邊比較穩。' : '正在漲潮，海邊、外海最好釣。';
+    tip.innerHTML = `<b>老闆說</b><span>「今天${sp ? esc(sp.label) : ''}那邊${tf ? '的' + esc(tf.name) : ''}特別多，晚了就被釣光囉。」</span><span>「${esc(SEASONS[SEASON].name)}了，${sf.map(esc).join('、')}這幾種現在最多。」</span><span>「${wx}${SEA_SPOTS.size ? td : ''}」</span>`; body.appendChild(tip); }
   const seg = el('div', 'seg'), tailor = shopName === '阿綾服裝店';
   /* 衣服都搬到阿綾服裝店：店裡有原本的服飾，也有阿綾自己設計的 */
   if (tailor && !['wear', 'ling'].includes(shopMode)) shopMode = 'wear'; if (!tailor && ['wear', 'ling'].includes(shopMode)) shopMode = 'sell';
@@ -15687,11 +15690,11 @@ function renderShop(body){
   if (shopMode === 'sell'){
     if (Cloud.on && (!ECON.at || Date.now() - ECON.at > 5 * 60000)) loadEcon();
     { const E = Object.entries(ECON.m || {}).filter(([id]) => FISH_BY_ID[id] && !FISH_BY_ID[id].of).sort((a, b) => b[1].m - a[1].m); if (Cloud.on && E.length){ const hi = E.filter(e => e[1].m >= 1.08).slice(0, 3), lo = E.filter(e => e[1].m <= 0.92).slice(-3);
-      const box = el('p', 'sub'); box.textContent = `📈 今日行情：${hi.length ? hi.map(([id, e]) => `${FISH_BY_ID[id].name} ×${(+e.m).toFixed(2)}`).join('、') + ' 比較缺貨，收得比較貴' : '大部分的魚價錢都正常'}${lo.length ? `；${lo.map(([id, e]) => `${FISH_BY_ID[id].name} ×${(+e.m).toFixed(2)}`).join('、')} 最近太多人賣，價錢比較低` : ''}。村民釣的魚也會賣給商店，食堂每小時會用掉一些。`; body.appendChild(box); } }
+      const box = el('p', 'sub'); box.textContent = `「今天${hi.length ? hi.map(([id]) => FISH_BY_ID[id].name).join('、') + '比較少，收得比較貴' : '大部分的魚價錢都正常'}${lo.length ? `；${lo.map(([id]) => FISH_BY_ID[id].name).join('、')}最近太多人賣，便宜一點` : ''}。」村民釣的魚也會賣給商店，食堂每小時會用掉一些。`; body.appendChild(box); } }
     if (Cloud.on){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', '🚢 跑船生意：裝上船載去珊瑚礁島賣（多三成）'); b.addEventListener('click', () => { openSheet('cargo'); loadCargo(); }); r.appendChild(b); body.appendChild(r); }
     const locked = new Set(rec.show || []);
     const favN = rec.tank.filter(x => x.k).length, list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
-    body.appendChild(el('p', 'sub', `${favN ? `⭐ 收藏的 ${favN} 條不會出現在這裡，也不會被賣掉。` : '在魚缸分頁按 ☆ 可以收藏魚，收藏的魚不會被賣掉。'}魚缸裡的魚可以賣掉換金幣，越重越值錢。${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
+    body.appendChild(el('p', 'sub', `「越重越值錢。」${favN ? `收藏⭐的 ${favN} 條不會出現在這裡，也不會被賣掉。` : '想留下來的魚，在魚缸按 ☆ 收藏就不會被賣掉。'}${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
     const shownList = rec.tank.filter(x => locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
     if (!list.length && !shownList.length){ body.appendChild(el('div', 'empty', '沒有可以賣的魚。去釣幾條再回來吧！')); return; }
     const commons = list.filter(x => FISH_BY_ID[x.f].rarity === '常見'), csum = commons.reduce((a, x) => a + itemPrice(x), 0);
@@ -17896,7 +17899,7 @@ function renderGangShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>⚓ 老港的每週限定手作</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能跟老港買。')); return; }
   const D = Gang.data; if (!D){ body.appendChild(el('div', 'empty', '載入中…')); return; }
-  body.appendChild(el('p', 'sub', '老港每週一早上 9 點用舊漁網、船纜、浮球的顏色做一件，全村只有 5 件，每人每週一件，賣完就沒了。帳號要建立滿 2 天、總共釣過 50 條魚才能買。'));
+  body.appendChild(el('p', 'sub', '「每個禮拜一早上 9 點，我用舊漁網、船纜、浮球的顏色做一件，全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。'));
   const it = D.item, left = D.stock - D.sold, ul = el('ul', 'shoplist'), li = el('li', D.mine ? 'on' : '');
   if (it && it.px){ const cv = designCanvas(it.px.slice(0, 256), 'pants', 3); cv.className = 'dishic'; cv.style.cssText = 'width:44px;height:44px;border-radius:10px;image-rendering:pixelated'; li.appendChild(cv); }
   const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', it ? it.name : '')); inf.appendChild(el('div', 'sub2', `🪙${D.price}・還剩 ${left}/${D.stock} 件${D.why && !D.mine ? '・' + D.why : ''}`)); li.appendChild(inf);
@@ -17925,7 +17928,7 @@ function renderFuShop(body){ fishHallSeg(body, 'fu');
   const head = el('div', 'shophead'); head.innerHTML = `<b>🧊 魚市場・阿福海產</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能賣魚給阿福。')); return; }
   const D = Fu.data; if (!D){ body.appendChild(el('div', 'empty', '載入中…')); return; }
-  body.appendChild(el('p', 'sub', '每天早上 6 點換新的收購單。阿福只收野生的魚：箱網養的、魚缸生的、收藏⭐或展示中的魚都不收。每一項每人每天只能交一次。'));
+  body.appendChild(el('p', 'sub', '「收購單每天早上 6 點換。我只收野生的：箱網養的、魚缸生的、收藏⭐跟展示中的都不要。每一樣一人一天交一次。」'));
   const P = Fu.pick;
   if (P){ const o = (D.orders || []).find(x => x.idx === P.idx); if (!o){ Fu.pick = null; renderTab(); return; }
     body.appendChild(el('div', 'dexhead', fuDesc(o)));
