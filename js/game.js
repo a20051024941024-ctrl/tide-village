@@ -4805,6 +4805,17 @@ function kidUpgrade(f){
   if (f.gearKey){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); }
 }
 // 表情動作還在做嗎：時間到、走開、開始釣魚就停
+/* v638 作者：「把現有動作用在對的時候」→「你先做」。站著不動一陣子（8～16 秒），會自己做個小動作：
+   左右看看（idle2）、伸懶腰（早上比較常）、打哈欠（晚上比較常）；做完過 12～26 秒再來一次。走動、拿著魚、在玩別的就不做。
+   每個人（自己、別的玩家、村民）各自隨機，所以村子看起來比較活。都是角色本來就有的動作，不用新素材 */
+function kidFidget(f, K, W, v){ const T = now(); let busy = false; if (f === me){ try { busy = Pool.on || Photo.on; } catch(e){} } const still = v < 0.1 && !f.held && !f.bkArm && !busy;
+  if (!still){ f.stillAt = 0; f.idleT = 0; f.fidAt = 0; if (f.fid){ f.fid = null; } return; }
+  if (!f.stillAt || T - (f.fidLast || 0) > 3) f.stillAt = T; f.fidLast = T; f.idleT = T - f.stillAt; if (!f.fidAt) f.fidAt = 8 + Math.random() * 8;   /* 用真的秒數算（隔超過 3 秒沒算到 = 這段時間沒在畫面上，重新開始） */
+  if (f.fid){ if (T > f.fid.until){ f.fid = null; } else { const k = f.fid.k, u = (T - f.fid.at) / (f.fid.until - f.fid.at), w = Math.min(1, u * 6, (1 - u) * 6); W[k] = w; W.idle = 1 - w * 0.95; return; } }
+  if (f.idleT < f.fidAt) return; f.fidAt = f.idleT + 12 + Math.random() * 14;
+  const h = gameHour(), night = h >= 21 || h < 5, morning = h >= 5 && h < 9, L = [['idle2', 3], ['stretch', morning ? 3 : 1], ['yawn', night ? 3 : 0.4]].filter(([k]) => K.acts[k]);
+  let r = Math.random() * L.reduce((a, b) => a + b[1], 0), k = L[0] && L[0][0]; for (const [n, w] of L){ r -= w; if (r <= 0){ k = n; break; } } if (!k) return;
+  const ac = K.acts[k], d = Math.min(4.5, ac.getClip().duration || 2); ac.reset(); ac.play(); f.fid = { k, at: T, until: T + d }; }
 function kidEmoteOn(f, t){ const E = f.emote, D = E && EMOTE_DEF[E.k]; if (!D || !f.av.kid || !f.av.kid.acts[D.anim]) { f.emote = null; return false; }
   const moved = !(f === me && mySeat) && now() - (E.at || 0) > 0.8 && ((f.aspd || 0) > 0.35 || f.air > 0.05); if (moved || f.fishing || f.sitting || f.swim || (!D.loop && now() > E.until)){ f.emote = null; if (f.bub && f.bubEmote) f.bub.hidden = true; return false; }
   if (!E.started){ E.started = true; const ac = f.av.kid.acts[D.anim]; ac.reset(); ac.play(); }
@@ -4905,7 +4916,8 @@ function kidAnimate(f, dt, t){
   else if (f.emote && kidEmoteOn(f, t)){ W[EMOTE_DEF[f.emote.k].anim] = 1; }
   else { const wk = smooth01((v - 0.2) / 0.8) * (1 - smooth01((v - 2.4) / 1.2)), rn = smooth01((v - 2.4) / 1.2) * (1 - smooth01((v - 4.3) / 0.6)), sp = smooth01((v - 4.3) / 0.6);   /* 走 3.8 用跑步動作、推到底 5.0 用衝刺動作 */
     W.idle = 1 - smooth01((v - 0.1) / 0.5); if (wk > 0) W.walk = wk; if (rn > 0) W.run = rn; if (sp > 0) W.sprint = sp;
-    if (f.held) W.hold_arms = 5; else if (f.bkArm && K.acts.hold_arms) W.hold_arms = 2.4; }   /* v533 籃球運球：上半身雙手在前面，球在手邊彈 */   /* 上半身捧著魚的比重大很多，手幾乎都是捧魚的樣子 */
+    if (f.held) W.hold_arms = 5; else if (f.bkArm && K.acts.hold_arms) W.hold_arms = 2.4;
+    kidFidget(f, K, W, v); }   /* v533 籃球運球：上半身雙手在前面，球在手邊彈 */   /* 上半身捧著魚的比重大很多，手幾乎都是捧魚的樣子 */
   if (f === me && Jump.land > 0 && !f.swim && !f.fishing){ W.jump_land = 1; for (const k of ['idle', 'walk', 'run', 'sprint']) if (W[k]) W[k] *= 0.3; }
   const rate = 1 - Math.exp(-dt * 10);
   for (const nm in K.acts){ const tgt = W[nm] || 0, cur = K.w[nm] || 0, nw = cur + (tgt - cur) * rate; K.w[nm] = nw < 0.002 && tgt === 0 ? 0 : nw; K.acts[nm].setEffectiveWeight(K.w[nm]); }
@@ -6851,7 +6863,7 @@ function landFish(){
   const fpc = FP.act; if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
   if (F.spot && F.spot.wild){ setTimeout(() => wildLanded(f, w), fpc ? 3600 : 1100); return; }   /* v593 荒島的魚：變成食物、記進荒島筆記，不進村子的紀錄 */
-  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); try { fkCaught(f); } catch(e){} if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); }, fpc ? 3600 : 900);   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
+  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); try { fkCaught(f); } catch(e){} if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); if (!fpc && (f.rarity === '傳說' || f.rarity === '稀有' || w >= 20)) startEmote(me, 'cheer'); }, fpc ? 3600 : 900);   /* v638 釣到稀有、傳說或 20kg 以上的大魚：雙手把魚舉過頭歡呼；普通的小魚就只是拿著 */   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
 const jumpers = [];
 function updateJumpers(dt, t){
@@ -16699,7 +16711,7 @@ function useRoom(r){
       else if (f.sev){ ticker(`🎉 <b>${esc(name)}</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`); if (Sev.ev && Sev.ev.fish === f.id){ Sev.ev.caught = name; Sev.told['got' + Sev.ev.id] = 1; } }
       if (f.rarity !== '常見' && !f.rs) Talk.recent.unshift({ who: name, name: f.name, at: Date.now() });
       else if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
-      if (p){ const pf = p.fisher, done = () => { pf.holdFish(f, w, 5); if (f.rarity === '傳說') pf.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); };
+      if (p){ const pf = p.fisher, done = () => { pf.holdFish(f, w, 5); if (f.rarity === '傳說' || f.rarity === '稀有' || w >= 20) startEmote(pf, 'cheer'); if (f.rarity === '傳說') pf.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); };
         if (pf.hookM){ scene.remove(pf.hookM); pf.hookM = null; }
         if (p.lastBob && Date.now() - (p.lastBobAt || 0) < 15000 && pf.av.g.visible && camera.position.distanceTo(pf.pos) < 35){   /* 看得到他把魚從水裡拉起來、甩到手上 */
           let fm = null; try { fm = fishModel(f, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); } catch(e){}
