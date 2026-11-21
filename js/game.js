@@ -2218,7 +2218,7 @@ function i18nT(s){ try { return typeof tr === 'function' ? tr(s) : s; } catch(e)
 const Voy = { on:false, m:null, btn:null };
 function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
   closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true); if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } if (F.phase !== 'idle') cancelFishing(); try { if (Bike.on) bikeOff(); } catch(e){} if (mySeat) try { standUp(); } catch(e){}
-  const P = [VOY_DOCK.slice(0, 2), [44, -38]].concat(lane), cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); const len = cum[cum.length - 1];
+  const P = [VOY_DOCK.slice(0, 2), [40, -30.5], [52, -30], [56, -50]].concat(lane), cum = [0];   /* 沿著出港的水道，不壓過碼頭 */ for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); const len = cum[cum.length - 1];
   if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 1.7); Voy.m.visible = false; }   /* v596 作者：「船的比例不對」→ 0.82 倍的船比人還小，放大到 1.7 倍（船長大約 10 公尺、駕駛艙比人高） */
   if (!Voy.btn){ const b = el('button', 'tbtn', '跳過 ▶'); b.id = 'voySkip'; b.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; b.addEventListener('click', () => voyEnd(true)); document.body.appendChild(b); Voy.btn = b; }
   const go = () => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, dur: clamp(len / 13.5, 9, 22), hd: VOY_DOCK[2] }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); pushPresence(true); flash(`🚤 出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('🚤 現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } };
@@ -15190,7 +15190,7 @@ function updateOtherSecrets(t){ if (Cloud.on && Date.now() - OtherSecret.at > 30
   for (const [id, g] of OtherSecret.marks) if (!live.has(id)){ scene.remove(g); OtherSecret.marks.delete(id); } }
 function secretAt(x, z){ let best = null; for (const sp of secretSpots.concat(OtherSecret.list)){ if (Math.hypot(x - sp.x, z - sp.z) < 3.0 && (!best || secretPower(sp) > secretPower(best))) best = sp; } return best; }
 function spotName(x, z){ const id = waterSpotId(x, z), s = SPOT_BY_ID[id]; return s ? s.short : '水邊'; }
-function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || mySeat || House.on || inHall()) return null;   /* 釣蝦場不能打窩 */ if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
+function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || (mySeat && !mySeat.gear) || House.on || inHall()) return null;   /* v680 作者：「坐著的時候不能打窩」→ 坐在自己的釣魚椅上可以打窩 */   /* 釣蝦場不能打窩 */ if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
 function myChums(){ return CHUMS.filter(c => (rec.bait[c.id] || 0) > 0); }
 function throwChum(type, secret){
   if (typeof inHall === 'function' && inHall()){ toast('🦐 釣蝦場不用打窩，老闆會定時放蝦進池子'); return; }
@@ -18718,15 +18718,16 @@ function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.rand
 // 阿默：港口裡不會有紅鯊，所以他每一趟都開自己的紅色小船，繞著島到外海隨便一個地方釣（每一趟去哪裡大家看到的都一樣）
 // 每 7 分鐘一趟：從碼頭開到外海的環線 → 沿著環線繞到這次的釣點 → 釣魚 → 原路開回來 → 在碼頭休息一下。環線離岸邊 22 公尺，不會撞到紅樹林；不會經過往珊瑚礁群島的跨海大橋那一側
 const AMO = { dock:[35.6, -27.2], cycle:420, pier:50, speed:4.2, off:22 };
+const AMO_EXIT = [[38, -29.5], [52, -30], [56, -50], [68, -56]];   /* 港口出去的水道（跟漁船一樣） */
 function amoRing(a){ const r = islandR(a) + AMO.off + 12 * Math.exp(-Math.pow((a - 0.4) / 0.4, 2)); return [Math.cos(a) * r, Math.sin(a) * r]; }   /* 紅樹林那一段繞遠一點 */
 function amoTrip(k){
   if (amoTrip.k === k) return amoTrip.c;
-  const aD = Math.atan2(AMO.dock[1], AMO.dock[0]), bridge = Math.PI / 2, h = hash32('amo' + k);
+  const E = AMO_EXIT[AMO_EXIT.length - 1], aD = Math.atan2(E[1], E[0]), bridge = Math.PI / 2, h = hash32('amo' + k);
   let aT; for (let tries = 0; tries < 20; tries++){ aT = -Math.PI + ((h >>> (tries % 16)) % 1000) / 1000 * Math.PI * 2 + tries * 0.37; aT = Math.atan2(Math.sin(aT), Math.cos(aT)); if (Math.abs(aT - bridge) > 0.45 && Math.abs(aT - aD) > 0.3) break; }
   // 往不會經過大橋的那個方向繞
   let d = aT - aD; const crosses = (from, delta) => { for (let u = 0; u <= 1; u += 0.02){ const a = Math.atan2(Math.sin(from + delta * u), Math.cos(from + delta * u)); if (Math.abs(a - bridge) < 0.4) return true; } return false; };
   if (crosses(aD, d)) d = d > 0 ? d - Math.PI * 2 : d + Math.PI * 2;
-  const pts = [AMO.dock.slice()], n = Math.max(2, Math.ceil(Math.abs(d) / 0.06)); for (let i = 0; i <= n; i++) pts.push(amoRing(aD + d * i / n));
+  const pts = [AMO.dock.slice()].concat(AMO_EXIT), n = Math.max(2, Math.ceil(Math.abs(d) / 0.06)); for (let i = 0; i <= n; i++) pts.push(amoRing(aD + d * i / n));   /* v680 作者：「阿默會穿越港口」→ 先沿著漁船出港的水道開出去，再上環線 */
   const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   amoTrip.k = k; amoTrip.c = { pts, cum, len: cum[cum.length - 1], aT, sail: cum[cum.length - 1] / AMO.speed }; return amoTrip.c;
 }
