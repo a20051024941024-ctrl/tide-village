@@ -1991,7 +1991,7 @@ function lwBall(B, dt, t, on){ const ball = B.ball; if (!on){ ball.visible = fal
   B.k += dt / 1.7; const n = Math.floor(B.k), u = B.k - n, from = A[n % 2], to = A[(n + 1) % 2];
   const x = from.q.x + (to.q.x - from.q.x) * u, z = from.q.z + (to.q.z - from.q.z) * u, y0 = groundHeight(x, z) + 1.25; ball.position.set(x, y0 + Math.sin(u * Math.PI) * 2.6, z); ball.rotation.y += dt * 4;
   const dm = Math.hypot(me.pos.x - x, me.pos.z - z); if (dm < 1.0 && ball.position.y - groundHeight(x, z) < 2.0 && !myBoat){ const a = Math.atan2(x - me.pos.x, z - me.pos.z); B.kick = { vx: Math.sin(a) * 7, vz: Math.cos(a) * 7, vy: 5, t: 0 }; try { SFX.jump(); } catch(e){} } }
-function lwTick(dt, t){ try { lwFleetTick(dt, t); } catch(e){ if (!lwTick.e1){ lwTick.e1 = 1; console.warn('lwFleet', e); } } try { lwBeachTick(dt, t); } catch(e){ if (!lwTick.e2){ lwTick.e2 = 1; console.warn('lwBeach', e); } } try { stampTick(dt, t); } catch(e){} }
+function lwTick(dt, t){ try { voyDockTick(dt, t); } catch(e){} try { lwFleetTick(dt, t); } catch(e){ if (!lwTick.e1){ lwTick.e1 = 1; console.warn('lwFleet', e); } } try { lwBeachTick(dt, t); } catch(e){ if (!lwTick.e2){ lwTick.e2 = 1; console.warn('lwBeach', e); } } try { stampTick(dt, t); } catch(e){} }
 function art2Tick(t){ if (Art2.fx) for (const f of Art2.fx){ try { f(t); } catch(e){} } for (const b of Art2.boats){ b.g.position.x = b.x; b.g.position.z = b.z; b.g.position.y = waterY(b.x, b.z, t) + (b.dy != null ? b.dy : -0.12); b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
 if (!ART2) setTimeout(() => { try { paveAll(); } catch(e){ console.warn('paveAll', e); } }, 0);
 if (ART2) setTimeout(() => { try { art2Props(); twMergeAll(); if (!LS.get('tide.art2Told', 0)){ LS.set('tide.art2Told', 1); toast('🎨 村子換新樣子了：港口、商店街、居民區的房子都重畫過，地圖也重新分區了（看「說明」）', 8); } } catch(e){ console.warn('art2 props', e); } }, 0);
@@ -2218,11 +2218,32 @@ function i18nT(s){ try { return typeof tr === 'function' ? tr(s) : s; } catch(e)
 const Voy = { on:false, m:null, btn:null };
 function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
   closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true); if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } if (F.phase !== 'idle') cancelFishing(); try { if (Bike.on) bikeOff(); } catch(e){} if (mySeat) try { standUp(); } catch(e){}
-  const P = [[44, -38]].concat(lane), cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); const len = cum[cum.length - 1];
+  const P = [VOY_DOCK.slice(0, 2), [44, -38]].concat(lane), cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); const len = cum[cum.length - 1];
   if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 1.7); Voy.m.visible = false; }   /* v596 作者：「船的比例不對」→ 0.82 倍的船比人還小，放大到 1.7 倍（船長大約 10 公尺、駕駛艙比人高） */
   if (!Voy.btn){ const b = el('button', 'tbtn', '跳過 ▶'); b.id = 'voySkip'; b.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; b.addEventListener('click', () => voyEnd(true)); document.body.appendChild(b); Voy.btn = b; }
-  const fx = $('#fadeFx'); fx.classList.add('on'); try { SFX.cast(); } catch(e){}
-  setTimeout(() => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, dur: clamp(len / 13.5, 9, 22), hd: null }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); cam.yaw = me.rot + Math.PI; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 150); flash(`🚤 出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('🚤 現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } }, 420); }
+  const go = () => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, dur: clamp(len / 13.5, 9, 22), hd: VOY_DOCK[2] }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); pushPresence(true); flash(`🚤 出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('🚤 現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } };
+  Voy.btn.hidden = true;
+  const startBoard = () => { Voy.board = { st: 'walk', t: 0, go }; try { SFX.cast(); } catch(e){} };
+  if (Math.hypot(me.pos.x - VOY_EDGE[0], me.pos.z - VOY_EDGE[1]) > 14){ const fx = $('#fadeFx'); fx.classList.add('on'); setTimeout(() => { me.pos.x = VOY_EDGE[0] - 2.5; me.pos.z = VOY_EDGE[1] + 0.5; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; startBoard(); setTimeout(() => fx.classList.remove('on'), 150); }, 420); } else startBoard(); }
+/* v679 作者：「出海的船去哪了」「坐船時要有上船下船的動畫」→ 阿海的船平常就停在港口那根小碼頭的南邊；
+   坐船時先從阿海那裡走到碼頭邊、跳上船（離太遠才先淡出移到碼頭），船再從碼頭開出去；到了以後從船邊跳上岸。 */
+const VOY_DOCK = [33.5, -31.2, Math.PI / 2], VOY_EDGE = [31.2, -28.9];
+function voyDeck(x, z, hd){ const sc = Voy.m.scale.x; return [x - Math.sin(hd) * 1.95 * sc, z - Math.cos(hd) * 1.95 * sc, WATER_LEVEL + (1.1 - 0.25) * sc]; }
+function voyDockTick(dt, t){ if (Voy.on || Voy.board) return; const d = Math.hypot(me.pos.x - VOY_DOCK[0], me.pos.z - VOY_DOCK[1]); if (!Voy.m){ if (d > 140) return; Voy.m = twBoat(0, 0, 0, 1.7); }
+  if (d > 160){ if (Voy.m.visible) Voy.m.visible = false; return; } const sc = Voy.m.scale.x, bob = Math.sin(t * 1.3) * 0.04, wh = WAVES.on ? waveH(VOY_DOCK[0], VOY_DOCK[1], t) : 0;
+  Voy.m.visible = true; Voy.m.position.set(VOY_DOCK[0], WATER_LEVEL - 0.25 * sc + bob + wh, VOY_DOCK[1]); Voy.m.rotation.set(Math.sin(t * 0.9) * 0.015, VOY_DOCK[2], Math.sin(t * 1.1) * 0.02);
+ }
+function voyBoardTick(dt){ const B = Voy.board; if (!B) return false; B.t += dt; me.sitting = false;
+  if (B.st === 'walk'){ const dx = VOY_EDGE[0] - me.pos.x, dz = VOY_EDGE[1] - me.pos.z, dd = Math.hypot(dx, dz); if (dd < 0.15 || B.t > 9){ B.st = 'hop'; B.t = 0; B.from = [me.pos.x, me.pos.z, me.baseY]; B.to = voyDeck(VOY_DOCK[0], VOY_DOCK[1], VOY_DOCK[2]); try { SFX.plop(); } catch(e){} }
+    else { const sp = Math.min(dd, 3.4 * dt); me.pos.x += dx / dd * sp; me.pos.z += dz / dd * sp; me.rot = lerpAngle(me.rot, Math.atan2(dx, dz), 1 - Math.exp(-10 * dt)); me.speed = 3.4; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; } }
+  else if (B.st === 'hop'){ const k = Math.min(1, B.t / 0.75), e = k * k * (3 - 2 * k), [fx, fz, fy] = B.from, [tx, tz, ty] = B.to; me.pos.x = fx + (tx - fx) * e; me.pos.z = fz + (tz - fz) * e; me.baseY = fy + (ty - fy) * e + Math.sin(k * Math.PI) * 0.9; Jump.gy = me.baseY; me.speed = 0; me.rot = lerpAngle(me.rot, Math.atan2(tx - fx, tz - fz), 0.3);
+    if (k >= 1){ me.baseY = ty; const go = B.go; Voy.board = null; me.rot = VOY_DOCK[2]; go(); } }
+  return true; }
+/* 到了：從船邊跳上岸 */
+function voyLandHop(){ let best = null; for (let a = 0; a < Math.PI * 2; a += Math.PI / 8){ const x = me.pos.x + Math.sin(a) * 2.6, z = me.pos.z + Math.cos(a) * 2.6; if (!isLand(x, z) && !deckAt(x, z)){ best = a; break; } } if (best == null) return;
+  const tx = me.pos.x, tz = me.pos.z, ty = me.baseY, fx = tx + Math.sin(best) * 2.4, fz = tz + Math.cos(best) * 2.4; Voy.hop = { t: 0, from: [fx, fz, WATER_LEVEL + 1.2], to: [tx, tz, ty] }; me.pos.x = fx; me.pos.z = fz; me.rot = Math.atan2(tx - fx, tz - fz); }
+function voyHopTick(dt){ const H = Voy.hop; if (!H) return false; H.t += dt; const k = Math.min(1, H.t / 0.7), e = k * k * (3 - 2 * k), [fx, fz, fy] = H.from, [tx, tz, ty] = H.to; me.pos.x = fx + (tx - fx) * e; me.pos.z = fz + (tz - fz) * e; me.baseY = fy + (ty - fy) * e + Math.sin(k * Math.PI) * 0.7; Jump.gy = me.baseY; me.speed = 0;
+  if (k >= 1){ Voy.hop = null; me.baseY = ty; Jump.gy = ty; try { SFX.plop(); } catch(e){} } return true; }
 function voyDrive(dt){ const V = Voy, t = now(); V.t += dt; const u0 = clamp(V.t / V.dur, 0, 1), u = u0 < 0.1 ? u0 * u0 * 5.2632 : u0 > 0.9 ? 1 - (1 - u0) * (1 - u0) * 5.2632 : (u0 - 0.05) * 1.0526, s = clamp(u, 0, 1) * V.len;   /* 頭尾慢、中間等速 */
   let i = 1; while (i < V.cum.length - 1 && V.cum[i] < s) i++; const a = V.P[i - 1], b = V.P[i], seg = V.cum[i] - V.cum[i - 1] || 1, k = clamp((s - V.cum[i - 1]) / seg, 0, 1), x = a[0] + (b[0] - a[0]) * k, z = a[1] + (b[1] - a[1]) * k, want = Math.atan2(b[0] - a[0], b[1] - a[1]);
   const prev = V.hd == null ? want : V.hd; V.hd = lerpAngle(prev, want, 1 - Math.exp(-1.8 * dt)); let dh = V.hd - prev; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); cam.yaw += dh;   /* 船轉彎，鏡頭跟著轉；玩家自己拖的角度會留著 */
@@ -2231,7 +2252,7 @@ function voyDrive(dt){ const V = Voy, t = now(); V.t += dt; const u0 = clamp(V.t
   me.pos.x = x - fx * 1.95 * sc; me.pos.z = z - fz * 1.95 * sc;   /* 站在駕駛艙後面、捲網機前面的甲板 */ me.baseY = WATER_LEVEL + (1.1 - 0.25) * sc + bob + wh; Jump.gy = me.baseY; me.rot = V.hd; me.speed = 0; me.sitting = false;
   if (u0 > 0.02 && u0 < 0.98 && Math.random() < dt * 14) ripple(x - fx * 3.2 * sc + (Math.random() - 0.5) * 1.2 * sc, z - fz * 3.2 * sc + (Math.random() - 0.5) * 1.2 * sc, Math.random() < 0.3);
   if (V.t >= V.dur) voyEnd(false); }
-function voyEnd(skip){ if (!Voy.on) return; Voy.on = false; if (Voy.m) Voy.m.visible = false; if (Voy.btn) Voy.btn.hidden = true; const tp = Voy.tp; Voy.tp = null; travelTo(tp); }
+function voyEnd(skip){ if (!Voy.on) return; Voy.on = false; if (Voy.m) Voy.m.visible = false; if (Voy.btn) Voy.btn.hidden = true; const tp = Voy.tp; Voy.tp = null; travelTo(tp); if (!skip) setTimeout(() => { try { voyLandHop(); } catch(e){} }, 900); }
 function signsTick(dt, t){
   const sp = F.spot && signSpotOk(F.spot) ? F.spot : (() => { const ns = nearestSpot(); return ns.spot && ns.d < 14 && signSpotOk(ns.spot) ? ns.spot : null; })();
   const show = sp && !onIsle && !House.on && !inIndoor() && !Dive.on, list = show ? signsAt(sp, signSlot()).filter(g => !Signs.scared.has(g.key)) : [];
@@ -6046,6 +6067,7 @@ function updatePlayer(dt){
   if (SKI.lift){ skiLiftTick(dt); return; }   /* v548 坐纜車 */
   if (SKI.on){ skiDrive(dt, uiBlocked ? 0 : ix, uiBlocked ? 0 : iz, L); return; }   /* v548 滑雪 */
   if (Voy.on){ voyDrive(dt); return; }   /* v579 坐阿海的船 */
+  if (Voy.board && voyBoardTick(dt)) return; if (Voy.hop && voyHopTick(dt)) return;   /* v679 上船、下船 */
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
   if (mySeat){
     if (L > 0.08 && !locked) standUp();
@@ -19589,6 +19611,7 @@ function renderTab(){
       '🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「收」再點，可以收回包包（自己放的），之後再拿出來不用錢。一座島最多 400 塊，跟一起住的人共用。',
       '🏝️ 小島的「買東西擺島上」分成房子、寵物圍欄、花草樹、家具、擺飾、方塊、隔板幾類；最後一個「島上的東西」列出島上每一件，可以直接移動或收起來（收回包包，之後拿出來擺不用再付錢；房子還是拆掉退一半）。',
       '🐟 炫耀魚的時候，鏡頭會慢慢繞到前面讓你看到自己舉著魚，6 秒後繞回去（中途拖畫面就停）。拉魚時左手會一圈一圈轉捲線器，等魚時右手會每隔幾秒輕輕抽一下竿。',
+      '🚤 阿海的船平常停在港口小碼頭的南邊。坐船時你會先走到碼頭邊、跳上船，船再從碼頭開出去；到了以後從船邊跳上岸。',
       '👕 穿搭：每個人可以跟阿萍免費挑一套入門衣服（只能挑一次，造型頁也有按鈕）。每週一換一個穿搭主題（海邊度假、漁夫日常、運動風、文青散步、冬天暖暖、冒險家輪流），身上穿到主題裡 2 件以上，釣到魚多一成經驗，村民也會稱讚你。點別人的名片，「👕 穿搭」頁看得到他穿什麼，「我也想要」會帶你去那件衣服，也可以按「穿得好看」幫他按讚（一週最多讚 30 次）。造型頁看得到這週被讚最多的人。',
       '🎣 釣友隊等級：隊員每釣一條 +1 經驗、每週目標達成 +300、同隊兩個人一起打小組對決打贏 +50。Lv2 名字旁邊掛隊徽、Lv3 隊員的小島插上隊旗、Lv4 每個隊員都拿到隊服（顏色是隊色）。每週目標達成領獎時，除了金幣再開一個隊伍寶箱（隨機魚餌、打窩料或珊瑚苗）。大看板有「本週小組勝場」。',
     ]);
