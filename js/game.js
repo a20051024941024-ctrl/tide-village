@@ -11513,7 +11513,8 @@ function buildPoolHall(){ const S = POOLH, g = new THREE.Group(); scene.add(g); 
     P(0.16, 0.05, 0.2, '#4a2c18', TRX + 0.05, ty - 0.06, HL - 0.06, false);                                   /* 球從桌子底下出來的口 */
     for (const zz of [-HL + 0.3, 0, HL - 0.3]) P(0.12, 0.03, 0.05, '#4a2c18', TRX + 0.08, ty - 0.1, zz, false);     /* 把槽撐在桌邊的小支架 */
     { const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 2 * HL - 0.2, 10), mat('#2a1a10', 0.7, { noWood: true })); pipe.rotation.x = Math.PI / 2; pipe.position.set(0, ty - 0.3, 0); tg.add(pipe); const el2 = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, HW + 0.24, 10), mat('#2a1a10', 0.7, { noWood: true })); el2.rotation.z = Math.PI / 2; el2.position.set(-(HW + 0.24) / 2, ty - 0.3, HL - 0.1); tg.add(el2); }   /* 桌子底下的回球管（從旁邊看得到） */
-    T.m = { tg, balls, cue, l1, l2, l3, ghost, hand, ty, pots: [], tray: [], TRX, TRY };
+    const band = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide })); band.rotation.order = 'YXZ'; band.visible = false; band.renderOrder = 3; tg.add(band);   /* v668 瞄準時從母球到「鬼球」一條半透明的帶子（跟球一樣寬），像作者傳的影片 */
+    T.m = { tg, balls, cue, l1, l2, l3, ghost, hand, band, ty, pots: [], tray: [], TRX, TRY };
     /* 吊燈 */
     const lp = new THREE.MeshStandardMaterial({ color: '#fff3c9', emissive: '#ffd98a', emissiveIntensity: 0.9 }); Venue.poolLamps.push(lp);
     const add = (w, h, d, c, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'string' ? mat(c, 0.8, { noWood: true }) : c); o.position.set(T.ox + x, y, T.oz + z); top.add(o); return o; };
@@ -11630,10 +11631,11 @@ function poolTickTable(T, dt, t, ih){ const M = T.m, S = T.sim; if (T.ph !== 'ov
   const c = T.b[0], showCue = active || (S && S.cue > 0);
   M.cue.visible = !!showCue; if (showCue){ const dxs = S ? S.dx : ax, dys = S ? S.dy : ay, gap = S ? 0.0 + (S.cue / 0.16) * 0.02 : 0.03 + pw * 0.34; const bx = S ? (M.cueAt ? M.cueAt.x : c.x) : c.x, by = S ? (M.cueAt ? M.cueAt.y : c.y) : c.y; if (!S) M.cueAt = { x: c.x, y: c.y };
     M.cue.position.set(by - dys * (PB.R + gap), M.ty + PB.R + 0.012, bx - dxs * (PB.R + gap)); M.cue.rotation.set(0.085, Math.atan2(dys, dxs), 0); }
-  const showAim = mineHere && c.on; M.l1.visible = M.l2.visible = M.l3.visible = M.ghost.visible = showAim; M.hand.visible = mineHere && T.ph === 'hand';
+  const showAim = mineHere && c.on; M.l1.visible = M.l2.visible = M.l3.visible = M.ghost.visible = showAim; if (M.band) M.band.visible = showAim; M.hand.visible = mineHere && T.ph === 'hand';
   if (M.hand.visible) M.hand.position.set(c.y, M.ty + 0.004, c.x);
   if (showAim){ const tr = poolTrace(T, ax, ay), y = M.ty + PB.R; const set = (l, x0, y0, x1, y1) => { const a = l.geometry.attributes.position; a.setXYZ(0, y0, y, x0); a.setXYZ(1, y1, y, x1); a.needsUpdate = true; };
     set(M.l1, c.x, c.y, tr.gx, tr.gy); M.ghost.position.set(tr.gy, y, tr.gx);
+    if (M.band){ const L = Math.hypot(tr.gx - c.x, tr.gy - c.y); M.band.visible = L > PB.R * 0.5; M.band.scale.set(PB.R * 2, Math.max(0.001, L), 1); M.band.position.set((c.y + tr.gy) / 2, M.ty + 0.003, (c.x + tr.gx) / 2); M.band.rotation.set(-Math.PI / 2, 0, 0); M.band.rotation.y = Math.atan2(ay, ax); M.band.rotation.x = -Math.PI / 2; }
     if (tr.hit > 0){ const b = T.b[tr.hit], dot = ax * tr.nx + ay * tr.ny, tx = ax - tr.nx * dot, ty2 = ay - tr.ny * dot; set(M.l2, b.x, b.y, b.x + tr.nx * 0.32, b.y + tr.ny * 0.32); set(M.l3, tr.gx, tr.gy, tr.gx + tx * 0.2, tr.gy + ty2 * 0.2); M.l2.visible = M.l3.visible = true; } else { M.l2.visible = M.l3.visible = false; } }
   /* 我的角色站到母球後面（別人從連線看得到我繞著桌子走） */
   if (mineHere){ const bx = -ax, by = -ay, EX = PB.HL + 0.85, EY = PB.HW + 0.85;   /* v498：離桌子遠一點，不然離開球桌時人會卡在桌邊的碰撞裡 */ let tt = 1e9; if (bx > 1e-6) tt = Math.min(tt, (EX - c.x) / bx); else if (bx < -1e-6) tt = Math.min(tt, (-EX - c.x) / bx); if (by > 1e-6) tt = Math.min(tt, (EY - c.y) / by); else if (by < -1e-6) tt = Math.min(tt, (-EY - c.y) / by);
@@ -11643,6 +11645,18 @@ function poolAimSend(){ const T = Pool.tables[Pool.ti]; if (Pool.spec || !poolMy
 function poolCam(){ const T = Pool.tables[Pool.ti]; if (!Pool.on || !T) return false; const asp = camera.aspect || 1, th = Math.tan(camera.fov * Math.PI / 360), port = asp < 1, needV = port ? PB.HL + 0.8 : PB.HW + 0.56, needH = port ? PB.HW + 0.5 : PB.HL + 0.5, H = Math.max(needV / th, needH / (th * asp));
   const ty = POOLH.y + PB.TOP; camera.up.set(port ? 0 : 1, 0, port ? 1 : 0); let ofx = 0, ofz = port ? 0.08 : 0, HH = H;
   /* v611「🔍 近看」：鏡頭拉近一倍、跟著母球，看得清楚球上的魚，也比較好瞄 */
+  /* v668 作者傳了一段撞球影片（鏡頭低低的在母球後面、看著球桿往前，一條半透明的帶子指到要打的球）→「撞球應該變這樣」：
+     輪到我瞄準的時候，鏡頭預設在母球後面低低地看出去（🎯 球桿視角）；球一打出去就慢慢升到桌子上面看全桌，等下一次瞄準再降回來。
+     自由球的時候也是球桿視角（手指按住母球可以拖著移動）；觀戰、等別人打，用從上面看。按「🔭 看全桌」可以一直從上面看。 */
+  const cueV = (Pool.view || 'cue') === 'cue' && !Pool.spec && poolMyTurn(T) && (T.ph === 'aim' || T.ph === 'hand') && !T.sim && T.b[0].on;
+  { const tn = now(), dt2 = Math.min(0.1, tn - (Pool.camAt || tn)); Pool.camAt = tn; const kk = 1 - Math.exp(-(Pool.camCue === cueV ? 7 : 3.2) * dt2); Pool.camCue = cueV;
+    Pool.cueBlend = (Pool.cueBlend || 0) + ((cueV ? 1 : 0) - (Pool.cueBlend || 0)) * (1 - Math.exp(-4 * dt2));
+    if (Pool.cueBlend > 0.002){ const c = T.b[0], ax = Pool.aim.y, az = Pool.aim.x, bx = T.ox + c.y, bz = T.oz + c.x, by = ty + PB.R;
+      const cp = Pool.cp || (Pool.cp = new THREE.Vector3()), ct = Pool.ct || (Pool.ct = new THREE.Vector3()), tp = new THREE.Vector3(bx - ax * 0.5, by + 0.15, bz - az * 0.5), tt = new THREE.Vector3(bx + ax * 1.5, ty, bz + az * 1.5);
+      if (!Pool.cpOk){ cp.copy(tp); ct.copy(tt); Pool.cpOk = true; } else { cp.lerp(tp, kk); ct.lerp(tt, kk); }
+      const b = Pool.cueBlend, e = b * b * (3 - 2 * b), top = new THREE.Vector3(T.ox, ty + H, T.oz + (port ? 0.08 : 0)), topT = new THREE.Vector3(T.ox, ty, T.oz + (port ? 0.08 : 0));
+      camera.up.set(0, 1, 0); camera.position.copy(top).lerp(cp, e); const look = topT.clone().lerp(ct, e); if (e < 0.999){ const upTop = new THREE.Vector3(port ? 0 : 1, 0, port ? 1 : 0); camera.up.copy(upTop).lerp(new THREE.Vector3(0, 1, 0), e).normalize(); }
+      camera.lookAt(look); camLook.set(T.ox, ty, T.oz); Pool.upDirty = true; return true; } else Pool.cpOk = false; }
   if (Pool.zoom){ const c = T.b[0], tx = clamp(c.on ? c.y : 0, -PB.HW * 0.5, PB.HW * 0.5), tz = clamp(c.on ? c.x : 0, -PB.HL * 0.5, PB.HL * 0.5); Pool.zx = Pool.zx == null ? tx : Pool.zx + (tx - Pool.zx) * 0.08; Pool.zz = Pool.zz == null ? tz : Pool.zz + (tz - Pool.zz) * 0.08; ofx = Pool.zx; ofz = Pool.zz; HH = H * 0.5; } else { Pool.zx = Pool.zz = null; }
   camera.position.set(T.ox + ofx, ty + HH, T.oz + ofz); camera.lookAt(T.ox + ofx, ty, T.oz + ofz);   /* 球桌往下挪一點，上面留給名字和提示 */ camLook.set(T.ox, ty, T.oz); Pool.upDirty = true; return true; }
 function poolPick(e){ const T = Pool.tables[Pool.ti]; if (!T) return null; Pool.rc = Pool.rc || new THREE.Raycaster(); Pool.pl = Pool.pl || new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); Pool.v2 = Pool.v2 || new THREE.Vector2(); Pool.v3 = Pool.v3 || new THREE.Vector3();
@@ -11650,13 +11664,15 @@ function poolPick(e){ const T = Pool.tables[Pool.ti]; if (!T) return null; Pool.
 function poolHudBuild(){ if (Pool.hud) return; const h = el('div'); h.id = 'poolHud';
   h.innerHTML = '<div class="pl-pad"></div><div class="pl-top panel"><div class="pl-p pl-p0"><b></b><i></i></div><div class="pl-mid"><span class="pl-msg"></span><span class="pl-time"></span></div><div class="pl-p pl-p1"><b></b><i></i></div></div><div class="pl-pow"><div class="pl-powfill"></div><div class="pl-powcue"></div><span>力道</span></div><div class="pl-fine"><span>微調</span></div><div class="pl-btns"><button class="pl-inv" hidden></button><button class="pl-zhe" hidden>跟阿喆對打</button><button class="pl-again" hidden>再來一局</button><button class="pl-leave">離開球桌</button></div><div class="pl-tip"></div>';
   document.body.appendChild(h); Pool.hud = h; const pad = $('.pl-pad', h), pow = $('.pl-pow', h);
-  { const zb = el('button', 'pl-zoom panel', '🔍 近看'); h.appendChild(zb); zb.addEventListener('click', () => { Pool.zoom = !Pool.zoom; zb.textContent = Pool.zoom ? '🔭 看全桌' : '🔍 近看'; }); }
+  { const V = { cue: '🎯 球桿視角', top: '🔭 看全桌', zoom: '🔍 近看' }, NX = { cue: 'top', top: 'zoom', zoom: 'cue' }; let v0 = 'cue'; try { v0 = LS.get('tide.poolView') || 'cue'; } catch(e){} if (!V[v0]) v0 = 'cue'; Pool.view = v0; Pool.zoom = v0 === 'zoom';
+    const zb = el('button', 'pl-zoom panel', V[v0]); h.appendChild(zb); zb.title = '換視角'; zb.addEventListener('click', () => { Pool.view = NX[Pool.view || 'cue']; Pool.zoom = Pool.view === 'zoom'; zb.textContent = V[Pool.view]; try { LS.set('tide.poolView', Pool.view); } catch(e){} }); }   /* v668 按一下換視角：球桿視角 → 看全桌 → 近看 */
   { const sk = el('button', 'pl-skin panel', poolSkinOn() ? '🎱 經典球' : '🐠 魚花色'); h.appendChild(sk); sk.addEventListener('click', () => { const on = !poolSkinOn(); try { LS.set('tide.poolSkin', on ? 'fish' : ''); } catch(e){} sk.textContent = on ? '🎱 經典球' : '🐠 魚花色'; poolApplySkin(); toast(on ? '🐠 換成魚花色球組，桌面變成水族箱（只有你看得到）' : '🎱 換回經典球組'); }); }
   { const sp = el('div', 'pl-sp panel'); h.appendChild(sp); sp.addEventListener('click', e => { const b = e.target.closest('button[data-sp]'); if (!b) return; const k = b.dataset.sp; Pool.sp = Pool.sp === k ? null : k; poolSpRender(); }); }
   $('.pl-leave', h).addEventListener('click', () => { poolLeave(); }); $('.pl-again', h).addEventListener('click', () => { poolAgain(); }); $('.pl-inv', h).addEventListener('click', () => { poolInvite(); }); $('.pl-zhe', h).addEventListener('click', () => { poolVsZhe(); });
   pad.addEventListener('pointerdown', e => { const T = Pool.tables[Pool.ti]; if (!T || Pool.spec || !poolMyTurn(T)) return; const p = poolPick(e); if (!p) return; try { pad.setPointerCapture(e.pointerId); } catch(_){} const c = T.b[0], near = T.ph === 'hand' && (p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y) < 0.14 * 0.14; Pool.drag = { id: e.pointerId, ball: near, sx: e.clientX, sy: e.clientY, moved: false, ang: Math.atan2(p.y - c.y, p.x - c.x) }; e.preventDefault(); });
   pad.addEventListener('pointermove', e => { const D = Pool.drag, T = Pool.tables[Pool.ti]; if (!D || D.id !== e.pointerId || !T || !poolMyTurn(T)) return; const p = poolPick(e); if (!p) return; if (Math.abs(e.clientX - D.sx) + Math.abs(e.clientY - D.sy) > 8) D.moved = true; const c = T.b[0];
     if (D.ball){ if (poolCuePosOK(T, p.x, p.y)){ c.x = p.x; c.y = p.y; c.on = 1; poolRefresh(T); } return; }
+    if (Pool.camCue){ if (!D.moved) return; const dxs = e.clientX - (D.lx == null ? D.sx : D.lx); D.lx = e.clientX; const cur = Math.atan2(Pool.aim.y, Pool.aim.x) - dxs * 0.0032; Pool.aim.x = Math.cos(cur); Pool.aim.y = Math.sin(cur); return; }   /* v668 球桿視角：手指左右滑轉方向 */
     const a = Math.atan2(p.y - c.y, p.x - c.x); if (!D.moved) return;
     let da = a - D.ang; if (da > Math.PI) da -= 2 * Math.PI; else if (da < -Math.PI) da += 2 * Math.PI; D.ang = a;
     /* v578 作者：「撞球操作卡卡的」→ 以前手指繞著母球轉幾度、球桿就轉幾度，手指離母球很近時滑一點點球桿就甩一大圈。現在手指離母球 0.5 公尺內會照距離放慢（最慢四分之一），每次事件最多轉 0.35 弧度 */
@@ -11684,7 +11700,7 @@ function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Poo
   else if (T.sim) msg = '球在跑…'; else if (Pool.spec) msg = `觀戰中：輪到 ${T.nm[T.turn] || '玩家'}`;
   else if (my) msg = T.ph === 'hand' ? (T.brk ? '開球：母球可以在線後面拖著擺' : '自由球：母球可以拖到任何地方') : '輪到你了'; else msg = vs ? '對手瞄準中…' : '';
   $('.pl-msg', h).textContent = msg; $('.pl-again', h).hidden = !(T.ph === 'over' && mi >= 0 && !Pool.spec); $('.pl-pow', h).classList.toggle('off', !my); $('.pl-fine', h).classList.toggle('off', !my); h.classList.toggle('spec', Pool.spec);
-  $('.pl-tip', h).textContent = my ? (T.ph === 'hand' ? '拖母球擺位置 → 在桌面上滑動瞄準（右邊微調條可以慢慢對準）→ 左邊力道條往下拉再放開' : '在桌面上滑動瞄準（點一下直接對準），右邊微調條上下滑可以慢慢對準 → 左邊力道條往下拉再放開就出桿') : ''; }
+  $('.pl-tip', h).textContent = my && Pool.camCue ? (T.ph === 'hand' ? '按住母球拖著擺位置 → 手指左右滑轉方向（點一下球直接對準）→ 左邊力道條往下拉再放開；左上可以換「看全桌」' : '手指左右滑轉方向（點一下球直接對準），右邊微調條慢慢對準 → 左邊力道條往下拉再放開') : my ? (T.ph === 'hand' ? '拖母球擺位置 → 在桌面上滑動瞄準（右邊微調條可以慢慢對準）→ 左邊力道條往下拉再放開' : '在桌面上滑動瞄準（點一下直接對準），右邊微調條上下滑可以慢慢對準 → 左邊力道條往下拉再放開就出桿') : ''; }
 /* v527 作者：「應該要兩個人都在桌子旁邊然後可以按邀請一起打」→ 你在練習、旁邊（球桌 4 公尺內）站著別的玩家時，右下角出現「邀請 某某 對打」；對方按接受就開始對打 */
 function poolNearPeer(T){ let best = null, bd = 4; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; const d = Math.max(Math.abs(p.target.x - T.ox) - PB.HW, 0) + Math.max(Math.abs(p.target.z - T.oz) - PB.HL, 0); if (d < bd && !Pool.tables.some(X => X.p[0] === k || X.p[1] === k)){ bd = d; best = { k, u: p.pres.u || '', n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
 function poolInvite(){ const T = Pool.tables[Pool.ti]; if (!T || T.mode !== 'solo' || poolMyIdx(T) !== 0) return; const P = poolNearPeer(T); if (!P){ toast('旁邊沒有人可以邀請（要站在球桌附近）'); return; } const tn = now(); if (Pool.invAt && tn - Pool.invAt < 6){ toast('剛邀請過，等對方回應'); return; } Pool.invAt = tn; poolSend({ k: 'inv', t: T.i, to: P.k, tu: P.u, n: poolName() }); toast(`🎱 已經邀請 ${esc(P.n)}，等對方回應`); }
@@ -16664,7 +16680,7 @@ function chatHistToggle(force){ let P = ChatH.el; if (!P){ P = ChatH.el = docume
   P.hidden = force != null ? !force : !P.hidden; document.body.classList.toggle('histOpen', !P.hidden); if (!P.hidden){ chatHistRender(); chatBadge(0); chatHistPlace(); setTimeout(chatHistPlace, 350); } }
 // 跑馬燈：大家的動態（誰釣到什麼、誰在炫耀、天色變化）從右往左飄過去；排隊一則接一則，不會疊在一起
 const Ticker = { q:[], nextAt:0, busy:false, speed:110 };
-/* v666 作者截圖：跑馬燈從左上「今天」那張卡片後面穿過去，字被擋住 → 每秒看一下，左邊有卡片跟跑馬燈同一個高度，就讓跑馬燈從卡片右邊開始 */
+/* v668 作者截圖：跑馬燈從左上「今天」那張卡片後面穿過去，字被擋住 → 每秒看一下，左邊有卡片跟跑馬燈同一個高度，就讓跑馬燈從卡片右邊開始 */
 setInterval(() => { const k = $('#ticker'); if (!k) return; let L = 0; const q = k.getBoundingClientRect();
   for (const id of ['#today3', '#guideCard']){ const t = $(id); if (!t || t.hidden) continue; const r = t.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && r.left < innerWidth / 2 && r.bottom > q.top + 2 && r.top < q.bottom - 2 && getComputedStyle(t).display !== 'none' && getComputedStyle(t).visibility !== 'hidden') L = Math.max(L, r.right + 8); }
   const v = L ? Math.round(L) + 'px' : ''; if (k.style.left !== v) k.style.left = v; }, 1000);
@@ -19033,6 +19049,7 @@ function renderTab(){
       '🏷️ 標記放流：魚缸裡每條魚旁邊有 🏷️ 按鈕，按兩次就幫牠掛上標籤放回大海，除了原本放流的 💙，再多 💙1。之後別人釣到同一種魚時，有機會釣到你標記的那一條：釣到的人 🪙+50，你 💙+5，兩個人都會收到通知。一天最多標記 10 條。',
       '🤿 潛水的新玩法：在外面的潛水點（不是自己小島的海底），海底找得到三種東西，游過去按按鈕就可以撿：🗑️ 垃圾（撿起來 💙 愛海點數 +1，一天最多 20 個）、✨ 造景材料（貝殼、海星、小石頭、海草、珊瑚、海綿、海葵，一天最多 15 個）、小生物（小蝦、小螃蟹、海蛞蝓、小丑魚寶寶、海馬寶寶、小河豚，要先在商店的「潛水」分頁買手抄網 🪙800 才能抓，有時候會溜走，一天最多 10 隻）。撿到的材料和小生物放在背包，回自己小島的海底就可以拿出來擺；小生物會在那裡自己游來游去。每天還有一個「潛水委託」（撿垃圾、撿材料、抓小生物輪流），完成拿 🪙300 和 💙2。',
       '🎱 撞球×釣魚：撞球畫面左上「🐠 魚花色」可以把球換成你釣過的魚的花色、桌面變成水族箱，你魚缸裡的魚在下面游（只有你看得到）；「🔍 近看」鏡頭拉近、跟著母球。',
+      '🎱 球桿視角：輪到你時鏡頭在母球後面低低地看出去，手指左右滑轉方向，點一下球直接對準；左上的按鈕可以換成「看全桌」或「近看」。',
       '🎱 打球時：球袋是小漩渦，球滾過會拖一串泡泡，進袋會「噗通」冒泡泡。',
       '🎱 撞球館是海洋風的：牆上的圓形舷窗看出去是海底，魚會游過去。',
       '🎱 一起打：你站在球桌旁邊時，有人在那張桌子開始一個人打，會跳出來問你要不要一起打；按「接受」就變成兩個人對打。',
