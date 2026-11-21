@@ -16664,6 +16664,10 @@ function chatHistToggle(force){ let P = ChatH.el; if (!P){ P = ChatH.el = docume
   P.hidden = force != null ? !force : !P.hidden; document.body.classList.toggle('histOpen', !P.hidden); if (!P.hidden){ chatHistRender(); chatBadge(0); chatHistPlace(); setTimeout(chatHistPlace, 350); } }
 // 跑馬燈：大家的動態（誰釣到什麼、誰在炫耀、天色變化）從右往左飄過去；排隊一則接一則，不會疊在一起
 const Ticker = { q:[], nextAt:0, busy:false, speed:110 };
+/* v666 作者截圖：跑馬燈從左上「今天」那張卡片後面穿過去，字被擋住 → 每秒看一下，左邊有卡片跟跑馬燈同一個高度，就讓跑馬燈從卡片右邊開始 */
+setInterval(() => { const k = $('#ticker'); if (!k) return; let L = 0; const q = k.getBoundingClientRect();
+  for (const id of ['#today3', '#guideCard']){ const t = $(id); if (!t || t.hidden) continue; const r = t.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && r.left < innerWidth / 2 && r.bottom > q.top + 2 && r.top < q.bottom - 2 && getComputedStyle(t).display !== 'none' && getComputedStyle(t).visibility !== 'hidden') L = Math.max(L, r.right + 8); }
+  const v = L ? Math.round(L) + 'px' : ''; if (k.style.left !== v) k.style.left = v; }, 1000);
 var Phone = { via:false, cat:'all', seen: +LS.get('tide.phSeen', 0) || 0, feed: (() => { try { const L = LS.get('tide.phFeed', []); return Array.isArray(L) ? L.filter(e => e && e.t > Date.now() - 864e5 && typeof e.h === 'string') : []; } catch(e){ return []; } })() };
 /* v581 📱 快訊：跑馬燈的每一則也記到手機裡（同樣的內容 10 分鐘內不重複），分成 世界／大家／我的 */
 function phFeedAdd(html){ if (!Phone || typeof html !== 'string') return; const t = Date.now(); if (Phone.feed.some(e => e.h === html && t - e.t < 6e5)) return;
