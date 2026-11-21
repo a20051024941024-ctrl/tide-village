@@ -12592,18 +12592,42 @@ function petModel(kind, acc, v, shineLv){
     head = new THREE.Group(); head.position.set(0, 0.11, 0.23); body.add(head); S(0.06, skin, 0, 0, 0, 1, 0.9, 1.15, head, 16); eyes(head, 0.02, 0.05, 0.035, 0.016);
     tail = new THREE.Group(); tail.position.set(0, 0.08, -0.2); body.add(tail); const tt = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.07, 8), M(skin)); tt.rotation.x = -Math.PI / 2; tail.add(tt);
     neckY = 0.11; neckZ = 0.2; hatY = 0.24; hatZ = 0.04; }
-  else if (kind === 'pondturtle'){ /* v296 斑龜：高一點的深橄欖色殼、黃色條紋的脖子；殼的亮度看光澤度 */ const shellC = c1, skin = '#4a5236', stripe = c2, sh = clamp(shineLv == null ? 40 : shineLv, 0, 100);
-    const shellM = new THREE.MeshStandardMaterial({ color: shade(shellC, -0.15 + sh * 0.0025), roughness: 0.85 - sh * 0.006, metalness: 0.05, emissive: sh >= 100 ? '#3a2a00' : '#000000', emissiveIntensity: sh >= 100 ? 0.35 : 0 });
-    const shell = S(0.15, shellM, 0, 0.13, 0, 1.12, 0.62, 1.32, null, 22);
-    for (let k = 0; k < 5; k++){ const a = k / 5 * Math.PI * 2; const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.048, 0.016, 6), new THREE.MeshStandardMaterial({ color: shade(shellC, -0.25 + sh * 0.002), roughness: 0.8 - sh * 0.006 })); pl.position.set(Math.cos(a) * 0.085, 0.205, Math.sin(a) * 0.095); pl.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); body.add(pl); }
-    if (sh >= 80) for (let k = 0; k < 6; k++){ const a = k / 6 * Math.PI * 2 + 0.3; S(0.024, new THREE.MeshStandardMaterial({ color: stripe, roughness: 0.3, emissive: stripe, emissiveIntensity: 0.3 }), Math.cos(a) * 0.1, 0.2, Math.sin(a) * 0.118, 1.2, 0.25, 1.2, null, 10); }   /* 光澤 80 以上：殼上出現漂亮的黃色花紋 */
-    if (sh >= 100){ const rim = new THREE.Mesh(new THREE.TorusGeometry(0.155, 0.012, 6, 28), new THREE.MeshStandardMaterial({ color: '#ffd36a', roughness: 0.25, metalness: 0.6, emissive: '#7a5a10', emissiveIntensity: 0.4 })); rim.rotation.x = Math.PI / 2; rim.scale.set(1.12, 1.32, 1); rim.position.y = 0.105; body.add(rim); }   /* 100：金色殼邊 */
-    S(0.145, '#d9c88a', 0, 0.085, 0, 1.08, 0.22, 1.22, null, 16);   /* 腹甲 */
-    for (const [x, z] of [[-0.13, 0.12], [0.13, 0.12], [-0.11, -0.13], [0.11, -0.13]]){ const f = S(0.04, skin, x, 0.07, z, 1.2, 0.6, 1, null, 10); legs.push(f); }
-    head = new THREE.Group(); head.position.set(0, 0.12, 0.22); body.add(head); S(0.05, skin, 0, 0, 0, 0.95, 0.85, 1.25, head, 14);
-    for (const sx of [-1, 1]){ S(0.011, stripe, sx * 0.042, -0.008, -0.005, 0.5, 0.5, 3.2, head, 8); S(0.009, stripe, sx * 0.03, -0.028, 0.0, 0.5, 0.5, 3.4, head, 8); }   /* 斑龜脖子的黃條紋 */
-    eyes(head, 0.016, 0.045, 0.03, 0.013);
-    tail = new THREE.Group(); tail.position.set(0, 0.08, -0.2); body.add(tail); const tt = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.06, 8), M(skin)); tt.rotation.x = -Math.PI / 2; tail.add(tt);
+  else if (kind === 'pondturtle'){ /* v296 斑龜；v660 作者：寵物要精緻 → 殼改成一片一片的鱗甲（中間一排、兩邊各四片、邊緣一圈鋸齒）、每片有一圈生長紋、片和片之間有深色的縫；
+       頭有尖一點的嘴、脖子的黃條紋、眼睛亮點、嘴巴線；腳是扁長的、有三根小爪子。光澤 80 以上：鱗甲中間出現黃色花紋；100：金色殼邊 */
+    const shade = (hx, k) => '#' + new THREE.Color(hx).offsetHSL(0, 0, k).getHexString();
+    const shellC = c1, skin = '#4a5236', stripe = c2, sh = clamp(shineLv == null ? 40 : shineLv, 0, 100);
+    const A = 0.168, B = 0.095, Cz = 0.198, CY = 0.125, seam = shade(shellC, -0.2);
+    const shellM = new THREE.MeshStandardMaterial({ color: seam, roughness: 0.85 - sh * 0.006, metalness: 0.05 });
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), shellM); dome.scale.set(A, B, Cz); dome.position.y = CY; dome.castShadow = true; body.add(dome);
+    const plateM = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 - sh * 0.006, metalness: 0.05, emissive: sh >= 100 ? '#3a2a00' : '#000000', emissiveIntensity: sh >= 100 ? 0.35 : 0 });
+    const parts = [], up = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(), rr = mulberry(7 + Math.round(sh)), base = new THREE.Color(shade(shellC, -0.12 + sh * 0.0025)), light = new THREE.Color(shade(shellC, 0.06 + sh * 0.002)), yel = new THREE.Color(stripe);
+    const onDome = (x, z, lift) => { const k = 1 - (x / A) ** 2 - (z / Cz) ** 2, y = CY + B * Math.sqrt(Math.max(0, k)); const n = new THREE.Vector3(x / (A * A), (y - CY) / (B * B), z / (Cz * Cz)).normalize(); return { p: new THREE.Vector3(x, y, z).addScaledVector(n, lift), n }; };
+    const plate = (x, z, r, sx, sz, col, lift, sides) => { const { p, n } = onDome(x, z, lift); const geo = new THREE.CylinderGeometry(r, r * 1.06, 0.007, sides || 6); geo.scale(sx, 1, sz); q.setFromUnitVectors(up, n); geo.applyQuaternion(q); geo.translate(p.x, p.y, p.z);
+      const g2 = geo.toNonIndexed(), cnt = g2.attributes.position.count, C3 = new Float32Array(cnt * 3); for (let k = 0; k < cnt; k++){ C3[k * 3] = col.r; C3[k * 3 + 1] = col.g; C3[k * 3 + 2] = col.b; } g2.setAttribute('color', new THREE.BufferAttribute(C3, 3)); g2.deleteAttribute('uv'); parts.push(g2); };
+    const scute = (x, z, r, sx, sz, sides) => { const v = (rr() - 0.5) * 0.08, c0 = base.clone().offsetHSL(0, 0, v); plate(x, z, r, sx, sz, c0, 0.001, sides); plate(x, z, r * 0.62, sx, sz, sh >= 80 ? yel.clone().lerp(light, 0.35) : light.clone().offsetHSL(0, 0, v), 0.004, sides); if (sh >= 80) plate(x, z, r * 0.24, sx, sz, yel, 0.007, sides); };
+    for (const z of [-0.128, -0.064, 0, 0.064, 0.128]) scute(0, z, 0.041, 1, 1.0);   /* 中間一排 */
+    for (const sx of [-1, 1]) for (const z of [-0.098, -0.033, 0.033, 0.098]) scute(sx * 0.088, z, 0.04, 1.08, 1.02);   /* 兩邊各四片 */
+    for (let k = 0; k < 26; k++){ const a = k / 26 * Math.PI * 2; scute(Math.sin(a) * A * 0.93, Math.cos(a) * Cz * 0.93, 0.025, 1, 1.1, 5); }   /* 邊緣一圈（鋸齒） */
+    { const g3 = mergeGeometries(parts, false); const pm = new THREE.Mesh(g3, plateM); pm.castShadow = true; body.add(pm); }
+    if (sh >= 100){ const rim = new THREE.Mesh(new THREE.TorusGeometry(1, 0.075, 6, 36), new THREE.MeshStandardMaterial({ color: '#ffd36a', roughness: 0.25, metalness: 0.6, emissive: '#7a5a10', emissiveIntensity: 0.4 })); rim.rotation.x = Math.PI / 2; rim.scale.set(A * 1.0, Cz * 1.0, 0.16); rim.position.y = CY + 0.004; body.add(rim); }   /* 100：金色殼邊 */
+    S(0.148, '#d9c88a', 0, 0.1, 0, 1.08, 0.2, 1.24, null, 18);   /* 腹甲 */
+    for (const sx of [-1, 1]) for (const z of [-0.06, 0.04]) S(0.02, '#5a4a2a', sx * 0.06, 0.072, z, 1.2, 0.3, 1.4, null, 8);   /* 腹甲上的深色斑 */
+    /* 腳：扁長、三根小爪子，前腳往前斜、後腳往後斜；pivot 在殼邊，走路時整隻動 */
+    for (const [x, z, fwd] of [[-0.11, 0.1, 1], [0.11, 0.1, 1], [-0.1, -0.11, -1], [0.1, -0.11, -1]]){ const pv = new THREE.Group(); pv.position.set(x, 0.07, z); body.add(pv); const sx = Math.sign(x);
+      const limb = S(0.036, skin, sx * 0.022, -0.028, fwd * 0.012, 1.0, 0.5, 1.35, pv, 12); limb.rotation.y = sx * fwd * 0.6;
+      for (let c = -1; c <= 1; c++){ const cl = new THREE.Mesh(new THREE.ConeGeometry(0.0055, 0.022, 5), M('#e8dfc4', 0.5)); cl.rotation.x = fwd * Math.PI / 2; cl.position.set(sx * 0.038 + c * 0.011, -0.036, fwd * 0.052); pv.add(cl); }
+      S(0.03, skin, -sx * 0.004, 0.0, -fwd * 0.01, 1, 0.8, 1.2, pv, 10);   /* 腳根，接到殼下面 */
+      legs.push(pv); }
+    /* 頭和脖子（head 往後縮＝縮進殼裡） */
+    head = new THREE.Group(); head.position.set(0, 0.118, 0.215); body.add(head);
+    const neck = S(0.04, skin, 0, -0.008, -0.035, 0.95, 0.85, 1.6, head, 12);
+    S(0.047, skin, 0, 0.004, 0.012, 0.95, 0.82, 1.15, head, 16);   /* 頭 */
+    S(0.026, shade(skin, -0.04), 0, -0.004, 0.05, 0.9, 0.75, 1.1, head, 12);   /* 尖一點的嘴 */
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.0025, 4, 10, Math.PI * 0.8), ink); mouth.rotation.set(Math.PI / 2, 0, Math.PI * 0.1); mouth.position.set(0, -0.016, 0.046); head.add(mouth);
+    for (const sx of [-1, 1]){ S(0.007, stripe, sx * 0.038, -0.004, -0.01, 0.5, 0.5, 5, head, 8); S(0.006, stripe, sx * 0.03, -0.024, -0.012, 0.5, 0.5, 5.2, head, 8); S(0.005, stripe, sx * 0.02, 0.026, -0.02, 0.5, 0.5, 4, head, 8); }   /* 斑龜脖子、頭上的黃條紋 */
+    const e0 = head.children.length; eyes(head, 0.016, 0.03, 0.03, 0.012); const ey = head.children.slice(e0).filter((m, k) => k % 2 === 0);
+    tail = new THREE.Group(); tail.position.set(0, 0.09, -0.2); body.add(tail); const tt = new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.06, 8), M(skin)); tt.rotation.x = -Math.PI / 2; tail.add(tt);
+    body.userData.tEyes = ey;
     neckY = 0.12; neckZ = 0.2; hatY = 0.26; hatZ = 0.03; }
   else if (kind === 'octopus'){ const sk = c1, sp = c2;
     S(0.12, sk, 0, 0.26, -0.02, 1, 1.15, 1.05, null, 22); if (v === 'c') for (let k = 0; k < 8; k++){ const a = k * 0.8; const r = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.006, 5, 10), M(sp, 0.3)); r.position.set(Math.cos(a) * 0.1, 0.28 + Math.sin(k) * 0.05, Math.sin(a) * 0.1 - 0.02); r.lookAt(0, 0.28, -0.02); body.add(r); }
@@ -12686,6 +12710,11 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   if (pt.spinUntil && now() < pt.spinUntil) U.body.rotation.y += 0.12;   /* 吃到點心開心地轉圈 */ else if (pt.spinUntil){ U.body.rotation.y = 0; pt.spinUntil = 0; }
   if (pt.kind === 'turtle' || pt.kind === 'pondturtle') U.legs.forEach((l, i) => { const b0 = l.userData.b0 || (l.userData.b0 = l.position.clone()), ph = pt.ph * 1.3 + (i === 0 || i === 3 ? 0 : Math.PI), s = Math.sin(ph), c = Math.cos(ph);   /* v658 作者：「小烏龜的腳都不會動」→ 以前只讓圓圓的腳原地轉，看起來不動；現在對角線兩隻一起往前伸、往後推，抬起來那一下會離地一點 */
     l.position.z = b0.z + s * 0.038 * mv; l.position.y = b0.y + Math.max(0, c) * 0.028 * mv; l.position.x = b0.x * (1 + Math.max(0, c) * 0.12 * mv); l.rotation.y = s * 0.45 * mv; l.rotation.x = -c * 0.3 * mv; }); else U.legs.forEach((l, i) => { l.rotation.x = Math.sin(pt.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.6 * mv; });
+  if (pt.kind === 'pondturtle' && U.head){ const H = U.head, hb = H.userData.b0 || (H.userData.b0 = H.position.clone());   /* v660 小烏龜的動作：走路時頭一點一點、身體左右晃；停下來偶爾眨眼，每十幾秒把頭縮進殼裡一下再伸出來 */
+    let rk = 0; if (mv < 0.1){ pt.tIdle = (pt.tIdle || 0) + dt; const cyc = (pt.tIdle + 6) % 13; rk = cyc < 0.45 ? cyc / 0.45 : cyc < 2.6 ? 1 : cyc < 3.2 ? 1 - (cyc - 2.6) / 0.6 : 0; rk = rk * rk * (3 - 2 * rk); } else pt.tIdle = 0;
+    H.position.z = hb.z - rk * 0.075 + Math.sin(pt.ph * 2.6) * 0.008 * mv; H.position.y = hb.y - rk * 0.012; const hs = 1 - rk * 0.22; H.scale.set(hs, hs, hs);
+    if (U.body) U.body.rotation.z = Math.sin(pt.ph * 1.3) * 0.045 * mv;
+    const TE = U.body && U.body.userData.tEyes; if (TE){ const bl = (t + 1.7) % 4.3 < 0.13 || rk > 0.5; for (const e of TE) e.scale.y = bl ? 0.12 : 1.15; } }
   if (pt.kind === 'horseshoe'){ /* 小鱟每 26 秒左右翻過來一次，腳亂踢，用尾劍把自己撐回去（真的鱟就是這樣翻身）。時間用大家一樣的時鐘＋名字算，別人看到的是同一下 */
     if (pt.sd == null){ let h = 0; for (const ch of String(pt.name || '')) h = (h * 31 + ch.charCodeAt(0)) % 2600; pt.sd = h / 100; }
     const cy = (Date.now() / 1000 + pt.sd) % 26, on = mv < 0.05 && !moving && !pt.act && cy < 3.4, rz = !on ? 0 : cy < 0.5 ? cy / 0.5 * Math.PI : cy < 2.6 ? Math.PI + Math.sin(cy * 9) * 0.12 : Math.PI + (cy - 2.6) / 0.8 * Math.PI;
@@ -19056,6 +19085,7 @@ function renderTab(){
       '跟寵物玩：按 😀 表情，下面有：🦴 給點心（你蹲下來餵，每種寵物吃的不一樣，牠會一口一口吃完）、✋ 摸摸頭（你蹲下來摸，牠會抬頭蹭你的手、冒愛心，河豚會鼓起來）、🤝 握手、🎾 丟球（寵物會跑去撿回來）、🏃 繞圈跑、😴 一起休息（你坐在地上，牠趴在旁邊打瞌睡，走開就結束）、坐下、跳一跳、轉圈，還有 🤗 抱抱。旁邊的人也看得到。你揮手、跳舞、歡呼、拍手時寵物也會跟著動。這些動作大家都看得到。',
       '在商店街入口西邊的寵物店（小花）可以領養：貓、柴犬、水獺、海鷗、寄居蟹，每一種都有好幾種花色（隨機，⭐ 很少見）。小海龜、小章魚、河豚只能在海邊、港口、珊瑚礁、紅樹林釣魚時偶爾順便撈到；溪邊、湖邊偶爾撈到小水獺。寵物可以放到「🏷️ 寵物市集」賣（賣家拿九成，買的人要重新培養親密度）。每人最多養 3 隻，同時只能帶 1 隻出門，其他的會待在自己小島上，朋友來參觀看得到。名字最多 8 個字。',
       '點頭像打開「🐾 寵物」可以帶出門、餵食、領禮物、改名。帶出門的寵物會跟著你走，別人也看得到牠和牠的名字。',
+      '小烏龜的殼是一片一片的鱗甲，光澤 80 以上鱗甲中間會出現黃色花紋、100 有金色殼邊。牠走路頭會一點一點，停下來會眨眼，偶爾把頭縮進殼裡再伸出來。',
       '餵食用魚缸裡的魚（魚會拿走）。一天第一次餵親密度 +15（稀有魚 +20、傳說魚 +25），之後同一天每次只 +1。親密度 10 以上，每隻寵物每天會帶一份小禮物（貝殼、照片或一點金幣）；60 以上戴項圈、150 以上再戴小帽子。',
       '帶貓出門的時候，附近有魚群牠會「喵～」提醒你。表情選單裡有「抱寵物」和「摸摸頭」。',
       '🐢 室內烏龜缸：走到缸旁邊按右下的「🐢 看烏龜缸」，會跳出缸裡有哪幾隻小烏龜，按「拿出來」就帶牠出門；身邊帶著小烏龜的話，也可以按「放進缸裡」。',
