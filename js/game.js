@@ -2062,7 +2062,24 @@ function signObj(){ const g = new THREE.Group(), C = {};
    都只是「把已經有的東西畫出來」：位置和時間照伺服器時間算（大家看到的一樣），沒有改任何機率。
    下雨、暴風雨、晚上鳥不出來（v471 的規則）；洄游的水花還是會有。 */
 const FLK = { mig:null, birds:[], far:[], list:[], scan:0, rip:0 };
-function flkBird(col, sc){ const b = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color: col }); b.add(new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.5), m)); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.04, 0.2), m); w.position.x = sd * 0.3; b.add(w); } b.scale.setScalar(sc); return b; }
+function flkBird(col, sc){   /* v643 作者：「海鳥沒有精緻模型」→ 圓身體、頭、橘嘴、尾巴；翅膀前寬後尖、灰色到黑色翅尖、往上微彎。結構跟以前一樣：children[0] 身體、[1][2] 左右翅膀（拍翅膀轉 rotation.z） */
+  const C = flkBird.C || (flkBird.C = {}), key = col; let G = C[key];
+  if (!G){ const parts = [], add = (geo, c, x, y, z, sx, sy, sz, rx) => { if (rx) geo.rotateX(rx); geo.scale(sx || 1, sy || 1, sz || 1); geo.translate(x, y, z); const cc = new THREE.Color(c), n = geo.attributes.position.count, A = new Float32Array(n * 3); for (let i = 0; i < n; i++){ A[i * 3] = cc.r; A[i * 3 + 1] = cc.g; A[i * 3 + 2] = cc.b; } geo.setAttribute('color', new THREE.BufferAttribute(A, 3)); parts.push(geo.index ? geo.toNonIndexed() : geo); };
+    add(new THREE.SphereGeometry(0.1, 9, 7), col, 0, 0, 0, 0.85, 0.8, 2.4);
+    add(new THREE.SphereGeometry(0.075, 8, 6), col, 0, 0.04, 0.24);
+    add(new THREE.ConeGeometry(0.022, 0.1, 5), '#f2a03a', 0, 0.03, 0.34, 1, 1, 1, Math.PI / 2);
+    add(new THREE.ConeGeometry(0.075, 0.2, 4), '#8f9aa3', 0, 0.01, -0.29, 1, 0.3, 1, -Math.PI / 2);
+    for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.014, 5, 4), '#1c1c1c', sx * 0.05, 0.065, 0.28);
+    const bodyG = mergeGeometries(parts, false);
+    const sh = new THREE.Shape(); sh.moveTo(0, 0.13); sh.lineTo(0.22, 0.12); sh.lineTo(0.42, 0.06); sh.lineTo(0.62, -0.06); sh.lineTo(0.5, -0.07); sh.lineTo(0.3, -0.06); sh.lineTo(0.12, -0.1); sh.lineTo(0, -0.11);
+    const wg = new THREE.ShapeGeometry(sh); wg.rotateX(-Math.PI / 2); const pos = wg.attributes.position, A = new Float32Array(pos.count * 3), cg = new THREE.Color(col === '#c3ccd5' ? '#8f9aa3' : '#b5c0c8'), ck = new THREE.Color('#2a2d31');
+    for (let i = 0; i < pos.count; i++){ const x = pos.getX(i), k = clamp((x - 0.4) / 0.2, 0, 1), c = cg.clone().lerp(ck, k); A[i * 3] = c.r; A[i * 3 + 1] = c.g; A[i * 3 + 2] = c.b; pos.setY(i, Math.max(0, x - 0.3) * 0.18); }
+    wg.setAttribute('color', new THREE.BufferAttribute(A, 3)); wg.computeVertexNormals();
+    const wgL = wg.clone(); wgL.scale(-1, 1, 1);
+    G = C[key] = { bodyG, wgR: wg, wgL, m: flkBird.m || (flkBird.m = new THREE.MeshLambertMaterial({ vertexColors:true, side:THREE.DoubleSide })) }; }
+  const b = new THREE.Group(); b.add(new THREE.Mesh(G.bodyG, G.m));
+  for (const sd of [-1, 1]){ const w = new THREE.Group(); w.position.set(sd * 0.05, 0.03, 0.02); w.add(new THREE.Mesh(sd < 0 ? G.wgL : G.wgR, G.m)); b.add(w); }
+  b.scale.setScalar(sc); return b; }
 function flkFar(){ const g = new THREE.Group(), bm = new THREE.MeshBasicMaterial({ color:'#2b2f36' }); for (let j = 0; j < 3; j++){ const b = new THREE.Group(); for (const sd of [-1, 1]){ const w = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.14), bm); w.position.x = sd * 0.26; b.add(w); } b.userData.a = j / 3 * Math.PI * 2; g.add(b); } g.userData.dyn = g.userData.keep = true; g.visible = false; scene.add(g); return g; }   /* 跟 signObj 的鳥同一個樣子 */
 function flkMigAt(sp){ if (!sp || !sp.dir || !sp.pos) return null; const L = Math.hypot(sp.dir.x, sp.dir.y) || 1; for (const d of [9, 6.5, 4.5]){ const x = sp.pos.x + sp.dir.x / L * d, z = sp.pos.z + sp.dir.y / L * d; if (waterAt(x, z)) return [x, z]; } return [sp.pos.x + sp.dir.x / L * 5, sp.pos.z + sp.dir.y / L * 5, 1]; }
 function flkTick(dt, t){
@@ -5918,8 +5935,15 @@ function updatePlayer(dt){
     /* v427 玩家回報「人物會穿牆」：角色改成大頭之後，頭比原本擋牆用的半徑（0.35）還寬，貼著牆走頭會陷進牆裡。戶外改成 0.48；
        屋裡家具擺得密、維持 0.35；如果現在站的地方用大半徑算已經卡住（例如剛從門口、椅子出來），也先用小的，才不會動不了 */
     const okStep = (ax, az, bx, bz) => { const BR = !House.on && !blocked(ax, az, 0.48) ? 0.48 : 0.35; if (!walkable(bx, bz) || blockedJ(bx, bz, BR, Jump.gy + Jump.air, ax, az)) return false; { const db = deckAt(bx, bz); if (db){ const ga = groundHeight(ax, az); return db.y - ga < 0.7 || (Jump.air > 0.05 && db.y <= Jump.gy + Jump.air + 0.1); } }   /* 高高的堤防路只能從樓梯上去 */ const gb = groundHeight(bx, bz); if (Jump.air > 0.05 && gb <= Jump.gy + Jump.air + 0.1) return true; const dh = gb - groundHeight(ax, az), dl = Math.hypot(bx - ax, bz - az) || 1e-3; return dh < 0.34 || dh / dl < 1.2; };   /* v199：小台階（34 公分以內）直接跨上去，不會卡在路緣、泥灘台地邊 */
-    if (okStep(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx;
-    if (okStep(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz;
+    { const ox = me.pos.x, oz = me.pos.z, wx = nx - ox, wz = nz - oz, want = Math.hypot(wx, wz);
+      if (okStep(me.pos.x, me.pos.z, nx, me.pos.z)) me.pos.x = nx;
+      if (okStep(me.pos.x, me.pos.z, me.pos.x, nz)) me.pos.z = nz;
+      /* v643 作者：「小東西會卡路」→ 正面撞到燈柱、木桶、招牌這種小東西時，以前只試 x、z 兩個方向，兩個都擋住就停住。
+         現在走不到一半時，斜 25°／50°／75° 再試，先試離那個東西比較遠的那一邊，就會順著滑過去 */
+      if (want > 1e-4 && Math.hypot(me.pos.x - ox, me.pos.z - oz) < want * 0.5){ me.pos.x = ox; me.pos.z = oz;
+        let side = 1; { let bc = null, bd = 1e9; for (const c of (House.on && House.cols) || colliders){ if (c.t !== 'c' && c.t !== undefined) continue; const d = Math.hypot(c.x - ox, c.z - oz) - (c.r || 0); if (d < bd){ bd = d; bc = c; } } if (bc && bd < 1.2) side = (wx * (bc.z - oz) - wz * (bc.x - ox)) > 0 ? -1 : 1; }
+        let done = false; for (const deg of [25, 50, 75, 90]) for (const sd of [side, -side]){ if (done) break; const a = sd * deg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), k = Math.max(0.5, ca * 0.9), tx = ox + (wx * ca - wz * sa) * k, tz = oz + (wx * sa + wz * ca) * k; if (okStep(ox, oz, tx, tz)){ me.pos.x = tx; me.pos.z = tz; done = true; } }
+        if (!done){ if (okStep(ox, oz, nx, oz)) me.pos.x = nx; if (okStep(me.pos.x, oz, me.pos.x, nz)) me.pos.z = nz; } } }
     const target = Math.atan2(mx, mz);
     me.rot = lerpAngle(me.rot, target, 1 - Math.exp(-14 * dt));
   }
