@@ -15828,8 +15828,14 @@ function afterSell(got, n){ if (got > 0) SFX.coin();
 function emptyRec(){ return { gear:{}, owned:[], island:{ v:2, items:[] }, dishes:[], total:0, bestW:0, bestFish:null, best:{}, count:{}, tank:[], show:[], legend:0, updatedAt:0, coins:0, rod:'bamboo', rods:['bamboo'], bait:{}, baitOn:null, sold:0, earned:0, love:0, released:0, dive:[], photos:[] }; }
 const SHOW_MAX = 100, KEEP_MAX = 200, FAV_MAX = 100;
 /* v650 我的海：放進小島海底的魚（用原本「展示」的清單 rec.show）。起始 30 條，海底花園每一株長到一半以上的珊瑚 +2，最多 60 條（作者選的） */
-function mySeaCap(){ let k = null; try { if (typeof farmMine === 'function' && farmMine() && Farm && Farm.plots){ k = 0; for (const key in Farm.plots){ const p = Farm.plots[key]; if (Number(key) >= 100 && p.c === 'coral' && farmProg(p) >= 0.5) k++; } LS.set('tide.seaCoral', k); } } catch(e){} if (k == null) k = LS.get('tide.seaCoral', 0) | 0; return Math.min(60, 30 + k * 2); }
-function mySeaFull(){ const cap = mySeaCap(); if ((rec.show || []).length >= cap){ toast(`我的海最多放 ${cap} 條${cap < 60 ? '（海底花園多種珊瑚，可以放更多）' : ''}，先拿出一條再放`); return true; } return false; }
+function mySeaCap(){ let k = null; try { if (onIsle && typeof canEditIsle === 'function' && canEditIsle(onIsle.owner) && Farm && Farm.plots && Farm.owner === onIsle.owner){ k = 0; for (const key in Farm.plots){ const p = Farm.plots[key]; if (Number(key) >= 100 && p.c === 'coral' && farmProg(p) >= 0.5) k++; } LS.set('tide.seaCoral', k); } } catch(e){} if (k == null) k = LS.get('tide.seaCoral', 0) | 0; return Math.min(60, 30 + k * 2); }
+/* v653 作者：一起住的人「共用」一個上限 → 整個家的海加起來 30～60 條（照住的那座島的珊瑚）。別人放了幾條用 home_sea 算（快取 20 秒） */
+const HomeSea = { at:0, others:0, busy:false };
+function homeShared(){ return !!(Home && Home.owner && Array.isArray(Home.people) && Home.people.length > 1); }
+function homeSeaRefresh(){ if (!Cloud.sb || !homeShared() || HomeSea.busy || Date.now() - HomeSea.at < 20000) return; HomeSea.busy = true;
+  Cloud.sb.rpc('home_sea', { p_owner: Home.owner }).then(({ data }) => { HomeSea.busy = false; HomeSea.at = Date.now(); if (Array.isArray(data)) HomeSea.others = data.filter(p => p.id !== myIdOrMe()).reduce((a, p) => a + (Array.isArray(p.fish) ? p.fish.length : 0), 0); if (curTab === 'tank' && !$('#sheet').hidden) renderTab(); }, () => { HomeSea.busy = false; }); }
+function mySeaUsed(){ homeSeaRefresh(); return (rec.show || []).length + (homeShared() ? HomeSea.others : 0); }
+function mySeaFull(){ const cap = mySeaCap(); if (mySeaUsed() >= cap){ toast(`${homeShared() ? '你們家的海' : '我的海'}最多放 ${cap} 條${cap < 60 ? '（海底花園多種珊瑚，可以放更多）' : ''}，先拿出一條再放`); return true; } return false; }
 // 箱網養殖（參考澎湖的圓形箱網；伺服器 041）：一個人一個箱網、最多 6 條；每天餵一次（20 金幣），每條魚往最大重量長 12%
 var CAGE = { x:-17.6, z:92.8, max:6, feed:20, k:0.12, pos:[[-15.6, 90.6], [-15.6, 95.0], [-20.0, 90.6], [-20.0, 95.0]], r:1.7 };
 const FARM = new Set(['grouper','amberjack','blackbream','girella','rabbitfish','lethrinus','milkfish','tilapia','mullet','barramundi','scat','mangsnapper','trevally']);   /* FAV：打星號收藏的魚（不能賣、不會被擠掉；伺服器 039） */
@@ -18651,7 +18657,7 @@ function renderTab(){
   } else if (curTab === 'bag'){ renderBag(body);
   } else if (curTab === 'tank'){
     const nShow = (rec.show || []).length;
-    body.appendChild(el('p', 'sub', nShow ? `你的海裡有 ${nShow} / ${mySeaCap()} 條魚，從小島碼頭的潛水梯下去就看得到，來你島上的朋友也看得到。按「放進我的海」或「拿出來」。`
+    body.appendChild(el('p', 'sub', homeShared() ? `你們家共用一片海：現在 ${mySeaUsed()} / ${mySeaCap()} 條（你放了 ${nShow} 條）。從小島碼頭的潛水梯下去就看得到大家的魚。按「放進我的海」或「拿出來」，只能拿出自己的。` : nShow ? `你的海裡有 ${nShow} / ${mySeaCap()} 條魚，從小島碼頭的潛水梯下去就看得到，來你島上的朋友也看得到。按「放進我的海」或「拿出來」。`
       : `你的海還是空的。最喜歡的魚按「放進我的海」，牠就會在你小島底下的海裡游（最多 ${mySeaCap()} 條，多種珊瑚可以放更多）。`));
     if (!rec.tank.length){ body.appendChild(el('div', 'empty', '魚缸還是空的。去任何一個釣點釣第一條魚吧！')); return; }
     if (FishCard.t){ const cx = rec.tank.find(x => x.t === FishCard.t); if (cx){ renderFishCard(body, cx); return; } FishCard.t = 0; }
@@ -18953,7 +18959,7 @@ function renderTab(){
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；我的海裡的不算）。`,
-      `🐠 我的海：最喜歡的魚可以放進自己小島底下的海。釣到時按「🐠 我的海」，或在「魚缸」按「放進我的海」。從小島碼頭的潛水梯下去，就看得到牠們照自己的習性游（螃蟹、比目魚趴在海底，鯊魚在外圈繞，傳說魚身邊有一點光）；游近一條魚，下面會寫是誰、哪天在哪裡釣到的。一開始可以放 30 條，海底花園每一株長大的珊瑚多 2 條，最多 60 條。放在我的海的魚不會被賣掉或拿去做菜，來你島上潛水的朋友也看得到。一起住的人共用同一片海：每個人放自己的魚，游近會寫是誰的；全部超過 60 條時，每個人輪流放最稀有、最重的。`,
+      `🐠 我的海：最喜歡的魚可以放進自己小島底下的海。釣到時按「🐠 我的海」，或在「魚缸」按「放進我的海」。從小島碼頭的潛水梯下去，就看得到牠們照自己的習性游（螃蟹、比目魚趴在海底，鯊魚在外圈繞，傳說魚身邊有一點光）；游近一條魚，下面會寫是誰、哪天在哪裡釣到的。一開始可以放 30 條，海底花園每一株長大的珊瑚多 2 條，最多 60 條。放在我的海的魚不會被賣掉或拿去做菜，來你島上潛水的朋友也看得到。一起住的人共用同一片海、也共用上限（整個家加起來 30～60 條，照島上的珊瑚）：每個人放自己的魚，游近會寫是誰的，只能拿出自己的。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）。主要在港口外海出沒，偶爾也會到珊瑚礁群島外側的深水邊巡游（機率更低）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
       '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低。圖鑑裡會先顯示影子，釣到才看得到樣子（赤紅霸王鯊例外，要釣到才會出現）。',
