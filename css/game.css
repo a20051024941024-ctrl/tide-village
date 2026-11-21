@@ -2027,3 +2027,4 @@ body.ui3 #mini3{background:linear-gradient(#f4fbff,#d4eeff)!important;border:3px
 .stbar b.ready{filter:none;opacity:1;animation:stBob 1s ease-in-out infinite}
 .stbar b.got{filter:none;opacity:1;font-size:15px}
 @keyframes stBob{50%{transform:translate(-50%,-70%)}}
+#mySeaChip{bottom:auto!important;top:calc(var(--gt,0px) + 74px);max-width:min(420px,46vw);white-space:normal;text-align:center}   /* v663 作者截圖：潛水時這條字壓在聊天列上 → 改放上面中間（頭像和地圖按鈕中間那塊空的） */
