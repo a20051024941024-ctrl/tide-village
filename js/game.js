@@ -10570,7 +10570,7 @@ function renderSailInv(){
 setInterval(() => { if (Party.inv && Date.now() > Party.inv.until){ Party.inv = null; renderSailInv(); } }, 2000);
 /* ---- 等級、稱號、成就：經驗值全部從伺服器記的紀錄算出來（釣到的魚、放流、水下照片），升級獎金由伺服器 019_levels.sql 發 ---- */
 const XP_RARITY = { '常見':10, '稀有':40, '傳說':250 };
-function calcXP(r){ r = r || rec; let x = 0; for (const [id, n] of Object.entries(r.count || {})){ const f = FISH_BY_ID[id]; if (f) x += (Number(n) || 0) * XP_RARITY[f.rarity]; } return x + (r.released || 0) * 5 + (r.photos || []).length * 30; }
+function calcXP(r){ r = r || rec; let x = +(r.xpBonus || 0) || 0; for (const [id, n] of Object.entries(r.count || {})){ const f = FISH_BY_ID[id]; if (f) x += (Number(n) || 0) * XP_RARITY[f.rarity]; } return x + (r.released || 0) * 5 + (r.photos || []).length * 30; }
 function lvNeed(L){ return 80 * (L - 1) + 20 * (L - 1) * (L - 2); }   // 到 Lv.L 需要的總經驗
 function lvOf(xp){ let L = 1; while (L < 99 && xp >= lvNeed(L + 1)) L++; return L; }
 const speciesN = () => Object.keys(rec.count || {}).filter(id => FISH_BY_ID[id]).length;
@@ -12285,8 +12285,8 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   { let mt = String(r.motto || '').slice(0, 30); try { mt = clean(mt); } catch(e){} const q = el('p', 'pc-motto', mt ? `「${mt}」` : isMe ? '（還沒寫一句話）' : ''); if (isMe){ const eb = el('button', 'pc-pen', '✏️'); eb.title = '改一句話'; eb.addEventListener('click', async () => { const v = prompt('寫一句話放在名片上（最多 30 個字，留空就是不寫）', r.motto || ''); if (v == null) return; const o = await festRpc('player_set_motto', { p_text: v }); if (o && o.ok){ r.motto = o.motto; cardDraw(c, r, peerId); } }); q.appendChild(eb); } if (mt || isMe) info.appendChild(q); }
   { const rk = el('div', 'pc-rank'); const D = r.duel, tt = duelTierOf(D ? D.stars : 0); rk.appendChild(el('div', 'pc-rk-ic', tt[2])); rk.appendChild(el('b', '', D ? tt[1] : '還沒打排位賽')); rk.appendChild(el('span', '', D ? `${D.stars}⭐・${D.wins} 勝 ${D.losses} 敗` : '背包 → 排位賽')); if (D && D.prev) rk.appendChild(el('small', '', `上一季最高：${D.prev.tier}`)); else if (D && D.best >= 2) rk.appendChild(el('small', '', `最多 ${D.best} 連勝`)); head.appendChild(rk); }
   /* v544 作者：「變成不要上下滑動的」→ 內容分成三頁（總覽／戰績／稱號成就），用左邊的按鈕切換，每一頁都剛好一個畫面，不用捲 */
-  const tabs = [['main', '👤 總覽'], ['rec', '🏟 戰績'], ['news', '📰 動態']]; if (isMe) tabs.push(['ach', '🎖 稱號成就']); if (!tabs.some(x => x[0] === c._tab)) c._tab = 'main';
-  const P1 = el('div', 'pc-pane'), P2 = el('div', 'pc-pane'), P3 = el('div', 'pc-pane'), P4 = el('div', 'pc-pane'); P1.hidden = c._tab !== 'main'; P2.hidden = c._tab !== 'rec'; P3.hidden = c._tab !== 'ach'; P4.hidden = c._tab !== 'news'; right.append(P1, P2, P4, P3);
+  const tabs = [['main', '👤 總覽'], ['style', '👕 穿搭'], ['rec', '🏟 戰績'], ['news', '📰 動態']]; if (isMe) tabs.push(['ach', '🎖 稱號成就']); if (!tabs.some(x => x[0] === c._tab)) c._tab = 'main';
+  const P1 = el('div', 'pc-pane'), P2 = el('div', 'pc-pane'), P3 = el('div', 'pc-pane'), P4 = el('div', 'pc-pane'); P1.hidden = c._tab !== 'main'; P2.hidden = c._tab !== 'rec'; P3.hidden = c._tab !== 'ach'; P4.hidden = c._tab !== 'news'; right.append(P1, P2, P4, P3); { const P5 = el('div', 'pc-pane'); P5.hidden = c._tab !== 'style'; right.appendChild(P5); if (!P5.hidden) styleCardPane(P5, isMe ? (Cloud.userId || myId) : (r.id || r.uid), isMe); }
   { const nav = el('div', 'pc-nav'); for (const [k, lab] of tabs){ const b = el('button', 'pc-tab' + (c._tab === k ? ' on' : ''), lab); b.addEventListener('click', () => { c._tab = k; cardDraw(c, r, peerId); }); nav.appendChild(b); } left.appendChild(nav); }
   { const D = r.duel, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '⚔️ 釣魚對決（排位賽）')); const g = el('div', 'pc-stats pc-sport'); const tt = duelTierOf(D ? D.stars : 0); for (const [ic, lab, val] of [[tt[2], '段位', D ? `${tt[1]} ${D.stars}⭐` : '—'], ['📊', '勝敗', D ? `${D.wins} 勝 ${D.losses} 敗` : '—'], ['🔥', '最多連勝', D ? String(D.best) : '—']]){ const d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', val)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }
   /* v546 動態頁：探索進度、釣魚大賽名次、最近動態（作者：參考圖裡還沒做的三樣） */
@@ -15531,7 +15531,7 @@ const Wardrobe = { slot:'hat', trying:null, tryTimer:0 };
 function ownsGear(id){ const it = GEAR_BY_ID[id]; return !!it && (!paidGear(it) || rec.owned.includes(id)); }
 function wearGear(id){
   const it = GEAR_BY_ID[id]; if (!it || !ownsGear(id)) return;
-  endTryOn(); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
+  endTryOn(); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true); Style.newAt = Date.now(); Style.said = false;
   cloudCall('set_gear', { p_gear: rec.gear }); renderTab();
 }
 function buyGear(id){
@@ -15947,10 +15947,61 @@ function renderWardrobe(body, only){
   if (!only && DESIGN_SLOTS.some(([k]) => k === Wardrobe.slot)) renderMyDesigns(body, Wardrobe.slot);
 }
 // ===== 衣櫃（像天天玩樂園）：左邊是大大的自己，右邊點衣服，身上馬上換給你看 =====
+
+/* ===== v673 👕 讓大家想挑衣服（作者：「我發現大家都沒在挑衣服」→ 同意設計；伺服器 215_style.sql）=====
+   ・入門套裝：每個人可以免費挑一套（阿萍送的）。新玩家取完名字就跳出來；已經在玩的人進遊戲後跳一次。
+   ・每週穿搭主題（週一換，六種輪流）：身上有 2 件以上，釣到魚多一成經驗；村民偶爾會稱讚。造型頁最上面看得到這週的主題和自己穿到幾件。
+   ・名片多一頁「👕 穿搭」：看別人的全身照和穿了什麼，每件旁邊「我也想要」直接帶你去那一格；可以幫他按讚。造型頁有這週被讚最多的 5 個人。
+   ・換新衣服以後走到村民旁邊，村民會說一句。 */
+const STYLE_THEMES = [
+  ['海邊度假', ['hat_sun', 'top_hawaii', 'top_tank', 'pants_shorts', 'shoes_sandals', 'acc_lei', 'acc_shell', 'back_balloon']],
+  ['漁夫日常', ['hat_bucket', 'top_vest', 'top_apron', 'pants_overalls', 'shoes_rain', 'back_basket', 'back_fishpack', 'top_stripe']],
+  ['運動風', ['hat_cap', 'top_dry', 'top_dryv', 'top_tee', 'top_vtee', 'pants_shorts', 'shoes_sneakers', 'socks_white']],
+  ['文青散步', ['hat_beanie', 'top_fstripe', 'top_long', 'pants_khaki', 'acc_glasses', 'acc_bowtie', 'socks_stripe', 'top_pocket']],
+  ['冬天暖暖', ['hat_beanie', 'top_hoodie', 'top_sweat', 'top_hoodt', 'acc_scarf%', 'pants_jeans', 'shoes_boots', 'hat_antler']],
+  ['冒險家', ['hat_pirate', 'top_nylon', 'back_fishpack', 'back_cloak%', 'back_kcape%', 'shoes_boots', 'pants_jeans', 'acc_goggles']] ];
+const STYLE_KITS = [['海邊度假', ['hat_sun', 'top_hawaii', 'pants_shorts', 'shoes_sandals', 'acc_lei']], ['漁夫', ['hat_bucket', 'top_vest', 'pants_overalls', 'shoes_rain', 'back_basket']], ['運動', ['hat_cap', 'top_dry', 'pants_shorts', 'shoes_sneakers', 'socks_white']],
+  ['文青', ['hat_beanie', 'top_stripe', 'pants_khaki', 'shoes_sneakers', 'acc_glasses']], ['可愛', ['hat_cat', 'top_kid', 'pants_skirt', 'shoes_sneakers', 'socks_stripe']], ['冒險', ['hat_pirate', 'top_nylon', 'pants_jeans', 'shoes_boots', 'back_fishpack']]];
+var Style = { newAt: 0, said: false, top: null, topAt: 0, sayAt: 0, showTop: false };
+function styleShot(im, g, size){ const go = () => { try { im.src = avatarShot(g, 'full', size); } catch(e){} }; go(); setTimeout(() => { if (!im.isConnected) return; try { AvShot.cache.clear(); } catch(e){} go(); }, 1800); }   /* 衣服的模型和貼圖是慢慢載入的：過一下再拍一次 */
+function styleTheme(){ const d = new Date(Date.now() + 8 * 3600e3), day = (d.getUTCDay() + 6) % 7, mon = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day), k = Math.round((mon - Date.UTC(2026, 10, 16)) / 864e5 / 7); return ((k % 6) + 6) % 6; }
+function styleHit(id, i){ return STYLE_THEMES[i][1].some(s => s.endsWith('%') ? String(id).startsWith(s.slice(0, -1)) : s === id); }
+function styleMatch(g){ const i = styleTheme(); return Object.entries(cleanGear(g || rec.gear)).filter(([k, v]) => k !== 'look' && styleHit(v, i)).map(([, v]) => v); }
+function styleKitPick(force){ if (!Cloud.on || (rec.owned || []).includes('kit_starter') || (!force && LS.get('tide.kitSkip', 0) > Date.now())) return; if ($('#kitPick')) return;
+  const ov = el('div', 'stpop'); ov.id = 'kitPick'; const pn = el('div', 'stcard kitcard'); ov.appendChild(pn);
+  pn.appendChild(el('div', 'sttitle', '阿萍的衣服')); pn.appendChild(el('p', 'stsay', '阿萍：「新來的喔？挑一套喜歡的，送你。」'));
+  const grid = el('div', 'kit-grid'); STYLE_KITS.forEach(([nm, ids], k) => { const b = el('button', 'kit-c'); const im = el('img'); im.alt = nm; styleShot(im, Object.assign(cleanGear(rec.gear), Object.fromEntries(ids.map(x => [x.split('_')[0], x]))), 160); b.appendChild(im); b.appendChild(el('b', '', nm)); b.appendChild(el('small', 'kit-ic', ids.slice(1, 3).map(x => (GEAR_BY_ID[x] || {}).name || '').join('・'))); b.title = ids.map(x => (GEAR_BY_ID[x] || {}).name).join('、');
+    b.addEventListener('click', async () => { if (pn.dataset.busy) return; pn.dataset.busy = '1'; try { const { data, error } = await Cloud.sb.rpc('style_starter', { p_k: k }); if (error) throw error; adoptRow(data); me.setGear(rec.gear); pushPresence(true); ov.remove(); try { SFX.coin(); } catch(e){} flash(`換上「${nm}」那套了`, 1.8); Style.newAt = Date.now(); Style.said = false; } catch(e){ toast(cloudErrMsg(e)); pn.dataset.busy = ''; } }); grid.appendChild(b); });
+  pn.appendChild(grid); const no = el('button', 'tbtn ghost', '先不要'); no.addEventListener('click', () => { LS.set('tide.kitSkip', Date.now() + 3 * 864e5); ov.remove(); }); pn.appendChild(no);
+  pn.appendChild(el('p', 'stsub', '之後也可以在造型頁挑（只能挑一次）。')); document.body.appendChild(ov); }
+async function styleTopLoad(){ if (!Cloud.on || Style.topBusy) return; Style.topBusy = true; try { const { data } = await Cloud.sb.rpc('style_top'); if (data){ Style.top = data; Style.topAt = Date.now(); if (!$('#sheet').hidden && (curTab === 'closet' || curTab === 'style')) renderTab(); } } catch(e){} Style.topBusy = false; }
+function styleHead(body){ const i = styleTheme(), T = STYLE_THEMES[i], hit = styleMatch(); const box = el('div', 'sty-head');
+  box.appendChild(el('div', 'sty-t', `這週的穿搭主題：${T[0]}`)); box.appendChild(el('div', 'sty-s', hit.length >= 2 ? `你身上有 ${hit.length} 件，釣到魚多一成經驗` : `穿 2 件以上，釣到魚多一成經驗（現在 ${hit.length} 件）`));
+  const ul = el('div', 'sty-items'); for (const id of T[1]){ const ids = id.endsWith('%') ? GEAR.filter(g => g.id.startsWith(id.slice(0, -1))).slice(0, 1).map(g => g.id) : [id]; for (const x of ids){ const it = GEAR_BY_ID[x]; if (!it) continue; const on = hit.includes(x) || (id.endsWith('%') && hit.some(h => h.startsWith(id.slice(0, -1)))); const c = el('button', 'sty-i' + (on ? ' on' : ''));
+      c.appendChild(el('span', '', it.icon)); c.appendChild(el('small', '', id.endsWith('%') ? it.name.replace(/^.{0,3}?(圍巾|斗篷|短披風)$/, '各種$1') : it.name)); c.addEventListener('click', () => { Closet.slot = it.slot; renderTab(); }); ul.appendChild(c); } }
+  box.appendChild(ul);
+  if (Cloud.on && !(rec.owned || []).includes('kit_starter')){ const k = el('button', 'tbtn buy sty-tg', '挑一套免費的入門衣服'); k.addEventListener('click', () => styleKitPick(true)); box.appendChild(k); }
+  const T5 = Style.top; if (Cloud.on && (!T5 || Date.now() - Style.topAt > 60000)) styleTopLoad();
+  if (T5 && (T5.top || []).length){ const tg = el('button', 'tbtn ghost sty-tg', Style.showTop ? '收起來' : `這週被讚最多的 ${T5.top.length} 個人`); tg.addEventListener('click', () => { Style.showTop = !Style.showTop; renderTab(); }); box.appendChild(tg); }
+  if (Style.showTop && T5 && (T5.top || []).length){ const row = el('div', 'sty-top'); for (const p of T5.top){ const c = el('button', 'sty-p'); const im = el('img'); im.alt = p.n; styleShot(im, cleanGear(p.gear || {}), 120); c.appendChild(im); c.appendChild(el('b', '', p.n)); c.appendChild(el('small', '', `👍 ${p.likes}`)); c.addEventListener('click', () => { closeSheet(); setTimeout(() => openCard(p.id, p.n), 60); }); row.appendChild(c); } box.appendChild(row); }
+  body.appendChild(box); }
+async function styleCardPane(P, uid, isMe){ P.appendChild(el('p', 'sub', '載入中…')); let r = null; try { const { data } = await Cloud.sb.rpc('style_of', { p_uid: uid }); r = data; } catch(e){} P.innerHTML = ''; if (!r){ P.appendChild(el('p', 'sub', '讀不到')); return; }
+  const g = cleanGear(isMe ? rec.gear : r.gear || {}), wrap = el('div', 'sty-card'); const im = el('img', 'sty-big'); im.alt = ''; styleShot(im, g, 220); wrap.appendChild(im);
+  const ul = el('div', 'sty-list'), i = styleTheme(); for (const k of ['hat', 'top', 'pants', 'shoes', 'socks', 'acc', 'back']){ const it = GEAR_BY_ID[g[k]]; if (!it || /_none$/.test(it.id)) continue; const row = el('div', 'sty-row'); row.appendChild(el('span', 'ic', it.icon)); row.appendChild(el('span', 'nm', it.name + (styleHit(it.id, i) ? '・主題' : '')));
+    if (!isMe){ const own = ownsGear(it.id), b = el('button', 'tbtn ghost', own ? '換上' : '我也想要'); b.addEventListener('click', () => { duelCardClose('pcard'); if (own){ wearGear(it.id); toast(`換上${it.name}了`); return; } Closet.slot = it.slot; Wardrobe.slot = it.slot; openSheet('closet'); }); row.appendChild(b); } ul.appendChild(row); }
+  wrap.appendChild(ul); P.appendChild(wrap);
+  const lk = el('div', 'sty-like'); lk.appendChild(el('span', '', `這週被讚 ${r.n || 0} 次`)); if (!isMe){ const b = el('button', 'tbtn' + (r.mine ? ' ghost' : ''), r.mine ? '👍 讚過了' : '👍 穿得好看'); b.disabled = !!r.mine; b.addEventListener('click', async () => { b.disabled = true; try { const { data, error } = await Cloud.sb.rpc('style_like', { p_to: uid }); if (error) throw error; b.textContent = '👍 讚過了'; lk.firstChild.textContent = `這週被讚 ${data.n} 次`; try { SFX.coin(); } catch(e){} } catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); lk.appendChild(b); } P.appendChild(lk); }
+/* 村民注意到你的衣服：換新衣服 3 分鐘內走到村民旁邊說一句；穿對這週主題，偶爾也會稱讚 */
+const STYLE_SAY_NEW = ['欸，新衣服喔', '這件好看耶', '今天穿得不一樣喔', '新買的？很適合你'], STYLE_SAY_TH = ['今天穿得很{t}喔', '這身很有{t}的感覺', '{t}耶，很會穿'];
+function styleTick(){ if (!rec || frameNo % 30 !== 7) return; const t = Date.now(); if (t - Style.sayAt < 25000) return; const fresh = Style.newAt && t - Style.newAt < 180000 && !Style.said, th = styleMatch().length >= 2 && Math.random() < 0.08;
+  if (!fresh && !th) return; let best = null, bd = 4.2; for (const f of CLOD.all){ if (!f || f === me || !f.isNpc || !f.say || !f.av.g.visible) continue; const d = Math.hypot(f.pos.x - me.pos.x, f.pos.z - me.pos.z); if (d < bd){ bd = d; best = f; } }
+  if (!best) return; Style.sayAt = t; if (fresh){ Style.said = true; best.say(STYLE_SAY_NEW[Math.floor(Math.random() * STYLE_SAY_NEW.length)], '', 2.6); } else best.say(STYLE_SAY_TH[Math.floor(Math.random() * STYLE_SAY_TH.length)].replace('{t}', STYLE_THEMES[styleTheme()][0]), '', 2.6); }
+setInterval(() => { try { styleTick(); } catch(e){} }, 500);
+setTimeout(function kitWait(){ if (!Cloud.on || !Cloud.lastRow || !$('#sheet').hidden || $('#welcome') || $('#stampPop')){ setTimeout(kitWait, 4000); return; } styleKitPick(false); }, 15000);
 const Closet = { slot:'top', scroll:{} };
 function closetTryAll(){ const g = cleanGear(Wardrobe.preview || rec.gear); return GEAR_SLOTS.map(([k]) => g[k]).filter(id => id && GEAR_BY_ID[id] && !ownsGear(id)).map(id => GEAR_BY_ID[id]); }
 function renderCloset(body){
-  const wrap = el('div', 'closet'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap);
+  const wrap = el('div', 'closet'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap); try { styleHead(R2); } catch(e){ console.warn('style', e); }
   // 左邊：大的 3D 預覽（可以轉）
   const showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'cl-pv');
   if (pvShow(box, showG)){ const W = Math.max(140, Math.min(300, Math.round(innerWidth * 0.3))), H = Math.max(180, Math.min(420, Math.round(innerHeight * 0.66))); pvSize(W, H); PV.cam.position.set(0, 1.05, 3.7); PV.cam.lookAt(0, 0.9, 0); box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); }
@@ -17498,7 +17549,7 @@ function adoptRow(row){ setTimeout(() => { try { refreshMyName(); } catch(e){} }
   Cloud.lastRow = row; if ('island' in row && row.island !== undefined) Cloud.fullAt = Date.now();
   Cloud.myWeekW = Cloud.contest && row.week_id === Cloud.contest.week_id ? Number(row.week_best_w) || 0 : 0;
   if (Tny.on && !Tny.test && Number(row.tourney_id) === Tny.id){ Tny.myW = Number(row.tourney_w) || 0; Tny.myN = row.tourney_n || 0; }
-  { const keep = rec && rec.rodLog, keepDv = rec && rec.dv; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; if ('dive_trash' in row) rec.dv = { day: row.dive_day || '', trash: row.dive_trash || 0, mat: row.dive_mat || 0, crit: row.dive_crit || 0, q: row.dive_q_done || null }; else if (keepDv) rec.dv = keepDv; } rec.rodSkin = row.rod_skin || null; rec.rodSkins = row.rod_skins && typeof row.rod_skins === 'object' ? row.rod_skins : (rec.rodSkins || {}); rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
+  { const keep = rec && rec.rodLog, keepDv = rec && rec.dv; rec = rowToRec(row); rec.rodLog = row.rod_log && typeof row.rod_log === 'object' ? row.rod_log : keep || {}; if ('dive_trash' in row) rec.dv = { day: row.dive_day || '', trash: row.dive_trash || 0, mat: row.dive_mat || 0, crit: row.dive_crit || 0, q: row.dive_q_done || null }; else if (keepDv) rec.dv = keepDv; } rec.xpBonus = +row.xp_bonus || 0; rec.rodSkin = row.rod_skin || null; rec.rodSkins = row.rod_skins && typeof row.rod_skins === 'object' ? row.rod_skins : (rec.rodSkins || {}); rec.lineCol = row.line_col || null; rec.hook = row.hook || null; try { me.setRodLook(rec.rodSkin, rec.lineCol); } catch(e){}   /* v253 工坊的竿子造型、釣線顏色 */
   try { if (row.tag_note) tagNoteShow(row.tag_note); } catch(e){}
   rec.island = cleanIsland(rec.island); Cloud.myLikes = Number(row.likes) || 0; LS.set('tide.rec', rec); buildTank(); buildCageFish();
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
@@ -19459,6 +19510,7 @@ function renderTab(){
       '魚缸、我的海裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
       '🐠 在自己小島的海底，點一下魚就會在上面顯示這條魚是誰、什麼時候、在哪裡釣到的，6 秒後自己收起來（不會一靠近就跳出來擋畫面）。',
       '🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「拆」再點，可以拆掉，自己放的退一半。一座島最多 400 塊，跟一起住的人共用。',
+      '👕 穿搭：每個人可以跟阿萍免費挑一套入門衣服（只能挑一次，造型頁也有按鈕）。每週一換一個穿搭主題（海邊度假、漁夫日常、運動風、文青散步、冬天暖暖、冒險家輪流），身上穿到主題裡 2 件以上，釣到魚多一成經驗，村民也會稱讚你。點別人的名片，「👕 穿搭」頁看得到他穿什麼，「我也想要」會帶你去那件衣服，也可以按「穿得好看」幫他按讚（一週最多讚 30 次）。造型頁看得到這週被讚最多的人。',
     ]);
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、七夕（晚上天上有鵲橋、每天一份禮物、限定花冠和鵲橋）、萬聖節（10/29～10/31，南瓜燈和蝙蝠、每天拿糖果、限定南瓜帽和巫師帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',

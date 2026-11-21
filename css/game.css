@@ -2102,3 +2102,29 @@ body{contain:paint}
 body:has(#blkBar:not([hidden])) #chat3, body:has(#blkBar:not([hidden])) #actWrap{visibility:hidden}
 @media (max-height:420px){ #blkBar{padding:5px 8px} #blkBar .bk-top{margin-bottom:3px} #blkBar .bk-sw small{display:none} #blkBar .bk-sw{width:36px} }
 body:has(#blkBar:not([hidden])) #today3{visibility:hidden}
+/* v673 👕 穿搭主題、入門套裝、名片的穿搭頁 */
+.sty-head{margin:0 0 10px;padding:10px;border-radius:12px;background:#fff7e6;border:2px solid #ecd6a8}
+.sty-t{font-weight:900;font-size:15px;color:#7a4a12}
+.sty-s{font-size:12.5px;margin:2px 0 6px;color:#6b5a45}
+.sty-items{display:flex;flex-wrap:wrap;gap:5px}
+.sty-i{display:flex;align-items:center;gap:3px;padding:3px 8px;border-radius:999px;border:1.5px solid #e2cfa6;background:#fff;font-size:12px}
+.sty-i.on{background:#ffe9a8;border-color:#e0a83a;font-weight:800}
+.sty-head .tbtn{margin-top:8px}
+.sty-t2{margin:10px 0 4px;font-weight:800;font-size:13px}
+.sty-top{display:flex;gap:6px;overflow-x:auto}
+.sty-p{flex:none;display:flex;flex-direction:column;align-items:center;width:76px;padding:4px;border-radius:10px;background:#fff;border:1.5px solid #ecd6a8}
+.sty-p img{width:56px;height:70px;object-fit:contain} .sty-p b{font-size:11px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .sty-p small{font-size:10.5px}
+.kitcard{width:min(94vw,520px)}
+.kit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 10px}
+.kit-c{display:flex;flex-direction:column;align-items:center;padding:6px;border-radius:12px;border:2px solid #e2cfa6;background:#fff}
+.kit-c:active{transform:scale(.97)} .kit-c img{width:80px;height:100px;object-fit:contain} .kit-c b{font-size:13px}
+@media (max-height:420px){ .kit-grid{grid-template-columns:repeat(6,1fr)} .kit-c img{width:60px;height:76px} }
+.sty-card{display:flex;gap:10px;align-items:flex-start}
+.sty-big{width:110px;height:140px;object-fit:contain;flex:none}
+.sty-list{flex:1;min-width:0}
+.sty-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px dashed rgba(0,0,0,.1);font-size:13px}
+.sty-row .nm{flex:1;min-width:0} .sty-row .tbtn{padding:4px 8px;font-size:12px}
+.sty-like{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:13px;font-weight:700}
+.sty-head .sty-tg{margin:6px 6px 0 0;padding:5px 10px;font-size:12.5px}
+@media (max-height:420px){ .sty-head{padding:6px 8px;margin-bottom:6px} .sty-s{margin-bottom:4px} .sty-i{padding:2px 6px;font-size:11px} }
+.kit-c .kit-ic{font-size:10.5px;color:#7a6a52;line-height:1.2}
