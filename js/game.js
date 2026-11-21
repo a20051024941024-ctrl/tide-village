@@ -748,7 +748,7 @@ function fishMat(id, part, color, glow, move, shape){
 function makeModelFish(f, scale){
   const st = FISH_STYLE[f.id]; const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
   const inner = new THREE.Group(); if (/^Fish/.test(st.shape)) inner.scale.z = 1.5; if (st.sc){ inner.scale.x *= st.sc[0]; inner.scale.y *= st.sc[1]; inner.scale.z *= st.sc[2]; } fish.add(inner);   // 稍微加厚，從上往下看比較清楚
-  const texB = FISH_TEX && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
+  const texB = !FISH_TEX_OFF && !CLASSIC && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
   for (const part of Object.keys(texB ? fishNoBodyMesh(st.shape) : FISH_MESH[st.shape])){
     const mt = fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape); if (st.glowParts && st.glowParts.includes(part) && !mt.userData.gl){ mt.userData.gl = 1; mt.emissive = new THREE.Color(st.c[part] || f.color); mt.emissiveIntensity = 0.9; }
     const mesh = new THREE.Mesh(texB ? fishGeoNB(st.shape, part) : fishGeo(st.shape, part), mt);
@@ -760,23 +760,32 @@ function makeModelFish(f, scale){
 /* ===== v654 試做：魚的花紋改成貼圖（作者「魚的 3D 模型要怎麼做得更細緻」→「先給我看」）=====
    以前身體是 28×22 格、花紋整格整格塗色，邊緣一格一格。現在身體是一張 56×44 的平滑網子，花紋用同一套規則畫成 512×256 的圖（每點取 4 個樣本，邊緣平順）。
    還在試做：網址加 #fishtex 才會用，作者看過說好才打開給大家。 */
-const FISH_TEX = /fishtex/.test(location.hash);
-const fishTexCache = {}, fishNBCache = {};
+const FISH_TEX_OFF = /nofishtex/.test(location.hash);   /* 作者 11/21 看過說「好」→ 打開給大家；網址加 #nofishtex 可以看舊的 */
+const fishTexCache = {}, fishNBCache = {}, fishTexQ = [];
+/* 花紋一張圖要算 2 萬多個點，手機上一次畫完會卡一下；所以排隊，每次只畫 16 行，畫完一張再下一張 */
+let fishTexBusy = false;
+function fishTexPump(){ if (fishTexBusy) return; fishTexBusy = true; const step = () => { const J = fishTexQ[0]; if (!J){ fishTexBusy = false; return; } const t0 = performance.now();
+    while (J.y < J.H && performance.now() - t0 < 8){ const rows = Math.min(16, J.H - J.y), im = J.cx.createImageData(J.W, rows);
+      for (let yy = 0; yy < rows; yy++) for (let x = 0; x < J.W; x++){ const y = J.y + yy, c1 = J.rgb(J.B.part((x + 0.25) / J.W, (y + 0.25) / J.H)), c2 = J.rgb(J.B.part((x + 0.75) / J.W, (y + 0.75) / J.H)), o = (yy * J.W + x) * 4; im.data[o] = (c1[0] + c2[0]) / 2; im.data[o + 1] = (c1[1] + c2[1]) / 2; im.data[o + 2] = (c1[2] + c2[2]) / 2; im.data[o + 3] = 255; }
+      J.cx.putImageData(im, 0, J.y); J.y += rows; }
+    if (J.y >= J.H){ J.tx.needsUpdate = true; fishTexQ.shift(); } setTimeout(step, 16); }; setTimeout(step, 0); }
 function fishSpecOf(shape){ return FISH_SPECS[shape.slice(2)]; }
 function fishNoBodyMesh(shape){ if (fishNBCache[shape]) return fishNBCache[shape].m; const S = fishSpecOf(shape); const m = FishGen.genFish(Object.assign({ noBody: true }, Quality.tier === 'low' ? { lod: true } : {}, S.p)); fishNBCache[shape] = { m, g: {} }; return m; }
 function fishGeoNB(shape, part){ const C = fishNBCache[shape]; if (C.g[part]) return C.g[part]; const raw = C.m[part], arr = new Float32Array(raw.length); for (let i = 0; i < raw.length; i++) arr[i] = raw[i] / 1000;
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); return (C.g[part] = g); }
 function fishTexBody(f, st){ const key = f.id; let C = fishTexCache[key];
   if (!C){ const S = fishSpecOf(st.shape), low = Quality.tier === 'low', B = FishGen.genFishBody(S.p, low ? 32 : 56, low ? 24 : 44);
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2)); g.computeVertexNormals();
+    const g = new THREE.BufferGeometry(); { const mp = new Map(), P = [], U = [], I = [], qk = v => Math.round(v * 20000);   /* 共用頂點（同位置、同 UV 只存一次），記憶體少很多 */
+      for (let i = 0; i < B.pos.length / 3; i++){ const kk = qk(B.pos[i * 3]) + ',' + qk(B.pos[i * 3 + 1]) + ',' + qk(B.pos[i * 3 + 2]) + ',' + qk(B.uv[i * 2]) + ',' + qk(B.uv[i * 2 + 1]); let j = mp.get(kk); if (j === undefined){ j = P.length / 3; mp.set(kk, j); P.push(B.pos[i * 3], B.pos[i * 3 + 1], B.pos[i * 3 + 2]); U.push(B.uv[i * 2], B.uv[i * 2 + 1]); } I.push(j); }
+      g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setIndex(I); } g.computeVertexNormals();
     { const P = g.attributes.position, N = g.attributes.normal, acc = new Map(), q = v => Math.round(v * 2000), k = i => q(P.getX(i)) + ',' + q(P.getY(i)) + ',' + q(P.getZ(i)), t = new THREE.Vector3();
       for (let i = 0; i < P.count; i++){ const kk = k(i), o = acc.get(kk) || acc.set(kk, new THREE.Vector3()).get(kk); o.x += N.getX(i); o.y += N.getY(i); o.z += N.getZ(i); }
       for (let i = 0; i < P.count; i++){ t.copy(acc.get(k(i))).normalize(); N.setXYZ(i, t.x, t.y, t.z); } }
-    const W = low ? 256 : 512, H = W / 2, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const cx = cv.getContext('2d'), im = cx.createImageData(W, H), col = {};
-    const rgb = pn => col[pn] || (col[pn] = (() => { const h = new THREE.Color(st.c[pn] || f.color || '#888888').getHex(); return [h >> 16 & 255, h >> 8 & 255, h & 255];   /* getHex 是 sRGB（畫布要的），不能直接拿 .r（那是線性的，會變暗） */ })());
-    const SS = [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){ let r = 0, gg = 0, b = 0; for (const [ox, oy] of SS){ const c = rgb(B.part((x + ox) / W, (y + oy) / H)); r += c[0]; gg += c[1]; b += c[2]; } const o = (y * W + x) * 4; im.data[o] = r / 4; im.data[o + 1] = gg / 4; im.data[o + 2] = b / 4; im.data[o + 3] = 255; }
-    cx.putImageData(im, 0, 0); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; tx.wrapT = THREE.RepeatWrapping;
+    const W = low ? 128 : 256, H = W / 2, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const cx = cv.getContext('2d'), col = {};
+    const rgb = pn => col[pn] || (col[pn] = (() => { const h = new THREE.Color(st.c[pn] || f.color || '#888888').getHex(); return [h >> 16 & 255, h >> 8 & 255, h & 255]; })());   /* getHex 是 sRGB（畫布要的），不能直接拿 .r（那是線性的，會變暗） */
+    { const a = rgb('Bottom'), b = rgb('Top'), gr = cx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0.3, `rgb(${a})`); gr.addColorStop(0.7, `rgb(${b})`); cx.fillStyle = gr; cx.fillRect(0, 0, W, H); }   /* 先塗上下兩色，花紋排隊慢慢畫（不卡） */
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; tx.wrapT = THREE.RepeatWrapping;
+    fishTexQ.push({ B, cx, W, H, rgb, tx, y: 0 }); fishTexPump();
     C = fishTexCache[key] = { g, tx }; }
   const m = fishMat(f.id + '/tex', 'Top', '#ffffff', st.glow, st.move, st.shape); if (!m.map){ m.map = C.tx; m.needsUpdate = true; }
   const mesh = new THREE.Mesh(C.g, m); mesh.castShadow = true; return mesh; }
