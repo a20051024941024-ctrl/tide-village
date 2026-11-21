@@ -34,7 +34,7 @@ const LS = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 };
-/* v681 iPhone 的「假橫向」（作者 11/22：「他說他的畫面不要是會突然轉來轉去的，跟安卓一樣」）。
+/* v682 iPhone 的「假橫向」（作者 11/22：「他說他的畫面不要是會突然轉來轉去的，跟安卓一樣」）。
    iPhone 的 Safari 不准網頁鎖住方向（安卓可以），所以改成：iPhone 開著「直向鎖定」、手機直拿的時候，遊戲自己把整個畫面橫著放，
    玩家把手機轉橫就是正的，畫面也不會因為手機歪一下就轉來轉去。手機如果真的轉成橫向（沒開鎖定），就照原本的方式。
    做法：body 轉 90 度；所有手指座標、元素位置、視窗寬高都換成「橫放後」的數字，遊戲其他地方不用改。打字的時候先暫停（鍵盤是直的）。 */
@@ -13501,7 +13501,7 @@ function renderSettings(body){
     row.appendChild(sl); row.appendChild(pct); f.appendChild(row); f.appendChild(el('p', 'sub', '往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。' + (L.out ? '' : '（現在在室內或水裡，這裡調的只是暫時的。）'))); }
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
-  if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v681 */
+  if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
     f.appendChild(el('p', 'sub', 'iPhone 的瀏覽器沒辦法把畫面鎖成橫的，所以手機打開「直向鎖定」時，遊戲會自己把畫面橫著放：手機橫拿就是正的，歪一下也不會轉來轉去。打字的時候畫面會先變回直的，打完再橫回來。')); }
@@ -17458,7 +17458,7 @@ function presenceObj(){
   { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }
   { const nf = myFrame(); if (nf) o.nf = nf; }   /* v670 排位的名牌框 */   /* v521 排位賽段位（名字旁邊掛稱號用） */
   if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat)); else if (Voy.on) o.bt = 1;   /* v579 坐阿海的船：別人看到你坐在小船上沿著航道走 */   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
-  if (mySeat && !me.standFish) o.st = 1;  if (mySeat && mySeat.furnLie) o.lie = mySeat.furnLie === 'bath' ? 2 : 1;   /* v681 躺在床上／泡澡：別人看你也要是躺著（以前別人看到的是坐在床上） */   /* v660 拉大魚時站起來：別人看你也是站著 */
+  if (mySeat && !me.standFish) o.st = 1;  if (mySeat && mySeat.furnLie) o.lie = mySeat.furnLie === 'bath' ? 2 : 1;   /* v682 躺在床上／泡澡：別人看你也要是躺著（以前別人看到的是坐在床上） */   /* v660 拉大魚時站起來：別人看你也是站著 */
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
   if (Bike.on) o.bk = 1;
   if (phoneMine()) o.ph = 1;   /* v581 正在滑手機（別人看到你拿手機） */   /* v438 在騎腳踏車 */
