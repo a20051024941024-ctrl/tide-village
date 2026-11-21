@@ -6327,5 +6327,16 @@
  "收": "Store",
  "🏝️ 小島的「買東西擺島上」分成房子、寵物圍欄、花草樹、家具、擺飾、方塊、隔板幾類；最後一個「島上的東西」列出島上每一件，可以直接移動或收起來（收回包包，之後拿出來擺不用再付錢；房子還是拆掉退一半）。": "🏝️ The island shop is split into houses, pet pens, plants, furniture, decorations, blocks and panels. The last tab, 'On my island', lists everything you've placed so you can move it or put it away in your bag (placing it again is free; houses are still demolished for half back).",
  "🐟 炫耀魚的時候，鏡頭會慢慢繞到前面讓你看到自己舉著魚，6 秒後繞回去（中途拖畫面就停）。拉魚時左手會一圈一圈轉捲線器，等魚時右手會每隔幾秒輕輕抽一下竿。": "🐟 When you show off a fish, the camera swings round to the front so you can see yourself holding it, then swings back after 6 seconds (dragging the screen stops it). While reeling, your left hand turns the reel; while waiting, your right hand gives the rod a little twitch every few seconds.",
- "🚤 阿海的船平常停在港口小碼頭的南邊。坐船時你會先走到碼頭邊、跳上船，船再從碼頭開出去；到了以後從船邊跳上岸。": "🚤 Ahai's boat is moored on the south side of the small harbour pier. When you take it, you walk to the edge of the pier and hop aboard, then the boat sets off; when you arrive you hop off onto land."
+ "🚤 阿海的船平常停在港口小碼頭的南邊。坐船時你會先走到碼頭邊、跳上船，船再從碼頭開出去；到了以後從船邊跳上岸。": "🚤 Ahai's boat is moored on the south side of the small harbour pier. When you take it, you walk to the edge of the pier and hop aboard, then the boat sets off; when you arrive you hop off onto land.",
+ "手機橫著拿就好": "Just hold your phone sideways",
+ "iPhone 開著直向鎖定也能玩，畫面不會再轉來轉去。字是倒的話按一下「翻過來」。": "You can play on iPhone with Portrait Orientation Lock on, and the screen won't keep spinning around. If the text is upside down, tap “Flip”.",
+ "翻過來": "Flip",
+ "好": "OK",
+ "📱 iPhone 直向鎖定時": "📱 iPhone with portrait lock on",
+ "畫面自己橫放（預設）": "Lay the screen sideways (default)",
+ "不要，維持原本": "No, keep it as is",
+ "畫面倒了？翻過來": "Upside down? Flip it",
+ "iPhone 的瀏覽器沒辦法把畫面鎖成橫的，所以手機打開「直向鎖定」時，遊戲會自己把畫面橫著放：手機橫拿就是正的，歪一下也不會轉來轉去。打字的時候畫面會先變回直的，打完再橫回來。": "Browsers on iPhone can't lock the screen to landscape, so when Portrait Orientation Lock is on, the game lays itself sideways: hold the phone sideways and it's the right way up, and tilting it won't make it spin. While you type, the screen goes upright for a moment, then lies sideways again when you're done.",
+ "坐在自己擺的釣魚椅上也能打窩。": "You can also throw chum while sitting on the fishing chair you set up.",
+ "iPhone 開著直向鎖定時，畫面會自己橫著放，手機橫拿就是正的；字倒了就到設定按「翻過來」。": "On iPhone with Portrait Orientation Lock on, the screen lays itself sideways, so just hold the phone sideways. If the text is upside down, tap “Flip” in Settings."
 }

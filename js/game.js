@@ -34,6 +34,76 @@ const LS = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 };
+/* v681 iPhone 的「假橫向」（作者 11/22：「他說他的畫面不要是會突然轉來轉去的，跟安卓一樣」）。
+   iPhone 的 Safari 不准網頁鎖住方向（安卓可以），所以改成：iPhone 開著「直向鎖定」、手機直拿的時候，遊戲自己把整個畫面橫著放，
+   玩家把手機轉橫就是正的，畫面也不會因為手機歪一下就轉來轉去。手機如果真的轉成橫向（沒開鎖定），就照原本的方式。
+   做法：body 轉 90 度；所有手指座標、元素位置、視窗寬高都換成「橫放後」的數字，遊戲其他地方不用改。打字的時候先暫停（鍵盤是直的）。 */
+const FL = (() => {
+  const ua = navigator.userAgent, S = { on: false, pause: false, flip: false, off: false, told: false,
+    ios: /iPhone|iPod|iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || /[?&#]fakeland=1/.test(location.href) };
+  try { S.flip = localStorage.getItem('tide.flFlip') === '1'; S.off = localStorage.getItem('tide.flOff') === '1'; S.told = localStorage.getItem('tide.flTold') === '1'; } catch(e){}
+  if (!S.ios || !isTouch) return S;
+  const gd = (o, k) => { for (let p = o; p; p = Object.getPrototypeOf(p)){ const d = Object.getOwnPropertyDescriptor(p, k); if (d) return d; } return null; };
+  const iwD = gd(window, 'innerWidth'), ihD = gd(window, 'innerHeight');
+  const RW = () => iwD.get.call(window), RH = () => ihD.get.call(window);
+  let W = RW(), H = RH();
+  // 螢幕座標 → 橫放後的座標
+  const loc = (x, y) => S.flip ? [H - y, x] : [y, W - x];
+  const scr = (x, y) => S.flip ? [y, H - x] : [W - y, x];
+  const patchXY = (proto, kx, ky) => { const dx = gd(proto, kx), dy = gd(proto, ky); if (!dx || !dy || !dx.get) return;
+    Object.defineProperty(proto, kx, { configurable: true, enumerable: true, get(){ const a = dx.get.call(this); return S.on ? loc(a, dy.get.call(this))[0] : a; } });
+    Object.defineProperty(proto, ky, { configurable: true, enumerable: true, get(){ const b = dy.get.call(this); return S.on ? loc(dx.get.call(this), b)[1] : b; } }); };
+  for (const P of [window.MouseEvent && MouseEvent.prototype, window.Touch && Touch.prototype]){ if (!P) continue; patchXY(P, 'clientX', 'clientY'); patchXY(P, 'pageX', 'pageY'); }
+  if (window.MouseEvent){ patchXY(MouseEvent.prototype, 'x', 'y');
+    const mx = gd(MouseEvent.prototype, 'movementX'), my = gd(MouseEvent.prototype, 'movementY');
+    if (mx && my){ Object.defineProperty(MouseEvent.prototype, 'movementX', { configurable: true, get(){ const a = mx.get.call(this), b = my.get.call(this); return S.on ? (S.flip ? -b : b) : a; } });
+      Object.defineProperty(MouseEvent.prototype, 'movementY', { configurable: true, get(){ const a = mx.get.call(this), b = my.get.call(this); return S.on ? (S.flip ? a : -a) : b; } }); } }
+  const gbcr = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function(){ const r = gbcr.call(this); if (!S.on) return r;
+    return S.flip ? new DOMRect(H - r.bottom, r.left, r.height, r.width) : new DOMRect(r.top, W - r.right, r.height, r.width); };
+  const efp = document.elementFromPoint, efps = document.elementsFromPoint;
+  document.elementFromPoint = function(x, y){ if (S.on){ [x, y] = scr(x, y); } return efp.call(document, x, y); };
+  if (efps) document.elementsFromPoint = function(x, y){ if (S.on){ [x, y] = scr(x, y); } return efps.call(document, x, y); };
+  Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => S.on ? RH() : RW() });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, get: () => S.on ? RW() : RH() });
+  const de = document.documentElement, cwD = gd(de, 'clientWidth'), chD = gd(de, 'clientHeight');
+  Object.defineProperty(de, 'clientWidth', { configurable: true, get(){ const a = cwD.get.call(this); return S.on ? chD.get.call(this) : a; } });
+  Object.defineProperty(de, 'clientHeight', { configurable: true, get(){ const b = chD.get.call(this); return S.on ? cwD.get.call(this) : b; } });
+  // 樣式表裡的 vw／vh 對調、直向／橫向的條件對調
+  const SW = { w: 'h', h: 'w' }, swU = v => v.replace(/(\d|\.)(d|s|l)?v([wh])\b/g, (m, a, b, c) => a + (b || '') + 'v' + SW[c]);
+  const swM = t => t.replace(/(min-|max-)?(width|height)|portrait|landscape/g, m => m === 'portrait' ? 'landscape' : m === 'landscape' ? 'portrait' : m.replace(/width|height/, k => k === 'width' ? 'height' : 'width'));
+  let rules = null;
+  const scan = () => { rules = []; const walk = L => { for (const r of L){ try {
+      if (r.media && r.cssRules){ rules.push({ m: r, a: r.media.mediaText, b: swM(r.media.mediaText) }); walk(r.cssRules); }
+      else if (r.cssRules) walk(r.cssRules);
+      if (r.style){ for (let i = 0; i < r.style.length; i++){ const k = r.style[i], v = r.style.getPropertyValue(k); if (/\dv[wh]\b|\d[dsl]v[wh]\b/.test(v)) rules.push({ s: r.style, k, a: v, b: swU(v), p: r.style.getPropertyPriority(k) }); } }
+    } catch(e){} } };
+    for (const sh of document.styleSheets){ try { walk(sh.cssRules); } catch(e){} } };
+  const css = on => { if (!rules) scan(); for (const x of rules){ try { if (x.m) x.m.media.mediaText = on ? x.b : x.a; else x.s.setProperty(x.k, on ? x.b : x.a, x.p); } catch(e){} } };
+  S.css = css;
+  const want = () => !S.off && !S.pause && RW() < RH() && RW() < 560 && !document.body.classList.contains('allowPortrait');
+  S.apply = () => { W = RW(); H = RH(); const on = want(), st = document.body.style; de.classList.toggle('fltype', S.pause);
+    if (on){ de.classList.add('fakeland'); de.classList.toggle('flflip', S.flip);
+      st.setProperty('--flw', H + 'px'); st.setProperty('--flh', W + 'px'); st.setProperty('--flt', S.flip ? `translateY(${H}px) rotate(-90deg)` : `translateX(${W}px) rotate(90deg)`); }
+    if (on !== S.on){ S.on = on; if (!on){ de.classList.remove('fakeland', 'flflip'); } css(on); try { dispatchEvent(new Event('resize')); } catch(e){} try { if (typeof syncOrient === 'function') syncOrient(); } catch(e){} if (on && !S.told) setTimeout(S.tell, 1500); }
+    else if (on){ try { dispatchEvent(new Event('resize')); } catch(e){} } };
+  let lastWH = '';
+  const chk = () => { const k = RW() + 'x' + RH() + (S.pause ? 'p' : '') + (S.off ? 'o' : '') + (S.flip ? 'f' : '') + document.body.classList.contains('allowPortrait'); if (k !== lastWH){ lastWH = k; S.apply(); } };
+  S.chk = chk; addEventListener('resize', () => setTimeout(chk, 60)); addEventListener('orientationchange', () => setTimeout(chk, 300)); setInterval(chk, 700);
+  S.setFlip = f => { S.flip = !!f; try { localStorage.setItem('tide.flFlip', S.flip ? '1' : '0'); } catch(e){} lastWH = ''; S.on = false; S.apply(); };
+  S.setOff = f => { S.off = !!f; try { localStorage.setItem('tide.flOff', S.off ? '1' : '0'); } catch(e){} chk(); };
+  // 打字：先把畫面轉回直的（iPhone 的鍵盤只會直著出來）
+  const isTxt = e => e && ((e.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit|color|file)$/i.test(e.type)) || e.tagName === 'TEXTAREA' || e.isContentEditable);
+  document.addEventListener('focusin', e => { if (isTxt(e.target) && !S.pause && S.on){ S.pause = true; chk(); } });
+  document.addEventListener('focusout', () => setTimeout(() => { if (S.pause && !isTxt(document.activeElement)){ S.pause = false; chk(); } }, 350));
+  // 第一次橫放：問一下方向對不對
+  S.tell = () => { if (!S.on || S.told || document.getElementById('flTip')) return; const d = document.createElement('div'); d.id = 'flTip';
+    d.innerHTML = '<b>手機橫著拿就好</b><span>iPhone 開著直向鎖定也能玩，畫面不會再轉來轉去。字是倒的話按一下「翻過來」。</span><div><button class="tbtn ghost" data-k="f">翻過來</button><button class="tbtn" data-k="ok">好</button></div>';
+    d.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.k === 'f'){ S.setFlip(!S.flip); return; } S.told = true; try { localStorage.setItem('tide.flTold', '1'); } catch(_){} d.remove(); });
+    document.body.appendChild(d); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', chk); else chk();
+  return S;
+})();
 /* v582 第一次玩的人不要一進來就看到一堆「更新公告」（那是寫給老玩家的） */
 const NEWBIE = (() => { try { return localStorage.getItem('tide.rec') == null && localStorage.getItem('tide.guide') == null && localStorage.getItem('tide.guide2') == null; } catch(e){ return false; } })();
 if (NEWBIE){ for (const k of ['tide.art2Told', 'tide.camFarTold', 'tide.phTold', 'tide.raceTold', 'tide.voyTold']) LS.set(k, 1); try { localStorage.setItem('tv_bike_hint', '1'); } catch(e){} }
@@ -1053,7 +1123,7 @@ function vpFirst(){ if (VP.first) return; try { const t = Math.round(performance
 function vpFit(){ const v = window.visualViewport, m = document.querySelector('meta[name=viewport]'); if (!v || !m) return false; const nowT = Date.now();
   if (innerWidth - v.width > 3){ vpFirst(); if (VP.n < 6 && nowT - VP.at > 2500){ VP.at = nowT; VP.n++; const m2 = document.createElement('meta'); m2.name = 'viewport'; m2.content = VP.n % 2 === 0 && v.width > 200 ? VP.base.replace('width=device-width', 'width=' + Math.round(v.width * v.scale)) : VP.base;   /* v616 偶數次改用「明確寫出螢幕寬度」的設定 */ m.replaceWith(m2); try { window.scrollTo(0, 0); } catch(e){} return true; } }
   return nowT - VP.at < 700; }
-function vvFix(){ const v = window.visualViewport, de = document.documentElement; if (!v) return; let wait = false; try { wait = vpFit(); } catch(e){} if (wait) return; const bad = innerWidth - v.width > 3, on = de.classList.contains('vvfix');
+function vvFix(){ const v = window.visualViewport, de = document.documentElement; if (!v) return; if (FL.on){ if (de.classList.contains('vvfix')){ de.classList.remove('vvfix'); const st = de.style; st.position = st.left = st.top = st.right = st.bottom = st.width = st.height = st.transform = ''; } return; } let wait = false; try { wait = vpFit(); } catch(e){} if (wait) return; const bad = innerWidth - v.width > 3, on = de.classList.contains('vvfix');
   if (bad){ if (v.offsetLeft > 1 || v.offsetTop > 1){ try { window.scrollTo(0, 0); } catch(e){} } const st = de.style, L = Math.round(v.offsetLeft) + 'px', T = Math.round(v.offsetTop) + 'px', W = Math.round(v.width) + 'px', H = Math.round(v.height) + 'px';
     if (!on || st.left !== L || st.top !== T || st.width !== W || st.height !== H){ de.classList.add('vvfix'); st.position = 'fixed'; st.left = L; st.top = T; st.right = 'auto'; st.bottom = 'auto'; st.width = W; st.height = H; st.transform = 'translateZ(0)'; try { resize(); } catch(e){} } }
   else if (on){ de.classList.remove('vvfix'); const st = de.style; st.position = st.left = st.top = st.right = st.bottom = st.width = st.height = st.transform = ''; try { resize(); } catch(e){} } }
@@ -1073,7 +1143,7 @@ if (window.visualViewport){ let zfAt = 0; const unzoom = () => { const v = visua
   setInterval(() => { try { const v = window.visualViewport, de = document.documentElement, sc = v ? v.scale : 1, vw = v ? v.width : innerWidth, ol = v ? v.offsetLeft : 0, ot = v ? v.offsetTop : 0;
       const cvs = document.getElementById('c'), cw = cvs ? cvs.getBoundingClientRect().width : 0;
       const bad = sc > 1.01 || innerWidth - vw > 3 || Math.abs(vw - de.clientWidth) > 3 || ol > 2 || ot > 2 || scrollX > 1 || scrollY > 1 || Math.abs(cw - de.clientWidth) > 3;
-      if (!bad){ if (zd) zd.style.display = 'none'; return; }
+      if (!bad || FL.on){ if (zd) zd.style.display = 'none'; return; }
       if (!zd){ zd = document.createElement('div'); zd.style.cssText = 'position:absolute;z-index:99999;pointer-events:none;font:9px/1.15 monospace;color:#fff;background:rgba(0,0,0,.45);padding:2px 5px;border-radius:5px;white-space:normal;word-break:break-all;max-width:min(420px,60vw);box-sizing:border-box'; document.body.appendChild(zd); }   /* v598 小字自己不能太寬（以前一長串不換行，自己就把版面撐出去） */
       zd.style.display = vpDiagShow() ? 'block' : 'none'; vpDiagRep(zd); { const fx = de.classList.contains('vvfix'); zd.style.left = ((fx ? 0 : ol) + scrollX + 6) + 'px'; zd.style.top = ((fx ? 0 : ot) + scrollY + 6) + 'px'; } zd.style.transform = 'scale(' + (1 / sc) + ')'; zd.style.transformOrigin = '0 0';
       let wide = ''; { const vwL = Math.round((window.visualViewport && visualViewport.width) || innerWidth), L = [];   /* v603 改用看得到的寬（741）來比：上一張圖 body 撐到 773，可是用 980 比就找不到人 */ for (const e of document.body.querySelectorAll('*')){ if (e === zd || e.closest('#labels')) continue; const r = e.getBoundingClientRect(); if (r.width > 0 && r.right > vwL + 4){ let fx = false; for (let q = e; q && q !== document.body; q = q.parentElement){ if (getComputedStyle(q).position === 'fixed'){ fx = true; break; } } L.push([r.right + (fx ? -1e5 : 0),   /* 固定在畫面上的東西不會撐寬版面，排到後面 */ (fx ? '~' : '') + (e.id ? '#' + e.id : e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className ? '.' + e.className.split(' ')[0] : '')) + ':' + Math.round(r.left) + '-' + Math.round(r.right)]); } } L.sort((a, b) => b[0] - a[0]); wide = L.slice(0, 3).map(q => q[1]).join(' '); }   /* v598 哪個東西超出版面右邊（截圖給作者就知道是誰把版面撐寬的） */
@@ -13431,6 +13501,10 @@ function renderSettings(body){
     row.appendChild(sl); row.appendChild(pct); f.appendChild(row); f.appendChild(el('p', 'sub', '往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。' + (L.out ? '' : '（現在在室內或水裡，這裡調的只是暫時的。）'))); }
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
+  if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v681 */
+    [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
+    f.appendChild(el('p', 'sub', 'iPhone 的瀏覽器沒辦法把畫面鎖成橫的，所以手機打開「直向鎖定」時，遊戲會自己把畫面橫著放：手機橫拿就是正的，歪一下也不會轉來轉去。打字的時候畫面會先變回直的，打完再橫回來。')); }
   { const f = field('🖥️ 畫質'), seg = el('div', 'seg');
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
@@ -17384,7 +17458,7 @@ function presenceObj(){
   { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }
   { const nf = myFrame(); if (nf) o.nf = nf; }   /* v670 排位的名牌框 */   /* v521 排位賽段位（名字旁邊掛稱號用） */
   if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat)); else if (Voy.on) o.bt = 1;   /* v579 坐阿海的船：別人看到你坐在小船上沿著航道走 */   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
-  if (mySeat && !me.standFish) o.st = 1;   /* v660 拉大魚時站起來：別人看你也是站著 */
+  if (mySeat && !me.standFish) o.st = 1;  if (mySeat && mySeat.furnLie) o.lie = mySeat.furnLie === 'bath' ? 2 : 1;   /* v681 躺在床上／泡澡：別人看你也要是躺著（以前別人看到的是坐在床上） */   /* v660 拉大魚時站起來：別人看你也是站著 */
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
   if (Bike.on) o.bk = 1;
   if (phoneMine()) o.ph = 1;   /* v581 正在滑手機（別人看到你拿手機） */   /* v438 在騎腳踏車 */
@@ -17448,6 +17522,7 @@ function applyPeer(pp){
   { const tb = Number.isInteger(pr.tb) ? TEAM_BADGE[pr.tb] : null; if ((p.fisher.nm.dataset.team || '') !== (tb || '')){ if (tb) p.fisher.nm.dataset.team = tb; else delete p.fisher.nm.dataset.team; } }
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph;
+  if (pr.lie){ p.fisher.sitting = false; const lk = pr.lie === 2 ? 'sitdown' : 'sleep'; if (!p.fisher.emote || p.fisher.emote.k !== lk) startEmote(p.fisher, lk); p.wasLie = 1; } else if (p.wasLie){ p.wasLie = 0; if (p.fisher.emote && (p.fisher.emote.k === 'sleep' || p.fisher.emote.k === 'sitdown')) p.fisher.emote = null; }
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
   p.fisher.wsK = Array.isArray(pr.ws) && typeof pr.ws[0] === 'string' && pr.ws[0].length < 40 ? pr.ws[0] : null; p.fisher.wsM = p.fisher.wsK ? (+pr.ws[1] || 0) & 63 : 0;
   p.fisher.petWant = Array.isArray(pr.pt) && PET_KINDS[pr.pt[0]] ? { kind: pr.pt[0], name: clean(String(pr.pt[1] || '').slice(0, 8)), acc: clamp(+pr.pt[2] || 0, 0, 2), var: /^[a-g]$/.test(pr.pt[3]) ? pr.pt[3] : 'a', shine: pr.pt[0] === 'pondturtle' ? clamp(+pr.pt[4] || 0, 0, 100) : undefined } : null;
@@ -19194,7 +19269,7 @@ try { let pend = new Set(), qd = false; const has = s => !!s && EMO_RE2.test(s);
 const HELP_SHORT = {
   '🎣 釣魚': ['水邊按住右下按鈕蓄力、放開拋竿；浮標猛沉出現「!」就再按一次。', '拉魚：按住收線、放開放線，張力條留在黃色。', '拋得遠、站在發光圈、看水面徵兆，稀有魚比較多。天氣、潮汐、時間也有影響；點右上角的潮汐可以看潮汐表。'],
   '🦐 室內釣蝦場': ['在廣場東邊的街上，走到門口按按鈕進去。', '先跟櫃台的阿忠買時段，蝦竿和餌都附。', '坐到池邊的板凳就能拋竿。'],
-  '🍚 打窩、窩點、渡船、小船': ['在釣具店買窩料，到水邊按「🍚 打窩」，魚咬得快、稀有魚變多。', '「提前打」的窩點 10 分鐘後最強，可以維持 1 小時。', '港口和鏡湖可以上船，划到水上釣。'],
+  '🍚 打窩、窩點、渡船、小船': ['在釣具店買窩料，到水邊按「🍚 打窩」，魚咬得快、稀有魚變多。', '「提前打」的窩點 10 分鐘後最強，可以維持 1 小時。', '港口和鏡湖可以上船，划到水上釣。', '坐在自己擺的釣魚椅上也能打窩。'],
   '💙 尺寸限制、放流、愛海點數': ['太小的魚會標「未達尺寸」，帶走只能賣半價。', '放流可以拿愛海點數，換金幣買不到的限定服飾。'],
   '🚢 潛水艇與黑淵裂縫': ['搭阿海的船到「深海浮台」，跟蔚博士租潛水艇（Lv.15、4500 金幣，只付一次）。', '按住 ⬇ 下潛、⬆ 上浮；停下來可以放線釣深海魚。', '釣到的魚要按「回港」才會放進魚缸。'],
   '🤿 潛水（進階玩法）': ['在商店買「潛水裝備組」，找港口的阿海按「去潛水」。', '注意氧氣：快沒了要浮上去，或游進冒泡泡的氣泡口補氧。', '海底可以拍照、撿貝殼、開寶箱，也看得到少見的變種魚。'],
@@ -19221,7 +19296,7 @@ const HELP_SHORT = {
   '🏝️ 私人小島': ['選單的「小島」可以去自己的島。', '在「買東西擺島上」挑房子和家具，走到想放的地方按「✔」。', '按「🔨 建造」可以移動或拆掉。'],
   '👥 跟大家一起玩': ['⚔️ 釣魚對決：一場 3 分鐘，比釣到的魚的總重量。', '按「找對手」是排位賽，贏了加星星、升段位；每個月是一季。', '可以加好友、組釣友隊、聊天、去別人的島玩。'],
   '⭐ 等級、稱號、成就': ['釣魚、放流、拍水下照片都有經驗值，升級送金幣。', '成就和等級會給稱號，在「成就」分頁選一個掛在名字上。'],
-  '⚙️ 設定、帳號、存檔、其他': ['右上的 ⚙️ 是設定：語言、字體大小、畫質、搖桿、釣魚視角。', '用帳號登入，換手機資料也不會不見。', '遇到不禮貌的人：點他的名字 →「檢舉」。']
+  '⚙️ 設定、帳號、存檔、其他': ['右上的 ⚙️ 是設定：語言、字體大小、畫質、搖桿、釣魚視角。', '用帳號登入，換手機資料也不會不見。', '遇到不禮貌的人：點他的名字 →「檢舉」。', 'iPhone 開著直向鎖定時，畫面會自己橫著放，手機橫拿就是正的；字倒了就到設定按「翻過來」。']
 };
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
@@ -19978,7 +20053,7 @@ function saveLook(){ LS.set('tide.look', look); me.setLook(look.shirt, look.hat)
 
 // landscape / fullscreen
 const portraitMQ = matchMedia('(orientation: portrait)');
-function syncOrient(){ document.body.classList.toggle('portrait', portraitMQ.matches); setTimeout(resize, 120); }
+function syncOrient(){ document.body.classList.toggle('portrait', portraitMQ.matches && !FL.on); setTimeout(resize, 120); }
 (portraitMQ.addEventListener ? portraitMQ.addEventListener('change', syncOrient) : portraitMQ.addListener(syncOrient)); syncOrient();
 addEventListener('orientationchange', () => { try { const m = document.querySelector('meta[name=viewport]'); if (m && m.content !== VP.base) m.content = VP.base; } catch(e){} setTimeout(resize, 250); });   /* v616 轉方向時把寫死的螢幕寬度改回 device-width */
 const fsEl = document.documentElement;
