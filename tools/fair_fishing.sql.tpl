@@ -208,6 +208,16 @@ begin
   kr := fitk * (rod->>'rare')::numeric * coalesce((bait->>'rare')::numeric, 1) * coalesce((bf->>'rare')::numeric, 1) * cb_r * (w->>'rare')::numeric * tr * (ln->>'rare')::numeric;
   kl := (rod->>'legend')::numeric * coalesce((bait->>'legend')::numeric, 1) * coalesce((bf->>'legend')::numeric, 1) * cb_l
         * (case when (w->>'legendSea')::boolean then (case when sea then (w->>'legend')::numeric else 1 end) else (w->>'legend')::numeric end);
+  -- v637 釣具改版第三次：專用竿的等級（208 rod_lv）：稀有 1／1.1／1.2／1.35／1.5、傳說 1／1／1.1／1.25／1.4（跟 js/game.js 的 rodLvK 一樣）
+  --   傳說的等級加成只在「對的地方」才有（手竿、遠投、磯釣 = 對的釣點；路亞軟竿 = 用路亞釣法），不然 5 級竿到哪裡都贏王者竿
+  --   路亞軟竿用路亞釣法時稀有 ×1.15、沒用 ×0.85（跟其他專用竿在對／錯的釣點一樣）
+  if pl.rod = 'r_lure' and p_spot not in ('shrimp', 'mudflat') then kr := kr * (case when rig = 'lure' then 1.15 else 0.85 end); end if;
+  if pl.rod in ('r_lure', 'r_iso', 'r_surf', 'r_pole') then
+    kr := kr * (array[1, 1.1, 1.2, 1.35, 1.5])[least(5, greatest(1, coalesce((pl.rod_lv->>pl.rod)::int, 1)))];
+    if (pl.rod = 'r_lure' and rig = 'lure') or (pl.rod <> 'r_lure' and fitk > 1) then
+      kl := kl * (array[1, 1, 1.1, 1.25, 1.4])[least(5, greatest(1, coalesce((pl.rod_lv->>pl.rod)::int, 1)))];
+    end if;
+  end if;
   -- v634 竿子的特別加成（月光竿晚上、深海竿在海上、路亞竿配假餌；跟 js/game.js 的 rodSp 一樣）
   if rod ? 'sp' then
     if rod->'sp' ? 'night' and per = 'night' then kr := kr * (rod->'sp'->'night'->>0)::numeric; kl := kl * (rod->'sp'->'night'->>1)::numeric; end if;

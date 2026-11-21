@@ -6374,7 +6374,9 @@ function biteWait(c){
   const per = periodOf(gameHour()); w *= per === 'twilight' ? 0.85 : per === 'day' ? 1.05 : 1;
   return Math.min(18, Math.max(1.8, w - c * 1.2));
 }
-function doCast(){
+/* v637 王者竿甩竿的金色光暈、5 級專用竿對上打法時竿尖發光 */
+function rodTipFx(col, n){ try { const a = (FP.act && FP.tip) ? null : me.av; const v = new THREE.Vector3(); (a ? a.tip : FP.tip).getWorldPosition(v); FX.emit(v.x, v.y, v.z, n, col, 0.35, 0.9, 0.7); } catch(e){} }
+function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a', 22); setTimeout(() => rodTipFx('#fff1b0', 14), 120); }, 60);
   const s = F.spot; const c = F.charge; F.castCharge = c;
   if (s && s.id !== 'shrimp' && s.id !== 'icelake' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, ...aimDir(s), d0);
     if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
@@ -6419,7 +6421,7 @@ const LEG_K = { harbor: 2.6, other: 0.35, sea: 1.05, river: 0.7 };   /* v568 加
 function pickFish(spot, charge){
   const list = (spot.fish || []).map(id => FISH_BY_ID[id]).filter(f => f && (!f.fest || festOn(f.fest)));   /* 節慶限定魚：節日期間才有 */
   const rod = curRod(), bait = F.baitUsed || null;   // 釣竿和這次拋竿用的魚餌會提高稀有魚機率
-  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * rodSp(rod, spot.id)[0] * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare * LINES[Rig.line].rare, kl = rod.legend * rodSp(rod, spot.id)[1] * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
+  const fb = F.buffAt || null, cb = F.phase === 'waiting' ? F.chumB : null, eb = envBonus(spot.id), tip = dailyTip(), rainy = WEATHERS[Env.wx].rain > 0, kr = rod.rare * rodSp(rod, spot.id)[0] * rodLvK(rod, spot.id)[0] * (bait ? bait.rare : 1) * (fb && fb.rare || 1) * (cb ? cb.rare : 1) * eb.rare * LINES[Rig.line].rare, kl = rod.legend * rodSp(rod, spot.id)[1] * rodLvK(rod, spot.id)[1] * (bait ? bait.legend : 1) * (fb && fb.legend || 1) * (cb ? cb.legend : 1) * eb.legend;
   const per = periodOf(gameHour());   // 有些魚只在特定時段常出現
   const rfit = rodFit(spot.id); const krFit = rfit ? ROD_FIT[rfit].rare : 1;   /* 專用竿用在對的地方 */
   const ring = spot.shore ? 1 : 1.3;   // 發光圈（好釣點）稀有魚、傳說魚比較多
@@ -6460,8 +6462,8 @@ function fightSig(f){ if (f.rarity === '常見') return null; const b = f.of || 
   const acts = FIGHT_PROF[fightStyleK(f)].acts.filter(a => a !== 'pause'); let h = 0; for (const c of b) h = (h * 31 + c.charCodeAt(0)) | 0; return [acts[Math.abs(h) % acts.length]]; }
 /* 竿對上打法：預兆多 0.15 秒、做對時魚掉的體力 ×1.3、做錯的怒衝減半；對不上只是普通（不扣分）。黃金王者竿全部中等 */
 const FIGHT_ROD = { bottom:['iso'], shadow:['lure'], pred:['lure'], cunning:['lure', 'pole'], tuna:['surf'], school:['pole'] };
-const FIGHT_ROD_TXT = { iso:'磯釣竿', lure:'路亞輕竿、月光夜釣竿', surf:'遠投竿、深海巨物竿', pole:'手竿' };
-function rodFam(r){ r = r || curRod(); if (r.id === 'king') return 'king'; if (r.id === 'lure' || r.id === 'moon') return 'lure'; if (r.id === 'deep') return 'surf'; const t = rodType(r); return t === 'cast' ? 'none' : t; }
+const FIGHT_ROD_TXT = { iso:'磯釣硬竿', lure:'路亞軟竿', surf:'遠投竿', pole:'手竿' };   /* v637 推薦改成商店有賣的新竿（舊竿停賣） */
+function rodFam(r){ r = r || curRod(); if (r.id === 'king') return 'king'; if (r.id === 'lure' || r.id === 'moon' || r.id === 'r_lure') return 'lure'; if (r.id === 'deep') return 'surf'; const t = rodType(r); return t === 'cast' ? 'none' : t; }
 function fightRodOk(f, r){ return (FIGHT_ROD[fightStyleK(f)] || []).includes(rodFam(r)); }
 function fightRodRec(f){ return (FIGHT_ROD[fightStyleK(f)] || []).map(x => FIGHT_ROD_TXT[x]).join('、') || '哪支都可以'; }
 function fightProf(f){ const k = fightStyleK(f); const P = Object.assign({ gap:1, quick:1, dmg:1, runK:1 }, FIGHT_PROF[k]); P.k = k;
@@ -6622,6 +6624,7 @@ function updateFishing(dt, t){
   }
   if (F.phase === 'reeling'){
     F.Tmax = Math.max(F.Tmax || 0, F.T || 0); const _P0 = F.P, _S0 = F.S;
+    if (F.prof && F.prof.match && rodLv() >= 5 && t > (F.glowT || 0)){ F.glowT = t + 0.18; rodTipFx('#7dffd8', 3); }
     // 像一般釣魚遊戲：魚有體力，會往左右衝（往反方向拉最有效），稀有的魚會跳出水面（跳的時候要放開）
     const p = F.fish.power, rod = curRod(), fb = curBuff(), big = BIG_FISH.has(F.fish.id);
     let actPull = 0;
@@ -6696,7 +6699,7 @@ function updateFishing(dt, t){
       $('#mashFx').style.setProperty('--m', (F.mashHits % 2).toString());
     } else if (F.hold){
       F.reelT = (F.reelT || 0) + dt; if (F.reelT > 0.09){ F.reelT = 0; SFX.reel(); }
-      F.T += (0.42 + pull*0.9) * dt * (rec.hook === 'hk_forge' ? 0.85 : 1) * (F.spot && F.spot.id === 'shrimp' ? curSrod().ten : rod.tension) * (fb && fb.tension || 1) * (F.careAt ? CARE.tension : 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
+      F.T += (0.42 + pull*0.9) * dt * (rec.hook === 'hk_forge' ? 0.85 : 1) * (F.spot && F.spot.id === 'shrimp' ? curSrod().ten : rod.tension * rodLvK(rod)[2]) * (fb && fb.tension || 1) * (F.careAt ? CARE.tension : 1) * (F.jump > 0 ? 2.4 : 1) * (F.envB ? F.envB.tension : 1) * LINES[Rig.line].tension;
       F.P += (0.24 + (inZone ? 0.1 : 0)) * (1.15 - p*0.35) * dt * rod.reel * (fb && fb.reel || 1) * (F.careAt ? CARE.reel : 1) * (0.7 + 0.6 * (1 - F.S)) * (F.prof ? F.prof.quick : 1) * (F.act && !F.act.tele && (F.act.k === 'snag' || F.act.k === 'run') ? 0.2 : 1);
     } else { F.T -= 0.75 * dt; F.T += pull * 0.12 * dt; F.P -= (0.03 + pull*0.03) * dt; }
     F.T = Math.max(0, F.T);
@@ -14659,6 +14662,22 @@ const RODS = [
 ];
 // 竿種：甩竿哪裡都可以；手竿、遠投竿、磯釣竿在對的釣點比較好用（伺服器 fair_fishing.sql.tpl 也一樣算）
 /* v635 竿子本身的顏色照種類統一（作者的計畫）：竹黃＝一般、青綠＝路亞（輕、軟）、深藍＝遠投和深海、深棕＝磯釣、木色＝手竿、金色＝王者竿 */
+/* ===== v637 釣具改版第三次：新的釣竿陣容（伺服器 208）=====
+   商店只賣 6 支：竹竿、路亞軟竿、手竿、遠投竿、磯釣硬竿、黃金王者竿；四支專用竿可以升 1～5 級。舊的 10 支停賣（買過的照用，可以免費換成對應的專用竿和等級） */
+RODS.push(
+  { id:'r_lure', name:'路亞軟竿', price:800, color:'#2fa58a', best:'🌑 魚影・🦈 掠食魚・🦊 狡猾魚', desc:'軟、好甩、收線快。對付會跳、會竄、會甩頭的魚最好用。可以升到 5 級。', tension:0.9, reel:1.25, rare:1, legend:1, lv:true },
+  { id:'r_pole', type:'pole', name:'手竿', price:500, best:'🐟 魚群・🦊 小型狡猾魚', desc:'沒有捲線器，往前輕輕一放。河、湖、溪、瀑布潭最好用，扭來扭去的魚也穩。可以升到 5 級。', tension:0.95, reel:1, rare:1, legend:1, lv:true },
+  { id:'r_surf', type:'surf', name:'遠投竿', price:800, best:'🐋 鮪魚・大型魚', desc:'又長又硬，拋得遠。沙灘、外海、冰海、深淵最好用，對付一直往外衝的大魚。可以升到 5 級。', tension:0.75, reel:1.2, rare:1, legend:1, lv:true },
+  { id:'r_iso', type:'iso', name:'磯釣硬竿', price:800, best:'🪨 底棲魚', desc:'竿身韌、拉力大。港口外海、礁岩、小島碼頭最好用，對付往下鑽、纏礁石的魚。可以升到 5 級。', tension:0.8, reel:1.1, rare:1, legend:1, lv:true });
+for (const r of RODS) if (['carbon', 'lure', 'deep', 'moon', 'pole_bamboo', 'pole_carbon', 'surf_basic', 'surf_pro', 'iso_basic', 'iso_pro'].includes(r.id)) r.old = true;
+{ const sb = RODS.find(r => r.id === 'surf_basic'); if (sb) sb.name = '舊遠投竿'; }
+{ const k = RODS.find(r => r.id === 'king'); if (k){ k.best = '👑 全能中等・獨一無二的金色'; k.desc = '什麼時候、什麼地方都是稀有 ×1.3、傳說 ×1.3，線最不容易斷、收線最快；不用換竿最方便。但在對的魚身上，4～5 級的專用竿會贏它。有這支竿的人名字旁邊有 👑，甩竿會有金色光暈。'; } }
+const ROD_SWAP = { carbon:['r_lure', 2], lure:['r_lure', 3], moon:['r_lure', 4], deep:['r_surf', 3], pole_bamboo:['r_pole', 2], pole_carbon:['r_pole', 3], surf_basic:['r_surf', 2], surf_pro:['r_surf', 4], iso_basic:['r_iso', 2], iso_pro:['r_iso', 4] };
+const ROD_LV = { rare:[1, 1.1, 1.2, 1.35, 1.5], legend:[1, 1, 1.1, 1.25, 1.4], ten:[1, 0.95, 0.92, 0.88, 0.85], cost:[800, 2000, 4500, 9000], n:[3, 2, 4, 1], r:['常見', '稀有', '稀有', '傳說'] };
+function rodLv(r){ r = r || curRod(); return r && r.lv ? clamp((rec.rodLv || {})[r.id] | 0 || 1, 1, 5) : 0; }
+function rodLvOk(r, spotId){ r = r || curRod(); if (r.id === 'r_lure') return Rig.rig === 'lure'; return rodFit(spotId, r) === 'good'; }   /* v637 對的地方：手竿、遠投、磯釣 = 對的釣點；路亞軟竿 = 用路亞釣法 */
+function rodLvK(r, spotId){ const l = rodLv(r); if (!l) return [1, 1, 1]; const ok = spotId === undefined ? true : rodLvOk(r, spotId), lf = r.id === 'r_lure' && spotId !== undefined && spotId !== 'shrimp' && spotId !== 'mudflat' ? (ok ? 1.15 : 0.85) : 1;
+  return [ROD_LV.rare[l - 1] * lf, ok ? ROD_LV.legend[l - 1] : 1, ROD_LV.ten[l - 1]]; }   /* 傳說的等級加成只在對的地方才有，不然 5 級竿到哪都贏王者竿（跟 020 一樣） */
 for (const r of RODS){ r.color = { bamboo:'#c9a24a', carbon:'#c9a24a', lure:'#2fa58a', moon:'#2fa58a', deep:'#1f3f8a', king:'#e8b730' }[r.id] || { pole:'#a8794c', surf:'#1f3f8a', iso:'#5a3a22' }[r.type] || r.color; }
 const ROD_TYPES = { cast:{ name:'甩竿', icon:'🎣', fit:null }, pole:{ name:'手竿', icon:'🎋', fit:['river', 'lake', 'pool', 'creek', 'canal', 'weir', 'icelake'] }, surf:{ name:'遠投竿', icon:'🏖️', fit:['sea', 'icesea', 'abyss'] }, iso:{ name:'磯釣竿', icon:'🪨', fit:['harbor', 'isle', 'reef'] } };
 const ROD_FIT = { good:{ rare:1.15, bite:0.85 }, bad:{ rare:0.85, bite:1.2 } };
@@ -15605,9 +15624,9 @@ function renderShop(body){
       body.appendChild(u2); }
   } else if (shopMode === 'rod'){
     { const k = careLeft(), box = el('div', 'field'); box.appendChild(el('label', '', '🧴 保養釣竿')); box.appendChild(el('p', 'sub', k ? `保養的效果還有 ${k} 次拋竿（收線快 10%、線比較不容易斷）。用完再來。` : `幫釣竿上油、換導環。接下來 ${CARE.casts} 次拋竿收線快 10%、線比較不容易斷。釣竿不會壞，沒保養也可以照常釣。`)); const b = el('button', 'tbtn', k ? `還有 ${k} 次` : `保養　🪙${CARE.price}`); b.disabled = k > 0 || rec.coins < CARE.price; b.addEventListener('click', rodCare); box.appendChild(b); body.appendChild(box); }
-    body.appendChild(el('p', 'sub', '每支竿子都有自己最強的時候：月光竿晚上、深海竿在海上、路亞竿配假餌，都比黃金王者竿好；王者竿是最穩的全能竿。甩竿哪裡都能用；手竿、遠投竿、磯釣竿在對的地方用，稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都放在包包裡，隨時可以換。'));
+    body.appendChild(el('p', 'sub', '六支竿子：竹竿、路亞軟竿、手竿、遠投竿、磯釣硬竿、黃金王者竿。四支專用竿買了以後到包包「🎣 釣組」升級（1～5 級），在對的魚身上會贏王者竿。以前的舊竿停賣了，買過的照用，也可以在「🎣 釣組」免費換成對應的專用竿。甩竿哪裡都能用；手竿、遠投竿、磯釣竿在對的地方用，稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都放在包包裡，隨時可以換。'));
     let ul = null, lastT = null;
-    for (const r of RODS){
+    for (const r of ['bamboo', 'r_lure', 'king', 'r_pole', 'r_surf', 'r_iso'].map(id => RODS.find(x => x.id === id)).filter(Boolean)){
       if (rodType(r) !== lastT){ lastT = rodType(r); const T = ROD_TYPES[lastT]; const h = el('div', 'dexhead', `${T.icon} ${T.name}`); h.appendChild(el('small', '', T.fit ? '最適合：' + T.fit.map(id => SPOT_BY_ID[id].label).join('、') : '哪裡都可以用')); body.appendChild(h); ul = el('ul', 'shoplist'); body.appendChild(ul); }
       const owned = rec.rods.includes(r.id), using = rec.rod === r.id, li = el('li', using ? 'on' : '');
       const sw = el('span', 'rodsw'); sw.style.background = r.color; li.appendChild(sw);
@@ -15994,6 +16013,16 @@ function renderRig2(body){
   // 釣竿
   { const ul = sec('🎣 釣竿', '點「換上」就會拿在手上'); for (const r of RODS.filter(r => r.price === 0 || (rec.rods || []).includes(r.id))){ const using = rec.rod === r.id;
       const li = row(ul, '', `${ROD_TYPES[rodType(r)].icon} ${r.name}`, (r.best ? r.best + '｜' : '') + r.desc + `（手感：${(ROD_FEEL[rodType(r)] || ROD_FEEL.cast).name}）｜` + rodMemo(r.id), using ? '使用中' : '換上', using ? null : async () => { if (Cloud.on){ await cloudCall('buy_rod', { p_rod: r.id }); } else { rodSwitchLocal(r.id); saveRecLocal(); } me.setRod(rec.rod); updateBobberLook(); pushPresence(true); renderTab(); }, using);
+      if (r.lv || r.old){ const nm = li.querySelector('.n'); if (nm && r.lv) nm.textContent += `　Lv.${rodLv(r)}${rodLv(r) >= 5 ? ' ✨' : ''}`; if (nm && r.old) nm.textContent += '（停賣）'; const ac = el('div', 'tacts'); ac.style.cssText = 'flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end';
+        if (r.lv && rodLv(r) < 5){ const L = rodLv(r), c = ROD_LV.cost[L - 1], n = ROD_LV.n[L - 1], rr = ROD_LV.r[L - 1], use = craftUse({ r: rr, n }), ok = use.length >= n && rec.coins >= c;   /* v637 升級：金幣＋魚缸裡的魚 */
+          const b = el('button', 'tbtn', `⬆️ 升到 Lv.${L + 1}（🪙${c.toLocaleString()}＋${rr}魚 ${n} 條）`); b.disabled = !ok; b.title = `稀有 ×${ROD_LV.rare[L]}、傳說 ×${ROD_LV.legend[L]}`;
+          b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定？會用掉：${use.map(x => FISH_BY_ID[x.f].name).join('、')}`; b.classList.add('warn'); return; }
+            b.disabled = true; const res = await craftRpc('rod_upgrade', { p_rod: r.id }); if (res && res.player){ adoptRow(res.player); SFX.catch(); flash(`⬆️ ${r.name} 升到 Lv.${res.lv}！稀有 ×${ROD_LV.rare[res.lv - 1]}、傳說 ×${ROD_LV.legend[res.lv - 1]}`, 2.2); } renderTab(); });
+          ac.appendChild(b); if (!ok) li.querySelector('.tinfo').appendChild(el('div', 'meta', use.length < n ? `升級要${rr}魚 ${n} 條（魚缸裡能用的只有 ${use.length} 條，收藏、展示中的不算）` : '升級的金幣不夠')); }
+        if (r.old && ROD_SWAP[r.id]){ const [nw, nl] = ROD_SWAP[r.id], N = RODS.find(x => x.id === nw), b = el('button', 'tbtn ghost', `🔁 免費換成 ${N.name} Lv.${Math.max(nl, rec.rods.includes(nw) ? rodLv(N) : 1)}`);
+          b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定換？${r.name}會變成 ${N.name}（紀錄一起帶過去）`; b.classList.add('warn'); return; }
+            b.disabled = true; const row = await cloudCall('rod_swap', { p_old: r.id }); if (row){ me.setRod(rec.rod); updateBobberLook(); pushPresence(true); SFX.catch(); flash(`🔁 換好了：${N.name} Lv.${rodLv(N)}`, 1.8); } renderTab(); }); ac.appendChild(b); }
+        if (ac.children.length){ li.style.flexWrap = 'wrap'; for (const x of ac.children) x.style.whiteSpace = 'normal'; li.appendChild(ac); } }   /* v637 作者畫面：兩顆按鈕把字擠成直的 → 按鈕放到下一行 */
       li.firstChild.textContent = ''; const dot = el('span'); dot.style.cssText = `display:inline-block;width:10px;height:34px;border-radius:5px;background:${r.color};transform:rotate(20deg)`; li.firstChild.appendChild(dot); } }
   { const ul = sec('🎯 釣法和 🧵 釣線', '免費，隨時可以換');
     for (const [k, v] of Object.entries(RIGS)){ const on = Rig.rig === k; row(ul, v.icon, '釣法：' + v.name, v.desc, on ? '使用中' : '換上', on ? null : () => { Rig.rig = k; saveRig(); SFX.chat(); renderTab(); }, on); }
@@ -16483,7 +16512,7 @@ const chatRate = new Map();
 function tooChatty(peerId){ const t = performance.now(), a = (chatRate.get(peerId) || []).filter(x => t - x < 6000); a.push(t); chatRate.set(peerId, a); return a.length > 4; }
 let myChatAt = [], lastMyChat = '';
 
-function peerName(p){ const pr = p.pres || {}; const n = typeof pr.n === 'string' && pr.n.trim() ? clean(pr.n.trim().slice(0, 16)) : (p.by && profileNames[p.by]) || friendNameOf(typeof pr.u === 'string' ? pr.u : p.by) || '釣客'; const hm = (onIsle || House.on) && typeof homeMate === 'function' && homeMate(p.by); return hm ? `${n}・${homeTitle(hm)}` : n; }   /* 一起住的人名字後面加稱呼（v275 只在小島上、房子裡才加，在外面就只顯示名字） */
+function peerName(p){ const pr = p.pres || {}; const n = typeof pr.n === 'string' && pr.n.trim() ? clean(pr.n.trim().slice(0, 16)) : (p.by && profileNames[p.by]) || friendNameOf(typeof pr.u === 'string' ? pr.u : p.by) || '釣客'; const hm = (onIsle || House.on) && typeof homeMate === 'function' && homeMate(p.by); const cr = pr.kc ? '👑 ' : ''; return cr + (hm ? `${n}・${homeTitle(hm)}` : n); }   /* v637 王者竿的人加 👑｜一起住的人名字後面加稱呼（v275 只在小島上、房子裡才加，在外面就只顯示名字） */
 function myDisplayName(){ return nickname || (myId && profileNames[myId]) || '你'; }
 
 let lastPres = '', lastPresAt = 0;
@@ -16510,6 +16539,7 @@ function presenceObj(){
   { const sc = mySecretState(); if (sc.length) o.sc = sc; }   /* v432 我的祕密窩點 */
   if (typeof Sub !== 'undefined' && Sub && Sub.on && Sub.pos) o.sb = [+Sub.pos.x.toFixed(1), +Sub.pos.y.toFixed(1), +Sub.pos.z.toFixed(1), +(Sub.yaw % (Math.PI * 2)).toFixed(2)];   /* v241 一起潛：潛水艇在裂縫裡的位置 */
   if (typeof Lv !== 'undefined' && Lv.cur) o.ti = Lv.cur;   /* 稱號（每 2.5 秒算一次，見 lvTick） */
+  if ((rec.rods || []).includes('king')) o.kc = 1;   /* v637 王者竿的人名字旁邊有 👑 */
   if (FK.set) o.fk = [+FK.set.x.toFixed(2), +FK.set.z.toFixed(2), +FK.set.face.toFixed(2), +FK.set.y.toFixed(2), FK.set.mask, +(FK.set.y0 - FK.set.y).toFixed(2), +(FK.set.nz || 1.4).toFixed(2)].concat(FK.net.slice(-6));   /* v618 釣魚裝備 */
   if (F.held && me.bobState === 'water') o.f = { ph:'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)], h:1 };
   else if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
@@ -16846,11 +16876,11 @@ const SUPABASE_KEY = 'sb_publishable_XfsYJu9TUcctWxQX57P2Vw_JPoD1EfK';
 const Cloud = { sb:null, on:false, status:'connecting', err:'', userId:null, email:null, isAnon:true, queue:Promise.resolve(), pending:0, board:{ best:[], total:[], earned:[] }, ui:{ step:'idle', mode:'bind', email:'', busy:false, msg:'' } };
 function rowToRec(r){
   return normRec({ total:r.total, bestW:Number(r.best_w) || 0, bestFish:r.best_fish, best:r.fish_best, count:r.fish_count, tank:r.tank, show:r.show, legend:r.legend,
-    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, shrimpUntil: r.shrimp_until ? Date.parse(r.shrimp_until) : 0, srods: r.srods, srod: r.srod, dive:r.dive, photos:r.photos, cage:r.cage, cageFed:r.cage_fed, updatedAt:Date.parse(r.updated_at) || Date.now() });
+    gear:r.gear, owned:r.owned, island:r.island, dishes:r.dishes, coins:r.coins, rod:r.rod, rodLv: r.rod_lv && typeof r.rod_lv === 'object' ? r.rod_lv : {}, rods:r.rods, bait:r.bait, baitOn:r.bait_on, sold:r.sold, earned:r.earned, love:r.love, released:r.released, shrimpUntil: r.shrimp_until ? Date.parse(r.shrimp_until) : 0, srods: r.srods, srod: r.srod, dive:r.dive, photos:r.photos, cage:r.cage, cageFed:r.cage_fed, updatedAt:Date.parse(r.updated_at) || Date.now() });
 }
 /* v312 管理員改名（125）：名字不適合被管理員改掉後，30 天內自己不能改回來；遊戲照伺服器的名字顯示 */
 function nameLocked(){ const L = Cloud.lastRow && Cloud.lastRow.name_lock; const t = L ? Date.parse(L) : 0; if (t > Date.now()){ toast(`你的名字被管理員改過了（原本的名字不適合），${Math.ceil((t - Date.now()) / 864e5)} 天後才能再改`); return true; } return false; }
-function adoptRow(row){
+function adoptRow(row){ setTimeout(() => { try { refreshMyName(); } catch(e){} }, 0);   /* v637 有王者竿就加 👑 */
   if (!row || typeof row !== 'object') return;
   try { chumThxCheck(row); } catch(e){}   /* v607 別人在你的窩釣到魚 */
   if (!nickname && row.nickname && row.nickname !== '釣客'){ nickname = String(row.nickname).slice(0, 16); LS.set('tide.nick', nickname); try { refreshMyName(); pushPresence(true); } catch(e){} }   /* v322 換手機、清過資料時手機上的名字是空的，別人就只看到「釣客」：用伺服器上的名字 */
@@ -16865,7 +16895,7 @@ function adoptRow(row){
   if (onIsle && onIsle.owner === myIdOrMe() && JSON.stringify(onIsle.layout) !== JSON.stringify(rec.island)){ onIsle.layout = rec.island; buildIsle(rec.island, onIsle.name); } renderCoins(); me.setRod(rec.rod); updateBobberLook(); if (!Wardrobe.trying) me.setGear(rec.gear); pushPresence(true);
   if (!$('#sheet').hidden && ['shop', 'tank', 'dex', 'rank', 'style', 'island', 'closet', 'museum'].includes(curTab) && !Cloud.ui.busy) renderTab();   /* 衣櫃也照伺服器的結果重畫（伺服器沒有你買過的紀錄時，不會一直顯示穿著） */
 }
-const CLOUD_ERR = ['魚的名字最多 8 個字', '兒童模式只能從名單裡選名字', '這個名字不行，換一個吧', '要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
+const CLOUD_ERR = ['這支釣竿已經停賣了', '你沒有這支釣竿', '這支釣竿不用換', '已經是最高的 5 級了', '這支釣竿不能升級', '你還沒有這支釣竿', '魚的名字最多 8 個字', '兒童模式只能從名單裡選名字', '這個名字不行，換一個吧', '要先釣到 30 條魚才能買要錢的設計', '這件設計已經下架了', '這條魚對不上伺服器，請重新整理遊戲', '這隻已經被別人釣走了', '要先買釣蝦時段', '沒有這支蝦竿', '還沒有買這支蝦竿', '一次可以買 30 或 60 分鐘', '拋太快了', '不能加自己當好友', '找不到這位玩家', '好友最多 100 位', '好友代碼是 8 個英文或數字', '要互相加好友才能送禮', '對方的禮物箱滿了', '一次可以送 10～1000 金幣', '今天送的金幣到上限了（每天 1000）', '今天送的魚到上限了（每天 10 條）', '找不到這條魚', '展示中的魚不能送', '找不到這個禮物', '要先買前一級的潛水用品', '要先買潛水裝備', '撿太快了', '愛海點數不夠', '今天客人都吃飽了', '還沒登入', '沒有這種魚', '重量不合理', '釣太快了', '金幣不夠', '沒有這支釣竿', '沒有這種魚餌', '今天做太多了', '做太快了', '食材不對', '沒有這道料理', '窩料不能掛在鉤子上', '沒有這個商品', '還沒有買這個', '沒有這個任務', '這個任務今天已經完成了', '交的東西不對', '沒有這種建築', '位置不對', '這個位置已經有東西了', '這裡沒有東西', '沒有這種東西', '放在島外面了', '會擋住碼頭的路', '跟別的東西疊在一起了', '島上已經放滿了', '房子最多 6 棟', '找不到這個東西', '請重新整理遊戲（小島改版了）'];
 // 依序送出（避免兩個動作互相蓋掉），全部送完才採用伺服器回傳的最新資料
 // 省流量（風險檢查第 3 點）：島的資料很大（房子、家具、大宅格局），常用的動作（拋竿、收線、賣魚、餵食…）都不會改到島，就不要回傳；至少每分鐘拿一次完整的（同島的人可能蓋了東西）
 function cloudSel(fn){ const L = Cloud.lastRow; if (Cloud.noSel || !L || ['place_item', 'remove_item', 'move_item'].includes(fn) || !Cloud.fullAt || Date.now() - Cloud.fullAt > 60000) return null;
@@ -17085,7 +17115,7 @@ async function initSocial(){
     db.collection('records').orderBy('total', 'desc').limit(20).onSnapshot(s => { lb.total = s.docs.map(d => ({ id:d.id, ...normRec(d.data()) })); if (curTab === 'rank' && !$('#sheet').hidden) renderTab(); }, () => {});
   }
 }
-function refreshMyName(){ me.setName(nickname || (myId && profileNames[myId]) || '你'); if (me.nm){ let t = ''; try { t = curTitle(); } catch(e){} if (t) me.nm.dataset.title = t; else delete me.nm.dataset.title;
+function refreshMyName(){ me.setName(((rec.rods || []).includes('king') ? '👑 ' : '') + (nickname || (myId && profileNames[myId]) || '你'));   /* v637 王者竿的補償：名字旁邊的王冠 */ if (me.nm){ let t = ''; try { t = curTitle(); } catch(e){} if (t) me.nm.dataset.title = t; else delete me.nm.dataset.title;
     try { const ds = Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0){ const tt = duelTierOf(ds.stars); me.nm.dataset.duel = tt[2] + tt[1]; } else delete me.nm.dataset.duel; } catch(e){} } }
 let saving = false, saveAgain = false;
 async function saveRemote(){
@@ -18732,6 +18762,10 @@ function renderTab(){
       '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 32×32 的格子、48 種顏色上畫圖案（上衣有正面和背面；有直線、方框、填色、吸色、左右對稱、粗細筆、復原重做，也可以用自己的圖片），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在水族館展示，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
+      '🎣 新的釣竿陣容：釣具店只賣 6 支 —— 竹竿（免費入門）、🎣 路亞軟竿（🪙800，最適合掠食魚、狡猾魚）、🎋 手竿（🪙500，河、湖、溪）、🏖️ 遠投竿（🪙800，海邊）、🪨 磯釣硬竿（🪙800，港口外海、小島碼頭）、👑 黃金王者竿（🪙12000，什麼時候、什麼地方都是稀有 ×1.3、傳說 ×1.3）。',
+      '⬆️ 釣竿升級：四支專用竿（路亞、手竿、遠投、磯釣）可以在背包「🎣 釣組」升級，1～5 級。每升一級要金幣＋魚缸裡的魚（Lv.2：🪙800＋常見魚 3 條；Lv.3：🪙2,000＋稀有魚 2 條；Lv.4：🪙4,500＋稀有魚 4 條；Lv.5：🪙9,000＋傳說魚 1 條）。用的是魚缸裡最輕的那幾條，⭐收藏和展示中的不會被拿走；按一下會先列出要用掉哪幾條，再按一次才真的升。等級越高稀有、傳說越多、線越不容易斷（Lv.5 稀有 ×1.5、傳說 ×1.4）。4～5 級的專用竿用在對的地方、對的魚，會贏過王者竿。Lv.5 的竿子拉對的魚時竿尖會閃光。',
+      '🔁 舊竿停賣：以前的 10 支竿子（碳纖維釣竿、路亞輕竿、月光夜釣竿、深海巨物竿、竹手竿、碳纖維手竿、舊遠投竿、職人遠投竿、磯釣竿、黑鯛磯釣竿）不再賣了，買過的照樣可以用。也可以在背包「🎣 釣組」免費換成對應的專用竿和等級（例如月光夜釣竿 → 路亞軟竿 Lv.4、黑鯛磯釣竿 → 磯釣硬竿 Lv.4），這支竿子的釣魚紀錄會一起帶過去；如果你已經有那支專用竿，等級取比較高的那個。',
+      '👑 黃金王者竿的特別待遇：有王者竿的人，名字旁邊會有 👑（大家都看得到），拿著王者竿拋竿時竿尖有一圈金色光暈。',
       '🎣 釣竿有分種類：甩竿哪裡都能用；🎋 手竿（台灣溪釣、池釣，沒有捲線器，拋不遠）最適合河、湖、溪、瀑布潭；🏖️ 遠投竿（舉過頭甩，拋得最遠）最適合海邊；🪨 磯釣竿（大顆的阿波浮標）最適合港口外海、小島碼頭。用在對的地方稀有魚多一點、魚咬得快一點，用錯地方就差一點。買過的竿子都在「包包」裡，隨時可以換。',
       '🐟 大魚變多了：晴潮海邊（第一個釣點）現在也釣得到鬼頭刀、青甘鰺、梭子魚、浪人鰺、星紋魟魚和章魚，大概每三、四竿就有一條大的；港口外海的星紋魟魚、晴潮海豚比以前常見，也多了浪人鰺和斑點魟，不會老是同樣那兩條。新手的前五條魚很快就會咬。',
       '🌧️ 下雨和暴風雨的時候，外面的村民會自己穿上雨衣、雨帽和雨靴，雨停了就脫掉。村長、阿綾、阿木、阿福下雨不散步、不釣魚，會去涼亭或食堂躲雨、或回家休息（老港例外，他下雨也要釣）。大家看到的都一樣。',
@@ -18770,7 +18804,7 @@ function renderTab(){
     sec('🪙 金幣與商店', [
       '潮汐魚市場（港邊廣場，原本的海邊商店、阿福海產店、釣客魚市合成一家）：走到門口按一下打開，上面一排按鈕可以切換三個櫃位 —— 🐟 賣魚、🧊 阿福海產、🤝 釣客擺攤。',
       '🐟 賣魚：把魚缸裡的魚賣掉，越稀有、越重越值錢。',
-      '釣具店：釣竿（越好越不容易斷線、收線越快、稀有傳說機率越高）、魚餌（每拋一次用掉一個）、窩料。',
+      '釣具店：釣竿（6 支，四支專用竿可以到包包「🎣 釣組」升級）、魚餌（每拋一次用掉一個）、窩料。',
       '服飾：兩間店都有「服飾」分頁（造型分頁也有）。帽子、衣服、褲子、鞋子、襪子、配件、背飾、表情加起來快 100 件，可以先試穿看看，大家都看得到你的打扮。',
       '配件和背飾也有用 3D 模型做的：4 色斗篷（披在肩膀上、走路跟著身體動）、潛水鏡（鏡片、綁帶、呼吸管）、漁夫冒險背包。',
       '潛水的時候會自動換上整套潛水裝備：深藍色潛水衣、面鏡和呼吸管、背上的氧氣瓶、腳上的蛙鞋，上岸就換回原本的衣服。',
