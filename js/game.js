@@ -5633,7 +5633,7 @@ canvas.addEventListener('pointerdown', e => { ensureAudio(); if (F.phase === 'id
    現在要「兩隻手指都有移動」（真的在捏）才縮放；只有一隻在動就不縮放 */
 canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; const pv = pinch.get(e.pointerId); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: pv.sx ?? e.clientX, sy: pv.sy ?? e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchArm){ const ma = Math.hypot(a.x - (a.sx ?? a.x), a.y - (a.sy ?? a.y)), mb = Math.hypot(b.x - (b.sx ?? b.x), b.y - (b.sy ?? b.y)); if (Math.abs(d - pinchArm) < 14 || ma < 10 || mb < 10) return; pinchArm = 0; pinchDist = d; return; } const L = camLimits(); if (pinchDist > 0){ cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); camDistSave(); } pinchDist = d; } });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
-canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
+canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; if (typeof Blk !== 'undefined' && Blk.paint) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
 const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); camDistSave(); }, { passive:false });
@@ -7287,6 +7287,7 @@ function buildIsle(layout, ownerName){
   isleCols = colliders.slice(n0);
   isleGroup.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
   if (!Build.on) isleBatch(isleGroup);
+  try { if (onIsle && Blk.owner !== onIsle.owner) blkLoad(onIsle.owner); else blkCols(); } catch(e){ console.warn('blk', e); }
 }
 // ---- 北方冰封群島的樣子（第一次走近才蓋，手機比較省）：雪島、結冰的湖和冰洞、冰釣帳篷、雪松、雪屋、雪人、流冰、海豹、一直下的小雪 ----
 const Frost = { built:false, snow:null, floes:[], seals:[] };
@@ -7966,8 +7967,8 @@ async function visitIsle(id, name){
   try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: id }); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
   catch(e){ toast('暫時連不上雲端'); }
 }
-function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
-function checkIsle(){ if (onIsle && !Dive.on && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 45){ stopBuild(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
+function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); if (Blk.on) blkStop(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
+function checkIsle(){ if (onIsle && !Dive.on && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 45){ stopBuild(); if (Blk.on) blkStop(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
 async function likeIsle(){
   if (!onIsle || onIsle.owner === myIdOrMe() || !Cloud.sb) return;
   try { const { data, error } = await Cloud.sb.rpc('like_island', { p_owner: onIsle.owner }); if (error) throw error; onIsle.likes = data; onIsle.liked = true; SFX.catch(); flash('❤️ 按讚了！', 1.2); renderIsleBar(); }
@@ -7987,6 +7988,94 @@ function renderIsleBar(){
   const back = el('button', 'tbtn ghost', '回村子'); back.addEventListener('click', leaveIsle); bar.appendChild(back);
 }
 // ---- 建造模式：拿著東西走來走去，放在想要的位置 ----
+
+/* ===== v672 🧱 小島的小方塊和隔板（作者：「自己的小島應該要加更多裝飾，比如一塊一塊的小方塊」「或隔板」；伺服器 214_isle_blocks.sql）=====
+   一格 50 公分、對齊格子、最多疊 6 層、一座島最多 400 塊（跟一起住的人共用）。
+   建造模式按「🧱 方塊和隔板」：選建材 → 點地面放一塊、點方塊上面疊上去、點側邊接在旁邊；按住不動半秒再滑，可以連續放一排。拖畫面還是轉鏡頭。
+   「拆」打開以後，點哪一塊拆哪一塊（自己放的退一半）。一塊一塊先畫出來，0.8 秒後一起送到伺服器。
+   方塊一層 50 公分，跳得上去也站得住（用原本「矮東西可以跳上去」的機制）。 */
+const BLK = { wood:['木頭', 15, '#b07a45', 'plank'], stone:['石頭', 20, '#9c9a92', 'stone'], brick:['紅磚', 25, '#b5523b', 'brick'], glass:['玻璃', 30, '#bfe8ff', 'glass'], grass:['草皮', 10, '#79b85a', 'grass'], sand:['沙', 10, '#e8d29a', 'sand'],
+  pr:['紅漆', 20, '#d4483a'], pw:['白漆', 20, '#f2eee4'], pb:['藍漆', 20, '#3d78c4'], py:['黃漆', 20, '#f0c23a'], pg:['綠漆', 20, '#4a9e5a'], pk:['黑漆', 20, '#2c2c32'],
+  nw:['木板隔板', 20, '#a8743f', 'plank', 1], nb:['竹籬', 30, '#c9b46a', 'bamboo', 1], ns:['矮石牆', 40, '#8e8b84', 'stone', 1], ng:['玻璃牆', 50, '#cfefff', 'glass', 1], nl:['格子窗', 40, '#efe3c6', 'lattice', 1] };
+const Blk = { on:false, t:'wood', r:0, erase:false, b:[], owner:null, g:null, ims:{}, pend:{ add:[], del:[] }, timer:0, busy:false, paint:null, rc:new THREE.Raycaster(), v:new THREE.Vector2(), tex:{} };
+function blkTex(kind, col){ const k = kind + col; if (Blk.tex[k]) return Blk.tex[k]; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = col; c.fillRect(0, 0, 64, 64);
+  const dk = 'rgba(0,0,0,.22)', lt = 'rgba(255,255,255,.18)';
+  if (kind === 'plank'){ c.fillStyle = dk; for (const y of [0, 21, 42]) c.fillRect(0, y, 64, 2); c.fillStyle = 'rgba(0,0,0,.08)'; for (let i = 0; i < 12; i++) c.fillRect((i * 23) % 64, (i * 11) % 64, 14, 1); c.fillStyle = dk; c.fillRect(30, 2, 2, 19); c.fillRect(12, 23, 2, 19); c.fillRect(46, 44, 2, 20); }
+  else if (kind === 'brick'){ c.fillStyle = '#d8cbb8'; for (let y = 0; y < 64; y += 16){ c.fillRect(0, y, 64, 2); const o = (y / 16) % 2 ? 16 : 0; for (let x = o; x < 64 + 32; x += 32) c.fillRect(x % 64, y, 2, 16); } c.fillStyle = lt; c.fillRect(4, 4, 20, 3); c.fillRect(36, 36, 18, 3); }
+  else if (kind === 'stone'){ c.strokeStyle = dk; c.lineWidth = 2; for (const [x, y, w, h] of [[2, 2, 28, 20], [32, 2, 30, 26], [2, 24, 20, 22], [24, 30, 38, 16], [2, 48, 34, 14], [38, 48, 24, 14]]){ c.fillStyle = `rgba(255,255,255,${(x * 7 + y) % 3 * 0.05})`; c.fillRect(x, y, w, h); c.strokeRect(x, y, w, h); } }
+  else if (kind === 'grass'){ c.fillStyle = 'rgba(30,80,20,.25)'; for (let i = 0; i < 40; i++) c.fillRect((i * 37) % 64, (i * 23) % 64, 2, 4); c.fillStyle = lt; for (let i = 0; i < 20; i++) c.fillRect((i * 19) % 64, (i * 41) % 64, 2, 3); }
+  else if (kind === 'sand'){ for (let i = 0; i < 60; i++){ c.fillStyle = i % 2 ? 'rgba(120,90,40,.18)' : 'rgba(255,255,255,.3)'; c.fillRect((i * 29) % 64, (i * 47) % 64, 2, 2); } }
+  else if (kind === 'bamboo'){ for (let x = 0; x < 64; x += 11){ c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x, 0, 2, 64); c.fillStyle = lt; c.fillRect(x + 4, 0, 2, 64); } c.fillStyle = dk; c.fillRect(0, 20, 64, 2); c.fillRect(0, 46, 64, 2); }
+  else if (kind === 'lattice'){ c.clearRect(0, 0, 64, 64); c.fillStyle = col; for (let i = 0; i <= 64; i += 16){ c.fillRect(i - 2, 0, 4, 64); c.fillRect(0, i - 2, 64, 4); } c.fillRect(0, 0, 64, 5); c.fillRect(0, 59, 64, 5); c.fillRect(0, 0, 5, 64); c.fillRect(59, 0, 5, 64); }
+  else if (kind === 'glass'){ c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.moveTo(8, 50); c.lineTo(24, 10); c.lineTo(30, 10); c.lineTo(14, 50); c.fill(); c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 3; c.strokeRect(1, 1, 62, 62); }
+  else { c.strokeStyle = 'rgba(0,0,0,.15)'; c.lineWidth = 2; c.strokeRect(1, 1, 62, 62); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; return (Blk.tex[k] = t); }
+function blkMat(t){ const B = BLK[t]; return new THREE.MeshStandardMaterial({ color:'#ffffff', map: blkTex(B[3] || 'paint', B[2]), roughness: B[3] === 'glass' ? 0.15 : 0.85, metalness: 0.02, transparent: B[3] === 'glass', opacity: B[3] === 'glass' ? 0.5 : 1, alphaTest: B[3] === 'lattice' ? 0.5 : 0, side: B[3] === 'lattice' ? THREE.DoubleSide : THREE.FrontSide, depthWrite: B[3] !== 'glass' }); }
+function blkGeo(t){ const B = BLK[t]; return B[4] ? new THREE.BoxGeometry(0.5, 0.5, B[3] === 'stone' ? 0.14 : 0.07) : new THREE.BoxGeometry(0.5, 0.5, 0.5); }
+const _bm = new THREE.Matrix4(), _bq = new THREE.Quaternion(), _bv = new THREE.Vector3(), _bs = new THREE.Vector3(1, 1, 1), _bup = new THREE.Vector3(0, 1, 0);
+function blkDraw(){ if (!onIsle){ blkClear(); return; } if (!Blk.g){ Blk.g = new THREE.Group(); Blk.g.userData.keep = true; scene.add(Blk.g); }
+  const by = {}; for (const x of Blk.b) (by[x[3]] = by[x[3]] || []).push(x);
+  for (const t of Object.keys(BLK)){ const L = by[t] || []; let im = Blk.ims[t];
+    if (!L.length){ if (im) im.count = 0; continue; }
+    if (!im || im.userData.cap < L.length){ if (im){ Blk.g.remove(im); im.dispose(); } const cap = Math.max(32, Math.ceil(L.length / 32) * 32 + 32); im = new THREE.InstancedMesh(blkGeo(t), blkMat(t), Math.min(400, cap)); im.userData.cap = Math.min(400, cap); im.userData.t = t; im.castShadow = BLK[t][3] !== 'glass'; im.receiveShadow = true; Blk.g.add(im); Blk.ims[t] = im; }
+    im.userData.list = L; L.forEach((x, i) => { _bv.set(ISLE.x + x[0] * 0.5, ISLE.y + x[2] * 0.5 + 0.25, ISLE.z + x[1] * 0.5); _bq.setFromAxisAngle(_bup, (x[4] || 0) * Math.PI / 2); _bm.compose(_bv, _bq, _bs); im.setMatrixAt(i, _bm); });
+    im.count = L.length; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); }
+  blkCols(); }
+function blkCols(){ if (Blk.cols) for (const c of Blk.cols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } Blk.cols = []; if (!onIsle) return;
+  const col = new Map(); for (const x of Blk.b){ const k = x[0] + ',' + x[1], P = BLK[x[3]] && BLK[x[3]][4], h = x[2] + 1, o = col.get(k); if (!o || o.h < h) col.set(k, { x: x[0], z: x[1], h, p: P ? (x[4] || 0) % 2 : -1 }); }
+  for (const o of col.values()){ const c = o.p < 0 ? { t:'b', x: ISLE.x + o.x * 0.5, z: ISLE.z + o.z * 0.5, hw: 0.25, hd: 0.25 } : o.p === 0 ? { t:'b', x: ISLE.x + o.x * 0.5, z: ISLE.z + o.z * 0.5, hw: 0.25, hd: 0.06 } : { t:'b', x: ISLE.x + o.x * 0.5, z: ISLE.z + o.z * 0.5, hw: 0.06, hd: 0.25 };
+    if (o.p >= 0 || o.h > 2) c.top = null; else c.top = ISLE.y + o.h * 0.5;   /* 一兩層的方塊可以跳上去站；三層以上、隔板會擋住 */
+    colliders.push(c); Blk.cols.push(c); } }
+function blkClear(){ if (Blk.g){ scene.remove(Blk.g); for (const im of Object.values(Blk.ims)) im.dispose(); } Blk.g = null; Blk.ims = {}; Blk.b = []; Blk.owner = null; blkCols(); }
+async function blkLoad(owner){ Blk.owner = owner; Blk.b = []; blkDraw();
+  if (!Cloud.on || !Cloud.sb){ if (owner === myIdOrMe()){ Blk.b = Array.isArray(rec.isleBlocks) ? rec.isleBlocks.slice() : []; blkDraw(); } return; }
+  try { const { data } = await Cloud.sb.rpc('isle_blocks_get', { p_owner: owner }); if (Blk.owner === owner && Array.isArray(data) && !Blk.pend.add.length && !Blk.pend.del.length){ Blk.b = data; blkDraw(); } } catch(e){} }
+function blkAt(gx, gz, gy){ return Blk.b.find(x => x[0] === gx && x[1] === gz && x[2] === gy); }
+function blkTop(gx, gz){ let h = -1; for (const x of Blk.b) if (x[0] === gx && x[1] === gz && x[2] > h) h = x[2]; return h; }
+function blkAdd(gx, gz, gy){ const t = Blk.t, B = BLK[t]; if (gy < 0) return; if (gy > 5){ blkHint('最多疊 6 層'); return; } if (blkAt(gx, gz, gy)) return;
+  const x = gx * 0.5, z = gz * 0.5; if (Math.hypot(x, z) > 22.6){ blkHint('放在島外面了'); return; } if (Math.abs(x) < 1.2 && z > 17){ blkHint('會擋住碼頭的路'); return; }
+  if (gy > 0 && !blkAt(gx, gz, gy - 1)){ blkHint('不能懸空'); return; } if (Blk.b.length >= 400){ blkHint('小島最多 400 塊'); return; } if (rec.coins < B[1]){ blkHint('金幣不夠'); return; }
+  const it = [gx, gz, gy, t, B[4] ? Blk.r : 0, String(Cloud.userId || 'me').slice(0, 8)]; Blk.b.push(it); rec.coins -= B[1]; try { renderCoins(); } catch(e){}
+  Blk.pend.add.push(it.slice(0, 5)); blkFlushSoon(); blkDraw(); { const n = $('#blkBar .bk-n'); if (n) n.textContent = `${Blk.b.length}/400`; } try { SFX.plop(); } catch(e){} try { FX.emit(ISLE.x + x, ISLE.y + gy * 0.5 + 0.4, ISLE.z + z, 5, BLK[t][2], 0.3, 1, 0.5); } catch(e){} }
+function blkDel(gx, gz, gy){ const it = blkAt(gx, gz, gy); if (!it) return; if (blkAt(gx, gz, gy + 1)){ blkHint('上面還有東西，先拆上面的'); return; }
+  if (isleRank() < 2 && it[5] !== String(Cloud.userId || 'me').slice(0, 8)){ blkHint('一般成員只能拆自己放的'); return; }
+  Blk.b.splice(Blk.b.indexOf(it), 1); if (it[5] === String(Cloud.userId || 'me').slice(0, 8)){ rec.coins += Math.floor(BLK[it[3]][1] / 2); try { renderCoins(); } catch(e){} }
+  const ai = Blk.pend.add.findIndex(a => a[0] === gx && a[1] === gz && a[2] === gy); if (ai >= 0) Blk.pend.add.splice(ai, 1); else Blk.pend.del.push([gx, gz, gy]);
+  blkFlushSoon(); blkDraw(); { const n = $('#blkBar .bk-n'); if (n) n.textContent = `${Blk.b.length}/400`; } try { SFX.click(); } catch(e){} }
+function blkFlushSoon(){ clearTimeout(Blk.timer); Blk.timer = setTimeout(blkFlush, 800); }
+async function blkFlush(){ if (!Blk.pend.add.length && !Blk.pend.del.length) return; if (!Cloud.on || !Cloud.sb){ rec.isleBlocks = Blk.b.slice(); Blk.pend = { add:[], del:[] }; saveRecLocal(); return; }
+  if (Blk.busy){ blkFlushSoon(); return; } Blk.busy = true; const P = Blk.pend; Blk.pend = { add:[], del:[] }; const owner = Blk.owner;
+  try { const { data, error } = await Cloud.sb.rpc('isle_blocks_edit', { p_owner: owner === myIdOrMe() ? null : owner, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }); if (error) throw error;
+    if (data && data.player) adoptRow(data.player); if (Blk.owner === owner && !Blk.pend.add.length && !Blk.pend.del.length && Array.isArray(data.b)){ Blk.b = data.b; blkDraw(); } }
+  catch(e){ toast('🧱 ' + cloudErrMsg(e)); blkLoad(owner); try { cloudRefresh(); } catch(e2){} }
+  Blk.busy = false; }
+function blkHint(t){ const h = $('#blkHint'); if (h){ h.textContent = t; h.classList.add('bad'); clearTimeout(Blk.ht); Blk.ht = setTimeout(() => { h.classList.remove('bad'); blkBar(); }, 1600); } else toast(t); }
+/* 點畫面：算出點到哪一格 */
+function blkPick(cx, cy){ const r = canvas.getBoundingClientRect(); Blk.v.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1); Blk.rc.setFromCamera(Blk.v, camera);
+  const hits = Blk.g ? Blk.rc.intersectObjects(Object.values(Blk.ims).filter(m => m.count > 0), false) : [];
+  if (hits.length){ const h = hits[0], L = h.object.userData.list, it = L && L[h.instanceId]; if (it){ const n = h.face.normal.clone().applyQuaternion(_bq.setFromAxisAngle(_bup, (it[4] || 0) * Math.PI / 2));
+      const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z); let d = [0, 0, 0]; if (ay >= ax && ay >= az) d = [0, 0, Math.sign(n.y)]; else if (ax >= az) d = [Math.sign(n.x), 0, 0]; else d = [0, Math.sign(n.z), 0];
+      return { hit: it, gx: it[0] + d[0], gz: it[1] + d[1], gy: it[2] + d[2] }; } }
+  const pl = new THREE.Plane(new THREE.Vector3(0, 1, 0), -ISLE.y), p = new THREE.Vector3(); if (!Blk.rc.ray.intersectPlane(pl, p)) return null;
+  const gx = Math.round((p.x - ISLE.x) / 0.5), gz = Math.round((p.z - ISLE.z) / 0.5); return { hit: null, gx, gz, gy: blkTop(gx, gz) + 1 }; }
+function blkTap(cx, cy){ const P = blkPick(cx, cy); if (!P) return; if (Blk.erase){ if (P.hit) blkDel(P.hit[0], P.hit[1], P.hit[2]); return; } blkAdd(P.gx, P.gz, P.gy); return P; }
+{ let down = null; canvas.addEventListener('pointerdown', e => { if (!Blk.on) return; down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; clearTimeout(Blk.lp);
+    Blk.lp = setTimeout(() => { if (down && !Blk.erase){ const P = blkTap(down.x, down.y); if (P){ Blk.paint = { gy: P.gy, last: P.gx + ',' + P.gz }; try { buzz(15); } catch(e){} } } }, 450); });   /* 按住不動 0.45 秒：開始連續放（同一層） */
+  canvas.addEventListener('pointermove', e => { if (!Blk.on || !down || e.pointerId !== down.id) return; if (Blk.paint){ const P = blkPick(e.clientX, e.clientY); if (!P) return; const gx = P.hit ? P.gx : P.gx, gz = P.gz, k = gx + ',' + gz; if (k !== Blk.paint.last){ Blk.paint.last = k; if (Blk.paint.gy === 0 || blkAt(gx, gz, Blk.paint.gy - 1)) blkAdd(gx, gz, Blk.paint.gy); } return; }
+    if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) clearTimeout(Blk.lp); });
+  const up = e => { if (!Blk.on || !down || e.pointerId !== down.id) return; clearTimeout(Blk.lp); const short = performance.now() - down.t < 450 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 10; if (short && !Blk.paint) blkTap(down.x, down.y); Blk.paint = null; down = null; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); }
+function blkStart(){ if (!onIsle || !canEditIsle()){ toast('要在自己（或一起住）的小島上才能蓋'); return; } closeSheet(); if (Build.on) stopBuild(); Blk.on = true; Blk.erase = false; blkBar(); try { renderIsleBar(); } catch(e){} }
+function blkStop(){ Blk.on = false; Blk.paint = null; blkFlush(); const b = $('#blkBar'); if (b) b.hidden = true; try { renderIsleBar(); } catch(e){} }
+function blkBar(){ let bar = $('#blkBar'); if (!Blk.on){ if (bar) bar.hidden = true; return; } if (!bar){ bar = el('div', 'panel'); bar.id = 'blkBar'; document.body.appendChild(bar); }
+  bar.hidden = false; bar.innerHTML = ''; const top = el('div', 'bk-top'); const B = BLK[Blk.t];
+  top.appendChild(el('span', 'bk-hint', Blk.erase ? '拆：點哪一塊拆哪一塊（自己放的退一半）' : `${B[0]} 🪙${B[1]}・點一下放，按住再滑放一排`)).id = 'blkHint';
+  top.appendChild(el('span', 'bk-n', `${Blk.b.length}/400`));
+  if (B[4] && !Blk.erase){ const r = el('button', 'tbtn ghost', '轉向'); r.addEventListener('click', () => { Blk.r = (Blk.r + 1) % 2; toast(Blk.r ? '隔板改成直的' : '隔板改成橫的'); }); top.appendChild(r); }
+  const er = el('button', 'tbtn ghost' + (Blk.erase ? ' on' : ''), Blk.erase ? '放' : '拆'); er.addEventListener('click', () => { Blk.erase = !Blk.erase; blkBar(); }); top.appendChild(er);
+  const ok = el('button', 'tbtn', '完成'); ok.addEventListener('click', blkStop); top.appendChild(ok); bar.appendChild(top);
+  const pal = el('div', 'bk-pal'); for (const [k, v] of Object.entries(BLK)){ const b = el('button', 'bk-sw' + (k === Blk.t && !Blk.erase ? ' on' : '') + (v[4] ? ' pn' : '')); const sw = el('i'); sw.style.background = `url(${blkTex(v[3] || 'paint', v[2]).image.toDataURL()}) center/cover, ${v[2]}`; b.appendChild(sw); b.appendChild(el('small', '', v[0]));
+    b.addEventListener('click', () => { Blk.t = k; Blk.erase = false; blkBar(); }); pal.appendChild(b); } bar.appendChild(pal); }
 const Build = { on:false, type:null, moveId:null, rot:0, ghost:null, x:0, z:0, err:null, sel:null };
 const ghostOk = new THREE.MeshStandardMaterial({ color:'#7fe0a8', transparent:true, opacity:0.55, emissive:'#3fbf7a', emissiveIntensity:0.6, depthWrite:false });
 const ghostBad = new THREE.MeshStandardMaterial({ color:'#ff8a7a', transparent:true, opacity:0.55, emissive:'#f04a3a', emissiveIntensity:0.6, depthWrite:false });
@@ -8036,6 +8125,7 @@ function renderBuildBar(){
   } else {
     bar.appendChild(el('span', 'bb-hint', '🔨 建造模式：走到東西旁邊可以移動或拆掉'));
     const sh = el('button', 'tbtn', '🛒 買東西'); sh.addEventListener('click', () => openSheet('island')); bar.appendChild(sh);
+    const bk = el('button', 'tbtn', '🧱 方塊和隔板'); bk.addEventListener('click', blkStart); bar.appendChild(bk);
   }
 }
 // 訪客帳號蓋房子、買大宅的時候提醒綁定 Email（清掉瀏覽器資料整座島就不見了）；三天內只提醒一次
@@ -19368,6 +19458,7 @@ function renderTab(){
       '水面上的魚群（沙丁魚、丁香魚這些）大家看到的是同一群：同一個時間、同一個地方，朋友也會看到一樣的魚群在一樣的位置游，可以約一起去追。',
       '魚缸、我的海裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
       '🐠 在自己小島的海底，點一下魚就會在上面顯示這條魚是誰、什麼時候、在哪裡釣到的，6 秒後自己收起來（不會一靠近就跳出來擋畫面）。',
+      '🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「拆」再點，可以拆掉，自己放的退一半。一座島最多 400 塊，跟一起住的人共用。',
     ]);
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、七夕（晚上天上有鵲橋、每天一份禮物、限定花冠和鵲橋）、萬聖節（10/29～10/31，南瓜燈和蝙蝠、每天拿糖果、限定南瓜帽和巫師帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',

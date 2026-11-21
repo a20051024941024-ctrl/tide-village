@@ -6289,5 +6289,18 @@
  "對決": "Duel",
  "太好了": "Great!",
  "往季紀念徽章": "Past season badges",
- "最近 10 場": "Last 10 matches"
+ "最近 10 場": "Last 10 matches",
+ "🧱 方塊和隔板：在自己的小島按「建造」→「🧱 方塊和隔板」。選建材以後，點地面放一塊，點方塊上面疊上去，點側邊接在旁邊；按住半秒不放再滑，可以連續放一排。方塊一格 50 公分、最多疊 6 層，一兩層高的跳得上去。有木頭、石頭、紅磚、玻璃、草皮、沙、六種顏色的漆，還有木板、竹籬、矮石牆、玻璃牆、格子窗五種隔板（可以轉向）。按「拆」再點，可以拆掉，自己放的退一半。一座島最多 400 塊，跟一起住的人共用。": "🧱 Blocks and panels: on your island tap Build → 🧱 Blocks & panels. Pick a material, then tap the ground to place a block, tap the top of a block to stack, or tap a side to build next to it; hold for half a second and slide to place a row. Blocks are 50 cm, up to 6 high, and you can jump onto one or two. Materials: wood, stone, brick, glass, grass, sand and six paint colours, plus five panels (wood board, bamboo fence, low stone wall, glass wall, lattice window) that can be rotated. Tap Remove and then a block to take it away; you get half back for your own. Up to 400 per island, shared with housemates.",
+ "🧱 方塊和隔板": "🧱 Blocks & panels",
+ "拆": "Remove",
+ "放": "Place",
+ "轉向": "Rotate",
+ "紅磚": "Brick",
+ "玻璃": "Glass",
+ "草皮": "Grass",
+ "竹籬": "Bamboo fence",
+ "矮石牆": "Low stone wall",
+ "玻璃牆": "Glass wall",
+ "格子窗": "Lattice window",
+ "木板隔板": "Wood board"
 }
