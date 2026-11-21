@@ -4816,6 +4816,16 @@ function kidFidget(f, K, W, v){ const T = now(); let busy = false; if (f === me)
   const h = gameHour(), night = h >= 21 || h < 5, morning = h >= 5 && h < 9, L = [['idle2', 3], ['stretch', morning ? 3 : 1], ['yawn', night ? 3 : 0.4]].filter(([k]) => K.acts[k]);
   let r = Math.random() * L.reduce((a, b) => a + b[1], 0), k = L[0] && L[0][0]; for (const [n, w] of L){ r -= w; if (r <= 0){ k = n; break; } } if (!k) return;
   const ac = K.acts[k], d = Math.min(4.5, ac.getClip().duration || 2); ac.reset(); ac.play(); f.fid = { k, at: T, until: T + d }; }
+/* v640 小動作第二批：① 坐著（碼頭邊、長椅）的時候兩隻小腿會輪流慢慢晃；② 下雨天在外面、沒穿雨衣、站著或走路時，肩膀縮起來、頭低低的，偶爾抖一下。
+   都是在骨架動畫算完以後再疊一點點旋轉，所以不用新的動作檔。 */
+function kidPostPose(f, K, dt){ const B = K.B; if (!B || !B.lowerlegl) return; const T = now(), k = Math.min(1, dt * 3);
+  const sitOn = f.sitting && !(f === me ? myBoat : f.boatMesh) && (K.w.sit || 0) > 0.6;
+  f.swA = (f.swA || 0) + ((sitOn ? 1 : 0) - (f.swA || 0)) * k;
+  if (f.swA > 0.01){ const ph = T * 2.1 + (f.av.blinkAt || 0); B.lowerlegl.rotation.x += Math.sin(ph) * 0.32 * f.swA; B.lowerlegr.rotation.x += Math.sin(ph + 2.4) * 0.32 * f.swA; }
+  let wet = false; try { wet = !!(WEATHERS[Env.wx] && WEATHERS[Env.wx].rain > 0) && !f.rainWear && !f.swim && !f.fishing && !f.sitting && !f.emote && f.pos.x > -100 && !(f === me && (inIndoor() || House.on)); } catch(e){}
+  f.rnA = (f.rnA || 0) + ((wet ? 1 : 0) - (f.rnA || 0)) * Math.min(1, dt * 1.5);
+  if (f.rnA > 0.01 && B.chest){ const A = f.rnA, sh = Math.max(0, Math.sin(T * 0.7 + (f.av.blinkAt || 0)) - 0.93) * 14; B.chest.rotation.x += 0.14 * A; if (B.head) B.head.rotation.x += 0.07 * A; B.chest.rotation.z += Math.sin(T * 38) * 0.03 * sh * A;
+    if (B.upperarml && B.upperarmr){ B.upperarml.rotation.z += 0.18 * A; B.upperarmr.rotation.z -= 0.18 * A; } } }
 function kidEmoteOn(f, t){ const E = f.emote, D = E && EMOTE_DEF[E.k]; if (!D || !f.av.kid || !f.av.kid.acts[D.anim]) { f.emote = null; return false; }
   const moved = !(f === me && mySeat) && now() - (E.at || 0) > 0.8 && ((f.aspd || 0) > 0.35 || f.air > 0.05); if (moved || f.fishing || f.sitting || f.swim || (!D.loop && now() > E.until)){ f.emote = null; if (f.bub && f.bubEmote) f.bub.hidden = true; return false; }
   if (!E.started){ E.started = true; const ac = f.av.kid.acts[D.anim]; ac.reset(); ac.play(); }
@@ -4931,7 +4941,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
+  K.mixer.update(dt); kidPostPose(f, K, dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
   if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
