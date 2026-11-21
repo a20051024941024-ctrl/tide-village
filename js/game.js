@@ -4361,7 +4361,37 @@ const CRAFT = [
   /* v257 鉤子（104_hooks.sql）：只影響拉魚的手感 */
   { id:'hk_barb', name:'倒刺鉤', c:600, n:3, r:'常見', ico:'🪝', desc:'線鬆掉的時候比較不會脫鉤（可以鬆久一點）' }, { id:'hk_circle', name:'圓形鉤', c:1500, n:2, r:'稀有', ico:'⭕', desc:'每條魚可以原諒一次失誤：連擊不歸零，做錯時拉力爆衝也比較小' },
   { id:'hk_forge', name:'鍛造重鉤', c:2500, n:3, r:'稀有', ico:'⚓', desc:'硬拉時拉力上升比較慢，對付大魚比較穩' }, { id:'hk_gold', name:'金鉤', c:5000, n:4, r:'稀有', ico:'✨', desc:'做對動作時魚多掉 20% 體力' } ];
+/* v670 排位賽季造型（作者：「每季換新」）：每個月（一季）一套新的，id 裡有年月。升到段位才送（伺服器 213），工坊做不出來。
+   釣竿好手→賽季釣線 lc_sYYYYMM、釣魚高手→賽季竿 rs_sYYYYMM、海上名人→名牌外框 nf_YYYYMM、傳說釣手→會發光的傳說竿 rs_lYYYYMM。
+   每個月的主題（顏色和花紋）在 SEASON_THEME，明年同一個月顏色一樣、但年份不同是另一件。 */
+const SEASON_THEME = { 1:['新春', '#c8282c', '#f2c14e', 'lantern'], 2:['梅雪', '#b8577a', '#ffffff', 'petal'], 3:['春雨', '#3f8a5c', '#cfe9d8', 'drop'], 4:['櫻花', '#d9668c', '#fff3f6', 'petal'], 5:['薰風', '#2d8f86', '#e6fff9', 'leaf'], 6:['夏潮', '#1f7fb4', '#bfefff', 'wave'],
+  7:['盛夏', '#e0761a', '#ffe08a', 'sun'], 8:['星夜', '#1d2b5c', '#ffe7a0', 'star'], 9:['秋月', '#5b3f8a', '#ffd86a', 'moon'], 10:['豐收', '#a8641f', '#ffe2a8', 'fish'], 11:['楓紅', '#b8322a', '#f7b733', 'leaf'], 12:['初雪', '#4f86b5', '#ffffff', 'snow'] };
+function seasonOf(id){ const m = /(\d{4})(\d{2})$/.exec(id || ''); return m ? { y: +m[1], m: +m[2], T: SEASON_THEME[+m[2]] } : null; }
+{ const now = new Date(), endY = now.getFullYear(), endM = now.getMonth() + 2; for (let y = 2026, m = 11; y < endY || (y === endY && m <= endM); m === 12 ? (y++, m = 1) : m++){ const T = SEASON_THEME[m], k = `${y}${String(m).padStart(2, '0')}`, when = `${y} 年 ${m} 月賽季`;
+    CRAFT.push({ id:'lc_s' + k, name:`${T[0]}賽季線`, c:0, n:0, r:'排位', season:1, col:T[2] === '#ffffff' ? T[1] : T[2], desc:`${when}升到「釣竿好手」送的` }, { id:'rs_s' + k, name:`${T[0]}賽季竿`, c:0, n:0, r:'排位', season:2, desc:`${when}升到「釣魚高手」送的` },
+      { id:'nf_' + k, name:`${T[0]}名牌框`, c:0, n:0, r:'排位', season:3, ico:'🪪', desc:`${when}升到「海上名人」送的，名字外面一圈框，大家都看得到` }, { id:'rs_l' + k, name:`${T[0]}傳說竿`, c:0, n:0, r:'排位', season:4, desc:`${when}升到「傳說釣手」送的，竿子會發光` }); } }
 const CRAFT_BY = Object.fromEntries(CRAFT.map(c => [c.id, c]));
+function seasonMotif(c, kind, x, y, r, col){ c.save(); c.translate(x, y); c.fillStyle = col; c.strokeStyle = col; c.lineWidth = 2.2;
+  if (kind === 'leaf'){ c.rotate(-0.6); c.beginPath(); c.ellipse(0, 0, r, r * 0.45, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(-r * 1.3, 0); c.lineTo(r, 0); c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = 1.2; c.stroke(); }
+  else if (kind === 'petal'){ for (let i = 0; i < 5; i++){ c.beginPath(); c.arc(Math.cos(i * 1.2566) * r * 0.5, Math.sin(i * 1.2566) * r * 0.5, r * 0.45, 0, 7); c.fill(); } c.fillStyle = '#ffd86a'; c.beginPath(); c.arc(0, 0, r * 0.22, 0, 7); c.fill(); }
+  else if (kind === 'drop'){ c.beginPath(); c.moveTo(0, -r); c.quadraticCurveTo(r * 0.8, r * 0.2, 0, r * 0.7); c.quadraticCurveTo(-r * 0.8, r * 0.2, 0, -r); c.fill(); }
+  else if (kind === 'wave'){ c.beginPath(); for (let i = -r * 2; i <= r * 2; i += 2) c.lineTo(i, Math.sin(i / r * 2.2) * r * 0.35); c.stroke(); }
+  else if (kind === 'sun'){ c.beginPath(); c.arc(0, 0, r * 0.5, 0, 7); c.fill(); for (let i = 0; i < 8; i++){ c.beginPath(); c.moveTo(Math.cos(i * 0.785) * r * 0.7, Math.sin(i * 0.785) * r * 0.7); c.lineTo(Math.cos(i * 0.785) * r, Math.sin(i * 0.785) * r); c.stroke(); } }
+  else if (kind === 'star'){ c.beginPath(); for (let i = 0; i < 10; i++){ const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * 0.42 : r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); }
+  else if (kind === 'moon'){ c.beginPath(); c.arc(0, 0, r * 0.8, 0, 7); c.fill(); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(r * 0.35, -r * 0.2, r * 0.7, 0, 7); c.fill(); }
+  else if (kind === 'fish'){ c.beginPath(); c.ellipse(0, 0, r * 0.8, r * 0.38, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(r * 0.7, 0); c.lineTo(r * 1.2, -r * 0.4); c.lineTo(r * 1.2, r * 0.4); c.closePath(); c.fill(); }
+  else if (kind === 'snow'){ for (let i = 0; i < 3; i++){ c.rotate(Math.PI / 3); c.beginPath(); c.moveTo(-r, 0); c.lineTo(r, 0); c.stroke(); } }
+  else if (kind === 'lantern'){ c.beginPath(); c.ellipse(0, 0, r * 0.62, r * 0.8, 0, 0, 7); c.fill(); c.fillStyle = '#5a1a10'; c.fillRect(-r * 0.35, -r * 0.95, r * 0.7, r * 0.2); c.fillRect(-r * 0.35, r * 0.75, r * 0.7, r * 0.2); }
+  c.restore(); }
+function seasonRodDraw(c, W, H, k){ const S = seasonOf(k); if (!S) return false; const T = S.T, leg = k.startsWith('rs_l'), g = c.createLinearGradient(0, H, 0, 0);
+  g.addColorStop(0, shadeHex(T[1], -0.35)); g.addColorStop(1, leg ? shadeHex(T[1], 0.15) : T[1]); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 8; i++) seasonMotif(c, T[3], i % 2 ? W * 0.68 : W * 0.32, 16 + i * 31, leg ? 11 : 10, T[2]);
+  if (leg){ c.fillStyle = '#ffd86a'; for (const y of [3, H - 6]) c.fillRect(0, y, W, 3); c.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 30; i++) c.fillRect((i * 29) % W, (i * 53) % H, 2, 2); }
+  return true; }
+function myFrame(){ if (LS.get('tide.nfOff', false)) return null; const L = (rec.owned || []).filter(x => /^nf_\d{6}$/.test(x)).sort(); return L.length ? L[L.length - 1] : null; }
+function nameFrame(nm, id){ if (!nm) return; const S = id && seasonOf(id); if (nm.dataset.nf === (id || '')) return; nm.dataset.nf = id || '';
+  if (!S){ nm.style.boxShadow = ''; nm.style.outline = ''; nm.classList.remove('nframe'); return; } nm.classList.add('nframe'); nm.style.setProperty('--nf1', S.T[1]); nm.style.setProperty('--nf2', S.T[2] === '#ffffff' ? '#e8f4ff' : S.T[2]); }
+function shadeHex(h, k){ return '#' + new THREE.Color(h).offsetHSL(0, 0, k).getHexString(); }
 const RSKIN_TEX = {};
 function rodSkinTex(k){ if (RSKIN_TEX[k]) return RSKIN_TEX[k]; const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const c = cv.getContext('2d'), W = 64, H = 256;
   if (k === 'rs_bamboo'){ c.fillStyle = '#b8c25a'; c.fillRect(0, 0, W, H); for (let y = 0; y < H; y += 42){ c.fillStyle = '#7a8a32'; c.fillRect(0, y, W, 5); c.fillStyle = '#d6dc8a'; c.fillRect(0, y + 5, W, 2); } }
@@ -4379,11 +4409,12 @@ function rodSkinTex(k){ if (RSKIN_TEX[k]) return RSKIN_TEX[k]; const cv = docume
     for (let j = 0; j < 9; j++){ const y0 = 18 + j * 28; c.strokeStyle = `rgba(150,220,255,${0.35 + (j % 3) * 0.15})`; c.lineWidth = 2.5; c.beginPath(); for (let x = 0; x <= W; x += 3) c.lineTo(x, y0 + Math.sin(x / 8 + j * 1.3) * 4); c.stroke(); }
     for (let j = 0; j < 3; j++){ const cy = 40 + j * 85; c.fillStyle = '#ffd86a'; c.beginPath(); c.arc(32, cy, 11, 0, 7); c.fill(); c.fillStyle = '#0d2a4d'; c.beginPath(); c.arc(37, cy - 3, 10, 0, 7); c.fill(); }
     c.fillStyle = '#fff6c8'; for (let i = 0; i < 26; i++){ c.fillRect((i * 37) % W, (i * 71) % H, 2, 2); } }
+  else if (seasonRodDraw(c, W, H, k)){ }
   else { c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 0.5); return (RSKIN_TEX[k] = t); }
 function rodHD(av, type, color, skin){
   if (!av || !av.rod) return; if (av.hd){ av.rod.remove(av.hd.root); if (av.hd.reelG) av.rod.remove(av.hd.reelG); }
-  const pole = type === 'pole', blank = skin === 'rs_gold' ? new THREE.MeshStandardMaterial({ color:'#e0b84a', roughness:0.25, metalness:0.85 }) : skin && CRAFT_BY[skin] ? new THREE.MeshStandardMaterial({ map: rodSkinTex(skin), roughness:0.35, metalness:0.2 }) : new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.25 }), dk = mat('#23262b', 0.4, { metalness:0.5 }), gold = mat('#d8b25a', 0.35, { metalness:0.6 }), wrap = mat(pole ? '#5a4030' : '#b8282c', 0.5);
+  const pole = type === 'pole', blank = skin === 'rs_gold' ? new THREE.MeshStandardMaterial({ color:'#e0b84a', roughness:0.25, metalness:0.85 }) : skin && CRAFT_BY[skin] ? new THREE.MeshStandardMaterial(Object.assign({ map: rodSkinTex(skin), roughness:0.35, metalness:0.2 }, /^rs_l\d/.test(skin) ? { emissive:'#ffffff', emissiveMap: rodSkinTex(skin), emissiveIntensity:0.55 } : {})) : new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.25 }), dk = mat('#23262b', 0.4, { metalness:0.5 }), gold = mat('#d8b25a', 0.35, { metalness:0.6 }), wrap = mat(pole ? '#5a4030' : '#b8282c', 0.5);
   const N = 6, L = 2.3, root = new THREE.Group(), segs = []; let par = root; root.position.y = 0.2;
   for (let i = 0; i < N; i++){ const r0 = 0.03 - i * 0.0036, r1 = 0.03 - (i + 1) * 0.0036, sl = (L - 0.2) / N, pv = new THREE.Group(); pv.position.y = i ? sl : 0; par.add(pv);
     const m = new THREE.Mesh(new THREE.CylinderGeometry(Math.max(0.006, r1), r0, sl, 7), blank); m.position.y = sl / 2; pv.add(m);
@@ -9518,9 +9549,18 @@ function mySeaTick(){ if (!Dive.on || Dive.site !== 'isle' || !Dive.group) retur
     const bed = diveBed(o.pos.x, o.pos.z) + (o.bottom ? o.y : 0.6); if (o.pos.y < bed) o.pos.y = bed;
     o.m.position.copy(o.pos); o.m.position.y += o.bottom ? 0 : Math.sin(t * 1.3 + o.ph) * 0.05; const hs = Math.hypot(o.vel.x, o.vel.z); if (hs > 0.02) o.m.rotation.y = lerpAngle(o.m.rotation.y, Math.atan2(-o.vel.z, o.vel.x), Math.min(1, dt * 4)); o.m.rotation.z = o.bottom ? 0 : clamp(Math.atan2(o.vel.y, hs + 0.01) * 0.6, -0.4, 0.4);
     const pd = Math.hypot(me.pos.x - o.pos.x, me.pos.z - o.pos.z, (me.baseY - o.pos.y) * 0.6);   /* 潛水時人的高度在 me.baseY */ if (pd < nd){ nd = pd; near = o; } }
+  /* v671 作者：「水伊布怎樣怎樣要玩家自己點才有，好擋」→ 不再靠近就自動跳，要點那條魚才顯示，6 秒後或游遠了就收起來 */
+  const S = MySea.sel; near = S && MySea.fish.includes(S) && performance.now() < MySea.selT && Math.hypot(me.pos.x - S.pos.x, me.pos.z - S.pos.z) < 14 ? S : null; if (!near) MySea.sel = null;
   let chip = $('#mySeaChip'); if (!chip){ chip = document.createElement('div'); chip.id = 'mySeaChip'; chip.className = 'panel'; document.body.appendChild(chip); }
   if (near){ const x = near.x, d = new Date(x.t), sp = SPOT_BY_ID[near.f.spot], who = x.who || '島主'; chip.hidden = false; const tx = `${fishTitle ? fishTitle(x) : near.f.name}・${x.w.toFixed(2)}kg・${who}在 ${d.getMonth() + 1}/${d.getDate()} 於${sp ? sp.label : '海裡'}釣到`; if (chip.textContent !== tx) chip.textContent = tx; }
   else if (!chip.hidden) chip.hidden = true; }
+const MySeaTap = { x: 0, y: 0, t: 0, rc: new THREE.Raycaster(), v: new THREE.Vector2() };
+canvas.addEventListener('pointerdown', e => { MySeaTap.x = e.clientX; MySeaTap.y = e.clientY; MySeaTap.t = performance.now(); });
+canvas.addEventListener('pointerup', e => { if (!Dive.on || Dive.site !== 'isle' || !MySea.fish.length) return; if (performance.now() - MySeaTap.t > 450 || Math.hypot(e.clientX - MySeaTap.x, e.clientY - MySeaTap.y) > 14) return;
+  const r = canvas.getBoundingClientRect(); MySeaTap.v.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); MySeaTap.rc.setFromCamera(MySeaTap.v, camera);
+  let best = null, bd = Infinity; const ray = MySeaTap.rc.ray, tmp = new THREE.Vector3();
+  for (const o of MySea.fish){ const c = o.m.getWorldPosition(tmp), d = ray.distanceToPoint(c), along = c.clone().sub(ray.origin).dot(ray.direction); if (along <= 0 || along > 40) continue; const sz = Math.max(0.5, (o.sz || 1) * 0.6) + along * 0.02; if (d < sz && along < bd){ bd = along; best = o; } }   /* 點到附近就算（魚小、會動，不用點很準） */
+  if (best){ MySea.sel = best; MySea.selT = performance.now() + 6000; try { SFX.click(); } catch(e){} } });
 function mySeaOff(){ const c = $('#mySeaChip'); if (c) c.hidden = true; if (MySea.g && MySea.g.parent) MySea.g.parent.remove(MySea.g); MySea.g = null; MySea.key = ''; MySea.fish = []; }
 function seaTick(){ if (!Dive.on || Dive.site !== 'isle'){ if (MySea.g || ($('#mySeaChip') && !$('#mySeaChip').hidden)) mySeaOff(); return; } try { mySeaTick(); } catch(e){ console.warn('mySea', e); } { const ib = $('#isleBar'); if (ib && !ib.hidden) ib.hidden = true; } if (frameNo % 30 === 11) seedChip(); decoTick(); if (frameNo % 120 === 9 && Sea.g && seaKey() !== Sea.vis) seaBuild(); }
 function nearSea(){ if (!Dive.on || Dive.site !== 'isle' || !Sea.g || !onIsle) return null; let best = -1, bd = 1.0; for (const i of seaSlots()){ const [x, z, y] = seaPos(i), d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd && me.baseY - y < 3){ bd = d; best = i; } } if (best < 0) return null; return { i: best, p: Farm.plots[100 + best], mine: farmMine() }; }
@@ -11722,6 +11762,44 @@ function duelSrvNow(){ return Date.now() + Duel.off; }
 function duelSide(d, mine){ const a = (d.me === 'a') === mine; if (d.team){ const x = duelSideRaw(d, a); x.name = (a ? [d.a_name, d.a2_name] : [d.b_name, d.b2_name]).map(n => n || '釣客').join('＋'); x.ids = a ? [d.a, d.a2] : [d.b, d.b2]; x.mem = (a ? d.am : d.bm) || {}; return x; } return duelSideRaw(d, a); }
 function duelSideRaw(d, a){ return a ? { id: d.a, name: d.a_name || '釣客', w: +d.a_w || 0, n: d.a_n || 0, big: +d.a_big || 0, log: Array.isArray(d.a_log) ? d.a_log : [] } : { id: d.b, name: d.b_name || '釣客', w: +d.b_w || 0, n: d.b_n || 0, big: +d.b_big || 0, log: Array.isArray(d.b_log) ? d.b_log : [] }; }
 
+
+/* ===== v670 ⚔️ 對決專屬畫面（手機「⚔️ 對決」；作者：「排位是不是也要有專屬畫面跟獎勵」「每季換新」；伺服器 213）=====
+   大大的段位牌和星星進度、本季剩幾天和名次、排位賽／小組對決按鈕、每天第一勝、這一季的四件段位獎勵、往季紀念徽章、最近 10 場、本季前 20 名。 */
+async function duelHubLoad(){ if (!duelOn() || Duel.hubBusy) return; Duel.hubBusy = true; const r = await duelRpc('duel_hub'); Duel.hubBusy = false; if (r && typeof r === 'object'){ Duel.hub = r; Duel.hubAt = Date.now(); Duel.stats = Object.assign({}, Duel.stats || {}, { stars: r.stars, wins: r.wins, losses: r.losses, draws: r.draws, streak: r.streak, best: r.best, s_wins: r.s_wins, s_losses: r.s_losses, season: r.season, mode: r.mode, spot: r.spot }); if (!$('#sheet').hidden && curTab === 'duelhub') renderTab(); } }
+function seasonItemsFor(se){ const k = String(se || '').replace('-', ''); return [['lc_s' + k, 1], ['rs_s' + k, 2], ['nf_' + k, 3], ['rs_l' + k, 4]]; }
+function renderDuelHub(body){ if (!Cloud.on){ body.appendChild(el('p', 'sub', '要連上雲端才能對決。')); return; } const H = Duel.hub; if (!H){ body.appendChild(el('p', 'sub', '載入中…')); duelHubLoad(); return; } if (Date.now() - (Duel.hubAt || 0) > 30000) duelHubLoad();
+  const st = H.stars || 0, ti = DUEL_TIERS.findIndex(t => t === duelTierOf(st)), tt = DUEL_TIERS[ti], nx = DUEL_TIERS[ti + 1];
+  const card = el('div', 'dh-card t' + ti); card.appendChild(el('div', 'dh-ic', tt[2])); const info = el('div', 'dh-info'); info.appendChild(el('div', 'dh-tier', tt[1])); info.appendChild(el('div', 'dh-stars', `⭐ ${st}`));
+  const bar = el('div', 'dh-bar'), fill = el('i'); fill.style.width = (nx ? Math.min(100, (st - tt[0]) / (nx[0] - tt[0]) * 100) : 100) + '%'; bar.appendChild(fill); info.appendChild(bar);
+  info.appendChild(el('div', 'dh-next', nx ? `再 ${nx[0] - st}⭐ 升到 ${nx[2]} ${nx[1]}` : '已經是最高段位了！')); card.appendChild(info); body.appendChild(card);
+  body.appendChild(el('div', 'dh-season', `${duelSeasonTxt(H.season)}・還剩 ${H.days_left} 天・本季 ${H.s_wins} 勝 ${H.s_losses} 敗${H.rank ? `・本季第 ${H.rank} 名` : ''}${(H.streak || 0) >= 2 ? `・🔥 ${H.streak} 連勝中` : ''}`));
+  { const row = el('div', 'dh-btns'); const a = el('button', 'tbtn buy', Duel.q ? '取消排隊' : '⚔️ 排位賽・找對手'), b = el('button', 'tbtn', '👥 小組對決'); a.disabled = b.disabled = duelLive();
+    a.addEventListener('click', () => { if (Duel.q){ duelQueueStop('已經取消排隊'); renderTab(); return; } closeSheet(); duelQueueAsk(); }); b.addEventListener('click', () => { closeSheet(); if (lobbyPeople().length >= 3) duelTeamPick(null); else duelTeamQueueAsk(); }); row.append(a, b); body.appendChild(row);
+    body.appendChild(el('p', 'sub', `今日特別賽：${H.mode ? duelModeName(H.mode, H.spot) : '—'}（按「排位賽」可以選）`)); }
+  body.appendChild(el('div', 'dh-day' + (H.day_win ? ' ok' : ''), H.day_win ? '✅ 今天的第一場勝利獎勵拿過了（✨ 亮光餌 ×5），明天再來' : '🎁 今天第一場排位勝利：送 ✨ 亮光餌 ×5'));
+  /* 這一季的段位獎勵 */
+  body.appendChild(el('div', 'dexhead', `🏆 ${duelSeasonTxt(H.season)}的段位獎勵（每季換新）`)); { const ul = el('div', 'dh-rew'), got = new Set(H.got || []), own = new Set(rec.owned || []);
+    for (const [id, k] of seasonItemsFor(H.season)){ const c = CRAFT_BY[id], T = DUEL_TIERS[k], ok = got.has(H.season + ':' + k) || own.has(id), li = el('div', 'dh-ri' + (ok ? ' ok' : '') + (k === 4 ? ' leg' : '')); if (!c) continue;
+      li.appendChild(craftSwatch(c)); li.appendChild(el('b', '', c.name)); li.appendChild(el('small', '', ok ? '✅ 拿到了' : `${T[2]} ${T[1]}（${T[0]}⭐）`)); ul.appendChild(li); }
+    body.appendChild(ul); body.appendChild(el('p', 'sub', '這一季第一次升到那個段位就送，馬上可以用：釣線和竿子在「背包 → 🎨 外觀」裝上，名牌框會自動掛在名字外面。下一季會換一套新的。'));
+    if ((rec.owned || []).some(x => /^nf_\d{6}$/.test(x))){ const on = !LS.get('tide.nfOff', false), b = el('button', 'tbtn ghost', on ? '🪪 名牌框：顯示中（按一下收起來）' : '🪪 名牌框：收起來了（按一下顯示）'); b.addEventListener('click', () => { LS.set('tide.nfOff', on); try { refreshMyName(); } catch(e){} renderTab(); }); body.appendChild(b); } }
+  /* 紀念徽章 */
+  if ((H.badges || []).length){ body.appendChild(el('div', 'dexhead', '🎖️ 往季紀念徽章')); const ul = el('div', 'dh-badges'); for (const b of H.badges.slice().reverse()){ const t = duelTierOf(b.p), S = seasonOf(String(b.s || '').replace('-', '')); const x = el('div', 'dh-bg'); if (S) x.style.setProperty('--bc', S.T[1]); x.appendChild(el('span', '', t[2])); x.appendChild(el('b', '', duelSeasonTxt(b.s).replace('賽季', '') + (S ? '・' + S.T[0] : ''))); x.appendChild(el('small', '', t[1])); ul.appendChild(x); } body.appendChild(ul); }
+  /* 最近 10 場 */
+  body.appendChild(el('div', 'dexhead', '📜 最近 10 場')); if (!(H.hist || []).length) body.appendChild(el('p', 'sub', '還沒打過，按上面的「排位賽」打第一場吧！'));
+  else { const ul = el('ul', 'dh-hist'); for (const h of H.hist){ const li = el('li', 'r-' + h.res); const sc = h.mode === 'big' ? `${(+h.me_big).toFixed(2)} : ${(+h.op_big).toFixed(2)}` : h.mode === 'count' ? `${h.me_n} : ${h.op_n} 條` : `${(+h.me_w).toFixed(2)} : ${(+h.op_w).toFixed(2)}`;
+      li.appendChild(el('b', '', h.res === 'w' ? '勝' : h.res === 'l' ? '敗' : '平')); li.appendChild(el('span', 'nm', `${h.team ? '👥 ' : ''}對 ${h.op || '釣客'}`)); li.appendChild(el('span', 'sc', sc)); li.appendChild(el('small', '', (h.ranked ? '排位' : '友誼') + (h.mode ? '・' + DUEL_MODES[h.mode][1] : ''))); ul.appendChild(li); } body.appendChild(ul); }
+  /* 本季排行 */
+  body.appendChild(el('div', 'dexhead', `👑 ${duelSeasonTxt(H.season)}排行`)); { const ul = el('ul', 'dh-top'); (H.top || []).forEach((r, i) => { const li = el('li', r.me ? 'me' : ''); const t = duelTierOf(r.stars); li.appendChild(el('b', '', i < 3 ? ['🥇', '🥈', '🥉'][i] : String(i + 1))); li.appendChild(el('span', 'nm', r.n)); li.appendChild(el('span', '', `${t[2]} ⭐${r.stars}`)); li.appendChild(el('small', '', `${r.wins}勝${r.losses}敗`)); ul.appendChild(li); });
+    if (!(H.top || []).length) ul.appendChild(el('li', '', '這一季還沒有人打排位賽')); body.appendChild(ul);
+    if (H.rank && !(H.top || []).some(r => r.me)) body.appendChild(el('div', 'dh-mine', `你：第 ${H.rank} 名・⭐${st}`)); } }
+/* 升段的時候：全螢幕跳一下新段位牌（有拿到賽季造型也一起秀） */
+function duelTierUp(tier, se){ const ti = DUEL_TIERS.findIndex(t => t[1] === tier); if (ti < 1) return; const T = DUEL_TIERS[ti], id = (seasonItemsFor(se || (Duel.hub && Duel.hub.season) || duelSeasonNow())[ti - 1] || [])[0], c = id && CRAFT_BY[id];
+  const ov = el('div', 'dh-up'); const bx = el('div', 'dh-upbox t' + ti); bx.appendChild(el('div', 'dh-upic', T[2])); bx.appendChild(el('div', 'dh-upt', `升上「${T[1]}」！`));
+  if (c){ bx.appendChild(el('div', 'dh-upr', `獲得賽季造型：${c.name}`)); if (!(rec.owned || []).includes(id)){ rec.owned = (rec.owned || []).concat(id); try { saveRecLocal(); } catch(e){} } }
+  const ok = el('button', 'tbtn buy', '太好了'); bx.appendChild(ok); ov.appendChild(bx); document.body.appendChild(ov); ok.addEventListener('click', () => { ov.remove(); try { refreshMyName(); } catch(e){} });
+  try { SFX.catch(); setTimeout(() => SFX.coin(), 350); } catch(e){} }
+function duelSeasonNow(){ const d = new Date(Date.now() + 8 * 3600e3); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; }
 /* ===== v668 👥 小組對決（2 對 2）（作者：「對決能有小組對決嗎」→ 同意設計：2 對 2、先不算星星。伺服器 212_duel_team.sql）
    ・邀請：同一個大廳裡選 1 個隊友＋2 個對手，三個人都按接受才開始。
    ・小組找對手：自己排，或跟朋友互相選對方一起排（會傳訊息叫朋友也按），湊滿 4 個人就開。
@@ -12177,6 +12255,7 @@ function duelTick(){ if (!duelOn()) return; const t = performance.now(), d = Due
   if (Duel.pend && Duel.shown !== Duel.pend.id && (!duelFishingNow() || t - Duel.pendAt > 60000)){ const pd = Duel.pend; Duel.pend = null; Duel.shown = pd.id; duelResult(pd); }
   if (t - Duel.polled > gap && !Duel.busy) duelPoll();
   try { duelWantTick(); } catch(e){}
+  if (!Duel.statsAt && !Duel.hub && !Duel.hubAt){ Duel.hubAt = 1; setTimeout(duelHubLoad, 12000); }
   if (!Duel.statsAt){ Duel.statsAt = t; duelRpc('duel_my_stats').then(s => { if (s && typeof s === 'object'){ Duel.stats = s; try { refreshMyName(); } catch(e){} } }); }
   duelQTick(); duelBarTick(); }
 function duelOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const m = msg.data; if (!duelOn() || m.to !== Cloud.userId) return;
@@ -12209,7 +12288,9 @@ function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), w
   if (d.team){ const all = Object.assign({}, d.am || {}, d.bm || {}); let best = null, bw = 0; for (const u in all) if (+all[u] > bw){ bw = +all[u]; best = u; }   /* v668 這場誰釣最重 */
     c.appendChild(el('p', 'dc-tier', best ? `⭐ 這場 MVP：${best === Cloud.userId ? '你' : duelNameOf(d, best)}（${bw.toFixed(2)} 公斤）` : '這場大家都沒釣到')); }
   c.appendChild(el('p', 'sub', d.team ? '👥 小組對決是友誼賽：不算星星和戰績。' : d.ranked === false ? '🤝 友誼賽：不算星星和戰績。想打排位賽到「背包」按「找對手」。' : d.counted === false ? '今天跟這位對手已經打滿 3 局，這一局不算進戰績。' : `你的對決戰績：${s.wins || 0} 勝 ${s.losses || 0} 敗${s.draws ? ` ${s.draws} 平` : ''}${(s.streak || 0) >= 2 ? `・${s.streak} 連勝中 🔥` : ''}`));
-  if (s.stars != null && d.ranked !== false){ const pv = Duel.prevStars, dl = pv != null && d.counted !== false ? (s.stars || 0) - pv : 0; c.appendChild(el('p', 'dc-tier', `段位：${duelTierTxt(s)}${dl > 0 ? `（+${dl}⭐）` : dl < 0 ? `（${dl}⭐）` : ''}`)); if (pv != null && duelTierOf(s.stars)[1] !== duelTierOf(pv)[1] && dl > 0){ flash(`⬆️ 升上「${duelTierOf(s.stars)[1]}」！`, 2); } }
+  if (s.stars != null && d.ranked !== false){ const pv = Duel.prevStars, dl = pv != null && d.counted !== false ? (s.stars || 0) - pv : 0; c.appendChild(el('p', 'dc-tier', `段位：${duelTierTxt(s)}${dl > 0 ? `（+${dl}⭐）` : dl < 0 ? `（${dl}⭐）` : ''}`)); if (pv != null && duelTierOf(s.stars)[1] !== duelTierOf(pv)[1] && dl > 0){ const nt = duelTierOf(s.stars)[1]; setTimeout(() => duelTierUp(nt), 600); } }
+  if (win === true && d.ranked && d.counted !== false && Duel.hub && !Duel.hub.day_win){ Duel.hub.day_win = true; c.appendChild(el('p', 'dc-tier', '🎁 今天第一場勝利：✨ 亮光餌 ×5')); }
+  if (d.ranked) setTimeout(duelHubLoad, 1500);
   Duel.prevStars = s.stars;
   if (d.team){ const row = el('div', 'dc-btns'), x2 = el('button', 'tbtn ghost', '關閉'), again = el('button', 'tbtn', '同一組再來一局'), q2 = el('button', 'tbtn ghost', '小組找對手'); const ok4 = duelOthers(d).every(u => lobbyPeople().some(p => p.uid === u)) && d.a === Cloud.userId;
     if (ok4) row.appendChild(again); row.append(q2, x2); c.appendChild(row); x2.addEventListener('click', () => duelCardClose('res')); q2.addEventListener('click', () => { duelCardClose('res'); duelTeamQueueAsk(); });
@@ -12604,13 +12685,13 @@ function renderCraft(body){
   const own = new Set(rec.owned || []);
   for (const [kind, title] of [['hk_', '🪝 鉤子（一次裝一個，影響拉魚）'], ['rs_', '🎣 竿子造型（跟著你走，換哪支竿子都還在；包包的「🎨 外觀」可以預覽和換）'], ['lc_', '🧵 釣線顏色']]){
     body.appendChild(el('div', 'dexhead', title)); const ul = el('ul', 'shoplist cols');
-    for (const c of CRAFT.filter(x => x.id.startsWith(kind))){ const li = el('li', own.has(c.id) ? 'on' : ''); li.appendChild(craftSwatch(c)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name));
+    for (const c of CRAFT.filter(x => x.id.startsWith(kind) && (!x.season || own.has(x.id)))){ const li = el('li', own.has(c.id) ? 'on' : ''); li.appendChild(craftSwatch(c)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name));
       const cur = kind === 'rs_' ? rec.rodSkin : kind === 'hk_' ? rec.hook : rec.lineCol, using = cur === c.id;
-      d.appendChild(el('div', 'sub2', own.has(c.id) ? (using ? '使用中' : '已經有了') : c.stamp ? `📮 做不出來：村長的集章卡每蓋滿 4 張送一支・${c.desc}` : `🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條${c.desc ? '・' + c.desc : ''}`)); li.appendChild(d);
+      d.appendChild(el('div', 'sub2', own.has(c.id) ? (using ? '使用中' : '已經有了') : c.season ? `⚔️ 做不出來：${c.desc}` : c.stamp ? `📮 做不出來：村長的集章卡每蓋滿 4 張送一支・${c.desc}` : `🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條${c.desc ? '・' + c.desc : ''}`)); li.appendChild(d);
       const a = el('div', 'tacts');
       if (own.has(c.id) && kind === 'hk_'){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上'); b.addEventListener('click', async () => { const row = await craftRpc('set_hook', { p_hook: using ? null : c.id }); if (row){ adoptRow(row); renderTab(); } }); a.appendChild(b); }
       else if (own.has(c.id)){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上'); b.addEventListener('click', async () => { const sk = kind === 'rs_' ? (using ? null : c.id) : rec.rodSkin || null, lc = kind === 'lc_' ? (using ? null : c.id) : rec.lineCol || null; const row = await craftRpc('set_rod_look', { p_skin: sk, p_line: lc }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } }); a.appendChild(b); }
-      else if (c.stamp){ }
+      else if (c.stamp || c.season){ }
       else { const use = craftUse(c), ok = use.length >= c.n && rec.coins >= c.c, b = el('button', 'tbtn', '做'); b.disabled = !ok; if (!ok) d.appendChild(el('div', 'sub2', use.length < c.n ? `魚缸裡能用的${c.r}魚只有 ${use.length} 條` : '金幣不夠'));
         b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; b.classList.add('warn'); d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
           b.disabled = true; const r = await craftRpc('craft_item', { p_id: c.id }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash(`🔧 阿鐵師傅做好了：${c.name}！`, 1.8); const n = npcs.find(x => x.shopNpc === 'craft'); if (n) n.say('做好了！拿去用吧', 'emote', 3); try { renderTab(); } catch(e){} } else b.disabled = false; }); a.appendChild(b); }
@@ -16487,8 +16568,8 @@ function renderLook(body){ const own = new Set(rec.owned || []);
     const none = el('li', (kind === 'rs_' ? !rec.rodSkin : !rec.lineCol) ? 'on' : ''); const sw0 = document.createElement('canvas'); sw0.width = 64; sw0.height = 40; const g0 = sw0.getContext('2d'); g0.fillStyle = kind === 'rs_' ? curRod().color : '#fbf8ef'; g0.fillRect(kind === 'rs_' ? 8 : 4, kind === 'rs_' ? 16 : 19, kind === 'rs_' ? 48 : 56, kind === 'rs_' ? 8 : 3); none.appendChild(sw0);
     const d0 = el('div', 'tinfo'); d0.appendChild(el('div', 'n', kind === 'rs_' ? '不裝（竿子原本的顏色）' : '白色（原本的）')); none.appendChild(d0); const a0 = el('div', 'tacts'), b0 = el('button', 'tbtn ghost', '用這個');
     b0.disabled = kind === 'rs_' ? !rec.rodSkin : !rec.lineCol; b0.addEventListener('click', async () => { const row = await craftRpc('set_rod_look', { p_skin: kind === 'rs_' ? null : rec.rodSkin || null, p_line: kind === 'lc_' ? null : rec.lineCol || null }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } }); a0.appendChild(b0); none.appendChild(a0); ul.appendChild(none);
-    for (const c of CRAFT.filter(x => x.id.startsWith(kind))){ const has = own.has(c.id), cur = kind === 'rs_' ? rec.rodSkin : rec.lineCol, using = cur === c.id, li = el('li', using ? 'on' : ''); li.appendChild(craftSwatch(c));
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name)); d.appendChild(el('div', 'sub2', has ? (using ? '使用中' : '已經有了') : c.stamp ? '還沒有・📮 集章卡限定（每蓋滿 4 張送）' : `還沒有・工坊做：🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條`)); li.appendChild(d);
+    for (const c of CRAFT.filter(x => x.id.startsWith(kind) && (!x.season || own.has(x.id)))){ const has = own.has(c.id), cur = kind === 'rs_' ? rec.rodSkin : rec.lineCol, using = cur === c.id, li = el('li', using ? 'on' : ''); li.appendChild(craftSwatch(c));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', c.name)); d.appendChild(el('div', 'sub2', has ? (using ? '使用中' : '已經有了') : c.season ? `還沒有・⚔️ ${c.desc}` : c.stamp ? '還沒有・📮 集章卡限定（每蓋滿 4 張送）' : `還沒有・工坊做：🪙${c.c.toLocaleString()}＋${c.r}魚 ${c.n} 條`)); li.appendChild(d);
       const a = el('div', 'tacts');
       if (has){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上'); b.addEventListener('click', async () => { const sk = kind === 'rs_' ? (using ? null : c.id) : rec.rodSkin || null, lc = kind === 'lc_' ? (using ? null : c.id) : rec.lineCol || null; const row = await craftRpc('set_rod_look', { p_skin: sk, p_line: lc }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } }); a.appendChild(b); }
       else { const b = el('button', 'tbtn ghost', '看一下'); b.addEventListener('click', () => { pv.innerHTML = ''; pv.appendChild(lookPreview(kind === 'rs_' ? c.id : rec.rodSkin, kind === 'lc_' ? c.id : rec.lineCol)); pv.scrollIntoView({ block:'nearest', behavior:'smooth' }); }); a.appendChild(b); }
@@ -16958,7 +17039,8 @@ function presenceObj(){
   { const av = myAvatar(); if (av) o.av = av; }   /* v334 頭像 */
   if (myId) o.u = myId;
   { const ft = typeof fbMyTeam === 'function' && fbMyTeam(); if (ft){ o.tn = ft.n; if (ft.c) o.tc = ft.c; } }   /* v529 釣友隊名（體育場足球分邊用） */
-  { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }   /* v521 排位賽段位（名字旁邊掛稱號用） */
+  { const ds = typeof Duel !== 'undefined' && Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0) o.dr = Math.max(0, Math.min(999, ds.stars | 0)); }
+  { const nf = myFrame(); if (nf) o.nf = nf; }   /* v670 排位的名牌框 */   /* v521 排位賽段位（名字旁邊掛稱號用） */
   if (myBoat) o.bt = 1 + Math.max(0, boats.indexOf(myBoat)); else if (Voy.on) o.bt = 1;   /* v579 坐阿海的船：別人看到你坐在小船上沿著航道走 */   /* v453 順便帶上是哪一艘（顏色），別人看到的船跟你同色 */
   if (mySeat && !me.standFish) o.st = 1;   /* v660 拉大魚時站起來：別人看你也是站著 */
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
@@ -17020,6 +17102,7 @@ function applyPeer(pp){
   p.fisher.setGear(cleanGear(pr.gr));
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { const st = pr.dr; if (Number.isInteger(st) && st >= 0 && st <= 999){ const tt = duelTierOf(st); p.fisher.nm.dataset.duel = tt[2] + tt[1]; } else delete p.fisher.nm.dataset.duel; }
+  nameFrame(p.fisher.nm, typeof pr.nf === 'string' && /^nf_\d{6}$/.test(pr.nf) ? pr.nf : null);
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph;
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
@@ -17539,7 +17622,7 @@ async function initSocial(){
   }
 }
 function refreshMyName(){ me.setName(((rec.rods || []).includes('king') ? '👑 ' : '') + (nickname || (myId && profileNames[myId]) || '你'));   /* v637 王者竿的補償：名字旁邊的王冠 */ if (me.nm){ let t = ''; try { t = curTitle(); } catch(e){} if (t) me.nm.dataset.title = t; else delete me.nm.dataset.title;
-    try { const ds = Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0){ const tt = duelTierOf(ds.stars); me.nm.dataset.duel = tt[2] + tt[1]; } else delete me.nm.dataset.duel; } catch(e){} } }
+    try { const ds = Duel.stats; if (ds && (ds.wins || 0) + (ds.losses || 0) > 0){ const tt = duelTierOf(ds.stars); me.nm.dataset.duel = tt[2] + tt[1]; } else delete me.nm.dataset.duel; } catch(e){} try { nameFrame(me.nm, myFrame()); } catch(e){} } }
 let saving = false, saveAgain = false;
 async function saveRemote(){
   if (!db || !myId || !dbWritable) return;
@@ -18810,6 +18893,7 @@ function renderTab(){
   if (curTab === 'craft'){ renderCraft(body); return; }
   if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'dm'){ renderDM(body); return; }
+  if (curTab === 'duelhub'){ renderDuelHub(body); return; }
   if (curTab === 'chumhot'){ renderChumHot(body); return; }
   if (curTab === 'fkit') curTab = 'rig2';   /* v635 釣魚裝備搬進「🎣 釣組」 */
   if (curTab === 'rig2'){ renderRig2(body); return; }
@@ -19283,6 +19367,7 @@ function renderTab(){
       '野外的水面和海底的魚都有自己的習性：黑鱸、石斑、鯊魚、鮪魚這些掠食魚會追比自己小很多的魚，追到就一口吃掉（水面會濺起水花、海底會冒泡泡），小魚看到大魚會成群逃開。被吃掉的小魚過一陣子會再游回來，不會越來越少。',
       '水面上的魚群（沙丁魚、丁香魚這些）大家看到的是同一群：同一個時間、同一個地方，朋友也會看到一樣的魚群在一樣的位置游，可以約一起去追。',
       '魚缸、我的海裡的魚不會互相吃，放心養。走近看魚（潛水時更明顯）畫面下方會告訴你牠正在做什麼。',
+      '🐠 在自己小島的海底，點一下魚就會在上面顯示這條魚是誰、什麼時候、在哪裡釣到的，6 秒後自己收起來（不會一靠近就跳出來擋畫面）。',
     ]);
     sec('🏮 節慶活動', [
       '台灣的節日村子會換裝飾、有限定活動：跨年（晚上港口放煙火，港口外海晚上釣得到限定的「煙火魚」，倒數的時候在線上領紀念章）、春節（除夕起 7 天，鏡湖釣得到限定的「紅錦鯉」，每天領紅包、舞獅在廣場繞、限定舞獅帽和春聯）、元宵（猜燈謎拿金幣、水面上有燈籠、限定天燈）、端午（港口有龍舟、划龍舟小遊戲、限定香包和龍舟模型）、中秋（大月亮、烤肉小遊戲、限定柚子帽）、七夕（晚上天上有鵲橋、每天一份禮物、限定花冠和鵲橋）、萬聖節（10/29～10/31，南瓜燈和蝙蝠、每天拿糖果、限定南瓜帽和巫師帽）、聖誕節（12/20～12/26，廣場大聖誕樹、晚上下小雪、每天一份禮物、限定聖誕帽和麋鹿角、聖誕樹家具）、每個月第一個週末晚上的夜市（廣場邊的夜市攤，走到攤子前面可以玩撈金魚和射氣球，一次 30 金幣，每天最多贏 600；一次撈到 8 分送金魚缸家具；限定夜市小攤）。',
@@ -19436,6 +19521,8 @@ function renderTab(){
       '⚔️ 有人在找對手的提示：別人按了「找對手」在排隊的時候，你的畫面上面會跳出「有人在找排位賽對手」（不會顯示是誰，配到才知道），按「我來打」馬上配到；不想打按 ✕，5 分鐘內不會再跳。',
       '⚔️ 排位賽和段位：只有自動配對到的才是排位賽，贏輸才會動星星、勝敗和連勝（跟同一個人一天只有前 3 局算）。有打過排位賽的人，名字旁邊會掛著段位。在「朋友」分頁、「背包」或廣場大看板的「⚔️ 對決排行」按「找對手」，系統會幫你找另一個也在找對手的人（不用在同一個大廳，會先找段位接近的），找到就直接開始；畫面上面會顯示「找對手中…」，隨時可以取消，兩分鐘沒找到會自動取消。贏一局 +1⭐，連勝第 3 場起每場 +2⭐；輸一局 -1⭐（3⭐ 以下不扣）。段位：🐟對決新手、🎣釣竿好手（3⭐）、🏅釣魚高手（8⭐）、🌊海上名人（15⭐）、👑傳說釣手（25⭐）。廣場大看板有「⚔️ 對決排行」前 20 名。',
       '👥 小組對決（2 對 2）：「朋友」分頁按「👥 小組對決」。可以邀同一個大廳的人（選 1 個隊友、2 個對手，三個人都接受就開始），或用「小組找對手」自己排、跟朋友一起排，湊滿 4 個人就開。3 分鐘比兩隊加起來的魚，可以選總重量、最大一條或條數。比賽中上面會顯示你和隊友各釣了多重，結束會選出這場釣最重的 MVP。小組對決是友誼賽，不算星星和戰績。',
+      '⚔️ 對決專屬畫面：手機「⚔️ 對決」看段位、星星還差多少升段、本季剩幾天和名次、最近 10 場、本季排行，也可以直接開排位賽或小組對決。',
+      '🏆 排位獎勵：每天第一場排位勝利送 ✨ 亮光餌 ×5。每一季（每個月）第一次升到某個段位，馬上送這一季的造型：釣竿好手→賽季釣線、釣魚高手→賽季竿子皮膚、海上名人→名牌框（名字外面一圈框，大家都看得到，可以在對決畫面收起來）、傳說釣手→會發光的傳說竿。每季換一套新的。換季時打過排位的人會拿到一個紀念徽章，永久保留。',
       '🗓 賽季：每個月（台灣時間）是一季。換月以後星星保留一半（例如 9⭐ 變 4⭐），再重新往上打；總勝敗和最多連勝不會變。上一季打到的最高段位會留在玩家資料頁的段位牌下面。大看板的對決排行只列這一季打過的人。',   /* v551 */
       '🎲 今日特別賽：按「找對手」會問你要比「一般排位賽」還是「今日特別賽」。特別賽每天換一種，輪流是 📍 指定釣點賽（只有在當天指定的釣點釣到才算，配到後有 12 秒走位）、🐋 大魚賽（只比最大的一條）、🔢 多魚賽（比釣到幾條，一樣多才比總重量）。都算星星和段位，只會配到選同一種的人。邀朋友打友誼賽時可以自己選要比哪一種。',
       '🖼️ 頭像：「造型」分頁最上面可以換頭像，選自己的角色、一個符號、自己養的寵物，或圖鑑裡釣過的魚。左上角、玩家列表、好友列表都會顯示。',
@@ -20663,7 +20750,7 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
    從手機打開頁面時，角色會拿出手機低頭滑，別人也看得到（presence 的 ph）。 ===== */
 const PHONE_APPS = [
   ['村子裡', [['phfeed', '🔔', '快訊'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
-  ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
+  ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['duelhub', '⚔️', '對決'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
   ['我的', [['photo', '📷', '拍照'], ['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
 SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.wild = '🏝️ 荒島背包'; SHEET_TITLE.phfeed = '🔔 快訊';
 function phoneOpen(){ Phone.via = true; openSheet('phone'); }
@@ -20671,7 +20758,7 @@ function phoneGo(tab){ Phone.via = true;
   if (tab === 'photo'){ closeSheet(); setTimeout(() => { try { enterPhoto(); } catch(e){} }, 80); return; }   /* v628 作者：「拍照功能去哪了」→ 頭像選單裡的📷被「今天」擋住看不到，手機也放一個 */
   if (tab === 'seachart'){ openSheet('map'); setTimeout(() => { const h = [...$$('#sheetBody .dexhead')].find(x => /航海圖/.test(x.textContent)); if (h) h.scrollIntoView({ block:'start', behavior:'smooth' }); }, 60); return; }
   try { ui3Open(tab); } catch(e){}
-  if (tab === 'news'){ News.pick = 0; loadNews(); } if (tab === 'board') loadBoard(); if (tab === 'tboard'){ Team.view = 'team'; loadTeam(); loadTeamBoard(); }
+  if (tab === 'news'){ News.pick = 0; loadNews(); } if (tab === 'board') loadBoard(); if (tab === 'tboard'){ Team.view = 'team'; loadTeam(); loadTeamBoard(); } if (tab === 'duelhub') duelHubLoad();
   if (tab === 'phfeed'){ Phone.seen = Date.now(); LS.set('tide.phSeen', Phone.seen); }
   openSheet(tab); }
 function phoneUnread(){ return Phone.feed.filter(e => e.t > Phone.seen && e.c !== 'me').length; }
@@ -20681,7 +20768,7 @@ function phoneFrN(){ return (Fr.gifts || []).length + (Fr.req || []).length; }
    一則最多 120 字，送出前跟大家聊天一樣過濾髒話；對方傳來的也會再過濾一次。封鎖的人傳的看不到。訊息伺服器只留 30 天。
    沒有一直連線：打開對話時每 4 秒問一次新訊息，平常每 25 秒問一次有沒有未讀（手機上的紅點、跳通知）。 */
 var DM = { with: null, msgs: [], last: 0, unread: [], at: 0, pullAt: 0, busy: false, draft: '' };
-SHEET_TITLE.dm = '💬 訊息';
+SHEET_TITLE.dm = '💬 訊息'; SHEET_TITLE.duelhub = '⚔️ 對決';
 function dmUnreadN(){ return DM.unread.reduce((a, u) => a + (u.n | 0), 0); }
 function dmBlocked(uid){ return !!(blockList[uid] || mutedSet.has(uid)); }
 async function dmUnreadLoad(){ if (!Cloud.on || !Cloud.sb || DM.uBusy) return; DM.uBusy = true; DM.at = Date.now();

@@ -6282,5 +6282,12 @@
  "一起排": "Queue together",
  "同一組再來一局": "Rematch, same teams",
  "小組找對手": "Team matchmaking",
- "📨 邀大廳裡的人": "📨 Invite people in this lobby"
+ "📨 邀大廳裡的人": "📨 Invite people in this lobby",
+ "🐠 在自己小島的海底，點一下魚就會在上面顯示這條魚是誰、什麼時候、在哪裡釣到的，6 秒後自己收起來（不會一靠近就跳出來擋畫面）。": "🐠 Under your own island, tap a fish to see who caught it, when and where. It hides again after 6 seconds (it no longer pops up just from swimming close).",
+ "⚔️ 對決專屬畫面：手機「⚔️ 對決」看段位、星星還差多少升段、本季剩幾天和名次、最近 10 場、本季排行，也可以直接開排位賽或小組對決。": "⚔️ Duel screen: open ⚔️ Duel on the phone to see your rank, how many stars to the next tier, days left in the season, your place, your last 10 matches and the season leaderboard. You can start a ranked or team duel from there too.",
+ "🏆 排位獎勵：每天第一場排位勝利送 ✨ 亮光餌 ×5。每一季（每個月）第一次升到某個段位，馬上送這一季的造型：釣竿好手→賽季釣線、釣魚高手→賽季竿子皮膚、海上名人→名牌框（名字外面一圈框，大家都看得到，可以在對決畫面收起來）、傳說釣手→會發光的傳說竿。每季換一套新的。換季時打過排位的人會拿到一個紀念徽章，永久保留。": "🏆 Ranked rewards: your first ranked win each day gives ✨ Glow bait ×5. Each season (each month), the first time you reach a tier you get that season's item: Rod Pro → season line, Fishing Ace → season rod skin, Sea Celebrity → name frame (a frame around your name everyone can see; you can hide it on the duel screen), Legend → glowing legend rod. A new set every season. When a season ends, everyone who played ranked gets a keepsake badge forever.",
+ "對決": "Duel",
+ "太好了": "Great!",
+ "往季紀念徽章": "Past season badges",
+ "最近 10 場": "Last 10 matches"
 }
