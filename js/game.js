@@ -9391,12 +9391,19 @@ function seaBuild(){ if (!Dive.on || Dive.site !== 'isle' || !Dive.group) return
 /* ===== v650 我的海：放進「我的海」的魚，在小島海底花園自己游（作者：「如果能將釣到的魚放在小島海底下」）=====
    自己的島用 rec.show；在朋友的島上用伺服器的 visit_aqua 拿對方的清單。魚用真的 3D 模型，不參加潛水的魚 AI（不會被大魚追著吃）。
    習性：螃蟹、比目魚、魟魚、章魚、龍蝦趴在海底慢慢爬；鯊魚、鯨魚、大魚在外圈繞大圈；其他的在中間到處游。傳說魚身邊有一點光。游近一條魚，下面會寫牠是誰釣的、多重 */
-const MySea = { g:null, key:'', fish:[], other:null, otherFor:null, loading:false, t:0 };
-function mySeaList(){ const own = typeof farmMine === 'function' && farmMine(); if (own){ const set = new Set(rec.show || []); return { name: '', list: rec.tank.filter(x => set.has(x.t)) }; }
-  const owner = onIsle && onIsle.owner; if (!owner) return { name: '', list: [] };
-  if (MySea.otherFor !== owner && !MySea.loading && Cloud.sb){ MySea.loading = true; Cloud.sb.rpc('visit_aqua', { p_id: owner }).then(({ data }) => { MySea.loading = false; MySea.otherFor = owner; if (data){ const r = normRec({ tank: data.tank, show: data.show }), set = new Set(r.show || []); MySea.other = { name: data.nickname || '', list: r.tank.filter(x => set.has(x.t)) }; } else MySea.other = { name: '', list: [] }; MySea.key = ''; }, () => { MySea.loading = false; }); }
-  return MySea.otherFor === owner && MySea.other ? MySea.other : { name: '', list: [] }; }
-function mySeaBuild(){ const L = mySeaList(), cap = 60, list = L.list.slice().sort((a, b) => (RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity]) || b.w - a.w).slice(0, cap);
+const MySea = { g:null, key:'', fish:[], other:null, otherFor:null, loading:false, t:0, at:0 };
+function mySeaList(){   /* v652 一起住的人共用：島主＋一起住的人放進「我的海」的魚都在這片海裡（伺服器 home_sea），每條寫是誰的 */
+  const owner = onIsle && onIsle.owner, meId = myIdOrMe(), mine = rec.tank.filter(x => new Set(rec.show || []).has(x.t));
+  if (!owner) return { people: [] };
+  if (Cloud.sb && !MySea.loading && (MySea.otherFor !== owner || Date.now() - (MySea.at || 0) > 60000)){ MySea.loading = true; MySea.at = Date.now();
+    Cloud.sb.rpc('home_sea', { p_owner: owner }).then(({ data, error }) => { MySea.loading = false; if (error || !Array.isArray(data)) return; MySea.otherFor = owner;
+      MySea.other = data.map(p => { const r = normRec({ tank: p.fish || [], show: p.show || [] }); return { id: p.id, name: p.n || '釣客', list: r.tank }; }); }, () => { MySea.loading = false; }); }
+  let people = MySea.otherFor === owner && MySea.other ? MySea.other.map(p => p.id === meId ? { id: meId, name: '你', list: mine } : p) : [];
+  if (owner === meId && !people.some(p => p.id === meId)) people = [{ id: meId, name: '你', list: mine }].concat(people);
+  if (!people.some(p => p.id === meId) && typeof canEditIsle === 'function' && canEditIsle(owner) && mine.length) people.push({ id: meId, name: '你', list: mine });   /* 一起住、伺服器還沒回來：先放自己的 */
+  return { people }; }
+function mySeaBuild(){ const P = mySeaList().people, cap = 60, srt = l => l.slice().filter(x => FISH_BY_ID[x.f]).sort((a, b) => (RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity]) || b.w - a.w);
+  const Q = P.map(p => ({ p, l: srt(p.list) })), list = []; for (let k = 0; list.length < cap && Q.some(q => q.l.length > k); k++) for (const q of Q){ if (list.length >= cap) break; const x = q.l[k]; if (x) list.push(Object.assign({ who: q.p.name }, x)); }   /* 超過 60 條：每個人輪流放一條（最稀有、最重的先），不會被一個人佔滿 */
   const key = (onIsle && onIsle.owner || '') + ':' + list.map(x => x.t).join(','); if (key === MySea.key && MySea.g) return; MySea.key = key;
   if (MySea.g){ MySea.g.parent && MySea.g.parent.remove(MySea.g); } MySea.fish = []; const g = MySea.g = new THREE.Group(); Dive.group.add(g);
   const rr = mulberry(list.length * 97 + 7), R = Math.min(DIVE.r * 0.5, 20);
@@ -9422,7 +9429,7 @@ function mySeaTick(){ if (!Dive.on || Dive.site !== 'isle' || !Dive.group) retur
     o.m.position.copy(o.pos); o.m.position.y += o.bottom ? 0 : Math.sin(t * 1.3 + o.ph) * 0.05; const hs = Math.hypot(o.vel.x, o.vel.z); if (hs > 0.02) o.m.rotation.y = lerpAngle(o.m.rotation.y, Math.atan2(-o.vel.z, o.vel.x), Math.min(1, dt * 4)); o.m.rotation.z = o.bottom ? 0 : clamp(Math.atan2(o.vel.y, hs + 0.01) * 0.6, -0.4, 0.4);
     const pd = Math.hypot(me.pos.x - o.pos.x, me.pos.z - o.pos.z, (me.baseY - o.pos.y) * 0.6);   /* 潛水時人的高度在 me.baseY */ if (pd < nd){ nd = pd; near = o; } }
   let chip = $('#mySeaChip'); if (!chip){ chip = document.createElement('div'); chip.id = 'mySeaChip'; chip.className = 'panel'; document.body.appendChild(chip); }
-  if (near){ const x = near.x, d = new Date(x.t), sp = SPOT_BY_ID[near.f.spot], who = typeof farmMine === 'function' && farmMine() ? '你' : (MySea.other && MySea.other.name) || '島主'; chip.hidden = false; const tx = `${fishTitle ? fishTitle(x) : near.f.name}・${x.w.toFixed(2)}kg・${who}在 ${d.getMonth() + 1}/${d.getDate()} 於${sp ? sp.label : '海裡'}釣到`; if (chip.textContent !== tx) chip.textContent = tx; }
+  if (near){ const x = near.x, d = new Date(x.t), sp = SPOT_BY_ID[near.f.spot], who = x.who || '島主'; chip.hidden = false; const tx = `${fishTitle ? fishTitle(x) : near.f.name}・${x.w.toFixed(2)}kg・${who}在 ${d.getMonth() + 1}/${d.getDate()} 於${sp ? sp.label : '海裡'}釣到`; if (chip.textContent !== tx) chip.textContent = tx; }
   else if (!chip.hidden) chip.hidden = true; }
 function mySeaOff(){ const c = $('#mySeaChip'); if (c) c.hidden = true; if (MySea.g && MySea.g.parent) MySea.g.parent.remove(MySea.g); MySea.g = null; MySea.key = ''; MySea.fish = []; }
 function seaTick(){ if (!Dive.on || Dive.site !== 'isle'){ if (MySea.g || ($('#mySeaChip') && !$('#mySeaChip').hidden)) mySeaOff(); return; } try { mySeaTick(); } catch(e){ console.warn('mySea', e); } { const ib = $('#isleBar'); if (ib && !ib.hidden) ib.hidden = true; } if (frameNo % 30 === 11) seedChip(); decoTick(); if (frameNo % 120 === 9 && Sea.g && seaKey() !== Sea.vis) seaBuild(); }
@@ -18946,7 +18953,7 @@ function renderTab(){
     ]);
     sec('🐠 魚缸、水族館、圖鑑', [
       `釣到的魚會放進魚缸（最多保留 ${KEEP_MAX} 條，滿了最舊的會被擠掉；我的海裡的不算）。`,
-      `🐠 我的海：最喜歡的魚可以放進自己小島底下的海。釣到時按「🐠 我的海」，或在「魚缸」按「放進我的海」。從小島碼頭的潛水梯下去，就看得到牠們照自己的習性游（螃蟹、比目魚趴在海底，鯊魚在外圈繞，傳說魚身邊有一點光）；游近一條魚，下面會寫是誰、哪天在哪裡釣到的。一開始可以放 30 條，海底花園每一株長大的珊瑚多 2 條，最多 60 條。放在我的海的魚不會被賣掉或拿去做菜，來你島上潛水的朋友也看得到。`,
+      `🐠 我的海：最喜歡的魚可以放進自己小島底下的海。釣到時按「🐠 我的海」，或在「魚缸」按「放進我的海」。從小島碼頭的潛水梯下去，就看得到牠們照自己的習性游（螃蟹、比目魚趴在海底，鯊魚在外圈繞，傳說魚身邊有一點光）；游近一條魚，下面會寫是誰、哪天在哪裡釣到的。一開始可以放 30 條，海底花園每一株長大的珊瑚多 2 條，最多 60 條。放在我的海的魚不會被賣掉或拿去做菜，來你島上潛水的朋友也看得到。一起住的人共用同一片海：每個人放自己的魚，游近會寫是誰的；全部超過 60 條時，每個人輪流放最稀有、最重的。`,
       '「包包」（上面的 🎒 按鈕）可以看身上帶的東西：金幣、愛海點數、釣竿、魚餌、窩料、料理、潛水用品、蝦竿，還可以直接換釣竿、換魚餌、吃料理。',
       '🦈 赤紅霸王鯊：外海深處住著一小群紅色的鯊魚，整個伺服器共用，一開始只有一公一母。沒被釣走的話，每一對（一公一母）每 7 天有一半機會生一隻小鯊（極少數是白化的）。主要在港口外海出沒，偶爾也會到珊瑚礁群島外側的深水邊巡游（機率更低）（最多 8 隻），隻數越多越容易遇到，但還是非常非常少見。就算上鉤，牠大部分都會掙脫，每掙脫一次身上就多一道叉叉，叉叉越多越難拉上來。釣到的紅鯊不能賣也不能送，放回海裡可以得到 💙100 愛海點數；全部被釣光就絕種了。',
       '✨ 變種：有些魚會有長得不一樣的稀有個體（例如不同花色的錦鯉、獅子頭金魚、白化鯰魚），機率非常低。圖鑑裡會先顯示影子，釣到才看得到樣子（赤紅霸王鯊例外，要釣到才會出現）。',
