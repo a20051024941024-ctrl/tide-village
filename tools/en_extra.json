@@ -6272,5 +6272,15 @@
  "📮 集章": "📮 Stamps",
  "📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一個只有集章拿得到的造型：先送竿子造型（郵票竿、潮汐月光竿），再送郵差帽、郵差包，之後出新的造型會再加進來。": "📮 Village chief's stamp card: the first time you play each day, the card pops up and you get a stamp. 7 stamps per card, and stamp 7 is the best. Missing a day doesn't reset it. Every 4 full cards gives you a skin you can only get from stamps: rod skins first (Postage Rod, Tide Moon Rod), then the mail carrier cap and mail bag, with more added later.",
  "郵票竿": "Postage Rod",
- "潮汐月光竿": "Tide Moon Rod"
+ "潮汐月光竿": "Tide Moon Rod",
+ "👥 小組對決（2 對 2）：「朋友」分頁按「👥 小組對決」。可以邀同一個大廳的人（選 1 個隊友、2 個對手，三個人都接受就開始），或用「小組找對手」自己排、跟朋友一起排，湊滿 4 個人就開。3 分鐘比兩隊加起來的魚，可以選總重量、最大一條或條數。比賽中上面會顯示你和隊友各釣了多重，結束會選出這場釣最重的 MVP。小組對決是友誼賽，不算星星和戰績。": "👥 Team duel (2 vs 2): in the Friends tab, tap 👥 Team duel. Invite people in the same lobby (pick 1 teammate and 2 opponents; it starts when all three accept), or use Team matchmaking to queue alone or with a friend; it starts when 4 players are found. For 3 minutes the two teams add up their fish, by total weight, biggest fish or number of fish. During the match you see how much you and your teammate each caught, and the heaviest catcher is named MVP. Team duels are friendly: no stars or record.",
+ "👥 小組對決（2 對 2）": "👥 Team duel (2 vs 2)",
+ "隊友": "Teammate",
+ "送出邀請": "Send invites",
+ "🔍 小組找對手": "🔍 Team matchmaking",
+ "🙋 自己排": "🙋 Queue alone",
+ "一起排": "Queue together",
+ "同一組再來一局": "Rematch, same teams",
+ "小組找對手": "Team matchmaking",
+ "📨 邀大廳裡的人": "📨 Invite people in this lobby"
 }

@@ -2032,3 +2032,11 @@ body.ui3 #mini3{background:linear-gradient(#f4fbff,#d4eeff)!important;border:3px
    固定在畫面上的東西不會被 body 的 overflow:hidden 剪掉，Android Chrome 就把整個版面撐成 980 寬，遊戲再自己縮回來 → 看起來一下縮小一下放大。
    改成：body 自己當這些東西的框（contain:paint），超出去的部分直接剪掉，版面不會再被撐寬。body 本來就是滿版固定在畫面上，所以東西的位置不會變。 */
 body{contain:paint}
+/* v668 👥 小組對決：選隊友和對手 */
+#duelCard .dt-mode{display:flex;gap:6px;margin:6px 0 8px}
+#duelCard .dt-mode .tbtn{flex:1;padding:6px 4px;font-size:13px}
+#duelCard .tbtn.on{background:linear-gradient(#ffd25a,#ff9a1f);color:#4a2400;border-color:#9a4f00}
+#duelCard .dt-list{max-height:min(40vh,260px);overflow:auto;margin:4px 0 8px}
+#duelCard .dt-row{display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px dashed rgba(0,0,0,.12)}
+#duelCard .dt-nm{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#duelCard .dt-row .tbtn{padding:5px 10px;font-size:13px}

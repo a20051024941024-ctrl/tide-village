@@ -6064,5 +6064,15 @@
  "📮 集章": "📮 Cap",
  "📮 村長的集章卡：每天第一次進遊戲會跳出來蓋一個章，7 格一張，第 7 格比較好。漏掉一天不會歸零，下次接著蓋。每蓋滿 4 張送一個只有集章拿得到的造型：先送竿子造型（郵票竿、潮汐月光竿），再送郵差帽、郵差包，之後出新的造型會再加進來。": "📮 Kartu cap kepala desa: pertama kali main setiap hari, kartu muncul dan kamu dapat satu cap. 7 cap per kartu, cap ke-7 paling bagus. Bolos sehari tidak mengulang dari awal. Setiap 4 kartu penuh dapat skin khusus: skin joran dulu (Joran Perangko, Joran Bulan Pasang), lalu topi tukang pos dan tas pos, nanti ditambah.",
  "郵票竿": "Joran Perangko",
- "潮汐月光竿": "Joran Bulan Pasang"
+ "潮汐月光竿": "Joran Bulan Pasang",
+ "👥 小組對決（2 對 2）：「朋友」分頁按「👥 小組對決」。可以邀同一個大廳的人（選 1 個隊友、2 個對手，三個人都接受就開始），或用「小組找對手」自己排、跟朋友一起排，湊滿 4 個人就開。3 分鐘比兩隊加起來的魚，可以選總重量、最大一條或條數。比賽中上面會顯示你和隊友各釣了多重，結束會選出這場釣最重的 MVP。小組對決是友誼賽，不算星星和戰績。": "👥 Duel tim (2 lawan 2): di tab Teman, ketuk 👥 Duel tim. Undang orang di lobi yang sama (pilih 1 rekan dan 2 lawan; mulai saat ketiganya menerima), atau pakai Cari lawan tim untuk antre sendiri atau bersama teman; mulai saat 4 pemain terkumpul. Selama 3 menit kedua tim menjumlahkan ikan mereka: total berat, ikan terbesar, atau jumlah ikan. Selama pertandingan terlihat berapa yang kamu dan rekanmu tangkap, dan penangkap terberat jadi MVP. Duel tim adalah pertandingan persahabatan: tanpa bintang atau catatan.",
+ "👥 小組對決（2 對 2）": "👥 Duel tim (2 lawan 2)",
+ "隊友": "Rekan",
+ "送出邀請": "Kirim undangan",
+ "🔍 小組找對手": "🔍 Cari lawan tim",
+ "🙋 自己排": "🙋 Antre sendiri",
+ "一起排": "Antre bersama",
+ "同一組再來一局": "Main lagi, tim sama",
+ "小組找對手": "Cari lawan tim",
+ "📨 邀大廳裡的人": "📨 Undang orang di lobi ini"
 }
