@@ -186,9 +186,11 @@ export function genFish(p){
     const t = ey.t ?? 0.1, yn = ey.y ?? 0.3, r = (ey.r ?? 0.09) * HD * 2 * (ey.abs ? 0 : 1) + (ey.abs || 0);
     M.mirror(s => {
       const y = yc(t) + (yn > 0 ? hu(t) : hl(t)) * yn, z = wd(t) * Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(yn), n))) * s;
-      if (ey.ring) M.ellip(ey.ringPart || 'EyeW', [X(t), y, z - s * r * 0.15], [r * 1.45, r * 1.45, r * 0.45], 8, 4);
-      M.ellip('Eye', [X(t), y, z + s * r * (ey.pop ?? 0.15)], [r, r, r * 0.7], 8, 5);
+      const es = p.lod ? 1 : 2;   /* v658 眼睛用比較多的面，看起來圓 */
+      if (ey.ring) M.ellip(ey.ringPart || 'EyeW', [X(t), y, z - s * r * 0.15], [r * 1.45, r * 1.45, r * 0.45], 8 * es, 4 * es);
+      M.ellip('Eye', [X(t), y, z + s * r * (ey.pop ?? 0.15)], [r, r, r * 0.7], 8 * es, 5 * es);
       if (ey.hi) M.ellip('EyeW', [X(t) + r * 0.25, y + r * 0.35, z + s * r * 0.62], [r * 0.3, r * 0.3, r * 0.18], 6, 4);
+      else if (!p.lod) M.ellip('EyeHi', [X(t) + r * 0.22, y + r * 0.3, z + s * r * (0.62 + (ey.pop ?? 0.15))], [r * 0.22, r * 0.22, r * 0.12], 8, 5);   /* 眼睛上一個小白點反光，看起來比較有精神 */
     });
   }
   // 嘴巴（2026-11-04）：p.mouth = { type:'term'（吻端）|'sub'（頭下面，像鯊魚）|'sup'（往上翹，像龍魚）, t:嘴角往後到哪裡, y:嘴在吻端的高度, open:張嘴的大小, lip:嘴唇的顏色 }

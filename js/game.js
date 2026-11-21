@@ -637,7 +637,7 @@ const FISH_STYLE = {
 function regFishSpec(id, S){
   const shape = 'G_' + id; let cache = null;
   Object.defineProperty(FISH_MESH, shape, { configurable:true, enumerable:true, get(){ if (!cache){ const gen = FishGen[{ shrimp:'genShrimp', crab:'genCrab', squid:'genSquid', octo:'genOcto', jelly:'genJelly', turtle:'genTurtle', seahorse:'genSeahorse' }[S.gen] || 'genFish']; cache = gen(Quality.tier === 'low' ? Object.assign({ lod:true }, S.p) : S.p); } return cache; } });
-  FISH_STYLE[id] = { shape, c: Object.assign({ Mouth:'#2a1a18' }, S.c), move: S.move || 'side', glow: !!S.glow, glowParts: S.glowParts };   /* 嘴巴預設深色 */
+  FISH_STYLE[id] = { shape, c: Object.assign({ Mouth:'#2a1a18', EyeHi:'#ffffff' }, S.c), move: S.move || 'side', glow: !!S.glow, glowParts: S.glowParts };   /* 嘴巴預設深色 */
 }
 for (const [id, S] of Object.entries(FISH_SPECS)) regFishSpec(id, S);
 /* 深藍旗魚（2026-11-06）：手刻的 Marlin 模型（js/fish-models.js），身體顏色和條紋在 fishMat 的 shader 裡畫；蓋掉 fish-specs 的參數版 */
@@ -658,6 +658,7 @@ function fishGeo(shape, part){
   if (shape === 'Marlin' && part === 'Body'){ const idx = [], map = new Map(), pos = []; for (let i = 0; i < arr.length; i += 3){ const k = arr[i].toFixed(3) + ',' + arr[i + 1].toFixed(3) + ',' + arr[i + 2].toFixed(3); let j = map.get(k); if (j === undefined){ j = pos.length / 3; map.set(k, j); pos.push(arr[i], arr[i + 1], arr[i + 2]); } idx.push(j); } g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setIndex(idx); }   /* 旗魚身體把重複的點接起來，才會有平滑的光（不然每一面都是硬邊） */
   g.computeVertexNormals();
   if (!CLASSIC && fishGenBody(shape) && (part === 'Top' || part === 'Bottom' || part === 'Spots')) fishSmoothN(shape, g, part === 'Spots' ? ['Spots'] : ['Top', 'Bottom']);
+  if (!CLASSIC && fishGenBody(shape) && /^Eye/.test(part)) fishSmoothPos(g);
   return (fishGeoCache[key] = g);
 }
 /* v632 魚的表面精緻化（作者 11/21「3D 模型呢」→「好」）：
@@ -710,7 +711,7 @@ function fishMat(id, part, color, glow, move, shape){
   const marlinFin = shape === 'Marlin' && part === 'Fins', m2 = shape === 'Marlin2';
   const gb = !CLASSIC && fishGenBody(shape), gBody = gb && (part === 'Top' || part === 'Bottom' || part === 'Spots'), fine = gb && Quality.tier !== 'low', gScale = gBody && fine && move !== 'eel', gFin = gb && fine && part === 'Fins';
   if (gBody){ m.flatShading = false; m.roughness = 0.36; m.metalness = 0.12; }
-  if (gb && part === 'Eye'){ m.roughness = 0.06; m.metalness = 0.0; m.flatShading = false; }
+  if (gb && /^Eye/.test(part)){ m.roughness = 0.06; m.metalness = 0.0; m.flatShading = false; if (part === 'EyeHi'){ m.emissive = new THREE.Color('#ffffff'); m.emissiveIntensity = 0.6; } }
   const finMove = !CLASSIC && part === 'Fins' && !/^Marlin/.test(shape || '') && (move === 'side' || move === 'vert' || move === 'eel');   /* v267 鰭自己會動（螃蟹、龍蝦、魟魚、旗魚不用） */
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
   if (glow && (part === 'Top' || part === 'Body')){ m.emissive = new THREE.Color(color); m.emissiveIntensity = 0.35; }
@@ -764,15 +765,23 @@ const FISH_TEX_OFF = /nofishtex/.test(location.hash);   /* 作者 11/21 看過�
 const fishTexCache = {}, fishNBCache = {}, fishTexQ = [];
 /* 花紋一張圖要算 2 萬多個點，手機上一次畫完會卡一下；所以排隊，每次只畫 16 行，畫完一張再下一張 */
 let fishTexBusy = false;
+/* v658 魚的下一步（作者「魚的下一步」）：花紋圖上加鰓蓋——頭後面一條往後彎的深色細線，線前面的臉頰亮一點、線後面有一點陰影，
+   每種魚都看得出頭和身體的分界。鰓蓋的位置照魚的頭長（tm）估；鰻魚、海龍這種細長的魚不畫。 */
+function fishGillOf(S, st){ const p = S.p || {}; if (st.move === 'eel' || p.gill === false || (p.bl ?? 0.8) > 0.93) return null; return { t: clamp(p.gill || (p.tm ?? 0.35) * 0.62, 0.12, 0.3) }; }
+function fishGillK(G, u, v){ const yn = Math.sin(v * Math.PI * 2 - Math.PI / 2); if (Math.abs(yn) > 0.82) return 1; const e = G.t + 0.05 * (1 - yn * yn) - 0.025, d = u - e;
+  if (d > -0.007 && d < 0.004) return 0.68; if (d >= 0.004 && d < 0.03) return 0.86 + (d - 0.004) / 0.026 * 0.14; if (d <= -0.007 && d > -0.06 && yn < 0.4) return 1.07; return 1; }
 function fishTexPump(){ if (fishTexBusy) return; fishTexBusy = true; const step = () => { const J = fishTexQ[0]; if (!J){ fishTexBusy = false; return; } const t0 = performance.now();
     while (J.y < J.H && performance.now() - t0 < 8){ const rows = Math.min(16, J.H - J.y), im = J.cx.createImageData(J.W, rows);
-      for (let yy = 0; yy < rows; yy++) for (let x = 0; x < J.W; x++){ const y = J.y + yy, c1 = J.rgb(J.B.part((x + 0.25) / J.W, (y + 0.25) / J.H)), c2 = J.rgb(J.B.part((x + 0.75) / J.W, (y + 0.75) / J.H)), o = (yy * J.W + x) * 4; im.data[o] = (c1[0] + c2[0]) / 2; im.data[o + 1] = (c1[1] + c2[1]) / 2; im.data[o + 2] = (c1[2] + c2[2]) / 2; im.data[o + 3] = 255; }
+      for (let yy = 0; yy < rows; yy++) for (let x = 0; x < J.W; x++){ const y = J.y + yy, c1 = J.rgb(J.B.part((x + 0.25) / J.W, (y + 0.25) / J.H)), c2 = J.rgb(J.B.part((x + 0.75) / J.W, (y + 0.75) / J.H)), o = (yy * J.W + x) * 4, k = J.gill ? fishGillK(J.gill, (x + 0.5) / J.W, (y + 0.5) / J.H) : 1; im.data[o] = Math.min(255, (c1[0] + c2[0]) / 2 * k); im.data[o + 1] = Math.min(255, (c1[1] + c2[1]) / 2 * k); im.data[o + 2] = Math.min(255, (c1[2] + c2[2]) / 2 * k); im.data[o + 3] = 255; }
       J.cx.putImageData(im, 0, J.y); J.y += rows; }
     if (J.y >= J.H){ J.tx.needsUpdate = true; fishTexQ.shift(); } setTimeout(step, 16); }; setTimeout(step, 0); }
 function fishSpecOf(shape){ return FISH_SPECS[shape.slice(2)]; }
 function fishNoBodyMesh(shape){ if (fishNBCache[shape]) return fishNBCache[shape].m; const S = fishSpecOf(shape); const m = FishGen.genFish(Object.assign({ noBody: true }, Quality.tier === 'low' ? { lod: true } : {}, S.p)); fishNBCache[shape] = { m, g: {} }; return m; }
 function fishGeoNB(shape, part){ const C = fishNBCache[shape]; if (C.g[part]) return C.g[part]; const raw = C.m[part], arr = new Float32Array(raw.length); for (let i = 0; i < raw.length; i++) arr[i] = raw[i] / 1000;
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); return (C.g[part] = g); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); if (/^Eye/.test(part)) fishSmoothPos(g); return (C.g[part] = g); }
+function fishSmoothPos(g){ const P = g.attributes.position, N = g.attributes.normal, acc = new Map(), q = v => Math.round(v * 4000), k = i => q(P.getX(i)) + ',' + q(P.getY(i)) + ',' + q(P.getZ(i)), t = new THREE.Vector3();
+  for (let i = 0; i < P.count; i++){ const kk = k(i), o = acc.get(kk) || acc.set(kk, new THREE.Vector3()).get(kk); o.x += N.getX(i); o.y += N.getY(i); o.z += N.getZ(i); }
+  for (let i = 0; i < P.count; i++){ t.copy(acc.get(k(i))).normalize(); N.setXYZ(i, t.x, t.y, t.z); } N.needsUpdate = true; }
 function fishTexBody(f, st){ const key = f.id; let C = fishTexCache[key];
   if (!C){ const S = fishSpecOf(st.shape), low = Quality.tier === 'low', B = FishGen.genFishBody(S.p, low ? 32 : 56, low ? 24 : 44);
     const g = new THREE.BufferGeometry(); { const mp = new Map(), P = [], U = [], I = [], qk = v => Math.round(v * 20000);   /* 共用頂點（同位置、同 UV 只存一次），記憶體少很多 */
@@ -785,7 +794,7 @@ function fishTexBody(f, st){ const key = f.id; let C = fishTexCache[key];
     const rgb = pn => col[pn] || (col[pn] = (() => { const h = new THREE.Color(st.c[pn] || f.color || '#888888').getHex(); return [h >> 16 & 255, h >> 8 & 255, h & 255]; })());   /* getHex 是 sRGB（畫布要的），不能直接拿 .r（那是線性的，會變暗） */
     { const a = rgb('Bottom'), b = rgb('Top'), gr = cx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0.3, `rgb(${a})`); gr.addColorStop(0.7, `rgb(${b})`); cx.fillStyle = gr; cx.fillRect(0, 0, W, H); }   /* 先塗上下兩色，花紋排隊慢慢畫（不卡） */
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; tx.wrapT = THREE.RepeatWrapping;
-    fishTexQ.push({ B, cx, W, H, rgb, tx, y: 0 }); fishTexPump();
+    fishTexQ.push({ B, cx, W, H, rgb, tx, y: 0, gill: fishGillOf(S, st) }); fishTexPump();
     C = fishTexCache[key] = { g, tx }; }
   const m = fishMat(f.id + '/tex', 'Top', '#ffffff', st.glow, st.move, st.shape); if (!m.map){ m.map = C.tx; m.needsUpdate = true; }
   const mesh = new THREE.Mesh(C.g, m); mesh.castShadow = true; return mesh; }
