@@ -12671,7 +12671,8 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   else y = ty + Math.abs(Math.sin(pt.ph)) * 0.05 * mv;
   pt.pos.y = y; pt.m.position.copy(pt.pos); pt.m.rotation.y = pt.rot;
   if (pt.spinUntil && now() < pt.spinUntil) U.body.rotation.y += 0.12;   /* 吃到點心開心地轉圈 */ else if (pt.spinUntil){ U.body.rotation.y = 0; pt.spinUntil = 0; }
-  if (pt.kind === 'turtle' || pt.kind === 'pondturtle') U.legs.forEach((l, i) => { l.rotation.y = Math.sin(pt.ph + i) * 0.5 * mv; }); else U.legs.forEach((l, i) => { l.rotation.x = Math.sin(pt.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.6 * mv; });
+  if (pt.kind === 'turtle' || pt.kind === 'pondturtle') U.legs.forEach((l, i) => { const b0 = l.userData.b0 || (l.userData.b0 = l.position.clone()), ph = pt.ph * 1.3 + (i === 0 || i === 3 ? 0 : Math.PI), s = Math.sin(ph), c = Math.cos(ph);   /* v658 作者：「小烏龜的腳都不會動」→ 以前只讓圓圓的腳原地轉，看起來不動；現在對角線兩隻一起往前伸、往後推，抬起來那一下會離地一點 */
+    l.position.z = b0.z + s * 0.038 * mv; l.position.y = b0.y + Math.max(0, c) * 0.028 * mv; l.position.x = b0.x * (1 + Math.max(0, c) * 0.12 * mv); l.rotation.y = s * 0.45 * mv; l.rotation.x = -c * 0.3 * mv; }); else U.legs.forEach((l, i) => { l.rotation.x = Math.sin(pt.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.6 * mv; });
   if (pt.kind === 'horseshoe'){ /* 小鱟每 26 秒左右翻過來一次，腳亂踢，用尾劍把自己撐回去（真的鱟就是這樣翻身）。時間用大家一樣的時鐘＋名字算，別人看到的是同一下 */
     if (pt.sd == null){ let h = 0; for (const ch of String(pt.name || '')) h = (h * 31 + ch.charCodeAt(0)) % 2600; pt.sd = h / 100; }
     const cy = (Date.now() / 1000 + pt.sd) % 26, on = mv < 0.05 && !moving && !pt.act && cy < 3.4, rz = !on ? 0 : cy < 0.5 ? cy / 0.5 * Math.PI : cy < 2.6 ? Math.PI + Math.sin(cy * 9) * 0.12 : Math.PI + (cy - 2.6) / 0.8 * Math.PI;
