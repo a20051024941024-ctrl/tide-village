@@ -48,8 +48,8 @@ class Mesh {
    p.depth 最大體高 ÷ 體長，p.wr 體寬 ÷ 體高，p.tm 最高點的位置，p.nose 吻部（<1 鈍、>1 尖），p.ped 尾柄高度比例
    p.up / p.lo / p.wd 可以直接給控制點，p.yc 中心線上下偏移（控制點），p.n 截面方圓（2 橢圓、>2 方）
    p.cs 背腹分色的高度（-1~1），p.pat 花紋規則，p.dorsal/anal/pect/pelv/caudal 鰭，p.eye，p.extra 其他零件 */
-export function genFish(p){
-  const M = new Mesh(), bl = p.bl ?? 0.8, SL = TL * bl, xt = X0 - SL, HD = (p.depth ?? 0.25) * SL / 2;
+function fishCore(p){
+  const bl = p.bl ?? 0.8, SL = TL * bl, xt = X0 - SL, HD = (p.depth ?? 0.25) * SL / 2;
   const prof = t => { const tm = p.tm ?? 0.35, nose = p.nose ?? 0.8, ped = p.ped ?? 0.22; if (t < tm) return Math.pow(Math.sin(t / tm * PI / 2), nose); const a = (t - tm) / (1 - tm); return ped + (1 - ped) * Math.pow(Math.cos(a * PI / 2), p.tailK ?? 1.3); };
   const top = p.top ?? 0.5;
   const hu = t => HD * 2 * top * (p.up ? curve(p.up, t) : prof(t));
@@ -78,9 +78,13 @@ export function genFish(p){
     }
     return part;
   };
-  // 身體：一圈一圈接起來
+  return { bl, SL, xt, HD, prof, top, hu, hl, wd, yc, X, n, se, NS, NR, pt, rules, partAt };
+}
+export function genFish(p){
+  const M = new Mesh(), { bl, SL, xt, HD, prof, top, hu, hl, wd, yc, X, n, se, NS, NR, pt, rules, partAt } = fishCore(p);
+  // 身體：一圈一圈接起來（noBody：身體改用 genFishBody 的貼圖版，這裡不畫）
   const ts = Array.from({ length: NS + 1 }, (_, i) => Math.pow(i / NS, p.tk ?? 1.12));
-  for (let i = 0; i < NS; i++){
+  for (let i = 0; i < (p.noBody ? 0 : NS); i++){
     const t0 = ts[i], t1 = ts[i + 1];
     for (let j = 0; j < NR; j++){
       const a0 = j / NR * PI * 2 - PI / 2, a1 = (j + 1) / NR * PI * 2 - PI / 2;
@@ -91,7 +95,7 @@ export function genFish(p){
       if (i === 0) M.tri(part, [X(0) + 0.0005, yc(0), 0], B, A);   /* 吻端封起來：有些魚的吻是鈍的（不是一個點），以前只畫一半，會露出一圈白色鋸齒的洞 */
     }
   }
-  if ((p.ped ?? 0.22) > 0.01){ // 尾柄的切口封起來
+  if (!p.noBody && (p.ped ?? 0.22) > 0.01){ // 尾柄的切口封起來
     const t = 1, c = [X(t), yc(t), 0]; for (let j = 0; j < NR; j++){ const a0 = j / NR * PI * 2 - PI / 2, a1 = (j + 1) / NR * PI * 2 - PI / 2; M.tri(p.capPart || 'Top', c, pt(t, a0), pt(t, a1)); } }
   const surfY = (t, s) => yc(t) + (s > 0 ? hu(t) : -hl(t));
   // 圓點花紋：貼在身體表面的扁扁小圓片（比三角形上色更圓）
@@ -396,4 +400,20 @@ export function genCrab(p){
     if (cl.tip) M.cone(cl.tip, tip, [tip[0] + 0.05 * k, tip[1], tip[2] - 0.02 * s * k], 0.012 * k, 4);
   });
   return M.out();
+}
+
+/* v654（試做）花紋改成貼圖：身體只做一張平滑的網子（帶 UV：u＝頭到尾、v＝繞身體一圈），花紋照同一套規則畫成一張圖。
+   邊緣不會再一格一格的鋸齒。回傳 { pos, uv, part(u, v) }：pos 是一般的小數座標（不是 ×1000） */
+export function genFishBody(p, NS = 56, NR = 44){
+  const { X, yc, n, pt, partAt } = fishCore(p), pos = [], uv = [], tk = p.tk ?? 1.12;
+  const T = i => Math.pow(i / NS, tk), A = j => j / NR * PI * 2 - PI / 2;
+  const push = (P, u, v) => { pos.push(P[0], P[1], P[2]); uv.push(u, v); };
+  for (let i = 0; i < NS; i++) for (let j = 0; j < NR; j++){
+    const t0 = T(i), t1 = T(i + 1), a0 = A(j), a1 = A(j + 1), v0 = j / NR, v1 = (j + 1) / NR;
+    const P00 = pt(t0, a0), P01 = pt(t0, a1), P11 = pt(t1, a1), P10 = pt(t1, a0);
+    push(P00, t0, v0); push(P01, t0, v1); push(P11, t1, v1); push(P00, t0, v0); push(P11, t1, v1); push(P10, t1, v0);
+    if (i === 0){ push([X(0) + 0.0005, yc(0), 0], 0, (v0 + v1) / 2); push(P01, t0, v1); push(P00, t0, v0); } }
+  if ((p.ped ?? 0.22) > 0.01){ const c = [X(1), yc(1), 0]; for (let j = 0; j < NR; j++){ push(c, 1, (j + 0.5) / NR); push(pt(1, A(j)), 1, j / NR); push(pt(1, A(j + 1)), 1, (j + 1) / NR); } }
+  const part = (u, v) => { const a = v * PI * 2 - PI / 2, ynm = Math.sin(a), zm = Math.cos(a); return partAt(u, Math.sign(ynm) * Math.pow(Math.abs(ynm), 2 / n), zm); };
+  return { pos, uv, part, capPart: p.capPart || 'Top' };
 }

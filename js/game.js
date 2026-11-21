@@ -748,14 +748,38 @@ function fishMat(id, part, color, glow, move, shape){
 function makeModelFish(f, scale){
   const st = FISH_STYLE[f.id]; const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
   const inner = new THREE.Group(); if (/^Fish/.test(st.shape)) inner.scale.z = 1.5; if (st.sc){ inner.scale.x *= st.sc[0]; inner.scale.y *= st.sc[1]; inner.scale.z *= st.sc[2]; } fish.add(inner);   // 稍微加厚，從上往下看比較清楚
-  for (const part of Object.keys(FISH_MESH[st.shape])){
+  const texB = FISH_TEX && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
+  for (const part of Object.keys(texB ? fishNoBodyMesh(st.shape) : FISH_MESH[st.shape])){
     const mt = fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape); if (st.glowParts && st.glowParts.includes(part) && !mt.userData.gl){ mt.userData.gl = 1; mt.emissive = new THREE.Color(st.c[part] || f.color); mt.emissiveIntensity = 0.9; }
-    const mesh = new THREE.Mesh(fishGeo(st.shape, part), mt);
+    const mesh = new THREE.Mesh(texB ? fishGeoNB(st.shape, part) : fishGeo(st.shape, part), mt);
     mesh.castShadow = true; inner.add(mesh);
   }
   fish.userData.tail = new THREE.Object3D();   // 舊程式會轉尾巴；新模型的擺動在 shader 裡
   return fish;
 }
+/* ===== v654 試做：魚的花紋改成貼圖（作者「魚的 3D 模型要怎麼做得更細緻」→「先給我看」）=====
+   以前身體是 28×22 格、花紋整格整格塗色，邊緣一格一格。現在身體是一張 56×44 的平滑網子，花紋用同一套規則畫成 512×256 的圖（每點取 4 個樣本，邊緣平順）。
+   還在試做：網址加 #fishtex 才會用，作者看過說好才打開給大家。 */
+const FISH_TEX = /fishtex/.test(location.hash);
+const fishTexCache = {}, fishNBCache = {};
+function fishSpecOf(shape){ return FISH_SPECS[shape.slice(2)]; }
+function fishNoBodyMesh(shape){ if (fishNBCache[shape]) return fishNBCache[shape].m; const S = fishSpecOf(shape); const m = FishGen.genFish(Object.assign({ noBody: true }, Quality.tier === 'low' ? { lod: true } : {}, S.p)); fishNBCache[shape] = { m, g: {} }; return m; }
+function fishGeoNB(shape, part){ const C = fishNBCache[shape]; if (C.g[part]) return C.g[part]; const raw = C.m[part], arr = new Float32Array(raw.length); for (let i = 0; i < raw.length; i++) arr[i] = raw[i] / 1000;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); return (C.g[part] = g); }
+function fishTexBody(f, st){ const key = f.id; let C = fishTexCache[key];
+  if (!C){ const S = fishSpecOf(st.shape), low = Quality.tier === 'low', B = FishGen.genFishBody(S.p, low ? 32 : 56, low ? 24 : 44);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2)); g.computeVertexNormals();
+    { const P = g.attributes.position, N = g.attributes.normal, acc = new Map(), q = v => Math.round(v * 2000), k = i => q(P.getX(i)) + ',' + q(P.getY(i)) + ',' + q(P.getZ(i)), t = new THREE.Vector3();
+      for (let i = 0; i < P.count; i++){ const kk = k(i), o = acc.get(kk) || acc.set(kk, new THREE.Vector3()).get(kk); o.x += N.getX(i); o.y += N.getY(i); o.z += N.getZ(i); }
+      for (let i = 0; i < P.count; i++){ t.copy(acc.get(k(i))).normalize(); N.setXYZ(i, t.x, t.y, t.z); } }
+    const W = low ? 256 : 512, H = W / 2, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const cx = cv.getContext('2d'), im = cx.createImageData(W, H), col = {};
+    const rgb = pn => col[pn] || (col[pn] = (() => { const h = new THREE.Color(st.c[pn] || f.color || '#888888').getHex(); return [h >> 16 & 255, h >> 8 & 255, h & 255];   /* getHex 是 sRGB（畫布要的），不能直接拿 .r（那是線性的，會變暗） */ })());
+    const SS = [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){ let r = 0, gg = 0, b = 0; for (const [ox, oy] of SS){ const c = rgb(B.part((x + ox) / W, (y + oy) / H)); r += c[0]; gg += c[1]; b += c[2]; } const o = (y * W + x) * 4; im.data[o] = r / 4; im.data[o + 1] = gg / 4; im.data[o + 2] = b / 4; im.data[o + 3] = 255; }
+    cx.putImageData(im, 0, 0); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; tx.wrapT = THREE.RepeatWrapping;
+    C = fishTexCache[key] = { g, tx }; }
+  const m = fishMat(f.id + '/tex', 'Top', '#ffffff', st.glow, st.move, st.shape); if (!m.map){ m.map = C.tx; m.needsUpdate = true; }
+  const mesh = new THREE.Mesh(C.g, m); mesh.castShadow = true; return mesh; }
 function fishShowScale(w){ return clamp(0.42 + Math.log(1 + (+w || 0)) * 0.36, 0.42, 1.85); }   /* v258 拉上來、捧在手上、炫耀共用同一個大小 */
 /* v286 節慶魚戴的小配件（現在有聖誕帽）：照模型大小放在頭頂（魚的頭朝 +x） */
 function fishHat(fish, kind){ fish.updateMatrixWorld(true); const s = fish.scale.x || 1, bb = new THREE.Box3().setFromObject(fish), sz = bb.getSize(new THREE.Vector3()), L = sz.x / s, H = Math.min(sz.y, sz.x * 0.32) / s, top = bb.max.y / s, fx = bb.max.x / s;
@@ -4857,9 +4881,10 @@ function kidFidget(f, K, W, v){ const T = now(); let busy = false; if (f === me)
 /* v640 小動作第二批：① 坐著（碼頭邊、長椅）的時候兩隻小腿會輪流慢慢晃；② 下雨天在外面、沒穿雨衣、站著或走路時，肩膀縮起來、頭低低的，偶爾抖一下。
    都是在骨架動畫算完以後再疊一點點旋轉，所以不用新的動作檔。 */
 function kidPostPose(f, K, dt){ const B = K.B; if (!B || !B.lowerlegl) return; const T = now(), k = Math.min(1, dt * 3);
-  const sitOn = f.sitting && !(f === me ? myBoat : f.boatMesh) && (K.w.sit || 0) > 0.6;
+  const sitOn = f.sitting && !f.fishing && !(f === me ? myBoat : f.boatMesh) && (K.w.sit || 0) > 0.6;   /* 坐著釣魚的時候不晃（專心釣） */
   f.swA = (f.swA || 0) + ((sitOn ? 1 : 0) - (f.swA || 0)) * k;
-  if (f.swA > 0.01){ const ph = T * 2.1 + (f.av.blinkAt || 0); B.lowerlegl.rotation.x += Math.sin(ph) * 0.32 * f.swA; B.lowerlegr.rotation.x += Math.sin(ph + 2.4) * 0.32 * f.swA; }
+  if (f.swA > 0.01){ const ph = T * 2.1 + (f.av.blinkAt || 0), kick = (q, b) => b > 0.6 ? -(0.5 + 0.5 * Math.sin(q)) * Math.min(0.45, b - 0.4) * f.swA : 0;   /* v654 作者：「你的腳是反方向的」→ 以前前後都晃，往後晃小腿會縮到椅子底下，從背後看像腳反過來。現在只往前踢、再放回原本坐姿，膝蓋彎不夠的時候不晃 */
+    B.lowerlegl.rotation.x += kick(ph, B.lowerlegl.rotation.x); B.lowerlegr.rotation.x += kick(ph + 2.4, B.lowerlegr.rotation.x); }
   let wet = false; try { wet = !!(WEATHERS[Env.wx] && WEATHERS[Env.wx].rain > 0) && !f.rainWear && !f.swim && !f.fishing && !f.sitting && !f.emote && f.pos.x > -100 && !(f === me && (inIndoor() || House.on)); } catch(e){}
   f.rnA = (f.rnA || 0) + ((wet ? 1 : 0) - (f.rnA || 0)) * Math.min(1, dt * 1.5);
   if (f.rnA > 0.01 && B.chest){ const A = f.rnA, sh = Math.max(0, Math.sin(T * 0.7 + (f.av.blinkAt || 0)) - 0.93) * 14; B.chest.rotation.x += 0.14 * A; if (B.head) B.head.rotation.x += 0.07 * A; B.chest.rotation.z += Math.sin(T * 38) * 0.03 * sh * A;
