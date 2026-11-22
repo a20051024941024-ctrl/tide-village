@@ -71,3 +71,8 @@ select fn as 動作, left(msg, 120) as 錯誤, sum(n) as 次數, count(distinct 
 \echo '## 📱 畫面被放大（viewport）的診斷，最近 3 天最新 12 筆'
 \echo
 select at at time zone 'Asia/Taipei' as 時間, left(msg, 400) as 診斷 from public.client_errors where fn = 'viewport' and at > now() - interval '3 days' order by at desc limit 12;
+
+\echo
+\echo '## 👕 指定玩家的穿著（作者回報人物樣子怪）'
+\echo
+select nickname, gear::text from public.players where nickname in ('水伊布', '小陳');
