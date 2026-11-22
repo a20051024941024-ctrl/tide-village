@@ -4943,8 +4943,8 @@ function surfaceAt(x, z){
 const KID = { gltf: null, clips: null, ok: false, failed: false, wait: new Set() };
 (function loadKid(){
   if (/kid=0/.test(location.hash)) return;
-  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; try { kidReshape(g.scene); kidCalmRun(g); } catch(e){ console.warn('kidReshape', e); KID.shape = null; } KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ console.warn('kid upgrade', e); } } },
-    undefined, e => { KID.failed = true; KID.wait.clear(); console.warn('3D 角色載入失敗，繼續用程式角色', e); }); } catch(e){ KID.failed = true; }
+  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; try { kidReshape(g.scene); kidCalmRun(g); } catch(e){ console.warn('kidReshape', e); KID.shape = null; } KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ KID.upErr = String(e && e.message || e).slice(0, 100); console.warn('kid upgrade', e); } } },
+    undefined, e => { KID.failed = true; KID.why = String(e && (e.message || e.type) || e).slice(0, 120); KID.wait.clear(); console.warn('3D 角色載入失敗，繼續用程式角色', e); }); } catch(e){ KID.failed = true; KID.why = 'x ' + String(e && e.message || e).slice(0, 120); }
 })();
 // 動作的原始移動速度（量過：腳往後推的速度），用來讓播放速度跟真正的移動速度一樣
 const KID_SPD = { walk: 0.68, run: 1.51, sprint: 1.43 };
@@ -5122,7 +5122,9 @@ K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save()
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 /* v691 作者：「iPhone 換新人物完全不會動」。我這邊（Android 模擬）會動，先把 iPhone 上發生什麼事送回伺服器：出錯的訊息、骨架有沒有在轉、顯卡能力 */
 K3.n = 0; K3.bad = e => { K3.ecount = (K3.ecount || 0) + 1; if (K3.ferr) return; K3.ferr = 1; console.warn('k3', e); try { errReport('k3', 'err ' + String(e && e.stack || e).replace(/\s+/g, ' ').slice(0, 280)); } catch(_){} };
-K3.diag = () => { if (K3.dg || !K3.on) return; const a = me && me.av, k = a && a.k3; if (!k){ if (!K3.dg0 && now() > 40){ K3.dg0 = 1; try { errReport('k3', `nok3 asset:${K3.asset ? 1 : 0} load:${K3.loading ? 1 : 0} err:${K3.err.slice(0, 80)} kid:${a && a.kid ? 1 : 0} ok:${KID.ok ? 1 : 0}`); } catch(e){} } return; }
+/* v692 iPhone 上的人走路很僵：伺服器紀錄顯示那支 iPhone 打開 40 秒還沒換成 3D 角色（還是最早的程式角色）。不管有沒有開新人物，iPhone 上 45 秒還沒換好就回報原因 */
+K3.kidDiag = () => { if (K3.kd || !FL.ios || now() < 45) return; K3.kd = 1; const a = me && me.av; if (a && a.kid) return; try { errReport('k3', `nokid ok:${KID.ok ? 1 : 0} fail:${KID.failed ? 1 : 0} why:${KID.why || ''} up:${KID.upErr || ''} hasgltf:${KID.gltf ? 1 : 0} wait:${KID.wait.size} kidFail:${a && a.kidFail ? 1 : 0} av:${a ? 1 : 0} t:${now().toFixed(0)} ua:${navigator.userAgent.slice(0, 90)}`); } catch(e){} };
+K3.diag = () => { if (K3.dg || !K3.on) return; const a = me && me.av, k = a && a.k3; if (!k){ if (!K3.dg0 && now() > 40){ K3.dg0 = 1; try { errReport('k3', `nok3 asset:${K3.asset ? 1 : 0} load:${K3.loading ? 1 : 0} err:${K3.err.slice(0, 80)} kid:${a && a.kid ? 1 : 0} ok:${KID.ok ? 1 : 0} fail:${KID.failed ? 1 : 0} why:${KID.why || ''} wait:${KID.wait.size} t:${now().toFixed(0)} ua:${navigator.userAgent.slice(0, 90)}`); } catch(e){} } return; }
   if (!K3.dq){ K3.dq = [k.bones.upperlegl.quaternion.clone(), a.kid.B.upperlegl.quaternion.clone(), K3.n, now()]; return; }
   if (now() - K3.dq[3] < 6) return; K3.dg = 1; const c = renderer.capabilities, sm = k.meshes.skin;
   try { errReport('k3', `diag ours:${k.bones.upperlegl.quaternion.angleTo(K3.dq[0]).toFixed(3)} game:${a.kid.B.upperlegl.quaternion.angleTo(K3.dq[1]).toFixed(3)} n:${K3.n - K3.dq[2]} e:${K3.ecount || 0} vis:${a.kid.m.visible ? 1 : 0} gl2:${c.isWebGL2 ? 1 : 0} fvt:${c.floatVertexTextures ? 1 : 0} vu:${c.maxVertexUniforms} vt:${c.maxVertexTextures} bt:${sm && sm.skeleton && sm.skeleton.boneTexture ? 1 : 0} q:${Quality.tier} spd:${(me.aspd || 0).toFixed(2)} w:${Object.entries(a.kid.w).filter(x => x[1] > 0.05).map(x => x[0] + x[1].toFixed(1)).join(',')} ua:${navigator.userAgent.slice(0, 90)}`); } catch(e){} };
@@ -21277,7 +21279,7 @@ function frame(){
   if (Dive.on) diveHideWorld(); else { cullAvatars(); hideOrphanBits(); }
   if (Quality.tier !== 'high'){ renderer.shadowMap.autoUpdate = false; if (frameNo % 2 === 0) renderer.shadowMap.needsUpdate = true; }   /* v289 中畫質影子兩張更新一次 */
   if (myBoat && !Dive.on){ try { KJ.ikR2 = kayakIK(me, myBoat.m); KJ.pr = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } }   /* v463 玩家說「別人有動作、自己沒有」：自己的角色在這一格後面可能又被別的地方更新一次，把姿勢洗掉。畫面送出去之前最後再握一次槳 */
-  try { K3.frame(); } catch(e){ K3.bad(e); }   /* v690 新人物：彈性、划船、騎車的姿勢都算完了，最後抄一次骨架 */
+  try { K3.frame(); } catch(e){ K3.bad(e); } try { K3.kidDiag(); } catch(e){}   /* v690 新人物：彈性、划船、騎車的姿勢都算完了，最後抄一次骨架 */
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
