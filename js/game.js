@@ -5077,7 +5077,7 @@ K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
   if (k.hair){ try { k.grp.remove(k.hair.sm); for (const b of k.hair.ch) if (b.parent) b.parent.remove(b); } catch(e){} k.hair = null; }
   const src = K3.asset.hair[type]; if (!src) return;
   let hm = null; src.scene.traverse(o => { if (o.isMesh && !hm) hm = o; }); if (!hm) return; const geo = hm.geometry;
-  const hb = k.bones.head; k.grp.updateMatrixWorld(true); const hw = hb.getWorldPosition(new THREE.Vector3()), hq = hb.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const hb = k.bones.head; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion()), hw = k.grp.worldToLocal(hb.getWorldPosition(new THREE.Vector3())), hq = gq.invert().multiply(hb.getWorldQuaternion(new THREE.Quaternion())).invert();   /* v691 頭的位置要用人物自己的座標算：v690 用了世界座標，人不在地圖正中間時，頭髮被拉成一大片拖在後面 */
   const ys = [0.42, 0.16, -0.14, -0.46], ch = []; let par = hb, prev = null;
   for (let i = 0; i < ys.length; i++){ const b = new THREE.Bone(), w = new THREE.Vector3(0, ys[i], -0.06); b.name = 'k3hair' + i; b.position.copy(i ? w.clone().sub(prev) : w.clone().sub(hw).applyQuaternion(hq)); par.add(b); ch.push(b); par = b; prev = w; }   /* 長髮：頭後面一串 4 節的骨頭，每一格往下垂，走路轉身頭髮會甩 */
   if (!geo.attributes.skinIndex){ const P = geo.attributes.position, n = P.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
@@ -5107,6 +5107,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
   { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s + k.dy * Math.min(1, fl); }
   if (K.m.visible) K.m.visible = false;
+  K3.n++;
   if (k.hair){ const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
     for (let i = 1; i < ch.length; i++){ const b = ch[i], tgt = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(gq); k.hair.q[i].slerp(tgt, 0.45); b.quaternion.copy(k.hair.q[i]); b.updateMatrixWorld(true); } }
   const sex = K3.cfg.sex === 'g' ? 'g' : 'b', ex = f && f.emote ? 'happy' : 'smile';
@@ -5114,10 +5115,17 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
 K3.frame = () => { const a = typeof me !== 'undefined' && me && me.av; if (!a) return;
   if (!K3.on){ if (a.k3) K3.detach(a); return; }
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
-  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.build(a); K3.apply(a); }
-  K3.sync(a, me); };
+  if (K3.err){ if (a.k3) K3.detach(a); return; }
+  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); try { K3.build(a); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
+  K3.sync(a, me); K3.diag(); };
 K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) K3.apply(a); } catch(e){ console.warn('k3 apply', e); } };
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
+/* v691 作者：「iPhone 換新人物完全不會動」。我這邊（Android 模擬）會動，先把 iPhone 上發生什麼事送回伺服器：出錯的訊息、骨架有沒有在轉、顯卡能力 */
+K3.n = 0; K3.bad = e => { K3.ecount = (K3.ecount || 0) + 1; if (K3.ferr) return; K3.ferr = 1; console.warn('k3', e); try { errReport('k3', 'err ' + String(e && e.stack || e).replace(/\s+/g, ' ').slice(0, 280)); } catch(_){} };
+K3.diag = () => { if (K3.dg || !K3.on) return; const a = me && me.av, k = a && a.k3; if (!k){ if (!K3.dg0 && now() > 40){ K3.dg0 = 1; try { errReport('k3', `nok3 asset:${K3.asset ? 1 : 0} load:${K3.loading ? 1 : 0} err:${K3.err.slice(0, 80)} kid:${a && a.kid ? 1 : 0} ok:${KID.ok ? 1 : 0}`); } catch(e){} } return; }
+  if (!K3.dq){ K3.dq = [k.bones.upperlegl.quaternion.clone(), a.kid.B.upperlegl.quaternion.clone(), K3.n, now()]; return; }
+  if (now() - K3.dq[3] < 6) return; K3.dg = 1; const c = renderer.capabilities, sm = k.meshes.skin;
+  try { errReport('k3', `diag ours:${k.bones.upperlegl.quaternion.angleTo(K3.dq[0]).toFixed(3)} game:${a.kid.B.upperlegl.quaternion.angleTo(K3.dq[1]).toFixed(3)} n:${K3.n - K3.dq[2]} e:${K3.ecount || 0} vis:${a.kid.m.visible ? 1 : 0} gl2:${c.isWebGL2 ? 1 : 0} fvt:${c.floatVertexTextures ? 1 : 0} vu:${c.maxVertexUniforms} vt:${c.maxVertexTextures} bt:${sm && sm.skeleton && sm.skeleton.boneTexture ? 1 : 0} q:${Quality.tier} spd:${(me.aspd || 0).toFixed(2)} w:${Object.entries(a.kid.w).filter(x => x[1] > 0.05).map(x => x[0] + x[1].toFixed(1)).join(',')} ua:${navigator.userAgent.slice(0, 90)}`); } catch(e){} };
 // 表情動作還在做嗎：時間到、走開、開始釣魚就停
 /* v638 作者：「把現有動作用在對的時候」→「你先做」。站著不動一陣子（8～16 秒），會自己做個小動作：
    左右看看（idle2）、伸懶腰（早上比較常）、打哈欠（晚上比較常）；做完過 12～26 秒再來一次。走動、拿著魚、在玩別的就不做。
@@ -5259,7 +5267,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt); kidPostPose(f, K, dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1; if (a.k3) try { K3.sync(a, f); } catch(e){}   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
+  K.mixer.update(dt); kidPostPose(f, K, dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1; if (a.k3) try { K3.sync(a, f); } catch(e){ K3.bad(e); }   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
   if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
@@ -21269,7 +21277,7 @@ function frame(){
   if (Dive.on) diveHideWorld(); else { cullAvatars(); hideOrphanBits(); }
   if (Quality.tier !== 'high'){ renderer.shadowMap.autoUpdate = false; if (frameNo % 2 === 0) renderer.shadowMap.needsUpdate = true; }   /* v289 中畫質影子兩張更新一次 */
   if (myBoat && !Dive.on){ try { KJ.ikR2 = kayakIK(me, myBoat.m); KJ.pr = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } }   /* v463 玩家說「別人有動作、自己沒有」：自己的角色在這一格後面可能又被別的地方更新一次，把姿勢洗掉。畫面送出去之前最後再握一次槳 */
-  try { K3.frame(); } catch(e){ if (!K3.ferr){ K3.ferr = 1; console.warn('k3', e); } }   /* v690 新人物：彈性、划船、騎車的姿勢都算完了，最後抄一次骨架 */
+  try { K3.frame(); } catch(e){ K3.bad(e); }   /* v690 新人物：彈性、划船、騎車的姿勢都算完了，最後抄一次骨架 */
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
