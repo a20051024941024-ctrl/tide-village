@@ -5070,13 +5070,15 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   scl.scale.setScalar(s); scl.position.y = 0.95 * s;
   const pws = KB.hips.parent.getWorldScale(new THREE.Vector3()).x;
   a.g.add(scl);
-  const k = a.k3 = { kidRef: K, scl, grp, bones, W, meshes, base, s, f: pws / s, gh0: KB.hips.position.clone(), hp0: bones.hips.position.clone(), X: {}, arm: -1, names: RG.order.filter(n => n !== 'root'), dy: gH - (W.hips.p.y + 0.95) * s, hair: null, hairT: '', sex: '', ex: '', handR0: K.handR };
+  const k = a.k3 = { restQ, kidRef: K, scl, grp, bones, W, meshes, base, s, f: pws / s, gh0: KB.hips.position.clone(), hp0: bones.hips.position.clone(), X: {}, arm: -1, names: RG.order.filter(n => n !== 'root'), dy: gH - (W.hips.p.y + 0.95) * s, hair: null, hairT: '', sex: '', ex: '', handR0: K.handR };
   K.handR = bones.handr; K.m.visible = false; return k; };
 K3.armX = (k, arm) => { if (k.arm === arm) return; k.arm = arm; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.X[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -arm * sg)).multiply(Wq); } };
 K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
   if (k.hair){ try { k.grp.remove(k.hair.sm); for (const b of k.hair.ch) if (b.parent) b.parent.remove(b); } catch(e){} k.hair = null; }
   const src = K3.asset.hair[type]; if (!src) return;
   let hm = null; src.scene.traverse(o => { if (o.isMesh && !hm) hm = o; }); if (!hm) return; const geo = hm.geometry;
+  /* v693 在遊戲中途換髮型時骨架正擺著動作，要先擺回站好的姿勢再綁上去，不然頭髮會歪到旁邊（作者截圖：短髮掛在後腦勺外面） */
+  const keep = {}; for (const n in k.bones){ keep[n] = k.bones[n].quaternion.clone(); k.bones[n].quaternion.copy(k.restQ[n]); } const keepHip = k.bones.hips.position.clone(); k.bones.hips.position.copy(k.hp0);
   const hb = k.bones.head; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion()), hw = k.grp.worldToLocal(hb.getWorldPosition(new THREE.Vector3())), hq = gq.invert().multiply(hb.getWorldQuaternion(new THREE.Quaternion())).invert();   /* v691 頭的位置要用人物自己的座標算：v690 用了世界座標，人不在地圖正中間時，頭髮被拉成一大片拖在後面 */
   const ys = [0.42, 0.16, -0.14, -0.46], ch = []; let par = hb, prev = null;
   for (let i = 0; i < ys.length; i++){ const b = new THREE.Bone(), w = new THREE.Vector3(0, ys[i], -0.06); b.name = 'k3hair' + i; b.position.copy(i ? w.clone().sub(prev) : w.clone().sub(hw).applyQuaternion(hq)); par.add(b); ch.push(b); par = b; prev = w; }   /* 長髮：頭後面一串 4 節的骨頭，每一格往下垂，走路轉身頭髮會甩 */
@@ -5085,6 +5087,7 @@ K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
       si[q * 4] = i0; si[q * 4 + 1] = i1; sw[q * 4] = 1 - t; sw[q * 4 + 1] = t; }
     geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4)); }
   const sm = new THREE.SkinnedMesh(geo, hm.material.clone()); sm.name = 'k3_hair'; sm.frustumCulled = false; sm.castShadow = true; k.grp.add(sm); k.grp.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(ch));
+  for (const n in keep) k.bones[n].quaternion.copy(keep[n]); k.bones.hips.position.copy(keepHip); k.grp.updateMatrixWorld(true);
   k.hair = { sm, ch, q: ch.map(() => new THREE.Quaternion()), base: hm.material.color.clone() }; K3.colorHair(k); };
 K3.colorHair = k => { const c = K3.cfg.c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
   const U = k.meshes.face && k.meshes.face.userData.U; if (U){ U.uOnH.value = col && K3.cfg.sex === 'b' ? 1 : 0; if (col) U.uHair.value.copy(col); } };
@@ -5108,8 +5111,13 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s + k.dy * Math.min(1, fl); }
   if (K.m.visible) K.m.visible = false;
   K3.n++;
-  if (k.hair){ const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
-    for (let i = 1; i < ch.length; i++){ const b = ch[i], tgt = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(gq); k.hair.q[i].slerp(tgt, 0.45); b.quaternion.copy(k.hair.q[i]); b.updateMatrixWorld(true); } }
+  if (k.hair && k.hf !== frameNo){ k.hf = frameNo; const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
+    /* v693 作者：「長髮的頭髮不會飄」→ 以前只會慢一點點跟上轉身。現在跑起來頭髮往後揚、跟著腳步上下晃，停下來再慢慢垂回去 */
+    const v = f ? Math.min(6, f.aspd || 0) : 0, T = now(); k.hv = (k.hv || 0) + (v - (k.hv || 0)) * 0.08;
+    const tilt = Math.min(0.75, k.hv * 0.16) + Math.sin(T * (6 + k.hv)) * 0.06 * Math.min(1, k.hv / 2), side = Math.sin(T * 1.7) * 0.03 + (k.turn || 0);
+    const rq = new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt, 0, side));
+    const yaw = k.grp.getWorldQuaternion(new THREE.Quaternion()), dy = k.yq ? 2 * Math.atan2(new THREE.Quaternion().copy(k.yq).invert().multiply(yaw).y, 1) : 0; k.yq = yaw.clone(); k.turn = ((k.turn || 0) + clamp(-dy * 3, -0.5, 0.5)) * 0.9;   /* 轉身的時候頭髮往外甩 */
+    for (let i = 1; i < ch.length; i++){ const b = ch[i], tgt = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(gq).multiply(rq); k.hair.q[i].slerp(tgt, 0.18 + 0.06 * i); b.quaternion.copy(k.hair.q[i]); b.updateMatrixWorld(true); } }
   const sex = K3.cfg.sex === 'g' ? 'g' : 'b', ex = f && f.emote ? 'happy' : 'smile';
   if (k.sex !== sex || k.ex !== ex){ k.sex = sex; k.ex = ex; const fm = k.meshes.face; if (fm){ fm.material.map = K3.face(sex, ex); fm.material.needsUpdate = true; } } };
 K3.frame = () => { const a = typeof me !== 'undefined' && me && me.av; if (!a) return;
@@ -5121,7 +5129,7 @@ K3.frame = () => { const a = typeof me !== 'undefined' && me && me.av; if (!a) r
 K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) K3.apply(a); } catch(e){ console.warn('k3 apply', e); } };
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 /* v691 作者：「iPhone 換新人物完全不會動」。我這邊（Android 模擬）會動，先把 iPhone 上發生什麼事送回伺服器：出錯的訊息、骨架有沒有在轉、顯卡能力 */
-K3.n = 0; K3.bad = e => { K3.ecount = (K3.ecount || 0) + 1; if (K3.ferr) return; K3.ferr = 1; console.warn('k3', e); try { errReport('k3', 'err ' + String(e && e.stack || e).replace(/\s+/g, ' ').slice(0, 280)); } catch(_){} };
+K3.n = 0; K3.bad = e => { K3.ecount = (K3.ecount || 0) + 1; K3.lastE = e && e.stack || e; if (K3.ferr) return; K3.ferr = 1; console.warn('k3', e); try { errReport('k3', 'err ' + String(e && e.stack || e).replace(/\s+/g, ' ').slice(0, 280)); } catch(_){} };
 /* v692 iPhone 上的人走路很僵：伺服器紀錄顯示那支 iPhone 打開 40 秒還沒換成 3D 角色（還是最早的程式角色）。不管有沒有開新人物，iPhone 上 45 秒還沒換好就回報原因 */
 K3.kidDiag = () => { if (K3.kd || !FL.ios || now() < 45) return; K3.kd = 1; const a = me && me.av; if (a && a.kid) return; try { errReport('k3', `nokid ok:${KID.ok ? 1 : 0} fail:${KID.failed ? 1 : 0} why:${KID.why || ''} up:${KID.upErr || ''} hasgltf:${KID.gltf ? 1 : 0} wait:${KID.wait.size} kidFail:${a && a.kidFail ? 1 : 0} av:${a ? 1 : 0} t:${now().toFixed(0)} ua:${navigator.userAgent.slice(0, 90)}`); } catch(e){} };
 K3.diag = () => { if (K3.dg || !K3.on) return; const a = me && me.av, k = a && a.k3; if (!k){ if (!K3.dg0 && now() > 40){ K3.dg0 = 1; try { errReport('k3', `nok3 asset:${K3.asset ? 1 : 0} load:${K3.loading ? 1 : 0} err:${K3.err.slice(0, 80)} kid:${a && a.kid ? 1 : 0} ok:${KID.ok ? 1 : 0} fail:${KID.failed ? 1 : 0} why:${KID.why || ''} wait:${KID.wait.size} t:${now().toFixed(0)} ua:${navigator.userAgent.slice(0, 90)}`); } catch(e){} } return; }
