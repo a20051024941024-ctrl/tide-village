@@ -4956,6 +4956,10 @@ function kidCalmRun(g){ if (!KID.shape) return; KID_SPD.walk *= 1.7; KID_SPD.run
    (1) 把身體的點往中心收（存在綁定姿勢裡；原本的座標另外留在 restP，衣服的領口、口袋、條紋還是照舊座標畫）
    (2) 把骨頭之間的距離拉長（腿、手）、縮短（軀幹）。腿變長以後整個人要墊高，墊多少看姿勢（站著全墊、坐椅子只墊小腿、坐地上和躺著不墊），在 kidAnimate 裡算 */
 const KID_SHAPE = { slim: 0.8, arm: 0.84, hand: 0.8, shoe: 1.0, leg: 1.3, armLen: 1.0, torso: 0.92, head: 1.3, shoulder: 0.15, /* v415 玩家給的 Q 版參考：頭再大一點、臉扁圓、下巴短 */ jawX: 0.07, jawY: 0.15, cheekX: 0.1, headDrop: 0.085 };   /* v417 玩家用 Meshy 生的全身 Q 版公仔當參考：頭佔身高快一半、腿短、手腳圓胖（原本 slim 0.64、leg 2.1、head 1.12 是高瘦的身材） */
+/* v688 新人物試玩（作者 11/22：朋友說人物「太醜了」→ 做一版圓胖的 Q 版給大家試）：手腳粗短、圓手套手（沒有一根一根的手指）、腿短一點、身體圓一點。
+   網址加 #kid2=1 開、#kid2=0 關（記在 tide.kid2）。只改自己看到的樣子（所有人物都變），別人看不到你的開關。 */
+const KID2 = (() => { let on = false; try { const m = location.hash.match(/kid2=(\d)/); if (m) localStorage.setItem('tide.kid2', m[1]); on = localStorage.getItem('tide.kid2') === '1'; } catch(e){} return on; })();
+if (KID2) Object.assign(KID_SHAPE, { slim: 1.05, arm: 1.25, hand: 1.1, shoe: 1.25, leg: 0.95, torso: 0.95, mitt: 1 });
 const _kq = new THREE.Quaternion();
 /* 腿變長以後整個人要墊高多少：每一格照現在的姿勢算——「比較低的那隻腳」離髖關節的垂直距離，新腿是舊腿的 leg 倍，差多少就墊多少。
    站著墊最多、蹲下墊少一點，跳起來腳離地的高度也跟以前一樣。坐椅子不墊（屁股要在原本的高度；以前腳是懸空的，腿變長剛好比較接近地面）；貼地、浮在水裡的姿勢也不墊 */
@@ -4974,7 +4978,7 @@ function kidReshape(scene){ const S = KID_SHAPE; scene.updateMatrixWorld(true);
         if (ny < 0){ const t = Math.min(1, -ny), jaw = t <= 0.35 ? 0 : (q => q * q * (3 - 2 * q))((t - 0.35) / 0.65), cheek = Math.exp(-Math.pow((ny + 0.32) / 0.26, 2));
           x = hx + dx * (1 - S.jawX * jaw + S.cheekX * cheek); z = hz + dz * (dz > 0 ? 1 - 0.08 * jaw + 0.03 * cheek : 1 - 0.05 * jaw); y = hy + dy * (1 - S.jawY * jaw); pos.setXYZ(i, x, y, z); }   /* 臉頰鼓一點、下巴收一點、整體短一點（太尖會像倒三角形，試過） */
         continue; }
-      if (n.startsWith('hand')){ const c = W[n], cx = c.x + Math.sign(c.x) * 0.03; x = cx + (x - cx) * 0.95; y = c.y + (y - c.y) * 0.5; z = c.z + (z - c.z) * 0.85; }   /* 手：圓球壓成扁扁的手掌（手指、拇指在 kidUpgrade 另外接上去） */
+      if (n.startsWith('hand')){ const c = W[n], cx = c.x + Math.sign(c.x) * 0.03, mt = S.mitt ? 1.12 : 1; x = cx + (x - cx) * 0.95 * mt; y = c.y + (y - c.y) * (S.mitt ? 0.78 : 0.5); z = c.z + (z - c.z) * 0.85 * mt; }   /* 手：圓球壓成扁扁的手掌（手指、拇指在 kidUpgrade 另外接上去） */
       else if (/^(upperarm|lowerarm|wrist)/.test(n)){ y = W.upperarml.y + (y - W.upperarml.y) * S.arm; z *= S.arm; }
       else if (/^(foot|toes)/.test(n)){ const cx = Math.sign(x) * Math.abs(W.footl.x); x = cx * S.slim + (x - cx) * S.shoe; z = 0.033 + (z - 0.033) * 0.85; }
       else { x *= S.slim; z *= S.slim; }
@@ -4993,6 +4997,8 @@ function kidReshape(scene){ const S = KID_SHAPE; scene.updateMatrixWorld(true);
 /* v411 手指：玩家問「手掌能有嗎」。原本的手是一顆圓球，現在壓成手掌，再接四根手指和一根拇指（T-pose：手臂沿著 x、手心朝下、拇指朝前 +z）。一隻手一個合併好的模型，左右共用 */
 const HAND_GEO = {};
 function handGeo(sx){ if (HAND_GEO[sx]) return HAND_GEO[sx]; const parts = [], cap = (r, len, x, y, z, rz, ry) => { const g = new THREE.CapsuleGeometry(r, len, 3, 8); g.rotateZ(Math.PI / 2); if (rz) g.rotateZ(rz); if (ry) g.rotateY(ry); g.translate(x, y, z); parts.push(g); };
+  if (KID_SHAPE.mitt){ const g0 = new THREE.SphereGeometry(0.05, 14, 10); g0.scale(1.0, 0.72, 1.05); g0.translate(sx * 0.055, -0.006, 0); parts.push(g0); cap(0.022, 0.018, sx * 0.02, -0.004, 0.058, sx * -0.1, sx * -0.9);   /* v688 新人物：圓圓的手套手＋一根短短的拇指 */
+    const gm = mergeGeometries(parts.map(x => x.index ? x.toNonIndexed() : x), false); gm.computeBoundingSphere(); gm.userData.shared = true; return HAND_GEO[sx] = gm; }
   [-0.045, -0.015, 0.015, 0.045].forEach((z, i) => cap(0.0165, 0.04 - Math.abs(i - 1.5) * 0.008, sx * (0.085 - Math.abs(i - 1.5) * 0.006), -0.012, z, sx * -0.28, 0));   /* 四根手指：中間兩根長一點，微微往下彎 */
   cap(0.019, 0.028, sx * 0.012, -0.008, 0.07, sx * -0.15, sx * -0.95);   /* 拇指：往前斜出去 */
   const g = mergeGeometries(parts.map(x => x.index ? x.toNonIndexed() : x), false); g.computeBoundingSphere(); g.userData.shared = true; return HAND_GEO[sx] = g; }
@@ -13518,6 +13524,9 @@ function renderSettings(body){
     row.appendChild(sl); row.appendChild(pct); f.appendChild(row); f.appendChild(el('p', 'sub', '往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。' + (L.out ? '' : '（現在在室內或水裡，這裡調的只是暫時的。）'))); }
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
+  { const f = field('🧒 人物樣子（試玩中）'), seg = el('div', 'seg');   /* v688 */
+    [[false, '原本的'], [true, '新的：圓一點、手腳胖一點']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(KID2 === k)); b.addEventListener('click', () => { if (KID2 === k) return; try { localStorage.setItem('tide.kid2', k ? '1' : '0'); } catch(e){} toast('換好了，重新載入一下'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '新的人物還在試，只有你自己看到的會變（村子裡每個人都會換成新的樣子），別人看不到你選了什麼。覺得哪個好看，跟作者說。')); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
