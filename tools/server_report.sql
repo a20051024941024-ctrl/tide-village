@@ -76,3 +76,8 @@ select at at time zone 'Asia/Taipei' as 時間, left(msg, 400) as 診斷 from pu
 \echo '## 👕 指定玩家的穿著（作者回報人物樣子怪）'
 \echo
 select nickname, gear::text from public.players where nickname in ('水伊布', '小陳');
+
+\echo
+\echo '## 🧑 iPhone 角色診斷（avdiag、shader），最近 3 天'
+\echo
+select at at time zone 'Asia/Taipei' as 時間, fn, left(msg, 300) as 內容 from public.client_errors where fn in ('avdiag', 'shader') and at > now() - interval '3 days' order by at desc limit 15;

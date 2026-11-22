@@ -8731,6 +8731,14 @@ function netErrText(m){ m = String(m || ''); if (typeof navigator !== 'undefined
   if (/fetch|network|timeout|timed out|Load failed|aborted|502|503|504|ECONN|Failed to/i.test(m)) return '連不到伺服器，可能是網路不穩，等一下再試';
   return '伺服器出了點問題，已經自動回報，等一下再試'; }
 const ErrQ = { at:0 };
+/* v684 iPhone 上自己的角色頭髮不見（作者 11/22 截圖：水伊布自己的 iPhone 看自己頭是白的，別人看他正常）：先收集資料。
+   著色器編譯失敗時回報是哪一個；iPhone 進遊戲 40 秒後回報一次自己角色頭上的東西狀態。 */
+try { renderer.debug.onShaderError = (gl, prog, vs, fs) => { try { const lg = (gl.getShaderInfoLog(fs) || '') + ' | ' + (gl.getShaderInfoLog(vs) || ''); errReport('shader', ('ios:' + (FL.ios ? 1 : 0) + ' ' + lg).replace(/[^\x20-\x7e]/g, '').slice(0, 290)); } catch(e){} }; } catch(e){}
+setTimeout(function avDiag(){ try { if (!FL.ios && !/avdiag/.test(location.href)) return; const av = me && me.av; if (!av || !av.headG){ setTimeout(avDiag, 20000); return; }
+  const h = av.hair, m = h && h.material, hd = av.headG; let nv = 0, nl = 0, nm = 0; hd.traverse(o => { if (!o.isMesh) return; nm++; let v = true; for (let q = o; q && q !== hd; q = q.parent) if (!q.visible) v = false; if (v) nv++; if (o.layers.mask !== 1) nl++; });
+  const wp = new THREE.Vector3(); if (h) h.getWorldPosition(wp);
+  errReport('avdiag', `h:${h ? (h.visible ? 1 : 0) : 'x'} hl:${h ? h.layers.mask : ''} hp:${h && h.parent ? (h.parent === hd ? 'hd' : 'o') : 'x'} op:${m ? m.opacity : ''} tr:${m && m.transparent ? 1 : 0} mv:${m && m.visible ? 1 : 0} sd:${m ? m.side : ''} map:${m && m.map && m.map.image ? m.map.image.width : 0} glb:${av.hairGlb ? 1 : 0} mesh:${nm}/${nv}/${nl} sc:${h ? h.scale.x.toFixed(2) + ',' + hd.scale.x.toFixed(2) : ''} wy:${wp.y.toFixed(2)} gl2:${renderer.capabilities.isWebGL2 ? 1 : 0} q:${Quality.tier} kid:${av.kid ? 1 : 0} prog:${renderer.info.programs ? renderer.info.programs.length : 0} look:${(rec.gear && rec.gear.look) || ''} hat:${(rec.gear && rec.gear.hat) || ''} top:${(rec.gear && rec.gear.top) || ''}`);
+} catch(e){ try { errReport('avdiag', 'err ' + String(e && e.message).replace(/[^\x20-\x7e]/g, '').slice(0, 200)); } catch(_){} } }, 40000);
 function errReport(fn, err){ const m = String((err && (err.message || err.details || err.code)) || err || '').slice(0, 300); if (!m || /[一-龥]/.test(m)) return;
   const net = /fetch|network|timeout|timed out|Load failed|aborted|Failed to/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false);
   if (net){ try { const q = LS.get('tide.errq', []); q.push([fn, m, Date.now()]); LS.set('tide.errq', q.slice(-10)); } catch(e){} return; }
