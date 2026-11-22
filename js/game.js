@@ -19323,7 +19323,10 @@ const SHEET_TITLE = { rig2:'🎣 釣組', look:'🎨 外觀', gyotaku:'🖋️ �
 const Pop = { d:{}, at:0, busy:false };
 function popFetch(){ if (Pop.busy || !Cloud.on || !Cloud.sb || Date.now() - Pop.at < 300000) return; Pop.busy = true; Pop.at = Date.now();
   Cloud.sb.rpc('fish_pop_list').then(({ data }) => { Pop.busy = false; if (data && typeof data === 'object'){ Pop.d = data; if (!$('#sheet').hidden && curTab === 'dex') renderTab(); } }, () => { Pop.busy = false; }); }
-function renderTab(){
+/* v685 同一頁重畫時（例如玩家頁有人進出、好友清單載好）保持原本捲到的位置（作者 11/22：「點玩家的時候，畫面會一點一點往上」） */
+function renderTab(){ const same = renderTab.last === curTab, b = $('#sheetBody'), bx = $('#sheet .box'), s0 = same && b ? b.scrollTop : 0, s1 = same && bx ? bx.scrollTop : 0;
+  try { renderTab0(); } finally { if (same && (s0 || s1)){ const fix = () => { if (renderTab.last !== curTab) return; if (b && s0) b.scrollTop = s0; if (bx && s1) bx.scrollTop = s1; }; fix(); requestAnimationFrame(fix); } } }
+function renderTab0(){
   try { ui3Tabs(); } catch(e){}
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }

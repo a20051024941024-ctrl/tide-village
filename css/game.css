@@ -2170,3 +2170,4 @@ html.fakeland #rotate{display:none!important}
 #flTip b{font-size:16px}
 #flTip div{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
 html.fltype #rotate{display:none!important}
+#sheetBody,#sheet .box{overflow-anchor:none}
