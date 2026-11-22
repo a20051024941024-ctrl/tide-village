@@ -5105,8 +5105,16 @@ K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
 K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
 /* 每一格：原本骨架的角度抄過來（手臂多轉一點貼近身體），髖部的上下前後照比例搬過來；長髮往下垂、跟著甩；表情 */
+const _k3q = new THREE.Quaternion(), _k3v = new THREE.Vector3();
 K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K) return; const GB = K.B, B = k.bones;
-  for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r); }
+  /* v694 作者：「跑步時動作好奇怪」→ 原本角色腿拉長過，所以遊戲把走路跑步的腿擺幅收小（跑 0.66）、腳步放慢（1.75 倍）。
+     新人物的腿比較短，照抄就變成慢動作小碎步、身體卻滑得很快。這裡把腿的擺幅放回來，腳步也加快一點（多推進動畫時間）。 */
+  const w = K.w, loco = (w.walk || 0) + (w.run || 0) + (w.sprint || 0);
+  if (f && loco > 0.2 && !f.fishing && !f.sitting && !f.swim && k.mx !== frameNo){ k.mx = frameNo; const ex = ((w.walk || 0) * 0.2 + (w.run || 0) * 0.23 + (w.sprint || 0) * 0.27) / Math.max(1, loco); if (ex > 0.01 && K.dt0) K.mixer.update(K.dt0 * ex); }
+  const ampS = 1 - Math.min(1, (w.run || 0) + (w.sprint || 0)) * 0.45 - (w.walk || 0) * 0.15;   /* 頭大的人往前傾太多會像要撲倒，身體少彎一點 */
+  const amp = loco > 0.05 ? 1 + ((w.walk || 0) * 0.136 + (w.run || 0) * 0.515 + (w.sprint || 0) * 0.667) / Math.max(1, loco) * Math.min(1, loco) : 1;
+  for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
+    else if ((amp > 1.01 && (n.startsWith('upperleg') || n.startsWith('lowerleg'))) || (ampS < 0.99 && (n === 'spine' || n === 'chest'))){ const am = n.startsWith('s') || n.startsWith('c') ? ampS : amp, R = k.restQ[n], d = R.clone().invert().multiply(b.quaternion); if (d.w < 0){ d.x = -d.x; d.y = -d.y; d.z = -d.z; d.w = -d.w; } const ang = 2 * Math.acos(Math.min(1, d.w)), sn = Math.sqrt(Math.max(1e-9, 1 - d.w * d.w)); if (ang > 1e-4) b.quaternion.copy(R).multiply(_k3q.setFromAxisAngle(_k3v.set(d.x / sn, d.y / sn, d.z / sn), ang * am)); } }
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
   { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s + k.dy * Math.min(1, fl); }
   if (K.m.visible) K.m.visible = false;
@@ -5277,7 +5285,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt); kidPostPose(f, K, dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1; if (a.k3) try { K3.sync(a, f); } catch(e){ K3.bad(e); }   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
+  K.mixer.update(dt); K.dt0 = dt; kidPostPose(f, K, dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1; if (a.k3) try { K3.sync(a, f); } catch(e){ K3.bad(e); }   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
   if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
