@@ -8738,6 +8738,15 @@ setTimeout(function avDiag(){ try { if (!FL.ios && !/avdiag/.test(location.href)
   const h = av.hair, m = h && h.material, hd = av.headG; let nv = 0, nl = 0, nm = 0; hd.traverse(o => { if (!o.isMesh) return; nm++; let v = true; for (let q = o; q && q !== hd; q = q.parent) if (!q.visible) v = false; if (v) nv++; if (o.layers.mask !== 1) nl++; });
   const wp = new THREE.Vector3(); if (h) h.getWorldPosition(wp);
   errReport('avdiag', `h:${h ? (h.visible ? 1 : 0) : 'x'} hl:${h ? h.layers.mask : ''} hp:${h && h.parent ? (h.parent === hd ? 'hd' : 'o') : 'x'} op:${m ? m.opacity : ''} tr:${m && m.transparent ? 1 : 0} mv:${m && m.visible ? 1 : 0} sd:${m ? m.side : ''} map:${m && m.map && m.map.image ? m.map.image.width : 0} glb:${av.hairGlb ? 1 : 0} mesh:${nm}/${nv}/${nl} sc:${h ? h.scale.x.toFixed(2) + ',' + hd.scale.x.toFixed(2) : ''} wy:${wp.y.toFixed(2)} gl2:${renderer.capabilities.isWebGL2 ? 1 : 0} q:${Quality.tier} kid:${av.kid ? 1 : 0} prog:${renderer.info.programs ? renderer.info.programs.length : 0} look:${(rec.gear && rec.gear.look) || ''} hat:${(rec.gear && rec.gear.hat) || ''} top:${(rec.gear && rec.gear.top) || ''}`);
+ setTimeout(() => { try {   /* v686 第二份：直接讀畫面上頭的顏色（一般／把頭的皮膚藏起來／頭髮不用貼圖），看是哪一層蓋掉頭髮 */
+    const gl = renderer.getContext(), c = new THREE.Vector3(); h.getWorldPosition(c); const tc = camera.position.clone().sub(c); tc.y = 0; tc.normalize(); const up = c.clone().addScaledVector(tc, 0.25).add(new THREE.Vector3(0, -0.12, 0));
+    const px = v => { const q = v.clone().project(camera); if (q.z > 1 || Math.abs(q.x) > 1 || Math.abs(q.y) > 1) return 'off'; const b = new Uint8Array(4); gl.readPixels(Math.round((q.x + 1) / 2 * gl.drawingBufferWidth), Math.round((q.y + 1) / 2 * gl.drawingBufferHeight), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b); return b[0] + '.' + b[1] + '.' + b[2]; };
+    const shot = () => { renderer.render(scene, camera); return px(c) + '/' + px(up); };
+    const a0 = shot(); const sk = []; hd.traverse(o => { if (o.isMesh && o !== h && o.visible){ o.visible = false; sk.push(o); } }); const a1 = shot(); sk.forEach(o => o.visible = true);
+    const mp = m.map; m.map = null; m.needsUpdate = true; const a2 = shot(); m.map = mp; m.needsUpdate = true;
+    const d = camera.position.distanceTo(c);
+    errReport('avdiag', `px n:${a0} onlyhair:${a1} nomap:${a2} sk:${sk.length} d:${d.toFixed(1)} db:${gl.getParameter(gl.DEPTH_BITS)} aa:${gl.getContextAttributes().antialias ? 1 : 0} dpr:${renderer.getPixelRatio()} fp:${renderer.capabilities.precision} near:${camera.near} far:${camera.far}`);
+  } catch(e){ try { errReport('avdiag', 'px err ' + String(e && e.message).replace(/[^\x20-\x7e]/g, '').slice(0, 200)); } catch(_){} } }, 3000);
 } catch(e){ try { errReport('avdiag', 'err ' + String(e && e.message).replace(/[^\x20-\x7e]/g, '').slice(0, 200)); } catch(_){} } }, 40000);
 function errReport(fn, err){ const m = String((err && (err.message || err.details || err.code)) || err || '').slice(0, 300); if (!m || /[一-龥]/.test(m)) return;
   const net = /fetch|network|timeout|timed out|Load failed|aborted|Failed to/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false);
