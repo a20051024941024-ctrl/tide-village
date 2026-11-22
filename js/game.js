@@ -19313,7 +19313,7 @@ const HELP_SHORT = {
   '🏝️ 私人小島': ['選單的「小島」可以去自己的島。', '在「買東西擺島上」挑房子和家具，走到想放的地方按「✔」。', '按「🔨 建造」可以移動或拆掉。'],
   '👥 跟大家一起玩': ['⚔️ 釣魚對決：一場 3 分鐘，比釣到的魚的總重量。', '按「找對手」是排位賽，贏了加星星、升段位；每個月是一季。', '可以加好友、組釣友隊、聊天、去別人的島玩。'],
   '⭐ 等級、稱號、成就': ['釣魚、放流、拍水下照片都有經驗值，升級送金幣。', '成就和等級會給稱號，在「成就」分頁選一個掛在名字上。'],
-  '⚙️ 設定、帳號、存檔、其他': ['右上的 ⚙️ 是設定：語言、字體大小、畫質、搖桿、釣魚視角。', '用帳號登入，換手機資料也不會不見。', '遇到不禮貌的人：點他的名字 →「檢舉」。', 'iPhone 開著直向鎖定時，畫面會自己橫著放，手機橫拿就是正的；字倒了就到設定按「翻過來」。']
+  '⚙️ 設定、帳號、存檔、其他': ['右上的 ⚙️ 是設定：語言、字體大小、畫質、搖桿、釣魚視角。', '用帳號登入，換手機資料也不會不見。', '遇到不禮貌的人：點他的名字 →「檢舉」。', 'iPhone 開著直向鎖定時，畫面會自己橫著放，手機橫拿就是正的；字倒了就到設定按「翻過來」。', '有新東西的時候，進遊戲會跳一張小卡提醒一次；看過的可以到手機的「最近更新」再翻。']
 };
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
@@ -19355,6 +19355,7 @@ function renderTab0(){
   if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'dm'){ renderDM(body); return; }
   if (curTab === 'duelhub'){ renderDuelHub(body); return; }
+  if (curTab === 'upd'){ renderUpd(body); return; }
   if (curTab === 'chumhot'){ renderChumHot(body); return; }
   if (curTab === 'fkit') curTab = 'rig2';   /* v635 釣魚裝備搬進「🎣 釣組」 */
   if (curTab === 'rig2'){ renderRig2(body); return; }
@@ -21217,9 +21218,36 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
    手機主畫面＝所有選單頁面的入口；新的「🔔 快訊」＝正在發生的事＋跑馬燈飄過去的消息（存在這支手機，留 24 小時）。
    從手機打開頁面時，角色會拿出手機低頭滑，別人也看得到（presence 的 ph）。 ===== */
 const PHONE_APPS = [
-  ['村子裡', [['phfeed', '🔔', '快訊'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
+  ['村子裡', [['phfeed', '🔔', '快訊'], ['upd', '🆕', '最近更新'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
   ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['duelhub', '⚔️', '對決'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
   ['我的', [['photo', '📷', '拍照'], ['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
+/* ===== v687 有新東西時提醒老玩家一次（作者 11/22：「每當有新東西，可以給原本在玩的玩家加一個小提醒，提醒一次」→ 同意設計）
+   UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
+   進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
+const UPD = [
+  { id:'u687', d:'11/22', items:[
+    ['🧱', '小島能擺一格一格的方塊和隔板，不要的可以整個收回來，之後再擺。', 'island'],
+    ['👕', '每週換一個穿搭主題，身上穿到兩件以上，釣魚多一成經驗。還沒挑過入門套裝的可以免費挑一套。', 'closet'],
+    ['🎣', '釣友隊有等級了，一起釣魚、一起打小組對決都會升級，升到 4 級全隊有隊服。', 'tboard'] ] },
+  { id:'u670', d:'11/21', items:[
+    ['📮', '每天上線蓋一個章，玩久一點還有在線獎勵。郵差阿信會把包裹送到你面前。', 'quest'],
+    ['👥', '對決可以 2 對 2 了：找一個朋友一起，跟另外兩個人比誰釣得重。', 'duelhub'],
+    ['⚔️', '對決有自己的頁面，排位每個月換一季，升段送那一季才有的竿子和釣線造型。', 'duelhub'] ] },
+];
+SHEET_TITLE.upd = '🆕 最近更新';
+function updItem(it, close){ const [ic, t, tab] = it, row = el('div', 'upd-it'); row.appendChild(el('span', 'upd-ic', ic)); row.appendChild(el('span', 'upd-t', t));
+  if (tab){ const b = el('button', 'tbtn ghost', '去看看'); b.addEventListener('click', () => { if (close) close(); phoneGo(tab); }); row.appendChild(b); } return row; }
+function renderUpd(body){ body.appendChild(el('p', 'sub', '最近加進村子的東西，新的在上面。'));
+  for (const u of UPD){ const box = el('div', 'upd-box'); box.appendChild(el('div', 'upd-d', u.d)); for (const it of u.items) box.appendChild(updItem(it, null)); body.appendChild(box); } }
+function updCanPop(){ return LS.get('tide.welcomed') && $('#sheet').hidden && !$('#welcome') && !$('#ageGate') && !$('#stampPop') && !$('#flTip') && !$('#updPop') && !(typeof F !== 'undefined' && F.phase && F.phase !== 'idle') && !Photo.on; }
+function updPop(){ const u = UPD[0]; if (!u || LS.get('tide.updSeen') === u.id) return; LS.set('tide.updSeen', u.id);
+  const d = el('div'); d.id = 'updPop'; const close = () => d.remove();
+  d.appendChild(el('b', '', '村子裡多了這些')); for (const it of u.items) d.appendChild(updItem(it, close));
+  const ft = el('div', 'upd-ft'), all = el('button', 'tbtn ghost', '以前的更新'), ok = el('button', 'tbtn', '知道了');
+  all.addEventListener('click', () => { close(); phoneGo('upd'); }); ok.addEventListener('click', close); ft.append(all, ok); d.appendChild(ft);
+  document.body.appendChild(d); try { SFX.click(); } catch(e){} }
+if (NEWBIE) LS.set('tide.updSeen', UPD[0].id);   /* 第一次玩的人不跳，以後的更新才提醒 */
+setTimeout(function updWait(){ if (!UPD[0] || LS.get('tide.updSeen') === UPD[0].id) return; if (!updCanPop()){ setTimeout(updWait, 3000); return; } updPop(); }, 9000);
 SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.wild = '🏝️ 荒島背包'; SHEET_TITLE.phfeed = '🔔 快訊';
 function phoneOpen(){ Phone.via = true; openSheet('phone'); }
 function phoneGo(tab){ Phone.via = true;
