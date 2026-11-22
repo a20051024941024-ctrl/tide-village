@@ -2182,3 +2182,9 @@ html.fltype #rotate{display:none!important}
 .upd-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
 .upd-box{background:rgba(255,255,255,.6);border-radius:12px;padding:8px 12px;margin:8px 0}
 .upd-d{font-weight:700;opacity:.7}
+/* v690 新人物（試玩）的顏色格子 */
+.k3lab{margin:6px 0 2px!important;font-weight:700}
+.k3sw{display:flex;flex-wrap:wrap;gap:6px}
+.k3c{width:30px;height:30px;border-radius:50%;border:2px solid rgba(58,42,20,.25);padding:0;cursor:pointer}
+.k3c[aria-pressed="true"]{border-color:#18334a;box-shadow:0 0 0 2px #fff,0 0 0 4px #18334a}
+.k3c0{width:auto;border-radius:15px;padding:0 10px;background:#f4efe6;font-size:12px}

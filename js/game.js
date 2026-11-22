@@ -5032,6 +5032,92 @@ function kidUpgrade(f){
   a.body = prim.shirt || a.body;
   if (f.gearKey){ const g = JSON.parse(f.gearKey); f.gearKey = ''; f.setGear(g); }
 }
+/* ===================== v690 新人物（試玩）=====================
+   作者 11/23「放吧」：用 Meshy 做的光頭素體，配上自己生的髮型和衣服（長捲髮、刺刺短髮、白T、連帽衣、女僕裝、短褲、長褲、兩雙鞋），每件都能換色。
+   素材在 models/kid3/（body.glb 是身體＋全部衣服，一件衣服一個零件；rig.json 是骨架位置）。
+   做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
+   原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
+   設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
+const K3 = { on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
+K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.k3') || 'null'); } catch(e){}
+  K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
+K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} };
+K3.read();
+K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = true; const P = 'models/kid3/', TL = new THREE.TextureLoader(), GL = new GLTFLoader();
+  Promise.all([fetch(P + 'rig.json').then(r => r.json()), GL.loadAsync(P + 'body.glb'), GL.loadAsync(P + 'hair_long.glb'), GL.loadAsync(P + 'hair_short.glb'), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png')])
+    .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {} }; K3.loading = false; })
+    .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
+K3.face = (sex, ex) => { const F = K3.asset.faces, k = sex + ex; if (!F[k]){ const t = new THREE.TextureLoader().load('models/kid3/f' + sex + '_' + ex + '.jpg'); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; F[k] = t; } return F[k]; };
+K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.scene; KS.updateMatrixWorld(true);
+  const KB = {}; KS.traverse(o => { if (o.isBone) KB[o.name] = o; });
+  const bones = {}, W = {};
+  for (const n of RG.order){ const b = new THREE.Bone(); b.name = n; bones[n] = b; W[n] = { q: KB[n].getWorldQuaternion(new THREE.Quaternion()), p: new THREE.Vector3(...(n === 'root' ? [0, -0.95, 0] : (RG.T[n] || RG.pos[n]))) }; }
+  for (const n of RG.order){ const kb = KB[n], par = kb.parent && bones[kb.parent.name]; if (par) par.add(bones[n]); }
+  for (const n of RG.order){ const b = bones[n], par = b.parent; if (!par || !par.isBone){ b.position.copy(W[n].p); b.quaternion.copy(W[n].q); continue; }
+    const inv = W[par.name].q.clone().invert(); b.position.copy(W[n].p.clone().sub(W[par.name].p).applyQuaternion(inv)); b.quaternion.copy(inv.multiply(W[n].q)); }
+  const restQ = {}; for (const n of RG.order) restQ[n] = bones[n].quaternion.clone();
+  for (const [s, sg] of [['l', 1], ['r', -1]]){ const n = 'upperarm' + s, Ra = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -RG.A * sg), pq = W[bones[n].parent.name].q.clone().invert(); bones[n].quaternion.copy(pq.multiply(Ra.multiply(W[n].q.clone()))); }   /* 模型是 A 字站姿，綁定時手臂先轉下來 */
+  const scl = new THREE.Group(), grp = new THREE.Group(); scl.add(grp); grp.add(bones.root); grp.updateMatrixWorld(true);
+  const sk = new THREE.Skeleton(RG.order.map(n => bones[n])), meshes = {}, base = {};
+  A.body.scene.traverse(o => { if (!o.isMesh) return; const nm = o.material.name, mt = o.material.clone(), sm = new THREE.SkinnedMesh(o.geometry, mt); sm.name = 'k3_' + nm; sm.frustumCulled = false; sm.castShadow = true; grp.add(sm); sm.bind(sk); meshes[nm] = sm; base[nm] = mt.color.clone(); });
+  for (const n of RG.order) bones[n].quaternion.copy(restQ[n]);
+  const fm = meshes.face; if (fm){ const U = { uMask: { value: A.mask.b }, uHair: { value: new THREE.Color('#3a3a50') }, uHairB: { value: new THREE.Color(0.3, 0.3, 0.4) }, uOnH: { value: 0 } }; fm.material.map = K3.face('b', 'smile');
+    fm.material.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.fragmentShader = 'uniform sampler2D uMask;uniform vec3 uHair,uHairB;uniform float uOnH;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n{ vec3 mk = texture2D(uMask, vMapUv).rgb; float lt = dot(diffuseColor.rgb, vec3(.3,.59,.11)); vec3 hc = uHair * (lt / max(dot(uHairB, vec3(.3,.59,.11)), 1e-3)); diffuseColor.rgb = mix(diffuseColor.rgb, hc, mk.r * uOnH); }'); };
+    fm.material.customProgramCacheKey = () => 'k3face'; fm.material.needsUpdate = true; fm.userData.U = U; }
+  /* 大小：跟原本角色差不多高（原本的頭放大過，整個人約 2 格高；新人物 1.9）。新人物的腿比較長、髖部高一點，坐下、躺下的時候整個人往下移，屁股才會貼在椅子上 */
+  const gH = KB.hips.getWorldPosition(new THREE.Vector3()).y, s = 1;
+  scl.scale.setScalar(s); scl.position.y = 0.95 * s;
+  const pws = KB.hips.parent.getWorldScale(new THREE.Vector3()).x;
+  a.g.add(scl);
+  const k = a.k3 = { kidRef: K, scl, grp, bones, W, meshes, base, s, f: pws / s, gh0: KB.hips.position.clone(), hp0: bones.hips.position.clone(), X: {}, arm: -1, names: RG.order.filter(n => n !== 'root'), dy: gH - (W.hips.p.y + 0.95) * s, hair: null, hairT: '', sex: '', ex: '', handR0: K.handR };
+  K.handR = bones.handr; K.m.visible = false; return k; };
+K3.armX = (k, arm) => { if (k.arm === arm) return; k.arm = arm; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.X[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -arm * sg)).multiply(Wq); } };
+K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
+  if (k.hair){ try { k.grp.remove(k.hair.sm); for (const b of k.hair.ch) if (b.parent) b.parent.remove(b); } catch(e){} k.hair = null; }
+  const src = K3.asset.hair[type]; if (!src) return;
+  let hm = null; src.scene.traverse(o => { if (o.isMesh && !hm) hm = o; }); if (!hm) return; const geo = hm.geometry;
+  const hb = k.bones.head; k.grp.updateMatrixWorld(true); const hw = hb.getWorldPosition(new THREE.Vector3()), hq = hb.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const ys = [0.42, 0.16, -0.14, -0.46], ch = []; let par = hb, prev = null;
+  for (let i = 0; i < ys.length; i++){ const b = new THREE.Bone(), w = new THREE.Vector3(0, ys[i], -0.06); b.name = 'k3hair' + i; b.position.copy(i ? w.clone().sub(prev) : w.clone().sub(hw).applyQuaternion(hq)); par.add(b); ch.push(b); par = b; prev = w; }   /* 長髮：頭後面一串 4 節的骨頭，每一格往下垂，走路轉身頭髮會甩 */
+  if (!geo.attributes.skinIndex){ const P = geo.attributes.position, n = P.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    for (let q = 0; q < n; q++){ const y = P.getY(q); let i0 = 0, i1 = 0, t = 0; if (y <= ys[3]){ i0 = i1 = 3; } else if (y < ys[0]){ for (let i = 0; i < 3; i++) if (y <= ys[i] && y > ys[i + 1]){ i0 = i; i1 = i + 1; t = (ys[i] - y) / (ys[i] - ys[i + 1]); } }
+      si[q * 4] = i0; si[q * 4 + 1] = i1; sw[q * 4] = 1 - t; sw[q * 4 + 1] = t; }
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4)); }
+  const sm = new THREE.SkinnedMesh(geo, hm.material.clone()); sm.name = 'k3_hair'; sm.frustumCulled = false; sm.castShadow = true; k.grp.add(sm); k.grp.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(ch));
+  k.hair = { sm, ch, q: ch.map(() => new THREE.Quaternion()), base: hm.material.color.clone() }; K3.colorHair(k); };
+K3.colorHair = k => { const c = K3.cfg.c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
+  const U = k.meshes.face && k.meshes.face.userData.U; if (U){ U.uOnH.value = col && K3.cfg.sex === 'b' ? 1 : 0; if (col) U.uHair.value.copy(col); } };
+/* 穿什麼：女僕裝是一整套（底下配黑色襯褲和白襪）；其他時候上衣、褲子分開選。手臂張多開跟著衣服（蓬裙最開、長褲一點、T恤原本的） */
+K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1 };
+  if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); }
+  else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; } else v.shirt = 1; v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
+  v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1;
+  for (const n in M) M[n].visible = !!v[n];
+  const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
+  for (const n of ['shirt', 'hoodie', 'dress']) set(n, C.top); for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2']) set(n, C.shoes);
+  if (c.top === 'maid') set('pants', '#1b1b20');
+  K3.armX(k, c.top === 'maid' ? 0 : c.bot === 'pants' ? 0.25 : 0.42);
+  K3.setHair(k, c.hair); K3.colorHair(k);
+  if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
+K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
+/* 每一格：原本骨架的角度抄過來（手臂多轉一點貼近身體），髖部的上下前後照比例搬過來；長髮往下垂、跟著甩；表情 */
+K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K) return; const GB = K.B, B = k.bones;
+  for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r); }
+  B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
+  { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s + k.dy * Math.min(1, fl); }
+  if (K.m.visible) K.m.visible = false;
+  if (k.hair){ const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
+    for (let i = 1; i < ch.length; i++){ const b = ch[i], tgt = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(gq); k.hair.q[i].slerp(tgt, 0.45); b.quaternion.copy(k.hair.q[i]); b.updateMatrixWorld(true); } }
+  const sex = K3.cfg.sex === 'g' ? 'g' : 'b', ex = f && f.emote ? 'happy' : 'smile';
+  if (k.sex !== sex || k.ex !== ex){ k.sex = sex; k.ex = ex; const fm = k.meshes.face; if (fm){ fm.material.map = K3.face(sex, ex); fm.material.needsUpdate = true; } } };
+K3.frame = () => { const a = typeof me !== 'undefined' && me && me.av; if (!a) return;
+  if (!K3.on){ if (a.k3) K3.detach(a); return; }
+  if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
+  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.build(a); K3.apply(a); }
+  K3.sync(a, me); };
+K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) K3.apply(a); } catch(e){ console.warn('k3 apply', e); } };
+K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 // 表情動作還在做嗎：時間到、走開、開始釣魚就停
 /* v638 作者：「把現有動作用在對的時候」→「你先做」。站著不動一陣子（8～16 秒），會自己做個小動作：
    左右看看（idle2）、伸懶腰（早上比較常）、打哈欠（晚上比較常）；做完過 12～26 秒再來一次。走動、拿著魚、在玩別的就不做。
@@ -5173,7 +5259,7 @@ function kidAnimate(f, dt, t){
     else K.casting = false; }
   if (ac.jump_land && W.jump_land && (K.w.jump_land || 0) < 0.1){ ac.jump_land.reset(); }
   { const H = f.ppose && f.ppose.hold, c = H && ac[H[0]]; if (c){ c.paused = true; c.time = Math.min(H[1], (now() - f.ppose.at) * 1.1); K.ppHeld = c; } else if (K.ppHeld){ K.ppHeld.paused = false; K.ppHeld = null; } }   /* 蹲下去停在那一格 */
-  K.mixer.update(dt); kidPostPose(f, K, dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1;   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
+  K.mixer.update(dt); kidPostPose(f, K, dt); if (f.sportFx || f.bkArm || f.ski) sportPose(f, K); kidLift(K); K.ikAt = -1; if (a.k3) try { K3.sync(a, f); } catch(e){}   /* v463 骨架動畫一跑，握槳的姿勢就要重做 */
   if (a.capeP && a.capeP.parent){ const B = K.B, u = K.v.set(0, 1, 0).applyQuaternion(B.chest.quaternion).applyQuaternion(B.spine.quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion), lean = Math.atan2(u.z, u.y), tgt = 0.12 - lean * 0.9 + Math.min(0.55, v * 0.09) + Math.sin(t * 6 + a.blinkAt) * 0.03 * Math.min(1, v); a.capeP.rotation.x += (tgt - a.capeP.rotation.x) * Math.min(1, dt * 8); }
 }
 const CLOD = { all: new Set(), L: 6 };   /* v289 角色遠近（clodTick） */
@@ -13524,6 +13610,22 @@ function renderSettings(body){
     row.appendChild(sl); row.appendChild(pct); f.appendChild(row); f.appendChild(el('p', 'sub', '往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。' + (L.out ? '' : '（現在在室內或水裡，這裡調的只是暫時的。）'))); }
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
+  { const f = field('🧒 新人物（試玩）'), c = K3.cfg, seg = el('div', 'seg');   /* v690 */
+    [[false, '原本的樣子'], [true, '試試新人物']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(!!c.on === k)); b.addEventListener('click', () => { K3.set({ on: k }); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg);
+    if (c.on){ const row = (lab, key, opts, off) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'seg'); opts.forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(c[key] === k)); if (off) b.disabled = true; b.addEventListener('click', () => { K3.set({ [key]: k }); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
+      const sw = (lab, key, cols) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
+        cols.forEach(col => { const b = el('button', 'k3c'); b.style.background = col; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
+      row('臉', 'sex', [['g', '女生'], ['b', '男生']]);
+      row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮']]);
+      sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
+      row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝']]);
+      sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
+      row('褲子', 'bot', [['shorts', '短褲'], ['pants', '長褲']], c.top === 'maid');
+      sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
+      row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
+      sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']); }
+    f.appendChild(el('p', 'sub', '新做的人物，還在試玩：可以選臉、髮型、衣服和顏色。現在只有你自己看得到，別人看到的你還是原本的樣子。原本的帽子、配件、造型先不會出現在新人物身上。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
@@ -19646,6 +19748,7 @@ function renderTab0(){
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
       '🎣 拋竿看出力：力量條越滿，竿子甩得越大、線飛得越遠越高；坐著釣到 3 公斤以上或稀有的魚，角色會站起來拉。',
       '👀 第一人稱釣魚：到「設定 → 🎣 釣魚視角」選「第一人稱」打開（預設是背後），打開以後一拋竿就會換成第一人稱，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
+      '🧒 新人物（試玩）：到「設定 → 🧒 新人物（試玩）」選「試試新人物」，可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色。現在只有自己看得到，別人看到的你還是原本的樣子；原本的帽子和配件先不會出現在新人物身上。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
@@ -21166,6 +21269,7 @@ function frame(){
   if (Dive.on) diveHideWorld(); else { cullAvatars(); hideOrphanBits(); }
   if (Quality.tier !== 'high'){ renderer.shadowMap.autoUpdate = false; if (frameNo % 2 === 0) renderer.shadowMap.needsUpdate = true; }   /* v289 中畫質影子兩張更新一次 */
   if (myBoat && !Dive.on){ try { KJ.ikR2 = kayakIK(me, myBoat.m); KJ.pr = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } }   /* v463 玩家說「別人有動作、自己沒有」：自己的角色在這一格後面可能又被別的地方更新一次，把姿勢洗掉。畫面送出去之前最後再握一次槳 */
+  try { K3.frame(); } catch(e){ if (!K3.ferr){ K3.ferr = 1; console.warn('k3', e); } }   /* v690 新人物：彈性、划船、騎車的姿勢都算完了，最後抄一次骨架 */
   renderer.render(scene, camera);
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
@@ -21231,6 +21335,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u690', d:'11/23', items:[
+    ['🧒', '新人物開放試玩：設定裡打開，可以選女生或男生的臉、長捲髮或短髮、白T／連帽衣／女僕裝、短褲或長褲、兩種鞋子，每件都能換顏色。先只有自己看得到。', 'settings'] ] },
   { id:'u687', d:'11/22', items:[
     ['🧱', '小島能擺一格一格的方塊和隔板，不要的可以整個收回來，之後再擺。', 'island'],
     ['👕', '每週換一個穿搭主題，身上穿到兩件以上，釣魚多一成經驗。還沒挑過入門套裝的可以免費挑一套。', 'closet'],
