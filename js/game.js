@@ -2311,7 +2311,10 @@ function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane
    坐船時先從阿海那裡走到碼頭邊、跳上船（離太遠才先淡出移到碼頭），船再從碼頭開出去；到了以後從船邊跳上岸。 */
 const VOY_DOCK = [33.5, -31.2, Math.PI / 2], VOY_EDGE = [31.2, -28.9];
 function voyDeck(x, z, hd){ const sc = Voy.m.scale.x; return [x - Math.sin(hd) * 1.95 * sc, z - Math.cos(hd) * 1.95 * sc, WATER_LEVEL + (1.1 - 0.25) * sc]; }
-function voyDockTick(dt, t){ if (Voy.on || Voy.board) return; const d = Math.hypot(me.pos.x - VOY_DOCK[0], me.pos.z - VOY_DOCK[1]); if (!Voy.m){ if (d > 140) return; Voy.m = twBoat(0, 0, 0, 1.7); }
+/* v744 作者：「人物會穿進去」（走進停在碼頭的大船裡）→ 停靠的船加一塊擋住的範圍（船身大小）；上船、出海的時候把它移開 */
+function voyColTick(){ if (!Voy.col){ Voy.col = { t: 'o', x: 0, z: 0, hw: 2.1, hd: 5.3, c: 1, s: 0, bw: 0, bd: 0, top: null }; colliders.push(Voy.col); }
+  const c = Voy.col, away = Voy.on || Voy.board; if (away){ c.x = 9999; c.z = 9999; return; } const ry = VOY_DOCK[2]; c.c = Math.cos(ry); c.s = Math.sin(ry); c.x = VOY_DOCK[0] + Math.sin(ry) * 0.2; c.z = VOY_DOCK[1] + Math.cos(ry) * 0.2; c.bw = Math.abs(c.c) * c.hw + Math.abs(c.s) * c.hd; c.bd = Math.abs(c.s) * c.hw + Math.abs(c.c) * c.hd; }
+function voyDockTick(dt, t){ try { voyColTick(); } catch(e){} if (Voy.on || Voy.board) return; const d = Math.hypot(me.pos.x - VOY_DOCK[0], me.pos.z - VOY_DOCK[1]); if (!Voy.m){ if (d > 140) return; Voy.m = twBoat(0, 0, 0, 1.7); }
   if (d > 160){ if (Voy.m.visible) Voy.m.visible = false; return; } const sc = Voy.m.scale.x, bob = Math.sin(t * 1.3) * 0.04, wh = WAVES.on ? waveH(VOY_DOCK[0], VOY_DOCK[1], t) : 0;
   Voy.m.visible = true; Voy.m.position.set(VOY_DOCK[0], WATER_LEVEL - 0.25 * sc + bob + wh, VOY_DOCK[1]); Voy.m.rotation.set(Math.sin(t * 0.9) * 0.015, VOY_DOCK[2], Math.sin(t * 1.1) * 0.02);
  }
