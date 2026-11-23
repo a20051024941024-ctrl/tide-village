@@ -11185,7 +11185,7 @@ function renderFriends(body){
   const on = onlineUids(), ul = el('ul', 'people');
   for (const f of Fr.list.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || (b.mutual - a.mutual))){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
     const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null;
-    { let gr = null; try { for (const p of peers.values()) if (p.pres && p.pres.u === f.id && p.fisher.gearKey){ gr = JSON.parse(p.fisher.gearKey); break; } } catch(e){} const im = avatarImg(f.av, '', gr); if (im) sw.replaceWith && li.append(im); }
+    { let gr = null, k3r = null; try { for (const p of peers.values()) if (p.pres && p.pres.u === f.id && p.fisher.gearKey){ gr = JSON.parse(p.fisher.gearKey); k3r = p.fisher.k3c || null; break; } } catch(e){} const im = avatarImg(f.av, '', gr, k3r); if (im) sw.replaceWith && li.append(im); }
     li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在這個大廳' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
     { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} cardTap(li, f.id, f.name || '釣客', pk); }
     if (f.mutual){ const ch = el('button', 'tbtn vbtn', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.textContent = `💬 ${u.n}`; ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); li.appendChild(ch);
@@ -12922,16 +12922,17 @@ function cardPick(c, r, peerId){ c.innerHTML = ''; c.classList.remove('pcard2');
 function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pcard2'); let nm = String(r.name || '玩家').slice(0, 16); try { nm = clean(nm); } catch(e){} const isMe = !!r.me;
   /* v538 作者給了一張「玩家資料」參考圖 → 改成整頁：左邊是角色全身照，右邊上面是頭像＋名字＋等級條＋一句話、旁邊是排位賽段位徽章，下面一排綜合數據、最得意的三種魚（有魚的圖）、稱號、成就 */
   const pr = peerId && peers.get(peerId) ? peers.get(peerId).pres || {} : null; let title = ''; try { title = isMe ? curTitle() : pr && typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti) ? pr.ti : ''; } catch(e){}
+  let k3r = null; try { k3r = isMe ? myK3() : (peerId && peers.get(peerId) && peers.get(peerId).fisher.k3c) || null; } catch(e){}
   let gr = null; try { if (isMe) gr = cleanGear(rec.gear); else if (peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey) gr = JSON.parse(peers.get(peerId).fisher.gearKey); else if (r.gear) gr = cleanGear(r.gear); } catch(e){}
   let L = 0, xk = 0, xpTx = ''; try { const xp = isMe ? calcXP() : calcXP({ count: r.count || {}, released: r.released || 0, photos: [] }); L = lvOf(xp); if (isMe){ xk = L >= 99 ? 1 : (xp - lvNeed(L)) / (lvNeed(L + 1) - lvNeed(L)); xpTx = L >= 99 ? '滿等' : `${Math.round(xp - lvNeed(L))} / ${lvNeed(L + 1) - lvNeed(L)}`; } } catch(e){}
   const X = el('button', 'pc-x', '✕'); X.setAttribute('aria-label', '關閉'); X.addEventListener('click', () => duelCardClose('pcard')); c.appendChild(X);
   const wrap = el('div', 'pc-wrap'), left = el('div', 'pc-left'), right = el('div', 'pc-right'); c.appendChild(wrap); wrap.append(left, right);
   /* 左：全身照 */
-  { const im = el('img', 'pc-body'); im.alt = ''; left.appendChild(im); setTimeout(() => { if (!im.isConnected) return; try { const src = avatarSrc('c:b1f0x0p' + (isMe ? 2 : 1) + 'a4z2', 384, gr); if (src) im.src = src; } catch(e){} }, 40); }   /* v543 全身照、魚的圖晚一點點再畫，資料頁先出來 */
+  { const im = el('img', 'pc-body'); im.alt = ''; left.appendChild(im); setTimeout(() => { if (!im.isConnected) return; try { const src = avatarSrc('c:b1f0x0p' + (isMe ? 2 : 1) + 'a4z2', 384, gr, k3r); if (src) im.src = src; } catch(e){} }, 40); }   /* v543 全身照、魚的圖晚一點點再畫，資料頁先出來 */
   if (r.team) left.appendChild(el('div', 'pc-team', `${TEAM_BADGE[r.team.badge] || '🎣'} ${String(r.team.name).slice(0, 12)}`));
   /* 右上：頭像＋名字＋等級＋一句話｜段位徽章 */
   const head = el('div', 'pc-head'), hb = el('div', 'pc-hb'), info = el('div', 'pc-info'); right.appendChild(head); head.appendChild(hb);
-  try { const av = isMe ? myAvatar() : r.avatar, src = avatarSrc(av, 192, gr) || avatarSrc('c:b0f1x0p0a4z0', 192, gr); if (src){ const im = el('img', 'pc-av'); im.src = src; im.alt = ''; if (isMe){ im.style.cursor = 'pointer'; im.title = '換大頭照'; im.addEventListener('click', () => cardStudio(c, r, peerId)); } hb.appendChild(im); if (isMe){ const cam = el('button', 'pc-cam', '📸'); cam.title = '換大頭照'; cam.addEventListener('click', () => cardStudio(c, r, peerId)); hb.appendChild(cam); } } } catch(e){}
+  try { const av = isMe ? myAvatar() : r.avatar, src = avatarSrc(av, 192, gr, k3r) || avatarSrc('c:b0f1x0p0a4z0', 192, gr, k3r); if (src){ const im = el('img', 'pc-av'); im.src = src; im.alt = ''; if (isMe){ im.style.cursor = 'pointer'; im.title = '換大頭照'; im.addEventListener('click', () => cardStudio(c, r, peerId)); } hb.appendChild(im); if (isMe){ const cam = el('button', 'pc-cam', '📸'); cam.title = '換大頭照'; cam.addEventListener('click', () => cardStudio(c, r, peerId)); hb.appendChild(cam); } } } catch(e){}
   hb.appendChild(info); info.appendChild(el('h3', '', nm)); if (title) info.appendChild(el('div', 'pc-title', title));
   { const lv = el('div', 'pc-lv'); lv.appendChild(el('b', '', `Lv.${L || 1}`)); if (isMe){ const bar = el('span', 'pc-xp'), fill = el('i', ''); fill.style.width = Math.round(clamp(xk, 0, 1) * 100) + '%'; bar.appendChild(fill); lv.appendChild(bar); lv.appendChild(el('small', '', xpTx)); } info.appendChild(lv); }
   { let mt = String(r.motto || '').slice(0, 30); try { mt = clean(mt); } catch(e){} const q = el('p', 'pc-motto', mt ? `「${mt}」` : isMe ? '（還沒寫一句話）' : ''); if (isMe){ const eb = el('button', 'pc-pen', '✏️'); eb.title = '改一句話'; eb.addEventListener('click', async () => { const v = prompt('寫一句話放在名片上（最多 30 個字，留空就是不寫）', r.motto || ''); if (v == null) return; const o = await festRpc('player_set_motto', { p_text: v }); if (o && o.ok){ r.motto = o.motto; cardDraw(c, r, peerId); } }); q.appendChild(eb); } if (mt || isMe) info.appendChild(q); }
@@ -16181,17 +16182,19 @@ const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1
 const SHOT_VIEW2 = { hat:[1.72, 2.45, 0.35], face:[1.32, 1.9, 0.15], acc:[1.23, 2.15, 0.4], top:[0.82, 2.5, 0.5], back:[0.95, 2.7, Math.PI - 0.6], pants:[0.42, 1.8, 0.45], shoes:[0.1, 1.25, 0.5], socks:[0.15, 1.15, 0.5], full:[0.95, 4.3, 0.45] };   /* v417 Q 版身材：頭大、人矮，鏡頭跟著調 */
 /* v731 新人物的衣櫃小圖：另外一個看不到的小場景，換上每個選項拍一張（快取起來，排隊一張一張畫，一次最多 20 毫秒） */
 const K3Shot = { kit: null, cache: new Map(), q: [], busy: false };
+function k3KitPose(av){ const k = av.k3; if (!k) return; if (!k.mixer && K3.asset.clipsJ){ try { K3.mkMixer(k); } catch(e){} if (k.acts){ for (const n in k.acts) k.acts[n].setEffectiveWeight(n === 'idle' ? 1 : 0); for (const n in k.eacts || {}) k.eacts[n].setEffectiveWeight(0); } }
+  if (k.mixer){ if (k.acts && k.acts.idle){ k.acts.idle.enabled = true; k.acts.idle.setEffectiveWeight(1); if (!k.acts.idle.isRunning()) k.acts.idle.play(); } k.mixer.update(0.033); } }
 function k3Kit(){ if (K3Shot.kit) return K3Shot.kit; if (!K3.asset || !KID.ok) return null;
   const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#c9b8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(2, 4, 3); sc.add(dl); const dl2 = new THREE.DirectionalLight('#ffffff', 0.9); dl2.position.set(-2, 2, -3); sc.add(dl2);
   const av = makeAvatar(look.shirt, look.hat); sc.add(av.g); avKidify(av); if (!av.kid) return null; K3.build(av); if (!av.k3) return null; av.k3.cfg = Object.assign({}, K3.cfg, { c: Object.assign({}, K3.cfg.c) }); K3.apply(av);
-  if (K3.asset.clipsJ){ K3.mkMixer(av.k3); const k = av.k3; if (k.acts){ for (const n of ['idle', 'walk', 'run', 'sprint']) if (k.acts[n]) k.acts[n].setEffectiveWeight(n === 'idle' ? 1 : 0); for (const n in k.eacts || {}) k.eacts[n].setEffectiveWeight(0); } if (k.mixer) k.mixer.update(0.5); }
+  k3KitPose(av);
   av.g.traverse(o => { if (o.isMesh) o.castShadow = false; }); av.g.rotation.y = 0;
   const cam = new THREE.PerspectiveCamera(28, 1, 0.05, 20), rt = new THREE.WebGLRenderTarget(160, 160, { samples: 4 }); rt.texture.colorSpace = THREE.SRGBColorSpace;
   return (K3Shot.kit = { sc, av, cam, rt, H: 1.7 }); }
 const K3_VIEW = { hat: [0.88, 1.15, 0.5], face: [0.83, 0.98, 0.3], ear: [0.84, 0.6, 0.85], top: [0.6, 1.05, 0.45], bot: [0.33, 1.1, 0.45], shoes: [0.06, 0.62, 0.55], full: [0.5, 2.3, 0.45] };
 function k3ShotNow(cfg, view, size){ const key = K3.enc(cfg) + '/' + view + '/' + size; if (K3Shot.cache.has(key)) return K3Shot.cache.get(key); const K = k3Kit(); if (!K) return null;
 
-  const a = K.av; a.k3.cfg = cfg; a.k3.ck = ''; K3.apply(a); if (a.k3.mixer) a.k3.mixer.update(0); a.g.updateMatrixWorld(true);
+  const a = K.av; a.k3.cfg = cfg; a.k3.ck = ''; K3.apply(a); k3KitPose(a); a.g.updateMatrixWorld(true);
   const [fy, fd, yaw] = K3_VIEW[view] || K3_VIEW.full, ty = fy * K.H, d = fd * K.H; K.cam.position.set(Math.sin(yaw) * d, ty + 0.06, Math.cos(yaw) * d); K.cam.lookAt(0, ty, 0);
   if (K.rt.width !== size) K.rt.setSize(size, size);
   const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
@@ -16200,6 +16203,17 @@ function k3ShotNow(cfg, view, size){ const key = K3.enc(cfg) + '/' + view + '/' 
   const cv = document.createElement('canvas'); cv.width = cv.height = size; const c2 = cv.getContext('2d'), id = c2.createImageData(size, size);
   for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
   c2.putImageData(id, 0, 0); const url = cv.toDataURL(); if (K3Shot.cache.size > 200) K3Shot.cache.clear(); K3Shot.cache.set(key, url); return url; }
+/* v737 作者：「左上角的頭像還是原本的」→ 大頭照、資料卡的照片也用新人物拍（背景、邊框、遠近、角度照舊；姿勢先用站好的） */
+function k3Portrait(cfg, C, S2){ const K = k3Kit(); if (!K) return null; const a = K.av; a.k3.cfg = Object.assign({}, cfg, { c: Object.assign({}, cfg.c) }); a.k3.ck = ''; K3.apply(a); k3KitPose(a); a.g.updateMatrixWorld(true);
+  const Z = AVC.zoom[C.z], yaw = (C.a - 4) * 0.2, zi = C.z, ty = [0.8, 0.68, 0.5][zi] * K.H, d = [2.0, 2.9, 4.7][zi]; K.cam.position.set(Math.sin(yaw) * d, ty + 0.08, Math.cos(yaw) * d); K.cam.lookAt(0, ty, 0);
+  if (K.rt.width !== S2) K.rt.setSize(S2, S2);
+  const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha(); renderer.setRenderTarget(K.rt); renderer.setClearColor('#000000', 0); renderer.clear(); renderer.render(K.sc, K.cam);
+  const px = new Uint8Array(S2 * S2 * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, S2, S2, px); renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA);
+  const t = document.createElement('canvas'); t.width = t.height = S2; const tc = t.getContext('2d'), id = tc.createImageData(S2, S2); for (let y = 0; y < S2; y++) id.data.set(px.subarray((S2 - 1 - y) * S2 * 4, (S2 - y) * S2 * 4), y * S2 * 4);
+  for (let i = 0; i < id.data.length; i += 4){ const al = id.data[i + 3]; if (al > 0 && al < 255){ id.data[i] = Math.min(255, id.data[i] * 255 / al); id.data[i + 1] = Math.min(255, id.data[i + 1] * 255 / al); id.data[i + 2] = Math.min(255, id.data[i + 2] * 255 / al); } }
+  tc.putImageData(id, 0, 0); return t; }
+function myK3(){ return K3.on && !/kid=0/.test(location.hash) ? K3.cfg : null; }
+function k3Face(size){ const c = myK3(); if (!c) return null; try { return k3ShotNow(Object.assign({}, c, { c: Object.assign({}, c.c) }), 'face', size); } catch(e){ return null; } }
 function k3ShotImg(cfg, view, alt){ const im = el('img', 'gearic'); im.alt = alt || ''; const key = K3.enc(cfg) + '/' + view + '/160';
   if (K3Shot.cache.has(key)) im.src = K3Shot.cache.get(key); else { im.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; K3Shot.q.push({ cfg, view, im }); k3ShotPump(); } return im; }
 function k3ShotPump(){ if (K3Shot.busy) return; K3Shot.busy = true; const step = () => { const t0 = performance.now();
@@ -16558,11 +16572,13 @@ const AVC = { bg: [['天空', ['#bfe6ff', '#eaf7ff']], ['海', ['#7fd0e8', '#2f8
 function avcParse(code){ const m = AV_C_RE.exec(code || ''); if (!m) return null; const n = m.slice(1).map(Number); return { b: n[0] % AVC.bg.length, f: n[1] % AVC.frame.length, x: n[2] % AVC.face.length, p: n[3] % AVC.pose.length, a: Math.min(8, n[4]), z: n[5] % AVC.zoom.length }; }
 function avcStr(c){ return `c:b${c.b}f${c.f}x${c.x}p${c.p}a${c.a}z${c.z}`; }
 /* 畫大頭照：角色用預覽用的小場景畫（透明背景），背景和外框用 2D 畫；gear 是那個人身上穿的 */
-function avatarPortrait(gear, C, size){ const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), R = size / 2, bg = AVC.bg[C.b][1];
+function avatarPortrait(gear, C, size, k3c){ const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), R = size / 2, bg = AVC.bg[C.b][1];
   c.save(); c.beginPath(); c.arc(R, R, R, 0, 7); c.clip(); const gr = c.createLinearGradient(0, 0, 0, size); gr.addColorStop(0, bg[0]); gr.addColorStop(1, bg[1]); c.fillStyle = gr; c.fillRect(0, 0, size, size);
   if (C.b === 6){ c.fillStyle = '#ffffff'; for (let i = 0; i < 14; i++){ const a = i * 2.39996, r = (0.25 + (i * 0.618 % 1) * 0.7) * R; c.globalAlpha = 0.5 + (i % 3) * 0.2; c.beginPath(); c.arc(R + Math.cos(a) * r, R + Math.sin(a) * r * 0.9, size * (0.008 + (i % 2) * 0.006), 0, 7); c.fill(); } c.globalAlpha = 1; }
   if (C.b === 1){ c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = size * 0.02; for (let k = 0; k < 3; k++){ c.beginPath(); for (let x = 0; x <= size; x += size / 16) c[x ? 'lineTo' : 'moveTo'](x, size * (0.66 + k * 0.1) + Math.sin(x / size * 9 + k * 2) * size * 0.018); c.stroke(); } }
-  if (gear){ try { const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } const fid = AVC.face[C.x][1], g2 = Object.assign({}, gear, fid ? { face: fid } : {}), gk = JSON.stringify(g2); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat); if (K.key !== gk){ applyGear(K.av, g2); K.key = gk; }
+  let k3t = null; if (gear && k3c){ try { k3t = k3Portrait(k3c, C, Math.min(512, size * 2)); } catch(e){ console.warn('k3portrait', e); } }
+  if (k3t) c.drawImage(k3t, 0, 0, size, size);
+  else if (gear){ try { const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } const fid = AVC.face[C.x][1], g2 = Object.assign({}, gear, fid ? { face: fid } : {}), gk = JSON.stringify(g2); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat); if (K.key !== gk){ applyGear(K.av, g2); K.key = gk; }
       const kid = K.av.kid, P = AVC.pose[C.p], Z = AVC.zoom[C.z]; let hy = 1.33;
       if (kid){ const nm = kid.acts[P[1]] ? P[1] : 'idle'; for (const k in kid.acts) kid.acts[k].setEffectiveWeight(k === nm ? 1 : 0); kid.acts[nm].time = 0; kid.mixer.setTime(0); kid.mixer.update(P[2]); kid.w = { [nm]: 1 }; kidLift(kid); K.av.g.updateMatrixWorld(true); hy = kid.B.head.getWorldPosition(new THREE.Vector3()).y + 0.24; }
       const yaw = (C.a - 4) * 0.2, ty = hy + Z[2] * (hy / 1.6); K.cam.position.set(Math.sin(yaw) * Z[1], ty + 0.1, Math.cos(yaw) * Z[1]); K.cam.lookAt(0, ty, 0);
@@ -16580,20 +16596,20 @@ const AV_BG = ['#cfe9f7', '#ffe3c4', '#e3f4d8', '#f6dcef', '#e8e3ff', '#fff2c2']
 const AvCache = new Map();
 function myAvatar(){ const r = Cloud.lastRow && typeof Cloud.lastRow.avatar === 'string' ? Cloud.lastRow.avatar : null; return r != null ? r : LS.get('tide.avatar', ''); }
 function avatarOk(code){ return typeof code === 'string' && (code === '' || AV_C_RE.test(code) || /^f:[a-z0-9_]{1,40}$/.test(code) && FISH_BY_ID[code.slice(2)] || /^p:[a-z]{1,20}$/.test(code) && PET_KINDS[code.slice(2)] || /^e:\d{1,2}$/.test(code) && AV_EMOJI[+code.slice(2)]); }
-function avatarSrc(code, size, gear){ size = size || 96; if (!avatarOk(code) || code === '') return null; const C = avcParse(code), key = code + '|' + size + (C ? '|' + (gear ? JSON.stringify(gear) : '') + (AvShot.kit && AvShot.kit.av.kid ? 'k' : '') : ''); if (AvCache.has(key)) return AvCache.get(key);
-  if (C){ const u = avatarPortrait(gear || null, C, size); if (AvCache.size > 120) AvCache.clear(); AvCache.set(key, u); return u; }
+function avatarSrc(code, size, gear, k3c){ size = size || 96; if (!avatarOk(code) || code === '') return null; const C = avcParse(code); if (k3c && !(K3.asset && KID.ok)) k3c = null; const key = code + '|' + size + (C ? '|' + (gear ? JSON.stringify(gear) : '') + (AvShot.kit && AvShot.kit.av.kid ? 'k' : '') + (k3c ? '|3' + K3.enc(k3c) : '') : ''); if (AvCache.has(key)) return AvCache.get(key);
+  if (C){ const u = avatarPortrait(gear || null, C, size, k3c); if (AvCache.size > 120) AvCache.clear(); AvCache.set(key, u); return u; }
   const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), h = [...code].reduce((a, ch) => a + ch.charCodeAt(0), 0);
   c.fillStyle = AV_BG[h % AV_BG.length]; c.beginPath(); c.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); c.fill();
   if (code.startsWith('f:')){ const f = FISH_BY_ID[code.slice(2)], fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; try { drawFish(fc, f.color, true, f.id); } catch(e){} c.drawImage(fc, size * 0.04, size * 0.2, size * 0.92, size * 0.575); }
   else { const ch = code.startsWith('p:') ? PET_KINDS[code.slice(2)].icon : AV_EMOJI[+code.slice(2)]; c.font = `${Math.round(size * 0.58)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ch, size / 2, size * 0.54); }
   const u = cv.toDataURL('image/png'); AvCache.set(key, u); if (code.startsWith('f:')) setTimeout(() => AvCache.delete(key), 4000); return u; }   /* 魚的小圖要一下下才畫好，過一會兒重畫 */
-function avatarImg(code, cls, gear){ const src = avatarSrc(code, 64, gear); if (!src) return null; const im = el('img', 'avimg ' + (cls || '')); im.src = src; im.alt = ''; return im; }
+function avatarImg(code, cls, gear, k3c){ const src = avatarSrc(code, 64, gear, k3c); if (!src) return null; const im = el('img', 'avimg ' + (cls || '')); im.src = src; im.alt = ''; return im; }
 async function setAvatar(code){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能換頭像'); return; }
   try { const { data, error } = await Cloud.sb.rpc('set_avatar', { p: code }); if (error) throw error; if (Cloud.lastRow) Cloud.lastRow.avatar = data || ''; LS.set('tide.avatar', data || ''); pushPresence(true); const mk = $('#brand .mark'); if (mk) mk._src = null; toast('🖼️ 頭像換好了'); if (AvStudio.onSet){ try { AvStudio.onSet(); } catch(e){} } else renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
 const AvStudio = { c: null };
 function renderAvatarStudio(body){ const f = el('div', 'field avst'); f.appendChild(el('label', '', '📸 大頭照')); const cur = myAvatar();
   if (!AvStudio.c) AvStudio.c = avcParse(cur) || { b: 0, f: 1, x: 0, p: 0, a: 4, z: 0 }; const C = AvStudio.c, wrap = el('div', 'avst-w'), left = el('div', 'avst-l'), im = el('img', 'avst-img'), right = el('div', 'avst-r'); im.alt = '';
-  const draw = () => { try { im.src = avatarSrc(avcStr(C), 256, cleanGear(rec.gear)) || ''; } catch(e){} use.disabled = avcStr(C) === myAvatar(); use.textContent = use.disabled ? '✔ 現在的頭像' : '用這張當頭像'; };
+  const draw = () => { try { im.src = avatarSrc(avcStr(C), 256, cleanGear(rec.gear), myK3()) || ''; } catch(e){} use.disabled = avcStr(C) === myAvatar(); use.textContent = use.disabled ? '✔ 現在的頭像' : '用這張當頭像'; };
   const use = el('button', 'btn primary', '用這張當頭像'); use.addEventListener('click', () => setAvatar(avcStr(C)));
   const row = (label, key, opts, paint) => { const r = el('div', 'avst-row'); r.appendChild(el('span', 'avst-k', label)); const box = el('div', 'avst-o'); opts.forEach((o, i) => { const b = el('button', 'avst-b' + (C[key] === i ? ' on' : ''), paint ? '' : o[0]); b.title = o[0]; b.setAttribute('aria-label', label + '：' + o[0]); if (paint){ b.classList.add('sw'); paint(b, o); } b.addEventListener('click', () => { C[key] = i; box.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === i)); if (key === 'p' && i > 0 && C.z === 0){ C.z = 1; const zb = right.querySelector('.avst-o[data-k="z"]'); if (zb) zb.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === 1)); toast('📸 姿勢要拍半身才看得到，已經幫你換成「半身」'); } poseNote(); draw(); }); box.appendChild(b); }); box.dataset.k = key; r.appendChild(box); right.appendChild(r); return r; };   /* v536 作者：「你那個動作其實很沒用」→ 大頭照只拍到臉，姿勢根本看不出來；現在選了姿勢會自動換成半身，選大頭的時候姿勢那排會變淡並說明 */
   let poseRow = null; const poseNote = () => { if (!poseRow) return; const off = C.z === 0; poseRow.style.opacity = off ? '0.5' : ''; let n = poseRow.querySelector('.avst-n'); if (!n){ n = el('small', 'avst-n', ''); n.style.cssText = 'display:block;font-size:11px;color:#5a6b7a;margin-top:2px'; poseRow.querySelector('.avst-o').appendChild(n); } n.textContent = off ? '（「大頭」只拍到臉，看不到姿勢；選姿勢會自動換成半身）' : ''; };
@@ -16607,7 +16623,7 @@ function renderAvatarStudio(body){ const f = el('div', 'field avst'); f.appendCh
 function renderAvatarPick(body){ renderAvatarStudio(body); const f = el('div', 'field'); f.appendChild(el('label', '', '🖼️ 或是選一個現成的頭像')); const cur = myAvatar(), g = el('div', 'avpick');
   /* v543 作者：「點這個畫面時，畫面都會卡一下」→ 這一排有一百多個小圖（符號、寵物、48 種魚），以前一打開就一口氣全部畫完才顯示；現在先顯示上面的大頭照，小圖每一格畫 6 個慢慢補上 */
   const Q = [], opt = (code, mk, title) => Q.push([code, mk, title]);
-  opt('', () => { const im = el('img', 'avimg'); try { im.src = avatarShot(cleanGear(rec.gear), 'face', 96) || ''; } catch(e){} return im; }, '我的角色');
+  opt('', () => { const im = el('img', 'avimg'); try { im.src = k3Face(96) || avatarShot(cleanGear(rec.gear), 'face', 96) || ''; } catch(e){} return im; }, '我的角色');
   AV_EMOJI.forEach((e, i) => opt('e:' + i, () => avatarImg('e:' + i), e));
   for (const k of [...new Set((Pets.list || []).map(p => p.kind))]) if (PET_KINDS[k]) opt('p:' + k, () => avatarImg('p:' + k), PET_KINDS[k].name);
   for (const fz of FISH.filter(x => (rec.count[x.id] || 0) > 0 && !x.of).sort((a, b) => (rec.count[b.id] || 0) - (rec.count[a.id] || 0)).slice(0, 48)) opt('f:' + fz.id, () => avatarImg('f:' + fz.id), fz.name);
@@ -17333,7 +17349,7 @@ if (UI2) document.body.classList.add('ui2');
 function ui2Tick(){
   if (!UI2) return;
   // 左上角的頭像：用自己的角色拍一張大頭照
-  try { const mk = $('#brand .mark'); if (mk){ const src = avatarSrc(myAvatar(), 96, cleanGear(rec.gear)) || avatarShot(cleanGear(rec.gear), 'face', 96); if (src && mk._src !== src){ mk._src = src; mk.innerHTML = ''; const im = document.createElement('img'); im.src = src; im.alt = ''; mk.appendChild(im); } } } catch(e){}
+  try { const mk = $('#brand .mark'); if (mk){ const src = avatarSrc(myAvatar(), 96, cleanGear(rec.gear), myK3()) || k3Face(96) || avatarShot(cleanGear(rec.gear), 'face', 96); if (src && mk._src !== src){ mk._src = src; mk.innerHTML = ''; const im = document.createElement('img'); im.src = src; im.alt = ''; mk.appendChild(im); } } } catch(e){}
   { const h = $('#brand h1'); const nm = nickname || '潮汐釣魚村'; if (h && h._nm !== nm){ h._nm = nm; h.textContent = nm; } }   // 左上角顯示自己的名字
   // 紅點：有禮物或好友邀請、有任務可以交
   const dot = (tab, n) => { const b = $(`#menu .mbtn[data-tab="${tab}"]`); if (!b) return; let d = $('.rdot', b); if (!n){ if (d) d.remove(); return; } if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); };
@@ -17508,7 +17524,7 @@ async function shareCard(o){ if (shareCard.busy) return; shareCard.busy = true; 
   g.font = `500 38px ${font}`; g.fillStyle = '#5b7385'; { const d = new Date(Date.now() + 8 * 3600000); g.fillText([o.place ? '📍 ' + o.place : '', `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`].filter(Boolean).join('　'), W / 2, cardY + 900); }
   /* 釣客：頭像、名字、等級稱號、圖鑑和總數 */
   { const py = 1300, ph = 150; g.fillStyle = 'rgba(255,255,255,.16)'; rr(70, py, W - 140, ph, 40); g.fill(); let ax = 110; const ar = 52, ay = py + ph / 2;
-    let av = null; try { const src = avatarSrc(myAvatar(), 208, cleanGear(rec.gear)); if (src){ av = new Image(); av.src = src; await new Promise(r => { av.onload = r; av.onerror = r; setTimeout(r, 600); }); } } catch(e){}
+    let av = null; try { const src = avatarSrc(myAvatar(), 208, cleanGear(rec.gear), myK3()); if (src){ av = new Image(); av.src = src; await new Promise(r => { av.onload = r; av.onerror = r; setTimeout(r, 600); }); } } catch(e){}
     g.fillStyle = '#fff'; g.beginPath(); g.arc(ax + ar, ay, ar + 5, 0, Math.PI * 2); g.fill(); if (av && av.width) g.drawImage(av, ax, ay - ar, ar * 2, ar * 2); else { g.font = `60px ${font}`; g.fillText('🧢', ax + ar, ay + 22); }
     let lv = 1, ttl = '', kinds = 0, total = 0; try { lv = lvOf(calcXP()); ttl = (typeof Lv !== 'undefined' && Lv.title) || ''; kinds = Object.keys(rec.count || {}).filter(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k]).length; total = rec.total || 0; } catch(e){}
     g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = `800 50px ${font}`; g.fillText(String(nickname || '釣客').slice(0, 12), ax + ar * 2 + 26, ay - 8); g.font = `600 34px ${font}`; g.globalAlpha = 0.92; g.fillText(`Lv.${lv}${ttl ? '・' + ttl : ''}`, ax + ar * 2 + 26, ay + 42);
@@ -19979,7 +19995,7 @@ function renderTab0(){
       { const qb = el('button', 'tbtn', duelLive() ? '正在對決中' : Duel.q ? '取消排隊' : '⚔️ 排位賽・找對手'); qb.disabled = duelLive(); qb.style.marginBottom = '8px'; qb.addEventListener('click', () => { if (Duel.q){ duelQueueStop('已經取消排隊'); renderTab(); } else { closeSheet(); duelQueueAsk(); } }); body.appendChild(qb); }
       if (!duelLive() && !Duel.q){ const tb = el('button', 'tbtn ghost', '👥 小組對決（2 對 2）'); tb.style.margin = '0 0 8px 6px'; tb.addEventListener('click', () => { closeSheet(); const P = lobbyPeople(); if (P.length >= 3) { const c = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); c.appendChild(X); c.appendChild(el('h3', '', '👥 小組對決（2 對 2）')); for (const [t, sb, fn] of [['📨 邀大廳裡的人', '選 1 個隊友、2 個對手', () => duelTeamPick(null)], ['🔍 小組找對手', '自己排，或跟朋友一起排，湊滿 4 人就開', () => duelTeamQueueAsk()]]){ const b = el('button', 'tbtn dq-pick'); b.appendChild(el('b', '', t)); b.appendChild(el('small', '', sb)); b.addEventListener('click', () => { duelCardClose('ask'); fn(); }); c.appendChild(b); } } else duelTeamQueueAsk(); }); body.appendChild(tb); } }   /* v522 作者：「只能在背包開排位賽嗎」→ 朋友分頁也放一顆；v668 加小組對決 */
     const ul = el('ul', 'people');
-    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} const im = avatarImg(av, '', gr); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st)); cardTap(li, isMe ? myId : uid, name, peerId);
+    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} let k3r = null; try { k3r = isMe ? myK3() : (peerId && peers.get(peerId) && peers.get(peerId).fisher.k3c) || null; } catch(e){} const im = avatarImg(av, '', gr, k3r); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st)); cardTap(li, isMe ? myId : uid, name, peerId);
       if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
       if (uid && Cloud.on && !isMe){ const cb = el('button', 'tbtn vbtn', '🪪 資料'); cb.addEventListener('click', () => openCard(uid, name, peerId)); li.appendChild(cb); }   /* v544 作者：「我的名片移除」→ 自己那一列不放按鈕（點左上角頭像就是自己的資料頁） */   /* v534 */
       if (uid && Cloud.on && !isMe && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); li.appendChild(dz); }
