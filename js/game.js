@@ -5127,10 +5127,13 @@ K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.
   K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
 K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} };
 K3.read();
+K3.neckTrim = body => { body.scene.traverse(o => { if (!o.isMesh) return; const nm = o.material.name, hd = nm === 'headskin', tp = /^T\w+_skin$/.test(nm); if (!hd && !tp) return; const g = o.geometry, P = g.attributes.position, ix = g.index.array, out = [];
+    const neck = i => { const x = P.getX(i), y = P.getY(i), z = P.getZ(i) - 0.012, r = Math.hypot(x, z); return hd ? ((y < 0.205 && r < 0.22) || (y < 0.26 && r < 0.1)) : (y > 0.15 && r < 0.17); };
+    for (let i = 0; i < ix.length; i += 3) if (!(neck(ix[i]) || neck(ix[i + 1]) || neck(ix[i + 2]))) out.push(ix[i], ix[i + 1], ix[i + 2]); g.setIndex(out); }); };
 K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = true; const P = 'models/kid3/', TL = new THREE.TextureLoader(), GL = new GLTFLoader();
   const V = '?v=' + K3.V;   /* v716 模型檔加版本號：手機或網路中間的暫存會留住舊的 body.glb（作者：「釣魚背心沒東西」——程式是新的、模型是舊的）。改了模型就把 K3.V 加一 */
   Promise.all([fetch(P + 'rig.json' + V).then(r => r.json()), GL.loadAsync(P + 'body.glb' + V), GL.loadAsync(P + 'hair_long.glb' + V), GL.loadAsync(P + 'hair_short.glb' + V), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png')])
-    .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null }; K3.loading = false;
+    .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null }; try { K3.neckTrim(body); K3.asset.neckTrim = true; } catch(e){ console.warn('neckTrim', e); } K3.loading = false;
       fetch(P + 'clips.json' + V).then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
     .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
 /* v718 作者：「可以加載完再進入遊戲嗎，不要一進去還是原本的造型」→ 一開始就同時下載新人物（以前要等舊角色載完才開始下載），進入畫面也等自己的新人物換好才掀開（最多多等到 22 秒，不會卡住） */
@@ -5148,6 +5151,13 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   const scl = new THREE.Group(), grp = new THREE.Group(); scl.add(grp); grp.add(bones.root); grp.updateMatrixWorld(true);
   const sk = new THREE.Skeleton(RG.order.map(n => bones[n])), meshes = {}, base = {};
   A.body.scene.traverse(o => { if (!o.isMesh) return; const nm = o.material.name, mt = o.material.clone(), sm = new THREE.SkinnedMesh(o.geometry, mt); sm.name = 'k3_' + nm; sm.frustumCulled = false; sm.castShadow = true; grp.add(sm); sm.bind(sk); meshes[nm] = sm; base[nm] = mt.color.clone(); if (nm === 'fist' || nm === 'palm' || /^[TB]\w+_(cloth|etc)$/.test(nm)) mt.side = THREE.DoubleSide; });   /* v731 作者：「脖子那圈又空了」→ 連帽衣的帽子、領口從上面往裡看是單面的，看得到後面的地 → 衣服兩面都畫 */   /* v708 手是從別的模型切下來的，有幾片面朝裡，從後面看是空心殼（作者：「手也是空的」）→ 兩面都畫 */
+  /* v735 作者：「看得到接縫」→ 脖子原本是兩塊疊在一起（頭帶下來的一截＋衣服那塊帶上來的一圈，邊緣是碎的、顏色也差一點）。
+     改成一根完整的脖子：上面插進頭裡、下面插進領口裡，上半跟著頭、下半跟著胸口。舊的那兩截在載入時就拿掉（K3.neckTrim） */
+  if (meshes.headskin && A.neckTrim){ const NS = 20, YS = [0.07, 0.12, 0.17, 0.21, 0.25, 0.3], WH = [0, 0, 0.25, 0.6, 1, 1], RR = [0.088, 0.086, 0.084, 0.085, 0.098, 0.106], P = [], SI = [], SW = [], I = [], ih = RG.order.indexOf('head'), ic = RG.order.indexOf('chest');
+    for (let j = 0; j < YS.length; j++) for (let i = 0; i < NS; i++){ const t = i / NS * Math.PI * 2; P.push(Math.sin(t) * RR[j], YS[j], 0.012 + Math.cos(t) * RR[j] * 0.95); SI.push(ih, ic, 0, 0); SW.push(WH[j], 1 - WH[j], 0, 0); }
+    for (let j = 0; j < YS.length - 1; j++) for (let i = 0; i < NS; i++){ const a0 = j * NS + i, a1 = j * NS + (i + 1) % NS; I.push(a0, a1, a0 + NS, a1, a1 + NS, a0 + NS); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4)); g.setIndex(I); g.computeVertexNormals();
+    const mt = new THREE.MeshStandardMaterial({ color: meshes.headskin.material.color.clone(), roughness: meshes.headskin.material.roughness }), sm = new THREE.SkinnedMesh(g, mt); sm.name = 'k3_neck'; sm.frustumCulled = false; sm.castShadow = false; grp.add(sm); sm.bind(sk); meshes.neck = sm; base.neck = mt.color.clone(); }
   for (const n of RG.order) bones[n].quaternion.copy(restQ[n]);
   const fm = meshes.face; if (fm){ const U = { uMask: { value: A.mask.b }, uHair: { value: new THREE.Color('#3a3a50') }, uHairB: { value: new THREE.Color(0.3, 0.3, 0.4) }, uOnH: { value: 0 }, uAcc: { value: K3.maskTex() }, uAccC: { value: new THREE.Color('#ffffff') }, uAccOn: { value: 0 } }; fm.material.map = K3.face('b', 'smile');
     fm.material.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.fragmentShader = 'uniform sampler2D uMask,uAcc;uniform vec3 uHair,uHairB,uAccC;uniform float uOnH,uAccOn;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n{ vec3 mk = texture2D(uMask, vMapUv).rgb; float lt = dot(diffuseColor.rgb, vec3(.3,.59,.11)); vec3 hc = uHair * (lt / max(dot(uHairB, vec3(.3,.59,.11)), 1e-3)); diffuseColor.rgb = mix(diffuseColor.rgb, hc, mk.r * uOnH); vec4 ac = texture2D(uAcc, vMapUv); diffuseColor.rgb = mix(diffuseColor.rgb, ac.rgb * uAccC, ac.a * uAccOn); }'); };
@@ -5274,7 +5284,7 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   { const TN = { tee: 'Ttee', vest: 'Tvest', hoodie: 'Thoodie' }[c.top], BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot];
     k.region = !!(TN && BN && M[TN + '_skin'] && M[BN + '_skin'] && M.headskin && c.top !== 'maid');
     if (k.region){ for (const n in v) if (!/^(face|skinlow|shoes|shoes2|mjskin|mjshoe|msskin|mssock|msshoe)$/.test(n)) delete v[n];
-      Object.assign(v, { headskin: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); } }
+      Object.assign(v, { headskin: 1, neck: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); } }
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
   for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest', 'Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth']) set(n, C.top); for (const n of ['Bshorts_cloth', 'Bpants_cloth']) set(n, C.bot); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
