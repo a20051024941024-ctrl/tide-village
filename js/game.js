@@ -818,13 +818,14 @@ function fishMat(id, part, color, glow, move, shape){
     }
   };
   m.customProgramCacheKey = () => 'fish-' + move + (body ? 'b' : '') + (scaly ? 's' : '') + (CLASSIC ? 'c' : '') + (gBody ? 'G' : '') + (gScale ? 'S' : '') + (gFin ? 'F' : '');
+  if (LOOK_PT){ m.name = part; if (!/^Eye/.test(part)){ const ob = m.onBeforeCompile, ck = m.customProgramCacheKey; m.onBeforeCompile = sh => { ob(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(0.3) * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 2.5);'); }; m.customProgramCacheKey = () => ck() + 'P'; } }   /* 畫風樣本：魚的邊緣一圈柔光（參考圖的魚亮亮的） */
   if (move === 'side' || move === 'eel' || move === 'marlin' || move === 'vert' || move === 'blob') m.userData.fmv = move === 'vert' ? 'vert' : 'side';   /* v448 這種魚的身體可以再加上掙扎的彎曲 */
   return (fishMatCache[key] = m);
 }
 function makeModelFish(f, scale){
   const st = FISH_STYLE[f.id]; const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
   const inner = new THREE.Group(); if (/^Fish/.test(st.shape)) inner.scale.z = 1.5; if (st.sc){ inner.scale.x *= st.sc[0]; inner.scale.y *= st.sc[1]; inner.scale.z *= st.sc[2]; } fish.add(inner);   // 稍微加厚，從上往下看比較清楚
-  const texB = !FISH_TEX_OFF && !LOOK_PT && !CLASSIC && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
+  const texB = !FISH_TEX_OFF && !CLASSIC && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
   for (const part of Object.keys(texB ? fishNoBodyMesh(st.shape) : FISH_MESH[st.shape])){
     const mt = fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape); if (st.glowParts && st.glowParts.includes(part) && !mt.userData.gl){ mt.userData.gl = 1; mt.emissive = new THREE.Color(st.c[part] || f.color); mt.emissiveIntensity = 0.9; }
     const mesh = new THREE.Mesh(texB ? fishGeoNB(st.shape, part) : fishGeo(st.shape, part), mt);
@@ -937,7 +938,13 @@ function makeSoftshell(scale){ const g = new THREE.Group(); g.scale.setScalar(sc
   for (const [x, z, r] of [[0.2, 0.27, 0.5], [0.2, -0.27, -0.5], [-0.3, 0.24, -0.6], [-0.3, -0.24, 0.6]]){ const ft = add(new THREE.SphereGeometry(0.075, 10, 8), sk, x, -0.03, z, 1.25, 0.26, 0.8); ft.rotation.y = r; }
   const tl = add(new THREE.ConeGeometry(0.03, 0.12, 8), sk, -0.44, -0.02, 0); tl.rotation.z = Math.PI / 2;
   g.userData.tail = new THREE.Object3D(); g.userData.view = [0.8, -0.5]; return g; }
-function fishModel(f, scale){
+function fishModel(f, scale){ const r = fishModel0(f, scale); return LOOK_PT ? ptCute(r) : r; }
+/* 畫風樣本：魚胖一點、眼睛大一點（參考圖 Play Together 的魚圓滾滾、大眼睛） */
+const ptEyeG = new Map();
+function ptCute(m){ if (!m || m.userData.ptc) return m; m.userData.ptc = 1; const kids = [...m.children], inner = new THREE.Group(); kids.forEach(k => inner.add(k)); inner.scale.set(0.92, 1.14, 1.18); m.add(inner);
+  m.traverse(o => { if (!o.isMesh || !o.material || !/^Eye/.test(o.material.name || '')) return; let g = ptEyeG.get(o.geometry.uuid); if (!g){ g = o.geometry.clone(); g.computeBoundingBox(); const c = g.boundingBox.getCenter(new THREE.Vector3()); g.translate(-c.x, -c.y, -c.z); g.scale(1.5, 1.5, 1.5); g.translate(c.x, c.y, c.z); ptEyeG.set(o.geometry.uuid, g); } o.geometry = g; });
+  return m; }
+function fishModel0(f, scale){
   if (f.hat){ const f2 = Object.assign({}, f); delete f2.hat; return fishHat(fishModel(f2, scale), f.hat); }
   if (f.id === 'marlin' || f.id === 'marlin_albino') return makeMarlin3(scale, f.id !== 'marlin');
   if (f.id === 'shark_red' || f.id === 'shark_red_albino') return makeRedShark(scale, f.id !== 'shark_red');
