@@ -2346,6 +2346,12 @@ function aimDir(s){ const L = Math.hypot(s.dir.x, s.dir.y) || 1, a = s.id === 'i
 function castDist(s, c){ const rt = rodType(curRod()); return s.id === 'shrimp' ? 1.4 + c * 1.6 : (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1); }
 /* v427 乾潮時露出來的那一段海底（主島的淺灘）：看起來是沙，浮標不要丟在上面 */
 function seaDry(x, z){ const U = waterSurface && waterSurface.material.uniforms; if (!U || !U.uTideD || U.uTideD.value < 0.01) return false; const sd = 2 - islandEdge(x, z); if (sd <= 0 || sd > SHELF_W + 1.5) return false; const inf = terrainInfo(x, z); if (!(inf.water && inf.region === 0 && -inf.h < U.uTideD.value + 0.09)) return false;
+  /* v718 作者：「走到海邊的時候腳會陷進去」→ 河口附近水面的著色器把那裡當成「不是海」（區域顏色模糊過），退潮時不會露出沙，
+     但走路這邊卻當成露出來的沙，人就走進畫面上的水裡。改成用水面同一張遮罩、同一條算式判斷：畫面上看得到水的地方就不能走 */
+  { const M = U.uMask && U.uMask.value, D = M && M.image && M.image.data, S = M && M.image && M.image.width; if (D && S){
+      const fx = (x + MAP_HALF) / (MAP_HALF * 2) * S - 0.5, fz = (z + MAP_HALF) / (MAP_HALF * 2) * S - 0.5, i0 = Math.max(0, Math.min(S - 2, Math.floor(fx))), j0 = Math.max(0, Math.min(S - 2, Math.floor(fz))), tx = clamp(fx - i0, 0, 1), tz = clamp(fz - j0, 0, 1);
+      const smp = c => { const a0 = D[(j0 * S + i0) * 4 + c], a1 = D[(j0 * S + i0 + 1) * 4 + c], b0 = D[((j0 + 1) * S + i0) * 4 + c], b1 = D[((j0 + 1) * S + i0 + 1) * 4 + c]; return ((a0 * (1 - tx) + a1 * tx) * (1 - tz) + (b0 * (1 - tx) + b1 * tx) * tz) / 255; };
+      const b = smp(2), sf = 1 - smooth01(clamp((b - 0.03) / 0.09, 0, 1)), depth = smp(0) * 2; if (depth > U.uTideD.value * sf - 0.01) return false; } }
   for (let k = 0; k < 8; k++){ const q = k * Math.PI / 4; for (const r of [2.5, 5]) if (deckAt(x + Math.cos(q) * r, z + Math.sin(q) * r)) return false; }   /* v608 作者：「這邊竟然可以下去」→ 碼頭、堤岸旁邊退潮也不算露出來的沙（那裡畫面上還是水，以前會走進水裡） */
   return true; }
 function castPoint(x, z, dx, dz, dist){
@@ -5078,6 +5084,8 @@ K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = tr
     .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null }; K3.loading = false;
       fetch(P + 'clips.json' + V).then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
     .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
+/* v718 作者：「可以加載完再進入遊戲嗎，不要一進去還是原本的造型」→ 一開始就同時下載新人物（以前要等舊角色載完才開始下載），進入畫面也等自己的新人物換好才掀開（最多多等到 22 秒，不會卡住） */
+if (K3.on && !/kid=0/.test(location.hash)) try { K3.fetch(); } catch(e){}
 K3.face = (sex, ex) => { const F = K3.asset.faces, k = sex + ex; if (!F[k]){ const t = new THREE.TextureLoader().load('models/kid3/f' + sex + '_' + ex + '.jpg'); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; F[k] = t; } return F[k]; };
 K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.scene; KS.updateMatrixWorld(true);
   const KB = {}; KS.traverse(o => { if (o.isBone) KB[o.name] = o; });
@@ -21393,10 +21401,11 @@ function shaderWarm(tag){ try { const lit = new Set(); scene.traverseVisible(o =
 { const fStart = () => frameNo; let f0 = null;
   const iv = setInterval(() => { if (Boot.done){ clearInterval(iv); return; } const el = (performance.now() - Boot.t0) / 1000;
     if (el > 1.5 && !Boot.sawLoad) Boot.assets = true;   /* 模型都在快取裡、一開始就載完的情況 */
-    const ready = Boot.assets && Boot.cloud; if (ready && f0 == null){ f0 = fStart(); if (!shaderWarm.at){ shaderWarm.at = 1; try { mtnBuild(); } catch(e){} try { clearWalkways(); } catch(e){ console.warn('clearWalkways', e); } setTimeout(() => { try { clearWalkways(); } catch(e){} }, 9000); shaderWarm('boot');   /* v625 雪山（滑雪場）原本走到 175 公尺內才蓋，蓋的那一格會卡：改成載入畫面時就蓋好 */ setTimeout(() => shaderWarm('late'), 10000); } } if (!ready) f0 = null;
+    const kidOk = !K3.on || !!K3.err || KID.failed || /kid=0/.test(location.hash) || !!(me.av && me.av.k3);   /* v715 自己的新人物換好了才算好 */
+    const ready = Boot.assets && Boot.cloud && kidOk; if (ready && f0 == null){ f0 = fStart(); if (!shaderWarm.at){ shaderWarm.at = 1; try { mtnBuild(); } catch(e){} try { clearWalkways(); } catch(e){ console.warn('clearWalkways', e); } setTimeout(() => { try { clearWalkways(); } catch(e){} }, 9000); shaderWarm('boot');   /* v625 雪山（滑雪場）原本走到 175 公尺內才蓋，蓋的那一格會卡：改成載入畫面時就蓋好 */ setTimeout(() => shaderWarm('late'), 10000); } } if (!ready) f0 = null;
     const warm = f0 == null ? 0 : Math.min(1, (fStart() - f0) / 24);
-    Boot.step(40 + (Boot.assets ? 20 : Math.min(15, el * 3)) + (Boot.cloud ? 25 : Math.min(18, el * 2.5)) + warm * 15, !Boot.assets ? '正在搬魚和道具…' : !Boot.cloud ? '正在跟伺服器拿你的紀錄…' : '快好了，正在整理畫面…');
-    if ((ready && warm >= 1) || el > 14){ Boot.done = true; clearInterval(iv); try { window.__loadDone && window.__loadDone(); } catch(e){} } }, 120); }
+    Boot.step(40 + (Boot.assets ? 20 : Math.min(15, el * 3)) + (Boot.cloud ? 25 : Math.min(18, el * 2.5)) + warm * 15, !Boot.assets ? '正在搬魚和道具…' : !Boot.cloud ? '正在跟伺服器拿你的紀錄…' : !kidOk ? '正在幫你換衣服…' : '快好了，正在整理畫面…');
+    if ((ready && warm >= 1) || (el > 14 && kidOk) || el > 22){ Boot.done = true; clearInterval(iv); try { window.__loadDone && window.__loadDone(); } catch(e){} } }, 120); }
 logMsg('', '歡迎來到潮汐釣魚村！走進任一個發光圈就可以拋竿。', true);
 initSocial().catch(() => {});
 try { hairGlbLoad(); } catch(e){}
