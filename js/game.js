@@ -5046,6 +5046,19 @@ K3.rand = (seed) => { let h = 2166136261 >>> 0; const S = String(seed); for (let
   const sex = r() < 0.5 ? 'g' : 'b', top = r() < 0.12 && sex === 'g' ? 'maid' : r() < 0.4 ? 'hoodie' : 'tee';
   return { sex, hair: sex === 'g' ? (r() < 0.8 ? 'long' : 'short') : (r() < 0.9 ? 'short' : 'long'), top, bot: r() < 0.5 ? 'shorts' : 'pants', shoes: top === 'maid' || (sex === 'g' && r() < 0.35) ? 'mary' : 'sneak',
     c: { hair: pick(K3.PAL.hair), top: r() < 0.3 ? '' : pick(K3.PAL.top), bot: r() < 0.3 ? '' : pick(K3.PAL.bot), shoes: r() < 0.4 ? '' : pick(K3.PAL.shoes) } }; };
+/* v713 造型頁改成新人物的衣櫃（作者：「原本的造型消失了」→ 好）：選項一份，設定頁和造型頁共用 */
+K3.ui = f => { const c = K3.cfg; const row = (lab, key, opts, off) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'seg'); opts.forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(c[key] === k)); if (off) b.disabled = true; b.addEventListener('click', () => { K3.set({ [key]: k }); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
+      const sw = (lab, key, cols) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
+        cols.forEach(col => { const b = el('button', 'k3c'); b.style.background = col; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
+      row('臉', 'sex', [['g', '女生'], ['b', '男生']]);
+      row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮']]);
+      sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
+      row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝']]);
+      sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
+      row('褲子', 'bot', [['shorts', '短褲'], ['pants', '長褲']], c.top === 'maid');
+      sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
+      row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
+      sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']); };
 /* v712 作者：「有些村民的服裝太不搭了」→ 村民不再亂配：上衣用村民原本的衣服顏色（大家認得），褲子、鞋子、髮色只從耐看的顏色裡挑，褲子跟上衣一深一淺；漁夫、船夫穿連帽衣，不穿女僕裝 */
 K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + nm), h = s => { let x = 0; for (const ch of String(s)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; }, H = h(nm), pick = (a, k) => a[(H >>> k) % a.length];
   const g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|慧|玉|珠|琪|婷|萍/.test(nm), b = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|信|潮|強|明|輝/.test(nm), old = /嬤|伯|爺|婆|老|公/.test(nm);
@@ -13698,18 +13711,7 @@ function renderSettings(body){
   { const f = field('🧒 人物樣子'), c = K3.cfg, seg = el('div', 'seg');   /* v690 */
     [[true, '新人物'], [false, '改回原本的人物']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(!!c.on === k)); b.addEventListener('click', () => { K3.set({ on: k }); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg);
-    if (c.on){ const row = (lab, key, opts, off) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'seg'); opts.forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(c[key] === k)); if (off) b.disabled = true; b.addEventListener('click', () => { K3.set({ [key]: k }); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
-      const sw = (lab, key, cols) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
-        cols.forEach(col => { const b = el('button', 'k3c'); b.style.background = col; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
-      row('臉', 'sex', [['g', '女生'], ['b', '男生']]);
-      row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮']]);
-      sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
-      row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝']]);
-      sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
-      row('褲子', 'bot', [['shorts', '短褲'], ['pants', '長褲']], c.top === 'maid');
-      sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
-      row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
-      sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']); }
+    if (c.on) K3.ui(f);
     f.appendChild(el('p', 'sub', '可以選臉、髮型、衣服和顏色，別的玩家看到的你也會一起變。原本的帽子、配件、造型先不會出現在新人物身上；想用的話可以改回原本的人物。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
@@ -16068,6 +16070,7 @@ function pvLoop(){
   if (!PV.cv || !PV.cv.isConnected || $('#sheet').hidden){ PV.raf = 0; return; }
   const t = now(); if (!PV.drag && t > PV.idleAt) PV.yaw += 0.01;
   const a = PV.av; a.g.rotation.y = PV.yaw; if (a.gearAnim) a.gearAnim(t, 0);
+  if (a.k3 && a.k3.mixer && a.k3.acts){ const k = a.k3; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(n === 'idle' ? 1 : 0); for (const n in k.eacts || {}) k.eacts[n].setEffectiveWeight(0); k.mixer.update(1 / 60); }   /* v713 衣櫃裡的新人物站著呼吸 */
   if (a.eyes){ const bt = (t + a.blinkAt) % 4.2; a.eyes[0].scale.y = a.eyes[1].scale.y = bt < 0.12 ? 0.12 : 1.15; if (a.eyes2) for (const pl of a.eyes2) pl.scale.y = bt < 0.12 && !pl.userData.shut ? 0.12 : 1; }
   PV.r.render(PV.sc, PV.cam); PV.raf = requestAnimationFrame(pvLoop);
 }
@@ -16485,7 +16488,22 @@ setInterval(() => { try { styleTick(); } catch(e){} }, 500);
 setTimeout(function kitWait(){ if (!Cloud.on || !Cloud.lastRow || !$('#sheet').hidden || $('#welcome') || $('#stampPop')){ setTimeout(kitWait, 4000); return; } styleKitPick(false); }, 15000);
 const Closet = { slot:'top', scroll:{} };
 function closetTryAll(){ const g = cleanGear(Wardrobe.preview || rec.gear); return GEAR_SLOTS.map(([k]) => g[k]).filter(id => id && GEAR_BY_ID[id] && !ownsGear(id)).map(id => GEAR_BY_ID[id]); }
+/* v713 新人物的衣櫃：左邊 3D 預覽（新人物，會轉），右邊臉、髮型、衣服、顏色 */
+function renderCloset3(body){
+  const wrap = el('div', 'closet'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap);
+  const box = el('div', 'cl-pv'); let ok = false;
+  try { if (pvInit() && K3.asset && KID.ok){ avKidify(PV.av); const a = PV.av; if (a.kid){ if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.build(a); a.k3.cfg = K3.cfg; a.k3.ck = ''; }
+      const ck = K3.enc(K3.cfg); if (a.k3.ck !== ck){ a.k3.ck = ck; a.k3.cfg = K3.cfg; K3.apply(a); } if (!a.k3.mixer && K3.asset.clipsJ) K3.mkMixer(a.k3);
+      const W = Math.max(140, Math.min(300, Math.round(innerWidth * 0.3))), H = Math.max(180, Math.min(420, Math.round(innerHeight * 0.66))); pvSize(W, H); PV.cam.position.set(0, 0.95, 3.3); PV.cam.lookAt(0, 0.85, 0);
+      box.appendChild(PV.cv); box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); if (!PV.raf) PV.raf = requestAnimationFrame(pvLoop); ok = true; } } } catch(e){ console.warn('closet3', e); }
+  if (!ok){ box.appendChild(el('div', 'cl-t sub', '人物載入中…')); if (!K3.asset) K3.fetch(); setTimeout(() => { if (!$('#sheet').hidden && curTab === 'closet') renderTab(); }, 1200); }
+  L.appendChild(box);
+  const info = el('div', 'cl-info'); info.appendChild(el('div', 'cl-t sub', '點右邊就會馬上換上，別的玩家看到的你也會一起變。新衣服陸續加進來。'));
+  const back = el('button', 'tbtn ghost', '改回原本的人物（用原本的帽子配件）'); back.addEventListener('click', () => { K3.set({ on: false }); renderTab(); }); info.appendChild(back); L.appendChild(info);
+  const list = el('div', 'cl-list k3list'); R2.appendChild(list); K3.ui(list); }
 function renderCloset(body){
+  if (K3.on){ renderCloset3(body); return; }
+  try { if (PV.av && PV.av.k3) K3.detach(PV.av); } catch(e){}
   const wrap = el('div', 'closet'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap); try { styleHead(R2); } catch(e){ console.warn('style', e); }
   // 左邊：大的 3D 預覽（可以轉）
   const showG = cleanGear(Wardrobe.preview || rec.gear), box = el('div', 'cl-pv');
