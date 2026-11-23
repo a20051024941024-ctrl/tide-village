@@ -5040,7 +5040,14 @@ function kidUpgrade(f){
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
 const K3 = { on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
+/* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
+K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
+K3.rand = (seed) => { let h = 2166136261 >>> 0; const S = String(seed); for (let i = 0; i < S.length; i++){ h ^= S.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } const r = () => { h ^= h << 13; h >>>= 0; h ^= h >> 17; h ^= h << 5; h >>>= 0; return (h % 10000) / 10000; }, pick = a => a[Math.floor(r() * a.length) % a.length];
+  const sex = r() < 0.5 ? 'g' : 'b', top = r() < 0.12 && sex === 'g' ? 'maid' : r() < 0.4 ? 'hoodie' : 'tee';
+  return { sex, hair: sex === 'g' ? (r() < 0.8 ? 'long' : 'short') : (r() < 0.9 ? 'short' : 'long'), top, bot: r() < 0.5 ? 'shorts' : 'pants', shoes: top === 'maid' || (sex === 'g' && r() < 0.35) ? 'mary' : 'sneak',
+    c: { hair: pick(K3.PAL.hair), top: r() < 0.3 ? '' : pick(K3.PAL.top), bot: r() < 0.3 ? '' : pick(K3.PAL.bot), shoes: r() < 0.4 ? '' : pick(K3.PAL.shoes) } }; };
 K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.k3') || 'null'); } catch(e){}
+  if (!c || c.v !== 2){ c = Object.assign(c && c.sex ? c : K3.rand(Math.random()), { on: true, v: 2 }); try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }
   K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
 K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} };
 K3.read();
@@ -5165,11 +5172,13 @@ K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
   if (!cfg){ if (a.k3) K3.detach(a); return; }
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
   if (K3.err){ if (a.k3) K3.detach(a); return; }
-  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); try { K3.build(a); a.k3.cfg = cfg; a.k3.ck = K3.enc(cfg); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; if (f === me) try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
+  if (f !== me && !a.k3 && ((f._lod | 0) > 0 || !a.g.parent || !a.g.visible || K3.built >= 1)) return;   /* 別人和村民：走近（完整版的距離）才換，一格最多換一個，免得卡 */
+  if (f !== me && a.k3 && (f._lod | 0) > 0) return;   /* 遠的不用每格抄骨架（遠處畫的是簡化版） */
+  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.built++; f._lod = -1; try { K3.build(a); a.k3.cfg = cfg; a.k3.ck = K3.enc(cfg); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; if (f === me) try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
   const k = a.k3; if (k.cfg !== cfg || (f === me && k.dirty)){ k.cfg = cfg; k.dirty = false; const ck = K3.enc(cfg); if (ck !== k.ck){ k.ck = ck; K3.apply(a); } }
   if (!k.mixer && K3.asset.clipsJ) K3.mkMixer(k);
   K3.sync(a, f); };
-K3.frame = () => { if (typeof me === 'undefined' || !me) return; for (const f of CLOD.all){ if (f === me || f.k3c || (f.av && f.av.k3)) K3.tick(f); } K3.diag(); };
+K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0; for (const f of CLOD.all){ if (f === me || f.k3c || (f.av && f.av.k3)) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
 K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short'], top: ['tee', 'hoodie', 'maid'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'] };
 K3.enc = c => [c.sex, c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || ''].join('|');
@@ -5378,7 +5387,7 @@ function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG
   if (k === 'full'){ S(0.17, 0, -0.17, 0.19, 1.4, 1.0, 0.8); S(0.1, 0, -0.3, 0.23, 1.1, 1.0, 0.7); } }
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); if (this.isNpc){ const nm = this.npcName, c = K3.rand('npc:' + nm), g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|阿慧|阿玉|阿珠/.test(nm), bb = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|阿信|阿潮/.test(nm); if (g !== bb){ c.sex = g ? 'g' : 'b'; c.hair = g ? 'long' : 'short'; if (!g && c.top === 'maid') c.top = 'tee'; if (!g && c.shoes === 'mary') c.shoes = 'sneak'; } this.k3c = c; }   /* v711 村民也是新人物，照名字固定配一套 */ this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
     if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
@@ -13678,8 +13687,8 @@ function renderSettings(body){
     row.appendChild(sl); row.appendChild(pct); f.appendChild(row); f.appendChild(el('p', 'sub', '往右拉看得比較遠、比較廣。也可以在畫面上用兩隻手指捏合來調，調好會記住。' + (L.out ? '' : '（現在在室內或水裡，這裡調的只是暫時的。）'))); }
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
-  { const f = field('🧒 新人物（試玩）'), c = K3.cfg, seg = el('div', 'seg');   /* v690 */
-    [[false, '原本的樣子'], [true, '試試新人物']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(!!c.on === k)); b.addEventListener('click', () => { K3.set({ on: k }); renderTab(); }); seg.appendChild(b); });
+  { const f = field('🧒 人物樣子'), c = K3.cfg, seg = el('div', 'seg');   /* v690 */
+    [[true, '新人物'], [false, '改回原本的人物']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(!!c.on === k)); b.addEventListener('click', () => { K3.set({ on: k }); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg);
     if (c.on){ const row = (lab, key, opts, off) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'seg'); opts.forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(c[key] === k)); if (off) b.disabled = true; b.addEventListener('click', () => { K3.set({ [key]: k }); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
       const sw = (lab, key, cols) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
@@ -13693,7 +13702,7 @@ function renderSettings(body){
       sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
       row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
       sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']); }
-    f.appendChild(el('p', 'sub', '新做的人物，還在試玩：可以選臉、髮型、衣服和顏色。打開以後別的玩家也看得到你的新樣子（他們不用自己打開）。原本的帽子、配件、造型先不會出現在新人物身上。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
+    f.appendChild(el('p', 'sub', '可以選臉、髮型、衣服和顏色，別的玩家看到的你也會一起變。原本的帽子、配件、造型先不會出現在新人物身上；想用的話可以改回原本的人物。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
@@ -19818,7 +19827,7 @@ function renderTab0(){
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
       '🎣 拋竿看出力：力量條越滿，竿子甩得越大、線飛得越遠越高；坐著釣到 3 公斤以上或稀有的魚，角色會站起來拉。',
       '👀 第一人稱釣魚：到「設定 → 🎣 釣魚視角」選「第一人稱」打開（預設是背後），打開以後一拋竿就會換成第一人稱，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
-      '🧒 新人物（試玩）：到「設定 → 🧒 新人物（試玩）」選「試試新人物」，可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色。打開以後別的玩家也看得到你的新樣子；原本的帽子和配件先不會出現在新人物身上。新人物的揮手、拍手、鞠躬、生氣、歡呼是另外做的真人動作，打招呼時手會張開，平常和跑步是握拳。',
+      '🧒 人物樣子：大家現在都是新人物，村民也是。到「設定 → 🧒 人物樣子」可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色，別的玩家看到的你也會一起變。原本的帽子和配件先不會出現在新人物身上，想用的話可以按「改回原本的人物」。揮手、拍手、鞠躬、生氣、歡呼是真人動作，打招呼時手會張開，平常和跑步是握拳。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
@@ -21405,6 +21414,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u711', d:'11/23', items:[
+    ['🧒', '大家都換成新人物了，村民也是！想換臉、髮型、衣服，到設定的「人物樣子」；想用原本的帽子配件，可以改回原本的人物。', 'settings'] ] },
   { id:'u710', d:'11/23', items:[
     ['👀', '別的玩家看得到你的新人物了：打開新人物後，你的臉、髮型、衣服和顏色大家都看得到，揮手、跳舞也一樣。', 'settings'] ] },
   { id:'u703', d:'11/23', items:[
