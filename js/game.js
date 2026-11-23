@@ -5079,7 +5079,7 @@ K3.mkMixer = k => { const J = K3.asset.clipsJ; if (!J || k.mixer) return; const 
     tr.push(new THREE.VectorKeyframeTrack('hips.position', tt, C.hp.map((v, i) => v + h0.getComponent(i % 3))));
     const ac = mixer.clipAction(new THREE.AnimationClip('k3' + nm, C.dur, tr)); ac.play(); ac.setEffectiveWeight(0); acts[nm] = ac; }
   k.mixer = mixer; k.acts = acts; k.mq = {}; for (const n of k.names) k.mq[n] = new THREE.Quaternion(); k.mhp = new THREE.Vector3(); };
-K3.armX = (k, arm) => { if (k.arm === arm) return; k.arm = arm; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.X[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -arm * sg)).multiply(Wq); } };
+K3.armX = (k, arm, live) => { if (!live) k.armBase = arm; if (k.arm === arm) return; k.arm = arm; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.X[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -arm * sg)).multiply(Wq); } };
 K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
   if (k.hair){ try { k.grp.remove(k.hair.sm); for (const b of k.hair.ch) if (b.parent) b.parent.remove(b); } catch(e){} k.hair = null; }
   const src = K3.asset.hair[type]; if (!src) return;
@@ -5112,6 +5112,7 @@ K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
 K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
 /* 每一格：原本骨架的角度抄過來（手臂多轉一點貼近身體），髖部的上下前後照比例搬過來；長髮往下垂、跟著甩；表情 */
+const _k3a = new THREE.Vector3(), _k3b = new THREE.Vector3(), _k3c = new THREE.Vector3();
 K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K) return; const GB = K.B, B = k.bones;
   /* v695 作者：「不能真的有現實的跑步動作嗎」→ 站著、走路、跑步、快跑改用 Meshy 的真人動捕動作（models/kid3/clips.json，已經換算到新人物的骨架上）。
      新人物自己有一個動畫播放器；原本角色站／走／跑的比重是多少，就用多少比重蓋上真人動作。釣魚、坐下、表情動作、騎車、滑雪、拿東西還是照抄原本的。 */
@@ -5121,11 +5122,15 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
     for (const n of ['idle', 'walk', 'run', 'sprint']) A[n].setEffectiveWeight((w[n] || 0) / Math.max(1e-4, lw));
     A.walk.timeScale = clamp(v / 1.2, 0.5, 2.0); A.run.timeScale = clamp(v / 2.9, 0.75, 1.6); A.sprint.timeScale = clamp(v / 2.6, 0.9, 2.2);
     k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); }
+  /* v697 作者：「這裡釣魚會破圖」→ 平常手臂往下壓（衣服才不會被撐開），但拿竿子釣魚、坐著的時候手要往前伸，壓下去竿子就離開手、穿過身體。釣魚、坐著時手臂幾乎不壓 */
+  { const tgt = f && (f.fishing || f.sitting || f.restRod) ? Math.min(k.armBase == null ? 0.42 : k.armBase, 0.08) : (k.armBase == null ? 0.42 : k.armBase); const cur = k.arm < 0 ? tgt : k.arm; const nx = Math.abs(tgt - cur) < 0.005 ? tgt : cur + (tgt - cur) * 0.15; if (nx !== k.arm) K3.armX(k, nx, true); }
   for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
     if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m)); }
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
   if (m > 0.01) B.hips.position.lerp(k.mhp, Math.min(1, m));
-  { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s + k.dy * Math.min(1, fl); }
+  { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s;
+    /* v697 坐下、躺下：屁股的高度直接對齊原本角色的屁股（原本角色坐下時整個人還會往下放，新人物腿比較短，以前算的固定值會讓人浮在椅子上 9 公分，穿過椅背和傘） */
+    if (fl > 0.01){ GB.hips.updateWorldMatrix(true, false); B.hips.updateWorldMatrix(true, false); const gy = GB.hips.getWorldPosition(_k3a).y, oy = B.hips.getWorldPosition(_k3b).y, sc = a.g.getWorldScale(_k3c).y || 1; k.scl.position.y += (gy - oy) / sc * Math.min(1, fl); } }
   if (K.m.visible) K.m.visible = false;
   K3.n++;
   if (k.hair && k.hf !== frameNo){ k.hf = frameNo; const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
