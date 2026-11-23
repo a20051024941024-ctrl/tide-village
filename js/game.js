@@ -13807,9 +13807,9 @@ function renderSettings(body){
   { const f = field('🧒 人物樣子'), c = K3.cfg, seg = el('div', 'seg');   /* v690 */
     [[true, '新人物'], [false, '改回原本的人物']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(!!c.on === k)); b.addEventListener('click', () => { K3.set({ on: k }); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg);
-    if (c.on) K3.ui(f);
+    if (c.on){ const go = el('button', 'tbtn', '👕 去造型頁換衣服、髮型'); go.style.marginTop = '8px'; go.addEventListener('click', () => { try { openSheet('closet'); } catch(e){} }); f.appendChild(go); }   /* v730 作者：「設定這裡可以去除掉了」→ 臉、髮型、衣服、顏色只在造型頁換，設定只留新舊人物切換 */
     f.appendChild(el('p', 'sub', '人物版本 ' + K3.V));   /* v723 作者截圖時看得出手機上是哪一版 */
-    f.appendChild(el('p', 'sub', '可以選臉、髮型、衣服和顏色，別的玩家看到的你也會一起變。原本的帽子、配件、造型先不會出現在新人物身上；想用的話可以改回原本的人物。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
+    f.appendChild(el('p', 'sub', '臉、髮型、衣服、配件和顏色都在造型頁換，別的玩家看到的你也會一起變。原本的帽子、配件、造型不會出現在新人物身上；想用的話可以改回原本的人物。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
