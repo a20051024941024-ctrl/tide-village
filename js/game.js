@@ -5082,7 +5082,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 746, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 748, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.faceOf = sex => sex === 'b' ? { eye: 'a0', brow: 'soft', mouth: 'smile', blush: 'none' } : { eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line' };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', mask: 'none', ear: 'none', hat: 'none', eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
@@ -5111,7 +5111,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
       row('腮紅', 'blush', [['none', '沒有'], ['soft', '淡淡的'], ['line', '斜線']]);
       row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮'], ['short2', '清爽短髮'], ['pony', '側馬尾'], ['twin', '雙馬尾']]);
       sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
-      row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝'], ['rain', '雨衣'], ['vest', '釣魚背心']]);
+      row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝'], ['rain', '雨衣'], ['vest', '釣魚背心'], ['wave', '海浪外套']]);
       sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
       row('褲子', 'bot', [['shorts', '短褲'], ['pants', '長褲']], c.top === 'maid');
       sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
@@ -5341,18 +5341,18 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   else { v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1; v.skinlow = 1; if (c.top === 'maid') v.sockslo = 1; }
   if (!M.skinlow) v.skin = 1;
   /* v726 分開接：這套上衣、這件褲子各有一整塊（連手臂、手、腿一起，同一個模型生的，沒有接縫）。有的話就用整塊的 */
-  { const TN = { tee: 'Ttee', vest: 'Tvest', hoodie: 'Thoodie' }[c.top], BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot];
+  { const TN = { tee: 'Ttee', vest: 'Tvest', hoodie: 'Thoodie', wave: 'Twave' }[c.top], BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot];
     k.region = !!(TN && BN && M[TN + '_skin'] && M[BN + '_skin'] && M.headskin && c.top !== 'maid');
     if (k.region){ for (const n in v) if (!/^(face|skinlow|shoes|shoes2|mjskin|mjshoe|msskin|mssock|msshoe)$/.test(n)) delete v[n];
       Object.assign(v, { headskin: 1, neck: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); } }
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
-  for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest', 'Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth']) set(n, C.top); for (const n of ['Bshorts_cloth', 'Bpants_cloth']) set(n, C.bot); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
+  for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest', 'Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth', 'Twave_cloth']) set(n, C.top); for (const n of ['Bshorts_cloth', 'Bpants_cloth']) set(n, C.bot); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
   for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
   try { K3.acc(k, c); } catch(e){}
-  { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; k.XR = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
+  { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, wave: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; k.XR = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
   K3.setHair(k, c.hair); K3.colorHair(k); try { K3.hat(k, c); } catch(e){ console.warn('hat', e); }
   /* v734 作者：「脖子空了，而且也接不好」→ 連帽衣的領口很寬，裡面只有一根細細的脖子，從旁邊看領口裡是空的。補一塊跟衣服同色的「領口內襯」（半顆扁球，黏在胸口的骨頭上），領口裡面就是實的 */
   try { const need = k.region && c.top === 'hoodie', fm = M.face, cb = k.bones.chest; if (need && !k.plug && fm && cb){ const sk = fm.skeleton, bi = sk.boneInverses[sk.bones.indexOf(cb)]; if (bi){ const geo = new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2); geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(0, 0.0, 0.02), new THREE.Quaternion(), new THREE.Vector3(0.21, 0.172, 0.125)));
@@ -5432,7 +5432,7 @@ K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0;
     for (const [, f] of L.slice(cap)) if (f.av.k3){ K3.detach(f.av); f._lod = -1; } }
   for (const f of CLOD.all){ if (f === me || ((f.k3c || (f.av && f.av.k3)) && (!K3.allow || K3.allow.has(f)))) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
-K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
+K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest', 'wave'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
 K3.enc = c => [/^b/.test(c.eye || '') ? 'g' : 'b', c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || '', c.mask || 'none', c.ear || 'none', (c.c || {}).mask || '', (c.c || {}).ear || '', c.hat || 'none', (c.c || {}).hat || '', c.eye || '', c.brow || '', c.mouth || '', c.blush || '', (c.c || {}).eye || ''].join('|');   /* v741 再多五格：眼睛、眉毛、嘴巴、腮紅、眼睛顏色。第一格（以前的男女臉）留給舊版看：有睫毛的眼睛送 g、沒有的送 b */ //   /* v729 後面多四格：口罩、耳環、口罩顏色、耳環顏色（舊版只讀前九格，不會壞） */
 K3.dec = s => { if (typeof s !== 'string' || s.length > 220) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
   const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
@@ -13161,7 +13161,7 @@ function fpRodLook(){ const m = FP.blk; if (!m) return; const r = RODS.find(x =>
 function fpLook(){ if (!FP.skin || !me || !me.av) return; const a = me.av, k = a.k3;
   try { if (K3.on && k && k.meshes){ const M = k.meshes, c = k.cfg || K3.cfg, sk = (M.headskin || M.skin || M.Ttee_skin).material.color;
       FP.skin.color.copy(sk); FP.skinD.color.copy(sk).multiplyScalar(0.82);
-      const sl = c.top === 'hoodie' ? (M.Thoodie_cloth || M.hoodie) : c.top === 'rain' ? M.raincoat : null;
+      const sl = c.top === 'hoodie' ? (M.Thoodie_cloth || M.hoodie) : c.top === 'wave' ? M.Twave_cloth : c.top === 'rain' ? M.raincoat : null;
       FP.sleeve.color.copy(sl ? sl.material.color : sk); FP.lookKey = K3.enc(c); return; }
     FP.skin.color.copy(a.skinM.color); FP.skinD.color.copy(a.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(a.shirtM.color); FP.lookKey = 'old'; } catch(e){} }
 function fpStart(){ try { fpRodLook(); } catch(e){} if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; fpLook();
@@ -21735,6 +21735,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u748', d:'11/24', items:[
+    ['🌊', '新上衣：海浪外套！深藍到淺藍的漸層、白色波浪邊，到造型頁「上衣」選，顏色也能換。', 'closet'] ] },
   { id:'u742', d:'11/24', items:[
     ['💇', '新髮型三種：清爽短髮、側馬尾、雙馬尾！到造型頁「臉・髮型」選，髮色一樣能換。', 'closet'] ] },
   { id:'u741', d:'11/24', items:[
