@@ -5127,13 +5127,20 @@ K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.
   K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
 K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} };
 K3.read();
+/* v736 領口的毛邊：衣服在領口那一圈的邊是一片一片尖尖的。把領口邊緣上的點沿著邊往左右鄰居拉平（做幾次），邊就變成一條順的線 */
+K3.rimSmooth = body => { body.scene.traverse(o => { if (!o.isMesh || !/^T\w+_(cloth|etc)$/.test(o.material.name)) return; const g = o.geometry, P = g.attributes.position, ix = g.index.array, E = new Map(), key = (a, b) => a < b ? a * 1e6 + b : b * 1e6 + a;
+    for (let i = 0; i < ix.length; i += 3) for (let e = 0; e < 3; e++){ const k = key(ix[i + e], ix[i + (e + 1) % 3]); E.set(k, (E.get(k) || 0) + 1); }
+    const nb = new Map(), inR = i => { const y = P.getY(i); return y > 0.1 && Math.hypot(P.getX(i), P.getZ(i)) < 0.3; };
+    for (const [k, c] of E){ if (c !== 1) continue; const a = Math.floor(k / 1e6), b = k % 1e6; if (!inR(a) || !inR(b)) continue; (nb.get(a) || nb.set(a, []).get(a)).push(b); (nb.get(b) || nb.set(b, []).get(b)).push(a); }
+    for (let it = 0; it < 10; it++){ const np = []; for (const [i, ns] of nb){ if (ns.length !== 2) continue; np.push([i, P.getX(i) * 0.5 + (P.getX(ns[0]) + P.getX(ns[1])) * 0.25, P.getY(i) * 0.5 + (P.getY(ns[0]) + P.getY(ns[1])) * 0.25, P.getZ(i) * 0.5 + (P.getZ(ns[0]) + P.getZ(ns[1])) * 0.25]); } for (const [i, x, y, z] of np) P.setXYZ(i, x, y, z); }
+    P.needsUpdate = true; g.computeVertexNormals(); }); };
 K3.neckTrim = body => { body.scene.traverse(o => { if (!o.isMesh) return; const nm = o.material.name, hd = nm === 'headskin', tp = /^T\w+_skin$/.test(nm); if (!hd && !tp) return; const g = o.geometry, P = g.attributes.position, ix = g.index.array, out = [];
     const neck = i => { const x = P.getX(i), y = P.getY(i), z = P.getZ(i) - 0.012, r = Math.hypot(x, z); return hd ? ((y < 0.205 && r < 0.22) || (y < 0.26 && r < 0.1)) : (y > 0.15 && r < 0.17); };
     for (let i = 0; i < ix.length; i += 3) if (!(neck(ix[i]) || neck(ix[i + 1]) || neck(ix[i + 2]))) out.push(ix[i], ix[i + 1], ix[i + 2]); g.setIndex(out); }); };
 K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = true; const P = 'models/kid3/', TL = new THREE.TextureLoader(), GL = new GLTFLoader();
   const V = '?v=' + K3.V;   /* v716 模型檔加版本號：手機或網路中間的暫存會留住舊的 body.glb（作者：「釣魚背心沒東西」——程式是新的、模型是舊的）。改了模型就把 K3.V 加一 */
   Promise.all([fetch(P + 'rig.json' + V).then(r => r.json()), GL.loadAsync(P + 'body.glb' + V), GL.loadAsync(P + 'hair_long.glb' + V), GL.loadAsync(P + 'hair_short.glb' + V), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png')])
-    .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null }; try { K3.neckTrim(body); K3.asset.neckTrim = true; } catch(e){ console.warn('neckTrim', e); } K3.loading = false;
+    .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null }; try { K3.neckTrim(body); K3.asset.neckTrim = true; } catch(e){ console.warn('neckTrim', e); } try { K3.rimSmooth(body); } catch(e){ console.warn('rimSmooth', e); } K3.loading = false;
       fetch(P + 'clips.json' + V).then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
     .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
 /* v718 作者：「可以加載完再進入遊戲嗎，不要一進去還是原本的造型」→ 一開始就同時下載新人物（以前要等舊角色載完才開始下載），進入畫面也等自己的新人物換好才掀開（最多多等到 22 秒，不會卡住） */
@@ -5229,6 +5236,7 @@ K3.acc = (k, c) => { const C = c.c || {}, U = k.meshes.face && k.meshes.face.use
     for (const o of D.mk(m)){ o.castShadow = false; g.add(o); } hb.add(g); return g; }); };
 /* v731 帽子：作者用 ChatGPT 生「光頭戴帽子」三視圖 → Meshy → 切出帽子（座標跟身體一樣），黏在頭的骨頭上。
    戴帽子時，被帽子蓋住的那一圈頭髮往內壓（每個方向量帽子內側多遠，頭髮超過就縮進去），露在外面的長髮、瀏海照常 */
+K3.RUNSW = 0; K3.RUNOUT = 0; K3.RUNTW = 0; K3.RUNEL = 0;   /* 跑步手臂的調整先關著，等作者看過動圖說好再開：預定 RUNSW 0.5、RUNOUT 0.2、RUNEL 0.6 */
 K3.HATS = { cap: 1, straw: 1 }; K3.hatA = {}; K3.HC = new THREE.Vector3(0, 0.6, 0.02); K3.HS = 1;
 /* v734 作者：「就不能做的乾乾淨淨完完整整的嗎」→ 帽子不再用 Meshy 切下來的（邊緣是碎的、緞帶跟帽子中間有縫）。
    改成程式照頭的大小做：帽冠、帽簷、緞帶都是一整圈平滑的面，邊緣是一條乾淨的線。座標：以頭的中心為原點，做好再往後仰一點 */
@@ -5316,13 +5324,22 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   else if (m > 0.01 && k.mf !== frameNo){ k.mf = frameNo; const v = f.aspd || 0, A = k.acts;
     for (const n of ['idle', 'walk', 'run', 'sprint']) A[n].setEffectiveWeight((w[n] || 0) / Math.max(1e-4, lw));
     A.walk.timeScale = clamp(v / 1.2, 0.5, 2.0); A.run.timeScale = clamp(v / 2.9, 0.75, 1.6); A.sprint.timeScale = clamp(v / 2.6, 0.9, 2.2);
-    k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); }
+    k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position);
+    /* v736 作者：「跑步動作還是有點不自然」→ 真人動作的跑步手臂擺得很小、手一直貼在肚子前面，穿厚衣服時手會陷進衣服。
+       跑得越快：① 上臂前後擺的幅度放大（以這個動作的平均姿勢為中心，往兩邊多擺一些）② 手臂往外張開一點，手不會擦到身體 */
+    k.rw = clamp((v - 1.2) / 1.8, 0, 1);   /* 平常搖桿推到底大約每秒 3.3 公尺（走路＋跑步混在一起），照速度算 */
+    if (k.rw > 0.02){ if (!k.avgQ){ k.avgQ = {}; for (const an of ['idle', 'walk', 'run', 'sprint']){ const o = k.avgQ[an] = {}, cl = A[an] && A[an].getClip(); if (!cl) continue; for (const tr of cl.tracks){ const mm = /(upperarm[lr])\.quaternion$/.exec(tr.name); if (!mm) continue; const v = tr.values, q = new THREE.Quaternion(0, 0, 0, 0); for (let i = 0; i < v.length; i += 4){ const sg = (q.x * v[i] + q.y * v[i + 1] + q.z * v[i + 2] + q.w * v[i + 3]) < 0 ? -1 : 1; q.x += sg * v[i]; q.y += sg * v[i + 1]; q.z += sg * v[i + 2]; q.w += sg * v[i + 3]; } o[mm[1]] = q.normalize(); } } }
+      for (const n of ['upperarml', 'upperarmr']){ const q = k._aq || (k._aq = new THREE.Quaternion()); q.set(0, 0, 0, 0); let any = false; for (const an of ['idle', 'walk', 'run', 'sprint']){ const aq = k.avgQ[an] && k.avgQ[an][n], ww = (w[an] || 0); if (!aq || ww <= 0) continue; const sg = (q.x * aq.x + q.y * aq.y + q.z * aq.z + q.w * aq.w) < 0 ? -1 : 1; q.x += sg * ww * aq.x; q.y += sg * ww * aq.y; q.z += sg * ww * aq.z; q.w += sg * ww * aq.w; any = true; }
+        if (any && q.lengthSq() > 1e-6){ q.normalize(); k.mq[n].copy(q.slerp(k.mq[n], 1 + K3.RUNSW * k.rw)); } } 
+      if (K3.RUNEL) for (const n of ['lowerarml', 'lowerarmr']){ const q = k._aq; q.copy(k.restQ[n]).slerp(k.mq[n], 1 - K3.RUNEL * k.rw); k.mq[n].copy(q); } } }   /* ③ 手肘不要彎那麼多：前臂放下來一點，手在腰旁邊擺，不會舉到胸口陷進衣服 */
   /* v697 作者：「這裡釣魚會破圖」→ 平常手臂往下壓（衣服才不會被撐開），但拿竿子釣魚、坐著的時候手要往前伸，壓下去竿子就離開手、穿過身體。釣魚、坐著時手臂幾乎不壓 */
   /* v704 作者：「手臂怪怪的」（釣魚時手臂整個縮在身體旁邊，從後面看只剩一小截）→ 釣魚、坐著時手臂往外打開一點，竿子跟著手走 */
   { const tgt = f && (f.fishing || f.sitting || f.restRod) ? -0.25 : (k.armBase == null ? 0.42 : k.armBase); const cur = k.arm < 0 ? tgt : k.arm; const nx = Math.abs(tgt - cur) < 0.005 ? tgt : cur + (tgt - cur) * 0.15; if (nx !== k.arm) K3.armX(k, nx, true); }
   for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
     if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m));
-    if (k.XO && m > 0.01){ if (n === 'upperarml') b.quaternion.multiply(k.XO.l); else if (n === 'upperarmr') b.quaternion.multiply(k.XO.r); } }   /* v719 穿背心、雨衣這種比較厚的衣服，走路跑步時手臂往外一點，不會甩進衣服裡 */
+    if (k.XO && m > 0.01){ if (n === 'upperarml') b.quaternion.multiply(k.XO.l); else if (n === 'upperarmr') b.quaternion.multiply(k.XO.r); }
+    if (m > 0.01 && k.rw > 0.02 && (n === 'upperarml' || n === 'upperarmr')){ if (!k.XR){ k.XR = {}; for (const [s2, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s2].q; k.XR[s2] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), K3.RUNOUT * sg)).multiply(Wq); } k._id = new THREE.Quaternion(); k._xr = new THREE.Quaternion(); }
+      b.quaternion.multiply(k._xr.copy(k._id).slerp(n === 'upperarml' ? k.XR.l : k.XR.r, k.rw * Math.min(1, m))); if (K3.RUNTW) b.quaternion.multiply(k._xr.setFromAxisAngle(K3._Y || (K3._Y = new THREE.Vector3(0, 1, 0)), K3.RUNTW * (n === 'upperarml' ? 1 : -1) * k.rw * Math.min(1, m))); } }   /* v719 穿背心、雨衣這種比較厚的衣服，走路跑步時手臂往外一點，不會甩進衣服裡 */
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
   if (m > 0.01) B.hips.position.lerp(k.mhp, Math.min(1, m));
   { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s;
