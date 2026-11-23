@@ -5236,7 +5236,7 @@ K3.acc = (k, c) => { const C = c.c || {}, U = k.meshes.face && k.meshes.face.use
     for (const o of D.mk(m)){ o.castShadow = false; g.add(o); } hb.add(g); return g; }); };
 /* v731 帽子：作者用 ChatGPT 生「光頭戴帽子」三視圖 → Meshy → 切出帽子（座標跟身體一樣），黏在頭的骨頭上。
    戴帽子時，被帽子蓋住的那一圈頭髮往內壓（每個方向量帽子內側多遠，頭髮超過就縮進去），露在外面的長髮、瀏海照常 */
-K3.RUNSW = 0.5; K3.RUNOUT = 0.2; K3.RUNTW = 0; K3.RUNEL = 0.6;   /* v737 作者看過動圖說好：跑步時上臂擺幅 +50%、手臂往外 0.2、手肘少彎六成 */
+K3.RUNSW = 0; K3.RUNOUT = 0.15; K3.RUNTW = 0; K3.RUNEL = 0.45;   /* v738 只對厚衣服：手臂往外 0.15、手肘少彎 45%（不然手會陷進胸口）；擺幅不再放大 */
 K3.HATS = { cap: 1, straw: 1 }; K3.hatA = {}; K3.HC = new THREE.Vector3(0, 0.6, 0.02); K3.HS = 1;
 /* v734 作者：「就不能做的乾乾淨淨完完整整的嗎」→ 帽子不再用 Meshy 切下來的（邊緣是碎的、緞帶跟帽子中間有縫）。
    改成程式照頭的大小做：帽冠、帽簷、緞帶都是一整圈平滑的面，邊緣是一條乾淨的線。座標：以頭的中心為原點，做好再往後仰一點 */
@@ -5322,14 +5322,17 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   if (k.ew > 0 && k.eE){ m = k.ew; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0);
     k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); } }
   else if (m > 0.01 && k.mf !== frameNo){ k.mf = frameNo; const v = f.aspd || 0, A = k.acts;
-    for (const n of ['idle', 'walk', 'run', 'sprint']) A[n].setEffectiveWeight((w[n] || 0) / Math.max(1e-4, lw));
+    /* v738 作者傳了之前的預覽動圖：「在這裡看明明沒什麼」→ 預覽是單獨播一個動作；遊戲裡是照舊人物的比重把「站、走、跑」三個動作混在一起（搖桿推到底時是 站 0.22＋走 0.44＋跑 0.34），
+       三個動作的步伐長短不一樣，混起來手腳就糊成一團、手舉在胸口前面。改成一次只播一個：慢的時候走、快的時候跑，中間用 0.3 秒左右換過去 */
+    { const tg = v < 0.25 ? 'idle' : (w.sprint || 0) > 0.5 * lw ? 'sprint' : v < (k.loco === 'run' ? 2.0 : 2.4) ? 'walk' : 'run'; k.loco = tg; const L = k.lwt || (k.lwt = { idle: 1, walk: 0, run: 0, sprint: 0 }), nw = performance.now(), r = 1 - Math.exp(-Math.min(0.25, (nw - (k._lt || nw - 16)) / 1000) * 9); let sm = 0; for (const n in L){ L[n] += ((n === tg ? 1 : 0) - L[n]) * r; sm += L[n]; }
+      k._lt = nw; for (const n in L) A[n].setEffectiveWeight(L[n] / Math.max(1e-4, sm)); }
     A.walk.timeScale = clamp(v / 1.2, 0.5, 2.0); A.run.timeScale = clamp(v / 2.9, 0.75, 1.6); A.sprint.timeScale = clamp(v / 2.6, 0.9, 2.2);
     k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position);
     /* v736 作者：「跑步動作還是有點不自然」→ 真人動作的跑步手臂擺得很小、手一直貼在肚子前面，穿厚衣服時手會陷進衣服。
        跑得越快：① 上臂前後擺的幅度放大（以這個動作的平均姿勢為中心，往兩邊多擺一些）② 手臂往外張開一點，手不會擦到身體 */
-    k.rw = clamp((v - 1.2) / 1.8, 0, 1);   /* 平常搖桿推到底大約每秒 3.3 公尺（走路＋跑步混在一起），照速度算 */
+    k.rw = k.XO ? clamp((k.lwt.run + k.lwt.sprint), 0, 1) : 0;   /* v738 只有厚衣服（連帽衣、背心、雨衣）跑步時才調手臂；薄衣服照動作原本的樣子 */ //   /* 平常搖桿推到底大約每秒 3.3 公尺（走路＋跑步混在一起），照速度算 */
     if (k.rw > 0.02){ if (!k.avgQ){ k.avgQ = {}; for (const an of ['idle', 'walk', 'run', 'sprint']){ const o = k.avgQ[an] = {}, cl = A[an] && A[an].getClip(); if (!cl) continue; for (const tr of cl.tracks){ const mm = /(upperarm[lr])\.quaternion$/.exec(tr.name); if (!mm) continue; const v = tr.values, q = new THREE.Quaternion(0, 0, 0, 0); for (let i = 0; i < v.length; i += 4){ const sg = (q.x * v[i] + q.y * v[i + 1] + q.z * v[i + 2] + q.w * v[i + 3]) < 0 ? -1 : 1; q.x += sg * v[i]; q.y += sg * v[i + 1]; q.z += sg * v[i + 2]; q.w += sg * v[i + 3]; } o[mm[1]] = q.normalize(); } } }
-      for (const n of ['upperarml', 'upperarmr']){ const q = k._aq || (k._aq = new THREE.Quaternion()); q.set(0, 0, 0, 0); let any = false; for (const an of ['idle', 'walk', 'run', 'sprint']){ const aq = k.avgQ[an] && k.avgQ[an][n], ww = (w[an] || 0); if (!aq || ww <= 0) continue; const sg = (q.x * aq.x + q.y * aq.y + q.z * aq.z + q.w * aq.w) < 0 ? -1 : 1; q.x += sg * ww * aq.x; q.y += sg * ww * aq.y; q.z += sg * ww * aq.z; q.w += sg * ww * aq.w; any = true; }
+      for (const n of ['upperarml', 'upperarmr']){ const q = k._aq || (k._aq = new THREE.Quaternion()); q.set(0, 0, 0, 0); let any = false; for (const an of ['idle', 'walk', 'run', 'sprint']){ const aq = k.avgQ[an] && k.avgQ[an][n], ww = (k.lwt[an] || 0); if (!aq || ww <= 0) continue; const sg = (q.x * aq.x + q.y * aq.y + q.z * aq.z + q.w * aq.w) < 0 ? -1 : 1; q.x += sg * ww * aq.x; q.y += sg * ww * aq.y; q.z += sg * ww * aq.z; q.w += sg * ww * aq.w; any = true; }
         if (any && q.lengthSq() > 1e-6){ q.normalize(); k.mq[n].copy(q.slerp(k.mq[n], 1 + K3.RUNSW * k.rw)); } } 
       if (K3.RUNEL) for (const n of ['lowerarml', 'lowerarmr']){ const q = k._aq; q.copy(k.restQ[n]).slerp(k.mq[n], 1 - K3.RUNEL * k.rw); k.mq[n].copy(q); } } }   /* ③ 手肘不要彎那麼多：前臂放下來一點，手在腰旁邊擺，不會舉到胸口陷進衣服 */
   /* v697 作者：「這裡釣魚會破圖」→ 平常手臂往下壓（衣服才不會被撐開），但拿竿子釣魚、坐著的時候手要往前伸，壓下去竿子就離開手、穿過身體。釣魚、坐著時手臂幾乎不壓 */
@@ -5338,7 +5341,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
     if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m));
     if (k.XO && m > 0.01){ if (n === 'upperarml') b.quaternion.multiply(k.XO.l); else if (n === 'upperarmr') b.quaternion.multiply(k.XO.r); }
-    if (m > 0.01 && k.rw > 0.02 && (n === 'upperarml' || n === 'upperarmr')){ if (!k.XR){ k.XR = {}; for (const [s2, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s2].q; k.XR[s2] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), K3.RUNOUT * (k.XO ? 1 : 0.3) * sg)).multiply(Wq); } k._id = new THREE.Quaternion(); k._xr = new THREE.Quaternion(); }
+    if (m > 0.01 && k.rw > 0.02 && (n === 'upperarml' || n === 'upperarmr')){ if (!k.XR){ k.XR = {}; for (const [s2, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s2].q; k.XR[s2] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), K3.RUNOUT * sg)).multiply(Wq); } k._id = new THREE.Quaternion(); k._xr = new THREE.Quaternion(); }
       b.quaternion.multiply(k._xr.copy(k._id).slerp(n === 'upperarml' ? k.XR.l : k.XR.r, k.rw * Math.min(1, m))); if (K3.RUNTW) b.quaternion.multiply(k._xr.setFromAxisAngle(K3._Y || (K3._Y = new THREE.Vector3(0, 1, 0)), K3.RUNTW * (n === 'upperarml' ? 1 : -1) * k.rw * Math.min(1, m))); } }   /* v719 穿背心、雨衣這種比較厚的衣服，走路跑步時手臂往外一點，不會甩進衣服裡 */
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
   if (m > 0.01) B.hips.position.lerp(k.mhp, Math.min(1, m));
