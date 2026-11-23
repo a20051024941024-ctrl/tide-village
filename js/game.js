@@ -5135,7 +5135,8 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
     A.walk.timeScale = clamp(v / 1.2, 0.5, 2.0); A.run.timeScale = clamp(v / 2.9, 0.75, 1.6); A.sprint.timeScale = clamp(v / 2.6, 0.9, 2.2);
     k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); }
   /* v697 作者：「這裡釣魚會破圖」→ 平常手臂往下壓（衣服才不會被撐開），但拿竿子釣魚、坐著的時候手要往前伸，壓下去竿子就離開手、穿過身體。釣魚、坐著時手臂幾乎不壓 */
-  { const tgt = f && (f.fishing || f.sitting || f.restRod) ? Math.min(k.armBase == null ? 0.42 : k.armBase, 0.08) : (k.armBase == null ? 0.42 : k.armBase); const cur = k.arm < 0 ? tgt : k.arm; const nx = Math.abs(tgt - cur) < 0.005 ? tgt : cur + (tgt - cur) * 0.15; if (nx !== k.arm) K3.armX(k, nx, true); }
+  /* v704 作者：「手臂怪怪的」（釣魚時手臂整個縮在身體旁邊，從後面看只剩一小截）→ 釣魚、坐著時手臂往外打開一點，竿子跟著手走 */
+  { const tgt = f && (f.fishing || f.sitting || f.restRod) ? -0.25 : (k.armBase == null ? 0.42 : k.armBase); const cur = k.arm < 0 ? tgt : k.arm; const nx = Math.abs(tgt - cur) < 0.005 ? tgt : cur + (tgt - cur) * 0.15; if (nx !== k.arm) K3.armX(k, nx, true); }
   for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
     if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m)); }
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
