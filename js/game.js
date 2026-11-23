@@ -5073,12 +5073,17 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   a.g.add(scl);
   const k = a.k3 = { restQ, kidRef: K, scl, grp, bones, W, meshes, base, s, f: pws / s, gh0: KB.hips.position.clone(), hp0: bones.hips.position.clone(), X: {}, arm: -1, names: RG.order.filter(n => n !== 'root'), dy: gH - (W.hips.p.y + 0.95) * s, hair: null, hairT: '', sex: '', ex: '', handR0: K.handR };
   K.handR = bones.handr; K.m.visible = false; return k; };
-K3.mkMixer = k => { const J = K3.asset.clipsJ; if (!J || k.mixer) return; const mixer = new THREE.AnimationMixer(k.grp), acts = {}, h0 = k.hp0;
-  for (const nm of ['idle', 'walk', 'run', 'sprint']){ const C = J.clips[nm]; if (!C) return; const tt = new Float32Array(C.n), tr = []; for (let i = 0; i < C.n; i++) tt[i] = i / J.fps;
+/* v703 表情動作（作者在 Meshy 用文字做的揮手、歡呼、生氣、拍手、鞠躬，換算到新人物；頭大，舉手時手臂往外打開才不會插進頭裡）。打招呼類的手張開，其他時候握拳 */
+K3.EMO = ['wave', 'cheer', 'angry', 'clap', 'bow']; K3.OPEN = { wave: 1, clap: 1, bow: 1 };
+K3.edur = (f, k) => { const a = f && f.av, J = K3.asset && K3.asset.clipsJ, C = J && J.clips['e_' + k]; return a && a.k3 && C ? C.dur + 0.15 : 0; };
+K3.mkMixer = k => { const J = K3.asset.clipsJ; if (!J || k.mixer) return; const mixer = new THREE.AnimationMixer(k.grp), acts = {}, eacts = {}, h0 = k.hp0;
+  const mk = (C, nm) => { const tt = new Float32Array(C.n), tr = []; for (let i = 0; i < C.n; i++) tt[i] = i / J.fps;
     for (const b in C.q) tr.push(new THREE.QuaternionKeyframeTrack(b + '.quaternion', tt, C.q[b]));
     tr.push(new THREE.VectorKeyframeTrack('hips.position', tt, C.hp.map((v, i) => v + h0.getComponent(i % 3))));
-    const ac = mixer.clipAction(new THREE.AnimationClip('k3' + nm, C.dur, tr)); ac.play(); ac.setEffectiveWeight(0); acts[nm] = ac; }
-  k.mixer = mixer; k.acts = acts; k.mq = {}; for (const n of k.names) k.mq[n] = new THREE.Quaternion(); k.mhp = new THREE.Vector3(); };
+    return mixer.clipAction(new THREE.AnimationClip('k3' + nm, C.dur, tr)); };
+  for (const nm of ['idle', 'walk', 'run', 'sprint']){ const C = J.clips[nm]; if (!C) return; const ac = mk(C, nm); ac.play(); ac.setEffectiveWeight(0); acts[nm] = ac; }
+  for (const nm of K3.EMO){ const C = J.clips['e_' + nm]; if (!C) continue; const ac = mk(C, 'e_' + nm); ac.setLoop(THREE.LoopOnce, 1); ac.clampWhenFinished = true; eacts[nm] = ac; }
+  k.mixer = mixer; k.acts = acts; k.eacts = eacts; k.mq = {}; for (const n of k.names) k.mq[n] = new THREE.Quaternion(); k.mhp = new THREE.Vector3(); };
 K3.armX = (k, arm, live) => { if (!live) k.armBase = arm; if (k.arm === arm) return; k.arm = arm; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.X[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -arm * sg)).multiply(Wq); } };
 K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
   if (k.hair){ try { k.grp.remove(k.hair.sm); for (const b of k.hair.ch) if (b.parent) b.parent.remove(b); } catch(e){} k.hair = null; }
@@ -5103,7 +5108,7 @@ K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1, shirt: 1 }); }
   else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; } v.shirt = 1;   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
   v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1;
-  for (const n in M) M[n].visible = !!v[n];
+  for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
   for (const n of ['shirt', 'hoodie', 'dress']) set(n, C.top); for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
@@ -5119,7 +5124,13 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
      新人物自己有一個動畫播放器；原本角色站／走／跑的比重是多少，就用多少比重蓋上真人動作。釣魚、坐下、表情動作、騎車、滑雪、拿東西還是照抄原本的。 */
   const w = K.w; let tot = 0; for (const n in w) tot += w[n]; const lw = (w.idle || 0) + (w.walk || 0) + (w.run || 0) + (w.sprint || 0);
   let m = tot > 0 ? lw / tot : 0; if (!k.mixer || !f || f.ski || f.bkArm || f.held || f.swim || f.fishing || f.sitting || f.air > 0.05) m = 0;
-  if (m > 0.01 && k.mf !== frameNo){ k.mf = frameNo; const v = f.aspd || 0, A = k.acts;
+  const E = f && f.emote, ek = E && E.started && k.eacts && k.eacts[E.k] ? E.k : '';
+  if (k.mixer && k.ef !== frameNo){ k.ef = frameNo; k.ew = (k.ew || 0) + ((ek ? 1 : 0) - (k.ew || 0)) * Math.min(1, (K.dt0 || 0.016) * 12); if (!ek && k.ew < 0.02){ k.ew = 0; if (k.eE){ k.eE = null; for (const n in k.eacts) k.eacts[n].stop(); } } }
+  if (ek && k.eE !== E){ k.eE = E; for (const n in k.eacts) k.eacts[n].stop(); const ac = k.eacts[ek]; ac.reset(); ac.setEffectiveWeight(1); ac.play(); }
+  { const op = !!(ek && K3.OPEN[ek]), M = k.meshes; if (k.op !== op && M.palm){ k.op = op; M.palm.visible = op; if (M.fist) M.fist.visible = !op; } }
+  if (k.ew > 0 && k.eE){ m = k.ew; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0);
+    k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); } }
+  else if (m > 0.01 && k.mf !== frameNo){ k.mf = frameNo; const v = f.aspd || 0, A = k.acts;
     for (const n of ['idle', 'walk', 'run', 'sprint']) A[n].setEffectiveWeight((w[n] || 0) / Math.max(1e-4, lw));
     A.walk.timeScale = clamp(v / 1.2, 0.5, 2.0); A.run.timeScale = clamp(v / 2.9, 0.75, 1.6); A.sprint.timeScale = clamp(v / 2.6, 0.9, 2.2);
     k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); }
@@ -5190,7 +5201,7 @@ function kidEmoteOn(f, t){ const E = f.emote, D = E && EMOTE_DEF[E.k]; if (!D ||
   const moved = !(f === me && mySeat) && now() - (E.at || 0) > 0.8 && ((f.aspd || 0) > 0.35 || f.air > 0.05); if (moved || f.fishing || f.sitting || f.swim || (!D.loop && now() > E.until)){ f.emote = null; if (f.bub && f.bubEmote) f.bub.hidden = true; return false; }
   if (!E.started){ E.started = true; const ac = f.av.kid.acts[D.anim]; ac.reset(); ac.play(); }
   return true; }
-function startEmote(f, k){ const D = EMOTE_DEF[k]; if (!D) return; f.emote = { k, until: now() + (D.dur || 9999), started: false, at: now() }; }
+function startEmote(f, k){ const D = EMOTE_DEF[k]; if (!D) return; let d = D.dur || 9999; try { d = K3.edur(f, k) || d; } catch(e){} f.emote = { k, until: now() + d, started: false, at: now() }; }
 /* v305 修正躺床「沒辦法馬上睡」：躺上去那一下人會瞬間移到床上，速度看起來很快，躺下的動作就被當成「走開了」取消，人變成站在床上。現在剛開始 0.8 秒內、或自己正坐著／躺著時不會因為移動被取消；躺著時動作不見了也會自動補回來 */
 // 每一格：照角色現在在做什麼，決定每個動作的比重（平滑過去，不會瞬間跳），播放速度跟移動速度一樣
 function kidPPoseOn(f){ const P = f.ppose; if (!P) return false; const moved = now() - P.at > 0.8 && ((f.aspd || 0) > 0.35 || f.air > 0.05);
@@ -19790,7 +19801,7 @@ function renderTab0(){
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
       '🎣 拋竿看出力：力量條越滿，竿子甩得越大、線飛得越遠越高；坐著釣到 3 公斤以上或稀有的魚，角色會站起來拉。',
       '👀 第一人稱釣魚：到「設定 → 🎣 釣魚視角」選「第一人稱」打開（預設是背後），打開以後一拋竿就會換成第一人稱，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
-      '🧒 新人物（試玩）：到「設定 → 🧒 新人物（試玩）」選「試試新人物」，可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色。現在只有自己看得到，別人看到的你還是原本的樣子；原本的帽子和配件先不會出現在新人物身上。',
+      '🧒 新人物（試玩）：到「設定 → 🧒 新人物（試玩）」選「試試新人物」，可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色。現在只有自己看得到，別人看到的你還是原本的樣子；原本的帽子和配件先不會出現在新人物身上。新人物的揮手、拍手、鞠躬、生氣、歡呼是另外做的真人動作，打招呼時手會張開，平常和跑步是握拳。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
@@ -21377,6 +21388,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u703', d:'11/23', items:[
+    ['👋', '新人物的表情動作換新了：揮手、拍手、鞠躬、生氣、歡呼都是真人動作，打招呼時手會張開。', 'settings'] ] },
   { id:'u690', d:'11/23', items:[
     ['🧒', '新人物開放試玩：設定裡打開，可以選女生或男生的臉、長捲髮或短髮、白T／連帽衣／女僕裝、短褲或長褲、兩種鞋子，每件都能換顏色。先只有自己看得到。', 'settings'] ] },
   { id:'u687', d:'11/22', items:[
