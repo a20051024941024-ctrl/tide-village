@@ -12983,7 +12983,15 @@ function fpRodLook(){ const m = FP.blk; if (!m) return; const r = RODS.find(x =>
   else if (sk && typeof CRAFT_BY !== 'undefined' && CRAFT_BY[sk]){ try { m.map = rodSkinTex(sk); m.color.set('#ffffff'); } catch(e){ m.map = null; m.color.set(r.color); } m.metalness = 0.2; m.roughness = 0.4; }
   else { m.map = null; m.color.set(r.color); m.metalness = 0.35; m.roughness = 0.35; }
   m.needsUpdate = true; }
-function fpStart(){ try { fpRodLook(); } catch(e){} if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; try { FP.skin.color.copy(me.av.skinM.color); FP.skinD.color.copy(me.av.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(me.av.shirtM.color); } catch(e){}
+/* v728 作者：「第一人稱時釣魚，手那邊跟自己穿的衣服不同步」→ 以前手和袖子一律照舊人物的膚色和上衣顏色。
+   現在穿新人物時：膚色照新人物的皮膚；袖子照上衣——白T、背心、女僕裝是短袖（看到的前臂是光的，袖子用膚色），連帽衣、雨衣是長袖（袖子用那件衣服的顏色）。換衣服時也會馬上跟著換 */
+function fpLook(){ if (!FP.skin || !me || !me.av) return; const a = me.av, k = a.k3;
+  try { if (K3.on && k && k.meshes){ const M = k.meshes, c = k.cfg || K3.cfg, sk = (M.headskin || M.skin || M.Ttee_skin).material.color;
+      FP.skin.color.copy(sk); FP.skinD.color.copy(sk).multiplyScalar(0.82);
+      const sl = c.top === 'hoodie' ? (M.Thoodie_cloth || M.hoodie) : c.top === 'rain' ? M.raincoat : null;
+      FP.sleeve.color.copy(sl ? sl.material.color : sk); FP.lookKey = K3.enc(c); return; }
+    FP.skin.color.copy(a.skinM.color); FP.skinD.color.copy(a.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(a.shirtM.color); FP.lookKey = 'old'; } catch(e){} }
+function fpStart(){ try { fpRodLook(); } catch(e){} if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; fpLook();
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
 function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
 function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
@@ -13012,7 +13020,7 @@ function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T 
   /* 線：竿尖 → 魚嘴（魚掛著的時候頭朝上，嘴在最上面）；拿到手上以後就解下來了 */
   const ln = FP.line; if (T < 2.65){ camera.updateMatrixWorld(); const a = ln.geometry.attributes.position, p0 = FP.tgt; p0.copy(tip); FP.g.localToWorld(p0); a.setXYZ(0, p0.x, p0.y, p0.z); p0.set(h.position.x, h.position.y + c.L * 0.46, h.position.z); FP.g.localToWorld(p0); a.setXYZ(1, p0.x, p0.y, p0.z); a.needsUpdate = true; ln.visible = true; } else ln.visible = false; }
 /* 每一格：決定要不要第一人稱、擺鏡頭、動竿子。回傳 true 表示鏡頭已經擺好，原本的鏡頭程式不用跑 */
-function fpTick(dt){ if (FROST.tents) for (const [m, tx, tz] of FROST.tents) m.visible = !(FP.act && Math.hypot(me.pos.x - tx, me.pos.z - tz) < 2.6);   /* v556 第一人稱坐在冰釣帳篷裡，帳篷布會擋住半個畫面 → 靠近時先不畫 */
+function fpTick(dt){ if (FP.act && ((FP.lkT = (FP.lkT || 0) + dt) > 0.5)){ FP.lkT = 0; try { const k = me.av && me.av.k3, key = K3.on && k && k.meshes ? K3.enc(k.cfg || K3.cfg) : 'old'; if (key !== FP.lookKey) fpLook(); } catch(e){} }   /* v728 換衣服、新人物剛載好時，第一人稱的手跟著換 */ if (FROST.tents) for (const [m, tx, tz] of FROST.tents) m.visible = !(FP.act && Math.hypot(me.pos.x - tx, me.pos.z - tz) < 2.6);   /* v556 第一人稱坐在冰釣帳篷裡，帳篷布會擋住半個畫面 → 靠近時先不畫 */
   const want = fpWant(); if (want && !FP.act) fpStart(); else if (!want && FP.act){ fpStop(); return false; } if (!FP.act) return false; const t = now(); fpRodLook();
   if (FP.c && F.phase === 'idle'){ fpCatchEnd(); FP.rodY = 0; }   /* v511 留在第一人稱的時候，看完卡片要把手上的魚放掉（以前會一直拿著） */
   FP.eye.set(me.pos.x, me.baseY + (me.sitting ? 0.85 : 1.16), me.pos.z);
