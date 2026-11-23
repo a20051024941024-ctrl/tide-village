@@ -5088,8 +5088,16 @@ K3.rand = (seed) => { let h = 2166136261 >>> 0; const S = String(seed); for (let
   return { sex, hair: sex === 'g' ? (r() < 0.8 ? 'long' : 'short') : (r() < 0.9 ? 'short' : 'long'), top, bot: r() < 0.5 ? 'shorts' : 'pants', shoes: top === 'maid' || (sex === 'g' && r() < 0.35) ? 'mary' : 'sneak',
     c: { hair: pick(K3.PAL.hair), top: r() < 0.3 ? '' : pick(K3.PAL.top), bot: r() < 0.3 ? '' : pick(K3.PAL.bot), shoes: r() < 0.4 ? '' : pick(K3.PAL.shoes) } }; };
 /* v713 造型頁改成新人物的衣櫃（作者：「原本的造型消失了」→ 好）：選項一份，設定頁和造型頁共用 */
-K3.ui = f => { const c = K3.cfg; const row = (lab, key, opts, off) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'seg'); opts.forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(c[key] === k)); if (off) b.disabled = true; b.addEventListener('click', () => { K3.set({ [key]: k }); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
-      const sw = (lab, key, cols) => { f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
+/* v731 作者：「現在的造型那邊都要改成之前的 3D 展示」→ 跟原本的衣櫃一樣：上面分類分頁，每個選項是一張卡片、裡面是你的新人物穿上那件的 3D 小圖（排隊慢慢畫，不卡）；顏色圓點照舊 */
+K3.TAB = { sex: 'look', hair: 'look', top: 'top', bot: 'bot', shoes: 'shoes', mask: 'acc', ear: 'acc' };
+K3.TABS = [['look', '😊', '臉・髮型'], ['top', '👕', '上衣'], ['bot', '👖', '褲子'], ['shoes', '👟', '鞋子'], ['acc', '🕶️', '配件']];
+K3.VIEW = { sex: 'face', hair: 'face', top: 'top', bot: 'bot', shoes: 'shoes', mask: 'face', ear: 'ear' };
+K3.ui = f => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'), inTab = key => (K3.TAB[key] || 'acc') === tab;
+      { const tabs = el('div', 'cl-tabs'); K3.TABS.forEach(([k, i, l]) => { const b = el('button', 'cl-tab' + (tab === k ? ' on' : '')); b.append(el('span', 'i', i), el('span', 'n', l)); b.addEventListener('click', () => { K3.uiTab = k; renderTab(); }); tabs.appendChild(b); }); f.appendChild(tabs); }
+      const row = (lab, key, opts, off) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const grid = el('div', 'cl-grid k3grid'); opts.forEach(([k, l]) => { const on = c[key] === k, b = el('button', 'cl-it' + (on ? ' on' : '')); b.setAttribute('aria-pressed', String(on)); if (off) b.disabled = true;
+        const cf = Object.assign({}, c, { [key]: k, c: Object.assign({}, c.c) }); if (key === 'ear') cf.hair = 'short';   /* 耳環小圖用短髮拍，長髮會把耳朵蓋住 */ b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', l)); b.appendChild(el('span', 'n', l)); if (on) b.appendChild(el('span', 'b', '穿著'));
+        b.addEventListener('click', () => { K3.set({ [key]: k }); renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
+      const sw = (lab, key, cols) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
         cols.forEach(col => { const b = el('button', 'k3c'); b.style.background = col; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
       row('臉', 'sex', [['g', '女生'], ['b', '男生']]);
       row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮']]);
@@ -16093,6 +16101,31 @@ function avKit(){
 const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1.3, 0.4], top:[0.85, 2.0, 0.5], back:[0.95, 2.1, Math.PI - 0.6], pants:[0.45, 1.7, 0.45], shoes:[0.12, 1.15, 0.5], socks:[0.18, 1.05, 0.5], full:[0.95, 3.4, 0.45] };
 /* v414 新身材比較高（kidReshape）：商品小圖、頭像的鏡頭高度跟著改，不然臉會被切掉（玩家截圖裡左上角的頭像只拍到衣服） */
 const SHOT_VIEW2 = { hat:[1.72, 2.45, 0.35], face:[1.32, 1.9, 0.15], acc:[1.23, 2.15, 0.4], top:[0.82, 2.5, 0.5], back:[0.95, 2.7, Math.PI - 0.6], pants:[0.42, 1.8, 0.45], shoes:[0.1, 1.25, 0.5], socks:[0.15, 1.15, 0.5], full:[0.95, 4.3, 0.45] };   /* v417 Q 版身材：頭大、人矮，鏡頭跟著調 */
+/* v731 新人物的衣櫃小圖：另外一個看不到的小場景，換上每個選項拍一張（快取起來，排隊一張一張畫，一次最多 20 毫秒） */
+const K3Shot = { kit: null, cache: new Map(), q: [], busy: false };
+function k3Kit(){ if (K3Shot.kit) return K3Shot.kit; if (!K3.asset || !KID.ok) return null;
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#c9b8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(2, 4, 3); sc.add(dl); const dl2 = new THREE.DirectionalLight('#ffffff', 0.9); dl2.position.set(-2, 2, -3); sc.add(dl2);
+  const av = makeAvatar(look.shirt, look.hat); sc.add(av.g); avKidify(av); if (!av.kid) return null; K3.build(av); if (!av.k3) return null; av.k3.cfg = Object.assign({}, K3.cfg, { c: Object.assign({}, K3.cfg.c) }); K3.apply(av);
+  if (K3.asset.clipsJ){ K3.mkMixer(av.k3); const k = av.k3; if (k.acts){ for (const n of ['idle', 'walk', 'run', 'sprint']) if (k.acts[n]) k.acts[n].setEffectiveWeight(n === 'idle' ? 1 : 0); for (const n in k.eacts || {}) k.eacts[n].setEffectiveWeight(0); } if (k.mixer) k.mixer.update(0.5); }
+  av.g.traverse(o => { if (o.isMesh) o.castShadow = false; }); av.g.rotation.y = 0;
+  const cam = new THREE.PerspectiveCamera(28, 1, 0.05, 20), rt = new THREE.WebGLRenderTarget(160, 160, { samples: 4 }); rt.texture.colorSpace = THREE.SRGBColorSpace;
+  return (K3Shot.kit = { sc, av, cam, rt, H: 1.7 }); }
+const K3_VIEW = { face: [0.83, 0.98, 0.3], ear: [0.84, 0.6, 0.85], top: [0.6, 1.05, 0.45], bot: [0.33, 1.1, 0.45], shoes: [0.06, 0.62, 0.55], full: [0.5, 2.3, 0.45] };
+function k3ShotNow(cfg, view, size){ const key = K3.enc(cfg) + '/' + view + '/' + size; if (K3Shot.cache.has(key)) return K3Shot.cache.get(key); const K = k3Kit(); if (!K) return null;
+  const a = K.av; a.k3.cfg = cfg; a.k3.ck = ''; K3.apply(a); if (a.k3.mixer) a.k3.mixer.update(0); a.g.updateMatrixWorld(true);
+  const [fy, fd, yaw] = K3_VIEW[view] || K3_VIEW.full, ty = fy * K.H, d = fd * K.H; K.cam.position.set(Math.sin(yaw) * d, ty + 0.06, Math.cos(yaw) * d); K.cam.lookAt(0, ty, 0);
+  if (K.rt.width !== size) K.rt.setSize(size, size);
+  const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
+  renderer.setRenderTarget(K.rt); renderer.setClearColor('#f3efe6', 1); renderer.clear(); renderer.render(K.sc, K.cam);
+  const px = new Uint8Array(size * size * 4); renderer.readRenderTargetPixels(K.rt, 0, 0, size, size, px); renderer.setRenderTarget(prevT); renderer.setClearColor(prevC, prevA);
+  const cv = document.createElement('canvas'); cv.width = cv.height = size; const c2 = cv.getContext('2d'), id = c2.createImageData(size, size);
+  for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
+  c2.putImageData(id, 0, 0); const url = cv.toDataURL(); if (K3Shot.cache.size > 200) K3Shot.cache.clear(); K3Shot.cache.set(key, url); return url; }
+function k3ShotImg(cfg, view, alt){ const im = el('img', 'gearic'); im.alt = alt || ''; const key = K3.enc(cfg) + '/' + view + '/160';
+  if (K3Shot.cache.has(key)) im.src = K3Shot.cache.get(key); else { im.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; K3Shot.q.push({ cfg, view, im }); k3ShotPump(); } return im; }
+function k3ShotPump(){ if (K3Shot.busy) return; K3Shot.busy = true; const step = () => { const t0 = performance.now();
+    while (K3Shot.q.length && performance.now() - t0 < 20){ const j = K3Shot.q.shift(); if (!j.im.isConnected) continue; try { const u = k3ShotNow(j.cfg, j.view, 160); if (u) j.im.src = u; else { K3Shot.q.unshift(j); break; } } catch(e){ console.warn('k3shot', e); } }
+    if (K3Shot.q.length) setTimeout(step, K3Shot.kit ? 30 : 600); else K3Shot.busy = false; }; setTimeout(step, 30); }
 function avatarShot(gear, view, size){
   const key = JSON.stringify([gear, view, size, look.shirt, look.hat, !!(AvShot.kit && AvShot.kit.av.kid)]); if (AvShot.cache.has(key)) return AvShot.cache.get(key);
   const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat);
@@ -21541,7 +21574,7 @@ const PHONE_APPS = [
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
   { id:'u729', d:'11/23', items:[
-    ['💎', '新配件：口罩和耳環！到造型頁最下面選，耳環有珍珠、星星、圈圈、水滴，都能換顏色。', 'closet'] ] },
+    ['💎', '新配件：口罩和耳環！到造型頁的「🕶️ 配件」分頁選，耳環有珍珠、星星、圈圈、水滴，都能換顏色。', 'closet'] ] },
   { id:'u715', d:'11/23', items:[
     ['🎣', '新衣服：釣魚背心！到造型頁的上衣選「釣魚背心」，裡面配白T，背心顏色可以換。', 'closet'] ] },
   { id:'u714', d:'11/23', items:[
