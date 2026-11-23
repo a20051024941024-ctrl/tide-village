@@ -1,13 +1,17 @@
 // 潮汐釣魚村：遊戲主程式
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { FISH_MESH } from './fish-models.js';
 import * as FishGen from './fish-gen.js';
 import { SPECS as FISH_SPECS } from './fish-specs.js';
 window.__gameStarted = true;
+/* v726 畫風樣本（作者 11/23：「美術風格就不對」→ 選 3：先照參考圖（Play Together）做樣本）。網址加 #look=pt 才會開，其他人完全不變。
+   圓潤：球、石頭、樹冠、燈籠、圓柱變圓滑，方塊邊角變圓，不要一面一面的稜角；魚：乾淨的亮面漸層，不要鱗片細紋 */
+const LOOK_PT = /look=pt/.test(location.hash);
 /* v403 進入畫面（index.html 的 #loadScr）：該跑的都跑完才掀開 —— 模型載完、伺服器的紀錄讀回來、畫面先畫過幾十張（第一次畫要編譯著色器，會卡），玩家一進來就是順的 */
 const Boot = { t0: performance.now(), assets: false, cloud: false, okAt: 0, done: false, step(p, t){ try { window.__loadStep && window.__loadStep(p, t); } catch(e){} } };
 THREE.DefaultLoadingManager.onStart = () => { Boot.assets = false; Boot.sawLoad = true; }; THREE.DefaultLoadingManager.onLoad = () => { Boot.assets = true; }; THREE.DefaultLoadingManager.onError = () => {};
@@ -779,8 +783,9 @@ function fishMat(id, part, color, glow, move, shape){
   if (marlinBody){ m.metalness = 0.55; m.roughness = 0.32; m.flatShading = false; }
   if (shape === 'Marlin' && part === 'Fins'){ m.metalness = 0.2; m.roughness = 0.5; }
   const marlinFin = shape === 'Marlin' && part === 'Fins', m2 = shape === 'Marlin2';
-  const gb = !CLASSIC && fishGenBody(shape), gBody = gb && (part === 'Top' || part === 'Bottom' || part === 'Spots'), fine = gb && Quality.tier !== 'low', gScale = gBody && fine && move !== 'eel', gFin = gb && fine && part === 'Fins';
+  const gb = !CLASSIC && fishGenBody(shape), gBody = gb && (part === 'Top' || part === 'Bottom' || part === 'Spots'), fine = gb && Quality.tier !== 'low', gScale = gBody && fine && move !== 'eel' && !LOOK_PT, gFin = gb && fine && part === 'Fins' && !LOOK_PT;
   if (gBody){ m.flatShading = false; m.roughness = 0.36; m.metalness = 0.12; }
+  if (LOOK_PT){ m.flatShading = false; if (body || gBody){ m.roughness = 0.28; m.metalness = 0.02; } }
   if (gb && /^Eye/.test(part)){ m.roughness = 0.06; m.metalness = 0.0; m.flatShading = false; if (part === 'EyeHi'){ m.emissive = new THREE.Color('#ffffff'); m.emissiveIntensity = 0.6; } }
   const finMove = !CLASSIC && part === 'Fins' && !/^Marlin/.test(shape || '') && (move === 'side' || move === 'vert' || move === 'eel');   /* v267 鰭自己會動（螃蟹、龍蝦、魟魚、旗魚不用） */
   if (!CLASSIC && part === 'Fins'){ m.transparent = true; m.opacity = 0.88; m.side = THREE.DoubleSide; }
@@ -819,7 +824,7 @@ function fishMat(id, part, color, glow, move, shape){
 function makeModelFish(f, scale){
   const st = FISH_STYLE[f.id]; const fish = new THREE.Group(); fish.scale.setScalar(scale || 1);
   const inner = new THREE.Group(); if (/^Fish/.test(st.shape)) inner.scale.z = 1.5; if (st.sc){ inner.scale.x *= st.sc[0]; inner.scale.y *= st.sc[1]; inner.scale.z *= st.sc[2]; } fish.add(inner);   // 稍微加厚，從上往下看比較清楚
-  const texB = !FISH_TEX_OFF && !CLASSIC && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
+  const texB = !FISH_TEX_OFF && !LOOK_PT && !CLASSIC && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
   for (const part of Object.keys(texB ? fishNoBodyMesh(st.shape) : FISH_MESH[st.shape])){
     const mt = fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape); if (st.glowParts && st.glowParts.includes(part) && !mt.userData.gl){ mt.userData.gl = 1; mt.emissive = new THREE.Color(st.c[part] || f.color); mt.emissiveIntensity = 0.9; }
     const mesh = new THREE.Mesh(texB ? fishGeoNB(st.shape, part) : fishGeo(st.shape, part), mt);
@@ -1789,7 +1794,7 @@ function twCottage(g, o){ const w = o.w, d = o.d, zf = o.front, zb = zf - d, zc 
   return { w, d, h: WH + RH }; }
 /* v474 路邊的小東西（照作者畫的道具設計圖用程式做）：藍色魚箱、裝冰和魚的保麗龍箱、紅燈籠、救生圈、纏著麻繩的纜樁、舊輪胎、三角錐、機車、塑膠板凳、盆栽、
    立式小黑板、彎頭路燈、藍白三角旗。每一樣都把零件合成一塊（一樣東西只畫一次），顏色寫在頂點上。 */
-function twPB(){ const parts = []; const add = (geo, col, x, y, z, rx, ry, rz, sx, sy, sz) => { if (sx != null) geo.scale(sx, sy == null ? sx : sy, sz == null ? sx : sz); if (rx) geo.rotateX(rx); if (rz) geo.rotateZ(rz); if (ry) geo.rotateY(ry); geo.translate(x || 0, y || 0, z || 0); const c = new THREE.Color(col), n = geo.attributes.position.count, A = new Float32Array(n * 3); for (let i = 0; i < n; i++){ A[i * 3] = c.r; A[i * 3 + 1] = c.g; A[i * 3 + 2] = c.b; } geo.setAttribute('color', new THREE.BufferAttribute(A, 3)); geo.deleteAttribute('uv'); if (!geo.attributes.normal) geo.computeVertexNormals(); parts.push(geo.index ? geo.toNonIndexed() : geo); return add; };
+function twPB(){ const parts = []; const add = (geo, col, x, y, z, rx, ry, rz, sx, sy, sz) => { if (LOOK_PT){ const up = ptGeo(geo, true); if (up){ geo.dispose(); geo = up; } } if (sx != null) geo.scale(sx, sy == null ? sx : sy, sz == null ? sx : sz); if (rx) geo.rotateX(rx); if (rz) geo.rotateZ(rz); if (ry) geo.rotateY(ry); geo.translate(x || 0, y || 0, z || 0); const c = new THREE.Color(col), n = geo.attributes.position.count, A = new Float32Array(n * 3); for (let i = 0; i < n; i++){ A[i * 3] = c.r; A[i * 3 + 1] = c.g; A[i * 3 + 2] = c.b; } geo.setAttribute('color', new THREE.BufferAttribute(A, 3)); geo.deleteAttribute('uv'); if (!geo.attributes.normal) geo.computeVertexNormals(); parts.push(geo.index ? geo.toNonIndexed() : geo); return add; };
   return { add, raw: geo => { geo.deleteAttribute('uv'); if (!geo.attributes.normal) geo.computeVertexNormals(); parts.push(geo.index ? geo.toNonIndexed() : geo); }, box: (sx, sy, sz, col, x, y, z, rx, ry, rz) => add(new THREE.BoxGeometry(sx, sy, sz), col, x, y, z, rx, ry, rz), cyl: (r0, r1, h, col, x, y, z, rx, ry, rz, seg) => add(new THREE.CylinderGeometry(r0, r1, h, seg || 10), col, x, y, z, rx, ry, rz),
     mesh(){ const g = mergeGeometries(parts, false); parts.forEach(q => q.dispose()); { const pa = g.attributes.position.array; for (let i = 0; i < pa.length; i++) if (pa[i] !== pa[i]) pa[i] = 0; }   /* v493 有零件算出壞掉的座標（漁船），會一直跳警告；壞的點歸零 */ g.computeVertexNormals(); const m = new THREE.Mesh(g, twMat('propM', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0, emissive: '#ffffff', emissiveIntensity: 0.06 }))); m.castShadow = true; m.receiveShadow = true; m.userData.dyn = true; return m; } }; }
 const TWP = {
@@ -3057,8 +3062,31 @@ function batchStatic(){
     Quality.batched = { before, after };
   } catch(e){ console.warn('batchStatic skipped', e); }
 }
+function ptGeo(g, noBox){ const p = g && g.parameters, t = g && g.type; if (!p) return null;
+  try {
+    if ((t === 'IcosahedronGeometry' || t === 'DodecahedronGeometry' || t === 'OctahedronGeometry' || t === 'TetrahedronGeometry') && (p.detail | 0) < 2) return new THREE.IcosahedronGeometry(p.radius, 2);
+    if (t === 'SphereGeometry' && p.widthSegments < 18) return new THREE.SphereGeometry(p.radius, 22, 16, p.phiStart, p.phiLength, p.thetaStart, p.thetaLength);
+    if (t === 'CylinderGeometry' && p.radialSegments >= 5 && p.radialSegments < 16) return new THREE.CylinderGeometry(p.radiusTop, p.radiusBottom, p.height, 18, p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
+    if (t === 'ConeGeometry' && p.radialSegments >= 5 && p.radialSegments < 16) return new THREE.ConeGeometry(p.radius, p.height, 18, p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
+    if (t === 'TorusGeometry' && (p.radialSegments < 12 || p.tubularSegments < 24)) return new THREE.TorusGeometry(p.radius, p.tube, 14, 32, p.arc);
+    if (!noBox && t === 'BoxGeometry'){ const mn = Math.min(p.width, p.height, p.depth), mx = Math.max(p.width, p.height, p.depth); if (mn >= 0.08 && mx <= 8) return new RoundedBoxGeometry(p.width, p.height, p.depth, 2, Math.min(0.06, mn * 0.2)); }
+  } catch(e){} return null; }
+function ptSoften(root){
+  const mats = new Set(), cache = new Map();
+  root.traverse(o => { if (!o.isMesh) return; (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m && mats.add(m)); if (o.isSkinnedMesh || (o.userData && o.userData.fish)) return;
+    const g = o.geometry, p = g && g.parameters; if (!p) return; let ng = cache.get(g);
+    if (ng === undefined){ ng = null; const t = g.type;
+      ng = ptGeo(g, false);
+      cache.set(g, ng); }
+    if (!ng && !g.userData.ptS && g.attributes.position && g.attributes.position.count < 500000){ let cg = cache.get(g.uuid); if (cg === undefined){ try { cg = toCreasedNormals(g, Math.PI * 50 / 180); cg.userData.ptS = 1; } catch(e){ cg = null; } cache.set(g.uuid, cg); } if (cg) ng = cg; }   /* 一面一面的（燈籠、合併過的零件、新美術房子）：50 度以內的稜角抹平，直角照留 */
+    if (ng){ ng.userData.ptS = 1; o.geometry = ng; } });
+  mats.forEach(m => { if (m.flatShading){ m.flatShading = false; m.needsUpdate = true; }
+    if (m.color && !m.userData.ptC){ m.userData.ptC = 1; const h = {}; m.color.getHSL(h); if (h.s > 0.08) m.color.setHSL(h.h, Math.min(1, h.s * 1.18), Math.min(0.92, h.l * 1.04)); } });   /* 顏色飽和一點、亮一點（參考圖是鮮豔的粉彩） */
+}
+if (LOOK_PT) try { ptSoften(scene); } catch(e){ console.warn('ptSoften', e); }
 batchStatic();
 addFlora();
+if (LOOK_PT) setTimeout(() => { try { ptSoften(scene); } catch(e){} }, 4000);
 
 function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of waters) if (x > w.x0 && x < w.x1 && z > w.z0 && z < w.z1) return true; return false; }
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
