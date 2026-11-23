@@ -16185,6 +16185,8 @@ const SHOT_VIEW = { hat:[1.55, 1.6, 0.35], face:[1.33, 0.95, 0.15], acc:[1.15, 1
 const SHOT_VIEW2 = { hat:[1.72, 2.45, 0.35], face:[1.32, 1.9, 0.15], acc:[1.23, 2.15, 0.4], top:[0.82, 2.5, 0.5], back:[0.95, 2.7, Math.PI - 0.6], pants:[0.42, 1.8, 0.45], shoes:[0.1, 1.25, 0.5], socks:[0.15, 1.15, 0.5], full:[0.95, 4.3, 0.45] };   /* v417 Q 版身材：頭大、人矮，鏡頭跟著調 */
 /* v731 新人物的衣櫃小圖：另外一個看不到的小場景，換上每個選項拍一張（快取起來，排隊一張一張畫，一次最多 20 毫秒） */
 const K3Shot = { kit: null, cache: new Map(), q: [], busy: false };
+/* v740 作者：「左上角臉是黑的」→ 臉的貼圖是用到才下載的，一進遊戲就拍大頭照時還沒下載完，拍出來臉是黑的又被記住。現在等臉的貼圖好了才拍，還沒好就先不記住、等一下重拍 */
+function k3TexOk(av){ try { const fm = av.k3.meshes.face; if (!fm) return true; const U = fm.userData.U, ok = t => !t || (t.image && (t.image.width > 0 || t.image.naturalWidth > 0) && t.image.complete !== false); return ok(fm.material.map) && (!U || (ok(U.uMask.value) && ok(U.uAcc.value))); } catch(e){ return true; } }
 function k3KitPose(av){ const k = av.k3; if (!k) return; if (!k.mixer && K3.asset.clipsJ){ try { K3.mkMixer(k); } catch(e){} if (k.acts){ for (const n in k.acts) k.acts[n].setEffectiveWeight(n === 'idle' ? 1 : 0); for (const n in k.eacts || {}) k.eacts[n].setEffectiveWeight(0); } }
   if (k.mixer){ if (k.acts && k.acts.idle){ k.acts.idle.enabled = true; k.acts.idle.setEffectiveWeight(1); if (!k.acts.idle.isRunning()) k.acts.idle.play(); } k.mixer.update(0.033); } }
 function k3Kit(){ if (K3Shot.kit) return K3Shot.kit; if (!K3.asset || !KID.ok) return null;
@@ -16197,7 +16199,7 @@ function k3Kit(){ if (K3Shot.kit) return K3Shot.kit; if (!K3.asset || !KID.ok) r
 const K3_VIEW = { hat: [0.88, 1.15, 0.5], face: [0.83, 0.98, 0.3], ear: [0.84, 0.6, 0.85], top: [0.6, 1.05, 0.45], bot: [0.33, 1.1, 0.45], shoes: [0.06, 0.62, 0.55], full: [0.5, 2.3, 0.45] };
 function k3ShotNow(cfg, view, size){ const key = K3.enc(cfg) + '/' + view + '/' + size; if (K3Shot.cache.has(key)) return K3Shot.cache.get(key); const K = k3Kit(); if (!K) return null;
 
-  const a = K.av; a.k3.cfg = cfg; a.k3.ck = ''; K3.apply(a); k3KitPose(a); a.g.updateMatrixWorld(true);
+  const a = K.av; a.k3.cfg = cfg; a.k3.ck = ''; K3.apply(a); if (!k3TexOk(a)) return null; k3KitPose(a); a.g.updateMatrixWorld(true);
   const [fy, fd, yaw] = K3_VIEW[view] || K3_VIEW.full, ty = fy * K.H, d = fd * K.H; K.cam.position.set(Math.sin(yaw) * d, ty + 0.06, Math.cos(yaw) * d); K.cam.lookAt(0, ty, 0);
   if (K.rt.width !== size) K.rt.setSize(size, size);
   const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
@@ -16207,7 +16209,7 @@ function k3ShotNow(cfg, view, size){ const key = K3.enc(cfg) + '/' + view + '/' 
   for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
   c2.putImageData(id, 0, 0); const url = cv.toDataURL(); if (K3Shot.cache.size > 200) K3Shot.cache.clear(); K3Shot.cache.set(key, url); return url; }
 /* v737 作者：「左上角的頭像還是原本的」→ 大頭照、資料卡的照片也用新人物拍（背景、邊框、遠近、角度照舊；姿勢先用站好的） */
-function k3Portrait(cfg, C, S2){ const K = k3Kit(); if (!K) return null; const a = K.av; a.k3.cfg = Object.assign({}, cfg, { c: Object.assign({}, cfg.c) }); a.k3.ck = ''; K3.apply(a); k3KitPose(a); a.g.updateMatrixWorld(true);
+function k3Portrait(cfg, C, S2){ const K = k3Kit(); if (!K) return null; const a = K.av; a.k3.cfg = Object.assign({}, cfg, { c: Object.assign({}, cfg.c) }); a.k3.ck = ''; K3.apply(a); if (!k3TexOk(a)) return null; k3KitPose(a); a.g.updateMatrixWorld(true);
   const Z = AVC.zoom[C.z], yaw = (C.a - 4) * 0.2, zi = C.z, ty = [0.8, 0.68, 0.5][zi] * K.H, d = [2.0, 2.9, 4.7][zi]; K.cam.position.set(Math.sin(yaw) * d, ty + 0.08, Math.cos(yaw) * d); K.cam.lookAt(0, ty, 0);
   if (K.rt.width !== S2) K.rt.setSize(S2, S2);
   const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha(); renderer.setRenderTarget(K.rt); renderer.setClearColor('#000000', 0); renderer.clear(); renderer.render(K.sc, K.cam);
@@ -16575,11 +16577,12 @@ const AVC = { bg: [['天空', ['#bfe6ff', '#eaf7ff']], ['海', ['#7fd0e8', '#2f8
 function avcParse(code){ const m = AV_C_RE.exec(code || ''); if (!m) return null; const n = m.slice(1).map(Number); return { b: n[0] % AVC.bg.length, f: n[1] % AVC.frame.length, x: n[2] % AVC.face.length, p: n[3] % AVC.pose.length, a: Math.min(8, n[4]), z: n[5] % AVC.zoom.length }; }
 function avcStr(c){ return `c:b${c.b}f${c.f}x${c.x}p${c.p}a${c.a}z${c.z}`; }
 /* 畫大頭照：角色用預覽用的小場景畫（透明背景），背景和外框用 2D 畫；gear 是那個人身上穿的 */
+const AvK3Miss = { n: 0 };
 function avatarPortrait(gear, C, size, k3c){ const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), R = size / 2, bg = AVC.bg[C.b][1];
   c.save(); c.beginPath(); c.arc(R, R, R, 0, 7); c.clip(); const gr = c.createLinearGradient(0, 0, 0, size); gr.addColorStop(0, bg[0]); gr.addColorStop(1, bg[1]); c.fillStyle = gr; c.fillRect(0, 0, size, size);
   if (C.b === 6){ c.fillStyle = '#ffffff'; for (let i = 0; i < 14; i++){ const a = i * 2.39996, r = (0.25 + (i * 0.618 % 1) * 0.7) * R; c.globalAlpha = 0.5 + (i % 3) * 0.2; c.beginPath(); c.arc(R + Math.cos(a) * r, R + Math.sin(a) * r * 0.9, size * (0.008 + (i % 2) * 0.006), 0, 7); c.fill(); } c.globalAlpha = 1; }
   if (C.b === 1){ c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = size * 0.02; for (let k = 0; k < 3; k++){ c.beginPath(); for (let x = 0; x <= size; x += size / 16) c[x ? 'lineTo' : 'moveTo'](x, size * (0.66 + k * 0.1) + Math.sin(x / size * 9 + k * 2) * size * 0.018); c.stroke(); } }
-  let k3t = null; if (gear && k3c){ try { k3t = k3Portrait(k3c, C, Math.min(512, size * 2)); } catch(e){ console.warn('k3portrait', e); } }
+  let k3t = null; if (gear && k3c){ try { k3t = k3Portrait(k3c, C, Math.min(512, size * 2)); } catch(e){ console.warn('k3portrait', e); } } if (gear && k3c && !k3t) AvK3Miss.n++;
   if (k3t) c.drawImage(k3t, 0, 0, size, size);
   else if (gear){ try { const K = avKit(); if (avKidify(K.av)){ K.key = ''; AvShot.cache.clear(); } const fid = AVC.face[C.x][1], g2 = Object.assign({}, gear, fid ? { face: fid } : {}), gk = JSON.stringify(g2); K.av.shirtM.color.set(look.shirt); K.av.hatM.color.set(look.hat); if (K.key !== gk){ applyGear(K.av, g2); K.key = gk; }
       const kid = K.av.kid, P = AVC.pose[C.p], Z = AVC.zoom[C.z]; let hy = 1.33;
@@ -16600,7 +16603,7 @@ const AvCache = new Map();
 function myAvatar(){ const r = Cloud.lastRow && typeof Cloud.lastRow.avatar === 'string' ? Cloud.lastRow.avatar : null; return r != null ? r : LS.get('tide.avatar', ''); }
 function avatarOk(code){ return typeof code === 'string' && (code === '' || AV_C_RE.test(code) || /^f:[a-z0-9_]{1,40}$/.test(code) && FISH_BY_ID[code.slice(2)] || /^p:[a-z]{1,20}$/.test(code) && PET_KINDS[code.slice(2)] || /^e:\d{1,2}$/.test(code) && AV_EMOJI[+code.slice(2)]); }
 function avatarSrc(code, size, gear, k3c){ size = size || 96; if (!avatarOk(code) || code === '') return null; const C = avcParse(code); if (k3c && !(K3.asset && KID.ok)) k3c = null; const key = code + '|' + size + (C ? '|' + (gear ? JSON.stringify(gear) : '') + (AvShot.kit && AvShot.kit.av.kid ? 'k' : '') + (k3c ? '|3' + K3.enc(k3c) : '') : ''); if (AvCache.has(key)) return AvCache.get(key);
-  if (C){ const u = avatarPortrait(gear || null, C, size, k3c); if (AvCache.size > 120) AvCache.clear(); AvCache.set(key, u); return u; }
+  if (C){ const m0 = AvK3Miss.n, u = avatarPortrait(gear || null, C, size, k3c); if (AvK3Miss.n !== m0){ if (AvCache.size > 120) AvCache.clear(); AvCache.set(key, u); setTimeout(() => { AvCache.delete(key); try { updateHUD(); } catch(e){} }, 1500); return u; } if (AvCache.size > 120) AvCache.clear(); AvCache.set(key, u); return u; }
   const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'), h = [...code].reduce((a, ch) => a + ch.charCodeAt(0), 0);
   c.fillStyle = AV_BG[h % AV_BG.length]; c.beginPath(); c.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); c.fill();
   if (code.startsWith('f:')){ const f = FISH_BY_ID[code.slice(2)], fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; try { drawFish(fc, f.color, true, f.id); } catch(e){} c.drawImage(fc, size * 0.04, size * 0.2, size * 0.92, size * 0.575); }
