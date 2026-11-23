@@ -5236,7 +5236,7 @@ K3.acc = (k, c) => { const C = c.c || {}, U = k.meshes.face && k.meshes.face.use
     for (const o of D.mk(m)){ o.castShadow = false; g.add(o); } hb.add(g); return g; }); };
 /* v731 帽子：作者用 ChatGPT 生「光頭戴帽子」三視圖 → Meshy → 切出帽子（座標跟身體一樣），黏在頭的骨頭上。
    戴帽子時，被帽子蓋住的那一圈頭髮往內壓（每個方向量帽子內側多遠，頭髮超過就縮進去），露在外面的長髮、瀏海照常 */
-K3.RUNSW = 0; K3.RUNOUT = 0; K3.RUNTW = 0; K3.RUNEL = 0;   /* 跑步手臂的調整先關著，等作者看過動圖說好再開：預定 RUNSW 0.5、RUNOUT 0.2、RUNEL 0.6 */
+K3.RUNSW = 0.5; K3.RUNOUT = 0.2; K3.RUNTW = 0; K3.RUNEL = 0.6;   /* v737 作者看過動圖說好：跑步時上臂擺幅 +50%、手臂往外 0.2、手肘少彎六成 */
 K3.HATS = { cap: 1, straw: 1 }; K3.hatA = {}; K3.HC = new THREE.Vector3(0, 0.6, 0.02); K3.HS = 1;
 /* v734 作者：「就不能做的乾乾淨淨完完整整的嗎」→ 帽子不再用 Meshy 切下來的（邊緣是碎的、緞帶跟帽子中間有縫）。
    改成程式照頭的大小做：帽冠、帽簷、緞帶都是一整圈平滑的面，邊緣是一條乾淨的線。座標：以頭的中心為原點，做好再往後仰一點 */
@@ -5300,7 +5300,7 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
   try { K3.acc(k, c); } catch(e){}
-  { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
+  { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; k.XR = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
   K3.setHair(k, c.hair); K3.colorHair(k); try { K3.hat(k, c); } catch(e){ console.warn('hat', e); }
   /* v734 作者：「脖子空了，而且也接不好」→ 連帽衣的領口很寬，裡面只有一根細細的脖子，從旁邊看領口裡是空的。補一塊跟衣服同色的「領口內襯」（半顆扁球，黏在胸口的骨頭上），領口裡面就是實的 */
   try { const need = k.region && c.top === 'hoodie', fm = M.face, cb = k.bones.chest; if (need && !k.plug && fm && cb){ const sk = fm.skeleton, bi = sk.boneInverses[sk.bones.indexOf(cb)]; if (bi){ const geo = new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2); geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(0, 0.0, 0.02), new THREE.Quaternion(), new THREE.Vector3(0.21, 0.172, 0.125)));
@@ -5338,7 +5338,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
     if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m));
     if (k.XO && m > 0.01){ if (n === 'upperarml') b.quaternion.multiply(k.XO.l); else if (n === 'upperarmr') b.quaternion.multiply(k.XO.r); }
-    if (m > 0.01 && k.rw > 0.02 && (n === 'upperarml' || n === 'upperarmr')){ if (!k.XR){ k.XR = {}; for (const [s2, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s2].q; k.XR[s2] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), K3.RUNOUT * sg)).multiply(Wq); } k._id = new THREE.Quaternion(); k._xr = new THREE.Quaternion(); }
+    if (m > 0.01 && k.rw > 0.02 && (n === 'upperarml' || n === 'upperarmr')){ if (!k.XR){ k.XR = {}; for (const [s2, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s2].q; k.XR[s2] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), K3.RUNOUT * (k.XO ? 1 : 0.3) * sg)).multiply(Wq); } k._id = new THREE.Quaternion(); k._xr = new THREE.Quaternion(); }
       b.quaternion.multiply(k._xr.copy(k._id).slerp(n === 'upperarml' ? k.XR.l : k.XR.r, k.rw * Math.min(1, m))); if (K3.RUNTW) b.quaternion.multiply(k._xr.setFromAxisAngle(K3._Y || (K3._Y = new THREE.Vector3(0, 1, 0)), K3.RUNTW * (n === 'upperarml' ? 1 : -1) * k.rw * Math.min(1, m))); } }   /* v719 穿背心、雨衣這種比較厚的衣服，走路跑步時手臂往外一點，不會甩進衣服裡 */
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
   if (m > 0.01) B.hips.position.lerp(k.mhp, Math.min(1, m));
