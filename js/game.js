@@ -5079,7 +5079,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 726, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 727, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
@@ -5144,6 +5144,7 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   const pws = KB.hips.parent.getWorldScale(new THREE.Vector3()).x;
   a.g.add(scl);
   const k = a.k3 = { restQ, kidRef: K, scl, grp, bones, W, meshes, base, s, f: pws / s, gh0: KB.hips.position.clone(), hp0: bones.hips.position.clone(), X: {}, arm: -1, names: RG.order.filter(n => n !== 'root'), dy: gH - (W.hips.p.y + 0.95) * s, hair: null, hairT: '', sex: '', ex: '', handR0: K.handR };
+  meshes.face && (meshes.face.userData.noProxy = true);
   { const small = /^(fist|palm|buttons|straps|strings|ribbon|face|socks|sockslo|mssock|msskin|mjskin|shirtin|shirtv|petticoat)$/, mine = a === (typeof me !== 'undefined' && me && me.av);   /* v718 影子：小零件不投影子；別人和村民只有身體投影子（iPhone 小卡） */
     for (const n in meshes){ const m = meshes[n]; m.castShadow = !small.test(n) && (mine || n === 'skin'); m.userData._cs = m.castShadow; } k.mine = mine; }
   K.handR = bones.handr; K.m.visible = false; return k; };
@@ -5172,7 +5173,7 @@ K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
     for (let q = 0; q < n; q++){ const y = P.getY(q); let i0 = 0, i1 = 0, t = 0; if (y <= ys[3]){ i0 = i1 = 3; } else if (y < ys[0]){ for (let i = 0; i < 3; i++) if (y <= ys[i] && y > ys[i + 1]){ i0 = i; i1 = i + 1; t = (ys[i] - y) / (ys[i] - ys[i + 1]); } }
       si[q * 4] = i0; si[q * 4 + 1] = i1; sw[q * 4] = 1 - t; sw[q * 4 + 1] = t; }
     geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4)); }
-  const sm = new THREE.SkinnedMesh(geo, hm.material.clone()); sm.name = 'k3_hair'; sm.frustumCulled = false; sm.castShadow = !!k.mine; sm.userData._cs = sm.castShadow; k.grp.add(sm); k.grp.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(ch));
+  const sm = new THREE.SkinnedMesh(geo, hm.material.clone()); sm.name = 'k3_hair'; sm.userData.noProxy = true; sm.frustumCulled = false; sm.castShadow = !!k.mine; sm.userData._cs = sm.castShadow; k.grp.add(sm); k.grp.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(ch));
   for (const n in keep) k.bones[n].quaternion.copy(keep[n]); k.bones.hips.position.copy(keepHip); k.grp.updateMatrixWorld(true);
   k.hair = { sm, ch, q: ch.map(() => new THREE.Quaternion()), base: hm.material.color.clone() }; K3.colorHair(k); };
 K3.colorHair = k => { const c = (k.cfg || K3.cfg).c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
@@ -5247,15 +5248,15 @@ K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
   if (!cfg){ if (a.k3) K3.detach(a); return; }
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
   if (K3.err){ if (a.k3) K3.detach(a); return; }
-  if (f !== me && !a.k3 && ((f._lod | 0) > 0 || !a.g.parent || !a.g.visible || K3.built >= 1)) return;   /* 別人和村民：走近（完整版的距離）才換，一格最多換一個，免得卡 */
-  if (f !== me && a.k3 && (f._lod | 0) > 0) return;   /* 遠的不用每格抄骨架（遠處畫的是簡化版） */
+  if (f !== me && !a.k3 && ((f._lod | 0) >= 3 || !a.g.parent || !a.g.visible || K3.built >= 1)) return;   /* v727 作者：「NPC 都改新的，不要再顯示舊的」→ 看得到的距離內都換（一格最多換一個） */   /* 別人和村民：走近（完整版的距離）才換，一格最多換一個，免得卡 */
+  if (f !== me && a.k3 && (f._lod | 0) >= 3) return;   /* 太遠（看不到）的不抄骨架 */
   if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.built++; f._lod = -1; try { K3.build(a); a.k3.cfg = cfg; a.k3.ck = K3.enc(cfg); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; if (f === me) try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
-  const k = a.k3; if (k.cfg !== cfg || (f === me && k.dirty)){ k.cfg = cfg; k.dirty = false; const ck = K3.enc(cfg); if (ck !== k.ck){ k.ck = ck; K3.apply(a); } }
+  const k = a.k3; if (k.cfg !== cfg || (f === me && k.dirty)){ k.cfg = cfg; k.dirty = false; const ck = K3.enc(cfg); if (ck !== k.ck){ k.ck = ck; K3.apply(a); f._lod = -1; } }
   if (!k.mixer && K3.asset.clipsJ) K3.mkMixer(k);
   K3.sync(a, f); };
 K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0;
   /* v718 作者：「iPhone 可以用，但小卡」→ 別人和村民同時換成新人物的人數有上限（iPhone、低畫質 3 個，其他 6 個），挑最近的；超過的拆掉，用原本的簡化版 */
-  if (frameNo % 30 === 0){ const cap = (FL.ios || Quality.tier === 'low') ? 3 : 6, L = []; for (const f of CLOD.all){ if (f === me || !f.k3c || !f.av || !f.av.g.parent) continue; L.push([f.av.g.position.distanceToSquared(me.pos), f]); } L.sort((a, b) => a[0] - b[0]); K3.allow = new Set(L.slice(0, cap).map(x => x[1]));
+  if (frameNo % 30 === 0){ const cap = 999, L = []; for (const f of CLOD.all){ if (f === me || !f.k3c || !f.av || !f.av.g.parent) continue; L.push([f.av.g.position.distanceToSquared(me.pos), f]); } L.sort((a, b) => a[0] - b[0]); K3.allow = new Set(L.slice(0, cap).map(x => x[1]));
     for (const [, f] of L.slice(cap)) if (f.av.k3){ K3.detach(f.av); f._lod = -1; } }
   for (const f of CLOD.all){ if (f === me || ((f.k3c || (f.av && f.av.k3)) && (!K3.allow || K3.allow.has(f)))) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
@@ -18755,15 +18756,17 @@ function renderSalon(body){
 /* v290 遠一點的角色：身體那幾塊（皮膚、衣服、褲子、鞋子…）合成一塊會動的模型，5 個 draw call 變 1 個；衣服顏色或換裝變了就重做 */
 function clodMat(T){ const m = new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness == null ? 0.8 : T.roughness, metalness: 0 });
   m.onBeforeCompile = sh => { sh.vertexShader = 'attribute float emi; varying float vEmi;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vEmi = emi;'); sh.fragmentShader = 'varying float vEmi;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * vEmi;'); }; m.customProgramCacheKey = () => 'clodEmi'; return m; }
-function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinnedMesh && o !== f._px) P.push(o); }); if (!P.length) return null;
+function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinnedMesh && o !== f._px && !o.userData.noProxy) P.push(o); }); if (!P.length) return null;
   const vis = o => { for (let q = o; q && q !== a.g; q = q.parent) if (!q.visible) return false; return true; };
+  { const v0 = P.filter(vis); if (v0.length) P.splice(0, P.length, ...v0, ...P.filter(o => !vis(o))); }   /* v727 新人物：骨架照看得到的那一副比（舊人物藏起來的那幾塊不算） */
   const use = P.filter(o => vis(o) && o.material && !Array.isArray(o.material) && !o.material.transparent && !o.material.map && o.skeleton && o.skeleton.bones.length === P[0].skeleton.bones.length && o.skeleton.bones.every((b, i) => b === P[0].skeleton.bones[i]) && o.bindMatrix.equals(P[0].bindMatrix) && o.parent === P[0].parent && !(o.geometry.morphAttributes && o.geometry.morphAttributes.position));
   if (use.length < 2 || use.length !== P.filter(vis).length) return null;
   const key = use.map(o => o.geometry.uuid + o.material.uuid + o.material.color.getHexString()).join('|');
   if (f._px && f._pxKey === key) return f._px;
   if (f._px){ if (f._px.parent) f._px.parent.remove(f._px); f._px.geometry.dispose(); f._px = null; }
   const gs = []; for (const o of use){ const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k) && !(k === 'color' && o.material.vertexColors)) g.deleteAttribute(k); g.morphAttributes = {}; g.clearGroups(); if (!g.attributes.normal) g.computeVertexNormals();
-    const c = o.material.color, n = g.attributes.position.count; if (!(o.material.vertexColors && g.attributes.color)){ const col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
+    const c = o.material.color, n = g.attributes.position.count; if (o.material.vertexColors && g.attributes.color && f.av && f.av.k3){ const ca = g.attributes.color, w = ca.itemSize, col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = ca.getX(i) * c.r; col[i * 3 + 1] = ca.getY(i) * c.g; col[i * 3 + 2] = ca.getZ(i) * c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); }   /* v727 新人物：顏色＝明暗 × 衣服顏色 */
+    else if (!(o.material.vertexColors && g.attributes.color)){ const col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
     { const em = o.material.emissive, e = em && (c.r + c.g + c.b) > 1e-4 ? (em.r + em.g + em.b) / (c.r + c.g + c.b) : 0, ea = new Float32Array(n).fill(e); g.setAttribute('emi', new THREE.BufferAttribute(ea, 1)); }   /* 玩家回報「阿福的膚色會自動變」：近的角色皮膚自己帶一點亮度，遠的簡化版沒有，走近走遠膚色就不一樣（晚上最明顯）。簡化版也帶同樣的亮度 */
     gs.push(g); }
   let mg = null; try { mg = mergeGeometries(gs, false); } catch(e){} gs.forEach(g => g.dispose()); if (!mg) return null;
@@ -18784,7 +18787,7 @@ function clodTick(){ const cp = camera.position;
     const d = Math.hypot(g.position.x - me.pos.x, g.position.z - me.pos.z) / CLOD_K[Quality.tier], lvl = f === me ? 0 : d > 44 ? 3 : d > 26 ? 2 : d > 11 ? 1 : 0;   /* v320 玩家說走路卡：俯瞰視角的鏡頭本來就離角色十幾公尺，以前從鏡頭算距離，廣場上的人全部都是完整版。改成從自己的角色算，低／中畫質提早換簡化版 */   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
     if (lvl === f._lod && frameNo - (f._lodAt || 0) < 120) continue; f._lod = lvl; f._lodAt = frameNo;
     const px = lvl === 1 || lvl === 2 ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
-    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
+    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh && !o.userData.noProxy){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
       if ((lvl === 1 || lvl === 2) && !o.isSkinnedMesh && !o.userData._face){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < (lvl === 2 ? 0.12 : 0.09); }
       if (lvl === 3 || small) o.layers.set(CLOD.L); else o.layers.set(0);
       /* v346 影子：身體一定有；頭、頭髮這種大塊的近處才有；小配件（眼睛、扣子、小飾品）不投影子，26 公尺外只剩身體的影子 */
