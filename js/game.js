@@ -5044,7 +5044,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 717, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 718, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
@@ -5109,6 +5109,8 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   const pws = KB.hips.parent.getWorldScale(new THREE.Vector3()).x;
   a.g.add(scl);
   const k = a.k3 = { restQ, kidRef: K, scl, grp, bones, W, meshes, base, s, f: pws / s, gh0: KB.hips.position.clone(), hp0: bones.hips.position.clone(), X: {}, arm: -1, names: RG.order.filter(n => n !== 'root'), dy: gH - (W.hips.p.y + 0.95) * s, hair: null, hairT: '', sex: '', ex: '', handR0: K.handR };
+  { const small = /^(fist|palm|buttons|straps|strings|ribbon|face|socks|sockslo|mssock|msskin|mjskin|shirtin|shirtv|petticoat)$/, mine = a === (typeof me !== 'undefined' && me && me.av);   /* v718 影子：小零件不投影子；別人和村民只有身體投影子（iPhone 小卡） */
+    for (const n in meshes){ const m = meshes[n]; m.castShadow = !small.test(n) && (mine || n === 'skin'); m.userData._cs = m.castShadow; } k.mine = mine; }
   K.handR = bones.handr; K.m.visible = false; return k; };
 /* v703 表情動作（作者在 Meshy 用文字做的揮手、歡呼、生氣、拍手、鞠躬，換算到新人物；頭大，舉手時手臂往外打開才不會插進頭裡）。打招呼類的手張開，其他時候握拳 */
 K3.EMO = ['wave', 'cheer', 'angry', 'clap', 'bow']; K3.OPEN = { wave: 1, clap: 1, bow: 1 };
@@ -5135,7 +5137,7 @@ K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
     for (let q = 0; q < n; q++){ const y = P.getY(q); let i0 = 0, i1 = 0, t = 0; if (y <= ys[3]){ i0 = i1 = 3; } else if (y < ys[0]){ for (let i = 0; i < 3; i++) if (y <= ys[i] && y > ys[i + 1]){ i0 = i; i1 = i + 1; t = (ys[i] - y) / (ys[i] - ys[i + 1]); } }
       si[q * 4] = i0; si[q * 4 + 1] = i1; sw[q * 4] = 1 - t; sw[q * 4 + 1] = t; }
     geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4)); }
-  const sm = new THREE.SkinnedMesh(geo, hm.material.clone()); sm.name = 'k3_hair'; sm.frustumCulled = false; sm.castShadow = true; k.grp.add(sm); k.grp.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(ch));
+  const sm = new THREE.SkinnedMesh(geo, hm.material.clone()); sm.name = 'k3_hair'; sm.frustumCulled = false; sm.castShadow = !!k.mine; sm.userData._cs = sm.castShadow; k.grp.add(sm); k.grp.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(ch));
   for (const n in keep) k.bones[n].quaternion.copy(keep[n]); k.bones.hips.position.copy(keepHip); k.grp.updateMatrixWorld(true);
   k.hair = { sm, ch, q: ch.map(() => new THREE.Quaternion()), base: hm.material.color.clone() }; K3.colorHair(k); };
 K3.colorHair = k => { const c = (k.cfg || K3.cfg).c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
@@ -5209,7 +5211,11 @@ K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
   const k = a.k3; if (k.cfg !== cfg || (f === me && k.dirty)){ k.cfg = cfg; k.dirty = false; const ck = K3.enc(cfg); if (ck !== k.ck){ k.ck = ck; K3.apply(a); } }
   if (!k.mixer && K3.asset.clipsJ) K3.mkMixer(k);
   K3.sync(a, f); };
-K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0; for (const f of CLOD.all){ if (f === me || f.k3c || (f.av && f.av.k3)) K3.tick(f); } K3.diag(); };
+K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0;
+  /* v718 作者：「iPhone 可以用，但小卡」→ 別人和村民同時換成新人物的人數有上限（iPhone、低畫質 3 個，其他 6 個），挑最近的；超過的拆掉，用原本的簡化版 */
+  if (frameNo % 30 === 0){ const cap = (FL.ios || Quality.tier === 'low') ? 3 : 6, L = []; for (const f of CLOD.all){ if (f === me || !f.k3c || !f.av || !f.av.g.parent) continue; L.push([f.av.g.position.distanceToSquared(me.pos), f]); } L.sort((a, b) => a[0] - b[0]); K3.allow = new Set(L.slice(0, cap).map(x => x[1]));
+    for (const [, f] of L.slice(cap)) if (f.av.k3){ K3.detach(f.av); f._lod = -1; } }
+  for (const f of CLOD.all){ if (f === me || ((f.k3c || (f.av && f.av.k3)) && (!K3.allow || K3.allow.has(f)))) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
 K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'] };
 K3.enc = c => [c.sex, c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || ''].join('|');
