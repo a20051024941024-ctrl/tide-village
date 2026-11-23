@@ -5101,10 +5101,10 @@ K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
   const sm = new THREE.SkinnedMesh(geo, hm.material.clone()); sm.name = 'k3_hair'; sm.frustumCulled = false; sm.castShadow = true; k.grp.add(sm); k.grp.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(ch));
   for (const n in keep) k.bones[n].quaternion.copy(keep[n]); k.bones.hips.position.copy(keepHip); k.grp.updateMatrixWorld(true);
   k.hair = { sm, ch, q: ch.map(() => new THREE.Quaternion()), base: hm.material.color.clone() }; K3.colorHair(k); };
-K3.colorHair = k => { const c = K3.cfg.c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
-  const U = k.meshes.face && k.meshes.face.userData.U; if (U){ U.uOnH.value = col && K3.cfg.sex === 'b' ? 1 : 0; if (col) U.uHair.value.copy(col); } };
+K3.colorHair = k => { const c = (k.cfg || K3.cfg).c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
+  const U = k.meshes.face && k.meshes.face.userData.U; if (U){ U.uOnH.value = col && (k.cfg || K3.cfg).sex === 'b' ? 1 : 0; if (col) U.uHair.value.copy(col); } };
 /* 穿什麼：女僕裝是一整套（底下配黑色襯褲和白襪）；其他時候上衣、褲子分開選。手臂張多開跟著衣服（蓬裙最開、長褲一點、T恤原本的） */
-K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
+K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
   else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else v.shirt = 1;   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
@@ -5157,16 +5157,26 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
     const rq = new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt, 0, side));
     const yaw = k.grp.getWorldQuaternion(new THREE.Quaternion()), dy = k.yq ? 2 * Math.atan2(new THREE.Quaternion().copy(k.yq).invert().multiply(yaw).y, 1) : 0; k.yq = yaw.clone(); k.turn = ((k.turn || 0) + clamp(-dy * 3, -0.5, 0.5)) * 0.9;   /* 轉身的時候頭髮往外甩 */
     for (let i = 1; i < ch.length; i++){ const b = ch[i], tgt = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(gq).multiply(rq); k.hair.q[i].slerp(tgt, 0.18 + 0.06 * i); b.quaternion.copy(k.hair.q[i]); b.updateMatrixWorld(true); } }
-  const sex = K3.cfg.sex === 'g' ? 'g' : 'b', ex = f && f.emote ? 'happy' : 'smile';
+  const sex = (k.cfg || K3.cfg).sex === 'g' ? 'g' : 'b', ex = f && f.emote ? 'happy' : 'smile';
   if (k.sex !== sex || k.ex !== ex){ k.sex = sex; k.ex = ex; const fm = k.meshes.face; if (fm){ fm.material.map = K3.face(sex, ex); fm.material.needsUpdate = true; } } };
-K3.frame = () => { const a = typeof me !== 'undefined' && me && me.av; if (!a) return;
-  if (!K3.on){ if (a.k3) K3.detach(a); return; }
+/* v710 同步：每個人（自己、別的玩家、之後的村民）都可以是新人物。自己的設定在 K3.cfg；別人的從 presence 的 k3 來（f.k3c） */
+K3.cfgOf = f => f === me ? (K3.on ? K3.cfg : null) : (f.k3c || null);
+K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
+  if (!cfg){ if (a.k3) K3.detach(a); return; }
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
   if (K3.err){ if (a.k3) K3.detach(a); return; }
-  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); try { K3.build(a); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
-  if (!a.k3.mixer && K3.asset.clipsJ) K3.mkMixer(a.k3);
-  K3.sync(a, me); K3.diag(); };
-K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) K3.apply(a); } catch(e){ console.warn('k3 apply', e); } };
+  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); try { K3.build(a); a.k3.cfg = cfg; a.k3.ck = K3.enc(cfg); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; if (f === me) try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
+  const k = a.k3; if (k.cfg !== cfg || (f === me && k.dirty)){ k.cfg = cfg; k.dirty = false; const ck = K3.enc(cfg); if (ck !== k.ck){ k.ck = ck; K3.apply(a); } }
+  if (!k.mixer && K3.asset.clipsJ) K3.mkMixer(k);
+  K3.sync(a, f); };
+K3.frame = () => { if (typeof me === 'undefined' || !me) return; for (const f of CLOD.all){ if (f === me || f.k3c || (f.av && f.av.k3)) K3.tick(f); } K3.diag(); };
+/* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
+K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short'], top: ['tee', 'hoodie', 'maid'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'] };
+K3.enc = c => [c.sex, c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || ''].join('|');
+K3.dec = s => { if (typeof s !== 'string' || s.length > 120) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
+  const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
+  [['hair', 5], ['top', 6], ['bot', 7], ['shoes', 8]].forEach(([k, i]) => { const v = hx(p[i]); if (v) c.c[k] = v; }); return c; };
+K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} try { pushPresence(true); } catch(e){} };
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 /* v691 作者：「iPhone 換新人物完全不會動」。我這邊（Android 模擬）會動，先把 iPhone 上發生什麼事送回伺服器：出錯的訊息、骨架有沒有在轉、顯卡能力 */
 K3.n = 0; K3.bad = e => { K3.ecount = (K3.ecount || 0) + 1; K3.lastE = e && e.stack || e; if (K3.ferr) return; K3.ferr = 1; console.warn('k3', e); try { errReport('k3', 'err ' + String(e && e.stack || e).replace(/\s+/g, ' ').slice(0, 280)); } catch(_){} };
@@ -13683,7 +13693,7 @@ function renderSettings(body){
       sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
       row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
       sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']); }
-    f.appendChild(el('p', 'sub', '新做的人物，還在試玩：可以選臉、髮型、衣服和顏色。現在只有你自己看得到，別人看到的你還是原本的樣子。原本的帽子、配件、造型先不會出現在新人物身上。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
+    f.appendChild(el('p', 'sub', '新做的人物，還在試玩：可以選臉、髮型、衣服和顏色。打開以後別的玩家也看得到你的新樣子（他們不用自己打開）。原本的帽子、配件、造型先不會出現在新人物身上。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
@@ -17635,6 +17645,7 @@ let lastPres = '', lastPresAt = 0;
 function presenceObj(){
   const o = { p:[+me.pos.x.toFixed(2), +me.pos.z.toFixed(2), +me.baseY.toFixed(2)], r:+me.rot.toFixed(2), sh:(rec && rec.gear && rec.gear.top === 'top_team' && myTeamColor()) || look.shirt, ht:look.hat }; { const tb = myTeamBadge(); if (tb) o.tb = TEAM_BADGE.indexOf(tb); }
   if (nickname) o.n = nickname;
+  if (K3.on) o.k3 = K3.enc(K3.cfg);   /* v710 新人物的樣子 */
   { const av = myAvatar(); if (av) o.av = av; }   /* v334 頭像 */
   if (myId) o.u = myId;
   { const ft = typeof fbMyTeam === 'function' && fbMyTeam(); if (ft){ o.tn = ft.n; if (ft.c) o.tc = ft.c; } }   /* v529 釣友隊名（體育場足球分邊用） */
@@ -17699,6 +17710,7 @@ function applyPeer(pp){
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
+  { const kc = pr.k3 ? K3.dec(pr.k3) : null, ks = kc ? K3.enc(kc) : ''; if ((p.fisher.k3s || '') !== ks){ p.fisher.k3s = ks; p.fisher.k3c = kc; } }   /* v710 別人的新人物 */
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { const st = pr.dr; if (Number.isInteger(st) && st >= 0 && st <= 999){ const tt = duelTierOf(st); p.fisher.nm.dataset.duel = tt[2] + tt[1]; } else delete p.fisher.nm.dataset.duel; }
   nameFrame(p.fisher.nm, typeof pr.nf === 'string' && /^nf_\d{6}$/.test(pr.nf) ? pr.nf : null);
@@ -19806,7 +19818,7 @@ function renderTab0(){
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
       '🎣 拋竿看出力：力量條越滿，竿子甩得越大、線飛得越遠越高；坐著釣到 3 公斤以上或稀有的魚，角色會站起來拉。',
       '👀 第一人稱釣魚：到「設定 → 🎣 釣魚視角」選「第一人稱」打開（預設是背後），打開以後一拋竿就會換成第一人稱，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
-      '🧒 新人物（試玩）：到「設定 → 🧒 新人物（試玩）」選「試試新人物」，可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色。現在只有自己看得到，別人看到的你還是原本的樣子；原本的帽子和配件先不會出現在新人物身上。新人物的揮手、拍手、鞠躬、生氣、歡呼是另外做的真人動作，打招呼時手會張開，平常和跑步是握拳。',
+      '🧒 新人物（試玩）：到「設定 → 🧒 新人物（試玩）」選「試試新人物」，可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色。打開以後別的玩家也看得到你的新樣子；原本的帽子和配件先不會出現在新人物身上。新人物的揮手、拍手、鞠躬、生氣、歡呼是另外做的真人動作，打招呼時手會張開，平常和跑步是握拳。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
@@ -21393,6 +21405,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u710', d:'11/23', items:[
+    ['👀', '別的玩家看得到你的新人物了：打開新人物後，你的臉、髮型、衣服和顏色大家都看得到，揮手、跳舞也一樣。', 'settings'] ] },
   { id:'u703', d:'11/23', items:[
     ['👋', '新人物的表情動作換新了：揮手、拍手、鞠躬、生氣、歡呼都是真人動作，打招呼時手會張開。', 'settings'] ] },
   { id:'u690', d:'11/23', items:[
