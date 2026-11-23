@@ -2188,3 +2188,29 @@ html.fltype #rotate{display:none!important}
 .k3c{width:30px;height:30px;border-radius:50%;border:2px solid rgba(58,42,20,.25);padding:0;cursor:pointer}
 .k3c[aria-pressed="true"]{border-color:#18334a;box-shadow:0 0 0 2px #fff,0 0 0 4px #18334a}
 .k3c0{width:auto;border-radius:15px;padding:0 10px;background:#f4efe6;font-size:12px}
+
+/* v738 新人物換裝頁：照天天玩樂園的排法（左邊大人物、右邊圓形小圖、分類在下面一排） */
+.closet.k3pt{gap:0;border-radius:18px;overflow:hidden}
+.closet.k3pt .cl-l{width:min(380px,38vw);gap:0;position:relative}
+.closet.k3pt .cl-pv{border-radius:0;background:#a8958c}
+.closet.k3pt .cl-pv .pvhint{color:rgba(255,255,255,.8)}
+.closet.k3pt .pv-reset{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgba(60,50,45,.55);color:#e9f7d8;font-size:24px;line-height:1;cursor:pointer}
+.closet.k3pt .pv-back{position:absolute;left:8px;top:8px;border:0;border-radius:999px;padding:5px 10px;background:rgba(255,255,255,.75);color:#4a3f38;font:inherit;font-size:11.5px;cursor:pointer}
+.closet.k3pt .cl-r{background:#f6f3e7;gap:0}
+.closet.k3pt .cl-list{padding:8px 12px 10px}
+.closet.k3pt .k3lab{color:#5a5148;font-size:14px!important;font-weight:800;border-bottom:2px solid #d9d3c2;padding-bottom:3px;margin:8px 0 8px!important}
+.closet.k3pt .cl-grid{grid-template-columns:repeat(4,1fr);gap:10px 8px}
+@media (min-width:1000px){ .closet.k3pt .cl-grid{grid-template-columns:repeat(5,1fr)} }
+.closet.k3pt .cl-it{background:transparent;box-shadow:none;border:0;padding:0 0 2px;gap:4px}
+.closet.k3pt .cl-it > img{width:min(84px,100%);height:auto;aspect-ratio:1;border-radius:50%;object-fit:cover;background:#7cc6dc;border:3px solid transparent;box-sizing:border-box}
+.closet.k3pt .cl-it.on{background:transparent}
+.closet.k3pt .cl-it.on > img{border-color:#f0a23a;box-shadow:0 0 0 3px #fff3d6}
+.closet.k3pt .cl-it .n{font-weight:700;color:#5a5148}
+.closet.k3pt .cl-it .b{top:0;right:2px;background:#f0a23a!important;color:#fff!important}
+.closet.k3pt .k3bar{flex:none;background:#e2d3a8;border-top:2px dashed #c9b98a;padding:6px 8px}
+.closet.k3pt .cl-tabs{justify-content:space-around;padding:0}
+.closet.k3pt .cl-tab{background:transparent;color:#fff;padding:4px 10px;border-radius:999px;font-weight:800;text-shadow:0 1px 0 rgba(120,95,50,.6)}
+.closet.k3pt .cl-tab .i{font-size:24px;filter:grayscale(.2)}
+.closet.k3pt .cl-tab.on{background:#a98a5c;color:#fff}
+.closet.k3pt .seg{flex-wrap:wrap;gap:8px}
+@media (orientation:portrait){ .closet.k3pt .cl-l{width:100%} .closet.k3pt .pv-reset{top:auto;bottom:10px;transform:none} }
