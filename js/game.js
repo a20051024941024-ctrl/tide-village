@@ -5080,7 +5080,7 @@ function kidUpgrade(f){
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
 const K3 = { V: 727, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
-K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
+K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', mask: 'none', ear: 'none', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
 K3.rand = (seed) => { let h = 2166136261 >>> 0; const S = String(seed); for (let i = 0; i < S.length; i++){ h ^= S.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } const r = () => { h ^= h << 13; h >>>= 0; h ^= h >> 17; h ^= h << 5; h >>>= 0; return (h % 10000) / 10000; }, pick = a => a[Math.floor(r() * a.length) % a.length];
@@ -5099,7 +5099,11 @@ K3.ui = f => { const c = K3.cfg; const row = (lab, key, opts, off) => { f.append
       row('褲子', 'bot', [['shorts', '短褲'], ['pants', '長褲']], c.top === 'maid');
       sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
       row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
-      sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']); };
+      sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']);
+      row('口罩', 'mask', [['none', '不戴'], ['mask', '口罩']]);
+      if (c.mask === 'mask') sw('口罩顏色', 'mask', ['#2b2b2e', '#f2b8c8', '#8fb8e0', '#c8b48a', '#7fbf8f', '#e8c547']);
+      row('耳環', 'ear', [['none', '不戴'], ['pearl', '珍珠'], ['star', '星星'], ['hoop', '圈圈'], ['drop', '水滴']]);
+      if (c.ear !== 'none') sw('耳環顏色', 'ear', ['#e8c25a', '#d8dde3', '#f2a7c0', '#6fc3e8', '#e0564f', '#2b2b2e']); };
 /* v712 作者：「有些村民的服裝太不搭了」→ 村民不再亂配：上衣用村民原本的衣服顏色（大家認得），褲子、鞋子、髮色只從耐看的顏色裡挑，褲子跟上衣一深一淺；漁夫、船夫穿連帽衣，不穿女僕裝 */
 K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + nm), h = s => { let x = 0; for (const ch of String(s)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; }, H = h(nm), pick = (a, k) => a[(H >>> k) % a.length];
   const g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|慧|玉|珠|琪|婷|萍/.test(nm), b = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|信|潮|強|明|輝/.test(nm), old = /嬤|伯|爺|婆|老|公/.test(nm);
@@ -5135,8 +5139,8 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   const sk = new THREE.Skeleton(RG.order.map(n => bones[n])), meshes = {}, base = {};
   A.body.scene.traverse(o => { if (!o.isMesh) return; const nm = o.material.name, mt = o.material.clone(), sm = new THREE.SkinnedMesh(o.geometry, mt); sm.name = 'k3_' + nm; sm.frustumCulled = false; sm.castShadow = true; grp.add(sm); sm.bind(sk); meshes[nm] = sm; base[nm] = mt.color.clone(); if (nm === 'fist' || nm === 'palm') mt.side = THREE.DoubleSide; });   /* v708 手是從別的模型切下來的，有幾片面朝裡，從後面看是空心殼（作者：「手也是空的」）→ 兩面都畫 */
   for (const n of RG.order) bones[n].quaternion.copy(restQ[n]);
-  const fm = meshes.face; if (fm){ const U = { uMask: { value: A.mask.b }, uHair: { value: new THREE.Color('#3a3a50') }, uHairB: { value: new THREE.Color(0.3, 0.3, 0.4) }, uOnH: { value: 0 } }; fm.material.map = K3.face('b', 'smile');
-    fm.material.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.fragmentShader = 'uniform sampler2D uMask;uniform vec3 uHair,uHairB;uniform float uOnH;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n{ vec3 mk = texture2D(uMask, vMapUv).rgb; float lt = dot(diffuseColor.rgb, vec3(.3,.59,.11)); vec3 hc = uHair * (lt / max(dot(uHairB, vec3(.3,.59,.11)), 1e-3)); diffuseColor.rgb = mix(diffuseColor.rgb, hc, mk.r * uOnH); }'); };
+  const fm = meshes.face; if (fm){ const U = { uMask: { value: A.mask.b }, uHair: { value: new THREE.Color('#3a3a50') }, uHairB: { value: new THREE.Color(0.3, 0.3, 0.4) }, uOnH: { value: 0 }, uAcc: { value: K3.maskTex() }, uAccC: { value: new THREE.Color('#ffffff') }, uAccOn: { value: 0 } }; fm.material.map = K3.face('b', 'smile');
+    fm.material.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.fragmentShader = 'uniform sampler2D uMask,uAcc;uniform vec3 uHair,uHairB,uAccC;uniform float uOnH,uAccOn;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n{ vec3 mk = texture2D(uMask, vMapUv).rgb; float lt = dot(diffuseColor.rgb, vec3(.3,.59,.11)); vec3 hc = uHair * (lt / max(dot(uHairB, vec3(.3,.59,.11)), 1e-3)); diffuseColor.rgb = mix(diffuseColor.rgb, hc, mk.r * uOnH); vec4 ac = texture2D(uAcc, vMapUv); diffuseColor.rgb = mix(diffuseColor.rgb, ac.rgb * uAccC, ac.a * uAccOn); }'); };
     fm.material.customProgramCacheKey = () => 'k3face'; fm.material.needsUpdate = true; fm.userData.U = U; }
   /* 大小：跟原本角色差不多高（原本的頭放大過，整個人約 2 格高；新人物 1.9）。新人物的腿比較長、髖部高一點，坐下、躺下的時候整個人往下移，屁股才會貼在椅子上 */
   const gH = KB.hips.getWorldPosition(new THREE.Vector3()).y, s = 1;
@@ -5179,6 +5183,30 @@ K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
 K3.colorHair = k => { const c = (k.cfg || K3.cfg).c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
   const U = k.meshes.face && k.meshes.face.userData.U; if (U){ U.uOnH.value = col && (k.cfg || K3.cfg).sex === 'b' ? 1 : 0; if (col) U.uHair.value.copy(col); } };
 /* 穿什麼：女僕裝是一整套（底下配黑色襯褲和白襪）；其他時候上衣、褲子分開選。手臂張多開跟著衣服（蓬裙最開、長褲一點、T恤原本的） */
+/* v729 配件：口罩畫在臉的貼圖上（跟著表情一起，不會穿模）；耳環是程式做的小東西，黏在頭的骨頭上、垂在耳垂下面 */
+K3.maskTex = () => { if (K3._mt) return K3._mt; const cv = document.createElement('canvas'); cv.width = cv.height = 512; const g = cv.getContext('2d');
+  /* 臉的貼圖是正面投影：x = 像素/512 − 0.5、y = 1.15 − 像素/512。鼻子約 (256,383)、嘴 (258,412)、下巴約 y 475、耳朵約 x 75 / 437 */
+  const body = () => { g.beginPath(); g.moveTo(132, 396); g.bezierCurveTo(170, 384, 220, 378, 256, 376); g.bezierCurveTo(292, 378, 342, 384, 380, 396); g.bezierCurveTo(384, 425, 378, 450, 360, 462); g.bezierCurveTo(320, 488, 192, 488, 152, 462); g.bezierCurveTo(134, 450, 128, 425, 132, 396); g.closePath(); };
+  g.strokeStyle = 'rgba(235,235,235,1)'; g.lineWidth = 5; g.lineCap = 'round';
+  for (const sd of [-1, 1]){ const x0 = 256 + sd * 122; g.beginPath(); g.moveTo(x0, 400); g.quadraticCurveTo(256 + sd * 160, 372, 256 + sd * 178, 348); g.stroke(); g.beginPath(); g.moveTo(256 + sd * 120, 452); g.quadraticCurveTo(256 + sd * 166, 420, 256 + sd * 180, 362); g.stroke(); }   /* 掛耳朵的繩子 */
+  body(); const gr = g.createLinearGradient(0, 376, 0, 486); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, '#f4f4f4'); gr.addColorStop(1, '#d6d6d6'); g.fillStyle = gr; g.fill();
+  g.save(); body(); g.clip(); g.strokeStyle = 'rgba(0,0,0,0.13)'; g.lineWidth = 3; for (const y of [412, 432, 452]){ g.beginPath(); g.moveTo(120, y - 4); g.quadraticCurveTo(256, y + 8, 392, y - 4); g.stroke(); }   /* 三條摺痕 */
+  g.strokeStyle = 'rgba(0,0,0,0.1)'; g.lineWidth = 4; body(); g.stroke(); g.restore();
+  const t = K3._mt = new THREE.CanvasTexture(cv); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; return t; };
+K3.EAR = { pearl: { col: '#f4efe6', mk: m => { const o = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 10), m); o.position.y = -0.024; return [o]; } },
+  star: { col: '#e8c25a', mk: m => { const sh = new THREE.Shape(); for (let i = 0; i < 10; i++){ const r = i % 2 ? 0.014 : 0.032, a = Math.PI / 2 + i * Math.PI / 5; i ? sh.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sh.moveTo(Math.cos(a) * r, Math.sin(a) * r); } const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.008, bevelEnabled: true, bevelSize: 0.003, bevelThickness: 0.003, bevelSegments: 1 }); geo.center(); const o = new THREE.Mesh(geo, m); o.rotation.y = Math.PI / 2; o.position.y = -0.04; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.014, 5), m); l.position.y = -0.007; return [o, l]; } },
+  hoop: { col: '#e8c25a', mk: m => { const o = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.0045, 6, 20), m); o.rotation.y = Math.PI / 2; o.position.y = -0.028; return [o]; } },
+  drop: { col: '#6fc3e8', mk: m => { const pts = []; for (let i = 0; i <= 10; i++){ const t = i / 10, r = Math.sin(Math.PI * t) * (0.6 - 0.4 * t) * 0.03 + 0.0005; pts.push(new THREE.Vector2(r, -t * 0.05)); } const o = new THREE.Mesh(new THREE.LatheGeometry(pts, 12), m); o.position.y = -0.016; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.018, 5), new THREE.MeshStandardMaterial({ color: '#d8dde3', metalness: 0.7, roughness: 0.3 })); l.position.y = -0.009; return [o, l]; } } };
+K3.acc = (k, c) => { const C = c.c || {}, U = k.meshes.face && k.meshes.face.userData.U;
+  if (U){ U.uAccOn.value = c.mask === 'mask' ? 1 : 0; U.uAccC.value.set(C.mask || '#ffffff'); }
+  const key = c.ear + '|' + (C.ear || ''); if (k.earK === key) return; k.earK = key;
+  if (k.ears){ for (const e of k.ears){ if (e.parent) e.parent.remove(e); e.traverse(o => { if (o.geometry) o.geometry.dispose(); }); } k.ears = null; }
+  const D = K3.EAR[c.ear]; if (!D) return; const fm = k.meshes.face, hb = k.bones.head; if (!fm || !hb) return;
+  const sk = fm.skeleton, bi = sk.boneInverses[sk.bones.indexOf(hb)]; if (!bi) return;
+  const m = new THREE.MeshStandardMaterial({ color: C.ear || D.col, roughness: c.ear === 'pearl' ? 0.25 : 0.3, metalness: c.ear === 'pearl' ? 0.1 : 0.75 });
+  k.ears = [-1, 1].map(sd => { const g = new THREE.Group(); g.name = 'k3_ear'; g.position.copy(new THREE.Vector3(sd * 0.352, 0.392, -0.008).applyMatrix4(fm.bindMatrix).applyMatrix4(bi));   /* 耳垂（模型座標）換到頭骨頭的座標 */
+    const q = new THREE.Quaternion(); new THREE.Matrix4().copy(bi).multiply(fm.bindMatrix).decompose(new THREE.Vector3(), q, new THREE.Vector3()); g.quaternion.copy(q); g.scale.setScalar(1.35 / new THREE.Vector3().setFromMatrixScale(new THREE.Matrix4().copy(bi).multiply(fm.bindMatrix)).x);
+    for (const o of D.mk(m)){ o.castShadow = false; g.add(o); } hb.add(g); return g; }); };
 K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
@@ -5198,6 +5226,7 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   if (c.top === 'maid') set('pants', '#1b1b20');
   for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
+  try { K3.acc(k, c); } catch(e){}
   { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
   K3.setHair(k, c.hair); K3.colorHair(k);
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
@@ -5260,11 +5289,11 @@ K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0;
     for (const [, f] of L.slice(cap)) if (f.av.k3){ K3.detach(f.av); f._lod = -1; } }
   for (const f of CLOD.all){ if (f === me || ((f.k3c || (f.av && f.av.k3)) && (!K3.allow || K3.allow.has(f)))) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
-K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'] };
-K3.enc = c => [c.sex, c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || ''].join('|');
+K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'] };
+K3.enc = c => [c.sex, c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || '', c.mask || 'none', c.ear || 'none', (c.c || {}).mask || '', (c.c || {}).ear || ''].join('|');   /* v729 後面多四格：口罩、耳環、口罩顏色、耳環顏色（舊版只讀前九格，不會壞） */
 K3.dec = s => { if (typeof s !== 'string' || s.length > 120) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
   const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
-  [['hair', 5], ['top', 6], ['bot', 7], ['shoes', 8]].forEach(([k, i]) => { const v = hx(p[i]); if (v) c.c[k] = v; }); return c; };
+  c.mask = ok('mask', p[9]); c.ear = ok('ear', p[10]); [['hair', 5], ['top', 6], ['bot', 7], ['shoes', 8], ['mask', 11], ['ear', 12]].forEach(([k, i]) => { const v = hx(p[i]); if (v) c.c[k] = v; }); return c; };
 K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} try { pushPresence(true); } catch(e){} };
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 /* v691 作者：「iPhone 換新人物完全不會動」。我這邊（Android 模擬）會動，先把 iPhone 上發生什麼事送回伺服器：出錯的訊息、骨架有沒有在轉、顯卡能力 */
@@ -19923,7 +19952,7 @@ function renderTab0(){
       '🎣 甩竿的線：甩出去的時候，線會跟著浮標的慣性從竿尖被拖出去，沿著浮標飛過的弧線在空中飄、慢慢往下掉；浮標落水以後，線先鬆鬆地躺在水面上，再慢慢被收緊。',
       '🎣 拋竿看出力：力量條越滿，竿子甩得越大、線飛得越遠越高；坐著釣到 3 公斤以上或稀有的魚，角色會站起來拉。',
       '👀 第一人稱釣魚：到「設定 → 🎣 釣魚視角」選「第一人稱」打開（預設是背後），打開以後一拋竿就會換成第一人稱，從拋竿開始就是從自己的眼睛看出去：看到自己握著竿子，竿子下面掛著捲線器、右手抓著把手；按住蓄力時竿子往後舉，放開就往前甩出去，浮標落水後會轉幾圈把手收掉多的線。拉魚時竿子會照張力彎下去（越緊越彎），按住收線的時候捲線器的把手會轉、喀喀響。釣到的時候竿子往上舉，魚吊在竿尖下面的長線上晃，接著把線拉過來、魚吊在眼前甩，然後手伸過來把魚拿起來——小魚單手拿，大魚要放下竿子用雙手捧——接著才跳出重量。手的膚色和袖子跟你的角色一樣。看完魚只要站著沒走開，就一直留在第一人稱（再拋竿也不會換來換去）；一走動、坐下、上船就回到背後視角。隨時可以在設定換回「背後」。打大魚王、潛水、在房子裡時不會用第一人稱。',
-      '🧒 人物樣子：大家現在都是新人物，村民也是。到「設定 → 🧒 人物樣子」可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，每件都能從色塊換顏色，別的玩家看到的你也會一起變。原本的帽子和配件先不會出現在新人物身上，想用的話可以按「改回原本的人物」。揮手、拍手、鞠躬、生氣、歡呼是真人動作，打招呼時手會張開，平常和跑步是握拳。',
+      '🧒 人物樣子：大家現在都是新人物，村民也是。到「設定 → 🧒 人物樣子」可以選女生或男生的臉、長捲髮或刺刺短髮、白T／連帽衣／女僕裝、短褲或長褲、運動鞋或瑪莉珍鞋，還可以戴口罩、耳環（珍珠、星星、圈圈、水滴），每件都能從色塊換顏色，別的玩家看到的你也會一起變。原本的帽子和配件先不會出現在新人物身上，想用的話可以按「改回原本的人物」。揮手、拍手、鞠躬、生氣、歡呼是真人動作，打招呼時手會張開，平常和跑步是握拳。',
       '🎨 設計我的環保袋：「設定 → 🎨 設計我的環保袋」可以用遊戲裡的 12 種魚和自己的名字，在手機上排出環保袋的圖案：點圖案放上去、拖著移動、放大縮小、旋轉，還可以換袋子和顏料的顏色。排好後按下載，帶到實體的版畫體驗照著印；「刻版用」是左右相反的版本。也可以把遊戲裡拍的彩色照片放上去：按右上角的相機拍一張（在家裡、跟鯨魚合影都可以），再按「👜 做成環保袋」，下載「印製用」的照片拿到實體專櫃，用熱轉印印在袋子上。',
       '🎁 兌換碼：參加實體活動（例如學校實習商店的環保袋版畫體驗）拿到的小卡上有兌換碼，在「設定 → 🎁 兌換碼」輸入，可以拿到 🪙300、💙5 和一面只有兌換碼拿得到的「版畫小旗」（海底裝飾）。同一組碼每個人只能用一次。',
       '🧺 籠子：潛水到外面的潛水點（珊瑚礁、沉船、外海、港口、海底洞穴），游到貼近海底，按下面那一排的「🧺 籠子」兩次就放下去（🪙50）。4 小時後回同一個潛水點，游到紅色浮球底下按「收籠子」，裡面有 1～3 隻螃蟹、蝦、小卷、鰻魚、龍蝦、章魚…，直接放進魚缸。最多同時放 2 個。',
@@ -21511,6 +21540,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u729', d:'11/23', items:[
+    ['💎', '新配件：口罩和耳環！到造型頁最下面選，耳環有珍珠、星星、圈圈、水滴，都能換顏色。', 'closet'] ] },
   { id:'u715', d:'11/23', items:[
     ['🎣', '新衣服：釣魚背心！到造型頁的上衣選「釣魚背心」，裡面配白T，背心顏色可以換。', 'closet'] ] },
   { id:'u714', d:'11/23', items:[
