@@ -2214,3 +2214,7 @@ html.fltype #rotate{display:none!important}
 .closet.k3pt .cl-tab.on{background:#a98a5c;color:#fff}
 .closet.k3pt .seg{flex-wrap:wrap;gap:8px}
 @media (orientation:portrait){ .closet.k3pt .cl-l{width:100%} .closet.k3pt .pv-reset{top:auto;bottom:10px;transform:none} }
+
+/* v742 新人物換裝頁：3D 預覽填滿左邊那格（原本固定 150×170，頭和腳被切掉） */
+.closet.k3pt .cl-pv{align-items:stretch}
+.closet.k3pt .cl-pv .pvcv{width:100%;height:100%;max-width:none;max-height:none;border-radius:0;flex:1;min-height:0}

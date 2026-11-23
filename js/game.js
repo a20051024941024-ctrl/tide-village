@@ -16772,11 +16772,12 @@ function renderCloset3(body){
   const box = el('div', 'cl-pv'); let ok = false;
   try { if (pvInit() && K3.asset && KID.ok){ avKidify(PV.av); const a = PV.av; if (a.kid){ if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.build(a); a.k3.cfg = K3.cfg; a.k3.ck = ''; }
       const ck = K3.enc(K3.cfg); if (a.k3.ck !== ck){ a.k3.ck = ck; a.k3.cfg = K3.cfg; K3.apply(a); } if (!a.k3.mixer && K3.asset.clipsJ) K3.mkMixer(a.k3);
-      const W = Math.max(140, Math.min(300, Math.round(innerWidth * 0.3))), H = Math.max(180, Math.min(420, Math.round(innerHeight * 0.66))); pvSize(W, H); PV.cam.position.set(0, 0.95, 3.3); PV.cam.lookAt(0, 0.85, 0);
+      /* v742 作者：「3D 預覽頭被切了」→ 畫布跟左邊那格一樣大，鏡頭拉遠一點、對準身體中間，頭髮上面留空 */
+      const fit = () => { const W = Math.max(120, box.clientWidth | 0), H = Math.max(140, box.clientHeight | 0); pvSize(W, H); const asp = W / H, d = Math.max(4.6, 2.3 / Math.max(0.35, asp)); PV.cam.position.set(0, 0.98, d); PV.cam.lookAt(0, 0.9, 0); };
+      pvSize(300, 300); PV.cam.position.set(0, 1.0, 3.7); PV.cam.lookAt(0, 0.93, 0); requestAnimationFrame(() => { if (box.isConnected) fit(); }); setTimeout(() => { if (box.isConnected) fit(); }, 400);
       box.appendChild(PV.cv); box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); { const rb = el('button', 'pv-reset', '↺'); rb.title = '轉回正面'; rb.setAttribute('aria-label', '轉回正面'); rb.addEventListener('click', () => { try { PV.yaw = 0; PV.idleAt = now() + 8000; } catch(e){} }); box.appendChild(rb); } if (!PV.raf) PV.raf = requestAnimationFrame(pvLoop); ok = true; } } } catch(e){ console.warn('closet3', e); }
   if (!ok){ box.appendChild(el('div', 'cl-t sub', '人物載入中…')); if (!K3.asset) K3.fetch(); setTimeout(() => { if (!$('#sheet').hidden && curTab === 'closet') renderTab(); }, 1200); }
   L.appendChild(box);
-  const back = el('button', 'pv-back', '改回原本的人物'); back.addEventListener('click', () => { K3.set({ on: false }); renderTab(); }); L.appendChild(back);
   const list = el('div', 'cl-list k3list'), bar = el('div', 'k3bar'); R2.append(list, bar); K3.ui(list, bar); }
 function renderCloset(body){
   if (K3.on){ renderCloset3(body); return; }
