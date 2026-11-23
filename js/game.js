@@ -5099,7 +5099,7 @@ K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
 K3.colorHair = k => { const c = K3.cfg.c.hair, col = c ? new THREE.Color(c) : null; if (k.hair) k.hair.sm.material.color.copy(col || k.hair.base);
   const U = k.meshes.face && k.meshes.face.userData.U; if (U){ U.uOnH.value = col && K3.cfg.sex === 'b' ? 1 : 0; if (col) U.uHair.value.copy(col); } };
 /* 穿什麼：女僕裝是一整套（底下配黑色襯褲和白襪）；其他時候上衣、褲子分開選。手臂張多開跟著衣服（蓬裙最開、長褲一點、T恤原本的） */
-K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1 };
+K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); }
   else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; } else v.shirt = 1; v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
   v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1;
