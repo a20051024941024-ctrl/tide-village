@@ -5079,7 +5079,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 725, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 726, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
@@ -5186,9 +5186,14 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   if (c.shoes === 'mary' && M.mjshoe){ if (c.top === 'maid'){ Object.assign(v, { msskin: 1, mssock: 1, msshoe: 1 }); v.socks = 0; } else Object.assign(v, { mjskin: 1, mjshoe: 1 }); }
   else { v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1; v.skinlow = 1; if (c.top === 'maid') v.sockslo = 1; }
   if (!M.skinlow) v.skin = 1;
+  /* v726 分開接：這套上衣、這件褲子各有一整塊（連手臂、手、腿一起，同一個模型生的，沒有接縫）。有的話就用整塊的 */
+  { const TN = { tee: 'Ttee', vest: 'Tvest', hoodie: 'Thoodie' }[c.top], BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot];
+    k.region = !!(TN && BN && M[TN + '_skin'] && M[BN + '_skin'] && M.headskin && c.top !== 'maid');
+    if (k.region){ for (const n in v) if (!/^(face|skinlow|shoes|shoes2|mjskin|mjshoe|msskin|mssock|msshoe)$/.test(n)) delete v[n];
+      Object.assign(v, { headskin: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); } }
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
-  for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest']) set(n, C.top); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
+  for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest', 'Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth']) set(n, C.top); for (const n of ['Bshorts_cloth', 'Bpants_cloth']) set(n, C.bot); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
   for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
@@ -5206,7 +5211,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   const E = f && f.emote, ek = E && E.started && k.eacts && k.eacts[E.k] ? E.k : '';
   if (k.mixer && k.ef !== frameNo){ k.ef = frameNo; k.ew = (k.ew || 0) + ((ek ? 1 : 0) - (k.ew || 0)) * Math.min(1, (K.dt0 || 0.016) * 12); if (!ek && k.ew < 0.02){ k.ew = 0; if (k.eE){ k.eE = null; for (const n in k.eacts) k.eacts[n].stop(); } } }
   if (ek && k.eE !== E){ k.eE = E; for (const n in k.eacts) k.eacts[n].stop(); const ac = k.eacts[ek]; ac.reset(); ac.setEffectiveWeight(1); ac.play(); }
-  { const op = !!(ek && K3.OPEN[ek]), M = k.meshes; if (k.op !== op && M.palm){ k.op = op; M.palm.visible = op; if (M.fist) M.fist.visible = !op; } }
+  { const op = !!(ek && K3.OPEN[ek]), M = k.meshes; if (k.op !== op && M.palm && !k.region){ k.op = op; M.palm.visible = op; if (M.fist) M.fist.visible = !op; } }
   if (k.ew > 0 && k.eE){ m = k.ew; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0);
     k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); } }
   else if (m > 0.01 && k.mf !== frameNo){ k.mf = frameNo; const v = f.aspd || 0, A = k.acts;
