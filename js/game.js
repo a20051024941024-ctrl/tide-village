@@ -5046,7 +5046,8 @@ K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg));
 K3.read();
 K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = true; const P = 'models/kid3/', TL = new THREE.TextureLoader(), GL = new GLTFLoader();
   Promise.all([fetch(P + 'rig.json').then(r => r.json()), GL.loadAsync(P + 'body.glb'), GL.loadAsync(P + 'hair_long.glb'), GL.loadAsync(P + 'hair_short.glb'), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png')])
-    .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {} }; K3.loading = false; })
+    .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null }; K3.loading = false;
+      fetch(P + 'clips.json').then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
     .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
 K3.face = (sex, ex) => { const F = K3.asset.faces, k = sex + ex; if (!F[k]){ const t = new THREE.TextureLoader().load('models/kid3/f' + sex + '_' + ex + '.jpg'); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; F[k] = t; } return F[k]; };
 K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.scene; KS.updateMatrixWorld(true);
@@ -5072,6 +5073,12 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   a.g.add(scl);
   const k = a.k3 = { restQ, kidRef: K, scl, grp, bones, W, meshes, base, s, f: pws / s, gh0: KB.hips.position.clone(), hp0: bones.hips.position.clone(), X: {}, arm: -1, names: RG.order.filter(n => n !== 'root'), dy: gH - (W.hips.p.y + 0.95) * s, hair: null, hairT: '', sex: '', ex: '', handR0: K.handR };
   K.handR = bones.handr; K.m.visible = false; return k; };
+K3.mkMixer = k => { const J = K3.asset.clipsJ; if (!J || k.mixer) return; const mixer = new THREE.AnimationMixer(k.grp), acts = {}, h0 = k.hp0;
+  for (const nm of ['idle', 'walk', 'run', 'sprint']){ const C = J.clips[nm]; if (!C) return; const tt = new Float32Array(C.n), tr = []; for (let i = 0; i < C.n; i++) tt[i] = i / J.fps;
+    for (const b in C.q) tr.push(new THREE.QuaternionKeyframeTrack(b + '.quaternion', tt, C.q[b]));
+    tr.push(new THREE.VectorKeyframeTrack('hips.position', tt, C.hp.map((v, i) => v + h0.getComponent(i % 3))));
+    const ac = mixer.clipAction(new THREE.AnimationClip('k3' + nm, C.dur, tr)); ac.play(); ac.setEffectiveWeight(0); acts[nm] = ac; }
+  k.mixer = mixer; k.acts = acts; k.mq = {}; for (const n of k.names) k.mq[n] = new THREE.Quaternion(); k.mhp = new THREE.Vector3(); };
 K3.armX = (k, arm) => { if (k.arm === arm) return; k.arm = arm; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.X[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -arm * sg)).multiply(Wq); } };
 K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
   if (k.hair){ try { k.grp.remove(k.hair.sm); for (const b of k.hair.ch) if (b.parent) b.parent.remove(b); } catch(e){} k.hair = null; }
@@ -5105,17 +5112,19 @@ K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
 K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
 /* 每一格：原本骨架的角度抄過來（手臂多轉一點貼近身體），髖部的上下前後照比例搬過來；長髮往下垂、跟著甩；表情 */
-const _k3q = new THREE.Quaternion(), _k3v = new THREE.Vector3();
 K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K) return; const GB = K.B, B = k.bones;
-  /* v694 作者：「跑步時動作好奇怪」→ 原本角色腿拉長過，所以遊戲把走路跑步的腿擺幅收小（跑 0.66）、腳步放慢（1.75 倍）。
-     新人物的腿比較短，照抄就變成慢動作小碎步、身體卻滑得很快。這裡把腿的擺幅放回來，腳步也加快一點（多推進動畫時間）。 */
-  const w = K.w, loco = (w.walk || 0) + (w.run || 0) + (w.sprint || 0);
-  if (f && loco > 0.2 && !f.fishing && !f.sitting && !f.swim && k.mx !== frameNo){ k.mx = frameNo; const ex = ((w.walk || 0) * 0.2 + (w.run || 0) * 0.23 + (w.sprint || 0) * 0.27) / Math.max(1, loco); if (ex > 0.01 && K.dt0) K.mixer.update(K.dt0 * ex); }
-  const ampS = 1 - Math.min(1, (w.run || 0) + (w.sprint || 0)) * 0.45 - (w.walk || 0) * 0.15;   /* 頭大的人往前傾太多會像要撲倒，身體少彎一點 */
-  const amp = loco > 0.05 ? 1 + ((w.walk || 0) * 0.136 + (w.run || 0) * 0.515 + (w.sprint || 0) * 0.667) / Math.max(1, loco) * Math.min(1, loco) : 1;
+  /* v695 作者：「不能真的有現實的跑步動作嗎」→ 站著、走路、跑步、快跑改用 Meshy 的真人動捕動作（models/kid3/clips.json，已經換算到新人物的骨架上）。
+     新人物自己有一個動畫播放器；原本角色站／走／跑的比重是多少，就用多少比重蓋上真人動作。釣魚、坐下、表情動作、騎車、滑雪、拿東西還是照抄原本的。 */
+  const w = K.w; let tot = 0; for (const n in w) tot += w[n]; const lw = (w.idle || 0) + (w.walk || 0) + (w.run || 0) + (w.sprint || 0);
+  let m = tot > 0 ? lw / tot : 0; if (!k.mixer || !f || f.ski || f.bkArm || f.held || f.swim || f.fishing || f.sitting || f.air > 0.05) m = 0;
+  if (m > 0.01 && k.mf !== frameNo){ k.mf = frameNo; const v = f.aspd || 0, A = k.acts;
+    for (const n of ['idle', 'walk', 'run', 'sprint']) A[n].setEffectiveWeight((w[n] || 0) / Math.max(1e-4, lw));
+    A.walk.timeScale = clamp(v / 1.2, 0.5, 2.0); A.run.timeScale = clamp(v / 2.9, 0.75, 1.6); A.sprint.timeScale = clamp(v / 2.6, 0.9, 2.2);
+    k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); }
   for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
-    else if ((amp > 1.01 && (n.startsWith('upperleg') || n.startsWith('lowerleg'))) || (ampS < 0.99 && (n === 'spine' || n === 'chest'))){ const am = n.startsWith('s') || n.startsWith('c') ? ampS : amp, R = k.restQ[n], d = R.clone().invert().multiply(b.quaternion); if (d.w < 0){ d.x = -d.x; d.y = -d.y; d.z = -d.z; d.w = -d.w; } const ang = 2 * Math.acos(Math.min(1, d.w)), sn = Math.sqrt(Math.max(1e-9, 1 - d.w * d.w)); if (ang > 1e-4) b.quaternion.copy(R).multiply(_k3q.setFromAxisAngle(_k3v.set(d.x / sn, d.y / sn, d.z / sn), ang * am)); } }
+    if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m)); }
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
+  if (m > 0.01) B.hips.position.lerp(k.mhp, Math.min(1, m));
   { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s + k.dy * Math.min(1, fl); }
   if (K.m.visible) K.m.visible = false;
   K3.n++;
@@ -5133,6 +5142,7 @@ K3.frame = () => { const a = typeof me !== 'undefined' && me && me.av; if (!a) r
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
   if (K3.err){ if (a.k3) K3.detach(a); return; }
   if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); try { K3.build(a); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
+  if (!a.k3.mixer && K3.asset.clipsJ) K3.mkMixer(a.k3);
   K3.sync(a, me); K3.diag(); };
 K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) K3.apply(a); } catch(e){ console.warn('k3 apply', e); } };
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
