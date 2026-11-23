@@ -5089,9 +5089,9 @@ K3.rand = (seed) => { let h = 2166136261 >>> 0; const S = String(seed); for (let
     c: { hair: pick(K3.PAL.hair), top: r() < 0.3 ? '' : pick(K3.PAL.top), bot: r() < 0.3 ? '' : pick(K3.PAL.bot), shoes: r() < 0.4 ? '' : pick(K3.PAL.shoes) } }; };
 /* v713 造型頁改成新人物的衣櫃（作者：「原本的造型消失了」→ 好）：選項一份，設定頁和造型頁共用 */
 /* v731 作者：「現在的造型那邊都要改成之前的 3D 展示」→ 跟原本的衣櫃一樣：上面分類分頁，每個選項是一張卡片、裡面是你的新人物穿上那件的 3D 小圖（排隊慢慢畫，不卡）；顏色圓點照舊 */
-K3.TAB = { sex: 'look', hair: 'look', top: 'top', bot: 'bot', shoes: 'shoes', mask: 'acc', ear: 'acc' };
+K3.TAB = { sex: 'look', hair: 'look', top: 'top', bot: 'bot', shoes: 'shoes', mask: 'acc', ear: 'acc', hat: 'acc' };
 K3.TABS = [['look', '😊', '臉・髮型'], ['top', '👕', '上衣'], ['bot', '👖', '褲子'], ['shoes', '👟', '鞋子'], ['acc', '🕶️', '配件']];
-K3.VIEW = { sex: 'face', hair: 'face', top: 'top', bot: 'bot', shoes: 'shoes', mask: 'face', ear: 'ear' };
+K3.VIEW = { sex: 'face', hair: 'face', top: 'top', bot: 'bot', shoes: 'shoes', mask: 'face', ear: 'ear', hat: 'hat' };
 K3.ui = f => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'), inTab = key => (K3.TAB[key] || 'acc') === tab;
       { const tabs = el('div', 'cl-tabs'); K3.TABS.forEach(([k, i, l]) => { const b = el('button', 'cl-tab' + (tab === k ? ' on' : '')); b.append(el('span', 'i', i), el('span', 'n', l)); b.addEventListener('click', () => { K3.uiTab = k; renderTab(); }); tabs.appendChild(b); }); f.appendChild(tabs); }
       const row = (lab, key, opts, off) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const grid = el('div', 'cl-grid k3grid'); opts.forEach(([k, l]) => { const on = c[key] === k, b = el('button', 'cl-it' + (on ? ' on' : '')); b.setAttribute('aria-pressed', String(on)); if (off) b.disabled = true;
@@ -5227,6 +5227,7 @@ K3.hatLoad = (t, cb) => { const A = K3.hatA[t]; if (A && A.geo) return A; if (A)
     for (const pm of ms){ const P = pm.geometry.attributes.position; for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i).sub(c).multiplyScalar(K3.HS); const r = v.length(), th = Math.min(23, Math.floor(Math.acos(Math.max(-1, Math.min(1, v.y / r))) / Math.PI * 24)), ph = Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (2 * Math.PI) * 48) % 48; if (r < R[th * 48 + ph]) R[th * 48 + ph] = r; } }
     for (let pass = 0; pass < 2; pass++) for (let th = 0; th < 24; th++) for (let ph = 0; ph < 48; ph++){ const i = th * 48 + ph; if (R[i] < 1e8) continue; const l = R[th * 48 + (ph + 47) % 48], r = R[th * 48 + (ph + 1) % 48], u = th ? R[(th - 1) * 48 + ph] : 1e9, d = th < 23 ? R[(th + 1) * 48 + ph] : 1e9;   /* 帽子上的點比較疏的方向會有洞（頭髮從洞穿出來）：左右或上下兩邊都有帽子的格子補起來 */
       if (l < 1e8 && r < 1e8) R[i] = Math.min(l, r); else if (u < 1e8 && d < 1e8) R[i] = Math.min(u, d); else if (th < 3 && u < 1e8) R[i] = u; }
+    { let pm = 1e9; for (let i = 0; i < 4 * 48; i++) pm = Math.min(pm, R[i]); if (pm < 1e8) for (let i = 0; i < 4 * 48; i++) if (R[i] > 1e8) R[i] = pm; }   /* 頭頂那幾格點很少，用頭頂最近的距離補滿（刺刺短髮不會從帽頂穿出來） */
     B.edge = new Int8Array(48); for (let ph = 0; ph < 48; ph++){ let e = -1; for (let th = 0; th < 24; th++) if (R[th * 48 + ph] < 1e8) e = th; B.edge[ph] = e; }   /* 每個方向帽子最下面那一格 */
     const cbs = B.cb; B.cb = []; for (const f of cbs) try { f(); } catch(e){} }).catch(e => console.warn('帽子載入失敗', e)); return null; };
 K3.hat = (k, c) => { const t = K3.HATS[c.hat] ? c.hat : 'none', C = c.c || {};
@@ -16140,8 +16141,9 @@ function k3Kit(){ if (K3Shot.kit) return K3Shot.kit; if (!K3.asset || !KID.ok) r
   av.g.traverse(o => { if (o.isMesh) o.castShadow = false; }); av.g.rotation.y = 0;
   const cam = new THREE.PerspectiveCamera(28, 1, 0.05, 20), rt = new THREE.WebGLRenderTarget(160, 160, { samples: 4 }); rt.texture.colorSpace = THREE.SRGBColorSpace;
   return (K3Shot.kit = { sc, av, cam, rt, H: 1.7 }); }
-const K3_VIEW = { face: [0.83, 0.98, 0.3], ear: [0.84, 0.6, 0.85], top: [0.6, 1.05, 0.45], bot: [0.33, 1.1, 0.45], shoes: [0.06, 0.62, 0.55], full: [0.5, 2.3, 0.45] };
+const K3_VIEW = { hat: [0.88, 1.15, 0.5], face: [0.83, 0.98, 0.3], ear: [0.84, 0.6, 0.85], top: [0.6, 1.05, 0.45], bot: [0.33, 1.1, 0.45], shoes: [0.06, 0.62, 0.55], full: [0.5, 2.3, 0.45] };
 function k3ShotNow(cfg, view, size){ const key = K3.enc(cfg) + '/' + view + '/' + size; if (K3Shot.cache.has(key)) return K3Shot.cache.get(key); const K = k3Kit(); if (!K) return null;
+  if (K3.HATS[cfg.hat] && !(K3.hatA[cfg.hat] && K3.hatA[cfg.hat].parts)){ K3.hatLoad(cfg.hat, () => {}); return null; }   /* 帽子還沒下載好就等一下再拍，不然小圖上沒有帽子 */
   const a = K.av; a.k3.cfg = cfg; a.k3.ck = ''; K3.apply(a); if (a.k3.mixer) a.k3.mixer.update(0); a.g.updateMatrixWorld(true);
   const [fy, fd, yaw] = K3_VIEW[view] || K3_VIEW.full, ty = fy * K.H, d = fd * K.H; K.cam.position.set(Math.sin(yaw) * d, ty + 0.06, Math.cos(yaw) * d); K.cam.lookAt(0, ty, 0);
   if (K.rt.width !== size) K.rt.setSize(size, size);
