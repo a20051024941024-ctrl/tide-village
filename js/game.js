@@ -5044,7 +5044,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 718, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 719, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
@@ -5157,6 +5157,7 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   if (c.top === 'maid') set('pants', '#1b1b20');
   for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
+  { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
   K3.setHair(k, c.hair); K3.colorHair(k);
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
 K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
@@ -5181,7 +5182,8 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   /* v704 作者：「手臂怪怪的」（釣魚時手臂整個縮在身體旁邊，從後面看只剩一小截）→ 釣魚、坐著時手臂往外打開一點，竿子跟著手走 */
   { const tgt = f && (f.fishing || f.sitting || f.restRod) ? -0.25 : (k.armBase == null ? 0.42 : k.armBase); const cur = k.arm < 0 ? tgt : k.arm; const nx = Math.abs(tgt - cur) < 0.005 ? tgt : cur + (tgt - cur) * 0.15; if (nx !== k.arm) K3.armX(k, nx, true); }
   for (const n of k.names){ const g = GB[n]; if (!g) continue; const b = B[n]; b.quaternion.copy(g.quaternion); if (n === 'upperarml') b.quaternion.multiply(k.X.l); else if (n === 'upperarmr') b.quaternion.multiply(k.X.r);
-    if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m)); }
+    if (m > 0.01) b.quaternion.slerp(k.mq[n], Math.min(1, m));
+    if (k.XO && m > 0.01){ if (n === 'upperarml') b.quaternion.multiply(k.XO.l); else if (n === 'upperarmr') b.quaternion.multiply(k.XO.r); } }   /* v719 穿背心、雨衣這種比較厚的衣服，走路跑步時手臂往外一點，不會甩進衣服裡 */
   B.hips.position.copy(GB.hips.position).sub(k.gh0).multiplyScalar(k.f).add(k.hp0);
   if (m > 0.01) B.hips.position.lerp(k.mhp, Math.min(1, m));
   { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s;
