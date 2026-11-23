@@ -5044,7 +5044,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 722, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 723, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
@@ -13730,6 +13730,7 @@ function renderSettings(body){
     [[true, '新人物'], [false, '改回原本的人物']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(!!c.on === k)); b.addEventListener('click', () => { K3.set({ on: k }); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg);
     if (c.on) K3.ui(f);
+    f.appendChild(el('p', 'sub', '人物版本 ' + K3.V));   /* v723 作者截圖時看得出手機上是哪一版 */
     f.appendChild(el('p', 'sub', '可以選臉、髮型、衣服和顏色，別的玩家看到的你也會一起變。原本的帽子、配件、造型先不會出現在新人物身上；想用的話可以改回原本的人物。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
