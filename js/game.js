@@ -5105,14 +5105,15 @@ K3.colorHair = k => { const c = K3.cfg.c.hair, col = c ? new THREE.Color(c) : nu
   const U = k.meshes.face && k.meshes.face.userData.U; if (U){ U.uOnH.value = col && K3.cfg.sex === 'b' ? 1 : 0; if (col) U.uHair.value.copy(col); } };
 /* 穿什麼：女僕裝是一整套（底下配黑色襯褲和白襪）；其他時候上衣、褲子分開選。手臂張多開跟著衣服（蓬裙最開、長褲一點、T恤原本的） */
 K3.apply = a => { const k = a.k3, c = K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
-  if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1, shirt: 1 }); }
-  else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; } v.shirt = 1;   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
+  const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
+  if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
+  else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else v.shirt = 1;   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
   v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1;
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
   for (const n of ['shirt', 'hoodie', 'dress']) set(n, C.top); for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
-  if (c.top === 'hoodie' && M.shirt) M.shirt.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid' && M.shirt) M.shirt.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress);
+  for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); }
   K3.armX(k, c.top === 'maid' ? 0 : c.bot === 'pants' ? 0.25 : 0.42);
   K3.setHair(k, c.hair); K3.colorHair(k);
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
