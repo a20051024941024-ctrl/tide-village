@@ -5134,6 +5134,7 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
     c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30'], 5), top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9) } }; };
 K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.k3') || 'null'); } catch(e){}
   if (!c || c.v !== 2){ c = Object.assign(c && c.sex ? c : K3.rand(Math.random()), { on: true, v: 2 }); try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }
+  if (c && !c.on){ c.on = true; try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }   /* v746 作者：「自動換」→ 之前自己改回舊人物的人也換成新人物（不再有舊人物） */
   if (c && !c.eye) Object.assign(c, K3.faceOf(c.sex));   /* v741 以前選女生臉／男生臉的人，換成一樣長相的搭配 */
   K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
 K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} };
@@ -18457,6 +18458,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
+    setTimeout(refundCheck, 9000);
     await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(stampLoad, 3500); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
@@ -18465,6 +18467,9 @@ async function cloudInit(){
   }
   if (!$('#sheet').hidden && curTab === 'style') renderTab();
 }
+/* v746 作者：「退回去」→ 以前在阿綾服裝店、阿萍美髮沙龍花的金幣退回來（219，伺服器算、每人一次）。進遊戲時問一次，有退就告訴玩家 */
+async function refundCheck(){ if (!Cloud.on || !Cloud.sb) return; const k = 'tide.refund219.' + (Cloud.userId || ''); if (LS.get(k, 0)) return;
+  try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k, 1); const n = data && data.coins | 0; if (n > 0){ try { await cloudRefresh(); } catch(e){} SFX.coin && SFX.coin(); flash(`💰 退回 🪙${n.toLocaleString()}`, 2.2); toast(`💰 服裝店、美髮沙龍整修中：以前買舊人物的衣服、髮型花的 🪙${n.toLocaleString()} 已經退還給你了`); } } catch(e){} }
 // ---- Email 連結：綁定（保存這份紀錄）或在別的裝置登入 ----
 // Supabase 免費方案不能改信件內容，所以用信裡的「Sign in／Confirm」連結（不用驗證碼）。
 const SITE_URL = location.origin + location.pathname;
