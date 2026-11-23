@@ -5150,7 +5150,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   if (k.hair && k.hf !== frameNo){ k.hf = frameNo; const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
     /* v693 作者：「長髮的頭髮不會飄」→ 以前只會慢一點點跟上轉身。現在跑起來頭髮往後揚、跟著腳步上下晃，停下來再慢慢垂回去 */
     const v = f ? Math.min(6, f.aspd || 0) : 0, T = now(); k.hv = (k.hv || 0) + (v - (k.hv || 0)) * 0.08;
-    const tilt = Math.min(0.75, k.hv * 0.16) + Math.sin(T * (6 + k.hv)) * 0.06 * Math.min(1, k.hv / 2), side = Math.sin(T * 1.7) * 0.03 + (k.turn || 0);
+    const tilt = Math.min(0.3, k.hv * 0.07) + Math.sin(T * (6 + k.hv)) * 0.025 * Math.min(1, k.hv / 2), side = Math.sin(T * 1.7) * 0.02 + clamp(k.turn || 0, -0.18, 0.18);   /* v706 作者：「長髮也是亂飄」→ 往後揚的角度、上下晃、轉身甩都減一半以上，頭髮貼著背 */
     const rq = new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt, 0, side));
     const yaw = k.grp.getWorldQuaternion(new THREE.Quaternion()), dy = k.yq ? 2 * Math.atan2(new THREE.Quaternion().copy(k.yq).invert().multiply(yaw).y, 1) : 0; k.yq = yaw.clone(); k.turn = ((k.turn || 0) + clamp(-dy * 3, -0.5, 0.5)) * 0.9;   /* 轉身的時候頭髮往外甩 */
     for (let i = 1; i < ch.length; i++){ const b = ch[i], tgt = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(gq).multiply(rq); k.hair.q[i].slerp(tgt, 0.18 + 0.06 * i); b.quaternion.copy(k.hair.q[i]); b.updateMatrixWorld(true); } }
