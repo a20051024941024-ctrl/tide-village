@@ -5046,6 +5046,14 @@ K3.rand = (seed) => { let h = 2166136261 >>> 0; const S = String(seed); for (let
   const sex = r() < 0.5 ? 'g' : 'b', top = r() < 0.12 && sex === 'g' ? 'maid' : r() < 0.4 ? 'hoodie' : 'tee';
   return { sex, hair: sex === 'g' ? (r() < 0.8 ? 'long' : 'short') : (r() < 0.9 ? 'short' : 'long'), top, bot: r() < 0.5 ? 'shorts' : 'pants', shoes: top === 'maid' || (sex === 'g' && r() < 0.35) ? 'mary' : 'sneak',
     c: { hair: pick(K3.PAL.hair), top: r() < 0.3 ? '' : pick(K3.PAL.top), bot: r() < 0.3 ? '' : pick(K3.PAL.bot), shoes: r() < 0.4 ? '' : pick(K3.PAL.shoes) } }; };
+/* v712 作者：「有些村民的服裝太不搭了」→ 村民不再亂配：上衣用村民原本的衣服顏色（大家認得），褲子、鞋子、髮色只從耐看的顏色裡挑，褲子跟上衣一深一淺；漁夫、船夫穿連帽衣，不穿女僕裝 */
+K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + nm), h = s => { let x = 0; for (const ch of String(s)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; }, H = h(nm), pick = (a, k) => a[(H >>> k) % a.length];
+  const g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|慧|玉|珠|琪|婷|萍/.test(nm), b = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|信|潮|強|明|輝/.test(nm), old = /嬤|伯|爺|婆|老|公/.test(nm);
+  const sex = g !== b ? (g ? 'g' : 'b') : c.sex, work = /漁|船|釣|海|港|潮|碼頭|捕/.test(nm);
+  const top = /^#[0-9a-f]{6}$/i.test(shirt || '') ? shirt : pick(K3.PAL.top, 3), lum = (() => { const n = parseInt(top.slice(1), 16); return ((n >> 16) * 0.3 + ((n >> 8) & 255) * 0.59 + (n & 255) * 0.11) / 255; })();
+  const darkB = ['#1e2a55', '#2b2b2e', '#3b4a5a', '#4a3a2e'], lightB = ['#c8b48a', '#8a8f96', '#d8d2c4', '#6a7f9a'];
+  return { sex, hair: sex === 'g' ? (H % 5 ? 'long' : 'short') : 'short', top: work || H % 3 === 0 ? 'hoodie' : 'tee', bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak',
+    c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30'], 5), top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9) } }; };
 K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.k3') || 'null'); } catch(e){}
   if (!c || c.v !== 2){ c = Object.assign(c && c.sex ? c : K3.rand(Math.random()), { on: true, v: 2 }); try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }
   K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
@@ -5387,7 +5395,7 @@ function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG
   if (k === 'full'){ S(0.17, 0, -0.17, 0.19, 1.4, 1.0, 0.8); S(0.1, 0, -0.3, 0.23, 1.1, 1.0, 0.7); } }
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); if (this.isNpc){ const nm = this.npcName, c = K3.rand('npc:' + nm), g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|阿慧|阿玉|阿珠/.test(nm), bb = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|阿信|阿潮/.test(nm); if (g !== bb){ c.sex = g ? 'g' : 'b'; c.hair = g ? 'long' : 'short'; if (!g && c.top === 'maid') c.top = 'tee'; if (!g && c.shoes === 'mary') c.shoes = 'sneak'; } this.k3c = c; }   /* v711 村民也是新人物，照名字固定配一套 */ this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); if (this.isNpc) this.k3c = K3.npc(this.npcName, opts.shirt);   /* v711 村民也是新人物，照名字固定配一套 */ this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
     if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
