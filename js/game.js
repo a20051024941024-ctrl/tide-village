@@ -5044,7 +5044,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 723, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 724, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
@@ -5146,14 +5146,14 @@ K3.colorHair = k => { const c = (k.cfg || K3.cfg).c.hair, col = c ? new THREE.Co
 K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
-  else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else if (c.top === 'rain' && M.raincoat){ v.raincoat = 1; v.buttons = 1; v[inner] = 1; } else if (c.top === 'vest' && M.vest){ v[M.shirtv ? 'shirtv' : 'shirt'] = 1; v.vest = 1; v.straps = 1; } else v.shirt = 1;   /* v715 釣魚背心（裡面是白T） */   /* v714 雨衣 */   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
+  else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else if (c.top === 'rain' && M.raincoat){ v.raincoat = 1; v.buttons = 1; v[inner] = 1; } else if (c.top === 'vest' && M.vest){ v[M.shirtv ? 'shirtv' : 'shirt'] = 1; if (M.shirtvb) v.shirtvb = 1; v.vest = 1; v.straps = 1; } else v.shirt = 1;   /* v715 釣魚背心（裡面是白T） */   /* v714 雨衣 */   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
   /* v709 換鞋子連小腿一起換：瑪莉珍鞋是作者生的「穿鞋子的整截小腿」（光腳版／女僕裝用白襪版），鞋子裡面是完整的腳；運動鞋用原本的小腿 */
   if (c.shoes === 'mary' && M.mjshoe){ if (c.top === 'maid'){ Object.assign(v, { msskin: 1, mssock: 1, msshoe: 1 }); v.socks = 0; } else Object.assign(v, { mjskin: 1, mjshoe: 1 }); }
   else { v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1; v.skinlow = 1; if (c.top === 'maid') v.sockslo = 1; }
   if (!M.skinlow) v.skin = 1;
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
-  for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest']) set(n, C.top); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); } for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
+  for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest']) set(n, C.top); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
   for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
