@@ -5219,17 +5219,32 @@ K3.acc = (k, c) => { const C = c.c || {}, U = k.meshes.face && k.meshes.face.use
     for (const o of D.mk(m)){ o.castShadow = false; g.add(o); } hb.add(g); return g; }); };
 /* v731 帽子：作者用 ChatGPT 生「光頭戴帽子」三視圖 → Meshy → 切出帽子（座標跟身體一樣），黏在頭的骨頭上。
    戴帽子時，被帽子蓋住的那一圈頭髮往內壓（每個方向量帽子內側多遠，頭髮超過就縮進去），露在外面的長髮、瀏海照常 */
-K3.HATS = { cap: 'hat_cap.glb', straw: 'hat_straw.glb' }; K3.hatA = {}; K3.HC = new THREE.Vector3(0, 0.6, 0.02); K3.HS = 1.03;
-K3.hatLoad = (t, cb) => { const A = K3.hatA[t]; if (A && A.geo) return A; if (A) { A.cb.push(cb); return null; } const B = K3.hatA[t] = { cb: [cb], geo: null };
-  new GLTFLoader().loadAsync('models/kid3/' + K3.HATS[t] + '?v=' + K3.V).then(gl => { const ms = []; gl.scene.traverse(o => { if (o.isMesh) ms.push(o); }); if (!ms.length) return;
-    B.parts = ms.map(m => ({ geo: m.geometry, mat: m.material, base: m.material.color.clone(), tint: m.material.name === 'band' || ms.length === 1 })); B.geo = ms[0].geometry;   /* 草帽：只有緞帶換顏色，草的部分不變 */
-    const c = K3.HC, R = B.rmin = new Float32Array(24 * 48).fill(1e9), v = new THREE.Vector3();
-    for (const pm of ms){ const P = pm.geometry.attributes.position; for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i).sub(c).multiplyScalar(K3.HS); const r = v.length(), th = Math.min(23, Math.floor(Math.acos(Math.max(-1, Math.min(1, v.y / r))) / Math.PI * 24)), ph = Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (2 * Math.PI) * 48) % 48; if (r < R[th * 48 + ph]) R[th * 48 + ph] = r; } }
-    for (let pass = 0; pass < 2; pass++) for (let th = 0; th < 24; th++) for (let ph = 0; ph < 48; ph++){ const i = th * 48 + ph; if (R[i] < 1e8) continue; const l = R[th * 48 + (ph + 47) % 48], r = R[th * 48 + (ph + 1) % 48], u = th ? R[(th - 1) * 48 + ph] : 1e9, d = th < 23 ? R[(th + 1) * 48 + ph] : 1e9;   /* 帽子上的點比較疏的方向會有洞（頭髮從洞穿出來）：左右或上下兩邊都有帽子的格子補起來 */
-      if (l < 1e8 && r < 1e8) R[i] = Math.min(l, r); else if (u < 1e8 && d < 1e8) R[i] = Math.min(u, d); else if (th < 3 && u < 1e8) R[i] = u; }
-    { let pm = 1e9; for (let i = 0; i < 4 * 48; i++) pm = Math.min(pm, R[i]); if (pm < 1e8) for (let i = 0; i < 4 * 48; i++) if (R[i] > 1e8) R[i] = pm; }   /* 頭頂那幾格點很少，用頭頂最近的距離補滿（刺刺短髮不會從帽頂穿出來） */
-    B.edge = new Int8Array(48); for (let ph = 0; ph < 48; ph++){ let e = -1; for (let th = 0; th < 24; th++) if (R[th * 48 + ph] < 1e8) e = th; B.edge[ph] = e; }   /* 每個方向帽子最下面那一格 */
-    const cbs = B.cb; B.cb = []; for (const f of cbs) try { f(); } catch(e){} }).catch(e => console.warn('帽子載入失敗', e)); return null; };
+K3.HATS = { cap: 1, straw: 1 }; K3.hatA = {}; K3.HC = new THREE.Vector3(0, 0.6, 0.02); K3.HS = 1;
+/* v734 作者：「就不能做的乾乾淨淨完完整整的嗎」→ 帽子不再用 Meshy 切下來的（邊緣是碎的、緞帶跟帽子中間有縫）。
+   改成程式照頭的大小做：帽冠、帽簷、緞帶都是一整圈平滑的面，邊緣是一條乾淨的線。座標：以頭的中心為原點，做好再往後仰一點 */
+K3.hatSurf = (nu, nv, closed, fn, tilt, flip) => { const P = [], Cc = [], I = [], ca = Math.cos(tilt), sa = Math.sin(tilt), c = K3.HC, W = nu + (closed ? 0 : 1);
+  for (let j = 0; j <= nv; j++) for (let i = 0; i < W; i++){ const o = fn(i / nu, j / nv, i, j); P.push(c.x + o[0], c.y + o[1] * ca + o[2] * sa, c.z - o[1] * sa + o[2] * ca); const s = o[3] == null ? 1 : o[3]; Cc.push(s, s, s); }
+  for (let j = 0; j < nv; j++) for (let i = 0; i < (closed ? nu : nu); i++){ const a = j * W + i, b = j * W + (i + 1) % W, d = a + W, e = b + W; if (!closed && i + 1 >= W) continue; if (flip) I.push(a, d, b, b, d, e); else I.push(a, b, d, b, e, d); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(Cc, 3)); g.setIndex(I); g.computeVertexNormals(); return g; };
+K3.hatMake = t => { const TAU = Math.PI * 2, mat = col => new THREE.MeshStandardMaterial({ color: col, roughness: 0.85, metalness: 0 }), parts = [], add = (geo, col, tint) => parts.push({ geo, mat: mat(col), base: new THREE.Color(col), tint: !!tint });
+  if (t === 'straw'){ const R = 0.392, H0 = 0.05, HC = 0.37, BR = 0.6, tl = 0.24, cr = tt => R * Math.pow(Math.cos(tt), 0.7);
+    add(K3.hatSurf(56, 14, true, (u, v, i, j) => { const tt = v * Math.PI / 2, r = Math.max(0.0005, cr(tt)); return [Math.sin(u * TAU) * r, H0 + HC * Math.sin(tt), Math.cos(u * TAU) * r, j % 2 ? 0.93 : 1.04]; }, tl, false), '#e2c184');   /* 帽冠：一圈一圈深淺交錯，像草編 */
+    add(K3.hatSurf(56, 7, true, (u, v, i, j) => { const r = R + (BR - R) * v; return [Math.sin(u * TAU) * r, H0 - 0.05 * v * v, Math.cos(u * TAU) * r, j % 2 ? 0.94 : 1.04]; }, tl, true), '#e2c184');   /* 帽簷 */
+    add(K3.hatSurf(56, 3, true, (u, v) => { const tt = Math.asin((0.012 + 0.1 * v) / HC), r = cr(tt) + 0.008; return [Math.sin(u * TAU) * r, H0 + 0.012 + 0.1 * v, Math.cos(u * TAU) * r, 1 - 0.1 * Math.abs(v - 0.5)]; }, tl, false), '#c8362e', true);   /* 緞帶：貼著帽冠的一整圈 */
+  } else { const R = 0.394, H0 = 0.045, HC = 0.365, tl = 0.1, cr = tt => R * Math.pow(Math.cos(tt), 0.8), seam = u => { let d = 1; for (let s = 0; s < 6; s++){ let x = Math.abs(u - (s + 0.5) / 6); x = Math.min(x, 1 - x); d = Math.min(d, x); } return 1 - 0.13 * Math.exp(-d * d * 9000); };
+    add(K3.hatSurf(60, 14, true, (u, v) => { const tt = v * Math.PI / 2, r = Math.max(0.0005, cr(tt)); return [Math.sin(u * TAU) * r, H0 + HC * Math.sin(tt), Math.cos(u * TAU) * r * 0.985, seam(u) * (v < 0.07 ? 0.9 : 1)]; }, tl, false), '#d8352f', true);   /* 帽身：六片的車線、下緣一圈 */
+    add(K3.hatSurf(16, 4, true, (u, v) => { const tt = v * Math.PI / 2, r = Math.max(0.0005, 0.032 * Math.cos(tt)); return [Math.sin(u * TAU) * r, H0 + HC - 0.002 + 0.016 * Math.sin(tt), Math.cos(u * TAU) * r, 0.9]; }, tl, false), '#d8352f', true);   /* 帽頂的扣子 */
+    add(K3.hatSurf(24, 6, false, (u, v) => { const a = (u - 0.5) * 2.1, ln = 0.23 * Math.pow(Math.cos(a * 0.72), 0.7); return [Math.sin(a) * (R - 0.004) * (1 + 0.1 * v), H0 + 0.012 - 0.035 * v - 0.05 * v * Math.sin(a) * Math.sin(a), Math.cos(a) * (R - 0.004) * 0.985 + ln * v, 1 - 0.06 * v]; }, tl, true), '#d8352f', true);   /* 帽舌 */
+  }
+  return parts; };
+K3.hatLoad = t => { let B = K3.hatA[t]; if (B) return B; B = K3.hatA[t] = { parts: K3.hatMake(t) };
+  const c = K3.HC, R = B.rmin = new Float32Array(24 * 48).fill(1e9), v = new THREE.Vector3();
+  for (const pm of B.parts){ const P = pm.geo.attributes.position; for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i).sub(c); const r = v.length(), th = Math.min(23, Math.floor(Math.acos(Math.max(-1, Math.min(1, v.y / r))) / Math.PI * 24)), ph = Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (2 * Math.PI) * 48) % 48; if (r < R[th * 48 + ph]) R[th * 48 + ph] = r; } }
+  for (let pass = 0; pass < 2; pass++) for (let th = 0; th < 24; th++) for (let ph = 0; ph < 48; ph++){ const i = th * 48 + ph; if (R[i] < 1e8) continue; const l = R[th * 48 + (ph + 47) % 48], r = R[th * 48 + (ph + 1) % 48], u = th ? R[(th - 1) * 48 + ph] : 1e9, d = th < 23 ? R[(th + 1) * 48 + ph] : 1e9;
+    if (l < 1e8 && r < 1e8) R[i] = Math.min(l, r); else if (u < 1e8 && d < 1e8) R[i] = Math.min(u, d); }
+  { let pm = 1e9; for (let i = 0; i < 4 * 48; i++) pm = Math.min(pm, R[i]); if (pm < 1e8) for (let i = 0; i < 4 * 48; i++) if (R[i] > 1e8) R[i] = pm; }
+  B.edge = new Int8Array(48); for (let ph = 0; ph < 48; ph++){ let e = -1; for (let th = 0; th < 24; th++) if (R[th * 48 + ph] < 1e8) e = th; B.edge[ph] = e; }
+  return B; };
 K3.hat = (k, c) => { const t = K3.HATS[c.hat] ? c.hat : 'none', C = c.c || {};
   const A = t === 'none' ? null : K3.hatLoad(t, () => { k.hatK = ''; K3.hat(k, k.cfg || c); });
   const tint = () => { if (A && k.hatMs) for (const [m, pt] of k.hatMs) if (pt.tint) m.material.color.copy(C.hat ? new THREE.Color(C.hat) : pt.base); }; tint();
@@ -5244,7 +5259,8 @@ K3.hat = (k, c) => { const t = K3.HATS[c.hat] ? c.hat : 'none', C = c.c || {};
       for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i).sub(K3.HC); const r = v.length(); if (r < 1e-4) continue; const th = Math.min(23, Math.floor(Math.acos(Math.max(-1, Math.min(1, v.y / r))) / Math.PI * 24)), ph = Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (2 * Math.PI) * 48) % 48; if (r > H[th * 48 + ph]) H[th * 48 + ph] = r; } } }
   if (k.hair){ const g0 = k.hair.sm.geometry, geo = g0.clone(), P = geo.attributes.position, R = A.rmin, HR = K3.headR, cc = K3.HC, v = new THREE.Vector3();
     for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i).sub(cc); const r = v.length(); if (r < 1e-4) continue; const th = Math.min(23, Math.floor(Math.acos(Math.max(-1, Math.min(1, v.y / r))) / Math.PI * 24)), ph = Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (2 * Math.PI) * 48) % 48, rh = R[th * 48 + ph];
-      if (rh < 1e8 && r > rh * 0.96){ const hr = HR[th * 48 + ph], nr = th >= A.edge[ph] - 1 ? Math.min(r, rh * 0.995) : Math.min(r, Math.max(rh * 0.96, Math.min(hr + 0.012, rh * 0.99)));   /* v731 作者：「棒球帽的頭皮能改嗎」→ 帽緣那兩圈的頭髮只收到帽子裡面一點點，不壓到頭皮上，帽子和頭之間的縫用頭髮蓋住 */ if (nr < r){ v.multiplyScalar(nr / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); } } }
+      { const eg = A.edge[ph]; if (eg >= 0 && th > eg && th <= eg + 2){ const re = R[eg * 48 + ph] * 0.99; if (r > re){ v.multiplyScalar(re / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); continue; } } }   /* 帽緣下面兩圈的頭髮不要比帽口寬，不然會從帽簷穿出來 */
+      if (rh < 1e8 && r > rh * 0.96){ const hr = HR[th * 48 + ph], nr = th >= A.edge[ph] - 1 ? Math.min(r, rh * 0.975) : Math.min(r, Math.max(rh * 0.96, Math.min(hr + 0.012, rh * 0.99)));   /* v731 作者：「棒球帽的頭皮能改嗎」→ 帽緣那兩圈的頭髮只收到帽子裡面一點點，不壓到頭皮上，帽子和頭之間的縫用頭髮蓋住 */ if (nr < r){ v.multiplyScalar(nr / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); } } }
     P.needsUpdate = true; k.hair.geo0 = g0; k.hair.sm.geometry = geo; } };
 K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
@@ -5268,6 +5284,10 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   try { K3.acc(k, c); } catch(e){}
   { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
   K3.setHair(k, c.hair); K3.colorHair(k); try { K3.hat(k, c); } catch(e){ console.warn('hat', e); }
+  /* v734 作者：「脖子空了，而且也接不好」→ 連帽衣的領口很寬，裡面只有一根細細的脖子，從旁邊看領口裡是空的。補一塊跟衣服同色的「領口內襯」（半顆扁球，黏在胸口的骨頭上），領口裡面就是實的 */
+  try { const need = k.region && c.top === 'hoodie', fm = M.face, cb = k.bones.chest; if (need && !k.plug && fm && cb){ const sk = fm.skeleton, bi = sk.boneInverses[sk.bones.indexOf(cb)]; if (bi){ const geo = new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2); geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(0, 0.0, 0.02), new THREE.Quaternion(), new THREE.Vector3(0.21, 0.172, 0.125)));
+        const g = new THREE.Group(); g.name = 'k3_plug'; new THREE.Matrix4().copy(bi).multiply(fm.bindMatrix).decompose(g.position, g.quaternion, g.scale); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.9 })); m.castShadow = false; g.add(m); cb.add(g); k.plug = m; } }
+    if (k.plug){ k.plug.visible = !!need; if (need && M.Thoodie_cloth) k.plug.material.color.copy(M.Thoodie_cloth.material.color).multiplyScalar(0.8); } } catch(e){}
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
 K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
 /* 每一格：原本骨架的角度抄過來（手臂多轉一點貼近身體），髖部的上下前後照比例搬過來；長髮往下垂、跟著甩；表情 */
@@ -16143,7 +16163,7 @@ function k3Kit(){ if (K3Shot.kit) return K3Shot.kit; if (!K3.asset || !KID.ok) r
   return (K3Shot.kit = { sc, av, cam, rt, H: 1.7 }); }
 const K3_VIEW = { hat: [0.88, 1.15, 0.5], face: [0.83, 0.98, 0.3], ear: [0.84, 0.6, 0.85], top: [0.6, 1.05, 0.45], bot: [0.33, 1.1, 0.45], shoes: [0.06, 0.62, 0.55], full: [0.5, 2.3, 0.45] };
 function k3ShotNow(cfg, view, size){ const key = K3.enc(cfg) + '/' + view + '/' + size; if (K3Shot.cache.has(key)) return K3Shot.cache.get(key); const K = k3Kit(); if (!K) return null;
-  if (K3.HATS[cfg.hat] && !(K3.hatA[cfg.hat] && K3.hatA[cfg.hat].parts)){ K3.hatLoad(cfg.hat, () => {}); return null; }   /* 帽子還沒下載好就等一下再拍，不然小圖上沒有帽子 */
+
   const a = K.av; a.k3.cfg = cfg; a.k3.ck = ''; K3.apply(a); if (a.k3.mixer) a.k3.mixer.update(0); a.g.updateMatrixWorld(true);
   const [fy, fd, yaw] = K3_VIEW[view] || K3_VIEW.full, ty = fy * K.H, d = fd * K.H; K.cam.position.set(Math.sin(yaw) * d, ty + 0.06, Math.cos(yaw) * d); K.cam.lookAt(0, ty, 0);
   if (K.rt.width !== size) K.rt.setSize(size, size);
