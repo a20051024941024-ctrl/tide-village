@@ -5038,7 +5038,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 716, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
 K3.PAL = { hair: ['#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#c4b5e8', '#e6e2d8', '#f2a7c0', '#5b7fc2'], top: ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff', '#e0564f', '#7fbf8f'], bot: ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a'], shoes: ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227'] };
@@ -5073,9 +5073,10 @@ K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.
 K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} };
 K3.read();
 K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = true; const P = 'models/kid3/', TL = new THREE.TextureLoader(), GL = new GLTFLoader();
-  Promise.all([fetch(P + 'rig.json').then(r => r.json()), GL.loadAsync(P + 'body.glb'), GL.loadAsync(P + 'hair_long.glb'), GL.loadAsync(P + 'hair_short.glb'), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png')])
+  const V = '?v=' + K3.V;   /* v716 模型檔加版本號：手機或網路中間的暫存會留住舊的 body.glb（作者：「釣魚背心沒東西」——程式是新的、模型是舊的）。改了模型就把 K3.V 加一 */
+  Promise.all([fetch(P + 'rig.json' + V).then(r => r.json()), GL.loadAsync(P + 'body.glb' + V), GL.loadAsync(P + 'hair_long.glb' + V), GL.loadAsync(P + 'hair_short.glb' + V), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png')])
     .then(([rg, body, hl, hs, mb, mg]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null }; K3.loading = false;
-      fetch(P + 'clips.json').then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
+      fetch(P + 'clips.json' + V).then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
     .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
 K3.face = (sex, ex) => { const F = K3.asset.faces, k = sex + ex; if (!F[k]){ const t = new THREE.TextureLoader().load('models/kid3/f' + sex + '_' + ex + '.jpg'); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; F[k] = t; } return F[k]; };
 K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.scene; KS.updateMatrixWorld(true);
