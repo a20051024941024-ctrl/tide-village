@@ -5053,7 +5053,7 @@ K3.ui = f => { const c = K3.cfg; const row = (lab, key, opts, off) => { f.append
       row('臉', 'sex', [['g', '女生'], ['b', '男生']]);
       row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮']]);
       sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
-      row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝']]);
+      row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝'], ['rain', '雨衣']]);
       sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
       row('褲子', 'bot', [['shorts', '短褲'], ['pants', '長褲']], c.top === 'maid');
       sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
@@ -5135,17 +5135,17 @@ K3.colorHair = k => { const c = (k.cfg || K3.cfg).c.hair, col = c ? new THREE.Co
 K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
-  else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else v.shirt = 1;   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
+  else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else if (c.top === 'rain' && M.raincoat){ v.raincoat = 1; v.buttons = 1; v[inner] = 1; } else v.shirt = 1;   /* v714 雨衣 */   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
   /* v709 換鞋子連小腿一起換：瑪莉珍鞋是作者生的「穿鞋子的整截小腿」（光腳版／女僕裝用白襪版），鞋子裡面是完整的腳；運動鞋用原本的小腿 */
   if (c.shoes === 'mary' && M.mjshoe){ if (c.top === 'maid'){ Object.assign(v, { msskin: 1, mssock: 1, msshoe: 1 }); v.socks = 0; } else Object.assign(v, { mjskin: 1, mjshoe: 1 }); }
   else { v[c.shoes === 'mary' ? 'shoes2' : 'shoes'] = 1; v.skinlow = 1; if (c.top === 'maid') v.sockslo = 1; }
   if (!M.skinlow) v.skin = 1;
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
-  for (const n of ['shirt', 'hoodie', 'dress']) set(n, C.top); for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
+  for (const n of ['shirt', 'hoodie', 'dress', 'raincoat']) set(n, C.top); for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
-  for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); }
-  K3.armX(k, c.top === 'maid' ? 0 : c.bot === 'pants' ? 0.25 : 0.42);
+  for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
+  K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
   K3.setHair(k, c.hair); K3.colorHair(k);
   if (M.face){ const g = c.sex === 'g' ? 'g' : 'b'; M.face.userData.U.uMask.value = K3.asset.mask[g]; k.sex = ''; } };
 K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
@@ -5188,7 +5188,8 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   const sex = (k.cfg || K3.cfg).sex === 'g' ? 'g' : 'b', ex = f && f.emote ? 'happy' : 'smile';
   if (k.sex !== sex || k.ex !== ex){ k.sex = sex; k.ex = ex; const fm = k.meshes.face; if (fm){ fm.material.map = K3.face(sex, ex); fm.material.needsUpdate = true; } } };
 /* v710 同步：每個人（自己、別的玩家、之後的村民）都可以是新人物。自己的設定在 K3.cfg；別人的從 presence 的 k3 來（f.k3c） */
-K3.cfgOf = f => f === me ? (K3.on ? K3.cfg : null) : (f.k3c || null);
+K3.cfgOf = f => { if (f === me) return K3.on ? K3.cfg : null; const c = f.k3c || null; if (!c || !f.isNpc || !f.rainWear) return c;   /* v714 下雨天村民穿雨衣（顏色跟原本村民的雨衣一樣） */
+  if (!f._k3r || f._k3r.src !== c){ f._k3r = Object.assign({}, c, { top: 'rain', c: Object.assign({}, c.c, { top: (f.av && f.av.rainCol) || '#f6c83b' }) }); f._k3r.src = c; } return f._k3r; };
 K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
   if (!cfg){ if (a.k3) K3.detach(a); return; }
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
@@ -5201,7 +5202,7 @@ K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
   K3.sync(a, f); };
 K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0; for (const f of CLOD.all){ if (f === me || f.k3c || (f.av && f.av.k3)) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
-K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short'], top: ['tee', 'hoodie', 'maid'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'] };
+K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short'], top: ['tee', 'hoodie', 'maid', 'rain'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'] };
 K3.enc = c => [c.sex, c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || ''].join('|');
 K3.dec = s => { if (typeof s !== 'string' || s.length > 120) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
   const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
@@ -21440,6 +21441,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u714', d:'11/23', items:[
+    ['🧥', '新衣服：黃色雨衣！到造型頁的上衣選「雨衣」，也可以換顏色。下雨天村民也會穿雨衣出門。', 'closet'] ] },
   { id:'u711', d:'11/23', items:[
     ['🧒', '大家都換成新人物了，村民也是！想換臉、髮型、衣服，到設定的「人物樣子」；想用原本的帽子配件，可以改回原本的人物。', 'settings'] ] },
   { id:'u710', d:'11/23', items:[
