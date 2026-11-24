@@ -834,7 +834,7 @@ const TITLES=[[1,'見習領主'],[5,'騎士'],[10,'男爵'],[15,'子爵'],[20,'�
 const CUNLOCK={2:'兵營倉庫、新建築',3:'怪獸巢、新建築',4:'建築升到 Lv 3',6:'第二座兵營倉庫',7:'建築升到 Lv 4',8:'人口上限 +20',9:'建築升到 Lv 5',10:'人口上限再 +20、奇觀各能蓋兩座'};
 const castleHp=lv=>3000+1000*(lv-1);
 function fits(key,x,y,rot,skip,R){const d=BT[key],r=rot%2,hw=(r?d.h:d.w)/2,hh=(r?d.w:d.h)/2;if(!inLand(x-hw,y-hh,x+hw,y+hh))return false;
-  for(const o of S.ents)if(o.b&&o.hp>0&&o!==skip&&Math.abs(o.x-x)<o.hw+hw+.04&&Math.abs(o.y-y)<o.hh+hh+.04)return false;return true}
+  const wl=d.wall||d.deco;for(const o of S.ents){if(!(o.b&&o.hp>0&&o!==skip))continue;const m=wl&&(o.d.wall||o.d.deco)?-.02:.04;if(Math.abs(o.x-x)<o.hw+hw+m&&Math.abs(o.y-y)<o.hh+hh+m)return false}return true}
 const canPut=(key,x,y,rot,skip)=>fits(key,x,y,rot,skip,RR());
 function loadB(list,team,civ){for(const[k,x,y,r,l]of list)if(fits(k,x,y,r,null,RR())){const e=mkB(team,civ,k,x,y,r);if(l>1&&k!=='castle')setUl(e,Math.min(MAXUL,l))}S.castle=S.ents.find(e=>e.key==='castle')||mkB(team,civ,'castle',0,0,0);S.castle.hp=S.castle.max=castleHp(S.lv)}
 /* 清理從資料庫或本機讀到的領地資料：其他玩家寫的內容一律視為不可信 */
