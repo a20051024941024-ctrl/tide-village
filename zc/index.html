@@ -657,8 +657,10 @@ const toW=(sx,sy)=>({x:cam.x+(sx-VW/2)/cam.z,y:cam.y+(sy-VH/2)/cam.z});
 function txt(s,x,y,size,col,stroke){g.save();g.setTransform(DPR,0,0,DPR,0,0);const px=Math.max(10,size*cam.z);g.font=`900 ${px}px ${FONT}`;g.textAlign='center';g.textBaseline='middle';const sx=(x-cam.x)*cam.z+VW/2,sy=(y-cam.y)*cam.z+VH/2;if(stroke){g.lineWidth=Math.max(2.5,px*.25);g.strokeStyle=stroke;g.lineJoin='round';g.strokeText(s,sx,sy)}g.fillStyle=col;g.fillText(s,sx,sy);g.restore()}
 
 /* ───────── 建築繪製 ───────── */
+const BIMG={},BIMK={castle:[1.06,.04],house:[1.18,.05],farm:[1.06,.02],barracks:[1.12,.04]};for(const k in BIMK){const im=new Image();im.onload=()=>{BIMG[k]=im;dirty=true;if(typeof gridDirty!=='undefined')gridDirty=true};im.src='img/'+k+'.png?v=1'}
+function bImg(g,key,civ,x,y,hw,hh,rot,an){const im=BIMG[key];if(!im||civ!==0)return false;const[k,dy]=BIMK[key],w=2*hw*k,h=w*im.height/im.width,a=clamp(an==null?1:an,0,1),sy=.6+.4*a;g.save();g.translate(x,y+hh+dy);if(rot%2)g.scale(-1,1);g.scale(1,sy);g.drawImage(im,-w/2,-h,w,h);g.restore();return true}
 function drawBld(g,key,civ,x,y,hw,hh,rot,t,an){
-  const cc=CIV[civ].col;
+  if(bImg(g,key,civ,x,y,hw,hh,rot,an))return;const cc=CIV[civ].col;
   if(key==='castle'||key==='atower'||key==='trebuchet'){drawB(g,key,civ,x,y,t,an,rot%2?-1:1);return}
   g.save();g.translate(x,y+hh);const vert=hh>hw;
   if(key==='farm'){const w=hw*2,h=hh*2;box(g,-hw,-h,w,h,'#8a6a3c');for(let i=0,px=-hw;px<hw-.01;px+=.3,i++){g.fillStyle=i%2?'#c7a548':'#d8b95a';g.fillRect(px,-h,Math.min(.3,hw-px),h)}
