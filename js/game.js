@@ -847,10 +847,10 @@ function labFishRow(x, btn){ const row = el('div', 'lab-fish'); row.appendChild(
 async function labBreed(i){ const S = labSel(i); if (Lab.busy || S.m == null || S.f == null) return; Lab.busy = true; renderTab();
   const r = await festRpc('lab_breed', { p_slot: i, p_m: S.m, p_f: S.f, p_tp: S.tp, p_fd: S.fd, p_pl: !!S.pl }); Lab.busy = false;
   if (r && r.lab){ Lab.data = r.lab; Lab.off = (r.now || Date.now()) - Date.now(); if (Array.isArray(r.tank)) rec.tank = normRec(Object.assign({}, rec, { tank: r.tank })).tank; if (typeof r.coins === 'number') rec.coins = r.coins; saveRecLocal(); try { buildTank(); } catch(e){} try { renderCoins(); } catch(e){}
-    const n = (r.born || []).length; SFX.catch && SFX.catch(); flash(`🐣 生了 ${n} 條魚苗！`, 1.8); ticker(`🧬 配種缸生了 <b>${n}</b> 條魚苗，明天長大就看得出牠們的樣子。`); }
+    const n = (r.born || []).length; SFX.catch && SFX.catch(); flash(`生了 ${n} 條魚苗`, 1.8); ticker(`🧬 配種缸生了 <b>${n}</b> 條魚苗，明天長大就看得出牠們的樣子。`); }
   renderTab(); }
 async function labBuy(){ if (Lab.busy) return; const n = (Lab.data && Lab.data.n) || 1, cost = LAB_SLOT_COST[n - 1]; if (!cost) return; if ((rec.coins || 0) < cost){ toast('金幣不夠喔'); return; } Lab.busy = true; const r = await festRpc('lab_slot_buy'); Lab.busy = false;
-  if (r && r.lab){ Lab.data = r.lab; if (typeof r.coins === 'number') rec.coins = r.coins; saveRecLocal(); try { renderCoins(); } catch(e){} SFX.coin && SFX.coin(); flash('🧬 多了一個配種缸！', 1.6); } renderTab(); }
+  if (r && r.lab){ Lab.data = r.lab; if (typeof r.coins === 'number') rec.coins = r.coins; saveRecLocal(); try { renderCoins(); } catch(e){} SFX.coin && SFX.coin(); flash('多了一個配種缸', 1.6); } renderTab(); }
 function renderLab(body){ const box = el('div', 'breedbox labbox'), hd = el('button', 'bb-h'); const fry = (rec.tank || []).filter(gnIsFry), nGene = (rec.tank || []).filter(x => x.gn).length;
   if (Lab.open == null) Lab.open = nGene > 0;
   hd.innerHTML = `<b>🧬 配種缸</b><span>${fry.length ? `${fry.length} 條魚苗正在長大` : nGene ? `你有 ${nGene} 條有基因的魚` : '自己挑爸媽，培育只有你有的魚'}</span><i>${Lab.open ? '▲' : '▼'}</i>`;
@@ -2183,7 +2183,7 @@ function lwBall(B, dt, t, on){ const ball = B.ball; if (!on){ ball.visible = fal
 function lwTick(dt, t){ try { voyDockTick(dt, t); } catch(e){} try { lwFleetTick(dt, t); } catch(e){ if (!lwTick.e1){ lwTick.e1 = 1; console.warn('lwFleet', e); } } try { lwBeachTick(dt, t); } catch(e){ if (!lwTick.e2){ lwTick.e2 = 1; console.warn('lwBeach', e); } } try { stampTick(dt, t); } catch(e){} }
 function art2Tick(t){ if (Art2.fx) for (const f of Art2.fx){ try { f(t); } catch(e){} } for (const b of Art2.boats){ b.g.position.x = b.x; b.g.position.z = b.z; b.g.position.y = waterY(b.x, b.z, t) + (b.dy != null ? b.dy : -0.12); b.g.rotation.set(Math.sin(t * 0.9 + b.ph) * 0.05, b.ry, Math.cos(t * 0.7 + b.ph) * 0.06); } }
 if (!ART2) setTimeout(() => { try { paveAll(); } catch(e){ console.warn('paveAll', e); } }, 0);
-if (ART2) setTimeout(() => { try { art2Props(); twMergeAll(); if (!LS.get('tide.art2Told', 0)){ LS.set('tide.art2Told', 1); toast('🎨 村子換新樣子了：港口、商店街、居民區的房子都重畫過，地圖也重新分區了（看「說明」）', 8); } } catch(e){ console.warn('art2 props', e); } }, 0);
+if (ART2) setTimeout(() => { try { art2Props(); twMergeAll(); if (!LS.get('tide.art2Told', 0)){ LS.set('tide.art2Told', 1); toast('村子換新樣子了：港口、商店街、居民區的房子都重畫過，地圖也重新分區了（看「說明」）', 8); } } catch(e){ console.warn('art2 props', e); } }, 0);
 var SEASON = (() => { const h = (location.hash.match(/season=(\w+)/) || [])[1]; if (SEASONS[h]) return h; const m = new Date(Date.now() + 8 * 3600e3).getUTCMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; })();
 var SEASON_FISH = new Set(SEASONS[SEASON].fish);
 function buildTrees(trees, PX, PZ){
@@ -2389,7 +2389,7 @@ function smTick(dt, t){ const ok = !onIsle && !House.on && !inIndoor() && !Dive.
   if (SeaMap.wxG){ SeaMap.wxG.position.y = Math.sin(t * 1.3) * 0.07; SeaMap.wxG.rotation.z = Math.sin(t * 0.9) * 0.06; SeaMap.wxG.rotation.x = Math.cos(t * 1.1) * 0.05; } if (SeaMap.cageG){ SeaMap.cageG.position.y = Math.sin(t * 1.0 + 1) * 0.05; SeaMap.cageG.rotation.z = Math.sin(t * 0.7) * 0.025; }
   { const away = gullAway(); for (const b of SeaMap.birds){ b.visible = !away; if (away) continue; const u = b.userData, a = u.p + t * 0.5; b.position.set(Math.cos(a) * u.r, u.h + Math.sin(t * 0.8 + u.p) * 0.5, Math.sin(a) * u.r); b.rotation.y = -a; const fl = Math.sin(t * 7 + u.p * 3) * 0.5; b.children[1].rotation.z = -0.3 - fl; b.children[2].rotation.z = 0.3 + fl; } }
   /* 發現 */
-  SeaMap.chk -= dt; if (SeaMap.chk <= 0){ SeaMap.chk = 0.3; for (const L of SEA_LM){ if (SeaMap.seen.has(L.id)) continue; const dx = L.x - px, dz = L.z - pz; if (dx * dx + dz * dz > 256) continue; SeaMap.seen.add(L.id); LS.set('tide.seaLm', [...SeaMap.seen]); SeaMap.chart = null; const n = seaSeenN(); try { SFX.coin(); } catch(e){} flash(`🧭 發現：${L.n}`, 2.4); toast(`${L.ic} ${L.n}：${L.d}（海上地標 ${n} / ${SEA_LM.length}，地圖最下面有航海圖）`, 9); if (n >= SEA_LM.length) setTimeout(() => { flash('🧭 八個海上地標都找到了！', 2.6); }, 2800); } } }
+  SeaMap.chk -= dt; if (SeaMap.chk <= 0){ SeaMap.chk = 0.3; for (const L of SEA_LM){ if (SeaMap.seen.has(L.id)) continue; const dx = L.x - px, dz = L.z - pz; if (dx * dx + dz * dz > 256) continue; SeaMap.seen.add(L.id); LS.set('tide.seaLm', [...SeaMap.seen]); SeaMap.chart = null; const n = seaSeenN(); try { SFX.coin(); } catch(e){} flash(`發現：${L.n}`, 2.4); toast(`${L.ic} ${L.n}：${L.d}（海上地標 ${n} / ${SEA_LM.length}，地圖最下面有航海圖）`, 9); if (n >= SEA_LM.length) setTimeout(() => { flash('八個海上地標都找到了', 2.6); }, 2800); } } }
 /* 航海圖（地圖分頁最下面）：上面是世界的 -x、右邊是世界的 -z（跟上面的村子地圖同一個方向） */
 function seaChart(body){ try { body.appendChild(el('div', 'dexhead', `🧭 航海圖（海上地標 ${seaSeenN()} / ${SEA_LM.length}）`)); body.appendChild(el('p', 'sub', '整片可以划船的海。紅綠浮標是航道，照著划就到得了。問號是還沒去過的地標，划船靠近就會記下來。找港口的阿海坐船，沿路也看得到。'));
     const N = 560, cv = document.createElement('canvas'); cv.width = cv.height = N; cv.style.cssText = 'width:100%;max-width:560px;display:block;margin:6px auto 4px;border-radius:14px;border:2px solid #18334a'; const c = cv.getContext('2d'), W = 192, X = z => (W - z) / (2 * W) * N, Y = x => (x + W) / (2 * W) * N;
@@ -2410,7 +2410,7 @@ function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane
   const P = [VOY_DOCK.slice(0, 2), [40, -30.5], [52, -30], [56, -50]].concat(lane), cum = [0];   /* 沿著出港的水道，不壓過碼頭 */ for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); const len = cum[cum.length - 1];
   if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 1.7); Voy.m.visible = false; }   /* v596 作者：「船的比例不對」→ 0.82 倍的船比人還小，放大到 1.7 倍（船長大約 10 公尺、駕駛艙比人高） */
   if (!Voy.btn){ const b = el('button', 'tbtn', '跳過 ▶'); b.id = 'voySkip'; b.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; b.addEventListener('click', () => voyEnd(true)); document.body.appendChild(b); Voy.btn = b; }
-  const go = () => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, dur: clamp(len / 13.5, 9, 22), hd: VOY_DOCK[2] }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); pushPresence(true); flash(`🚤 出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('🚤 現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } };
+  const go = () => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, dur: clamp(len / 13.5, 9, 22), hd: VOY_DOCK[2] }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); pushPresence(true); flash(`出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } };
   Voy.btn.hidden = true;
   const startBoard = () => { Voy.board = { st: 'walk', t: 0, go }; try { SFX.cast(); } catch(e){} };
   if (Math.hypot(me.pos.x - VOY_EDGE[0], me.pos.z - VOY_EDGE[1]) > 14){ const fx = $('#fadeFx'); fx.classList.add('on'); setTimeout(() => { me.pos.x = VOY_EDGE[0] - 2.5; me.pos.z = VOY_EDGE[1] + 0.5; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; startBoard(); setTimeout(() => fx.classList.remove('on'), 150); }, 420); } else startBoard(); }
@@ -3421,7 +3421,7 @@ const BlueW = { m:null, told:-1, songAt:0, blowAt:0, nBlow:0, krill:null,
       const roll = Math.sin(clamp((u - 0.3) / 0.5, 0, 1) * Math.PI); m.rotation.x = roll * 1.4; m.position.y = -0.4 + roll * 0.2; m.position.x += P.hx * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; m.position.z += P.hz * Math.sin(clamp(u, 0, 1) * Math.PI) * 4; }
     else { m.rotation.x = 0; if (this.krill) this.krill.visible = false; }
     // 公告（每一輪一次）＋鯨歌（離藍鯨 140 公尺內，每 16 秒一段）
-    const c = Math.floor(Math.floor(bossNow() / 1000) / 3600); if (this.told !== c && d < 80){ this.told = c; toast('🐋 神秘島礁岩外有藍鯨浮上來噴水了！接下來一分半鐘，在神秘島礁岩比較容易釣到藍鯨'); }
+    const c = Math.floor(Math.floor(bossNow() / 1000) / 3600); if (this.told !== c && d < 80){ this.told = c; toast('神秘島礁岩外有藍鯨浮上來噴水了！接下來一分半鐘，在神秘島礁岩比較容易釣到藍鯨'); }
     const dist = Math.hypot(me.pos.x - P.x, me.pos.z - P.z); if (dist < 90 && t - this.songAt > 45){ this.songAt = t; whaleSong(clamp(1 - dist / 90, 0.1, 0.8)); } },   /* v244 鯨歌小聲一點、少一點（45 秒一段、90 公尺內才聽得到） */
   makeKrill(){ const N = 260, g = new THREE.BufferGeometry(), a = new Float32Array(N * 3); for (let i = 0; i < N; i++){ const r = Math.random() * 3, th = Math.random() * 6.28; a[i * 3] = Math.cos(th) * r; a[i * 3 + 1] = -Math.random() * 1.2; a[i * 3 + 2] = Math.sin(th) * r; }
     g.setAttribute('position', new THREE.BufferAttribute(a, 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ color:'#ff8fa0', size:0.45, transparent:true, opacity:0.9, depthWrite:false })); scene.add(p); return p; } };
@@ -3440,7 +3440,7 @@ const OW_SP = { dolphin:{ n:'海豚群', ic:'🐬', p:0.25, len:2.5, keep:0.4 },
 const OW = { ok:new Map(), act:new Map(), scanAt:0, slick:[], seen:new Set(), btn:null, boxL:{} };
 /* v282 鯨魚跳出水面的好運（113）：伺服器自己算那一格是不是真的有跳出水面的鯨魚，對了就給 3 分鐘船上釣魚的好運 */
 async function owBreachLuck(P){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('sea_breach', { p_cx: P.cx, p_cz: P.cz }); if (error) throw error;
-  if (data && data.ok){ OW.luckUntil = Date.now() + 180000; SFX.catch(); flash('🐋 看到鯨魚跳出水面了！好運 3 分鐘：在船上釣，稀有魚、傳說魚比較好釣', 2.6); } } catch(e){} }
+  if (data && data.ok){ OW.luckUntil = Date.now() + 180000; SFX.catch(); flash('看到鯨魚跳出水面了！好運 3 分鐘：在船上釣，稀有魚、傳說魚比較好釣', 2.6); } } catch(e){} }
 function owEmit(t, d){ try { if (room && room.connected()) room.emit(t, d).catch(() => {}); } catch(e){} }
 function owFind(k){ for (const e of OW.act.values()){ const P = e.P; if (P.cx + ',' + P.cz + ',' + P.W === k) return e; } return null; }
 function onOwMug(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const e = owFind(String(m.data.k)); if (!e || e.P.k !== 'humpback' || e.mug || e.mugDone || !isFinite(+m.data.a0)) return; e.mug = { t0: now(), a0: +m.data.a0, peer: m.peer }; }
@@ -3513,7 +3513,7 @@ function owMark(e, txt){ if (e.mk) return; const cv = document.createElement('ca
 function owMarkStep(e, h){ if (!e.mk) return; const a = now() - e.mkT; if (a > 8 || !e.m || !e.m.parent){ scene.remove(e.mk); e.mk.material.map.dispose(); e.mk.material.dispose(); e.mk = null; return; }
   e.mk.position.set(e.m.position.x, e.m.position.y + h + 2 + Math.sin(a * 3) * 0.2, e.m.position.z); e.mk.material.opacity = a > 7 ? 8 - a : 1; }
 function owSight(k){ if (OW.seen.has(k)) return; OW.seen.add(k); const S = OW_SP[k]; toast(`${S.ic} 你遇到了${S.n}！`); shareChip(S); const seen = LS.get('tide.seaSeen', []); if (!seen.includes(k)) LS.set('tide.seaSeen', [...seen, k]);
-  if (Cloud.on && Cloud.sb) festRpc('sea_sighting', { p_kind: k }).then(r => { if (r && r.player) adoptRow(r.player); if (r && r.first) setTimeout(() => toast(`🔭 海上目擊：${S.ic} ${S.n}（💙 +30）`), 1600); }); }
+  if (Cloud.on && Cloud.sb) festRpc('sea_sighting', { p_kind: k }).then(r => { if (r && r.player) adoptRow(r.player); if (r && r.first) setTimeout(() => toast(`海上目擊：${S.ic} ${S.n}（💙 +30）`), 1600); }); }
 /* v304 遇到鯨魚、海豚時，畫面上出現「📤 分享這一刻」小按鈕（10 秒），按了用現在的畫面做分享卡片 */
 function shareChip(S){ let c = $('#shareChip'); if (!c){ c = document.createElement('button'); c.id = 'shareChip'; document.body.appendChild(c); }
   c.textContent = `📤 分享這一刻（${S.n}）`; c.hidden = false; clearTimeout(shareChip.t); shareChip.t = setTimeout(() => { c.hidden = true; }, 10000);
@@ -6392,7 +6392,7 @@ $('#pTote').addEventListener('click', () => { if (!Photo.blob) return;
   const src = renderer.domElement, cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height; try { cv.getContext('2d').drawImage(src, 0, 0); } catch(e){} for (const o of hid) o.visible = true;
   let lum = 128; try { const t = document.createElement('canvas'); t.width = 32; t.height = 18; const x = t.getContext('2d'); x.drawImage(cv, 0, 0, 32, 18); const D = x.getImageData(0, 0, 32, 18).data; let a = 0; for (let k = 0; k < D.length; k += 4) a += D[k] * 0.3 + D[k + 1] * 0.59 + D[k + 2] * 0.11; lum = a / (D.length / 4); } catch(e){}
   TOTE.photo = cv; TOTE.dark = lum < 85; const st = toteState(); st.items = st.items.filter(it => it.k !== 'p'); st.items.unshift({ k:'p', x:0.5, y:0.42, s:1, r:0, crop:'sq', cx:0.5, fr:1, br: TOTE.dark ? 1 : 0 }); st.sel = 0; toteSave(); closePhotoView(); exitPhoto(); openSheet('tote'); toteTpl(0);
-  if (TOTE.dark) toast('🌙 這張照片比較暗，印在布上會更暗。已經先幫你調亮；白天拍的顏色會更漂亮'); });
+  if (TOTE.dark) toast('這張照片比較暗，印在布上會更暗。已經先幫你調亮；白天拍的顏色會更漂亮'); });
 $('#pShare').addEventListener('click', async () => { try { await navigator.share({ files: [Photo.file], title: '潮汐釣魚村', text: '我在潮汐釣魚村拍的照片！' }); } catch(e){} });
 $('#pAgain').addEventListener('click', closePhotoView);
 $('#photoView').addEventListener('click', e => { if (e.target.id === 'photoView') closePhotoView(); });
@@ -6411,7 +6411,7 @@ function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return fal
 function boardBoat(b){ if (tyBlock('開船')) return;
   if (F.phase !== 'idle') cancelFishing();
   myBoat = b; me.pos.x = b.m.position.x; me.pos.z = b.m.position.z; me.rot = b.m.rotation.y; me.sitting = true; cam.yaw = me.rot + Math.PI;
-  toast('上船了！用搖桿划船，在水上任何地方都可以拋竿。'); pushPresence(true);
+  toast('上船了。用搖桿划船，在水上任何地方都可以拋竿。'); pushPresence(true);
 }
 function leaveBoat(){
   if (!myBoat) return;
@@ -6471,7 +6471,7 @@ function boatDiveSite(){ if (!myBoat) return null; const w = waterSpotId(me.pos.
 function updateBoatButton(){
   { const d = $('#boatDive'), site = myBoat && !Ferry.on && F.phase === 'idle' && !Dive.on ? boatDiveSite() : null, show = !!site; if (d.hidden === show) d.hidden = !show;
     if (show && now() - (OW.wsAt || 0) > 2){ OW.wsAt = now(); let ws = null; try { ws = site === 'offshore' ? wsFind(me.pos.x, me.pos.z, 90) : null; } catch(e){} const tx = ws ? '🤿 下潛 💤🐋' : '🤿 下潛'; if (d.textContent !== tx) d.textContent = tx;
-      if (ws && OW.wsTold !== ws.key){ OW.wsTold = ws.key; flash('🐋 水面下有好幾個巨大的影子，一動也不動……', 2.6); setTimeout(() => toast(hasDive('dive_suit') ? '💤 是睡覺的抹香鯨群！按「🤿 下潛」下去看，動作要輕' : '💤 是睡覺的抹香鯨群！要有潛水裝備才能下去看（商店的「🤿潛水」）'), 2900); } } }
+      if (ws && OW.wsTold !== ws.key){ OW.wsTold = ws.key; flash('水面下有好幾個巨大的影子，一動也不動……', 2.6); setTimeout(() => toast(hasDive('dive_suit') ? '💤 是睡覺的抹香鯨群！按「🤿 下潛」下去看，動作要輕' : '💤 是睡覺的抹香鯨群！要有潛水裝備才能下去看（商店的「🤿潛水」）'), 2900); } } }
   const btn = $('#boatBtn'); let label = '';
   if (myBoat){ if (F.phase === 'idle') label = '下船'; }
   else if (F.phase === 'idle' && !SKI.on && !SKI.lift && nearBoat()) label = '上船';
@@ -6841,7 +6841,7 @@ function bikeTick(dt){
 function joyMag(){ return Math.hypot(joy.x + ((keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0)), joy.z + ((keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0))); }
 function ui3Bike(){ let b = $('#bike3'); const row = $('#actRow'); if (!row) return; if (!b){ b = document.createElement('button'); b.id = 'bike3'; b.className = 'panel'; b.addEventListener('click', e => { e.stopPropagation(); if (Bike.on) bikeOff(); else bikeOn(); }); row.insertBefore(b, $('#jumpBtn')); }
   const want = Bike.on || !!(Bike.park && canRide() && Math.hypot(me.pos.x - Bike.park.x, me.pos.z - Bike.park.z) < 2.8);   /* v440 玩家建議：下面一排按鈕太擠。腳踏車平常收在背包裡，只有正在騎（下車）、或走到停著的車旁邊（騎車）才出現按鈕 */ if (b.hidden === want) b.hidden = !want; const lab = Bike.on ? '🚲<small>下車</small>' : '🚲<small>騎車</small>'; if (b.dataset.l !== lab){ b.dataset.l = lab; b.innerHTML = lab; b.classList.toggle('on', Bike.on); }
-  if (!Bike.hinted && !uiBlocked && canRide()){ Bike.hinted = true; let seen = false; try { seen = localStorage.getItem('tv_bike_hint') === '1'; localStorage.setItem('tv_bike_hint', '1'); } catch(e){} if (!seen) toast('🚲 你的背包裡有一台腳踏車！打開右上角的「背包」拿出來騎', 5); } }
+  if (!Bike.hinted && !uiBlocked && canRide()){ Bike.hinted = true; let seen = false; try { seen = localStorage.getItem('tv_bike_hint') === '1'; localStorage.setItem('tv_bike_hint', '1'); } catch(e){} if (!seen) toast('你的背包裡有一台腳踏車。打開右上角的「背包」拿出來騎', 5); } }
 /* ---- 坐椅子：走到椅子旁邊按按鈕就能坐下，搖桿一動就站起來 ---- */
 function allChairs(){ return CHAIRS.concat(isleChairs, CHAIRS_ROOM); }
 function nearChair(){
@@ -6849,7 +6849,7 @@ function nearChair(){
   for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z) - (c.reach ? c.reach - 1.1 : 0); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
   return best;
 }
-function sitDown(c){ if (F.held && c && c.gear) fkUnhold(); else if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('🪑 坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
+function sitDown(c){ if (F.held && c && c.gear) fkUnhold(); else if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
 function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (fkHoldOk(mySeat)) fkHold(); else if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; if (c.ret){ me.pos.x = c.ret[0]; me.pos.z = c.ret[1]; }   /* v618 釣魚裝備的椅子：站起來回到岸上（釣台在水上） */ Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
@@ -6976,7 +6976,7 @@ function toyStep(o, dt, t){ const K = o.K; let [base, wet] = toyBase(o, o.x, o.z
   /* 球門：沙灘球從正面穿過門線就算進球 */
   const G = Toys.goal; if (G && o.k === 'ball'){ const dx = o.x - G.x, dz = o.z - G.z, lz = dx * G.nx + dz * G.nz, lx = dx * G.nz - dz * G.nx;
     if (o.own && o.plz > 0 && lz <= 0 && Math.abs(lx) < G.w && o.y - K.r < G.h && t > o.goalT){ toyEmit({ i: o.i, g: 1 }); o.goalT = t + 4; o.homeAt = t + 2.6; o.vx *= 0.12; o.vz *= 0.12; Toys.goals++; LS.set('tide.goals', Toys.goals);
-      flash('⚽ 進球！', 1.4); toast('⚽ × ' + Toys.goals); try { SFX.coin(); } catch(e){} buzz([30, 30, 60]); for (const c of ['#ffd23f', '#f2493d', '#3d8bf2', '#7fe08a']) FX.emit(G.x, G.h + 0.2, G.z, 16, c, 2.2, 3.2, 1.3); }
+      flash('進球！', 1.4); toast('⚽ × ' + Toys.goals); try { SFX.coin(); } catch(e){} buzz([30, 30, 60]); for (const c of ['#ffd23f', '#f2493d', '#3d8bf2', '#7fe08a']) FX.emit(G.x, G.h + 0.2, G.z, 16, c, 2.2, 3.2, 1.3); }
     o.plz = Math.abs(lx) < G.w + 0.5 ? lz : 0; }
   if (o.homeAt && t > o.homeAt) toyHome(o, true);
   else if (o.wet && t - o.wet > 30) toyHome(o, Math.hypot(o.hx - me.pos.x, o.hz - me.pos.z) < 40);
@@ -7020,7 +7020,7 @@ function toyTick(dt, t){ if (CLASSIC) return; if (Dive.on || House.on || inIndoo
     if (d2 > 4900){ if (o.own && away) toyHome(o, false); if (o.g.visible) o.g.visible = false; continue; } if (!o.g.visible) o.g.visible = true;
     const reach = K.r + pr; if (can && d2 < reach * reach && o.y - K.r < feet + 1.5 && o.y + K.r > feet - 0.15){ const d = Math.sqrt(d2), nx = d > 1e-3 ? dx / d : Math.sin(me.rot), nz = d > 1e-3 ? dz / d : Math.cos(me.rot), rel = (Toys.pvx - o.vx) * nx + (Toys.pvz - o.vz) * nz;
       if (rel > 0.15){ const j = rel * (1 + K.e) * K.kick; o.vx += nx * j; o.vz += nz * j; if (rel > 1.8) o.vy = Math.max(o.vy, rel * K.up); o.rest = false; o.own = true; o.dirty = true; toySound(o, rel);
-        if (!Toys.hint){ Toys.hint = true; if (!LS.get('tide.toyhint', false)){ LS.set('tide.toyhint', true); toast('⚽ 這個可以踢！騎腳踏車撞上去會飛更遠'); } } }
+        if (!Toys.hint){ Toys.hint = true; if (!LS.get('tide.toyhint', false)){ LS.set('tide.toyhint', true); toast('這個可以踢。騎腳踏車撞上去會飛更遠'); } } }
       const qx = px + nx * (reach + 0.01), qz = pz + nz * (reach + 0.01); if (!blocked(qx, qz, K.r)){ o.x = qx; o.z = qz; if (o.rest || !o.own){ o.own = true; o.dirty = true; } o.rest = false; } }
     if (!o.rest){ toyStep(o, Math.min(dt, 0.05), t); if (o.rest && o.own) o.dirty = true; } }
   toyFlush(tn); gullTick(dt, t, px, pz, psp); try { aquaChipTick(); } catch(e){} }
@@ -7146,7 +7146,7 @@ function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bi
 
 /* v341 玩家說不要自動走、也不要箭頭：大按鈕只用一句話說最近的釣點在哪個方向、多遠（AW 自動走已經停用） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
-function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`🎣 最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
+function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
 function awStop(msg){ if (!AW.on) return; AW.on = false; joy.x = joy.z = 0; if (msg) toast(msg); }
 function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ awStop(); return; } if (F.phase !== 'idle' || uiBlocked || Dive.on || onIsle){ awStop(); return; } const dx = AW.x - me.pos.x, dz = AW.z - me.pos.z, d = Math.hypot(dx, dz), t = now();
   if (d < 1.4){ awStop(`🎣 到了「${esc(AW.label)}」，按「拋竿」開始釣魚`); return; }
@@ -7182,9 +7182,9 @@ function actionDown(){
     if (inHall() && mySeat && mySeat.shrimp){ spot = seatSpot(mySeat); }
     else if (mySeat && mySeat.nook){ spot = nookSpot(mySeat); if (!spot){ standUp(); return; } }   /* 釣魚小角落：坐在長椅上直接拋竿 */
     else if (myBoat) spot = boatSpot(); else { const ns = nearestSpot(); const sh0 = ns.d > 1.7 && !mySeat ? shoreSpot() : null; if (sh0 && !nearShop() && !(nearChair() && Math.hypot(me.pos.x - nearChair().x, me.pos.z - nearChair().z) < 0.9)){ ns.d = 0; ns.spot = sh0; } if (ns.d > 1.7){ const chN = !mySeat ? nearChair() : null; const sh = mySeat || (chN && Math.hypot(me.pos.x - chN.x, me.pos.z - chN.z) < 0.9) ? null : nearShop(); if (nearStairs()){ act.classList.remove('down'); goFloor(nearStairs().d); } else if (nearExit()){ act.classList.remove('down'); exitHouse(); } else if (nearDoor()){ act.classList.remove('down'); enterHouse(nearDoor()); } else if (sh){ act.classList.remove('down'); openShop(sh); } else if (mySeat){ standUp(); } else { const ch = nearChair(); if (ch){ if (ch.bed && House.furnG && House.furnG.get(ch.bed.id)) useFurn({ o: ch.bed, m: House.furnG.get(ch.bed.id), b:'bed' }); else sitDown(ch); } else if (nearFurn()){ act.classList.remove('down'); useFurn(nearFurn()); } else if (inCafe()){ act.classList.remove('down'); openShop(SHOPS.find(s => s.id === 'cook')); } else if (inMuseum()){ act.classList.remove('down'); openMuseum(); } else { act.classList.remove('down'); goFishing(); } } return; } spot = ns.spot; }
-    if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('🎫 要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
+    if (spot && spot.id === 'shrimp' && !shrimpLeft()){ act.classList.remove('down'); toast('要先跟櫃台的老闆阿忠買時段，才可以釣蝦'); openSheet('shrimp'); return; }
     F.spot = spot; F.phase = 'charging'; F.chargeT = 0;
-    try { const dd = Duel.d; if (dd && dd.status === 'active' && dd.spot && spot && spot.id !== dd.spot && now() - (Duel.spotWarn || -99) > 15){ Duel.spotWarn = now(); toast(`📍 這裡不是指定釣點，在這裡釣到的不算分（要到「${duelSpotName(dd.spot)}」）`); } } catch(e){}   /* v551 指定釣點賽 */
+    try { const dd = Duel.d; if (dd && dd.status === 'active' && dd.spot && spot && spot.id !== dd.spot && now() - (Duel.spotWarn || -99) > 15){ Duel.spotWarn = now(); toast(`這裡不是指定釣點，在這裡釣到的不算分（要到「${duelSpotName(dd.spot)}」）`); } } catch(e){}   /* v551 指定釣點賽 */
     if (F.aimSpot !== spot.id){ F.aim = 0; F.aimSpot = spot.id; } { const [ax, az] = aimDir(spot); me.rot = Math.atan2(ax, az); } me.fishing = true; me.bobState = 'none';
   } else if (F.phase === 'waiting'){
     if (F.spot && F.spot.id === 'shrimp' && me.bobState === 'water' && Rig.rig !== 'lure'){
@@ -7242,9 +7242,9 @@ function fishStandTick(){ if (!mySeat){ if (me.standFish) me.standFish = false; 
 function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a', 22); setTimeout(() => rodTipFx('#fff1b0', 14), 120); }, 60);
   const s = F.spot; const c = F.charge; F.castCharge = c; me.castPow = c;
   if (s && s.id !== 'shrimp' && s.id !== 'icelake' && !myBoat && !mySeat){ const rt0 = rodType(curRod()), d0 = (3 + c * 4.5) * (Rig.rig === 'lure' ? 1.25 : 1) * (rt0 === 'pole' ? 0.55 : rt0 === 'surf' ? 1.45 : rt0 === 'iso' ? 1.1 : 1), cp0 = castPoint(s.pos.x, s.pos.z, ...aimDir(s), d0);
-    if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('🚫 前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
+    if (castBlocked(s.pos.x, s.pos.z, cp0[0], cp0[1])){ SFX.fail(); flash('前面有陸地擋住，線拋不過去 — 換個方向再拋', 1.8); cancelFishing(); return; } }   /* 線會經過陸地（草岸、沙灘）就不讓拋 */
   { const fit = rodFit(s && s.id); if (fit === 'bad' && !doCast.told[s.id]){ doCast.told[s.id] = 1; const best = Object.entries(ROD_TYPES).find(([, T]) => T.fit && T.fit.includes(s.id)); setTimeout(() => toast(`${ROD_TYPES[rodType(curRod())].name}在這裡不太好用${best ? `，${s.short}比較適合用${best[1].icon}${best[1].name}（包包裡可以換）` : '，換成甩竿試試'}`), 900); } }
-  if (liftHeight() > LIFT_H && !hasNet() && !doCast.netTold){ doCast.netTold = 1; setTimeout(() => toast(`🥅 這裡比水面高很多：1.5 公斤以上的魚沒有撈網會拉不上來（釣具店「🧰工具」有賣）`), 400); }
+  if (liftHeight() > LIFT_H && !hasNet() && !doCast.netTold){ doCast.netTold = 1; setTimeout(() => toast(`這裡比水面高很多：1.5 公斤以上的魚沒有撈網會拉不上來（釣具店「🧰工具」有賣）`), 400); }
   if (!(s && s.wild)){ F.buffAt = curBuff(); useBuffCast(); F.careAt = careLeft() > 0; useCareCast(); } else { F.buffAt = null; F.careAt = false; }   /* v593 荒島：村子的料理加成、餌都不能用 */
   // 用掉一個魚餌
   const bt = Rig.rig === 'lure' || (s && s.wild) ? null : curBait(); F.baitUsed = bt;   // 路亞用假餌，不消耗魚餌
@@ -7255,7 +7255,7 @@ function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a'
   const to = new THREE.Vector3(cp[0] + (hole ? 0 : rand(-0.3,0.3)), 0.12, cp[1] + (hole ? 0 : rand(-0.3,0.3)));
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
-  F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`💨 砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了！要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`🎯 落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
+  F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了。要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
   me.flying = { from, to, t:0, delay:0.17, dur: 0.42 + c * 0.6, h: 0.35 + c * 1.0, done(){ SFX.plop(); } };   /* v660 作者：「線不能依據出力決定丟多遠或動畫嗎」→ 輕拋飛得快又低、全力一甩飛比較久、弧線高一點 */   /* v519 作者：「甩竿出去線應該直直往前飛」→ 拋物線壓低（以前最高 2.8 公尺，現在 1.2），線往前射出去 */ me.windup = 0; me.castT = 0;
   F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
   F.roll = null; F.rollWait = 0; F.pre = null; F.probe = null; F.lastNib = 0;
@@ -7268,9 +7268,9 @@ function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a'
       F.rollErr = row ? '' : Cloud.lastErr; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; });
     roll(0); }   /* 伺服器抽好了，但不會告訴手機是什麼魚（072）；咬餌前大約 2 秒才用 hook_fish 問 */
   F.envB = envBonus(s.id);
-  F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('🐟 浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
+  F.nest = nestNear(to.x, to.z); if (F.nest) setTimeout(() => toast('浮標落在吳郭魚的窩旁邊，守窩的公魚很兇，馬上就會咬！'), 700);
   F.phase = 'waiting'; F.waitUntil = now() + biteWait(c) * (F.nest ? 0.55 : 1) * (rodFit(s.id) ? ROD_FIT[rodFit(s.id)].bite : 1) * (s.id === 'shrimp' ? 0.75 : 1) * (s.id === 'mangrove' && Env.tide.lv < -0.35 ? 1.6 : 1) * (F.chumB ? F.chumB.wait * (1 - 0.08 * chumCrowd(me.pos.x, me.pos.z, true)) : 1) * F.envB.bite * LINES[Rig.line].bite * (Rig.rig === 'bottom' ? 1.15 : 1) * SeaMem.BITE[seaMemLv(s.id)]; F.nibbleAt = now() + 1.2 + Math.random()*1.5;
-  if (F.chumB) setTimeout(() => toast(`🍚 浮標落在${F.chumB.name}的窩點裡！`), 500);
+  if (F.chumB) setTimeout(() => toast(`浮標落在${F.chumB.name}的窩點裡`), 500);
   SFX.cast(); pushPresence(true);
 }
 function cancelFishing(msg){
@@ -7354,8 +7354,8 @@ function startReel(){
   try { F.leap = fishModel(F.fish, F.bossScale); if (F.fish.rs && F.rsTag) addScars(F.leap, rsInfo(F.rsTag).scars); F.leap.visible = false; scene.add(F.leap); } catch(e){ F.leap = null; }
   { const bb = $('#bossBar'); bb.hidden = !F.boss; if (F.boss){ bb.className = 'r-' + F.fish.rarity; $('#bbName').textContent = `？？？・${F.fish.rarity}`; $('#bbHp').style.width = '100%'; $('#bbPct').textContent = '100%';
     F.eaten = eatPlanFor(F.fish); F.eatT0 = now();   /* v378 朋友建議：有時候是小魚先上鉤，再被更大的魚一口吞掉（只是演出，釣到什麼魚的機率沒有變） */
-    if (F.eaten){ flash('🐟 小魚上鉤了…', 0.9); buzz(40); const tk = F.t0; setTimeout(() => { if (F.phase !== 'reeling' || F.t0 !== tk) return; flash('😱 被更大的魚一口吞掉了！', 1.9); camShake = Math.max(camShake, 0.6); SFX.bite(); buzz([60, 50, 260]); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 46, '#e8f7ff', 2.2, 3.6, 1.2); FX.emit(me.bobPos.x, 0.2, me.bobPos.z, 10, '#ff6b5a', 0.8, 1.6, 0.9); $('#fhName').textContent = '小魚被大魚吞掉了！超大的拉力！'; }, 950); }
-    else { flash('⚠️ 巨大魚影！', 1.8); buzz([80, 40, 160]); camShake = Math.max(camShake, 0.35); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 36, '#e8f7ff', 1.8, 3.2, 1.1); } } }
+    if (F.eaten){ flash('小魚上鉤了…', 0.9); buzz(40); const tk = F.t0; setTimeout(() => { if (F.phase !== 'reeling' || F.t0 !== tk) return; flash('被更大的魚一口吞掉了', 1.9); camShake = Math.max(camShake, 0.6); SFX.bite(); buzz([60, 50, 260]); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 46, '#e8f7ff', 2.2, 3.6, 1.2); FX.emit(me.bobPos.x, 0.2, me.bobPos.z, 10, '#ff6b5a', 0.8, 1.6, 0.9); $('#fhName').textContent = '小魚被大魚吞掉了！超大的拉力！'; }, 950); }
+    else { flash('巨大魚影', 1.8); buzz([80, 40, 160]); camShake = Math.max(camShake, 0.35); SFX.bite(); ripple(me.bobPos.x, me.bobPos.z, true); FX.emit(me.bobPos.x, 0.3, me.bobPos.z, 36, '#e8f7ff', 1.8, 3.2, 1.1); } } }
   $('#mashFx').hidden = true;
   me.say('!', 'alert', 0.6);
   const shr = F.spot && F.spot.id === 'shrimp'; F.shr = shr;
@@ -7613,7 +7613,7 @@ function updateFishing(dt, t){
     if (F.Td){ /* v293 搏鬥時間跟魚的大小有關：進度和魚的體力照目標時間調快慢（玩得好壞還是有差，只是不會一下就拉上來） */
       const d = (t - F.t0) / F.Td; F.g = clamp(1 + 2.2 * (d - F.P), 0.012, 3); if (F.P > _P0) F.P = _P0 + (F.P - _P0) * F.g;
       const want = Math.min(0.9, d / 0.85 * 0.9), gS = F.gS = clamp(1 + 2.2 * (want - (1 - F.S)), 0.03, 3); if (F.S < _S0) F.S = _S0 - (_S0 - F.S) * gS; }
-    if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`🦈 ${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
+    if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
     else if (F.T >= 1){ buzz([200, 60, 80]); SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); myFace('cry'); cancelFishing(); }
     else if (F.slack > (rec.hook === 'hk_barb' ? 4.6 : 3.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); myFace('cry'); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
     else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); myFace('cry'); cancelFishing(); }
@@ -8461,18 +8461,18 @@ function wildPlaceConfirm(){ const P = Wild.place, S = wildSt(); if (!P) return;
   const [x, z, r] = wildPlaceSpot(), R = P.R; wildPlaceEnd(); S.kit[P.id]--; if (!S.kit[P.id]) delete S.kit[P.id];
   const c = { t: R.id, x: +x.toFixed(2), z: +z.toFixed(2), r: +r.toFixed(3), at: Date.now() }; if (R.id === 'fire') c.fuel = Date.now() + 240000; S.camp.push(c);
   for (const N of Wild.nodes) if (N.n.k !== 'coco' && N.n.k !== 'bamboo' && N.n.k !== 'rock' && N.n.k !== 'pool' && Math.hypot(N.n.x - x, N.n.z - z) < R.rad + 0.5) S.node[N.n.id] = 4e12;   /* 蓋房子的地方清乾淨，不會再長 */
-  wildNodeVis(); wildSave(); Wild.build = { c, t0: now(), dur: R.bt }; me.rot = Math.atan2(x - me.pos.x, z - me.pos.z); startEmote(me, 'farmwater'); toast(`🔨 開始蓋${R.n}……`); wildCampMesh(c, 0.01); }
+  wildNodeVis(); wildSave(); Wild.build = { c, t0: now(), dur: R.bt }; me.rot = Math.atan2(x - me.pos.x, z - me.pos.z); startEmote(me, 'farmwater'); toast(`開始蓋${R.n}……`); wildCampMesh(c, 0.01); }
 function wildLowIn(){ const t0 = Date.now(); for (let k = 1; k <= 120; k++) if (tideNow(t0 + k * 10000).lv < 0.2) return Math.max(1, Math.ceil(k / 6)); return 9; }
 function wildTideLow(){ const lv = Env.tideTest != null ? Env.tideTest : (Env.tide ? Env.tide.lv : 1); return lv < 0.2; }
 function wildGather(N){ const I = WILD_ITEMS[N.n.k], S = wildSt(); if (!I || Wild.busy) return;
-  if (N.n.k === 'pool' && !wildTideLow()){ toast(`🌊 漲潮了，潮池泡在水裡，大約 ${wildLowIn()} 分鐘後退潮。先搖椰子樹吃`); return; }
+  if (N.n.k === 'pool' && !wildTideLow()){ toast(`漲潮了，潮池泡在水裡，大約 ${wildLowIn()} 分鐘後退潮。先搖椰子樹吃`); return; }
   const gk = N.n.k === 'pool' ? (Math.random() < 0.6 ? 'fishS' : 'crab') : (I.give || N.n.k), GI = WILD_ITEMS[gk];
   const got = I.get[0] + Math.floor(Math.random() * (I.get[1] - I.get[0] + 1)), nb = Object.assign({}, S.bag); nb[gk] = (nb[gk] | 0) + got; const boneX = N.n.k === 'wood' && Math.random() < 0.22; if (boneX) nb.bone = (nb.bone | 0) + 1;   /* v600 漂流木堆裡偶爾卡著被沖上岸的魚骨（漲潮撿不到魚的時候也能慢慢湊魚鉤） */
-  if (wildSlots(nb) > WILD_BAG){ toast(`🎒 荒島背包滿了（${WILD_BAG} 格）`); return; }
+  if (wildSlots(nb) > WILD_BAG){ toast(`荒島背包滿了（${WILD_BAG} 格）`); return; }
   Wild.busy = true; me.rot = Math.atan2(N.n.x - me.pos.x, N.n.z - me.pos.z); startEmote(me, I.anim);
   if (N.n.k === 'coco'){ const t0 = now(), pt = N.top; Wild.shake = { N, t0 }; }   /* 搖椰子樹：樹葉晃、椰子掉下來 */
   setTimeout(() => { Wild.busy = false; Wild.shake = null; S.bag = nb; S.node[N.n.id] = Date.now() + I.cd * 1000; wildSave(); wildNodeVis(); try { puff(N.n.x, groundHeight(N.n.x, N.n.z), N.n.z); SFX.plop(); } catch(e){}
-    flash(`${GI.ic} ${GI.n} +${got}${boneX ? '・🦴 魚骨 +1' : ''}`, 1.2); if (!LS.get('tide.wildTip1', false)){ LS.set('tide.wildTip1', true); setTimeout(() => toast('🎒 撿到的東西放在「背包 → 🏝️ 荒島」，在那裡也可以製作'), 1300); } }, N.n.k === 'stone' || N.n.k === 'rock' || N.n.k === 'bamboo' || N.n.k === 'coco' ? 1500 : 1000); }
+    flash(`${GI.ic} ${GI.n} +${got}${boneX ? '・🦴 魚骨 +1' : ''}`, 1.2); if (!LS.get('tide.wildTip1', false)){ LS.set('tide.wildTip1', true); setTimeout(() => toast('撿到的東西放在「背包 → 🏝️ 荒島」，在那裡也可以製作'), 1300); } }, N.n.k === 'stone' || N.n.k === 'rock' || N.n.k === 'bamboo' || N.n.k === 'coco' ? 1500 : 1000); }
 function wildHas(need, bag){ for (const k in need) if ((bag[k] | 0) < need[k]) return false; return true; }
 function wildCanPlace(x, z, rad){ if (!wildNear(x, z, -1) || wildWater(x, z) || wildWater(x + rad, z) || wildWater(x - rad, z) || wildWater(x, z + rad) || wildWater(x, z - rad)) return '要蓋在島上的空地'; if (deckAt(x, z)) return '不能蓋在碼頭上';
   const lx = x - WILD.x, lz = z - WILD.z; if (lx < -WILD.r + 9 && Math.abs(lz) < 3.2) return '碼頭前面要留路';
@@ -8487,7 +8487,7 @@ function wildCraft(R){ const S = wildSt(); if (!wildHas(R.need, S.bag)){ toast('
     const nb = Object.assign({}, S.bag); for (const k in R.need){ nb[k] -= R.need[k]; if (!nb[k]) delete nb[k]; } S.bag = nb; S.kit = Object.assign({}, S.kit); S.kit[R.id] = wildKit(S, R.id) + 1; wildSave();
     flash(`${R.ic} ${R.n}做好了！`, 1.4); try { SFX.coin(); } catch(e){} if (onWild()) wildPlaceStart(R.id); else { toast(`${R.ic} 收在荒島背包，到了漂流島再拿出來放`); renderTab(); } return; }
   const nb = Object.assign({}, S.bag); for (const k in R.need){ nb[k] -= R.need[k]; if (!nb[k]) delete nb[k]; } nb[R.id] = (nb[R.id] | 0) + 1;
-  if (wildSlots(nb) > WILD_BAG){ toast(`🎒 荒島背包滿了（${WILD_BAG} 格）`); return; } S.bag = nb; wildSave(); startEmote(me, 'farmplant'); try { SFX.coin(); } catch(e){} flash(`${R.ic} 做好了：${R.n}`, 1.2); renderTab(); }
+  if (wildSlots(nb) > WILD_BAG){ toast(`荒島背包滿了（${WILD_BAG} 格）`); return; } S.bag = nb; wildSave(); startEmote(me, 'farmplant'); try { SFX.coin(); } catch(e){} flash(`${R.ic} 做好了：${R.n}`, 1.2); renderTab(); }
 /* 營地的樣子：營火（石頭圍一圈、木頭、會動的火焰）、遮雨棚（四根竹竿＋葉子屋頂）、小木屋（原木牆、草屋頂、門口、裡面一張床） */
 function wildCampMesh(c, k){ if (!Wild.g) return null; const g = new THREE.Group(), lx = c.x - WILD.x, lz = c.z - WILD.z, y = wildH(c.x, c.z) ?? WILD.y; g.position.set(lx, y, lz); g.rotation.y = c.r || 0; g.userData.c = c;
   const W = mat('#9a7a52', 0.9), Wd = mat('#7d5f3e', 0.9), L = mat('#4f9a4a', 0.75, { side: THREE.DoubleSide }), St = mat('#8f8a80', 0.9, { flatShading: true }), Bm = mat('#a7c454', 0.6);
@@ -8513,7 +8513,7 @@ function wildCampCols(c){ const R = WILD_RECIPES.find(r => r.id === c.t); if (!R
 function wildCampBuildAll(){ if (!Wild.g) return; if (Wild.campG){ Wild.g.remove(Wild.campG); Wild.campG = null; } Wild.campMesh = []; for (const c of wildSt().camp){ const m = wildCampMesh(c, 1); Wild.campMesh.push(m); if (!c.colOn){ wildCampCols(c); Object.defineProperty(c, 'colOn', { value: true, enumerable: false }); } } }
 function nearWildFire(){ if (!onWild()) return null; let best = null, bd = 1.9; for (const c of wildSt().camp) if (c.t === 'fire'){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd){ bd = d; best = c; } } return best; }
 function wildFireAdd(c){ const S = wildSt(); if (!(S.bag.wood | 0)){ toast('沒有漂流木了，去海邊撿'); return; } const left = Math.max(0, (c.fuel || 0) - Date.now()); if (left > 16 * 60000){ toast('火已經夠旺了'); return; }
-  S.bag.wood--; if (!S.bag.wood) delete S.bag.wood; c.fuel = Date.now() + left + 240000; wildSave(); startEmote(me, 'farmplant'); try { SFX.plop(); } catch(e){} flash(`🔥 加了一塊木頭，還能燒 ${Math.round((left + 240000) / 60000)} 分鐘`, 1.4); }
+  S.bag.wood--; if (!S.bag.wood) delete S.bag.wood; c.fuel = Date.now() + left + 240000; wildSave(); startEmote(me, 'farmplant'); try { SFX.plop(); } catch(e){} flash(`加了一塊木頭，還能燒 ${Math.round((left + 240000) / 60000)} 分鐘`, 1.4); }
 /* ===== v592 荒島 C：飽足度、體力、吃、烤、倒下、睡覺 =====
    只有在漂流島上才會動：飽足度每 9 秒 -1；飽足度 0 → 體力每 3 秒 -1；晚上離點著的營火 6 公尺外、又不在小木屋裡 → 每 6 秒 -1；
    下雨不在遮雨棚或小木屋下 → 每 6 秒 -1（暴風雨、颱風加倍）。飽足度 50 以上而且沒有在掉 → 每 4 秒 +1。
@@ -8526,7 +8526,7 @@ function wildWarm(){ const T = Date.now(); for (const c of wildSt().camp){ if (c
 function wildDrain(){ const W = WEATHERS[Env.wx] || {}, night = DayNight.period === 'night', rain = (W.rain || 0) > 0 || Env.wx === 'typre' || Env.wx === 'tymid', hard = Env.wx === 'storm' || Env.wx === 'typre' || Env.wx === 'tymid', roof = wildUnderRoof(), S = wildSt();
   const L = []; if (S.hun <= 0) L.push(['餓', 1 / 3]); if (night && !wildWarm()) L.push(['冷', 1 / 6]); if (rain && !roof) L.push([hard ? '暴風雨' : '淋雨', hard ? 1 / 3 : 1 / 6]); return L; }
 function wildSurvTick(dt){ const S = wildSt(); if (!onWild() || Wild.down){ Wild.trip = Wild.trip && onWild() ? Wild.trip : null; return; }
-  if (!Wild.trip){ Wild.trip = Date.now(); if (!LS.get('tide.wildIntro', false)){ LS.set('tide.wildIntro', true); setTimeout(() => { flash('🏝️ 漂流島：這裡什麼都沒有，要靠自己活下去', 2.6); setTimeout(() => toast('左上角是飽足度和體力，下面一行是「下一步」。先去沙灘撿漂流木吧！'), 2800); }, 600); } if (S.rested){ S.max = 120; S.rested = false; S.sta = Math.max(S.sta, 100); toast('😴 在家睡飽了：這一趟體力上限 120'); } else S.max = 100; S.sta = Math.min(S.sta, S.max); wildSave(); }
+  if (!Wild.trip){ Wild.trip = Date.now(); if (!LS.get('tide.wildIntro', false)){ LS.set('tide.wildIntro', true); setTimeout(() => { flash('漂流島：這裡什麼都沒有，要靠自己活下去', 2.6); setTimeout(() => toast('左上角是飽足度和體力，下面一行是「下一步」。先去沙灘撿漂流木吧'), 2800); }, 600); } if (S.rested){ S.max = 120; S.rested = false; S.sta = Math.max(S.sta, 100); toast('在家睡飽了：這一趟體力上限 120'); } else S.max = 100; S.sta = Math.min(S.sta, S.max); wildSave(); }
   const sleep = Wild.sleep, k = sleep ? 0.35 : 1; S.hun = Math.max(0, S.hun - dt / 9 * k); const L = sleep ? [] : wildDrain(); let d = 0; for (const q of L) d += q[1];
   if (sleep){ S.sta = Math.min(wildStaMax(), S.sta + dt * 2); } else if (d > 0) S.sta = Math.max(0, S.sta - dt * d); else if (S.hun >= 50) S.sta = Math.min(wildStaMax(), S.sta + dt / 4);
   Wild.why = L.map(q => q[0]); if ((Wild.svT = (Wild.svT || 0) + dt) > 30){ Wild.svT = 0; wildSave(); }
@@ -8541,13 +8541,13 @@ function wildCook(c){ const S = wildSt(), k = wildRawFood(); if (!k || Wild.busy
   setTimeout(() => { Wild.busy = false; const I = WILD_ITEMS[k]; if (!(S.bag[k] | 0)) return; S.bag[k]--; if (!S.bag[k]) delete S.bag[k]; S.bag[I.cook] = (S.bag[I.cook] | 0) + 1; wildSave(); try { SFX.coin(); puff(c.x, groundHeight(c.x, c.z) + 0.4, c.z); } catch(e){} flash(`${WILD_ITEMS[I.cook].ic} 烤好了：${WILD_ITEMS[I.cook].n}`, 1.2); }, 1800); }
 function wildCollapse(){ if (Wild.down) return; Wild.down = true; const S = wildSt(); Wild.sleep = null;
   const lost = []; for (const k in S.bag){ if (k === 'rod' || k === 'hook') continue; const n = S.bag[k] | 0, keep = Math.ceil(n / 2); if (n - keep > 0) lost.push(`${WILD_ITEMS[k] ? WILD_ITEMS[k].ic : ''}${n - keep}`); S.bag[k] = keep; if (!S.bag[k]) delete S.bag[k]; }
-  S.hun = 40; S.sta = 40; const cab = S.camp.find(c => c.t === 'cabin'); wildSave(); startEmote(me, 'playdead'); flash('😵 你倒下了……', 2.2); try { SFX.fail(); } catch(e){}
+  S.hun = 40; S.sta = 40; const cab = S.camp.find(c => c.t === 'cabin'); wildSave(); startEmote(me, 'playdead'); flash('你倒下了……', 2.2); try { SFX.fail(); } catch(e){}
   const fx = $('#fadeFx'); setTimeout(() => { if (fx) fx.classList.add('on'); }, 1600);
-  setTimeout(() => { if (cab){ me.pos.x = cab.x; me.pos.z = cab.z; me.baseY = groundHeight(cab.x, cab.z); me.emote = null; if (fx) fx.classList.remove('on'); flash('🛖 你在小木屋裡醒來了', 2.2); }
-    else { travelTo(TRAVEL.find(t => t.id === 'harborsq')); setTimeout(() => flash('🚤 阿海：「我在海上看到你倒在沙灘上，就把你載回來了！」', 3), 1200); }
-    Wild.down = false; Wild.trip = null; if (lost.length) setTimeout(() => toast(`🎒 荒島背包掉了一半：${lost.join('　')}`), 2400); }, 3000); }
+  setTimeout(() => { if (cab){ me.pos.x = cab.x; me.pos.z = cab.z; me.baseY = groundHeight(cab.x, cab.z); me.emote = null; if (fx) fx.classList.remove('on'); flash('你在小木屋裡醒來了', 2.2); }
+    else { travelTo(TRAVEL.find(t => t.id === 'harborsq')); setTimeout(() => flash('阿海：「我在海上看到你倒在沙灘上，就把你載回來了！」', 3), 1200); }
+    Wild.down = false; Wild.trip = null; if (lost.length) setTimeout(() => toast(`荒島背包掉了一半：${lost.join('　')}`), 2400); }, 3000); }
 function nearWildBed(){ if (!onWild()) return null; const r = wildUnderRoof(); return r && r.t === 'cabin' ? r : null; }
-function wildSleepToggle(c){ if (Wild.sleep){ Wild.sleep = null; me.emote = null; toast('☀️ 起床了'); return; } Wild.sleep = { c, t0: now() }; const cs = Math.cos(c.r), sn = Math.sin(c.r), bx = -1.0, bz = -0.35; me.pos.x = c.x + bx * cs + bz * sn; me.pos.z = c.z - bx * sn + bz * cs; startEmote(me, 'sleep'); toast('😴 在小木屋裡睡覺：體力慢慢回滿，晚上不會冷。再按一次起床'); }
+function wildSleepToggle(c){ if (Wild.sleep){ Wild.sleep = null; me.emote = null; toast('起床了'); return; } Wild.sleep = { c, t0: now() }; const cs = Math.cos(c.r), sn = Math.sin(c.r), bx = -1.0, bz = -0.35; me.pos.x = c.x + bx * cs + bz * sn; me.pos.z = c.z - bx * sn + bz * cs; startEmote(me, 'sleep'); toast('在小木屋裡睡覺：體力慢慢回滿，晚上不會冷。再按一次起床'); }
 /* v594 荒島 E：第一次上島的一步一步引導（狀態條下面一行「下一步」，做完一步跳下一步，全部做完就不再出現） */
 const WILD_GUIDE = [
   { t:'在沙灘撿 5 塊漂流木', ok: S => (S.bag.wood | 0) >= 5 || S.camp.some(c => c.t === 'fire') },
@@ -8569,7 +8569,7 @@ function wildHud(){ let h = $('#wildHud'); const on = onWild() && !Wild.down && 
   R[1].querySelector('b').style.width = Math.round(S.sta / mx * 100) + '%'; R[1].querySelector('em').textContent = Math.round(S.sta); R[1].classList.toggle('low', S.sta < 25);
   { const G = wildGuideStep(), gd = h.querySelector('.wh-g'), tx = G ? `🧭 ${G.i + 1}/${WILD_GUIDE.length}：${G.t}` : ''; if (gd.textContent !== tx) gd.textContent = tx; }
   const why = Wild.sleep ? '😴 睡覺中' : (Wild.why || []).length ? '⚠️ ' + Wild.why.join('、') + '：體力在掉' : S.hun < 25 ? '🍗 肚子餓了，找東西吃' : ''; const w = h.querySelector('.wh-w'); if (w.textContent !== why) w.textContent = why; }
-function wildHomeRest(dt){ if (typeof House === 'undefined' || !House.on || !mySeat || !mySeat.bed){ Wild.homeT = 0; return; } Wild.homeT = (Wild.homeT || 0) + dt; if (Wild.homeT > 5 && !wildSt().rested){ wildSt().rested = true; wildSave(); toast('😴 睡飽了：下一趟去漂流島，體力上限 120'); } }
+function wildHomeRest(dt){ if (typeof House === 'undefined' || !House.on || !mySeat || !mySeat.bed){ Wild.homeT = 0; return; } Wild.homeT = (Wild.homeT || 0) + dt; if (Wild.homeT > 5 && !wildSt().rested){ wildSt().rested = true; wildSave(); toast('睡飽了：下一趟去漂流島，體力上限 120'); } }
 function nearWildBoat(){ if (!onWild()) return false; return Math.hypot(me.pos.x - (WILD.x - WILD_RE - 6.5), me.pos.z - WILD.z) < 1.8; }
 function wildTick(dt, t){ wildHomeRest(dt); if (!Wild.built) return; wildPlaceTick(); if (onWild() || wildNear(me.pos.x, me.pos.z, 30)) wildPoolTick(dt, t); if (Wild.migMsg && onWild()){ toast(Wild.migMsg); Wild.migMsg = null; } if (wildNear(me.pos.x, me.pos.z, 30)) wildPull();
   if (frameNo % 60 === 7) wildNodeVis();
@@ -8649,7 +8649,7 @@ function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBu
 function checkIsle(){ if (onIsle && !Dive.on && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > 45){ stopBuild(); if (Blk.on) blkStop(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
 async function likeIsle(){
   if (!onIsle || onIsle.owner === myIdOrMe() || !Cloud.sb) return;
-  try { const { data, error } = await Cloud.sb.rpc('like_island', { p_owner: onIsle.owner }); if (error) throw error; onIsle.likes = data; onIsle.liked = true; SFX.catch(); flash('❤️ 按讚了！', 1.2); renderIsleBar(); }
+  try { const { data, error } = await Cloud.sb.rpc('like_island', { p_owner: onIsle.owner }); if (error) throw error; onIsle.likes = data; onIsle.liked = true; SFX.catch(); flash('按讚了', 1.2); renderIsleBar(); }
   catch(e){ toast('暫時沒辦法按讚'); }
 }
 function renderIsleBar(){
@@ -9291,7 +9291,7 @@ function adoptHome(d){
 function homeInviteCard(iv){ try { let c = $('#invCard'); if (c) c.remove(); c = el('div', 'panel'); c.id = 'invCard';
   c.innerHTML = `<div class="ic-h">🏠 ${esc(iv.name || '朋友')} 邀請你搬進他家！</div><div class="ic-s">搬過去以後你的小島還在，只是「回家」會回到他家。</div>`;
   const a = el('div', 'ic-a'), y = el('button', 'tbtn', '搬進去'), v = el('button', 'tbtn ghost', '先去看看'), n = el('button', 'tbtn ghost', '不要'), x = el('button', 'tbtn ghost', '晚點再說');
-  y.addEventListener('click', () => { c.remove(); homeRpc('answer_home', { p_owner: iv.owner, p_ok: true }).then(d => d && (SFX.catch(), flash(`🏠 搬進 ${iv.name || '朋友'} 的家了！`, 1.8))); });
+  y.addEventListener('click', () => { c.remove(); homeRpc('answer_home', { p_owner: iv.owner, p_ok: true }).then(d => d && (SFX.catch(), flash(`搬進 ${iv.name || '朋友'} 的家了`, 1.8))); });
   n.addEventListener('click', () => { c.remove(); homeRpc('answer_home', { p_owner: iv.owner, p_ok: false }); });
   v.addEventListener('click', () => { c.remove(); try { visitIsle(iv.owner); } catch(e){ openSheet('island'); } });
   x.addEventListener('click', () => c.remove()); a.append(y, v, n, x); c.appendChild(a); document.body.appendChild(c); SFX.catch(); } catch(e){} }
@@ -9545,23 +9545,23 @@ function useFurn(n){ const { o, m, b } = n, P = m.position, say = (x, s2) => me.
   /* v405 玩家想要：走到烏龜缸旁邊按一下，跳出一個畫面看缸裡有哪幾隻小烏龜，可以一隻一隻拿出來（帶出門），也可以把身邊的小烏龜放進去 */
   if (b === 'turtletank'){ openTurtleTank(o); return; }
   const lieOn = (y, kind) => { const c = { x: P.x, z: P.z, face: o.r, y, room: true, furnLie: kind }; sitDown(c); if (kind !== 'bath') me.sitting = false; startEmote(me, kind === 'bath' ? 'sitdown' : 'sleep');   /* 躺著要用躺下的動作，不是坐著 */ myEmote = { k: kind === 'bath' ? 'sitdown' : 'sleep', at: Date.now() }; pushPresence(true); };
-  if (b === 'bed'){ lieOn(P.y + 0.42, 'bed'); say('💤', 4); toast('😴 躺下來休息…（按「起來」或搖桿就起來）'); return; }
-  if (b === 'bath'){ lieOn(P.y + 0.15, 'bath'); say('🛁', 4); for (let i = 0; i < 3; i++) setTimeout(() => FX.emit(P.x, P.y + 0.7, P.z, 10, '#ffffff', 0.5, 1.2, 1.2), i * 500); toast('🛁 好舒服～'); return; }
+  if (b === 'bed'){ lieOn(P.y + 0.42, 'bed'); say('💤', 4); toast('躺下來休息…（按「起來」或搖桿就起來）'); return; }
+  if (b === 'bath'){ lieOn(P.y + 0.15, 'bath'); say('🛁', 4); for (let i = 0; i < 3; i++) setTimeout(() => FX.emit(P.x, P.y + 0.7, P.z, 10, '#ffffff', 0.5, 1.2, 1.2), i * 500); toast('好舒服～'); return; }
   if (b === 'toilet'){ sitDown({ x: P.x, z: P.z, face: o.r, y: P.y + 0.12, room: true }); say('🚽'); return; }
   if (b === 'tv'){ if (!m.userData.tvScreen){ m.traverse(c => { if (!m.userData.tvScreen && c.isMesh && c.material && c.material.color && c.material.color.getHexString() === '2b4a6a'){ c.material = c.material.clone(); m.userData.tvScreen = c; } }); }
     m.userData.tvOn = !m.userData.tvOn; const sc = m.userData.tvScreen; if (sc && !m.userData.tvOn){ sc.material.emissive.set('#000000'); }
-    if (m.userData.tvOn){ const L = FISH.filter(f => f.desc && !f.of && !f.fest); const f = L[Math.floor(Math.random() * L.length)]; toast(`📺 電視正在播海洋節目：${f.name}——${f.desc}`); try { tone(660, 0.12, 'sine', 0.04); } catch(e){} } else toast('📺 關掉電視'); return; }
+    if (m.userData.tvOn){ const L = FISH.filter(f => f.desc && !f.of && !f.fest); const f = L[Math.floor(Math.random() * L.length)]; toast(`電視正在播海洋節目：${f.name}——${f.desc}`); try { tone(660, 0.12, 'sine', 0.04); } catch(e){} } else toast('關掉電視'); return; }
   if (b === 'lamp'){ m.traverse(c => { if (House.lamps.includes(c)) c.userData.off = !c.userData.off; }); try { SFX.tick(); } catch(e){} return; }
-  if (b === 'fire'){ m.traverse(c => { if (House.fires.includes(c)) c.userData.off = !c.userData.off; }); FX.emit(P.x, P.y + 0.6, P.z, 8, '#ffb040', 0.4, 1.2, 0.8); toast('🔥 劈哩啪啦…'); return; }
+  if (b === 'fire'){ m.traverse(c => { if (House.fires.includes(c)) c.userData.off = !c.userData.off; }); FX.emit(P.x, P.y + 0.6, P.z, 8, '#ffb040', 0.4, 1.2, 0.8); toast('劈哩啪啦…'); return; }
   if (b === 'piano'){ say('🎵', 4); const N = [523, 587, 659, 698, 784, 880], song = Array.from({ length: 8 }, () => N[Math.floor(Math.random() * N.length)]); song.forEach((hz, i) => setTimeout(() => { try { tone(hz, 0.35, 'triangle', 0.06); } catch(e){} FX.emit(P.x, P.y + 1.4, P.z, 2, '#ffd36a', 0.4, 1.4, 1.0); }, i * 260)); return; }
   if (b === 'stove'){ const sh = SHOPS.find(x => x.id === 'cook'); if (sh) openShop(sh); return; }
   if (b === 'fridge' || b === 'tank'){ openSheet('tank'); return; }
   if (b === 'ward'){ openSheet('closet'); return; }
   if (b === 'desk'){ openSheet('dex'); return; }
-  if (b === 'shelf'){ const L = FISH.filter(f => f.desc && !f.of && !f.fest), f = L[Math.floor(Math.random() * L.length)]; say('📖'); toast(`📚 書上寫著：${f.name}——${f.desc}`); return; }
-  if (b === 'clock'){ const h = gameHour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60); say('🕰️'); toast(`🕰️ 村子現在 ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`); return; }
+  if (b === 'shelf'){ const L = FISH.filter(f => f.desc && !f.of && !f.fest), f = L[Math.floor(Math.random() * L.length)]; say('📖'); toast(`書上寫著：${f.name}——${f.desc}`); return; }
+  if (b === 'clock'){ const h = gameHour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60); say('🕰️'); toast(`村子現在 ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`); return; }
   if (b === 'sink'){ FX.emit(P.x, P.y + 1.0, P.z, 12, '#9fe3ff', 0.3, 0.6, 0.6); try { SFX.splash(); } catch(e){} say('🫧'); return; }
-  if (b === 'plant' || b === 'bigplant'){ FX.emit(P.x, P.y + 1.2, P.z, 10, '#9fe3ff', 0.4, 0.4, 0.7); const s0 = m.scale.x; m.scale.setScalar(s0 * 1.08); setTimeout(() => m.scale.setScalar(s0), 300); say('💧'); toast('💧 澆好水了，葉子看起來很開心'); return; } }
+  if (b === 'plant' || b === 'bigplant'){ FX.emit(P.x, P.y + 1.2, P.z, 10, '#9fe3ff', 0.4, 0.4, 0.7); const s0 = m.scale.x; m.scale.setScalar(s0 * 1.08); setTimeout(() => m.scale.setScalar(s0), 300); say('💧'); toast('澆好水了，葉子看起來很開心'); return; } }
 function updateHouse(t){
   if (!House.on) return;
   for (const fl of House.fires || []){ fl.visible = !fl.userData.off; fl.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9) * 0.2, 1); }
@@ -9638,7 +9638,7 @@ function renderMansionGrow(body, it){ const lv = mansionLv(it), L = MANSION_LV[l
   else if (N){ box.appendChild(el('div', 'gb-s', `下一級：${N.hw * 2}×${N.hd * 2} 公尺・🪙${N.cost.toLocaleString()}。不用先付錢，村長阿土伯先借你，房間馬上變大，之後慢慢還就好。`));
     const b = el('button', 'tbtn', `🏗️ 擴建到 ${N.hw * 2}×${N.hd * 2}（貸款 🪙${N.cost.toLocaleString()}）`); b.disabled = isleRank() < 2;
     b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定擴建？要還 🪙${N.cost.toLocaleString()}`; b.classList.add('warn'); return; }
-      homeOp('expand', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`🏗️ 擴建好了！房間變成 ${N.hw * 2}×${N.hd * 2}`, 1.8); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
+      homeOp('expand', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`擴建好了。房間變成 ${N.hw * 2}×${N.hd * 2}`, 1.8); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
     box.appendChild(b); }
   else box.appendChild(el('div', 'gb-s', '🎉 已經擴建到最大了！'));
   { const up = houseUp(it), nf = up + 1;   /* 加蓋樓層（076） */
@@ -9647,7 +9647,7 @@ function renderMansionGrow(body, it){ const lv = mansionLv(it), L = MANSION_LV[l
     else if (!loan){ box.appendChild(el('div', 'gb-s', `加蓋 ${nf + 1} 樓：🪙${FLOOR_COST[nf].toLocaleString()}（一樣跟阿土伯借，之後慢慢還）。樓梯會蓋在房間後面的兩個角落${up ? '' : '，那裡的家具要先移開'}。`));
       const b = el('button', 'tbtn', `🏢 加蓋 ${nf + 1} 樓（貸款 🪙${FLOOR_COST[nf].toLocaleString()}）`); b.disabled = isleRank() < 2;
       b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定加蓋？要還 🪙${FLOOR_COST[nf].toLocaleString()}`; b.classList.add('warn'); return; }
-        homeOp('floor', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`🏢 ${nf + 1} 樓蓋好了！走到右後角的樓梯就可以上去`, 2.0); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
+        homeOp('floor', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`${nf + 1} 樓蓋好了。走到右後角的樓梯就可以上去`, 2.0); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
       box.appendChild(b); } }
   body.appendChild(box); }
 // 每一層的地板、壁紙（免費換，076）；以前畫過的隔間牆可以一鍵拆掉
@@ -9705,7 +9705,7 @@ function renderClDesign(body){
   const bar = el('div', 'tankbar'), ok = el('button', 'tbtn', '💾 儲存格局'), clr = el('button', 'tbtn ghost', '全部清掉'), bk = el('button', 'tbtn ghost', '取消');
   ok.addEventListener('click', async () => { if (E.busy) return; E.busy = true; ok.disabled = true;
     const cl = { walls: E.walls, doors: E.doors, wins: E.wins, fl: E.flS.join(''), wp: E.wpS.join('') }; const okk = await homeOp('design', { house: E.it.id, cl });
-    E.busy = false; if (okk){ SFX.catch(); flash('🏠 格局改好了！放不下的家具已經收起來、退一半了', 1.8); CLE = null; closeSheet(); const it = isleItems().find(x => x.id === E.it.id); if (it && House.on) rebuildHouseRoom(it); } else ok.disabled = false; });
+    E.busy = false; if (okk){ SFX.catch(); flash('格局改好了。放不下的家具已經收起來、退一半了', 1.8); CLE = null; closeSheet(); const it = isleItems().find(x => x.id === E.it.id); if (it && House.on) rebuildHouseRoom(it); } else ok.disabled = false; });
   clr.addEventListener('click', () => { if (clr.dataset.sure !== '1'){ clr.dataset.sure = '1'; clr.textContent = '確定清掉？'; return; } E.walls = []; E.doors = []; E.wins = []; E.flS = '0'.repeat(540).split(''); E.wpS = '0'.repeat(540).split(''); renderTab(); });
   bk.addEventListener('click', () => { CLE = null; curTab = 'furn'; renderTab(); }); bar.append(ok, clr, bk); body.appendChild(bar);
   body.appendChild(el('p', 'sub', `牆 ${E.walls.length} 段・門 ${E.doors.length} 個・窗 ${E.wins.length} 個（最多：牆＋窗 500、門 60）`));
@@ -9724,7 +9724,7 @@ function renderFurnSheet(body){
     const ul = el('ul', 'shoplist'); for (const [k, L] of Object.entries(LAYOUTS)){ const on = (it.lay || 'open') === k, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ['🏠', '🏡', '🏘️', '🏰'][Object.keys(LAYOUTS).indexOf(k)]));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${L.name}（${L.W}×${L.D}）`)); d.appendChild(el('div', 'sub2', `${LAYOUT_DESC[k]}・${L.rooms.length ? L.rooms.length + ' 間臥室' : '沒有隔間'}`)); li.appendChild(d);
       const diff = L.price - cur.price, b = el('button', 'tbtn' + (on ? ' ghost' : ''), on ? '現在的' : diff > 0 ? `換 🪙${diff.toLocaleString()}` : diff < 0 ? `換 +${Math.floor(-diff / 2)}` : '換'); b.disabled = on || (diff > 0 && rec.coins < diff);
-      b.addEventListener('click', () => homeOp('layout', { house: it.id, lay: k }).then(ok => { if (ok){ SFX.catch(); flash(`🏠 換成${L.name}了！`, 1.4); me.pos.x = ISLE.x; me.pos.z = ISLE.z + L.D / 2 - 1.4; renderTab(); } }));
+      b.addEventListener('click', () => homeOp('layout', { house: it.id, lay: k }).then(ok => { if (ok){ SFX.catch(); flash(`換成${L.name}了`, 1.4); me.pos.x = ISLE.x; me.pos.z = ISLE.z + L.D / 2 - 1.4; renderTab(); } }));
       const a = el('div', 'tacts'); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); return;
   }
@@ -9749,7 +9749,7 @@ function renderHomeTab(body){
   const bar = el('div', 'tankbar'); const go = el('button', 'tbtn', '🏠 回家'); go.addEventListener('click', goHome); bar.appendChild(go); body.appendChild(bar);
   if (Home.invites.length){ body.appendChild(el('div', 'dexhead', '📮 邀請你搬進去')); const ul = el('ul', 'shoplist');
     for (const iv of Home.invites){ const li = el('li'); li.appendChild(el('span', 'dishic', '🏠')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${iv.name || '朋友'} 的家`)); d.appendChild(el('div', 'sub2', amOwner && people.length > 1 ? '你家裡還有室友，要先請他們搬走才能搬過去' : '搬過去以後，你的小島還在，只是「回家」會回到他家')); li.appendChild(d);
-      const a = el('div', 'tacts'), y = el('button', 'tbtn', '搬進去'), n = el('button', 'tbtn ghost', '不要'); y.addEventListener('click', () => homeRpc('answer_home', { p_owner: iv.owner, p_ok: true }).then(d => d && (SFX.catch(), flash(`🏠 搬進 ${iv.name || '朋友'} 的家了！`, 1.8)))); n.addEventListener('click', () => homeRpc('answer_home', { p_owner: iv.owner, p_ok: false }));
+      const a = el('div', 'tacts'), y = el('button', 'tbtn', '搬進去'), n = el('button', 'tbtn ghost', '不要'); y.addEventListener('click', () => homeRpc('answer_home', { p_owner: iv.owner, p_ok: true }).then(d => d && (SFX.catch(), flash(`搬進 ${iv.name || '朋友'} 的家了`, 1.8)))); n.addEventListener('click', () => homeRpc('answer_home', { p_owner: iv.owner, p_ok: false }));
       a.appendChild(y); a.appendChild(n); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); }
   const ownerP = people.find(p => p.owner) || people[0];
@@ -9772,7 +9772,7 @@ function renderHomeTab(body){
     if (people.length >= Home.cap) body.appendChild(el('div', 'empty', '家裡已經住滿了。'));
     else if (!fl.length) body.appendChild(el('div', 'empty', '要先在「玩家」分頁互相加好友，才能邀請他搬進來。'));
     else { const u2 = el('ul', 'shoplist'); for (const f of fl){ const sent = Home.sent.includes(f.id), li = el('li'); li.appendChild(el('span', 'dishic', '🙂')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name || '釣客')); d.appendChild(el('div', 'sub2', sent ? '已經寄出邀請，等他回覆' : '互相加好友')); li.appendChild(d);
-        const a = el('div', 'tacts'), b = el('button', 'tbtn' + (sent ? ' ghost' : ''), sent ? '收回' : '邀請'); b.addEventListener('click', () => sent ? homeRpc('kick_home', { p_member: f.id }) : homeRpc('invite_home', { p_member: f.id }).then(d => { if (!d) return; toast(`📨 邀請寄給 ${esc(f.name || '朋友')} 了`); try { if (room && room.connected()) room.emit('hinv', { to: f.id }).catch(() => {}); } catch(e){} })); a.appendChild(b); li.appendChild(a); u2.appendChild(li); }
+        const a = el('div', 'tacts'), b = el('button', 'tbtn' + (sent ? ' ghost' : ''), sent ? '收回' : '邀請'); b.addEventListener('click', () => sent ? homeRpc('kick_home', { p_member: f.id }) : homeRpc('invite_home', { p_member: f.id }).then(d => { if (!d) return; toast(`邀請寄給 ${esc(f.name || '朋友')} 了`); try { if (room && room.connected()) room.emit('hinv', { to: f.id }).catch(() => {}); } catch(e){} })); a.appendChild(b); li.appendChild(a); u2.appendChild(li); }
       body.appendChild(u2); } }
 }
 // ---- 共同島嶼的權限、公共儲物箱（062_isle_roles.sql）----
@@ -9806,7 +9806,7 @@ function renderIsleHelpers(body){
   body.appendChild(ul);
   if (my >= 2 && (L || []).length < 2){ const row = el('div', 'tankbar'), inp = el('input'); inp.placeholder = '幫手的名字（1～8 個字）'; inp.maxLength = 8; inp.value = IsleH.hireName; inp.style.cssText = 'font-size:15px;padding:6px 8px;border-radius:10px;border:1px solid #c8d8e4;max-width:170px'; inp.addEventListener('input', () => { IsleH.hireName = inp.value; });
     const tr = el('div', 'chipline'); for (const [k, l] of Object.entries(HELPER_TRAIT)){ const b = el('button', 'chip' + (IsleH.hireTrait === k ? ' on' : ''), l); b.addEventListener('click', () => { IsleH.hireTrait = k; renderTab(); }); tr.appendChild(b); }
-    const go = el('button', 'tbtn', '請幫手 🪙1500'); go.addEventListener('click', async () => { go.disabled = true; try { const { data, error } = await Cloud.sb.rpc('isle_hire', { p_name: inp.value, p_trait: IsleH.hireTrait }); if (error) throw error; adoptRow(data); flash(`🧑‍🌾 ${inp.value} 來島上幫忙了！`, 1.6); IsleH.hireName = ''; IsleH.at = 0; loadIsleH(null); } catch(e){ toast(cloudErrMsg(e)); go.disabled = false; } });
+    const go = el('button', 'tbtn', '請幫手 🪙1500'); go.addEventListener('click', async () => { go.disabled = true; try { const { data, error } = await Cloud.sb.rpc('isle_hire', { p_name: inp.value, p_trait: IsleH.hireTrait }); if (error) throw error; adoptRow(data); flash(`${inp.value} 來島上幫忙了`, 1.6); IsleH.hireName = ''; IsleH.at = 0; loadIsleH(null); } catch(e){ toast(cloudErrMsg(e)); go.disabled = false; } });
     row.append(inp, go); body.appendChild(row); body.appendChild(tr); }
 }
 function renderIslePerms(body, meId){
@@ -10191,7 +10191,7 @@ function farmBtn(fp){ const p = fp.p; if (fp.locked){ const nx = farmNext(); ret
 function farmAct(fp){ const p = fp.p; if (!fp.locked && !p && seedHand()){ if (seedHand().sea){ toast('這是海底的種子，要從小島碼頭的潛水梯下去種'); return; } farmSow(fp.i, Farm.hand); return; } if (fp.locked || !p){ Farm.sel = -1; Farm.view = ''; openSheet('farm'); return; } if (farmProg(p) >= 1){ farmHarvest(fp.i); return; } if ((p.w || 0) < 3 && !farmWetLeft(p)){ farmWater(fp.i); return; } Farm.sel = -1; Farm.view = ''; openSheet('farm'); }
 async function farmSow(i, id){ const C = CROP_BY[id]; if (!C || !farmMine() || Farm.plots[i] || (i < 100 ? i >= Farm.n || C.sea : i - 100 >= Sea.n || !C.sea) || Farm.busy) return; if (seedN(id) < 1){ toast('背包裡沒有這種種子'); return; }
   if (farmOnline()){ if (!await farmRpc('farm_plant', { p_slot: i, p_crop: id })) return; } else { rec.bait['seed_' + id] = seedN(id) - 1; if (!rec.bait['seed_' + id]) delete rec.bait['seed_' + id]; saveRecLocal(); Farm.plots[i] = { c: id, t: Date.now(), w: 0, wa: 0 }; farmLocalSave(); farmBuild(); }
-  if (i < 100) farmDo('farmplant', i); else { seaBuild(); try { SFX.plop(); } catch(e){} } try { SFX.click(); } catch(e){} const left = seedN(id); if (!left) Farm.hand = null; seedChip(); toast(`🌱 種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟` + (left ? `（還有 ${left} 顆）` : '。種子用完了')); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+  if (i < 100) farmDo('farmplant', i); else { seaBuild(); try { SFX.plop(); } catch(e){} } try { SFX.click(); } catch(e){} const left = seedN(id); if (!left) Farm.hand = null; seedChip(); toast(`種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟` + (left ? `（還有 ${left} 顆）` : '。種子用完了')); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 async function farmBuySeed(id, n){ const C = CROP_BY[id]; if (!C || Farm.busy) return; if (!cropOnSale(C)){ toast('這種種子這週沒有賣'); return; } if (rec.coins < C.seed * n){ toast('金幣不夠買種子'); return; } if (seedN(id) + n > 999){ toast('種子帶太多了'); return; }
   if (Cloud.on && Cloud.sb){ if (!await farmRpc('farm_buy_seed', { p_crop: id, p_n: n })) return; } else { addCoins(-C.seed * n); rec.bait['seed_' + id] = seedN(id) + n; saveRecLocal(); }
   try { SFX.coin(); } catch(e){} if (!seedHand()) Farm.hand = id; seedChip(); if (!$('#sheet').hidden) renderTab(); }
@@ -10201,10 +10201,10 @@ async function farmWater(i){ const p = Farm.plots[i]; if (!p || !onIsle) return;
   if (nearFarm() || Math.hypot(me.pos.x - farmPos(i)[0], me.pos.z - farmPos(i)[1]) < 2.5) farmDo('farmwater', i); const q = Farm.plots[i]; toast(mine ? `💧 澆好了（${q ? q.w : 1}／3）${q && q.w >= 2 ? '，這一格會豐收！' : '，澆滿 2 次會豐收'}` : `💧 幫忙澆水了${rec.coins > c0 ? `，謝謝你！🪙+${rec.coins - c0}` : '，謝謝你！'}`); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 async function farmHarvest(i){ const p = Farm.plots[i]; if (!p || !farmMine() || farmProg(p) < 1) return; const C = CROP_BY[p.c], big = (p.w || 0) >= 2, pay = Math.round(C.sell * (big ? 1.5 : 1));
   if (farmOnline()){ if (!await farmRpc('farm_harvest', { p_slot: i })) return; } else { addCoins(pay); if (p.c === 'corn'){ rec.bait.corn = Math.min(999, (rec.bait.corn || 0) + 5); saveRecLocal(); } delete Farm.plots[i]; farmLocalSave(); farmBuild(); }
-  if (i >= 100) seaBuild(); try { SFX.coin(); } catch(e){} flash(`${C.icon} ${big ? '豐收！' : '收成！'}🪙+${pay}`, 1.6); if (p.c === 'corn') toast('🌽 另外拿到 5 份玉米粒魚餌'); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+  if (i >= 100) seaBuild(); try { SFX.coin(); } catch(e){} flash(`${C.icon} ${big ? '豐收！' : '收成！'}🪙+${pay}`, 1.6); if (p.c === 'corn') toast('另外拿到 5 份玉米粒魚餌'); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 async function farmUnlock(){ const nx = farmNext(); if (!farmMine() || !nx) return; const cost = nx.cost; if (rec.coins < cost){ toast('金幣不夠'); return; }
   if (farmOnline()){ if (!await farmRpc('farm_unlock')) return; } else { addCoins(-cost); Farm.n = nx.n; farmLocalSave(); farmBuild(); }
-  try { SFX.coin(); } catch(e){} toast(`🌱 菜園變大了，現在有 ${Farm.n} 格`); if (curTab === 'farm') renderTab(); }
+  try { SFX.coin(); } catch(e){} toast(`菜園變大了，現在有 ${Farm.n} 格`); if (curTab === 'farm') renderTab(); }
 function renderFarm(body){
   if (!onIsle){ body.appendChild(el('p', 'sub', '菜園在小島的西邊，要先去小島。')); return; }
   const mine = farmMine();
@@ -10347,17 +10347,17 @@ function divePickSpawn(){ DPICK.list = []; if (!Dive.group || Dive.site === 'isl
 function divePickTick(){ if (!DPICK.list.length || Dive.site === 'isle') return; const cs = []; for (const p of DPICK.list) if (p.c && !p.gone) cs.push(p.c); if (cs.length) critTick(cs); for (const p of DPICK.list) if (p.c){ p.x = p.c.g.position.x; p.z = p.c.g.position.z; } }
 function nearPick(){ if (!Dive.on || Dive.site === 'isle' || !DPICK.list.length) return null; let best = null, bd = 1.5; for (const p of DPICK.list){ if (p.gone) continue; const d = Math.hypot(me.pos.x - p.x, me.pos.z - p.z); if (d < bd && me.baseY - diveBed(p.x, p.z) < 2.8){ bd = d; best = p; } } return best; }
 function pickLabel(p){ if (p.kind === 'crit' && !hasDive('dive_net')) return ['要手抄網', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・商店有賣 🪙800`]; return p.kind === 'trash' ? ['撿起來', '🗑️ 海底垃圾・💙+1'] : p.kind === 'mat' ? ['撿起來', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・帶回去擺`] : ['抓！', `${DECO_BY[p.item].icon} ${DECO_BY[p.item].name}・用手抄網`]; }
-async function pickDo(p){ if (DPICK.busy || p.gone) return; if (p.kind === 'crit' && !hasDive('dive_net')){ toast('🥅 要有手抄網才抓得到小生物。商店的「🤿潛水」分頁有賣（🪙800）'); return; } const d = dvState(); if ((d[p.kind] || 0) >= DPICK.cap[p.kind]){ toast(p.kind === 'crit' ? '今天抓夠多了，明天再來（一天最多 10 隻）' : p.kind === 'mat' ? '今天撿夠多了，明天再來（一天最多 15 個）' : '今天撿夠多了，明天再來（一天最多 20 個）'); return; }
-  if (p.kind === 'crit' && Math.random() < 0.35){ p.c.hx += (Math.random() - 0.5) * 6; p.c.hz += (Math.random() - 0.5) * 6; p.c.ph += 2; try { SFX.fail(); } catch(e){} flash('💨 溜走了！再靠近一次', 1.1); buzz(30); return; }
+async function pickDo(p){ if (DPICK.busy || p.gone) return; if (p.kind === 'crit' && !hasDive('dive_net')){ toast('要有手抄網才抓得到小生物。商店的「🤿潛水」分頁有賣（🪙800）'); return; } const d = dvState(); if ((d[p.kind] || 0) >= DPICK.cap[p.kind]){ toast(p.kind === 'crit' ? '今天抓夠多了，明天再來（一天最多 10 隻）' : p.kind === 'mat' ? '今天撿夠多了，明天再來（一天最多 15 個）' : '今天撿夠多了，明天再來（一天最多 20 個）'); return; }
+  if (p.kind === 'crit' && Math.random() < 0.35){ p.c.hx += (Math.random() - 0.5) * 6; p.c.hz += (Math.random() - 0.5) * 6; p.c.ph += 2; try { SFX.fail(); } catch(e){} flash('溜走了。再靠近一次', 1.1); buzz(30); return; }
   DPICK.busy = true; let ok = true;
   if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('dive_pick', { p_kind: p.kind, p_item: p.item || null }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ ok = false; toast(cloudErrMsg(e)); } }
   else { if (p.kind === 'trash'){ rec.love = (rec.love || 0) + 1; } else rec.bait['deco_' + p.item] = decoN(p.item) + 1; }
   DPICK.busy = false; if (!ok) return; const d2 = dvState(); d2[p.kind] = (d2[p.kind] || 0) + 1; saveRecLocal(); p.gone = true; if (p.o.parent) p.o.parent.remove(p.o);
   try { p.kind === 'trash' ? SFX.click() : SFX.catch(); } catch(e){} buzz(25); flash(p.kind === 'trash' ? '🗑️ 撿起來了　💙+1' : `${DECO_BY[p.item].icon} ${p.kind === 'crit' ? '抓到' : '撿到'}${DECO_BY[p.item].name}！`, 1.2);
   if (p.kind !== 'trash' && d2[p.kind] === 1) toast(p.kind === 'crit' ? '小生物放在背包裡。回自己小島的海底，拿出來放下，牠會在那裡游來游去' : '造景材料放在背包裡。回自己小島的海底就可以拿出來擺');
-  const q = dvQuest(); if (!q.done && q.kind === p.kind){ if (q.have >= q.need) dvClaim(); else toast(`📋 潛水委託 ${q.have}／${q.need}`); } }
+  const q = dvQuest(); if (!q.done && q.kind === p.kind){ if (q.have >= q.need) dvClaim(); else toast(`潛水委託 ${q.have}／${q.need}`); } }
 async function dvClaim(){ const d = dvState(); if (d.q === dvDay()) return; if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('dive_quest_claim'); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ if (/領過/.test(String(e && e.message))) { dvState().q = dvDay(); saveRecLocal(); } return; } } else { addCoins(300); rec.love = (rec.love || 0) + 2; }
-  dvState().q = dvDay(); saveRecLocal(); try { SFX.catch(); } catch(e){} setTimeout(() => { flash('📋 潛水委託完成！🪙+300　💙+2', 2.2); }, 1300); }
+  dvState().q = dvDay(); saveRecLocal(); try { SFX.catch(); } catch(e){} setTimeout(() => { flash('潛水委託完成。🪙+300　💙+2', 2.2); }, 1300); }
 /* v389 籠子：潛水時在公共潛水點的海底放籠子（🪙50），4 小時後回同一個潛水點收，裡面有螃蟹、蝦、小卷、章魚…（伺服器 150；沒連線時手機自己算） */
 const TRAP_LOOT = [['crab', 30], ['shrimp', 20], ['squid', 12], ['eel', 8], ['mudcrab', 8], ['cuttle', 6], ['lobster', 6], ['octopus', 5], ['kingcrab', 5]], TRAP_MS = 4 * 3600000;
 const Trap = { list:[], off:0, g:null, busy:false, sure:0, loaded:false };
@@ -10373,33 +10373,33 @@ function trapBuild(){ if (Trap.g && Trap.g.parent) Trap.g.parent.remove(Trap.g);
 function nearTrap(){ if (!Dive.on || Dive.site === 'isle') return null; let best = null, bd = 1.6; for (const t of Trap.list){ if (t.site !== Dive.site) continue; const x = DIVE.x + t.x, z = DIVE.z + t.z, d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd && me.baseY - diveBed(x, z) < 3){ bd = d; best = t; } } return best; }
 function trapSpot(){ if (!Dive.on || Dive.site === 'isle' || !Trap.loaded || Trap.list.length >= 2 || !['reef', 'wreck', 'offshore', 'harbor', 'cave'].includes(Dive.site)) return null; if (me.baseY - diveBed(me.pos.x, me.pos.z) > 2.2) return null; return { x: +(me.pos.x - DIVE.x).toFixed(2), z: +(me.pos.z - DIVE.z).toFixed(2) }; }
 function trapLabel(){ const t = nearTrap(); if (t) return trapNow() >= t.ready ? ['收籠子', '🧺 有東西了！'] : ['籠子', `🧺 還要 ${farmLeftStr(t.ready - trapNow())}`]; return null; }
-function trapAct(){ const t = nearTrap(); if (t){ if (trapNow() >= t.ready) trapTake(t); else toast(`🧺 籠子還要 ${farmLeftStr(t.ready - trapNow())}才有東西。到時候回${DIVE_SITES[t.site].name}來收`); return true; }
+function trapAct(){ const t = nearTrap(); if (t){ if (trapNow() >= t.ready) trapTake(t); else toast(`籠子還要 ${farmLeftStr(t.ready - trapNow())}才有東西。到時候回${DIVE_SITES[t.site].name}來收`); return true; }
   return false; }
 /* 放籠子：按下面那一排的「🧺 籠子」（要貼近海底），按兩次才會放，免得不小心花掉金幣 */
 function trapBtn(){ if (!Dive.on || Dive.site === 'isle') return; if (!Trap.loaded){ toast('籠子的資料還在載入，等一下再按'); return; } const mine = Trap.list.map(t => `${DIVE_SITES[t.site] ? DIVE_SITES[t.site].name : t.site}：${trapNow() >= t.ready ? '可以收了' : '還要 ' + farmLeftStr(t.ready - trapNow())}`);
-  if (Trap.list.length >= 2){ toast('🧺 最多同時放 2 個籠子。' + mine.join('；')); return; } const sp = trapSpot(); if (!sp){ toast('🧺 要先往下游到貼近海底，才能放籠子' + (mine.length ? '。已經放的：' + mine.join('；') : '')); return; }
-  if (Date.now() > Trap.sure){ Trap.sure = Date.now() + 4000; toast('🧺 再按一次「籠子」，就放在這裡（🪙50，4 小時後回來收螃蟹、蝦、章魚）'); return; } Trap.sure = 0; trapPut(sp); }
+  if (Trap.list.length >= 2){ toast('最多同時放 2 個籠子。' + mine.join('；')); return; } const sp = trapSpot(); if (!sp){ toast('要先往下游到貼近海底，才能放籠子' + (mine.length ? '。已經放的：' + mine.join('；') : '')); return; }
+  if (Date.now() > Trap.sure){ Trap.sure = Date.now() + 4000; toast('再按一次「籠子」，就放在這裡（🪙50，4 小時後回來收螃蟹、蝦、章魚）'); return; } Trap.sure = 0; trapPut(sp); }
 async function trapPut(sp){ if (Trap.busy) return; if (rec.coins < 50){ toast('金幣不夠'); return; } Trap.busy = true;
   if (trapOnline()){ try { const { data, error } = await Cloud.sb.rpc('trap_put', { p_site: Dive.site, p_x: sp.x, p_z: sp.z }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ toast(cloudErrMsg(e)); Trap.busy = false; return; } await trapLoad(); }
   else { addCoins(-50); Trap.list.push({ id: Date.now(), site: Dive.site, x: sp.x, z: sp.z, ready: Date.now() + TRAP_MS }); LS.set('tide.traps', Trap.list); trapBuild(); }
-  Trap.busy = false; try { SFX.plop(); } catch(e){} flash('🧺 籠子放好了', 1.3); toast(`4 小時後回${DIVE_SITES[Dive.site].name}潛下來收（紅色浮球底下）`); }
+  Trap.busy = false; try { SFX.plop(); } catch(e){} flash('籠子放好了', 1.3); toast(`4 小時後回${DIVE_SITES[Dive.site].name}潛下來收（紅色浮球底下）`); }
 async function trapTake(t){ if (Trap.busy) return; Trap.busy = true; let got = [];
   if (trapOnline()){ try { const { data, error } = await Cloud.sb.rpc('trap_take', { p_id: t.id }); if (error) throw error; got = (data && data.got) || []; if (data && data.pl){ delete data.pl.island; adoptRow(data.pl); } } catch(e){ toast(cloudErrMsg(e)); Trap.busy = false; return; } await trapLoad(); }
   else { const r0 = Math.random(), n = 1 + (r0 < 0.6 ? 1 : 0) + (r0 < 0.2 ? 1 : 0), tot = TRAP_LOOT.reduce((a, x) => a + x[1], 0); for (let i = 0; i < n; i++){ let r = Math.random() * tot, id = 'crab'; for (const [k, w] of TRAP_LOOT){ if ((r -= w) < 0){ id = k; break; } } const f = FISH_BY_ID[id]; if (!f) continue; const w = +(f.min + (f.max - f.min) * Math.pow(Math.random(), 2)).toFixed(2); got.push({ f: id, w }); rec.tank.unshift({ f: id, w, t: Date.now() + i }); rec.count[id] = (rec.count[id] || 0) + 1; rec.total++; if (w > (rec.best[id] || 0)) rec.best[id] = w; }
     trimTank(); saveRecLocal(); buildTank(); Trap.list = Trap.list.filter(x => x !== t); LS.set('tide.traps', Trap.list); trapBuild(); }
-  Trap.busy = false; try { SFX.catch(); } catch(e){} buzz([40, 30, 80]); const names = got.map(g => FISH_BY_ID[g.f] ? `${FISH_BY_ID[g.f].name} ${fmtKg(g.w)}` : '').filter(Boolean); flash(`🧺 收到 ${got.length} 隻！`, 1.6); toast(`籠子裡有：${names.join('、')}。已經放進魚缸`); }
+  Trap.busy = false; try { SFX.catch(); } catch(e){} buzz([40, 30, 80]); const names = got.map(g => FISH_BY_ID[g.f] ? `${FISH_BY_ID[g.f].name} ${fmtKg(g.w)}` : '').filter(Boolean); flash(`收到 ${got.length} 隻`, 1.6); toast(`籠子裡有：${names.join('、')}。已經放進魚缸`); }
 /* v389 標記放流：幫魚掛上標籤再放走；之後別人釣到牠，兩邊都有獎勵、都會收到通知 */
 function tagNoteShow(n){ if (!n || !n.id || !n.k) return; const key = n.k + n.id; if (LS.get('tide.tagSeen', '') === key) return; LS.set('tide.tagSeen', key); const f = FISH_BY_ID[n.f], fn = f ? f.name : '魚';
-  setTimeout(() => { try { SFX.catch(); } catch(e){} if (n.k === 'catch'){ flash('🏷️ 這條魚身上有標籤！', 2.2);
+  setTimeout(() => { try { SFX.catch(); } catch(e){} if (n.k === 'catch'){ flash('這條魚身上有標籤', 2.2);
       { const cc = $('#catchCard'), bb = $('#ccBadges'); if (cc && !cc.hidden && bb){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `這條魚的故事：${n.name || '釣客'} ${n.days ? n.days + ' 天前' : '今天'}放流牠時只有 ${fmtKg(n.w)}`; bb.appendChild(x); } }   /* v586 漁獲卡片上直接寫出這條魚的故事 */ toast(`是 ${esc(n.name || '釣客')} ${n.days ? n.days + ' 天前' : '今天'}標記放流的${esc(fn)}（當時 ${fmtKg(n.w)}）。謝謝你找到牠　🪙+50`); }
-    else { flash('🏷️ 你標記的魚被釣到了！', 2.2); toast(`${esc(n.name || '釣客')} 釣到了你標記放流的${esc(fn)}（現在 ${fmtKg(n.w)}）　💙+5`); } logMsg('', n.k === 'catch' ? `你釣到 ${n.name || '釣客'} 標記放流的${fn}` : `${n.name || '釣客'} 釣到了你標記放流的${fn}`, true); }, 2800); }
-async function tagRelease(x, f){ const p = releaseLocal(x) + 1; rec.love = (rec.love || 0) + 1; saveRecLocal(); renderTab(); toast(`🏷️ ${esc(f.name)} 掛上標籤游回大海了 💙 愛海點數 +${p}。以後有人釣到牠，會通知你`);
+    else { flash('你標記的魚被釣到了！', 2.2); toast(`${esc(n.name || '釣客')} 釣到了你標記放流的${esc(fn)}（現在 ${fmtKg(n.w)}）　💙+5`); } logMsg('', n.k === 'catch' ? `你釣到 ${n.name || '釣客'} 標記放流的${fn}` : `${n.name || '釣客'} 釣到了你標記放流的${fn}`, true); }, 2800); }
+async function tagRelease(x, f){ const p = releaseLocal(x) + 1; rec.love = (rec.love || 0) + 1; saveRecLocal(); renderTab(); toast(`${esc(f.name)} 掛上標籤游回大海了 💙 愛海點數 +${p}。以後有人釣到牠，會通知你`);
   if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('tag_release', { p_ts: x.t }); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); } catch(e){ toast(cloudErrMsg(e)); } } }
 /* v386 海底花園按讚、本週最美海底：去別人的島潛下去可以按讚（一週一次），排行每週一重算（伺服器 148） */
 const SeaLike = { n:0, liked:false, pieces:0, owner:null, top:null, last:null, at:0, busy:false };
 async function seaLikeLoad(){ if (!onIsle || !farmOnline()){ SeaLike.owner = null; return; } const own = onIsle.owner; try { const { data, error } = await Cloud.sb.rpc('sea_like_info', { p_owner: own }); if (error) throw error; if (data && onIsle && onIsle.owner === own){ SeaLike.owner = own; SeaLike.n = Number(data.n) || 0; SeaLike.liked = !!data.liked; SeaLike.pieces = Number(data.pieces) || 0; } } catch(e){ SeaLike.owner = null; } }
 function seaCanLike(){ return !!onIsle && SeaLike.owner === onIsle.owner && !SeaLike.liked && !farmMine() && SeaLike.pieces >= 5; }
-async function seaLike(){ if (SeaLike.busy || !seaCanLike()) return; SeaLike.busy = true; try { const { data, error } = await Cloud.sb.rpc('sea_like', { p_owner: onIsle.owner }); if (error) throw error; SeaLike.n = Number(data.n) || SeaLike.n + 1; SeaLike.liked = true; try { SFX.catch(); } catch(e){} flash('👍 幫這片海底按讚了！', 1.4); me.say('👍', 'emote', 3); } catch(e){ toast(cloudErrMsg(e)); } SeaLike.busy = false; if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+async function seaLike(){ if (SeaLike.busy || !seaCanLike()) return; SeaLike.busy = true; try { const { data, error } = await Cloud.sb.rpc('sea_like', { p_owner: onIsle.owner }); if (error) throw error; SeaLike.n = Number(data.n) || SeaLike.n + 1; SeaLike.liked = true; try { SFX.catch(); } catch(e){} flash('幫這片海底按讚了', 1.4); me.say('👍', 'emote', 3); } catch(e){ toast(cloudErrMsg(e)); } SeaLike.busy = false; if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 async function seaTopLoad(force){ if (!Cloud.on || !Cloud.sb || (!force && Date.now() - SeaLike.at < 60000)) return; SeaLike.at = Date.now(); try { const { data, error } = await Cloud.sb.rpc('sea_top'); if (error) throw error; SeaLike.top = (data && data.top) || []; SeaLike.last = (data && data.last) || null; if (curTab === 'farm' && !$('#sheet').hidden && Farm.view === 'sea') renderTab(); } catch(e){ SeaLike.top = SeaLike.top || []; } }
 function renderSeaTop(body){ body.appendChild(el('div', 'dexhead', '🏆 本週最美海底')); if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端才看得到排行。')); return; } seaTopLoad();
   body.appendChild(el('p', 'sub', '去別人的島潛下去參觀，覺得漂亮就按讚（一個人一週對同一座島一次）。每週一重新算；海底至少要放 5 樣東西才會上榜。' + (SeaLike.last ? `上週第一名：${SeaLike.last.name}（👍${SeaLike.last.n}）` : '')));
@@ -10504,10 +10504,10 @@ function seaAct(){ const ns = nearSea();
 async function seaPlantHere(sp, id){ const C = CROP_BY[id]; if (!C || !C.sea || Farm.busy || seedN(id) < 1) return; const why = seaWhyNot(sp); if (why){ toast(why); return; }
   if (farmOnline()){ if (!await farmRpc('sea_plant', { p_crop: id, p_x: sp.x, p_z: sp.z })) return; }
   else { let sl = 100; while (Farm.plots[sl]) sl++; rec.bait['seed_' + id] = seedN(id) - 1; if (!rec.bait['seed_' + id]) delete rec.bait['seed_' + id]; saveRecLocal(); Farm.plots[sl] = { c: id, t: Date.now(), w: 0, wa: 0, x: sp.x, z: sp.z }; farmLocalSave(); }
-  seaBuild(); try { SFX.plop(); } catch(e){} const left = seedN(id); if (!left) Farm.hand = null; seedChip(); toast(`🌱 種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟` + (left ? `（還有 ${left} 顆）` : '。種子用完了')); }
+  seaBuild(); try { SFX.plop(); } catch(e){} const left = seedN(id); if (!left) Farm.hand = null; seedChip(); toast(`種下了${C.icon}${C.name}，大概 ${C.hrs} 小時後成熟` + (left ? `（還有 ${left} 顆）` : '。種子用完了')); }
 async function seaUnlock(){ const nx = seaNextStep(); if (!farmMine() || !nx) return; if (rec.coins < nx.cost){ toast('金幣不夠'); return; }
   if (farmOnline()){ if (!await farmRpc('farm_unlock_sea')) return; } else { addCoins(-nx.cost); Sea.n = nx.n; farmLocalSave(); }
-  seaBuild(); try { SFX.coin(); } catch(e){} toast(`🪸 海底花園變大了，現在可以種 ${Sea.n} 株`); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
+  seaBuild(); try { SFX.coin(); } catch(e){} toast(`海底花園變大了，現在可以種 ${Sea.n} 株`); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); }
 function renderSea(body, mine){
   body.appendChild(el('p', 'sub', '海底花園：把海底的種子拿在手上，游到海底想種的地方按「種下」，哪裡都可以種（兩株要隔開一點）。照現實的時間長大，不用澆水。長到一半以上的越多，游過來的魚群越多（可以拍照）。種子在菜園的種子攤買。'));
   if (mine){ body.appendChild(el('div', 'dexhead', '🎒 背包裡的海底種子')); const ul = el('ul', 'shoplist'); const own = CROPS.filter(C => C.sea && seedN(C.id) > 0); if (!own.length) ul.appendChild(el('li', 'empty', '背包裡沒有海底的種子。先浮上去，到菜園的種子攤買。'));
@@ -10534,7 +10534,7 @@ function seaMemAdd(id, n, why){ try { const sp = id && SPOT_BY_ID[id]; if (!sp) 
   if (why === 'catch'){ const day = new Date().toDateString(); if (e.cd !== day){ e.cd = day; e.cn = 0; } if (e.cn >= 20) return; e.cn++; }
   const l0 = seaMemLv(id); e.p = Math.min(9999, (e.p || 0) + n); LS.set('tide.seaMem', SeaMem.d); const l1 = seaMemLv(id); const card = $('#spotCard'); if (card) card._s = null;
   if (l1 > l0){ const msg = ['', '這片水開始認得你了，水面多了一點亮光', '這裡的魚比較不怕你了，上鉤快一點', '小魚會跳出水面跟你打招呼', '你守護的這片水，魚越來越多', '這片水把你當成家人了'][l1];
-    ticker(`🌊 <b>${esc(sp.label)}</b> 對你的記憶變深了：<b>${SeaMem.NM[l1]}</b>`); toast(`🌊 海洋記憶「${SeaMem.NM[l1]}」：${msg}`); try { SFX.catch(); } catch(e2){} }
+    ticker(`🌊 <b>${esc(sp.label)}</b> 對你的記憶變深了：<b>${SeaMem.NM[l1]}</b>`); toast(`海洋記憶「${SeaMem.NM[l1]}」：${msg}`); try { SFX.catch(); } catch(e2){} }
   SeaMem.syncT = performance.now() + 15000; } catch(e){} }
 function seaMemSync(){ if (!Cloud.on || !Cloud.sb) return; SeaMem.syncT = 0; SeaMem.pulled = true; const send = {}; for (const k in SeaMem.d) send[k] = { p: seaMemPts(k) };
   Cloud.sb.rpc('sea_mem_save', { p: send }).then(({ data, error }) => { if (error || !data || typeof data !== 'object') return; let ch = false;
@@ -10557,7 +10557,7 @@ function seaMemTick(dt, t){ if (frameNo % 30 === 5){ if (!SeaMem.pulled && Cloud
 async function pickLitter(l){
   if (Canal.busy) return; Canal.busy = true; me.dip = 1;
   let ok = true; if (Cloud.on && Cloud.sb){ try { const { data, error } = await Cloud.sb.rpc('pick_litter'); if (error){ ok = false; toast(String(error.message || '').includes('今天') ? '今天已經撿很多了，謝謝你！明天再來 💙' : '等一下再撿'); } else if (data) adoptRow(data); } catch(e){ ok = false; } }
-  else { const day = new Date().toDateString(); if (rec.litterDay !== day){ rec.litterDay = day; rec.litterN = 0; } if (rec.litterN >= 20){ ok = false; toast('今天已經撿很多了，謝謝你！明天再來 💙'); } else { rec.litterN++; rec.love = (rec.love || 0) + 1; deedCount('lit'); } }
+  else { const day = new Date().toDateString(); if (rec.litterDay !== day){ rec.litterDay = day; rec.litterN = 0; } if (rec.litterN >= 20){ ok = false; toast('今天已經撿很多了，謝謝你。明天再來 💙'); } else { rec.litterN++; rec.love = (rec.love || 0) + 1; deedCount('lit'); } }
   Canal.busy = false; if (!ok) return;
   Canal.g.remove(l.m); Canal.litter.splice(Canal.litter.indexOf(l), 1); saveRecLocal(); SFX.chat(); flash(`${l.T.icon} 撿起${l.T.name}，丟進垃圾桶 💙 愛海 +1`, 1.4); seaMemAdd(seaMemHere(), 2, 'litter');
 }
@@ -10684,16 +10684,16 @@ async function cageCall(fn, args, local){
   const ok = local(); if (ok){ saveRecLocal(); buildTank(); buildCageFish(); rt(); } return ok;
 }
 function cagePut(x){ if ((rec.cage || []).length >= CAGE.max){ toast(`箱網最多放 ${CAGE.max} 條`); return; }
-  cageCall('cage_put', { p_ts: x.t }, () => { rec.tank = rec.tank.filter(y => y.t !== x.t); rec.show = (rec.show || []).filter(t => t !== x.t); const c = Object.assign({}, x, { w0: x.w0 || x.w, at: Date.now() }); delete c.fm; rec.cage = (rec.cage || []).concat([c]); return true; }).then(ok => ok && toast(`🐟 把${esc(FISH_BY_ID[x.f].name)}放進箱網了`)); }
+  cageCall('cage_put', { p_ts: x.t }, () => { rec.tank = rec.tank.filter(y => y.t !== x.t); rec.show = (rec.show || []).filter(t => t !== x.t); const c = Object.assign({}, x, { w0: x.w0 || x.w, at: Date.now() }); delete c.fm; rec.cage = (rec.cage || []).concat([c]); return true; }).then(ok => ok && toast(`把${esc(FISH_BY_ID[x.f].name)}放進箱網了`)); }
 function cageFeed(){ if (!(rec.cage || []).length){ toast('箱網裡還沒有魚'); return; } if (rec.cageFed === taipeiDate()){ toast('今天已經餵過了，明天再來'); return; } if (rec.coins < CAGE.feed){ toast('金幣不夠'); return; }
   const [cx, cz] = CAGE.pos[0]; for (let i = 0; i < 4; i++) setTimeout(() => FX.emit(cx + (Math.random() - 0.5) * 1.6, WATER_LEVEL + 0.4, cz + (Math.random() - 0.5) * 1.6, 8, '#c8a060', 0.4, 0.6, 0.8), i * 120);
   const before = new Map((rec.cage || []).map(x => [x.t, { f: x.f, cr: !!x.cr }]));
   cageCall('cage_feed', {}, () => { rec.cage = rec.cage.map(cageFeedOne); rec.cageFed = taipeiDate(); addCoins(-CAGE.feed); return true; }).then(ok => { if (!ok) return; let big = false;
     for (const x of rec.cage || []){ const b = before.get(x.t); if (!b) continue; const nm = x.n || (FISH_BY_ID[b.f] || {}).name || '魚';
-      if (b.f !== x.f && FISH_BY_ID[x.f]){ big = true; SFX.catch(); flash(`✨ ${esc(nm)}變成${esc(FISH_BY_ID[x.f].name)}了！`, 3); }
-      else if (x.cr && !b.cr){ big = true; SFX.catch(); flash(`👑 ${esc(nm)}長成魚王了！`, 3); } }
-    if (!big) toast('🍚 餵好了！魚長大了一點'); }); }
-function cageTake(x){ cageCall('cage_take', { p_ts: x.t }, () => { rec.cage = rec.cage.filter(y => y.t !== x.t); const b = Object.assign({}, x, { fm: true }); delete b.at; rec.tank.unshift(b); trimTank(); return true; }).then(ok => ok && toast(`🎉 收成${esc(FISH_BY_ID[x.f].name)} ${fmtKg(x.w)}，放進魚缸了`)); }
+      if (b.f !== x.f && FISH_BY_ID[x.f]){ big = true; SFX.catch(); flash(`${esc(nm)}變成${esc(FISH_BY_ID[x.f].name)}了`, 3); }
+      else if (x.cr && !b.cr){ big = true; SFX.catch(); flash(`${esc(nm)}長成魚王了`, 3); } }
+    if (!big) toast('餵好了。魚長大了一點'); }); }
+function cageTake(x){ cageCall('cage_take', { p_ts: x.t }, () => { rec.cage = rec.cage.filter(y => y.t !== x.t); const b = Object.assign({}, x, { fm: true }); delete b.at; rec.tank.unshift(b); trimTank(); return true; }).then(ok => ok && toast(`收成${esc(FISH_BY_ID[x.f].name)} ${fmtKg(x.w)}，放進魚缸了`)); }
 function renderCage(body){
   const list = rec.cage || [], fed = rec.cageFed === taipeiDate();
   if (FishCard.t){ const cx = list.find(x => x.t === FishCard.t); if (cx){ renderFishCard(body, cx, true); return; } FishCard.t = 0; }
@@ -10728,8 +10728,8 @@ function updateMangrove(dt, t){
   if (Mang.flies){ const op = DayNight.lamp > 0.5 ? 0.85 : 0; Mang.flies.material.opacity += (op - Mang.flies.material.opacity) * Math.min(1, dt * 0.8); if (Mang.flies.material.opacity > 0.02){ const p = Mang.flies.geometry.attributes.position, b = Mang.flies.userData.base; for (let i = 0; i < p.count; i++){ p.array[i * 3] = b[i * 3] + Math.sin(t * 0.7 + i) * 0.4; p.array[i * 3 + 1] = b[i * 3 + 1] + Math.sin(t * 1.3 + i * 2.1) * 0.25; p.array[i * 3 + 2] = b[i * 3 + 2] + Math.cos(t * 0.6 + i) * 0.4; } p.needsUpdate = true; Mang.flies.material.size = 0.12 + Math.sin(t * 4) * 0.04; } }
   // 漲潮了還站在泥灘上：被水推回島上
   const e = mangE(me.pos.x, me.pos.z), onMud = e <= 0 && e > -MANG.mud && !deckAt(me.pos.x, me.pos.z) && !myBoat && !isLand(me.pos.x, me.pos.z);   /* 只有真的站在泥灘（原本是海）上才算；本島岸邊離小島很近，以前會被當成泥灘、漲潮時被「吸」到島上 */
-  if (onMud && !mudOut()){ for (let k = 0; k < 40; k++){ const [ix, iz] = MANG.isl.reduce((b, s) => Math.hypot(me.pos.x - s[0], me.pos.z - s[1]) - s[2] < Math.hypot(me.pos.x - b[0], me.pos.z - b[1]) - b[2] ? s : b); const a = Math.atan2(me.pos.z - iz, me.pos.x - ix); me.pos.x -= Math.cos(a) * 0.15; me.pos.z -= Math.sin(a) * 0.15; if (mangE(me.pos.x, me.pos.z) > 0.3) break; } toast('🌊 漲潮了！泥灘被淹掉，趕快回到島上'); }
-  if (onMud && !Mang.onMud && Date.now() - Mang.told > 60000){ Mang.told = Date.now(); toast('🦀 泥灘上的小動物很怕人，搖桿推一點點、慢慢靠近，再按「抓！」'); }
+  if (onMud && !mudOut()){ for (let k = 0; k < 40; k++){ const [ix, iz] = MANG.isl.reduce((b, s) => Math.hypot(me.pos.x - s[0], me.pos.z - s[1]) - s[2] < Math.hypot(me.pos.x - b[0], me.pos.z - b[1]) - b[2] ? s : b); const a = Math.atan2(me.pos.z - iz, me.pos.x - ix); me.pos.x -= Math.cos(a) * 0.15; me.pos.z -= Math.sin(a) * 0.15; if (mangE(me.pos.x, me.pos.z) > 0.3) break; } toast('漲潮了！泥灘被淹掉，趕快回到島上'); }
+  if (onMud && !Mang.onMud && Date.now() - Mang.told > 60000){ Mang.told = Date.now(); toast('泥灘上的小動物很怕人，搖桿推一點點、慢慢靠近，再按「抓。」'); }
   Mang.onMud = onMud;
   // 小動物
   const out = mudOut(); for (const c of Mang.critters){
@@ -10987,7 +10987,7 @@ function onTagMsg(msg){
     d.to = from; from = d.by;
     Tag.ghost = d.to; Tag.immune = from; Tag.immuneUntil = now + TAG_IMMUNE;
     ticker(`👻 <b>${esc(tagName(from))}</b> 抓到了 <b>${esc(tagName(d.to))}</b>！`);
-    if (d.to === Tag.me){ SFX.bite(); flash('👻 被抓到了！換你當鬼', 1.6); camShake = Math.max(camShake, 0.15); }
+    if (d.to === Tag.me){ SFX.bite(); flash('被抓到了。換你當鬼', 1.6); camShake = Math.max(camShake, 0.15); }
     else if (from === Tag.me) flash('抓到了！快跑 🏃', 1.2);
     refreshGhostTags();
   } else if (d.a === 'end'){
@@ -11075,7 +11075,7 @@ function tyAt(ms){ const fz = (location.hash.match(/ty=(pre|mid|post)/) || [])[1
   const ep = Math.floor((ms + 8 * 3600e3) / TY.EP), L = tyLand(ep); return ms >= L - TY.PRE && ms < L + TY.MID + TY.POST ? { id: ep, land: L, phase: ms < L ? 'pre' : ms < L + TY.MID ? 'mid' : 'post' } : null; }
 function tyNext(ms){ const ep = Math.floor((ms + 8 * 3600e3) / TY.EP); for (let e = ep; e < ep + 3; e++){ const L = tyLand(e); if (L > ms) return L; } return null; }
 function tyOn(){ return !!(Env.ty && Env.ty.phase === 'mid'); }
-function tyBlock(what){ if (!tyOn()) return false; toast(`🌀 颱風天不能${what}，等風雨過了再說（還有 ${Math.max(1, Math.ceil((Env.ty.land + TY.MID - Date.now()) / 60000))} 分鐘）`); return true; }
+function tyBlock(what){ if (!tyOn()) return false; toast(`颱風天不能${what}，等風雨過了再說（還有 ${Math.max(1, Math.ceil((Env.ty.land + TY.MID - Date.now()) / 60000))} 分鐘）`); return true; }
 function weatherAt(ms){
   { const ty = tyAt(ms); if (ty) return ty.phase === 'pre' ? 'typre' : ty.phase === 'mid' ? 'tymid' : 'typost'; }
   const b = Math.floor(ms / WX_BLOCK), r = hash32('wx' + b) % 100; let acc = 0;
@@ -11163,7 +11163,7 @@ function tyNearItem(){ if (!Env.ty || Env.ty.phase !== 'post' || !TY.items) retu
 async function tyPick(){ const it = tyNearItem(), gb = $('#gatherBtn'); if (!it || gb.disabled) return; gb.disabled = true; me.bend = 0.6; try { SFX.tick(); } catch(e){} const done = () => setTimeout(() => { gb.disabled = false; }, 600), N = TY_ITEM[it.k];
   const take = () => { TY.picked.add(it.i); if (it.m){ it.m.visible = false; } try { FX.emit(it.x, groundHeight(it.x, it.z) + 0.4, it.z, 14, '#ffe9a0', 0.4, 1.2, 0.9); } catch(e){} };
   if (!Cloud.on || !Cloud.sb){ take(); flash(`${N[0]} 撿到${N[1]}！`, 1.4); done(); return; }
-  try { const { data, error } = await Cloud.sb.rpc('typhoon_pick', { p_i: it.i }); if (error) throw error; adoptRow(data.player); take(); SFX.catch(); flash(`${N[0]} 撿到${N[1]}！${data.coins ? '🪙+' + data.coins : ''}${data.love ? '💙+' + data.love : ''}`, 1.8); const left = TY.items.filter(o => !TY.picked.has(o.i)).length; if (!left) setTimeout(() => toast('🌈 這次颱風沖上來的東西你都撿完了！'), 1900); }
+  try { const { data, error } = await Cloud.sb.rpc('typhoon_pick', { p_i: it.i }); if (error) throw error; adoptRow(data.player); take(); SFX.catch(); flash(`${N[0]} 撿到${N[1]}！${data.coins ? '🪙+' + data.coins : ''}${data.love ? '💙+' + data.love : ''}`, 1.8); const left = TY.items.filter(o => !TY.picked.has(o.i)).length; if (!left) setTimeout(() => toast('這次颱風沖上來的東西你都撿完了'), 1900); }
   catch(e){ const em = cloudErrMsg(e); toast(em); if (/撿過/.test(em)) take(); } done(); }
 /* ================= v569 🏘️ 居民區是村民的家（作者 11/18：「居民區是專門給 NPC 住的」） =================
    以前那八棟只是佈景，村民的家還設在地圖改版前的舊位置（走到空地上「回家」）。伺服器 197 把五個家搬到居民區的門口。
@@ -11248,13 +11248,13 @@ function ohTick(dt){ const ms = bossNow(), P = ohPlan(ms), dC = Math.hypot(me.po
     if (u < T0 - 2) say('a', calf ? '🐋 流冰外面有三隻虎鯨，圍著一對座頭鯨母子！' : '🐋 流冰外面有三隻虎鯨，繞著浮冰上的海豹轉！', true);
     if (!calf && u > 10 && u < 30) say('b', '🐋 遠處有座頭鯨噴氣……牠朝這邊游過來了');
     if (u > T0 && u < T0 + 40) say('c', calf ? '💦 座頭鯨媽媽把小鯨護在身邊，用胸鰭和尾巴拍水趕虎鯨' : '💦 座頭鯨擋在海豹和虎鯨中間，用胸鰭和尾巴拍水');
-    if (u > T0 + 56 && u < 110){ say('d', calf ? '🐋 虎鯨放棄了，母子平安' : '🐋 虎鯨放棄了，海豹得救了', true); if (!LS.get('tide.orcaHunt', false)){ LS.set('tide.orcaHunt', true); setTimeout(() => toast('🏅 你親眼看到座頭鯨趕走虎鯨！'), 3200); } } } }
+    if (u > T0 + 56 && u < 110){ say('d', calf ? '🐋 虎鯨放棄了，母子平安' : '🐋 虎鯨放棄了，海豹得救了', true); if (!LS.get('tide.orcaHunt', false)){ LS.set('tide.orcaHunt', true); setTimeout(() => toast('你親眼看到座頭鯨趕走虎鯨'), 3200); } } } }
 function tyTick(ms, dt, t){ const ty = tyAt(ms), ph = ty ? ty.phase : null, prev = Env.tyPh || null; Env.ty = ty;
   if (ph !== prev){ Env.tyPh = ph; const first = Env.tyInit !== 1; Env.tyInit = 1;
     if (ph === 'pre') ticker(`🌀 <b>颱風警報</b>：颱風大約 ${Math.max(1, Math.ceil((ty.land - ms) / 60000))} 分鐘後登陸潮汐村！風浪變大了，魚咬得特別兇。登陸後不能開船、潛水。`);
-    if (ph === 'mid'){ flash('🌀 颱風登陸了！', 2.6); ticker('🌀 <b>颱風登陸</b>：狂風暴雨 40 分鐘。船和潛水都停了；到晴潮海邊、港口外海的岸邊釣，有機會釣到被大浪翻上來的深海魚。'); camShake = Math.max(camShake, 0.5);
-      try { if (Dive.on) endDive('🌀 颱風來了，先上岸'); } catch(e){} try { if (myBoat && !Ferry.on){ leaveBoat(); toast('🌀 颱風來了，小船先靠岸'); } else if (myBoat && Ferry.on){ leaveFerry(true); toast('🌀 颱風來了，阿海把船開回港口了'); } } catch(e){} }
-    if (ph === 'post'){ flash('🌈 颱風過了！', 2.4); ticker('🌈 <b>颱風過後</b>：放晴了。沙灘上沖上來漂流木、貝殼、玻璃浮球，還有寶箱，走過去按「撿」（一小時內，每樣一次）。'); TY.picked = new Set(); TY.loadFor = null; }
+    if (ph === 'mid'){ flash('颱風登陸了！', 2.6); ticker('🌀 <b>颱風登陸</b>：狂風暴雨 40 分鐘。船和潛水都停了；到晴潮海邊、港口外海的岸邊釣，有機會釣到被大浪翻上來的深海魚。'); camShake = Math.max(camShake, 0.5);
+      try { if (Dive.on) endDive('🌀 颱風來了，先上岸'); } catch(e){} try { if (myBoat && !Ferry.on){ leaveBoat(); toast('颱風來了，小船先靠岸'); } else if (myBoat && Ferry.on){ leaveFerry(true); toast('颱風來了，阿海把船開回港口了'); } } catch(e){} }
+    if (ph === 'post'){ flash('颱風過了', 2.4); ticker('🌈 <b>颱風過後</b>：放晴了。沙灘上沖上來漂流木、貝殼、玻璃浮球，還有寶箱，走過去按「撿」（一小時內，每樣一次）。'); TY.picked = new Set(); TY.loadFor = null; }
     if (!ph){ tyClear(); if (prev === 'post' && !first) ticker('🌊 海邊恢復平靜了。'); } }
   if (ph === 'pre'){ const m = Math.ceil((ty.land - ms) / 60000); if ((m === 30 || m === 10) && Env.tyWarn !== ty.id + ':' + m){ Env.tyWarn = ty.id + ':' + m; ticker(`🌀 颱風還有 <b>${m} 分鐘</b>登陸。要出海、潛水的趁現在回來。`); } }
   if (ph === 'mid' && !House.on && !inIndoor() && !Dive.on && Math.random() < dt * 0.12) camShake = Math.max(camShake, 0.1);   /* 一陣一陣的強風 */
@@ -11313,7 +11313,7 @@ async function claimTourney(){
 function tourneyTick(){
   const T = tourneyNow(), nowMs = Date.now();
   if (T.active && !Tny.on){ Tny.on = true; Tny.id = T.id; Tny.test = !!T.test; if (Tny.myId !== T.id){ Tny.myW = 0; Tny.myN = 0; Tny.myId = T.id; } Tny.board = []; Tny.boardId = T.id;
-    flash('🏆 釣魚大賽開始！', 1.8); ticker(`🏆 <b>釣魚大賽開始了！</b>${TOURNEY.mins} 分鐘內釣到的魚，總重量最重的前三名有獎（🪙${TOURNEY.prize.join(' / ')}）`); loadTnyBoard(T.id); }
+    flash('釣魚大賽開始', 1.8); ticker(`🏆 <b>釣魚大賽開始了！</b>${TOURNEY.mins} 分鐘內釣到的魚，總重量最重的前三名有獎（🪙${TOURNEY.prize.join(' / ')}）`); loadTnyBoard(T.id); }
   if (!T.active && Tny.on){ Tny.on = false; const id = Tny.id; ticker(`🏁 釣魚大賽結束了！${Tny.myN ? `你釣了 ${Tny.myN} 條、${Tny.myW.toFixed(2)}kg，` : ''}名次馬上公布`); setTimeout(() => { loadTnyBoard(id); claimTourney(); }, 25000 + Math.random() * 8000); }
   if (!T.active && T.start - nowMs < 5 * 60e3 && Tny.warnId !== T.id){ Tny.warnId = T.id; ticker(`⏰ 釣魚大賽 ${Math.ceil((T.start - nowMs) / 60000)} 分鐘後開始，先找好釣點吧！`); }
   if (Tny.on && Date.now() - Tny.boardAt > 20000) loadTnyBoard(Tny.id);
@@ -11348,14 +11348,14 @@ async function addFriend(uid, name){ if (Kid.on){ toast('兒童安全模式：�
 async function openGift(g){
   const before = rec.coins, row = await cloudCall('open_gift', { p_id: g.id }); if (!row) return;
   SFX.catch(); const from = g.name || '朋友';
-  if (g.kind === 'coins') flash(`🎁 ${from} 送你 🪙${(Number(row.coins) || 0) - before}！`, 1.8);
-  else { const f = FISH_BY_ID[g.data && g.data.f]; flash(`🎁 ${from} 送你一條${f ? f.name : '魚'}${g.data && g.data.w ? ' ' + Number(g.data.w).toFixed(2) + 'kg' : ''}！`, 1.8); }
+  if (g.kind === 'coins') flash(`${from} 送你 🪙${(Number(row.coins) || 0) - before}！`, 1.8);
+  else { const f = FISH_BY_ID[g.data && g.data.f]; flash(`${from} 送你一條${f ? f.name : '魚'}${g.data && g.data.w ? ' ' + Number(g.data.w).toFixed(2) + 'kg' : ''}！`, 1.8); }
   Fr.gifts = Fr.gifts.filter(x => x.id !== g.id); adoptFriends({ friends:Fr.list, requests:Fr.req, gifts:Fr.gifts });
 }
 async function sendGift(to, kind, val){
   const args = { p_to: to.id, p_kind: kind, p_ts: kind === 'fish' ? val : null, p_amount: kind === 'coins' ? val : null };
   const row = await cloudCall('send_gift', args); if (!row) return;
-  SFX.chat(); toast(`🎁 送出去了！${esc(to.name || '朋友')} 打開就會收到`); if (room && room.connected()) room.emit('gift', { to: to.id }).catch(() => {});
+  SFX.chat(); toast(`送出去了。${esc(to.name || '朋友')} 打開就會收到`); if (room && room.connected()) room.emit('gift', { to: to.id }).catch(() => {});
   renderTab();
 }
 setInterval(() => { if (Cloud.on) loadFriends(); }, 60000);
@@ -11377,7 +11377,7 @@ function renderFriends(body){
   }
   const box = el('div', 'tipbox'); box.innerHTML = `<b>🤝 你的好友代碼：<span class="fcode">${esc(friendCode())}</span></b><span>把代碼給朋友，或在下面輸入朋友的代碼。在大廳裡的人也可以直接按「加好友」。互相加好友以後就能送禮。</span>`;
   const row = el('div', 'fadd'), inp = el('input'); inp.placeholder = '輸入朋友的 8 碼代碼'; inp.maxLength = 8; inp.autocapitalize = 'off'; const go = el('button', 'tbtn', '加好友');
-  go.addEventListener('click', async () => { const c = inp.value.trim(); if (!/^[0-9a-fA-F]{8}$/.test(c)){ toast('好友代碼是 8 個英文或數字'); return; } go.disabled = true; const d = await frRpc('add_friend_code', { p_code: c }); go.disabled = false; if (d){ adoptFriends(d); inp.value = ''; toast('👋 已經送出好友邀請'); } });
+  go.addEventListener('click', async () => { const c = inp.value.trim(); if (!/^[0-9a-fA-F]{8}$/.test(c)){ toast('好友代碼是 8 個英文或數字'); return; } go.disabled = true; const d = await frRpc('add_friend_code', { p_code: c }); go.disabled = false; if (d){ adoptFriends(d); inp.value = ''; toast('已經送出好友邀請'); } });
   row.append(inp, go); box.appendChild(row); body.appendChild(box);
   if (Fr.gifts.length){ body.appendChild(el('div', 'dexhead', `🎁 收到的禮物（${Fr.gifts.length}）`)); const ul = el('ul', 'shoplist');
     for (const g of Fr.gifts){ const li = el('li', 'on'), f = g.kind === 'fish' && FISH_BY_ID[g.data && g.data.f]; li.appendChild(el('span', 'dishic', g.kind === 'coins' ? '🪙' : '🐟'));
@@ -11411,7 +11411,7 @@ function onSail(msg){
   const name = peerName(p); Party.inv = { x:+d.x, z:+d.z, label: clean(String(d.label || '外海').slice(0, 30)), lid: String(d.lid || ''), peer: msg.peer, name, until: Date.now() + 45000 }; renderSailInv();
   ticker(`🚤 <b>${esc(name)}</b> 要出海去${esc(Party.inv.label)}，按上面的「一起去」加入船隊！`);
 }
-function onSailJoin(msg){ if (msg.sameTab || !msg.data || msg.data.lid !== myIdOrMe()) return; const p = peers.get(msg.peer); if (!p) return; Party.joined.set(msg.peer, peerName(p)); toast(`🚤 ${esc(peerName(p))} 加入你的船隊了！`); renderFerryBar(); }
+function onSailJoin(msg){ if (msg.sameTab || !msg.data || msg.data.lid !== myIdOrMe()) return; const p = peers.get(msg.peer); if (!p) return; Party.joined.set(msg.peer, peerName(p)); toast(`${esc(peerName(p))} 加入你的船隊了`); renderFerryBar(); }
 function joinSail(){
   const v = Party.inv; Party.inv = null; renderSailInv(); if (!v || Date.now() > v.until) return; if (Dive.on) endDive('', true);
   // 停在隊長旁邊（不會疊在一起）
@@ -11484,7 +11484,7 @@ function renderLvChip(){
   let c = $('#lvChip'); if (!c){ c = document.createElement('span'); c.id = 'lvChip'; c.title = '等級和成就'; c.addEventListener('click', () => openSheet('ach')); const h1 = $('#brand h1'); if (h1) h1.appendChild(c); else return; }
   const xp = calcXP(), L = lvOf(xp), k = L >= 99 ? 1 : (xp - lvNeed(L)) / (lvNeed(L + 1) - lvNeed(L)); let tt = ''; try { tt = curTitle(); } catch(e){} const t = `⭐ Lv.${L}${tt ? `・${tt}` : ''}`; if (c._t !== t){ c.textContent = t; c._t = t; } c.style.setProperty('--k', (k * 100).toFixed(0) + '%');
 }
-async function claimLevels(){ if (!Cloud.on) return; const before = rec.coins, row = await cloudCall('claim_levels'); if (!row) return; const got = (Number(row.coins) || 0) - before; if (got > 0){ SFX.catch(); flash(`⭐ 升級獎勵 🪙${got.toLocaleString()}！`, 2); } }
+async function claimLevels(){ if (!Cloud.on) return; const before = rec.coins, row = await cloudCall('claim_levels'); if (!row) return; const got = (Number(row.coins) || 0) - before; if (got > 0){ SFX.catch(); flash(`升級獎勵 🪙${got.toLocaleString()}！`, 2); } }
 /* v311 上架（35）：玩到第 3 天、或升到 Lv10，提醒訪客帳號綁定 Email（換手機才登得回同一個角色）。每個時機只提醒一次 */
 const PlayDays = (() => { const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); let n = Number(LS.get('tide.pdN', 0)) || 0; if (LS.get('tide.pdLast', '') !== d){ n++; LS.set('tide.pdN', n); LS.set('tide.pdLast', d); } return n; })();
 function bindMilestone(L){ if (!Cloud.on || !Cloud.isAnon) return; const done = LS.get('tide.bindMs', []) || [];
@@ -11494,14 +11494,14 @@ function bindMilestone(L){ if (!Cloud.on || !Cloud.isAnon) return; const done = 
                               : { t:'🌊 第 3 天來釣魚了！', s:'謝謝你常常來！你現在是訪客帳號，換手機或清掉瀏覽器資料，角色就找不回來了。綁定 Email 就能永久保存。' }); }
 function lvTick(){
   if (!rec) return; const L = lvOf(calcXP()); if (Lv.L != null) try { bindMilestone(L); } catch(e){} renderLvChip(); { const t = curTitle(); if (t !== Lv.cur){ Lv.cur = t; refreshMyName(); pushPresence(true); } }
-  if (Lv.L != null && L > Lv.L){ flash(`🎉 升級了！Lv.${L}`, 2); SFX.catch(); ticker(`🎉 <b>你</b>升到 Lv.${L} 了！${LV_TITLES.some(([l]) => l === L) ? `得到稱號「${LV_TITLES.find(([l]) => l === L)[1]}」` : ''}`); if (room && room.connected()) room.emit('lvup', { L }).catch(() => {}); setTimeout(claimLevels, 1500); }
+  if (Lv.L != null && L > Lv.L){ flash(`升級了！Lv.${L}`, 2); SFX.catch(); ticker(`🎉 <b>你</b>升到 Lv.${L} 了！${LV_TITLES.some(([l]) => l === L) ? `得到稱號「${LV_TITLES.find(([l]) => l === L)[1]}」` : ''}`); if (room && room.connected()) room.emit('lvup', { L }).catch(() => {}); setTimeout(claimLevels, 1500); }
   Lv.L = L;
   // 成就
   const done = ACH.filter(achDone).map(a => a.id);
   if (!Lv.init){ Lv.init = true; for (const id of done) Lv.seen.add(id); LS.set('tide.achInit', true); LS.set('tide.achSeen', [...Lv.seen]); return; }
   const fresh = done.filter(id => !Lv.seen.has(id));
   if (fresh.length){ for (const id of fresh) Lv.seen.add(id); LS.set('tide.achSeen', [...Lv.seen]); const a = ACH.find(x => x.id === fresh[0]);
-    flash(`🏅 成就達成：${a.icon} ${a.name}`, 2); SFX.catch(); ticker(`🏅 成就達成：<b>${esc(a.name)}</b>${a.title ? `，得到稱號「${esc(a.title)}」` : ''}${fresh.length > 1 ? `（還有 ${fresh.length - 1} 個）` : ''}`); }
+    flash(`成就達成：${a.icon} ${a.name}`, 2); SFX.catch(); ticker(`🏅 成就達成：<b>${esc(a.name)}</b>${a.title ? `，得到稱號「${esc(a.title)}」` : ''}${fresh.length > 1 ? `（還有 ${fresh.length - 1} 個）` : ''}`); }
 }
 setInterval(lvTick, 2500);
 function renderAch(body){
@@ -11512,15 +11512,15 @@ function renderAch(body){
   body.appendChild(el('div', 'dexhead', '✏️ 名字（顯示在頭上，大家都看得到）'));
   if (Kid.on){ const row = el('div', 'titles'), sa = el('select', 'txt'), sb = el('select', 'txt'); for (const a of KID_ADJ) sa.appendChild(new Option(a, a)); for (const b of KID_ANI) sb.appendChild(new Option(b, b));
     const cur = KID_ADJ.find(a => (nickname || '').startsWith(a)); if (cur){ sa.value = cur; sb.value = nickname.slice(cur.length); }
-    const ok = el('button', 'tbtn', '改名'); ok.addEventListener('click', () => { if (nameLocked()) return; const v = sa.value + sb.value; nickname = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); });
+    const ok = el('button', 'tbtn', '改名'); ok.addEventListener('click', () => { if (nameLocked()) return; const v = sa.value + sb.value; nickname = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`名字改成「${v}」了`); });
     row.append(sa, sb, ok); body.appendChild(row); body.appendChild(el('p', 'sub', '兒童安全模式：名字從「形容詞＋動物」選。')); }
   else { const row = el('div', 'titles'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = nickname; inp.placeholder = (myId && profileNames[myId]) || '例如：小陳'; inp.style.cssText = 'flex:1 1 12em;min-width:0';
-    const ok = el('button', 'tbtn', '改名'); const save = () => { if (nameLocked()){ inp.value = nickname; return; } const v = clean(inp.value.trim().slice(0, 16)); if (!v){ toast('名字不能是空的'); inp.value = nickname; return; } if (v === nickname){ toast('名字沒有改'); return; } nickname = v; inp.value = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`✏️ 名字改成「${v}」了`); };
+    const ok = el('button', 'tbtn', '改名'); const save = () => { if (nameLocked()){ inp.value = nickname; return; } const v = clean(inp.value.trim().slice(0, 16)); if (!v){ toast('名字不能是空的'); inp.value = nickname; return; } if (v === nickname){ toast('名字沒有改'); return; } nickname = v; inp.value = v; LS.set('tide.nick', v); refreshMyName(); pushPresence(true); cloudProfile(); toast(`名字改成「${v}」了`); };
     ok.addEventListener('click', save); inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); }); row.appendChild(inp); row.appendChild(ok); body.appendChild(row); }
   body.appendChild(el('div', 'dexhead', '🏷️ 稱號（顯示在名字上面，大家都看得到）'));
   const tl = el('div', 'titles'), cur = curTitle();
   const none = el('button', 'tbtn' + (cur ? ' ghost' : ''), '不顯示'); none.addEventListener('click', () => { Lv.title = ''; Lv.cur = ''; LS.set('tide.title', ''); refreshMyName(); renderLvChip(); pushPresence(true); renderTab(); }); tl.appendChild(none);
-  for (const t of myTitles()){ const b = el('button', 'tbtn' + (cur === t.name ? '' : ' ghost'), t.name); b.title = t.how; b.addEventListener('click', () => { Lv.title = t.name; Lv.cur = t.name; LS.set('tide.title', t.name); refreshMyName(); renderLvChip(); pushPresence(true); renderTab(); toast(`🏷️ 稱號「${t.name}」顯示在你的名字上面了`); }); tl.appendChild(b); }
+  for (const t of myTitles()){ const b = el('button', 'tbtn' + (cur === t.name ? '' : ' ghost'), t.name); b.title = t.how; b.addEventListener('click', () => { Lv.title = t.name; Lv.cur = t.name; LS.set('tide.title', t.name); refreshMyName(); renderLvChip(); pushPresence(true); renderTab(); toast(`稱號「${t.name}」顯示在你的名字上面了`); }); tl.appendChild(b); }
   body.appendChild(tl);
   const done = ACH.filter(achDone).length; body.appendChild(el('div', 'dexhead', `🏅 成就（${done} / ${ACH.length}）`));
   const ul = el('ul', 'shoplist cols ach');
@@ -11630,7 +11630,7 @@ function sevReleased(f){
 }
 function sevCaughtByMe(f, w){
   if (!f.sev || !Sev.ev) return; Sev.ev.caught = '你'; Sev.told['got' + Sev.ev.id] = 1; rec.sevGot = Object.assign({}, rec.sevGot, { [Sev.ev.id]: 1 }); saveRecLocal();
-  flash(`🎉 你釣到了今天唯一的${f.name}！`, 3); ticker(`🎉 <b>你</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`);
+  flash(`你釣到了今天唯一的${f.name}！`, 3); ticker(`🎉 <b>你</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`);
 }
 function curSrod(){ return SHRIMP_RODS.find(r => r.id === rec.srod && (r.price === 0 || (rec.srods || []).includes(r.id))) || SHRIMP_RODS[0]; }
 async function buyShrimpRod(id){
@@ -11638,7 +11638,7 @@ async function buyShrimpRod(id){
   if ((rec.srods || []).includes(id) || r.price === 0){ rec.srod = id; saveRecLocal(); if (Cloud.on) cloudCall('set_shrimp_rod', { p_id: id }); SFX.click(); updateBobberLook(); renderTab(); return; }
   if (rec.coins < r.price){ toast(`金幣不夠，還差 🪙${r.price - rec.coins}`); return; }
   rec.srods = (rec.srods || []).concat(id); rec.srod = id; addCoins(-r.price); saveRecLocal(); if (Cloud.on) cloudCall('buy_shrimp_rod', { p_id: id });
-  SFX.coin(); flash(`🎣 買了${r.name}！`, 1.5); updateBobberLook(); renderTab();
+  SFX.coin(); flash(`買了${r.name}`, 1.5); updateBobberLook(); renderTab();
 }   // [分鐘, 金幣]，跟伺服器 025_shrimp.sql 一樣
 function buildShrimpFront(){
   const g = new THREE.Group(), X = SHRIMP_DOOR.x, Z = SHRIMP_DOOR.z, y0 = groundHeight(X, Z); g.position.set(X, y0, Z); scene.add(g);
@@ -11775,7 +11775,7 @@ function buildCafe(){
 function enterCafe(){
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
   setTimeout(() => { me.pos.x = Venue.cafeExit.x; me.pos.z = Venue.cafeExit.z - 2.2; me.baseY = CAFE.y; Jump.gy = CAFE.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.6; Venue.cafeDist = cam.dist; cam.dist = Math.min(cam.dist, 6); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80);
-    flash('🏮 歡迎光臨潮汐食堂！', 1.4); }, 260);
+    flash('歡迎光臨潮汐食堂', 1.4); }, 260);
 }
 function exitCafe(){
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (mySeat) standUp(); if (CookGame.on) return;
@@ -11883,7 +11883,7 @@ function fbShoot(){ if (!inStad() || !fbCanPlay()) return; const b = SOC.b, S = 
   const fx = Math.sin(me.rot), fz = Math.cos(me.rot); fbTouch(fx * 13.5, fz * 13.5, 3.4); }
 /* ---- 比賽 ---- */
 function fbPlayers(){ const out = [{ k: poolKey(), u: myId || '', t: fbMyTeam() }]; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!inStad(p.target.x, p.target.z)) continue; const tn = fbStr(p.pres.tn, 12); out.push({ k, u: fbStr(p.pres.u, 40), t: tn ? { n: tn, c: fbStr(p.pres.tc, 9) } : null }); } return out; }
-function fbStart(){ const m = SOC.m; if (m.st === 'play'){ toast('⚽ 比賽進行中'); return; } const P = fbPlayers(); if (P.length < 2){ toast('⚽ 要兩個人以上才能比賽（先自己練習踢踢看）'); return; }
+function fbStart(){ const m = SOC.m; if (m.st === 'play'){ toast('比賽進行中'); return; } const P = fbPlayers(); if (P.length < 2){ toast('要兩個人以上才能比賽（先自己練習踢踢看）'); return; }
   const cnt = new Map(); for (const p of P) if (p.t) cnt.set(p.t.n, (cnt.get(p.t.n) || 0) + 1); const teams = [...cnt.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)); const sides = {};
   if (teams.length >= 2){ const A = teams[0][0], Bn = teams[1][0]; m.team = true; m.a = { n: A, c: (P.find(p => p.t && p.t.n === A).t.c) || '' }; m.b = { n: Bn, c: (P.find(p => p.t && p.t.n === Bn).t.c) || '' }; for (const p of P){ const s = p.t && p.t.n === A ? 0 : p.t && p.t.n === Bn ? 1 : null; if (s != null){ sides[p.k] = s; if (p.u) sides[p.u] = s; } } }
   else { m.team = false; m.a = { n: '紅隊', c: '#e0564f' }; m.b = { n: '藍隊', c: '#4f8fe0' }; P.sort((a, b) => a.k < b.k ? -1 : 1).forEach((p, i) => { sides[p.k] = i % 2; if (p.u) sides[p.u] = i % 2; }); }
@@ -11982,8 +11982,8 @@ function bkLive(){ const m = BK.m; return m.st === 'play' && m.ph === 'live'; }
 function bkOppDist(){ const m = BK.m, mi = bkMyIdx(); if (mi < 0) return 99; const o = bkPosOf(m.p[1 - mi]); return o ? Math.hypot(o.x - me.pos.x, o.z - me.pos.z) : 99; }
 function bkMeterStop(fake){ if (!BK.meter) return; BK.meter = null; bkMeterEl().hidden = true; bkPoseEnd(poolKey()); if (BK.m.st === 'play' && bkMyIdx() === BK.m.pos){ bkSend({ k: 'aim', on: 0 }); if (fake){ BK.cd = now() + 0.35; } } }
 function bkPress(){ if (!inStad() || !bkOnCourt() || !BK.balls.length) return; const tn = now(), m = BK.m, mi = bkMyIdx(); if (m.st === 'over') return;
-  if (m.st === 'play' && mi >= 0){ if (m.pos !== mi){ bkDefend(); return; } if (m.ph !== 'live'){ return; } if (!m.clear){ toast('🏀 先把球帶出三分線，才能開始進攻'); return; } }
-  else if (m.st === 'play'){ toast('🏀 有人正在比賽，等這場打完再練投'); return; }
+  if (m.st === 'play' && mi >= 0){ if (m.pos !== mi){ bkDefend(); return; } if (m.ph !== 'live'){ return; } if (!m.clear){ toast('先把球帶出三分線，才能開始進攻'); return; } }
+  else if (m.st === 'play'){ toast('有人正在比賽，等這場打完再練投'); return; }
   if (!BK.meter){ if (tn < BK.cd) return; const z = bkZone(); if (m.st === 'play'){ const od = bkOppDist(); z.tol *= od < 1.5 && !(m.jumpAt && tn - m.jumpAt > 0.6 && tn - m.jumpAt < 1.6) ? 0.6 : 1; } BK.meter = { t0: tn, z, x: me.pos.x, zz: me.pos.z }; const e = bkMeterEl(); e.hidden = false; $('.bk-z', e).style.cssText = `left:${(0.5 - z.tol) * 100}%;width:${z.tol * 200}%`; try { SFX.tick(); } catch(e2){} bkPose(poolKey(), 'throw', 6.5, 0.32);   /* 舉球：停在投籃動作往上舉的那一格 */ if (m.st === 'play') bkSend({ k: 'aim', on: 1 }); return; }
   const M = BK.meter, v = bkMeterVal(tn); let made = Math.abs(v - 0.5) <= M.z.tol, blk = false; BK.meter = null; bkMeterEl().hidden = true; BK.cd = tn + 1.15;
   const rx = me.pos.x - STAD.x, rz = me.pos.z - STAD.z; me.rot = Math.atan2(BK.HX - rx, BK.HZ - rz);
@@ -11993,9 +11993,9 @@ function bkPress(){ if (!inStad() || !bkOnCourt() || !BK.balls.length) return; c
   setTimeout(() => { if (!inStad()) return; if (made){ flash(BK.streak >= 2 ? `🏀 連進 ${BK.streak} 球！` : `🏀 進了！（${M.z.nm}）`, 1.0); try { SFX.coin(); } catch(e){} } else { try { tone(210, 0.09, 'triangle', 0.07); } catch(e){} } }, 850); }
 function bkDefend(){ const m = BK.m, tn = now(), mi = bkMyIdx(); if (m.st !== 'play' || mi < 0 || m.pos === mi || m.ph !== 'live') return; if (tn < (BK.dcd || 0)) return; const a = bkPosOf(m.p[m.pos]); if (!a) return; const d = Math.hypot(a.x - me.pos.x, a.z - me.pos.z);
   if (m.aim && d < 1.9){ BK.dcd = tn + 1.5; me.rot = Math.atan2(a.x - me.pos.x, a.z - me.pos.z); try { jump(); } catch(e){} bkSend({ k: 'jump' }); m.myJump = tn; return; }   /* 蓋火鍋：跳起來 */
-  if (d > 1.35){ toast('🏀 再靠近一點才抄得到球'); return; }
+  if (d > 1.35){ toast('再靠近一點才抄得到球'); return; }
   me.rot = Math.atan2(a.x - me.pos.x, a.z - me.pos.z); bkPose(poolKey(), 'interact', 0.55); const fx = Math.sin(a.rot || 0), fz = Math.cos(a.rot || 0), dot = (fx * (me.pos.x - a.x) + fz * (me.pos.z - a.z)) / Math.max(0.1, d), ch = m.aim ? 0 : dot > 0.2 ? 0.45 : dot > -0.3 ? 0.25 : 0.1, ok = Math.random() < ch;
-  if (ok){ BK.dcd = tn + 0.8; const ev = { k: 'e', n: m.n, t: 'steal' }; bkSend(ev); bkEvent(ev, poolKey()); } else { BK.dcd = tn + 2.0; bkSend({ k: 'try' }); flash('沒抄到！', 0.7); try { tone(180, 0.08, 'triangle', 0.06); } catch(e){} } }
+  if (ok){ BK.dcd = tn + 0.8; const ev = { k: 'e', n: m.n, t: 'steal' }; bkSend(ev); bkEvent(ev, poolKey()); } else { BK.dcd = tn + 2.0; bkSend({ k: 'try' }); flash('沒抄到', 0.7); try { tone(180, 0.08, 'triangle', 0.06); } catch(e){} } }
 /* 一次進攻的結果（投籃／被抄／超過時間）：每個人收到都照同樣的方式算 */
 function bkEvent(d, peer){ const m = BK.m; if (m.st !== 'play' || Math.floor(+d.n) !== m.n) return; const att = m.pos, def = 1 - att, mi = bkMyIdx(), tn = now();
   if (d.t === 'shot'){ if (peer !== m.p[att]) return; const ok = !!d.ok && !d.blk, pt = d.pt === 3 ? 3 : 2, px = Array.isArray(d.p) ? clamp(+d.p[0] || 0, BK.X0 - 1, BK.X1 + 1) : BK.HX + 3, pz = Array.isArray(d.p) ? clamp(+d.p[1] || 0, BK.Z0 - 1, BK.Z1 + 1) : 0;
@@ -12016,7 +12016,7 @@ function bkAfterShot(){ const m = BK.m, L = m.last, mi = bkMyIdx(), tn = now(); 
 /* ---- 邀請、開始、同步 ---- */
 function bkNearPeer(){ let best = null, bd = 1e9; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!bkOnCourt(p.target.x, p.target.z)) continue; const d = Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z); if (d < bd){ bd = d; best = { k, u: fbStr(p.pres.u, 40), n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
 function bkMyName(){ try { return poolName(); } catch(e){ return '玩家'; } }
-function bkInvite(){ const m = BK.m, tn = now(); if (m.st === 'play'){ toast('🏀 有人正在比賽，等這場打完'); return; } const P = bkNearPeer(); if (!P){ toast('🏀 球場上要有另一個人才能 1 對 1（自己可以先練投）'); return; } if (tn - BK.invAt < 6){ toast('剛邀請過，等對方回應'); return; } BK.invAt = tn; bkSend({ k: 'inv', to: P.k, tu: P.u, n: bkMyName() }); toast(`🏀 已經邀請 ${esc(P.n)}，等對方回應`); }
+function bkInvite(){ const m = BK.m, tn = now(); if (m.st === 'play'){ toast('有人正在比賽，等這場打完'); return; } const P = bkNearPeer(); if (!P){ toast('球場上要有另一個人才能 1 對 1（自己可以先練投）'); return; } if (tn - BK.invAt < 6){ toast('剛邀請過，等對方回應'); return; } BK.invAt = tn; bkSend({ k: 'inv', to: P.k, tu: P.u, n: bkMyName() }); toast(`已經邀請 ${esc(P.n)}，等對方回應`); }
 function bkStart(peer, nm){ const m = BK.m; m.st = 'play'; m.q++; m.from = poolKey(); m.p = [poolKey(), peer]; m.nm = [bkMyName(), nm]; m.sc = [0, 0]; m.n = 1; m.pos = Math.random() < 0.5 ? 0 : 1; m.ph = 'check'; m.phEnd = now() + 2.5; m.over = false; m.aim = false; m.jumpAt = 0; m.clear = false; m.last = null; m.rx = now(); m.t0 = now(); m.mid = 'bk' + Date.now().toString(36) + poolKey().slice(0, 12); bkMatchSend(); bkChanged('start'); }
 function bkMatchSend(){ const m = BK.m; m.tx = now(); bkSend({ k: 'st', q: m.q, st: m.st, p: m.p, nm: m.nm, sc: m.sc, n: m.n, pos: m.pos, mid: m.mid || '' }); }
 function bkChanged(why){ const m = BK.m, mi = bkMyIdx(); bkBarDraw(); if (!inStad()) return;
@@ -12031,18 +12031,18 @@ function bkOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !
   if (d.k === 'e'){ bkEvent(d, peer); return; }
   if (d.k === 'aim'){ if (m.st === 'play' && peer === m.p[m.pos]){ m.aim = !!d.on; if (m.aim){ m.aimAt = now(); bkPose(peer, 'throw', 6.5, 0.32); } else bkPoseEnd(peer); bkBarDraw(); } return; }
   if (d.k === 'jump'){ if (m.st === 'play' && peer === m.p[1 - m.pos]) m.jumpAt = now(); return; }
-  if (d.k === 'try'){ if (m.st === 'play' && peer === m.p[1 - m.pos]){ bkPose(peer, 'interact', 0.55); if (bkMyIdx() === m.pos) flash('對手抄球沒抄到！', 0.7); } return; }
+  if (d.k === 'try'){ if (m.st === 'play' && peer === m.p[1 - m.pos]){ bkPose(peer, 'interact', 0.55); if (bkMyIdx() === m.pos) flash('對手抄球沒抄到', 0.7); } return; }
   if (d.k === 'inv'){ const mine = d.to === me2 || (myId && d.tu && d.tu === myId); if (!mine || !inStad() || !bkOnCourt() || m.st === 'play' || Duel.card) return; const nm = fbStr(d.n, 12) || '玩家'; const c = duelCardOpen('bkinv'); c.appendChild(el('h3', '', '🏀 1 對 1 邀請')); c.appendChild(el('p', '', `${nm} 想跟你打 1 對 1：輪流進攻，先拿到 11 分的人贏。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); let n = 20; const tm = el('p', 'sub', ''); c.append(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('bkinv'); }; upd(); c._iv = setInterval(upd, 1000);
     ok.addEventListener('click', () => { duelCardClose('bkinv'); bkSend({ k: 'ok', to: peer, n: bkMyName() }); }); no.addEventListener('click', () => { duelCardClose('bkinv'); bkSend({ k: 'no', to: peer, n: bkMyName() }); }); try { SFX.chat(); } catch(e){} return; }
   if (d.k === 'ok'){ if (d.to !== me2 || m.st === 'play' || now() - BK.invAt > 30) return; bkStart(peer, fbStr(d.n, 12) || '玩家'); return; }
-  if (d.k === 'no'){ if (d.to === me2) toast(`🏀 ${esc(fbStr(d.n, 12) || '對方')} 現在不想比`); return; }
+  if (d.k === 'no'){ if (d.to === me2) toast(`${esc(fbStr(d.n, 12) || '對方')} 現在不想比`); return; }
   if (d.k === 'q'){ if (m.st !== 'idle' && m.from === me2) setTimeout(bkMatchSend, 150 + Math.random() * 200); return; }
   if (d.k === 'st'){ const q = Math.floor(+d.q), n = Math.floor(+d.n) || 1; if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st) || !Array.isArray(d.p) || !Array.isArray(d.nm) || !Array.isArray(d.sc)) return; if (peer !== fbStr(d.p[0], 40)) return; if (q < m.q) return;
     const was = m.st, wq = m.q, fresh = q !== wq || was === 'idle'; m.q = q; m.from = peer; m.rx = now(); if (d.mid) m.mid = fbStr(d.mid, 40); m.p = [fbStr(d.p[0], 40), fbStr(d.p[1], 40)]; m.nm = [0, 1].map(i => { let s = fbStr(d.nm[i], 12) || '玩家'; try { s = clean(s); } catch(e){} return s; });
     if (fresh || n > m.n){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.n = n; m.pos = d.pos === 1 ? 1 : 0; m.aim = false; m.jumpAt = 0; m.clear = false; m.last = null; m.over = false; if (d.st === 'play'){ m.ph = 'check'; m.phEnd = now() + (fresh ? 2.5 : 1.0); } }
     if (d.st === 'play' && was !== 'play'){ m.st = 'play'; bkChanged(fresh ? 'start' : ''); } else if (d.st === 'over' && was === 'play' && !m.last){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.st = 'over'; m.overAt = now(); bkChanged('over'); } else if (d.st === 'idle' && was !== 'idle'){ m.st = 'idle'; bkChanged(''); } else if (d.st === 'play') m.st = 'play';
     bkBarDraw(); return; } }
-function bkPeerLeft(peer){ const m = BK.m; if (m.st === 'play' && (m.p[0] === peer || m.p[1] === peer)){ m.st = 'idle'; m.q++; bkChanged(''); if (bkMyIdx() >= 0 && inStad()) toast('🏀 對手離開了，比賽取消'); } }
+function bkPeerLeft(peer){ const m = BK.m; if (m.st === 'play' && (m.p[0] === peer || m.p[1] === peer)){ m.st = 'idle'; m.q++; bkChanged(''); if (bkMyIdx() >= 0 && inStad()) toast('對手離開了，比賽取消'); } }
 function bkBallCarry(dt, tn){ const m = BK.m, S = STAD, cb = BK.carry; if (!cb) return; const show = m.st === 'play' && (m.ph === 'live' || m.ph === 'check'); for (const k of m.p){ const f = bkFisher(k); if (f) f.bkArm = show && k === m.p[m.pos] && !(k === poolKey() && BK.meter) && !m.aim; }
   if (!show){ cb.visible = false; return; } const k = m.p[m.pos], f = bkFisher(k), pos = bkPosOf(k); if (!f || !pos){ cb.visible = false; return; } cb.visible = true;
   const aiming = (k === poolKey() && !!BK.meter) || m.aim, v = f.aspd || 0, hx = pos.x + Math.sin(pos.rot) * 0.32 + Math.cos(pos.rot) * 0.2, hz = pos.z + Math.cos(pos.rot) * 0.32 - Math.sin(pos.rot) * 0.2, baseY = (f === me ? me.baseY : (f.pos ? f.pos.y : S.y)) || S.y;
@@ -12052,12 +12052,12 @@ function bkTick(dt, t){ const im = inStad(); if (!im){ if (BK.asked){ BK.asked =
   if (!BK.asked){ BK.asked = true; bkSend({ k: 'q' }); }
   if (!BK.carry && BK.balls.length){ const bl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), mat('#e8762c', 0.7)); bl.castShadow = true; bl.visible = false; scene.add(bl); bl.userData.keep = true; BK.carry = bl; }
   bkBallsTick(dt); if (BK.net && BK.net.scale.y > 1) BK.net.scale.y = Math.max(1, BK.net.scale.y - dt * 0.8); bkBallCarry(dt, tn);
-  if (BK.meter){ if (!bkOnCourt() || tn - BK.meter.t0 > 6) bkMeterStop(false); else if (m.st === 'play' && tn - BK.meter.t0 > 0.25 && Math.hypot(me.pos.x - BK.meter.x, me.pos.z - BK.meter.zz) > 0.35){ bkMeterStop(true); flash('假動作！', 0.5); } else { const mk = $('.bk-m', bkMeterEl()); mk.style.left = (bkMeterVal(tn) * 100) + '%'; } }
+  if (BK.meter){ if (!bkOnCourt() || tn - BK.meter.t0 > 6) bkMeterStop(false); else if (m.st === 'play' && tn - BK.meter.t0 > 0.25 && Math.hypot(me.pos.x - BK.meter.x, me.pos.z - BK.meter.zz) > 0.35){ bkMeterStop(true); flash('假動作', 0.5); } else { const mk = $('.bk-m', bkMeterEl()); mk.style.left = (bkMeterVal(tn) * 100) + '%'; } }
   if (m.st === 'play'){
     if (m.ph === 'shot' && tn >= m.phEnd) bkAfterShot();
-    else if (m.ph === 'check' && tn >= m.phEnd){ m.ph = 'live'; m.clk = tn + 14; m.clear = false; bkBarDraw(); if (mi === m.pos) flash('🏀 你的球！先帶出三分線', 1.1); else if (mi >= 0) flash('🛡 防守！', 0.9); }
+    else if (m.ph === 'check' && tn >= m.phEnd){ m.ph = 'live'; m.clk = tn + 14; m.clear = false; bkBarDraw(); if (mi === m.pos) flash('你的球。先帶出三分線', 1.1); else if (mi >= 0) flash('防守', 0.9); }
     else if (m.ph === 'live' && mi === m.pos){ if (!m.clear && Math.hypot(me.pos.x - STAD.x - BK.HX, me.pos.z - STAD.z - BK.HZ) > BK.ARC + 0.1){ m.clear = true; m.clk = tn + 14; bkBarDraw(); try { SFX.tick(); } catch(e){} } if (tn > m.clk && !BK.meter){ const ev = { k: 'e', n: m.n, t: 'clock' }; bkSend(ev); bkEvent(ev, me2); } }
-    if (m.from === me2){ if (tn - m.tx > 2) bkMatchSend(); if (tn - (m.t0 || tn) > 420){ m.over = true; if (m.ph !== 'shot'){ m.st = 'over'; m.overAt = tn; m.q++; bkMatchSend(); bkChanged('over'); } } } else if (tn - m.rx > 12){ m.st = 'idle'; bkChanged(''); toast('🏀 連不上對手，比賽取消'); } }
+    if (m.from === me2){ if (tn - m.tx > 2) bkMatchSend(); if (tn - (m.t0 || tn) > 420){ m.over = true; if (m.ph !== 'shot'){ m.st = 'over'; m.overAt = tn; m.q++; bkMatchSend(); bkChanged('over'); } } } else if (tn - m.rx > 12){ m.st = 'idle'; bkChanged(''); toast('連不上對手，比賽取消'); } }
   else if (m.st === 'over' && tn - (m.overAt || 0) > 7){ m.st = 'idle'; if (m.from === me2){ m.q++; bkMatchSend(); } bkChanged(''); }
   if (frameNo % 12 === 0) bkBarDraw(); }
 function bkNear(){ const S = STAD, m = BK.m; if (Math.hypot(S.x + BK.TABLE.x - me.pos.x, S.z + BK.TABLE.z - me.pos.z) < 1.9 && !(m.st === 'play' && bkMyIdx() >= 0)){ if (m.st === 'play') return { id: 'bktable', label: '比賽中', mode: 'bkinv', sub: `🏀 ${m.nm[0]} ${m.sc[0]} : ${m.sc[1]} ${m.nm[1]}` }; const P = bkNearPeer(); return { id: 'bktable', label: '1 對 1', mode: 'bkinv', sub: P ? `🏀 找 ${P.n} 打 1 對 1` : '🏀 球場上要有另一個人' }; }
@@ -12103,22 +12103,22 @@ function bdAim(mi, q){ const sgn = mi === 0 ? 1 : -1, sp = Math.hypot(BD.mvx, BD
   if (sp > 0.8){ if (Math.abs(side) > 0.6) tz = Math.sign(side) * (BD.HW - 0.55 - Math.random() * 0.5); if (toNet > 0.6) depth = 1.5 + Math.random() * 0.5; else if (toNet < -0.6) depth = 4.3 + Math.random() * 0.5; }
   return [BD.CX + sgn * depth, tz]; }
 function bdSwing(){ const m = BD.m, mi = bdMyIdx(), tn = now(); if (m.st !== 'play' || mi < 0 || !inStad()) return; if (tn < BD.cd) return; const rx = me.pos.x - STAD.x, rz = me.pos.z - STAD.z;
-  if (bdSideOf(rx) !== mi){ toast('🏸 要站在自己那一邊才能打'); return; }
+  if (bdSideOf(rx) !== mi){ toast('要站在自己那一邊才能打'); return; }
   bkPose(poolKey(), 'throw', 0.5); bdSend({ k: 'sw' });
   if (m.ph === 'serve'){ if (m.srv !== mi || tn < m.phEnd) return; BD.cd = tn + 0.5; const b = bdAim(mi, 0.3), d = { k: 'h', n: m.hn + 1, pn: m.pn, a: [Math.round(rx * 100) / 100, Math.round(rz * 100) / 100, 1.1], b: [Math.round(b[0] * 100) / 100, Math.round(b[1] * 100) / 100], T: 1.45 }; bdSend(d); bdFly(d, mi); return; }
   const F = BD.f; if (m.ph !== 'rally' || !F || F.done || F.by === mi){ BD.cd = tn + 0.3; return; }
   const P = bdPosAt(F, tn), dist = Math.hypot(F.x1 - rx, F.z1 - rz);   /* 看的是「離圈圈多遠」＋「球是不是快到了」（飛過一半以後），手機上比較好按 */ if (P.u < 0.5 || dist > 1.75){ BD.cd = tn + 0.55; flash(P.u < 0.5 ? '太早了！' : '太遠了，揮空！', 0.5); return; }
   BD.cd = tn + 0.35; const q = clamp(1 - dist / 1.75, 0, 1) * (0.6 + 0.4 * clamp(1 - Math.abs(P.u - 0.82) / 0.3, 0, 1)), sm = q > 0.8, b = bdAim(mi, q), d = { k: 'h', n: F.n + 1, pn: m.pn, a: [Math.round(P.x * 100) / 100, Math.round(P.z * 100) / 100, Math.round(Math.max(0.5, P.y) * 100) / 100], b: [Math.round(b[0] * 100) / 100, Math.round(b[1] * 100) / 100], T: sm ? 0.78 : Math.round((1.4 - 0.4 * q) * 100) / 100, sm: sm ? 1 : 0 };
-  me.rot = Math.atan2(b[0] - rx, b[1] - rz); bdSend(d); bdFly(d, mi); if (sm) flash('💥 殺球！', 0.6); }
+  me.rot = Math.atan2(b[0] - rx, b[1] - rz); bdSend(d); bdFly(d, mi); if (sm) flash('殺球', 0.6); }
 function bdPoint(win, n){ const m = BD.m; if (m.st !== 'play' || n !== m.pn) return; m.pn++; m.sc[win]++; m.srv = win; m.ph = 'serve'; m.phEnd = now() + 1.6; m.last = win; if (BD.f) BD.f.done = true; const mi = bdMyIdx();
   if (inStad() && (mi >= 0 || bdOnCourt())){ flash(mi === win ? '🏸 得分！' : mi >= 0 ? '沒接到…' : `🏸 ${m.nm[win]} 得分`, 0.9); try { if (mi === win) SFX.coin(); else tone(200, 0.09, 'triangle', 0.06); } catch(e){} }
   if (m.sc[0] >= 7 || m.sc[1] >= 7){ m.st = 'over'; m.overAt = now(); if (m.from === poolKey()){ m.q++; bdMatchSend(); } bdChanged('over'); } else if (m.from === poolKey()) bdMatchSend(); bdBarDraw(); }
 function bdNearPeer(){ let best = null, bd = 1e9; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; if (!bdOnCourt(p.target.x, p.target.z)) continue; const d = Math.hypot(p.target.x - me.pos.x, p.target.z - me.pos.z); if (d < bd){ bd = d; best = { k, u: fbStr(p.pres.u, 40), n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
-function bdInvite(){ const m = BD.m, tn = now(); if (m.st === 'play'){ toast('🏸 有人正在比賽，等這場打完'); return; } const P = bdNearPeer(); if (!P){ toast('🏸 球場上要有另一個人才能 1 對 1'); return; } if (tn - BD.invAt < 6){ toast('剛邀請過，等對方回應'); return; } BD.invAt = tn; bdSend({ k: 'inv', to: P.k, tu: P.u, n: bkMyName() }); toast(`🏸 已經邀請 ${esc(P.n)}，等對方回應`); }
+function bdInvite(){ const m = BD.m, tn = now(); if (m.st === 'play'){ toast('有人正在比賽，等這場打完'); return; } const P = bdNearPeer(); if (!P){ toast('球場上要有另一個人才能 1 對 1'); return; } if (tn - BD.invAt < 6){ toast('剛邀請過，等對方回應'); return; } BD.invAt = tn; bdSend({ k: 'inv', to: P.k, tu: P.u, n: bkMyName() }); toast(`已經邀請 ${esc(P.n)}，等對方回應`); }
 function bdStart(peer, nm){ const m = BD.m, mine = bdSideOf(me.pos.x - STAD.x); m.st = 'play'; m.q++; m.from = poolKey(); m.p = mine === 0 ? [poolKey(), peer] : [peer, poolKey()]; m.nm = mine === 0 ? [bkMyName(), nm] : [nm, bkMyName()]; m.sc = [0, 0]; m.pn = 1; m.hn = 0; m.srv = Math.random() < 0.5 ? 0 : 1; m.ph = 'serve'; m.phEnd = now() + 2.5; m.last = -1; m.rx = now(); m.t0 = now(); m.mid = 'bd' + Date.now().toString(36) + poolKey().slice(0, 12); BD.f = null; bdMatchSend(); bdChanged('start'); }
 function bdMatchSend(){ const m = BD.m; m.tx = now(); bdSend({ k: 'st', q: m.q, st: m.st, p: m.p, nm: m.nm, sc: m.sc, pn: m.pn, srv: m.srv, mid: m.mid || '' }); }
 function bdChanged(why){ const m = BD.m, mi = bdMyIdx(); bdBarDraw(); for (const k of m.p) if (k) bdRacket(k, m.st === 'play'); if (!inStad()) return;
-  if (why === 'start'){ if (mi >= 0) flash(`🏸 1 對 1 開始！你在${mi === 0 ? '西' : '東'}邊半場，${m.srv === mi ? '你先發球' : '對手先發球'}`, 2.4); try { SFX.tick(); } catch(e){} }
+  if (why === 'start'){ if (mi >= 0) flash(`1 對 1 開始。你在${mi === 0 ? '西' : '東'}邊半場，${m.srv === mi ? '你先發球' : '對手先發球'}`, 2.4); try { SFX.tick(); } catch(e){} }
   else if (why === 'over'){ const w = m.sc[0] > m.sc[1] ? 0 : 1; if (mi >= 0 && m.mid && m.rep !== m.mid){ m.rep = m.mid; sportReport('badminton', m.mid, mi === w ? 'w' : 'l', false); } if (mi >= 0 || bdOnCourt()){ flash(mi === w ? `🎉 你贏了！（${m.sc[0]} : ${m.sc[1]}）` : mi >= 0 ? `這場輸了（${m.sc[0]} : ${m.sc[1]}），再來一場！` : `🏸 ${m.nm[w]} 贏了（${m.sc[0]} : ${m.sc[1]}）`, 3); try { if (mi === w){ SFX.coin(); bkPose(poolKey(), 'cheer', 2); } } catch(e){} } } }
 function bdBarEl(){ if (!BD.bar){ const b = el('div', 'panel'); b.id = 'bdBar'; b.className = 'panel sbar'; b.hidden = true; document.body.appendChild(b); BD.bar = b; } return BD.bar; }
 function bdBarDraw(){ const b = bdBarEl(), m = BD.m, mi = bdMyIdx(), show = inStad() && m.st !== 'idle' && (mi >= 0 || bdOnCourt()); if (!show){ if (!b.hidden) b.hidden = true; return; } b.hidden = false;
@@ -12132,14 +12132,14 @@ function bdOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data !
   if (d.k === 'inv'){ const mine = d.to === me2 || (myId && d.tu && d.tu === myId); if (!mine || !inStad() || !bdOnCourt() || m.st === 'play' || Duel.card) return; const nm = fbStr(d.n, 12) || '玩家'; const c = duelCardOpen('bdinv'); c.appendChild(el('h3', '', '🏸 1 對 1 邀請')); c.appendChild(el('p', '', `${nm} 想跟你打羽球：先拿到 7 分的人贏。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); let n = 20; const tm = el('p', 'sub', ''); c.append(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('bdinv'); }; upd(); c._iv = setInterval(upd, 1000);
     ok.addEventListener('click', () => { duelCardClose('bdinv'); bdSend({ k: 'ok', to: peer, n: bkMyName(), sd: bdSideOf(me.pos.x - STAD.x) }); }); no.addEventListener('click', () => { duelCardClose('bdinv'); bdSend({ k: 'no', to: peer, n: bkMyName() }); }); try { SFX.chat(); } catch(e){} return; }
   if (d.k === 'ok'){ if (d.to !== me2 || m.st === 'play' || now() - BD.invAt > 30) return; if (d.sd === bdSideOf(me.pos.x - STAD.x)){ me.pos.x = STAD.x + BD.CX + (d.sd === 0 ? 3 : -3); me.pos.z = STAD.z; try { pushPresence(true); } catch(e){} } bdStart(peer, fbStr(d.n, 12) || '玩家'); return; }
-  if (d.k === 'no'){ if (d.to === me2) toast(`🏸 ${esc(fbStr(d.n, 12) || '對方')} 現在不想打`); return; }
+  if (d.k === 'no'){ if (d.to === me2) toast(`${esc(fbStr(d.n, 12) || '對方')} 現在不想打`); return; }
   if (d.k === 'q'){ if (m.st !== 'idle' && m.from === me2) setTimeout(bdMatchSend, 150 + Math.random() * 200); return; }
   if (d.k === 'st'){ const q = Math.floor(+d.q), pn = Math.floor(+d.pn) || 1; if (!isFinite(q) || !['idle', 'play', 'over'].includes(d.st) || !Array.isArray(d.p) || !Array.isArray(d.nm) || !Array.isArray(d.sc)) return; if (q < m.q) return; const p2 = [fbStr(d.p[0], 40), fbStr(d.p[1], 40)]; if (peer !== p2[0] && peer !== p2[1]) return; if (m.from && q === m.q && peer !== m.from) return;
     const was = m.st, wq = m.q, fresh = q !== wq || was === 'idle'; m.q = q; m.from = peer; m.rx = now(); m.p = p2; m.nm = [0, 1].map(i => { let s = fbStr(d.nm[i], 12) || '玩家'; try { s = clean(s); } catch(e){} return s; }); if (d.mid) m.mid = fbStr(d.mid, 40);
     if (fresh || pn > m.pn){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.pn = pn; m.srv = d.srv === 1 ? 1 : 0; if (fresh){ m.hn = 0; BD.f = null; } m.ph = 'serve'; m.phEnd = now() + (fresh ? 2.5 : 1.2); if (BD.f) BD.f.done = true; }
     if (d.st === 'play' && was !== 'play'){ m.st = 'play'; bdChanged(fresh ? 'start' : ''); } else if (d.st === 'over' && was === 'play'){ m.sc = [0, 1].map(i => clamp(Math.floor(+d.sc[i] || 0), 0, 99)); m.st = 'over'; m.overAt = now(); bdChanged('over'); } else if (d.st === 'idle' && was !== 'idle'){ m.st = 'idle'; bdChanged(''); } else if (d.st === 'play') m.st = 'play';
     bdBarDraw(); return; } }
-function bdPeerLeft(peer){ const m = BD.m; if (m.st === 'play' && (m.p[0] === peer || m.p[1] === peer)){ m.st = 'idle'; m.q++; bdChanged(''); if (bdMyIdx() >= 0 && inStad()) toast('🏸 對手離開了，比賽取消'); } }
+function bdPeerLeft(peer){ const m = BD.m; if (m.st === 'play' && (m.p[0] === peer || m.p[1] === peer)){ m.st = 'idle'; m.q++; bdChanged(''); if (bdMyIdx() >= 0 && inStad()) toast('對手離開了，比賽取消'); } }
 function bdTick(dt, t){ const im = inStad(); if (!im){ if (BD.asked){ BD.asked = false; bdBarDraw(); } return; } bdBuild(); const m = BD.m, tn = now(), me2 = poolKey(), mi = bdMyIdx(), S = STAD;
   if (!BD.asked){ BD.asked = true; bdSend({ k: 'q' }); }
   { const vx = (me.pos.x - BD.px) / Math.max(dt, 1e-3), vz = (me.pos.z - BD.pz) / Math.max(dt, 1e-3); BD.px = me.pos.x; BD.pz = me.pos.z; if (Math.abs(vx) < 20 && Math.abs(vz) < 20){ BD.mvx += (vx - BD.mvx) * 0.3; BD.mvz += (vz - BD.mvz) * 0.3; } }
@@ -12147,14 +12147,14 @@ function bdTick(dt, t){ const im = inStad(); if (!im){ if (BD.asked){ BD.asked =
   if (m.st === 'play' && F && !F.done){ const P = bdPosAt(F, tn); sh.visible = true; sh.position.set(S.x + P.x, S.y + P.y, S.z + P.z); sh.rotation.z = Math.atan2(F.x1 - F.x0, 1) * 0.2; rg.visible = true; rg.position.set(S.x + F.x1, S.y + 0.09, S.z + F.z1); const k = 1 + (1 - P.u) * 1.3; rg.scale.set(k, k, 1); rg.material.color.set(mi >= 0 && F.by !== mi ? '#ffe066' : '#ffffff'); rg.material.opacity = mi >= 0 && F.by !== mi ? 0.95 : 0.4;
     if (P.u >= 1){ const loser = 1 - F.by; if (mi === loser){ F.done = true; bdSend({ k: 'pt', w: F.by, pn: m.pn }); bdPoint(F.by, m.pn); } else if (tn - F.t0 > F.T + 1.5 && mi === F.by){ F.done = true; bdSend({ k: 'pt', w: F.by, pn: m.pn }); bdPoint(F.by, m.pn); } else if (tn - F.t0 > F.T + 4){ F.done = true; } } }
   else { rg.visible = false; if (m.st === 'play' && m.ph === 'serve'){ const pos = bkPosOf(m.p[m.srv]); if (pos){ sh.visible = true; sh.position.set(pos.x + Math.sin(pos.rot) * 0.35, S.y + 1.0, pos.z + Math.cos(pos.rot) * 0.35); } else sh.visible = false; } else sh.visible = false; }
-  if (m.st === 'play'){ if (m.from === me2){ if (tn - m.tx > 2) bdMatchSend(); if (tn - (m.t0 || tn) > 480){ m.st = 'over'; m.overAt = tn; m.q++; bdMatchSend(); bdChanged('over'); } } else if (tn - m.rx > 12){ m.st = 'idle'; bdChanged(''); toast('🏸 連不上對手，比賽取消'); } }
+  if (m.st === 'play'){ if (m.from === me2){ if (tn - m.tx > 2) bdMatchSend(); if (tn - (m.t0 || tn) > 480){ m.st = 'over'; m.overAt = tn; m.q++; bdMatchSend(); bdChanged('over'); } } else if (tn - m.rx > 12){ m.st = 'idle'; bdChanged(''); toast('連不上對手，比賽取消'); } }
   else if (m.st === 'over' && tn - (m.overAt || 0) > 7){ m.st = 'idle'; if (m.from === me2){ m.q++; bdMatchSend(); } bdChanged(''); }
   if (frameNo % 12 === 0) bdBarDraw(); }
 function bdNear(){ const S = STAD, m = BD.m, mi = bdMyIdx(); if (Math.hypot(S.x + BD.TABLE.x - me.pos.x, S.z + BD.TABLE.z - me.pos.z) < 1.9 && !(m.st === 'play' && mi >= 0)){ if (m.st === 'play') return { id: 'bdtable', label: '比賽中', mode: 'bdinv', sub: `🏸 ${m.nm[0]} ${m.sc[0]} : ${m.sc[1]} ${m.nm[1]}` }; const P = bdNearPeer(); return { id: 'bdtable', label: '1 對 1', mode: 'bdinv', sub: P ? `🏸 找 ${P.n} 打羽球` : '🏸 球場上要有另一個人' }; }
   if (m.st === 'play' && mi >= 0 && bdOnCourt()){ if (m.ph === 'serve') return m.srv === mi ? { id: 'bdswing', label: '發球', mode: 'bdswing', sub: '🏸 往哪邊跑就打哪邊' } : { id: 'bdswing', label: '準備', mode: 'bdswing', sub: '🏸 對手要發球了' }; return { id: 'bdswing', label: '揮拍', mode: 'bdswing', sub: BD.f && BD.f.by !== mi ? '🏸 跑到圈圈，球快到再按' : '🏸 回到中間等球' }; }
   return null; }
 function enterStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
-  setTimeout(() => { me.pos.x = Venue.stExit.x; me.pos.z = Venue.stExit.z - 2.6; me.baseY = STAD.y; Jump.gy = STAD.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🏟️ 歡迎來到潮汐體育場！', 1.4); }, 260); }
+  setTimeout(() => { me.pos.x = Venue.stExit.x; me.pos.z = Venue.stExit.z - 2.6; me.baseY = STAD.y; Jump.gy = STAD.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('歡迎來到潮汐體育場', 1.4); }, 260); }
 function exitStadium(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door();
   setTimeout(() => { const f = STAD_DOOR.face || 0; me.pos.x = STAD_DOOR.x + Math.sin(f) * 0.6; me.pos.z = STAD_DOOR.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260); }
 /* ================= v497 🎱 潮汐撞球館（作者 11/16：「撞球場或許也可以做一個像潮汐食堂一樣，然後玩法可以參考」八號球） =================
@@ -12234,8 +12234,8 @@ function poolResolve(T){ const S = T.sim, pot = S.pot, cueIn = pot.includes(0), 
   T.dl = now() + PB.TURN; poolEmit(T); poolSay(T); }
 function poolLeftBefore(T, g, pot){ let n = poolLeft(T, g); for (const i of pot) if (poolGrp(i) === g) n++; return n; }   /* 這一桿之前這一組還剩幾顆 */
 function poolSay(T){ if (!inPoolHall()) return; const mi = poolMyIdx(T), e = T.ev; if (mi < 0 && !(Pool.on && Pool.ti === T.i)) return; poolRankReport(T, mi, e); const mine = T.mode === 'solo' || (T.ph === 'over' ? T.win === mi : T.turn === mi);
-  if (e === 'clear'){ flash(`🎱 清台！用了 ${T.shots} 桿`, 2.2); SFX.coin(); }
-  else if (e === 'win8' || e === 'lose8' || e === 'afk' || e === 'left'){ if (mi < 0) flash(`🎱 ${T.nm[T.win] || '玩家'} 贏了`, 2); else if (T.win === mi){ flash(e === 'left' ? '🎱 對手離開了，你贏了' : e === 'afk' ? '🎱 對手沒有出桿，你贏了' : '🎱 你贏了！', 2.2); SFX.coin(); } else flash(e === 'lose8' && T.win !== mi ? '😵 黑八進錯了，這局輸了' : '這局輸了，再來一局！', 2.2); }
+  if (e === 'clear'){ flash(`清台。用了 ${T.shots} 桿`, 2.2); SFX.coin(); }
+  else if (e === 'win8' || e === 'lose8' || e === 'afk' || e === 'left'){ if (mi < 0) flash(`${T.nm[T.win] || '玩家'} 贏了`, 2); else if (T.win === mi){ flash(e === 'left' ? '🎱 對手離開了，你贏了' : e === 'afk' ? '🎱 對手沒有出桿，你贏了' : '🎱 你贏了！', 2.2); SFX.coin(); } else flash(e === 'lose8' && T.win !== mi ? '😵 黑八進錯了，這局輸了' : '這局輸了，再來一局！', 2.2); }
   else if (e === 'back8') flash('黑球要留到最後，先擺回桌上', 1.8);
   else if (e === 'scratch') flash(T.mode === 'solo' ? '母球進袋了，重新擺' : mine ? '對手把母球打進袋：自由球！' : '母球進袋，犯規！', 1.6);
   else if (e === 'foul') flash(mine ? '對手犯規：自由球！' : '犯規！換對手打', 1.6);
@@ -12247,8 +12247,8 @@ function poolTimeout(T){ const who = T.turn; T.miss[who] = (T.miss[who] || 0) + 
 function poolSit(i){ const T = Pool.tables[i]; if (!T || Pool.on) return; const k = poolKey();
   if (T.mode === 'vs' && poolMyIdx(T) < 0){ poolEnter(i, true); return; }
   if (poolMyIdx(T) >= 0){ poolEnter(i, false); return; }
-  if (T.mode === 'idle' || (T.mode !== 'vs' && !T.p[0])){ poolRack(T); T.p = [k, null]; T.nm = [poolName(), '']; T.mode = 'solo'; T.turn = 0; T.g0 = 0; T.ph = 'hand'; T.brk = true; T.win = -1; T.shots = 0; T.miss = [0, 0]; T.ev = ''; T.sim = null; T.seq = Math.max(T.seq, Math.floor(Date.now() / 1000)); poolEmit(T); poolEnter(i, false); flash('🎱 練習：把球都打進去', 1.6); return; }
-  if (T.mode === 'solo' && T.p[0] && T.p[0] !== k){ if (T.sim){ toast('等這一桿打完再加入'); return; } poolRack(T); T.p = [T.p[0], k]; T.nm = [T.nm[0], poolName()]; T.mode = 'vs'; T.turn = 0; T.g0 = 0; T.ph = 'hand'; T.brk = true; T.win = -1; T.shots = 0; T.miss = [0, 0]; T.ev = 'start'; T.dl = now() + PB.TURN; T.seq = Math.max(T.seq, Math.floor(Date.now() / 1000) + 20);   /* v528 作者：「第一次都會直接說對方贏了」→ 我這邊記的這張桌子的進度如果比對方舊，對方會不理我的「加入」，接著他的舊狀態（上一局他贏了）蓋回來。加入時把進度號碼直接拉到最新 */ poolEmit(T); poolEnter(i, false); flash(`🎱 跟 ${T.nm[0]} 對打，對方開球`, 1.8); } }
+  if (T.mode === 'idle' || (T.mode !== 'vs' && !T.p[0])){ poolRack(T); T.p = [k, null]; T.nm = [poolName(), '']; T.mode = 'solo'; T.turn = 0; T.g0 = 0; T.ph = 'hand'; T.brk = true; T.win = -1; T.shots = 0; T.miss = [0, 0]; T.ev = ''; T.sim = null; T.seq = Math.max(T.seq, Math.floor(Date.now() / 1000)); poolEmit(T); poolEnter(i, false); flash('練習：把球都打進去', 1.6); return; }
+  if (T.mode === 'solo' && T.p[0] && T.p[0] !== k){ if (T.sim){ toast('等這一桿打完再加入'); return; } poolRack(T); T.p = [T.p[0], k]; T.nm = [T.nm[0], poolName()]; T.mode = 'vs'; T.turn = 0; T.g0 = 0; T.ph = 'hand'; T.brk = true; T.win = -1; T.shots = 0; T.miss = [0, 0]; T.ev = 'start'; T.dl = now() + PB.TURN; T.seq = Math.max(T.seq, Math.floor(Date.now() / 1000) + 20);   /* v528 作者：「第一次都會直接說對方贏了」→ 我這邊記的這張桌子的進度如果比對方舊，對方會不理我的「加入」，接著他的舊狀態（上一局他贏了）蓋回來。加入時把進度號碼直接拉到最新 */ poolEmit(T); poolEnter(i, false); flash(`跟 ${T.nm[0]} 對打，對方開球`, 1.8); } }
 /* v528 作者：「別人進來都不會跟我站同一個位置，都在對面」→ 上桌打球的人固定站在球桌靠大廳中間那一側，兩個人並排（以前是在哪裡按按鈕就站在哪裡） */
 function poolStand(T){ const mi = poolMyIdx(T); if (mi < 0) return; const side = T.ox < POOLH.x ? 1 : -1; me.pos.x = T.ox + side * (PB.HW + 0.85); me.pos.z = T.oz + (mi === 0 ? -0.55 : 0.55); me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.atan2(T.ox - me.pos.x, 0); try { pushPresence(true); } catch(e){} }
 function poolEnter(i, spec){ const T = Pool.tables[i]; if (!spec) poolStand(T); Pool.on = true; Pool.spec = !!spec; Pool.ti = i; Pool.pw = 0; Pool.drag = null; Pool.aim = { x: 1, y: 0 }; uiBlocked = true; for (const k in keys) keys[k] = false; joy.x = joy.z = 0; document.body.classList.add('pooling'); poolMeVis(false); poolHudBuild(); poolHud(); poolRefresh(T); if (Venue.poolTop) Venue.poolTop.visible = false; try { SFX.click(); } catch(e){} }
@@ -12276,7 +12276,7 @@ const ZHE = 'npc:zhe';
 function poolNpc(k){ return typeof k === 'string' && k.slice(0, 4) === 'npc:'; }
 function poolZheBusy(){ return Pool.tables.some(T => T.mode === 'vs' && T.p[1] === ZHE); }
 function poolVsZhe(){ const T = Pool.tables[Pool.ti]; if (!T || Pool.spec || T.mode !== 'solo' || poolMyIdx(T) !== 0) return; if (T.sim){ toast('等這一桿打完'); return; } if (poolZheBusy()){ toast('阿喆正在另一桌打，等他一下'); return; }
-  poolRack(T); T.p = [poolKey(), ZHE]; T.nm = [poolName(), '阿喆']; T.mode = 'vs'; T.turn = 0; T.g0 = 0; T.ph = 'hand'; T.brk = true; T.win = -1; T.shots = 0; T.miss = [0, 0]; T.ev = 'start'; T.dl = now() + PB.TURN; T.ai = null; T.sim = null; T.seq = Math.max(T.seq, Math.floor(Date.now() / 1000)); poolEmit(T); flash('🎱 跟阿喆對打，你先開球', 1.8); }
+  poolRack(T); T.p = [poolKey(), ZHE]; T.nm = [poolName(), '阿喆']; T.mode = 'vs'; T.turn = 0; T.g0 = 0; T.ph = 'hand'; T.brk = true; T.win = -1; T.shots = 0; T.miss = [0, 0]; T.ev = 'start'; T.dl = now() + PB.TURN; T.ai = null; T.sim = null; T.seq = Math.max(T.seq, Math.floor(Date.now() / 1000)); poolEmit(T); flash('跟阿喆對打，你先開球', 1.8); }
 function poolZheGo(){ if (Pool.on) return; if (poolZheBusy()){ toast('阿喆正在跟別人打，可以先去旁邊觀戰'); return; } const T = Pool.tables.find(T => T.mode === 'idle'); if (!T){ toast('兩張球桌都有人在用，等一下再找阿喆'); return; } poolSit(T.i); if (Pool.on && Pool.ti === T.i) poolVsZhe(); }
 const ZHE_POCK = [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sy]) => ({ x: sx * (PB.HL - 0.035), y: sy * (PB.HW - 0.035), side: false })).concat([{ x: 0, y: PB.HW + 0.005, side: true }, { x: 0, y: -(PB.HW + 0.005), side: true }]);
 function zheClear(T, x0, y0, x1, y1, skip, rad){ const dx = x1 - x0, dy = y1 - y0, L2 = dx * dx + dy * dy || 1e-9; for (let i = 1; i < 16; i++){ const b = T.b[i]; if (!b.on || i === skip) continue; const u = clamp(((b.x - x0) * dx + (b.y - y0) * dy) / L2, 0, 1), px = x0 + dx * u - b.x, py = y0 + dy * u - b.y; if (px * px + py * py < rad * rad) return false; } return true; }
@@ -12351,7 +12351,7 @@ function poolOnMsg(msg){ if (!msg || msg.sameTab || !msg.data || typeof msg.data
   if (d.k === 'q'){ const own = T => T.mode !== 'idle' && !T.sim && (T.p[0] === poolKey() || (poolMyIdx(T) >= 0 && T.from === poolKey())); for (const T of Pool.tables) if (own(T)) setTimeout(() => { if (own(T)) poolSend(poolSer(T)); }, 150 + Math.random() * 300); return; }   /* v528 最後宣布狀態的人也會回答（以前只有 1 號位的人回答，輪到 2 號位打的時候沒有人回） */
   const T = Pool.tables[d.t === 1 ? 1 : 0]; if (!T || (d.t !== 0 && d.t !== 1)) return;
   if (d.k === 'inv'){ const mine = d.to === poolKey() || (myId && d.tu && d.tu === myId); if (!mine || !inPoolHall() || Pool.on || T.mode !== 'solo' || T.p[0] !== peer) return; if (Duel.card) return; poolInviteAsk(T, d); return; }
-  if (d.k === 'invno'){ if (d.to === poolKey()) toast(`🎱 ${esc(poolStr(d.n, 12) || '對方')} 現在不想打`); return; }
+  if (d.k === 'invno'){ if (d.to === poolKey()) toast(`${esc(poolStr(d.n, 12) || '對方')} 現在不想打`); return; }
   if (d.k === 'st'){ const q = Math.floor(+d.q); if (!isFinite(q) || q < 0) return; if (!Array.isArray(d.p) || d.p.length !== 2) return;
     const p = d.p.map(x => x == null ? null : poolStr(x, 40) || null); if (p[0] !== peer && p[1] !== peer && T.p[0] !== peer && T.p[1] !== peer) return;   /* 只有球桌上的人（或剛離開的人）可以改這張桌子 */
     if (!(T.mode === 'idle' || q > T.seq || (q === T.seq && peer < T.from))) return;
@@ -12692,7 +12692,7 @@ function poolHud(){ const h = Pool.hud, T = Pool.tables[Pool.ti]; if (!h || !Poo
   $('.pl-tip', h).textContent = my && Pool.camCue ? (T.ph === 'hand' ? '按住母球拖著擺位置 → 手指左右滑轉方向（點一下球直接對準）→ 左邊力道條往下拉再放開；左上可以換「看全桌」' : '手指左右滑轉方向（點一下球直接對準），右邊微調條慢慢對準 → 左邊力道條往下拉再放開') : my ? (T.ph === 'hand' ? '拖母球擺位置 → 在桌面上滑動瞄準（右邊微調條可以慢慢對準）→ 左邊力道條往下拉再放開' : '在桌面上滑動瞄準（點一下直接對準），右邊微調條上下滑可以慢慢對準 → 左邊力道條往下拉再放開就出桿') : ''; }
 /* v527 作者：「應該要兩個人都在桌子旁邊然後可以按邀請一起打」→ 你在練習、旁邊（球桌 4 公尺內）站著別的玩家時，右下角出現「邀請 某某 對打」；對方按接受就開始對打 */
 function poolNearPeer(T){ let best = null, bd = 4; for (const [k, p] of peers){ if (!p || !p.target || !p.pres) continue; const d = Math.max(Math.abs(p.target.x - T.ox) - PB.HW, 0) + Math.max(Math.abs(p.target.z - T.oz) - PB.HL, 0); if (d < bd && !Pool.tables.some(X => X.p[0] === k || X.p[1] === k)){ bd = d; best = { k, u: p.pres.u || '', n: String(peerName(p) || '玩家').slice(0, 12) }; } } return best; }
-function poolInvite(){ const T = Pool.tables[Pool.ti]; if (!T || T.mode !== 'solo' || poolMyIdx(T) !== 0) return; const P = poolNearPeer(T); if (!P){ toast('旁邊沒有人可以邀請（要站在球桌附近）'); return; } const tn = now(); if (Pool.invAt && tn - Pool.invAt < 6){ toast('剛邀請過，等對方回應'); return; } Pool.invAt = tn; poolSend({ k: 'inv', t: T.i, to: P.k, tu: P.u, n: poolName() }); toast(`🎱 已經邀請 ${esc(P.n)}，等對方回應`); }
+function poolInvite(){ const T = Pool.tables[Pool.ti]; if (!T || T.mode !== 'solo' || poolMyIdx(T) !== 0) return; const P = poolNearPeer(T); if (!P){ toast('旁邊沒有人可以邀請（要站在球桌附近）'); return; } const tn = now(); if (Pool.invAt && tn - Pool.invAt < 6){ toast('剛邀請過，等對方回應'); return; } Pool.invAt = tn; poolSend({ k: 'inv', t: T.i, to: P.k, tu: P.u, n: poolName() }); toast(`已經邀請 ${esc(P.n)}，等對方回應`); }
 function poolInviteAsk(T, d, auto){ const nm = poolStr(d.n, 12) || '玩家'; const c = duelCardOpen('pinv'); c.appendChild(el('h3', '', '🎱 撞球邀請')); c.appendChild(el('p', '', auto ? `${nm} 在你旁邊開始打撞球了，要一起打一局 8 號球嗎？` : `${nm} 邀請你一起打一局 8 號球。`)); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); c.appendChild(row); let n = 20; const tm = el('p', 'sub', ''); c.insertBefore(tm, row); const upd = () => { tm.textContent = `${n} 秒內回應`; if (n-- <= 0) duelCardClose('pinv'); }; upd(); c._iv = setInterval(upd, 1000);
   ok.addEventListener('click', () => { duelCardClose('pinv'); if (!inPoolHall() || Pool.on){ return; } if (T.mode === 'solo' && T.p[0] && T.p[0] !== poolKey()) poolSit(T.i); else toast('對方已經不在那張球桌了'); });
   no.addEventListener('click', () => { duelCardClose('pinv'); if (auto) return; poolSend({ k: 'invno', t: T.i, to: poolStr(d.f, 40), n: poolName() }); }); try { SFX.chat(); } catch(e){} }
@@ -12757,8 +12757,8 @@ function duelNameOf(d, uid){ return uid === d.a ? d.a_name : uid === d.a2 ? d.a2
 function duelOthers(d){ return [d.a, d.a2, d.b, d.b2].filter(u => u && u !== Cloud.userId); }
 function duelMateOf(d){ return d.me === 'a' ? (d.a === Cloud.userId ? d.a2 : d.a) : (d.b === Cloud.userId ? d.b2 : d.b); }
 function lobbyPeople(){ const L = [], seen = new Set(); for (const p of peers.values()){ const u = p.pres && typeof p.pres.u === 'string' ? p.pres.u : null; if (!u || p.guest || seen.has(u) || u === Cloud.userId || (blockList && blockList[u])) continue; seen.add(u); L.push({ uid: u, name: peerName(p) }); } return L; }
-function duelTeamPick(pre){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
-  const P = lobbyPeople(); if (P.length < 3){ toast('👥 小組對決要 4 個人：這個大廳裡至少還要有 3 個玩家。人不夠可以用「小組找對手」'); return; }
+function duelTeamPick(pre){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('你已經有一場對決了'); return; }
+  const P = lobbyPeople(); if (P.length < 3){ toast('小組對決要 4 個人：這個大廳裡至少還要有 3 個玩家。人不夠可以用「小組找對手」'); return; }
   const role = {}; if (pre) role[pre] = 'op'; let mode = null;
   const c = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); c.appendChild(X);
   c.appendChild(el('h3', '', '👥 小組對決（2 對 2）')); c.appendChild(el('p', 'sub', '選 1 個隊友、2 個對手。三個人都按接受就開始，3 分鐘比兩隊加起來的魚。友誼賽，不算星星。'));
@@ -12771,16 +12771,16 @@ function duelTeamPick(pre){ if (!duelOn()){ toast('要連上雲端才能對決')
   draw(); c.appendChild(go); c.appendChild(st);
   go.addEventListener('click', async () => { const mate = Object.keys(role).find(k => role[k] === 'mate'), ops = Object.keys(role).filter(k => role[k] === 'op'); if (!mate || ops.length !== 2) return; go.disabled = true;
     const r = await duelRpc('duel_team_invite', { p_mate: mate, p_op1: ops[0], p_op2: ops[1], p_mode: mode }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); go.disabled = false; return; } if (r.err){ toast('⚔️ ' + esc(r.err)); go.disabled = false; return; }
-    duelCardClose('ask'); duelAdopt(r); for (const u of [mate, ...ops]) duelSay('inv', u); toast('👥 已經邀請了，等三個人都接受…'); }); }
+    duelCardClose('ask'); duelAdopt(r); for (const u of [mate, ...ops]) duelSay('inv', u); toast('已經邀請了，等三個人都接受…'); }); }
 function duelTeamAsk(d){ const c = duelCardOpen('ask'); const mate = duelMateOf(d), ops = d.me === 'a' ? [d.b_name, d.b2_name] : [d.a_name, d.a2_name];
   c.appendChild(el('h3', '', '👥 小組對決（2 對 2）'));
   c.appendChild(el('p', '', `${d.a_name || '釣客'} 邀你打小組對決${d.mode ? '「' + duelModeName(d.mode) + '」' : ''}：你和 ${duelNameOf(d, mate) || '釣客'} 一隊，對 ${ops.map(n => n || '釣客').join('、')}。3 分鐘，比兩隊加起來的${d.mode === 'big' ? '最大一條' : d.mode === 'count' ? '條數' : '魚的重量'}。（友誼賽，不算星星）`));
   const tm = el('p', 'sub', ''); c.appendChild(tm); const row = el('div', 'dc-btns'), ok = el('button', 'tbtn', '接受'), no = el('button', 'tbtn ghost', '不要'); row.append(ok, no); c.appendChild(row);
   const left = () => Math.max(0, Math.ceil(((+d.created || Date.now()) + 39000 - duelSrvNow()) / 1000)); const upd = () => { const s2 = left(); tm.textContent = `${s2} 秒內回應`; if (s2 <= 0) duelCardClose('ask'); }; upd(); c._iv = setInterval(upd, 500);
   const ans = async yes => { ok.disabled = no.disabled = true; const r = await duelRpc('duel_team_answer', { p_id: d.id, p_ok: yes }); duelCardClose('ask'); if (r && r.err){ toast('⚔️ ' + esc(r.err)); Duel.d = null; duelBar(); return; } if (r === undefined || r === null){ toast('暫時連不上雲端'); return; }
-    duelAdopt(r); for (const u of duelOthers(d)) duelSay('ans', u); if (yes && r.status === 'invited') toast('👥 已接受，等其他人…'); };
+    duelAdopt(r); for (const u of duelOthers(d)) duelSay('ans', u); if (yes && r.status === 'invited') toast('已接受，等其他人…'); };
   ok.addEventListener('click', () => ans(true)); no.addEventListener('click', () => ans(false)); try { SFX.chat(); } catch(e){} }
-function duelTeamQueueAsk(){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; } if (Duel.q) return;
+function duelTeamQueueAsk(){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('你已經有一場對決了'); return; } if (Duel.q) return;
   const c = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); c.appendChild(X);
   c.appendChild(el('h3', '', '👥 小組找對手（2 對 2）')); c.appendChild(el('p', 'sub', '湊滿 4 個人就開始，不用在同一個大廳。友誼賽，不算星星。'));
   const b0 = el('button', 'tbtn dq-pick'); b0.appendChild(el('b', '', '🙋 自己排')); b0.appendChild(el('small', '', '配一個隊友給你')); b0.addEventListener('click', () => { duelCardClose('ask'); duelTeamQueueStart(null); }); c.appendChild(b0);
@@ -12807,12 +12807,12 @@ function duelSpotName(id){ const sp = id && SPOT_BY_ID[id]; return sp ? sp.label
 function duelDaySpot(){ return (Duel.stats && Duel.stats.spot) || Duel.daySpot || null; }   /* 只有今天是指定釣點賽才有值 */
 function duelSeasonTxt(se){ const m = /^\d{4}-(\d{2})$/.exec(se || ''); return m ? `${+m[1]} 月賽季` : '本季'; }
 /* 按「找對手」先選哪一種 */
-function duelQueueAsk(){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; } if (Duel.q) return; const md = duelDayMode(), sp = duelDaySpot(); if (!md || (md === 'spot' && !sp)){ duelQueueStart(null); return; }
+function duelQueueAsk(){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('你已經有一場對決了'); return; } if (Duel.q) return; const md = duelDayMode(), sp = duelDaySpot(); if (!md || (md === 'spot' && !sp)){ duelQueueStart(null); return; }
   const card = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); card.appendChild(X); card.appendChild(el('h3', '', '⚔️ 排位賽・要比哪一種？'));
   const mk = (title, sub, mode) => { const b = el('button', 'tbtn dq-pick'); b.appendChild(el('b', '', title)); b.appendChild(el('small', '', sub)); b.addEventListener('click', () => { duelCardClose('ask'); duelQueueStart(mode); }); card.appendChild(b); };
   mk('⚔️ 一般排位賽', duelModeSub(null), null); mk(`今日特別賽・${duelModeName(md, sp)}`, duelModeSub(md, sp), md);
   card.appendChild(el('p', 'sub', '兩種都算星星和段位。特別賽每天換一種：指定釣點賽、大魚賽、多魚賽輪流。')); }
-async function duelQueueStart(mode){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; } if (Duel.q) return;
+async function duelQueueStart(mode){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('你已經有一場對決了'); return; } if (Duel.q) return;
   if (mode && !DUEL_MODES[mode]) mode = SPOT_BY_ID[mode] ? 'spot' : null;
   Duel.q = { t0: performance.now(), at: 0, busy: false, n: 0, mode: mode || null, spot: mode === 'spot' ? duelDaySpot() : null }; duelQBar(); await duelQueuePing(); }
 async function duelQueuePing(){ const Q = Duel.q; if (!Q || Q.busy) return; Q.busy = true; Q.at = performance.now(); const r = Q.team ? await duelRpc('duel_team_queue', { p_mate: Q.mate || null }) : await duelRpc('duel_queue_join3', { p_mode: Q.mode || null }); Q.busy = false; if (Duel.q !== Q) return;
@@ -12857,7 +12857,7 @@ function cardTap(li, uid, name, peerId){ if (!uid || !Cloud.on) return; for (con
    🎿 滑雪：冰封群島南邊多一座真的雪山「雪松山」（地形是真的，走得上去），山腳有小木屋、教練、滑雪板架；纜車把人載到山頂；從山頂的出發門滑到小木屋前面的終點。 */
 const RKIND = { ski: { ic: '🎿', nm: '滑雪賽', pen: 3 } };
 const RACE = { cur: null, inv: null, bar: null, last: null, best: (() => { try { const b = LS.get('tide.raceBest', {}); return b && typeof b === 'object' ? b : {}; } catch(e){ return {}; } })(), top: {} };
-setTimeout(() => { try { if (!LS.get('tide.raceTold', 0)){ LS.set('tide.raceTold', 1); toast('🎿 冰封群島南邊的雪松山開了滑雪場（看「說明」）'); } } catch(e){} }, 15000);
+setTimeout(() => { try { if (!LS.get('tide.raceTold', 0)){ LS.set('tide.raceTold', 1); toast('冰封群島南邊的雪松山開了滑雪場（看「說明」）'); } } catch(e){} }, 15000);
 function raceSend(d){ try { if (RACE.tap) RACE.tap(d); if (room) room.emit('race', d).catch(() => {}); } catch(e){} }
 function raceFmt(ms){ ms = Math.max(0, Math.round(ms)); const s = ms / 1000; return s >= 60 ? `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}` : s.toFixed(2) + ' 秒'; }
 function raceGates(kind){ return SKI.gates; }
@@ -12877,7 +12877,7 @@ function raceCall(kind){ if (RACE.cur) return; const iv = RACE.inv; let id, t0, 
 function raceQuit(say){ const c = RACE.cur; if (!c) return; RACE.cur = null; raceBarDraw(); skiStop(); if (say) toast(`${RKIND[c.kind].ic} 這一趟放棄了`); }
 function raceTick(dt){ const c = RACE.cur; if (RACE.inv && RACE.inv.t0 < Date.now()) RACE.inv = null; if (!c) return; const K = RKIND[c.kind], G = raceGates(c.kind);
   if (c.st === 'wait'){ const left = (c.t0 - Date.now()) / 1000; if (left <= 3 && Math.ceil(left) < c.beep && left > 0){ c.beep = Math.ceil(left); flash(String(c.beep), 0.7); try { SFX.tick(); } catch(e){} }
-    if (left <= 0){ c.st = 'run'; c.ts = now(); c.px = me.pos.x; c.pz = me.pos.z; flash('出發！', 0.8); try { SFX.jump(); } catch(e){} } }
+    if (left <= 0){ c.st = 'run'; c.ts = now(); c.px = me.pos.x; c.pz = me.pos.z; flash('出發', 0.8); try { SFX.jump(); } catch(e){} } }
   else if (c.st === 'run'){ const x = me.pos.x, z = me.pos.z;
     for (let j = c.gi; j < G.length; j++){   /* 漏掉的門直接算漏（加罰秒），不用回頭 */ const g = G[j]; if (raceSeg(c.px, c.pz, x, z, g.ax, g.az, g.bx, g.bz)){ c.miss += j - c.gi; c.gi = j + 1; try { SFX.tick(); } catch(e){} break; } }
     c.px = x; c.pz = z;
@@ -13010,7 +13010,7 @@ function skiDrive(dt, ix, iz, L){ if (F.phase !== 'idle') cancelFishing(); const
     if (flat && c && c.st === 'run' && SKI.v < 2.5 && lz > MTN.base + MTN.len - 0.5) acc = 3;   /* 出發門前面是平的：自動滑出去 */
     SKI.v = clamp(SKI.v + acc * dt, 0, 15); }
   let nx = x + fx * SKI.v * dt, nz = z + fz * SKI.v * dt; if (!mtnOn(nx, nz, 0)){ if (mtnOn(x, nz, 0)){ nx = x; SKI.v *= 0.9; } else if (mtnOn(nx, z, 0)){ nz = z; SKI.v *= 0.9; } else { SKI.v *= 0.3; nx = x; nz = z; } }   /* 滑到山的邊緣：沿著邊滑，不會卡死 */
-  if (SKI.fall <= 0 && SKI.v > 2.5) for (const t of SKI.trees){ if (Math.abs(t.x - nx) < 1.4 && Math.hypot(t.x - nx, t.z - nz) < t.r + 0.35){ SKI.fall = 1.5; SKI.v *= 0.2; nx = x - fx * 0.3; nz = z - fz * 0.3; flash('💥 撞到雪松了！', 1.1); try { SFX.fail(); buzz([60, 40, 120]); } catch(e){} break; } }
+  if (SKI.fall <= 0 && SKI.v > 2.5) for (const t of SKI.trees){ if (Math.abs(t.x - nx) < 1.4 && Math.hypot(t.x - nx, t.z - nz) < t.r + 0.35){ SKI.fall = 1.5; SKI.v *= 0.2; nx = x - fx * 0.3; nz = z - fz * 0.3; flash('撞到雪松了', 1.1); try { SFX.fail(); buzz([60, 40, 120]); } catch(e){} break; } }
   me.pos.x = nx; me.pos.z = nz; const gh = groundHeight(nx, nz);
   if (SKI.air > 0 || gh < SKI.y - 0.12){ if (SKI.air <= 0){ SKI.air = 0.001; SKI.vy = Math.min(2.6, SKI.v * 0.22); } SKI.vy -= 14 * dt; SKI.y += SKI.vy * dt; SKI.air += dt; if (SKI.y <= gh){ SKI.y = gh; if (SKI.air > 0.25){ try { SFX.plop(); noise(0.35, 0.09, 900, 300, 0.7, 'lowpass'); buzz(30); } catch(e){} FX.emit(nx, gh + 0.2, nz, 22, '#ffffff', 1.8, 2.6, 0.7); camShake = Math.max(camShake, Math.min(0.22, 0.06 + SKI.air * 0.12)); } SKI.air = 0; SKI.vy = 0; } } else SKI.y = gh;
   me.baseY = SKI.y; Jump.gy = SKI.y; me.speed = SKI.v;
@@ -13088,10 +13088,10 @@ function skiFx(dt, nx, nz, gh, fx, fz, steer, brake){ const v = SKI.v, k = Math.
   if (SKI.air <= 0 && v > 1.5 && SKI.sn1 <= 0){ SKI.sn1 = 0.15; try { noise(0.22, 0.012 + 0.03 * k + Math.abs(steer) * 0.045 * k + (brake ? 0.07 : 0), 1700 + v * 140, 1300 + v * 90, 0.8, 'bandpass'); } catch(e){} }
   if (v > 5 && SKI.sn2 <= 0){ SKI.sn2 = 0.42; try { noise(0.7, 0.05 * k * k, 380 + v * 22, 520 + v * 26, 0.6, 'lowpass'); } catch(e){} } }
 /* 纜車：等下一張吊椅到站 → 坐上去 → 到山頂下來 */
-function skiLiftGo(){ if (SKI.lift || SKI.on) return; if (F.phase !== 'idle') cancelFishing(); if (Bike.on) bikeOff(); let bi = 0, bu = -1; for (let i = 0; i < SKI.nChair; i++){ const u = skiLiftU(i); if (u > bu){ bu = u; bi = i; } } SKI.lift = { i: bi, st: 'wait', t: now() }; toast('🚡 跟小木屋借了滑雪板，下一張吊椅來了就坐上去'); }
+function skiLiftGo(){ if (SKI.lift || SKI.on) return; if (F.phase !== 'idle') cancelFishing(); if (Bike.on) bikeOff(); let bi = 0, bu = -1; for (let i = 0; i < SKI.nChair; i++){ const u = skiLiftU(i); if (u > bu){ bu = u; bi = i; } } SKI.lift = { i: bi, st: 'wait', t: now() }; toast('跟小木屋借了滑雪板，下一張吊椅來了就坐上去'); }
 function skiLiftTick(dt){ if (F.phase !== 'idle') cancelFishing(); const Lf = SKI.lift, u = skiLiftU(Lf.i); me.speed = 0;
   if (Lf.st === 'wait'){ const [x, z] = mtnW(SKI.LIFT0.lx + 0.9, SKI.LIFT0.lz); me.pos.x += (x - me.pos.x) * Math.min(1, dt * 6); me.pos.z += (z - me.pos.z) * Math.min(1, dt * 6); me.rot = lerpAngle(me.rot, SKI.liftAng, Math.min(1, dt * 8)); me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; if (u < 0.3 || now() - Lf.t > 4){ Lf.st = 'ride'; me.sitting = true; skiGear(me, true, false); pushPresence(true); } return; }
-  if (u >= 0.495 || now() - Lf.t > 40){ const [x, z] = mtnW(SKI.LIFT1.lx - 2.2, SKI.LIFT1.lz - 1.5); me.pos.x = x; me.pos.z = z; me.sitting = false; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; SKI.lift = null; skiGear(me, false); pushPresence(true); toast('🎿 到山頂了！走到「出發」的門按「出發」'); return; }
+  if (u >= 0.495 || now() - Lf.t > 40){ const [x, z] = mtnW(SKI.LIFT1.lx - 2.2, SKI.LIFT1.lz - 1.5); me.pos.x = x; me.pos.z = z; me.sitting = false; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; SKI.lift = null; skiGear(me, false); pushPresence(true); toast('到山頂了。走到「出發」的門按「出發」'); return; }
   /* v554 作者 11/18 截圖：「不能自由轉動畫面，而且屁股沒坐在椅子上」
      1) 坐姿的屁股在角色位置後面約 0.45，所以人要放在椅子中心往前 0.45，屁股才會落在椅面上（以前整個人在椅背後面）
      2) 鏡頭只在剛坐上去的 1.5 秒幫你轉到背後，之後可以自己拖畫面看風景 */
@@ -13181,7 +13181,7 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   else { for (const [lab, tab] of [['👕 造型', 'closet'], ['📖 圖鑑', 'dex']]){ const b = el('button', 'tbtn ghost', lab); b.addEventListener('click', () => { duelCardClose('pcard'); openSheet(tab); }); row.appendChild(b); } }
   left.appendChild(row); if (r.since){ const d = new Date(+r.since); P2.appendChild(el('p', 'sub pc-since', `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} 來到潮汐釣魚村`)); } }
 function duelLive(){ const d = Duel.d; return !!d && (d.status === 'invited' || d.status === 'active'); }
-function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('⚔️ 你已經有一場對決了'); return; }
+function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對決'); return; } if (duelLive()){ toast('你已經有一場對決了'); return; }
   const card = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); card.appendChild(X); card.appendChild(el('h3', '', `🤝 邀 ${name || '對方'} 打友誼賽・比哪一種？`));
   const sp = (Duel.dspot || duelDaySpot());
   for (const m of [null, 'big', 'count'].concat(sp ? ['spot'] : [])){ const b = el('button', 'tbtn dq-pick'); b.appendChild(el('b', '', m ? duelModeName(m, sp) : '⚔️ 比總重量')); b.appendChild(el('small', '', duelModeSub(m, sp))); b.addEventListener('click', () => { duelCardClose('ask'); duelInviteGo(uid, name, m); }); card.appendChild(b); }
@@ -13189,11 +13189,11 @@ function duelInvite(uid, name){ if (!duelOn()){ toast('要連上雲端才能對�
   card.appendChild(el('p', 'sub', '友誼賽不算星星和戰績。')); }
 async function duelInviteGo(uid, name, mode){ if (!duelOn() || duelLive()) return;
   const r = await duelRpc('duel_invite2', { p_to: uid, p_mode: mode || null }); if (r === undefined || r === null){ toast('暫時連不上雲端，等一下再試'); return; } if (r.err){ toast('⚔️ ' + esc(r.err)); return; }
-  duelAdopt(r); duelSay('inv', uid); toast(`⚔️ 已經邀請 ${esc(name || '對方')} 釣魚對決，等對方回應…`); }
+  duelAdopt(r); duelSay('inv', uid); toast(`已經邀請 ${esc(name || '對方')} 釣魚對決，等對方回應…`); }
 function duelFishingNow(){ try { return ['bite', 'reeling', 'landing', 'land', 'result'].includes(F.phase) || !$('#catchCard').hidden; } catch(e){ return false; } }
 function duelAdopt(d){ const prev = Duel.d; if (d && (d.status === 'declined' || d.status === 'cancelled')) d = null; Duel.d = d || null;
   if (d){ if (isFinite(+d.now)) Duel.off = +d.now - Date.now(); if (d.stats){ Duel.stats = Object.assign({}, Duel.stats || {}, d.stats); if (d.status === 'done' && Duel.statsFor !== d.id){ Duel.statsFor = d.id; Duel.statsAt = 0; }   /* v551 打完重新拿一次（本季勝敗、今天的指定釣點都在那裡） */ try { refreshMyName(); } catch(e){} } }
-  if (!d){ if (prev && prev.status === 'invited'){ if (prev.team) toast('👥 有人沒有接受，這場小組對決取消了'); else if (prev.me === 'a') toast('⚔️ 對方沒有接受對決'); duelCardClose('ask'); } duelBar(); return; }
+  if (!d){ if (prev && prev.status === 'invited'){ if (prev.team) toast('有人沒有接受，這場小組對決取消了'); else if (prev.me === 'a') toast('對方沒有接受對決'); duelCardClose('ask'); } duelBar(); return; }
   if (d.status === 'invited'){ if (d.team){ if (!(d.acc || []).includes(Cloud.userId) && Duel.asked !== d.id){ Duel.asked = d.id; duelTeamAsk(d); } } else if (d.me === 'b' && Duel.asked !== d.id){ Duel.asked = d.id; duelAsk(d); } }
   else if (d.status === 'active'){ duelCardClose('ask'); if (Duel.startTold !== d.id){ Duel.startTold = d.id; if (d.stats) Duel.prevStars = d.stats.stars; if (duelSrvNow() < d.start + 2000){ flash(d.team ? '👥 小組對決！準備…' : '⚔️ 釣魚對決！準備…', 1.6); try { SFX.coin(); } catch(e){} } } }
   else if (d.status === 'done'){ duelCardClose('ask'); if (Duel.shown !== d.id){ if (duelFishingNow() && (!Duel.pend || Duel.pend.id !== d.id || performance.now() - Duel.pendAt < 60000)){ if (!Duel.pend || Duel.pend.id !== d.id) Duel.pendAt = performance.now(); Duel.pend = d; } else { Duel.pend = null; Duel.shown = d.id; duelResult(d); } } }   /* v524 手上還有魚、或正在看釣到的魚：結果等一下再跳 */
@@ -13220,7 +13220,7 @@ function duelBar(){ const d = Duel.d, show = !!d && d.status === 'active'; let b
 function duelBarTick(){ const b = Duel.bar, d = Duel.d; if (!b || b.hidden || !d || d.status !== 'active') return; const n = duelSrvNow(); let tx, low = false;
   if (n < d.start) tx = d.spot ? `📍 指定釣點賽・快到「${duelSpotName(d.spot)}」… ${Math.max(1, Math.ceil((d.start - n) / 1000))}` : `${d.mode ? duelModeName(d.mode) + '・' : ''}${d.ranked ? '排位賽' : '友誼賽'}・準備… ${Math.max(1, Math.ceil((d.start - n) / 1000))}`;
   else { const s = Math.max(0, Math.ceil((d.end - n) / 1000)); low = s <= 15; tx = s > 0 && d.team ? (() => { const me2 = duelSide(d, true), mt = duelMateOf(d), mw = +(me2.mem[Cloud.userId] || 0), tw = +(me2.mem[mt] || 0); return `👥 對 ${duelSide(d, false).name}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}・你 ${mw.toFixed(1)}＋隊友 ${tw.toFixed(1)}`; })() : s > 0 ? `${d.spot ? '📍' + duelSpotName(d.spot) + '・' : d.mode === 'big' ? '🐋 比最大一條・' : d.mode === 'count' ? '🔢 比條數・' : ''}對 ${duelSide(d, false).name}${(d.me === 'a' ? d.b_tier : d.a_tier) ? '（' + (d.me === 'a' ? d.b_tier : d.a_tier) + '）' : ''}・${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '時間到！手上這條 12 秒內拉上來還算';
-    if (Duel.goTold !== d.id){ Duel.goTold = d.id; if (n - d.start < 3000){ flash('⚔️ 開始！', 1.2); try { SFX.catch(); } catch(e){} } } }
+    if (Duel.goTold !== d.id){ Duel.goTold = d.id; if (n - d.start < 3000){ flash('開始', 1.2); try { SFX.catch(); } catch(e){} } } }
   if (tx !== Duel.subKey){ Duel.subKey = tx; $('.db-sub', b).textContent = tx; b.classList.toggle('low', low); } }
 function duelCardClose(kind){ const c = Duel.card; if (!c || (kind && c.dataset.kind !== kind)) return; if (c.dataset.kind === 'pcard') AvStudio.onSet = null; clearInterval(c._iv); c.remove(); Duel.card = null; }
 function duelCardOpen(kind){ duelCardClose(); const c = el('div', 'panel'); c.id = 'duelCard'; c.dataset.kind = kind; document.body.appendChild(c); Duel.card = c; return c; }
@@ -13244,11 +13244,11 @@ function duelResult(d){ const me = duelSide(d, true), op = duelSide(d, false), w
   Duel.prevStars = s.stars;
   if (d.team){ const row = el('div', 'dc-btns'), x2 = el('button', 'tbtn ghost', '關閉'), again = el('button', 'tbtn', '同一組再來一局'), q2 = el('button', 'tbtn ghost', '小組找對手'); const ok4 = duelOthers(d).every(u => lobbyPeople().some(p => p.uid === u)) && d.a === Cloud.userId;
     if (ok4) row.appendChild(again); row.append(q2, x2); c.appendChild(row); x2.addEventListener('click', () => duelCardClose('res')); q2.addEventListener('click', () => { duelCardClose('res'); duelTeamQueueAsk(); });
-    again.addEventListener('click', async () => { duelCardClose('res'); const r = await duelRpc('duel_team_invite', { p_mate: d.a2, p_op1: d.b, p_op2: d.b2, p_mode: d.mode || null }); if (!r || r.err){ toast('⚔️ ' + esc((r && r.err) || '暫時連不上雲端')); return; } duelAdopt(r); for (const u of duelOthers(d)) duelSay('inv', u); toast('👥 已經邀請了，等三個人都接受…'); });
-    try { if (win === true) SFX.coin(); else SFX.click(); } catch(e){} if (win === true) flash('🏆 小組對決勝利！', 1.6); return; }
+    again.addEventListener('click', async () => { duelCardClose('res'); const r = await duelRpc('duel_team_invite', { p_mate: d.a2, p_op1: d.b, p_op2: d.b2, p_mode: d.mode || null }); if (!r || r.err){ toast('⚔️ ' + esc((r && r.err) || '暫時連不上雲端')); return; } duelAdopt(r); for (const u of duelOthers(d)) duelSay('inv', u); toast('已經邀請了，等三個人都接受…'); });
+    try { if (win === true) SFX.coin(); else SFX.click(); } catch(e){} if (win === true) flash('小組對決勝利', 1.6); return; }
   const row = el('div', 'dc-btns'), again = el('button', 'tbtn' + (d.ranked ? ' ghost' : ''), d.ranked ? '邀他打友誼賽' : '再來一局'), x = el('button', 'tbtn ghost', '關閉'); row.append(again, x); c.appendChild(row);
   again.addEventListener('click', () => { duelCardClose('res'); duelInvite(op.id, op.name); }); { const qb = el('button', 'tbtn' + (d.ranked ? '' : ' ghost'), d.ranked ? '再排一場' : '打排位賽'); if (d.ranked) row.insertBefore(qb, again); qb.addEventListener('click', () => { duelCardClose('res'); if (d.ranked) duelQueueStart(d.mode && d.mode === duelDayMode() ? d.mode : null); else duelQueueAsk(); }); if (!d.ranked) row.insertBefore(qb, x); } x.addEventListener('click', () => duelCardClose('res'));
-  try { if (win === true) SFX.coin(); else SFX.click(); } catch(e){} if (win === true) flash('🏆 對決勝利！', 1.6); }
+  try { if (win === true) SFX.coin(); else SFX.click(); } catch(e){} if (win === true) flash('對決勝利', 1.6); }
 /* ================= v503 🎣 第一人稱釣魚（作者 11/16：傳了三張自己釣魚的照片——竿子伸向水面、魚掛在線上被拉出水、戴手套把魚拿在手上
    「以前釣魚的時候覺得這樣很有成就感」→ 全程第一人稱、可以切換；手照角色的膚色和袖子） =================
    開關在「設定 → 🎣 釣魚視角」。打開以後，從拋竿到看完魚都是從自己眼睛看出去：
@@ -13314,7 +13314,7 @@ function fpLook(){ if (!FP.skin || !me || !me.av) return; const a = me.av, k = a
       const sl = c.top === 'hoodie' ? (M.Thoodie_cloth || M.hoodie) : c.top === 'wave' ? M.Twave_cloth : c.top === 'rain' ? M.raincoat : null;
       FP.sleeve.color.copy(sl ? sl.material.color : sk); FP.lookKey = K3.enc(c); return; }
     FP.skin.color.copy(a.skinM.color); FP.skinD.color.copy(a.skinM.color).multiplyScalar(0.82); FP.sleeve.color.copy(a.shirtM.color); FP.lookKey = 'old'; } catch(e){} }
-function fpStart(){ try { fpRodLook(); } catch(e){} if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('👀 釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; fpLook();
+function fpStart(){ try { fpRodLook(); } catch(e){} if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; fpLook();
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
 function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
 function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
@@ -13390,7 +13390,7 @@ function fpTick(dt){ if (FP.act && ((FP.lkT = (FP.lkT || 0) + dt) > 0.5)){ FP.lk
   FP.knob.getWorldPosition(hp); FP.g.worldToLocal(hp); FP.handR.position.set(hp.x + 0.018, hp.y - 0.008, hp.z + 0.03); FP.handR.rotation.set(0.1, 0.35, -(FP.lean || 0) * 0.6); FP.handR.visible = !(c && c.held);
   FP.line.visible = false; fpCatchTick(dt, t); return true; }
 function enterPoolHall(){ try { if (Pool.texF){ Pool.texF.forEach((t, n) => { if (n) t.dispose(); }); Pool.texF = null; } Pool.feltFish = null; setTimeout(() => { try { poolApplySkin(); } catch(e){} }, 900); } catch(e){} const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
-  setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🎱 歡迎來到潮汐撞球館！', 1.4); }, 260); }
+  setTimeout(() => { me.pos.x = Venue.poolExit.x; me.pos.z = Venue.poolExit.z - 2.0; me.baseY = POOLH.y; Jump.gy = POOLH.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.5; Venue.poolDist = cam.dist; cam.dist = Math.min(cam.dist, 8); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('歡迎來到潮汐撞球館', 1.4); }, 260); }
 function exitPoolHall(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (Pool.on) poolLeave();
   setTimeout(() => { const f = POOL_DOOR.face || 0; me.pos.x = POOL_DOOR.x + Math.sin(f) * 0.6; me.pos.z = POOL_DOOR.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; if (Venue.poolDist) cam.dist = Venue.poolDist; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260); }
 function poolNear(){ if (Venue.poolExit && Math.hypot(me.pos.x - Venue.poolExit.x, me.pos.z - Venue.poolExit.z) < 1.3) return { id: 'poolexit', label: '出去', mode: 'poolexit' };
@@ -13455,7 +13455,7 @@ function updateMuseumHall(dt, t){ const im = inMuseum(); if (Venue.museum && Ven
   for (const tk of Venue.mzTanks || []) for (const f of tk.fish){ const a = t * f.sp + f.ph, x = Math.sin(a) * 0.72, vx = Math.cos(a); f.m.position.set(x, f.y + Math.sin(a * 1.7) * 0.05, Math.sin(a * 0.6) * 0.18); f.m.rotation.y = vx > 0 ? 0 : Math.PI; }
   if (Venue.mzWhale) Venue.mzWhale.rotation.y = Math.sin(t * 0.1) * 0.05; }
 function enterMuseum(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
-  setTimeout(() => { me.pos.x = Venue.mzExit.x; me.pos.z = Venue.mzExit.z - 2.2; me.baseY = MUSEUM.y; Jump.gy = MUSEUM.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.55; Venue.mzDist = cam.dist; cam.dist = Math.min(cam.dist, 7); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('🏛️ 歡迎來到海洋博物館！', 1.4); loadMuseum(true); }, 260); }
+  setTimeout(() => { me.pos.x = Venue.mzExit.x; me.pos.z = Venue.mzExit.z - 2.2; me.baseY = MUSEUM.y; Jump.gy = MUSEUM.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.55; Venue.mzDist = cam.dist; cam.dist = Math.min(cam.dist, 7); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash('歡迎來到海洋博物館', 1.4); loadMuseum(true); }, 260); }
 function exitMuseum(){ const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door();
   setTimeout(() => { const f = MUSEUM_DOOR.face || 0; me.pos.x = MUSEUM_DOOR.x + Math.sin(f) * 0.6; me.pos.z = MUSEUM_DOOR.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; if (Venue.mzDist) cam.dist = Venue.mzDist; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260); }
 async function loadMuseum(force){ if (Museum.busy || !Cloud.on || !Cloud.sb) return; if (!force && Museum.at && Date.now() - Museum.at < 20000) return; Museum.busy = true; Museum.at = Date.now();
@@ -13480,7 +13480,7 @@ function renderMuseum(body){
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${f.name} ${(+x.w).toFixed(2)}kg`)); d.appendChild(el('div', 'sub2', first ? '🌟 還沒有人捐過！你會是首位捐贈者' : `首位：${Museum.by.get(x.f).fn}`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '捐出'); b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定捐？'; b.classList.add('warn'); return; } b.disabled = true;
         try { const { data, error } = await Cloud.sb.rpc('donate_fish', { p_t: x.t }); if (error) throw error; adoptRow(data.player); my.add(x.f); if (Museum.my) Museum.my.slots = [...my];
-          if (data.first){ SFX.catch(); flash(`🏛️ 你是第一個捐出${f.name}的人，名字刻在博物館了！`, 2.4); } else { SFX.coin(); flash(`🏛️ 捐出了${f.name}，謝謝你！`, 1.6); } loadMuseum(true); }
+          if (data.first){ SFX.catch(); flash(`你是第一個捐出${f.name}的人，名字刻在博物館了`, 2.4); } else { SFX.coin(); flash(`捐出了${f.name}，謝謝你`, 1.6); } loadMuseum(true); }
         catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); return; }
   const R0 = MZ_REGIONS();
@@ -13491,7 +13491,7 @@ function renderMuseum(body){
       li.appendChild(el('span', 'dishic', claims.has(sp.id) ? '✅' : got >= need.length ? '🎁' : '🐟'));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', sp.label)); d.appendChild(el('div', 'sub2', claims.has(sp.id) ? '已經領了・魚拓在家具裡' : `捐了 ${got} / ${need.length} 種・獎勵 🪙${300 + 30 * need.length} ＋ 魚拓`)); li.appendChild(d);
       if (!claims.has(sp.id) && got >= need.length){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '領獎'); b.addEventListener('click', async () => { b.disabled = true;
-          try { const { data, error } = await Cloud.sb.rpc('museum_claim', { p_region: sp.id }); if (error) throw error; adoptRow(data.player); claims.add(sp.id); if (Museum.my) Museum.my.claims = [...claims]; SFX.catch(); flash(`🎁 ${sp.label}集滿了！+${data.coins} 金幣，還有「${sp.label}魚拓」`, 2.6); renderTab(); }
+          try { const { data, error } = await Cloud.sb.rpc('museum_claim', { p_region: sp.id }); if (error) throw error; adoptRow(data.player); claims.add(sp.id); if (Museum.my) Museum.my.claims = [...claims]; SFX.catch(); flash(`${sp.label}集滿了。+${data.coins} 金幣，還有「${sp.label}魚拓」`, 2.6); renderTab(); }
           catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); a.appendChild(b); li.appendChild(a); }
       ul.appendChild(li); }
     body.appendChild(ul); return; }
@@ -13554,14 +13554,14 @@ function gkMesh(d){ const g = new THREE.Group(); const cv = d ? gkCanvas(d, 384)
 async function gkShare(d){ const cv = gkCanvas(d, 960), f = FISH_BY_ID[d.fish], fn = `魚拓-${f ? f.name : 'fish'}.png`;
   try { const blob = await new Promise(r => cv.toBlob(r, 'image/png')); const file = new File([blob], fn, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: '潮汐釣魚村 魚拓' }); return; }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast('🖋️ 魚拓圖片存好了'); } catch(e){ if (e && e.name !== 'AbortError') toast('存不了圖片，可以用手機截圖'); } }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast('魚拓圖片存好了'); } catch(e){ if (e && e.name !== 'AbortError') toast('存不了圖片，可以用手機截圖'); } }
 /* 看一張魚拓（大圖）＋按鈕 */
 function gkView(d, opts){ opts = opts || {}; let ov = $('#gkView'); if (ov) ov.remove(); ov = document.createElement('div'); ov.id = 'gkView'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   const box2 = el('div', 'gkbox panel'); const img = gkCanvas(d, 720); const show = document.createElement('img'); show.src = img.toDataURL('image/png'); show.alt = '魚拓'; box2.appendChild(show);
   const acts = el('div', 'gkacts');
   if (opts.make){ const b = el('button', 'tbtn', `做成魚拓 🪙${GK_COST}`); b.disabled = rec.coins < GK_COST; if (b.disabled) b.title = '金幣不夠';
     b.addEventListener('click', async () => { if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能做魚拓'); return; } b.disabled = true;
-      try { const { data, error } = await Cloud.sb.rpc('gyotaku_make', { p_t: typeof opts.make === 'function' ? opts.make() : opts.make }); if (error) throw error; adoptRow(data.player); gkReg(data.item); if (GK.mine) GK.mine.unshift(data.item); SFX.catch(); ov.remove(); flash('🖋️ 魚拓做好了！回家打開「🏠 家具」就能掛起來', 2.4); gkView(data.item); if (!$('#sheet').hidden) renderTab(); }
+      try { const { data, error } = await Cloud.sb.rpc('gyotaku_make', { p_t: typeof opts.make === 'function' ? opts.make() : opts.make }); if (error) throw error; adoptRow(data.player); gkReg(data.item); if (GK.mine) GK.mine.unshift(data.item); SFX.catch(); ov.remove(); flash('魚拓做好了！回家打開「🏠 家具」就能掛起來', 2.4); gkView(data.item); if (!$('#sheet').hidden) renderTab(); }
       catch(e){ toast(cloudErrMsg(e)); b.disabled = false; } }); acts.appendChild(b); }
   else { const sh = el('button', 'tbtn', '📤 存圖片／分享'); sh.addEventListener('click', () => gkShare(d)); acts.appendChild(sh);
     if (d.mine){ const hang = el('button', 'tbtn ghost', House.on && canEditIsle() ? '🏠 拿去掛' : '🏠 回家掛'); hang.addEventListener('click', () => { if (House.on && canEditIsle()){ ov.remove(); closeSheet(); startFurn('gk' + d.id); } else toast('回到自己家，打開「🏠 家具」就看得到你的魚拓'); }); acts.appendChild(hang);
@@ -13610,10 +13610,10 @@ function petVarRare(k, v){ const keys = Object.keys(PET_VARS[k] || {}); return k
 const Pets = { list:null, at:0, busy:false, atShop:false, feedFor:null, home:[], homeKey:'', meowAt:0, newName:'' };
 async function petLuckyTry(fid){ if (!Cloud.on || !Cloud.sb) return; let r = null; try { const { data } = await Cloud.sb.rpc(fid === 'horseshoe' ? 'pet_horseshoe' : 'pet_lucky'); r = data; }   /* v559 釣到三棘鱟：改問伺服器有沒有小鱟跟著（192） */ catch(e){ return; } if (!r || !r.got) return;
   const K = PET_KINDS[r.kind], vn = petFull(r.kind, r.var);
-  if (r.kind === 'horseshoe'){ setTimeout(() => { if (r.full){ flash('🦀 沙地上有一隻小鱟跟著牠！可是你的寵物已經太多了（200 隻），只好讓牠留在海邊', 2.8); return; }
-      SFX.catch(); flash('🦀 沙地上還有一隻小鱟跟著牠！牠爬到你腳邊，決定跟你回家了', 3.2); setTimeout(() => toast('🦀 小鱟住在小島的海水池最舒服。到「寵物」可以幫牠取名字'), 3600); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); return; }
+  if (r.kind === 'horseshoe'){ setTimeout(() => { if (r.full){ flash('沙地上有一隻小鱟跟著牠。可是你的寵物已經太多了（200 隻），只好讓牠留在海邊', 2.8); return; }
+      SFX.catch(); flash('沙地上還有一隻小鱟跟著牠。牠爬到你腳邊，決定跟你回家了', 3.2); setTimeout(() => toast('小鱟住在小島的海水池最舒服。到「寵物」可以幫牠取名字'), 3600); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); return; }
   setTimeout(() => { if (r.full){ flash(`${K.icon} 魚線上掛著一隻${vn}！可是你的寵物已經太多了（200 隻），只好放牠回去了`, 2.6); return; }
-    SFX.catch(); flash(r.kind === 'pondturtle' ? `${K.icon} 撿到一隻${vn}！這是被棄養的烏龜，帶回家好好照顧吧` : `${K.icon} 哇！順便撈到一隻${vn}${petVarRare(r.kind, r.var) ? '（很少見的花色！）' : ''}，牠決定跟你回家了`, 3); if (r.kind === 'pondturtle') setTimeout(() => toast('🐢 養了就要一直照顧，不要棄養。烏龜可以活幾十年喔'), 3400); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); }
+    SFX.catch(); flash(r.kind === 'pondturtle' ? `${K.icon} 撿到一隻${vn}！這是被棄養的烏龜，帶回家好好照顧吧` : `${K.icon} 哇！順便撈到一隻${vn}${petVarRare(r.kind, r.var) ? '（很少見的花色！）' : ''}，牠決定跟你回家了`, 3); if (r.kind === 'pondturtle') setTimeout(() => toast('養了就要一直照顧，不要棄養。烏龜可以活幾十年喔'), 3400); if (Array.isArray(r.pets)) Pets.list = r.pets; Pets.homeKey = ''; }, 2200); }
 /* v253 阿鐵師傅的工坊 */
 function craftUse(c){ const shown = new Set((rec.show || []).map(String)); return (rec.tank || []).filter(x => { const f = FISH_BY_ID[x.f]; return f && f.rarity === c.r && !f.of && !x.k && !shown.has(String(x.t)); }).sort((a, b) => a.w - b.w).slice(0, c.n); }
 function craftSwatch(c){ const cv = document.createElement('canvas'); cv.width = 64; cv.height = 40; const g = cv.getContext('2d');
@@ -13630,14 +13630,14 @@ function renderCraft(body){
     d.appendChild(el('div', 'sub2', '🪙30＋常見魚 2 條，換 4 個活餌。「掠食魚看到活的就追，往有海鳥的地方丟最好。」一天最多做 8 次。')); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn', '做'); b.disabled = use.length < 2 || rec.coins < 30;
     b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
-      b.disabled = true; const r = await craftRpc('craft_bait', { p_id:'live' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('🪱 做好 4 個活餌了！到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b.disabled = false; });
+      b.disabled = true; const r = await craftRpc('craft_bait', { p_id:'live' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('做好 4 個活餌了。到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b.disabled = false; });
     a.appendChild(b); li.appendChild(a); ul.appendChild(li);
     { /* v295 秋刀魚切塊：1 條秋刀魚＋🪙20 → 4 個；鯊魚和大型掠食魚最愛 */ const li2 = el('li'); li2.appendChild(el('span', 'rodsw bait-saurychunk'));
       const shown = new Set((rec.show || []).map(String)), use2 = (rec.tank || []).filter(x => x.f === 'saury' && !x.k && !shown.has(String(x.t))).sort((p, q) => p.w - q.w).slice(0, 1);
       const d2 = el('div', 'tinfo'); d2.appendChild(el('div', 'n', `秋刀魚切塊（現在有 ${(rec.bait || {}).saurychunk || 0} 個）`)); d2.appendChild(el('div', 'sub2', '🪙20＋秋刀魚 1 條，換 4 個。「鯊魚、鮪魚、浪人鰺聞到這個味道就來了。」跟活餌加起來一天最多做 8 次。')); li2.appendChild(d2);
       const a2 = el('div', 'tacts'), b2 = el('button', 'tbtn', '做'); b2.disabled = !use2.length || rec.coins < 20;
       b2.addEventListener('click', async () => { if (b2.dataset.sure !== '1'){ b2.dataset.sure = '1'; b2.textContent = '確定？'; d2.appendChild(el('div', 'sub2', '會用掉：' + use2.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
-        b2.disabled = true; const r = await craftRpc('craft_bait', { p_id:'saurychunk' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('🔪 切好 4 個秋刀魚切塊了！到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b2.disabled = false; });
+        b2.disabled = true; const r = await craftRpc('craft_bait', { p_id:'saurychunk' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('切好 4 個秋刀魚切塊了。到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b2.disabled = false; });
       a2.appendChild(b2); li2.appendChild(a2); ul.appendChild(li2); }
     body.appendChild(ul); }
   const own = new Set(rec.owned || []);
@@ -13652,7 +13652,7 @@ function renderCraft(body){
       else if (c.stamp || c.season){ }
       else { const use = craftUse(c), ok = use.length >= c.n && rec.coins >= c.c, b = el('button', 'tbtn', '做'); b.disabled = !ok; if (!ok) d.appendChild(el('div', 'sub2', use.length < c.n ? `魚缸裡能用的${c.r}魚只有 ${use.length} 條` : '金幣不夠'));
         b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; b.classList.add('warn'); d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
-          b.disabled = true; const r = await craftRpc('craft_item', { p_id: c.id }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash(`🔧 阿鐵師傅做好了：${c.name}！`, 1.8); const n = npcs.find(x => x.shopNpc === 'craft'); if (n) n.say('做好了！拿去用吧', 'emote', 3); try { renderTab(); } catch(e){} } else b.disabled = false; }); a.appendChild(b); }
+          b.disabled = true; const r = await craftRpc('craft_item', { p_id: c.id }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash(`阿鐵師傅做好了：${c.name}！`, 1.8); const n = npcs.find(x => x.shopNpc === 'craft'); if (n) n.say('做好了！拿去用吧', 'emote', 3); try { renderTab(); } catch(e){} } else b.disabled = false; }); a.appendChild(b); }
       li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); } }
 function petMine(){ return Pets.list ? Pets.list.find(p => p.out) || null : null; }
@@ -13884,7 +13884,7 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
     if (A.ph === 'fly'){ const u = Math.min(1, age / 0.7); b.position.set(A.sx + (A.bx - A.sx) * u, A.sy + (A.by - A.sy) * u + Math.sin(u * Math.PI) * 1.6, A.sz + (A.bz - A.sz) * u); if (u >= 1){ A.ph = 'go'; } petStep(pt, dt, t, A.bx, A.bz, gy, true, pt.rot); return true; }
     if (A.ph === 'go'){ petStep(pt, dt, t, A.bx, A.bz, gy, true, pt.rot); if (Math.hypot(pt.pos.x - A.bx, pt.pos.z - A.bz) < 0.35 || age > 8){ A.ph = 'back'; } return true; }
     if (A.ph === 'back'){ const c = Math.cos(f.rot), s2 = Math.sin(f.rot), tx = f.pos.x + s2 * 0.9, tz = f.pos.z + c * 0.9; petStep(pt, dt, t, tx, tz, gy, true, faceMe); b.position.set(pt.pos.x + Math.sin(pt.rot) * 0.32, pt.pos.y + 0.32, pt.pos.z + Math.cos(pt.rot) * 0.32);
-      if (Math.hypot(pt.pos.x - tx, pt.pos.z - tz) < 0.3 || age > 16){ scene.remove(b); pt.act = null; pt.spinUntil = t + 0.8; try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); } catch(e){} if (f === me) toast(`🎾 ${esc(pt.name || '寵物')}把球撿回來了！`); } return true; }
+      if (Math.hypot(pt.pos.x - tx, pt.pos.z - tz) < 0.3 || age > 16){ scene.remove(b); pt.act = null; pt.spinUntil = t + 0.8; try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); } catch(e){} if (f === me) toast(`${esc(pt.name || '寵物')}把球撿回來了！`); } return true; }
   }
   if (A.k === 'sit'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); if (U.body) U.body.scale.y = age < 2.2 ? 0.82 : 1; if (age > 2.4){ if (U.body) U.body.scale.y = 1; pt.act = null; } return true; }
   if (A.k === 'jump'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); pt.pos.y = gy + Math.abs(Math.sin(age * 7)) * 0.35 * (pt.kind === 'gull' || pt.kind === 'puffer' ? 0 : 1); pt.m.position.y = pt.pos.y; if (age > 1.8) pt.act = null; return true; }
@@ -13895,7 +13895,7 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
     petStep(pt, dt, t, tx, tz, gy, false, faceMe);
     if (age < 2.6){ const e = clamp((age - 1.1) / 1.4, 0, 1); if (it) it.scale.setScalar(Math.max(0.01, 1 - e)); if (head && age > 1.1) head.rotation.x = (A.hrx || 0) + Math.abs(Math.sin(age * 13)) * 0.32;   /* 一口一口吃 */
       if (U.tail) U.tail.rotation.y = Math.sin(t * 16) * 0.5; if (age > 1.1 && Math.floor(age * 4) !== A.cr){ A.cr = Math.floor(age * 4); try { FX.emit(pt.pos.x + Math.sin(pt.rot) * 0.25, pt.pos.y + 0.3, pt.pos.z + Math.cos(pt.rot) * 0.25, 3, '#d9a066', 0.18, 0.6, 0.6); } catch(e){} } return true; }
-    if (!A.done){ A.done = true; if (it){ scene.remove(it); A.item = null; } if (head && A.hrx != null) head.rotation.x = A.hrx; pt.spinUntil = t + 0.9; hearts(14); if (f === me) toast(`😋 ${esc(pt.name || '寵物')}吃得好開心！`); }
+    if (!A.done){ A.done = true; if (it){ scene.remove(it); A.item = null; } if (head && A.hrx != null) head.rotation.x = A.hrx; pt.spinUntil = t + 0.9; hearts(14); if (f === me) toast(`${esc(pt.name || '寵物')}吃得好開心`); }
     if (age > 3.4) petActEnd(pt); return true; }
   if (A.k === 'pat'){ const [tx, tz] = petFront(f, 0.55);
     if (age < 0.8){ petStep(pt, dt, t, tx, tz, gy, true, faceMe); return true; }
@@ -13903,14 +13903,14 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
     if (k2 < 2.4){ if (U.body && A.bs){ const puff = pt.kind === 'puffer' ? Math.sin(Math.min(1, k2 / 1.2) * Math.PI) * 0.4 : 0; U.body.scale.set(A.bs.x * (1 + puff), A.bs.y * (pt.kind === 'puffer' ? 1 + puff : 0.9), A.bs.z * (1 + puff)); }   /* 坐好；河豚被摸會鼓起來 */
       pt.m.rotation.z = Math.sin(k2 * 4.5) * 0.13; if (head) head.rotation.x = (A.hrx || 0) - 0.22 + Math.sin(k2 * 9) * 0.06;   /* 抬頭、左右蹭手 */
       if (U.tail) U.tail.rotation.y = Math.sin(t * 15) * 0.5; if (Math.floor(k2 / 0.45) !== A.hb){ A.hb = Math.floor(k2 / 0.45); hearts(2); } return true; }
-    if (!A.done){ A.done = true; if (U.body && A.bs) U.body.scale.copy(A.bs); pt.m.rotation.z = 0; if (head && A.hrx != null) head.rotation.x = A.hrx; hearts(10); if (f === me) toast(`💕 ${esc(pt.name || '寵物')}好喜歡被你摸頭`); }
+    if (!A.done){ A.done = true; if (U.body && A.bs) U.body.scale.copy(A.bs); pt.m.rotation.z = 0; if (head && A.hrx != null) head.rotation.x = A.hrx; hearts(10); if (f === me) toast(`${esc(pt.name || '寵物')}好喜歡被你摸頭`); }
     if (age > 3.6) petActEnd(pt); return true; }
   if (A.k === 'paw'){ const [tx, tz] = petFront(f, 0.6);
     if (age < 0.7){ petStep(pt, dt, t, tx, tz, gy, true, faceMe); return true; }
     petStep(pt, dt, t, tx, tz, gy, false, faceMe); const u = clamp((age - 0.7) / 1.3, 0, 1);
     if (U.body && A.bs) U.body.rotation.x = A.brx - Math.sin(u * Math.PI) * 0.45;   /* 前腳抬起來搭到手上 */
     if (U.legs && U.legs.length >= 2 && pt.kind !== 'turtle' && pt.kind !== 'pondturtle'){ U.legs[0].rotation.x = -Math.sin(u * Math.PI) * 1.1; }
-    if (age > 1.3 && !A.sp){ A.sp = true; try { FX.emit(tx, gy + 0.6, tz, 12, '#ffd23a', 0.3, 1.0, 0.9); } catch(e){} if (f === me) toast(`🤝 ${esc(pt.name || '寵物')}跟你握手！`); }
+    if (age > 1.3 && !A.sp){ A.sp = true; try { FX.emit(tx, gy + 0.6, tz, 12, '#ffd23a', 0.3, 1.0, 0.9); } catch(e){} if (f === me) toast(`${esc(pt.name || '寵物')}跟你握手`); }
     if (age > 2.2) petActEnd(pt); return true; }
   if (A.k === 'zoom'){ const ang = A.a0 + age * 4.4, R = 1.7, tx = f.pos.x + Math.sin(ang) * R, tz = f.pos.z + Math.cos(ang) * R;
     petStep(pt, dt, t, tx, tz, groundHeight(tx, tz), true, pt.rot); if (Math.floor(age * 5) !== A.du){ A.du = Math.floor(age * 5); try { FX.emit(pt.pos.x, pt.pos.y + 0.05, pt.pos.z, 2, '#d8c8a8', 0.15, 0.5, 0.5); } catch(e){} }   /* 跑兩圈、揚起一點沙 */
@@ -13923,7 +13923,7 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
   if (A.k === 'spin'){ if (age > 1.7) pt.act = null; return false; }
   pt.act = null; return false; }
 function petAct(k){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held && me.held.pet) return;
-  if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'rest') toast(`😴 跟${esc(pt.name || '寵物')}一起坐著休息，走開就結束`); } }
+  if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'rest') toast(`跟${esc(pt.name || '寵物')}一起坐著休息，走開就結束`); } }
 function updatePetFor(f, want, dt, t){
   if (!want){ if (f.pet){ petFree(f.pet); f.pet = null; } return; }
   const k = petKey(want); if (!f.pet || f.pet.key !== k){ if (f.pet) petFree(f.pet); f.pet = petMake(want); f.pet.pos.set(f.pos.x - 0.8, f.baseY, f.pos.z - 0.8); }
@@ -13970,7 +13970,7 @@ function updatePets(dt, t){
     petStep(pt, dt, t, w.x, w.z, groundHeight(pt.pos.x, pt.pos.z), false, pt.rot); }
   // 貓看到附近有魚群會喵喵叫
   const mine = me.pet; if (mine && mine.kind === 'cat' && t > Pets.meowAt && !Dive.on && !House.on){ const sc = (FAI.schools || []).find(sc => Math.hypot(sc.lead.x - me.pos.x, sc.lead.z - me.pos.z) < 14);
-    if (sc){ Pets.meowAt = t + 45; const ang = Math.atan2(sc.lead.x - me.pos.x, sc.lead.z - me.pos.z) - cam.yaw, dir = Math.abs(Math.sin(ang)) < 0.5 ? '前面' : Math.sin(ang) > 0 ? '左邊' : '右邊'; toast(`🐱 ${esc(mine.name)}：喵～（${dir}的水裡好像有魚群）`); SFX.tick && SFX.tick(); mine.m.position.y += 0.15; } }
+    if (sc){ Pets.meowAt = t + 45; const ang = Math.atan2(sc.lead.x - me.pos.x, sc.lead.z - me.pos.z) - cam.yaw, dir = Math.abs(Math.sin(ang)) < 0.5 ? '前面' : Math.sin(ang) > 0 ? '左邊' : '右邊'; toast(`${esc(mine.name)}：喵～（${dir}的水裡好像有魚群）`); SFX.tick && SFX.tick(); mine.m.position.y += 0.15; } }
   // 抱寵物：放開以後放回地上
   if (mine && mine.hug && !(me.held && me.held.pet)){ mine.hug = false; if (mine.m.userData.lb) mine.m.userData.lb.visible = true; scene.add(mine.m); mine.pos.set(me.pos.x + Math.sin(me.rot) * 0.8, me.baseY, me.pos.z + Math.cos(me.rot) * 0.8); }
   if (PetShop.npc){ const d = Math.hypot(me.pos.x - PetShop.npc.pos.x, me.pos.z - PetShop.npc.pos.z); if (d < 40 && !onIsle){ PetShop.npc.av.g.visible = true; if (d < 6) PetShop.npc.rot = lerpAngle(PetShop.npc.rot, Math.atan2(me.pos.x - PetShop.npc.pos.x, me.pos.z - PetShop.npc.pos.z), 1 - Math.exp(-3 * dt)); PetShop.npc.update(dt, t); PetShop.npc.placeTag();
@@ -14009,7 +14009,7 @@ async function turtleCare(p, act, food, t){ if (!Cloud.on || !Cloud.sb){ toast('
   try { const { data, error } = await Cloud.sb.rpc('turtle_care', { p_id: p.id, p_act: act, p_food: food || null, p_t: t || null }); if (error) throw error;
     if (data.player) adoptRow(data.player); const i = (Pets.list || []).findIndex(x => x.id === p.id); if (i >= 0) Pets.list[i] = data.pet; Pets.homeKey = ''; pushPresence(true);
     const pt = (me.pet && petMine() && petMine().id === p.id) ? me.pet : Pets.home.find(h => h.name === p.name); if (pt && act === 'treat' && data.add > 0) pt.spinUntil = now() + 1.6;
-    if (data.add > 0){ SFX.catch(); flash(`✨ 光澤度 +${data.add}（${data.pet.shine}）`, 1.6); } else SFX.tick(); setTimeout(() => toast(`🐢 ${data.msg}`), 400); renderTab(); }
+    if (data.add > 0){ SFX.catch(); flash(`光澤度 +${data.add}（${data.pet.shine}）`, 1.6); } else SFX.tick(); setTimeout(() => toast(`🐢 ${data.msg}`), 400); renderTab(); }
   catch(e){ toast(cloudErrMsg(e)); } }
 function turtleCareBox(p){ const box = el('li', 'turtlecare'), atIsle = !!onIsle && onIsle.owner === myIdOrMe();
   const row = (ic, title, note, btn, done, fn) => { const r = el('div', 'tcrow'); r.appendChild(el('span', 'tci', ic)); const t = el('div', 'tct'); t.appendChild(el('b', '', title)); t.appendChild(el('div', 'sub2', note)); r.appendChild(t); const b = el('button', 'tbtn' + (done ? ' ghost' : ''), done ? '今天做過了' : btn); b.disabled = !!done; b.addEventListener('click', () => { b.disabled = true; fn(); }); r.appendChild(b); box.appendChild(r); return r; };
@@ -14041,16 +14041,16 @@ function renderPets(body){
     if (p.kind === 'pondturtle'){ const cb = el('button', 'tbtn ghost', '🧽 照顧'); cb.addEventListener('click', () => { Pets.careFor = Pets.careFor === p.id ? null : p.id; renderTab(); }); a.appendChild(cb);
       const sh = p.shine == null ? 40 : p.shine; d.appendChild(el('div', 'sub2', `✨ 龜殼光澤度 ${sh} / 100${sh >= 100 ? '　🏅 金色殼邊！' : sh >= 80 ? '　殼上出現漂亮的花紋' : ''}`)); const bar = el('div', 'shinebar'); const fill = el('i'); fill.style.width = sh + '%'; bar.appendChild(fill); d.appendChild(bar); }
     else { const fb = el('button', 'tbtn ghost', '🐟 餵'); fb.addEventListener('click', () => { Pets.feedFor = Pets.feedFor === p.id ? null : p.id; renderTab(); }); a.appendChild(fb); }
-    if (!p.gift){ const gb = el('button', 'tbtn ghost', '🎁 禮物'); gb.disabled = p.love < 10; gb.addEventListener('click', async () => { const r = await petRpc('pet_gift', { p_id: p.id }); if (r){ adoptRow(r.player); const what = r.what === 'shell' ? '撿到一個漂亮的貝殼' : r.what === 'photo' ? '叼來一張你們出去玩的照片' : '找到一些亮晶晶的硬幣'; flash(`🎁 ${p.name}${what}！+${r.coins} 金幣`, 2.2); SFX.coin(); loadPets(true); } }); a.appendChild(gb); }
+    if (!p.gift){ const gb = el('button', 'tbtn ghost', '🎁 禮物'); gb.disabled = p.love < 10; gb.addEventListener('click', async () => { const r = await petRpc('pet_gift', { p_id: p.id }); if (r){ adoptRow(r.player); const what = r.what === 'shell' ? '撿到一個漂亮的貝殼' : r.what === 'photo' ? '叼來一張你們出去玩的照片' : '找到一些亮晶晶的硬幣'; flash(`${p.name}${what}。+${r.coins} 金幣`, 2.2); SFX.coin(); loadPets(true); } }); a.appendChild(gb); }
     const mb = el('button', 'tbtn ghost', '⋯'); mb.addEventListener('click', () => { Pets.menu = Pets.menu === p.id ? null : p.id; renderTab(); }); a.appendChild(mb);
     li.appendChild(a); ul.appendChild(li);
     if (Pets.careFor === p.id && p.kind === 'pondturtle') ul.appendChild(turtleCareBox(p));
     if (Pets.feedFor === p.id){ const box = el('li', ''); const fishes = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && !FISH_BY_ID[x.f].rs).slice(0, 30);
       if (!fishes.length) box.appendChild(el('div', 'sub', '魚缸裡沒有魚，先去釣幾條吧。'));
-      else { box.appendChild(el('div', 'sub2', `選一條魚餵${p.name}（魚會從魚缸拿走）：`)); const row = el('div', 'chipline'); for (const x of fishes){ const b = el('button', 'chip', `${FISH_BY_ID[x.f].name} ${(+x.w).toFixed(2)}kg`); b.addEventListener('click', async () => { b.disabled = true; const r = await petRpc('pet_feed', { p_id: p.id, p_t: x.t }); if (r){ adoptRow(r.player); flash(`😋 ${p.name}吃得好開心！親密度 +${r.add}`, 1.6); SFX.catch(); Pets.feedFor = null; await loadPets(true); } else b.disabled = false; }); row.appendChild(b); } box.appendChild(row); }
+      else { box.appendChild(el('div', 'sub2', `選一條魚餵${p.name}（魚會從魚缸拿走）：`)); const row = el('div', 'chipline'); for (const x of fishes){ const b = el('button', 'chip', `${FISH_BY_ID[x.f].name} ${(+x.w).toFixed(2)}kg`); b.addEventListener('click', async () => { b.disabled = true; const r = await petRpc('pet_feed', { p_id: p.id, p_t: x.t }); if (r){ adoptRow(r.player); flash(`${p.name}吃得好開心。親密度 +${r.add}`, 1.6); SFX.catch(); Pets.feedFor = null; await loadPets(true); } else b.disabled = false; }); row.appendChild(b); } box.appendChild(row); }
       ul.appendChild(box); }
     if (Pets.menu === p.id){ const box = el('li', ''), ni = el('input', 'txt'); ni.maxLength = 8; ni.value = p.name; ni.style.cssText = 'width:9em'; const rn = el('button', 'tbtn ghost', '改名'); rn.addEventListener('click', async () => { const r = await petRpc('pet_rename', { p_id: p.id, p_name: ni.value }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); renderTab(); } });
-      const rl = el('button', 'tbtn ghost', '送養'); rl.addEventListener('click', async () => { if (rl.dataset.sure !== '1'){ rl.dataset.sure = '1'; rl.textContent = `確定把${p.name}送給別人養？`; rl.classList.add('warn'); return; } const r = await petRpc('pet_release', { p_id: p.id }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); toast(`👋 ${p.name}找到新家了`); renderTab(); } });
+      const rl = el('button', 'tbtn ghost', '送養'); rl.addEventListener('click', async () => { if (rl.dataset.sure !== '1'){ rl.dataset.sure = '1'; rl.textContent = `確定把${p.name}送給別人養？`; rl.classList.add('warn'); return; } const r = await petRpc('pet_release', { p_id: p.id }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); toast(`${p.name}找到新家了`); renderTab(); } });
       const pi2 = el('input', 'txt'); pi2.type = 'number'; pi2.min = 50; pi2.max = 20000; pi2.value = p.price || 500; pi2.style.cssText = 'width:6em';
       const sb = el('button', 'tbtn ghost', p.price != null ? '從市集收回' : '放到市集賣'); sb.addEventListener('click', async () => { const r = await petRpc('pet_sell', { p_id: p.id, p_price: p.price != null ? null : Math.round(+pi2.value || 0) }); if (r){ Pets.list = r; Pets.menu = null; pushPresence(true); toast(p.price != null ? `${p.name}回家了` : `🏷️ ${p.name}放到寵物市集了，賣出去拿九成`); renderTab(); } });
       box.append(ni, rn, rl); if (p.price == null) box.append(el('span', 'sub2', '　價錢'), pi2); box.append(sb); ul.appendChild(box); } }
@@ -14190,7 +14190,7 @@ function bossAdopt(d){ BossW.st = d; BossW.off = d.now ? Date.parse(d.now) - Dat
   if (!BossW.seen[k]){ BossW.seen[k] = 1;
     if (d.state === 'soon') ticker(`🐋 <b>${esc(d.name)}</b> ${new Date(d.start).toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })} 會出現在港口外海！大家一起來拉`);
     else if (d.state === 'live') ticker(`🐋 <b>${esc(d.name)}</b> 出現在港口外海了！快去按「一起拉！」`);
-    else if (d.state === 'won'){ ticker(`🎉 大家一起把 <b>${esc(d.name)}</b> 釣上來了！出力最多的是 <b>${esc((d.top[0] || {}).name || '')}</b>`); if (d.me && d.me.p > 0){ SFX.catch(); flash(`🎉 ${d.name}釣上來了！你是第 ${d.me.rank} 名${d.me.rank <= 3 ? '，拿到魚拓！' : ''}`, 3); setTimeout(() => cloudRefresh && cloudRefresh(), 1500); } }
+    else if (d.state === 'won'){ ticker(`🎉 大家一起把 <b>${esc(d.name)}</b> 釣上來了！出力最多的是 <b>${esc((d.top[0] || {}).name || '')}</b>`); if (d.me && d.me.p > 0){ SFX.catch(); flash(`${d.name}釣上來了！你是第 ${d.me.rank} 名${d.me.rank <= 3 ? '，拿到魚拓！' : ''}`, 3); setTimeout(() => cloudRefresh && cloudRefresh(), 1500); } }
     else if (d.state === 'lost'){ ticker(`💨 <b>${esc(d.name)}</b> 掙脫逃走了…下次再一起努力`); if (d.me && d.me.p > 0) setTimeout(() => cloudRefresh && cloudRefresh(), 1500); } }
   if (d.me) BossW.joined = d.id; }
 function bossNow(){ return Date.now() + (BossW.off || 0); }
@@ -14202,7 +14202,7 @@ function bossExpired(st){ return !!(st && st.state === 'live' && st.end && bossN
 function bossLive(){ const st = BossW.st; return !!(st && st.id && st.state === 'live' && !bossExpired(st) && bossNear()); }
 function bossPulling(){ return bossLive() && BossW.joined === BossW.st.id && !myBoat && !mySeat && !Bike.on; }
 async function bossJoin(){ if (BossW.joining) return; if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能一起拉'); return; } if (myBoat || mySeat){ toast('要站在岸上或碼頭才能一起拉'); return; } BossW.joining = true;
-  try { const { data, error } = await Cloud.sb.rpc('boss_join', { p_id: BossW.st.id }); if (error) throw error; bossAdopt(data); BossW.joined = BossW.st.id; if (F.phase !== 'idle') cancelFishing(); SFX.catch(); buzz(40); flash('🎣 加入了！按住右下角「拉！」', 1.8); } catch(e){ toast(cloudErrMsg(e)); } BossW.joining = false; }
+  try { const { data, error } = await Cloud.sb.rpc('boss_join', { p_id: BossW.st.id }); if (error) throw error; bossAdopt(data); BossW.joined = BossW.st.id; if (F.phase !== 'idle') cancelFishing(); SFX.catch(); buzz(40); flash('加入了！按住右下角「拉！」', 1.8); } catch(e){ toast(cloudErrMsg(e)); } BossW.joining = false; }
 function bossHitPop(n){ try { const a = $('#act').getBoundingClientRect(), e = document.createElement('div'); e.className = 'bossHit'; e.textContent = '+' + n; e.style.left = (a.left + a.width / 2) + 'px'; e.style.top = (a.top - 6) + 'px'; document.body.appendChild(e); requestAnimationFrame(() => e.classList.add('go')); setTimeout(() => e.remove(), 900); } catch(e){} }
 function bossRod(dt, t){ const on = bossPulling() && F.phase === 'idle';
   if (!on){ const w = F.phase === 'reeling' && F.hold ? 0.6 : 0; me.tug = (me.tug || 0) + (w - (me.tug || 0)) * Math.min(1, dt * 6); me.yank = (me.yank || 0) * Math.max(0, 1 - dt * 8); }   /* 一般拉魚按住收線時也往後仰一點 */
@@ -14347,7 +14347,7 @@ NightGame.start = async function(kind){ if (NightGame.on) return; let gid = null
   const finish = async (why) => { if (S.over) return; S.over = true; S.msg = why; let res = null;
     if (gid){ res = await festRpc('fest_game_end', { p_id: gid, p_score: S.score }); if (res) adoptRow(res.player); }
     S.res = res || { score: S.score, coins: 0, local: true }; SFX.catch(); };
-  const close = () => { cancelAnimationFrame(raf); removeEventListener('resize', fit); ov.remove(); NightGame.on = false; if (S.res && S.res.bowl) flash('🐟 拿到「金魚缸」家具！到家裡的家具清單就能擺', 2.6); };
+  const close = () => { cancelAnimationFrame(raf); removeEventListener('resize', fit); ov.remove(); NightGame.on = false; if (S.res && S.res.bowl) flash('拿到「金魚缸」家具！到家裡的家具清單就能擺', 2.6); };
   quit.addEventListener('click', () => { if (!S.over) finish('不玩了'); else close(); });
   const pos = e => ({ x: e.clientX, y: e.clientY });
   // ---------- 撈金魚 ----------
@@ -14471,12 +14471,12 @@ function renderFest(body){ body.appendChild(el('div', 'shophead')).innerHTML = '
   const on = festActive(), d = Fest.d, fmt = x => new Date(x).toLocaleString('zh-TW', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
   if (!on.length){ body.appendChild(el('div', 'empty', d && d.next ? `現在沒有節慶活動。下一個是「${d.next.name}」：${fmt(d.next.start)} 開始。` : '現在沒有節慶活動。')); }
   for (const f of on){ const box2 = el('div', 'growbox'); box2.appendChild(el('div', 'gb-t', `${FEST_ICON[f.kind] || '🏮'} ${f.name}・到 ${fmt(f.end)}`)); body.appendChild(box2);
-    if (f.kind === 'cny'){ const done = d && (d.mine || []).includes('hongbao'), b = el('button', 'tbtn', done ? '🧧 今天的紅包領過了' : '🧧 領今天的紅包'); b.disabled = done; b.addEventListener('click', async () => { const r = await festRpc('fest_hongbao'); if (r){ adoptRow(r.player); SFX.catch(); flash(`🧧 恭喜發財！紅包裡有 ${r.coins} 金幣`, 2.2); loadFest(true); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '春節每天都可以領一次紅包。舞獅在廣場繞圈圈，店門口都貼了春聯。')); }
+    if (f.kind === 'cny'){ const done = d && (d.mine || []).includes('hongbao'), b = el('button', 'tbtn', done ? '🧧 今天的紅包領過了' : '🧧 領今天的紅包'); b.disabled = done; b.addEventListener('click', async () => { const r = await festRpc('fest_hongbao'); if (r){ adoptRow(r.player); SFX.catch(); flash(`恭喜發財！紅包裡有 ${r.coins} 金幣`, 2.2); loadFest(true); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '春節每天都可以領一次紅包。舞獅在廣場繞圈圈，店門口都貼了春聯。')); }
     if (f.kind === 'lantern'){ box2.appendChild(el('p', 'sub', '猜燈謎：每一題答對 50 金幣（每題只能答對一次）。晚上水面上有燈籠，天燈會飛上天。'));
       if (!Fest.riddles){ Fest.riddles = []; festRpc('fest_riddles').then(r => { Fest.riddles = r || []; renderTab(); }); }
-      for (const q of Fest.riddles){ const row = el('div', 'field'); row.appendChild(el('label', '', `${q.done ? '✅' : '🏮'} ${q.q}`)); if (!q.done){ const ip = el('input', 'txt'); ip.placeholder = `提示：${q.hint || ''}`; const b = el('button', 'tbtn ghost', '猜'); b.addEventListener('click', async () => { const r = await festRpc('fest_answer', { p_id: q.id, p_answer: ip.value }); if (!r) return; if (r.ok){ adoptRow(r.player); q.done = true; SFX.catch(); flash('🎉 答對了！+50 金幣', 1.6); renderTab(); } else { SFX.fail(); toast('不對喔，再想想看'); } }); const rr = el('div', 'tankbar'); rr.append(ip, b); row.appendChild(rr); } box2.appendChild(row); } }
-    if (f.kind === 'ny'){ const b = el('button', 'tbtn', '🎆 領跨年紀念章'); b.addEventListener('click', async () => { const r = await festRpc('fest_badge'); if (r){ adoptRow(r.player); SFX.catch(); flash('🎆 新年快樂！拿到跨年紀念章（成就裡可以換稱號）', 2.4); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '晚上港口外面會放煙火。12/31 23:50～1/1 00:15 倒數的時候在線上，按上面的按鈕就能領紀念章。')); }
-    if (f.kind === 'xmas' || f.kind === 'qixi' || f.kind === 'halloween'){ const gk = { xmas:'xgift', qixi:'qgift', halloween:'hgift' }[f.kind], gl = { xmas:'🎁 拿今天的聖誕禮物', qixi:'💞 拿今天的七夕禮物', halloween:'🍬 不給糖就搗蛋！拿糖果' }[f.kind], done = d && (d.mine || []).includes(gk), b = el('button', 'tbtn', done ? '🎁 今天的禮物拿過了' : gl); b.disabled = done; b.addEventListener('click', async () => { const r = await festRpc('fest_gift'); if (r){ adoptRow(r.player); SFX.catch(); flash(`🎁 聖誕快樂！禮物裡有 ${r.coins} 金幣`, 2.2); loadFest(true); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', { xmas:'聖誕節每天都可以拿一份禮物。廣場中間立了大聖誕樹，晚上還會下小雪。', qixi:'七夕每天都可以拿一份禮物。晚上天上有喜鵲搭成的鵲橋，廣場掛著粉紅色的燈。', halloween:'萬聖節每天都可以拿一次糖果（金幣）。廣場擺滿南瓜燈，晚上有蝙蝠飛來飛去。' }[f.kind])); }
+      for (const q of Fest.riddles){ const row = el('div', 'field'); row.appendChild(el('label', '', `${q.done ? '✅' : '🏮'} ${q.q}`)); if (!q.done){ const ip = el('input', 'txt'); ip.placeholder = `提示：${q.hint || ''}`; const b = el('button', 'tbtn ghost', '猜'); b.addEventListener('click', async () => { const r = await festRpc('fest_answer', { p_id: q.id, p_answer: ip.value }); if (!r) return; if (r.ok){ adoptRow(r.player); q.done = true; SFX.catch(); flash('答對了。+50 金幣', 1.6); renderTab(); } else { SFX.fail(); toast('不對喔，再想想看'); } }); const rr = el('div', 'tankbar'); rr.append(ip, b); row.appendChild(rr); } box2.appendChild(row); } }
+    if (f.kind === 'ny'){ const b = el('button', 'tbtn', '🎆 領跨年紀念章'); b.addEventListener('click', async () => { const r = await festRpc('fest_badge'); if (r){ adoptRow(r.player); SFX.catch(); flash('新年快樂！拿到跨年紀念章（成就裡可以換稱號）', 2.4); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', '晚上港口外面會放煙火。12/31 23:50～1/1 00:15 倒數的時候在線上，按上面的按鈕就能領紀念章。')); }
+    if (f.kind === 'xmas' || f.kind === 'qixi' || f.kind === 'halloween'){ const gk = { xmas:'xgift', qixi:'qgift', halloween:'hgift' }[f.kind], gl = { xmas:'🎁 拿今天的聖誕禮物', qixi:'💞 拿今天的七夕禮物', halloween:'🍬 不給糖就搗蛋！拿糖果' }[f.kind], done = d && (d.mine || []).includes(gk), b = el('button', 'tbtn', done ? '🎁 今天的禮物拿過了' : gl); b.disabled = done; b.addEventListener('click', async () => { const r = await festRpc('fest_gift'); if (r){ adoptRow(r.player); SFX.catch(); flash(`聖誕快樂！禮物裡有 ${r.coins} 金幣`, 2.2); loadFest(true); } }); box2.appendChild(b); box2.appendChild(el('p', 'sub', { xmas:'聖誕節每天都可以拿一份禮物。廣場中間立了大聖誕樹，晚上還會下小雪。', qixi:'七夕每天都可以拿一份禮物。晚上天上有喜鵲搭成的鵲橋，廣場掛著粉紅色的燈。', halloween:'萬聖節每天都可以拿一次糖果（金幣）。廣場擺滿南瓜燈，晚上有蝙蝠飛來飛去。' }[f.kind])); }
     if (f.kind === 'duanwu'){ box2.appendChild(el('p', 'sub', '港口邊停著一艘龍舟，廣場插滿了彩旗。划龍舟小遊戲一次 30 金幣：跟著鼓聲划，划贏對手船、連划越多獎勵越多（最多 160）。約朋友同一時間（前後 20 秒內）一起開始划，每多一位隊友獎勵 +20%（最多 +60%）。')); const b = el('button', 'tbtn', '🐉 划龍舟（🪙30）'); b.addEventListener('click', () => { closeSheet(); NightGame.start('boat'); }); box2.appendChild(b); }
     if (f.kind === 'moon'){ box2.appendChild(el('p', 'sub', '晚上東邊會升起很大的月亮，廣場有兔子燈，記得拍照！中秋烤肉小遊戲一次 30 金幣：串燒烤到金黃就拿起來，一串 12 金幣。')); const b = el('button', 'tbtn', '🍢 中秋烤肉（🪙30）'); b.addEventListener('click', () => { closeSheet(); NightGame.start('bbq'); }); box2.appendChild(b); }
     if (f.kind === 'night'){ box2.appendChild(el('p', 'sub', '廣場旁邊擺了夜市攤：撈金魚、射氣球、大雞排、珍珠奶茶、烤魷魚。小遊戲一次 30 金幣，每天最多贏 600 金幣。'));
@@ -14485,7 +14485,7 @@ function renderFest(body){ body.appendChild(el('div', 'shophead')).innerHTML = '
     const items = GEAR.filter(g => g.fest === f.kind), furns = Object.keys(FURN).filter(k2 => FURN[k2].fe === f.kind), ul = el('ul', 'shoplist cols');
     for (const it of items){ const li = el('li'), own = ownsGear(it.id); li.appendChild(el('span', 'dishic', it.icon)); const dd = el('div', 'tinfo'); dd.appendChild(el('div', 'n', `${it.name}（限定）`)); dd.appendChild(el('div', 'sub2', own ? '已經買了・在衣櫃裡' : `🪙${it.price.toLocaleString()}`)); li.appendChild(dd); if (!own){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '買'); b.addEventListener('click', () => buyGear(it.id)); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
     for (const k2 of furns){ const li = el('li'), own = (rec.owned || []).includes(k2), pr = { fe_couplet:200, fe_skylantern:300, fe_dragonboat:600, fe_stall:800, fe_xtree:500, fe_bridge:500, fe_jacko:300 }[k2]; li.appendChild(el('span', 'dishic', FEST_ICON[f.kind] || '🏮')); const dd = el('div', 'tinfo'); dd.appendChild(el('div', 'n', `${FURN[k2].name}（限定家具）`)); dd.appendChild(el('div', 'sub2', own ? '已經買了・在家具清單裡（擺不用錢）' : `🪙${pr}・買一次就永遠是你的`)); li.appendChild(dd);
-      if (!own){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '買'); b.addEventListener('click', async () => { const r = await festRpc('fest_buy', { p_item: k2 }); if (r){ adoptRow(r); SFX.coin(); flash(`🏮 買了${FURN[k2].name}！到家裡的家具清單就能擺`, 2); renderTab(); } }); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
+      if (!own){ const a = el('div', 'tacts'), b = el('button', 'tbtn', '買'); b.addEventListener('click', async () => { const r = await festRpc('fest_buy', { p_item: k2 }); if (r){ adoptRow(r); SFX.coin(); flash(`買了${FURN[k2].name}。到家裡的家具清單就能擺`, 2); renderTab(); } }); a.appendChild(b); li.appendChild(a); } ul.appendChild(li); }
     if (items.length || furns.length){ box2.appendChild(el('div', 'sub2', '限定商品（過了節日就買不到，買到的永遠保留）：')); box2.appendChild(ul); } }
   if (d && d.next && on.length) body.appendChild(el('p', 'sub', `下一個節日：「${d.next.name}」${fmt(d.next.start)}`)); }
 function inHall(){ return inShrimpHall(me.pos.x, me.pos.z, 0); }
@@ -14493,7 +14493,7 @@ function shrimpLeft(){ return Math.max(0, (rec.shrimpUntil || 0) - Date.now()); 
 function enterShrimp(){
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true);
   setTimeout(() => { me.pos.x = Venue.exit.x; me.pos.z = Venue.exit.z - 2.4; me.baseY = SHRIMP.y; Jump.gy = SHRIMP.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.6; Venue.savedDist = cam.dist; cam.dist = Math.min(cam.dist, 6); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80);
-    flash('🦐 歡迎光臨釣蝦場！', 1.4); sevRefresh(); if (!shrimpLeft()) setTimeout(() => toast('先到左邊的櫃台跟老闆阿忠買時段，才可以釣蝦喔'), 1500); }, 260);
+    flash('歡迎光臨釣蝦場', 1.4); sevRefresh(); if (!shrimpLeft()) setTimeout(() => toast('先到左邊的櫃台跟老闆阿忠買時段，才可以釣蝦喔'), 1500); }, 260);
 }
 function exitShrimp(){
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (mySeat) standUp(); if (F.phase !== 'idle') cancelFishing();
@@ -14504,7 +14504,7 @@ async function buyShrimpTime(min){
   if (rec.coins < it[1]){ toast(`金幣不夠，還差 🪙${it[1] - rec.coins}`); return; }
   if (Cloud.on){ const row = await cloudCall('buy_shrimp_time', { p_min: min }); if (!row) return; }
   else { addCoins(-it[1]); rec.shrimpUntil = Math.max(Date.now(), rec.shrimpUntil || 0) + min * 60000; saveRecLocal(); }
-  SFX.coin(); flash(`🎫 買了 ${min} 分鐘，祝你大豐收！`, 1.6); renderTab();
+  SFX.coin(); flash(`買了 ${min} 分鐘，祝你大豐收`, 1.6); renderTab();
 }
 function renderShrimpDesk(body){
   body.appendChild(el('div', 'shophead')).innerHTML = `<b>🦐 釣蝦場櫃台・老闆 阿忠</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
@@ -14658,12 +14658,12 @@ function ferryTo(x, z, label){ if (tyBlock('出海')) return;
   if (myBoat) leaveFerry(true);
   const fx = $('#fadeFx'); fx.classList.add('on'); SFX.cast();
   setTimeout(() => { if (F.phase !== 'idle') cancelFishing(); const back = 2.4; b.m.position.set(px - back, WATER_LEVEL, pz); b.m.rotation.set(0, Math.PI / 2, 0); boardBoat(b); me.rot = Math.PI / 2; cam.yaw = me.rot + Math.PI;
-    Ferry.on = true; Ferry.label = label; renderFerryBar(); pushPresence(true); if (Party.team && !/祕密窩點|船隊/.test(label)) sailInvite(px, pz, label); setTimeout(() => fx.classList.remove('on'), 120); flash(`🚤 到了：${label}`, 1.4); }, 420);
+    Ferry.on = true; Ferry.label = label; renderFerryBar(); pushPresence(true); if (Party.team && !/祕密窩點|船隊/.test(label)) sailInvite(px, pz, label); setTimeout(() => fx.classList.remove('on'), 120); flash(`到了：${label}`, 1.4); }, 420);
 }
 function leaveFerry(silent){
   const b = myBoat; if (!b) return; if (F.phase !== 'idle') cancelFishing();
   myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); Ferry.on = false; Party.lead = null; Party.joined.clear(); renderFerryBar();
-  if (!silent){ const h = TRAVEL.find(t => t.id === 'harbor'); travelTo(h || TRAVEL[0]); toast('🚤 阿海把你載回港口了'); }
+  if (!silent){ const h = TRAVEL.find(t => t.id === 'harbor'); travelTo(h || TRAVEL[0]); toast('阿海把你載回港口了'); }
 }
 function renderFerryBar(){
   let bar = $('#ferryBar'); if (!Ferry.on){ if (bar) bar.hidden = true; return; }
@@ -14795,25 +14795,25 @@ function wsUpdate(dt){ const pod = Dive.pod, ns = bossNow() / 1000, surf = DIVE.
       if (up >= 1 && !w.blown){ w.blown = true; try { FX.emit(w.h.position.x, surf - 0.4, w.h.position.z, 14, '#e8fbff', 0.5, 1.4, 1.6); } catch(e){} } else if (up < 1) w.blown = false;
       const dx = me.pos.x - w.h.position.x, dz = me.pos.z - w.h.position.z, d = Math.hypot(dx, dz), inY = Math.abs(me.baseY + 0.8 - w.h.position.y) < w.len / 2 + 1.2; if (inY) near = Math.min(near, d); else near = Math.min(near, d + 6);
       if (inY && d < w.rad + 1.1) w.alert += dt * 1.1; else if (inY && d < w.rad + 6 && (me.speed || 0) > 2.4) w.alert += dt * 0.7; else w.alert = Math.max(0, w.alert - dt * 0.35);
-      if (w.alert > 1 && !w.warned){ w.warned = true; toast('🤫 太近、太快了，牠的身體動了一下……慢慢退開'); } if (w.alert < 0.2) w.warned = false;
-      if (w.alert > 2.6){ w.wake = ns; pod.mask |= 1 << i; try { pushPresence(true); } catch(e){} toast('🐋 牠被吵醒了，慢慢游走了'); }
+      if (w.alert > 1 && !w.warned){ w.warned = true; toast('太近、太快了，牠的身體動了一下……慢慢退開'); } if (w.alert < 0.2) w.warned = false;
+      if (w.alert > 2.6){ w.wake = ns; pod.mask |= 1 << i; try { pushPresence(true); } catch(e){} toast('牠被吵醒了，慢慢游走了'); }
       if (inY && d < w.rad + 0.45 && d > 0.01){ const k = (w.rad + 0.45 - d) / d; me.pos.x += dx * k; me.pos.z += dz * k; } }   /* 不會游進鯨魚身體裡 */
     else { const q = ns - w.wake, turn = smooth01((q - 1.5) / 6), sw = Math.max(0, q - 4), dist = sw < 6 ? sw * sw * 1.6 / 12 : 4.8 + (sw - 6) * 1.6, fx = Math.cos(w.yaw), fz = -Math.sin(w.yaw);   /* 醒來：抖一下 → 轉成水平 → 擺著尾巴游走 */
       const x = w.x + fx * dist, z = w.z + fz * dist; w.h.position.set(x, Math.max(diveBed(x, z) + w.len * 0.16 + 0.6, w.y0 - turn * 1.5 - sw * 0.1), z);
       w.h.rotation.set(Math.sin(q * 1.3) * 0.06 * turn, w.yaw + Math.sin(q * 1.3 + 1) * 0.05 * turn, sgn * Math.PI / 2 * (1 - turn) + (q < 1.5 ? Math.sin(q * 9) * 0.05 : 0));
       if (Math.hypot(x - DIVE.x, z - DIVE.z) > DIVE.r + w.len || q > 70){ if (w.h.parent) w.h.parent.remove(w.h); w.gone = true; } } });
-  if (!pod.told && near < 26){ pod.told = true; flash('💤 一群抹香鯨直立著在睡覺……安靜地漂在旁邊，不要吵醒牠們', 3.4); if (!LS.get('tide.whaleSleep', false)){ LS.set('tide.whaleSleep', true); setTimeout(() => toast('🏅 第一次看到睡覺的抹香鯨群！可以開相機拍下來'), 3800); } }
-  if (gone === N && !pod.over){ pod.over = true; toast('🐋 鯨群都醒了，游回深海去了'); } }
+  if (!pod.told && near < 26){ pod.told = true; flash('一群抹香鯨直立著在睡覺……安靜地漂在旁邊，不要吵醒牠們', 3.4); if (!LS.get('tide.whaleSleep', false)){ LS.set('tide.whaleSleep', true); setTimeout(() => toast('第一次看到睡覺的抹香鯨群。可以開相機拍下來'), 3800); } }
+  if (gone === N && !pod.over){ pod.over = true; toast('鯨群都醒了，游回深海去了'); } }
 function diveExtrasUpdate(dt, t){
   if (Dive.pod){ try { wsUpdate(dt); } catch(e){} }
   else if (Dive.site === 'offshore' && t - (Dive.podScan || 0) > 2){ Dive.podScan = t; for (const p of peers.values()){ const f = p.fisher, ws = f && f.wsK ? wsByKey(f.wsK) : null; if (ws){ wsBuild(ws); break; } } }   /* 一起潛的人有鯨群：我也看得到同一群 */
   if (Dive.fight){ const F = Dive.fight, k = t * 0.9; F.g.rotation.x = Math.sin(k) * 0.55 + Math.sin(k * 2.3) * 0.15; F.g.rotation.z = Math.sin(k * 0.7) * 0.25; F.g.position.y = F.y0 + Math.sin(k * 0.5) * 1.2; F.sq.rotation.z = 0.25 + Math.sin(t * 3.1) * 0.12;   /* 鯨魚甩頭翻滾、魷魚死命纏住 */
-    if (!F.told && Math.hypot(me.pos.x - F.g.position.x, me.pos.z - F.g.position.z) < 22){ F.told = true; flash('🐋🦑 你目擊了抹香鯨大戰大王魷魚！快拍照', 2.6); } }
+    if (!F.told && Math.hypot(me.pos.x - F.g.position.x, me.pos.z - F.g.position.z) < 22){ F.told = true; flash('你目擊了抹香鯨大戰大王魷魚！快拍照', 2.6); } }
   if (Dive.bw){ const B = Dive.bw;   /* v230：一次潛水只游過一次（以前每 110 秒繞回來一次），從玩家旁邊 16 公尺外經過，不會穿過人；慢慢上下起伏、微微側身 */
     if (!B.go && t > B.t0){ B.go = t; const px = -B.dz, pz = B.dx, L = DIVE.r * 1.3; B.a = { x: me.pos.x + px * 16 - B.dx * L, z: me.pos.z + pz * 16 - B.dz * L }; B.L = L * 2; B.y = clamp(me.baseY + 3, DIVE.y + 4, DIVE.y + DIVE.top - 2.5); }
     if (B.go){ const v = (t - B.go) / 55; B.m.visible = v < 1; if (v < 1){ B.m.position.set(B.a.x + B.dx * v * B.L, B.y + Math.sin(v * 6.28) * 0.8, B.a.z + B.dz * v * B.L); B.m.rotation.x = Math.sin(v * 6.28 + 1) * 0.06; if (!B.sang && v > 0.25){ B.sang = true; whaleSong(0.8); } } } else B.m.visible = false; }
   for (const v of Dive.vents || []){ const a = v.pts.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i + 1] += dt * (1.2 + (i % 5) * 0.2); a[i] += Math.sin(t * 3 + i) * dt * 0.1; if (a[i + 1] > DIVE.top + (DIVE.y - v.y)) a[i + 1] = 0.3; } v.pts.geometry.attributes.position.needsUpdate = true;
-    if (Math.hypot(me.pos.x - v.x, me.pos.z - v.z) < 1.4 && Dive.o2 < Dive.o2max){ Dive.o2 = Math.min(Dive.o2max, Dive.o2 + dt * 12); if (!Dive.ventTold || now() - Dive.ventTold > 6){ Dive.ventTold = now(); flash('🫧 吸到氣泡口的空氣，氧氣慢慢補回來', 1.2); } } }
+    if (Math.hypot(me.pos.x - v.x, me.pos.z - v.z) < 1.4 && Dive.o2 < Dive.o2max){ Dive.o2 = Math.min(Dive.o2max, Dive.o2 + dt * 12); if (!Dive.ventTold || now() - Dive.ventTold > 6){ Dive.ventTold = now(); flash('吸到氣泡口的空氣，氧氣慢慢補回來', 1.2); } } }
   for (const p of Dive.portals || []){ for (const v of p.veil) v.material.opacity = 0.4 + Math.sin(t * 2.2) * 0.15;
     if (!Dive.ending && !Dive.moving && Math.hypot(me.pos.x - p.x, me.pos.z - p.z) < 2.2 && me.baseY < p.y + 4.5){
       if (!p.ok){ if (!p.told || now() - p.told > 5){ p.told = now(); const S2 = DIVE_SITES[p.to]; toast(`${S2.name}要先買：${S2.need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); } continue; }
@@ -15210,8 +15210,8 @@ function diveAction(){
 function divePhoto(f){
   rec.photos = rec.photos || []; const isNew = !rec.photos.includes(f.id);
   const fl = $('#fadeFx'); fl.classList.add('flashw'); setTimeout(() => fl.classList.remove('flashw'), 160); SFX.chat();
-  if (isNew){ rec.photos.push(f.id); saveRecLocal(); cloudCall('add_photo', { p_fish: f.id }); flash(`📸 拍到了${f.name}！水下圖鑑 ${rec.photos.length}/${diveSpecies().length}`, 1.8); }
-  else flash(`📸 ${f.name}（已經拍過了）`, 1.2);
+  if (isNew){ rec.photos.push(f.id); saveRecLocal(); cloudCall('add_photo', { p_fish: f.id }); flash(`拍到了${f.name}。水下圖鑑 ${rec.photos.length}/${diveSpecies().length}`, 1.8); }
+  else flash(`${f.name}（已經拍過了）`, 1.2);
 }
 const LOOT_TXT = { chest:'🎁 寶箱裡有', shell:'🐚 撿到貝殼，賣了', pearl:'🦪 撿到珍珠，賣了' }, LOOT_FULL = { chest:'🎁 今天的寶箱開夠了（每天 6 個）', shell:'🐚 今天的貝殼撿夠了（每天 40 個）', pearl:'🦪 今天的珍珠撿夠了（每天 15 顆）' };
 async function grabLoot(l){
@@ -15221,7 +15221,7 @@ async function grabLoot(l){
     flash(got > 0 ? `${LOOT_TXT[l.kind]} 🪙${got}！` : LOOT_FULL[l.kind], 1.6); return; }
   const got = l.kind === 'chest' ? (Dive.site === 'wreck' ? 300 : Dive.site === 'cave' ? 400 : Dive.site === 'harbor' ? 200 : 150) + Math.floor(Math.random() * 200) : l.kind === 'pearl' ? 80 + Math.floor(Math.random() * 81) : 5 + Math.floor(Math.random() * 16); addCoins(got); flash(`${LOOT_TXT[l.kind]} 🪙${got}！`, 1.6);
 }
-function diveFpToggle(){ Dive.fp = !Dive.fp; try { localStorage.setItem('tide.divefp', Dive.fp ? '1' : '0'); } catch(e){} if (Dive.fp){ cam.pitch = 0.1; toast('👁 第一人稱：拖畫面轉頭，搖桿往前就朝你看的方向游'); } else { cam.pitch = Math.max(cam.pitch, 0.3); toast('切回一般視角'); } const b = $('#diveFp'); if (b) b.classList.toggle('on', !!Dive.fp); }
+function diveFpToggle(){ Dive.fp = !Dive.fp; try { localStorage.setItem('tide.divefp', Dive.fp ? '1' : '0'); } catch(e){} if (Dive.fp){ cam.pitch = 0.1; toast('第一人稱：拖畫面轉頭，搖桿往前就朝你看的方向游'); } else { cam.pitch = Math.max(cam.pitch, 0.3); toast('切回一般視角'); } const b = $('#diveFp'); if (b) b.classList.toggle('on', !!Dive.fp); }
 const _dvP = new THREE.Vector3();
 function updateDiveSwim(dt, ix, iz, L){
   if (Dive.ending) return;
@@ -15245,7 +15245,7 @@ function updateDive(dt, t){
   if (Dive.torch){ const fx = Dive.fp ? -Math.sin(cam.yaw) : Math.sin(me.rot), fz = Dive.fp ? -Math.cos(cam.yaw) : Math.cos(me.rot); Dive.torch.position.set(me.pos.x + fx * 0.9, me.baseY + 0.9, me.pos.z + fz * 0.9); Dive.torch.intensity = 7 + Math.sin(t * 9) * 0.25; }
   // 氧氣
   if (Dive.ending) return; Dive.o2 -= dt; const o = Dive.o2;
-  if (o < 15 && Dive.warned < 1){ Dive.warned = 1; flash('⚠️ 氧氣只剩 15 秒，快上去！', 1.6); SFX.bite(); }
+  if (o < 15 && Dive.warned < 1){ Dive.warned = 1; flash('氧氣只剩 15 秒，快上去！', 1.6); SFX.bite(); }
   if (o <= 0 && !Dive.ending){ endDive('😮‍💨 氧氣用完了，自動浮上水面'); return; }
   // 海帶
   if (Dive.kelp && frameNo % 2 === 0){ const { im, list } = Dive.kelp, cur = faiCurrent(); for (let i = 0; i < list.length; i++){ const k = list[i]; tankDummy.position.set(k.x, k.y, k.z); tankDummy.rotation.set(Math.sin(t * 0.9 + k.ph) * 0.12 * (0.6 + cur.sp) + cur.lz, k.ry, Math.cos(t * 0.7 + k.ph) * 0.1 * (0.6 + cur.sp) - cur.lx); tankDummy.scale.set(1, k.s, 1); tankDummy.updateMatrix(); im.setMatrixAt(i, tankDummy.matrix); } im.instanceMatrix.needsUpdate = true; }
@@ -15379,7 +15379,7 @@ function completeQuest(q){
   if (q.kind === 'dish') rec.dishes = rec.dishes.filter(d => !set.has(d.t)); else { rec.tank = rec.tank.filter(x => !set.has(x.t)); buildTank(); }
   rec.earned += q.reward; addCoins(q.reward); saveRecLocal(); q.done = true;
   cloudCall('complete_quest', { p_idx: q.i, p_ts: ts }); setTimeout(loadQuests, 1500);
-  SFX.catch(); flash(`📜 任務完成！+${q.reward} 金幣`, 1.6); const npc = questNpcs.find(n => n.who === q.who); if (npc){ npc.f.say('謝謝你！😄', 'emote', 3); npc.mark = null; FX.emit(npc.f.pos.x, 2, npc.f.pos.z, 18, '#ffd36a', 1, 2, 1); }
+  SFX.catch(); flash(`任務完成。+${q.reward} 金幣`, 1.6); const npc = questNpcs.find(n => n.who === q.who); if (npc){ npc.f.say('謝謝你！😄', 'emote', 3); npc.mark = null; FX.emit(npc.f.pos.x, 2, npc.f.pos.z, 18, '#ffd36a', 1, 2, 1); }
   renderTab();
 }
 /* ===== v662 📮 集章卡（登入獎勵）＋ 郵差的包裹（在線獎勵）（作者：「兩個都做，不歸零，都要有，而且我們以後一定會出造型」）
@@ -15432,9 +15432,9 @@ function courierSpawn(){ const back = cam.yaw + (Math.random() < 0.5 ? 1 : -1) *
 function courierStart(){ if (Stamp.cour) return; if (!courierCanWalk()){ stampPendNote(); return; } const p = courierSpawn(); if (!p){ stampPendNote(); return; }
   const f = new Fisher({ shirt: '#3d6b4f', hat: '#2f5a40', name: '郵差 阿信', kind: 'npc' }); f.pos.x = p[0]; f.pos.z = p[1]; f.baseY = groundHeight(p[0], p[1]);
   Stamp.cour = { f, st: 'in', t: 0, sx: p[0], sz: p[1] }; }
-function stampPendNote(){ if (Stamp.noteAt && Date.now() - Stamp.noteAt < 5 * 60000) return; Stamp.noteAt = Date.now(); toast('📮 郵差阿信送包裹來了，先放在「📱 手機 → 今天」，到那裡收'); }
+function stampPendNote(){ if (Stamp.noteAt && Date.now() - Stamp.noteAt < 5 * 60000) return; Stamp.noteAt = Date.now(); toast('郵差阿信送包裹來了，先放在「📱 手機 → 今天」，到那裡收'); }
 async function playClaim(f){ if (Stamp.busy) return null; Stamp.busy = true; try { const { data, error } = await Cloud.sb.rpc('play_claim'); if (error) throw error; adoptRow(data.player); Stamp.st.claim = data.step; Stamp.pend = Stamp.st.claim < 3 && Stamp.st.mins >= PLAY_STEPS[Stamp.st.claim]; saveRecLocal();
-    try { SFX.coin(); } catch(e){} flash(`📦 包裹：${stampTxt(data.got)}`, 2.4); if (!$('#sheet').hidden) renderTab(); return data; } catch(e){ if (!f) toast(cloudErrMsg(e)); return null; } finally { Stamp.busy = false; } }
+    try { SFX.coin(); } catch(e){} flash(`包裹：${stampTxt(data.got)}`, 2.4); if (!$('#sheet').hidden) renderTab(); return data; } catch(e){ if (!f) toast(cloudErrMsg(e)); return null; } finally { Stamp.busy = false; } }
 function courierTick(dt, t){ const C = Stamp.cour; if (!C) return; const f = C.f; C.t += dt;
   const end = () => { try { f.dispose(); CLOD.all.delete(f); } catch(e){} Stamp.cour = null; };
   if (C.st !== 'out' && (!courierCanWalk() || C.t > 40)){ end(); if (Stamp.pend) stampPendNote(); return; }
@@ -15624,16 +15624,16 @@ function renderTote(body){ const st = toteState();
 /* v391 兌換碼：實體活動的小卡 → 遊戲裡的小禮物（單向贈送，伺服器 152） */
 async function redeemCode(inp, btn){ const code = String(inp.value || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (code.length < 6){ toast('請輸入小卡上的兌換碼'); return; } if (!(Cloud.on && Cloud.sb)){ toast('要連上雲端才能兌換'); return; } if (btn.disabled) return; btn.disabled = true;
   try { const { data, error } = await Cloud.sb.rpc('redeem', { p_code: code }); if (error) throw error; if (!data || !data.ok){ toast((data && data.msg) || '兌換碼不對，請再檢查一次'); }
-    else { if (data.pl){ delete data.pl.island; adoptRow(data.pl); } inp.value = ''; try { SFX.catch(); } catch(e){} closeSheet(); flash('🎁 兌換成功！', 2.0); toast('拿到 🪙300、💙5 和「🚩 版畫小旗」。小旗在背包裡，潛到自己小島的海底就可以插上去'); } }
+    else { if (data.pl){ delete data.pl.island; adoptRow(data.pl); } inp.value = ''; try { SFX.catch(); } catch(e){} closeSheet(); flash('兌換成功！', 2.0); toast('拿到 🪙300、💙5 和「🚩 版畫小旗」。小旗在背包裡，潛到自己小島的海底就可以插上去'); } }
   catch(e){ toast(cloudErrMsg(e)); } btn.disabled = false; }
 /* v380 保養釣竿：釣竿不會壞；在釣具店花金幣保養，接下來 30 次拋竿收線快一點、線比較不容易斷。沒保養照常釣（次數存在這台裝置，跟料理的加成分開算、可以疊） */
 const CARE = { casts:30, price:200, reel:1.1, tension:0.9 };
 function careLeft(){ const c = LS.get('tide.care', null); return c && c.left > 0 ? Math.min(CARE.casts, Math.floor(c.left)) : 0; }
-function useCareCast(){ const n = careLeft(); if (!n) return; LS.set('tide.care', { left: n - 1 }); if (n - 1 <= 0) toast('🧴 釣竿的保養效果用完了，可以再去釣具店保養'); renderBuff(); }
+function useCareCast(){ const n = careLeft(); if (!n) return; LS.set('tide.care', { left: n - 1 }); if (n - 1 <= 0) toast('釣竿的保養效果用完了，可以再去釣具店保養'); renderBuff(); }
 let careBusy = false;
 async function rodCare(){ if (careBusy) return; if (careLeft() > 0){ toast('釣竿才剛保養過，用完再來'); return; } if (rec.coins < CARE.price){ toast('金幣不夠'); return; }
   if (Cloud.on && Cloud.sb){ careBusy = true; let ok = false; try { const { data, error } = await Cloud.sb.rpc('rod_care'); if (error) throw error; if (data && typeof data === 'object') delete data.island; adoptRow(data); ok = true; } catch(e){ toast(cloudErrMsg(e)); } careBusy = false; if (!ok) return; } else addCoins(-CARE.price);
-  LS.set('tide.care', { left: CARE.casts }); try { SFX.catch(); } catch(e){} flash('🧴 釣竿保養好了！', 1.4); toast(`接下來 ${CARE.casts} 次拋竿：收線快 10%、線比較不容易斷`); renderBuff(); if (!$('#sheet').hidden) renderTab(); }
+  LS.set('tide.care', { left: CARE.casts }); try { SFX.catch(); } catch(e){} flash('釣竿保養好了', 1.4); toast(`接下來 ${CARE.casts} 次拋竿：收線快 10%、線比較不容易斷`); renderBuff(); if (!$('#sheet').hidden) renderTab(); }
 function curBuff(){ return buff && BUFFS[buff.r] && buff.left > 0 ? Object.assign({ r:buff.r, left:buff.left }, BUFFS[buff.r]) : null; }
 function eatDish(ts){
   const d = rec.dishes.find(x => x.t === ts); if (!d) return; const rc = RECIPES[d.r], bf = BUFFS[d.r];
@@ -15933,8 +15933,8 @@ function updateChum(dt, t){
     if (k >= 1){ ChumFly.on = false; scene.remove(ChumFly.m); SFX.plop();
       if (ChumFly.secret){ ripple(ChumFly.to.x, ChumFly.to.z, true); while (secretSpots.length >= SECRET_MAX){ const old = secretSpots.shift(); const g = secretMarks.get(old.id); if (g) scene.remove(g); secretMarks.delete(old.id); }
         const sp = { id: Date.now(), x: +ChumFly.to.x.toFixed(2), z: +ChumFly.to.z.toFixed(2), type: ChumFly.type, at: Date.now(), where: spotName(ChumFly.to.x, ChumFly.to.z) }; secretSpots.push(sp); saveSecrets(); secretMark(sp);
-        toast(`🤫 窩點做好了（${sp.where}）！窩料會慢慢發酵，大約 10 分鐘後效果最強。大家都看得到這顆浮標，別人來釣效果是你的 75%。`); OtherSecret.at = 0; }
-      else { const zn = addChumZone(ChumFly.to.x, ChumFly.to.z, ChumFly.type, 'me'); if (zn) toast(`🍚 打好窩了！在這附近下竿，魚會比較快上鉤（${Math.round(CHUM_BY_ID[ChumFly.type].dur / 60)} 分鐘左右）`); } } }
+        toast(`窩點做好了（${sp.where}）！窩料會慢慢發酵，大約 10 分鐘後效果最強。大家都看得到這顆浮標，別人來釣效果是你的 75%。`); OtherSecret.at = 0; }
+      else { const zn = addChumZone(ChumFly.to.x, ChumFly.to.z, ChumFly.type, 'me'); if (zn) toast(`打好窩了！在這附近下竿，魚會比較快上鉤（${Math.round(CHUM_BY_ID[ChumFly.type].dur / 60)} 分鐘左右）`); } } }
 }
 const ChumFly = { on:false };
 // ---- 提前打窩：祕密窩點（只有自己知道，存在這台裝置；效果慢慢醞釀，10 分鐘後最強，維持 1 小時）----
@@ -15968,7 +15968,7 @@ function secretMark(sp, other){
 function updateSecrets(t){
   if (Cloud.on && Cloud.sb && secretLoaded !== Cloud.userId) loadSecretsCloud();
   for (let i = secretSpots.length - 1; i >= 0; i--){ const sp = secretSpots[i], pw = secretPower(sp);
-    if (pw <= 0){ const g = secretMarks.get(sp.id); if (g) scene.remove(g); secretMarks.delete(sp.id); secretSpots.splice(i, 1); saveSecrets(); toast('🍚 有一個祕密窩點的窩料散掉了'); continue; }
+    if (pw <= 0){ const g = secretMarks.get(sp.id); if (g) scene.remove(g); secretMarks.delete(sp.id); secretSpots.splice(i, 1); saveSecrets(); toast('有一個祕密窩點的窩料散掉了'); continue; }
     let g = secretMarks.get(sp.id); if (!g) g = secretMark(sp);
     const vis = !onIsle && !House.on; if (g.visible !== vis) g.visible = vis;
     g.userData.bo.position.y = 0.08 + Math.sin(t * 2 + sp.x) * 0.04; g.userData.pt.material.opacity = 0.08 + 0.22 * pw; }
@@ -15995,7 +15995,7 @@ function spotName(x, z){ const id = waterSpotId(x, z), s = SPOT_BY_ID[id]; retur
 function chumSpot(){ if (F.phase !== 'idle' || ChumFly.on || (mySeat && !mySeat.gear) || House.on || inHall()) return null;   /* v681 作者：「坐著的時候不能打窩」→ 坐在自己的釣魚椅上可以打窩 */   /* 釣蝦場不能打窩 */ if (myBoat) return boatSpot(); const ns = nearestSpot(); if (ns.d < 1.7) return ns.spot; return shoreSpot(); }
 function myChums(){ return CHUMS.filter(c => (rec.bait[c.id] || 0) > 0); }
 function throwChum(type, secret){
-  if (typeof inHall === 'function' && inHall()){ toast('🦐 釣蝦場不用打窩，老闆會定時放蝦進池子'); return; }
+  if (typeof inHall === 'function' && inHall()){ toast('釣蝦場不用打窩，老闆會定時放蝦進池子'); return; }
   const C = CHUM_BY_ID[type], sp = chumSpot(); if (!C || !sp){ toast('要在水邊才能打窩'); return; } if (!(rec.bait[type] > 0)){ toast(`沒有${C.name}了，到釣具店買`); return; }
   const cp = castPoint(sp.pos.x, sp.pos.z, sp.dir.x, sp.dir.y, 4.5), to = new THREE.Vector3(cp[0], WATER_LEVEL, cp[1]), from = new THREE.Vector3(); me.av.armR.getWorldPosition(from);
   me.rot = Math.atan2(sp.dir.x, sp.dir.y);
@@ -16019,7 +16019,7 @@ function chumHotTick(){ const T = now(); if (T - ChumHot.at < 0.5) return; ChumH
 function chumHotPlace(){ if (!ChumHot.tags.size) return; const v = new THREE.Vector3(); for (const e of ChumHot.tags.values()){ v.set(e._x, WATER_LEVEL + 1.6, e._z).project(camera); if (v.z > 1){ e.style.display = 'none'; continue; } e.style.display = ''; e.style.transform = `translate(-50%,-50%) translate(${(v.x * 0.5 + 0.5) * innerWidth}px,${(-v.y * 0.5 + 0.5) * innerHeight}px)`; } }
 function chumThxCheck(row){ const L = Array.isArray(row && row.chum_thx_log) ? row.chum_thx_log : []; const nw = L.filter(e => +e.at > ChumHot.thxSeen).sort((a, b) => a.at - b.at); if (!nw.length) return;
   const first = !ChumHot.thxSeen; ChumHot.thxSeen = Math.max(...L.map(e => +e.at || 0)); LS.set('tide.chumThx', ChumHot.thxSeen); if (first && nw.length > 3) return;
-  nw.slice(-3).forEach((e, i) => setTimeout(() => { const f = FISH_BY_ID[e.f], nm = clean(String(e.n || '釣客').slice(0, 16)); toast(`🍚 ${nm} 在你的窩釣到${f ? f.name : '一條魚'}${+e.c ? `，謝禮 +${+e.c} 💰` : ''}`); try { phFeedAdd(`🍚 <b>${esc(nm)}</b> 在你的窩釣到${esc(f ? f.name : '一條魚')}`); } catch(err){} }, i * 1800)); }
+  nw.slice(-3).forEach((e, i) => setTimeout(() => { const f = FISH_BY_ID[e.f], nm = clean(String(e.n || '釣客').slice(0, 16)); toast(`${nm} 在你的窩釣到${f ? f.name : '一條魚'}${+e.c ? `，謝禮 +${+e.c} 💰` : ''}`); try { phFeedAdd(`🍚 <b>${esc(nm)}</b> 在你的窩釣到${esc(f ? f.name : '一條魚')}`); } catch(err){} }, i * 1800)); }
 function chumAt(x, z){ let best = null; for (const zn of chumZones){ const d = Math.hypot(x - zn.x, z - zn.z); if (d < 3.2 && (!best || zn.until > best.until)) best = zn; } return best; }
 function chumBonus(zn, spotId, secret){
   if (secret){ const C = CHUM_BY_ID[secret.type], pw = secretPower(secret), sea = SEA_SPOTS.has(spotId), fit = C.fresh ? (sea ? 0.45 : 1) : C.sea ? (sea ? 1 : 0.5) : 1, k = pw * fit;
@@ -16537,7 +16537,7 @@ function wearGear(id){
 }
 function buyGear(id){
   const it = GEAR_BY_ID[id]; if (!it || ownsGear(id)) return;
-  if (it.rw === 'stamp'){ toast('📮 這個買不到：村長的集章卡每蓋滿 4 張送一件'); return; } if (it.rw === 'team'){ toast('🎽 釣友隊升到 Lv4，隊員都會拿到隊服'); return; } if (it.rw){ toast(it.id === 'hat_skipom' ? '🎿 這頂帽子買不到：到雪松山滑雪場滑完一趟就送' : `🎿 這副雪鏡買不到：在雪松山 ${SKI_GOG_S} 秒內滑完就送`); return; }
+  if (it.rw === 'stamp'){ toast('這個買不到：村長的集章卡每蓋滿 4 張送一件'); return; } if (it.rw === 'team'){ toast('釣友隊升到 Lv4，隊員都會拿到隊服'); return; } if (it.rw){ toast(it.id === 'hat_skipom' ? '🎿 這頂帽子買不到：到雪松山滑雪場滑完一趟就送' : `🎿 這副雪鏡買不到：在雪松山 ${SKI_GOG_S} 秒內滑完就送`); return; }
   if (it.love) return redeemLove(id);
   if (rec.coins < it.price){ toast(`金幣不夠，還差 🪙${(it.price - rec.coins).toLocaleString()}`); return; }
   endTryOn(); rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); addCoins(-it.price); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
@@ -16546,7 +16546,7 @@ function buyGear(id){
 // 愛海商品：用放流得到的愛海點數換
 function redeemLove(id){
   const it = GEAR_BY_ID[id]; if (!it || !it.love || ownsGear(id)) return;
-  if ((rec.love || 0) < it.love){ toast(`愛海點數不夠，還差 💙${it.love - (rec.love || 0)}。把魚放流就能得到點數！`); return; }
+  if ((rec.love || 0) < it.love){ toast(`愛海點數不夠，還差 💙${it.love - (rec.love || 0)}。把魚放流就能得到點數`); return; }
   endTryOn(); rec.love -= it.love; rec.owned.push(id); rec.gear = Object.assign(cleanGear(rec.gear), { [it.slot]: id }); saveRecLocal(); me.setGear(rec.gear); pushPresence(true);
   cloudCall('redeem_love', { p_item: id }); SFX.catch(); flash(`${it.icon} 換到了${it.name}！`, 1.4); renderTab();
 }
@@ -16663,7 +16663,7 @@ function renderMyDesigns(body, slot){
 }
 /* v303 玩家說：自己設計的衣服要能刪掉，而且要有一個地方專門放自己的衣服 → 造型裡的「🎨 我的設計」：自己畫的、買來的設計衣服都在這裡，可以穿、脫、刪掉 */
 async function dropDesign(item){ const d = designId(item); if (!d) return; if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能刪掉'); return; }
-  try { const { data, error } = await Cloud.sb.rpc('drop_design', { p_id: d.id }); if (error) throw error; adoptRow(data); rec.owned = (rec.owned || []).filter(x => x !== item); me.setGear(rec.gear); pushPresence(true); SFX.click(); toast('🗑️ 拿掉了'); renderTab(); }
+  try { const { data, error } = await Cloud.sb.rpc('drop_design', { p_id: d.id }); if (error) throw error; adoptRow(data); rec.owned = (rec.owned || []).filter(x => x !== item); me.setGear(rec.gear); pushPresence(true); SFX.click(); toast('拿掉了'); renderTab(); }
   catch(e){ toast(cloudErrMsg(e)); } }
 function designDelBtn(item, D){ const b = el('button', 'tbtn ghost', '🗑️'); b.title = '刪掉'; b.addEventListener('click', e => { e.stopPropagation(); if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.classList.add('warn'); b.textContent = D && D.mine ? (D.sold ? '確定下架並拿掉？' : '確定刪掉？') : '確定從衣櫃拿掉？'; return; } b.disabled = true; dropDesign(item); }); return b; }
 function renderMyClothes(list){
@@ -16741,7 +16741,7 @@ function renderDesignEd(body){
   { const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true; const ib = el('button', 'tbtn', '🖼️ 用自己的圖片');
     ib.addEventListener('click', () => fi.click());
     fi.addEventListener('change', () => { const file = fi.files && fi.files[0]; fi.value = ''; if (!file) return; const url = URL.createObjectURL(file), im = new Image();
-      im.onload = () => { try { snap(); designFromImage(im, E.px, off()); draw(); drawPrev(); toast('🖼️ 圖片變成格子圖了，可以再用畫筆修一修'); } catch(e){ toast('這張圖片讀不出來，換一張試試'); } URL.revokeObjectURL(url); };
+      im.onload = () => { try { snap(); designFromImage(im, E.px, off()); draw(); drawPrev(); toast('圖片變成格子圖了，可以再用畫筆修一修'); } catch(e){ toast('這張圖片讀不出來，換一張試試'); } URL.revokeObjectURL(url); };
       im.onerror = () => { URL.revokeObjectURL(url); toast('這張圖片讀不出來，換一張試試'); }; im.src = url; });
     side.append(ib, fi); }
   const prev = el('img'); prev.alt = '預覽'; prev.style.cssText = 'width:120px;height:120px;border-radius:10px;background:#eef4f7'; side.appendChild(prev);
@@ -16752,7 +16752,7 @@ function renderDesignEd(body){
   const bar = el('div', 'tankbar'), sv = el('button', 'tbtn', E.busy ? '儲存中…' : '💾 儲存並穿上'), bk = el('button', 'tbtn ghost', '取消');
   sv.disabled = E.busy; sv.addEventListener('click', async () => { if (!Cloud.on || !Cloud.sb){ toast('要連上雲端（登入）才能儲存設計'); return; } E.busy = true; renderTab();
     try { const { data, error } = await Cloud.sb.rpc('save_design', { p_kind: E.kind, p_name: E.name, p_px: designPxStr(E.px), p_price: E.price }); if (error) throw error;
-      Designs.map.set(data.id, data); const item = E.kind + '_dz' + data.id; if (!rec.owned.includes(item)) rec.owned.push(item); E.busy = false; E.px = null; E.name = ''; toast(`🎨 存好了！「${esc(data.name)}」已經放到設計師市集`); wearDesign(item); curTab = 'style'; renderTab(); }
+      Designs.map.set(data.id, data); const item = E.kind + '_dz' + data.id; if (!rec.owned.includes(item)) rec.owned.push(item); E.busy = false; E.px = null; E.name = ''; toast(`存好了。「${esc(data.name)}」已經放到設計師市集`); wearDesign(item); curTab = 'style'; renderTab(); }
     catch(e){ E.busy = false; toast(String(e.message || '').includes('今天') ? '今天設計太多件了，明天再來' : '存不起來，等一下再試'); renderTab(); } });
   bk.addEventListener('click', () => { curTab = 'style'; renderTab(); }); bar.append(sv, bk); body.appendChild(bar);
 }
@@ -16779,7 +16779,7 @@ function renderMarket(body, inShop){
     if (d.mine){ const pb = el('button', 'tbtn ghost', '改價錢'); pb.addEventListener('click', async () => { const v = prompt('新的價錢（0～5000）', String(d.price)); if (v == null) return; const p = clamp(Math.round(+v || 0), 0, 5000); try { const { data } = await Cloud.sb.rpc('edit_design', { p_id: d.id, p_price: p, p_listed: null }); Object.assign(d, data); renderTab(); } catch(e){} });
       const lb = el('button', 'tbtn ghost', d.listed ? '下架' : '上架'); lb.addEventListener('click', async () => { try { const { data } = await Cloud.sb.rpc('edit_design', { p_id: d.id, p_price: null, p_listed: !d.listed }); Object.assign(d, data); renderTab(); } catch(e){} }); a.append(pb, lb); }
     if (own && !on){ const b = el('button', 'tbtn', '穿上'); b.addEventListener('click', () => wearDesign(item)); a.appendChild(b); }
-    if (!own){ const b = el('button', 'tbtn' + (rec.coins < d.price ? ' ghost' : ''), d.price ? `買 🪙${d.price}` : '免費拿'); b.addEventListener('click', async () => { if (rec.coins < d.price){ toast('金幣不夠'); return; } b.disabled = true; const row = await cloudCall('buy_design', { p_id: d.id }); if (row){ SFX.catch(); toast(`買到了「${esc(d.name)}」！`); wearDesign(item); } renderTab(); }); a.appendChild(b);
+    if (!own){ const b = el('button', 'tbtn' + (rec.coins < d.price ? ' ghost' : ''), d.price ? `買 🪙${d.price}` : '免費拿'); b.addEventListener('click', async () => { if (rec.coins < d.price){ toast('金幣不夠'); return; } b.disabled = true; const row = await cloudCall('buy_design', { p_id: d.id }); if (row){ SFX.catch(); toast(`買到了「${esc(d.name)}」`); wearDesign(item); } renderTab(); }); a.appendChild(b);
       const rp = el('button', 'tbtn ghost', '檢舉'); rp.addEventListener('click', async () => { if (!confirmOnce(rp)) return; try { await Cloud.sb.rpc('report_design', { p_id: d.id, p_reason: '不適當的圖案' }); toast('謝謝你，我們收到了'); rp.disabled = true; } catch(e){ toast('今天檢舉太多次了'); } }); a.appendChild(rp); }
     li.appendChild(a); ul.appendChild(li); }
   body.appendChild(ul);
@@ -16897,13 +16897,13 @@ function avatarSrc(code, size, gear, k3c){ size = size || 96; if (!avatarOk(code
   const u = cv.toDataURL('image/png'); AvCache.set(key, u); if (code.startsWith('f:')) setTimeout(() => AvCache.delete(key), 4000); return u; }   /* 魚的小圖要一下下才畫好，過一會兒重畫 */
 function avatarImg(code, cls, gear, k3c){ const src = avatarSrc(code, 64, gear, k3c); if (!src) return null; const im = el('img', 'avimg ' + (cls || '')); im.src = src; im.alt = ''; return im; }
 async function setAvatar(code){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能換頭像'); return; }
-  try { const { data, error } = await Cloud.sb.rpc('set_avatar', { p: code }); if (error) throw error; if (Cloud.lastRow) Cloud.lastRow.avatar = data || ''; LS.set('tide.avatar', data || ''); pushPresence(true); const mk = $('#brand .mark'); if (mk) mk._src = null; toast('🖼️ 頭像換好了'); if (AvStudio.onSet){ try { AvStudio.onSet(); } catch(e){} } else renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
+  try { const { data, error } = await Cloud.sb.rpc('set_avatar', { p: code }); if (error) throw error; if (Cloud.lastRow) Cloud.lastRow.avatar = data || ''; LS.set('tide.avatar', data || ''); pushPresence(true); const mk = $('#brand .mark'); if (mk) mk._src = null; toast('頭像換好了'); if (AvStudio.onSet){ try { AvStudio.onSet(); } catch(e){} } else renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
 const AvStudio = { c: null };
 function renderAvatarStudio(body){ const f = el('div', 'field avst'); f.appendChild(el('label', '', '📸 大頭照')); const cur = myAvatar();
   if (!AvStudio.c) AvStudio.c = avcParse(cur) || { b: 0, f: 1, x: 0, p: 0, a: 4, z: 0 }; const C = AvStudio.c, wrap = el('div', 'avst-w'), left = el('div', 'avst-l'), im = el('img', 'avst-img'), right = el('div', 'avst-r'); im.alt = '';
   const draw = () => { try { im.src = avatarSrc(avcStr(C), 256, cleanGear(rec.gear), myK3()) || ''; } catch(e){} use.disabled = avcStr(C) === myAvatar(); use.textContent = use.disabled ? '✔ 現在的頭像' : '用這張當頭像'; };
   const use = el('button', 'btn primary', '用這張當頭像'); use.addEventListener('click', () => setAvatar(avcStr(C)));
-  const row = (label, key, opts, paint) => { const r = el('div', 'avst-row'); r.appendChild(el('span', 'avst-k', label)); const box = el('div', 'avst-o'); opts.forEach((o, i) => { const b = el('button', 'avst-b' + (C[key] === i ? ' on' : ''), paint ? '' : o[0]); b.title = o[0]; b.setAttribute('aria-label', label + '：' + o[0]); if (paint){ b.classList.add('sw'); paint(b, o); } b.addEventListener('click', () => { C[key] = i; box.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === i)); if (key === 'p' && i > 0 && C.z === 0){ C.z = 1; const zb = right.querySelector('.avst-o[data-k="z"]'); if (zb) zb.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === 1)); toast('📸 姿勢要拍半身才看得到，已經幫你換成「半身」'); } poseNote(); draw(); }); box.appendChild(b); }); box.dataset.k = key; r.appendChild(box); right.appendChild(r); return r; };   /* v536 作者：「你那個動作其實很沒用」→ 大頭照只拍到臉，姿勢根本看不出來；現在選了姿勢會自動換成半身，選大頭的時候姿勢那排會變淡並說明 */
+  const row = (label, key, opts, paint) => { const r = el('div', 'avst-row'); r.appendChild(el('span', 'avst-k', label)); const box = el('div', 'avst-o'); opts.forEach((o, i) => { const b = el('button', 'avst-b' + (C[key] === i ? ' on' : ''), paint ? '' : o[0]); b.title = o[0]; b.setAttribute('aria-label', label + '：' + o[0]); if (paint){ b.classList.add('sw'); paint(b, o); } b.addEventListener('click', () => { C[key] = i; box.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === i)); if (key === 'p' && i > 0 && C.z === 0){ C.z = 1; const zb = right.querySelector('.avst-o[data-k="z"]'); if (zb) zb.querySelectorAll('.avst-b').forEach((x, j) => x.classList.toggle('on', j === 1)); toast('姿勢要拍半身才看得到，已經幫你換成「半身」'); } poseNote(); draw(); }); box.appendChild(b); }); box.dataset.k = key; r.appendChild(box); right.appendChild(r); return r; };   /* v536 作者：「你那個動作其實很沒用」→ 大頭照只拍到臉，姿勢根本看不出來；現在選了姿勢會自動換成半身，選大頭的時候姿勢那排會變淡並說明 */
   let poseRow = null; const poseNote = () => { if (!poseRow) return; const off = C.z === 0; poseRow.style.opacity = off ? '0.5' : ''; let n = poseRow.querySelector('.avst-n'); if (!n){ n = el('small', 'avst-n', ''); n.style.cssText = 'display:block;font-size:11px;color:#5a6b7a;margin-top:2px'; poseRow.querySelector('.avst-o').appendChild(n); } n.textContent = off ? '（「大頭」只拍到臉，看不到姿勢；選姿勢會自動換成半身）' : ''; };
   C.x = 0;   /* v540 作者：「表情這種的讓玩家用自己造型就好了」→ 拿掉表情那一排，大頭照的臉就是你造型裡選的臉 */
   row('遠近', 'z', AVC.zoom); poseRow = row('姿勢', 'p', AVC.pose); poseNote();
@@ -17127,7 +17127,7 @@ function fkPlace(){ const why = fkWhy(); if (why){ toast(why); return false; } c
   const seat = { x: w.x + dx * (sl + 0.05), z: w.z + dz * (sl + 0.05), face: w.face, y: (mask & 2 ? y0 : w.y) + 0.2, nook: true, gear: true, reach: mask & 2 ? 3.4 : 1.4, ret: [w.x - dx * 0.5, w.z - dz * 0.5] };
   FK.seat = seat; CHAIRS.push(seat); FK.set = { x: w.x, z: w.z, face: w.face, y: w.y, mask, y0, isle: !!onIsle, nz: w.nz };
   try { SFX.door(); } catch(e){} fkPop(g, FK.at); sitDown(seat); FK.sitT = now();
-  setTimeout(() => toast(`🎣 裝備擺好了！${mask & 4 ? '等魚的時候可以按「跳」站起來走開，竿子會插在竿架上。' : '按「拋竿」就能坐著釣。'}`), 500);
+  setTimeout(() => toast(`裝備擺好了！${mask & 4 ? '等魚的時候可以按「跳」站起來走開，竿子會插在竿架上。' : '按「拋竿」就能坐著釣。'}`), 500);
   pushPresence(true); renderTabIf('rig2'); return true; }
 function renderTabIf(tab){ try { if (!$('#sheet').hidden && curTab === tab) renderTab(); } catch(e){} }
 function fkClear(quiet){ me.restRod = false; if (FK.seat){ if (mySeat === FK.seat) standUp(); const i = CHAIRS.indexOf(FK.seat); if (i >= 0) CHAIRS.splice(i, 1); FK.seat = null; }
@@ -17162,11 +17162,11 @@ function fkTick(dt){ const t = now();
   if (d > 15 || Dive.on || House.on || myBoat || (onIsle ? 1 : 0) !== (FK.set.isle ? 1 : 0)) fkPack(F.held ? '走太遠了，竿子和裝備都收回背包了' : '🎣 走遠了，釣魚裝備收回背包'); }
 /* 竿架：站起來時把竿子留在竿架上 */
 function fkHoldOk(c){ return c && c.gear && FK.set && (FK.set.mask & 4) && F.phase === 'waiting' && !me.flying && me.bobState === 'water' && !(F.spot && F.spot.id === 'shrimp') && FK.g && FK.g.userData.tip; }
-function fkHold(){ F.held = true; F.heldRing = 0; me.fishing = false; me.heldTip = FK.g.userData.tip; F.waitUntil = Math.max(F.waitUntil, now() + 1.5); toast('🎣 竿子插在竿架上了。魚咬了鈴鐺會響，回來坐下就能拉'); pushPresence(true); }
+function fkHold(){ F.held = true; F.heldRing = 0; me.fishing = false; me.heldTip = FK.g.userData.tip; F.waitUntil = Math.max(F.waitUntil, now() + 1.5); toast('竿子插在竿架上了。魚咬了鈴鐺會響，回來坐下就能拉'); pushPresence(true); }
 function fkUnhold(){ if (!F.held) return; F.held = false; me.heldTip = null; me.fishing = true; if (F.heldRing){ F.waitUntil = now() + 0.5; F.heldRing = 0; } pushPresence(true); }
 function fkBell(){ try { tone(2093, 0.35, 'sine', 0.07); setTimeout(() => tone(2637, 0.4, 'sine', 0.06), 120); } catch(e){} }
 /* 等魚的時候（竿子在竿架上）：輪到魚咬了 → 鈴鐺響、竿尖抖，25 秒內回來坐下；沒回來魚就跑了 */
-function fkHeldBite(t){ if (!F.heldRing){ F.heldRing = t; fkBell(); try { buzz([60, 60, 60]); } catch(e){} flash('🔔 竿架的鈴鐺響了！快回去坐下拉魚', 2); FK.ringAt = t; }
+function fkHeldBite(t){ if (!F.heldRing){ F.heldRing = t; fkBell(); try { buzz([60, 60, 60]); } catch(e){} flash('竿架的鈴鐺響了！快回去坐下拉魚', 2); FK.ringAt = t; }
   if (t - FK.ringAt > 1.6){ FK.ringAt = t; fkBell(); }
   fkRing(t); F.waitUntil = t + 0.3;
   if (t - F.heldRing > 25){ cancelFishing(); flash('魚吃掉餌跑了…（鈴鐺響的時候要回去坐下）', 2); } }
@@ -17198,7 +17198,7 @@ function renderFkitShop(body){ body.appendChild(el('div', 'dexhead', '🎣 釣�
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', k.name)); d.appendChild(el('div', 'meta', k.desc + (lock ? '（要先有摺疊椅）' : ''))); li.appendChild(d);
     const b = el('button', 'tbtn' + (own ? ' ghost' : ''), own ? '已經有了' : `買 🪙${k.price.toLocaleString()}`); b.disabled = own || lock;
     b.addEventListener('click', async () => { if (rec.coins < k.price){ toast(`金幣不夠，還差 🪙${(k.price - rec.coins).toLocaleString()}`); return; }
-      const done = () => { SFX.catch(); toast(`買到了 ${k.icon}<b>${k.name}</b>！在背包「🎣 釣組」，走到水邊就能擺出來`); if (FK.set) pushPresence(true); };
+      const done = () => { SFX.catch(); toast(`買到了 ${k.icon}<b>${k.name}</b>。在背包「🎣 釣組」，走到水邊就能擺出來`); if (FK.set) pushPresence(true); };
       if (Cloud.on){ b.disabled = true; const row = await cloudCall('buy_tool', { p_tool: k.id }); if (row) done(); renderTab(); return; }
       rec.owned.push(k.id); addCoins(-k.price); saveRecLocal(); done(); renderTab(); });
     li.appendChild(b); ul.appendChild(li); }
@@ -17228,8 +17228,8 @@ function renderShop(body){
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', NET.name)); d.appendChild(el('div', 'meta', NET.desc)); li.appendChild(d);
       const b = el('button', 'tbtn' + (own ? ' ghost' : ''), own ? '已經有了' : `買 🪙${NET.price}`); b.disabled = own;
       b.addEventListener('click', async () => { if (rec.coins < NET.price){ toast(`金幣不夠，還差 🪙${(NET.price - rec.coins).toLocaleString()}`); return; }
-        if (Cloud.on){ b.disabled = true; const row = await cloudCall('buy_tool', { p_tool: NET.id }); if (row){ SFX.catch(); toast(`買到了 ${NET.icon}<b>${NET.name}</b>！`); } renderTab(); return; }
-        rec.owned.push(NET.id); addCoins(-NET.price); saveRecLocal(); SFX.catch(); toast(`買到了 ${NET.icon}<b>${NET.name}</b>！`); renderTab(); });
+        if (Cloud.on){ b.disabled = true; const row = await cloudCall('buy_tool', { p_tool: NET.id }); if (row){ SFX.catch(); toast(`買到了 ${NET.icon}<b>${NET.name}</b>`); } renderTab(); return; }
+        rec.owned.push(NET.id); addCoins(-NET.price); saveRecLocal(); SFX.catch(); toast(`買到了 ${NET.icon}<b>${NET.name}</b>`); renderTab(); });
       li.appendChild(b); ul.appendChild(li); body.appendChild(ul); }
     renderFkitShop(body);
     return;
@@ -17290,8 +17290,8 @@ function renderShop(body){
       b.disabled = using;
       b.addEventListener('click', async () => {
         if (!owned && rec.coins < r.price){ toast(`金幣不夠，還差 🪙${(r.price - rec.coins).toLocaleString()}`); return; }
-        if (Cloud.on){ b.disabled = true; b.textContent = '處理中…'; const row = await cloudCall('buy_rod', { p_rod: r.id }); if (row && !owned){ SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); } renderTab(); return; }   // 由伺服器確認金幣
-        if (!owned){ rec.rods.push(r.id); addCoins(-r.price); SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>！`); }
+        if (Cloud.on){ b.disabled = true; b.textContent = '處理中…'; const row = await cloudCall('buy_rod', { p_rod: r.id }); if (row && !owned){ SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>`); } renderTab(); return; }   // 由伺服器確認金幣
+        if (!owned){ rec.rods.push(r.id); addCoins(-r.price); SFX.catch(); toast(`買到了 <b>${esc(r.name)}</b>`); }
         rodSwitchLocal(r.id); saveRecLocal(); me.setRod(r.id); updateBobberLook(); pushPresence(true); renderTab();
       });
       li.appendChild(b); ul.appendChild(li);
@@ -17401,7 +17401,7 @@ function starTotal(){ let n = 0; for (const f of starFish()) n += starsOf(f); re
 const STAR_TITLES = [[50, '魚種通'], [150, '海洋學者'], [300, '深海學者'], [450, '潮汐大師']];
 function starStr(k){ return '★'.repeat(k) + '☆'.repeat(3 - k); }
 async function mastLoad(){ if (!Cloud.on || !Cloud.sb || Mast.busy) return; Mast.busy = true; try { const { data, error } = await Cloud.sb.rpc('my_mastery'); if (!error && Array.isArray(data)){ Mast.set = new Set(data); Mast.loaded = true; } } catch(e){} Mast.busy = false; }
-async function mastAfterCatch(f, pfc, star0){ if (pfc && Cloud.on && Cloud.sb){ try { const { data } = await Cloud.sb.rpc('fish_perfect', { p_fish: f.id }); if (data && data.ok){ if (data.new){ Mast.set.add(f.id); toast(`✨ 完美搏鬥！${f.name}的每個動作都對上了`); } } } catch(e){} }
+async function mastAfterCatch(f, pfc, star0){ if (pfc && Cloud.on && Cloud.sb){ try { const { data } = await Cloud.sb.rpc('fish_perfect', { p_fish: f.id }); if (data && data.ok){ if (data.new){ Mast.set.add(f.id); toast(`完美搏鬥。${f.name}的每個動作都對上了`); } } } catch(e){} }
   const s1 = starsOf(f); if (s1 > star0 && s1 >= 2) setTimeout(() => { SFX.catch(); flash(`${'⭐'.repeat(s1)} ${f.name}升到 ${s1} 顆星！${s1 === 2 ? '以後牠咬餌時你一眼就認得出來' : '圖鑑金框，以後比較常釣到大尺寸的'}`, 2.6); }, 1200);
   else if (pfc && s1 < 3 && Mast.set.has(f.id)) setTimeout(() => toast(`再釣一條 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上的${f.name}，就三顆星了`), 1500); }
 function recordCatch(f, w){
@@ -17689,11 +17689,11 @@ function renderRig2(body){
         if (r.lv && rodLv(r) < 5){ const L = rodLv(r), c = ROD_LV.cost[L - 1], n = ROD_LV.n[L - 1], rr = ROD_LV.r[L - 1], use = craftUse({ r: rr, n }), ok = use.length >= n && rec.coins >= c;   /* v637 升級：金幣＋魚缸裡的魚 */
           const b = el('button', 'tbtn', `升一級（🪙${c.toLocaleString()}＋${rr}魚 ${n} 條）`); b.disabled = !ok; b.title = `稀有 ×${ROD_LV.rare[L]}、傳說 ×${ROD_LV.legend[L]}`;
           b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定？會用掉：${use.map(x => FISH_BY_ID[x.f].name).join('、')}`; b.classList.add('warn'); return; }
-            b.disabled = true; const res = await craftRpc('rod_upgrade', { p_rod: r.id }); if (res && res.player){ adoptRow(res.player); SFX.catch(); flash(`⬆️ ${r.name} 升到 Lv.${res.lv}！稀有 ×${ROD_LV.rare[res.lv - 1]}、傳說 ×${ROD_LV.legend[res.lv - 1]}`, 2.2); } renderTab(); });
+            b.disabled = true; const res = await craftRpc('rod_upgrade', { p_rod: r.id }); if (res && res.player){ adoptRow(res.player); SFX.catch(); flash(`${r.name} 升到 Lv.${res.lv}！稀有 ×${ROD_LV.rare[res.lv - 1]}、傳說 ×${ROD_LV.legend[res.lv - 1]}`, 2.2); } renderTab(); });
           ac.appendChild(b); if (!ok) li.querySelector('.tinfo').appendChild(el('div', 'meta', use.length < n ? `升級要${rr}魚 ${n} 條（魚缸裡能用的只有 ${use.length} 條，收藏、我的海裡的不算）` : '升級的金幣不夠')); }
         if (r.old && ROD_SWAP[r.id]){ const [nw, nl] = ROD_SWAP[r.id], N = RODS.find(x => x.id === nw), b = el('button', 'tbtn ghost', `免費換成 ${N.name} ${'★'.repeat(Math.max(nl, rec.rods.includes(nw) ? rodLv(N) : 1))}`);
           b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定換？${r.name}會變成 ${N.name}（紀錄一起帶過去）`; b.classList.add('warn'); return; }
-            b.disabled = true; const row = await cloudCall('rod_swap', { p_old: r.id }); if (row){ me.setRod(rec.rod); updateBobberLook(); pushPresence(true); SFX.catch(); flash(`🔁 換好了：${N.name} Lv.${rodLv(N)}`, 1.8); } renderTab(); }); ac.appendChild(b); }
+            b.disabled = true; const row = await cloudCall('rod_swap', { p_old: r.id }); if (row){ me.setRod(rec.rod); updateBobberLook(); pushPresence(true); SFX.catch(); flash(`換好了：${N.name} Lv.${rodLv(N)}`, 1.8); } renderTab(); }); ac.appendChild(b); }
         if (ac.children.length){ li.style.flexWrap = 'wrap'; for (const x of ac.children) x.style.whiteSpace = 'normal'; li.appendChild(ac); } }   /* v637 作者畫面：兩顆按鈕把字擠成直的 → 按鈕放到下一行 */
       li.firstChild.textContent = ''; const dot = el('span'); dot.style.cssText = `display:inline-block;width:10px;height:34px;border-radius:5px;background:${r.color};transform:rotate(20deg)`; li.firstChild.appendChild(dot); } }
   { const ul = sec('🎯 釣法和 🧵 釣線', '免費，隨時可以換');
@@ -17746,7 +17746,7 @@ function showCatch(f, w, res){
   if (F.sex){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = F.sex === 'M' ? '♂ 公' : '♀ 母'; b.appendChild(x); }
   if (F.brood){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = '🐣 嘴裡含著小魚・放流多 💙5'; b.appendChild(x); }
   if (f.rs && F.rsTag){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `🦈 ${rsLabel(F.rsTag)}・身上 ${rsInfo(F.rsTag).scars} 道叉叉・整片海只有一小群`; b.appendChild(x); }
-  if (f.of){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `✨ 罕見變種（${FISH_BY_ID[f.of].name}）`; b.appendChild(x); if (res.isNew){ SFX.catch(); flash(`✨ 發現新的變種：${f.name}！`, 2.4); } }
+  if (f.of){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `✨ 罕見變種（${FISH_BY_ID[f.of].name}）`; b.appendChild(x); if (res.isNew){ SFX.catch(); flash(`發現新的變種：${f.name}`, 2.4); } }
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '第一次釣到'; b.appendChild(x); }
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '你釣過最大的'; b.appendChild(x); }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
@@ -17800,7 +17800,7 @@ function qrMatrix(text){ const bytes = [...new TextEncoder().encode(text)], V = 
       if (fn[y][x]) continue; let on = bi < tot ? (all[bi >> 3] >> (7 - (bi & 7))) & 1 : 0; bi++; if ((x + y) % 2 === 0) on ^= 1; M[y][x] = on; } }   /* 遮罩 0 */
   return M; }
 /* v304 一鍵分享卡片；v346 重做：魚畫得清楚、兩個徽章都顯示、有頭像等級和圖鑑數、下面有 QR 碼（掃了就能玩） */
-async function shareCard(o){ if (shareCard.busy) return; shareCard.busy = true; setTimeout(() => { shareCard.busy = false; }, 2500); toast('🖼️ 正在做分享圖…'); const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
+async function shareCard(o){ if (shareCard.busy) return; shareCard.busy = true; setTimeout(() => { shareCard.busy = false; }, 2500); toast('正在做分享圖…'); const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
   const rr = (x, y, w, h, r) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); };
   const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#8fd3f4'); bg.addColorStop(0.5, '#2f89c7'); bg.addColorStop(1, '#173d63'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
   g.globalAlpha = 0.16; g.strokeStyle = '#fff'; g.lineWidth = 10; for (let k = 0; k < 4; k++){ const y = 1330 + k * 60; g.beginPath(); for (let x = -40; x <= W + 40; x += 20) g.lineTo(x, y + Math.sin(x / 70 + k) * 14); g.stroke(); } g.globalAlpha = 1;
@@ -17830,7 +17830,7 @@ async function shareCard(o){ if (shareCard.busy) return; shareCard.busy = true; 
   const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.92)); if (!blob){ toast('做圖失敗了'); return; } const file = new File([blob], `tide-${Date.now()}.jpg`, { type: 'image/jpeg' });
   const text = `${o.kind === 'whale' ? '我在潮汐釣魚村遇到了' : '我在潮汐釣魚村釣到了'}${o.title}！一起來玩：${gameUrl()}`;
   try { if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: '潮汐釣魚村', text }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
-  const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); toast('📥 分享圖已經存起來了，可以傳到 IG、LINE'); }
+  const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); toast('分享圖已經存起來了，可以傳到 IG、LINE'); }
 var ccFish = null, ccAt = 0;
 const ccEarly = () => performance.now() - ccAt < 700;
 function releaseCaught(){
@@ -17845,7 +17845,7 @@ $('#ccRel').addEventListener('click', () => { if (!ccEarly()) releaseCaught(); }
 $('#ccShow').addEventListener('click', () => { if (ccEarly()) return;   // 釣到時直接選「放進水族館展示」
   const f = ccFish, x = f && rec.tank.find(y => y.f === f.id); if (!x){ closeCatch(); return; }
   rec.show = (rec.show || []).filter(t => t !== x.t); if (mySeaFull()) return;
-  rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); MySea.key = ''; toast(`🐠 <b>${esc(f.name)}</b> 放進你的海了。到小島碼頭的潛水梯下去就看得到牠`); closeCatch(); });
+  rec.show.push(x.t); saveRecLocal(); buildTank(); cloudCall('set_show', { p_show: rec.show.slice() }); MySea.key = ''; toast(`<b>${esc(f.name)}</b> 放進你的海了。到小島碼頭的潛水梯下去就看得到牠`); closeCatch(); });
 /* ===== v304 新手主線：釣第一條魚 → 賣魚 → 買竿子 → 去自己的小島 → 潛一次水（長輩、小孩都看得懂；左上角一張小卡片＋地上的光柱指路）＋第一次釣魚的手指教學 ===== */
 /* v582 作者：「新手教學那些再去重做」→ 五步、大約 10 分鐘：釣魚 → 手機看圖鑑 → 賣魚 → 坐阿海的船出海 → 在島上釣滿 5 條（伺服器的新手獎勵本來就要 5 條）。做完跳「你現在可以自由玩了」 */
 const GUIDE = [
@@ -18055,7 +18055,7 @@ function meetNear(peerId){ const p = peers.get(peerId); return !!p && Math.hypot
 function meetDone(peerId){ const u = peerUid.get(peerId), p = peers.get(peerId); if (!u || !p || metWith(u)) return; const n = peerName(p);
   Meet.list[u] = { n: String(n).slice(0, 16), at: Date.now() }; const ks = Object.keys(Meet.list); if (ks.length > 300){ ks.sort((a, b) => Meet.list[a].at - Meet.list[b].at).slice(0, ks.length - 300).forEach(k => delete Meet.list[k]); }
   LS.set('tide.met', Meet.list); SFX.catch(); try { FX.emit(p.fisher.pos.x, 2, p.fisher.pos.z, 14, '#ffd36a', 1, 1.5); } catch(e){}
-  toast(`👋 你和 <b>${esc(n)}</b> 互相打了招呼，變成認識的人了！${strangerSafe() && !Kid.on ? '現在看得到他打的字了。' : ''}`); }
+  toast(`你和 <b>${esc(n)}</b> 互相打了招呼，變成認識的人了。${strangerSafe() && !Kid.on ? '現在看得到他打的字了。' : ''}`); }
 function meetMyWave(){ Meet.myWave = Date.now(); for (const [pid, t] of Meet.peerWave) if (Date.now() - t < 60000 && meetNear(pid)) meetDone(pid); }
 function meetPeerWave(pid){ Meet.peerWave.set(pid, Date.now()); if (Date.now() - Meet.myWave < 60000 && meetNear(pid)) meetDone(pid); }
 function emote(k){ ensureAudio(); if (!emoteOwned(k)){ buyEmote(k); return; } const D = EMOTE_DEF[k]; me.say(D && D.bub || EMOTES[k], 'emote', D && D.loop ? 4 : 3); startEmote(me, k); myEmote = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'wave') meetMyWave(); if (me.pet && !me.pet.act){ const rk = { wave:'sit', dance:'jump', cheer:'jump', clap:'spin' }[k]; if (rk) petDo(me, rk, Date.now()); } }   /* v332 你做動作，寵物也跟著 */
@@ -18098,7 +18098,7 @@ async function buyEmote(k){ const D = EMOTE_DEF[k]; if (!D) return;
   if (!Cloud.on){ toast('要連上線才能學新的表情動作'); return; }
   if (emoteAsk !== k){ emoteAsk = k; setTimeout(() => { if (emoteAsk === k) emoteAsk = null; }, 4000); toast(`${EMOTES[k]} ${D.name}：要花 🪙${D.buy} 學會嗎？再點一次就買`); return; }
   emoteAsk = null; if ((rec.coins || 0) < D.buy){ toast('金幣不夠喔'); return; }
-  const r = await festRpc('buy_emote', { p_id: 'em_' + k }); if (r && r.player){ adoptRow(r.player); SFX.coin(); toast(`🎉 學會了「${D.name}」！`); openEmotePanel(true); setTimeout(() => emote(k), 300); } }
+  const r = await festRpc('buy_emote', { p_id: 'em_' + k }); if (r && r.player){ adoptRow(r.player); SFX.coin(); toast(`學會了「${D.name}」`); openEmotePanel(true); setTimeout(() => emote(k), 300); } }
 { const em = $('#emotes'); if (em){ const b = document.createElement('button'); b.className = 'panel'; b.id = 'emoteMore'; b.setAttribute('aria-label', '表情動作'); b.textContent = '😀'; b.addEventListener('click', e => { e.stopPropagation(); ensureAudio(); openEmotePanel(); }); em.appendChild(b); } }
 addEventListener('pointerdown', e => { const P = $('#emotePanel'); if (P && !P.hidden && !P.contains(e.target) && e.target.id !== 'emoteMore') P.hidden = true; });
 
@@ -18114,7 +18114,7 @@ function openShowPick(){
   const shown = new Set((rec.show || []).map(String)), top = {};
   for (const x of rec.tank || []){ const f = FISH_BY_ID[x.f]; if (!f || !(x.w > 0)) continue; if (!top[x.f] || x.w > top[x.f].w) top[x.f] = x; }
   const ids = Object.keys(top);
-  if (!ids.length){ toast('魚缸裡沒有魚可以炫耀，先去釣一條吧！'); return; }
+  if (!ids.length){ toast('魚缸裡沒有魚可以炫耀，先去釣一條吧'); return; }
   ids.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b].rarity] - RARITY_ORDER[FISH_BY_ID[a].rarity] || top[b].w - top[a].w);
   const list = pick.querySelector('.splist'); list.innerHTML = '';
   for (const id of ids){
@@ -18691,7 +18691,7 @@ async function cloudInit(){
     setCloudUser(session.user);
     /* v306：綁定 Email 要點信裡的確認連結才算數。很多人填了 Email 就以為綁好了，換手機才發現找不到紀錄 → 打開遊戲就問伺服器，還沒確認就一直提醒 */
     if (Cloud.isAnon) sb.auth.getUser().then(({ data }) => { const u = data && data.user; if (!u) return; setCloudUser(u);
-      if (Cloud.pendingEmail){ watchBind(); setTimeout(() => toast(`⚠️ Email 還沒綁定完成：請到 ${Cloud.pendingEmail} 收信，點裡面的確認連結（在「造型 → 雲端存檔」可以重寄）`), 6000); } }).catch(() => {});
+      if (Cloud.pendingEmail){ watchBind(); setTimeout(() => toast(`Email 還沒綁定完成：請到 ${Cloud.pendingEmail} 收信，點裡面的確認連結（在「造型 → 雲端存檔」可以重寄）`), 6000); } }).catch(() => {});
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
@@ -18706,7 +18706,7 @@ async function cloudInit(){
 }
 /* v746 作者：「退回去」→ 以前在阿綾服裝店、阿萍美髮沙龍花的金幣退回來（219，伺服器算、每人一次）。進遊戲時問一次，有退就告訴玩家 */
 async function refundCheck(){ if (!Cloud.on || !Cloud.sb) return; const k = 'tide.refund219.' + (Cloud.userId || ''); if (LS.get(k, 0)) return;
-  try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k, 1); const n = data && data.coins | 0; if (n > 0){ try { await cloudRefresh(); } catch(e){} SFX.coin && SFX.coin(); flash(`💰 退回 🪙${n.toLocaleString()}`, 2.2); toast(`💰 服裝店、美髮沙龍整修中：以前買舊人物的衣服、髮型花的 🪙${n.toLocaleString()} 已經退還給你了`); } } catch(e){} }
+  try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k, 1); const n = data && data.coins | 0; if (n > 0){ try { await cloudRefresh(); } catch(e){} SFX.coin && SFX.coin(); flash(`退回 🪙${n.toLocaleString()}`, 2.2); toast(`服裝店、美髮沙龍整修中：以前買舊人物的衣服、髮型花的 🪙${n.toLocaleString()} 已經退還給你了`); } } catch(e){} }
 // ---- Email 連結：綁定（保存這份紀錄）或在別的裝置登入 ----
 // Supabase 免費方案不能改信件內容，所以用信裡的「Sign in／Confirm」連結（不用驗證碼）。
 const SITE_URL = location.origin + location.pathname;
@@ -18990,8 +18990,8 @@ function sciReg(d){ if (!d || Sci.reg.has(d.id)) return; const B = FISH_BY_ID[d.
 function loadSci(force){ if (Sci.busy) return Sci.busy; if (!Cloud.on || !Cloud.sb) return Promise.resolve(); if (!force && Sci.at && Date.now() - Sci.at < 60000) return Promise.resolve(); Sci.at = Date.now();
   Sci.busy = (async () => { try { const [{ data, error }, qr] = await Promise.all([Cloud.sb.rpc('sci_list'), Cloud.sb.rpc('sci_quest').then(r => r, () => ({}))]); if (qr && !qr.error && qr.data && qr.data.fish) Sci.quest = qr.data;
       if (!error && Array.isArray(data)){ Sci.list = data; for (const d of data.slice().reverse()) sciReg(d); sciPlace();
-      { const Q = sciQuest(); if (Q){ let seen = null; try { seen = localStorage.getItem('tide.sciQSeen'); } catch(e){} if (seen !== Sci.quest.day){ try { localStorage.setItem('tide.sciQSeen', Sci.quest.day); } catch(e){} setTimeout(() => toast(`🔬 蔚博士今天在${Q.S.label}調查「${Q.f.name}」，釣到拿給他看有謝禮`), 2500); } } }
-      const T = data[0]; if (T && T.day === sciToday()){ let seen = null; try { seen = localStorage.getItem('tide.sciSeen'); } catch(e){} if (seen !== T.day){ try { localStorage.setItem('tide.sciSeen', T.day); } catch(e){} setTimeout(() => { if (T.giant){ flash(`🐋 蔚博士在${SPOT_BY_ID[T.spot].label}發現了深海巨魚「${T.name}」！`, 3.2); SFX.catch(); } else toast(`🔬 蔚博士今天在${SPOT_BY_ID[T.spot].label}發現了新品種「${T.name}」！`); }, 2500); } } } } catch(e){}
+      { const Q = sciQuest(); if (Q){ let seen = null; try { seen = localStorage.getItem('tide.sciQSeen'); } catch(e){} if (seen !== Sci.quest.day){ try { localStorage.setItem('tide.sciQSeen', Sci.quest.day); } catch(e){} setTimeout(() => toast(`蔚博士今天在${Q.S.label}調查「${Q.f.name}」，釣到拿給他看有謝禮`), 2500); } } }
+      const T = data[0]; if (T && T.day === sciToday()){ let seen = null; try { seen = localStorage.getItem('tide.sciSeen'); } catch(e){} if (seen !== T.day){ try { localStorage.setItem('tide.sciSeen', T.day); } catch(e){} setTimeout(() => { if (T.giant){ flash(`蔚博士在${SPOT_BY_ID[T.spot].label}發現了深海巨魚「${T.name}」`, 3.2); SFX.catch(); } else toast(`蔚博士今天在${SPOT_BY_ID[T.spot].label}發現了新品種「${T.name}」`); }, 2500); } } } } catch(e){}
     Sci.busy = null; if (!$('#sheet').hidden && (curTab === 'sci' || curTab === 'dex')) renderTab(); })();
   return Sci.busy; }
 // 蔚博士站在今天調查的釣點旁邊，身邊放著水下攝影機、保冷箱和調查旗
@@ -19024,7 +19024,7 @@ function renderSci(body){
     card.appendChild(el('div', 'scin', f.name)); card.appendChild(el('div', 'sub2', `${f.rarity}・${(+f.min).toFixed(2)}～${(+f.max).toFixed(2)} kg${tn ? '・🌊 ' + tn : ''}${BOTTOM_FISH.has(f.id) ? '・沉底釣比較容易' : ''}`));
     if (f.desc) card.appendChild(el('p', 'scis', f.desc)); card.appendChild(el('div', 'sub2', rec.count[f.id] ? `✅ 你一共釣過 ${rec.count[f.id]} 條` : '你還沒釣過這種魚')); body.appendChild(card);
     const q = el('div', 'scicard'); q.appendChild(el('div', 'scit', '📋 蔚博士的委託')); q.appendChild(el('p', 'scis', `「幫我釣一條「${f.name}」，要今天釣的，放在魚缸裡給我看看！我用實驗室養的夜光蟲做了魚餌當謝禮。」→ ✨ 夜光蟲餌 ×3（晚上才出現的魚最愛），一天一次。`));
-    const bb = el('button', 'tbtn', Q.done ? '✅ 今天給他看過了' : '給蔚博士看'); bb.disabled = Q.done; bb.addEventListener('click', async () => { bb.disabled = true; try { const { data, error } = await Cloud.sb.rpc('sci_bug'); if (error) throw error; adoptRow(data.player); if (Sci.quest) Sci.quest.done = true; SFX.catch(); flash('✨ 拿到 3 個夜光蟲餌！', 2); renderTab(); return; } catch(e){ toast(cloudErrMsg(e)); } bb.disabled = false; }); q.appendChild(bb); body.appendChild(q); }
+    const bb = el('button', 'tbtn', Q.done ? '✅ 今天給他看過了' : '給蔚博士看'); bb.disabled = Q.done; bb.addEventListener('click', async () => { bb.disabled = true; try { const { data, error } = await Cloud.sb.rpc('sci_bug'); if (error) throw error; adoptRow(data.player); if (Sci.quest) Sci.quest.done = true; SFX.catch(); flash('拿到 3 個夜光蟲餌！', 2); renderTab(); return; } catch(e){ toast(cloudErrMsg(e)); } bb.disabled = false; }); q.appendChild(bb); body.appendChild(q); }
   else body.appendChild(el('div', 'empty', '蔚博士正在準備今天的調查，等一下再來。'));
   for (const N of SCI_NEW){ body.appendChild(el('div', 'dexhead', `🆕 蔚博士確認的新魚（${N.day.slice(5).replace('-', '/')}・${SPOT_BY_ID[N.spot].label}）`)); if (N.note) body.appendChild(el('p', 'sub', N.note)); const ul = el('ul', 'shoplist');
     for (const id of N.ids){ const f = FISH_BY_ID[id]; if (!f) continue; const li = el('li'), got = !!rec.count[id], c2 = fishCanvas(f, true, 64, 40), tn = sciTideNote(f); c2.className = 'dishic'; li.appendChild(c2);
@@ -19055,7 +19055,7 @@ const Cargo = { info: null, at: 0, busy: false, sure: 0 };
 function cargoPlace(){ if (onIsle || House.on || Dive.on) return null; for (const k in CARGO_AT){ const P = CARGO_AT[k]; if (Math.hypot(me.pos.x - P.x, me.pos.z - P.z) < P.r) return k; } return null; }
 async function loadCargo(){ if (!Cloud.on || !Cloud.sb || Cargo.busy) return; Cargo.at = Date.now(); const r = await festRpc('cargo_info'); if (r && r.cargo){ Cargo.info = r; if (!$('#sheet').hidden && curTab === 'cargo') renderTab(); } }
 async function cargoDo(fn, args){ if (Cargo.busy) return null; Cargo.busy = true; const r = await festRpc(fn, args); Cargo.busy = false; Cargo.sure = 0;
-  if (r && r.player){ adoptRow(r.player); try { buildTank(); } catch(e){} Cargo.info = r.info; Cargo.at = Date.now(); if (r.got != null){ SFX.coin(); const more = r.got - r.base; flash(`🚢 這一趟賣了 ${r.n} 條，🪙 +${r.got}${more > 0 ? `（比直接賣多 ${more}）` : more < 0 ? `（比直接賣少 ${-more}）` : ''}`, 2.4); renderCoins(); } }
+  if (r && r.player){ adoptRow(r.player); try { buildTank(); } catch(e){} Cargo.info = r.info; Cargo.at = Date.now(); if (r.got != null){ SFX.coin(); const more = r.got - r.base; flash(`這一趟賣了 ${r.n} 條，🪙 +${r.got}${more > 0 ? `（比直接賣多 ${more}）` : more < 0 ? `（比直接賣少 ${-more}）` : ''}`, 2.4); renderCoins(); } }
   if (!$('#sheet').hidden && curTab === 'cargo') renderTab(); return r; }
 function renderCargo(body){
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上線（登入）才能跑船做生意。')); return; }
@@ -19101,7 +19101,7 @@ async function teamFlag(owner){ if (!Cloud.on || !owner || !isleGroup) return; c
   (function wave(){ if (!g.parent) return; const P = geo.attributes.position, B = g.userData.base, t = performance.now() / 1000; for (let i = 0; i < P.count; i++){ const x = B[i * 3]; P.array[i * 3 + 2] = Math.sin(x * 3 - t * 3) * 0.08 * x; } P.needsUpdate = true; requestAnimationFrame(wave); })(); }   /* 旗子會飄 */
 
 async function loadTeam(){ if (!Cloud.on || !Cloud.sb) return; const r = await festRpc('team_my2'); if (r && 'team' in r){ Team.my = r; Team.at = Date.now(); if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); } }
-async function teamDo(fn, args){ if (Team.busy) return null; Team.busy = true; const r = await festRpc(fn, args); Team.busy = false; if (r && r.player){ adoptRow(r.player); Team.my = Object.assign({}, Team.my || {}, r.team); SFX.coin(); if (r.chest) teamChest(r.pay, r.chest); else flash(`🎉 釣友隊這一週的目標達成！🪙 +${r.pay}`, 2); setTimeout(loadTeam, 800); } else if (r && 'team' in r) Team.my = r; if (r){ Team.at = Date.now(); loadTeamBoard(); } if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); return r; }
+async function teamDo(fn, args){ if (Team.busy) return null; Team.busy = true; const r = await festRpc(fn, args); Team.busy = false; if (r && r.player){ adoptRow(r.player); Team.my = Object.assign({}, Team.my || {}, r.team); SFX.coin(); if (r.chest) teamChest(r.pay, r.chest); else flash(`釣友隊這一週的目標達成。🪙 +${r.pay}`, 2); setTimeout(loadTeam, 800); } else if (r && 'team' in r) Team.my = r; if (r){ Team.at = Date.now(); loadTeamBoard(); } if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); return r; }
 async function loadTeamBoard(){ if (!Cloud.on || !Cloud.sb) return; Team.bat = Date.now(); festRpc('team_wins_top').then(w => { if (Array.isArray(w)){ Team.wins = w; } }); const r = await festRpc('team_board'); if (r && r.best){ const top = r.best[0] ? r.best[0].n + r.best[0].f + r.best[0].w : ''; if (Team.board && top && top !== Team.lastTop) Team.flashT = now(); Team.lastTop = top; Team.board = r; paintTeamBoard(); if (!$('#sheet').hidden && curTab === 'tboard') renderTab(); } }
 function paintTeamBoard(){ const cv = Team.cv; if (!cv) return; const c = cv.getContext('2d'), W = 1024, H = 600, B = Team.board;
   c.fillStyle = '#23364a'; c.fillRect(0, 0, W, H); c.fillStyle = '#f6c453'; c.fillRect(0, 0, W, 78); c.fillStyle = '#23364a'; c.font = 'bold 50px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🏆 潮汐村大看板', W / 2, 42);
@@ -19192,7 +19192,7 @@ function renderTeamSheet(body){
 /* ===== v270 阿萍美髮沙龍：新髮型 🪙400、新髮色 🪙200（伺服器 109 決定價錢、哪些已經設計出來）。原本的髮型髮色照舊免費 ===== */
 const SALON_TALK = ['昨天我又熬夜了，因為這個顏色一直調不出我要的感覺……終於！', '今天的設計靈感來自港口的夕陽', '你知道嗎？我連做夢都在編辮子', '休假？那是什麼？可以吃嗎？', '我剛剛幫海鷗修了一下羽毛，牠很滿意', '每一個髮型我都至少試剪了一百次', '今天的新髮色，是我盯著海浪看了一整個下午才調出來的'];
 async function salonBuy(kind, n, apply){ if (!Cloud.on || !Cloud.sb){ toast('要連上線才能找阿萍'); return; } const price = kind === 'hs' ? 400 : 200; if ((rec.coins || 0) < price){ toast('金幣不夠喔'); return; }
-  const r = await festRpc('buy_salon', { p_kind: kind, p_n: n }); if (r && r.player){ adoptRow(r.player); SFX.coin(); const nm = kind === 'hs' ? LOOK_HAIR[n] : hcName(n); flash(`💇 阿萍幫你${kind === 'hs' ? '剪好了' : '染好了'}：${nm}！`, 1.8); const np = npcs.find(x => x.shopNpc === 'salon'); if (np) np.say(kind === 'hs' ? '剪好了！超適合你的！' : '這個顏色在你頭上超亮眼！', 'emote', 3); if (apply) apply(); renderTab(); } }
+  const r = await festRpc('buy_salon', { p_kind: kind, p_n: n }); if (r && r.player){ adoptRow(r.player); SFX.coin(); const nm = kind === 'hs' ? LOOK_HAIR[n] : hcName(n); flash(`阿萍幫你${kind === 'hs' ? '剪好了' : '染好了'}：${nm}`, 1.8); const np = npcs.find(x => x.shopNpc === 'salon'); if (np) np.say(kind === 'hs' ? '剪好了！超適合你的！' : '這個顏色在你頭上超亮眼！', 'emote', 3); if (apply) apply(); renderTab(); } }
 function renderSalon(body){
   const g0 = cleanGear(rec.gear), L = lookParse(g0.look), d = salonDays();
   body.appendChild(el('p', 'sub', `💇「${SALON_TALK[d % SALON_TALK.length]}」——阿萍`));
@@ -19318,8 +19318,8 @@ function evtHM(sec){ const d = new Date(sec * 1000 + 8 * 3600000); return String
 async function evtLoad(){ if (!Cloud.on || !Cloud.sb) return null; try { const { data, error } = await Cloud.sb.rpc('ev_status'); if (error) throw error; Evt.st = data; Evt.at = Date.now(); return data; } catch(e){ return null; } }
 async function evtAfterCatch(fid, w){ const m = evtMig(bossNow()), b = evtBounty(bossNow()); if (!((m.active && fid === m.fish) || (fid === b.fish && w >= b.minw))) return;
   const old = Evt.st; const r = await evtLoad(); if (!r) return; renderEvtChip(true);
-  if (r.mig && r.mig.active && fid === r.mig.fish){ if (r.mig.done && !(old && old.mig && old.mig.id === r.mig.id && old.mig.done)){ SFX.catch(); flash('🐟 洄游任務完成！🪙+200', 2); } else if (!r.mig.done) toast(`🐟 洄游：${FISH_BY_ID[fid].name} ${r.mig.n}/4`); }
-  if (r.bounty && r.bounty.done && fid === r.bounty.fish && !(old && old.bounty && old.bounty.id === r.bounty.id && old.bounty.done)){ SFX.catch(); flash(`🎯 懸賞達成：${FISH_BY_ID[fid].name}！🪙+300`, 2.2); } }
+  if (r.mig && r.mig.active && fid === r.mig.fish){ if (r.mig.done && !(old && old.mig && old.mig.id === r.mig.id && old.mig.done)){ SFX.catch(); flash('洄游任務完成。🪙+200', 2); } else if (!r.mig.done) toast(`洄游：${FISH_BY_ID[fid].name} ${r.mig.n}/4`); }
+  if (r.bounty && r.bounty.done && fid === r.bounty.fish && !(old && old.bounty && old.bounty.id === r.bounty.id && old.bounty.done)){ SFX.catch(); flash(`懸賞達成：${FISH_BY_ID[fid].name}。🪙+300`, 2.2); } }
 function renderEvtChip(force){ if (!Evt.chip){ Evt.chip = document.createElement('button'); Evt.chip.id = 'evChip'; Evt.chip.className = 'panel'; Evt.chip.addEventListener('click', () => { openSheet('events'); evtLoad().then(() => { if (curTab === 'events') renderTab(); }); }); document.body.appendChild(Evt.chip); }
   const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), met = evtMeteor(ms), st = Evt.st, parts = [];
   if (m.active){ const n = st && st.mig && st.mig.id === m.id ? st.mig.n : 0, done = st && st.mig && st.mig.id === m.id && st.mig.done; parts.push(`🐟 ${(SPOT_BY_ID[m.spot] || {}).short || ''}${(FISH_BY_ID[m.fish] || {}).name || ''}洄游 ${done ? '✅' : Math.min(5, n) + '/5'}`); }
@@ -19351,7 +19351,7 @@ function rumorSpot(st){ return (SPOT_BY_ID[st && st.spot] || {}).label || '某�
 function rumorNotice(old, st){ const wk = String(st.week || '');
   if (LS.get('tide.rumorWk', '') !== wk){ LS.set('tide.rumorWk', wk); setTimeout(() => ticker(`📰 本週傳聞：有人在<b>${esc(rumorSpot(st))}</b>看到很大的影子……（活動頁看線索）`), 4000); }
   if (old && old.week === st.week){
-    if (st.c2 && !old.c2){ flash(`🔍 你注意到了：那個大影子好像都在${PER_NAME[st.per] || '某個時段'}出現`, 2.6); setTimeout(() => toast('港口追紅鯊的阿默整天看著海，去問問他吧'), 2800); }
+    if (st.c2 && !old.c2){ flash(`你注意到了：那個大影子好像都在${PER_NAME[st.per] || '某個時段'}出現`, 2.6); setTimeout(() => toast('港口追紅鯊的阿默整天看著海，去問問他吧'), 2800); }
     if (st.caught && !old.caught){ setTimeout(() => flash(st.first && st.first.me ? '🏆 你是本週第一個釣到傳聞大魚的人！+500 金幣' : '🔍 你也釣到了傳聞的大魚！+150 金幣', 2.6), 2200); }
   }
   if (st.first && !st.first.me && LS.get('tide.rumorFirst', '') !== wk){ LS.set('tide.rumorFirst', wk); ticker(`🏆 本週傳聞的大魚被 <b>${esc(st.first.name)}</b> 第一個釣到了！（${(FISH_BY_ID[st.fish] || {}).name || '傳說魚'} ${fmtKg(st.first.w)}）`); }
@@ -19359,7 +19359,7 @@ function rumorNotice(old, st){ const wk = String(st.week || '');
 function rumorAfterCatch(spotId){ if (Rumor.st && spotId === Rumor.st.spot) setTimeout(() => rumorLoad(true), 1200); }
 function rumorAmo(n){ const st = Rumor.st; if (!st || !st.c2 || st.c3 || Rumor.talked === st.week || !Cloud.on) return; if (Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) > 3.6) return;
   Rumor.talked = st.week; Cloud.sb.rpc('rumor_talk').then(({ data }) => { if (!data) return; const old = Rumor.st; Rumor.st = data; Rumor.at = Date.now();
-    n.say(`${rumorSpot(data)}的大影子？我看過！要用「${RIG_NAME[data.rig] || '?'}」才釣得到，${PER_NAME[data.per] || ''}去最好`, 'talk', 7); flash(`🔍 第三條線索：用「${RIG_NAME[data.rig] || '?'}」`, 2.4); rumorNotice(old, data); }, () => { Rumor.talked = ''; }); }
+    n.say(`${rumorSpot(data)}的大影子？我看過！要用「${RIG_NAME[data.rig] || '?'}」才釣得到，${PER_NAME[data.per] || ''}去最好`, 'talk', 7); flash(`第三條線索：用「${RIG_NAME[data.rig] || '?'}」`, 2.4); rumorNotice(old, data); }, () => { Rumor.talked = ''; }); }
 function rumorItem(item){ const st = Rumor.st; if (!st) return;
   const clue = [`📍 地點：${rumorSpot(st)}`, st.c2 ? `🕒 時段：${PER_NAME[st.per]}` : `🕒 時段：？？（在${rumorSpot(st)}釣到 5 條魚就會注意到，${Math.min(5, st.n)}/5）`, st.c3 ? `🎣 釣法：${RIG_NAME[st.rig]}` : st.c2 ? '🎣 釣法：？？（去港口問追紅鯊的阿默）' : '🎣 釣法：？？'];
   const head = st.first ? `本週第一個釣到的是 ${st.first.name}（${(FISH_BY_ID[st.fish] || {}).name || ''} ${fmtKg(st.first.w)}）` : '還沒有人釣到，第一個釣到的人 🪙500';
@@ -19410,9 +19410,9 @@ function renderStory(body){ body.appendChild(el('div', 'shophead')).innerHTML = 
     d.appendChild(el('div', 'sub2', v.asked ? '✅ 今天的委託完成了' : `今天的委託：想要一條「${v.askName}」`));
     const row = el('div', 'titles'); const npc = storyNpc(v.who), near = npc && Math.hypot(me.pos.x - npc.pos.x, me.pos.z - npc.pos.z) < 5;
     if (!v.asked){ const fish = rec.tank.filter(x => x.f === v.ask && !(rec.show || []).includes(x.t)).sort((a, b) => a.w - b.w)[0], b = el('button', 'tbtn' + (fish ? '' : ' ghost'), fish ? `交出${v.askName}` : '魚缸裡還沒有');
-      b.disabled = !fish; if (fish) b.addEventListener('click', () => { b.disabled = true; rec.tank = rec.tank.filter(x => x.t !== fish.t); buildTank(); storyCall('story_give', { p_who: v.who, p_t: fish.t }, () => { SFX.catch(); flash(`💌 ${v.name}：謝謝你！❤️ +15、🪙 +80`, 1.8); }); }); row.appendChild(b); }
+      b.disabled = !fish; if (fish) b.addEventListener('click', () => { b.disabled = true; rec.tank = rec.tank.filter(x => x.t !== fish.t); buildTank(); storyCall('story_give', { p_who: v.who, p_t: fish.t }, () => { SFX.catch(); flash(`${v.name}：謝謝你。❤️ +15、🪙 +80`, 1.8); }); }); row.appendChild(b); }
     if (!v.talked){ const b = el('button', 'tbtn ghost', near ? '👋 打招呼' : '去找他'); b.addEventListener('click', () => { if (!near){ if (npc){ closeSheet(); travelTo({ id:'npc', label:v.name, x: npc.pos.x + 1.6, z: npc.pos.z + 1.6, rot: Math.atan2(-1.6, -1.6) }); } return; } b.disabled = true; storyCall('story_talk', { p_who: v.who }, () => { npc.say(STORY_HI[v.who] || '你好！', 'talk', 4); toast(`❤️ ${v.name} +3`); }); }); row.appendChild(b); }
-    if (v.ch < 5 && v.aff >= STORY_NEED[v.ch]){ const b = el('button', 'tbtn', `📖 讀第 ${v.ch + 1} 章（🪙${STORY_PAY[v.ch]}）`); b.addEventListener('click', () => { b.disabled = true; storyCall('story_read', { p_who: v.who }, r => { Story.open = v.who + ':' + r.ch; SFX.catch(); if (r.ch === 5) flash(`🏅 得到稱號「${STORY_WHO[v.who].replace('村長 ', '')}的知己」`, 2.4); }); }); row.appendChild(b); }
+    if (v.ch < 5 && v.aff >= STORY_NEED[v.ch]){ const b = el('button', 'tbtn', `📖 讀第 ${v.ch + 1} 章（🪙${STORY_PAY[v.ch]}）`); b.addEventListener('click', () => { b.disabled = true; storyCall('story_read', { p_who: v.who }, r => { Story.open = v.who + ':' + r.ch; SFX.catch(); if (r.ch === 5) flash(`得到稱號「${STORY_WHO[v.who].replace('村長 ', '')}的知己」`, 2.4); }); }); row.appendChild(b); }
     else if (v.ch < 5) d.appendChild(el('div', 'sub2', `下一章：好感 ${STORY_NEED[v.ch]}`));
     if (v.ch > 0){ const b = el('button', 'tbtn ghost', '📖 看故事'); b.addEventListener('click', () => { Story.open = Story.open && Story.open.startsWith(v.who + ':') ? null : v.who + ':' + v.ch; renderTab(); }); row.appendChild(b); }
     d.appendChild(row);
@@ -19451,14 +19451,14 @@ function ageGate(){ if ($('#ageGate')) return; if ($('#welcome')){ Welcome.age =
   document.body.appendChild(g); g.querySelector('#agOk').addEventListener('click', async () => { const v = +g.querySelector('#agY').value; if (!v){ toast('請選你的出生年份'); return; } const b = g.querySelector('#agOk'); b.disabled = true;
     try { const { data, error } = await Cloud.sb.rpc('set_birth_year', { p_year: v }); if (error) throw error; Kid.on = !!data.kid; Kid.asked = true; Kid.teen = !Kid.on && new Date().getFullYear() - v <= 17; LS.set('tide.teen', Kid.teen); LS.set('tide.kid', Kid.on); LS.set('tide.ageAsked', true);
       if (Kid.on && data.name){ nickname = data.name; LS.set('tide.nick', nickname); refreshMyName(); pushPresence(true); }
-      g.remove(); kidApply(); if (Kid.on) flash('🧒 已經開啟兒童安全模式：聊天用下面的快速句子，玩得開心！', 2.6); }
+      g.remove(); kidApply(); if (Kid.on) flash('已經開啟兒童安全模式：聊天用下面的快速句子，玩得開心！', 2.6); }
     catch(e){ b.disabled = false; toast((e && e.message) || '請稍後再試'); } }); }
 function renderBoard(body){
   body.appendChild(el('p', 'sub', '大家都可以在這裡留言，跟村子裡的人打招呼、約一起釣魚、分享好釣點。一則最多 60 個字；要釣過 5 條魚才能留，一天最多 5 則。不要留電話、地址這些個人資料喔。'));
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '要連上線才看得到留言板。')); return; }
   const f = el('form', 'boardform'), ta = el('textarea'); ta.maxLength = 60; ta.rows = 2; ta.placeholder = '寫點什麼給大家看…'; ta.value = Board.draft; ta.addEventListener('input', () => { Board.draft = ta.value; cnt.textContent = `${ta.value.length} / 60`; });
   const row = el('div', 'boardrow'), cnt = el('span', 'sub2', `${Board.draft.length} / 60`), go = el('button', 'tbtn', '📌 貼上去'); go.type = 'submit'; row.append(cnt, go); f.append(ta, row);
-  f.addEventListener('submit', async e => { e.preventDefault(); const t = ta.value.trim(); if (!t) return; if (clean(t) !== t){ toast('這句話不行，換個說法吧'); return; } const r = await boardDo('board_post', { p_text: t }); if (Array.isArray(r)){ Board.draft = ''; SFX.coin(); toast('📌 貼上留言板了'); renderTab(); } });
+  f.addEventListener('submit', async e => { e.preventDefault(); const t = ta.value.trim(); if (!t) return; if (clean(t) !== t){ toast('這句話不行，換個說法吧'); return; } const r = await boardDo('board_post', { p_text: t }); if (Array.isArray(r)){ Board.draft = ''; SFX.coin(); toast('貼上留言板了'); renderTab(); } });
   if (Kid.on) body.appendChild(el('p', 'sub', '🧒 兒童安全模式：可以看大家的留言，不能留言喔。')); else body.appendChild(f);
   const L = Board.list; if (!L){ body.appendChild(el('p', 'sub', Board.busy ? '讀取中…' : '讀不到留言，等一下再試試。')); return; }
   if (!L.length){ body.appendChild(el('p', 'sub', '還沒有人留言，當第一個吧！')); return; }
@@ -19513,7 +19513,7 @@ function renderGangShop(body){
   if (it && it.px){ const cv = designCanvas(it.px.slice(0, 256), 'pants', 3); cv.className = 'dishic'; cv.style.cssText = 'width:44px;height:44px;border-radius:10px;image-rendering:pixelated'; li.appendChild(cv); }
   const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', it ? it.name : '')); inf.appendChild(el('div', 'sub2', `🪙${D.price}・還剩 ${left}/${D.stock} 件${D.why && !D.mine ? '・' + D.why : ''}`)); li.appendChild(inf);
   const a = el('div', 'tacts'), b = el('button', 'tbtn' + (D.mine || left <= 0 || D.why ? ' ghost' : ''), D.mine ? '買過了' : left <= 0 ? '賣完了' : `買 🪙${D.price}`); b.disabled = !!(D.mine || left <= 0 || D.why || rec.coins < D.price);
-  b.addEventListener('click', async () => { b.disabled = true; try { const { data, error } = await Cloud.sb.rpc('gang_buy'); if (error) throw error; adoptRow(data); SFX.catch(); flash(`⚓ 買到老港的「${it.name}」了！去「造型」穿穿看`, 2); } catch(e){ toast(cloudErrMsg(e)); } loadGang(); });
+  b.addEventListener('click', async () => { b.disabled = true; try { const { data, error } = await Cloud.sb.rpc('gang_buy'); if (error) throw error; adoptRow(data); SFX.catch(); flash(`買到老港的「${it.name}」了。去「造型」穿穿看`, 2); } catch(e){ toast(cloudErrMsg(e)); } loadGang(); });
   a.appendChild(b); li.appendChild(a); ul.appendChild(li); body.appendChild(ul);
   if ((D.past || []).length){ body.appendChild(el('div', 'dexhead', '之前做過的')); const u2 = el('ul', 'wlist old'); for (const p of D.past) u2.appendChild(el('li', '', `${p.week}　${p.name}（賣了 ${p.sold}/${p.stock}）`)); body.appendChild(u2); }
 }
@@ -19532,7 +19532,7 @@ function fuLines(){ const D = Fu.data; if (!D) return []; const out = [], O = D.
   return out; }
 function fuOk(o, x){ return x.f === o.fish && x.w >= +o.minw && !x.fm && !x.y && !x.rs && !x.k && !(rec.show || []).includes(x.t); }
 async function fuDeliver(o, ts){ try { const { data, error } = await Cloud.sb.rpc('fu_deliver', { p_idx: o.idx, p_ts: ts }); if (error) throw error; const before = rec.coins; adoptRow(data); buildTank();
-    SFX.catch(); flash(`🐟 阿福收下了！🪙 +${Math.max(0, rec.coins - before)}`, 1.6); Fu.pick = null; loadFu(); } catch(e){ toast(cloudErrMsg(e)); } }
+    SFX.catch(); flash(`阿福收下了。🪙 +${Math.max(0, rec.coins - before)}`, 1.6); Fu.pick = null; loadFu(); } catch(e){ toast(cloudErrMsg(e)); } }
 function renderFuShop(body){ fishHallSeg(body, 'fu');
   const head = el('div', 'shophead'); head.innerHTML = `<b>🧊 魚市場・阿福海產</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能賣魚給阿福。')); return; }
@@ -19976,7 +19976,7 @@ function worldMemLines(n){
 // 跟村民說話：伺服器記得你跟他聊過幾次（每個村民 10 分鐘算一次）
 function worldTalk(n){ if (!n || !n.wid || !Cloud.on || !Cloud.sb) return; const k = n.wid; if (World.talkAt[k] && Date.now() - World.talkAt[k] < 10 * 60000) return; World.talkAt[k] = Date.now();
   Cloud.sb.rpc('npc_talk', { p_npc: k }).then(({ data }) => { if (data && World.me){ World.me[k] = Object.assign({}, World.me[k], data); } }).catch(() => {}); }
-async function worldGift(k, t){ try { const { data, error } = await Cloud.sb.rpc('npc_gift', { p_npc: k, p_t: t }); if (error) throw error; adoptRow(data); buildTank(); SFX.catch(); flash(`🎁 ${WORLD_WHO[k]}收下了你的禮物！`, 1.6);
+async function worldGift(k, t){ try { const { data, error } = await Cloud.sb.rpc('npc_gift', { p_npc: k, p_t: t }); if (error) throw error; adoptRow(data); buildTank(); SFX.catch(); flash(`${WORLD_WHO[k]}收下了你的禮物`, 1.6);
     const n = npcs.concat(questNpcs.map(q => q.f)).find(f => f.wid === k); if (n) n.say('哇！謝謝你～我會好好珍惜的', 'emote', 4); World.at = 0; loadWorld(); } catch(e){ toast(cloudErrMsg(e)); } }
 function worldNear(k){ const n = npcs.concat(questNpcs.map(q => q.f)).find(f => f.wid === k); return n && !n.wHide && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 8; }
 function renderWorldGift(body){ const k = World.giftTo; body.appendChild(el('div', 'dexhead', `🎁 送一條魚給${WORLD_WHO[k] || ''}`));
@@ -20793,7 +20793,7 @@ function faiDiveUpdate(dt, t){
 function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌還要 ${Math.ceil(FAI.baitCd - now())} 秒才能再撒`); return; } FAI.baitCd = now() + 12;
   const x = me.pos.x + Math.sin(me.rot) * 1.6, z = me.pos.z + Math.cos(me.rot) * 1.6; Dive.bait = { x, y: me.baseY + 1, z, until: t + 18 };
   if (!Dive.baitFx){ const g = new THREE.Group(); const m = mat('#e8c88a', 0.8); for (let i = 0; i < 18; i++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 4), m); b.position.set((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.6); g.add(b); } Dive.group.add(g); Dive.baitFx = g; }
-  flash('🍞 撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
+  flash('撒了一把魚餌，附近的魚會游過來', 1.4); SFX.plop(); }
 
 
 /* ===================== v237 潛水艇與黑淵裂縫 =====================
@@ -21063,7 +21063,7 @@ function subEnter(r){   /* 過場播完才真的切到深海 */
   scene.fog = new THREE.Fog('#020a14', 2, range); scene.background = new THREE.Color('#020a14'); Sub.light.distance = range * 1.5;
   Sub.camWas = cam.pitch; cam.pitch = 0.42; camera.fov = 55; camera.updateProjectionMatrix();   /* v291 潛水艇用自己的鏡頭（跟舊視角一樣） */
   Sub.pos.set(0, 9.2, -58); subLightInit(); Sub.zone = ''; Sub.wentDark = false; subEvReset(); Sub.yaw = 0; Sub.v = 0; { const sc0 = document.getElementById('sailComp'); if (sc0) sc0.hidden = true; } Sub.on = true; document.body.classList.add('subbing'); subHud(); Sub.camWas = { ...cam }; cam.yaw = Sub.yaw + Math.PI; cam.pitch = 0.42;
-  ensureAudio(); flash('🚢 潛水艇出發！往前開，看看大陸棚的盡頭有什麼', 2.4); SFX.plop(); subRender();
+  ensureAudio(); flash('潛水艇出發。往前開，看看大陸棚的盡頭有什麼', 2.4); SFX.plop(); subRender();
   { const down = [...peers.values()].filter(p => p.sub).map(p => peerName(p)); Sub.peerT0 = now(); if (down.length) setTimeout(() => { if (Sub.on) subMsg(`🚢 ${down.slice(0, 3).join('、')}${down.length > 3 ? ' 等人' : ''} 也在下面`, 2); }, 3000); } }
 
 async function subEnd(why){
@@ -21075,9 +21075,9 @@ async function subEnd(why){
   if (Sub.whale){ Sub.group.remove(Sub.whale.m); Sub.whale = null; } try { subEvStop(true); } catch(e){} subDrone(false); if (musicOn && Sub.musicOff){ try { MUSIC.start(); } catch(e){} } Sub.musicOff = false;
   document.body.classList.remove('subbing'); Object.assign(cam, Sub.camWas || {}); if (Sub.dockM) subCineStart('back', () => {});   /* 回港：潛水艇從水裡浮上來、人從艙門走出來 */ camera.position.set(me.pos.x - Math.sin(cam.yaw || 0) * -6, me.baseY + 4, me.pos.z - Math.cos(cam.yaw || 0) * -6); camera.lookAt(me.pos.x, me.baseY + 1, me.pos.z);   /* 鏡頭直接回到人旁邊 */ Sub.fish = null; const h = $('#subHud'); if (h) h.querySelector('.sh-fish').hidden = true;
   if (r && r.player) adoptRow(r.player); if (r && r.sub) Sub.st = r.sub;
-  if (!r) return; if (r.void){ flash('⚠️ 潛水艇的紀錄不對，這一趟作廢了', 2.6); return; }
+  if (!r) return; if (r.void){ flash('潛水艇的紀錄不對，這一趟作廢了', 2.6); return; }
   const kept = r.kept || [];
-  if (why === 'pressure') flash(`💥 船體撐不住，被緊急拉回港${r.lost ? `，船艙的 ${r.lost} 條魚全部不見了` : ''}`, 3);
+  if (why === 'pressure') flash(`船體撐不住，被緊急拉回港${r.lost ? `，船艙的 ${r.lost} 條魚全部不見了` : ''}`, 3);
   else flash(`${why === 'battery' ? '🔋 電池用完，自動回港' : '⚓ 回到港口'}${kept.length ? `：帶回 ${kept.length} 條魚` : ''}`, 2.6);
   if (kept.length) ticker('🚢 潛水艇帶回：' + kept.map(k => `${(FISH_BY_ID[k.f] || {}).name || k.f} ${k.w}kg`).join('、'));
   try { renderTab(); } catch(e){} }
@@ -21316,7 +21316,7 @@ function subFrame(dt, t){
   try { subPeersTick(dt, t); } catch(e){}
   // 第一次走到裂縫邊緣（5 公尺內）
   if (!Sub.edgeHit && P.z > subEdge(P.x) - 5 && P.y > -3){ Sub.edgeHit = true; if (musicOn){ try { MUSIC.stop(); Sub.musicOff = true; } catch(e){} } subDrone(true); H.classList.add('deep');
-    if (!Sub.st.found){ subMsg('……這裡沒有底。', 2); setTimeout(async () => { const r = await subRpc('sub_found'); if (r){ Sub.st = r.sub; if (r.first){ flash('🏅 成就達成：發現黑淵裂縫', 2.4); ticker('🕳️ 你發現了黑淵裂縫。沒有人知道它有多深。'); SFX.catch(); } } }, 3200); } }
+    if (!Sub.st.found){ subMsg('……這裡沒有底。', 2); setTimeout(async () => { const r = await subRpc('sub_found'); if (r){ Sub.st = r.sub; if (r.first){ flash('成就達成：發現黑淵裂縫', 2.4); ticker('🕳️ 你發現了黑淵裂縫。沒有人知道它有多深。'); SFX.catch(); } } }, 3200); } }
   if (Sub.drone && t > (Sub.creakAt || 0)){ Sub.creakAt = t + 6 + Math.random() * 8; tone(70 + Math.random() * 40, 0.9, 'sawtooth', 0.012, 50); }   /* 金屬微微作響 */
   // 電池、耐壓
   if (Sub.dark) Sub.t0 += dt * 0.5;   /* v261 關燈的時候電池只用一半（伺服器也記了關燈的時間） */
@@ -21357,7 +21357,7 @@ async function subAction(){ const P = Sub.pos, depth = Math.round(subDepth(P.y))
   if (Sub.near){ const o = Sub.near; const r = await subRpc('sub_pick', { p_kind: o.kind, p_depth: depth }); if (!r) return; o.m.visible = false; Sub.st = r.sub; SFX.coin(); flash(o.kind === 'anchor' ? `⚓ 撿到古代船錨（${r.sub.anchor} 個）` : `💎 撿到深海礦石（${r.sub.ore} 個）`, 1.6); return; }
   if (Sub.fish || depth < 200) return;
   const r = await subRpc('sub_cast', { p_depth: depth }); if (!r) return; if (r.void){ subEnd('normal'); return; }
-  Sub.fish = { phase:'wait', at: now(), depth }; SFX.plop(); flash('🎣 放線下去了，等一下…', 1.4);
+  Sub.fish = { phase:'wait', at: now(), depth }; SFX.plop(); flash('放線下去了，等一下…', 1.4);
   setTimeout(async () => { if (!Sub.fish || Sub.fish.phase !== 'wait') return; const { data, error } = await Cloud.sb.rpc('hook_fish'); if (error || !data || !Sub.fish){ toast(cloudErrMsg(error || '')); Sub.fish = null; return; }
     const f = FISH_BY_ID[data.cast_fish]; Sub.fish = { phase:'fight', id:data.cast_fish, w:data.cast_w, f, ten:0.35, pro:0.15, t0: now(), surge:0, power: f ? f.power || 0.5 : 0.5, legend: f && f.rarity === '傳說' };
     const H = subHud(), b = H.querySelector('.sh-fish'); b.hidden = false; b.querySelector('.sf-name').textContent = '有東西咬了！快收線'; SFX.splash(true); camShake = 0.3; }, 2300 + Math.random() * 1500); }
@@ -21418,7 +21418,7 @@ function subFishTick(dt, t){ const F = Sub.fish; if (F.phase !== 'fight') return
   else { F.ten -= dt * 0.45; F.pro -= dt * 0.02 * pull; }
   F.ten = clamp(F.ten, 0, 1.2); F.pro = clamp(F.pro, -0.1, 1);
   b.querySelector('.sf-ten').style.width = Math.min(100, F.ten * 100) + '%'; b.querySelector('.sf-pro').style.width = Math.max(0, F.pro * 100) + '%'; b.classList.toggle('danger', F.ten > 0.82);
-  if (F.ten >= 1){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('💥 線斷了！魚跑掉了', 1.6); myFace('cry'); return; }
+  if (F.ten >= 1){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('線斷了！魚跑掉了', 1.6); myFace('cry'); return; }
   if (F.pro <= -0.05 || now() - F.t0 > 75){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('魚脫鉤跑掉了', 1.4); myFace('cry'); return; }
   if (F.pro >= 1){ F.phase = 'land'; b.hidden = true; subRpc('sub_land', { p_fish: F.id, p_w: F.w }).then(r => { Sub.fish = null; if (!r) return; Sub.hold = r.hold || []; SFX.catch(); const n = F.f ? F.f.name : F.id; flash(`${F.legend ? '🌟 ' : ''}釣到${n}！${F.w}kg（先放在船艙，回港才算）`, 2.4); if (F.legend) ticker(`🌟 你在黑淵裂縫釣到了 <b>${esc(n)}</b>！`); }); } }
 
@@ -21485,9 +21485,9 @@ async function openSubPanel(){
     html += '<p class="sub">魚要放在魚缸裡（收藏、展示的不會被拿走）。礦石在裂縫 1400 公尺以下撿，船錨在溝底的沉船旁邊。</p>';
   }
   p.innerHTML = html; p.querySelector('.spx').addEventListener('click', closeSubPanel);
-  const u = p.querySelector('.sp-unlock'); if (u) u.addEventListener('click', async () => { const r = await subRpc('sub_unlock'); if (!r) return; adoptRow(r.player); Sub.st = r.sub; SFX.coin(); flash('🚢 租到潛水艇了！', 1.8); openSubPanel(); });
+  const u = p.querySelector('.sp-unlock'); if (u) u.addEventListener('click', async () => { const r = await subRpc('sub_unlock'); if (!r) return; adoptRow(r.player); Sub.st = r.sub; SFX.coin(); flash('租到潛水艇了', 1.8); openSubPanel(); });
   const g = p.querySelector('.sp-go'); if (g) g.addEventListener('click', () => subStart());
-  for (const b of p.querySelectorAll('[data-up]')) b.addEventListener('click', async () => { const r = await subRpc('sub_upgrade', { p_kind: b.dataset.up }); if (!r) return; adoptRow(r.player); Sub.st = r.sub; SFX.coin(); flash('🔧 升級完成！', 1.6); openSubPanel(); });
+  for (const b of p.querySelectorAll('[data-up]')) b.addEventListener('click', async () => { const r = await subRpc('sub_upgrade', { p_kind: b.dataset.up }); if (!r) return; adoptRow(r.player); Sub.st = r.sub; SFX.coin(); flash('升級完成！', 1.6); openSubPanel(); });
 }
 
 addSeasonDeco(); try { buildShrimpHall(); buildShrimpFront(); } catch(e){ console.warn('venues', e); } try { buildCafe(); } catch(e){ console.warn('cafe', e); } try { buildMuseum(); } catch(e){ console.warn('museum', e); } try { buildStadium(); } catch(e){ console.warn('stadium', e); } try { buildPoolHall(); } catch(e){ console.warn('poolhall', e); } try { buildHarborLadder(); } catch(e){ console.warn('ladder', e); } try { buildPetShop(); } catch(e){ console.warn('petshop', e); } try { buildNooks(); } catch(e){ console.warn('nooks', e); } try { buildStreetLamps(); } catch(e){ console.warn('lamps', e); }
@@ -21581,7 +21581,7 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
   /* v581 作者：上面只留 地圖、背包、手機，其他都收進 📱 手機 */
   for (const g of [UI_GROUPS.find(x => x.k === 'map'), UI_GROUPS.find(x => x.k === 'bag'), { k:'ph', ic:'📱', lab:'手機', tabs:[] }]){ const b = document.createElement('button'); b.className = 'mbtn panel g3'; b.dataset.group = g.k; b.dataset.tabs = g.tabs.map(t => t[0]).join(' '); b.setAttribute('aria-label', g.lab);
     b.innerHTML = `<span class="g3i">${g.ic}</span><span class="g3l">${g.lab}</span>`; b.addEventListener('click', () => { if (g.k === 'ph') phoneOpen(); else ui3OpenGroup(g.k); }); M.appendChild(b); }
-  if (!LS.get('tide.phTold', false)) setTimeout(() => { LS.set('tide.phTold', true); toast('📱 圖鑑、排行榜、玩家、造型、設定……都搬進右上角的「手機」了'); }, 4000); }
+  if (!LS.get('tide.phTold', false)) setTimeout(() => { LS.set('tide.phTold', true); toast('圖鑑、排行榜、玩家、造型、設定……都搬進右上角的「手機」了'); }, 4000); }
 
 /* ===== v581 📱 遊戲裡的手機（作者：「我想要手機與社群」「大部分都能放進手機裡」「玩家用手機時有動作」）
    手機主畫面＝所有選單頁面的入口；新的「🔔 快訊」＝正在發生的事＋跑馬燈飄過去的消息（存在這支手機，留 24 小時）。
@@ -21594,6 +21594,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u757', d:'11/24', items:[
+    ['💬', '畫面上跳出來的字清爽一點：開頭的小圖示拿掉，不再每句都用驚嘆號。'] ] },
   { id:'u756', d:'11/24', items:[
     ['📖', '說明頁重寫了：每段只留怎麼做，價錢和機率收在「想算數字的人再看」。'] ] },
   { id:'u755', d:'11/24', items:[
@@ -21889,7 +21891,7 @@ function welcomeStep(st){ const w = $('#welcome'); if (!w) return; w.innerHTML =
     const row = el('div', 'wc-row'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = welcomeRandName(); inp.setAttribute('aria-label', '名字'); const dice = el('button', 'tbtn ghost', '🎲'); dice.setAttribute('aria-label', '隨機名字'); dice.addEventListener('click', () => { SFX.click(); inp.value = welcomeRandName(); dice.animate && dice.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg)' }], { duration: 350 }); });
     row.append(inp, dice); c.appendChild(row); const msg = el('p', 'wc-err', ''); c.appendChild(msg);
     const ok = el('button', 'tbtn wc-go', i18nT('就叫這個名字！')); const save = () => { const v = inp.value.trim().slice(0, 16); if (!v){ msg.textContent = i18nT('名字不能是空的'); return; } if (clean(v) !== v){ msg.textContent = i18nT('這個名字不能用，換一個吧'); return; }
-      nickname = v; LS.set('tide.nick', v); try { refreshMyName(); pushPresence(true); cloudProfile(); } catch(e){} SFX.coin && SFX.coin(); welcomeDone(false); flash(`👋 ${v}，歡迎來到潮汐釣魚村！`, 2.2); };
+      nickname = v; LS.set('tide.nick', v); try { refreshMyName(); pushPresence(true); cloudProfile(); } catch(e){} SFX.coin && SFX.coin(); welcomeDone(false); flash(`${v}，歡迎來到潮汐釣魚村`, 2.2); };
     ok.addEventListener('click', save); inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) save(); }); c.appendChild(ok);
     const bk = el('button', 'tbtn ghost wc-b', '‹ ' + i18nT('返回')); bk.addEventListener('click', () => welcomeStep('title')); c.appendChild(bk); setTimeout(() => { try { inp.select(); } catch(e){} }, 60); }
   w.appendChild(c); }
