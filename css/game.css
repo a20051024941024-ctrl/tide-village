@@ -2218,3 +2218,25 @@ html.fltype #rotate{display:none!important}
 /* v742 新人物換裝頁：3D 預覽填滿左邊那格（原本固定 150×170，頭和腳被切掉） */
 .closet.k3pt .cl-pv{align-items:stretch}
 .closet.k3pt .cl-pv .pvcv{width:100%;height:100%;max-width:none;max-height:none;border-radius:0;flex:1;min-height:0}
+
+/* v750 🧬 配種缸 */
+.labbox{background:#eef8f4;border-color:#b9e0d2}
+.labbox .lab-p{margin:4px 12px 8px}
+.labbox .bb-t{margin:6px 12px 4px;font-weight:800}
+.lab-card{background:#fff;border-radius:14px;margin:6px 10px 10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.lab-h{font-weight:800;color:var(--ink)}
+.lab-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lab-par{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:96px;border:2px dashed #b9d8cd;border-radius:12px;background:#f6fbf9;font:inherit;color:var(--ink);cursor:pointer;padding:6px}
+.lab-par.has{border-style:solid;border-color:#7cc6b0;background:#fff}
+.lab-par small{color:var(--ink-soft);font-size:11.5px;text-align:center;line-height:1.3}
+.lab-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lab-k{flex:none;width:2.6em;font-weight:700;color:var(--ink-soft);font-size:13px}
+.lab-row .seg{flex:1;flex-wrap:wrap}
+.lab-tip{color:var(--ink-soft);font-size:12px}
+.lab-go{align-self:stretch}
+.lab-buy{margin:0 10px 8px}
+.lab-list{display:flex;flex-direction:column;gap:6px;margin:4px 10px 10px;max-height:46vh;overflow:auto}
+.lab-fish{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:6px 10px}
+.lab-fish .lf-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.lab-fish .lf-t small{color:var(--ink-soft);font-size:12px}
+.lab-wait{color:var(--ink-soft);font-size:12px;white-space:nowrap}

@@ -775,6 +775,110 @@ const FISH_MOVES = {
   marlin: 'float wk = clamp((-position.x - 0.15) / 0.55, 0.0, 1.0);\n transformed.z += sin(uFishT * 7.0 + position.x * 4.0) * 0.1 * wk * wk;',   /* 只有後 1/3 擺動，前段和劍不動 */
 };
 for (const [id, st] of Object.entries(FISH_STYLE)){ const gen = FISH_SPECS[id] && FISH_SPECS[id].gen; if (st.shape === 'Crab' || gen === 'crab') st.move = 'crab'; else if (st.shape === 'Lobster') st.move = 'lobster'; }   /* v229：螃蟹、龍蝦的腳會動 */
+/* ===== v750 🧬 生命垂釣・第一次：配種缸（作者 11/23 選 C「自然演化＋玩家培育」，11/24「生命垂釣」）=====
+   伺服器（220_life_breed.sql）算遺傳和突變；這裡只負責「照基因把魚畫出來」和配種缸的畫面。
+   基因 gn：c 主色、p 花紋、f 鰭、s 光澤、r 稀有突變（各兩份）、z 體型、n 第幾代。規則要跟 220 的說明一樣。 */
+const GN = { COL: [null, '#e2463c', '#f08a32', '#f2cf3a', '#f4f1ea', '#2b2d33', '#3f7fe0', '#8a5fd6', '#f08fb8', '#4fb86a', '#34b8b0', '#8a5a3a'],
+  COLN: ['原色', '紅', '橘', '黃', '白', '黑', '藍', '紫', '粉', '綠', '青', '棕'], PAT: ['', '斑點', '條紋', '紅白', '三色', '網紋', '漸層'], FIN: ['', '長鰭', '蝴蝶鰭', '燕尾', '圓扇'], SHN: ['', '金屬光', '珍珠', '透明'], RARE: ['', '白化', '金鱗', '黑化', '夜光', '寶石眼'],
+  MAX: { c: 11, p: 6, f: 4, s: 3, r: 5 }, finGeo: new Map() };
+function gnClean(x){ const g = x && x.gn; if (!g || typeof g !== 'object') return {}; const o = { gn: {} };
+  for (const k of ['c', 'p', 'f', 's', 'r']){ const a = Array.isArray(g[k]) ? g[k] : [0, 0]; o.gn[k] = [0, 1].map(i => { const v = Math.floor(Number(a[i]) || 0); return v >= 0 && v <= GN.MAX[k] ? v : 0; }); }
+  o.gn.z = clamp(Math.round(Number(g.z) || 100), 80, 130); o.gn.n = clamp(Math.floor(Number(g.n) || 0), 0, 9999); if (typeof g.mu === 'string' && /^[cpfsr]$/.test(g.mu)) o.gn.mu = g.mu;
+  if (Array.isArray(x.pm) && x.pm.length === 2) o.pm = x.pm.map(Number); const gb = Number(x.gb); if (gb > 0) o.gb = gb; return o; }
+function gnOf(x){ return Object.assign({ c: [0, 0], p: [0, 0], f: [0, 0], s: [0, 0], r: [0, 0], z: 100, n: 0 }, (x && x.gn) || {}); }
+function gnIsFry(x){ return !!(x && x.gn && x.gb && Lab.now() - x.gb < 86400000); }
+/* 看得到的樣子：主色兩份混在一起；花紋 1、2、6 一份就出現，3、4、5 要兩份一樣；鰭、光澤、稀有突變要兩份一樣 */
+function gnPheno(g){ const same = a => a[0] === a[1] ? a[0] : 0, rec = v => v >= 3 && v <= 5; let p; if (g.p[0] === g.p[1]) p = g.p[0]; else { const d = g.p.filter(v => v && !rec(v)); p = d.length ? Math.min(...d) : 0; }
+  return { c: g.c.slice().sort((a, b) => a - b), p, f: same(g.f), s: same(g.s), r: same(g.r), z: g.z }; }
+function gnHidden(g){ let n = 0; const P = gnPheno(g); if (g.p[0] !== g.p[1]) for (const v of g.p) if (v && v !== P.p) n++; for (const k of ['f', 's', 'r']) if (g[k][0] !== g[k][1]) n += g[k].filter(v => v).length; return n; }
+function gnChips(x){ if (!x || !x.gn || gnIsFry(x)) return []; const g = gnOf(x), P = gnPheno(g), out = [];
+  if (P.c[0] || P.c[1]) out.push(P.c[0] === P.c[1] ? GN.COLN[P.c[0]] + '色' : (P.c[0] ? GN.COLN[P.c[0]] : '淡') + GN.COLN[P.c[1]] + '色');
+  if (P.p) out.push(GN.PAT[P.p]); if (P.f) out.push(GN.FIN[P.f]); if (P.s) out.push(GN.SHN[P.s]); if (P.r) out.push('✨' + GN.RARE[P.r]);
+  if (P.z >= 112) out.push('大隻'); else if (P.z <= 90) out.push('小隻'); const h = gnHidden(g); if (h) out.push(`藏著 ${h} 個還沒顯出來的特徵`); return out; }
+function gnFish(x, def){ if (!x || !x.gn || !def || gnIsFry(x)) return def; const st0 = FISH_STYLE[def.id]; if (!st0) return def; const P = gnPheno(gnOf(x)), zq = Math.round(P.z / 5) * 5;
+  if (!P.c[0] && !P.c[1] && !P.p && !P.f && !P.s && !P.r && zq === 100) return def;
+  const key = `gn~${def.id}~${P.c.join('.')}-${P.p}${P.f}${P.s}${P.r}-${zq}`;
+  if (!FISH_STYLE[key]){ const c = Object.assign({}, st0.c), L = (h, to, k) => '#' + new THREE.Color(h).lerp(new THREE.Color(to), k).getHexString();
+    for (const part of Object.keys(c)){ if (/^(Eye|Mouth)/.test(part)) continue; const k = part === 'Bottom' ? 0.4 : /^(Fins|Tail)/.test(part) ? 0.78 : 0.88, tint = a => a ? L(c[part], GN.COL[a], k) : c[part]; let h = L(tint(P.c[0]), tint(P.c[1]), 0.5);
+      if (P.r === 1) h = L(h, '#fff3ec', 0.86); else if (P.r === 2) h = L(h, part === 'Bottom' ? '#f6e3a0' : '#e6b033', 0.78); else if (P.r === 3) h = L(h, '#1b1c21', 0.82); c[part] = h; }
+    if (P.r === 1) c.Eye = '#d8384a'; if (P.r === 5) c.Eye = '#22d8c6';
+    const k = zq / 100, sc0 = st0.sc || [1, 1, 1], st = Object.assign({}, st0, { c, gn: P, sc: [sc0[0] * k, sc0[1] * k, sc0[2] * k] });
+    if (P.r === 4){ st.glow = true; st.glowParts = Object.keys(c).filter(n => !/^(Eye|Mouth)/.test(n)); } if (P.r === 5) st.glowParts = (st0.glowParts || []).concat(['Eye']);
+    FISH_STYLE[key] = st; FISH_BY_ID[key] = Object.assign({}, def, { id: key, color: c.Top || def.color }); }
+  return Object.assign({}, FISH_BY_ID[key], { name: def.name }); }
+/* 花紋：畫在身體的貼圖上（u 從頭到尾、v 繞身體一圈）；鰭和眼睛不畫 */
+function gnHash(i, j){ let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; }
+function gnNoise(x, y, py){ const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), w = j => ((j % py) + py) % py;
+  const a = gnHash(xi, w(yi)), b = gnHash(xi + 1, w(yi)), c = gnHash(xi, w(yi + 1)), d = gnHash(xi + 1, w(yi + 1)); return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy; }
+function gnPatOf(st, rgb){ const P = st.gn, hx = h => { const v = new THREE.Color(h).getHex(); return [v >> 16 & 255, v >> 8 & 255, v & 255]; }, top = rgb('Top'), lum = (top[0] * 0.3 + top[1] * 0.59 + top[2] * 0.11) / 255;
+  const dark = lum > 0.35 ? top.map(v => v * 0.38) : top.map(v => Math.min(255, v * 1.9 + 60)), wild = !P.c[0] && !P.c[1];
+  const pale = lum > 0.72 || wild;   /* 紅白、三色：底是白的，色塊用主色；主色是原色或太白就用紅色 */
+  return { k: P.p, a: P.p >= 3 && P.p <= 4 && pale ? hx('#e2463c') : top, b: dark, w: hx('#f6f2ea'), bk: hx('#26272c') }; }
+function gnPat(T, u, v, part, c){ if (/^(Eye|Mouth|Fins|Tail)/.test(part)) return c; const TAU = Math.PI * 2;
+  switch (T.k){
+    case 1: { const gx = u * 15, gy = v * 12, ci = Math.floor(gx), cj = Math.floor(gy); for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++){ const jj = ((j % 12) + 12) % 12; if (gnHash(i * 3 + 7, jj * 5 + 1) < 0.5) continue; const px = i + 0.2 + gnHash(i, jj) * 0.6, py = j + 0.2 + gnHash(i + 11, jj + 3) * 0.6, r = 0.2 + gnHash(i + 5, jj + 9) * 0.16; if ((gx - px) * (gx - px) + (gy - py) * (gy - py) < r * r) return T.b; } return c; }
+    case 2: return part !== 'Bottom' && Math.sin(u * TAU * 6.5 + Math.sin(v * TAU) * 0.7) > 0.3 ? T.b : c;
+    case 3: return gnNoise(u * 5.5, v * 4, 4) > 0.5 ? T.a : T.w;
+    case 4: { if (gnNoise(u * 9 + 31, v * 6, 6) > 0.7) return T.bk; return gnNoise(u * 5.5, v * 4, 4) > 0.5 ? T.a : T.w; }
+    case 5: { const row = Math.floor(v * 16), a = (u * 24 + (row % 2) * 0.5) % 1, b = (v * 16) % 1; return a < 0.14 || b < 0.16 ? [c[0] * 0.55, c[1] * 0.55, c[2] * 0.55] : c; }
+    case 6: { const t = clamp((u - 0.25) / 0.6, 0, 1), k = t * t * (3 - 2 * t); return [c[0] + (T.w[0] - c[0]) * k, c[1] + (T.w[1] - c[1]) * k, c[2] + (T.w[2] - c[2]) * k]; }
+  } return c; }
+/* 鰭：魚的鰭和尾巴是同一片網子，所以直接搬點——尾巴往後、往上下拉；背鰭、腹鰭往外拉。一種形狀只算一次 */
+function gnFinGeo(geo, st, part, bodyGeo){ const k = st.shape + '/' + part + '/' + st.gn.f + (geo.index ? 'i' : ''); let g = GN.finGeo.get(k); if (g) return g;
+  if (!bodyGeo.boundingBox) bodyGeo.computeBoundingBox(); const bb = bodyGeo.boundingBox, tx = bb.min.x + (bb.max.x - bb.min.x) * 0.1, hy = Math.max(bb.max.y, -bb.min.y) * 0.72;
+  const [tl, th, fh] = [[1, 1, 1], [1.55, 1.2, 1.4], [1.2, 1.65, 1.6], [1.85, 0.95, 1.1], [1.08, 1.75, 1.2]][st.gn.f] || [1, 1, 1];
+  g = geo.clone(); const P = g.attributes.position; for (let i = 0; i < P.count; i++){ let x = P.getX(i), y = P.getY(i); if (x < tx){ const d = tx - x; x = tx - d * tl; y *= 1 + (th - 1) * Math.min(1, d / 0.12); } else if (Math.abs(y) > hy){ y = Math.sign(y) * (hy + (Math.abs(y) - hy) * fh); } P.setXY(i, x, y); }
+  P.needsUpdate = true; g.computeVertexNormals(); g.computeBoundingBox(); g.computeBoundingSphere(); GN.finGeo.set(k, g); return g; }
+function gnSheen(m, P, part){ if (!m || m.userData.gnS) return; m.userData.gnS = 1; if (/^(Eye|Mouth)/.test(part)) return;
+  if (P.s === 1 || P.r === 2){ m.metalness = 0.28; m.roughness = 0.2; m.emissive = new THREE.Color(m.color).multiplyScalar(0.5); m.emissiveIntensity = 0.22; }   /* 場景沒有環境反射，金屬感太重會變黑，所以只加一點＋自己微微亮 */ else if (P.s === 2){ m.metalness = 0.18; m.roughness = 0.16; m.emissive = new THREE.Color('#fff4f8'); m.emissiveIntensity = 0.12; } else if (P.s === 3){ m.transparent = true; m.opacity = 0.62; m.depthWrite = true; } m.needsUpdate = true; }
+
+/* 配種缸（魚缸分頁、「養魚繁殖」下面）：挑一公一母、設定環境、每天配一次 */
+const Lab = { data: null, off: 0, busy: false, open: null, pick: null, sel: (() => { try { return JSON.parse(localStorage.getItem('tide.labsel') || '{}') || {}; } catch(e){ return {}; } })(),
+  now(){ return Date.now() + this.off; } };
+const LAB_SLOT_COST = [2000, 5000, 10000], LAB_TP = [['cold', '❄️ 冷水', '藍、紫、青比較容易出現'], ['mid', '💧 常溫', '不偏哪一邊'], ['warm', '🔥 溫水', '紅、橘、黃、粉比較容易出現']],
+  LAB_FD = [['norm', '一般飼料', 0, '免費'], ['color', '色揚飼料', 30, '顏色、花紋比較容易傳下去'], ['protein', '高蛋白', 30, '魚苗體型大一點']];
+async function labLoad(){ if (Lab.busy || !Cloud.on || !Cloud.sb) return; Lab.busy = true; try { const { data, error } = await Cloud.sb.rpc('lab_get'); if (!error && data){ Lab.data = data.lab || { n: 1, s: {} }; Lab.off = (data.now || Date.now()) - Date.now(); } else Lab.data = Lab.data || { err: 1 }; } catch(e){ Lab.data = Lab.data || { err: 1 }; } Lab.busy = false; if (!$('#sheet').hidden && curTab === 'tank') renderTab(); }
+function labSel(i){ const S = Lab.sel[i] || (Lab.sel[i] = {}), sv = Lab.data && Lab.data.s && Lab.data.s[i]; if (sv && S.m == null && S.f == null && !S.init){ S.m = sv.m; S.f = sv.f; S.tp = sv.tp; S.fd = sv.fd; S.pl = !!sv.pl; } S.init = 1; S.tp = S.tp || 'mid'; S.fd = S.fd || 'norm';
+  for (const k of ['m', 'f']) if (S[k] != null && !rec.tank.some(x => x.t === S[k])) S[k] = null; return S; }
+function labSave(){ try { localStorage.setItem('tide.labsel', JSON.stringify(Lab.sel)); } catch(e){} }
+function labOk(x, sex, other){ if (!x || x.s !== sex || x.rs || !TANK_BREED.has(breedBase(x.f)) || gnIsFry(x)) return false; return !other || breedBase(other.f) === breedBase(x.f); }
+function labFishRow(x, btn){ const row = el('div', 'lab-fish'); row.appendChild(fishCanvas(gpyFish(x), true, 64, 40)); const t = el('div', 'lf-t'); t.appendChild(el('b', '', `${sexIcon(x)} ${x.n || fishNameOf(x)}`));
+  const ch = gnChips(x); t.appendChild(el('small', '', x.gn ? `第 ${gnOf(x).n} 代${ch.length ? '・' + ch.join('・') : '・看起來跟一般的一樣'}` : (x.g && FISH_BY_ID[x.g] ? `帶著${FISH_BY_ID[x.g].name}的基因` : '還沒配過種'))); row.appendChild(t); if (btn) row.appendChild(btn); return row; }
+async function labBreed(i){ const S = labSel(i); if (Lab.busy || S.m == null || S.f == null) return; Lab.busy = true; renderTab();
+  const r = await festRpc('lab_breed', { p_slot: i, p_m: S.m, p_f: S.f, p_tp: S.tp, p_fd: S.fd, p_pl: !!S.pl }); Lab.busy = false;
+  if (r && r.lab){ Lab.data = r.lab; Lab.off = (r.now || Date.now()) - Date.now(); if (Array.isArray(r.tank)) rec.tank = normRec(Object.assign({}, rec, { tank: r.tank })).tank; if (typeof r.coins === 'number') rec.coins = r.coins; saveRecLocal(); try { buildTank(); } catch(e){} try { renderCoins(); } catch(e){}
+    const n = (r.born || []).length; SFX.catch && SFX.catch(); flash(`🐣 生了 ${n} 條魚苗！`, 1.8); ticker(`🧬 配種缸生了 <b>${n}</b> 條魚苗，明天長大就看得出牠們的樣子。`); }
+  renderTab(); }
+async function labBuy(){ if (Lab.busy) return; const n = (Lab.data && Lab.data.n) || 1, cost = LAB_SLOT_COST[n - 1]; if (!cost) return; if ((rec.coins || 0) < cost){ toast('金幣不夠喔'); return; } Lab.busy = true; const r = await festRpc('lab_slot_buy'); Lab.busy = false;
+  if (r && r.lab){ Lab.data = r.lab; if (typeof r.coins === 'number') rec.coins = r.coins; saveRecLocal(); try { renderCoins(); } catch(e){} SFX.coin && SFX.coin(); flash('🧬 多了一個配種缸！', 1.6); } renderTab(); }
+function renderLab(body){ const box = el('div', 'breedbox labbox'), hd = el('button', 'bb-h'); const fry = (rec.tank || []).filter(gnIsFry), nGene = (rec.tank || []).filter(x => x.gn).length;
+  if (Lab.open == null) Lab.open = nGene > 0;
+  hd.innerHTML = `<b>🧬 配種缸</b><span>${fry.length ? `${fry.length} 條魚苗正在長大` : nGene ? `你有 ${nGene} 條有基因的魚` : '自己挑爸媽，培育只有你有的魚'}</span><i>${Lab.open ? '▲' : '▼'}</i>`;
+  hd.addEventListener('click', () => { Lab.open = !Lab.open; Lab.pick = null; renderTab(); }); box.appendChild(hd); body.appendChild(box); if (!Lab.open) return;
+  if (!Cloud.on || !Cloud.sb){ box.appendChild(el('p', 'sub lab-p', '要連上線才能用配種缸。')); return; }
+  if (!Lab.data){ box.appendChild(el('p', 'sub lab-p', '正在看配種缸…')); labLoad(); return; }
+  if (Lab.data.err){ box.appendChild(el('p', 'sub lab-p', '配種缸暫時打不開，等一下再試。')); const b = el('button', 'tbtn', '再試一次'); b.addEventListener('click', () => { Lab.data = null; renderTab(); }); box.appendChild(b); return; }
+  if (Lab.pick){ const { i, sex } = Lab.pick, S = labSel(i), other = rec.tank.find(x => x.t === (sex === 'M' ? S.f : S.m)), list = rec.tank.filter(x => labOk(x, sex, other));
+    const back = el('button', 'tbtn ghost', '← 回配種缸'); back.addEventListener('click', () => { Lab.pick = null; renderTab(); }); box.appendChild(back);
+    box.appendChild(el('div', 'bb-t', `挑${sex === 'M' ? '爸爸 ♂' : '媽媽 ♀'}${other ? `（要跟另一半同一種：${FISH_BY_ID[breedBase(other.f)].name}）` : ''}`));
+    if (!list.length) box.appendChild(el('p', 'sub lab-p', `魚缸裡沒有可以選的${sex === 'M' ? '公魚' : '母魚'}。會在魚缸生小魚的有：${[...TANK_BREED].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。魚苗要長大才能配。`));
+    const wrap = el('div', 'lab-list'); for (const x of list.slice(0, 80)){ const b = el('button', 'tbtn', '選牠'); b.addEventListener('click', () => { S[sex === 'M' ? 'm' : 'f'] = x.t; labSave(); Lab.pick = null; renderTab(); }); wrap.appendChild(labFishRow(x, b)); } box.appendChild(wrap); return; }
+  box.appendChild(el('p', 'sub lab-p', '自己挑一公一母（同一種），每一缸每天可以配一次，生 1～3 條魚苗。魚苗會從爸媽各拿一半的特徵（顏色、花紋、鰭、光澤、體型），偶爾突變出爸媽都沒有的樣子。魚苗明天長大才看得出樣子，長大後可以再拿來配。'));
+  const n = Lab.data.n || 1;
+  for (let i = 1; i <= n; i++){ const S = labSel(i), sv = (Lab.data.s || {})[i], card = el('div', 'lab-card'), wait = sv && sv.at ? sv.at + 20 * 3600000 - Lab.now() : 0;
+    card.appendChild(el('div', 'lab-h', `配種缸 ${i}`));
+    const pr = el('div', 'lab-pair'); for (const [sex, key, lab] of [['M', 'm', '＋ 挑爸爸 ♂'], ['F', 'f', '＋ 挑媽媽 ♀']]){ const x = rec.tank.find(q => q.t === S[key]), b = el('button', 'lab-par' + (x ? ' has' : ''));
+      if (x){ b.appendChild(fishCanvas(gpyFish(x), true, 84, 52)); b.appendChild(el('b', '', `${sexIcon(x)} ${x.n || fishNameOf(x)}`)); const ch = gnChips(x); b.appendChild(el('small', '', ch.length ? ch.join('・') : x.gn ? '一般的樣子' : '還沒配過種')); } else b.appendChild(el('span', '', lab));
+      b.addEventListener('click', () => { Lab.pick = { i, sex }; renderTab(); }); pr.appendChild(b); } card.appendChild(pr);
+    const seg = (title, opts, cur, set) => { const r = el('div', 'lab-row'); r.appendChild(el('span', 'lab-k', title)); const sg = el('div', 'seg'); for (const o of opts){ const b = el('button', '', o[1] + (o[2] > 0 ? ` 🪙${o[2]}` : '')); b.setAttribute('aria-pressed', String(cur === o[0])); b.title = o[3] || o[2] || ''; b.addEventListener('click', () => { set(o[0]); labSave(); renderTab(); }); sg.appendChild(b); } r.appendChild(sg); card.appendChild(r); };
+    seg('水溫', LAB_TP.map(o => [o[0], o[1], 0, o[2]]), S.tp, v => S.tp = v); seg('飼料', LAB_FD, S.fd, v => S.fd = v); seg('水草', [[false, '不放', 0, ''], [true, '🌿 多放水草', 20, '特別的鰭比較容易傳下去']], !!S.pl, v => S.pl = v);
+    const tip = [LAB_TP.find(o => o[0] === S.tp)[2], LAB_FD.find(o => o[0] === S.fd)[3], S.pl ? '特別的鰭比較容易傳下去' : ''].filter(t => t && t !== '免費' && t !== '不偏哪一邊'); if (tip.length) card.appendChild(el('small', 'lab-tip', '這樣配：' + tip.join('；') + '（機率多一點，不是保證）'));
+    const cost = (S.fd === 'norm' ? 0 : 30) + (S.pl ? 20 : 0), go = el('button', 'tbtn lab-go', wait > 0 ? `休息中・還要 ${wait > 3600000 ? Math.ceil(wait / 3600000) + ' 小時' : Math.ceil(wait / 60000) + ' 分鐘'}` : Lab.busy ? '配種中…' : `🧬 配種${cost ? `（🪙${cost}）` : ''}`);
+    go.disabled = wait > 0 || Lab.busy || S.m == null || S.f == null; go.addEventListener('click', () => labBreed(i)); card.appendChild(go); if (wait <= 0 && (S.m == null || S.f == null)) card.appendChild(el('small', 'lab-tip', '先挑好爸爸和媽媽。'));
+    box.appendChild(card); }
+  if (n < 4){ const b = el('button', 'tbtn ghost lab-buy', `＋ 再加一個配種缸（🪙${LAB_SLOT_COST[n - 1].toLocaleString()}）`); b.addEventListener('click', labBuy); box.appendChild(b); }
+  if (fry.length){ box.appendChild(el('div', 'bb-t', `🐣 正在長大的魚苗（${fry.length}）`)); const wrap = el('div', 'lab-list'); for (const x of fry.slice(0, 30)){ const h = Math.max(1, Math.ceil((x.gb + 86400000 - Lab.now()) / 3600000)), row = labFishRow(x, el('small', 'lab-wait', `還要 ${h} 小時`)); row.querySelector('small').textContent = '魚苗・長大才看得出樣子'; wrap.appendChild(row); } box.appendChild(wrap); }
+  box.appendChild(el('p', 'sub lab-p', `有基因的魚最多養 60 條（現在 ${nGene} 條）。養殖的魚賣的錢只有四分之一。點魚缸裡的魚可以看牠的卡片和特徵。`)); }
 function fishMat(id, part, color, glow, move, shape){
   move = move || 'side';
   const key = id + '/' + part + (shape === 'Marlin2' ? '/2' : ''); if (fishMatCache[key]) return fishMatCache[key];
@@ -828,9 +932,12 @@ function makeModelFish(f, scale){
   const texB = !FISH_TEX_OFF && !CLASSIC && fishGenBody(st.shape) ? fishTexBody(f, st) : null; if (texB) inner.add(texB);
   for (const part of Object.keys(texB ? fishNoBodyMesh(st.shape) : FISH_MESH[st.shape])){
     const mt = fishMat(f.id, part, st.c[part] || f.color, st.glow, st.move, st.shape); if (st.glowParts && st.glowParts.includes(part) && !mt.userData.gl){ mt.userData.gl = 1; mt.emissive = new THREE.Color(st.c[part] || f.color); mt.emissiveIntensity = 0.9; }
-    const mesh = new THREE.Mesh(texB ? fishGeoNB(st.shape, part) : fishGeo(st.shape, part), mt);
+    let geo = texB ? fishGeoNB(st.shape, part) : fishGeo(st.shape, part); if (st.gn && st.gn.f && texB && /^(Fins|Tail)/.test(part)) geo = gnFinGeo(geo, st, part, texB.geometry);
+    if (st.gn) gnSheen(mt, st.gn, part);
+    const mesh = new THREE.Mesh(geo, mt);
     mesh.castShadow = true; inner.add(mesh);
   }
+  if (st.gn && texB) gnSheen(texB.material, st.gn, 'Top');
   fish.userData.tail = new THREE.Object3D();   // 舊程式會轉尾巴；新模型的擺動在 shader 裡
   return fish;
 }
@@ -848,7 +955,7 @@ function fishGillK(G, u, v){ const yn = Math.sin(v * Math.PI * 2 - Math.PI / 2);
   if (d > -0.007 && d < 0.004) return 0.68; if (d >= 0.004 && d < 0.03) return 0.86 + (d - 0.004) / 0.026 * 0.14; if (d <= -0.007 && d > -0.06 && yn < 0.4) return 1.07; return 1; }
 function fishTexPump(){ if (fishTexBusy) return; fishTexBusy = true; const step = () => { const J = fishTexQ[0]; if (!J){ fishTexBusy = false; return; } const t0 = performance.now();
     while (J.y < J.H && performance.now() - t0 < 8){ const rows = Math.min(16, J.H - J.y), im = J.cx.createImageData(J.W, rows);
-      for (let yy = 0; yy < rows; yy++) for (let x = 0; x < J.W; x++){ const y = J.y + yy, c1 = J.rgb(J.B.part((x + 0.25) / J.W, (y + 0.25) / J.H)), c2 = J.rgb(J.B.part((x + 0.75) / J.W, (y + 0.75) / J.H)), o = (yy * J.W + x) * 4, k = J.gill ? fishGillK(J.gill, (x + 0.5) / J.W, (y + 0.5) / J.H) : 1; im.data[o] = Math.min(255, (c1[0] + c2[0]) / 2 * k); im.data[o + 1] = Math.min(255, (c1[1] + c2[1]) / 2 * k); im.data[o + 2] = Math.min(255, (c1[2] + c2[2]) / 2 * k); im.data[o + 3] = 255; }
+      for (let yy = 0; yy < rows; yy++) for (let x = 0; x < J.W; x++){ const y = J.y + yy, p1 = J.B.part((x + 0.25) / J.W, (y + 0.25) / J.H), p2 = J.B.part((x + 0.75) / J.W, (y + 0.75) / J.H), c1 = J.pat ? gnPat(J.pat, (x + 0.25) / J.W, (y + 0.25) / J.H, p1, J.rgb(p1)) : J.rgb(p1), c2 = J.pat ? gnPat(J.pat, (x + 0.75) / J.W, (y + 0.75) / J.H, p2, J.rgb(p2)) : J.rgb(p2), o = (yy * J.W + x) * 4, k = J.gill ? fishGillK(J.gill, (x + 0.5) / J.W, (y + 0.5) / J.H) : 1; im.data[o] = Math.min(255, (c1[0] + c2[0]) / 2 * k); im.data[o + 1] = Math.min(255, (c1[1] + c2[1]) / 2 * k); im.data[o + 2] = Math.min(255, (c1[2] + c2[2]) / 2 * k); im.data[o + 3] = 255; }
       J.cx.putImageData(im, 0, J.y); J.y += rows; }
     if (J.y >= J.H){ J.tx.needsUpdate = true; fishTexQ.shift(); } setTimeout(step, 16); }; setTimeout(step, 0); }
 function fishSpecOf(shape){ return FISH_SPECS[shape.slice(2)]; }
@@ -870,7 +977,7 @@ function fishTexBody(f, st){ const key = f.id; let C = fishTexCache[key];
     const rgb = pn => col[pn] || (col[pn] = (() => { const h = new THREE.Color(st.c[pn] || f.color || '#888888').getHex(); return [h >> 16 & 255, h >> 8 & 255, h & 255]; })());   /* getHex 是 sRGB（畫布要的），不能直接拿 .r（那是線性的，會變暗） */
     { const a = rgb('Bottom'), b = rgb('Top'), gr = cx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0.3, `rgb(${a})`); gr.addColorStop(0.7, `rgb(${b})`); cx.fillStyle = gr; cx.fillRect(0, 0, W, H); }   /* 先塗上下兩色，花紋排隊慢慢畫（不卡） */
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; tx.wrapT = THREE.RepeatWrapping;
-    fishTexQ.push({ B, cx, W, H, rgb, tx, y: 0, gill: fishGillOf(S, st) }); fishTexPump();
+    fishTexQ.push({ B, cx, W, H, rgb, tx, y: 0, gill: fishGillOf(S, st), pat: st.gn && st.gn.p ? gnPatOf(st, rgb) : null }); fishTexPump();
     C = fishTexCache[key] = { g, tx }; }
   const m = fishMat(f.id + '/tex', 'Top', '#ffffff', st.glow, st.move, st.shape); if (!m.map){ m.map = C.tx; m.needsUpdate = true; }
   const mesh = new THREE.Mesh(C.g, m); mesh.castShadow = true; return mesh; }
@@ -16029,7 +16136,7 @@ function renderFishCard(body, x, inCage){
   const card = el('div', 'fcard'); body.appendChild(card);
   const top = el('div', 'fc-top'); top.appendChild(fishCanvas(gx, true, 150, 96)); const tt = el('div', 'fc-tt');
   tt.appendChild(el('div', 'fc-name', x.n || fishNameOf(x))); tt.appendChild(el('div', 'fc-sp', `${x.n ? fishNameOf(x) + '・' : ''}${sexIcon(x) ? sexIcon(x) + '・' : ''}${f.rarity}${f.of ? '・✨變種' : ''}`));
-  const tags = el('div', 'fc-tags'); for (const [on, t] of [[x.k, '⭐ 收藏'], [shown, '🐠 在我的海'], [x.cr, '👑 魚王'], [x.ev, '✨ 自己養出來的變種'], [inCage, '🐟 箱網裡'], [x.fm && !x.cr, '🍚 箱網養大'], [x.y, '🍼 水族館出生'], [x.b, '🐣 含著小魚'], [x.g && FISH_BY_ID[x.g], x.g && FISH_BY_ID[x.g] ? `🧬 帶著${FISH_BY_ID[x.g].name}的基因` : '']]) if (on) tags.appendChild(el('span', 'badge', t));
+  const tags = el('div', 'fc-tags'); for (const [on, t] of [[x.k, '⭐ 收藏'], [shown, '🐠 在我的海'], [x.cr, '👑 魚王'], [x.ev, '✨ 自己養出來的變種'], [inCage, '🐟 箱網裡'], [x.fm && !x.cr, '🍚 箱網養大'], [x.y && !x.gn, '🍼 水族館出生'], [gnIsFry(x), '🐣 魚苗・明天長大'], [x.gn && !gnIsFry(x), x.gn ? `🧬 第 ${gnOf(x).n} 代` : ''], ...gnChips(x).map(t => [true, '🧬 ' + t]), [x.b, '🐣 含著小魚'], [x.g && FISH_BY_ID[x.g], x.g && FISH_BY_ID[x.g] ? `🧬 帶著${FISH_BY_ID[x.g].name}的基因` : '']]) if (on) tags.appendChild(el('span', 'badge', t));
   tt.appendChild(tags); top.appendChild(tt); card.appendChild(top);
   const pct = Math.max(0, Math.min(1, (x.w - f.min) / Math.max(0.001, f.max - f.min)));
   const bar = el('div', 'fc-bar'); bar.innerHTML = `<i style="width:${Math.round(pct * 100)}%"></i>`; card.appendChild(el('div', 'fc-lab', `體型：${fmtKg(x.w)}（這種魚 ${fmtKg(f.min)}～${fmtKg(f.max)}，牠在 ${Math.round(pct * 100)}% 的位置${pct >= 0.999 ? '，已經是最大的了 👑' : ''}）`)); card.appendChild(bar);
@@ -16060,7 +16167,8 @@ function gpyWild(){ const c = 'wwwrby', t = 'ooosd', r = s => s[Math.floor(Math.
 function gpyBaby(a, b){ const A = gpyParse(a) || gpyParse('ww|oo'), B = gpyParse(b) || gpyParse('ww|oo'), h = s => s[Math.random() < 0.5 ? 0 : 1];
   let c = [h(A.c), h(B.c)], t = [h(A.t), h(B.t)]; if (Math.random() < 0.04) c[Math.random() < 0.5 ? 0 : 1] = 'wrbykp'[Math.floor(Math.random() * 6)]; if (Math.random() < 0.03) t[Math.random() < 0.5 ? 0 : 1] = 'dso'[Math.floor(Math.random() * 3)]; return c.join('') + '|' + t.join(''); }
 // 每一種品系（顏色＋尾巴形狀＋公母＋白化）用自己的模型顏色；母魚顏色比較淡
-function gpyFish(x){ const base = FISH_BY_ID[x.f], g = base && isGuppy(x.f) ? gpyParse(x.gp) : null; if (!g) return base;
+function gpyFish(x){ return gnFish(x, gpyFish0(x)); }
+function gpyFish0(x){ const base = FISH_BY_ID[x.f], g = base && isGuppy(x.f) ? gpyParse(x.gp) : null; if (!g) return base;
   const tl = gpyTail(g.t), fem = x.s === 'F', alb = x.f === 'guppy_albino', key = `gpy~${g.c.join('')}${tl}${fem ? 'F' : 'M'}${alb ? 'a' : ''}`;
   if (!FISH_STYLE[key]){ const B = FISH_STYLE[GPY_TAIL[tl][0]], c = Object.assign({}, B.c), lt = (h, k) => '#' + new THREE.Color(h).lerp(new THREE.Color('#c8ccc0'), k).getHexString();
     if (alb) Object.assign(c, FISH_STYLE.guppy_albino.c); c.Tail = fem ? lt(GPY_COL[g.c[0]][0], 0.55) : GPY_COL[g.c[0]][0]; c.Tail2 = fem ? lt(GPY_COL[g.c[1]][0], 0.6) : GPY_COL[g.c[1]][0];
@@ -17168,7 +17276,7 @@ function normRec(r){
   e.breedAt = Number(r.breedAt) || 0;   /* 水族館繁殖上次算到哪 */
   e.total = Number(r.total) || 0; e.bestW = Number(r.bestW) || 0; e.bestFish = FISH_BY_ID[r.bestFish] ? r.bestFish : null; e.legend = Number(r.legend) || 0; e.updatedAt = Number(r.updatedAt) || 0;
   for (const f of FISH){ if (r.best && Number(r.best[f.id]) > 0) e.best[f.id] = Number(r.best[f.id]); if (r.count && Number(r.count[f.id]) > 0) e.count[f.id] = Number(r.count[f.id]); }
-  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}, fishExtra(x), typeof x.g === 'string' && FISH_BY_ID[x.g] ? { g:x.g } : {}, typeof x.gp === 'string' && /^[wrbykp]{2}\|[dso]{2}$/.test(x.gp) ? { gp:x.gp } : {}, x.ev ? { ev:true } : {}));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
+  if (Array.isArray(r.tank)) e.tank = r.tank.filter(x => x && FISH_BY_ID[x.f]).slice(0, KEEP_MAX + SHOW_MAX + FAV_MAX).map(x => Object.assign({ f:x.f, w:Number(x.w)||0, t:Number(x.t)||0 }, typeof x.rs === 'string' && /^\d+:[MF]:\d+$/.test(x.rs) ? { rs:x.rs } : {}, { s: x.s === 'M' || x.s === 'F' ? x.s : (Math.floor(Number(x.t) || 0) % 2 === 0 ? 'M' : 'F') },   /* 以前釣的魚沒有記公母：用時間決定（跟 037 一樣） */ x.b ? { b:true } : {}, x.y ? { y:true } : {}, x.k ? { k:true } : {}, x.fm ? { fm:true } : {}, fishExtra(x), typeof x.g === 'string' && FISH_BY_ID[x.g] ? { g:x.g } : {}, typeof x.gp === 'string' && /^[wrbykp]{2}\|[dso]{2}$/.test(x.gp) ? { gp:x.gp } : {}, x.ev ? { ev:true } : {}, gnClean(x)));   /* k：打星號收藏；fm：箱網養大的；rs：赤紅霸王鯊的編號、性別、叉叉 */
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
@@ -20025,6 +20133,7 @@ function renderTab0(){
     body.appendChild(el('p', 'sub', '👆 點魚的圖或名字，可以看牠的卡片、幫牠取名字。'));
     breedTank();
     renderBreedGuide(body);
+    renderLab(body);
     const bar = el('div', 'tankbar');
     const sortSel = el('div', 'seg');
     [['new','最新'],['big','最重'],['rare','最稀有'],['fav','⭐收藏']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String((tankSort || 'new') === k)); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortSel.appendChild(b); });
@@ -20293,6 +20402,7 @@ function renderTab0(){
       '♂♀ 公母和繁殖：每條魚都有公母（卡片、魚缸會顯示 ♂／♀）。春天和夏天是野外繁殖季，吳郭魚、鯽魚、羅漢魚、青鱂魚、彈塗魚、招潮蟹、小龍蝦這些會自己繁殖的魚比較多、小魚也比較多；月灣河岸的淺水底會有吳郭魚的窩，浮標落在窩旁邊，守窩的公魚會馬上衝來咬。有些母吳郭魚嘴裡含著小魚（🐣），放流會多 💙5。水族館裡展示同一種魚的一公一母，每天有機會生小魚（🍼，每天最多 3 條），會生的有金魚、錦鯉、鯉魚、鯽魚、吳郭魚、小丑魚、青鱂魚、泰國蝦、小龍蝦、海馬、泥鰍、羅漢魚。',
       '🎨 自己設計衣服：在「造型」分頁選「衣服」或「褲子」等，最下面按「＋ 自己設計」，就能在 32×32 的格子、48 種顏色上畫圖案（上衣有正面和背面；有直線、方框、填色、吸色、左右對稱、粗細筆、復原重做，也可以用自己的圖片），存好就能穿。設計會放到「🛍️ 設計師市集」，自己定價，別人買了九成的錢給你。帽子、鞋子、披風、領巾也可以自己設計，件數沒有上限；不適當的圖案被檢舉三次會下架。',
       '🐟 孔雀魚配種：生態池和螢光溪釣得到孔雀魚。每一條的尾巴顏色和形狀都不一樣（顏色有灰、紅、藍、黃，形狀有圓尾、劍尾、扇尾），公魚很花、母魚比較淡。一公一母放在水族館展示會生小魚，小魚從爸爸媽媽各遺傳一半，偶爾會突變出黑色、紫色或新的尾巴，看你能配出幾種品系！',
+      '🧬 配種缸（生命垂釣）：魚缸分頁的「🧬 配種缸」可以自己挑一公一母（同一種、會在魚缸生小魚的那 13 種），每一缸每天配一次，生 1～3 條魚苗。魚苗從爸媽各拿一半的特徵：主色、花紋（斑點、條紋、紅白、三色、網紋、漸層）、鰭（長鰭、蝴蝶鰭、燕尾、圓扇）、光澤（金屬光、珍珠、透明）、體型；有的特徵要爸媽兩邊都帶著才會顯出來，所以看起來普通的魚也可能藏著特別的基因。每條魚苗有 5% 機會突變出爸媽都沒有的特徵，0.5% 機會出現稀有突變（白化、金鱗、黑化、夜光、寶石眼）。水溫、飼料、水草會讓某些特徵比較容易出現（冷水偏藍紫青、溫水偏紅橘黃粉、色揚飼料幫顏色和花紋、高蛋白長比較大、水草幫特別的鰭），但只是機率多一點。魚苗隔天長大才看得出樣子，長大可以再配；兄弟姊妹互配，體型會變小。有基因的魚最多養 60 條，配種缸可以用金幣加到 4 缸。',
       '🧬 變種也會繁殖（照真實的隱性遺傳）：同一種變種一公一母放在我的海，生出來的小魚是變種；變種配一般的，小魚看起來一般，但會「🧬 帶著變種的基因」；帶基因的再配變種，一半是變種；兩條帶同樣基因的配，四分之一是變種。',
       '🎣 新的釣竿陣容：釣具店只賣 6 支 —— 竹竿（免費入門）、🎣 路亞軟竿（🪙800，最適合掠食魚、狡猾魚）、🎋 手竿（🪙500，河、湖、溪）、🏖️ 遠投竿（🪙800，海邊）、🪨 磯釣硬竿（🪙800，港口外海、小島碼頭）、👑 黃金王者竿（🪙12000，什麼時候、什麼地方都是稀有 ×1.3、傳說 ×1.3）。',
       '⬆️ 釣竿升級：四支專用竿（路亞、手竿、遠投、磯釣）可以在背包「🎣 釣組」升級，1～5 級。每升一級要金幣＋魚缸裡的魚（Lv.2：🪙800＋常見魚 3 條；Lv.3：🪙2,000＋稀有魚 2 條；Lv.4：🪙4,500＋稀有魚 4 條；Lv.5：🪙9,000＋傳說魚 1 條）。用的是魚缸裡最輕的那幾條，⭐收藏和我的海裡的不會被拿走；按一下會先列出要用掉哪幾條，再按一次才真的升。等級越高稀有、傳說越多、線越不容易斷（Lv.5 稀有 ×1.5、傳說 ×1.4）。4～5 級的專用竿用在對的地方、對的魚，會贏過王者竿。Lv.5 的竿子拉對的魚時竿尖會閃光。',
