@@ -2344,3 +2344,7 @@ html.fltype #rotate{display:none!important}
 body.guideOn #hint{display:none!important}   /* v752 操作說明併進老港第一句，原本那塊會被聊天列蓋住一半 */
 
 body.touch #hint{display:none!important}   /* v758 手機上這塊舊操作提示一直被聊天列蓋住一半；走路和轉頭老港第一句就講了 */
+
+/* v759 作者截圖：木框頁面右上角的紅色叉叉被框切掉一塊 → 標題列不再往右、往上伸出框外 */
+#sheet.th-wood header{margin:0 0 0 -10px!important}
+#sheet.th-wood #closeSheet{position:relative;z-index:3}

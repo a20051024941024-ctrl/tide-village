@@ -17908,7 +17908,15 @@ function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.create
   /* 地上的光柱指路 */
   if (!Guide.beacon){ const g = new THREE.Group(), m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 9, 18, 1, true), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })); m.position.y = 4.5; g.add(m);
     const r = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.85, 32), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.8, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.y = 0.06; g.add(r); g.userData.dyn = true; scene.add(g); Guide.beacon = g; }
-  const show = !busy && !!tgt && (!Guide.hide || !!(G && G.nav)) && Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) > 3; Guide.beacon.visible = show; if (show){ Guide.beacon.position.set(tgt.x, groundHeight(tgt.x, tgt.z), tgt.z); Guide.beacon.children[0].material.opacity = 0.22 + Math.sin(now() * 3) * 0.1; } }
+  const show = !busy && !!tgt && (!Guide.hide || !!(G && G.nav)) && Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) > 3; Guide.beacon.visible = show; if (show){ Guide.beacon.position.set(tgt.x, groundHeight(tgt.x, tgt.z), tgt.z); Guide.beacon.children[0].material.opacity = 0.22 + Math.sin(now() * 3) * 0.1; }
+  /* v759 作者截圖：「我覺得可以做箭頭，不然有點看不到」→ 腳邊地上三個往目的地指的黃色箭頭，一個接一個亮過去（只有自己看得到，帶路和新手教學都有） */
+  if (!Guide.arr){ const g = new THREE.Group(), sh = new THREE.Shape(); sh.moveTo(0, 0.42); sh.lineTo(0.5, -0.12); sh.lineTo(0.5, -0.42); sh.lineTo(0, 0.12); sh.lineTo(-0.5, -0.42); sh.lineTo(-0.5, -0.12); sh.closePath();
+    const geo = new THREE.ShapeGeometry(sh); geo.rotateX(-Math.PI / 2); geo.scale(1, 1, -1);
+    for (let i = 0; i < 3; i++){ const o = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#5a3a00', transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide })); o.scale.setScalar(1.22); o.position.set(0, 0, 1.5 + i * 0.85); o.renderOrder = 6; g.add(o);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#ffd23f', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); m.position.set(0, 0.012, 1.5 + i * 0.85); m.renderOrder = 7; g.add(m); }
+    g.userData.dyn = true; scene.add(g); Guide.arr = g; }
+  Guide.arr.visible = show && !SKI.on; if (Guide.arr.visible){ const dx = tgt.x - me.pos.x, dz = tgt.z - me.pos.z, T = now(); Guide.arr.position.set(me.pos.x, me.pos.y + 0.07, me.pos.z); Guide.arr.rotation.y = Math.atan2(dx, dz);
+    for (let i = 0; i < 3; i++){ const w = 0.35 + 0.65 * Math.max(0, Math.sin(T * 5 - i * 1.1)); Guide.arr.children[i * 2 + 1].material.opacity = w; Guide.arr.children[i * 2].material.opacity = 0.2 + 0.35 * w; const z = 1.5 + i * 0.85 + Math.sin(T * 5 - i * 1.1) * 0.08; Guide.arr.children[i * 2].position.z = z; Guide.arr.children[i * 2 + 1].position.z = z; } } }
 /* 第一次釣魚的手指教學（釣到 3 條以前都會出現） */
 function fingerTip(){ let c = Guide.fin; if (!c){ c = Guide.fin = document.createElement('div'); c.id = 'fingerTip'; document.body.appendChild(c); }
   let t = ''; if (rec.total < 3 && !Dive.on && !House.on && !Photo.on){ const ph = F.phase, near = nearestSpot(), canCast = near && (near.d < 1.7 || shoreSpot());
@@ -21594,6 +21602,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u759', d:'11/24', items:[
+    ['🧭', '帶路的時候腳邊多了三個黃色箭頭，往要去的地方指。木框頁面右上角的叉叉不會再被切掉。'] ] },
   { id:'u757', d:'11/24', items:[
     ['💬', '畫面上跳出來的字清爽一點：開頭的小圖示拿掉，不再每句都用驚嘆號。'] ] },
   { id:'u756', d:'11/24', items:[
