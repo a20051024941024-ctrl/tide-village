@@ -2327,3 +2327,18 @@ html.fltype #rotate{display:none!important}
 .lb2-egg{width:34px;height:34px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 30%,#fff,#ffe9c2);box-shadow:inset 0 0 0 2px #f0c987;font:inherit;font-size:11px;font-weight:800;color:#8a5a1c;cursor:pointer;padding:0}
 .lb2-t{font-size:22px}
 .lb2-row{gap:6px}.lb2-opt{font-size:12px;padding:0 3px;gap:3px;min-width:0}.lb2-opt i{font-size:16px}.lb2-row .k{width:2.3em}
+/* v752 新手教學改成老港帶你：頭像＋他講的話，下面一行小字是現在要做的事和五個點 */
+#guideCard .grow{display:flex;gap:9px;align-items:flex-start}
+#guideCard .gface{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #0d4a8c;flex:none;background:#cfe6f5;vertical-align:middle}
+#guideCard:not(.talk) .gface,#guideCard > .gface{width:26px;height:26px;margin-right:6px}
+#guideCard .gsay{flex:1;min-width:0}
+#guideCard.talk .gt b{font-size:12px;color:#0d4a8c}
+#guideCard.talk .gh{margin-top:1px;font-size:14px;color:#18334a;line-height:1.45}
+#guideCard.talk .gd{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:12px;margin-top:6px;padding-top:5px;border-top:1px dashed #cfd9e2}
+#guideCard .gdots{margin-left:auto;display:inline-flex;gap:3px}
+#guideCard .gdots i{width:6px;height:6px;border-radius:50%;background:#d5dde5;display:block}
+#guideCard .gdots i.on{background:#2b8fe6}#guideCard .gdots i.now{background:#ffb02e}
+@keyframes gpop{0%{transform:scale(.92)}45%{transform:scale(1.05)}100%{transform:scale(1)}}
+#guideCard.gpop{animation:gpop .38s ease-out}
+
+body.guideOn #hint{display:none!important}   /* v752 操作說明併進老港第一句，原本那塊會被聊天列蓋住一半 */

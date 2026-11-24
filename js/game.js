@@ -17846,16 +17846,16 @@ $('#ccShow').addEventListener('click', () => { if (ccEarly()) return;   // 釣�
 /* ===== v304 新手主線：釣第一條魚 → 賣魚 → 買竿子 → 去自己的小島 → 潛一次水（長輩、小孩都看得懂；左上角一張小卡片＋地上的光柱指路）＋第一次釣魚的手指教學 ===== */
 /* v582 作者：「新手教學那些再去重做」→ 五步、大約 10 分鐘：釣魚 → 手機看圖鑑 → 賣魚 → 坐阿海的船出海 → 在島上釣滿 5 條（伺服器的新手獎勵本來就要 5 條）。做完跳「你現在可以自由玩了」 */
 const GUIDE = [
-  { t:'釣到第一條魚', h:'走到水邊（地上有光柱的地方），按住右下的「拋竿」蓄力，放開就拋出去。', at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 1 },
-  { t:'用手機看圖鑑', h:'按右上角會跳的「📱 手機」，再點「📖 圖鑑」，看看你剛剛釣到的魚。', at:() => null, ok:() => !!LS.get('tide.guideDex', false), ph:true },
-  { t:'把魚賣掉換金幣', h:'到港邊的「潮汐魚市場」，按「賣魚」把魚賣掉（想收藏的可以先放魚缸）。', at:() => LANDMARKS.find(l => l.id === 'shop').pos, ok:() => !!LS.get('tide.guideSold', false) },
-  { t:'坐船出海', h:'到港口找船夫「阿海」，選一座島按「載我去」，坐船過去（免費）。', at:() => new THREE.Vector3(FERRY.at[0], 0, FERRY.at[1]), ok:() => !!LS.get('tide.guideVoy', false) },
-  { t:'在島上釣滿 5 條魚', h:() => `不同的地方有不同的魚。找個水邊再釣幾條（現在 ${Math.min(5, rec.total)}/5）。`, at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 5 },
+  { t:'釣一條魚', h:() => (isTouch ? '新來的？左下搖桿走路，手指拖畫面轉頭。' : '新來的？WASD 走路，滑鼠拖畫面轉頭。') + '去水邊亮亮的那裡，按住「拋竿」，放開就甩出去。', at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 1 },
+  { t:'用手機看圖鑑', h:'不錯嘛。右上角的手機拿出來，點「圖鑑」，看看剛剛那條叫什麼。', at:() => null, ok:() => !!LS.get('tide.guideDex', false), ph:true },
+  { t:'把魚賣掉', h:'魚放久了不新鮮。拿去港邊的魚市場賣掉，捨不得的先養在魚缸。', at:() => LANDMARKS.find(l => l.id === 'shop').pos, ok:() => !!LS.get('tide.guideSold', false) },
+  { t:'坐船出海', h:'村子邊就這幾種魚。去港口找阿海，叫他載你出去，不用錢。', at:() => new THREE.Vector3(FERRY.at[0], 0, FERRY.at[1]), ok:() => !!LS.get('tide.guideVoy', false) },
+  { t:'在島上釣滿 5 條魚', h:() => '每個地方的魚不一樣，多釣幾條再說。' + `（${Math.min(5, rec.total)}/5）`, at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 5 },
 ];
-const Guide = { i: null, el: null, beacon: null, fin: null, hide: false };
+const Guide = { i: null, el: null, beacon: null, fin: null, hide: false, bye: 0, pop: 0 }, GUIDE_BYE = { t:'教完了', h:'行了，沒什麼好教的了。海很大，自己去。', at:() => null, bye:true };
 /* v337 玩家找不到阿海、理髮店：地圖可以選「帶我去」，左上角出現箭頭和距離、地上有光柱，走到了自動結束 */
 const Nav = { t: null };
-function navTo(label, x, z){ Nav.t = { label, x, z }; if (!$('#sheet').hidden) closeSheet(); if (Guide.el) Guide.el._k = ''; toast(`🧭 帶你去「${label}」：跟著左上角的箭頭和地上的光柱走`); }
+function navTo(label, x, z){ Nav.t = { label, x, z }; if (!$('#sheet').hidden) closeSheet(); if (Guide.el) Guide.el._k = ''; toast(`往「${label}」，跟著箭頭走`); }
 function navList(){ const L = [], byName = p => { const n = npcs.find(n => n.shopNpc === p && !n.wHide); return n && n.pos ? [n.pos.x, n.pos.z] : null; };
   L.push(['🚤', '阿海（坐船、潛水、去別的島）', FERRY.at]);
   const ICON = { aquarium:'🐠', chat:'💬', tackle:'🎣', shop:'🏪', cook:'🍲', museum:'🏛️', tailor:'👗', mu:'🪚', market:'🐟', salon:'💇', cai:'🎨', fu:'🦐' };
@@ -17872,34 +17872,36 @@ function guideInit(){ let v = LS.get('tide.guide2', null);
   Guide.i = v; Guide.hide = !!LS.get('tide.guideHide', false); }
 function guideTick(){ if (Guide.i == null) guideInit(); if (onIsle && onIsle.owner === myIdOrMe()) guideMark('isle'); if (Dive.on) guideMark('dive');
   fingerTip();
-  if (Nav.t){ const d = Math.hypot(Nav.t.x - me.pos.x, Nav.t.z - me.pos.z); if (d < 3.4){ const lab = Nav.t.label; Nav.t = null; if (Guide.el) Guide.el._k = ''; flash(`📍 到了：${lab}`, 1.8); try { SFX.catch(); } catch(e){} }
-    else { const T = Nav.t; return guideShow({ nav: true, t: '帶你去：' + T.label, h: '跟著箭頭和地上的光柱走，到了會自動結束。', at: () => new THREE.Vector3(T.x, 0, T.z) }); } }
-  if (Guide.i === 'done') return guideShow(null);
-  while (Guide.i !== 'done' && GUIDE[Guide.i].ok()){ Guide.i++; SFX.catch(); if (Guide.i >= GUIDE.length){ Guide.i = 'done'; LS.set('tide.guide2', 'done'); LS.set('tide.guide', 'done'); flash('🎉 新手任務全部完成！你已經是潮汐村的釣客了', 2.6); guideReward(); setTimeout(guideFree, 3200); break; } LS.set('tide.guide2', Guide.i); flash(`✅ 完成！下一個：${GUIDE[Guide.i].t}`, 2); }
-  guideShow(Guide.i === 'done' ? null : GUIDE[Guide.i]);
+  if (Nav.t){ const d = Math.hypot(Nav.t.x - me.pos.x, Nav.t.z - me.pos.z); if (d < 3.4){ const lab = Nav.t.label; Nav.t = null; if (Guide.el) Guide.el._k = ''; flash(`${lab}到了`, 1.8); try { SFX.catch(); } catch(e){} }
+    else { const T = Nav.t; return guideShow({ nav: true, t: '往' + T.label, h: '跟著箭頭和地上的光柱走。', at: () => new THREE.Vector3(T.x, 0, T.z) }); } }
+  if (Guide.i === 'done'){ guideShow(Guide.bye > now() ? GUIDE_BYE : null); document.body.classList.toggle('guideOn', !!(Guide.el && !Guide.el.hidden)); return; }
+  while (Guide.i !== 'done' && GUIDE[Guide.i].ok()){ Guide.i++; SFX.catch(); if (Guide.i >= GUIDE.length){ Guide.i = 'done'; LS.set('tide.guide2', 'done'); LS.set('tide.guide', 'done'); Guide.bye = now() + 5; Guide.pop = now(); guideReward(); setTimeout(guideFree, 5200); break; }   /* 最後一句也是老港在卡片裡講，不用大字 */ LS.set('tide.guide2', Guide.i); Guide.pop = now(); }   /* v752 作者：「遊戲全面不要有ai味…然後新手教學」→ 不跳「完成！下一個」，老港直接講下一句，卡片跳一下 */
+  guideShow(Guide.i === 'done' ? (Guide.bye > now() ? GUIDE_BYE : null) : GUIDE[Guide.i]);
   { const G = Guide.i === 'done' ? null : GUIDE[Guide.i], pb = $('#menu .mbtn[data-group="ph"]'); if (pb) pb.classList.toggle('gpulse', !!(G && G.ph) && $('#sheet').hidden); }
   document.body.classList.toggle('guideOn', !!(Guide.el && !Guide.el.hidden && !Guide.hide)); }
 /* v582 新手任務做完：「你現在可以自由玩了」──四件可以自己選的事（作者：「玩家想在遊戲裡想幹嘛就幹嘛」） */
 function guideFree(){ if (LS.get('tide.guideFree', false)) return; LS.set('tide.guideFree', true); if ($('#guideFree')) return;
   const w = el('div', ''); w.id = 'guideFree'; const c = el('div', 'gf-card'); w.appendChild(c);
-  c.appendChild(el('div', 'gf-t', '🌊 你現在可以自由玩了')); c.appendChild(el('div', 'gf-s', '潮汐村沒有規定要做什麼，想去哪就去哪。不知道要做什麼的話，可以試試：'));
+  c.appendChild(el('div', 'gf-t', '接下來隨你')); c.appendChild(el('div', 'gf-s', '這裡沒人管你要做什麼。一時想不到的話：'));
   const L = el('div', 'gf-l'), shut = () => { w.classList.add('out'); setTimeout(() => w.remove(), 260); };
   for (const [ic, t, d, fn] of [
     ['🏝️', '蓋自己的小島', '蓋房子、擺家具、種東西', () => phoneGo('island')],
-    ['🤿', '存錢去潛水', '🪙1,500 在釣具店買潛水裝備，海底有寶箱', () => { const l = LANDMARKS.find(x => x.id === 'tackle'); navTo('釣具店', l.pos.x, l.pos.z); }],
-    ['🎱', '找阿喆打撞球', '撞球館的常客，隨時可以跟他對打', () => navTo('撞球館', POOL_DOOR.x, POOL_DOOR.z)],
-    ['🎿', '去雪松山滑雪', '冰封群島南邊，坐纜車上山再滑下來', () => voyStart(TRAVEL.find(x => x.id === 'frostdock'))]]){
+    ['🤿', '存錢去潛水', '裝備 🪙1,500，釣具店有賣。海底有寶箱', () => { const l = LANDMARKS.find(x => x.id === 'tackle'); navTo('釣具店', l.pos.x, l.pos.z); }],
+    ['🎱', '找阿喆打撞球', '他整天泡在撞球館', () => navTo('撞球館', POOL_DOOR.x, POOL_DOOR.z)],
+    ['🎿', '去雪松山滑雪', '在冰封群島南邊，坐纜車上去', () => voyStart(TRAVEL.find(x => x.id === 'frostdock'))]]){
     const b = el('button', 'gf-i'); b.innerHTML = `<span class="gf-ic">${ic}</span><span><b>${t}</b><small>${d}</small></span>`; b.addEventListener('click', () => { SFX.click(); shut(); fn(); }); L.appendChild(b); }
-  c.appendChild(L); c.appendChild(el('div', 'gf-s', '🚲 背包裡還有一台腳踏車，拿出來騎跑得比較快。'));
-  const x = el('button', 'gf-x', '我自己逛逛'); x.addEventListener('click', () => { SFX.click(); shut(); }); c.appendChild(x);
+  c.appendChild(L); c.appendChild(el('div', 'gf-s', '背包裡有一台腳踏車，騎車比走路快。'));
+  const x = el('button', 'gf-x', '我自己逛'); x.addEventListener('click', () => { SFX.click(); shut(); }); c.appendChild(x);
   document.body.appendChild(w); try { SFX.catch(); } catch(e){} }
-async function guideReward(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('guide_reward'); if (error) throw error; adoptRow(data); setTimeout(() => flash('🎁 新手獎勵 🪙300！', 2), 2800); } catch(e){} }
+async function guideReward(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('guide_reward'); if (error) throw error; adoptRow(data); setTimeout(() => flash('老港塞給你 🪙300', 2.2), 2200); } catch(e){} }
 function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.createElement('div'); c.id = 'guideCard'; document.body.appendChild(c); c.addEventListener('click', e => { if (e.target.closest('.gnav')){ Nav.t = null; c._k = ''; guideTick(); return; } if (e.target.closest('.gx')){ Guide.hide = !Guide.hide; LS.set('tide.guideHide', Guide.hide); c._k = ''; guideTick(); } }); }
   const busy = !G || !!onIsle || Dive.on || House.on || inIndoor() || F.phase === 'reeling' || F.phase === 'bite' || Photo.on || (typeof Sub !== 'undefined' && Sub.on);
   c.hidden = busy; let tgt = null;
   if (!busy){ const p = G.at(); if (p && !onIsle){ tgt = p; } const d = tgt ? Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) : 0;
     let dir = ''; if (tgt && d > 2){ const a = Math.atan2(tgt.x - camera.position.x, tgt.z - camera.position.z), cy = Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)), rel = ((a - cy + Math.PI * 3) % (Math.PI * 2)) - Math.PI; dir = `<span class="garr" style="transform:rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)">⬆</span> 大約 ${Math.round(d)} 公尺`; }
-    const gh = typeof G.h === 'function' ? G.h() : G.h, k = (G.nav ? 'nav' + G.t : Guide.i + '|' + Guide.hide + gh) + '|' + dir; if (c._k !== k){ c._k = k; c.innerHTML = G.nav ? `<div class="gt"><b>🧭 ${esc(G.t)}</b><button class="gx gnav">取消</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}` : Guide.hide ? `<b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}</b> <button class="gx">打開</button>` : `<div class="gt"><b>🧭 新手任務 ${Guide.i + 1}/${GUIDE.length}：${G.t}</b><button class="gx" aria-label="收起">－</button></div><div class="gh">${gh}</div>${dir ? `<div class="gd">${dir}</div>` : ''}`; } }
+    const gh = typeof G.h === 'function' ? G.h() : G.h, k = (G.nav ? 'nav' + G.t : Guide.i + '|' + Guide.hide + gh) + '|' + dir; if (c._k !== k){ c._k = k; c.classList.toggle('talk', !G.nav); const dots = G.nav ? '' : `<span class="gdots">${GUIDE.map((_, j) => `<i class="${G.bye || j < Guide.i ? 'on' : j === Guide.i ? 'now' : ''}"></i>`).join('')}</span>`;
+      c.innerHTML = G.nav ? `<div class="gt"><b>${esc(G.t)}</b><button class="gx gnav">取消</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}` : Guide.hide && !G.bye ? `<img class="gface" src="icons/ui/gang.jpg" alt=""><b>${G.t}</b> <button class="gx">打開</button>` : `<div class="grow"><img class="gface" src="icons/ui/gang.jpg" alt=""><div class="gsay"><div class="gt"><b>老港</b><button class="gx" aria-label="收起">－</button></div><div class="gh">${gh}</div></div></div><div class="gd"><span class="gnow">${G.t}</span>${dir ? ' ・ ' + dir : ''}${dots}</div>`;
+      if (Guide.pop && now() - Guide.pop < 1.5){ Guide.pop = 0; c.classList.remove('gpop'); void c.offsetWidth; c.classList.add('gpop'); } } }
   /* 地上的光柱指路 */
   if (!Guide.beacon){ const g = new THREE.Group(), m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 9, 18, 1, true), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })); m.position.y = 4.5; g.add(m);
     const r = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.85, 32), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.8, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.y = 0.06; g.add(r); g.userData.dyn = true; scene.add(g); Guide.beacon = g; }
@@ -17907,11 +17909,11 @@ function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.create
 /* 第一次釣魚的手指教學（釣到 3 條以前都會出現） */
 function fingerTip(){ let c = Guide.fin; if (!c){ c = Guide.fin = document.createElement('div'); c.id = 'fingerTip'; document.body.appendChild(c); }
   let t = ''; if (rec.total < 3 && !Dive.on && !House.on && !Photo.on){ const ph = F.phase, near = nearestSpot(), canCast = near && (near.d < 1.7 || shoreSpot());
-    if (ph === 'idle' && canCast && !mySeat) t = '👆 按住「拋竿」不要放，<br>力量條滿了再放開！';
-    else if (ph === 'charging') t = '✋ 放開就拋出去！';
-    else if (ph === 'waiting') t = '👀 看著浮標…<br>沉下去、出現「!」再按';
-    else if (ph === 'bite') t = '👆 現在按！';
-    else if (ph === 'reeling') t = '👆 按住收線，<br>線變紅（太緊）就放開'; }
+    if (ph === 'idle' && canCast && !mySeat) t = '按住「拋竿」不要放，<br>力量條滿了再放開';
+    else if (ph === 'charging') t = '放開';
+    else if (ph === 'waiting') t = '看浮標。<br>沉下去、跳出「!」再按';
+    else if (ph === 'bite') t = '按！';
+    else if (ph === 'reeling') t = '按住收線，<br>線變紅就放開'; }
   if (c._t !== t){ c._t = t; c.innerHTML = t; c.className = F.phase === 'bite' ? 'hot' : ''; } c.hidden = !t; }
 /* v295 自己拿餌：退潮時在沙灘挖沙蠶、在珊瑚礁島撿小螃蟹（伺服器 gather_bait 算次數和潮汐） */
 function gatherKind(){ if (F.phase !== 'idle' || Dive.on || myBoat || mySeat || House.on || inIndoor() || onIsle) return null; if (typeof Sub !== 'undefined' && Sub.on) return null;
@@ -21970,6 +21972,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u754', d:'11/24', items:[
+    ['🎣', '老港會帶新來的人了：新手教學不再是任務卡，改成老港一句一句跟你講。'] ] },
   { id:'u751', d:'11/24', items:[
     ['💇', '新髮型三種：鮑伯短髮、小馬尾、包包頭，到造型頁「髮型」選。戴帽子時包包頭的丸子會自動收進帽子裡。', 'closet'],
     ['🧑‍🤝‍🧑', '村民不再撞衫了：每個人固定一套造型，釣魚開船的戴草帽、穿釣魚背心，有人戴棒球帽、耳環、口罩，也有人穿海浪外套，髮型和眼睛顏色也分開了。'] ] },
