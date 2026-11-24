@@ -562,7 +562,7 @@ mage:{s:.45,H:714,cx:258,atk:'cast',ord:['armb','body','armf'],hip:[[215,520],[3
 for(const k in RIG){if(k.endsWith('_wait'))continue;const r=RIG[k];r.im={};let n=0;for(const q of ['body','leg','armf','armb','bodyc']){const im=new Image();im.onload=()=>{r.im[q]=im;if(++n===4&&q!=='bodyc'||n===5&&!r.ok){r.ok=true;dirty=true}};im.src='img/r_'+k+'_'+q+'.png?v=1'}}
 function uQuad(g,r,k,face,sw,t,mv,nb,d){const f=(r.hk||1.32)*k/r.H,S=r.s,I=r.im,D=UDIE,S1=sw>0?Math.sin(Math.min(1,sw)*PI):0;
   if(r.fly)g.translate(0,-(d.lift??.75)+(D<0?Math.sin(t*3)*.05:0));g.scale(face*f,f);g.translate(-r.cx,-r.H);
-  const pic=(im,x,y,w)=>g.drawImage(im,x,y,im.width/S,im.height/S);const p=t*5.5;let bob=0,tilt=0,fw=0,lg=(i,ph)=>[0,0];
+  const pic=(im,x,y,w)=>g.drawImage(im,x,y,im.width/S,im.height/S);const p=t*3.8;let bob=0,tilt=0,fw=0,lg=(i,ph)=>[0,0];
   if(D>=0){bob=r.fly?0:80*D;tilt=.12*D;lg=(i,fr)=>[(fr?-1.1:1)*D,0]}
   else if(mv&&!r.fly){bob=-Math.abs(Math.cos(p))*10;lg=(i,fr,ph)=>[Math.sin(p+ph)*.32,Math.max(0,Math.cos(p+ph))*16]}
   else if(!nb&&t)bob=Math.sin(t*2.2)*3;
@@ -581,7 +581,7 @@ function uRigDraw(g,r,k,face,sw,t,mv,nb){const f=1.32*k/r.H,S=r.s,I=r.im,D=UDIE;
   const pic=(im,x,y)=>g.drawImage(im,x,y,im.width/S,im.height/S);
   let bob=0,la=[0,0],lift=[0,0],lx=[0,0],af=0,ab=0,lean=0,fw=0;
   if(D>=0){const a=D;la=[-.12*a,.22*a];bob=60*a;lean=-.2*a;af=1.4*a;ab=-.5*a}
-  else if(mv){const p=t*6,sn=Math.sin(p),cs=Math.cos(p);lx=[sn*32,-sn*32];lift=[Math.max(0,cs)*20,Math.max(0,-cs)*20];la=[-lift[0]*.004,-lift[1]*.004];bob=-Math.abs(cs)*12;af=-sn*.3;ab=sn*.25;lean=.05}
+  else if(mv){const p=t*4,sn=Math.sin(p),cs=Math.cos(p);lx=[sn*38,-sn*38];lift=[Math.max(0,cs)*20,Math.max(0,-cs)*20];la=[-lift[0]*.004,-lift[1]*.004];bob=-Math.abs(cs)*12;af=-sn*.3;ab=sn*.25;lean=.05}
   else if(!nb&&t){const b=Math.sin(t*2.2);bob=b*4;af=b*.03;ab=-b*.03}
   let bx=0;if(sw>0&&D<0){const S1=Math.sin(Math.min(1,sw)*PI);if(r.atk==='bow'){const dr=sw<.6?sw/.6:Math.max(0,1-(sw-.6)/.12);bx=-95*dr;ab=-.18*dr;af=-.12*S1;lean=-.04*S1}
     else if(r.atk==='cast'){af=sw<.4?-1*sw/.4:sw<.6?-1+.65*(sw-.4)/.2:-.35*(1-(sw-.6)/.4);fw=S1*25;lean=S1*.06}
