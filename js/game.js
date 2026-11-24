@@ -5082,7 +5082,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 748, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 749, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.faceOf = sex => sex === 'b' ? { eye: 'a0', brow: 'soft', mouth: 'smile', blush: 'none' } : { eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line' };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', mask: 'none', ear: 'none', hat: 'none', eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
@@ -5148,11 +5148,18 @@ K3.rimSmooth = body => { body.scene.traverse(o => { if (!o.isMesh || !/^T\w+_(cl
     P.needsUpdate = true; g.computeVertexNormals(); }); };
 K3.neckTrim = body => { body.scene.traverse(o => { if (!o.isMesh) return; const nm = o.material.name, hd = nm === 'headskin', tp = /^T\w+_skin$/.test(nm); if (!hd && !tp) return; const g = o.geometry, P = g.attributes.position, ix = g.index.array, out = [];
     const neck = i => { const x = P.getX(i), y = P.getY(i), z = P.getZ(i) - 0.012, r = Math.hypot(x, z); return hd ? ((y < 0.205 && r < 0.22) || (y < 0.26 && r < 0.1)) : (y > 0.15 && r < 0.17); };
-    for (let i = 0; i < ix.length; i += 3) if (!(neck(ix[i]) || neck(ix[i + 1]) || neck(ix[i + 2]))) out.push(ix[i], ix[i + 1], ix[i + 2]); g.setIndex(out); }); };
+    const front = i => hd && P.getZ(i) > 0.2 && Math.abs(P.getX(i)) < 0.3 && P.getY(i) > 0.5 && P.getY(i) < 0.74, fill = [];   /* v749 頭那塊皮膚在眉毛的位置會從臉前面凸出來一點，蓋住畫上去的眉毛（淡淡一塊鋸齒）→ 臉正面那一帶本來就有「臉」那一片，頭皮那塊拿掉 */
+    for (let i = 0; i < ix.length; i += 3) if (!(neck(ix[i]) || neck(ix[i + 1]) || neck(ix[i + 2]))){ if (front(ix[i]) && front(ix[i + 1]) && front(ix[i + 2])) fill.push(ix[i], ix[i + 1], ix[i + 2]); else out.push(ix[i], ix[i + 1], ix[i + 2]); } g.setIndex(out);
+    /* v749 臉那一片在原本眉毛的位置是破洞（當初眉毛被當成頭髮切掉了），洞後面是頭那塊皮膚，所以畫上去的眉毛會缺一塊。
+       把頭那塊在額頭的三角形拿出來，貼上跟臉一樣的貼圖（照正面投影算貼圖位置），放在臉後面一點點補洞 */
+    if (hd && fill.length){ const fg = new THREE.BufferGeometry(), n = fill.length, pp = new Float32Array(n * 3), nn = new Float32Array(n * 3), uv = new Float32Array(n * 2), si = new Uint16Array(n * 4), sw = new Float32Array(n * 4), N = g.attributes.normal, SI = g.attributes.skinIndex, SW = g.attributes.skinWeight;
+      for (let i = 0; i < n; i++){ const j = fill[i]; pp[i * 3] = P.getX(j); pp[i * 3 + 1] = P.getY(j); pp[i * 3 + 2] = P.getZ(j); nn[i * 3] = N.getX(j); nn[i * 3 + 1] = N.getY(j); nn[i * 3 + 2] = N.getZ(j); uv[i * 2] = P.getX(j) + 0.5; uv[i * 2 + 1] = 1.15 - P.getY(j); for (let c = 0; c < 4; c++){ si[i * 4 + c] = SI.getComponent(j, c); sw[i * 4 + c] = SW.getComponent(j, c); } }
+      fg.setAttribute('position', new THREE.BufferAttribute(pp, 3)); fg.setAttribute('normal', new THREE.BufferAttribute(nn, 3)); fg.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); fg.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); fg.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4)); K3.asset.fillGeo = fg; } }); };
 K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = true; const P = 'models/kid3/', TL = new THREE.TextureLoader(), GL = new GLTFLoader();
   const V = '?v=' + K3.V;   /* v716 模型檔加版本號：手機或網路中間的暫存會留住舊的 body.glb（作者：「釣魚背心沒東西」——程式是新的、模型是舊的）。改了模型就把 K3.V 加一 */
   Promise.all([fetch(P + 'rig.json' + V).then(r => r.json()), GL.loadAsync(P + 'body.glb' + V), GL.loadAsync(P + 'hair_long.glb' + V), GL.loadAsync(P + 'hair_short.glb' + V), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png'), TL.loadAsync(P + 'face_base.jpg' + V), TL.loadAsync(P + 'eyes.jpg' + V)])
-    .then(([rg, body, hl, hs, mb, mg, fbase, feyes]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null, fbase: fbase.image, feyes: feyes.image }; try { K3.neckTrim(body); K3.asset.neckTrim = true; } catch(e){ console.warn('neckTrim', e); } try { K3.rimSmooth(body); } catch(e){ console.warn('rimSmooth', e); } K3.loading = false;
+    .then(([rg, body, hl, hs, mb, mg, fbase, feyes]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null, fbase: fbase.image, feyes: feyes.image }; try { K3.neckTrim(body); K3.asset.neckTrim = true; } catch(e){ console.warn('neckTrim', e); } try { K3.rimSmooth(body); } catch(e){ console.warn('rimSmooth', e); } try { body.scene.traverse(o => { if (!o.isMesh || o.material.name !== 'face') return; const P = o.geometry.attributes.position, N = o.geometry.attributes.normal, v = new THREE.Vector3();   /* v749 臉的模型在原本眉毛的位置有一點凸起，換成別種眉毛（或生氣、哭）時會看到淡淡的舊眉毛形狀 → 那一帶的光影改用平滑的蛋形 */
+        for (let i = 0; i < P.count; i++){ const x = P.getX(i), y = P.getY(i), z = P.getZ(i); if (z < 0.1 || y < 0.55 || y > 0.7 || Math.abs(x) > 0.3) continue; const w = Math.min(1, (y - 0.55) / 0.02, (0.7 - y) / 0.02, (0.3 - Math.abs(x)) / 0.03); v.set(x / (0.39 * 0.39), (y - 0.6) / (0.38 * 0.38), z / (0.35 * 0.35)).normalize(); N.setXYZ(i, N.getX(i) + (v.x - N.getX(i)) * w, N.getY(i) + (v.y - N.getY(i)) * w, N.getZ(i) + (v.z - N.getZ(i)) * w); } N.needsUpdate = true; }); } catch(e){ console.warn('browflat', e); } K3.loading = false;
       fetch(P + 'clips.json' + V).then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
     .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
 /* v718 作者：「可以加載完再進入遊戲嗎，不要一進去還是原本的造型」→ 一開始就同時下載新人物（以前要等舊角色載完才開始下載），進入畫面也等自己的新人物換好才掀開（最多多等到 22 秒，不會卡住） */
@@ -5160,32 +5167,54 @@ if (K3.on && !/kid=0/.test(location.hash)) try { K3.fetch(); } catch(e){}
 /* v741 臉是現場畫出來的：空白的臉 → 貼上選的那對眼睛（作者用 ChatGPT 生的 12 種，可以換顏色）→ 畫眉毛、嘴巴、腮紅。
    同一張臉大家共用一張貼圖（照設定存起來）。ex：smile 平常、happy 做動作時（眼睛瞇成彎的、張嘴笑）、blink 眨眼 */
 K3.FC = new Map();
+/* v749 情緒表情：[眼睛怎麼畫, 嘴巴怎麼畫]。own＝照自己選的眼睛／嘴巴 */
+K3.EXF = { smile: ['own', 'own'], blink: ['closed', 'own'], happy: ['arc', 'open'], star: ['star', 'open'], wink: ['wink', 'open'], surprised: ['own', 'o'], shock: ['dot', 'big'], angry: ['ang', 'frown'], cry: ['cry', 'wail'], sleep: ['closed', 'o'], flat: ['line', 'flat'], smug: ['half', 'smirk'], shy: ['own', 'shy'] };
+/* 做哪個動作配哪個表情（沒寫到的動作維持平常的臉） */
+K3.EXMAP = { wave: 'happy', dance: 'happy', clap: 'happy', laugh: 'happy', hop: 'happy', cheer: 'star', thumbs: 'wink', wow: 'surprised', scared: 'shock', angry: 'angry', sleep: 'sleep', yawn: 'sleep', stretch: 'blink', bow: 'blink', shrug: 'flat', playdead: 'flat', point: 'smug', spin: 'smug' };
 K3.faceKey = c => [c.eye, c.brow, c.mouth, c.blush, (c.c || {}).eye || '', (c.c || {}).hair || ''].join(',');
 K3.faceTex = (c, ex, size) => { const A = K3.asset; if (!A || !A.fbase || !A.feyes) return null; const key = K3.faceKey(c) + ',' + ex + ',' + size; let t = K3.FC.get(key); if (t) return t;
   const cv = document.createElement('canvas'); cv.width = cv.height = size; const g = cv.getContext('2d'), D = Math.PI / 180, C = c.c || {}; g.scale(size / 512, size / 512); g.drawImage(A.fbase, 0, 0, 512, 512);
   const SK = '#fde0d0', INK = '#3c282a', LIP = '#96464b', MO = '#a04646', TG = '#eb828c', EY = [[170, 342, 1], [342, 342, -1]], arc = (x, y, rx, ry, a0, a1, w, col) => { g.beginPath(); g.ellipse(x, y, rx, ry, 0, a0 * D, a1 * D); g.lineWidth = w; g.lineCap = 'round'; g.strokeStyle = col; g.stroke(); };
   /* 眼睛 */
-  if (ex === 'smile'){ const row = (c.eye && c.eye[0] === 'b' ? 6 : 0) + (+(c.eye || 'a0')[1] || 0), pc = K3._pc || (K3._pc = document.createElement('canvas')); pc.width = 140; pc.height = 110; const q = pc.getContext('2d', { willReadFrequently: true });
-    for (let j = 0; j < 2; j++){ q.globalCompositeOperation = 'source-over'; q.clearRect(0, 0, 140, 110); q.drawImage(A.feyes, j * 140, row * 110, 140, 110, 0, 0, 140, 110);
+  const EM = K3.EXF[ex] || K3.EXF.smile, em = EM[0], mm = EM[1];
+  if (em === 'own' || em === 'half' || em === 'ang' || em === 'wink'){ const row = (c.eye && c.eye[0] === 'b' ? 6 : 0) + (+(c.eye || 'a0')[1] || 0), pc = K3._pc || (K3._pc = document.createElement('canvas')); pc.width = 140; pc.height = 110; const q = pc.getContext('2d', { willReadFrequently: true });
+    for (let j = 0; j < 2; j++){ if (em === 'wink' && j === 1) continue; q.globalCompositeOperation = 'source-over'; q.clearRect(0, 0, 140, 110); q.drawImage(A.feyes, j * 140, row * 110, 140, 110, 0, 0, 140, 110);
       if (C.eye){ const tc = new THREE.Color(C.eye), th = {}; tc.getHSL(th, THREE.SRGBColorSpace); const im = q.getImageData(0, 0, 140, 110), d = im.data, hc = new THREE.Color(), hs = {};   /* 換眼睛顏色：只改虹膜那種棕色的點，眼白、睫毛、皮膚不動 */
         for (let i = 0; i < d.length; i += 4){ const px = (i / 4) % 140, py = Math.floor(i / 4 / 140); if (Math.abs(px - 70) > 46 || Math.abs(py - 62) > 42) continue; const r = d[i] / 255, gg = d[i + 1] / 255, b = d[i + 2] / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), sv = mx ? (mx - mn) / mx : 0; if (sv < 0.3 || mx < 0.2 || mx > 0.97) continue; hc.setRGB(r, gg, b, THREE.SRGBColorSpace); hc.getHSL(hs, THREE.SRGBColorSpace); if (hs.h > 0.14 && hs.h < 0.9) continue; if (mx > 0.8 && sv < 0.42) continue;
           hc.setHSL(th.h, Math.min(1, hs.s * (0.5 + th.s)), hs.l * (0.75 + 0.5 * th.l), THREE.SRGBColorSpace); const o = hc.getRGB({}, THREE.SRGBColorSpace); d[i] = o.r * 255; d[i + 1] = o.g * 255; d[i + 2] = o.b * 255; }
         q.putImageData(im, 0, 0); }
       q.globalCompositeOperation = 'destination-in'; q.save(); q.translate(70, 55); q.scale(1, 49 / 62); const gr = q.createRadialGradient(0, 0, 40, 0, 0, 66); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.62, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); q.fillStyle = gr; q.fillRect(-80, -80, 160, 160); q.restore();
-      g.drawImage(pc, EY[j][0] - 70, EY[j][1] - 64); } }
-  else for (const [x, y] of EY){ if (ex === 'happy') arc(x, y + 8, 30, 22, 200, 340, 6.5, INK); else arc(x, y - 2, 30, 20, 20, 160, 6.5, INK); }
+      g.drawImage(pc, EY[j][0] - 70, EY[j][1] - 64); }
+    /* 得意：上眼皮蓋住一半；生氣：眼皮斜斜壓下來（靠鼻子那邊低）；眨單眼：另一隻眼畫成彎的 */
+    if (em === 'half') for (const [x, y] of EY){ g.fillStyle = SK; g.fillRect(x - 62, y - 70, 124, 62); g.beginPath(); g.moveTo(x - 40, y - 8); g.lineTo(x + 40, y - 8); g.lineWidth = 7; g.lineCap = 'round'; g.strokeStyle = INK; g.stroke(); }
+    if (em === 'ang') for (const [x, y, s] of EY){ g.beginPath(); g.moveTo(x - 64 * s, y - 72); g.lineTo(x + 64 * s, y - 72); g.lineTo(x + 64 * s, y + 2); g.lineTo(x - 64 * s, y - 32); g.closePath(); g.fillStyle = SK; g.fill(); g.beginPath(); g.moveTo(x - 44 * s, y - 25); g.lineTo(x + 44 * s, y - 5); g.lineWidth = 7; g.lineCap = 'round'; g.strokeStyle = INK; g.stroke(); }
+    if (em === 'wink') arc(EY[1][0], EY[1][1] + 8, 30, 22, 200, 340, 6.5, INK); }
+  else for (const [x, y, s] of EY){
+    if (em === 'arc') arc(x, y + 8, 30, 22, 200, 340, 6.5, INK); else if (em === 'closed') arc(x, y - 2, 30, 20, 20, 160, 6.5, INK);
+    else if (em === 'line'){ g.beginPath(); g.moveTo(x - 28, y + 4); g.lineTo(x + 28, y + 4); g.lineWidth = 7; g.lineCap = 'round'; g.strokeStyle = INK; g.stroke(); }
+    else if (em === 'dot'){ g.beginPath(); g.ellipse(x, y - 4, 34, 34, 0, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 5; g.strokeStyle = INK; g.stroke(); g.beginPath(); g.ellipse(x, y - 4, 8, 8, 0, 0, Math.PI * 2); g.fillStyle = INK; g.fill(); }
+    else if (em === 'star'){ g.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? 14 : 34, a = -Math.PI / 2 + i * Math.PI / 5; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y - 4 + Math.sin(a) * r); } g.closePath(); g.fillStyle = '#ffcd3c'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#c88c1e'; g.stroke(); g.beginPath(); g.ellipse(x - 5, y - 13, 4.5, 4.5, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,0.9)'; g.fill(); }
+    else if (em === 'cry'){ g.beginPath(); g.moveTo(x - 20 * s, y - 16); g.lineTo(x + 16 * s, y - 2); g.lineTo(x - 20 * s, y + 12); g.lineWidth = 6.5; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = INK; g.stroke(); g.beginPath(); g.ellipse(x - 6 * s, y + 34, 7, 12, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(120,190,245,0.92)'; g.fill(); } }
+  if (ex === 'flat'){ g.beginPath(); g.moveTo(400, 262); g.quadraticCurveTo(386, 292, 400, 300); g.quadraticCurveTo(414, 292, 400, 262); g.fillStyle = 'rgba(130,195,245,0.92)'; g.fill(); }   /* 無言的一滴汗 */
   /* 眉毛（顏色跟髮色走，深一點） */
-  { const bc = C.hair ? '#' + new THREE.Color(C.hair).multiplyScalar(0.72).getHexString() : '#6a6480'; for (const [ex0, ey, s] of EY){ const x = ex0 + 6 * s, y = ey - 74 - (ex === 'happy' ? 4 : 0), k = c.brow;
+  { const bc = C.hair ? '#' + new THREE.Color(C.hair).multiplyScalar(0.72).getHexString() : '#6a6480'; for (const [ex0, ey, s] of EY){ const x = ex0 + 6 * s, y = ey - 74 - ({ happy: 4, star: 5, surprised: 9, shock: 10 }[ex] || 0) + (ex === 'angry' ? 14 : 0), k = ex === 'angry' ? 'down' : ex === 'cry' ? 'up' : c.brow;
       if (k === 'thick'){ g.beginPath(); g.moveTo(x - 27, y + 1); g.lineTo(x + 27, y + 1); g.lineWidth = 13; g.lineCap = 'round'; g.strokeStyle = bc; g.stroke(); }
       else if (k === 'up' || k === 'down'){ const sg = k === 'up' ? 1 : -1; g.beginPath(); g.moveTo(x - 30 * s, y + 8 * sg); g.lineTo(x + 30 * s, y - 8 * sg); g.lineWidth = 7; g.lineCap = 'round'; g.strokeStyle = bc; g.stroke(); }
       else arc(x, y + 13, 36, 21, 205, 335, k === 'soft' ? 10 : 4.5, bc); } }
   /* 腮紅 */
-  if (c.blush === 'soft' || c.blush === 'line') for (const bx of [150, 362]){ g.beginPath(); g.ellipse(bx, 392, 31, 12.5, 0, 0, Math.PI * 2); g.fillStyle = c.blush === 'line' ? 'rgba(255,135,155,0.5)' : 'rgba(255,135,155,0.33)'; g.fill();
-    if (c.blush === 'line') for (const k of [-12, 0, 12]){ g.beginPath(); g.moveTo(bx + k - 4, 398); g.lineTo(bx + k + 4, 386); g.lineWidth = 2; g.strokeStyle = 'rgba(238,105,128,0.8)'; g.stroke(); } }
+  const bl = ex === 'shy' ? 'shy' : (ex === 'star' && c.blush === 'none') ? 'soft' : c.blush;
+  if (bl === 'soft' || bl === 'line' || bl === 'shy') for (const bx of [150, 362]){ g.beginPath(); g.ellipse(bx, 392, 31, 12.5, 0, 0, Math.PI * 2); g.fillStyle = bl === 'shy' ? 'rgba(255,110,140,0.72)' : bl === 'line' ? 'rgba(255,135,155,0.5)' : 'rgba(255,135,155,0.33)'; g.fill();
+    if (bl === 'line' || bl === 'shy') for (const k of [-12, 0, 12]){ g.beginPath(); g.moveTo(bx + k - 4, 398); g.lineTo(bx + k + 4, 386); g.lineWidth = 2; g.strokeStyle = 'rgba(238,105,128,0.8)'; g.stroke(); } }
   /* 嘴巴 */
   { const x = 258, y = 412, half = (rx, ry, oy) => { g.beginPath(); g.ellipse(x, y + oy, rx, ry, 0, 0, Math.PI); g.closePath(); g.fillStyle = MO; g.fill(); };
-    if (ex === 'happy'){ half(17, 12, 2); g.beginPath(); g.ellipse(x, y + 9, 8, 4.5, 0, 0, Math.PI * 2); g.fillStyle = TG; g.fill(); }
-    else { const k = c.mouth;
+    if (mm === 'open'){ half(17, 12, 2); g.beginPath(); g.ellipse(x, y + 9, 8, 4.5, 0, 0, Math.PI * 2); g.fillStyle = TG; g.fill(); }
+    else if (mm === 'o'){ g.beginPath(); g.ellipse(x, y + 2, 6, 7.5, 0, 0, Math.PI * 2); g.fillStyle = MO; g.fill(); }
+    else if (mm === 'big'){ g.beginPath(); g.ellipse(x, y + 3, 14, 13, 0, 0, Math.PI * 2); g.fillStyle = MO; g.fill(); g.beginPath(); g.ellipse(x, y + 10, 8, 5, 0, 0, Math.PI * 2); g.fillStyle = TG; g.fill(); }
+    else if (mm === 'wail'){ g.beginPath(); g.ellipse(x, y + 4, 13, 9, 0, 0, Math.PI * 2); g.fillStyle = MO; g.fill(); }
+    else if (mm === 'smirk'){ g.beginPath(); g.moveTo(x - 12, y + 3); g.lineTo(x + 2, y + 3); g.lineTo(x + 14, y - 5); g.lineWidth = 3; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = LIP; g.stroke(); }
+    else if (mm === 'shy'){ g.beginPath(); for (let i = 0; i <= 28; i += 2){ const px = x - 14 + i, py = y + 1 + 3 * Math.sin(i / 28 * Math.PI * 3); i ? g.lineTo(px, py) : g.moveTo(px, py); } g.lineWidth = 3; g.lineCap = 'round'; g.strokeStyle = LIP; g.stroke(); }
+    else if (mm === 'frown') arc(x, y + 9, 12, 7, 200, 340, 3.2, LIP);
+    else { const k = mm === 'own' ? c.mouth : mm;
       if (k === 'smile') arc(x, y - 4, 16, 10, 20, 160, 3, LIP); else if (k === 'grin'){ half(17, 11.5, 2); g.fillStyle = '#fff'; g.fillRect(x - 11, y + 2, 22, 3.5); }
       else if (k === 'cat'){ arc(x - 6.5, y - 2, 6.5, 6.5, 10, 170, 3, LIP); arc(x + 6.5, y - 2, 6.5, 6.5, 10, 170, 3, LIP); }
       else if (k === 'flat'){ g.beginPath(); g.moveTo(x - 10, y); g.lineTo(x + 10, y); g.lineWidth = 3; g.lineCap = 'round'; g.strokeStyle = LIP; g.stroke(); }
@@ -5193,7 +5222,7 @@ K3.faceTex = (c, ex, size) => { const A = K3.asset; if (!A || !A.fbase || !A.fey
       else if (k === 'tooth'){ arc(x, y - 4, 13, 9, 20, 160, 3, LIP); g.beginPath(); g.moveTo(x + 3, y + 3); g.lineTo(x + 9.5, y + 1.5); g.lineTo(x + 6.5, y + 9); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 1.2; g.strokeStyle = LIP; g.stroke(); }
       else arc(x, y - 3, 11, 7, 20, 160, 3, LIP); } }
   t = new THREE.CanvasTexture(cv); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; if (K3.FC.size > 90){ for (const [k0, t0] of K3.FC){ t0.dispose(); K3.FC.delete(k0); if (K3.FC.size <= 60) break; } } K3.FC.set(key, t); return t; };
-K3.setFace = (k, ex, big) => { const fm = k.meshes.face, c = k.cfg || K3.cfg; if (!fm) return; const fk = K3.faceKey(c) + ',' + ex + ',' + (big ? 1 : 0); if (k.fk === fk) return; const t = K3.faceTex(c, ex, big ? 512 : 256); if (!t) return; k.fk = fk; k.ex = ex; fm.material.map = t; fm.material.needsUpdate = true; };
+K3.setFace = (k, ex, big) => { const fm = k.meshes.face, c = k.cfg || K3.cfg; if (!fm) return; const fk = K3.faceKey(c) + ',' + ex + ',' + (big ? 1 : 0); if (k.fk === fk) return; const t = K3.faceTex(c, ex, big ? 512 : 256); if (!t) return; k.fk = fk; k.ex = ex; fm.material.map = t; fm.material.needsUpdate = true; const ff = k.meshes.facefill; if (ff){ ff.material.map = t; ff.material.needsUpdate = true; } };
 K3.face = (sex, ex) => { const F = K3.asset.faces, k = sex + ex; if (!F[k]){ const t = new THREE.TextureLoader().load('models/kid3/f' + sex + '_' + ex + '.jpg'); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; F[k] = t; } return F[k]; };
 K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.scene; KS.updateMatrixWorld(true);
   const KB = {}; KS.traverse(o => { if (o.isBone) KB[o.name] = o; });
@@ -5217,6 +5246,7 @@ K3.build = a => { const A = K3.asset, RG = A.rg, K = a.kid; const KS = KID.gltf.
   for (const n of RG.order) bones[n].quaternion.copy(restQ[n]);
   const fm = meshes.face; if (fm){ const U = { uMask: { value: A.mask.b }, uHair: { value: new THREE.Color('#3a3a50') }, uHairB: { value: new THREE.Color(0.3, 0.3, 0.4) }, uOnH: { value: 0 }, uAcc: { value: K3.maskTex() }, uAccC: { value: new THREE.Color('#ffffff') }, uAccOn: { value: 0 } }; fm.material.map = K3.face('b', 'smile');
     fm.material.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.fragmentShader = 'uniform sampler2D uMask,uAcc;uniform vec3 uHair,uHairB,uAccC;uniform float uOnH,uAccOn;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n{ vec3 mk = texture2D(uMask, vMapUv).rgb; float lt = dot(diffuseColor.rgb, vec3(.3,.59,.11)); vec3 hc = uHair * (lt / max(dot(uHairB, vec3(.3,.59,.11)), 1e-3)); diffuseColor.rgb = mix(diffuseColor.rgb, hc, mk.r * uOnH); vec4 ac = texture2D(uAcc, vMapUv); diffuseColor.rgb = mix(diffuseColor.rgb, ac.rgb * uAccC, ac.a * uAccOn); }'); };
+    if (A.fillGeo){ const mt2 = fm.material.clone(); mt2.onBeforeCompile = fm.material.onBeforeCompile; mt2.customProgramCacheKey = fm.material.customProgramCacheKey; mt2.polygonOffset = true; mt2.polygonOffsetFactor = 2; mt2.polygonOffsetUnits = 4; const s2 = new THREE.SkinnedMesh(A.fillGeo, mt2); s2.name = 'k3_facefill'; s2.frustumCulled = false; s2.castShadow = false; s2.userData.noProxy = true; grp.add(s2); s2.bind(sk); meshes.facefill = s2; base.facefill = mt2.color.clone(); }
     fm.material.customProgramCacheKey = () => 'k3face'; fm.material.needsUpdate = true; fm.userData.U = U; }
   /* 大小：跟原本角色差不多高（原本的頭放大過，整個人約 2 格高；新人物 1.9）。新人物的腿比較長、髖部高一點，坐下、躺下的時候整個人往下移，屁股才會貼在椅子上 */
   const gH = KB.hips.getWorldPosition(new THREE.Vector3()).y, s = 1;
@@ -5332,7 +5362,7 @@ K3.hat = (k, c) => { const t = K3.HATS[c.hat] ? c.hat : 'none', C = c.c || {};
       { const eg = A.edge[ph]; if (eg >= 0 && th > eg && th <= eg + 2){ const re = R[eg * 48 + ph] * 0.99; if (r > re){ v.multiplyScalar(re / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); continue; } } }   /* 帽緣下面兩圈的頭髮不要比帽口寬，不然會從帽簷穿出來 */
       if (rh < 1e8 && r > rh * 0.96){ const hr = HR[th * 48 + ph], nr = th >= A.edge[ph] - 1 ? Math.min(r, rh * 0.975) : Math.min(r, Math.max(rh * 0.96, Math.min(hr + 0.012, rh * 0.99)));   /* v731 作者：「棒球帽的頭皮能改嗎」→ 帽緣那兩圈的頭髮只收到帽子裡面一點點，不壓到頭皮上，帽子和頭之間的縫用頭髮蓋住 */ if (nr < r){ v.multiplyScalar(nr / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); } } }
     P.needsUpdate = true; k.hair.geo0 = g0; k.hair.sm.geometry = geo; } };
-K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
+K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, facefill: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
   else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else if (c.top === 'rain' && M.raincoat){ v.raincoat = 1; v.buttons = 1; v[inner] = 1; } else if (c.top === 'vest' && M.vest){ v[M.shirtv ? 'shirtv' : 'shirt'] = 1; if (M.shirtvb) v.shirtvb = 1; v.vest = 1; v.straps = 1; } else v.shirt = 1;   /* v715 釣魚背心（裡面是白T） */   /* v714 雨衣 */   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
@@ -5343,7 +5373,7 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   /* v726 分開接：這套上衣、這件褲子各有一整塊（連手臂、手、腿一起，同一個模型生的，沒有接縫）。有的話就用整塊的 */
   { const TN = { tee: 'Ttee', vest: 'Tvest', hoodie: 'Thoodie', wave: 'Twave' }[c.top], BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot];
     k.region = !!(TN && BN && M[TN + '_skin'] && M[BN + '_skin'] && M.headskin && c.top !== 'maid');
-    if (k.region){ for (const n in v) if (!/^(face|skinlow|shoes|shoes2|mjskin|mjshoe|msskin|mssock|msshoe)$/.test(n)) delete v[n];
+    if (k.region){ for (const n in v) if (!/^(face|facefill|skinlow|shoes|shoes2|mjskin|mjshoe|msskin|mssock|msshoe)$/.test(n)) delete v[n];
       Object.assign(v, { headskin: 1, neck: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); } }
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
@@ -5409,7 +5439,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
     const rq = new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt, 0, side));
     const yaw = k.grp.getWorldQuaternion(new THREE.Quaternion()), dy = k.yq ? 2 * Math.atan2(new THREE.Quaternion().copy(k.yq).invert().multiply(yaw).y, 1) : 0; k.yq = yaw.clone(); k.turn = ((k.turn || 0) + clamp(-dy * 3, -0.5, 0.5)) * 0.9;   /* 轉身的時候頭髮往外甩 */
     for (let i = 1; i < ch.length; i++){ const b = ch[i], tgt = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(gq).multiply(rq); k.hair.q[i].slerp(tgt, 0.18 + 0.06 * i); b.quaternion.copy(k.hair.q[i]); b.updateMatrixWorld(true); } }
-  { let ex = f && f.emote ? 'happy' : 'smile'; const mine = f === me, near = mine || !f || !me || !f.pos || Math.hypot(f.pos.x - me.pos.x, f.pos.z - me.pos.z) < 9;
+  { let ex = (f && f.emote && K3.EXMAP[f.emote.k]) || (f && f.fx && now() < f.fx.until && f.fx.k) || (f && f._k3ex) || 'smile'; const mine = f === me, near = mine || !f || !me || !f.pos || Math.hypot(f.pos.x - me.pos.x, f.pos.z - me.pos.z) < 9;
     if (ex === 'smile' && near){ const t = performance.now() / 1000; if (k.bk == null) k.bk = t + 1 + Math.random() * 4; if (t > k.bk){ if (t > k.bk + 0.13) k.bk = t + 2.4 + Math.random() * 3.6; else ex = 'blink'; } }   /* 每隔幾秒眨一下眼（只有自己和 9 公尺內的人） */
     K3.setFace(k, ex, mine); }
   if (k.hairW && K3.asset.hair[k.hairW]){ try { const c = k.cfg || K3.cfg; K3.setHair(k, k.hairW); K3.colorHair(k); k.hatK = ''; K3.hat(k, c); if (f) f._lod = -1; } catch(e){ console.warn('hair', e); k.hairW = null; } } };
@@ -7335,7 +7365,7 @@ function updateFishing(dt, t){
     if (F.spot && F.spot.id === 'shrimp'){ const k = clamp((t - F.biteAt) / 0.5, 0, 1); me.dip = 0.3 + k * 1.1 + Math.sin(t * 24) * 0.06 * k; me.bobJit = 0.04 * k; if (!F.drift) F.drift = Math.random() < 0.5 ? -1 : 1; const nx = me.bobPos.x + F.drift * 0.25 * dt; if (inShrimpPool(nx, me.bobPos.z)) me.bobPos.x = nx; }   // 慢慢沉到底、一直抖、往旁邊跑   // 慢慢沉到底、一直抖
     else { const k = clamp((t - F.biteAt) / 0.12, 0, 1); me.dip = k * 3.2 + Math.sin(t * 30) * 0.15; me.bobJit = 0.03;
       if (F.drift && F.spot && F.spot.dir){ const L = Math.hypot(F.spot.dir.x, F.spot.dir.y) || 1, sx = -F.spot.dir.y / L * F.drift, sz = F.spot.dir.x / L * F.drift, nx = me.bobPos.x + sx * 1.6 * dt, nz = me.bobPos.z + sz * 1.6 * dt; if (waterAt(nx, nz)){ me.bobPos.x = nx; me.bobPos.z = nz; } } }   /* 掠食魚一口咬住往旁邊拖 */
-    if (t > F.biteUntil){ me.dip = 0; me.bobJit = 0; F.phase = 'waiting'; F.probe = null; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); SFX.fail(); pushPresence(true); }
+    if (t > F.biteUntil){ me.dip = 0; me.bobJit = 0; F.phase = 'waiting'; F.probe = null; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); myFace('cry'); SFX.fail(); pushPresence(true); }
   }
   if (F.phase === 'reeling'){
     F.Tmax = Math.max(F.Tmax || 0, F.T || 0); const _P0 = F.P, _S0 = F.S;
@@ -7464,9 +7494,9 @@ function updateFishing(dt, t){
       const d = (t - F.t0) / F.Td; F.g = clamp(1 + 2.2 * (d - F.P), 0.012, 3); if (F.P > _P0) F.P = _P0 + (F.P - _P0) * F.g;
       const want = Math.min(0.9, d / 0.85 * 0.9), gS = F.gS = clamp(1 + 2.2 * (want - (1 - F.S)), 0.03, 3); if (F.S < _S0) F.S = _S0 - (_S0 - F.S) * gS; }
     if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`🦈 ${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
-    else if (F.T >= 1){ buzz([200, 60, 80]); SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); cancelFishing(); }
-    else if (F.slack > (rec.hook === 'hk_barb' ? 4.6 : 3.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
-    else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); cancelFishing(); }
+    else if (F.T >= 1){ buzz([200, 60, 80]); SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); myFace('cry'); cancelFishing(); }
+    else if (F.slack > (rec.hook === 'hk_barb' ? 4.6 : 3.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); myFace('cry'); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
+    else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); myFace('cry'); cancelFishing(); }
     else if (F.P >= 1){ F.pfCatch = !!(F.acts && F.pf && F.actN >= 2 && (F.Tmax || 0) < 0.92); landFish(); }
   }
   // HUD + button
@@ -7550,7 +7580,7 @@ function landFish(){
     const f = F.fish, w = F.weight, from = me.bobPos.clone(); from.y = 0.1; const fm = fishModel(f, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); fm.position.copy(from); scene.add(fm);
     const mid = new THREE.Vector3(from.x + (me.pos.x - from.x) * 0.25, from.y + liftHeight() * 0.55, from.z + (me.pos.z - from.z) * 0.25);
     jumpers.push({ m: fm, from, to: mid, t: 0 }); SFX.splash(true);
-    setTimeout(() => { SFX.fail(); camShake = Math.max(camShake, 0.3); ripple(from.x, from.z, true); fm.visible = false; me.bend = 0; flash(`線斷了！${esc(f.name)}（${fmtKg(w)}）太重了，從這麼高硬拔拉不上來 — 去釣具店「🧰工具」買${NET.icon}撈網，或到南岸草坡下面的低岸釣`, 3.4); cancelFishing(); }, 650);
+    setTimeout(() => { SFX.fail(); myFace('cry'); camShake = Math.max(camShake, 0.3); ripple(from.x, from.z, true); fm.visible = false; me.bend = 0; flash(`線斷了！${esc(f.name)}（${fmtKg(w)}）太重了，從這麼高硬拔拉不上來 — 去釣具店「🧰工具」買${NET.icon}撈網，或到南岸草坡下面的低岸釣`, 3.4); cancelFishing(); }, 650);
     return; }
   if (liftHeight() > LIFT_H && F.weight > LIFT_KG){ flash(`${NET.icon} 放下撈網，把魚撈上來！`, 1.2);   /* 撈網：長柄網子伸到水面，把魚兜起來一起拉上來 */
     const ng = new THREE.Group(), rim = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.025, 6, 20), mat('#3a3a3a', 0.6)); rim.rotation.x = Math.PI / 2; ng.add(rim);
@@ -17808,7 +17838,10 @@ $('#chatToggle').addEventListener('click', () => { document.body.classList.toggl
 $('#chatIn').addEventListener('focus', () => { for (const k in keys) keys[k] = false; renderChatMode(); });
 try { renderChatMode(); } catch (e) {}
 
-let myEmote = null;
+let myEmote = null, myFx = null;
+/* v749 只換臉、不做動作的表情（魚跑掉會哭、被拍手比讚會害羞），自己做的會送給別人看 */
+function faceFx(f, k, dur){ if (f && K3.EXF[k]) f.fx = { k, until: now() + (dur || 2.6) }; }
+function myFace(k, dur){ try { faceFx(me, k, dur); myFx = { k, at: Date.now() }; pushPresence(true); } catch(e){} }
 /* v313 安全認識陌生人（41）：跟 Sky 一樣，先「互相揮手」才算認識。開了「只看認識的人打的字」之後，
    陌生人自己打的字只會顯示成 💬，快速聊天的固定句子還是看得到；互相揮手（60 秒內、8 公尺內）就變成認識的人。
    13～17 歲預設開，成人預設關，設定裡可以改；兒童模式照原本的規則（只看得到快速聊天）。 */
@@ -17852,7 +17885,7 @@ $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(
 function closeEmotePanel(){ const P = $('#emotePanel'); if (P) P.hidden = true; }
 function openEmotePanel(force){ let P = $('#emotePanel'); if (!P){ P = document.createElement('div'); P.id = 'emotePanel'; P.className = 'panel'; P.hidden = true; document.body.appendChild(P); }
   if (!force) P.hidden = !P.hidden; if (P.hidden) return;
-  P.textContent = ''; P.appendChild(el('div', 'ep-t', '😀 表情動作'));
+  P.textContent = ''; P.appendChild(el('div', 'ep-t', '😀 表情動作')); { const h = el('div', '', '做動作的時候臉也會跟著變'); h.style.cssText = 'font-size:12px;opacity:.65;margin:-2px 0 6px'; P.appendChild(h); }
   const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], own = emoteOwned(k), b = el('button', 'ep-b' + (own ? '' : ' lock')); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', own ? D.name : `🪙${D.buy}`)); if (!own) b.title = D.name + '（' + D.buy + ' 金幣）'; b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
   for (const [ic, nm, fn] of [...(document.body.classList.contains('ui3') ? [['🐟', '炫耀魚', () => { closeEmotePanel(); const sb = $('#showBtn'); if (sb) sb.click(); }]] : []), ['🤗', '抱寵物', () => petHug()], ...PET_ACTS.map(([i2, n2, k2]) => [i2, n2, () => petAct(k2)])]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
   P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。有 🪙 的是新動作，點一下就能用金幣學會。'));
@@ -17996,6 +18029,7 @@ function presenceObj(){
   else if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && (Date.now() - myEmote.at < 4000 || (me.emote && me.emote.k === myEmote.k))) o.e = myEmote;
+  if (myFx && Date.now() - myFx.at < 3000) o.fx = myFx;
   if (myPetAct && Date.now() - myPetAct.at < 4000) o.pa = myPetAct;   /* v332 跟寵物玩的動作，別人也看得到 */   /* 一直在做的動作（坐著、躺著、跳舞）別人晚一點進來也看得到 */
   if (myShow && Date.now() - myShow.at < 6500) o.s = myShow;
   if (rec.rod !== 'bamboo') o.rd = rec.rod;
@@ -18068,7 +18102,8 @@ function applyPeer(pp){
     ticker(`🐟 <b>${esc(peerName(p))}</b> 在炫耀 <span class="chip r-${sf.rarity}">${sf.rarity}</span> <b>${esc(sf.name)}</b> ${fmtKg(sw)}`);
   }
   if (pr.pa && typeof pr.pa === 'object' && PET_ACTS.some(a => a[2] === pr.pa.k) && pr.pa.at !== p.lastPa){ p.lastPa = pr.pa.at; if (p.fisher && p.fisher.pet) petDo(p.fisher, pr.pa.k, pr.pa.at); }
-  if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; if (pr.e.k === 'wave') try { meetPeerWave(pp.peer); } catch(e){} const D = EMOTE_DEF[pr.e.k]; p.fisher.say(D && D.bub || EMOTES[pr.e.k], 'emote', 3); startEmote(p.fisher, pr.e.k); }
+  if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; if (pr.e.k === 'wave') try { meetPeerWave(pp.peer); } catch(e){} const D = EMOTE_DEF[pr.e.k]; p.fisher.say(D && D.bub || EMOTES[pr.e.k], 'emote', 3); startEmote(p.fisher, pr.e.k); if ((pr.e.k === 'clap' || pr.e.k === 'thumbs') && me && !me.emote && Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < 4) myFace('shy', 3); }
+  if (pr.fx && typeof pr.fx === 'object' && pr.fx.at !== p.lastFx){ p.lastFx = pr.fx.at; faceFx(p.fisher, String(pr.fx.k), 2.6); }
 }
 function updatePeers(dt, t){
   for (const p of peers.values()){
@@ -21559,8 +21594,8 @@ function subFishTick(dt, t){ const F = Sub.fish; if (F.phase !== 'fight') return
   else { F.ten -= dt * 0.45; F.pro -= dt * 0.02 * pull; }
   F.ten = clamp(F.ten, 0, 1.2); F.pro = clamp(F.pro, -0.1, 1);
   b.querySelector('.sf-ten').style.width = Math.min(100, F.ten * 100) + '%'; b.querySelector('.sf-pro').style.width = Math.max(0, F.pro * 100) + '%'; b.classList.toggle('danger', F.ten > 0.82);
-  if (F.ten >= 1){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('💥 線斷了！魚跑掉了', 1.6); return; }
-  if (F.pro <= -0.05 || now() - F.t0 > 75){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('魚脫鉤跑掉了', 1.4); return; }
+  if (F.ten >= 1){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('💥 線斷了！魚跑掉了', 1.6); myFace('cry'); return; }
+  if (F.pro <= -0.05 || now() - F.t0 > 75){ Sub.fish = null; b.hidden = true; SFX.fail(); flash('魚脫鉤跑掉了', 1.4); myFace('cry'); return; }
   if (F.pro >= 1){ F.phase = 'land'; b.hidden = true; subRpc('sub_land', { p_fish: F.id, p_w: F.w }).then(r => { Sub.fish = null; if (!r) return; Sub.hold = r.hold || []; SFX.catch(); const n = F.f ? F.f.name : F.id; flash(`${F.legend ? '🌟 ' : ''}釣到${n}！${F.w}kg（先放在船艙，回港才算）`, 2.4); if (F.legend) ticker(`🌟 你在黑淵裂縫釣到了 <b>${esc(n)}</b>！`); }); } }
 
 /* ---- 潛水艇碼頭（v248 搬到深海浮台）和租借、升級的面板 ---- */
@@ -21735,6 +21770,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u749', d:'11/24', items:[
+    ['😆', '臉會跟著動作變表情了：揮手跳舞會笑、歡呼星星眼、比讚眨眼、害怕嚇到、生氣皺眉、睡覺閉眼……魚跑掉會哭，被旁邊的人拍手或比讚會害羞。別人也看得到。'] ] },
   { id:'u748', d:'11/24', items:[
     ['🌊', '新上衣：海浪外套！深藍到淺藍的漸層、白色波浪邊，到造型頁「上衣」選，顏色也能換。', 'closet'] ] },
   { id:'u742', d:'11/24', items:[
