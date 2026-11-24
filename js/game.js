@@ -5286,6 +5286,7 @@ K3.FC = new Map();
 /* v749 情緒表情：[眼睛怎麼畫, 嘴巴怎麼畫]。own＝照自己選的眼睛／嘴巴 */
 K3.EXF = { smile: ['own', 'own'], blink: ['closed', 'own'], happy: ['arc', 'open'], star: ['star', 'open'], wink: ['wink', 'open'], surprised: ['own', 'o'], shock: ['dot', 'big'], angry: ['ang', 'frown'], cry: ['cry', 'wail'], sleep: ['closed', 'o'], flat: ['line', 'flat'], smug: ['half', 'smirk'], shy: ['own', 'shy'] };
 /* 做哪個動作配哪個表情（沒寫到的動作維持平常的臉） */
+K3.RIGID = { short: 1, short2: 1, bob: 1, bun: 1, lowpony: 1 };
 K3.EXMAP = { wave: 'happy', dance: 'happy', clap: 'happy', laugh: 'happy', hop: 'happy', cheer: 'star', thumbs: 'wink', wow: 'surprised', scared: 'shock', angry: 'angry', sleep: 'sleep', yawn: 'sleep', stretch: 'blink', bow: 'blink', shrug: 'flat', playdead: 'flat', point: 'smug', spin: 'smug' };
 K3.faceKey = c => [c.eye, c.brow, c.mouth, c.blush, (c.c || {}).eye || '', (c.c || {}).hair || ''].join(',');
 K3.faceTex = (c, ex, size) => { const A = K3.asset; if (!A || !A.fbase || !A.feyes) return null; const key = K3.faceKey(c) + ',' + ex + ',' + size; let t = K3.FC.get(key); if (t) return t;
@@ -5549,7 +5550,9 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
     if (fl > 0.01){ GB.hips.updateWorldMatrix(true, false); B.hips.updateWorldMatrix(true, false); const gy = GB.hips.getWorldPosition(_k3a).y, oy = B.hips.getWorldPosition(_k3b).y, sc = a.g.getWorldScale(_k3c).y || 1; k.scl.position.y += (gy - oy) / sc * Math.min(1, fl); } }
   if (K.m.visible) K.m.visible = false;
   K3.n++;
-  if (k.hair && k.hf !== frameNo){ k.hf = frameNo; const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
+  /* v755 作者截圖：「短髮的頭髮會動反而沒有比較好，因為會漏頭皮」→ 短的髮型（刺刺短髮、清爽短髮、鮑伯、包包頭、小馬尾）整個黏在頭上跟著頭動，不再自己晃；只有長髮、側馬尾、雙馬尾會甩 */
+  if (k.hair && K3.RIGID[k.hairT]){ if (k.hrig !== k.hair){ k.hrig = k.hair; for (let i = 1; i < k.hair.ch.length; i++){ k.hair.ch[i].quaternion.identity(); if (k.hair.q && k.hair.q[i]) k.hair.q[i].identity(); } } }
+  else if (k.hair && k.hf !== frameNo){ k.hf = frameNo; const ch = k.hair.ch; k.grp.updateMatrixWorld(true); const gq = k.grp.getWorldQuaternion(new THREE.Quaternion());
     /* v693 作者：「長髮的頭髮不會飄」→ 以前只會慢一點點跟上轉身。現在跑起來頭髮往後揚、跟著腳步上下晃，停下來再慢慢垂回去 */
     const v = f ? Math.min(6, f.aspd || 0) : 0, T = now(); k.hv = (k.hv || 0) + (v - (k.hv || 0)) * 0.08;
     const tilt = Math.min(0.3, k.hv * 0.07) + Math.sin(T * (6 + k.hv)) * 0.025 * Math.min(1, k.hv / 2), side = Math.sin(T * 1.7) * 0.02 + clamp(k.turn || 0, -0.18, 0.18);   /* v706 作者：「長髮也是亂飄」→ 往後揚的角度、上下晃、轉身甩都減一半以上，頭髮貼著背 */
@@ -21972,6 +21975,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u755', d:'11/24', items:[
+    ['💇', '短的髮型（刺刺短髮、清爽短髮、鮑伯、包包頭、小馬尾）不會再自己晃了，跑步時不會露出頭皮。長髮和馬尾照樣會甩。'] ] },
   { id:'u754', d:'11/24', items:[
     ['🎣', '老港會帶新來的人了：新手教學不再是任務卡，改成老港一句一句跟你講。'] ] },
   { id:'u751', d:'11/24', items:[
