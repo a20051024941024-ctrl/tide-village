@@ -13793,6 +13793,7 @@ function petModel(kind, acc, v, shineLv){
   if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, hatY, hatZ); body.add(hat); C(0.07, 0.07, 0.012, '#f2d48a', 0, 0, 0, hat, 16); C(0.04, 0.045, 0.05, '#f2d48a', 0, 0.03, 0, hat, 14); C(0.046, 0.046, 0.012, '#e8473a', 0, 0.012, 0, hat, 14); }
   g.userData = { body, head, tail, wings, legs, arms, kind };
   rigidMerge(g);   /* v290 同一塊會一起動的小零件合成一個，寵物從 30 幾個 draw call 變十個左右 */
+  if (kind === 'cat' && Cat3.VARS[v || 'a'] && !window.__noCat3) cat3Attach(g, acc || 0, v || 'a');
   return g;
 }
 /* v290 把一個模型裡「跟著同一個父節點一起動」的小零件合併（不同顏色用頂點顏色），動畫用的節點（userData 裡記著的）不動 */
@@ -13813,6 +13814,71 @@ function rigidMerge(root){ const keep = new Set(); const mark = v => { if (!v) r
       const mesh = new THREE.Mesh(mg, M); mesh.castShadow = L[0].castShadow; mesh.receiveShadow = L[0].receiveShadow; n.add(mesh);
       for (const o of L){ n.remove(o); o.geometry.dispose(); } } }
   return root; }
+/* ===== v761 精美貓：作者「我們應該做精美寵物模型了」「要非常的像家貓一樣」=====
+   外型是作者用 Meshy 做的橘貓（減面到 8 千面，花紋重新烤成一張貼圖）；骨頭是程式照身體的位置接上去的（骨盆、胸、脖子、頭、兩隻耳朵、四隻腳各兩節、尾巴四節）。
+   走路是對角步（左前跟右後一起），停下來幾秒會坐下、尾巴繞到旁邊，看著主人，耳朵偶爾抖一下。模型用到才下載，下載好之前先用原本的貓。 */
+const Cat3 = { V: 1, p: null, a: null, S: 0.42, VARS: { a: 1, b: 1, c: 1, d: 1, e: 1, f: 1, g: 1 }, M: {} };
+/* 其他花色用同一個模型換貼圖（灰虎斑、三花、黑貓、白貓、賓士、暹羅是照橘貓的貼圖用程式重新上色的），用到哪個才下載哪張 */
+function cat3Mat(v){ if (!v || v === 'a' || !Cat3.VARS[v]) return Cat3.a.mat; if (Cat3.M[v]) return Cat3.M[v]; const m = Cat3.a.mat.clone(); Cat3.M[v] = m; new THREE.TextureLoader().load('models/pets/cat_' + v + '.jpg?v=' + Cat3.V, tx => { tx.flipY = false; tx.colorSpace = THREE.SRGBColorSpace; tx.generateMipmaps = false; tx.minFilter = THREE.LinearFilter; tx.magFilter = THREE.LinearFilter; tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping; m.map = tx; m.needsUpdate = true; }); return m; }
+const CAT3_B = [['pelvis', -1, 0, 0.50, -0.20], ['chest', 0, 0, 0.50, 0.17], ['neck', 1, 0, 0.60, 0.20], ['head', 2, 0, 0.70, 0.28], ['earL', 3, 0.13, 0.88, 0.30], ['earR', 3, -0.13, 0.88, 0.30],
+  ['FLu', 1, 0.09, 0.38, 0.21], ['FLl', 6, 0.09, 0.17, 0.22], ['FRu', 1, -0.09, 0.38, 0.21], ['FRl', 8, -0.09, 0.17, 0.215],
+  ['BLu', 0, 0.09, 0.40, -0.21], ['BLl', 10, 0.088, 0.17, -0.27], ['BRu', 0, -0.09, 0.40, -0.16], ['BRl', 12, -0.085, 0.17, -0.20],
+  ['t0', 0, 0, 0.55, -0.33], ['t1', 14, 0, 0.67, -0.40], ['t2', 15, 0, 0.79, -0.44], ['t3', 16, 0, 0.90, -0.45]];
+function cat3Load(){ if (!Cat3.p) Cat3.p = new GLTFLoader().loadAsync('models/pets/cat.glb?v=' + Cat3.V).then(gl => { let hm = null; gl.scene.traverse(o => { if (o.isMesh && !hm) hm = o; }); const geo = hm.geometry, P = geo.attributes.position, n = P.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    const sm = (a, b, v) => { const u = clamp((v - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); }, ix = {}; CAT3_B.forEach((b, i) => { ix[b[0]] = i; });
+    for (let q = 0; q < n; q++){ const x = P.getX(q), y = P.getY(q), z = P.getZ(q), W = new Map(), add = (k, w) => { if (w > 0.001) W.set(ix[k], (W.get(ix[k]) || 0) + w); }; let rem = 1;
+      const tw = sm(-0.30, -0.36, z) * sm(0.46, 0.54, y);   /* 尾巴：照高度分給四節 */
+      if (tw > 0){ const k = clamp((y - 0.55) / 0.117, 0, 2.999), i0 = Math.floor(k), fr = k - i0; add('t' + i0, tw * (1 - fr)); add('t' + (i0 + 1), tw * fr); rem -= tw; }
+      const hw = rem * sm(0.56, 0.66, y) * sm(0.06, 0.16, z);   /* 頭和耳朵 */
+      if (hw > 0){ const ew = sm(0.84, 0.90, y) * sm(0.045, 0.075, Math.abs(x)); add(x > 0 ? 'earL' : 'earR', hw * ew); add('head', hw * (1 - ew)); rem -= hw; }
+      const nw = rem * 0.6 * sm(0.50, 0.58, y) * sm(0.04, 0.14, z); if (nw > 0){ add('neck', nw); rem -= nw; }
+      if (rem > 0.001 && y < 0.44){ const front = z > 0, L = x > 0, nm = (front ? 'F' : 'B') + (L ? 'L' : 'R'), lz = CAT3_B[ix[nm + 'u']][4];   /* 腳：肚子以下整隻算腳，往上到肩膀、屁股慢慢交給身體 */
+        let lw = sm(0.44, 0.28, y); if (y > 0.28) lw *= sm(0.03, 0.07, Math.abs(x)) * sm(0.16, 0.07, Math.abs(z - lz)); lw *= rem;
+        if (lw > 0){ const ll = sm(0.24, 0.14, y); add(nm + 'l', lw * ll); add(nm + 'u', lw * (1 - ll)); rem -= lw; } }
+      if (rem > 0.001){ const cw = sm(-0.10, 0.10, z); add('chest', rem * cw); add('pelvis', rem * (1 - cw)); }
+      const A = [...W.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = A.reduce((s, e) => s + e[1], 0) || 1; A.forEach((e, k) => { si[q * 4 + k] = e[0]; sw[q * 4 + k] = e[1] / tot; }); }
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    const m = hm.material; if (m.map){ m.map.generateMipmaps = false; m.map.minFilter = THREE.LinearFilter; m.map.magFilter = THREE.LinearFilter; m.map.needsUpdate = true; } m.roughness = 0.86; m.metalness = 0;
+    Cat3.a = { geo, mat: m }; }).catch(e => { console.warn('精美貓載入失敗', e); Cat3.p = null; });
+  return Cat3.p; }
+function cat3Attach(g, acc, v){ const go = () => { if (!Cat3.a || g.userData.cat3) return; try { cat3Make(g, acc, v); } catch(e){ console.warn('cat3', e); } }; if (Cat3.a) go(); else { const p = cat3Load(); if (p) p.then(go); } }
+function cat3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.remove(old);
+  const body = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(Cat3.S); rig.position.y = 0.022; body.add(rig); g.add(body);   /* 腳掌墊高一點點，不然站著的時候腳趾埋在地裡 */
+  const bones = CAT3_B.map(b => { const o = new THREE.Bone(); o.name = 'c3' + b[0]; return o; }), b = {}, rest = {};
+  CAT3_B.forEach((d, i) => { const p = d[1] >= 0 ? CAT3_B[d[1]] : null; bones[i].position.set(d[2] - (p ? p[2] : 0), d[3] - (p ? p[3] : 0), d[4] - (p ? p[4] : 0)); (p ? bones[d[1]] : rig).add(bones[i]); b[d[0]] = bones[i]; rest[d[0]] = bones[i].position.clone(); });
+  const sm = new THREE.SkinnedMesh(Cat3.a.geo, cat3Mat(v)); sm.name = 'cat3'; sm.frustumCulled = false; sm.castShadow = true; sm.userData.noProxy = true; rig.add(sm);
+  const par = g.parent; g.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(bones));
+  if (acc >= 1){ const col = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.022, 8, 18), mat('#e8473a', 0.5)); col.rotation.x = 0.55; col.position.set(0, -0.015, 0.0); b.neck.add(col); const bell = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), mat('#ffd36a', 0.3)); bell.position.set(0, -0.085, 0.085); b.neck.add(bell); }
+  if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, 0.235, -0.01); hat.rotation.x = -0.12; b.head.add(hat); const hm2 = mat('#f2d48a', 0.7); const br = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.022, 16), hm2), cr = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.1, 0.1, 14), hm2), rb = new THREE.Mesh(new THREE.CylinderGeometry(0.102, 0.102, 0.024, 14), mat('#e8473a', 0.6)); cr.position.y = 0.06; rb.position.y = 0.024; hat.add(br, cr, rb); }
+  U.body = body; U.head = new THREE.Object3D(); U.tail = null; U.legs = [0, 1, 2, 3].map(() => new THREE.Object3D()); U.cat3 = { b, rest, sit: 0, lie: 0, idle: 0, hy: 0, hp: 0, ear: 0, earAt: 2 + Math.random() * 5, earS: 1, seed: Math.random() * 10 }; }
+function cat3Tick(pt, dt, t, mv, tx, tz){ const U = pt.m.userData, C = U.cat3, b = C.b, R = C.rest, ph = pt.ph, A = pt.act && pt.act.k;
+  C.idle = mv < 0.08 ? C.idle + dt : 0;
+  const wLie = A === 'rest' ? 1 : 0, wSit = !wLie && (A === 'sit' || A === 'pat' || A === 'treat' || pt.catSit || (C.idle > 3.5 && !A)) ? 1 : 0;
+  C.sit += (wSit - C.sit) * Math.min(1, dt * 3.4); C.lie += (wLie - C.lie) * Math.min(1, dt * 3); const e = v => v * v * (3 - 2 * v), s = e(C.sit), l = e(C.lie), up = 1 - Math.max(s, l), w = mv * up;
+  /* 身體：坐下時屁股放低、身體往後仰；趴下整個放低。走路時腰和肩膀左右反著扭 */
+  b.pelvis.position.y = R.pelvis.y - 0.235 * s - 0.27 * l + Math.abs(Math.sin(ph)) * 0.008 * w; b.pelvis.position.z = R.pelvis.z + 0.03 * s;
+  b.pelvis.rotation.set(-0.66 * s, Math.sin(ph) * 0.07 * w, Math.sin(ph) * 0.03 * w);
+  const br = 1 + Math.sin(t * 2.1 + C.seed) * 0.012; b.chest.scale.set(br, br, 1);
+  b.chest.rotation.set(0.34 * s, -Math.sin(ph) * 0.1 * w, 0);
+  /* 四隻腳：對角步。上面那節前後擺，抬起來往前的時候下面那節彎起來 */
+  const leg = (nm, p, front) => { const sw = Math.sin(ph + p), lift = Math.max(0, Math.cos(ph + p)), u = b[nm + 'u'], lo = b[nm + 'l'];
+    let ux = sw * 0.5 * w - lift * 0.12 * w, lx = lift * 0.85 * w;
+    if (front){ ux += 0.32 * s - 1.38 * l; lx += 0.0 * s + 0.1 * l; } else { ux += -0.62 * s - 0.95 * l; lx += 1.55 * s + 1.75 * l; }
+    u.rotation.x = ux; lo.rotation.x = lx; };
+  leg('FL', 0, true); leg('BR', 0.25, false); leg('FR', Math.PI, true); leg('BL', Math.PI + 0.25, false);
+  if (U.legs[0].rotation.x){ b.FLu.rotation.x += U.legs[0].rotation.x * 0.9; b.FLl.rotation.x += -U.legs[0].rotation.x * 0.35; U.legs[0].rotation.x = 0; }   /* 握手：抬左前腳 */
+  /* 頭：停著的時候看主人（或東看西看），走路時看前面、輕輕點頭 */
+  const dx = tx - pt.pos.x, dz = tz - pt.pos.z, far = Math.hypot(dx, dz) > 0.45; let wy = 0, wp = 0;
+  if (mv < 0.15){ if (far){ let d = Math.atan2(dx, dz) - pt.rot; d = Math.atan2(Math.sin(d), Math.cos(d)); wy = clamp(d, -1.1, 1.1); wp = -0.32; } else { wy = Math.sin(t * 0.55 + C.seed) * 0.55 + Math.sin(t * 0.23 + C.seed * 2) * 0.3; wp = Math.sin(t * 0.37 + C.seed) * 0.12 - 0.05; } }
+  C.hy += (wy - C.hy) * Math.min(1, dt * 3.5); C.hp += (wp - C.hp) * Math.min(1, dt * 3.5);
+  b.neck.rotation.set(-0.18 * s + 0.1 * l + C.hp * 0.4, C.hy * 0.4, 0); b.head.rotation.set(-0.1 * s + C.hp * 0.6 + Math.sin(ph * 2) * 0.025 * w + (U.head.rotation.x || 0), C.hy * 0.6, Math.sin(t * 0.31 + C.seed) * 0.06 * (1 - mv));
+  /* 耳朵：隔幾秒抖一下 */
+  if (t > C.earAt){ C.earAt = t + 3 + Math.random() * 7; C.ear = 1; C.earS = Math.random() < 0.5 ? 1 : -1; } C.ear = Math.max(0, C.ear - dt * 5); const ev = Math.sin(C.ear * Math.PI * 3) * 0.3 * C.ear;
+  b.earL.rotation.set(0, 0, C.earS > 0 ? ev : 0); b.earR.rotation.set(0, 0, C.earS < 0 ? -ev : 0);
+  /* 尾巴：站著慢慢擺、走路翹高一點；坐下、趴下放到地上繞到旁邊，尾巴尖還是會輕輕甩 */
+  const fast = A === 'treat' || A === 'pat' ? 3 : 1, dn = Math.max(s, l);
+  for (let i = 0; i < 4; i++){ const o = b['t' + i], wv = Math.sin(t * 1.5 * fast - i * 0.7 + C.seed) * (0.1 + i * 0.07) * (1 - dn * 0.6) + Math.sin(ph - i * 0.5) * 0.06 * w;
+    o.rotation.set(i === 0 ? -0.55 * s - 1.45 * l + 0.12 * w : -0.2 * dn + (i === 3 ? Math.sin(t * 0.9 + C.seed) * 0.22 : 0), 0, wv + (i > 0 ? 0.5 * dn : 0)); } }
 function petLabel(name){ const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = 'rgba(255,255,255,0.88)'; const w = Math.min(244, 30 + c.measureText ? 40 + name.length * 30 : 200); c.beginPath(); c.roundRect ? c.roundRect((256 - w) / 2, 8, w, 46, 22) : c.rect((256 - w) / 2, 8, w, 46); c.fill(); c.fillStyle = '#18334a'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 128, 32);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest:false, transparent:true })); sp.scale.set(1.1, 0.28, 1); sp.renderOrder = 5; return sp; }
 function petMake(w){ const m = petModel(w.kind, w.acc || 0, w.var, w.shine), lb = petLabel(w.name || PET_KINDS[w.kind].name); lb.position.y = w.kind === 'gull' ? 0.6 : 0.62; lb.userData.nameLabel = true; m.add(lb); m.userData.lb = lb; scene.add(m); return { kind: w.kind, name: w.name, acc: w.acc || 0, m, pos: new THREE.Vector3(), vel: 0, rot: 0, ph: Math.random() * 6, fly: 0, key: petKey(w), wander: null }; }
@@ -13840,7 +13906,7 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   else if (pt.kind === 'octopus' && U.arms){ y = ty; U.arms.forEach((a, i) => { a.rotation.z = Math.sin(pt.ph * 0.8 + i) * 0.25 * (0.3 + mv); }); }
   else if (pt.kind === 'gull'){ pt.fly += ((moving || pt.vel > 0.6 ? 1 : 0) - pt.fly) * Math.min(1, dt * 2); y = ty + pt.fly * (1.7 + Math.sin(t * 1.6 + pt.ph * 0.1) * 0.15);
     if (U.wings) U.wings.forEach((w, i) => { w.rotation.z = (i ? -1 : 1) * (pt.fly > 0.2 ? Math.sin(t * 14) * 0.7 : 0.15); }); }
-  else y = ty + Math.abs(Math.sin(pt.ph)) * 0.05 * mv;
+  else y = ty + Math.abs(Math.sin(pt.ph)) * (U.cat3 ? 0 : 0.05) * mv;
   pt.pos.y = y; pt.m.position.copy(pt.pos); pt.m.rotation.y = pt.rot;
   if (pt.spinUntil && now() < pt.spinUntil) U.body.rotation.y += 0.12;   /* 吃到點心開心地轉圈 */ else if (pt.spinUntil){ U.body.rotation.y = 0; pt.spinUntil = 0; }
   if (pt.kind === 'turtle' || pt.kind === 'pondturtle') U.legs.forEach((l, i) => { const b0 = l.userData.b0 || (l.userData.b0 = l.position.clone()), ph = pt.ph * 1.3 + (i === 0 || i === 3 ? 0 : Math.PI), s = Math.sin(ph), c = Math.cos(ph);   /* v658 作者：「小烏龜的腳都不會動」→ 以前只讓圓圓的腳原地轉，看起來不動；現在對角線兩隻一起往前伸、往後推，抬起來那一下會離地一點 */
@@ -13860,6 +13926,7 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   if (U.tail) U.tail.rotation.y = Math.sin(t * (pt.kind === 'shiba' ? 9 : 2.5)) * (pt.kind === 'shiba' ? 0.3 : 0.4);
   if (U.head) U.head.rotation.y = mv < 0.1 ? Math.sin(t * 0.7 + pt.ph * 0.01) * 0.35 : 0;
   if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
+  if (U.cat3){ try { cat3Tick(pt, dt, t, mv, tx, tz); } catch(e){} }
 }
 /* ===== v332 跟寵物互動：丟球（跑去撿回來）、給點心、坐下、跳一跳、轉圈；揮手、跳舞、歡呼時寵物也會跟著動；別人也看得到 ===== */
 const PET_ACTS = [['🦴', '給點心', 'treat'], ['✋', '摸摸頭', 'pat'], ['🤝', '握手', 'paw'], ['🎾', '丟球', 'ball'], ['🏃', '繞圈跑', 'zoom'], ['😴', '一起休息', 'rest'], ['🐾', '坐下', 'sit'], ['🦘', '跳一跳', 'jump'], ['🌀', '轉圈', 'spin']];
@@ -13895,7 +13962,7 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
     if (A.ph === 'back'){ const c = Math.cos(f.rot), s2 = Math.sin(f.rot), tx = f.pos.x + s2 * 0.9, tz = f.pos.z + c * 0.9; petStep(pt, dt, t, tx, tz, gy, true, faceMe); b.position.set(pt.pos.x + Math.sin(pt.rot) * 0.32, pt.pos.y + 0.32, pt.pos.z + Math.cos(pt.rot) * 0.32);
       if (Math.hypot(pt.pos.x - tx, pt.pos.z - tz) < 0.3 || age > 16){ scene.remove(b); pt.act = null; pt.spinUntil = t + 0.8; try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); } catch(e){} if (f === me) toast(`${esc(pt.name || '寵物')}把球撿回來了！`); } return true; }
   }
-  if (A.k === 'sit'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); if (U.body) U.body.scale.y = age < 2.2 ? 0.82 : 1; if (age > 2.4){ if (U.body) U.body.scale.y = 1; pt.act = null; } return true; }
+  if (A.k === 'sit'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); if (U.body && !U.cat3) U.body.scale.y = age < 2.2 ? 0.82 : 1; if (age > (U.cat3 ? 4 : 2.4)){ if (U.body) U.body.scale.y = 1; pt.act = null; } return true; }
   if (A.k === 'jump'){ petStep(pt, dt, t, pt.pos.x, pt.pos.z, gy, false, faceMe); pt.pos.y = gy + Math.abs(Math.sin(age * 7)) * 0.35 * (pt.kind === 'gull' || pt.kind === 'puffer' ? 0 : 1); pt.m.position.y = pt.pos.y; if (age > 1.8) pt.act = null; return true; }
   const hearts = (n) => { try { FX.emit(pt.pos.x, pt.pos.y + 0.55, pt.pos.z, n, '#ff7b9c', 0.35, 1.1, 1.0); } catch(e){} }, head = U.head || U.body;
   if (A.k === 'treat'){ const [tx, tz] = petFront(f, pt.kind === 'puffer' || pt.kind === 'gull' ? 0.55 : 0.44), it = A.item;
@@ -13909,7 +13976,7 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
   if (A.k === 'pat'){ const [tx, tz] = petFront(f, 0.55);
     if (age < 0.8){ petStep(pt, dt, t, tx, tz, gy, true, faceMe); return true; }
     petStep(pt, dt, t, tx, tz, gy, false, faceMe); const k2 = age - 0.8;
-    if (k2 < 2.4){ if (U.body && A.bs){ const puff = pt.kind === 'puffer' ? Math.sin(Math.min(1, k2 / 1.2) * Math.PI) * 0.4 : 0; U.body.scale.set(A.bs.x * (1 + puff), A.bs.y * (pt.kind === 'puffer' ? 1 + puff : 0.9), A.bs.z * (1 + puff)); }   /* 坐好；河豚被摸會鼓起來 */
+    if (k2 < 2.4){ if (U.body && A.bs && !U.cat3){ const puff = pt.kind === 'puffer' ? Math.sin(Math.min(1, k2 / 1.2) * Math.PI) * 0.4 : 0; U.body.scale.set(A.bs.x * (1 + puff), A.bs.y * (pt.kind === 'puffer' ? 1 + puff : 0.9), A.bs.z * (1 + puff)); }   /* 坐好；河豚被摸會鼓起來 */
       pt.m.rotation.z = Math.sin(k2 * 4.5) * 0.13; if (head) head.rotation.x = (A.hrx || 0) - 0.22 + Math.sin(k2 * 9) * 0.06;   /* 抬頭、左右蹭手 */
       if (U.tail) U.tail.rotation.y = Math.sin(t * 15) * 0.5; if (Math.floor(k2 / 0.45) !== A.hb){ A.hb = Math.floor(k2 / 0.45); hearts(2); } return true; }
     if (!A.done){ A.done = true; if (U.body && A.bs) U.body.scale.copy(A.bs); pt.m.rotation.z = 0; if (head && A.hrx != null) head.rotation.x = A.hrx; hearts(10); if (f === me) toast(`${esc(pt.name || '寵物')}好喜歡被你摸頭`); }
@@ -13927,7 +13994,7 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
   if (A.k === 'rest'){ const [tx, tz] = petFront(f, 0.15, 0.62); const still = f.ppose && f.ppose.k === 'rest';
     if (!still && age > 1.2 || age > 60){ petActEnd(pt); return false; }
     if (age < 1.2){ petStep(pt, dt, t, tx, tz, gy, true, f.rot); return true; }
-    petStep(pt, dt, t, tx, tz, gy, false, f.rot); if (U.body && A.bs){ const br = 1 + Math.sin(t * 1.8) * 0.035; U.body.scale.set(A.bs.x * br, A.bs.y * 0.72, A.bs.z * br); } if (head) head.rotation.x = (A.hrx || 0) + 0.3;   /* 趴下來、慢慢呼吸 */
+    petStep(pt, dt, t, tx, tz, gy, false, f.rot); if (U.body && A.bs && !U.cat3){ const br = 1 + Math.sin(t * 1.8) * 0.035; U.body.scale.set(A.bs.x * br, A.bs.y * 0.72, A.bs.z * br); } if (head) head.rotation.x = (A.hrx || 0) + 0.3;   /* 趴下來、慢慢呼吸 */
     if (U.tail) U.tail.rotation.y = Math.sin(t * 1.2) * 0.15; if (Math.floor(age / 1.6) !== A.zz){ A.zz = Math.floor(age / 1.6); try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 1, '#cfd8e6', 0.12, 0.7, 1.4); } catch(e){} } return true; }
   if (A.k === 'spin'){ if (age > 1.7) pt.act = null; return false; }
   pt.act = null; return false; }
@@ -20463,7 +20530,7 @@ function renderTab0(){
         ["跑船：一次最多 10 條。村子的魚載去珊瑚礁島、礁島的魚載回村子，都多三成。裝船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半。要過 45 秒才能賣。", "阿萍：新髮色 200 金幣，新髮型 400。", "自己畫的衣服是 32×32 格、48 色。別人買了你拿九成。被檢舉三次會下架。"]],
       ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型八種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭。", "還能戴帽子、口罩、耳環。每一件都能換顏色。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
         ["每週一換一個穿搭主題，身上穿到 2 件以上，釣魚多一成經驗。", "幫別人的穿搭按讚，一週最多 30 次。"]],
-      ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小章魚、河豚、小水獺買不到，釣魚時偶爾會撈到。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶貓出門，附近有魚群牠會叫。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
+      ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小章魚、河豚、小水獺買不到，釣魚時偶爾會撈到。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶貓出門，附近有魚群牠會叫。你停下來牠會坐下看你。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
         ["餵食會用掉魚缸的魚。一天第一次親密度加 15（稀有魚 20、傳說魚 25），之後同一天每次加 1。", "親密度 10 以上每天帶一份小禮物，60 戴項圈，150 再戴小帽子。", "圍欄、海水池、烏龜缸各 1,500 金幣，一個住 5 隻。", "市集賣出賣家拿九成，買的人親密度重來。名字最多 8 個字。", "釣到三棘鱟有兩成機會跟來一隻小鱟。"]],
       ["鯨魚、大魚", "event", ["每天晚上 8:30，港口外海會來一條超大的魚，週六日下午 2:00 也有。", "站在港口按「一起拉」，大家合力。指針留在綠色才有用，畫面變紅就放開。", "有出力就有獎。", "鯨魚不在港口外海：抹香鯨在深海浮台，白鯨、虎鯨、座頭鯨在流冰海岸，藍鯨、鯨鯊在神秘島礁岩。", "划船到外海，可能遇到海豚、座頭鯨、藍鯨、抹香鯨。鯨魚在水面時可以拍照。", "看到鯨魚跳出水面，接下來幾分鐘在船上比較好釣。", "外海深處有一小群紅色的鯊魚，全伺服器共用，釣光就絕種。釣到不能賣，放回去拿愛海點數。"],
         ["大魚要在 10 分鐘內拉完。前 3 名拿魚拓，第 1 名拿稱號。斷線後 10 秒不能出力。", "藍鯨每小時在神秘島礁岩外浮上來一分半鐘，這時釣到藍鯨的機率是平常 5 倍。", "鯨魚跳出水面給 3 分鐘好運，30 分鐘最多一次，一天最多 4 次。", "海上目擊每種第一次遇到送 30 愛海點數。", "紅鯊最多 8 隻，每一對每 7 天有一半機會生一隻。放回海裡拿 100 愛海點數。", "流冰海岸大約每一個多小時有虎鯨來圍獵，一次兩分鐘左右，站在岸邊看得到。"]],
@@ -21688,6 +21755,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u761', d:'11/24', items:[
+    ['🐱', '貓換成新的了：七種花色（橘貓、虎斑、三花、黑貓、白貓、賓士、暹羅）。走路會邁步，停下來會坐下、尾巴繞到旁邊，會抬頭看你，耳朵偶爾抖一下。寵物店裡的貓也一起換了。'] ] },
   { id:'u760', d:'11/24', items:[
     ['🐾', '寵物店搬到商店街口的路邊，變成可以走進去的店：裡面有貓、柴犬、水獺、烏龜、寄居蟹和海鷗。涼亭退到寵物樂園旁邊。'] ] },
   { id:'u759', d:'11/24', items:[
