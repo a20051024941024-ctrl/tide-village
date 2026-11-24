@@ -550,12 +550,21 @@ const SHAPES={ram:(g,d,s,t,mv)=>{ln(g,-.55,-.3,.55,-.3,DK,.14);ln(g,-.55,-.3,.55
   spider:(g,d,s,t,mv)=>spider(g,s,t,mv),slime:(g,d,s,t,mv)=>slime(g,s,t,mv),golem:(g,d,s,t,mv)=>golem(g,s,t,mv),hydra:(g,d,s,t)=>hydra(g,s,t),
   unicorn:(g,d,s,t,mv,cc)=>{horse(g,'#f6f2f6','none',t,mv,cc);ln(g,.24,-.62,.4,-.97,'#c79bff',.07);poly(g,[.58,-.98,.8,-1.28+s*.06,.66,-.94],GOLD,DK,.015);ell(g,.82,-1.3,.03,.03,'#fff')}};
 function bossDraw(g,key,civ,x,y,...a){ell(g,x,y,1.1,.45,'rgba(180,30,20,.25)','#b02a22',.05);g.save();g.translate(x,y);g.scale(1.75,1.75);drawUnit(g,key,civ,0,0,...a);g.restore();txt('頭目',x,y-3.1,.34,'#ffd23c','#150d07')}
-const UIMG={},UIMK=['militia','archer','cleric','mage'];for(const k of UIMK){const im=new Image();im.onload=()=>{UIMG[k]=im;dirty=true};im.src='img/u_'+k+'.png?v=1'}
+let UWALK=false;const UIMG={},UIMK=['militia','archer','cleric','mage'];
+/* 把腳切成左右兩塊，走路時輪流抬腳 */
+function uRig(im){const W=im.width,H=im.height,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);let a;try{a=x.getImageData(0,0,W,H).data}catch(e){return im}
+  const y0=Math.round(H*.8);let best=1e9,sx=W>>1;for(let cx=Math.round(W*.32);cx<W*.68;cx++){let v=0;for(let y=y0;y<H;y++)v+=a[(y*W+cx)*4+3];if(v<best){best=v;sx=cx}}
+  const mk=(sx0,sy0,w,h)=>{const o=document.createElement('canvas');o.width=w;o.height=h;o.getContext('2d').drawImage(im,sx0,sy0,w,h,0,0,w,h);return o};
+  im.rig={y0,sx,body:mk(0,0,W,y0+1),L:mk(0,y0,sx,H-y0),R:mk(sx,y0,W-sx,H-y0)};return im}
+for(const k of UIMK){const im=new Image();im.onload=()=>{UIMG[k]=uRig(im);dirty=true};im.src='img/u_'+k+'.png?v=1'}
 /* 士兵生圖：一張站姿圖，靠彈跳、傾斜、前衝做出走路和攻擊 */
 function uImg(g,im,k,face,sw,t,mv,nb){const s=Math.sin(clamp(sw,0,1)*PI),h=1.32*k,w=h*im.width/im.height;g.scale(face,1);
   if(mv){const p=t*11;g.translate(0,-Math.abs(Math.sin(p))*.07*k);g.rotate(Math.sin(p)*.07)}else if(!nb&&t)g.scale(1+Math.sin(t*2.2)*.012,1-Math.sin(t*2.2)*.02);
   if(s>0){g.translate(s*.2*k,0);g.rotate(s*.16);g.scale(1+s*.06,1-s*.06)}
-  g.drawImage(im,-w/2,-h,w,h)}
+  const R=UWALK&&im.rig;if(!R||!mv){g.drawImage(im,-w/2,-h,w,h);return}
+  const f=h/im.height,p=t*11,l1=Math.max(0,Math.sin(p)),l2=Math.max(0,-Math.sin(p)),st=.07*k;
+  const foot=(c,x0,lift,dx)=>g.drawImage(c,-w/2+x0*f+dx,-h+R.y0*f-lift*.12*k,c.width*f,c.height*f);
+  foot(R.L,0,l1,Math.sin(p)*st);foot(R.R,R.sx,l2,-Math.sin(p)*st);g.drawImage(R.body,-w/2,-h,w,R.body.height*f)}
 function drawUnit(g,key,civ,x,y,face,sw,t,mv,nb,wo,sackc,mt){
   const d=C[key],L0=look(key)||{},L=sackc?Object.assign({},L0,{sack:sackc}):L0,cc=CIV[civ].col,s=Math.sin(clamp(sw,0,1)*PI),big=d.cav||d.shape,k=(big?d.r/.42:L.sc?1:d.r/.3)*1.22,sc=L.sc||1;g.save();g.translate(x,y);
   if(!nb){ell(g,.03,.03,(big?.52:.3*sc)*k,(big?.17:.12*sc)*k,'rgba(0,0,0,.28)');ell(g,0,0,(big?.52:.32*sc)*k,(big?.18:.13*sc)*k,cc.c+'66',cc.c,.045)}
@@ -825,7 +834,7 @@ function drawBld(g,key,civ,x,y,hw,hh,rot,t,an){
     if(!vert){ell(g,.06,.03,hw+.05,.15,'rgba(0,0,0,.28)');box(g,-hw,-1-hh*1.2,hw*2,hh*1.2,'#e0dac8',DK,.03);wall(g,-hw,-1,hw*2,1,s);cren(g,-hw,-1,hw*2,s);slit(g,-hw*.5,-.7);slit(g,hw*.5,-.7)}
     else{box(g,-hw+.12,-hh*2+.05,hw*2,hh*2,'rgba(0,0,0,.2)');box(g,-hw,-hh*2-1,hw*2,hh*2,'#e0dac8',DK,.03);for(let py=-hh*2-.85;py<-1.1;py+=.34){box(g,-hw,py,.14,.2,s,DK,.02);box(g,hw-.14,py,.14,.2,s,DK,.02)}wall(g,-hw,-1,hw*2,1,s);cren(g,-hw,-1,hw*2,s)}}
   g.restore()}
-function bIcon(c,key,civ){const d=BT[key],gg=c.getContext('2d'),cw=c.width;gg.setTransform(1,0,0,1,0,0);gg.clearRect(0,0,cw,cw);const span=Math.max(d.w,d.vh)+.4,s=cw/span;gg.setTransform(s,0,0,s,cw/2,cw/2);drawBld(gg,key,civ,0,d.vh/2-d.h/2,d.w/2,d.h/2,0,0,0)}
+function bIcon(c,key,civ){const d=BT[key],gg=c.getContext('2d'),cw=c.width;gg.setTransform(1,0,0,1,0,0);gg.clearRect(0,0,cw,cw);const span=Math.max(d.w,d.vh)+.4,s=cw/span;gg.setTransform(s,0,0,s,cw/2,cw/2);const im=BIMG[civ&&key==='castle'?'castle_'+civ:key];if(im){const f=Math.min(cw*.94/im.width,cw*.94/im.height);gg.setTransform(1,0,0,1,0,0);gg.drawImage(im,(cw-im.width*f)/2,(cw-im.height*f)/2,im.width*f,im.height*f);return}drawBld(gg,key,civ,0,d.vh/2-d.h/2,d.w/2,d.h/2,0,0,0)}
 
 /* ───────── 尋路（格狀 A*，繞過建築；被圍住時選最薄處破牆） ───────── */
 const CS=.5,INF=.25,DX=[1,-1,0,0,1,1,-1,-1],DY=[0,0,1,-1,1,-1,1,-1];
