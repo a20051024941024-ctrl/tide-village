@@ -2342,3 +2342,5 @@ html.fltype #rotate{display:none!important}
 #guideCard.gpop{animation:gpop .38s ease-out}
 
 body.guideOn #hint{display:none!important}   /* v752 操作說明併進老港第一句，原本那塊會被聊天列蓋住一半 */
+
+body.touch #hint{display:none!important}   /* v758 手機上這塊舊操作提示一直被聊天列蓋住一半；走路和轉頭老港第一句就講了 */
