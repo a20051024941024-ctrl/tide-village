@@ -130,6 +130,7 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
   #gacha #gGraveP[hidden]{display:none!important}
   #gacha:not(.odds) #gOdds{display:none}#gacha .godd{display:inline-block;margin-top:6px;background:none;border:0;color:#7a5a2a;text-decoration:underline;font-size:12px;padding:2px}
   #gacha .gpull h2{margin-top:0}}
+#bar .tip b small{font-size:11px;font-weight:700;color:#7a5a2a;display:block}
 @media(prefers-reduced-motion:reduce){#toast{transition:none}.card,.row button,.seg button,.go{transition:none}}
 .chips{display:flex;gap:6px;overflow-x:auto;touch-action:pan-x;scrollbar-width:none;padding-bottom:2px}.chips::-webkit-scrollbar{display:none}.chips button{flex:none;min-height:40px;padding:0 12px;border-radius:20px;border:2px solid #6b4a2a;background:#f4ecd8;color:var(--ink);font-weight:900;font-size:13.5px;white-space:nowrap}.chips button.on{background:#2a1c10;color:var(--par);border-color:#2a1c10}
 .seth{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:14px 0 6px;padding:6px 9px;border-left:7px solid var(--sc);background:rgba(42,28,16,.09);border-radius:5px}.seth b{font-size:16px;font-weight:900}.seth span{font-size:12.5px;flex:1;min-width:150px}.seth em{font-style:normal;font-size:12.5px;font-weight:900;color:#7a4a08;width:100%}.seth button{min-height:40px;padding:0 14px;border-radius:9px;border:2px solid #5d3c0c;background:linear-gradient(#f4d06a,#c98a1c);color:#3a2405;font-weight:900;font-size:14px}
@@ -175,7 +176,8 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
       <li>「出征」先花金幣搜尋對手，打贏會搶走對方的資源；別人打贏你，你也會被搶。打真人最多搶走對方庫存的一成五，攻陷主堡是兩成五。被打之後有 8 小時護盾，自己出征護盾就結束。主堡 3 級以下不會被別人找到。另外有一關比一關難的冒險島，每 6 小時可以去 3 次。</li>
       <li>領地左邊有石牆圍著的營地，打破裡面的寶箱有大獎，打破牢籠可以救出一隻稀有兵種。右邊有頭目，又大又硬，打倒有召喚券。打完過一陣子會再出現，一次比一次強。</li>
       <li>「出征」裡的海圖有七座島，每座分一到三星，一星打過開二星，三星有頭目，第一次打過有召喚券。主堡 Lv 3 可以蓋「怪獸巢」，每 3 小時照顧一次，三次孵出一隻巨型怪獸。</li>
-      <li>人口最多 120。兵太多可以蓋「兵營倉庫」，選士兵按「存進倉庫」，存著的不佔人口，要用再點倉庫拿出來。</li>
+      <li>主堡最高 10 級，每升一級解鎖新東西，點主堡會寫下一級有什麼。建築最高升到 Lv 5。玩家等級沒有上限，每幾級換一個稱號：見習領主、騎士、男爵、子爵、伯爵、侯爵、公爵、大公、國王、皇帝。</li>
+      <li>人口最多 120（主堡 8 級、10 級各再加 20）。兵太多可以蓋「兵營倉庫」，選士兵按「存進倉庫」，存著的不佔人口，要用再點倉庫拿出來。</li>
       <li>領地要點外面的木牌用金幣買，新買的地上有樹和石頭，派村民清掉才能蓋。不用的建築可以收進倉庫，之後在「建造」的倉庫分頁免費擺回來。</li>
       <li>單指拖曳移動畫面，雙指或右下角按鈕縮放，單指點一下選取。</li></ol></details>
     <details class="panel fold"><summary>兵種圖鑑</summary><ul class="ul" id="uL"></ul></details>
@@ -594,7 +596,7 @@ function drawB(g,key,civ,x,y,t,an,fl){
 let S=null,paused=false,AC=null,mute=false,sT={};
 function snd(k,f,dur,type,vol,slide){if(mute||!AC)return;const n=AC.currentTime;if(sT[k]&&n-sT[k]<.07)return;sT[k]=n;try{const o=AC.createOscillator(),a=AC.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,n);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),n+dur);a.gain.setValueAtTime(vol||.04,n);a.gain.exponentialRampToValueAtTime(.0001,n+dur);o.connect(a).connect(AC.destination);o.start(n);o.stop(n+dur)}catch(e){}}
 const core=()=>(S.cr||RAD[S['lv']])+(S.ext||0),RR=()=>land().R;
-const RAD=[0,6,8,10,12,14],UPC=[0,150,320,600,1000],MAXLV=5,EDGE=3.5;
+const RAD=[0,6,8,10,12,14,14,14,14,14,14],UPC=[0,150,320,600,1000],MAXLV=10,EDGE=3.5;
 const BT={
 castle:{n:'主堡',w:3,h:3,vh:3.2,hp:3000,dmg:95,hs:1,rng:6.5,t:'領地的核心，被攻陷就輸了。升級可以蓋新的建築。'},
 farm:{n:'農田',w:2.4,h:2,vh:.7,hp:500,cost:50,food:.9,flat:1,t:'派一名村民來耕作才會產糧，一座農田一名村民。'},
@@ -614,14 +616,14 @@ trebuchet:{n:'投石機',w:1.6,h:1.6,vh:1.75,hp:600,cost:180,dmg:190,hs:4.5,rng:
 Object.assign(BT,{tree:{n:'樹',w:.8,h:.6,vh:1.6,hp:120,node:'wood'},goldmine:{n:'金礦',w:1.3,h:.9,vh:.95,hp:400,node:'gold'},stonepile:{n:'石堆',w:1.3,h:.9,vh:.95,hp:400,node:'stone'},camp:{n:'巨魔營地',w:2.2,h:1.6,vh:1.7,hp:1400}});
 for(const k in BT)BT[k].key=k;
 const COST={farm:{w:50},market:{w:80,g:20},house:{w:60},barracks:{w:100},stable:{w:120,g:40},academy:{w:100,s:80,g:50},crypt:{s:150,g:30},den:{w:150,s:100},roost:{s:200,g:150},palisade:{w:25},atower:{w:60,s:40},magetower:{s:100,g:80},stonewall:{s:60},trebuchet:{w:150,g:60}};
-const UPCOST=[0,{w:150,s:60,g:80},{w:300,s:200,g:200},{w:500,s:450,g:400},{w:800,s:800,g:800}];
+const UPCOST=[0,{w:150,s:60,g:80},{w:300,s:200,g:200},{w:500,s:450,g:400},{w:800,s:800,g:800},{w:1200,s:1200,g:1100},{w:1700,s:1700,g:1500},{w:2300,s:2300,g:2000},{w:3000,s:3000,g:2600},{w:4000,s:4000,g:3400}];
 Object.assign(SHAPES,{wildhorse:(g,d,s,t,mv)=>horse(g,'#9a6b3f','none',t,mv,{}),
   sheep:(g,d,s,t,mv)=>{const k=mv?Math.sin(t*12)*.05:0;for(const x of[-.2,-.08,.1,.22])ln(g,x,-.22,x+(x<0?k:-k),-.02,DK,.05);for(const[a,b,r]of[[-.18,-.36,.17],[.02,-.4,.19],[.2,-.36,.16],[0,-.26,.2]])ell(g,a,b,r,r*.85,'#f4f0e4','#8a8477',.02);ell(g,.36,-.4,.1,.09,'#3a2a1a',DK,.02);ell(g,.4,-.42,.014,.014,'#fff');poly(g,[.3,-.46,.26,-.54,.36,-.47],'#3a2a1a')},
   cow:(g,d,s,t,mv)=>{const k=mv?Math.sin(t*10)*.06:0;for(const x of[-.3,-.18,.16,.28]){ln(g,x,-.3,x+(x<0?k:-k),-.03,DK,.09);ln(g,x,-.3,x+(x<0?k:-k),-.04,'#f1ead8',.055)}ln(g,-.42,-.5,-.5,-.2,DK,.04);ell(g,0,-.45,.44,.22,'#f1ead8',DK,.03);ell(g,-.15,-.5,.16,.12,'#7a4a2a');ell(g,.18,-.4,.1,.08,'#7a4a2a');ell(g,-.05,-.25,.08,.05,'#f0b8b8',DK,.015);
     poly(g,[.36,-.66,.62,-.62,.66,-.44,.5,-.38,.36,-.46],'#f1ead8',DK,.03);ell(g,.6,-.46,.07,.06,'#f0b8b8',DK,.015);ell(g,.5,-.56,.02,.02,DK);poly(g,[.4,-.66,.36,-.8,.46,-.68],'#ece6d6',DK,.015);poly(g,[.5,-.66,.54,-.8,.58,-.65],'#ece6d6',DK,.015)}});
 Object.assign(BT,{nest:{n:'育龍巢',w:1.7,h:1.4,vh:1.25,hp:800,t:'照顧和餵養你的幼龍。'},
 dflag:{n:'旗幟',w:.6,h:.5,vh:1.35,hp:150,deco:1},dtorch:{n:'火炬',w:.5,h:.5,vh:1.05,hp:150,deco:1},dflower:{n:'花圃',w:1.2,h:.8,vh:.4,hp:150,deco:1},dhedge:{n:'樹籬',w:1.6,h:.6,vh:.65,hp:200,deco:1},dtree:{n:'櫻花樹',w:.8,h:.6,vh:1.65,hp:200,deco:1},dstatue:{n:'騎士雕像',w:1,h:1,vh:1.7,hp:300,deco:1},dfount:{n:'噴泉',w:1.6,h:1.2,vh:1.15,hp:300,deco:1},
-worldtree:{n:'世界樹',w:2.6,h:2.2,vh:3.3,hp:2500,wonder:1,lv:2,max:()=>1,t:'奇觀。持續產出糧食。'},colosseum:{n:'大競技場',w:3.2,h:2.4,vh:2.1,hp:3000,wonder:1,lv:3,max:()=>1,t:'奇觀。人口上限加 12。'},pyramid:{n:'太陽金字塔',w:3,h:2.4,vh:2.5,hp:3000,wonder:1,lv:3,max:()=>1,t:'奇觀。持續產出金幣。'}});
+worldtree:{n:'世界樹',w:2.6,h:2.2,vh:3.3,hp:2500,wonder:1,lv:2,max:lv=>lv>=10?2:1,t:'奇觀。持續產出糧食。'},colosseum:{n:'大競技場',w:3.2,h:2.4,vh:2.1,hp:3000,wonder:1,lv:3,max:lv=>lv>=10?2:1,t:'奇觀。人口上限加 12。'},pyramid:{n:'太陽金字塔',w:3,h:2.4,vh:2.5,hp:3000,wonder:1,lv:3,max:lv=>lv>=10?2:1,t:'奇觀。持續產出金幣。'}});
 for(const k in BT){BT[k].key=k;if(BT[k].deco&&!BT[k].t)BT[k].t='裝飾，讓領地更好看。'}
 Object.assign(COST,{dflag:{g:20},dtorch:{w:15},dflower:{w:20},dhedge:{w:20},dtree:{w:30},dstatue:{s:60},dfount:{s:120,g:40},worldtree:{w:900,g:300},colosseum:{w:500,s:700,g:400},pyramid:{s:900,g:500}});
 Object.assign(BT,{lumbermill:{n:'伐木場',w:2.2,h:1.6,vh:1.3,hp:700,t:'不用村民，自己持續產出木材。'},quarry:{n:'採石場',w:2.2,h:1.6,vh:1.3,hp:700,t:'不用村民，自己持續產出石材。'},ranch:{n:'牧場',w:2.4,h:1.8,vh:1.25,hp:700,t:'不用村民，自己持續產出糧食。'},
@@ -825,8 +827,11 @@ function cpt(b,x,y){return b.b?[clamp(x,b.x-b.hw,b.x+b.hw),clamp(y,b.y-b.hh,b.y+
 function ed(a,b){const[px,py]=cpt(b,a.x,a.y);let d=Math.hypot(px-a.x,py-a.y);if(!b.b)d-=b.r;d-=a.b?Math.min(a.hw,a.hh):a.r;return d}
 function add(e){e.id=S.id++;e.max=e.hp;S.ents.push(e);return e}
 function mkB(team,civ,key,x,y,rot){const d=BT[key],r=rot%2;gridDirty=true;return add({team,civ,b:1,ul:1,key,d,x,y,rot,hw:(r?d.h:d.w)/2,hh:(r?d.w:d.h)/2,hp:d.hp,cd:.5,an:1,q:[],tp:0})}
-function mkU(team,civ,key,x,y,role,lvl){const d=C[key],ulv=clamp(lvl||1,1,MAXU),pm=(1+.1*(ulv-1))*(team===0&&HOME&&HOME.sc&&HOME.sc.includes(SETOF[key])?1.1:1);return add({team,civ,key,d,pm,lv:ulv,x,y,r:d.r,hp:d.hp*pm,ang:0,face:team?-1:1,sw:1,run:0,cd:.4,rt:0,bd:1,bh:1,post:{x,y},role,navT:0})}
+const UHP=2;
+function mkU(team,civ,key,x,y,role,lvl){const d=C[key],ulv=clamp(lvl||1,1,MAXU),pm=(1+.1*(ulv-1))*(team===0&&HOME&&HOME.sc&&HOME.sc.includes(SETOF[key])?1.1:1);return add({team,civ,key,d,pm,lv:ulv,x,y,r:d.r,hp:d.hp*pm*UHP,ang:0,face:team?-1:1,sw:1,run:0,cd:.4,rt:0,bd:1,bh:1,post:{x,y},role,navT:0})}
 const scene=o=>Object.assign({t:0,ents:[],proj:[],fx:[],id:1,shake:0},o);
+const TITLES=[[1,'見習領主'],[5,'騎士'],[10,'男爵'],[15,'子爵'],[20,'伯爵'],[25,'侯爵'],[30,'公爵'],[40,'大公'],[50,'國王'],[60,'皇帝']],title=l=>TITLES.filter(t=>l>=t[0]).pop()[1];
+const CUNLOCK={2:'兵營倉庫、新建築',3:'怪獸巢、新建築',4:'建築升到 Lv 3',6:'第二座兵營倉庫',7:'建築升到 Lv 4',8:'人口上限 +20',9:'建築升到 Lv 5',10:'人口上限再 +20、奇觀各能蓋兩座'};
 const castleHp=lv=>3000+1000*(lv-1);
 function fits(key,x,y,rot,skip,R){const d=BT[key],r=rot%2,hw=(r?d.h:d.w)/2,hh=(r?d.w:d.h)/2;if(!inLand(x-hw,y-hh,x+hw,y+hh))return false;
   for(const o of S.ents)if(o.b&&o.hp>0&&o!==skip&&Math.abs(o.x-x)<o.hw+hw+.04&&Math.abs(o.y-y)<o.hh+hh+.04)return false;return true}
@@ -854,10 +859,10 @@ function startHome(doc){
   sel=null;place=null;menuOpen=false;selU=new Set();paused=false;cam.x=0;cam.y=.5;cam.z=40;gridDirty=true;clampCam();barSig='';$('#enemy').hidden=true}
 const count=k=>S.ents.filter(e=>e.b&&e.key===k&&e.hp>0&&e.team===0).length;
 const army=()=>HOME.ents.filter(e=>!e.b&&e.team===0&&e.hp>0&&!e.temp),ppOf=k=>C[k].pp||1;
-const pop=()=>army().concat(S.raid?S.army.filter(u=>u.hp>0):[]).reduce((s,u)=>s+ppOf(u.key),0)+HOME.ents.reduce((s,e)=>s+(e.b&&e.hp>0?e.q.reduce((a,k)=>a+ppOf(k),0):0),0),POPCAP=120,popMax=()=>Math.min(POPCAP,popRaw()),popRaw=()=>5+2*HOME.lv+HOME.ents.reduce((s,e)=>s+(e.b&&e.team===0&&e.hp>0?(e.key==='house'?2+2*ulv(e):e.key==='colosseum'?12:0):0),0);
+const pop=()=>army().concat(S.raid?S.army.filter(u=>u.hp>0):[]).reduce((s,u)=>s+ppOf(u.key),0)+HOME.ents.reduce((s,e)=>s+(e.b&&e.hp>0?e.q.reduce((a,k)=>a+ppOf(k),0):0),0),POPCAP0=120,popCap=()=>POPCAP0+(HOME.lv>=8?20:0)+(HOME.lv>=10?20:0),popMax=()=>Math.min(popCap(),popRaw()),popRaw=()=>5+2*HOME.lv+HOME.ents.reduce((s,e)=>s+(e.b&&e.team===0&&e.hp>0?(e.key==='house'?2+2*ulv(e):e.key==='colosseum'?12:0):0),0);
 function toast(s){const t=$('#toast');t.textContent=s;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2800)}
 
-function hurt(src,t,v,ranged){if(t.hp<=0||(t.team===2&&!t.b))return;const sd=src.d;if(t.d.cav&&sd.anti)v*=sd.anti;if(ranged&&t.d.armor&&!sd.pierce)v*=t.d.armor;if(t.b&&!src.b)v*=.6*(sd.siege||1);t.hp-=v;t.hit=.12;if(!t.b&&t.team!==0&&!S.raid&&src&&src.hp>0&&src.team===0&&!(t.ord&&t.ord.tg&&alive(t.ord.tg)))for(const o of S.ents)if(!o.b&&o.team===t.team&&o.hp>0&&!o.d.ani&&Math.hypot(o.x-t.x,o.y-t.y)<4&&!(o.ord&&o.ord.tg&&alive(o.ord.tg)))o.ord={tg:src};if(t.hp<=0&&t.d.rebirth&&!t.reborn){t.reborn=1;t.hp=t.max*.5;S.fx.push({k:'boom',x:t.x,y:t.y,t:0,life:.6,r:1.2,c:'#ff8a1e'});S.fx.push({k:'txt',x:t.x,y:t.y,t:0,life:.9,s:'浴火重生'});return}if(sd.leech&&src.hp>0)src.hp=Math.min(src.max,src.hp+v*sd.leech);if(t.hp<=0)kill(t)}
+function hurt(src,t,v,ranged){if(t.hp<=0||(t.team===2&&!t.b))return;const sd=src.d;if(t.d.cav&&sd.anti)v*=sd.anti;if(ranged&&t.d.armor&&!sd.pierce)v*=t.d.armor;if(t.b&&!src.b)v*=.6*(sd.siege||1);t.hp-=v;t.hit=.12;if(!t.b&&v>=1){const nw=performance.now();if(!t.dn||nw-t.dn>380){t.dn=nw;S.fx.push({k:'dmg',x:t.x,y:t.y,ox:(Math.random()-.5)*.5,t:0,life:.7,s:String(Math.round(v)),c:t.team===0?'#ff8a7a':'#fff3c0'})}if(!ranged&&!t.d.fly&&!t.boss&&src&&!src.b){const dx=t.x-src.x,dy=t.y-src.y,L=Math.hypot(dx,dy)||1,kb=Math.min(.12,v/t.max*.6);t.x+=dx/L*kb;t.y+=dy/L*kb}}if(!t.b&&t.team!==0&&!S.raid&&src&&src.hp>0&&src.team===0&&!(t.ord&&t.ord.tg&&alive(t.ord.tg)))for(const o of S.ents)if(!o.b&&o.team===t.team&&o.hp>0&&!o.d.ani&&Math.hypot(o.x-t.x,o.y-t.y)<4&&!(o.ord&&o.ord.tg&&alive(o.ord.tg)))o.ord={tg:src};if(t.hp<=0&&t.d.rebirth&&!t.reborn){t.reborn=1;t.hp=t.max*.5;S.fx.push({k:'boom',x:t.x,y:t.y,t:0,life:.6,r:1.2,c:'#ff8a1e'});S.fx.push({k:'txt',x:t.x,y:t.y,t:0,life:.9,s:'浴火重生'});return}if(sd.leech&&src.hp>0)src.hp=Math.min(src.max,src.hp+v*sd.leech);if(t.hp<=0)kill(t)}
 function kill(e){e.hp=0;if(e.b){S.fx.push({k:'crumble',key:e.key,civ:e.civ,x:e.x,y:e.y,hw:e.hw,hh:e.hh,rot:e.rot,t:0,life:.9});if(e.team!==2)S.fx.push({k:'rub',x:e.x,y:e.y+e.hh,s:e.hw,t:0,life:9})}else if(e.nc||e.d.split||e.key==='slimelet')S.fx.push({k:'puff',x:e.x,y:e.y,t:0,life:.5,s:e.r*1.8,c:e.d.shape==='slime'?'#8fe08a':null});else S.fx.push({k:'die',key:e.key,civ:e.civ,x:e.x,y:e.y,face:e.face,t:0,life:e.d.fly?1.4:1.1});selU.delete(e);if(sel===e)sel=null;barSig='';if(!e.b&&e.team===0&&e.d.once&&!e.temp&&HOME){HOME.dead[e.key]=(HOME.dead[e.key]||0)+1;dirty=true}
   if(!S.raid&&e.fort&&(e.key==='chest'||e.key==='cage')){const n=S.cnt.forts||0;S.cnt.forts=n+1;HOME.fa=Date.now();for(const o of S.ents)if(o.fort&&o.b&&o!==e)o.hp=0;addXp(60);
     if(e.key==='chest'){const r={gold:200+80*n,wood:150,stone:150,tk:1};give(r);toast('打開寶箱，獲得 '+rtxt(r))}
@@ -1037,7 +1042,7 @@ $('#qB').onclick=()=>{const m=MIS[HOME.mi];if(!m||m[1]()[0]<m[1]()[1])return;giv
 
 /* ───────── 等級、擴張、融合、搜尋對手、冒險島 ───────── */
 const xpNeed=l=>60+40*l;
-function addXp(n){const H=HOME;if(!H)return;H.xp+=n;while(H.xp>=xpNeed(H.plv)){H.xp-=xpNeed(H.plv);H.plv++;H.tk++;barSig='';toast(`升到等級 ${H.plv}，獲得召喚券 1 張`);snd('up',392,.5,'triangle',.08,392)}}
+function addXp(n){const H=HOME;if(!H)return;H.xp+=n;while(H.xp>=xpNeed(H.plv)){H.xp-=xpNeed(H.plv);H.plv++;H.tk++;barSig='';{const nt=TITLES.find(t=>t[0]===H.plv);toast(nt?`升到等級 ${H.plv}，成為「${nt[1]}」！獲得召喚券 1 張`:`升到等級 ${H.plv}，獲得召喚券 1 張`)}snd('up',392,.5,'triangle',.08,392)}}
 const extCost=()=>300*(HOME.ext+1),MAXEXT=4;
 function setStar(u,n){u.sr=n;const f=Math.pow(1.6,n);u.pm*=f;u.max*=f;u.hp=u.max}
 function mixable(){const g={};for(const u of soldiers()){if(u.d.vil||(u.sr||0)>=2)continue;const k=u.key+'|'+(u.sr||0);(g[k]=g[k]||[]).push(u)}return Object.keys(g).filter(k=>g[k].length>=2).map(k=>({k:k.split('|')[0],sr:+k.split('|')[1],us:g[k]}))}
@@ -1067,7 +1072,7 @@ const NPC=[['見習騎士羅蘭',0,1],['酋長葛魯克',3,2],['林后艾薇拉'
 function bIconCastle(c,civ){const gg=c.getContext('2d'),s=c.width/3.7;gg.setTransform(1,0,0,1,0,0);gg.clearRect(0,0,c.width,c.width);gg.setTransform(s,0,0,s,c.width/2,c.width/2);drawB(gg,'castle',civ,0,.1,0,1,1)}
 const loot=lv=>80+70*lv;
 function startRaid(t){const a=soldiers();if(!a.length)return;HOME.ents=HOME.ents.filter(e=>!a.includes(e));for(const u of a)u.home={x:u.post.x,y:u.post.y};
-  S=scene({raid:true,civ:HOME.civ,lv:t.lv,cr:t.cr||RAD[t.lv]||RAD[1],ext:t.ext||0,pl:t.pl||[],tgt:t,army:a,phase:'deploy',time:180,fallen:false});loadB(t.b,1,t.civ);t.army.forEach((k,i)=>{const an=i*2.4,r=2.8+(i%4)*.6;mkU(1,t.civ,k,Math.cos(an)*r,Math.sin(an)*r,'guard',t.ul[k])});if(t.boss){const u=mkU(1,t.civ,t.boss,0,-2.2,'guard',Math.min(5,1+t.sea[0]));u.boss=1;u.r*=1.6;u.max*=3+t.sea[0];u.hp=u.max;u.pm*=1.4}
+  S=scene({raid:true,civ:HOME.civ,lv:t.lv,cr:t.cr||RAD[t.lv]||RAD[1],ext:t.ext||0,pl:t.pl||[],tgt:t,army:a,phase:'deploy',time:240,fallen:false});loadB(t.b,1,t.civ);t.army.forEach((k,i)=>{const an=i*2.4,r=2.8+(i%4)*.6;mkU(1,t.civ,k,Math.cos(an)*r,Math.sin(an)*r,'guard',t.ul[k])});if(t.boss){const u=mkU(1,t.civ,t.boss,0,-2.2,'guard',Math.min(5,1+t.sea[0]));u.boss=1;u.r*=1.6;u.max*=3+t.sea[0];u.hp=u.max;u.pm*=1.4}
   S.total=S.ents.filter(e=>e.b&&!e.d.wall&&!e.d.deco).length;sel=null;place=null;menuOpen=false;selU=new Set();gridDirty=true;cam.x=0;cam.y=0;cam.z=zmin();clampCam();barSig='';const el=$('#enemy');el.hidden=false;el.textContent=t.isle?t.name:'攻打：'+(t.npc?t.name+'（電腦）':(names[t.id]||'無名領主'))+'的領地'}
 function deploy(di){const dr=DIRS[di],R=RR()+2.2,n=S.army.length,cols=Math.ceil(n/2);S.army.forEach((u,i)=>{const a=(i%cols-(cols-1)/2)*.8,bk=(i/cols|0)*.8;u.x=dr[1]*(R+bk)+(dr[1]?0:a);u.y=dr[2]*(R+bk)+(dr[2]?0:a);u.post={x:u.x,y:u.y};u.role='raid';u.ord=null;u.tg=null;u.breach=null;u.path=null;u.navK=null;u.dep=.3;u.face=dr[1]>0?-1:1;u.id=S.id++;S.ents.push(u)});
   S.phase='fight';selU=new Set();cam.x=dr[1]*R*.6;cam.y=dr[2]*R*.6;cam.z=Math.max(zmin(),30);clampCam();barSig='';snd('horn',196,.8,'sawtooth',.07,-40)}
@@ -1195,7 +1200,7 @@ function draw(now){
     else if(f.k==='crumble'){const q=Math.min(1,p*1.5);g.globalAlpha=1-q*q;g.save();g.translate(f.x+Math.sin(f.t*70)*.05*(1-q),f.y+f.hh);g.scale(1,1-q*.8);g.translate(-f.x,-(f.y+f.hh));drawBld(g,f.key,f.civ,f.x,f.y,f.hw,f.hh,f.rot,0,1);g.restore();
       g.globalAlpha=(1-p)*.85;for(let i=0;i<8;i++){const a=i*.8;ell(g,f.x+Math.cos(a)*(f.hw+.2)*(.35+p),f.y+f.hh-.15-p*.7*(i%3),.3+p*.45,.22+p*.32,'#cfc6b0')}}
     else if(f.k==='rub'){g.globalAlpha=p<.7?.95:(1-p)/.3;for(let i=0;i<9;i++){const a=i*2.4,d=f.s*(.2+(i*.37%1)*.75);ell(g,f.x+Math.cos(a)*d,f.y-.25+Math.sin(a)*d*.35,.2+i%3*.07,.12+i%2*.05,i%2?'#a39c8c':'#7d776a','#4a463e',.03)}}
-    else if(f.k==='txt')txt(f.s,f.x,f.y-.9-p*.6,.42,f.c||'#ffe08a','#150d07');g.globalAlpha=1}
+    else if((f.k==='txt'||f.k==='dmg'))txt(f.s,f.x+(f.ox||0),f.y-.9-p*.6,f.k==='dmg'?.3:.42,f.c||'#ffe08a','#150d07');g.globalAlpha=1}
   for(const e of list){if(e.key==='castle'&&e.team===(S.raid?1:0)){bar(e,e.y+e.hh+.12,2.4,true);txt('Lv '+S.lv,e.x,e.y+e.hh+.62,.4,'#ffe08a','#150d07')}else if(e.b){if(e.hp<e.max||e===sel)bar(e,e.y+e.hh+.1,Math.min(1.6,e.hw*1.6))}else if(e.hp<e.max||selU.has(e))bar(e,e.y-uh(e)-(e.team?.42:.22),.7)}
 }
 
@@ -1270,7 +1275,7 @@ function setBar(){if(selU.size)ptUpd();const us0=sel&&!place?upSig(sel):'';if(us
     else if(sel.key==='market'){sig='t'+sel.id+TR.map(t=>HOME[t[0]]>=t[1]?1:0).join('');if(sig===barSig)return;const tb=(t,i)=>`<button data-a="trade" data-k="${i}" ${HOME[t[0]]>=t[1]?'':'disabled'}>${RLAB[t[0]]}${t[1]}→${RLAB[t[2]]}${t[3]}</button>`;
       html=`<p class="tip"><b>市集</b>　把多的資源換成缺的，也會持續帶來一點金幣。</p><div class="row trade">${TR.slice(0,3).map(tb).join('')}</div><div class="row trade">${TR.slice(3).map((t,i)=>tb(t,i+3)).join('')}</div><div class="row"><button class="x2" data-a="move">移動</button><button class="x2" data-a="rot1">旋轉</button><button class="x2" data-a="stow" ${sel.mix||sel.q.length?'disabled':''}>收進倉庫</button><button class="x2" data-a="del">拆除</button></div>`}
     else if(sel.key==='castle'){const mx=S.lv>=MAXLV,c=UPCOST[S.lv]||{},R2=(RAD[Math.min(MAXLV,S.lv+1)]+HOME.ext)*2,tv=F>=50&&pop()<popMax()&&sel.q.length<5;sig='c'+S.lv+can(c)+tv+sel.q.length+land().area+pop()+'/'+popMax()+count('house')+JSON.stringify(HOME.st);if(sig===barSig)return;
-      html=`<p class="tip"><b>主堡 Lv ${S.lv}</b>　領地 ${land().area} 格　人口 ${pop()} / ${popMax()}${popRaw()>POPCAP?'（最多 '+POPCAP+'）':''}　民房 ${count('house')} / ${BT.house.max(S.lv)}</p>${stockInner(POOL)?'<div class="cards">'+stockInner(POOL)+'</div>':''}<div class="row"><button class="x2" data-a="move">移動</button><button data-a="tvil" ${tv?'':'disabled'}><span class="lg">訓練</span>村民 50 糧${sel.q.length?'（'+sel.q.length+'）':''}</button><button class="x2" data-a="land">買地</button></div><div class="row"><button class="pri" data-a="up" ${mx||!can(c)?'disabled':''}>${mx?'已達最高等級':`<span class="lg">升級主堡：${ctx(c)}</span><span class="sh">升級 ${ctx(c)}</span>`}</button></div>`}
+      html=`<p class="tip"><b>主堡 Lv ${S.lv}${S.lv<MAXLV&&CUNLOCK[S.lv+1]?'<br><small>下一級：'+CUNLOCK[S.lv+1]+'</small>':''}</b>　領地 ${land().area} 格　人口 ${pop()} / ${popMax()}${popRaw()>popCap()?'（最多 '+popCap()+'）':''}　民房 ${count('house')} / ${BT.house.max(S.lv)}</p>${stockInner(POOL)?'<div class="cards">'+stockInner(POOL)+'</div>':''}<div class="row"><button class="x2" data-a="move">移動</button><button data-a="tvil" ${tv?'':'disabled'}><span class="lg">訓練</span>村民 50 糧${sel.q.length?'（'+sel.q.length+'）':''}</button><button class="x2" data-a="land">買地</button></div><div class="row"><button class="pri" data-a="up" ${mx||!can(c)?'disabled':''}>${mx?'已達最高等級':`<span class="lg">升級主堡：${ctx(c)}</span><span class="sh">升級 ${ctx(c)}</span>`}</button></div>`}
     else if(sel.d.tr){const ro=roster(sel.key),onceN=TRAIN[sel.key].filter(k=>C[k].once).length,miss=TRAIN[sel.key].length-onceN-ro.length,ok=k=>F>=fcost(k)&&pop()+ppOf(k)<=popMax()&&sel.q.length<5;sig='b'+sel.id+ro.map(k=>(ok(k)?1:0)+''+HOME.own[k]).join('')+sel.q.length+(pop()>=popMax())+JSON.stringify(HOME.st)+HOME.horses+soldiers().some(canMount);if(sig===barSig)return;
       html=`<p class="tip"><b>${sel.d.n}</b>　${sel.q.length?'訓練中 '+sel.q.length+' 隻。':''}${ro.length||stockInner(TRAIN[sel.key])?'':'這裡能訓練的兵種你還沒有，先去「召喚」。'}${onceN?'有 '+onceN+' 種怪獸不能訓練，只能召喚取得。':''}${miss&&ro.length?'還有 '+miss+' 種未獲得。':''}${pop()>=popMax()?'人口已滿：多蓋民房或升級主堡。':''}</p><div class="cards">`+ro.map(k=>`<button class="card" data-a="train" data-k="${k}" ${ok(k)?'':'disabled'}><canvas width="120" height="120" data-u="${k}"></canvas><b>${nm(k)}${HOME.own[k]>1?' Lv'+HOME.own[k]:''}</b><i>${fcost(k)} 糧${ppOf(k)>1?'<br>佔 '+ppOf(k)+' 人口':''}</i></button>`).join('')+stockInner(TRAIN[sel.key])+`</div>${sel.key==='stable'?`<div class="row"><button data-a="mount" ${HOME.horses>0&&soldiers().some(canMount)?'':'disabled'}>讓一名步兵上馬（馬匹 ${HOME.horses}）</button></div>`:''}<div class="row"><button class="x2" data-a="move">移動</button><button class="x2" data-a="rot1">旋轉</button><button class="x2" data-a="stow" ${sel.mix||sel.q.length?'disabled':''}>收進倉庫</button><button class="x2" data-a="del">拆除</button></div>`}
     else{const fm=sel.key==='farm',wk=fm&&farmBusy(sel,null);sig='s'+sel.id+wk+idleV().length;if(sig===barSig)return;html=`<p class="tip"><b>${d.n}</b>　${fm?(wk?'有村民正在耕作，持續產糧。':'還沒有人耕作。'):''}${d.t}</p><div class="row">${fm&&!wk?`<button class="pri" data-a="work" ${idleV().length?'':'disabled'}><span class="lg">派閒置村民來耕作</span><span class="sh">派人耕作</span></button>`:''}<button class="x2" data-a="move">移動</button><button class="x2" data-a="rot1">旋轉</button><button class="x2" data-a="stow" ${sel.mix||sel.q.length?'disabled':''}>收進倉庫</button><button class="x2" data-a="del">拆除</button></div>`}}
@@ -1304,7 +1309,7 @@ $('#bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!
   else if(a==='whout'){const W=HOME.wh||[],i=W.findIndex(q=>q[0]===k),w=sel;if(i<0||!w||pop()+ppOf(k)>popMax())return;const[q]=W.splice(i,1),u=mkU(0,S.civ,q[0],w.x+rnd(-.6,.6),w.y+w.hh+.5,'guard',HOME.own[q[0]]);u.post={x:u.x,y:u.y+rnd(.6,1.4)};if(q[1]&&canMount(u))setMount(u);if(q[2])setStar(u,q[2]);S.fx.push({k:'puff',x:u.x,y:u.y,t:0,life:.4,s:.8});barSig='';dirty=true}
   else if(a==='stow'){if(!sel||!STOWOK(sel.key)||sel.mix||sel.q.length||sel.fire)return;if((HOME.inv||(HOME.inv=[])).length>=60){toast('倉庫滿了（60 個）');return}if(alive(sel.worker))sel.worker.job=null;HOME.inv.push([sel.key,ulv(sel)]);S.fx.push({k:'puff',x:sel.x,y:sel.y,t:0,life:.5,s:1.2});toast(sel.d.n+'收進倉庫了');sel.hp=0;sel=null;gridDirty=true;dirty=true;barSig=''}
   else if(a==='del'){const c=COST[sel.key]||{};HOME.wood+=Math.round((c.w||0)/2);HOME.stone+=Math.round((c.s||0)/2);HOME.gold+=Math.round((c.g||0)/2);if(alive(sel.worker))sel.worker.job=null;S.fx.push({k:'puff',x:sel.x,y:sel.y,t:0,life:.5,s:1.2});sel.hp=0;sel=null;gridDirty=true;dirty=true}
-  else if(a==='up'){const c=UPCOST[S.lv];if(S.lv>=MAXLV||!can(c))return;pay(c);if(!S.cr)S.cr=RAD[S.lv];S.lv++;S.castle.max=castleHp(S.lv);S.castle.hp=S.castle.max;gridDirty=true;dirty=true;barSig='';toast(`主堡升到 Lv ${S.lv}，可以蓋新的建築了`);snd('up',330,.5,'triangle',.08,330)}
+  else if(a==='up'){const c=UPCOST[S.lv];if(S.lv>=MAXLV||!can(c))return;pay(c);if(!S.cr)S.cr=RAD[S.lv];S.lv++;S.castle.max=castleHp(S.lv);S.castle.hp=S.castle.max;gridDirty=true;dirty=true;barSig='';toast(`主堡升到 Lv ${S.lv}`+(CUNLOCK[S.lv]?'：'+CUNLOCK[S.lv]:'，可以蓋新的建築了'));snd('up',330,.5,'triangle',.08,330)}
   else if(a==='train'){const c=fcost(k);if(S.food<c||pop()+ppOf(k)>popMax()||sel.q.length>=5)return;S.food-=c;sel.q.push(k)}
   else if(a==='call'){if(!HOME.st[k]||pop()+ppOf(k)>popMax())return;HOME.st[k]--;const u=mkU(0,S.civ,k,sel.x+rnd(-.9,.9),sel.y+sel.hh+rnd(.6,1.4),'guard');u.dep=.4;S.fx.push({k:'ring',x:u.x,y:u.y,t:0,life:.8,c:'#ffd23c'});dirty=true}
   else if(a==='all'){selU=new Set(mine().filter(u=>!u.d.vil));sel=null;menuOpen=false}
@@ -1330,7 +1335,7 @@ $('#bar').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!
   else if(a==='raid'){openRaids()}else if(a==='gacha'){openGacha()}else if(a==='dep'){deploy(+k)}else if(a==='retreat'){endRaid('撤退')}
   barSig='';setBar()});
 let hudSig='';
-function hud(){let w='';if(S.raid)w=S.phase==='deploy'?'部署中':`${Math.round(razed()*100)}%・${Math.max(0,Math.ceil(S.time))/60|0}:${String(Math.max(0,Math.ceil(S.time))%60).padStart(2,'0')}`;else w='等級 '+HOME.plv+'　'+Math.floor(HOME.xp)+'/'+xpNeed(HOME.plv);
+function hud(){let w='';if(S.raid)w=S.phase==='deploy'?'部署中':`${Math.round(razed()*100)}%・${Math.max(0,Math.ceil(S.time))/60|0}:${String(Math.max(0,Math.ceil(S.time))%60).padStart(2,'0')}`;else w=title(HOME.plv)+' Lv '+HOME.plv+'　'+Math.floor(HOME.xp)+'/'+xpNeed(HOME.plv);
   questUI();const s=[Math.floor(HOME.gold),Math.floor(HOME.food),Math.floor(HOME.wood),Math.floor(HOME.stone),pop()+'/'+popMax(),w].join('|');if(s===hudSig)return;hudSig=s;$('#vWd').textContent=Math.floor(HOME.wood);$('#vSt').textContent=Math.floor(HOME.stone);$('#vG').textContent=Math.floor(HOME.gold);$('#vF').textContent=Math.floor(HOME.food);$('#vP').textContent=pop()+'/'+popMax();const el=$('#vW');el.textContent=w;el.classList.toggle('hot',!!S.raid)}
 
 function setPause(p){if(!S)return;paused=p;$('#pause').hidden=!p}
@@ -1450,7 +1455,7 @@ musketeer:{helm:'tall',body:'#27408f',det:'sash',dc:'#c8201a',leg:'#c8201a'},
 camel:{helm:'turban',hc:'#27408f',body:'#f1ead8',det:'sash',dc:'#27408f',leg:'#e8d8a8',pc:'#c8201a'}});
 Object.assign(RAR,{cguard:1,carcher:2,valkyrie:2,seraph:3,cdragon:4,leafblade:1,druid:2,beetle:2,tigerrider:3,edragon:4,scarecrow:1,witch:2,vampire:3,werewolf:3,ndragon:4,tideguard:1,crab:2,seahorse:2,octopus:3,seaking:3,sdragon:4,raider:1,shieldmaiden:2,frostgiant:3,fdragon:4,repeater:1,glaive:2,general:3,lung:4,scimitar:1,musketeer:2,camel:2,djinn:4});
 for(const k in RAR)if(!POOL.includes(k))POOL.push(k);for(const k in C)C[k].key=k;
-Object.assign(BT,{warehouse:{n:'兵營倉庫',w:2.2,h:1.6,vh:1.7,hp:1000,lv:2,max:()=>1,t:'把士兵存起來，不佔人口。'}});COST.warehouse={w:200,s:120};CATS.find(c=>c[0]==='軍事')[1].push('warehouse');
+Object.assign(BT,{warehouse:{n:'兵營倉庫',w:2.2,h:1.6,vh:1.7,hp:1000,lv:2,max:lv=>lv>=6?2:1,t:'把士兵存起來，不佔人口。'}});COST.warehouse={w:200,s:120};CATS.find(c=>c[0]==='軍事')[1].push('warehouse');
 Object.assign(BT,{chest:{n:'寶箱',w:1,h:.8,vh:.85,hp:700},cage:{n:'牢籠',w:1.1,h:1,vh:1.35,hp:600}});
 Object.assign(BT,{mnest:{n:'怪獸巢',w:2,h:1.6,vh:1.5,hp:1000,lv:3,max:()=>1,t:'每 3 小時照顧一次，3 次孵出一隻巨型怪獸，一隻比一隻強。'}});COST.mnest={s:250,g:150};CATS.find(c=>c[0]==='軍事')[1].push('mnest');
 const MNEST=['treant','golem','cyclops','hydra'],MCARE_MS=3*3600e3;
@@ -1522,9 +1527,9 @@ function advTarget(n){const th=ISLE[(n-1)%ISLE.length],s=SETS[th[0]],lv=Math.min
   return{id:'adv',npc:1,isle:1,name:th[1]+'・冒險第 '+n+' 關',iname:th[1],set:th[0],tint:th[3],civ:th[2],lv,b:NPC[lv-1].b.map(it=>it[0]==='barracks'?[s.b,it[1],it[2],it[3]]:it).concat([[s.deco,-1.75,2.6,0],[s.deco,1.75,2.6,0]]),army:a,ul:Object.fromEntries(ro.map(k=>[k,Math.min(5,Math.ceil(n/3))]))}}
 MIS.push(['在建造選單的「文明」分頁蓋一座專屬兵營。',()=>[SETB.reduce((s,k)=>s+count(k),0),1],{tk:2}],['到「召喚」的套組圖鑑集滿任一個套組，領取套組獎勵。',()=>[HOME.sc.length,1],{tk:3}],['在靈魂熔爐把兩名不同的士兵融合成新兵種。',()=>[HOME.cnt.fuse||0,1],{tk:2}],['集滿 3 個套組。',()=>[HOME.sc.length,3],{tk:5,gold:1000}]);
 /* 建築升級：最高 Lv 3 */
-const MAXUL=3,upable=e=>e&&e.b&&e.team===0&&COST[e.key]&&!e.d.deco&&!e.d.wonder&&e.key!=='mixer'&&e.key!=='mnest',ulv=e=>e.ul||1,ulm=(e,f)=>1+f*(ulv(e)-1);
+const MAXUL=5,upable=e=>e&&e.b&&e.team===0&&COST[e.key]&&!e.d.deco&&!e.d.wonder&&e.key!=='mixer'&&e.key!=='mnest',ulv=e=>e.ul||1,ulm=(e,f)=>1+f*(ulv(e)-1);
 function setUl(e,n){const r=e.hp/e.max;e.ul=n;e.max=e.d.hp*(1+.4*(n-1));e.hp=e.max*r}
-const upCost=e=>{const c=COST[e.key],o={},f=1.5*ulv(e);for(const k in c)o[k]=Math.ceil(c[k]*f/5)*5;return o},upNeed=e=>ulv(e)>=2?4:2;
+const upCost=e=>{const c=COST[e.key],o={},f=1.5*ulv(e);for(const k in c)o[k]=Math.ceil(c[k]*f/5)*5;return o},upNeed=e=>[0,2,4,7,9][ulv(e)]||10;
 const upWhat=e=>{const d=e.d,k=e.key;return k==='house'?'人口再 +2':k==='farm'||k==='market'||k==='lumbermill'||k==='quarry'||k==='ranch'?'產量 +50%':d.dmg?'傷害 +25%':d.tr?'訓練速度加快三成':''};
 const prod=k=>S.ents.reduce((a,e)=>a+(e.b&&e.key===k&&e.hp>0&&e.team===0?ulm(e,.5):0),0);
 const upSig=e=>upable(e)?ulv(e)+'|'+(ulv(e)<MAXUL&&can(upCost(e)))+'|'+S.lv+!!e.fire:'';
@@ -1543,7 +1548,7 @@ const MAXPL=40;
 function forSale(){const L=land();if(L.fs)return L.fs;const out=[],n=(S.pl||[]).length;if(S.raid||n>=MAXPL)return L.fs=out;const R0=L.R0,M=R0+8,o=((R0%4)+4)%4,al=v=>((v-o)%4+4)%4===0;
   for(let x0=-M;x0+4<=M;x0++)if(al(x0))for(let y0=-M;y0+4<=M;y0++)if(al(y0)){let a=0,adj=false;for(let i=0;i<4;i++)for(let j=0;j<4;j++){const x=x0+i,y=y0+j;if(L.has(x,y))continue;a++;if(L.has(x-1,y)||L.has(x+1,y)||L.has(x,y-1)||L.has(x,y+1))adj=true}if(a>=8&&adj)out.push({x0,y0,a,c:Math.round((150+60*n)*a/160)*10})}
   return L.fs=out}
-const whCap=()=>{const w=HOME.ents.find(e=>e.key==='warehouse'&&e.team===0&&e.hp>0);return w?30*ulv(w):0},whN=()=>(HOME.wh||[]).length;
+const whCap=()=>HOME.ents.filter(e=>e.key==='warehouse'&&e.team===0&&e.hp>0).reduce((a,w)=>a+30*ulv(w),0),whN=()=>(HOME.wh||[]).length;
 const STOWOK=k=>typeof k==='string'&&BT[k]&&COST[k]&&!BT[k].node&&k!=='castle'&&k!=='camp';
 const invN=k=>(HOME&&HOME.inv||[]).filter(q=>q[0]===k).length;
 function plotClutter(x0,y0){const L=land(),spots=[];for(let i=0;i<4;i++)for(let j=0;j<4;j++)if(L.T.has((x0+i)+','+(y0+j)))spots.push([x0+i+.5,y0+j+.5]);
