@@ -2240,3 +2240,54 @@ html.fltype #rotate{display:none!important}
 .lab-fish .lf-t{flex:1;min-width:0;display:flex;flex-direction:column}
 .lab-fish .lf-t small{color:var(--ink-soft);font-size:12px}
 .lab-wait{color:var(--ink-soft);font-size:12px;white-space:nowrap}
+
+/* v752 介面樣本「魚缸」（#look=tank）：一個真的水族箱＋這條魚＋一排圓圓的魚；不用白色圓角卡片 */
+#sheet.tk2on .box{width:min(1100px,calc(100vw - var(--gl,0px) - var(--gr,0px) - 8px));max-height:100%;height:100%;box-sizing:border-box}
+#sheet.tk2on #sheetBody{padding:4px 10px 10px;overflow:hidden;display:flex;flex:1;min-height:0}
+.tk2{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,54fr) minmax(0,46fr);gap:14px}
+.tk2-aq{position:relative;min-height:0;display:flex;flex-direction:column;border-radius:10px 10px 6px 6px;padding:9px 9px 0;
+  background:linear-gradient(180deg,#8a5a34,#6f4526);box-shadow:inset 0 2px 0 rgba(255,255,255,.22),inset 0 -3px 0 rgba(0,0,0,.25),0 3px 0 #4f3019}
+.tk2-water{position:relative;flex:1;min-height:120px;overflow:hidden;border-radius:4px;
+  background:radial-gradient(120% 60% at 30% 0%,rgba(255,255,255,.38),transparent 60%),linear-gradient(180deg,#8fdcf0 0%,#4fb6dc 48%,#2a86bd 86%,#d9c08a 86.5%,#c7a96c 100%);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.35),inset 0 0 22px rgba(10,60,100,.35)}
+.tk2-fish{position:absolute;left:0;top:0;width:78px;height:50px;cursor:pointer;will-change:transform;filter:drop-shadow(0 3px 2px rgba(10,50,90,.28))}
+.tk2-fish.sel{filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 2px #ffe27a);z-index:2}
+.tk2-weed{position:absolute;bottom:11%;width:10px;border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,#58c27a,#2f8f57);transform-origin:50% 100%;animation:tk2sway 5s ease-in-out infinite;opacity:.9}
+.tk2-weed::after{content:'';position:absolute;left:9px;bottom:0;width:8px;height:66%;border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,#7ad693,#3a9c63)}
+@keyframes tk2sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(6deg)}}
+.tk2-bub{position:absolute;bottom:12%;width:6px;height:6px;border-radius:50%;border:1.5px solid rgba(255,255,255,.8);animation:tk2bub 7s linear infinite}
+@keyframes tk2bub{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-260px) translateX(8px);opacity:0}}
+.tk2-plate{position:absolute;left:18px;top:16px;padding:2px 9px;border-radius:3px;background:rgba(20,60,90,.55);color:#eaf8ff;font-size:12px;pointer-events:none}
+.tk2-plate b{font-size:14px}
+.tk2-signs{display:flex;gap:8px;justify-content:center;align-items:flex-start;padding:0 4px;height:46px;flex:none}
+.tk2-sign{position:relative;top:-2px;display:flex;align-items:center;gap:5px;height:38px;padding:0 13px;border:0;border-radius:0 0 9px 9px;font:inherit;color:#fff6df;cursor:pointer;
+  background:linear-gradient(180deg,#a8743f,#8a5a2c);box-shadow:0 3px 0 #5b3a1b,inset 0 1px 0 rgba(255,255,255,.25)}
+.tk2-sign::before,.tk2-sign::after{content:'';position:absolute;top:-7px;width:3px;height:8px;background:#e9d7a6;border-radius:2px}
+.tk2-sign::before{left:12px}.tk2-sign::after{right:12px}
+.tk2-sign i{font-style:normal;font-size:17px}.tk2-sign b{font-size:15px;letter-spacing:1px}
+.tk2-sign small{font-size:11px;background:#ffe9a8;color:#6b4517;border-radius:9px;padding:1px 6px;margin-left:2px}
+.tk2-sign:active{top:0;box-shadow:0 1px 0 #5b3a1b}
+.tk2-side{min-width:0;min-height:0;display:flex;flex-direction:column}
+.tk2-hd{flex:none;padding:2px 2px 0}
+.tk2-name{font-size:26px;font-weight:900;line-height:1.15;color:#17364f;letter-spacing:.5px}
+.tk2-meta{font-size:13px;color:#5f7d92;margin-top:1px}
+.tk2-tags{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:5px;font-size:12.5px;color:#2f6f8f;font-weight:700}
+.tk2-acts{flex:none;display:flex;gap:6px;justify-content:space-between;margin:10px 0 8px;padding:0 4px}
+.tk2-act{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;font:inherit;color:#33566e;cursor:pointer;padding:0;min-width:56px}
+.tk2-act i{font-style:normal;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;font-size:23px;background:#fff;box-shadow:0 3px 0 #b9d3e2,inset 0 0 0 2px #d6e8f2}
+.tk2-act span{font-size:12px;font-weight:700;white-space:nowrap}
+.tk2-act.on i{background:#ffe9a8;box-shadow:0 3px 0 #d9b25a,inset 0 0 0 2px #f3cf73}
+.tk2-act.sure i{background:#ffd2cf;box-shadow:0 3px 0 #d98a84,inset 0 0 0 2px #f0a8a2}
+.tk2-act:active i{transform:translateY(2px);box-shadow:0 1px 0 #b9d3e2,inset 0 0 0 2px #d6e8f2}
+.tk2-act:disabled{opacity:.38}
+.tk2-sort{flex:none;display:flex;gap:16px;border-bottom:2px solid #d5e6ef;padding:0 4px}
+.tk2-sort button{border:0;background:none;font:inherit;font-size:13.5px;font-weight:700;color:#7d98aa;padding:4px 0 5px;margin-bottom:-2px;border-bottom:3px solid transparent;cursor:pointer}
+.tk2-sort button.on{color:#17364f;border-bottom-color:#2f9bd8}
+.tk2-grid{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:9px 6px;padding:9px 4px 4px;align-content:start}
+.tk2-tok{position:relative;aspect-ratio:1;border-radius:50%;border:0;padding:0;cursor:pointer;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#e9f8ff,#bfe4f3 70%);box-shadow:inset 0 0 0 3px var(--ring,#a9c4cf)}
+.tk2-tok canvas{width:82%;height:auto;pointer-events:none}
+.tk2-tok i{position:absolute;right:-3px;top:-4px;font-style:normal;font-size:13px}
+.tk2-tok.sel{box-shadow:inset 0 0 0 3px var(--ring,#a9c4cf),0 0 0 3px #fff,0 0 0 5px #17364f}
+.tk2-none,.tk2-help{color:#5f7d92;font-size:14px;margin:8px 4px}
+.tk2-back{border:0;background:none;font:inherit;font-weight:800;color:#2f6f8f;padding:4px 2px 8px;cursor:pointer}
+@media (orientation:portrait){ .tk2{grid-template-columns:1fr;grid-template-rows:minmax(0,40fr) minmax(0,60fr)} .tk2-name{font-size:22px} }

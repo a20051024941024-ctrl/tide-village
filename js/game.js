@@ -16184,6 +16184,52 @@ function gpyFish0(x){ const base = FISH_BY_ID[x.f], g = base && isGuppy(x.f) ? g
     if (alb) Object.assign(c, FISH_STYLE.guppy_albino.c); c.Tail = fem ? lt(GPY_COL[g.c[0]][0], 0.55) : GPY_COL[g.c[0]][0]; c.Tail2 = fem ? lt(GPY_COL[g.c[1]][0], 0.6) : GPY_COL[g.c[1]][0];
     FISH_STYLE[key] = Object.assign({}, B, { c }); FISH_BY_ID[key] = Object.assign({}, base, { id: key, color: c.Tail }); }
   return Object.assign({}, FISH_BY_ID[key], { name: fishNameOf(x) }); }
+/* ===== v752 介面樣本「魚缸」（作者 11/24 傳了「AI 做的網站一眼看得出來」那串：什麼都塞圓角卡片、留白沒輕重、排版固定、說明太多 →「好」先拿魚缸試做）=====
+   網址加 #look=tank 才會開，其他人完全不變。想法：整個畫面只做一件事——看魚。左邊是一個真的水族箱（魚在裡面游，點魚就選牠），
+   右邊只有這條魚的名字和四顆圓按鈕，下面一排圓圓的魚；說明全部收進「？」，繁殖和配種缸變成兩塊木牌。 */
+const TK2_ON = /look=tank/.test(location.hash);
+const Tank2 = { sel: 0, view: null, pos: new Map(), raf: 0 };
+const TK2_RING = { '常見': '#a9c4cf', '稀有': '#4aa3ff', '傳說': '#f0a23a' };
+function tk2List(){ let list = rec.tank.slice(); if (tankSort === 'fav') list = list.filter(x => x.k); if (tankSort === 'big') list.sort((a, b) => b.w - a.w); else if (tankSort === 'rare') list.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity] || b.w - a.w); return list; }
+function renderTank2(body){ const T = Tank2;
+  if (T.view){ const back = el('button', 'tk2-back', '← 回魚缸'); back.addEventListener('click', () => { T.view = null; Lab.pick = null; renderTab(); }); body.appendChild(back);
+    if (T.view === 'breed'){ Breed.open = true; breedTank(); renderBreedGuide(body); } else if (T.view === 'lab'){ Lab.open = true; renderLab(body); }
+    else { const nShow = (rec.show || []).length; for (const t of [`🌊 我的海：最喜歡的魚按「我的海」，牠就會在你小島底下的海裡游（現在 ${nShow} / ${mySeaCap()} 條），來你島上的朋友也看得到。`, '⭐ 收藏：收藏的魚不會被賣掉，也不能放流。', '💙 放流：把魚放回大海，拿愛海點數。', '📖 卡片：看這條魚的詳細資料、幫牠取名字、做魚拓、掛標籤放流。', '🐣 繁殖、🧬 配種缸：在魚缸下面的兩塊木牌。']) body.appendChild(el('p', 'tk2-help', t)); }
+    return; }
+  const list = tk2List(); if (!list.some(x => x.t === T.sel)) T.sel = list.length ? list[0].t : (rec.tank[0] && rec.tank[0].t) || 0;
+  const cur = rec.tank.find(x => x.t === T.sel) || rec.tank[0], shown = new Set(shownFish().map(x => x.t)), pick = t => { T.sel = t; renderTab(); };
+  const wrap = el('div', 'tk2'), aq = el('div', 'tk2-aq'), water = el('div', 'tk2-water'), side = el('div', 'tk2-side'); wrap.append(aq, side); body.appendChild(wrap); aq.appendChild(water);
+  /* 水族箱：最多 12 條（選到的、放在我的海的、收藏的先進去） */
+  for (let i = 0; i < 3; i++){ const w = el('i', 'tk2-weed'); w.style.left = [12, 68, 86][i] + '%'; w.style.height = [34, 46, 28][i] + '%'; w.style.animationDelay = (-i * 1.3) + 's'; water.appendChild(w); }
+  for (let i = 0; i < 6; i++){ const b = el('i', 'tk2-bub'); b.style.left = (8 + i * 16 + (i % 2) * 5) + '%'; b.style.animationDelay = (-i * 1.7) + 's'; b.style.animationDuration = (6 + (i % 3) * 2) + 's'; water.appendChild(b); }
+  const swim = [cur].concat(list.filter(x => x !== cur && shown.has(x.t)), list.filter(x => x !== cur && !shown.has(x.t) && x.k), list.filter(x => x !== cur && !shown.has(x.t) && !x.k)).slice(0, 12), fishEls = [];
+  swim.forEach((x, i) => { const f = FISH_BY_ID[x.f], big = clamp(0.75 + Math.log10(Math.max(0.05, x.w) + 1) * 0.55, 0.7, 1.45), cv = fishCanvas(gpyFish(x), true, 78, 50); cv.className = 'tk2-fish' + (x === cur ? ' sel' : ''); cv.title = fishNameOf(x);
+    let P = T.pos.get(x.t); if (!P){ P = { x: 0.1 + Math.random() * 0.8, y: 0.12 + Math.random() * 0.62, v: (0.018 + Math.random() * 0.03) * (Math.random() < 0.5 ? -1 : 1), ph: Math.random() * 6.28 }; T.pos.set(x.t, P); }
+    cv.addEventListener('click', () => pick(x.t)); water.appendChild(cv); fishEls.push({ cv, P, big }); });
+  { const plate = el('div', 'tk2-plate'); plate.innerHTML = `<b>${rec.tank.length}</b> 條魚${shown.size ? `・<b>${shown.size}</b> 條在我的海` : ''}`; aq.appendChild(plate); }
+  cancelAnimationFrame(T.raf); let last = performance.now(); const tick = now => { if (!wrap.isConnected) return; const dt = Math.min(0.05, (now - last) / 1000); last = now; const W = water.clientWidth, H = water.clientHeight;
+    for (const o of fishEls){ const P = o.P; P.x += P.v * dt; if (P.x > 0.93){ P.x = 0.93; P.v = -Math.abs(P.v); } else if (P.x < 0.07){ P.x = 0.07; P.v = Math.abs(P.v); } const y = P.y + Math.sin(now / 1000 * 0.7 + P.ph) * 0.03;
+      o.cv.style.transform = `translate(${(P.x * W - 39).toFixed(1)}px, ${(y * H - 25).toFixed(1)}px) scale(${(P.v > 0 ? 1 : -1) * o.big}, ${o.big})`; } T.raf = requestAnimationFrame(tick); }; T.raf = requestAnimationFrame(tick);
+  /* 右邊：這條魚 */
+  if (cur){ const f = FISH_BY_ID[cur.f], hd = el('div', 'tk2-hd'); hd.appendChild(el('div', 'tk2-name', `${cur.n || fishNameOf(cur)} ${sexIcon(cur)}`));
+    hd.appendChild(el('div', 'tk2-meta', `${cur.n ? fishNameOf(cur) + '・' : ''}${cur.w.toFixed(2)} kg・${f.rarity}${f.of ? '・變種' : ''}`));
+    const tags = [cur.k ? '⭐ 收藏' : '', shown.has(cur.t) ? '🌊 在我的海' : '', gnIsFry(cur) ? '🐣 魚苗・明天長大' : '', ...gnChips(cur), cur.g && FISH_BY_ID[cur.g] ? `帶著${FISH_BY_ID[cur.g].name}的基因` : ''].filter(Boolean);
+    if (tags.length){ const tg = el('div', 'tk2-tags'); tags.slice(0, 5).forEach(t => tg.appendChild(el('span', '', t))); hd.appendChild(tg); } side.appendChild(hd);
+    const acts = el('div', 'tk2-acts'), act = (ic, lab, on, fn, dis) => { const b = el('button', 'tk2-act' + (on ? ' on' : '')); b.append(el('i', '', ic), el('span', '', lab)); if (dis) b.disabled = true; b.addEventListener('click', () => fn(b)); acts.appendChild(b); return b; };
+    act(cur.k ? '⭐' : '☆', cur.k ? '收藏中' : '收藏', cur.k, () => { if (setFav(cur, !cur.k)){ toast(cur.k ? `⭐ 收藏了${esc(f.name)}，不會被賣掉` : `取消收藏${esc(f.name)}`); renderTab(); } });
+    act('🌊', shown.has(cur.t) ? '拿出來' : '我的海', shown.has(cur.t), () => { if (!rec.show) rec.show = []; const i = rec.show.indexOf(cur.t); if (i >= 0) rec.show.splice(i, 1); else { if (mySeaFull()) return; rec.show.push(cur.t); } saveRecLocal(); buildTank(); renderTab(); cloudCall('set_show', { p_show: rec.show.slice() }); MySea.key = ''; });
+    act('💙', `放流 +${lovePts(f, cur.w)}`, false, b => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.classList.add('sure'); b.querySelector('span').textContent = '確定？'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.classList.remove('sure'); b.querySelector('span').textContent = `放流 +${lovePts(f, cur.w)}`; } }, 2500); return; }
+      seaMemAdd(seaMemHere(), 3, 'release'); const p = releaseLocal(cur); T.pos.delete(cur.t); renderTab(); toast(`${esc(f.name)} 游回大海了 💙 愛海點數 +${p}`); cloudCall('release_fish', { p_ts: cur.t }); }, !!cur.k);
+    act('📖', '卡片', false, () => { FishCard.t = cur.t; FishCard.edit = false; renderTab(); }); side.appendChild(acts); }
+  /* 一排圓圓的魚 */
+  const sortRow = el('div', 'tk2-sort'); [['new', '最新'], ['big', '最重'], ['rare', '稀有'], ['fav', '⭐']].forEach(([k, l]) => { const b = el('button', (tankSort || 'new') === k ? 'on' : '', l); b.addEventListener('click', () => { tankSort = k; renderTab(); }); sortRow.appendChild(b); }); side.appendChild(sortRow);
+  const grid = el('div', 'tk2-grid'); list.forEach(x => { const f = FISH_BY_ID[x.f], b = el('button', 'tk2-tok' + (cur && x.t === cur.t ? ' sel' : '')); b.style.setProperty('--ring', TK2_RING[f.rarity] || '#b58be0'); b.appendChild(fishCanvas(gpyFish(x), true, 44, 28));
+    const mk = x.k ? '⭐' : shown.has(x.t) ? '🌊' : gnIsFry(x) ? '🐣' : x.gn ? '🧬' : ''; if (mk) b.appendChild(el('i', '', mk)); b.addEventListener('click', () => pick(x.t)); grid.appendChild(b); });
+  if (!list.length) grid.appendChild(el('p', 'tk2-none', '還沒有收藏的魚。')); side.appendChild(grid);
+  requestAnimationFrame(() => { const s = grid.querySelector('.sel'); if (s && s.scrollIntoView) try { s.scrollIntoView({ block: 'nearest' }); } catch(e){} });
+  /* 木牌 */
+  const signs = el('div', 'tk2-signs'), sign = (ic, lab, sub, v) => { const b = el('button', 'tk2-sign'); b.append(el('i', '', ic), el('b', '', lab)); if (sub) b.appendChild(el('small', '', sub)); b.addEventListener('click', () => { T.view = v; renderTab(); }); signs.appendChild(b); };
+  const pairs = tankPairs().filter(p => p.pairs > 0).length, fry = rec.tank.filter(gnIsFry).length; sign('🐣', '繁殖', pairs ? `${pairs} 種配對中` : '', 'breed'); sign('🧬', '配種缸', fry ? `${fry} 條魚苗` : '', 'lab'); sign('？', '', '', 'help'); aq.appendChild(signs); }
 // 養魚繁殖說明（魚缸分頁最上面）：三個步驟＋自己每一種會生的魚現在的進度
 const Breed = { open: null };
 function renderBreedGuide(body){
@@ -20001,7 +20047,7 @@ function renderTab0(){
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
   const body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
-  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('phone', curTab === 'phone');
+  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && !Tank2.view && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone');
   { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
   try { phoneHdr(); } catch(e){}
   if (curTab === 'dex' && !LS.get('tide.guideDex', false)) LS.set('tide.guideDex', true);   /* v582 新手任務第 2 步 */
@@ -20135,6 +20181,7 @@ function renderTab0(){
     if (missing.length) resolveNames(missing).then(() => { if (curTab === 'rank' && !$('#sheet').hidden) $$('.rank .who', body).forEach(w => { const id = w.dataset.id; if (id !== myId && profileNames[id]) w.firstChild.textContent = profileNames[id]; }); });
   } else if (curTab === 'bag'){ renderBag(body);
   } else if (curTab === 'tank'){
+    if (TK2_ON && rec.tank.length && !FishCard.t){ renderTank2(body); return; }
     const nShow = (rec.show || []).length;
     body.appendChild(el('p', 'sub', homeShared() ? `你們家共用一片海：現在 ${mySeaUsed()} / ${mySeaCap()} 條（你放了 ${nShow} 條）。從小島碼頭的潛水梯下去就看得到大家的魚。按「放進我的海」或「拿出來」，只能拿出自己的。` : nShow ? `你的海裡有 ${nShow} / ${mySeaCap()} 條魚，從小島碼頭的潛水梯下去就看得到，來你島上的朋友也看得到。按「放進我的海」或「拿出來」。`
       : `你的海還是空的。最喜歡的魚按「放進我的海」，牠就會在你小島底下的海裡游（最多 ${mySeaCap()} 條，多種珊瑚可以放更多）。`));
