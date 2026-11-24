@@ -555,28 +555,28 @@ let UWALK=false,UDIE=-1;
 const RIG={militia:{s:.45,H:805,cx:289,hip:[[245,560],[335,560]],leg:[92,15],armf:{at:[176,468],p:[333,85]},armb:{at:[352,470],p:[21,103]}},
 archer:{s:.45,H:693,cx:252,atk:'bow',ord:['body','armf','armb'],hip:[[205,480],[300,480]],leg:[65,12],armf:{at:[350,341],p:[24,253],r:.25},armb:{at:[175,346],p:[24,36],r:.15}},
 cleric:{s:.45,H:875,cx:230,hip:[[185,640],[275,640]],leg:[61,15],armf:{at:[115,399],p:[280,174]},armb:{at:[365,399],p:[44,39]}},
-paladin:{q:1,s:.45,hk:1.6,H:728,cx:310,ls:.75,F:'leg',B:'armf',hipF:[[460,540],[425,540]],hipB:[[185,489],[150,489]],pF:[62,15],pB:[68,19],x:{img:'armb',at:[335,277],p:[75,72],kind:'lance'}},
-unicorn_wait:{q:1,s:.45,hk:1.35,H:767,cx:180,ls:.75,F:'leg',B:'armf',hipF:[[290,570],[255,570]],hipB:[[95,516],[60,516]],pF:[79,16],pB:[97,19],x:{img:'armb',at:[28,445],p:[315,79],back:1,kind:'tail',sc:.8}},
+paladin:{q:1,s:.45,hk:1.6,H:748,cx:322,ls:.75,F:'leg',B:'armf',hipF:[[500,560],[465,560]],hipB:[[180,554],[145,554]],pF:[62,15],pB:[77,10],x:{img:'armb',at:[315,280],p:[75,72],kind:'lance'}},
+unicorn:{q:1,s:.45,hk:1.35,H:712,cx:222,ls:.75,F:'leg',B:'armf',hipF:[[390,515],[355,515]],hipB:[[90,461],[55,461]],pF:[79,16],pB:[97,19],x:{img:'armb',at:[18,410],p:[315,79],back:1,kind:'tail',sc:.8}},
 griffin:{q:1,s:.45,hk:1.2,H:586,cx:300,fly:1,wing:{img:'leg',at:[215,370],p:[40,439],sc:.7,r:-.75}},
 mage:{s:.45,H:714,cx:258,atk:'cast',ord:['armb','body','armf'],hip:[[215,520],[300,520]],leg:[68,12],armf:{at:[375,380],p:[27,250]},armb:{at:[115,385],p:[38,32],r:.5}}};
 for(const k in RIG){if(k.endsWith('_wait'))continue;const r=RIG[k];r.im={};let n=0;for(const q of ['body','leg','armf','armb','bodyc']){const im=new Image();im.onload=()=>{r.im[q]=im;if(++n===4&&q!=='bodyc'||n===5&&!r.ok){r.ok=true;dirty=true}};im.src='img/r_'+k+'_'+q+'.png?v=1'}}
 function uQuad(g,r,k,face,sw,t,mv,nb,d){const f=(r.hk||1.32)*k/r.H,S=r.s,I=r.im,D=UDIE,S1=sw>0?Math.sin(Math.min(1,sw)*PI):0;
   if(r.fly)g.translate(0,-(d.lift??.75)+(D<0?Math.sin(t*3)*.05:0));g.scale(face*f,f);g.translate(-r.cx,-r.H);
   const pic=(im,x,y,w)=>g.drawImage(im,x,y,im.width/S,im.height/S);const p=t*8;let bob=0,tilt=0,fw=0,lg=(i,ph)=>[0,0];
-  if(D>=0){bob=r.fly?0:110*D;tilt=.12*D;lg=(i,fr)=>[(fr?-1.1:1)*D,0]}
+  if(D>=0){bob=r.fly?0:80*D;tilt=.12*D;lg=(i,fr)=>[(fr?-1.1:1)*D,0]}
   else if(mv&&!r.fly){bob=-Math.abs(Math.cos(p))*10;lg=(i,fr,ph)=>[Math.sin(p+ph)*.32,Math.max(0,Math.cos(p+ph))*16]}
   else if(!nb&&t)bob=Math.sin(t*2.2)*3;
   if(S1){fw=S1*(r.x&&r.x.kind==='lance'?30:55);if(!r.x||r.x.kind!=='lance')tilt+=S1*.14}
   g.translate(fw,0);
   const leg=(im,h,pv,fr,ph,dark)=>{const[a,l]=lg(0,fr,ph);g.save();g.translate(h[0],h[1]-l+(D>=0?bob*.5:0));g.rotate(a);if(r.ls)g.scale(r.ls,r.ls);if(dark)g.filter='brightness(.8)';pic(im,-pv[0],-pv[1]);g.restore()};
   const fx=r.cx+120,gy=r.H;g.translate(fx,gy);g.rotate(tilt);g.translate(-fx,-gy);
-  if(r.F){leg(I[r.B],r.hipB[1],r.pB,0,PI,1);leg(I[r.F],r.hipF[1],r.pF,1,0,1);leg(I[r.B],r.hipB[0],r.pB,0,0,0);leg(I[r.F],r.hipF[0],r.pF,1,PI,0)}
+  const near=()=>{leg(I[r.B],r.hipB[0],r.pB,0,0,0);leg(I[r.F],r.hipF[0],r.pF,1,PI,0)};if(r.F){leg(I[r.B],r.hipB[1],r.pB,0,PI,1);leg(I[r.F],r.hipF[1],r.pF,1,0,1);if(D<0)near()}
   g.translate(0,bob);
   const X=r.x,xa=X&&X.kind==='tail'?Math.sin(t*(mv?9:3))*.18:0,xt=()=>{g.save();g.translate(X.at[0]+(X.kind==='lance'?S1*80:0),X.at[1]);g.rotate(xa+(X.kind==='lance'?-.08*S1:0));if(X.sc)g.scale(X.sc,X.sc);pic(I[X.img],-X.p[0],-X.p[1]);g.restore()};
   const W=r.wing,wa=W?(D>=0?.3:-.25+Math.sin(t*(sw>0?22:mv?12:7))*.45):0,wg=(dk,o)=>{g.save();g.translate(W.at[0]+o,W.at[1]-o*.6);g.rotate(wa+(W.r||0)+(dk?-.3:0));const sc=W.sc||1;g.scale(sc,sc);if(dk)g.filter='brightness(.72)';pic(I[W.img],-W.p[0],-W.p[1]);g.restore()};
   if(W){wg(1,-30);wg(0,0)}if(X&&X.back)xt();
   const bd=I.bodyc&&(D>.05||(D<0&&!mv&&!(sw>0)&&t%3.7<.13))?I.bodyc:I.body;pic(bd,0,0);
-  if(X&&!X.back)xt()}
+  if(r.F&&D>=0){g.save();g.translate(0,-bob);near();g.restore()}if(X&&!X.back)xt()}
 function uRigDraw(g,r,k,face,sw,t,mv,nb){const f=1.32*k/r.H,S=r.s,I=r.im,D=UDIE;g.scale(face*f,f);g.translate(-r.cx,-r.H);
   const pic=(im,x,y)=>g.drawImage(im,x,y,im.width/S,im.height/S);
   let bob=0,la=[0,0],lift=[0,0],lx=[0,0],af=0,ab=0,lean=0,fw=0;
