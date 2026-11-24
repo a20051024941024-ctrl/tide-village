@@ -120,7 +120,7 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
       <li>建造選單分成經濟、軍事、防禦、裝飾、奇觀五類。奇觀很貴但效果強，各只能蓋一座。</li>
       <li>領地角落外有巨魔營地，巨魔會在外圍遊蕩、攻擊村民。派兵打掉營地有獎勵，過一陣子會再出現。</li>
       <li>兵種靠「召喚」收集，在各自的建築訓練；有七種怪獸只能召喚，無法訓練，陣亡後可以在墓園用金幣復活。開局送你一隻幼龍。</li>
-      <li>「出征」先花金幣搜尋對手，打贏會搶走對方的資源；別人打贏你，你也會被搶。另外有一關比一關難的冒險島，每 6 小時可以去 3 次。</li>
+      <li>「出征」先花金幣搜尋對手，打贏會搶走對方的資源；別人打贏你，你也會被搶。打真人最多搶走對方庫存的一成五，攻陷主堡是兩成五。被打之後有 8 小時護盾，自己出征護盾就結束。主堡 3 級以下不會被別人找到。另外有一關比一關難的冒險島，每 6 小時可以去 3 次。</li>
       <li>領地除了升級主堡，還能在主堡用金幣買地擴張。</li>
       <li>單指拖曳移動畫面，雙指或右下角按鈕縮放，單指點一下選取。</li></ol></div>
     <div class="panel"><h2>兵種圖鑑</h2><ul class="ul" id="uL"></ul></div>
@@ -136,7 +136,7 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
   </section>
   <section class="ov" id="raids" hidden>
     <p class="big" style="font-size:34px;margin-top:6px">出征</p><p class="sub" id="rT"></p>
-    <div class="panel"><h2>搜尋對手</h2><p class="note" style="margin:0 0 8px">花金幣找一位和你主堡等級相近的領主。打贏會搶走對方一部分庫存，攻陷主堡搶得更多。</p><div id="rl"></div><div class="seg" style="margin-top:8px"><button id="rSearch"></button><button id="rAtk">攻打</button></div></div>
+    <div class="panel"><h2>搜尋對手</h2><p class="note" style="margin:0 0 8px">花金幣找一位和你主堡等級相近的領主。打贏會搶走對方一部分庫存，攻陷主堡搶得更多。有護盾或主堡不到 3 級的人不會被找到。</p><div id="rl"></div><div class="seg" style="margin-top:8px"><button id="rSearch"></button><button id="rAtk">攻打</button></div></div>
     <div class="panel"><h2>冒險島</h2><p class="note" id="rAdvT" style="margin:0 0 8px"></p><div class="seg"><button id="rAdv"></button></div></div><p class="sub" id="rN"></p>
     <button class="go alt" id="bRC">取消</button>
   </section>
@@ -158,6 +158,23 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
     <button class="go" id="bRep">知道了</button>
   </section>
 </div>
+<script>
+/* 潮汐釣魚村：嵌在村子裡的時候，雲端接村子的 Supabase（supabase/221_zc.sql）。
+   這份遊戲原本接的是 Claude 作品頁的資料庫，寫法是 db.doc('bases/我').set(...) 這種；這裡做一層一樣寫法的轉接，遊戲本體不用改。
+   資料庫還沒裝好、或沒登入的時候，這裡什麼都不做，遊戲會自己變成離線（只打電腦領主）。 */
+(()=>{let api=null;try{api=window.parent!==window&&parent.__zcApi}catch(e){}if(!api||!api.rpc)return;let uid=null;try{uid=api.uid()}catch(e){}if(!uid)return;
+const snap=(id,data)=>({id,exists:data!=null,data:()=>data});
+const db={doc(path){const[col,id]=path.split('/');return{
+  get:async()=>{if(col==='bases'){const r=await api.rpc('zc_my',{});window.__zcShield=r&&+r.shield||0;return snap(id,r&&r.body||null)}return snap(id,null)},
+  set:async body=>{if(col==='bases'){const r=await api.rpc('zc_save',{p_body:body});if(r&&r.shield!=null)window.__zcShield=+r.shield;return}
+    if(col==='raids'){const l=(body&&body.list)||[],x=l[l.length-1];if(x&&x.d)await api.rpc('zc_raid',{p_def:x.d,p_pct:Math.round(+x.p)||0,p_loot:x.l||{},p_civ:Math.round(+x.c)||0,p_t:Math.round(+x.t)||Date.now()})}}}},
+ collection(col){const q={limit(){return q},get:async()=>{
+  if(col==='bases'){const r=await api.rpc('zc_find',{});return{docs:(r||[]).map(x=>snap(x.id,x.body))}}
+  if(col==='raids'){const r=await api.rpc('zc_reports',{});return{docs:(r||[]).map(x=>snap(x.id,{list:x.list}))}}
+  return{docs:[]}}};return q}};
+const user={id:async()=>uid,can:async()=>true,profiles:async ids=>{const o={};if(!ids||!ids.length)return o;const r=await api.rpc('zc_names',{p_ids:ids});for(const x of r||[])o[x.id]={name:x.name};return o}};
+window.claude={use:async n=>n==='db'?db:n==='user'?user:null}})();
+</script>
 <script>
 {
 const W=12,H=24,PI=Math.PI;
@@ -975,7 +992,7 @@ function deploy(di){const dr=DIRS[di],R=RR()+2.2,n=S.army.length,cols=Math.ceil(
   S.phase='fight';selU=new Set();cam.x=dr[1]*R*.6;cam.y=dr[2]*R*.6;cam.z=Math.max(zmin(),30);clampCam();barSig='';snd('horn',196,.8,'sawtooth',.07,-40)}
 const razed=()=>{const left=S.ents.filter(e=>e.b&&!e.d.wall&&!e.d.deco&&e.team===1).length;return S.total?1-left/S.total:0};
 function endRaid(why){const t=S.tgt,fell=S.fallen,pct=S.fallen?1:razed(),win=S.fallen||pct>=.5,gain=Math.round(loot(t.lv)*pct*(S.fallen?1.5:1)),back=S.phase==='deploy'?S.army:S.ents.filter(e=>!e.b&&e.team===0&&e.hp>0&&!e.temp),lost=S.army.length-back.length;
-  S=HOME;for(const u of back){u.role='guard';u.ord=null;u.tg=null;u.breach=null;u.path=null;u.navK=null;u.post=u.home;u.x=u.home.x;u.y=u.home.y;u.id=S.id++;S.ents.push(u)}S.gold+=gain;const tk=win?(fell?2:1):0;S.tk+=tk;if(S.ev.w!==weekId())S.ev={w:weekId(),wins:0,got:false};if(win){S.ev.wins++;S.cnt.wins=(S.cnt.wins||0)+1}if(fell)S.cnt.falls=(S.cnt.falls||0)+1;let gw=Math.round(gain*.6),gst=Math.round(gain*.4),gf=0,gg=0,stl=null;const rs=t.isle?null:tres(t),sh=pct*(fell?.5:.3);if(rs){stl={g:Math.round(rs.gold*sh),w:Math.round(rs.wood*sh),s:Math.round(rs.stone*sh),f:Math.round(rs.food*sh)};gg=stl.g;gw+=stl.w;gst+=stl.s;gf=stl.f}if(t.isle&&win){const n=HOME.adv.n;gg=100+60*n;gw+=40*n;gst+=40*n;if(n%2===0)S.tk++;HOME.adv.n++}S.wood+=gw;S.stone+=gst;S.food+=gf;S.gold+=gg;if(win)addXp(t.isle?50:60);
+  S=HOME;for(const u of back){u.role='guard';u.ord=null;u.tg=null;u.breach=null;u.path=null;u.navK=null;u.post=u.home;u.x=u.home.x;u.y=u.home.y;u.id=S.id++;S.ents.push(u)}S.gold+=gain;const tk=win?(fell?2:1):0;S.tk+=tk;if(S.ev.w!==weekId())S.ev={w:weekId(),wins:0,got:false};if(win){S.ev.wins++;S.cnt.wins=(S.cnt.wins||0)+1}if(fell)S.cnt.falls=(S.cnt.falls||0)+1;let gw=Math.round(gain*.6),gst=Math.round(gain*.4),gf=0,gg=0,stl=null;const rs=t.isle?null:tres(t),sh=pct*(t.npc?(fell?.5:.3):(fell?.25:.15));if(rs){stl={g:Math.round(rs.gold*sh),w:Math.round(rs.wood*sh),s:Math.round(rs.stone*sh),f:Math.round(rs.food*sh)};gg=stl.g;gw+=stl.w;gst+=stl.s;gf=stl.f}if(t.isle&&win){const n=HOME.adv.n;gg=100+60*n;gw+=40*n;gst+=40*n;if(n%2===0)S.tk++;HOME.adv.n++}S.wood+=gw;S.stone+=gst;S.food+=gf;S.gold+=gg;if(win)addXp(t.isle?50:60);
   sel=null;selU=new Set();place=null;gridDirty=true;cam.x=0;cam.y=.5;cam.z=40;clampCam();barSig='';$('#enemy').hidden=true;dirty=true;
   $('#resT').textContent=why==='撤退'&&pct<.5?'撤退':win?'得勝':'失利';$('#resS').textContent=`摧毀 ${Math.round(pct*100)}%　戰利品 金${gain+gg} 木${gw} 石${gst}${gf?' 糧'+gf:''}`+(tk?`　召喚券 +${tk}`:'');$('#resD').textContent=`${why}。${lost?'折損 '+lost+' 名士兵，':'無人陣亡，'}${back.length} 人回到領地。`;$('#result').hidden=false;if(Object.values(HOME.dead).some(v=>v>0))$('#resD').textContent+=' 陣亡的怪獸可以到「召喚」裡的墓園用金幣復活。';snd('end',win?520:160,.6,'triangle',.09,win?300:-80);
   if(!t.npc&&pct>0)logRaid(t.id,pct,stl)}
@@ -1025,7 +1042,7 @@ async function reports(){const q=await tmo(DB.collection('raids').limit(60).get(
   if(!hits.length)return;const tg=HOME||saved;for(const h of hits){if(tg)['gold','wood','stone','food'].forEach((k,i)=>{h.l[i]=Math.min(h.l[i],Math.floor(tg[k]||0));tg[k]=(tg[k]||0)-h.l[i]})}hits.sort((a,b)=>b.t-a.t);let ps={};try{ps=await USR.profiles(hits.map(h=>h.a))}catch(e){}
   const ul=$('#repL');ul.textContent='';for(const h of hits.slice(0,6)){const li=document.createElement('li');li.textContent=`${(ps[h.a]&&ps[h.a].name)||'無名領主'}率軍攻打了你的領地，摧毀 ${h.p}%${h.l.some(v=>v)?`，搶走 金${h.l[0]} 木${h.l[1]} 石${h.l[2]} 糧${h.l[3]}`:''}。`;ul.append(li)}
   $('#rep').hidden=false;try{localStorage.setItem('zc_seen',hits[0].t)}catch(e){}}
-function menuNet(){$('#net').textContent=netState==='on'?(canWrite?'已連線：你的領地會存到雲端，其他玩家可以來攻打。':'已連線（唯讀）：你可以攻打別人，但你的領地不會公開。'):netState==='wait'?'連線中…':'離線：進度只存在這台裝置，只能攻打電腦領主。';
+function menuNet(){$('#net').textContent=netState==='on'?(canWrite?'已連線：你的領地會存到雲端，其他玩家可以來攻打。'+(()=>{const m=(+window.__zcShield||0)-Date.now();return m>60000?`你有護盾，還有 ${m>=3600e3?Math.ceil(m/3600e3)+' 小時':Math.ceil(m/60000)+' 分鐘'}沒人能打你。`:''})():'已連線（唯讀）：你可以攻打別人，但你的領地不會公開。'):netState==='wait'?'連線中…':'離線：進度只存在這台裝置，只能攻打電腦領主。';
   const b=$('#bCont');b.hidden=!saved;if(saved)b.textContent=`繼續我的領地（主堡 Lv ${saved.lv}・兵種 ${Object.keys(saved.own).length} 種）`}
 async function net(){try{saved=clean(JSON.parse(localStorage.getItem('zf5_save')))}catch(e){}menuNet();
   try{const cl=window.claude;if(!cl||!cl.use)throw 0;const[db,user]=await Promise.all([cl.use('db'),cl.use('user')]);if(!db||!user)throw 0;const id=await user.id();if(!id)throw 0;DB=db;USR=user;UID=id;

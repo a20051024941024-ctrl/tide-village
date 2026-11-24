@@ -13891,7 +13891,7 @@ function cat3Tick(pt, dt, t, mv, tx, tz){ const U = pt.m.userData, C = U.cat3, b
 /* ===== v763 築城守土：作者「整個加進來，讓玩家可以在遊戲裡玩另外一款遊戲」=====
    《築城守土》是作者自己做的另一款遊戲（築城、養兵、出征），整份放在 zc/index.html，這裡只負責入口：潮汐廣場邊一張沙盤桌，走過去按「玩」就整個畫面切過去，按「回潮汐村」再回來。
    兩邊的程式和存檔是分開的（金幣不互通）。玩的時候村子的畫面降到每秒 4 張省電，角色會拿出手機（別人看得到）。 */
-const ZC = { on: false, el: null, at: [9.2, 8.6, -0.75], g: null, flags: [], music: false, V: 1 };
+const ZC = { on: false, el: null, at: [9.2, 8.6, -0.75], g: null, flags: [], music: false, V: 2 };
 function buildZcTable(){ const [X, Z, R] = ZC.at, y0 = groundHeight(X, Z), g = new THREE.Group(); g.position.set(X, y0, Z); g.rotation.y = R; g.userData.keep = true; g.userData.dyn = true; scene.add(g); ZC.g = g;
   const B = (sz, c, p, par) => { const b = box(sz, c, p); (par || g).add(b); return b; }, wood = '#8a5a2b', woodD = '#5a3a22';
   for (const sx of [-0.72, 0.72]) for (const sz of [-0.45, 0.45]) B([0.1, 0.72, 0.1], woodD, [sx, 0.36, sz]);
@@ -13916,6 +13916,8 @@ function zcOpen(){ if (ZC.on) return; ZC.on = true; try { if (mySeat) standUp();
   try { pushPresence(true); } catch(e){} setTimeout(() => { try { fr.focus(); } catch(e){} }, 300); }
 function zcClose(){ if (!ZC.on) return; ZC.on = false; try { if (ZC.el) ZC.el.remove(); } catch(e){} ZC.el = null; try { if (ZC.music && musicOn){ ensureAudio(); MUSIC.start(); } } catch(e){} try { Power.input = performance.now(); pushPresence(true); } catch(e){} }
 addEventListener('message', e => { try { if (e.origin === location.origin && e.data && e.data.zc === 'exit') zcClose(); } catch(x){} });
+/* 《築城守土》的雲端（領地、出征、戰報）用村子這邊已經登入的帳號，不用再登入一次。資料庫在 supabase/221_zc.sql */
+window.__zcApi = { uid: () => (Cloud.on && Cloud.sb && Cloud.userId) || null, rpc: async (fn, args) => { if (!/^zc_[a-z]+$/.test(fn)) throw new Error('bad fn'); const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; return data; } };
 function petLabel(name){ const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = 'rgba(255,255,255,0.88)'; const w = Math.min(244, 30 + c.measureText ? 40 + name.length * 30 : 200); c.beginPath(); c.roundRect ? c.roundRect((256 - w) / 2, 8, w, 46, 22) : c.rect((256 - w) / 2, 8, w, 46); c.fill(); c.fillStyle = '#18334a'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 128, 32);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest:false, transparent:true })); sp.scale.set(1.1, 0.28, 1); sp.renderOrder = 5; return sp; }
 function petMake(w){ const m = petModel(w.kind, w.acc || 0, w.var, w.shine), lb = petLabel(w.name || PET_KINDS[w.kind].name); lb.position.y = w.kind === 'gull' ? 0.6 : 0.62; lb.userData.nameLabel = true; m.add(lb); m.userData.lb = lb; scene.add(m); return { kind: w.kind, name: w.name, acc: w.acc || 0, m, pos: new THREE.Vector3(), vel: 0, rot: 0, ph: Math.random() * 6, fly: 0, key: petKey(w), wander: null }; }
@@ -21794,6 +21796,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u764', d:'11/24', items:[
+    ['🏰', '《築城守土》的出征接上線了：可以打到其他玩家的領地。最多搶走對方庫存的一成五，被打後有 8 小時護盾，主堡 3 級以下不會被找到。'] ] },
   { id:'u763', d:'11/24', items:[
     ['🏰', '潮汐廣場邊多了一張沙盤桌：走過去可以玩另一款遊戲《築城守土》，築城、養兵、出征。按「回潮汐村」就回來。'] ] },
   { id:'u762', d:'11/24', items:[
