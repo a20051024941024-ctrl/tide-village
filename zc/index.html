@@ -954,16 +954,16 @@ const cost=k=>{const c=COST[k],mm=BT[k].wall?1:1+.2*count(k),o={};for(const r in
 function nodeFits(key,x,y){const d=BT[key],hw=d.w/2,hh=d.h/2,L=lim()-.3;if(Math.abs(x)+hw>L||Math.abs(y)+hh>L)return false;for(const o of S.ents)if(o.b?o.hp>0&&Math.abs(o.x-x)<o.hw+hw+1.1&&Math.abs(o.y-y)<o.hh+hh+1.1:Math.hypot(o.x-x,o.y-y)<1)return false;return true}
 function spawnNode(key,rmin,rmax){for(let i=0;i<50;i++){const a=Math.random()*6.283,r=rmin+Math.random()*(rmax-rmin),x=Math.round(Math.cos(a)*r*4)/4,y=Math.round(Math.sin(a)*r*4)/4;if(nodeFits(key,x,y))return mkB(2,0,key,x,y,0)}return null}
 function genNodes(n,rmin){const far=lim()*1.35;for(let i=0;i<n;i++)spawnNode('tree',rmin,far);for(let i=0;i<Math.ceil(n/7);i++){spawnNode('goldmine',rmin+.8,far);spawnNode('stonepile',rmin+.8,far)}}
-const CAMPXY=[[1,1],[-1,-1]];
-function spawnCamp(i){const R=RR()+1.75,sx=CAMPXY[i][0],sy=CAMPXY[i][1],x=sx*R,y=sy*R;for(const o of S.ents)if(o.b&&o.team===2&&Math.abs(o.x-x)<o.hw+1.7&&Math.abs(o.y-y)<o.hh+1.4)o.hp=0;S.ents=S.ents.filter(e=>e.hp>0);
+const CAMPXY=[[1,1],[-1,-1]],campR=()=>Math.max(RR()+1.75,lim()*.5);
+function spawnCamp(i){const R=campR(),sx=CAMPXY[i][0],sy=CAMPXY[i][1],x=sx*R,y=sy*R;for(const o of S.ents)if(o.b&&o.team===2&&Math.abs(o.x-x)<o.hw+1.7&&Math.abs(o.y-y)<o.hh+1.4)o.hp=0;S.ents=S.ents.filter(e=>e.hp>0);
   const c=mkB(1,3,'camp',x,y,0),n=S.cnt.camps||0;c.ci=i;c.wt=40;['goblin','goblin'].concat(n>=1?['troll']:[],n>=3?['ogre']:[],n>=5?['troll','goblin']:[]).forEach((k,j)=>{const u=mkU(1,3,k,x-sx*(1.5+(j%2)*.7)+rnd(-.4,.4),y-sy*(1.3+(j>>1)*.7)+rnd(-.4,.4),'guard',1+Math.floor(n/2));u.camp=c})}
 const FORT_MS=10*60e3,BOSS_MS=30*60e3,BOSSK=['ogre','cyclops','hydra','dragon'];
-function spawnFort(){const R=RR(),cx=-(R+6.6),cy=0,n=S.cnt.forts||0,kind=n%2?'cage':'chest',lv=1+Math.floor(n/2);
+function spawnFort(){const R=RR(),cx=-Math.max(R+6.6,lim()*.72),cy=0,n=S.cnt.forts||0,kind=n%2?'cage':'chest',lv=1+Math.floor(n/2);
   for(const o of S.ents)if(o.b&&o.team===2&&Math.abs(o.x-cx)<4.2&&Math.abs(o.y-cy)<3.6)o.hp=0;S.ents=S.ents.filter(e=>e.hp>0);
   const W=(x,y,r)=>{const w=mkB(1,3,'stonewall',x,y,r);w.fort=1};W(cx,cy-2.4,0);W(cx,cy+2.4,0);W(cx-2.4,cy-1.5,1);W(cx-2.4,cy+1.5,1);W(cx+2.4,cy-1.9,1);W(cx+2.4,cy+1.9,1);
   const c=mkB(1,3,kind,cx-.6,cy,0);c.fort=1;
   ['goblin','troll','goblin'].concat(n>=2?['ogre']:[],n>=4?['troll','minotaur']:[]).forEach((k,j)=>{const u=mkU(1,3,k,cx+.7+(j%2)*.8,cy-1.1+(j>>1)*.9,'guard',lv);u.fort=1});gridDirty=true}
-function spawnBoss(){const R=RR(),x=R+7.6,y=0,n=S.cnt.boss||0,k=BOSSK[Math.min(BOSSK.length-1,n)];
+function spawnBoss(){const R=RR(),x=Math.max(R+7.6,lim()*.76),y=0,n=S.cnt.boss||0,k=BOSSK[Math.min(BOSSK.length-1,n)];
   for(const o of S.ents)if(o.b&&o.team===2&&Math.abs(o.x-x)<2.5&&Math.abs(o.y-y)<2.5)o.hp=0;S.ents=S.ents.filter(e=>e.hp>0);
   const u=mkU(1,3,k,x,y,'guard',1+n);u.boss=1;u.r*=1.6;u.max*=4+n;u.hp=u.max;u.pm*=1.5;u.post={x,y}}
 function lairTick(){if(S.raid||!HOME)return;const now=Date.now();
@@ -1674,7 +1674,7 @@ function drawSigns(now){if(S.raid)return;for(const p of forSale()){const x=p.x0+
     if(on||place){g.setLineDash([.3,.2]);box(g,p.x0+.06,p.y0+.06,3.88,3.88,on?'rgba(255,224,138,.2)':null,on?'#ffe08a':'rgba(255,255,255,.25)',on?.08:.04);g.setLineDash([])}
     g.save();g.translate(x,y+.3);ell(g,.03,.02,.3,.07,'rgba(0,0,0,.22)');ln(g,-.2,0,-.2,-.5,WDD,.06);ln(g,.2,0,.2,-.5,WDD,.06);box(g,-.44,-.9,.88,.48,'#d9b860',DK,.03,.04);box(g,-.44,-.9,.88,.13,'#b02a22',DK,.02,.03);g.restore();if(cam.z>=36)txt(p.c+'金',x,y-.26,.19,'#2a1c10')}
   if(!S.raid&&HOME===S)for(const e of S.ents)if(e.b&&e.team===0&&e.hp>0&&WHV[e.key]&&whvReady(e.key))txt('收成！',e.x,e.y-e.d.vh-.3+Math.sin(performance.now()/300)*.08,.34,'#ffe08a','#150d07');
-  for(let i=0;i<2;i++)if(S.campT&&S.campT[i]>0&&!S.ents.some(e=>e.key==='camp'&&e.ci===i&&e.hp>0)){const R=RR()+1.75,x=CAMPXY[i][0]*R,y=CAMPXY[i][1]*R,t=Math.ceil(S.campT[i]);txt('巨魔 '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+' 後回來',x,y,.24,'#f4ecd8','#150d07')}}
+  for(let i=0;i<2;i++)if(S.campT&&S.campT[i]>0&&!S.ents.some(e=>e.key==='camp'&&e.ci===i&&e.hp>0)){const R=campR(),x=CAMPXY[i][0]*R,y=CAMPXY[i][1]*R,t=Math.ceil(S.campT[i]);txt('巨魔 '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+' 後回來',x,y,.24,'#f4ecd8','#150d07')}}
 /* 選框：已選單位的頭像與血條；框選工具 */
 let boxMode=false;
 const ptHTML=us=>`<div class="pts">${us.slice().sort((a,b)=>a.key<b.key?-1:a.key>b.key?1:a.id-b.id).map(u=>`<button class="pt" data-a="one" data-k="${u.id}"><canvas width="72" height="72" data-u="${u.key}"></canvas><span><i></i></span></button>`).join('')}</div>`;
