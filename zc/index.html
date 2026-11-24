@@ -177,6 +177,7 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
       <li>領地左邊有石牆圍著的營地，打破裡面的寶箱有大獎，打破牢籠可以救出一隻稀有兵種。右邊有頭目，又大又硬，打倒有召喚券。打完過一陣子會再出現，一次比一次強。</li>
       <li>「出征」裡的海圖有七座島，每座分一到三星，一星打過開二星，三星有頭目，第一次打過有召喚券。主堡 Lv 3 可以蓋「怪獸巢」，每 3 小時照顧一次，三次孵出一隻巨型怪獸。</li>
       <li>主堡最高 10 級，每升一級解鎖新東西，點主堡會寫下一級有什麼。建築最高升到 Lv 5。玩家等級沒有上限，每幾級換一個稱號：見習領主、騎士、男爵、子爵、伯爵、侯爵、公爵、大公、國王、皇帝。</li>
+      <li>新的五套兵：叢林部族、金翼精靈、鬥技場、地獄與泰坦、英雄與奇兵，各有專屬兵營（建造的「文明」分頁）。自爆兵會炸掉一片，僧侶能讓敵人倒戈，象騎兵會把敵人踩暈。英雄只能召喚，陣亡可以在墓園復活。</li>
       <li>人口最多 120（主堡 8 級、10 級各再加 20）。兵太多可以蓋「兵營倉庫」，選士兵按「存進倉庫」，存著的不佔人口，要用再點倉庫拿出來。</li>
       <li>領地要點外面的木牌用金幣買，新買的地上有樹和石頭，派村民清掉才能蓋。不用的建築可以收進倉庫，之後在「建造」的倉庫分頁免費擺回來。</li>
       <li>單指拖曳移動畫面，雙指或右下角按鈕縮放，單指點一下選取。</li></ol></details>
@@ -341,6 +342,7 @@ function arm(g,w,s,t,L,mv){g.save();
   const blade=(len,wd)=>{ln(g,0,0,len,0,DK,wd+.035);ln(g,0,0,len,0,BL2,wd);ln(g,.07,-.075,.07,.075,'#b8902f',.045)};
   if(w==='pick'||w==='hoe'){g.translate(.17,-.5);g.rotate(-1.3+s*1.7);ln(g,-.08,0,.44,0,WDD,.05);if(w==='pick'){g.beginPath();g.moveTo(.36,-.2);g.quadraticCurveTo(.52,0,.36,.2);g.strokeStyle=DK;g.lineWidth=.08;g.lineCap='round';g.stroke();g.strokeStyle='#aeb4bd';g.lineWidth=.045;g.stroke()}else box(g,.38,-.02,.07,.18,'#aeb4bd',DK,.02)}
   else if(w==='sack'){ell(g,-.2,-.52,.17,.2,L.sack||'#c9a56a',DK,.025);ln(g,-.2,-.72,-.14,-.66,DK,.03)}
+  else if(w==='blow'){g.translate(.12,-.74);ln(g,0,0,.52,-.03,DK,.065);ln(g,0,0,.52,-.03,'#c9a24a',.038);for(const o of[.15,.32])ln(g,o,-.035,o,.025,'#2f9a6a',.03);if(s>.4)ell(g,.6,-.04,.05*s,.035*s,'rgba(255,255,255,.75)')}
   else if(w==='trident'){g.translate(.15+s*.2,-.5);g.rotate(-.95+s*.8);ln(g,-.28,0,.52,0,DK,.07);ln(g,-.28,0,.52,0,'#c9a24a',.04);ln(g,.5,-.1,.5,.1,'#ffe08a',.04);for(const o of[-.1,0,.1]){ln(g,.5,o,.7,o,DK,.055);ln(g,.5,o,.7,o,'#ffe08a',.03)}}
   else if(w==='claw'){g.translate(.14,-.52);g.rotate(-.7+s*1.3);ln(g,0,0,.26,0,DK,.12);ln(g,0,0,.26,0,L.skin||SK,.085);for(const o of[-.05,0,.05])ln(g,.27,o,.38,o*1.7,'#f4f0e4',.028)}
   else if(w==='pumpkin'){if(s<.5){ell(g,.12,-1.0+s*.3,.12,.105,'#f08a1e',DK,.022);ln(g,.12,-1.1+s*.3,.1,-1.16+s*.3,'#3f6b2a',.03)}ln(g,.14,-.6,.12,-.88,L.arm||'#c9a56a',.06)}
@@ -396,6 +398,9 @@ function helm(g,L){const x=.02,y=-.8,h=L.helm,hc=L.hc;
   else if(h==='cyclops'){ell(g,x+.05,y-.03,.085,.08,'#fff',DK,.022);ell(g,x+.08,y-.03,.04,.045,'#3d6fb8');ell(g,x+.09,y-.03,.018,.02,DK);ln(g,x-.04,y-.13,x+.14,y-.11,DK,.035);poly(g,[x-.03,y-.13,x+.02,y-.28,x+.07,y-.13],'#ece6d6',DK,.018)}
   else if(h==='halo'){dome(g,x,y-.03,.135,.15,GOLD);poly(g,[x-.1,y-.06,x-.32,y-.3,x-.2,y-.1,x-.3,y-.06,x-.12,y+.02],'#fff',DK,.018);ln(g,x-.13,y-.03,x+.13,y-.03,'#fff',.028);ln(g,x+.105,y-.04,x+.105,y+.05,GOLD,.035);ell(g,x,y-.3,.13,.035,null,'#ffe08a',.032)}
   else if(h==='circlet'){const c=hc||'#f0d070';poly(g,[x-.12,y-.08,x-.24,y+.3,x-.08,y+.24,x-.03,y-.1],c,DK,.02);dome(g,x-.01,y-.04,.138,.135,c);ln(g,x-.12,y-.07,x+.13,y-.07,GOLD,.03);ell(g,x+.09,y-.08,.025,.03,'#7fe8ff');if(L.halo)ell(g,x,y-.32,.15,.04,null,'#ffe08a',.035)}
+  else if(h==='glad'){const c=hc||'#b8bec8';dome(g,x,y-.02,.148,.148,c);box(g,x+.02,y-.06,.13,.13,'#3d434b',DK,.015);for(let i=0;i<3;i++)ln(g,x+.05+i*.04,y-.05,x+.05+i*.04,y+.06,c,.015);ln(g,x-.15,y+.06,x+.14,y+.06,c,.04);g.beginPath();g.moveTo(x-.12,y-.12);g.quadraticCurveTo(x,y-.38,x+.14,y-.12);g.lineTo(x+.08,y-.12);g.quadraticCurveTo(x,y-.28,x-.06,y-.12);g.closePath();g.fillStyle=L.pc||'#c8201a';g.fill();g.strokeStyle=DK;g.lineWidth=.015;g.stroke()}
+  else if(h==='feather'){const cs=L.fcs||['#e8452e','#2f9a6a','#ffd23c','#2f86e0','#e8452e'];for(let i=0;i<5;i++){g.save();g.translate(x-.03,y-.06);g.rotate(-.95+i*.35);ell(g,0,-.2,.05,.15,cs[i],DK,.015);ln(g,0,-.08,0,-.32,'rgba(0,0,0,.25)',.01);g.restore()}box(g,x-.14,y-.07,.29,.08,hc||GOLD,DK,.015);ell(g,x+.03,y-.03,.035,.035,'#2fa8a0',DK,.01)}
+  else if(h==='jaguar'){const c=hc||'#e8a838';dome(g,x-.01,y-.03,.148,.142,c);poly(g,[x-.14,y-.02,x-.22,y+.22,x-.08,y+.12],c,DK,.02);for(const o of[-.09,.05])poly(g,[x+o-.045,y-.12,x+o,y-.25,x+o+.05,y-.12],c,DK,.015);poly(g,[x+.05,y-.13,x+.27,y-.08,x+.25,y+.01,x+.07,y-.02],c,DK,.02);ell(g,x+.26,y-.05,.022,.018,DK);ell(g,x+.12,y-.09,.02,.016,'#9fe04a',DK,.008);for(const[a,b]of[[-.07,-.08],[.02,-.11],[-.11,.01],[.15,-.06],[-.17,.12]])ell(g,x+a,y+b,.024,.019,'#5a3a1a')}
   else if(h==='leaf'){const c=hc||'#c9a24a';poly(g,[x-.12,y-.08,x-.2,y+.18,x-.07,y+.12,x-.03,y-.1],c,DK,.02);dome(g,x-.01,y-.04,.138,.135,c);for(const[a,b,r]of[[-.1,-.14,-.9],[0,-.19,-.2],[.09,-.15,.5]]){g.save();g.translate(x+a,y+b);g.rotate(r);ell(g,0,-.05,.035,.075,'#5d8c38',DK,.012);g.restore()}}
   else if(h==='antler'){const c=hc||'#4a5a2a';ell(g,x-.02,y-.01,.155,.16,c,DK,.025);ell(g,x+.055,y+.015,.08,.09,L.skin||SK);ell(g,x+.1,y,.014,.018,DK);ell(g,0,-.65,.2,.065,c,DK,.02);for(const o of[-.08,.03]){ln(g,x+o,y-.14,x+o-.05,y-.4,'#c9b28a',.035);ln(g,x+o-.03,y-.28,x+o+.07,y-.36,'#c9b28a',.028);ln(g,x+o-.045,y-.34,x+o-.14,y-.4,'#c9b28a',.025)}}
   else if(h==='witch'){const c=hc||'#3a2a5e';poly(g,[x-.12,y-.06,x-.2,y+.2,x-.08,y+.14,x-.04,y-.08],'#3f6b2a',DK,.018);poly(g,[x-.14,y-.06,x+.14,y-.06,x+.05,y-.32,x-.1,y-.5,x-.26,y-.46,x-.1,y-.4],c,DK,.025);ell(g,x,y-.06,.26,.055,c,DK,.025);ln(g,x-.12,y-.11,x+.11,y-.11,'#f08a1e',.04);box(g,x-.035,y-.15,.07,.07,null,GOLD,.02)}
@@ -504,12 +509,12 @@ function dragon(g,col,bel,s,t,o){o=o||{};const wc=o.wc||col,hc=o.hc||'#ece6d6',f
   if(s>.25){ell(g,.93,-.7,.08+s*.07,.06+s*.04,fc);ell(g,.9,-.7,.04,.03,o.fc?'#fff':'#ffd23c')}
   for(let i=0;i<4;i++)poly(g,[-.25+i*.14,-.44,-.2+i*.14,-.57,-.13+i*.14,-.45],'#ece6d6',DK,.012);
   g.save();g.translate(.05,-.4);wing(g,wc,t,0,1.4);g.restore()}
-function griffin(g,s,t){const tan='#c9953a',wh='#f1ead8';
-  g.save();g.translate(-.02,-.42);wing(g,'#8a5a2b',t,1.2,1.1);g.restore();curve(g,-.38,-.3,-.7,-.36,-.72,-.1,tan,.05);ell(g,-.72,-.08,.06,.07,'#6b4423',DK,.015);
+function griffin(g,s,t,o){o=o||{};const tan=o.tan||'#c9953a',wh=o.wh||'#f1ead8';
+  g.save();g.translate(-.02,-.42);wing(g,o.w1||'#8a5a2b',t,1.2,1.1);g.restore();curve(g,-.38,-.3,-.7,-.36,-.72,-.1,tan,.05);ell(g,-.72,-.08,.06,.07,'#6b4423',DK,.015);
   ln(g,-.25,-.15,-.3,.08,DK,.11);ln(g,-.25,-.15,-.3,.08,tan,.07);ln(g,.2,-.15,.26,.08,DK,.1);ln(g,.2,-.15,.26,.08,'#e8b830',.06);
   ell(g,0,-.3,.42,.2,tan,DK,.03);ell(g,.3,-.42,.2,.22,wh,DK,.03);ell(g,.42,-.68,.15,.14,wh,DK,.03);poly(g,[.52,-.72,.73,-.63,.52,-.57],'#e8b830',DK,.02);ell(g,.46,-.7,.025,.025,DK);poly(g,[.34,-.78,.3,-.93,.42,-.8],wh,DK,.02);
-  g.save();g.translate(-.08,-.42);g.scale(.8,.8);fig(g,{helm:'great',body:'#2450b8',det:'sun',leg:'#8d949e',pc:GOLD},'lance',s,t,true,true);g.restore();
-  g.save();g.translate(.08,-.44);wing(g,'#a8703a',t,0,1.2);g.restore()}
+  g.save();g.translate(-.08,-.42);g.scale(.8,.8);fig(g,o.rider||{helm:'great',body:'#2450b8',det:'sun',leg:'#8d949e',pc:GOLD},o.rw||'lance',s,t,true,true);g.restore();
+  g.save();g.translate(.08,-.44);wing(g,o.w2||'#a8703a',t,0,1.2);g.restore()}
 function phoenix(g,s,t){const f=Math.sin(t*12)*.03,al=g.globalAlpha;g.globalAlpha=al*.25;ell(g,0,-.35,.6+s*.1,.42,'#ffb347');g.globalAlpha=al;
   g.save();g.translate(-.02,-.35);wing(g,'#c8301a',t,1.2,1);g.restore();g.lineCap='round';
   for(let i=0;i<3;i++){g.beginPath();g.moveTo(-.25,-.25);g.quadraticCurveTo(-.7,-.2+i*.12,-1,-.05+i*.14+f);g.strokeStyle=['#ffd23c','#ff8a1e','#c8301a'][i];g.lineWidth=.07;g.stroke()}
@@ -546,7 +551,7 @@ function drawUnit(g,key,civ,x,y,face,sw,t,mv,nb,wo,sackc,mt){
   const d=C[key],L0=look(key)||{},L=sackc?Object.assign({},L0,{sack:sackc}):L0,cc=CIV[civ].col,s=Math.sin(clamp(sw,0,1)*PI),big=d.cav||d.shape,k=(big?d.r/.42:L.sc?1:d.r/.3)*1.22,sc=L.sc||1;g.save();g.translate(x,y);
   if(!nb){ell(g,.03,.03,(big?.52:.3*sc)*k,(big?.17:.12*sc)*k,'rgba(0,0,0,.28)');ell(g,0,0,(big?.52:.32*sc)*k,(big?.18:.13*sc)*k,cc.c+'66',cc.c,.045)}
   g.scale(face*k,k);if(!mv&&!nb&&t)g.scale(1,1+Math.sin(t*2.2)*.014);if(d.shape){if(d.fly)g.translate(0,-(d.lift??.75)+Math.sin(t*3)*.03);SHAPES[d.shape](g,d,s,t,mv,cc);g.restore();return}
-  if(d.cav||mt){if(d.mount==='wolf'||d.mount==='tiger'){wolf(g,d.cav,t,mv);if(d.mount==='tiger')stripes(g);g.translate(-.06,-.3)}else{horse(g,d.cav||'#9a6b3f',L.bard,t,mv,cc);if(d.mount==='stag')antlers(g);if(d.mount==='camel'){ell(g,-.05,-.63,.21,.14,d.cav,DK,.028);box(g,-.22,-.72,.34,.1,'#c8201a',DK,.02,.03);g.translate(0,-.1)}g.translate(-.04,-.4)}}
+  if(d.cav||mt){if(d.mount==='lizard'){lizard(g,d.cav,t,mv);g.translate(-.05,-.26)}else if(d.mount==='wolf'||d.mount==='tiger'){wolf(g,d.cav,t,mv);if(d.mount==='tiger')stripes(g);g.translate(-.06,-.3)}else{horse(g,d.cav||'#9a6b3f',L.bard,t,mv,cc);if(d.mount==='stag')antlers(g);if(d.mount==='camel'){ell(g,-.05,-.63,.21,.14,d.cav,DK,.028);box(g,-.22,-.72,.34,.1,'#c8201a',DK,.02,.03);g.translate(0,-.1)}g.translate(-.04,-.4)}}
   if(L.short)g.scale(1.1,.84);if(sc!==1)g.scale(sc,sc);g.translate(s*.05,0);fig(g,L,wo||L.w||d.w,s,t,mv,!!d.cav||!!mt);g.restore()}
 const utall=(d,L)=>d.shape?d.tall+(d.fly?(d.lift??.75):0):((L.w||d.w)==='staff'?1.5:(L.w||d.w)==='rock'?1.42:d.cav?1.5:1.16)*(L.sc||1);
 function icon(cv,key,civ){
@@ -777,6 +782,16 @@ function drawBld(g,key,civ,x,y,hw,hh,rot,t,an){
     roof(-.9,1.08,.36);box(g,-.5,-1.62,1,.38,'#f1ead8',DK,.028);for(const x of[-.5,.4])box(g,x,-1.62,.1,.38,rd,DK,.02);box(g,-.14,-1.54,.28,.2,'#ffe9a0',DK,.018);ln(g,0,-1.54,0,-1.34,DK,.015);roof(-1.62,.72,.34);ell(g,0,-2.02,.06,.08,GOLD,DK,.015);
     for(const sx of[-1,1]){ln(g,sx*.62,-.86,sx*.62,-.74,DK,.015);ell(g,sx*.62,-.66,.07,.09,'#e8452e',DK,.018);ln(g,sx*.62,-.57,sx*.62,-.5,GOLD,.02)}
     const fx=(rot%2?-1:1)*(hw-.1);ln(g,fx,0,fx,-.95,WDD,.035);g.beginPath();g.moveTo(fx,-.95);g.quadraticCurveTo(fx+.2,-.9,fx+.1,-.62);g.lineTo(fx,-.7);g.closePath();g.fillStyle=BL2;g.fill();g.strokeStyle=DK;g.lineWidth=.015;g.stroke()}
+  else if(key==='heroalt'){ell(g,.05,.03,hw+.05,.15,'rgba(0,0,0,.27)');for(let i=0;i<3;i++){const w=hw*2-.2-i*.35;box(g,-w/2,-(i+1)*.2,w,.2,'#d8d2c4',DK,.025)}for(const sx of[-hw+.3,hw-.3]){box(g,sx-.12,-1.5,.24,.9,'#e4dcc8',DK,.025);flame(g,sx,-1.5,.9,t)}g.save();g.translate(0,-.6);g.scale(.95,.95);fig(g,{helm:'great',hc:GOLD,body:'#d8d2c4',det:'plate',dc:GOLD,skin:'#d8d2c4',leg:'#c8c2b4',sh:'heater',shc:'#2450b8'},'greatsword',.2,0,false,false);g.restore()}
+  else if(key==='darmor'){ell(g,.04,.02,.26,.08,'rgba(0,0,0,.24)');ln(g,0,0,0,-1,'#5a3a22',.05);ln(g,-.25,-.75,.25,-.75,'#5a3a22',.04);box(g,-.18,-.75,.36,.42,'#aeb4bd',DK,.025,.06);dome(g,0,-.82,.14,.15,'#aeb4bd');ln(g,-.15,-.6,.15,-.6,GOLD,.03)}
+  else if(key==='arena'){ell(g,.05,.03,hw+.05,.16,'rgba(0,0,0,.27)');const st='#e4d4b0';ell(g,0,-.7,hw-.05,.75,st,DK,.035);ell(g,0,-.78,hw-.4,.42,'#d9b870',DK,.025);for(let i=0;i<9;i++){const a=PI+i/8*PI;awin(g,Math.cos(a)*(hw-.25)-.07,-.7+Math.sin(a)*.55-.12,.14,.24)}box(g,-hw+.05,-.7,hw*2-.1,.7,st,DK,.03);for(let x=-hw+.3;x<hw-.1;x+=.4)awin(g,x-.09,-.55,.18,.38);for(const sx of[-.6,0,.6]){ln(g,sx,-1.45,sx,-1.85,'#3a2a1a',.04);poly(g,[sx,-1.85,sx+.28,-1.78,sx,-1.7],'#c8201a',DK,.015)}}
+  else if(key==='hellgate'){ell(g,.05,.03,hw+.05,.15,'rgba(0,0,0,.3)');ell(g,0,-.02,hw-.1,.18,'#3a0a0a');for(const sx of[-1,1]){poly(g,[sx*(hw-.1),0,sx*(hw-.3),-1.9,sx*(hw-.6),-2.3,sx*(hw-.65),0],'#3d3238',DK,.035);ell(g,sx*(hw-.42),-1.4,.06,.08,'#ff8a1e')}g.beginPath();g.moveTo(-hw+.62,0);g.lineTo(-hw+.62,-1.3);g.quadraticCurveTo(0,-2.1,hw-.62,-1.3);g.lineTo(hw-.62,0);g.closePath();const gr=g.createLinearGradient(0,-1.8,0,0);gr.addColorStop(0,'#ff8a1e');gr.addColorStop(1,'#7a1420');g.fillStyle=gr;g.fill();g.strokeStyle=DK;g.lineWidth=.03;g.stroke();for(const[a,sc]of[[-.3,1],[0,1.3],[.3,1]])flame(g,a,-.1,sc,t);poly(g,[-.25,-1.9,0,-2.15,.25,-1.9,0,-1.75],'#e8c860',DK,.02)}
+  else if(key==='dstatue2'){ell(g,.04,.02,.34,.09,'rgba(0,0,0,.24)');box(g,-.28,-.3,.56,.3,'#bfb8a8',DK,.025);g.save();g.translate(0,-.3);g.scale(.85,.85);fig(g,{helm:'glad',hc:'#d8d2c4',pc:'#c8c2b4',body:'#d8d2c4',det:'plate',dc:'#bfb8a8',skin:'#d8d2c4',leg:'#c8c2b4',sh:'round',shc:'#d8d2c4'},'sword',.3,0,false,false);g.restore()}
+  else if(key==='dbrazier'){ell(g,.04,.02,.28,.08,'rgba(0,0,0,.24)');ln(g,-.18,0,-.08,-.4,'#3d3238',.05);ln(g,.18,0,.08,-.4,'#3d3238',.05);ell(g,0,-.45,.26,.1,'#3d3238',DK,.025);flame(g,-.08,-.48,1,t);flame(g,.1,-.48,1.2,t)}
+  else if(key==='jtemple'){ell(g,.05,.03,hw+.05,.15,'rgba(0,0,0,.27)');const st='#c9b08a';for(let i=0;i<4;i++){const w=hw*2-.2-i*.42;box(g,-w/2,-(i+1)*.36,w,.36,i%2?st:'#bfa47c',DK,.03)}box(g,-.16,-1.44,.32,1.44,'#b09470',DK,.02);for(let y=-.12;y>-1.44;y-=.12)ln(g,-.16,y,.16,y,'rgba(0,0,0,.2)',.015);box(g,-.38,-1.95,.76,.52,'#a8503a',DK,.03);poly(g,[-.46,-1.95,0,-2.25,.46,-1.95],'#2f9a6a',DK,.03);box(g,-.12,-1.8,.24,.36,'#3a2a1a');for(const[a,b]of[[-hw+.25,-.3],[hw-.3,-.65],[-hw+.6,-1.05],[.5,-1.2]])ell(g,a,b,.13,.08,'#3f8a2a','#27481b',.02);for(const sx of[-.3,.3])flame(g,sx,-1.95,.8,t)}
+  else if(key==='gpalace'){ell(g,.05,.03,hw+.05,.15,'rgba(0,0,0,.27)');const wh='#f4f0e4';box(g,-hw+.1,-1.15,hw*2-.2,1.15,wh,DK,.03);for(let x=-hw+.35;x<hw-.2;x+=.38)ln(g,x,-1.1,x,-.05,'#e8c860',.06);box(g,-hw+.05,-1.3,hw*2-.1,.18,'#e8b830',DK,.025);dome(g,0,-1.3,.6,.55,'#e8b830',DK,.03);ell(g,-.12,-1.55,.1,.12,'rgba(255,255,255,.35)');ln(g,0,-1.85,0,-2.2,DK,.05);ell(g,0,-2.22,.06,.06,'#fff3a0',DK,.015);for(const sx of[-hw+.22,hw-.22]){box(g,sx-.14,-1.75,.28,1.75,wh,DK,.025);poly(g,[sx-.18,-1.75,sx,-2.3,sx+.18,-1.75],'#e8b830',DK,.025)}awin(g,-.2,-.7,.4,.7);for(const sx of[-.62,.62]){poly(g,[sx,-.95,sx+(sx>0?.22:-.22),-1.1,sx+(sx>0?.16:-.16),-.85],'#fff6d8',DK,.02)}}
+  else if(key==='dtiki'){ell(g,.04,.02,.3,.08,'rgba(0,0,0,.24)');const cs=['#a8503a','#2f9a6a','#e8c860'];for(let i=0;i<3;i++){const y=-(i+1)*.4;box(g,-.2,y,.4,.4,cs[i],DK,.025);ell(g,-.07,y+.14,.045,.05,'#fff',DK,.01);ell(g,.07,y+.14,.045,.05,'#fff',DK,.01);box(g,-.1,y+.26,.2,.06,DK)}poly(g,[-.3,-1.2,0,-1.38,.3,-1.2],'#e8452e',DK,.02)}
+  else if(key==='dgbanner'){ell(g,.04,.02,.26,.08,'rgba(0,0,0,.24)');ln(g,0,0,0,-1.35,'#5a3a22',.06);ell(g,0,-1.37,.05,.05,GOLD,DK,.012);const v=Math.sin(t*3+x)*.04;poly(g,[0,-1.28,.42,-1.24+v,.42,-.7+v,.21,-.8,0,-.72],'#e8b830',DK,.02);poly(g,[.1,-1.12,.32,-1.06+v,.18,-.94],'#fff6d8',DK,.012)}
   else if(key==='pavilion'){const c1='#c8201a',c2='#f1ead8';ell(g,.05,.03,hw+.05,.14,'rgba(0,0,0,.26)');
     box(g,-1.1,-.1,2.2,.1,'#7a2a5a',DK,.02);for(let i=0;i<9;i++)poly(g,[-1.0+i*.25,-.05,-.9+i*.25,-.09,-.8+i*.25,-.05,-.9+i*.25,-.01],GOLD);
     for(let i=0;i<8;i++){const x0=-.9+i*.225;box(g,x0,-.85,.226,.75,i%2?c2:c1)}box(g,-.9,-.85,1.8,.75,null,DK,.03);
@@ -862,7 +877,7 @@ const army=()=>HOME.ents.filter(e=>!e.b&&e.team===0&&e.hp>0&&!e.temp),ppOf=k=>C[
 const pop=()=>army().concat(S.raid?S.army.filter(u=>u.hp>0):[]).reduce((s,u)=>s+ppOf(u.key),0)+HOME.ents.reduce((s,e)=>s+(e.b&&e.hp>0?e.q.reduce((a,k)=>a+ppOf(k),0):0),0),POPCAP0=120,popCap=()=>POPCAP0+(HOME.lv>=8?20:0)+(HOME.lv>=10?20:0),popMax=()=>Math.min(popCap(),popRaw()),popRaw=()=>5+2*HOME.lv+HOME.ents.reduce((s,e)=>s+(e.b&&e.team===0&&e.hp>0?(e.key==='house'?2+2*ulv(e):e.key==='colosseum'?12:0):0),0);
 function toast(s){const t=$('#toast');t.textContent=s;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2800)}
 
-function hurt(src,t,v,ranged){if(t.hp<=0||(t.team===2&&!t.b))return;const sd=src.d;if(t.d.cav&&sd.anti)v*=sd.anti;if(ranged&&t.d.armor&&!sd.pierce)v*=t.d.armor;if(t.b&&!src.b)v*=.6*(sd.siege||1);t.hp-=v;t.hit=.12;if(!t.b&&v>=1){const nw=performance.now();if(!t.dn||nw-t.dn>380){t.dn=nw;S.fx.push({k:'dmg',x:t.x,y:t.y,ox:(Math.random()-.5)*.5,t:0,life:.7,s:String(Math.round(v)),c:t.team===0?'#ff8a7a':'#fff3c0'})}if(!ranged&&!t.d.fly&&!t.boss&&src&&!src.b){const dx=t.x-src.x,dy=t.y-src.y,L=Math.hypot(dx,dy)||1,kb=Math.min(.12,v/t.max*.6);t.x+=dx/L*kb;t.y+=dy/L*kb}}if(!t.b&&t.team!==0&&!S.raid&&src&&src.hp>0&&src.team===0&&!(t.ord&&t.ord.tg&&alive(t.ord.tg)))for(const o of S.ents)if(!o.b&&o.team===t.team&&o.hp>0&&!o.d.ani&&Math.hypot(o.x-t.x,o.y-t.y)<4&&!(o.ord&&o.ord.tg&&alive(o.ord.tg)))o.ord={tg:src};if(t.hp<=0&&t.d.rebirth&&!t.reborn){t.reborn=1;t.hp=t.max*.5;S.fx.push({k:'boom',x:t.x,y:t.y,t:0,life:.6,r:1.2,c:'#ff8a1e'});S.fx.push({k:'txt',x:t.x,y:t.y,t:0,life:.9,s:'浴火重生'});return}if(sd.leech&&src.hp>0)src.hp=Math.min(src.max,src.hp+v*sd.leech);if(t.hp<=0)kill(t)}
+function hurt(src,t,v,ranged){if(t.hp<=0||(t.team===2&&!t.b))return;const sd=src.d;if(t.d.cav&&sd.anti)v*=sd.anti;if(ranged&&t.d.armor&&!sd.pierce)v*=t.d.armor;if(t.b&&!src.b)v*=.6*(sd.siege||1);t.hp-=v;t.hit=.12;if(t.hp>0&&!t.b&&!t.boss&&src&&!src.b&&src.hp>0){const sd2=src.d;if(sd2.stun){t.stun=Math.max(t.stun||0,sd2.stun);S.fx.push({k:'txt',x:t.x,y:t.y,t:0,life:.6,s:'暈！',c:'#ffd23c'})}if(sd2.convert&&t.team!==src.team&&t.team!==2&&!t.d.once&&!t.d.vil&&(t.d.pp||1)<=2&&Math.random()<sd2.convert){t.team=src.team;t.civ=src.civ;t.temp=1;t.tg=null;t.ord=null;t.breach=null;t.role=src.role;t.post={x:t.x,y:t.y};selU.delete(t);S.fx.push({k:'ring',x:t.x,y:t.y,t:0,life:.7,c:'#fff3a0'});S.fx.push({k:'txt',x:t.x,y:t.y,t:0,life:.9,s:'倒戈！',c:'#fff3a0'});return}}if(!t.b&&v>=1){const nw=performance.now();if(!t.dn||nw-t.dn>380){t.dn=nw;S.fx.push({k:'dmg',x:t.x,y:t.y,ox:(Math.random()-.5)*.5,t:0,life:.7,s:String(Math.round(v)),c:t.team===0?'#ff8a7a':'#fff3c0'})}if(!ranged&&!t.d.fly&&!t.boss&&src&&!src.b){const dx=t.x-src.x,dy=t.y-src.y,L=Math.hypot(dx,dy)||1,kb=Math.min(.12,v/t.max*.6);t.x+=dx/L*kb;t.y+=dy/L*kb}}if(!t.b&&t.team!==0&&!S.raid&&src&&src.hp>0&&src.team===0&&!(t.ord&&t.ord.tg&&alive(t.ord.tg)))for(const o of S.ents)if(!o.b&&o.team===t.team&&o.hp>0&&!o.d.ani&&Math.hypot(o.x-t.x,o.y-t.y)<4&&!(o.ord&&o.ord.tg&&alive(o.ord.tg)))o.ord={tg:src};if(t.hp<=0&&t.d.rebirth&&!t.reborn){t.reborn=1;t.hp=t.max*.5;S.fx.push({k:'boom',x:t.x,y:t.y,t:0,life:.6,r:1.2,c:'#ff8a1e'});S.fx.push({k:'txt',x:t.x,y:t.y,t:0,life:.9,s:'浴火重生'});return}if(sd.leech&&src.hp>0)src.hp=Math.min(src.max,src.hp+v*sd.leech);if(t.hp<=0)kill(t)}
 function kill(e){e.hp=0;if(e.b){S.fx.push({k:'crumble',key:e.key,civ:e.civ,x:e.x,y:e.y,hw:e.hw,hh:e.hh,rot:e.rot,t:0,life:.9});if(e.team!==2)S.fx.push({k:'rub',x:e.x,y:e.y+e.hh,s:e.hw,t:0,life:9})}else if(e.nc||e.d.split||e.key==='slimelet')S.fx.push({k:'puff',x:e.x,y:e.y,t:0,life:.5,s:e.r*1.8,c:e.d.shape==='slime'?'#8fe08a':null});else S.fx.push({k:'die',key:e.key,civ:e.civ,x:e.x,y:e.y,face:e.face,t:0,life:e.d.fly?1.4:1.1});selU.delete(e);if(sel===e)sel=null;barSig='';if(!e.b&&e.team===0&&e.d.once&&!e.temp&&HOME){HOME.dead[e.key]=(HOME.dead[e.key]||0)+1;dirty=true}
   if(!S.raid&&e.fort&&(e.key==='chest'||e.key==='cage')){const n=S.cnt.forts||0;S.cnt.forts=n+1;HOME.fa=Date.now();for(const o of S.ents)if(o.fort&&o.b&&o!==e)o.hp=0;addXp(60);
     if(e.key==='chest'){const r={gold:200+80*n,wood:150,stone:150,tk:1};give(r);toast('打開寶箱，獲得 '+rtxt(r))}
@@ -898,7 +913,7 @@ function nav(e,dt,gx,gy,t,key){const d=e.d;e.navT-=dt;
     const w=p[e.pi];if(w.b&&alive(w.b)){e.breach=w.b;e.mv=0;return}
     if(!(e.pi>=p.length-1&&Math.hypot(w.x-e.x,w.y-e.y)<.3)){tx=w.x;ty=w.y}}
   const dx=tx-e.x,dy=ty-e.y,L=Math.hypot(dx,dy)||1,m=Math.min(L,d.spd*(e.spdm||1)*e.bh*dt);e.x+=dx/L*m;e.y+=dy/L*m;e.run+=m;e.mv=1;e.ang=Math.atan2(dy,dx);e.cd=Math.max(.25,e.cd-dt*e.bh)}
-function updU(e,dt){const d=e.d;if(d.ani){updA(e,dt);return}if(d.vil){if(e.dep>0){e.dep-=dt;return}updV(e,dt);return}if(e.sw<1)e.sw+=dt*3.4;if(e.dep>0){e.dep-=dt;return}
+function updU(e,dt){const d=e.d;if(d.ani){updA(e,dt);return}if(e.stun>0){e.stun-=dt;e.mv=0;return}if(d.vil){if(e.dep>0){e.dep-=dt;return}updV(e,dt);return}if(e.sw<1)e.sw+=dt*3.4;if(e.dep>0){e.dep-=dt;return}
   if(d.regen&&e.hp<e.max)e.hp=Math.min(e.max,e.hp+e.max*d.regen*dt);
   if(d.summon&&alive(e.tg)){e.sm=(e.sm??3)-dt;if(e.sm<=0){e.sm=6;if(S.ents.filter(o=>o.own===e&&o.hp>0).length<3){const u=mkU(e.team,e.civ,d.summon,e.x+rnd(-.5,.5),e.y+rnd(.2,.5),'raid');u.own=e;u.temp=1;u.dep=.4;S.fx.push({k:'ring',x:u.x,y:u.y,t:0,life:.6,c:d.magic})}}}let t=null;const o=e.ord;
   if(o&&o.tg){if(alive(o.tg))t=o.tg;else e.ord=null}
@@ -1453,6 +1468,88 @@ general:{helm:'plume',hc:'#b8902f',body:'#27408f',det:'plate',dc:GOLD,leg:'#3a2a
 scimitar:{helm:'turban',body:'#c8201a',det:'sash',dc:GOLD,beard:'#1a1410',leg:'#f1ead8',sh:'round',shc:'#b8902f'},
 musketeer:{helm:'tall',body:'#27408f',det:'sash',dc:'#c8201a',leg:'#c8201a'},
 camel:{helm:'turban',hc:'#27408f',body:'#f1ead8',det:'sash',dc:'#27408f',leg:'#e8d8a8',pc:'#c8201a'}});
+function elephant(g,s,t,mv){const c='#9aa0a8',dk='#6b7078',k=mv?Math.sin(t*9)*.06:0;g.lineCap='round';
+  for(const[x,o]of[[-.42,0],[-.2,1],[.22,1],[.42,0]]){const kk=o?k:-k;ln(g,x,-.4,x+kk,-.03,DK,.2);ln(g,x,-.4,x+kk,-.04,c,.15)}
+  ell(g,0,-.65,.62,.42,c,DK,.035);ell(g,.55,-.85,.3,.28,c,DK,.03);ell(g,.38,-.85,.2,.26,dk,DK,.02);curve(g,.78,-.8,.92,-.5,.8,-.18+s*.08,DK,.14);curve(g,.78,-.8,.92,-.5,.8,-.18+s*.08,c,.09);
+  curve(g,.68,-.7,.86,-.62,.95,-.72,'#f4f0e4',.05);ell(g,.64,-.95,.03,.03,DK);box(g,-.4,-1.12,.7,.18,'#c8201a',DK,.025,.04);ln(g,-.4,-1.03,.3,-1.03,GOLD,.035);
+  g.save();g.translate(-.05,-1.1);g.scale(.8,.8);fig(g,{helm:'turban',hc:'#c8201a',body:'#e8c860',det:'sash',dc:'#c8201a',skin:'#b8784a',leg:'#e8c860'},'spear',s,t,false,true);g.restore()}
+function chariot(g,s,t,mv,cc){g.save();g.translate(.42,0);g.scale(.82,.82);horse(g,'#f1ead8','none',t,mv,cc);g.restore();ln(g,-.3,-.45,.15,-.55,WDD,.05);
+  wheel(g,-.5,.28,t,mv);box(g,-.82,-.78,.6,.42,'#c8201a',DK,.03,.05);ln(g,-.8,-.66,-.24,-.66,GOLD,.04);g.save();g.translate(-.5,-.72);g.scale(.8,.8);fig(g,{helm:'glad',hc:'#e8c860',pc:'#c8201a',body:'#c8201a',det:'plate',dc:GOLD,leg:'#e8c860'},'spear',s,t,false,true);g.restore()}
+function lion(g,t,mv){wolf(g,'#d9a84a',t,mv);g.save();g.translate(.5,-.5);for(let i=0;i<9;i++){const a=i/9*6.283;ell(g,Math.cos(a)*.13-.04,Math.sin(a)*.15,.1,.08,'#8a4a1a',DK,.012)}ell(g,0,0,.15,.15,'#d9a84a',DK,.02);ell(g,.04,-.03,.022,.022,DK);poly(g,[.08,.04,.22,.06,.1,.1],'#d9a84a',DK,.015);g.restore();ln(g,-.62,-.3,-.7,-.12,'#8a4a1a',.07)}
+function ftiger(g,t,mv){wolf(g,'#e8601e',t,mv);stripes(g);for(const[x,sc]of[[-.25,.9],[-.05,1.1],[.15,.9]])flame(g,x,-.5,sc,t);flame(g,-.66,-.24,.7,t)}
+function lizard(g,col,t,mv){const ph=mv?t*15:0,dk='#2f5a26';g.lineCap='round';curve(g,-.36,-.3,-.75,-.32,-.92,-.06,DK,.16);curve(g,-.36,-.3,-.75,-.32,-.92,-.06,col,.1);
+  for(const[x,o]of[[-.28,0],[-.16,2],[.18,1],[.3,3]]){const k=mv?Math.sin(ph+o*1.6)*.13:0;ln(g,x,-.24,x+k-.06,-.04,DK,.1);ln(g,x,-.24,x+k-.06,-.05,col,.06);ell(g,x+k-.06,-.02,.06,.03,DK)}
+  ell(g,0,-.33,.46,.16,col,DK,.03);ell(g,.04,-.25,.34,.06,'#c8d08a');for(let i=0;i<5;i++)poly(g,[-.3+i*.13,-.47,-.25+i*.13,-.57,-.2+i*.13,-.47],'#e8452e',DK,.012);
+  poly(g,[.3,-.45,.5,-.52,.78,-.42,.78,-.33,.46,-.27],col,DK,.03);ell(g,.56,-.45,.025,.025,'#ffd23c',DK,.008);ln(g,.6,-.36,.77,-.36,dk,.015)}
+function rex(g,s,t,mv){const c='#6b8a3a',bel='#d8d89a',k=mv?Math.sin(t*8)*.1:0;g.lineCap='round';
+  curve(g,-.3,-.78,-.8,-.86,-1.1,-.55,DK,.27);curve(g,-.3,-.78,-.8,-.86,-1.1,-.55,c,.2);
+  ln(g,-.18,-.62,-.24-k,-.05,DK,.24);ln(g,-.18,-.62,-.24-k,-.06,c,.18);ell(g,-.2-k,-.03,.14,.05,DK);
+  ell(g,0,-.8,.44,.32,c,DK,.035);ell(g,.1,-.66,.3,.15,bel);for(let i=0;i<4;i++)ln(g,-.25+i*.13,-1.07,-.2+i*.13,-.95,'rgba(0,0,0,.25)',.03);
+  ln(g,.12,-.6,.16+k,-.05,DK,.24);ln(g,.12,-.6,.16+k,-.06,c,.18);ell(g,.2+k,-.03,.14,.05,DK);
+  ell(g,.32,-1,.17,.22,c,DK,.03);ln(g,.36,-.78,.48,-.7,DK,.07);ln(g,.36,-.78,.48,-.7,c,.045);
+  g.save();g.translate(.4,-1.2);ell(g,.18,0,.32,.15,c,DK,.03);for(let i=0;i<5;i++)poly(g,[.1+i*.07,.1,.13+i*.07,.17,.16+i*.07,.1],'#fff',DK,.008);
+  g.save();g.translate(.02,.1);g.rotate(.15+s*.45);poly(g,[-.02,-.02,.44,0,.42,.1,0,.08],bel,DK,.025);g.restore();ell(g,.14,-.06,.035,.03,'#ffd23c',DK,.01);ln(g,.06,-.12,.2,-.1,DK,.025);g.restore()}
+function ballista(g,s,t,mv){const wd='#a8703a';ln(g,-.6,-.22,.45,-.22,DK,.13);ln(g,-.6,-.22,.45,-.22,wd,.08);wheel(g,-.38,.2,t,mv);wheel(g,.25,.2,t,mv);
+  box(g,-.5,-.62,.95,.14,'#f4f0e4',DK,.025);ln(g,-.4,-.22,-.2,-.55,WDD,.06);ln(g,.3,-.22,.1,-.55,WDD,.06);
+  const pl=s*.22;g.beginPath();g.moveTo(.32,-1.02);g.quadraticCurveTo(.5,-.55,.32,-.08);g.strokeStyle=DK;g.lineWidth=.09;g.stroke();g.strokeStyle=GOLD;g.lineWidth=.055;g.stroke();
+  ln(g,.32,-1.02,.05-pl,-.55,'#f1ead8',.018);ln(g,.32,-.08,.05-pl,-.55,'#f1ead8',.018);ln(g,.05-pl,-.55,.75,-.55,DK,.05);ln(g,.05-pl,-.55,.75,-.55,'#e8c860',.03);poly(g,[.75,-.6,.88,-.55,.75,-.5],'#f4f0e4',DK,.015)}
+Object.assign(C,{
+jwar:{n:'羽冠戰士',hp:320,dmg:64,hs:1,rng:.5,spd:1.4,r:.3,w:'club',food:24,t:'黑曜石木劍砍得又深又痛。',h:'頭上的羽毛越多，打過的仗越多。'},
+jblow:{n:'吹箭手',hp:170,dmg:36,hs:1.1,rng:5,spd:1.35,r:.28,w:'blow',pierce:1,food:28,t:'躲在遠處吹毒箭，無視護甲。',h:'一口氣能吹到二十步外。'},
+jjag:{n:'美洲豹戰士',hp:380,dmg:82,hs:.8,rng:.5,spd:1.9,r:.3,w:'spear',charge:1.6,food:38,t:'跑得飛快，撲上去的第一擊特別重。',h:'披著豹皮，走路沒有聲音。'},
+jliz:{n:'蜥蜴騎士',pp:2,hp:1100,dmg:120,hs:1.1,rng:.8,spd:1.8,r:.42,cav:'#4f8a3a',mount:'lizard',w:'spear',armor:.8,food:80,t:'鱗甲擋下兩成遠程傷害，衝進敵陣不怕箭。',h:'蜥蜴曬太陽的時候，騎士也在曬。'},
+jrex:{n:'暴龍',pp:4,hp:3000,dmg:200,hs:1.6,rng:.9,spd:1.3,r:.6,shape:'rex',tall:1.55,wide:2.2,splash:1.1,siege:1.5,food:220,once:1,t:'一口咬下去，旁邊的也跟著遭殃。只能靠召喚取得。',h:'叢林深處每隔幾年就會傳出一聲吼。'},
+jserp:{...DRG,n:'羽蛇龍',hp:2500,dmg:185,spd:1.6,col:'#2f9a6a',bel:'#ffe08a',wc:'#e8452e',hc:'#ffd23c',fc:'#7fffb0',magic:'#7fffb0',t:'長著羽毛的龍，吐出翠綠的風暴。',h:'神廟壁畫上畫的就是牠。'},
+gsw:{n:'金翼劍士',hp:340,dmg:66,hs:1,rng:.5,spd:1.35,r:.3,w:'sword',armor:.85,food:26,t:'金甲擋下一成五的遠程傷害。',h:'盔甲擦得比鏡子還亮。'},
+garc:{n:'金翼弓手',hp:200,dmg:46,hs:1,rng:6.5,spd:1.25,r:.28,w:'longbow',food:30,t:'射得比一般弓手更遠。',h:'精靈的眼睛能看見三里外的蝴蝶。'},
+gpri:{n:'精靈祭司',hp:420,dmg:48,hs:1.3,rng:5,spd:1.1,r:.3,w:'staff',magic:'#ffe08a',heal:{r:3.5,p:.03},food:45,t:'光球攻擊敵人，身邊的友軍會慢慢回血。',h:'祈禱的時候連鳥都安靜下來。'},
+ggry:{n:'金翼獅鷲',pp:2,hp:1300,dmg:130,hs:1.1,rng:.8,spd:2.2,r:.44,shape:'ggriffin',tall:1.45,wide:1.7,fly:1,charge:2,food:90,t:'飛越城牆直撲後排，俯衝的第一擊傷害加倍。',h:'金色的羽毛一根就能換一匹馬。'},
+gbal:{n:'精靈弩車',hp:520,dmg:150,hs:2.4,rng:8,minr:1.5,spd:.9,r:.45,shape:'ballista',tall:1.1,wide:1.6,pierce:1,siege:1.5,food:70,t:'巨弩射得很遠，無視護甲，對建築也有效。',h:'一支弩箭有一棵小樹那麼長。'},
+aspear:{n:'長矛鬥士',hp:300,dmg:60,hs:1,rng:.9,spd:1.35,r:.3,w:'spear',anti:1.5,food:24,t:'長矛搆得遠，對騎兵傷害提高五成。',h:'觀眾喊得越大聲，他刺得越準。'},
+amace:{n:'重錘鬥士',hp:520,dmg:78,hs:1.3,rng:.5,spd:1.1,r:.32,w:'mace',armor:.8,food:40,t:'大盾擋下兩成遠程傷害，重錘一下一下砸。',h:'在場上從來沒有往後退過一步。'},
+abull:{n:'牛頭鬥士',pp:2,hp:1400,dmg:135,hs:1.4,rng:.8,spd:1.2,r:.42,w:'axe',splash:.8,charge:1.6,food:85,t:'低頭衝撞，一斧頭掃倒一片。',h:'看到紅色就停不下來。'},
+achamp:{n:'冠軍鬥士',pp:2,hp:1200,dmg:120,hs:1,rng:.6,spd:1.4,r:.34,w:'greatsword',aura:{r:3.5,dmg:1.25},food:90,t:'身邊的友軍傷害提高兩成五。',h:'贏了一百場，觀眾只叫他的名字。'},
+achar:{n:'戰車',pp:2,hp:1000,dmg:110,hs:1.1,rng:.8,spd:2.2,r:.48,shape:'chariot',tall:1.4,wide:2,charge:2.2,splash:.7,food:80,t:'衝進敵陣的第一擊造成 2.2 倍傷害，還會撞倒旁邊的人。',h:'輪子上綁著刀，誰都不敢靠近。'},
+alion:{n:'競技場雄獅',pp:4,hp:2800,dmg:190,hs:1.1,rng:.9,spd:2,r:.6,shape:'lion',tall:1.05,wide:1.9,charge:2,splash:.8,food:200,once:1,t:'撲殺的第一擊傷害加倍。只能靠召喚取得。',h:'牠的吼聲傳遍整座城。'},
+imp:{n:'小惡魔',hp:180,dmg:40,hs:.7,rng:.5,spd:1.8,r:.26,w:'trident',shape:'figfly',tall:1.5,wide:1.4,lift:.3,fly:1,food:22,t:'會飛，越過城牆騷擾後排。',h:'笑聲比牠本人可怕。'},
+demon:{n:'惡魔重錘手',pp:2,hp:1500,dmg:140,hs:1.5,rng:.8,spd:1,r:.44,w:'hammer',splash:1,siege:2,food:90,t:'重錘砸地震倒一片，打建築傷害加倍。',h:'從地底的裂縫爬出來。'},
+ftiger:{n:'火焰虎',pp:2,hp:1100,dmg:120,hs:.9,rng:.8,spd:2.3,r:.44,shape:'ftiger',tall:.95,wide:1.6,charge:1.8,food:80,t:'全身是火，跑得比馬還快。',h:'走過的草地會冒煙。'},
+icarus:{n:'飛翼少年',hp:360,dmg:68,hs:.9,rng:.5,spd:2,r:.3,w:'sword',shape:'figfly',tall:1.7,wide:1.9,lift:.35,fly:1,charge:1.6,food:40,t:'用蠟做的翅膀飛越城牆，俯衝一擊特別重。',h:'飛太高的那一天，翅膀會融化。'},
+rtitan:{n:'岩石泰坦',pp:4,hp:3600,dmg:210,hs:1.9,rng:1,spd:.8,r:.62,w:'club',splash:1.3,siege:2.5,armor:.6,food:240,once:1,t:'岩石身體擋下四成遠程傷害，砸建築特別痛。只能靠召喚取得。',h:'睡著的時候被當成一座山。'},
+wtitan:{n:'風之泰坦',pp:4,hp:2600,dmg:170,hs:1.6,rng:6,spd:1.1,r:.58,w:'staff',magic:'#bfeeff',splash:1.6,food:240,once:1,t:'捲起旋風轟炸一大片敵人。只能靠召喚取得。',h:'牠一嘆氣，海上就起浪。'},
+kami:{n:'自爆兵',hp:200,dmg:500,hs:1,rng:.5,spd:1.7,r:.26,w:'bomb',boom:2.2,siege:2,food:35,t:'衝進敵陣引爆自己，炸掉附近一大片。',h:'跑最快的那個通常活最短。'},
+monk:{n:'僧侶',hp:260,dmg:20,hs:3,rng:5,spd:1.05,r:.28,w:'staff',magic:'#fff3a0',convert:.35,food:70,t:'唸經攻擊，有機會讓被打到的敵人倒戈成自己人（大型怪獸和巨龍不會）。',h:'說的話連敵人都聽得進去。'},
+eleph:{n:'象騎兵',pp:3,hp:2000,dmg:110,hs:1.6,rng:.9,spd:1.1,r:.55,shape:'eleph',tall:1.75,wide:2,splash:.8,stun:1.2,siege:1.5,food:150,t:'踩下去讓周圍的敵人暈 1.2 秒。',h:'牠記得每一個欺負過牠的人。'},
+hspin:{n:'旋風劍姬',hp:1200,dmg:95,hs:.8,rng:.7,spd:1.6,r:.32,w:'greatsword',splash:1.3,food:120,once:1,hero:1,t:'英雄。轉身一揮，打到身邊所有敵人。陣亡可以在墓園復活。',h:'跳舞和打仗她用的是同一套步伐。'},
+hbolt:{n:'雷霆法師',hp:900,dmg:120,hs:1.6,rng:6.5,spd:1.1,r:.32,w:'staff',magic:'#9fd8ff',splash:1.6,food:120,once:1,hero:1,t:'英雄。召下閃電，炸一大片敵人。陣亡可以在墓園復活。',h:'鬍子裡永遠有一點靜電。'},
+hroar:{n:'戰吼勇士',hp:1600,dmg:100,hs:1.1,rng:.7,spd:1.4,r:.34,w:'axe',aura:{r:4.5,dmg:1.35},food:120,once:1,hero:1,t:'英雄。一聲吼，身邊的友軍傷害提高三成五。陣亡可以在墓園復活。',h:'吼聲能讓逃兵回頭。'},
+hheal:{n:'聖光女騎士',hp:1500,dmg:85,hs:1.1,rng:.7,spd:1.4,r:.32,w:'sword',heal:{r:4,p:.04},armor:.8,food:120,once:1,hero:1,t:'英雄。戰鬥中讓身邊的友軍持續回血。陣亡可以在墓園復活。',h:'她的盾牌上沒有一道刮痕。'},
+gdrag:{...DRG,n:'黃金龍',hp:2700,dmg:195,spd:1.5,col:'#e8b830',bel:'#fff2c0',wc:'#fff6d8',hc:'#ffffff',fc:'#fff3a0',magic:'#ffe08a',t:'全身金鱗，吐出耀眼的光焰。',h:'傳說牠睡在金幣堆上。'}});
+Object.assign(SHAPES,{eleph:(g,d,s,t,mv)=>elephant(g,s,t,mv),chariot:(g,d,s,t,mv,cc)=>chariot(g,s,t,mv,cc),lion:(g,d,s,t,mv)=>lion(g,t,mv),ftiger:(g,d,s,t,mv)=>ftiger(g,t,mv),rex:(g,d,s,t,mv)=>rex(g,s,t,mv),ballista:(g,d,s,t,mv)=>ballista(g,s,t,mv),ggriffin:(g,d,s,t)=>griffin(g,s,t,{tan:'#e8b830',wh:'#fff6d8',w1:'#f4f0e4',w2:'#ffe08a',rider:{helm:'winghelm',hc:GOLD,body:'#f4f0e4',det:'plate',dc:GOLD,skin:ELF,ears:1,leg:'#dfe6ee'},rw:'lance'})});
+Object.assign(LK,{
+jwar:{helm:'feather',body:'#2f9a6a',det:'paint',dc:'#e8452e',skin:'#b8784a',bare:1,leg:'#e8c860',sh:'round',shc:'#e8452e'},
+jblow:{helm:'feather',fcs:['#2f9a6a','#ffd23c','#2f9a6a','#ffd23c','#2f9a6a'],body:'#e8c860',det:'paint',dc:'#2f9a6a',skin:'#b8784a',bare:1,leg:'#7a5a36'},
+jjag:{helm:'jaguar',body:'#e8a838',det:'fur',dc:'#5a3a1a',skin:'#b8784a',leg:'#7a5a36'},
+jliz:{helm:'feather',body:'#2f86e0',det:'paint',dc:'#ffd23c',skin:'#b8784a',leg:'#e8c860'},
+kami:{helm:'bald',body:'#6b4a2a',det:'sash',dc:'#c8201a',skin:'#d9a07a',leg:'#3a2a1a'},
+monk:{helm:'hood',hc:'#a8703a',body:'#a8703a',det:'robe',dc:'#f4f0e4',leg:'#6b4423',orb:'#fff3a0'},
+hspin:{helm:'braid',hc:'#c8201a',body:'#2f86e0',det:'plate',dc:GOLD,leg:'#f4f0e4',cloak:'#c8201a'},
+hbolt:{helm:'wizard',hc:'#2450b8',body:'#2450b8',det:'robe',dc:'#9fd8ff',beard:'#f4f8fb',leg:'#1a2a5a',orb:'#9fd8ff'},
+hroar:{helm:'horned',body:'#7a4a2a',det:'fur',dc:'#d9cfb4',beard:'#c97b2a',leg:'#3a2a1a',cloak:'#7a1420',sc:1.15},
+hheal:{helm:'circlet',hc:GOLD,body:'#f4f0e4',det:'plate',dc:GOLD,leg:'#dfe6ee',sh:'heater',shc:'#f4f0e4',cloak:'#2f86e0'},
+aspear:{helm:'glad',hc:'#b8bec8',pc:'#c8201a',body:'#c97b4a',det:'belly',dc:'#c8201a',skin:'#d9a07a',bare:1,leg:'#c8201a',sh:'round',shc:'#b8902f'},
+amace:{helm:'glad',hc:'#8d949e',pc:'#2450b8',body:'#8d949e',det:'mail',leg:'#3a2a1a',sh:'heater',shc:'#c8201a'},
+abull:{helm:'bull',body:'#7a1420',det:'sash',dc:GOLD,skin:'#4a2a1a',bare:1,leg:'#3a2a1a',sc:1.4},
+achamp:{helm:'glad',hc:'#e8c860',pc:'#c8201a',body:'#e8c860',det:'plate',dc:'#c8201a',leg:'#7a1420',cloak:'#c8201a'},
+imp:{helm:'horned',body:'#c8201a',det:'belly',dc:'#7a1420',skin:'#d8452e',bare:1,leg:'#7a1420',wings:'#5a1a1a',wk:.7,sc:.85},
+demon:{helm:'horned',body:'#8a1a1a',det:'belly',dc:'#3a0a0a',skin:'#b02a22',bare:1,leg:'#3a0a0a',tusk:1,sc:1.45},
+icarus:{helm:'circlet',hc:GOLD,body:'#f4f0e4',det:'sash',dc:'#2f86e0',leg:'#d9a07a',wings:'#fff6d8',wk:1.2},
+rtitan:{helm:'bald',body:'#8f8a80',det:'belly',dc:'#5a554b',skin:'#9a958a',bare:1,leg:'#5a554b',beard:'#6b665c',sc:1.75},
+wtitan:{helm:'circlet',hc:'#dff4ff',body:'#5a9ac8',det:'robe',dc:'#dff4ff',skin:'#bfe0f0',beard:'#f4f8fb',leg:'#3a6a8a',orb:'#bfeeff',cloak:'#7fb8e8',sc:1.6},
+gsw:{helm:'winghelm',hc:GOLD,body:'#f4f0e4',det:'plate',dc:GOLD,skin:ELF,ears:1,leg:'#dfe6ee',sh:'heater',shc:'#e8b830'},
+garc:{helm:'circlet',hc:GOLD,body:'#2f8f4e',det:'leaf',dc:GOLD,skin:ELF,ears:1,leg:'#f4f0e4',back:'quiver'},
+gpri:{helm:'mitre',hc:'#f4f0e4',body:'#f4f0e4',det:'robe',dc:GOLD,skin:ELF,ears:1,leg:'#e8c860',orb:'#ffe08a'}});
+Object.assign(RAR,{kami:1,monk:3,eleph:3,hspin:3,hbolt:4,hroar:3,hheal:4,aspear:1,amace:2,abull:3,achamp:3,achar:2,alion:4,imp:1,demon:2,ftiger:3,icarus:2,rtitan:4,wtitan:4,jwar:1,jblow:2,jjag:2,jliz:3,jrex:4,jserp:4,gsw:1,garc:2,gpri:3,ggry:3,gbal:2,gdrag:4});
 Object.assign(RAR,{cguard:1,carcher:2,valkyrie:2,seraph:3,cdragon:4,leafblade:1,druid:2,beetle:2,tigerrider:3,edragon:4,scarecrow:1,witch:2,vampire:3,werewolf:3,ndragon:4,tideguard:1,crab:2,seahorse:2,octopus:3,seaking:3,sdragon:4,raider:1,shieldmaiden:2,frostgiant:3,fdragon:4,repeater:1,glaive:2,general:3,lung:4,scimitar:1,musketeer:2,camel:2,djinn:4});
 for(const k in RAR)if(!POOL.includes(k))POOL.push(k);for(const k in C)C[k].key=k;
 Object.assign(BT,{warehouse:{n:'兵營倉庫',w:2.2,h:1.6,vh:1.7,hp:1000,lv:2,max:lv=>lv>=6?2:1,t:'把士兵存起來，不佔人口。'}});COST.warehouse={w:200,s:120};CATS.find(c=>c[0]==='軍事')[1].push('warehouse');
@@ -1473,6 +1570,9 @@ BT.stable.t='馴養坐騎：獨角獸、狼騎兵、聖騎士。';BT.den.t='豢�
 Object.assign(COST,{sanctum:{s:200,g:150},treehall:{w:250,g:60},coral:{s:180,g:120},longhouse:{w:220,s:60},dojo:{w:180,s:120,g:60},pavilion:{w:150,g:180},dcloud:{g:40},dmush:{w:20},dpumpkin:{w:15,g:5},dcoral:{s:30},drune:{s:50},dlantern:{s:40},dpalm:{w:30}});
 for(const[b,k]of[['barracks','ranger'],['stable','stag'],['den','treant']])TRAIN[b].splice(TRAIN[b].indexOf(k),1);
 Object.assign(TRAIN,{sanctum:['cguard','carcher','valkyrie','seraph','cdragon'],treehall:['ranger','leafblade','druid','stag','beetle','tigerrider','treant','edragon'],coral:['tideguard','crab','seahorse','octopus','seaking','sdragon'],longhouse:['raider','shieldmaiden','frostgiant','fdragon'],dojo:['repeater','glaive','general','lung'],pavilion:['scimitar','musketeer','camel','djinn']});
+Object.assign(BT,{heroalt:{n:'英雄祭壇',w:2,h:1.6,vh:2,hp:1000,tr:1,lv:3,t:'訓練自爆兵、僧侶、象騎兵。英雄只能靠召喚取得。'},darmor:{n:'盔甲架',w:.6,h:.5,vh:1.2,hp:150,deco:1},arena:{n:'鬥技場',w:2.6,h:2,vh:1.9,hp:1000,tr:1,lv:3,t:'鬥技場的專屬兵營：長矛鬥士、重錘鬥士、牛頭鬥士、冠軍鬥士、戰車。'},hellgate:{n:'地獄門',w:2.2,h:1.8,vh:2.4,hp:1000,tr:1,lv:4,t:'地獄與泰坦的專屬兵營：小惡魔、惡魔重錘手、火焰虎、飛翼少年。'},dstatue2:{n:'鬥士雕像',w:.7,h:.6,vh:1.4,hp:150,deco:1},dbrazier:{n:'地獄火盆',w:.6,h:.6,vh:.9,hp:150,deco:1},jtemple:{n:'叢林神廟',w:2.4,h:1.8,vh:2.3,hp:950,tr:1,lv:2,t:'叢林部族的專屬兵營：羽冠戰士、吹箭手、美洲豹戰士、蜥蜴騎士。'},gpalace:{n:'金翼宮',w:2.4,h:1.8,vh:2.4,hp:950,tr:1,lv:3,t:'金翼精靈的專屬兵營：金翼劍士、金翼弓手、精靈祭司、金翼獅鷲、精靈弩車。'},dtiki:{n:'圖騰柱',w:.6,h:.5,vh:1.35,hp:150,deco:1},dgbanner:{n:'金翼旗',w:.6,h:.5,vh:1.4,hp:150,deco:1}});for(const k of['jtemple','gpalace','dtiki','dgbanner','arena','hellgate','dstatue2','dbrazier','heroalt','darmor'])BT[k].key=k;
+Object.assign(COST,{heroalt:{s:250,g:200},darmor:{s:20,g:20},arena:{w:200,s:250,g:150},hellgate:{s:300,g:250},dstatue2:{s:60},dbrazier:{s:30,g:10},jtemple:{s:220,g:120},gpalace:{w:150,s:150,g:220},dtiki:{w:30},dgbanner:{g:40}});
+Object.assign(TRAIN,{jtemple:['jwar','jblow','jjag','jliz','jrex','jserp'],gpalace:['gsw','garc','gpri','ggry','gbal','gdrag'],arena:['aspear','amace','abull','achamp','achar','alion'],hellgate:['imp','demon','ftiger','icarus','rtitan','wtitan'],heroalt:['kami','monk','eleph','hspin','hbolt','hroar','hheal']});SETB.push('jtemple','gpalace','arena','hellgate','heroalt');CATS.find(c=>c[0]==='裝飾')[1].push('dtiki','dgbanner','dstatue2','dbrazier','darmor');
 TRAIN.crypt=['skeleton','scarecrow','witch','wraith','vampire','werewolf','necromancer','ndragon'];
 for(const b in TRAIN)for(const k of TRAIN[b])FROM[k]=b;
 CATS.splice(2,0,['文明',SETB]);CATS.find(c=>c[0]==='裝飾')[1].push('dcloud','dmush','dpumpkin','dcoral','drune','dlantern','dpalm');
@@ -1485,6 +1585,11 @@ sea:{n:'深海',col:'#2fa8a0',b:'coral',deco:'dcoral',u:TRAIN.coral},
 north:{n:'北境',col:'#5a9ac8',b:'longhouse',deco:'drune',u:TRAIN.longhouse},
 east:{n:'東方',col:'#c8201a',b:'dojo',deco:'dlantern',u:TRAIN.dojo},
 sand:{n:'沙漠',col:'#d9a84a',b:'pavilion',deco:'dpalm',u:TRAIN.pavilion},
+jungle:{n:'叢林部族',col:'#3f9a3a',b:'jtemple',deco:'dtiki',u:TRAIN.jtemple},
+gelf:{n:'金翼精靈',col:'#e8b830',b:'gpalace',deco:'dgbanner',u:TRAIN.gpalace},
+arena:{n:'鬥技場',col:'#c8201a',b:'arena',deco:'dstatue2',u:TRAIN.arena},
+hell:{n:'地獄與泰坦',col:'#8a1a1a',b:'hellgate',deco:'dbrazier',u:TRAIN.hellgate},
+hero:{n:'英雄與奇兵',col:'#2450b8',b:'heroalt',deco:'darmor',u:TRAIN.heroalt},
 iron:{n:'鐵爐矮人',col:'#c08a1e',u:['thunderer','flamer','ironguard','golem']},
 horde:{n:'荒原部落',col:'#b02a22',u:['goblin','bomber','berserker','shaman','wolfrider','troll','ogre']},
 beast:{n:'巨獸',col:'#7a5a36',u:['slime','spider','minotaur','cyclops','hydra']},
