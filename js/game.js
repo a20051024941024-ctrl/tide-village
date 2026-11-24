@@ -13971,7 +13971,7 @@ function cat3Tick(pt, dt, t, mv, tx, tz){ const U = pt.m.userData, C = U.cat3, b
 /* ===== v763 築城守土：作者「整個加進來，讓玩家可以在遊戲裡玩另外一款遊戲」=====
    《築城守土》是作者自己做的另一款遊戲（築城、養兵、出征），整份放在 zc/index.html，這裡只負責入口：潮汐廣場邊一張沙盤桌，走過去按「玩」就整個畫面切過去，按「回潮汐村」再回來。
    兩邊的程式和存檔是分開的（金幣不互通）。玩的時候村子的畫面降到每秒 4 張省電，角色會拿出手機（別人看得到）。 */
-const ZC = { on: false, el: null, at: [9.2, 8.6, -0.75], g: null, flags: [], music: false, V: 29 };
+const ZC = { on: false, el: null, at: [9.2, 8.6, -0.75], g: null, flags: [], music: false, V: 30 };
 function buildZcTable(){ const [X, Z, R] = ZC.at, y0 = groundHeight(X, Z), g = new THREE.Group(); g.position.set(X, y0, Z); g.rotation.y = R; g.userData.keep = true; g.userData.dyn = true; scene.add(g); ZC.g = g;
   const B = (sz, c, p, par) => { const b = box(sz, c, p); (par || g).add(b); return b; }, wood = '#8a5a2b', woodD = '#5a3a22';
   for (const sx of [-0.72, 0.72]) for (const sz of [-0.45, 0.45]) B([0.1, 0.72, 0.1], woodD, [sx, 0.36, sz]);
@@ -21876,6 +21876,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u793', d:'11/25', items:[['🏰','民兵會真的走路、舉劍往前劈；被打倒會閉上眼睛躺在地上一下才消失，站著偶爾會眨眼；死掉不再飄出發光小球']] },
   { id:'u792', d:'11/25', items:[['🏰','建造選單卡片上的建築圖不再被壓扁']] },
   { id:'u791', d:'11/25', items:[['🏰','王國的民兵、弓箭手、牧師、法師換成新畫的圖，走路會彈跳、攻擊會往前衝']] },
   { id:'u790', d:'11/25', items:[['🏰','三個敵人文明的主堡換成新畫的圖：巨樹宮殿、熔爐要塞、獸骨戰寨；抽到的主堡外觀也會用新圖']] },
