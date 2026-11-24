@@ -5189,7 +5189,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 749, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 751, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.faceOf = sex => sex === 'b' ? { eye: 'a0', brow: 'soft', mouth: 'smile', blush: 'none' } : { eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line' };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', mask: 'none', ear: 'none', hat: 'none', eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
@@ -5216,7 +5216,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
       row('眉毛', 'brow', [['thin', '細彎眉'], ['soft', '彎眉'], ['thick', '粗眉'], ['up', '八字眉'], ['down', '劍眉']]);
       row('嘴巴', 'mouth', [['small', '小嘴'], ['smile', '微笑'], ['grin', '露齒笑'], ['cat', '貓嘴'], ['flat', '一字嘴'], ['pout', '嘟嘴'], ['tooth', '小虎牙']]);
       row('腮紅', 'blush', [['none', '沒有'], ['soft', '淡淡的'], ['line', '斜線']]);
-      row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮'], ['short2', '清爽短髮'], ['pony', '側馬尾'], ['twin', '雙馬尾']]);
+      row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮'], ['short2', '清爽短髮'], ['pony', '側馬尾'], ['twin', '雙馬尾'], ['bob', '鮑伯短髮'], ['lowpony', '小馬尾'], ['bun', '包包頭']]);
       sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
       row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝'], ['rain', '雨衣'], ['vest', '釣魚背心'], ['wave', '海浪外套']]);
       sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
@@ -5237,8 +5237,17 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
   const top = /^#[0-9a-f]{6}$/i.test(shirt || '') ? shirt : pick(K3.PAL.top, 3), lum = (() => { const n = parseInt(top.slice(1), 16); return ((n >> 16) * 0.3 + ((n >> 8) & 255) * 0.59 + (n & 255) * 0.11) / 255; })();
   const darkB = ['#1e2a55', '#2b2b2e', '#3b4a5a', '#4a3a2e'], lightB = ['#c8b48a', '#8a8f96', '#d8d2c4', '#6a7f9a'];
   const gg = sex === 'g', face = { eye: old ? pick(gg ? ['b3', 'b1', 'b5'] : ['a3', 'a5', 'a1'], 11) : pick(gg ? ['b0', 'b1', 'b2', 'b4', 'b5', 'b2'] : ['a0', 'a1', 'a2', 'a4', 'a0', 'a2'], 11), brow: gg ? pick(['thin', 'thin', 'up'], 13) : pick(['soft', 'thick', 'down', 'soft'], 13), mouth: pick(gg ? ['small', 'cat', 'small', 'tooth'] : ['smile', 'flat', 'smile', 'grin', 'tooth'], 15), blush: gg ? pick(['line', 'soft'], 17) : pick(['none', 'none', 'soft'], 17) };
-  return { sex, ...face, hair: sex === 'g' ? ['long', 'twin', 'long', 'pony', 'short', 'long', 'twin'][H % 7] : (H % 3 ? 'short' : 'short2'),   /* v742 村民也會留新髮型 */ top: work || H % 3 === 0 ? 'hoodie' : 'tee', bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak',
-    c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30'], 5), top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9) } }; };
+  /* v750 村民用配飾和衣服分得出誰是誰：照名字固定一套（不是每次隨機），大約一半的人有配飾。
+     釣魚、開船的戴草帽或穿釣魚背心；年輕人有的戴棒球帽、有的穿海浪外套；開店的戴耳環；少數人戴口罩；眼睛顏色也分開 */
+  const A = h('acc:' + nm), ap = (a, k) => a[(A >>> k) % a.length], shop = /店|老闆|館|攤|市場|師傅|教練/.test(nm), young = !old;
+  const sea = /漁夫|船夫|船長|石滬|釣客|捕魚|村長/.test(nm), hat = sea ? (A % 4 < 3 ? 'straw' : 'cap') : work ? (A % 4 === 0 ? 'cap' : 'none') : old ? (A % 3 === 0 ? 'straw' : 'none') : (A % 5 === 0 ? 'cap' : 'none');
+  const ear = hat === 'none' && (shop ? A % 3 < 2 : gg && young && (A >>> 4) % 3 === 0) ? ap(['pearl', 'star', 'hoop', 'drop'], 6) : 'none';
+  const mask = hat === 'none' && ear === 'none' && (A >>> 9) % 9 === 0 ? 'mask' : 'none';
+  const topK = work ? ((A >>> 3) % 3 === 0 ? 'vest' : 'hoodie') : young && !shop && (A >>> 12) % 5 === 0 ? 'wave' : H % 3 === 0 ? 'hoodie' : 'tee';
+  const eyeC = (A >>> 15) % 2 ? ap(['#3f6fc0', '#3f8f6a', '#7a4a2a', '#5a5f6a', '#8a5fb0', '#b0703a'], 17) : '';
+  return { sex, ...face, hair: sex === 'g' ? (old ? ['bun', 'lowpony'][H % 2] : ['long', 'twin', 'pony', 'bob', 'short2', 'bun', 'lowpony'][H % 7]) : ['short', 'short2', 'lowpony', 'short2', 'short'][H % 5],   /* v742 村民也會留新髮型 */ top: topK, bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak', hat, ear, mask,
+    c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30', '#8a5a3a'], 5), top: topK === 'wave' ? ap(['#2f6fc0', '#2f9a9a', '#5a6fd0', '#d06a8a'], 20) : top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9),
+      ...(hat === 'cap' ? { hat: ap(['#e0564f', '#2f6fc0', '#2b2b2e', '#f2f2ee', '#3f8f6a', '#e8c547'], 22) } : {}), ...(mask === 'mask' ? { mask: ap(['#f2f2ee', '#2b2b2e', '#8fb8e0', '#f2b8c8'], 24) } : {}), ...(eyeC ? { eye: eyeC } : {}) } }; };
 K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.k3') || 'null'); } catch(e){}
   if (!c || c.v !== 2){ c = Object.assign(c && c.sex ? c : K3.rand(Math.random()), { on: true, v: 2 }); try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }
   if (c && !c.on){ c.on = true; try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }   /* v746 作者：「自動換」→ 之前自己改回舊人物的人也換成新人物（不再有舊人物） */
@@ -5466,7 +5475,8 @@ K3.hat = (k, c) => { const t = K3.HATS[c.hat] ? c.hat : 'none', C = c.c || {};
       for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i).sub(K3.HC); const r = v.length(); if (r < 1e-4) continue; const th = Math.min(23, Math.floor(Math.acos(Math.max(-1, Math.min(1, v.y / r))) / Math.PI * 24)), ph = Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (2 * Math.PI) * 48) % 48; if (r > H[th * 48 + ph]) H[th * 48 + ph] = r; } } }
   if (k.hair){ const g0 = k.hair.sm.geometry, geo = g0.clone(), P = geo.attributes.position, R = A.rmin, HR = K3.headR, cc = K3.HC, v = new THREE.Vector3();
     for (let i = 0; i < P.count; i++){ v.fromBufferAttribute(P, i).sub(cc); const r = v.length(); if (r < 1e-4) continue; const th = Math.min(23, Math.floor(Math.acos(Math.max(-1, Math.min(1, v.y / r))) / Math.PI * 24)), ph = Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (2 * Math.PI) * 48) % 48, rh = R[th * 48 + ph];
-      { const eg = A.edge[ph]; if (eg >= 0 && th > eg && th <= eg + 2){ const re = R[eg * 48 + ph] * 0.99; if (r > re){ v.multiplyScalar(re / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); continue; } } }   /* 帽緣下面兩圈的頭髮不要比帽口寬，不然會從帽簷穿出來 */
+      { const eg = A.edge[ph]; if (eg >= 0 && th > eg && th <= eg + (t === 'straw' ? 6 : 2)){ const re = R[eg * 48 + ph] * (0.99 + (t === 'straw' ? Math.max(0, th - eg - 3) * 0.045 : 0));   /* v750 草帽的帽簷寬又往下斜，鮑伯頭這種蓬的頭髮要多收幾圈、越往下放越寬，才不會從帽簷上面刺出來 */ if (r > re){ v.multiplyScalar(re / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); continue; } } }   /* 帽緣下面兩圈的頭髮不要比帽口寬，不然會從帽簷穿出來 */
+      if (rh < 1e8 && t === 'straw' && rh > HR[th * 48 + ph] * 1.22){ if (r > rh * 0.86){ v.multiplyScalar(rh * 0.86 / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); } continue; }   /* v750 草帽帽簷那幾圈：頭髮離帽簷底下留一段距離，貼太近會有尖尖的從帽簷刺出來 */
       if (rh < 1e8 && r > rh * 0.96){ const hr = HR[th * 48 + ph], nr = th >= A.edge[ph] - 1 ? Math.min(r, rh * 0.975) : Math.min(r, Math.max(rh * 0.96, Math.min(hr + 0.012, rh * 0.99)));   /* v731 作者：「棒球帽的頭皮能改嗎」→ 帽緣那兩圈的頭髮只收到帽子裡面一點點，不壓到頭皮上，帽子和頭之間的縫用頭髮蓋住 */ if (nr < r){ v.multiplyScalar(nr / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); } } }
     P.needsUpdate = true; k.hair.geo0 = g0; k.hair.sm.geometry = geo; } };
 K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, facefill: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
@@ -5569,7 +5579,7 @@ K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0;
     for (const [, f] of L.slice(cap)) if (f.av.k3){ K3.detach(f.av); f._lod = -1; } }
   for (const f of CLOD.all){ if (f === me || ((f.k3c || (f.av && f.av.k3)) && (!K3.allow || K3.allow.has(f)))) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
-K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest', 'wave'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
+K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin', 'bob', 'lowpony', 'bun'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest', 'wave'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
 K3.enc = c => [/^b/.test(c.eye || '') ? 'g' : 'b', c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || '', c.mask || 'none', c.ear || 'none', (c.c || {}).mask || '', (c.c || {}).ear || '', c.hat || 'none', (c.c || {}).hat || '', c.eye || '', c.brow || '', c.mouth || '', c.blush || '', (c.c || {}).eye || ''].join('|');   /* v741 再多五格：眼睛、眉毛、嘴巴、腮紅、眼睛顏色。第一格（以前的男女臉）留給舊版看：有睫毛的眼睛送 g、沒有的送 b */ //   /* v729 後面多四格：口罩、耳環、口罩顏色、耳環顏色（舊版只讀前九格，不會壞） */
 K3.dec = s => { if (typeof s !== 'string' || s.length > 220) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
   const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
@@ -21880,6 +21890,9 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u751', d:'11/24', items:[
+    ['💇', '新髮型三種：鮑伯短髮、小馬尾、包包頭，到造型頁「髮型」選。戴帽子時包包頭的丸子會自動收進帽子裡。', 'closet'],
+    ['🧑‍🤝‍🧑', '村民不再撞衫了：每個人固定一套造型，釣魚開船的戴草帽、穿釣魚背心，有人戴棒球帽、耳環、口罩，也有人穿海浪外套，髮型和眼睛顏色也分開了。'] ] },
   { id:'u749', d:'11/24', items:[
     ['😆', '臉會跟著動作變表情了：揮手跳舞會笑、歡呼星星眼、比讚眨眼、害怕嚇到、生氣皺眉、睡覺閉眼……魚跑掉會哭，被旁邊的人拍手或比讚會害羞。別人也看得到。'] ] },
   { id:'u748', d:'11/24', items:[
