@@ -2291,3 +2291,39 @@ html.fltype #rotate{display:none!important}
 .tk2-none,.tk2-help{color:#5f7d92;font-size:14px;margin:8px 4px}
 .tk2-back{border:0;background:none;font:inherit;font-weight:800;color:#2f6f8f;padding:4px 2px 8px;cursor:pointer}
 @media (orientation:portrait){ .tk2{grid-template-columns:1fr;grid-template-rows:minmax(0,40fr) minmax(0,60fr)} .tk2-name{font-size:22px} }
+
+/* v753 配種缸（跟魚缸同一套：木框水族箱＋右邊圖示） */
+.lb2-water{background:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.42),transparent 62%),linear-gradient(180deg,#a8e6dc 0%,#5fc4c8 50%,#2f93ad 86%,#e2cfa0 86.5%,#cdb47c 100%)}
+.lb2-back{position:absolute;left:16px;top:15px;z-index:3;border:0;border-radius:3px;padding:3px 9px;background:rgba(20,60,90,.55);color:#eaf8ff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.lb2-slots{position:absolute;right:16px;top:15px;z-index:3;display:flex;gap:5px}
+.lb2-slots button{min-width:26px;height:26px;border:0;border-radius:50%;background:rgba(20,60,90,.45);color:#eaf8ff;font:inherit;font-weight:800;font-size:13px;cursor:pointer;padding:0 6px}
+.lb2-slots button.on{background:#fff;color:#17566f}
+.lb2-slots button.add{border-radius:13px;background:rgba(255,233,168,.9);color:#6b4517}
+.lb2-par{position:absolute;top:50%;width:42%;transform:translateY(-54%);display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;font:inherit;color:#fff;cursor:pointer;padding:0;text-shadow:0 1px 2px rgba(10,50,80,.7)}
+.lb2-par.pa{left:3%}.lb2-par.ma{right:3%}
+.lb2-par canvas{width:min(120px,100%);height:auto;filter:drop-shadow(0 4px 3px rgba(10,50,90,.3));animation:lb2bob 3.2s ease-in-out infinite}
+.lb2-par.ma canvas{transform:scaleX(-1);animation-name:lb2bobR;animation-delay:-1.4s}
+@keyframes lb2bob{0%,100%{transform:translateY(-3px)}50%{transform:translateY(4px)}}
+@keyframes lb2bobR{0%,100%{transform:scaleX(-1) translateY(-3px)}50%{transform:scaleX(-1) translateY(4px)}}
+.lb2-par b{font-size:14.5px;font-weight:800}.lb2-par small{font-size:11.5px;opacity:.95;line-height:1.25}
+.lb2-par .plus{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;border:2.5px dashed rgba(255,255,255,.85);font-size:30px;margin-bottom:4px;text-shadow:none}
+.lb2-par.picking canvas,.lb2-par.picking .plus{filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 3px #ffe27a)}
+.lb2-heart{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font-size:30px;pointer-events:none}
+.lb2-heart.on{animation:lb2beat 1.1s ease-in-out infinite}
+@keyframes lb2beat{0%,100%{transform:translate(-50%,-50%) scale(1)}40%{transform:translate(-50%,-50%) scale(1.25)}}
+.lb2-msg{position:absolute;left:0;right:0;top:42%;text-align:center;color:#fff;font-weight:700;text-shadow:0 1px 2px rgba(10,50,80,.7)}
+.lb2 .tk2-side{gap:7px;justify-content:flex-start}
+.lb2-row{display:flex;align-items:center;gap:8px}
+.lb2-row .k,.lb2-fry .k{flex:none;width:2.6em;font-size:13px;font-weight:800;color:#5f7d92}
+.lb2-opt{flex:1;display:flex;align-items:center;gap:5px;justify-content:center;min-height:40px;border:0;border-radius:20px;background:#fff;box-shadow:0 3px 0 #b9d3e2,inset 0 0 0 2px #d6e8f2;font:inherit;font-size:12.5px;font-weight:700;color:#33566e;cursor:pointer;padding:0 6px;white-space:nowrap}
+.lb2-opt i{font-style:normal;font-size:18px}
+.lb2-opt.on{background:#d9f3ff;box-shadow:0 3px 0 #2f9bd8,inset 0 0 0 2.5px #2f9bd8;color:#17364f}
+.lb2-tip{font-size:12.5px;color:#2f6f8f;font-weight:700;min-height:1.4em;padding:0 2px}
+.lb2-go{flex:none;margin-top:auto;height:50px;border:0;border-radius:25px;font:inherit;font-size:19px;font-weight:900;letter-spacing:2px;color:#fff;cursor:pointer;background:linear-gradient(180deg,#ff8f8f,#f05f7a);box-shadow:0 4px 0 #b93d57}
+.lb2-go:active{transform:translateY(3px);box-shadow:0 1px 0 #b93d57}
+.lb2-go:disabled{background:#c9d6dd;box-shadow:0 4px 0 #a3b3bc;color:#fff;letter-spacing:0;font-size:15px}
+.lb2-fry{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.lb2-fry .k{width:auto}
+.lb2-egg{width:34px;height:34px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 30%,#fff,#ffe9c2);box-shadow:inset 0 0 0 2px #f0c987;font:inherit;font-size:11px;font-weight:800;color:#8a5a1c;cursor:pointer;padding:0}
+.lb2-t{font-size:22px}
+.lb2-row{gap:6px}.lb2-opt{font-size:12px;padding:0 3px;gap:3px;min-width:0}.lb2-opt i{font-size:16px}.lb2-row .k{width:2.3em}

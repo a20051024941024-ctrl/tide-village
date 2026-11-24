@@ -16187,13 +16187,15 @@ function gpyFish0(x){ const base = FISH_BY_ID[x.f], g = base && isGuppy(x.f) ? g
 /* ===== v752 介面樣本「魚缸」（作者 11/24 傳了「AI 做的網站一眼看得出來」那串：什麼都塞圓角卡片、留白沒輕重、排版固定、說明太多 →「好」先拿魚缸試做）=====
    網址加 #look=tank 才會開，其他人完全不變。想法：整個畫面只做一件事——看魚。左邊是一個真的水族箱（魚在裡面游，點魚就選牠），
    右邊只有這條魚的名字和四顆圓按鈕，下面一排圓圓的魚；說明全部收進「？」，繁殖和配種缸變成兩塊木牌。 */
-const TK2_ON = /look=tank/.test(location.hash);
+const TK2_ON = !/look=oldtank/.test(location.hash);   /* v753 作者看過樣本說「對」→ 開給大家；網址加 #look=oldtank 可以看舊的 */
 const Tank2 = { sel: 0, view: null, pos: new Map(), raf: 0 };
 const TK2_RING = { '常見': '#a9c4cf', '稀有': '#4aa3ff', '傳說': '#f0a23a' };
 function tk2List(){ let list = rec.tank.slice(); if (tankSort === 'fav') list = list.filter(x => x.k); if (tankSort === 'big') list.sort((a, b) => b.w - a.w); else if (tankSort === 'rare') list.sort((a, b) => RARITY_ORDER[FISH_BY_ID[b.f].rarity] - RARITY_ORDER[FISH_BY_ID[a.f].rarity] || b.w - a.w); return list; }
 function renderTank2(body){ const T = Tank2;
-  if (T.view){ const back = el('button', 'tk2-back', '← 回魚缸'); back.addEventListener('click', () => { T.view = null; Lab.pick = null; renderTab(); }); body.appendChild(back);
-    if (T.view === 'breed'){ Breed.open = true; breedTank(); renderBreedGuide(body); } else if (T.view === 'lab'){ Lab.open = true; renderLab(body); }
+  if (T.view === 'lab'){ renderLab2(body); return; }
+  if (T.view){ const toLab = T.view === 'labhelp', back = el('button', 'tk2-back', toLab ? '← 回配種缸' : '← 回魚缸'); back.addEventListener('click', () => { T.view = toLab ? 'lab' : null; Lab.pick = null; renderTab(); }); body.appendChild(back);
+    if (T.view === 'breed'){ Breed.open = true; breedTank(); renderBreedGuide(body); }
+    else if (toLab){ for (const t of ['🧬 自己挑一公一母（同一種），每一缸每天可以配一次，生 1～3 條魚苗。', '魚苗從爸媽各拿一半的特徵：主色、花紋、鰭、光澤、體型。有的特徵要爸媽兩邊都帶著才會顯出來，所以看起來普通的魚也可能藏著特別的基因。', '每條魚苗有 5% 機會突變出爸媽都沒有的特徵，0.5% 機會出現稀有突變（白化、金鱗、黑化、夜光、寶石眼）。', '❄️ 冷水：藍、紫、青比較容易出現。🔥 溫水：紅、橘、黃、粉比較容易出現。🎨 色揚飼料：顏色、花紋比較容易傳下去。💪 高蛋白：魚苗大一點。🌿 水草：特別的鰭比較容易傳下去。這些只是機率多一點，不是保證。', '🐣 魚苗隔天長大才看得出樣子，長大後可以再配。兄弟姊妹互配，體型會變小。', `有基因的魚最多養 60 條。會在魚缸生小魚的有：${[...TANK_BREED].map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).join('、')}。`]) body.appendChild(el('p', 'tk2-help', t)); }
     else { const nShow = (rec.show || []).length; for (const t of [`🌊 我的海：最喜歡的魚按「我的海」，牠就會在你小島底下的海裡游（現在 ${nShow} / ${mySeaCap()} 條），來你島上的朋友也看得到。`, '⭐ 收藏：收藏的魚不會被賣掉，也不能放流。', '💙 放流：把魚放回大海，拿愛海點數。', '📖 卡片：看這條魚的詳細資料、幫牠取名字、做魚拓、掛標籤放流。', '🐣 繁殖、🧬 配種缸：在魚缸下面的兩塊木牌。']) body.appendChild(el('p', 'tk2-help', t)); }
     return; }
   const list = tk2List(); if (!list.some(x => x.t === T.sel)) T.sel = list.length ? list[0].t : (rec.tank[0] && rec.tank[0].t) || 0;
@@ -16230,6 +16232,37 @@ function renderTank2(body){ const T = Tank2;
   /* 木牌 */
   const signs = el('div', 'tk2-signs'), sign = (ic, lab, sub, v) => { const b = el('button', 'tk2-sign'); b.append(el('i', '', ic), el('b', '', lab)); if (sub) b.appendChild(el('small', '', sub)); b.addEventListener('click', () => { T.view = v; renderTab(); }); signs.appendChild(b); };
   const pairs = tankPairs().filter(p => p.pairs > 0).length, fry = rec.tank.filter(gnIsFry).length; sign('🐣', '繁殖', pairs ? `${pairs} 種配對中` : '', 'breed'); sign('🧬', '配種缸', fry ? `${fry} 條魚苗` : '', 'lab'); sign('？', '', '', 'help'); aq.appendChild(signs); }
+/* v753 配種缸照魚缸樣本的想法重排（作者「對」）：左邊是配種缸——爸爸媽媽面對面、中間一顆心；右邊用圖示選水溫、飼料、水草，一顆大按鈕配種；說明收進「？」 */
+function renderLab2(body){ const T = Tank2, wrap = el('div', 'tk2 lb2'), aq = el('div', 'tk2-aq'), water = el('div', 'tk2-water lb2-water'), side = el('div', 'tk2-side'); wrap.append(aq, side); body.appendChild(wrap); aq.appendChild(water);
+  const back = el('button', 'lb2-back', '← 魚缸'); back.addEventListener('click', () => { T.view = null; Lab.pick = null; renderTab(); }); aq.appendChild(back);
+  const signs = el('div', 'tk2-signs'), hb = el('button', 'tk2-sign'); hb.append(el('i', '', '？'), el('b', '', '怎麼配')); hb.addEventListener('click', () => { T.view = 'labhelp'; renderTab(); }); signs.appendChild(hb); aq.appendChild(signs);
+  const msg = t => { water.appendChild(el('p', 'lb2-msg', t)); };
+  if (!Cloud.on || !Cloud.sb){ msg('要連上線才能用配種缸。'); return; } if (!Lab.data){ msg('正在看配種缸…'); labLoad(); return; }
+  if (Lab.data.err){ msg('配種缸暫時打不開。'); const b = el('button', 'lb2-go', '再試一次'); b.addEventListener('click', () => { Lab.data = null; renderTab(); }); side.appendChild(b); return; }
+  const n = Lab.data.n || 1, i = Lab.cur = clamp(Lab.cur || 1, 1, n), S = labSel(i), sv = (Lab.data.s || {})[i], wait = sv && sv.at ? sv.at + 20 * 3600000 - Lab.now() : 0, pa = rec.tank.find(q => q.t === S.m), ma = rec.tank.find(q => q.t === S.f);
+  { const tabs = el('div', 'lb2-slots'); for (let k = 1; k <= n; k++){ const b = el('button', k === i ? 'on' : '', String(k)); b.title = `配種缸 ${k}`; b.addEventListener('click', () => { Lab.cur = k; Lab.pick = null; renderTab(); }); tabs.appendChild(b); }
+    if (n < 4){ const cost = LAB_SLOT_COST[n - 1], b = el('button', 'add', '＋'); b.title = '再加一個配種缸'; b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `🪙${cost.toLocaleString()}？`; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = '＋'; } }, 2500); return; } labBuy(); }); tabs.appendChild(b); } aq.appendChild(tabs); }
+  for (let k = 0; k < 2; k++){ const w = el('i', 'tk2-weed'); w.style.left = [6, 90][k] + '%'; w.style.height = [38, 30][k] + '%'; w.style.animationDelay = (-k * 1.6) + 's'; water.appendChild(w); }
+  for (const [sex, x, cls, lab] of [['M', pa, 'pa', '爸爸 ♂'], ['F', ma, 'ma', '媽媽 ♀']]){ const b = el('button', 'lb2-par ' + cls + (x ? ' has' : '') + (Lab.pick && Lab.pick.sex === sex ? ' picking' : ''));
+    if (x){ b.appendChild(fishCanvas(gpyFish(x), true, 120, 76)); b.appendChild(el('b', '', `${sexIcon(x)} ${x.n || fishNameOf(x)}`)); const ch = gnChips(x); b.appendChild(el('small', '', ch.length ? ch.slice(0, 4).join('・') : x.gn ? '一般的樣子' : '還沒配過種')); }
+    else { b.appendChild(el('span', 'plus', '＋')); b.appendChild(el('b', '', '挑' + lab)); }
+    b.addEventListener('click', () => { Lab.pick = Lab.pick && Lab.pick.sex === sex ? null : { i, sex }; renderTab(); }); water.appendChild(b); }
+  water.appendChild(el('div', 'lb2-heart' + (pa && ma && wait <= 0 ? ' on' : ''), wait > 0 ? '💤' : pa && ma ? '💗' : '🤍'));
+  if (Lab.pick){ const sex = Lab.pick.sex, key = sex === 'M' ? 'm' : 'f', other = sex === 'M' ? ma : pa, list = rec.tank.filter(x => labOk(x, sex, other));
+    side.appendChild(el('div', 'tk2-name lb2-t', `挑${sex === 'M' ? '爸爸 ♂' : '媽媽 ♀'}`)); side.appendChild(el('div', 'tk2-meta', other ? `要跟另一半同一種：${FISH_BY_ID[breedBase(other.f)].name}` : '點一條魚，左邊就會換成牠'));
+    const grid = el('div', 'tk2-grid'); list.slice(0, 120).forEach(x => { const f = FISH_BY_ID[x.f], b = el('button', 'tk2-tok' + (x.t === S[key] ? ' sel' : '')); b.style.setProperty('--ring', TK2_RING[f.rarity] || '#b58be0'); b.appendChild(fishCanvas(gpyFish(x), true, 44, 28)); if (x.gn) b.appendChild(el('i', '', '🧬')); b.title = fishNameOf(x);
+      b.addEventListener('click', () => { S[key] = x.t; labSave(); renderTab(); }); grid.appendChild(b); });
+    if (!list.length) grid.appendChild(el('p', 'tk2-none', `魚缸裡沒有可以選的${sex === 'M' ? '公魚' : '母魚'}。魚苗要長大才能配。`)); side.appendChild(grid);
+    const ok = el('button', 'lb2-go', '好了'); ok.addEventListener('click', () => { Lab.pick = null; renderTab(); }); side.appendChild(ok); return; }
+  const row = (lab, opts, cur, set) => { const r = el('div', 'lb2-row'); r.appendChild(el('span', 'k', lab)); for (const [v, ic, name, cost] of opts){ const b = el('button', 'lb2-opt' + (cur === v ? ' on' : '')); b.append(el('i', '', ic), el('span', '', name + (cost ? ` 🪙${cost}` : ''))); b.addEventListener('click', () => { set(v); labSave(); renderTab(); }); r.appendChild(b); } side.appendChild(r); };
+  row('水溫', [['cold', '❄️', '冷水'], ['mid', '💧', '常溫'], ['warm', '🔥', '溫水']], S.tp, v => S.tp = v);
+  row('飼料', [['norm', '🥣', '一般'], ['color', '🎨', '色揚', 30], ['protein', '💪', '高蛋白', 30]], S.fd, v => S.fd = v);
+  row('水草', [[false, '🫧', '不放'], [true, '🌿', '多放', 20]], !!S.pl, v => S.pl = v);
+  const tip = [LAB_TP.find(o => o[0] === S.tp)[2], LAB_FD.find(o => o[0] === S.fd)[3], S.pl ? '特別的鰭比較容易傳下去' : ''].filter(t => t && t !== '免費' && t !== '不偏哪一邊');
+  side.appendChild(el('div', 'lb2-tip', tip.length ? tip.join('；') : !pa || !ma ? '先點左邊，挑好爸爸和媽媽。' : '什麼都不加，就看爸媽和運氣。'));
+  const cost = (S.fd === 'norm' ? 0 : 30) + (S.pl ? 20 : 0), go = el('button', 'lb2-go', wait > 0 ? `休息中・還要 ${wait > 3600000 ? Math.ceil(wait / 3600000) + ' 小時' : Math.ceil(wait / 60000) + ' 分鐘'}` : Lab.busy ? '配種中…' : `配種${cost ? ` 🪙${cost}` : ''}`);
+  go.disabled = wait > 0 || Lab.busy || !pa || !ma; go.addEventListener('click', () => labBreed(i)); side.appendChild(go);
+  const fry = rec.tank.filter(gnIsFry); if (fry.length){ const fr = el('div', 'lb2-fry'); fr.appendChild(el('span', 'k', `🐣 魚苗 ${fry.length}`)); for (const x of fry.slice(0, 8)){ const h = Math.max(1, Math.ceil((x.gb + 86400000 - Lab.now()) / 3600000)), b = el('button', 'lb2-egg', `${h}h`); b.title = `還要 ${h} 小時長大`; b.addEventListener('click', () => { T.view = null; T.sel = x.t; renderTab(); }); fr.appendChild(b); } side.appendChild(fr); } }
 // 養魚繁殖說明（魚缸分頁最上面）：三個步驟＋自己每一種會生的魚現在的進度
 const Breed = { open: null };
 function renderBreedGuide(body){
@@ -20047,7 +20080,7 @@ function renderTab0(){
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
   const body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
-  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && !Tank2.view && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone');
+  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone');
   { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
   try { phoneHdr(); } catch(e){}
   if (curTab === 'dex' && !LS.get('tide.guideDex', false)) LS.set('tide.guideDex', true);   /* v582 新手任務第 2 步 */
