@@ -2348,3 +2348,26 @@ body.touch #hint{display:none!important}   /* v758 手機上這塊舊操作提�
 /* v759 作者截圖：木框頁面右上角的紅色叉叉被框切掉一塊 → 標題列不再往右、往上伸出框外 */
 #sheet.th-wood header{margin:0 0 0 -10px!important}
 #sheet.th-wood #closeSheet{position:relative;z-index:3}
+
+/* v766 擺家具：下面一條清單、跟著家具的圓鈕 */
+body.furntop #today3, body.furntop #mini3, body.furntop #top, body.furntop #chat, body.furntop #actWrap, body.furntop #joy, body.furntop #joyZone, body.furntop #emotes, body.furntop #menu, body.furntop #isleBar, body.furntop #ticker, body.furntop #hint, body.furntop #guideCard, body.furntop #evChip, body.furntop #labels{display:none!important}
+#furnTray{position:fixed;left:0;right:0;bottom:0;z-index:9;padding:6px calc(8px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));background:linear-gradient(#f6e6c0,#e3c98f);border-top:3px solid #3a2a17;box-shadow:0 -3px 10px #0006;animation:ftUp .18s ease-out}
+#furnTray[hidden],#furnTop[hidden],#furnPf[hidden]{display:none!important}
+@keyframes ftUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+#furnTray .ft-tabs{display:flex;gap:5px;margin-bottom:6px;overflow-x:auto;scrollbar-width:none}
+#furnTray .ft-tabs button{flex:none;padding:4px 12px;border-radius:10px;border:2px solid #3a2a17;background:#fff6de;color:#3a2a17;font-weight:800;font-size:13px}
+#furnTray .ft-tabs button.on{background:linear-gradient(#6fc0ff,#2f86e0);color:#fff;border-color:#17386b}
+#furnTray .ft-strip{display:flex;gap:7px;overflow-x:auto;padding:5px 2px 2px;touch-action:pan-x;scrollbar-width:none}#furnTray .ft-strip::-webkit-scrollbar,#furnTray .ft-tabs::-webkit-scrollbar{display:none}
+#furnTray .ft-empty{font-size:13px;color:#5b472c;padding:22px 8px}
+.ft-card{position:relative;flex:none;width:82px;height:80px;border-radius:12px;border:2.5px solid #3a2a17;background:#fff8e6;color:#3a2a17;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:2px 2px 4px;box-shadow:0 3px 0 #3a2a17;transition:transform .08s}
+.ft-card:active{transform:translateY(2px) scale(.97)}.ft-card.on{background:#cfe8ff;border-color:#17386b;box-shadow:0 3px 0 #17386b}.ft-card.poor{filter:grayscale(.7);opacity:.7}
+.ft-card .ft-icw{width:46px;height:42px;display:grid;place-items:center;pointer-events:none;overflow:hidden}.ft-card .ft-icw img{width:46px!important;height:46px!important;object-fit:contain;margin:0;border:0;background:none;box-shadow:none;border-radius:0}
+.ft-card b{font-size:11.5px;line-height:1.15;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}.ft-card i{font-style:normal;font-size:11px;font-weight:800;color:#8a5a12;pointer-events:none}
+.ft-card u{position:absolute;right:-5px;top:-7px;text-decoration:none;background:#3bb54a;color:#fff;border:2px solid #3a2a17;border-radius:9px;font-size:10.5px;font-weight:800;padding:0 5px;pointer-events:none}
+#furnTop{position:fixed;left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));z-index:9;display:flex;align-items:center;gap:7px;pointer-events:none}
+#furnTop>*{pointer-events:auto}#furnTop .ft-sp{flex:1;pointer-events:none}
+#ftCoin{background:#fff8e6;color:#3a2a17;border:2px solid #3a2a17;border-radius:11px;padding:4px 10px;font-weight:800;font-size:13px;opacity:1}#ftHint{background:#1d130bd9;color:#ffe9b0;border-radius:11px;padding:6px 12px;font-size:13px;font-weight:700;max-width:52vw}#ftHint.bad{color:#ffb0a3}
+#furnPf{position:fixed;z-index:9;transform:translateX(-50%);display:flex;gap:9px;align-items:center}
+#furnPf button{width:50px;height:50px;border-radius:50%;border:3px solid #3a2a17;color:#fff;font-size:23px;font-weight:900;line-height:1;box-shadow:0 3px 0 #3a2a17;transition:transform .08s}#furnPf button:active{transform:translateY(2px) scale(.95)}
+#furnPf .x{background:#d23a2a}#furnPf .r{background:#2f86e0}#furnPf .o{background:#3bb54a}#furnPf .o.no{filter:grayscale(1) brightness(.7)}
+#furnPf .t{width:auto;height:44px;padding:0 15px;border-radius:22px;font-size:13.5px;background:#8a6a3a;color:#fff;border:3px solid #3a2a17;display:grid;place-items:center;font-weight:800}#furnPf .t.b{background:#2f86e0}#furnPf .t.warn{background:#d23a2a}

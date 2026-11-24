@@ -6317,7 +6317,7 @@ canvas.addEventListener('pointerdown', e => { ensureAudio(); if (F.phase === 'id
    現在要「兩隻手指都有移動」（真的在捏）才縮放；只有一隻在動就不縮放 */
 canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; const pv = pinch.get(e.pointerId); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: pv.sx ?? e.clientX, sy: pv.sy ?? e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchArm){ const ma = Math.hypot(a.x - (a.sx ?? a.x), a.y - (a.sy ?? a.y)), mb = Math.hypot(b.x - (b.sx ?? b.x), b.y - (b.sy ?? b.y)); if (Math.abs(d - pinchArm) < 14 || ma < 10 || mb < 10) return; pinchArm = 0; pinchDist = d; return; } const L = camLimits(); if (pinchDist > 0){ cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); camDistSave(); } pinchDist = d; } });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
-canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; if (typeof Blk !== 'undefined' && (Blk.paint || Blk.rect)) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
+canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; if (FB.on && FB.top) return; if (typeof Blk !== 'undefined' && (Blk.paint || Blk.rect)) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
 const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); camDistSave(); }, { passive:false });
@@ -7046,7 +7046,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (FB.on && FB.top && House.on && furnCam(dt)) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 /* v608 作者：「很多地方其實都會被樹擋視野，就算換了方向還是會被房子擋」→ 擋在鏡頭和你中間的樹、房子、牆變半透明（像很多第三人稱遊戲）。
@@ -8677,6 +8677,7 @@ function renderIsleBar(){
   bar.hidden = false; bar.innerHTML = ''; const mine = onIsle.owner === myIdOrMe();
   bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 我家（${onIsle.name}）` : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}`));
   if (House.on && canEditIsle()){ const fb = el('button', 'tbtn', FB.on ? '完成擺設' : '🛋️ 擺家具'); fb.addEventListener('click', () => { if (FB.on) stopFurn(); else startFurn(); renderIsleBar(); }); bar.appendChild(fb);
+    if (FB.on && !FB.top){ const tb = el('button', 'tbtn ghost', '用手指擺'); tb.addEventListener('click', () => { LS.set('tide.furnWalk', false); clearFurnGhost(); FB.top = true; FB.sel = null; FT.cx = 0; FT.cz = 0; renderFurnBar(); renderIsleBar(); }); bar.appendChild(tb); }
     const lb = el('button', 'tbtn ghost', '🏠 格局'); lb.addEventListener('click', () => { furnSheet = 'lay'; openSheet('furn'); }); bar.appendChild(lb); }
   else if (mine || canEditIsle()){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (Build.on) stopBuild(); else { if (onIsle && onIsle.owner !== myIdOrMe()) loadIsleP(); Build.on = true; isleUnbatch(isleGroup); renderBuildBar(); renderIsleBar(); } }); bar.appendChild(b);
     const s = el('button', 'tbtn ghost', '🛒 買東西'); s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
@@ -9590,37 +9591,116 @@ function updateHouse(t){
   for (const P of House.paints || []){ const a = t * 0.7 + P.ph; if (P.fish){ P.fish.position.x = Math.sin(a) * 0.1; P.fish.position.y = P.y - 0.02 + Math.sin(a * 1.7) * 0.025; P.fish.rotation.z = Math.sin(a * 1.7 + 1) * 0.07; }
     P.strokes.forEach((sm, i) => { sm.position.x = Math.sin(a * 0.8 + i * 2.1) * 0.2; sm.material.opacity = 0.22 + 0.2 * (0.5 + 0.5 * Math.sin(a * 1.3 + i)); }); }
   for (const o of House.fish){ const a = t * 0.8 + o.k, c = Math.cos(o.r), s = Math.sin(o.r), lx = Math.cos(a) * 0.45, lz = Math.sin(a * 1.3) * 0.12; o.f.position.x = o.x + c * lx + s * lz; o.f.position.z = o.z - s * lx + c * lz; o.f.rotation.y = o.r + (Math.sin(a) > 0 ? Math.PI : 0); }
-  updateFurn();
+  updateFurn(); furnTopTick();
 }
 
 // ---- 擺家具模式（在房子裡面拿著家具走，放在想要的位置）----
-const FB = { on:false, type:null, moveId:null, rot:0, ghost:null, x:0, z:0, err:null, sel:null };
+const FB = { on:false, type:null, moveId:null, rot:0, ghost:null, x:0, z:0, err:null, sel:null, top:false };
 function startFurn(type, moveId){
   if (!House.on || !canEditIsle()){ toast('要在自己（或住的）家裡才能擺家具'); return; }
-  closeSheet(); clearFurnGhost(); FB.on = true; FB.type = type || null; FB.moveId = moveId || null;
+  const was = FB.on, px = FB.x, pz = FB.z, pt = FB.type;
+  closeSheet(); clearFurnGhost(); if (!was){ FB.top = !LS.get('tide.furnWalk', false); FT.cx = 0; FT.cz = 0; FB.sel = null; } FB.on = true; FB.type = type || null; FB.moveId = moveId || null;
   if (type){ const o = moveId ? houseFurn(House.it).find(x => x.id === moveId) : null; FB.rot = o ? o.r : Math.round(((me.rot + Math.PI) % (Math.PI * 2)) / (Math.PI / 2)) * Math.PI / 2;
     FB.ghost = furnMesh(type); FB.ghost.traverse(o => { if (o.isMesh){ o.material = ghostOk; o.castShadow = false; } }); scene.add(FB.ghost);
-    if (moveId){ const m = House.furnG.get(moveId); if (m) m.visible = false; } }
+    if (moveId){ const m = House.furnG.get(moveId); if (m) m.visible = false; }
+    if (FB.top){ const o2 = moveId ? houseFurn(House.it).find(x => x.id === moveId) : null; if (o2){ FB.x = o2.x; FB.z = o2.z; } else if (was && pt === type){ const lay = houseLay(House.it), f = floorFurn(House.it), st = FURN[type].rad * 2 + 0.25; let ok = false; for (const [dx, dz] of [[st, 0], [-st, 0], [0, st], [0, -st]].map(v => [Math.ceil(v[0] * 4) / 4 * 1, Math.ceil(v[1] * 4) / 4 * 1])) if (!furnCheck(lay, f, type, px + dx, pz + dz, -1)){ FB.x = px + dx; FB.z = pz + dz; ok = true; break; } if (!ok){ FB.x = px; FB.z = pz; } } else { FB.x = Math.round(FT.cx * 4) / 4; FB.z = Math.round(FT.cz * 4) / 4; } FB.sel = null; } }
   renderFurnBar(); renderIsleBar();
 }
 function clearFurnGhost(){ if (FB.ghost){ scene.remove(FB.ghost); FB.ghost = null; } if (FB.moveId && House.furnG){ const m = House.furnG.get(FB.moveId); if (m) m.visible = true; } FB.type = null; FB.moveId = null; }
-function stopFurn(){ clearFurnGhost(); FB.on = false; FB.sel = null; renderFurnBar(); }
+function stopFurn(){ clearFurnGhost(); FB.on = false; FB.sel = null; renderFurnBar(); furnTopOff(); }
+/* ===== v766 擺家具新做法（作者：「很難找，要用很多下」）：鏡頭拉高往下看整個房間，家具清單變成下面一條一直開著（有分類、最近用過），
+   點小圖家具就出現，用手指拖位置，✓ ✕ ↻ 跟著家具；擺好的家具直接點、直接拖。舊的「走路對位置」還留著（上面「改用走路擺」）。
+   規則、價錢、伺服器都沒動，還是 home_edit 的 fplace／fmove／fremove。 ===== */
+const FT = { tab:'recent', ptr:null, cx:0, cz:0, sig:'', pfSig:'', dist:10 };
+const FT_TABS = [['recent', '最近用過', null], ['bed', '臥室', ['bed']], ['live', '客廳', ['live']], ['kit', '廚房浴室', ['kit']], ['plant', '植物', ['plant']], ['art', '魚拓和畫', ['gk', 'gy', 'mu', 'cai']], ['fe', '節慶', ['fe']]];
+function furnRecent(t){ if (!t || !FURN[t]) return; const a = (LS.get('tide.furnRecent', []) || []).filter(x => x !== t); a.unshift(t); LS.set('tide.furnRecent', a.slice(0, 14)); FT.sig = ''; }
+function furnTabList(tab){ const T = FT_TABS.find(x => x[0] === tab) || FT_TABS[0], own = rec.owned || [];
+  if (!T[2]){ const f = House.it ? houseFurn(House.it) : [], seen = new Set(), out = []; for (const k of [...(LS.get('tide.furnRecent', []) || []), ...f.map(o => o.t).reverse()]) if (FURN[k] && FURN[k].g !== '_base' && !seen.has(k)){ seen.add(k); out.push(k); } return out.slice(0, 16); }
+  return Object.keys(FURN).filter(k => T[2].includes(FURN[k].g) && ((FURN[k].g !== 'gy' && FURN[k].g !== 'fe') || own.includes(k))); }
+function furnTopOff(){ document.body.classList.remove('furntop'); for (const id of ['#furnTray', '#furnTop', '#furnPf']){ const n = $(id); if (n) n.hidden = true; } FT.sig = ''; FT.pfSig = ''; FT.ptr = null; }
+function furnTray(){
+  document.body.classList.add('furntop');
+  let tr = $('#furnTray'), tp = $('#furnTop'), pf = $('#furnPf');
+  if (!tr){ tr = document.createElement('div'); tr.id = 'furnTray'; tr.innerHTML = '<div class="ft-tabs"></div><div class="ft-strip"></div>'; document.body.appendChild(tr);
+    tp = document.createElement('div'); tp.id = 'furnTop'; tp.innerHTML = '<span id="ftHint"></span><span class="ft-sp"></span><span id="ftCoin" class="coinpill"></span><button class="tbtn ghost" data-a="walk">改用走路擺</button><button class="tbtn ghost" data-a="lay">格局</button><button class="tbtn" data-a="done">完成</button>'; document.body.appendChild(tp);
+    pf = document.createElement('div'); pf.id = 'furnPf'; document.body.appendChild(pf);
+    tp.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a; if (a === 'done'){ stopFurn(); renderIsleBar(); } else if (a === 'lay'){ furnSheet = 'lay'; openSheet('furn'); } else if (a === 'walk'){ LS.set('tide.furnWalk', true); FB.top = false; clearFurnGhost(); renderFurnBar(); toast('改回走路擺了。下次進擺設會記得；想換回來，按「擺家具」旁邊的「用手指擺」'); renderIsleBar(); } });
+    tr.addEventListener('click', e => { const tb = e.target.closest('button[data-tab]'); if (tb){ FT.tab = tb.dataset.tab; FT.sig = ''; furnTray(); return; } const c = e.target.closest('[data-k]'); if (!c) return; const k = c.dataset.k, T = FURN[k]; if (!T) return; if (rec.coins < T.price){ toast(`金幣不夠，還差 ${(T.price - rec.coins).toLocaleString()}`); return; } if (floorFurn(House.it).length >= 40){ toast('這一層已經 40 件，放不下了'); return; } startFurn(k); });
+    pf.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a;
+      if (a === 'x'){ clearFurnGhost(); renderFurnBar(); } else if (a === 'r' && FB.ghost){ FB.rot = (FB.rot + Math.PI / 2) % (Math.PI * 2); } else if (a === 'ok'){ confirmFurn(); }
+      else if (FB.sel){ const o = FB.sel, T = FURN[o.t];
+        if (a === 'r'){ homeOp('fmove', { house: House.it.id, id: o.id, x: o.x, z: o.z, r: +(((o.r || 0) + Math.PI / 2) % (Math.PI * 2)).toFixed(2) }).then(() => { FT.pfSig = ''; }); }
+        else if (a === 'rm'){ if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定收掉？'; b.classList.add('warn'); return; } homeOp('fremove', { house: House.it.id, id: o.id }).then(ok => { if (ok){ FB.sel = null; FT.sig = ''; toast(`收掉了 ${T.name}，退回 ${Math.floor(T.price / 2)} 金幣`); renderFurnBar(); } }); }
+        else if (a === 'bed'){ homeOp('bed', { house: House.it.id, id: o.id }).then(ok => { if (ok){ toast(o.own ? '已經放掉這張床' : '這張床是你的了！房門上會掛你的名字'); FT.pfSig = ''; } }); } } });
+  }
+  tr.hidden = false; tp.hidden = false; pf.hidden = false;
+  if (FT.tab === 'recent' && !furnTabList('recent').length) FT.tab = 'live';
+  const f = House.it ? houseFurn(House.it) : [], sig = FT.tab + '|' + f.length + '|' + (FB.type || '') + '|' + rec.coins + '|' + (rec.owned || []).length;
+  if (sig === FT.sig) return; FT.sig = sig;
+  const tabs = tr.firstChild, strip = tr.lastChild, keepScroll = strip.dataset.tab === FT.tab ? strip.scrollLeft : 0; tabs.innerHTML = ''; strip.innerHTML = ''; strip.dataset.tab = FT.tab;
+  for (const [k, name] of FT_TABS){ if (k !== 'recent' && !furnTabList(k).length) continue; const b = el('button', k === FT.tab ? 'on' : '', name); b.dataset.tab = k; tabs.appendChild(b); }
+  const list = furnTabList(FT.tab); if (!list.length) strip.appendChild(el('span', 'ft-empty', '這一類還沒有東西'));
+  for (const k of list){ const T = FURN[k], n = f.filter(x => x.t === k).length, c = el('button', 'ft-card' + (FB.type === k && !FB.moveId ? ' on' : '') + (rec.coins < T.price ? ' poor' : '')); c.dataset.k = k;
+    const iw = el('span', 'ft-icw', ''), ic = el('span', 'ft-ic', ''); iw.appendChild(ic); c.appendChild(iw); c.appendChild(el('b', '', T.name)); c.appendChild(el('i', '', T.price.toLocaleString())); if (n) c.appendChild(el('u', '', '家裡 ' + n)); strip.appendChild(c);
+    thumbLater(ic, 'furn:' + k, () => furnMesh(k), T.name); }
+  strip.scrollLeft = keepScroll; const cp = $('#ftCoin'); if (cp){ cp.textContent = '🪙 ' + rec.coins.toLocaleString(); try { coinify(cp); } catch(_){} }
+}
+function furnCam(dt){
+  const lay = House.it && houseLay(House.it); if (!lay) return false;
+  const tf = Math.tan(camera.fov * Math.PI / 360), pit = 1.1, dist = clamp(Math.max((lay.D + 2.5) / (2 * tf * 0.66), (lay.W + 2) / (2 * tf * camera.aspect)), 7, 16.5); FT.dist = dist;
+  FT.cx = clamp(FT.cx, -lay.W / 2, lay.W / 2); FT.cz = clamp(FT.cz, -lay.D / 2, lay.D / 2);
+  const tx = ISLE.x + FT.cx, tz = ISLE.z + FT.cz + dist * 0.15, k = 1 - Math.exp(-dt * 9);
+  camLook.x += (tx - camLook.x) * k; camLook.y += (ROOM_Y - camLook.y) * k; camLook.z += (tz - camLook.z) * k;
+  const px = camLook.x, py = camLook.y + Math.sin(pit) * dist, pz = camLook.z + Math.cos(pit) * dist;
+  camera.position.x += (px - camera.position.x) * k; camera.position.y += (py - camera.position.y) * k; camera.position.z += (pz - camera.position.z) * k;
+  camera.up.set(0, 1, 0); camera.lookAt(camLook); return true;
+}
+function furnRay(e){ const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1, 0.5).unproject(camera), o = camera.position, d = v.sub(o).normalize(); if (d.y > -0.05) return null; const t = (ROOM_Y - o.y) / d.y; return { x: o.x + d.x * t - ISLE.x, z: o.z + d.z * t - ISLE.z }; }
+function furnTopTick(){
+  if (!(FB.on && FB.top && House.on && House.it)) return; const pf = $('#furnPf'), hint = $('#ftHint'); if (!pf) return;
+  if (FB.sel){ const o = floorFurn(House.it).find(x => x.id === FB.sel.id); if (!o) { FB.sel = null; } else FB.sel = o; }
+  const g = FB.ghost ? { x: FB.x, z: FB.z, t: FB.type } : FB.sel ? { x: FB.sel.x, z: FB.sel.z, t: FB.sel.t } : null;
+  const T = g && FURN[g.t], sig = FB.ghost ? 'g' + (FB.moveId ? 'm' : 'n') : FB.sel ? 's' + FB.sel.id + (FB.sel.own || '') + canTouch(FB.sel) : '';
+  if (sig !== FT.pfSig){ FT.pfSig = sig; pf.innerHTML = FB.ghost ? '<button class="x" data-a="x" aria-label="取消">✕</button><button class="r" data-a="r" aria-label="轉向">↻</button><button class="o" data-a="ok" aria-label="放這裡">✓</button>'
+      : FB.sel ? (canTouch(FB.sel) ? `<button class="r" data-a="r" aria-label="轉向">↻</button><button class="t" data-a="rm">收掉 +${Math.floor(T.price / 2)}</button>` : '<span class="t">這是別人買的</span>') + (T.bed && (!FB.sel.own || FB.sel.own === myIdOrMe()) ? `<button class="t b" data-a="bed">${FB.sel.own ? '不睡這張了' : '這是我的床'}</button>` : '') : ''; }
+  if (g){ const v = new THREE.Vector3(ISLE.x + g.x, ROOM_Y + 0.1, ISLE.z + g.z + T.rad * 0.6).project(camera), tr = $('#furnTray'), maxY = innerHeight - (tr ? tr.offsetHeight : 110) - 62;
+    pf.style.left = clamp((v.x + 1) / 2 * innerWidth, 100, innerWidth - 100) + 'px'; pf.style.top = clamp((1 - v.y) / 2 * innerHeight + 10, 54, maxY) + 'px'; pf.style.display = 'flex';
+    const ok = pf.querySelector('.o'); if (ok) ok.classList.toggle('no', !!FB.err); } else pf.style.display = 'none';
+  if (hint){ const n = floorFurn(House.it).length, t = FB.ghost ? (FB.err ? '這裡不能放：' + FB.err : `${T.name}${FB.moveId ? '' : '　' + T.price.toLocaleString() + ' 金幣'}　手指拖到位置再按勾`) : FB.sel ? `${T.name}${FB.sel.own ? '・' + roomName(FB.sel.own) + '的' : ''}　按住拖就能搬` : `這一層 ${n} / 40 件　點下面的小圖擺新的，點房間裡的家具可以搬`;
+    if (hint.textContent !== t) hint.textContent = t; hint.classList.toggle('bad', !!(FB.ghost && FB.err)); }
+  if (FB.sel && !FB.ghost){ const m = House.furnG.get(FB.sel.id); if (m) m.position.y = ROOM_Y + 0.04 + Math.abs(Math.sin(performance.now() / 260)) * 0.05; }
+}
+{ const s4 = v => Math.round(v * 4) / 4;
+  canvas.addEventListener('pointerdown', e => { if (!(FB.on && FB.top && House.on && House.it)) return; const p = furnRay(e); if (!p) return;
+    const P = FT.ptr = { id: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, mode: 'pan', p0: p, cx: FT.cx, cz: FT.cz, ox: 0, oz: 0 };
+    if (FB.ghost){ P.mode = 'ghost'; if (Math.hypot(p.x - FB.x, p.z - FB.z) < FURN[FB.type].rad + 0.7){ P.ox = FB.x - p.x; P.oz = FB.z - p.z; } else { FB.x = s4(p.x); FB.z = s4(p.z); } }
+    else { let best = null, bd = 1e9; for (const o of floorFurn(House.it)){ const dd = Math.hypot(p.x - o.x, p.z - o.z); if (dd < Math.max(0.5, FURN[o.t].rad * 0.95) && dd < bd){ bd = dd; best = o; } } if (best){ P.mode = 'furn'; P.o = best; } } });
+  canvas.addEventListener('pointermove', e => { const P = FT.ptr; if (!P || P.id !== e.pointerId || !FB.on || !FB.top) return; const dx = e.clientX - P.sx, dy = e.clientY - P.sy; if (!P.moved && Math.hypot(dx, dy) > 8) P.moved = true; if (!P.moved) return;
+    if (P.mode === 'furn'){ if (canTouch(P.o)){ const o = P.o; startFurn(o.t, o.id); FB.x = o.x; FB.z = o.z; P.mode = 'ghost'; P.ox = o.x - P.p0.x; P.oz = o.z - P.p0.z; P.auto = true; } else { P.mode = 'none'; toast('一般成員只能動自己買的家具'); } }
+    if (P.mode === 'ghost' && FB.ghost){ const p = furnRay(e); if (p){ FB.x = s4(p.x + P.ox); FB.z = s4(p.z + P.oz); } }
+    else if (P.mode === 'pan'){ const wpp = FT.dist * 2 * Math.tan(camera.fov * Math.PI / 360) / Math.max(1, canvas.clientHeight); FT.cx = P.cx - dx * wpp; FT.cz = P.cz - dy * wpp / Math.sin(1.1); } });
+  const up = e => { const P = FT.ptr; if (!P || P.id !== e.pointerId) return; FT.ptr = null; if (!FB.on || !FB.top || !House.it) return;
+    if (!P.moved){ if (P.mode === 'furn'){ FB.sel = P.o; FT.pfSig = ''; } else if (P.mode === 'pan' && FB.sel){ const m = House.furnG.get(FB.sel.id); if (m) m.position.y = ROOM_Y + 0.01; FB.sel = null; } return; }
+    if (P.auto && FB.ghost && FB.moveId){ const id = FB.moveId; if (!furnCheck(houseLay(House.it), floorFurn(House.it), FB.type, FB.x, FB.z, id)){ FB.err = null; confirmFurn().then(() => { const o = floorFurn(House.it).find(x => x.id === id); if (o && FB.on && FB.top && !FB.ghost){ FB.sel = o; FT.pfSig = ''; } }); } } };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); }
 function updateFurn(){
   if (!FB.on || !House.on || !House.it) return; const lay = houseLay(House.it), f = floorFurn(House.it);
   if (FB.ghost){
-    const T = FURN[FB.type], d = T.rad + 0.9, lx = Math.round((me.pos.x + Math.sin(me.rot) * d - ISLE.x) * 4) / 4, lz = Math.round((me.pos.z + Math.cos(me.rot) * d - ISLE.z) * 4) / 4;
+    const T = FURN[FB.type], d = T.rad + 0.9, lx = FB.top ? FB.x : Math.round((me.pos.x + Math.sin(me.rot) * d - ISLE.x) * 4) / 4, lz = FB.top ? FB.z : Math.round((me.pos.z + Math.cos(me.rot) * d - ISLE.z) * 4) / 4;
     FB.x = lx; FB.z = lz; FB.err = furnCheck(lay, f, FB.type, lx, lz, FB.moveId || -1);
     FB.ghost.position.set(ISLE.x + lx, ROOM_Y + 0.01, ISLE.z + lz); FB.ghost.rotation.y = FB.rot;
     const m = FB.err ? ghostBad : ghostOk; FB.ghost.traverse(o => { if (o.isMesh && o.material !== m) o.material = m; });
     const hint = $('#fbHint'); if (hint){ const t = FB.err ? '✖ ' + FB.err : `✓ ${T.name}：走路調整位置`; if (hint.textContent !== t) hint.textContent = t; hint.classList.toggle('bad', !!FB.err); }
-  } else {
+  } else if (!FB.top) {
     let best = null, bd = 1.6; for (const o of f){ const dd = Math.hypot(me.pos.x - ISLE.x - o.x, me.pos.z - ISLE.z - o.z) - FURN[o.t].rad * 0.5; if (dd < bd){ bd = dd; best = o; } }
     if ((best && best.id) !== (FB.sel && FB.sel.id)){ FB.sel = best; renderFurnBar(); }
   }
 }
 function renderFurnBar(){
   let bar = $('#furnBar');
-  if (!FB.on){ if (bar) bar.hidden = true; return; }
+  if (!FB.on){ if (bar) bar.hidden = true; furnTopOff(); return; }
+  if (FB.top && House.on){ if (bar) bar.hidden = true; furnTray(); return; }
+  furnTopOff();
   if (!bar){ bar = document.createElement('div'); bar.id = 'furnBar'; bar.className = 'panel buildbar'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = '';
   const btn = (txt, cls, fn) => { const b = el('button', 'tbtn' + (cls ? ' ' + cls : ''), txt); b.addEventListener('click', fn); bar.appendChild(b); return b; };
@@ -9641,7 +9721,7 @@ async function confirmFurn(){
   if (!moving && rec.coins < T.price){ toast(`金幣不夠，還差 🪙${(T.price - rec.coins).toLocaleString()}`); return; }
   const ok = await homeOp(moving ? 'fmove' : 'fplace', moving ? Object.assign(p, { id: moving }) : Object.assign(p, { t: type, k: House.floor || 0 }));
   if (!ok) return; SFX.plop(); FX.emit(ISLE.x + p.x, ROOM_Y + 0.6, ISLE.z + p.z, 12, '#fff4dc', 0.5, 1.4, 0.8);
-  if (!moving && rec.coins >= T.price && !T.bed) startFurn(type); else { FB.on = true; renderFurnBar(); }
+  furnRecent(type); if (!moving && rec.coins >= T.price && !T.bed) startFurn(type); else { if (FB.top) clearFurnGhost(); FB.on = true; renderFurnBar(); }
 }
 // ---- 大宅的格局編輯器：俯視的格子圖，用手指畫牆、門、窗，或幫房間上色 ----
 var CLE = null;
@@ -20589,7 +20669,7 @@ function renderTab0(){
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
-      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」。家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
+      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
         ["端給客人拿 1.5 倍，每天最多 60 位。每天最多做 150 道。", "跟美雲姨買是料理價值的 2.5 倍，一天最多 6 道。吧台點餐 45～225 金幣。"]],
@@ -21796,6 +21876,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u766', d:'11/24', items:[
+    ['🛋️', '家裡擺家具換了做法：畫面拉高看整個房間，家具清單在下面一條，有分類和「最近用過」。點小圖、手指拖到位置、按勾。擺好的家具按住拖就能搬。'] ] },
   { id:'u765', d:'11/24', items:[
     ['🏰', '《築城守土》橫著玩的操作重排：地圖變全畫面，下面一條固定的按鈕列，建造、框選、召喚、出征永遠在右邊同一個位置。蓋房子時確認和取消跟在建築旁邊，蓋完可以接著蓋。'] ] },
   { id:'u764', d:'11/24', items:[
