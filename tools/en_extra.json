@@ -8748,5 +8748,6 @@
  "遠征島變成大地圖：從海灘登陸，一路打過哨站、營寨到島主主城，後面的守軍會來支援；每座島有自己的地形，星級目標不同，有些關卡直接派一隊兵給你": "Expedition islands are now big maps: land on the beach and fight through an outpost and a fort to the island lord's citadel while reinforcements arrive; each island has its own terrain, each star has a different goal, and some levels give you a fixed squad",
  "築城守土橫向畫面：沒選東西時下面那條會收起來，按鈕浮在地圖角落，地圖變大；拿掉「全部收」；士兵打完仗會留在原地，不再自己走回主堡旁": "Castle game in landscape: when nothing is selected the bottom bar folds away and buttons float in the corners, giving more map; removed Collect All; soldiers now stay where a fight ends instead of walking back to the keep",
  "築城守土會記住每個士兵站的位置，下線再回來不會全部擠回主堡旁": "The castle game now remembers where each soldier stands, so they no longer crowd back around the keep when you come back",
- "修好民房金幣和農田麥穗點不到的問題：點圖示或房子都能收，旁邊的也會一起收": "Fixed coins on houses and wheat on farms not responding: tap the icon or the building, and nearby ones are collected too"
+ "修好民房金幣和農田麥穗點不到的問題：點圖示或房子都能收，旁邊的也會一起收": "Fixed coins on houses and wheat on farms not responding: tap the icon or the building, and nearby ones are collected too",
+ "修好直向城牆點不到的問題，整段牆都點得到": "Fixed vertical walls being hard to tap; the whole wall is tappable now"
 }

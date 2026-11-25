@@ -1482,7 +1482,7 @@ function zoomBy(f){if(!S)return;inert=null;cam.z=clamp(cam.z*f,zmin(),ZMAX);clam
 $('#zIn').onclick=()=>zoomBy(1.35);$('#zOut').onclick=()=>zoomBy(1/1.35);$('#zFit').onclick=()=>{if(!S)return;inert=null;const R=RR()+5,fz=Math.min(VW,VH)/(2*R+1);cam.x=0;cam.y=0;cam.z=Math.abs(cam.z-fz)<.5?zmin():fz;clampCam()};
 cv.addEventListener('wheel',ev=>{if(!S)return;ev.preventDefault();const p=lp(ev),w=toW(p.x,p.y);cam.z=clamp(cam.z*(ev.deltaY<0?1.12:.89),zmin(),ZMAX);cam.x=w.x-(p.x-VW/2)/cam.z;cam.y=w.y-(p.y-VH/2)/cam.z;clampCam()},{passive:false});
 document.addEventListener('contextmenu',e=>e.preventDefault());
-function hitAt(w,team,units,blds){let best=null,by=-1e9;for(const e of S.ents){if(e.hp<=0||e.team!==team||(e.b?!blds:!units))continue;const hit=e.b?Math.abs(w.x-e.x)<e.hw+.1&&w.y>e.y+e.hh-e.d.vh&&w.y<e.y+e.hh+.1:Math.abs(w.x-e.x)<.55&&w.y>e.y-uh(e)-.15&&w.y<e.y+.35,k=e.y+(e.b?e.hh:.01);if(hit&&k>by){by=k;best=e}}return best}
+function hitAt(w,team,units,blds){let best=null,by=-1e9;for(const e of S.ents){if(e.hp<=0||e.team!==team||(e.b?!blds:!units))continue;const hit=e.b?Math.abs(w.x-e.x)<Math.max(e.hw,.35)+.1&&w.y>Math.min(e.y+e.hh-e.d.vh,e.y-e.hh-(e.d.wall&&e.rot%2?1:.1))&&w.y<e.y+e.hh+.1:Math.abs(w.x-e.x)<.55&&w.y>e.y-uh(e)-.15&&w.y<e.y+.35,k=e.y+(e.b?e.hh:.01);if(hit&&k>by){by=k;best=e}}return best}
 function tap(w){
   if(place){place.x=snap(w.x);place.y=snap(w.y);if(place.segs){place.segs=null;barSig=''}return}
   if(S.raid&&S.phase==='deploy'){let bi=0,bd=1e9;DIRS.forEach((d,i)=>{const dd=Math.hypot(w.x-d[1]*(RR()+2),w.y-d[2]*(RR()+2));if(dd<bd){bd=dd;bi=i}});deploy(bi);return}
