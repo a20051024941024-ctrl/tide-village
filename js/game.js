@@ -7825,7 +7825,7 @@ const ISLE_ITEMS = {
   hedge:{ name:'矮樹籬', price:100, rad:0.9 },
   /* v386 寵物圍欄（伺服器 149）：每一個多 5 隻那一類寵物的名額，待在家的寵物會在裡面玩 */
   penland:{ name:'陸地圍欄（貓、柴犬、海鷗的家，一個住 5 隻）', price:1500, rad:2.0, pen:'land' },
-  pensea:{ name:'海水池（水獺、寄居蟹、小海龜、章魚、河豚的家，一個住 5 隻）', price:1500, rad:1.8, pen:'sea' },
+  pensea:{ name:'海水池（水獺、小海龜的家，一個住 5 隻）', price:1500, rad:1.8, pen:'sea' },
   pentank:{ name:'烏龜缸（小烏龜的家，一個住 5 隻）', price:1500, rad:1.2, pen:'tank' },
 };
 const FEST_FISH_WHEN = { ny:'🎆 跨年夜限定（12/31 晚上～1/1）', xmas:'🎄 聖誕節限定（12/20～12/26）', cny:'🧧 春節限定（過年那一週）' };
@@ -13715,12 +13715,12 @@ function renderGyotaku(body){
 const PET_KINDS = {
   cat:     { name:'貓',     icon:'🐱', price:300,  desc:'港邊的流浪貓，領養只收一點手續費。看到魚群會喵喵叫。' },
   shiba:   { name:'柴犬',   icon:'🐕', price:2000, desc:'笑咪咪的柴犬，走路屁股一扭一扭。' },
-  otter:   { name:'水獺',   icon:'🦦', price:2500, desc:'很愛玩水的水獺，常常在旁邊翻滾。在溪邊釣魚偶爾也會撈到小水獺。' },
+  otter:   { name:'水獺',   icon:'🦦', price:2500, ev:true, desc:'很愛玩水的水獺，常常在旁邊翻滾。之後的活動才會再出現。' },   /* v832 作者：水獺以後等活動出（先停賣、溪邊撈不到，已經有的留著） */
   gull:    { name:'海鷗',   icon:'🕊️', price:1200, desc:'在你頭上飛來飛去，停下來就站在旁邊。' },
-  crab:    { name:'寄居蟹', icon:'🐚', price:800,  desc:'背著貝殼橫著走。海邊、紅樹林釣魚偶爾會撈到。' },
+  crab:    { name:'寄居蟹', icon:'🐚', price:800,  gone:true, desc:'背著貝殼橫著走。海邊、紅樹林釣魚偶爾會撈到。' },
   turtle:  { name:'小海龜', icon:'🐢', fish:true, desc:'只能在海邊、港口、珊瑚礁釣魚時偶爾撈到。慢慢爬，很療癒。' },
-  octopus: { name:'小章魚', icon:'🐙', fish:true, desc:'只能在海邊、港口、珊瑚礁釣魚時偶爾撈到。八隻腳一扭一扭地跟著你。' },
-  puffer:  { name:'河豚',   icon:'🐡', fish:true, desc:'只能在海邊、紅樹林釣魚時偶爾撈到。在你身邊飄著，嚇到會鼓起來。' },
+  octopus: { name:'小章魚', icon:'🐙', fish:true, gone:true, desc:'只能在海邊、港口、珊瑚礁釣魚時偶爾撈到。八隻腳一扭一扭地跟著你。' },
+  puffer:  { name:'河豚',   icon:'🐡', fish:true, gone:true, desc:'只能在海邊、紅樹林釣魚時偶爾撈到。在你身邊飄著，嚇到會鼓起來。' },
   horseshoe: { name:'小鱟', icon:'🦀', fish:true, desc:'只有在晴潮海邊、紅樹林退潮時釣到「三棘鱟」，才有機會發現跟在旁邊的小鱟。慢慢爬，長長的尾劍一擺一擺；偶爾會翻過來，再用尾劍把自己撐回去。' },
   pondturtle: { name:'小烏龜', icon:'🐢', price:600, desc:'台灣溪邊、池塘常見的斑龜，脖子有黃色細條紋。要好好照顧：多曬太陽、吃得均衡、水保持乾淨，殼會越來越亮。河邊、池塘釣魚偶爾也會撿到被棄養的小烏龜。' },
 };
@@ -14256,14 +14256,14 @@ function buildPetShop(){
     const wt = new THREE.Mesh(new THREE.CircleGeometry(R, 28), new THREE.MeshStandardMaterial({ color:'#7fd0e8', transparent: true, opacity: 0.72, roughness: 0.15 })); wt.rotation.x = -Math.PI / 2; wt.position.set(S.x + px, Y + 0.24, S.z + pz); g.add(wt); PetShop.water = wt;
     const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.42, 0), mat('#9a9a94', 0.95, { noWood: true })); rock.scale.y = 0.6; rock.position.set(S.x + px + 0.7, Y + 0.22, S.z + pz - 0.6); g.add(rock);
     addCircleCol(S.x + px, S.z + pz, R + 0.15); PetShop.pool = [S.x + px, S.z + pz, R - 0.35];
-    const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.4), new THREE.MeshBasicMaterial({ map: signTex('水獺', '#7a5236', '#ffffff', 256, 72) })); sg.position.set(S.x - S.w / 2 + 0.03, Y + 2.0, S.z + pz); sg.rotation.y = Math.PI / 2; g.add(sg); }
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.4), new THREE.MeshBasicMaterial({ map: signTex('水獺・活動限定', '#7a5236', '#ffffff', 384, 72) })); sg.position.set(S.x - S.w / 2 + 0.03, Y + 2.0, S.z + pz); sg.rotation.y = Math.PI / 2; g.add(sg); }
   // 烏龜和寄居蟹的矮桌（右前）：沙子、石頭、小水盤
   { const tx = 5.2, tz = 3.0, TW = 3.0, TD = 1.8, TH = 0.7; B(TW, TH, TD, mat('#c79a6b', 0.8), tx, Y + TH / 2, tz); B(TW - 0.12, 0.04, TD - 0.12, mat('#ecd9a8', 0.95, { noWood: true }), tx, Y + TH + 0.02, tz);
     for (const [bx, bz, bw, bd] of [[tx, tz - TD / 2, TW, 0.05], [tx, tz + TD / 2, TW, 0.05], [tx - TW / 2, tz, 0.05, TD], [tx + TW / 2, tz, 0.05, TD]]){ const gl = new THREE.Mesh(new THREE.BoxGeometry(bw, 0.22, bd), new THREE.MeshStandardMaterial({ color:'#d8f2ff', transparent: true, opacity: 0.35, roughness: 0.1 })); gl.position.set(S.x + bx, Y + TH + 0.13, S.z + bz); g.add(gl); }
     const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.3, 0.03, 18), mat('#7fd0e8', 0.2, { noWood: true })); dish.position.set(S.x + tx - 0.9, Y + TH + 0.055, S.z + tz + 0.3); g.add(dish);
     for (const [rx, rz] of [[0.9, -0.4], [0.2, 0.5]]){ const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16, 0), mat('#9a9a94', 0.95, { noWood: true })); rk.scale.y = 0.6; rk.position.set(S.x + tx + rx, Y + TH + 0.1, S.z + tz + rz); g.add(rk); }
     addBoxCol(S.x + tx, S.z + tz, TW + 0.1, TD + 0.1); PetShop.table = [S.x + tx, S.z + tz, TW / 2 - 0.3, TD / 2 - 0.25, Y + TH + 0.05];
-    const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.4), new THREE.MeshBasicMaterial({ map: signTex('烏龜・寄居蟹', '#5d6a3c', '#ffffff', 384, 72) })); sg.position.set(S.x + S.w / 2 - 0.03, Y + 2.0, S.z + tz); sg.rotation.y = -Math.PI / 2; g.add(sg); }
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.4), new THREE.MeshBasicMaterial({ map: signTex('烏龜', '#5d6a3c', '#ffffff', 256, 72) })); sg.position.set(S.x + S.w / 2 - 0.03, Y + 2.0, S.z + tz); sg.rotation.y = -Math.PI / 2; g.add(sg); }
   // 海鷗的站架（櫃台右邊）
   { const x = 3.0, z = CZ + 0.2; B(0.5, 0.06, 0.5, dark, x, Y + 0.03, z); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.5, 8), dark); p.position.set(S.x + x, Y + 0.75, S.z + z); g.add(p); B(0.8, 0.05, 0.05, dark, x, Y + 1.5, z); addCircleCol(S.x + x, S.z + z, 0.3); PetShop.stand = [S.x + x, Y + 1.53, S.z + z]; }
   // 盆栽、出口
@@ -14285,7 +14285,7 @@ function petHallFill(){ const S = PETH, Y = S.y, put = (k, v, zone, o) => { cons
   put('cat', 'f', [PetShop.bed[0], PetShop.bed[0], PetShop.bed[2], PetShop.bed[2]], { still: true, y: PetShop.bed[1], rot: 2.2 });
   for (const v of ['a', 'b', 'c', 'd']) put('shiba', v, dogPen, { per: 3 + PetShop.in.length % 3 });
   const P = PetShop.pool, pz = [P[0] - P[2], P[0] + P[2], P[1] - P[2], P[1] + P[2]]; for (const v of ['a', 'b', 'c']) put('otter', v, pz, { per: 3.5, y: Y + 0.1 });
-  const T = PetShop.table, tz = [T[0] - T[2], T[0] + T[2], T[1] - T[3], T[1] + T[3]]; for (const v of ['a', 'b', 'c']) put('pondturtle', v, tz, { per: 9, y: T[4] }); for (const v of Object.keys(PET_VARS.crab || { a: 1 }).slice(0, 2)) put('crab', v, tz, { per: 6, y: T[4] });
+  const T = PetShop.table, tz = [T[0] - T[2], T[0] + T[2], T[1] - T[3], T[1] + T[3]]; for (const v of ['a', 'b', 'c']) put('pondturtle', v, tz, { per: 9, y: T[4] });
   put('gull', Object.keys(PET_VARS.gull || { a: 1 })[0], [PetShop.stand[0], PetShop.stand[0], PetShop.stand[2], PetShop.stand[2]], { still: true, y: PetShop.stand[1], rot: 0 });
   put('cat', 'a', aisle, { per: 7 }); put('shiba', 'a', aisle, { per: 6 }); }
 function petHallAt(pt, slot){ const z = pt.zone; let h = (Math.imul(slot + 7, 0x9E3779B1) ^ Math.imul(pt.zi + 3, 0x85EBCA6B)) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D) >>> 0; const a = (h & 0xffff) / 0xffff, b = (h >>> 16) / 0xffff; return [z[0] + (z[1] - z[0]) * a, z[2] + (z[3] - z[2]) * b, (h >>> 5) % 4 === 0]; }
@@ -14366,8 +14366,8 @@ function renderPets(body){
   body.appendChild(el('div', 'dexhead', '🏠 領養'));
   const f1 = el('div', 'field'); f1.appendChild(el('label', '', '幫牠取名字（1～8 個字）')); const ni = el('input', 'txt'); ni.maxLength = 8; ni.value = Pets.newName; ni.placeholder = '例如：小咪'; ni.addEventListener('input', () => { Pets.newName = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
   const ul2 = el('ul', 'shoplist cols');
-  body.appendChild(el('p', 'sub', '「每一種都有好幾種花色，領養的時候隨機挑，有⭐的很少見喔。小海龜、小章魚、河豚我這裡沒有，要在海邊釣魚的時候碰運氣。」'));
-  for (const [k, K] of Object.entries(PET_KINDS).filter(([, K]) => !K.fish)){ const li = el('li'); li.appendChild(el('span', 'dishic', K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc + '　花色：' + Object.values(PET_VARS[k]).map(x => x[0]).join('、'))); li.appendChild(d);
+  body.appendChild(el('p', 'sub', '「每一種都有好幾種花色，領養的時候隨機挑，有⭐的很少見喔。小海龜我這裡沒有，要在海邊釣魚的時候碰運氣。水獺池裡那幾隻是活動才會來的，先看看就好。」'));
+  for (const [k, K] of Object.entries(PET_KINDS).filter(([, K]) => !K.fish && !K.gone && !K.ev)){ const li = el('li'); li.appendChild(el('span', 'dishic', K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc + '　花色：' + Object.values(PET_VARS[k]).map(x => x[0]).join('、'))); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < K.price ? ' ghost' : ''), '領養'); b.addEventListener('click', async () => { const nm = (Pets.newName || '').trim() || K.name; if (rec.coins < K.price){ toast(`金幣不夠，還差 🪙${(K.price - rec.coins).toLocaleString()}`); return; } b.disabled = true;
       const r = await petRpc('pet_adopt', { p_kind: k, p_name: nm }); if (r){ adoptRow(r.player); Pets.list = r.pets; Pets.newName = ''; SFX.catch(); flash(`${K.icon} ${nm}（${petVarName(k, r.var)}${petVarRare(k, r.var) ? '⭐很少見！' : ''}）成為你的家人了！`, 2.2); if (!petMine()){ const np = r.pets[r.pets.length - 1]; const o = await petRpc('pet_out', { p_id: np.id }); if (o) Pets.list = o; } pushPresence(true); renderTab(); } else b.disabled = false; });
     a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
@@ -19036,8 +19036,13 @@ async function cloudInit(){
   if (!$('#sheet').hidden && curTab === 'style') renderTab();
 }
 /* v746 作者：「退回去」→ 以前在阿綾服裝店、阿萍美髮沙龍花的金幣退回來（219，伺服器算、每人一次）。進遊戲時問一次，有退就告訴玩家 */
-async function refundCheck(){ if (!Cloud.on || !Cloud.sb) return; const k = 'tide.refund219.' + (Cloud.userId || ''); if (LS.get(k, 0)) return;
-  try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k, 1); const n = data && data.coins | 0; if (n > 0){ try { await cloudRefresh(); } catch(e){} SFX.coin && SFX.coin(); flash(`退回 🪙${n.toLocaleString()}`, 2.2); toast(`服裝店、美髮沙龍整修中：以前買舊人物的衣服、髮型花的 🪙${n.toLocaleString()} 已經退還給你了`); } } catch(e){} }
+/* v832 也用來告訴玩家寵物調整（226：小章魚、河豚、寄居蟹收回，領養的寄居蟹退錢）。每個退款種類各一個記號，問過就不再問 */
+async function refundCheck(){ if (!Cloud.on || !Cloud.sb) return; const u = Cloud.userId || '', k1 = 'tide.refund219.' + u, k2 = 'tide.refund226.' + u; if (LS.get(k1, 0) && LS.get(k2, 0)) return;
+  try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k1, 1); LS.set(k2, 1); const n = data && data.coins | 0, ks = (data && data.kinds) || [];
+    if (n > 0){ try { await cloudRefresh(); } catch(e){} SFX.coin && SFX.coin(); flash(`退回 🪙${n.toLocaleString()}`, 2.2); }
+    if (ks.includes('pet_retire')){ try { await loadPets(true); } catch(e){} }
+    const msg = []; if (ks.includes('old_wardrobe')) msg.push('服裝店、美髮沙龍整修中：以前買舊人物的衣服、髮型的金幣已經退還給你了'); if (ks.includes('pet_retire')) msg.push('小章魚、河豚、寄居蟹回到大海了' + (n > 0 && !ks.includes('old_wardrobe') ? `，在寵物店領養寄居蟹花的 🪙${n.toLocaleString()} 已經退還給你` : '') + '。謝謝你照顧牠們！');
+    if (!msg.length && n > 0) msg.push(`退還給你 🪙${n.toLocaleString()}`); if (msg.length) toast(msg.join('；') + (n > 0 && ks.length > 1 ? `（共 🪙${n.toLocaleString()}）` : '')); } catch(e){} }
 // ---- Email 連結：綁定（保存這份紀錄）或在別的裝置登入 ----
 // Supabase 免費方案不能改信件內容，所以用信裡的「Sign in／Confirm」連結（不用驗證碼）。
 const SITE_URL = location.origin + location.pathname;
@@ -20774,7 +20779,7 @@ function renderTab0(){
         ["跑船：一次最多 10 條。村子的魚載去珊瑚礁島、礁島的魚載回村子，都多三成。裝船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半。要過 45 秒才能賣。", "阿萍：新髮色 200 金幣，新髮型 400。", "自己畫的衣服是 32×32 格、48 色。別人買了你拿九成。被檢舉三次會下架。"]],
       ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型八種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭。", "還能戴帽子、口罩、耳環。每一件都能換顏色。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
         ["每週一換一個穿搭主題，身上穿到 2 件以上，釣魚多一成經驗。", "幫別人的穿搭按讚，一週最多 30 次。"]],
-      ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小章魚、河豚、小水獺買不到，釣魚時偶爾會撈到。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶貓出門，附近有魚群牠會叫。你停下來牠會坐下看你。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
+      ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小烏龜釣魚時偶爾會撈到（小海龜只能用撈的）。水獺之後的活動才會出現。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶貓出門，附近有魚群牠會叫。你停下來牠會坐下看你。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
         ["餵食會用掉魚缸的魚。一天第一次親密度加 15（稀有魚 20、傳說魚 25），之後同一天每次加 1。", "親密度 10 以上每天帶一份小禮物，60 戴項圈，150 再戴小帽子。", "圍欄、海水池、烏龜缸各 1,500 金幣，一個住 5 隻。", "市集賣出賣家拿九成，買的人親密度重來。名字最多 8 個字。", "釣到三棘鱟有兩成機會跟來一隻小鱟。"]],
       ["鯨魚、大魚", "event", ["每天晚上 8:30，港口外海會來一條超大的魚，週六日下午 2:00 也有。", "站在港口按「一起拉」，大家合力。指針留在綠色才有用，畫面變紅就放開。", "有出力就有獎。", "鯨魚不在港口外海：抹香鯨在深海浮台，白鯨、虎鯨、座頭鯨在流冰海岸，藍鯨、鯨鯊在神秘島礁岩。", "划船到外海，可能遇到海豚、座頭鯨、藍鯨、抹香鯨。鯨魚在水面時可以拍照。", "看到鯨魚跳出水面，接下來幾分鐘在船上比較好釣。", "外海深處有一小群紅色的鯊魚，全伺服器共用，釣光就絕種。釣到不能賣，放回去拿愛海點數。"],
         ["大魚要在 10 分鐘內拉完。前 3 名拿魚拓，第 1 名拿稱號。斷線後 10 秒不能出力。", "藍鯨每小時在神秘島礁岩外浮上來一分半鐘，這時釣到藍鯨的機率是平常 5 倍。", "鯨魚跳出水面給 3 分鐘好運，30 分鐘最多一次，一天最多 4 次。", "海上目擊每種第一次遇到送 30 愛海點數。", "紅鯊最多 8 隻，每一對每 7 天有一半機會生一隻。放回海裡拿 100 愛海點數。", "流冰海岸大約每一個多小時有虎鯨來圍獵，一次兩分鐘左右，站在岸邊看得到。"]],
