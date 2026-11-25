@@ -1242,7 +1242,8 @@ function vpFirst(){ if (VP.first) return; try { const t = Math.round(performance
     let wd = ''; try { const vw = (window.visualViewport && visualViewport.width) || innerWidth, L = []; for (const e of document.querySelectorAll('body *')){ const r = e.getBoundingClientRect(); if (r.width > 0 && r.right > vw + 4) L.push([r.right, (e.id ? '#' + e.id : e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className ? '.' + e.className.split(' ')[0] : '')) + ':' + Math.round(r.right)]); } L.sort((a, b) => b[0] - a[0]); wd = L.slice(0, 3).map(x => x[1]).join(' '); } catch(e){}   /* v616 出問題的那一刻誰最寬（包含固定在畫面上的） */
     VP.first = '@' + t + 's ' + [ph, fp, so, ai, vk, or, document.fullscreenElement ? 'fs' : ''].filter(Boolean).join(',') + (wd ? ' w:' + wd : ''); } catch(e){ VP.first = '@?'; } }
 function vpFit(){ const v = window.visualViewport, m = document.querySelector('meta[name=viewport]'); if (!v || !m) return false; const nowT = Date.now();
-  if (innerWidth - v.width > 3){ vpFirst(); if (VP.n < 6 && nowT - VP.at > 2500){ VP.at = nowT; VP.n++; const m2 = document.createElement('meta'); m2.name = 'viewport'; m2.content = VP.n % 2 === 0 && v.width > 200 ? VP.base.replace('width=device-width', 'width=' + Math.round(v.width * v.scale)) : VP.base;   /* v616 偶數次改用「明確寫出螢幕寬度」的設定 */ m.replaceWith(m2); try { window.scrollTo(0, 0); } catch(e){} return true; } }
+  if (innerWidth - v.width > 3){ vpFirst(); if (VP.n < 6 && nowT - VP.at > 2500){ VP.at = nowT; VP.n++; const m2 = document.createElement('meta'); m2.name = 'viewport'; m2.content = VP.base;   /* v616 偶數次改用「明確寫出螢幕寬度」的設定 */ m.replaceWith(m2); try { window.scrollTo(0, 0); } catch(e){} return true; } }
+  else if (m.content !== VP.base && nowT - VP.at > 2500){ VP.at = nowT; const m2 = document.createElement('meta'); m2.name = 'viewport'; m2.content = VP.base; m.replaceWith(m2); return true; }   /* v819 以前偶數次會寫死寬度，寫錯就一直卡在放大的版面（按鈕變大互相擋到）；現在一律改回原本的設定 */
   return nowT - VP.at < 700; }
 function vvFix(){ const v = window.visualViewport, de = document.documentElement; if (!v) return; if (FL.on){ if (de.classList.contains('vvfix')){ de.classList.remove('vvfix'); const st = de.style; st.position = st.left = st.top = st.right = st.bottom = st.width = st.height = st.transform = ''; } return; } let wait = false; try { wait = vpFit(); } catch(e){} if (wait) return; const bad = innerWidth - v.width > 3, on = de.classList.contains('vvfix');
   if (bad){ if (v.offsetLeft > 1 || v.offsetTop > 1){ try { window.scrollTo(0, 0); } catch(e){} } const st = de.style, L = Math.round(v.offsetLeft) + 'px', T = Math.round(v.offsetTop) + 'px', W = Math.round(v.width) + 'px', H = Math.round(v.height) + 'px';
@@ -21876,6 +21877,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u819', d:'11/25', items:[['📱','修好一直點畫面放大後，縮回來按鈕卻變大互相擋到的問題']] },
   { id:'u818', d:'11/25', items:[['🏘️','手機的「村民」讀不到資料時不會一直卡在讀取中，會寫原因和「再試一次」']] },
   { id:'u817', d:'11/25', items:[['👣','「有人來逛過你的小島」的通知只會出現一次，還會寫是誰、多久以前來的']] },
   { id:'u816', d:'11/25', items:[['🐉','會飛的兵（龍、鳳凰、獅鷲）不再去打城牆，直接飛過去打建築；敵人不再砍樹；獅鷲騎士的翅膀改成往後張開，拍得比較慢']] },
