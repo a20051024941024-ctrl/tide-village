@@ -35,9 +35,9 @@ revoke all on function public.stat_beat(text) from public, anon;
 grant execute on function public.stat_beat(text) to authenticated;
 
 -- 部署時印出來：最近 30 天新來的玩家，每一步有幾個人做到（漏斗），和「之後沒再回來的人最後在做什麼」
-with np as (select id, created_at from public.players where created_at > now() - interval '30 days'),
+with np as (select id, created_at from public.players where created_at > greatest(now() - interval '30 days', timestamptz '2026-11-25 15:30:00+00')),   -- 只算開始記錄（v848）以後才來的新玩家，舊帳號以前做過什麼記不到
 ms as (select m.ev, count(*) n from public.play_ms m join np on np.id = m.uid group by m.ev)
-select '遊玩紀錄 📊 新玩家 ' || (select count(*) from np) || ' 人；做到：' ||
+select '遊玩紀錄 📊 開始記錄後的新玩家 ' || (select count(*) from np) || ' 人；做到：' ||
   coalesce((select string_agg(e || ' ' || coalesce((select n from ms where ms.ev = e), 0), '、' order by o)
     from unnest(array['boot1','cast1','bite1','catch1','tab:dex','g2','sell1','g3','boat1','g4','catch5','g5','catch20','isle1','name','day2','day7']) with ordinality as t(e, o)), '')
   as result;
