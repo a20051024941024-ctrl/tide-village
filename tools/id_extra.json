@@ -8474,5 +8474,6 @@
  "築城守土會記住每個士兵站的位置，下線再回來不會全部擠回主堡旁": "Permainan benteng kini mengingat posisi setiap prajurit, jadi mereka tidak lagi berkumpul di sekitar benteng saat kamu kembali",
  "修好民房金幣和農田麥穗點不到的問題：點圖示或房子都能收，旁邊的也會一起收": "Memperbaiki koin di rumah dan gandum di ladang yang tidak bisa diketuk: ketuk ikon atau bangunannya, yang di dekatnya ikut terkumpul",
  "修好直向城牆點不到的問題，整段牆都點得到": "Memperbaiki tembok tegak yang sulit diketuk; kini seluruh tembok bisa diketuk",
- "召喚畫面的「墓園」分頁一直都看得到，沒有陣亡的怪獸時會說明怎麼才會出現": "Tab Makam di layar panggil kini selalu terlihat, dan menjelaskan kapan monster muncul di sana"
+ "召喚畫面的「墓園」分頁一直都看得到，沒有陣亡的怪獸時會說明怎麼才會出現": "Tab Makam di layar panggil kini selalu terlihat, dan menjelaskan kapan monster muncul di sana",
+ "畫城牆時從現有的牆頭開始拖，會自動接上去，橫的牆頭也能接出直的牆": "Saat menggambar tembok, mulai seret dari ujung tembok yang ada dan otomatis tersambung, termasuk tembok tegak dari ujung tembok mendatar"
 }
