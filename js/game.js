@@ -15790,6 +15790,7 @@ function todayItems(){ const L = [], ms = bossNow(), tp = new Date(ms + 8 * 3600
   { const b = evtBounty(ms), dn = Evt.st && Evt.st.bounty && Evt.st.bounty.id === b.id && Evt.st.bounty.done; L.push({ ic:'🎯', t:'懸賞魚：' + ((FISH_BY_ID[b.fish] || {}).name || ''), s:dn ? '已經領了 ✅' : `${b.minw} 公斤以上送 🪙300（到 ${evtHM(b.en)}）`, done:!!dn, btn:'看活動', fn:ev }); }
   { const nx = TOURNEY.hours.map(h => h * 60).find(m => m + TOURNEY.mins > hm); L.push({ ic:'🏆', t:'釣魚大賽', s:nx == null ? '今天的大賽都結束了，明天 12:00 再來' : nx <= hm ? '進行中！10 分鐘比總重量' : `下一場 ${String(nx / 60 | 0).padStart(2, '0')}:00，10 分鐘比總重量`, done:nx == null }); }
   if (evtMeteor(ms) || hm >= 22 * 60) L.push({ ic:'🌠', t:'流星雨夜釣', s:evtMeteor(ms) ? '進行中！傳說魚比較好釣' : '今晚 23:00～23:30', done:false });
+  { const ng = nowGoodList().slice(0, 3); if (ng.length) L.push({ ic:'⏰', t:'現在正好', s:ng.map(f => `${rec.count[f.id] ? f.name : '沒釣過的' + f.rarity + '魚'}（${SPOT_BY_ID[f.spot].short}）`).join('、') + '　圖鑑最上面有全部', done:false, btn:'去釣點', fn:go(ng[0].spot) }); }
   { const near = FISH.filter(f => !f.rs && !f.of && (rec.count[f.id] || 0) >= 5 && (rec.count[f.id] || 0) < 10 && starsOf(f) < 2).sort((a, b) => (rec.count[b.id] || 0) - (rec.count[a.id] || 0)).slice(0, 3);
     if (near.length) L.push({ ic:'⭐', t:'差一點升星', s:near.map(f => `${f.name}再釣 ${10 - rec.count[f.id]} 條`).join('、') + ' 就有 ★★', done:false }); }
   return L; }
@@ -17723,7 +17724,7 @@ async function mastAfterCatch(f, pfc, star0){ if (pfc && Cloud.on && Cloud.sb){ 
   else if (pfc && s1 < 3 && Mast.set.has(f.id)) setTimeout(() => toast(`再釣一條 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上的${f.name}，就三顆星了`), 1500); }
 function recordCatch(f, w){
   const pfc = F.pfCatch; F.pfCatch = false; const star0 = starsOf(f);
-  const isNew = !rec.count[f.id]; const isBest = w > (rec.best[f.id] || 0);
+  const isNew = !rec.count[f.id], prevBest = rec.best[f.id] || 0; const isBest = w > prevBest; F.lastBest = isBest && !isNew;
   rec.total++; rec.count[f.id] = (rec.count[f.id] || 0) + 1; if (isBest) rec.best[f.id] = w; seaMemAdd(F.spot && F.spot.id, 1, 'catch'); try { if (!(F.spot && F.spot.id === 'shrimp')) rodNote(f, w); } catch(e){}
   const isTop = w > rec.bestW; if (isTop){ rec.bestW = w; rec.bestFish = f.id; }
   if (f.rarity === '傳說') rec.legend++;
@@ -17732,8 +17733,9 @@ function recordCatch(f, w){
   rec.updatedAt = Date.now();
   LS.set('tide.rec', rec); saveRemote(); buildTank();
   cloudCall('record_catch', { p_fish: f.id, p_weight: w }).then(r => { if (r) duelAfterCatch(f, w); if (r) petLuckyTry(f.id); if (r) evtAfterCatch(f.id, w); if (r) mastAfterCatch(f, pfc, star0); if (r) rumorAfterCatch(F.spot && F.spot.id); });   /* 081：釣到魚以後伺服器幫你試一次運氣，偶爾撈到小動物 */
+  try { fbLoad(); } catch(e){}
   if (Tny.on){ Tny.myW += w; Tny.myN++; }
-  return { isNew, isBest: isBest && !isNew };
+  return { isNew, isBest: isBest && !isNew, prev: prevBest };
 }
 
 function shade(hex, amt){ const c = new THREE.Color(hex); if (amt < 0) c.lerp(new THREE.Color('#000'), -amt); else c.lerp(new THREE.Color('#fff'), amt); return '#' + c.getHexString(); }
@@ -18065,7 +18067,10 @@ function showCatch(f, w, res){
   if (f.rs && F.rsTag){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `🦈 ${rsLabel(F.rsTag)}・身上 ${rsInfo(F.rsTag).scars} 道叉叉・整片海只有一小群`; b.appendChild(x); }
   if (f.of){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `✨ 罕見變種（${FISH_BY_ID[f.of].name}）`; b.appendChild(x); if (res.isNew){ SFX.catch(); flash(`發現新的變種：${f.name}`, 2.4); } }
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '第一次釣到'; b.appendChild(x); }
-  if (res.isBest){ const x = document.createElement('span'); x.className = 'badge'; x.textContent = '你釣過最大的'; b.appendChild(x); }
+  /* v831 做深：釣到魚就知道自己站在哪裡——破紀錄大聲說出來（比上次大多少）；沒破就告訴你紀錄是多少、差多少；還會跟朋友比 */
+  if (res.isBest){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `🏆 破紀錄 +${fmtKg(w - (res.prev || 0))}`; b.appendChild(x); if (!f.of){ SFX.catch(); flash(`🏆 破紀錄！${f.name} ${fmtKg(w)}`, 2.2); } }
+  else if (!res.isNew && res.prev > 0){ const x = document.createElement('span'); x.className = 'badge'; const gap = res.prev - w; x.textContent = gap <= res.prev * 0.12 ? `差 ${fmtKg(gap)} 破紀錄` : `你的紀錄 ${fmtKg(res.prev)}`; b.appendChild(x); }
+  { const fb = FRB.map[f.id]; if (fb && w > fb.w){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `👥 比 ${fb.n} 的 ${fmtKg(fb.w)} 還大`; b.appendChild(x); if (!res.isBest && !res.isNew) setTimeout(() => flash(`👥 贏過${fb.n}了！`, 1.8), 300); } }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
   if (Tny.on){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `⏱️ 大賽 +${w.toFixed(2)}kg`; b.appendChild(x); }
   $('#ccName').textContent = (F.ev ? '✨演化・' : '') + (gx ? gx.name : f.name);
@@ -18715,7 +18720,8 @@ function useRoom(r){
       if (f.rs){ setTimeout(rsPoll, 1500); }   /* 紅鯊的公告由伺服器紀錄發（每個大廳都看得到，不會重複） */
       else if (f.sev){ ticker(`🎉 <b>${esc(name)}</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`); if (Sev.ev && Sev.ev.fish === f.id){ Sev.ev.caught = name; Sev.told['got' + Sev.ev.id] = 1; } }
       if (f.rarity !== '常見' && !f.rs) Talk.recent.unshift({ who: name, name: f.name, at: Date.now() });
-      else if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
+      { const uid = peerUid.get(msg.peer); if (uid && p && Array.isArray(Fr.list) && Fr.list.some(x => x.id === uid) && (f.rarity !== '常見' || f.of || msg.data.b)) frNotice(name, f, w, !!msg.data.b, msg.peer); }   /* v831 朋友釣到好東西：跳一張卡，可以直接過去看 */
+      if (f.rarity !== '常見' && !f.rs) ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
       if (p){ const pf = p.fisher, done = () => { pf.holdFish(f, w, 5); if (f.rarity === '傳說' || f.rarity === '稀有' || w >= 20) startEmote(pf, 'cheer'); if (f.rarity === '傳說') pf.say('🎉 ' + f.name + ' ' + fmtKg(w), 'emote', 5); };
         if (pf.hookM){ scene.remove(pf.hookM); pf.hookM = null; }
         if (p.lastBob && Date.now() - (p.lastBobAt || 0) < 15000 && pf.av.g.visible && camera.position.distanceTo(pf.pos) < 35){   /* 看得到他把魚從水裡拉起來、甩到手上 */
@@ -19167,7 +19173,28 @@ async function rsPoll(){
       if (fresh && l.caught && !RS.mine.has(String(l.id))) ticker(`🦈 <b>${esc(l.name || '有人')}</b> 在外海釣到了 <b>${l.a ? '白化赤紅霸王鯊' : '赤紅霸王鯊'}</b>（${rsLabel(l.id + ':' + l.sex)}）${fmtKg(Number(l.w))}！${RS.n ? `海裡還剩 ${RS.n} 隻` : '海裡已經一隻都不剩了……'}`); } } catch(e){}
 }
 setInterval(rsPoll, 120000); setTimeout(rsPoll, 8000);
-function announceCatch(f, w, spot){ if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot }).catch(() => {});
+/* ===== v831 做深（作者：「我們現在要把目前的東西做深」） =====
+   ① FRB：朋友每種魚最大的一條（伺服器 225 friend_bests）——圖鑑、釣到魚的卡片上跟朋友比
+   ② 現在正好：照現在的時間、潮水、天氣、季節，哪些魚比較容易出現（圖鑑最上面、今天的清單、阿默會說）
+   ③ 朋友釣到稀有、傳說、變種或破自己的紀錄：跳一張卡，按「過去看」就到他旁邊 */
+const FRB = { map: {}, at: 0, busy: false };
+async function fbLoad(force){ if (FRB.busy || !Cloud.on || !Cloud.sb || (!force && Date.now() - FRB.at < 300000)) return; FRB.busy = true;
+  try { const { data, error } = await Cloud.sb.rpc('friend_bests'); if (!error && Array.isArray(data)){ const m = {}; for (const r of data){ const bb = r && r.best; if (!bb || typeof bb !== 'object') continue; for (const k in bb){ const w = +bb[k]; if (FISH_BY_ID[k] && w > 0 && (!m[k] || w > m[k].w)) m[k] = { n: String(r.name || '朋友').slice(0, 20), w }; } } FRB.map = m; if (!$('#sheet').hidden && curTab === 'dex') renderTab(); } } catch(e){}
+  FRB.at = Date.now(); FRB.busy = false; }
+function fishSpecial(f){ return !!(TIDE_FISH[f.id] || (COND_FISH[f.id] && COND_FISH[f.id] !== 'lure' && COND_FISH[f.id] !== 'veg') || SEASON_FISH.has(f.id) || f.time === 'twilight' || f.fest); }   /* 只看白天／晚上的魚很多，不算「特別」 */
+function fishNowGood(f){ if (!f || f.of || f.rs || f.sev || (f.fest && !festOn(f.fest))) return false; const sp = SPOT_BY_ID[f.spot]; if (!sp || sp.hidden) return false; let has = false;
+  if (f.time){ has = true; if (f.time !== periodOf(gameHour())) return false; }
+  if (TIDE_FISH[f.id] && SEA_SPOTS.has(f.spot) && f.spot !== 'mudflat'){ has = true; if (TIDE_FISH[f.id] !== tideSide(Env.tide.st)) return false; }
+  { const c = COND_FISH[f.id]; if (c && c !== 'lure' && c !== 'veg'){ has = true; if (!condOk(c)) return false; } }
+  if (SEASON_FISH.has(f.id)) has = true;
+  return has; }
+function nowGoodList(){ const RK = { '稀有': 0, '常見': 1, '傳說': 2 }, L = FISH.filter(f => fishNowGood(f) && (!rec.count[f.id] || starsOf(f) < 2)).sort((a, b) => (fishSpecial(b) ? 1 : 0) - (fishSpecial(a) ? 1 : 0) || (rec.count[a.id] ? 1 : 0) - (rec.count[b.id] ? 1 : 0) || RK[a.rarity] - RK[b.rarity]);
+  const out = [], sp = new Set(); for (const f of L) if (!sp.has(f.spot)){ sp.add(f.spot); out.push(f); } for (const f of L) if (!out.includes(f)) out.push(f); return out; }   /* 特別條件（潮水、天氣、季節、黃昏）的先；稀有比傳說好達成；不同釣點輪流排 */
+function frNotice(name, f, w, best, peer){ const t = document.createElement('div'); t.className = 'toast panel frnote';
+  t.innerHTML = `<b>${esc(name)}</b> ${best ? '破自己的紀錄了：' : '釣到了'} <span class="chip r-${f.rarity}">${f.of ? '變種' : f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`;
+  const b = document.createElement('button'); b.className = 'tbtn'; b.textContent = '👀 過去看'; b.addEventListener('click', () => { const q = peers.get(peer); t.remove(); if (!q){ toast('他已經離開了'); return; } const P = q.fisher.pos, a = q.fisher.rot + Math.PI * 0.75; travelTo({ id: 'friend', label: name, x: P.x + Math.sin(a) * 1.6, z: P.z + Math.cos(a) * 1.6, rot: q.fisher.rot + Math.PI, color: '#f6b04a' }); });
+  t.appendChild(b); $('#toasts').appendChild(t); try { SFX.chat(); } catch(e){} setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 600); }, 9000); }
+function announceCatch(f, w, spot){ if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot, b: F.lastBest ? 1 : 0 }).catch(() => {});
   if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>你</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);   /* 跑馬燈只報稀有和傳說，自己的也會出現 */ logMsg('', `你釣到了 ${f.name} ${w.toFixed(2)}kg`, true); }
 const Rare = { rows: null, at: 0 };
 const lb = { best: [], total: [] }; let lbLoading = false, lbSlow = false, lbMode = 'best';
@@ -19972,6 +19999,7 @@ function amoLines(){ const L = [], mine = rec.tank.find(x => FISH_BY_ID[x.f] && 
   else if (RS.n > 0) L.push(`聽說海裡還有 ${RS.n} 隻紅鯊，其中一隻一定是在等我`, RS.n >= 4 ? '最近紅鯊好像變多了，機會來了！' : '紅鯊那麼少，每一次拋竿都要認真');
   if (Talk.recent.some(r => /赤紅霸王鯊/.test(r.name) && Date.now() - r.at < 3600e3)) L.push('剛剛有人釣到紅鯊了！好羨慕……下一隻是我的');
   if (Env.wx === 'storm') L.push('暴風雨的晚上，紅鯊最愛出來，我才不回家');
+  { const ng = nowGoodList().filter(f => SEA_SPOTS.has(f.spot)); if (ng.length){ const f = ng[0]; L.push(rec.count[f.id] ? `現在去${SPOT_BY_ID[f.spot].short}，${f.name}正是時候` : `現在${SPOT_BY_ID[f.spot].short}有一種你還沒釣過的${f.rarity}魚會出來，我看水就知道`); } }   /* v831 阿默會說現在真的會出現的魚 */
   if (Env.tide && Env.tide.st){ const T = { high:'現在滿潮，大魚會靠岸邊，岸邊的釣點比較好', low:'現在乾潮，去外海比較有機會，岸邊魚都跑了', rise:'在漲潮，魚開始往岸邊游，再等一下就會咬', fall:'在退潮，魚往外走，跟著牠們去外海' }[Env.tide.st]; if (T) L.push(T, T); }
   return L; }
 // ---- 村民回話：你在聊天框說話，旁邊 9 公尺內最近的村民會看你說了什麼回一句（照關鍵字，回的內容都要跟遊戲規則一樣）----
@@ -20458,6 +20486,12 @@ function renderTab0(){
     body.appendChild(el('p', 'sub', `已收集 ${got} / ${base.length} 種・✨ 變種 ${vgot} / ${vall.length} 種・總共釣到 ${rec.total} 條・傳說 ${rec.legend} 條。拋得越遠，越容易遇到稀有魚。${hasDive('dive_suit') || (rec.photos || []).length ? `📸 水下圖鑑（潛水時拍到的）${(rec.photos || []).length} / ${diveSpecies().length} 種。` : ''}`));
     if (Cloud.on){ popFetch(); const ent = Object.entries(Pop.d).filter(([k]) => FISH_BY_ID[k]), low = ent.filter(([, v]) => v[0] < 85).sort((a, b) => a[1][0] - b[1][0]).slice(0, 3), evo = ent.filter(([, v]) => v[1]);   /* v586 全服共養：海洋健康 */
       const bx = el('div', 'sub'); bx.innerHTML = `🌊 <b>海洋健康</b>（整個伺服器一起養的海）：` + (low.length ? `最近變少的 ${low.map(([k, v]) => `${esc(FISH_BY_ID[k].name)} ${v[0]}%`).join('、')}，多放流牠們吧。` : '各種魚都還很健康。') + (evo.length ? `　✨ 已演化：${evo.map(([k]) => esc(FISH_BY_ID[k].name)).join('、')}。` : '') + '　釣走會變少、放流會變多（標記放流算兩條），連續 3 天 115% 以上會演化出新花色。'; body.appendChild(bx); }
+    fbLoad();
+    { const ng = nowGoodList().slice(0, 6); if (ng.length){ const h = el('div', 'dexhead', '⏰ 現在正好'); h.appendChild(el('small', '', `照現在的時間、潮水、天氣和季節，這些魚比平常容易出現（${PERIOD_LABEL[periodOf(gameHour())].split(' ')[0]}・${tideSide(Env.tide.st) === 'in' ? '漲潮' : '退潮'}）`)); body.appendChild(h);
+      const ul = el('ul', 'shoplist'); for (const f of ng){ const known = !!rec.count[f.id], li = el('li'); const cv = fishCanvas(f, known, 64, 40); cv.className = 'gearic'; li.appendChild(cv);
+        const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${known ? f.name : '還沒釣過的魚'}・${SPOT_BY_ID[f.spot].label}`)); d.appendChild(el('div', 'sub2', known ? `再釣 ${Math.max(0, 10 - (rec.count[f.id] || 0))} 條或釣到 ${fmtKg(f.min + (f.max - f.min) * 0.8)} 以上就 ★★` : `${f.rarity}・${[f.time ? PERIOD_FISH[f.time] : '', TIDE_FISH[f.id] ? (TIDE_FISH[f.id] === 'in' ? '漲潮' : '退潮') : '', COND_FISH[f.id] ? COND_TXT[COND_FISH[f.id]] : '', SEASON_FISH.has(f.id) ? '當季' : ''].filter(Boolean).join('・')}`)); li.appendChild(d);
+        const a = el('div', 'tacts'), b = el('button', 'tbtn ghost', '去釣點'); b.addEventListener('click', () => { const t = TRAVEL.find(x => x.id === f.spot); if (t){ closeSheet(); travelTo(t); } else toast('這個釣點要自己走過去'); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+      body.appendChild(ul); } }
     { let seen = []; try { seen = LS.get('tide.seaSeen', []); if (!Array.isArray(seen)) seen = []; } catch(e){} const h = el('div', 'dexhead', '🐋 海上目擊'); h.appendChild(el('span', 'dexcnt' + (seen.length === 4 ? ' all' : ''), `${seen.length} / 4`)); h.appendChild(el('small', '', '划船到外海碰運氣，每一種第一次遇到送 💙30 愛海點數')); body.appendChild(h);
       const ul = el('ul', 'shoplist'), DS = { dolphin:'5～12 隻一群，快速游、輪流跳出水面。', humpback:'會躍身、拍尾、用長長的白色胸鰭拍水；深潛時把整片尾鰭舉出水面。', bluewhale:'噴又直又高的水柱，背像一條長長的島慢慢滑過。', sperm:'在水面像木頭一樣漂著休息，水柱斜斜往左前方噴。' };
       for (const [k, S] of Object.entries(OW_SP)){ const ok = seen.includes(k), li = el('li', ok ? '' : 'lock'); li.appendChild(el('span', 'dishic', ok ? S.ic : '❔')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', ok ? S.n : '？？？')); d.appendChild(el('div', 'sub2', ok ? DS[k] : '還沒遇到')); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul); }
@@ -20473,6 +20507,8 @@ function renderTab0(){
         it.appendChild(fishCanvas(f, known, 96, 60)); it.appendChild(el('div', 'n', known ? f.name : '？？？'));
         it.appendChild(el('span', 'chip r-' + f.rarity, f.rarity)); if (f.of){ it.classList.add('var'); it.appendChild(el('span', 'chip var', known ? `✨ ${FISH_BY_ID[f.of].name}的變種` : `✨ ${rec.count[f.of] ? FISH_BY_ID[f.of].name : '某種魚'}的變種`)); } if (SEASON_FISH.has(f.id)) it.appendChild(el('span', 'chip season', SEASONS[SEASON].icon + '當季')); if (f.sci && !f.of) it.appendChild(el('span', 'chip sci', f.sci.giant ? '🐋 深海巨魚' : '🔬 新品種'));
         it.appendChild(el('div', 'meta', known ? `最大 ${rec.best[f.id].toFixed(2)}kg・${rec.count[f.id]} 條` : '尚未釣到'));
+        { const fb = FRB.map[f.id]; if (fb) it.appendChild(el('div', 'meta fr', `👥 朋友最大：${fb.n} ${fmtKg(fb.w)}${known && rec.best[f.id] >= fb.w ? '・你最大 👑' : ''}`)); }
+        if (fishSpecial(f) && fishNowGood(f)) it.appendChild(el('span', 'chip now', '⏰ 現在正好'));
         if (known){ const st = starsOf(f), sd = el('div', 'stars s' + st, starStr(st)); sd.title = st >= 3 ? '已經三顆星了' : st === 2 ? `三顆星：完美搏鬥一次＋釣到 ${fmtKg(f.min + (f.max - f.min) * 0.95)} 以上（${Mast.set.has(f.id) ? '完美搏鬥 ✓' : '還沒完美搏鬥'}）` : `兩顆星：釣到 10 條（現在 ${rec.count[f.id]}）或 ${fmtKg(f.min + (f.max - f.min) * 0.8)} 以上`; it.appendChild(sd); it.addEventListener('click', () => toast(`${f.name} ${starStr(st)}：${sd.title}`)); if (st >= 3) it.classList.add('gold'); }
         if (f.time) it.appendChild(el('div', 'meta tm', PERIOD_LABEL[f.time].split(' ')[0] + ' ' + PERIOD_FISH[f.time]));
         if (COND_FISH[f.id]) it.appendChild(el('div', 'meta tm', COND_TXT[COND_FISH[f.id]]));
@@ -20730,7 +20766,7 @@ function renderTab0(){
         ["潛水裝備組 1,500 金幣。", "三個潛水點：珊瑚礁（有裝備就能去）、沉船深海（要大型氧氣瓶）、海底洞穴（要專業雙氧氣瓶加潛水燈）。", "氧氣瓶升級：60、100、150、220 秒。", "每天上限：貝殼 40 個、寶箱 6 個、洞穴珍珠 15 顆、垃圾 20 個、造景材料 15 個、小生物 10 隻。", "抓小生物要先買手抄網，800 金幣。", "蟹籠一個 50 金幣，最多同時放 2 個，收起來有 1～3 隻。", "外海每 5 分鐘有 3 種魚特別活躍，上鉤機率 2.5 倍。"]],
       ["潛水艇", "fish", ["搭阿海的船到「深海浮台」，跟蔚博士租潛水艇，只付一次。", "搖桿控制方向，按住下箭頭下潛、上箭頭上浮。", "停下來可以放線釣深海魚。釣到的魚要按「回港」才會進魚缸。", "潛太深會警告，不上浮會被拉回港，船艙的魚全部不見。", "電池用完會自己回港，魚留著。", "同一個大廳的人在海裡看得到彼此的潛水艇，可以喊話。", "怕被嚇到可以在設定關掉「深海驚嚇效果」。"],
         ["要 15 級、4,500 金幣。", "深度 200 公尺以下才能放線。", "超過耐壓深度 30 秒內要上浮。", "升級：耐壓 800、1,500、3,000 公尺；電池 5、8、12 分鐘；探照燈 25、40、60 公尺。要金幣和深海的魚或礦石。", "皇帶魚在岩壁中段，大王魷魚在 2,500 公尺以下。", "深海目擊每種第一次看到送 30 愛海點數。關燈時電池只用一半。", "蔚博士每個星期五會在裂縫裡發現一種新生物。"]],
-      ["魚缸、我的海、圖鑑", "home", ["釣到的魚進魚缸，最多留 " + (KEEP_MAX) + " 條，滿了最舊的會被擠掉。", "喜歡的魚放進「我的海」，就在你小島底下，從小島碼頭的潛水梯下去看得到。放在那裡的不會被賣掉或拿去做菜。", "在魚缸點魚的圖可以看牠的卡片，還能幫牠取名字。", "圖鑑記你釣過的每一種和最重的紀錄。", "按魚那顆按鈕可以把魚捧起來給大家看。", "可以去看別人的水族館，從玩家名單或排行榜點名字。", "有些魚有長得不一樣的變種，很少見。圖鑑先給你看影子。"],
+      ["魚缸、我的海、圖鑑", "home", ["釣到的魚進魚缸，最多留 " + (KEEP_MAX) + " 條，滿了最舊的會被擠掉。", "喜歡的魚放進「我的海」，就在你小島底下，從小島碼頭的潛水梯下去看得到。放在那裡的不會被賣掉或拿去做菜。", "在魚缸點魚的圖可以看牠的卡片，還能幫牠取名字。", "圖鑑記你釣過的每一種和最重的紀錄。", "圖鑑最上面的「⏰ 現在正好」：照現在的時間、潮水、天氣和季節，列出比平常容易出現的魚，按「去釣點」直接過去。手機的「今天」也有。", "釣到魚的卡片會告訴你這種魚你的紀錄是多少：破紀錄會寫「🏆 破紀錄」和比上次大多少，差一點的會寫還差幾公斤。", "加了好友以後，圖鑑每種魚會寫「👥 朋友最大」是誰、幾公斤；你比他大會有 👑。", "按魚那顆按鈕可以把魚捧起來給大家看。", "可以去看別人的水族館，從玩家名單或排行榜點名字。", "有些魚有長得不一樣的變種，很少見。圖鑑先給你看影子。"],
         ["我的海一開始放 30 條。海底花園每長大一株珊瑚多 2 條，最多 60 條。一起住的人共用。", "魚的名字最多 8 個字。"]],
       ["配種", "home", ["每條魚有公母。", "魚缸的「配種缸」可以挑同一種的一公一母，一缸一天配一次。", "魚苗的顏色、花紋、鰭從爸媽各拿一半，隔天長大才看得出來。", "看起來普通的魚也可能帶著特別的基因。", "水溫、飼料、水草會讓某些特徵比較容易出現，只是機率多一點。", "兄弟姊妹互配，體型會變小。", "變種也會遺傳：兩條變種生變種；變種配一般的，小魚看起來一般但帶著基因。"],
         ["一次生 1～3 條。每條 5% 機會突變，0.5% 機會稀有突變（白化、金鱗、黑化、夜光、寶石眼）。", "能配的有 13 種。有基因的魚最多養 60 條，配種缸可以用金幣加到 4 缸。", "變種帶基因的配變種，一半是變種；兩條帶基因的配，四分之一是變種。", "春夏是野外繁殖季。含著小魚的母吳郭魚放流多 5 愛海點數。"]],
@@ -20768,7 +20804,7 @@ function renderTab0(){
         ["足球一場 3 分鐘。", "籃球 1 對 1 先拿 11 分的贏，一次進攻 14 秒。弧線內 2 分，外 3 分。抄球失敗 2 秒不能再抄。", "羽球先拿 7 分的贏。"]],
       ["滑雪", "social", ["冰封群島南邊有座雪山，山腳有小木屋和教練小嵐。", "到山腳東邊坐纜車上去。", "在山頂的門按「出發」。旁邊的人按「一起出發」就一起比。", "會自己往下滑。搖桿左右轉彎，往前蹲低比較快，往後煞車。", "要穿過每一道旗門。滑出雪道會變慢，撞到樹會摔倒。", "滑完一趟送毛球帽，滑得夠快再送滑雪鏡。"],
         ["漏掉一道旗門加 3 秒。", (SKI_GOG_S) + " 秒內滑完送滑雪鏡。", "按出發後等 6 秒才開始。"]],
-      ["跟別人一起玩", "social", ["一進來就在公共大廳，一個大廳最多 " + (LOBBY_MAX) + " 人。想只跟朋友玩就開私人房間。", "走到別人旁邊按「揮手」，他也揮回來，你們就算認識了。", "加好友：按「加好友」，或輸入他的 8 碼好友代碼。", "好友可以互相送魚、傳私訊、去對方的小島。", "點別人的角色或名字看他的名片，可以直接邀對決。", "釣魚對決：3 分鐘比誰釣得重。按「找對手」是排位賽，會算段位。", "小組對決是 2 對 2。", "釣友隊：2 到 6 個人一隊，每週一起完成目標領獎。在廣場的大看板建立。", "地圖上可以做記號給大家看，例如這裡魚很多。", "廣場西邊有留言板。", "遇到不舒服的人，點他的名字可以封鎖或檢舉。", "聊天框左邊可以切「全部」和「附近」。"],
+      ["跟別人一起玩", "social", ["一進來就在公共大廳，一個大廳最多 " + (LOBBY_MAX) + " 人。想只跟朋友玩就開私人房間。", "走到別人旁邊按「揮手」，他也揮回來，你們就算認識了。", "加好友：按「加好友」，或輸入他的 8 碼好友代碼。", "好友可以互相送魚、傳私訊、去對方的小島。", "好友在同一個大廳釣到稀有魚、傳說魚、變種，或破了自己的紀錄，你會跳出一張卡，按「👀 過去看」就到他旁邊。", "點別人的角色或名字看他的名片，可以直接邀對決。", "釣魚對決：3 分鐘比誰釣得重。按「找對手」是排位賽，會算段位。", "小組對決是 2 對 2。", "釣友隊：2 到 6 個人一隊，每週一起完成目標領獎。在廣場的大看板建立。", "地圖上可以做記號給大家看，例如這裡魚很多。", "廣場西邊有留言板。", "遇到不舒服的人，點他的名字可以封鎖或檢舉。", "聊天框左邊可以切「全部」和「附近」。"],
         ["送魚一天 10 條，金幣不能送。帳號要滿 3 天或綁 Email，而且釣過 30 條。", "私訊一則最多 120 字，伺服器留 30 天。", "排位賽跟同一個人一天只有前 3 局算。每個月一季，換季星星留一半。每天第一場排位勝利送亮光餌 5 個。", "釣友隊要釣過 20 條才能建。每週目標：合力釣 120 條乘人數，湊齊 15 加 5 乘人數種。達成後釣過 5 條的隊員各領 600 金幣。", "地圖記號 24 小時後消失，同時最多 3 個，一天最多 10 個，要釣過 5 條。", "留言一則最多 60 字，一天最多 5 則，要釣過 5 條。", "附近聊天是 28 公尺內。", "鬼抓人 2 個人以上，3 分鐘後還是鬼的人輸。"]],
       ["等級、成就", "social", ["釣魚、放流、拍水下照片都有經驗。點左上角的等級看進度。", "每升一級有金幣。", "成就有 " + (ACH.length) + " 個。有些會給稱號，選一個掛在名字上。", "點左上角的等級打開「成就」，最上面可以改名字。"],
         ["經驗：常見魚 10、稀有魚 40、傳說魚 250、放流 5、水下照片每種 30。", "升級獎金是等級乘 50。", "在同一個釣點放流、撿垃圾、釣魚，那裡會越來越熟，魚咬得比較快。"]],
@@ -21963,6 +21999,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u831', d:'11/25', items:[['🏆','釣到魚就知道自己站在哪裡：破紀錄會大聲告訴你比上次大多少，沒破會寫你的紀錄、差一點的寫還差幾公斤'], ['⏰','圖鑑最上面多了「現在正好」：照現在的時間、潮水、天氣、季節列出比較容易出現的魚，一鍵去釣點。手機的「今天」、阿默也會提醒'], ['👥','跟朋友比：圖鑑每種魚寫朋友最大的是誰；釣到比朋友還大的會告訴你。好友釣到稀有、傳說、變種或破紀錄，會跳卡片，可以直接過去看'], ['🐛','修好：別人釣到稀有魚、傳說魚，跑馬燈之前不會出現']] },
   { id:'u830', d:'11/25', items:[['🪑','生態池旁邊、廟前面那張歪歪的長椅拿掉了']] },
   { id:'u829', d:'11/25', items:[['🪑','人物坐椅子換成真的坐姿：屁股坐在椅面上、大腿平放、小腿往下、手放在大腿上，不會再浮在椅子上或膝蓋翹起來。阿默坐在長椅上會兩手拿著遊戲機低頭打']] },
   { id:'u825', d:'11/25', items:[['🪑','阿默上岸後會先喘一下，再慢慢走到港邊廣場最近的長椅坐下來打遊戲機；快出海時站起來走回碼頭。長椅有人坐他就換一張']] },

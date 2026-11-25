@@ -8523,5 +8523,20 @@
  "坐一下……打一場": "Duduk sebentar... main satu ronde.",
  "腳好痠": "Kakiku pegal.",
  "人物坐椅子換成真的坐姿：屁股坐在椅面上、大腿平放、小腿往下、手放在大腿上，不會再浮在椅子上或膝蓋翹起來。阿默坐在長椅上會兩手拿著遊戲機低頭打": "Duduk di kursi sekarang pakai pose duduk sungguhan: pantat di atas kursi, paha rata, betis menggantung, tangan di atas paha. Tidak lagi melayang di atas kursi atau lutut terangkat. A-Mo duduk di bangku memegang game genggam dengan kedua tangan sambil menunduk.",
- "生態池旁邊、廟前面那張歪歪的長椅拿掉了": "Bangku miring di samping kolam ekologi, di depan kuil, sudah dihapus."
+ "生態池旁邊、廟前面那張歪歪的長椅拿掉了": "Bangku miring di samping kolam ekologi, di depan kuil, sudah dihapus.",
+ "圖鑑最上面的「⏰ 現在正好」：照現在的時間、潮水、天氣和季節，列出比平常容易出現的魚，按「去釣點」直接過去。手機的「今天」也有。": "Di bagian atas Buku Ikan, \"⏰ Pas sekarang\" menampilkan ikan yang lebih sering muncul menurut waktu, pasang surut, cuaca dan musim saat ini. Ketuk \"Pergi\" untuk langsung ke sana. Ada juga di Hari Ini di ponsel.",
+ "釣到魚的卡片會告訴你這種魚你的紀錄是多少：破紀錄會寫「🏆 破紀錄」和比上次大多少，差一點的會寫還差幾公斤。": "Kartu tangkapan menunjukkan rekormu untuk ikan itu. Rekor baru ditandai \"🏆 Rekor baru\" dan seberapa besar selisihnya; kalau hampir, ditunjukkan kurang berapa kg.",
+ "加了好友以後，圖鑑每種魚會寫「👥 朋友最大」是誰、幾公斤；你比他大會有 👑。": "Setelah punya teman, tiap ikan di Buku Ikan menunjukkan \"👥 Terbesar teman\": siapa dan berapa berat. Kalau punyamu lebih besar kamu dapat 👑.",
+ "好友在同一個大廳釣到稀有魚、傳說魚、變種，或破了自己的紀錄，你會跳出一張卡，按「👀 過去看」就到他旁邊。": "Saat teman di lobi yang sama menangkap ikan langka, legendaris, varian, atau memecahkan rekornya sendiri, sebuah kartu muncul. Ketuk \"👀 Lihat\" untuk langsung ke sampingnya.",
+ "釣到魚就知道自己站在哪裡：破紀錄會大聲告訴你比上次大多少，沒破會寫你的紀錄、差一點的寫還差幾公斤": "Setiap tangkapan memberi tahu posisimu: rekor baru menyebut selisihnya; kalau tidak, ditunjukkan rekormu atau kurang berapa kg.",
+ "圖鑑最上面多了「現在正好」：照現在的時間、潮水、天氣、季節列出比較容易出現的魚，一鍵去釣點。手機的「今天」、阿默也會提醒": "Buku Ikan sekarang dibuka dengan \"Pas sekarang\": ikan yang lebih mungkin muncul menurut waktu, pasang surut, cuaca dan musim, dengan satu ketuk ke lokasinya. Hari Ini di ponsel dan A-Mo juga mengingatkan.",
+ "跟朋友比：圖鑑每種魚寫朋友最大的是誰；釣到比朋友還大的會告訴你。好友釣到稀有、傳說、變種或破紀錄，會跳卡片，可以直接過去看": "Bersaing dengan teman: tiap ikan di Buku Ikan menunjukkan ikan terbesar temanmu. Kalau kamu dapat yang lebih besar, kamu diberi tahu. Saat teman dapat ikan langka, legendaris, varian atau pecah rekor, muncul kartu supaya kamu bisa datang melihat.",
+ "修好：別人釣到稀有魚、傳說魚，跑馬燈之前不會出現": "Diperbaiki: tangkapan langka dan legendaris pemain lain tidak muncul di ticker.",
+ "⏰ 現在正好": "⏰ Pas sekarang",
+ "👀 過去看": "👀 Lihat",
+ "他已經離開了": "Dia sudah pergi",
+ "現在正好": "Pas sekarang",
+ "破自己的紀錄了：": "memecahkan rekornya sendiri:",
+ "還沒釣過的魚": "Ikan yang belum pernah ditangkap",
+ "這個釣點要自己走過去": "Kamu harus jalan sendiri ke lokasi ini"
 }

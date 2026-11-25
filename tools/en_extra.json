@@ -8799,5 +8799,20 @@
  "坐一下……打一場": "Sit for a bit... one round.",
  "腳好痠": "My legs are sore.",
  "人物坐椅子換成真的坐姿：屁股坐在椅面上、大腿平放、小腿往下、手放在大腿上，不會再浮在椅子上或膝蓋翹起來。阿默坐在長椅上會兩手拿著遊戲機低頭打": "Sitting on chairs now uses a real sitting pose: bottom on the seat, thighs flat, lower legs hanging down, hands on the thighs. No more floating above the chair or knees sticking up. A-Mo sits on the bench holding his handheld with both hands, looking down at it.",
- "生態池旁邊、廟前面那張歪歪的長椅拿掉了": "Removed the crooked bench next to the eco pond, in front of the temple."
+ "生態池旁邊、廟前面那張歪歪的長椅拿掉了": "Removed the crooked bench next to the eco pond, in front of the temple.",
+ "圖鑑最上面的「⏰ 現在正好」：照現在的時間、潮水、天氣和季節，列出比平常容易出現的魚，按「去釣點」直接過去。手機的「今天」也有。": "At the top of the Fish Book, \"⏰ Right now\" lists fish that show up more often given the current time, tide, weather and season. Tap \"Go\" to head straight there. It's also in Today on your phone.",
+ "釣到魚的卡片會告訴你這種魚你的紀錄是多少：破紀錄會寫「🏆 破紀錄」和比上次大多少，差一點的會寫還差幾公斤。": "The catch card tells you your record for that fish. A new record shows \"🏆 New record\" and how much bigger it is; if you were close, it shows how many kg you were short.",
+ "加了好友以後，圖鑑每種魚會寫「👥 朋友最大」是誰、幾公斤；你比他大會有 👑。": "Once you have friends, each fish in the Fish Book shows \"👥 Friends' best\": who and how heavy. If yours is bigger you get a 👑.",
+ "好友在同一個大廳釣到稀有魚、傳說魚、變種，或破了自己的紀錄，你會跳出一張卡，按「👀 過去看」就到他旁邊。": "When a friend in the same lobby catches a rare, legendary or variant fish, or beats their own record, a card pops up. Tap \"👀 Go see\" to jump next to them.",
+ "釣到魚就知道自己站在哪裡：破紀錄會大聲告訴你比上次大多少，沒破會寫你的紀錄、差一點的寫還差幾公斤": "Every catch tells you where you stand: a new record says how much bigger it is; otherwise it shows your record, or how many kg you were short.",
+ "圖鑑最上面多了「現在正好」：照現在的時間、潮水、天氣、季節列出比較容易出現的魚，一鍵去釣點。手機的「今天」、阿默也會提醒": "The Fish Book now starts with \"Right now\": fish more likely to appear given the time, tide, weather and season, with a one-tap trip to the spot. Today on your phone and A-Mo will remind you too.",
+ "跟朋友比：圖鑑每種魚寫朋友最大的是誰；釣到比朋友還大的會告訴你。好友釣到稀有、傳說、變種或破紀錄，會跳卡片，可以直接過去看": "Compete with friends: each fish in the Fish Book shows your friends' biggest. Catch one bigger than theirs and you'll be told. When a friend lands a rare, legendary or variant fish or breaks a record, a card pops up so you can go see.",
+ "修好：別人釣到稀有魚、傳說魚，跑馬燈之前不會出現": "Fixed: other players' rare and legendary catches weren't showing in the ticker.",
+ "⏰ 現在正好": "⏰ Right now",
+ "👀 過去看": "👀 Go see",
+ "他已經離開了": "They've already left",
+ "現在正好": "Right now",
+ "破自己的紀錄了：": "beat their own record:",
+ "還沒釣過的魚": "Fish you haven't caught",
+ "這個釣點要自己走過去": "You'll need to walk to this spot"
 }
