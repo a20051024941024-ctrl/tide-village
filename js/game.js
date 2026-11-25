@@ -5513,7 +5513,8 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   { const TN = { tee: 'Ttee', vest: 'Tvest', hoodie: 'Thoodie', wave: 'Twave', hoodup: 'Thoodup' }[c.top], BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot];
     k.region = !!(TN && BN && M[TN + '_skin'] && M[BN + '_skin'] && M.headskin && c.top !== 'maid');
     if (k.region){ for (const n in v) if (!/^(face|facefill|skinlow|shoes|shoes2|mjskin|mjshoe|msskin|mssock|msshoe)$/.test(n)) delete v[n];
-      Object.assign(v, { headskin: 1, neck: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); if (c.top === 'hoodup') v.headskin = 0; } }   /* 帽子戴上的連帽衣：光頭的頭皮會從帽子頂穿出來，收掉（臉和下巴用衣服那塊自己的） */
+      Object.assign(v, { headskin: 1, neck: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); if (c.top === 'hoodup') v.headskin = 0; } }
+  if (M.neck && k.base.neck){ M.neck.material.color.copy(k.base.neck); if (c.top === 'hoodup') M.neck.material.color.copy(k.base.neck).multiplyScalar(0.45); }   /* 帽子戴上：脖子在帽子的陰影裡，後面領口的縫也看不出來 */   /* 帽子戴上的連帽衣：光頭的頭皮會從帽子頂穿出來，收掉（臉和下巴用衣服那塊自己的） */
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
   const set = (n, col) => { const b = col ? new THREE.Color(col) : k.base[n]; if (M[n] && b) M[n].material.color.copy(b); };
   for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest', 'Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth', 'Twave_cloth', 'Thoodup_cloth']) set(n, C.top); for (const n of ['Bshorts_cloth', 'Bpants_cloth']) set(n, C.bot); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
