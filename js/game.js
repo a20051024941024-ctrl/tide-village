@@ -18749,7 +18749,7 @@ function visitLog(p, left){
 function agoText(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : m < 1440 ? `${Math.round(m / 60)} 小時前` : `${Math.round(m / 1440)} 天前`; }
 var CVisits = { list:null, at:0, loading:false };
 async function loadCloudVisits(){ if (!Cloud.on || CVisits.loading) return; CVisits.loading = true; try { const { data, error } = await Cloud.sb.rpc('get_visits'); if (!error && Array.isArray(data)){ const was = CVisits.list; CVisits.list = data; CVisits.at = Date.now();
-  const seenAt = LS.get('tide.visitSeen', 0), fresh = data.filter(v => Date.parse(v.at) > seenAt); if (!was && fresh.length) ticker(`👣 你不在的時候，有 ${new Set(fresh.map(v => v.id)).size} 個人來逛過你的小島或水族館（玩家分頁）`);
+  const seenAt = LS.get('tide.visitSeen', 0), fresh = data.filter(v => Date.parse(v.at) > seenAt); if (!was && fresh.length){ const ids = new Set(fresh.map(v => v.id)), f0 = fresh.reduce((a, v) => Date.parse(v.at) > Date.parse(a.at) ? v : a, fresh[0]), ago = Date.now() - Date.parse(f0.at), when = ago < 3600e3 ? Math.max(1, Math.round(ago / 60000)) + ' 分鐘前' : ago < 86400e3 ? Math.round(ago / 3600e3) + ' 小時前' : Math.round(ago / 86400e3) + ' 天前'; ticker(ids.size > 1 ? `👣 你不在的時候，${f0.name || '有人'}等 ${ids.size} 個人來逛過你的小島或水族館（最近一次是${when}，玩家分頁看名單）` : `👣 ${f0.name || '有人'}${when}來逛過你的小島或水族館（玩家分頁看名單）`); LS.set('tide.visitSeen', Math.max(...data.map(v => Date.parse(v.at) || 0))); }
   if (!$('#sheet').hidden && curTab === 'people') renderTab(); } } catch(e){} CVisits.loading = false; }
 function renderCloudVisits(body){
   if (!Cloud.on) return; if (Date.now() - CVisits.at > 30000) loadCloudVisits();
@@ -21876,6 +21876,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u817', d:'11/25', items:[['👣','「有人來逛過你的小島」的通知只會出現一次，還會寫是誰、多久以前來的']] },
   { id:'u816', d:'11/25', items:[['🐉','會飛的兵（龍、鳳凰、獅鷲）不再去打城牆，直接飛過去打建築；敵人不再砍樹；獅鷲騎士的翅膀改成往後張開，拍得比較慢']] },
   { id:'u815', d:'11/25', items:[['🐎','遠征島上岸後在藍旗圍起來的登陸區整隊；選了兵可以按「上馬」一次全騎上，只要那一套有騎兵的兵種都能上馬']] },
   { id:'u814', d:'11/25', items:[['🏝️','遠征島整隊時部隊站在海灘上排成方陣，不會掉進海裡；按「全軍」會提示選了幾名']] },
