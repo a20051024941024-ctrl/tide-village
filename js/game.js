@@ -1067,27 +1067,29 @@ function fishModel0(f, scale){
   if (f.id === 'horseshoe') return makeHorseshoe(scale);
   if (f.id === 'softshell') return makeSoftshell(scale);
   if (MFISH && MFISH.of[f.id]) return makeMFish(f.id, scale);
-  if (f.id === 'koi' && !window.__noKoi3 && !CLASSIC) return makeKoi3(f, scale);
+  if (REAL3[f.id] && !window.__noKoi3 && !CLASSIC) return makeReal3(f, scale);
   if (FISH_STYLE[f.id]){ try { return makeModelFish(f, scale); } catch(e){} }
   return makeFish(f.color, scale);
 }
-/* v836 真實的朱紅錦鯉：作者用 Meshy 付費方案做的模型（三視圖是作者找人生的圖），75 萬面減到 5,000 面，貼圖重新烘成一張 1024（models/fish/koi.glb）。
-   頭朝 +x、長度 1 → 載進來放大成 1.55（跟其他魚一樣大）。游泳擺尾用 FISH_MOVES.side，掙扎彎曲用 fishAct（userData.fmv）。
-   模型還沒載好的時候先用原本的錦鯉，載好後換掉。之後要讓生命垂釣的錦鯉照基因換顏色，就在這張貼圖上把紅色的地方換色。 */
-const Koi3 = { geo:null, mat:null, wait:new Set(), tex:null };
-new GLTFLoader().loadAsync('models/fish/koi.glb').then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
-  const geo = mesh.geometry; geo.scale(1.55, 1.55, 1.55); geo.computeBoundingSphere(); geo.userData.shared = true; Koi3.geo = geo; Koi3.tex = mesh.material.map; if (Koi3.tex){ Koi3.tex.colorSpace = THREE.SRGBColorSpace; Koi3.tex.anisotropy = 4; }
-  for (const fish of [...Koi3.wait]){ try { koi3Fill(fish); } catch(e){ console.warn('koi3', e); } } Koi3.wait.clear(); }).catch(e => console.warn('koi glb', e));
-function koi3Mat(){ if (Koi3.mat) return Koi3.mat;
-  const m = new THREE.MeshStandardMaterial({ map: Koi3.tex, roughness:0.42, metalness:0.04, side:THREE.DoubleSide });
+/* v836 真實的魚：作者用 Meshy 付費方案做的模型（三視圖是作者找人生的圖），幾十萬面減到約 5,000 面，貼圖重新烘成一張 1024（models/fish/<id>.glb，各約 0.9MB）。
+   v837 加上翡翠河鱸、銀鱗鯽。第一次需要那種魚的時候才下載；還沒載好先用原本的模型，載好後換掉。
+   頭朝 +x、長度 1 → 放大成 1.55（跟其他魚一樣大）。游泳擺尾用 FISH_MOVES.side，掙扎彎曲用 fishAct（userData.fmv）。
+   生命垂釣培育出來的魚（gn~ 開頭的 id）不走這裡。之後要照基因換顏色，就在貼圖上換色。 */
+const REAL3 = { koi:{}, perch:{}, crucian:{} };
+function real3Load(id){ const R = REAL3[id]; R.wait = R.wait || new Set(); if (R.loading) return; R.loading = true;
+  new GLTFLoader().loadAsync('models/fish/' + id + '.glb').then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
+    const geo = mesh.geometry; geo.scale(1.55, 1.55, 1.55); geo.computeBoundingSphere(); geo.userData.shared = true; R.tex = mesh.material.map; if (R.tex){ R.tex.colorSpace = THREE.SRGBColorSpace; R.tex.anisotropy = 4; } R.geo = geo;
+    for (const fish of [...R.wait]){ try { real3Fill(fish, id); } catch(e){ console.warn('real3', e); } } R.wait.clear(); }).catch(e => console.warn('real3 glb ' + id, e)); }
+function real3Mat(id){ const R = REAL3[id]; if (R.mat) return R.mat;
+  const m = new THREE.MeshStandardMaterial({ map: R.tex, roughness:0.42, metalness:0.04, side:THREE.DoubleSide });
   m.onBeforeCompile = sh => { sh.uniforms.uFishT = fishTime; sh.vertexShader = 'uniform float uFishT;\n' + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = vec3(position);\n ' + FISH_MOVES.side);
     const oc = sh.fragmentShader.includes('#include <opaque_fragment>') ? '#include <opaque_fragment>' : '#include <output_fragment>';
     sh.fragmentShader = sh.fragmentShader.replace(oc, 'outgoingLight += vec3(1.0, 0.97, 0.92) * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0) * 0.18;\n' + oc); };   /* 邊緣一點點亮光，鱗片看起來濕濕的 */
-  m.customProgramCacheKey = () => 'koi3'; m.userData.fmv = 'side'; return (Koi3.mat = m); }
-function koi3Fill(fish){ for (const c of [...fish.children]) fish.remove(c); fish.userData.tail = new THREE.Object3D(); const b = new THREE.Mesh(Koi3.geo, koi3Mat()); b.castShadow = true; fish.add(b); }
-function makeKoi3(f, scale){
-  if (!Koi3.geo){ let fish; try { fish = FISH_STYLE[f.id] ? makeModelFish(f, scale) : makeFish(f.color, scale); } catch(e){ fish = makeFish(f.color, scale); } Koi3.wait.add(fish); return fish; }
-  const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); koi3Fill(fish); fish.userData.tail = new THREE.Object3D(); return fish; }
+  m.customProgramCacheKey = () => 'real3'; m.userData.fmv = 'side'; return (R.mat = m); }
+function real3Fill(fish, id){ for (const c of [...fish.children]) fish.remove(c); fish.userData.tail = new THREE.Object3D(); const b = new THREE.Mesh(REAL3[id].geo, real3Mat(id)); b.castShadow = true; fish.add(b); }
+function makeReal3(f, scale){ const R = REAL3[f.id];
+  if (!R.geo){ real3Load(f.id); let fish; try { fish = FISH_STYLE[f.id] ? makeModelFish(f, scale) : makeFish(f.color, scale); } catch(e){ fish = makeFish(f.color, scale); } R.wait.add(fish); return fish; }
+  const fish = new THREE.Group(); fish.scale.setScalar(scale || 1); real3Fill(fish, f.id); return fish; }
 
 /* ================= QUALITY（畫質分級：低 / 中 / 高） ================= */
 // 中 = 原本手機的設定，高 = 原本電腦的設定；低是給較舊的 Android 手機
