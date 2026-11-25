@@ -18413,6 +18413,7 @@ function logMsg(name, text, sys, noHist){
   const d = document.createElement('div'); d.className = 'm' + (sys ? ' sys' : '');
   if (name){ const b = document.createElement('b'); b.textContent = name; d.appendChild(b); }
   d.appendChild(document.createTextNode(text)); logEl.appendChild(d);
+  try { c2Add(name, text, sys, logMsg.dist); } catch(e){} logMsg.dist = null;
   while (logEl.children.length > 30) logEl.firstChild.remove();
   if (name && !sys && !noHist){ chatHistAdd(name, text); if (!ChatH.el || ChatH.el.hidden) chatBadge(1); }
   setTimeout(() => d.classList.add('fade'), sys ? 6000 : 30000);   /* 系統訊息 6 秒就淡掉；玩家說的話留 30 秒（v367 從 14 秒加長，比較不會漏看） */
@@ -18815,7 +18816,7 @@ function useRoom(r){
       text = clean(text);
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '釣客';
       { const a = recentChat.get(msg.peer) || []; a.push(msg.data.t.slice(0, 120)); recentChat.set(msg.peer, a.slice(-5)); }
-      if (p) p.fisher.say(text); logMsg((nr ? '📍' : '') + name, text); SFX.chat();
+      if (p) p.fisher.say(text); logMsg.dist = p ? Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) : 99; logMsg.peer = msg.peer; logMsg((nr ? '📍' : '') + name, text); logMsg.peer = null; SFX.chat();
     }, () => {});
     room.on('cook', msg => {
       if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const rc = RECIPES[msg.data.r]; if (!rc) return; const q = clamp(Math.round(Number(msg.data.q) || 1), 1, 3);
@@ -22486,11 +22487,42 @@ function ui3ChatFit(){ const c = $('#chat3'), row = $('#actRow'); if (!c || !row
   let left = 1e9; for (const w of [row, $('#boatRow')]){ if (!w) continue; for (const b of w.children){ if (b.hidden || b.tagName.toLowerCase() === 'svg') continue; const r = b.getBoundingClientRect(); if (r.width && r.bottom > a.top + 2 && r.top < a.bottom - 2) left = Math.min(left, r.left); } }
   const lim = left - 10; if (a.right <= lim) return; const z = a.width / (c.offsetWidth || a.width), nw = Math.max(150, Math.min(a.width, lim - a.left)), nl = Math.max(8, Math.min(a.left, lim - nw));
   c.style.width = (nw / z) + 'px'; c.style.transform = `translateX(${(nl - innerWidth / 2) / z}px)`; }
+/* v845 作者：「我覺得聊天畫面改的像這樣不錯」（Play Together 的聊天框）→ 聊天列上面一個半透明的深色框，固定顯示最近 3 句；
+   右上「⋯」：看誰的聊天（全部／只看附近／不顯示）、我說的話給誰聽（全部／附近）、檢舉剛剛說話的人。點框框打開完整的聊天紀錄。
+   原本左邊一句一句浮出來的泡泡、📜 按鈕在這個版本收起來。先用網址 #chat2 試看，作者說好再開給大家。 */
+const CHAT2 = /chat2/.test(location.hash) || !!LS.get('tide.chat2', 0);
+if (CHAT2) document.body.classList.add('chat2');
+const C2 = { lines: [], view: LS.get('tide.c2view', 'all'), el: null, menu: null };
+function c2Add(name, text, sys, dist){ if (!CHAT2) return; C2.lines.push({ name: name || '', text: String(text || ''), sys: !!sys, dist: dist == null ? 0 : dist, peer: logMsg.peer || null, me: /^📍?你$/.test(name || '') || (name || '') === myDisplayName() }); if (C2.lines.length > 40) C2.lines.shift(); c2Render(); }
+function c2Render(){ const L = C2.el && C2.el.querySelector('.c2l'); if (!L) return; L.textContent = '';
+  if (C2.view === 'off'){ L.appendChild(el('div', 'c2x', '聊天已隱藏（右上 ⋯ 可以打開）')); return; }
+  const show = C2.lines.filter(q => C2.view !== 'near' || q.sys || q.me || q.dist <= NEAR_R).slice(-3);
+  if (!show.length){ L.appendChild(el('div', 'c2x', '還沒有人說話，說聲嗨吧 👋')); return; }
+  for (const q of show){ const r = el('div', 'c2r' + (q.sys ? ' sys' : '') + (q.me ? ' me' : '')); if (q.name){ const b = el('b', '', q.name + '：'); r.appendChild(b); } r.appendChild(document.createTextNode(q.text)); L.appendChild(r); } }
+function c2Fit(){ const c = $('#chat3'), b = C2.el; if (!c || !b) return; const r = c.getBoundingClientRect(); if (!r.width){ b.style.display = 'none'; return; } b.style.display = ''; const bar = c.querySelector('.c3bar'), br = bar ? bar.getBoundingClientRect() : r; b.style.left = Math.round(br.left) + 'px'; b.style.width = Math.round(br.width) + 'px'; b.style.bottom = Math.round(innerHeight - r.top + 6) + 'px'; }
+function c2Build(){ if (C2.el) return; const b = C2.el = document.createElement('div'); b.id = 'c2';
+  b.innerHTML = '<div class="c2h"><span class="c2tab">一般</span><span class="c2m"></span><button class="c2more" aria-label="聊天設定">⋯</button></div><div class="c2l"></div>';
+  document.body.appendChild(b); b.querySelector('.c2l').addEventListener('click', e => { e.stopPropagation(); chatHistToggle(); });
+  b.querySelector('.c2more').addEventListener('click', e => { e.stopPropagation(); c2Menu(); });
+  const mode = () => { const m = b.querySelector('.c2m'); m.textContent = (C2.view === 'near' ? '只看附近' : C2.view === 'off' ? '不顯示' : '') + (chatNear ? (C2.view === 'all' ? '' : '・') + '說給附近聽' : ''); };
+  C2.mode = mode; mode(); c2Render(); setInterval(() => { try { c2Fit(); } catch(e){} }, 400); addEventListener('resize', () => setTimeout(c2Fit, 50)); }
+function c2Menu(){ let M = C2.menu; if (M && !M.hidden){ M.hidden = true; return; }
+  if (!M){ M = C2.menu = document.createElement('div'); M.id = 'c2menu'; document.body.appendChild(M); document.addEventListener('pointerdown', e => { if (!M.hidden && !M.contains(e.target) && !e.target.closest('.c2more')) M.hidden = true; }); }
+  const opt = (label, on, fn) => { const o = el('button', 'c2o' + (on ? ' on' : ''), label); o.addEventListener('click', e => { e.stopPropagation(); fn(); c2Menu(); c2Menu(); }); return o; };
+  M.textContent = ''; M.appendChild(el('div', 'c2t', '查看聊天'));
+  { const r = el('div', 'c2row'); r.append(opt('全部', C2.view === 'all', () => { C2.view = 'all'; LS.set('tide.c2view', 'all'); C2.mode(); c2Render(); }), opt('只看附近', C2.view === 'near', () => { C2.view = 'near'; LS.set('tide.c2view', 'near'); C2.mode(); c2Render(); }), opt('不顯示', C2.view === 'off', () => { C2.view = 'off'; LS.set('tide.c2view', 'off'); C2.mode(); c2Render(); })); M.appendChild(r); }
+  M.appendChild(el('div', 'c2t', '我說的話'));
+  { const r = el('div', 'c2row'); r.append(opt('大家都聽得到', !chatNear, () => { chatNear = false; LS.set('tide.chatNear', false); try { renderChatMode(); } catch(e){} C2.mode(); }), opt('只給附近的人', chatNear, () => { chatNear = true; LS.set('tide.chatNear', true); try { renderChatMode(); } catch(e){} C2.mode(); })); M.appendChild(r); }
+  const who = []; for (let i = C2.lines.length - 1; i >= 0 && who.length < 4; i--){ const q = C2.lines[i]; if (q.peer && !who.some(w => w.peer === q.peer)) who.push(q); }
+  M.appendChild(el('div', 'c2t', '檢舉聊天內容'));
+  if (!who.length) M.appendChild(el('div', 'c2x', '剛剛沒有其他玩家說話'));
+  for (const q of who){ const rb = el('button', 'c2rep', '🚩 ' + q.name.replace(/^📍/, '')); rb.addEventListener('click', e => { e.stopPropagation(); if (!confirmOnce(rb)) return; reportPeer(q.peer, q.name.replace(/^📍/, ''), '聊天內容不當'); M.hidden = true; }); M.appendChild(rb); }
+  const r = C2.el.getBoundingClientRect(); M.style.left = Math.round(Math.max(8, r.right - 260)) + 'px'; M.style.bottom = Math.round(innerHeight - r.top + 6) + 'px'; M.style.maxHeight = Math.max(120, Math.round(r.top - 14)) + 'px'; M.hidden = false; }
 function ui3Chat(){ if ($('#chat3')) return; const b = document.createElement('div'); b.id = 'chat3';
   const bar = el('button', 'c3bar panel', '💬 點這裡聊天…'); bar.addEventListener('click', () => { const t = $('#chatToggle'); if (t) t.click(); });
   const hb = el('button', 'c3em c3h panel', '📜'); hb.setAttribute('aria-label', '聊天紀錄'); hb.addEventListener('click', e => { e.stopPropagation(); chatHistToggle(); });
   const em = el('button', 'c3em panel', '😀'); em.setAttribute('aria-label', '表情動作'); em.addEventListener('click', e => { e.stopPropagation(); openEmotePanel(); });
-  b.append(hb, bar, em); document.body.appendChild(b);
+  b.append(hb, bar, em); document.body.appendChild(b); if (CHAT2){ hb.hidden = true; c2Build(); }
   const ci = $('#chatIn'); if (ci){ ci.addEventListener('focus', () => { if (!ChatH.el || ChatH.el.hidden){ ChatH.auto = true; chatHistToggle(true); } });   /* 打字的時候順便看到大家剛剛說什麼 */
     ci.addEventListener('blur', () => setTimeout(() => { if (ChatH.auto && document.activeElement !== ci){ ChatH.auto = false; chatHistToggle(false); } }, 250)); } }
 /* 右下：🐾（有帶寵物才出現）＝打開表情動作裡的寵物互動 */
