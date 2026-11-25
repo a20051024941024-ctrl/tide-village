@@ -1020,11 +1020,12 @@ function fishAct(model, kind){ if (CLASSIC || !model) return null; const U = { v
 function fishActTick(dt){ dt = Math.min(dt, 0.05); for (let i = FishActs.length - 1; i >= 0; i--){ const A = FishActs[i], m = A.m; let p = m, on = false; while (p){ if (p === scene){ on = true; break; } p = p.parent; }
     if (!on){ if (now() - A.seen > 1.5){ for (const q of A.mats){ try { q.dispose(); } catch(e){} } FishActs.splice(i, 1); } continue; } A.seen = now(); A.t += dt;
     /* 一陣一陣：burst 是這一陣還剩幾秒，next 是離下一陣還有幾秒 */
-    if (A.burst > 0) A.burst -= dt; else { A.next -= dt; if (A.next <= 0){ A.burst = A.kind === 'air' ? 0.38 + Math.random() * 0.25 : 0.4 + Math.random() * 0.3; A.next = A.kind === 'air' ? 0.16 + Math.random() * 0.22 : 1.5 + Math.random() * 2.2; A.dir = -A.dir; } }
+    if (A.kind === 'flop'){ if (A.burst > 0) A.burst -= dt; } else if (A.burst > 0) A.burst -= dt; else { A.next -= dt; if (A.next <= 0){ A.burst = A.kind === 'air' ? 0.38 + Math.random() * 0.25 : 0.4 + Math.random() * 0.3; A.next = A.kind === 'air' ? 0.16 + Math.random() * 0.22 : 1.5 + Math.random() * 2.2; A.dir = -A.dir; } }
     const on2 = A.burst > 0 ? 1 : 0, k = A.k = (A.k || 0) + (on2 - (A.k || 0)) * Math.min(1, dt * (on2 ? 18 : 7));   /* k：0 休息 → 1 猛甩 */
-    A.ph += dt * (A.kind === 'air' ? 9 + 22 * k : 3 + 24 * k);
-    A.U.value.set((A.kind === 'air' ? 0.7 : 0.18) + 2.4 * k, A.ph, Math.sin(A.ph * 0.5) * k * (A.kind === 'air' ? 1.15 : 0.9), 0);
-    if (A.kind === 'air'){ A.tw += dt * (1.2 + 9 * k) * A.dir; m.rotation.set(Math.sin(A.t * 3.1 + A.ph * 0.1) * 0.16, A.tw, Math.PI / 2 * 0.9 + Math.sin(A.t * 5.3) * 0.1 + Math.sin(A.ph) * 0.22 * k); }
+    const ak = A.kind === 'air' || A.kind === 'flop'; A.ph += dt * (ak ? 9 + 22 * k : 3 + 24 * k);
+    A.U.value.set((ak ? 0.7 : 0.18) + 2.4 * k, A.ph, Math.sin(A.ph * 0.5) * k * (ak ? 1.15 : 0.9), 0);
+    if (A.kind === 'flop'){}   /* v835 在地上跳：身體彎曲照算，位置和翻身交給 flopTick */
+    else if (A.kind === 'air'){ A.tw += dt * (1.2 + 9 * k) * A.dir; m.rotation.set(Math.sin(A.t * 3.1 + A.ph * 0.1) * 0.16, A.tw, Math.PI / 2 * 0.9 + Math.sin(A.t * 5.3) * 0.1 + Math.sin(A.ph) * 0.22 * k); }
     else { m.rotation.z = Math.sin(A.ph) * 0.2 * k; m.rotation.x = Math.sin(A.ph * 0.5) * 0.12 * k; m.position.y = A.by + Math.abs(Math.sin(A.ph * 0.5)) * 0.06 * k; } } }
 /* v557 三棘鱟：圓頂的頭胸甲（馬蹄形）、後面一塊比較小帶刺的腹甲、一根又長又尖的尾劍。頭朝 +x */
 function makeHorseshoe(scale){ const g = new THREE.Group(); g.scale.setScalar(scale || 1); const sh = mat('#8f8a5c', 0.5), dk = mat('#5c5938', 0.6), ey = mat('#17150e', 0.3), wh = new THREE.MeshBasicMaterial({ color:'#ffffff' });
@@ -6029,7 +6030,7 @@ class Fisher {
     const v = tmpV.set(this.pos.x, this.pos.y + (KID.shape ? (this.sitting ? 1.88 : 2.18) : 1.95), this.pos.z);   /* v411 人變高了，名字跟著往上 */
     const d = camera.position.distanceTo(v);
     v.project(camera);
-    if (v.z > 1 || d > (this.isNpc ? 24 : 45) || (this === me && F.phase !== 'idle' && F.phase !== 'charging')){ this.tag.style.display = 'none'; return; }   /* v294 自己釣魚的時候不顯示自己的名字，畫面不擠 */
+    if (v.z > 1 || d > (this.isNpc ? 24 : 45) || (this === me && F.phase !== 'idle' && F.phase !== 'charging' && !F.flopShow)){ this.tag.style.display = 'none'; return; }   /* v294 自己釣魚的時候不顯示自己的名字，畫面不擠 */
     const sx = (v.x*0.5+0.5)*viewW(), sy = (-v.y*0.5+0.5)*viewH();
     if (sx < -160 || sx > viewW() + 160 || sy < -80 || sy > viewH() + 80){ this.tag.style.display = 'none'; return; }   /* v616 畫面外的名字不要擺到兩三千像素外（可能是把網頁撐寬的元兇之一） */
     /* v195：村民的名字跟別的名字牌疊到就先不顯示（玩家自己和其他玩家的名字一直顯示） */
@@ -6115,6 +6116,7 @@ const SFX = {
   step(){ noise(0.05, 0.025, 900, 0, 1.5); },
   cast(){ tone(900, 0.25, 'triangle', 0.08, 300); },
   plop(){ tone(520, 0.18, 'sine', 0.18, 160); },
+  slap(h){ h = h || 1; noise(0.07, 0.1 * h, 2600, 500, 1.3); tone(150, 0.07, 'sine', 0.07 * h, 70); },   /* v835 魚在地上拍一下：濕濕的「啪」 */
   bite(){ tone(880, 0.08, 'square', 0.06); setTimeout(() => tone(1100, 0.1, 'square', 0.06), 90); },
   catch(){ [523,659,784,1046].forEach((f,i) => setTimeout(() => tone(f, 0.22, 'triangle', 0.12), i*90)); },
   fail(){ tone(300, 0.35, 'sawtooth', 0.06, 120); },
@@ -7766,15 +7768,52 @@ function landFish(){
   const from = me.bobPos.clone(); from.y = 0.1;
   const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm); const fmAct = fishAct(fm, 'air');   /* v448 吊在線上：頭朝上、整條身體猛甩 */
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
-  const fpc = FP.act; if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
+  const fpc = FP.act, wild = F.spot && F.spot.wild, flop = !fpc && !wild && !CLASSIC;
+  if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else if (!flop) jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
-  if (F.spot && F.spot.wild){ setTimeout(() => wildLanded(f, w), fpc ? 3600 : 1100); return; }   /* v593 荒島的魚：變成食物、記進荒島筆記，不進村子的紀錄 */
-  setTimeout(() => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); try { fkCaught(f); } catch(e){} if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); if (!fpc && (f.rarity === '傳說' || f.rarity === '稀有' || w >= 20)) startEmote(me, 'cheer'); }, fpc ? 3600 : 900);   /* v638 釣到稀有、傳說或 20kg 以上的大魚：雙手把魚舉過頭歡呼；普通的小魚就只是拿著 */   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
+  if (wild){ setTimeout(() => wildLanded(f, w), fpc ? 3600 : 1100); return; }   /* v593 荒島的魚：變成食物、記進荒島筆記，不進村子的紀錄 */
+  const fin = () => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); try { fkCaught(f); } catch(e){} if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); if (!fpc && (f.rarity === '傳說' || f.rarity === '稀有' || w >= 20)) startEmote(me, 'cheer'); };
+  if (flop){ const dur = flopDur(f, w), spot = flopSpot(me, from, !!myBoat); me.say(`${f.name} ${fmtKg(w)}`, 'emote', dur + 1.2); jumpers.push({ m: fm, from, to: spot, t: 0, act: fmAct, flop: { dur, mine: true, f, w, done: fin } }); }   /* v835 魚先甩到腳邊、在地上啪啪跳，頭上先冒出是什麼魚，跳完才撿起來、跳卡片 */
+  else setTimeout(fin, fpc ? 3600 : 900);   /* v638 釣到稀有、傳說或 20kg 以上的大魚：雙手把魚舉過頭歡呼；普通的小魚就只是拿著 */   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
 const jumpers = [];
+/* v835 魚拉上岸：先「啪」一聲落在腳邊（碼頭就落在木板上、船上落在甲板上），在地上彎身拍尾巴亂跳幾下，再撿起來拿著。
+   小魚跳得高、跳得快；大魚很重，只會用力甩幾下，落地時畫面震一下；傳說魚落地閃光。點一下畫面可以跳過（只限自己的魚）。
+   別人的魚也一樣：收到 catch 時看得到他的魚掉在他腳邊跳（同一套 flopLand）。 */
+const Flops = [];
+function flopDur(f, w){ return f.rarity === '傳說' ? 2.6 : (f.rarity === '稀有' || BIG_FISH.has(f.id) || w >= 20) ? 1.9 : 1.1; }
+function flopSpot(who, from, boat){ const px = who.pos.x, pz = who.pos.z; let dx = from.x - px, dz = from.z - pz; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+  const cand = boat ? [[0.45, -0.35], [-0.45, -0.35], [0, -0.6]] : [[0.75, 0.15], [-0.75, 0.15], [0.6, -0.45], [-0.6, -0.45], [0, -0.85], [0.5, 0], [-0.5, 0]];   /* [往旁邊, 往水的方向]：先放身體旁邊，旁邊是水就放後面 */
+  for (const [sd, fw] of cand){ const x = px + (-dz) * sd + dx * fw, z = pz + dx * sd + dz * fw; if (boat) return new THREE.Vector3(x, who.pos.y, z); if (walkable(x, z) && Math.abs(groundHeight(x, z) - who.pos.y) < 0.6) return new THREE.Vector3(x, groundHeight(x, z), z); }
+  return new THREE.Vector3(px - dx * 0.5, who.pos.y, pz - dz * 0.5); }
+function flopLand(m, A, at, o){
+  m.rotation.order = 'YXZ'; const side = Math.random() < 0.5 ? 1 : -1; m.rotation.set(side * 1.42, Math.random() * 6.28, 0); m.position.copy(at); m.updateMatrixWorld(true);
+  let off = 0.05; try { const bb = new THREE.Box3().setFromObject(m); off = Math.max(0.02, (at.y - bb.min.y) * 0.85); } catch(e){}
+  if (A) { A.kind = 'flop'; A.burst = 0; } else { try { A = fishAct(m, 'flop'); } catch(e){ A = null; } }
+  const big = BIG_FISH.has(o.f.id) || fishShowScale(o.w || 1) > 1.4, leg = o.f.rarity === '傳說', near = camera.position.distanceTo(at) < 18;
+  const Q = { m, A, gy: at.y + off, y: at.y + off, vy: 0, vx: 0, vz: 0, vr: 0, roll: side * 1.42, rollT: side * 1.42, t: 0, next: 0.12, air: false, big, o };
+  m.position.y = Q.y; Flops.push(Q);
+  if (near){ try { SFX.slap(big ? 1.5 : 1); } catch(e){} FX.emit(at.x, at.y + 0.1, at.z, leg ? 40 : big ? 14 : 7, leg ? '#ffd36a' : '#e6f6ff', leg ? 2.2 : 1.2, leg ? 3.5 : 2.2, leg ? 1.3 : 0.7); }
+  if (o.mine && big) camShake = Math.max(camShake, 0.25);
+  if (o.mine){ F.flopShow = 1; const sk = () => { if (Q.t > 0.35) Q.t = Math.max(Q.t, Q.o.dur); }; Q.sk = sk; addEventListener('pointerdown', sk, true); }   /* 點一下畫面：不等它跳完 */
+}
+function flopTick(dt){ dt = Math.min(dt, 0.05);
+  for (let i = Flops.length - 1; i >= 0; i--){ const Q = Flops[i], m = Q.m; Q.t += dt; const left = Q.o.dur - Q.t;
+    if (!Q.air){ Q.next -= dt; if (Q.next <= 0 && left > 0.3){ const fade = 1 - Math.min(0.6, Q.t / Q.o.dur * 0.6);   /* 越跳越沒力 */
+        Q.vy = (Q.big ? 1.3 + Math.random() * 0.6 : 2.4 + Math.random() * 1.3) * fade; const a = Math.random() * 6.28, sp = Q.big ? 0.15 : 0.25 + Math.random() * 0.35; Q.vx = Math.cos(a) * sp; Q.vz = Math.sin(a) * sp; Q.vr = (Math.random() < 0.5 ? -1 : 1) * (Q.big ? 1 + Math.random() : 2 + Math.random() * 4);
+        if (!Q.big && Math.random() < 0.3) Q.rollT = -Q.rollT;   /* 偶爾在空中翻面 */
+        Q.air = true; Q.next = Q.big ? 0.45 + Math.random() * 0.4 : 0.18 + Math.random() * 0.35; if (Q.A){ Q.A.burst = Q.big ? 0.5 : 0.32; } } }
+    if (Q.air){ Q.vy -= 15 * dt; Q.y += Q.vy * dt; m.position.x += Q.vx * dt; m.position.z += Q.vz * dt; m.rotation.y += Q.vr * dt;
+      if (Q.y <= Q.gy){ Q.y = Q.gy; Q.air = false; if (Q.vy < -1 && camera.position.distanceTo(m.position) < 18){ try { SFX.slap(Q.big ? 1.3 : 0.7); } catch(e){} if (Math.random() < 0.7) FX.emit(m.position.x, Q.gy + 0.05, m.position.z, 4, '#e6f6ff', 0.9, 1.6, 0.5); if (Q.big && Q.o.mine) camShake = Math.max(camShake, 0.12); } Q.vy = 0; } }
+    Q.roll += (Q.rollT - Q.roll) * Math.min(1, dt * (Q.air ? 9 : 14)); m.position.y = Q.y;
+    m.rotation.x = Q.roll + (Q.A ? Math.sin(Q.A.ph || 0) * 0.12 * (Q.A.k || 0) : 0); m.rotation.z = Q.air ? Math.sin(Q.t * 17) * 0.25 : 0;
+    if (Q.t >= Q.o.dur && !Q.air){ Flops.splice(i, 1); scene.remove(m); if (Q.sk){ removeEventListener('pointerdown', Q.sk, true); F.flopShow = 0; } try { Q.o.done && Q.o.done(); } catch(e){ console.warn('flop', e); } }
+  } }
 function updateJumpers(dt, t){
+  if (Flops.length) flopTick(dt);
   for (let i = jumpers.length - 1; i >= 0; i--){
     const j = jumpers[i]; j.t += dt;
+    if (j.flop && j.t >= 0.9){ jumpers.splice(i, 1); flopLand(j.m, j.act, j.to, j.flop); continue; }
     const k = Math.min(1, j.t / 0.9);
     j.m.position.lerpVectors(j.from, j.to, k); j.m.position.y += Math.sin(k*Math.PI) * (j.net ? 0.3 : 1.6);
     if (j.net){ const p = j.m.userData.pole, dx = me.pos.x - j.m.position.x, dy = me.pos.y + 1.3 - j.m.position.y, dz = me.pos.z - j.m.position.z, L = Math.hypot(dx, dy, dz) || 1; p.scale.y = L; p.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / L, dy / L, dz / L)); }
@@ -18726,7 +18765,7 @@ function useRoom(r){
         if (pf.hookM){ scene.remove(pf.hookM); pf.hookM = null; }
         if (p.lastBob && Date.now() - (p.lastBobAt || 0) < 15000 && pf.av.g.visible && camera.position.distanceTo(pf.pos) < 35){   /* 看得到他把魚從水裡拉起來、甩到手上 */
           let fm = null; try { fm = fishModel(f, clamp(0.5 + Math.log(1 + w) * 0.35, 0.5, 1.8)); } catch(e){}
-          if (fm){ const from = p.lastBob.clone(); from.y = 0.1; fm.position.copy(from); scene.add(fm); jumpers.push({ m: fm, from, to: new THREE.Vector3(pf.pos.x, pf.baseY + 2.2, pf.pos.z), t: 0, end: 0.92 }); ripple(from.x, from.z, true); pf.bend = 0.9; setTimeout(done, 900); }
+          if (fm){ const from = p.lastBob.clone(); from.y = 0.1; fm.position.copy(from); scene.add(fm); if (CLASSIC){ jumpers.push({ m: fm, from, to: new THREE.Vector3(pf.pos.x, pf.baseY + 2.2, pf.pos.z), t: 0, end: 0.92 }); setTimeout(done, 900); } else { const dur = flopDur(f, w); pf.say(`${f.name} ${fmtKg(w)}`, 'emote', dur + 1); jumpers.push({ m: fm, from, to: flopSpot(pf, from, !!pf.boatMesh), t: 0, act: fishAct(fm, 'air'), flop: { dur, f, w, done } }); }   /* v835 別人的魚也是先掉在他腳邊跳 */ ripple(from.x, from.z, true); pf.bend = 0.9; }
           else done(); }
         else done(); }   // 大家都看得到他捧著剛釣到的魚
     }, () => {});
@@ -20757,7 +20796,7 @@ function renderTab0(){
       body.appendChild(inp); body.appendChild(none); }
     /* v756 作者：「遊戲全面不要有ai味，介紹也是」→ 說明頁整個重寫：每段最多十來條、一條一兩句，只講怎麼做；價錢、機率、每天上限收在「想算數字的人再看」。描述畫面的拿掉、放錯段的搬回去（撞球、環保袋、造型原本都塞在「釣魚」裡） */
     const HELP2 = [
-      ["釣魚", "fish", ["走到水邊，按住「拋竿」，放開。拋得越遠，稀有的魚越多。", "浮標點幾下是魚在試探，先別按。整個沉下去、跳出「!」再按，人物會用力揚竿把魚鉤住。", "拉魚時按住收線，張力條變紅就放開。線鬆太久魚會脫鉤。", "魚往外衝的時候，捲線器會「滋滋」叫、人會被往前扯，這時候放開，等牠跑完。往左竄，搖桿往右拉。跳出水面，放開。", "畫面中間跳出黃字是魚要出招了，變紅就照上面寫的做。做對了魚會累很快。", "地上發光的圈是好釣點。", "先看水面再拋：漣漪是小魚，黑影是大魚，海鳥盤旋是掠食魚，冒泡是底棲魚。拋在旁邊，砸在上面會嚇跑。", "清晨、黃昏、下雨天比較好釣。海邊要看潮汐，點右上角天氣那格有潮汐表。", "有些魚很挑（潮位、天氣、白天晚上、吃什麼餌），圖鑑裡每一種都有寫。", "沒釣過的魚只看得到黑影，拉上來才知道是什麼。"],
+      ["釣魚", "fish", ["走到水邊，按住「拋竿」，放開。拋得越遠，稀有的魚越多。", "浮標點幾下是魚在試探，先別按。整個沉下去、跳出「!」再按，人物會用力揚竿把魚鉤住。", "拉魚時按住收線，張力條變紅就放開。線鬆太久魚會脫鉤。", "魚往外衝的時候，捲線器會「滋滋」叫、人會被往前扯，這時候放開，等牠跑完。往左竄，搖桿往右拉。跳出水面，放開。", "畫面中間跳出黃字是魚要出招了，變紅就照上面寫的做。做對了魚會累很快。", "地上發光的圈是好釣點。", "先看水面再拋：漣漪是小魚，黑影是大魚，海鳥盤旋是掠食魚，冒泡是底棲魚。拋在旁邊，砸在上面會嚇跑。", "清晨、黃昏、下雨天比較好釣。海邊要看潮汐，點右上角天氣那格有潮汐表。", "有些魚很挑（潮位、天氣、白天晚上、吃什麼餌），圖鑑裡每一種都有寫。", "沒釣過的魚只看得到黑影，拉上來才知道是什麼。", "魚拉上來會先掉在腳邊亂跳，頭上寫著是什麼魚、多重，跳完才撿起來。不想等就點一下畫面。"],
         ["傳說魚：竹釣竿在港口外海每竿約 0.2%～0.5%，其他地方 0.1%～0.2%。滿力拋比輕輕拋高一倍以上。好竿、魚餌、窩料、料理都會加。", "保底：連 150 條沒中傳說魚，之後每竿多一點機會（250 條時加 0.4%、400 條加 1%、最高加 3%），中了重算。釣蝦場不算。", "等咬大約 5～12 秒。小魚拉 6～10 秒，中型 15～25 秒，大魚 30～50 秒，傳說魚 1～2 分鐘。", "線鬆超過 3 秒左右會脫鉤。魚衝完、跳完的 1.6 秒內放著沒關係。", "水面的徵兆每 45 秒換一批。", "釣具店老闆每天報一種魚，那種魚當天在那個釣點多 2.5 倍。", "圖鑑每種魚三顆星：第一次釣到一顆；釣 10 條或釣到前 20% 大的兩顆；完美搏鬥一次加上前 5% 大的三顆。"]],
       ["釣竿、魚餌、裝備", "fish", ["釣具店賣六支竿：竹竿（免費）、路亞軟竿、手竿、遠投竿、磯釣硬竿、黃金王者竿。", "竿子要用對地方：手竿在河、湖、溪；遠投竿在海邊；磯釣竿在港口外海和小島碼頭；路亞竿釣掠食魚。", "路亞、手竿、遠投、磯釣四支可以在背包的「釣組」升級，最高 5 級，要金幣和魚缸裡的魚。", "釣法在釣具店換，不用錢：浮標什麼都釣，路亞釣掠食魚，沉底釣底棲魚。", "細線咬得快但容易斷，粗線相反。", "魚餌挑魚：玉米粒釣鯉魚鯽魚，蝦仁釣鯛，蚯蚓釣底棲魚，活餌釣掠食魚。換上以後右上角會寫這裡哪些魚愛吃。", "阿鐵在釣具店旁邊，帶魚和金幣去找他，可以做活餌、鉤子、竿子造型、釣線顏色。", "站得比水面高很多的地方釣到大魚要用撈網，釣具店「工具」有賣，買了會自己用。", "摺疊椅、釣台、竿架、遮陽傘也在「工具」。到水邊從背包「釣組」按「擺出來」，坐著就能釣。", "以前買的舊竿照樣能用，也可以在「釣組」免費換成現在的竿。"],
         ["價錢：路亞軟竿 800、手竿 500、遠投竿 800、磯釣硬竿 800、黃金王者竿 12,000。王者竿到哪裡稀有和傳說都是 1.3 倍。", "升級：2 級 800 金幣加常見魚 3 條；3 級 2,000 加稀有魚 2 條；4 級 4,500 加稀有魚 4 條；5 級 9,000 加傳說魚 1 條。用的是魚缸裡最輕的，收藏和我的海裡的不會動。5 級稀有 1.5 倍、傳說 1.4 倍。", "對上愛吃的餌，那種魚多 1.8 倍。沙蠶在退潮的沙灘挖，小螃蟹在珊瑚礁島的礁岩撿，各一天 6 次。", "鉤子：倒刺鉤線鬆比較不會脫鉤；圓形鉤每條魚原諒一次失誤；鍛造重鉤硬拉時張力升得慢；金鉤做對時魚多掉體力。阿鐵一天最多做 10 件。", "保養釣竿 200 金幣，接下來 30 竿收線快 10%、線比較不容易斷。", "摺疊椅 600、小釣台 1,500、竿架加魚護 900、遮陽傘加釣箱 800。後三樣要先有摺疊椅。有釣台可以多拋 3 公尺左右。", "竿架：等魚時按「跳」站起來，竿子插著，魚咬了鈴鐺會響，25 秒內回去坐下就能拉。", "撈網：站在高處釣到 1.5 公斤以上才需要。", "每支竿子會記得釣過幾條。100 條叫「順手」，500 條叫「老夥伴」，2,000 條叫「傳家寶」，只是紀念。"]],
@@ -22004,6 +22043,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u835', d:'11/25', items:[['🐟','釣到魚會先甩到腳邊，在地上啪啪亂跳，頭上冒出是什麼魚；大魚很重，落地會震一下。旁邊的人也看得到']] },
   { id:'u834', d:'11/25', items:[['👴','村長多了一句話：遊戲還在一直更新，每天上線都不一樣']] },
   { id:'u831', d:'11/25', items:[['🏆','釣到魚就知道自己站在哪裡：破紀錄會大聲告訴你比上次大多少，沒破會寫你的紀錄、差一點的寫還差幾公斤'], ['⏰','圖鑑最上面多了「現在正好」：照現在的時間、潮水、天氣、季節列出比較容易出現的魚，一鍵去釣點。手機的「今天」、阿默也會提醒'], ['👥','跟朋友比：圖鑑每種魚寫朋友最大的是誰；釣到比朋友還大的會告訴你。好友釣到稀有、傳說、變種或破紀錄，會跳卡片，可以直接過去看'], ['🐛','修好：別人釣到稀有魚、傳說魚，跑馬燈之前不會出現']] },
   { id:'u830', d:'11/25', items:[['🪑','生態池旁邊、廟前面那張歪歪的長椅拿掉了']] },
