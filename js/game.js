@@ -5409,7 +5409,8 @@ K3.mkMixer = k => { const J = K3.asset.clipsJ; if (!J || k.mixer) return; const 
     return mixer.clipAction(new THREE.AnimationClip('k3' + nm, C.dur, tr)); };
   for (const nm of ['idle', 'walk', 'run', 'sprint']){ const C = J.clips[nm]; if (!C) return; const ac = mk(C, nm); ac.play(); ac.setEffectiveWeight(0); acts[nm] = ac; }
   for (const nm of K3.EMO){ const C = J.clips['e_' + nm]; if (!C) continue; const ac = mk(C, 'e_' + nm); ac.setLoop(THREE.LoopOnce, 1); ac.clampWhenFinished = true; eacts[nm] = ac; }
-  k.mixer = mixer; k.acts = acts; k.eacts = eacts; k.mq = {}; for (const n of k.names) k.mq[n] = new THREE.Quaternion(); k.mhp = new THREE.Vector3(); };
+  const sacts = {}; for (const nm of ['sit', 'sitg']){ const C = J.clips['s_' + nm]; if (!C) continue; const ac = mk(C, 's_' + nm); ac.play(); ac.setEffectiveWeight(0); sacts[nm] = ac; }   /* v826 坐椅子：Meshy 做的真的坐姿（一般、坐著打遊戲機） */
+  k.mixer = mixer; k.acts = acts; k.eacts = eacts; k.sacts = sacts; k.mq = {}; for (const n of k.names) k.mq[n] = new THREE.Quaternion(); k.mhp = new THREE.Vector3(); };
 K3.armX = (k, arm, live) => { if (!live) k.armBase = arm; if (k.arm === arm) return; k.arm = arm; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.X[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -arm * sg)).multiply(Wq); } };
 K3.setHair = (k, type) => { if (k.hairT === type) return; k.hairT = type;
   if (k.hair){ try { k.grp.remove(k.hair.sm); for (const b of k.hair.ch) if (b.parent) b.parent.remove(b); } catch(e){} k.hair = null; }
@@ -5543,7 +5544,12 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   if (k.mixer && k.ef !== frameNo){ k.ef = frameNo; k.ew = (k.ew || 0) + ((ek ? 1 : 0) - (k.ew || 0)) * Math.min(1, (K.dt0 || 0.016) * 12); if (!ek && k.ew < 0.02){ k.ew = 0; if (k.eE){ k.eE = null; for (const n in k.eacts) k.eacts[n].stop(); } } }
   if (ek && k.eE !== E){ k.eE = E; for (const n in k.eacts) k.eacts[n].stop(); const ac = k.eacts[ek]; ac.reset(); ac.setEffectiveWeight(1); ac.play(); }
   { const op = !!(ek && K3.OPEN[ek]), M = k.meshes; if (k.op !== op && M.palm && !k.region){ k.op = op; M.palm.visible = op; if (M.fist) M.fist.visible = !op; } }
-  if (k.ew > 0 && k.eE){ m = k.ew; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0);
+  /* v826 作者：「我們到現在還沒把人物坐到椅子上這件事做好」→ 坐椅子（長椅、摺疊椅、沙發…）改用 Meshy 做的真人坐姿：屁股在椅面、大腿平、小腿垂直、腳踩地。
+     阿默坐著打遊戲機用另一個（兩手在胸前、低頭）。船上、坐著釣魚還是照舊。 */
+  const sk = !ek && k.sacts && f && f.sitting && !f.fishing && (K.w.sit || 0) > 0.5 && !(f === me ? myBoat : f.boatMesh) && !(f.amo && f.amoMode !== 'pier') ? (f.amoPlay && k.sacts.sitg ? 'sitg' : k.sacts.sit ? 'sit' : '') : '';
+  if (k.sacts) for (const n in k.sacts) if (k.sk !== sk) k.sacts[n].setEffectiveWeight(n === sk ? 1 : 0); k.sk = sk;
+  if (sk){ m = 1; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0); k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); } }
+  else if (k.ew > 0 && k.eE){ m = k.ew; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0);
     k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); } }
   else if (m > 0.01 && k.mf !== frameNo){ k.mf = frameNo; const v = f.aspd || 0, A = k.acts;
     /* v738 作者傳了之前的預覽動圖：「在這裡看明明沒什麼」→ 預覽是單獨播一個動作；遊戲裡是照舊人物的比重把「站、走、跑」三個動作混在一起（搖桿推到底時是 站 0.22＋走 0.44＋跑 0.34），
@@ -5571,7 +5577,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   if (m > 0.01) B.hips.position.lerp(k.mhp, Math.min(1, m));
   { let fl = 0; for (const n of KID_FLAT) fl += K.w[n] || 0; k.scl.position.y = 0.95 * k.s;
     /* v697 坐下、躺下：屁股的高度直接對齊原本角色的屁股（原本角色坐下時整個人還會往下放，新人物腿比較短，以前算的固定值會讓人浮在椅子上 9 公分，穿過椅背和傘） */
-    if (fl > 0.01){ GB.hips.updateWorldMatrix(true, false); B.hips.updateWorldMatrix(true, false); const gy = GB.hips.getWorldPosition(_k3a).y, oy = B.hips.getWorldPosition(_k3b).y, sc = a.g.getWorldScale(_k3c).y || 1; k.scl.position.y += (gy - oy) / sc * Math.min(1, fl); } }
+    if (fl > 0.01 && !k.sk){ GB.hips.updateWorldMatrix(true, false);   /* v826 新坐姿（k.sk）自己算好屁股在椅面上，不跟舊人物對齊 */ B.hips.updateWorldMatrix(true, false); const gy = GB.hips.getWorldPosition(_k3a).y, oy = B.hips.getWorldPosition(_k3b).y, sc = a.g.getWorldScale(_k3c).y || 1; k.scl.position.y += (gy - oy) / sc * Math.min(1, fl); } }
   if (K.m.visible) K.m.visible = false;
   K3.n++;
   /* v755 作者截圖：「短髮的頭髮會動反而沒有比較好，因為會漏頭皮」→ 短的髮型（刺刺短髮、清爽短髮、鮑伯、包包頭、小馬尾）整個黏在頭上跟著頭動，不再自己晃；只有長髮、側馬尾、雙馬尾會甩 */
