@@ -14469,6 +14469,7 @@ function buildNooks(){
     if (best == null) continue; const id = waterSpotId(px + Math.sin(best) * 3, pz + Math.cos(best) * 3); if (!SPOT_BY_ID[id] || id === 'shrimp') continue;
     if (!far(px, pz, avoid, 9)) continue; cand.push([px, pz, best, id]); }
   for (const c of cand.sort(() => rr() - 0.5)){ if (NOOKS.length >= 16) break; if (!far(c[0], c[1], NOOKS.map(n => [n.x, n.z]), 16)) continue; NOOKS.push({ x: c[0], z: c[1], face: c[2], spot: c[3] }); }
+  for (let i = NOOKS.length - 1; i >= 0; i--) if (Math.hypot(NOOKS[i].x - POND.x, NOOKS[i].z - POND.z) < 9) NOOKS.splice(i, 1);   /* v830 作者：生態池旁邊（廟前面、小木屋旁）那張長椅不要了 */
   const wood = '#8c5d3b', dark = '#5a3d2b';
   NOOKS.forEach((n, i) => { const g = new THREE.Group(), y = groundHeight(n.x, n.z); g.position.set(n.x, y, n.z); g.rotation.y = n.face; scene.add(g);
     // 長椅（面向水，坐兩個人）
@@ -21962,6 +21963,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u830', d:'11/25', items:[['🪑','生態池旁邊、廟前面那張歪歪的長椅拿掉了']] },
   { id:'u829', d:'11/25', items:[['🪑','人物坐椅子換成真的坐姿：屁股坐在椅面上、大腿平放、小腿往下、手放在大腿上，不會再浮在椅子上或膝蓋翹起來。阿默坐在長椅上會兩手拿著遊戲機低頭打']] },
   { id:'u825', d:'11/25', items:[['🪑','阿默上岸後會先喘一下，再慢慢走到港邊廣場最近的長椅坐下來打遊戲機；快出海時站起來走回碼頭。長椅有人坐他就換一張']] },
   { id:'u823', d:'11/25', items:[['🎮','阿默在碼頭改成直接坐在地上、腳伸直打遊戲機，不會再像蹲著']] },
