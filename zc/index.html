@@ -65,6 +65,25 @@ h1{font-size:42px;font-weight:900;line-height:1.05;margin:6px 0 2px;color:var(--
 .ul small{display:block;font-size:12.5px;color:#6b4a2a;line-height:1.3;margin-top:1px}
 .ul b{font-weight:900;font-size:14px}.ul em{font-style:normal;font-weight:900;color:#8a5a0c;white-space:nowrap}
 .note{font-size:13px;margin:8px 0 0;color:#5a4028;line-height:1.5}
+/* 大地圖（作者 11/25：大家出現在同一張地圖上、可以結盟、可以攻打） */
+#wmap{padding-top:10px}
+.wm-hd{width:100%;max-width:620px;display:flex;align-items:center;justify-content:space-between;color:var(--par)}
+.wm-hd .gx{position:static}
+.wm-wrap{position:relative;width:100%;max-width:620px;margin:8px 0 12px;border-radius:12px;overflow:hidden;border:2px solid #6b4a2a;flex:none}
+#wmC{display:block;width:100%;height:min(62vh,440px);touch-action:none;cursor:grab}
+.wm-zm{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.wm-zm button{width:40px;height:40px;border-radius:10px;border:2px solid #3a2a17;background:linear-gradient(#fff6de,#ecd9aa);color:#3a2a17;font-weight:900;font-size:20px;box-shadow:0 2px 0 #3a2a17}
+.wm-msg{position:absolute;left:10px;bottom:8px;margin:0;font-size:12.5px;color:#fff6de;text-shadow:0 1px 2px #000;pointer-events:none}
+.wm-sel{display:flex;gap:10px;align-items:center}.wm-sel canvas{width:64px;height:64px;flex:none}.wm-sel>div{flex:1;min-width:0}
+.wm-sel b{display:block;font-size:18px;font-weight:900;overflow-wrap:anywhere}.wm-sel span{display:block;font-size:13px;line-height:1.45}
+.wm-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.wm-btns button{flex:1;min-height:44px;border-radius:10px;font-weight:900;font-size:15px;border:2px solid #3a2a17;background:linear-gradient(#fff6de,#ecd9aa);color:#3a2a17;box-shadow:0 3px 0 #3a2a17}
+.wm-btns button.atk{background:linear-gradient(#e2553a,#9e2a17);border-color:#5d170d;color:#fff;box-shadow:0 3px 0 #5d170d}.wm-btns button:disabled{opacity:.5}
+.wm-al .arow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #b89b6288}.wm-al .arow:first-of-type{border:0}.wm-al .arow span{flex:1;font-size:13.5px}.wm-al .arow b{font-weight:900}
+.wm-al .arow button{min-height:38px;padding:0 12px;border-radius:9px;font-weight:900;border:2px solid #3a2a17;background:linear-gradient(#fff6de,#ecd9aa);color:#3a2a17}
+.wm-al .tagc{display:inline-block;min-width:1.6em;padding:0 5px;margin-right:4px;border-radius:5px;background:#2f7a3d;color:#fff;font-weight:900;font-size:12px;text-align:center}
+.wm-al input{flex:1;min-width:0;height:40px;border-radius:9px;border:2px solid #6b4a2a;background:#fff8e6;color:#2a1c10;padding:0 10px;font:inherit;font-size:15px}
+.wm-al .frow{display:flex;gap:8px;margin-top:8px}
+.wm-al .go.alt{color:#6b4a2a;border-color:#8a6a3e;max-width:none}
 .how{margin:0;padding-left:1.2em;font-size:13.5px;line-height:1.55}
 .go{width:100%;max-width:460px;min-height:54px;border-radius:12px;background:linear-gradient(#f4d06a,#c98a1c);border:2px solid #5d3c0c;color:#3a2405;font-weight:900;font-size:21px;letter-spacing:6px;box-shadow:0 4px 0 #150d07;flex:none}
 .go.alt{background:none;border-color:#6b4a2a;color:var(--par);font-size:16px;letter-spacing:2px;margin-top:10px;box-shadow:none;min-height:46px}
@@ -247,10 +266,17 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
   <section class="ov" id="goals" hidden><p class="big" style="font-size:34px;margin-top:6px">目標</p><p class="sub">做完就能領獎。每日任務每天換新，挑戰每週換新。</p><div id="goalsL"></div><button class="go alt" id="gsX">返回領地</button></section>
   <section class="ov" id="raids" hidden>
     <p class="big" style="font-size:34px;margin-top:6px">出征</p><p class="sub" id="rT"></p>
+    <div class="panel" id="rWM" hidden><h2>大地圖</h2><p class="note" style="margin:0 0 8px">所有人的領地都在同一張地圖上。點別人的主堡可以出兵攻打，也可以一起結盟（同盟不能互打）。</p><button class="go" id="bWM" style="letter-spacing:2px;font-size:18px;min-height:48px">🗺️ 打開大地圖</button></div>
     <div class="panel" id="rPP" hidden><h2>玩家</h2><p class="note" style="margin:0 0 6px">村子裡其他真人玩家的領地，免費指定攻打。打過你的人會排在最前面，48 小時內可以報仇一次，就算他有護盾也打得到。</p><div id="rPl"></div></div>
     <div class="panel"><h2>搜尋對手</h2><p class="note" style="margin:0 0 8px">花金幣找一位和你主堡等級相近的領主。打贏會搶走對方一部分庫存，攻陷主堡搶得更多。有護盾或主堡不到 3 級的人不會被找到。</p><div id="rl"></div><div class="seg" style="margin-top:8px"><button id="rSearch"></button><button id="rAtk">攻打</button></div></div>
     <div class="panel"><h2>出海</h2><p class="note" id="rAdvT" style="margin:0 0 8px"></p><div id="sea"></div></div><p class="sub" id="rN"></p>
     <button class="go alt" id="bRC">取消</button>
+  </section>
+  <section class="ov" id="wmap" hidden>
+    <div class="wm-hd"><p class="big" style="font-size:30px;margin:4px 0 0">大地圖</p><button class="gx" id="wmX" aria-label="返回">✕</button></div>
+    <div class="wm-wrap"><canvas id="wmC"></canvas><div class="wm-zm"><button id="wmIn" aria-label="放大">＋</button><button id="wmOut" aria-label="縮小">－</button><button id="wmMe" aria-label="回到我的主堡">🏰</button></div><p class="wm-msg" id="wmMsg"></p></div>
+    <div class="panel" id="wmSel" hidden></div>
+    <div class="panel" id="wmAl"></div>
   </section>
   <section class="ov" id="gacha" hidden>
     <div class="ghead"><p class="big" style="font-size:34px;margin-top:6px">召喚</p><p class="sub" id="gT"></p><button class="gx" id="gX" aria-label="返回領地">✕</button></div><div class="gtabs"><button data-gt="ev" class="on">活動</button><button data-gt="col">圖鑑</button><button data-gt="grave" id="gtGrave">墓園</button><button data-gt="sk">主堡外觀</button></div>
@@ -1282,7 +1308,76 @@ function drawPlayers(){const P=$('#rPP'),box=$('#rPl');if(!P)return;P.hidden=!pl
     sp.innerHTML=`主堡 Lv ${+t.lv||0}・守軍 ${+t.army||0}`+(t.rev?'<br><i class="rv">打過你，可以報仇</i>':sh>60000?`<br>護盾還有 ${sh>=3600e3?Math.ceil(sh/3600e3)+' 小時':Math.ceil(sh/60000)+' 分鐘'}`:'');tx.append(b,sp);
     const bt=document.createElement('button');bt.className='rb'+(t.rev?' rev':'');bt.textContent=t.rev?'報仇':'攻打';bt.disabled=!soldiers().length||(!t.rev&&sh>60000);bt.onclick=()=>atkPlayer(t.id,t.name);row.append(c2,tx,bt);box.append(row)}}
 async function atkPlayer(id,nm){if(!ZAPI||!HOME)return;if(!soldiers().length){toast('你還沒有士兵，先到兵營訓練。');return}let r=null;try{r=await tmo(ZAPI.rpc('zc_target',{p_id:id}),10000)}catch(e){}
-  const c=r&&r.body&&clean(r.body);if(!c){toast('對方現在有護盾，打不了。');loadPlayers(true);return}Object.assign(c,{id:r.id});if(nm)names[r.id]=nm;$('#raids').hidden=true;$('#rep').hidden=true;startRaid(c);if(r.rev)setTimeout(()=>toast('報仇！這次打完不會再給對方加護盾。'),400)}
+  if(r&&r.ally){toast('同一個聯盟的人不能互打。');return}const c=r&&r.body&&clean(r.body);if(!c){toast('對方現在有護盾，打不了。');loadPlayers(true);return}Object.assign(c,{id:r.id});if(nm)names[r.id]=nm;$('#raids').hidden=true;$('#rep').hidden=true;startRaid(c);if(r.rev)setTimeout(()=>toast('報仇！這次打完不會再給對方加護盾。'),400)}
+/* ===== 大地圖＋聯盟（224_zc_world.sql）=====
+   伺服器只記每個人的座標、聯盟；地圖每 30 秒問一次有沒有變（不用即時頻道，省雲端額度）。
+   出兵：照距離走一段時間（3～20 秒）才開打，地圖上看得到隊伍走過去；同一個聯盟的人不能互打（伺服器也會擋）。 */
+const WM={d:null,t:0,sel:null,cx:30,cy:30,cell:14,march:null,raf:0,poll:0,ic:{},al:null,busy:false};
+const WM_N=60;window.__wm=WM;
+async function wmLoad(force){if(!ZAPI||netState!=='on')return;if(!force&&WM.d&&Date.now()-WM.t<25000)return;try{const r=await tmo(ZAPI.rpc('zc_world',{}),10000);if(r){WM.d=r;WM.t=Date.now();if(r.aid&&(!WM.al||WM.al.id!==r.aid))wmAlLoad(r.aid);else if(!r.aid)WM.al=null}}catch(e){if(!WM.d)$('#wmMsg').textContent='地圖暫時讀不到，等一下再試。'}wmSel();wmAlDraw()}
+async function wmAlLoad(aid){try{WM.al=await tmo(ZAPI.rpc('zc_ally_info',{p_aid:aid}),10000)}catch(e){}wmAlDraw()}
+function wmMe(){return WM.d&&WM.d.bases.find(b=>b.id===WM.d.me)}
+function wmAlly(id){return WM.d&&WM.d.allies.find(a=>a.id===id)}
+function wmRel(b){const d=WM.d;if(!d)return 'x';if(b.id===d.me)return 'me';if(d.aid&&b.aid===d.aid)return 'ally';return 'x'}
+function openWorld(){$('#raids').hidden=true;$('#wmap').hidden=false;const c=$('#wmC');WM.sel=null;wmLoad(true).then(()=>{const m=wmMe();if(m){WM.cx=m.x;WM.cy=m.y}});
+  if(!c.dataset.on){c.dataset.on=1;wmInput(c);$('#wmX').onclick=closeWorld;$('#wmIn').onclick=()=>wmZoom(1.35);$('#wmOut').onclick=()=>wmZoom(1/1.35);$('#wmMe').onclick=()=>{const m=wmMe();if(m){WM.cx=m.x;WM.cy=m.y}}}
+  clearInterval(WM.poll);WM.poll=setInterval(()=>{if($('#wmap').hidden){clearInterval(WM.poll);return}wmLoad(true)},30000);cancelAnimationFrame(WM.raf);const loop=()=>{if($('#wmap').hidden)return;wmDraw();WM.raf=requestAnimationFrame(loop)};WM.raf=requestAnimationFrame(loop);wmAlDraw()}
+function closeWorld(){if(WM.march){toast('隊伍正在路上。');return}$('#wmap').hidden=true;clearInterval(WM.poll);openRaids()}
+function wmZoom(k){const c=$('#wmC'),fit=Math.min(c.clientWidth,c.clientHeight)/WM_N;WM.cell=clamp(WM.cell*k,fit,34)}
+function wmToWorld(c,px,py){return{x:WM.cx+(px-c.clientWidth/2)/WM.cell,y:WM.cy+(py-c.clientHeight/2)/WM.cell}}
+function wmInput(c){const pts=new Map();let moved=0,pinch=0;
+  c.addEventListener('pointerdown',e=>{c.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.offsetX,y:e.offsetY});moved=0;if(pts.size===2){const [a,b]=[...pts.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y)}});
+  c.addEventListener('pointermove',e=>{const p=pts.get(e.pointerId);if(!p)return;if(pts.size===2){p.x=e.offsetX;p.y=e.offsetY;const [a,b]=[...pts.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch>0)wmZoom(d/pinch);pinch=d;moved=99;return}
+    const dx=e.offsetX-p.x,dy=e.offsetY-p.y;moved+=Math.abs(dx)+Math.abs(dy);WM.cx=clamp(WM.cx-dx/WM.cell,0,WM_N);WM.cy=clamp(WM.cy-dy/WM.cell,0,WM_N);p.x=e.offsetX;p.y=e.offsetY});
+  const up=e=>{const had=pts.has(e.pointerId);pts.delete(e.pointerId);if(pts.size<2)pinch=0;if(had&&moved<8&&pts.size===0)wmTap(e.offsetX,e.offsetY)};c.addEventListener('pointerup',up);c.addEventListener('pointercancel',e=>{pts.delete(e.pointerId)});
+  c.addEventListener('wheel',e=>{e.preventDefault();wmZoom(e.deltaY<0?1.15:1/1.15)},{passive:false})}
+function wmTap(px,py){const c=$('#wmC'),w=wmToWorld(c,px,py);let best=null,bd=1e9;for(const b of (WM.d&&WM.d.bases)||[]){const d=Math.hypot(b.x+.5-w.x,b.y+.5-w.y);if(d<bd){bd=d;best=b}}WM.sel=best&&bd<Math.max(1.6,22/WM.cell)?best.id:null;wmSel()}
+function wmIcon(civ){civ=clamp(+civ||0,0,3);if(!WM.ic[civ]){const c=document.createElement('canvas');c.width=c.height=96;bIconCastle(c,civ);WM.ic[civ]=c}return WM.ic[civ]}
+function wmDraw(){const c=$('#wmC');if(!c)return;const W=c.clientWidth,H=c.clientHeight,dpr=Math.min(2,devicePixelRatio||1);if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr)}
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);const cl=WM.cell,ox=W/2-WM.cx*cl,oy=H/2-WM.cy*cl;g.fillStyle='#2a5a78';g.fillRect(0,0,W,H);
+  g.fillStyle='#7fa35a';g.fillRect(ox,oy,WM_N*cl,WM_N*cl);g.fillStyle='#8db266';for(let i=0;i<WM_N;i+=2)for(let j=(i/2)%2;j<WM_N;j+=2){const x=ox+i*cl,y=oy+j*cl;if(x>W||y>H||x+cl*2<0||y+cl*2<0)continue;g.fillRect(x,y,cl*2,cl*2)}
+  g.strokeStyle='rgba(60,40,20,.18)';g.lineWidth=1;g.beginPath();for(let i=0;i<=WM_N;i+=10){g.moveTo(ox+i*cl,oy);g.lineTo(ox+i*cl,oy+WM_N*cl);g.moveTo(ox,oy+i*cl);g.lineTo(ox+WM_N*cl,oy+i*cl)}g.stroke();
+  g.strokeStyle='#e9d7a6';g.lineWidth=3;g.strokeRect(ox,oy,WM_N*cl,WM_N*cl);
+  const d=WM.d;if(!d)return;const now=Date.now(),sz=Math.max(18,cl*2.4);
+  if(d.aid){g.fillStyle='rgba(80,200,110,.13)';for(const b of d.bases)if(b.aid===d.aid){g.beginPath();g.arc(ox+(b.x+.5)*cl,oy+(b.y+.5)*cl,cl*4,0,7);g.fill()}}
+  for(const b of d.bases){const x=ox+(b.x+.5)*cl,y=oy+(b.y+.5)*cl;if(x<-sz||y<-sz||x>W+sz||y>H+sz)continue;const rel=wmRel(b),sel=WM.sel===b.id;
+    g.beginPath();g.ellipse(x,y+sz*.32,sz*.46,sz*.17,0,0,7);g.fillStyle=rel==='me'?'#f4d06a':rel==='ally'?'#4fcf6e':b.aid?'#e0634a':'#c9b58a';g.fill();
+    g.drawImage(wmIcon(b.civ),x-sz/2,y-sz*.62,sz,sz);
+    if((+b.shield||0)>now){g.beginPath();g.arc(x,y-sz*.12,sz*.58,0,7);g.strokeStyle='rgba(120,200,255,.85)';g.lineWidth=2;g.stroke();g.fillStyle='rgba(120,200,255,.12)';g.fill()}
+    if(sel){g.beginPath();g.arc(x,y-sz*.12,sz*.66,0,7);g.strokeStyle='#fff';g.lineWidth=3;g.stroke()}
+    if(cl>=9||sel||rel==='me'){const al=b.aid&&wmAlly(b.aid),t=(al?'['+al.tag+'] ':'')+(rel==='me'?'你':(b.name||'無名領主'))+' Lv'+b.lv;g.font='900 '+Math.round(clamp(cl*.85,11,14))+'px sans-serif';g.textAlign='center';g.textBaseline='top';const tw=g.measureText(t).width;
+      g.fillStyle='rgba(21,13,7,.72)';g.fillRect(x-tw/2-4,y+sz*.42,tw+8,Math.round(clamp(cl*.85,11,14))+5);g.fillStyle=rel==='me'?'#f4d06a':rel==='ally'?'#8ff0a4':'#fff6de';g.fillText(t,x,y+sz*.42+2)}}
+  const M=WM.march;if(M){const k=clamp((now-M.t0)/(M.t1-M.t0),0,1),ax=ox+(M.ax+.5)*cl,ay=oy+(M.ay+.5)*cl,bx=ox+(M.bx+.5)*cl,by=oy+(M.by+.5)*cl;
+    g.setLineDash([6,6]);g.strokeStyle='rgba(255,240,200,.9)';g.lineWidth=2.5;g.beginPath();g.moveTo(ax,ay);g.lineTo(bx,by);g.stroke();g.setLineDash([]);
+    const mx=ax+(bx-ax)*k,my=ay+(by-ay)*k;g.font='900 '+Math.round(Math.max(18,cl*1.4))+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('⚔️',mx,my);
+    $('#wmMsg').textContent=k<1?`隊伍出發了，還要 ${Math.ceil((M.t1-now)/1000)} 秒到達`:'到了，開打！';
+    if(k>=1&&!M.done){M.done=true;setTimeout(()=>{WM.march=null;$('#wmap').hidden=true;clearInterval(WM.poll);atkPlayer(M.id,M.name)},500)}}
+  else if(!$('#wmMsg').dataset.err)$('#wmMsg').textContent=`${d.bases.length} 位領主・拖曳移動、兩指縮放`}
+function wmSel(){const P=$('#wmSel');if(!P)return;const d=WM.d,b=d&&WM.sel&&d.bases.find(x=>x.id===WM.sel);P.hidden=!b;if(!b)return;P.textContent='';const rel=wmRel(b),al=b.aid&&wmAlly(b.aid),sh=(+b.shield||0)-Date.now();
+  const row=document.createElement('div');row.className='wm-sel';const cv=document.createElement('canvas');cv.width=cv.height=96;bIconCastle(cv,clamp(+b.civ||0,0,3));const tx=document.createElement('div'),nm=document.createElement('b');nm.textContent=rel==='me'?'你的領地':(b.name||'無名領主');tx.append(nm);
+  const line=t=>{const s=document.createElement('span');s.textContent=t;tx.append(s)};line(`主堡 Lv ${b.lv}・守軍 ${b.army||0}・座標 (${b.x}, ${b.y})`);line(al?`聯盟：[${al.tag}] ${al.name}`:'沒有聯盟');if(sh>60000)line(`護盾還有 ${sh>=3600e3?Math.ceil(sh/3600e3)+' 小時':Math.ceil(sh/60000)+' 分鐘'}`);if(b.rev)line('打過你，可以報仇');row.append(cv,tx);P.append(row);
+  if(rel==='me')return;const bt=document.createElement('div');bt.className='wm-btns';
+  if(rel==='ally'){const x=document.createElement('button');x.textContent='🤝 同盟';x.disabled=true;bt.append(x)}
+  else{const me=wmMe(),a=document.createElement('button');a.className='atk';const dist=me?Math.hypot(me.x-b.x,me.y-b.y):10,sec=Math.round(clamp(dist*.5,3,20));a.textContent=(b.rev?'⚔️ 報仇':'⚔️ 出兵攻打')+`（${sec} 秒）`;
+    a.disabled=!!WM.march||!soldiers().length||b.lv<3||(!b.rev&&sh>60000);a.onclick=()=>{if(!me)return;WM.march={id:b.id,name:b.name,ax:me.x,ay:me.y,bx:b.x,by:b.y,t0:Date.now(),t1:Date.now()+sec*1000};wmSel()};bt.append(a);
+    if(!soldiers().length)line('你還沒有士兵，先到兵營訓練。');else if(b.lv<3)line('對方主堡還不到 3 級（新手保護）。')
+    if(al&&!d.aid){const j=document.createElement('button');j.textContent='加入他的聯盟';j.onclick=()=>wmJoin(al.id);bt.append(j)}}
+  P.append(bt)}
+async function wmCall(fn,args){if(WM.busy)return null;WM.busy=true;let r=null;try{r=await tmo(ZAPI.rpc(fn,args||{}),10000)}catch(e){toast(String((e&&e.message)||'失敗了，等一下再試').replace(/^.*?:\s*/,''))}WM.busy=false;return r}
+async function wmJoin(aid){const r=await wmCall('zc_ally_join',{p_aid:aid});if(r&&r.ok){toast('加入聯盟了！同盟的人不能互打。');await wmLoad(true)}}
+function wmAlDraw(){const P=$('#wmAl');if(!P||$('#wmap').hidden)return;P.textContent='';P.className='panel wm-al';const h=document.createElement('h2');h.textContent='聯盟';P.append(h);const d=WM.d;if(!d){const p=document.createElement('p');p.className='note';p.textContent='讀取中…';P.append(p);return}
+  const note=t=>{const p=document.createElement('p');p.className='note';p.style.margin='0 0 6px';p.textContent=t;P.append(p)};
+  if(d.aid){const A=WM.al,al=wmAlly(d.aid);if(!A){note('讀取中…');return}const leader=A.leader===d.me;note(`[${A.tag}] ${A.name}・${A.members.length} / 20 人${leader?'・你是盟主':''}。同盟的人不能互打，在地圖上用綠色標出來。`);
+    for(const m of A.members){const r=document.createElement('div');r.className='arow';const s=document.createElement('span'),b=document.createElement('b');b.textContent=(m.id===d.me?'你':m.name||'無名領主')+(m.id===A.leader?' 👑':'');s.append(b,document.createTextNode(`　主堡 Lv ${m.lv}`));r.append(s);
+      const go=document.createElement('button');go.textContent='在哪';go.onclick=()=>{const bb=d.bases.find(x=>x.id===m.id);if(bb){WM.cx=bb.x;WM.cy=bb.y;WM.sel=bb.id;wmSel()}};r.append(go);
+      if(leader&&m.id!==d.me){const k=document.createElement('button');k.textContent='請離開';k.onclick=async()=>{if(k.dataset.s!=='1'){k.dataset.s='1';k.textContent='確定？';setTimeout(()=>{k.dataset.s='';k.textContent='請離開'},2500);return}const r2=await wmCall('zc_ally_kick',{p_uid:m.id});if(r2&&r2.ok){await wmAlLoad(d.aid);wmLoad(true)}};r.append(k)}
+      P.append(r)}
+    const lv=document.createElement('button');lv.className='go alt';lv.textContent='退出聯盟';lv.onclick=async()=>{if(lv.dataset.s!=='1'){lv.dataset.s='1';lv.textContent='確定要退出？';setTimeout(()=>{lv.dataset.s='';lv.textContent='退出聯盟'},2500);return}const r=await wmCall('zc_ally_leave');if(r&&r.ok){WM.al=null;toast('退出聯盟了。');wmLoad(true)}};P.append(lv);return}
+  note('加入一個聯盟，或自己開一個（最多 20 人）。同盟的人不能互打。');
+  for(const a of d.allies){const r=document.createElement('div');r.className='arow';const s=document.createElement('span'),t=document.createElement('i');t.className='tagc';t.textContent=a.tag;const b=document.createElement('b');b.textContent=a.name;s.append(t,b,document.createTextNode(`　${a.n} / 20 人`));const j=document.createElement('button');j.textContent='加入';j.disabled=a.n>=20;j.onclick=()=>wmJoin(a.id);r.append(s,j);P.append(r)}
+  if(!d.allies.length)note('還沒有人開聯盟。');
+  const f=document.createElement('div');f.className='frow';const n=document.createElement('input');n.maxLength=10;n.placeholder='聯盟名字（2～10 字）';const tg=document.createElement('input');tg.maxLength=3;tg.placeholder='簡稱';tg.style.flex='0 0 5.5em';const c=document.createElement('button');c.textContent='開聯盟';c.style.cssText='min-height:40px;padding:0 12px;border-radius:9px;font-weight:900;border:2px solid #3a2a17;background:linear-gradient(#f4d06a,#c98a1c);color:#3a2405';
+  c.onclick=async()=>{const r=await wmCall('zc_ally_create',{p_name:n.value.trim(),p_tag:tg.value.trim()});if(r&&r.ok){toast('聯盟開好了！把朋友拉進來吧。');await wmLoad(true)}};f.append(n,tg,c);P.append(f)}
 function renderRaids(){loadPlayers();const n=soldiers().length,box=$('#rl'),c=searchCost(),H=HOME;$('#rT').textContent=n?`你有 ${n} 名士兵可以出征。金幣 ${Math.floor(H.gold)}`:'你還沒有士兵，先到兵營訓練。';box.textContent='';
   if(found){const t=found,rs=tres(t),row=document.createElement('div');row.className='rrow';const c2=document.createElement('canvas');c2.width=c2.height=96;bIconCastle(c2,t.civ);const tx=document.createElement('span'),b=document.createElement('b'),sp=document.createElement('span');b.textContent=t.npc?t.name+'（電腦）':(names[t.id]||'無名領主');sp.textContent=`主堡 Lv ${t.lv}・守軍 ${t.army.length}・庫存 金${Math.floor(rs.gold)} 木${Math.floor(rs.wood)} 石${Math.floor(rs.stone)} 糧${Math.floor(rs.food)}`;tx.append(b,sp);row.append(c2,tx);box.append(row)}
   else{const p=document.createElement('p');p.className='note';p.style.margin='0';p.textContent='還沒有搜尋到對手。';box.append(p)}
@@ -1292,7 +1387,7 @@ function renderRaids(){loadPlayers();const n=soldiers().length,box=$('#rl'),c=se
     if(open)for(let st=1;st<=3;st++){const b=document.createElement('button'),ok=st<=SE[i]+1;b.textContent='★'.repeat(st);b.disabled=!ok||!left||!n;b.title=ok?'':'先打過 '+(st-1)+' 星';b.onclick=()=>{H.adv.ts.push(Date.now());dirty=true;$('#raids').hidden=true;startRaid(seaTarget(i,st))};c.appendChild(b)}
     else{const q=document.createElement('i');q.textContent='先打過上一座島的一星';c.appendChild(q)}sea.appendChild(c)});
   $('#rN').textContent=netState==='on'?(others.length?'':'目前還沒有其他玩家的領地，搜尋到的會是電腦領主。'):netState==='wait'?'正在連線…':'目前無法連線，只會搜尋到電腦領主。'}
-function openRaids(){renderRaids();$('#raids').hidden=false;if(netState==='on')loadOthers().catch(()=>{})}
+function openRaids(){renderRaids();{const w=$('#rWM');if(w){w.hidden=!(ZAPI&&netState==='on');$('#bWM').onclick=openWorld}}$('#raids').hidden=false;if(netState==='on')loadOthers().catch(()=>{})}
 /* ───────── 出征：攻打其他領主 ───────── */
 const NPC=[['見習騎士羅蘭',0,1],['酋長葛魯克',3,2],['林后艾薇拉',1,3],['鐵鬚王杜林',2,4],['大法師莫德',0,5]].map(([n,civ,lv],i)=>{
   const b=[['castle',0,0,0],['farm',-3.6,2.8,0],['market',-3.5,-2.8,0],['barracks',3.5,-2.8,0],['atower',0,-3.6,0],['palisade',-3,-5.2,0],['palisade',0,-5.2,0],['palisade',3,-5.2,0]];
