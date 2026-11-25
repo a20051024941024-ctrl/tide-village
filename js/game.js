@@ -2832,6 +2832,18 @@ function castPoint(x, z, dx, dz, dist){
     Fu.ice = ice; }
   house(HLOT.shop[0], HLOT.shop[1], '#5fb6e3', 8.6, HLOT.shop[2], { awning: '#2f89c7', sign: '潮汐魚市場', signIcon: '🐟' });      // v434 潮汐魚市場（原本的海邊商店＋阿福海產店＋釣客魚市）
   /* 57 村長辦公室：潮汐廣場東邊，門朝廣場；門口掛「村長辦公室」招牌，旁邊一根旗竿 */
+  /* v842 作者：「我每次都會想要走到村長那裡，但每次都會很直覺的走到另外一個廣場」→ 從港邊廣場沿路立三根木頭路標，指著去村長辦公室（潮汐廣場）的路 */
+  try { const wood = mat('#7a5a3a', 0.9), tipM = mat('#7a5236', 0.9);
+    const post = (x, z, arms) => { const g = new THREE.Group(), y = groundHeight(x, z); g.position.set(x, y, z); scene.add(g);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2.4, 8), wood); pole.position.y = 1.2; pole.castShadow = true; g.add(pole);
+      arms.forEach(([tx, tz, txt], i) => { const a = new THREE.Group(); a.position.y = 2.05 - i * 0.45; a.rotation.y = Math.atan2(tx - x, tz - z) - Math.PI / 2; g.add(a);
+        const tex = signTex(txt, '#7a5236', '#fff6dc', 448, 80), fm = new THREE.MeshBasicMaterial({ map: tex }), side = mat('#6a4a2e', 0.9);
+        const b = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.32, 0.06), [side, side, side, side, fm, fm]); b.position.x = 0.95; a.add(b);
+        const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 3), tipM); tip.rotation.x = Math.PI / 2; tip.rotation.y = 0; tip.position.x = 1.88; a.add(tip); }); };
+    post(15.6, -21.9, [[7.3, -23, '🏛️ 村長・潮汐廣場'], [30, -27.5, '⚓ 碼頭']]);
+    post(9.5, -20.6, [[7.3, -14, '🏛️ 村長・潮汐廣場'], [22.5, -24.5, '⛲ 港邊廣場']]);
+    post(13.6, -6.6, [[CHIEF_OFFICE[0] - 3.2, CHIEF_OFFICE[1] + 0.6, '🏛️ 村長辦公室'], [7.3, -14, '⛲ 港邊廣場']]);
+  } catch(e){ console.warn('post', e); }
   { const [OX, OZ, OR] = CHIEF_OFFICE, og = house(OX, OZ, '#b8553a', 3.8, OR, { awning: '#2f6fa0', sign: '村長辦公室', signIcon: '🏛️', signInk: '#5a2a20', wall: '#f1e6cf' });
     const fx = OX - 2.6, fz = OZ + 2.2, fy = groundHeight(fx, fz), pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.6, 8), mat('#e9e2cf', 0.5)); pole.position.set(fx, fy + 1.8, fz); pole.castShadow = true; scene.add(pole);
     const flag = box([0.05, 0.6, 0.95], '#2f89c7', [fx, fy + 3.25, fz + 0.5]); scene.add(flag); addCircleCol(fx, fz, 0.2); }
@@ -15758,7 +15770,7 @@ function renderDiveShop(body){
   body.appendChild(ul);
 }
 const QUEST_NPC = {
-  chief: { name:'村長 阿土伯', at:[HARBOR_SQ[0] - 3.6, HARBOR_SQ[1] + 1.4],   /* v840 作者：「我每次都會想要走到村長那裡，但每次都會很直覺的走到另外一個廣場」（港邊廣場）→ 村長回到港邊廣場噴水池西邊（一進遊戲就看得到）；村長辦公室留在潮汐廣場當建築 */ shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
+  chief: { name:'村長 阿土伯', at:[CHIEF_OFFICE[0] - 3.2, CHIEF_OFFICE[1] + 0.6],   /* 57 回到潮汐廣場，站在村長辦公室門口（v840 搬去港邊廣場是誤會，v842 搬回來） */ shirt:'#8c5d3b', hat:'#f6f0dd', gear:{ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' } },
   wang:  { name:'漁夫 老王',   at:[27.4, -32.6],   /* v320 移到北邊那座碼頭的岸邊（原本跟村長、阿福、阿海擠在同一個碼頭口） */ shirt:'#2f6fb5', hat:'#ffd36a', gear:{ hat:'hat_bucket', top:'top_vest', shoes:'shoes_rain', back:'back_basket' } },
   mei:   { name:'食堂 美雲姨', at:[CAFE.x + 1.6, CAFE.z - CAFE.d / 2 + 1.4], cafe:true, shirt:'#f5a5d8', hat:'#ffffff', gear:{ hat:'hat_chef', top:'top_apron' } },
 };
@@ -20909,7 +20921,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["一進來站在港邊廣場，釣具店、魚市場、碼頭都在這。", "村長阿土伯就在港邊廣場噴水池旁邊；島中央是潮汐廣場，東邊是村長辦公室。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "商店街在南邊：小花寵物店、阿綾服裝店、阿彩畫廊、阿木木工坊、阿萍美髮沙龍。涼亭在寵物店後面、寵物樂園旁邊。", "體育場和撞球館在西南邊的運動公園。", "潮汐廣場邊有一張沙盤桌，可以玩《築城守土》。那邊的金幣和村子的不相通。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。"],
+      ["村子怎麼走", "home", ["一進來站在港邊廣場，釣具店、魚市場、碼頭都在這。", "島中央是潮汐廣場，村長在東邊的辦公室門口。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "商店街在南邊：小花寵物店、阿綾服裝店、阿彩畫廊、阿木木工坊、阿萍美髮沙龍。涼亭在寵物店後面、寵物樂園旁邊。", "體育場和撞球館在西南邊的運動公園。", "潮汐廣場邊有一張沙盤桌，可以玩《築城守土》。那邊的金幣和村子的不相通。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
