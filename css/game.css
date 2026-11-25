@@ -2371,3 +2371,9 @@ body.furntop #today3, body.furntop #mini3, body.furntop #top, body.furntop #chat
 #furnPf button{width:50px;height:50px;border-radius:50%;border:3px solid #3a2a17;color:#fff;font-size:23px;font-weight:900;line-height:1;box-shadow:0 3px 0 #3a2a17;transition:transform .08s}#furnPf button:active{transform:translateY(2px) scale(.95)}
 #furnPf .x{background:#d23a2a}#furnPf .r{background:#2f86e0}#furnPf .o{background:#3bb54a}#furnPf .o.no{filter:grayscale(1) brightness(.7)}
 #furnPf .t{width:auto;height:44px;padding:0 15px;border-radius:22px;font-size:13.5px;background:#8a6a3a;color:#fff;border:3px solid #3a2a17;display:grid;place-items:center;font-weight:800}#furnPf .t.b{background:#2f86e0}#furnPf .t.warn{background:#d23a2a}
+
+/* v831 圖鑑：現在正好、朋友最大、朋友釣到好東西的卡片 */
+.chip.now{background:#e3f5ff;color:#1c6a96;margin-left:4px}
+.dex .meta.fr{color:#a0521a}
+.toast.frnote{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.toast.frnote .tbtn{padding:4px 10px;font-size:13px}
