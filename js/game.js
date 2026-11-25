@@ -7575,7 +7575,7 @@ function updateFishing(dt, t){
     if (F.spot && F.spot.id === 'shrimp'){ const k = clamp((t - F.biteAt) / 0.5, 0, 1); me.dip = 0.3 + k * 1.1 + Math.sin(t * 24) * 0.06 * k; me.bobJit = 0.04 * k; if (!F.drift) F.drift = Math.random() < 0.5 ? -1 : 1; const nx = me.bobPos.x + F.drift * 0.25 * dt; if (inShrimpPool(nx, me.bobPos.z)) me.bobPos.x = nx; }   // 慢慢沉到底、一直抖、往旁邊跑   // 慢慢沉到底、一直抖
     else { const k = clamp((t - F.biteAt) / 0.12, 0, 1); me.dip = k * 3.2 + Math.sin(t * 30) * 0.15; me.bobJit = 0.03;
       if (F.drift && F.spot && F.spot.dir){ const L = Math.hypot(F.spot.dir.x, F.spot.dir.y) || 1, sx = -F.spot.dir.y / L * F.drift, sz = F.spot.dir.x / L * F.drift, nx = me.bobPos.x + sx * 1.6 * dt, nz = me.bobPos.z + sz * 1.6 * dt; if (waterAt(nx, nz)){ me.bobPos.x = nx; me.bobPos.z = nz; } } }   /* 掠食魚一口咬住往旁邊拖 */
-    if (t > F.biteUntil){ me.dip = 0; me.bobJit = 0; F.phase = 'waiting'; F.probe = null; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); myFace('cry'); SFX.fail(); pushPresence(true); }
+    if (t > F.biteUntil){ statMs('miss1'); me.dip = 0; me.bobJit = 0; F.phase = 'waiting'; F.probe = null; F.waitUntil = t + rand(2.5, 5.5); F.nibbleAt = t + 1; flash(F.spot && F.spot.id === 'shrimp' ? '太慢了，蝦子把餌吃掉跑了' : '魚跑掉了', 1); myFace('cry'); SFX.fail(); pushPresence(true); }
   }
   if (F.phase === 'reeling'){
     F.Tmax = Math.max(F.Tmax || 0, F.T || 0); const _P0 = F.P, _S0 = F.S;
@@ -7704,9 +7704,9 @@ function updateFishing(dt, t){
       const d = (t - F.t0) / F.Td; F.g = clamp(1 + 2.2 * (d - F.P), 0.012, 3); if (F.P > _P0) F.P = _P0 + (F.P - _P0) * F.g;
       const want = Math.min(0.9, d / 0.85 * 0.9), gS = F.gS = clamp(1 + 2.2 * (want - (1 - F.S)), 0.03, 3); if (F.S < _S0) F.S = _S0 - (_S0 - F.S) * gS; }
     if (F.rsEscAt && F.fish.rs && F.P >= F.rsEscAt){ SFX.fail(); camShake = Math.max(camShake, 0.5); F.rsDone = 1; flash(`${F.fish.name}甩頭掙脫了！牠身上又多了一道叉叉`, 2.4); cancelFishing(); }
-    else if (F.T >= 1){ buzz([200, 60, 80]); SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); myFace('cry'); cancelFishing(); }
+    else if (F.T >= 1){ statMs('snap1'); buzz([200, 60, 80]); SFX.fail(); flash(F.spot && F.spot.id === 'shrimp' ? '太用力了，蝦子鬆鉗掉回池子裡 🦐' : '線斷了！', 1.4); myFace('cry'); cancelFishing(); }
     else if (F.slack > (rec.hook === 'hk_barb' ? 4.6 : 3.2)){ SFX.fail(); flash('線太鬆，魚脫鉤跑掉了…', 1.6); myFace('cry'); cancelFishing(); }   /* 倒刺鉤：可以鬆久一點 */
-    else if (F.P <= -0.55){ SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); myFace('cry'); cancelFishing(); }
+    else if (F.P <= -0.55){ statMs('run1'); SFX.fail(); flash('線被拉光了，魚跑掉了', 1.6); myFace('cry'); cancelFishing(); }
     else if (F.P >= 1){ F.pfCatch = !!(F.acts && F.pf && F.actN >= 2 && (F.Tmax || 0) < 0.92); landFish(); }
   }
   // HUD + button
@@ -19157,7 +19157,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    setTimeout(refundCheck, 9000);
+    setTimeout(refundCheck, 9000); setTimeout(statInit, 4000);
     await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(stampLoad, 3500); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
@@ -19168,6 +19168,30 @@ async function cloudInit(){
 }
 /* v746 作者：「退回去」→ 以前在阿綾服裝店、阿萍美髮沙龍花的金幣退回來（219，伺服器算、每人一次）。進遊戲時問一次，有退就告訴玩家 */
 /* v832 也用來告訴玩家寵物調整（226：小章魚、河豚、寄居蟹收回，領養的寄居蟹退錢）。每個退款種類各一個記號，問過就不再問 */
+/* v848 遊玩紀錄（228）：80 人來過、昨天只剩 1 人 → 記錄新玩家做到哪一步、每天玩幾分鐘、最後在做什麼，好知道在哪裡離開。
+   只記遊戲裡的步驟（例：第一次拋竿、第一次釣到、新手五步、第一次打開某個分頁），不記位置、聊天、個人資料。每個里程碑只送一次（手機記著送過了）。 */
+const Stat = { on: false, q: new Set(), tabs: new Set() };
+function statMs(ev){ try { if (!ev || LS.get('tide.ms.' + ev, 0)) return; if (!Stat.on){ Stat.q.add(ev); return; } LS.set('tide.ms.' + ev, 1);
+  Cloud.sb.rpc('stat_ms', { p_ev: ev }).then(r => { if (r && r.error) LS.set('tide.ms.' + ev, 0); }, () => LS.set('tide.ms.' + ev, 0)); } catch(e){} }
+function statCtx(){ try { const g = Guide.i === 'done' ? 'gd' : 'g' + (Guide.i | 0); let c = 'walk';
+    if (!$('#sheet').hidden) c = 'sheet:' + String(curTab || '').replace(/[^a-z0-9_]/gi, '').slice(0, 12);
+    else if (F.phase && F.phase !== 'idle') c = 'fish:' + F.phase; else if (Dive.on) c = 'dive'; else if (Voy.on) c = 'boat'; else if (onIsle) c = 'isle'; else if (typeof Shop !== 'undefined' && Shop && Shop.open) c = 'shop';
+    else if (me.sitting) c = 'sit'; else if (document.body.classList.contains('chatting')) c = 'chat';
+    return (g + '|' + c).toLowerCase(); } catch(e){ return 'x'; } }
+function statTick(){ try {
+  if (F.phase === 'waiting') statMs('cast1'); if (F.phase === 'bite' || F.phase === 'reeling') statMs('bite1');
+  if (rec.total >= 1) statMs('catch1'); if (rec.total >= 5) statMs('catch5'); if (rec.total >= 20) statMs('catch20'); if (rec.total >= 100) statMs('catch100');
+  if (LS.get('tide.guideSold', false)) statMs('sell1'); if (LS.get('tide.guideVoy', false) || Voy.on) statMs('boat1'); if (onIsle) statMs('isle1'); if (Dive.on) statMs('dive1');
+  if (Guide.i === 'done') statMs('g5'); else if (Guide.i >= 1) for (let k = 1; k <= Guide.i; k++) statMs('g' + k);
+  if (!$('#sheet').hidden && curTab && !Stat.tabs.has(curTab)){ Stat.tabs.add(curTab); statMs('tab:' + String(curTab).replace(/[^a-z0-9_]/gi, '').slice(0, 16).toLowerCase()); }
+  try { const nm = String(nickname || '').trim(); if (nm && !/^釣客\d*$/.test(nm)) statMs('name'); } catch(e){}
+} catch(e){} }
+function statInit(){ if (Stat.on || !Cloud.on || !Cloud.sb) return; Stat.on = true;
+  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), first = LS.get('tide.firstDay', null) || today; LS.set('tide.firstDay', first);
+  const days = Math.round((Date.parse(today) - Date.parse(first)) / 864e5); statMs('boot1'); if (days >= 1) statMs('day2'); if (days >= 7) statMs('day7');
+  for (const ev of Stat.q) statMs(ev); Stat.q.clear(); setInterval(statTick, 5000); statTick();
+  const beat = () => { try { if (document.visibilityState === 'visible' && Cloud.on && Cloud.sb) Cloud.sb.rpc('stat_beat', { p_ctx: statCtx() }).then(() => {}, () => {}); } catch(e){} };
+  beat(); setInterval(beat, 60000); }
 async function refundCheck(){ if (!Cloud.on || !Cloud.sb) return; const u = Cloud.userId || '', k1 = 'tide.refund219.' + u, k2 = 'tide.refund226.' + u; if (LS.get(k1, 0) && LS.get(k2, 0)) return;
   try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k1, 1); LS.set(k2, 1); const n = data && data.coins | 0, ks = (data && data.kinds) || [];
     if (n > 0){ try { await cloudRefresh(); } catch(e){} SFX.coin && SFX.coin(); flash(`退回 🪙${n.toLocaleString()}`, 2.2); }
