@@ -19676,14 +19676,14 @@ const STORY_TXT = {
     '現在我不出遠海了，每天在碼頭邊釣一點點，夠吃就好。海給我們的，要懂得還回去。',
     '好的釣客不是釣最多的人，是最懂得等待的人。你已經是了。'] };
 var Story = { list:null, at:0, busy:false, open:null };
-async function storyLoad(force){ if (!Cloud.on || !Cloud.sb || Story.busy) return; if (!force && Story.at && Date.now() - Story.at < 3 * 60000) return; Story.busy = true;
-  try { const { data, error } = await Cloud.sb.rpc('story_status'); if (!error && Array.isArray(data)){ Story.list = data.map(v => Object.assign(v, { name: STORY_WHO[v.who] || v.who, today: v.asked, askName: (FISH_BY_ID[v.ask] || {}).name || v.ask })); Story.at = Date.now(); LS.set('tide.storyCh', Object.fromEntries(Story.list.map(v => [v.who, v.ch]))); } } catch(e){} Story.busy = false; }
+async function storyLoad(force){ if (!Cloud.on || !Cloud.sb || Story.busy) return; if (!force && Story.at && Date.now() - Story.at < 3 * 60000) return; Story.busy = true; Story.err = '';
+  try { const { data, error } = await Promise.race([Cloud.sb.rpc('story_status'), new Promise((_, rj) => setTimeout(() => rj(new Error('timeout')), 8000))]); if (error) Story.err = cloudErrMsg(error); else if (!Array.isArray(data)) Story.err = '讀不到村民資料'; if (!error && Array.isArray(data)){ Story.list = data.map(v => Object.assign(v, { name: STORY_WHO[v.who] || v.who, today: v.asked, askName: (FISH_BY_ID[v.ask] || {}).name || v.ask })); Story.at = Date.now(); LS.set('tide.storyCh', Object.fromEntries(Story.list.map(v => [v.who, v.ch]))); } } catch(e){ Story.err = e && e.message === 'timeout' ? '連線太慢，讀不到' : cloudErrMsg(e); } Story.busy = false; }
 function storyChOf(who){ const L = typeof Story !== 'undefined' && Story && Story.list && Story.list.find(v => v.who === who); return L ? L.ch : ((LS.get('tide.storyCh', {}) || {})[who] || 0); }
 function storyNpc(who){ return npcs.find(n => n.wid === who) || (who === 'chief' && questNpcs.find(q => q.who === 'chief') || {}).f; }
 async function storyCall(fn, args, after){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; if (data && data.player) adoptRow(data.player); const st = data && (data.story || (Array.isArray(data) ? data : null)); if (st){ Story.list = null; Story.at = 0; await storyLoad(true); } if (after) after(data); renderTab(); } catch(e){ toast(cloudErrMsg(e)); } }
 function renderStory(body){ body.appendChild(el('div', 'shophead')).innerHTML = `<b>💌 村民的故事</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`;
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '要連上雲端才看得到村民的故事。')); return; }
-  if (!Story.list){ body.appendChild(el('p', 'sub', '讀取中…')); storyLoad(true).then(() => { if (curTab === 'story') renderTab(); }); return; }
+  if (!Story.list){ if (Story.err){ body.appendChild(el('p', 'sub', '村民資料讀不到：' + Story.err)); const rb = el('button', 'tbtn', '再試一次'); rb.addEventListener('click', () => { Story.err = ''; renderTab(); }); body.appendChild(rb); return; } body.appendChild(el('p', 'sub', '讀取中…')); if (!Story.busy) storyLoad(true).then(() => { if (curTab === 'story') renderTab(); }); return; }
   body.appendChild(el('p', 'sub', '每天幫村民完成委託（交一條他想要的魚）＋15 好感、🪙80；走到他旁邊打招呼 ＋3 好感（每天一次）。好感到 15、35、60、85、100 會解鎖一章故事，讀完 5 章得到稱號「○○的知己」。'));
   const ul = el('ul', 'shoplist story');
   for (const v of Story.list){ const li = el('li', ''); li.appendChild(el('span', 'dishic', STORY_IC[v.who] || '🙂')); const d = el('div', 'tinfo');
@@ -21876,6 +21876,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u818', d:'11/25', items:[['🏘️','手機的「村民」讀不到資料時不會一直卡在讀取中，會寫原因和「再試一次」']] },
   { id:'u817', d:'11/25', items:[['👣','「有人來逛過你的小島」的通知只會出現一次，還會寫是誰、多久以前來的']] },
   { id:'u816', d:'11/25', items:[['🐉','會飛的兵（龍、鳳凰、獅鷲）不再去打城牆，直接飛過去打建築；敵人不再砍樹；獅鷲騎士的翅膀改成往後張開，拍得比較慢']] },
   { id:'u815', d:'11/25', items:[['🐎','遠征島上岸後在藍旗圍起來的登陸區整隊；選了兵可以按「上馬」一次全騎上，只要那一套有騎兵的兵種都能上馬']] },

@@ -8755,5 +8755,6 @@
  "遠征島整隊時部隊站在海灘上排成方陣，不會掉進海裡；按「全軍」會提示選了幾名": "On expedition islands your troops now line up on the beach in a block instead of ending up in the sea; All shows how many were selected",
  "遠征島上岸後在藍旗圍起來的登陸區整隊；選了兵可以按「上馬」一次全騎上，只要那一套有騎兵的兵種都能上馬": "On expedition islands you land and gather inside a landing zone marked by blue flags; select soldiers and tap Mount to put them all on horses — any unit whose set has cavalry can ride",
  "會飛的兵（龍、鳳凰、獅鷲）不再去打城牆，直接飛過去打建築；敵人不再砍樹；獅鷲騎士的翅膀改成往後張開，拍得比較慢": "Flying units (dragons, phoenixes, griffins) no longer attack walls and fly straight to buildings; enemies no longer chop trees; Griffin Rider wings now spread backward and flap slower",
- "「有人來逛過你的小島」的通知只會出現一次，還會寫是誰、多久以前來的": "The \"someone visited your island\" notice now appears only once, and says who came and how long ago"
+ "「有人來逛過你的小島」的通知只會出現一次，還會寫是誰、多久以前來的": "The \"someone visited your island\" notice now appears only once, and says who came and how long ago",
+ "手機的「村民」讀不到資料時不會一直卡在讀取中，會寫原因和「再試一次」": "The phone Villagers app no longer gets stuck loading; if it cannot load it shows why with a Try again button"
 }
