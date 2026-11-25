@@ -5745,6 +5745,7 @@ function kidAnimate(f, dt, t){
   const a = f.av, K = a.kid, v = f.aspd || 0, W = {};
   if (K.kjOn){ for (let i = 0; i < K.kjB.length; i++) K.kjB[i].quaternion.copy(K.kjQ[i]); K.kjOn = false; }   /* v452 上一格疊上去的彈性先還原（見 kidJuice 的說明） */
   if (f.swim) W.dive = 1;
+  else if (f.floorSit && K.acts.sit_floor) W.sit_floor = 1;   /* 直接坐在地上（阿默在碼頭打遊戲機） */
   else if (f.sitting || (f === me ? !!myBoat : !!f.boatMesh)) W.sit = 1;
   else if (f.skiFall && K.acts.playdead) W.playdead = 1;
   else if (f.ski) W.idle = 1;   /* v548 滑雪：站姿由 sportPose 壓成蹲低 */
@@ -20008,8 +20009,8 @@ function updateAmo(n, dt, t){
   let mode, s; if (ph < S){ mode = 'go'; s = ph * AMO.speed; } else if (ph < fishEnd){ mode = 'sea'; s = c.len; } else if (ph < fishEnd + S){ mode = 'back'; s = c.len - (ph - fishEnd) * AMO.speed; } else mode = 'pier';
   if (mode === 'pier'){ n.boat.position.set(AMO.dock[0], WATER_LEVEL, AMO.dock[1]); n.boat.rotation.set(0, Math.PI / 2, 0);
     if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; amoRecast(n, t); n.amoTired = t + 4; if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['今天又沒遇到……下一趟換個地方', '好累……我坐一下打一場', '上岸了，先打一場再說']), '', 4); }
-    if (t > (n.amoTired || 0)){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 5; n.sitting = true; n.baseY = n.homeY - 0.42; } }
-  else { const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
+    if (t > (n.amoTired || 0)){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 5; n.sitting = true; n.floorSit = true; n.baseY = n.homeY; } else n.floorSit = false; }
+  else { n.floorSit = false; const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
     const hd = mode === 'sea' ? out : hd0 + (mode === 'back' ? Math.PI : 0);
     n.boat.position.set(x, WATER_LEVEL + bob, z); n.boat.rotation.set(Math.sin(t * 1.1) * 0.02, hd, Math.sin(t * 1.3) * 0.03);
     n.pos.set(x, 0, z); n.baseY = WATER_LEVEL - 0.08 + bob; n.sitting = true; n.rot = hd;
@@ -21930,6 +21931,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u823', d:'11/25', items:[['🎮','阿默在碼頭改成直接坐在地上、腳伸直打遊戲機，不會再像蹲著']] },
   { id:'u822', d:'11/25', items:[['🎣','釣魚動作照真的來：浮標沉下去會用力揚竿、拉魚時一扳一收（扳的時候不收線，放低時快收）、魚往外衝人會被往前扯、捲線器滋滋叫，最後把竿子一提把魚拉出水面。也多了揚竿的咻聲和收線的喀喀聲'], ['🎮','阿默在碼頭休息時，現在看得出來在打遊戲機了：兩手拿著在胸前、低頭看螢幕，走近還會聽到他邊打邊碎念']] },
   { id:'u820', d:'11/25', items:[['🎮','我們的朋友阿默換新樣子了：全身黑、黑口罩、黑帽子，船也是黑的。上岸會坐在碼頭打遊戲機休息，走近會告訴你哪裡有魚影、現在潮水該去哪釣。他自己釣魚也照真的來：魚先試吃、浮標沉下去才揚竿、一扳一收拉上來']] },
   { id:'u819', d:'11/25', items:[['📱','修好一直點畫面放大後，縮回來按鈕卻變大互相擋到的問題']] },
