@@ -6188,6 +6188,7 @@ const SFX = {
   reel(){ noise(0.035, 0.04, 3200, 0, 6); },
   drag(){ noise(0.025, 0.035, 5200, 0, 9); },   /* 魚往外衝、捲線器被拉出線的「滋滋」聲 */
   whoosh(){ noise(0.2, 0.07, 700, 2600, 1.2); },   /* 揚竿刺魚：竿子劃過空氣 */
+  fanfare(lv){ const n = lv >= 3 ? [523, 659, 784, 1047, 1319] : lv >= 2 ? [659, 784, 1047] : [784, 1047]; n.forEach((f, i) => setTimeout(() => tone(f, i === n.length - 1 ? 0.5 : 0.14, 'triangle', 0.06), i * 110)); },   /* vHYPE 釣到好東西的小號角：越稀有越長 */
   coin(){ tone(1568, 0.08, 'square', 0.04); setTimeout(() => tone(2093, 0.16, 'square', 0.04), 70); },
   click(){ tone(700, 0.04, 'triangle', 0.04); },
   squeak(){ const f = 900 + Math.random() * 300; tone(f, 0.12, 'square', 0.025, f * 1.4); setTimeout(() => tone(f * 1.2, 0.1, 'square', 0.02, f * 0.9), 130); },
@@ -18409,7 +18410,21 @@ function renderLook(body){ const own = new Set(rec.owned || []);
       li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); } }
 /* ================= CATCH CARD ================= */
+/* vHYPE 作者 11/26 定核心「釣到的那一刻要很爽」→ 釣到好東西時畫面中間先跳一下大字＋號角＋光：
+   傳說（金色光芒、最長）＞ 第一次釣到這種魚、破自己紀錄、罕見變種、稀有（藍色）。普通魚的小魚不跳，才不會每條都在慶祝。卡片照常出來，大字 1.6 秒自己淡掉。 */
+function catchHype(f, res){ try {
+  const leg = f.rarity === '傳說', rare = f.rarity === '稀有', lines = [];
+  if (leg) lines.push(['🌟', '傳說！']); else if (f.of && res.isNew) lines.push(['✨', '新的變種！']); else if (res.isNew) lines.push(['📖', '第一次釣到！']);
+  if (res.isBest && !res.isNew) lines.push(['🏅', '破自己的紀錄！']);
+  if (!lines.length && rare) lines.push(['💎', '稀有！']);
+  if (!lines.length) return;
+  const lv = leg ? 3 : (res.isNew || f.of) ? 2 : 1, d = document.createElement('div'); d.id = 'hype'; d.className = 'hv' + lv;
+  d.innerHTML = `<div class="hyrays"></div><div class="hyt">${lines.map(([i, t]) => `<div><span>${i}</span>${esc(t)}</div>`).join('')}</div>`;
+  const old = $('#hype'); if (old) old.remove(); document.body.appendChild(d); setTimeout(() => d.classList.add('out'), lv >= 3 ? 1900 : 1400); setTimeout(() => d.remove(), lv >= 3 ? 2500 : 2000);
+  SFX.fanfare && SFX.fanfare(lv); buzz(lv >= 3 ? [60, 40, 60, 40, 220] : [40, 30, 90]); if (lv >= 3) camShake = Math.max(camShake, 0.25);
+} catch(e){} }
 function showCatch(f, w, res){
+  catchHype(f, res);
   const gx = isGuppy(f.id) && F.gp ? gpyFish({ f: f.id, gp: F.gp, s: F.sex }) : null;
   drawFish($('#ccCanvas'), F.ev ? evoColor((gx || f).color) : (gx || f).color, true, (gx || f).id);
   const b = $('#ccBadges'); b.textContent = '';
@@ -18420,7 +18435,7 @@ function showCatch(f, w, res){
   if (f.of){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `✨ 罕見變種（${FISH_BY_ID[f.of].name}）`; b.appendChild(x); if (res.isNew){ SFX.catch(); flash(`發現新的變種：${f.name}`, 2.4); } }
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '第一次釣到'; b.appendChild(x); }
   /* v831 做深：釣到魚就知道自己站在哪裡——破紀錄大聲說出來（比上次大多少）；沒破就告訴你紀錄是多少、差多少；還會跟朋友比 */
-  if (res.isBest){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `🏆 破紀錄 +${fmtKg(w - (res.prev || 0))}`; b.appendChild(x); if (!f.of){ SFX.catch(); flash(`🏆 破紀錄！${f.name} ${fmtKg(w)}`, 2.2); } }
+  if (res.isBest){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `🏆 破紀錄 +${fmtKg(w - (res.prev || 0))}`; b.appendChild(x); }
   else if (!res.isNew && res.prev > 0){ const x = document.createElement('span'); x.className = 'badge'; const gap = res.prev - w; x.textContent = gap <= res.prev * 0.12 ? `差 ${fmtKg(gap)} 破紀錄` : `你的紀錄 ${fmtKg(res.prev)}`; b.appendChild(x); }
   { const fb = FRB.map[f.id]; if (fb && w > fb.w){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `👥 比 ${fb.n} 的 ${fmtKg(fb.w)} 還大`; b.appendChild(x); if (!res.isBest && !res.isNew) setTimeout(() => flash(`👥 贏過${fb.n}了！`, 1.8), 300); } }
   if (Cloud.contest && Cloud.contest.fish === f.id){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '🏆 本週比賽魚'; b.appendChild(x); }
@@ -22387,7 +22402,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
-  { id:'u855', d:'11/26', items:[['🚶','阿默上岸後走去長椅的時候有走路動作了（以前會站著滑過去，還一直在碼頭釣魚）'], ['🧓','老人家不再把手背在後面，拄拐杖的照舊']] },
+  { id:'u856', d:'11/26', items:[['🚶','阿默上岸後走去長椅的時候有走路動作了（以前會站著滑過去，還一直在碼頭釣魚）'], ['🧓','老人家不再把手背在後面，拄拐杖的照舊']] },
+  { id:'u855', d:'11/26', items:[['🌟','釣到好東西時畫面中間會跳大字＋號角：傳說（金光）、第一次釣到、破自己紀錄、罕見變種、稀有']] },
   { id:'u854', d:'11/26', items:[['🌉','建地島移到離珊瑚礁遠一點的地方；木橋改接在住宅區中間那條步道的盡頭，岸邊那頭是平順的斜板，走得過去了'], ['🐦','海鳥不會再對著陸地俯衝捕魚']] },
   { id:'u852', d:'11/26', items:[['💇','新髮型三種：捲捲短髮、雙麻花辮、長直髮，到造型頁「髮型」選', 'closet'], ['🧓','村子裡的老人家看起來更像老人了：背有點駝、手背在後面散步、臉上有皺紋，有的戴老花眼鏡、拄拐杖'], ['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
   { id:'u849', d:'11/25', items:[['🌳','村子裡的樹變少了：路邊不再有樹擋路，西邊公寓旁清出一大塊空地（之後要做建地）']] },

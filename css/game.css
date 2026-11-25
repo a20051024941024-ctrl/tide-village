@@ -2413,3 +2413,16 @@ body.chat2.chatting #c2, body.ui3.photo #c2, body.ui3.subcine #c2, body.ui3.f3 #
 #imail .ims{font-size:24px;line-height:1}#imail .imt{flex:1;min-width:0;word-break:break-word}#imail .imt b{color:#1f74c8;margin-right:6px}#imail .imd{color:#7b8a96;font-size:11px}
 #imail .imb{display:flex;flex-direction:column;gap:4px}#imail .imb .tbtn{padding:3px 8px;font-size:12px}
 body.photo #imail{display:none}
+
+/* vHYPE 釣到好東西的大字 */
+#hype{position:fixed;inset:0;z-index:9000;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;padding-top:14vh}
+#hype .hyt{position:relative;text-align:center;background:rgba(13,60,120,.82);border:3px solid #fff;border-radius:22px;padding:6px 22px 8px;box-shadow:0 6px 24px rgba(0,0,0,.3);font-weight:900;color:#fff;font-size:34px;line-height:1.25;text-shadow:0 3px 0 #0d4a8c,0 0 18px rgba(43,143,230,.8);animation:hyin .45s cubic-bezier(.2,1.6,.4,1) both}
+#hype .hyt span{margin-right:6px}#hype .hyt small{display:block;font-size:17px;font-weight:800;margin-top:2px}
+#hype.hv3 .hyt{background:rgba(120,70,0,.85);border-color:#ffe08a;font-size:44px;color:#fff6c8;text-shadow:0 3px 0 #8a5a00,0 0 26px rgba(255,200,60,.95)}
+#hype .hyrays{position:absolute;left:50%;top:22vh;width:120vmax;height:120vmax;margin:-60vmax 0 0 -60vmax;opacity:0;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.0) 0 9deg,rgba(255,255,255,.22) 9deg 18deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 0,transparent 60%);mask:radial-gradient(circle,#000 0,transparent 60%);animation:hyspin 2.6s linear both}
+#hype.hv3 .hyrays{background:repeating-conic-gradient(from 0deg,rgba(255,214,90,0) 0 8deg,rgba(255,214,90,.45) 8deg 16deg);opacity:1}
+#hype.hv2 .hyrays{opacity:.8}
+#hype.out{transition:opacity .5s;opacity:0}
+@keyframes hyin{0%{transform:scale(.3) translateY(20px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes hyspin{0%{transform:rotate(0) scale(.6)}100%{transform:rotate(40deg) scale(1)}}
+body.photo #hype{display:none}
