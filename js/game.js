@@ -22135,6 +22135,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u847', d:'11/25', items:[['💬','新的聊天框：聊天列上面一行顯示最新一句，點一下展開最近 5 句；左邊切換看全村／附近／隱藏，⚙️ 可以設定誰聽得到你、檢舉說不好的話的人']] },
   { id:'u844', d:'11/25', items:[['🧓','阿鐵師傅改回男生；老闆不再被當成老人（阿忠、阿福不會白頭髮了）；老阿伯留白色平頭、老阿嬤包包頭']] },
   { id:'u843', d:'11/25', items:[['💇','新髮型三種：平頭、西瓜頭、中分短髮，到造型頁「髮型」選，都可以換顏色', 'closet']] },
   { id:'u841', d:'11/25', items:[['🔧','修好第一人稱釣到魚後畫面卡在旁邊：看完魚會自己轉回前面的水面']] },
@@ -22491,7 +22492,7 @@ function ui3ChatFit(){ const c = $('#chat3'), row = $('#actRow'); if (!c || !row
    右上「⋯」：看誰的聊天（全部／只看附近／不顯示）、我說的話給誰聽（全部／附近）、檢舉剛剛說話的人。點框框打開完整的聊天紀錄。
    原本左邊一句一句浮出來的泡泡、📜 按鈕在這個版本收起來。先用網址 #chat2 試看，作者說好再開給大家。
    作者 11/25「我怕被說抄襲」→ 改成釣魚村自己的樣子：白底藍框（跟其他按鈕一樣）、平常只有一行（左邊「🌐 全村／📍 附近／🙈 隱藏」、中間最新一句、右邊 ⚙️），點那一行才往上展開最近 5 句。 */
-const CHAT2 = /chat2/.test(location.hash) || !!LS.get('tide.chat2', 0);
+const CHAT2 = !/chat1/.test(location.hash);   /* v847 作者說好 → 開給大家（網址加 #chat1 可以看舊的） */
 if (CHAT2) document.body.classList.add('chat2');
 const C2 = { lines: [], view: LS.get('tide.c2view', 'all'), el: null, menu: null };
 function c2Add(name, text, sys, dist){ if (!CHAT2) return; C2.lines.push({ name: name || '', text: String(text || ''), sys: !!sys, dist: dist == null ? 0 : dist, peer: logMsg.peer || null, me: /^📍?你$/.test(name || '') || (name || '') === myDisplayName() }); if (C2.lines.length > 40) C2.lines.shift(); c2Render(); }
