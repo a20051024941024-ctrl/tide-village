@@ -5297,7 +5297,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
       if (c.ear !== 'none') sw('耳環顏色', 'ear', ['#e8c25a', '#d8dde3', '#f2a7c0', '#6fc3e8', '#e0564f', '#2b2b2e']); };
 /* v712 作者：「有些村民的服裝太不搭了」→ 村民不再亂配：上衣用村民原本的衣服顏色（大家認得），褲子、鞋子、髮色只從耐看的顏色裡挑，褲子跟上衣一深一淺；漁夫、船夫穿連帽衣，不穿女僕裝 */
 K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + nm), h = s => { let x = 0; for (const ch of String(s)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; }, H = h(nm), pick = (a, k) => a[(H >>> k) % a.length];
-  const g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|慧|玉|珠|琪|婷|萍/.test(nm), b = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|信|潮|強|明|輝/.test(nm), old = /嬤|伯|爺|婆|老|公/.test(nm);
+  const g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|慧|玉|珠|琪|婷|萍/.test(nm), b = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|信|潮|強|明|輝|鐵|師傅|王|忠/.test(nm), old = /嬤|伯|爺|婆|公/.test(nm) || /老(?!闆|師)/.test(nm);   /* v844 作者：「阿鐵是男生還是女生」→ 阿鐵師傅被當成女生；「老闆」的老不算老人 */
   const sex = g !== b ? (g ? 'g' : 'b') : c.sex, work = /漁|船|釣|海|港|潮|碼頭|捕/.test(nm);
   const top = /^#[0-9a-f]{6}$/i.test(shirt || '') ? shirt : pick(K3.PAL.top, 3), lum = (() => { const n = parseInt(top.slice(1), 16); return ((n >> 16) * 0.3 + ((n >> 8) & 255) * 0.59 + (n & 255) * 0.11) / 255; })();
   const darkB = ['#1e2a55', '#2b2b2e', '#3b4a5a', '#4a3a2e'], lightB = ['#c8b48a', '#8a8f96', '#d8d2c4', '#6a7f9a'];
@@ -5310,7 +5310,7 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
   const mask = hat === 'none' && ear === 'none' && (A >>> 9) % 9 === 0 ? 'mask' : 'none';
   const topK = work ? ((A >>> 3) % 3 === 0 ? 'vest' : 'hoodie') : young && !shop && (A >>> 12) % 5 === 0 ? 'wave' : H % 3 === 0 ? 'hoodie' : 'tee';
   const eyeC = (A >>> 15) % 2 ? ap(['#3f6fc0', '#3f8f6a', '#7a4a2a', '#5a5f6a', '#8a5fb0', '#b0703a'], 17) : '';
-  return { sex, ...face, hair: sex === 'g' ? (old ? ['bun', 'lowpony'][H % 2] : ['long', 'twin', 'pony', 'bob', 'short2', 'bun', 'lowpony'][H % 7]) : ['short', 'short2', 'lowpony', 'short2', 'short'][H % 5],   /* v742 村民也會留新髮型 */ top: topK, bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak', hat, ear, mask,
+  return { sex, ...face, hair: sex === 'g' ? (old ? 'bun' : ['long', 'twin', 'pony', 'bob', 'short2', 'bun', 'lowpony'][H % 7]) : old ? ['buzz', 'buzz', 'short'][H % 3] : ['short', 'short2', 'lowpony', 'short2', 'short', 'mid', 'bowl', 'buzz'][H % 8],   /* v844 老阿伯留平頭（白髮），老阿嬤包包頭；年輕男生也會留新髮型 */   /* v742 村民也會留新髮型 */ top: topK, bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak', hat, ear, mask,
     c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30', '#8a5a3a'], 5), top: topK === 'wave' ? ap(['#2f6fc0', '#2f9a9a', '#5a6fd0', '#d06a8a'], 20) : top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9),
       ...(hat === 'cap' ? { hat: ap(['#e0564f', '#2f6fc0', '#2b2b2e', '#f2f2ee', '#3f8f6a', '#e8c547'], 22) } : {}), ...(mask === 'mask' ? { mask: ap(['#f2f2ee', '#2b2b2e', '#8fb8e0', '#f2b8c8'], 24) } : {}), ...(eyeC ? { eye: eyeC } : {}) } }; };
 /* 阿默（作者的朋友）：全身黑、黑口罩永遠不拿下來、戴黑帽；之後有「帽子戴在頭上的連帽衣」再換上 */
@@ -22134,6 +22134,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u844', d:'11/25', items:[['🧓','阿鐵師傅改回男生；老闆不再被當成老人（阿忠、阿福不會白頭髮了）；老阿伯留白色平頭、老阿嬤包包頭']] },
   { id:'u843', d:'11/25', items:[['💇','新髮型三種：平頭、西瓜頭、中分短髮，到造型頁「髮型」選，都可以換顏色', 'closet']] },
   { id:'u841', d:'11/25', items:[['🔧','修好第一人稱釣到魚後畫面卡在旁邊：看完魚會自己轉回前面的水面']] },
   { id:'u839', d:'11/25', items:[['🐟','翡翠河鱸和銀鱗鯽也換成真實的樣子了：河鱸綠底黑條紋、橘紅色的鰭，鯽魚一片一片銀色鱗片']] },
