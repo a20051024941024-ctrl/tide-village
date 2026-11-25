@@ -2845,9 +2845,7 @@ function castPoint(x, z, dx, dz, dist){
         const tex = signTex(txt, '#7a5236', '#fff6dc', 448, 80), fm = new THREE.MeshBasicMaterial({ map: tex }), side = mat('#6a4a2e', 0.9);
         const b = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.32, 0.06), [side, side, side, side, fm, fm]); b.position.x = 0.95; a.add(b);
         const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 3), tipM); tip.rotation.x = Math.PI / 2; tip.rotation.y = 0; tip.position.x = 1.88; a.add(tip); }); };
-    post(15.6, -21.9, [[7.3, -23, '🏛️ 村長・潮汐廣場'], [30, -27.5, '⚓ 碼頭']]);
-    post(9.5, -20.6, [[7.3, -14, '🏛️ 村長・潮汐廣場'], [22.5, -24.5, '⛲ 港邊廣場']]);
-    post(13.6, -6.6, [[CHIEF_OFFICE[0] - 3.2, CHIEF_OFFICE[1] + 0.6, '🏛️ 村長辦公室'], [7.3, -14, '⛲ 港邊廣場']]);
+    post(15.6, -21.9, [[7.3, -23, '🏛️ 村長']]);   /* v852 作者：「路標太多了，而且很亂」→ 只留港邊廣場出口這一根、一塊牌子 */
   } catch(e){ console.warn('post', e); }
   { const [OX, OZ, OR] = CHIEF_OFFICE, og = house(OX, OZ, '#b8553a', 3.8, OR, { awning: '#2f6fa0', sign: '村長辦公室', signIcon: '🏛️', signInk: '#5a2a20', wall: '#f1e6cf' });
     const fx = OX - 2.6, fz = OZ + 2.2, fy = groundHeight(fx, fz), pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.6, 8), mat('#e9e2cf', 0.5)); pole.position.set(fx, fy + 1.8, fz); pole.castShadow = true; scene.add(pole);
