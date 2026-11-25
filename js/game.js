@@ -461,7 +461,7 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:24, y:0.32 };
-/* v850 🏘️ 建地島：西邊公寓外的海上（見 blBuild）。一格建地 20×20 公尺、格子中間 4 公尺的路；木橋從村子西岸（z 43）接到島的入口 */
+/* v852 🏘️ 建地島：西邊公寓外的海上（見 blBuild）。一格建地 20×20 公尺、格子中間 4 公尺的路；木橋從村子西岸（z 43）接到島的入口 */
 const BLI = { x:-55, z:104, half:40, y:0.5, lot:20, gap:4, oz:3, bz0:39.5, bz1:64.5, by:0.45 };   /* oz：建地往北挪 3 公尺，南邊留入口廣場 */
 const BLS = { street:1, n:1, used:{}, list:null, at:0, loading:false, mine:null, help:[], views:{}, built:false, near:false, g:null, bp:null, admin:null };
 const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer', 'g_printflag'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
@@ -1328,7 +1328,7 @@ scene.add(sun, sun.target);
 /* ================= WORLD ================= */
 const colliders = []; // {t:'b',x,z,hw,hd} | {t:'c',x,z,r}
 const decks = [];     // {x0,x1,z0,z1,y}
-for (const [z0, z1, y] of [[BLI.bz0, BLI.bz0 + 2, 0.12], [BLI.bz0 + 2, BLI.bz0 + 4, 0.28], [BLI.bz0 + 4, BLI.bz1 + 1, BLI.by]]) decks.push({ x0: BLI.x - 1.5, x1: BLI.x + 1.5, z0, z1, y });   /* v850 往建地島的木橋（岸邊那頭做成小斜坡，不用跳） */
+for (const [z0, z1, y] of [[BLI.bz0, BLI.bz0 + 2, 0.12], [BLI.bz0 + 2, BLI.bz0 + 4, 0.28], [BLI.bz0 + 4, BLI.bz1 + 1, BLI.by]]) decks.push({ x0: BLI.x - 1.5, x1: BLI.x + 1.5, z0, z1, y });   /* v852 往建地島的木橋（岸邊那頭做成小斜坡，不用跳） */
 const waters = [];    // {x0,x1,z0,z1}
 const animWater = [];
 const lanterns = [];
@@ -5317,7 +5317,7 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
   const ear = hat === 'none' && (shop ? A % 3 < 2 : gg && young && (A >>> 4) % 3 === 0) ? ap(['pearl', 'star', 'hoop', 'drop'], 6) : 'none';
   const mask = hat === 'none' && ear === 'none' && (A >>> 9) % 9 === 0 ? 'mask' : 'none';
   const topK = work ? ((A >>> 3) % 3 === 0 ? 'vest' : 'hoodie') : young && !shop && (A >>> 12) % 5 === 0 ? 'wave' : H % 3 === 0 ? 'hoodie' : 'tee';
-  const glasses = old && (A >>> 26) % 2 === 0, cane = old && !work && !sea && (A >>> 27) % 2 === 0;   /* v845 一半的老人戴老花眼鏡；不出海的老人有一半拄拐杖 */
+  const glasses = old && (A >>> 26) % 2 === 0, cane = old && !work && !sea && (A >>> 27) % 2 === 0;   /* v852 一半的老人戴老花眼鏡；不出海的老人有一半拄拐杖 */
   const eyeC = (A >>> 15) % 2 ? ap(['#3f6fc0', '#3f8f6a', '#7a4a2a', '#5a5f6a', '#8a5fb0', '#b0703a'], 17) : '';
   return { sex, ...face, hair: sex === 'g' ? (old ? 'bun' : ['long', 'twin', 'pony', 'bob', 'short2', 'bun', 'lowpony'][H % 7]) : old ? ['buzz', 'buzz', 'short'][H % 3] : ['short', 'short2', 'lowpony', 'short2', 'short', 'mid', 'bowl', 'buzz'][H % 8],   /* v844 老阿伯留平頭（白髮），老阿嬤包包頭；年輕男生也會留新髮型 */   /* v742 村民也會留新髮型 */ top: topK, bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak', hat, ear, mask, old, glasses, cane,
     c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30', '#8a5a3a'], 5), top: topK === 'wave' ? ap(['#2f6fc0', '#2f9a9a', '#5a6fd0', '#d06a8a'], 20) : top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9),
@@ -5398,7 +5398,7 @@ K3.faceTex = (c, ex, size) => { const A = K3.asset; if (!A || !A.fbase || !A.fey
   const bl = ex === 'shy' ? 'shy' : (ex === 'star' && c.blush === 'none') ? 'soft' : c.blush;
   if (bl === 'soft' || bl === 'line' || bl === 'shy') for (const bx of [150, 362]){ g.beginPath(); g.ellipse(bx, 392, 31, 12.5, 0, 0, Math.PI * 2); g.fillStyle = bl === 'shy' ? 'rgba(255,110,140,0.72)' : bl === 'line' ? 'rgba(255,135,155,0.5)' : 'rgba(255,135,155,0.33)'; g.fill();
     if (bl === 'line' || bl === 'shy') for (const k of [-12, 0, 12]){ g.beginPath(); g.moveTo(bx + k - 4, 398); g.lineTo(bx + k + 4, 386); g.lineWidth = 2; g.strokeStyle = 'rgba(238,105,128,0.8)'; g.stroke(); } }
-  /* v845 老人家的紋路：額頭兩三條、眼尾魚尾紋、眼袋、嘴角兩邊的法令紋。線條淡、圓圓的，維持可愛 */
+  /* v852 老人家的紋路：額頭兩三條、眼尾魚尾紋、眼袋、嘴角兩邊的法令紋。線條淡、圓圓的，維持可愛 */
   if (c.old){ const WR = 'rgba(165,105,92,0.55)', ln = (pts, w) => { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 4) g.quadraticCurveTo(pts[i], pts[i + 1], pts[i + 2], pts[i + 3]); g.lineWidth = w; g.lineCap = 'round'; g.strokeStyle = WR; g.stroke(); };
     for (const [y, w, wd] of [[212, 3.2, 70], [228, 2.6, 52]]) ln([256 - wd, y + 4, 256, y - 6, 256 + wd, y + 4], w);
     for (const [x, s] of [[170, 1], [342, -1]]){ const ox = x - 72 * s; ln([ox, 330, ox - 14 * s, 326, ox - 22 * s, 318], 2.6); ln([ox + 2 * s, 344, ox - 14 * s, 344, ox - 22 * s, 340], 2.6);   /* 魚尾紋 */
@@ -5517,7 +5517,7 @@ K3.acc = (k, c) => { const C = c.c || {}, U = k.meshes.face && k.meshes.face.use
   k.ears = [-1, 1].map(sd => { const g = new THREE.Group(); g.name = 'k3_ear'; g.position.copy(new THREE.Vector3(sd * 0.352, 0.392, -0.008).applyMatrix4(fm.bindMatrix).applyMatrix4(bi));   /* 耳垂（模型座標）換到頭骨頭的座標 */
     const q = new THREE.Quaternion(); new THREE.Matrix4().copy(bi).multiply(fm.bindMatrix).decompose(new THREE.Vector3(), q, new THREE.Vector3()); g.quaternion.copy(q); g.scale.setScalar(1.35 / new THREE.Vector3().setFromMatrixScale(new THREE.Matrix4().copy(bi).multiply(fm.bindMatrix)).x);
     for (const o of D.mk(m)){ o.castShadow = false; g.add(o); } hb.add(g); return g; }); };
-/* v845 老花眼鏡（程式做）：兩個圓框、鼻樑、兩根鏡腳掛到耳朵；座標用模型座標（眼睛中心 x ±0.168、y 0.478、臉面 z ≈ 0.29），換到頭骨頭上 */
+/* v852 老花眼鏡（程式做）：兩個圓框、鼻樑、兩根鏡腳掛到耳朵；座標用模型座標（眼睛中心 x ±0.168、y 0.478、臉面 z ≈ 0.29），換到頭骨頭上 */
 K3.glasses = (k, c) => { const on = !!c.glasses; if (!!k.glsOn === on) return; k.glsOn = on;
   if (k.gls){ if (k.gls.parent) k.gls.parent.remove(k.gls); k.gls.traverse(o => { if (o.geometry) o.geometry.dispose(); }); k.gls = null; } if (!on) return;
   const fm = k.meshes.face, hb = k.bones.head; if (!fm || !hb) return; const sk = fm.skeleton, bi = sk.boneInverses[sk.bones.indexOf(hb)]; if (!bi) return;
@@ -5664,7 +5664,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
     K3.setFace(k, ex, mine); }
   if (k.hairW && K3.asset.hair[k.hairW]){ try { const c = k.cfg || K3.cfg; K3.setHair(k, k.hairW); K3.colorHair(k); k.hatK = ''; K3.hat(k, c); if (f) f._lod = -1; } catch(e){ console.warn('hair', e); k.hairW = null; } } };
 /* v710 同步：每個人（自己、別的玩家、之後的村民）都可以是新人物。自己的設定在 K3.cfg；別人的從 presence 的 k3 來（f.k3c） */
-{ const s0 = K3.sync; K3.sync = (a, f) => { s0(a, f); if (f && f.k3old && a.k3 && a.k3.bones && !f.emote && !f.held) try { oldPose(f, a.k3.bones); } catch(e){} }; }   /* v845 老人家的姿勢蓋在新人物最後的姿勢上 */
+{ const s0 = K3.sync; K3.sync = (a, f) => { s0(a, f); if (f && f.k3old && a.k3 && a.k3.bones && !f.emote && !f.held) try { oldPose(f, a.k3.bones); } catch(e){} }; }   /* v852 老人家的姿勢蓋在新人物最後的姿勢上 */
 K3.cfgOf = f => { if (f === me) return K3.on ? K3.cfg : null; const c = f.k3c || null; if (!c || !f.isNpc || !f.rainWear) return c;   /* v714 下雨天村民穿雨衣（顏色跟原本村民的雨衣一樣） */
   if (!f._k3r || f._k3r.src !== c){ f._k3r = Object.assign({}, c, { top: 'rain', c: Object.assign({}, c.c, { top: (f.av && f.av.rainCol) || '#f6c83b' }) }); f._k3r.src = c; } return f._k3r; };
 K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
@@ -5712,7 +5712,7 @@ function kidFidget(f, K, W, v){ const T = now(); let busy = false; if (f === me)
   const ac = K.acts[k], d = Math.min(4.5, ac.getClip().duration || 2); ac.reset(); ac.play(); f.fid = { k, at: T, until: T + d }; }
 /* v640 小動作第二批：① 坐著（碼頭邊、長椅）的時候兩隻小腿會輪流慢慢晃；② 下雨天在外面、沒穿雨衣、站著或走路時，肩膀縮起來、頭低低的，偶爾抖一下。
    都是在骨架動畫算完以後再疊一點點旋轉，所以不用新的動作檔。 */
-/* v845 老人家的姿勢：背微駝、肩膀往前、頭往前探再抬起來看前面；沒在釣魚、沒坐著的時候兩手背在後面（散步、站著都是） */
+/* v852 老人家的姿勢：背微駝、肩膀往前、頭往前探再抬起來看前面；沒在釣魚、沒坐著的時候兩手背在後面（散步、站著都是） */
 function oldPose(f, B){ const sit = f.sitting, fish = f.fishing, cane = !!(f.k3c && f.k3c.cane) && !sit && !fish;
   if (B.spine) B.spine.rotation.x += sit ? 0.1 : 0.14; if (B.chest) B.chest.rotation.x += sit ? 0.1 : 0.18; if (B.head) B.head.rotation.x -= sit ? 0.12 : 0.24;
   if (sit || fish || !B.upperarml || !B.lowerarml || !B.upperarmr || !B.lowerarmr || !B.handl || !B.handr){ oldCane(f, B, false); return; }
@@ -5721,7 +5721,7 @@ function oldPose(f, B){ const sit = f.sitting, fish = f.fishing, cane = !!(f.k3c
     if (cane && s === 'r'){ const sw = f.k3cw || 0; K3.aim(B.upperarmr, B.lowerarmr, new THREE.Vector3(-0.22, -0.9, 0.28 + sw * 0.25).normalize().applyQuaternion(q)); K3.aim(B.lowerarmr, B.handr, new THREE.Vector3(-0.05, -0.85, 0.45 + sw * 0.2).normalize().applyQuaternion(q)); continue; }   /* 拄拐杖那隻手往前下方伸，走路時跟著前後擺一點 */
     K3.aim(B['upperarm' + s], B['lowerarm' + s], new THREE.Vector3(sg * 0.18, -0.85, -0.45).normalize().applyQuaternion(q)); K3.aim(B['lowerarm' + s], B['hand' + s], new THREE.Vector3(-sg * 0.85, 0.05, -0.35).normalize().applyQuaternion(q)); }
   oldCane(f, B, cane); }   /* 手擺好了才擺拐杖 */
-/* v845 拐杖：掛在右手上，每一格都轉成直直往下、長度剛好碰到地面；上面一個彎彎的把手 */
+/* v852 拐杖：掛在右手上，每一格都轉成直直往下、長度剛好碰到地面；上面一個彎彎的把手 */
 function oldCane(f, B, on){ const k = f.av && f.av.k3; if (!k) return; let c = k.cane;
   if (!on){ if (c) c.visible = false; return; }
   if (!c || c.parent !== B.handr){ if (c && c.parent) c.parent.remove(c); const m = new THREE.MeshStandardMaterial({ color: '#7a5232', roughness: 0.6 }); c = new THREE.Group(); c.name = 'k3_cane';
@@ -5922,7 +5922,7 @@ function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG
   if (k === 'full'){ S(0.17, 0, -0.17, 0.19, 1.4, 1.0, 0.8); S(0.1, 0, -0.3, 0.23, 1.1, 1.0, 0.7); } }
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); if (this.isNpc){ this.k3c = K3.npc(this.npcName, opts.shirt); this.k3old = !!(this.k3c && this.k3c.old); }   /* v845 老人家（姿勢、拐杖看 k3c.old / k3c.cane） */   /* v711 村民也是新人物，照名字固定配一套 */ this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); if (this.isNpc){ this.k3c = K3.npc(this.npcName, opts.shirt); this.k3old = !!(this.k3c && this.k3c.old); }   /* v852 老人家（姿勢、拐杖看 k3c.old / k3c.cane） */   /* v711 村民也是新人物，照名字固定配一套 */ this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
     if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
@@ -7303,8 +7303,8 @@ function actionDown(){
     { const cr = nearCritter(); if (cr){ act.classList.remove('down'); grabCritter(cr); return; } }
    /* 紅樹林泥灘：徒手抓 */
     { const lt = nearLitter(); if (lt){ act.classList.remove('down'); pickLitter(lt); return; } }   /* 水圳：撿垃圾 */
-    if (blGateNear()){ act.classList.remove('down'); blOpen(-2); return; }   /* v850 建地島：選街 */
-    { const h = blHere(); if (h){ act.classList.remove('down'); blOpen(h.i); return; } }   /* v850 建地島：站在一格建地上 */
+    if (blGateNear()){ act.classList.remove('down'); blOpen(-2); return; }   /* v852 建地島：選街 */
+    { const h = blHere(); if (h){ act.classList.remove('down'); blOpen(h.i); return; } }   /* v852 建地島：站在一格建地上 */
     if (Wild.place){ act.classList.remove('down'); wildPlaceConfirm(); return; }   /* v600 放營火、遮雨棚、小木屋 */
     { const wn = nearWildNode(); if (wn){ act.classList.remove('down'); wildGather(wn); return; } }   /* v590 漂流島：撿材料 */
     if (nearWildBoat()){ act.classList.remove('down'); Wild.trip = null; travelTo(TRAVEL.find(t => t.id === 'harborsq')); return; }   /* v592 漂流島碼頭：坐船回村子 */
@@ -7920,8 +7920,8 @@ function updateJumpers(dt, t){
   }
 }
 
-/* ================= v850 🏘️ 建地島（作者 11/25：「我有朋友就想要我蓋的東西大家都看得到」「必須為以後人越來越多做準備」「就怕地太小」）=================
-   西邊公寓外的海上，走木橋過去。一條街 9 格（3×3），每格 20×20 公尺，最高 32 層（16 公尺），一格最多 3000 塊。伺服器 229_build_lots.sql。
+/* ================= v852 🏘️ 建地島（作者 11/25：「我有朋友就想要我蓋的東西大家都看得到」「必須為以後人越來越多做準備」「就怕地太小」）=================
+   西邊公寓外的海上，走木橋過去。一條街 9 格（3×3），每格 20×20 公尺，最高 32 層（16 公尺），一格最多 3000 塊。伺服器 230_build_lots.sql。
    ・每條街是同一座島，只是裝的建築不同：入口的路牌選要逛哪一街（一街快滿了自動開二街，沒有上限）。
    ・每人最多申請一格；主人可以邀好友一起蓋（共同建造者，最多 6 人）。14 天沒上線建地就讓給別人，蓋的東西存成設計圖，下次一鍵蓋回來。
    ・蓋東西用小島同一套方塊工具（Blk），只是原點換成建地中心、範圍和上限不同。
@@ -9018,7 +9018,7 @@ const BPAL = ['#f2eee4', '#d9d4c7', '#9c9a92', '#5a5a62', '#2c2c32', '#d4483a', 
 /* 碰撞：box＝整塊擋、half＝半塊高、panel＝像隔板一樣薄、null＝不擋（地磚、門、遮雨棚走得過去） */
 const BSHP_COL = { cb:'box', hf:'half', tl:null, sl:'box', st:'box', qr:'box', cy:'box', dm:'half', ar:'box', dr:null, dt:null, wr:'panel', ws:'panel', aw:null };
 const BLK_MAX = 1500, BLK_LAYERS = 16;
-/* v850 同一套工具也用在建地島：Blk.lot 有東西時，原點是那格建地的中心，最高 32 層、最多 3000 塊 */
+/* v852 同一套工具也用在建地島：Blk.lot 有東西時，原點是那格建地的中心，最高 32 層、最多 3000 塊 */
 const blkO = () => Blk.lot ? Blk.lot.o : ISLE, blkMax = () => Blk.lot ? 3000 : BLK_MAX, blkLay = () => Blk.lot ? 32 : BLK_LAYERS;
 const Blk = { on:false, t:'wood', r:0, c:0, erase:false, b:[], owner:null, g:null, ims:{}, pend:{ add:[], del:[] }, timer:0, busy:false, paint:null, rc:new THREE.Raycaster(), v:new THREE.Vector2(), tex:{},
   mode:'one', H:4, mir:false, undo:[], plan:null, rect:null, cat:'shape' };
@@ -21124,7 +21124,7 @@ function renderTab0(){
         ["一次生 1～3 條。每條 5% 機會突變，0.5% 機會稀有突變（白化、金鱗、黑化、夜光、寶石眼）。", "能配的有 13 種。有基因的魚最多養 60 條，配種缸可以用金幣加到 4 缸。", "變種帶基因的配變種，一半是變種；兩條帶基因的配，四分之一是變種。", "春夏是野外繁殖季。含著小魚的母吳郭魚放流多 5 愛海點數。"]],
       ["買東西、賣魚", "home", ["潮汐魚市場在港邊廣場，裡面三個櫃位：賣魚、阿福海產、釣客擺攤。", "魚越稀有、越重越值錢。", "釣具店賣釣竿、魚餌、窩料、工具。", "衣服可以先試穿再買，大家都看得到你穿什麼。", "阿萍的美髮沙龍在阿綾服裝店對面，剪了染了就是你的。", "造型頁最下面可以自己畫衣服，還能放到設計師市集賣。", "魚市場的「跑船生意」：把魚載到別的地方賣比較貴。"],
         ["跑船：一次最多 10 條。村子的魚載去珊瑚礁島、礁島的魚載回村子，都多三成。裝船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半。要過 45 秒才能賣。", "阿萍：新髮色 200 金幣，新髮型 400。", "自己畫的衣服是 32×32 格、48 色。別人買了你拿九成。被檢舉三次會下架。"]],
-      ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型十一種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭、平頭、西瓜頭、中分短髮。", "還能戴帽子、口罩、耳環。每一件都能換顏色。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
+      ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型十四種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭、平頭、西瓜頭、中分短髮、捲捲短髮、雙麻花辮、長直髮。", "還能戴帽子、口罩、耳環。每一件都能換顏色。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
         ["每週一換一個穿搭主題，身上穿到 2 件以上，釣魚多一成經驗。", "幫別人的穿搭按讚，一週最多 30 次。"]],
       ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小烏龜釣魚時偶爾會撈到（小海龜只能用撈的）。水獺之後的活動才會出現。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶貓出門，附近有魚群牠會叫。你停下來牠會坐下看你。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
         ["餵食會用掉魚缸的魚。一天第一次親密度加 15（稀有魚 20、傳說魚 25），之後同一天每次加 1。", "親密度 10 以上每天帶一份小禮物，60 戴項圈，150 再戴小帽子。", "圍欄、海水池、烏龜缸各 1,500 金幣，一個住 5 隻。", "市集賣出賣家拿九成，買的人親密度重來。名字最多 8 個字。", "釣到三棘鱟有兩成機會跟來一隻小鱟。"]],
@@ -22352,7 +22352,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
-  { id:'uLOTS', d:'11/26', items:[['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
+  { id:'u852', d:'11/26', items:[['💇','新髮型三種：捲捲短髮、雙麻花辮、長直髮，到造型頁「髮型」選', 'closet'], ['🧓','村子裡的老人家看起來更像老人了：背有點駝、手背在後面散步、臉上有皺紋，有的戴老花眼鏡、拄拐杖'], ['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
   { id:'u849', d:'11/25', items:[['🌳','村子裡的樹變少了：路邊不再有樹擋路，西邊公寓旁清出一大塊空地（之後要做建地）']] },
   { id:'u850', d:'11/25', items:[['🔍','鏡頭可以拉得更近（兩指捏合），近看寵物；拉近時會往腳邊看'], ['⚙️','設定整理：搖桿固定在左下角、一律俯瞰視角、拿掉「改回原本的人物」']] },
   { id:'u847', d:'11/25', items:[['💬','新的聊天框：聊天列上面一行顯示最新一句，點一下展開最近 5 句；左邊切換看全村／附近／隱藏，⚙️ 可以設定誰聽得到你、檢舉說不好的話的人']] },
