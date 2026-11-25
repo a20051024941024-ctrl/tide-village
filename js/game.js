@@ -13565,8 +13565,9 @@ function fpTick(dt){ if (FP.act && ((FP.lkT = (FP.lkT || 0) + dt) > 0.5)){ FP.lk
     if (F.spot && F.spot.id === 'icelake'){ const k2 = d < 0.75 ? 0.75 / Math.max(0.2, d) : 1; FP.tgt.set(me.pos.x + (B.x - me.pos.x) * k2, me.baseY + 0.02, me.pos.z + (B.z - me.pos.z) * k2); }
     FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
   else if (FP.c && FP.c.fl && FP.c.fl.st === 1 && FP.c.fl.q){ FP.tgt.copy(FP.c.fl.q.position); FP.look.lerp(FP.tgt, 1 - Math.exp(-5 * dt)); }   /* v837 低頭看地上跳的魚 */
-  else if (FP.c){ const fx = FP.look.x - FP.eye.x, fz = FP.look.z - FP.eye.z, fl = Math.hypot(fx, fz) || 1; FP.tgt.set(FP.eye.x + fx / fl * 4, FP.eye.y - (FP.c.t < 1.25 ? 0.05 : FP.c.t < 2.6 ? 0.45 : 0.9), FP.eye.z + fz / fl * 4); FP.look.lerp(FP.tgt, 1 - Math.exp(-4 * dt)); }   /* 魚出水：抬頭看竿尖和吊著的魚；要拿魚了再低頭看手 */
+  else if (FP.c){ const fx = FP.c.fl ? Math.sin(me.rot) : FP.look.x - FP.eye.x, fz = FP.c.fl ? Math.cos(me.rot) : FP.look.z - FP.eye.z,   /* v841 看完地上跳的魚要轉回水面（以前會一直看著旁邊的地上，要走一下才回來） */ fl = Math.hypot(fx, fz) || 1; FP.tgt.set(FP.eye.x + fx / fl * 4, FP.eye.y - (FP.c.t < 1.25 ? 0.05 : FP.c.t < 2.6 ? 0.45 : 0.9), FP.eye.z + fz / fl * 4); FP.look.lerp(FP.tgt, 1 - Math.exp(-4 * dt)); }   /* 魚出水：抬頭看竿尖和吊著的魚；要拿魚了再低頭看手 */
   else if (!FP.c && F.phase === 'charging'){ const ih = F.spot && F.spot.id === 'icelake' && F.spot.hole; if (ih) FP.tgt.set(ih[0], me.baseY + 0.02, ih[1]); else FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
+  else if (!FP.c && F.phase === 'idle'){ FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL + 0.3, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-3 * dt)); }   /* v841 作者：「釣起來看到魚之後畫面會卡住，要移動才會變回來」→ 看完卡片慢慢抬頭看回前面 */
   if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
   if (!isFinite(camera.position.x + camera.position.y + camera.position.z)) camera.position.copy(FP.eye);
   FP.inT = (FP.inT || 0) + dt; camera.up.set(0, 1, 0); camera.position.lerp(FP.eye, 1 - Math.exp(-(3 + 11 * Math.min(1, FP.inT / 0.7)) * dt)); camera.lookAt(FP.look); camLook.copy(FP.look);   /* 剛切進來的 0.7 秒慢慢移過去 */
@@ -22121,6 +22122,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u841', d:'11/25', items:[['🔧','修好第一人稱釣到魚後畫面卡在旁邊：看完魚會自己轉回前面的水面']] },
   { id:'u839', d:'11/25', items:[['🐟','翡翠河鱸和銀鱗鯽也換成真實的樣子了：河鱸綠底黑條紋、橘紅色的鰭，鯽魚一片一片銀色鱗片']] },
   { id:'u837', d:'11/25', items:[['🐢','寵物斑龜換成新的模型：會一步一步爬、伸頭東張西望、害怕就縮頭，休息時趴著曬太陽'], ['📷','第一人稱釣魚也會看到魚甩到地上跳，低頭看牠跳完再撿起來'], ['🐟','魟魚、螃蟹、章魚這種扁的，拉上來是平平趴著抖，不會翻成側躺']] },
   { id:'u836', d:'11/25', items:[['🎏','朱紅錦鯉換成真實的樣子：紅白花紋、鱗片、鬍鬚都看得到，游泳會擺尾巴']] },

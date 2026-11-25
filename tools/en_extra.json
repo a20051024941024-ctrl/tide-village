@@ -8823,5 +8823,6 @@
  "寵物斑龜換成新的模型：會一步一步爬、伸頭東張西望、害怕就縮頭，休息時趴著曬太陽": "The pet pond turtle has a new model: it crawls step by step, pokes its head out to look around, pulls it in when scared, and basks when resting",
  "第一人稱釣魚也會看到魚甩到地上跳，低頭看牠跳完再撿起來": "In first-person fishing you also see the fish land and flop on the ground; look down, then pick it up",
  "魟魚、螃蟹、章魚這種扁的，拉上來是平平趴著抖，不會翻成側躺": "Flat catches like rays, crabs and octopus now lie flat and twitch instead of tipping onto their side",
- "翡翠河鱸和銀鱗鯽也換成真實的樣子了：河鱸綠底黑條紋、橘紅色的鰭，鯽魚一片一片銀色鱗片": "The emerald perch and silver crucian now look real too: green perch with black bars and orange-red fins, crucian with silvery scales"
+ "翡翠河鱸和銀鱗鯽也換成真實的樣子了：河鱸綠底黑條紋、橘紅色的鰭，鯽魚一片一片銀色鱗片": "The emerald perch and silver crucian now look real too: green perch with black bars and orange-red fins, crucian with silvery scales",
+ "修好第一人稱釣到魚後畫面卡在旁邊：看完魚會自己轉回前面的水面": "Fixed the first-person view getting stuck to the side after a catch: it now turns back to the water"
 }
