@@ -1488,7 +1488,7 @@ function tap(w){
   if(S.raid&&S.phase==='deploy'){let bi=0,bd=1e9;DIRS.forEach((d,i)=>{const dd=Math.hypot(w.x-d[1]*(RR()+2),w.y-d[2]*(RR()+2));if(dd<bd){bd=dd;bi=i}});deploy(bi);return}
   if(tapDrop(w))return;
   if(!S.raid&&!selU.size&&!place){const eb=hitAt(w,1,false,true)||hitAt(w,1,true,true);const ct=eb&&(eb.key==='camp'?eb:eb.camp&&eb.camp.hp>0?eb.camp:null);if(ct){sel=ct;menuOpen=false;barSig='';S.fx.push({k:'ring',x:ct.x,y:ct.y,t:0,life:.5,c:'#ff5a46'});snd('ord',300,.06,'triangle',.03,60);return}}
-  if(!S.raid&&!selU.size){const ce=hitAt(w,0,true,false);if(ce&&stkReady(ce)){collect(ce);return}}
+  if(!S.raid&&!selU.size&&!place){let ce=null,bd=.75;for(const e of S.ents)if(stkReady(e)){const d=Math.hypot(w.x-e.x,w.y-(e.y-e.d.vh-.35));if(d<bd){bd=d;ce=e}}if(!ce){const hb=hitAt(w,0,false,true);if(hb&&stkReady(hb))ce=hb}if(ce){collect(ce);for(const e of S.ents)if(e!==ce&&stkReady(e)&&Math.hypot(e.x-ce.x,e.y-ce.y)<2.2)collect(e);return}}
   selPlot=null;if(!S.raid&&!selU.size){const p=forSale().find(q=>Math.hypot(w.x-q.x0-2,w.y-q.y0-1.8)<.85);if(p){selPlot=p;sel=null;menuOpen=false;barSig='';snd('ord',420,.06,'triangle',.03,60);return}}
   const mine=hitAt(w,0,true,false);
   if(selU.size){const foe=hitAt(w,1,true,true);
