@@ -68,7 +68,8 @@ h1{font-size:42px;font-weight:900;line-height:1.05;margin:6px 0 2px;color:var(--
 /* 大地圖（作者 11/25：大家出現在同一張地圖上、可以結盟、可以攻打） */
 #wmap{padding-top:10px}
 .wm-hd{width:100%;max-width:620px;display:flex;align-items:center;justify-content:space-between;color:var(--par)}
-.wm-hd .gx{position:static}
+.wm-hd #wmX{display:block;position:static;flex:none;width:44px;height:44px;border-radius:50%;border:3px solid #3a2a17;background:#d23a2a;color:#fff;font-size:20px;font-weight:900;box-shadow:0 3px 0 #3a2a17}
+@media(orientation:landscape){#wmC{height:min(70vh,440px)}}
 .wm-wrap{position:relative;width:100%;max-width:620px;margin:8px 0 12px;border-radius:12px;overflow:hidden;border:2px solid #6b4a2a;flex:none}
 #wmC{display:block;width:100%;height:min(62vh,440px);touch-action:none;cursor:grab}
 .wm-zm{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
@@ -277,6 +278,7 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
     <div class="wm-wrap"><canvas id="wmC"></canvas><div class="wm-zm"><button id="wmIn" aria-label="放大">＋</button><button id="wmOut" aria-label="縮小">－</button><button id="wmMe" aria-label="回到我的主堡">🏰</button></div><p class="wm-msg" id="wmMsg"></p></div>
     <div class="panel" id="wmSel" hidden></div>
     <div class="panel" id="wmAl"></div>
+    <button class="go alt" id="wmX2">返回出征</button>
   </section>
   <section class="ov" id="gacha" hidden>
     <div class="ghead"><p class="big" style="font-size:34px;margin-top:6px">召喚</p><p class="sub" id="gT"></p><button class="gx" id="gX" aria-label="返回領地">✕</button></div><div class="gtabs"><button data-gt="ev" class="on">活動</button><button data-gt="col">圖鑑</button><button data-gt="grave" id="gtGrave">墓園</button><button data-gt="sk">主堡外觀</button></div>
@@ -1320,7 +1322,7 @@ function wmMe(){return WM.d&&WM.d.bases.find(b=>b.id===WM.d.me)}
 function wmAlly(id){return WM.d&&WM.d.allies.find(a=>a.id===id)}
 function wmRel(b){const d=WM.d;if(!d)return 'x';if(b.id===d.me)return 'me';if(d.aid&&b.aid===d.aid)return 'ally';return 'x'}
 function openWorld(){$('#raids').hidden=true;$('#wmap').hidden=false;const c=$('#wmC');WM.sel=null;wmLoad(true).then(()=>{const m=wmMe();if(m){WM.cx=m.x;WM.cy=m.y}});
-  if(!c.dataset.on){c.dataset.on=1;wmInput(c);$('#wmX').onclick=closeWorld;$('#wmIn').onclick=()=>wmZoom(1.35);$('#wmOut').onclick=()=>wmZoom(1/1.35);$('#wmMe').onclick=()=>{const m=wmMe();if(m){WM.cx=m.x;WM.cy=m.y}}}
+  if(!c.dataset.on){c.dataset.on=1;wmInput(c);$('#wmX').onclick=closeWorld;$('#wmX2').onclick=closeWorld;$('#wmIn').onclick=()=>wmZoom(1.35);$('#wmOut').onclick=()=>wmZoom(1/1.35);$('#wmMe').onclick=()=>{const m=wmMe();if(m){WM.cx=m.x;WM.cy=m.y}}}
   clearInterval(WM.poll);WM.poll=setInterval(()=>{if($('#wmap').hidden){clearInterval(WM.poll);return}wmLoad(true)},30000);cancelAnimationFrame(WM.raf);const loop=()=>{if($('#wmap').hidden)return;wmDraw();WM.raf=requestAnimationFrame(loop)};WM.raf=requestAnimationFrame(loop);wmAlDraw()}
 function closeWorld(){if(WM.march){toast('隊伍正在路上。');return}$('#wmap').hidden=true;clearInterval(WM.poll);openRaids()}
 function wmZoom(k){const c=$('#wmC'),fit=Math.min(c.clientWidth,c.clientHeight)/WM_N;WM.cell=clamp(WM.cell*k,fit,34)}

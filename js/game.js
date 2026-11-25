@@ -3471,7 +3471,10 @@ function owR(a, b, c, k){ let h = (a * 374761393 + b * 668265263 + c * 214748364
 function owOpen(x, z, R){ if (Math.abs(x) > 186 || Math.abs(z) > 186 || !boatWater(x, z)) return false; for (let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2, px = x + Math.cos(a) * R, pz = z + Math.sin(a) * R; if (walkable(px, pz) || deckAt(px, pz) || (Math.abs(px) < 190 && Math.abs(pz) < 190 && !boatWater(px, pz) && !(Math.hypot(px - ISLE.x, pz - ISLE.z) < ISLE.r + 16))) return false; } return Math.hypot(x - ISLE.x, z - ISLE.z) > ISLE.r + 40; }
 function owCellOk(cx, cz){ const k = cx + ',' + cz; if (!OW.ok.has(k)){ const x = (cx + 0.5) * OW_CELL, z = (cz + 0.5) * OW_CELL; OW.ok.set(k, owOpen(x, z, 40) ? (owOpen(x, z, 70) ? 2 : 1) : 0); } return OW.ok.get(k); }
 // 這一格這段時間的計畫（同樣的格子、同樣的 20 分鐘，大家算出來都一樣）
-function owPlan(cx, cz, W){ const ok = owCellOk(cx, cz); if (!ok) return null; const r = owR(cx, cz, W, 1); let acc = 0, k = null;
+/* v826 作者截圖「海豚跑進來」：以前只看路線終點是不是海，中間整段直線可能穿過主島，海豚群就從潮汐廣場上面游過去。現在沿路每 6 公尺檢查一次，換 8 個方向找一條全程都在開闊海面的路；找不到就縮短距離，再不行這一格就不出現。算過的存起來（每秒都會問） */
+function owPathOk(x0, z0, hd, L){ for (let s = 0; s <= L + 0.1; s += 6){ const x = x0 + Math.sin(hd) * s, z = z0 + Math.cos(hd) * s; if (!owOpen(x, z, 12)) return false; } return true; }
+function owPlan(cx, cz, W){ const key = cx + ',' + cz + ',' + W; OW.plan = OW.plan || new Map(); if (OW.plan.has(key)) return OW.plan.get(key); if (OW.plan.size > 400) OW.plan.clear(); const P = owPlan0(cx, cz, W); OW.plan.set(key, P); return P; }
+function owPlan0(cx, cz, W){ const ok = owCellOk(cx, cz); if (!ok) return null; const r = owR(cx, cz, W, 1); let acc = 0, k = null;
   for (const [id, S] of Object.entries(OW_SP)){ acc += S.p; if (r < acc){ k = id; break; } } if (!k || (k === 'sperm' && ok < 2)) return null; if (owR(cx, cz, W, 77) > OW_SP[k].keep) return null;
   const R = i => owR(cx, cz, W, 10 + i), P = { k, cx, cz, W };
   if (k === 'bluewhale'){ P.nb = 3 + Math.floor(R(1) * 4); P.breach = R(2) < 1 / 30; P.dur = 6 + P.nb * 17 + 14 + (P.breach ? 6 : 0); P.spd = 2.0; }
@@ -3480,7 +3483,7 @@ function owPlan(cx, cz, W){ const ok = owCellOk(cx, cz); if (!ok) return null; c
   else if (k === 'sperm'){ P.log = 60 + Math.floor(R(1) * 40); P.dur = 6 + P.log + 12; P.spd = 0.3; }
   else { P.n = 5 + Math.floor(R(1) * 8); P.dur = 50 + Math.floor(R(2) * 30); P.spd = 6.0; }
   const x0 = (cx + 0.2 + R(5) * 0.6) * OW_CELL, z0 = (cz + 0.2 + R(6) * 0.6) * OW_CELL; let hd = R(7) * Math.PI * 2; const L = P.spd * P.dur;
-  if (!owOpen(x0 + Math.sin(hd) * L, z0 + Math.cos(hd) * L, 25)) hd += Math.PI; if (!owOpen(x0 + Math.sin(hd) * L, z0 + Math.cos(hd) * L, 25)){ P.spd *= 0.3; }
+  { let got = false; for (const sc of [1, 0.3]) { for (let i = 0; i < 8 && !got; i++){ const h = hd + (i % 2 ? -1 : 1) * Math.ceil(i / 2) * Math.PI / 4; if (owOpen(x0 + Math.sin(h) * L * sc, z0 + Math.cos(h) * L * sc, 25) && owPathOk(x0, z0, h, L * sc)){ hd = h; got = true; } } if (got){ P.spd *= sc; break; } } if (!got) return null; }
   P.x0 = x0; P.z0 = z0; P.hd = hd; P.st = 20 + R(9) * (OW_WIN - P.dur - 40); return P; }
 function owModel(k){ const S = OW_SP[k]; let m;
   if (k === 'humpback'){ if (!MFISH.geo.humpback) return null; m = new THREE.Group(); m.userData.mf = MFISH.of.humpback || (MFISH.of.humpback = { k:'humpback', albino:false }); mfishFill(m); m.userData.tail = new THREE.Object3D(); }
@@ -3555,7 +3558,7 @@ OW.update = function(t){
     for (const [k, P] of want) if (!OW.act.has(k)){ const m = owModel(P.k); if (m) OW.act.set(k, { P, m, seenNear:false }); } }
   let photo = false;
   for (const e of OW.act.values()){ const P = e.P, u = inW - P.st + (bossNow() % 1000) / 1000 * 0, L = OW_SP[P.k].len, m = e.m, d = Math.hypot(m.position.x - mx, m.position.z - mz);
-    if (P.k === 'dolphin'){ const s = u * P.spd, fx = Math.sin(P.hd), fz = Math.cos(P.hd), sx = fz, sz = -fx, fade = smooth01(u / 3) * (1 - smooth01((u - P.dur + 4) / 4));
+    if (P.k === 'dolphin'){ const s = u * P.spd, fx = Math.sin(P.hd), fz = Math.cos(P.hd), sx = fz, sz = -fx, fade0 = smooth01(u / 3) * (1 - smooth01((u - P.dur + 4) / 4));
       let gx = P.x0 + fx * s, gz = P.z0 + fz * s, gh = P.hd;
       /* 海豚跟船（bow riding）：你在划船、海豚群在 40 公尺內，就跑到船頭前面一起游 */
       /* v282：跟著別人的船也大家看得到 —— 誰的船在帶這群海豚，會告訴附近的人（owbow），大家都畫在那艘船的船頭前面 */
@@ -3580,11 +3583,14 @@ OW.update = function(t){
           if (e.apX == null) e.apX = false; }
         if (on && e.apX) e.ap = Math.min(1, (e.ap || 0) + dtq / 5); else if (e.ap) e.ap = Math.max(0, e.ap - dtq / 5);
         if (e.ap){ const b = smooth01(e.ap); gx += (e.apX + Math.sin(u * 0.5) * 2 - gx) * b; gz += (e.apZ + Math.cos(u * 0.4) * 2 - gz) * b; } }
+      /* v826 保險：海豚群現在的位置不是開闊的海（岸上、沙灘、碼頭、淺水），就潛下去不露出來 */
+      { const wet = boatWater(gx, gz) && !walkable(gx, gz) && !deckAt(gx, gz); e.wetK = e.wetK == null ? (wet ? 1 : 0) : clamp(e.wetK + (wet ? 1 : -1) / 40, 0, 1); }
+      const fade = fade0 * e.wetK;
       m.position.set(gx, waterY(gx, gz, now()), gz); m.rotation.set(0, gh - Math.PI / 2, 0);
       m.children.forEach((dm, i) => { if (i >= P.n){ dm.visible = false; return; } dm.visible = fade > 0.02; const ox = (owR(P.cx, P.cz, P.W, 40 + i) - 0.5) * 9, oz = (owR(P.cx, P.cz, P.W, 60 + i) - 0.5) * 7, ph = u * 2.1 + i * 1.7, arc = Math.sin(ph);
         dm.position.set(oz, (arc > 0 ? arc * 2.3 - 0.45 : arc * 1.0 - 0.45) * fade + (fade - 1) * 2, ox); dm.rotation.set(0, 0, Math.cos(ph) * 0.65);
         if (Math.abs(arc) < 0.06 && Math.cos(ph) < 0 && dm.visible && d < 70 && (e.spl || 0) < u - 0.25){ e.spl = u; const wp = dm.getWorldPosition(new THREE.Vector3()); ripple(wp.x, wp.z, false); } });
-      if (d < 45 && u > 4 && u < P.dur - 4 && owOnScreen(m.position)) e.seenNear = true; if (e.seenNear){ if (!OW.seen.has('dolphin')) owMark(e, '🐬 海豚群'); owSight('dolphin'); } owMarkStep(e, 1.6); continue; }   /* v305：看到的當下就說（以前等牠們走了才跳通知，找不到） */
+      if (d < 45 && u > 4 && u < P.dur - 4 && e.wetK > 0.5 && owOnScreen(m.position)) e.seenNear = true; if (e.seenNear){ if (!OW.seen.has('dolphin')) owMark(e, '🐬 海豚群'); owSight('dolphin'); } owMarkStep(e, 1.6); continue; }   /* v305：看到的當下就說（以前等牠們走了才跳通知，找不到） */
     const Q = owPose(e, u);
     /* 從船底下游過：路徑上 8 公尺內有船，就潛深一點從底下穿過去，船被水流輕輕推一下 */
     if (myBoat && P.k !== 'sperm'){ const bd = Math.hypot(Q.x - mx, Q.z - mz); if (bd < OW_SP[P.k].len * 0.6 + 8 && Q.surf && !e.mug){ Q.y = Math.min(Q.y, -((OW.boxH && OW.boxH[P.k]) || 0.15) * OW_SP[P.k].len * 1.3); Q.ev = Q.ev === 'land' ? null : Q.ev; me.pos.x += Math.sin(P.hd) * 0.4 * (1 / 60); me.pos.z += Math.cos(P.hd) * 0.4 * (1 / 60); } }
@@ -13994,7 +14000,7 @@ function cat3Tick(pt, dt, t, mv, tx, tz){ const U = pt.m.userData, C = U.cat3, b
 /* ===== v763 築城守土：作者「整個加進來，讓玩家可以在遊戲裡玩另外一款遊戲」=====
    《築城守土》是作者自己做的另一款遊戲（築城、養兵、出征），整份放在 zc/index.html，這裡只負責入口：潮汐廣場邊一張沙盤桌，走過去按「玩」就整個畫面切過去，按「回潮汐村」再回來。
    兩邊的程式和存檔是分開的（金幣不互通）。玩的時候村子的畫面降到每秒 4 張省電，角色會拿出手機（別人看得到）。 */
-const ZC = { on: false, el: null, at: [9.2, 8.6, -0.75], g: null, flags: [], music: false, V: 54 };
+const ZC = { on: false, el: null, at: [9.2, 8.6, -0.75], g: null, flags: [], music: false, V: 55 };
 function buildZcTable(){ const [X, Z, R] = ZC.at, y0 = groundHeight(X, Z), g = new THREE.Group(); g.position.set(X, y0, Z); g.rotation.y = R; g.userData.keep = true; g.userData.dyn = true; scene.add(g); ZC.g = g;
   const B = (sz, c, p, par) => { const b = box(sz, c, p); (par || g).add(b); return b; }, wood = '#8a5a2b', woodD = '#5a3a22';
   for (const sx of [-0.72, 0.72]) for (const sz of [-0.45, 0.45]) B([0.1, 0.72, 0.1], woodD, [sx, 0.36, sz]);
