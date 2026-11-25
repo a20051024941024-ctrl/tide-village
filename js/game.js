@@ -5717,7 +5717,7 @@ function oldPose(f, B){ const sit = f.sitting, fish = f.fishing, cane = !!(f.k3c
   const root = f.av.g; root.updateMatrixWorld(true); const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.rot);
   for (const [s, sg] of [['l', 1], ['r', -1]]){
     if (cane && s === 'r'){ const sw = f.k3cw || 0; K3.aim(B.upperarmr, B.lowerarmr, new THREE.Vector3(-0.22, -0.9, 0.28 + sw * 0.25).normalize().applyQuaternion(q)); K3.aim(B.lowerarmr, B.handr, new THREE.Vector3(-0.05, -0.85, 0.45 + sw * 0.2).normalize().applyQuaternion(q)); continue; }   /* 拄拐杖那隻手往前下方伸，走路時跟著前後擺一點 */
-    K3.aim(B['upperarm' + s], B['lowerarm' + s], new THREE.Vector3(sg * 0.18, -0.85, -0.45).normalize().applyQuaternion(q)); K3.aim(B['lowerarm' + s], B['hand' + s], new THREE.Vector3(-sg * 0.85, 0.05, -0.35).normalize().applyQuaternion(q)); }
+    }   /* v855 作者：「老人家的手背在後面怪怪的」→ 不再背手，手照原本的動作擺 */
   oldCane(f, B, cane); }   /* 手擺好了才擺拐杖 */
 /* v852 拐杖：掛在右手上，每一格都轉成直直往下、長度剛好碰到地面；上面一個彎彎的把手 */
 function oldCane(f, B, on){ const k = f.av && f.av.k3; if (!k) return; let c = k.cane;
@@ -20567,6 +20567,9 @@ function updateNpcs(dt, t){
     if (n.shopNpc === 'salon'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); if (Salon.poleTex) Salon.poleTex.offset.y = (t * 0.35) % 1; continue; }   /* 阿萍站在店門口顧店；理髮燈一直轉 */
     if (n.shopNpc === 'craft'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); continue; }   /* v255 阿鐵師傅站著顧攤，不釣魚 */
     if (n.amo){ updateAmo(n, dt, t); amoFish(n, dt, t); if (frameNo % 20 === 0) rumorAmo(n); }
+    if (n.amo && n.amoMode === 'pier'){ n.st = 'wait'; n.next = t + 5; if (n.held && n.speed > 0){ n.av.g.remove(n.held.o); n.held = null; }   /* v855 作者：「阿默走路動畫沒做出來」→ 上岸以後還在跑村民的釣魚流程（一直釣到魚、捧著魚），走路動作被蓋掉；上岸就不釣了，走路時把手上的魚收起來 */
+      { const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(npcLine(n), '', 6); n.talkAt = t + rand(20, 40); } }
+      n.update(dt, t); n.placeTag(); continue; }
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
     const st = n.st || 'wait';
     if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z);
@@ -22384,6 +22387,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u855', d:'11/26', items:[['🚶','阿默上岸後走去長椅的時候有走路動作了（以前會站著滑過去，還一直在碼頭釣魚）'], ['🧓','老人家不再把手背在後面，拄拐杖的照舊']] },
   { id:'u854', d:'11/26', items:[['🌉','建地島移到離珊瑚礁遠一點的地方；木橋改接在住宅區中間那條步道的盡頭，岸邊那頭是平順的斜板，走得過去了'], ['🐦','海鳥不會再對著陸地俯衝捕魚']] },
   { id:'u852', d:'11/26', items:[['💇','新髮型三種：捲捲短髮、雙麻花辮、長直髮，到造型頁「髮型」選', 'closet'], ['🧓','村子裡的老人家看起來更像老人了：背有點駝、手背在後面散步、臉上有皺紋，有的戴老花眼鏡、拄拐杖'], ['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
   { id:'u849', d:'11/25', items:[['🌳','村子裡的樹變少了：路邊不再有樹擋路，西邊公寓旁清出一大塊空地（之後要做建地）']] },
