@@ -113,6 +113,12 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
 @keyframes ldp{to{transform:translateY(-3px);box-shadow:0 4px 10px #2f86e066}}
 #login p{margin:8px 0 4px;font-size:13px;line-height:1.4}#login .lnx{color:#a3271a;font-weight:900}
 #login button{min-width:120px;height:40px;border-radius:12px;border:2.5px solid #17386b;background:linear-gradient(#6fc0ff,#2f86e0);color:#fff;font-size:15px;font-weight:900;box-shadow:inset 0 3px 0 #fff6,0 3px 0 #17386b}
+@media(orientation:landscape){#app.idle #stage{grid-row:2/4}
+  #app.idle #bar{grid-row:3;background:none;border:0;box-shadow:none;height:auto;padding:0 8px 8px;pointer-events:none;z-index:3;align-self:end}
+  #app.idle #bar>*{pointer-events:auto}#app.idle #bar .tip{display:none}
+  #app.idle #bar .row button{height:42px;min-width:58px;font-size:13px;opacity:.94}
+  #app.idle #tools{grid-row:3;background:none;border:0;box-shadow:none;z-index:3;padding:0 8px 8px;align-self:end}
+  #app.idle #tools button{height:50px}}
 @keyframes zcpop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
 @media(orientation:landscape){#app{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr) auto}#stage{grid-column:1/3;grid-row:2}
   #bar{grid-column:1;grid-row:3;height:86px;min-height:0;flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;padding:5px 8px;border-left:0;border-top:3px solid #3a2a17;background:linear-gradient(#f6e6c0,#e3c98f);box-shadow:0 -2px 8px #0008;scrollbar-width:none}#bar::-webkit-scrollbar{display:none}
@@ -205,7 +211,7 @@ button:active:not(:disabled){transform:translateY(1px) scale(.97)}.card,.row but
       <li>地圖上有羊、牛、野馬：派村民牽回來，羊和牛變成糧食，野馬帶回獸欄後可以讓步兵上馬。</li>
       <li>育龍巢可以照顧和餵養幼龍：照顧三次送一隻新的龍，餵到滿級可以進化成巨龍。</li>
       <li>伐木場、採石場、牧場不用村民也會自己產資源。攻城工坊製造衝車、投石車、加農砲。靈魂熔爐把兩名同兵種融合成更強的一名。</li>
-      <li>民房會慢慢累積金幣，農田有村民耕作會慢慢長熟，上面冒出金幣或麥穗就點一下收成，或按下面的「全部收」。打倒敵人會掉金幣和藍色經驗星星，點一下撿起來，沒撿過幾秒也會自己飛過來。</li>
+      <li>民房會慢慢累積金幣，農田有村民耕作會慢慢長熟，上面冒出金幣或麥穗就點一下收成。打倒敵人會掉金幣和藍色經驗星星，點一下撿起來，沒撿過幾秒也會自己飛過來。</li>
 <li>蓋城牆或柵欄時，在空地上用一根手指拖曳，可以一次畫出一整排，拖到一半轉彎就變成 L 形，紅色的格子放不下會跳過。點一棟建築按「圍城牆」，會自動在它四周圍一圈、留一個門口。</li>
 <li>點左上角的任務可以打開「目標」：主線任務、每天三個每日任務、本週挑戰、等級與稱號進度、圖鑑還差幾種。主堡升級和奇觀施工要等一段時間，可以用金幣或召喚券加速。</li>
 <li>做任何事都會累積經驗，每升一級送一張召喚券。每天第一次進遊戲可以簽到，累計天數越多獎勵越好，第 2、5、15、30、50 天會送強力的龍族。</li>
@@ -1035,7 +1041,7 @@ function nav(e,dt,gx,gy,t,key){const d=e.d;e.navT-=dt;
 function updU(e,dt){const d=e.d;if(d.ani){updA(e,dt);return}if(e.stun>0){e.stun-=dt;e.mv=0;return}if(S.raid&&S.phase==='stage'&&e.team===0){const o=e.ord;if(o&&!o.tg){if(Math.hypot(o.x-e.x,o.y-e.y)<.45){e.ord=null;e.post={x:e.x,y:e.y}}else nav(e,dt,o.x,o.y,null,'m'+o.n)}else e.mv=0;const Lm=RR()+1.4;if(Math.abs(e.x)<Lm&&Math.abs(e.y)<Lm){if(Math.abs(e.x)>Math.abs(e.y))e.x=Math.sign(e.x||1)*Lm;else e.y=Math.sign(e.y||1)*Lm;e.ord=o&&o.tg?o:null}return}if(e.slowT>0)e.slowT-=dt;if(d.vil){if(e.dep>0){e.dep-=dt;return}updV(e,dt);return}if(e.sw<1)e.sw+=dt*3.4;if(e.dep>0){e.dep-=dt;return}
   if(d.regen&&e.hp<e.max)e.hp=Math.min(e.max,e.hp+e.max*d.regen*dt);
   if(d.summon&&alive(e.tg)){e.sm=(e.sm??3)-dt;if(e.sm<=0){e.sm=6;if(S.ents.filter(o=>o.own===e&&o.hp>0).length<3){const u=mkU(e.team,e.civ,d.summon,e.x+rnd(-.5,.5),e.y+rnd(.2,.5),'raid');u.own=e;u.temp=1;u.dep=.4;S.fx.push({k:'ring',x:u.x,y:u.y,t:0,life:.6,c:d.magic})}}}let t=null;const o=e.ord;
-  if(o&&o.tg){if(alive(o.tg))t=o.tg;else e.ord=null}
+  if(o&&o.tg){if(alive(o.tg))t=o.tg;else{e.ord=null;if(e.team===0&&!S.raid)e.post={x:e.x,y:e.y}}}
   else if(o){o.T-=dt;if(Math.hypot(o.x-e.x,o.y-e.y)<Math.max(.45,e.r*1.3)||o.T<=0||(Math.hypot(o.x-e.x,o.y-e.y)<1.4&&(e.stk>0||blockedAt(e,o.x,o.y)))){e.stk=0;e.ord=null;e.post={x:e.x,y:e.y}}else{nav(e,dt,o.x,o.y,null,'m'+o.n);return}}
   if(!t){if(e.breach&&!alive(e.breach))e.breach=null;e.rt-=dt;if(e.rt<=0||(e.tg&&!alive(e.tg))){e.rt=.35;e.tg=pick(e)}
     t=e.tg&&!e.tg.b?e.tg:e.breach||e.tg}
@@ -1499,7 +1505,7 @@ function tap(w){
 
 /* ───────── 下方操作列 ───────── */
 let lastUs='';
-function setBar(){if(selU.size)ptUpd();const us0=sel&&!place?upSig(sel):'';if(us0!==lastUs){lastUs=us0;barSig=''}
+function setBar(){{const idle=!S.raid&&!sel&&!menuOpen&&!place&&!selU.size&&!selPlot,ap=$('#app');if(ap.classList.contains('idle')!==idle){ap.classList.toggle('idle',idle);requestAnimationFrame(()=>{resize();dirty=true})}}if(selU.size)ptUpd();const us0=sel&&!place?upSig(sel):'';if(us0!==lastUs){lastUs=us0;barSig=''}
   const cv0=HOME.civ,G=Math.floor(HOME.gold),F=Math.floor(HOME.food);let sig,html='';
   if(place&&place.segs){const n=place.segs.filter(q=>q.ok).length,c=segCost(place.key,n),pay=can(c);sig='ps'+place.key+place.segs.length+n+pay+ctx(c);if(sig===barSig)return;html=`<p class="tip ${n&&pay?'':'warn'}"><b>${place.ring?'圍起來':'畫牆'}：${n} 段${BT[place.key].n}</b>${place.segs.length>n?'紅色的放不下，會跳過。':''}${!pay?'資源不足，需要 '+ctx(c)+'。':'按確認一次蓋好。點一下地面改回一段一段放。'}</p><div class="row dup"><button data-a="cancel">取消</button><button class="pri" data-a="ok" ${n&&pay?'':'disabled'}>確認建造 ${ctx(c)}</button></div>`}
   else if(place){const ok=canPut(place.key,place.x,place.y,place.rot,place.ent),c=place.ent?null:cost(place.key),pay=!c||can(c);sig='p'+place.key+ok+pay+place.rot+!!place.ent+(c?ctx(c):'');
@@ -1534,7 +1540,7 @@ function setBar(){if(selU.size)ptUpd();const us0=sel&&!place?upSig(sel):'';if(us
     else{const fm=sel.key==='farm',wk=fm&&farmBusy(sel,null);sig='s'+sel.id+wk+idleV().length;if(sig===barSig)return;html=`<p class="tip"><b>${d.n}</b>　${fm?(wk?'有村民正在耕作，持續產糧。':'還沒有人耕作。'):''}${d.t}</p><div class="row">${fm&&!wk?`<button class="pri" data-a="work" ${idleV().length?'':'disabled'}><span class="lg">派閒置村民來耕作</span><span class="sh">派人耕作</span></button>`:''}<button class="x2" data-a="move">移動</button><button class="x2" data-a="rot1">旋轉</button><button class="x2" data-a="stow" ${sel.mix||sel.q.length?'disabled':''}>收進倉庫</button>${sel&&!sel.d.wall&&!sel.d.deco?'<button class="x2" data-a="ring">圍城牆</button>':''}<button class="x2" data-a="del">拆除</button></div>`}}
   else if(menuOpen){const INV=HOME.inv||[],BL=menuTab<0?[]:CATS[menuTab][1];if(menuTab<0&&!INV.length)menuTab=0;sig='m'+menuTab+INV.length+BL.map(k=>count(k)).join()+BL.map(k=>(S.lv>=(BT[k].lv||1)&&can(cost(k)))?1:0).join('')+BL.map(k=>ctx(cost(k))).join()+S.lv;if(sig===barSig)return;
     html=`<div class="tabs">${INV.length?`<button data-a="tab" data-k="-1" class="${menuTab<0?'on':''}">倉庫 ${INV.length}</button>`:''}${CATS.map((c,i)=>`<button data-a="tab" data-k="${i}" class="${i===menuTab?'on':''}">${c[0]}</button>`).join('')}</div><div class="cards">`+(menuTab<0?INV.map((q,i)=>{const d=BT[q[0]],fl=d.max&&count(q[0])>=d.max(S.lv);return`<button class="card" data-a="build" data-k="${q[0]}" data-i="${i}" ${fl?'disabled':''}><canvas width="120" height="120" data-b="${q[0]}"></canvas><b>${d.n}${q[1]>1?' Lv'+q[1]:''}</b><i>${fl?'已達上限':'免費擺出'}</i></button>`}).join(''):'')+BL.map(k=>{const d=BT[k],lk=S.lv<(d.lv||1),fl=d.max&&count(k)+invN(k)>=d.max(S.lv);return`<button class="card" data-a="build" data-k="${k}" ${lk||fl||!can(cost(k))?'disabled':''}><canvas width="120" height="120" data-b="${k}"></canvas><b>${d.n}</b>${d.dmg?`<i class="st">⚔${d.dmg} 射程${d.rng}</i>`:''}<i>${lk?'主堡 Lv '+d.lv:fl?'已達上限 '+count(k):ctx(cost(k))}</i></button>`}).join('')+`</div><div class="row dup"><button data-a="close">關閉</button></div>`}
-  else{const n=soldiers().length,iv=idleV().length,nv=vils().length,rn=readyN();sig='i'+n+'|'+HOME.tk+'|'+iv+'|'+nv+'|'+rn;if(sig===barSig)return;html=`<p class="tip">${iv?'有 '+iv+' 名村民閒著：按「村民」選取他們，再點樹、礦堆或農田。':'點村民再點樹或礦堆派去採集；點士兵可以指揮作戰。'}</p><div class="row five"><button class="pri dup" data-a="menu">建造</button>${rn?`<button class="pri" data-a="clall">全部收 ${rn}</button>`:''}<button data-a="vil" ${nv?'':'disabled'}>村民${iv?' '+iv+'閒':''}</button><button data-a="all" ${n?'':'disabled'}>全軍 ${n}</button><button data-a="box" class="${boxMode?'on':''}" ${n||nv?'':'disabled'}>${boxMode?'拖曳畫框':'框選'}</button><button class="dup" data-a="gacha">召喚${HOME.tk?" "+HOME.tk:""}</button><button class="pri dup" data-a="raid">出征</button></div>`}
+  else{const n=soldiers().length,iv=idleV().length,nv=vils().length;sig='i'+n+'|'+HOME.tk+'|'+iv+'|'+nv;if(sig===barSig)return;html=`<p class="tip">${iv?'有 '+iv+' 名村民閒著：按「村民」選取他們，再點樹、礦堆或農田。':'點村民再點樹或礦堆派去採集；點士兵可以指揮作戰。'}</p><div class="row five"><button class="pri dup" data-a="menu">建造</button><button data-a="vil" ${nv?'':'disabled'}>村民${iv?' '+iv+'閒':''}</button><button data-a="all" ${n?'':'disabled'}>全軍 ${n}</button><button data-a="box" class="${boxMode?'on':''}" ${n||nv?'':'disabled'}>${boxMode?'拖曳畫框':'框選'}</button><button class="dup" data-a="gacha">召喚${HOME.tk?" "+HOME.tk:""}</button><button class="pri dup" data-a="raid">出征</button></div>`}
   if(sel&&!place&&!S.raid&&upable(sel)&&!menuOpen&&!selU.size){const ur=upRow(sel);html+=/disabled/.test(ur)?ur.replace('<button','<button class="x2"'):ur.replace(/（耐久[^）]*）/,'')}
   if(barDown)return;if((barSig||'~')[0]!==sig[0])$('#bar').classList.remove('more');barSig=sig;const bar=$('#bar'),sc=bar.querySelector('.cards'),sl=sc?sc.scrollLeft:0;bar.innerHTML=html;if(bar.querySelector('.x2')){const mo=document.createElement('div');mo.className='row mo';mo.innerHTML='<button data-a="more" aria-label="更多">⋯</button>';bar.appendChild(mo)}const nc=bar.querySelector('.cards');if(nc)nc.scrollLeft=sl;
   bar.querySelectorAll('canvas[data-b]').forEach(c=>bIcon(c,c.dataset.b,cv0));bar.querySelectorAll('canvas[data-u]').forEach(c=>icon(c,c.dataset.u,cv0));
