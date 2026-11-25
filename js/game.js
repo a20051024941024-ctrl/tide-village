@@ -5284,7 +5284,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
       row('眉毛', 'brow', [['thin', '細彎眉'], ['soft', '彎眉'], ['thick', '粗眉'], ['up', '八字眉'], ['down', '劍眉']]);
       row('嘴巴', 'mouth', [['small', '小嘴'], ['smile', '微笑'], ['grin', '露齒笑'], ['cat', '貓嘴'], ['flat', '一字嘴'], ['pout', '嘟嘴'], ['tooth', '小虎牙']]);
       row('腮紅', 'blush', [['none', '沒有'], ['soft', '淡淡的'], ['line', '斜線']]);
-      row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮'], ['short2', '清爽短髮'], ['pony', '側馬尾'], ['twin', '雙馬尾'], ['bob', '鮑伯短髮'], ['lowpony', '小馬尾'], ['bun', '包包頭'], ['buzz', '平頭'], ['bowl', '西瓜頭'], ['mid', '中分短髮']]);
+      row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮'], ['short2', '清爽短髮'], ['pony', '側馬尾'], ['twin', '雙馬尾'], ['bob', '鮑伯短髮'], ['lowpony', '小馬尾'], ['bun', '包包頭'], ['buzz', '平頭'], ['bowl', '西瓜頭'], ['mid', '中分短髮'], ['curly', '捲捲短髮'], ['braid', '雙麻花辮'], ['straight', '長直髮']]);
       sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
       row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝'], ['rain', '雨衣'], ['vest', '釣魚背心'], ['wave', '海浪外套']]);
       sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
@@ -5356,7 +5356,7 @@ K3.FC = new Map();
 /* v749 情緒表情：[眼睛怎麼畫, 嘴巴怎麼畫]。own＝照自己選的眼睛／嘴巴 */
 K3.EXF = { smile: ['own', 'own'], blink: ['closed', 'own'], happy: ['arc', 'open'], star: ['star', 'open'], wink: ['wink', 'open'], surprised: ['own', 'o'], shock: ['dot', 'big'], angry: ['ang', 'frown'], cry: ['cry', 'wail'], sleep: ['closed', 'o'], flat: ['line', 'flat'], smug: ['half', 'smirk'], shy: ['own', 'shy'] };
 /* 做哪個動作配哪個表情（沒寫到的動作維持平常的臉） */
-K3.RIGID = { short: 1, short2: 1, bob: 1, bun: 1, lowpony: 1, buzz: 1, bowl: 1, mid: 1 };
+K3.RIGID = { short: 1, short2: 1, bob: 1, bun: 1, lowpony: 1, buzz: 1, bowl: 1, mid: 1, curly: 1 };
 K3.EXMAP = { wave: 'happy', dance: 'happy', clap: 'happy', laugh: 'happy', hop: 'happy', cheer: 'star', thumbs: 'wink', wow: 'surprised', scared: 'shock', angry: 'angry', sleep: 'sleep', yawn: 'sleep', stretch: 'blink', bow: 'blink', shrug: 'flat', playdead: 'flat', point: 'smug', spin: 'smug' };
 K3.faceKey = c => [c.eye, c.brow, c.mouth, c.blush, (c.c || {}).eye || '', (c.c || {}).hair || ''].join(',');
 K3.faceTex = (c, ex, size) => { const A = K3.asset; if (!A || !A.fbase || !A.feyes) return null; const key = K3.faceKey(c) + ',' + ex + ',' + size; let t = K3.FC.get(key); if (t) return t;
@@ -5658,7 +5658,7 @@ K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0;
     for (const [, f] of L.slice(cap)) if (f.av.k3){ K3.detach(f.av); f._lod = -1; } }
   for (const f of CLOD.all){ if (f === me || ((f.k3c || (f.av && f.av.k3)) && (!K3.allow || K3.allow.has(f)))) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
-K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin', 'bob', 'lowpony', 'bun', 'buzz', 'bowl', 'mid'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest', 'wave'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
+K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin', 'bob', 'lowpony', 'bun', 'buzz', 'bowl', 'mid', 'curly', 'braid', 'straight'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest', 'wave'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
 K3.enc = c => [/^b/.test(c.eye || '') ? 'g' : 'b', c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || '', c.mask || 'none', c.ear || 'none', (c.c || {}).mask || '', (c.c || {}).ear || '', c.hat || 'none', (c.c || {}).hat || '', c.eye || '', c.brow || '', c.mouth || '', c.blush || '', (c.c || {}).eye || ''].join('|');   /* v741 再多五格：眼睛、眉毛、嘴巴、腮紅、眼睛顏色。第一格（以前的男女臉）留給舊版看：有睫毛的眼睛送 g、沒有的送 b */ //   /* v729 後面多四格：口罩、耳環、口罩顏色、耳環顏色（舊版只讀前九格，不會壞） */
 K3.dec = s => { if (typeof s !== 'string' || s.length > 220) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
   const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
