@@ -3117,6 +3117,9 @@ function castPoint(x, z, dx, dz, dist){
     if (Math.abs(x - REEF.x) < 4.5 && z > REEF.bz0 - 6) continue;   /* 往珊瑚礁群島的橋頭 */   /* 城市水圳那一區是工廠和水泥路，不長樹 */   /* 山頂留一塊空地、上山的路寬一點，走得過去 */
     trees.push([x, z, wr()]); addCircleCol(x, z, 0.38); colliders[colliders.length - 1].tree = 1;
   }
+  /* v846 作者：「樹只是擋路而已，沒有必要留這麼多」→ 照舊算完（亂數順序不變）再拿掉：① 離路 3.2 公尺內的 ② 村子裡（森林、山丘以外）的樹叢留一半 ③ 西邊公寓和撞球館中間那塊（之後的建地街）全部清空 */
+  { const rr = mulberry(846); for (let i = trees.length - 1; i >= 0; i--){ const [tx, tz] = trees[i], forest = tz > 15 || Math.hypot(tx - MAP.hill.x, tz - MAP.hill.z) < MAP.hill.R + 4, lot = tx > -40 && tx < -20 && tz > 28 && tz < 50;
+      if (lot || pathDist(tx, tz) < 3.2 || (!forest && rr() < 0.5) || (forest && rr() < 0.25)){ trees.splice(i, 1); const ci = colliders.findIndex(c => c.tree && Math.abs(c.x - tx) < 0.01 && Math.abs(c.z - tz) < 0.01); if (ci >= 0) colliders.splice(ci, 1); } } }
   /* v760 涼亭搬過來的位置原本有樹：樹照舊算完以後再把這一圈的拿掉（先拿掉會讓亂數順序變掉，整座島的樹都不一樣） */
   { for (let i = trees.length - 1; i >= 0; i--){ const [tx, tz] = trees[i]; if (Math.hypot(tx - PAV[0], tz - PAV[1]) < 4.4){ trees.splice(i, 1); const ci = colliders.findIndex(c => c.tree && Math.abs(c.x - tx) < 0.01 && Math.abs(c.z - tz) < 0.01); if (ci >= 0) colliders.splice(ci, 1); } }
     if (ART2) addCircleCol(PAV[0], PAV[1], 0.75);
