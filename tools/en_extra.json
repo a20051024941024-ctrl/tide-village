@@ -8751,5 +8751,6 @@
  "修好民房金幣和農田麥穗點不到的問題：點圖示或房子都能收，旁邊的也會一起收": "Fixed coins on houses and wheat on farms not responding: tap the icon or the building, and nearby ones are collected too",
  "修好直向城牆點不到的問題，整段牆都點得到": "Fixed vertical walls being hard to tap; the whole wall is tappable now",
  "召喚畫面的「墓園」分頁一直都看得到，沒有陣亡的怪獸時會說明怎麼才會出現": "The Graveyard tab on the summon screen is always visible now, and explains when monsters show up there",
- "畫城牆時從現有的牆頭開始拖，會自動接上去，橫的牆頭也能接出直的牆": "When drawing walls, start dragging from the end of an existing wall and it connects automatically, including a vertical wall off a horizontal one"
+ "畫城牆時從現有的牆頭開始拖，會自動接上去，橫的牆頭也能接出直的牆": "When drawing walls, start dragging from the end of an existing wall and it connects automatically, including a vertical wall off a horizontal one",
+ "遠征島整隊時部隊站在海灘上排成方陣，不會掉進海裡；按「全軍」會提示選了幾名": "On expedition islands your troops now line up on the beach in a block instead of ending up in the sea; All shows how many were selected"
 }
