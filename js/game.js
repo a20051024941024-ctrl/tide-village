@@ -461,6 +461,9 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 六個釣點：fish = 會釣到的魚，legendBoost = 傳說魚機率加成
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:24, y:0.32 };
+/* v850 🏘️ 建地島：西邊公寓外的海上（見 blBuild）。一格建地 20×20 公尺、格子中間 4 公尺的路；木橋從村子西岸（z 43）接到島的入口 */
+const BLI = { x:-55, z:104, half:40, y:0.5, lot:20, gap:4, oz:3, bz0:39.5, bz1:64.5, by:0.45 };   /* oz：建地往北挪 3 公尺，南邊留入口廣場 */
+const BLS = { street:1, n:1, used:{}, list:null, at:0, loading:false, mine:null, help:[], views:{}, built:false, near:false, g:null, bp:null, admin:null };
 const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer', 'g_printflag'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
 const GARDEN = { x:150 - 24 - 5.75, z:0, hx:6.75, hz:5, px:150 - 24 - 4.5, sx:150 - 24 - 11.3 };   /* px：田的中心；sx：種子攤 */   /* v370 小島西邊的菜園平台 */
 // 海上的釣蝦場、企鵝冰原：在主島西邊的海上（用快速傳送或渡船去）
@@ -596,6 +599,7 @@ const BOAT_DOCKS = [
 ];
 // 快速傳送點（站的位置與面向）
 const TRAVEL = [
+  { id:'lots', label:'建地島', x:BLI.x, z:BLI.z - BLI.half + 4.5, rot:0, color:'#c9a46a' },
   { id:'plaza', label:'潮汐廣場', x:4, z:9.6, rot:Math.PI, color:PALETTE.gold },
   { id:'harborsq', label:'港邊廣場', x:HARBOR_SQ[0], z:HARBOR_SQ[1] + 4, rot:Math.PI, color:'#cfc6b4' },
   ...SPOTS.filter(s => s.id !== 'isle' && !s.hidden).map(s => s.id === 'shrimp' ? { id:s.id, label:'釣蝦場門口', x:-1, z:-6.4, rot:Math.PI, color:s.color } : ({ id:s.id, label:s.label, x:s.pos.x, z:s.pos.z, rot:Math.atan2(s.dir.x, s.dir.y), color:s.color })),   /* 釣蝦場在村子裡，傳送到門口（SHRIMP_DOOR 往外 2.6） */
@@ -1324,6 +1328,7 @@ scene.add(sun, sun.target);
 /* ================= WORLD ================= */
 const colliders = []; // {t:'b',x,z,hw,hd} | {t:'c',x,z,r}
 const decks = [];     // {x0,x1,z0,z1,y}
+for (const [z0, z1, y] of [[BLI.bz0, BLI.bz0 + 2, 0.12], [BLI.bz0 + 2, BLI.bz0 + 4, 0.28], [BLI.bz0 + 4, BLI.bz1 + 1, BLI.by]]) decks.push({ x0: BLI.x - 1.5, x1: BLI.x + 1.5, z0, z1, y });   /* v850 往建地島的木橋（岸邊那頭做成小斜坡，不用跳） */
 const waters = [];    // {x0,x1,z0,z1}
 const animWater = [];
 const lanterns = [];
@@ -3271,8 +3276,8 @@ function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of wate
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
 function isleH(x, z){ if (Math.abs(x - GARDEN.x) <= GARDEN.hx && Math.abs(z - GARDEN.z) <= GARDEN.hz) return ISLE.y; const d = Math.hypot(x - ISLE.x, z - ISLE.z); if (d > ISLE.r + 2.2) return null; return d <= ISLE.r ? ISLE.y : ISLE.y - (d - ISLE.r) / 2.2 * 0.3; }
 function frostH(x, z){ const d = Math.hypot(x - FROST.x, z - FROST.z); if (d > FROST.r + 2.2) return null; if (Math.hypot(x - FROST.lake.x, z - FROST.lake.z) < FROST.lake.r) return FROST.lake.y; return d <= FROST.r ? FROST.y : FROST.y - (d - FROST.r) / 2.2 * 0.3; }
-function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } if (wildNear(x, z, 10)){ const wh = wildH(x, z); if (wh !== null) return Math.max(0, wh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } { const th = terrainH(x, z); return th < 0 && seaDry(x, z) ? th : Math.max(0, th); } }
-function walkable(x, z){ if (deckAt(x, z)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (wildNear(x, z, 4)) return !wildWater(x, z); if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && (isLand(x, z) || seaDry(x, z))   /* v562 作者：乾潮露出來的沙灘「走不過去」→ 退潮時水退掉的濕沙可以走上去；漲回來會被推回岸上（5505 那段） */; }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; { const bh = blH(x, z); if (bh !== null) return bh; } if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } if (wildNear(x, z, 10)){ const wh = wildH(x, z); if (wh !== null) return Math.max(0, wh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } { const th = terrainH(x, z); return th < 0 && seaDry(x, z) ? th : Math.max(0, th); } }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (blOn(x, z, 0.3)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (wildNear(x, z, 4)) return !wildWater(x, z); if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISLE.r + 1.6) return true; if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && (isLand(x, z) || seaDry(x, z))   /* v562 作者：乾潮露出來的沙灘「走不過去」→ 退潮時水退掉的濕沙可以走上去；漲回來會被推回岸上（5505 那段） */; }
 /* ===== v644 作者：「擋路的小東西直接移掉吧」=====
    村子蓋好以後掃一遍：小的、會擋人的東西（燈柱、木桶、柱子、小招牌、盆栽…）如果站在路或廣場上，而且四周都是空地（站在路中間，不是靠牆、靠水邊），
    就整個拿掉（碰撞和樣子都拿掉）。靠牆、靠水邊的照留。人物、寵物不會被拿掉。之後作者可以用「擺設村子」自己調 */
@@ -7257,6 +7262,8 @@ function actionDown(){
     { const cr = nearCritter(); if (cr){ act.classList.remove('down'); grabCritter(cr); return; } }
    /* 紅樹林泥灘：徒手抓 */
     { const lt = nearLitter(); if (lt){ act.classList.remove('down'); pickLitter(lt); return; } }   /* 水圳：撿垃圾 */
+    if (blGateNear()){ act.classList.remove('down'); blOpen(-2); return; }   /* v850 建地島：選街 */
+    { const h = blHere(); if (h){ act.classList.remove('down'); blOpen(h.i); return; } }   /* v850 建地島：站在一格建地上 */
     if (Wild.place){ act.classList.remove('down'); wildPlaceConfirm(); return; }   /* v600 放營火、遮雨棚、小木屋 */
     { const wn = nearWildNode(); if (wn){ act.classList.remove('down'); wildGather(wn); return; } }   /* v590 漂流島：撿材料 */
     if (nearWildBoat()){ act.classList.remove('down'); Wild.trip = null; travelTo(TRAVEL.find(t => t.id === 'harborsq')); return; }   /* v592 漂流島碼頭：坐船回村子 */
@@ -7741,6 +7748,8 @@ function updateFishing(dt, t){
     else if (wfN){ const lt = Math.max(0, (wfN.fuel || 0) - Date.now()); label = '加木頭'; sub = lt > 0 ? `🔥 還能燒 ${Math.ceil(lt / 60000)} 分鐘・🪵 ${wildSt().bag.wood | 0}` : `🔥 火熄了・🪵 ${wildSt().bag.wood | 0}`; cls = 'shop'; }
     else if (wnN){ const I = WILD_ITEMS[wnN.n.k]; label = I.verb; sub = `${I.ic} ${I.n}・荒島背包 ${wildSlots(wildSt().bag)}/${WILD_BAG}`; cls = 'shop'; }
     else if (ltN){ label = '撿起來'; sub = `${ltN.T.icon} ${ltN.T.name}・💙+1`; cls = 'shop'; }
+    else if (blGateNear()){ label = '選街'; sub = `🏘️ 現在是${blStName(BLS.street)}`; cls = 'shop'; }
+    else if (blHere()){ const h = blHere(), L = h.L; label = blCanBuild(L) ? '建地' : L.owner ? '看看' : '空地'; sub = L.owner ? `🏘️ ${L.sign || (L.name || '有人') + '的建地'}` : '🏘️ 可以申請'; cls = 'shop'; }
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearSeaDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '🪸 海底花園' : '🤿 要先買裝備'; cls = 'shop'; }
@@ -7869,6 +7878,147 @@ function updateJumpers(dt, t){
     if (j.t > (j.end || 2.6)){ scene.remove(j.m); jumpers.splice(i, 1); }   /* end：落到手上就收掉（手上會換成 holdFish 的魚） */
   }
 }
+
+/* ================= v850 🏘️ 建地島（作者 11/25：「我有朋友就想要我蓋的東西大家都看得到」「必須為以後人越來越多做準備」「就怕地太小」）=================
+   西邊公寓外的海上，走木橋過去。一條街 9 格（3×3），每格 20×20 公尺，最高 32 層（16 公尺），一格最多 3000 塊。伺服器 229_build_lots.sql。
+   ・每條街是同一座島，只是裝的建築不同：入口的路牌選要逛哪一街（一街快滿了自動開二街，沒有上限）。
+   ・每人最多申請一格；主人可以邀好友一起蓋（共同建造者，最多 6 人）。14 天沒上線建地就讓給別人，蓋的東西存成設計圖，下次一鍵蓋回來。
+   ・蓋東西用小島同一套方塊工具（Blk），只是原點換成建地中心、範圍和上限不同。
+   ・3 個人檢舉就先藏起來；管理員可以清空。 */
+function blC(i){ const ix = i % 3, jz = Math.floor(i / 3), s = BLI.lot + BLI.gap; return [BLI.x + (ix - 1) * s, BLI.z + BLI.oz + (jz - 1) * s]; }
+function blOn(x, z, pad){ const h = BLI.half + (pad || 0), r = 6, dx = Math.abs(x - BLI.x), dz = Math.abs(z - BLI.z); if (dx > h || dz > h) return false; if (dx > h - r && dz > h - r) return Math.hypot(dx - (h - r), dz - (h - r)) <= r; return true; }
+function blH(x, z){ return blOn(x, z, 0.6) ? BLI.y : null; }
+function blRow(i){ return (BLS.list || []).find(r => r.lot === i) || { lot: i, owner: null, name: null, b: [], sign: '', mem: [] }; }
+function blHere(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } if (!blOn(x, z)) return null; for (let i = 0; i < 9; i++){ const [cx, cz] = blC(i); if (Math.abs(x - cx) <= BLI.lot / 2 && Math.abs(z - cz) <= BLI.lot / 2) return { i, cx, cz, L: blRow(i) }; } return null; }
+function blGateNear(){ return blOn(me.pos.x, me.pos.z, 1) && Math.hypot(me.pos.x - (BLI.x + 6), me.pos.z - (BLI.z - BLI.half + 4)) < 2.4; }
+function blMine(L){ return !!(Cloud.userId && L && L.owner === Cloud.userId); }
+function blCanBuild(L){ const u = Cloud.userId; return !!(u && L && L.owner && (L.owner === u || (L.mem || []).some(m => m.id === u))); }
+function blStName(n){ return (['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][n] || n) + '街'; }
+/* 島、路、建地框、入口牌坊、木橋（只在第一次走近時蓋） */
+function blBuild(){ if (BLS.built) return; BLS.built = true; const g = new THREE.Group(); g.name = 'buildIsle'; scene.add(g); BLS.g = g;
+  const M = (c, r) => new THREE.MeshStandardMaterial({ color: c, roughness: r || 0.85 }), Y = BLI.y;
+  const box = (x, y, z, w, h, d, m, sh) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y + h / 2, z); o.receiveShadow = true; o.castShadow = !!sh; g.add(o); return o; };
+  const slab = (hs, top, m) => { const h = top + 2; box(BLI.x, -2, BLI.z, hs * 2 - 12, h, hs * 2, m); box(BLI.x, -2, BLI.z, hs * 2, h, hs * 2 - 12, m); for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const c = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, h, 28), m); c.position.set(BLI.x + sx * (hs - 6), -2 + h / 2, BLI.z + sz * (hs - 6)); c.receiveShadow = true; g.add(c); } };
+  slab(BLI.half + 2.5, Y - 0.18, M('#e8d29a')); slab(BLI.half, Y, M('#7fbf63'));
+  const S = 3 * BLI.lot + 2 * BLI.gap; box(BLI.x, Y, BLI.z + BLI.oz / 2 - 1, S + 4, 0.03, S + 4 + BLI.oz + 4, M('#d9c9a6'));   /* 路 */
+  const pad = M('#86c76a'), curb = M('#c9c1b3', 0.9);
+  for (let i = 0; i < 9; i++){ const [x, z] = blC(i), L = BLI.lot; box(x, Y + 0.03, z, L, 0.03, L, pad); for (const [dx, dz, w, d] of [[0, -L / 2, L, 0.2], [0, L / 2, L, 0.2], [-L / 2, 0, 0.2, L], [L / 2, 0, 0.2, L]]) box(x + dx, Y + 0.03, z + dz, w, 0.16, d, curb); }
+  /* 入口牌坊（朝村子那邊）＋選街路牌 */
+  const ez = BLI.z - BLI.half + 2.2, red = M('#8a3a2a', 0.6); box(BLI.x - 4, Y, ez, 0.4, 3.6, 0.4, red, true); box(BLI.x + 4, Y, ez, 0.4, 3.6, 0.4, red, true); box(BLI.x, Y + 3.45, ez, 9.6, 0.45, 0.65, red, true); box(BLI.x, Y + 3.0, ez, 8.4, 0.22, 0.4, red);
+  BLS.gateLab = blLabel(g, BLI.x, Y + 4.6, ez, '🏘️ 建地島・' + blStName(BLS.street), 1.35);
+  const wood = M('#6b4a32'); box(BLI.x + 6, Y, ez + 1.8, 0.2, 2.6, 0.2, wood, true); for (let k = 0; k < 3; k++) box(BLI.x + 6.8, Y + 2.2 - k * 0.5, ez + 1.8, 1.6, 0.36, 0.08, M('#f2e6c8'));
+  blLabel(g, BLI.x + 7, Y + 3.3, ez + 1.8, '選要逛哪一街', 0.6);
+  /* 木橋（村子西岸 → 島的入口） */
+  const len = BLI.bz1 - BLI.bz0, bm = M('#b07a45', 0.8), pm = M('#7a5232', 0.8), bc = (BLI.bz0 + BLI.bz1) / 2; box(BLI.x, BLI.by - 0.25, bc + 2, 3.2, 0.25, len - 4, bm, true); box(BLI.x, 0.12 - 0.25, BLI.bz0 + 1, 3.2, 0.25, 2, bm, true); box(BLI.x, 0.28 - 0.25, BLI.bz0 + 3, 3.2, 0.25, 2, bm, true);
+  for (let t = BLI.bz0; t <= BLI.bz1; t += 3) for (const sx of [-1.55, 1.55]) box(BLI.x + sx, -1.2, t, 0.2, BLI.by + 2.2, 0.2, pm, true);
+  for (const sx of [-1.55, 1.55]) box(BLI.x + sx, BLI.by + 0.85, bc, 0.12, 0.12, len, pm);
+  for (const sx of [-1.65, 1.65]){ const c = { t: 'b', x: BLI.x + sx, z: bc, hw: 0.1, hd: len / 2, top: null }; colliders.push(c); }   /* 欄杆：不會從橋上掉下去 */
+  for (let i = 0; i < 9; i++) blDrawLot(i); }
+/* 文字牌（canvas 做的 sprite） */
+function blLabel(parent, x, y, z, text, sc, bg){ const cv = document.createElement('canvas'); cv.width = 640; cv.height = 128; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthWrite: false })); s.userData.cv = cv; s.scale.set(4.6 * (sc || 1), 0.92 * (sc || 1), 1); s.position.set(x, y, z); s.renderOrder = 5; parent.add(s); blLabelSet(s, text, bg); return s; }
+function blLabelSet(s, text, bg){ if (!s || s.userData.t === text + (bg || '')) return; s.userData.t = text + (bg || ''); const cv = s.userData.cv, g = cv.getContext('2d'); g.clearRect(0, 0, 640, 128); g.fillStyle = bg || 'rgba(255,255,255,0.92)'; g.beginPath(); g.roundRect(8, 8, 624, 112, 44); g.fill(); g.fillStyle = '#3a2a20'; g.font = 'bold 58px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(text).slice(0, 18), 320, 68); s.material.map.needsUpdate = true; }
+/* 一格建地上的方塊（別人蓋的、自己沒在蓋的時候）：跟小島一樣用 InstancedMesh，一種建材一個 */
+const _blv = new THREE.Vector3(), _blq = new THREE.Quaternion(), _blm = new THREE.Matrix4(), _bls = new THREE.Vector3(1, 1, 1), _blc = new THREE.Color();
+function blDrawLot(i){ if (!BLS.g) return; let V = BLS.views[i]; if (!V){ V = BLS.views[i] = { g: new THREE.Group(), ims: {}, cols: [] }; BLS.g.add(V.g); }
+  const L = blRow(i), [cx, cz] = blC(i), editing = Blk.lot && Blk.lot.i === i, list = editing || (L.hidden && !blMine(L)) ? [] : (L.b || []);
+  const by = {}; for (const x of list) (by[x[3]] = by[x[3]] || []).push(x);
+  for (const t of Object.keys(BLK)){ const Lt = by[t] || []; let im = V.ims[t];
+    if (!Lt.length){ if (im) im.count = 0; continue; }
+    if (!im || im.userData.cap < Lt.length){ if (im){ V.g.remove(im); im.dispose(); } const cap = Math.max(16, Math.ceil(Lt.length / 32) * 32 + 32), shp = blkIsShape(t); im = new THREE.InstancedMesh(blkGeo(t), blkMat(t), cap); im.userData.cap = cap; im.castShadow = BLK[t][3] !== 'glass'; im.receiveShadow = true; if (shp) for (let k = 0; k < cap; k++) im.setColorAt(k, _blc.set('#ffffff')); V.g.add(im); V.ims[t] = im; }
+    Lt.forEach((x, k) => { _blv.set(cx + x[0] * 0.5, BLI.y + x[2] * 0.5 + 0.25, cz + x[1] * 0.5); _blq.setFromAxisAngle(_bup, (x[4] || 0) * Math.PI / 2); _blm.compose(_blv, _blq, _bls); im.setMatrixAt(k, _blm); if (im.instanceColor) im.setColorAt(k, _blc.set(blkCol(x) || '#ffffff')); });
+    im.count = Lt.length; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; im.computeBoundingSphere(); }
+  /* 碰撞（跟小島一樣：從地上連起來的實心塊才擋） */
+  for (const c of V.cols){ const k = colliders.indexOf(c); if (k >= 0) colliders.splice(k, 1); } V.cols = [];
+  const col = new Map(); for (const x of list){ const k = x[0] + ',' + x[1]; let o = col.get(k); if (!o) col.set(k, o = { x: x[0], z: x[1], cells: {} }); o.cells[x[2]] = x; }
+  for (const o of col.values()){ let g0 = -1; for (let y = 0; y <= 1; y++){ const x = o.cells[y]; if (x && blkSolid(x)){ g0 = y; break; } } if (g0 < 0) continue;
+    const base = o.cells[g0], kind = blkSolid(base); let h = g0, y = g0; while (o.cells[y] && blkSolid(o.cells[y])){ h = y + (blkSolid(o.cells[y]) === 'half' ? 0.5 : 1); y++; }
+    const px = cx + o.x * 0.5, pz = cz + o.z * 0.5, p = kind === 'panel' ? (base[4] || 0) % 2 : -1;
+    const c = p < 0 ? { t: 'b', x: px, z: pz, hw: 0.25, hd: 0.25 } : p === 0 ? { t: 'b', x: px, z: pz, hw: 0.25, hd: 0.06 } : { t: 'b', x: px, z: pz, hw: 0.06, hd: 0.25 };
+    c.top = p >= 0 || h > 2 || g0 > 0 ? null : BLI.y + h * 0.5; colliders.push(c); V.cols.push(c); }
+  /* 名字牌：招牌字 ＞ 誰的建地 ＞ 空地 */
+  let top = 0; for (const x of list) top = Math.max(top, x[2]); const ty = BLI.y + Math.max(2.6, (top + 1) * 0.5 + 1.4);
+  const txt = L.hidden && !blMine(L) ? '🚧 整理中' : L.sign ? L.sign : L.owner ? `${L.name || '有人'}的建地` : '空地・可以申請', bg = !L.owner ? 'rgba(255,240,200,0.95)' : L.sign ? 'rgba(255,236,170,0.96)' : '';
+  if (!V.lab) V.lab = blLabel(V.g, cx, ty, cz, txt, L.owner ? 1 : 0.8, bg); else { blLabelSet(V.lab, txt, bg); V.lab.position.y = ty; V.lab.scale.set(4.6 * (L.owner ? 1 : 0.8), 0.92 * (L.owner ? 1 : 0.8), 1); }
+  if (L.owner && L.sign && L.name){ if (!V.sub) V.sub = blLabel(V.g, cx, ty - 0.8, cz, '', 0.55); blLabelSet(V.sub, L.name, 'rgba(255,255,255,0.8)'); V.sub.position.y = ty - 0.75; V.sub.visible = true; } else if (V.sub) V.sub.visible = false; }
+async function blLoad(force){ if (BLS.loading || !Cloud.on || !Cloud.sb) return; if (!force && BLS.list && performance.now() - BLS.at < 20000) return; BLS.loading = true;
+  try { const [s, l] = await Promise.all([Cloud.sb.rpc('lots_streets'), Cloud.sb.rpc('lots_get', { p_street: BLS.street })]);
+    if (s.error) throw s.error; if (l.error) throw l.error; const st = s.data || {}; BLS.n = Math.max(1, st.n | 0); BLS.used = st.used || {}; BLS.mine = st.mine || null; BLS.help = st.help || [];
+    if (BLS.admin == null){ BLS.admin = false; Cloud.sb.rpc('is_admin').then(r => { BLS.admin = !!(r && r.data); }, () => {}); }
+    BLS.list = Array.isArray(l.data) ? l.data : []; BLS.at = performance.now(); BLS.err = '';
+    for (let i = 0; i < 9; i++) if (!(Blk.lot && Blk.lot.i === i)) blDrawLot(i); renderTabIf('lot'); }
+  catch(e){ BLS.err = cloudErrMsg(e); BLS.at = performance.now(); } BLS.loading = false; }
+function blSetStreet(n){ n = Math.max(1, Math.min(BLS.n || 1, n | 0)); if (Blk.lot) blBuildStop(); BLS.street = n; BLS.list = null; if (BLS.gateLab) blLabelSet(BLS.gateLab, '🏘️ 建地島・' + blStName(n)); for (let i = 0; i < 9; i++) blDrawLot(i); blLoad(true); }
+function updateBuildLots(){ const d = Math.hypot(me.pos.x - BLI.x, me.pos.z - BLI.z), near = d < BLI.half + 60;
+  if (near && !BLS.built) blBuild(); if (!BLS.built) return;
+  if (near !== BLS.near){ BLS.near = near; BLS.g.visible = near; for (const V of Object.values(BLS.views)){ if (near){ for (const c of V.cols) if (!colliders.includes(c)) colliders.push(c); } else for (const c of V.cols){ const k = colliders.indexOf(c); if (k >= 0) colliders.splice(k, 1); } } }
+  if (near) blLoad(false);
+  if (Blk.lot && !Blk.on) blBuildStop(); }
+/* 開始在建地上蓋（自己的，或主人邀請一起蓋的） */
+function blBuildStart(i){ const L = blRow(i); if (!blCanBuild(L)){ toast('要自己的建地，或主人邀你一起蓋'); return; } if (!Cloud.on){ toast('要連上雲端才能蓋建地'); return; }
+  closeSheet(); if (Build.on) stopBuild(); const [cx, cz] = blC(i);
+  Blk.lot = { i, street: BLS.street, own: blMine(L), o: { x: cx, y: BLI.y, z: cz } }; Blk.owner = 'lot'; Blk.b = (L.b || []).map(x => x.slice()); Blk.undo = []; Blk.pend = { add: [], del: [] };
+  blDrawLot(i); blkDraw(); Blk.on = true; Blk.erase = false; Blk.plan = null; blkBar(); toast(`🧱 在${L.sign || '建地'}上蓋東西：點地面放、點方塊疊上去。按「完成」結束`); }
+async function blBuildStop(){ const lot = Blk.lot; if (!lot) return; if (Blk.on){ Blk.on = false; Blk.paint = null; Blk.rect = null; Blk.plan = null; blkPreview(null); const b = $('#blkBar'); if (b) b.hidden = true; }
+  try { await blkFlush(); } catch(e){} const L = blRow(lot.i); if (lot.street === BLS.street && BLS.list && BLS.list.includes(L)) L.b = Blk.b.slice();
+  if (Blk.g){ scene.remove(Blk.g); for (const im of Object.values(Blk.ims)) im.dispose(); } Blk.g = null; Blk.ims = {}; Blk.b = []; Blk.owner = null; Blk.undo = []; for (const c of Blk.cols || []){ const k = colliders.indexOf(c); if (k >= 0) colliders.splice(k, 1); } Blk.cols = [];
+  Blk.lot = null; blDrawLot(lot.i); blLoad(true); }
+/* 📐 樣板：一鍵放下一間像樣的店，再自己改（作者：「就怕玩家做出來的東西不明顯」）。格子座標以建地中心為 0,0，前面（-z）朝入口 */
+const BL_TPL = {
+  stall: { n: '日式小吃店', ic: '🏮', mk: () => { const c = []; for (let y = 0; y < 5; y++) for (let x = -5; x <= 5; x++) for (let z = -4; z <= 4; z++){ const edge = Math.abs(x) === 5 || z === 4; if (edge) c.push([x, z, y, 'cb', 0, 22]); }
+      for (let x = -4; x <= 4; x++) c.push([x, -4, 0, 'hf', 0, 0]); for (let x = -4; x <= 4; x++) c.push([x, -4, 4, 'cb', 0, 5]);
+      for (const [y, r] of [[5, 6], [6, 5], [7, 3]]) for (let x = -r; x <= r; x++) for (let z = -r + 1; z <= r - 1; z++) c.push([x, z, y, 'cb', 0, 4]);
+      for (let x = -5; x <= 5; x += 2) c.push([x, -5, 4, 'aw', 0, x % 4 ? 0 : 5]); return c; } },
+  cottage: { n: '小木屋', ic: '🏠', mk: () => { const c = []; for (let y = 0; y < 5; y++) for (let x = -5; x <= 5; x++) for (let z = -4; z <= 4; z++){ if (!(Math.abs(x) === 5 || Math.abs(z) === 4)) continue; if (x === 0 && z === -4 && y < 2) continue; if ((Math.abs(x) === 3 && z === -4 || Math.abs(z) === 1 && Math.abs(x) === 5) && y === 2) continue; c.push([x, z, y, 'cb', 0, 0]); }
+      c.push([0, -4, 0, 'dr', 0, 22]); for (const x of [-3, 3]) c.push([x, -4, 2, 'ws', 0, 22]); for (const sx of [-5, 5]) for (const z of [-1, 1]) c.push([sx, z, 2, 'ws', 1, 22]);
+      for (let k = 0; k < 5; k++){ const y = 5 + k, zr = 5 - k; for (let x = -6; x <= 6; x++) for (let z = -zr; z <= zr; z++) c.push([x, z, y, 'cb', 0, 5]); } return c; } },
+  fish: { n: '魚攤', ic: '🐟', mk: () => { const c = []; for (const x of [-5, 5]) for (const z of [-2, 2]) for (let y = 0; y < 5; y++) c.push([x, z, y, 'cy', 0, 22]);
+      for (let x = -4; x <= 4; x++) for (let z = -1; z <= 1; z++) c.push([x, z, 0, 'hf', 0, 0]);
+      for (let x = -5; x <= 5; x++) for (let z = -2; z <= 2; z++) c.push([x, z, 5, 'cb', 0, (x + 6) % 2 ? 0 : 5]); return c; } },
+  garden: { n: '小花園', ic: '🌷', mk: () => { const c = []; for (let k = -8; k <= 8; k++){ c.push([k, -8, 0, 'nw', 0]); c.push([k, 8, 0, 'nw', 0]); if (Math.abs(k) < 8){ c.push([-8, k, 0, 'nw', 1]); c.push([8, k, 0, 'nw', 1]); } }
+      c.splice(c.findIndex(q => q[0] === 0 && q[1] === -8), 1); for (let z = -7; z <= 0; z++) c.push([0, z, 0, 'tl', 0, 20]);
+      for (let x = -2; x <= 2; x++) for (let z = 2; z <= 4; z++) c.push([x, z, 0, 'tl', 0, 14]);
+      for (const [x, z, k] of [[-5, -4, 19], [-4, 3, 8], [5, -5, 18], [4, 2, 19], [-6, 6, 17], [6, 6, 8], [-3, -2, 18], [3, -3, 17]]) c.push([x, z, 0, 'dm', 0, k]); return c; } } };
+function blTemplate(k, i){ const T = BL_TPL[k]; if (!T) return; if (!(Blk.lot && Blk.lot.i === i)) blBuildStart(i); if (!Blk.lot) return;
+  const cells = T.mk().filter(q => !blkAt(q[0], q[1], q[2])), { cost } = blkCost(cells);
+  if (!confirm(`放一間「${T.n}」？大約 ${cells.length} 塊，要 🪙${cost}（包包裡收著的方塊先用）。放好以後可以自己改。`)) return;
+  const n = blkPlaceMany(cells.map(q => [q[0], q[1], q[2], q[3], q[4] || 0, q[5] | 0])); if (n) toast(`${T.ic} 放好了「${T.n}」，可以自己改顏色、加東西`); }
+/* 手機上的建地面板 */
+let blSheetI = -1;
+function blOpen(i){ blSheetI = i; openSheet('lot'); blLoad(true); }
+function renderLot(body){ body.textContent = ''; const i = blSheetI;
+  if (!Cloud.on){ body.appendChild(el('p', 'sub', '建地島要連上雲端才能用。')); return; }
+  if (i === -2){ body.appendChild(el('div', 'dexhead', '🏘️ 建地島・選要逛哪一街')); const box = el('div', 'gb-r');
+    for (let n = 1; n <= (BLS.n || 1); n++){ const b = el('button', n === BLS.street ? 'tbtn' : 'tbtn ghost', `${blStName(n)}（${(BLS.used || {})[n] || 0}/9）`); b.addEventListener('click', () => { blSetStreet(n); closeSheet(); toast(`🏘️ 現在逛的是${blStName(n)}`); }); box.appendChild(b); }
+    body.appendChild(box); if (BLS.mine){ const b = el('button', 'tbtn', `🏠 去我的建地（${blStName(BLS.mine.street)}）`); b.addEventListener('click', () => { blSetStreet(BLS.mine.street); closeSheet(); blGoLot(BLS.mine.lot); }); body.appendChild(b); }
+    body.appendChild(el('p', 'sub', '一條街 9 格建地。快滿了會自動開下一條街。')); return; }
+  const L = blRow(i), mine = blMine(L), can = blCanBuild(L);
+  body.appendChild(el('div', 'dexhead', `🏘️ ${blStName(BLS.street)}・第 ${i + 1} 格`));
+  if (BLS.err && !BLS.list){ body.appendChild(el('p', 'sub', '讀不到建地：' + BLS.err)); return; }
+  if (!BLS.list){ body.appendChild(el('p', 'sub', '讀取中…')); return; }
+  const row = el('div', 'gb-r'), btn = (t, fn, ghost) => { const b = el('button', ghost ? 'tbtn ghost' : 'tbtn', t); b.addEventListener('click', fn); row.appendChild(b); return b; };
+  if (!L.owner){ body.appendChild(el('p', 'sub', '這格是空地。申請以後就是你的，20×20 公尺，可以蓋 32 層高，最多 3000 塊。方塊的價錢跟小島一樣，包包裡收著的可以直接用。'));
+    if (BLS.mine) body.appendChild(el('p', 'sub', `你已經有一格了（${blStName(BLS.mine.street)}第 ${BLS.mine.lot + 1} 格），每人只能有一格。要換的話先到那格退掉。`));
+    else { btn('📝 申請這格', () => blClaim(i, false)); if (BLS.bp && BLS.bp.n > 0) btn(`📐 申請並蓋回設計圖（${BLS.bp.n} 塊）`, () => blClaim(i, true), true); }
+    body.appendChild(row); blBpCheck(); return; }
+  body.appendChild(el('p', 'sub', L.sign ? `「${L.sign}」・${L.name || '有人'}的建地` : `${L.name || '有人'}的建地`));
+  if ((L.mem || []).length) body.appendChild(el('p', 'sub', '一起蓋的人：' + L.mem.map(m => m.name || '朋友').join('、')));
+  if (L.hidden) body.appendChild(el('p', 'sub', mine ? '🚧 這格被幾個人檢舉，先藏起來了（只有你看得到），等管理員看過。' : '🚧 這格整理中。'));
+  if (can) btn('🧱 開始蓋', () => blBuildStart(i));
+  let r2 = null; if (can){ r2 = el('div', 'gb-r'); r2.appendChild(el('span', 'sub', '📐 樣板：')); for (const [k, T] of Object.entries(BL_TPL)){ const b = el('button', 'tbtn ghost', `${T.ic} ${T.n}`); b.addEventListener('click', () => { closeSheet(); blTemplate(k, i); }); r2.appendChild(b); } }
+  if (mine){ btn('🪧 改招牌', () => { const t = prompt('招牌要寫什麼？（最多 14 個字）', L.sign || ''); if (t == null) return; blRpc('lot_sign', { p_text: t }, r => { L.sign = r.sign; blDrawLot(i); renderTabIf('lot'); toast('🪧 招牌換好了'); }); }, true);
+    btn('🤝 邀好友一起蓋', () => blInvite(L), true);
+    btn('退掉這格', () => { if (!confirm('退掉這格建地？蓋的東西會存成設計圖，下次申請可以一鍵蓋回來。')) return; blRpc('lot_release', {}, () => { toast('退掉了，蓋的東西存成設計圖'); blLoad(true); }); }, true); }
+  else if (can) btn('不一起蓋了', () => { if (!confirm('退出，不再一起蓋這格？')) return; blRpc('lot_member', { p_member: Cloud.userId, p_add: false }, () => { toast('退出了'); blLoad(true); }); }, true);
+  if (!mine && !can) btn('🚩 檢舉', () => { if (!confirm('這格蓋了不適合的東西嗎？三個人檢舉就會先藏起來，等管理員看。')) return; blRpc('lot_report', { p_street: BLS.street, p_lot: i }, r => toast(r.hidden ? '已經先藏起來了，謝謝' : '收到了，謝謝')); }, true);
+  if (BLS.admin){ btn('🛠️ 清空（管理員）', () => { if (confirm('清空這格的方塊和招牌？')) blRpc('admin_lot', { p_street: BLS.street, p_lot: i, p_clear: true }, () => blLoad(true)); }, true); if (L.hidden) btn('恢復顯示', () => blRpc('admin_lot', { p_street: BLS.street, p_lot: i, p_clear: false }, () => blLoad(true)), true); }
+  body.appendChild(row); if (r2) body.appendChild(r2); }
+async function blRpc(fn, args, ok){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; if (data && data.player) adoptRow(data.player); ok && ok(data || {}); } catch(e){ toast('🏘️ ' + cloudErrMsg(e)); } }
+async function blBpCheck(){ if (BLS.bpAt && performance.now() - BLS.bpAt < 30000) return; BLS.bpAt = performance.now(); try { const { data } = await Cloud.sb.rpc('lot_blueprint'); const had = !!(BLS.bp && BLS.bp.n); BLS.bp = data || null; if (!!(BLS.bp && BLS.bp.n) !== had) renderTabIf('lot'); } catch(e){} }
+function blClaim(i, bp){ blRpc('lot_claim', { p_street: BLS.street, p_lot: i, p_bp: !!bp }, r => { SFX.catch(); flash(`🏘️ ${blStName(BLS.street)}第 ${i + 1} 格是你的了！`, 2); BLS.bp = null; BLS.bpAt = 0; blLoad(true); setTimeout(() => { if (blSheetI === i) renderTabIf('lot'); }, 600); }); }
+function blInvite(L){ const fr = (Fr.list || []).filter(f => !(L.mem || []).some(m => m.id === f.id)); if (!fr.length){ toast('先加好友，才能邀他一起蓋'); return; }
+  const names = fr.map((f, k) => `${k + 1}. ${f.name || f.nickname || '好友'}`).join('\n'), t = prompt('要邀誰一起蓋？輸入號碼：\n' + names); const k = (parseInt(t, 10) || 0) - 1; if (!fr[k]) return;
+  blRpc('lot_member', { p_member: fr[k].id, p_add: true }, () => { toast(`🤝 邀 ${fr[k].name || '好友'} 一起蓋了`); blLoad(true); }); }
+function blGoLot(i){ const [cx, cz] = blC(i); travelTo({ id: 'lot', label: '我的建地', x: cx, z: cz - BLI.lot / 2 - 1.5, rot: 0 }); }
 
 /* ================= RECORDS / COLLECTION ================= */
 /* ================= ISLAND 2.0：玩家島（自由擺放、房子可以進去、看得到別人的島、按讚）================= */
@@ -8827,6 +8977,8 @@ const BPAL = ['#f2eee4', '#d9d4c7', '#9c9a92', '#5a5a62', '#2c2c32', '#d4483a', 
 /* 碰撞：box＝整塊擋、half＝半塊高、panel＝像隔板一樣薄、null＝不擋（地磚、門、遮雨棚走得過去） */
 const BSHP_COL = { cb:'box', hf:'half', tl:null, sl:'box', st:'box', qr:'box', cy:'box', dm:'half', ar:'box', dr:null, dt:null, wr:'panel', ws:'panel', aw:null };
 const BLK_MAX = 1500, BLK_LAYERS = 16;
+/* v850 同一套工具也用在建地島：Blk.lot 有東西時，原點是那格建地的中心，最高 32 層、最多 3000 塊 */
+const blkO = () => Blk.lot ? Blk.lot.o : ISLE, blkMax = () => Blk.lot ? 3000 : BLK_MAX, blkLay = () => Blk.lot ? 32 : BLK_LAYERS;
 const Blk = { on:false, t:'wood', r:0, c:0, erase:false, b:[], owner:null, g:null, ims:{}, pend:{ add:[], del:[] }, timer:0, busy:false, paint:null, rc:new THREE.Raycaster(), v:new THREE.Vector2(), tex:{},
   mode:'one', H:4, mir:false, undo:[], plan:null, rect:null, cat:'shape' };
 function blkTex(kind, col){ const k = kind + col; if (Blk.tex[k]) return Blk.tex[k]; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = col; c.fillRect(0, 0, 64, 64);
@@ -8871,35 +9023,35 @@ const BLK_GLASS = { wr: () => new THREE.CircleGeometry(0.15, 20), ws: () => new 
 let blkGlassMat = null;
 const _bm = new THREE.Matrix4(), _bq = new THREE.Quaternion(), _bv = new THREE.Vector3(), _bs = new THREE.Vector3(1, 1, 1), _bup = new THREE.Vector3(0, 1, 0), _bc = new THREE.Color();
 function blkCol(x){ return blkIsShape(x[3]) ? (x[6] != null && BPAL[x[6]] ? BPAL[x[6]] : BLK[x[3]][2]) : null; }
-function blkDraw(){ if (!onIsle){ blkClear(); return; } if (!Blk.g){ Blk.g = new THREE.Group(); Blk.g.userData.keep = true; scene.add(Blk.g); }
+function blkDraw(){ if (!onIsle && !Blk.lot){ blkClear(); return; } if (!Blk.g){ Blk.g = new THREE.Group(); Blk.g.userData.keep = true; scene.add(Blk.g); }
   const by = {}; for (const x of Blk.b) (by[x[3]] = by[x[3]] || []).push(x);
   const put = (key, geo, mat, L, color, shadow) => { let im = Blk.ims[key];
     if (!L.length){ if (im) im.count = 0; return; }
-    if (!im || im.userData.cap < L.length){ if (im){ Blk.g.remove(im); im.dispose(); } const cap = Math.min(BLK_MAX, Math.max(32, Math.ceil(L.length / 32) * 32 + 32)); im = new THREE.InstancedMesh(geo, mat, cap); im.userData.cap = cap; im.userData.t = key; im.castShadow = shadow; im.receiveShadow = true; if (color) for (let i = 0; i < cap; i++) im.setColorAt(i, _bc.set('#ffffff')); Blk.g.add(im); Blk.ims[key] = im; }
-    im.userData.list = L; L.forEach((x, i) => { _bv.set(ISLE.x + x[0] * 0.5, ISLE.y + x[2] * 0.5 + 0.25, ISLE.z + x[1] * 0.5); _bq.setFromAxisAngle(_bup, (x[4] || 0) * Math.PI / 2); _bm.compose(_bv, _bq, _bs); im.setMatrixAt(i, _bm); if (color) im.setColorAt(i, _bc.set(blkCol(x))); });
+    if (!im || im.userData.cap < L.length){ if (im){ Blk.g.remove(im); im.dispose(); } const cap = Math.min(blkMax(), Math.max(32, Math.ceil(L.length / 32) * 32 + 32)); im = new THREE.InstancedMesh(geo, mat, cap); im.userData.cap = cap; im.userData.t = key; im.castShadow = shadow; im.receiveShadow = true; if (color) for (let i = 0; i < cap; i++) im.setColorAt(i, _bc.set('#ffffff')); Blk.g.add(im); Blk.ims[key] = im; }
+    im.userData.list = L; L.forEach((x, i) => { _bv.set(blkO().x + x[0] * 0.5, blkO().y + x[2] * 0.5 + 0.25, blkO().z + x[1] * 0.5); _bq.setFromAxisAngle(_bup, (x[4] || 0) * Math.PI / 2); _bm.compose(_bv, _bq, _bs); im.setMatrixAt(i, _bm); if (color) im.setColorAt(i, _bc.set(blkCol(x))); });
     im.count = L.length; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; im.computeBoundingSphere(); };
   for (const t of Object.keys(BLK)){ const L = by[t] || []; put(t, blkGeo(t), Blk.ims[t] ? Blk.ims[t].material : blkMat(t), L, blkIsShape(t), BLK[t][3] !== 'glass');
     if (BLK_GLASS[t]){ blkGlassMat = blkGlassMat || new THREE.MeshStandardMaterial({ color:'#cfefff', roughness: 0.1, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }); const k = t + '#g'; put(k, Blk.ims[k] ? Blk.ims[k].geometry : BLK_GLASS[t](), blkGlassMat, L, false, false); if (Blk.ims[k]) Blk.ims[k].userData.glass = true; } }
   blkCols(); }
 /* 碰撞：每一格直的算一根柱子，只看從地上（第 0 層）連起來的實心塊。第 2 層以上才有的東西（門上面的拱頂、屋簷）不擋，人可以從下面走過去 */
 function blkSolid(x){ const t = x[3]; if (!blkIsShape(t)) return BLK[t] && BLK[t][4] ? 'panel' : 'box'; return BSHP_COL[t]; }
-function blkCols(){ if (Blk.cols) for (const c of Blk.cols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } Blk.cols = []; if (!onIsle) return;
+function blkCols(){ if (Blk.cols) for (const c of Blk.cols){ const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } Blk.cols = []; if (!onIsle && !Blk.lot) return;
   const col = new Map(); for (const x of Blk.b){ const k = x[0] + ',' + x[1]; let o = col.get(k); if (!o) col.set(k, o = { x: x[0], z: x[1], cells: {} }); o.cells[x[2]] = x; }
   for (const o of col.values()){ let g0 = -1; for (let y = 0; y <= 1; y++){ const x = o.cells[y]; if (x && blkSolid(x)){ g0 = y; break; } } if (g0 < 0) continue;
     const base = o.cells[g0], kind = blkSolid(base); let h = g0, y = g0; while (o.cells[y] && blkSolid(o.cells[y])){ h = y + (blkSolid(o.cells[y]) === 'half' ? 0.5 : 1); y++; }
-    const px = ISLE.x + o.x * 0.5, pz = ISLE.z + o.z * 0.5, p = kind === 'panel' ? (base[4] || 0) % 2 : -1;
+    const px = blkO().x + o.x * 0.5, pz = blkO().z + o.z * 0.5, p = kind === 'panel' ? (base[4] || 0) % 2 : -1;
     const c = p < 0 ? { t:'b', x: px, z: pz, hw: 0.25, hd: 0.25 } : p === 0 ? { t:'b', x: px, z: pz, hw: 0.25, hd: 0.06 } : { t:'b', x: px, z: pz, hw: 0.06, hd: 0.25 };
-    if (p >= 0 || h > 2 || g0 > 0) c.top = null; else c.top = ISLE.y + h * 0.5;   /* 一兩層的方塊可以跳上去站；三層以上、隔板會擋住 */
+    if (p >= 0 || h > 2 || g0 > 0) c.top = null; else c.top = blkO().y + h * 0.5;   /* 一兩層的方塊可以跳上去站；三層以上、隔板會擋住 */
     colliders.push(c); Blk.cols.push(c); } }
 function blkClear(){ if (Blk.g){ scene.remove(Blk.g); for (const im of Object.values(Blk.ims)) im.dispose(); } Blk.g = null; Blk.ims = {}; Blk.b = []; Blk.owner = null; Blk.undo = []; blkCols(); }
-async function blkLoad(owner){ Blk.owner = owner; Blk.b = []; Blk.undo = []; blkDraw();
+async function blkLoad(owner){ if (Blk.lot){ BLS.at = 0; await blLoad(true); const L = blRow(Blk.lot.i); Blk.b = (L.b || []).map(x => x.slice()); blkDraw(); return; } Blk.owner = owner; Blk.b = []; Blk.undo = []; blkDraw();
   if (!Cloud.on || !Cloud.sb){ if (owner === myIdOrMe()){ Blk.b = Array.isArray(rec.isleBlocks) ? rec.isleBlocks.slice() : []; blkDraw(); } return; }
   try { const { data } = await Cloud.sb.rpc('isle_blocks_get', { p_owner: owner }); if (Blk.owner === owner && Array.isArray(data) && !Blk.pend.add.length && !Blk.pend.del.length){ Blk.b = data; blkDraw(); } } catch(e){} }
 function blkAt(gx, gz, gy){ return Blk.b.find(x => x[0] === gx && x[1] === gz && x[2] === gy); }
 function blkTop(gx, gz){ let h = -1; for (const x of Blk.b) if (x[0] === gx && x[1] === gz && x[2] > h) h = x[2]; return h; }
 const blkMe8 = () => String(Cloud.userId || 'me').slice(0, 8);
 function blkSupported(gx, gz, gy, extra){ if (gy === 0) return true; const has = (a, b, c) => !!blkAt(a, b, c) || (extra && extra.has(a + ',' + b + ',' + c)); return has(gx, gz, gy - 1) || has(gx + 1, gz, gy) || has(gx - 1, gz, gy) || has(gx, gz + 1, gy) || has(gx, gz - 1, gy); }
-function blkWhy(gx, gz, gy){ if (gy < 0) return '不能放'; if (gy >= BLK_LAYERS) return `最多疊 ${BLK_LAYERS} 層`; const x = gx * 0.5, z = gz * 0.5; if (Math.hypot(x, z) > 22.6) return '放在島外面了'; if (Math.abs(x) < 1.2 && z > 17) return '會擋住碼頭的路'; return null; }
+function blkWhy(gx, gz, gy){ if (gy < 0) return '不能放'; if (gy >= blkLay()) return `最多疊 ${blkLay()} 層`; const x = gx * 0.5, z = gz * 0.5; if (Blk.lot) return Math.abs(gx) > 19 || Math.abs(gz) > 19 ? '超出建地了' : null; if (Math.hypot(x, z) > 22.6) return '放在島外面了'; if (Math.abs(x) < 1.2 && z > 17) return '會擋住碼頭的路'; return null; }
 /* 放一塊（不檢查錢，呼叫的人先算好）；回傳放好的那一塊 */
 function blkPut(gx, gz, gy, t, r, c){ const it = [gx, gz, gy, t, r || 0, blkMe8()]; if (blkIsShape(t)) it.push(c | 0); Blk.b.push(it);
   const k = 'b:' + t; if (isleBagN(k) > 0) rec.isleBag = Object.assign({}, rec.isleBag, { [k]: isleBagN(k) - 1 }); else rec.coins -= BLK[t][1];
@@ -8915,7 +9067,7 @@ function blkPlaceMany(cells0, quiet){ const seen = new Set(), cells = [], add = 
   for (const c of cells0){ add(...c); if (c[3] === 'dr') add(c[0], c[1], c[2] + 1, 'dt', c[4], c[5]); }
   if (Blk.mir) for (const c of cells.slice()){ if (c[0] !== 0) add(-c[0], c[1], c[2], c[3], blkMirR(c[4]), c[5]); }
   if (!cells.length){ if (!quiet) blkHint('那裡已經有東西了'); return 0; }
-  if (Blk.b.length + cells.length > BLK_MAX){ blkHint(`小島最多 ${BLK_MAX} 塊（還能放 ${Math.max(0, BLK_MAX - Blk.b.length)} 塊）`); return 0; }
+  if (Blk.b.length + cells.length > blkMax()){ blkHint(`${Blk.lot ? '一格建地' : '小島'}最多 ${blkMax()} 塊（還能放 ${Math.max(0, blkMax() - Blk.b.length)} 塊）`); return 0; }
   const { cost } = blkCost(cells); if (rec.coins < cost){ blkHint(`金幣不夠（要 🪙${cost}）`); return 0; }
   /* 照順序放：每一輪放「下面或旁邊已經有東西」的 */
   const left = cells.slice().sort((a, b) => a[2] - b[2]), done = []; let prog = true;
@@ -8924,7 +9076,7 @@ function blkPlaceMany(cells0, quiet){ const seen = new Set(), cells = [], add = 
   if (left.length) blkHint(`有 ${left.length} 塊懸空，沒有放`);
   Blk.undo.push({ add: done.map(x => x.slice(0, 3)) }); if (Blk.undo.length > 30) Blk.undo.shift();
   try { renderCoins(); } catch(e){} blkFlushSoon(); blkDraw(); blkCount(); try { SFX.plop(); } catch(e){}
-  try { const x = done[0]; FX.emit(ISLE.x + x[0] * 0.5, ISLE.y + x[2] * 0.5 + 0.4, ISLE.z + x[1] * 0.5, 5, blkCol(x) || BLK[x[3]][2], 0.3, 1, 0.5); } catch(e){} return done.length; }
+  try { const x = done[0]; FX.emit(blkO().x + x[0] * 0.5, blkO().y + x[2] * 0.5 + 0.4, blkO().z + x[1] * 0.5, 5, blkCol(x) || BLK[x[3]][2], 0.3, 1, 0.5); } catch(e){} return done.length; }
 function blkAdd(gx, gz, gy){ const w = blkWhy(gx, gz, gy); if (w){ blkHint(w); return; } if (blkAt(gx, gz, gy)) return;
   if (!blkSupported(gx, gz, gy)){ blkHint('不能懸空：下面或旁邊要有一塊可以靠'); return; }
   blkPlaceMany([[gx, gz, gy, Blk.t, blkIsShape(Blk.t) || (BLK[Blk.t] && BLK[Blk.t][4]) ? Blk.r : 0, Blk.c]]); }
@@ -8935,7 +9087,7 @@ function blkDelMany(list0, quiet){ const me8 = blkMe8(), want = new Set(), its =
   if (Blk.mir) for (const it of its.slice()) if (it[0] !== 0) push(blkAt(-it[0], it[1], it[2]));
   its.sort((a, b) => b[2] - a[2]); const done = [];
   for (const it of its){ const up = blkAt(it[0], it[1], it[2] + 1); if (up && !want.has(up[0] + ',' + up[1] + ',' + up[2])){ if (!quiet) blkHint('上面還有東西，先收上面的'); continue; }
-    if (isleRank() < 2 && it[5] !== me8){ if (!quiet) blkHint('一般成員只能收自己放的'); continue; } blkTake(it); done.push(it); }
+    if ((Blk.lot ? (Blk.lot.own ? 2 : 1) : isleRank()) < 2 && it[5] !== me8){ if (!quiet) blkHint('一般成員只能收自己放的'); continue; } blkTake(it); done.push(it); }
   if (!done.length) return 0; Blk.undo.push({ del: done.map(x => x.slice()) }); if (Blk.undo.length > 30) Blk.undo.shift();
   blkFlushSoon(); blkDraw(); blkCount(); try { SFX.click(); } catch(e){} return done.length; }
 function blkDel(gx, gz, gy){ const it = blkAt(gx, gz, gy); if (it) blkDelMany([it]); }
@@ -8944,12 +9096,12 @@ function blkUndo(){ const U = Blk.undo.pop(); if (!U){ blkHint('沒有可以復�
   try { if (U.add){ const its = U.add.map(k => blkAt(k[0], k[1], k[2])).filter(Boolean); blkDelMany(its, true); Blk.undo.pop(); }
     else if (U.del){ blkPlaceMany(U.del.map(x => [x[0], x[1], x[2], x[3], x[4] || 0, x[6] | 0]).filter(c => c[3] !== 'dt'), true); Blk.undo.pop(); } } finally { Blk.mir = mir; }
   blkHint('↩️ 復原了'); }
-function blkCount(){ const n = $('#blkBar .bk-n'); if (n) n.textContent = `${Blk.b.length}/${BLK_MAX}`; }
+function blkCount(){ const n = $('#blkBar .bk-n'); if (n) n.textContent = `${Blk.b.length}/${blkMax()}`; }
 function blkFlushSoon(){ clearTimeout(Blk.timer); Blk.timer = setTimeout(blkFlush, 800); }
 async function blkFlush(){ if (!Blk.pend.add.length && !Blk.pend.del.length) return; if (!Cloud.on || !Cloud.sb){ rec.isleBlocks = Blk.b.slice(); Blk.pend = { add:[], del:[] }; saveRecLocal(); return; }
   if (Blk.busy){ blkFlushSoon(); return; } Blk.busy = true; const owner = Blk.owner;
   try { while (Blk.pend.add.length || Blk.pend.del.length){ const P = { add: Blk.pend.add.splice(0, 300), del: Blk.pend.del.splice(0, 300) };   /* 一次最多送 300 塊，多的分好幾次 */
-      const { data, error } = await Cloud.sb.rpc('isle_blocks_edit', { p_owner: owner === myIdOrMe() ? null : owner, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }); if (error) throw error;
+      const { data, error } = Blk.lot ? await Cloud.sb.rpc('lot_blocks_edit', { p_street: Blk.lot.street, p_lot: Blk.lot.i, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }) : await Cloud.sb.rpc('isle_blocks_edit', { p_owner: owner === myIdOrMe() ? null : owner, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }); if (error) throw error;
       if (data && data.player) adoptRow(data.player); if (Blk.owner === owner && !Blk.pend.add.length && !Blk.pend.del.length && Array.isArray(data.b)){ Blk.b = data.b; blkDraw(); } } }
   catch(e){ Blk.pend = { add:[], del:[] }; toast('🧱 ' + cloudErrMsg(e)); blkLoad(owner); try { cloudRefresh(); } catch(e2){} }
   Blk.busy = false; }
@@ -8960,8 +9112,8 @@ function blkPick(cx, cy){ const r = canvas.getBoundingClientRect(); Blk.v.set((c
   if (hits.length){ const h = hits[0], L = h.object.userData.list, it = L && L[h.instanceId]; if (it){ const n = h.face.normal.clone().applyQuaternion(_bq.setFromAxisAngle(_bup, (it[4] || 0) * Math.PI / 2));
       const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z); let d = [0, 0, 0]; if (ay >= ax && ay >= az) d = [0, 0, Math.sign(n.y)]; else if (ax >= az) d = [Math.sign(n.x), 0, 0]; else d = [0, Math.sign(n.z), 0];
       return { hit: it, gx: it[0] + d[0], gz: it[1] + d[1], gy: it[2] + d[2] }; } }
-  const pl = new THREE.Plane(new THREE.Vector3(0, 1, 0), -ISLE.y), p = new THREE.Vector3(); if (!Blk.rc.ray.intersectPlane(pl, p)) return null;
-  const gx = Math.round((p.x - ISLE.x) / 0.5), gz = Math.round((p.z - ISLE.z) / 0.5); return { hit: null, gx, gz, gy: blkTop(gx, gz) + 1 }; }
+  const pl = new THREE.Plane(new THREE.Vector3(0, 1, 0), -blkO().y), p = new THREE.Vector3(); if (!Blk.rc.ray.intersectPlane(pl, p)) return null;
+  const gx = Math.round((p.x - blkO().x) / 0.5), gz = Math.round((p.z - blkO().z) / 0.5); return { hit: null, gx, gz, gy: blkTop(gx, gz) + 1 }; }
 function blkTap(cx, cy){ const P = blkPick(cx, cy); if (!P) return; if (Blk.erase){ if (P.hit) blkDel(P.hit[0], P.hit[1], P.hit[2]); return; } blkAdd(P.gx, P.gz, P.gy); return P; }
 /* v681 一次拉一整片：地板（長方形填滿）、牆（一直線 × 高度）、房間（長方形的外框 × 高度） */
 function blkRectCells(a, b){ const out = [], gy = a.gy, H = Blk.H, t = Blk.t, r = Blk.r, c = Blk.c, x0 = Math.min(a.gx, b.gx), x1 = Math.max(a.gx, b.gx), z0 = Math.min(a.gz, b.gz), z1 = Math.max(a.gz, b.gz);
@@ -8971,7 +9123,7 @@ function blkRectCells(a, b){ const out = [], gy = a.gy, H = Blk.H, t = Blk.t, r 
   return out.slice(0, 900); }
 function blkPreview(cells){ let im = Blk.prev; if (!cells || !cells.length){ if (im) im.visible = false; return; }
   if (!im || im.userData.cap < cells.length){ if (im){ scene.remove(im); im.dispose(); } im = Blk.prev = new THREE.InstancedMesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), ghostOk, Math.max(64, cells.length + 64)); im.userData.cap = Math.max(64, cells.length + 64); im.userData.dyn = true; im.renderOrder = 4; scene.add(im); }
-  im.visible = true; cells.forEach((c, i) => { _bv.set(ISLE.x + c[0] * 0.5, ISLE.y + c[2] * 0.5 + 0.25, ISLE.z + c[1] * 0.5); _bm.makeTranslation(_bv.x, _bv.y, _bv.z); im.setMatrixAt(i, _bm); }); im.count = cells.length; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); }
+  im.visible = true; cells.forEach((c, i) => { _bv.set(blkO().x + c[0] * 0.5, blkO().y + c[2] * 0.5 + 0.25, blkO().z + c[1] * 0.5); _bm.makeTranslation(_bv.x, _bv.y, _bv.z); im.setMatrixAt(i, _bm); }); im.count = cells.length; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); }
 { let down = null; canvas.addEventListener('pointerdown', e => { if (!Blk.on || Blk.plan) return; down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; clearTimeout(Blk.lp);
     Blk.lp = setTimeout(() => { if (!down || Blk.erase) return; if (Blk.mode === 'one'){ const P = blkTap(down.x, down.y); if (P){ Blk.paint = { gy: P.gy, last: P.gx + ',' + P.gz }; try { buzz(15); } catch(e){} } return; }
       const P = blkPick(down.x, down.y); if (!P) return; const a = { gx: P.gx, gz: P.gz, gy: P.gy }; Blk.rect = { a, b: a }; Blk.paint = { rect: true }; blkPreview(blkRectCells(a, a)); try { buzz(15); } catch(e){} }, 380); });   /* 按住不動一下：單塊＝連續放一排；地板／牆／房間＝開始拉 */
@@ -8984,7 +9136,7 @@ function blkPreview(cells){ let im = Blk.prev; if (!cells || !cells.length){ if 
     const short = performance.now() - down.t < 380 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 10; if (short && !Blk.paint) blkTap(down.x, down.y); Blk.paint = null; down = null; };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); }
 function blkStart(){ if (!onIsle || !canEditIsle()){ toast('要在自己（或一起住）的小島上才能蓋'); return; } closeSheet(); if (Build.on) stopBuild(); Blk.on = true; Blk.erase = false; Blk.plan = null; blkBar(); try { renderIsleBar(); } catch(e){} }
-function blkStop(){ Blk.on = false; Blk.paint = null; Blk.rect = null; Blk.plan = null; blkPreview(null); blkFlush(); const b = $('#blkBar'); if (b) b.hidden = true; try { renderIsleBar(); } catch(e){} }
+function blkStop(){ if (Blk.lot){ blBuildStop(); return; } Blk.on = false; Blk.paint = null; Blk.rect = null; Blk.plan = null; blkPreview(null); blkFlush(); const b = $('#blkBar'); if (b) b.hidden = true; try { renderIsleBar(); } catch(e){} }
 function blkSwatch(k, v){ const i = el('i'); if (blkIsShape(k)) { i.className = 'shp'; i.textContent = { cb:'⬛', hf:'▬', tl:'▭', sl:'◢', st:'▟', qr:'◜', cy:'⬤', dm:'◠', ar:'⌒', dr:'🚪', dt:'🚪', wr:'⭕', ws:'🪟', aw:'⛱️' }[k] || '■'; i.style.color = BPAL[Blk.c] || v[2]; } else i.style.background = `url(${blkTex(v[3] || 'paint', v[2]).image.toDataURL()}) center/cover, ${v[2]}`; return i; }
 function blkBar(){ let bar = $('#blkBar'); if (!Blk.on){ if (bar) bar.hidden = true; return; } if (!bar){ bar = el('div', 'panel'); bar.id = 'blkBar'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; const top = el('div', 'bk-top'); const B = BLK[Blk.t], shape = blkIsShape(Blk.t);
@@ -8995,7 +9147,7 @@ function blkBar(){ let bar = $('#blkBar'); if (!Blk.on){ if (bar) bar.hidden = t
     const no = el('button', 'tbtn ghost', '取消'); no.addEventListener('click', () => { Blk.plan = null; blkPreview(null); blkBar(); }); top.appendChild(no); bar.appendChild(top); return; }
   const tip = Blk.erase ? '收：點哪一塊收哪一塊（自己放的回到包包）' : Blk.mode === 'one' ? `${B[0]} ${isleBagN('b:' + Blk.t) ? `包包 ${isleBagN('b:' + Blk.t)}` : '🪙' + B[1]}・點一下放，按住再滑放一排` : `${B[0]}・按住一下再拖出${{ floor:'一片地板', wall:'一面牆', room:'一間房間的四面牆' }[Blk.mode]}`;
   top.appendChild(el('span', 'bk-hint', tip)).id = 'blkHint';
-  top.appendChild(el('span', 'bk-n', `${Blk.b.length}/${BLK_MAX}`));
+  top.appendChild(el('span', 'bk-n', `${Blk.b.length}/${blkMax()}`));
   const un = el('button', 'tbtn ghost', '↩️'); un.title = '復原'; un.disabled = !Blk.undo.length; un.addEventListener('click', () => { blkUndo(); blkBar(); }); top.appendChild(un);
   if ((shape || B[4]) && !Blk.erase){ const r = el('button', 'tbtn ghost', '🔄'); r.title = '轉向'; r.addEventListener('click', () => { Blk.r = (Blk.r + 1) % 4; toast(`方向 ${['↑', '→', '↓', '←'][Blk.r]}`); }); top.appendChild(r); }
   const er = el('button', 'tbtn ghost' + (Blk.erase ? ' on' : ''), Blk.erase ? '放' : '收'); er.addEventListener('click', () => { Blk.erase = !Blk.erase; blkBar(); }); top.appendChild(er);
@@ -20624,6 +20776,7 @@ function renderTab0(){
   if (curTab === 'museum'){ renderMuseum(body); return; }
   if (curTab === 'pets'){ renderPets(body); return; }
   if (curTab === 'craft'){ renderCraft(body); return; }
+  if (curTab === 'lot'){ renderLot(body); return; }
   if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'dm'){ renderDM(body); return; }
   if (curTab === 'duelhub'){ renderDuelHub(body); return; }
@@ -20955,6 +21108,7 @@ function renderTab0(){
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
+      ["建地島", "home", ["西邊公寓旁邊有一座木橋，走過去就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"]],
       ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
@@ -22072,7 +22226,7 @@ function frame(){
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
   updatePlayer(dt); try { fishStandTick(); } catch(e){} try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); try { updateBuildLots(); } catch(e){ if (!updateBuildLots.e){ updateBuildLots.e = 1; console.warn('lots', e); } } updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
@@ -22162,6 +22316,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'uLOTS', d:'11/26', items:[['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
   { id:'u849', d:'11/25', items:[['🌳','村子裡的樹變少了：路邊不再有樹擋路，西邊公寓旁清出一大塊空地（之後要做建地）']] },
   { id:'u847', d:'11/25', items:[['💬','新的聊天框：聊天列上面一行顯示最新一句，點一下展開最近 5 句；左邊切換看全村／附近／隱藏，⚙️ 可以設定誰聽得到你、檢舉說不好的話的人']] },
   { id:'u844', d:'11/25', items:[['🧓','阿鐵師傅改回男生；老闆不再被當成老人（阿忠、阿福不會白頭髮了）；老阿伯留白色平頭、老阿嬤包包頭']] },
