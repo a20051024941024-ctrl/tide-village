@@ -462,7 +462,7 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:24, y:0.32 };
 /* v852 🏘️ 建地島：西邊公寓外的海上（見 blBuild）。一格建地 20×20 公尺、格子中間 4 公尺的路；木橋從村子西岸（z 43）接到島的入口 */
-const BLI = { x:-55, z:104, half:40, y:0.5, lot:20, gap:4, oz:3, bz0:39.5, bz1:64.5, by:0.45 };   /* oz：建地往北挪 3 公尺，南邊留入口廣場 */
+const BLI = { x:-72, z:104, half:39, y:0.5, lot:20, gap:4, oz:4, bx:-47, bz0:42.6, bz1:65.8, by:0.45 };   /* oz：建地往北挪，南邊留入口廣場。v853 作者：「島太近了」「路接不好」「完全過不去」→ 島往外移到離珊瑚礁 20 公尺外；橋接在住宅區中間那條步道（x -47）的盡頭，以前接在阿春家旁邊被房子擋住 */
 const BLS = { street:1, n:1, used:{}, list:null, at:0, loading:false, mine:null, help:[], views:{}, built:false, near:false, g:null, bp:null, admin:null };
 const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer', 'g_printflag'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
 const GARDEN = { x:150 - 24 - 5.75, z:0, hx:6.75, hz:5, px:150 - 24 - 4.5, sx:150 - 24 - 11.3 };   /* px：田的中心；sx：種子攤 */   /* v370 小島西邊的菜園平台 */
@@ -599,7 +599,7 @@ const BOAT_DOCKS = [
 ];
 // 快速傳送點（站的位置與面向）
 const TRAVEL = [
-  { id:'lots', label:'建地島', x:BLI.x, z:BLI.z - BLI.half + 4.5, rot:0, color:'#c9a46a' },
+  { id:'lots', label:'建地島', x:BLI.bx, z:BLI.z - BLI.half + 4.5, rot:0, color:'#c9a46a' },
   { id:'plaza', label:'潮汐廣場', x:4, z:9.6, rot:Math.PI, color:PALETTE.gold },
   { id:'harborsq', label:'港邊廣場', x:HARBOR_SQ[0], z:HARBOR_SQ[1] + 4, rot:Math.PI, color:'#cfc6b4' },
   ...SPOTS.filter(s => s.id !== 'isle' && !s.hidden).map(s => s.id === 'shrimp' ? { id:s.id, label:'釣蝦場門口', x:-1, z:-6.4, rot:Math.PI, color:s.color } : ({ id:s.id, label:s.label, x:s.pos.x, z:s.pos.z, rot:Math.atan2(s.dir.x, s.dir.y), color:s.color })),   /* 釣蝦場在村子裡，傳送到門口（SHRIMP_DOOR 往外 2.6） */
@@ -1216,7 +1216,7 @@ function terrainInfo(x, z){
   return { h, water, region };
 }
 function terrainH(x, z){ return terrainInfo(x, z).h; }
-function isLand(x, z){ return !terrainInfo(x, z).water; }
+function isLand(x, z){ return blOn(x, z, 0.2) || !terrainInfo(x, z).water; }   /* v853 建地島也算陸地（不然站在島上到處都會跳「拋竿」） */
 function trailDist(x, z){ let d = 1e9; for (const p of MAP.trails || []) d = Math.min(d, lineDist(x, z, p)); return d; }
 function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); for (const S of [SPORT, SPORT2]){ const dx = Math.max(S.x0 - x, 0, x - S.x1), dz = Math.max(S.z0 - z, 0, z - S.z1); d = Math.min(d, dx || dz ? Math.hypot(dx, dz) : -Math.min(x - S.x0, S.x1 - x, z - S.z0, S.z1 - z)); } return d; }
 function inSand(x, z){ const e = islandEdge(x, z); return e < 4.5 + wobble(x + z, 2) * 1.2; }
@@ -1328,7 +1328,7 @@ scene.add(sun, sun.target);
 /* ================= WORLD ================= */
 const colliders = []; // {t:'b',x,z,hw,hd} | {t:'c',x,z,r}
 const decks = [];     // {x0,x1,z0,z1,y}
-for (const [z0, z1, y] of [[BLI.bz0, BLI.bz0 + 2, 0.12], [BLI.bz0 + 2, BLI.bz0 + 4, 0.28], [BLI.bz0 + 4, BLI.bz1 + 1, BLI.by]]) decks.push({ x0: BLI.x - 1.5, x1: BLI.x + 1.5, z0, z1, y });   /* v852 往建地島的木橋（岸邊那頭做成小斜坡，不用跳） */
+for (let k = 0; k < 8; k++) decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + k * 0.5, z1: BLI.bz0 + (k + 1) * 0.5, y: BLI.by * (k + 1) / 9 }); decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + 4, z1: BLI.bz1 + 1, y: BLI.by });   /* v852 往建地島的木橋；v853 岸邊那頭 4 公尺慢慢斜上去（一片一片 5 公分），不再是兩個台階 */
 const waters = [];    // {x0,x1,z0,z1}
 const animWater = [];
 const lanterns = [];
@@ -2297,7 +2297,7 @@ function buildTrees(trees, PX, PZ){
 }
 
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
-function waterAt(px, pz){ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (wildNear(px, pz, 10)) return wildWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); { const sh = mtnH(px, pz); if (sh !== null && sh > -0.12) return false; } if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
+function waterAt(px, pz){ if (blOn(px, pz, 0.2)) return false;   /* v853 建地島上不是水 */ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (wildNear(px, pz, 10)) return wildWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); { const sh = mtnH(px, pz); if (sh !== null && sh > -0.12) return false; } if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castBlocked(x, z, px, pz){
   const L = Math.hypot(px - x, pz - z); if (L < 2.2) return false;
   let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
@@ -2370,7 +2370,7 @@ function flkTick(dt, t){
   FLK.migOn = !!at; FLK.mig.visible = !!at && !away;
   if (at){ const cx = at[0], cz = at[1], d = Math.hypot(me.pos.x - cx, me.pos.z - cz), wy = at[2] ? groundHeight(cx, cz) : waterY(cx, cz, t);
     if (FLK.mig.visible){ FLK.mig.position.set(cx, wy, cz);
-      for (const b of FLK.birds){ const u = b.userData, a = u.p + t * u.w * 0.55, q = (t * 0.13 + u.p * 0.31) % 1, k = q > 0.86 && !at[2] ? Math.sin((q - 0.86) / 0.14 * Math.PI) : 0, y = u.h * (1 - k * 0.92) + 0.35;
+      for (const b of FLK.birds){ const u = b.userData, a = u.p + t * u.w * 0.55, q = (t * 0.13 + u.p * 0.31) % 1, k = q > 0.86 && !at[2] && waterAt(cx + Math.cos(a) * u.r, cz + Math.sin(a) * u.r) ? Math.sin((q - 0.86) / 0.14 * Math.PI) : 0,   /* v853 作者：「海鳥會在陸地捕魚」→ 只在下面是水的時候才俯衝 */ y = u.h * (1 - k * 0.92) + 0.35;
         b.position.set(Math.cos(a) * u.r, y, Math.sin(a) * u.r); b.rotation.y = -a + (u.w > 0 ? 0 : Math.PI); b.rotation.x = k > 0.05 && q < 0.93 ? 0.7 : 0;
         const fl = k > 0.3 ? -0.9 : Math.sin(t * 8 + u.p * 3) * 0.5; b.children[1].rotation.z = -0.3 - fl; b.children[2].rotation.z = 0.3 + fl;
         if (k > 0.96 && !u.dv){ u.dv = true; if (d < 70){ const wx = cx + b.position.x, wz = cz + b.position.z; ripple(wx, wz); FX.emit(wx, wy + 0.1, wz, 6, '#ffffff', 0.8, 1.6, 0.6); } } else if (k < 0.2) u.dv = false; } }
@@ -7929,7 +7929,7 @@ function blOn(x, z, pad){ const h = BLI.half + (pad || 0), r = 6, dx = Math.abs(
 function blH(x, z){ return blOn(x, z, 0.6) ? BLI.y : null; }
 function blRow(i){ return (BLS.list || []).find(r => r.lot === i) || { lot: i, owner: null, name: null, b: [], sign: '', mem: [] }; }
 function blHere(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } if (!blOn(x, z)) return null; for (let i = 0; i < 9; i++){ const [cx, cz] = blC(i); if (Math.abs(x - cx) <= BLI.lot / 2 && Math.abs(z - cz) <= BLI.lot / 2) return { i, cx, cz, L: blRow(i) }; } return null; }
-function blGateNear(){ return blOn(me.pos.x, me.pos.z, 1) && Math.hypot(me.pos.x - (BLI.x + 6), me.pos.z - (BLI.z - BLI.half + 4)) < 2.4; }
+function blGateNear(){ return blOn(me.pos.x, me.pos.z, 1) && Math.hypot(me.pos.x - (BLI.bx + 6), me.pos.z - (BLI.z - BLI.half + 4)) < 2.4; }
 function blMine(L){ return !!(Cloud.userId && L && L.owner === Cloud.userId); }
 function blCanBuild(L){ const u = Cloud.userId; return !!(u && L && L.owner && (L.owner === u || (L.mem || []).some(m => m.id === u))); }
 function blStName(n){ return (['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][n] || n) + '街'; }
@@ -7939,19 +7939,19 @@ function blBuild(){ if (BLS.built) return; BLS.built = true; const g = new THREE
   const box = (x, y, z, w, h, d, m, sh) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y + h / 2, z); o.receiveShadow = true; o.castShadow = !!sh; g.add(o); return o; };
   const slab = (hs, top, m) => { const h = top + 2; box(BLI.x, -2, BLI.z, hs * 2 - 12, h, hs * 2, m); box(BLI.x, -2, BLI.z, hs * 2, h, hs * 2 - 12, m); for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const c = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, h, 28), m); c.position.set(BLI.x + sx * (hs - 6), -2 + h / 2, BLI.z + sz * (hs - 6)); c.receiveShadow = true; g.add(c); } };
   slab(BLI.half + 2.5, Y - 0.18, M('#e8d29a')); slab(BLI.half, Y, M('#7fbf63'));
-  const S = 3 * BLI.lot + 2 * BLI.gap; box(BLI.x, Y, BLI.z + BLI.oz / 2 - 1, S + 4, 0.03, S + 4 + BLI.oz + 4, M('#d9c9a6'));   /* 路 */
+  const S = 3 * BLI.lot + 2 * BLI.gap; box(BLI.x, Y, BLI.z, S + 4, 0.03, BLI.half * 2 - 2, M('#d9c9a6'));   /* 路 */
   const pad = M('#86c76a'), curb = M('#c9c1b3', 0.9);
   for (let i = 0; i < 9; i++){ const [x, z] = blC(i), L = BLI.lot; box(x, Y + 0.03, z, L, 0.03, L, pad); for (const [dx, dz, w, d] of [[0, -L / 2, L, 0.2], [0, L / 2, L, 0.2], [-L / 2, 0, 0.2, L], [L / 2, 0, 0.2, L]]) box(x + dx, Y + 0.03, z + dz, w, 0.16, d, curb); }
   /* 入口牌坊（朝村子那邊）＋選街路牌 */
-  const ez = BLI.z - BLI.half + 2.2, red = M('#8a3a2a', 0.6); box(BLI.x - 4, Y, ez, 0.4, 3.6, 0.4, red, true); box(BLI.x + 4, Y, ez, 0.4, 3.6, 0.4, red, true); box(BLI.x, Y + 3.45, ez, 9.6, 0.45, 0.65, red, true); box(BLI.x, Y + 3.0, ez, 8.4, 0.22, 0.4, red);
-  BLS.gateLab = blLabel(g, BLI.x, Y + 4.6, ez, '🏘️ 建地島・' + blStName(BLS.street), 1.35);
-  const wood = M('#6b4a32'); box(BLI.x + 6, Y, ez + 1.8, 0.2, 2.6, 0.2, wood, true); for (let k = 0; k < 3; k++) box(BLI.x + 6.8, Y + 2.2 - k * 0.5, ez + 1.8, 1.6, 0.36, 0.08, M('#f2e6c8'));
-  blLabel(g, BLI.x + 7, Y + 3.3, ez + 1.8, '選要逛哪一街', 0.6);
+  const ez = BLI.z - BLI.half + 2.2, red = M('#8a3a2a', 0.6); box(BLI.bx - 4, Y, ez, 0.4, 3.6, 0.4, red, true); box(BLI.bx + 4, Y, ez, 0.4, 3.6, 0.4, red, true); box(BLI.bx, Y + 3.45, ez, 9.6, 0.45, 0.65, red, true); box(BLI.bx, Y + 3.0, ez, 8.4, 0.22, 0.4, red);
+  BLS.gateLab = blLabel(g, BLI.bx, Y + 4.6, ez, '🏘️ 建地島・' + blStName(BLS.street), 1.35);
+  const wood = M('#6b4a32'); box(BLI.bx + 6, Y, ez + 1.8, 0.2, 2.6, 0.2, wood, true); for (let k = 0; k < 3; k++) box(BLI.bx + 6.8, Y + 2.2 - k * 0.5, ez + 1.8, 1.6, 0.36, 0.08, M('#f2e6c8'));
+  blLabel(g, BLI.bx + 7, Y + 3.3, ez + 1.8, '選要逛哪一街', 0.6);
   /* 木橋（村子西岸 → 島的入口） */
-  const len = BLI.bz1 - BLI.bz0, bm = M('#b07a45', 0.8), pm = M('#7a5232', 0.8), bc = (BLI.bz0 + BLI.bz1) / 2; box(BLI.x, BLI.by - 0.25, bc + 2, 3.2, 0.25, len - 4, bm, true); box(BLI.x, 0.12 - 0.25, BLI.bz0 + 1, 3.2, 0.25, 2, bm, true); box(BLI.x, 0.28 - 0.25, BLI.bz0 + 3, 3.2, 0.25, 2, bm, true);
-  for (let t = BLI.bz0; t <= BLI.bz1; t += 3) for (const sx of [-1.55, 1.55]) box(BLI.x + sx, -1.2, t, 0.2, BLI.by + 2.2, 0.2, pm, true);
-  for (const sx of [-1.55, 1.55]) box(BLI.x + sx, BLI.by + 0.85, bc, 0.12, 0.12, len, pm);
-  for (const sx of [-1.65, 1.65]){ const c = { t: 'b', x: BLI.x + sx, z: bc, hw: 0.1, hd: len / 2, top: null }; colliders.push(c); }   /* 欄杆：不會從橋上掉下去 */
+  const len = BLI.bz1 - BLI.bz0, bm = M('#b07a45', 0.8), pm = M('#7a5232', 0.8), bc = (BLI.bz0 + BLI.bz1) / 2; box(BLI.bx, BLI.by - 0.25, bc + 2, 3.2, 0.25, len - 4, bm, true); { const rp = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.25, 4.1), bm); rp.position.set(BLI.bx, BLI.by / 2 - 0.12, BLI.bz0 + 2); rp.rotation.x = -Math.atan2(BLI.by, 4); rp.castShadow = rp.receiveShadow = true; g.add(rp); }   /* 岸邊那頭是一片斜板 */
+  for (let t = BLI.bz0 + 4; t <= BLI.bz1; t += 3) for (const sx of [-1.55, 1.55]) box(BLI.bx + sx, -1.2, t, 0.2, BLI.by + 2.2, 0.2, pm, true);
+  for (const sx of [-1.55, 1.55]) box(BLI.bx + sx, BLI.by + 0.85, bc + 2, 0.12, 0.12, len - 4, pm);
+  for (const sx of [-1.65, 1.65]){ const c = { t: 'b', x: BLI.bx + sx, z: bc + 2, hw: 0.1, hd: (len - 4) / 2, top: null }; colliders.push(c); }   /* 欄杆：不會從橋上掉下去 */
   for (let i = 0; i < 9; i++) blDrawLot(i); }
 /* 文字牌（canvas 做的 sprite） */
 function blLabel(parent, x, y, z, text, sc, bg){ const cv = document.createElement('canvas'); cv.width = 640; cv.height = 128; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthWrite: false })); s.userData.cv = cv; s.scale.set(4.6 * (sc || 1), 0.92 * (sc || 1), 1); s.position.set(x, y, z); s.renderOrder = 5; parent.add(s); blLabelSet(s, text, bg); return s; }
@@ -8026,7 +8026,9 @@ let blSheetI = -1;
 function blOpen(i){ blSheetI = i; openSheet('lot'); blLoad(true); }
 function renderLot(body){ body.textContent = ''; const i = blSheetI;
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '建地島要連上雲端才能用。')); return; }
-  if (i === -2){ body.appendChild(el('div', 'dexhead', '🏘️ 建地島・選要逛哪一街')); const box = el('div', 'gb-r');
+  if (i === -2){ body.appendChild(el('div', 'dexhead', '🏘️ 建地島'));
+    if (!BLS.mine && BLS.list){ const free = [...Array(9).keys()].find(k => !blRow(k).owner); if (free != null){ const b = el('button', 'tbtn', `🏃 帶我去空地（${blStName(BLS.street)}第 ${free + 1} 格）`); b.addEventListener('click', () => { closeSheet(); blGoLot(free); setTimeout(() => blOpen(free), 900); }); body.appendChild(b); } else body.appendChild(el('p', 'sub', `${blStName(BLS.street)}滿了，換一條街看看`)); }
+    body.appendChild(el('div', 'dexhead', '選要逛哪一街')); const box = el('div', 'gb-r');
     for (let n = 1; n <= (BLS.n || 1); n++){ const b = el('button', n === BLS.street ? 'tbtn' : 'tbtn ghost', `${blStName(n)}（${(BLS.used || {})[n] || 0}/9）`); b.addEventListener('click', () => { blSetStreet(n); closeSheet(); toast(`🏘️ 現在逛的是${blStName(n)}`); }); box.appendChild(b); }
     body.appendChild(box); if (BLS.mine){ const b = el('button', 'tbtn', `🏠 去我的建地（${blStName(BLS.mine.street)}）`); b.addEventListener('click', () => { blSetStreet(BLS.mine.street); closeSheet(); blGoLot(BLS.mine.lot); }); body.appendChild(b); }
     body.appendChild(el('p', 'sub', '一條街 9 格建地。快滿了會自動開下一條街。')); return; }
@@ -21174,7 +21176,7 @@ function renderTab0(){
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
-      ["建地島", "home", ["西邊公寓旁邊有一座木橋，走過去就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []],
+      ["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []],
       ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
@@ -22382,6 +22384,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u854', d:'11/26', items:[['🌉','建地島移到離珊瑚礁遠一點的地方；木橋改接在住宅區中間那條步道的盡頭，岸邊那頭是平順的斜板，走得過去了'], ['🐦','海鳥不會再對著陸地俯衝捕魚']] },
   { id:'u852', d:'11/26', items:[['💇','新髮型三種：捲捲短髮、雙麻花辮、長直髮，到造型頁「髮型」選', 'closet'], ['🧓','村子裡的老人家看起來更像老人了：背有點駝、手背在後面散步、臉上有皺紋，有的戴老花眼鏡、拄拐杖'], ['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
   { id:'u849', d:'11/25', items:[['🌳','村子裡的樹變少了：路邊不再有樹擋路，西邊公寓旁清出一大塊空地（之後要做建地）']] },
   { id:'u853', d:'11/26', items:[['📮','小島信箱：去別人的島可以按「📮 留言」投一張明信片；自己的島上看得到誰來過、留了什麼，可以回訪'], ['🏘️','大家現在都在同一個村子，不再分大廳']] },
