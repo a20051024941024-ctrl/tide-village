@@ -19991,7 +19991,7 @@ const TIDE_TALK = { high: ['滿潮了，海水都淹到沙灘上來了', '現在
 function npcLine(n){ const r = Math.random(), pick = a => a[Math.floor(Math.random() * a.length)]; if (n.rainWear && Math.random() < 0.3) return pick(['下雨了，還好有帶雨衣', '下雨天魚比較好咬，淋一點雨沒關係', '雨衣穿著有點悶，不過總比淋濕好', '你沒穿雨衣啊？小心別感冒了']); if (r > 0.86 && n.pos && islandEdge(n.pos.x, n.pos.z) < 16 && Math.hypot(n.pos.x, n.pos.z) < 70){ if (Env.wx === 'storm') return '今天浪好大，外海都是白頭浪'; if (Env.tide && TIDE_TALK[Env.tide.st]) return pick(TIDE_TALK[Env.tide.st]); } if (n.wid && r < 0.3){ const m = worldMemLines(n); if (m.length) return pick(m); } if (n.shopNpc === 'cai'){ const a = caiLines(); if (a.length && r < 0.55) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'sci'){ const a = sciLines(); if (a.length && r < 0.65) return pick(a); return pick(n.lines); } if (n.shopNpc === 'news'){ const a = newsLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.wid === 'gang'){ const a = gangLines(); if (a.length && r < 0.45) return pick(a); } if (n.shopNpc === 'fu'){ const a = fuLines(); if (a.length && r < 0.6) return pick(a); return r < 0.9 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.shopNpc === 'mu'){ const a = muLines(); if (a.length && r < 0.5) return pick(a); return r < 0.85 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.tailor){ const a = lingLines(); if (a.length && r < 0.45) return pick(a); return r < 0.8 ? pick(n.lines) : pick(npcEventLines(n)); } if (n.amo){ const a = amoLines(); if (a.length && r < 0.5) return pick(a); return pick(n.lines); } if (r < 0.4) return pick(npcEventLines(n)); if (r < 0.7) return pick(NPC_TIPS); return pick(n.lines); }
 // 阿默：港口裡不會有紅鯊，所以他每一趟都開自己的紅色小船，繞著島到外海隨便一個地方釣（每一趟去哪裡大家看到的都一樣）
 // 每 7 分鐘一趟：從碼頭開到外海的環線 → 沿著環線繞到這次的釣點 → 釣魚 → 原路開回來 → 在碼頭休息一下。環線離岸邊 22 公尺，不會撞到紅樹林；不會經過往珊瑚礁群島的跨海大橋那一側
-const AMO = { dock:[35.6, -27.2], cycle:420, pier:50, speed:4.2, off:22 };
+const AMO = { dock:[35.6, -27.2], cycle:420, pier:120, speed:4.2, off:22 };   /* v825 上岸時間拉長：走去長椅、坐著打遊戲機、再走回來 */
 const AMO_EXIT = [[38, -29.5], [52, -30], [56, -50], [68, -56]];   /* 港口出去的水道（跟漁船一樣） */
 function amoRing(a){ const r = islandR(a) + AMO.off + 12 * Math.exp(-Math.pow((a - 0.4) / 0.4, 2)); return [Math.cos(a) * r, Math.sin(a) * r]; }   /* 紅樹林那一段繞遠一點 */
 function amoTrip(k){
@@ -20012,9 +20012,8 @@ function updateAmo(n, dt, t){
   const T = Date.now() / 1000, k = Math.floor(T / AMO.cycle), ph = T - k * AMO.cycle, c = amoTrip(k), S = c.sail, fishEnd = AMO.cycle - AMO.pier - S;
   let mode, s; if (ph < S){ mode = 'go'; s = ph * AMO.speed; } else if (ph < fishEnd){ mode = 'sea'; s = c.len; } else if (ph < fishEnd + S){ mode = 'back'; s = c.len - (ph - fishEnd) * AMO.speed; } else mode = 'pier';
   if (mode === 'pier'){ n.boat.position.set(AMO.dock[0], WATER_LEVEL, AMO.dock[1]); n.boat.rotation.set(0, Math.PI / 2, 0);
-    if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; amoRecast(n, t); n.amoTired = t + 4; if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['今天又沒遇到……下一趟換個地方', '好累……我坐一下打一場', '上岸了，先打一場再說']), '', 4); }
-    if (t > (n.amoTired || 0)){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 5; n.sitting = true; n.floorSit = true; n.baseY = n.homeY; } else n.floorSit = false; }
-  else { n.floorSit = false; const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
+    if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; n.fishing = false; n.bobState = 'none'; n.flying = null; n.amoSeat = null; n.amoTired = t + 4; if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['今天又沒遇到……下一趟換個地方', '好累……我坐一下打一場', '上岸了，先打一場再說']), '', 4); }
+    amoBench(n, dt, t, AMO.cycle - ph); }  else { n.floorSit = false; const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
     const hd = mode === 'sea' ? out : hd0 + (mode === 'back' ? Math.PI : 0);
     n.boat.position.set(x, WATER_LEVEL + bob, z); n.boat.rotation.set(Math.sin(t * 1.1) * 0.02, hd, Math.sin(t * 1.3) * 0.03);
     n.pos.set(x, 0, z); n.baseY = WATER_LEVEL - 0.08 + bob; n.sitting = true; n.rot = hd;
@@ -20024,6 +20023,22 @@ function updateAmo(n, dt, t){
   n.amoMode = mode; amoDevice(n, mode, t);
 }
 const pick2 = a => a[Math.floor(Math.random() * a.length)];
+/* v825 阿默上岸：先喘一下 → 慢慢走到港邊廣場最近的長椅 → 坐下打遊戲機 → 快出海時站起來走回碼頭（有玩家坐著的長椅就換一張） */
+function amoSeatBusy(c){ const hit = f => f && f.sitting && Math.hypot(f.pos.x - c.x, f.pos.z - c.z) < 0.5; if (mySeat === c) return true; for (const pr of peers.values()) if (hit(pr.fisher)) return true; return false; }
+function amoWalk(n, dt, x, z){ const dx = x - n.pos.x, dz = z - n.pos.z, d = Math.hypot(dx, dz); if (d < 0.12){ n.speed = 0; return true; }
+  const st = Math.min(d, 0.85 * dt); n.pos.x += dx / d * st; n.pos.z += dz / d * st; n.baseY = groundHeight(n.pos.x, n.pos.z); n.rot = lerpAngle(n.rot, Math.atan2(dx, dz), 1 - Math.exp(-6 * dt)); n.speed = 0.85; return false; }
+function amoBench(n, dt, t, left){ const H = n.home, near = camera.position.distanceTo(n.pos) < 25;
+  if (t < (n.amoTired || 0)){ n.speed = 0; n.sitting = false; return; }
+  if (!n.amoSeat){ let best = null, bd = 1e9; for (const c of CHAIRS){ if (!c.back || c.nook || c.gear || c.shrimp) continue; const d = Math.hypot(c.x - H.x, c.z - H.z); if (d > 22 || d >= bd || amoSeatBusy(c)) continue; best = c; bd = d; } n.amoSeat = best || 'none'; }
+  const c = n.amoSeat; if (c === 'none'){ n.speed = 0; n.sitting = false; return; }
+  const fx = c.x - Math.sin(c.face) * 0.7, fz = c.z - Math.cos(c.face) * 0.7;
+  if (left < Math.hypot(fx - H.x, fz - H.z) / 0.85 + 4){   /* 快出海了：站起來走回碼頭 */
+    if (n.sitting){ n.sitting = false; n.pos.x = fx; n.pos.z = fz; n.baseY = groundHeight(fx, fz); if (near) n.say(pick2(['該出海了……', '好，再去找一次紅鯊']), '', 3); }
+    if (amoWalk(n, dt, H.x, H.z)){ n.baseY = n.homeY; n.rot = lerpAngle(n.rot, n.homeRot, 1 - Math.exp(-4 * dt)); } return; }
+  if (n.sitting) return;
+  if (!n.amoGo){ n.amoGo = 1; }
+  if (amoSeatBusy(c)){ n.amoSeat = null; return; }
+  if (amoWalk(n, dt, fx, fz)){ n.sitting = true; n.pos.x = seatX(c); n.pos.z = seatZ(c); n.baseY = c.y; n.rot = c.face; n.speed = 0; if (near) n.say(pick2(['終於可以坐了', '坐一下……打一場', '腳好痠']), '', 3); } }
 /* 阿默的掌上遊戲機：在碼頭坐著休息的時候兩手拿著打；釣魚的時候收起來（釣魚要兩手顧竿） */
 /* 阿默照真的釣魚來：
    ① 等：兩手顧竿，眼睛盯浮標
@@ -21935,6 +21950,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u825', d:'11/25', items:[['🪑','阿默上岸後會先喘一下，再慢慢走到港邊廣場最近的長椅坐下來打遊戲機；快出海時站起來走回碼頭。長椅有人坐他就換一張']] },
   { id:'u823', d:'11/25', items:[['🎮','阿默在碼頭改成直接坐在地上、腳伸直打遊戲機，不會再像蹲著']] },
   { id:'u822', d:'11/25', items:[['🎣','釣魚動作照真的來：浮標沉下去會用力揚竿、拉魚時一扳一收（扳的時候不收線，放低時快收）、魚往外衝人會被往前扯、捲線器滋滋叫，最後把竿子一提把魚拉出水面。也多了揚竿的咻聲和收線的喀喀聲'], ['🎮','阿默在碼頭休息時，現在看得出來在打遊戲機了：兩手拿著在胸前、低頭看螢幕，走近還會聽到他邊打邊碎念']] },
   { id:'u820', d:'11/25', items:[['🎮','我們的朋友阿默換新樣子了：全身黑、黑口罩、黑帽子，船也是黑的。上岸會坐在碼頭打遊戲機休息，走近會告訴你哪裡有魚影、現在潮水該去哪釣。他自己釣魚也照真的來：魚先試吃、浮標沉下去才揚竿、一扳一收拉上來']] },
