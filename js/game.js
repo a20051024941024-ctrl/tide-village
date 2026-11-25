@@ -1019,6 +1019,7 @@ function fishAct(model, kind){ if (CLASSIC || !model) return null; const U = { v
   const A = { m: model, U, mats, kind, t: 0, ph: Math.random() * 6.28, seen: now(), burst: kind === 'air' ? 0.5 : 0, next: kind === 'air' ? 0 : 0.9 + Math.random() * 1.2, dir: 1, by: model.position.y, tw: 0 }; FishActs.push(A); return A; }
 function fishActTick(dt){ dt = Math.min(dt, 0.05); for (let i = FishActs.length - 1; i >= 0; i--){ const A = FishActs[i], m = A.m; let p = m, on = false; while (p){ if (p === scene){ on = true; break; } p = p.parent; }
     if (!on){ if (now() - A.seen > 1.5){ for (const q of A.mats){ try { q.dispose(); } catch(e){} } FishActs.splice(i, 1); } continue; } A.seen = now(); A.t += dt;
+    if (A.kind === 'flat'){ A.U.value.set(0, 0, 0, 0); continue; }   /* v837 魟魚、螃蟹這種扁的：躺平在地上，不做左右彎 */
     /* 一陣一陣：burst 是這一陣還剩幾秒，next 是離下一陣還有幾秒 */
     if (A.kind === 'flop'){ if (A.burst > 0) A.burst -= dt; } else if (A.burst > 0) A.burst -= dt; else { A.next -= dt; if (A.next <= 0){ A.burst = A.kind === 'air' ? 0.38 + Math.random() * 0.25 : 0.4 + Math.random() * 0.3; A.next = A.kind === 'air' ? 0.16 + Math.random() * 0.22 : 1.5 + Math.random() * 2.2; A.dir = -A.dir; } }
     const on2 = A.burst > 0 ? 1 : 0, k = A.k = (A.k || 0) + (on2 - (A.k || 0)) * Math.min(1, dt * (on2 ? 18 : 7));   /* k：0 休息 → 1 猛甩 */
@@ -7790,11 +7791,12 @@ function landFish(){
   const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm); const fmAct = fishAct(fm, 'air');   /* v448 吊在線上：頭朝上、整條身體猛甩 */
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
   const fpc = FP.act, wild = F.spot && F.spot.wild, flop = !fpc && !wild && !CLASSIC;
-  if (fpc){ scene.remove(fm); try { fpCatch(f, w, from); } catch(e){ console.warn('fp', e); } } else if (!flop) jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
+  if (fpc){ scene.remove(fm); try { fpCatch(f, w, from, wild || CLASSIC ? null : { dur: flopDur(f, w) }); } catch(e){ console.warn('fp', e); } } else if (!flop) jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from);
   if (wild){ setTimeout(() => wildLanded(f, w), fpc ? 3600 : 1100); return; }   /* v593 荒島的魚：變成食物、記進荒島筆記，不進村子的紀錄 */
   const fin = () => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); try { fkCaught(f); } catch(e){} if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); if (!fpc && (f.rarity === '傳說' || f.rarity === '稀有' || w >= 20)) startEmote(me, 'cheer'); };
   if (flop){ const dur = flopDur(f, w), spot = flopSpot(me, from, !!myBoat); me.say(`${f.name} ${fmtKg(w)}`, 'emote', dur + 1.2); jumpers.push({ m: fm, from, to: spot, t: 0, act: fmAct, flop: { dur, mine: true, f, w, done: fin } }); }   /* v835 魚先甩到腳邊、在地上啪啪跳，頭上先冒出是什麼魚，跳完才撿起來、跳卡片 */
+  else if (fpc && FP.c && FP.c.fl) FP.c.fl.fin = fin;   /* v837 第一人稱也一樣：魚甩到地上跳，低頭看牠，跳完撿起來才跳卡片 */
   else setTimeout(fin, fpc ? 3600 : 900);   /* v638 釣到稀有、傳說或 20kg 以上的大魚：雙手把魚舉過頭歡呼；普通的小魚就只是拿著 */   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
 const jumpers = [];
@@ -7807,12 +7809,16 @@ function flopSpot(who, from, boat){ const px = who.pos.x, pz = who.pos.z; let dx
   const cand = boat ? [[0.45, -0.35], [-0.45, -0.35], [0, -0.6]] : [[0.75, 0.15], [-0.75, 0.15], [0.6, -0.45], [-0.6, -0.45], [0, -0.85], [0.5, 0], [-0.5, 0]];   /* [往旁邊, 往水的方向]：先放身體旁邊，旁邊是水就放後面 */
   for (const [sd, fw] of cand){ const x = px + (-dz) * sd + dx * fw, z = pz + dx * sd + dz * fw; if (boat) return new THREE.Vector3(x, who.pos.y, z); if (walkable(x, z) && Math.abs(groundHeight(x, z) - who.pos.y) < 0.6) return new THREE.Vector3(x, groundHeight(x, z), z); }
   return new THREE.Vector3(px - dx * 0.5, who.pos.y, pz - dz * 0.5); }
+/* v837 作者：「魟魚這種很奇怪」→ 扁的（魟魚、比目魚、螃蟹、龍蝦、章魚、鱟、鱉、海參、烏賊…）不翻成側躺、不會彈起來，平平趴在地上抖、鰭邊拍幾下、螃蟹往旁邊爬兩步 */
+const FLOP_FLAT_MV = new Set(['wing', 'crab', 'lobster', 'flap', 'squid', 'hover']), FLOP_FLAT_ID = /^(octopus|seacuc|horseshoe|softshell|giantsquid|squid|dumbo)/;
+function flopFlat(f){ const id = String(f && f.id || '').replace(/^gn~([^~]+)~.*/, '$1'), st = FISH_STYLE[id]; return FLOP_FLAT_ID.test(id) || !!(st && FLOP_FLAT_MV.has(st.move)); }
 function flopLand(m, A, at, o){
-  m.rotation.order = 'YXZ'; const side = Math.random() < 0.5 ? 1 : -1; m.rotation.set(side * 1.42, Math.random() * 6.28, 0); m.position.copy(at); m.updateMatrixWorld(true);
-  let off = 0.05; try { const bb = new THREE.Box3().setFromObject(m); off = Math.max(0.02, (at.y - bb.min.y) * 0.85); } catch(e){}
-  if (A) { A.kind = 'flop'; A.burst = 0; } else { try { A = fishAct(m, 'flop'); } catch(e){ A = null; } }
+  const flat = flopFlat(o.f);
+  m.rotation.order = 'YXZ'; const side = flat ? 0 : Math.random() < 0.5 ? 1 : -1; m.rotation.set(side * 1.42, Math.random() * 6.28, 0); m.position.copy(at); m.updateMatrixWorld(true);
+  let off = 0.05; try { const bb = new THREE.Box3().setFromObject(m), v = (at.y - bb.min.y) * 0.85; if (isFinite(v)) off = clamp(v, 0.02, 0.6); } catch(e){}   /* 有些魚的模型量不出大小（NaN），魚會整條不見 */
+  if (A) { A.kind = flat ? 'flat' : 'flop'; A.burst = 0; } else if (!flat){ try { A = fishAct(m, 'flop'); } catch(e){ A = null; } }
   const big = BIG_FISH.has(o.f.id) || fishShowScale(o.w || 1) > 1.4, leg = o.f.rarity === '傳說', near = camera.position.distanceTo(at) < 18;
-  const Q = { m, A, gy: at.y + off, y: at.y + off, vy: 0, vx: 0, vz: 0, vr: 0, roll: side * 1.42, rollT: side * 1.42, t: 0, next: 0.12, air: false, big, o };
+  const Q = { m, A: flat ? null : A, flat, tw: 0, twd: 1, crab: flat && FISH_STYLE[o.f.id] && /crab|lobster/.test(FISH_STYLE[o.f.id].move), gy: at.y + off, y: at.y + off, vy: 0, vx: 0, vz: 0, vr: 0, roll: side * 1.42, rollT: side * 1.42, t: 0, next: 0.12, air: false, big, o };
   m.position.y = Q.y; Flops.push(Q);
   if (near){ try { SFX.slap(big ? 1.5 : 1); } catch(e){} FX.emit(at.x, at.y + 0.1, at.z, leg ? 40 : big ? 14 : 7, leg ? '#ffd36a' : '#e6f6ff', leg ? 2.2 : 1.2, leg ? 3.5 : 2.2, leg ? 1.3 : 0.7); }
   if (o.mine && big) camShake = Math.max(camShake, 0.25);
@@ -7820,6 +7826,10 @@ function flopLand(m, A, at, o){
 }
 function flopTick(dt){ dt = Math.min(dt, 0.05);
   for (let i = Flops.length - 1; i >= 0; i--){ const Q = Flops[i], m = Q.m; Q.t += dt; const left = Q.o.dur - Q.t;
+    if (Q.flat){ Q.next -= dt; if (Q.next <= 0 && left > 0.3){ Q.next = 0.35 + Math.random() * 0.5; Q.tw = 0.22; Q.twd = Math.random() < 0.5 ? -1 : 1; if (Q.crab){ const a = m.rotation.y + Math.PI / 2 * Q.twd; Q.vx = Math.sin(a) * 0.5; Q.vz = Math.cos(a) * 0.5; } if (camera.position.distanceTo(m.position) < 18) try { SFX.slap(0.4); } catch(e){} }
+      Q.tw = Math.max(0, (Q.tw || 0) - dt); const k = Q.tw / 0.22; m.position.y = Q.gy + Math.sin(k * Math.PI) * (Q.crab ? 0.015 : 0.03); m.rotation.x = Math.sin(Q.t * 30) * 0.06 * k; m.rotation.z = Math.sin(Q.t * 23) * 0.08 * k; m.rotation.y += Q.twd * 0.6 * k * dt * (Q.crab ? 0 : 1);
+      if (Q.crab && k > 0){ m.position.x += Q.vx * dt; m.position.z += Q.vz * dt; }
+      if (Q.t >= Q.o.dur){ Flops.splice(i, 1); scene.remove(m); if (Q.sk){ removeEventListener('pointerdown', Q.sk, true); F.flopShow = 0; } try { Q.o.done && Q.o.done(); } catch(e){ console.warn('flop', e); } } continue; }
     if (!Q.air){ Q.next -= dt; if (Q.next <= 0 && left > 0.3){ const fade = 1 - Math.min(0.6, Q.t / Q.o.dur * 0.6);   /* 越跳越沒力 */
         Q.vy = (Q.big ? 1.3 + Math.random() * 0.6 : 2.4 + Math.random() * 1.3) * fade; const a = Math.random() * 6.28, sp = Q.big ? 0.15 : 0.25 + Math.random() * 0.35; Q.vx = Math.cos(a) * sp; Q.vz = Math.sin(a) * sp; Q.vr = (Math.random() < 0.5 ? -1 : 1) * (Q.big ? 1 + Math.random() : 2 + Math.random() * 4);
         if (!Q.big && Math.random() < 0.3) Q.rollT = -Q.rollT;   /* 偶爾在空中翻面 */
@@ -13510,17 +13520,24 @@ function fpLook(){ if (!FP.skin || !me || !me.av) return; const a = me.av, k = a
 function fpStart(){ try { fpRodLook(); } catch(e){} if (LS.get('tide.fpTold', 0) !== 1){ LS.set('tide.fpTold', 1); try { toast('釣魚現在會自動換成第一人稱。不習慣的話：設定 → 🎣 釣魚視角 → 背後', 6000); } catch(e){} } fpBuild(); FP.act = true; FP.inT = 0; FP.stay = true; FP.g.visible = true; FP.rodY = 0; fpLook();
   poolMeVis(false); FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6); }
 function fpStop(){ if (!FP.act) return; FP.act = false; if (FP.g) FP.g.visible = false; if (FP.line) FP.line.visible = false; fpCatchEnd(); poolMeVis(true); }
+function h0Hide(c){ c.h.visible = false; }
 function fpCatchEnd(){ const c = FP.c; if (!c) return; FP.c = null; try { FP.g.remove(c.h); for (const x of c.hands) FP.g.remove(x); } catch(e){} }
 /* 釣到魚：from 是浮標的位置（世界座標） */
-function fpCatch(f, w, from){ fpCatchEnd(); const m = fishModel(f, fishShowScale(w)), box = new THREE.Box3().setFromObject(m), sz = box.getSize(new THREE.Vector3()), L0 = Math.max(0.05, sz.x), H0 = Math.max(0.02, sz.y);
+function fpCatch(f, w, from, fl){ fpCatchEnd(); const m = fishModel(f, fishShowScale(w)), box = new THREE.Box3().setFromObject(m), sz = box.getSize(new THREE.Vector3()), L0 = Math.max(0.05, sz.x), H0 = Math.max(0.02, sz.y);
   const L = clamp(0.12 + 0.135 * Math.log(1 + 6 * Math.max(0, +w || 0)), 0.14, 0.86), k = L / L0, h = new THREE.Group();   /* 眼前的魚多長（公尺）照重量算：0.15 公斤約 21 公分、1 公斤約 38 公分、9 公斤約 66 公分；遊戲裡的魚模型本來就畫得比真的大，不能直接用 */ h.scale.setScalar(k); h.add(m); FP.g.add(h);
   const st = from.clone(); st.y = WATER_LEVEL - 0.1; camera.updateMatrixWorld(); FP.g.worldToLocal(st); if (!isFinite(st.x + st.y + st.z)) st.set(0, -0.6, -3); if (st.z > -1.2) st.z = -1.2;
   const two = L > 0.36, hands = two ? [fpHand(-1), fpHand(1)] : [fpHand(1)];   /* 單手拿：右手放開把手去拿魚 */ for (const x of hands){ x.visible = false; x.scale.setScalar(two ? 1.25 : 1.1); FP.g.add(x); }
-  FP.c = { f, w, m, h, L, H: H0 * k, t: 0, st, act: fishAct(m, 'air'), hands, two, held: false, hang: new THREE.Vector3(0.0, 0.03, -0.72 - L * 0.55), hold: new THREE.Vector3(two ? 0 : 0.0, -0.07, -0.5 - L * 0.42) }; h.position.copy(st); }
+  FP.c = { f, w, m, h, L, H: H0 * k, t: 0, st, act: fishAct(m, 'air'), hands, two, held: false, hang: new THREE.Vector3(0.0, 0.03, -0.72 - L * 0.55), hold: new THREE.Vector3(two ? 0 : 0.0, -0.07, -0.5 - L * 0.42), fl: fl ? Object.assign({ st: 0, from: from.clone() }, fl) : null }; h.position.copy(st); }
 function fpTipLocal(out){ camera.updateMatrixWorld(true); FP.tip.getWorldPosition(out); return FP.g.worldToLocal(out); }   /* 竿尖在鏡頭前面的位置（FP.g 沒有自己的位移，所以就是鏡頭座標） */
 /* v505 作者：「魚釣起來的動作很怪，沒有長長的線勾著魚的畫面」→ 竿子往上舉，魚吊在竿尖下面一條長線上、像鐘擺一樣晃、一邊甩，再拉過來用手拿 */
 const FP_LN = 0.95;   /* 竿尖到魚嘴的線有多長（公尺） */
-function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt; const T = c.t, h = c.h, e = x => 1 - (1 - x) * (1 - x), tip = fpTipLocal(c.tipV || (c.tipV = new THREE.Vector3()));
+function fpCatchTick(dt, t){ const c = FP.c; if (!c) return; c.t += dt;
+  if (c.fl && c.fl.st === 0 && c.t >= 1.2){ c.fl.st = 1; const wp = new THREE.Vector3(); c.h.getWorldPosition(wp); h0Hide(c);   /* 吊了一下以後：魚從竿尖甩到腳邊（世界裡的魚，同一套 flopLand） */
+    const wm = fishModel(c.f, fishShowScale(c.w)); wm.position.copy(wp); scene.add(wm); c.fl.q = wm; const spot = flopSpot(me, c.fl.from, !!myBoat); spot.add(new THREE.Vector3(Math.sin(me.rot), 0, Math.cos(me.rot)).multiplyScalar(0.0));
+    jumpers.push({ m: wm, from: wp, to: spot, t: 0, act: fishAct(wm, 'air'), flop: { dur: c.fl.dur, mine: true, f: c.f, w: c.w, done: () => { if (FP.c !== c) return; c.fl.st = 2; c.t = 2.6; c.h.visible = true; c.from = c.from || new THREE.Vector3(); c.from.set(0, -0.6, -0.7); setTimeout(() => { try { c.fl.fin && c.fl.fin(); } catch(e){ console.warn('fpfin', e); } }, 700); } } });
+    try { flash(`${c.f.name} ${fmtKg(c.w)}`, c.fl.dur + 1); } catch(e){} }
+  if (c.fl && c.fl.st === 1){ c.t = 1.2; c.lift = Math.max(0, (c.lift || 0) - dt * 2); FP.rodY += (-0.4 - FP.rodY) * Math.min(1, dt * 4); FP.line.visible = false; return; }
+  const T = c.t, h = c.h, e = x => 1 - (1 - x) * (1 - x), tip = fpTipLocal(c.tipV || (c.tipV = new THREE.Vector3()));
   const hangAt = out => { const k = Math.max(0, T - 0.45), amp = 0.42 * Math.exp(-k * 0.75), ax = amp * Math.sin(k * 3.6 + 0.6), az = amp * 0.45 * Math.sin(k * 2.7); return out.set(tip.x + FP_LN * Math.sin(ax), tip.y - FP_LN * Math.cos(ax) * Math.cos(az) - c.L * 0.46, tip.z + FP_LN * Math.sin(az)); };
   /* 0～0.6 秒出水 → 0.6～1.2 吊在竿尖下面晃 → 1.2～1.7 抓住線把魚拉到眼前 → 1.7～2.6 魚吊在眼前甩（像秤魚的時候那樣看清楚）→ 2.6 以後用手拿 */
   const near = c.near || (c.near = new THREE.Vector3()); near.set(Math.sin(T * 2.3) * 0.035 * Math.exp(-Math.max(0, T - 1.7) * 0.9), 0.02 - c.L * 0.1, -0.5 - c.L * 0.5);
@@ -13545,6 +13562,7 @@ function fpTick(dt){ if (FP.act && ((FP.lkT = (FP.lkT || 0) + dt) > 0.5)){ FP.lk
     /* v556 作者 11/18 截圖：「冰洞釣魚會看不到洞」→ 冰洞就在腳邊，以前鏡頭硬是看向 2 公尺外的水平線。冰洞釣魚時直接低頭看洞 */
     if (F.spot && F.spot.id === 'icelake'){ const k2 = d < 0.75 ? 0.75 / Math.max(0.2, d) : 1; FP.tgt.set(me.pos.x + (B.x - me.pos.x) * k2, me.baseY + 0.02, me.pos.z + (B.z - me.pos.z) * k2); }
     FP.look.lerp(FP.tgt, 1 - Math.exp(-7 * dt)); }
+  else if (FP.c && FP.c.fl && FP.c.fl.st === 1 && FP.c.fl.q){ FP.tgt.copy(FP.c.fl.q.position); FP.look.lerp(FP.tgt, 1 - Math.exp(-5 * dt)); }   /* v837 低頭看地上跳的魚 */
   else if (FP.c){ const fx = FP.look.x - FP.eye.x, fz = FP.look.z - FP.eye.z, fl = Math.hypot(fx, fz) || 1; FP.tgt.set(FP.eye.x + fx / fl * 4, FP.eye.y - (FP.c.t < 1.25 ? 0.05 : FP.c.t < 2.6 ? 0.45 : 0.9), FP.eye.z + fz / fl * 4); FP.look.lerp(FP.tgt, 1 - Math.exp(-4 * dt)); }   /* 魚出水：抬頭看竿尖和吊著的魚；要拿魚了再低頭看手 */
   else if (!FP.c && F.phase === 'charging'){ const ih = F.spot && F.spot.id === 'icelake' && F.spot.hole; if (ih) FP.tgt.set(ih[0], me.baseY + 0.02, ih[1]); else FP.tgt.set(me.pos.x + Math.sin(me.rot) * 7, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 7); FP.look.lerp(FP.tgt, 1 - Math.exp(-6 * dt)); }
   if (!isFinite(FP.look.x + FP.look.y + FP.look.z)) FP.look.set(me.pos.x + Math.sin(me.rot) * 6, WATER_LEVEL, me.pos.z + Math.cos(me.rot) * 6);   /* 浮標的位置偶爾會是 NaN（拉魚那一格），NaN 一進來鏡頭就永遠壞掉，整個畫面變成一片藍 */
