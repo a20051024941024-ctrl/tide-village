@@ -11614,7 +11614,7 @@ function renderFriends(body){
   for (const f of Fr.list.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || (b.mutual - a.mutual))){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
     const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null;
     { let gr = null, k3r = null; try { for (const p of peers.values()) if (p.pres && p.pres.u === f.id && p.fisher.gearKey){ gr = JSON.parse(p.fisher.gearKey); k3r = p.fisher.k3c || null; break; } } catch(e){} const im = avatarImg(f.av, '', gr, k3r); if (im) sw.replaceWith && li.append(im); }
-    li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在這個大廳' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
+    li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在村子裡' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
     { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} cardTap(li, f.id, f.name || '釣客', pk); }
     if (f.mutual){ const ch = el('button', 'tbtn vbtn', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.textContent = `💬 ${u.n}`; ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); li.appendChild(ch);
       const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
@@ -18704,7 +18704,7 @@ function pushPresence(force){
 function setOnline(){
   const n = 1 + Array.from(peers.values()).length; const el = $('#online');
   el.classList.toggle('live', !!(room && room.connected()));
-  $('#onlineTxt').textContent = room ? (room.connected() ? (pjMode && room.code ? `房間 ${room.code}・` : room.isLobby ? `大廳 ${room.lobbyNo}・` : '') + `${n} 人在村裡` : '連線中…') : '單人模式';
+  $('#onlineTxt').textContent = room ? (room.connected() ? (pjMode && room.code ? `房間 ${room.code}・` : '') + `${n} 人在村裡` : '連線中…') : '單人模式';
   if (!$('#sheet').hidden && curTab === 'people') renderTab();
 }
 function isHex(s){ return typeof s === 'string' && /^#[0-9a-f]{6}$/i.test(s); }
@@ -18866,7 +18866,7 @@ function useRoom(r){
 /* ---- 公共大廳：用 Supabase Realtime，打開遊戲就會看到其他正在玩的人 ---- */
 // 和 PJRoom 一樣的介面（connected／on／onPeers／onConnection／presence／emit／leave），所以 useRoom() 不用改。
 // 位置用 broadcast 送（最多每秒 4 次、只有變動時才送）；presence 只拿來知道誰進來、誰離開。
-const LOBBY_MAX = 12, LOBBY_COUNT = 30;   // 架構第四階段：每個公共大廳最多 12 人，伺服器分配（061_lobby.sql）
+const LOBBY_MAX = 100, LOBBY_COUNT = 30;   /* v851 作者：「先不要有大廳，讓玩家目前都可以出現在這裡」→ 一律進第 1 個（229）；以下舊說明留著 */   // 架構第四階段：每個公共大廳最多 12 人，伺服器分配（061_lobby.sql）
 const Lobby = { list:null, at:0, beat:0 };
 function SBRoom(sb, name, key, myName){
   const R = { isLobby:true, code:null, lobbyNo:0, key }; let ch = null, live = false, myPres = null, lastSent = '', flushT = 0, lastAt = 0;
@@ -18963,12 +18963,12 @@ async function joinLobby(want, isNew){
   lobbyJoining = true;
   try {
     // 先問伺服器：想去的大廳有沒有位子、好友在哪一個（伺服器一次只讓一個人挑，不會超過 12 人）
-    let no = 0; { const last = LS.get('tide.lobby', null); const w = want || (last && Date.now() - last.at < 10 * 60000 ? last.no : 0);   /* 斷線、重新整理：10 分鐘內回到原本的大廳 */
+    let no = 0; { const last = LS.get('tide.lobby', null); const w = 0;   /* v851 不記上次在哪個大廳，大家都進同一個 */   /* 斷線、重新整理：10 分鐘內回到原本的大廳 */
       try { const { data, error } = await Cloud.sb.rpc('lobby_pick', { p_want: w || 0, p_new: !!isNew }); if (error) throw error; no = +data || 0; } catch(e){ if (e && /滿了/.test(e.message || '')) toast(e.message); no = 0; } }
     if (no){ const r = SBRoom(Cloud.sb, 'tide-lobby-' + no, (Cloud.userId || 'x').slice(0, 8) + '-' + Math.random().toString(36).slice(2, 6), nickname);
       try { await r.start(); } catch(e){ console.warn('lobby', e); no = 0; }
       if (no){ if (room || pjMode){ r.leave(); return; } r.lobbyNo = no; useRoom(r); LS.set('tide.lobby', { no, at: Date.now() }); lobbyBeat(true);
-        const n = r.size() - 1; logMsg('系統', n > 0 ? `進入公共大廳 ${no}，現在有 ${n} 位釣客在村子裡（最多 ${LOBBY_MAX} 人）。` : `進入公共大廳 ${no}。現在只有你，有人進來時你就會看到他。`, true); return; } }
+        const n = r.size() - 1; logMsg('系統', n > 0 ? `進入村子，現在有 ${n} 位釣客在村子裡。` : `進入村子。現在只有你，有人進來時你就會看到他。`, true); return; } }
     for (let i = 1; i <= LOBBY_COUNT; i++){
       const r = SBRoom(Cloud.sb, 'tide-lobby-' + i, (Cloud.userId || 'x').slice(0, 8) + '-' + Math.random().toString(36).slice(2, 6), nickname);
       try { await r.start(); } catch(e){ console.warn('lobby', e); break; }
@@ -18977,7 +18977,7 @@ async function joinLobby(want, isNew){
       if (r.size() <= LOBBY_MAX || i === LOBBY_COUNT){
         r.lobbyNo = i; useRoom(r);
         const n = r.size() - 1;
-        logMsg('系統', n > 0 ? `進入公共大廳 ${i}，現在有 ${n} 位釣客在村子裡。` : `進入公共大廳 ${i}。現在只有你，有人進來時你就會看到他。`, true);
+        logMsg('系統', n > 0 ? `進入村子，現在有 ${n} 位釣客在村子裡。` : `進入村子。現在只有你，有人進來時你就會看到他。`, true);
         break;
       }
       r.leave();
@@ -18987,7 +18987,8 @@ async function joinLobby(want, isNew){
 function leaveLobby(){ if (room && room.isLobby){ try { room.leave(); } catch(e){} clearInterval(roomTimer); clearPeers(); room = null; } }
 // 每 30 秒跟伺服器報到；斷線了自動回到原本的大廳
 function lobbyBeat(force){ if (!Cloud.on || !room || !room.isLobby || !room.lobbyNo) return; if (!force && Date.now() - Lobby.beat < 30000) return; Lobby.beat = Date.now(); LS.set('tide.lobby', { no: room.lobbyNo, at: Date.now() }); Cloud.sb.rpc('lobby_beat', { p_no: room.lobbyNo }).then(() => {}, () => {}); }
-setInterval(() => { try { lobbyBeat(false); if (Cloud.on && room && room.isLobby && !room.connected() && !lobbyJoining && Date.now() - roomJoinAt > 8000){ const no = room.lobbyNo; leaveLobby(); logMsg('系統', '連線斷了，正在回到原本的大廳…', true); joinLobby(no); } } catch(e){} }, 10000);
+setInterval(() => { try { if (Cloud.on && room && room.isLobby && room.connected() && room.lobbyNo > 1 && !Lobby.merged && F.phase === 'idle' && !lobbyJoining && !Dive.on && !myBoat){ Lobby.merged = true; switchLobby(0); } } catch(e){} }, 10000);   /* v851 還留在別的大廳的人，有空的時候搬到大家在的那一個（只搬一次） */
+setInterval(() => { try { lobbyBeat(false); if (Cloud.on && room && room.isLobby && !room.connected() && !lobbyJoining && Date.now() - roomJoinAt > 8000){ const no = room.lobbyNo; leaveLobby(); logMsg('系統', '連線斷了，正在重新連回村子…', true); joinLobby(no); } } catch(e){} }, 10000);
 function switchLobby(no, isNew){ if (room && room.isLobby && room.lobbyNo === no && !isNew) return; leaveLobby(); LS.set('tide.lobby', null); joinLobby(no, isNew).then(() => { Lobby.at = 0; if (!$('#sheet').hidden && curTab === 'people') renderTab(); }); }
 async function loadLobbies(){ if (!Cloud.on || Lobby.busy) return; Lobby.busy = true; try { const { data } = await Cloud.sb.rpc('lobby_list'); if (data) Lobby.list = data; } catch(e){} Lobby.busy = false; Lobby.at = Date.now(); if (!$('#sheet').hidden && curTab === 'people') renderTab(); }
 function lobbyBox(){ const box = el('div', 'lobbybox'); if (!Lobby.list || Date.now() - Lobby.at > 20000) loadLobbies();
@@ -20819,7 +20820,7 @@ function renderTab0(){
   } else if (curTab === 'dzmarket'){ renderMarket(body);
   } else if (curTab === 'people'){
     if (Cloud.on){ if (renderFriends(body)) return; body.appendChild(el('div', 'dexhead', '🏘️ 現在在村子裡的人')); }
-    if (room && room.isLobby){ body.appendChild(el('p', 'sub', `你在公共大廳 ${room.lobbyNo}：打開遊戲的人都會自動分到有位子的大廳（每個大廳最多 ${LOBBY_MAX} 人，會先找有好友的大廳）。可以換到別的大廳、自己開一個新的，或開私人房間只跟朋友玩。村民、魚市、村報這些資料每個大廳都一樣。`)); body.appendChild(lobbyBox()); body.appendChild(pjBox()); }
+    if (room && room.isLobby){ body.appendChild(el('p', 'sub', '現在在村子裡的人。想只跟朋友玩，可以開私人房間。')); body.appendChild(pjBox()); }   /* v851 先不分大廳：拿掉大廳清單、換大廳、開新大廳 */
     else if (room && !pjMode) body.appendChild(el('p', 'sub', '現在在村子裡的人。分享這個頁面的連結給朋友，就能一起釣魚、聊天。'));
     else if (pjAvailable()) body.appendChild(pjBox());
     else body.appendChild(el('p', 'sub', '目前是單人模式。在 claude.ai 上開啟並分享這個頁面，朋友加入後就會出現在這裡。'));
@@ -20962,7 +20963,7 @@ function renderTab0(){
         ["足球一場 3 分鐘。", "籃球 1 對 1 先拿 11 分的贏，一次進攻 14 秒。弧線內 2 分，外 3 分。抄球失敗 2 秒不能再抄。", "羽球先拿 7 分的贏。"]],
       ["滑雪", "social", ["冰封群島南邊有座雪山，山腳有小木屋和教練小嵐。", "到山腳東邊坐纜車上去。", "在山頂的門按「出發」。旁邊的人按「一起出發」就一起比。", "會自己往下滑。搖桿左右轉彎，往前蹲低比較快，往後煞車。", "要穿過每一道旗門。滑出雪道會變慢，撞到樹會摔倒。", "滑完一趟送毛球帽，滑得夠快再送滑雪鏡。"],
         ["漏掉一道旗門加 3 秒。", (SKI_GOG_S) + " 秒內滑完送滑雪鏡。", "按出發後等 6 秒才開始。"]],
-      ["跟別人一起玩", "social", ["一進來就在公共大廳，一個大廳最多 " + (LOBBY_MAX) + " 人。想只跟朋友玩就開私人房間。", "走到別人旁邊按「揮手」，他也揮回來，你們就算認識了。", "加好友：按「加好友」，或輸入他的 8 碼好友代碼。", "好友可以互相送魚、傳私訊、去對方的小島。", "好友在同一個大廳釣到稀有魚、傳說魚、變種，或破了自己的紀錄，你會跳出一張卡，按「👀 過去看」就到他旁邊。", "點別人的角色或名字看他的名片，可以直接邀對決。", "釣魚對決：3 分鐘比誰釣得重。按「找對手」是排位賽，會算段位。", "小組對決是 2 對 2。", "釣友隊：2 到 6 個人一隊，每週一起完成目標領獎。在廣場的大看板建立。", "地圖上可以做記號給大家看，例如這裡魚很多。", "廣場西邊有留言板。", "遇到不舒服的人，點他的名字可以封鎖或檢舉。", "聊天框左邊可以切「全部」和「附近」。"],
+      ["跟別人一起玩", "social", ["一進來就在村子裡，正在玩的人都看得到你。想只跟朋友玩就開私人房間。", "走到別人旁邊按「揮手」，他也揮回來，你們就算認識了。", "加好友：按「加好友」，或輸入他的 8 碼好友代碼。", "好友可以互相送魚、傳私訊、去對方的小島。", "好友在同一個大廳釣到稀有魚、傳說魚、變種，或破了自己的紀錄，你會跳出一張卡，按「👀 過去看」就到他旁邊。", "點別人的角色或名字看他的名片，可以直接邀對決。", "釣魚對決：3 分鐘比誰釣得重。按「找對手」是排位賽，會算段位。", "小組對決是 2 對 2。", "釣友隊：2 到 6 個人一隊，每週一起完成目標領獎。在廣場的大看板建立。", "地圖上可以做記號給大家看，例如這裡魚很多。", "廣場西邊有留言板。", "遇到不舒服的人，點他的名字可以封鎖或檢舉。", "聊天框左邊可以切「全部」和「附近」。"],
         ["送魚一天 10 條，金幣不能送。帳號要滿 3 天或綁 Email，而且釣過 30 條。", "私訊一則最多 120 字，伺服器留 30 天。", "排位賽跟同一個人一天只有前 3 局算。每個月一季，換季星星留一半。每天第一場排位勝利送亮光餌 5 個。", "釣友隊要釣過 20 條才能建。每週目標：合力釣 120 條乘人數，湊齊 15 加 5 乘人數種。達成後釣過 5 條的隊員各領 600 金幣。", "地圖記號 24 小時後消失，同時最多 3 個，一天最多 10 個，要釣過 5 條。", "留言一則最多 60 字，一天最多 5 則，要釣過 5 條。", "附近聊天是 28 公尺內。", "鬼抓人 2 個人以上，3 分鐘後還是鬼的人輸。"]],
       ["等級、成就", "social", ["釣魚、放流、拍水下照片都有經驗。點左上角的等級看進度。", "每升一級有金幣。", "成就有 " + (ACH.length) + " 個。有些會給稱號，選一個掛在名字上。", "點左上角的等級打開「成就」，最上面可以改名字。"],
         ["經驗：常見魚 10、稀有魚 40、傳說魚 250、放流 5、水下照片每種 30。", "升級獎金是等級乘 50。", "在同一個釣點放流、撿垃圾、釣魚，那裡會越來越熟，魚咬得比較快。"]],
@@ -22381,7 +22382,7 @@ function renderDM(body){ if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上
     mu.sort((a, b) => ((un.get(b.id) || {}).n | 0) - ((un.get(a.id) || {}).n | 0) || (on.has(b.id) - on.has(a.id)));
     if (!mu.length){ body.appendChild(el('div', 'empty', '還沒有可以私訊的好友。')); return; }
     const ul = el('ul', 'people'); for (const f of mu){ const li = el('li', 'dm-li'), u = un.get(f.id), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', clean(String(f.name || '釣客').slice(0, 16)))); d.appendChild(el('div', 'sub2', u ? clean(String(u.last || '').slice(0, 30)) : on.has(f.id) ? '在這個大廳' : '點一下開始聊'));
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', clean(String(f.name || '釣客').slice(0, 16)))); d.appendChild(el('div', 'sub2', u ? clean(String(u.last || '').slice(0, 30)) : on.has(f.id) ? '在村子裡' : '點一下開始聊'));
       li.append(sw, d); if (u) li.appendChild(el('i', 'ph-dot', (u.n | 0) > 9 ? '9+' : String(u.n | 0)));
       li.addEventListener('click', () => dmOpen(f.id, f.name)); ul.appendChild(li); }
     body.appendChild(ul); return; }
