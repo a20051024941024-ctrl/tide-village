@@ -1229,7 +1229,7 @@ const MIS=[
 ['出征時攻陷一座主堡。',()=>[HOME.cnt.falls||0,1],{tk:2}],
 ['把主堡升到 Lv 4。',()=>[HOME.lv,4],{tk:3}],
 ['收集 10 種兵種。',()=>[Object.keys(HOME.own).length,10],{tk:2}],
-['在墓園復活一隻陣亡的怪獸。',()=>[HOME.cnt.revives||0,1],{gold:300}],
+['到「召喚」的「墓園」復活一隻陣亡的怪獸。只能召喚的怪獸在戰鬥中陣亡後才會出現在墓園。',()=>[HOME.cnt.revives||0,1],{gold:300}],
 ['累計摧毀 8 座巨魔營地。',()=>[HOME.cnt.camps||0,8],{tk:3}],
 ['出征累計贏 12 場。',()=>[HOME.cnt.wins||0,12],{tk:4}],
 ['把主堡升到 Lv 5。',()=>[HOME.lv,5],{tk:5}],
@@ -1343,7 +1343,7 @@ function renderGacha(res){const H=HOME,f=featured(),td=H.day===today();
     else{icon(c,res.k,H.civ);$('#gResN').textContent=C[res.k].n+(!C[res.k].once&&H.own[res.k]>1?' Lv '+H.own[res.k]:'');$('#gResR').textContent=RN[RAR[res.k]];box.dataset.r=RAR[res.k]}$('#gResX').textContent=res.txt;snd('draw',res.k.startsWith('skin')||RAR[res.k]===3?660:440,.5,'triangle',.08,440)}
   $('#gCol').innerHTML=albumHTML();
   document.querySelectorAll('#gCol canvas').forEach(c=>icon(c,c.dataset.u,H.civ));
-  const dk=POOL.filter(k=>H.dead[k]>0);$('#gGraveP').hidden=!dk.length;{const gt=$('#gtGrave');if(gt)gt.hidden=!dk.length;const g=$('#gacha');if(!dk.length&&g.dataset.tab==='grave'){g.dataset.tab='ev';for(const x of g.querySelectorAll('.gtabs button'))x.classList.toggle('on',x.dataset.gt==='ev')}}$('#gGrave').innerHTML=dk.map(k=>`<button class="gc" data-rv="${k}" data-r="${RAR[k]}" ${H.gold>=RCOST[RAR[k]]?'':'disabled'}><canvas width="96" height="96" data-u="${k}"></canvas><b>${C[k].n} ×${H.dead[k]}</b><i>復活 ${RCOST[RAR[k]]} 金</i></button>`).join('');document.querySelectorAll('#gGrave canvas').forEach(c=>icon(c,c.dataset.u,H.civ));
+  const dk=POOL.filter(k=>H.dead[k]>0);$('#gGraveP').hidden=false;$('#gGrave').innerHTML=(dk.length?'':'<p class="note" style="margin:0;grid-column:1/-1">現在沒有陣亡的怪獸。只能靠召喚取得的怪獸（例如幼龍、九頭蛇、鳳凰）在戰鬥中陣亡後，會來到這裡等你復活。</p>')+dk.map(k=>`<button class="gc" data-rv="${k}" data-r="${RAR[k]}" ${H.gold>=RCOST[RAR[k]]?'':'disabled'}><canvas width="96" height="96" data-u="${k}"></canvas><b>${C[k].n} ×${H.dead[k]}</b><i>復活 ${RCOST[RAR[k]]} 金</i></button>`).join('');document.querySelectorAll('#gGrave canvas').forEach(c=>icon(c,c.dataset.u,H.civ));
   $('#gSk').innerHTML=CIV.map((c,i)=>`<button class="gc${H.civ===i?' on':''}${H.sks.includes(i)?'':' lock'}" data-s="${i}" ${H.sks.includes(i)?'':'disabled'}><canvas width="96" height="96"></canvas><b>${c.n}</b><i>${H.sks.includes(i)?(H.civ===i?'使用中':'點選更換'):'未獲得'}</i></button>`).join('');
   document.querySelectorAll('#gSk canvas').forEach((c,i)=>bIconCastle(c,i))}
 $('#gacha').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||b.disabled)return;const H=HOME;let res;
