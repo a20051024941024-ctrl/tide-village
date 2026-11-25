@@ -5309,9 +5309,9 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
   const ear = hat === 'none' && (shop ? A % 3 < 2 : gg && young && (A >>> 4) % 3 === 0) ? ap(['pearl', 'star', 'hoop', 'drop'], 6) : 'none';
   const mask = hat === 'none' && ear === 'none' && (A >>> 9) % 9 === 0 ? 'mask' : 'none';
   const topK = work ? ((A >>> 3) % 3 === 0 ? 'vest' : 'hoodie') : young && !shop && (A >>> 12) % 5 === 0 ? 'wave' : H % 3 === 0 ? 'hoodie' : 'tee';
-  const glasses = old && (A >>> 26) % 2 === 0;   /* v845 一半的老人戴老花眼鏡 */
+  const glasses = old && (A >>> 26) % 2 === 0, cane = old && !work && !sea && (A >>> 27) % 2 === 0;   /* v845 一半的老人戴老花眼鏡；不出海的老人有一半拄拐杖 */
   const eyeC = (A >>> 15) % 2 ? ap(['#3f6fc0', '#3f8f6a', '#7a4a2a', '#5a5f6a', '#8a5fb0', '#b0703a'], 17) : '';
-  return { sex, ...face, hair: sex === 'g' ? (old ? 'bun' : ['long', 'twin', 'pony', 'bob', 'short2', 'bun', 'lowpony'][H % 7]) : old ? ['buzz', 'buzz', 'short'][H % 3] : ['short', 'short2', 'lowpony', 'short2', 'short', 'mid', 'bowl', 'buzz'][H % 8],   /* v844 老阿伯留平頭（白髮），老阿嬤包包頭；年輕男生也會留新髮型 */   /* v742 村民也會留新髮型 */ top: topK, bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak', hat, ear, mask, old, glasses,
+  return { sex, ...face, hair: sex === 'g' ? (old ? 'bun' : ['long', 'twin', 'pony', 'bob', 'short2', 'bun', 'lowpony'][H % 7]) : old ? ['buzz', 'buzz', 'short'][H % 3] : ['short', 'short2', 'lowpony', 'short2', 'short', 'mid', 'bowl', 'buzz'][H % 8],   /* v844 老阿伯留平頭（白髮），老阿嬤包包頭；年輕男生也會留新髮型 */   /* v742 村民也會留新髮型 */ top: topK, bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak', hat, ear, mask, old, glasses, cane,
     c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30', '#8a5a3a'], 5), top: topK === 'wave' ? ap(['#2f6fc0', '#2f9a9a', '#5a6fd0', '#d06a8a'], 20) : top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9),
       ...(hat === 'cap' ? { hat: ap(['#e0564f', '#2f6fc0', '#2b2b2e', '#f2f2ee', '#3f8f6a', '#e8c547'], 22) } : {}), ...(mask === 'mask' ? { mask: ap(['#f2f2ee', '#2b2b2e', '#8fb8e0', '#f2b8c8'], 24) } : {}), ...(eyeC ? { eye: eyeC } : {}) } }; };
 /* 阿默（作者的朋友）：全身黑、黑口罩永遠不拿下來、戴黑帽；之後有「帽子戴在頭上的連帽衣」再換上 */
@@ -5705,11 +5705,25 @@ function kidFidget(f, K, W, v){ const T = now(); let busy = false; if (f === me)
 /* v640 小動作第二批：① 坐著（碼頭邊、長椅）的時候兩隻小腿會輪流慢慢晃；② 下雨天在外面、沒穿雨衣、站著或走路時，肩膀縮起來、頭低低的，偶爾抖一下。
    都是在骨架動畫算完以後再疊一點點旋轉，所以不用新的動作檔。 */
 /* v845 老人家的姿勢：背微駝、肩膀往前、頭往前探再抬起來看前面；沒在釣魚、沒坐著的時候兩手背在後面（散步、站著都是） */
-function oldPose(f, B){ const sit = f.sitting, fish = f.fishing;
+function oldPose(f, B){ const sit = f.sitting, fish = f.fishing, cane = !!(f.k3c && f.k3c.cane) && !sit && !fish;
   if (B.spine) B.spine.rotation.x += sit ? 0.1 : 0.14; if (B.chest) B.chest.rotation.x += sit ? 0.1 : 0.18; if (B.head) B.head.rotation.x -= sit ? 0.12 : 0.24;
-  if (sit || fish || !B.upperarml || !B.lowerarml || !B.upperarmr || !B.lowerarmr || !B.handl || !B.handr) return;
+  if (sit || fish || !B.upperarml || !B.lowerarml || !B.upperarmr || !B.lowerarmr || !B.handl || !B.handr){ oldCane(f, B, false); return; }
   const root = f.av.g; root.updateMatrixWorld(true); const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.rot);
-  for (const [s, sg] of [['l', 1], ['r', -1]]){ K3.aim(B['upperarm' + s], B['lowerarm' + s], new THREE.Vector3(sg * 0.18, -0.85, -0.45).normalize().applyQuaternion(q)); K3.aim(B['lowerarm' + s], B['hand' + s], new THREE.Vector3(-sg * 0.85, 0.05, -0.35).normalize().applyQuaternion(q)); } }
+  for (const [s, sg] of [['l', 1], ['r', -1]]){
+    if (cane && s === 'r'){ const sw = f.k3cw || 0; K3.aim(B.upperarmr, B.lowerarmr, new THREE.Vector3(-0.22, -0.9, 0.28 + sw * 0.25).normalize().applyQuaternion(q)); K3.aim(B.lowerarmr, B.handr, new THREE.Vector3(-0.05, -0.85, 0.45 + sw * 0.2).normalize().applyQuaternion(q)); continue; }   /* 拄拐杖那隻手往前下方伸，走路時跟著前後擺一點 */
+    K3.aim(B['upperarm' + s], B['lowerarm' + s], new THREE.Vector3(sg * 0.18, -0.85, -0.45).normalize().applyQuaternion(q)); K3.aim(B['lowerarm' + s], B['hand' + s], new THREE.Vector3(-sg * 0.85, 0.05, -0.35).normalize().applyQuaternion(q)); }
+  oldCane(f, B, cane); }   /* 手擺好了才擺拐杖 */
+/* v845 拐杖：掛在右手上，每一格都轉成直直往下、長度剛好碰到地面；上面一個彎彎的把手 */
+function oldCane(f, B, on){ const k = f.av && f.av.k3; if (!k) return; let c = k.cane;
+  if (!on){ if (c) c.visible = false; return; }
+  if (!c || c.parent !== B.handr){ if (c && c.parent) c.parent.remove(c); const m = new THREE.MeshStandardMaterial({ color: '#7a5232', roughness: 0.6 }); c = new THREE.Group(); c.name = 'k3_cane';
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.016, 1, 8), m); st.geometry.translate(0, -0.5, 0); c.add(st); c.userData.st = st;
+    const hd = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.018, 6, 12, Math.PI), m); hd.position.set(-0.05, 0, 0); c.add(hd); const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 8), new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.8 })); c.add(tip); c.userData.tip = tip;
+    B.handr.add(c); k.cane = c; }
+  c.visible = true; const hp = new THREE.Vector3(); B.handr.updateMatrixWorld(true); B.handr.getWorldPosition(hp); const gy = f.baseY != null ? f.baseY : f.pos.y, L = Math.max(0.2, hp.y - gy);
+  const pq = new THREE.Quaternion(); B.handr.getWorldQuaternion(pq); const want = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.rot); c.quaternion.copy(pq.invert().multiply(want));
+  const ws = new THREE.Vector3(); B.handr.getWorldScale(ws); c.scale.setScalar(1 / (ws.y || 1)); c.userData.st.scale.y = L; c.userData.tip.position.y = -L + 0.02;
+  const v = f.aspd || 0; f.k3cw = v > 0.25 ? Math.sin(now() * 5.5) : (f.k3cw || 0) * 0.9; }
 const AMOP = { ua: [0.25, -0.8, 0.5], la: [0.55, 0.15, 0.8], hd: 0.35, ch: 0.12 };   /* 手臂方向（以人物自己為準：x 往外、y 往上、z 往前） */
 /* 把骨頭 b 轉到讓它指向子骨頭的方向變成 dir（世界座標）；用來擺「兩手拿東西在胸前」這種動作檔裡沒有的姿勢 */
 K3.aim = (b, child, dir) => { b.updateMatrixWorld(true); const p0 = b.getWorldPosition(new THREE.Vector3()), p1 = child.getWorldPosition(new THREE.Vector3()), cur = p1.sub(p0).normalize();
@@ -5900,7 +5914,7 @@ function npcFacialHair(av, mk){ const k = av.npcFh, hm = av.hairM, HD = av.headG
   if (k === 'full'){ S(0.17, 0, -0.17, 0.19, 1.4, 1.0, 0.8); S(0.1, 0, -0.3, 0.23, 1.1, 1.0, 0.7); } }
 class Fisher {
   constructor(opts){
-    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); if (this.isNpc){ this.k3c = K3.npc(this.npcName, opts.shirt); this.k3old = !!(this.k3c && this.k3c.old); }   /* v711 村民也是新人物，照名字固定配一套 */ this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
+    this.av = makeAvatar(opts.shirt, opts.hat); scene.add(this.av.g); this.isNpc = opts.kind === 'npc'; this.npcName = String(opts.name || ''); if (this.isNpc){ this.k3c = K3.npc(this.npcName, opts.shirt); this.k3old = !!(this.k3c && this.k3c.old); }   /* v845 老人家（姿勢、拐杖看 k3c.old / k3c.cane） */   /* v711 村民也是新人物，照名字固定配一套 */ this.noRain = /釣蝦場|博物館|球館|^客人・/.test(this.npcName);   /* v577 作者截圖：阿喆在撞球館裡穿著雨衣 */   /* 在屋子裡的人下雨不用穿雨衣 */ CLOD.all.add(this);
     if (KID.ok) kidUpgrade(this); else if (!KID.failed) KID.wait.add(this);
     this.bob = makeBobber(); this.line = makeLine();
     this.pos = this.av.g.position; this.rot = 0; this.walk = 0; this.speed = 0;
