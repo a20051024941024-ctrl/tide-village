@@ -440,6 +440,10 @@ const DEEP_Q = [
   { id:'snipeeel_albino', spot:'abyss', of:'snipeeel', sub:true, name:'白化線鰻', rarity:'常見', color:'#f4f2f2', min:0.02, max:0.1, power:0.25, w:0.03, depth:300, desc:'全身白白的，像一條漂在黑暗裡的白色緞帶，眼睛是淡淡的粉紅色。' },
   { id:'snipeeel_glow', spot:'abyss', of:'snipeeel', sub:true, name:'螢光線鰻', rarity:'常見', color:'#5af0ff', min:0.02, max:0.1, power:0.25, w:0.02, depth:300, desc:'長長的鳥嘴和身體下緣發出藍綠色的光，游起來像一條會動的霓虹燈管。' },
   { id:'snipeeel_black', spot:'abyss', of:'snipeeel', sub:true, name:'黑鷸鰻', rarity:'常見', color:'#2a2220', min:0.02, max:0.08, power:0.25, w:0.05, depth:500, desc:'線鰻的近親，全身深褐到黑色，一樣有細長的鳥嘴，住得比線鰻再深一點。' },
+  /* 每週新增：玻璃章魚（Vitreledonella richardi） */
+  { id:'glassocto', spot:'abyss', sub:true, name:'玻璃章魚', rarity:'稀有', color:'#888888', min:0.05, max:0.4, power:0.3, depth:400, desc:'整隻章魚幾乎是透明的，像用玻璃做的，只看得到眼睛、連著眼睛的細神經和一小條肚子裡的消化器官。牠的眼睛是長長的，不是圓的，這樣從下面往上看時影子會比較小，比較不容易被發現。' },
+  { id:'glassocto_albino', spot:'abyss', of:'glassocto', sub:true, name:'白化玻璃章魚', rarity:'稀有', color:'#f4f2f2', min:0.05, max:0.4, power:0.3, w:0.03, depth:400, desc:'本來就快看不見了，這隻連眼睛都是淡淡的粉紅色，像一顆漂在水裡的白色泡泡。' },
+  { id:'glassocto_glow', spot:'abyss', of:'glassocto', sub:true, name:'螢光玻璃章魚', rarity:'稀有', color:'#b08aff', min:0.05, max:0.4, power:0.3, w:0.02, depth:400, desc:'八隻腕和兩顆長長的眼睛發出淡紫色的光，像一盞會游泳的水晶燈。' },
 ];
 var DeepQ = { got:new Set(), at:0 };
 for (const d of DEEP_Q) FISH_BY_ID[d.id] = d;   /* 查得到（魚缸裡已經有的不會被當成不認識的魚丟掉），但還不在 FISH 名單裡（圖鑑、清單看不到） */

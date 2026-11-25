@@ -140,6 +140,7 @@ supabase/099_deep_weekly.sql 🔬 深海生物每週解鎖：deep_queue（從 20
 supabase/100_deep_variants.sql ✨ 深海生物變種：排隊的 12 種各加一個螢光變種（_glow），另外加紅燈巨口魚、斑點銀鮫、南非皺鰓鯊（真實的不同顏色）；跟本種同一週解鎖。
 supabase/142_deep_yeticrab.sql 🦀 每週新深海生物：雪人蟹（白化、螢光、跳舞雪人蟹），排在 deep_queue 第 13 週（ord 12）。
 supabase/196_deep_snipeeel.sql 🐍 每週新深海生物：線鰻（白化、螢光、黑鷸鰻），排在 deep_queue 第 14 週（ord 13）。
+supabase/223_deep_glassocto.sql 🐙 每週新深海生物：玻璃章魚（白化、螢光），排在 deep_queue 第 15 週（ord 14）。
 supabase/101_bluewhale_hourly.sql 🐋 藍鯨浮上來改成每小時一次（原本每 20 分鐘）。
 supabase/102_craft.sql 🔧 阿鐵師傅的工坊：craft_item 用魚缸裡的魚＋金幣做竿子造型（rs_）和釣線顏色（lc_），set_rod_look 裝上；一天最多 10 件。
 supabase/103_craft_bait.sql 🪱 阿鐵師傅做活餌：craft_bait 用 2 條常見魚＋30 金幣做 4 個活餌（吸引掠食魚）；020 重產：餌的 k（吸引哪一類魚）、_sign_hit 多 p_bk。
