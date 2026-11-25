@@ -2400,3 +2400,16 @@ body.furntop #today3, body.furntop #mini3, body.furntop #top, body.furntop #chat
 #c2menu .c2x{color:#7b8a96;font-size:12px}
 body.chat2 #log{display:none}
 body.chat2.chatting #c2, body.ui3.photo #c2, body.ui3.subcine #c2, body.ui3.f3 #c2, body.infish #c2, body.kid #c2{display:none!important}
+
+/* v853 小島信箱 */
+#imail{position:fixed;z-index:40;left:50%;top:50%;transform:translate(-50%,-50%);width:min(380px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow-y:auto;background:#fff;border:2.5px solid #2b8fe6;box-shadow:0 0 0 1.5px #0d4a8c,0 4px 0 1.5px #0d4a8c;border-radius:18px;padding:10px 12px 12px;color:#23415a;font:13.5px system-ui,sans-serif}
+#imail .imh{display:flex;align-items:center;gap:8px;margin-bottom:8px}#imail .imh b{flex:1;font-size:15px;color:#0d4a8c}
+#imail .imx{width:30px;height:30px;border-radius:50%;border:0;background:#e3f2fd;color:#0d4a8c;font-size:15px}
+#imail .imst{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}#imail .imst button{width:38px;height:38px;border-radius:12px;border:2px solid #d6e9f8;background:#f4faff;font-size:20px;padding:0}#imail .imst button.on{border-color:#2b8fe6;background:#dff0ff}
+#imail .imq{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}#imail .imq button{border:1.5px solid #b9d8f2;background:#f4faff;border-radius:999px;padding:4px 10px;font-size:13px;color:#23415a}#imail .imq button.on{background:#2b8fe6;color:#fff;border-color:#0d4a8c}
+#imail input{width:100%;box-sizing:border-box;border:2px solid #b9d8f2;border-radius:12px;padding:8px 10px;font-size:15px;margin-bottom:8px}
+#imail > .tbtn{width:100%}#imail .imtip{color:#7b8a96;font-size:12px;margin:6px 0 0}
+#imail .imi{display:flex;gap:8px;align-items:flex-start;padding:8px 4px;border-top:1.5px dashed #d6e9f8}#imail .imi.new{background:#fff8e1;border-radius:10px}
+#imail .ims{font-size:24px;line-height:1}#imail .imt{flex:1;min-width:0;word-break:break-word}#imail .imt b{color:#1f74c8;margin-right:6px}#imail .imd{color:#7b8a96;font-size:11px}
+#imail .imb{display:flex;flex-direction:column;gap:4px}#imail .imb .tbtn{padding:3px 8px;font-size:12px}
+body.photo #imail{display:none}

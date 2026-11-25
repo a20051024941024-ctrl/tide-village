@@ -8981,12 +8981,43 @@ async function likeIsle(){
   try { const { data, error } = await Cloud.sb.rpc('like_island', { p_owner: onIsle.owner }); if (error) throw error; onIsle.likes = data; onIsle.liked = true; SFX.catch(); flash('按讚了', 1.2); renderIsleBar(); }
   catch(e){ toast('暫時沒辦法按讚'); }
 }
+/* v853 小島信箱（231）：別人來你的島可以投一張明信片（圖案＋一句話，兒童模式只能選固定句子），你上線時看得到誰來過、說了什麼，可以回訪、刪除、檢舉。
+   人少、大家不一定同時在線上，這是「不用同時在線也能互動」的方式。島上方的列也顯示今天、總共幾個人來過。 */
+var IMail = { unread: 0, list: null, el: null };
+const MAIL_STAMPS = ['🐟', '🎣', '🌸', '👍', '🎉', '💙', '🏝️', '🦀'], MAIL_KID = ['你的島好漂亮！', '下次一起釣魚！', '謝謝招待 🐟', '我來玩囉！', '你的房子好可愛', '我也想要這樣的島'];
+async function imailUnread(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('isle_mail_unread'); if (error) return; const n = data | 0, up = n > IMail.unread; IMail.unread = n; imailDot(); if (up && n) ticker(`📮 你的小島信箱有 <b>${n}</b> 張新的明信片`); } catch(e){} }
+function imailDot(){ try { const d = Fr.gifts.length + Fr.req.length + IMail.unread; $$('[data-tab="people"]').forEach(b => b.classList.toggle('hasdot', d > 0)); } catch(e){} try { if (onIsle) renderIsleBar(); } catch(e){} }
+function imailModal(){ let M = IMail.el; if (!M){ M = IMail.el = document.createElement('div'); M.id = 'imail'; M.className = 'panel'; document.body.appendChild(M); } M.textContent = ''; M.hidden = false; return M; }
+function imailClose(){ if (IMail.el) IMail.el.hidden = true; }
+function imailWrite(owner, name){ const M = imailModal(); let st = MAIL_STAMPS[0], q = null;
+  const head = el('div', 'imh'); head.appendChild(el('b', '', `📮 給 ${clean(String(name || '島主').slice(0, 16))} 的明信片`)); const x = el('button', 'imx', '✕'); x.addEventListener('click', imailClose); head.appendChild(x); M.appendChild(head);
+  const sr = el('div', 'imst'); MAIL_STAMPS.forEach((e, i) => { const b = el('button', i ? '' : 'on', e); b.addEventListener('click', () => { st = e; sr.querySelectorAll('button').forEach(z => z.classList.toggle('on', z === b)); }); sr.appendChild(b); }); M.appendChild(sr);
+  let inp = null;
+  if (Kid.on){ const qr = el('div', 'imq'); MAIL_KID.forEach((t, i) => { const b = el('button', '', t); b.addEventListener('click', () => { q = i; qr.querySelectorAll('button').forEach(z => z.classList.toggle('on', z === b)); }); qr.appendChild(b); }); M.appendChild(qr); }
+  else { inp = el('input'); inp.maxLength = 40; inp.placeholder = '寫一句話給島主（最多 40 字）'; M.appendChild(inp); setTimeout(() => { try { inp.focus(); } catch(e){} }, 50); }
+  const go = el('button', 'tbtn', '投進信箱'); go.addEventListener('click', async () => { const body = inp ? inp.value.trim() : ''; if (inp && !body){ toast('寫一句話吧'); return; } if (Kid.on && q == null){ toast('選一句話'); return; }
+    go.disabled = true; try { const { error } = await Cloud.sb.rpc('isle_mail_send', { p_owner: owner, p_stamp: st, p_body: body, p_q: q }); if (error) throw error; imailClose(); SFX.catch && SFX.catch(); flash('📮 投進信箱了', 1.4); }
+    catch(e){ go.disabled = false; const m = String((e && e.message) || ''); toast(/今天|不太好|寫一句|選一句|自己/.test(m) ? esc(m) : '暫時投不進去，等一下再試'); } });
+  M.appendChild(go); M.appendChild(el('p', 'imtip', '島主上線時會看到。同一座島一天最多投 3 張。')); }
+async function imailOpen(){ const M = imailModal(); const head = el('div', 'imh'); head.appendChild(el('b', '', '📮 我的小島信箱')); const x = el('button', 'imx', '✕'); x.addEventListener('click', imailClose); head.appendChild(x); M.appendChild(head);
+  const box = el('div', 'iml'); box.appendChild(el('p', 'imtip', '讀取中…')); M.appendChild(box);
+  try { const { data, error } = await Cloud.sb.rpc('isle_mail_list'); if (error) throw error; IMail.list = Array.isArray(data) ? data : []; IMail.unread = 0; imailDot(); } catch(e){ box.textContent = ''; box.appendChild(el('p', 'imtip', '暫時連不上雲端')); return; }
+  box.textContent = ''; if (!IMail.list.length){ box.appendChild(el('p', 'imtip', '還沒有人留言。邀朋友來你的島玩吧！')); return; }
+  for (const m of IMail.list){ const it = el('div', 'imi' + (m.new ? ' new' : '')), ago = Math.round((Date.now() - Date.parse(m.at)) / 60000), nm = clean(String(m.name || '釣客').slice(0, 16));
+    it.appendChild(el('span', 'ims', m.stamp || '🐟')); const tx = el('div', 'imt'); tx.appendChild(el('b', '', nm)); tx.appendChild(el('span', 'imd', ago < 60 ? `${Math.max(1, ago)} 分鐘前` : ago < 1440 ? `${Math.round(ago / 60)} 小時前` : `${Math.round(ago / 1440)} 天前`)); tx.appendChild(el('div', '', clean(String(m.body || '')))); it.appendChild(tx);
+    const bs = el('div', 'imb'); const v = el('button', 'tbtn', '回訪'); v.addEventListener('click', () => { imailClose(); visitIsle(m.from, nm); }); bs.appendChild(v);
+    const d = el('button', 'tbtn ghost', '刪除'); d.addEventListener('click', async () => { if (!confirmOnce(d)) return; try { await Cloud.sb.rpc('isle_mail_del', { p_id: m.id }); it.remove(); } catch(e){} }); bs.appendChild(d);
+    const r = el('button', 'tbtn ghost', '🚩'); r.title = '檢舉'; r.addEventListener('click', async () => { if (!confirmOnce(r)) return; try { const { error } = await Cloud.sb.rpc('report_player', { p_target: m.from, p_name: nm, p_reason: '小島明信片內容不當', p_chat: String(m.body || '') }); toast(error ? '檢舉沒有送出，等一下再試' : '已送出檢舉，謝謝你'); } catch(e){} }); bs.appendChild(r);
+    it.appendChild(bs); box.appendChild(it); } }
+setInterval(() => { try { if (Cloud.on && document.visibilityState === 'visible') imailUnread(); } catch(e){} }, 120000);
 function renderIsleBar(){
   let bar = $('#isleBar');
   if (!onIsle){ if (bar) bar.hidden = true; return; }
   if (!bar){ bar = document.createElement('div'); bar.id = 'isleBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; const mine = onIsle.owner === myIdOrMe();
-  bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 我家（${onIsle.name}）` : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}`));
+  if (onIsle.vc === undefined && Cloud.on && Cloud.sb){ onIsle.vc = null; const ow = onIsle.owner; Cloud.sb.rpc('isle_visit_count', { p_owner: ow }).then(r => { if (onIsle && onIsle.owner === ow && r && r.data){ onIsle.vc = r.data; renderIsleBar(); } }, () => {}); }
+  bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 我家（${onIsle.name}）` : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}` + (onIsle.vc ? `・來訪 今天 ${onIsle.vc.today | 0}・共 ${onIsle.vc.total | 0}` : '')));
+  if (Cloud.on){ if (mine){ const mb = el('button', 'tbtn' + (IMail.unread ? '' : ' ghost'), IMail.unread ? `📮 ${IMail.unread}` : '📮 信箱'); mb.addEventListener('click', imailOpen); bar.appendChild(mb); } else if (!canEditIsle()){ const mb = el('button', 'tbtn', '📮 留言'); mb.addEventListener('click', () => imailWrite(onIsle.owner, onIsle.name)); bar.appendChild(mb); } }
   if (House.on && canEditIsle()){ const fb = el('button', 'tbtn', FB.on ? '完成擺設' : '🛋️ 擺家具'); fb.addEventListener('click', () => { if (FB.on) stopFurn(); else startFurn(); renderIsleBar(); }); bar.appendChild(fb);
     if (FB.on && !FB.top){ const tb = el('button', 'tbtn ghost', '用手指擺'); tb.addEventListener('click', () => { LS.set('tide.furnWalk', false); clearFurnGhost(); FB.top = true; FB.sel = null; FT.cx = 0; FT.cz = 0; renderFurnBar(); renderIsleBar(); }); bar.appendChild(tb); }
     const lb = el('button', 'tbtn ghost', '🏠 格局'); lb.addEventListener('click', () => { furnSheet = 'lay'; openSheet('furn'); }); bar.appendChild(lb); }
@@ -11751,7 +11782,7 @@ function adoptFriends(d){
   if (!d || typeof d !== 'object') return; Fr.list = Array.isArray(d.friends) ? d.friends : []; Fr.req = Array.isArray(d.requests) ? d.requests : []; Fr.gifts = Array.isArray(d.gifts) ? d.gifts : []; Fr.at = Date.now();
   const key = Fr.gifts.map(g => g.id).join(',') + '|' + Fr.req.map(r => r.id).join(',');
   if (key !== Fr.notified){ const newG = Fr.gifts.length && !Fr.notified.startsWith(Fr.gifts.map(g => g.id).join(',')); if (Fr.notified !== '' || Fr.gifts.length || Fr.req.length){ if (Fr.gifts.length && newG) ticker(`🎁 你有 ${Fr.gifts.length} 個禮物還沒打開（玩家分頁）`); else if (Fr.req.length) ticker(`👋 有 ${Fr.req.length} 個人想加你好友（玩家分頁）`); } Fr.notified = key; }
-  const dot = Fr.gifts.length + Fr.req.length; $$('[data-tab="people"]').forEach(b => b.classList.toggle('hasdot', dot > 0));
+  const dot = Fr.gifts.length + Fr.req.length + ((typeof IMail !== 'undefined' && IMail) ? IMail.unread : 0); $$('[data-tab="people"]').forEach(b => b.classList.toggle('hasdot', dot > 0));
   if (!$('#sheet').hidden && curTab === 'people') renderTab();
 }
 async function loadFriends(){ const d = await frRpc('get_friends'); if (d) adoptFriends(d); }
@@ -11790,6 +11821,7 @@ function renderFriends(body){
   const row = el('div', 'fadd'), inp = el('input'); inp.placeholder = '輸入朋友的 8 碼代碼'; inp.maxLength = 8; inp.autocapitalize = 'off'; const go = el('button', 'tbtn', '加好友');
   go.addEventListener('click', async () => { const c = inp.value.trim(); if (!/^[0-9a-fA-F]{8}$/.test(c)){ toast('好友代碼是 8 個英文或數字'); return; } go.disabled = true; const d = await frRpc('add_friend_code', { p_code: c }); go.disabled = false; if (d){ adoptFriends(d); inp.value = ''; toast('已經送出好友邀請'); } });
   row.append(inp, go); box.appendChild(row); body.appendChild(box);
+  { const mb = el('button', 'tbtn' + (IMail.unread ? '' : ' ghost'), IMail.unread ? `📮 小島信箱：${IMail.unread} 張新的明信片` : '📮 小島信箱'); mb.style.margin = '6px 0'; mb.addEventListener('click', imailOpen); body.appendChild(mb); }   /* v853 */
   if (Fr.gifts.length){ body.appendChild(el('div', 'dexhead', `🎁 收到的禮物（${Fr.gifts.length}）`)); const ul = el('ul', 'shoplist');
     for (const g of Fr.gifts){ const li = el('li', 'on'), f = g.kind === 'fish' && FISH_BY_ID[g.data && g.data.f]; li.appendChild(el('span', 'dishic', g.kind === 'coins' ? '🪙' : '🐟'));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${g.name || '朋友'} 送的禮物`)); d.appendChild(el('div', 'meta', g.kind === 'coins' ? `金幣 ${g.data && g.data.amount}` : f ? `${f.name} ${Number(g.data.w).toFixed(2)}kg` : '一條魚')); li.appendChild(d);
@@ -18283,7 +18315,7 @@ function ui2Tick(){
   { const h = $('#brand h1'); const nm = nickname || '潮汐釣魚村'; if (h && h._nm !== nm){ h._nm = nm; h.textContent = nm; } }   // 左上角顯示自己的名字
   // 紅點：有禮物或好友邀請、有任務可以交
   const dot = (tab, n) => { const b = $(`#menu .mbtn[data-tab="${tab}"]`); if (!b) return; let d = $('.rdot', b); if (!n){ if (d) d.remove(); return; } if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); };
-  dot('people', (Fr.gifts || []).length + (Fr.req || []).length);
+  dot('people', (Fr.gifts || []).length + (Fr.req || []).length + ((typeof IMail !== 'undefined' && IMail) ? IMail.unread : 0));
 }
 setInterval(ui2Tick, 2000); setTimeout(ui2Tick, 1200);
 
@@ -19346,7 +19378,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    setTimeout(refundCheck, 9000); setTimeout(statInit, 4000);
+    setTimeout(refundCheck, 9000); setTimeout(statInit, 4000); setTimeout(imailUnread, 6000);
     await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(stampLoad, 3500); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
@@ -21142,7 +21174,7 @@ function renderTab0(){
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
-      ["建地島", "home", ["西邊公寓旁邊有一座木橋，走過去就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"]],
+      ["建地島", "home", ["西邊公寓旁邊有一座木橋，走過去就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []],
       ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
@@ -22352,6 +22384,7 @@ const PHONE_APPS = [
 const UPD = [
   { id:'u852', d:'11/26', items:[['💇','新髮型三種：捲捲短髮、雙麻花辮、長直髮，到造型頁「髮型」選', 'closet'], ['🧓','村子裡的老人家看起來更像老人了：背有點駝、手背在後面散步、臉上有皺紋，有的戴老花眼鏡、拄拐杖'], ['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
   { id:'u849', d:'11/25', items:[['🌳','村子裡的樹變少了：路邊不再有樹擋路，西邊公寓旁清出一大塊空地（之後要做建地）']] },
+  { id:'u853', d:'11/26', items:[['📮','小島信箱：去別人的島可以按「📮 留言」投一張明信片；自己的島上看得到誰來過、留了什麼，可以回訪'], ['🏘️','大家現在都在同一個村子，不再分大廳']] },
   { id:'u850', d:'11/25', items:[['🔍','鏡頭可以拉得更近（兩指捏合），近看寵物；拉近時會往腳邊看'], ['⚙️','設定整理：搖桿固定在左下角、一律俯瞰視角、拿掉「改回原本的人物」']] },
   { id:'u847', d:'11/25', items:[['💬','新的聊天框：聊天列上面一行顯示最新一句，點一下展開最近 5 句；左邊切換看全村／附近／隱藏，⚙️ 可以設定誰聽得到你、檢舉說不好的話的人']] },
   { id:'u844', d:'11/25', items:[['🧓','阿鐵師傅改回男生；老闆不再被當成老人（阿忠、阿福不會白頭髮了）；老阿伯留白色平頭、老阿嬤包包頭']] },
