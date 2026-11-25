@@ -5266,6 +5266,8 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
   return { sex, ...face, hair: sex === 'g' ? (old ? ['bun', 'lowpony'][H % 2] : ['long', 'twin', 'pony', 'bob', 'short2', 'bun', 'lowpony'][H % 7]) : ['short', 'short2', 'lowpony', 'short2', 'short'][H % 5],   /* v742 村民也會留新髮型 */ top: topK, bot: old || work || H % 2 ? 'pants' : 'shorts', shoes: sex === 'g' && !work && H % 3 === 1 ? 'mary' : 'sneak', hat, ear, mask,
     c: { hair: old ? '#bdbab4' : pick(['#2a2422', '#3a2a22', '#5a3a2a', '#1c1c22', '#6a4a30', '#8a5a3a'], 5), top: topK === 'wave' ? ap(['#2f6fc0', '#2f9a9a', '#5a6fd0', '#d06a8a'], 20) : top, bot: pick(lum > 0.55 ? darkB : lightB, 7), shoes: pick(['#2a2a2a', '#ffffff', '#5a3a2a', '#3a3a44'], 9),
       ...(hat === 'cap' ? { hat: ap(['#e0564f', '#2f6fc0', '#2b2b2e', '#f2f2ee', '#3f8f6a', '#e8c547'], 22) } : {}), ...(mask === 'mask' ? { mask: ap(['#f2f2ee', '#2b2b2e', '#8fb8e0', '#f2b8c8'], 24) } : {}), ...(eyeC ? { eye: eyeC } : {}) } }; };
+/* 阿默（作者的朋友）：全身黑、黑口罩永遠不拿下來、戴黑帽；之後有「帽子戴在頭上的連帽衣」再換上 */
+{ const npc0 = K3.npc; K3.npc = (nm, shirt) => { const r = npc0(nm, shirt); if (/阿默/.test(nm)){ const B = '#1c1c20'; Object.assign(r, { top: K3.OPT && K3.OPT.top && K3.OPT.top.includes && K3.OPT.top.includes('hoodup') ? 'hoodup' : 'hoodie', bot: 'pants', shoes: 'sneak', hat: 'cap', mask: 'mask', ear: 'none', hair: 'short', brow: 'down', mouth: 'flat', blush: 'none' }); r.c = Object.assign({}, r.c, { top: B, bot: B, shoes: '#141416', hat: B, mask: '#141416', hair: '#141418' }); } return r; }; }
 K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.k3') || 'null'); } catch(e){}
   if (!c || c.v !== 2){ c = Object.assign(c && c.sex ? c : K3.rand(Math.random()), { on: true, v: 2 }); try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }
   if (c && !c.on){ c.on = true; try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }   /* v746 作者：「自動換」→ 之前自己改回舊人物的人也換成新人物（不再有舊人物） */
@@ -19138,8 +19140,8 @@ const npcs = [
   { name:'阿蘭・紅樹林巡守員', shirt:'#4f7f44', hat:'#e8d8a8', x:65.6, z:10.55, y:0.62, dir:new THREE.Vector2(0.35, 1).normalize(), lines:['退潮的時候泥灘會露出來，可以下去抓彈塗魚喔', '走慢一點，招潮蟹很膽小的', '鋸鰩已經很少了，釣到記得放流', '漲潮的時候，烏魚和黑鯛會游進樹根裡', '晚上這裡會有螢火蟲'] },
   // 阿默：一輩子的夢想就是釣到赤紅霸王鯊（紅鯊這個點子是使用者的朋友想出來的）
   { name:'阿默・追紅鯊的人', shirt:'#c8161c', hat:'#18334a', x:26.6, z:-26.1, y:0.3,   /* v541 作者：「阿默都會來擋我」→ 他原本站在 x:31.4，離「港口外海」釣點的光圈只有 2 公尺；往碼頭裡面挪 5 公尺，離光圈 6.7 公尺 */ dir:new THREE.Vector2(0.35, 1).normalize(), amo:true,
-    lines:['我從小就天天望著這片海', '小時候有一天，我看到一隻紅色的鯊魚浮出水面……從那天起，我就決定一定要釣到牠', '那天牠的背鰭劃過海面，紅得像夕陽一樣，我到現在都忘不了', '大人都說我看錯了，可是我知道牠真的在', '赤紅霸王鯊……我每天都在這裡等牠', '聽說牠背上有黑色的虎紋，眼睛是金色的', '牠的力氣大到會把竿子拉彎，我一定要親手感受一次', '有人說紅鯊只是傳說，我不信', '總有一天，跑馬燈上會出現我的名字', '我不會賣牠，也不會送人，釣到了我要好好看著牠', '如果你先釣到了……也要告訴我喔', '港口裡面不會有紅鯊，要開船到外海才有機會', '我的小船是紅色的，跟紅鯊一樣'],
-    catchLines:['唉……又不是紅鯊', '這隻也很好，但我要的是紅色的', '還沒，還沒……', '今天的海好安靜，紅鯊在睡覺嗎'] },
+    lines:['我從小就天天望著這片海', '小時候有一天，我看到一隻紅色的鯊魚浮出水面……從那天起，我就決定一定要釣到牠', '那天牠的背鰭劃過海面，紅得像夕陽一樣，我到現在都忘不了', '大人都說我看錯了，可是我知道牠真的在', '赤紅霸王鯊……我每天都在這裡等牠', '聽說牠背上有黑色的虎紋，眼睛是金色的', '牠的力氣大到會把竿子拉彎，我一定要親手感受一次', '有人說紅鯊只是傳說，我不信', '總有一天，跑馬燈上會出現我的名字', '我不會賣牠，也不會送人，釣到了我要好好看著牠', '如果你先釣到了……也要告訴我喔', '港口裡面不會有紅鯊，要開船到外海才有機會', '我的船是黑色的，衣服也是黑的，比較耐髒', '這片水面有一點亂，等一下應該會有魚影', '我看一眼就知道哪裡有魚，以前打遊戲練出來的', '點了就要吃完，浪費食物會被罵', '走到碼頭就好……我不想再走了', '口罩？不拿，吃飯也不拿', '運動？打遊戲也是在動手指啊', '不要吵，我在打王……啊，浮標動了', '釣魚跟打遊戲一樣，要看得到別人沒注意的地方'],
+    catchLines:['看到了，就是現在', '我早就知道牠會咬', '唉……又不是紅鯊', '這隻也很好，但我要的是紅色的', '還沒，還沒……', '今天的海好安靜，紅鯊在睡覺嗎'] },
   { name:'阿嬤・石滬人家', shirt:'#d8708a', hat:'#f4e8c8', x:9.6, z:83.6, y:0.42, dir:new THREE.Vector2(1, -0.2).normalize(), lines:['石滬是以前的人一顆一顆咾咕石疊起來的', '退潮的時候來，魚都被關在愛心裡面', '滿潮的時候魚都游出去了，要等', '臭肚魚背上的刺有毒，抓的時候小心', '菜宅的石牆是擋東北季風用的', '橋那邊的花瓶岩，是海浪慢慢磨出來的'] },
   // 阿綾：服裝店的設計師，站在店門口櫃台的旁邊；每天早上和傍晚會設計一件新衣服放到市集（050_ling.sql）
   (() => { const r = SHOPLOT.ling.r, [x, z] = lotAt('ling', -1.75, 2.75); return { name:'阿綾・服裝設計師', shirt:'#f5a5d8', hat:'#8a3a6a', x, z, y:0.02, dir:new THREE.Vector2(Math.sin(r), Math.cos(r)), tailor:true,
@@ -19930,6 +19932,7 @@ function amoLines(){ const L = [], mine = rec.tank.find(x => FISH_BY_ID[x.f] && 
   else if (RS.n > 0) L.push(`聽說海裡還有 ${RS.n} 隻紅鯊，其中一隻一定是在等我`, RS.n >= 4 ? '最近紅鯊好像變多了，機會來了！' : '紅鯊那麼少，每一次拋竿都要認真');
   if (Talk.recent.some(r => /赤紅霸王鯊/.test(r.name) && Date.now() - r.at < 3600e3)) L.push('剛剛有人釣到紅鯊了！好羨慕……下一隻是我的');
   if (Env.wx === 'storm') L.push('暴風雨的晚上，紅鯊最愛出來，我才不回家');
+  if (Env.tide && Env.tide.st){ const T = { high:'現在滿潮，大魚會靠岸邊，岸邊的釣點比較好', low:'現在乾潮，去外海比較有機會，岸邊魚都跑了', rise:'在漲潮，魚開始往岸邊游，再等一下就會咬', fall:'在退潮，魚往外走，跟著牠們去外海' }[Env.tide.st]; if (T) L.push(T, T); }
   return L; }
 // ---- 村民回話：你在聊天框說話，旁邊 9 公尺內最近的村民會看你說了什麼回一句（照關鍵字，回的內容都要跟遊戲規則一樣）----
 function npcReply(n, text){
@@ -19976,13 +19979,14 @@ function amoTrip(k){
   amoTrip.k = k; amoTrip.c = { pts, cum, len: cum[cum.length - 1], aT, sail: cum[cum.length - 1] / AMO.speed }; return amoTrip.c;
 }
 function amoAt(c, s){ s = clamp(s, 0, c.len); let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++; const a = c.pts[i - 1], b = c.pts[i], seg = c.cum[i] - c.cum[i - 1] || 1, u = (s - c.cum[i - 1]) / seg; return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
-function amoRecast(n, t){ const a = n.rot, dx = Math.sin(a), dz = Math.cos(a), cp = n.sitting ? [n.pos.x + dx * 4.5, n.pos.z + dz * 4.5] : castPoint(n.pos.x, n.pos.z, dx, dz, 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
+function amoRecast(n, t){ const a = n.rot, dx = Math.sin(a), dz = Math.cos(a), cp = n.sitting ? [n.pos.x + dx * 4.5, n.pos.z + dz * 4.5] : castPoint(n.pos.x, n.pos.z, dx, dz, 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.amoCast = n.bobPos.clone(); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
 function updateAmo(n, dt, t){
-  if (!n.boat){ n.boat = makeBoatMesh('#c8161c'); scene.add(n.boat); n.home = n.pos.clone(); n.homeRot = n.rot; n.homeY = n.baseY; }
+  if (!n.boat){ n.boat = makeBoatMesh('#26262b'); scene.add(n.boat); n.home = n.pos.clone(); n.homeRot = n.rot; n.homeY = n.baseY; }
   const T = Date.now() / 1000, k = Math.floor(T / AMO.cycle), ph = T - k * AMO.cycle, c = amoTrip(k), S = c.sail, fishEnd = AMO.cycle - AMO.pier - S;
   let mode, s; if (ph < S){ mode = 'go'; s = ph * AMO.speed; } else if (ph < fishEnd){ mode = 'sea'; s = c.len; } else if (ph < fishEnd + S){ mode = 'back'; s = c.len - (ph - fishEnd) * AMO.speed; } else mode = 'pier';
   if (mode === 'pier'){ n.boat.position.set(AMO.dock[0], WATER_LEVEL, AMO.dock[1]); n.boat.rotation.set(0, Math.PI / 2, 0);
-    if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; amoRecast(n, t); if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say('今天又沒遇到……下一趟換個地方', '', 4); } }
+    if (n.amoMode !== 'pier'){ n.pos.copy(n.home); n.baseY = n.homeY; n.rot = n.homeRot; n.sitting = false; amoRecast(n, t); n.amoTired = t + 4; if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['今天又沒遇到……下一趟換個地方', '好累……我坐一下打一場', '上岸了，先打一場再說']), '', 4); }
+    if (t > (n.amoTired || 0)){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 5; n.sitting = true; n.baseY = n.homeY - 0.42; } }
   else { const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
     const hd = mode === 'sea' ? out : hd0 + (mode === 'back' ? Math.PI : 0);
     n.boat.position.set(x, WATER_LEVEL + bob, z); n.boat.rotation.set(Math.sin(t * 1.1) * 0.02, hd, Math.sin(t * 1.3) * 0.03);
@@ -19990,8 +19994,34 @@ function updateAmo(n, dt, t){
     if (mode !== 'sea'){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 3; }
     else if (n.amoMode !== 'sea'){ amoRecast(n, t); if (camera.position.distanceTo(n.pos) < 30) n.say('今天來這裡試試看……紅鯊，我來了', '', 4); } }
   if (n.amoMode === 'pier' && mode === 'go' && camera.position.distanceTo(n.pos) < 25) n.say('我要開船出海了，港口裡不會有紅鯊的', '', 4);
-  n.amoMode = mode;
+  n.amoMode = mode; amoDevice(n, mode, t);
 }
+const pick2 = a => a[Math.floor(Math.random() * a.length)];
+/* 阿默的掌上遊戲機：在碼頭坐著休息的時候兩手拿著打；釣魚的時候收起來（釣魚要兩手顧竿） */
+/* 阿默照真的釣魚來：
+   ① 等：兩手顧竿，眼睛盯浮標
+   ② 魚先試吃：浮標一點一點地抖（他不動，等）；有時候魚只是偷吃餌就跑了 → 重新掛餌
+   ③ 浮標整個被拉下去：馬上往上一揚竿（刺魚）
+   ④ 拉魚：竿子往後扳、放下來的時候快速收線，一扳一收；魚衝的時候被往前拉一下；浮標（線）越來越靠近
+   ⑤ 魚拉出水面、拿起來看 → 收起來 → 再甩竿出去 */
+function amoFish(n, dt, t){ const st = n.st, near = camera.position.distanceTo(n.pos) < 25;
+  if (!n.fishing || !(st === 'nib' || st === 'strike' || st === 'fight')){ n.tug = (n.tug || 0) * Math.pow(0.02, dt); n.yank = 0; n.reelSpin = null; if (st === 'show' && n.amoCast) n.bobPos.copy(n.amoCast); return; }
+  if (st === 'nib'){ const u = t - n.nibAt, tw = Math.pow(Math.max(0, Math.sin(u * 6.5)), 6); n.dip = 0.15 + tw * 0.4; n.bend = 0.04 + tw * 0.1; n.tug = 0; n.yank = 0; n.reelSpin = 0;
+    if (tw > 0.85 && !n._nr){ n._nr = 1; ripple(n.bobPos.x, n.bobPos.z); } else if (tw < 0.3) n._nr = 0;
+    if (t > n.stT){ if (Math.random() < 0.8){ n.st = 'strike'; n.stT = t + 0.32; n.dip = 1; ripple(n.bobPos.x, n.bobPos.z, true); if (near && Math.random() < 0.4) n.say(pick2(['就是現在', '咬了', '看到了']), '', 2); }
+      else { n.st = 'wait'; n.next = t + rand(5, 10); n.dip = 0; n.bend = 0; if (near && Math.random() < 0.5) n.say(pick2(['被偷吃了……重新掛餌', '太早拉會跑掉，這隻只是在試吃', '偷吃餌的小魚，不理牠']), '', 3); } } return; }
+  if (st === 'strike'){ const u = 1 - (n.stT - t) / 0.32; n.tug = Math.min(1, u * 3.5); n.bend = 0.95; n.dip = 1; n.reelSpin = 0; n.yank = 0;
+    if (t > n.stT){ n.st = 'fight'; n.fT0 = t; n.fT1 = t + rand(2.8, 4.5); } return; }
+  const u = Math.min(1, (t - n.fT0) / (n.fT1 - n.fT0)), up = 0.5 + 0.5 * Math.sin((t - n.fT0) * Math.PI * 2 / 1.5 - Math.PI / 2), run = Math.pow(Math.max(0, Math.sin(t * 2.1 + 1.7)), 10) * (1 - u);
+  n.tug = 0.2 + 0.65 * up - run * 0.4; n.reelSpin = up < 0.45 ? 1 : 0.1; n.bend = 0.72 + 0.25 * up + run * 0.1; n.yank = run * 0.8; n.dip = 0.7 + Math.sin(t * 9) * 0.3;
+  const A = n.amoCast; if (A){ const tip = new THREE.Vector3(); n.av.tip.getWorldPosition(tip); const k = 0.1 + 0.72 * u * u; n.bobPos.set(A.x + (tip.x - A.x) * k + Math.sin(t * 3.1) * 0.25 * (1 - u), 0.12, A.z + (tip.z - A.z) * k + Math.cos(t * 2.6) * 0.25 * (1 - u)); }
+  if (Math.random() < dt * (3 + run * 8)) ripple(n.bobPos.x + (Math.random() - 0.5) * 0.5, n.bobPos.z + (Math.random() - 0.5) * 0.5);
+  if (t > n.fT1){ n.tug = 0; n.yank = 0; n.reelSpin = null; n.st = 'reel'; n.stT = t - 1; } }
+function amoDevice(n, mode, t){ const k = n.av && n.av.k3, B = k && k.bones; if (!B || !B.handl || !B.handr || n._culled){ if (n.dev) n.dev.visible = false; return; }
+  if (!n.dev){ const g = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.085, 0.03), new THREE.MeshLambertMaterial({ color: 0x2a2a30 })), scr = new THREE.Mesh(new THREE.PlaneGeometry(0.085, 0.06), new THREE.MeshBasicMaterial({ color: 0x7fd8ff })); scr.position.z = 0.016; g.add(body, scr); for (const sx of [-0.062, 0.062]){ const b = new THREE.Mesh(new THREE.CircleGeometry(0.012, 10), new THREE.MeshBasicMaterial({ color: sx < 0 ? 0x444450 : 0xd04848 })); b.position.set(sx, 0, 0.016); g.add(b); } n.dev = g; n.devScr = scr; scene.add(g); }
+  const play = mode === 'pier' && n.sitting && !n.fishing; n.dev.visible = !!play; if (!play) return;
+  const a = new THREE.Vector3(), b = new THREE.Vector3(); B.handl.getWorldPosition(a); B.handr.getWorldPosition(b); const p = a.add(b).multiplyScalar(0.5); p.y += 0.06; n.dev.position.copy(p);
+  n.dev.rotation.set(-0.9, n.rot, 0, 'YXZ'); n.devScr.material.color.setHSL(0.55 + 0.08 * Math.sin(t * 3), 0.8, 0.6 + 0.15 * Math.sin(t * 7)); }
 /* ============ v450 村民自由走動 ============
    玩家說「NPC 應該要能自由移動」。原本只有村長、阿綾、阿木、阿福、老港 5 位照伺服器的作息走動，其他人永遠站在原地。
    現在另外 9 位也會走：釣魚的村民（阿潮、小溪、阿伯）每隔幾分鐘收竿，走去廣場、魚市場、釣具店、涼亭附近待一下再回來重新拋竿；
@@ -20070,11 +20100,12 @@ function updateNpcs(dt, t){
     if (n.shopNpc === 'fu'){ updateShopNpc(n, dt, t, () => (!Fu.at || Date.now() - Fu.at > 5 * 60000) && loadFu()); continue; }
     if (n.shopNpc === 'salon'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); if (Salon.poleTex) Salon.poleTex.offset.y = (t * 0.35) % 1; continue; }   /* 阿萍站在店門口顧店；理髮燈一直轉 */
     if (n.shopNpc === 'craft'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); continue; }   /* v255 阿鐵師傅站著顧攤，不釣魚 */
-    if (n.amo){ updateAmo(n, dt, t); if (frameNo % 20 === 0) rumorAmo(n); }
+    if (n.amo){ updateAmo(n, dt, t); amoFish(n, dt, t); if (frameNo % 20 === 0) rumorAmo(n); }
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
     const st = n.st || 'wait';
     if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z);
-      if (Math.random() < 0.4){ n.st = 'reel'; n.stT = t + rand(1.6, 3.2); }
+      if (n.amo){ n.st = 'nib'; n.nibAt = t; n.stT = t + rand(1.4, 2.8); n.dip = 0.2; n.bend = 0.05; }
+      else if (Math.random() < 0.4){ n.st = 'reel'; n.stT = t + rand(1.6, 3.2); }
       else n.next = t + rand(6, 15); }
     { const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && n.st !== 'show' && !Dive.on && !House.on){ n.say(npcLine(n), '', 6); n.talkAt = t + rand(20, 40); } else if (d > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5); }   /* 走近才講話，講完隔一陣子再講 */
     if (st === 'reel'){ n.bend = 0.75 + Math.sin(t * 6) * 0.2; n.dip = 0.6 + Math.sin(t * 9) * 0.3; if (Math.random() < dt * 3) ripple(n.bobPos.x + (Math.random() - 0.5) * 0.6, n.bobPos.z + (Math.random() - 0.5) * 0.6);
@@ -21877,6 +21908,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u820', d:'11/25', items:[['🎮','我們的朋友阿默換新樣子了：全身黑、黑口罩、黑帽子，船也是黑的。上岸會坐在碼頭打遊戲機休息，走近會告訴你哪裡有魚影、現在潮水該去哪釣。他自己釣魚也照真的來：魚先試吃、浮標沉下去才揚竿、一扳一收拉上來']] },
   { id:'u819', d:'11/25', items:[['📱','修好一直點畫面放大後，縮回來按鈕卻變大互相擋到的問題']] },
   { id:'u818', d:'11/25', items:[['🏘️','手機的「村民」讀不到資料時不會一直卡在讀取中，會寫原因和「再試一次」']] },
   { id:'u817', d:'11/25', items:[['👣','「有人來逛過你的小島」的通知只會出現一次，還會寫是誰、多久以前來的']] },
