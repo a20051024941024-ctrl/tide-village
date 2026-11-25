@@ -8738,5 +8738,6 @@
  "士兵和坐騎走路的腳步放慢，步伐大一點": "Soldiers and mounts now walk with slower, longer steps",
  "士兵和坐騎走路的腳步再放慢": "Soldiers and mounts walk with even slower steps",
  "兵營的兵種卡片改成圖在左、字在右，不再擋住；橫向畫面下面找回「框選」；解散士兵要再按一次確認": "Unit cards in training buildings now show the picture on the left and text on the right so nothing is cut off; Box Select is back in the bottom bar in landscape; dismissing soldiers now needs a second tap to confirm",
- "照原版拿掉「解散」士兵的按鈕": "Removed the Dismiss soldiers button, like the original"
+ "照原版拿掉「解散」士兵的按鈕": "Removed the Dismiss soldiers button, like the original",
+ "築城守土新增累計簽到：每天都有獎勵，第 2、5、15、30、50 天送龍族，第 3、10、20、40 天送召喚券大禮包": "Castle game now has cumulative login rewards: something every day, dragons on days 2, 5, 15, 30 and 50, and big summon-ticket bundles on days 3, 10, 20 and 40"
 }
