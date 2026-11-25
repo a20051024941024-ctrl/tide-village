@@ -10240,8 +10240,8 @@ var IsleH = { owner:null, list:null, at:0, busy:false, fishers:[], hireName:'', 
 const HELPER_TRAIT = { hard:'💪 勤勞', normal:'🙂 普通', sleepy:'😴 愛睡', chatty:'💬 愛聊天' };
 async function loadIsleH(owner){ if (IsleH.busy || !Cloud.on) return; IsleH.busy = true; IsleH.at = Date.now(); try { const { data } = await Cloud.sb.rpc('isle_helpers', { p_owner: owner || null }); IsleH.list = data || []; IsleH.owner = owner || null; } catch(e){} IsleH.busy = false; isleHelperSpawn(); if (!$('#sheet').hidden && curTab === 'island') renderTab(); }
 function isleHelperSpawn(){ for (const f of IsleH.fishers) f.dispose(); IsleH.fishers = []; if (!onIsle || !IsleH.list) return;
-  IsleH.list.forEach((h, i) => { const f = new Fisher({ shirt:['#3fbf9d', '#ff9f43'][i % 2], hat:'#f6f0dd', name:`${h.name}・島上的幫手`, kind:'npc' }); const sd = i ? 1 : -1, x = ISLE.x + sd * 1.28, z = ISLE.z + ISLE.r + 3.9;   /* v384 幫手以前是「坐在空氣上」（屁股懸空）：改成坐在碼頭的邊邊、腳垂在外面，臉朝海 */
-    f.pos.set(x, 0, z); f.baseY = 0.36 - HELPER_SIT; f.rot = sd * Math.PI / 2; f.helper = h; f.setGear({ hat:'hat_bucket', face: h.state === 'sleep' ? 'face_sleepy' : 'face_happy' }); f.sitting = true;
+  IsleH.list.forEach((h, i) => { const f = new Fisher({ shirt:['#3fbf9d', '#ff9f43'][i % 2], hat:'#f6f0dd', name:`${h.name}・島上的幫手`, kind:'npc' }); const sd = i ? 1 : -1, x = ISLE.x + sd * 1.2, z = ISLE.z + ISLE.r + 4.85;   /* v857 往碼頭尾巴挪，不要跟路燈、梯子、救生圈疊在一起 */   /* v384 幫手以前是「坐在空氣上」（屁股懸空）：改成坐在碼頭的邊邊、腳垂在外面，臉朝海 */
+    f.pos.set(x, 0, z); f.baseY = 0.36;   /* v857 跟坐椅子一樣，屁股就在碼頭木板上（以前往下 0.4 是舊人物用的，換新人物後變成半個身體卡進木板） */ f.rot = sd * Math.PI / 2; f.helper = h; f.setGear({ hat:'hat_bucket', face: h.state === 'sleep' ? 'face_sleepy' : 'face_happy' }); f.sitting = true;
     if (h.state === 'fish'){ f.fishing = true; f.bobState = 'water'; const cp = [x + sd * 4, z]; f.bobPos.set(cp[0], 0.12, cp[1]); f.next = now() + rand(4, 10); } else f.say('💤', 'emote', 99999);
     f.lines = h.state === 'sleep' ? ['（呼呼大睡中…）'] : [...(h.log || []).slice(0, 3).map(l => l.txt), `我已經幫大家釣了 ${h.total} 條魚`, h.trait === 'chatty' ? '島上的大家都好親切～' : h.trait === 'hard' ? '再釣一條！' : '今天的海很平靜']; IsleH.fishers.push(f); }); }
 function updateIsleHelpers(dt, t){ if (!onIsle){ if (IsleH.fishers.length){ for (const f of IsleH.fishers) f.dispose(); IsleH.fishers = []; IsleH.list = null; } return; }
@@ -16025,6 +16025,7 @@ function updateQuestNpcs(dt, t){
     const d = Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z);
     const wd = q.who === 'chief' ? false : worldDrive(q.f, dt, t);   /* v250 村長要發任務，一直待在廣場（不跟著村民作息到處走、回家睡覺） */
     if (wd){}
+    else if (d < 62 && inCafe(q.f.pos.x, q.f.pos.z) && !inCafe()){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; q.f.tag.style.display = 'none'; }   /* v857 食堂裡的人（美雲姨）只有走進食堂才看得到，不會從外面看到站在海上 */
     else if (d < 62){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
     else q.f.tag.style.display = 'none';
     const qs = Quests.list && Quests.list.find(x => x.who === q.who), mark = !Cloud.on ? '' : !qs ? '' : qs.done ? '✔️' : '❗';
@@ -16416,7 +16417,7 @@ function spawnCustomer(t){
 }
 function updateCustomers(dt, t){
   if (!cookStall) return;
-  const near = Math.hypot(me.pos.x - cookStall.x, me.pos.z - cookStall.z) < 32;
+  const hall = !!cookStall.hall, near = hall ? inCafe() : Math.hypot(me.pos.x - cookStall.x, me.pos.z - cookStall.z) < 32;   /* v857 室內食堂：人在食堂裡才有客人，客人也只在裡面看得到 */
   if (near && t > custNext){ custNext = t + rand(25, 50); if (customers.filter(c => c.state !== 'out').length < 3) spawnCustomer(t); }
   for (let i = customers.length - 1; i >= 0; i--){
     const c = customers[i], f = c.f, tgt = c.state === 'out' ? c.from : c.st;
@@ -16431,6 +16432,7 @@ function updateCustomers(dt, t){
       c.state = 'wait'; f.sitting = true; f.baseY = c.st.y; f.pos.x = c.st.x; f.pos.z = c.st.z; const rc = RECIPES[c.order]; f.say(`想吃 ${rc.icon} ${rc.name}`, 'order', 9999); c.until = t + 150;
       if (!c.told){ c.told = true; }   /* 客人來了不用跑馬燈（使用者覺得太吵） */
     } else { f.dispose(); customers.splice(i, 1); continue; }
+    if (hall && !near){ f.av.g.visible = false; if (f.blob) f.blob.visible = false; f.tag.style.display = 'none'; continue; } else if (hall && !f.av.g.visible && !f._culled) f.av.g.visible = true;
     f.update(dt, t); f.placeTag();
   }
 }
@@ -22417,6 +22419,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u859', d:'11/26', items:[['🍲','食堂裡的美雲姨和客人，只有走進食堂才看得到（以前從外面看會像站在海上）'], ['🪝','小島碼頭上的幫手改成好好坐在碼頭邊、腳垂在水上，不會再跟路燈、救生圈疊在一起']] },
   { id:'u858', d:'11/26', items:[['🐟','翡翠河鱸、銀鱗鯽、朱紅錦鯉換成真實模型後，釣到的卡片、圖鑑小圖也換成新的樣子了','dex']] },
   { id:'u857', d:'11/26', items:[['📜','釣到村民在找的魚、博物館還缺的魚，卡片上會直接寫「老王要的・魚缸 1/3」「🏛️ 博物館還缺這條」'],['🐠','去別人的島，上面會寫「🐠 海裡 N 條」，按了帶你走到潛水梯，下去看島主養的魚']] },
   { id:'u856', d:'11/26', items:[['🚶','阿默上岸後走去長椅的時候有走路動作了（以前會站著滑過去，還一直在碼頭釣魚）'], ['🧓','老人家不再把手背在後面，拄拐杖的照舊']] },
