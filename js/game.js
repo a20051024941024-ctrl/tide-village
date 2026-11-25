@@ -13996,6 +13996,7 @@ function petModel(kind, acc, v, shineLv){
   g.userData = { body, head, tail, wings, legs, arms, kind };
   rigidMerge(g);   /* v290 同一塊會一起動的小零件合成一個，寵物從 30 幾個 draw call 變十個左右 */
   if (kind === 'cat' && Cat3.VARS[v || 'a'] && !window.__noCat3) cat3Attach(g, acc || 0, v || 'a');
+  if (kind === 'pondturtle' && !window.__noTurtle3) turtle3Attach(g, acc || 0, v || 'a');
   return g;
 }
 /* v290 把一個模型裡「跟著同一個父節點一起動」的小零件合併（不同顏色用頂點顏色），動畫用的節點（userData 裡記著的）不動 */
@@ -14043,6 +14044,41 @@ function cat3Load(){ if (!Cat3.p) Cat3.p = new GLTFLoader().loadAsync('models/pe
     const m = hm.material; if (m.map){ m.map.generateMipmaps = false; m.map.minFilter = THREE.LinearFilter; m.map.magFilter = THREE.LinearFilter; m.map.needsUpdate = true; } m.roughness = 0.86; m.metalness = 0;
     Cat3.a = { geo, mat: m }; }).catch(e => { console.warn('精美貓載入失敗', e); Cat3.p = null; });
   return Cat3.p; }
+/* ===== v833 精美斑龜（作者用 ChatGPT 三視圖＋Meshy 做的，models/pets/turtle.glb）=====
+   模型：頭朝 +z、高 1、長約 2；用程式切成骨架：身體、頭（可以縮進殼裡）、四隻腳、尾巴。花色 b（深色）、c（金黃）用同一張貼圖染色 */
+const Tt3 = { V: 1, p: null, a: null, S: 0.2, M: {}, TINT: { a: '#ffffff', b: '#9a9a8c', c: '#ffe6a0' } };
+const TT3_B = [['root', -1, 0, 0.30, 0], ['head', 0, 0, 0.55, 0.45], ['FL', 0, 0.35, 0.30, 0.32], ['FR', 0, -0.35, 0.30, 0.32], ['BL', 0, 0.38, 0.30, -0.37], ['BR', 0, -0.38, 0.30, -0.37], ['tail', 0, 0, 0.22, -0.74]];
+function turtle3Load(){ if (!Tt3.p) Tt3.p = new GLTFLoader().loadAsync('models/pets/turtle.glb?v=' + Tt3.V).then(gl => { let hm = null; gl.scene.traverse(o => { if (o.isMesh && !hm) hm = o; }); const geo = hm.geometry, P = geo.attributes.position, n = P.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    const sm = (a, b, v) => { const u = clamp((v - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); }, ix = {}; TT3_B.forEach((b, i) => { ix[b[0]] = i; });
+    for (let q = 0; q < n; q++){ const x = P.getX(q), y = P.getY(q), z = P.getZ(q), W = []; let rem = 1;
+      const hw = sm(0.36, 0.56, z) * sm(0.22, 0.42, y); if (hw > 0){ W.push([ix.head, hw]); rem -= hw; }   /* 頭和脖子 */
+      const tw = rem * sm(-0.66, -0.8, z) * sm(0.38, 0.3, y); if (tw > 0){ W.push([ix.tail, tw]); rem -= tw; }
+      if (rem > 0.001 && y < 0.34){ const L = x > 0, F = z > 0, nm = (F ? 'F' : 'B') + (L ? 'L' : 'R'), b = TT3_B[ix[nm]], d = Math.hypot(x - b[2], z - b[4]); const lw = rem * sm(0.34, 0.2, y) * sm(0.3, 0.16, d); if (lw > 0){ W.push([ix[nm], lw]); rem -= lw; } }
+      if (rem > 0.001) W.push([ix.root, rem]);
+      W.sort((a, b) => b[1] - a[1]); const A = W.slice(0, 4), tot = A.reduce((s, e) => s + e[1], 0) || 1; A.forEach((e, k) => { si[q * 4 + k] = e[0]; sw[q * 4 + k] = e[1] / tot; }); }
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    const m = hm.material; if (m.map){ m.map.generateMipmaps = false; m.map.minFilter = THREE.LinearFilter; m.map.magFilter = THREE.LinearFilter; m.map.needsUpdate = true; } m.roughness = 0.62; m.metalness = 0; m.color.setScalar(1.18);   /* 遊戲的光比 Meshy 預覽暗一點，貼圖提亮一些才是原本的橄欖綠、黃條紋 */
+    Tt3.a = { geo, mat: m }; }).catch(e => { console.warn('精美烏龜載入失敗', e); Tt3.p = null; });
+  return Tt3.p; }
+function turtle3Mat(v){ const k = Tt3.TINT[v] ? v : 'a'; if (k === 'a') return Tt3.a.mat; if (!Tt3.M[k]){ const m = Tt3.a.mat.clone(); m.color.set(Tt3.TINT[k]).multiplyScalar(1.18); Tt3.M[k] = m; } return Tt3.M[k]; }
+function turtle3Attach(g, acc, v){ const go = () => { if (!Tt3.a || g.userData.tt3) return; try { turtle3Make(g, acc, v); } catch(e){ console.warn('tt3', e); } }; if (Tt3.a) go(); else { const p = turtle3Load(); if (p) p.then(go); } }
+function turtle3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.remove(old);
+  const body = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(Tt3.S); body.add(rig); g.add(body);
+  const bones = TT3_B.map(b => { const o = new THREE.Bone(); o.name = 't3' + b[0]; return o; }), b = {}, rest = {};
+  TT3_B.forEach((d, i) => { const p = d[1] >= 0 ? TT3_B[d[1]] : null; bones[i].position.set(d[2] - (p ? p[2] : 0), d[3] - (p ? p[3] : 0), d[4] - (p ? p[4] : 0)); (p ? bones[d[1]] : rig).add(bones[i]); b[d[0]] = bones[i]; rest[d[0]] = bones[i].position.clone(); });
+  const sm = new THREE.SkinnedMesh(Tt3.a.geo, turtle3Mat(v)); sm.name = 'tt3'; sm.frustumCulled = false; sm.castShadow = true; sm.userData.noProxy = true; rig.add(sm); g.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(bones));
+  const M = c => mat(c, 0.5);
+  if (acc >= 1){ const bw = new THREE.Group(); bw.position.set(0.16, 0.38, 0.05); b.head.add(bw); for (const sx of [-1, 1]){ const l = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), M('#ff7aa8')); l.scale.set(1, 0.7, 0.45); l.position.x = sx * 0.1; bw.add(l); } const k = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M('#ff7aa8')); bw.add(k); }   /* 蝴蝶結在頭上 */
+  if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, 0.45, 0.08); hat.rotation.x = -0.1; b.head.add(hat); const hm2 = mat('#f2d48a', 0.7); const br = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.04, 16), hm2), cr = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.22, 0.2, 14), hm2), rb = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.225, 0.05, 14), mat('#e8473a', 0.6)); cr.position.y = 0.12; rb.position.y = 0.05; hat.add(br, cr, rb); }
+  U.body = body; U.head = new THREE.Object3D(); U.tail = null; U.legs = [0, 1, 2, 3].map(() => new THREE.Object3D()); U.tt3 = { b, rest, rig, seed: Math.random() * 10, rk: 0, tIdle: 0 }; }
+/* 斑龜怎麼動：走路對角的兩隻腳一起划（真的烏龜就是這樣）、身體左右晃、頭一點一點；停下來會東看西看，每十幾秒把頭縮進殼裡一下再伸出來；「一起休息」時四隻腳攤開、頭抬高曬太陽 */
+function turtle3Tick(pt, dt, t, mv){ const C = pt.m.userData.tt3, b = C.b, R = C.rest, ph = pt.ph * 1.3, A = pt.act && pt.act.k, bask = A === 'rest' || A === 'sit';
+  if (mv < 0.1 && !A){ C.tIdle += dt; } else C.tIdle = 0; const cyc = (C.tIdle + 6 + C.seed) % 14; let rk = mv < 0.1 && !A ? (cyc < 0.4 ? cyc / 0.4 : cyc < 2.8 ? 1 : cyc < 3.4 ? 1 - (cyc - 2.8) / 0.6 : 0) : 0; rk = rk * rk * (3 - 2 * rk); C.rk += (rk - C.rk) * Math.min(1, dt * 12);
+  const legs = [['FL', 0, 1], ['FR', Math.PI, -1], ['BL', Math.PI, 1], ['BR', 0, -1]];
+  for (const [nm, o, sx] of legs){ const L = b[nm], s = Math.sin(ph + o), c = Math.cos(ph + o); L.rotation.set(s * 0.55 * mv, 0, (bask ? 0.55 : 0) * sx + Math.max(0, c) * 0.15 * mv * sx); L.position.copy(R[nm]); L.position.y += Math.max(0, c) * 0.04 * mv; }
+  const H = b.head; H.position.copy(R.head); H.position.z -= C.rk * 0.2; H.position.y -= C.rk * 0.06; H.scale.setScalar(1 - C.rk * 0.15);
+  H.rotation.x = Math.sin(ph * 2) * 0.06 * mv + (bask ? -0.3 : 0); H.rotation.y = mv < 0.1 ? Math.sin(t * 0.55 + C.seed) * 0.45 * (1 - C.rk) : 0;
+  b.tail.rotation.y = Math.sin(t * 1.8 + C.seed) * 0.25; C.rig.rotation.z = Math.sin(ph) * 0.05 * mv; C.rig.position.y = (bask ? -0.012 : 0); }
 function cat3Attach(g, acc, v){ const go = () => { if (!Cat3.a || g.userData.cat3) return; try { cat3Make(g, acc, v); } catch(e){ console.warn('cat3', e); } }; if (Cat3.a) go(); else { const p = cat3Load(); if (p) p.then(go); } }
 function cat3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.remove(old);
   const body = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(Cat3.S); rig.position.y = 0.022; body.add(rig); g.add(body);   /* 腳掌墊高一點點，不然站著的時候腳趾埋在地裡 */
@@ -14159,6 +14195,7 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   if (U.head) U.head.rotation.y = mv < 0.1 ? Math.sin(t * 0.7 + pt.ph * 0.01) * 0.35 : 0;
   if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
   if (U.cat3){ try { cat3Tick(pt, dt, t, mv, tx, tz); } catch(e){} }
+  if (U.tt3){ try { turtle3Tick(pt, dt, t, mv); } catch(e){} }
 }
 /* ===== v332 跟寵物互動：丟球（跑去撿回來）、給點心、坐下、跳一跳、轉圈；揮手、跳舞、歡呼時寵物也會跟著動；別人也看得到 ===== */
 const PET_ACTS = [['🦴', '給點心', 'treat'], ['✋', '摸摸頭', 'pat'], ['🤝', '握手', 'paw'], ['🎾', '丟球', 'ball'], ['🏃', '繞圈跑', 'zoom'], ['😴', '一起休息', 'rest'], ['🐾', '坐下', 'sit'], ['🦘', '跳一跳', 'jump'], ['🌀', '轉圈', 'spin']];
