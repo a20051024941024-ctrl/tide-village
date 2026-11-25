@@ -1084,7 +1084,8 @@ const REAL3 = { koi:{}, perch:{}, crucian:{} };
 function real3Load(id){ const R = REAL3[id]; R.wait = R.wait || new Set(); if (R.loading) return; R.loading = true;
   new GLTFLoader().loadAsync('models/fish/' + id + '.glb').then(g => { let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
     const geo = mesh.geometry; geo.scale(1.55, 1.55, 1.55); geo.computeBoundingSphere(); geo.userData.shared = true; R.tex = mesh.material.map; if (R.tex){ R.tex.colorSpace = THREE.SRGBColorSpace; R.tex.anisotropy = 4; } R.geo = geo;
-    for (const fish of [...R.wait]){ try { real3Fill(fish, id); } catch(e){ console.warn('real3', e); } } R.wait.clear(); }).catch(e => console.warn('real3 glb ' + id, e)); }
+    for (const fish of [...R.wait]){ try { real3Fill(fish, id); } catch(e){ console.warn('real3', e); } } R.wait.clear();
+    if (R.cvs){ const L = R.cvs; R.cvs = null; for (const [cv, color, known] of L){ if (cv.isConnected) try { drawFish(cv, color, known, id); } catch(e){} } }   /* v858 卡片小圖等模型下載好再重畫 */ }).catch(e => console.warn('real3 glb ' + id, e)); }
 function real3Mat(id){ const R = REAL3[id]; if (R.mat) return R.mat;
   const m = new THREE.MeshStandardMaterial({ map: R.tex, roughness:0.42, metalness:0.04, side:THREE.DoubleSide });
   m.onBeforeCompile = sh => { sh.uniforms.uFishT = fishTime; sh.vertexShader = 'uniform float uFishT;\n' + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = vec3(position);\n ' + FISH_MOVES.side);
@@ -18124,6 +18125,11 @@ function drawHat2D(cv, kind){ const ctx = cv.getContext('2d'), W = cv.width, H =
 function drawFish(cv, color, known, id){
   if (id && /^(octopus|dumbo|seacuc|shark_red|lobster|bluelobster|crayfish|horseshoe|softshell)/.test(id) && FISH_BY_ID[id]){ try { if (drawMFishGL(cv, id, known, () => fishModel(FISH_BY_ID[id], 1))) return; } catch(e){} }   /* v310 手工做的模型（小飛象章魚、海參、章魚、紅鯊、龍蝦），小圖直接用遊戲裡的 3D 模型畫，兩邊才會一樣 */
   if (id){ try { if (drawMFishGL(cv, id, known)) return; } catch(e){} }
+  /* v858 作者：「今天加入的遊戲模型，他的卡片好像沒更新」→ 換成真實模型的魚（REAL3：錦鯉、河鱸、鯽魚）卡片、圖鑑小圖也用同一個模型畫；
+     模型還沒下載完先畫舊的，下載好再把還在畫面上的小圖重畫一次 */
+  if (id && REAL3[id] && !window.__noKoi3 && !CLASSIC && FISH_BY_ID[id]){ const R3 = REAL3[id];
+    if (R3.geo){ try { if (drawMFishGL(cv, id, known, () => makeReal3(FISH_BY_ID[id], 1))) return; } catch(e){} }
+    else { (R3.cvs = R3.cvs || []).push([cv, color, known]); real3Load(id); } }
   if (id === 'marlin' || id === 'marlin_albino') return drawMarlin2(cv, known, id !== 'marlin');
   if (id && FISH_STYLE[id]){ try { drawModelFish(cv, FISH_BY_ID[id], known); if (known && FISH_BY_ID[id].hat) drawHat2D(cv, FISH_BY_ID[id].hat); return; } catch(e){} }
   const ctx = cv.getContext('2d'), W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(W*0.52, H/2);
@@ -22411,6 +22417,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u858', d:'11/26', items:[['🐟','翡翠河鱸、銀鱗鯽、朱紅錦鯉換成真實模型後，釣到的卡片、圖鑑小圖也換成新的樣子了','dex']] },
   { id:'u857', d:'11/26', items:[['📜','釣到村民在找的魚、博物館還缺的魚，卡片上會直接寫「老王要的・魚缸 1/3」「🏛️ 博物館還缺這條」'],['🐠','去別人的島，上面會寫「🐠 海裡 N 條」，按了帶你走到潛水梯，下去看島主養的魚']] },
   { id:'u856', d:'11/26', items:[['🚶','阿默上岸後走去長椅的時候有走路動作了（以前會站著滑過去，還一直在碼頭釣魚）'], ['🧓','老人家不再把手背在後面，拄拐杖的照舊']] },
   { id:'u855', d:'11/26', items:[['🌟','釣到好東西時畫面中間會跳大字＋號角：傳說（金光）、第一次釣到、破自己紀錄、罕見變種、稀有']] },
