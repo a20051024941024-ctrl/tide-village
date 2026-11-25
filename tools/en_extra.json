@@ -8740,5 +8740,6 @@
  "兵營的兵種卡片改成圖在左、字在右，不再擋住；橫向畫面下面找回「框選」；解散士兵要再按一次確認": "Unit cards in training buildings now show the picture on the left and text on the right so nothing is cut off; Box Select is back in the bottom bar in landscape; dismissing soldiers now needs a second tap to confirm",
  "照原版拿掉「解散」士兵的按鈕": "Removed the Dismiss soldiers button, like the original",
  "築城守土新增累計簽到：每天都有獎勵，第 2、5、15、30、50 天送龍族，第 3、10、20、40 天送召喚券大禮包": "Castle game now has cumulative login rewards: something every day, dragons on days 2, 5, 15, 30 and 50, and big summon-ticket bundles on days 3, 10, 20 and 40",
- "築城守土「出征」多了玩家名單：可以免費指定攻打真人玩家的領地；被打了戰報會有「報仇」按鈕，48 小時內對方有護盾也打得到": "The castle game Raid screen now has a player list: pick any real player's territory to attack for free; battle reports have a Revenge button that works for 48 hours even if they have a shield"
+ "築城守土「出征」多了玩家名單：可以免費指定攻打真人玩家的領地；被打了戰報會有「報仇」按鈕，48 小時內對方有護盾也打得到": "The castle game Raid screen now has a player list: pick any real player's territory to attack for free; battle reports have a Revenge button that works for 48 hours even if they have a shield",
+ "築城守土新增「目標」：點左上任務打開，有每天三個每日任務、本週挑戰、稱號進度條和圖鑑還差幾種；主堡升級和奇觀要等時間施工，可以用金幣或召喚券加速": "Castle game adds Goals: tap the quest at top left for three daily tasks, a weekly challenge, a title progress bar and how many units each set still needs; castle upgrades and wonders now take time to build and can be sped up with gold or summon tickets"
 }
