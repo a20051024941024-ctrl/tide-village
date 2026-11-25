@@ -4847,6 +4847,8 @@ function buildNewEnvironment(){
         col = mix(col, sky, fres);
         col *= uLight;
         col += uGlint * pow(max(dot(R, uSun), 0.0), 180.0) * 1.6;
+        { float sp = pow(max(dot(R, uSun), 0.0), 26.0), tw = smoothstep(0.55, 1.0, (sin(vW.x * 7.1 + uTime * 3.1 + sin(vW.z * 2.3)) * sin(vW.z * 6.3 - uTime * 2.4 + sin(vW.x * 1.9))) * 0.5 + 0.5);
+          col += uGlint * sp * (0.12 + 0.55 * tw) * (1.0 - far * 0.3) * mix(0.55, 1.0, smoothstep(0.15, 0.5, uSun.y)); }   /* v832 往太陽（晚上月亮）那個方向，水面一閃一閃的光路 */
         float shore = 1.0 - smoothstep(0.08, 0.24, depth);
         float fn = sin(vW.x * 2.3 + uTime * 1.4 + sin(vW.z * 1.7)) * sin(vW.z * 2.1 - uTime * 1.1 + sin(vW.x * 1.3));
         float foam = shore * smoothstep(0.15, 0.75, fn * 0.5 + 0.5 + shore * 0.35) * uFoam;
@@ -4869,6 +4871,7 @@ function buildNewEnvironment(){
         foam = max(foam, seaF * (1.0 - smoothstep(0.0, 0.05, depth)) * 0.85 * uFoam * step(uTideUp, 0.001));   /* 退潮時最前面那條白邊 */
         foam = max(foam, fl * (1.0 - smoothstep(0.0, 0.45, sd + reach)) * 0.9 * uFoam);   /* 漲潮時沖上沙灘最前面的白邊 */
         col = mix(col, uLight, foam * 0.7 + clamp(crest * 0.9, 0.0, 0.55));   /* 浪峰帶一點白 */
+        col = mix(col, uSkyHor * uLight, smoothstep(45.0, 150.0, length(cameraPosition.xz - vW.xz)) * 0.55 * seaF);   /* v832 遠處的海慢慢融進地平線的天色，不會有一條硬硬的線 */
         float alpha = mix(0.58, 0.93, smoothstep(0.1, 1.2, depth)) * mix(1.0, 0.62, fl * (1.0 - m.g));
         gl_FragColor = vec4(col, max(alpha, foam * 0.8) * edge * tideEdge);
         #include <tonemapping_fragment>
@@ -4883,12 +4886,24 @@ function buildNewEnvironment(){
 
   // ---- 天空：上深下淺的漸層＋太陽周圍的光暈 ----
   skyDome = new THREE.Mesh(new THREE.SphereGeometry(190, 32, 16), new THREE.ShaderMaterial({
-    uniforms: { uTop: { value: new THREE.Color('#62bfe8') }, uHor: { value: new THREE.Color('#c6ecef') }, uLow: { value: new THREE.Color('#b7e5df') }, uSun: { value: sunDir }, uSunCol: { value: new THREE.Color('#fff1c4') } },
+    uniforms: { uTop: { value: new THREE.Color('#62bfe8') }, uHor: { value: new THREE.Color('#c6ecef') }, uLow: { value: new THREE.Color('#b7e5df') }, uSun: { value: sunDir }, uSunCol: { value: new THREE.Color('#fff1c4') }, uT: { value: 0 }, uCov: { value: 0.42 }, uDay: { value: 1 }, uWarm: { value: 0 } },
     vertexShader: 'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow; uniform vec3 uSun; uniform vec3 uSunCol; varying vec3 vDir;
+    /* v832 天空做精緻（作者朋友：「背景改真實一點」）：同樣柔和的畫風，加上會慢慢飄的雲（靠近地平線的一層）、黃昏太陽那一側整片染橘、晚上雲變暗變藍 */
+    fragmentShader: `uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow; uniform vec3 uSun; uniform vec3 uSunCol; uniform float uT; uniform float uCov; uniform float uDay; uniform float uWarm; varying vec3 vDir;
+      float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+      float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y); }
+      float fbm(vec2 p){ float a = 0.5, v = 0.0; for (int i = 0; i < 5; i++){ v += a * vn(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return v; }
       void main(){ vec3 d = normalize(vDir); float y = d.y;
         vec3 col = mix(uHor, uTop, smoothstep(0.0, 0.6, y)); col = mix(col, uLow, smoothstep(0.0, -0.25, y));
         float s = max(dot(d, uSun), 0.0); col += uSunCol * (pow(s, 24.0) * 0.35 + pow(s, 4.0) * 0.08);
+        col += uSunCol * uWarm * pow(s, 3.0) * (1.0 - smoothstep(0.0, 0.45, y)) * 0.35;   /* 黃昏：太陽那一側的地平線整片暖起來 */
+        if (y > 0.015){ vec2 q = d.xz / (y + 0.18) * 1.15 + vec2(uT * 0.012, uT * 0.004);
+          float n = fbm(q), n2 = fbm(q * 2.3 + 4.0);
+          float c = smoothstep(1.0 - uCov, 1.0 - uCov + 0.28, n * 0.8 + n2 * 0.25) * smoothstep(0.015, 0.12, y) * (1.0 - smoothstep(0.55, 0.9, y));
+          float sh = smoothstep(0.35, 0.95, fbm(q * 1.6 - vec2(0.0, 0.35)));   /* 雲底比較暗，有厚度 */
+          vec3 lit = mix(vec3(1.0), uSunCol, 0.35 + 0.4 * uWarm) * mix(0.32, 1.05, uDay) + uSunCol * pow(s, 6.0) * 0.5 * uWarm;
+          vec3 dk = mix(uHor, uTop, 0.45) * mix(0.55, 0.9, uDay);
+          col = mix(col, mix(lit, dk, sh * 0.5), c * mix(0.55, 0.97, uDay)); }
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -20926,7 +20941,10 @@ const stars = (() => {
 const lhBeam = (() => {
   if (!lhLight) return null;
   const geo = new THREE.ConeGeometry(2.6, 30, 20, 1, true); geo.translate(0, -13, 0); geo.rotateZ(Math.PI / 2);
-  const m = new THREE.MeshBasicMaterial({ color:'#fff3c0', transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, fog:false });
+  /* v832 光束以前是一整根一樣亮的管子，看起來像天上插了一根柱子 → 越遠越淡、邊緣柔柔的，像霧裡的光 */
+  const m = new THREE.ShaderMaterial({ uniforms: { opacity: { value: 0 }, col: { value: new THREE.Color('#fff3c0') } }, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+    vertexShader: 'varying float vL; varying vec3 vN; varying vec3 vV; void main(){ vL = clamp((position.x + 2.0) / 30.0, 0.0, 1.0); vec4 wp = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }',
+    fragmentShader: 'uniform float opacity; uniform vec3 col; varying float vL; varying vec3 vN; varying vec3 vV; void main(){ float e = pow(abs(dot(normalize(vN), normalize(vV))), 1.6); float a = opacity * 2.2 * e * pow(1.0 - vL, 1.6) * smoothstep(0.0, 0.06, vL); gl_FragColor = vec4(col * a, a); }' });
   const b = new THREE.Mesh(geo, m); const wp = new THREE.Vector3(); lhLight.getWorldPosition(wp); b.position.copy(wp); b.visible = false; scene.add(b); return b;
 })();
 const _cA = new THREE.Color(), _cB = new THREE.Color();
@@ -20945,7 +20963,8 @@ function updateDayNight(t){
   lerpKey(k0, k1, f, 'sun', sun.color); sun.intensity = num('si') * (MODERN ? 1 : 0.57);
   lerpKey(k0, k1, f, 'hs', hemi.color); lerpKey(k0, k1, f, 'hg', hemi.groundColor); hemi.intensity = num('hi') * (MODERN ? 1 : 0.68);
   lerpKey(k0, k1, f, 'low', scene.fog.color); lerpKey(k0, k1, f, 'top', scene.background);
-  if (skyDome){ const u = skyDome.material.uniforms; lerpKey(k0, k1, f, 'top', u.uTop.value); lerpKey(k0, k1, f, 'hor', u.uHor.value); lerpKey(k0, k1, f, 'low', u.uLow.value); lerpKey(k0, k1, f, 'disc', u.uSunCol.value); u.uSun.value.copy(_sunDir); }
+  if (skyDome){ const u = skyDome.material.uniforms; lerpKey(k0, k1, f, 'top', u.uTop.value); lerpKey(k0, k1, f, 'hor', u.uHor.value); lerpKey(k0, k1, f, 'low', u.uLow.value); lerpKey(k0, k1, f, 'disc', u.uSunCol.value); u.uSun.value.copy(_sunDir);
+    if (u.uT){ u.uT.value = t; u.uDay.value = clamp(1 - num('stars'), 0, 1); u.uWarm.value = Math.max(1 - Math.abs(h - 18.1) / 1.2, 1 - Math.abs(h - 6.3) / 1.0, 0); let cv = 0.4; try { const W = Env.wx; cv = W === 'storm' || W === 'tymid' ? 0.85 : W === 'rain' || W === 'typre' ? 0.72 : W === 'cloudy' || W === 'fog' ? 0.64 : 0.5; } catch(e){} u.uCov.value += (cv - u.uCov.value) * 0.02; } }
   if (waterSurface){ const u = waterSurface.material.uniforms; lerpKey(k0, k1, f, 'top', u.uSkyTop.value).lerp(_cB.set('#6cc4ea'), 0.25); lerpKey(k0, k1, f, 'hor', u.uSkyHor.value); lerpKey(k0, k1, f, 'wl', u.uLight.value); lerpKey(k0, k1, f, 'disc', u.uGlint.value); u.uSun.value.copy(_sunDir); for (const t of SEA_TINTS) t.m.color.copy(t.c).multiply(u.uLight.value); }
   /* v456 新美術試玩版：照作者選的主視覺（繽紛的台灣漁港插畫）調白天的光和顏色——天空是飽和的藍、海是亮的土耳其藍、太陽偏暖、
      背光的那一面染一點藍紫（不要灰灰的影子）。只在白天、而且天氣好的時候靠過去；清晨黃昏和晚上、下雨天維持原本的樣子。 */
@@ -20965,7 +20984,7 @@ function updateDayNight(t){
   if (tankWaterMat) tankWaterMat.emissiveIntensity = lamp * 0.55;   // 晚上水族館會亮
   if (rainbow) rainbow.visible = DayNight.period === 'day';
   if (aquaVane) aquaVane.rotation.y = Math.sin(t * 0.3) * 0.8 + Math.sin(t * 1.1) * 0.15;
-  if (lhBeam){ lhBeam.visible = lamp > 0.3; lhBeam.material.opacity = lamp * 0.09; lhBeam.rotation.y = t * 0.7; }
+  if (lhBeam){ lhBeam.visible = lamp > 0.3; if (lhBeam.material.uniforms) lhBeam.material.uniforms.opacity.value = lamp * 0.09; else lhBeam.material.opacity = lamp * 0.09; lhBeam.rotation.y = t * 0.7; }
   // 陰影跟著太陽／月亮的方向
   sun.position.set(me.pos.x + _sunDir.x * 40, _sunDir.y * 40, me.pos.z + _sunDir.z * 40); sun.target.position.set(me.pos.x, 0, me.pos.z);
   // 左上角的時間
