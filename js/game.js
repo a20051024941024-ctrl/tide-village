@@ -5277,11 +5277,17 @@ K3.TABS = [['look', '😊', '臉・髮型'], ['top', '👕', '上衣'], ['bot', 
 K3.VIEW = { sex: 'face', eye: 'face', brow: 'face', mouth: 'face', blush: 'face', hair: 'face', top: 'top', bot: 'bot', shoes: 'shoes', mask: 'face', ear: 'ear', hat: 'hat' };
 K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'), inTab = key => (K3.TAB[key] || 'acc') === tab;
       { const tabs = el('div', 'cl-tabs'); K3.TABS.forEach(([k, i, l]) => { const b = el('button', 'cl-tab' + (tab === k ? ' on' : '')); b.append(el('span', 'i', i), el('span', 'n', l)); b.addEventListener('click', () => { K3.uiTab = k; renderTab(); }); tabs.appendChild(b); }); (tabHost || f).appendChild(tabs); }
+      /* v860 試穿列：試穿中的東西、總價、全部買下／換回原本 */
+      if (Cloud.on){ const U = K3.real ? K3.unpaid() : []; if (U.length){ const tot = U.reduce((a, id) => a + K3.cost(id), 0), bx = el('div', 'k3try'); bx.appendChild(el('div', 'k3try-t', '試穿中：' + U.map(K3.nm).join('、')));
+          const bk = el('button', 'tbtn ghost', '換回原本'); bk.addEventListener('click', () => { K3.tryEnd(); renderTab(); }); const by = el('button', 'tbtn buy', `全部買下 🪙${tot.toLocaleString()}`); by.disabled = rec.coins < tot; by.addEventListener('click', () => K3.buyAll());
+          const r2 = el('div', 'k3try-b'); r2.append(bk, by); bx.appendChild(r2); bx.appendChild(el('small', '', `你有 🪙${rec.coins.toLocaleString()}・只有你看得到，買了大家才看得到`)); f.appendChild(bx); }
+        else f.appendChild(el('p', 'sub k3note', '臉免費；髮型、衣服、顏色用金幣買，買了就是你的。點了先試穿，喜歡再買。')); }
       const row = (lab, key, opts, off) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const grid = el('div', 'cl-grid k3grid'); opts.forEach(([k, l]) => { const on = c[key] === k, b = el('button', 'cl-it' + (on ? ' on' : '')); b.setAttribute('aria-pressed', String(on)); if (off) b.disabled = true;
-        const cf = Object.assign({}, c, { [key]: k, c: Object.assign({}, c.c) }); if (key === 'ear') cf.hair = 'short';   /* 耳環小圖用短髮拍，長髮會把耳朵蓋住 */ b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', l)); b.appendChild(el('span', 'n', l)); if (on) b.appendChild(el('span', 'b', '穿著'));
-        b.addEventListener('click', () => { K3.set({ [key]: k }); renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
-      const sw = (lab, key, cols) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
-        cols.forEach(col => { const b = el('button', 'k3c'); b.style.background = col; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); };
+        (K3.LBL || (K3.LBL = {}))[key + '_' + k] = l; const pid = K3.PAID_K.includes(key) ? K3.idOf(key, k) : null, mine = !pid || K3.owns(pid);
+        const cf = Object.assign({}, c, { [key]: k, c: Object.assign({}, c.c) }); if (key === 'ear') cf.hair = 'short';   /* 耳環小圖用短髮拍，長髮會把耳朵蓋住 */ b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', l)); b.appendChild(el('span', 'n', l)); if (on) b.appendChild(el('span', 'b', mine ? '穿著' : '試穿')); else if (!mine) b.appendChild(el('span', 'b k3pr', '🪙' + K3.cost(pid)));
+        b.addEventListener('click', () => { if (K3.real || !mine) K3.tryOn(x => { x[key] = k; }); else K3.set({ [key]: k }); renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
+      const sw = (lab, key, cols) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { if (K3.real) K3.tryOn(x => { x.c[key] = ''; }); else K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
+        cols.forEach(col => { const pc = K3.PAID_K.includes(key) ? K3.idC(key, col) : null, mine = !pc || K3.owns(pc), b = el('button', 'k3c' + (mine ? '' : ' k3lock')); b.style.background = col; if (!mine) b.title = '🪙' + K3.PRICE.color; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { if (K3.real || !mine) K3.tryOn(x => { x.c[key] = col; }); else K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); if (Cloud.on && K3.PAID_K.includes(key) && cols.some(col => !K3.owns(K3.idC(key, col)))) f.appendChild(el('small', 'k3cnote', `🪙 有小金幣的顏色一個 ${K3.PRICE.color}`)); };
       /* v741 作者：「我一開始不是說，中性沒有分男生女生」→ 不再有男生臉、女生臉。眼睛、眉毛、嘴巴、腮紅各自選，誰都可以選任何一種 */
       row('眼睛', 'eye', [['a0', '圓眼'], ['b0', '星星眼'], ['b4', '水汪汪'], ['a1', '下垂眼'], ['b1', '溫柔眼'], ['a2', '鳳眼'], ['b2', '貓眼'], ['b5', '丹鳳眼'], ['a4', '三白眼'], ['a3', '睏睏眼'], ['b3', '慵懶眼'], ['a5', '瞇瞇眼']]);
       sw('眼睛顏色', 'eye', ['#3f6fc0', '#3c8f5a', '#8a5fb5', '#b8404a', '#c99632', '#3a3a44', '#d9739a', '#3fa7b5']);
@@ -5323,8 +5329,11 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
       ...(hat === 'cap' ? { hat: ap(['#e0564f', '#2f6fc0', '#2b2b2e', '#f2f2ee', '#3f8f6a', '#e8c547'], 22) } : {}), ...(mask === 'mask' ? { mask: ap(['#f2f2ee', '#2b2b2e', '#8fb8e0', '#f2b8c8'], 24) } : {}), ...(eyeC ? { eye: eyeC } : {}) } }; };
 /* 阿默（作者的朋友）：全身黑、黑口罩永遠不拿下來、戴黑帽；之後有「帽子戴在頭上的連帽衣」再換上 */
 { const npc0 = K3.npc; K3.npc = (nm, shirt) => { const r = npc0(nm, shirt); if (/阿默/.test(nm)){ const B = '#1c1c20'; Object.assign(r, { top: K3.OPT && K3.OPT.top && K3.OPT.top.includes && K3.OPT.top.includes('hoodup') ? 'hoodup' : 'hoodie', bot: 'pants', shoes: 'sneak', hat: 'cap', mask: 'mask', ear: 'none', hair: 'short', brow: 'down', mouth: 'flat', blush: 'none' }); r.c = Object.assign({}, r.c, { top: B, bot: B, shoes: '#141416', hat: B, mask: '#141416', hair: '#141418' }); } return r; }; }
+/* v860 第一次玩的人從免費的基本款開始（白T、短褲或長褲、運動鞋、長捲髮或刺刺短髮、原色），臉隨機配 */
+K3.free0 = r => { const P = a => a[Math.floor(Math.random() * a.length)]; return Object.assign(r, { top: 'tee', shoes: 'sneak', hair: r.hair === 'long' ? 'long' : 'short', hat: 'none', mask: 'none', ear: 'none', c: {},
+  eye: P(['a0', 'b0', 'b4', 'a1', 'b1', 'b2']), brow: P(['thin', 'soft', 'thick']), mouth: P(['small', 'smile', 'grin', 'cat']), blush: P(['none', 'soft', 'line']) }); };
 K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.k3') || 'null'); } catch(e){}
-  if (!c || c.v !== 2){ c = Object.assign(c && c.sex ? c : K3.rand(Math.random()), { on: true, v: 2 }); try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }
+  if (!c || c.v !== 2){ c = Object.assign(c && c.sex ? c : K3.free0(K3.rand(Math.random())), { on: true, v: 2 }); try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }
   if (c && !c.on){ c.on = true; try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }   /* v746 作者：「自動換」→ 之前自己改回舊人物的人也換成新人物（不再有舊人物） */
   if (c && !c.eye) Object.assign(c, K3.faceOf(c.sex));   /* v741 以前選女生臉／男生臉的人，換成一樣長相的搭配 */
   K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
@@ -5689,6 +5698,27 @@ K3.dec = s => { if (typeof s !== 'string' || s.length > 220) return null; const 
   c.mask = ok('mask', p[9]); c.ear = ok('ear', p[10]); c.hat = ok('hat', p[13]); if (O.eye.includes(p[15])){ c.eye = p[15]; c.brow = ok('brow', p[16]); c.mouth = ok('mouth', p[17]); c.blush = ok('blush', p[18]); } else Object.assign(c, K3.faceOf(c.sex)); [['hair', 5], ['top', 6], ['bot', 7], ['shoes', 8], ['mask', 11], ['ear', 12], ['hat', 14], ['eye', 19]].forEach(([k, i]) => { const v = hx(p[i]); if (v) c.c[k] = v; }); return c; };
 K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} try { pushPresence(true); } catch(e){} };
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
+/* v860 造型要用金幣買（作者：「造型的衣服頭髮顏色那些全部都要用錢買，不要現在什麼都免費」；伺服器 232_k3_shop.sql，價錢兩邊要一樣）。
+   臉免費＋一套基本款；其他點了先「試穿」（只有自己看得到、不存、不送給別人），按「全部買下」才是你的。關掉造型頁沒買就換回原本的。
+   已經在玩的人：第一次連上時把身上那套送他（k3_grant，伺服器只給 v860 以前的帳號）；之後身上有沒買的東西就換回基本款。 */
+K3.PRICE = { hair:600, top:800, bot:500, shoes:400, hat:500, mask:500, ear:500, color:150 };
+K3.FREE = new Set(['hair_long', 'hair_short', 'top_tee', 'bot_shorts', 'bot_pants', 'shoes_sneak', 'hat_none', 'mask_none', 'ear_none']);
+K3.PAID_K = ['hair', 'top', 'bot', 'shoes', 'hat', 'mask', 'ear'];
+K3.idOf = (k, v) => 'k3_' + k + '_' + v; K3.idC = (k, col) => 'k3c_' + k + '_' + String(col).replace('#', '').toLowerCase();
+K3.cost = id => /^k3c_/.test(id) ? K3.PRICE.color : K3.FREE.has(id.slice(3)) ? 0 : (K3.PRICE[id.split('_')[1]] || 0);
+K3.owns = id => !Cloud.on || K3.cost(id) === 0 || (rec.owned || []).includes(id);
+K3.ids = c => { const L = []; for (const k of K3.PAID_K){ if (c[k] != null) L.push(K3.idOf(k, c[k])); const col = (c.c || {})[k]; if (col && (k !== 'hat' || c.hat !== 'none') && (k !== 'mask' || c.mask === 'mask') && (k !== 'ear' || c.ear !== 'none')) L.push(K3.idC(k, col)); } return L; };
+K3.unpaid = c => K3.ids(c || K3.cfg).filter(id => !K3.owns(id));
+K3.nm = id => { const m = /^k3(c?)_([a-z]+)_(.+)$/.exec(id); if (!m) return id; const part = { hair:'髮', top:'上衣', bot:'褲子', shoes:'鞋子', hat:'帽子', mask:'口罩', ear:'耳環' }[m[2]] || ''; return m[1] ? (m[2] === 'hair' ? '髮色' : part + '顏色') : (K3.LBL && K3.LBL[m[2] + '_' + m[3]]) || part; };
+K3.tryOn = fn => { if (!K3.real) K3.real = JSON.parse(JSON.stringify(K3.cfg)); fn(K3.cfg); try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} if (!K3.unpaid().length){ const keep = K3.cfg; K3.real = null; K3.cfg = keep; K3.set({}); } };
+K3.tryEnd = () => { if (!K3.real) return; K3.cfg = K3.real; K3.real = null; try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} };
+K3.buyAll = async () => { const L = K3.unpaid(); if (!L.length || K3.buying) return; const tot = L.reduce((a, id) => a + K3.cost(id), 0); if (rec.coins < tot){ toast(`金幣不夠，還差 🪙${(tot - rec.coins).toLocaleString()}`); return; }
+  K3.buying = true; try { for (const id of L){ const { data, error } = await Cloud.sb.rpc('k3_buy', { p_id: id }); if (error) throw error; adoptRow(data); } K3.real = null; K3.set({}); try { SFX.coin(); } catch(e){} flash(`👕 買好了！花了 🪙${tot.toLocaleString()}`, 1.6); Style.newAt = Date.now(); Style.said = false; }
+  catch(e){ toast('買不了：' + ((e && e.message) || '網路怪怪的')); } K3.buying = false; renderTab(); };
+K3.fix = () => { if (!Cloud.on || !(rec.owned || []).includes('k3_grand') || K3.real) return; let ch = false; const c = K3.cfg;
+  for (const k of K3.PAID_K){ if (c[k] != null && !K3.owns(K3.idOf(k, c[k]))){ c[k] = k === 'hair' ? 'short' : k === 'top' ? 'tee' : k === 'bot' ? 'shorts' : k === 'shoes' ? 'sneak' : 'none'; ch = true; } const col = (c.c || {})[k]; if (col && !K3.owns(K3.idC(k, col))){ c.c[k] = ''; ch = true; } }
+  if (ch){ K3.set({}); toast('造型裡沒買的東西換回基本款了（之前買的、身上那套都還在）'); } };
+async function k3Grant(){ if (!Cloud.on || !Cloud.sb || !K3.on) return; try { if (!(rec.owned || []).includes('k3_grand')){ const { data, error } = await Cloud.sb.rpc('k3_grant', { p_ids: K3.ids(K3.cfg) }); if (error) return; adoptRow(data); } K3.fix(); } catch(e){} }
 /* v691 作者：「iPhone 換新人物完全不會動」。我這邊（Android 模擬）會動，先把 iPhone 上發生什麼事送回伺服器：出錯的訊息、骨架有沒有在轉、顯卡能力 */
 K3.n = 0; K3.bad = e => { K3.ecount = (K3.ecount || 0) + 1; K3.lastE = e && e.stack || e; if (K3.ferr) return; K3.ferr = 1; console.warn('k3', e); try { errReport('k3', 'err ' + String(e && e.stack || e).replace(/\s+/g, ' ').slice(0, 280)); } catch(_){} };
 /* v692 iPhone 上的人走路很僵：伺服器紀錄顯示那支 iPhone 打開 40 秒還沒換成 3D 角色（還是最早的程式角色）。不管有沒有開新人物，iPhone 上 45 秒還沒換好就回報原因 */
@@ -18052,7 +18082,7 @@ function normRec(r){
   if (Array.isArray(r.show)){ const ts = new Set(e.tank.map(x => x.t)); e.show = r.show.map(Number).filter(t => ts.has(t)).slice(0, SHOW_MAX); }
   // 經濟（金幣、釣竿、魚餌）
   if (r.island && typeof r.island === 'object') e.island = cleanIsland(r.island);
-  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gyb?_[a-z]+$/.test(id) || /^bt_[a-z0-9]+$/.test(id) || /^fe_[a-z]+$/.test(id) || /^(rs|lc|hk|em)_[a-z0-9_]+$/.test(id) || /^h[sc]\d{1,3}$/.test(id) || /^nf_\d{6}$/.test(id)))];   /* v681 排位送的名牌框 nf_YYYYMM 也要留著（回歸：存檔讀回來不見了） */   /* v280 修正：阿鐵做的竿子／釣線／鉤子（rs_ lc_ hk_）、買的動作（em_）、阿萍的髮型髮色（hs hc）以前在這裡被濾掉，做好了卻顯示沒有 */   /* gyb_：大魚的魚拓、bt_：大魚稱號 */   /* gy_：博物館魚拓 */
+  if (Array.isArray(r.owned)) e.owned = [...new Set(r.owned.filter(id => /^k3c?_[a-z]+_[a-z0-9]+$/.test(id) || id === 'k3_grand' || paidGear(GEAR_BY_ID[id]) || /^(top|pants|hat|shoes|back|acc)_dz\d+$/.test(id) || /^tool_/.test(id) || /^gyb?_[a-z]+$/.test(id) || /^bt_[a-z0-9]+$/.test(id) || /^fe_[a-z]+$/.test(id) || /^(rs|lc|hk|em)_[a-z0-9_]+$/.test(id) || /^h[sc]\d{1,3}$/.test(id) || /^nf_\d{6}$/.test(id)))];   /* v681 排位送的名牌框 nf_YYYYMM 也要留著（回歸：存檔讀回來不見了） */   /* v280 修正：阿鐵做的竿子／釣線／鉤子（rs_ lc_ hk_）、買的動作（em_）、阿萍的髮型髮色（hs hc）以前在這裡被濾掉，做好了卻顯示沒有 */   /* gyb_：大魚的魚拓、bt_：大魚稱號 */   /* gy_：博物館魚拓 */
   { const g = cleanGear(r.gear); for (const k in g){ const it = GEAR_BY_ID[g[k]]; if (paidGear(it) && !e.owned.includes(it.id)) g[k] = GEAR_DEFAULT[k]; } e.gear = g; }
   if (Array.isArray(r.dishes)) e.dishes = r.dishes.filter(d => d && RECIPES[d.r]).slice(0, 100).map(d => ({ r:d.r, q:clamp(Math.round(Number(d.q) || 1), 1, 3), t:Number(d.t) || 0 }));
   e.coins = Math.max(0, Math.floor(Number(r.coins) || 0)); e.love = Math.max(0, Math.floor(Number(r.love) || 0)); e.released = Math.max(0, Math.floor(Number(r.released) || 0)); e.shrimpUntil = Number(r.shrimpUntil) || 0; e.sevGot = r.sevGot && typeof r.sevGot === 'object' ? r.sevGot : {}; e.srods = Array.isArray(r.srods) ? r.srods.filter(x => SHRIMP_RODS.some(y => y.id === x)) : []; e.srod = typeof r.srod === 'string' ? r.srod : 'srod_basic'; e.dive = Array.isArray(r.dive) ? [...new Set(r.dive.filter(id => DIVE_BY_ID[id]))] : []; e.photos = Array.isArray(r.photos) ? [...new Set(r.photos.filter(id => FISH_BY_ID[id]))] : []; e.sold = Number(r.sold) || 0; e.earned = Number(r.earned) || 0;
@@ -18918,7 +18948,7 @@ let lastPres = '', lastPresAt = 0;
 function presenceObj(){
   const o = { p:[+me.pos.x.toFixed(2), +me.pos.z.toFixed(2), +me.baseY.toFixed(2)], r:+me.rot.toFixed(2), sh:(rec && rec.gear && rec.gear.top === 'top_team' && myTeamColor()) || look.shirt, ht:look.hat }; { const tb = myTeamBadge(); if (tb) o.tb = TEAM_BADGE.indexOf(tb); }
   if (nickname) o.n = nickname;
-  if (K3.on) o.k3 = K3.enc(K3.cfg);   /* v710 新人物的樣子 */
+  if (K3.on) o.k3 = K3.enc(K3.real || K3.cfg);   /* v860 試穿中別人看到的是原本的 */   /* v710 新人物的樣子 */
   { const av = myAvatar(); if (av) o.av = av; }   /* v334 頭像 */
   if (myId) o.u = myId;
   { const ft = typeof fbMyTeam === 'function' && fbMyTeam(); if (ft){ o.tn = ft.n; if (ft.c) o.tc = ft.c; } }   /* v529 釣友隊名（體育場足球分邊用） */
@@ -19412,7 +19442,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    setTimeout(refundCheck, 9000); setTimeout(statInit, 4000); setTimeout(imailUnread, 6000); setTimeout(() => { try { loadMuseum(); } catch(e){} }, 12000);   /* v857 釣到時要知道博物館缺不缺這條 */
+    setTimeout(refundCheck, 9000); setTimeout(statInit, 4000); setTimeout(k3Grant, 3000); setTimeout(imailUnread, 6000); setTimeout(() => { try { loadMuseum(); } catch(e){} }, 12000);   /* v857 釣到時要知道博物館缺不缺這條 */
     await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(stampLoad, 3500); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
@@ -20821,7 +20851,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
-function closeSheet(){ closeModelView(); if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
+function closeSheet(){ closeModelView(); try { if (K3.real){ K3.tryEnd(); toast('沒買的造型換回原本的了'); } } catch(e){} if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
 $('#closeSheet').addEventListener('click', closeSheet);
@@ -22419,6 +22449,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u860', d:'11/26', items:[['👕','造型改成用金幣買：臉免費、送一套基本款，其他點了先試穿，喜歡再按「全部買下」','closet'],['🎁','你現在身上那一套直接送你，不用重買']] },
   { id:'u859', d:'11/26', items:[['🍲','食堂裡的美雲姨和客人，只有走進食堂才看得到（以前從外面看會像站在海上）'], ['🪝','小島碼頭上的幫手改成好好坐在碼頭邊、腳垂在水上，不會再跟路燈、救生圈疊在一起']] },
   { id:'u858', d:'11/26', items:[['🐟','翡翠河鱸、銀鱗鯽、朱紅錦鯉換成真實模型後，釣到的卡片、圖鑑小圖也換成新的樣子了','dex']] },
   { id:'u857', d:'11/26', items:[['📜','釣到村民在找的魚、博物館還缺的魚，卡片上會直接寫「老王要的・魚缸 1/3」「🏛️ 博物館還缺這條」'],['🐠','去別人的島，上面會寫「🐠 海裡 N 條」，按了帶你走到潛水梯，下去看島主養的魚']] },

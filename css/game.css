@@ -2427,3 +2427,14 @@ body.photo #imail{display:none}
 @keyframes hyspin{0%{transform:rotate(0) scale(.6)}100%{transform:rotate(40deg) scale(1)}}
 body.photo #hype{display:none}
 #catchCard .badge.want{background:#2f8f5b;color:#fff}   /* v857 有人要這條魚 */
+
+/* v860 造型要用金幣買：試穿列、價錢、要買的顏色 */
+.k3try{background:#fff8e6;border:2px solid #f0a23a;border-radius:14px;padding:8px 10px;margin:6px 0 8px}
+.k3try-t{font-weight:800;color:#6a4a00;font-size:14px}
+.k3try-b{display:flex;gap:8px;margin:6px 0 2px}.k3try-b .tbtn{flex:1}
+.k3try small{color:#8a6a2a;font-size:11.5px}
+.closet.k3pt .cl-it .b.k3pr{background:#fff3d6!important;color:#8a5a00!important;border:1px solid #f0c060}
+.k3c.k3lock{position:relative}
+.k3c.k3lock::after{content:'🪙';position:absolute;right:-5px;bottom:-5px;font-size:12px;line-height:1}
+.k3note{margin:2px 0 6px!important;font-size:12px}
+.k3cnote{display:block;color:#8a6a2a;font-size:11px;margin:-2px 0 6px}
