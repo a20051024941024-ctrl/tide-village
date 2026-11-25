@@ -6343,7 +6343,7 @@ const me = new Fisher({ shirt: look.shirt, hat: look.hat, name: '你', kind: 'me
 me.pos.set(HARBOR_SQ[0], 0, HARBOR_SQ[1] + 4); me.rot = Math.PI;   /* 44 第三區：一進遊戲就在港邊廣場（面向噴水池和碼頭） */
 /* v291 視角：俯瞰（預設，從斜上方往下看）／貼近（舊的）。存在本機 */
 const CAMV = { P: { top: { pitch: 0.9, dist: 13, fov: 45 }, near: { pitch: 0.42, dist: 9, fov: 55 } }, mode: 'top', fk: 0 };
-try { let v = localStorage.getItem('tide.camView'); try { v = JSON.parse(v); } catch(_){} if (v === 'near' || v === 'top') CAMV.mode = v; } catch(e){}
+/* v850 作者：「直接是俯瞰了」→ 不再讀以前存的「貼近」，一律俯瞰（設定拿掉） */
 { const m = /camv=([\d.]+),([\d.]+),([\d.]+)/.exec(location.hash); if (m){ CAMV.P.top = { pitch: +m[1], dist: +m[2], fov: +m[3] }; CAMV.mode = 'top'; } }   /* 測試用：#camv=俯角,距離,視野 */
 const camBaseFov = () => CAMV.P[CAMV.mode].fov;
 const cam = { yaw: 0, pitch: CAMV.P[CAMV.mode].pitch, dist: CAMV.P[CAMV.mode].dist };
@@ -6378,10 +6378,10 @@ let drag = null;
 const CAM_FAR = 28;
 let camDistT = 0;
 function camDistSave(){ if (!camLimits().out || (typeof SKI !== 'undefined' && SKI.on)) return; clearTimeout(camDistT); camDistT = setTimeout(() => { try { localStorage.setItem('tide.camDist', String(Math.round(cam.dist * 10) / 10)); } catch(e){} }, 400); }
-try { const v = parseFloat(localStorage.getItem('tide.camDist')); if (v >= 4.5 && v <= CAM_FAR) cam.dist = v; } catch(e){}
+try { const v = parseFloat(localStorage.getItem('tide.camDist')); if (v >= 2.4 && v <= CAM_FAR) cam.dist = v; } catch(e){}
 setTimeout(() => { try { if (!LS.get('tide.camFarTold', 0)){ LS.set('tide.camFarTold', 1); toast(isTouch ? '🔭 鏡頭可以拉得更遠了：在畫面上用兩隻手指捏合，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住' : '🔭 鏡頭可以拉得更遠了：滾輪，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住', 9); } } catch(e){} }, 9000);
 const pinch = new Map(); let pinchDist = 0;
-const camLimits = () => (typeof Dive !== 'undefined' && Dive.on && Dive.fp && !Photo.on) ? { pmin: -1.2, pmax: 1.2, dmin: 4.5, dmax: 18 } : Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: -0.6, pmax: 1.15, dmin: 4.5, dmax: CAM_FAR, out: true };   /* v597 作者：「頭不能往上看」→ 外面也可以往上拖到看天空（以前最低 0.12） */   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
+const camLimits = () => (typeof Dive !== 'undefined' && Dive.on && Dive.fp && !Photo.on) ? { pmin: -1.2, pmax: 1.2, dmin: 4.5, dmax: 18 } : Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: -0.6, pmax: 1.15, dmin: 2.4, dmax: CAM_FAR, out: true };   /* v597 作者：「頭不能往上看」→ 外面也可以往上拖到看天空（以前最低 0.12） */   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
 /* v314 玩家回報：快速點畫面時會一下放大一下縮小。兩隻手指輪流快點會被當成「兩指縮放」，或手指放開的訊號漏掉、留下一隻「幽靈手指」。
    現在：手指放開在任何地方都會清掉；兩指距離要先變超過 14px 才開始縮放（快點的小抖動不算） */
 let pinchArm = 0;
@@ -6397,7 +6397,7 @@ canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointerc
 canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); camDistSave(); }, { passive:false });
 
 // joystick（浮動：按在左半邊哪裡，搖桿中心就在哪裡；v314 設定可以改成固定在左下角）
-function joyFixed(){ return LS.get('tide.joyFixed', false) === true; }
+function joyFixed(){ return true; }   /* v850 作者：搖桿直接固定在左下角（設定拿掉） */
 (function(){
   const zone = $('#joyZone'), el = $('#joy'), knob = $('.knob', el); let id = null, cx = 0, cy = 0, M = 60, ox = 0, oy = 0;
   zone.addEventListener('pointerdown', e => { try { awStop(); } catch(_){}
@@ -6584,7 +6584,7 @@ function discover(t){
   for (const tp of TRAVEL){
     if (!visited.has(tp.id) && Math.hypot(me.pos.x - tp.x, me.pos.z - tp.z) < 7){
       visited.add(tp.id); LS.set('tide.visited', [...visited]);
-      toast(`發現新地點：<b>${esc(tp.label)}</b><br>以後可以從「地圖」直接傳送過來`);
+      if (Guide.i == null || Guide.i === 'done') toast(`發現新地點：<b>${esc(tp.label)}</b><br>以後可以從「地圖」直接傳送過來`);   /* v850 新手教學還沒走完時不跳（同時只出現一個提示） */
     }
   }
 }
@@ -7203,6 +7203,7 @@ function updateCamera2(dt){
     return;
   }
   const target = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);   // 用地面高度，不跟著走路的上下晃動（不然鏡頭會一直震）
+  { const own0 = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on); if (!own0 && cam.dist < 4.5) target.y -= (4.5 - cam.dist) / 2.1 * 0.8; }   /* v850 作者：「我不能拉很近看我的小烏龜」→ 戶外鏡頭可以拉到 2.4 公尺（原本 4.5）；越近，看的點越往腳邊移（不然只看到後腦勺） */
   const own = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on);   /* 有自己鏡頭的地方不改 */
   { const bf = own ? 55 : camBaseFov() + (Bike.on ? Math.min(11, Bike.sp * 1.25) : 0); if (!Photo.on && Math.abs(camera.fov - bf) > 0.05){ camera.fov += (bf - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); } }
   /* v291 俯瞰視角釣魚時：鏡頭對準角色和浮標中間，拋得遠就稍微拉遠，浮標不會跑出畫面 */
@@ -14526,10 +14527,6 @@ function renderSettings(body){
   /* v311 上架（34）：字體大小。標準／大／特大，選單、聊天、提示、釣到魚的卡片一起放大 */
   { const f = field('🔠 字體大小'), seg = el('div', 'seg'), cur = LS.get('tide.fs', 0); [[0, '標準'], [1, '大'], [2, '特大']].forEach(([k, l]) => { const b = el('button', '', l); b.style.fontSize = [14, 16, 18][k] + 'px'; b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.fs', k); applyFontSize(); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '字太小看不清楚的話選「大」或「特大」。選單、聊天、提示文字和釣到魚的卡片都會變大。')); }
-  { const f = field('🕹️ 移動搖桿'), seg = el('div', 'seg'), cur = joyFixed(); [[false, '跟著手指（預設）'], [true, '固定在左下角']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.joyFixed', k); renderTab(); }); seg.appendChild(b); });
-    f.appendChild(seg); f.appendChild(el('p', 'sub', '跟著手指：按在左半邊哪裡，搖桿就出現在哪裡。固定：搖桿一直在左下角不會動，按左半邊任何地方都是從那裡推。')); }
-  { const f = field('🎥 視角'), seg = el('div', 'seg'); [['top', '俯瞰（預設）'], ['near', '貼近（舊的）']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(CAMV.mode === k)); b.addEventListener('click', () => { setCamView(k); renderTab(); }); seg.appendChild(b); });
-    f.appendChild(seg); f.appendChild(el('p', 'sub', '俯瞰：從斜上方往下看，看得比較遠、比較整齊。貼近：從角色背後看，比較有臨場感。兩種都可以用手指拖動、兩指縮放。')); }
   { const f = field('🔭 鏡頭遠近'), L = camLimits(), row = el('div', 'volrow'), sl = el('input'), pct = el('span', 'volpct', '');   /* v573 */
     sl.type = 'range'; sl.min = L.dmin; sl.max = L.dmax; sl.step = 0.5; sl.value = clamp(cam.dist, L.dmin, L.dmax); sl.setAttribute('aria-label', '鏡頭遠近');
     const show = () => { const k = (+sl.value - L.dmin) / (L.dmax - L.dmin); pct.textContent = k < 0.2 ? '很近' : k < 0.45 ? '近' : k < 0.7 ? '遠' : '很遠'; }; show();
@@ -14538,11 +14535,9 @@ function renderSettings(body){
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
   { const f = field('🧒 人物樣子'), c = K3.cfg, seg = el('div', 'seg');   /* v690 */
-    [[true, '新人物'], [false, '改回原本的人物']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(!!c.on === k)); b.addEventListener('click', () => { K3.set({ on: k }); renderTab(); }); seg.appendChild(b); });
-    f.appendChild(seg);
     if (c.on){ const go = el('button', 'tbtn', '👕 去造型頁換衣服、髮型'); go.style.marginTop = '8px'; go.addEventListener('click', () => { try { openSheet('closet'); } catch(e){} }); f.appendChild(go); }   /* v730 作者：「設定這裡可以去除掉了」→ 臉、髮型、衣服、顏色只在造型頁換，設定只留新舊人物切換 */
     f.appendChild(el('p', 'sub', '人物版本 ' + K3.V));   /* v723 作者截圖時看得出手機上是哪一版 */
-    f.appendChild(el('p', 'sub', '臉、髮型、衣服、配件和顏色都在造型頁換，別的玩家看到的你也會一起變。原本的帽子、配件、造型不會出現在新人物身上；想用的話可以改回原本的人物。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
+    f.appendChild(el('p', 'sub', '臉、髮型、衣服、配件和顏色都在造型頁換，別的玩家看到的你也會一起變。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
     [[false, '畫面自己橫放（預設）'], [true, '不要，維持原本']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FL.off === k)); b.addEventListener('click', () => { FL.setOff(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); const fb = el('button', 'tbtn ghost', '畫面倒了？翻過來'); fb.style.marginTop = '8px'; fb.addEventListener('click', () => FL.setFlip(!FL.flip)); f.appendChild(fb);
@@ -18304,7 +18299,7 @@ $('#ccShow').addEventListener('click', () => { if (ccEarly()) return;   // 釣�
 /* ===== v304 新手主線：釣第一條魚 → 賣魚 → 買竿子 → 去自己的小島 → 潛一次水（長輩、小孩都看得懂；左上角一張小卡片＋地上的光柱指路）＋第一次釣魚的手指教學 ===== */
 /* v582 作者：「新手教學那些再去重做」→ 五步、大約 10 分鐘：釣魚 → 手機看圖鑑 → 賣魚 → 坐阿海的船出海 → 在島上釣滿 5 條（伺服器的新手獎勵本來就要 5 條）。做完跳「你現在可以自由玩了」 */
 const GUIDE = [
-  { t:'釣一條魚', h:() => (isTouch ? '新來的？左下搖桿走路，手指拖畫面轉頭。' : '新來的？WASD 走路，滑鼠拖畫面轉頭。') + '去水邊亮亮的那裡，按住「拋竿」，放開就甩出去。', at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 1 },
+  { t:'釣一條魚', h:() => { const n = nearestSpot(), can = n && (n.d < 1.7 || shoreSpot()); return can ? '到了！按住右下的「拋竿」，放開就甩出去。' : (isTouch ? '用左下的搖桿，走到地上發光的地方。' : '用 WASD 走到地上發光的地方。'); }, at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 1 },
   { t:'用手機看圖鑑', h:'不錯嘛。右上角的手機拿出來，點「圖鑑」，看看剛剛那條叫什麼。', at:() => null, ok:() => !!LS.get('tide.guideDex', false), ph:true },
   { t:'把魚賣掉', h:'魚放久了不新鮮。拿去港邊的魚市場賣掉，捨不得的先養在魚缸。', at:() => LANDMARKS.find(l => l.id === 'shop').pos, ok:() => !!LS.get('tide.guideSold', false) },
   { t:'坐船出海', h:'村子邊就這幾種魚。去港口找阿海，叫他載你出去，不用錢。', at:() => new THREE.Vector3(FERRY.at[0], 0, FERRY.at[1]), ok:() => !!LS.get('tide.guideVoy', false) },
@@ -18336,7 +18331,7 @@ function guideTick(){ if (Guide.i == null) guideInit(); if (onIsle && onIsle.own
   while (Guide.i !== 'done' && GUIDE[Guide.i].ok()){ Guide.i++; SFX.catch(); if (Guide.i >= GUIDE.length){ Guide.i = 'done'; LS.set('tide.guide2', 'done'); LS.set('tide.guide', 'done'); Guide.bye = now() + 5; Guide.pop = now(); guideReward(); setTimeout(guideFree, 5200); break; }   /* 最後一句也是老港在卡片裡講，不用大字 */ LS.set('tide.guide2', Guide.i); Guide.pop = now(); }   /* v752 作者：「遊戲全面不要有ai味…然後新手教學」→ 不跳「完成！下一個」，老港直接講下一句，卡片跳一下 */
   guideShow(Guide.i === 'done' ? (Guide.bye > now() ? GUIDE_BYE : null) : GUIDE[Guide.i]);
   { const G = Guide.i === 'done' ? null : GUIDE[Guide.i], pb = $('#menu .mbtn[data-group="ph"]'); if (pb) pb.classList.toggle('gpulse', !!(G && G.ph) && $('#sheet').hidden); }
-  document.body.classList.toggle('guideOn', !!(Guide.el && !Guide.el.hidden && !Guide.hide)); }
+  document.body.classList.toggle('guideOn', !!(Guide.el && (!Guide.el.hidden || (Guide.fin && !Guide.fin.hidden)) && !Guide.hide)); }   /* v850 手指提示暫時蓋掉新手卡片時，「今天」也不要跑出來 */
 /* v582 新手任務做完：「你現在可以自由玩了」──四件可以自己選的事（作者：「玩家想在遊戲裡想幹嘛就幹嘛」） */
 function guideFree(){ if (LS.get('tide.guideFree', false)) return; LS.set('tide.guideFree', true); if ($('#guideFree')) return;
   const w = el('div', ''); w.id = 'guideFree'; const c = el('div', 'gf-card'); w.appendChild(c);
@@ -18353,7 +18348,7 @@ function guideFree(){ if (LS.get('tide.guideFree', false)) return; LS.set('tide.
   document.body.appendChild(w); try { SFX.catch(); } catch(e){} }
 async function guideReward(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('guide_reward'); if (error) throw error; adoptRow(data); setTimeout(() => flash('老港塞給你 🪙300', 2.2), 2200); } catch(e){} }
 function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.createElement('div'); c.id = 'guideCard'; document.body.appendChild(c); c.addEventListener('click', e => { if (e.target.closest('.gnav')){ Nav.t = null; c._k = ''; guideTick(); return; } if (e.target.closest('.gx')){ Guide.hide = !Guide.hide; LS.set('tide.guideHide', Guide.hide); c._k = ''; guideTick(); } }); }
-  const busy = !G || !!onIsle || Dive.on || House.on || inIndoor() || F.phase === 'reeling' || F.phase === 'bite' || Photo.on || (typeof Sub !== 'undefined' && Sub.on);
+  const busy = !G || !!onIsle || Dive.on || House.on || inIndoor() || F.phase === 'reeling' || F.phase === 'bite' || Photo.on || (typeof Sub !== 'undefined' && Sub.on) || (!G.nav && !G.bye && Guide.fin && !Guide.fin.hidden);   /* v850 手指提示出來的時候，新手卡片先收起來（同時只出現一個提示） */
   c.hidden = busy; let tgt = null;
   if (!busy){ const p = G.at(); if (p && !onIsle){ tgt = p; } const d = tgt ? Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) : 0;
     let dir = ''; if (tgt && d > 2){ const a = Math.atan2(tgt.x - camera.position.x, tgt.z - camera.position.z), cy = Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)), rel = ((a - cy + Math.PI * 3) % (Math.PI * 2)) - Math.PI; dir = `<span class="garr" style="transform:rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)">⬆</span> 大約 ${Math.round(d)} 公尺`; }
@@ -22163,6 +22158,7 @@ const PHONE_APPS = [
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
   { id:'u849', d:'11/25', items:[['🌳','村子裡的樹變少了：路邊不再有樹擋路，西邊公寓旁清出一大塊空地（之後要做建地）']] },
+  { id:'u850', d:'11/25', items:[['🔍','鏡頭可以拉得更近（兩指捏合），近看寵物；拉近時會往腳邊看'], ['⚙️','設定整理：搖桿固定在左下角、一律俯瞰視角、拿掉「改回原本的人物」']] },
   { id:'u847', d:'11/25', items:[['💬','新的聊天框：聊天列上面一行顯示最新一句，點一下展開最近 5 句；左邊切換看全村／附近／隱藏，⚙️ 可以設定誰聽得到你、檢舉說不好的話的人']] },
   { id:'u844', d:'11/25', items:[['🧓','阿鐵師傅改回男生；老闆不再被當成老人（阿忠、阿福不會白頭髮了）；老阿伯留白色平頭、老阿嬤包包頭']] },
   { id:'u843', d:'11/25', items:[['💇','新髮型三種：平頭、西瓜頭、中分短髮，到造型頁「髮型」選，都可以換顏色', 'closet']] },
@@ -22299,7 +22295,7 @@ const UPD = [
   { id:'u714', d:'11/23', items:[
     ['🧥', '新衣服：黃色雨衣！到造型頁的上衣選「雨衣」，也可以換顏色。下雨天村民也會穿雨衣出門。', 'closet'] ] },
   { id:'u711', d:'11/23', items:[
-    ['🧒', '大家都換成新人物了，村民也是！想換臉、髮型、衣服，到設定的「人物樣子」；想用原本的帽子配件，可以改回原本的人物。', 'settings'] ] },
+    ['🧒', '大家都換成新人物了，村民也是！想換臉、髮型、衣服，到造型頁。', 'settings'] ] },
   { id:'u710', d:'11/23', items:[
     ['👀', '別的玩家看得到你的新人物了：打開新人物後，你的臉、髮型、衣服和顏色大家都看得到，揮手、跳舞也一樣。', 'settings'] ] },
   { id:'u703', d:'11/23', items:[
@@ -22531,7 +22527,7 @@ function c2Render(){ const B = C2.el; if (!B) return; const last = B.querySelect
   if (!all.length){ last.appendChild(el('span', 'c2x', '還沒有人說話，說聲嗨吧 👋')); more.hidden = true; return; }
   last.appendChild(row(all[all.length - 1]));
   more.hidden = !C2.open; if (C2.open){ for (const q of all.slice(-5, -1)) more.appendChild(row(q)); const h = el('button', 'c2hist', '📜 看全部聊天紀錄'); h.addEventListener('click', e => { e.stopPropagation(); chatHistToggle(); }); more.appendChild(h); } }
-function c2Fit(){ const c = $('#chat3'), b = C2.el; if (!c || !b) return; const r = c.getBoundingClientRect(); if (!r.width){ b.style.display = 'none'; return; } b.style.display = ''; const bar = c.querySelector('.c3bar'), br = bar ? bar.getBoundingClientRect() : r; b.style.left = Math.round(br.left) + 'px'; b.style.width = Math.round(br.width) + 'px'; b.style.bottom = Math.round(innerHeight - r.top + 6) + 'px'; }
+function c2Fit(){ const c = $('#chat3'), b = C2.el; if (!c || !b) return; const r = c.getBoundingClientRect(); if (!r.width || !C2.lines.some(q => !q.sys && q.name !== '系統')){ b.style.display = 'none'; return; }   /* v850 還沒有人說過話（只有系統訊息）就先不顯示聊天框；新手畫面少一樣東西 */ b.style.display = ''; const bar = c.querySelector('.c3bar'), br = bar ? bar.getBoundingClientRect() : r; b.style.left = Math.round(br.left) + 'px'; b.style.width = Math.round(br.width) + 'px'; b.style.bottom = Math.round(innerHeight - r.top + 6) + 'px'; }
 function c2Build(){ if (C2.el) return; const b = C2.el = document.createElement('div'); b.id = 'c2';
   b.innerHTML = '<div class="c2lines" hidden></div><div class="c2row"><button class="c2seg" aria-label="要看誰的聊天"></button><div class="c2last"></div><button class="c2gear" aria-label="聊天設定">⚙️</button></div>';
   document.body.appendChild(b);
