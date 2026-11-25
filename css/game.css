@@ -2426,4 +2426,4 @@ body.photo #imail{display:none}
 @keyframes hyin{0%{transform:scale(.3) translateY(20px);opacity:0}100%{transform:none;opacity:1}}
 @keyframes hyspin{0%{transform:rotate(0) scale(.6)}100%{transform:rotate(40deg) scale(1)}}
 body.photo #hype{display:none}
-#catchCard .badge.want{background:#2f8f5b;color:#fff}   /* vLINK 有人要這條魚 */
+#catchCard .badge.want{background:#2f8f5b;color:#fff}   /* v857 有人要這條魚 */

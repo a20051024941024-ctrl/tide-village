@@ -9021,7 +9021,7 @@ function renderIsleBar(){
   if (onIsle.vc === undefined && Cloud.on && Cloud.sb){ onIsle.vc = null; const ow = onIsle.owner; Cloud.sb.rpc('isle_visit_count', { p_owner: ow }).then(r => { if (onIsle && onIsle.owner === ow && r && r.data){ onIsle.vc = r.data; renderIsleBar(); } }, () => {}); }
   bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 我家（${onIsle.name}）` : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}` + (onIsle.vc ? `・來訪 今天 ${onIsle.vc.today | 0}・共 ${onIsle.vc.total | 0}` : '')));
   if (Cloud.on){ if (mine){ const mb = el('button', 'tbtn' + (IMail.unread ? '' : ' ghost'), IMail.unread ? `📮 ${IMail.unread}` : '📮 信箱'); mb.addEventListener('click', imailOpen); bar.appendChild(mb); } else if (!canEditIsle()){ const mb = el('button', 'tbtn', '📮 留言'); mb.addEventListener('click', () => imailWrite(onIsle.owner, onIsle.name)); bar.appendChild(mb); } }
-  /* v856 我的海本來就有，但來玩的人不知道海底有魚、島主不知道可以放：訪客看到「🐠 海裡 N 條」按了帶去潛水梯；自己的海空的就提醒去放 */
+  /* v857 我的海本來就有，但來玩的人不知道海底有魚、島主不知道可以放：訪客看到「🐠 海裡 N 條」按了帶去潛水梯；自己的海空的就提醒去放 */
   if (Cloud.on && Cloud.sb && !House.on && !Build.on){ const ow = onIsle.owner;
     if (onIsle.sea === undefined){ onIsle.sea = null; Cloud.sb.rpc('home_sea', { p_owner: ow }).then(({ data }) => { if (!onIsle || onIsle.owner !== ow || !Array.isArray(data)) return; onIsle.sea = data.reduce((n, p) => n + ((p.show || []).length), 0); renderIsleBar();
       if (!mine && onIsle.sea > 0 && !onIsle.seaTold){ onIsle.seaTold = 1; ticker(`🐠 ${esc(onIsle.name)}的海裡養了 <b>${onIsle.sea}</b> 條魚，從碼頭的潛水梯下去就看得到`); } }, () => {}); }
@@ -18443,7 +18443,7 @@ function showCatch(f, w, res){
   /* v831 做深：釣到魚就知道自己站在哪裡——破紀錄大聲說出來（比上次大多少）；沒破就告訴你紀錄是多少、差多少；還會跟朋友比 */
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `🏆 破紀錄 +${fmtKg(w - (res.prev || 0))}`; b.appendChild(x); }
   else if (!res.isNew && res.prev > 0){ const x = document.createElement('span'); x.className = 'badge'; const gap = res.prev - w; x.textContent = gap <= res.prev * 0.12 ? `差 ${fmtKg(gap)} 破紀錄` : `你的紀錄 ${fmtKg(res.prev)}`; b.appendChild(x); }
-  /* v856 作者：「賺錢跟釣魚不知道要幹嘛」→ 釣到的這條有沒有人要：村民的請求、博物館還缺，直接寫在卡片上（系統本來就有，只是玩家不知道） */
+  /* v857 作者：「賺錢跟釣魚不知道要幹嘛」→ 釣到的這條有沒有人要：村民的請求、博物館還缺，直接寫在卡片上（系統本來就有，只是玩家不知道） */
   try { if (Quests.list) for (const q of Quests.list){ if (q.done || q.kind === 'dish' || q.target !== f.id || w < Number(q.minw || 0)) continue; const npc = QUEST_NPC[q.who], x = document.createElement('span'); x.className = 'badge want'; x.textContent = `📜 ${npc ? npc.name.split(' ').pop() : ''}要的・魚缸 ${Math.min(questItems(q).length, q.n)}/${q.n}`; b.appendChild(x); break; }
     if (Cloud.on && Museum.my && !/^nx/.test(f.id) && !((Museum.my.slots || []).includes(f.id))){ const x = document.createElement('span'); x.className = 'badge want'; x.textContent = '🏛️ 博物館還缺這條'; b.appendChild(x); } } catch(e){}
   { const fb = FRB.map[f.id]; if (fb && w > fb.w){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `👥 比 ${fb.n} 的 ${fmtKg(fb.w)} 還大`; b.appendChild(x); if (!res.isBest && !res.isNew) setTimeout(() => flash(`👥 贏過${fb.n}了！`, 1.8), 300); } }
@@ -19404,7 +19404,7 @@ async function cloudInit(){
     sb.auth.onAuthStateChange((ev, ss) => { if (!ss || !ss.user) return; const other = Cloud.on && ss.user.id !== Cloud.userId; setCloudUser(ss.user); if (other){ cloudLoad(false).then(loadBoard).catch(() => {}); } });
     await cloudLoad(true);
     Cloud.on = true; Cloud.status = 'on';
-    setTimeout(refundCheck, 9000); setTimeout(statInit, 4000); setTimeout(imailUnread, 6000); setTimeout(() => { try { loadMuseum(); } catch(e){} }, 12000);   /* v856 釣到時要知道博物館缺不缺這條 */
+    setTimeout(refundCheck, 9000); setTimeout(statInit, 4000); setTimeout(imailUnread, 6000); setTimeout(() => { try { loadMuseum(); } catch(e){} }, 12000);   /* v857 釣到時要知道博物館缺不缺這條 */
     await loadContest(); loadBoard(); setTimeout(aquaLoad, 2500); setTimeout(claimTourney, 6000); setTimeout(loadFriends, 3000); setTimeout(loadHome, 4500); setTimeout(breedTank, 7000); setInterval(loadHome, 180000); setTimeout(stampLoad, 3500); setTimeout(loadCloudVisits, 5000); setTimeout(claimLevels, 9000); setInterval(loadBoard, 60000); setInterval(loadContest, 10 * 60000); loadMuted(); setInterval(loadMuted, 3 * 60000);
     joinLobby();
     document.addEventListener('visibilitychange', async () => { if (document.hidden || !Cloud.on) return; cloudRefresh(); if (Cloud.isAnon){ try { const { data } = await sb.auth.getUser(); if (data && data.user && data.user.email){ setCloudUser(data.user); if (!$('#sheet').hidden && curTab === 'style') renderTab(); } } catch(e){} } });
@@ -22411,11 +22411,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
-<<<<<<< Updated upstream
+  { id:'u857', d:'11/26', items:[['📜','釣到村民在找的魚、博物館還缺的魚，卡片上會直接寫「老王要的・魚缸 1/3」「🏛️ 博物館還缺這條」'],['🐠','去別人的島，上面會寫「🐠 海裡 N 條」，按了帶你走到潛水梯，下去看島主養的魚']] },
   { id:'u856', d:'11/26', items:[['🚶','阿默上岸後走去長椅的時候有走路動作了（以前會站著滑過去，還一直在碼頭釣魚）'], ['🧓','老人家不再把手背在後面，拄拐杖的照舊']] },
-=======
-  { id:'u856', d:'11/26', items:[['📜','釣到村民在找的魚、博物館還缺的魚，卡片上會直接寫「老王要的・魚缸 1/3」「🏛️ 博物館還缺這條」'],['🐠','去別人的島，上面會寫「🐠 海裡 N 條」，按了帶你走到潛水梯，下去看島主養的魚']] },
->>>>>>> Stashed changes
   { id:'u855', d:'11/26', items:[['🌟','釣到好東西時畫面中間會跳大字＋號角：傳說（金光）、第一次釣到、破自己紀錄、罕見變種、稀有']] },
   { id:'u854', d:'11/26', items:[['🌉','建地島移到離珊瑚礁遠一點的地方；木橋改接在住宅區中間那條步道的盡頭，岸邊那頭是平順的斜板，走得過去了'], ['🐦','海鳥不會再對著陸地俯衝捕魚']] },
   { id:'u852', d:'11/26', items:[['💇','新髮型三種：捲捲短髮、雙麻花辮、長直髮，到造型頁「髮型」選', 'closet'], ['🧓','村子裡的老人家看起來更像老人了：背有點駝、手背在後面散步、臉上有皺紋，有的戴老花眼鏡、拄拐杖'], ['🏘️','新地方「建地島」：西邊公寓旁走木橋過去。申請一格 20×20 公尺的建地，蓋的東西大家都看得到'], ['📐','不會蓋也沒關係：有小吃店、小木屋、魚攤、花園的樣板，一鍵放下再自己改'], ['🤝','可以邀好友一起蓋，還能掛自己的招牌']] },
