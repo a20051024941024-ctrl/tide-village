@@ -22294,16 +22294,22 @@ function welcomeStep(st){ const w = $('#welcome'); if (!w) return; w.innerHTML =
     const a = el('button', 'tbtn wc-go', i18nT('開始新的冒險')); a.addEventListener('click', () => { SFX.click(); welcomeStep('name'); });
     const b = el('button', 'tbtn ghost wc-b', i18nT('我玩過了，用 Email 找回角色')); b.addEventListener('click', () => { SFX.click(); welcomeDone(true); Cloud.ui.step = 'email'; Cloud.ui.mode = 'login'; Cloud.ui.msg = ''; openSheet('style'); setTimeout(() => { const x = $('#sheetBody .cloudbox'); if (x) x.scrollIntoView({ block: 'center' }); }, 120); });
     c.append(a, b); c.appendChild(el('p', 'wc-f', i18nT('不用註冊就能玩，之後在「造型」可以綁定 Email 保存紀錄'))); }
-  else { c.appendChild(el('div', 'wc-logo', '✏️')); c.appendChild(el('h2', 'wc-t2', i18nT('幫你的角色取個名字'))); c.appendChild(el('p', 'wc-s', i18nT('會顯示在頭上，大家都看得到。不要用真名喔！')));
+  else { const re = st === 'rename'; c.appendChild(el('div', 'wc-logo', '✏️')); c.appendChild(el('h2', 'wc-t2', i18nT('幫你的角色取個名字'))); c.appendChild(el('p', 'wc-s', re ? i18nT('你現在還叫「釣客」，大家分不出誰是誰。取一個自己的名字吧！不要用真名喔。') : i18nT('會顯示在頭上，大家都看得到。不要用真名喔！')));
     const row = el('div', 'wc-row'), inp = el('input', 'txt'); inp.maxLength = 16; inp.value = welcomeRandName(); inp.setAttribute('aria-label', '名字'); const dice = el('button', 'tbtn ghost', '🎲'); dice.setAttribute('aria-label', '隨機名字'); dice.addEventListener('click', () => { SFX.click(); inp.value = welcomeRandName(); dice.animate && dice.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg)' }], { duration: 350 }); });
     row.append(inp, dice); c.appendChild(row); const msg = el('p', 'wc-err', ''); c.appendChild(msg);
     const ok = el('button', 'tbtn wc-go', i18nT('就叫這個名字！')); const save = () => { const v = inp.value.trim().slice(0, 16); if (!v){ msg.textContent = i18nT('名字不能是空的'); return; } if (clean(v) !== v){ msg.textContent = i18nT('這個名字不能用，換一個吧'); return; }
-      nickname = v; LS.set('tide.nick', v); try { refreshMyName(); pushPresence(true); cloudProfile(); } catch(e){} SFX.coin && SFX.coin(); welcomeDone(false); flash(`${v}，歡迎來到潮汐釣魚村`, 2.2); };
+      nickname = v; LS.set('tide.nick', v); try { refreshMyName(); pushPresence(true); cloudProfile(); } catch(e){} SFX.coin && SFX.coin(); welcomeDone(re); flash(re ? `以後大家都叫你「${v}」了` : `${v}，歡迎來到潮汐釣魚村`, 2.2); };
     ok.addEventListener('click', save); inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) save(); }); c.appendChild(ok);
-    const bk = el('button', 'tbtn ghost wc-b', '‹ ' + i18nT('返回')); bk.addEventListener('click', () => welcomeStep('title')); c.appendChild(bk); setTimeout(() => { try { inp.select(); } catch(e){} }, 60); }
+    const bk = el('button', 'tbtn ghost wc-b', re ? i18nT('先不要') : '‹ ' + i18nT('返回')); bk.addEventListener('click', () => re ? welcomeDone(true) : welcomeStep('title')); c.appendChild(bk); if (re) c.appendChild(el('p', 'wc-f', i18nT('之後也可以點左上角的名字改'))); setTimeout(() => { try { inp.select(); } catch(e){} }, 60); }
   w.appendChild(c); }
 function welcomeDone(login){ LS.set('tide.welcomed', true); if (Welcome.cam){ cam.pitch = Welcome.cam.p; cam.dist = Welcome.cam.d; Welcome.cam = null; } const w = $('#welcome'); if (w){ w.classList.add('out'); setTimeout(() => w.remove(), 380); } document.body.classList.remove('welcomeOn'); if (Welcome.age && !login) setTimeout(() => { Welcome.age = false; ageGate(); }, 450); }
 if (!NEWBIE) LS.set('tide.welcomed', true);
+/* v821 作者：「現在還是釣客的玩家可以叫他們取名，顯示一次」→ 老玩家的名字還是預設的「釣客」（或空的），進遊戲時跳一次取名字（跟新手同一個畫面），按「先不要」就不會再問 */
+function nameAskCheck(){ if (LS.get('tide.nameAsk1', false) || $('#welcome') || Kid.on) return; const nm = String(nickname || (myId && profileNames[myId]) || '').trim();
+  if (nm && !/^釣客\d*$/.test(nm)) return; if (Cloud.lastRow && Cloud.lastRow.name_lock && Date.parse(Cloud.lastRow.name_lock) > Date.now()) return;
+  if (!Boot.done || F.phase !== 'idle' || !$('#sheet').hidden) return setTimeout(nameAskCheck, 3000);
+  LS.set('tide.nameAsk1', true); const w = document.createElement('div'); w.id = 'welcome'; document.body.appendChild(w); document.body.classList.add('welcomeOn'); welcomeStep('rename'); }
+if (!NEWBIE) setTimeout(function nwait(){ if (!Boot.done) return setTimeout(nwait, 1000); setTimeout(nameAskCheck, 7000); }, 1000);   /* 等雲端把名字拿回來（換手機的人），再決定要不要問 */
 function ui3Init(){ if (!UI3.on) return; if (NEWBIE && !LS.get('tide.welcomed', false)){ const wt = () => { if (!Boot.done) return setTimeout(wt, 250); setTimeout(() => { if (!LS.get('tide.welcomed', false)) welcomeOpen(); }, 600); }; wt(); }   /* 進入畫面掀開以後才出現，背景才看得到村子 */ document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
