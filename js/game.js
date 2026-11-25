@@ -5514,10 +5514,10 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
     if (k.region){ for (const n in v) if (!/^(face|facefill|skinlow|shoes|shoes2|mjskin|mjshoe|msskin|mssock|msshoe)$/.test(n)) delete v[n];
       Object.assign(v, { headskin: 1, neck: 1, [TN + '_skin']: 1, [TN + '_cloth']: 1, [TN + '_etc']: 1, [BN + '_skin']: 1, [BN + '_cloth']: 1, [BN + '_etc']: 1 }); } }
   for (const n in M) M[n].visible = !!v[n]; k.op = false;
-  const set = (n, col) => { if (M[n]) M[n].material.color.copy(col ? new THREE.Color(col) : k.base[n]); };
+  const set = (n, col) => { const b = col ? new THREE.Color(col) : k.base[n]; if (M[n] && b) M[n].material.color.copy(b); };
   for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest', 'Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth', 'Twave_cloth']) set(n, C.top); for (const n of ['Bshorts_cloth', 'Bpants_cloth']) set(n, C.bot); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
-  for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
+  for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (!C.top && !k.base[{ hoodie: 'hoodie', maid: 'dress', rain: 'raincoat' }[c.top] || 'shirt']) continue;   /* 沒有預設顏色的零件就不換（不然整個新人物會壞掉） */ if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
   try { K3.acc(k, c); } catch(e){}
   { const o = { vest: 0.16, rain: 0.12, hoodie: 0.07, wave: 0.07, maid: 0.06 }[c.top] || 0; k.XO = null; k.XR = null; if (o){ k.XO = {}; for (const [s, sg] of [['l', 1], ['r', -1]]){ const Wq = k.W['upperarm' + s].q; k.XO[s] = Wq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), o * sg)).multiply(Wq); } } }
@@ -5631,7 +5631,18 @@ function kidFidget(f, K, W, v){ const T = now(); let busy = false; if (f === me)
   const ac = K.acts[k], d = Math.min(4.5, ac.getClip().duration || 2); ac.reset(); ac.play(); f.fid = { k, at: T, until: T + d }; }
 /* v640 小動作第二批：① 坐著（碼頭邊、長椅）的時候兩隻小腿會輪流慢慢晃；② 下雨天在外面、沒穿雨衣、站著或走路時，肩膀縮起來、頭低低的，偶爾抖一下。
    都是在骨架動畫算完以後再疊一點點旋轉，所以不用新的動作檔。 */
+const AMOP = { ua: [0.25, -0.8, 0.5], la: [0.55, 0.15, 0.8], hd: 0.35, ch: 0.12 };   /* 手臂方向（以人物自己為準：x 往外、y 往上、z 往前） */
+/* 把骨頭 b 轉到讓它指向子骨頭的方向變成 dir（世界座標）；用來擺「兩手拿東西在胸前」這種動作檔裡沒有的姿勢 */
+K3.aim = (b, child, dir) => { b.updateMatrixWorld(true); const p0 = b.getWorldPosition(new THREE.Vector3()), p1 = child.getWorldPosition(new THREE.Vector3()), cur = p1.sub(p0).normalize();
+  const dq = new THREE.Quaternion().setFromUnitVectors(cur, dir), wq = b.getWorldQuaternion(new THREE.Quaternion()), pq = b.parent.getWorldQuaternion(new THREE.Quaternion());
+  b.quaternion.copy(pq.invert().multiply(dq).multiply(wq)); b.updateMatrixWorld(true); };
 function kidPostPose(f, K, dt){ const B = K.B; if (!B || !B.lowerlegl) return; const T = now(), k = Math.min(1, dt * 3);
+  if (f.amoPlay && B.upperarml && B.lowerarml && B.upperarmr && B.lowerarmr && B.handl && B.handr){ const P = AMOP, tap = Math.max(0, Math.sin(T * 9)) * 0.05;   /* 阿默坐著打遊戲機：兩手在胸前拿著、低頭看螢幕、大拇指一直按 */
+    if (B.head) B.head.rotation.x += P.hd; if (B.chest) B.chest.rotation.x += P.ch;
+    const root = f.av.g; root.updateMatrixWorld(true); const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.rot);
+    for (const [s, sg] of [['l', 1], ['r', -1]]){ const ua = B['upperarm' + s], la = B['lowerarm' + s], hd = B['hand' + s];
+      K3.aim(ua, la, new THREE.Vector3(sg * P.ua[0], P.ua[1], P.ua[2]).normalize().applyQuaternion(q));
+      K3.aim(la, hd, new THREE.Vector3(-sg * P.la[0], P.la[1] + (s === 'l' ? tap : -tap), P.la[2]).normalize().applyQuaternion(q)); } }
   if (f.fishing && B.chest && ((f.windup || 0) > 0.02 || f.castT >= 0) && !f.sitting){ const pw = f.castPow == null ? 0.7 : f.castPow, cd = 0.42 + 0.22 * pw;   /* v660 甩竿時身體也跟著：蓄力往後仰、身體轉開；放開時往前壓，力越大壓越多 */
     let bk = (f.windup || 0), fw = 0; if (f.castT >= 0){ const u = f.castT / cd; bk = u < 0.25 ? 1 - u / 0.25 : 0; fw = u < 0.25 ? u / 0.25 : Math.max(0, 1 - (u - 0.25) / 0.75); fw *= 0.5 + pw; }
     B.chest.rotation.x += -0.22 * bk + 0.28 * fw; B.chest.rotation.y += 0.35 * bk - 0.15 * fw; if (B.spine) B.spine.rotation.x += 0.12 * fw - 0.08 * bk; }
@@ -6075,6 +6086,8 @@ const SFX = {
   splash(big){ noise(big ? 0.7 : 0.4, big ? 0.22 : 0.12, 1800, 400, 0.8); tone(240, 0.2, 'sine', 0.05, 90); },
   tick(){ tone(1600, 0.03, 'sine', 0.035); },
   reel(){ noise(0.035, 0.04, 3200, 0, 6); },
+  drag(){ noise(0.025, 0.035, 5200, 0, 9); },   /* 魚往外衝、捲線器被拉出線的「滋滋」聲 */
+  whoosh(){ noise(0.2, 0.07, 700, 2600, 1.2); },   /* 揚竿刺魚：竿子劃過空氣 */
   coin(){ tone(1568, 0.08, 'square', 0.04); setTimeout(() => tone(2093, 0.16, 'square', 0.04), 70); },
   click(){ tone(700, 0.04, 'triangle', 0.04); },
   squeak(){ const f = 900 + Math.random() * 300; tone(f, 0.12, 'square', 0.025, f * 1.4); setTimeout(() => tone(f * 1.2, 0.1, 'square', 0.02, f * 0.9), 130); },
@@ -7221,7 +7234,7 @@ function actionDown(){
       F.waitUntil -= 0.7; F.twitch = (F.twitch || 0) + 1; me.bend = 0.6; ripple(me.bobPos.x, me.bobPos.z); SFX.plop();
     } else cancelFishing('收竿了');
   } else if (F.phase === 'bite'){
-    startReel(); F.hold = true;
+    startReel(); F.hold = true; me.strikeT = now(); try { SFX.whoosh(); buzz(40); } catch(e){} camShake = Math.max(camShake, 0.06);   /* 浮標沉下去 → 用力往上揚竿刺魚 */
   } else if (F.phase === 'reeling'){
     if (F.act && !F.act.tele && (F.act.k === 'pause' || F.act.k === 'feint')){ F.act.taps++; F.P += 0.03 * (F.prof ? F.prof.quick : 1) * (F.Td ? F.g || 1 : 1); F.S = Math.max(0, F.S - 0.025 * (F.Td ? F.gS || 1 : 1)); me.bend = 0.6; try { SFX.reel(); } catch(e){} return; }   /* v254 泵竿：喘氣時連續點 */
     if (F.mash){ F.P += 0.045 * (F.Td ? Math.max(0.1, F.g || 1) : 1); F.mashHits++; camShake = Math.max(camShake, 0.06);
@@ -7453,7 +7466,9 @@ function updateBiteShadow(dt, t, want){ const B = BiteFish;
   const ty = shallow ? WATER_LEVEL - 0.2 : WATER_LEVEL - (bite ? 0.4 : 1.1 - 0.45 * B.shK); g.position.y += (ty - g.position.y) * Math.min(1, dt * 2);
   g.rotation.y = Math.atan2(-(b.z - g.position.z), b.x - g.position.x) + Math.sin(t * 2.5) * 0.12; }
 function updateFishing(dt, t){
-  me.reelSpin = F.phase === 'reeling' ? (F.hold ? 1 : 0.18) : 0;   /* v678 自己：按住收線時左手轉得快，放開時慢慢轉 */
+  me.reelSpin = F.phase === 'reeling' ? (F.hold ? ((F.pumpUp || 0) > 0.55 ? 0.12 : 1) : 0.18) : 0;   /* v822 一扳一收：竿子往後扳的時候不轉，放低的時候快快收線 */
+  if (F.phase === 'reeling'){ const c = Math.floor((me.crankPh || 0) / Math.PI); if (c !== F.crankN){ F.crankN = c; if (me.reelSpin > 0.5) try { SFX.reel(); } catch(e){} }
+    if ((me.yank || 0) > 0.4 && t > (F.dragAt || 0)){ F.dragAt = t + 0.045; try { SFX.drag(); } catch(e){} } }   /* v678 自己：按住收線時左手轉得快，放開時慢慢轉 */
   try { signsTick(dt, t); } catch(e){}
   try { flkTick(dt, t); } catch(e){ if (!flkTick.err){ flkTick.err = 1; console.warn('flk', e); } }
   try { smTick(dt, t); } catch(e){ if (!smTick.err){ smTick.err = 1; console.warn('sea', e); } }
@@ -7729,7 +7744,7 @@ function landFish(){
     const poleM = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1, 6), mat('#c8b070', 0.6)); poleM.geometry.translate(0, 0.5, 0); ng.add(poleM); ng.userData.pole = poleM;
     const from = me.bobPos.clone(); from.y = WATER_LEVEL + 0.05; ng.position.copy(from); scene.add(ng); jumpers.push({ m: ng, from, to: new THREE.Vector3(me.pos.x, me.pos.y + 2.2, me.pos.z), t: 0, end: 0.92, net: true }); }
   reelCleanup(); SFX.splash(BIG_FISH.has(F.fish.id) || F.fish.rarity === '傳說');
-  F.phase = 'landing'; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2; buzz(F.fish && F.fish.rarity === '傳說' ? [60, 40, 60, 40, 220] : F.fish && F.fish.rarity === '稀有' ? [50, 40, 120] : 45);
+  F.phase = 'landing'; F.landT = now(); F.pumpPh = 0; F.hold = false; me.bobState = 'none'; me.dip = 0; me.bend = 0.2; buzz(F.fish && F.fish.rarity === '傳說' ? [60, 40, 60, 40, 220] : F.fish && F.fish.rarity === '稀有' ? [50, 40, 120] : 45);
   const f = F.fish, w = F.weight;
   const from = me.bobPos.clone(); from.y = 0.1;
   const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm); const fmAct = fishAct(fm, 'air');   /* v448 吊在線上：頭朝上、整條身體猛甩 */
@@ -14479,7 +14494,14 @@ async function bossJoin(){ if (BossW.joining) return; if (!Cloud.on || !Cloud.sb
   try { const { data, error } = await Cloud.sb.rpc('boss_join', { p_id: BossW.st.id }); if (error) throw error; bossAdopt(data); BossW.joined = BossW.st.id; if (F.phase !== 'idle') cancelFishing(); SFX.catch(); buzz(40); flash('加入了！按住右下角「拉！」', 1.8); } catch(e){ toast(cloudErrMsg(e)); } BossW.joining = false; }
 function bossHitPop(n){ try { const a = $('#act').getBoundingClientRect(), e = document.createElement('div'); e.className = 'bossHit'; e.textContent = '+' + n; e.style.left = (a.left + a.width / 2) + 'px'; e.style.top = (a.top - 6) + 'px'; document.body.appendChild(e); requestAnimationFrame(() => e.classList.add('go')); setTimeout(() => e.remove(), 900); } catch(e){} }
 function bossRod(dt, t){ const on = bossPulling() && F.phase === 'idle';
-  if (!on){ const w = F.phase === 'reeling' && F.hold ? 0.6 : 0; me.tug = (me.tug || 0) + (w - (me.tug || 0)) * Math.min(1, dt * 6); me.yank = (me.yank || 0) * Math.max(0, 1 - dt * 8); }   /* 一般拉魚按住收線時也往後仰一點 */
+  if (!on){ const t0 = now(); let w = 0, y = 0, fast = false;   /* v822 照真的釣魚：①揚竿刺魚 ②一扳一收 ③魚衝的時候被往前扯 ④起魚時把竿子往上一提 */
+    if (F.phase === 'reeling'){ const sk = me.strikeT ? t0 - me.strikeT : 9;
+      if (sk < 0.45){ fast = true; w = sk < 0.12 ? sk / 0.12 * 1.15 : 1.15 - (sk - 0.12) / 0.33 * 0.55; me.bend = Math.max(me.bend || 0, 0.95); }
+      else if (F.hold && !(F.run > 0)){ F.pumpPh = (F.pumpPh || 0) + dt / 1.5; const ph = F.pumpPh % 1, up = ph < 0.45 ? Math.sin(ph / 0.45 * Math.PI / 2) : Math.cos((ph - 0.45) / 0.55 * Math.PI / 2); F.pumpUp = up; w = 0.2 + 0.75 * up; }
+      else F.pumpUp = 0;
+      if (F.run > 0) y = 0.85; else if (F.act && !F.act.tele && F.act.k === 'run') y = 0.85; }
+    else if (F.phase === 'landing' && F.landT){ const u = t0 - F.landT; fast = true; if (u < 0.7) w = 1.25 * (u < 0.15 ? u / 0.15 : u < 0.4 ? 1 : 1 - (u - 0.4) / 0.3); }
+    me.tug = (me.tug || 0) + (w - (me.tug || 0)) * Math.min(1, dt * (fast ? 22 : 7)); me.yank = (me.yank || 0) + (y - (me.yank || 0)) * Math.min(1, dt * (y > (me.yank || 0) ? 9 : 5)); }   /* 一般拉魚按住收線時也往後仰一點 */
   if (!on){ if (BossW.rod){ BossW.rod = false; BossW.hold = false; me.tug = 0; me.yank = 0; if (F.phase === 'idle'){ me.fishing = false; me.bobState = 'none'; me.bend = 0; me.dip = 0; } pushPresence(true); } return; }
   const m = BossW.m, bx = m ? m.position.x : bossAt()[0], bz = m ? m.position.z : bossAt()[1];
   /* v508 作者：「線都沒丟到水裡」→ 加入的時候先真的甩一竿：浮標飛出去、落在大魚前面的水裡，線從那裡沒入水中（大魚在水面下） */
@@ -20017,11 +20039,11 @@ function amoFish(n, dt, t){ const st = n.st, near = camera.position.distanceTo(n
   const A = n.amoCast; if (A){ const tip = new THREE.Vector3(); n.av.tip.getWorldPosition(tip); const k = 0.1 + 0.72 * u * u; n.bobPos.set(A.x + (tip.x - A.x) * k + Math.sin(t * 3.1) * 0.25 * (1 - u), 0.12, A.z + (tip.z - A.z) * k + Math.cos(t * 2.6) * 0.25 * (1 - u)); }
   if (Math.random() < dt * (3 + run * 8)) ripple(n.bobPos.x + (Math.random() - 0.5) * 0.5, n.bobPos.z + (Math.random() - 0.5) * 0.5);
   if (t > n.fT1){ n.tug = 0; n.yank = 0; n.reelSpin = null; n.st = 'reel'; n.stT = t - 1; } }
-function amoDevice(n, mode, t){ const k = n.av && n.av.k3, B = k && k.bones; if (!B || !B.handl || !B.handr || n._culled){ if (n.dev) n.dev.visible = false; return; }
-  if (!n.dev){ const g = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.085, 0.03), new THREE.MeshLambertMaterial({ color: 0x2a2a30 })), scr = new THREE.Mesh(new THREE.PlaneGeometry(0.085, 0.06), new THREE.MeshBasicMaterial({ color: 0x7fd8ff })); scr.position.z = 0.016; g.add(body, scr); for (const sx of [-0.062, 0.062]){ const b = new THREE.Mesh(new THREE.CircleGeometry(0.012, 10), new THREE.MeshBasicMaterial({ color: sx < 0 ? 0x444450 : 0xd04848 })); b.position.set(sx, 0, 0.016); g.add(b); } n.dev = g; n.devScr = scr; scene.add(g); }
-  const play = mode === 'pier' && n.sitting && !n.fishing; n.dev.visible = !!play; if (!play) return;
+function amoDevice(n, mode, t){ const k = n.av && n.av.k3, B = k && k.bones; if (!B || !B.handl || !B.handr || n._culled){ if (n.dev) n.dev.visible = false; n.amoPlay = false; return; }
+  if (!n.dev){ const g = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.085, 0.03), new THREE.MeshLambertMaterial({ color: 0x2a2a30 })), scr = new THREE.Mesh(new THREE.PlaneGeometry(0.085, 0.06), new THREE.MeshBasicMaterial({ color: 0x7fd8ff })); scr.position.z = 0.016; g.add(body, scr); for (const sx of [-0.062, 0.062]){ const b = new THREE.Mesh(new THREE.CircleGeometry(0.012, 10), new THREE.MeshBasicMaterial({ color: sx < 0 ? 0x444450 : 0xd04848 })); b.position.set(sx, 0, 0.016); g.add(b); } g.scale.setScalar(1.45); n.dev = g; n.devScr = scr; scene.add(g); }
+  const play = mode === 'pier' && n.sitting && !n.fishing; n.dev.visible = !!play; n.amoPlay = !!play; if (!play) return;
   const a = new THREE.Vector3(), b = new THREE.Vector3(); B.handl.getWorldPosition(a); B.handr.getWorldPosition(b); const p = a.add(b).multiplyScalar(0.5); p.y += 0.06; n.dev.position.copy(p);
-  n.dev.rotation.set(-0.9, n.rot, 0, 'YXZ'); n.devScr.material.color.setHSL(0.55 + 0.08 * Math.sin(t * 3), 0.8, 0.6 + 0.15 * Math.sin(t * 7)); }
+  n.dev.rotation.set(-0.9, n.rot, 0, 'YXZ'); if (camera.position.distanceTo(n.pos) < 14 && t > (n.gameSay || 0)){ n.gameSay = t + rand(14, 26); n.say(pick2(['這關好難……', '再一場就好', '差一點……', '贏了。', '不要吵，我在打王', '電快沒了']), '', 3); }   /* 走近會聽到他邊打邊碎念，一看就知道在打遊戲 */ n.devScr.material.color.setHSL(0.55 + 0.08 * Math.sin(t * 3), 0.8, 0.6 + 0.15 * Math.sin(t * 7)); }
 /* ============ v450 村民自由走動 ============
    玩家說「NPC 應該要能自由移動」。原本只有村長、阿綾、阿木、阿福、老港 5 位照伺服器的作息走動，其他人永遠站在原地。
    現在另外 9 位也會走：釣魚的村民（阿潮、小溪、阿伯）每隔幾分鐘收竿，走去廣場、魚市場、釣具店、涼亭附近待一下再回來重新拋竿；
@@ -20661,7 +20683,7 @@ function renderTab0(){
       body.appendChild(inp); body.appendChild(none); }
     /* v756 作者：「遊戲全面不要有ai味，介紹也是」→ 說明頁整個重寫：每段最多十來條、一條一兩句，只講怎麼做；價錢、機率、每天上限收在「想算數字的人再看」。描述畫面的拿掉、放錯段的搬回去（撞球、環保袋、造型原本都塞在「釣魚」裡） */
     const HELP2 = [
-      ["釣魚", "fish", ["走到水邊，按住「拋竿」，放開。拋得越遠，稀有的魚越多。", "浮標點幾下是魚在試探，先別按。整個沉下去、跳出「!」再按。", "拉魚時按住收線，張力條變紅就放開。線鬆太久魚會脫鉤。", "魚往外衝就放開，等牠跑完。往左竄，搖桿往右拉。跳出水面，放開。", "畫面中間跳出黃字是魚要出招了，變紅就照上面寫的做。做對了魚會累很快。", "地上發光的圈是好釣點。", "先看水面再拋：漣漪是小魚，黑影是大魚，海鳥盤旋是掠食魚，冒泡是底棲魚。拋在旁邊，砸在上面會嚇跑。", "清晨、黃昏、下雨天比較好釣。海邊要看潮汐，點右上角天氣那格有潮汐表。", "有些魚很挑（潮位、天氣、白天晚上、吃什麼餌），圖鑑裡每一種都有寫。", "沒釣過的魚只看得到黑影，拉上來才知道是什麼。"],
+      ["釣魚", "fish", ["走到水邊，按住「拋竿」，放開。拋得越遠，稀有的魚越多。", "浮標點幾下是魚在試探，先別按。整個沉下去、跳出「!」再按，人物會用力揚竿把魚鉤住。", "拉魚時按住收線，張力條變紅就放開。線鬆太久魚會脫鉤。", "魚往外衝的時候，捲線器會「滋滋」叫、人會被往前扯，這時候放開，等牠跑完。往左竄，搖桿往右拉。跳出水面，放開。", "畫面中間跳出黃字是魚要出招了，變紅就照上面寫的做。做對了魚會累很快。", "地上發光的圈是好釣點。", "先看水面再拋：漣漪是小魚，黑影是大魚，海鳥盤旋是掠食魚，冒泡是底棲魚。拋在旁邊，砸在上面會嚇跑。", "清晨、黃昏、下雨天比較好釣。海邊要看潮汐，點右上角天氣那格有潮汐表。", "有些魚很挑（潮位、天氣、白天晚上、吃什麼餌），圖鑑裡每一種都有寫。", "沒釣過的魚只看得到黑影，拉上來才知道是什麼。"],
         ["傳說魚：竹釣竿在港口外海每竿約 0.2%～0.5%，其他地方 0.1%～0.2%。滿力拋比輕輕拋高一倍以上。好竿、魚餌、窩料、料理都會加。", "保底：連 150 條沒中傳說魚，之後每竿多一點機會（250 條時加 0.4%、400 條加 1%、最高加 3%），中了重算。釣蝦場不算。", "等咬大約 5～12 秒。小魚拉 6～10 秒，中型 15～25 秒，大魚 30～50 秒，傳說魚 1～2 分鐘。", "線鬆超過 3 秒左右會脫鉤。魚衝完、跳完的 1.6 秒內放著沒關係。", "水面的徵兆每 45 秒換一批。", "釣具店老闆每天報一種魚，那種魚當天在那個釣點多 2.5 倍。", "圖鑑每種魚三顆星：第一次釣到一顆；釣 10 條或釣到前 20% 大的兩顆；完美搏鬥一次加上前 5% 大的三顆。"]],
       ["釣竿、魚餌、裝備", "fish", ["釣具店賣六支竿：竹竿（免費）、路亞軟竿、手竿、遠投竿、磯釣硬竿、黃金王者竿。", "竿子要用對地方：手竿在河、湖、溪；遠投竿在海邊；磯釣竿在港口外海和小島碼頭；路亞竿釣掠食魚。", "路亞、手竿、遠投、磯釣四支可以在背包的「釣組」升級，最高 5 級，要金幣和魚缸裡的魚。", "釣法在釣具店換，不用錢：浮標什麼都釣，路亞釣掠食魚，沉底釣底棲魚。", "細線咬得快但容易斷，粗線相反。", "魚餌挑魚：玉米粒釣鯉魚鯽魚，蝦仁釣鯛，蚯蚓釣底棲魚，活餌釣掠食魚。換上以後右上角會寫這裡哪些魚愛吃。", "阿鐵在釣具店旁邊，帶魚和金幣去找他，可以做活餌、鉤子、竿子造型、釣線顏色。", "站得比水面高很多的地方釣到大魚要用撈網，釣具店「工具」有賣，買了會自己用。", "摺疊椅、釣台、竿架、遮陽傘也在「工具」。到水邊從背包「釣組」按「擺出來」，坐著就能釣。", "以前買的舊竿照樣能用，也可以在「釣組」免費換成現在的竿。"],
         ["價錢：路亞軟竿 800、手竿 500、遠投竿 800、磯釣硬竿 800、黃金王者竿 12,000。王者竿到哪裡稀有和傳說都是 1.3 倍。", "升級：2 級 800 金幣加常見魚 3 條；3 級 2,000 加稀有魚 2 條；4 級 4,500 加稀有魚 4 條；5 級 9,000 加傳說魚 1 條。用的是魚缸裡最輕的，收藏和我的海裡的不會動。5 級稀有 1.5 倍、傳說 1.4 倍。", "對上愛吃的餌，那種魚多 1.8 倍。沙蠶在退潮的沙灘挖，小螃蟹在珊瑚礁島的礁岩撿，各一天 6 次。", "鉤子：倒刺鉤線鬆比較不會脫鉤；圓形鉤每條魚原諒一次失誤；鍛造重鉤硬拉時張力升得慢；金鉤做對時魚多掉體力。阿鐵一天最多做 10 件。", "保養釣竿 200 金幣，接下來 30 竿收線快 10%、線比較不容易斷。", "摺疊椅 600、小釣台 1,500、竿架加魚護 900、遮陽傘加釣箱 800。後三樣要先有摺疊椅。有釣台可以多拋 3 公尺左右。", "竿架：等魚時按「跳」站起來，竿子插著，魚咬了鈴鐺會響，25 秒內回去坐下就能拉。", "撈網：站在高處釣到 1.5 公斤以上才需要。", "每支竿子會記得釣過幾條。100 條叫「順手」，500 條叫「老夥伴」，2,000 條叫「傳家寶」，只是紀念。"]],
@@ -21908,6 +21930,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u822', d:'11/25', items:[['🎣','釣魚動作照真的來：浮標沉下去會用力揚竿、拉魚時一扳一收（扳的時候不收線，放低時快收）、魚往外衝人會被往前扯、捲線器滋滋叫，最後把竿子一提把魚拉出水面。也多了揚竿的咻聲和收線的喀喀聲'], ['🎮','阿默在碼頭休息時，現在看得出來在打遊戲機了：兩手拿著在胸前、低頭看螢幕，走近還會聽到他邊打邊碎念']] },
   { id:'u820', d:'11/25', items:[['🎮','我們的朋友阿默換新樣子了：全身黑、黑口罩、黑帽子，船也是黑的。上岸會坐在碼頭打遊戲機休息，走近會告訴你哪裡有魚影、現在潮水該去哪釣。他自己釣魚也照真的來：魚先試吃、浮標沉下去才揚竿、一扳一收拉上來']] },
   { id:'u819', d:'11/25', items:[['📱','修好一直點畫面放大後，縮回來按鈕卻變大互相擋到的問題']] },
   { id:'u818', d:'11/25', items:[['🏘️','手機的「村民」讀不到資料時不會一直卡在讀取中，會寫原因和「再試一次」']] },
