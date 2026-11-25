@@ -1130,7 +1130,10 @@ function islandR(t){
   r += 21 * bump(2.62, 0.26);   /* v494 擴島：西南邊多長出一大塊地（作者：整體太擠，島可以擴大）。這個方向的海上沒有釣點、橋、碼頭 */
   return r;
 }
-function islandEdge(x, z){ return islandR(Math.atan2(z, x)) - Math.hypot(x, z); }   // 正數 = 島上
+/* v837 作者 11/25 截圖「這裡有水」：生態池東邊和石碼頭中間夾著一條細細的海水溝（x 23～26、z -39～-43），看起來像地上積水。把這一塊填成草地（碼頭東邊的海不動） */
+const LAND_FILL = [[21, 25.8, -43, -35]];
+function landFill(x, z){ let e = -99; for (const [x0, x1, z0, z1] of LAND_FILL){ const d = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1)); e = Math.max(e, 6 - d * 2.5); } return e; }
+function islandEdge(x, z){ return Math.max(islandR(Math.atan2(z, x)) - Math.hypot(x, z), landFill(x, z)); }   // 正數 = 島上
 // 線段距離
 function segDist(px, pz, ax, az, bx, bz){ const vx = bx - ax, vz = bz - az, l = vx * vx + vz * vz; let t = l ? ((px - ax) * vx + (pz - az) * vz) / l : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(px - ax - vx * t, pz - az - vz * t); }
 function lineDist(px, pz, pts){ let d = 1e9; for (let i = 0; i < pts.length - 1; i++) d = Math.min(d, segDist(px, pz, pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1])); return d; }
@@ -1171,7 +1174,7 @@ var Mu = { show:null, at:0, busy:false };
 var Fu = { data:null, at:0, busy:false, ice:null, iceKey:'', pick:null };
 var REEF = { x:0, z:86, r:10, y:0.42, bz0:43.6, bz1:76.8, bw:2.2, by:0.55, weir:[[13.6, 82.0, 0.13], [13.6, 87.6, 0.115]] };
 // 百年生態池（參考新竹湖口國小，前身大湖口公學校的生態池）：兩個圓圓的池子連在一起，中間有紅色拱橋
-const POND = { x:16.6, z:-36.4, lobes:[[13.0, -36.2, 4.2], [20.2, -36.6, 3.6]], bx:16.8, mound:[12.4, -36.6], hut:[8.0, -33.2], sign:[6.0, -38.6], trees:[[8.4, -41.6, 1.0], [24.2, -31.6, 0.9], [23.2, -41.4, 0.85]] };
+const POND = { x:16.6, z:-36.4, lobes:[[13.0, -36.2, 4.2], [20.2, -36.6, 3.6]], bx:16.8, mound:[12.4, -36.6], hut:[8.0, -33.2], sign:[6.0, -38.6], trees:[[8.4, -41.6, 1.0], [24.2, -31.6, 0.9]]   /* v837 作者：老校工旁邊、碼頭邊那棵樹移掉 */ };
 var CANAL = POND;   /* 舊的名字（有些地方還在用） */
 function pondIn(x, z){ let e = -99; POND.lobes.forEach(([cx, cz, r], i) => { const a = Math.atan2(z - cz, x - cx); e = Math.max(e, r + wobble(a * 3, i * 2.1) * 0.35 - Math.hypot(x - cx, z - cz)); }); return e; }   /* 正的＝在池子裡 */
 function hillH(x, z){
