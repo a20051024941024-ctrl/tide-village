@@ -5217,7 +5217,7 @@ function kidUpgrade(f){
    做法：新人物有自己的一副骨架，每一格把原本角色骨架的角度照抄過來，所以原本的所有動作（走、跑、釣魚、坐、表情動作、騎車、划船）都直接能用。
    原本的角色還在（藏起來），拿在手上的東西改跟新人物的手。只改「自己看到的自己」，別人看到的你不變（試玩階段，之後再同步）。
    設定 → 🧒 新人物（試玩）打開；網址加 #k3=1 也能開。 */
-const K3 = { V: 751, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
+const K3 = { V: 829, allow: null, on: false, cfg: null, asset: null, loading: false, err: '', ferr: 0 };
 K3.faceOf = sex => sex === 'b' ? { eye: 'a0', brow: 'soft', mouth: 'smile', blush: 'none' } : { eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line' };
 K3.DEF = { on: false, sex: 'g', hair: 'long', top: 'tee', bot: 'shorts', shoes: 'sneak', mask: 'none', ear: 'none', hat: 'none', eye: 'b0', brow: 'thin', mouth: 'small', blush: 'line', c: {} };
 /* v711 作者：「先同步然後村民A」「先做2跟3」→ 所有人都換成新人物（設定裡可以改回原本的）。第一次的人隨機配一套臉、髮型、衣服、顏色 */
@@ -5552,7 +5552,7 @@ K3.sync = (a, f) => { const k = a.k3, K = a.kid; if (!k || !K || k.kidRef !== K)
   { const op = !!(ek && K3.OPEN[ek]), M = k.meshes; if (k.op !== op && M.palm && !k.region){ k.op = op; M.palm.visible = op; if (M.fist) M.fist.visible = !op; } }
   /* v826 作者：「我們到現在還沒把人物坐到椅子上這件事做好」→ 坐椅子（長椅、摺疊椅、沙發…）改用 Meshy 做的真人坐姿：屁股在椅面、大腿平、小腿垂直、腳踩地。
      阿默坐著打遊戲機用另一個（兩手在胸前、低頭）。船上、坐著釣魚還是照舊。 */
-  const sk = !ek && k.sacts && f && f.sitting && !f.fishing && (K.w.sit || 0) > 0.5 && !(f === me ? myBoat : f.boatMesh) && !(f.amo && f.amoMode !== 'pier') ? (f.amoPlay && k.sacts.sitg ? 'sitg' : k.sacts.sit ? 'sit' : '') : '';
+  const sk = !ek && k.sacts && f && f.sitting && !f.fishing && (K.w.sit || 0) > 0.5 && !(f === me ? myBoat : f.boatMesh) && !(f.amo && f.amoMode !== 'pier') && !(f === me && mySeat && mySeat.nook) ?   /* 釣魚裝備的摺疊椅、釣魚小角落：座位高度是照原本坐姿量的，先維持原本 */ (f.amoPlay && k.sacts.sitg ? 'sitg' : k.sacts.sit ? 'sit' : '') : '';
   if (k.sacts) for (const n in k.sacts) if (k.sk !== sk) k.sacts[n].setEffectiveWeight(n === sk ? 1 : 0); k.sk = sk;
   if (sk){ m = 1; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0); k.mixer.update(Math.min(0.1, K.dt0 || 0.016)); for (const n of k.names) k.mq[n].copy(B[n].quaternion); k.mhp.copy(B.hips.position); } }
   else if (k.ew > 0 && k.eE){ m = k.ew; if (k.mf !== frameNo){ k.mf = frameNo; for (const n of ['idle', 'walk', 'run', 'sprint']) k.acts[n].setEffectiveWeight(0);
@@ -21962,6 +21962,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u829', d:'11/25', items:[['🪑','人物坐椅子換成真的坐姿：屁股坐在椅面上、大腿平放、小腿往下、手放在大腿上，不會再浮在椅子上或膝蓋翹起來。阿默坐在長椅上會兩手拿著遊戲機低頭打']] },
   { id:'u825', d:'11/25', items:[['🪑','阿默上岸後會先喘一下，再慢慢走到港邊廣場最近的長椅坐下來打遊戲機；快出海時站起來走回碼頭。長椅有人坐他就換一張']] },
   { id:'u823', d:'11/25', items:[['🎮','阿默在碼頭改成直接坐在地上、腳伸直打遊戲機，不會再像蹲著']] },
   { id:'u822', d:'11/25', items:[['🎣','釣魚動作照真的來：浮標沉下去會用力揚竿、拉魚時一扳一收（扳的時候不收線，放低時快收）、魚往外衝人會被往前扯、捲線器滋滋叫，最後把竿子一提把魚拉出水面。也多了揚竿的咻聲和收線的喀喀聲'], ['🎮','阿默在碼頭休息時，現在看得出來在打遊戲機了：兩手拿著在胸前、低頭看螢幕，走近還會聽到他邊打邊碎念']] },
