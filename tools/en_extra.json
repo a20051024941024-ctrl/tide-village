@@ -8737,5 +8737,6 @@
  "獨角獸換成新畫的樣子，聖騎士的馬換上完整的身體；倒下時腳會伸出來趴在地上": "Unicorns have a new look and the Paladin horse has a full body; when knocked down their legs stretch out as they lie on the ground",
  "士兵和坐騎走路的腳步放慢，步伐大一點": "Soldiers and mounts now walk with slower, longer steps",
  "士兵和坐騎走路的腳步再放慢": "Soldiers and mounts walk with even slower steps",
- "兵營的兵種卡片改成圖在左、字在右，不再擋住；橫向畫面下面找回「框選」；解散士兵要再按一次確認": "Unit cards in training buildings now show the picture on the left and text on the right so nothing is cut off; Box Select is back in the bottom bar in landscape; dismissing soldiers now needs a second tap to confirm"
+ "兵營的兵種卡片改成圖在左、字在右，不再擋住；橫向畫面下面找回「框選」；解散士兵要再按一次確認": "Unit cards in training buildings now show the picture on the left and text on the right so nothing is cut off; Box Select is back in the bottom bar in landscape; dismissing soldiers now needs a second tap to confirm",
+ "照原版拿掉「解散」士兵的按鈕": "Removed the Dismiss soldiers button, like the original"
 }
