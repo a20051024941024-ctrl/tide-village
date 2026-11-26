@@ -4844,6 +4844,9 @@ function rodSkinTex(k){ if (RSKIN_TEX[k]) return RSKIN_TEX[k]; const cv = docume
   else if (seasonRodDraw(c, W, H, k)){ }
   else { c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 0.5); return (RSKIN_TEX[k] = t); }
+/* v895 釣竿的 3D 小圖：用身上那支竿子同一個做法（rodHD）做一支，斜斜擺著拍 */
+function rodShotMesh(r){ const av = { rod: new THREE.Group(), pole: { visible: true, material: {} }, tip: new THREE.Object3D(), reel: null }; av.rod.add(av.tip); rodHD(av, rodType(r), r.color, null);
+  const g = new THREE.Group(); av.rod.scale.set(2.0, 0.75, 2.0); av.rod.rotation.set(0.25, 0.5, -0.95); g.add(av.rod); return g; }   /* 竿子很細：小圖裡變粗變短一點才看得出樣子 */
 function rodHD(av, type, color, skin){
   if (!av || !av.rod) return; if (av.hd){ av.rod.remove(av.hd.root); if (av.hd.reelG) av.rod.remove(av.hd.reelG); }
   const pole = type === 'pole', blank = skin === 'rs_gold' ? new THREE.MeshStandardMaterial({ color:'#e0b84a', roughness:0.25, metalness:0.85 }) : skin && CRAFT_BY[skin] ? new THREE.MeshStandardMaterial(Object.assign({ map: rodSkinTex(skin), roughness:0.35, metalness:0.2 }, /^rs_l\d/.test(skin) ? { emissive:'#ffffff', emissiveMap: rodSkinTex(skin), emissiveIntensity:0.55 } : {})) : new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.25 }), dk = mat('#23262b', 0.4, { metalness:0.5 }), gold = mat('#d8b25a', 0.35, { metalness:0.6 }), wrap = mat(pole ? '#5a4030' : '#b8282c', 0.5);
@@ -15538,7 +15541,7 @@ function renderPetMarket(body){
   if (!Pets.market){ body.appendChild(el('div', 'empty', '載入中…')); loadPetMarket(); return; }
   if (!Pets.market.length){ body.appendChild(el('div', 'empty', '市集現在沒有寵物。')); return; }
   const ul = el('ul', 'shoplist cols');
-  for (const m of Pets.market){ const K = PET_KINDS[m.kind]; if (!K) continue; const li = el('li'); li.appendChild(el('span', 'dishic', K.icon));
+  for (const m of Pets.market){ const K = PET_KINDS[m.kind]; if (!K) continue; const li = el('li'); li.appendChild(petShotEl(m.kind, K.icon));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${m.name}・${petFull(m.kind, m.var)}${petVarRare(m.kind, m.var) ? ' ⭐' : ''}`)); d.appendChild(el('div', 'sub2', `🪙${(+m.price).toLocaleString()}・${m.mine ? '你自己的' : esc(m.by) + ' 賣的'}`)); li.appendChild(d);
     if (!m.mine){ const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < m.price ? ' ghost' : ''), '買'); b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定 🪙${(+m.price).toLocaleString()}？`; b.classList.add('warn'); return; } b.disabled = true;
         const r = await petRpc('pet_buy', { p_id: m.id }); if (r){ adoptRow(r.player); Pets.list = r.pets; SFX.catch(); flash(`${K.icon} ${m.name}跟你回家了！`, 1.8); Pets.homeKey = ''; loadPetMarket(); } else b.disabled = false; }); a.appendChild(b); li.appendChild(a); }
@@ -15574,7 +15577,7 @@ function renderPets(body){
   /* v606 作者：「不應該限制包包裡寵物的數量吧」→ 不限數量（伺服器 203），圍欄只是寵物的家 */
   body.appendChild(el('p', 'sub', `養了 ${L.length} 隻，一次帶 1 隻出門。在小島蓋圍欄、海水池、烏龜缸，留在家的會住進去玩。每天第一次餵最開心；跟你越熟，會帶小禮物給你，還會戴上項圈、小帽子。`));
   const ul = el('ul', 'shoplist');
-  for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(el('span', 'dishic', K.icon));
+  for (const p of L){ const K = PET_KINDS[p.kind], li = el('li', p.out ? 'on' : ''); li.appendChild(petShotEl(p.kind, K.icon));
     const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}${petVarRare(p.kind, p.var) ? ' ⭐' : ''}${p.price != null ? `（市集掛賣中 🪙${p.price.toLocaleString()}）` : p.out ? '（跟著你）' : '（在家）'}`)); d.appendChild(el('div', 'sub2', `💕 親密度 ${p.love}${p.acc >= 2 ? '・👒 小帽子' : p.acc >= 1 ? '・🎀 項圈' : ''}${p.fed ? '・今天餵過了' : ''}${p.gift ? '・今天的禮物領過了' : ''}`)); li.appendChild(d);
     const a = el('div', 'tacts');
     const ob = el('button', 'tbtn' + (p.out ? ' ghost' : ''), p.out ? '回家' : '帶出門'); ob.disabled = p.price != null; ob.addEventListener('click', async () => { const r = await petRpc('pet_out', { p_id: p.out ? null : p.id }); if (r){ Pets.list = r; Pets.homeKey = ''; pushPresence(true); SFX.click(); renderTab(); } }); a.appendChild(ob);
@@ -18834,7 +18837,7 @@ function renderShop(body){
     for (const r of ['bamboo', 'r_lure', 'king', 'r_pole', 'r_surf', 'r_iso'].map(id => RODS.find(x => x.id === id)).filter(Boolean)){
       if (rodType(r) !== lastT){ lastT = rodType(r); const T = ROD_TYPES[lastT]; const h = el('div', 'dexhead', `${T.icon} ${T.name}`); h.appendChild(el('small', '', T.fit ? '最適合：' + T.fit.map(id => SPOT_BY_ID[id].label).join('、') : '哪裡都可以用')); body.appendChild(h); ul = el('ul', 'shoplist'); body.appendChild(ul); }
       const owned = rec.rods.includes(r.id), using = rec.rod === r.id, li = el('li', using ? 'on' : '');
-      const sw = el('span', 'rodsw'); sw.style.background = r.color; li.appendChild(sw);
+      const sw = el('span', 'rodsw rodshot'); sw.style.background = r.color; li.appendChild(sw); thumbLater(sw, 'rod3:' + r.id, () => rodShotMesh(r), r.name);   /* v895 釣竿也用 3D 小圖（作者：「那些店可以參考寵物店嗎」） */
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', r.name)); if (r.best){ const bt = el('div', 'meta', r.best); bt.style.cssText = 'color:#2f7d5b;font-weight:700'; d.appendChild(bt); } d.appendChild(el('div', 'meta', r.desc)); if (owned && rodMemo(r.id)){ const mm = el('div', 'meta', rodMemo(r.id)); mm.style.color = '#b2783a'; d.appendChild(mm); } li.appendChild(d);
       const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '使用中' : owned ? '換上' : `買 🪙${r.price.toLocaleString()}`);
       b.disabled = using;
@@ -23540,6 +23543,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u895', d:'11/26', items:[['🎣','釣具店的釣竿、我的寵物、寵物市集都換成 3D 小圖了，不再只是一塊顏色或符號']] },
   { id:'u894', d:'11/26', items:[['🏠','房子改成整棟買：小屋、小家、中家、大房子、兩層樓、大宅、三層大宅、海景豪宅八種，買了就是那麼大，不用擴建、不用借錢；外面看得出大小和幾層樓。以前的房子大小、家具都不變','island']] },
   { id:'u893', d:'11/26', items:[['🌧️','下雨天阿潮、小溪、阿伯會收竿走回居民區的家躲雨，家裡的燈會亮；雨停再走回來釣魚。顧店的人、老港、阿默阿穎照常在外面'], ['🐾','寵物店的卡片換成真的 3D 寵物小圖，不再只是符號','pets']] },
   { id:'u892', d:'11/26', items:[['🏠','各有自己的家：進房子按「擺家具」→「🏠 當我的家」，一個人一棟，裡面的家具只有你能動，門口會立一塊「誰的家」名牌；人搬走了，他的家會變回大家的','island']] },
