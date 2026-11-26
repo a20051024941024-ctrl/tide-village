@@ -8952,5 +8952,15 @@
  "沒關係，我有帶雨衣": "It's fine, I brought a raincoat",
  "我腳在痛，下次吧": "My foot hurts, next time",
  "嘿！粉紅色最好看！": "Hey! Pink is the best!",
- "不會再突然跳出「阿萍的衣服：挑一套入門衣服」（那是舊人物的衣服，換新人物以後穿了也看不到）": "The \"Ah-Ping's clothes: pick a starter outfit\" window no longer pops up (those were clothes for the old characters, which don't show on the new ones)"
+ "不會再突然跳出「阿萍的衣服：挑一套入門衣服」（那是舊人物的衣服，換新人物以後穿了也看不到）": "The \"Ah-Ping's clothes: pick a starter outfit\" window no longer pops up (those were clothes for the old characters, which don't show on the new ones)",
+ "阿鐵師傅的工坊改版：原本的東西照樣做，配方改成「金幣＋少一點魚＋材料」；新增貝殼浮標、魚鱗路亞（品質分普通、精良、極品）、修竿包、木雕握把竿、粉紅閃亮竿。第一次去會送一包入門材料": "Ah-Tie's workshop update: old items can still be made, now with coins + fewer fish + materials; new: shell floats, scale lures (Normal / Fine / Superb quality), rod repair kits, Carved Grip Rod and Pink Sparkle Rod. Your first visit gives a starter pack of materials",
+ "材料：海邊撿垃圾、潛水撿垃圾時有機會多撿到貝殼、舊漁網、漂流木、珊瑚碎片、粉紅貝；魚可以在工坊分解成魚鱗": "Materials: picking up litter on the beach or while diving can also give shells, old nets, driftwood, coral bits or pink shells; fish can be broken down into scales at the workshop",
+ "釣竿有耐久度了：釣到越大的魚掉越多，用修竿包補（材料做，或直接付 🪙300 跟阿鐵買）。普通浮標、普通假餌本來就在背包裡，免費、不會弄丟": "Rods now have durability: bigger fish wear them more; fix them with a repair kit (craft it, or buy one from Ah-Tie for 🪙300). The plain float and plain lure are always in your bag, free and never lost",
+ "魚市場「釣客擺攤」多了「🧺 材料・裝備」：材料、浮標、路亞、修竿包、工坊做的造型都能賣給別人": "The fish market's \"Angler stalls\" now has \"🧺 Materials & Gear\": sell materials, floats, lures, repair kits and workshop-made styles to other players",
+ "村民更常出門散步了": "Villagers go out for walks more often",
+ "阿鐵在釣具店旁邊，帶魚、金幣和材料去找他，可以做活餌、鉤子、浮標、路亞、修竿包、竿子造型、釣線顏色。第一次去他會送你一包入門材料。": "Ah-Tie is next to the tackle shop. Bring fish, coins and materials to make live bait, hooks, floats, lures, repair kits, rod styles and line colors. Your first visit gives a starter pack of materials.",
+ "材料有六種：貝殼、舊漁網、漂流木、珊瑚碎片、魚鱗、粉紅貝。海邊撿垃圾、潛水撿垃圾時有機會多撿到；魚鱗在阿鐵的工坊用魚分解。": "There are six materials: shells, old nets, driftwood, coral bits, scales and pink shells. Picking up litter on the beach or while diving can give them; scales come from breaking down fish at Ah-Tie's workshop.",
+ "普通浮標、普通假餌本來就在背包裡，免費、不會弄丟。阿鐵做的貝殼浮標（浮標釣）、魚鱗路亞（路亞釣法）讓魚咬得快一點，拉斷線會弄丟；品質有普通、精良、極品。到「包包 → 🎣 釣組」換。": "The plain float and plain lure are always in your bag, free and never lost. Ah-Tie's shell float (float fishing) and scale lure (lure fishing) make fish bite a bit faster, but are lost when the line snaps; quality is Normal, Fine or Superb. Switch them in \"Bag → 🎣 Tackle\".",
+ "釣竿有耐久度，釣到越大的魚掉越多；掉到 0 拉魚時拉力上升比較快。修竿包一個補 40，可以用材料做，或直接付 🪙300 跟阿鐵買。": "Rods have durability; bigger fish wear them more. At 0, line tension rises faster while reeling. A repair kit restores 40; craft it with materials or buy one from Ah-Tie for 🪙300.",
+ "材料、浮標、路亞、修竿包、阿鐵做的造型，可以到魚市場「🤝 釣客擺攤 → 🧺 材料・裝備」賣給別人，自己訂價，賣出收 5%。集章卡、排位送的造型不能賣。": "Materials, floats, lures, repair kits and workshop-made styles can be sold at the fish market under \"🤝 Angler stalls → 🧺 Materials & Gear\" at your own price; 5% fee on sales. Stamp-card and ranked-season styles can't be sold."
 }
