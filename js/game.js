@@ -15367,7 +15367,7 @@ function petBall(){ if (!PetBallM){ PetBallM = new THREE.Mesh(new THREE.SphereGe
 let PetBallM = null;
 function petDo(f, k, at){ const pt = f.pet; if (!pt || pt.hug) return false; petActEnd(pt);
   const t = now(), U = pt.m.userData; pt.act = { k, t0: t, at, bs: U.body ? U.body.scale.clone() : null, brx: U.body ? U.body.rotation.x : 0, hrx: U.head ? U.head.rotation.x : null, a0: Math.atan2(pt.pos.x - f.pos.x, pt.pos.z - f.pos.z) };
-  const P = PET_POSE[k]; if (P && f.av && f.av.kid && !f.fishing && !f.sitting && !f.swim){ f.emote = null; f.ppose = { k, W: P.W, hold: P.hold || null, at: t, until: t + P.dur }; }
+  const P = PET_POSE[k]; if (P && f.av && f.av.kid && !f.fishing && !f.sitting && !f.swim && !(f === me && typeof Zen !== 'undefined' && Zen.on)){ f.emote = null; f.ppose = { k, W: P.W, hold: P.hold || null, at: t, until: t + P.dur }; }
   if (k === 'ball'){ const fx = Math.sin(f.rot), fz = Math.cos(f.rot); let d = 6.5; while (d > 1.5 && !walkable(f.pos.x + fx * d, f.pos.z + fz * d)) d -= 0.5;
     const bx = f.pos.x + fx * d, bz = f.pos.z + fz * d, b = petBall(); b.position.set(f.pos.x, f.baseY + 1.2, f.pos.z); scene.add(b); Object.assign(pt.act, { ball: b, bx, bz, by: groundHeight(bx, bz) + 0.11, sx: f.pos.x, sz: f.pos.z, sy: f.baseY + 1.2, ph: 'fly' }); }
   if (k === 'treat'){ pt.act.item = petTreatMesh(pt.kind); scene.add(pt.act.item); }
@@ -15416,6 +15416,26 @@ function petActStep(f, pt, dt, t){ const A = pt.act, U = pt.m.userData, gy = gro
     if (U.tail) U.tail.rotation.y = Math.sin(t * 1.2) * 0.15; if (Math.floor(age / 1.6) !== A.zz){ A.zz = Math.floor(age / 1.6); try { FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 1, '#cfd8e6', 0.12, 0.7, 1.4); } catch(e){} } return true; }
   if (A.k === 'spin'){ if (age > 1.7) pt.act = null; return false; }
   pt.act = null; return false; }
+/* ===== v905 阿穎的回饋：「上了一天的班已經很累了，結果在遊戲裡還不能放鬆，寵物就是要放鬆，什麼都不用管，它自己就會把事情做好」
+   ① 陪著就會變親：寵物跟著你，每 5 分鐘親密度 +1（伺服器 254，一天最多 +12），不用每天餵。
+   ② 🌙 放空：表情選單按「放空」，坐下來、畫面慢慢拉遠轉一圈、按鈕都收起來，寵物在旁邊自己玩、打瞌睡；搖桿一動或點畫面就回來。 */
+const Comp = { at: Date.now(), busy: false };
+async function petCompanyTick(){ const pm = petMine(); if (!pm || !me.pet || !Cloud.on || !Cloud.sb || Comp.busy) return; if (Date.now() - Comp.at < 300000) return;
+  if (Math.hypot(me.pet.pos.x - me.pos.x, me.pet.pos.z - me.pos.z) > 12) return; Comp.busy = true; Comp.at = Date.now();
+  try { const { data } = await Cloud.sb.rpc('pet_company', { p_id: pm.id }); if (data && data.got){ pm.love = data.love; if (Zen.on) Zen.love = (Zen.love || 0) + 1; else if (Math.random() < 0.5) me.pet && toast(`🐾 ${esc(pm.name || '寵物')}陪著你走，親密度 +1（${data.love}）`); } } catch(e){} Comp.busy = false; }
+const ZEN_POSE = () => 'sitdown';
+const Zen = { on: false, t0: 0, cam: null, next: 0, love: 0, btn: null };
+function zenStart(){ closeEmotePanel(); if (Zen.on) return; if (F.phase !== 'idle' || myBoat || Dive.on || Sub.on){ toast('先把手上的事做完再放空吧'); return; }
+  Zen.on = true; Zen.t0 = performance.now(); Zen.love = 0; Zen.cam = { dist: cam.dist, pitch: cam.pitch }; Zen.next = now() + 3;
+  if (!mySeat) emote(ZEN_POSE());
+  document.body.classList.add('zen'); const b = Zen.btn = el('button', 'zenbtn', '🌙 ' + i18nT('放空中…點一下回來')); b.addEventListener('click', zenStop); document.body.appendChild(b);
+  Zen.next = now() + 1; }
+function zenStop(){ if (!Zen.on) return; Zen.on = false; document.body.classList.remove('zen'); if (Zen.btn){ Zen.btn.remove(); Zen.btn = null; }
+  if (Zen.cam){ cam.dist = Zen.cam.dist; cam.pitch = Zen.cam.pitch; } const min = Math.round((performance.now() - Zen.t0) / 60000), pm = petMine();
+  if (min >= 1) toast(`🌙 放空了 ${min} 分鐘${pm ? `，${esc(pm.name || '寵物')}一直在旁邊陪著你${Zen.love ? `（親密度 +${Zen.love}）` : ''}` : ''}`); }
+function zenTick(dt){ if (!Zen.on) return; if (Math.abs(joy.x) > 0.2 || Math.abs(joy.z) > 0.2 || F.phase !== 'idle' || Object.values(keys).some(Boolean)){ zenStop(); return; }
+  cam.dist += (9 - cam.dist) * Math.min(1, dt * 0.25); cam.pitch += (0.34 - cam.pitch) * Math.min(1, dt * 0.25); cam.yaw += dt * 0.035;
+  if (!mySeat && (!me.emote || me.emote.k !== ZEN_POSE()) && now() > Zen.next){ Zen.next = now() + 1.5; emote(ZEN_POSE()); } }   /* 坐著放空；寵物自己在旁邊玩 */
 function petAct(k){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held && me.held.pet) return;
   if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'rest') toast(`跟${esc(pt.name || '寵物')}一起坐著休息，走開就結束`); } }
 function updatePetFor(f, want, dt, t){
@@ -15451,6 +15471,7 @@ function updatePets(dt, t){ try { shopHallTick(dt, t); } catch(e){ if (!shopHall
   updatePetFor(me, petMine(), dt, t);
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
+  if (frameNo % 120 === 0) petCompanyTick(); zenTick(dt);
   for (const pt of Pets.home){
     if (pt.pen && pt.pen.indoor){ const fm = House.on && House.it && House.it.id === pt.pen.hid && House.furnG.get(pt.pen.fid); pt.m.visible = !!fm; if (!fm){ pt.inFm = null; continue; } const w = pt.wander;
       const spot = () => { const u = (Math.random() * 2 - 1) * 1.0, v = (Math.random() * 2 - 1) * 0.48, c = Math.cos(fm.rotation.y), s = Math.sin(fm.rotation.y); return [fm.position.x + u * c + v * s, fm.position.z - u * s + v * c]; };
@@ -18100,7 +18121,7 @@ function bbCapDraw(){ const c = BB.capCv, x = c.getContext('2d'), it = BB_LIST[B
 function bbBuild(){ if (BB.g) return; const P = window.__bbAt || BB_AT, a = P.a * Math.PI / 180, x = P.cx + Math.cos(a) * P.R, z = P.cz + Math.sin(a) * P.R, r = Math.atan2(P.cx - x, P.cz - z) + (P.turn || 0);
   const g = BB.g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; g.userData.keep = true; scene.add(g);
   /* v902 作者：「放在那裡不合適」→ 不放在釣具店屋頂，改成廣場邊自己一座：兩根柱子撐著的大螢幕，下面可以走過去 */
-  const cz = 0, W = P.W || 7.2, H = W * 9 / 16, base = P.y || 2.3, y0 = base + W * 0.1 + H / 2, dark = '#22262d';
+  const cz = 0, W = P.W || 7.2, H = W * 9 / 16, base = P.y || 4.0,   /* v905 作者：「可以再稍微加高一點」「阿報會擋到」→ 螢幕底部離地 4 公尺 */ y0 = base + W * 0.1 + H / 2, dark = '#22262d';
   for (const sx of [-W * 0.32, W * 0.32]){ g.add(box([0.32, y0, 0.32], '#6f7a86', [sx, y0 / 2, -0.25])); g.add(box([0.9, 0.25, 0.9], '#9c9a92', [sx, 0.12, -0.25])); }
   g.add(box([W + 0.4, H + W * 0.1 + 0.4, 0.3], dark, [0, y0 - W * 0.05, cz - 0.17]));
   g.add(box([W * 0.7, 0.18, 0.5], '#3a3f47', [0, y0 + H / 2 + 0.3, cz - 0.1]));
@@ -18112,6 +18133,7 @@ function bbBuild(){ if (BB.g) return; const P = window.__bbAt || BB_AT, a = P.a 
   g.traverse(o => { o.userData.keep = true; }); bbShow(0); }
 function bbShow(i){ BB.i = (i + BB_LIST.length) % BB_LIST.length; const it = BB_LIST[BB.i]; BB.t = 0; if (BB.capCv) bbCapDraw();
   if (BB.card){ BB.card.dispose(); BB.card = null; } if (it.soon || !it.k || !BB.on){ BB.card = bbCardTex(it); if (BB.scr){ BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; } return; }
+  if (!BB.blobs[it.k] && BB.scr){ BB.card = bbCardTex(it); BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; }   /* 影片還在下載：先放這段的字卡，不會字幕跟畫面對不上 */
   bbBlob(it.k).then(u => { if (BB_LIST[BB.i] !== it) return; if (!u){ BB.card = bbCardTex(it); BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; return; }
     if (!BB.vid){ const v = BB.vid = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.crossOrigin = 'anonymous'; v.addEventListener('ended', () => bbShow(BB.i + 1)); BB.tex = new THREE.VideoTexture(v); BB.tex.colorSpace = THREE.SRGBColorSpace; BB.tex.minFilter = THREE.LinearFilter; BB.tex.generateMipmaps = false; try { BB.tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); } catch(e){} }
     BB.vid.src = u; BB.vid.currentTime = 0; const pr = BB.vid.play(); if (pr && pr.catch) pr.catch(() => {}); BB.scr.material.map = BB.tex; BB.scr.material.needsUpdate = true; }); }
@@ -19869,7 +19891,7 @@ function openEmotePanel(force){ let P = $('#emotePanel'); if (!P){ P = document.
   if (!force) P.hidden = !P.hidden; if (P.hidden) return;
   P.textContent = ''; P.appendChild(el('div', 'ep-t', '😀 表情動作')); { const h = el('div', '', '做動作的時候臉也會跟著變'); h.style.cssText = 'font-size:12px;opacity:.65;margin:-2px 0 6px'; P.appendChild(h); }
   const g = el('div', 'ep-g'); for (const k of EMOTE_ORDER){ const D = EMOTE_DEF[k], own = emoteOwned(k), b = el('button', 'ep-b' + (own ? '' : ' lock')); b.appendChild(el('span', 'ep-i', EMOTES[k])); b.appendChild(el('span', 'ep-n', own ? D.name : `🪙${D.buy}`)); if (!own) b.title = D.name + '（' + D.buy + ' 金幣）'; b.addEventListener('click', () => emote(k)); g.appendChild(b); } P.appendChild(g);
-  for (const [ic, nm, fn] of [...(document.body.classList.contains('ui3') ? [['🐟', '炫耀魚', () => { closeEmotePanel(); const sb = $('#showBtn'); if (sb) sb.click(); }]] : []), ['🤗', '抱寵物', () => petHug()], ...PET_ACTS.map(([i2, n2, k2]) => [i2, n2, () => petAct(k2)])]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
+  for (const [ic, nm, fn] of [...(document.body.classList.contains('ui3') ? [['🐟', '炫耀魚', () => { closeEmotePanel(); const sb = $('#showBtn'); if (sb) sb.click(); }]] : []), ['🌙', '放空', () => zenStart()], ['🤗', '抱寵物', () => petHug()], ...PET_ACTS.map(([i2, n2, k2]) => [i2, n2, () => petAct(k2)])]){ const b = el('button', 'ep-b'); b.appendChild(el('span', 'ep-i', ic)); b.appendChild(el('span', 'ep-n', nm)); b.addEventListener('click', fn); g.appendChild(b); }   /* 080：跟帶出門的寵物互動 */
   P.appendChild(el('div', 'ep-s', '坐下、躺下、跳舞、伏地挺身會一直做，走開就停。大家都看得到。有 🪙 的是新動作，點一下就能用金幣學會。'));
   const em = $('#emotes'), r = em && em.getBoundingClientRect(); if (r && r.width){ P.style.bottom = Math.round(innerHeight - r.top + 8) + 'px'; P.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; P.style.maxHeight = Math.max(160, Math.round(r.top - 16)) + 'px'; } }   /* 貼在表情按鈕列的正上方；太高就捲動，不會超出畫面 */
 /* v264 學新的表情動作：第一次點跳出確認，再點一次就買（金幣由伺服器扣） */
@@ -20714,7 +20736,7 @@ const npcs = [
     lines:['這個髮色我昨天半夜三點才調出來，你看！', '剪、染、燙、編，頭髮的事都找我', '不設計我睡不著，真的', '你這頭……要不要讓我修一下？', '海風很傷頭髮，釣完記得來護一下', '新髮型兩天一款，髮色天天換，我沒休過假'] },
   // 阿報：廣場的報童，每天早上 7 點出《潮汐村報》（057_news.sql）
   { name:'阿報・村報記者', shirt:'#f1e3c8', hat:'#2b2f36', x:-0.6, z:1.2, y:0.02, dir:new THREE.Vector2(0.6, 0.8).normalize(), shopNpc:'news',
-    lines:['號外！今天的《潮汐村報》出來了', '每天早上 7 點出報，昨天的大魚、博物館新展品、節慶都寫在上面', '釣到稀有的，明天就上報，名字還是金色的', '報紙留 7 天，想翻舊的也行', '村子裡的八卦，問我就對了'] },
+    lines:['號外！今天的《潮汐村報》出來了', '每天早上 7 點出報，昨天的大魚、博物館新展品、節慶都寫在上面', '釣到稀有的，明天就上報，名字還是金色的', '報紙留 7 天，想翻舊的也行', '村子裡的八卦，問我就對了', '後面那面大看板看過了嗎？村子裡好玩的都在上面播'] },
   // 蔚博士：海洋科學家，每天跑到世界上的一個釣點調查，發現一種新品種（070_sci.sql）；站在今天調查的釣點旁邊
   { name:'蔚博士・海洋科學家', shirt:'#f4f6f8', hat:'#2f7fa8', x:2.4, z:3.2, y:0.02, dir:new THREE.Vector2(-0.6, 0.8).normalize(), shopNpc:'sci',
     lines:['晴潮海邊我又確認了四種：沙鮻、石斑幼魚、潮池蝦虎，還有鱟。牠們挑潮位出現，先看潮汐表', '我每天換一個地方調查，今天剛好在這裡', '每天我挑一種魚研究，你釣到就拿來給我看，有謝禮', '真的沒記錄過的魚，我確認了會第一個講', '研究站的潛水艇缺人採樣。深海浮台的潛水艇碼頭借你用，Lv.15 以上，搭阿海的船去', '以前記錄的那些花色不一樣的魚，還住在原本的釣點', '白化、黑化的個體我也還沒看齊，你看到要跟我說'] },
@@ -22522,7 +22544,7 @@ function renderTab0(){
         ["跑船：一次最多 10 條。村子的魚載去珊瑚礁島、礁島的魚載回村子，都多三成。裝船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半。要過 45 秒才能賣。", "阿萍：新髮色 200 金幣，新髮型 400。", "自己畫的衣服是 32×32 格、48 色。別人買了你拿九成。被檢舉三次會下架。"]],
       ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型十四種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭、平頭、西瓜頭、中分短髮、捲捲短髮、雙麻花辮、長直髮。", "還能戴帽子、口罩、耳環。", "不能自己調色，每件衣服有幾款設計款（配好的顏色和圖案），各自要買；⚓ 是老港每週的限定款，只有老港賣。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
         ["每週一換一個穿搭主題，身上穿到 2 件以上，釣魚多一成經驗。", "幫別人的穿搭按讚，一週最多 30 次。"]],
-      ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小烏龜釣魚時偶爾會撈到（小海龜只能用撈的）。水獺之後的活動才會出現。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶貓出門，附近有魚群牠會叫。你停下來牠會坐下看你。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
+      ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小烏龜釣魚時偶爾會撈到（小海龜只能用撈的）。水獺之後的活動才會出現。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶寵物出門陪著牠，每 5 分鐘親密度 +1（一天最多 +12），不用每天餵也會變親。", "累了可以按表情那顆的「🌙 放空」：坐下來，按鈕都收起來，畫面慢慢轉，寵物在旁邊陪你；搖桿一動或點「回來」就結束。", "帶貓出門，附近有魚群牠會叫。你停下來牠會坐下看你。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
         ["餵食會用掉魚缸的魚。一天第一次親密度加 15（稀有魚 20、傳說魚 25），之後同一天每次加 1。", "親密度 10 以上每天帶一份小禮物，60 戴項圈，150 再戴小帽子。", "圍欄、海水池、烏龜缸各 1,500 金幣，一個住 5 隻。", "市集賣出賣家拿九成，買的人親密度重來。名字最多 8 個字。", "釣到三棘鱟有兩成機會跟來一隻小鱟。"]],
       ["鯨魚、大魚", "event", ["每天晚上 8:30，港口外海會來一條超大的魚，週六日下午 2:00 也有。", "站在港口按「一起拉」，大家合力。指針留在綠色才有用，畫面變紅就放開。", "有出力就有獎。", "鯨魚不在港口外海：抹香鯨在深海浮台，白鯨、虎鯨、座頭鯨在流冰海岸，藍鯨、鯨鯊在神秘島礁岩。", "划船到外海，可能遇到海豚、座頭鯨、藍鯨、抹香鯨。鯨魚在水面時可以拍照。", "看到鯨魚跳出水面，接下來幾分鐘在船上比較好釣。", "外海深處有一小群紅色的鯊魚，全伺服器共用，釣光就絕種。釣到不能賣，放回去拿愛海點數。"],
         ["大魚要在 10 分鐘內拉完。前 3 名拿魚拓，第 1 名拿稱號。斷線後 10 秒不能出力。", "藍鯨每小時在神秘島礁岩外浮上來一分半鐘，這時釣到藍鯨的機率是平常 5 倍。", "鯨魚跳出水面給 3 分鐘好運，30 分鐘最多一次，一天最多 4 次。", "海上目擊每種第一次遇到送 30 愛海點數。", "紅鯊最多 8 隻，每一對每 7 天有一半機會生一隻。放回海裡拿 100 愛海點數。", "流冰海岸大約每一個多小時有虎鯨來圍獵，一次兩分鐘左右，站在岸邊看得到。"]],
@@ -23748,6 +23770,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u905', d:'11/26', items:[['🐾','寵物陪著你就會變親：帶出門每 5 分鐘親密度 +1（一天最多 +12），不用每天餵','pets'], ['🌙','表情選單多一個「🌙 放空」：坐下來，按鈕都收起來，畫面慢慢轉一圈，寵物在旁邊陪你，什麼都不用做；搖桿一動或點「回來」就結束'], ['📺','潮汐大看板再加高，螢幕底部離地 4 公尺，不會被人擋到；換段時字幕和畫面會一起換']] },
   { id:'u904', d:'11/26', items:[['📺','潮汐大看板再搬一次：搬到島中央的潮汐廣場旁邊的草地，面向廣場，不會擋到店、釣點和海；走到大看板前面按「大看板」可以全螢幕看']] },
   { id:'u903', d:'11/26', items:[['⛵','阿默上岸時長椅都被坐走了，不會再站在船邊兩分鐘不動：他會回默穎號坐在船尾打遊戲機，阿穎也跟著上船坐船頭一起打']] },
   { id:'u902', d:'11/26', items:[['📺','潮汐大看板從釣具店屋頂搬下來，改成港邊廣場海邊沙灘上自己一座（兩根柱子撐著，背後就是海），不會再壓在店上面']] },
