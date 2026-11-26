@@ -9949,6 +9949,8 @@ function fzTex(pat, col, base){ const k = pat + col + base; let t = FZ.tex.get(k
   else if (pat === 'star'){ c.fillStyle = lt; for (let y = 8; y < 64; y += 16) for (let x = (y / 16 % 2) * 8 + 8; x < 64; x += 16){ c.beginPath(); for (let i = 0; i < 10; i++){ const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.2 : 5.2; c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } c.closePath(); c.fill(); } }   /* v404 阿木的新花樣：小星星（157_weekly_designs.sql） */
   else if (pat === 'herring'){ c.strokeStyle = lt; c.lineWidth = 3; c.lineCap = 'butt'; for (let i = 0; i < 4; i++){ const x0 = i * 16, d = i % 2 ? 1 : -1; c.save(); c.beginPath(); c.rect(x0, 0, 16, 64); c.clip(); for (let y = -16; y < 80; y += 8){ c.beginPath(); c.moveTo(x0, y); c.lineTo(x0 + 16, y + d * 8); c.stroke(); } c.restore(); }
     c.globalAlpha = 0.3; c.fillStyle = dk; for (let x = 0; x < 64; x += 16) c.fillRect(x, 0, 1, 64); c.globalAlpha = 1; }   /* v572 阿木的新花樣：人字紋（一排一排斜線左右交錯，198_weekly_designs.sql） */
+  else if (pat === 'diamond'){ c.fillStyle = lt; for (let y = 0; y < 64; y += 16) for (let x = 0; x < 64; x += 16) if ((x + y) / 16 % 2 === 0){ c.beginPath(); c.moveTo(x + 8, y); c.lineTo(x + 16, y + 8); c.lineTo(x + 8, y + 16); c.lineTo(x, y + 8); c.closePath(); c.fill(); }
+    c.strokeStyle = dk; c.globalAlpha = 0.4; c.lineWidth = 1; for (let k = -64; k < 128; k += 16){ c.beginPath(); c.moveTo(k, 0); c.lineTo(k + 64, 64); c.moveTo(k, 64); c.lineTo(k + 64, 0); c.stroke(); } c.globalAlpha = 1; }   /* v891 阿木的新花樣：菱格紋（一格一格斜斜的菱形、細細的斜線，250_weekly_designs.sql） */
   t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2); FZ.tex.set(k, t); return t; }
 // ---- 阿彩的畫（058_cai.sql）：畫架上一幅畫；背景照畫的風格用筆觸畫出來，魚是遊戲裡同一隻魚的模型，扁扁的貼在畫布上 ----
 function paintTex(d){ const k = d.pat + d.main; let t = Cai.tex.get(k); if (t) return t; const cv = document.createElement('canvas'); cv.width = 128; cv.height = 96; const c = cv.getContext('2d');
@@ -23449,6 +23451,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u891', d:'11/26', items:[['🪑','阿木做家具多了一種新花樣「菱格紋」：一格一格斜斜的菱形，之後做的家具有機會用上']] },
   { id:'u890', d:'11/26', items:[['🧸','床上可以放娃娃了：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻；躺下來會抱著第一隻，其他的會讓到旁邊','island']] },
   { id:'u889', d:'11/26', items:[['🧱','村民不會再卡進牆裡了：阿木站在木工坊的牆裡、大家聚在一起時排進牆或水裡的，都會自己站到旁邊空的地方']] },
   { id:'u888', d:'11/26', items:[['🚪','自己圍房間：用方塊或隔板圍一圈、留一個門，走到門旁邊按「名牌」掛上去。可以選「我的房間」（只有你能動裡面的東西）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名','island'], ['🔴','牆沒圍好時按「看缺口在哪」，缺口會閃紅色；走進房間會看到房間的名字','island']] },
