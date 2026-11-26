@@ -14285,6 +14285,7 @@ function petModel(kind, acc, v, shineLv){
   rigidMerge(g);   /* v290 同一塊會一起動的小零件合成一個，寵物從 30 幾個 draw call 變十個左右 */
   if (kind === 'cat' && Cat3.VARS[v || 'a'] && !window.__noCat3) cat3Attach(g, acc || 0, v || 'a');
   if (kind === 'pondturtle' && !window.__noTurtle3) turtle3Attach(g, acc || 0, v || 'a');
+  if (kind === 'shiba' && Dog3.VARS[v || 'a'] && !window.__noDog3) dog3Attach(g, acc || 0, v || 'a');
   return g;
 }
 /* v290 把一個模型裡「跟著同一個父節點一起動」的小零件合併（不同顏色用頂點顏色），動畫用的節點（userData 裡記著的）不動 */
@@ -14367,6 +14368,42 @@ function turtle3Tick(pt, dt, t, mv){ const C = pt.m.userData.tt3, b = C.b, R = C
   const H = b.head; H.position.copy(R.head); H.position.z -= C.rk * 0.2; H.position.y -= C.rk * 0.06; H.scale.setScalar(1 - C.rk * 0.15);
   H.rotation.x = Math.sin(ph * 2) * 0.06 * mv + (bask ? -0.3 : 0); H.rotation.y = mv < 0.1 ? Math.sin(t * 0.55 + C.seed) * 0.45 * (1 - C.rk) : 0;
   b.tail.rotation.y = Math.sin(t * 1.8 + C.seed) * 0.25; C.rig.rotation.z = Math.sin(ph) * 0.05 * mv; C.rig.position.y = (bask ? -0.012 : 0); }
+/* ===== v866 精美柴犬（作者 ChatGPT 三視圖＋Meshy，72 萬面減到 1 萬面：scratchpad qem.mjs）=====
+   跟精美貓一樣用程式切骨架（骨頭名字一樣，所以走路、坐下、趴下、看主人、搖尾巴都用 cat3Tick）；捲尾巴分四節。
+   花色：赤柴是原本的貼圖，芝麻柴、黑柴、白柴是把橘色那塊用程式重新上色（眼睛、鼻子、裏白不動） */
+const Dog3 = { V: 1, p: null, a: null, S: 0.48, VARS: { a: 1, b: 1, c: 1, d: 1 }, M: {} };
+const DOG3_B = [['pelvis', -1, 0, 0.45, -0.26], ['chest', 0, 0, 0.45, 0.08], ['neck', 1, 0, 0.56, 0.12], ['head', 2, 0, 0.70, 0.22], ['earL', 3, 0.105, 0.88, 0.24], ['earR', 3, -0.105, 0.88, 0.24],
+  ['FLu', 1, 0.11, 0.34, 0.167], ['FLl', 6, 0.11, 0.15, 0.17], ['FRu', 1, -0.13, 0.34, 0.19], ['FRl', 8, -0.13, 0.15, 0.19],
+  ['BLu', 0, 0.135, 0.36, -0.335], ['BLl', 10, 0.137, 0.15, -0.335], ['BRu', 0, -0.13, 0.36, -0.262], ['BRl', 12, -0.13, 0.15, -0.262],
+  ['t0', 0, 0, 0.60, -0.42], ['t1', 14, 0, 0.70, -0.46], ['t2', 15, 0, 0.76, -0.38], ['t3', 16, 0, 0.73, -0.27]];
+function dog3Mat(v){ if (!v || v === 'a' || !Dog3.VARS[v]) return Dog3.a.mat; if (Dog3.M[v]) return Dog3.M[v]; const m = Dog3.a.mat.clone(); Dog3.M[v] = m; new THREE.TextureLoader().load('models/pets/shiba_' + v + '.jpg?v=' + Dog3.V, tx => { tx.flipY = false; tx.colorSpace = THREE.SRGBColorSpace; tx.generateMipmaps = false; tx.minFilter = THREE.LinearFilter; tx.magFilter = THREE.LinearFilter; tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping; m.map = tx; m.needsUpdate = true; }); return m; }
+function dog3Load(){ if (!Dog3.p) Dog3.p = new GLTFLoader().loadAsync('models/pets/shiba.glb?v=' + Dog3.V).then(gl => { let hm = null; gl.scene.traverse(o => { if (o.isMesh && !hm) hm = o; }); const geo = hm.geometry, P = geo.attributes.position, n = P.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    const sm = (a, b, v) => { const u = clamp((v - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); }, ix = {}; DOG3_B.forEach((b, i) => { ix[b[0]] = i; });
+    for (let q = 0; q < n; q++){ const x = P.getX(q), y = P.getY(q), z = P.getZ(q), W = new Map(), add = (k, w) => { if (w > 0.001) W.set(ix[k], (W.get(ix[k]) || 0) + w); }; let rem = 1;
+      const tw = sm(0.55, 0.62, y) * sm(-0.17, -0.25, z);   /* 捲尾巴：在背上、屁股上面；照離哪一節近分 */
+      if (tw > 0){ const D = [0, 1, 2, 3].map(i => { const b = DOG3_B[ix['t' + i]]; return [i, 1 / (0.0004 + (x - b[2]) ** 2 + (y - b[3]) ** 2 + (z - b[4]) ** 2)]; }).sort((a, b) => b[1] - a[1]).slice(0, 2), ts = D[0][1] + D[1][1]; for (const [i, w] of D) add('t' + i, tw * w / ts); rem -= tw; }
+      const hw = rem * sm(0.52, 0.62, y) * sm(0.0, 0.10, z);   /* 頭和耳朵 */
+      if (hw > 0){ const ew = sm(0.82, 0.88, y) * sm(0.03, 0.07, Math.abs(x)); add(x > 0 ? 'earL' : 'earR', hw * ew); add('head', hw * (1 - ew)); rem -= hw; }
+      const nw = rem * 0.6 * sm(0.46, 0.54, y) * sm(-0.08, 0.02, z); if (nw > 0){ add('neck', nw); rem -= nw; }
+      if (rem > 0.001 && y < 0.42){ const front = z > -0.08, L = x > 0, nm = (front ? 'F' : 'B') + (L ? 'L' : 'R'), lz = DOG3_B[ix[nm + 'u']][4];   /* 腳 */
+        let lw = sm(0.42, 0.26, y); if (y > 0.26) lw *= sm(0.03, 0.07, Math.abs(x)) * sm(0.15, 0.07, Math.abs(z - lz)); lw *= rem;
+        if (lw > 0){ const ll = sm(0.22, 0.12, y); add(nm + 'l', lw * ll); add(nm + 'u', lw * (1 - ll)); rem -= lw; } }
+      if (rem > 0.001){ const cw = sm(-0.22, 0.02, z); add('chest', rem * cw); add('pelvis', rem * (1 - cw)); }
+      const A = [...W.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = A.reduce((s, e) => s + e[1], 0) || 1; A.forEach((e, k) => { si[q * 4 + k] = e[0]; sw[q * 4 + k] = e[1] / tot; }); }
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    const m = hm.material; if (m.map){ m.map.generateMipmaps = false; m.map.minFilter = THREE.LinearFilter; m.map.magFilter = THREE.LinearFilter; m.map.needsUpdate = true; } m.roughness = 0.88; m.metalness = 0;
+    Dog3.a = { geo, mat: m }; }).catch(e => { console.warn('精美柴犬載入失敗', e); Dog3.p = null; });
+  return Dog3.p; }
+function dog3Attach(g, acc, v){ const go = () => { if (!Dog3.a || g.userData.cat3) return; try { dog3Make(g, acc, v); } catch(e){ console.warn('dog3', e); } }; if (Dog3.a) go(); else { const p = dog3Load(); if (p) p.then(go); } }
+function dog3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.remove(old);
+  const body = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(Dog3.S); rig.position.y = 0.02; body.add(rig); g.add(body);
+  const bones = DOG3_B.map(b => { const o = new THREE.Bone(); o.name = 'd3' + b[0]; return o; }), b = {}, rest = {};
+  DOG3_B.forEach((d, i) => { const p = d[1] >= 0 ? DOG3_B[d[1]] : null; bones[i].position.set(d[2] - (p ? p[2] : 0), d[3] - (p ? p[3] : 0), d[4] - (p ? p[4] : 0)); (p ? bones[d[1]] : rig).add(bones[i]); b[d[0]] = bones[i]; rest[d[0]] = bones[i].position.clone(); });
+  const sm = new THREE.SkinnedMesh(Dog3.a.geo, dog3Mat(v)); sm.name = 'dog3'; sm.frustumCulled = false; sm.castShadow = true; sm.userData.noProxy = true; rig.add(sm);
+  g.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(bones));
+  if (acc >= 1){ const col = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.022, 8, 18), mat('#e8473a', 0.5)); col.rotation.x = 0.5; col.position.set(0, -0.02, 0.0); b.neck.add(col); const bell = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), mat('#ffd36a', 0.3)); bell.position.set(0, -0.1, 0.1); b.neck.add(bell); }
+  if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, 0.24, 0.0); hat.rotation.x = -0.12; b.head.add(hat); const hm2 = mat('#f2d48a', 0.7); const br = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.022, 16), hm2), cr = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.1, 0.1, 14), hm2), rb = new THREE.Mesh(new THREE.CylinderGeometry(0.102, 0.102, 0.024, 14), mat('#e8473a', 0.6)); cr.position.y = 0.06; rb.position.y = 0.024; hat.add(br, cr, rb); }
+  U.body = body; U.head = new THREE.Object3D(); U.tail = null; U.legs = [0, 1, 2, 3].map(() => new THREE.Object3D()); U.cat3 = { b, rest, sit: 0, lie: 0, idle: 0, hy: 0, hp: 0, ear: 0, earAt: 2 + Math.random() * 5, earS: 1, seed: Math.random() * 10, dog: 1 }; }
 function cat3Attach(g, acc, v){ const go = () => { if (!Cat3.a || g.userData.cat3) return; try { cat3Make(g, acc, v); } catch(e){ console.warn('cat3', e); } }; if (Cat3.a) go(); else { const p = cat3Load(); if (p) p.then(go); } }
 function cat3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.remove(old);
   const body = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(Cat3.S); rig.position.y = 0.022; body.add(rig); g.add(body);   /* 腳掌墊高一點點，不然站著的時候腳趾埋在地裡 */
@@ -22569,6 +22606,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u866', d:'11/26', items:[['🐕','柴犬換成精美的新模型：走路、坐下、趴下、看主人、捲尾巴搖搖搖；赤柴、芝麻柴、黑柴、白柴都有']] },
   { id:'u865', d:'11/26', items:[['👕','不會再突然跳出「阿萍的衣服：挑一套入門衣服」（那是舊人物的衣服，換新人物以後穿了也看不到）']] },
   { id:'u864', d:'11/26', items:[['💬','村民遇到村民會聊天了：散步經過會互相打招呼，停下來會聊兩句（看時間、天氣、在做什麼），聊天時會轉頭看對方']] },
   { id:'u863', d:'11/26', items:[['🚶','村民不會再瞬移：散步回來、上班回攤位會用走的走回去；阿默下船會從船邊跨上碼頭，出海前也先走到船旁邊等']] },
