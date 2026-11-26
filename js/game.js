@@ -9387,11 +9387,28 @@ function renderIsleBar(){
   bar.hidden = false; bar.innerHTML = ''; isleCtl(bar, false); }
 function isleRefresh(){ renderIsleBar(); try { if (!$('#sheet').hidden && (curTab === 'island' || curTab === 'isleapp')) renderTab(); } catch(e){} }
 /* v881 作者：「不對，我不要這個」→ 選「手機裡獨立一個小島 App」：手機多一個「⛵ 我的島」，跟造型一樣自己一頁；小島商店那頁不再塞這排按鈕 */
+/* v897 我的島 App 的分頁 */
+let IA_TAB = 'isle';
+function renderIsleSub(body, isleTab){
+  if (isleTab === 'home'){ renderHomeTab(body); return; }
+  if (isleTab === 'land'){ body.appendChild(landMapEl()); return; }
+  if (isleTab === 'visit'){
+    body.appendChild(el('p', 'sub', '按讚數最多的島。去參觀時可以幫他按讚（每天每座島一次）。'));
+    const ul = el('ul', 'shoplist'); body.appendChild(ul);
+    if (!Cloud.on){ ul.appendChild(el('li', '', '要連上雲端才能逛別人的島')); return; }
+    fetchIslands().then(list => { ul.innerHTML = ''; if (!list.length){ ul.appendChild(el('li', '', '還沒有人布置小島，當第一個吧！')); return; }
+      for (const p of list){ const li = el('li'); li.appendChild(el('span', 'dishic', '🏝️')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.nickname || '釣客'} 的島`)); d.appendChild(el('div', 'sub2', `❤️ ${p.likes || 0}・${cleanIsland(p.island).items.length} 件東西`)); li.appendChild(d);
+        const a = el('div', 'tacts'), b = el('button', 'tbtn', '參觀'); b.addEventListener('click', () => visitIsle(p.id, p.nickname || '釣客')); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } });
+    return;
+  }
+}
 function renderIsleApp(body){ const head = el('div', 'shophead'); head.innerHTML = `<b>⛵ 我的島</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  { const seg = el('div', 'seg'); [['isle', '⛵ 島上'], ['home', '🏠 我的家' + (Home.invites.length ? ' 🔴' : '')], ['visit', '🌏 逛別人的島'], ['land', '🌳 島的大小']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(IA_TAB === k)); b.addEventListener('click', () => { IA_TAB = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg); }
+  if (IA_TAB !== 'isle'){ renderIsleSub(body, IA_TAB); return; }
   if (!onIsle){ body.appendChild(el('p', 'sub', '你現在在村子裡。上了島，這裡會有建造、信箱、人氣排行、回村。'));
     const r = el('div', 'isleapp'); const go = el('button', 'tbtn', '🏝️ 前往我的小島'); go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); r.appendChild(go);
     if (Cloud.on){ const mb = el('button', 'tbtn ghost', IMail.unread ? `📮 信箱（${IMail.unread}）` : '📮 信箱'); mb.addEventListener('click', imailOpen); r.appendChild(mb); }
-    const tp = el('button', 'tbtn ghost', '🏆 本週人氣小島'); tp.addEventListener('click', isleTopShow); r.appendChild(tp); const vi = el('button', 'tbtn ghost', '🌏 逛別人的島'); vi.addEventListener('click', () => { isleTab = 'visit'; phoneGo('island'); }); r.appendChild(vi); body.appendChild(r); return; }
+    const tp = el('button', 'tbtn ghost', '🏆 本週人氣小島'); tp.addEventListener('click', isleTopShow); r.appendChild(tp); const vi = el('button', 'tbtn ghost', '🌏 逛別人的島'); vi.addEventListener('click', () => { IA_TAB = 'visit'; renderTab(); }); r.appendChild(vi); body.appendChild(r); return; }
   const r = el('div', 'isleapp on'); isleCtl(r, true); body.appendChild(r);
   if (onIsle.vc) body.appendChild(el('p', 'sub', `來訪：今天 ${onIsle.vc.today | 0} 人・總共 ${onIsle.vc.total | 0} 人`)); }
 function isleCtl(bar, phone){ if (!onIsle) return; const mine = onIsle.owner === myIdOrMe();
@@ -9846,7 +9863,7 @@ function isleBagN(t){ return Math.max(0, +(isleBagAll()[t]) || 0); }
 async function isleBagOp(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能用大箱子'); return false; }
   try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; const owner = args.p_owner || myIdOrMe(), mine = owner === myIdOrMe(), L = cleanIsland(data.island);
     if (mine) rec.island = L; if (onIsle && onIsle.owner === owner) onIsle.layout = L; rec.coins = Number(data.coins) || 0; if (data.bag){ if (!mine && onIsle && onIsle.owner === owner) onIsle.bag = data.bag; else rec.isleBag = data.bag; } saveRecLocal(); renderCoins(); afterHomeOp(L);
-    try { if (room && room.connected()) room.emit('isleup', { owner }).catch(() => {}); } catch(e){} if (!$('#sheet').hidden && curTab === 'island') renderTab(); return data; }
+    try { if (room && room.connected()) room.emit('isleup', { owner }).catch(() => {}); } catch(e){} if (!$('#sheet').hidden && (curTab === 'island' || curTab === 'isleapp')) renderTab(); return data; }
   catch(e){ toast(cloudErrMsg(e)); return false; } }
 async function isleStow(id){ const it = isleItems().find(i => i.id === id); if (!it) return; const r = await isleBagOp('isle_stow', { p_owner: onIsle ? onIsle.owner : null, p_id: id }); if (r){ Build.sel = null; renderBuildBar(); toast(isleChest() ? `${ISLE_ITEMS[it.t].name}收進大箱子了，大家都能拿出來擺` : `${ISLE_ITEMS[it.t].name}收起來了，在大箱子裡`); try { SFX.click(); } catch(e){} } }
 function removeIsleItem(id){
@@ -10166,7 +10183,7 @@ function adoptHome(d){
   for (const iv of Home.invites){ const k = iv.owner + iv.at; if (!Home.told[k]){ Home.told[k] = 1; ticker(`🏠 <b>${esc(iv.name || '朋友')}</b> 邀請你搬進他家！`); homeInviteCard(iv); } }
   for (const p of peers.values()) p.fisher.setName(peerName(p));
   $$('[data-tab="island"]').forEach(b => b.classList.toggle('hasdot', Home.invites.length > 0));
-  if (!$('#sheet').hidden && curTab === 'island') renderTab(); if (onIsle) renderIsleBar();
+  if (!$('#sheet').hidden && (curTab === 'island' || curTab === 'isleapp')) renderTab(); if (onIsle) renderIsleBar();
 }
 /* v245 有人邀請你搬進他家：畫面中間跳一張卡片（有聲音），可以直接回覆，不用自己去「小島」分頁找 */
 function homeInviteCard(iv){ try { let c = $('#invCard'); if (c) c.remove(); c = el('div', 'panel'); c.id = 'invCard';
@@ -10733,7 +10750,7 @@ var IsleP = { me:null, people:[], store:null, at:0, busy:false };
 const PERM_NAME = { owner:'👑 創建者', co:'🤝 共同島主', admin:'🛠️ 管理成員', member:'🙂 一般成員' }, PERM_RANK = { owner:4, co:3, admin:2, member:1 };
 async function loadIsleP(){ if (IsleP.busy || !Cloud.on) return; IsleP.busy = true; IsleP.at = Date.now();
   try { const [a, b] = await Promise.all([Cloud.sb.rpc('isle_people'), Cloud.sb.rpc('isle_storage')]); if (a.data){ IsleP.me = a.data.me; IsleP.people = a.data.people || []; } IsleP.store = b.data || []; } catch(e){}
-  IsleP.busy = false; if (!$('#sheet').hidden && curTab === 'island') renderTab(); try { if (Build.on) renderBuildBar(); } catch(e){} }   /* v246 權限讀到了，建造列馬上換成對的按鈕（之前要等很久，共同島主會先被當成一般成員，不能拆） */
+  IsleP.busy = false; if (!$('#sheet').hidden && (curTab === 'island' || curTab === 'isleapp')) renderTab(); try { if (Build.on) renderBuildBar(); } catch(e){} }   /* v246 權限讀到了，建造列馬上換成對的按鈕（之前要等很久，共同島主會先被當成一般成員，不能拆） */
 async function isleCall(fn, args, msg){ try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; if (data && data.tank) { adoptRow(data); buildTank(); } if (msg) flash(msg, 1.4); } catch(e){ toast(cloudErrMsg(e)); } IsleP.at = 0; Home.at = 0; loadIsleP(); }
 // ---- 島上的幫手（065_isle_npc.sql）：白天在碼頭釣魚、釣到的放進公共儲物箱；大家都離線也照樣工作 ----
 const HELPER_SIT = 0.4;
@@ -10741,7 +10758,7 @@ var IsleH = { owner:null, list:null, at:0, busy:false, fishers:[], hireName:'', 
 const HELPER_JOB = { fish:['🎣', '釣魚', '白天在碼頭釣魚，魚放進公共儲物箱。越熟練越常釣到稀有的魚。'], farm:['🌱', '顧田', '幫島上的田澆水，熟了就收，賣的錢給島主。越熟練一小時做越多株。'], land:['🪓', '開地', '用大家放進他錢包的錢，一格一格把樹林開成地，木頭給島主。越熟練開越快。'] };
 const starTxt = n => '★'.repeat(Math.max(1, Math.min(5, n || 1))) + '☆'.repeat(5 - Math.max(1, Math.min(5, n || 1)));
 const HELPER_TRAIT = { hard:'💪 勤勞', normal:'🙂 普通', sleepy:'😴 愛睡', chatty:'💬 愛聊天' };
-async function loadIsleH(owner){ if (IsleH.busy || !Cloud.on) return; IsleH.busy = true; IsleH.at = Date.now(); try { const { data } = await Cloud.sb.rpc('isle_helpers', { p_owner: owner || null }); IsleH.list = data || []; IsleH.owner = owner || null; } catch(e){} IsleH.busy = false; isleHelperSpawn(); if (!$('#sheet').hidden && curTab === 'island') renderTab(); }
+async function loadIsleH(owner){ if (IsleH.busy || !Cloud.on) return; IsleH.busy = true; IsleH.at = Date.now(); try { const { data } = await Cloud.sb.rpc('isle_helpers', { p_owner: owner || null }); IsleH.list = data || []; IsleH.owner = owner || null; } catch(e){} IsleH.busy = false; isleHelperSpawn(); if (!$('#sheet').hidden && (curTab === 'island' || curTab === 'isleapp')) renderTab(); }
 function isleHelperSpawn(){ for (const f of IsleH.fishers) f.dispose(); IsleH.fishers = []; if (!onIsle || !IsleH.list) return;
   IsleH.list.forEach((h, i) => { const f = new Fisher({ shirt:['#3fbf9d', '#ff9f43'][i % 2], hat:'#f6f0dd', name:`${h.name}・島上的幫手`, kind:'npc' }); const sd = i ? 1 : -1, x = ISLE.x + sd * 1.2, z = ISLE.z + ISLE.r + 4.85 + ISLE.dk;   /* v857 往碼頭尾巴挪，不要跟路燈、梯子、救生圈疊在一起 */   /* v384 幫手以前是「坐在空氣上」（屁股懸空）：改成坐在碼頭的邊邊、腳垂在外面，臉朝海 */
     f.pos.set(x, 0, z); f.baseY = 0.36;   /* v857 跟坐椅子一樣，屁股就在碼頭木板上（以前往下 0.4 是舊人物用的，換新人物後變成半個身體卡進木板） */ f.rot = sd * Math.PI / 2; f.helper = h; f.setGear({ hat:'hat_bucket', face: h.state === 'sleep' ? 'face_sleepy' : 'face_happy' }); f.sitting = false;   /* v877 作者：「他的屁股浮空」→ 坐著釣魚的舊姿勢跟新人物對不上（屁股懸在木板上面）。改成站在碼頭邊釣魚，跟玩家釣魚一樣；睡覺的時候坐在木板上（跟海灘上坐著一樣的動作） */
@@ -11897,22 +11914,12 @@ let isleTab = 'shop';
 function renderIsland(body){
   /* v884 上面只留一排：分頁＋金幣＋去小島／回村（以前標題、按鈕、分頁三排，商店被擠到下面） */
   const mine = onIsle && onIsle.owner === myIdOrMe(), top = el('div', 'ish-top'), seg = el('div', 'seg');
-  [['shop', '🛒 買東西'], ['home', '🏠 我的家' + (Home.invites.length ? ' 🔴' : '')], ['visit', '🌏 逛別人的島'], ['land', '🌳 島的大小']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(isleTab === k)); b.addEventListener('click', () => { isleTab = k; renderTab(); }); seg.appendChild(b); }); top.appendChild(seg);
+  /* v897 作者計畫第 1 步：「我的家／逛別人的島／島的大小」搬進手機的「⛵ 我的島」，小島商店只剩買東西 */
+  { const b = el('button', 'tbtn ghost', '⛵ 我的島' + (Home.invites.length ? ' 🔴' : '')); b.addEventListener('click', () => phoneGo('isleapp')); top.appendChild(b); }
   top.appendChild(el('span', 'coinpill', `🪙 ${rec.coins.toLocaleString()}`));
   if (!mine){ const go = el('button', 'tbtn', '🏝️ 去小島'); go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); top.appendChild(go); }
   if (onIsle){ const bk = el('button', 'tbtn ghost', '⛵ 回村'); bk.addEventListener('click', () => { closeSheet(); leaveIsle(); }); top.appendChild(bk); }
   body.appendChild(top);
-  if (isleTab === 'home'){ renderHomeTab(body); return; }
-  if (isleTab === 'land'){ body.appendChild(landMapEl()); return; }
-  if (isleTab === 'visit'){
-    body.appendChild(el('p', 'sub', '按讚數最多的島。去參觀時可以幫他按讚（每天每座島一次）。'));
-    const ul = el('ul', 'shoplist'); body.appendChild(ul);
-    if (!Cloud.on){ ul.appendChild(el('li', '', '要連上雲端才能逛別人的島')); return; }
-    fetchIslands().then(list => { ul.innerHTML = ''; if (!list.length){ ul.appendChild(el('li', '', '還沒有人布置小島，當第一個吧！')); return; }
-      for (const p of list){ const li = el('li'); li.appendChild(el('span', 'dishic', '🏝️')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.nickname || '釣客'} 的島`)); d.appendChild(el('div', 'sub2', `❤️ ${p.likes || 0}・${cleanIsland(p.island).items.length} 件東西`)); li.appendChild(d);
-        const a = el('div', 'tacts'), b = el('button', 'tbtn', '參觀'); b.addEventListener('click', () => visitIsle(p.id, p.nickname || '釣客')); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } });
-    return;
-  }
   const items = isleItems(), nh = items.filter(i => ISLE_ITEMS[i.t].house).length;   /* 住在別人家時就是那座島 */
   /* v675 作者：「方塊和隔板也都加進來這裡，然後要加分類」「把原本的東西拆掉，這裡也不清楚」→ 分類按鈕；方塊、隔板也在這裡買；多一個「島上的東西」看得到每一件，可以移動、拆掉 */
   const CATS = [['house', '房子'], ['pen', '寵物圍欄'], ['plant', '花草樹'], ['furn', '家具'], ['deco', '擺飾'], ['shape', '🏗️ 形狀'], ['block', '方塊'], ['panel', '隔板'], ['mine', `島上的東西（${items.length + Blk.b.length}）`], ['chest', '大箱子']];
@@ -22089,7 +22096,7 @@ function renderTab0(){
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
   const body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
-  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('ishopm', curTab === 'island' && isleTab === 'shop');   /* v884 小島商店跟造型頁一樣撐滿 */ $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
+  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('ishopm', curTab === 'island');   /* v884 小島商店跟造型頁一樣撐滿 */ $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
   { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
   try { phoneHdr(); } catch(e){}
   if (curTab === 'dex' && !LS.get('tide.guideDex', false)) LS.set('tide.guideDex', true);   /* v582 新手任務第 2 步 */
@@ -22436,7 +22443,7 @@ function renderTab0(){
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
       ...(BLI.off ? [] : [["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []]]),
-      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子整棟買，有八種大小：小屋 3,000 到三層樓的海景豪宅 42,000，買了就是那麼大，不用擴建、不用借錢。以前擴建過的房子大小不變，還沒還完的貸款照樣可以還。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "島上可以請 2 個幫手（一個 🪙1500）：🎣 釣魚（魚放進公共儲物箱）、🌱 顧田（澆水、收成，錢給島主）、🪓 開地（用你放進他錢包的錢開地，木頭給島主）。做久了會變熟練，★ 越多做越好。", "房子可以掛「我的家」：進房子按「擺家具」→「🏠 當我的家」。一個人一棟，掛了以後裡面的家具只有你能動，門口會立一塊名牌。沒掛的房子是大家的。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "用方塊或隔板圍一圈（至少 2 塊高），留一個「門」，走到門旁邊按「名牌」就能掛上去變成一間房間。", "名牌可以選「我的房間」（裡面的東西和牆只有你能動，每人一間）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名（大家的房間）。沒圍好的話按「看缺口在哪」，缺口會閃紅色。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
+      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「⛵ 我的島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子整棟買，有八種大小：小屋 3,000 到三層樓的海景豪宅 42,000，買了就是那麼大，不用擴建、不用借錢。以前擴建過的房子大小不變，還沒還完的貸款照樣可以還。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "島上可以請 2 個幫手（一個 🪙1500）：🎣 釣魚（魚放進公共儲物箱）、🌱 顧田（澆水、收成，錢給島主）、🪓 開地（用你放進他錢包的錢開地，木頭給島主）。做久了會變熟練，★ 越多做越好。", "房子可以掛「我的家」：進房子按「擺家具」→「🏠 當我的家」。一個人一棟，掛了以後裡面的家具只有你能動，門口會立一塊名牌。沒掛的房子是大家的。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "用方塊或隔板圍一圈（至少 2 塊高），留一個「門」，走到門旁邊按「名牌」就能掛上去變成一間房間。", "名牌可以選「我的房間」（裡面的東西和牆只有你能動，每人一間）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名（大家的房間）。沒圍好的話按「看缺口在哪」，缺口會閃紅色。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "手機「⛵ 我的島」裡有「🏠 我的家」「🌏 逛別人的島」「🌳 島的大小」；去參觀別人的島，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大 30×18、三層樓。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
         ["端給客人拿 1.5 倍，每天最多 60 位。每天最多做 150 道。", "跟美雲姨買是料理價值的 2.5 倍，一天最多 6 道。吧台點餐 45～225 金幣。"]],
@@ -23643,6 +23650,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u898', d:'11/26', items:[['⛵','「我的家」「逛別人的島」「島的大小」搬進手機的「⛵ 我的島」了；小島商店只剩買東西，畫面比較乾淨','isleapp']] },
   { id:'u897', d:'11/26', items:[['🏪','釣具店、阿木木工坊、阿彩畫廊可以走進去逛了：牆上掛滿釣竿、地上擺著阿木的家具、牆上掛著阿彩的畫；走到櫃台就能買']] },
   { id:'u896', d:'11/26', items:[['🧑‍🌾','島上的幫手可以做三種工作：🎣 釣魚、🌱 顧田（澆水、收成，賣的錢給島主）、🪓 開地（用放進他錢包的錢一格一格開地）。做久了會變熟練，最多 ★★★★★，越熟練釣到越多稀有魚、顧越多田、開越快','island'], ['🪓','在島上看得到幫手做事：顧田的在田裡走來走去澆水，開地的站在樹林邊砍樹。住在島上的人都可以請幫手、叫他換工作','island']] },
   { id:'u895', d:'11/26', items:[['🎣','釣具店的釣竿、我的寵物、寵物市集都換成 3D 小圖了，不再只是一塊顏色或符號']] },
