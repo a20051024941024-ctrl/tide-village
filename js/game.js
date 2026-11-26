@@ -655,7 +655,7 @@ const EMOTE_DEF = {
   thumbs:{ name:'比讚', anim:'thumbs', dur:2.0, buy:300 }, point:{ name:'指前面', anim:'point', dur:2.0, buy:300 }, pickup:{ name:'撿東西', anim:'pickup', dur:1.3, buy:300 }, throw:{ name:'丟東西', anim:'throw', dur:1.35, buy:300 },
   shrug:{ name:'聳肩', anim:'shrug', dur:1.6, buy:500 }, yawn:{ name:'打哈欠', anim:'yawn', dur:2.4, buy:500, bub:'🥱' }, stretch:{ name:'伸懶腰', anim:'stretch', dur:2.6, buy:500 }, spin:{ name:'轉圈圈', anim:'spin', dur:1.3, buy:800 }, hop:{ name:'開心跳', anim:'hop', dur:1.8, buy:800, bub:'🥳' } };
 function emoteOwned(k){ const D = EMOTE_DEF[k]; return !D || !D.buy || (rec.owned || []).includes('em_' + k); }
-const EMOTE_ORDER = ['wave', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'angry', 'scared', 'sitdown', 'crosssit', 'leansit', 'sleep', 'pushups', 'situps', 'playdead', 'wow', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin', 'hop'];
+const EMOTE_ORDER = ['wave', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'angry', 'scared', 'sitdown', 'sleep', 'pushups', 'situps', 'playdead', 'wow', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin', 'hop'];
 const RARITY_ORDER = { '常見':0, '稀有':1, '傳說':2 };
 
 /* ---- Quaternius「Animated Fish Pack」(CC0) 的三種魚形，依魚種重新上色 ----
@@ -2247,7 +2247,8 @@ const LW_DECK = 1.1;
 /* ---- 南方沙灘的遊客（沙灘、陽傘是 buildBeach 本來就有的） ---- */
 const LW_BEACH = { c:[40, -6],
   /* v605 作者：「那四個要加，就必須讓他們有回家的動畫，而且也不要同時回去，然後要有名字」→ 每個人有名字和自己的長相（眼睛、髮型、衣服，NPC_STYLE），來和走的時間錯開（i×0.45 遊戲小時≈40 秒），下雨也一個一個收東西走 */
-  P:[ { k:'sun', towel:0, name:'小葵・觀光客', look:['#f5a5d8', '#ffffff'] }, { k:'sun', towel:2, name:'阿哲・觀光客', look:['#7db7d7', '#ffd36a'] },
+  /* v909 作者：「這裡白天會有兩個 NPC 也不要了」→ 拿掉坐在海灘巾上曬太陽的小葵、阿哲（海灘巾和陽傘留著） */
+  P:[
       { k:'swim', x:49.6, z:-11.5, name:'美美・觀光客', look:['#f6a96b', '#3fbf9d'], ring:'#ff6a5a' }, { k:'swim', x:50.2, z:-4.5, name:'大頭・觀光客', look:['#9fc7a8', '#f17b6d'], ring:'#ffd34a' },
     ] };   /* v604 作者：「打排球的兩個 NPC 如果動作還是很假就不要了」→ 拿掉（只有站著把球丟來丟去，沒有真的打排球的動作） */
 /* v585 曬太陽的人坐在海灘巾上（跟 buildBeach 的陽傘位置一樣算） */
@@ -15453,10 +15454,10 @@ const Comp = { at: Date.now(), busy: false };
 async function petCompanyTick(){ const pm = petMine(); if (!pm || !me.pet || !Cloud.on || !Cloud.sb || Comp.busy) return; if (Date.now() - Comp.at < 300000) return;
   if (Math.hypot(me.pet.pos.x - me.pos.x, me.pet.pos.z - me.pos.z) > 12) return; Comp.busy = true; Comp.at = Date.now();
   try { const { data } = await Cloud.sb.rpc('pet_company', { p_id: pm.id }); if (data && data.got){ pm.love = data.love; if (Zen.on) Zen.love = (Zen.love || 0) + 1; else if (Math.random() < 0.5) me.pet && toast(`🐾 ${esc(pm.name || '寵物')}陪著你走，親密度 +1（${data.love}）`); } } catch(e){} Comp.busy = false; }
-const ZEN_POSE = () => Zen.pose || 'crosssit';
+const ZEN_POSE = () => Zen.pose || 'sitdown';
 const Zen = { on: false, t0: 0, cam: null, next: 0, love: 0, btn: null };
 function zenStart(){ closeEmotePanel(); if (Zen.on) return; if (F.phase !== 'idle' || myBoat || Dive.on || Sub.on){ toast('先把手上的事做完再放空吧'); return; }
-  Zen.on = true; Zen.pose = 'crosssit'; Zen.swap = now() + 40; Zen.t0 = performance.now(); Zen.love = 0; Zen.cam = { dist: cam.dist, pitch: cam.pitch }; Zen.next = now() + 3;
+  Zen.on = true; Zen.pose = 'sitdown'; Zen.swap = now() + 40; Zen.t0 = performance.now(); Zen.love = 0; Zen.cam = { dist: cam.dist, pitch: cam.pitch }; Zen.next = now() + 3;
   if (!mySeat) emote(ZEN_POSE());
   document.body.classList.add('zen'); const b = Zen.btn = el('button', 'zenbtn', '🌙 ' + i18nT('放空中…點一下回來')); b.addEventListener('click', zenStop); document.body.appendChild(b);
   Zen.next = now() + 1; }
@@ -15465,7 +15466,7 @@ function zenStop(){ if (!Zen.on) return; Zen.on = false; document.body.classList
   if (min >= 1) toast(`🌙 放空了 ${min} 分鐘${pm ? `，${esc(pm.name || '寵物')}一直在旁邊陪著你${Zen.love ? `（親密度 +${Zen.love}）` : ''}` : ''}`); }
 function zenTick(dt){ if (!Zen.on) return; if (Math.abs(joy.x) > 0.2 || Math.abs(joy.z) > 0.2 || F.phase !== 'idle' || Object.values(keys).some(Boolean)){ zenStop(); return; }
   cam.dist += (9 - cam.dist) * Math.min(1, dt * 0.25); cam.pitch += (0.34 - cam.pitch) * Math.min(1, dt * 0.25); cam.yaw += dt * 0.035;
-  if (!mySeat && now() > (Zen.swap || 0)){ Zen.swap = now() + 40; const L = ['crosssit', 'leansit', 'sitdown']; Zen.pose = L[(L.indexOf(Zen.pose) + 1) % L.length] || 'crosssit'; me.emote = null; Zen.next = 0; }   /* 放空時每 40 秒換一個坐姿 */
+  if (!mySeat && now() > (Zen.swap || 0)){ Zen.swap = now() + 40; const L = ['sitdown'];   /* v909 作者：「這個會卡住」「看起來像折到」→ 自己轉骨頭擺的兩個坐姿先收起來，之後用真的動作檔再做 */ Zen.pose = L[(L.indexOf(Zen.pose) + 1) % L.length] || 'crosssit'; me.emote = null; Zen.next = 0; }   /* 放空時每 40 秒換一個坐姿 */
   if (!mySeat && (!me.emote || me.emote.k !== ZEN_POSE()) && now() > Zen.next){ Zen.next = now() + 1.5; emote(ZEN_POSE()); } }   /* 坐著放空；寵物自己在旁邊玩 */
 function petAct(k){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held && me.held.pet) return;
   if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'rest') toast(`跟${esc(pt.name || '寵物')}一起坐著休息，走開就結束`); } }
@@ -18168,7 +18169,7 @@ function bbShow(i){ BB.i = (i + BB_LIST.length) % BB_LIST.length; const it = BB_
   bbBlob(it.k).then(u => { if (BB_LIST[BB.i] !== it) return; if (!u){ BB.card = bbCardTex(it); BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; return; }
     if (!BB.vid){ const v = BB.vid = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.crossOrigin = 'anonymous'; v.addEventListener('ended', () => bbShow(BB.i + 1)); BB.tex = new THREE.VideoTexture(v); BB.tex.colorSpace = THREE.SRGBColorSpace; BB.tex.minFilter = THREE.LinearFilter; BB.tex.generateMipmaps = false; try { BB.tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); } catch(e){} }
     BB.vid.src = u; BB.vid.currentTime = 0; const pr = BB.vid.play(); if (pr && pr.catch) pr.catch(() => {}); BB.scr.material.map = BB.tex; BB.scr.material.needsUpdate = true; }); }
-function bbTick(dt){ if (onIsle || Dive.on || House.on){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
+function bbTick(dt){ if (/nobb/.test(location.hash)) return; if (onIsle || Dive.on || House.on){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
   const d = Math.hypot(me.pos.x - BB_AT.cx, me.pos.z - BB_AT.cz); if (d > 75){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
   if (!BB.g){ bbBuild(); if (!BB.g) return; }
   if (!BB.on){ BB.on = true; bbShow(BB.i); } BB.t += dt; const it = BB_LIST[BB.i]; if ((it.soon || !it.k) && BB.t > 4.5) bbShow(BB.i + 1); else if (!it.soon && BB.t > 14 && (!BB.vid || BB.vid.paused)) bbShow(BB.i + 1);
@@ -21155,6 +21156,21 @@ function renderSalon(body){
 /* v290 遠一點的角色：身體那幾塊（皮膚、衣服、褲子、鞋子…）合成一塊會動的模型，5 個 draw call 變 1 個；衣服顏色或換裝變了就重做 */
 function clodMat(T){ const m = new THREE.MeshStandardMaterial({ vertexColors: true, color: '#ffffff', roughness: T.roughness == null ? 0.8 : T.roughness, metalness: 0 });
   m.onBeforeCompile = sh => { sh.vertexShader = 'attribute float emi; varying float vEmi;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vEmi = emi;'); sh.fragmentShader = 'varying float vEmi;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * vEmi;'); }; m.customProgramCacheKey = () => 'clodEmi'; return m; }
+/* v909 作者：「你就換成簡單版的」→ 量過：每個新人物遠遠的還要畫 2 萬多個三角形（合併後的身體＋頭髮＋臉）。
+   26～44 公尺（畫質越低越近）改成一個幾百個三角形的小人偶：顏色照他的頭髮、上衣、褲子、鞋子，遠遠看差不多。 */
+const IMP = { mat: new Map(), geo: null };
+function impMat(c){ c = c || '#888888'; let m = IMP.mat.get(c); if (!m){ m = new THREE.MeshLambertMaterial({ color: c }); IMP.mat.set(c, m); } return m; }
+function clodImp(f){ if (f._imp) return f._imp; if (/noimp/.test(location.hash)) return null; const a = f.av, k = a.k3, C = (k.cfg && k.cfg.c) || {}, cfg = k.cfg || {};
+  if (!IMP.geo) IMP.geo = { box: new THREE.BoxGeometry(1, 1, 1), sph: new THREE.SphereGeometry(1, 10, 8) };
+  const pos = a.g.position.y, bb = new THREE.Box3().setFromObject(a.g), H = Math.max(1.2, Math.min(3, bb.max.y - pos)), S = H / 2.3, g = new THREE.Group(); g.userData.imp = true; g.scale.setScalar(S);
+  const skin = '#f6d3bf', hair = C.hair || '#3a2c28', top = C.top || (cfg.top === 'maid' ? '#2b2b2e' : '#f4f4f4'), bot = C.bot || '#2a3550', shoe = C.shoes || '#f0f0f0';
+  const add = (geo, col, sx, sy, sz, x, y, z, sh) => { const m = new THREE.Mesh(geo, impMat(col)); m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.castShadow = !!sh; m.userData.imp = true; g.add(m); return m; };
+  add(IMP.geo.box, shoe, 0.2, 0.12, 0.3, -0.12, 0.06, 0.03); add(IMP.geo.box, shoe, 0.2, 0.12, 0.3, 0.12, 0.06, 0.03);
+  add(IMP.geo.box, bot, 0.42, 0.5, 0.26, 0, 0.36, 0, true); add(IMP.geo.box, top, 0.52, 0.55, 0.3, 0, 0.86, 0, true);
+  add(IMP.geo.box, skin, 0.13, 0.48, 0.14, -0.34, 0.86, 0); add(IMP.geo.box, skin, 0.13, 0.48, 0.14, 0.34, 0.86, 0);
+  add(IMP.geo.sph, skin, 0.5, 0.48, 0.46, 0, 1.6, 0, true); add(IMP.geo.sph, hair, 0.54, 0.44, 0.5, 0, 1.72, -0.05); add(IMP.geo.sph, '#2a1c1c', 0.07, 0.1, 0.04, -0.17, 1.56, 0.44); add(IMP.geo.sph, '#2a1c1c', 0.07, 0.1, 0.04, 0.17, 1.56, 0.44);   /* 兩顆小眼睛 */
+  if (/long|twin|braid|straight|lowpony|curly/.test(cfg.hair || '')) add(IMP.geo.box, hair, 0.8, 0.85, 0.22, 0, 1.25, -0.28);
+  a.g.add(g); g.traverse(o => o.layers.set(CLOD.L)); f._imp = g; return g; }
 function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinnedMesh && o !== f._px && !o.userData.noProxy) P.push(o); }); if (!P.length) return null;
   const vis = o => { for (let q = o; q && q !== a.g; q = q.parent) if (!q.visible) return false; return true; };
   { const v0 = P.filter(vis); if (v0.length) P.splice(0, P.length, ...v0, ...P.filter(o => !vis(o))); }   /* v727 新人物：骨架照看得到的那一副比（舊人物藏起來的那幾塊不算） */
@@ -21185,8 +21201,9 @@ function clodTick(){ const cp = camera.position;
   for (const f of CLOD.all){ const g = f.av && f.av.g; if (!g || !g.parent){ if (g && !g.parent && f !== me) CLOD.all.delete(f); continue; }
     const d = Math.hypot(g.position.x - me.pos.x, g.position.z - me.pos.z) / CLOD_K[Quality.tier], lvl = f === me ? 0 : d > 44 ? 3 : d > 26 ? 2 : d > 11 ? 1 : 0;   /* v320 玩家說走路卡：俯瞰視角的鏡頭本來就離角色十幾公尺，以前從鏡頭算距離，廣場上的人全部都是完整版。改成從自己的角色算，低／中畫質提早換簡化版 */   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
     if (lvl === f._lod && frameNo - (f._lodAt || 0) < 120) continue; f._lod = lvl; f._lodAt = frameNo;
-    const px = lvl === 1 || lvl === 2 ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
-    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px) return; if (px && o.isSkinnedMesh && !o.userData.noProxy){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
+    const imp = lvl === 2 && f.av.k3 && f !== me ? clodImp(f) : null; if (f._imp) f._imp.traverse(o => o.layers.set(imp ? 0 : CLOD.L));   /* v909 遠的新人物換成簡單版 */
+    const px = !imp && (lvl === 1 || lvl === 2) ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
+    g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px || o.userData.imp) return; if (imp){ o.layers.set(CLOD.L); return; } if (px && o.isSkinnedMesh && !o.userData.noProxy){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
       if ((lvl === 1 || lvl === 2) && !o.isSkinnedMesh && !o.userData._face){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < (lvl === 2 ? 0.12 : 0.09); }
       if (lvl === 3 || small) o.layers.set(CLOD.L); else o.layers.set(0);
       /* v346 影子：身體一定有；頭、頭髮這種大塊的近處才有；小配件（眼睛、扣子、小飾品）不投影子，26 公尺外只剩身體的影子 */
@@ -23806,6 +23823,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u910', d:'11/27', items:[['⚡','比較不卡：離你 26 公尺以上的人物換成簡單版的小人偶（顏色照他的頭髮、衣服、褲子），走近就變回原本的樣子；港邊廣場要畫的三角形少了兩成'], ['🏖️','南方沙灘白天坐在海灘巾上曬太陽的兩個觀光客拿掉了（海灘巾和陽傘留著）'], ['🧘','「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上']] },
   { id:'u909', d:'11/27', items:[['🎣','退潮時阿穎（和其他村民）不會再一直重複拋竿：前面沒水會轉向有水的地方甩，真的都沒水就收竿等潮水回來'], ['🐠','潛水艇、潛水時魚不會再突然冒出來：遠近改成跟海裡的霧一樣']] },
   { id:'u908', d:'11/26', items:[['⚡','比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）']] },
   { id:'u907', d:'11/26', items:[['✨','開心時的星星眼改好看了：不再整顆變黃色星星，保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光']] },

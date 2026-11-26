@@ -9279,5 +9279,8 @@
  "盤腿坐": "Cross-legged",
  "往後撐著坐": "Lean back",
  "開心時的星星眼改好看了：不再整顆變黃色星星，保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光": "Happy star eyes look nicer: instead of turning into solid yellow stars, your own eyes stay with two little sparkles in them.",
- "比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）": "Smoother: the village is split into areas, and areas out of view or too far are skipped; on highest quality, far-away villagers are skipped too (closer on iPhone)."
+ "比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）": "Smoother: the village is split into areas, and areas out of view or too far are skipped; on highest quality, far-away villagers are skipped too (closer on iPhone).",
+ "比較不卡：離你 26 公尺以上的人物換成簡單版的小人偶（顏色照他的頭髮、衣服、褲子），走近就變回原本的樣子；港邊廣場要畫的三角形少了兩成": "Smoother: characters more than 26 m away become simple little figures (colored like their hair, top and pants) and turn back when you get close; about 20% fewer triangles at Harbor Plaza.",
+ "南方沙灘白天坐在海灘巾上曬太陽的兩個觀光客拿掉了（海灘巾和陽傘留著）": "The two tourists sunbathing on towels at South Beach in the daytime are removed (towels and umbrellas stay).",
+ "「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上": "\"Cross-legged\" and \"Lean back\" looked stuck and bent, so they are put away for now and will return with real animations; Zone out uses the normal floor sit."
 }
