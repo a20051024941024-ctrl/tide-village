@@ -462,7 +462,7 @@ const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector
 // 私人小島：在海上的另一個位置（主島在 -75～75 之間），每個人的島都在同一個地方，只會看到同一座島上的人
 const ISLE = { x:150, z:0, r:24, y:0.32 };
 /* v852 🏘️ 建地島：西邊公寓外的海上（見 blBuild）。一格建地 20×20 公尺、格子中間 4 公尺的路；木橋從村子西岸（z 43）接到島的入口 */
-const BLI = { x:-72, z:104, half:39, y:0.5, lot:20, gap:4, oz:4, bx:-47, bz0:42.6, bz1:65.8, by:0.45 };   /* oz：建地往北挪，南邊留入口廣場。v853 作者：「島太近了」「路接不好」「完全過不去」→ 島往外移到離珊瑚礁 20 公尺外；橋接在住宅區中間那條步道（x -47）的盡頭，以前接在阿春家旁邊被房子擋住 */
+const BLI = { x:-72, z:104, half:39, y:0.5, lot:20, gap:4, oz:4, bx:-47, bz0:42.6, bz1:65.8, by:0.45, off:true };   /* v861 作者：「先收起來」→ off:true 時島、橋、傳送點、說明都不出現（程式和伺服器資料都留著，改回 false 就回來） */   /* oz：建地往北挪，南邊留入口廣場。v853 作者：「島太近了」「路接不好」「完全過不去」→ 島往外移到離珊瑚礁 20 公尺外；橋接在住宅區中間那條步道（x -47）的盡頭，以前接在阿春家旁邊被房子擋住 */
 const BLS = { street:1, n:1, used:{}, list:null, at:0, loading:false, mine:null, help:[], views:{}, built:false, near:false, g:null, bp:null, admin:null };
 const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer', 'g_printflag'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
 const GARDEN = { x:150 - 24 - 5.75, z:0, hx:6.75, hz:5, px:150 - 24 - 4.5, sx:150 - 24 - 11.3 };   /* px：田的中心；sx：種子攤 */   /* v370 小島西邊的菜園平台 */
@@ -599,7 +599,7 @@ const BOAT_DOCKS = [
 ];
 // 快速傳送點（站的位置與面向）
 const TRAVEL = [
-  { id:'lots', label:'建地島', x:BLI.bx, z:BLI.z - BLI.half + 4.5, rot:0, color:'#c9a46a' },
+  ...(BLI.off ? [] : [{ id:'lots', label:'建地島', x:BLI.bx, z:BLI.z - BLI.half + 4.5, rot:0, color:'#c9a46a' }]),
   { id:'plaza', label:'潮汐廣場', x:4, z:9.6, rot:Math.PI, color:PALETTE.gold },
   { id:'harborsq', label:'港邊廣場', x:HARBOR_SQ[0], z:HARBOR_SQ[1] + 4, rot:Math.PI, color:'#cfc6b4' },
   ...SPOTS.filter(s => s.id !== 'isle' && !s.hidden).map(s => s.id === 'shrimp' ? { id:s.id, label:'釣蝦場門口', x:-1, z:-6.4, rot:Math.PI, color:s.color } : ({ id:s.id, label:s.label, x:s.pos.x, z:s.pos.z, rot:Math.atan2(s.dir.x, s.dir.y), color:s.color })),   /* 釣蝦場在村子裡，傳送到門口（SHRIMP_DOOR 往外 2.6） */
@@ -1329,7 +1329,7 @@ scene.add(sun, sun.target);
 /* ================= WORLD ================= */
 const colliders = []; // {t:'b',x,z,hw,hd} | {t:'c',x,z,r}
 const decks = [];     // {x0,x1,z0,z1,y}
-for (let k = 0; k < 8; k++) decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + k * 0.5, z1: BLI.bz0 + (k + 1) * 0.5, y: BLI.by * (k + 1) / 9 }); decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + 4, z1: BLI.bz1 + 1, y: BLI.by });   /* v852 往建地島的木橋；v853 岸邊那頭 4 公尺慢慢斜上去（一片一片 5 公分），不再是兩個台階 */
+if (!BLI.off){ for (let k = 0; k < 8; k++) decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + k * 0.5, z1: BLI.bz0 + (k + 1) * 0.5, y: BLI.by * (k + 1) / 9 }); decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + 4, z1: BLI.bz1 + 1, y: BLI.by }); }   /* v852 往建地島的木橋；v853 岸邊那頭 4 公尺慢慢斜上去（一片一片 5 公分），不再是兩個台階 */
 const waters = [];    // {x0,x1,z0,z1}
 const animWater = [];
 const lanterns = [];
@@ -7957,7 +7957,7 @@ function updateJumpers(dt, t){
    ・蓋東西用小島同一套方塊工具（Blk），只是原點換成建地中心、範圍和上限不同。
    ・3 個人檢舉就先藏起來；管理員可以清空。 */
 function blC(i){ const ix = i % 3, jz = Math.floor(i / 3), s = BLI.lot + BLI.gap; return [BLI.x + (ix - 1) * s, BLI.z + BLI.oz + (jz - 1) * s]; }
-function blOn(x, z, pad){ const h = BLI.half + (pad || 0), r = 6, dx = Math.abs(x - BLI.x), dz = Math.abs(z - BLI.z); if (dx > h || dz > h) return false; if (dx > h - r && dz > h - r) return Math.hypot(dx - (h - r), dz - (h - r)) <= r; return true; }
+function blOn(x, z, pad){ if (BLI.off) return false; const h = BLI.half + (pad || 0), r = 6, dx = Math.abs(x - BLI.x), dz = Math.abs(z - BLI.z); if (dx > h || dz > h) return false; if (dx > h - r && dz > h - r) return Math.hypot(dx - (h - r), dz - (h - r)) <= r; return true; }
 function blH(x, z){ return blOn(x, z, 0.6) ? BLI.y : null; }
 function blRow(i){ return (BLS.list || []).find(r => r.lot === i) || { lot: i, owner: null, name: null, b: [], sign: '', mem: [] }; }
 function blHere(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } if (!blOn(x, z)) return null; for (let i = 0; i < 9; i++){ const [cx, cz] = blC(i); if (Math.abs(x - cx) <= BLI.lot / 2 && Math.abs(z - cz) <= BLI.lot / 2) return { i, cx, cz, L: blRow(i) }; } return null; }
@@ -8019,7 +8019,7 @@ async function blLoad(force){ if (BLS.loading || !Cloud.on || !Cloud.sb) return;
     for (let i = 0; i < 9; i++) if (!(Blk.lot && Blk.lot.i === i)) blDrawLot(i); renderTabIf('lot'); }
   catch(e){ BLS.err = cloudErrMsg(e); BLS.at = performance.now(); } BLS.loading = false; }
 function blSetStreet(n){ n = Math.max(1, Math.min(BLS.n || 1, n | 0)); if (Blk.lot) blBuildStop(); BLS.street = n; BLS.list = null; if (BLS.gateLab) blLabelSet(BLS.gateLab, '🏘️ 建地島・' + blStName(n)); for (let i = 0; i < 9; i++) blDrawLot(i); blLoad(true); }
-function updateBuildLots(){ const d = Math.hypot(me.pos.x - BLI.x, me.pos.z - BLI.z), near = d < BLI.half + 60;
+function updateBuildLots(){ if (BLI.off) return; const d = Math.hypot(me.pos.x - BLI.x, me.pos.z - BLI.z), near = d < BLI.half + 60;
   if (near && !BLS.built) blBuild(); if (!BLS.built) return;
   if (near !== BLS.near){ BLS.near = near; BLS.g.visible = near; for (const V of Object.values(BLS.views)){ if (near){ for (const c of V.cols) if (!colliders.includes(c)) colliders.push(c); } else for (const c of V.cols){ const k = colliders.indexOf(c); if (k >= 0) colliders.splice(k, 1); } } }
   if (near) blLoad(false);
@@ -21241,7 +21241,7 @@ function renderTab0(){
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
-      ["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []],
+      ...(BLI.off ? [] : [["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []]]),
       ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
@@ -22449,6 +22449,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u861', d:'11/26', items:[['🏘️','建地島先收起來，等之後準備好再開放（已經蓋的東西都還留著）']] },
   { id:'u860', d:'11/26', items:[['👕','造型改成用金幣買：臉免費、送一套基本款，其他點了先試穿，喜歡再按「全部買下」','closet'],['🎁','你現在身上那一套直接送你，不用重買']] },
   { id:'u859', d:'11/26', items:[['🍲','食堂裡的美雲姨和客人，只有走進食堂才看得到（以前從外面看會像站在海上）'], ['🪝','小島碼頭上的幫手改成好好坐在碼頭邊、腳垂在水上，不會再跟路燈、救生圈疊在一起']] },
   { id:'u858', d:'11/26', items:[['🐟','翡翠河鱸、銀鱗鯽、朱紅錦鯉換成真實模型後，釣到的卡片、圖鑑小圖也換成新的樣子了','dex']] },
