@@ -643,19 +643,19 @@ const TRAVEL = [
 ];
 const SHIRTS = ['#f17b6d','#2f89c7','#3fbf9d','#ffd36a','#9b7bff','#f5a5d8','#ff9f43','#5b6b7a'];
 const HATS = ['#ffd36a','#f6f0dd','#18334a','#f17b6d','#3fbf9d','#8c5d3b'];
-const EMOTES = { wave:'👋', fish:'🐟', wow:'😮', cheer:'🎉', dance:'💃', clap:'👏', bow:'🙇', laugh:'😂', angry:'😠', scared:'😱', sitdown:'🧘', sleep:'😴', pushups:'💪', situps:'🏋️', playdead:'💀', thumbs:'👍', point:'👉', pickup:'🫳', throw:'🤾', shrug:'🤷', yawn:'🥱', stretch:'🙆', spin:'🌀', hop:'🥳' };
+const EMOTES = { crosssit:'🧘‍♂️', leansit:'🏖️', wave:'👋', fish:'🐟', wow:'😮', cheer:'🎉', dance:'💃', clap:'👏', bow:'🙇', laugh:'😂', angry:'😠', scared:'😱', sitdown:'🧘', sleep:'😴', pushups:'💪', situps:'🏋️', playdead:'💀', thumbs:'👍', point:'👉', pickup:'🫳', throw:'🤾', shrug:'🤷', yawn:'🥱', stretch:'🙆', spin:'🌀', hop:'🥳' };
 // 表情動作（2026-11-05）：角色真的會做動作（KayKit 動作＋自己做的跳舞、鞠躬、拍手、跺腳、大笑）；有 loop 的會一直做到你走開
 const EMOTE_DEF = {
   farmplant:{ name:'種東西', anim:'pickup', dur:1.3 }, farmwater:{ name:'澆水', anim:'interact', dur:2.0 },
   wave:{ name:'揮手', anim:'wave', dur:2.1 }, wow:{ name:'驚嘆', anim:'surprised', dur:1.1 }, cheer:{ name:'歡呼', anim:'cheer', dur:3.3 }, dance:{ name:'跳舞', anim:'dance', loop:true },
   clap:{ name:'拍手', anim:'clap', dur:2.4 }, bow:{ name:'鞠躬', anim:'bow', dur:2.0 }, laugh:{ name:'大笑', anim:'laugh', dur:2.0 }, angry:{ name:'生氣', anim:'angry', dur:2.7 },
-  scared:{ name:'嚇一跳', anim:'surprised', dur:1.1 }, sitdown:{ name:'坐地上', anim:'sit_floor', loop:true }, sleep:{ name:'躺下睡覺', anim:'lie', loop:true, bub:'💤' },
+  scared:{ name:'嚇一跳', anim:'surprised', dur:1.1 }, sitdown:{ name:'坐地上', anim:'sit_floor', loop:true }, crosssit:{ name:'盤腿坐', anim:'sit_cross', loop:true }, leansit:{ name:'往後撐著坐', anim:'sit_lean', loop:true }, sleep:{ name:'躺下睡覺', anim:'lie', loop:true, bub:'💤' },
   pushups:{ name:'伏地挺身', anim:'pushups', loop:true }, situps:{ name:'仰臥起坐', anim:'situps', loop:true }, playdead:{ name:'裝死', anim:'playdead', loop:true, once:true },
   /* v264 表情商店（107）：要用金幣買，價錢以伺服器為準 */
   thumbs:{ name:'比讚', anim:'thumbs', dur:2.0, buy:300 }, point:{ name:'指前面', anim:'point', dur:2.0, buy:300 }, pickup:{ name:'撿東西', anim:'pickup', dur:1.3, buy:300 }, throw:{ name:'丟東西', anim:'throw', dur:1.35, buy:300 },
   shrug:{ name:'聳肩', anim:'shrug', dur:1.6, buy:500 }, yawn:{ name:'打哈欠', anim:'yawn', dur:2.4, buy:500, bub:'🥱' }, stretch:{ name:'伸懶腰', anim:'stretch', dur:2.6, buy:500 }, spin:{ name:'轉圈圈', anim:'spin', dur:1.3, buy:800 }, hop:{ name:'開心跳', anim:'hop', dur:1.8, buy:800, bub:'🥳' } };
 function emoteOwned(k){ const D = EMOTE_DEF[k]; return !D || !D.buy || (rec.owned || []).includes('em_' + k); }
-const EMOTE_ORDER = ['wave', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'angry', 'scared', 'sitdown', 'sleep', 'pushups', 'situps', 'playdead', 'wow', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin', 'hop'];
+const EMOTE_ORDER = ['wave', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'angry', 'scared', 'sitdown', 'crosssit', 'leansit', 'sleep', 'pushups', 'situps', 'playdead', 'wow', 'thumbs', 'point', 'pickup', 'throw', 'shrug', 'yawn', 'stretch', 'spin', 'hop'];
 const RARITY_ORDER = { '常見':0, '稀有':1, '傳說':2 };
 
 /* ---- Quaternius「Animated Fish Pack」(CC0) 的三種魚形，依魚種重新上色 ----
@@ -1137,6 +1137,8 @@ const TIERS = {
   mid:  { label:'中', dpr:1.5, shadow:1024, tufts:0.5,  waterEvery:1, aa:false },
   high: { label:'高', dpr:2.0, shadow:2048, tufts:1.0,  waterEvery:1, aa:true  },
 };
+/* v906 作者：「iPhone 手機，用最高畫質的時候會卡一下一下」→ iPhone 螢幕本來就很細（3 倍），最高畫質畫 2 倍＋2048 影子太重：iPhone 改成 1.6 倍、影子 1536，看起來差不多但順很多 */
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)){ TIERS.high.dpr = 1.6; TIERS.high.shadow = 1536; TIERS.mid.dpr = 1.35; }
 const Quality = {
   setting: LS.get('tide.quality', 'auto'),   // 'auto' | 'low' | 'mid' | 'high'
   tier: 'mid',
@@ -5286,7 +5288,7 @@ function surfaceAt(x, z){
 const KID = { gltf: null, clips: null, ok: false, failed: false, wait: new Set() };
 (function loadKid(){
   if (/kid=0/.test(location.hash)) return;
-  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; try { kidReshape(g.scene); kidCalmRun(g); } catch(e){ console.warn('kidReshape', e); KID.shape = null; } KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ KID.upErr = String(e && e.message || e).slice(0, 100); console.warn('kid upgrade', e); } } },
+  try { new GLTFLoader().load('models/tide_kid.glb', g => { KID.gltf = g; try { kidReshape(g.scene); kidCalmRun(g); } catch(e){ console.warn('kidReshape', e); KID.shape = null; } KID.clips = Object.fromEntries(g.animations.map(a => [a.name, a])); if (KID.clips.hold){ const h = KID.clips.hold.clone(); h.name = 'hold_arms'; h.tracks = h.tracks.filter(t => /^(upperarm|lowerarm|wrist|hand|chest)/.test(t.name)); KID.clips.hold_arms = h; }   /* 捧魚：只有上半身，腳照樣走 */ try { kidPoseClips(); } catch(e){ console.warn('kidPoseClips', e); } KID.ok = true; for (const f of [...KID.wait]){ KID.wait.delete(f); try { kidUpgrade(f); } catch(e){ KID.upErr = String(e && e.message || e).slice(0, 100); console.warn('kid upgrade', e); } } },
     undefined, e => { KID.failed = true; KID.why = String(e && (e.message || e.type) || e).slice(0, 120); KID.wait.clear(); console.warn('3D 角色載入失敗，繼續用程式角色', e); }); } catch(e){ KID.failed = true; KID.why = 'x ' + String(e && e.message || e).slice(0, 120); }
 })();
 // 動作的原始移動速度（量過：腳往後推的速度），用來讓播放速度跟真正的移動速度一樣
@@ -5306,7 +5308,20 @@ if (KID2) Object.assign(KID_SHAPE, { slim: 1.05, arm: 1.25, hand: 1.1, shoe: 1.2
 const _kq = new THREE.Quaternion();
 /* 腿變長以後整個人要墊高多少：每一格照現在的姿勢算——「比較低的那隻腳」離髖關節的垂直距離，新腿是舊腿的 leg 倍，差多少就墊多少。
    站著墊最多、蹲下墊少一點，跳起來腳離地的高度也跟以前一樣。坐椅子不墊（屁股要在原本的高度；以前腳是懸空的，腿變長剛好比較接近地面）；貼地、浮在水裡的姿勢也不墊 */
-const KID_FLAT = ['sit', 'sit_floor', 'sit_floor_down', 'lie', 'lie_down', 'playdead', 'dive', 'swim', 'pushups', 'situps'];
+const KID_FLAT = ['sit', 'sit_floor', 'sit_cross', 'sit_lean', 'sit_floor_down', 'lie', 'lie_down', 'playdead', 'dive', 'swim', 'pushups', 'situps'];
+/* v906 作者傳了坐姿參考圖「還是能加這個」→ 用坐地上那個動作當底，自己轉骨頭擺出兩個新坐姿（不是用別人的模型）：
+   盤腿坐（兩手放膝蓋）、往後撐著坐（身體往後靠、腳彎到旁邊）。會輕輕呼吸，放空時輪流換。 */
+const KID_POSES = {
+  sit_cross: { upperlegl: [0, 0.9, -0.8], upperlegr: [0, -0.9, 0.8], lowerlegl: [1.2, 0, 0], lowerlegr: [1.2, 0, 0], upperarml: [0.25, 0, -0.7], upperarmr: [0.25, 0, 0.7], head: [0.12, 0, 0] },
+  sit_lean: { upperarml: [0.15, 0, 0.9], upperarmr: [0.15, 0, -0.9], spine: [-0.5, 0, 0], head: [0.3, 0, 0], upperlegl: [0, 0.7, -0.35], upperlegr: [0, 0.7, -0.35], lowerlegl: [0.4, 0, 0], lowerlegr: [0.4, 0, 0] } };
+function kidPoseClips(){ const base = KID.clips && KID.clips.sit_floor; if (!base) return; const q = new THREE.Quaternion(), d = new THREE.Quaternion(), e = new THREE.Euler(), br = new THREE.Quaternion();
+  for (const [nm, ov] of Object.entries(KID_POSES)){ const T = [];
+    for (const t of base.tracks){ const bn = t.name.split('.')[0], n = t.times.length, fi = n > 2 ? Math.round((n - 1) * 0.5) : 0;
+      if (t.name.endsWith('.quaternion')){ q.fromArray(t.values, fi * 4); if (ov[bn]){ e.set(ov[bn][0], ov[bn][1], ov[bn][2], 'XYZ'); d.setFromEuler(e); q.multiply(d); }
+        if (bn === 'chest'){ const a = q.toArray(); br.setFromEuler(e.set(0.05, 0, 0, 'XYZ')); const q2 = q.clone().multiply(br); T.push(new THREE.QuaternionKeyframeTrack(t.name, [0, 2, 4], [...a, ...q2.toArray(), ...a])); }   /* 輕輕呼吸 */
+        else T.push(new THREE.QuaternionKeyframeTrack(t.name, [0, 4], [...q.toArray(), ...q.toArray()])); }
+      else { const v = Array.from(t.values.slice(fi * 3, fi * 3 + 3)); T.push(new THREE.VectorKeyframeTrack(t.name, [0, 4], [...v, ...v])); } }
+    KID.clips[nm] = new THREE.AnimationClip(nm, 4, T); } }
 function kidLift(K){ if (!K.liftN) return; const B = K.B, v = K.v; let drop = 0, flat = 0; for (const n of KID_FLAT) flat += K.w[n] || 0;
   for (const s of ['l', 'r']){ v.copy(B['foot' + s].position).applyQuaternion(B['lowerleg' + s].quaternion).add(B['lowerleg' + s].position).applyQuaternion(B['upperleg' + s].quaternion).applyQuaternion(B.hips.quaternion).applyQuaternion(B.root.quaternion); drop = Math.max(drop, -v.y); }
   K.liftN.position.y = Math.max(0, drop) * (1 - 1 / KID_SHAPE.leg) * Math.max(0, 1 - Math.min(1, flat)); }
@@ -15423,10 +15438,10 @@ const Comp = { at: Date.now(), busy: false };
 async function petCompanyTick(){ const pm = petMine(); if (!pm || !me.pet || !Cloud.on || !Cloud.sb || Comp.busy) return; if (Date.now() - Comp.at < 300000) return;
   if (Math.hypot(me.pet.pos.x - me.pos.x, me.pet.pos.z - me.pos.z) > 12) return; Comp.busy = true; Comp.at = Date.now();
   try { const { data } = await Cloud.sb.rpc('pet_company', { p_id: pm.id }); if (data && data.got){ pm.love = data.love; if (Zen.on) Zen.love = (Zen.love || 0) + 1; else if (Math.random() < 0.5) me.pet && toast(`🐾 ${esc(pm.name || '寵物')}陪著你走，親密度 +1（${data.love}）`); } } catch(e){} Comp.busy = false; }
-const ZEN_POSE = () => 'sitdown';
+const ZEN_POSE = () => Zen.pose || 'crosssit';
 const Zen = { on: false, t0: 0, cam: null, next: 0, love: 0, btn: null };
 function zenStart(){ closeEmotePanel(); if (Zen.on) return; if (F.phase !== 'idle' || myBoat || Dive.on || Sub.on){ toast('先把手上的事做完再放空吧'); return; }
-  Zen.on = true; Zen.t0 = performance.now(); Zen.love = 0; Zen.cam = { dist: cam.dist, pitch: cam.pitch }; Zen.next = now() + 3;
+  Zen.on = true; Zen.pose = 'crosssit'; Zen.swap = now() + 40; Zen.t0 = performance.now(); Zen.love = 0; Zen.cam = { dist: cam.dist, pitch: cam.pitch }; Zen.next = now() + 3;
   if (!mySeat) emote(ZEN_POSE());
   document.body.classList.add('zen'); const b = Zen.btn = el('button', 'zenbtn', '🌙 ' + i18nT('放空中…點一下回來')); b.addEventListener('click', zenStop); document.body.appendChild(b);
   Zen.next = now() + 1; }
@@ -15435,6 +15450,7 @@ function zenStop(){ if (!Zen.on) return; Zen.on = false; document.body.classList
   if (min >= 1) toast(`🌙 放空了 ${min} 分鐘${pm ? `，${esc(pm.name || '寵物')}一直在旁邊陪著你${Zen.love ? `（親密度 +${Zen.love}）` : ''}` : ''}`); }
 function zenTick(dt){ if (!Zen.on) return; if (Math.abs(joy.x) > 0.2 || Math.abs(joy.z) > 0.2 || F.phase !== 'idle' || Object.values(keys).some(Boolean)){ zenStop(); return; }
   cam.dist += (9 - cam.dist) * Math.min(1, dt * 0.25); cam.pitch += (0.34 - cam.pitch) * Math.min(1, dt * 0.25); cam.yaw += dt * 0.035;
+  if (!mySeat && now() > (Zen.swap || 0)){ Zen.swap = now() + 40; const L = ['crosssit', 'leansit', 'sitdown']; Zen.pose = L[(L.indexOf(Zen.pose) + 1) % L.length] || 'crosssit'; me.emote = null; Zen.next = 0; }   /* 放空時每 40 秒換一個坐姿 */
   if (!mySeat && (!me.emote || me.emote.k !== ZEN_POSE()) && now() > Zen.next){ Zen.next = now() + 1.5; emote(ZEN_POSE()); } }   /* 坐著放空；寵物自己在旁邊玩 */
 function petAct(k){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held && me.held.pet) return;
   if (petDo(me, k, Date.now())){ myPetAct = { k, at: Date.now() }; pushPresence(true); closeEmotePanel(); if (k === 'rest') toast(`跟${esc(pt.name || '寵物')}一起坐著休息，走開就結束`); } }
@@ -23770,6 +23786,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u906', d:'11/26', items:[['🧘','兩個新坐姿：「盤腿坐」（兩手放膝蓋）、「往後撐著坐」（身體往後靠、腳彎到旁邊），表情選單裡就有，坐著會輕輕呼吸；「🌙 放空」時每 40 秒自己換一個坐姿'], ['📱','iPhone 用最高畫質會卡一下一下：iPhone 的最高畫質改成比較省力的設定，看起來差不多但順很多']] },
   { id:'u905', d:'11/26', items:[['🐾','寵物陪著你就會變親：帶出門每 5 分鐘親密度 +1（一天最多 +12），不用每天餵','pets'], ['🌙','表情選單多一個「🌙 放空」：坐下來，按鈕都收起來，畫面慢慢轉一圈，寵物在旁邊陪你，什麼都不用做；搖桿一動或點「回來」就結束'], ['📺','潮汐大看板再加高，螢幕底部離地 4 公尺，不會被人擋到；換段時字幕和畫面會一起換']] },
   { id:'u904', d:'11/26', items:[['📺','潮汐大看板再搬一次：搬到島中央的潮汐廣場旁邊的草地，面向廣場，不會擋到店、釣點和海；走到大看板前面按「大看板」可以全螢幕看']] },
   { id:'u903', d:'11/26', items:[['⛵','阿默上岸時長椅都被坐走了，不會再站在船邊兩分鐘不動：他會回默穎號坐在船尾打遊戲機，阿穎也跟著上船坐船頭一起打']] },
