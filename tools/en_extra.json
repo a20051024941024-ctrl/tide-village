@@ -9282,5 +9282,15 @@
  "比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）": "Smoother: the village is split into areas, and areas out of view or too far are skipped; on highest quality, far-away villagers are skipped too (closer on iPhone).",
  "比較不卡：離你 26 公尺以上的人物換成簡單版的小人偶（顏色照他的頭髮、衣服、褲子），走近就變回原本的樣子；港邊廣場要畫的三角形少了兩成": "Smoother: characters more than 26 m away become simple little figures (colored like their hair, top and pants) and turn back when you get close; about 20% fewer triangles at Harbor Plaza.",
  "南方沙灘白天坐在海灘巾上曬太陽的兩個觀光客拿掉了（海灘巾和陽傘留著）": "The two tourists sunbathing on towels at South Beach in the daytime are removed (towels and umbrellas stay).",
- "「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上": "\"Cross-legged\" and \"Lean back\" looked stuck and bent, so they are put away for now and will return with real animations; Zone out uses the normal floor sit."
+ "「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上": "\"Cross-legged\" and \"Lean back\" looked stuck and bent, so they are put away for now and will return with real animations; Zone out uses the normal floor sit.",
+ "右下「👁 艙內」：坐進潛水艇裡，從圓形觀景窗往外看。拖畫面轉頭，搖桿往前就朝你看的方向開；往上看或往下看再往前推，會跟著上浮、下潛。按「🚢 艙外」切回原本的視角。": "Bottom right \"👁 Cabin\": sit inside the submarine and look out through the round viewport. Drag to turn your head; push the stick forward to drive where you look. Look up or down while pushing forward to rise or dive. Tap \"🚢 Outside\" to switch back.",
+ "回到艇外的視角": "Back to the outside view",
+ "坐在艙裡往外看：拖畫面轉頭，搖桿往前就朝你看的方向開": "Looking out from the cabin: drag to turn your head, push forward to drive where you look",
+ "按右下的「艙內」，可以坐進潛水艇裡從觀景窗往外看": "Tap \"Cabin\" at the bottom right to sit inside and look out through the viewport",
+ "深海的溝底換成淺色泥沙、岩壁亮一點，燈照過去看得出形狀": "The trench floor is now pale sediment and the rock walls are lighter, so you can see their shape in your lights",
+ "深的地方只有燈照到的才看得到：兩顆前燈會在海底照出一大片亮的地方，水裡看得到光柱，顆粒被照到會一閃一閃。": "Deep down you only see what your lamps light: the two headlights make a big bright patch on the seabed, you can see the light beams in the water, and drifting particles sparkle when lit.",
+ "潛水艇可以坐進艙裡了：右下按「艙內」，從圓形觀景窗往外看，拖畫面轉頭，往哪看就往哪開": "You can now sit inside the submarine: tap \"Cabin\" at the bottom right to look out through the round viewport, drag to look around, and drive where you look",
+ "潛水艇換成兩顆大燈：照到的海底是一大片亮的，水裡看得到光柱，顆粒被照到會閃；別人的潛水艇遠遠也看得到兩道光": "The submarine now has two big headlights: they light up a wide patch of seabed, beams show in the water and particles sparkle; you can see other players' two beams from afar",
+ "艙內": "Cabin",
+ "艙外": "Outside"
 }

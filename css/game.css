@@ -2566,3 +2566,6 @@ body.photo #hype{display:none}
 body.zen #top,body.zen #menu,body.zen #joyZone,body.zen #joy,body.zen #emotes,body.zen #actWrap,body.zen #chat,body.zen #chatBar,body.zen #chatRow,body.zen #ticker,body.zen #hint,body.zen #toasts,body.zen #spotCard,body.zen #isleBar,body.zen #chatToggle,body.zen #showBtn,body.zen #guideCard,body.zen #todayCard,body.zen #today3,body.zen #chatForm,body.zen #chat3,body.zen #emoteMore,body.zen #boatRow,body.zen #mini3,body.zen #bTop,body.zen #actRow{opacity:0!important;pointer-events:none!important;transition:opacity 1.2s}
 .zenbtn{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:300;background:#0f223388;color:#eaf4ff;border:1px solid #ffffff44;border-radius:22px;padding:8px 18px;font-size:15px;backdrop-filter:blur(4px);animation:zenIn 2s ease}
 @keyframes zenIn{from{opacity:0}to{opacity:1}}
+/* v912 潛水艇第一人稱：觀景窗的窗框（只蓋住畫面，不擋按鈕） */
+#subPort{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:5}
+#subHud .sh-fp small{white-space:nowrap}

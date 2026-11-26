@@ -9006,5 +9006,15 @@
  "比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）": "Lebih lancar: desa dibagi per area, area yang tidak terlihat atau terlalu jauh tidak digambar; di kualitas tertinggi, penduduk yang jauh juga tidak digambar (lebih dekat di iPhone).",
  "比較不卡：離你 26 公尺以上的人物換成簡單版的小人偶（顏色照他的頭髮、衣服、褲子），走近就變回原本的樣子；港邊廣場要畫的三角形少了兩成": "Lebih lancar: karakter yang lebih dari 26 m berubah jadi boneka sederhana (warna rambut, baju, celananya) dan kembali normal saat didekati; sekitar 20% lebih sedikit segitiga di Alun-alun Pelabuhan.",
  "南方沙灘白天坐在海灘巾上曬太陽的兩個觀光客拿掉了（海灘巾和陽傘留著）": "Dua turis yang berjemur di atas handuk di Pantai Selatan siang hari dihapus (handuk dan payung tetap).",
- "「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上": "\"Bersila\" dan \"Bersandar\" terlihat tersangkut dan tertekuk, jadi disimpan dulu dan akan kembali dengan animasi asli; Bengong memakai duduk biasa."
+ "「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上": "\"Bersila\" dan \"Bersandar\" terlihat tersangkut dan tertekuk, jadi disimpan dulu dan akan kembali dengan animasi asli; Bengong memakai duduk biasa.",
+ "右下「👁 艙內」：坐進潛水艇裡，從圓形觀景窗往外看。拖畫面轉頭，搖桿往前就朝你看的方向開；往上看或往下看再往前推，會跟著上浮、下潛。按「🚢 艙外」切回原本的視角。": "Kanan bawah \"👁 Kabin\": duduk di dalam kapal selam dan lihat keluar lewat jendela bundar. Geser layar untuk menoleh; dorong joystick ke depan untuk melaju ke arah pandangan. Lihat ke atas atau bawah sambil maju untuk naik atau menyelam. Tekan \"🚢 Luar\" untuk kembali.",
+ "回到艇外的視角": "Kembali ke tampilan luar",
+ "坐在艙裡往外看：拖畫面轉頭，搖桿往前就朝你看的方向開": "Melihat dari kabin: geser untuk menoleh, dorong ke depan untuk melaju ke arah pandangan",
+ "按右下的「艙內」，可以坐進潛水艇裡從觀景窗往外看": "Tekan \"Kabin\" di kanan bawah untuk duduk di dalam dan melihat lewat jendela",
+ "深海的溝底換成淺色泥沙、岩壁亮一點，燈照過去看得出形狀": "Dasar palung kini berlumpur terang dan dinding batu lebih terang, jadi bentuknya terlihat saat disorot",
+ "深的地方只有燈照到的才看得到：兩顆前燈會在海底照出一大片亮的地方，水裡看得到光柱，顆粒被照到會一閃一閃。": "Di laut dalam kamu hanya melihat yang terkena lampu: dua lampu depan menerangi petak besar di dasar laut, berkas cahaya terlihat di air, dan partikel berkilau saat tersorot.",
+ "潛水艇可以坐進艙裡了：右下按「艙內」，從圓形觀景窗往外看，拖畫面轉頭，往哪看就往哪開": "Sekarang bisa duduk di dalam kapal selam: tekan \"Kabin\" di kanan bawah untuk melihat lewat jendela bundar, geser untuk melihat sekeliling, dan melaju ke arah pandangan",
+ "潛水艇換成兩顆大燈：照到的海底是一大片亮的，水裡看得到光柱，顆粒被照到會閃；別人的潛水艇遠遠也看得到兩道光": "Kapal selam kini punya dua lampu besar: menerangi petak luas dasar laut, berkas cahaya terlihat di air dan partikel berkilau; dua berkas kapal selam pemain lain terlihat dari jauh",
+ "艙內": "Kabin",
+ "艙外": "Luar"
 }
