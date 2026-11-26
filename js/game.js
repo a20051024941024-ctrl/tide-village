@@ -18086,7 +18086,7 @@ const BB_LIST = [
   { k:'fish', ic:'🎣', t:'甩竿釣魚，跟大魚拔河' }, { k:'boat', ic:'⛵', t:'開船出海，找更大的魚' }, { k:'dive', ic:'🤿', t:'潛到海底，看珊瑚和魚群' },
   { ic:'🪓', t:'自己的小島，一格一格開地' }, { k:'house', ic:'🏠', t:'房子整棟買，越蓋越大' }, { k:'pet', ic:'🐕', t:'寵物跟著你到處走' },
   { soon:1, ic:'🌴', t:'主島外圍新樣子' }, { soon:1, ic:'🪴', t:'菜箱和石頭水槽' }, { soon:1, ic:'🎮', t:'家具遊戲機' }, { soon:1, ic:'🐶', t:'寵物叫你去睡' } ];
-const BB_AT = { a: 15, R: 14 };
+const BB_AT = { cx: 4, cz: 4, a: 225, R: 12 };   /* v903 作者：「還是有點不合適」→ 搬到島中央的潮汐廣場 */
 const BB = { g:null, scr:null, cap:null, capCv:null, i:0, vid:null, tex:null, card:null, blobs:{}, loading:{}, t:0, on:false, view:null };
 function bbUrl(k){ return 'models/bb/' + k + '.mp4'; }
 async function bbBlob(k){ if (BB.blobs[k]) return BB.blobs[k]; if (BB.loading[k]) return null; BB.loading[k] = 1;
@@ -18097,7 +18097,7 @@ function bbCardTex(it){ const c = document.createElement('canvas'); c.width = 12
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
 function bbCapDraw(){ const c = BB.capCv, x = c.getContext('2d'), it = BB_LIST[BB.i]; x.setTransform(2, 0, 0, 2, 0, 0); x.fillStyle = '#10161e'; x.fillRect(0, 0, 640, 64); x.fillStyle = '#ffd34a'; x.font = 'bold 30px sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText('📺', 14, 33);
   x.fillStyle = '#ffffff'; x.font = 'bold 32px sans-serif'; x.fillText(it.ic + ' ' + i18nT(it.t), 64, 33, 520); for (let k = 0; k < BB_LIST.length; k++){ x.fillStyle = k === BB.i ? '#ffd34a' : '#3d4a5a'; x.fillRect(640 - 14 - (BB_LIST.length - k) * 9, 54, 6, 6); } BB.cap.material.map.needsUpdate = true; }
-function bbBuild(){ if (BB.g) return; const P = window.__bbAt || BB_AT, a = P.a * Math.PI / 180, x = HARBOR_SQ[0] + Math.cos(a) * P.R, z = HARBOR_SQ[1] + Math.sin(a) * P.R, r = Math.atan2(HARBOR_SQ[0] - x, HARBOR_SQ[1] - z) + (P.turn || 0);
+function bbBuild(){ if (BB.g) return; const P = window.__bbAt || BB_AT, a = P.a * Math.PI / 180, x = P.cx + Math.cos(a) * P.R, z = P.cz + Math.sin(a) * P.R, r = Math.atan2(P.cx - x, P.cz - z) + (P.turn || 0);
   const g = BB.g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; g.userData.keep = true; scene.add(g);
   /* v902 作者：「放在那裡不合適」→ 不放在釣具店屋頂，改成廣場邊自己一座：兩根柱子撐著的大螢幕，下面可以走過去 */
   const cz = 0, W = P.W || 7.2, H = W * 9 / 16, base = P.y || 2.3, y0 = base + W * 0.1 + H / 2, dark = '#22262d';
@@ -18116,11 +18116,11 @@ function bbShow(i){ BB.i = (i + BB_LIST.length) % BB_LIST.length; const it = BB_
     if (!BB.vid){ const v = BB.vid = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.crossOrigin = 'anonymous'; v.addEventListener('ended', () => bbShow(BB.i + 1)); BB.tex = new THREE.VideoTexture(v); BB.tex.colorSpace = THREE.SRGBColorSpace; BB.tex.minFilter = THREE.LinearFilter; BB.tex.generateMipmaps = false; try { BB.tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); } catch(e){} }
     BB.vid.src = u; BB.vid.currentTime = 0; const pr = BB.vid.play(); if (pr && pr.catch) pr.catch(() => {}); BB.scr.material.map = BB.tex; BB.scr.material.needsUpdate = true; }); }
 function bbTick(dt){ if (onIsle || Dive.on || House.on){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
-  const d = Math.hypot(me.pos.x - HARBOR_SQ[0], me.pos.z - HARBOR_SQ[1]); if (d > 75){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
+  const d = Math.hypot(me.pos.x - BB_AT.cx, me.pos.z - BB_AT.cz); if (d > 75){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
   if (!BB.g){ bbBuild(); if (!BB.g) return; }
   if (!BB.on){ BB.on = true; bbShow(BB.i); } BB.t += dt; const it = BB_LIST[BB.i]; if ((it.soon || !it.k) && BB.t > 4.5) bbShow(BB.i + 1); else if (!it.soon && BB.t > 14 && (!BB.vid || BB.vid.paused)) bbShow(BB.i + 1);
   if (BB.glow) BB.glow.intensity = DayNight.lamp ? 0.6 : 0; }
-function nearBB(){ return !onIsle && !House.on && !myBoat && Math.hypot(me.pos.x - HARBOR_SQ[0], me.pos.z - HARBOR_SQ[1]) < 3.2; }
+function nearBB(){ if (onIsle || House.on || myBoat || !BB.g) return false; const g = BB.g, fx = g.position.x + Math.sin(g.rotation.y) * 3, fz = g.position.z + Math.cos(g.rotation.y) * 3; return Math.hypot(me.pos.x - fx, me.pos.z - fz) < 2.6; }
 /* 全螢幕看大看板（左右換段） */
 function bbOpen(start){ let i = start == null ? BB.i : start; const ov = document.createElement('div'); ov.className = 'bbview'; document.body.appendChild(ov);
   const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.autoplay = true; const card = el('div', 'bbcard'), cap = el('div', 'bbcap'), dots = el('div', 'bbdots');
@@ -22534,7 +22534,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["一進來站在港邊廣場，釣具店、魚市場、碼頭都在這。", "港邊廣場往海邊的沙灘上立著一面「潮汐大看板」，輪流播村子裡的各種玩法和即將推出的新東西；站在廣場噴水池旁按「大看板」可以全螢幕看，左右滑換下一段。", "島中央是潮汐廣場，村長在東邊的辦公室門口。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "商店街在南邊：小花寵物店、阿綾服裝店、阿彩畫廊、阿木木工坊、阿萍美髮沙龍。涼亭在寵物店後面、寵物樂園旁邊。", "體育場和撞球館在西南邊的運動公園。", "潮汐廣場邊有一張沙盤桌，可以玩《築城守土》。那邊的金幣和村子的不相通。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["一進來站在港邊廣場，釣具店、魚市場、碼頭都在這。", "島中央的潮汐廣場旁邊立著一面「潮汐大看板」，輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "島中央是潮汐廣場，村長在東邊的辦公室門口。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "商店街在南邊：小花寵物店、阿綾服裝店、阿彩畫廊、阿木木工坊、阿萍美髮沙龍。涼亭在寵物店後面、寵物樂園旁邊。", "體育場和撞球館在西南邊的運動公園。", "潮汐廣場邊有一張沙盤桌，可以玩《築城守土》。那邊的金幣和村子的不相通。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -23748,6 +23748,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u904', d:'11/26', items:[['📺','潮汐大看板再搬一次：搬到島中央的潮汐廣場旁邊的草地，面向廣場，不會擋到店、釣點和海；走到大看板前面按「大看板」可以全螢幕看']] },
   { id:'u903', d:'11/26', items:[['⛵','阿默上岸時長椅都被坐走了，不會再站在船邊兩分鐘不動：他會回默穎號坐在船尾打遊戲機，阿穎也跟著上船坐船頭一起打']] },
   { id:'u902', d:'11/26', items:[['📺','潮汐大看板從釣具店屋頂搬下來，改成港邊廣場海邊沙灘上自己一座（兩根柱子撐著，背後就是海），不會再壓在店上面']] },
   { id:'u901', d:'11/26', items:[['📺','潮汐大看板放大快一倍（8×4.5 公尺），字幕加大，影片畫質調高，從廣場看得比較清楚']] },
