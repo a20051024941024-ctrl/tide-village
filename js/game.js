@@ -22865,6 +22865,7 @@ function faiPlace(a, dt, t){ if (a.tr.crawl){ const ty = WATER_LEVEL - Math.max(
 /* v912 作者：「偶爾有魚冒出頭不錯，跳出水面也行」→ 水裡游的魚變少，改成偶爾（15～35 秒一次）在你前面的水面，有一條魚跳出水面畫一道弧、或探頭出來看一下又沉下去。
    魚用這片水常見的魚（圖鑑同一個模型），同時只有一條，手機很便宜也沒負擔。 */
 const FJ = { at: 0, cur: null, cache: new Map() };
+function sp2fish(sp, k){ return (sp.fish || []).map(id => FISH_BY_ID[id]).filter(f => f && !f.of && !f.fest && f.rarity !== '傳說' && sigClass(f) === k && FISH_STYLE[f.id] && (FISH_STYLE[f.id].move || 'side') === 'side' && !/squid|octo|crab|shrimp|lobster|eel|^ika/.test(f.id)); }
 function fjPose(m, yaw, up){ if (m.userData.ax === 'x'){ m.rotation.set(0, yaw - Math.PI / 2, 0); m.rotateZ(up); } else { m.rotation.set(0, yaw, 0); m.rotateX(-up); } }   /* 有的魚模型頭朝 +x、有的朝 +z：看長的那一邊 */
 function fishJumpTick(dt, t){ const C = FJ.cur;
   if (C){ const u = (t - C.t0) / C.dur; if (u >= 1){ C.m.visible = false; if (C.kind === 'jump') ripple(C.x1, C.z1); FJ.cur = null; return; }
@@ -22873,12 +22874,20 @@ function fishJumpTick(dt, t){ const C = FJ.cur;
     return; }
   if (t < FJ.at) return; FJ.at = t + 15 + Math.random() * 20;
   if (Dive.on || House.on || onIsle || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || F.phase === 'fight') return;
-  const yaw = cam.yaw + Math.PI; let pt = null;   /* 鏡頭前面 6～18 公尺的水面 */
+  const yaw = cam.yaw + Math.PI; let pt = null, cls = null;
+  /* v914 作者說「做」：魚跳的地方變成線索。在釣點附近的時候，魚大多（七成）會從這一輪的「魚訊」位置跳出來（就是會給加成的那幾個點，伺服器 _sign_m 算的位置一樣），
+     跳出來的魚也是那個魚訊的種類（小魚群、中大型魚、掠食魚），所以看到魚跳、往那裡拋，就是拋在魚訊上，真的比較好釣（加成是伺服器原本就有的，不是另外做假的）。底棲魚不跳，冒泡泡就好 */
+  { const sp = F.spot && signSpotOk(F.spot) ? F.spot : (() => { const ns = nearestSpot(); return ns.spot && ns.d < 14 && signSpotOk(ns.spot) ? ns.spot : null; })();
+    if (sp && Math.random() < 0.7){ const L = signsAt(sp, signSlot()).filter(g => !Signs.scared.has(g.key) && g.k !== 'bottom'); if (L.length){ const g = L[Math.floor(Math.random() * L.length)]; pt = [g.x + (Math.random() - 0.5) * 0.8, g.z + (Math.random() - 0.5) * 0.8]; cls = g.k; } } }
+  /* 其他時候：鏡頭前面 6～18 公尺的水面 */
   for (let k = 0; k < 10 && !pt; k++){ const a = yaw + (Math.random() - 0.5) * 1.1, d = 6 + Math.random() * 12, x = me.pos.x + Math.sin(a) * d, z = me.pos.z + Math.cos(a) * d; if (waterAt(x, z) && !seaDry(x, z) && !deckAt(x, z) && faiDepth(x, z) > 0.8){ let vis = true; for (let u = 0.25; u < 1; u += 0.25) if (blocked(me.pos.x + (x - me.pos.x) * u, me.pos.z + (z - me.pos.z) * u, 0.2)) vis = false; if (vis) pt = [x, z]; } }   /* 中間被船、房子擋住的不要 */
   if (!pt) return; const sid = waterSpotId(pt[0], pt[1]), sp = SPOT_BY_ID[sid]; if (!sp) return;
-  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && !f.of && !f.fest && f.rarity === '常見' && !BIG_FISH.has(f.id) && f.max < 5 && FISH_STYLE[f.id] && !/Squid|Octo|Crab|Lobster|Shrimp|Eel|Manta|Jelly|Star|Urchin/i.test(FISH_STYLE[f.id].shape || '') && !/squid|octo|crab|shrimp|lobster|eel|cuttle|clam|snail|seacuc|star|urchin|jelly|ray|abalone|oyster|conch|turtle|^ika/.test(f.id) && (FISH_STYLE[f.id].move || 'side') === 'side'); if (!pool.length) return;   /* 只有魚會跳（不要烏賊、螃蟹、蝦、鰻） */ const f = pool[Math.floor(Math.random() * pool.length)];
+  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && !f.of && !f.fest && f.rarity === '常見' && !BIG_FISH.has(f.id) && f.max < 5 && FISH_STYLE[f.id] && !/Squid|Octo|Crab|Lobster|Shrimp|Eel|Manta|Jelly|Star|Urchin/i.test(FISH_STYLE[f.id].shape || '') && !/squid|octo|crab|shrimp|lobster|eel|cuttle|clam|snail|seacuc|star|urchin|jelly|ray|abalone|oyster|conch|turtle|^ika/.test(f.id) && (FISH_STYLE[f.id].move || 'side') === 'side'); if (!pool.length && !cls) return;   /* 只有魚會跳（不要烏賊、螃蟹、蝦、鰻） */ let f = pool[Math.floor(Math.random() * pool.length)];
+  if (cls){ const P2 = sp2fish(sp, cls); if (P2.length) f = P2[Math.floor(Math.random() * P2.length)]; } if (!f) return;   /* 魚訊的種類 */
+  const big = cls === 'shadow' || cls === 'pred';
   let m = FJ.cache.get(f.id); if (!m){ try { m = fishModel(f, 1); const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()); m.scale.multiplyScalar(0.55 / Math.max(0.05, sz.x, sz.z)); m.userData.ax = sz.x > sz.z ? 'x' : 'z'; } catch(e){ return; }   /* 統一 55 公分長，遠遠看得到 */ m.userData.keep = m.userData.dyn = true; m.traverse(o => { if (o.isMesh) o.castShadow = false; }); scene.add(m); FJ.cache.set(f.id, m); if (FJ.cache.size > 6){ const [k0, m0] = FJ.cache.entries().next().value; if (m0 !== m){ scene.remove(m0); FJ.cache.delete(k0); } } }
-  m.visible = true; const wy = waterY(pt[0], pt[1], now()), jump = Math.random() < 0.6, a2 = Math.random() * Math.PI * 2, L = 1.2 + Math.random() * 1.2;
+  if (m.userData.s0 == null) m.userData.s0 = m.scale.x; m.scale.setScalar(m.userData.s0 * (big ? 1.7 : 1));
+  m.visible = true; const wy = waterY(pt[0], pt[1], now()), jump = cls ? true : Math.random() < 0.6, a2 = Math.random() * Math.PI * 2, L = 1.2 + Math.random() * 1.2;
   if (jump){ const x1 = pt[0] + Math.sin(a2) * L, z1 = pt[1] + Math.cos(a2) * L; FJ.cur = { kind: 'jump', m, t0: t, dur: 0.75 + Math.random() * 0.25, x0: pt[0], z0: pt[1], x1, z1, wy, h: 0.6 + Math.random() * 0.5, yaw: Math.atan2(x1 - pt[0], z1 - pt[1]) };   /* 魚模型的頭朝 +z */ ripple(pt[0], pt[1]); try { owSplashSnd(false, Math.hypot(pt[0] - me.pos.x, pt[1] - me.pos.z) * 4); } catch(e){} }
   else FJ.cur = { kind: 'peek', m, t0: t, dur: 2.2 + Math.random(), x0: pt[0], z0: pt[1], wy, yaw: a2 }; }
 function updateFishAI(dt0, t){
@@ -23899,6 +23908,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u914', d:'11/27', items:[['🐟','看到魚跳出水面？往那裡拋！在釣點附近，魚大多是從「魚訊」的位置跳出來的，跳的也是那一種魚（小魚群、大魚、掠食魚），拋在那裡比較好釣']] },
   { id:'u913', d:'11/27', items:[['👁','潛水艇可以坐進艙裡了：右下按「艙內」，從圓形觀景窗往外看，拖畫面轉頭，往哪看就往哪開'], ['🔦','潛水艇換成兩顆大燈：照到的海底是一大片亮的，水裡看得到光柱，顆粒被照到會閃；別人的潛水艇遠遠也看得到兩道光'], ['🏔️','深海的溝底換成淺色泥沙、岩壁亮一點，燈照過去看得出形狀']] },
   { id:'u912', d:'11/27', items:[['🐟','水裡游來游去的魚少了一半，魚群同時只有一群'], ['💦','改成偶爾（大約半分鐘）會有一條魚在你前面跳出水面、或探頭出來看一下又沉下去'], ['🧊','魚市場冰台上的魚改成側躺']] },
   { id:'u911', d:'11/27', items:[['🐚','退潮時沒水釣的村民會走到沙灘上撿貝殼、挖文蛤，蹲下去找，偶爾說撿到什麼；水回來就走回去繼續釣']] },
