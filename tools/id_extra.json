@@ -8898,5 +8898,21 @@
  " 平方公尺。": " m² di dalam. ",
  "現在是：": "Sekarang: ",
  "，只有他自己可以動": ", hanya dia yang bisa mengubah",
- "這是": "Ini "
+ "這是": "Ini ",
+ "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。": "Kasur bisa diberi boneka: saat menata perabot, ketuk kasur lalu tekan \"🧸 Boneka\". Pilih dari ikan yang pernah ditangkap atau hewan yang pernah dipelihara, maks 3. Saat berbaring, kamu memeluk yang pertama.",
+ "床上可以放娃娃了：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻；躺下來會抱著第一隻，其他的會讓到旁邊": "Kasur sekarang bisa diberi boneka: saat menata perabot, ketuk kasur lalu tekan \"🧸 Boneka\". Pilih dari ikan yang pernah ditangkap atau hewan peliharaan, maks 3. Saat berbaring kamu memeluk yang pertama dan yang lain bergeser.",
+ "🧸 娃娃": "🧸 Boneka",
+ "🧸 床上的娃娃": "🧸 Boneka di kasur",
+ "在房子裡擺家具時，點床再按「🧸 娃娃」。": "Saat menata perabot di rumah, ketuk kasur lalu tekan \"🧸 Boneka\".",
+ "每張床最多放 3 隻。躺下來的時候會抱著第一隻。娃娃是你釣過的魚、養過的寵物做的。": "Maks 3 per kasur. Saat berbaring kamu memeluk yang pertama. Boneka dibuat dari ikan yang pernah ditangkap dan hewan peliharaanmu.",
+ "（空的）": "(kosong)",
+ "🐟 釣過的魚": "🐟 Ikan tertangkap",
+ "🐾 養過的寵物": "🐾 Hewan peliharaan",
+ "還沒釣過魚": "Belum menangkap ikan",
+ "還沒養寵物": "Belum punya hewan",
+ "放了": "Sudah",
+ "✔ 就這樣放": "✔ Selesai",
+ "要連上雲端才能放娃娃": "Sambungkan ke cloud untuk menaruh boneka",
+ "娃娃放好了，躺下來會抱著第一隻": "Boneka sudah ditaruh. Berbaring untuk memeluk yang pertama.",
+ "床上的娃娃收起來了": "Boneka di kasur disimpan"
 }

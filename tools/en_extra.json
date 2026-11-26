@@ -9174,5 +9174,21 @@
  " 平方公尺。": " m² inside. ",
  "現在是：": "Now: ",
  "，只有他自己可以動": ", only they can change it",
- "這是": "This is "
+ "這是": "This is ",
+ "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。": "You can put plushies on beds: while placing furniture, tap a bed and press \"🧸 Plushies\". Pick from fish you have caught or pets you have kept, up to 3. Lying down, you hug the first one.",
+ "床上可以放娃娃了：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻；躺下來會抱著第一隻，其他的會讓到旁邊": "Beds can hold plushies now: while placing furniture, tap a bed and press \"🧸 Plushies\". Pick from fish you have caught or pets you have kept, up to 3. Lying down, you hug the first one and the others move aside.",
+ "🧸 娃娃": "🧸 Plushies",
+ "🧸 床上的娃娃": "🧸 Bed plushies",
+ "在房子裡擺家具時，點床再按「🧸 娃娃」。": "While placing furniture in a house, tap a bed and press \"🧸 Plushies\".",
+ "每張床最多放 3 隻。躺下來的時候會抱著第一隻。娃娃是你釣過的魚、養過的寵物做的。": "Up to 3 per bed. Lying down, you hug the first one. Plushies are made from fish you have caught and pets you have kept.",
+ "（空的）": "(empty)",
+ "🐟 釣過的魚": "🐟 Fish caught",
+ "🐾 養過的寵物": "🐾 Pets kept",
+ "還沒釣過魚": "No fish caught yet",
+ "還沒養寵物": "No pets yet",
+ "放了": "Placed",
+ "✔ 就這樣放": "✔ Done",
+ "要連上雲端才能放娃娃": "Connect to the cloud to place plushies",
+ "娃娃放好了，躺下來會抱著第一隻": "Plushies placed. Lie down to hug the first one.",
+ "床上的娃娃收起來了": "Bed plushies put away"
 }
