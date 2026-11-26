@@ -5347,13 +5347,20 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
       if (Cloud.on){ const U = K3.real ? K3.unpaid() : []; if (U.length){ const tot = U.reduce((a, id) => a + K3.cost(id), 0), bx = el('div', 'k3try'); bx.appendChild(el('div', 'k3try-t', '試穿中：' + U.map(K3.nm).join('、')));
           const bk = el('button', 'tbtn ghost', '換回原本'); bk.addEventListener('click', () => { K3.tryEnd(); renderTab(); }); const by = el('button', 'tbtn buy', `全部買下 🪙${tot.toLocaleString()}`); by.disabled = rec.coins < tot; by.addEventListener('click', () => K3.buyAll());
           const r2 = el('div', 'k3try-b'); r2.append(bk, by); bx.appendChild(r2); bx.appendChild(el('small', '', `你有 🪙${rec.coins.toLocaleString()}・只有你看得到，買了大家才看得到`)); f.appendChild(bx); }
-        else f.appendChild(el('p', 'sub k3note', '臉免費；髮型、衣服、顏色用金幣買，買了就是你的。點了先試穿，喜歡再買。')); }
+        else f.appendChild(el('p', 'sub k3note', '臉免費；髮型、衣服、設計款用金幣買，買了就是你的。點了先試穿，喜歡再買。⚓ 是老港的限定款。')); }
       const row = (lab, key, opts, off) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const grid = el('div', 'cl-grid k3grid'); opts.forEach(([k, l]) => { const on = c[key] === k, b = el('button', 'cl-it' + (on ? ' on' : '')); b.setAttribute('aria-pressed', String(on)); if (off) b.disabled = true;
         (K3.LBL || (K3.LBL = {}))[key + '_' + k] = l; const pid = K3.PAID_K.includes(key) ? K3.idOf(key, k) : null, mine = !pid || K3.owns(pid);
         const cf = Object.assign({}, c, { [key]: k, c: Object.assign({}, c.c) }); if (key === 'ear') cf.hair = 'short';   /* 耳環小圖用短髮拍，長髮會把耳朵蓋住 */ b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', l)); b.appendChild(el('span', 'n', l)); if (on) b.appendChild(el('span', 'b', mine ? '穿著' : '試穿')); else if (!mine) b.appendChild(el('span', 'b k3pr', '🪙' + K3.cost(pid)));
         b.addEventListener('click', () => { if (K3.real || !mine) K3.tryOn(x => { x[key] = k; }); else K3.set({ [key]: k }); renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
-      const sw = (lab, key, cols) => { if (!inTab(key)) return; cols = cols.concat(K3.gangCols(key).filter(x => !cols.includes(x)));   /* v871 老港買到的限定色也排進來 */ f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { if (K3.real) K3.tryOn(x => { x.c[key] = ''; }); else K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
+      const sw = (lab, key, cols) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { if (K3.real) K3.tryOn(x => { x.c[key] = ''; }); else K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
         cols.forEach(col => { const pc = K3.PAID_K.includes(key) ? K3.idC(key, col) : null, mine = !pc || K3.owns(pc), b = el('button', 'k3c' + (mine ? '' : ' k3lock')); b.style.background = col; if (!mine) b.title = '🪙' + K3.PRICE.color; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { if (K3.real || !mine) K3.tryOn(x => { x.c[key] = col; }); else K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); if (Cloud.on && K3.PAID_K.includes(key) && cols.some(col => !K3.owns(K3.idC(key, col)))) f.appendChild(el('small', 'k3cnote', `🪙 有小金幣的顏色一個 ${K3.PRICE.color}`)); };
+      /* v874 設計款：小圖是穿上的樣子，沒買的標價錢，點了先試穿 */
+      const dsw = (lab, key) => { if (!inTab(key)) return; const st = c[key], D = (K3.DES[key] || {})[st]; if (!D) return; const ks = [''].concat(Object.keys(D).filter(k => !D[k][6] || K3.owns('k3v_' + key + '_' + st + '_' + k)));
+        f.appendChild(el('p', 'sub k3lab', lab)); const grid = el('div', 'cl-grid k3grid'), cur = K3.isKey((c.c || {})[key]) && D[c.c[key]] ? c.c[key] : '';
+        ks.forEach(k => { const on = cur === k, d = k ? D[k] : null, pid = k ? 'k3v_' + key + '_' + st + '_' + k : K3.idOf(key, st), mine = K3.owns(pid), b = el('button', 'cl-it' + (on ? ' on' : '')); b.setAttribute('aria-pressed', String(on));
+          const cf = Object.assign({}, c, { c: Object.assign({}, c.c, { [key]: k || undefined }) }); if (!k) delete cf.c[key]; if (key === 'ear') cf.hair = 'short';
+          b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', d ? d[0] : '原本')); b.appendChild(el('span', 'n', d ? d[0] + (d[6] ? '⚓' : '') : '原本的')); if (on) b.appendChild(el('span', 'b', mine ? '穿著' : '試穿')); else if (!mine) b.appendChild(el('span', 'b k3pr', '🪙' + K3.cost(pid)));
+          b.addEventListener('click', () => { const fn = x => { x.c = x.c || {}; if (k) x.c[key] = k; else delete x.c[key]; }; if (K3.real || !mine) K3.tryOn(fn); else { fn(K3.cfg); K3.set({}); } renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
       /* v741 作者：「我一開始不是說，中性沒有分男生女生」→ 不再有男生臉、女生臉。眼睛、眉毛、嘴巴、腮紅各自選，誰都可以選任何一種 */
       row('眼睛', 'eye', [['a0', '圓眼'], ['b0', '星星眼'], ['b4', '水汪汪'], ['a1', '下垂眼'], ['b1', '溫柔眼'], ['a2', '鳳眼'], ['b2', '貓眼'], ['b5', '丹鳳眼'], ['a4', '三白眼'], ['a3', '睏睏眼'], ['b3', '慵懶眼'], ['a5', '瞇瞇眼']]);
       sw('眼睛顏色', 'eye', ['#3f6fc0', '#3c8f5a', '#8a5fb5', '#b8404a', '#c99632', '#3a3a44', '#d9739a', '#3fa7b5']);
@@ -5361,19 +5368,18 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
       row('嘴巴', 'mouth', [['small', '小嘴'], ['smile', '微笑'], ['grin', '露齒笑'], ['cat', '貓嘴'], ['flat', '一字嘴'], ['pout', '嘟嘴'], ['tooth', '小虎牙']]);
       row('腮紅', 'blush', [['none', '沒有'], ['soft', '淡淡的'], ['line', '斜線']]);
       row('髮型', 'hair', [['long', '長捲髮'], ['short', '刺刺短髮'], ['short2', '清爽短髮'], ['pony', '側馬尾'], ['twin', '雙馬尾'], ['bob', '鮑伯短髮'], ['lowpony', '小馬尾'], ['bun', '包包頭'], ['buzz', '平頭'], ['bowl', '西瓜頭'], ['mid', '中分短髮'], ['curly', '捲捲短髮'], ['braid', '雙麻花辮'], ['straight', '長直髮'], ['shave', '理光頭']]);
-      sw('髮色', 'hair', ['#c4b5e8', '#2a2422', '#5a3a2a', '#c9883a', '#e8d08a', '#e6e2d8', '#f2a7c0', '#5b7fc2']);
       row('上衣', 'top', [['tee', '白T'], ['hoodie', '連帽衣'], ['maid', '女僕裝'], ['rain', '雨衣'], ['vest', '釣魚背心'], ['wave', '海浪外套']]);
-      sw('上衣顏色', 'top', ['#2f5a3a', '#2b2b2e', '#f2b8c8', '#e8c547', '#8fb8e0', '#1e2a55', '#d98aa6', '#ffffff']);
+      dsw('上衣設計', 'top');
       row('褲子', 'bot', [['shorts', '短褲'], ['pants', '長褲']], c.top === 'maid');
-      sw('褲子顏色', 'bot', ['#1e2a55', '#2b2b2e', '#3b5b8a', '#c8b48a', '#7a7a7a', '#5a3a2a']);
+      if (c.top !== 'maid') dsw('褲子設計', 'bot');
       row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
-      sw('鞋子顏色', 'shoes', ['#ffffff', '#2a2a2a', '#8a2a2a', '#e0564f', '#3a6ea5', '#c9a227']);
+      dsw('鞋子設計', 'shoes');
       row('帽子', 'hat', [['none', '不戴'], ['cap', '棒球帽'], ['straw', '草帽']]);
-      if (c.hat !== 'none') sw(c.hat === 'straw' ? '緞帶顏色' : '帽子顏色', 'hat', ['#2b2b2e', '#ffffff', '#1e2a55', '#3a6ea5', '#2f5a3a', '#e8c547', '#f2a7c0', '#c8b48a']);
+      if (c.hat !== 'none') dsw(c.hat === 'straw' ? '緞帶' : '帽子設計', 'hat');
       row('口罩', 'mask', [['none', '不戴'], ['mask', '口罩']]);
-      if (c.mask === 'mask') sw('口罩顏色', 'mask', ['#2b2b2e', '#f2b8c8', '#8fb8e0', '#c8b48a', '#7fbf8f', '#e8c547']);
+      if (c.mask === 'mask') dsw('口罩設計', 'mask');
       row('耳環', 'ear', [['none', '不戴'], ['pearl', '珍珠'], ['star', '星星'], ['hoop', '圈圈'], ['drop', '水滴']]);
-      if (c.ear !== 'none') sw('耳環顏色', 'ear', ['#e8c25a', '#d8dde3', '#f2a7c0', '#6fc3e8', '#e0564f', '#2b2b2e']); };
+      if (c.ear !== 'none') dsw('耳環設計', 'ear'); };
 /* v712 作者：「有些村民的服裝太不搭了」→ 村民不再亂配：上衣用村民原本的衣服顏色（大家認得），褲子、鞋子、髮色只從耐看的顏色裡挑，褲子跟上衣一深一淺；漁夫、船夫穿連帽衣，不穿女僕裝 */
 K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + nm), h = s => { let x = 0; for (const ch of String(s)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; }, H = h(nm), pick = (a, k) => a[(H >>> k) % a.length];
   const g = /嬤|姨|姐|姊|妹|美|蘭|綾|彩|葵|春|花|婆|娘|小溪|慧|玉|珠|琪|婷|萍/.test(nm), b = /伯|叔|哥|爺|公|財|福|港|木|默|哲|大頭|阿海|老|船長|郵差|信|潮|強|明|輝|鐵|師傅|王|忠/.test(nm), old = /嬤|伯|爺|婆|公/.test(nm) || /老(?!闆|師)/.test(nm);   /* v844 作者：「阿鐵是男生還是女生」→ 阿鐵師傅被當成女生；「老闆」的老不算老人 */
@@ -5656,7 +5662,28 @@ K3.hat = (k, c) => { const t = K3.HATS[c.hat] ? c.hat : 'none', C = c.c || {};
       if (rh < 1e8 && t === 'straw' && rh > HR[th * 48 + ph] * 1.22){ if (r > rh * 0.86){ v.multiplyScalar(rh * 0.86 / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); } continue; }   /* v750 草帽帽簷那幾圈：頭髮離帽簷底下留一段距離，貼太近會有尖尖的從帽簷刺出來 */
       if (rh < 1e8 && r > rh * 0.96){ const hr = HR[th * 48 + ph], nr = th >= A.edge[ph] - 1 ? Math.min(r, rh * 0.975) : Math.min(r, Math.max(rh * 0.96, Math.min(hr + 0.012, rh * 0.99)));   /* v731 作者：「棒球帽的頭皮能改嗎」→ 帽緣那兩圈的頭髮只收到帽子裡面一點點，不壓到頭皮上，帽子和頭之間的縫用頭髮蓋住 */ if (nr < r){ v.multiplyScalar(nr / r).add(cc); P.setXYZ(i, v.x, v.y, v.z); } } }
     P.needsUpdate = true; k.hair.geo0 = g0; k.hair.sm.geometry = geo; } };
-K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = c.c || {}; if (!k) return; const v = { face: 1, facefill: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
+/* v874 布上的圖案：在材質的顏色後面畫，用模型本來的座標（跟著衣服一起動，不會滑）。所有衣服共用同一份著色程式，只換參數 */
+K3.PATN = { stripe: 1, dot: 2, check: 3, net: 4, wave: 5, vstripe: 6 };
+K3.pat = (m, d) => { if (!m || !m.material) return; const mt = m.material, id = d && d[3] ? K3.PATN[d[3]] || 0 : 0;
+  if (!mt.userData.patU){ if (!id) return; const U = mt.userData.patU = { uPat: { value: 0 }, uPC: { value: new THREE.Color() }, uPS: { value: 10 } };
+    mt.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
+      sh.vertexShader = 'varying vec3 vPObj;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvPObj = position;');
+      sh.fragmentShader = 'uniform int uPat; uniform vec3 uPC; uniform float uPS; varying vec3 vPObj;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        if (uPat > 0){ vec3 q = vPObj * uPS; float m = 0.0;
+          if (uPat == 1) m = step(0.5, fract(q.y));
+          else if (uPat == 2){ vec2 g = fract(vec2(q.x + q.z * 0.7, q.y)) - 0.5; m = 1.0 - smoothstep(0.17, 0.23, length(g)); }
+          else if (uPat == 3) m = mod(floor(q.x) + floor(q.y) + floor(q.z), 2.0) * 0.55;
+          else if (uPat == 4){ float a = abs(fract((q.x + q.z + q.y) * 0.7) - 0.5), b = abs(fract((q.x + q.z - q.y) * 0.7) - 0.5); m = 1.0 - smoothstep(0.035, 0.07, min(a, b)); }
+          else if (uPat == 5) m = step(0.5, fract(q.y + sin((q.x + q.z) * 2.2) * 0.18));
+          else if (uPat == 6) m = step(0.62, fract(q.x + q.z * 0.6));
+          vec3 vc = vec3(1.0);
+          #ifdef USE_COLOR
+          vc = vColor.rgb;
+          #endif
+          diffuseColor.rgb = mix(diffuseColor.rgb, uPC * vc, m); }`); };
+    mt.customProgramCacheKey = () => 'k3pat'; mt.needsUpdate = true; }
+  const U = mt.userData.patU; U.uPat.value = id; if (id){ U.uPC.value.set(d[4] || '#ffffff'); U.uPS.value = d[5] || 10; } };
+K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, DS = {}, C = (() => { const o = {}, c0 = c.c || {}; for (const key in c0){ const v = c0[key]; if (K3.isKey(v)){ const d = K3.des(key, c[key], v); if (d){ o[key] = d[1]; DS[key] = d; } } else o[key] = v; } return o; })(); if (!k) return;   /* v874 設計款換成顏色，舊的色號（村民）照用 */ const v = { face: 1, facefill: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
   else { if (c.top === 'hoodie'){ v.hoodie = 1; v.strings = 1; v[inner] = 1; } else if (c.top === 'rain' && M.raincoat){ v.raincoat = 1; v.buttons = 1; v[inner] = 1; } else if (c.top === 'vest' && M.vest){ v[M.shirtv ? 'shirtv' : 'shirt'] = 1; if (M.shirtvb) v.shirtvb = 1; v.vest = 1; v.straps = 1; } else v.shirt = 1;   /* v715 釣魚背心（裡面是白T） */   /* v714 雨衣 */   /* v698 作者：「這樣看的時候脖子以下是空的」→ 穿連帽衣、女僕裝時裡面的身體（白T那一層）也留著，從領口往下看才不會是空心的；顏色跟外衣一樣，萬一露出來也看不出來 */ v[c.bot === 'pants' ? 'pants2' : 'pants'] = 1; }
@@ -5673,6 +5700,12 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, C = 
   const set = (n, col) => { const b = col ? new THREE.Color(col) : k.base[n]; if (M[n] && b) M[n].material.color.copy(b); };
   for (const n of ['shirt', 'hoodie', 'dress', 'raincoat', 'vest', 'Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth', 'Twave_cloth']) set(n, C.top); for (const n of ['Bshorts_cloth', 'Bpants_cloth']) set(n, C.bot); if (c.top === 'vest'){ set('shirt', null); set('shirtv', null); if (M.shirtvb && M.vest) M.shirtvb.material.color.copy(M.vest.material.color); }   /* v724 背心裡面白T的身體跟背心同色 */ for (const n of ['pants', 'pants2']) set(n, C.bot); for (const n of ['shoes', 'shoes2', 'mjshoe', 'msshoe']) set(n, C.shoes);
   if (c.top === 'maid') set('pants', '#1b1b20');
+  /* v874 設計款：邊條顏色＋圖案 */
+  { const dt = DS.top, db = DS.bot, TN = { tee: 'Ttee', vest: 'Tvest', hoodie: 'Thoodie', wave: 'Twave' }[c.top], BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot];
+    for (const n of ['Ttee_etc', 'Tvest_etc', 'Thoodie_etc', 'Twave_etc', 'buttons', 'apron']) set(n, null); for (const n of ['Bshorts_etc', 'Bpants_etc']) set(n, null);
+    if (dt && dt[2]){ if (TN) set(TN + '_etc', dt[2]); if (c.top === 'rain') set('buttons', dt[2]); }
+    if (db && db[2] && BN) set(BN + '_etc', db[2]);
+    for (const n of ['Ttee_cloth', 'Tvest_cloth', 'Thoodie_cloth', 'Twave_cloth', 'raincoat', 'dress', 'hoodie', 'vest', 'shirt']) K3.pat(M[n], dt); for (const n of ['Bshorts_cloth', 'Bpants_cloth', 'pants', 'pants2']) K3.pat(M[n], c.top === 'maid' ? null : db); }
   for (const sn of ['shirt', 'shirtin']){ const sm = M[sn]; if (!sm) continue; if (!C.top && !k.base[{ hoodie: 'hoodie', maid: 'dress', rain: 'raincoat' }[c.top] || 'shirt']) continue;   /* 沒有預設顏色的零件就不換（不然整個新人物會壞掉） */ if (c.top === 'hoodie') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.hoodie); else if (c.top === 'maid') sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.dress); else if (c.top === 'rain' && k.base.raincoat) sm.material.color.copy(C.top ? new THREE.Color(C.top) : k.base.raincoat); }
   K3.armX(k, c.top === 'maid' ? 0 : c.top === 'rain' ? 0.2 : c.bot === 'pants' ? 0.25 : 0.42);
   try { K3.acc(k, c); } catch(e){}
@@ -5768,7 +5801,7 @@ K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin', 'b
 K3.enc = c => [/^b/.test(c.eye || '') ? 'g' : 'b', c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || '', c.mask || 'none', c.ear || 'none', (c.c || {}).mask || '', (c.c || {}).ear || '', c.hat || 'none', (c.c || {}).hat || '', c.eye || '', c.brow || '', c.mouth || '', c.blush || '', (c.c || {}).eye || ''].join('|');   /* v741 再多五格：眼睛、眉毛、嘴巴、腮紅、眼睛顏色。第一格（以前的男女臉）留給舊版看：有睫毛的眼睛送 g、沒有的送 b */ //   /* v729 後面多四格：口罩、耳環、口罩顏色、耳環顏色（舊版只讀前九格，不會壞） */
 K3.dec = s => { if (typeof s !== 'string' || s.length > 220) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
   const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
-  c.mask = ok('mask', p[9]); c.ear = ok('ear', p[10]); c.hat = ok('hat', p[13]); if (O.eye.includes(p[15])){ c.eye = p[15]; c.brow = ok('brow', p[16]); c.mouth = ok('mouth', p[17]); c.blush = ok('blush', p[18]); } else Object.assign(c, K3.faceOf(c.sex)); [['hair', 5], ['top', 6], ['bot', 7], ['shoes', 8], ['mask', 11], ['ear', 12], ['hat', 14], ['eye', 19]].forEach(([k, i]) => { const v = hx(p[i]); if (v) c.c[k] = v; }); return c; };
+  c.mask = ok('mask', p[9]); c.ear = ok('ear', p[10]); c.hat = ok('hat', p[13]); if (O.eye.includes(p[15])){ c.eye = p[15]; c.brow = ok('brow', p[16]); c.mouth = ok('mouth', p[17]); c.blush = ok('blush', p[18]); } else Object.assign(c, K3.faceOf(c.sex)); [['hair', 5], ['top', 6], ['bot', 7], ['shoes', 8], ['mask', 11], ['ear', 12], ['hat', 14], ['eye', 19]].forEach(([k, i]) => { const v = hx(p[i]) || (k !== 'eye' && K3.isKey(p[i]) ? p[i] : undefined); if (v) c.c[k] = v; }); return c; };   /* v874 設計款送的是名字（例 buoy），舊版看到不是色號就用原色 */
 K3.set = patch => { Object.assign(K3.cfg, patch); K3.on = !!K3.cfg.on; K3.save(); try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} try { pushPresence(true); } catch(e){} };
 K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 /* v860 造型要用金幣買（作者：「造型的衣服頭髮顏色那些全部都要用錢買，不要現在什麼都免費」；伺服器 232_k3_shop.sql，價錢兩邊要一樣）。
@@ -5777,23 +5810,48 @@ K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 /* v871 老港色：老港每週限定手作才有的顏色（伺服器 237 _gang_cols 一樣），造型頁買不到，買到的才會排進顏色選單 */
 K3.GANG = { 'ff8a3d': '浮球橘', 'b8372e': '船纜紅', '5e7a52': '舊漁網綠', '2c4f73': '老船藍', 'f3d27a': '燈塔黃', '16324a': '黑潮藍', 'a9b3b8': '鹹魚銀', 'd9c49a': '退潮沙' };
 K3.gangCols = key => (rec.owned || []).filter(id => id.startsWith('k3c_' + key + '_') && K3.GANG[id.slice(-6)]).map(id => '#' + id.slice(-6));
+/* v874 作者 11/26：「顏色就算了吧，直接用那些顏色與圖案來設計原本的衣服，老港改賣限定衣服」→ 不能自己調色了（髮色、衣服、褲子、鞋子、帽子、口罩、耳環），
+   改成每件衣服有幾款「設計款」：配好的主色、邊條顏色、圖案（條紋、點點、格子、漁網、海浪，用模型座標畫在布上，跟著衣服動）。
+   設計款各自要買（k3v_<部位>_<款式>_<設計>，伺服器 238）；老港每週出一款 g 開頭的限定設計，只有老港賣。眼睛顏色是臉的一部分，照舊免費選。
+   d: [名字, 主色, 邊條色, 圖案, 圖案色, 圖案密度] */
+K3.DES = {
+  top: { tee: { mar: ['海軍條紋', '#f2f0ea', '#1e2a55', 'stripe', '#2a3f78', 14], buoy: ['浮球點點', '#fff3dc', '#e86a2a', 'dot', '#ff8a3d', 11], sun: ['夕陽橘', '#f2a24a', '#8a3a1a'], ink: ['墨黑', '#2b2b2e', '#e8e4da'] },
+    hoodie: { kuro: ['黑潮藍', '#16324a', '#e8eef2'], net: ['漁網綠', '#6b7a52', '#2d3524', 'net', '#3a4530', 9], shell: ['櫻貝粉', '#f2b8c8', '#ffffff'], ash: ['礁岩灰', '#7a7f86', '#2b2b2e'] },
+    rain: { buoy: ['浮球橘', '#ff8a3d', '#1e2a55'], ship: ['老船藍條紋', '#2c4f73', '#e8eef2', 'stripe', '#e8eef2', 9], glass: ['海玻璃綠', '#8fd3c0', '#2c4f73'], red: ['救生紅', '#d8443a', '#ffffff'] },
+    vest: { sand: ['退潮沙', '#c9b48a', '#6a5a3a'], navy: ['港口藍', '#1e2a55', '#c9a227'], red: ['船纜紅', '#b8372e', '#f2e6d4'], camo: ['紅樹林', '#4f6a3a', '#2d3524', 'check', '#3e5530', 7] },
+    wave: { night: ['夜潮', '#16243f', '#d8e2f2'], coral: ['珊瑚', '#ff8f7a', '#fff3ea'], mint: ['薄荷浪', '#7fcfb8', '#f2fffb', 'wave', '#5fb8a0', 8], sand: ['沙灘', '#e8d6aa', '#ffffff', 'dot', '#d4bd88', 12] },
+    maid: { navy: ['海軍藍', '#1e2a55', '#ffffff'], pink: ['草莓粉', '#d98aa6', '#ffffff'], mint: ['薄荷綠', '#6fbfa8', '#ffffff'] } },
+  bot: { shorts: { denim: ['牛仔藍', '#3b5b8a', '#26364f'], khaki: ['卡其', '#c8b48a', '#8a7a58'], check: ['格紋', '#5a3a2a', '#3a2418', 'check', '#3a2418', 10], white: ['米白', '#e8e4da', '#b8b2a4'] },
+    pants: { denim: ['牛仔藍', '#3b5b8a', '#26364f'], khaki: ['卡其', '#c8b48a', '#8a7a58'], check: ['格紋', '#5a3a2a', '#3a2418', 'check', '#3a2418', 10], navy: ['海軍條紋', '#1e2a55', '#141c3a', 'vstripe', '#3a4f80', 16] } },
+  shoes: { sneak: { black: ['黑色', '#2a2a2a'], red: ['紅色', '#e0564f'], blue: ['海藍', '#3a6ea5'], yellow: ['芥末黃', '#c9a227'] }, mary: { black: ['黑色', '#2a2a2a'], red: ['紅色', '#8a2a2a'], white: ['白色', '#ffffff'] } },
+  hat: { cap: { navy: ['海軍藍', '#1e2a55'], red: ['紅色', '#e0564f'], white: ['白色', '#ffffff'], yellow: ['黃色', '#e8c547'] }, straw: { navy: ['藍緞帶', '#1e2a55'], pink: ['粉緞帶', '#f2a7c0'], black: ['黑緞帶', '#2b2b2e'] } },
+  mask: { mask: { black: ['黑色', '#2b2b2e'], pink: ['粉紅', '#f2b8c8'], blue: ['淺藍', '#8fb8e0'] } },
+  ear: { pearl: { gold: ['金色', '#e8c25a'], pink: ['粉色', '#f2a7c0'] }, star: { gold: ['金色', '#e8c25a'], silver: ['銀色', '#d8dde3'] }, hoop: { gold: ['金色', '#e8c25a'], silver: ['銀色', '#d8dde3'] }, drop: { blue: ['海藍', '#6fc3e8'], silver: ['銀色', '#d8dde3'] } } };
+/* 老港的每週限定設計（伺服器 238 _gang_des 一樣的順序），只在老港那裡買得到 */
+K3.GANGD = [['rain', 'g1', '浮球點點雨衣', '#ff8a3d', '#1e2a55', 'dot', '#fff3dc', 9], ['wave', 'g2', '老船出海外套', '#2c4f73', '#f3d27a', 'stripe', '#3a6390', 10], ['hoodie', 'g3', '舊漁網連帽衣', '#5e7a52', '#2f3d28', 'net', '#2f3d28', 8],
+  ['tee', 'g4', '燈塔條紋T', '#f3f0e6', '#b8372e', 'stripe', '#b8372e', 12], ['vest', 'g5', '黑潮背心', '#16324a', '#a9b3b8', 'net', '#24476a', 7], ['rain', 'g6', '鹹魚銀雨衣', '#a9b3b8', '#2c4f73', 'stripe', '#e8eef2', 8],
+  ['wave', 'g7', '退潮沙海浪外套', '#d9c49a', '#ffffff', 'wave', '#c4ad7e', 9], ['hoodie', 'g8', '船纜紅連帽衣', '#b8372e', '#f2e6d4', 'vstripe', '#8a2620', 14]];
+for (const [st, k, n, a, b, pt, pc, ps] of K3.GANGD) K3.DES.top[st][k] = [n, a, b, pt, pc, ps, 1];
+K3.des = (part, style, key) => { const D = K3.DES[part] && K3.DES[part][style]; return (D && key && D[key]) || null; };
+K3.isKey = v => typeof v === 'string' && /^[a-z][a-z0-9]{0,9}$/.test(v);
 K3.PRICE = { hair:600, top:800, bot:500, shoes:400, hat:500, mask:500, ear:500, color:150 };
 K3.FREE = new Set(['hair_long', 'hair_short', 'top_tee', 'bot_shorts', 'bot_pants', 'shoes_sneak', 'hat_none', 'mask_none', 'ear_none']);
 K3.PAID_K = ['hair', 'top', 'bot', 'shoes', 'hat', 'mask', 'ear'];
 K3.idOf = (k, v) => 'k3_' + k + '_' + v; K3.idC = (k, col) => 'k3c_' + k + '_' + String(col).replace('#', '').toLowerCase();
-K3.cost = id => /^k3c_/.test(id) ? K3.PRICE.color : K3.FREE.has(id.slice(3)) ? 0 : (K3.PRICE[id.split('_')[1]] || 0);
+K3.cost = id => /^k3c_/.test(id) ? K3.PRICE.color : /^k3v_/.test(id) ? (K3.PRICE[id.split('_')[1]] || 0) : K3.FREE.has(id.slice(3)) ? 0 : (K3.PRICE[id.split('_')[1]] || 0);
 K3.owns = id => !Cloud.on || K3.cost(id) === 0 || (rec.owned || []).includes(id);
-K3.ids = c => { const L = []; for (const k of K3.PAID_K){ if (c[k] != null) L.push(K3.idOf(k, c[k])); const col = (c.c || {})[k]; if (col && (k !== 'hat' || c.hat !== 'none') && (k !== 'mask' || c.mask === 'mask') && (k !== 'ear' || c.ear !== 'none')) L.push(K3.idC(k, col)); } return L; };
+K3.ids = c => { const L = []; for (const k of K3.PAID_K){ if (c[k] != null) L.push(K3.idOf(k, c[k])); const key = (c.c || {})[k]; if (K3.isKey(key) && K3.des(k, c[k], key)) L.push('k3v_' + k + '_' + c[k] + '_' + key); } return L; };   /* v874 設計款 */
 K3.unpaid = c => K3.ids(c || K3.cfg).filter(id => !K3.owns(id));
-K3.nm = id => { const m = /^k3(c?)_([a-z]+)_(.+)$/.exec(id); if (!m) return id; const part = { hair:'髮', top:'上衣', bot:'褲子', shoes:'鞋子', hat:'帽子', mask:'口罩', ear:'耳環' }[m[2]] || ''; return m[1] ? (m[2] === 'hair' ? '髮色' : part + '顏色') : (K3.LBL && K3.LBL[m[2] + '_' + m[3]]) || part; };
+K3.nm = id => { const v = /^k3v_([a-z]+)_([a-z0-9]+)_([a-z0-9]+)$/.exec(id); if (v){ const d = K3.des(v[1], v[2], v[3]); return ((K3.LBL && K3.LBL[v[1] + '_' + v[2]]) || '') + (d ? '・' + d[0] : ''); } const m = /^k3(c?)_([a-z]+)_(.+)$/.exec(id); if (!m) return id; const part = { hair:'髮', top:'上衣', bot:'褲子', shoes:'鞋子', hat:'帽子', mask:'口罩', ear:'耳環' }[m[2]] || ''; return m[1] ? (m[2] === 'hair' ? '髮色' : part + '顏色') : (K3.LBL && K3.LBL[m[2] + '_' + m[3]]) || part; };
 K3.tryOn = fn => { if (!K3.real) K3.real = JSON.parse(JSON.stringify(K3.cfg)); fn(K3.cfg); try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} if (!K3.unpaid().length){ const keep = K3.cfg; K3.real = null; K3.cfg = keep; K3.set({}); } };
 K3.tryEnd = () => { if (!K3.real) return; K3.cfg = K3.real; K3.real = null; try { const a = me && me.av; if (a && a.k3) a.k3.dirty = true; } catch(e){} };
 K3.buyAll = async () => { const L = K3.unpaid(); if (!L.length || K3.buying) return; const tot = L.reduce((a, id) => a + K3.cost(id), 0); if (rec.coins < tot){ toast(`金幣不夠，還差 🪙${(tot - rec.coins).toLocaleString()}`); return; }
   K3.buying = true; try { for (const id of L){ const { data, error } = await Cloud.sb.rpc('k3_buy', { p_id: id }); if (error) throw error; adoptRow(data); } K3.real = null; K3.set({}); try { SFX.coin(); } catch(e){} flash(`👕 買好了！花了 🪙${tot.toLocaleString()}`, 1.6); Style.newAt = Date.now(); Style.said = false; }
   catch(e){ toast('買不了：' + ((e && e.message) || '網路怪怪的')); } K3.buying = false; renderTab(); };
-K3.fix = () => { if (!Cloud.on || !(rec.owned || []).includes('k3_grand') || K3.real) return; let ch = false; const c = K3.cfg;
-  for (const k of K3.PAID_K){ if (c[k] != null && !K3.owns(K3.idOf(k, c[k]))){ c[k] = k === 'hair' ? 'short' : k === 'top' ? 'tee' : k === 'bot' ? 'shorts' : k === 'shoes' ? 'sneak' : 'none'; ch = true; } const col = (c.c || {})[k]; if (col && !K3.owns(K3.idC(k, col))){ c.c[k] = ''; ch = true; } }
-  if (ch){ K3.set({}); toast('造型裡沒買的東西換回基本款了（之前買的、身上那套都還在）'); } };
+K3.fix = () => { if (!Cloud.on || !(rec.owned || []).includes('k3_grand') || K3.real) return; let ch = false; const c = K3.cfg; c.c = c.c || {};
+  for (const k of K3.PAID_K){ if (c[k] != null && !K3.owns(K3.idOf(k, c[k]))){ c[k] = k === 'hair' ? 'short' : k === 'top' ? 'tee' : k === 'bot' ? 'shorts' : k === 'shoes' ? 'sneak' : 'none'; ch = true; } const v = c.c[k];
+    if (v && (!K3.isKey(v) || !K3.des(k, c[k], v) || !K3.owns('k3v_' + k + '_' + c[k] + '_' + v))){ delete c.c[k]; ch = true; } }   /* v874 不能調色了：以前選的顏色、沒買的設計款換回原本的 */
+  if (ch){ K3.set({}); toast('造型裡不能用的顏色、沒買的設計款換回原本的了'); } };
 async function k3Grant(){ if (!Cloud.on || !Cloud.sb || !K3.on) return; try { if (!(rec.owned || []).includes('k3_grand')){ const { data, error } = await Cloud.sb.rpc('k3_grant', { p_ids: K3.ids(K3.cfg) }); if (error) return; adoptRow(data); } K3.fix(); } catch(e){} }
 /* v691 作者：「iPhone 換新人物完全不會動」。我這邊（Android 模擬）會動，先把 iPhone 上發生什麼事送回伺服器：出錯的訊息、骨架有沒有在轉、顯卡能力 */
 K3.n = 0; K3.bad = e => { K3.ecount = (K3.ecount || 0) + 1; K3.lastE = e && e.stack || e; if (K3.ferr) return; K3.ferr = 1; console.warn('k3', e); try { errReport('k3', 'err ' + String(e && e.stack || e).replace(/\s+/g, ' ').slice(0, 280)); } catch(_){} };
@@ -19844,11 +19902,11 @@ function statInit(){ if (Stat.on || !Cloud.on || !Cloud.sb) return; Stat.on = tr
   for (const ev of Stat.q) statMs(ev); Stat.q.clear(); setInterval(statTick, 5000); statTick();
   const beat = () => { try { if (document.visibilityState === 'visible' && Cloud.on && Cloud.sb) Cloud.sb.rpc('stat_beat', { p_ctx: statCtx() }).then(() => {}, () => {}); } catch(e){} };
   beat(); setInterval(beat, 60000); }
-async function refundCheck(){ if (!Cloud.on || !Cloud.sb) return; const u = Cloud.userId || '', k1 = 'tide.refund219.' + u, k2 = 'tide.refund226.' + u; if (LS.get(k1, 0) && LS.get(k2, 0)) return;
-  try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k1, 1); LS.set(k2, 1); const n = data && data.coins | 0, ks = (data && data.kinds) || [];
+async function refundCheck(){ if (!Cloud.on || !Cloud.sb) return; const u = Cloud.userId || '', k1 = 'tide.refund219.' + u, k2 = 'tide.refund226.' + u, k3 = 'tide.refund238.' + u; if (LS.get(k1, 0) && LS.get(k2, 0) && LS.get(k3, 0)) return;
+  try { const { data, error } = await Cloud.sb.rpc('refund_seen'); if (error) return; LS.set(k1, 1); LS.set(k2, 1); LS.set(k3, 1); const n = data && data.coins | 0, ks = (data && data.kinds) || [];
     if (n > 0){ try { await cloudRefresh(); } catch(e){} SFX.coin && SFX.coin(); flash(`退回 🪙${n.toLocaleString()}`, 2.2); }
     if (ks.includes('pet_retire')){ try { await loadPets(true); } catch(e){} }
-    const msg = []; if (ks.includes('old_wardrobe')) msg.push('服裝店、美髮沙龍整修中：以前買舊人物的衣服、髮型的金幣已經退還給你了'); if (ks.includes('pet_retire')) msg.push('小章魚、河豚、寄居蟹回到大海了' + (n > 0 && !ks.includes('old_wardrobe') ? `，在寵物店領養寄居蟹花的 🪙${n.toLocaleString()} 已經退還給你` : '') + '。謝謝你照顧牠們！');
+    const msg = []; if (ks.includes('old_wardrobe')) msg.push('服裝店、美髮沙龍整修中：以前買舊人物的衣服、髮型的金幣已經退還給你了'); if (ks.includes('k3_color')) msg.push('造型不能自己調色了，改成設計款；以前買的顏色一個退 🪙150'); if (ks.includes('pet_retire')) msg.push('小章魚、河豚、寄居蟹回到大海了' + (n > 0 && !ks.includes('old_wardrobe') ? `，在寵物店領養寄居蟹花的 🪙${n.toLocaleString()} 已經退還給你` : '') + '。謝謝你照顧牠們！');
     if (!msg.length && n > 0) msg.push(`退還給你 🪙${n.toLocaleString()}`); if (msg.length) toast(msg.join('；') + (n > 0 && ks.length > 1 ? `（共 🪙${n.toLocaleString()}）` : '')); } catch(e){} }
 // ---- Email 連結：綁定（保存這份紀錄）或在別的裝置登入 ----
 // Supabase 免費方案不能改信件內容，所以用信裡的「Sign in／Confirm」連結（不用驗證碼）。
@@ -20717,14 +20775,14 @@ function renderGangShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>⚓ 老港的每週限定手作</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能跟老港買。')); return; }
   const D = Gang.data; if (!D){ body.appendChild(el('div', 'empty', '載入中…')); return; }
-  body.appendChild(el('p', 'sub', D.k3 && D.k3.part ? '「每個禮拜一早上 9 點，我用浮球、船纜、舊漁網的顏色染一件，這些顏色外面買不到。全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。' : '「每個禮拜一早上 9 點，我用舊漁網、船纜、浮球的顏色做一件，全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。'));
+  body.appendChild(el('p', 'sub', D.k3 && D.k3.part ? '「每個禮拜一早上 9 點，我用浮球、船纜、舊漁網的顏色和花樣做一件，外面買不到。全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。' : '「每個禮拜一早上 9 點，我用舊漁網、船纜、浮球的顏色做一件，全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。'));
   /* v871 作者：「老港這個應該變成設計目前3D模型衣服了吧」→ 老港改做新人物的衣服：用造型頁買不到的「老港色」染一件，小圖是你穿上的樣子 */
   if (D.k3 && D.k3.part){ const K = D.k3, left = D.stock - D.sold, ul = el('ul', 'shoplist'), li = el('li', D.mine ? 'on' : ''), cf = JSON.parse(JSON.stringify(K3.real || K3.cfg));
-    cf[K.part] = K.style; cf.c = Object.assign({}, cf.c, { [K.part]: K.col }); const im = k3ShotImg(cf, K.part === 'hat' ? 'hat' : 'top', K.name); im.style.cssText = 'width:64px;height:64px;border-radius:12px;background:#f3ead8'; li.appendChild(im);
-    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', K.name)); inf.appendChild(el('div', 'sub2', `${K3.GANG[K.col.slice(1)] || ''}是老港色，造型頁買不到・🪙${D.price}・還剩 ${left}/${D.stock} 件${D.why && !D.mine ? '・' + D.why : ''}`)); li.appendChild(inf);
-    const a = el('div', 'tacts'), owns = (rec.owned || []).includes('k3c_' + K.part + '_' + K.col.slice(1)), b = el('button', 'tbtn' + (D.mine || left <= 0 || D.why ? ' ghost' : ''), D.mine ? '買過了' : left <= 0 ? '賣完了' : `買 🪙${D.price}`); b.disabled = !!(D.mine || left <= 0 || D.why || rec.coins < D.price);
+    cf[K.part] = K.style; cf.c = Object.assign({}, cf.c, { [K.part]: K.key }); const im = k3ShotImg(cf, K.part === 'hat' ? 'hat' : 'top', K.name); im.style.cssText = 'width:64px;height:64px;border-radius:12px;background:#f3ead8'; li.appendChild(im);
+    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', K.name)); inf.appendChild(el('div', 'sub2', `老港限定設計，造型頁買不到・🪙${D.price}・還剩 ${left}/${D.stock} 件${D.why && !D.mine ? '・' + D.why : ''}`)); li.appendChild(inf);
+    const a = el('div', 'tacts'), owns = (rec.owned || []).includes('k3v_' + K.part + '_' + K.style + '_' + K.key), b = el('button', 'tbtn' + (D.mine || left <= 0 || D.why ? ' ghost' : ''), D.mine ? '買過了' : left <= 0 ? '賣完了' : `買 🪙${D.price}`); b.disabled = !!(D.mine || left <= 0 || D.why || rec.coins < D.price);
     b.addEventListener('click', async () => { b.disabled = true; try { const { data, error } = await Cloud.sb.rpc('gang_buy'); if (error) throw error; adoptRow(data); SFX.catch(); flash(`買到老港的「${K.name}」了！`, 2); } catch(e){ toast(cloudErrMsg(e)); } loadGang(); });
-    a.appendChild(b); if (owns && K3.on){ const wr = el('button', 'tbtn ghost', '穿上'); wr.addEventListener('click', () => { K3.tryEnd(); K3.set({ [K.part]: K.style, c: Object.assign({}, K3.cfg.c, { [K.part]: K.col }) }); flash('換好了，大家看得到', 1.4); renderTab(); }); a.appendChild(wr); }
+    a.appendChild(b); if (owns && K3.on){ const wr = el('button', 'tbtn ghost', '穿上'); wr.addEventListener('click', () => { K3.tryEnd(); K3.set({ [K.part]: K.style, c: Object.assign({}, K3.cfg.c, { [K.part]: K.key }) }); flash('換好了，大家看得到', 1.4); renderTab(); }); a.appendChild(wr); }
     li.appendChild(a); ul.appendChild(li); body.appendChild(ul);
     if ((D.past || []).length){ body.appendChild(el('div', 'dexhead', '之前做過的')); const u2 = el('ul', 'wlist old'); for (const p of D.past) u2.appendChild(el('li', '', `${p.week}　${p.name}（賣了 ${p.sold}/${p.stock}）`)); body.appendChild(u2); }
     return; }
@@ -21760,7 +21818,7 @@ function renderTab0(){
         ["一次生 1～3 條。每條 5% 機會突變，0.5% 機會稀有突變（白化、金鱗、黑化、夜光、寶石眼）。", "能配的有 13 種。有基因的魚最多養 60 條，配種缸可以用金幣加到 4 缸。", "變種帶基因的配變種，一半是變種；兩條帶基因的配，四分之一是變種。", "春夏是野外繁殖季。含著小魚的母吳郭魚放流多 5 愛海點數。"]],
       ["買東西、賣魚", "home", ["潮汐魚市場在港邊廣場，裡面三個櫃位：賣魚、阿福海產、釣客擺攤。", "魚越稀有、越重越值錢。", "釣具店賣釣竿、魚餌、窩料、工具。", "衣服可以先試穿再買，大家都看得到你穿什麼。", "阿萍的美髮沙龍在阿綾服裝店對面，剪了染了就是你的。", "造型頁最下面可以自己畫衣服，還能放到設計師市集賣。", "魚市場的「跑船生意」：把魚載到別的地方賣比較貴。"],
         ["跑船：一次最多 10 條。村子的魚載去珊瑚礁島、礁島的魚載回村子，都多三成。裝船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半。要過 45 秒才能賣。", "阿萍：新髮色 200 金幣，新髮型 400。", "自己畫的衣服是 32×32 格、48 色。別人買了你拿九成。被檢舉三次會下架。"]],
-      ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型十四種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭、平頭、西瓜頭、中分短髮、捲捲短髮、雙麻花辮、長直髮。", "還能戴帽子、口罩、耳環。每一件都能換顏色。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
+      ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型十四種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭、平頭、西瓜頭、中分短髮、捲捲短髮、雙麻花辮、長直髮。", "還能戴帽子、口罩、耳環。", "不能自己調色，每件衣服有幾款設計款（配好的顏色和圖案），各自要買；⚓ 是老港每週的限定款，只有老港賣。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
         ["每週一換一個穿搭主題，身上穿到 2 件以上，釣魚多一成經驗。", "幫別人的穿搭按讚，一週最多 30 次。"]],
       ["寵物", "pet", ["寵物店在商店街口，走進去找櫃台的小花領養。店裡的貓狗可以隨便看。", "小海龜、小烏龜釣魚時偶爾會撈到（小海龜只能用撈的）。水獺之後的活動才會出現。", "點頭像打開「寵物」，可以帶出門、餵食、領禮物、改名。", "一次帶一隻出門，其他的留在你的小島。", "按表情那顆可以跟牠玩：給點心、摸頭、握手、丟球、抱抱。", "帶貓出門，附近有魚群牠會叫。你停下來牠會坐下看你。", "在小島蓋圍欄，待在家的寵物會住進去。", "寵物可以放到寵物市集賣。"],
         ["餵食會用掉魚缸的魚。一天第一次親密度加 15（稀有魚 20、傳說魚 25），之後同一天每次加 1。", "親密度 10 以上每天帶一份小禮物，60 戴項圈，150 再戴小帽子。", "圍欄、海水池、烏龜缸各 1,500 金幣，一個住 5 隻。", "市集賣出賣家拿九成，買的人親密度重來。名字最多 8 個字。", "釣到三棘鱟有兩成機會跟來一隻小鱟。"]],
@@ -22988,6 +23046,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u874', d:'11/26', items:[['👕','造型不能自己調色了，改成每件衣服有幾款設計款：條紋、點點、格子、漁網、海浪，顏色都配好了','closet'],['⚓','老港每週改賣外面買不到的限定設計款','gang'],['🪙','以前買的顏色一個退 150 金幣']] },
   { id:'u873', d:'11/26', items:[['🏝️','你的小島變大了：外面一圈淺水礁和浪花、白沙灘、椰子樹、樹林，東北邊還有幾根高高的峭壁。原本蓋的東西都在。','island'],['🌳','樹林分成 6 塊地，走到牌子那裡就能買。買下來樹會倒下，換成漂流木，地就可以拿來蓋房子。']] },
   { id:'u872', d:'11/26', items:[['🎣','村民在釣魚的時候走過去，他不會再拿著竿子整個人滑開；兩個村民也不會再疊在一起']] },
   { id:'u871', d:'11/26', items:[['⚓','老港的每週限定手作改做新人物的衣服了：用造型頁買不到的「老港色」（浮球橘、船纜紅、舊漁網綠…）染一件，全村 5 件，買了直接按「穿上」','gang']] },
