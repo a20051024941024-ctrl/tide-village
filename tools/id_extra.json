@@ -8791,5 +8791,12 @@
  "建地島先收起來，你蓋的東西都還在。": "Pulau Bangun ditutup dulu. Semua yang kamu bangun masih ada.",
  "造型改成用金幣買，臉免費，還送一套基本款。想買的先試穿看看。": "Gaya sekarang dibeli pakai koin. Wajah gratis, plus satu set dasar gratis. Coba dulu sebelum beli.",
  "你身上現在那套直接送你。": "Baju yang kamu pakai sekarang jadi milikmu, gratis.",
- "村民講話換了口氣，比較像真的人在跟你聊天。阿綾、阿鐵、阿福他們各有各的脾氣。": "Warga sekarang bicara dengan gaya baru, lebih seperti orang sungguhan yang mengobrol denganmu. Aling, Atie, Afu dan lainnya punya watak masing-masing."
+ "村民講話換了口氣，比較像真的人在跟你聊天。阿綾、阿鐵、阿福他們各有各的脾氣。": "Warga sekarang bicara dengan gaya baru, lebih seperti orang sungguhan yang mengobrol denganmu. Aling, Atie, Afu dan lainnya punya watak masing-masing.",
+ "小島外圍是樹林，分成 6 塊地。走到樹林邊的牌子按「買這塊地」，再按一次確定，樹就會砍掉，那塊地可以蓋房子、放方塊。": "Bagian luar pulaumu berupa hutan yang dibagi jadi 6 petak. Datangi papan di tepi hutan, ketuk \"Beli tanah ini\", lalu ketuk lagi untuk memastikan. Pohonnya ditebang dan kamu bisa membangun di sana.",
+ "買地照順序越來越貴：2,000、4,000、7,000、11,000、16,000、22,000。砍下來的樹會變成 6 個漂流木。東北邊的峭壁不能買。": "Setiap petak lebih mahal dari sebelumnya: 2.000, 4.000, 7.000, 11.000, 16.000, 22.000. Pohon yang ditebang jadi 6 kayu apung. Tebing di timur laut tidak bisa dibeli.",
+ "你的小島變大了：外面一圈淺水礁和浪花、白沙灘、椰子樹、樹林，東北邊還有幾根高高的峭壁。原本蓋的東西都在。": "Pulaumu jadi lebih besar: lingkaran karang dangkal dan ombak, pasir putih, pohon kelapa dan hutan, plus tebing tinggi di timur laut. Semua bangunanmu masih ada.",
+ "樹林分成 6 塊地，走到牌子那裡就能買。買下來樹會倒下，換成漂流木，地就可以拿來蓋房子。": "Hutannya dibagi jadi 6 petak yang bisa dibeli di papan. Beli satu, pohonnya tumbang jadi kayu apung, dan tanahnya bisa kamu bangun.",
+ "買這塊地": "Beli tanah ini",
+ "這塊地還沒買，買下來才能放": "Tanah ini belum kamu beli",
+ "這塊地還沒買，買下來才能蓋": "Tanah ini belum kamu beli"
 }

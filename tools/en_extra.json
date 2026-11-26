@@ -9067,5 +9067,12 @@
  "建地島先收起來，你蓋的東西都還在。": "Building Island is closed for now. Everything you built is still there.",
  "造型改成用金幣買，臉免費，還送一套基本款。想買的先試穿看看。": "Styles are bought with coins now. Faces are free, plus a free basic outfit. Try things on before buying.",
  "你身上現在那套直接送你。": "The outfit you're wearing now is yours, free.",
- "村民講話換了口氣，比較像真的人在跟你聊天。阿綾、阿鐵、阿福他們各有各的脾氣。": "Villagers talk differently now, more like real people chatting with you. Aling, Atie, Afu and the rest each have their own temper."
+ "村民講話換了口氣，比較像真的人在跟你聊天。阿綾、阿鐵、阿福他們各有各的脾氣。": "Villagers talk differently now, more like real people chatting with you. Aling, Atie, Afu and the rest each have their own temper.",
+ "小島外圍是樹林，分成 6 塊地。走到樹林邊的牌子按「買這塊地」，再按一次確定，樹就會砍掉，那塊地可以蓋房子、放方塊。": "The outer ring of your island is forest, split into 6 plots. Walk to a sign at the forest edge, tap \"Buy this land\" and tap again to confirm. The trees get cut down and you can build there.",
+ "買地照順序越來越貴：2,000、4,000、7,000、11,000、16,000、22,000。砍下來的樹會變成 6 個漂流木。東北邊的峭壁不能買。": "Each plot costs more than the last: 2,000, 4,000, 7,000, 11,000, 16,000, 22,000. The cut trees become 6 driftwood. The north-east cliffs can't be bought.",
+ "你的小島變大了：外面一圈淺水礁和浪花、白沙灘、椰子樹、樹林，東北邊還有幾根高高的峭壁。原本蓋的東西都在。": "Your island got bigger: a ring of shallow reef and surf, white sand, palms and forest, plus tall cliffs in the north-east. Everything you built is still there.",
+ "樹林分成 6 塊地，走到牌子那裡就能買。買下來樹會倒下，換成漂流木，地就可以拿來蓋房子。": "The forest is split into 6 plots you can buy at the signs. Buy one and the trees fall, turning into driftwood, and the land is yours to build on.",
+ "買這塊地": "Buy this land",
+ "這塊地還沒買，買下來才能放": "You haven't bought this land yet",
+ "這塊地還沒買，買下來才能蓋": "You haven't bought this land yet"
 }
