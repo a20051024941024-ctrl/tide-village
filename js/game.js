@@ -21591,7 +21591,17 @@ function updateNpcs(dt, t){
 }
 /* v872 作者：「黃色雨衣村民卡進去了」→ 兩個村民站太近（散步走到同一個地方）就把畫出來的身體往兩邊推開一點，不會疊在一起；
    釣魚中的村民身邊 0.55 公尺內玩家進不去（輕輕推出去），不然玩家跟村民疊在一起、村民又要讓位就會一直亂動 */
-function npcSpread(){ const L = npcs.filter(n => n.av && n.av.g.visible && !n.wHide && !n.sitting && !n.yOnBoat && n.av.g.parent);
+/* v888 作者：「村民都卡進去了」（阿木木工坊）→ 阿木站的位置在房子的牆裡（房子改過、站位沒跟著改），伺服器排的位置（好幾個人站一圈）也可能排進牆。
+   現在村民停著的時候，站的點在障礙物裡面就往外找最近一個空的、能走、高度差不多的點站（算過的點記起來，30 秒清一次，不會每格都算） */
+const UNST = { m: new Map(), at: 0 };
+function unstuckAt(x, z){ const k = Math.round(x * 10) + ',' + Math.round(z * 10); let v = UNST.m.get(k); if (v !== undefined) return v; v = null;
+  const wet = !walkable(x, z); if (wet || blocked(x, z, 0.2)){ const g0 = groundHeight(x, z); outer: for (let r = 0.25; r <= 3.2; r += 0.2) for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;   /* 站到水裡（站一圈排到岸外）也一樣拉回岸上 */
+      if (walkable(px, pz) && !blocked(px, pz, 0.28) && (wet || Math.abs(groundHeight(px, pz) - g0) < 0.45)){ v = [px, pz]; break outer; } } }
+  UNST.m.set(k, v); return v; }
+function npcUnstick(){ const T = performance.now(); if (T - UNST.at > 30000){ UNST.at = T; UNST.m.clear(); } if (House.on || Dive.on || onIsle) return;
+  for (const n of npcs){ if (!n.av || !n.av.g.visible || n.wHide || n.sitting || n.yOnBoat || n.swim || (n.boat && !n.amo) || n.speed > 0.05 || (n.amo && n.amoMode !== 'pier')) continue; if (camera.position.distanceTo(n.pos) > 45) continue;
+    const v = unstuckAt(n.pos.x, n.pos.z); if (v){ n.pos.x = v[0]; n.pos.z = v[1]; n.baseY = groundHeight(v[0], v[1]); if (n.roam && n.roam.post && Math.hypot(n.roam.post.x - v[0], n.roam.post.z - v[1]) < 2.7 && blocked(n.roam.post.x, n.roam.post.z, 0.2)){ n.roam.post.x = v[0]; n.roam.post.z = v[1]; } } } }
+function npcSpread(){ try { npcUnstick(); } catch(e){} const L = npcs.filter(n => n.av && n.av.g.visible && !n.wHide && !n.sitting && !n.yOnBoat && n.av.g.parent);
   for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++){ const a = L[i].av.g.position, b = L[j].av.g.position, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
     if (d < 0.62 && Math.abs(a.y - b.y) < 1){ const ux = d > 0.01 ? dx / d : 1, uz = d > 0.01 ? dz / d : 0, k = (0.62 - d) / 2; const ma = L[i].fishing ? 0 : 1, mb = L[j].fishing ? 0 : 1, sm = ma + mb || 1;
       a.x -= ux * k * 2 * ma / sm; a.z -= uz * k * 2 * ma / sm; b.x += ux * k * 2 * mb / sm; b.z += uz * k * 2 * mb / sm; } }
@@ -21659,6 +21669,7 @@ function worldPose(wid){
   /* v395 玩家回報：吃飯時間村民全擠在潮汐食堂門口，擋住門進不去。現在在食堂附近的村民排在門的兩旁（離門 2 公尺以上），門口留空 */
   { const D = CAFE_DOOR, f = D.face || 0; if (Math.hypot(to.x - D.x, to.z - D.z) < 4){ const nx = Math.sin(f), nz = Math.cos(f), tx = Math.cos(f), tz = -Math.sin(f), side = k % 2 ? 1 : -1, off = 2.3 + Math.floor(k / 2) * 0.9;
     x = D.x + nx * 0.9 + tx * side * off; z = D.z + nz * 0.9 + tz * side * off; rot = Math.atan2(-tx * side + nx * 0.6, -tz * side + nz * 0.6); } }
+  { const v = unstuckAt(x, z); if (v){ x = v[0]; z = v[1]; } }   /* v888 排到牆裡、水裡的往外挪 */
   return { walk:false, x, z, rot, v:0, r, to };
 }
 var WORLD_LINES = {
@@ -23400,7 +23411,11 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+<<<<<<< Updated upstream
   { id:'u888', d:'11/26', items:[['🚪','自己圍房間：用方塊或隔板圍一圈、留一個門，走到門旁邊按「名牌」掛上去。可以選「我的房間」（只有你能動裡面的東西）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名','island'], ['🔴','牆沒圍好時按「看缺口在哪」，缺口會閃紅色；走進房間會看到房間的名字','island']] },
+=======
+  { id:'u888', d:'11/26', items:[['🧱','村民不會再卡進牆裡了：阿木站在木工坊的牆裡、大家聚在一起時排進牆或水裡的，都會自己站到旁邊空的地方']] },
+>>>>>>> Stashed changes
   { id:'u887', d:'11/26', items:[['⛵','阿默和阿穎有自己的雙人船「默穎號」了：黑色船身、船頭一片紅鯊鰭、船緣從紅變粉紅，還有粉紅愛心和小旗。到了釣點兩個人會並排一起釣'], ['🚶','阿默和阿穎上岸走去長椅會繞著碼頭走，不會再走在海上；從椅子站起來也不會穿過椅背、亂動了']] },
   { id:'u886', d:'11/26', items:[['🤝','大家一起住：住在島上的人都一樣，都可以蓋、拆、擺家具、種田，不再分共同島主、管理、一般成員；只有島主可以邀請和請人搬走','island'], ['📦','島上多一個大箱子（碼頭左邊的沙灘），收起來的東西、拆下來的方塊都放進去，一起住的人都能拿出來擺，不用再付錢；小島商店也多一個「📦 大箱子」分頁','island']] },
   { id:'u885', d:'11/26', items:[['📦','小島商店的「島上的東西」也換成大圖的樣子：點一個看模型，下面直接按移動、收起來。','island']] },
