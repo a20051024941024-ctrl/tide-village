@@ -1412,7 +1412,7 @@ addDeck(WILD.x - WILD_RE - 3.0, WILD.z, 9.0, 2.4, WILD.y + 0.18);   /* v590 漂�
 function inPoolHall(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } return Math.abs(x - POOLH.x) < POOLH.w / 2 && Math.abs(z - POOLH.z) < POOLH.d / 2; }
 function inStad(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } return Math.abs(x - STAD.x) < STAD.w / 2 && Math.abs(z - STAD.z) < STAD.d / 2; }
 function inMuseum(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } return Math.abs(x - MUSEUM.x) < MUSEUM.w / 2 && Math.abs(z - MUSEUM.z) < MUSEUM.d / 2; }
-function inIndoor(){ return inCafe() || inMuseum() || inPoolHall() || inPetHall(); }
+function inIndoor(){ return inCafe() || inMuseum() || inPoolHall() || inPetHall() || !!inShopHall(); }
 function inCafe(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } return Math.abs(x - CAFE.x) < CAFE.w / 2 && Math.abs(z - CAFE.z) < CAFE.d / 2; }
 function inShrimpHall(x, z, m){ return Math.abs(x - SHRIMP.x) < SHRIMP.w / 2 + (m || 0) && Math.abs(z - SHRIMP.z) < SHRIMP.d / 2 + (m || 0); }
 function inShrimpPool(x, z){ return Math.abs(x - SHRIMP.x) < SHRIMP.pw / 2 - 0.05 && Math.abs(z - SHRIMP.z) < SHRIMP.pd / 2 - 0.05; }
@@ -15438,7 +15438,7 @@ async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.for
     const i = free++, x = ISLE.x + 3 + (i % 3) * 1.5, z = ISLE.z + 4 + Math.floor(i / 3) * 1.2; pt.pos.set(x, groundHeight(x, z), z); pt.wander = { x, z, at: 0 }; return pt; }); }
 function penSpot(it){ const A = PEN_AREA[it.t], u = (Math.random() * 2 - 1) * A.hx, v = (Math.random() * 2 - 1) * A.hz, c = Math.cos(it.r), s = Math.sin(it.r);
   return { x: ISLE.x + it.x + u * c + v * s, z: ISLE.z + it.z - u * s + v * c, y: ISLE.y + A.y }; }
-function updatePets(dt, t){
+function updatePets(dt, t){ try { shopHallTick(dt, t); } catch(e){ if (!shopHallTick.w){ shopHallTick.w = 1; console.warn('shophall', e); } }
   updatePetFor(me, petMine(), dt, t);
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
@@ -15466,6 +15466,85 @@ function updatePets(dt, t){
 function petHug(){ const pt = me.pet; if (!pt){ toast('要先帶一隻寵物出門（點頭像的「🐾 寵物」）'); return; } if (me.held) me.av.g.remove(me.held.o); pt.hug = true; if (pt.m.parent) pt.m.parent.remove(pt.m); const y = me.av.kid ? 0.62 : 0.8, z = me.av.kid ? 0.3 : 0.38; pt.m.position.set(0, y, z); pt.m.rotation.set(0, Math.PI / 2, 0); if (pt.m.userData.lb) pt.m.userData.lb.visible = false; me.av.g.add(pt.m);   /* 抱著的時候名字牌先藏起來（不然會擋到臉） */ me.held = { o: pt.m, y, z, until: now() + 4, pet: true };   /* v358 少了 z 會變成 NaN（寵物跑到看不見的地方，只剩一小塊）；橫著抱，看得到側面 */ me.say(`🤗 ${pt.name}`, 'emote', 4); closeEmotePanel(); }
 function petPat(){ petAct('pat'); }
 function petPatOld(){ const pt = me.pet; if (!pt) return; pt.pos.set(me.pos.x + Math.sin(me.rot) * 0.7, me.baseY, me.pos.z + Math.cos(me.rot) * 0.7); pt.rot = me.rot + Math.PI; FX.emit(pt.pos.x, pt.pos.y + 0.6, pt.pos.z, 10, '#ff9ab0', 0.4, 1.2, 1.0); me.say(`✋ 摸摸 ${pt.name}`, 'emote', 3); closeEmotePanel(); }
+/* ============ v897 走進去逛的商店（作者 11/26：「那些店可以參考寵物店嗎」選「兩個都要」）============
+   照寵物店的做法：外面是商店街上的店，走到門口按「進去看看」；裡面是店內大廳（實際位置在地圖外 x -118），老闆站櫃台，走到櫃台按鈕打開原本的商店；
+   賣的東西真的擺出來：釣具店牆上一排釣竿（跟身上的竿子同一個模型）、魚餌架、潛水用具、牆上掛一尾大旗魚；阿木木工坊把他做的家具一件一件擺在地上；
+   阿彩畫廊牆上掛她的畫、中間一個畫架。第一次進去才蓋（不會拖慢開遊戲），東西清單（阿木、阿彩）有更新就重擺。
+   老闆是另外一個「店裡的人」（跟外面同一個樣子）；外面那位出門了（吃飯、睡覺），店裡也看不到他，櫃台立一塊牌子，東西照樣能買。 */
+const SHOPH = {
+  tackle: { name:'釣具店', x:-118, z:290, w:14, d:11, y:0.9, wall:'#f6dcb8', band:'#f6a96b', keep:'釣具店 老闆', shirt:'#f6a96b', sign:'🎣 釣具店' },
+  mu:     { name:'阿木木工坊', x:-118, z:330, w:15, d:12, y:0.9, wall:'#efe0c8', band:'#c79a6b', keep:'阿木・家具木匠', npc:'mu', sign:'🪑 阿木木工坊' },
+  cai:    { name:'阿彩畫廊', x:-118, z:370, w:15, d:11, y:0.9, wall:'#f7f2fb', band:'#9b7bff', keep:'阿彩・畫家', npc:'cai', sign:'🎨 阿彩畫廊' } };
+for (const S of Object.values(SHOPH)) addDeck(S.x, S.z, S.w, S.d, S.y);
+function inShopHall(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } for (const [k, S] of Object.entries(SHOPH)) if (Math.abs(x - S.x) < S.w / 2 && Math.abs(z - S.z) < S.d / 2) return k; return null; }
+function shDoor(k){ if (k === 'tackle'){ const [x, z, r] = HLOT.tackle; return { x: x + Math.sin(r) * 2.8, z: z + Math.cos(r) * 2.8, face: r }; } const L = SHOPLOT[k]; return { x: L.x + Math.sin(L.r) * 3.2, z: L.z + Math.cos(L.r) * 3.2, face: L.r }; }
+function shBuild(k){ const S = SHOPH[k]; if (S.g) return S; const g = new THREE.Group(); scene.add(g); S.g = g; g.visible = false; g.userData.keep = g.userData.dyn = true; const Y = S.y, H = 3.6;
+  const M = (c, r, ex) => mat(c, r == null ? 0.85 : r, Object.assign({ noWood: true }, ex || {}));
+  const B = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof m === 'string' ? M(m) : m); o.position.set(S.x + x, y, S.z + z); g.add(o); return o; };
+  B(S.w, 0.2, S.d, M('#b98a5e'), 0, Y - 0.1, 0); for (let i = -S.w / 2 + 0.5; i < S.w / 2; i += 1) B(0.96, 0.005, S.d - 0.1, M(i % 2 ? '#c79a6b' : '#b98a5e'), i, Y + 0.003, 0);   /* 木地板 */
+  const wl = M(S.wall, 0.9, { emissive: S.wall, emissiveIntensity: 0.12 });
+  for (const [w, x, z, ry] of [[S.w, 0, -S.d / 2, 0], [S.w, 0, S.d / 2, Math.PI], [S.d, -S.w / 2, 0, Math.PI / 2], [S.d, S.w / 2, 0, -Math.PI / 2]]){
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, H), wl); p.position.set(S.x + x, Y + H / 2, S.z + z); p.rotation.y = ry; g.add(p);
+    const bd = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.12), M(S.band, 0.7)); bd.position.set(S.x + x + Math.sin(ry) * 0.01, Y + 1.0, S.z + z + Math.cos(ry) * 0.01); bd.rotation.y = ry; g.add(bd); }
+  { const o = new THREE.Mesh(new THREE.PlaneGeometry(S.w, S.d), wl); o.rotation.x = Math.PI / 2; o.position.set(S.x, Y + H, S.z); g.add(o); }
+  for (const [x, z, w, d] of [[0, -S.d / 2, S.w, 0.3], [0, S.d / 2, S.w, 0.3], [-S.w / 2, 0, 0.3, S.d], [S.w / 2, 0, 0.3, S.d]]) addBoxCol(S.x + x, S.z + z, w, d);
+  for (const x of [-S.w / 4, S.w / 4]) for (const z of [-S.d / 5, S.d / 5]){ const lp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), M('#fff6d8', 0.5, { emissive: '#ffe9a8', emissiveIntensity: 1 })); lp.position.set(S.x + x, Y + H - 0.32, S.z + z); g.add(lp); }
+  const CZ = -S.d / 2 + 1.6; S.cz = CZ;   /* 櫃台在後面中間 */
+  B(3.6, 1.0, 0.75, M(S.band, 0.7), 0, Y + 0.5, CZ); B(3.8, 0.07, 0.9, M('#8c5d3b', 0.8), 0, Y + 1.03, CZ); addBoxCol(S.x, S.z + CZ, 3.8, 0.9);
+  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.75), new THREE.MeshBasicMaterial({ map: signTex(S.sign, S.band, '#ffffff', 640, 140) })); sg.position.set(S.x, Y + 3.0, S.z - S.d / 2 + 0.03); g.add(sg); }
+  { const dr = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.2), M('#a8673e', 0.6)); dr.position.set(S.x, Y + 1.1, S.z + S.d / 2 - 0.03); dr.rotation.y = Math.PI; g.add(dr); }   /* 門用單面的板子：鏡頭在牆外的時候看不到、不會擋住 */ { const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.4), new THREE.MeshBasicMaterial({ map: signTex('出口', S.band, '#ffffff', 256, 96) })); sg.position.set(S.x, Y + 2.5, S.z + S.d / 2 - 0.06); sg.rotation.y = Math.PI; g.add(sg); }
+  S.exit = { x: S.x, z: S.z + S.d / 2 - 0.9 };
+  for (const [x, z] of [[-S.w / 2 + 0.6, S.d / 2 - 0.6], [S.w / 2 - 0.6, S.d / 2 - 0.6]]){ B(0.5, 0.5, 0.5, M('#a8673e', 0.8), x, Y + 0.25, z); const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 0), M('#4e9a52', 0.8)); lf.position.set(S.x + x, Y + 0.9, S.z + z); g.add(lf); addBoxCol(S.x + x, S.z + z, 0.6, 0.6); }
+  S.away = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.36), new THREE.MeshBasicMaterial({ map: signTex('老闆出去一下，東西照樣能買', '#7a5236', '#ffffff', 512, 120), side: THREE.DoubleSide })); S.away.position.set(S.x, Y + 1.32, S.z + CZ + 0.47); S.away.visible = false; g.add(S.away);
+  S.items = new THREE.Group(); g.add(S.items); S.ik = '';
+  if (k === 'tackle') shTackle(S, B, M);
+  if (k === 'mu') B(2.4, 0.85, 1.0, M('#a8794e', 0.85), -S.w / 2 + 1.6, Y + 0.43, -S.d / 2 + 1.0), B(1.2, 0.06, 0.3, M('#d8c49a'), -S.w / 2 + 1.4, Y + 0.9, -S.d / 2 + 0.9), addBoxCol(S.x - S.w / 2 + 1.6, S.z - S.d / 2 + 1.0, 2.4, 1.0);   /* 工作台、木板 */
+  if (k === 'cai'){ const e = paintMesh({ main:'#ffffff', accent:'#8c5d3b', pat:'sea', fish:null }); e.position.set(S.x + 2.6, Y, S.z + 0.6); e.rotation.y = -0.6; g.add(e); addCircleCol(S.x + 2.6, S.z + 0.6, 0.5);
+    for (const [i, c] of ['#e8473a', '#ffd36a', '#5fb6e3', '#3fbf9d', '#9b7bff'].entries()) B(0.09, 0.02, 0.09, M(c, 0.5), 3.4 + i * 0.12, Y + 0.72, 0.9); B(0.75, 0.7, 0.45, M('#c79a6b'), 3.6, Y + 0.35, 0.9); }   /* 畫架、調色盤 */
+  const f = new Fisher({ shirt: S.shirt || '#c79a6b', hat: '#5a3d2b', name: S.keep, kind: 'npc' }); f.pos.set(S.x, Y, S.z + CZ - 0.8); f.baseY = Y; f.rot = 0; f.av.g.visible = false; f.nm.classList.add('quest'); S.npc = f;
+  g.traverse(o => { if (o.isMesh){ o.castShadow = false; o.userData.keep = true; } }); return S; }
+/* 釣具店：左右牆的釣竿架、後面的魚餌架、潛水用具、牆上的大旗魚 */
+function shTackle(S, B, M){ const Y = S.y, g = S.g;
+  const rods = ['bamboo', 'r_lure', 'king', 'r_pole', 'r_surf', 'r_iso'].map(id => RODS.find(x => x.id === id)).filter(Boolean);
+  for (const sd of [-1, 1]){ const wx = sd * (S.w / 2 - 0.25); B(0.12, 0.08, 4.6, M('#8c5d3b'), wx, Y + 0.55, 0.3); B(0.12, 0.08, 4.6, M('#8c5d3b'), wx, Y + 2.2, 0.3);
+    rods.forEach((r, i) => { if ((i % 2 ? 1 : -1) !== sd) return; const j = Math.floor(i / 2); for (let c = 0; c < 2; c++){ const av = { rod: new THREE.Group(), pole: { visible: true, material: {} }, tip: new THREE.Object3D(), reel: null }; av.rod.add(av.tip); try { rodHD(av, rodType(r), r.color, null); } catch(e){ continue; }
+      av.rod.position.set(S.x + wx - sd * 0.18, Y + 0.45, S.z - 1.6 + j * 1.55 + c * 0.5); av.rod.rotation.set(0, sd > 0 ? -Math.PI / 2 : Math.PI / 2, sd * -0.05); av.rod.scale.setScalar(1.05); g.add(av.rod); } });
+    const lab = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.36), new THREE.MeshBasicMaterial({ map: signTex(sd < 0 ? '釣竿・路亞竿・手竿' : '王者竿・投竿・磯釣竿', '#8c5d3b', '#ffffff', 512, 72) })); lab.position.set(S.x + wx - sd * 0.05, Y + 2.7, S.z + 0.3); lab.rotation.y = sd > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(lab); addBoxCol(S.x + wx, S.z + 0.3, 0.6, 4.8); }
+  /* 後牆的魚餌架：一格一盒（顏色照魚餌） */
+  const bc = ['#c8834a', '#e86a5a', '#ffd36a', '#7fc8e8', '#9fd8a8', '#f2a65a', '#b88ad8', '#e8e0c8'];
+  for (const yy of [1.45, 2.1]) B(4.2, 0.05, 0.36, M('#8c5d3b'), -4.2, Y + yy, -S.d / 2 + 0.2);
+  for (let i = 0; i < 12; i++) B(0.42, 0.34, 0.26, M(bc[i % bc.length], 0.6), -5.9 + (i % 6) * 0.68, Y + (i < 6 ? 1.65 : 2.3), -S.d / 2 + 0.22);
+  { const lb = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.34), new THREE.MeshBasicMaterial({ map: signTex('魚餌', '#e86a5a', '#ffffff', 320, 64) })); lb.position.set(S.x - 4.2, Y + 2.75, S.z - S.d / 2 + 0.03); g.add(lb); }
+  /* 潛水用具：氧氣瓶兩支、蛙鞋、蛙鏡（右後） */
+  for (const [i, c] of [[0, '#f2c23a'], [1, '#e8473a']]){ const tk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.75, 14), M(c, 0.35, { metalness: 0.3 })); tk.position.set(S.x + 3.6 + i * 0.42, Y + 0.38, S.z - S.d / 2 + 0.5); g.add(tk); const vl = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.12, 8), M('#555a60', 0.4)); vl.position.set(S.x + 3.6 + i * 0.42, Y + 0.82, S.z - S.d / 2 + 0.5); g.add(vl); }
+  for (const sx of [0, 0.32]) B(0.24, 0.03, 0.6, M('#2f8fd8', 0.5), 4.9 + sx, Y + 0.02, -S.d / 2 + 0.6);
+  { const ms = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.05, 8, 16), M('#2a2a30', 0.4)); ms.position.set(S.x + 4.4, Y + 1.6, S.z - S.d / 2 + 0.06); g.add(ms); const gl = new THREE.Mesh(new THREE.CircleGeometry(0.12, 16), M('#9fd8f0', 0.1)); gl.position.set(S.x + 4.4, Y + 1.6, S.z - S.d / 2 + 0.08); g.add(gl); }
+  addBoxCol(S.x + 4.3, S.z - S.d / 2 + 0.6, 2.0, 1.0);
+  /* 牆上掛一尾大旗魚（招牌） */
+  try { const fm = fishModel(FISH_BY_ID.marlin, 2.2); fm.position.set(S.x + 3.6, Y + 2.55, S.z - S.d / 2 + 0.25); fm.rotation.set(0, Math.PI / 2, 0); g.add(fm); } catch(e){}
+  /* 中間一張展示桌：捲線器、浮標 */
+  B(1.8, 0.75, 0.9, M('#a8794e'), 0, Y + 0.38, 1.2); addBoxCol(S.x, S.z + 1.2, 1.9, 1.0);
+  for (let i = 0; i < 3; i++){ const rl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.12, 14), M('#c9d6e3', 0.3, { metalness: 0.6 })); rl.rotation.x = Math.PI / 2; rl.position.set(S.x - 0.55 + i * 0.55, Y + 0.85, S.z + 1.05); g.add(rl); }
+  for (let i = 0; i < 4; i++){ const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M(i % 2 ? '#e8473a' : '#ffd36a', 0.4)); fl.position.set(S.x - 0.6 + i * 0.4, Y + 0.82, S.z + 1.45); g.add(fl); } }
+/* 阿木的家具、阿彩的畫：清單有變才重擺 */
+function shFill(k){ const S = SHOPH[k]; if (!S || !S.g) return; const L = k === 'mu' ? FZ.list : k === 'cai' ? Cai.list : null; if (!L) return; const key = L.map(d => d.id).join(','); if (key === S.ik) return; S.ik = key;
+  for (const c of S.items.children.slice()) S.items.remove(c); const Y = S.y;
+  if (k === 'mu'){ const n = Math.min(L.length, 10); for (let i = 0; i < n; i++){ const d = L[i], row = i < 5 ? 0 : 1, col = i % 5, x = -5.0 + col * 2.5, z = -0.6 + row * 2.6; let m = null; try { m = fzMesh(d); } catch(e){ continue; } m.position.set(S.x + x, Y, S.z + z); m.rotation.y = row ? Math.PI : 0; S.items.add(m); addCircleCol(S.x + x, S.z + z, 0.55);
+      const tg = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.26), new THREE.MeshBasicMaterial({ map: signTex(d.name + (d.price ? '・🪙' + d.price : ''), '#8c5d3b', '#ffffff', 384, 80), side: THREE.DoubleSide })); tg.position.set(S.x + x, Y + 1.55, S.z + z); S.items.add(tg); } }
+  if (k === 'cai'){ const n = Math.min(L.length, 8); for (let i = 0; i < n; i++){ const d = L[i]; let m = null; try { m = paintMesh(d); } catch(e){ continue; }
+      const wall = i < 4 ? -1 : 1, j = i % 4; m.position.set(S.x + wall * (S.w / 2 - 0.45), Y - 0.25, S.z - 3.0 + j * 2.0); m.rotation.y = wall < 0 ? Math.PI / 2 : -Math.PI / 2; S.items.add(m); addCircleCol(m.position.x, m.position.z, 0.5); } }
+  S.items.traverse(o => { if (o.isMesh){ o.castShadow = false; o.userData.keep = true; } }); }
+function shopHallTick(dt, t){ const k0 = inShopHall();
+  for (const [k, S] of Object.entries(SHOPH)){ if (!S.g) continue; const on = k === k0; if (S.g.visible !== on) S.g.visible = on; const N = S.npc; if (!on){ if (N.av.g.visible) N.av.g.visible = false; N.tag.style.display = 'none'; continue; }
+    if (frameNo % 60 === 0) shFill(k);
+    const o = S.npc && SHOPH[k].npc ? npcs.find(n => n.shopNpc === SHOPH[k].npc) : null, away = !!(o && (o.wHide || (o.wMode && o.wMode !== 'post')));
+    N.av.g.visible = !away; S.away.visible = away; if (away){ N.tag.style.display = 'none'; continue; }
+    const d = Math.hypot(me.pos.x - N.pos.x, me.pos.z - N.pos.z); if (d < 6) N.rot = lerpAngle(N.rot, Math.atan2(me.pos.x - N.pos.x, me.pos.z - N.pos.z), 1 - Math.exp(-3 * dt)); N.update(dt, t); N.placeTag(); } }
+function enterShopHall(k){ const S = shBuild(k); if (k === 'mu' && Cloud.on && (!FZ.at || Date.now() - FZ.at > 10 * 60000)) try { loadMu(); } catch(e){} if (k === 'cai' && typeof loadCai === 'function' && Cloud.on && !Cai.list) try { loadCai(); } catch(e){}
+  shFill(k); const fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (myBoat) leaveFerry(true); if (mySeat) standUp();
+  setTimeout(() => { S.g.visible = true; me.pos.x = S.exit.x; me.pos.z = S.exit.z - 2.0; me.baseY = S.y; Jump.gy = S.y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = 0.55; S.dist = cam.dist; cam.dist = Math.min(cam.dist, 7); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); flash(`${npcShort({ npcName: S.keep }) || S.keep}：「歡迎，慢慢看。」`, 1.6); }, 260); }
+function exitShopHall(k){ const S = SHOPH[k], D = shDoor(k), fx = $('#fadeFx'); fx.classList.add('on'); SFX.door(); if (mySeat) standUp();
+  setTimeout(() => { const f = D.face || 0; me.pos.x = D.x + Math.sin(f) * 0.6; me.pos.z = D.z + Math.cos(f) * 0.6; me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = f; cam.yaw = f + Math.PI; if (S.dist) cam.dist = S.dist; pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 260); }
 // ---- 寵物店：廣場西邊的小攤子，店長小花，攤子上有幾隻寵物在玩 ----
 const PetShop = { npc:null, demo:[], in:[] };
 function buildPetShop(){
@@ -17987,7 +18066,7 @@ function nearShop(){
   { const g = npcs.find(n => n.shopNpc === 'news'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'news', label:'阿報・村報', mode:'news' }; }
   { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
   { const g = npcs.find(n => n.wid === 'gang'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'gang', label:'老港・漁夫', mode:'gang' }; }
-  { const g = npcs.find(n => n.shopNpc === 'craft'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'craft', label:'阿鐵師傅', mode:'craft' }; }
+  { const g = npcs.find(n => n.shopNpc === 'craft'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3){ const D = shDoor('tackle'); if (Math.hypot(me.pos.x - D.x, me.pos.z - D.z) >= Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z)) return { id:'craft', label:'阿鐵師傅', mode:'craft' }; } }   /* v897 阿鐵站在釣具店門口旁邊：離門比較近就是要進釣具店 */
   { const g = npcs.find(n => n.shopNpc === 'salon'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'salon', label:'阿萍美髮沙龍', mode:'salon' }; }
   if (inHall()){
     if (Venue.desk && Math.hypot(me.pos.x - Venue.desk.x, me.pos.z - Venue.desk.z) < 2) return { id:'shrimpdesk', label:'買時段', mode:'shrimpdesk' };
@@ -18014,15 +18093,18 @@ function nearShop(){
   if (Math.hypot(me.pos.x - POOL_DOOR.x, me.pos.z - POOL_DOOR.z) < 1.7) return { id:'pooldoor', label:'潮汐撞球館', mode:'pooldoor', sub:'🎱 進去打撞球' };
   if (!onIsle && ZC.g && Math.hypot(me.pos.x - ZC.at[0], me.pos.z - ZC.at[1]) < 2.1) return { id:'zc', label:'築城守土', mode:'zc', sub:'🏰 坐下來玩一局' };
   if (!onIsle && Math.hypot(me.pos.x - PET_DOOR.x, me.pos.z - PET_DOOR.z) < 1.7) return { id:'petdoor', label:'小花寵物店', mode:'petdoor', sub:'🐾 進去看看' };
+  { const hk = inShopHall(); if (hk){ const S = SHOPH[hk]; if (S.exit && Math.hypot(me.pos.x - S.exit.x, me.pos.z - S.exit.z) < 1.3) return { id:'shexit', label:'出去', mode:'shexit', hall: hk };   /* v897 店裡：櫃台開原本的商店、門口出去 */
+      if (S.npc && Math.hypot(me.pos.x - S.npc.pos.x, me.pos.z - S.npc.pos.z) < 3.0){ const sh = SHOPS.find(x => x.id === hk); if (sh) return sh; } return null; } }
   { /* v434 魚市場一棟裡有三個櫃位：站在哪個櫃位前面就開哪個（比最近的），不是照清單順序 */
     const [cx, cz] = hlAt('shop', 0, 2.6); let best = null, bd = 4.8;
     for (const sh of SHOPS){ if (sh.id === 'cook') continue; const l = LANDMARKS.find(l => l.id === sh.id); if (!l) continue; const d = sh.id === 'shop' ? Math.min(Math.hypot(me.pos.x - cx, me.pos.z - cz) , Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) + 1.5) : Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z); if (d < bd){ bd = d; best = sh; } }
+    if (best && SHOPH[best.id] && !onIsle && !House.on){ const D = shDoor(best.id); if (Math.hypot(me.pos.x - D.x, me.pos.z - D.z) < 2.4) return { id:'shdoor' + best.id, label: best.label, mode:'shdoor', hall: best.id, sub:'🚪 進去看看' }; return null; }   /* v897 這幾間要走進去逛 */
     if (best) return best; }
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '魚市場・賣魚';
 function openShop(sh){ ensureAudio(); if (K3.on && (sh.mode === 'tailor' || sh.mode === 'salon')){ toast(sh.mode === 'tailor' ? '🚧 阿綾服裝店整修中：阿綾正在幫新人物做新衣服，做好就重新開張。現在換衣服請到「造型」' : '🚧 阿萍美髮沙龍整修中：阿萍正在幫新人物設計新髮型，做好就重新開張。現在換髮型請到「造型」'); return; }   /* v743 作者：「這兩個應該沒用了吧」「先掛整修中」→ 兩間店賣的是舊人物的東西，新人物用不到；買過的東西都還留著 */
-if (sh.mode === 'racego'){ raceCall(sh.kind); return; } if (sh.mode === 'skicoach'){ raceCard('ski'); return; } if (sh.mode === 'skilift'){ skiLiftGo(); return; } if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'land'){ landBuy(sh.t); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'zc'){ zcOpen(); return; } if (sh.mode === 'petdoor'){ enterPetHall(); return; } if (sh.mode === 'petexit'){ exitPetHall(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'poolzhe'){ poolZheGo(); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
+if (sh.mode === 'racego'){ raceCall(sh.kind); return; } if (sh.mode === 'skicoach'){ raceCard('ski'); return; } if (sh.mode === 'skilift'){ skiLiftGo(); return; } if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'land'){ landBuy(sh.t); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'zc'){ zcOpen(); return; } if (sh.mode === 'petdoor'){ enterPetHall(); return; } if (sh.mode === 'shdoor'){ enterShopHall(sh.hall); return; } if (sh.mode === 'shexit'){ exitShopHall(sh.hall); return; } if (sh.mode === 'petexit'){ exitPetHall(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'poolzhe'){ poolZheGo(); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
 // 預覽也用 3D 角色（模型載好以後才換；換的時候把衣服重新穿一次）
@@ -23561,6 +23643,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u897', d:'11/26', items:[['🏪','釣具店、阿木木工坊、阿彩畫廊可以走進去逛了：牆上掛滿釣竿、地上擺著阿木的家具、牆上掛著阿彩的畫；走到櫃台就能買']] },
   { id:'u896', d:'11/26', items:[['🧑‍🌾','島上的幫手可以做三種工作：🎣 釣魚、🌱 顧田（澆水、收成，賣的錢給島主）、🪓 開地（用放進他錢包的錢一格一格開地）。做久了會變熟練，最多 ★★★★★，越熟練釣到越多稀有魚、顧越多田、開越快','island'], ['🪓','在島上看得到幫手做事：顧田的在田裡走來走去澆水，開地的站在樹林邊砍樹。住在島上的人都可以請幫手、叫他換工作','island']] },
   { id:'u895', d:'11/26', items:[['🎣','釣具店的釣竿、我的寵物、寵物市集都換成 3D 小圖了，不再只是一塊顏色或符號']] },
   { id:'u894', d:'11/26', items:[['🏠','房子改成整棟買：小屋、小家、中家、大房子、兩層樓、大宅、三層大宅、海景豪宅八種，買了就是那麼大，不用擴建、不用借錢；外面看得出大小和幾層樓。以前的房子大小、家具都不變','island']] },
