@@ -479,7 +479,7 @@ function isl2Mask(){ const m = onIsle && Number.isFinite(+onIsle.land) ? +onIsle
 /* v879 一格 4×4 公尺：格子 (i, j) 的中心在 (4i, 4j)，i、j 從 -14 到 14 */
 function isl2TileOf(dx, dz){ return [Math.round(dx / 4), Math.round(dz / 4)]; }
 function isl2TId(i, j){ return (j + 14) * 29 + (i + 14); }
-function isl2TCore(i, j){ return Math.hypot(i * 4, j * 4) <= 22; }
+function isl2TCore(i, j){ return Math.hypot(i * 4, j * 4) <= 22 || (i >= -9 && i <= -6 && j >= -1 && j <= 1); }   /* v880 菜園那塊直接算你的 */
 function isl2TOk(i, j){ return Math.abs(i) <= 14 && Math.abs(j) <= 14 && !isl2TCore(i, j) && isl2In(i * 4, j * 4) >= 5 && !ISL2.karst.some(k => Math.hypot(i * 4 - k[0], j * 4 - k[1]) < k[2] + 2.5); }
 function isl2TSet(){ const a = onIsle ? (Array.isArray(onIsle.tiles) ? onIsle.tiles : []) : (rec && Array.isArray(rec.isleTiles) ? rec.isleTiles : []); if (ISL2.tsrc !== a){ ISL2.tsrc = a; ISL2.tset = new Set(a.map(Number)); } return ISL2.tset; }
 function isl2TKey(){ return isl2TSet().size + ':' + [...isl2TSet()].reduce((h, v) => (h * 31 + v) % 1000003, 7); }
@@ -10882,7 +10882,7 @@ function farmBase(){
   const g = Farm.baseG = new THREE.Group(); g.userData.dyn = true; g.position.set(GARDEN.x, 0, GARDEN.z); scene.add(g);
   const sand = box([GARDEN.hx * 2 + 1.6, 0.8, GARDEN.hz * 2 + 1.6], '#f2d69a', [0, ISLE.y - 0.72, 0]); sand.castShadow = false; g.add(sand);
   const top = box([GARDEN.hx * 2, 0.5, GARDEN.hz * 2], '#86c26a', [0, ISLE.y - 0.25, 0]); top.castShadow = false; g.add(top);
-  for (let r = 0; r < rows - 1; r++){ const lane = box([GARDEN.hx * 2 - 0.6, 0.02, 0.9], '#dcbf7d', [0, ISLE.y + 0.012, (r - (rows - 2) / 2) * 3]); lane.castShadow = false; g.add(lane); }   /* 每兩排田中間一條走道 */
+  for (let r = 0; r < 0; r++){ const lane = box([GARDEN.hx * 2 - 0.6, 0.02, 0.9], '#dcbf7d', [0, ISLE.y + 0.012, (r - (rows - 2) / 2) * 3]); lane.castShadow = false; g.add(lane); }   /* 每兩排田中間一條走道 */
   for (const sx of [-1, 1]) for (let k = 0; k < 5; k++){ g.add(box([0.1, 0.55, 0.1], PALETTE.wood, [-GARDEN.hx + 0.15 + k * (GARDEN.hx * 2 - 0.3) / 4, ISLE.y + 0.27, sx * (GARDEN.hz - 0.12)])); }
   for (const sx of [-1, 1]) g.add(box([GARDEN.hx * 2 - 0.3, 0.07, 0.06], PALETTE.wood, [0, ISLE.y + 0.42, sx * (GARDEN.hz - 0.12)]));
   g.add(box([0.1, 0.9, 0.1], PALETTE.wood, [GARDEN.hx - 0.7, ISLE.y + 0.45, -GARDEN.hz + 0.6]));
@@ -10915,9 +10915,9 @@ function farmPlant(g, p, st){   /* 依成長階段畫作物：芽 → 小苗 →
   }
 }
 function farmBuild(){
-  if (onIsle && Farm.g){ let same = Farm.vis.length === Farm.max; for (let i = 0; same && i < Farm.max; i++){ const p = Farm.plots[i], wet = p && farmWetLeft(p) > 0; if (Farm.vis[i] !== (i >= Farm.n ? 'L' : p ? p.c + farmStage(p) : '-') + (wet ? 'w' : '')) same = false; } if (same) return; }   /* 沒有變就不重畫 */
+  if (onIsle && Farm.g){ let same = true; for (let i = 0; same && i < 0; i++){ const p = Farm.plots[i], wet = p && farmWetLeft(p) > 0; if (Farm.vis[i] !== (i >= Farm.n ? 'L' : p ? p.c + farmStage(p) : '-') + (wet ? 'w' : '')) same = false; } if (same) return; }   /* 沒有變就不重畫 */
   farmClear(); if (!onIsle) return; const g = Farm.g = new THREE.Group(); g.userData.dyn = true; scene.add(g);
-  for (let i = 0; i < Farm.max; i++){ const [x, z] = farmPos(i), p = Farm.plots[i], locked = i >= Farm.n, st = farmStage(p), wet = p && farmWetLeft(p) > 0;
+  for (let i = 0; i < 0; i++){ const [x, z] = farmPos(i), p = Farm.plots[i], locked = i >= Farm.n, st = farmStage(p), wet = p && farmWetLeft(p) > 0;   /* v880 格子菜園合併進自由種田，不畫格子了 */
     const pg = new THREE.Group(); pg.position.set(x, ISLE.y, z); g.add(pg);
     const soil = box([1.7, 0.08, 1.7], locked ? '#9cb980' : wet ? '#5a3d28' : '#8a6344', [0, 0.04, 0]); soil.castShadow = false; pg.add(soil);
     if (!locked) for (const [bx, bz, w, d] of [[0, -0.88, 1.86, 0.1], [0, 0.88, 1.86, 0.1], [-0.88, 0, 0.1, 1.86], [0.88, 0, 0.1, 1.86]]){ const b = box([w, 0.14, d], PALETTE.wood, [bx, 0.07, bz]); b.castShadow = false; pg.add(b); }
@@ -10932,8 +10932,9 @@ function farmBuild(){
 const FF_S = 0.8, FF = { g: null, key: '', mode: null, q: [], qt: 0, busy: false, uT: { value: 0 }, mats: {}, cell: '', idle: 0 };
 function ffSlot(x, z){ const gx = Math.round(x / FF_S), gz = Math.round(z / FF_S); if (Math.abs(gx) > 75 || Math.abs(gz) > 75) return -1; return 1000 + (gz + 75) * 151 + (gx + 75); }
 function ffXY(s){ const i = s - 1000; return [(i % 151 - 75) * FF_S, (Math.floor(i / 151) - 75) * FF_S]; }
-function ffCan(s){ if (s < 1000) return false; const [x, z] = ffXY(s); if (!isl2Can(x, z, 0.4) || Math.hypot(x, z) < 3.6 || (Math.abs(x) < 1.6 && z > 16)) return false; if (isl2Garden(ISLE.x + x, ISLE.z + z, 0.6)) return false;
+function ffCan(s){ if (s < 1000) return false; const [x, z] = ffXY(s); if (!isl2Can(x, z, 0.4) || Math.hypot(x, z) < 3.6 || (Math.abs(x) < 1.6 && z > 16)) return false; if (Math.abs(ISLE.x + x - GARDEN.sx) < 1.3 && Math.abs(ISLE.z + z - GARDEN.z) < 1.9) return false;
   for (const it of (onIsle && onIsle.layout && onIsle.layout.items) || []){ const T = ISLE_ITEMS[it.t]; if (T && Math.hypot(it.x - x, it.z - z) < T.rad * 0.85 + 0.4) return false; } return true; }
+function ffMax(){ return 300 + 5 * Math.max(4, Farm.n || 4); }
 function ffSlots(){ return Object.keys(Farm.plots).map(Number).filter(s => s >= 1000); }
 function ffMat(k, col){ if (FF.mats[k]) return FF.mats[k]; const m = mat(col, 0.75); if (k !== 'soil' && k !== 'wet'){ m.onBeforeCompile = sh => { sh.uniforms.uFT = FF.uT; sh.vertexShader = 'uniform float uFT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n float ffh = max(0.0, transformed.y); transformed.x += sin(uFT * 1.7 + instanceMatrix[3].x * 1.3 + instanceMatrix[3].z * 0.9) * 0.05 * ffh;\n#endif'); }; m.customProgramCacheKey = () => 'ffsway'; } return (FF.mats[k] = m); }
 /* 每一株：依成長階段放幾個零件（都是同一批 InstancedMesh） */
@@ -10967,7 +10968,7 @@ function ffBuild(force){ if (!onIsle){ if (FF.g){ scene.remove(FF.g); FF.g = nul
 /* 現在站的地方附近能做什麼 */
 function ffAround(r, f){ const out = []; for (const s of ffSlots()){ const [x, z] = ffXY(s); if (Math.hypot(ISLE.x + x - me.pos.x, ISLE.z + z - me.pos.z) < r && (!f || f(Farm.plots[s]))) out.push(s); } return out; }
 function freeNear(){ if (!onIsle || !farmMine() || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return null; const dx = me.pos.x - ISLE.x, dz = me.pos.z - ISLE.z;
-  if (isl2Garden(me.pos.x, me.pos.z, 0.5)) return null; if (!isl2Can(dx, dz, 0)) return FF.mode ? { k: 'stop' } : null;
+  if (nearSeedShop()) return null; if (!isl2Can(dx, dz, 0) && !isl2Garden(me.pos.x, me.pos.z, 0)) return FF.mode ? { k: 'stop' } : null;
   if (FF.mode) return { k: 'stop' };
   const ripe = ffAround(2.2, p => farmProg(p) >= 1).length; if (ripe) return { k: 'harv', n: ripe };
   const H = seedHand(); if (H && !H.sea) return { k: 'sow', H };
@@ -10976,7 +10977,7 @@ function freeNear(){ if (!onIsle || !farmMine() || myBoat || mySeat || F.phase !
 function freeBtn(fp){ if (fp.k === 'stop') return [FF.mode === 'sow' ? '停止種' : '停止收', FF.mode === 'sow' ? '🌱 邊走邊種中，走過去的地方都會種' : '🧺 邊走邊收中']; if (fp.k === 'harv') return ['收成', `🧺 邊走邊收・附近 ${fp.n} 株熟了`];
   if (fp.k === 'sow') return ['種田', `${fp.H.icon} 邊走邊種・有 ${seedN(fp.H.id)} 顆`]; return ['澆水', `💧 身邊 ${fp.n} 株一起澆`]; }
 function freeAct(fp){ if (fp.k === 'stop'){ ffFlush(); FF.mode = null; return; } if (fp.k === 'water'){ ffWater(); return; }
-  if (ffSlots().length >= 300 && fp.k === 'sow'){ toast('田裡最多種 300 株，先收一些'); return; } FF.mode = fp.k === 'sow' ? 'sow' : 'harv'; FF.cell = ''; FF.idle = 0; FF.hand = Farm.hand;
+  if (ffSlots().length >= ffMax() && fp.k === 'sow'){ toast(`田裡最多種 ${ffMax()} 株，先收一些`); return; } FF.mode = fp.k === 'sow' ? 'sow' : 'harv'; FF.cell = ''; FF.idle = 0; FF.hand = Farm.hand;
   toast(fp.k === 'sow' ? '開始邊走邊種：走過去的地方都會種下去（一次三排），再按一次停' : '開始邊走邊收：走過熟了的田就會收起來，再按一次停'); ffStep(true); }
 /* 每一幀：看腳下（往前一點、左右各一格）那幾個位置 */
 function ffStep(now){ if (!FF.mode) return; if (!onIsle || !farmMine()){ FF.mode = null; return; }
@@ -10985,7 +10986,7 @@ function ffStep(now){ if (!FF.mode) return; if (!onIsle || !farmMine()){ FF.mode
   const cells = [here]; for (const s of [-1, 1]) cells.push(ffSlot(cx + fz * FF_S * s, cz - fx * FF_S * s));
   let did = false;
   if (FF.mode === 'sow'){ const id = FF.hand, C = CROP_BY[id]; if (!C){ FF.mode = null; return; }
-    for (const s of cells){ if (s < 0 || Farm.plots[s] || !ffCan(s)) continue; if (seedN(id) - FF.q.length < 1){ ffFlush(); FF.mode = null; toast(`${C.icon} 種子用完了`); break; } if (ffSlots().length >= 300){ ffFlush(); FF.mode = null; toast('田裡最多種 300 株'); break; }
+    for (const s of cells){ if (s < 0 || Farm.plots[s] || !ffCan(s)) continue; if (seedN(id) - FF.q.length < 1){ ffFlush(); FF.mode = null; toast(`${C.icon} 種子用完了`); break; } if (ffSlots().length >= ffMax()){ ffFlush(); FF.mode = null; toast(`田裡最多種 ${ffMax()} 株`); break; }
       Farm.plots[s] = { c: id, t: farmNow(), w: 0, wa: 0, pend: true }; FF.q.push(s); did = true; } }
   else { for (const s of cells){ const p = Farm.plots[s]; if (!p || farmProg(p) < 1 || p.pend) continue; p.pend = true; FF.q.push(s); did = true; } }
   if (did){ try { startEmote(me, 'farmplant'); } catch(e){} try { puff(me.pos.x + fx * 0.5, ISLE.y + 0.05, me.pos.z + fz * 0.5); } catch(e){} if (FF.mode === 'harv') for (const s of FF.q) if (Farm.plots[s]){ (FF.done = FF.done || {})[s] = Farm.plots[s]; delete Farm.plots[s]; } ffBuild(true); }
@@ -11009,7 +11010,7 @@ function landHints(){ if (!onIsle || !landMine() || Dive.on || House.on || !$('#
     toast('🌳 島變大了！樹林邊的白色虛線框是可以開的地，走過去面向它按「開地」'); if (best) setTimeout(() => { try { navTo('可以開的地', ISLE.x + best[0] * 4, ISLE.z + best[1] * 4 + 2.5); } catch(e){} }, 1500); return; }
   if (!LS.get('tide.hintSow', false) && seedHand() && !seedHand().sea && freeNear() && freeNear().k === 'sow'){ LS.set('tide.hintSow', true); toast('🌱 空地也可以種！按「種田」就會邊走邊種，一次三排'); } }
 function farmTick(){ farmFxTick(); if (frameNo % 60 === 23) landHints(); FF.uT.value = performance.now() / 1000; if (FF.mode) ffStep(false); if (frameNo % 90 === 7 && onIsle) ffBuild(); if (frameNo % 30 === 11) seedChip(); if (frameNo % 90 !== 7 || !onIsle || !Farm.g) return; if (Farm.owner !== onIsle.owner){ farmLoad(); return; }
-  for (let i = 0; i < Farm.max; i++){ const p = Farm.plots[i], wet = p && farmWetLeft(p) > 0, k = (i >= Farm.n ? 'L' : p ? p.c + farmStage(p) : '-') + (wet ? 'w' : ''); if (k !== Farm.vis[i]){ farmBuild(); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); return; } } }
+  for (let i = 0; i < 0; i++){ const p = Farm.plots[i], wet = p && farmWetLeft(p) > 0, k = (i >= Farm.n ? 'L' : p ? p.c + farmStage(p) : '-') + (wet ? 'w' : ''); if (k !== Farm.vis[i]){ farmBuild(); if (curTab === 'farm' && !$('#sheet').hidden) renderTab(); return; } } }
 function farmAdopt(d){ if (!d || !onIsle || (d.owner && d.owner !== onIsle.owner)) return; Farm.owner = onIsle.owner; Farm.max = Math.max(12, Math.min(96, Number(d.max) || 12)); Farm.next = d.next === undefined ? undefined : d.next && d.next.n ? { n: Number(d.next.n), cost: Number(d.next.cost) || 0 } : null; Farm.n = Math.max(4, Math.min(Farm.max, Number(d.n) || 4)); farmLayout();
   SeaDeco.list = (Array.isArray(d.deco) ? d.deco : []).filter(x => x && DECO_BY[x.k] && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.z))).map(x => ({ id: x.id, k: x.k, x: Number(x.x), z: Number(x.z), r: Number(x.r) || 0 }));
   { const sd = d.sea || {}; Sea.max = Math.max(8, Math.min(60, Number(sd.max) || 16)); Sea.n = Math.max(4, Math.min(Sea.max, Number(sd.n) || 4)); Sea.next = d.sea ? (sd.next && sd.next.n ? { n: Number(sd.next.n), cost: Number(sd.next.cost) || 0 } : null) : undefined; if (Dive.on && Dive.site === 'isle') seaBuild(); } Farm.off = d.now ? Number(d.now) - Date.now() : 0; Farm.plots = {};
@@ -11025,7 +11026,7 @@ async function farmRpc(fn, args){ if (Farm.busy) return false; Farm.busy = true;
   Farm.busy = false; if (onIsle && !/_buy$|^sea_deco_|^farm_buy_seed$/.test(fn)) await farmRefresh(); return ok; }
 /* v379 買種子、種下去的時候畫面會閃一下：以前每次都把整個菜園清空再重畫。現在買東西不重畫，種／澆／收只在拿到新資料後換一次 */
 async function farmRefresh(){ if (!onIsle || !farmOnline()) return; const own = onIsle.owner; try { const { data, error } = await Cloud.sb.rpc('farm_get', { p_owner: own }); if (error) throw error; if (onIsle && onIsle.owner === own) farmAdopt(data); } catch(e){ console.warn('farm_get', e && e.message); } }
-function nearFarm(){ if (!onIsle || !Farm.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return null; if (Math.abs(me.pos.x - GARDEN.x) > GARDEN.hx + 1 || Math.abs(me.pos.z - GARDEN.z) > GARDEN.hz + 1) return null;
+function nearFarm(){ return null; if (!onIsle || !Farm.g || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return null; if (Math.abs(me.pos.x - GARDEN.x) > GARDEN.hx + 1 || Math.abs(me.pos.z - GARDEN.z) > GARDEN.hz + 1) return null;
   let best = -1, bd = 1.55; for (let i = 0; i < Farm.max; i++){ const [x, z] = farmPos(i), d = Math.hypot(me.pos.x - x, me.pos.z - z); if (d < bd){ bd = d; best = i; } } if (best < 0) return null;
   const p = Farm.plots[best], mine = farmMine(); if (!mine && (!p || best >= Farm.n || farmProg(p) >= 1)) return null; return { i: best, p, locked: best >= Farm.n, mine }; }
 function farmBtn(fp){ const p = fp.p; if (fp.locked){ const nx = farmNext(); return nx ? ['開墾', `🪙${nx.cost}・多 ${nx.n - Farm.n} 格田`] : ['看菜園', '這一格還沒開放']; } if (!p){ const H = seedHand(); return H ? ['種下', `${H.icon} ${H.name} ×${seedN(H.id)}`] : ['播種', CROPS.some(C => seedN(C.id) > 0 && !C.sea) ? '🎒 從背包拿種子' : '🛒 先去種子攤買種子']; }
@@ -11052,7 +11053,7 @@ function renderFarm(body){
   if (!onIsle){ body.appendChild(el('p', 'sub', '菜園在小島的西邊，要先去小島。')); return; }
   const mine = farmMine();
   if (Farm.view === 'sea'){ renderSea(body, mine); return; }
-  body.appendChild(el('p', 'sub', mine ? '先到菜園最西邊的種子攤買種子，放進背包後點「拿在手上」，再走到空的田旁邊按「種下」，一格一顆。作物照現實的時間長大（關掉遊戲也會繼續長）。澆水一次快 12%（最多 3 次，每格一小時澆一次），澆滿 2 次會「豐收」多賣五成。忘記澆水也不會枯掉。' : '這是朋友的菜園。你可以幫忙澆水（每次 🪙10，一天最多 10 次）。'));
+  body.appendChild(el('p', 'sub', mine ? '先到菜園的種子攤買種子，在背包點「拿在手上」，再到菜園或島上開好的空地按「種田」，走過去的地方一次種三排，想種多密就多密。作物照現實時間長大（關掉遊戲也會繼續長）。熟了按「收成」邊走邊收，「澆水」一次澆身邊一片，澆滿 2 次會豐收。' : '這是朋友的田，可以幫忙澆水（每次 🪙10，一天最多 10 次）。'));
   const seedLi = (C, lim) => { const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子` + (seedN(C.id) ? `（有 ${seedN(C.id)} 顆）` : ''))); t.appendChild(el('div', 'sub2', `一顆 🪙${C.seed}・${C.hrs} 小時・收成 🪙${C.sell}${C.id === 'corn' ? '＋玉米粒魚餌 5 份' : ''}`)); li.appendChild(t);
     for (const n of [1, 5]){ const b = el('button', 'tbtn' + (n === 1 ? ' ghost' : ''), `×${n}`); b.style.marginLeft = '6px'; b.disabled = rec.coins < C.seed * n || Farm.busy; b.addEventListener('click', () => farmBuySeed(C.id, n)); li.appendChild(b); } if (lim) li.style.boxShadow = '0 0 0 3px #ffb84d inset'; return li; };
   if (Farm.view === 'shop'){   /* v372 種子攤：平常的種子＋本週限定 */
@@ -11072,15 +11073,12 @@ function renderFarm(body){
       for (const C of own){ const on = Farm.hand === C.id, li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name}種子 ×${seedN(C.id)}`)); t.appendChild(el('div', 'sub2', `${C.hrs} 小時・收成 🪙${C.sell}`)); li.appendChild(t);
         const b = el('button', 'tbtn' + (on ? ' ghost' : ''), on ? '手上' : '拿在手上'); b.addEventListener('click', () => { seedHold(on ? null : C.id); if (!on) closeSheet(); else renderTab(); }); li.appendChild(b); ul.appendChild(li); }
       body.appendChild(ul); } }
-  body.appendChild(el('div', 'dexhead', `🧺 菜園（${Farm.n}／${Farm.max} 格）`)); const ul = el('ul', 'shoplist');
-  for (let i = 0; i < Farm.n; i++){ const p = Farm.plots[i], C = p && CROP_BY[p.c], li = el('li', 'on'); li.appendChild(el('span', 'dishic', C ? C.icon : '🟫')); const t = el('div', 'tinfo'), ripe = p && farmProg(p) >= 1;
-    t.appendChild(el('div', 'n', `菜田 ${i + 1}` + (C ? '：' + C.name : '：空的')));
-    t.appendChild(el('div', 'sub2', !p ? (mine ? '空的，拿種子走過來種' : '還沒種東西') : ripe ? ((p.w || 0) >= 2 ? '✨ 成熟了・豐收' : '✅ 成熟了') : `還要 ${farmLeftStr(farmRipeAt(p) - farmNow())}・💧${p.w || 0}／3`)); li.appendChild(t);
-    if (p && ripe && mine){ const b = el('button', 'tbtn', '收成'); b.disabled = Farm.busy; b.addEventListener('click', () => farmHarvest(i)); li.appendChild(b); }
-    else if (p && !ripe){ const b = el('button', 'tbtn ghost', '💧 澆水'); b.disabled = Farm.busy || (p.w || 0) >= 3 || farmWetLeft(p) > 0; b.addEventListener('click', () => farmWater(i)); li.appendChild(b); }
-    ul.appendChild(li); }
-  body.appendChild(ul);
-  const nx = mine ? farmNext() : null; if (nx){ const b = el('button', 'tbtn', `開墾 ${nx.n - Farm.n} 格新的地　🪙${nx.cost}`); b.style.cssText = 'display:block;margin:10px auto'; b.disabled = Farm.busy || rec.coins < nx.cost; b.addEventListener('click', farmUnlock); body.appendChild(b); }
+  { const L = ffSlots(), ripe = L.filter(k => farmProg(Farm.plots[k]) >= 1).length, by = {}; for (const k of L){ const c = Farm.plots[k].c; by[c] = (by[c] || 0) + 1; }
+    body.appendChild(el('div', 'dexhead', `🧺 田（${L.length}／${ffMax()} 株）`)); const ul = el('ul', 'shoplist');
+    if (!L.length) ul.appendChild(el('li', 'empty', mine ? '還沒種東西。拿著種子到菜園或空地按「種田」。' : '還沒種東西'));
+    for (const c in by){ const C = CROP_BY[c]; if (!C) continue; const ks = L.filter(k => Farm.plots[k].c === c), r = ks.filter(k => farmProg(Farm.plots[k]) >= 1).length, soon = ks.filter(k => farmProg(Farm.plots[k]) < 1).map(k => farmRipeAt(Farm.plots[k]) - farmNow()).sort((x, y) => x - y)[0];
+      const li = el('li', 'on'); li.appendChild(el('span', 'dishic', C.icon)); const t = el('div', 'tinfo'); t.appendChild(el('div', 'n', `${C.name} ×${ks.length}`)); t.appendChild(el('div', 'sub2', (r ? `✅ 熟了 ${r} 株` : '') + (r && soon != null ? '・' : '') + (soon != null ? `最快 ${farmLeftStr(soon)} 後熟` : ''))); li.appendChild(t); ul.appendChild(li); }
+    body.appendChild(ul); if (ripe && mine) body.appendChild(el('p', 'sub2', `有 ${ripe} 株熟了，走到田裡按「收成」，走過去就收起來。`)); }
 }
 /* v374 小島海底花園：從小島碼頭的潛水梯下去，海床上有幾格可以種海底的作物（海帶、海葡萄、珊瑚、珍珠貝）。
    跟菜園共用同一套（格子編號 100 起、種子放背包、伺服器算時間）。種得越多（長到一半以上的），游過來的魚群越多。 */
@@ -21953,7 +21951,7 @@ function renderTab0(){
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
       ...(BLI.off ? [] : [["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []]]),
-      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
+      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "島的西邊有菜園，種子攤買種子，種下去要澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前菜園開墾過幾格，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
         ["端給客人拿 1.5 倍，每天最多 60 位。每天最多做 150 道。", "跟美雲姨買是料理價值的 2.5 倍，一天最多 6 道。吧台點餐 45～225 金幣。"]],
@@ -23160,6 +23158,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u880', d:'11/26', items:[['🧺','西邊的菜園併進自由種田了：菜園那塊地直接是你的，原本格子裡種的作物都搬到原位繼續長。拿著種子按「種田」，菜園裡也能種得密密麻麻。','island'],['🌱','以前開墾過菜園的格數不會浪費，每格讓田多 5 株（12 格的人最多 360 株）。']] },
   { id:'u879', d:'11/26', items:[['🪓','小島改成一格一格開地：走到樹林邊面向白色虛線框按「開地」，一格 150 起，想往哪邊長就往哪邊開。以前買的大塊地都換成小格子了。','island'],['🗺️','手機「小島 → 🌳 島的大小」可以看整座島的地圖：開了幾格、還能開幾格、全部開完要多少。'],['🌱','田的泥土改成跟草地一樣平。']] },
   { id:'u878', d:'11/26', items:[['📱','小島的建造、信箱、回村搬到「手機 → 小島」，畫面上不再有小島列，截圖比較乾淨（建造的時候才會出現）','island'],['🧱','方塊、隔板、形狀都有 3D 小圖了'],['⛵','小島碼頭往外挪，伸進海裡，不再整個躺在沙灘上']] },
   { id:'u877', d:'11/26', items:[['🏝️','小島上面那排改成一排、短短的，不會再蓋到頭上的名字'],['🎣','島上的幫手改成站在碼頭邊釣魚，不會再坐在空氣上；睡覺時坐在木板上']] },

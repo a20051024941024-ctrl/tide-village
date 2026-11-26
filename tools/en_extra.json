@@ -9097,5 +9097,10 @@
  "🌳 島變大了！樹林邊的白色虛線框是可以開的地，走過去面向它按「開地」": "🌳 Your island grew! White dashed squares at the forest edge can be cleared. Face one and tap \"Clear land\".",
  "🌱 空地也可以種！按「種田」就會邊走邊種，一次三排": "🌱 You can farm empty land too! Tap \"Farm\" to plant as you walk, three rows at a time.",
  "🌱 種子除了種在菜園，島上開好的空地也能種：拿在手上按「種田」，走過去就種下去": "🌱 Besides the garden, you can plant on any cleared land: hold the seeds, tap \"Farm\" and walk.",
- "這裡還沒開，到樹林邊按「開地」": "Not cleared yet. Tap \"Clear land\" at the forest edge."
+ "這裡還沒開，到樹林邊按「開地」": "Not cleared yet. Tap \"Clear land\" at the forest edge.",
+ "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前菜園開墾過幾格，每格再多 5 株。": "When ripe, tap \"Harvest\" and walk over them; \"Water\" waters the patch around you. Up to 300 plants per island, plus 5 for every garden plot you unlocked before.",
+ "西邊的菜園併進自由種田了：菜園那塊地直接是你的，原本格子裡種的作物都搬到原位繼續長。拿著種子按「種田」，菜園裡也能種得密密麻麻。": "The west garden is now part of free farming: that land is yours, and crops in the old plots moved to the same spots and keep growing. Hold seeds and tap \"Farm\" to plant the garden as densely as you like.",
+ "以前開墾過菜園的格數不會浪費，每格讓田多 5 株（12 格的人最多 360 株）。": "Garden plots you unlocked before still count: each adds 5 plants to your limit (360 with 12 plots).",
+ "先到菜園的種子攤買種子，在背包點「拿在手上」，再到菜園或島上開好的空地按「種田」，走過去的地方一次種三排，想種多密就多密。作物照現實時間長大（關掉遊戲也會繼續長）。熟了按「收成」邊走邊收，「澆水」一次澆身邊一片，澆滿 2 次會豐收。": "Buy seeds at the garden stall, tap \"Hold\" in your bag, then tap \"Farm\" in the garden or on cleared land. You plant three rows wherever you walk, as densely as you like. Crops grow in real time, even with the game closed. When ripe, tap \"Harvest\" and walk over them; \"Water\" waters the patch around you. Water twice for a bumper crop.",
+ "還沒種東西。拿著種子到菜園或空地按「種田」。": "Nothing planted yet. Hold seeds and tap \"Farm\" in the garden or on empty land."
 }

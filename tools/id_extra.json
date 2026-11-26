@@ -8821,5 +8821,10 @@
  "🌳 島變大了！樹林邊的白色虛線框是可以開的地，走過去面向它按「開地」": "🌳 Pulaumu membesar! Kotak bergaris putih di tepi hutan bisa dibuka. Hadapkan ke sana dan ketuk \"Buka lahan\".",
  "🌱 空地也可以種！按「種田」就會邊走邊種，一次三排": "🌱 Tanah kosong juga bisa ditanami! Ketuk \"Bertani\" untuk menanam sambil berjalan, tiga baris sekaligus.",
  "🌱 種子除了種在菜園，島上開好的空地也能種：拿在手上按「種田」，走過去就種下去": "🌱 Selain di kebun, kamu bisa menanam di tanah terbuka: pegang benih, ketuk \"Bertani\", lalu berjalan.",
- "這裡還沒開，到樹林邊按「開地」": "Belum dibuka. Ketuk \"Buka lahan\" di tepi hutan."
+ "這裡還沒開，到樹林邊按「開地」": "Belum dibuka. Ketuk \"Buka lahan\" di tepi hutan.",
+ "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前菜園開墾過幾格，每格再多 5 株。": "Saat matang, ketuk \"Panen\" lalu jalan melewatinya; \"Siram\" menyiram petak di sekitarmu. Maksimal 300 tanaman per pulau, ditambah 5 untuk tiap petak kebun yang dulu kamu buka.",
+ "西邊的菜園併進自由種田了：菜園那塊地直接是你的，原本格子裡種的作物都搬到原位繼續長。拿著種子按「種田」，菜園裡也能種得密密麻麻。": "Kebun barat sekarang jadi bagian dari bertani bebas: tanah itu milikmu, dan tanaman di petak lama pindah ke tempat yang sama dan terus tumbuh. Pegang benih dan ketuk \"Bertani\" untuk menanam serapat yang kamu mau.",
+ "以前開墾過菜園的格數不會浪費，每格讓田多 5 株（12 格的人最多 360 株）。": "Petak kebun yang dulu dibuka tetap dihitung: tiap petak menambah 5 tanaman (360 dengan 12 petak).",
+ "先到菜園的種子攤買種子，在背包點「拿在手上」，再到菜園或島上開好的空地按「種田」，走過去的地方一次種三排，想種多密就多密。作物照現實時間長大（關掉遊戲也會繼續長）。熟了按「收成」邊走邊收，「澆水」一次澆身邊一片，澆滿 2 次會豐收。": "Beli benih di kios kebun, ketuk \"Pegang\" di tas, lalu ketuk \"Bertani\" di kebun atau tanah terbuka. Kamu menanam tiga baris di mana pun kamu berjalan, serapat yang kamu mau. Tanaman tumbuh sesuai waktu nyata, bahkan saat game ditutup. Saat matang, ketuk \"Panen\" dan jalan melewatinya; \"Siram\" menyiram petak di sekitarmu. Siram dua kali untuk panen melimpah.",
+ "還沒種東西。拿著種子到菜園或空地按「種田」。": "Belum ada tanaman. Pegang benih dan ketuk \"Bertani\" di kebun atau tanah kosong."
 }
