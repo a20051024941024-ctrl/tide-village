@@ -2599,6 +2599,11 @@ function seaDry(x, z){ const U = waterSurface && waterSurface.material.uniforms;
       const b = smp(2), sf = 1 - smooth01(clamp((b - 0.03) / 0.09, 0, 1)), depth = smp(0) * 2; if (depth > U.uTideD.value * sf - 0.01) return false; } }
   for (let k = 0; k < 8; k++){ const q = k * Math.PI / 4; for (const r of [2.5, 5]) if (deckAt(x + Math.cos(q) * r, z + Math.sin(q) * r)) return false; }   /* v608 作者：「這邊竟然可以下去」→ 碼頭、堤岸旁邊退潮也不算露出來的沙（那裡畫面上還是水，以前會走進水裡） */
   return true; }
+/* v909 作者：「阿穎會在這裡一直不斷的重複拋竿」→ 退潮時前面整片變沙地，以前浮標掉在沙上就收竿重甩、一直重複。
+   現在甩竿前先找：正前方、往左右偏 30、60 度，哪個方向 3～12 公尺內有水就轉過去甩；都沒有就收竿等水回來（每 6 秒看一次） */
+function npcWetRot(n){ const ok = (x, z) => waterAt(x, z) && !seaDry(x, z);
+  for (const da of [0, 0.5, -0.5, 1.0, -1.0]){ const a = n.rot + da, dx = Math.sin(a), dz = Math.cos(a); for (let d = 3; d <= 12; d += 0.5) if (ok(n.pos.x + dx * d, n.pos.z + dz * d)) return a; }
+  return null; }
 function castPoint(x, z, dx, dz, dist){
   const ok = d => waterAt(x + dx * d, z + dz * d) && !seaDry(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
@@ -21169,7 +21174,7 @@ function clodProxy(f){ const a = f.av, P = []; a.g.traverse(o => { if (o.isSkinn
   use[0].parent.add(px); f._px = px; f._pxKey = key; return px; }
 /* v290 遠的小東西不畫：低畫質 48 公尺（半徑 1.5 以下）、中畫質 75 公尺（半徑 1 以下）外的小東西（花、小石頭、魚、浮標…）先不畫；高畫質不動 */
 const FARC = { list: [], at: -1e9, L: 7 };
-function farcTick(){ const lim = Quality.tier === 'low' ? 48 : Quality.tier === 'mid' ? 75 : 0, rMax = Quality.tier === 'low' ? 1.5 : 1;
+function farcTick(){ const lim = ((typeof Sub !== 'undefined' && Sub.on) || Dive.on) ? 0 : Quality.tier === 'low' ? 48 : Quality.tier === 'mid' ? 75 : 0, rMax   /* v909 作者：潛水艇裡「這裡的魚會突然出現」→ 遠的小東西先不畫是給村子用的，深海、潛水用村子的距離（48／75 公尺）在霧裡就會看到魚突然冒出來；海底有自己的霧和遠近，這裡不用 */ = Quality.tier === 'low' ? 1.5 : 1;
   if (!lim){ if (FARC.list.length){ for (const o of FARC.list) o.layers.set(0); FARC.list = []; } return; }
   if (frameNo - FARC.at > 300){ FARC.at = frameNo; for (const o of FARC.list) o.layers.set(0); const skip = new Set(); for (const f of CLOD.all) if (f.av && f.av.g) skip.add(f.av.g); const L = [], v = FARC.v || (FARC.v = new THREE.Vector3());
     const walk = o => { if (skip.has(o)) return; if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !o.userData.sb && !o.userData.keep && o.geometry){ const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const sc = o.getWorldScale(v); if (g.boundingSphere && g.boundingSphere.radius * Math.max(sc.x, sc.y, sc.z) < rMax) L.push(o); } for (const c of o.children) walk(c); };
@@ -21770,8 +21775,9 @@ function updateYin(n, dt, t){ const A = npcs.find(x => x.amo); if (!A || !A.boat
   if (n.yOnBoat){ n.yOnBoat = false; n.pos.copy(H); n.baseY = n.yHomeY; yinOff(n); }   /* 這一趟沒跟（剛好換到下一趟），回碼頭 */
   n.sitting = false; amoDevice(n, 'x', t);
   if (Math.hypot(n.pos.x - H.x, n.pos.z - H.z) > 0.15){ yinOff(n); amoWalk(n, dt, H.x, H.z); return true; }
-  n.speed = 0; n.baseY = n.yHomeY; n.rot = n.yHomeRot;
-  if (!n.fishing && n.st !== 'show' && n.st !== 'windup'){ const cp = castPoint(H.x, H.z, Math.sin(n.rot), Math.cos(n.rot), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
+  n.speed = 0; n.baseY = n.yHomeY; if (n.st !== 'dry' && !n.fishing) n.rot = n.yHomeRot;
+  if (!n.fishing && n.st !== 'show' && n.st !== 'windup' && n.st !== 'dry'){ n.rot = n.yHomeRot; const r = npcWetRot(n);   /* v909 作者：「阿穎會在這裡一直不斷的重複拋竿」→ 退潮前面沒水：以前每一格都直接把浮標放回沙上、又發現沒水重甩，一直重複。現在先找有水的方向，沒有就收竿等 */
+    if (r == null){ n.st = 'dry'; n.stT = t + 6; n.fishing = false; n.bobState = 'none'; } else { n.rot = r; const cp = castPoint(H.x, H.z, Math.sin(r), Math.cos(r), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); } }
   return false; }
 /* ============ v450 村民自由走動 ============
    玩家說「NPC 應該要能自由移動」。原本只有村長、阿綾、阿木、阿福、老港 5 位照伺服器的作息走動，其他人永遠站在原地。
@@ -21963,8 +21969,10 @@ function updateNpcs(dt, t){
         if (f){ const fw = +(f.min + (f.max - f.min) * Math.random() * 0.6).toFixed(2); n.holdFish(f, fw, 4); if (n.yin) n.yinBag = { f, w: fw }; if (camera.position.distanceTo(n.pos) < 25 && Math.random() < 0.6) n.say((n.catchLines || ['釣到了！', `是${f.name}！`, '今天運氣不錯～', '嘿咻！'])[Math.floor(Math.random() * (n.catchLines ? n.catchLines.length : 4))], '', 3); }
         n.st = 'show'; n.stT = t + 4.2; } }
     if (st === 'show' && t > n.stT){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; }
+    if (st === 'dry' && t > n.stT){ n.stT = t + 6; const r = npcWetRot(n); if (r != null){ n.rot = r; n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; } }   /* v909 退潮等水回來：每 6 秒看一次 */
+    if (st === 'windup' && n.windup === 0 && !n.wetOk){ const r = npcWetRot(n); if (r == null){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'dry'; n.stT = t + 6; n.wetOk = false; if (camera.position.distanceTo(n.pos) < 20) n.say(pick2(['退潮了，水都退光了……等一下再釣', '沒水了，休息一下']), '', 3.5); } else { n.rot = r; n.wetOk = true; } }
     if (st === 'windup'){ n.windup = Math.min(1, (n.windup || 0) + dt / 0.6);
-      if (t > n.stT){ n.windup = 0; n.castT = 0; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); try { const cp = castPoint(n.pos.x, n.pos.z, Math.sin(n.rot), Math.cos(n.rot), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); } catch(e){}   /* v881 作者：「阿穎看起來像在釣陸地」→ 每次甩竿重新找有水的地方（退潮時往外甩） */ n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
+      if (t > n.stT){ n.windup = 0; n.castT = 0; n.wetOk = false; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); try { const cp = castPoint(n.pos.x, n.pos.z, Math.sin(n.rot), Math.cos(n.rot), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); } catch(e){}   /* v881 作者：「阿穎看起來像在釣陸地」→ 每次甩竿重新找有水的地方（退潮時往外甩） */ n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
     if (st === 'wait'){ n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); if (n.fishing && n.bobState === 'water' && (frameNo + (n.npcI || 0)) % 90 === 0 && (seaDry(n.bobPos.x, n.bobPos.z) || !waterAt(n.bobPos.x, n.bobPos.z))){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } }   /* v881 潮水退了、浮標躺在沙上：收竿重甩 */
     if (!n.amo) try { amoFish(n, dt, t); } catch(e){}
     try { npcAvoid(n, dt, t); } catch(e){}
@@ -23227,7 +23235,7 @@ function subDecoSwap(){ deepLoad().then(() => { const G = DEEP.geo, lam = new TH
   if (G.wreck && Sub.wreck){ for (const c of Sub.wreck.g.children) c.visible = false; const m = add(G.wreck, lam, Sub.wreck.g, [6.5, 6.5, 6.5], 0.8 * 6.5 - 1.2, true); m.rotation.y = Math.PI / 2; }
   if (G.jelly){ const jm = new THREE.MeshBasicMaterial({ vertexColors:true, transparent:true, opacity:0.88 }); for (const j of Sub.jelly){ j.m.visible = false; j.m.userData.off = true; const m = new THREE.Mesh(G.jelly, jm); m.scale.setScalar(1.1); m.position.copy(j.m.position); Sub.group.add(m); Sub.cull.push(m); j.m = m; } }   /* 水母自己會發光，不用打光 */
   for (const o of [Sub.oar && Sub.oar.m, Sub.squid && Sub.squid.m, ...Sub.shelfFish.map(f => f.m)]) if (o) Sub.cull.push(o); }); }
-function subCullCrit(P){ const R = 14 * (1 + (Sub.buddy || 0) * 0.45); for (const c of Sub.crit || []){ const dx = c.m.position.x - P.x, dy = c.m.position.y - P.y, dz = c.m.position.z - P.z; c.m.visible = dx * dx + dy * dy + dz * dz < R * R; } }   /* 小生物 22 公尺外就先不畫 */
+function subCullCrit(P){ const R = Math.max(14 * (1 + (Sub.buddy || 0) * 0.45), (Sub.viewR || 0) + 4);   /* v909 跟霧一樣遠才藏（以前 14 公尺，霧還看得到就突然冒出來） */ for (const c of Sub.crit || []){ const dx = c.m.position.x - P.x, dy = c.m.position.y - P.y, dz = c.m.position.z - P.z; c.m.visible = dx * dx + dy * dy + dz * dz < R * R; } }   /* 小生物 22 公尺外就先不畫 */
 function subHud(){ let h = $('#subHud'); if (h) return h;
   h = document.createElement('div'); h.id = 'subHud';
   h.innerHTML = '<div class="sh-top panel"><span class="sh-depth">深度 <b>0</b> m</span><span class="sh-zone"></span><span class="sh-sonar" title="聲納"><i></i></span><span class="sh-vs"></span><span class="sh-bat">🔋 <b>5:00</b></span><span class="sh-hold">🐟 <b>0</b></span><span class="sh-lim"></span></div>'
@@ -23798,6 +23806,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u909', d:'11/27', items:[['🎣','退潮時阿穎（和其他村民）不會再一直重複拋竿：前面沒水會轉向有水的地方甩，真的都沒水就收竿等潮水回來'], ['🐠','潛水艇、潛水時魚不會再突然冒出來：遠近改成跟海裡的霧一樣']] },
   { id:'u908', d:'11/26', items:[['⚡','比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）']] },
   { id:'u907', d:'11/26', items:[['✨','開心時的星星眼改好看了：不再整顆變黃色星星，保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光']] },
   { id:'u906', d:'11/26', items:[['🧘','兩個新坐姿：「盤腿坐」（兩手放膝蓋）、「往後撐著坐」（身體往後靠、腳彎到旁邊），表情選單裡就有，坐著會輕輕呼吸；「🌙 放空」時每 40 秒自己換一個坐姿'], ['📱','iPhone 用最高畫質會卡一下一下：iPhone 的最高畫質改成比較省力的設定，看起來差不多但順很多']] },
