@@ -8798,5 +8798,16 @@
  "樹林分成 6 塊地，走到牌子那裡就能買。買下來樹會倒下，換成漂流木，地就可以拿來蓋房子。": "Hutannya dibagi jadi 6 petak yang bisa dibeli di papan. Beli satu, pohonnya tumbang jadi kayu apung, dan tanahnya bisa kamu bangun.",
  "買這塊地": "Beli tanah ini",
  "這塊地還沒買，買下來才能放": "Tanah ini belum kamu beli",
- "這塊地還沒買，買下來才能蓋": "Tanah ini belum kamu beli"
+ "這塊地還沒買，買下來才能蓋": "Tanah ini belum kamu beli",
+ "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。": "Kamu juga bisa bertani di tanah kosong pulaumu (lingkaran tengah atau tanah yang dibeli, bukan pantai): pegang benih lalu ketuk \"Bertani\", dan kamu menanam tiga baris di mana pun kamu berjalan, serapat yang kamu mau. Ketuk lagi untuk berhenti.",
+ "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株。": "Saat tanaman matang, ketuk \"Panen\" lalu jalan melewatinya; \"Siram\" menyiram petak di sekitarmu. Maksimal 300 tanaman per pulau.",
+ "小島的空地可以自由種田了：拿著種子按「種田」，邊走邊種，一次三排，種得密密麻麻也可以。": "Kamu bisa bertani bebas di tanah kosong pulaumu: pegang benih, ketuk \"Bertani\", lalu tanam sambil berjalan, tiga baris sekaligus, serapat yang kamu mau.",
+ "熟了按「收成」走過去就收起來；澆水也是一次澆一片。": "Saat matang, ketuk \"Panen\" lalu jalan melewatinya; menyiram juga sekaligus satu petak.",
+ "種田": "Bertani",
+ "停止種": "Berhenti tanam",
+ "停止收": "Berhenti panen",
+ "開始邊走邊種：走過去的地方都會種下去（一次三排），再按一次停": "Menanam sambil berjalan: tiga baris di mana pun kamu lewat. Ketuk lagi untuk berhenti.",
+ "開始邊走邊收：走過熟了的田就會收起來，再按一次停": "Panen sambil berjalan: tanaman matang yang kamu lewati akan dipanen. Ketuk lagi untuk berhenti.",
+ "田裡最多種 300 株，先收一些": "Maksimal 300 tanaman. Panen dulu sebagian.",
+ "停下來太久，先不種了": "Kamu diam cukup lama, jadi menanam dihentikan."
 }

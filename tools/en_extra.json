@@ -9074,5 +9074,16 @@
  "樹林分成 6 塊地，走到牌子那裡就能買。買下來樹會倒下，換成漂流木，地就可以拿來蓋房子。": "The forest is split into 6 plots you can buy at the signs. Buy one and the trees fall, turning into driftwood, and the land is yours to build on.",
  "買這塊地": "Buy this land",
  "這塊地還沒買，買下來才能放": "You haven't bought this land yet",
- "這塊地還沒買，買下來才能蓋": "You haven't bought this land yet"
+ "這塊地還沒買，買下來才能蓋": "You haven't bought this land yet",
+ "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。": "You can farm on empty land on your island too (the middle ring or land you bought, not the beach): hold seeds and tap \"Farm\", and you plant three rows wherever you walk, as dense as you like. Tap again to stop.",
+ "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株。": "When crops are ripe, tap \"Harvest\" and walk over them to collect; \"Water\" waters the patch around you. Up to 300 plants per island.",
+ "小島的空地可以自由種田了：拿著種子按「種田」，邊走邊種，一次三排，種得密密麻麻也可以。": "You can farm freely on your island's empty land: hold seeds, tap \"Farm\" and plant as you walk, three rows at a time, as packed as you like.",
+ "熟了按「收成」走過去就收起來；澆水也是一次澆一片。": "When ripe, tap \"Harvest\" and walk over them; watering covers a whole patch too.",
+ "種田": "Farm",
+ "停止種": "Stop planting",
+ "停止收": "Stop harvesting",
+ "開始邊走邊種：走過去的地方都會種下去（一次三排），再按一次停": "Planting as you walk: three rows wherever you go. Tap again to stop.",
+ "開始邊走邊收：走過熟了的田就會收起來，再按一次停": "Harvesting as you walk: ripe crops you pass get collected. Tap again to stop.",
+ "田裡最多種 300 株，先收一些": "Up to 300 plants. Harvest some first.",
+ "停下來太久，先不種了": "You stopped for a while, so planting paused."
 }
