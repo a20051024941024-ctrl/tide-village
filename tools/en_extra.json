@@ -9221,5 +9221,20 @@
  "房子整棟買，買了就是那麼大，不用擴建、不用借錢。島上房子 ": "Houses are bought whole: no expanding, no loans. Houses on island ",
  " 棟。拆掉退一半。": ". Removing refunds half.",
  " 層樓・每層 ": " floors, each ",
- " 公尺。房子現在是整棟買的，不用再擴建；想住大一點可以在「小島商店 → 房子」再買一棟。": " m. Houses are bought whole now; for more space, buy another in \"Island Shop → House\"."
+ " 公尺。房子現在是整棟買的，不用再擴建；想住大一點可以在「小島商店 → 房子」再買一棟。": " m. Houses are bought whole now; for more space, buy another in \"Island Shop → House\".",
+ "島上可以請 2 個幫手（一個 🪙1500）：🎣 釣魚（魚放進公共儲物箱）、🌱 顧田（澆水、收成，錢給島主）、🪓 開地（用你放進他錢包的錢開地，木頭給島主）。做久了會變熟練，★ 越多做越好。": "You can hire 2 helpers per island (🪙1500 each): 🎣 Fishing (fish go to the shared storage), 🌱 Farming (waters and harvests, coins go to the owner), 🪓 Clearing (clears land with money in their wallet, wood goes to the owner). They get better with practice: more ★ means better work.",
+ "島上的幫手可以做三種工作：🎣 釣魚、🌱 顧田（澆水、收成，賣的錢給島主）、🪓 開地（用放進他錢包的錢一格一格開地）。做久了會變熟練，最多 ★★★★★，越熟練釣到越多稀有魚、顧越多田、開越快": "Island helpers now do three jobs: 🎣 Fishing, 🌱 Farming (waters and harvests, sales go to the owner), 🪓 Clearing (clears land tile by tile with money in their wallet). They improve up to ★★★★★: more rare fish, more crops tended, faster clearing.",
+ "在島上看得到幫手做事：顧田的在田裡走來走去澆水，開地的站在樹林邊砍樹。住在島上的人都可以請幫手、叫他換工作": "You can see helpers working on the island: the farmer walks around watering crops, the clearer chops at the forest edge. Anyone living on the island can hire helpers and change their job.",
+ "顧田": "Farming",
+ "熟練 ": "Skill ",
+ "錢包 🪙": "Wallet 🪙",
+ "放 🪙": "Add 🪙",
+ "白天在碼頭釣魚，魚放進公共儲物箱。越熟練越常釣到稀有的魚。": "Fishes at the dock in the daytime; fish go to the shared storage. More skill, more rare fish.",
+ "幫島上的田澆水，熟了就收，賣的錢給島主。越熟練一小時做越多株。": "Waters the island crops and harvests ripe ones; sales go to the owner. More skill, more crops per hour.",
+ "用大家放進他錢包的錢，一格一格把樹林開成地，木頭給島主。越熟練開越快。": "Uses money in their wallet to clear forest tile by tile; wood goes to the owner. More skill, faster clearing.",
+ "幫手白天（6～22 點）工作、晚上睡覺，大家都離線也照樣做（最多補 24 小時）。三種工作：🎣 釣魚、🌱 顧田、🪓 開地。做久了會變熟練（★ 越多做越好），換工作的話每種工作的熟練度分開記。": "Helpers work in the daytime (6–22) and sleep at night, even when everyone is offline (up to 24 hours caught up). Three jobs: 🎣 Fishing, 🌱 Farming, 🪓 Clearing. They improve with practice (more ★ is better); skill is tracked per job.",
+ "今天的菜長得不錯": "The crops look good today",
+ "水澆夠了才會豐收喔": "Enough water means a big harvest",
+ "這棵樹好硬…": "This tree is tough...",
+ "錢包還有 🪙": "Wallet: 🪙"
 }

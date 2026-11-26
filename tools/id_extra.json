@@ -8945,5 +8945,20 @@
  "房子整棟買，買了就是那麼大，不用擴建、不用借錢。島上房子 ": "Rumah dibeli utuh: tanpa perluasan, tanpa pinjaman. Rumah di pulau ",
  " 棟。拆掉退一半。": ". Dibongkar kembali setengah.",
  " 層樓・每層 ": " lantai, tiap lantai ",
- " 公尺。房子現在是整棟買的，不用再擴建；想住大一點可以在「小島商店 → 房子」再買一棟。": " m. Rumah sekarang dibeli utuh; untuk lebih luas, beli lagi di \"Toko Pulau → Rumah\"."
+ " 公尺。房子現在是整棟買的，不用再擴建；想住大一點可以在「小島商店 → 房子」再買一棟。": " m. Rumah sekarang dibeli utuh; untuk lebih luas, beli lagi di \"Toko Pulau → Rumah\".",
+ "島上可以請 2 個幫手（一個 🪙1500）：🎣 釣魚（魚放進公共儲物箱）、🌱 顧田（澆水、收成，錢給島主）、🪓 開地（用你放進他錢包的錢開地，木頭給島主）。做久了會變熟練，★ 越多做越好。": "Kamu bisa menyewa 2 pembantu per pulau (🪙1500 masing-masing): 🎣 Memancing (ikan masuk penyimpanan bersama), 🌱 Bertani (menyiram dan memanen, uang untuk pemilik), 🪓 Membuka lahan (memakai uang di dompetnya, kayu untuk pemilik). Makin terlatih makin bagus (★).",
+ "島上的幫手可以做三種工作：🎣 釣魚、🌱 顧田（澆水、收成，賣的錢給島主）、🪓 開地（用放進他錢包的錢一格一格開地）。做久了會變熟練，最多 ★★★★★，越熟練釣到越多稀有魚、顧越多田、開越快": "Pembantu pulau sekarang punya tiga pekerjaan: 🎣 Memancing, 🌱 Bertani (menyiram dan memanen, hasil jual untuk pemilik), 🪓 Membuka lahan (petak demi petak dengan uang di dompetnya). Keahlian naik sampai ★★★★★: lebih banyak ikan langka, lebih banyak tanaman, lebih cepat membuka lahan.",
+ "在島上看得到幫手做事：顧田的在田裡走來走去澆水，開地的站在樹林邊砍樹。住在島上的人都可以請幫手、叫他換工作": "Pembantu terlihat bekerja di pulau: petani berkeliling menyiram, pembuka lahan menebang di tepi hutan. Semua penghuni bisa menyewa pembantu dan mengganti pekerjaannya.",
+ "顧田": "Bertani",
+ "熟練 ": "Keahlian ",
+ "錢包 🪙": "Dompet 🪙",
+ "放 🪙": "Tambah 🪙",
+ "白天在碼頭釣魚，魚放進公共儲物箱。越熟練越常釣到稀有的魚。": "Memancing di dermaga siang hari; ikan masuk penyimpanan bersama. Makin terlatih makin sering ikan langka.",
+ "幫島上的田澆水，熟了就收，賣的錢給島主。越熟練一小時做越多株。": "Menyiram tanaman dan memanen yang matang; hasil jual untuk pemilik. Makin terlatih makin banyak per jam.",
+ "用大家放進他錢包的錢，一格一格把樹林開成地，木頭給島主。越熟練開越快。": "Memakai uang di dompetnya untuk membuka hutan petak demi petak; kayu untuk pemilik. Makin terlatih makin cepat.",
+ "幫手白天（6～22 點）工作、晚上睡覺，大家都離線也照樣做（最多補 24 小時）。三種工作：🎣 釣魚、🌱 顧田、🪓 開地。做久了會變熟練（★ 越多做越好），換工作的話每種工作的熟練度分開記。": "Pembantu bekerja siang hari (6–22) dan tidur malam, tetap bekerja saat semua offline (maks 24 jam). Tiga pekerjaan: 🎣 Memancing, 🌱 Bertani, 🪓 Buka lahan. Makin terlatih makin bagus (★); keahlian dicatat per pekerjaan.",
+ "今天的菜長得不錯": "Tanaman hari ini bagus",
+ "水澆夠了才會豐收喔": "Cukup air berarti panen besar",
+ "這棵樹好硬…": "Pohon ini keras...",
+ "錢包還有 🪙": "Dompet: 🪙"
 }
