@@ -5525,12 +5525,13 @@ K3.neckTrim = body => { body.scene.traverse(o => { if (!o.isMesh) return; const 
       for (let i = 0; i < n; i++){ const j = fill[i]; pp[i * 3] = P.getX(j); pp[i * 3 + 1] = P.getY(j); pp[i * 3 + 2] = P.getZ(j); nn[i * 3] = N.getX(j); nn[i * 3 + 1] = N.getY(j); nn[i * 3 + 2] = N.getZ(j); uv[i * 2] = P.getX(j) + 0.5; uv[i * 2 + 1] = 1.15 - P.getY(j); for (let c = 0; c < 4; c++){ si[i * 4 + c] = SI.getComponent(j, c); sw[i * 4 + c] = SW.getComponent(j, c); } }
       fg.setAttribute('position', new THREE.BufferAttribute(pp, 3)); fg.setAttribute('normal', new THREE.BufferAttribute(nn, 3)); fg.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); fg.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); fg.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4)); K3.asset.fillGeo = fg; } }); };
 K3.fetch = () => { if (K3.asset || K3.loading || K3.err) return; K3.loading = true; const P = 'models/kid3/', TL = new THREE.TextureLoader(), GL = new GLTFLoader();
-  const V = '?v=' + K3.V;   /* v716 模型檔加版本號：手機或網路中間的暫存會留住舊的 body.glb（作者：「釣魚背心沒東西」——程式是新的、模型是舊的）。改了模型就把 K3.V 加一 */
+  const V = '?v=' + K3.V + (K3.tries ? '&r=' + K3.tries : '');   /* v915 重試的時候網址加一個數字，不會又拿到暫存裡壞掉的那份 */ /* v716 模型檔加版本號：手機或網路中間的暫存會留住舊的 body.glb（作者：「釣魚背心沒東西」——程式是新的、模型是舊的）。改了模型就把 K3.V 加一 */
   Promise.all([fetch(P + 'rig.json' + V).then(r => r.json()), GL.loadAsync(P + 'body.glb' + V), GL.loadAsync(P + 'hair_long.glb' + V), GL.loadAsync(P + 'hair_short.glb' + V), TL.loadAsync(P + 'mask_b.png'), TL.loadAsync(P + 'mask_g.png'), TL.loadAsync(P + 'face_base.jpg' + V), TL.loadAsync(P + 'eyes.jpg' + V)])
     .then(([rg, body, hl, hs, mb, mg, fbase, feyes]) => { mb.flipY = mg.flipY = false; K3.asset = { rg, body, hair: { long: hl, short: hs }, mask: { b: mb, g: mg }, faces: {}, clipsJ: null, fbase: fbase.image, feyes: feyes.image }; try { K3.neckTrim(body); K3.asset.neckTrim = true; } catch(e){ console.warn('neckTrim', e); } try { K3.rimSmooth(body); } catch(e){ console.warn('rimSmooth', e); } try { body.scene.traverse(o => { if (!o.isMesh || o.material.name !== 'face') return; const P = o.geometry.attributes.position, N = o.geometry.attributes.normal, v = new THREE.Vector3();   /* v749 臉的模型在原本眉毛的位置有一點凸起，換成別種眉毛（或生氣、哭）時會看到淡淡的舊眉毛形狀 → 那一帶的光影改用平滑的蛋形 */
         for (let i = 0; i < P.count; i++){ const x = P.getX(i), y = P.getY(i), z = P.getZ(i); if (z < 0.1 || y < 0.55 || y > 0.7 || Math.abs(x) > 0.3) continue; const w = Math.min(1, (y - 0.55) / 0.02, (0.7 - y) / 0.02, (0.3 - Math.abs(x)) / 0.03); v.set(x / (0.39 * 0.39), (y - 0.6) / (0.38 * 0.38), z / (0.35 * 0.35)).normalize(); N.setXYZ(i, N.getX(i) + (v.x - N.getX(i)) * w, N.getY(i) + (v.y - N.getY(i)) * w, N.getZ(i) + (v.z - N.getZ(i)) * w); } N.needsUpdate = true; }); } catch(e){ console.warn('browflat', e); } K3.loading = false;
       fetch(P + 'clips.json' + V).then(r => r.json()).then(j => { K3.asset.clipsJ = j; }).catch(e => console.warn('新人物動作載入失敗', e)); })
-    .catch(e => { K3.loading = false; K3.err = String(e); console.warn('新人物載入失敗', e); try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} }); };
+    .catch(e => { K3.loading = false; console.warn('新人物載入失敗', e); K3.tries = (K3.tries || 0) + 1; try { errReport('k3', 'load fail #' + K3.tries + ' ' + String(e).slice(0, 200)); } catch(_){}
+      if (K3.tries < 4){ K3.err = 'retry'; setTimeout(() => { K3.err = ''; }, [4000, 12000, 30000][K3.tries - 1]); } else { K3.err = String(e); try { toast('新人物載入失敗，先用原本的樣子（網路好一點再重開遊戲）'); } catch(_){} } }); };   /* v915 作者：「iPhone 手機怎麼變回去了」→ 以前網路斷一下、模型檔沒抓到，整場遊戲就全部變回舊人物；現在隔 4、12、30 秒再試，試 4 次才放棄 */
 /* v718 作者：「可以加載完再進入遊戲嗎，不要一進去還是原本的造型」→ 一開始就同時下載新人物（以前要等舊角色載完才開始下載），進入畫面也等自己的新人物換好才掀開（最多多等到 22 秒，不會卡住） */
 if (K3.on && !/kid=0/.test(location.hash)) try { K3.fetch(); } catch(e){}
 /* v741 臉是現場畫出來的：空白的臉 → 貼上選的那對眼睛（作者用 ChatGPT 生的 12 種，可以換顏色）→ 畫眉毛、嘴巴、腮紅。
@@ -5887,10 +5888,11 @@ K3.cfgOf = f => { if (f === me) return K3.on ? K3.cfg : null; const c = f.k3c ||
 K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
   if (!cfg){ if (a.k3) K3.detach(a); return; }
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
-  if (K3.err){ if (a.k3) K3.detach(a); return; }
+  if (K3.err){ if (a.k3 && K3.err !== 'retry') K3.detach(a); return; }
+  if (f._k3bad && now() < f._k3bad) return;   /* v915 這個人換新人物出錯：先用舊的，20 秒後再試（不再因為一個人出錯，全部的人都變回舊人物） */
   if (f !== me && !a.k3 && ((f._lod | 0) >= 3 || !a.g.parent || !a.g.visible || K3.built >= 1)) return;   /* v727 作者：「NPC 都改新的，不要再顯示舊的」→ 看得到的距離內都換（一格最多換一個） */   /* 別人和村民：走近（完整版的距離）才換，一格最多換一個，免得卡 */
   if (f !== me && a.k3 && (f._lod | 0) >= 3) return;   /* 太遠（看不到）的不抄骨架 */
-  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.built++; f._lod = -1; try { K3.build(a); a.k3.cfg = cfg; a.k3.ck = K3.enc(cfg); K3.apply(a); } catch(e){ K3.err = 'build'; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; if (f === me) try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
+  if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.built++; f._lod = -1; try { K3.build(a); a.k3.cfg = cfg; a.k3.ck = K3.enc(cfg); K3.apply(a); f._k3bad = 0; } catch(e){ f._k3bad = now() + 20; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; if (f === me) try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
   const k = a.k3; if (k.cfg !== cfg || (f === me && k.dirty)){ k.cfg = cfg; k.dirty = false; const ck = K3.enc(cfg); if (ck !== k.ck){ k.ck = ck; K3.apply(a); f._lod = -1; } }
   if (!k.mixer && K3.asset.clipsJ) K3.mkMixer(k);
   K3.sync(a, f); };
@@ -23908,6 +23910,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u915', d:'11/27', items:[['👧','新人物比較不會突然變回舊的樣子：模型沒下載到會自己再試幾次；某一個人出錯也不會害全部的人變回舊人物']] },
   { id:'u914', d:'11/27', items:[['🐟','看到魚跳出水面？往那裡拋！在釣點附近，魚大多是從「魚訊」的位置跳出來的，跳的也是那一種魚（小魚群、大魚、掠食魚），拋在那裡比較好釣']] },
   { id:'u913', d:'11/27', items:[['👁','潛水艇可以坐進艙裡了：右下按「艙內」，從圓形觀景窗往外看，拖畫面轉頭，往哪看就往哪開'], ['🔦','潛水艇換成兩顆大燈：照到的海底是一大片亮的，水裡看得到光柱，顆粒被照到會閃；別人的潛水艇遠遠也看得到兩道光'], ['🏔️','深海的溝底換成淺色泥沙、岩壁亮一點，燈照過去看得出形狀']] },
   { id:'u912', d:'11/27', items:[['🐟','水裡游來游去的魚少了一半，魚群同時只有一群'], ['💦','改成偶爾（大約半分鐘）會有一條魚在你前面跳出水面、或探頭出來看一下又沉下去'], ['🧊','魚市場冰台上的魚改成側躺']] },
