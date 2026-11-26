@@ -12,7 +12,7 @@
 -- 阿鐵的工坊（craft_item、craft_bait）：原本的東西照做，配方改成「金幣＋少一點魚＋材料」；新東西只用材料。修竿包也可以直接付 🪙300 買（g_repair_c）。
 -- 普通浮標、普通假餌不是東西：沒裝（eq_float／eq_lure = 0）就是用普通的，免費、不會弄丟。
 -- 市集（item_market）：材料、浮標／路亞／修竿包、工坊做的造型（竿子造型、釣線顏色、鉤子）可以賣。
---   集章、排位賽季送的、以後付費的造型都不在 _recipe 裡，所以不能賣。
+--   集章、排位賽季送的、以後付費的造型都不在 _craft_recipe 裡，所以不能賣。
 alter table public.players add column if not exists rod_dur jsonb not null default '{}'::jsonb;
 alter table public.craft_log add column if not exists ng integer not null default 0;
 create table if not exists public.mat_log (uid uuid not null, day date not null, src text not null, n integer not null default 0, primary key (uid, day, src));
@@ -23,7 +23,7 @@ create or replace function public._bag_add(b jsonb, k text, n integer) returns j
   select jsonb_set(coalesce(b, '{}'::jsonb), array[k], to_jsonb(greatest(0, least(999, coalesce((b ->> k)::integer, 0) + n)))) $$;
 
 /* 配方：c 金幣、n 幾條魚、r 魚的稀有度、m 材料、kind（own＝放進 owned、一人一個；gear＝有品質的消耗品；item＝數量；bait＝魚餌） */
-create or replace function public._recipe(p text) returns jsonb language sql immutable as $$
+create or replace function public._craft_recipe(p text) returns jsonb language sql immutable as $$
   select (case p
     when 'rs_bamboo'  then '{"c":400,"n":1,"r":"常見","m":{"wood":2},"kind":"own"}'
     when 'rs_wood'    then '{"c":500,"n":1,"r":"常見","m":{"wood":3},"kind":"own"}'
@@ -54,7 +54,7 @@ create or replace function public._recipe(p text) returns jsonb language sql imm
 
 /* 舊的 _craft_def 也改成看新配方（別的地方還有在用，例如市集判斷能不能賣） */
 create or replace function public._craft_def(p text) returns jsonb language sql immutable as $$
-  select case when public._recipe(p) ->> 'kind' = 'own' then public._recipe(p) else null end $$;
+  select case when public._craft_recipe(p) ->> 'kind' = 'own' then public._craft_recipe(p) else null end $$;
 
 /* 用掉魚缸裡最輕的 n 條某稀有度的魚（不碰收藏、展示中、變種）；不夠回 null */
 create or replace function public._take_fish(pl public.players, n integer, r text) returns text[] language plpgsql stable security definer set search_path = public as $$
@@ -78,7 +78,7 @@ create or replace function public._mat_name(k text) returns text language sql im
   select case k when 'shell' then '貝殼' when 'net' then '舊漁網' when 'wood' then '漂流木' when 'coral' then '珊瑚碎片' when 'scale' then '魚鱗' when 'pink' then '粉紅貝' else k end $$;
 
 create or replace function public.craft_item(p_id text) returns jsonb language plpgsql security definer set search_path = public as $$
-declare pl public.players := public._me(); d jsonb := public._recipe(p_id); use text[]; td date := (now() at time zone 'Asia/Taipei')::date; cnt integer; ng integer; b jsonb; e record; q integer := 0; rnd double precision; short text;
+declare pl public.players := public._me(); d jsonb := public._craft_recipe(p_id); use text[]; td date := (now() at time zone 'Asia/Taipei')::date; cnt integer; ng integer; b jsonb; e record; q integer := 0; rnd double precision; short text;
 begin
   if d is null or d ->> 'kind' = 'bait' then raise exception '阿鐵師傅不會做這個'; end if;
   select * into pl from public.players where id = pl.id for update;
@@ -138,7 +138,7 @@ do $$ declare f text; begin
     execute format('revoke all on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
-  foreach f in array array['_bag_add(jsonb,text,integer)', '_recipe(text)', '_take_fish(public.players,integer,text)', '_mat_short(jsonb,jsonb)', '_mat_name(text)'] loop
+  foreach f in array array['_bag_add(jsonb,text,integer)', '_craft_recipe(text)', '_take_fish(public.players,integer,text)', '_mat_short(jsonb,jsonb)', '_mat_name(text)'] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
   end loop;
 end $$;

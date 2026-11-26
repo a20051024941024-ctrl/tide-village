@@ -20,7 +20,7 @@ alter table public.item_market enable row level security;
 create or replace function public._item_kind(k text) returns text language sql immutable as $$
   select case when k in ('mat_shell', 'mat_net', 'mat_wood', 'mat_coral', 'mat_scale', 'mat_pink') then 'mat'
     when k in ('gf_1', 'gf_2', 'gf_3', 'gl_1', 'gl_2', 'gl_3', 'g_repair') then 'gear'
-    when public._recipe(k) ->> 'kind' = 'own' then 'skin' else null end $$;
+    when public._craft_recipe(k) ->> 'kind' = 'own' then 'skin' else null end $$;
 
 /* 擺 3 天沒賣掉：退回給賣家 */
 create or replace function public._item_expire() returns void language plpgsql security definer set search_path = public as $$
