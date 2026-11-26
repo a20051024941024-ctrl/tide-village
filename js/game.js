@@ -20212,7 +20212,7 @@ function useRoom(r){
       if (p) p.fisher.say(rc.icon, 'emote', 3);
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
-    room.on('subq', onSubQ, () => {});
+    room.on('subq', onSubQ, () => {}); room.on('subbait', onSubBait, () => {});
     room.on('pool', poolOnMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
@@ -22602,7 +22602,7 @@ function renderTab0(){
         ["放流：常見魚 1 點、稀有 3 點、傳說 10 點，未達尺寸的至少 3 點。", "標記放流多 1 點，一天最多 10 條。別人釣到：他拿 50 金幣，你拿 5 點。", "族群量最低掉到 30%，不會絕種，每天慢慢回到 100%。連 3 天 115% 以上，那種魚會多出新花色。", "撿垃圾一個 1 點，一天最多 20 個。", "未達尺寸：比那種魚最輕的再重四分之一才算夠大。"]],
       ["潛水", "fish", ["在商店的「潛水」買潛水裝備組，找港口的阿海按「去潛水」。", "也可以從港口碼頭旁的梯子、珊瑚礁群島北邊沙灘的牌子直接下水。", isTouch ? "搖桿游，旁邊的上下箭頭升降。一直往上就上岸。" : "WASD 游，空白鍵或 E 往上、C 或 Q 往下，F 拍照或撿東西。一直往上就上岸。", "看氧氣。快沒了就浮上去，或游進冒泡的氣泡口補。", "海底可以撿貝殼、開寶箱、撿垃圾和造景材料。", "靠近魚、讓牠在畫面中間按「拍照」，會記進水下圖鑑。", "海底邊緣發光的石拱門通到隔壁的海域，不用浮上去。", "貼著海底按「籠子」可以放蟹籠，4 小時後回來收。", "在外海的船上按「下潛看魚」，可以看這一帶現在有什麼魚。"],
         ["潛水裝備組 1,500 金幣。", "三個潛水點：珊瑚礁（有裝備就能去）、沉船深海（要大型氧氣瓶）、海底洞穴（要專業雙氧氣瓶加潛水燈）。", "氧氣瓶升級：60、100、150、220 秒。", "每天上限：貝殼 40 個、寶箱 6 個、洞穴珍珠 15 顆、垃圾 20 個、造景材料 15 個、小生物 10 隻。", "抓小生物要先買手抄網，800 金幣。", "蟹籠一個 50 金幣，最多同時放 2 個，收起來有 1～3 隻。", "外海每 5 分鐘有 3 種魚特別活躍，上鉤機率 2.5 倍。"]],
-      ["潛水艇", "fish", ["搭阿海的船到「深海浮台」，跟蔚博士租潛水艇，只付一次。", "搖桿控制方向，按住下箭頭下潛、上箭頭上浮。", "停下來可以放線釣深海魚。釣到的魚要按「回港」才會進魚缸。", "潛太深會警告，不上浮會被拉回港，船艙的魚全部不見。", "右下「👁 艙內」：坐進潛水艇裡，從圓形觀景窗往外看。拖畫面轉頭，搖桿往前就朝你看的方向開；往上看或往下看再往前推，會跟著上浮、下潛。按「🚢 艙外」切回原本的視角。", "深的地方只有燈照到的才看得到：兩顆前燈會在海底照出一大片亮的地方，水裡看得到光柱，顆粒被照到會一閃一閃。", "電池用完會自己回港，魚留著。", "同一個大廳的人在海裡看得到彼此的潛水艇，可以喊話。", "怕被嚇到可以在設定關掉「深海驚嚇效果」。"],
+      ["潛水艇", "fish", ["搭阿海的船到「深海浮台」，跟蔚博士租潛水艇，只付一次。", "搖桿控制方向，按住下箭頭下潛、上箭頭上浮。", "停下來可以放線釣深海魚。釣到的魚要按「回港」才會進魚缸。", "潛太深會警告，不上浮會被拉回港，船艙的魚全部不見。", "右下「👁 艙內」：坐進潛水艇裡，從圓形觀景窗往外看。拖畫面轉頭，搖桿往前就朝你看的方向開；往上看或往下看再往前推，會跟著上浮、下潛。按「🚢 艙外」切回原本的視角。", "深的地方只有燈照到的才看得到：兩顆前燈會在海底照出一大片亮的地方，水裡看得到光柱，顆粒被照到會一閃一閃。", "溝底和岩架上有長著白色海葵的大石頭、長柄的海綿和橘色的海鰓，岩壁看得出一層一層的岩層。比較高的石頭，潛水艇貼著海底開過去會自己抬高越過。", "東邊有一段裂縫特別窄，兩邊的岩壁同時照得到。", "700 公尺以下、貼近海底可以按「🍖 放餌」，一趟 2 份：小蝦蟲會越聚越多，深海魚也會過來繞。在餌旁邊放線，魚比較快咬。一起潛的人也看得到。", "關燈、放餌、艙內這三顆在右下按鈕的上面一排。", "電池用完會自己回港，魚留著。", "同一個大廳的人在海裡看得到彼此的潛水艇，可以喊話。", "怕被嚇到可以在設定關掉「深海驚嚇效果」。"],
         ["要 15 級、4,500 金幣。", "深度 200 公尺以下才能放線。", "超過耐壓深度 30 秒內要上浮。", "升級：耐壓 800、1,500、3,000 公尺；電池 5、8、12 分鐘；探照燈 25、40、60 公尺。要金幣和深海的魚或礦石。", "皇帶魚在岩壁中段，大王魷魚在 2,500 公尺以下。", "深海目擊每種第一次看到送 30 愛海點數。關燈時電池只用一半。", "蔚博士每個星期五會在裂縫裡發現一種新生物。"]],
       ["魚缸、我的海、圖鑑", "home", ["釣到的魚進魚缸，最多留 " + (KEEP_MAX) + " 條，滿了最舊的會被擠掉。", "喜歡的魚放進「我的海」，就在你小島底下，從小島碼頭的潛水梯下去看得到。放在那裡的不會被賣掉或拿去做菜。", "在魚缸點魚的圖可以看牠的卡片，還能幫牠取名字。", "圖鑑記你釣過的每一種和最重的紀錄。", "圖鑑最上面的「⏰ 現在正好」：照現在的時間、潮水、天氣和季節，列出比平常容易出現的魚，按「去釣點」直接過去。手機的「今天」也有。", "釣到魚的卡片會告訴你這種魚你的紀錄是多少：破紀錄會寫「🏆 破紀錄」和比上次大多少，差一點的會寫還差幾公斤。", "加了好友以後，圖鑑每種魚會寫「👥 朋友最大」是誰、幾公斤；你比他大會有 👑。", "按魚那顆按鈕可以把魚捧起來給大家看。", "可以去看別人的水族館，從玩家名單或排行榜點名字。", "有些魚有長得不一樣的變種，很少見。圖鑑先給你看影子。"],
         ["我的海一開始放 30 條。海底花園每長大一株珊瑚多 2 條，最多 60 條。一起住的人共用。", "魚的名字最多 8 個字。"]],
@@ -23078,7 +23078,7 @@ function faiDiveBait(){ const t = now(); if (FAI.baitCd > now()){ toast(`魚餌�
 const SUBW = { x:0, y:-1000, z:0 };
 var Sub = { on:false, st:null, dive:null, group:null, pos:new THREE.Vector3(), yaw:0, v:0, vy:0, up:false, down:false, hold:[], maxD:0, edgeHit:false, warnT:0, fish:null, picks:[], ending:false };
 function subEdge(x){ return 4 * Math.sin(x * 0.07) + 3 * Math.sin(x * 0.19 + 1.3) + 1.5 * Math.sin(x * 0.53 + 0.4); }
-function subWidth(x){ return 46 + 10 * Math.sin(x * 0.045 + 0.7); }
+function subWidth(x){ return 46 + 10 * Math.sin(x * 0.045 + 0.7) - 25 * Math.exp(-(((x - 46) / 12) ** 2)); }   /* v916 東邊有一段變窄（最窄大約 24 公尺）：兩邊岩壁同時照得到的「峽谷」 */
 function subNoise(x, z){ return Math.sin(x * 0.31 + z * 0.17) * 0.5 + Math.sin(x * 0.13 - z * 0.29 + 1.7) * 0.4 + Math.sin(x * 0.71 + z * 0.53) * 0.15; }
 const SUB_WALL = [[0, 0], [1.2, 0.23], [2.7, 0.245], [3.7, 0.465], [5.2, 0.48], [6.6, 1]];   /* 岩壁：斷崖 → 岩架（約 840 公尺）→ 斷崖 → 岩架（約 1500 公尺）→ 斷崖 → 溝底 */
 function subWallK(n){ if (n <= 0) return 0; for (let i = 1; i < SUB_WALL.length; i++){ const [a, va] = SUB_WALL[i - 1], [b, vb] = SUB_WALL[i]; if (n <= b) return va + (vb - va) * smooth01((n - a) / (b - a)); } return 1; }
@@ -23095,7 +23095,7 @@ function subTerrain(){
   const rowsOf = x => { const e = subEdge(x), w = subWidth(x), out = [], seg = (a, b, n) => { for (let k = 0; k < n; k++) out.push(a + (b - a) * k / n); };
     seg(-70, e - 0.6, 28); seg(e - 0.6, e + 8.6, 16); seg(e + 8.6, e + w - 8.6, 14); seg(e + w - 8.6, e + w + 0.6, 16); seg(e + w + 0.6, 90, 10); out.push(90); return out; };
   const NZ = rowsOf(0).length, pos = new Float32Array((NX + 1) * NZ * 3), col = new Float32Array((NX + 1) * NZ * 3), C = new THREE.Color();
-  const sand = new THREE.Color('#c9bf9f'), rock = new THREE.Color('#3a3f47'), ledge = new THREE.Color('#57544e'), floorC = new THREE.Color('#8a826f');   /* v912 溝底換成淺色的泥沙、岩壁亮一點：燈照到的地方才看得出一大片亮的 */
+  const sand = new THREE.Color('#e2d7b4'), rock = new THREE.Color('#6b655d'), ledge = new THREE.Color('#77716a'), floorC = new THREE.Color('#7d7566');   /* v912 溝底換成淺色的泥沙、岩壁亮一點；v916 貼上岩石紋理以後整體會暗一成多，顏色跟著調 */
   for (let i = 0; i <= NX; i++){ const x = xs[i], zs = rowsOf(x), e = subEdge(x), w = subWidth(x);
     for (let j = 0; j < NZ; j++){ const z = zs[j], y = subH(x, z), p = (i * NZ + j) * 3; pos[p] = x; pos[p + 1] = y; pos[p + 2] = z;
       const n = Math.min(z - e, e + w - z), k = n > 0 ? subWallK(n) : 0;
@@ -23104,7 +23104,30 @@ function subTerrain(){
       col[p] = C.r; col[p + 1] = C.g; col[p + 2] = C.b; } }
   const idx = []; for (let i = 0; i < NX; i++) for (let j = 0; j < NZ - 1; j++){ const a = i * NZ + j, b = (i + 1) * NZ + j; idx.push(a, a + 1, b, b, a + 1, b + 1); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
-  return new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors:true })); }
+  /* v916 表面紋理：平的地方（大陸棚、岩架、溝底）是泥沙、照 x、z 貼；陡的岩壁是岩石、照 x、高度貼，一層一層的岩層才會是橫的。同一個地形分成兩種材質 */
+  { const na = g.attributes.normal, uv = new Float32Array(na.count * 2); for (let i = 0; i < na.count; i++){ uv[i * 2] = pos[i * 3] / 8; uv[i * 2 + 1] = (Math.abs(na.getY(i)) > 0.72 ? pos[i * 3 + 2] : pos[i * 3 + 1]) / 8; } g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    const fl = [], wl = []; for (let i = 0; i < idx.length; i += 3) ((na.getY(idx[i]) + na.getY(idx[i + 1]) + na.getY(idx[i + 2])) / 3 > 0.72 ? fl : wl).push(idx[i], idx[i + 1], idx[i + 2]);
+    g.setIndex(fl.concat(wl)); g.addGroup(0, fl.length, 0); g.addGroup(fl.length, wl.length, 1); }
+  const RT = subRockTex(), lowQ = Quality.tier === 'low';
+  return new THREE.Mesh(g, [new THREE.MeshLambertMaterial({ vertexColors:true, map: RT.mud, bumpMap: lowQ ? null : RT.mudBump, bumpScale: 0.14 }), new THREE.MeshLambertMaterial({ vertexColors:true, map: RT.map, bumpMap: lowQ ? null : RT.bump, bumpScale: 0.5 })]); }
+/* 兩張可以無縫接續的圖。岩石：一層一層的岩層（慢慢高起來再突然掉下去）＋顆粒＋幾條裂縫；泥沙：細細的顆粒、淡淡的波紋、小洞和小土堆（海底生物挖的）。
+   顏色圖讓表面有深有淺，同一份高低拿來當凹凸，燈照過去才有明暗。最低畫質只用顏色圖 */
+function subRockTex(){ if (Sub.rockTex) return Sub.rockTex; const N = 256, rnd = mulberry(77), sm = t => t * t * (3 - 2 * t);
+  const L = [[8, 0.46], [16, 0.25], [32, 0.14], [64, 0.09], [128, 0.06]].map(([P, w]) => { const a = new Float32Array(P * P); for (let i = 0; i < a.length; i++) a[i] = rnd(); return [P, a, w]; });
+  const noise = (u, v) => { let t = 0; for (const [P, a, w] of L){ const x = u * P, y = v * P, x0 = Math.floor(x), y0 = Math.floor(y), fx = sm(x - x0), fy = sm(y - y0), i0 = ((x0 % P) + P) % P, i1 = (i0 + 1) % P, j0 = ((y0 % P) + P) % P, j1 = (j0 + 1) % P; t += w * ((a[j0 * P + i0] * (1 - fx) + a[j0 * P + i1] * fx) * (1 - fy) + (a[j1 * P + i0] * (1 - fx) + a[j1 * P + i1] * fx) * fy); } return t; };
+  const make = (hf, lo2, tint) => { const mk = () => { const cv = document.createElement('canvas'); cv.width = cv.height = N; return cv; }, ch = mk(), ca = mk(), xh = ch.getContext('2d'), xa = ca.getContext('2d'), ih = xh.createImageData(N, N), ia = xa.createImageData(N, N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ const u = x / N, v = y / N, n = noise(u, v), h = clamp(hf(u, v, n), 0, 1), i = (y * N + x) * 4, m = lo2 + (1 - lo2) * h, t = noise(v + 0.37, u + 0.11);
+      ih.data[i] = ih.data[i + 1] = ih.data[i + 2] = Math.round(h * 255); ih.data[i + 3] = 255;
+      ia.data[i] = Math.round(255 * m * (1 - tint + tint * t)); ia.data[i + 1] = Math.round(255 * m * (1 - tint * 0.5)); ia.data[i + 2] = Math.round(255 * m * (1 - tint * t)); ia.data[i + 3] = 255; }
+    xh.putImageData(ih, 0, 0); xa.putImageData(ia, 0, 0); return [ch, ca, xh, xa]; };
+  const tex = cv => { const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
+  const [rh, ra, rxh, rxa] = make((u, v, n) => { const b = (v * 6 + n * 0.55) % 1, band = b < 0.8 ? b / 0.8 : (1 - b) / 0.2; return 0.45 * n + 0.55 * band; }, 0.62, 0.07);
+  for (const [c2, colr] of [[rxh, 'rgba(0,0,0,0.5)'], [rxa, 'rgba(30,26,22,0.45)']]){ const r2 = mulberry(5); c2.strokeStyle = colr; c2.lineWidth = 1.2; for (let k = 0; k < 9; k++){ let x = r2() * N, y = r2() * N; c2.beginPath(); c2.moveTo(x, y); for (let q = 0; q < 10; q++){ x += (r2() - 0.5) * 26; y += 6 + r2() * 14; c2.lineTo(x, y); } c2.stroke(); } }
+  const [mh, ma, mxh, mxa] = make((u, v, n) => 0.45 + 0.4 * (n - 0.5) + 0.07 * Math.sin((v * 9 + n * 2.2) * 6.283), 0.8, 0.05);
+  { const r2 = mulberry(9); for (let k = 0; k < 46; k++){ const x = 8 + r2() * (N - 16), y = 8 + r2() * (N - 16), r = 1.5 + r2() * 3, hole = r2() < 0.55;   /* 小洞（深色）和小土堆（淺色） */
+      for (const [c2, dark, lite] of [[mxh, 'rgba(0,0,0,0.55)', 'rgba(255,255,255,0.5)'], [mxa, 'rgba(40,34,26,0.4)', 'rgba(255,250,235,0.3)']]){ const gr = c2.createRadialGradient(x, y, 0, x, y, hole ? r : r * 2.2); gr.addColorStop(0, hole ? dark : lite); gr.addColorStop(1, 'rgba(128,128,128,0)'); c2.fillStyle = gr; c2.beginPath(); c2.arc(x, y, hole ? r : r * 2.2, 0, 6.283); c2.fill(); } } }
+  const map = tex(ra), bump = tex(rh), mud = tex(ma), mudBump = tex(mh); map.colorSpace = mud.colorSpace = THREE.SRGBColorSpace;
+  return (Sub.rockTex = { map, bump, mud, mudBump }); }
 
 function subModel(){   /* v244 研究用的小潛水艇：黃色艇身＋白色甲板、紅色腰帶、流線型指揮塔（艙門會開關、潛望鏡、天線、紅色信號燈）、兩側各三個圓窗、
      前面的大圓罩和兩盞探照燈、機械手臂、底下的滑橇、兩側推進器、尾巴十字舵和有罩子的螺旋槳。同一種材質的零件合成一個（手機上畫起來比較省） */
@@ -23153,7 +23176,7 @@ function subGlow(color, s, fog){ const sp = new THREE.Sprite(new THREE.SpriteMat
    · 魚群：五群共一百五十條小魚。兩群會跟著潛水艇繞著游，潛到大約 400 公尺以下就不跟了（深海還是黑的、安靜的）；另外三群在大陸棚上自己巡游。
    · 全部用程式做的小模型，同一種只畫一次（instanced），不影響裂縫裡原本的東西。 */
 /* ===== v912 深海翻新①：兩顆大燈的光柱、潛水艇第一人稱（作者 11/27 傳了深海探勘的照片：燈打在海底一大片亮、看得到光柱、只有燈照到的地方亮）===== */
-const SUB_LAMP = 100;
+const SUB_LAMP = 16;   /* v916 以前 100、越近越亮（1／距離），靠近的東西整片死白看不到細節；改成比較平均（衰減 0.5），近的不爆、遠的一樣看得到 */
 function subBeamMat(){ if (Sub.beamMat) return Sub.beamMat;
   return (Sub.beamMat = new THREE.ShaderMaterial({ uniforms:{ uC:{ value:new THREE.Color('#d6ecff') }, uK:{ value:0.15 } },
     vertexShader:'varying float vT; varying float vE; void main(){ vT = uv.y; vec4 mv = modelViewMatrix * vec4(position, 1.0); vec3 n = normalize(normalMatrix * normal); vE = abs(dot(n, normalize(-mv.xyz))); gl_Position = projectionMatrix * mv; }',
@@ -23186,6 +23209,115 @@ function subPortDraw(){ let cv = document.getElementById('subPort'); if (!Sub.fp
   c.lineWidth = 2; c.strokeStyle = '#66717a'; c.beginPath(); c.ellipse(cx, cy, rx - fw / 2, ry - fw / 2, 0, 0, Math.PI * 2); c.stroke(); c.strokeStyle = '#1d2226'; c.beginPath(); c.ellipse(cx, cy, rx + fw / 2, ry + fw / 2, 0, 0, Math.PI * 2); c.stroke();
   for (let i = 0; i < 28; i++){ const a = i / 28 * Math.PI * 2, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry; if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue; c.fillStyle = '#7d8890'; c.beginPath(); c.arc(x, y, fw * 0.22, 0, Math.PI * 2); c.fill(); c.fillStyle = '#2a3035'; c.beginPath(); c.arc(x + 1, y + 1, fw * 0.1, 0, Math.PI * 2); c.fill(); }
   c.globalAlpha = 0.06; c.fillStyle = '#fff'; c.beginPath(); c.ellipse(cx - rx * 0.45, cy - ry * 0.55, rx * 0.28, ry * 0.08, -0.35, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
+/* v916 深海翻新③（作者 11/27 傳的深海探勘照片：燈照到的海底有長滿白色海葵的大石頭、泥地上一根一根的東西）：
+   溝底和岩架上一堆一堆的石頭（深褐色、朝上的那一面蓋著一層淺色的泥），石頭上長白色的海葵（短短的身體＋一圈觸手），泥地上有一支支長柄的玻璃海綿和橘色的海鰓。
+   每一種都用 InstancedMesh 一次畫完（整片海底只多 4 次繪製），數量照畫質。比較高的石頭，潛水艇貼著海底開過去會自己慢慢抬高越過（不會撞、不會穿進去） */
+function subLump(x, y, z){ return 1 + 0.16 * Math.sin(x * 3.1 + 1.3) * Math.sin(y * 2.7 + 0.4) + 0.11 * Math.sin(z * 4.3 + x * 2.2) + 0.05 * Math.sin(y * 7 + z * 5); }
+function subSeabed(g){ const rnd = mulberry(916), lo = Quality.tier === 'low', hi = Quality.tier === 'high', NB = lo ? 40 : hi ? 100 : 70, D4 = new THREE.Object3D(), C = new THREE.Color(), V = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), Qs = new THREE.Quaternion(), RT = subRockTex();
+  const flat = (x, z) => { const h = subH(x, z); return Math.abs(subH(x + 1.2, z) - h) + Math.abs(subH(x, z + 1.2) - h) + Math.abs(subH(x - 1.2, z) - h) + Math.abs(subH(x, z - 1.2) - h) < 1.4; };
+  // 一堆一堆：先挑中心，旁邊再放一兩顆小的
+  const spots = [], cen = [];
+  for (let t = 0; t < 1400 && spots.length < NB; t++){ const x = -74 + rnd() * 148, e = subEdge(x), w = subWidth(x), z = e + 0.5 + rnd() * (w - 1), y = subH(x, z); if (subDepth(y) < 700 || !flat(x, z)) continue; if (cen.some(c => Math.hypot(c[0] - x, c[1] - z) < 6.5)) continue; cen.push([x, z]);
+    const big = rnd() < 0.15, k = 1 + Math.floor(rnd() * 3.2), s0 = big ? 1.5 + rnd() * 0.8 : 0.55 + rnd() * 0.65;
+    for (let j = 0; j < k && spots.length < NB; j++){ const a = rnd() * 6.283, r = j ? s0 * (0.9 + rnd() * 1.2) + 0.4 : 0, bx = x + Math.cos(a) * r, bz = z + Math.sin(a) * r; if (j && !flat(bx, bz)) continue; const sc = j ? s0 * (0.35 + rnd() * 0.4) : s0, sx = sc * (1 + rnd() * 0.5), sy = sc * (0.5 + rnd() * 0.25), sz = sc * (0.9 + rnd() * 0.4), by = subH(bx, bz);
+      spots.push({ x: bx, y: by + sy * 0.3, z: bz, sx, sy, sz, ry: rnd() * 6.283, top: sy * 1.3, R: Math.max(sx, sz) }); } }
+  const rockGeo = det => { const bg = new THREE.IcosahedronGeometry(1, det), pa = bg.attributes.position; for (let i = 0; i < pa.count; i++){ const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), k = subLump(x, y, z); pa.setXYZ(i, x * k, y * k, z * k); }
+    toCreasedNormals(bg, 1.2); const na = bg.attributes.normal, n = na.count, col = new Float32Array(n * 3); for (let i = 0; i < n; i++){ const up = smooth01((na.getY(i) - 0.4) / 0.4); col[i * 3] = 0.3 + 0.7 * up; col[i * 3 + 1] = 0.26 + 0.74 * up; col[i * 3 + 2] = 0.22 + 0.78 * up; } bg.setAttribute('color', new THREE.BufferAttribute(col, 3));   /* 朝上的面是淺色的泥，旁邊是深褐色的石頭 */
+    const ua = bg.attributes.uv; if (ua) for (let i = 0; i < ua.count; i++) ua.setXY(i, ua.getX(i) * 2, ua.getY(i) * 1.2); return bg; };
+  const rockM = new THREE.MeshLambertMaterial({ vertexColors:true, map: RT.map, bumpMap: lo ? null : RT.bump, bumpScale: 0.25 }), all = [];
+  for (const [list, det] of [[spots.filter(b => b.R >= 0.85), lo ? 1 : 2], [spots.filter(b => b.R < 0.85), 1]]){ if (!list.length) continue; const bm = new THREE.InstancedMesh(rockGeo(det), rockM, list.length);
+    list.forEach((b, i) => { D4.position.set(b.x, b.y, b.z); D4.rotation.set(0, b.ry, 0); D4.scale.set(b.sx, b.sy, b.sz); D4.updateMatrix(); bm.setMatrixAt(i, D4.matrix); bm.setColorAt(i, C.setHSL(0.09 + rnd() * 0.03, 0.14 + rnd() * 0.08, 0.5 + rnd() * 0.1)); });
+    bm.instanceColor.needsUpdate = true; g.add(bm); all.push(bm); }
+  // 石頭表面上的一個點（照石頭真正的凹凸算）和那裡朝外的方向
+  const onRock = (b, u, w, out) => { const yy = Math.sqrt(Math.max(0.05, 1 - u * u - w * w)), k = subLump(u, yy, w), c = Math.cos(b.ry), sn = Math.sin(b.ry), lx = u * k * b.sx, lz = w * k * b.sz; out.p.set(b.x + lx * c + lz * sn, b.y + yy * k * b.sy, b.z - lx * sn + lz * c); const nx = u / b.sx, ny = yy / b.sy, nz = w / b.sz; out.n.set(nx * c + nz * sn, ny, -nx * sn + nz * c).normalize(); return out; };
+  const tmp = { p: new THREE.Vector3(), n: new THREE.Vector3() };
+  // 海葵：短短的身體、頂上一圈往外張開的觸手、中間幾根比較直的
+  const ag = new THREE.BufferGeometry(); { const P3 = [], tri = (a, b, c) => P3.push(...a, ...b, ...c), NS = 7, H0 = 0.15, R0 = 0.11, R1 = 0.085;
+    for (let i = 0; i < NS; i++){ const a0 = i / NS * 6.283, a1 = (i + 1) / NS * 6.283, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1); tri([c0 * R0, 0, s0 * R0], [c0 * R1, H0, s0 * R1], [c1 * R0, 0, s1 * R0]); tri([c1 * R0, 0, s1 * R0], [c0 * R1, H0, s0 * R1], [c1 * R1, H0, s1 * R1]); tri([0, H0 + 0.012, 0], [c1 * R1, H0, s1 * R1], [c0 * R1, H0, s0 * R1]); }
+    const ring = (cnt, len, w, el, r0, ph) => { for (let i = 0; i < cnt; i++){ const a = i / cnt * 6.283 + ph, c = Math.cos(a), sn = Math.sin(a), bx = c * r0, bz = sn * r0, ce = Math.cos(el) * len, se = Math.sin(el) * len; tri([bx + sn * w / 2, H0 - 0.01, bz - c * w / 2], [bx - sn * w / 2, H0 - 0.01, bz + c * w / 2], [bx + c * ce, H0 + se, bz + sn * ce]); } };
+    ring(10, 0.17, 0.06, 0.3, 0.07, 0); if (!lo) ring(8, 0.15, 0.055, 0.8, 0.055, 0.35); ring(5, 0.11, 0.045, 1.25, 0.03, 0.7);   /* 觸手一根就是一片細長的三角形（像花瓣），整隻不到 50 個三角形 */
+    ag.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P3), 3)); ag.computeVertexNormals(); }
+  const per = lo ? 3 : hi ? 9 : 6, am = new THREE.InstancedMesh(ag, new THREE.MeshLambertMaterial({ color:'#ffffff', side:THREE.DoubleSide }), spots.length * per * 3); let n = 0;
+  for (const b of spots){ const cnt = Math.min(per * 3, Math.max(1, Math.round(per * b.R * b.R * 1.1))); for (let k = 0; k < cnt; k++){ const a = rnd() * 6.283, r = Math.sqrt(rnd()) * 0.78; onRock(b, Math.cos(a) * r, Math.sin(a) * r, tmp);
+      D4.position.copy(tmp.p).addScaledVector(tmp.n, -0.02); D4.quaternion.setFromUnitVectors(UP, tmp.n).multiply(Qs.setFromAxisAngle(UP, rnd() * 6.283)); D4.scale.setScalar(0.5 + rnd() * 0.55); D4.updateMatrix(); am.setMatrixAt(n, D4.matrix);
+      const kind = rnd(); am.setColorAt(n, kind < 0.72 ? C.setHSL(0.1, 0.1, 0.86 + rnd() * 0.1) : kind < 0.9 ? C.setHSL(0.97, 0.45, 0.8) : C.setHSL(0.07, 0.7, 0.68)); n++; } }
+  am.count = n; am.instanceColor.needsUpdate = true; g.add(am);
+  // 泥地上：長柄的玻璃海綿（細柄＋白色的杯子）、橘色的海鰓（細柄＋扁扁的羽毛）。不長在石頭裡
+  const clear = (x, z) => !spots.some(b => Math.hypot(b.x - x, b.z - z) < b.R + 0.35);
+  const mud = (N, minD, fn) => { let m = 0; for (let t = 0; t < N * 8 && m < N; t++){ const x = -74 + rnd() * 148, e = subEdge(x), w = subWidth(x), z = e + 0.5 + rnd() * (w - 1), y = subH(x, z); if (subDepth(y) < minD || !flat(x, z) || !clear(x, z)) continue; fn(m, x, y, z); m++; } return m; };
+  const sg = mergeGeometries([new THREE.CylinderGeometry(0.02, 0.03, 0.5, 4, 1, true).translate(0, 0.25, 0), new THREE.LatheGeometry([[0.025, 0], [0.1, 0.09], [0.135, 0.2], [0.12, 0.31], [0.1, 0.36]].map(q => new THREE.Vector2(q[0], q[1])), 5).translate(0, 0.49, 0)], false);
+  const NS = lo ? 30 : hi ? 90 : 55, sm2 = new THREE.InstancedMesh(sg, new THREE.MeshLambertMaterial({ color:'#ffffff', side:THREE.DoubleSide }), NS);
+  sm2.count = mud(NS, 800, (m, x, y, z) => { D4.position.set(x, y - 0.04, z); D4.rotation.set((rnd() - 0.5) * 0.3, rnd() * 6, (rnd() - 0.5) * 0.3); D4.scale.setScalar(0.5 + rnd() * 0.55); D4.updateMatrix(); sm2.setMatrixAt(m, D4.matrix); sm2.setColorAt(m, C.setHSL(0.12, 0.12, 0.8 + rnd() * 0.14)); });
+  if (sm2.instanceColor) sm2.instanceColor.needsUpdate = true; g.add(sm2);
+  const pg = mergeGeometries([new THREE.CylinderGeometry(0.02, 0.03, 0.45, 4, 1, true).translate(0, 0.225, 0), new THREE.SphereGeometry(0.1, 5, 4).scale(1, 2.9, 0.32).translate(0, 0.68, 0)], false);
+  const NP = lo ? 50 : hi ? 160 : 100, pm = new THREE.InstancedMesh(pg, new THREE.MeshLambertMaterial({ color:'#ffffff' }), NP);
+  pm.count = mud(NP, 900, (m, x, y, z) => { D4.position.set(x, y - 0.05, z); D4.rotation.set((rnd() - 0.5) * 0.4, rnd() * 6, (rnd() - 0.5) * 0.4); D4.scale.setScalar(0.6 + rnd() * 0.7); D4.updateMatrix(); pm.setMatrixAt(m, D4.matrix); pm.setColorAt(m, C.setHSL(rnd() < 0.6 ? 0.04 : 0.11, 0.55 + rnd() * 0.25, 0.42 + rnd() * 0.14)); });
+  if (pm.instanceColor) pm.instanceColor.needsUpdate = true; g.add(pm);
+  all.push(am, sm2, pm); for (const o of all) o.userData.off = true;   /* 不照距離一個一個藏（整批就一次繪製）；人在大陸棚上、看不到裂縫裡面的時候整批不畫（subFrame） */
+  Sub.seabed = { all, am, sm: sm2, pm, spots, clear, flat }; }
+/* 潛水艇貼著海底開到比較高的石頭上面：要多抬高多少（石頭旁邊就開始慢慢抬，不會突然跳一下） */
+function subBump(x, z){ const S = Sub.seabed; if (!S) return 0; let h = 0; for (const b of S.spots){ if (b.top < 0.5) continue; const dx = x - b.x, dz = z - b.z, lim = b.R * 1.5 + 2.6; if (Math.abs(dx) > lim || Math.abs(dz) > lim) continue; const d = Math.hypot(dx, dz), k = 1 - smooth01((d - b.R * 0.5) / (b.R + 2.1)); if (k > 0) h = Math.max(h, (b.top - 0.15) * k); } return h; }
+/* ===== v916 深海翻新④ 放餌（作者 11/27 傳的照片：海底放一塊餌，一大群小蝦蟲圍過來搶）=====
+   700 公尺以下、貼近海底（6 公尺內）按「🍖 放餌」：餌籠沉到海底揚起一點泥，幾秒後小蝦蟲從四面八方游過來越聚越多，再過一下深海魚也會過來繞。
+   一趟 2 份，一份撐 90 秒。在餌旁邊（8 公尺內）放線，魚比較快咬——只是比較快，釣到什麼還是伺服器決定，不用改伺服器。
+   一起潛的人也看得到：room 'subbait' 只送位置，各自在自己的手機上演（跟說話的泡泡一樣是純畫面）。 */
+const SUB_BAIT = { n: 2, life: 90, near: 8, depth: 700, alt: 6.5 }, SUB_FP4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+function subBaitLeft(){ return Math.max(0, SUB_BAIT.n - (Sub.baitUsed || 0)); }
+function subBaitOK(){ const P = Sub.pos; return subDepth(P.y) >= SUB_BAIT.depth && P.y - subH(P.x, P.z) < SUB_BAIT.alt; }
+function subBaitNear(){ const P = Sub.pos; return (Sub.baits || []).some(b => b.age > 8 && b.age < b.life - 6 && Math.hypot(b.x - P.x, b.z - P.z) < SUB_BAIT.near && Math.abs(b.y - P.y) < 12); }
+/* 燈有沒有照到這個點（0～1）：小蝦蟲被燈照到才亮 */
+function subLampAt(x, y, z){ const P = Sub.pos, fx = Math.sin(Sub.yaw), fz = Math.cos(Sub.yaw), dh = 0.935, dy = -0.355, vx = x - (P.x + fx * 1.3), vy = y - (P.y - 0.3), vz = z - (P.z + fz * 1.3), al = vx * fx * dh + vy * dy + vz * fz * dh; if (al <= 0 || al > 24) return 0;
+  const rx = vx - fx * dh * al, ry = vy - dy * al, rz = vz - fz * dh * al, rad = 0.5 + al * 0.72, r2 = (rx * rx + ry * ry + rz * rz) / (rad * rad); return r2 < 1 ? (1 - r2 * r2) * (1 - al / 24) * (1 - (Sub.darkK || 0)) : 0; }
+function subBaitGo(){ if (!Sub.on || Sub.fish || Sub.ending) return; const P = Sub.pos, depth = subDepth(P.y);
+  if (!subBaitLeft()){ subMsg('這一趟的餌用完了（一趟 2 份）', 1.6); return; }
+  if (depth < SUB_BAIT.depth){ subMsg('再深一點才有東西來吃', 1.6); return; }
+  if (P.y - subH(P.x, P.z) >= SUB_BAIT.alt){ subMsg('⬇ 再靠近海底一點才能放餌', 1.6); return; }
+  if ((Sub.baits || []).some(b => b.mine && Math.hypot(b.x - P.x, b.z - P.z) < 12)){ subMsg('旁邊已經有一份餌了', 1.4); return; }
+  const fx = Math.sin(Sub.yaw), fz = Math.cos(Sub.yaw), h0 = subH(P.x, P.z), S = Sub.seabed; let tx = P.x, tz = P.z;   /* 放在前面看得到的地方；前面是岩壁或石頭就換旁邊，都不行就放正下方 */
+  pick: for (const d of [3.6, 2.8, 4.4, 2.0]) for (const a of [0, 0.4, -0.4, 0.9, -0.9]){ const c = Math.cos(a), sn = Math.sin(a), x = P.x + (fx * c + fz * sn) * d, z = P.z + (fz * c - fx * sn) * d; if (Math.abs(subH(x, z) - h0) < 1.2 && (!S || (S.clear(x, z) && S.flat(x, z)))){ tx = x; tz = z; break pick; } }
+  Sub.baitUsed = (Sub.baitUsed || 0) + 1; subBaitSpawn(tx, tz, true, [P.x + fx * 2.1, P.y - 0.85, P.z + fz * 2.1]); SFX.plop(); subMsg('🍖 餌放下去了，等等看誰來吃', 2);
+  try { if (room && room.connected()) room.emit('subbait', { p: [Math.round(tx * 10) / 10, Math.round(tz * 10) / 10] }).catch(() => {}); } catch(e){} subRender(); }
+function onSubBait(msg){ if (!Sub.on || !msg || !msg.data || msg.sameTab) return; try { if (isBlockedPeer(msg.peer)) return; } catch(e){} const a = msg.data.p; if (!Array.isArray(a) || !Number.isFinite(+a[0]) || !Number.isFinite(+a[1])) return;
+  const x = clamp(+a[0] || 0, -76, 76), z = clamp(+a[1] || 0, -66, 86), R = Sub.baitRx || (Sub.baitRx = new Map()); if (now() - (R.get(msg.peer) || 0) < 8 || (Sub.baits || []).length >= 4 || subDepth(subH(x, z)) < SUB_BAIT.depth - 60) return; R.set(msg.peer, now());
+  subBaitSpawn(x, z, false, null); const p = peers.get(msg.peer); if (Math.hypot(x - Sub.pos.x, z - Sub.pos.z) < 40) subMsg(`🍖 ${p ? peerName(p) : '有人'} 放了一份餌`, 1.6); }
+function subBaitSpawn(x, z, mine, from){ const y = subH(x, z), rnd = mulberry((Math.round(x * 10) * 7919 + Math.round(z * 10) * 104729) | 0), lo = Quality.tier === 'low', hi = Quality.tier === 'high', g = new THREE.Group(); g.userData.off = true; Sub.group.add(g);
+  // 餌籠：鐵絲籠裡一塊魚肉，上面一顆橘色小浮球（遠遠找得到）
+  const cage = new THREE.Group(), wm = new THREE.MeshLambertMaterial({ color:'#c9d2da', wireframe:true });
+  cage.add(new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.3, 8, 2), wm)); { const ch = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), new THREE.MeshLambertMaterial({ color:'#c8574a' })); ch.scale.set(1, 0.8, 1.2); cage.add(ch); }
+  { const ln = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.7, 3), new THREE.MeshLambertMaterial({ color:'#d8d2c0' })); ln.position.y = 0.5; cage.add(ln); const fl = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), new THREE.MeshLambertMaterial({ color:'#ff8a2a', emissive:'#5a2400' })); fl.position.y = 0.9; cage.add(fl); }
+  const to = new THREE.Vector3(x, y + 0.17, z), fr = from ? new THREE.Vector3(from[0], from[1], from[2]) : new THREE.Vector3(x + 0.4, y + 2.6, z); cage.position.copy(fr); g.add(cage);
+  // 小蝦蟲：一堆小點，每一隻有自己到的時間、從哪個方向來、最後停在餌旁邊的哪裡
+  const N = lo ? 160 : hi ? 480 : 320, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), sd = new Float32Array(N * 7);
+  for (let i = 0; i < N; i++){ const a = rnd() * 6.283, r = 0.05 + Math.pow(rnd(), 2.2) * 0.9, b = rnd() * 6.283, q = i * 7; sd[q] = Math.cos(a) * r; sd[q + 1] = r < 0.24 ? 0.02 + rnd() * 0.36 : 0.02 + rnd() * rnd() * 0.14; sd[q + 2] = Math.sin(a) * r; sd[q + 3] = Math.cos(b); sd[q + 4] = Math.sin(b); sd[q + 5] = 5 + rnd() * 5; sd[q + 6] = 3 + 22 * Math.pow(i / N, 0.75) + rnd() * 1.5; pos[i * 3 + 1] = -500; }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.085, map: subGlowTex(), color:'#ffe6d6', vertexColors:true, transparent:true, depthWrite:false, alphaTest:0.12 })); pts.frustumCulled = false; g.add(pts);
+  // 聞到味道過來的深海魚（溝底是獅子魚、鼬鳚、鼠尾鱈；岩架上是鼠尾鱈、鼬鳚）
+  const deep = subDepth(y) >= 2300, ids = deep ? ['marsnail', 'cuskeel', 'rattail', 'marsnail'] : ['rattail', 'cuskeel', 'rattail', 'cuskeel'], fish = [];
+  for (let k = 0; k < (lo ? 2 : hi ? 4 : 3); k++){ const id = ids[k], f = FISH_BY_ID[id]; if (!f) continue; try { const m = fishModel(f, id === 'rattail' ? 0.8 : 0.92); m.visible = false; g.add(m); fish.push({ m, tIn: 12 + k * 6 + rnd() * 4, a0: rnd() * 6.283, sp: (rnd() < 0.5 ? -1 : 1) * (0.32 + rnd() * 0.2), r1: 0.95 + k * 0.36, y0: 0.35 + rnd() * 0.45, ph: rnd() * 6 }); } catch(e){} }
+  const puff = subGlow('#cbbfa6', 0.3, true); puff.material.opacity = 0; puff.position.set(x, y + 0.25, z); g.add(puff);
+  (Sub.baits || (Sub.baits = [])).push({ g, cage, fr, to, pts, pos, col, sd, N, fish, puff, x, y, z, mine, age: 0, life: SUB_BAIT.life, dropT: clamp(fr.distanceTo(to) / 1.3, 1.1, 3.5), told: 0 }); }
+function subBaitDrop(b){ if (b.g.parent) b.g.parent.remove(b.g); b.pts.geometry.dispose(); b.pts.material.dispose(); b.cage.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); b.puff.material.dispose(); }
+function subBaitClear(){ for (const b of Sub.baits || []) try { subBaitDrop(b); } catch(e){} Sub.baits = []; if (Sub.baitRx) Sub.baitRx.clear(); }
+function subBaitTick(dt){ const L = Sub.baits; if (!L || !L.length) return; const P = Sub.pos;
+  for (let n = L.length - 1; n >= 0; n--){ const b = L[n]; b.age += dt; const t = b.age, out = t - (b.life - 9);
+    if (t > b.life){ subBaitDrop(b); L.splice(n, 1); if (b.mine && Sub.on) subMsg('餌被吃光了', 1.4); continue; }
+    // 餌籠往下沉、著地揚起一點泥
+    const u = Math.min(1, t / b.dropT), e = u * u * (3 - 2 * u); b.cage.position.lerpVectors(b.fr, b.to, e); b.cage.position.x += Math.sin(t * 2.3) * 0.12 * (1 - u); b.cage.rotation.y = t * (u < 1 ? 1.4 : 0); b.cage.rotation.z = Math.sin(t * 3) * 0.2 * (1 - u);
+    { const pu = (t - b.dropT) / 1.6; if (pu > 0 && pu < 1){ b.puff.visible = true; b.puff.scale.setScalar(0.4 + pu * 2.4); b.puff.material.opacity = 0.5 * (1 - pu) * (0.25 + 0.75 * subLampAt(b.x, b.y + 0.3, b.z)); } else b.puff.visible = false; }
+    if (out > 0) b.cage.scale.setScalar(Math.max(0.01, 1 - out / 7));   /* 快吃完了：餌越來越小 */
+    // 小蝦蟲
+    const near = Math.abs(b.x - P.x) < 45 && Math.abs(b.z - P.z) < 45 && Math.abs(b.y - P.y) < 40; b.pts.visible = near;
+    if (near){ const a = b.pos, c = b.col, sd = b.sd, t0 = t - b.dropT; let here = 0;
+      for (let i = 0; i < b.N; i++){ const q = i * 7, p3 = i * 3, ti = t0 - sd[q + 6]; if (ti <= 0){ a[p3 + 1] = -500; continue; }
+        const k = Math.min(1, ti / 3.4), ek = k * k * (3 - 2 * k), far = sd[q + 5] * (1 - ek) + (out > 0 ? Math.min(1, out / 6) ** 2 * 7 : 0), wob = k < 1 ? Math.sin(ti * 5 + i) * 0.25 * (1 - k) : 0;
+        const x = b.x + sd[q] + sd[q + 3] * far + sd[q + 4] * wob + Math.sin(t * 7 + i * 1.3) * 0.025, y = b.y + sd[q + 1] + far * 0.12 + Math.abs(Math.sin(t * 5 + i * 1.7)) * 0.035, z = b.z + sd[q + 2] + sd[q + 4] * far - sd[q + 3] * wob + Math.cos(t * 6.3 + i * 2.1) * 0.025;
+        a[p3] = x; a[p3 + 1] = y; a[p3 + 2] = z; if (k >= 1) here++; const li = 0.1 + 0.9 * subLampAt(x, y, z); c[p3] = li; c[p3 + 1] = li; c[p3 + 2] = li; }
+      b.pts.geometry.attributes.position.needsUpdate = true; b.pts.geometry.attributes.color.needsUpdate = true; b.pts.material.opacity = out > 5 ? Math.max(0, 1 - (out - 5) / 4) : 1;
+      if (b.mine && Sub.on && Math.hypot(b.x - P.x, b.z - P.z) < 14){ if (b.told < 1 && here > b.N * 0.2){ b.told = 1; subMsg('小蝦蟲聞到味道，越來越多了', 1.8); } } }
+    // 深海魚：從暗處繞進來，圍著餌轉；快吃完就散開
+    for (const f of b.fish){ const tf = t - b.dropT - f.tIn; if (tf <= 0){ f.m.visible = false; continue; } const k = Math.min(1, tf / 7), ek = k * k * (3 - 2 * k), r = f.r1 + (10 - f.r1) * (1 - ek) + (out > 0 ? Math.min(1, out / 7) * 11 : 0), a = f.a0 + tf * f.sp;
+      f.m.visible = near; f.m.position.set(b.x + Math.cos(a) * r, b.y + f.y0 + Math.sin(t * 0.8 + f.ph) * 0.12, b.z + Math.sin(a) * r); f.m.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)) + (f.sp > 0 ? 0 : Math.PI);
+      if (b.mine && b.told < 2 && k > 0.6 && Sub.on && Math.hypot(b.x - P.x, b.z - P.z) < 14){ b.told = 2; subMsg('🐟 有魚聞到味道過來了，現在放線比較快咬', 2.4); } } } }
 function subReef(g){ const rnd = mulberry(4242), R = Sub.reef = { schools: [], u: { value: 0 }, bub: null }, D4 = new THREE.Object3D(), C4 = new THREE.Color(), pick = a => a[Math.floor(rnd() * a.length)];
   /* v496 專門做一輪細節（作者：為什麼沒有影片那麼細 → 好）：魚有魚鰭、眼睛、條紋，尾巴會擺；分枝珊瑚真的有分岔，多了桌形珊瑚、海葵（觸手會動）、海星、小石頭；
      海草是一片片的葉子、海帶是長長的帶子；礁上冒泡泡。數量照畫質分級：低畫質最少，中畫質約兩倍，高畫質約三倍半。 */
@@ -23256,7 +23388,7 @@ function subBuild(){
   const hemi = new THREE.HemisphereLight('#3a6a9a', '#0a1018', 0.7); hemi.position.set(0, 2000, 0);   /* v495 這盞「天光」的方向是照它在世界裡的位置算的；整個深海場景放在地底下 1000 公尺，結果光變成從下面來，海底朝上的那一面一直是黑的。把它擺到上面，白沙和珊瑚才看得到顏色 */ g.add(hemi); Sub.hemi = hemi;
   // 潛水艇和前燈
   const m = subModel(); g.add(m); Sub.m = m;
-  const L = new THREE.SpotLight('#e4f2ff', SUB_LAMP, 40, 0.7, 0.55, 1.0); L.position.set(0, -0.3, 1.3); m.add(L); const tg = new THREE.Object3D(); tg.position.set(0, -3.6, 10); m.add(tg); L.target = tg; Sub.light = L;   /* v912 燈更亮、更寬、照遠一點：海底被照到的地方是一大片亮的 */
+  const L = new THREE.SpotLight('#e4f2ff', SUB_LAMP, 40, 0.7, 0.55, 0.5); L.position.set(0, -0.3, 1.3); m.add(L); const tg = new THREE.Object3D(); tg.position.set(0, -3.6, 10); m.add(tg); L.target = tg; Sub.light = L;   /* v912 燈更亮、更寬、照遠一點：海底被照到的地方是一大片亮的 */
   subBeams(m, true);
   const L2 = new THREE.PointLight('#bfe0ff', 10, 9, 1.2); L2.position.set(0, 1.6, -2.4); Sub.hullL = L2;   /* 照亮艇身，讓玩家看得到自己的潛水艇 */ m.add(L2);
   // 溝底：熱泉噴口（藍光，從裂縫邊緣往下看得到一點點）、岩柱、沉船
@@ -23289,7 +23421,8 @@ function subBuild(){
   const kelpM = new THREE.MeshLambertMaterial({ color:'#3a6a3a' }); for (let i = 0; i < 40; i++){ const x = -70 + rnd() * 140, z = -60 + rnd() * 50; if (z > subEdge(x) - 3) continue; const h = 1 + rnd() * 2.5, k = new THREE.Mesh(new THREE.ConeGeometry(0.12, h, 4), kelpM); k.position.set(x, subH(x, z) + h / 2, z); g.add(k); }
   for (let i = 0; i < 18; i++){ const x = -70 + rnd() * 140, z = -60 + rnd() * 55; if (z > subEdge(x) - 3) continue; const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 + rnd() * 0.8, 0), rockM); r.position.set(x, subH(x, z) + 0.2, z); r.scale.y = 0.6; g.add(r); }
   Sub.shelfFish = []; for (let i = 0; i < 2; i++){ try { const f = fishModel(FISH_BY_ID[['moonbream', 'mackerel'][i]], 0.6); f.position.set(-30 + i * 9, 3, -40 + (i % 3) * 8); g.add(f); Sub.shelfFish.push({ m:f, cx:f.position.x, cz:f.position.z, r:3 + i % 3, ph:i, y:2 + (i % 3) }); } catch(e){} }
-  try { subReef(g); } catch(e){ console.warn('subReef', e); }
+  try { const n0 = g.children.length, R = subReef(g); R.all = g.children.slice(n0).filter(m => !R.schools.some(q => q.m === m) && !(R.bub && R.bub.m === m)); } catch(e){ console.warn('subReef', e); }
+  try { subSeabed(g); } catch(e){ console.warn('subSeabed', e); }
   // 傳說：皇帶魚直直地立在岩壁中段（1000～1500 公尺）、大王魷魚在溝底、偶爾從頭頂游過的抹香鯨
   try { const of = fishModel(FISH_BY_ID.oarfish, 4.5); of.rotation.z = Math.PI / 2; const x = -14, z = subEdge(x) + 3.2; of.position.set(x, -44, z + 2.5); g.add(of); Sub.oar = { m:of, x, z: z + 2.5, y:-44, dy:0 }; } catch(e){}
   try { const sq = fishModel(FISH_BY_ID.giantsquid, 7); const x = 6, z = subEdge(x) + subWidth(x) * 0.5; sq.position.set(x, -112, z); g.add(sq); Sub.squid = { m:sq, cx:x, cz:z }; } catch(e){}
@@ -23339,7 +23472,7 @@ function subHud(){ let h = $('#subHud'); if (h) return h;
     + '<div class="sh-warn" hidden>⚠️ 超過耐壓深度！<b>30</b> 秒內不上浮會被拉回港、船艙的魚全部不見</div>'
     + '<div class="sh-msg" hidden></div>'
     + '<div class="sh-q panel" hidden>' + SUB_Q.map((q, i) => `<button data-k="${i}">${q}</button>`).join('') + '<form class="sh-qf"><input maxlength="40" placeholder="自己打字…" enterkeyhint="send" autocomplete="off"><button type="submit">送出</button></form></div>'
-    + '<div class="sh-btns"><button class="panel sh-say">💬<small>說話</small></button><button class="panel sh-act" hidden></button><button class="panel sh-fp">👁<small>艙內</small></button><button class="panel sh-lamp" hidden>🔦<small>關燈</small></button><button class="panel sh-dn">⬇<small>下潛</small></button><button class="panel sh-up">⬆<small>上浮</small></button><button class="panel sh-home">⚓<small>回港</small></button></div>'
+    + '<div class="sh-tools"><button class="panel sh-lamp" hidden>🔦<small>關燈</small></button><button class="panel sh-bait" hidden>🍖<small>放餌</small></button><button class="panel sh-fp">👁<small>艙內</small></button></div><div class="sh-btns"><button class="panel sh-say">💬<small>說話</small></button><button class="panel sh-act" hidden></button><button class="panel sh-dn">⬇<small>下潛</small></button><button class="panel sh-up">⬆<small>上浮</small></button><button class="panel sh-home">⚓<small>回港</small></button></div>'
     + '<div class="sh-fish panel" hidden><b class="sf-name">有東西咬了！</b><div class="sf-row"><span>張力</span><div class="sf-bar"><i class="sf-ten"></i><em></em></div></div><div class="sf-row"><span>距離</span><div class="sf-bar"><i class="sf-pro"></i></div></div><button class="sf-reel">按住收線</button></div>';
   document.body.appendChild(h);
   const hold = (sel, k) => { const b = h.querySelector(sel); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sub[k] = true; b.classList.add('down'); }); const off = () => { Sub[k] = false; b.classList.remove('down'); }; b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); };
@@ -23349,6 +23482,7 @@ function subHud(){ let h = $('#subHud'); if (h) return h;
   h.querySelector('.sh-act').addEventListener('click', () => subAction());
   h.querySelector('.sh-lamp').addEventListener('click', () => subLamp(!Sub.dark));
   h.querySelector('.sh-fp').addEventListener('click', () => subFpSet(!Sub.fp));
+  h.querySelector('.sh-bait').addEventListener('click', () => { try { subBaitGo(); } catch(e){ console.warn('subBait', e); } });
   h.querySelector('.sh-say').addEventListener('click', () => { if (!room || !room.connected()){ toast('要在大廳或房間裡，才能跟一起潛的人說話'); return; } const q = h.querySelector('.sh-q'); q.hidden = !q.hidden; });
   /* v265 開潛水艇也能打字聊天：一邊用搖桿開，一邊打字（同一個大廳的人都收得到，一起潛的人頭上會冒泡泡） */
   h.querySelector('.sh-qf').addEventListener('submit', e => { e.preventDefault(); const inp = h.querySelector('.sh-qf input'), t = clean(inp.value.trim()).slice(0, 40); if (!t) return;
@@ -23363,7 +23497,7 @@ async function subStart(){ if (tyBlock('開潛水艇')) return;
   if (Sub.dockM && !Sub.cine){ Sub.cineBusy = true; subCineStart('go', () => { Sub.cineBusy = false; subEnter(r); }); return; } subEnter(r); }
 function subEnter(r){   /* 過場播完才真的切到深海 */
   { const fx = $('#fadeFx'); if (fx) setTimeout(() => fx.classList.remove('on'), 350); }
-  Sub.dive = r; Sub.st = r.sub; Sub.hold = []; Sub.maxD = 0; Sub.edgeHit = false; Sub.warnT = 0; Sub.fish = null; Sub.ending = false; Sub.t0 = now(); Sub.near = null;
+  Sub.dive = r; Sub.st = r.sub; Sub.hold = []; Sub.maxD = 0; Sub.baitUsed = 0; try { subBaitClear(); } catch(e){} Sub.edgeHit = false; Sub.warnT = 0; Sub.fish = null; Sub.ending = false; Sub.t0 = now(); Sub.near = null;
   if (!Sub.group) subBuild(); Sub.group.visible = true; subPaint(Sub.m, subColorOf(myId || 'me'));
   for (const o of Sub.ores) o.m.visible = true;
   // 藏起村子、關掉村子的燈、換成深海的霧
@@ -23382,7 +23516,7 @@ async function subEnd(why){
   setTimeout(() => { if (fx) fx.classList.remove('on'); }, 500);
   if (Sub.camWas != null){ cam.pitch = Sub.camWas; Sub.camWas = null; }
   Sub.on = false; Sub.group.visible = false; for (const o of Sub.restore || []) o.visible = true; Sub.restore = null; scene.fog = Sub.fogWas; scene.background = Sub.bgWas;
-  if (Sub.whale){ Sub.group.remove(Sub.whale.m); Sub.whale = null; } try { subEvStop(true); } catch(e){} subDrone(false); if (musicOn && Sub.musicOff){ try { MUSIC.start(); } catch(e){} } Sub.musicOff = false;
+  if (Sub.whale){ Sub.group.remove(Sub.whale.m); Sub.whale = null; } try { subEvStop(true); } catch(e){} try { subBaitClear(); } catch(e){} subDrone(false); if (musicOn && Sub.musicOff){ try { MUSIC.start(); } catch(e){} } Sub.musicOff = false;
   document.body.classList.remove('subbing', 'subfp'); { const pc = document.getElementById('subPort'); if (pc) pc.hidden = true; } Object.assign(cam, Sub.camWas || {}); if (Sub.dockM) subCineStart('back', () => {});   /* 回港：潛水艇從水裡浮上來、人從艙門走出來 */ camera.position.set(me.pos.x - Math.sin(cam.yaw || 0) * -6, me.baseY + 4, me.pos.z - Math.cos(cam.yaw || 0) * -6); camera.lookAt(me.pos.x, me.baseY + 1, me.pos.z);   /* 鏡頭直接回到人旁邊 */ Sub.fish = null; const h = $('#subHud'); if (h) h.querySelector('.sh-fish').hidden = true;
   if (r && r.player) adoptRow(r.player); if (r && r.sub) Sub.st = r.sub;
   if (!r) return; if (r.void){ flash('潛水艇的紀錄不對，這一趟作廢了', 2.6); return; }
@@ -23613,11 +23747,16 @@ function subFrame(dt, t){
   /* v264 撞到斜坡、岩壁就停住（以前會沿著坡一直往上爬，看起來像莫名其妙上浮）；只有很緩的坡才會順著抬一點點，貼著牆可以往旁邊滑 */
   { const okAt = (x, z) => subH(x, z) + 1.1 <= Math.max(ny, P.y) + 0.04;
     if (!okAt(nx, nz)){ if (okAt(nx, P.z)) nz = P.z; else if (okAt(P.x, nz)) nx = P.x; else { nx = P.x; nz = P.z; Sub.v *= 0.5; } }
-    ny = Math.max(ny, subH(nx, nz) + 1.1); }
+    ny = Math.max(ny, subH(nx, nz) + 1.1 + subBump(nx, nz)); }   /* v916 比較高的石頭：自己抬高越過去 */
   P.set(nx, ny, nz); Sub.m.position.copy(P); Sub.m.rotation.set(-Sub.vy * 0.25, Sub.yaw, -Sub.turn * 0.14); Sub.m.userData.prop.rotation.z += dt * (2 + Math.abs(Sub.v) * 4);
   // 鏡頭：在艇後上方跟著
   if (Sub.fp){ const kx = Math.sin(cam.yaw), kz = Math.cos(cam.yaw), el = -clamp(cam.pitch, -1.1, 1.1), ce = Math.cos(el), bob = Math.sin(t * 0.9) * 0.025;   /* v912 第一人稱：眼睛在前面的大圓罩裡，看的方向照拖畫面（上下左右都可以看） */
-    camera.position.set(SUBW.x + P.x + fx * 1.0, SUBW.y + P.y + 0.08 + bob, SUBW.z + P.z + fz * 1.0); camera.lookAt(camera.position.x - kx * ce * 10, camera.position.y + Math.sin(el) * 10, camera.position.z - kz * ce * 10); }
+    let off = -0.6; for (const o of [1.0, 0.7, 0.4, 0.15, -0.2]){ if (subH(P.x + fx * (o + 0.4), P.z + fz * (o + 0.4)) + 0.35 <= P.y + 0.08){ off = o; break; } }   /* v916 鼻子頂到岩壁的時候，眼睛往艙裡退，不會穿進岩壁裡看到外面 */
+    Sub.fpOff = Sub.fpOff == null || off < Sub.fpOff ? off : Sub.fpOff + (off - Sub.fpOff) * Math.min(1, dt * 6);
+    let cx = P.x + fx * Sub.fpOff, cz = P.z + fz * Sub.fpOff; const cy = P.y + 0.08 + bob;
+    { let px = 0, pz = 0; for (const [ax, az] of SUB_FP4) if (subH(cx + ax * 0.45, cz + az * 0.45) > cy - 0.3){ px -= ax * 0.32; pz -= az * 0.32; }   /* 旁邊貼著岩壁：往另一邊讓開一點 */
+      const kq = Math.min(1, dt * 8); Sub.fpPx = (Sub.fpPx || 0) + (px - (Sub.fpPx || 0)) * kq; Sub.fpPz = (Sub.fpPz || 0) + (pz - (Sub.fpPz || 0)) * kq; cx += Sub.fpPx; cz += Sub.fpPz; }
+    camera.position.set(SUBW.x + cx, SUBW.y + cy, SUBW.z + cz); camera.lookAt(camera.position.x - kx * ce * 10, camera.position.y + Math.sin(el) * 10, camera.position.z - kz * ce * 10); }
   else { const cdist = 7, ch = 1.0 + clamp(cam.pitch, -0.25, 1.0) * 7.5, kx = Math.sin(cam.yaw), kz = Math.cos(cam.yaw); camera.position.set(SUBW.x + P.x + kx * cdist, SUBW.y + Math.min(P.y + ch, SUB_SURF - 0.4), SUBW.z + P.z + kz * cdist); camera.lookAt(SUBW.x + P.x - kx * 7, SUBW.y + P.y + 1.8 - ch * 0.95 - Math.max(0, -Sub.vy) * 2, SUBW.z + P.z - kz * 7); }   /* 從艇的後上方往前下方看，看得到前燈照的地方 */
   const depth = subDepth(P.y); Sub.maxD = Math.max(Sub.maxD, depth);
   try { subLightTick(dt, t, depth); } catch(e){ console.warn('sublight', e); }
@@ -23647,6 +23786,7 @@ function subFrame(dt, t){
   if (Sub.swarm && frameNo % 3 === 0){ const a = Sub.swarm.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 3){ a[i] += (Math.random() - 0.5) * 0.08; a[i + 1] = clamp(a[i + 1] + (Math.random() - 0.5) * 0.06, 0, 1.8); a[i + 2] += (Math.random() - 0.5) * 0.06; a[i] = clamp(a[i], -4.6, 4.6); a[i + 2] = clamp(a[i + 2], -1.5, 1.5); } Sub.swarm.geometry.attributes.position.needsUpdate = true; }
   for (const j of Sub.jelly){ j.m.position.y = j.y0 + Math.sin(t * 0.5 + j.ph) * 1.5; j.m.scale.y = 1 + Math.sin(t * 2 + j.ph) * 0.15; }
   try { subReefTick(dt, t); } catch(e){}
+  try { subBaitTick(dt); } catch(e){ console.warn('subBait', e); }
   for (const f of Sub.shelfFish){ const a = t * 0.35 + f.ph; f.m.position.set(f.cx + Math.cos(a) * f.r, f.y, f.cz + Math.sin(a) * f.r); f.m.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)) + Math.PI / 2; }
   if (Sub.oar){ const O = Sub.oar, d = Math.hypot(P.x - O.x, P.y - O.m.position.y, P.z - O.z), lit = d < 12 && ((O.x - P.x) * fx + (O.z - P.z) * fz) > 0; O.dy += ((lit ? -1.2 : 0.15) - O.dy) * dt; O.m.position.y = clamp(O.m.position.y + O.dy * dt, -56, -34); O.m.position.x = O.x + Math.sin(t * 0.3) * 0.6; }   /* 被燈照到會慢慢往下躲 */
   if (Sub.squid){ const S = Sub.squid, a = t * 0.06; S.m.position.set(S.cx + Math.cos(a) * 9, -112 + Math.sin(t * 0.4) * 1.5, S.cz + Math.sin(a) * 6); S.m.rotation.y = -a; }
@@ -23654,7 +23794,10 @@ function subFrame(dt, t){
   if (!Sub.whale && now() - Sub.t0 > Sub.whaleNext && depth < 1500 && !Sub.dark && subEvFree(t)){ subEvMark(t, 'whale'); try { const m = fishModel(FISH_BY_ID.sperm, 22); const a = Sub.yaw + Math.PI / 2; m.rotation.y = a - Math.PI / 2; Sub.group.add(m); Sub.whale = { m, t0:t, sx: P.x - Math.sin(a) * 30, sz: P.z - Math.cos(a) * 30, dx: Math.sin(a), dz: Math.cos(a), y: P.y + 7 }; whaleSong(0.9); setTimeout(() => { if (Sub.on) subSight('whale'); }, 4000); } catch(e){ Sub.whaleNext += 120; } }
   if (Sub.whale){ const W = Sub.whale, u = (t - W.t0) / 10; W.m.position.set(W.sx + W.dx * u * 60, W.y, W.sz + W.dz * u * 60); const dark = Math.sin(clamp(u, 0, 1) * Math.PI); Sub.light.intensity = SUB_LAMP * (1 - dark * 0.88); Sub.whaleDark = dark;
     if (u > 1){ Sub.group.remove(W.m); Sub.whale = null; Sub.whaleNext = (now() - Sub.t0) + 150 + Math.random() * 120; Sub.light.intensity = SUB_LAMP; Sub.whaleDark = 0; } }
+  if (frameNo % 10 === 0 && Sub.seabed){ const vis = P.z > subEdge(P.x) - 14; for (const m of Sub.seabed.all) m.visible = vis; }
+  const reefDn = P.y < -16;   /* v916 潛到裂縫裡（大約 520 公尺以下）就看不到大陸棚上的珊瑚礁了，整批不畫（以前離得近就一直畫著，白白多畫二十幾萬個三角形） */
   if (frameNo % 10 === 0){ const VR = (Sub.viewR || Sub.range) + 6, R2 = VR * VR, w = new THREE.Vector3(); if (!Sub.cullAll){ const skip = new Set([Sub.terr, Sub.m, ...Sub.vents.map(v => v.v), ...(Sub.crit || []).map(c => c.m), ...Sub.ores.map(o => o.m), Sub.wreck && Sub.wreck.g]); Sub.cullAll = Sub.group.children.filter(o => !o.isLight && !skip.has(o)); } for (const m of [...Sub.cull, ...Sub.cullAll]){ if (m.userData.off) continue; m.getWorldPosition(w); const dx = w.x - SUBW.x - P.x, dy = w.y - SUBW.y - P.y, dz = w.z - SUBW.z - P.z; m.visible = dx * dx + dy * dy + dz * dz < R2; } subCullCrit(P); }   /* 霧外面的東西先不畫 */
+  if (frameNo % 10 === 0 && Sub.reef && Sub.reef.all && (reefDn || Sub.reef.dn)){ for (const m of Sub.reef.all){ if (reefDn){ if (m.visible){ m.visible = false; m.userData.dn = 1; } } else if (m.userData.dn){ m.visible = true; m.userData.dn = 0; } } Sub.reef.dn = reefDn; }
   // 附近可以撿的東西、可以放線的地方
   Sub.near = null; for (const o of Sub.ores){ if (!o.m.visible) continue; if (Math.hypot(P.x - o.x, P.y - o.y - 0.5, P.z - o.z) < 3.2){ Sub.near = o; break; } }
   if (Sub.fish) subFishTick(dt, t);
@@ -23667,16 +23810,18 @@ function subRender(){ const H = subHud(), P = Sub.pos, depth = subDepth(P.y), le
   const w = H.querySelector('.sh-warn'); w.hidden = !(Sub.warnT > 0); if (Sub.warnT > 0) set('.sh-warn b', String(Math.max(0, Math.ceil(30 - Sub.warnT))));
   const act = H.querySelector('.sh-act'); let lbl = '';
   if (Sub.fish) lbl = ''; else if (Sub.near) lbl = Sub.near.kind === 'anchor' ? '⚓ 撿船錨' : '⛏️ 撿礦石'; else if (depth >= 200 && Math.abs(Sub.v) < 0.4 && Math.abs(Sub.vy) < 0.3) lbl = '🎣 放線';
-  act.hidden = !lbl; if (lbl && act.textContent !== lbl) act.textContent = lbl; }
+  act.hidden = !lbl; if (lbl && act.textContent !== lbl) act.textContent = lbl;
+  { const bb = H.querySelector('.sh-bait'), show = depth >= SUB_BAIT.depth && !Sub.fish; if (bb.hidden === show) bb.hidden = !show; if (show){ const left = subBaitLeft(), tx = `🍖<small>放餌 ${left}</small>`; if (bb.dataset.tx !== tx){ bb.dataset.tx = tx; bb.innerHTML = tx; } bb.classList.toggle('off', !left || !subBaitOK()); } } }
 
 async function subAction(){ const P = Sub.pos, depth = Math.round(subDepth(P.y));
   if (Sub.near){ const o = Sub.near; const r = await subRpc('sub_pick', { p_kind: o.kind, p_depth: depth }); if (!r) return; o.m.visible = false; Sub.st = r.sub; SFX.coin(); flash(o.kind === 'anchor' ? `⚓ 撿到古代船錨（${r.sub.anchor} 個）` : `💎 撿到深海礦石（${r.sub.ore} 個）`, 1.6); return; }
   if (Sub.fish || depth < 200) return;
   const r = await subRpc('sub_cast', { p_depth: depth }); if (!r) return; if (r.void){ subEnd('normal'); return; }
-  Sub.fish = { phase:'wait', at: now(), depth }; SFX.plop(); flash('放線下去了，等一下…', 1.4);
+  const byBait = subBaitNear();   /* v916 在餌旁邊放線：魚比較快咬（釣到什麼還是伺服器決定） */
+  Sub.fish = { phase:'wait', at: now(), depth }; SFX.plop(); flash(byBait ? '放線下去了，餌旁邊魚多，很快就有動靜' : '放線下去了，等一下…', 1.4);
   setTimeout(async () => { if (!Sub.fish || Sub.fish.phase !== 'wait') return; const { data, error } = await Cloud.sb.rpc('hook_fish'); if (error || !data || !Sub.fish){ toast(cloudErrMsg(error || '')); Sub.fish = null; return; }
     const f = FISH_BY_ID[data.cast_fish]; Sub.fish = { phase:'fight', id:data.cast_fish, w:data.cast_w, f, ten:0.35, pro:0.15, t0: now(), surge:0, power: f ? f.power || 0.5 : 0.5, legend: f && f.rarity === '傳說' };
-    const H = subHud(), b = H.querySelector('.sh-fish'); b.hidden = false; b.querySelector('.sf-name').textContent = '有東西咬了！快收線'; SFX.splash(true); camShake = 0.3; }, 2300 + Math.random() * 1500); }
+    const H = subHud(), b = H.querySelector('.sh-fish'); b.hidden = false; b.querySelector('.sf-name').textContent = '有東西咬了！快收線'; SFX.splash(true); camShake = 0.3; }, byBait ? 900 + Math.random() * 700 : 2300 + Math.random() * 1500); }
 
 /* ===== v241 一起潛：同一個大廳／私人房間的人在裂縫裡看得到彼此的潛水艇 =====
    位置跟村子裡一樣用 presence 送（sb：x, y, z, 方向；每秒 2～3 次），這裡內插成平滑的動作。
@@ -23910,6 +24055,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u916', d:'11/27', items:[['🪨','深海的海底多了長著白色海葵的大石頭、長柄的海綿和橘色的海鰓；岩壁看得出一層一層的岩層和裂縫，東邊多了一段很窄的峽谷'], ['🍖','潛水艇可以放餌：700 公尺以下貼近海底按「放餌」，小蝦蟲越聚越多，深海魚也過來繞；在餌旁邊放線比較快咬（一趟 2 份，一起潛的人也看得到）'], ['🔦','潛水艇的燈重新調過：靠近的東西不會整片死白，看得到細節。關燈、放餌、艙內移到按鈕上面一排']] },
   { id:'u915', d:'11/27', items:[['👧','新人物比較不會突然變回舊的樣子：模型沒下載到會自己再試幾次；某一個人出錯也不會害全部的人變回舊人物']] },
   { id:'u914', d:'11/27', items:[['🐟','看到魚跳出水面？往那裡拋！在釣點附近，魚大多是從「魚訊」的位置跳出來的，跳的也是那一種魚（小魚群、大魚、掠食魚），拋在那裡比較好釣']] },
   { id:'u913', d:'11/27', items:[['👁','潛水艇可以坐進艙裡了：右下按「艙內」，從圓形觀景窗往外看，拖畫面轉頭，往哪看就往哪開'], ['🔦','潛水艇換成兩顆大燈：照到的海底是一大片亮的，水裡看得到光柱，顆粒被照到會閃；別人的潛水艇遠遠也看得到兩道光'], ['🏔️','深海的溝底換成淺色泥沙、岩壁亮一點，燈照過去看得出形狀']] },

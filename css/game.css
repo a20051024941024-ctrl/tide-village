@@ -1017,7 +1017,7 @@ body.subbing #subHud{display:block}
 #subPanel .sp-go{width:100%;margin-top:6px;height:46px;font-size:17px}
 /* v241 一起潛：快速說話 */
 #subHud .sh-btns .sh-say{width:56px;height:56px;font-size:19px}
-#subHud .sh-q{position:fixed;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;width:min(300px,80vw);padding:8px;border-radius:16px;z-index:9}
+#subHud .sh-q{position:fixed;right:16px;bottom:calc(152px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;width:min(300px,80vw);padding:8px;border-radius:16px;z-index:9}
 #subHud .sh-q[hidden]{display:none}
 #subHud .sh-q button{border:0;border-radius:999px;padding:8px 12px;font-size:14px;font-weight:700;background:#eef5fa;color:#18334a}
 /* v243 左上角：平常不要白底（太擋畫面），只留字；字加白色光暈，背景再亮再暗都看得清楚。點頭像打開時才有底 */
@@ -2569,3 +2569,12 @@ body.zen #top,body.zen #menu,body.zen #joyZone,body.zen #joy,body.zen #emotes,bo
 /* v912 潛水艇第一人稱：觀景窗的窗框（只蓋住畫面，不擋按鈕） */
 #subPort{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:5}
 #subHud .sh-fp small{white-space:nowrap}
+/* v916 潛水艇：工具（關燈、放餌、艙內）放在主要按鈕上面一排小一點的，下面那排只留開船要用的（說話、放線、下潛、上浮、回港），不會擠到搖桿 */
+#subHud .sh-tools{position:fixed;right:16px;bottom:calc(90px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:flex-end;z-index:8}
+#subHud .sh-tools button{width:52px;height:52px;border-radius:50%;border:0;font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;color:#18334a;font-weight:800}
+#subHud .sh-tools button small{font-size:10px;margin-top:2px;white-space:nowrap}
+#subHud .sh-tools button.off{opacity:.55}
+#subHud .sh-tools button:active{transform:scale(.94);filter:brightness(.9)}
+/* 村子的聊天列在畫面正中間，會跟潛水艇的按鈕疊在一起：開潛水艇時往左縮（聊天框跟著它）；螢幕太窄放不下就先收起來，潛水艇自己有「說話」 */
+body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,calc(100vw - 636px))}
+@media (max-width:780px){ body.subbing #chat3{display:none!important} }
