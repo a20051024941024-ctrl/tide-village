@@ -1438,6 +1438,49 @@ function makeBoatMesh(color){
   g.add(hull, inner, stripe, seat); g.userData.oars = oars;
   return g;
 }
+/* v887 阿默和阿穎的雙人船「默穎號」（作者：「他們一起搭的船，我覺得要設計獨屬於他們兩個人風格的雙人船」）。
+   阿默：全身黑、追紅鯊 → 黑色船身、船頭一片紅色鯊魚鰭、船尾紅色的舷外機（他開船）。阿穎：最愛粉紅 → 船頭粉紅座墊、粉紅小旗、側邊粉紅愛心、冰桶粉紅蓋（回港比魚用的）。
+   船緣一條色帶從船尾的紅慢慢變成船頭的粉紅，一半是阿默的、一半是阿穎的。阿默坐船尾顧舷外機，阿穎坐船頭；到了釣點船橫過來，兩個人並排面向外海一起釣。
+   全部是幾何形狀（沒有圖片檔），手機很便宜也跑得動。船頭 +z。 */
+const DUO = { amoZ: -0.62, yinZ: 0.72 };   /* 兩個人坐的位置（船的前後方向） */
+function makeDuoBoat(){
+  const g = new THREE.Group(), BLACK = '#232328', RED = '#c8161c', PINK = '#f48fb1';
+  const outl = (P, k, kz, dz) => { const X = v => v * k, Z = v => v * kz + dz; P.moveTo(X(-0.66), Z(-1.38)); P.lineTo(X(0.66), Z(-1.38)); P.lineTo(X(0.72), Z(0.35)); P.quadraticCurveTo(X(0.5), Z(1.25), X(0), Z(1.68)); P.quadraticCurveTo(X(-0.5), Z(1.25), X(-0.72), Z(0.35)); P.lineTo(X(-0.66), Z(-1.38)); return P; };
+  const sh = outl(new THREE.Shape(), 1, 1, 0), ring = (k, kz, dz) => { const r = outl(new THREE.Shape(), 1, 1, 0); r.holes.push(outl(new THREE.Path(), k, kz, dz)); return r; };   /* 中間挖空的船身（看得到裡面的座位） */
+  const ex = (shape, depth) => { const q = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 8 }); q.rotateX(Math.PI / 2); q.translate(0, depth, 0); return q; };   /* 形狀的 y 變成船頭（+z） */
+  const hull = new THREE.Mesh(ex(ring(0.86, 0.9, -0.03), 0.44), mat(BLACK, 0.55)); hull.position.y = -0.14; hull.castShadow = true; g.add(hull);
+  const floor = new THREE.Mesh(ex(sh, 0.05), mat('#5b3d2a', 0.9)); floor.position.y = 0.02; g.add(floor);
+  /* 船緣色帶：船尾紅 → 船頭粉紅 */
+  const rimG = ex(ring(0.84, 0.88, -0.03), 0.06); rimG.scale(1.03, 1, 1.02); rimG.translate(0, 0.29, 0); const P = rimG.attributes.position, col = new Float32Array(P.count * 3), cR = new THREE.Color(RED), cP = new THREE.Color(PINK), cc = new THREE.Color();
+  for (let i = 0; i < P.count; i++){ const u = clamp((P.getZ(i) + 0.5) / 1.2, 0, 1); cc.copy(cR).lerp(cP, u * u * (3 - 2 * u)); col.set([cc.r, cc.g, cc.b], i * 3); }
+  rimG.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.add(new THREE.Mesh(rimG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0 })));
+  /* 船頭的紅鯊鰭（阿默一輩子的夢想） */
+  const fs = new THREE.Shape(); fs.moveTo(-0.26, 0); fs.quadraticCurveTo(-0.1, 0.2, 0.12, 0.5); fs.quadraticCurveTo(0.08, 0.2, 0.2, 0); fs.lineTo(-0.26, 0);
+  const finG = new THREE.ExtrudeGeometry(fs, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1, curveSegments: 6 }); finG.translate(0, 0, -0.025); finG.rotateY(-Math.PI / 2);
+  const fin = new THREE.Mesh(finG, mat(RED, 0.5)); fin.position.set(0, 0.3, 1.28); fin.castShadow = true; g.add(fin);
+  /* 兩側的粉紅愛心（阿穎貼的） */
+  const hs = new THREE.Shape(); hs.moveTo(0, -0.09); hs.bezierCurveTo(-0.02, -0.07, -0.11, -0.02, -0.11, 0.035); hs.bezierCurveTo(-0.11, 0.09, -0.04, 0.1, 0, 0.055); hs.bezierCurveTo(0.04, 0.1, 0.11, 0.09, 0.11, 0.035); hs.bezierCurveTo(0.11, -0.02, 0.02, -0.07, 0, -0.09);
+  const heartG = new THREE.ShapeGeometry(hs, 6), hm = new THREE.MeshStandardMaterial({ color: PINK, roughness: 0.5, side: THREE.DoubleSide });
+  for (const sd of [-1, 1]){ const h = new THREE.Mesh(heartG, hm); h.position.set(sd * 0.735, 0.1, 0.55); h.rotation.y = sd * Math.PI / 2 + sd * -0.06; g.add(h); }
+  /* 船名牌「默穎號」：船尾兩側 */
+  { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d'); x.fillStyle = '#232328'; x.fillRect(0, 0, 256, 64); x.font = 'bold 40px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    const gr = x.createLinearGradient(40, 0, 216, 0); gr.addColorStop(0, RED); gr.addColorStop(1, PINK); x.fillStyle = gr; x.fillText('默穎號', 128, 34);
+    const tx = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) tx.colorSpace = THREE.SRGBColorSpace; const pm = new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide }), pg = new THREE.PlaneGeometry(0.56, 0.14);
+    for (const sd of [-1, 1]){ const pl = new THREE.Mesh(pg, pm); pl.position.set(sd * 0.705, 0.13, -0.75); pl.rotation.y = sd * Math.PI / 2; g.add(pl); } }
+  /* 座位：船尾黑凳紅墊（阿默）、船頭黑凳粉紅墊（阿穎） */
+  g.add(box([1.2, 0.06, 0.32], '#3a3a40', [0, 0.24, DUO.amoZ - 0.25]), box([0.62, 0.05, 0.26], RED, [0, 0.29, DUO.amoZ - 0.25]));
+  g.add(box([1.1, 0.06, 0.3], '#3a3a40', [0, 0.24, DUO.yinZ - 0.25]), box([0.6, 0.05, 0.24], PINK, [0, 0.29, DUO.yinZ - 0.25]));
+  /* 中間的冰桶：白色、粉紅蓋子（回港比魚就從這裡拿出來） */
+  g.add(box([0.42, 0.24, 0.3], '#f4f4f2', [0.18, 0.24, 0.08]), box([0.44, 0.05, 0.32], PINK, [0.18, 0.38, 0.08]), box([0.16, 0.03, 0.04], '#ffffff', [0.18, 0.42, 0.08]));
+  /* 船尾的舷外機（阿默開）：黑機身、紅色上蓋、把手伸向阿默 */
+  const mot = new THREE.Group(); mot.position.set(0, 0.2, -1.45); g.add(mot);
+  mot.add(box([0.26, 0.3, 0.3], '#1a1a1e', [0, 0.15, -0.06]), box([0.28, 0.1, 0.32], RED, [0, 0.33, -0.06]), box([0.07, 0.5, 0.07], '#2b2b30', [0, -0.2, -0.08]));
+  const til = box([0.04, 0.04, 0.5], '#2b2b30', [0.08, 0.22, 0.25]); til.rotation.x = 0.15; mot.add(til); mot.add(box([0.06, 0.06, 0.12], RED, [0.08, 0.26, 0.5]));
+  /* 粉紅小旗（船頭左邊，會飄） */
+  const pole = box([0.03, 0.75, 0.03], '#dcdcdc', [-0.5, 0.6, 1.0]); g.add(pole);
+  const flS = new THREE.Shape(); flS.moveTo(0, 0); flS.lineTo(0, 0.22); flS.lineTo(-0.36, 0.11); flS.lineTo(0, 0);
+  const flag = new THREE.Mesh(new THREE.ShapeGeometry(flS), new THREE.MeshStandardMaterial({ color: PINK, roughness: 0.6, side: THREE.DoubleSide })); const fp = new THREE.Group(); fp.position.set(-0.5, 0.74, 1.0); fp.add(flag); g.add(fp);
+  g.userData.flag = fp; g.userData.duo = true; g.userData.keep = true; return g; }   /* keep：會開出去的船，不能被 batchStatic 合併進碼頭 */
 /* v453 玩家傳來一張平台舟的照片：「船可以改成這種的」。可以划的船（碼頭兩艘、別的玩家划的船）從木頭小船換成平台舟：
    細長、兩頭尖、人坐在上面腳往前伸，一支兩頭都有槳葉的槳拿在手上左右輪流划（手真的握在槳上，見 kidJuice）。
    港口停著當裝飾的木船、阿默的漁船不變（漁夫用的是漁船）。顏色照碼頭編號固定，別人看到的顏色跟你一樣。 */
@@ -7166,7 +7209,7 @@ function nearChair(){
   return best;
 }
 function sitDown(c){ if (F.held && c && c.gear) fkUnhold(); else if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
-function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (fkHoldOk(mySeat)) fkHold(); else if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; me.pos.x = c.x - Math.sin(c.face) * 0.7; me.pos.z = c.z - Math.cos(c.face) * 0.7; if (c.ret){ me.pos.x = c.ret[0]; me.pos.z = c.ret[1]; }   /* v618 釣魚裝備的椅子：站起來回到岸上（釣台在水上） */ Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
+function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (fkHoldOk(mySeat)) fkHold(); else if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; { const F2 = chairFront(c); me.pos.x = F2[0]; me.pos.z = F2[1]; } if (c.ret){ me.pos.x = c.ret[0]; me.pos.z = c.ret[1]; }   /* v618 釣魚裝備的椅子：站起來回到岸上（釣台在水上） */ Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
 function canJump(){ return !Dive.on && !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
@@ -11727,7 +11770,7 @@ function renderIsland(body){
   const C = Isle2.cat;
   if (C === 'chest'){ isleChest2(body, items); return; }   /* v886 大家共用的大箱子 */
   if (C !== 'mine'){ isleShop2(body, C, CATS, catOf, items, nh); return; }   /* v884 照造型頁的樣子 */
-  isleMine2(body, items, nh); return;   /* v885 島上的東西也照造型頁的樣子 */
+  isleMine2(body, items, nh); return;   /* v887 島上的東西也照造型頁的樣子 */
   if (C === 'block' || C === 'panel' || C === 'shape'){
     body.appendChild(el('p', 'sub', `一格 50 公分，可以疊 ${BLK_LAYERS} 層，一座島最多 ${BLK_MAX} 塊（現在 ${Blk.b.length} 塊）。按「拿去蓋」以後：點地面放、點上面疊、點側邊接旁邊；選「地板／牆／房間」可以一次拉一整片，放錯按 ↩️ 復原。${C === 'shape' ? '形狀可以選 24 種顏色（顏色不用錢），也可以轉方向；門會自動放上下兩格。' : C === 'panel' ? '隔板可以轉向。' : ''}`));
     const ul = el('ul', 'shoplist cols'); for (const [k, v] of Object.entries(BLK).filter(([k, v]) => k !== 'dt' && (C === 'shape' ? blkIsShape(k) : !blkIsShape(k) && !!v[4] === (C === 'panel')))){ const li = el('li'), sw = el('i', 'blk-sw' + (v[4] ? ' pn' : '')); sw.style.background = `url(${blkTex(v[3] || 'paint', v[2]).image.toDataURL()}) center/cover, ${v[2]}`; blkIcon(sw, k, v); li.appendChild(sw);
@@ -11779,7 +11822,7 @@ function ipvShow(host, key, make){ if (!ipvInit()) return false;
   requestAnimationFrame(() => { if (host.isConnected) fit(); }); if (!IPV.raf) IPV.raf = requestAnimationFrame(ipvLoop); return true; }
 function ipvLoop(){ if (!IPV.cv || !IPV.cv.isConnected || $('#sheet').hidden){ IPV.raf = 0; return; } const t = now(); if (!IPV.drag && t > IPV.idleAt) IPV.yaw += 0.008;
   const c = IPV.c, r = IPV.rad * 3.6; IPV.cam.position.set(c.x + Math.sin(IPV.yaw) * r, c.y + r * 0.55, c.z + Math.cos(IPV.yaw) * r); IPV.cam.lookAt(c); IPV.r.render(IPV.sc, IPV.cam); IPV.raf = requestAnimationFrame(ipvLoop); }
-/* v885 「島上的東西」也照造型頁排：右邊一格一格（島上擺的東西、蓋的方塊），點一個左邊大圖，下面「移動」「收起來／拆掉」。長說明拿掉 */
+/* v887 「島上的東西」也照造型頁排：右邊一格一格（島上擺的東西、蓋的方塊），點一個左邊大圖，下面「移動」「收起來／拆掉」。長說明拿掉 */
 /* v886 📦 大箱子：收起來的東西、拆下來的方塊都在這裡（住在島上的人共用），拿出來擺不用錢 */
 function isleChest2(body, items){
   const B = isleBagAll(), list = Object.entries(B).filter(([k, n]) => +n > 0 && (k.startsWith('b:') ? BLK[k.slice(2)] : ISLE_ITEMS[k]));
@@ -21198,34 +21241,47 @@ function amoTrip(k){
 function amoAt(c, s){ s = clamp(s, 0, c.len); let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++; const a = c.pts[i - 1], b = c.pts[i], seg = c.cum[i] - c.cum[i - 1] || 1, u = (s - c.cum[i - 1]) / seg; return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
 function amoRecast(n, t){ const a = n.rot, dx = Math.sin(a), dz = Math.cos(a), cp = n.sitting ? [n.pos.x + dx * 4.5, n.pos.z + dz * 4.5] : castPoint(n.pos.x, n.pos.z, dx, dz, 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.amoCast = n.bobPos.clone(); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); }
 function updateAmo(n, dt, t){
-  if (!n.boat){ n.boat = makeBoatMesh('#26262b'); scene.add(n.boat); n.home = n.pos.clone(); n.homeRot = n.rot; n.homeY = n.baseY; }
+  if (!n.boat){ n.boat = makeDuoBoat(); scene.add(n.boat); n.home = n.pos.clone(); n.homeRot = n.rot; n.homeY = n.baseY; }
   const T = Date.now() / 1000, k = Math.floor(T / AMO.cycle), ph = T - k * AMO.cycle, c = amoTrip(k), S = c.sail, fishEnd = AMO.cycle - AMO.pier - S;
   let mode, s; if (ph < S){ mode = 'go'; s = ph * AMO.speed; } else if (ph < fishEnd){ mode = 'sea'; s = c.len; } else if (ph < fishEnd + S){ mode = 'back'; s = c.len - (ph - fishEnd) * AMO.speed; } else mode = 'pier';
-  if (mode === 'pier'){ n.boat.position.set(AMO.dock[0], WATER_LEVEL, AMO.dock[1]); n.boat.rotation.set(0, Math.PI / 2, 0);
+  { const fl = n.boat.userData.flag; if (fl && camera.position.distanceTo(n.boat.position) < 60) fl.rotation.y = Math.sin(t * 5.5) * 0.35 + (mode === 'go' || mode === 'back' ? 0.25 : 0); }
+  if (mode === 'pier'){ n.boat.position.set(AMO.dock[0], WATER_LEVEL, AMO.dock[1]); n.boat.rotation.set(0, Math.PI / 2, 0); n.boatHd = Math.PI / 2;
     if (n.amoMode !== 'pier'){ { const L = amoLand(n); n.pos.set(L[0], 0, L[1]); n.baseY = groundHeight(L[0], L[1]); }   /* v863 從船上跨到碼頭邊（以前直接放回 9 公尺外的原位，看起來像瞬移） */ n.rot = n.homeRot; n.sitting = false; n.fishing = false; n.bobState = 'none'; n.flying = null; n.amoSeat = null; n.amoTired = t + 4; if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['今天又沒遇到……下一趟換個地方', '好累……我坐一下打一場', '上岸了，先打一場再說']), '', 4); }
     amoBench(n, dt, t, AMO.cycle - ph); }  else { n.floorSit = false; const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
-    const hd = mode === 'sea' ? out : hd0 + (mode === 'back' ? Math.PI : 0);
-    n.boat.position.set(x, WATER_LEVEL + bob, z); n.boat.rotation.set(Math.sin(t * 1.1) * 0.02, hd, Math.sin(t * 1.3) * 0.03);
-    n.pos.set(x, 0, z); n.baseY = WATER_LEVEL - 0.08 + bob; n.sitting = true; n.rot = hd;
+    const hd = mode === 'sea' ? out : hd0 + (mode === 'back' ? Math.PI : 0), bh = mode === 'sea' ? out - Math.PI / 2 : hd;   /* v887 到了釣點船橫過來，兩個人並排面向外海 */
+    n.boatHd = n.boatHd == null ? bh : lerpAngle(n.boatHd, bh, 1 - Math.exp(-1.5 * dt));
+    n.boat.position.set(x, WATER_LEVEL + bob, z); n.boat.rotation.set(Math.sin(t * 1.1) * 0.02, n.boatHd, Math.sin(t * 1.3) * 0.03);
+    { const fx = Math.sin(n.boatHd), fz = Math.cos(n.boatHd); n.pos.set(x + fx * DUO.amoZ, 0, z + fz * DUO.amoZ); }   /* 阿默坐船尾顧舷外機 */
+    n.baseY = WATER_LEVEL - 0.08 + bob; n.sitting = true; n.rot = mode === 'sea' ? out : n.boatHd;
     if (mode !== 'sea'){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.next = t + 3; }
     else if (n.amoMode !== 'sea'){ amoRecast(n, t); if (camera.position.distanceTo(n.pos) < 30) n.say('今天來這裡試試看……紅鯊，我來了', '', 4); } }
   if (n.amoMode === 'pier' && mode === 'go' && camera.position.distanceTo(n.pos) < 25) n.say('我要開船出海了，港口裡不會有紅鯊的', '', 4);
   n.amoMode = mode; amoDevice(n, mode, t);
+  if (mode !== 'pier') for (const y of npcs) if (y.yin && y.yOnBoat){ duoYinSeat(y, n); if (y.av && y.av.g){ y.av.g.position.x = y.pos.x; y.av.g.position.z = y.pos.z; } }   /* 船先動完再把阿穎放上去（不然阿穎比阿默先更新，會落後船一格） */
 }
+function duoYinSeat(n, A){ const b = A.boat, hd = b.rotation.y; n.pos.set(b.position.x + Math.sin(hd) * DUO.yinZ, 0, b.position.z + Math.cos(hd) * DUO.yinZ); n.baseY = A.baseY; }
 const pick2 = a => a[Math.floor(Math.random() * a.length)];
 /* v825 阿默上岸：先喘一下 → 慢慢走到港邊廣場最近的長椅 → 坐下打遊戲機 → 快出海時站起來走回碼頭（有玩家坐著的長椅就換一張） */
 function amoSeatBusy(c){ const hit = f => f && f.sitting && Math.hypot(f.pos.x - c.x, f.pos.z - c.z) < 0.5; if (mySeat === c) return true; for (const pr of peers.values()) if (hit(pr.fisher)) return true; return false; }
-function amoWalk(n, dt, x, z){ const dx = x - n.pos.x, dz = z - n.pos.z, d = Math.hypot(dx, dz); if (d < 0.12){ n.speed = 0; return true; }
-  const st = Math.min(d, 0.85 * dt); n.pos.x += dx / d * st; n.pos.z += dz / d * st; n.baseY = groundHeight(n.pos.x, n.pos.z); n.rot = lerpAngle(n.rot, Math.atan2(dx, dz), 1 - Math.exp(-6 * dt)); n.speed = 0.85; return false; }
+/* v887 作者：「他們兩個 NPC 會走在海上」→ 以前從碼頭到長椅是直線走，中間隔著港口的水就直接踩過去。現在用村民的尋路（navFind）沿著碼頭、廣場走；找不到路才直線 */
+/* v887 椅子的正前方（坐的人面對的那一邊）。以前站起來、走過來坐都用椅背那一邊，人會穿過椅背。前面不能站（例如臨海的釣魚座）才用後面 */
+function chairFront(c, d){ d = d || 0.7; const sx = Math.sin(c.face), sz = Math.cos(c.face), fx = c.x + sx * d, fz = c.z + sz * d; if (c.back && !c.ret && walkable(fx, fz) && !blocked(fx, fz, 0.2)) return [fx, fz]; return [c.x - sx * d, c.z - sz * d]; }
+function amoWalk(n, dt, x, z){ const W = n._aw; if (!W || Math.abs(W.x - x) > 0.3 || Math.abs(W.z - z) > 0.3){ const pre = n._awPre; n._awPre = null; const sx = pre ? pre[0] : n.pos.x, sz = pre ? pre[1] : n.pos.z; let pts = navFind(sx, sz, x, z); pts = pts && pts.length > 2 ? pts.slice(1) : [[x, z]];
+    while (pts.length > 2 && Math.hypot(pts[0][0] - sx, pts[0][1] - sz) < 1.2 && Math.hypot(pts[1][0] - sx, pts[1][1] - sz) < Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]) + 0.6) pts.shift();   /* 尋路格子的第一格常常在旁邊，不要先往回走一步 */
+    if (pre) pts.unshift(pre); n._aw = { x, z, pts, i: 0 }; }
+  const P = n._aw; let wx = P.pts[P.i][0], wz = P.pts[P.i][1]; if (P.i < P.pts.length - 1 && Math.hypot(wx - n.pos.x, wz - n.pos.z) < 0.25){ P.i++; wx = P.pts[P.i][0]; wz = P.pts[P.i][1]; }
+  const last = P.i >= P.pts.length - 1; if (last){ wx = x; wz = z; }
+  const dx = wx - n.pos.x, dz = wz - n.pos.z, d = Math.hypot(dx, dz); if (last && d < 0.12){ n.speed = 0; n._aw = null; return true; }
+  const st = Math.min(d, 0.85 * dt); n.pos.x += dx / (d || 1) * st; n.pos.z += dz / (d || 1) * st; n.baseY = groundHeight(n.pos.x, n.pos.z); n.rot = lerpAngle(n.rot, Math.atan2(dx, dz), 1 - Math.exp(-6 * dt)); n.speed = 0.85; return false; }
 /* 船停的地方旁邊、最近的一塊碼頭（從停船處往阿默原本站的地方找第一個能站的點） */
 function amoLand(n){ if (AMO.land) return AMO.land; const [x0, z0] = AMO.dock, H = n.home || n.pos; for (let u = 0; u <= 1.0001; u += 0.02){ const x = x0 + (H.x - x0) * u, z = z0 + (H.z - z0) * u; if (walkable(x, z) && groundHeight(x, z) > 0.1){ const k = Math.min(1, u + 0.04); return AMO.land = [x0 + (H.x - x0) * k, z0 + (H.z - z0) * k]; } } return AMO.land = [H.x, H.z]; }
 function amoBench(n, dt, t, left){ const H0 = n.home, L = amoLand(n), H = { x: L[0], z: L[1] }, near = camera.position.distanceTo(n.pos) < 25;
   if (t < (n.amoTired || 0)){ n.speed = 0; n.sitting = false; return; }
   if (!n.amoSeat){ let best = null, bd = 1e9; for (const c of CHAIRS){ if (!c.back || c.nook || c.gear || c.shrimp) continue; const d = Math.hypot(c.x - H0.x, c.z - H0.z); if (d > 22 || d >= bd || amoSeatBusy(c)) continue; best = c; bd = d; } n.amoSeat = best || 'none'; }
   const c = n.amoSeat; if (c === 'none'){ n.speed = 0; n.sitting = false; return; }
-  const fx = c.x - Math.sin(c.face) * 0.7, fz = c.z - Math.cos(c.face) * 0.7;
-  if (left < Math.hypot(fx - H.x, fz - H.z) / 0.85 + 4){   /* 快出海了：站起來走回碼頭 */
-    if (n.sitting){ n.sitting = false; n.pos.x = fx; n.pos.z = fz; n.baseY = groundHeight(fx, fz); if (near) n.say(pick2(['該出海了……', '好，再去找一次紅鯊']), '', 3); }
+  const [fx, fz] = chairFront(c);
+  const kk = Math.floor(Date.now() / 1000 / AMO.cycle); if (n.amoLeave === kk || left < Math.hypot(fx - H.x, fz - H.z) / 0.85 * 1.4 + 4){ n.amoLeave = kk;   /* 快出海了：站起來走回碼頭（v887 決定要走就不會再坐回去；走尋路比直線遠，多留一點時間） */
+    if (n.sitting){ n.sitting = false; n._aw = null; n._awPre = [fx, fz]; if (near) n.say(pick2(['該出海了……', '好，再去找一次紅鯊']), '', 3); }
     if (amoWalk(n, dt, H.x, H.z)){ n.baseY = groundHeight(H.x, H.z); n.rot = lerpAngle(n.rot, Math.atan2(AMO.dock[0] - H.x, AMO.dock[1] - H.z), 1 - Math.exp(-4 * dt)); } return; }   /* v863 走到船旁邊等出海（不是走回原位再瞬移上船） */
   if (n.sitting) return;
   if (!n.amoGo){ n.amoGo = 1; }
@@ -21293,8 +21349,8 @@ function updateYin(n, dt, t){ const A = npcs.find(x => x.amo); if (!A || !A.boat
     if (n.yOnBoat){ n.yOnBoat = false; n.sitting = false; const L = amoLand(A), dx = A.home.x - L[0], dz = A.home.z - L[1], dl = Math.hypot(dx, dz) || 1; n.pos.set(L[0] + dx / dl * 0.9, 0, L[1] + dz / dl * 0.9); n.baseY = groundHeight(n.pos.x, n.pos.z); }   /* v863 跟阿默一起從船邊下來 */
     yinOff(n);
     const rideNext = (hash32('yin' + (k + 1)) & 3) < 2, L = amoLand(A), ldx = A.home.x - L[0], ldz = A.home.z - L[1], ldl = Math.hypot(ldx, ldz) || 1, G = rideNext ? { x: L[0] + ldx / ldl * 0.9, z: L[1] + ldz / ldl * 0.9 } : H;   /* 下一趟要跟船：走到船旁邊；不跟：走回自己釣魚的位置 */
-    if (left < Math.hypot(n.pos.x - G.x, n.pos.z - G.z) / 0.85 + 6){   /* 阿默快出海了：一起站起來走回碼頭 */
-      if (n.sitting && n.ySeat && n.ySeat !== 'none'){ const c = n.ySeat; n.sitting = false; n.pos.x = c.x - Math.sin(c.face) * 0.7; n.pos.z = c.z - Math.cos(c.face) * 0.7; n.baseY = groundHeight(n.pos.x, n.pos.z); }
+    if (n.yLeave === k || left < Math.hypot(n.pos.x - G.x, n.pos.z - G.z) / 0.85 * 1.4 + 6){ n.yLeave = k;   /* 阿默快出海了：一起站起來走回碼頭（v887 作者：「從旁邊的椅子下來的時候，阿穎動的很奇怪」→ 以前站起來往前一步，離碼頭變近，條件又不成立就坐回去，坐下、站起來一直來回。現在決定要走就走） */
+      if (n.sitting && n.ySeat && n.ySeat !== 'none'){ const c = n.ySeat; n.sitting = false; n._aw = null; n._awPre = chairFront(c); }
       n.sitting = false; n.ySeat = null; amoDevice(n, 'x', t);
       if (amoWalk(n, dt, G.x, G.z)){ n.baseY = groundHeight(G.x, G.z); n.rot = lerpAngle(n.rot, rideNext ? Math.atan2(AMO.dock[0] - G.x, AMO.dock[1] - G.z) : n.yHomeRot, 1 - Math.exp(-4 * dt)); } return true; }
     const c0 = A.amoSeat;
@@ -21303,14 +21359,14 @@ function updateYin(n, dt, t){ const A = npcs.find(x => x.amo); if (!A || !A.boat
     const c = n.ySeat;
     if (c === 'none'){ const fx = c0.x - Math.sin(c0.face) * 1.0 + Math.cos(c0.face) * 1.0, fz = c0.z - Math.cos(c0.face) * 1.0 - Math.sin(c0.face) * 1.0;   /* 沒有空位：站在阿默旁邊看他打 */
       if (amoWalk(n, dt, fx, fz)) n.rot = lerpAngle(n.rot, Math.atan2(c0.x - fx, c0.z - fz), 1 - Math.exp(-4 * dt)); amoDevice(n, 'x', t); if (A.sitting) yinBanter(n, A, t); return true; }
-    if (!n.sitting){ if (amoSeatBusy(c)){ n.ySeat = null; return true; } const fx = c.x - Math.sin(c.face) * 0.7, fz = c.z - Math.cos(c.face) * 0.7;
+    if (!n.sitting){ if (amoSeatBusy(c)){ n.ySeat = null; return true; } const [fx, fz] = chairFront(c);
       if (amoWalk(n, dt, fx, fz)){ n.sitting = true; n.pos.x = seatX(c); n.pos.z = seatZ(c); n.baseY = c.y; n.rot = c.face; n.speed = 0; if (near) n.say(pick2(['阿默，來打一場！', '我坐這邊喔', '今天一定要上牌位']), '', 3); } }
     amoDevice(n, n.sitting ? 'pier' : 'x', t); if (n.sitting && A.sitting) yinBanter(n, A, t); return true; }
   n.ySeat = null;
   if (ride){   /* 跟阿默上船：坐在他後面，到了釣點往船邊拋竿 */
     if (!n.yOnBoat){ n.yOnBoat = true; n.sitting = true; amoDevice(n, 'x', t); if (near && mode === 'go') n.say('阿默等我！我也要去', '', 3); }
-    const b = A.boat, hd = b.rotation.y; n.pos.set(b.position.x - Math.sin(hd) * 1.15, 0, b.position.z - Math.cos(hd) * 1.15); n.baseY = A.baseY; n.speed = 0;
-    if (mode === 'sea'){ const side = hd - Math.PI / 2; n.rot = side; if (!n.fishing){ n.fishing = true; n.bobState = 'water'; n.flying = null; n.bobPos.set(n.pos.x + Math.sin(side) * 4, 0.12, n.pos.z + Math.cos(side) * 4); n.st = 'wait'; }
+    const b = A.boat, hd = b.rotation.y; duoYinSeat(n, A); n.speed = 0;   /* v887 坐默穎號的船頭 */
+    if (mode === 'sea'){ const side = A.rot; n.rot = side; if (!n.fishing){ n.fishing = true; n.bobState = 'water'; n.flying = null; n.bobPos.set(n.pos.x + Math.sin(side) * 4, 0.12, n.pos.z + Math.cos(side) * 4); n.st = 'wait'; }
       n.dip = Math.max(0, Math.sin(t * 0.7) - 0.9) * 4; n.bend = n.dip * 0.4; }
     else { n.rot = hd; yinOff(n); }
     return true; }
@@ -23271,6 +23327,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u887', d:'11/26', items:[['⛵','阿默和阿穎有自己的雙人船「默穎號」了：黑色船身、船頭一片紅鯊鰭、船緣從紅變粉紅，還有粉紅愛心和小旗。到了釣點兩個人會並排一起釣'], ['🚶','阿默和阿穎上岸走去長椅會繞著碼頭走，不會再走在海上；從椅子站起來也不會穿過椅背、亂動了']] },
   { id:'u886', d:'11/26', items:[['🤝','大家一起住：住在島上的人都一樣，都可以蓋、拆、擺家具、種田，不再分共同島主、管理、一般成員；只有島主可以邀請和請人搬走','island'], ['📦','島上多一個大箱子（碼頭左邊的沙灘），收起來的東西、拆下來的方塊都放進去，一起住的人都能拿出來擺，不用再付錢；小島商店也多一個「📦 大箱子」分頁','island']] },
   { id:'u885', d:'11/26', items:[['📦','小島商店的「島上的東西」也換成大圖的樣子：點一個看模型，下面直接按移動、收起來。','island']] },
   { id:'u884', d:'11/26', items:[['🛒','小島商店改成跟造型頁一樣：左邊 3D 預覽可以轉，右邊大圖，分類在最下面','island']] },
