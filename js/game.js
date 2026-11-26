@@ -5331,7 +5331,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
         (K3.LBL || (K3.LBL = {}))[key + '_' + k] = l; const pid = K3.PAID_K.includes(key) ? K3.idOf(key, k) : null, mine = !pid || K3.owns(pid);
         const cf = Object.assign({}, c, { [key]: k, c: Object.assign({}, c.c) }); if (key === 'ear') cf.hair = 'short';   /* 耳環小圖用短髮拍，長髮會把耳朵蓋住 */ b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', l)); b.appendChild(el('span', 'n', l)); if (on) b.appendChild(el('span', 'b', mine ? '穿著' : '試穿')); else if (!mine) b.appendChild(el('span', 'b k3pr', '🪙' + K3.cost(pid)));
         b.addEventListener('click', () => { if (K3.real || !mine) K3.tryOn(x => { x[key] = k; }); else K3.set({ [key]: k }); renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
-      const sw = (lab, key, cols) => { if (!inTab(key)) return; f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { if (K3.real) K3.tryOn(x => { x.c[key] = ''; }); else K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
+      const sw = (lab, key, cols) => { if (!inTab(key)) return; cols = cols.concat(K3.gangCols(key).filter(x => !cols.includes(x)));   /* v871 老港買到的限定色也排進來 */ f.appendChild(el('p', 'sub k3lab', lab)); const r = el('div', 'k3sw'), cur = c.c[key] || ''; const b0 = el('button', 'k3c k3c0', '原色'); b0.setAttribute('aria-pressed', String(!cur)); b0.addEventListener('click', () => { if (K3.real) K3.tryOn(x => { x.c[key] = ''; }); else K3.setC(key, ''); renderTab(); }); r.appendChild(b0);
         cols.forEach(col => { const pc = K3.PAID_K.includes(key) ? K3.idC(key, col) : null, mine = !pc || K3.owns(pc), b = el('button', 'k3c' + (mine ? '' : ' k3lock')); b.style.background = col; if (!mine) b.title = '🪙' + K3.PRICE.color; b.setAttribute('aria-label', lab + ' ' + col); b.setAttribute('aria-pressed', String(cur === col)); b.addEventListener('click', () => { if (K3.real || !mine) K3.tryOn(x => { x.c[key] = col; }); else K3.setC(key, col); renderTab(); }); r.appendChild(b); }); f.appendChild(r); if (Cloud.on && K3.PAID_K.includes(key) && cols.some(col => !K3.owns(K3.idC(key, col)))) f.appendChild(el('small', 'k3cnote', `🪙 有小金幣的顏色一個 ${K3.PRICE.color}`)); };
       /* v741 作者：「我一開始不是說，中性沒有分男生女生」→ 不再有男生臉、女生臉。眼睛、眉毛、嘴巴、腮紅各自選，誰都可以選任何一種 */
       row('眼睛', 'eye', [['a0', '圓眼'], ['b0', '星星眼'], ['b4', '水汪汪'], ['a1', '下垂眼'], ['b1', '溫柔眼'], ['a2', '鳳眼'], ['b2', '貓眼'], ['b5', '丹鳳眼'], ['a4', '三白眼'], ['a3', '睏睏眼'], ['b3', '慵懶眼'], ['a5', '瞇瞇眼']]);
@@ -5753,6 +5753,9 @@ K3.setC = (k, v) => { K3.cfg.c[k] = v; K3.set({}); };
 /* v860 造型要用金幣買（作者：「造型的衣服頭髮顏色那些全部都要用錢買，不要現在什麼都免費」；伺服器 232_k3_shop.sql，價錢兩邊要一樣）。
    臉免費＋一套基本款；其他點了先「試穿」（只有自己看得到、不存、不送給別人），按「全部買下」才是你的。關掉造型頁沒買就換回原本的。
    已經在玩的人：第一次連上時把身上那套送他（k3_grant，伺服器只給 v860 以前的帳號）；之後身上有沒買的東西就換回基本款。 */
+/* v871 老港色：老港每週限定手作才有的顏色（伺服器 237 _gang_cols 一樣），造型頁買不到，買到的才會排進顏色選單 */
+K3.GANG = { 'ff8a3d': '浮球橘', 'b8372e': '船纜紅', '5e7a52': '舊漁網綠', '2c4f73': '老船藍', 'f3d27a': '燈塔黃', '16324a': '黑潮藍', 'a9b3b8': '鹹魚銀', 'd9c49a': '退潮沙' };
+K3.gangCols = key => (rec.owned || []).filter(id => id.startsWith('k3c_' + key + '_') && K3.GANG[id.slice(-6)]).map(id => '#' + id.slice(-6));
 K3.PRICE = { hair:600, top:800, bot:500, shoes:400, hat:500, mask:500, ear:500, color:150 };
 K3.FREE = new Set(['hair_long', 'hair_short', 'top_tee', 'bot_shorts', 'bot_pants', 'shoes_sneak', 'hat_none', 'mask_none', 'ear_none']);
 K3.PAID_K = ['hair', 'top', 'bot', 'shoes', 'hat', 'mask', 'ear'];
@@ -20576,13 +20579,23 @@ var Gang = { data:null, at:0, busy:false };
 async function loadGang(){ if (Gang.busy || !Cloud.on || !Cloud.sb) return; Gang.busy = true; Gang.at = Date.now();
   try { const { data, error } = await Cloud.sb.rpc('gang_week'); if (!error && data){ Gang.data = data; if (data.item) Designs.map.set(data.item.id, data.item); } } catch(e){}
   Gang.busy = false; if (!$('#sheet').hidden && curTab === 'gang') renderTab(); }
-function gangLines(){ const D = Gang.data; if (!D || !D.item) return []; const left = D.stock - D.sold;
-  return [left > 0 ? `這週我做了「${D.item.name}」，只有 ${D.stock} 件，還剩 ${left} 件` : '這週做的已經賣完了，下週一早上再來', '舊漁網、船纜都捨不得丟，拿來做成衣服剛剛好', '每個人一週只能買一件，要留給別人喔']; }
+function gangLines(){ const D = Gang.data; if (!D || !(D.item || D.k3)) return []; const left = D.stock - D.sold;
+  const nm = D.k3 && D.k3.name || (D.item && D.item.name) || ''; return [left > 0 ? `這週我做了「${nm}」，只有 ${D.stock} 件，還剩 ${left} 件` : '這週做的已經賣完了，下週一早上再來', '舊漁網、船纜都捨不得丟，拿來做成衣服剛剛好', '每個人一週只能買一件，要留給別人喔']; }
 function renderGangShop(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>⚓ 老港的每週限定手作</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能跟老港買。')); return; }
   const D = Gang.data; if (!D){ body.appendChild(el('div', 'empty', '載入中…')); return; }
-  body.appendChild(el('p', 'sub', '「每個禮拜一早上 9 點，我用舊漁網、船纜、浮球的顏色做一件，全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。'));
+  body.appendChild(el('p', 'sub', D.k3 && D.k3.part ? '「每個禮拜一早上 9 點，我用浮球、船纜、舊漁網的顏色染一件，這些顏色外面買不到。全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。' : '「每個禮拜一早上 9 點，我用舊漁網、船纜、浮球的顏色做一件，全村就 5 件，一人一個禮拜一件，賣完就沒了。」帳號要滿 2 天、釣過 50 條魚才能買。'));
+  /* v871 作者：「老港這個應該變成設計目前3D模型衣服了吧」→ 老港改做新人物的衣服：用造型頁買不到的「老港色」染一件，小圖是你穿上的樣子 */
+  if (D.k3 && D.k3.part){ const K = D.k3, left = D.stock - D.sold, ul = el('ul', 'shoplist'), li = el('li', D.mine ? 'on' : ''), cf = JSON.parse(JSON.stringify(K3.real || K3.cfg));
+    cf[K.part] = K.style; cf.c = Object.assign({}, cf.c, { [K.part]: K.col }); const im = k3ShotImg(cf, K.part === 'hat' ? 'hat' : 'top', K.name); im.style.cssText = 'width:64px;height:64px;border-radius:12px;background:#f3ead8'; li.appendChild(im);
+    const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', K.name)); inf.appendChild(el('div', 'sub2', `${K3.GANG[K.col.slice(1)] || ''}是老港色，造型頁買不到・🪙${D.price}・還剩 ${left}/${D.stock} 件${D.why && !D.mine ? '・' + D.why : ''}`)); li.appendChild(inf);
+    const a = el('div', 'tacts'), owns = (rec.owned || []).includes('k3c_' + K.part + '_' + K.col.slice(1)), b = el('button', 'tbtn' + (D.mine || left <= 0 || D.why ? ' ghost' : ''), D.mine ? '買過了' : left <= 0 ? '賣完了' : `買 🪙${D.price}`); b.disabled = !!(D.mine || left <= 0 || D.why || rec.coins < D.price);
+    b.addEventListener('click', async () => { b.disabled = true; try { const { data, error } = await Cloud.sb.rpc('gang_buy'); if (error) throw error; adoptRow(data); SFX.catch(); flash(`買到老港的「${K.name}」了！`, 2); } catch(e){ toast(cloudErrMsg(e)); } loadGang(); });
+    a.appendChild(b); if (owns && K3.on){ const wr = el('button', 'tbtn ghost', '穿上'); wr.addEventListener('click', () => { K3.tryEnd(); K3.set({ [K.part]: K.style, c: Object.assign({}, K3.cfg.c, { [K.part]: K.col }) }); flash('換好了，大家看得到', 1.4); renderTab(); }); a.appendChild(wr); }
+    li.appendChild(a); ul.appendChild(li); body.appendChild(ul);
+    if ((D.past || []).length){ body.appendChild(el('div', 'dexhead', '之前做過的')); const u2 = el('ul', 'wlist old'); for (const p of D.past) u2.appendChild(el('li', '', `${p.week}　${p.name}（賣了 ${p.sold}/${p.stock}）`)); body.appendChild(u2); }
+    return; }
   const it = D.item, left = D.stock - D.sold, ul = el('ul', 'shoplist'), li = el('li', D.mine ? 'on' : '');
   if (it && it.px){ const cv = designCanvas(it.px.slice(0, 256), 'pants', 3); cv.className = 'dishic'; cv.style.cssText = 'width:44px;height:44px;border-radius:10px;image-rendering:pixelated'; li.appendChild(cv); }
   const inf = el('div', 'tinfo'); inf.appendChild(el('div', 'n', it ? it.name : '')); inf.appendChild(el('div', 'sub2', `🪙${D.price}・還剩 ${left}/${D.stock} 件${D.why && !D.mine ? '・' + D.why : ''}`)); li.appendChild(inf);
@@ -22834,7 +22847,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
-  { id:'u869', d:'11/26', items:[['🕊️','海鷗換成精美的新模型：飛的時候拍翅膀、偶爾滑翔，停下來收翅膀、歪頭看你、伸懶腰抖一抖；銀鷗、黑頭鷗、金色海鷗都有']] },
+  { id:'u871', d:'11/26', items:[['⚓','老港的每週限定手作改做新人物的衣服了：用造型頁買不到的「老港色」（浮球橘、船纜紅、舊漁網綠…）染一件，全村 5 件，買了直接按「穿上」','gang']] },
+  { id:'u870', d:'11/26', items:[['🕊️','海鷗換成精美的新模型：飛的時候拍翅膀、偶爾滑翔，停下來收翅膀、歪頭看你、伸懶腰抖一抖；銀鷗、黑頭鷗、金色海鷗都有']] },
   { id:'u869', d:'11/26', items:[['💬','村民講話換了口氣，比較像真的人在跟你聊天。阿綾、阿鐵、阿福他們各有各的脾氣。']] },
   { id:'u868', d:'11/26', items:[['🔧','阿鐵的工坊換新畫面了，缺什麼材料一眼就看得到。'],['🐟','要用魚的東西，現在可以自己挑哪一條。換魚鱗也是。']] },
   { id:'u867', d:'11/26', items:[['🔧','阿鐵的工坊大改：做東西要金幣、少一點魚，再加材料。新東西有貝殼浮標、魚鱗路亞、修竿包，還有兩款新竿子。第一次去他會送你一包材料。'], ['🐚','材料在海邊、潛水撿垃圾的時候會順便撿到。魚鱗用魚換。'], ['🎣','釣竿會磨損了，釣越大的魚磨越多。用修竿包補。'], ['🧺','材料和工坊做的東西，可以拿到魚市場擺攤賣。'], ['🚶','村民比較常出門晃了。']] },
