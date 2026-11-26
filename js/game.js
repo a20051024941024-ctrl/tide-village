@@ -14169,9 +14169,11 @@ function craftSwatch(c){ const cv = document.createElement('canvas'); cv.width =
   else if (c.col){ g.strokeStyle = c.col; g.lineWidth = 4; g.beginPath(); g.moveTo(4, 30); g.bezierCurveTo(20, 4, 44, 36, 60, 10); g.stroke(); }
   else { const T = rodSkinTex(c.id).image; g.save(); g.translate(32, 20); g.rotate(-0.35); if (c.id === 'rs_gold'){ g.fillStyle = '#e0b84a'; g.fillRect(-30, -5, 60, 10); } else g.drawImage(T, 0, 0, 64, 256, -30, -5, 60, 10); g.restore(); }
   cv.className = 'mktic'; cv.style.width = '64px'; cv.style.height = '40px'; return cv; }
-async function craftRpc(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能找阿鐵師傅'); return null; } try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
+async function craftRpc(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能找阿鐵師傅'); return null; } try { let { data, error } = await Cloud.sb.rpc(fn, args);
+    if (error && args && args.p_fish && (error.code === 'PGRST202' || /p_fish|function/i.test(error.message || ''))){ const a2 = Object.assign({}, args); delete a2.p_fish; ({ data, error } = await Cloud.sb.rpc(fn, a2)); }   /* 伺服器還沒貼 236：先照舊用最輕的魚 */
+    if (error) throw error; return data; } catch(e){ toast(cloudErrMsg(e)); return null; } }
 /* v867 阿鐵的工坊：原本的東西和用材料做的新東西放在一起，分六類 */
-const CraftUI = { cat: 'rod', starter: false };
+const CraftUI = { cat: 'gear', starter: false, sel: null, pick: {} };
 function craftDone(r, nm, extra){ if (!(r && r.player)) return false; adoptRow(r.player); SFX.catch(); flash(`阿鐵師傅做好了：${nm}${extra || ''}！`, 1.8); const n = npcs.find(x => x.shopNpc === 'craft'); if (n) n.say('做好了！拿去用吧', 'emote', 3); try { renderTab(); } catch(e){} return true; }
 /* 一列配方：要的東西寫清楚，缺什麼就寫什麼；要用到魚的先問一次「確定？」 */
 function craftRow(ul, o){ const li = el('li', o.on ? 'on' : ''); li.appendChild(o.sw || el('span', 'rodsw', o.ico || '')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', o.name)); if (o.sub) d.appendChild(el('div', 'sub2', o.sub)); li.appendChild(d);
@@ -14185,50 +14187,108 @@ function craftRow(ul, o){ const li = el('li', o.on ? 'on' : ''); li.appendChild(
   b.addEventListener('click', async () => { if (use.length && b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '確定？'; b.classList.add('warn'); d.appendChild(el('div', 'sub2', '會用掉：' + use.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
     b.disabled = true; const r = await craftRpc(o.fn || 'craft_item', { p_id: o.id }); if (!o.done(r)) b.disabled = false; });
   return li; }
-function renderCraft(body){
-  body.appendChild(el('div', 'dexhead', '🔧 阿鐵師傅的工坊'));
-  body.appendChild(el('p', 'sub', '「以前的照樣幫你做，現在要加一點材料。用的魚是你魚缸裡最輕的那幾條，收藏⭐、我的海裡跟變種的我不碰。」'));
-  if (Cloud.on && !bagN('mat_starter') && !CraftUI.starter){ CraftUI.starter = true; Cloud.sb.rpc('mats_starter').then(({ data: r }) => { if (r && r.player){ adoptRow(r.player); if (r.got) flash('阿鐵師傅送你一包入門材料！', 2); try { renderTab(); } catch(e){} } }).catch(() => {}); }
-  /* 我的材料＋分解魚 */
-  { const box = el('div', 'matbar'); for (const [k, nm, ic] of MATS){ const c = el('span', 'matchip' + (bagN('mat_' + k) ? '' : ' zero'), `${ic} ${nm} ${bagN('mat_' + k)}`); box.appendChild(c); } body.appendChild(box);
-    body.appendChild(el('p', 'sub2', '材料哪裡來：海邊撿垃圾、潛水撿垃圾時有機會多撿到（貝殼、舊漁網、漂流木、珊瑚碎片、粉紅貝）；魚鱗用魚分解；也可以到魚市場旁的釣客市集跟別人買。'));
-    const row = el('div', 'matbar'); for (const [r, per] of [['常見', 1], ['稀有', 3]]){ const n = craftUse({ r, n: 99 }).length, b = el('button', 'tbtn ghost', `分解 1 條${r}魚 → 💠${per}`); b.disabled = !n;
-      b.addEventListener('click', async () => { if (b.dataset.sure !== '1'){ const x = craftUse({ r, n: 1 })[0]; b.dataset.sure = '1'; b.textContent = `確定？會用掉 ${FISH_BY_ID[x.f].name} ${x.w}kg`; b.classList.add('warn'); return; }
-        b.disabled = true; const res = await craftRpc('mat_scale', { p_r: r, p_n: 1 }); if (res && res.player){ adoptRow(res.player); SFX.chat(); flash(`拿到魚鱗 ×${res.got}`, 1.4); renderTab(); } else b.disabled = false; }); row.appendChild(b); }
-    body.appendChild(row); }
-  const cats = [['bait', '🪱 魚餌'], ['hook', '🪝 鉤子'], ['gear', '🔴 浮標・路亞'], ['repair', '🧰 修竿'], ['rod', '🎨 竿子造型'], ['line', '🧵 釣線顏色']];
-  { const tabs = el('div', 'tabs craftcats'); for (const [k, nm] of cats){ const b = el('button', 'tbtn' + (CraftUI.cat === k ? '' : ' ghost'), nm); b.addEventListener('click', () => { CraftUI.cat = k; renderTab(); }); tabs.appendChild(b); } body.appendChild(tabs); }
-  const ul = el('ul', 'shoplist' + (CraftUI.cat === 'rod' || CraftUI.cat === 'line' ? ' cols' : '')); body.appendChild(ul); const cat = CraftUI.cat, own = new Set(rec.owned || []);
+/* v868 阿鐵的工坊換成自己的畫面：上面分類、左邊清單、右邊要的東西；要用魚的格子可以自己挑魚（作者：「做東西應該做出他的專屬介面，簡單不複雜」「選魚要是遊戲魚的樣子」） */
+function craftFishOk(x, r, saury, shown){ const f = FISH_BY_ID[x.f]; return f && !x.k && !shown.has(String(x.t)) && (saury ? x.f === 'saury' : f.rarity === r && !f.of); }
+function craftPool(r, saury){ const shown = new Set((rec.show || []).map(String)); return (rec.tank || []).filter(x => craftFishOk(x, r, saury, shown)).sort((a, b) => a.w - b.w); }
+/* 這一樣東西選好的魚：還在、還能用的才算；不夠的用最輕的補上（不用每次都自己選） */
+function craftPicked(key, n, r, saury){ if (!n) return []; const pool = craftPool(r, saury), by = new Map(pool.map(x => [String(x.t), x])), got = [];
+  for (const t of CraftUI.pick[key] || []){ const x = by.get(String(t)); if (x && !got.includes(x)) got.push(x); if (got.length >= n) break; }
+  for (const x of pool){ if (got.length >= n) break; if (!got.includes(x)) got.push(x); }
+  return got; }
+function craftItems(cat){ const own = new Set(rec.owned || []), L = [];
+  const baitDone = (nm) => r => { if (!(r && r.player)) return false; adoptRow(r.player); SFX.catch(); flash(`做好 4 個${nm}了。到「包包」的魚餌換上`, 2); try { renderTab(); } catch(e){} return true; };
   if (cat === 'bait'){
-    craftRow(ul, { ico: '', sw: el('span', 'rodsw bait-live'), name: `活餌（現在有 ${bagN('live')} 個）`, sub: '做一次換 4 個。「掠食魚看到活的就追，往有海鳥的地方丟最好。」跟秋刀魚切塊加起來一天最多做 8 次。', R: RECIPE.live, fn: 'craft_bait', id: 'live', done: r => { if (!(r && r.player)) return false; adoptRow(r.player); SFX.catch(); flash('做好 4 個活餌了。到「包包」的魚餌換上', 2); renderTab(); return true; } });
-    { const shown = new Set((rec.show || []).map(String)), use2 = (rec.tank || []).filter(x => x.f === 'saury' && !x.k && !shown.has(String(x.t))).sort((p, q) => p.w - q.w).slice(0, 1);
-      const li2 = el('li'); li2.appendChild(el('span', 'rodsw bait-saurychunk')); const d2 = el('div', 'tinfo'); d2.appendChild(el('div', 'n', `秋刀魚切塊（現在有 ${bagN('saurychunk')} 個）`)); d2.appendChild(el('div', 'sub2', '要：🪙20＋秋刀魚 1 條，換 4 個。「鯊魚、鮪魚、浪人鰺聞到這個味道就來了。」')); li2.appendChild(d2);
-      const a2 = el('div', 'tacts'), b2 = el('button', 'tbtn', '做'); b2.disabled = !use2.length || rec.coins < 20;
-      b2.addEventListener('click', async () => { if (b2.dataset.sure !== '1'){ b2.dataset.sure = '1'; b2.textContent = '確定？'; d2.appendChild(el('div', 'sub2', '會用掉：' + use2.map(x => `${FISH_BY_ID[x.f].name} ${x.w}kg`).join('、'))); return; }
-        b2.disabled = true; const r = await craftRpc('craft_bait', { p_id:'saurychunk' }); if (r && r.player){ adoptRow(r.player); SFX.catch(); flash('切好 4 個秋刀魚切塊了。到「包包」的魚餌換上', 2); try { renderTab(); } catch(e){} } else b2.disabled = false; });
-      a2.appendChild(b2); li2.appendChild(a2); ul.appendChild(li2); } }
+    L.push({ key: 'live', ico: '🪱', name: '活餌', tags: ['做一次 4 個', `現在有 ${bagN('live')} 個`], desc: '「掠食魚看到活的就追，往有海鳥的地方丟最好。」跟秋刀魚切塊加起來一天最多做 8 次。', R: RECIPE.live, fn: 'craft_bait', id: 'live', done: baitDone('活餌') });
+    L.push({ key: 'saurychunk', ico: '🔪', name: '秋刀魚切塊', tags: ['做一次 4 個', `現在有 ${bagN('saurychunk')} 個`], desc: '「鯊魚、鮪魚、浪人鰺聞到這個味道就來了。」', R: { c: 20, n: 1, r: '常見', saury: true, m: {} }, fn: 'craft_bait', id: 'saurychunk', done: baitDone('秋刀魚切塊') }); }
   else if (cat === 'gear'){
     for (const g of GEAR2){ const have = [1, 2, 3].map(q => bagN(g.key + q)), eq = eqGear(g.eq);
-      craftRow(ul, { ico: g.ico, name: g.name, sub: g.desc + `　你有：${have.map((n, i) => `${GQ_STAR[i + 1]} ${GQ[i + 1]} ×${n}`).join('、')}${eq ? `（裝著 ${GQ[eq]}）` : ''}。做出來：普通 70%、精良 25%、極品 5%。`, R: RECIPE[g.id], id: g.id,
-        done: r => craftDone(r, g.name, r && r.q ? `（${GQ_STAR[r.q]} ${GQ[r.q]}）` : '') }); }
-    ul.appendChild(el('p', 'sub2', '沒裝的時候用普通浮標、普通假餌：免費、不會弄丟。裝哪一個到「包包 → 🎣 釣組」換。')); }
-  else if (cat === 'repair'){
-    const rod = RODS.find(x => x.id === rec.rod) || RODS[0], dur = rodDur(rec.rod);
-    { const li = el('li'); li.appendChild(el('span', 'rodsw', '🎣')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${rod.name}　耐久度 ${dur}／100`)); const bar = el('div', 'durbar'); const i = el('i'); i.style.width = dur + '%'; bar.appendChild(i); d.appendChild(bar);
-      d.appendChild(el('div', 'sub2', '釣到越大的魚掉越多；掉到 0 拉魚時拉力上升比較快（還是可以釣）。一個修竿包補 40。')); li.appendChild(d);
-      const a = el('div', 'tacts'), b = el('button', 'tbtn', `用修竿包（有 ${bagN('g_repair')} 個）`); b.disabled = !bagN('g_repair') || dur >= 100; b.addEventListener('click', async () => { b.disabled = true; const row = await craftRpc('rod_repair', { p_rod: rec.rod }); if (row){ adoptRow(row); SFX.chat(); flash(`${rod.name} 修好了！`, 1.4); renderTab(); } else b.disabled = false; });
-      a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
-    craftRow(ul, { ico: '🧰', name: '修竿包（用材料做）', sub: '自己撿材料做，比較便宜。做好的也可以拿去市集賣。', R: RECIPE.g_repair, id: 'g_repair', done: r => craftDone(r, '修竿包') });
-    craftRow(ul, { ico: '🪙', name: '修竿包（直接跟阿鐵買）', sub: '不想撿材料的話，直接付錢。', R: RECIPE.g_repair_c, id: 'g_repair_c', label: '買', done: r => craftDone(r, '修竿包') }); }
+      L.push({ key: g.id, ico: g.ico, name: g.name, tags: ['掛在釣線上', '拉斷線會弄丟'], sub: eq ? `裝著 ${GQ[eq]}` : have.some(Boolean) ? `有 ${have.reduce((a, b) => a + b, 0)} 個` : '', desc: g.desc + `\n你有：${have.map((n, i) => `${GQ[i + 1]} ×${n}`).join('、')}${eq ? `（裝著 ${GQ[eq]}）` : ''}。裝哪一個到「包包 → 🎣 釣組」換。`, R: RECIPE[g.id], id: g.id, q: true,
+        done: r => craftDone(r, g.name, r && r.q ? `（${GQ_STAR[r.q]} ${GQ[r.q]}）` : '') }); } }
+  else if (cat === 'repair'){ const rod = RODS.find(x => x.id === rec.rod) || RODS[0], dur = rodDur(rec.rod);
+    L.push({ key: 'rodfix', ico: '🎣', name: `修我的${rod.name}`, sub: `耐久度 ${dur}／100`, dur, tags: ['一個修竿包補 40'], desc: '釣到越大的魚掉越多；掉到 0 拉魚時拉力上升比較快（還是可以釣）。',
+      act: { label: bagN('g_repair') ? `用修竿包（有 ${bagN('g_repair')} 個）` : '還沒有修竿包', off: !bagN('g_repair') || dur >= 100 ? (dur >= 100 ? '釣竿好好的，不用修' : '先在下面做一個修竿包') : '', go: async () => { const row = await craftRpc('rod_repair', { p_rod: rec.rod }); if (row){ adoptRow(row); SFX.chat(); flash(`${rod.name} 修好了！`, 1.4); renderTab(); } } } });
+    L.push({ key: 'g_repair', ico: '🧰', name: '修竿包', sub: `有 ${bagN('g_repair')} 個`, tags: ['自己撿材料做比較便宜'], desc: '做好的也可以拿去市集賣。', R: RECIPE.g_repair, id: 'g_repair', done: r => craftDone(r, '修竿包') });
+    L.push({ key: 'g_repair_c', ico: '🪙', name: '修竿包（直接買）', tags: ['不想撿材料的話'], desc: '直接付錢跟阿鐵買一個。', R: RECIPE.g_repair_c, id: 'g_repair_c', label: '買！', done: r => craftDone(r, '修竿包') }); }
   else { const kind = cat === 'hook' ? 'hk_' : cat === 'rod' ? 'rs_' : 'lc_';
-    if (kind === 'rs_') ul.before(el('p', 'sub2', '竿子造型跟著你走，換哪支竿子都還在；包包的「🎨 外觀」可以預覽和換。做好的可以拿去市集賣，用著的要先拿下來。'));
     for (const c of CRAFT.filter(x => x.id.startsWith(kind) && (!x.season || own.has(x.id)))){ const cur = kind === 'rs_' ? rec.rodSkin : kind === 'hk_' ? rec.hook : rec.lineCol, using = cur === c.id;
-      if (own.has(c.id)){ const b = el('button', 'tbtn' + (using ? ' ghost' : ''), using ? '拿下' : '裝上');
-        b.addEventListener('click', async () => { if (kind === 'hk_'){ const row = await craftRpc('set_hook', { p_hook: using ? null : c.id }); if (row){ adoptRow(row); renderTab(); } return; }
-          const sk = kind === 'rs_' ? (using ? null : c.id) : rec.rodSkin || null, lc = kind === 'lc_' ? (using ? null : c.id) : rec.lineCol || null; const row = await craftRpc('set_rod_look', { p_skin: sk, p_line: lc }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } });
-        craftRow(ul, { sw: craftSwatch(c), name: c.name, sub: (using ? '使用中' : '已經有了') + (c.desc ? '・' + c.desc : ''), on: true, btns: [b] }); }
-      else if (c.stamp || c.season) craftRow(ul, { sw: craftSwatch(c), name: c.name, sub: c.season ? `⚔️ 做不出來：${c.desc}` : `📮 做不出來：村長的集章卡每蓋滿 4 張送一支・${c.desc}`, btns: [] });
-      else craftRow(ul, { sw: craftSwatch(c), name: c.name, sub: c.desc || '', R: RECIPE[c.id] || { c: c.c, n: c.n, r: c.r }, id: c.id, done: r => craftDone(r, c.name) }); } } }
+      const it = { key: c.id, sw: () => craftSwatch(c), name: c.name, desc: c.desc || '', tags: [kind === 'rs_' ? '換竿子的樣子' : kind === 'lc_' ? '換釣線顏色' : '換鉤子'] };
+      if (own.has(c.id)){ it.sub = using ? '使用中' : '已經有了'; it.mine = true;
+        it.act = { label: using ? '拿下來' : '裝上', go: async () => { if (kind === 'hk_'){ const row = await craftRpc('set_hook', { p_hook: using ? null : c.id }); if (row){ adoptRow(row); renderTab(); } return; }
+          const sk = kind === 'rs_' ? (using ? null : c.id) : rec.rodSkin || null, lc = kind === 'lc_' ? (using ? null : c.id) : rec.lineCol || null; const row = await craftRpc('set_rod_look', { p_skin: sk, p_line: lc }); if (row){ adoptRow(row); pushPresence(true); renderTab(); } } }; }
+      else if (c.stamp || c.season){ it.sub = '做不出來'; it.act = { label: '做不出來', off: c.season ? c.desc : '村長的集章卡每蓋滿 4 張送一支' }; }
+      else { it.R = RECIPE[c.id] || { c: c.c, n: c.n, r: c.r }; it.id = c.id; it.done = r => craftDone(r, c.name); }
+      L.push(it); } }
+  return L; }
+function renderCraft(body){
+  if (Cloud.on && !bagN('mat_starter') && !CraftUI.starter){ CraftUI.starter = true; Cloud.sb.rpc('mats_starter').then(({ data: r }) => { if (r && r.player){ adoptRow(r.player); if (r.got) flash('阿鐵師傅送你一包入門材料！', 2); try { renderTab(); } catch(e){} } }).catch(() => {}); }
+  const ws = el('div', 'ws'); body.appendChild(ws);
+  { const top = el('div', 'wstop'); top.appendChild(el('p', 'wssay', '阿鐵師傅：「材料帶來，我教你做。手巧一點的，做出來就是極品。」'));
+    const box = el('div', 'matbar'); for (const [k, nm, ic] of MATS){ const c = el('span', 'matchip' + (bagN('mat_' + k) ? '' : ' zero'), `${ic} ${bagN('mat_' + k)}`); c.title = nm; box.appendChild(c); }
+    const sc = el('button', 'matchip wsscale', '💠 用魚換魚鱗'); sc.addEventListener('click', () => craftPicker({ mode: 'scale', r: '常見' })); box.appendChild(sc); top.appendChild(box); ws.appendChild(top); }
+  const cats = [['bait', '🪱 魚餌'], ['hook', '🪝 鉤子'], ['gear', '🔴 浮標路亞'], ['repair', '🧰 修竿'], ['rod', '🎨 竿子造型'], ['line', '🧵 釣線']];
+  { const tabs = el('div', 'wstabs'); for (const [k, nm] of cats){ const b = el('button', CraftUI.cat === k ? 'on' : '', nm); b.addEventListener('click', () => { CraftUI.cat = k; CraftUI.sel = null; SFX.click(); renderTab(); }); tabs.appendChild(b); } ws.appendChild(tabs); }
+  const items = craftItems(CraftUI.cat); let sel = items.find(x => x.key === CraftUI.sel) || items[0]; if (sel) CraftUI.sel = sel.key;
+  const row = el('div', 'wsrow'), list = el('div', 'wslist'); let det = el('div', 'wsdet'); row.appendChild(list); row.appendChild(det); ws.appendChild(row);
+  for (const it of items){ const b = el('button', 'wsit' + (it === sel ? ' on' : '') + (it.mine ? ' mine' : '')); const ic = el('span', 'wsic'); if (it.sw) ic.appendChild(it.sw()); else ic.textContent = it.ico || ''; b.appendChild(ic);
+    const t = el('div'); t.appendChild(el('b', '', it.name)); if (it.sub) t.appendChild(el('small', '', it.sub)); b.appendChild(t);
+    b.addEventListener('click', () => { CraftUI.sel = it.key; SFX.click(); renderTab(); }); list.appendChild(b); }
+  if (!sel){ det.appendChild(el('p', 'sub', '這裡還沒有東西')); return; }
+  const det0 = det; det = el('div', 'wsdetin'); det0.appendChild(det);
+  { const h = el('h3', 'wsname'); const ic = el('span', 'wsic big'); if (sel.sw) ic.appendChild(sel.sw()); else ic.textContent = sel.ico || ''; h.appendChild(ic); h.appendChild(document.createTextNode(sel.name)); det.appendChild(h); }
+  if (sel.tags){ const tg = el('div', 'wstags'); for (const x of sel.tags) tg.appendChild(el('span', '', x)); det.appendChild(tg); }
+  if (sel.dur != null){ const bar = el('div', 'durbar'); const i = el('i'); i.style.width = sel.dur + '%'; bar.appendChild(i); det.appendChild(bar); }
+  const R = sel.R; let why = '', fish = [];
+  if (R){ const slots = el('div', 'wsslots');
+    fish = craftPicked(sel.key, R.n || 0, R.r, R.saury);
+    for (let i = 0; i < (R.n || 0); i++){ const x = fish[i], s = el('button', 'wsslot fish' + (x ? ' ok' : ' no'));
+      if (x){ const f = FISH_BY_ID[x.f]; try { s.appendChild(fishCanvas(f, true, 64, 40)); } catch(e){ s.appendChild(el('b', '', '🐟')); } s.appendChild(el('span', '', f.name)); s.appendChild(el('small', '', `${(+x.w).toFixed(2)}kg`)); s.appendChild(el('i', 'wschg', '換')); }
+      else { s.appendChild(el('b', '', '🐟')); s.appendChild(el('span', '', R.saury ? '秋刀魚' : `${R.r}魚`)); s.appendChild(el('small', '', '魚缸裡沒有')); }
+      s.addEventListener('click', () => craftPicker({ mode: 'item', key: sel.key, n: R.n, r: R.r, saury: R.saury, cur: fish.map(y => String(y.t)) })); slots.appendChild(s); }
+    for (const [k, v] of Object.entries(R.m || {})){ const m = MAT_BY[k], hv = bagN('mat_' + k), s = el('div', 'wsslot ' + (hv >= v ? 'ok' : 'no')); s.appendChild(el('b', '', m[2])); s.appendChild(el('span', '', m[1])); s.appendChild(el('small', '', `${hv} / ${v}`)); slots.appendChild(s); }
+    { const s = el('div', 'wsslot ' + (rec.coins >= R.c ? 'ok' : 'no')); s.appendChild(el('b', '', '🪙')); s.appendChild(el('span', '', '金幣')); s.appendChild(el('small', '', R.c.toLocaleString())); slots.appendChild(s); }
+    det.appendChild(slots);
+    const short = matShort(R.m);
+    why = rec.coins < R.c ? '金幣不夠' : fish.length < (R.n || 0) ? `還缺${R.saury ? '秋刀魚' : R.r + '魚'} ${(R.n || 0) - fish.length} 條` : short ? `還缺${MAT_BY[short][1]} ×${R.m[short] - bagN('mat_' + short)}` : ''; }
+  if (sel.q){ const q = el('div', 'wsq'); for (const [t, p, c] of [['普通', '70%', 'q1'], ['精良', '25%', 'q2'], ['極品', '5%', 'q3']]) q.appendChild(el('span', c, `${t} ${p}`)); det.appendChild(q); }
+  if (sel.desc) for (const line of sel.desc.split('\n')) det.appendChild(el('p', 'wsdesc', line));
+  if (R && R.n && fish.length) det.appendChild(el('p', 'wsdesc soft', '會用掉上面的魚。點魚的格子可以換別條（收藏⭐、展示中的不會出現）。'));
+  if (R && short0(R)) det.appendChild(el('p', 'wsdesc soft', `${MAT_BY[short0(R)][1]}哪裡來：${MAT_FROM[short0(R)] || '到釣客市集跟別人買'}`));
+  const go = el('button', 'wsgo');
+  if (sel.act){ go.textContent = sel.act.off ? sel.act.label : sel.act.label; if (sel.act.off){ go.disabled = true; det.appendChild(el('p', 'wsdesc soft', sel.act.off)); }
+    go.addEventListener('click', async () => { go.disabled = true; await sel.act.go(); go.disabled = false; }); }
+  else if (R){ go.textContent = why || sel.label || '做！'; go.disabled = !!why;
+    go.addEventListener('click', async () => { go.disabled = true; const args = { p_id: sel.id }; if (fish.length) args.p_fish = fish.map(x => String(x.t));
+      const r = await craftRpc(sel.fn || 'craft_item', args); if (sel.done(r)){ CraftUI.pick[sel.key] = []; craftPop(sel, r); } else go.disabled = false; }); }
+  det0.appendChild(go); }
+const MAT_FROM = { shell: '海邊撿垃圾、潛水撿垃圾時偶爾會撿到', net: '海邊撿垃圾時偶爾會撿到', wood: '海邊撿垃圾時偶爾會撿到', coral: '潛水撿垃圾時偶爾會撿到', pink: '潛水撿垃圾時很少會撿到', scale: '上面「用魚換魚鱗」' };
+function short0(R){ return matShort(R.m); }
+/* 做好了：跳一個小卡片，有品質的顯示幾顆星 */
+function craftPop(sel, r){ const old = $('#wsPop'); if (old) old.remove(); const bx = $('#sheet .box'); if (!bx) return;
+  const p = el('div', 'wspop'); p.id = 'wsPop'; const c = el('div', 'wspopc'); const ic = el('div', 'wspopic'); if (sel.sw) ic.appendChild(sel.sw()); else ic.textContent = sel.ico || ''; c.appendChild(ic);
+  if (r && r.q) c.appendChild(el('div', 'wsstars', '★'.repeat(r.q) + '☆'.repeat(3 - r.q)));
+  c.appendChild(el('h3', '', `${r && r.q ? GQ[r.q] + '的' : ''}${sel.name}！`)); c.appendChild(el('p', '', r && r.q === 3 ? '阿鐵師傅：「這個手不錯喔！」' : '阿鐵師傅：「拿去用吧。」'));
+  const ok = el('button', 'wsgo', '好'); ok.addEventListener('click', () => p.remove()); c.appendChild(ok); p.appendChild(c); p.addEventListener('click', e => { if (e.target === p) p.remove(); }); bx.appendChild(p); }
+/* 選魚的小視窗：用遊戲裡的魚圖；收藏⭐、展示中、變種的不會出現 */
+function craftPicker(o){ const old = $('#wsPick'); if (old) old.remove(); const bx = $('#sheet .box'); if (!bx) return;
+  const p = el('div', 'wspick'); p.id = 'wsPick'; const c = el('div', 'wspickc'); p.appendChild(c); bx.appendChild(p); p.addEventListener('click', e => { if (e.target === p) p.remove(); });
+  const chosen = new Set(o.cur || []); const max = o.mode === 'scale' ? 20 : o.n;
+  const draw = () => { c.textContent = ''; const x0 = el('button', 'wsx', '✕'); x0.addEventListener('click', () => p.remove()); c.appendChild(x0);
+    if (o.mode === 'scale'){ c.appendChild(el('h3', '', '💠 用魚換魚鱗')); c.appendChild(el('p', 'wsdesc soft', `常見魚 1 條換 1 片、稀有魚 1 條換 3 片，一天最多 40 條。點要換的魚，一次最多 20 條。`));
+      const tg = el('div', 'wstabs sm'); for (const r of ['常見', '稀有']){ const b = el('button', o.r === r ? 'on' : '', r + '魚'); b.addEventListener('click', () => { o.r = r; chosen.clear(); draw(); }); tg.appendChild(b); } c.appendChild(tg); }
+    else { c.appendChild(el('h3', '', `🐟 選 ${o.n} 條${o.saury ? '秋刀魚' : o.r + '魚'}`)); c.appendChild(el('p', 'wsdesc soft', '點魚選起來，再點一次取消。⭐收藏的、擺在展示的不會出現在這裡。')); }
+    const pool = craftPool(o.r, o.saury), g = el('div', 'wsfg');
+    if (!pool.length) g.appendChild(el('p', 'wsdesc', '魚缸裡沒有可以用的魚，去釣幾條再來吧。'));
+    for (const x of pool){ const f = FISH_BY_ID[x.f], t = String(x.t), b = el('button', 'wsf' + (chosen.has(t) ? ' on' : ''));
+      try { b.appendChild(fishCanvas(f, true, 80, 50)); } catch(e){ b.appendChild(el('b', '', '🐟')); } b.appendChild(el('span', '', f.name)); b.appendChild(el('small', '', `${(+x.w).toFixed(2)} kg`));
+      b.addEventListener('click', () => { if (chosen.has(t)) chosen.delete(t); else { if (max === 1) chosen.clear(); else if (chosen.size >= max){ toast(`最多選 ${max} 條`); return; } chosen.add(t); } SFX.click(); draw(); }); g.appendChild(b); }
+    c.appendChild(g);
+    const ok = el('button', 'wsgo');
+    if (o.mode === 'scale'){ const per = o.r === '稀有' ? 3 : 1; ok.textContent = chosen.size ? `換成 💠${chosen.size * per}` : '先選魚'; ok.disabled = !chosen.size;
+      ok.addEventListener('click', async () => { ok.disabled = true; const res = await craftRpc('mat_scale', { p_r: o.r, p_n: chosen.size, p_fish: [...chosen] }); if (res && res.player){ adoptRow(res.player); SFX.chat(); flash(`拿到魚鱗 ×${res.got}`, 1.4); p.remove(); renderTab(); } else ok.disabled = false; }); }
+    else { ok.textContent = chosen.size === o.n ? `就用這 ${o.n} 條` : `還要選 ${o.n - chosen.size} 條`; ok.disabled = chosen.size !== o.n;
+      ok.addEventListener('click', () => { CraftUI.pick[o.key] = [...chosen]; p.remove(); renderTab(); }); }
+    c.appendChild(ok); };
+  draw(); }
 function petMine(){ return Pets.list ? Pets.list.find(p => p.out) || null : null; }
 async function loadPets(force){ if (Pets.busy || !Cloud.on || !Cloud.sb) return; if (!force && Pets.at && Date.now() - Pets.at < 60000) return; Pets.busy = true; Pets.at = Date.now();
   try { const { data } = await Cloud.sb.rpc('pet_list'); if (Array.isArray(data)) Pets.list = data; } catch(e){} Pets.busy = false; Pets.homeKey = ''; pushPresence(true); if (!$('#sheet').hidden && curTab === 'pets') renderTab(); }
@@ -21131,7 +21191,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
-function closeSheet(){ closeModelView(); try { if (K3.real){ K3.tryEnd(); toast('沒買的造型換回原本的了'); } } catch(e){} if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
+function closeSheet(){ closeModelView(); { const wp = $('#wsPick'), wo = $('#wsPop'); if (wp) wp.remove(); if (wo) wo.remove(); } try { if (K3.real){ K3.tryEnd(); toast('沒買的造型換回原本的了'); } } catch(e){} if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
 $('#closeSheet').addEventListener('click', closeSheet);
@@ -21178,7 +21238,7 @@ function renderTab0(){
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
   const body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
-  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone');
+  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
   { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
   try { phoneHdr(); } catch(e){}
   if (curTab === 'dex' && !LS.get('tide.guideDex', false)) LS.set('tide.guideDex', true);   /* v582 新手任務第 2 步 */
@@ -21483,7 +21543,7 @@ function renderTab0(){
     const HELP2 = [
       ["釣魚", "fish", ["走到水邊，按住「拋竿」，放開。拋得越遠，稀有的魚越多。", "浮標點幾下是魚在試探，先別按。整個沉下去、跳出「!」再按，人物會用力揚竿把魚鉤住。", "拉魚時按住收線，張力條變紅就放開。線鬆太久魚會脫鉤。", "魚往外衝的時候，捲線器會「滋滋」叫、人會被往前扯，這時候放開，等牠跑完。往左竄，搖桿往右拉。跳出水面，放開。", "畫面中間跳出黃字是魚要出招了，變紅就照上面寫的做。做對了魚會累很快。", "地上發光的圈是好釣點。", "先看水面再拋：漣漪是小魚，黑影是大魚，海鳥盤旋是掠食魚，冒泡是底棲魚。拋在旁邊，砸在上面會嚇跑。", "清晨、黃昏、下雨天比較好釣。海邊要看潮汐，點右上角天氣那格有潮汐表。", "有些魚很挑（潮位、天氣、白天晚上、吃什麼餌），圖鑑裡每一種都有寫。", "沒釣過的魚只看得到黑影，拉上來才知道是什麼。", "魚拉上來會先掉在腳邊亂跳，頭上寫著是什麼魚、多重，跳完才撿起來。不想等就點一下畫面。"],
         ["傳說魚：竹釣竿在港口外海每竿約 0.2%～0.5%，其他地方 0.1%～0.2%。滿力拋比輕輕拋高一倍以上。好竿、魚餌、窩料、料理都會加。", "保底：連 150 條沒中傳說魚，之後每竿多一點機會（250 條時加 0.4%、400 條加 1%、最高加 3%），中了重算。釣蝦場不算。", "等咬大約 5～12 秒。小魚拉 6～10 秒，中型 15～25 秒，大魚 30～50 秒，傳說魚 1～2 分鐘。", "線鬆超過 3 秒左右會脫鉤。魚衝完、跳完的 1.6 秒內放著沒關係。", "水面的徵兆每 45 秒換一批。", "釣具店老闆每天報一種魚，那種魚當天在那個釣點多 2.5 倍。", "圖鑑每種魚三顆星：第一次釣到一顆；釣 10 條或釣到前 20% 大的兩顆；完美搏鬥一次加上前 5% 大的三顆。"]],
-      ["釣竿、魚餌、裝備", "fish", ["釣具店賣六支竿：竹竿（免費）、路亞軟竿、手竿、遠投竿、磯釣硬竿、黃金王者竿。", "竿子要用對地方：手竿在河、湖、溪；遠投竿在海邊；磯釣竿在港口外海和小島碼頭；路亞竿釣掠食魚。", "路亞、手竿、遠投、磯釣四支可以在背包的「釣組」升級，最高 5 級，要金幣和魚缸裡的魚。", "釣法在釣具店換，不用錢：浮標什麼都釣，路亞釣掠食魚，沉底釣底棲魚。", "細線咬得快但容易斷，粗線相反。", "魚餌挑魚：玉米粒釣鯉魚鯽魚，蝦仁釣鯛，蚯蚓釣底棲魚，活餌釣掠食魚。換上以後右上角會寫這裡哪些魚愛吃。", "阿鐵在釣具店旁邊，帶魚、金幣和材料去找他，可以做活餌、鉤子、浮標、路亞、修竿包、竿子造型、釣線顏色。第一次去他會送你一包入門材料。", "材料有六種：貝殼、舊漁網、漂流木、珊瑚碎片、魚鱗、粉紅貝。海邊撿垃圾、潛水撿垃圾時有機會多撿到；魚鱗在阿鐵的工坊用魚分解。", "普通浮標、普通假餌本來就在背包裡，免費、不會弄丟。阿鐵做的貝殼浮標（浮標釣）、魚鱗路亞（路亞釣法）讓魚咬得快一點，拉斷線會弄丟；品質有普通、精良、極品。到「包包 → 🎣 釣組」換。", "釣竿有耐久度，釣到越大的魚掉越多；掉到 0 拉魚時拉力上升比較快。修竿包一個補 40，可以用材料做，或直接付 🪙300 跟阿鐵買。", "材料、浮標、路亞、修竿包、阿鐵做的造型，可以到魚市場「🤝 釣客擺攤 → 🧺 材料・裝備」賣給別人，自己訂價，賣出收 5%。集章卡、排位送的造型不能賣。", "站得比水面高很多的地方釣到大魚要用撈網，釣具店「工具」有賣，買了會自己用。", "摺疊椅、釣台、竿架、遮陽傘也在「工具」。到水邊從背包「釣組」按「擺出來」，坐著就能釣。", "以前買的舊竿照樣能用，也可以在「釣組」免費換成現在的竿。"],
+      ["釣竿、魚餌、裝備", "fish", ["釣具店賣六支竿：竹竿（免費）、路亞軟竿、手竿、遠投竿、磯釣硬竿、黃金王者竿。", "竿子要用對地方：手竿在河、湖、溪；遠投竿在海邊；磯釣竿在港口外海和小島碼頭；路亞竿釣掠食魚。", "路亞、手竿、遠投、磯釣四支可以在背包的「釣組」升級，最高 5 級，要金幣和魚缸裡的魚。", "釣法在釣具店換，不用錢：浮標什麼都釣，路亞釣掠食魚，沉底釣底棲魚。", "細線咬得快但容易斷，粗線相反。", "魚餌挑魚：玉米粒釣鯉魚鯽魚，蝦仁釣鯛，蚯蚓釣底棲魚，活餌釣掠食魚。換上以後右上角會寫這裡哪些魚愛吃。", "阿鐵在釣具店旁邊，帶魚、金幣和材料去找他，可以做活餌、鉤子、浮標、路亞、修竿包、竿子造型、釣線顏色。第一次去他會送你一包入門材料。", "材料有六種：貝殼、舊漁網、漂流木、珊瑚碎片、魚鱗、粉紅貝。海邊撿垃圾、潛水撿垃圾時有機會多撿到；魚鱗在阿鐵的工坊用魚換（點上面的「💠 用魚換魚鱗」，自己挑要換哪幾條）。", "要用到魚的東西，格子是橘色虛線的：一開始先放你最輕的魚，點格子可以換成別條。收藏⭐、展示中的魚不會出現在裡面。", "普通浮標、普通假餌本來就在背包裡，免費、不會弄丟。阿鐵做的貝殼浮標（浮標釣）、魚鱗路亞（路亞釣法）讓魚咬得快一點，拉斷線會弄丟；品質有普通、精良、極品。到「包包 → 🎣 釣組」換。", "釣竿有耐久度，釣到越大的魚掉越多；掉到 0 拉魚時拉力上升比較快。修竿包一個補 40，可以用材料做，或直接付 🪙300 跟阿鐵買。", "材料、浮標、路亞、修竿包、阿鐵做的造型，可以到魚市場「🤝 釣客擺攤 → 🧺 材料・裝備」賣給別人，自己訂價，賣出收 5%。集章卡、排位送的造型不能賣。", "站得比水面高很多的地方釣到大魚要用撈網，釣具店「工具」有賣，買了會自己用。", "摺疊椅、釣台、竿架、遮陽傘也在「工具」。到水邊從背包「釣組」按「擺出來」，坐著就能釣。", "以前買的舊竿照樣能用，也可以在「釣組」免費換成現在的竿。"],
         ["價錢：路亞軟竿 800、手竿 500、遠投竿 800、磯釣硬竿 800、黃金王者竿 12,000。王者竿到哪裡稀有和傳說都是 1.3 倍。", "升級：2 級 800 金幣加常見魚 3 條；3 級 2,000 加稀有魚 2 條；4 級 4,500 加稀有魚 4 條；5 級 9,000 加傳說魚 1 條。用的是魚缸裡最輕的，收藏和我的海裡的不會動。5 級稀有 1.5 倍、傳說 1.4 倍。", "對上愛吃的餌，那種魚多 1.8 倍。沙蠶在退潮的沙灘挖，小螃蟹在珊瑚礁島的礁岩撿，各一天 6 次。", "鉤子：倒刺鉤線鬆比較不會脫鉤；圓形鉤每條魚原諒一次失誤；鍛造重鉤硬拉時張力升得慢；金鉤做對時魚多掉體力。阿鐵一天最多做 10 件。", "保養釣竿 200 金幣，接下來 30 竿收線快 10%、線比較不容易斷。", "摺疊椅 600、小釣台 1,500、竿架加魚護 900、遮陽傘加釣箱 800。後三樣要先有摺疊椅。有釣台可以多拋 3 公尺左右。", "竿架：等魚時按「跳」站起來，竿子插著，魚咬了鈴鐺會響，25 秒內回去坐下就能拉。", "撈網：站在高處釣到 1.5 公斤以上才需要。", "每支竿子會記得釣過幾條。100 條叫「順手」，500 條叫「老夥伴」，2,000 條叫「傳家寶」，只是紀念。"]],
       ["釣蝦場", "fish", ["在廣場東邊的街上，走到門口按按鈕進去。", "先跟櫃台的阿忠買時段，蝦竿和餌都附。", "坐到池邊的板凳就能拋竿。", "這裡不會跳「!」，要自己看浮標。輕輕點是試探，整個沉下去一直抖才提竿。", "拉蝦要慢，一直按著太用力蝦會鬆鉗。", "三隻泰國蝦可以拿到池邊的烤爐烤，不用錢。"],
         ["30 分鐘 200 金幣，60 分鐘 350，可以累加。", "櫃台賣的蝦竿：碳纖維 1,200、職人手工 4,000。好竿反應時間比較長、比較不會鬆鉗，不會改變釣到哪種蝦。", "每天中午到晚上某個時間，阿忠會放一隻藍色龍蝦進池子，持續 2 小時，全伺服器只有一隻。每竿大約 0.15% 碰到。釣到選放生拿 50 愛海點數。", "窩料在這裡不能用。"]],
@@ -22729,6 +22789,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u868', d:'11/26', items:[['🔧','阿鐵師傅的工坊換了新畫面：上面選分類，左邊選東西，右邊直接看到要什麼材料、還缺什麼，按「做！」就好。'],['🐟','做東西要用魚的時候可以自己挑哪一條，選魚的畫面是遊戲裡魚的樣子；不選的話一樣先用最輕的。'],['💠','換魚鱗也改成自己挑魚，一次最多 20 條。']] },
   { id:'u867', d:'11/26', items:[['🔧','阿鐵師傅的工坊改版：原本的東西照樣做，配方改成「金幣＋少一點魚＋材料」；新增貝殼浮標、魚鱗路亞（品質分普通、精良、極品）、修竿包、木雕握把竿、粉紅閃亮竿。第一次去會送一包入門材料'], ['🐚','材料：海邊撿垃圾、潛水撿垃圾時有機會多撿到貝殼、舊漁網、漂流木、珊瑚碎片、粉紅貝；魚可以在工坊分解成魚鱗'], ['🎣','釣竿有耐久度了：釣到越大的魚掉越多，用修竿包補（材料做，或直接付 🪙300 跟阿鐵買）。普通浮標、普通假餌本來就在背包裡，免費、不會弄丟'], ['🧺','魚市場「釣客擺攤」多了「🧺 材料・裝備」：材料、浮標、路亞、修竿包、工坊做的造型都能賣給別人'], ['🚶','村民更常出門散步了']] },
   { id:'u866', d:'11/26', items:[['🐕','柴犬換成精美的新模型：走路、坐下、趴下、看主人、捲尾巴搖搖搖；赤柴、芝麻柴、黑柴、白柴都有']] },
   { id:'u865', d:'11/26', items:[['👕','不會再突然跳出「阿萍的衣服：挑一套入門衣服」（那是舊人物的衣服，換新人物以後穿了也看不到）']] },

@@ -2447,3 +2447,61 @@ body.photo #hype{display:none}
 .durbar{height:8px;background:#e9e1d1;border-radius:6px;overflow:hidden;margin:4px 0;max-width:240px}
 .durbar i{display:block;height:100%;background:linear-gradient(90deg,#e2703a,#f2c94c)}
 .mkt-cats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+/* v868 阿鐵的工坊：自己的畫面（上面分類、左邊清單、右邊要的東西）＋選魚 */
+#sheet.wsOn .box{width:min(960px,calc(100vw - var(--gl,0px) - var(--gr,0px) - 8px));max-height:100%;height:100%;box-sizing:border-box}
+#sheet.wsOn #sheetBody{overflow:hidden;display:flex;flex-direction:column;flex:1;min-height:0}
+.ws{display:flex;flex-direction:column;gap:8px;color:#173042;flex:1;min-height:0}
+.wstop{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.wssay{margin:0;font-size:14px;color:#5a4a3a;flex:1 1 260px}
+.wstop .matbar{margin:0}
+.wsscale{cursor:pointer;background:#e8f4ee!important;color:#17696b!important;font-weight:700}
+.wstabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.wstabs button{flex:none;font-size:15px;font-weight:700;padding:7px 14px;border-radius:12px;background:#efe5d2;color:#6b5e4a}
+.wstabs button.on{background:#17696b;color:#fff}
+.wstabs.sm button{font-size:14px;padding:5px 12px}
+.wsrow{display:flex;gap:12px;align-items:stretch;flex:1;min-height:0}
+.wslist{flex:0 0 36%;display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding:2px;min-height:0}
+.wsit{display:flex;align-items:center;gap:10px;text-align:left;background:#fff;border:3px solid #e3d3b4;border-radius:14px;padding:8px 10px;color:#173042}
+.wsit.on{border-color:#e2703a;background:#fff1e6}
+.wsit b{display:block;font-size:16px}.wsit small{display:block;font-size:12px;color:#7a6a58}
+.wsit.mine small{color:#2e8b57;font-weight:700}
+.wsic{flex:none;width:44px;text-align:center;font-size:28px;line-height:1;display:inline-grid;place-items:center}
+.wsic canvas{width:44px!important;height:28px!important}
+.wsic.big{width:52px;font-size:34px}.wsic.big canvas{width:52px!important;height:32px!important}
+.wsdet{flex:1;min-width:0;min-height:0;overflow-y:auto;background:#fff;border:3px solid #e3d3b4;border-radius:16px;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.wsdetin{flex:1;min-height:0;overflow-y:auto;padding:10px 14px 4px}
+.wsdet>.wsgo{flex:none;margin:6px 14px 10px;align-self:flex-start}
+.wsname{display:flex;align-items:center;gap:8px;margin:0;font-size:22px}
+.wstags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.wstags span{font-size:13px;background:#e8f4ee;color:#17696b;border-radius:8px;padding:2px 9px;font-weight:700}
+.wsslots{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.wsslot{flex:1 1 76px;max-width:120px;min-height:92px;background:#f7f1e4;border-radius:12px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#173042;font-size:13px}
+.wsslot b{font-size:28px;line-height:1.1}.wsslot small{font-weight:700;font-size:13px}
+.wsslot.ok small{color:#2e8b57}.wsslot.no small{color:#c0392b}.wsslot.no{background:#fdecea}
+.wsslot.fish{border:3px dashed #e2703a;background:#fff4ea;cursor:pointer}
+.wsslot.fish canvas{width:64px!important;height:40px!important}
+.wsslot.fish.ok small{color:#e2703a}
+.wsq{display:flex;gap:6px;margin:4px 0 8px}.wsq span{flex:1;text-align:center;border-radius:10px;padding:6px 2px;font-weight:700;font-size:14px}
+.wsq .q1{background:#efe5d2}.wsq .q2{background:#dbeefa}.wsq .q3{background:#fde6c8}
+.wsdesc{margin:4px 0;font-size:14px;line-height:1.45}.wsdesc.soft{color:#7a6a58;font-size:13px}
+.wsgo{display:block;margin:12px 0 2px;min-width:180px;padding:11px 26px;border-radius:16px;font-size:20px;font-weight:900;background:linear-gradient(#ffb85c,#f08a24);color:#4a2500;box-shadow:0 5px 0 #b05a10}
+.wsgo:active{transform:translateY(3px);box-shadow:0 2px 0 #b05a10}
+.wsgo:disabled{background:#e9e1d1;color:#6b5e4a;box-shadow:0 5px 0 #b8ab92;font-size:17px}
+.wspick,.wspop{position:absolute;inset:0;z-index:20;background:rgba(20,40,60,.45);display:grid;place-items:center;padding:10px}
+.wspickc,.wspopc{position:relative;width:min(760px,100%);max-height:100%;overflow-y:auto;background:#fff8ea;border:6px solid #c98a4b;border-radius:18px;padding:14px 16px;box-sizing:border-box;color:#173042}
+.wspickc h3,.wspopc h3{margin:0 0 4px;font-size:22px}
+.wspickc{display:flex;flex-direction:column}.wspickc>*{flex:none}.wspickc .wsfg{flex:1 1 auto;min-height:0;overflow-y:auto;align-content:start}
+.wspickc .wsgo{margin:8px auto 2px}
+.wsx{position:absolute;right:10px;top:8px;width:34px;height:34px;border-radius:50%;background:#efe5d2;font-weight:900}
+.wsfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:8px 0}
+.wsf{position:relative;background:#fff;border:3px solid #e3d3b4;border-radius:14px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;font-size:14px;font-weight:700;color:#173042}
+.wsf canvas{width:80px!important;height:50px!important}.wsf small{font-weight:500;color:#7a6a58}
+.wsf.on{border-color:#e2703a;background:#fff1e6}.wsf.on::after{content:'✔';position:absolute;right:7px;top:3px;color:#e2703a;font-size:18px}
+.wspopc{width:min(380px,100%);text-align:center}
+.wspopic{position:relative;width:120px;height:120px;margin:0 auto;display:grid;place-items:center;font-size:62px}
+.wspopic::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:50%;background:repeating-conic-gradient(#ffd86a 0 10deg,#fff1b8 10deg 20deg);animation:wsspin 6s linear infinite}.wspopc{isolation:isolate}.wspopic canvas{width:80px!important;height:50px!important}
+@keyframes wsspin{to{transform:rotate(360deg)}}
+.wsstars{font-size:30px;color:#ffb000;letter-spacing:4px;margin-top:6px}
+.wspopc .wsgo{margin:10px auto 0}
+@media (max-height:520px){.wssay{display:none}.wstags{display:none}.wsname{margin-bottom:2px}.wspickc{padding:10px 12px}.wspickc h3{font-size:18px}.wsfg{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}.wsf canvas{width:64px!important;height:40px!important}.wsslot{min-height:66px;flex-basis:74px;padding:4px}.wsslot b{font-size:22px}.wsslot.fish canvas{width:52px!important;height:32px!important}.wsgo{padding:7px 22px;font-size:17px}.wsname{font-size:18px}.wsit{padding:5px 8px}.wstabs button{padding:5px 11px;font-size:14px}.ws{gap:6px}}
+.wsslot.fish{position:relative}.wschg{position:absolute;top:3px;right:4px;font-style:normal;font-size:11px;font-weight:900;color:#fff;background:#e2703a;border-radius:6px;padding:0 5px}
