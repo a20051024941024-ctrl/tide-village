@@ -9085,5 +9085,17 @@
  "開始邊走邊種：走過去的地方都會種下去（一次三排），再按一次停": "Planting as you walk: three rows wherever you go. Tap again to stop.",
  "開始邊走邊收：走過熟了的田就會收起來，再按一次停": "Harvesting as you walk: ripe crops you pass get collected. Tap again to stop.",
  "田裡最多種 300 株，先收一些": "Up to 300 plants. Harvest some first.",
- "停下來太久，先不種了": "You stopped for a while, so planting paused."
+ "停下來太久，先不種了": "You stopped for a while, so planting paused.",
+ "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。": "Your island's outer ring is forest in 4×4 m tiles you open one by one. Walk to the forest edge, face a white dashed square and tap \"Clear land\". The trees fall and the tile is yours to build and farm on.",
+ "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。": "New tiles must connect to your land. From 150 each, getting pricier as you go (up to 600), and each gives 1 driftwood. Check \"Island → 🌳 Island size\" on your phone for the full map.",
+ "小島改成一格一格開地：走到樹林邊面向白色虛線框按「開地」，一格 150 起，想往哪邊長就往哪邊開。以前買的大塊地都換成小格子了。": "Islands now grow tile by tile: face a white dashed square at the forest edge and tap \"Clear land\". From 150 a tile, grow in any direction. Plots you bought before became tiles.",
+ "手機「小島 → 🌳 島的大小」可以看整座島的地圖：開了幾格、還能開幾格、全部開完要多少。": "\"Island → 🌳 Island size\" shows a map of your island: tiles opened, tiles left and what it costs to open them all.",
+ "田的泥土改成跟草地一樣平。": "Field soil now sits flush with the grass.",
+ "開地": "Clear land",
+ "🌳 島的大小": "🌳 Island size",
+ "淺綠是開好的地、白色虛線是下一格可以開的、深綠是樹林、灰色是峭壁、紅點是你。走到樹林邊面向那格，按「開地」。": "Light green is opened land, white dashed is what you can open next, dark green is forest, grey is cliff, the red dot is you. Walk to the forest edge, face the tile and tap \"Clear land\".",
+ "🌳 島變大了！樹林邊的白色虛線框是可以開的地，走過去面向它按「開地」": "🌳 Your island grew! White dashed squares at the forest edge can be cleared. Face one and tap \"Clear land\".",
+ "🌱 空地也可以種！按「種田」就會邊走邊種，一次三排": "🌱 You can farm empty land too! Tap \"Farm\" to plant as you walk, three rows at a time.",
+ "🌱 種子除了種在菜園，島上開好的空地也能種：拿在手上按「種田」，走過去就種下去": "🌱 Besides the garden, you can plant on any cleared land: hold the seeds, tap \"Farm\" and walk.",
+ "這裡還沒開，到樹林邊按「開地」": "Not cleared yet. Tap \"Clear land\" at the forest edge."
 }

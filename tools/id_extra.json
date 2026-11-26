@@ -8809,5 +8809,17 @@
  "開始邊走邊種：走過去的地方都會種下去（一次三排），再按一次停": "Menanam sambil berjalan: tiga baris di mana pun kamu lewat. Ketuk lagi untuk berhenti.",
  "開始邊走邊收：走過熟了的田就會收起來，再按一次停": "Panen sambil berjalan: tanaman matang yang kamu lewati akan dipanen. Ketuk lagi untuk berhenti.",
  "田裡最多種 300 株，先收一些": "Maksimal 300 tanaman. Panen dulu sebagian.",
- "停下來太久，先不種了": "Kamu diam cukup lama, jadi menanam dihentikan."
+ "停下來太久，先不種了": "Kamu diam cukup lama, jadi menanam dihentikan.",
+ "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。": "Bagian luar pulaumu berupa hutan dalam petak 4×4 m yang dibuka satu per satu. Datangi tepi hutan, hadapkan ke kotak bergaris putih, lalu ketuk \"Buka lahan\". Pohonnya tumbang dan petak itu jadi milikmu untuk dibangun dan ditanami.",
+ "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。": "Petak baru harus tersambung dengan tanahmu. Mulai 150 per petak, makin mahal (maksimal 600), dan tiap petak memberi 1 kayu apung. Lihat peta lengkap di \"Pulau → 🌳 Ukuran pulau\" di ponselmu.",
+ "小島改成一格一格開地：走到樹林邊面向白色虛線框按「開地」，一格 150 起，想往哪邊長就往哪邊開。以前買的大塊地都換成小格子了。": "Pulau sekarang tumbuh petak demi petak: hadapkan ke kotak bergaris putih di tepi hutan dan ketuk \"Buka lahan\". Mulai 150 per petak, tumbuh ke arah mana saja. Petak besar yang dulu dibeli sudah jadi petak kecil.",
+ "手機「小島 → 🌳 島的大小」可以看整座島的地圖：開了幾格、還能開幾格、全部開完要多少。": "\"Pulau → 🌳 Ukuran pulau\" menampilkan peta pulaumu: petak yang dibuka, sisa petak, dan biaya membuka semuanya.",
+ "田的泥土改成跟草地一樣平。": "Tanah ladang sekarang rata dengan rumput.",
+ "開地": "Buka lahan",
+ "🌳 島的大小": "🌳 Ukuran pulau",
+ "淺綠是開好的地、白色虛線是下一格可以開的、深綠是樹林、灰色是峭壁、紅點是你。走到樹林邊面向那格，按「開地」。": "Hijau muda = tanah terbuka, garis putih = petak berikutnya, hijau tua = hutan, abu-abu = tebing, titik merah = kamu. Datangi tepi hutan, hadapkan ke petak itu dan ketuk \"Buka lahan\".",
+ "🌳 島變大了！樹林邊的白色虛線框是可以開的地，走過去面向它按「開地」": "🌳 Pulaumu membesar! Kotak bergaris putih di tepi hutan bisa dibuka. Hadapkan ke sana dan ketuk \"Buka lahan\".",
+ "🌱 空地也可以種！按「種田」就會邊走邊種，一次三排": "🌱 Tanah kosong juga bisa ditanami! Ketuk \"Bertani\" untuk menanam sambil berjalan, tiga baris sekaligus.",
+ "🌱 種子除了種在菜園，島上開好的空地也能種：拿在手上按「種田」，走過去就種下去": "🌱 Selain di kebun, kamu bisa menanam di tanah terbuka: pegang benih, ketuk \"Bertani\", lalu berjalan.",
+ "這裡還沒開，到樹林邊按「開地」": "Belum dibuka. Ketuk \"Buka lahan\" di tepi hutan."
 }
