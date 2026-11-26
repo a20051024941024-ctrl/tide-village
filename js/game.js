@@ -21589,7 +21589,7 @@ function updateAmo(n, dt, t){
   let mode, s; if (ph < S){ mode = 'go'; s = ph * AMO.speed; } else if (ph < fishEnd){ mode = 'sea'; s = c.len; } else if (ph < fishEnd + S){ mode = 'back'; s = c.len - (ph - fishEnd) * AMO.speed; } else mode = 'pier';
   { const fl = n.boat.userData.flag; if (fl && camera.position.distanceTo(n.boat.position) < 60) fl.rotation.y = Math.sin(t * 5.5) * 0.35 + (mode === 'go' || mode === 'back' ? 0.25 : 0); }
   if (mode === 'pier'){ n.boat.position.set(AMO.dock[0], WATER_LEVEL, AMO.dock[1]); n.boat.rotation.set(0, Math.PI / 2, 0); n.boatHd = Math.PI / 2;
-    if (n.amoMode !== 'pier'){ { const L = amoLand(n); n.pos.set(L[0], 0, L[1]); n.baseY = groundHeight(L[0], L[1]); }   /* v863 從船上跨到碼頭邊（以前直接放回 9 公尺外的原位，看起來像瞬移） */ n.rot = n.homeRot; n.sitting = false; n.fishing = false; n.bobState = 'none'; n.flying = null; n.amoSeat = null; n.amoTired = t + 4; if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['今天又沒遇到……下一趟換個地方', '好累……我坐一下打一場', '上岸了，先打一場再說']), '', 4); }
+    if (n.amoMode !== 'pier'){ { const L = amoLand(n); n.pos.set(L[0], 0, L[1]); n.baseY = groundHeight(L[0], L[1]); }   /* v863 從船上跨到碼頭邊（以前直接放回 9 公尺外的原位，看起來像瞬移） */ n.rot = n.homeRot; n.sitting = false; n.fishing = false; n.bobState = 'none'; n.flying = null; n.amoSeat = null; n.amoInBoat = false; n.amoTired = t + 4; if (n.amoMode && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['今天又沒遇到……下一趟換個地方', '好累……我坐一下打一場', '上岸了，先打一場再說']), '', 4); }
     amoBench(n, dt, t, AMO.cycle - ph); }  else { n.floorSit = false; const [x, z, hd0] = amoAt(c, s), bob = Math.sin(t * 1.6 + 1) * 0.04, out = Math.atan2(Math.cos(c.aT), Math.sin(c.aT)) * 0 + Math.atan2(x, z);   /* 釣魚的時候面向外海（背對島） */
     const hd = mode === 'sea' ? out : hd0 + (mode === 'back' ? Math.PI : 0), bh = mode === 'sea' ? out - Math.PI / 2 : hd;   /* v887 到了釣點船橫過來，兩個人並排面向外海 */
     n.boatHd = n.boatHd == null ? bh : lerpAngle(n.boatHd, bh, 1 - Math.exp(-1.5 * dt));
@@ -21602,6 +21602,7 @@ function updateAmo(n, dt, t){
   n.amoMode = mode; amoDevice(n, mode, t);
   if (mode !== 'pier') for (const y of npcs) if (y.yin && y.yOnBoat){ duoYinSeat(y, n); if (y.av && y.av.g){ y.av.g.position.x = y.pos.x; y.av.g.position.z = y.pos.z; } }   /* 船先動完再把阿穎放上去（不然阿穎比阿默先更新，會落後船一格） */
 }
+function duoSeat(n, z){ const b = npcs.find(x => x.amo).boat, hd = b.rotation.y; n.pos.set(b.position.x + Math.sin(hd) * z, 0, b.position.z + Math.cos(hd) * z); n.baseY = WATER_LEVEL - 0.08; n.rot = hd; n.sitting = true; n.speed = 0; }   /* v903 停在碼頭的默穎號上坐著 */
 function duoYinSeat(n, A){ const b = A.boat, hd = b.rotation.y; n.pos.set(b.position.x + Math.sin(hd) * DUO.yinZ, 0, b.position.z + Math.cos(hd) * DUO.yinZ); n.baseY = A.baseY; }
 const pick2 = a => a[Math.floor(Math.random() * a.length)];
 /* v825 阿默上岸：先喘一下 → 慢慢走到港邊廣場最近的長椅 → 坐下打遊戲機 → 快出海時站起來走回碼頭（有玩家坐著的長椅就換一張） */
@@ -21620,8 +21621,11 @@ function amoWalk(n, dt, x, z){ const W = n._aw; if (!W || Math.abs(W.x - x) > 0.
 function amoLand(n){ if (AMO.land) return AMO.land; const [x0, z0] = AMO.dock, H = n.home || n.pos; for (let u = 0; u <= 1.0001; u += 0.02){ const x = x0 + (H.x - x0) * u, z = z0 + (H.z - z0) * u; if (walkable(x, z) && groundHeight(x, z) > 0.1){ const k = Math.min(1, u + 0.04); return AMO.land = [x0 + (H.x - x0) * k, z0 + (H.z - z0) * k]; } } return AMO.land = [H.x, H.z]; }
 function amoBench(n, dt, t, left){ const H0 = n.home, L = amoLand(n), H = { x: L[0], z: L[1] }, near = camera.position.distanceTo(n.pos) < 25;
   if (t < (n.amoTired || 0)){ n.speed = 0; n.sitting = false; return; }
-  if (!n.amoSeat){ let best = null, bd = 1e9; for (const c of CHAIRS){ if (!c.back || c.nook || c.gear || c.shrimp) continue; const d = Math.hypot(c.x - H0.x, c.z - H0.z); if (d > 22 || d >= bd || amoSeatBusy(c)) continue; best = c; bd = d; } n.amoSeat = best || 'none'; }
-  const c = n.amoSeat; if (c === 'none'){ n.speed = 0; n.sitting = false; return; }
+  if (n.amoSeat === 'none' && t > (n.amoSeatRetry || 0)) n.amoSeat = null;   /* v903 作者：「阿默剛剛在這個位置卡住了」→ 長椅被坐走（玩家、阿穎）的時候以前就一直站在船邊兩分鐘不動；現在每 5 秒再找一次，等的時候站著打遊戲機 */
+  if (!n.amoSeat){ let best = null, bd = 1e9; for (const c of CHAIRS){ if (!c.back || c.nook || c.gear || c.shrimp) continue; const d = Math.hypot(c.x - H0.x, c.z - H0.z); if (d > 22 || d >= bd || amoSeatBusy(c)) continue; best = c; bd = d; } n.amoSeat = best || 'none'; if (!best) n.amoSeatRetry = t + 5; }
+  if (n.amoInBoat){ duoSeat(n, DUO.amoZ); return; }
+  const c = n.amoSeat; if (c === 'none'){ n.speed = 0; n.sitting = false; if (Math.hypot(n.pos.x - H.x, n.pos.z - H.z) > 0.2){ amoWalk(n, dt, H.x, H.z); return; }   /* 長椅都有人：回自己的默穎號，坐在船尾打遊戲機 */
+    n.amoInBoat = true; n.amoSeatRetry = 1e12; duoSeat(n, DUO.amoZ); if (near) n.say(pick2(['椅子都有人……那我回船上打', '船上也可以打']), '', 3); return; }
   const [fx, fz] = chairFront(c);
   const kk = Math.floor(Date.now() / 1000 / AMO.cycle); if (n.amoLeave === kk || left < Math.hypot(fx - H.x, fz - H.z) / 0.85 * 1.4 + 4){ n.amoLeave = kk;   /* 快出海了：站起來走回碼頭（v887 決定要走就不會再坐回去；走尋路比直線遠，多留一點時間） */
     if (n.sitting){ n.sitting = false; n._aw = null; n._awPre = [fx, fz]; if (near) n.say(pick2(['該出海了……', '好，再去找一次紅鯊']), '', 3); }
@@ -21693,10 +21697,12 @@ function updateYin(n, dt, t){ const A = npcs.find(x => x.amo); if (!A || !A.boat
     yinOff(n);
     const rideNext = (hash32('yin' + (k + 1)) & 3) < 2, L = amoLand(A), ldx = A.home.x - L[0], ldz = A.home.z - L[1], ldl = Math.hypot(ldx, ldz) || 1, G = rideNext ? { x: L[0] + ldx / ldl * 0.9, z: L[1] + ldz / ldl * 0.9 } : H;   /* 下一趟要跟船：走到船旁邊；不跟：走回自己釣魚的位置 */
     if (n.yLeave === k || left < Math.hypot(n.pos.x - G.x, n.pos.z - G.z) / 0.85 * 1.4 + 6){ n.yLeave = k;   /* 阿默快出海了：一起站起來走回碼頭（v887 作者：「從旁邊的椅子下來的時候，阿穎動的很奇怪」→ 以前站起來往前一步，離碼頭變近，條件又不成立就坐回去，坐下、站起來一直來回。現在決定要走就走） */
+      if (n.yInBoat){ if (rideNext){ duoSeat(n, DUO.yinZ); amoDevice(n, 'x', t); return true; } n.yInBoat = false; n.sitting = false; n.pos.set(L[0], 0, L[1]); n.baseY = groundHeight(L[0], L[1]); }   /* v903 在船上等：要跟就直接坐著，不跟就跨回碼頭再走 */
       if (n.sitting && n.ySeat && n.ySeat !== 'none'){ const c = n.ySeat; n.sitting = false; n._aw = null; n._awPre = chairFront(c); }
       n.sitting = false; n.ySeat = null; amoDevice(n, 'x', t);
       if (amoWalk(n, dt, G.x, G.z)){ n.baseY = groundHeight(G.x, G.z); n.rot = lerpAngle(n.rot, rideNext ? Math.atan2(AMO.dock[0] - G.x, AMO.dock[1] - G.z) : n.yHomeRot, 1 - Math.exp(-4 * dt)); } return true; }
     const c0 = A.amoSeat;
+    if (A.amoInBoat){ const L2 = amoLand(A); if (!n.yInBoat && Math.hypot(n.pos.x - L2[0], n.pos.z - L2[1]) > 0.2){ n.sitting = false; amoWalk(n, dt, L2[0], L2[1]); amoDevice(n, 'x', t); return true; } n.yInBoat = true; duoSeat(n, DUO.yinZ); amoDevice(n, 'pier', t); if (A.sitting) yinBanter(n, A, t); return true; }   /* v903 阿默在船上打：阿穎也上船坐船頭一起打 */
     if (!c0 || c0 === 'none'){ n.sitting = false; const tx = A.pos.x - 1.2, tz = A.pos.z; if (Math.hypot(n.pos.x - tx, n.pos.z - tz) > 0.3) amoWalk(n, dt, tx, tz); else n.speed = 0; amoDevice(n, 'x', t); return true; }
     if (!n.ySeat){ let best = null, bd = 1e9; for (const c of CHAIRS){ if (c === c0 || c.nook || c.gear || c.shrimp) continue; const d = Math.hypot(c.x - c0.x, c.z - c0.z); if (d > 3.2 || d >= bd || amoSeatBusy(c)) continue; best = c; bd = d; } n.ySeat = best || 'none'; }
     const c = n.ySeat;
@@ -21705,7 +21711,7 @@ function updateYin(n, dt, t){ const A = npcs.find(x => x.amo); if (!A || !A.boat
     if (!n.sitting){ if (amoSeatBusy(c)){ n.ySeat = null; return true; } const [fx, fz] = chairFront(c);
       if (amoWalk(n, dt, fx, fz)){ n.sitting = true; n.pos.x = seatX(c); n.pos.z = seatZ(c); n.baseY = c.y; n.rot = c.face; n.speed = 0; if (near) n.say(pick2(['阿默，來打一場！', '我坐這邊喔', '今天一定要上牌位']), '', 3); } }
     amoDevice(n, n.sitting ? 'pier' : 'x', t); if (n.sitting && A.sitting) yinBanter(n, A, t); return true; }
-  n.ySeat = null;
+  n.ySeat = null; n.yInBoat = false;
   if (ride){   /* 跟阿默上船：坐在他後面，到了釣點往船邊拋竿 */
     if (!n.yOnBoat){ n.yOnBoat = true; n.sitting = true; amoDevice(n, 'x', t); if (near && mode === 'go') n.say('阿默等我！我也要去', '', 3); }
     const b = A.boat, hd = b.rotation.y; duoYinSeat(n, A); n.speed = 0;   /* v887 坐默穎號的船頭 */
@@ -23742,6 +23748,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u903', d:'11/26', items:[['⛵','阿默上岸時長椅都被坐走了，不會再站在船邊兩分鐘不動：他會回默穎號坐在船尾打遊戲機，阿穎也跟著上船坐船頭一起打']] },
   { id:'u902', d:'11/26', items:[['📺','潮汐大看板從釣具店屋頂搬下來，改成港邊廣場海邊沙灘上自己一座（兩根柱子撐著，背後就是海），不會再壓在店上面']] },
   { id:'u901', d:'11/26', items:[['📺','潮汐大看板放大快一倍（8×4.5 公尺），字幕加大，影片畫質調高，從廣場看得比較清楚']] },
   { id:'u900', d:'11/26', items:[['📺','港邊廣場釣具店的屋頂多了一面「潮汐大看板」，輪流播村子裡的玩法（釣大魚、開船、潛水、蓋房子、寵物…）和即將推出的新東西；站在廣場噴水池旁按「大看板」可以全螢幕看']] },
