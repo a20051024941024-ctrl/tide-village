@@ -7536,6 +7536,7 @@ function actionDown(){
     { const wf = !Wild.busy && !Wild.build && nearWildFire(); if (wf){ act.classList.remove('down'); wildFireAdd(wf); return; } }   /* v591 營火：加木頭 */
     if (nearCage()){ act.classList.remove('down'); openSheet('cage'); return; }   /* 箱網 */
     if (nearSeedShop()){ act.classList.remove('down'); Farm.view = 'shop'; openSheet('farm'); return; }   /* 種子攤 */
+    { const rd = nearRoomDoor(); if (rd && isleRank() >= 2){ act.classList.remove('down'); Room.door = rd; openSheet('roomsign'); return; } }   /* v887 門上掛名牌 */
     if (nearChest()){ act.classList.remove('down'); isleTab = 'shop'; Isle2.cat = 'chest'; try { SFX.click(); } catch(e){} openSheet('island'); return; }   /* v886 大箱子 */
     if (nearSeaDive()){ act.classList.remove('down'); seaDive(); return; }   /* 小島碼頭的潛水梯：下去海底花園 */
     { const fp = nearFarm(); if (fp){ act.classList.remove('down'); farmAct(fp); return; } }   /* 小島菜園 */
@@ -8019,6 +8020,7 @@ function updateFishing(dt, t){
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearSeaDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '🪸 海底花園' : '🤿 要先買裝備'; cls = 'shop'; }
+    else if (nearRoomDoor() && isleRank() >= 2){ const rr = roomOfDoor(nearRoomDoor()); label = '名牌'; sub = rr ? `${roomIcon(rr)} ${rmName(rr)}` : '🚪 掛名牌'; cls = 'shop'; }
     else if (nearChest()){ const n = Object.values(isleBagAll()).reduce((a, b) => a + (+b > 0 ? +b : 0), 0); label = '大箱子'; sub = n ? `📦 裡面有 ${n} 樣` : '📦 空的'; cls = 'shop'; }
     else if (nearSeedShop()){ const L = CROPS.find(C => C.lim === farmWeek()); label = '種子攤'; sub = L ? `${L.icon} 本週限定：${L.name}` : '🌱 買種子'; cls = 'shop'; }
     else if (nearFarm()){ const fb = farmBtn(nearFarm()); label = fb[0]; sub = fb[1]; cls = 'shop'; }
@@ -9290,7 +9292,7 @@ function updateFar(dt, t){
   if (Far.green && Far.gAnim) Far.gAnim(dt, t);
   if (!Far.abyss && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 90) buildAbyss();
   if (!Far.myst && Math.hypot(me.pos.x - MYST.x, me.pos.z - MYST.z) < 90) buildMyst();
-  if (ISL2.reefM && onIsle) ISL2.reefM.uniforms.uT.value = t; Land.t = t; if (Land.fall.length) landTick(); if (onIsle) chestTick(Math.min(0.1, t - (Land.ct || t))); Land.ct = t;
+  if (ISL2.reefM && onIsle) ISL2.reefM.uniforms.uT.value = t; Land.t = t; if (Land.fall.length) landTick(); if (onIsle){ const dt0 = Math.min(0.1, t - (Land.ct || t)); chestTick(dt0); roomTick(dt0); } Land.ct = t;
   if (Far.deepMats && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 140) for (const m of Far.deepMats) m.uniforms.uT.value = t;
   if (Far.jelly && frameNo % 3 === 0 && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 70){ Far.jelly.position.y = Math.sin(t * 0.5) * 0.25; Far.jelly.material.opacity = 0.55 + Math.sin(t * 1.3) * 0.2; }
   if (Far.lava) Far.lava.material.color.setHSL(0.05, 1, 0.5 + Math.sin(t * 2) * 0.08);
@@ -9326,7 +9328,7 @@ async function visitIsle(id, name){
   try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: id }); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show, land: +data.land || 0, tiles: Array.isArray(data.tiles) ? data.tiles : [], bag: data.bag && typeof data.bag === 'object' ? data.bag : null }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
   catch(e){ toast('暫時連不上雲端'); }
 }
-function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); if (Blk.on) blkStop(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
+function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); if (Blk.on) blkStop(); onIsle = null; Room.list = []; roomDraw(); roomGapShow(null); clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
 function checkIsle(){ if (onIsle && !Dive.on && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > ISL2.R + 20){ stopBuild(); if (Blk.on) blkStop(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
 async function likeIsle(){
   if (!onIsle || onIsle.owner === myIdOrMe() || !Cloud.sb) return;
@@ -9487,9 +9489,78 @@ function blkCols(){ if (Blk.cols) for (const c of Blk.cols){ const i = colliders
     if (p >= 0 || h > 2 || g0 > 0) c.top = null; else c.top = blkO().y + h * 0.5;   /* 一兩層的方塊可以跳上去站；三層以上、隔板會擋住 */
     colliders.push(c); Blk.cols.push(c); } }
 function blkClear(){ if (Blk.g){ scene.remove(Blk.g); for (const im of Object.values(Blk.ims)) im.dispose(); } Blk.g = null; Blk.ims = {}; Blk.b = []; Blk.owner = null; Blk.undo = []; blkCols(); }
-async function blkLoad(owner){ if (Blk.lot){ BLS.at = 0; await blLoad(true); const L = blRow(Blk.lot.i); Blk.b = (L.b || []).map(x => x.slice()); blkDraw(); return; } Blk.owner = owner; Blk.b = []; Blk.undo = []; blkDraw();
+async function blkLoad(owner){ if (Blk.lot){ BLS.at = 0; await blLoad(true); const L = blRow(Blk.lot.i); Blk.b = (L.b || []).map(x => x.slice()); blkDraw(); return; } Blk.owner = owner; Blk.b = []; Blk.undo = []; Room.list = []; blkDraw();
   if (!Cloud.on || !Cloud.sb){ if (owner === myIdOrMe()){ Blk.b = Array.isArray(rec.isleBlocks) ? rec.isleBlocks.slice() : []; blkDraw(); } return; }
-  try { const { data } = await Cloud.sb.rpc('isle_blocks_get', { p_owner: owner }); if (Blk.owner === owner && Array.isArray(data) && !Blk.pend.add.length && !Blk.pend.del.length){ Blk.b = data; blkDraw(); } } catch(e){} }
+  try { const { data } = await Cloud.sb.rpc('isle_blocks_get', { p_owner: owner }); if (Blk.owner === owner && Array.isArray(data) && !Blk.pend.add.length && !Blk.pend.del.length){ Blk.b = data; blkDraw(); } } catch(e){}
+  roomLoad(owner); }
+/* ===== v887 自己圍房間＋名牌門（伺服器 247、248）=====
+   作者：「小角落這個東西，我在家裡自己圍一個不是更好」「拿方塊或隔板」「我看天天就有人會自己做廁所或房間」
+   用方塊／隔板圍一圈（至少 2 塊高）、留一個門，在門上掛名牌就是一間房間。「我的房間」只有自己能動裡面的東西；廁所、浴室…是大家的。 */
+const ROOM_KINDS = [['mine', '🛏️', '我的房間'], ['toilet', '🚻', '廁所'], ['bath', '🛁', '浴室'], ['kitchen', '🍳', '廚房'], ['game', '🎮', '遊戲間'], ['closet', '👗', '衣帽間'], ['custom', '🏷️', '自己取名']];
+const Room = { list: [], g: null, signs: [], gap: null, gapT: 0, inside: null, door: null, t: 0 };
+const roomKey = (gx, gz) => (gx + 500) * 1000 + (gz + 500);
+function rmName(r){ if (!r) return ''; if (r.kind === 'mine') return r.uid === myIdOrMe() ? '我的房間' : `${r.name || '釣客'}的房間`; if (r.kind === 'custom') return r.label || '房間'; if (r.kind === 'shared') return '大家的房間'; const k = ROOM_KINDS.find(x => x[0] === r.kind); return k ? k[2] : '房間'; }
+function roomIcon(r){ if (r.kind === 'shared') return '🚪'; const k = ROOM_KINDS.find(x => x[0] === r.kind); return k ? k[1] : '🚪'; }
+/* 牆：同一格這層和上一層都有東西（地磚、遮雨棚不算） */
+function roomWalls(gy){ const lv = [new Set(), new Set()]; for (const x of Blk.b){ if (x[3] === 'tl' || x[3] === 'aw') continue; const d = x[2] - gy; if (d === 0 || d === 1) lv[d].add(roomKey(x[0], x[1])); } const w = new Set(); for (const k of lv[0]) if (lv[1].has(k)) w.add(k); return w; }
+/* 從一格往外找；回傳 { cells } 或 { leak: 走出去的路 } */
+function roomFill(w, sx, sz){ const k0 = roomKey(sx, sz); if (w.has(k0)) return null; const seen = new Map([[k0, -1]]), q = [[sx, sz]];
+  for (let i = 0; i < q.length; i++){ const [x, z] = q[i]; if (Math.max(Math.abs(x - sx), Math.abs(z - sz)) >= 31 || seen.size > 900) return { leak: [x, z], seen };
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const nx = x + dx, nz = z + dz, k = roomKey(nx, nz); if (seen.has(k) || w.has(k)) continue; seen.set(k, roomKey(x, z)); q.push([nx, nz]); } }
+  return { cells: [...seen.keys()] }; }
+function roomDoorSides(d){ return (d[4] || 0) % 2 ? [[d[0] - 1, d[1]], [d[0] + 1, d[1]]] : [[d[0], d[1] - 1], [d[0], d[1] + 1]]; }
+function roomCalc(d){ const w = roomWalls(d[2]), A = roomDoorSides(d).map(([x, z]) => roomFill(w, x, z));
+  const ok = A.filter(a => a && a.cells); if (ok.length) return { cells: ok.sort((a, b) => a.cells.length - b.cells.length)[0].cells };
+  /* 沒圍好：找缺口。門旁邊連著的牆圍出一個範圍，往外跑的路上最後一格還在範圍裡的就是缺口 */
+  const comp = new Set(), st = [roomKey(d[0], d[1])], wk = new Set(w); wk.add(roomKey(d[0], d[1]));
+  while (st.length){ const k = st.pop(); if (comp.has(k)) continue; comp.add(k); const x = Math.floor(k / 1000) - 500, z = k % 1000 - 500; for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++){ const n = roomKey(x + dx, z + dz); if (wk.has(n) && !comp.has(n)) st.push(n); } }
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const k of comp){ const x = Math.floor(k / 1000) - 500, z = k % 1000 - 500; x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  for (const a of A){ if (!a || !a.leak) continue; const [sx, sz] = roomDoorSides(d)[A.indexOf(a)]; if (sx < x0 || sx > x1 || sz < z0 || sz > z1) continue;
+    /* 找的順序是由近到遠：第一個走出範圍的格子，沿著來的路往回，最後一格還在範圍裡的就是缺口 */
+    const inB = c => { const cx = Math.floor(c / 1000) - 500, cz = c % 1000 - 500; return cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1; };
+    for (const [k, par] of a.seen){ if (inB(k)) continue; let c = par; while (c >= 0 && !inB(c)) c = a.seen.get(c); if (c >= 0) return { gap: [Math.floor(c / 1000) - 500, c % 1000 - 500, d[2]] }; break; } }
+  return { gap: null }; }
+async function roomLoad(owner){ if (!Cloud.on || !Cloud.sb || !owner){ Room.list = []; roomDraw(); return; } try { const { data } = await Cloud.sb.rpc('isle_rooms', { p_owner: owner }); if (onIsle && onIsle.owner === owner && Array.isArray(data)){ Room.list = data; roomDraw(); } } catch(e){} }
+function roomSet(L){ if (Array.isArray(L)){ Room.list = L; roomDraw(); if (!$('#sheet').hidden && curTab === 'roomsign') renderTab(); } }
+function roomSignTex(r){ const c = document.createElement('canvas'); c.width = 320; c.height = 112; const x = c.getContext('2d'), broken = !(r.cells && r.cells.length);
+  x.fillStyle = '#7a4f2a'; x.fillRect(0, 0, 320, 112); x.fillStyle = broken ? '#f6e3c8' : '#fff6d8'; x.fillRect(8, 8, 304, 96); x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = '44px sans-serif'; x.fillStyle = '#3a2a1a'; const t = roomIcon(r) + ' ' + rmName(r); x.fillText(t, 160, broken ? 46 : 58, 290); if (broken){ x.font = '24px sans-serif'; x.fillStyle = '#c0392b'; x.fillText('牆有缺口', 160, 86); }
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx; }
+function roomDraw(){ if (Room.g){ scene.remove(Room.g); Room.g.traverse(o => { if (o.material && o.material.map) o.material.map.dispose(); if (o.geometry) o.geometry.dispose(); }); Room.g = null; } Room.signs = [];
+  if (!onIsle || Blk.lot || !Room.list.length) return; const g = Room.g = new THREE.Group(); g.userData.keep = true; scene.add(g);
+  for (const r of Room.list){ const d = blkAt(r.gx, r.gz, r.gy); if (!d || d[3] !== 'dr') continue; const tx = roomSignTex(r), piv = new THREE.Group();
+    piv.position.set(ISLE.x + r.gx * 0.5, ISLE.y + r.gy * 0.5 + 1.2, ISLE.z + r.gz * 0.5); piv.rotation.y = (d[4] || 0) * Math.PI / 2; g.add(piv);
+    for (const s of [1, -1]){ const m = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.3), new THREE.MeshBasicMaterial({ map: tx })); m.position.set(0, -0.12, s * 0.07); if (s < 0) m.rotation.y = Math.PI; piv.add(m); }
+    piv.add(box([0.02, 0.08, 0.02], '#5a3a1c', [-0.3, 0, 0])); piv.add(box([0.02, 0.08, 0.02], '#5a3a1c', [0.3, 0, 0]));
+    Room.signs.push({ piv, ph: (r.gx * 7 + r.gz * 3) % 10 }); } }
+function roomAt(x, z, y){ if (!onIsle || Blk.lot) return null; const gx = Math.round((x - ISLE.x) * 2), gz = Math.round((z - ISLE.z) * 2), k = roomKey(gx, gz);
+  return Room.list.find(r => r.cells && r.cells.includes(k) && (y == null || Math.abs(y - (ISLE.y + r.gy * 0.5)) < 0.9)) || null; }
+/* 別人的「我的房間」：裡面的東西、牆，只有他自己能動 */
+function roomLockAt(gx, gz, ring){ const me = myIdOrMe(), k = roomKey(gx, gz); for (const r of Room.list){ if (r.kind !== 'mine' || !r.uid || r.uid === me || !(r.cells && r.cells.length)) continue;
+    if (r.cells.includes(k)) return r; if (ring){ for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) if (r.cells.includes(roomKey(gx + dx, gz + dz))) return r; } } return null; }
+function nearRoomDoor(){ if (!onIsle || Blk.lot || Blk.on || Build.on || myBoat || mySeat || House.on || F.phase !== 'idle') return null; let best = null, bd = 1.25;
+  for (const x of Blk.b){ if (x[3] !== 'dr') continue; const wx = ISLE.x + x[0] * 0.5, wz = ISLE.z + x[1] * 0.5, wy = ISLE.y + x[2] * 0.5; if (Math.abs(me.pos.y - wy) > 0.8) continue; const dd = Math.hypot(me.pos.x - wx, me.pos.z - wz); if (dd < bd){ bd = dd; best = x; } }
+  return best; }
+function roomOfDoor(d){ return d ? Room.list.find(r => r.gx === d[0] && r.gz === d[1] && r.gy === d[2]) || null : null; }
+function roomGapShow(c){ if (Room.gap){ scene.remove(Room.gap); Room.gap = null; } if (!c) return; const m = new THREE.Mesh(new THREE.BoxGeometry(0.54, 1.04, 0.54), new THREE.MeshBasicMaterial({ color: '#ff3b30', transparent: true, opacity: 0.6, depthTest: false }));
+  m.position.set(ISLE.x + c[0] * 0.5, ISLE.y + c[2] * 0.5 + 0.5, ISLE.z + c[1] * 0.5); m.renderOrder = 9; m.userData.keep = true; scene.add(m); Room.gap = m; Room.gapT = 6; }
+function roomTick(dt){ Room.t += dt; for (const s of Room.signs) s.piv.rotation.z = Math.sin(Room.t * 1.3 + s.ph) * 0.05;
+  if (Room.gap){ Room.gapT -= dt; Room.gap.material.opacity = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(Room.t * 8)); if (Room.gapT <= 0){ scene.remove(Room.gap); Room.gap.geometry.dispose(); Room.gap = null; } }
+  const r = onIsle && !Blk.on ? roomAt(me.pos.x, me.pos.z, me.pos.y) : null; if ((r && r.id) !== (Room.inside && Room.inside.id)){ Room.inside = r; if (r && r.cells && r.cells.length) flash(roomIcon(r) + ' ' + rmName(r), 1.1); } }
+async function roomCall(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能掛名牌'); return false; } try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; roomSet(data); return true; } catch(e){ toast(cloudErrMsg(e)); return false; } }
+function renderRoomSign(body){ const d = Room.door, owner = onIsle && onIsle.owner; if (!d || !owner){ body.appendChild(el('div', 'empty', '走到門旁邊再按一次。')); return; }
+  const cur = roomOfDoor(d), calc = roomCalc(d), ownerArg = owner === myIdOrMe() ? null : owner, args = { p_owner: ownerArg, p_gx: d[0], p_gz: d[1], p_gy: d[2] };
+  const others = cur && cur.kind === 'mine' && cur.uid && cur.uid !== myIdOrMe();
+  if (cur) body.appendChild(el('div', 'dexhead', `${roomIcon(cur)} 現在是：${rmName(cur)}`));
+  if (calc.cells){ const m2 = (calc.cells.length * 0.25).toFixed(1).replace(/\.0$/, ''); body.appendChild(el('p', 'sub', `✅ 圍好了，裡面大約 ${m2} 平方公尺。${others ? '這是別人的房間，只有他可以換名牌。' : '選一個名牌掛上去：'}`)); }
+  else { body.appendChild(el('p', 'sub', '⚠️ 還沒圍好：牆要至少 2 塊高、圍一整圈，只留這個門（最大 15×15 公尺）。'));
+    if (calc.gap){ const b = el('button', 'tbtn', '🔴 看缺口在哪'); b.addEventListener('click', () => { closeSheet(); roomGapShow(calc.gap); toast('紅色閃的地方就是缺口，補兩塊高的牆就好'); }); body.appendChild(b); } }
+  if (calc.cells && !others){ const ul = el('div', 'chipline'); for (const [k, ic, n] of ROOM_KINDS){ const b = el('button', 'chip' + (cur && cur.kind === k ? ' on' : ''), ic + ' ' + n);
+      b.addEventListener('click', async () => { let lb = ''; if (k === 'custom'){ const v = prompt('房間的名字（最多 6 個字）', cur && cur.kind === 'custom' ? cur.label : ''); if (v == null) return; lb = clean(v).slice(0, 6); if (!lb) return; }
+        if (await roomCall('isle_room_set', Object.assign({}, args, { p_kind: k, p_label: lb }))){ SFX.plop(); const nr = roomOfDoor(d); if (nr) FX.emit(ISLE.x + d[0] * 0.5, ISLE.y + d[2] * 0.5 + 1.1, ISLE.z + d[1] * 0.5, 12, '#fff4dc', 0.5, 1.2, 0.8); closeSheet(); flash(`${nr ? roomIcon(nr) + ' ' + rmName(nr) : '掛好了'}`, 1.4); } });
+      ul.appendChild(b); } body.appendChild(ul);
+    body.appendChild(el('p', 'sub', '🛏️ 我的房間：裡面的東西和牆只有你能動，每個人一間。其他名牌是大家的房間，誰都可以用。')); }
+  if (cur && !others){ const rm = el('button', 'tbtn ghost', '拿掉名牌'); rm.addEventListener('click', async () => { if (await roomCall('isle_room_del', { p_owner: ownerArg, p_id: cur.id })){ closeSheet(); toast('名牌拿掉了'); } }); body.appendChild(rm); } }
 function blkAt(gx, gz, gy){ return Blk.b.find(x => x[0] === gx && x[1] === gz && x[2] === gy); }
 function blkTop(gx, gz){ let h = -1; for (const x of Blk.b) if (x[0] === gx && x[1] === gz && x[2] > h) h = x[2]; return h; }
 const blkMe8 = () => String(Cloud.userId || 'me').slice(0, 8);
@@ -9530,6 +9601,7 @@ function blkDelMany(list0, quiet){ const me8 = blkMe8(), want = new Set(), its =
   if (Blk.mir) for (const it of its.slice()) if (it[0] !== 0) push(blkAt(-it[0], it[1], it[2]));
   its.sort((a, b) => b[2] - a[2]); const done = [];
   for (const it of its){ const up = blkAt(it[0], it[1], it[2] + 1); if (up && !want.has(up[0] + ',' + up[1] + ',' + up[2])){ if (!quiet) blkHint('上面還有東西，先收上面的'); continue; }
+    if (!Blk.lot){ const lk = roomLockAt(it[0], it[1], true); if (lk){ if (!quiet) blkHint(`這是${rmName(lk)}，只有他自己可以動`); continue; } }
     if ((Blk.lot ? (Blk.lot.own ? 2 : 1) : isleRank()) < 2 && it[5] !== me8){ if (!quiet) blkHint('一般成員只能收自己放的'); continue; } blkTake(it); done.push(it); }
   if (!done.length) return 0; Blk.undo.push({ del: done.map(x => x.slice()) }); if (Blk.undo.length > 30) Blk.undo.shift();
   blkFlushSoon(); blkDraw(); blkCount(); try { SFX.click(); } catch(e){} return done.length; }
@@ -9545,7 +9617,7 @@ async function blkFlush(){ if (!Blk.pend.add.length && !Blk.pend.del.length) ret
   if (Blk.busy){ blkFlushSoon(); return; } Blk.busy = true; const owner = Blk.owner;
   try { while (Blk.pend.add.length || Blk.pend.del.length){ const P = { add: Blk.pend.add.splice(0, 300), del: Blk.pend.del.splice(0, 300) };   /* 一次最多送 300 塊，多的分好幾次 */
       const { data, error } = Blk.lot ? await Cloud.sb.rpc('lot_blocks_edit', { p_street: Blk.lot.street, p_lot: Blk.lot.i, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }) : await Cloud.sb.rpc('isle_blocks_edit', { p_owner: owner === myIdOrMe() ? null : owner, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }); if (error) throw error;
-      if (data && data.player) adoptRow(data.player); if (data && data.bag && !Blk.lot && owner !== myIdOrMe() && onIsle && onIsle.owner === owner) onIsle.bag = data.bag; if (Blk.owner === owner && !Blk.pend.add.length && !Blk.pend.del.length && Array.isArray(data.b)){ Blk.b = data.b; blkDraw(); } } }
+      if (data && data.player) adoptRow(data.player); if (data && data.bag && !Blk.lot && owner !== myIdOrMe() && onIsle && onIsle.owner === owner) onIsle.bag = data.bag; if (data && Array.isArray(data.rooms) && !Blk.lot) roomSet(data.rooms); if (Blk.owner === owner && !Blk.pend.add.length && !Blk.pend.del.length && Array.isArray(data.b)){ Blk.b = data.b; blkDraw(); } } }
   catch(e){ Blk.pend = { add:[], del:[] }; toast('🧱 ' + cloudErrMsg(e)); blkLoad(owner); try { cloudRefresh(); } catch(e2){} }
   Blk.busy = false; }
 function blkHint(t){ const h = $('#blkHint'); if (h){ h.textContent = t; h.classList.add('bad'); clearTimeout(Blk.ht); Blk.ht = setTimeout(() => { h.classList.remove('bad'); blkBar(); }, 1600); } else toast(t); }
@@ -10013,7 +10085,7 @@ function furnMesh(t){
 const Home = { owner:null, people:[], invites:[], sent:[], cap:6, at:0, told:{} };
 // 島上的權限（071）：拆東西、改格局要管理成員以上；一般成員只能移動、收掉自己買的
 function isleRank(){ const owner = onIsle && onIsle.owner, meId = myIdOrMe(); if (!Cloud.on || !owner || owner === meId) return 4; if (!IsleP.me && !IsleP.busy && Date.now() - IsleP.at > 20000) loadIsleP(); return PERM_RANK[IsleP.me] || 1; }
-function canTouch(o){ return isleRank() >= 2 || !!(o && o.by && o.by === myIdOrMe()); }
+function canTouch(o){ if (o && o.x != null && roomLockAt(Math.round(o.x * 2), Math.round(o.z * 2), false)) return false; return isleRank() >= 2 || !!(o && o.by && o.by === myIdOrMe()); }
 function canEditIsle(owner){ owner = owner || (onIsle && onIsle.owner); const meId = myIdOrMe(); return !!owner && (owner === meId || (Home.owner === owner && Home.people.some(p => p.id === meId))); }
 function homeMate(uid){ return uid && Home.people.find(p => p.id === uid && p.id !== myIdOrMe()); }
 function homeTitle(p){ return p ? (p.title || (p.owner ? '島主' : HOME_ROLES[p.role] || '室友')) : ''; }
@@ -10086,7 +10158,7 @@ async function homeOp(op, p){
 async function isleRefresh(owner){ if (!Cloud.on || !Cloud.sb || !onIsle || onIsle.owner !== owner || Isle_refreshing) return; Isle_refreshing = true;
   try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: owner }); if (data && data.island && onIsle && onIsle.owner === owner){ const L = cleanIsland(data.island); if (data.bag && typeof data.bag === 'object') onIsle.bag = data.bag;
       if (JSON.stringify(L) !== JSON.stringify(onIsle.layout || null) && !Build.moveId){ if (owner === myIdOrMe()) rec.island = L; afterHomeOp(L); } } } catch(e){}
-  Isle_refreshing = false; }
+  roomLoad(owner); Isle_refreshing = false; }
 var Isle_refreshing = false;
 setInterval(() => { try { if (onIsle && document.visibilityState === 'visible' && !Build.moveId) isleRefresh(onIsle.owner); } catch(e){} }, 20000);
 function afterHomeOp(L){
@@ -21761,7 +21833,7 @@ function sheetDeco(){ const sh = $('#sheet'); if (!sh || sh.hidden || !(sh.class
   sh.querySelectorAll('#sheetBody .tbtn:not(.buy)').forEach(b => { if (/^買\s/.test(b.textContent) || /^買 ?🪙/.test(b.textContent)) b.classList.add('buy'); }); }   /* v647 要花錢買的按鈕是橘色 */
 { let q = 0; const mo = new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { sheetDeco(); } catch(e){} }); }); const go = () => { const sh = document.getElementById('sheet'); if (sh) mo.observe(sh, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] }); else setTimeout(go, 200); }; go(); }
 const SHEET_WOOD = new Set(['shop', 'shrimp', 'cook', 'cargo', 'salon', 'market', 'mu', 'fu', 'gang', 'cai', 'craft', 'ferry', 'board', 'tboard', 'tote', 'cage', 'museum', 'sci', 'news', 'fest', 'cldesign']);
-const SHEET_TITLE = { rig2:'🎣 釣組', look:'🎨 外觀', gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🛒 小島商店', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', tboard:'🏆 大看板・釣友隊', cargo:'🚢 跑船生意', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 田', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
+const SHEET_TITLE = { roomsign:'🚪 門的名牌', rig2:'🎣 釣組', look:'🎨 外觀', gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🛒 小島商店', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', tboard:'🏆 大看板・釣友隊', cargo:'🚢 跑船生意', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 田', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
 /* v586 全服共養的魚種族群（伺服器 199_fish_pop）：圖鑑打開時讀，5 分鐘更新一次 */
 const Pop = { d:{}, at:0, busy:false };
 function popFetch(){ if (Pop.busy || !Cloud.on || !Cloud.sb || Date.now() - Pop.at < 300000) return; Pop.busy = true; Pop.at = Date.now();
@@ -21977,6 +22049,7 @@ function renderTab0(){
   } else if (curTab === 'gyotaku'){ renderGyotaku(body);
   } else if (curTab === 'events'){ renderEvents(body);
   } else if (curTab === 'tote'){ renderTote(body);
+  } else if (curTab === 'roomsign'){ renderRoomSign(body);
   } else if (curTab === 'farm'){ renderFarm(body);
   } else if (curTab === 'salon'){ renderSalon(body);
   } else if (curTab === 'cargo'){ renderCargo(body);
@@ -22120,7 +22193,7 @@ function renderTab0(){
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
       ...(BLI.off ? [] : [["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []]]),
-      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
+      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "用方塊或隔板圍一圈（至少 2 塊高），留一個「門」，走到門旁邊按「名牌」就能掛上去變成一間房間。", "名牌可以選「我的房間」（裡面的東西和牆只有你能動，每人一間）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名（大家的房間）。沒圍好的話按「看缺口在哪」，缺口會閃紅色。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
         ["端給客人拿 1.5 倍，每天最多 60 位。每天最多做 150 道。", "跟美雲姨買是料理價值的 2.5 倍，一天最多 6 道。吧台點餐 45～225 金幣。"]],
@@ -23327,6 +23400,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u888', d:'11/26', items:[['🚪','自己圍房間：用方塊或隔板圍一圈、留一個門，走到門旁邊按「名牌」掛上去。可以選「我的房間」（只有你能動裡面的東西）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名','island'], ['🔴','牆沒圍好時按「看缺口在哪」，缺口會閃紅色；走進房間會看到房間的名字','island']] },
   { id:'u887', d:'11/26', items:[['⛵','阿默和阿穎有自己的雙人船「默穎號」了：黑色船身、船頭一片紅鯊鰭、船緣從紅變粉紅，還有粉紅愛心和小旗。到了釣點兩個人會並排一起釣'], ['🚶','阿默和阿穎上岸走去長椅會繞著碼頭走，不會再走在海上；從椅子站起來也不會穿過椅背、亂動了']] },
   { id:'u886', d:'11/26', items:[['🤝','大家一起住：住在島上的人都一樣，都可以蓋、拆、擺家具、種田，不再分共同島主、管理、一般成員；只有島主可以邀請和請人搬走','island'], ['📦','島上多一個大箱子（碼頭左邊的沙灘），收起來的東西、拆下來的方塊都放進去，一起住的人都能拿出來擺，不用再付錢；小島商店也多一個「📦 大箱子」分頁','island']] },
   { id:'u885', d:'11/26', items:[['📦','小島商店的「島上的東西」也換成大圖的樣子：點一個看模型，下面直接按移動、收起來。','island']] },
