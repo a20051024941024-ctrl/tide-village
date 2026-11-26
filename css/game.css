@@ -2510,3 +2510,7 @@ body.photo #hype{display:none}
 #isleBar{flex-wrap:nowrap!important;max-width:min(470px,60vw)!important;gap:5px!important;padding:4px 6px 4px 10px!important;font-size:13px!important}
 #isleBar .ib-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto;font-weight:700}
 #isleBar .tbtn{padding:5px 9px;font-size:13px;white-space:nowrap;flex:0 0 auto}
+
+/* v878 手機裡的小島按鈕 */
+.tankbar.isleCtl{flex-wrap:wrap;gap:6px;align-items:center}
+.tankbar.isleCtl .ib-t{font-weight:800;margin-right:4px}
