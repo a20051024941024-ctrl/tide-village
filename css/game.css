@@ -2519,3 +2519,32 @@ body.photo #hype{display:none}
 .isleapp{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
 .isleapp .tbtn{padding:10px 16px;font-size:15px}
 .isleapp .ib-t{flex:1 0 100%;font-size:18px;font-weight:800;margin-bottom:4px}
+
+/* v884 小島商店照造型頁 */
+.closet.ishop .cl-pv{flex:1;min-height:180px}
+.closet.ishop .cl-pv img{width:100%;height:100%;object-fit:contain}
+.ish-info{background:#f6f3e7;padding:8px 12px 10px;border-top:2px solid #d9d3c2}
+.ish-n{font-weight:800;font-size:16px;color:#3a3028}
+.ish-p{font-size:13px;color:#6a5a48;margin:2px 0 6px}
+.ish-a{display:flex;gap:6px;flex-wrap:wrap}.ish-a .tbtn{flex:1}
+.closet.ishop .cl-it .gearic,.closet.ishop .cl-it .ish-sw{width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover;background:#8ec9e0;display:block}
+.closet.ishop .cl-it .ish-sw{background-size:cover!important}
+.closet.ishop .cl-tabs{overflow-x:auto;flex-wrap:nowrap}
+
+.ish-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.ish-top .seg{margin:0;flex:1 1 auto}
+.ish-top .coinpill{margin-left:auto}
+
+#sheet.ishopm .box{width:min(1100px,calc(100vw - var(--gl,0px) - var(--gr,0px) - 8px));max-height:100%;height:100%;box-sizing:border-box}
+#sheet.ishopm #sheetBody{padding:6px 12px 10px;overflow:hidden;display:flex;flex-direction:column;flex:1;min-height:0}
+#sheet.ishopm .closet.ishop{flex:1;min-height:0}
+#sheet.ishopm .closet.ishop .cl-l{display:flex;flex-direction:column}
+#sheet.ishopm .closet.ishop .cl-r{display:flex;flex-direction:column;min-height:0}
+#sheet.ishopm .closet.ishop .cl-list{flex:1;overflow-y:auto;min-height:0}
+
+#sheet.ishopm .closet.ishop .cl-pv{min-height:90px}
+.ish-info{padding:5px 10px 7px}
+.ish-n{font-size:14px;display:inline}
+.ish-p{font-size:12px;margin:1px 0 5px}
+.ish-a .tbtn{padding:6px 10px}
+.closet.ishop .cl-grid{grid-template-columns:repeat(5,1fr)!important}

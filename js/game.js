@@ -11688,12 +11688,13 @@ function viewModel(title, info, make, act){ closeModelView(); const ov = documen
 function closeModelView(){ if (!MView.on) return; MView.on = false; cancelAnimationFrame(MView.raf); try { MView.R.dispose(); MView.R.forceContextLoss(); } catch(e){} if (MView.ov) MView.ov.remove(); MView.R = MView.ov = null; }
 let isleTab = 'shop';
 function renderIsland(body){
-  const head = el('div', 'shophead'); head.innerHTML = `<b>🛒 小島商店</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
-  const mine = onIsle && onIsle.owner === myIdOrMe(), bar = el('div', 'tankbar');
-  const go = el('button', 'tbtn', mine ? '你在小島上' : '前往我的小島'); go.disabled = mine; go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); bar.appendChild(go);
-  if (onIsle){ const bk = el('button', 'tbtn ghost', '回村子'); bk.addEventListener('click', () => { closeSheet(); leaveIsle(); }); bar.appendChild(bk); }
-  body.appendChild(bar);
-  const seg = el('div', 'seg'); [['shop', '🛒 買東西擺島上'], ['home', '🏠 我的家' + (Home.invites.length ? ' 🔴' : '')], ['visit', '🌏 逛別人的島'], ['land', '🌳 島的大小']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(isleTab === k)); b.addEventListener('click', () => { isleTab = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
+  /* v884 上面只留一排：分頁＋金幣＋去小島／回村（以前標題、按鈕、分頁三排，商店被擠到下面） */
+  const mine = onIsle && onIsle.owner === myIdOrMe(), top = el('div', 'ish-top'), seg = el('div', 'seg');
+  [['shop', '🛒 買東西'], ['home', '🏠 我的家' + (Home.invites.length ? ' 🔴' : '')], ['visit', '🌏 逛別人的島'], ['land', '🌳 島的大小']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(isleTab === k)); b.addEventListener('click', () => { isleTab = k; renderTab(); }); seg.appendChild(b); }); top.appendChild(seg);
+  top.appendChild(el('span', 'coinpill', `🪙 ${rec.coins.toLocaleString()}`));
+  if (!mine){ const go = el('button', 'tbtn', '🏝️ 去小島'); go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); top.appendChild(go); }
+  if (onIsle){ const bk = el('button', 'tbtn ghost', '⛵ 回村'); bk.addEventListener('click', () => { closeSheet(); leaveIsle(); }); top.appendChild(bk); }
+  body.appendChild(top);
   if (isleTab === 'home'){ renderHomeTab(body); return; }
   if (isleTab === 'land'){ body.appendChild(landMapEl()); return; }
   if (isleTab === 'visit'){
@@ -11711,8 +11712,9 @@ function renderIsland(body){
   const PLANT = new Set(['flower', 'palm', 'tree', 'bush', 'hydrangea', 'sunflower', 'cherry', 'maple', 'hedge']), FURN = new Set(['bench', 'lamp', 'picnic', 'parasol', 'swing', 'hammock', 'sunbed', 'bbq', 'campfire', 'tent', 'pergola', 'mailbox', 'fence', 'stonepath']);
   const catOf = (k, v) => v.house ? 'house' : v.pen ? 'pen' : PLANT.has(k) ? 'plant' : FURN.has(k) ? 'furn' : 'deco';
   if (!CATS.some(c => c[0] === Isle2.cat)) Isle2.cat = 'house';
-  { const row = el('div', 'isl-cats'); for (const [k, l] of CATS){ const b = el('button', 'tbtn' + (Isle2.cat === k ? '' : ' ghost'), l); b.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); row.appendChild(b); } body.appendChild(row); }
+  if (Isle2.cat === 'mine'){ const row = el('div', 'isl-cats'); for (const [k, l] of CATS){ const b = el('button', 'tbtn' + (Isle2.cat === k ? '' : ' ghost'), l); b.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); row.appendChild(b); } body.appendChild(row); }
   const C = Isle2.cat;
+  if (C !== 'mine'){ isleShop2(body, C, CATS, catOf, items, nh); return; }   /* v884 照造型頁的樣子 */
   if (C === 'block' || C === 'panel' || C === 'shape'){
     body.appendChild(el('p', 'sub', `一格 50 公分，可以疊 ${BLK_LAYERS} 層，一座島最多 ${BLK_MAX} 塊（現在 ${Blk.b.length} 塊）。按「拿去蓋」以後：點地面放、點上面疊、點側邊接旁邊；選「地板／牆／房間」可以一次拉一整片，放錯按 ↩️ 復原。${C === 'shape' ? '形狀可以選 24 種顏色（顏色不用錢），也可以轉方向；門會自動放上下兩格。' : C === 'panel' ? '隔板可以轉向。' : ''}`));
     const ul = el('ul', 'shoplist cols'); for (const [k, v] of Object.entries(BLK).filter(([k, v]) => k !== 'dt' && (C === 'shape' ? blkIsShape(k) : !blkIsShape(k) && !!v[4] === (C === 'panel')))){ const li = el('li'), sw = el('i', 'blk-sw' + (v[4] ? ' pn' : '')); sw.style.background = `url(${blkTex(v[3] || 'paint', v[2]).image.toDataURL()}) center/cover, ${v[2]}`; blkIcon(sw, k, v); li.appendChild(sw);
@@ -11745,7 +11747,52 @@ function renderIsland(body){
     }
     body.appendChild(ul); }
 }
-var Isle2 = { cat: 'house' };
+var Isle2 = { cat: 'house', sel: {} };
+/* v884 作者：「小島商店不能做成這樣子的嗎」（指著造型頁）→ 照造型頁排：左邊大大的 3D 預覽（可以轉），下面是名字、價錢、拿去擺；右邊一格一格大圖；分類在最下面一排 */
+const ISHOP_TABS = [['house', '🏠', '房子'], ['pen', '🐾', '圍欄'], ['plant', '🌳', '花草樹'], ['furn', '🪑', '家具'], ['deco', '🏺', '擺飾'], ['shape', '🏗️', '形狀'], ['block', '🧱', '方塊'], ['panel', '🚪', '隔板'], ['mine', '📦', '島上的']];
+const IPV = { r: null, cv: null, sc: null, cam: null, obj: null, key: '', yaw: 0.6, drag: null, idleAt: 0, raf: 0, failed: false, c: null, rad: 1 };
+function ipvInit(){ if (IPV.r) return true; if (IPV.failed) return false;
+  try { const cv = document.createElement('canvas'); cv.className = 'pvcv'; const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); r.setSize(300, 300, false);
+    r.outputColorSpace = renderer.outputColorSpace; r.toneMapping = renderer.toneMapping; r.toneMappingExposure = renderer.toneMappingExposure; r.setClearColor(0x000000, 0);
+    const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#c9b8a0', 1.7)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(3, 5, 4); sc.add(dl);
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 200);
+    cv.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); IPV.drag = { x: e.clientX, yaw: IPV.yaw }; try { cv.setPointerCapture(e.pointerId); } catch(_){} });
+    cv.addEventListener('pointermove', e => { if (!IPV.drag) return; e.preventDefault(); IPV.yaw = IPV.drag.yaw + (e.clientX - IPV.drag.x) * 0.014; });
+    const up = () => { if (IPV.drag){ IPV.drag = null; IPV.idleAt = now() + 2.5; } }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.style.touchAction = 'none';
+    Object.assign(IPV, { r, cv, sc, cam }); return true; } catch(e){ IPV.failed = true; return false; } }
+function ipvShow(host, key, make){ if (!ipvInit()) return false;
+  if (IPV.key !== key){ if (IPV.obj){ IPV.sc.remove(IPV.obj); } let g = null; try { g = make(); } catch(e){ console.warn('ipv', e); } if (!g) return false; IPV.obj = g; IPV.sc.add(g); IPV.key = key; const { c, r } = fitCam(IPV.cam, g); IPV.c = c; IPV.rad = r; IPV.yaw = 0.6; }   /* 鏡頭離遠一點，整件看得到 */
+  host.appendChild(IPV.cv); const fit = () => { const W = Math.max(120, host.clientWidth | 0), H = Math.max(120, host.clientHeight | 0); IPV.r.setSize(W, H, false); IPV.cam.aspect = W / H; IPV.cam.updateProjectionMatrix(); };
+  requestAnimationFrame(() => { if (host.isConnected) fit(); }); if (!IPV.raf) IPV.raf = requestAnimationFrame(ipvLoop); return true; }
+function ipvLoop(){ if (!IPV.cv || !IPV.cv.isConnected || $('#sheet').hidden){ IPV.raf = 0; return; } const t = now(); if (!IPV.drag && t > IPV.idleAt) IPV.yaw += 0.008;
+  const c = IPV.c, r = IPV.rad * 3.6; IPV.cam.position.set(c.x + Math.sin(IPV.yaw) * r, c.y + r * 0.55, c.z + Math.cos(IPV.yaw) * r); IPV.cam.lookAt(c); IPV.r.render(IPV.sc, IPV.cam); IPV.raf = requestAnimationFrame(ipvLoop); }
+function isleShop2(body, C, CATS, catOf, items, nh){
+  const blk = C === 'block' || C === 'panel' || C === 'shape';
+  const list = blk ? Object.entries(BLK).filter(([k, v]) => k !== 'dt' && (C === 'shape' ? blkIsShape(k) : !blkIsShape(k) && !!v[4] === (C === 'panel'))) : Object.entries(ISLE_ITEMS).filter(([k2, v]) => catOf(k2, v) === C && !OLD_HOUSES.has(k2));
+  let sel = Isle2.sel[C]; if (!list.some(([k]) => k === sel)) sel = Isle2.sel[C] = list.length ? list[0][0] : null;
+  const wrap = el('div', 'closet k3pt ishop'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap);
+  const box = el('div', 'cl-pv'); L.appendChild(box);
+  const info = el('div', 'ish-info'); L.appendChild(info);
+  if (sel){ const v = blk ? null : ISLE_ITEMS[sel], b = blk ? BLK[sel] : null, name = blk ? b[0] : v.name, price = blk ? b[1] : v.price;
+    const ok = ipvShow(box, (blk ? 'b:' : 'i:') + sel, () => { if (blk){ const m = new THREE.Mesh(blkGeo(sel), blkMat(sel)); if (blkIsShape(sel)) m.material.color.set(b[2]); const g = new THREE.Group(); g.add(m); return g; } return itemMesh(sel, { lite: !!v.house }); });
+    if (ok) box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); else { const im = el('img'); try { im.src = blk ? '' : itemShot(sel, 256); } catch(e){} box.appendChild(im); }
+    info.appendChild(el('div', 'ish-n', name));
+    const nOn = blk ? Blk.b.filter(x => x[3] === sel).length : items.filter(i => i.t === sel).length, nb = isleBagN(blk ? 'b:' + sel : sel);
+    info.appendChild(el('div', 'ish-p', `🪙 ${price.toLocaleString()}${blk ? ' 一塊' : ''}・島上 ${nOn} ${blk ? '塊' : '個'}${nb ? `・包包裡 ${nb}` : ''}`));
+    const acts = el('div', 'ish-a');
+    if (blk){ const bt = el('button', 'tbtn buy', '🔨 拿去蓋'); bt.addEventListener('click', () => { Blk.t = sel; if (!onIsle || !canEditIsle()){ closeSheet(); goMyIsle(); setTimeout(blkStart, 1200); return; } blkStart(); }); acts.appendChild(bt); }
+    else { if (nb){ const bb = el('button', 'tbtn buy', '拿出來擺'); bb.addEventListener('click', () => startPlace(sel, null, true)); acts.appendChild(bb); }
+      else { const bt = el('button', 'tbtn buy' + (rec.coins < price ? ' ghost' : ''), `拿去擺 🪙${price.toLocaleString()}`); bt.addEventListener('click', () => { if (rec.coins < price){ toast(`金幣不夠，還差 🪙${(price - rec.coins).toLocaleString()}`); return; } startPlace(sel); }); acts.appendChild(bt); } }
+    info.appendChild(acts); }
+  const lst = el('div', 'cl-list k3list'), bar = el('div', 'k3bar'); R2.append(lst, bar);
+  lst.appendChild(el('p', 'sub k3note', blk ? `一格 50 公分、最多疊 ${BLK_LAYERS} 層、一座島 ${BLK_MAX} 塊（現在 ${Blk.b.length}）。拿去蓋以後點地面放、點上面疊。${C === 'shape' ? '形狀可以選 24 種顏色（不用錢）。' : ''}` : `島上 ${items.length} / ${ISLE_MAX} 件、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟。拿去擺以後走路調位置、⟲ 轉方向、✔ 放下；拆掉退一半。`));
+  const grid = el('div', 'cl-grid k3grid');
+  for (const [k, v] of list){ const on = k === sel, b = el('button', 'cl-it' + (on ? ' on' : '')), name = blk ? v[0] : v.name, price = blk ? v[1] : v.price;
+    if (blk){ const sw = el('i', 'blk-sw ish-sw'); blkIcon(sw, k, v); b.appendChild(sw); } else { const im = el('img', 'gearic'); im.alt = name; try { im.src = itemShot(k, 128); } catch(e){} b.appendChild(im); }
+    b.appendChild(el('span', 'n', name)); b.appendChild(el('span', 'b k3pr', '🪙' + price.toLocaleString()));
+    b.addEventListener('click', () => { Isle2.sel[C] = k; renderTab(); }); grid.appendChild(b); }
+  lst.appendChild(grid);
+  const tabs = el('div', 'cl-tabs'); for (const [k, i, l] of ISHOP_TABS){ const t = el('button', 'cl-tab' + (C === k ? ' on' : '')); t.append(el('span', 'i', i), el('span', 'n', k === 'mine' ? `${l}(${items.length + Blk.b.length})` : l)); t.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); tabs.appendChild(t); } bar.appendChild(tabs); }
 
 /* ================= 有新版本時提醒（玩家自己按才重新整理，不會在拉魚時突然重開）================= */
 const Upd = { base:null, ready:false, shown:false, snooze:0 };
@@ -21608,7 +21655,7 @@ function renderTab0(){
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
   const body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
-  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
+  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('ishopm', curTab === 'island' && isleTab === 'shop' && Isle2.cat !== 'mine');   /* v884 小島商店跟造型頁一樣撐滿 */ $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
   { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
   try { phoneHdr(); } catch(e){}
   if (curTab === 'dex' && !LS.get('tide.guideDex', false)) LS.set('tide.guideDex', true);   /* v582 新手任務第 2 步 */
@@ -23160,6 +23207,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u884', d:'11/26', items:[['🛒','小島商店改成跟造型頁一樣：左邊 3D 預覽可以轉，右邊大圖，分類在最下面','island']] },
   { id:'u883', d:'11/26', items:[['🌱','菜園整個拿掉了，整座島開好的地都是你的田。種子攤搬到小島碼頭旁邊的沙灘，一上島就看得到。','island']] },
   { id:'u882', d:'11/26', items:[['🛒','手機的「小島」改名「小島商店」（買東西、我的家、逛別人的島、島的大小）；建造、信箱、回村在「⛵ 我的島」','island']] },
   { id:'u881', d:'11/26', items:[['⛵','手機多了「我的島」：上島以後的建造、信箱、人氣排行、回村都在這裡','isleapp'],['🎣','退潮的時候村民會把浮標甩到有水的地方，不會再釣沙灘']] },
