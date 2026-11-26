@@ -2514,3 +2514,8 @@ body.photo #hype{display:none}
 /* v878 手機裡的小島按鈕 */
 .tankbar.isleCtl{flex-wrap:wrap;gap:6px;align-items:center}
 .tankbar.isleCtl .ib-t{font-weight:800;margin-right:4px}
+
+/* v881 手機「我的島」 */
+.isleapp{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.isleapp .tbtn{padding:10px 16px;font-size:15px}
+.isleapp .ib-t{flex:1 0 100%;font-size:18px;font-weight:800;margin-bottom:4px}

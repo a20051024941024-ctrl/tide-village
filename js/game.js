@@ -9320,15 +9320,23 @@ setInterval(() => { try { if (Cloud.on && document.visibilityState === 'visible'
    只有在建造、擺家具的時候畫面上才出現（要按「完成建造」） */
 function renderIsleBar(){
   let bar = $('#isleBar'); const show = !!onIsle && (Build.on || (House.on && canEditIsle()));
-  if (!show){ if (bar) bar.hidden = true; if (onIsle && !renderIsleBar.told){ renderIsleBar.told = 1; setTimeout(() => { try { ticker('🏝️ 小島的建造、信箱、回村都在「手機 → 小島」裡'); } catch(e){} }, 2500); } return; }
+  if (!show){ if (bar) bar.hidden = true; if (onIsle && !renderIsleBar.told){ renderIsleBar.told = 1; setTimeout(() => { try { ticker('⛵ 小島的建造、信箱、回村都在「手機 → 我的島」裡'); } catch(e){} }, 2500); } return; }
   if (!bar){ bar = document.createElement('div'); bar.id = 'isleBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; isleCtl(bar, false); }
-function isleRefresh(){ renderIsleBar(); try { if (!$('#sheet').hidden && curTab === 'island') renderTab(); } catch(e){} }
+function isleRefresh(){ renderIsleBar(); try { if (!$('#sheet').hidden && (curTab === 'island' || curTab === 'isleapp')) renderTab(); } catch(e){} }
+/* v881 作者：「不對，我不要這個」→ 選「手機裡獨立一個小島 App」：手機多一個「⛵ 我的島」，跟造型一樣自己一頁；小島商店那頁不再塞這排按鈕 */
+function renderIsleApp(body){ const head = el('div', 'shophead'); head.innerHTML = `<b>⛵ 我的島</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (!onIsle){ body.appendChild(el('p', 'sub', '你現在在村子裡。上了島，這裡會有建造、信箱、人氣排行、回村。'));
+    const r = el('div', 'isleapp'); const go = el('button', 'tbtn', '🏝️ 前往我的小島'); go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); r.appendChild(go);
+    if (Cloud.on){ const mb = el('button', 'tbtn ghost', IMail.unread ? `📮 信箱（${IMail.unread}）` : '📮 信箱'); mb.addEventListener('click', imailOpen); r.appendChild(mb); }
+    const tp = el('button', 'tbtn ghost', '🏆 本週人氣小島'); tp.addEventListener('click', isleTopShow); r.appendChild(tp); const vi = el('button', 'tbtn ghost', '🌏 逛別人的島'); vi.addEventListener('click', () => { isleTab = 'visit'; phoneGo('island'); }); r.appendChild(vi); body.appendChild(r); return; }
+  const r = el('div', 'isleapp on'); isleCtl(r, true); body.appendChild(r);
+  if (onIsle.vc) body.appendChild(el('p', 'sub', `來訪：今天 ${onIsle.vc.today | 0} 人・總共 ${onIsle.vc.total | 0} 人`)); }
 function isleCtl(bar, phone){ if (!onIsle) return; const mine = onIsle.owner === myIdOrMe();
   if (onIsle.vc === undefined && Cloud.on && Cloud.sb){ onIsle.vc = null; const ow = onIsle.owner; Cloud.sb.rpc('isle_visit_count', { p_owner: ow }).then(r => { if (onIsle && onIsle.owner === ow && r && r.data){ onIsle.vc = r.data; isleRefresh(); } }, () => {}); }
   /* v877 作者：「左上角擋到了，字被擋住了」→ 小島列改成一排、短短的（以前兩排又寬，蓋到頭上的名字）：來訪人數改成 👣，按鈕只留圖示 */
   { const t = el('span', 'ib-t', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 ${onIsle.name}` : `🏝️ ${onIsle.name}`) + ` ❤️${onIsle.likes || 0}` + (onIsle.vc ? ` 👣${onIsle.vc.today | 0}` : '')); if (onIsle.vc) t.title = `來訪：今天 ${onIsle.vc.today | 0}・總共 ${onIsle.vc.total | 0}`; bar.appendChild(t); }
-  if (Cloud.on){ if (mine){ const mb = el('button', 'tbtn' + (IMail.unread ? '' : ' ghost'), IMail.unread ? `📮${IMail.unread}` : '📮'); mb.title = '信箱'; mb.addEventListener('click', imailOpen); bar.appendChild(mb); } else if (!canEditIsle()){ const mb = el('button', 'tbtn', '📮 留言'); mb.addEventListener('click', () => imailWrite(onIsle.owner, onIsle.name)); bar.appendChild(mb); } }
+  if (Cloud.on){ if (mine){ const mb = el('button', 'tbtn' + (IMail.unread ? '' : ' ghost'), IMail.unread ? `📮${phone ? ' 信箱 ' : ''}${IMail.unread}` : (phone ? '📮 信箱' : '📮')); mb.title = '信箱'; mb.addEventListener('click', imailOpen); bar.appendChild(mb); } else if (!canEditIsle()){ const mb = el('button', 'tbtn', '📮 留言'); mb.addEventListener('click', () => imailWrite(onIsle.owner, onIsle.name)); bar.appendChild(mb); } }
   /* v857 我的海本來就有，但來玩的人不知道海底有魚、島主不知道可以放：訪客看到「🐠 海裡 N 條」按了帶去潛水梯；自己的海空的就提醒去放 */
   if (Cloud.on && Cloud.sb && !House.on && !Build.on){ const ow = onIsle.owner;
     if (onIsle.sea === undefined){ onIsle.sea = null; Cloud.sb.rpc('home_sea', { p_owner: ow }).then(({ data }) => { if (!onIsle || onIsle.owner !== ow || !Array.isArray(data)) return; onIsle.sea = data.reduce((n, p) => n + ((p.show || []).length), 0); isleRefresh();
@@ -9339,9 +9347,9 @@ function isleCtl(bar, phone){ if (!onIsle) return; const mine = onIsle.owner ===
     if (FB.on && !FB.top){ const tb = el('button', 'tbtn ghost', '用手指擺'); tb.addEventListener('click', () => { LS.set('tide.furnWalk', false); clearFurnGhost(); FB.top = true; FB.sel = null; FT.cx = 0; FT.cz = 0; renderFurnBar(); isleRefresh(); }); bar.appendChild(tb); }
     const lb = el('button', 'tbtn ghost', '🏠 格局'); lb.addEventListener('click', () => { furnSheet = 'lay'; openSheet('furn'); }); bar.appendChild(lb); }
   else if (mine || canEditIsle()){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (phone) closeSheet(); if (Build.on) stopBuild(); else { if (onIsle && onIsle.owner !== myIdOrMe()) loadIsleP(); Build.on = true; isleUnbatch(isleGroup); renderBuildBar(); isleRefresh(); } }); bar.appendChild(b);
-    const s = el('button', 'tbtn ghost', '🛒'); s.title = '買東西'; s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
+    const s = el('button', 'tbtn ghost', phone ? '🛒 買東西' : '🛒'); s.title = '買東西'; s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
   if (!mine && !canEditIsle()){ const l = el('button', 'tbtn' + (onIsle.liked ? ' ghost' : ''), onIsle.liked ? '❤️ 已按讚' : '❤️ 按讚'); l.disabled = !!onIsle.liked; l.addEventListener('click', likeIsle); bar.appendChild(l); }
-  { const tp = el('button', 'tbtn ghost', '🏆'); tp.title = '本週人氣小島'; tp.addEventListener('click', isleTopShow); bar.appendChild(tp); }
+  { const tp = el('button', 'tbtn ghost', phone ? '🏆 本週人氣' : '🏆'); tp.title = '本週人氣小島'; tp.addEventListener('click', isleTopShow); bar.appendChild(tp); }
   const back = el('button', 'tbtn ghost', '⛵ 回村'); back.addEventListener('click', () => { if (phone) closeSheet(); leaveIsle(); }); bar.appendChild(back);
 }
 // ---- 建造模式：拿著東西走來走去，放在想要的位置 ----
@@ -11689,8 +11697,8 @@ let isleTab = 'shop';
 function renderIsland(body){
   const head = el('div', 'shophead'); head.innerHTML = `<b>🏝️ 我的小島</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   const mine = onIsle && onIsle.owner === myIdOrMe(), bar = el('div', 'tankbar');
-  if (onIsle){ bar.classList.add('isleCtl'); isleCtl(bar, true); if (!mine){ const go = el('button', 'tbtn ghost', '去我的小島'); go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); bar.appendChild(go); } }   /* v878 在島上：小島的按鈕都在這裡 */
-  else { const go = el('button', 'tbtn', '前往我的小島'); go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); bar.appendChild(go); }
+  const go = el('button', 'tbtn', mine ? '你在小島上' : '前往我的小島'); go.disabled = mine; go.addEventListener('click', () => { closeSheet(); goMyIsle(); }); bar.appendChild(go);
+  if (onIsle){ const bk = el('button', 'tbtn ghost', '回村子'); bk.addEventListener('click', () => { closeSheet(); leaveIsle(); }); bar.appendChild(bk); }
   body.appendChild(bar);
   const seg = el('div', 'seg'); [['shop', '🛒 買東西擺島上'], ['home', '🏠 我的家' + (Home.invites.length ? ' 🔴' : '')], ['visit', '🌏 逛別人的島'], ['land', '🌳 島的大小']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(isleTab === k)); b.addEventListener('click', () => { isleTab = k; renderTab(); }); seg.appendChild(b); }); body.appendChild(seg);
   if (isleTab === 'home'){ renderHomeTab(body); return; }
@@ -21341,8 +21349,8 @@ function updateNpcs(dt, t){
         n.st = 'show'; n.stT = t + 4.2; } }
     if (st === 'show' && t > n.stT){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; }
     if (st === 'windup'){ n.windup = Math.min(1, (n.windup || 0) + dt / 0.6);
-      if (t > n.stT){ n.windup = 0; n.castT = 0; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
-    if (st === 'wait'){ n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); }
+      if (t > n.stT){ n.windup = 0; n.castT = 0; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); try { const cp = castPoint(n.pos.x, n.pos.z, Math.sin(n.rot), Math.cos(n.rot), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); } catch(e){}   /* v881 作者：「阿穎看起來像在釣陸地」→ 每次甩竿重新找有水的地方（退潮時往外甩） */ n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
+    if (st === 'wait'){ n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); if (n.fishing && n.bobState === 'water' && (frameNo + (n.npcI || 0)) % 90 === 0 && (seaDry(n.bobPos.x, n.bobPos.z) || !waterAt(n.bobPos.x, n.bobPos.z))){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } }   /* v881 潮水退了、浮標躺在沙上：收竿重甩 */
     try { npcAvoid(n, dt, t); } catch(e){}
     try { meetTurn(n, dt, t); } catch(e){}
     n.update(dt, t); n.placeTag();
@@ -21634,6 +21642,7 @@ function renderTab0(){
   if (curTab === 'shop'){ renderShop(body); return; }
   if (curTab === 'cook'){ renderCook(body); return; }
   if (curTab === 'island'){ renderIsland(body); return; }
+  if (curTab === 'isleapp'){ renderIsleApp(body); return; }
   if (curTab === 'furn'){ renderFurnSheet(body); return; }
   if (curTab === 'quest'){ renderQuests(body); return; }
   if (curTab === 'ferry'){ renderFerry(body); return; }
@@ -23153,11 +23162,12 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
 const PHONE_APPS = [
   ['村子裡', [['phfeed', '🔔', '快訊'], ['upd', '🆕', '最近更新'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
   ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['duelhub', '⚔️', '對決'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
-  ['我的', [['photo', '📷', '拍照'], ['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
+  ['我的', [['photo', '📷', '拍照'], ['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🏝️', '小島'], ['isleapp', '⛵', '我的島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
 /* ===== v687 有新東西時提醒老玩家一次（作者 11/22：「每當有新東西，可以給原本在玩的玩家加一個小提醒，提醒一次」→ 同意設計）
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u881', d:'11/26', items:[['⛵','手機多了「我的島」：上島以後的建造、信箱、人氣排行、回村都在這裡','isleapp'],['🎣','退潮的時候村民會把浮標甩到有水的地方，不會再釣沙灘']] },
   { id:'u880', d:'11/26', items:[['🧺','西邊的菜園併進自由種田了：菜園那塊地直接是你的，原本格子裡種的作物都搬到原位繼續長。拿著種子按「種田」，菜園裡也能種得密密麻麻。','island'],['🌱','以前開墾過菜園的格數不會浪費，每格讓田多 5 株（12 格的人最多 360 株）。']] },
   { id:'u879', d:'11/26', items:[['🪓','小島改成一格一格開地：走到樹林邊面向白色虛線框按「開地」，一格 150 起，想往哪邊長就往哪邊開。以前買的大塊地都換成小格子了。','island'],['🗺️','手機「小島 → 🌳 島的大小」可以看整座島的地圖：開了幾格、還能開幾格、全部開完要多少。'],['🌱','田的泥土改成跟草地一樣平。']] },
   { id:'u878', d:'11/26', items:[['📱','小島的建造、信箱、回村搬到「手機 → 小島」，畫面上不再有小島列，截圖比較乾淨（建造的時候才會出現）','island'],['🧱','方塊、隔板、形狀都有 3D 小圖了'],['⛵','小島碼頭往外挪，伸進海裡，不再整個躺在沙灘上']] },
@@ -23341,7 +23351,7 @@ const UPD = [
     ['👥', '對決可以 2 對 2 了：找一個朋友一起，跟另外兩個人比誰釣得重。', 'duelhub'],
     ['⚔️', '對決有自己的頁面，排位每個月換一季，升段送那一季才有的竿子和釣線造型。', 'duelhub'] ] },
 ];
-SHEET_TITLE.upd = '🆕 最近更新';
+SHEET_TITLE.upd = '🆕 最近更新'; SHEET_TITLE.isleapp = '⛵ 我的島';
 function updItem(it, close){ const [ic, t, tab] = it, row = el('div', 'upd-it'); row.appendChild(el('span', 'upd-ic', ic)); row.appendChild(el('span', 'upd-t', t));
   if (tab){ const b = el('button', 'tbtn ghost', '去看看'); b.addEventListener('click', () => { if (close) close(); phoneGo(tab); }); row.appendChild(b); } return row; }
 function renderUpd(body){ body.appendChild(el('p', 'sub', '最近加進村子的東西，新的在上面。'));
@@ -23471,7 +23481,7 @@ function renderPhone(body){ const scr = el('div', 'ph-home');
   const un = phoneUnread(), fr = phoneFrN();
   for (const [sec, apps] of PHONE_APPS){ scr.appendChild(el('div', 'ph-sec', sec)); const g = el('div', 'ph-grid');
     for (const [tab, ic, lab] of apps){ const b = el('button', 'ph-app' + (tab === 'phfeed' ? ' new' : '')); b.innerHTML = `<span class="ph-ic">${ic}</span><span class="ph-lab">${lab}</span>`;
-      const n = tab === 'phfeed' ? un : tab === 'people' ? fr : tab === 'dm' ? dmUnreadN() : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
+      const n = tab === 'phfeed' ? un : tab === 'people' ? fr : tab === 'dm' ? dmUnreadN() : tab === 'isleapp' ? (IMail.unread | 0) : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
       b.addEventListener('click', () => { SFX.click(); phoneGo(tab); }); g.appendChild(b); }
     scr.appendChild(g); }
   body.appendChild(scr); }
