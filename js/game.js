@@ -12315,7 +12315,7 @@ function resBuild(){ RES.built = true; const g = new THREE.Group();
     H.bm = bm; H.gl = gl; H.lit = 0; H.door = [px + s * 0.3, H.z];
     try { addCircleCol(px, H.z + 1.25, 0.12); addCircleCol(px, H.z - 1.25, 0.12); } catch(e){} }
   scene.add(g); RES.g = g; }
-function resHomeIn(H){ if (!H.who) return false; if (H.who === 'chief') return true; if (/^cap\d$/.test(H.who)) return lwCapHome(+H.who.slice(3));   /* 村長要發任務，人一直在廣場（v250），家裡的燈晚上照樣留著 */ const r = World.rows && World.rows[H.who]; if (!Cloud.on || !r) return true;   /* 沒連線：不知道作息，當成在家 */
+function resHomeIn(H){ if (!H.who) return false; for (const nm of RH.in){ const n = npcs.find(x => x.npcName === nm); if (n && n.rh && n.rh.H === H) return true; }   /* v893 下雨回家躲雨的人在家，燈亮著 */ if (H.who === 'chief') return true; if (/^cap\d$/.test(H.who)) return lwCapHome(+H.who.slice(3));   /* 村長要發任務，人一直在廣場（v250），家裡的燈晚上照樣留著 */ const r = World.rows && World.rows[H.who]; if (!Cloud.on || !r) return true;   /* 沒連線：不知道作息，當成在家 */
   return r.place === H.id && (r.act === 'sleep' || r.act === 'rest') && (r.from === r.place || worldNow() >= Date.parse(r.arr)); }
 function resTick(dt){ if (!RES.built){ if (frameNo < 40) return; try { resBuild(); } catch(e){ RES.built = true; console.warn('resBuild', e); return; } }
   if (!RES.g) return; const show = !House.on && !inIndoor() && !Dive.on && !onIsle; if (RES.g.visible !== show) RES.g.visible = show; if (!show) return;
@@ -15242,6 +15242,13 @@ addEventListener('message', e => { try { if (e.origin === location.origin && e.d
 window.__zcApi = { uid: () => (Cloud.on && Cloud.sb && Cloud.userId) || null, rpc: async (fn, args) => { if (!/^zc_[a-z_]+$/.test(fn)) throw new Error('bad fn'); const { data, error } = await Cloud.sb.rpc(fn, args || {}); if (error) throw error; return data; } };
 function petLabel(name){ const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = 'rgba(255,255,255,0.88)'; const w = Math.min(244, 30 + c.measureText ? 40 + name.length * 30 : 200); c.beginPath(); c.roundRect ? c.roundRect((256 - w) / 2, 8, w, 46, 22) : c.rect((256 - w) / 2, 8, w, 46); c.fill(); c.fillStyle = '#18334a'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 128, 32);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest:false, transparent:true })); sp.scale.set(1.1, 0.28, 1); sp.renderOrder = 5; return sp; }
+/* v893 作者：「這些還是這樣，都只是符號而已」→ 寵物店的卡片用真的 3D 模型拍一張小圖（Meshy 的貓、柴犬、海鷗、斑龜等模型載好才拍；拍好記起來，載不到就留原本的符號） */
+const PET_SHOT_LOAD = { cat: () => cat3Load(), shiba: () => dog3Load(), gull: () => gull3Load(), pondturtle: () => turtle3Load() };
+function petShotEl(kind, icon){ const sp = el('span', 'dishic petshot', icon), key = 'pet3:' + kind;
+  const put = () => { try { const url = modelShot(key, () => { const g = petModel(kind, 0, 'a'); g.rotation.y = 0.05; return g; }, 192); sp.textContent = ''; const im = document.createElement('img'); im.src = url; im.alt = (PET_KINDS[kind] || {}).name || ''; sp.appendChild(im); } catch(e){ console.warn('petshot', e); } };
+  if (ItemShot.cache.has(key)){ put(); return sp; }
+  let p = null; try { p = PET_SHOT_LOAD[kind] ? PET_SHOT_LOAD[kind]() : null; } catch(e){}
+  Promise.resolve(p).then(() => requestAnimationFrame(put), () => {}); return sp; }
 function petMake(w){ const m = petModel(w.kind, w.acc || 0, w.var, w.shine), lb = petLabel(w.name || PET_KINDS[w.kind].name); lb.position.y = w.kind === 'gull' ? 0.6 : 0.62; lb.userData.nameLabel = true; m.add(lb); m.userData.lb = lb; scene.add(m); return { kind: w.kind, name: w.name, acc: w.acc || 0, m, pos: new THREE.Vector3(), vel: 0, rot: 0, ph: Math.random() * 6, fly: 0, key: petKey(w), wander: null }; }
 const petKey = w => w.kind + '|' + (w.var || '') + '|' + w.name + '|' + (w.acc || 0) + (w.kind === 'pondturtle' ? '|' + Math.floor((w.shine == null ? 40 : w.shine) / 10) : '');   /* v296 小烏龜的殼看光澤度 */
 function petFree(pt){ if (pt && pt.m){ if (pt.m.parent) pt.m.parent.remove(pt.m); pt.m.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); }); } }
@@ -15576,7 +15583,7 @@ function renderPets(body){
   const f1 = el('div', 'field'); f1.appendChild(el('label', '', '幫牠取名字（1～8 個字）')); const ni = el('input', 'txt'); ni.maxLength = 8; ni.value = Pets.newName; ni.placeholder = '例如：小咪'; ni.addEventListener('input', () => { Pets.newName = ni.value; }); f1.appendChild(ni); body.appendChild(f1);
   const ul2 = el('ul', 'shoplist cols');
   body.appendChild(el('p', 'sub', '「每一種都有好幾種花色，領養的時候隨機挑，有⭐的很少見喔。小海龜我這裡沒有，要在海邊釣魚的時候碰運氣。水獺池裡那幾隻是活動才會來的，先看看就好。」'));
-  for (const [k, K] of Object.entries(PET_KINDS).filter(([, K]) => !K.fish && !K.gone && !K.ev)){ const li = el('li'); li.appendChild(el('span', 'dishic', K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc + '　花色：' + Object.values(PET_VARS[k]).map(x => x[0]).join('、'))); li.appendChild(d);
+  for (const [k, K] of Object.entries(PET_KINDS).filter(([, K]) => !K.fish && !K.gone && !K.ev)){ const li = el('li'); li.appendChild(petShotEl(k, K.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${K.name}・🪙${K.price.toLocaleString()}`)); d.appendChild(el('div', 'sub2', K.desc + '　花色：' + Object.values(PET_VARS[k]).map(x => x[0]).join('、'))); li.appendChild(d);
     const a = el('div', 'tacts'), b = el('button', 'tbtn' + (rec.coins < K.price ? ' ghost' : ''), '領養'); b.addEventListener('click', async () => { const nm = (Pets.newName || '').trim() || K.name; if (rec.coins < K.price){ toast(`金幣不夠，還差 🪙${(K.price - rec.coins).toLocaleString()}`); return; } b.disabled = true;
       const r = await petRpc('pet_adopt', { p_kind: k, p_name: nm }); if (r){ adoptRow(r.player); Pets.list = r.pets; Pets.newName = ''; SFX.catch(); flash(`${K.icon} ${nm}（${petVarName(k, r.var)}${petVarRare(k, r.var) ? '⭐很少見！' : ''}）成為你的家人了！`, 2.2); if (!petMine()){ const np = r.pets[r.pets.length - 1]; const o = await petRpc('pet_out', { p_id: np.id }); if (o) Pets.list = o; } pushPresence(true); renderTab(); } else b.disabled = false; });
     a.appendChild(b); li.appendChild(a); ul2.appendChild(li); }
@@ -21569,6 +21576,50 @@ function roamPose(R, ms){ if (!R.c.length) return null; const K = ROAM_K[R.kind]
   if (a < tw){ const [x, z, h] = navAt(c, a * v); return { walk: true, x, z, rot: h, c }; }
   if (a < tw + dwell){ const [x, z, h] = navAt(c, c.len); return { walk: false, x, z, rot: h + Math.sin(i * 1.7 + R.h) * 1.2, c }; }
   const [x, z, h] = navAt(c, c.len - (a - tw - dwell) * v); return { walk: true, x, z, rot: h + Math.PI, c }; }
+/* ============ v893 下雨天村民回家躲雨 ============
+   作者 11/26：「村民不是都有自己的家嗎，下雨天他們可以自動回家嗎，除了少數幾個除外」。
+   會回家的：阿潮、小溪、阿伯。他們住在居民區那幾棟公寓的樓上（跟船長們同一棟），開始下雨後各自隔幾秒收竿、沿著路（navFind）走回家、進門就不見；
+   家裡的燈會亮。雨停了再走回原本的位置重新拋竿。
+   不回家的（例外）：
+     - 顧店的人（阿彩、阿鐵、阿萍、阿報、阿綾、阿木、阿福）：店要開。
+     - 老港：下雨也愛釣魚。
+     - 阿默、阿穎：追紅鯊。
+     - 蔚博士：在做研究。
+     - 阿嬤：住在石滬那邊，走不回居民區。
+     - 阿蘭：紅樹林巡守員，下雨也要顧紅樹林（她站的木棧道也接不上村子的路）。
+     - 村長、船長們：本來就照自己的作息走。
+   同步：什麼時候下雨是照時間算的（weatherAt），誰幾秒後出門也是照名字算，每支手機看到的一樣，晚進來的人也會看到同樣的位置。 */
+const RAIN_HOME = { '阿潮': 'cap0', '小溪': 'cap1', '阿伯': 'cap2' };   /* 住哪一棟（RES_HOMES 的 who） */
+var RH = { k: null, sp: null, in: new Set() };
+function rhWet(ms){ const f = (location.hash.match(/wx=(\w+)/) || [])[1], w = WEATHERS[WEATHERS[f] ? f : weatherAt(ms)]; return !!(w && w.rain > 0); }   /* 跟 updateEnv 同一個時鐘（Date.now）、同一個 #wx= 測試開關 */
+/* 這一刻所在（或 6 分鐘內剛結束）的那一段雨：[開始, 結束]，一分鐘算一次 */
+function rhSpell(ms){ const k = Math.floor(ms / 60000); if (RH.k === k) return RH.sp; RH.k = k; let sp = null, m0 = null;
+  for (let i = 0; i <= 6; i++){ if (rhWet(ms - i * 60000)){ m0 = ms - i * 60000; break; } }
+  if (m0 != null){ let S = m0, E = m0; for (let i = 0; i < 300 && rhWet(S - 30000); i++) S -= 30000; for (let i = 0; i < 300 && rhWet(E + 30000); i++) E += 30000; sp = [Math.floor(S / 30000) * 30000, Math.floor(E / 30000) * 30000 + 30000]; }
+  return (RH.sp = sp); }
+function rhPlan(n){ if (n.rh) return n.rh; if (frameNo < (n.rhTry || 0)) return null; n.rhTry = frameNo + 300; const who = RAIN_HOME[npcShort(n)]; if (!who || !n.roam || !n.roam.post) return null;
+  const H = RES_HOMES.find(q => q.who === who); if (!H) return null; const P = n.roam.post, sd = H.x < -47 ? 1 : -1, dx = H.x + sd * 3.3, dz = H.z + (hash32('rh' + n.npcName) % 3 - 1) * 0.7;
+  let pts = navFind(P.x, P.z, dx, dz);
+  if (!pts) for (const c of (n.roam.c || [])){ const q = navFind(c.x, c.z, dx, dz); if (q){ pts = c.pts.concat(q.slice(1)); break; } }   /* 尋路地圖沒涵蓋的地方（阿蘭在紅樹林）：先走散步走得到的那條路，再接尋路 */
+  if (!pts) return null; const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const h = hash32('rh' + n.npcName); return (n.rh = { H, c: { pts, cum, len: cum[cum.length - 1] }, d1: 6 + h % 30, d2: 4 + (h >>> 8) % 25 }); }
+/* 回傳 true＝這一格由躲雨接手 */
+function rainHomeDrive(n, dt, t){ if (!RAIN_HOME[npcShort(n)] || !n.roam || !n.roam.post) return false;
+  const ms = Date.now(), sp = rhSpell(ms); let st = null, a = 0;
+  if (sp){ const R = rhPlan(n); if (R){ const v = 1.45, tw = R.c.len / v * 1000, lv = sp[0] + R.d1 * 1000, ar = lv + tw, out = Math.max(ar, sp[1] + R.d2 * 1000), bk = out + tw;
+      if (ms >= lv && ms < ar){ st = 'go'; a = (ms - lv) / 1000 * v; } else if (ms >= ar && ms < out){ st = 'home'; } else if (ms >= out && ms < bk){ st = 'back'; a = R.c.len - (ms - out) / 1000 * v; } } }
+  const P = n.roam.post;
+  if (!st){ if (n.rhSt){ n.rhSt = null; RH.in.delete(n.npcName); n.wHide = false; n.av.g.visible = !onIsle; if (n.blob) n.blob.visible = true; n._culled = false;
+      n.pos.set(P.x, P.y, P.z); n.baseY = P.y; n.rot = P.rot; n.speed = 0; n.roam.away = false; if (P.fishing){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; } }
+    return false; }
+  const first = !n.rhSt; if (first || n.rhSt !== st){ if (st !== 'home' && n.rhSt === 'home' || first){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.sitting = false; if (n.held){ n.av.g.remove(n.held.o); n.held = null; } }
+    if (st === 'go' && camera.position.distanceTo(n.pos) < 25) n.say(pick2(['下雨了，先回家躲雨', '雨好大，收竿收竿', '衣服要濕了，回家囉']), '', 3.5);
+    n.rhSt = st; }
+  if (st === 'home'){ RH.in.add(n.npcName); n.wHide = true; n.av.g.visible = false; if (n.blob) n.blob.visible = false; n.tag.style.display = 'none'; n.speed = 0; return true; }
+  RH.in.delete(n.npcName); if (n.wHide){ n.wHide = false; n._culled = false; } n.av.g.visible = !onIsle;
+  if (st === 'back' && camera.position.distanceTo(n.pos) < 25 && !n.rhSay){ n.rhSay = 1; n.say(pick2(['雨停了，回去釣魚', '終於停了']), '', 3); } if (st === 'go') n.rhSay = 0;
+  const [x, z, hd] = navAt(n.rh.c, a); n.pos.x = x; n.pos.z = z; n.baseY = groundHeight(x, z); n.pos.y = n.baseY; n.rot = lerpAngle(n.rot, hd + (st === 'back' ? Math.PI : 0), 1 - Math.exp(-8 * dt)); n.speed = 1.45;
+  n.update(dt, t); n.placeTag(); return true; }
 function roamDrive(n, dt, t){ if (!n.roam){ if (n.roam === 0) return false; const kind = roamKind(n); if (!kind){ n.roam = 0; return false; }
     n.roam = { kind, post: { x: n.pos.x, z: n.pos.z, y: n.baseY, rot: n.rot, fishing: !!n.fishing }, c: [], tries: 0, ready: false, id: 'rm:' + n.npcName, h: hash32('rm:' + n.npcName), away: false }; }
   const R = n.roam, P = R.post;
@@ -21606,6 +21657,7 @@ function updateNpcs(dt, t){
   for (const n of npcs){
     if (n.wid === 'gang' && Cloud.on && (!Gang.at || Date.now() - Gang.at > 10 * 60000) && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 30) loadGang();
     if (worldDrive(n, dt, t)){ worldShopLoad(n); continue; }
+    try { if (rainHomeDrive(n, dt, t)) continue; } catch(e){ if (!rainHomeDrive.w){ rainHomeDrive.w = 1; console.warn('rainhome', e); } }   /* v893 下雨回家 */
     try { if (roamDrive(n, dt, t)) continue; } catch(e){ if (!roamDrive.w){ roamDrive.w = 1; console.warn('roam', e); } }   /* v450 其他村民也會自己走動 */
     if (n.tailor){ updateLing(n, dt, t); continue; }
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
@@ -23470,6 +23522,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u893', d:'11/26', items:[['🌧️','下雨天阿潮、小溪、阿伯會收竿走回居民區的家躲雨，家裡的燈會亮；雨停再走回來釣魚。顧店的人、老港、阿默阿穎照常在外面'], ['🐾','寵物店的卡片換成真的 3D 寵物小圖，不再只是符號','pets']] },
   { id:'u892', d:'11/26', items:[['🏠','各有自己的家：進房子按「擺家具」→「🏠 當我的家」，一個人一棟，裡面的家具只有你能動，門口會立一塊「誰的家」名牌；人搬走了，他的家會變回大家的','island']] },
   { id:'u891', d:'11/26', items:[['🪑','阿木做家具多了一種新花樣「菱格紋」：一格一格斜斜的菱形，之後做的家具有機會用上']] },
   { id:'u890', d:'11/26', items:[['🧸','床上可以放娃娃了：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻；躺下來會抱著第一隻，其他的會讓到旁邊','island']] },
