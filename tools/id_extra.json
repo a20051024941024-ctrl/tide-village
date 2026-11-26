@@ -8826,5 +8826,17 @@
  "西邊的菜園併進自由種田了：菜園那塊地直接是你的，原本格子裡種的作物都搬到原位繼續長。拿著種子按「種田」，菜園裡也能種得密密麻麻。": "Kebun barat sekarang jadi bagian dari bertani bebas: tanah itu milikmu, dan tanaman di petak lama pindah ke tempat yang sama dan terus tumbuh. Pegang benih dan ketuk \"Bertani\" untuk menanam serapat yang kamu mau.",
  "以前開墾過菜園的格數不會浪費，每格讓田多 5 株（12 格的人最多 360 株）。": "Petak kebun yang dulu dibuka tetap dihitung: tiap petak menambah 5 tanaman (360 dengan 12 petak).",
  "先到菜園的種子攤買種子，在背包點「拿在手上」，再到菜園或島上開好的空地按「種田」，走過去的地方一次種三排，想種多密就多密。作物照現實時間長大（關掉遊戲也會繼續長）。熟了按「收成」邊走邊收，「澆水」一次澆身邊一片，澆滿 2 次會豐收。": "Beli benih di kios kebun, ketuk \"Pegang\" di tas, lalu ketuk \"Bertani\" di kebun atau tanah terbuka. Kamu menanam tiga baris di mana pun kamu berjalan, serapat yang kamu mau. Tanaman tumbuh sesuai waktu nyata, bahkan saat game ditutup. Saat matang, ketuk \"Panen\" dan jalan melewatinya; \"Siram\" menyiram petak di sekitarmu. Siram dua kali untuk panen melimpah.",
- "還沒種東西。拿著種子到菜園或空地按「種田」。": "Belum ada tanaman. Pegang benih dan ketuk \"Bertani\" di kebun atau tanah kosong."
+ "還沒種東西。拿著種子到菜園或空地按「種田」。": "Belum ada tanaman. Pegang benih dan ketuk \"Bertani\" di kebun atau tanah kosong.",
+ "🌱 田": "🌱 Ladang",
+ "🌱 種子拿在手上，在島上開好的地按「種田」，走過去就種下去": "🌱 Pegang benih, ketuk \"Bertani\" di tanah terbuka, lalu berjalan untuk menanam.",
+ "還沒種東西。拿著種子到島上開好的地按「種田」。": "Belum ada tanaman. Pegang benih dan ketuk \"Bertani\" di tanah terbuka.",
+ "還沒有種子。碼頭旁邊有種子攤，走過去就可以買。": "Belum punya benih. Ada kios benih di dekat dermaga.",
+ "田在你的小島上，要先去小島。": "Ladangmu ada di pulaumu. Pergi ke sana dulu.",
+ "背包裡沒有海底的裝飾。小島碼頭旁邊的種子攤有賣。": "Tidak ada dekorasi dasar laut di tas. Kios benih di dekat dermaga pulau menjualnya.",
+ "背包裡沒有海底的種子。先浮上去，到碼頭旁邊的種子攤買。": "Tidak ada benih dasar laut di tas. Naik dulu dan beli di kios benih dekat dermaga.",
+ "拿在手上，到島上開好的地按「種田」": "Pegang lalu ketuk \"Bertani\" di tanah terbuka",
+ "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。": "Ada kios benih di dekat dermaga pulau. Semua tanah terbuka bisa ditanami; jangan lupa disiram.",
+ "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。": "Saat matang, ketuk \"Panen\" lalu jalan melewatinya; \"Siram\" menyiram petak di sekitarmu. Maksimal 300 tanaman per pulau, ditambah 5 untuk tiap petak yang dulu kamu buka.",
+ "先到碼頭旁邊的種子攤買種子，在背包點「拿在手上」，再到島上開好的地按「種田」，走過去的地方一次種三排，想種多密就多密。作物照現實時間長大（關掉遊戲也會繼續長）。熟了按「收成」邊走邊收，「澆水」一次澆身邊一片，澆滿 2 次會豐收。": "Beli benih di kios dekat dermaga, ketuk \"Pegang\" di tas, lalu ketuk \"Bertani\" di tanah terbuka pulaumu. Kamu menanam tiga baris di mana pun kamu berjalan, serapat yang kamu mau. Tanaman tumbuh sesuai waktu nyata, bahkan saat game ditutup. Saat matang, ketuk \"Panen\" dan jalan melewatinya; \"Siram\" menyiram petak di sekitarmu. Siram dua kali untuk panen melimpah.",
+ "菜園整個拿掉了，整座島開好的地都是你的田。種子攤搬到小島碼頭旁邊的沙灘，一上島就看得到。": "Kebun sudah dihapus: semua tanah terbuka di pulaumu sekarang jadi ladang. Kios benih pindah ke pantai dekat dermaga pulau, tepat di tempat kamu tiba."
 }
