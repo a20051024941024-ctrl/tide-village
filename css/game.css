@@ -2554,3 +2554,11 @@ body.photo #hype{display:none}
 /* v893 寵物店卡片：3D 模型小圖 */
 .dishic.petshot{width:84px;height:84px;font-size:44px;display:flex;align-items:center;justify-content:center;border-radius:18px;background:#f3ede4;overflow:hidden}
 .dishic.petshot img{width:100%;height:100%;object-fit:cover;display:block}
+/* v899 潮汐大看板全螢幕 */
+.bbview{position:fixed;inset:0;z-index:400;background:#0b1118;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;padding-top:max(12px,env(safe-area-inset-top))}
+.bbstage{position:relative;width:min(96vw,calc((100vh - 140px) * 16 / 9));aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;border:6px solid #22262d;box-shadow:0 0 40px #4fb6ff55}
+.bbstage video{width:100%;height:100%;object-fit:cover;display:block}
+.bbcard{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:min(22vw,180px);background:linear-gradient(#3a2d4f,#1b1530)}
+.bbcap{color:#fff;font-weight:700;font-size:clamp(16px,3.4vw,26px);text-align:center}
+.bbdots{display:flex;gap:6px}.bbdots i{width:10px;height:10px;border-radius:50%;background:#3d4a5a;cursor:pointer}.bbdots i.on{background:#ffd34a}
+.bbbar{display:flex;gap:10px}
