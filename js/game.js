@@ -18090,25 +18090,25 @@ const BB = { g:null, scr:null, cap:null, capCv:null, i:0, vid:null, tex:null, ca
 function bbUrl(k){ return 'models/bb/' + k + '.mp4'; }
 async function bbBlob(k){ if (BB.blobs[k]) return BB.blobs[k]; if (BB.loading[k]) return null; BB.loading[k] = 1;
   try { const r = await fetch(bbUrl(k)); if (!r.ok) throw 0; const b = await r.blob(); BB.blobs[k] = URL.createObjectURL(b); return BB.blobs[k]; } catch(e){ return null; } finally { BB.loading[k] = 0; } }
-function bbCardTex(it){ const c = document.createElement('canvas'); c.width = 640; c.height = 360; const x = c.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 360); g.addColorStop(0, it.soon ? '#3a2d4f' : '#1d6aa8'); g.addColorStop(1, it.soon ? '#1b1530' : '#0f2a44'); x.fillStyle = g; x.fillRect(0, 0, 640, 360);
+function bbCardTex(it){ const c = document.createElement('canvas'); c.width = 1280; c.height = 720; const x = c.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0); const g = x.createLinearGradient(0, 0, 0, 360); g.addColorStop(0, it.soon ? '#3a2d4f' : '#1d6aa8'); g.addColorStop(1, it.soon ? '#1b1530' : '#0f2a44'); x.fillStyle = g; x.fillRect(0, 0, 640, 360);
   x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '120px sans-serif'; x.fillText(it.ic, 320, 150); x.font = 'bold 40px sans-serif'; x.fillStyle = '#fff'; x.fillText(i18nT(it.t), 320, 262, 600);
   if (it.soon){ x.font = 'bold 30px sans-serif'; x.fillStyle = '#ffd34a'; x.fillText('✨ ' + i18nT('即將推出'), 320, 318); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
-function bbCapDraw(){ const c = BB.capCv, x = c.getContext('2d'), it = BB_LIST[BB.i]; x.fillStyle = '#10161e'; x.fillRect(0, 0, 640, 64); x.fillStyle = '#ffd34a'; x.font = 'bold 30px sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText('📺', 14, 33);
+function bbCapDraw(){ const c = BB.capCv, x = c.getContext('2d'), it = BB_LIST[BB.i]; x.setTransform(2, 0, 0, 2, 0, 0); x.fillStyle = '#10161e'; x.fillRect(0, 0, 640, 64); x.fillStyle = '#ffd34a'; x.font = 'bold 30px sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText('📺', 14, 33);
   x.fillStyle = '#ffffff'; x.font = 'bold 32px sans-serif'; x.fillText(it.ic + ' ' + i18nT(it.t), 64, 33, 520); for (let k = 0; k < BB_LIST.length; k++){ x.fillStyle = k === BB.i ? '#ffd34a' : '#3d4a5a'; x.fillRect(640 - 14 - (BB_LIST.length - k) * 9, 54, 6, 6); } BB.cap.material.map.needsUpdate = true; }
 function bbBuild(){ if (BB.g || typeof HLOT === 'undefined') return; const [x, z, r] = HLOT.tackle, g = BB.g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; g.userData.keep = true; scene.add(g);
-  const roof = 4.62, cz = -1.3, W = 4.4, H = 2.475, y0 = roof + 1.15 + H / 2, dark = '#22262d';
-  for (const sx of [-1.4, 1.4]) g.add(box([0.14, 1.3, 0.14], dark, [sx, roof + 0.6, cz - 0.1]));
-  g.add(box([W + 0.3, H + 0.75, 0.22], dark, [0, y0 - 0.2, cz - 0.14]));
+  const roof = 4.62, cz = -1.3, W = 8.0, H = 4.5, y0 = roof + 1.6 + H / 2, dark = '#22262d';   /* v901 作者：「太小了而且看不清楚」→ 放大快一倍（8×4.5 公尺）、字幕條加高 */
+  for (const sx of [-2.2, 2.2]) g.add(box([0.22, 2.0, 0.22], dark, [sx, roof + 0.95, cz - 0.15]));
+  g.add(box([W + 0.4, H + W * 0.1 + 0.4, 0.25], dark, [0, y0 - W * 0.05, cz - 0.15]));
   const scr = BB.scr = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false })); scr.position.set(0, y0, cz); g.add(scr);
-  BB.capCv = document.createElement('canvas'); BB.capCv.width = 640; BB.capCv.height = 64; const ct = new THREE.CanvasTexture(BB.capCv); ct.colorSpace = THREE.SRGBColorSpace;
+  BB.capCv = document.createElement('canvas'); BB.capCv.width = 1280; BB.capCv.height = 128; const ct = new THREE.CanvasTexture(BB.capCv); ct.colorSpace = THREE.SRGBColorSpace;
   const cap = BB.cap = new THREE.Mesh(new THREE.PlaneGeometry(W, W * 0.1), new THREE.MeshBasicMaterial({ map: ct, toneMapped: false })); cap.position.set(0, y0 - H / 2 - W * 0.05 - 0.02, cz + 0.001); g.add(cap);
-  const glow = new THREE.PointLight('#8fd3ff', 0, 9); glow.position.set(0, y0, cz + 1.2); g.add(glow); BB.glow = glow;
+  const glow = new THREE.PointLight('#8fd3ff', 0, 14); glow.position.set(0, y0, cz + 1.8); g.add(glow); BB.glow = glow;
   g.traverse(o => { o.userData.keep = true; }); bbShow(0); }
 function bbShow(i){ BB.i = (i + BB_LIST.length) % BB_LIST.length; const it = BB_LIST[BB.i]; BB.t = 0; if (BB.capCv) bbCapDraw();
   if (BB.card){ BB.card.dispose(); BB.card = null; } if (it.soon || !it.k || !BB.on){ BB.card = bbCardTex(it); if (BB.scr){ BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; } return; }
   bbBlob(it.k).then(u => { if (BB_LIST[BB.i] !== it) return; if (!u){ BB.card = bbCardTex(it); BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; return; }
-    if (!BB.vid){ const v = BB.vid = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.crossOrigin = 'anonymous'; v.addEventListener('ended', () => bbShow(BB.i + 1)); BB.tex = new THREE.VideoTexture(v); BB.tex.colorSpace = THREE.SRGBColorSpace; }
+    if (!BB.vid){ const v = BB.vid = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.crossOrigin = 'anonymous'; v.addEventListener('ended', () => bbShow(BB.i + 1)); BB.tex = new THREE.VideoTexture(v); BB.tex.colorSpace = THREE.SRGBColorSpace; BB.tex.minFilter = THREE.LinearFilter; BB.tex.generateMipmaps = false; try { BB.tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); } catch(e){} }
     BB.vid.src = u; BB.vid.currentTime = 0; const pr = BB.vid.play(); if (pr && pr.catch) pr.catch(() => {}); BB.scr.material.map = BB.tex; BB.scr.material.needsUpdate = true; }); }
 function bbTick(dt){ if (onIsle || Dive.on || House.on){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
   const d = Math.hypot(me.pos.x - HARBOR_SQ[0], me.pos.z - HARBOR_SQ[1]); if (d > 75){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
@@ -23737,6 +23737,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u901', d:'11/26', items:[['📺','潮汐大看板放大快一倍（8×4.5 公尺），字幕加大，影片畫質調高，從廣場看得比較清楚']] },
   { id:'u900', d:'11/26', items:[['📺','港邊廣場釣具店的屋頂多了一面「潮汐大看板」，輪流播村子裡的玩法（釣大魚、開船、潛水、蓋房子、寵物…）和即將推出的新東西；站在廣場噴水池旁按「大看板」可以全螢幕看']] },
   { id:'u899', d:'11/26', items:[['🐟','魚市場可以走進去逛了：冰台上擺著真的魚（賣魚的單子上按「走進去逛」）。門口照樣直接賣魚'], ['🌧️','下雨天阿嬤會回石滬小島上的家、阿蘭回木棧道盡頭新蓋的巡守站躲雨'], ['🎣','村民釣魚跟你一樣：魚先試吃、刺魚、一扳一收拉上來；鏡頭貼著柱子、招牌時，擋住的東西會變半透明']] },
   { id:'u898', d:'11/26', items:[['⛵','「我的家」「逛別人的島」「島的大小」搬進手機的「⛵ 我的島」了；小島商店只剩買東西，畫面比較乾淨','isleapp']] },
