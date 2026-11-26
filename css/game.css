@@ -2438,3 +2438,12 @@ body.photo #hype{display:none}
 .k3c.k3lock::after{content:'🪙';position:absolute;right:-5px;bottom:-5px;font-size:12px;line-height:1}
 .k3note{margin:2px 0 6px!important;font-size:12px}
 .k3cnote{display:block;color:#8a6a2a;font-size:11px;margin:-2px 0 6px}
+/* v867 阿鐵工坊：材料、分類、耐久度 */
+.matbar{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.matchip{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700}
+.matchip.zero{opacity:.5}
+.craftcats{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.sub2.warn{color:#c0392b}
+.durbar{height:8px;background:#e9e1d1;border-radius:6px;overflow:hidden;margin:4px 0;max-width:240px}
+.durbar i{display:block;height:100%;background:linear-gradient(90deg,#e2703a,#f2c94c)}
+.mkt-cats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}

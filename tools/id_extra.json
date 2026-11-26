@@ -8676,5 +8676,15 @@
  "沒關係，我有帶雨衣": "Tidak apa, aku bawa jas hujan",
  "我腳在痛，下次吧": "Kakiku sakit, lain kali",
  "嘿！粉紅色最好看！": "Hei! Merah muda paling bagus!",
- "不會再突然跳出「阿萍的衣服：挑一套入門衣服」（那是舊人物的衣服，換新人物以後穿了也看不到）": "Jendela \"Baju dari Ah-Ping: pilih satu set pemula\" tidak lagi muncul tiba-tiba (itu baju untuk karakter lama, tidak terlihat di karakter baru)"
+ "不會再突然跳出「阿萍的衣服：挑一套入門衣服」（那是舊人物的衣服，換新人物以後穿了也看不到）": "Jendela \"Baju dari Ah-Ping: pilih satu set pemula\" tidak lagi muncul tiba-tiba (itu baju untuk karakter lama, tidak terlihat di karakter baru)",
+ "阿鐵師傅的工坊改版：原本的東西照樣做，配方改成「金幣＋少一點魚＋材料」；新增貝殼浮標、魚鱗路亞（品質分普通、精良、極品）、修竿包、木雕握把竿、粉紅閃亮竿。第一次去會送一包入門材料": "Pembaruan bengkel Ah-Tie: barang lama tetap bisa dibuat, sekarang dengan koin + lebih sedikit ikan + bahan; baru: pelampung kerang, umpan sisik (kualitas Biasa / Bagus / Istimewa), kit perbaikan joran, Joran Gagang Ukir dan Joran Merah Muda Berkilau. Kunjungan pertama memberi paket bahan pemula",
+ "材料：海邊撿垃圾、潛水撿垃圾時有機會多撿到貝殼、舊漁網、漂流木、珊瑚碎片、粉紅貝；魚可以在工坊分解成魚鱗": "Bahan: memungut sampah di pantai atau saat menyelam bisa juga memberi kerang, jaring bekas, kayu apung, pecahan karang atau kerang merah muda; ikan bisa diurai jadi sisik di bengkel",
+ "釣竿有耐久度了：釣到越大的魚掉越多，用修竿包補（材料做，或直接付 🪙300 跟阿鐵買）。普通浮標、普通假餌本來就在背包裡，免費、不會弄丟": "Joran sekarang punya daya tahan: ikan besar lebih cepat mengikisnya; perbaiki dengan kit perbaikan (buat sendiri, atau beli dari Ah-Tie seharga 🪙300). Pelampung dan umpan biasa selalu ada di tas, gratis dan tidak pernah hilang",
+ "魚市場「釣客擺攤」多了「🧺 材料・裝備」：材料、浮標、路亞、修竿包、工坊做的造型都能賣給別人": "\"Lapak pemancing\" di pasar ikan sekarang punya \"🧺 Bahan & Perlengkapan\": jual bahan, pelampung, umpan, kit perbaikan dan gaya buatan bengkel ke pemain lain",
+ "村民更常出門散步了": "Warga lebih sering keluar jalan-jalan",
+ "阿鐵在釣具店旁邊，帶魚、金幣和材料去找他，可以做活餌、鉤子、浮標、路亞、修竿包、竿子造型、釣線顏色。第一次去他會送你一包入門材料。": "Ah-Tie ada di sebelah toko alat pancing. Bawa ikan, koin dan bahan untuk membuat umpan hidup, kail, pelampung, umpan tiruan, kit perbaikan, gaya joran dan warna senar. Kunjungan pertama memberi paket bahan pemula.",
+ "材料有六種：貝殼、舊漁網、漂流木、珊瑚碎片、魚鱗、粉紅貝。海邊撿垃圾、潛水撿垃圾時有機會多撿到；魚鱗在阿鐵的工坊用魚分解。": "Ada enam bahan: kerang, jaring bekas, kayu apung, pecahan karang, sisik dan kerang merah muda. Memungut sampah di pantai atau saat menyelam bisa memberinya; sisik didapat dengan mengurai ikan di bengkel Ah-Tie.",
+ "普通浮標、普通假餌本來就在背包裡，免費、不會弄丟。阿鐵做的貝殼浮標（浮標釣）、魚鱗路亞（路亞釣法）讓魚咬得快一點，拉斷線會弄丟；品質有普通、精良、極品。到「包包 → 🎣 釣組」換。": "Pelampung dan umpan biasa selalu ada di tas, gratis dan tidak pernah hilang. Pelampung kerang (mancing pelampung) dan umpan sisik (mancing umpan tiruan) buatan Ah-Tie membuat ikan sedikit lebih cepat makan umpan, tapi hilang saat senar putus; kualitasnya Biasa, Bagus atau Istimewa. Ganti di \"Tas → 🎣 Perlengkapan\".",
+ "釣竿有耐久度，釣到越大的魚掉越多；掉到 0 拉魚時拉力上升比較快。修竿包一個補 40，可以用材料做，或直接付 🪙300 跟阿鐵買。": "Joran punya daya tahan; ikan besar lebih cepat mengikisnya. Di 0, tegangan senar naik lebih cepat saat menggulung. Kit perbaikan memulihkan 40; buat dengan bahan atau beli dari Ah-Tie seharga 🪙300.",
+ "材料、浮標、路亞、修竿包、阿鐵做的造型，可以到魚市場「🤝 釣客擺攤 → 🧺 材料・裝備」賣給別人，自己訂價，賣出收 5%。集章卡、排位送的造型不能賣。": "Bahan, pelampung, umpan tiruan, kit perbaikan dan gaya buatan bengkel bisa dijual di pasar ikan bagian \"🤝 Lapak pemancing → 🧺 Bahan & Perlengkapan\" dengan harga sendiri; biaya 5% saat terjual. Gaya dari kartu stempel dan musim peringkat tidak bisa dijual."
 }
