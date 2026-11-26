@@ -14421,6 +14421,7 @@ function petModel(kind, acc, v, shineLv){
   if (kind === 'cat' && Cat3.VARS[v || 'a'] && !window.__noCat3) cat3Attach(g, acc || 0, v || 'a');
   if (kind === 'pondturtle' && !window.__noTurtle3) turtle3Attach(g, acc || 0, v || 'a');
   if (kind === 'shiba' && Dog3.VARS[v || 'a'] && !window.__noDog3) dog3Attach(g, acc || 0, v || 'a');
+  if (kind === 'gull' && Gl3.VARS[v || 'a'] && !window.__noGull3) gull3Attach(g, acc || 0, v || 'a');
   return g;
 }
 /* v290 把一個模型裡「跟著同一個父節點一起動」的小零件合併（不同顏色用頂點顏色），動畫用的節點（userData 裡記著的）不動 */
@@ -14539,6 +14540,49 @@ function dog3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.rem
   if (acc >= 1){ const col = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.022, 8, 18), mat('#e8473a', 0.5)); col.rotation.x = 0.5; col.position.set(0, -0.02, 0.0); b.neck.add(col); const bell = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), mat('#ffd36a', 0.3)); bell.position.set(0, -0.1, 0.1); b.neck.add(bell); }
   if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, 0.24, 0.0); hat.rotation.x = -0.12; b.head.add(hat); const hm2 = mat('#f2d48a', 0.7); const br = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.022, 16), hm2), cr = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.1, 0.1, 14), hm2), rb = new THREE.Mesh(new THREE.CylinderGeometry(0.102, 0.102, 0.024, 14), mat('#e8473a', 0.6)); cr.position.y = 0.06; rb.position.y = 0.024; hat.add(br, cr, rb); }
   U.body = body; U.head = new THREE.Object3D(); U.tail = null; U.legs = [0, 1, 2, 3].map(() => new THREE.Object3D()); U.cat3 = { b, rest, sit: 0, lie: 0, idle: 0, hy: 0, hp: 0, ear: 0, earAt: 2 + Math.random() * 5, earS: 1, seed: Math.random() * 10, dog: 1 }; }
+/* ===== v869 精美海鷗（作者 ChatGPT 三視圖＋Meshy，27 萬面減到 9 千面）=====
+   骨架：身體、頭、左右翅膀、左右腳、尾巴。飛的時候拍翅膀（偶爾滑翔），停在地上會收翅膀、左右歪頭看、偶爾伸展翅膀抖一抖；走路兩隻腳輪流、身體左右搖。
+   花色：銀鷗是原本貼圖；黑頭鷗把頭上白色那塊染深（眼睛、嘴不動）；金色海鷗把灰翅膀染金 */
+const Gl3 = { V: 1, p: null, a: null, S: 0.42, VARS: { a: 1, b: 1, c: 1 }, M: {} };
+const GL3_B = [['root', -1, 0, 0.35, 0], ['head', 0, 0, 0.56, 0.04], ['wL', 0, 0.17, 0.48, 0], ['wR', 0, -0.17, 0.48, 0], ['lL', 0, 0.06, 0.17, 0.0], ['lR', 0, -0.06, 0.17, 0.0], ['tail', 0, 0, 0.28, -0.22]];
+function gull3Mat(v){ if (!v || v === 'a' || !Gl3.VARS[v]) return Gl3.a.mat; if (Gl3.M[v]) return Gl3.M[v]; const m = Gl3.a.mat.clone(); Gl3.M[v] = m; new THREE.TextureLoader().load('models/pets/gull_' + v + '.jpg?v=' + Gl3.V, tx => { tx.flipY = false; tx.colorSpace = THREE.SRGBColorSpace; tx.generateMipmaps = false; tx.minFilter = THREE.LinearFilter; tx.magFilter = THREE.LinearFilter; tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping; m.map = tx; m.needsUpdate = true; }); return m; }
+function gull3Load(){ if (!Gl3.p) Gl3.p = new GLTFLoader().loadAsync('models/pets/gull.glb?v=' + Gl3.V).then(gl => { let hm = null; gl.scene.traverse(o => { if (o.isMesh && !hm) hm = o; }); const geo = hm.geometry, P = geo.attributes.position, n = P.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    const sm = (a, b, v) => { const u = clamp((v - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); }, ix = {}; GL3_B.forEach((b, i) => { ix[b[0]] = i; });
+    for (let q = 0; q < n; q++){ const x = P.getX(q), y = P.getY(q), z = P.getZ(q), W = []; let rem = 1;
+      const hw = sm(0.50, 0.58, y); if (hw > 0){ W.push([ix.head, hw]); rem -= hw; }   /* 頭和嘴 */
+      const ww = rem * sm(0.13, 0.16, Math.abs(x)) * sm(0.14, 0.2, y) * sm(0.55, 0.5, y); if (ww > 0){ W.push([x > 0 ? ix.wL : ix.wR, ww]); rem -= ww; }   /* 翅膀：貼在身體兩側那片 */
+      const tw = rem * sm(-0.24, -0.30, z) * sm(0.40, 0.33, y); if (tw > 0){ W.push([ix.tail, tw]); rem -= tw; }
+      const lw = rem * sm(0.19, 0.13, y); if (lw > 0){ W.push([x > 0 ? ix.lL : ix.lR, lw]); rem -= lw; }   /* 腳 */
+      if (rem > 0.001) W.push([ix.root, rem]);
+      W.sort((a, b) => b[1] - a[1]); const A = W.slice(0, 4), tot = A.reduce((s, e) => s + e[1], 0) || 1; A.forEach((e, k) => { si[q * 4 + k] = e[0]; sw[q * 4 + k] = e[1] / tot; }); }
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    const m = hm.material; if (m.map){ m.map.generateMipmaps = false; m.map.minFilter = THREE.LinearFilter; m.map.magFilter = THREE.LinearFilter; m.map.needsUpdate = true; } m.roughness = 0.8; m.metalness = 0;
+    Gl3.a = { geo, mat: m }; }).catch(e => { console.warn('精美海鷗載入失敗', e); Gl3.p = null; });
+  return Gl3.p; }
+function gull3Attach(g, acc, v){ const go = () => { if (!Gl3.a || g.userData.gl3) return; try { gull3Make(g, acc, v); } catch(e){ console.warn('gl3', e); } }; if (Gl3.a) go(); else { const p = gull3Load(); if (p) p.then(go); } }
+function gull3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.remove(old);
+  const body = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(Gl3.S); rig.position.y = 0.01; body.add(rig); g.add(body);
+  const bones = GL3_B.map(b => { const o = new THREE.Bone(); o.name = 'g3' + b[0]; return o; }), b = {}, rest = {};
+  GL3_B.forEach((d, i) => { const p = d[1] >= 0 ? GL3_B[d[1]] : null; bones[i].position.set(d[2] - (p ? p[2] : 0), d[3] - (p ? p[3] : 0), d[4] - (p ? p[4] : 0)); (p ? bones[d[1]] : rig).add(bones[i]); b[d[0]] = bones[i]; rest[d[0]] = bones[i].position.clone(); });
+  const sm = new THREE.SkinnedMesh(Gl3.a.geo, gull3Mat(v)); sm.name = 'gull3'; sm.frustumCulled = false; sm.castShadow = true; sm.userData.noProxy = true; rig.add(sm);
+  g.updateMatrixWorld(true); sm.bind(new THREE.Skeleton(bones));
+  if (acc >= 1){ const col = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.025, 8, 18), mat('#e8473a', 0.5)); col.rotation.x = Math.PI / 2 - 0.15; col.position.set(0, -0.02, 0.0); b.head.add(col); const bell = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), mat('#ffd36a', 0.3)); bell.position.set(0, -0.06, 0.15); b.head.add(bell); }
+  if (acc >= 2){ const hat = new THREE.Group(); hat.position.set(0, 0.42, -0.02); hat.rotation.x = -0.1; b.head.add(hat); const hm2 = mat('#f2d48a', 0.7); const br = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.024, 16), hm2), cr = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.105, 0.11, 14), hm2), rb = new THREE.Mesh(new THREE.CylinderGeometry(0.107, 0.107, 0.026, 14), mat('#e8473a', 0.6)); cr.position.y = 0.065; rb.position.y = 0.026; hat.add(br, cr, rb); }
+  U.body = body; U.head = new THREE.Object3D(); U.tail = null; U.wings = null; U.legs = [0, 1].map(() => new THREE.Object3D()); U.gl3 = { b, rest, rig, seed: Math.random() * 10, hy: 0, tilt: 0, str: 0, strAt: 6 + Math.random() * 8, glide: 0 }; }
+function gull3Tick(pt, dt, t, mv){ const C = pt.m.userData.gl3, b = C.b, R = C.rest, fly = clamp(pt.fly || 0, 0, 1), A = pt.act && pt.act.k, sq = A === 'sit' || A === 'rest' ? 1 : 0, w = mv * (1 - fly);
+  /* 翅膀：飛的時候拍（每隔幾秒滑翔一下），站著收好；偶爾伸展抖一抖 */
+  C.glide = fly > 0.5 && Math.sin(t * 0.7 + C.seed) > 0.55 ? Math.min(1, C.glide + dt * 3) : Math.max(0, C.glide - dt * 3);
+  if (fly < 0.2 && !A && t > C.strAt){ C.strAt = t + 8 + Math.random() * 10; C.str = 1; } C.str = Math.max(0, C.str - dt * 0.8);
+  const strV = Math.sin(C.str * Math.PI) * (1.1 + Math.sin(t * 22) * 0.12 * (C.str > 0.2 ? 1 : 0));
+  const flap = fly * ((1 - C.glide) * (0.75 + Math.sin(t * 13) * 0.85) + C.glide * 1.35), wz = Math.max(flap, strV), treat = A === 'treat' || A === 'pat' ? Math.abs(Math.sin(t * 9)) * 0.35 : 0;
+  b.wL.rotation.set(-0.15 * fly, 0, wz + treat); b.wR.rotation.set(-0.15 * fly, 0, -wz - treat); const ws = 1 + 0.55 * Math.max(fly, C.str * 0.6); b.wL.scale.set(ws, ws, 1 + 0.25 * fly); b.wR.scale.set(ws, ws, 1 + 0.25 * fly);   /* v869 飛的時候翅膀張大一點，看起來才像在飛 */
+  /* 身體：飛的時候往前傾；走路左右搖、兩隻腳輪流；坐下（休息）整隻蹲低 */
+  const ph = pt.ph * 1.6; C.rig.rotation.x = 0.28 * fly; C.rig.rotation.z = Math.sin(ph) * 0.09 * w; C.rig.position.y = 0.01 - 0.035 * sq + Math.abs(Math.sin(ph)) * 0.012 * w;
+  b.lL.rotation.x = Math.sin(ph) * 0.6 * w + 0.9 * fly; b.lR.rotation.x = -Math.sin(ph) * 0.6 * w + 0.9 * fly; b.lL.position.y = R.lL.y + 0.04 * sq; b.lR.position.y = R.lR.y + 0.04 * sq;
+  /* 頭：站著時一下看左一下看右、歪頭；走路一點一點 */
+  if (mv < 0.1 && fly < 0.3){ if (Math.sin(t * 0.9 + C.seed) > 0.92) C.hy = Math.sin(t * 3.1 + C.seed) * 0.9; C.tilt += (Math.sin(t * 0.5 + C.seed) * 0.3 - C.tilt) * Math.min(1, dt * 2); } else { C.hy *= 0.9; C.tilt *= 0.9; }
+  b.head.rotation.set(Math.sin(ph * 2) * 0.08 * w - 0.2 * fly + (A === 'treat' ? 0.4 * Math.abs(Math.sin(t * 8)) : 0), b.head.rotation.y + (C.hy - b.head.rotation.y) * Math.min(1, dt * 8), C.tilt);
+  b.tail.rotation.set(Math.sin(t * 2.3 + C.seed) * 0.08, Math.sin(t * 1.7 + C.seed) * 0.12, 0); }
 function cat3Attach(g, acc, v){ const go = () => { if (!Cat3.a || g.userData.cat3) return; try { cat3Make(g, acc, v); } catch(e){ console.warn('cat3', e); } }; if (Cat3.a) go(); else { const p = cat3Load(); if (p) p.then(go); } }
 function cat3Make(g, acc, v){ const U = g.userData, old = U.body; if (old) g.remove(old);
   const body = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(Cat3.S); rig.position.y = 0.022; body.add(rig); g.add(body);   /* 腳掌墊高一點點，不然站著的時候腳趾埋在地裡 */
@@ -14656,6 +14700,7 @@ function petStep(pt, dt, t, tx, tz, ty, moving, faceTo){
   if (pt.kind === 'otter' && mv < 0.05){ U.body.rotation.z = Math.max(0, Math.sin(t * 0.5 + pt.ph * 0.01)) > 0.97 ? Math.sin(t * 12) * 0.5 : U.body.rotation.z * 0.9; }   /* 水獺偶爾滾一下 */
   if (U.cat3){ try { cat3Tick(pt, dt, t, mv, tx, tz); } catch(e){} }
   if (U.tt3){ try { turtle3Tick(pt, dt, t, mv); } catch(e){} }
+  if (U.gl3){ try { gull3Tick(pt, dt, t, mv); } catch(e){} }
 }
 /* ===== v332 跟寵物互動：丟球（跑去撿回來）、給點心、坐下、跳一跳、轉圈；揮手、跳舞、歡呼時寵物也會跟著動；別人也看得到 ===== */
 const PET_ACTS = [['🦴', '給點心', 'treat'], ['✋', '摸摸頭', 'pat'], ['🤝', '握手', 'paw'], ['🎾', '丟球', 'ball'], ['🏃', '繞圈跑', 'zoom'], ['😴', '一起休息', 'rest'], ['🐾', '坐下', 'sit'], ['🦘', '跳一跳', 'jump'], ['🌀', '轉圈', 'spin']];
@@ -22789,6 +22834,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u869', d:'11/26', items:[['🕊️','海鷗換成精美的新模型：飛的時候拍翅膀、偶爾滑翔，停下來收翅膀、歪頭看你、伸懶腰抖一抖；銀鷗、黑頭鷗、金色海鷗都有']] },
   { id:'u868', d:'11/26', items:[['🔧','阿鐵師傅的工坊換了新畫面：上面選分類，左邊選東西，右邊直接看到要什麼材料、還缺什麼，按「做！」就好。'],['🐟','做東西要用魚的時候可以自己挑哪一條，選魚的畫面是遊戲裡魚的樣子；不選的話一樣先用最輕的。'],['💠','換魚鱗也改成自己挑魚，一次最多 20 條。']] },
   { id:'u867', d:'11/26', items:[['🔧','阿鐵師傅的工坊改版：原本的東西照樣做，配方改成「金幣＋少一點魚＋材料」；新增貝殼浮標、魚鱗路亞（品質分普通、精良、極品）、修竿包、木雕握把竿、粉紅閃亮竿。第一次去會送一包入門材料'], ['🐚','材料：海邊撿垃圾、潛水撿垃圾時有機會多撿到貝殼、舊漁網、漂流木、珊瑚碎片、粉紅貝；魚可以在工坊分解成魚鱗'], ['🎣','釣竿有耐久度了：釣到越大的魚掉越多，用修竿包補（材料做，或直接付 🪙300 跟阿鐵買）。普通浮標、普通假餌本來就在背包裡，免費、不會弄丟'], ['🧺','魚市場「釣客擺攤」多了「🧺 材料・裝備」：材料、浮標、路亞、修竿包、工坊做的造型都能賣給別人'], ['🚶','村民更常出門散步了']] },
   { id:'u866', d:'11/26', items:[['🐕','柴犬換成精美的新模型：走路、坐下、趴下、看主人、捲尾巴搖搖搖；赤柴、芝麻柴、黑柴、白柴都有']] },
