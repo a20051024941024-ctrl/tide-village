@@ -3287,6 +3287,11 @@ function watchFps(t){
 }
 
 /* ---- 合併靜態物件：同一種材質的房子、碼頭、樹幹…合成一個網格，大幅減少手機的繪製次數 ---- */
+/* v908 作者：「比如像麥塊，進到一個區塊才會加載其他不會」→ 村子切成 32 公尺一格，合併的時候每一格分開；
+   離鏡頭太遠的格子整塊不畫（畫質越低看越近），看不到的方向本來就不畫。iPhone 卡卡的時候最有用。 */
+const CHUNK = { size: +((location.hash.match(/chunk=(\d+)/) || [])[1] || 48), meshes: [], v: new THREE.Vector3(), far: { low: 85, mid: 120, high: 170 }, at: 0, hid: 0 };
+function chunkCull(){ const R = CHUNK.far[Quality.tier] || 120, cp = camera.position; let hid = 0;
+  for (const m of CHUNK.meshes){ const bs = m.geometry.boundingSphere; if (!bs) continue; const on = cp.distanceTo(bs.center) - bs.radius < R; if (m.visible !== on) m.visible = on; if (!on) hid++; } CHUNK.hid = hid; }
 function batchStatic(){
   if (/nomerge/.test(location.hash)) return;
   try {
@@ -3301,7 +3306,8 @@ function batchStatic(){
       if (o.material && o.material.map) return;   // 有貼圖的（招牌）不合併：合併會丟掉 uv，招牌的字會不見
       if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !Array.isArray(o.material) && o.visible){
         const m = o.material;
-        const key = [m.type, m.color && m.color.getHex(), m.emissive && m.emissive.getHex(), m.emissiveIntensity, m.roughness, m.metalness, m.transparent, m.opacity, m.side, m.flatShading, m.fog, o.castShadow, o.receiveShadow].join('|');
+        o.getWorldPosition(CHUNK.v); const ck = Math.floor(CHUNK.v.x / CHUNK.size) + ',' + Math.floor(CHUNK.v.z / CHUNK.size);   /* v908 分區：同一種材質也照位置分開合併，遠的那一區整塊不畫 */
+        const key = [m.type, m.color && m.color.getHex(), m.emissive && m.emissive.getHex(), m.emissiveIntensity, m.roughness, m.metalness, m.transparent, m.opacity, m.side, m.flatShading, m.fog, o.castShadow, o.receiveShadow, ck].join('|');
         if (!groups.has(key)) groups.set(key, []); groups.get(key).push(o);
       }
       for (const c of o.children.slice()) walk(c);
@@ -3314,6 +3320,7 @@ function batchStatic(){
       const merged = mergeGeometries(geos, false); geos.forEach(g => g.dispose());
       if (!merged){ after += list.length; continue; }
       const mesh = new THREE.Mesh(merged, list[0].material); mesh.castShadow = list[0].castShadow; mesh.receiveShadow = list[0].receiveShadow; mesh.matrixAutoUpdate = false;
+      merged.computeBoundingSphere(); CHUNK.meshes.push(mesh);
       scene.add(mesh); for (const o of list) o.parent && o.parent.remove(o); after++;
     }
     Quality.batched = { before, after };
@@ -22172,7 +22179,8 @@ function renderWorldGift(body){ const k = World.giftTo; body.appendChild(el('div
 function worldSummary(){ if (!World.rows || !World.places) return []; return Object.keys(WORLD_WHO).filter(k => World.rows[k]).map(k => { const wp = worldPose(k), r = World.rows[k], pl = World.places[r.place] || {}; return { id:k, name:WORLD_WHO[k], icon: wp && wp.walk ? '🚶' : (WORLD_ACT[r.act] || ['❔'])[0], text: wp && wp.walk ? `正在走去${pl.name || ''}（要${(WORLD_ACT[r.act] || ['', ''])[1]}）` : `在${pl.name || ''}${(WORLD_ACT[r.act] || ['', ''])[1]}`, x: wp ? wp.x : pl.x, z: wp ? wp.z : pl.z }; }); }
 
 // 手機效能：畫質「低／中」時，離鏡頭太遠的 NPC 和客人先不畫（每個角色有 20～40 個零件，很吃效能）
-const AV_CULL = { low: 40, mid: 62 };   /* v229：放遠一點，而且「消失」要再遠 8 公尺（來回走的時候不會一直閃） */
+const AV_CULL = { low: 40, mid: 62, high: 85 };   /* v908 最高畫質也要：每個新人物有 4～6 萬個三角形，太遠的先不畫 */
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)){ AV_CULL.high = 70; AV_CULL.mid = 55; }   /* v229：放遠一點，而且「消失」要再遠 8 公尺（來回走的時候不會一直閃） */
 function cullAvatars(){
   const R = AV_CULL[Quality.tier]; if (!R) return; const cx = camera.position.x, cz = camera.position.z, R2 = R * R;
   const R2o = (R + 8) * (R + 8), far = f => { const dx = f.pos.x - cx, dz = f.pos.z - cz, d2 = dx * dx + dz * dz; return f._culled ? d2 > R2 : d2 > R2o; };
@@ -22676,7 +22684,7 @@ const debugEl = /debug/.test(location.hash) ? Object.assign(document.createEleme
 if (debugEl){ debugEl.style.cssText = 'position:fixed;left:50%;bottom:8px;transform:translateX(-50%);padding:6px 10px;font:12px/1.4 ui-monospace,monospace;z-index:40;pointer-events:none;white-space:nowrap'; document.body.appendChild(debugEl); }
 function updateDebug(){
   const i = renderer.info, b = Quality.batched;
-  debugEl.textContent = `FPS ${Quality.fps ? Quality.fps.toFixed(0) : '…'} · 繪製 ${i.render.calls} · 三角形 ${(i.render.triangles/1000).toFixed(1)}k · 畫質 ${TIERS[Quality.tier].label}${Quality.setting === 'auto' ? '(自動)' : ''} · 合併 ${b ? b.before + '→' + b.after : '關'}`;
+  debugEl.textContent = `FPS ${Quality.fps ? Quality.fps.toFixed(0) : '…'} · 區塊 ${CHUNK.meshes.length - CHUNK.hid}/${CHUNK.meshes.length} · 繪製 ${i.render.calls} · 三角形 ${(i.render.triangles/1000).toFixed(1)}k · 畫質 ${TIERS[Quality.tier].label}${Quality.setting === 'auto' ? '(自動)' : ''} · 合併 ${b ? b.before + '→' + b.after : '關'}`;
 }
 /* ================= DAY / NIGHT：日夜循環 ================= */
 // 一天 = 現實 36 分鐘。用現實時間換算，所以同一時刻所有玩家看到的天色都一樣（不用連線同步）。
@@ -23724,6 +23732,7 @@ function frame(){
   if (myBoat && !Dive.on){ try { KJ.ikR2 = kayakIK(me, myBoat.m); KJ.pr = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } }   /* v463 玩家說「別人有動作、自己沒有」：自己的角色在這一格後面可能又被別的地方更新一次，把姿勢洗掉。畫面送出去之前最後再握一次槳 */
   try { K3.frame(); } catch(e){ K3.bad(e); } try { K3.kidDiag(); } catch(e){}   /* v690 新人物：彈性、划船、騎車的姿勢都算完了，最後抄一次骨架 */
   renderer.render(scene, camera);
+  if (frameNo % 10 === 0 && CHUNK.meshes.length) chunkCull();
   if (debugEl && frameNo % 15 === 0) updateDebug();
   requestAnimationFrame(frame);
 }
@@ -23789,6 +23798,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u908', d:'11/26', items:[['⚡','比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）']] },
   { id:'u907', d:'11/26', items:[['✨','開心時的星星眼改好看了：不再整顆變黃色星星，保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光']] },
   { id:'u906', d:'11/26', items:[['🧘','兩個新坐姿：「盤腿坐」（兩手放膝蓋）、「往後撐著坐」（身體往後靠、腳彎到旁邊），表情選單裡就有，坐著會輕輕呼吸；「🌙 放空」時每 40 秒自己換一個坐姿'], ['📱','iPhone 用最高畫質會卡一下一下：iPhone 的最高畫質改成比較省力的設定，看起來差不多但順很多']] },
   { id:'u905', d:'11/26', items:[['🐾','寵物陪著你就會變親：帶出門每 5 分鐘親密度 +1（一天最多 +12），不用每天餵','pets'], ['🌙','表情選單多一個「🌙 放空」：坐下來，按鈕都收起來，畫面慢慢轉一圈，寵物在旁邊陪你，什麼都不用做；搖桿一動或點「回來」就結束'], ['📺','潮汐大看板再加高，螢幕底部離地 4 公尺，不會被人擋到；換段時字幕和畫面會一起換']] },

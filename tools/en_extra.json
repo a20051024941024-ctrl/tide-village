@@ -9278,5 +9278,6 @@
  "iPhone 用最高畫質會卡一下一下：iPhone 的最高畫質改成比較省力的設定，看起來差不多但順很多": "iPhone stuttered on the highest quality: iPhone now uses lighter settings for highest quality, looking about the same but much smoother.",
  "盤腿坐": "Cross-legged",
  "往後撐著坐": "Lean back",
- "開心時的星星眼改好看了：不再整顆變黃色星星，保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光": "Happy star eyes look nicer: instead of turning into solid yellow stars, your own eyes stay with two little sparkles in them."
+ "開心時的星星眼改好看了：不再整顆變黃色星星，保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光": "Happy star eyes look nicer: instead of turning into solid yellow stars, your own eyes stay with two little sparkles in them.",
+ "比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）": "Smoother: the village is split into areas, and areas out of view or too far are skipped; on highest quality, far-away villagers are skipped too (closer on iPhone)."
 }
