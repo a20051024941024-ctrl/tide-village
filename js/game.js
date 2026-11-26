@@ -5511,7 +5511,7 @@ if (K3.on && !/kid=0/.test(location.hash)) try { K3.fetch(); } catch(e){}
    同一張臉大家共用一張貼圖（照設定存起來）。ex：smile 平常、happy 做動作時（眼睛瞇成彎的、張嘴笑）、blink 眨眼 */
 K3.FC = new Map();
 /* v749 情緒表情：[眼睛怎麼畫, 嘴巴怎麼畫]。own＝照自己選的眼睛／嘴巴 */
-K3.EXF = { smile: ['own', 'own'], blink: ['closed', 'own'], happy: ['arc', 'open'], star: ['star', 'open'], wink: ['wink', 'open'], surprised: ['own', 'o'], shock: ['dot', 'big'], angry: ['ang', 'frown'], cry: ['cry', 'wail'], sleep: ['closed', 'o'], flat: ['line', 'flat'], smug: ['half', 'smirk'], shy: ['own', 'shy'] };
+K3.EXF = { smile: ['own', 'own'], blink: ['closed', 'own'], happy: ['arc', 'open'], star: ['own', 'open'], wink: ['wink', 'open'], surprised: ['own', 'o'], shock: ['dot', 'big'], angry: ['ang', 'frown'], cry: ['cry', 'wail'], sleep: ['closed', 'o'], flat: ['line', 'flat'], smug: ['half', 'smirk'], shy: ['own', 'shy'] };
 /* 做哪個動作配哪個表情（沒寫到的動作維持平常的臉） */
 K3.RIGID = { short: 1, short2: 1, bob: 1, bun: 1, lowpony: 1, buzz: 1, bowl: 1, mid: 1, curly: 1, shave: 1 };
 K3.EXMAP = { wave: 'happy', dance: 'happy', clap: 'happy', laugh: 'happy', hop: 'happy', cheer: 'star', thumbs: 'wink', wow: 'surprised', scared: 'shock', angry: 'angry', sleep: 'sleep', yawn: 'sleep', stretch: 'blink', bow: 'blink', shrug: 'flat', playdead: 'flat', point: 'smug', spin: 'smug' };
@@ -5539,6 +5539,9 @@ K3.faceTex = (c, ex, size) => { const A = K3.asset; if (!A || !A.fbase || !A.fey
     else if (em === 'dot'){ g.beginPath(); g.ellipse(x, y - 4, 34, 34, 0, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 5; g.strokeStyle = INK; g.stroke(); g.beginPath(); g.ellipse(x, y - 4, 8, 8, 0, 0, Math.PI * 2); g.fillStyle = INK; g.fill(); }
     else if (em === 'star'){ g.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? 14 : 34, a = -Math.PI / 2 + i * Math.PI / 5; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y - 4 + Math.sin(a) * r); } g.closePath(); g.fillStyle = '#ffcd3c'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#c88c1e'; g.stroke(); g.beginPath(); g.ellipse(x - 5, y - 13, 4.5, 4.5, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,0.9)'; g.fill(); }
     else if (em === 'cry'){ g.beginPath(); g.moveTo(x - 20 * s, y - 16); g.lineTo(x + 16 * s, y - 2); g.lineTo(x - 20 * s, y + 12); g.lineWidth = 6.5; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = INK; g.stroke(); g.beginPath(); g.ellipse(x - 6 * s, y + 34, 7, 12, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(120,190,245,0.92)'; g.fill(); } }
+  /* v907 作者覺得整顆黃星星的眼睛「不好看」→ 改成保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光 */
+  if (ex === 'star') for (const [x, y] of EY){ const spk = (cx, cy, r) => { g.beginPath(); for (let i = 0; i < 8; i++){ const rr = i % 2 ? r * 0.28 : r, a = -Math.PI / 2 + i * Math.PI / 4; g[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); g.fill(); };
+    g.fillStyle = 'rgba(255,255,255,0.95)'; g.shadowColor = 'rgba(255,225,120,0.9)'; g.shadowBlur = 6; spk(x + 12, y - 20, 17); spk(x - 14, y + 10, 9); g.shadowBlur = 0; }
   if (ex === 'flat'){ g.beginPath(); g.moveTo(400, 262); g.quadraticCurveTo(386, 292, 400, 300); g.quadraticCurveTo(414, 292, 400, 262); g.fillStyle = 'rgba(130,195,245,0.92)'; g.fill(); }   /* 無言的一滴汗 */
   /* 眉毛（顏色跟髮色走，深一點） */
   { const bc = C.hair ? '#' + new THREE.Color(C.hair).multiplyScalar(0.72).getHexString() : '#6a6480'; for (const [ex0, ey, s] of EY){ const x = ex0 + 6 * s, y = ey - 74 - ({ happy: 4, star: 5, surprised: 9, shock: 10 }[ex] || 0) + (ex === 'angry' ? 14 : 0), k = ex === 'angry' ? 'down' : ex === 'cry' ? 'up' : c.brow;
@@ -23786,6 +23789,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u907', d:'11/26', items:[['✨','開心時的星星眼改好看了：不再整顆變黃色星星，保留自己的眼睛，眼珠裡多兩顆閃閃的小亮光']] },
   { id:'u906', d:'11/26', items:[['🧘','兩個新坐姿：「盤腿坐」（兩手放膝蓋）、「往後撐著坐」（身體往後靠、腳彎到旁邊），表情選單裡就有，坐著會輕輕呼吸；「🌙 放空」時每 40 秒自己換一個坐姿'], ['📱','iPhone 用最高畫質會卡一下一下：iPhone 的最高畫質改成比較省力的設定，看起來差不多但順很多']] },
   { id:'u905', d:'11/26', items:[['🐾','寵物陪著你就會變親：帶出門每 5 分鐘親密度 +1（一天最多 +12），不用每天餵','pets'], ['🌙','表情選單多一個「🌙 放空」：坐下來，按鈕都收起來，畫面慢慢轉一圈，寵物在旁邊陪你，什麼都不用做；搖桿一動或點「回來」就結束'], ['📺','潮汐大看板再加高，螢幕底部離地 4 公尺，不會被人擋到；換段時字幕和畫面會一起換']] },
   { id:'u904', d:'11/26', items:[['📺','潮汐大看板再搬一次：搬到島中央的潮汐廣場旁邊的草地，面向廣場，不會擋到店、釣點和海；走到大看板前面按「大看板」可以全螢幕看']] },
