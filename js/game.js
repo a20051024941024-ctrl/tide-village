@@ -466,7 +466,7 @@ const BLI = { x:-72, z:104, half:39, y:0.5, lot:20, gap:4, oz:4, bx:-47, bz0:42.
 const BLS = { street:1, n:1, used:{}, list:null, at:0, loading:false, mine:null, help:[], views:{}, built:false, near:false, g:null, bp:null, admin:null };
 const DECO_IDS = ['amphora', 'bubble', 'clam', 'anchor', 'lantern', 'chest', 'statue', 'arch', 'coral_p', 'coral_o', 'coral_v', 'braincoral', 'seagrass', 'kelpdeco', 'anemone', 'sponge', 'starfish', 'shell', 'rock_s', 'rock_l', 'sandtile', 'c_shrimp', 'c_crab', 'c_slug', 'c_clown', 'c_seahorse', 'c_puffer', 'g_printflag'];   /* 海底的裝飾、造景（伺服器 147_sea_build 的價目表要有同一批） */
 const GARDEN = { x:150 - 24 - 5.75, z:0, hx:6.75, hz:5, px:150 - 24 - 4.5, sx:150 - 24 - 11.3 };   /* px：田的中心；sx：種子攤 */   /* v370 小島西邊的菜園平台 */
-const STALL = { x: ISLE.x + 4.2, z: ISLE.z + 25.6 };   /* v881 菜園拿掉了，種子攤搬到小島碼頭旁邊的沙灘（沙灘不能蓋東西，不會跟玩家的東西疊在一起） */
+const STALL = { x: ISLE.x + 4.2, z: ISLE.z + 25.6 }, CHEST = { x: ISLE.x - 4.2, z: ISLE.z + 25.4 };   /* v886 大箱子在碼頭另一邊 */   /* v881 菜園拿掉了，種子攤搬到小島碼頭旁邊的沙灘（沙灘不能蓋東西，不會跟玩家的東西疊在一起） */
 /* ===== v873 小島改成自然的島（作者 11/26：照海島照片「還不錯欸」→「好」）=====
    外圍一圈淺水礁和浪花、白沙灘、椰子樹、茂密樹林、東北邊幾根石灰岩峭壁。中間半徑 24 公尺（原本的小島）照舊是你的，蓋的東西都不動。
    外面分 6 塊地（扇形，東北兩塊是峭壁不能買），買了才會砍樹（下一版）；沙灘整圈都可以走。南邊碼頭那段海岸比較近，碼頭、潛水梯都在原位。 */
@@ -7493,6 +7493,7 @@ function actionDown(){
     { const wf = !Wild.busy && !Wild.build && nearWildFire(); if (wf){ act.classList.remove('down'); wildFireAdd(wf); return; } }   /* v591 營火：加木頭 */
     if (nearCage()){ act.classList.remove('down'); openSheet('cage'); return; }   /* 箱網 */
     if (nearSeedShop()){ act.classList.remove('down'); Farm.view = 'shop'; openSheet('farm'); return; }   /* 種子攤 */
+    if (nearChest()){ act.classList.remove('down'); isleTab = 'shop'; Isle2.cat = 'chest'; try { SFX.click(); } catch(e){} openSheet('island'); return; }   /* v886 大箱子 */
     if (nearSeaDive()){ act.classList.remove('down'); seaDive(); return; }   /* 小島碼頭的潛水梯：下去海底花園 */
     { const fp = nearFarm(); if (fp){ act.classList.remove('down'); farmAct(fp); return; } }   /* 小島菜園 */
     { const fp = freeNear(); if (fp){ act.classList.remove('down'); freeAct(fp); return; } }   /* v876 自由種田 */
@@ -7975,6 +7976,7 @@ function updateFishing(dt, t){
     else if (nearSnorkel()){ label = '浮潛'; sub = hasDive('dive_suit') ? '🤿 下水看珊瑚礁' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearHarborDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '⚓ 下去港口海底' : '🤿 要先買潛水裝備'; cls = 'shop'; }
     else if (nearSeaDive()){ label = '潛水'; sub = hasDive('dive_suit') ? '🪸 海底花園' : '🤿 要先買裝備'; cls = 'shop'; }
+    else if (nearChest()){ const n = Object.values(isleBagAll()).reduce((a, b) => a + (+b > 0 ? +b : 0), 0); label = '大箱子'; sub = n ? `📦 裡面有 ${n} 樣` : '📦 空的'; cls = 'shop'; }
     else if (nearSeedShop()){ const L = CROPS.find(C => C.lim === farmWeek()); label = '種子攤'; sub = L ? `${L.icon} 本週限定：${L.name}` : '🌱 買種子'; cls = 'shop'; }
     else if (nearFarm()){ const fb = farmBtn(nearFarm()); label = fb[0]; sub = fb[1]; cls = 'shop'; }
     else if (freeNear()){ const fb = freeBtn(freeNear()); label = fb[0]; sub = fb[1]; cls = 'shop'; }
@@ -8204,7 +8206,7 @@ const BL_TPL = {
       for (const [x, z, k] of [[-5, -4, 19], [-4, 3, 8], [5, -5, 18], [4, 2, 19], [-6, 6, 17], [6, 6, 8], [-3, -2, 18], [3, -3, 17]]) c.push([x, z, 0, 'dm', 0, k]); return c; } } };
 function blTemplate(k, i){ const T = BL_TPL[k]; if (!T) return; if (!(Blk.lot && Blk.lot.i === i)) blBuildStart(i); if (!Blk.lot) return;
   const cells = T.mk().filter(q => !blkAt(q[0], q[1], q[2])), { cost } = blkCost(cells);
-  if (!confirm(`放一間「${T.n}」？大約 ${cells.length} 塊，要 🪙${cost}（包包裡收著的方塊先用）。放好以後可以自己改。`)) return;
+  if (!confirm(`放一間「${T.n}」？大約 ${cells.length} 塊，要 🪙${cost}（大箱子裡有的方塊先用）。放好以後可以自己改。`)) return;
   const n = blkPlaceMany(cells.map(q => [q[0], q[1], q[2], q[3], q[4] || 0, q[5] | 0])); if (n) toast(`${T.ic} 放好了「${T.n}」，可以自己改顏色、加東西`); }
 /* 手機上的建地面板 */
 let blSheetI = -1;
@@ -8222,7 +8224,7 @@ function renderLot(body){ body.textContent = ''; const i = blSheetI;
   if (BLS.err && !BLS.list){ body.appendChild(el('p', 'sub', '讀不到建地：' + BLS.err)); return; }
   if (!BLS.list){ body.appendChild(el('p', 'sub', '讀取中…')); return; }
   const row = el('div', 'gb-r'), btn = (t, fn, ghost) => { const b = el('button', ghost ? 'tbtn ghost' : 'tbtn', t); b.addEventListener('click', fn); row.appendChild(b); return b; };
-  if (!L.owner){ body.appendChild(el('p', 'sub', '這格是空地。申請以後就是你的，20×20 公尺，可以蓋 32 層高，最多 3000 塊。方塊的價錢跟小島一樣，包包裡收著的可以直接用。'));
+  if (!L.owner){ body.appendChild(el('p', 'sub', '這格是空地。申請以後就是你的，20×20 公尺，可以蓋 32 層高，最多 3000 塊。方塊的價錢跟小島一樣，大箱子裡有的可以直接用。'));
     if (BLS.mine) body.appendChild(el('p', 'sub', `你已經有一格了（${blStName(BLS.mine.street)}第 ${BLS.mine.lot + 1} 格），每人只能有一格。要換的話先到那格退掉。`));
     else { btn('📝 申請這格', () => blClaim(i, false)); if (BLS.bp && BLS.bp.n > 0) btn(`📐 申請並蓋回設計圖（${BLS.bp.n} 塊）`, () => blClaim(i, true), true); }
     body.appendChild(row); blBpCheck(); return; }
@@ -8399,7 +8401,7 @@ function isl2Trees(){ const mask = isl2TKey(); if (ISL2.treeG && ISL2.mask === m
   for (let i = 0; i < 14000 && trees.length < 720; i++){ const dx = (rnd() - 0.5) * 2 * ISL2.R, dz = (rnd() - 0.5) * 2 * ISL2.R, d = isl2In(dx, dz); if (d < 8 || Math.hypot(dx, dz) < ISLE.r + 2.5) continue;
     if (isl2Garden(ISLE.x + dx, ISLE.z + dz, 2.5) || isl2Dock(dx, dz) || isl2Karst(dx, dz) || isl2Owned(dx, dz)) continue;  if (isl2Noise(dx * 0.4 + 3, dz * 0.4) < -0.55) continue; trees.push([dx, dz, 0.85 + rnd() * 0.75]); }
   for (let i = 0; i < 3000 && palms.length < 110; i++){ const th = rnd() * Math.PI * 2, r = isl2Shore(th) - 2.5 - rnd() * 4.5, dx = Math.cos(th) * r, dz = Math.sin(th) * r;
-    if (isl2Dock(dx, dz) || isl2Garden(ISLE.x + dx, ISLE.z + dz, 1) || isl2Karst(dx, dz) || Math.hypot(dx, dz) < ISLE.r + 2 || Math.hypot(dx - SEA.at[0] + ISLE.x, dz - SEA.at[1] + ISLE.z) < 4 || Math.hypot(dx - STALL.x + ISLE.x, dz - STALL.z + ISLE.z) < 3.2) continue; palms.push([dx, dz, 0.8 + rnd() * 0.5, rnd() * 6.28, (rnd() - 0.5) * 0.4]); }
+    if (isl2Dock(dx, dz) || isl2Garden(ISLE.x + dx, ISLE.z + dz, 1) || isl2Karst(dx, dz) || Math.hypot(dx, dz) < ISLE.r + 2 || Math.hypot(dx - SEA.at[0] + ISLE.x, dz - SEA.at[1] + ISLE.z) < 4 || Math.hypot(dx - CHEST.x + ISLE.x, dz - CHEST.z + ISLE.z) < 2.6 || Math.hypot(dx - STALL.x + ISLE.x, dz - STALL.z + ISLE.z) < 3.2) continue; palms.push([dx, dz, 0.8 + rnd() * 0.5, rnd() * 6.28, (rnd() - 0.5) * 0.4]); }
   ISL2.trees = trees; const o = new THREE.Object3D(), Y = ISLE.y;
   { const tm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.26, 1, 6).translate(0, 0.5, 0), mat('#6b4a30', 0.9), trees.length); trees.forEach(([x, z, s], i) => { o.position.set(x, Y, z); o.rotation.set(0, 0, 0); o.scale.set(s, s * 1.6, s); o.updateMatrix(); tm.setMatrixAt(i, o.matrix); }); tm.castShadow = true; g.add(tm);
     const cols = ['#2e6b2a', '#3c7d2f', '#4a8a35', '#2a5e2c', '#56963c'], ims = cols.map(c => new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), mat(c, 0.9), trees.length * 2)), n = cols.map(() => 0);
@@ -9245,7 +9247,7 @@ function updateFar(dt, t){
   if (Far.green && Far.gAnim) Far.gAnim(dt, t);
   if (!Far.abyss && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 90) buildAbyss();
   if (!Far.myst && Math.hypot(me.pos.x - MYST.x, me.pos.z - MYST.z) < 90) buildMyst();
-  if (ISL2.reefM && onIsle) ISL2.reefM.uniforms.uT.value = t; Land.t = t; if (Land.fall.length) landTick();
+  if (ISL2.reefM && onIsle) ISL2.reefM.uniforms.uT.value = t; Land.t = t; if (Land.fall.length) landTick(); if (onIsle) chestTick(Math.min(0.1, t - (Land.ct || t))); Land.ct = t;
   if (Far.deepMats && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 140) for (const m of Far.deepMats) m.uniforms.uT.value = t;
   if (Far.jelly && frameNo % 3 === 0 && Math.hypot(me.pos.x - ABYSS.x, me.pos.z - ABYSS.z) < 70){ Far.jelly.position.y = Math.sin(t * 0.5) * 0.25; Far.jelly.material.opacity = 0.55 + Math.sin(t * 1.3) * 0.2; }
   if (Far.lava) Far.lava.material.color.setHSL(0.05, 1, 0.5 + Math.sin(t * 2) * 0.08);
@@ -9278,7 +9280,7 @@ function goMyIsle(){ goIsle(myIdOrMe(), myDisplayName() === '你' ? '我' : myDi
 async function visitIsle(id, name){
   if (!Cloud.sb){ toast('要連上雲端才能參觀別人的島'); return; }
   if (id === myIdOrMe()){ closeSheet(); goMyIsle(); return; }
-  try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: id }); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show, land: +data.land || 0, tiles: Array.isArray(data.tiles) ? data.tiles : [] }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
+  try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: id }); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show, land: +data.land || 0, tiles: Array.isArray(data.tiles) ? data.tiles : [], bag: data.bag && typeof data.bag === 'object' ? data.bag : null }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
   catch(e){ toast('暫時連不上雲端'); }
 }
 function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); if (Blk.on) blkStop(); onIsle = null; clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
@@ -9452,13 +9454,13 @@ function blkSupported(gx, gz, gy, extra){ if (gy === 0) return true; const has =
 function blkWhy(gx, gz, gy){ if (gy < 0) return '不能放'; if (gy >= blkLay()) return `最多疊 ${blkLay()} 層`; const x = gx * 0.5, z = gz * 0.5; if (Blk.lot) return Math.abs(gx) > 19 || Math.abs(gz) > 19 ? '超出建地了' : null; if (!isl2Can(x, z, 1.4)) return isl2Owned(x, z) || Math.hypot(x, z) <= 22.6 ? '放在島外面了' : '這裡還沒開，到樹林邊按「開地」'; if (Math.abs(x) < 1.2 && z > 17) return '會擋住碼頭的路'; return null; }
 /* 放一塊（不檢查錢，呼叫的人先算好）；回傳放好的那一塊 */
 function blkPut(gx, gz, gy, t, r, c){ const it = [gx, gz, gy, t, r || 0, blkMe8()]; if (blkIsShape(t)) it.push(c | 0); Blk.b.push(it);
-  const k = 'b:' + t; if (isleBagN(k) > 0) rec.isleBag = Object.assign({}, rec.isleBag, { [k]: isleBagN(k) - 1 }); else rec.coins -= BLK[t][1];
+  const k = 'b:' + t; if (isleBagN(k) > 0) isleBagSet(Object.assign({}, isleBagAll(), { [k]: isleBagN(k) - 1 })); else rec.coins -= BLK[t][1];
   Blk.pend.add.push(it.length > 6 ? [it[0], it[1], it[2], it[3], it[4], 0, it[6]] : it.slice(0, 5)); return it; }
-function blkTake(it){ Blk.b.splice(Blk.b.indexOf(it), 1); if (it[5] === blkMe8()) rec.isleBag = Object.assign({}, rec.isleBag, { ['b:' + it[3]]: isleBagN('b:' + it[3]) + 1 });
+function blkTake(it){ Blk.b.splice(Blk.b.indexOf(it), 1); if (it[5] === blkMe8() || isleChest()) isleBagSet(Object.assign({}, isleBagAll(), { ['b:' + it[3]]: isleBagN('b:' + it[3]) + 1 }));
   const ai = Blk.pend.add.findIndex(a => a[0] === it[0] && a[1] === it[1] && a[2] === it[2]); if (ai >= 0) Blk.pend.add.splice(ai, 1); else Blk.pend.del.push([it[0], it[1], it[2]]); }
 /* 🪞 對稱：以島中間那條線（左右）照鏡子，方向也跟著反過來 */
 const blkMirR = r => (6 - (r || 0)) % 4;
-/* 算一批要放的格子要多少錢（包包裡有的先用） */
+/* 算一批要放的格子要多少錢（大箱子裡有的先用） */
 function blkCost(cells){ const need = {}; for (const c of cells) need[c[3]] = (need[c[3]] || 0) + 1; let cost = 0, bag = 0; for (const [t, n] of Object.entries(need)){ const b = Math.min(n, isleBagN('b:' + t)); bag += b; cost += (n - b) * BLK[t][1]; } return { cost, bag }; }
 /* 放一批：自動加上對稱、門的上半，照「下面或旁邊有東西靠」的順序排；放不了的略過。全部算一步，可以復原 */
 function blkPlaceMany(cells0, quiet){ const seen = new Set(), cells = [], add = (gx, gz, gy, t, r, c) => { const k = gx + ',' + gz + ',' + gy; if (seen.has(k) || blkAt(gx, gz, gy) || blkWhy(gx, gz, gy)) return; seen.add(k); cells.push([gx, gz, gy, t, r, c]); };
@@ -9489,7 +9491,7 @@ function blkDelMany(list0, quiet){ const me8 = blkMe8(), want = new Set(), its =
   if (!done.length) return 0; Blk.undo.push({ del: done.map(x => x.slice()) }); if (Blk.undo.length > 30) Blk.undo.shift();
   blkFlushSoon(); blkDraw(); blkCount(); try { SFX.click(); } catch(e){} return done.length; }
 function blkDel(gx, gz, gy){ const it = blkAt(gx, gz, gy); if (it) blkDelMany([it]); }
-/* ↩️ 復原上一步（放的收回、收的放回去，用包包裡的不用錢） */
+/* ↩️ 復原上一步（放的收回、收的放回去，用大箱子裡的不用錢） */
 function blkUndo(){ const U = Blk.undo.pop(); if (!U){ blkHint('沒有可以復原的了'); return; } const mir = Blk.mir; Blk.mir = false;
   try { if (U.add){ const its = U.add.map(k => blkAt(k[0], k[1], k[2])).filter(Boolean); blkDelMany(its, true); Blk.undo.pop(); }
     else if (U.del){ blkPlaceMany(U.del.map(x => [x[0], x[1], x[2], x[3], x[4] || 0, x[6] | 0]).filter(c => c[3] !== 'dt'), true); Blk.undo.pop(); } } finally { Blk.mir = mir; }
@@ -9500,7 +9502,7 @@ async function blkFlush(){ if (!Blk.pend.add.length && !Blk.pend.del.length) ret
   if (Blk.busy){ blkFlushSoon(); return; } Blk.busy = true; const owner = Blk.owner;
   try { while (Blk.pend.add.length || Blk.pend.del.length){ const P = { add: Blk.pend.add.splice(0, 300), del: Blk.pend.del.splice(0, 300) };   /* 一次最多送 300 塊，多的分好幾次 */
       const { data, error } = Blk.lot ? await Cloud.sb.rpc('lot_blocks_edit', { p_street: Blk.lot.street, p_lot: Blk.lot.i, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }) : await Cloud.sb.rpc('isle_blocks_edit', { p_owner: owner === myIdOrMe() ? null : owner, p_add: P.add.length ? P.add : null, p_del: P.del.length ? P.del : null }); if (error) throw error;
-      if (data && data.player) adoptRow(data.player); if (Blk.owner === owner && !Blk.pend.add.length && !Blk.pend.del.length && Array.isArray(data.b)){ Blk.b = data.b; blkDraw(); } } }
+      if (data && data.player) adoptRow(data.player); if (data && data.bag && !Blk.lot && owner !== myIdOrMe() && onIsle && onIsle.owner === owner) onIsle.bag = data.bag; if (Blk.owner === owner && !Blk.pend.add.length && !Blk.pend.del.length && Array.isArray(data.b)){ Blk.b = data.b; blkDraw(); } } }
   catch(e){ Blk.pend = { add:[], del:[] }; toast('🧱 ' + cloudErrMsg(e)); blkLoad(owner); try { cloudRefresh(); } catch(e2){} }
   Blk.busy = false; }
 function blkHint(t){ const h = $('#blkHint'); if (h){ h.textContent = t; h.classList.add('bad'); clearTimeout(Blk.ht); Blk.ht = setTimeout(() => { h.classList.remove('bad'); blkBar(); }, 1600); } else toast(t); }
@@ -9540,10 +9542,10 @@ function blkBar(){ let bar = $('#blkBar'); if (!Blk.on){ if (bar) bar.hidden = t
   bar.hidden = false; bar.innerHTML = ''; const top = el('div', 'bk-top'); const B = BLK[Blk.t], shape = blkIsShape(Blk.t);
   if (Blk.plan){   /* 拉好一片：確認 */
     const { cost, bag } = blkCost(Blk.plan); blkPreview(Blk.plan);
-    top.appendChild(el('span', 'bk-hint', `放 ${Blk.plan.length} 塊${Blk.mir ? '（加上對稱那邊）' : ''}・${cost ? '🪙' + cost.toLocaleString() : '不用錢'}${bag ? `（包包裡 ${bag} 塊先用）` : ''}`)).id = 'blkHint';
+    top.appendChild(el('span', 'bk-hint', `放 ${Blk.plan.length} 塊${Blk.mir ? '（加上對稱那邊）' : ''}・${cost ? '🪙' + cost.toLocaleString() : '不用錢'}${bag ? `（大箱子裡 ${bag} 塊先用）` : ''}`)).id = 'blkHint';
     const ok = el('button', 'tbtn', '確定'); ok.addEventListener('click', () => { const P = Blk.plan; Blk.plan = null; blkPreview(null); blkPlaceMany(P); blkBar(); }); top.appendChild(ok);
     const no = el('button', 'tbtn ghost', '取消'); no.addEventListener('click', () => { Blk.plan = null; blkPreview(null); blkBar(); }); top.appendChild(no); bar.appendChild(top); return; }
-  const tip = Blk.erase ? '收：點哪一塊收哪一塊（自己放的回到包包）' : Blk.mode === 'one' ? `${B[0]} ${isleBagN('b:' + Blk.t) ? `包包 ${isleBagN('b:' + Blk.t)}` : '🪙' + B[1]}・點一下放，按住再滑放一排` : `${B[0]}・按住一下再拖出${{ floor:'一片地板', wall:'一面牆', room:'一間房間的四面牆' }[Blk.mode]}`;
+  const tip = Blk.erase ? '收：點哪一塊收哪一塊（收進大箱子）' : Blk.mode === 'one' ? `${B[0]} ${isleBagN('b:' + Blk.t) ? `大箱子 ${isleBagN('b:' + Blk.t)}` : '🪙' + B[1]}・點一下放，按住再滑放一排` : `${B[0]}・按住一下再拖出${{ floor:'一片地板', wall:'一面牆', room:'一間房間的四面牆' }[Blk.mode]}`;
   top.appendChild(el('span', 'bk-hint', tip)).id = 'blkHint';
   top.appendChild(el('span', 'bk-n', `${Blk.b.length}/${blkMax()}`));
   const un = el('button', 'tbtn ghost', '↩️'); un.title = '復原'; un.disabled = !Blk.undo.length; un.addEventListener('click', () => { blkUndo(); blkBar(); }); top.appendChild(un);
@@ -9607,7 +9609,7 @@ function renderBuildBar(){
     const T = ISLE_ITEMS[Build.type];
     bar.appendChild(el('span', 'bb-hint', '')).id = 'bbHint';
     const r = el('button', 'tbtn ghost', '⟲ 轉向'); r.addEventListener('click', () => { Build.rot = (Build.rot + Math.PI / 4) % (Math.PI * 2); }); bar.appendChild(r);
-    const ok = el('button', 'tbtn', Build.moveId ? '✔ 放這裡' : Build.fromBag ? '✔ 放這裡（包包裡的）' : `✔ 放這裡 🪙${T.price.toLocaleString()}`); ok.addEventListener('click', confirmPlace); bar.appendChild(ok);
+    const ok = el('button', 'tbtn', Build.moveId ? '✔ 放這裡' : Build.fromBag ? '✔ 放這裡（大箱子裡的）' : `✔ 放這裡 🪙${T.price.toLocaleString()}`); ok.addEventListener('click', confirmPlace); bar.appendChild(ok);
     const x = el('button', 'tbtn ghost', '✖'); x.addEventListener('click', () => { clearGhost(); renderBuildBar(); }); bar.appendChild(x);
   } else if (Build.sel){
     const T = ISLE_ITEMS[Build.sel.t]; bar.appendChild(el('span', 'bb-hint', `🔨 ${T.name}`));
@@ -9654,13 +9656,17 @@ function confirmPlace(){
 }
 
 /* v676 作者：「買的東西不是要拆掉退一半吧，而是整個收回吧」→ 島上的東西「收起來」放回包包（伺服器 217），之後拿出來擺不用再付錢。房子還是用拆掉（裡面有家具）。方塊和隔板拆掉也是收回包包。 */
-function isleBagN(t){ return Math.max(0, +((rec.isleBag || {})[t]) || 0); }
-async function isleBagOp(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能用包包'); return false; }
+/* v886 大家一起住：在別人（住在一起的島主）的島上，用的是島主家的「大箱子」，大家共用（伺服器 245） */
+function isleChest(){ return !Blk.lot && onIsle && onIsle.owner && onIsle.owner !== myIdOrMe() && onIsle.bag ? onIsle.bag : null; }
+function isleBagAll(){ return isleChest() || rec.isleBag || {}; }
+function isleBagSet(b){ if (isleChest()) onIsle.bag = b; else rec.isleBag = b; }
+function isleBagN(t){ return Math.max(0, +(isleBagAll()[t]) || 0); }
+async function isleBagOp(fn, args){ if (!Cloud.on || !Cloud.sb){ toast('要連上雲端才能用大箱子'); return false; }
   try { const { data, error } = await Cloud.sb.rpc(fn, args); if (error) throw error; const owner = args.p_owner || myIdOrMe(), mine = owner === myIdOrMe(), L = cleanIsland(data.island);
-    if (mine) rec.island = L; if (onIsle && onIsle.owner === owner) onIsle.layout = L; rec.coins = Number(data.coins) || 0; if (data.bag) rec.isleBag = data.bag; saveRecLocal(); renderCoins(); afterHomeOp(L);
+    if (mine) rec.island = L; if (onIsle && onIsle.owner === owner) onIsle.layout = L; rec.coins = Number(data.coins) || 0; if (data.bag){ if (!mine && onIsle && onIsle.owner === owner) onIsle.bag = data.bag; else rec.isleBag = data.bag; } saveRecLocal(); renderCoins(); afterHomeOp(L);
     try { if (room && room.connected()) room.emit('isleup', { owner }).catch(() => {}); } catch(e){} if (!$('#sheet').hidden && curTab === 'island') renderTab(); return data; }
   catch(e){ toast(cloudErrMsg(e)); return false; } }
-async function isleStow(id){ const it = isleItems().find(i => i.id === id); if (!it) return; const r = await isleBagOp('isle_stow', { p_owner: onIsle ? onIsle.owner : null, p_id: id }); if (r){ Build.sel = null; renderBuildBar(); toast(r.to ? `收起來了，放回 ${r.to} 的包包` : `${ISLE_ITEMS[it.t].name}收起來了，在包包裡`); try { SFX.click(); } catch(e){} } }
+async function isleStow(id){ const it = isleItems().find(i => i.id === id); if (!it) return; const r = await isleBagOp('isle_stow', { p_owner: onIsle ? onIsle.owner : null, p_id: id }); if (r){ Build.sel = null; renderBuildBar(); toast(isleChest() ? `${ISLE_ITEMS[it.t].name}收進大箱子了，大家都能拿出來擺` : `${ISLE_ITEMS[it.t].name}收起來了，在大箱子裡`); try { SFX.click(); } catch(e){} } }
 function removeIsleItem(id){
   if (Cloud.on && Cloud.sb){ const it = isleItems().find(i => i.id === id); if (!it) return; homeOp('remove', { id }).then(ok => { if (ok){ toast(`拆掉了 ${ISLE_ITEMS[it.t].name}，退回一半金幣`); Build.sel = null; renderBuildBar(); } }); return; }
   const items = rec.island.items, it = items.find(i => i.id === id); if (!it) return; const back = Math.floor(ISLE_ITEMS[it.t].price / 2);
@@ -10035,7 +10041,7 @@ async function homeOp(op, p){
 }
 /* v245 別人在同一座島上蓋、拆、搬東西：重新讀一次島（有人通知就馬上讀；在島上時每 20 秒也會自己讀一次，不在同一個大廳也看得到） */
 async function isleRefresh(owner){ if (!Cloud.on || !Cloud.sb || !onIsle || onIsle.owner !== owner || Isle_refreshing) return; Isle_refreshing = true;
-  try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: owner }); if (data && data.island && onIsle && onIsle.owner === owner){ const L = cleanIsland(data.island);
+  try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: owner }); if (data && data.island && onIsle && onIsle.owner === owner){ const L = cleanIsland(data.island); if (data.bag && typeof data.bag === 'object') onIsle.bag = data.bag;
       if (JSON.stringify(L) !== JSON.stringify(onIsle.layout || null) && !Build.moveId){ if (owner === myIdOrMe()) rec.island = L; afterHomeOp(L); } } } catch(e){}
   Isle_refreshing = false; }
 var Isle_refreshing = false;
@@ -10537,8 +10543,8 @@ function renderHomeTab(body){
   const ts = el('div', 'chipline'); for (const t of HOME_TITLES){ const b = el('button', 'chip' + (mine.title === t ? ' on' : ''), t); b.addEventListener('click', () => homeRpc('set_home_title', { p_role: mine.role || 'family', p_title: mine.title === t ? null : t })); ts.appendChild(b); }
   const cus = el('button', 'chip', '✏️ 自己取'); cus.addEventListener('click', () => { const v = prompt('稱呼（最多 6 個字）', mine.title || ''); if (v != null) homeRpc('set_home_title', { p_role: mine.role || 'family', p_title: clean(v).slice(0, 6) || null }); }); ts.appendChild(cus); body.appendChild(ts);
   renderIslePerms(body, meId);
-  // 邀請好友（島主、共同島主、管理成員都可以）
-  if (amOwner || IsleP.me === 'co' || IsleP.me === 'admin'){ body.appendChild(el('div', 'dexhead', '📨 邀請好友搬進來')); const fl = (Fr.list || []).filter(f => f.mutual && !people.some(p => p.id === f.id));
+  // 邀請好友（v886 只有島主）
+  if (amOwner){ body.appendChild(el('div', 'dexhead', '📨 邀請好友搬進來')); const fl = (Fr.list || []).filter(f => f.mutual && !people.some(p => p.id === f.id));
     if (people.length >= Home.cap) body.appendChild(el('div', 'empty', '家裡已經住滿了。'));
     else if (!fl.length) body.appendChild(el('div', 'empty', '要先在「玩家」分頁互相加好友，才能邀請他搬進來。'));
     else { const u2 = el('ul', 'shoplist'); for (const f of fl){ const sent = Home.sent.includes(f.id), li = el('li'); li.appendChild(el('span', 'dishic', '🙂')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', f.name || '釣客')); d.appendChild(el('div', 'sub2', sent ? '已經寄出邀請，等他回覆' : '互相加好友')); li.appendChild(d);
@@ -10582,14 +10588,11 @@ function renderIsleHelpers(body){
 function renderIslePerms(body, meId){
   if (!IsleP.at || Date.now() - IsleP.at > 20000) loadIsleP();
   const my = PERM_RANK[IsleP.me] || 0;
-  body.appendChild(el('div', 'dexhead', '🔑 成員權限')); body.appendChild(el('p', 'sub', '創建者什麼都能做；共同島主可以蓋、拆、邀請、請人搬走、設定管理成員；管理成員可以蓋、拆、邀請、請一般成員搬走、拿儲物箱的魚；一般成員可以一起蓋、擺家具、放魚進儲物箱，只能拿回自己放的。別人來參觀是訪客，只能看。'));
-  const ul = el('ul', 'shoplist'); for (const p of IsleP.people){ const isMe = p.id === meId, li = el('li', isMe ? 'on' : ''); li.appendChild(el('span', 'dishic', (PERM_NAME[p.perm] || '🙂').split(' ')[0]));
-    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', (p.name || '釣客') + (isMe ? '（你）' : ''))); d.appendChild(el('div', 'sub2', (PERM_NAME[p.perm] || '').split(' ')[1] || '')); li.appendChild(d);
-    const a = el('div', 'tacts'), th = PERM_RANK[p.perm] || 0;
-    if (!isMe && th < 4 && (my === 4 || (my === 3 && th < 3))){ for (const k of my === 4 ? ['co', 'admin', 'member'] : ['admin', 'member']){ if (k === p.perm) continue; const b = el('button', 'tbtn ghost vbtn', (PERM_NAME[k] || '').split(' ')[1]); b.addEventListener('click', () => { b.disabled = true; isleCall('isle_set_perm', { p_member: p.id, p_perm: k }, '🔑 權限改好了'); }); a.appendChild(b); } }
-    if (!isMe && my >= 2 && my > th){ const k = el('button', 'tbtn ghost vbtn', '請他搬走'); k.addEventListener('click', () => { if (k.dataset.sure !== '1'){ k.dataset.sure = '1'; k.textContent = '確定？'; return; } k.disabled = true; isleCall('kick_home', { p_member: p.id }, '已經請他搬走了'); }); a.appendChild(k); }
-    li.appendChild(a); ul.appendChild(li); }
-  body.appendChild(ul);
+  /* v886 作者：「就參考麥塊的做法」→ 住在島上的人都一樣，不分權限；只有島主可以邀請、請人搬走 */
+  body.appendChild(el('div', 'dexhead', '🤝 大家一起住'));
+  const rl = el('ul', 'shoplist'); for (const [ic, n, t] of [['🧱', '大家都一樣', '住在島上的人都可以蓋、拆、擺家具、種田，不分誰大誰小'], ['📦', '一個大箱子', '收起來的東西、拆下來的方塊都放進大箱子，誰拿出來擺都不用再付錢'], ['👑', '島主管搬家', '只有島主可以邀請好友搬進來、請人搬走']]){
+    const li = el('li'); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', n)); d.appendChild(el('div', 'sub2', t)); li.appendChild(d); rl.appendChild(li); }
+  body.appendChild(rl);
   renderIsleHelpers(body);
   // 公共儲物箱
   body.appendChild(el('div', 'dexhead', `📦 公共儲物箱（${(IsleP.store || []).length} / 60）`)); body.appendChild(el('p', 'sub', '島上大家共用，跟自己的魚缸分開。放進去的魚誰都看得到，誰放的、誰拿的都有紀錄。'));
@@ -10897,8 +10900,17 @@ function farmBase(){   /* v881 菜園的平台、圍欄、招牌拿掉（整座�
     const sc = document.createElement('canvas'); sc.width = 256; sc.height = 96; const c2 = sc.getContext('2d'); c2.fillStyle = '#fff6d8'; c2.fillRect(0, 0, 256, 96); c2.strokeStyle = '#3f8a4a'; c2.lineWidth = 8; c2.strokeRect(4, 4, 248, 88); c2.font = '60px sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText('🌱🛒', 128, 52);
     const stx = new THREE.CanvasTexture(sc); stx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.5), new THREE.MeshBasicMaterial({ map: stx })); sg.position.set(0.95, 1.75, 0); sg.rotation.y = Math.PI / 2; st.add(sg);
     if (!Farm.col){ Farm.col = true; try { colliders.push({ t:'b', x: STALL.x, z: STALL.z, hw: 0.5, hd: 1.15 }); } catch(e){} } }
+  { const c = new THREE.Group(); c.position.set(STALL.x - CHEST.x, ISLE.y, STALL.z - CHEST.z); g.add(c);   /* v886 📦 大箱子（g 轉了 180°，所以 x、z 反過來） */
+    c.add(box([1.5, 0.62, 0.9], '#a8733f', [0, 0.31, 0])); c.add(box([1.56, 0.08, 0.96], '#7a4f2a', [0, 0.05, 0]));
+    for (const dx of [-0.62, 0.62]) c.add(box([0.1, 0.66, 0.94], '#7a4f2a', [dx, 0.33, 0]));
+    const lid = new THREE.Group(); lid.position.set(0, 0.62, -0.45); c.add(lid);
+    lid.add(box([1.56, 0.2, 0.96], '#b9824a', [0, 0.1, 0.45])); lid.add(box([1.6, 0.06, 1.0], '#7a4f2a', [0, 0.2, 0.45])); lid.add(box([0.2, 0.18, 0.06], '#f3cf3a', [0, 0.02, 0.95]));
+    Farm.chestLid = lid; Farm.chestA = 0;
+    if (!Farm.colC){ Farm.colC = true; try { colliders.push({ t:'b', x: CHEST.x, z: CHEST.z, hw: 0.8, hd: 0.5 }); } catch(e){} } }
   g.traverse(o => { o.userData.dyn = true; });
 }
+function nearChest(){ if (!onIsle || myBoat || mySeat || F.phase !== 'idle' || Dive.on || House.on) return false; return Math.hypot(me.pos.x - CHEST.x, me.pos.z - CHEST.z) < 2.2; }
+function chestTick(dt){ const l = Farm.chestLid; if (!l) return; const want = nearChest() || (!$('#sheet').hidden && curTab === 'island' && Isle2.cat === 'chest' && onIsle) ? 1 : 0; Farm.chestA += (want - Farm.chestA) * Math.min(1, dt * 6); l.rotation.x = -Farm.chestA * 1.15; }
 function farmClear(){ if (Farm.g){ scene.remove(Farm.g); Farm.g.traverse(o => { if (o.isMesh && o.geometry && !o.userData.keepGeo) o.geometry.dispose(); }); Farm.g = null; } Farm.vis = []; }
 function farmSprite(icon){ let m = Farm.spr[icon]; if (!m){ const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c = cv.getContext('2d'); c.font = '72px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(icon, 48, 54); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; m = Farm.spr[icon] = new THREE.SpriteMaterial({ map: tx, depthWrite:false }); } const sp = new THREE.Sprite(m); sp.scale.set(0.8, 0.8, 1); return sp; }
 function farmStage(p){ if (!p) return -1; const k = farmProg(p); return k >= 1 ? 3 : k >= 0.6 ? 2 : k >= 0.25 ? 1 : 0; }
@@ -11708,21 +11720,22 @@ function renderIsland(body){
   }
   const items = isleItems(), nh = items.filter(i => ISLE_ITEMS[i.t].house).length;   /* 住在別人家時就是那座島 */
   /* v675 作者：「方塊和隔板也都加進來這裡，然後要加分類」「把原本的東西拆掉，這裡也不清楚」→ 分類按鈕；方塊、隔板也在這裡買；多一個「島上的東西」看得到每一件，可以移動、拆掉 */
-  const CATS = [['house', '房子'], ['pen', '寵物圍欄'], ['plant', '花草樹'], ['furn', '家具'], ['deco', '擺飾'], ['shape', '🏗️ 形狀'], ['block', '方塊'], ['panel', '隔板'], ['mine', `島上的東西（${items.length + Blk.b.length}）`]];
+  const CATS = [['house', '房子'], ['pen', '寵物圍欄'], ['plant', '花草樹'], ['furn', '家具'], ['deco', '擺飾'], ['shape', '🏗️ 形狀'], ['block', '方塊'], ['panel', '隔板'], ['mine', `島上的東西（${items.length + Blk.b.length}）`], ['chest', '大箱子']];
   const PLANT = new Set(['flower', 'palm', 'tree', 'bush', 'hydrangea', 'sunflower', 'cherry', 'maple', 'hedge']), FURN = new Set(['bench', 'lamp', 'picnic', 'parasol', 'swing', 'hammock', 'sunbed', 'bbq', 'campfire', 'tent', 'pergola', 'mailbox', 'fence', 'stonepath']);
   const catOf = (k, v) => v.house ? 'house' : v.pen ? 'pen' : PLANT.has(k) ? 'plant' : FURN.has(k) ? 'furn' : 'deco';
   if (!CATS.some(c => c[0] === Isle2.cat)) Isle2.cat = 'house';
   const C = Isle2.cat;
+  if (C === 'chest'){ isleChest2(body, items); return; }   /* v886 大家共用的大箱子 */
   if (C !== 'mine'){ isleShop2(body, C, CATS, catOf, items, nh); return; }   /* v884 照造型頁的樣子 */
   isleMine2(body, items, nh); return;   /* v885 島上的東西也照造型頁的樣子 */
   if (C === 'block' || C === 'panel' || C === 'shape'){
     body.appendChild(el('p', 'sub', `一格 50 公分，可以疊 ${BLK_LAYERS} 層，一座島最多 ${BLK_MAX} 塊（現在 ${Blk.b.length} 塊）。按「拿去蓋」以後：點地面放、點上面疊、點側邊接旁邊；選「地板／牆／房間」可以一次拉一整片，放錯按 ↩️ 復原。${C === 'shape' ? '形狀可以選 24 種顏色（顏色不用錢），也可以轉方向；門會自動放上下兩格。' : C === 'panel' ? '隔板可以轉向。' : ''}`));
     const ul = el('ul', 'shoplist cols'); for (const [k, v] of Object.entries(BLK).filter(([k, v]) => k !== 'dt' && (C === 'shape' ? blkIsShape(k) : !blkIsShape(k) && !!v[4] === (C === 'panel')))){ const li = el('li'), sw = el('i', 'blk-sw' + (v[4] ? ' pn' : '')); sw.style.background = `url(${blkTex(v[3] || 'paint', v[2]).image.toDataURL()}) center/cover, ${v[2]}`; blkIcon(sw, k, v); li.appendChild(sw);
-      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v[0])); d.appendChild(el('div', 'sub2', `🪙 ${v[1]} 一塊・島上 ${Blk.b.filter(x => x[3] === k).length} 塊${isleBagN('b:' + k) ? `・包包裡 ${isleBagN('b:' + k)} 塊（先用這些，不用錢）` : ''}`)); li.appendChild(d);
+      const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v[0])); d.appendChild(el('div', 'sub2', `🪙 ${v[1]} 一塊・島上 ${Blk.b.filter(x => x[3] === k).length} 塊${isleBagN('b:' + k) ? `・大箱子裡 ${isleBagN('b:' + k)} 塊（先用這些，不用錢）` : ''}`)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '拿去蓋'); b.addEventListener('click', () => { Blk.t = k; if (!onIsle || !canEditIsle()){ closeSheet(); goMyIsle(); setTimeout(blkStart, 1200); return; } blkStart(); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     body.appendChild(ul); return; }
   if (C === 'mine'){
-    body.appendChild(el('p', 'sub', `東西 ${items.length} / ${ISLE_MAX} 件、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟、方塊和隔板 ${Blk.b.length} / ${BLK_MAX} 塊。東西收起來會放回包包（誰買的就回誰的包包），之後拿出來擺不用再付錢；房子還是用拆掉（退一半）。`));
+    body.appendChild(el('p', 'sub', `東西 ${items.length} / ${ISLE_MAX} 件、房子 ${nh} / ${ISLE_HOUSE_MAX} 棟、方塊和隔板 ${Blk.b.length} / ${BLK_MAX} 塊。東西收起來會放進大箱子（住在島上的人共用一個），之後誰拿出來擺都不用再付錢；房子還是用拆掉（退一半）。`));
     if (!items.length && !Blk.b.length) body.appendChild(el('p', 'empty', '島上還沒有東西。'));
     const ul = el('ul', 'shoplist cols'); for (const it of items){ const v = ISLE_ITEMS[it.t]; if (!v) continue; const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(it.t, 96); } catch(e){} li.appendChild(ic);
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', (it.by && it.by !== myIdOrMe() ? '別人放的・' : '') + (v.house ? `房子拆掉退 🪙${Math.floor(v.price / 2).toLocaleString()}` : '收起來會放回包包'))); li.appendChild(d);
@@ -11740,7 +11753,7 @@ function renderIsland(body){
     for (const [k, v] of Object.entries(ISLE_ITEMS).filter(([k2, v]) => catOf(k2, v) === C && !OLD_HOUSES.has(k2))){   /* 076：房子只賣大宅 */
       const li = el('li'); const ic = el('img', 'gearic'); ic.alt = v.name; try { ic.src = itemShot(k, 96); } catch(e){} li.appendChild(ic);
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', v.name)); d.appendChild(el('div', 'sub2', `🪙 ${v.price.toLocaleString()}・島上 ${items.filter(i => i.t === k).length} 個`)); li.appendChild(d);
-      const nb = isleBagN(k); if (nb) d.appendChild(el('div', 'sub2 bagn', `包包裡收著 ${nb} 個（用完才會再收錢）`));
+      const nb = isleBagN(k); if (nb) d.appendChild(el('div', 'sub2 bagn', `大箱子裡有 ${nb} 個（用完才會再收錢）`));
       const a = el('div', 'tacts'); if (nb){ const bb = el('button', 'tbtn', '拿出來擺'); bb.addEventListener('click', () => startPlace(k, null, true)); a.appendChild(bb); }
       const b = el('button', 'tbtn' + (rec.coins < v.price ? ' ghost' : ''), '拿去擺'), place = () => { if (rec.coins < v.price){ toast(`金幣不夠，還差 🪙${(v.price - rec.coins).toLocaleString()}`); return; } startPlace(k); }; b.addEventListener('click', place); if (!nb) a.appendChild(b); li.appendChild(a); ul.appendChild(li);
       li.classList.add('viewable'); d.appendChild(el('div', 'sub2 look', '👆 點一下看 3D 模型')); const look = () => viewModel(v.name, `🪙 ${v.price.toLocaleString()}${v.house ? '・房子，可以走進去擺家具' : ''}`, () => itemMesh(k, { lite: !!v.house }), { label: `拿去擺（🪙${v.price.toLocaleString()}）`, fn: place }); ic.addEventListener('click', look); d.addEventListener('click', look);
@@ -11749,7 +11762,7 @@ function renderIsland(body){
 }
 var Isle2 = { cat: 'house', sel: {} };
 /* v884 作者：「小島商店不能做成這樣子的嗎」（指著造型頁）→ 照造型頁排：左邊大大的 3D 預覽（可以轉），下面是名字、價錢、拿去擺；右邊一格一格大圖；分類在最下面一排 */
-const ISHOP_TABS = [['house', '🏠', '房子'], ['pen', '🐾', '圍欄'], ['plant', '🌳', '花草樹'], ['furn', '🪑', '家具'], ['deco', '🏺', '擺飾'], ['shape', '🏗️', '形狀'], ['block', '🧱', '方塊'], ['panel', '🚪', '隔板'], ['mine', '📦', '島上的']];
+const ISHOP_TABS = [['house', '🏠', '房子'], ['pen', '🐾', '圍欄'], ['plant', '🌳', '花草樹'], ['furn', '🪑', '家具'], ['deco', '🏺', '擺飾'], ['shape', '🏗️', '形狀'], ['block', '🧱', '方塊'], ['panel', '🚪', '隔板'], ['mine', '🏝️', '島上的'], ['chest', '📦', '大箱子']];
 const IPV = { r: null, cv: null, sc: null, cam: null, obj: null, key: '', yaw: 0.6, drag: null, idleAt: 0, raf: 0, failed: false, c: null, rad: 1 };
 function ipvInit(){ if (IPV.r) return true; if (IPV.failed) return false;
   try { const cv = document.createElement('canvas'); cv.className = 'pvcv'; const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); r.setSize(300, 300, false);
@@ -11767,6 +11780,29 @@ function ipvShow(host, key, make){ if (!ipvInit()) return false;
 function ipvLoop(){ if (!IPV.cv || !IPV.cv.isConnected || $('#sheet').hidden){ IPV.raf = 0; return; } const t = now(); if (!IPV.drag && t > IPV.idleAt) IPV.yaw += 0.008;
   const c = IPV.c, r = IPV.rad * 3.6; IPV.cam.position.set(c.x + Math.sin(IPV.yaw) * r, c.y + r * 0.55, c.z + Math.cos(IPV.yaw) * r); IPV.cam.lookAt(c); IPV.r.render(IPV.sc, IPV.cam); IPV.raf = requestAnimationFrame(ipvLoop); }
 /* v885 「島上的東西」也照造型頁排：右邊一格一格（島上擺的東西、蓋的方塊），點一個左邊大圖，下面「移動」「收起來／拆掉」。長說明拿掉 */
+/* v886 📦 大箱子：收起來的東西、拆下來的方塊都在這裡（住在島上的人共用），拿出來擺不用錢 */
+function isleChest2(body, items){
+  const B = isleBagAll(), list = Object.entries(B).filter(([k, n]) => +n > 0 && (k.startsWith('b:') ? BLK[k.slice(2)] : ISLE_ITEMS[k]));
+  let sel = Isle2.sel.chest; if (!list.some(([k]) => k === sel)) sel = Isle2.sel.chest = list.length ? list[0][0] : null;
+  const wrap = el('div', 'closet k3pt ishop'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap);
+  const box = el('div', 'cl-pv'); L.appendChild(box); const info = el('div', 'ish-info'); L.appendChild(info);
+  if (sel){ const n = +B[sel], blk = sel.startsWith('b:'), k = blk ? sel.slice(2) : sel, acts = el('div', 'ish-a');
+    if (blk){ const b = BLK[k]; const ok = ipvShow(box, sel, () => { const m = new THREE.Mesh(blkGeo(k), blkMat(k)); if (blkIsShape(k)) m.material.color.set(b[2]); const g = new THREE.Group(); g.add(m); return g; }); if (ok) box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉'));
+      info.appendChild(el('div', 'ish-n', `${b[0]} ×${n}`)); const bt = el('button', 'tbtn buy', '🔨 拿去蓋'); bt.addEventListener('click', () => { Blk.t = k; if (!onIsle || !canEditIsle()){ closeSheet(); goMyIsle(); setTimeout(blkStart, 1200); return; } blkStart(); }); acts.appendChild(bt); }
+    else { const v = ISLE_ITEMS[k]; const ok = ipvShow(box, 'i:' + k, () => itemMesh(k, { lite: !!v.house })); if (ok) box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); else { const im = el('img'); try { im.src = itemShot(k, 256); } catch(e){} box.appendChild(im); }
+      info.appendChild(el('div', 'ish-n', `${v.name} ×${n}`)); const bb = el('button', 'tbtn buy', '拿出來擺'); bb.addEventListener('click', () => { if (!onIsle || !canEditIsle()){ toast('要在自己住的島上才能擺'); return; } startPlace(k, null, true); }); acts.appendChild(bb); }
+    info.appendChild(el('div', 'ish-p', '拿出來不用錢')); info.appendChild(acts); }
+  else box.appendChild(el('p', 'empty', '大箱子是空的'));
+  const lst = el('div', 'cl-list k3list'), bar = el('div', 'k3bar'); R2.append(lst, bar);
+  lst.appendChild(el('p', 'sub k3note', isleChest() ? '這是島主家的大箱子，住在島上的人一起用。' : '島上收起來的東西、拆下來的方塊都在這裡。一起住的人也能拿出來用。'));
+  const grid = el('div', 'cl-grid k3grid');
+  for (const [k, n] of list){ const b = el('button', 'cl-it' + (k === sel ? ' on' : ''));
+    if (k.startsWith('b:')){ const t = k.slice(2), sw = el('i', 'blk-sw ish-sw'); blkIcon(sw, t, BLK[t]); b.appendChild(sw); b.appendChild(el('span', 'n', BLK[t][0])); }
+    else { const v = ISLE_ITEMS[k], im = el('img', 'gearic'); im.alt = v.name; try { im.src = itemShot(k, 128); } catch(e){} b.appendChild(im); b.appendChild(el('span', 'n', v.name)); }
+    b.appendChild(el('span', 'b k3pr', '×' + n)); b.addEventListener('click', () => { Isle2.sel.chest = k; renderTab(); }); grid.appendChild(b); }
+  lst.appendChild(grid);
+  const tabs = el('div', 'cl-tabs'); for (const [k, i, l] of ISHOP_TABS){ const t = el('button', 'cl-tab' + (k === 'chest' ? ' on' : '')); t.append(el('span', 'i', i), el('span', 'n', k === 'mine' ? `${l}(${items.length + Blk.b.length})` : l)); t.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); tabs.appendChild(t); } bar.appendChild(tabs);
+}
 function isleMine2(body, items, nh){
   const cnt = {}; for (const x of Blk.b) cnt[x[3]] = (cnt[x[3]] || 0) + 1;
   const list = items.filter(it => ISLE_ITEMS[it.t]).map(it => ['i' + it.id, it]).concat(Object.keys(cnt).filter(k => BLK[k]).map(k => ['b' + k, k]));
@@ -11806,7 +11842,7 @@ function isleShop2(body, C, CATS, catOf, items, nh){
     if (ok) box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉')); else { const im = el('img'); try { im.src = blk ? '' : itemShot(sel, 256); } catch(e){} box.appendChild(im); }
     info.appendChild(el('div', 'ish-n', name));
     const nOn = blk ? Blk.b.filter(x => x[3] === sel).length : items.filter(i => i.t === sel).length, nb = isleBagN(blk ? 'b:' + sel : sel);
-    info.appendChild(el('div', 'ish-p', `🪙 ${price.toLocaleString()}${blk ? ' 一塊' : ''}・島上 ${nOn} ${blk ? '塊' : '個'}${nb ? `・包包裡 ${nb}` : ''}`));
+    info.appendChild(el('div', 'ish-p', `🪙 ${price.toLocaleString()}${blk ? ' 一塊' : ''}・島上 ${nOn} ${blk ? '塊' : '個'}${nb ? `・大箱子裡 ${nb}` : ''}`));
     const acts = el('div', 'ish-a');
     if (blk){ const bt = el('button', 'tbtn buy', '🔨 拿去蓋'); bt.addEventListener('click', () => { Blk.t = sel; if (!onIsle || !canEditIsle()){ closeSheet(); goMyIsle(); setTimeout(blkStart, 1200); return; } blkStart(); }); acts.appendChild(bt); }
     else { if (nb){ const bb = el('button', 'tbtn buy', '拿出來擺'); bb.addEventListener('click', () => startPlace(sel, null, true)); acts.appendChild(bb); }
@@ -22028,7 +22064,7 @@ function renderTab0(){
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
       ...(BLI.off ? [] : [["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []]]),
-      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "可以邀好友搬進來一起住、一起蓋。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
+      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
         ["端給客人拿 1.5 倍，每天最多 60 位。每天最多做 150 道。", "跟美雲姨買是料理價值的 2.5 倍，一天最多 6 道。吧台點餐 45～225 金幣。"]],
@@ -23235,6 +23271,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u886', d:'11/26', items:[['🤝','大家一起住：住在島上的人都一樣，都可以蓋、拆、擺家具、種田，不再分共同島主、管理、一般成員；只有島主可以邀請和請人搬走','island'], ['📦','島上多一個大箱子（碼頭左邊的沙灘），收起來的東西、拆下來的方塊都放進去，一起住的人都能拿出來擺，不用再付錢；小島商店也多一個「📦 大箱子」分頁','island']] },
   { id:'u885', d:'11/26', items:[['📦','小島商店的「島上的東西」也換成大圖的樣子：點一個看模型，下面直接按移動、收起來。','island']] },
   { id:'u884', d:'11/26', items:[['🛒','小島商店改成跟造型頁一樣：左邊 3D 預覽可以轉，右邊大圖，分類在最下面','island']] },
   { id:'u883', d:'11/26', items:[['🌱','菜園整個拿掉了，整座島開好的地都是你的田。種子攤搬到小島碼頭旁邊的沙灘，一上島就看得到。','island']] },
