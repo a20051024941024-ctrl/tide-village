@@ -20990,7 +20990,7 @@ function roamDrive(n, dt, t){ if (!n.roam){ if (n.roam === 0) return false; cons
   n.update(dt, t); n.placeTag(); return true; }
 /* v542 作者：「讓 NPC 看到玩家，會自動避開」→ 站著或在釣魚的村民，玩家走到他 1.6 公尺內，他會自己往旁邊讓開（最多挪 1.8 公尺，不會走進水裡、不會掉下碼頭），人走了再慢慢走回原位。
    每個人的手機各自算（看的是自己和畫面上其他玩家的位置），所以大家看到的大致一樣。坐在船上的、顧店的村民不會動。 */
-function npcAvoid(n, dt, t){ if (n.sitting || n.wHide || n.st === 'show') return; const A = n.avA || (n.avA = { x: n.pos.x, z: n.pos.z, ox: 0, oz: 0 });
+function npcAvoid(n, dt, t){ if (n.sitting || n.wHide || n.st === 'show' || n.fishing) return;   /* v872 作者：「阿穎在釣魚時我走到他旁邊，他會開始亂動」→ 釣魚中的村民不讓位（不然拿著竿子整個人平移）；改成玩家被輕輕擋在外面 */ const A = n.avA || (n.avA = { x: n.pos.x, z: n.pos.z, ox: 0, oz: 0 });
   if (Math.hypot(n.pos.x - (A.x + A.ox), n.pos.z - (A.z + A.oz)) > 0.06){ A.x = n.pos.x; A.z = n.pos.z; A.ox = A.oz = 0; }   /* 被別的程式搬過位置（回碼頭、換地方）：重新認原位 */
   let px = 0, pz = 0, bd = 1e9; const see = (x, z) => { const d = Math.hypot(x - A.x, z - A.z); if (d < bd){ bd = d; px = x; pz = z; } };
   if (!House.on && !Dive.on && !onIsle) see(me.pos.x, me.pos.z); if (frameNo % 3 === 0 || n.avPeer){ n.avPeer = null; for (const p of peers.values()){ if (!p || !p.target || peerPlaceKey(p.pres)) continue; const d = Math.hypot(p.target.x - A.x, p.target.z - A.z); if (d < 2.4){ n.avPeer = p; if (d < bd){ bd = d; px = p.target.x; pz = p.target.z; } } } }
@@ -21045,7 +21045,16 @@ function updateNpcs(dt, t){
     try { meetTurn(n, dt, t); } catch(e){}
     n.update(dt, t); n.placeTag();
   }
+  try { npcSpread(); } catch(e){}
 }
+/* v872 作者：「黃色雨衣村民卡進去了」→ 兩個村民站太近（散步走到同一個地方）就把畫出來的身體往兩邊推開一點，不會疊在一起；
+   釣魚中的村民身邊 0.55 公尺內玩家進不去（輕輕推出去），不然玩家跟村民疊在一起、村民又要讓位就會一直亂動 */
+function npcSpread(){ const L = npcs.filter(n => n.av && n.av.g.visible && !n.wHide && !n.sitting && !n.yOnBoat && n.av.g.parent);
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++){ const a = L[i].av.g.position, b = L[j].av.g.position, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+    if (d < 0.62 && Math.abs(a.y - b.y) < 1){ const ux = d > 0.01 ? dx / d : 1, uz = d > 0.01 ? dz / d : 0, k = (0.62 - d) / 2; const ma = L[i].fishing ? 0 : 1, mb = L[j].fishing ? 0 : 1, sm = ma + mb || 1;
+      a.x -= ux * k * 2 * ma / sm; a.z -= uz * k * 2 * ma / sm; b.x += ux * k * 2 * mb / sm; b.z += uz * k * 2 * mb / sm; } }
+  if (House.on || Dive.on || onIsle || me.boat || me.sitting) return;
+  for (const n of L){ if (!n.fishing) continue; const dx = me.pos.x - n.pos.x, dz = me.pos.z - n.pos.z, d = Math.hypot(dx, dz); if (d < 0.55 && d > 0.001 && Math.abs(me.pos.y - n.pos.y) < 1){ const k = 0.55 / d; const nx = n.pos.x + dx * k, nz = n.pos.z + dz * k; if (walkable(nx, nz)){ me.pos.x = nx; me.pos.z = nz; } } } }
 
 /* ================= 村民自己過日子（架構第二階段，054_world.sql）=================
    伺服器每分鐘推進一次「世界時間」：5 位公共 NPC（村長、阿綾、阿木、阿福、老港）的肚子餓、累、想聊天、想玩，照個性和作息決定現在要做什麼、去哪裡、幾點出發、幾點到。
@@ -22847,6 +22856,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u872', d:'11/26', items:[['🎣','村民在釣魚的時候走過去，他不會再拿著竿子整個人滑開；兩個村民也不會再疊在一起']] },
   { id:'u871', d:'11/26', items:[['⚓','老港的每週限定手作改做新人物的衣服了：用造型頁買不到的「老港色」（浮球橘、船纜紅、舊漁網綠…）染一件，全村 5 件，買了直接按「穿上」','gang']] },
   { id:'u870', d:'11/26', items:[['🕊️','海鷗換成精美的新模型：飛的時候拍翅膀、偶爾滑翔，停下來收翅膀、歪頭看你、伸懶腰抖一抖；銀鷗、黑頭鷗、金色海鷗都有']] },
   { id:'u869', d:'11/26', items:[['💬','村民講話換了口氣，比較像真的人在跟你聊天。阿綾、阿鐵、阿福他們各有各的脾氣。']] },
