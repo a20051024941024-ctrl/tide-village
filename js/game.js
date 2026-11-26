@@ -2605,6 +2605,19 @@ function seaDry(x, z){ const U = waterSurface && waterSurface.material.uniforms;
 function npcWetRot(n){ const ok = (x, z) => waterAt(x, z) && !seaDry(x, z);
   for (const da of [0, 0.5, -0.5, 1.0, -1.0]){ const a = n.rot + da, dx = Math.sin(a), dz = Math.cos(a); for (let d = 3; d <= 12; d += 0.5) if (ok(n.pos.x + dx * d, n.pos.z + dz * d)) return a; }
   return null; }
+/* v911 作者說「做」：退潮沒水可以釣的村民，走到退出來的沙灘上撿貝殼、挖文蛤（蹲下去，跟種菜同一個動作），偶爾說撿到什麼；
+   每 6 秒從原本的位置看一次水回來沒，回來了就走回去重新甩竿。只在露出來的沙地（seaDry）上走，不會走到水裡。 */
+const TIDE_FIND = ['撿到一個貝殼！', '挖到一顆文蛤', '這隻寄居蟹好可愛', '有小螃蟹跑掉了', '撿到一個漂亮的螺', '沙裡有海瓜子'];
+function npcTideComb(n, dt, t){ if (!n.tc) n.tc = { hx: n.pos.x, hz: n.pos.z, hr: n.rot, hy: n.baseY, ph: 'look', at: t + 1 + Math.random() * 2, n: 0 }; const C = n.tc;
+  const home = () => { n.pos.x = C.hx; n.pos.z = C.hz; n.rot = C.hr; n.baseY = C.hy; };
+  if (t > n.stT){ n.stT = t + 6; const px = n.pos.x, pz = n.pos.z, pr = n.rot; n.pos.x = C.hx; n.pos.z = C.hz; n.rot = C.hr; const r = npcWetRot(n); n.pos.x = px; n.pos.z = pz; n.rot = pr; if (r != null && C.ph !== 'back'){ C.ph = 'back'; C.wr = r; n.emote = null; } }
+  const go = (x, z, v) => { const dx = x - n.pos.x, dz = z - n.pos.z, d = Math.hypot(dx, dz); if (d < 0.15){ n.speed = 0; return true; } const st = Math.min(d, v * dt); n.pos.x += dx / d * st; n.pos.z += dz / d * st; n.baseY = groundHeight(n.pos.x, n.pos.z); n.rot = lerpAngle(n.rot, Math.atan2(dx, dz), 1 - Math.exp(-6 * dt)); n.speed = v; return false; };
+  if (C.ph === 'back'){ if (go(C.hx, C.hz, 0.9)){ home(); n.rot = C.wr; n.tc = null; n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; if (camera.position.distanceTo(n.pos) < 20) n.say('水回來了，繼續釣！', '', 3); } return; }
+  if (C.ph === 'look'){ if (t < C.at) return; let best = null;   /* 找前面露出來的沙地 */
+    for (let k = 0; k < 14 && !best; k++){ const a = C.hr + (Math.random() - 0.5) * 2.2, d = 2.5 + Math.random() * 6.5, x = C.hx + Math.sin(a) * d, z = C.hz + Math.cos(a) * d; if (!seaDry(x, z) || blocked(x, z, 0.3)) continue; let ok = true; for (let u = 0.2; u < 1; u += 0.2){ const qx = n.pos.x + (x - n.pos.x) * u, qz = n.pos.z + (z - n.pos.z) * u; if (blocked(qx, qz, 0.25) || (waterAt(qx, qz) && !seaDry(qx, qz))){ ok = false; break; } } if (ok) best = [x, z]; }
+    if (!best){ C.at = t + 4; return; } C.tx = best[0]; C.tz = best[1]; C.ph = 'walk'; if (C.n === 0 && camera.position.distanceTo(n.pos) < 20) n.say(pick2(['退潮了，去撿貝殼', '水退了，來挖文蛤']), '', 3); return; }
+  if (C.ph === 'walk'){ if (go(C.tx, C.tz, 0.75)){ C.ph = 'pick'; C.at = t + 3.2 + Math.random() * 2; startEmote(n, 'farmplant'); } return; }
+  if (C.ph === 'pick'){ n.speed = 0; if (t > C.at){ n.emote = null; C.n++; if (Math.random() < 0.45 && camera.position.distanceTo(n.pos) < 18) n.say(pick2(TIDE_FIND), '', 3); C.ph = 'look'; C.at = t + 0.6 + Math.random() * 1.5; } } }
 function castPoint(x, z, dx, dz, dist){
   const ok = d => waterAt(x + dx * d, z + dz * d) && !seaDry(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
@@ -21791,10 +21804,11 @@ function updateYin(n, dt, t){ const A = npcs.find(x => x.amo); if (!A || !A.boat
     return true; }
   if (n.yOnBoat){ n.yOnBoat = false; n.pos.copy(H); n.baseY = n.yHomeY; yinOff(n); }   /* 這一趟沒跟（剛好換到下一趟），回碼頭 */
   n.sitting = false; amoDevice(n, 'x', t);
+  if (n.st === 'dry' && n.tc) return false;   /* v911 退潮在沙灘上撿貝殼：交給 npcTideComb */
   if (Math.hypot(n.pos.x - H.x, n.pos.z - H.z) > 0.15){ yinOff(n); amoWalk(n, dt, H.x, H.z); return true; }
   n.speed = 0; n.baseY = n.yHomeY; if (n.st !== 'dry' && !n.fishing) n.rot = n.yHomeRot;
   if (!n.fishing && n.st !== 'show' && n.st !== 'windup' && n.st !== 'dry'){ n.rot = n.yHomeRot; const r = npcWetRot(n);   /* v909 作者：「阿穎會在這裡一直不斷的重複拋竿」→ 退潮前面沒水：以前每一格都直接把浮標放回沙上、又發現沒水重甩，一直重複。現在先找有水的方向，沒有就收竿等 */
-    if (r == null){ n.st = 'dry'; n.stT = t + 6; n.fishing = false; n.bobState = 'none'; } else { n.rot = r; const cp = castPoint(H.x, H.z, Math.sin(r), Math.cos(r), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); } }
+    if (r == null){ n.st = 'dry'; n.stT = t + 6; n.fishing = false; n.bobState = 'none'; n.tc = null; } else { n.rot = r; const cp = castPoint(H.x, H.z, Math.sin(r), Math.cos(r), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); n.fishing = true; n.bobState = 'water'; n.flying = null; n.st = 'wait'; n.next = t + rand(4, 10); } }
   return false; }
 /* ============ v450 村民自由走動 ============
    玩家說「NPC 應該要能自由移動」。原本只有村長、阿綾、阿木、阿福、老港 5 位照伺服器的作息走動，其他人永遠站在原地。
@@ -21986,8 +22000,8 @@ function updateNpcs(dt, t){
         if (f){ const fw = +(f.min + (f.max - f.min) * Math.random() * 0.6).toFixed(2); n.holdFish(f, fw, 4); if (n.yin) n.yinBag = { f, w: fw }; if (camera.position.distanceTo(n.pos) < 25 && Math.random() < 0.6) n.say((n.catchLines || ['釣到了！', `是${f.name}！`, '今天運氣不錯～', '嘿咻！'])[Math.floor(Math.random() * (n.catchLines ? n.catchLines.length : 4))], '', 3); }
         n.st = 'show'; n.stT = t + 4.2; } }
     if (st === 'show' && t > n.stT){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; }
-    if (st === 'dry' && t > n.stT){ n.stT = t + 6; const r = npcWetRot(n); if (r != null){ n.rot = r; n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; } }   /* v909 退潮等水回來：每 6 秒看一次 */
-    if (st === 'windup' && n.windup === 0 && !n.wetOk){ const r = npcWetRot(n); if (r == null){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'dry'; n.stT = t + 6; n.wetOk = false; if (camera.position.distanceTo(n.pos) < 20) n.say(pick2(['退潮了，水都退光了……等一下再釣', '沒水了，休息一下']), '', 3.5); } else { n.rot = r; n.wetOk = true; } }
+    if (st === 'dry') npcTideComb(n, dt, t);   /* v911 退潮：去沙灘撿貝殼、挖文蛤，水回來再回去釣 */
+    if (st === 'windup' && n.windup === 0 && !n.wetOk){ const r = npcWetRot(n); if (r == null){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'dry'; n.stT = t + 6; n.wetOk = false; n.tc = null; if (camera.position.distanceTo(n.pos) < 20) n.say(pick2(['退潮了，水都退光了……等一下再釣', '沒水了，休息一下']), '', 3.5); } else { n.rot = r; n.wetOk = true; } }
     if (st === 'windup'){ n.windup = Math.min(1, (n.windup || 0) + dt / 0.6);
       if (t > n.stT){ n.windup = 0; n.castT = 0; n.wetOk = false; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); try { const cp = castPoint(n.pos.x, n.pos.z, Math.sin(n.rot), Math.cos(n.rot), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); } catch(e){}   /* v881 作者：「阿穎看起來像在釣陸地」→ 每次甩竿重新找有水的地方（退潮時往外甩） */ n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
     if (st === 'wait'){ n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); if (n.fishing && n.bobState === 'water' && (frameNo + (n.npcI || 0)) % 90 === 0 && (seaDry(n.bobPos.x, n.bobPos.z) || !waterAt(n.bobPos.x, n.bobPos.z))){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } }   /* v881 潮水退了、浮標躺在沙上：收竿重甩 */
@@ -22008,7 +22022,7 @@ function unstuckAt(x, z){ const k = Math.round(x * 10) + ',' + Math.round(z * 10
       if (walkable(px, pz) && !blocked(px, pz, 0.28) && (wet || Math.abs(groundHeight(px, pz) - g0) < 0.45)){ v = [px, pz]; break outer; } } }
   UNST.m.set(k, v); return v; }
 function npcUnstick(){ const T = performance.now(); if (T - UNST.at > 30000){ UNST.at = T; UNST.m.clear(); } if (House.on || Dive.on || onIsle) return;
-  for (const n of npcs){ if (!n.av || !n.av.g.visible || n.wHide || n.sitting || n.yOnBoat || n.swim || (n.boat && !n.amo) || n.speed > 0.05 || (n.amo && n.amoMode !== 'pier')) continue; if (camera.position.distanceTo(n.pos) > 45) continue;
+  for (const n of npcs){ if (!n.av || !n.av.g.visible || n.wHide || n.sitting || n.yOnBoat || n.swim || n.tc || (n.boat && !n.amo) || n.speed > 0.05 || (n.amo && n.amoMode !== 'pier')) continue; if (camera.position.distanceTo(n.pos) > 45) continue;
     const v = unstuckAt(n.pos.x, n.pos.z); if (v){ n.pos.x = v[0]; n.pos.z = v[1]; n.baseY = groundHeight(v[0], v[1]); if (n.roam && n.roam.post && Math.hypot(n.roam.post.x - v[0], n.roam.post.z - v[1]) < 2.7 && blocked(n.roam.post.x, n.roam.post.z, 0.2)){ n.roam.post.x = v[0]; n.roam.post.z = v[1]; } } } }
 function npcSpread(){ try { npcUnstick(); } catch(e){} const L = npcs.filter(n => n.av && n.av.g.visible && !n.wHide && !n.sitting && !n.yOnBoat && n.av.g.parent);
   for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++){ const a = L[i].av.g.position, b = L[j].av.g.position, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
@@ -23823,6 +23837,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u911', d:'11/27', items:[['🐚','退潮時沒水釣的村民會走到沙灘上撿貝殼、挖文蛤，蹲下去找，偶爾說撿到什麼；水回來就走回去繼續釣']] },
   { id:'u910', d:'11/27', items:[['⚡','比較不卡：離你 26 公尺以上的人物換成簡單版的小人偶（顏色照他的頭髮、衣服、褲子），走近就變回原本的樣子；港邊廣場要畫的三角形少了兩成'], ['🏖️','南方沙灘白天坐在海灘巾上曬太陽的兩個觀光客拿掉了（海灘巾和陽傘留著）'], ['🧘','「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上']] },
   { id:'u909', d:'11/27', items:[['🎣','退潮時阿穎（和其他村民）不會再一直重複拋竿：前面沒水會轉向有水的地方甩，真的都沒水就收竿等潮水回來'], ['🐠','潛水艇、潛水時魚不會再突然冒出來：遠近改成跟海裡的霧一樣']] },
   { id:'u908', d:'11/26', items:[['⚡','比較不卡：村子切成一區一區，看不到、太遠的那一區整塊不畫；最高畫質時太遠的村民也先不畫（iPhone 再近一點）']] },
