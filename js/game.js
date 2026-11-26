@@ -9305,8 +9305,9 @@ function renderIsleBar(){
   if (!bar){ bar = document.createElement('div'); bar.id = 'isleBar'; bar.className = 'panel'; document.body.appendChild(bar); }
   bar.hidden = false; bar.innerHTML = ''; const mine = onIsle.owner === myIdOrMe();
   if (onIsle.vc === undefined && Cloud.on && Cloud.sb){ onIsle.vc = null; const ow = onIsle.owner; Cloud.sb.rpc('isle_visit_count', { p_owner: ow }).then(r => { if (onIsle && onIsle.owner === ow && r && r.data){ onIsle.vc = r.data; renderIsleBar(); } }, () => {}); }
-  bar.appendChild(el('span', '', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 我家（${onIsle.name}）` : `🏝️ ${onIsle.name} 的小島`) + `・❤️ ${onIsle.likes || 0}` + (onIsle.vc ? `・來訪 今天 ${onIsle.vc.today | 0}・共 ${onIsle.vc.total | 0}` : '')));
-  if (Cloud.on){ if (mine){ const mb = el('button', 'tbtn' + (IMail.unread ? '' : ' ghost'), IMail.unread ? `📮 ${IMail.unread}` : '📮 信箱'); mb.addEventListener('click', imailOpen); bar.appendChild(mb); } else if (!canEditIsle()){ const mb = el('button', 'tbtn', '📮 留言'); mb.addEventListener('click', () => imailWrite(onIsle.owner, onIsle.name)); bar.appendChild(mb); } }
+  /* v877 作者：「左上角擋到了，字被擋住了」→ 小島列改成一排、短短的（以前兩排又寬，蓋到頭上的名字）：來訪人數改成 👣，按鈕只留圖示 */
+  { const t = el('span', 'ib-t', (mine ? '🏝️ 我的小島' : canEditIsle() ? `🏠 ${onIsle.name}` : `🏝️ ${onIsle.name}`) + ` ❤️${onIsle.likes || 0}` + (onIsle.vc ? ` 👣${onIsle.vc.today | 0}` : '')); if (onIsle.vc) t.title = `來訪：今天 ${onIsle.vc.today | 0}・總共 ${onIsle.vc.total | 0}`; bar.appendChild(t); }
+  if (Cloud.on){ if (mine){ const mb = el('button', 'tbtn' + (IMail.unread ? '' : ' ghost'), IMail.unread ? `📮${IMail.unread}` : '📮'); mb.title = '信箱'; mb.addEventListener('click', imailOpen); bar.appendChild(mb); } else if (!canEditIsle()){ const mb = el('button', 'tbtn', '📮 留言'); mb.addEventListener('click', () => imailWrite(onIsle.owner, onIsle.name)); bar.appendChild(mb); } }
   /* v857 我的海本來就有，但來玩的人不知道海底有魚、島主不知道可以放：訪客看到「🐠 海裡 N 條」按了帶去潛水梯；自己的海空的就提醒去放 */
   if (Cloud.on && Cloud.sb && !House.on && !Build.on){ const ow = onIsle.owner;
     if (onIsle.sea === undefined){ onIsle.sea = null; Cloud.sb.rpc('home_sea', { p_owner: ow }).then(({ data }) => { if (!onIsle || onIsle.owner !== ow || !Array.isArray(data)) return; onIsle.sea = data.reduce((n, p) => n + ((p.show || []).length), 0); renderIsleBar();
@@ -9317,10 +9318,10 @@ function renderIsleBar(){
     if (FB.on && !FB.top){ const tb = el('button', 'tbtn ghost', '用手指擺'); tb.addEventListener('click', () => { LS.set('tide.furnWalk', false); clearFurnGhost(); FB.top = true; FB.sel = null; FT.cx = 0; FT.cz = 0; renderFurnBar(); renderIsleBar(); }); bar.appendChild(tb); }
     const lb = el('button', 'tbtn ghost', '🏠 格局'); lb.addEventListener('click', () => { furnSheet = 'lay'; openSheet('furn'); }); bar.appendChild(lb); }
   else if (mine || canEditIsle()){ const b = el('button', 'tbtn', Build.on ? '完成建造' : '🔨 建造'); b.addEventListener('click', () => { if (Build.on) stopBuild(); else { if (onIsle && onIsle.owner !== myIdOrMe()) loadIsleP(); Build.on = true; isleUnbatch(isleGroup); renderBuildBar(); renderIsleBar(); } }); bar.appendChild(b);
-    const s = el('button', 'tbtn ghost', '🛒 買東西'); s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
+    const s = el('button', 'tbtn ghost', '🛒'); s.title = '買東西'; s.addEventListener('click', () => openSheet('island')); bar.appendChild(s); }
   if (!mine && !canEditIsle()){ const l = el('button', 'tbtn' + (onIsle.liked ? ' ghost' : ''), onIsle.liked ? '❤️ 已按讚' : '❤️ 按讚'); l.disabled = !!onIsle.liked; l.addEventListener('click', likeIsle); bar.appendChild(l); }
   { const tp = el('button', 'tbtn ghost', '🏆'); tp.title = '本週人氣小島'; tp.addEventListener('click', isleTopShow); bar.appendChild(tp); }
-  const back = el('button', 'tbtn ghost', '回村子'); back.addEventListener('click', leaveIsle); bar.appendChild(back);
+  const back = el('button', 'tbtn ghost', '⛵ 回村'); back.addEventListener('click', leaveIsle); bar.appendChild(back);
 }
 // ---- 建造模式：拿著東西走來走去，放在想要的位置 ----
 
@@ -10526,12 +10527,12 @@ const HELPER_TRAIT = { hard:'💪 勤勞', normal:'🙂 普通', sleepy:'😴 �
 async function loadIsleH(owner){ if (IsleH.busy || !Cloud.on) return; IsleH.busy = true; IsleH.at = Date.now(); try { const { data } = await Cloud.sb.rpc('isle_helpers', { p_owner: owner || null }); IsleH.list = data || []; IsleH.owner = owner || null; } catch(e){} IsleH.busy = false; isleHelperSpawn(); if (!$('#sheet').hidden && curTab === 'island') renderTab(); }
 function isleHelperSpawn(){ for (const f of IsleH.fishers) f.dispose(); IsleH.fishers = []; if (!onIsle || !IsleH.list) return;
   IsleH.list.forEach((h, i) => { const f = new Fisher({ shirt:['#3fbf9d', '#ff9f43'][i % 2], hat:'#f6f0dd', name:`${h.name}・島上的幫手`, kind:'npc' }); const sd = i ? 1 : -1, x = ISLE.x + sd * 1.2, z = ISLE.z + ISLE.r + 4.85;   /* v857 往碼頭尾巴挪，不要跟路燈、梯子、救生圈疊在一起 */   /* v384 幫手以前是「坐在空氣上」（屁股懸空）：改成坐在碼頭的邊邊、腳垂在外面，臉朝海 */
-    f.pos.set(x, 0, z); f.baseY = 0.36;   /* v857 跟坐椅子一樣，屁股就在碼頭木板上（以前往下 0.4 是舊人物用的，換新人物後變成半個身體卡進木板） */ f.rot = sd * Math.PI / 2; f.helper = h; f.setGear({ hat:'hat_bucket', face: h.state === 'sleep' ? 'face_sleepy' : 'face_happy' }); f.sitting = true;
-    if (h.state === 'fish'){ f.fishing = true; f.bobState = 'water'; const cp = [x + sd * 4, z]; f.bobPos.set(cp[0], 0.12, cp[1]); f.next = now() + rand(4, 10); } else f.say('💤', 'emote', 99999);
+    f.pos.set(x, 0, z); f.baseY = 0.36;   /* v857 跟坐椅子一樣，屁股就在碼頭木板上（以前往下 0.4 是舊人物用的，換新人物後變成半個身體卡進木板） */ f.rot = sd * Math.PI / 2; f.helper = h; f.setGear({ hat:'hat_bucket', face: h.state === 'sleep' ? 'face_sleepy' : 'face_happy' }); f.sitting = false;   /* v877 作者：「他的屁股浮空」→ 坐著釣魚的舊姿勢跟新人物對不上（屁股懸在木板上面）。改成站在碼頭邊釣魚，跟玩家釣魚一樣；睡覺的時候坐在木板上（跟海灘上坐著一樣的動作） */
+    if (h.state === 'fish'){ f.fishing = true; f.bobState = 'water'; const cp = [x + sd * 4, z]; f.bobPos.set(cp[0], 0.12, cp[1]); f.next = now() + rand(4, 10); } else { f.say('💤', 'emote', 99999); try { startEmote(f, 'sitdown'); } catch(e){} }
     f.lines = h.state === 'sleep' ? ['（呼呼大睡中…）'] : [...(h.log || []).slice(0, 3).map(l => l.txt), `我已經幫大家釣了 ${h.total} 條魚`, h.trait === 'chatty' ? '島上的大家都好親切～' : h.trait === 'hard' ? '再釣一條！' : '今天的海很平靜']; IsleH.fishers.push(f); }); }
 function updateIsleHelpers(dt, t){ if (!onIsle){ if (IsleH.fishers.length){ for (const f of IsleH.fishers) f.dispose(); IsleH.fishers = []; IsleH.list = null; } return; }
   if (Cloud.on && (!IsleH.list || IsleH.owner !== onIsle.owner || Date.now() - IsleH.at > 10 * 60000)) loadIsleH(onIsle.owner);
-  for (const f of IsleH.fishers){ const d = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z);
+  for (const f of IsleH.fishers){ const d = Math.hypot(me.pos.x - f.pos.x, me.pos.z - f.pos.z); if (f.helper && f.helper.state === 'sleep' && !f.emote){ try { startEmote(f, 'sitdown'); } catch(e){} }
     if (f.fishing && t > f.next){ f.dip = 1; f.bend = 0.6; ripple(f.bobPos.x, f.bobPos.z); f.next = t + rand(6, 14); } f.dip = (f.dip || 0) * Math.pow(0.08, dt); f.bend = (f.bend || 0) * Math.pow(0.2, dt);
     if (d < 7 && t > (f.talkAt || 0) && f.helper.state === 'fish'){ f.say(f.lines[Math.floor(Math.random() * f.lines.length)], '', 5); f.talkAt = t + rand(15, 28); }
     if (d < 60){ f.update(dt, t); f.placeTag(); } else f.tag.style.display = 'none'; } }
@@ -23129,6 +23130,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u877', d:'11/26', items:[['🏝️','小島上面那排改成一排、短短的，不會再蓋到頭上的名字'],['🎣','島上的幫手改成站在碼頭邊釣魚，不會再坐在空氣上；睡覺時坐在木板上']] },
   { id:'u876', d:'11/26', items:[['🌱','小島的空地可以自由種田了：拿著種子按「種田」，邊走邊種，一次三排，種得密密麻麻也可以。','island'],['🧺','熟了按「收成」走過去就收起來；澆水也是一次澆一片。']] },
   { id:'u875', d:'11/26', items:[['👕','海浪外套、釣魚背心的下襬跟褲子中間那條空的縫補起來了，不會再看起來分一半']] },
   { id:'u874', d:'11/26', items:[['👕','造型不能自己調色了，改成每件衣服有幾款設計款：條紋、點點、格子、漁網、海浪，顏色都配好了','closet'],['⚓','老港每週改賣外面買不到的限定設計款','gang'],['🪙','以前買的顏色一個退 150 金幣']] },
