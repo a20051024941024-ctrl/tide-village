@@ -7408,8 +7408,10 @@ function camFadeCand(){ const C = CamFade, T = now(); if (C.cand && T - C.candAt
 /* v611 作者截圖：坐阿海的船，整艘船變半透明。你站在上面、裡面的東西（船、碼頭、浮台）不算擋視野：把你的位置換到那個東西自己的座標，看有沒有在它的範圍裡 */
 function camFadeUnder(o){ const g = o.geometry; if (!g) return false; if (!g.boundingBox) g.computeBoundingBox(); const b = g.boundingBox; if (!b) return false; const v = (CamFade.pv || (CamFade.pv = new THREE.Vector3())).set(me.pos.x, me.pos.y + 0.5, me.pos.z); o.worldToLocal(v); return v.x > b.min.x - 0.2 && v.x < b.max.x + 0.2 && v.z > b.min.z - 0.2 && v.z < b.max.z + 0.2 && v.y > b.min.y - 1.5 && v.y < b.max.y + 0.5; }
 function camFadeTick(target){ const T = now(), C = CamFade;
-  if (frameNo % 5 === 0 && !Dive.on && !House.on && !inIndoor() && !FP.act){ for (const hy of [0.2, -0.75]){ const from = new THREE.Vector3(target.x, target.y + hy, target.z), dir = camera.position.clone().sub(from), L = dir.length();   /* 頭和身體各打一條（樹幹擋到身體也算） */
-    if (L > 1.5){ dir.divideScalar(L); C.ray.set(from, dir); C.ray.far = L - 0.2; C.ray.camera = camera; const hits = C.ray.intersectObjects(camFadeCand(), false);
+  const ends = C.ends || (C.ends = [0, 1, 2, 3, 4].map(() => new THREE.Vector3())), cr = (C.cr || (C.cr = new THREE.Vector3())).setFromMatrixColumn(camera.matrixWorld, 0), cu = (C.cu || (C.cu = new THREE.Vector3())).setFromMatrixColumn(camera.matrixWorld, 1);
+  ends[0].copy(camera.position); ends[1].copy(camera.position).addScaledVector(cr, 0.4); ends[2].copy(camera.position).addScaledVector(cr, -0.4); ends[3].copy(camera.position).addScaledVector(cu, 0.3); ends[4].copy(camera.position).addScaledVector(cu, -0.3);   /* v899 鏡頭旁邊 0.4 公尺的柱子也會擋到半個畫面：多打四條到鏡頭四周 */
+  if (frameNo % 5 === 0 && !Dive.on && !House.on && !inIndoor() && !FP.act){ for (const [hy, E] of [[0.2, ends[0]], [-0.75, ends[0]], [0.2, ends[1]], [0.2, ends[2]], [0.2, ends[3]], [-0.3, ends[4]]]){ const from = new THREE.Vector3(target.x, target.y + hy, target.z), dir = E.clone().sub(from), L = dir.length();   /* 頭和身體各打一條（樹幹擋到身體也算） */
+    if (L > 1.5){ dir.divideScalar(L); C.ray.set(from, dir); C.ray.far = L + 0.45; C.ray.camera = camera; const hits = C.ray.intersectObjects(camFadeCand(), false);   /* v899 作者截圖：鏡頭貼著燈柱、招牌時一整條深綠色擋住畫面。以前線只打到鏡頭前 0.2 公尺，貼在鏡頭上的東西打不到；現在打到鏡頭後面一點 */
       for (const h of hits){ const o = h.object;
         if (o.isInstancedMesh && h.instanceId != null){ if (!o.visible || o.count < 1) continue; const key = o.uuid + ':' + h.instanceId; let e = C.cur.get(key);   /* 村裡的樹是一大批一起畫的（InstancedMesh）：把擋到的那一棵拿出來單獨畫成半透明，原本那一格先縮成 0 */
           if (!e){ const M = new THREE.Matrix4(); o.getMatrixAt(h.instanceId, M); const m0 = Array.isArray(o.material) ? o.material[0] : o.material, mm = m0.clone(); mm.transparent = true; mm.depthWrite = false; mm.opacity = 0.28;
@@ -15481,10 +15483,11 @@ function petPatOld(){ const pt = me.pet; if (!pt) return; pt.pos.set(me.pos.x + 
 const SHOPH = {
   tackle: { name:'釣具店', x:-118, z:290, w:14, d:11, y:0.9, wall:'#f6dcb8', band:'#f6a96b', keep:'釣具店 老闆', shirt:'#f6a96b', sign:'🎣 釣具店' },
   mu:     { name:'阿木木工坊', x:-118, z:330, w:15, d:12, y:0.9, wall:'#efe0c8', band:'#c79a6b', keep:'阿木・家具木匠', npc:'mu', sign:'🪑 阿木木工坊' },
-  cai:    { name:'阿彩畫廊', x:-118, z:370, w:15, d:11, y:0.9, wall:'#f7f2fb', band:'#9b7bff', keep:'阿彩・畫家', npc:'cai', sign:'🎨 阿彩畫廊' } };
+  cai:    { name:'阿彩畫廊', x:-118, z:370, w:15, d:11, y:0.9, wall:'#f7f2fb', band:'#9b7bff', keep:'阿彩・畫家', npc:'cai', sign:'🎨 阿彩畫廊' },
+  market: { name:'潮汐魚市場', x:-118, z:412, w:17, d:13, y:0.9, wall:'#eaf4fb', band:'#3f8fdc', keep:'阿福・海產店老闆', npc:'fu', sign:'🐟 潮汐魚市場' } };   /* v899 魚市場：門口照樣直接賣魚；賣魚的單子上多一個「走進去逛」，裡面冰台擺真的魚 */
 for (const S of Object.values(SHOPH)) addDeck(S.x, S.z, S.w, S.d, S.y);
 function inShopHall(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } for (const [k, S] of Object.entries(SHOPH)) if (Math.abs(x - S.x) < S.w / 2 && Math.abs(z - S.z) < S.d / 2) return k; return null; }
-function shDoor(k){ if (k === 'tackle'){ const [x, z, r] = HLOT.tackle; return { x: x + Math.sin(r) * 2.8, z: z + Math.cos(r) * 2.8, face: r }; } const L = SHOPLOT[k]; return { x: L.x + Math.sin(L.r) * 3.2, z: L.z + Math.cos(L.r) * 3.2, face: L.r }; }
+function shDoor(k){ if (k === 'market'){ const [x, z] = hlAt('shop', 0, 5.2); return { x, z, face: HLOT.shop[2] }; } if (k === 'tackle'){ const [x, z, r] = HLOT.tackle; return { x: x + Math.sin(r) * 2.8, z: z + Math.cos(r) * 2.8, face: r }; } const L = SHOPLOT[k]; return { x: L.x + Math.sin(L.r) * 3.2, z: L.z + Math.cos(L.r) * 3.2, face: L.r }; }
 function shBuild(k){ const S = SHOPH[k]; if (S.g) return S; const g = new THREE.Group(); scene.add(g); S.g = g; g.visible = false; g.userData.keep = g.userData.dyn = true; const Y = S.y, H = 3.6;
   const M = (c, r, ex) => mat(c, r == null ? 0.85 : r, Object.assign({ noWood: true }, ex || {}));
   const B = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof m === 'string' ? M(m) : m); o.position.set(S.x + x, y, S.z + z); g.add(o); return o; };
@@ -15505,6 +15508,7 @@ function shBuild(k){ const S = SHOPH[k]; if (S.g) return S; const g = new THREE.
   S.away = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.36), new THREE.MeshBasicMaterial({ map: signTex('老闆出去一下，東西照樣能買', '#7a5236', '#ffffff', 512, 120), side: THREE.DoubleSide })); S.away.position.set(S.x, Y + 1.32, S.z + CZ + 0.47); S.away.visible = false; g.add(S.away);
   S.items = new THREE.Group(); g.add(S.items); S.ik = '';
   if (k === 'tackle') shTackle(S, B, M);
+  if (k === 'market') shMarket(S, B, M);
   if (k === 'mu') B(2.4, 0.85, 1.0, M('#a8794e', 0.85), -S.w / 2 + 1.6, Y + 0.43, -S.d / 2 + 1.0), B(1.2, 0.06, 0.3, M('#d8c49a'), -S.w / 2 + 1.4, Y + 0.9, -S.d / 2 + 0.9), addBoxCol(S.x - S.w / 2 + 1.6, S.z - S.d / 2 + 1.0, 2.4, 1.0);   /* 工作台、木板 */
   if (k === 'cai'){ const e = paintMesh({ main:'#ffffff', accent:'#8c5d3b', pat:'sea', fish:null }); e.position.set(S.x + 2.6, Y, S.z + 0.6); e.rotation.y = -0.6; g.add(e); addCircleCol(S.x + 2.6, S.z + 0.6, 0.5);
     for (const [i, c] of ['#e8473a', '#ffd36a', '#5fb6e3', '#3fbf9d', '#9b7bff'].entries()) B(0.09, 0.02, 0.09, M(c, 0.5), 3.4 + i * 0.12, Y + 0.72, 0.9); B(0.75, 0.7, 0.45, M('#c79a6b'), 3.6, Y + 0.35, 0.9); }   /* 畫架、調色盤 */
@@ -15533,6 +15537,22 @@ function shTackle(S, B, M){ const Y = S.y, g = S.g;
   B(1.8, 0.75, 0.9, M('#a8794e'), 0, Y + 0.38, 1.2); addBoxCol(S.x, S.z + 1.2, 1.9, 1.0);
   for (let i = 0; i < 3; i++){ const rl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.12, 14), M('#c9d6e3', 0.3, { metalness: 0.6 })); rl.rotation.x = Math.PI / 2; rl.position.set(S.x - 0.55 + i * 0.55, Y + 0.85, S.z + 1.05); g.add(rl); }
   for (let i = 0; i < 4; i++){ const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M(i % 2 ? '#e8473a' : '#ffd36a', 0.4)); fl.position.set(S.x - 0.6 + i * 0.4, Y + 0.82, S.z + 1.45); g.add(fl); } }
+/* 魚市場：三排鋪碎冰的檯子，上面擺真的魚（照這個季節、海邊和港口常見的魚，用圖鑑同一個模型）；藍色魚箱、吊燈；右邊是阿福海產的櫃位 */
+function shMarket(S, B, M){ const Y = S.y, g = S.g, ice = M('#eef7fb', 0.35, { emissive: '#eef7fb', emissiveIntensity: 0.08 });
+  const ids = []; for (const sid of ['harbor', 'sea', 'river', 'lake']) if (SPOT_BY_ID[sid]) for (const id of SPOT_BY_ID[sid].fish){ const f = FISH_BY_ID[id]; if (f && !BIG_FISH.has(id) && !f.fest && f.rarity !== '傳說' && !ids.includes(id)) ids.push(id); }
+  let k = 0; for (const tz of [-1.4, 1.6]) for (const tx of [-5.2, 0, 5.2]){ if (tz > 0 && tx === 0) continue;   /* 中間前面留走道 */
+    B(3.6, 0.85, 1.5, M('#9aa6b0', 0.5), tx, Y + 0.43, tz); B(3.5, 0.08, 1.4, ice, tx, Y + 0.89, tz); addBoxCol(S.x + tx, S.z + tz, 3.7, 1.6);
+    for (let i = 0; i < 4; i++){ const f = FISH_BY_ID[ids[k++ % Math.max(1, ids.length)]]; if (!f) continue; let m = null; try { m = fishModel(f, 0.55); } catch(e){ continue; }
+      const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()), L = Math.max(sz.x, sz.z, 0.01), sc = Math.min(2.0, 0.95 / L); m.scale.multiplyScalar(sc);
+      m.rotation.set(Math.PI / 2, 0, i % 2 ? 0.25 : -0.25);   /* 側躺在冰上 */ m.position.set(S.x + tx - 1.2 + i * 0.8, Y + 0.97, S.z + tz + (i % 2 ? 0.25 : -0.25)); g.add(m);
+      const tg = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.18), new THREE.MeshBasicMaterial({ map: signTex(f.name, '#ffffff', '#1f4f6e', 256, 72) })); tg.rotation.x = -Math.PI / 2.6; tg.position.set(S.x + tx - 1.2 + i * 0.8, Y + 0.95, S.z + tz + 0.68); g.add(tg); } }
+  for (let i = 0; i < 6; i++) B(0.7, 0.32, 0.5, M('#3f8fdc', 0.6), -7.4 + (i % 2) * 0.05, Y + 0.16 + Math.floor(i / 2) * 0.33, -4.6 + (i % 2) * 0.1);   /* 疊起來的藍色魚箱 */
+  addBoxCol(S.x - 7.4, S.z - 4.6, 0.9, 0.7);
+  /* 阿福海產的櫃位（右邊牆） */
+  B(0.9, 1.0, 3.0, M('#f6a96b', 0.7), S.w / 2 - 1.0, Y + 0.5, 3.0); B(1.0, 0.07, 3.2, M('#8c5d3b'), S.w / 2 - 1.0, Y + 1.03, 3.0); addBoxCol(S.x + S.w / 2 - 1.0, S.z + 3.0, 1.0, 3.2);
+  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.5), new THREE.MeshBasicMaterial({ map: signTex('🦐 阿福海產', '#f6a96b', '#ffffff', 512, 110) })); sg.position.set(S.x + S.w / 2 - 0.03, Y + 2.3, S.z + 3.0); sg.rotation.y = -Math.PI / 2; g.add(sg); }
+  S.fu = { x: S.x + S.w / 2 - 2.0, z: S.z + 3.0 };
+  for (const x of [-5.2, 0, 5.2]){ const lp = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.22, 14, 1, true), M('#2f6fae', 0.6, { side: THREE.DoubleSide })); lp.position.set(S.x + x, Y + 3.25, S.z + 0.2); g.add(lp); const bl = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), M('#fff6d8', 0.5, { emissive: '#ffe9a8', emissiveIntensity: 1 })); bl.position.set(S.x + x, Y + 3.17, S.z + 0.2); g.add(bl); } }
 /* 阿木的家具、阿彩的畫：清單有變才重擺 */
 function shFill(k){ const S = SHOPH[k]; if (!S || !S.g) return; const L = k === 'mu' ? FZ.list : k === 'cai' ? Cai.list : null; if (!L) return; const key = L.map(d => d.id).join(','); if (key === S.ik) return; S.ik = key;
   for (const c of S.items.children.slice()) S.items.remove(c); const Y = S.y;
@@ -18101,7 +18121,8 @@ function nearShop(){
   if (!onIsle && ZC.g && Math.hypot(me.pos.x - ZC.at[0], me.pos.z - ZC.at[1]) < 2.1) return { id:'zc', label:'築城守土', mode:'zc', sub:'🏰 坐下來玩一局' };
   if (!onIsle && Math.hypot(me.pos.x - PET_DOOR.x, me.pos.z - PET_DOOR.z) < 1.7) return { id:'petdoor', label:'小花寵物店', mode:'petdoor', sub:'🐾 進去看看' };
   { const hk = inShopHall(); if (hk){ const S = SHOPH[hk]; if (S.exit && Math.hypot(me.pos.x - S.exit.x, me.pos.z - S.exit.z) < 1.3) return { id:'shexit', label:'出去', mode:'shexit', hall: hk };   /* v897 店裡：櫃台開原本的商店、門口出去 */
-      if (S.npc && Math.hypot(me.pos.x - S.npc.pos.x, me.pos.z - S.npc.pos.z) < 3.0){ const sh = SHOPS.find(x => x.id === hk); if (sh) return sh; } return null; } }
+      if (hk === 'market' && S.fu && Math.hypot(me.pos.x - S.fu.x, me.pos.z - S.fu.z) < 1.8){ const sh = SHOPS.find(x => x.id === 'fu'); if (sh) return sh; }
+      if (S.npc && Math.hypot(me.pos.x - S.npc.pos.x, me.pos.z - S.npc.pos.z) < 3.0){ const sh = SHOPS.find(x => x.id === (hk === 'market' ? 'shop' : hk)); if (sh) return sh; } return null; } }
   { /* v434 魚市場一棟裡有三個櫃位：站在哪個櫃位前面就開哪個（比最近的），不是照清單順序 */
     const [cx, cz] = hlAt('shop', 0, 2.6); let best = null, bd = 4.8;
     for (const sh of SHOPS){ if (sh.id === 'cook') continue; const l = LANDMARKS.find(l => l.id === sh.id); if (!l) continue; const d = sh.id === 'shop' ? Math.min(Math.hypot(me.pos.x - cx, me.pos.z - cz) , Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z) + 1.5) : Math.hypot(me.pos.x - l.pos.x, me.pos.z - l.pos.z); if (d < bd){ bd = d; best = sh; } }
@@ -18865,6 +18886,7 @@ function renderFkitShop(body){ body.appendChild(el('div', 'dexhead', '🎣 釣�
   body.appendChild(ul); }
 function renderShop(body){
   if (shopMode === 'sell' && shopName === '魚市場・賣魚') fishHallSeg(body, 'shop');
+  if (shopName === '魚市場・賣魚' && !inShopHall() && !onIsle && !House.on){ const D = shDoor('market'); if (Math.hypot(me.pos.x - D.x, me.pos.z - D.z) < 8){ const b = el('button', 'tbtn ghost', '🚪 走進去逛（冰台上今天的魚）'); b.style.cssText = 'width:100%;margin:4px 0 8px'; b.addEventListener('click', () => { closeSheet(); enterShopHall('market'); }); body.appendChild(b); } }   /* v899 門口照樣直接賣，想看再進去 */
   const head = el('div', 'shophead'); head.innerHTML = `<b>${shopName}</b><span><span class="lovepill">💙 ${(rec.love || 0).toLocaleString()}</span> <span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span></span>`; body.appendChild(head);
   if (shopName === '釣具店'){ const W = WEATHERS[Env.wx], tip = el('div', 'tipbox'), T = dailyTip(), sp = SPOT_BY_ID[T.spot], tf = FISH_BY_ID[T.fish], sf = SEASONS[SEASON].fish.map(id => FISH_BY_ID[id] && FISH_BY_ID[id].name).filter(Boolean).slice(0, 3);   /* v645 文字口氣：老闆用講的，不是天氣預報 */
     const wx = WX_SAY[Env.wx] || esc(W.desc);
@@ -21706,18 +21728,28 @@ function roamPose(R, ms){ if (!R.c.length) return null; const K = ROAM_K[R.kind]
   const [x, z, h] = navAt(c, c.len - (a - tw - dwell) * v); return { walk: true, x, z, rot: h + Math.PI, c }; }
 /* ============ v893 下雨天村民回家躲雨 ============
    作者 11/26：「村民不是都有自己的家嗎，下雨天他們可以自動回家嗎，除了少數幾個除外」。
-   會回家的：阿潮、小溪、阿伯。他們住在居民區那幾棟公寓的樓上（跟船長們同一棟），開始下雨後各自隔幾秒收竿、沿著路（navFind）走回家、進門就不見；
+   會回家的：阿潮、小溪、阿伯；v899 起阿嬤（回石滬小島上的紅屋頂房子）、阿蘭（回木棧道盡頭的巡守站）也會。他們住在居民區那幾棟公寓的樓上（跟船長們同一棟），開始下雨後各自隔幾秒收竿、沿著路（navFind）走回家、進門就不見；
    家裡的燈會亮。雨停了再走回原本的位置重新拋竿。
    不回家的（例外）：
      - 顧店的人（阿彩、阿鐵、阿萍、阿報、阿綾、阿木、阿福）：店要開。
      - 老港：下雨也愛釣魚。
      - 阿默、阿穎：追紅鯊。
      - 蔚博士：在做研究。
-     - 阿嬤：住在石滬那邊，走不回居民區。
-     - 阿蘭：紅樹林巡守員，下雨也要顧紅樹林（她站的木棧道也接不上村子的路）。
      - 村長、船長們：本來就照自己的作息走。
    同步：什麼時候下雨是照時間算的（weatherAt），誰幾秒後出門也是照名字算，每支手機看到的一樣，晚進來的人也會看到同樣的位置。 */
-const RAIN_HOME = { '阿潮': 'cap0', '小溪': 'cap1', '阿伯': 'cap2' };   /* 住哪一棟（RES_HOMES 的 who） */
+const RAIN_HOME = { '阿潮': 'cap0', '小溪': 'cap1', '阿伯': 'cap2',
+  '阿嬤': { name: '阿嬤的家', via: [[-3.2, 86.9]] },   /* v899 石滬小島上那棟紅屋頂的房子就是阿嬤家（北邊是門） */
+  '阿蘭': { name: '紅樹林巡守站', via: [[68.3, 10.05], [69.2, 10.05]] } };   /* v899 木棧道東邊盡頭新蓋的高腳巡守站（門朝西、對著木棧道） */
+addDeck(70.2, 10.05, 3.8, 3.4, 0.6);   /* 巡守站的平台，接在阿蘭那段木棧道的東邊盡頭（南北兩邊有欄杆，東邊是開的） */
+function rhHutBuild(){ if (RH.hutG) return; const g = new THREE.Group(), y = 0.6, wd = mat('#8c6a48', 0.85), dk = mat('#5a3d2b', 0.85), gr = mat('#4f7f44', 0.8); g.userData.dyn = g.userData.keep = true; g.position.set(70.7, 0, 10.05); g.rotation.y = Math.PI / 2; scene.add(g); RH.hutG = g;
+  const B = (w, h, d, m, px, py, pz) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); o.castShadow = true; g.add(o); return o; };   /* 小屋自己的座標：門朝 -z */
+  B(3.4, 0.12, 3.8, wd, 0, y - 0.06, -0.5); for (const [sx, sz] of [[-1.5, -2.2], [1.5, -2.2], [-1.5, 1.2], [1.5, 1.2]]) B(0.16, 1.6, 0.16, dk, sx, y - 0.8, sz);   /* 平台、高腳 */
+  B(2.4, 1.9, 2.0, gr, 0, y + 0.95, 0); B(2.9, 0.12, 2.5, dk, 0, y + 1.95, 0);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.9, 0.9, 4), mat('#6b4a32', 0.8)); roof.rotation.y = Math.PI / 4; roof.position.set(0, y + 2.45, 0); g.add(roof);
+  B(0.8, 1.4, 0.06, dk, 0, y + 0.7, -1.02);
+  RH.hutWin = mat('#ffe9a8', 0.5, { emissive: '#ffd36a', emissiveIntensity: 0 }); for (const sx of [-1, 1]){ const w = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.45), RH.hutWin); w.position.set(sx * 1.21, y + 1.2, 0); w.rotation.y = sx * Math.PI / 2; g.add(w); }
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.36), new THREE.MeshBasicMaterial({ map: signTex('🌿 紅樹林巡守站', '#4f7f44', '#ffffff', 384, 80) })); sg.position.set(0, y + 1.75, -1.04); sg.rotation.y = Math.PI; g.add(sg);
+  addBoxCol(70.7, 10.05, 2.1, 2.5); }
 var RH = { k: null, sp: null, in: new Set() };
 function rhWet(ms){ const f = (location.hash.match(/wx=(\w+)/) || [])[1], w = WEATHERS[WEATHERS[f] ? f : weatherAt(ms)]; return !!(w && w.rain > 0); }   /* 跟 updateEnv 同一個時鐘（Date.now）、同一個 #wx= 測試開關 */
 /* 這一刻所在（或 6 分鐘內剛結束）的那一段雨：[開始, 結束]，一分鐘算一次 */
@@ -21726,6 +21758,8 @@ function rhSpell(ms){ const k = Math.floor(ms / 60000); if (RH.k === k) return R
   if (m0 != null){ let S = m0, E = m0; for (let i = 0; i < 300 && rhWet(S - 30000); i++) S -= 30000; for (let i = 0; i < 300 && rhWet(E + 30000); i++) E += 30000; sp = [Math.floor(S / 30000) * 30000, Math.floor(E / 30000) * 30000 + 30000]; }
   return (RH.sp = sp); }
 function rhPlan(n){ if (n.rh) return n.rh; if (frameNo < (n.rhTry || 0)) return null; n.rhTry = frameNo + 300; const who = RAIN_HOME[npcShort(n)]; if (!who || !n.roam || !n.roam.post) return null;
+  if (typeof who === 'object'){ const P = n.roam.post, pts = [[P.x, P.z]].concat(who.via), cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));   /* 自己的家就在旁邊：照固定路線走 */
+    const h = hash32('rh' + n.npcName); return (n.rh = { H: who, c: { pts, cum, len: cum[cum.length - 1] }, d1: 6 + h % 30, d2: 4 + (h >>> 8) % 25 }); }
   const H = RES_HOMES.find(q => q.who === who); if (!H) return null; const P = n.roam.post, sd = H.x < -47 ? 1 : -1, dx = H.x + sd * 3.3, dz = H.z + (hash32('rh' + n.npcName) % 3 - 1) * 0.7;
   let pts = navFind(P.x, P.z, dx, dz);
   if (!pts) for (const c of (n.roam.c || [])){ const q = navFind(c.x, c.z, dx, dz); if (q){ pts = c.pts.concat(q.slice(1)); break; } }   /* 尋路地圖沒涵蓋的地方（阿蘭在紅樹林）：先走散步走得到的那條路，再接尋路 */
@@ -21733,6 +21767,8 @@ function rhPlan(n){ if (n.rh) return n.rh; if (frameNo < (n.rhTry || 0)) return 
   const h = hash32('rh' + n.npcName); return (n.rh = { H, c: { pts, cum, len: cum[cum.length - 1] }, d1: 6 + h % 30, d2: 4 + (h >>> 8) % 25 }); }
 /* 回傳 true＝這一格由躲雨接手 */
 function rainHomeDrive(n, dt, t){ if (!RAIN_HOME[npcShort(n)] || !n.roam || !n.roam.post) return false;
+  if (!RH.hutG) try { rhHutBuild(); } catch(e){ RH.hutG = 1; console.warn('hut', e); }
+  if (RH.hutWin && npcShort(n) === '阿蘭') RH.hutWin.emissiveIntensity = n.rhSt === 'home' ? 1.2 : 0;
   const ms = Date.now(), sp = rhSpell(ms); let st = null, a = 0;
   if (sp){ const R = rhPlan(n); if (R){ const v = 1.45, tw = R.c.len / v * 1000, lv = sp[0] + R.d1 * 1000, ar = lv + tw, out = Math.max(ar, sp[1] + R.d2 * 1000), bk = out + tw;
       if (ms >= lv && ms < ar){ st = 'go'; a = (ms - lv) / 1000 * v; } else if (ms >= ar && ms < out){ st = 'home'; } else if (ms >= out && ms < bk){ st = 'back'; a = R.c.len - (ms - out) / 1000 * v; } } }
@@ -21808,8 +21844,7 @@ function updateNpcs(dt, t){
     // 村民也會釣魚：等一陣子 → 有魚咬（浮標沉）→ 有時候拉上來捧著魚給大家看 → 舉竿、甩出去
     const st = n.st || 'wait';
     if (st === 'wait' && t > n.next){ n.dip = 1; n.bend = 0.6; ripple(n.bobPos.x, n.bobPos.z);
-      if (n.amo){ n.st = 'nib'; n.nibAt = t; n.stT = t + rand(1.4, 2.8); n.dip = 0.2; n.bend = 0.05; }
-      else if (Math.random() < 0.4){ n.st = 'reel'; n.stT = t + rand(1.6, 3.2); }
+      if (n.amo || Math.random() < 0.45){ n.st = 'nib'; n.nibAt = t; n.stT = t + rand(1.4, 2.8); n.dip = 0.2; n.bend = 0.05; n.amoCast = n.bobPos.clone(); }   /* v899 作者：村民的釣魚動作照玩家來 → 每個村民都跟阿默一樣：魚先試吃（浮標抖）→ 刺魚 → 一扳一收拉魚、魚衝的時候被扯一下 → 拉上來 */
       else n.next = t + rand(6, 15); }
     { const d = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z); if (d < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && n.st !== 'show' && !Dive.on && !House.on){ n.say(npcLine(n), '', 6); n.talkAt = t + rand(20, 40); } else if (d > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5); }   /* 走近才講話，講完隔一陣子再講 */
     if (st === 'reel'){ n.bend = 0.75 + Math.sin(t * 6) * 0.2; n.dip = 0.6 + Math.sin(t * 9) * 0.3; if (Math.random() < dt * 3) ripple(n.bobPos.x + (Math.random() - 0.5) * 0.6, n.bobPos.z + (Math.random() - 0.5) * 0.6);
@@ -21821,6 +21856,7 @@ function updateNpcs(dt, t){
     if (st === 'windup'){ n.windup = Math.min(1, (n.windup || 0) + dt / 0.6);
       if (t > n.stT){ n.windup = 0; n.castT = 0; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); try { const cp = castPoint(n.pos.x, n.pos.z, Math.sin(n.rot), Math.cos(n.rot), 4.5); n.bobPos.set(cp[0], 0.12, cp[1]); } catch(e){}   /* v881 作者：「阿穎看起來像在釣陸地」→ 每次甩竿重新找有水的地方（退潮時往外甩） */ n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
     if (st === 'wait'){ n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); if (n.fishing && n.bobState === 'water' && (frameNo + (n.npcI || 0)) % 90 === 0 && (seaDry(n.bobPos.x, n.bobPos.z) || !waterAt(n.bobPos.x, n.bobPos.z))){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } }   /* v881 潮水退了、浮標躺在沙上：收竿重甩 */
+    if (!n.amo) try { amoFish(n, dt, t); } catch(e){}
     try { npcAvoid(n, dt, t); } catch(e){}
     try { meetTurn(n, dt, t); } catch(e){}
     n.update(dt, t); n.placeTag();
@@ -23650,6 +23686,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u899', d:'11/26', items:[['🐟','魚市場可以走進去逛了：冰台上擺著真的魚（賣魚的單子上按「走進去逛」）。門口照樣直接賣魚'], ['🌧️','下雨天阿嬤會回石滬小島上的家、阿蘭回木棧道盡頭新蓋的巡守站躲雨'], ['🎣','村民釣魚跟你一樣：魚先試吃、刺魚、一扳一收拉上來；鏡頭貼著柱子、招牌時，擋住的東西會變半透明']] },
   { id:'u898', d:'11/26', items:[['⛵','「我的家」「逛別人的島」「島的大小」搬進手機的「⛵ 我的島」了；小島商店只剩買東西，畫面比較乾淨','isleapp']] },
   { id:'u897', d:'11/26', items:[['🏪','釣具店、阿木木工坊、阿彩畫廊可以走進去逛了：牆上掛滿釣竿、地上擺著阿木的家具、牆上掛著阿彩的畫；走到櫃台就能買']] },
   { id:'u896', d:'11/26', items:[['🧑‍🌾','島上的幫手可以做三種工作：🎣 釣魚、🌱 顧田（澆水、收成，賣的錢給島主）、🪓 開地（用放進他錢包的錢一格一格開地）。做久了會變熟練，最多 ★★★★★，越熟練釣到越多稀有魚、顧越多田、開越快','island'], ['🪓','在島上看得到幫手做事：顧田的在田裡走來走去澆水，開地的站在樹林邊砍樹。住在島上的人都可以請幫手、叫他換工作','island']] },
