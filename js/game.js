@@ -5715,6 +5715,11 @@ K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, DS =
   try { const need = k.region && c.top === 'hoodie', fm = M.face, cb = k.bones.chest; if (need && !k.plug && fm && cb){ const sk = fm.skeleton, bi = sk.boneInverses[sk.bones.indexOf(cb)]; if (bi){ const geo = new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2); geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(0, 0.0, 0.02), new THREE.Quaternion(), new THREE.Vector3(0.21, 0.172, 0.125)));
         const g = new THREE.Group(); g.name = 'k3_plug'; new THREE.Matrix4().copy(bi).multiply(fm.bindMatrix).decompose(g.position, g.quaternion, g.scale); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.9 })); m.castShadow = false; g.add(m); cb.add(g); k.plug = m; } }
     if (k.plug){ k.plug.visible = !!need; if (need && M.Thoodie_cloth) k.plug.material.color.copy(M.Thoodie_cloth.material.color).multiplyScalar(0.8); } } catch(e){}
+  /* v875 作者：「你還是會分一半啊」→ 海浪外套的下襬是往外張的，裡面沒有身體，從前面看下襬跟褲頭之間是一條空的縫（看得到後面）。
+     在腰上補一圈跟褲子同色的「腰身」（黏在屁股的骨頭上，跟著動），縫就補起來了 */
+  try { const need = k.region && (c.top === 'wave' || c.top === 'vest'), fm = M.face, hb = k.bones.hips; if (need && !k.waist && fm && hb){ const sk = fm.skeleton, bi = sk.boneInverses[sk.bones.indexOf(hb)]; if (bi){ const geo = new THREE.CylinderGeometry(1, 1, 1, 24, 1, true); geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(0, -0.19, 0.035), new THREE.Quaternion(), new THREE.Vector3(0.178, 0.09, 0.138)));
+        const g = new THREE.Group(); g.name = 'k3_waist'; new THREE.Matrix4().copy(bi).multiply(fm.bindMatrix).decompose(g.position, g.quaternion, g.scale); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.95, side: THREE.DoubleSide })); m.castShadow = false; g.add(m); hb.add(g); k.waist = m; } }
+    if (k.waist){ k.waist.visible = !!need; const BN = { shorts: 'Bshorts', pants: 'Bpants' }[c.bot]; if (need && BN && M[BN + '_cloth']) k.waist.material.color.copy(M[BN + '_cloth'].material.color).multiplyScalar(0.85); } } catch(e){}
   if (M.face){ k.fk = ''; try { K3.setFace(k, 'smile', !!k.mine || !!k.big); } catch(e){ console.warn('face', e); } } };
 K3.detach = a => { const k = a.k3; if (!k) return; try { if (k.scl.parent) k.scl.parent.remove(k.scl); } catch(e){} if (a.kid && k.kidRef === a.kid){ a.kid.m.visible = true; a.kid.handR = k.handR0 || a.kid.B.handr; } a.k3 = null; };
 /* 每一格：原本骨架的角度抄過來（手臂多轉一點貼近身體），髖部的上下前後照比例搬過來；長髮往下垂、跟著甩；表情 */
@@ -23046,6 +23051,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u875', d:'11/26', items:[['👕','海浪外套、釣魚背心的下襬跟褲子中間那條空的縫補起來了，不會再看起來分一半']] },
   { id:'u874', d:'11/26', items:[['👕','造型不能自己調色了，改成每件衣服有幾款設計款：條紋、點點、格子、漁網、海浪，顏色都配好了','closet'],['⚓','老港每週改賣外面買不到的限定設計款','gang'],['🪙','以前買的顏色一個退 150 金幣']] },
   { id:'u873', d:'11/26', items:[['🏝️','你的小島變大了：外面一圈淺水礁和浪花、白沙灘、椰子樹、樹林，東北邊還有幾根高高的峭壁。原本蓋的東西都在。','island'],['🌳','樹林分成 6 塊地，走到牌子那裡就能買。買下來樹會倒下，換成漂流木，地就可以拿來蓋房子。']] },
   { id:'u872', d:'11/26', items:[['🎣','村民在釣魚的時候走過去，他不會再拿著竿子整個人滑開；兩個村民也不會再疊在一起']] },
