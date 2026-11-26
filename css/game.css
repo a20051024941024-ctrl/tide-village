@@ -2549,6 +2549,7 @@ body.photo #hype{display:none}
 .ish-a .tbtn{padding:6px 10px}
 .closet.ishop .cl-grid{grid-template-columns:repeat(5,1fr)!important}
 .ish-more{opacity:.55;justify-content:center;border-style:dashed!important}
+.ish-hk{font-size:22px;line-height:1.1;letter-spacing:-4px;min-height:56px;display:flex;align-items:center;justify-content:center}
 .closet.ishop .cl-it{min-width:0}.closet.ishop .cl-grid > *{min-width:0}.closet.ishop .cl-it .gearic{max-width:100%;height:auto}
 /* v893 寵物店卡片：3D 模型小圖 */
 .dishic.petshot{width:84px;height:84px;font-size:44px;display:flex;align-items:center;justify-content:center;border-radius:18px;background:#f3ede4;overflow:hidden}

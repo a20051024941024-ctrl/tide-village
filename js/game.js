@@ -8301,7 +8301,7 @@ const ISLE_ITEMS = {
   beach:   { name:'海邊小屋', price:3000, rad:2.9, house:true, roof:'#5fb6e3', w:3.6, awning:'#2f89c7' },
   tea:     { name:'和風茶屋', price:5500, rad:3.0, house:true, roof:'#4a4f5a', w:3.4, wall:'#f1e6cf' },
   villa:   { name:'大別墅',   price:8000, rad:3.6, house:true, roof:'#ec8b68', w:4.4, scale:1.3 },
-  mansion: { name:'大宅（可以擴建、加蓋二樓三樓）', price:3000, rad:4.6, house:true, roof:'#5a6f8a', w:4.4, scale:1.7, wall:'#f4efe4' },
+  mansion: { name:'房子', price:3000, rad:4.6, house:true, roof:'#5a6f8a', w:4.4, scale:1.7, wall:'#f4efe4' },
   flower:  { name:'花圃', price:200, rad:0.9 },   bench:  { name:'長椅', price:150, rad:0.9 },   lamp:   { name:'路燈', price:250, rad:0.35 },
   palm:    { name:'椰子樹', price:400, rad:0.6 }, pond:   { name:'小魚池', price:1200, rad:1.5 }, flag:   { name:'旗子', price:300, rad:0.3 },
   fence:   { name:'木圍籬', price:80, rad:0.9 },  tree:   { name:'圓圓樹', price:300, rad:1.1 }, rock:   { name:'石頭', price:100, rad:0.7 },
@@ -8517,6 +8517,10 @@ function drawIsleSign(name){
 // ---- 每一種東西的 3D 模型（原點在地面中心，正面朝 +z）----
 function itemMesh(type, opts){
   opts = opts || {}; const T = ISLE_ITEMS[type], g = new THREE.Group();
+  if (type === 'mansion' && ART2 && opts.it !== undefined){   /* v893 房子整棟買：外觀照大小、樓層變（小屋一層、海景豪宅三層又寬又深） */
+    const D = houseDims(opts.it || {}), S = 1.34, sub = new THREE.Group(); sub.scale.setScalar(S); g.add(sub);
+    const sd = Math.abs(Math.floor(+((opts.it || {}).id) || 3)); twHouse(sub, { w: D.w / S, d: D.d / S, fl: D.fl, front: D.d / 2 / S, seed: sd, kind: 'home', wall: ['#f2b6c0', '#f4d9a0', '#c7e3c0', '#f6c9a8', '#cfe0f4'][sd % 5] });
+    g.traverse(o => { o.userData.dyn = false; }); return g; }
   if (T.house){
     if (!houseBuilder) return g; const n0 = colliders.length;
     const h = houseBuilder(0, 0, T.roof, T.w, 0, Object.assign({}, T.awning ? { awning:T.awning } : {}, T.wall ? { wall:T.wall } : {}));
@@ -8603,11 +8607,17 @@ function itemMesh(type, opts){
   }
   return g;
 }
-function itemDoor(it){ const T = ISLE_ITEMS[it.t], d = 1.25 * (T.scale || 1) + 0.7, c = Math.cos(it.r), s = Math.sin(it.r); return { x: ISLE.x + it.x + s * d, z: ISLE.z + it.z + c * d, face: it.r + Math.PI, it }; }
+/* v893 房子整棟買：八種大小（伺服器 252 的 _house_kit 要一樣） */
+const HOUSE_KITS = [{ k:'s1', n:'小屋', lv:1, up:0, price:3000 }, { k:'s2', n:'小家', lv:2, up:0, price:4500 }, { k:'s3', n:'中家', lv:3, up:0, price:6500 }, { k:'s5', n:'大房子', lv:5, up:0, price:12000 },
+  { k:'f5', n:'兩層樓', lv:5, up:1, price:18000 }, { k:'f6', n:'大宅', lv:6, up:1, price:22000 }, { k:'t7', n:'三層大宅', lv:7, up:2, price:36000 }, { k:'t8', n:'海景豪宅', lv:8, up:2, price:42000 }];
+function houseKitOf(it){ const lv = mansionLv(it), up = houseUp(it); return HOUSE_KITS.find(K => K.lv === lv && K.up === up) || null; }
+function houseDims(it){ const L = MANSION_LV[mansionLv(it)] || MANSION_LV[5], up = houseUp(it); return { w: Math.min(10.6, 5.6 + (L.hw - 5) * 0.5), d: Math.min(6.6, 4.4 + (L.hd - 4) * 0.45), fl: up + 1 }; }
+function itemDoor(it){ if (it.t === 'mansion' && ART2){ const D = houseDims(it), d = D.d / 2 + 0.7, c = Math.cos(it.r), s = Math.sin(it.r); return { x: ISLE.x + it.x + s * d, z: ISLE.z + it.z + c * d, face: it.r + Math.PI, it }; }
+  const T = ISLE_ITEMS[it.t], d = 1.25 * (T.scale || 1) + 0.7, c = Math.cos(it.r), s = Math.sin(it.r); return { x: ISLE.x + it.x + s * d, z: ISLE.z + it.z + c * d, face: it.r + Math.PI, it }; }
 function placeItemInGroup(group, it, withCols){
-  const T = ISLE_ITEMS[it.t], g = itemMesh(it.t, { lite: !withCols }); g.position.set(ISLE.x + it.x, ISLE.y, ISLE.z + it.z); g.rotation.y = it.r; g.userData.item = it; group.add(g);
+  const T = ISLE_ITEMS[it.t], g = itemMesh(it.t, { lite: !withCols, it }); g.position.set(ISLE.x + it.x, ISLE.y, ISLE.z + it.z); g.rotation.y = it.r; g.userData.item = it; group.add(g);
   if (!withCols) return g;
-  if (T.house){ const c = Math.cos(it.r), s = Math.sin(it.r), w = T.w * (T.scale || 1), d = 2.5 * (T.scale || 1); addBoxCol(ISLE.x + it.x, ISLE.z + it.z, Math.abs(c) * w + Math.abs(s) * d, Math.abs(s) * w + Math.abs(c) * d); isleDoors.push(itemDoor(it)); }
+  if (T.house){ const c = Math.cos(it.r), s = Math.sin(it.r), HD = it.t === 'mansion' && ART2 ? houseDims(it) : null, w = HD ? HD.w + 0.1 : T.w * (T.scale || 1), d = HD ? HD.d + 0.1 : 2.5 * (T.scale || 1); addBoxCol(ISLE.x + it.x, ISLE.z + it.z, Math.abs(c) * w + Math.abs(s) * d, Math.abs(s) * w + Math.abs(c) * d); isleDoors.push(itemDoor(it)); }
   else if (it.t === 'bench' || it.t === 'picnic' || it.t === 'swing'){
     const c = Math.cos(it.r), s = Math.sin(it.r), seat = (lx, lz, face) => isleChairs.push({ x: ISLE.x + it.x + c * lx + s * lz, z: ISLE.z + it.z - s * lx + c * lz, face: it.r + face, y: ISLE.y + (it.t === 'swing' ? 0.1 : 0.02), isle: true });
     if (it.t === 'bench'){ seat(-0.45, 0.05, 0); seat(0.45, 0.05, 0); } else if (it.t === 'picnic'){ seat(-0.4, -0.78, 0); seat(0.4, -0.78, 0); seat(-0.4, 0.78, Math.PI); seat(0.4, 0.78, Math.PI); addCircleCol(ISLE.x + it.x, ISLE.z + it.z, 0.5); } else seat(0, 0, 0);
@@ -9742,11 +9752,11 @@ async function isleTopShow(){ let p = $('#isleTop'); if (!p){ p = el('div', 'pan
 const Build = { on:false, type:null, moveId:null, rot:0, ghost:null, x:0, z:0, err:null, sel:null };
 const ghostOk = new THREE.MeshStandardMaterial({ color:'#7fe0a8', transparent:true, opacity:0.55, emissive:'#3fbf7a', emissiveIntensity:0.6, depthWrite:false });
 const ghostBad = new THREE.MeshStandardMaterial({ color:'#ff8a7a', transparent:true, opacity:0.55, emissive:'#f04a3a', emissiveIntensity:0.6, depthWrite:false });
-function startPlace(type, moveId, fromBag){ Build.fromBag = !!fromBag && !moveId;
+function startPlace(type, moveId, fromBag, kit){ Build.fromBag = !!fromBag && !moveId; Build.kit = kit && !moveId ? kit : null;
   if (!onIsle || !canEditIsle()){ goMyIsle(); setTimeout(() => startPlace(type, moveId), 900); return; }
   closeSheet(); clearGhost(); Build.on = true; isleUnbatch(isleGroup); Build.type = type; Build.moveId = moveId || null;
   const it = moveId ? isleItems().find(x => x.id === moveId) : null; Build.rot = it ? it.r : Math.round(((me.rot + Math.PI) % (Math.PI * 2)) / (Math.PI / 4)) * Math.PI / 4;
-  Build.ghost = itemMesh(type, { lite:true }); Build.ghost.traverse(o => { if (o.isMesh){ o.material = ghostOk; o.castShadow = false; } }); scene.add(Build.ghost);
+  Build.ghost = itemMesh(type, { lite:true, it: type === 'mansion' ? (it || (Build.kit ? { t: 'mansion', lv: Build.kit.lv, up: Build.kit.up } : undefined)) : undefined }); Build.ghost.traverse(o => { if (o.isMesh){ o.material = ghostOk; o.castShadow = false; } }); scene.add(Build.ghost);
   if (moveId && isleGroup){ const g = isleGroup.children.find(c => c.userData.item && c.userData.item.id === moveId); if (g) g.visible = false; }
   renderBuildBar(); renderIsleBar();
 }
@@ -9776,7 +9786,7 @@ function renderBuildBar(){
     const T = ISLE_ITEMS[Build.type];
     bar.appendChild(el('span', 'bb-hint', '')).id = 'bbHint';
     const r = el('button', 'tbtn ghost', '⟲ 轉向'); r.addEventListener('click', () => { Build.rot = (Build.rot + Math.PI / 4) % (Math.PI * 2); }); bar.appendChild(r);
-    const ok = el('button', 'tbtn', Build.moveId ? '✔ 放這裡' : Build.fromBag ? '✔ 放這裡（大箱子裡的）' : `✔ 放這裡 🪙${T.price.toLocaleString()}`); ok.addEventListener('click', confirmPlace); bar.appendChild(ok);
+    const ok = el('button', 'tbtn', Build.moveId ? '✔ 放這裡' : Build.fromBag ? '✔ 放這裡（大箱子裡的）' : `✔ 蓋在這裡 🪙${(Build.kit ? Build.kit.price : T.price).toLocaleString()}`); ok.addEventListener('click', confirmPlace); bar.appendChild(ok);
     const x = el('button', 'tbtn ghost', '✖'); x.addEventListener('click', () => { clearGhost(); renderBuildBar(); }); bar.appendChild(x);
   } else if (Build.sel){
     const T = ISLE_ITEMS[Build.sel.t]; bar.appendChild(el('span', 'bb-hint', `🔨 ${T.name}`));
@@ -9804,7 +9814,9 @@ function confirmPlace(){
   if (Cloud.on && Cloud.sb){   // 雲端：經過伺服器（島主和住戶都可以蓋）
     const T = ISLE_ITEMS[Build.type], x = Build.x, z = Build.z, r = +Build.rot.toFixed(2), moving = Build.moveId, type = Build.type, bagged = Build.fromBag;
     if (bagged){ clearGhost(); isleBagOp('isle_bag_place', { p_owner: onIsle ? onIsle.owner : null, p: { t: type, x, z, r } }).then(ok => { if (!ok) return; SFX.plop(); FX.emit(ISLE.x + x, 0.6, ISLE.z + z, 14, '#fff4dc', 0.6, 1.6, 0.9); if (isleBagN(type) > 0) startPlace(type, null, true); else renderBuildBar(); }); return; }
-    if (!moving && rec.coins < T.price){ toast(`金幣不夠，還差 🪙${(T.price - rec.coins).toLocaleString()}`); return; }
+    const KT = !moving && type === 'mansion' ? Build.kit : null, need = KT ? KT.price : T.price;
+    if (!moving && rec.coins < need){ toast(`金幣不夠，還差 🪙${(need - rec.coins).toLocaleString()}`); return; }
+    if (KT){ clearGhost(); homeOp('buyhouse', { k: KT.k, x, z, r }).then(ok => { if (!ok) return; SFX.catch(); FX.emit(ISLE.x + x, 1.2, ISLE.z + z, 24, '#fff4dc', 0.8, 2.2, 1.1); flash(`🏠 ${KT.n}蓋好了`, 1.6); ticker(`🏗️ 你在小島上蓋了一棟 <b>${esc(KT.n)}</b>！`); bindRemind(KT.n); renderBuildBar(); }); return; }
     clearGhost(); homeOp(moving ? 'move' : 'place', moving ? { id: moving, x, z, r } : { t: type, x, z, r }).then(ok => { if (!ok) return; SFX.plop(); FX.emit(ISLE.x + x, 0.6, ISLE.z + z, 14, '#fff4dc', 0.6, 1.6, 0.9);
       if (!moving) ticker(`🏗️ 你在小島上放了 <b>${esc(T.name)}</b>！`); if (!moving && T.house) bindRemind(T.name); if (!moving && rec.coins >= T.price && !T.house) startPlace(type); });
     return; }
@@ -10224,6 +10236,9 @@ function afterHomeOp(L){
 // 沒連雲端時（只有自己的島）在本機照一樣的規則改
 function localHomeOp(op, p){
   const items = rec.island.items, cost = n => { if (rec.coins < n) return `金幣不夠，還差 🪙${(n - rec.coins).toLocaleString()}`; addCoins(-n); return null; };
+  if (op === 'expand' || op === 'floor') return '房子現在是整棟買的，不用再擴建了。想住大一點，可以再買一棟大的';
+  if (op === 'buyhouse'){ const K = HOUSE_KITS.find(x => x.k === p.k); if (!K) return '沒有這種房子'; if (rec.coins < K.price) return `金幣不夠，還差 🪙${(K.price - rec.coins).toLocaleString()}`; const e = localHomeOp('place', { t: 'mansion', x: p.x, z: p.z, r: p.r }); if (e) return e;
+    const it = items.filter(i => i.t === 'mansion').sort((a, b) => b.id - a.id)[0]; it.lv = K.lv; it.up = K.up; it.loan = 0; addCoins(-(K.price - ISLE_ITEMS.mansion.price)); return null; }
   if (op === 'place'){ const T = ISLE_ITEMS[p.t], e = isleCheck(items, p.t, p.x, p.z, -1); if (e) return e; if (items.length >= ISLE_MAX) return '島上已經放滿了'; if (T.house && items.filter(i => ISLE_ITEMS[i.t].house).length >= ISLE_HOUSE_MAX) return '房子最多 6 棟'; const c = cost(T.price); if (c) return c; items.push(Object.assign({ id: items.reduce((m, i) => Math.max(m, i.id), 0) + 1, t:p.t, x:p.x, z:p.z, r:p.r }, p.t === 'mansion' ? { lay:'custom', f:[], lv:1, loan:0 } : {})); }
   else if (op === 'design'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以自己設計格局'; const L = MANSION_LV[mansionLv(it)], ow = w => w[0] === w[2] ? Math.abs(w[0]) === L.hw : Math.abs(w[1]) === L.hd; it.cl = Object.assign({ owins: (p.cl.wins || []).filter(ow) }, p.cl, { wins: (p.cl.wins || []).filter(w => !ow(w)) }); it.lay = 'custom'; }
   else if (op === 'floor'){ const it = items.find(i => i.id === p.house); if (!it || it.t !== 'mansion') return '只有大宅可以加蓋樓層'; const up = houseUp(it); if (up >= 2) return '最多蓋到三樓'; if (it.loan > 0) return '上一次的貸款還沒還清'; it.up = up + 1; it.loan = FLOOR_COST[up + 1]; }
@@ -10577,27 +10592,13 @@ async function confirmFurn(){
 // ---- 大宅的格局編輯器：俯視的格子圖，用手指畫牆、門、窗，或幫房間上色 ----
 var CLE = null;
 // 擴建：跟村長阿土伯借錢（不收利息），房間馬上變大；慢慢還，還清了才能再擴建
-function renderMansionGrow(body, it){ const lv = mansionLv(it), L = MANSION_LV[lv], N = MANSION_LV[lv + 1], loan = it.loan || 0, box = el('div', 'growbox');
-  box.appendChild(el('div', 'gb-t', `🏗️ 大宅擴建　第 ${lv} / ${MANSION_MAX} 級・${L.hw * 2}×${L.hd * 2} 公尺`));
-  const bar = el('div', 'gb-bar'); for (let i = 1; i <= MANSION_MAX; i++) bar.appendChild(el('i', i <= lv ? 'on' : '')); box.appendChild(bar);
+function renderMansionGrow(body, it){ const lv = mansionLv(it), L = MANSION_LV[lv], up0 = houseUp(it), KT = houseKitOf(it), loan = it.loan || 0, box = el('div', 'growbox');   /* v893 整棟買：不再擴建、加蓋，只剩還舊貸款 */
+  box.appendChild(el('div', 'gb-t', `🏠 ${KT ? KT.n : '房子'}・${L.hw * 2}×${L.hd * 2} 公尺${up0 ? `・${up0 + 1} 層` : ''}`));
   if (loan > 0){ box.appendChild(el('div', 'gb-s', `🏦 擴建貸款還剩 🪙${loan.toLocaleString()}（跟村長阿土伯借的，不收利息）`)); const row = el('div', 'gb-r');
     for (const amt of [...[500, 1000].filter(v => v < loan), loan]){ const b = el('button', 'tbtn' + (amt === loan ? '' : ' ghost'), amt === loan ? `全部還清 🪙${amt.toLocaleString()}` : `還 🪙${amt.toLocaleString()}`); b.disabled = rec.coins < amt;
       b.addEventListener('click', () => homeOp('repay', { house: it.id, amount: amt }).then(ok => { if (ok){ SFX.catch(); const left = (isleItems().find(x => x.id === it.id) || {}).loan || 0; flash(left ? `🏦 還了 🪙${amt.toLocaleString()}，還剩 🪙${left.toLocaleString()}` : '🎉 擴建貸款還清了！可以再擴建囉', 1.6); renderTab(); } })); row.appendChild(b); }
     box.appendChild(row); }
-  else if (N){ box.appendChild(el('div', 'gb-s', `下一級：${N.hw * 2}×${N.hd * 2} 公尺・🪙${N.cost.toLocaleString()}。不用先付錢，村長阿土伯先借你，房間馬上變大，之後慢慢還就好。`));
-    const b = el('button', 'tbtn', `🏗️ 擴建到 ${N.hw * 2}×${N.hd * 2}（貸款 🪙${N.cost.toLocaleString()}）`); b.disabled = isleRank() < 2;
-    b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定擴建？要還 🪙${N.cost.toLocaleString()}`; b.classList.add('warn'); return; }
-      homeOp('expand', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`擴建好了。房間變成 ${N.hw * 2}×${N.hd * 2}`, 1.8); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
-    box.appendChild(b); }
-  else box.appendChild(el('div', 'gb-s', '🎉 已經擴建到最大了！'));
-  { const up = houseUp(it), nf = up + 1;   /* 加蓋樓層（076） */
-    box.appendChild(el('div', 'gb-t', `🏢 樓層：${up + 1} / 3 層`));
-    if (up >= 2) box.appendChild(el('div', 'gb-s', '🎉 已經蓋到三樓了！'));
-    else if (!loan){ box.appendChild(el('div', 'gb-s', `加蓋 ${nf + 1} 樓：🪙${FLOOR_COST[nf].toLocaleString()}（一樣跟阿土伯借，之後慢慢還）。樓梯會蓋在房間後面的兩個角落${up ? '' : '，那裡的家具要先移開'}。`));
-      const b = el('button', 'tbtn', `🏢 加蓋 ${nf + 1} 樓（貸款 🪙${FLOOR_COST[nf].toLocaleString()}）`); b.disabled = isleRank() < 2;
-      b.addEventListener('click', () => { if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = `確定加蓋？要還 🪙${FLOOR_COST[nf].toLocaleString()}`; b.classList.add('warn'); return; }
-        homeOp('floor', { house: it.id }).then(ok => { if (ok){ SFX.catch(); flash(`${nf + 1} 樓蓋好了。走到右後角的樓梯就可以上去`, 2.0); const nit = isleItems().find(x => x.id === it.id); if (nit && House.on) rebuildHouseRoom(nit); renderTab(); } }); });
-      box.appendChild(b); } }
+  else box.appendChild(el('div', 'gb-s', `${up0 + 1} 層樓・每層 ${L.hw * 2}×${L.hd * 2} 公尺。房子現在是整棟買的，不用再擴建；想住大一點可以在「小島商店 → 房子」再買一棟。`));
   body.appendChild(box); }
 // 每一層的地板、壁紙（免費換，076）；以前畫過的隔間牆可以一鍵拆掉
 function renderMansionDeco(body, it){ const fk = curFloor(it), dc = Array.isArray(it.dc) && Array.isArray(it.dc[fk]) ? it.dc[fk] : [-1, -1], box = el('div', 'growbox');
@@ -12003,8 +12004,25 @@ function isleMine2(body, items, nh){
   { const left = ISLE_MAX - items.length; const b = el('div', 'cl-it ish-more'); b.appendChild(el('span', 'n', `還可以放 ${left} 件`)); grid.appendChild(b); }
   lst.appendChild(grid);
   const tabs = el('div', 'cl-tabs'); for (const [k, i, l] of ISHOP_TABS){ const t = el('button', 'cl-tab' + (k === 'mine' ? ' on' : '')); t.append(el('span', 'i', i), el('span', 'n', k === 'mine' ? `${l}(${items.length + Blk.b.length})` : l)); t.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); tabs.appendChild(t); } bar.appendChild(tabs); }
+function isleHouses2(body, CATS, items, nh){
+  let sel = Isle2.sel.house; if (!HOUSE_KITS.some(K => K.k === sel)) sel = Isle2.sel.house = 's1'; const K = HOUSE_KITS.find(x => x.k === sel), L = MANSION_LV[K.lv];
+  const wrap = el('div', 'closet k3pt ishop'), Lb = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(Lb, R2); body.appendChild(wrap);
+  const box = el('div', 'cl-pv'); Lb.appendChild(box); const info = el('div', 'ish-info'); Lb.appendChild(info);
+  const ok = ipvShow(box, 'h:' + K.k, () => itemMesh('mansion', { lite: true, it: { t: 'mansion', lv: K.lv, up: K.up, id: 3 } })); if (ok) box.appendChild(el('small', 'pvhint', '↔ 拖曳可以轉'));
+  info.appendChild(el('div', 'ish-n', K.n)); info.appendChild(el('div', 'ish-p', `🪙 ${K.price.toLocaleString()}・${L.hw * 2}×${L.hd * 2} 公尺${K.up ? `・${K.up + 1} 層` : ''}`));
+  const acts = el('div', 'ish-a'), bt = el('button', 'tbtn buy' + (rec.coins < K.price ? ' ghost' : ''), `買這棟 🪙${K.price.toLocaleString()}`);
+  bt.addEventListener('click', () => { if (rec.coins < K.price){ toast(`金幣不夠，還差 🪙${(K.price - rec.coins).toLocaleString()}`); return; } if (nh >= ISLE_HOUSE_MAX){ toast('房子最多 6 棟'); return; } startPlace('mansion', null, false, K); }); acts.appendChild(bt); info.appendChild(acts);
+  const lst = el('div', 'cl-list k3list'), bar = el('div', 'k3bar'); R2.append(lst, bar);
+  lst.appendChild(el('p', 'sub k3note', `房子整棟買，買了就是那麼大，不用擴建、不用借錢。島上房子 ${nh} / ${ISLE_HOUSE_MAX} 棟。拆掉退一半。`));
+  const grid = el('div', 'cl-grid k3grid');
+  for (const H of HOUSE_KITS){ const b = el('button', 'cl-it' + (H.k === sel ? ' on' : '')), M = MANSION_LV[H.lv]; b.appendChild(el('span', 'ish-hk', '🏠'.repeat(H.up + 1))); b.appendChild(el('span', 'n', H.n)); b.appendChild(el('span', 'b k3pr', '🪙' + H.price.toLocaleString()));
+    b.title = `${M.hw * 2}×${M.hd * 2}`; b.addEventListener('click', () => { Isle2.sel.house = H.k; renderTab(); }); grid.appendChild(b); }
+  lst.appendChild(grid);
+  const tabs = el('div', 'cl-tabs'); for (const [k, i, l] of ISHOP_TABS){ const t = el('button', 'cl-tab' + (k === 'house' ? ' on' : '')); t.append(el('span', 'i', i), el('span', 'n', k === 'mine' ? `${l}(${items.length + Blk.b.length})` : l)); t.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); tabs.appendChild(t); } bar.appendChild(tabs);
+}
 function isleShop2(body, C, CATS, catOf, items, nh){
   const blk = C === 'block' || C === 'panel' || C === 'shape';
+  if (C === 'house'){ isleHouses2(body, CATS, items, nh); return; }   /* v893 房子整棟買 */
   const list = blk ? Object.entries(BLK).filter(([k, v]) => k !== 'dt' && (C === 'shape' ? blkIsShape(k) : !blkIsShape(k) && !!v[4] === (C === 'panel'))) : Object.entries(ISLE_ITEMS).filter(([k2, v]) => catOf(k2, v) === C && !OLD_HOUSES.has(k2));
   let sel = Isle2.sel[C]; if (!list.some(([k]) => k === sel)) sel = Isle2.sel[C] = list.length ? list[0][0] : null;
   const wrap = el('div', 'closet k3pt ishop'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap);
@@ -22315,8 +22333,8 @@ function renderTab0(){
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
       ...(BLI.off ? [] : [["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []]]),
-      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "房子可以掛「我的家」：進房子按「擺家具」→「🏠 當我的家」。一個人一棟，掛了以後裡面的家具只有你能動，門口會立一塊名牌。沒掛的房子是大家的。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "用方塊或隔板圍一圈（至少 2 塊高），留一個「門」，走到門旁邊按「名牌」就能掛上去變成一間房間。", "名牌可以選「我的房間」（裡面的東西和牆只有你能動，每人一間）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名（大家的房間）。沒圍好的話按「看缺口在哪」，缺口會閃紅色。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
-        ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
+      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子整棟買，有八種大小：小屋 3,000 到三層樓的海景豪宅 42,000，買了就是那麼大，不用擴建、不用借錢。以前擴建過的房子大小不變，還沒還完的貸款照樣可以還。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "房子可以掛「我的家」：進房子按「擺家具」→「🏠 當我的家」。一個人一棟，掛了以後裡面的家具只有你能動，門口會立一塊名牌。沒掛的房子是大家的。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "用方塊或隔板圍一圈（至少 2 塊高），留一個「門」，走到門旁邊按「名牌」就能掛上去變成一間房間。", "名牌可以選「我的房間」（裡面的東西和牆只有你能動，每人一間）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名（大家的房間）。沒圍好的話按「看缺口在哪」，缺口會閃紅色。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
+        ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大 30×18、三層樓。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
         ["端給客人拿 1.5 倍，每天最多 60 位。每天最多做 150 道。", "跟美雲姨買是料理價值的 2.5 倍，一天最多 6 道。吧台點餐 45～225 金幣。"]],
       ["博物館、魚拓", "home", ["海洋博物館在西北邊，水族館旁邊。找館長海音捐魚。", "每一種魚你只能捐一次。第一個捐的人名字會刻在上面。", "一個釣點的魚都捐齊可以領獎。", "釣到新紀錄、傳說魚或變種時，卡片上可以按「魚拓」。魚缸裡每條魚旁邊也有。", "做好的魚拓可以掛在家裡，也能存成圖片。"],
@@ -23522,6 +23540,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u894', d:'11/26', items:[['🏠','房子改成整棟買：小屋、小家、中家、大房子、兩層樓、大宅、三層大宅、海景豪宅八種，買了就是那麼大，不用擴建、不用借錢；外面看得出大小和幾層樓。以前的房子大小、家具都不變','island']] },
   { id:'u893', d:'11/26', items:[['🌧️','下雨天阿潮、小溪、阿伯會收竿走回居民區的家躲雨，家裡的燈會亮；雨停再走回來釣魚。顧店的人、老港、阿默阿穎照常在外面'], ['🐾','寵物店的卡片換成真的 3D 寵物小圖，不再只是符號','pets']] },
   { id:'u892', d:'11/26', items:[['🏠','各有自己的家：進房子按「擺家具」→「🏠 當我的家」，一個人一棟，裡面的家具只有你能動，門口會立一塊「誰的家」名牌；人搬走了，他的家會變回大家的','island']] },
   { id:'u891', d:'11/26', items:[['🪑','阿木做家具多了一種新花樣「菱格紋」：一格一格斜斜的菱形，之後做的家具有機會用上']] },
