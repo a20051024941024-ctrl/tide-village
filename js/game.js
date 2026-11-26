@@ -20656,6 +20656,32 @@ function roamGrow(n){ const R = n.roam, K = ROAM_K[R.kind], P = R.post, i = R.tr
    現在差 12 公尺以內就用走的走回去（走完才拋竿），差更多（剛進遊戲、資料剛到）才直接放。 */
 function npcStepTo(n, x, z, dt, v){ const dx = x - n.pos.x, dz = z - n.pos.z, d = Math.hypot(dx, dz); v = v || 1.45; if (d < 0.12){ n.speed = 0; return true; }
   const st = Math.min(d, v * dt); n.pos.x += dx / d * st; n.pos.z += dz / d * st; n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY; n.rot = lerpAngle(n.rot, Math.atan2(dx, dz), 1 - Math.exp(-8 * dt)); n.speed = v; return false; }
+/* ============ v864 村民遇到村民會聊天 ============
+   作者選了「村民之間互動」。散步的村民走到另一個村民旁邊（3.2 公尺內）：走路經過就互相打招呼；停下來的時候會聊兩句（看時間、天氣、在做什麼），聊天時轉頭看對方。
+   同一對 2 分鐘內不會再聊；玩家 30 公尺內才講出來（台詞每支手機自己挑，只是氣氛，不用同步）。 */
+const MEET = { q: [], pair: new Map() };
+function npcShort(n){ return String(n.npcName || '').split('・')[0]; }
+function meetLines(a, b, walking){ const A = npcShort(a), B = npcShort(b), h = gameHour(), rain = (WEATHERS[Env && Env.wx] || {}).rain > 0;
+  if (walking) return [pick2([`嗨，${B}！`, `${B}，去哪裡啊？`, `${B}，今天精神不錯喔`]), pick2(['嗨～', '出來走走而已', `${A}你也是啊`])];
+  const L = [[`${B}，今天釣得怎麼樣？`, pick2(['還不錯，剛剛釣到一條', '今天都不咬……', '還沒開始釣呢'])],
+    [`${B}，聽說阿默又出海了`, '他每天都在找那隻紅鯊'],
+    [`${B}，晚上要不要一起去食堂？`, pick2(['好啊，聽說美雲姨今天有新菜', '今天不行，改天吧'])],
+    [`${B}，你有看到最近港口好多人在釣魚嗎？`, '對啊，村子越來越熱鬧了'],
+    [`${B}，你家的花開了沒？`, pick2(['開了！改天來看', '還沒，再等幾天'])]];
+  if (h < 10) L.push([`早啊，${B}！`, `早～${A}，吃早餐了沒？`]);
+  if (h >= 17) L.push([`${B}，天快黑了，等一下要回家了吧`, '再待一下就回去']);
+  if (rain) L.push([`下雨了，${B}要不要先回去？`, '沒關係，我有帶雨衣']);
+  if (a.yin || b.yin) L.push([a.yin ? `嘿${B}！要不要一起打籃球？` : `${B}，你今天也好粉紅`, a.yin ? '我腳在痛，下次吧' : '嘿！粉紅色最好看！']);
+  return L[Math.floor(Math.random() * L.length)]; }
+function npcMeet(n, t, walking){ if ((frameNo + (n.mi || (n.mi = 1 + Math.floor(Math.random() * 29)))) % 30) return; if (t < (n.meetAt || 0) || n.wHide || !n.av.g.visible) return;
+  if (camera.position.distanceTo(n.pos) > 30 || Dive.on || House.on || onIsle) return;
+  let m = null, bd = walking ? 2.6 : 3.2; for (const o of npcs){ if (o === n || o.wHide || !o.av.g.visible || o.yOnBoat || (o.amo && o.amoMode !== 'pier') || t < (o.meetAt || 0)) continue; const d = Math.hypot(o.pos.x - n.pos.x, o.pos.z - n.pos.z); if (d < bd){ bd = d; m = o; } }
+  if (!m) return; const key = [n.npcName, m.npcName].sort().join('|'); if (t < (MEET.pair.get(key) || 0)) return;
+  MEET.pair.set(key, t + 120); n.meetAt = t + 25; m.meetAt = t + 25; const [a, b] = meetLines(n, m, walking);
+  n.say(a, '', 3.4); n.talkAt = t + 15; n.meetFace = m; n.meetT = t + 7; if (!m.fishing && !m.sitting){ m.meetFace = n; m.meetT = t + 7; }
+  MEET.q.push({ who: m, txt: b, at: t + 2.6 }); }
+function meetTick(t){ for (let i = MEET.q.length - 1; i >= 0; i--){ const q = MEET.q[i]; if (t < q.at) continue; MEET.q.splice(i, 1); if (camera.position.distanceTo(q.who.pos) < 30){ q.who.say(q.txt, '', 3.4); q.who.talkAt = t + 15; } } }
+function meetTurn(n, dt, t){ if (!n.meetFace || t > (n.meetT || 0) || n.fishing || n.sitting || n.speed > 0) return false; const m = n.meetFace; n.rot = lerpAngle(n.rot, Math.atan2(m.pos.x - n.pos.x, m.pos.z - n.pos.z), 1 - Math.exp(-5 * dt)); return true; }
 function roamPose(R, ms){ if (!R.c.length) return null; const K = ROAM_K[R.kind], C = K.C[0] + (R.h % K.C[1]), T = ms / 1000 + ((R.h >>> 4) % C), i = Math.floor(T / C), u = T - i * C;
   const hx = hash32(R.id + ':' + i), r1 = (hx % 1000) / 1000, r2 = ((hx >>> 10) % 1000) / 1000, r3 = ((hx >>> 20) % 1000) / 1000;
   if (r1 > K.p) return null; const wx = WEATHERS[weatherAt(ms - u * 1000)]; if (wx && wx.rain > 0) return null;   /* 天氣看這一輪開始的時候（走到一半才下雨的話，照樣走完，不會瞬間跳回去） */
@@ -20678,7 +20704,9 @@ function roamDrive(n, dt, t){ if (!n.roam){ if (n.roam === 0) return false; cons
   n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY;
   const pd = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
   if (ps.walk){ n.rot = lerpAngle(n.rot, ps.rot, 1 - Math.exp(-8 * dt)); n.speed = 1.45; }
-  else { n.speed = 0; n.rot = lerpAngle(n.rot, pd < 7 ? Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z) : ps.rot, 1 - Math.exp(-3 * dt)); }
+  try { npcMeet(n, t, !!ps.walk); } catch(e){}
+  if (!ps.walk && meetTurn(n, dt, t)) n.speed = 0;
+  else if (!ps.walk){ n.speed = 0; n.rot = lerpAngle(n.rot, pd < 7 ? Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z) : ps.rot, 1 - Math.exp(-3 * dt)); }
   if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(Math.random() < 0.5 ? ROAM_LINES[Math.floor(Math.random() * ROAM_LINES.length)] : npcLine(n), '', 5); n.talkAt = t + rand(18, 34); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
   n.update(dt, t); n.placeTag(); return true; }
 /* v542 作者：「讓 NPC 看到玩家，會自動避開」→ 站著或在釣魚的村民，玩家走到他 1.6 公尺內，他會自己往旁邊讓開（最多挪 1.8 公尺，不會走進水裡、不會掉下碼頭），人走了再慢慢走回原位。
@@ -20694,6 +20722,7 @@ function npcAvoid(n, dt, t){ if (n.sitting || n.wHide || n.st === 'show') return
     if ((tx || tz) && t > (n.avSay || 0) && camera.position.distanceTo(n.pos) < 14){ n.avSay = t + 45; try { n.say(['我讓一下，你站這裡吧', '借過借過～這邊給你', '喔，你要站這裡啊，我挪一下'][Math.floor(Math.random() * 3)], '', 3); } catch(e){} } }
   const dx = tx - A.ox, dz = tz - A.oz, dl = Math.hypot(dx, dz), sp = (tx || tz) ? 2.2 : 1.1, st = Math.min(dl, sp * dt); if (dl > 0.01){ A.ox += dx / dl * st; A.oz += dz / dl * st; n.pos.x = A.x + A.ox; n.pos.z = A.z + A.oz; n.aspd = dl > 0.05 ? sp : 0; } else if (n.aspd && !n.avKeep) n.aspd = 0; }
 function updateNpcs(dt, t){
+  try { meetTick(t); } catch(e){}
   try { rainWearTick(); } catch(e){}
   for (const n of npcs){
     if (n.wid === 'gang' && Cloud.on && (!Gang.at || Date.now() - Gang.at > 10 * 60000) && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 30) loadGang();
@@ -20734,6 +20763,7 @@ function updateNpcs(dt, t){
       if (t > n.stT){ n.windup = 0; n.castT = 0; const from = new THREE.Vector3(); n.av.tip.getWorldPosition(from); n.bobState = 'fly'; n.flying = { from, to: n.bobPos.clone(), t:0, delay:0.17, dur:0.75, h:1.6 }; n.st = 'wait'; n.next = t + rand(6, 15); } }
     if (st === 'wait'){ n.dip *= Math.pow(0.08, dt); n.bend *= Math.pow(0.2, dt); }
     try { npcAvoid(n, dt, t); } catch(e){}
+    try { meetTurn(n, dt, t); } catch(e){}
     n.update(dt, t); n.placeTag();
   }
 }
@@ -20858,7 +20888,8 @@ function worldDrive(n, dt, t){
   if (mode !== 'home' && !n._culled) n.av.g.visible = !onIsle;
   n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY;
   if (mode === 'walk'){ n.rot = lerpAngle(n.rot, wp.rot, 1 - Math.exp(-8 * dt)); n.speed = wp.v; }
-  else { n.speed = 0; if (mode === 'away' && !n.fishing) n.rot = lerpAngle(n.rot, wp.rot, 1 - Math.exp(-3 * dt)); }
+  else { n.speed = 0; if (mode === 'away' && !n.fishing && !meetTurn(n, dt, t)) n.rot = lerpAngle(n.rot, wp.rot, 1 - Math.exp(-3 * dt)); }
+  if (mode !== 'home') try { npcMeet(n, t, mode === 'walk'); } catch(e){}
   // 走近的時候講一句現在在做的事
   const pd = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
   if (mode !== 'home'){
@@ -21323,7 +21354,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["一進來站在港邊廣場，釣具店、魚市場、碼頭都在這。", "島中央是潮汐廣場，村長在東邊的辦公室門口。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "商店街在南邊：小花寵物店、阿綾服裝店、阿彩畫廊、阿木木工坊、阿萍美髮沙龍。涼亭在寵物店後面、寵物樂園旁邊。", "體育場和撞球館在西南邊的運動公園。", "潮汐廣場邊有一張沙盤桌，可以玩《築城守土》。那邊的金幣和村子的不相通。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["一進來站在港邊廣場，釣具店、魚市場、碼頭都在這。", "島中央是潮汐廣場，村長在東邊的辦公室門口。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "商店街在南邊：小花寵物店、阿綾服裝店、阿彩畫廊、阿木木工坊、阿萍美髮沙龍。涼亭在寵物店後面、寵物樂園旁邊。", "體育場和撞球館在西南邊的運動公園。", "潮汐廣場邊有一張沙盤桌，可以玩《築城守土》。那邊的金幣和村子的不相通。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -22537,6 +22568,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u864', d:'11/26', items:[['💬','村民遇到村民會聊天了：散步經過會互相打招呼，停下來會聊兩句（看時間、天氣、在做什麼），聊天時會轉頭看對方']] },
   { id:'u863', d:'11/26', items:[['🚶','村民不會再瞬移：散步回來、上班回攤位會用走的走回去；阿默下船會從船邊跨上碼頭，出海前也先走到船旁邊等']] },
   { id:'u862', d:'11/26', items:[['🌸','碼頭多了一位新朋友阿穎：熱情、愛開玩笑，看到誰都說「嘿叔叔！」，最愛粉紅色。他常跟阿默混在一起：阿默上岸就坐旁邊一起打遊戲，出海時有時跟著上船一起釣，回來還會比誰的魚比較大、比較稀有（桌面寵物的點子就是阿穎想的，謝謝他！）'], ['💇','新髮型「理光頭」：貼著頭皮一層很短的髮渣，到造型頁「髮型」選']] },
   { id:'u861', d:'11/26', items:[['🏘️','建地島先收起來，等之後準備好再開放（已經蓋的東西都還留著）']] },
