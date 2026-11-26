@@ -17702,7 +17702,7 @@ function styleHead(body){ const i = styleTheme(), T = STYLE_THEMES[i], hit = sty
   const ul = el('div', 'sty-items'); for (const id of T[1]){ const ids = id.endsWith('%') ? GEAR.filter(g => g.id.startsWith(id.slice(0, -1))).slice(0, 1).map(g => g.id) : [id]; for (const x of ids){ const it = GEAR_BY_ID[x]; if (!it) continue; const on = hit.includes(x) || (id.endsWith('%') && hit.some(h => h.startsWith(id.slice(0, -1)))); const c = el('button', 'sty-i' + (on ? ' on' : ''));
       c.appendChild(el('span', '', it.icon)); c.appendChild(el('small', '', id.endsWith('%') ? it.name.replace(/^.{0,3}?(圍巾|斗篷|短披風)$/, '各種$1') : it.name)); c.addEventListener('click', () => { Closet.slot = it.slot; renderTab(); }); ul.appendChild(c); } }
   box.appendChild(ul);
-  if (Cloud.on && !(rec.owned || []).includes('kit_starter')){ const k = el('button', 'tbtn buy sty-tg', '挑一套免費的入門衣服'); k.addEventListener('click', () => styleKitPick(true)); box.appendChild(k); }
+  if (false && Cloud.on && !(rec.owned || []).includes('kit_starter')){ const k = el('button', 'tbtn buy sty-tg', '挑一套免費的入門衣服'); k.addEventListener('click', () => styleKitPick(true)); box.appendChild(k); }
   const T5 = Style.top; if (Cloud.on && (!T5 || Date.now() - Style.topAt > 60000)) styleTopLoad();
   if (T5 && (T5.top || []).length){ const tg = el('button', 'tbtn ghost sty-tg', Style.showTop ? '收起來' : `這週被讚最多的 ${T5.top.length} 個人`); tg.addEventListener('click', () => { Style.showTop = !Style.showTop; renderTab(); }); box.appendChild(tg); }
   if (Style.showTop && T5 && (T5.top || []).length){ const row = el('div', 'sty-top'); for (const p of T5.top){ const c = el('button', 'sty-p'); const im = el('img'); im.alt = p.n; styleShot(im, cleanGear(p.gear || {}), 120); c.appendChild(im); c.appendChild(el('b', '', p.n)); c.appendChild(el('small', '', `👍 ${p.likes}`)); c.addEventListener('click', () => { closeSheet(); setTimeout(() => openCard(p.id, p.n), 60); }); row.appendChild(c); } box.appendChild(row); }
@@ -17719,7 +17719,8 @@ function styleTick(){ if (!rec || frameNo % 30 !== 7) return; const t = Date.now
   if (!fresh && !th) return; let best = null, bd = 4.2; for (const f of CLOD.all){ if (!f || f === me || !f.isNpc || !f.say || !f.av.g.visible) continue; const d = Math.hypot(f.pos.x - me.pos.x, f.pos.z - me.pos.z); if (d < bd){ bd = d; best = f; } }
   if (!best) return; Style.sayAt = t; if (fresh){ Style.said = true; best.say(STYLE_SAY_NEW[Math.floor(Math.random() * STYLE_SAY_NEW.length)], '', 2.6); } else best.say(STYLE_SAY_TH[Math.floor(Math.random() * STYLE_SAY_TH.length)].replace('{t}', STYLE_THEMES[styleTheme()][0]), '', 2.6); }
 setInterval(() => { try { styleTick(); } catch(e){} }, 500);
-setTimeout(function kitWait(){ if (!Cloud.on || !Cloud.lastRow || !$('#sheet').hidden || $('#welcome') || $('#stampPop')){ setTimeout(kitWait, 4000); return; } styleKitPick(false); }, 15000);
+/* v865 作者截圖：Lv.38 的玩家突然跳出「阿萍的衣服：新來的喔？挑一套」→ 這是舊人物的入門衣服（換新人物以後穿了也看不到，v860 起造型改用金幣買），不再自動跳出來 */
+if (false) setTimeout(function kitWait(){ if (!Cloud.on || !Cloud.lastRow || !$('#sheet').hidden || $('#welcome') || $('#stampPop')){ setTimeout(kitWait, 4000); return; } styleKitPick(false); }, 15000);
 const Closet = { slot:'top', scroll:{} };
 function closetTryAll(){ const g = cleanGear(Wardrobe.preview || rec.gear); return GEAR_SLOTS.map(([k]) => g[k]).filter(id => id && GEAR_BY_ID[id] && !ownsGear(id)).map(id => GEAR_BY_ID[id]); }
 /* v713 新人物的衣櫃：左邊 3D 預覽（新人物，會轉），右邊臉、髮型、衣服、顏色 */
@@ -22568,6 +22569,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u865', d:'11/26', items:[['👕','不會再突然跳出「阿萍的衣服：挑一套入門衣服」（那是舊人物的衣服，換新人物以後穿了也看不到）']] },
   { id:'u864', d:'11/26', items:[['💬','村民遇到村民會聊天了：散步經過會互相打招呼，停下來會聊兩句（看時間、天氣、在做什麼），聊天時會轉頭看對方']] },
   { id:'u863', d:'11/26', items:[['🚶','村民不會再瞬移：散步回來、上班回攤位會用走的走回去；阿默下船會從船邊跨上碼頭，出海前也先走到船旁邊等']] },
   { id:'u862', d:'11/26', items:[['🌸','碼頭多了一位新朋友阿穎：熱情、愛開玩笑，看到誰都說「嘿叔叔！」，最愛粉紅色。他常跟阿默混在一起：阿默上岸就坐旁邊一起打遊戲，出海時有時跟著上船一起釣，回來還會比誰的魚比較大、比較稀有（桌面寵物的點子就是阿穎想的，謝謝他！）'], ['💇','新髮型「理光頭」：貼著頭皮一層很短的髮渣，到造型頁「髮型」選']] },
