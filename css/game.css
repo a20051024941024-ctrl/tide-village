@@ -2548,3 +2548,5 @@ body.photo #hype{display:none}
 .ish-p{font-size:12px;margin:1px 0 5px}
 .ish-a .tbtn{padding:6px 10px}
 .closet.ishop .cl-grid{grid-template-columns:repeat(5,1fr)!important}
+.ish-more{opacity:.55;justify-content:center;border-style:dashed!important}
+.closet.ishop .cl-it{min-width:0}.closet.ishop .cl-grid > *{min-width:0}.closet.ishop .cl-it .gearic{max-width:100%;height:auto}

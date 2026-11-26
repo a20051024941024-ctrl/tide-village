@@ -9114,5 +9114,11 @@
  "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。": "There's a seed stall by the island pier. You can farm on any cleared land; remember to water.",
  "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。": "When ripe, tap \"Harvest\" and walk over them; \"Water\" waters the patch around you. Up to 300 plants per island, plus 5 for each field plot you unlocked before.",
  "先到碼頭旁邊的種子攤買種子，在背包點「拿在手上」，再到島上開好的地按「種田」，走過去的地方一次種三排，想種多密就多密。作物照現實時間長大（關掉遊戲也會繼續長）。熟了按「收成」邊走邊收，「澆水」一次澆身邊一片，澆滿 2 次會豐收。": "Buy seeds at the stall by the pier, tap \"Hold\" in your bag, then tap \"Farm\" on cleared land on your island. You plant three rows wherever you walk, as densely as you like. Crops grow in real time, even with the game closed. When ripe, tap \"Harvest\" and walk over them; \"Water\" waters the patch around you. Water twice for a bumper crop.",
- "菜園整個拿掉了，整座島開好的地都是你的田。種子攤搬到小島碼頭旁邊的沙灘，一上島就看得到。": "The garden is gone: all your cleared land is now farmland. The seed stall moved to the beach by the island pier, right where you arrive."
+ "菜園整個拿掉了，整座島開好的地都是你的田。種子攤搬到小島碼頭旁邊的沙灘，一上島就看得到。": "The garden is gone: all your cleared land is now farmland. The seed stall moved to the beach by the island pier, right where you arrive.",
+ "小島商店的「島上的東西」也換成大圖的樣子：點一個看模型，下面直接按移動、收起來。": "\"Items on the island\" in the island shop now uses big pictures too: tap one to see the model, then move or store it right below.",
+ "別人放的": "Placed by someone else",
+ "島上還沒有東西": "Nothing on the island yet",
+ "✋ 移動": "✋ Move",
+ "📦 收起來": "📦 Store",
+ "🧹 去收": "🧹 Go clear"
 }
