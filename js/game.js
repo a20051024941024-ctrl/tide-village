@@ -15610,7 +15610,7 @@ function shMarket(S, B, M){ const Y = S.y, g = S.g, ice = M('#eef7fb', 0.35, { e
     B(3.6, 0.85, 1.5, M('#9aa6b0', 0.5), tx, Y + 0.43, tz); B(3.5, 0.08, 1.4, ice, tx, Y + 0.89, tz); addBoxCol(S.x + tx, S.z + tz, 3.7, 1.6);
     for (let i = 0; i < 4; i++){ const f = FISH_BY_ID[ids[k++ % Math.max(1, ids.length)]]; if (!f) continue; let m = null; try { m = fishModel(f, 0.55); } catch(e){ continue; }
       const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()), L = Math.max(sz.x, sz.z, 0.01), sc = Math.min(2.0, 0.95 / L); m.scale.multiplyScalar(sc);
-      m.rotation.set(Math.PI / 2, 0, i % 2 ? 0.25 : -0.25);   /* 側躺在冰上 */ m.position.set(S.x + tx - 1.2 + i * 0.8, Y + 0.97, S.z + tz + (i % 2 ? 0.25 : -0.25)); g.add(m);
+      m.rotation.set(0, Math.PI / 2 + (i % 2 ? 0.25 : -0.25), Math.PI / 2);   /* 側躺在冰上，頭朝左右（魚模型的頭朝 +z） */ m.position.set(S.x + tx - 1.2 + i * 0.8, Y + 0.97, S.z + tz + (i % 2 ? 0.25 : -0.25)); g.add(m);
       const tg = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.18), new THREE.MeshBasicMaterial({ map: signTex(f.name, '#ffffff', '#1f4f6e', 256, 72) })); tg.rotation.x = -Math.PI / 2.6; tg.position.set(S.x + tx - 1.2 + i * 0.8, Y + 0.95, S.z + tz + 0.68); g.add(tg); } }
   for (let i = 0; i < 6; i++) B(0.7, 0.32, 0.5, M('#3f8fdc', 0.6), -7.4 + (i % 2) * 0.05, Y + 0.16 + Math.floor(i / 2) * 0.33, -4.6 + (i % 2) * 0.1);   /* 疊起來的藍色魚箱 */
   addBoxCol(S.x - 7.4, S.z - 4.6, 0.9, 0.7);
@@ -18940,7 +18940,7 @@ function fkPack(msg){ if (!FK.set) return; fkClear(false); try { SFX.click(); } 
 /* 魚護裡的魚（自己的：釣到就加；別人的：照 presence） */
 function fkNetFish(g, ids){ const np = g && g.userData.net; if (!np) return; const key = ids.join(','); if (np.userData.key === key) return; np.userData.key = key;
   for (const o of (np.userData.fish || [])) np.remove(o); np.userData.fish = [];
-  ids.slice(-6).forEach((id, i) => { const f = FISH_BY_ID[id]; if (!f) return; let m; try { m = fishModel(f, 0.32); } catch(e){ m = makeFish(f.color || '#8ab', 0.32); } m.userData.ph = i * 1.1; m.position.y = -0.3; np.add(m); np.userData.fish.push(m); }); }
+  ids.slice(-6).forEach((id, i) => { const f = FISH_BY_ID[id]; if (!f) return; let m; try { m = fishModel(f, 0.55); } catch(e){ m = makeFish(f.color || '#8ab', 0.32); } m.userData.ph = i * 1.1; m.position.y = -0.3; np.add(m); np.userData.fish.push(m); }); }
 function fkNetAnim(g, t){ const np = g && g.userData.net; if (!np || !np.userData.fish) return; np.position.y = (g.userData.netY || 0) + WATER_LEVEL - g.position.y + 0.05;
   /* v621 作者：「魚在魚護裡會一直繞圈圈」→ 每條魚自己慢慢游到網子裡隨便一個地方，有時候停下來、尾巴輕輕擺，轉彎是慢慢轉 */
   const dt = Math.min(0.1, Math.max(0, t - (np.userData.lt || t))); np.userData.lt = t;
@@ -22815,7 +22815,7 @@ function updateDayNight(t){
    2. 潛水：原本繞圈圈的魚群和單獨的魚都換成這套 AI，會避開海底、礁丘，可以撒魚餌，被追的魚會躲到岩石旁邊。
    效能：魚的模型用物件池重複使用；離鏡頭遠的魚降低更新頻率、太遠就不畫；手機畫質越低，魚越少。 */
 const FAI = { agents:[], pool:new Map(), spawnAt:0, hooked:null, schools:[], obsAt:0, events:[], bait:null, baitCd:0 };
-const FAI_MAX = { low:3, mid:5, high:8 }, FAI_SCHOOL = { low:6, mid:8, high:11 };   /* v319 玩家說海邊一直看到魚有點多：附近單獨游的魚、魚群裡的條數都少大約三分之一 */
+const FAI_MAX = { low:2, mid:3, high:4 }, FAI_SCHOOL = { low:4, mid:5, high:7 };   /* v912 作者 11/27：「感覺不用出現那麼多魚了」→ 再少一半左右：單獨游的魚 2～4 條、魚群 4～7 條 */   /* v319 玩家說海邊一直看到魚有點多：附近單獨游的魚、魚群裡的條數都少大約三分之一 */
 const FAI_SIL = new THREE.MeshBasicMaterial({ color:'#0d2233', transparent:true, opacity:0.45, depthWrite:false });   /* 還沒釣過的魚：只看到黑黑的影子 */
 const FAI_CURIOUS = new Set(['butterfly', 'sergeant', 'idol', 'bluetang', 'turtle', 'clown', 'parrot', 'rabbitfish', 'razorsurgeon', 'creolefish', 'goldfish', 'koi', 'carp', 'tilapia', 'dolphin', 'moonwrasse', 'girella']);
 const FAI_STATE = { wander:'慢慢游著', flee:'被嚇跑了！', curious:'好奇地靠過來看你', bait:'被魚餌吸引過來了', hooked:'在咬你的餌…', chase:'正在追獵物！', forage:'在找東西吃', hide:'躲在岩石旁邊', circle:'在你附近繞圈圈', school:'成群游過去', eat:'吃得飽飽的' };
@@ -22862,7 +22862,27 @@ function faiPlace(a, dt, t){ if (a.tr.crawl){ const ty = WATER_LEVEL - Math.max(
   const sp = Math.hypot(a.vel.x, a.vel.z); a.m.position.copy(a.pos); if (sp > 0.02) a.m.rotation.y = lerpAngle(a.m.rotation.y, Math.atan2(-a.vel.z, a.vel.x), Math.min(1, dt * 6));
   a.m.rotation.z = a.state === 'forage' ? -0.35 : Math.sin(t * 2 + a.id * 9) * 0.05; }
 // ---- 岸上看得到的水裡：每一幀 ----
+/* v912 作者：「偶爾有魚冒出頭不錯，跳出水面也行」→ 水裡游的魚變少，改成偶爾（15～35 秒一次）在你前面的水面，有一條魚跳出水面畫一道弧、或探頭出來看一下又沉下去。
+   魚用這片水常見的魚（圖鑑同一個模型），同時只有一條，手機很便宜也沒負擔。 */
+const FJ = { at: 0, cur: null, cache: new Map() };
+function fjPose(m, yaw, up){ if (m.userData.ax === 'x'){ m.rotation.set(0, yaw - Math.PI / 2, 0); m.rotateZ(up); } else { m.rotation.set(0, yaw, 0); m.rotateX(-up); } }   /* 有的魚模型頭朝 +x、有的朝 +z：看長的那一邊 */
+function fishJumpTick(dt, t){ const C = FJ.cur;
+  if (C){ const u = (t - C.t0) / C.dur; if (u >= 1){ C.m.visible = false; if (C.kind === 'jump') ripple(C.x1, C.z1); FJ.cur = null; return; }
+    if (C.kind === 'jump'){ const x = C.x0 + (C.x1 - C.x0) * u, z = C.z0 + (C.z1 - C.z0) * u, y = C.wy + Math.sin(u * Math.PI) * C.h - 0.05; C.m.position.set(x, y, z); fjPose(C.m, C.yaw, (0.5 - u) * 2.2); }
+    else { const k = u < 0.25 ? u / 0.25 : u > 0.75 ? (1 - u) / 0.25 : 1; C.m.position.set(C.x0, C.wy - 0.25 + k * 0.28 + Math.sin(t * 6) * 0.015, C.z0); fjPose(C.m, C.yaw, 0.75); if (u > 0.3 && u < 0.32 && !C.rp){ C.rp = 1; ripple(C.x0, C.z0); } }
+    return; }
+  if (t < FJ.at) return; FJ.at = t + 15 + Math.random() * 20;
+  if (Dive.on || House.on || onIsle || inIndoor() || (typeof Sub !== 'undefined' && Sub.on) || F.phase === 'fight') return;
+  const yaw = cam.yaw + Math.PI; let pt = null;   /* 鏡頭前面 6～18 公尺的水面 */
+  for (let k = 0; k < 10 && !pt; k++){ const a = yaw + (Math.random() - 0.5) * 1.1, d = 6 + Math.random() * 12, x = me.pos.x + Math.sin(a) * d, z = me.pos.z + Math.cos(a) * d; if (waterAt(x, z) && !seaDry(x, z) && !deckAt(x, z) && faiDepth(x, z) > 0.8){ let vis = true; for (let u = 0.25; u < 1; u += 0.25) if (blocked(me.pos.x + (x - me.pos.x) * u, me.pos.z + (z - me.pos.z) * u, 0.2)) vis = false; if (vis) pt = [x, z]; } }   /* 中間被船、房子擋住的不要 */
+  if (!pt) return; const sid = waterSpotId(pt[0], pt[1]), sp = SPOT_BY_ID[sid]; if (!sp) return;
+  const pool = sp.fish.map(id => FISH_BY_ID[id]).filter(f => f && !f.of && !f.fest && f.rarity === '常見' && !BIG_FISH.has(f.id) && f.max < 5 && FISH_STYLE[f.id] && !/Squid|Octo|Crab|Lobster|Shrimp|Eel|Manta|Jelly|Star|Urchin/i.test(FISH_STYLE[f.id].shape || '') && !/squid|octo|crab|shrimp|lobster|eel|cuttle|clam|snail|seacuc|star|urchin|jelly|ray|abalone|oyster|conch|turtle|^ika/.test(f.id) && (FISH_STYLE[f.id].move || 'side') === 'side'); if (!pool.length) return;   /* 只有魚會跳（不要烏賊、螃蟹、蝦、鰻） */ const f = pool[Math.floor(Math.random() * pool.length)];
+  let m = FJ.cache.get(f.id); if (!m){ try { m = fishModel(f, 1); const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()); m.scale.multiplyScalar(0.55 / Math.max(0.05, sz.x, sz.z)); m.userData.ax = sz.x > sz.z ? 'x' : 'z'; } catch(e){ return; }   /* 統一 55 公分長，遠遠看得到 */ m.userData.keep = m.userData.dyn = true; m.traverse(o => { if (o.isMesh) o.castShadow = false; }); scene.add(m); FJ.cache.set(f.id, m); if (FJ.cache.size > 6){ const [k0, m0] = FJ.cache.entries().next().value; if (m0 !== m){ scene.remove(m0); FJ.cache.delete(k0); } } }
+  m.visible = true; const wy = waterY(pt[0], pt[1], now()), jump = Math.random() < 0.6, a2 = Math.random() * Math.PI * 2, L = 1.2 + Math.random() * 1.2;
+  if (jump){ const x1 = pt[0] + Math.sin(a2) * L, z1 = pt[1] + Math.cos(a2) * L; FJ.cur = { kind: 'jump', m, t0: t, dur: 0.75 + Math.random() * 0.25, x0: pt[0], z0: pt[1], x1, z1, wy, h: 0.6 + Math.random() * 0.5, yaw: Math.atan2(x1 - pt[0], z1 - pt[1]) };   /* 魚模型的頭朝 +z */ ripple(pt[0], pt[1]); try { owSplashSnd(false, Math.hypot(pt[0] - me.pos.x, pt[1] - me.pos.z) * 4); } catch(e){} }
+  else FJ.cur = { kind: 'peek', m, t0: t, dur: 2.2 + Math.random(), x0: pt[0], z0: pt[1], wy, yaw: a2 }; }
 function updateFishAI(dt0, t){
+  try { fishJumpTick(dt0, t); } catch(e){ if (!fishJumpTick.w){ fishJumpTick.w = 1; console.warn('fishjump', e); } }
   if (Dive.on || House.on){ if (FAI.agents.length){ for (const a of FAI.agents) faiFree(a); FAI.agents = []; } faiSchoolsClear(); return; }
   const max = FAI_MAX[Quality.tier] || 10, px = me.pos.x, pz = me.pos.z;
   // 生出新的魚（玩家附近、看得到的水裡），離太遠的收回物件池
@@ -22922,7 +22942,7 @@ function schoolPlan(cx, cz, win){ if (schoolHash(cx, cz, win * 3 + 1) > 0.42) re
 function schoolPathAt(pl, ts){ const a = pl.ph + ts * pl.w; return [pl.ax + Math.cos(a) * pl.r, pl.az + Math.sin(a) * pl.r]; }
 function faiSchoolSpawn(px, pz){ const win = Math.floor(Date.now() / 1000 / SCHOOL_WIN);
   FAI.schools = FAI.schools.filter(s => { const far = Math.hypot(s.lead.x - px, s.lead.z - pz) > 40 || (s.plan && !s.plan.key.endsWith(',' + win) && Math.hypot(s.lead.x - px, s.lead.z - pz) > 18); if (far) for (const im of s.ims) if (im.parent) im.parent.remove(im); return !far; });
-  const max = Quality.tier === 'high' ? 2 : 1; if (FAI.schools.length >= max) return;
+  const max = 1; if (FAI.schools.length >= max) return;   /* v912 魚群同時最多一群（最高畫質以前兩群） */
   const have = new Set(FAI.schools.map(s => s.plan && s.plan.key)), c0x = Math.floor(px / SCHOOL_CELL), c0z = Math.floor(pz / SCHOOL_CELL), cand = [];
   for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++){ const pl = schoolPlan(c0x + dx, c0z + dz, win); if (!pl || have.has(pl.key)) continue; const d = Math.hypot(pl.ax - px, pl.az - pz); if (d < 34) cand.push([d, pl]); }
   cand.sort((a, b) => a[0] - b[0]); const pick = cand[0]; if (!pick) return; const pl = pick[1], [x, z] = schoolPathAt(pl, Date.now() / 1000);
@@ -23837,6 +23857,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u912', d:'11/27', items:[['🐟','水裡游來游去的魚少了一半，魚群同時只有一群'], ['💦','改成偶爾（大約半分鐘）會有一條魚在你前面跳出水面、或探頭出來看一下又沉下去'], ['🧊','魚市場冰台上的魚改成側躺']] },
   { id:'u911', d:'11/27', items:[['🐚','退潮時沒水釣的村民會走到沙灘上撿貝殼、挖文蛤，蹲下去找，偶爾說撿到什麼；水回來就走回去繼續釣']] },
   { id:'u910', d:'11/27', items:[['⚡','比較不卡：離你 26 公尺以上的人物換成簡單版的小人偶（顏色照他的頭髮、衣服、褲子），走近就變回原本的樣子；港邊廣場要畫的三角形少了兩成'], ['🏖️','南方沙灘白天坐在海灘巾上曬太陽的兩個觀光客拿掉了（海灘巾和陽傘留著）'], ['🧘','「盤腿坐」「往後撐著坐」看起來會卡、像折到，先收起來，之後用真的動作再做；放空時先用原本的坐地上']] },
   { id:'u909', d:'11/27', items:[['🎣','退潮時阿穎（和其他村民）不會再一直重複拋竿：前面沒水會轉向有水的地方甩，真的都沒水就收竿等潮水回來'], ['🐠','潛水艇、潛水時魚不會再突然冒出來：遠近改成跟海裡的霧一樣']] },
