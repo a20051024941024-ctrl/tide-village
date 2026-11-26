@@ -8648,6 +8648,7 @@ function buildIsle(layout, ownerName){
   if (!Build.on) isleBatch(isleGroup);
   try { if (onIsle && Blk.owner !== onIsle.owner) blkLoad(onIsle.owner); else blkCols(); } catch(e){ console.warn('blk', e); }
   try { if (onIsle) teamFlag(onIsle.owner); } catch(e){}
+  try { homesDraw(); } catch(e){}   /* v891 房子搬了，門口的名牌跟著走 */
 }
 // ---- 北方冰封群島的樣子（第一次走近才蓋，手機比較省）：雪島、結冰的湖和冰洞、冰釣帳篷、雪松、雪屋、雪人、流冰、海豹、一直下的小雪 ----
 const Frost = { built:false, snow:null, floes:[], seals:[] };
@@ -9328,7 +9329,7 @@ async function visitIsle(id, name){
   try { const { data } = await Cloud.sb.rpc('visit_isle', { p_id: id }); if (!data){ toast('找不到這位玩家的島'); return; } closeSheet(); Cloud.sb.rpc('log_visit', { p_owner: id, p_kind: 'isle' }).then(() => {}, () => {}); goIsle(id, data.nickname || name, data.island, { likes: data.likes || 0, tank: data.tank, show: data.show, land: +data.land || 0, tiles: Array.isArray(data.tiles) ? data.tiles : [], plush: data.plush && typeof data.plush === 'object' ? data.plush : {}, bag: data.bag && typeof data.bag === 'object' ? data.bag : null }); if (room && room.connected()) room.emit('isle', { to:id }).catch(() => {}); }
   catch(e){ toast('暫時連不上雲端'); }
 }
-function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); if (Blk.on) blkStop(); onIsle = null; Room.list = []; roomDraw(); roomGapShow(null); clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
+function leaveIsle(){ if (!onIsle) return; if (House.on) exitHouse(true); stopBuild(); if (Blk.on) blkStop(); onIsle = null; Room.list = []; roomDraw(); roomGapShow(null); Homes.list = []; homesDraw(); clearNeighbors(); renderIsleBar(); travelTo(TRAVEL.find(t => t.id === 'harborsq') || TRAVEL[0]); pushPresence(true); }
 function checkIsle(){ if (onIsle && !Dive.on && !House.on && performance.now() - onIsle.at > 1500 && Math.hypot(me.pos.x - ISLE.x, me.pos.z - ISLE.z) > ISL2.R + 20){ stopBuild(); if (Blk.on) blkStop(); onIsle = null; clearNeighbors(); renderIsleBar(); pushPresence(true); } }
 async function likeIsle(){
   if (!onIsle || onIsle.owner === myIdOrMe() || !Cloud.sb) return;
@@ -9493,6 +9494,22 @@ async function blkLoad(owner){ if (Blk.lot){ BLS.at = 0; await blLoad(true); con
   if (!Cloud.on || !Cloud.sb){ if (owner === myIdOrMe()){ Blk.b = Array.isArray(rec.isleBlocks) ? rec.isleBlocks.slice() : []; blkDraw(); } return; }
   try { const { data } = await Cloud.sb.rpc('isle_blocks_get', { p_owner: owner }); if (Blk.owner === owner && Array.isArray(data) && !Blk.pend.add.length && !Blk.pend.del.length){ Blk.b = data; blkDraw(); } } catch(e){}
   roomLoad(owner); }
+/* ===== v891 各有自己的家（伺服器 251）：作者「那玩家們自己在島上買自己的家呢」→ 房子掛「我的家」，一人一棟，只有自己能動裡面；沒掛的是大家的 ===== */
+const Homes = { list: [], g: null };
+function homeOfHid(hid){ return Homes.list.find(h => h.hid === hid) || null; }
+function homeLock(hid){ const h = homeOfHid(hid); return h && h.uid !== myIdOrMe() ? h : null; }
+function homeName(h){ return h ? (h.uid === myIdOrMe() ? '我的家' : `${h.name || '釣客'}的家`) : '大家的房子'; }
+async function homesLoad(owner){ if (!Cloud.on || !Cloud.sb || !owner){ Homes.list = []; homesDraw(); return; } try { const { data } = await Cloud.sb.rpc('isle_homes', { p_owner: owner }); if (onIsle && onIsle.owner === owner && Array.isArray(data)){ Homes.list = data; homesDraw(); } } catch(e){} }
+function homesDraw(){ if (Homes.g){ scene.remove(Homes.g); Homes.g.traverse(o => { if (o.material && o.material.map) o.material.map.dispose(); if (o.geometry) o.geometry.dispose(); }); Homes.g = null; }
+  if (!onIsle || !Homes.list.length) return; const g = Homes.g = new THREE.Group(); g.userData.keep = true; scene.add(g);
+  for (const h of Homes.list){ const it = isleItems().find(i => i.id === h.hid), T = it && ISLE_ITEMS[it.t]; if (!T || !T.house) continue; const dr = itemDoor(it), s0 = Math.sin(it.r), c0 = Math.cos(it.r);
+    const tx = roomSignTex({ kind: 'custom', icon: '🏠', label: homeName(h), cells: [1] }); const m = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.315), new THREE.MeshBasicMaterial({ map: tx }));
+    const px = dr.x + c0 * 1.25, pz = dr.z - s0 * 1.25, pv = new THREE.Group(); pv.position.set(px, ISLE.y, pz); pv.rotation.y = it.r; g.add(pv);   /* 門旁邊立一塊小名牌（房子的樣子每棟不一樣，掛在牆上會被擋住） */
+    pv.add(box([0.08, 1.1, 0.08], '#7a4f2a', [0, 0.55, -0.02])); m.position.set(0, 1.0, 0.03); pv.add(m); const bk = m.clone(); bk.rotation.y = Math.PI; bk.position.z = -0.07; pv.add(bk); } }
+async function homeClaim(on){ const it = House.it; if (!it || !Cloud.on || !Cloud.sb){ toast('要連上雲端才能有自己的家'); return; } const owner = onIsle && onIsle.owner;
+  try { const { data, error } = await Cloud.sb.rpc('isle_home_claim', { p_owner: owner && owner !== myIdOrMe() ? owner : null, p_hid: it.id, p_on: on }); if (error) throw error; Homes.list = Array.isArray(data) ? data : []; homesDraw(); renderFurnBar();
+    if (on){ SFX.plop(); flash('🏠 這是我的家了', 1.4); toast('門口掛上你的名牌了。裡面的家具只有你可以動，別人還是可以進來玩'); } else toast('這棟變回大家的房子了'); }
+  catch(e){ toast(cloudErrMsg(e)); } }
 /* ===== v889 床上的娃娃（伺服器 249）：作者拍了自己床上的娃娃說「比如床可以放自己的娃娃嗎」→ 原創的娃娃：釣過的魚、養過的寵物。每張床最多 3 隻，躺下來會抱著第一隻 ===== */
 const Plush = { bed: null, pick: [], tab: 'f' };
 function islePlushMap(){ return onIsle && onIsle.owner && onIsle.owner !== myIdOrMe() ? (onIsle.plush || {}) : (rec.islePlush || {}); }
@@ -9555,11 +9572,11 @@ function roomCalc(d){ const w = roomWalls(d[2]), A = roomDoorSides(d).map(([x, z
     const inB = c => { const cx = Math.floor(c / 1000) - 500, cz = c % 1000 - 500; return cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1; };
     for (const [k, par] of a.seen){ if (inB(k)) continue; let c = par; while (c >= 0 && !inB(c)) c = a.seen.get(c); if (c >= 0) return { gap: [Math.floor(c / 1000) - 500, c % 1000 - 500, d[2]] }; break; } }
   return { gap: null }; }
-async function roomLoad(owner){ if (!Cloud.on || !Cloud.sb || !owner){ Room.list = []; roomDraw(); return; } try { const { data } = await Cloud.sb.rpc('isle_rooms', { p_owner: owner }); if (onIsle && onIsle.owner === owner && Array.isArray(data)){ Room.list = data; roomDraw(); } } catch(e){} }
+async function roomLoad(owner){ homesLoad(owner); if (!Cloud.on || !Cloud.sb || !owner){ Room.list = []; roomDraw(); return; } try { const { data } = await Cloud.sb.rpc('isle_rooms', { p_owner: owner }); if (onIsle && onIsle.owner === owner && Array.isArray(data)){ Room.list = data; roomDraw(); } } catch(e){} }
 function roomSet(L){ if (Array.isArray(L)){ Room.list = L; roomDraw(); if (!$('#sheet').hidden && curTab === 'roomsign') renderTab(); } }
 function roomSignTex(r){ const c = document.createElement('canvas'); c.width = 320; c.height = 112; const x = c.getContext('2d'), broken = !(r.cells && r.cells.length);
   x.fillStyle = '#7a4f2a'; x.fillRect(0, 0, 320, 112); x.fillStyle = broken ? '#f6e3c8' : '#fff6d8'; x.fillRect(8, 8, 304, 96); x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.font = '44px sans-serif'; x.fillStyle = '#3a2a1a'; const t = roomIcon(r) + ' ' + rmName(r); x.fillText(t, 160, broken ? 46 : 58, 290); if (broken){ x.font = '24px sans-serif'; x.fillStyle = '#c0392b'; x.fillText('牆有缺口', 160, 86); }
+  x.font = '44px sans-serif'; x.fillStyle = '#3a2a1a'; const t = (r.icon || roomIcon(r)) + ' ' + rmName(r); x.fillText(t, 160, broken ? 46 : 58, 290); if (broken){ x.font = '24px sans-serif'; x.fillStyle = '#c0392b'; x.fillText('牆有缺口', 160, 86); }
   const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx; }
 function roomDraw(){ if (Room.g){ scene.remove(Room.g); Room.g.traverse(o => { if (o.material && o.material.map) o.material.map.dispose(); if (o.geometry) o.geometry.dispose(); }); Room.g = null; } Room.signs = [];
   if (!onIsle || Blk.lot || !Room.list.length) return; const g = Room.g = new THREE.Group(); g.userData.keep = true; scene.add(g);
@@ -10122,7 +10139,7 @@ function furnMesh(t){
 const Home = { owner:null, people:[], invites:[], sent:[], cap:6, at:0, told:{} };
 // 島上的權限（071）：拆東西、改格局要管理成員以上；一般成員只能移動、收掉自己買的
 function isleRank(){ const owner = onIsle && onIsle.owner, meId = myIdOrMe(); if (!Cloud.on || !owner || owner === meId) return 4; if (!IsleP.me && !IsleP.busy && Date.now() - IsleP.at > 20000) loadIsleP(); return PERM_RANK[IsleP.me] || 1; }
-function canTouch(o){ if (o && o.x != null && roomLockAt(Math.round(o.x * 2), Math.round(o.z * 2), false)) return false; return isleRank() >= 2 || !!(o && o.by && o.by === myIdOrMe()); }
+function canTouch(o){ if (House.on && House.it && homeLock(House.it.id)) return false; if (o && o.id != null && ISLE_ITEMS[o.t] && ISLE_ITEMS[o.t].house && homeLock(o.id)) return false; if (o && o.x != null && !House.on && roomLockAt(Math.round(o.x * 2), Math.round(o.z * 2), false)) return false; return isleRank() >= 2 || !!(o && o.by && o.by === myIdOrMe()); }
 function canEditIsle(owner){ owner = owner || (onIsle && onIsle.owner); const meId = myIdOrMe(); return !!owner && (owner === meId || (Home.owner === owner && Home.people.some(p => p.id === meId))); }
 function homeMate(uid){ return uid && Home.people.find(p => p.id === uid && p.id !== myIdOrMe()); }
 function homeTitle(p){ return p ? (p.title || (p.owner ? '島主' : HOME_ROLES[p.role] || '室友')) : ''; }
@@ -10237,7 +10254,7 @@ function roomSign(text, x, y, z, ry){
 function enterHouse(door){
   if (House.on) return; SFX.door(); stopBuild(); const it = door.it, T = ISLE_ITEMS[it.t];
   House.on = true; House.floor = 0; House.type = it.t; House.back = { x: door.x, z: door.z, rot: door.face };
-  rebuildHouseRoom(it);
+  rebuildHouseRoom(it); { const h = homeOfHid(it.id); if (h) setTimeout(() => flash('🏠 ' + homeName(h), 1.2), 700); }
   const fx = $('#fadeFx'); fx.classList.add('on'); const lay = houseLay(it);
   setTimeout(() => { me.pos.x = ISLE.x; me.pos.z = ISLE.z + lay.D / 2 - 1.4; me.baseY = ROOM_Y; Jump.gy = ROOM_Y; me.rot = Math.PI; cam.yaw = 0; cam.pitch = Math.max(cam.pitch, 0.6); House.savedDist = cam.dist; cam.dist = Math.min(cam.dist, 7); pushPresence(true); setTimeout(() => fx.classList.remove('on'), 80); }, 220);
   flash(`🏠 ${T.name}・${lay.name}`, 1.0); renderIsleBar();
@@ -10544,7 +10561,9 @@ function renderFurnBar(){
     if (T.bed && (!o.own || o.own === myIdOrMe())) btn(o.own ? '不睡這張了' : '🛏️ 這是我的床', 'ghost', () => homeOp('bed', { house: House.it.id, id: o.id }).then(ok => ok && toast(o.own ? '已經放掉這張床' : '這張床是你的了！房門上會掛你的名字')));
     const rm = !mine ? (bar.appendChild(el('span', 'bb-hint', '（一般成員只能動自己買的家具）')), null) : btn(`收掉 +${Math.floor(T.price / 2)}`, 'ghost', () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定收掉？'; rm.classList.add('warn'); return; } homeOp('fremove', { house: House.it.id, id: o.id }).then(ok => { if (ok){ FB.sel = null; toast(`收掉了 ${T.name}，退回 🪙${Math.floor(T.price / 2)}`); } }); });
     btn('🛒', 'ghost', () => openSheet('furn')); btn('完成', 'ghost', stopFurn); }
+  else if (House.it && homeLock(House.it.id)){ bar.appendChild(el('span', 'bb-hint', `🏠 這是${homeName(homeLock(House.it.id))}，只有他可以擺家具`)); btn('完成', 'ghost', stopFurn); }
   else { bar.appendChild(el('span', 'bb-hint', '🛋️ 擺家具：走到家具旁邊可以移動、收掉'));
+    if (House.it && isleRank() >= 2 && Cloud.on){ const mineH = homeOfHid(House.it.id); btn(mineH ? '🏠 不當我的家' : '🏠 當我的家', 'ghost', () => homeClaim(!mineH)); }
     btn('🛒 買家具', '', () => openSheet('furn')); btn('🏠 格局', 'ghost', () => { furnSheet = 'lay'; openSheet('furn'); }); btn('完成', 'ghost', stopFurn); }
 }
 async function confirmFurn(){
@@ -22244,7 +22263,7 @@ function renderTab0(){
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
         ["飽足度每 9 秒少 1。吃飽 50 以上體力會慢慢回來。", "草繩要 3 把草；骨頭魚鉤要 2 根魚骨；手作竹竿要 3 竹子、2 草繩、1 魚鉤。", "營火要 5 漂流木、3 石頭；遮雨棚要 8 漂流木、6 大葉子、2 草繩；小木屋要 20 漂流木、10 竹子、12 大葉子、6 草繩、6 石頭。", "晚上離營火 6 公尺內才不會冷。"]],
       ...(BLI.off ? [] : [["建地島", "home", ["住宅區中間那條步道一直走到海邊，接著木橋就是建地島。地圖的「找人、找店」也可以直接傳送過去。", "一條街有 9 格建地，每格 20×20 公尺，可以蓋 32 層高、最多 3000 塊。蓋好的東西大家走過都看得到。", "站在空地上按「空地」，就能申請。每人只能有一格。", "站在自己的建地上按「建地」，可以開始蓋、改招牌、邀好友一起蓋。", "不會蓋的話，用「樣板」一鍵放下小吃店、小木屋、魚攤或花園，再自己改顏色、加東西。", "方塊的價錢跟小島一樣，收掉的會放回包包，小島和建地都能用。", "入口牌坊旁邊的路牌可以選要逛哪一街。一街快滿了會自動開二街。", "14 天沒上線，建地會讓給別人，蓋的東西存成設計圖，下次申請可以一鍵蓋回來。", "看到不適合的東西，站在那格按「看看」，再按「檢舉」。"], []]]),
-      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "用方塊或隔板圍一圈（至少 2 塊高），留一個「門」，走到門旁邊按「名牌」就能掛上去變成一間房間。", "名牌可以選「我的房間」（裡面的東西和牆只有你能動，每人一間）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名（大家的房間）。沒圍好的話按「看缺口在哪」，缺口會閃紅色。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
+      ["自己的小島", "home", ["手機的「小島」可以去自己的島。", "小島外圍是樹林，一格 4×4 公尺，一格一格開。走到樹林邊、面向白色虛線框按「開地」，樹倒下來，那格就是你的，可以蓋房子、放方塊、種田。", "新開的格子要跟你的地連在一起。一格 150 起，開越多越貴（最多 600），每開一格送 1 個漂流木。手機「小島 → 🌳 島的大小」看得到整座島開了多少。", "在「買東西擺島上」挑東西，拿著走到想放的地方，綠色就能放。", "按「建造」走到東西旁邊可以移動或收起來。", "房子先買小的，之後可以跟村長借錢擴建、加蓋樓層，不收利息。", "走進房子按「擺家具」，畫面會拉高看整個房間。下面一條是家具，有分類，點小圖再用手指拖到位置，按勾放下。", "擺好的家具直接點它、按住拖就能搬。不習慣的話按上面「改用走路擺」。", "家具大多可以用：床可以躺，鋼琴可以彈，爐台可以做菜。", "床上可以放娃娃：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻。躺下來會抱著第一隻。", "島主可以邀好友搬進來一起住。住在島上的人都一樣，都可以蓋、拆、擺、種；只有島主可以邀請和請人搬走。", "房子可以掛「我的家」：進房子按「擺家具」→「🏠 當我的家」。一個人一棟，掛了以後裡面的家具只有你能動，門口會立一塊名牌。沒掛的房子是大家的。", "收起來的東西、拆下來的方塊都放進大箱子（碼頭左邊的沙灘上，或「小島商店 → 📦 大箱子」）。大家共用，拿出來擺不用再付錢。", "「方塊和隔板」可以自己一塊一塊蓋房子。", "用方塊或隔板圍一圈（至少 2 塊高），留一個「門」，走到門旁邊按「名牌」就能掛上去變成一間房間。", "名牌可以選「我的房間」（裡面的東西和牆只有你能動，每人一間）或廁所、浴室、廚房、遊戲間、衣帽間、自己取名（大家的房間）。沒圍好的話按「看缺口在哪」，缺口會閃紅色。", "小島碼頭旁邊有種子攤。整座島開好的地都能種田，種下去記得澆水。", "自己島上的空地也可以種田（中間那圈或買下的地，沙灘不行）：手上拿著種子按「種田」，走過去的地方一次種三排，想種多密就多密。再按一次停。", "田熟了按「收成」邊走邊收；「澆水」一次澆身邊的一片。一座島最多種 300 株，以前開墾過幾格田，每格再多 5 株。", "碼頭旁的潛水梯下去是海底花園，可以種珊瑚和海帶。", "「逛別人的島」可以去參觀，喜歡就按愛心。"],
         ["島上最多 60 件東西、房子 6 棟。房子 3,000 金幣起，最大可以擴到 30×18。拆掉退一半。", "一起住含島主最多 6 人。", "方塊最高 16 層，一座島最多 1,500 塊。", "海底：海帶 3 小時、海葡萄 8 小時、珊瑚 36 小時、珍珠貝 48 小時，不用澆水。", "每座島每天可以按一次愛心。"]],
       ["食堂", "home", ["潮汐食堂在往港口的大路西邊，走到櫃台就能做菜。", "用魚缸裡的魚做，一共 13 道。做得越好星星越多。", "料理可以賣，也可以吃。吃了接下來幾竿有加成。", "客人進來點餐，端給他賺得比較多。", "沒有魚也可以直接跟美雲姨買，或坐到吧台點一道來吃。"],
         ["端給客人拿 1.5 倍，每天最多 60 位。每天最多做 150 道。", "跟美雲姨買是料理價值的 2.5 倍，一天最多 6 道。吧台點餐 45～225 金幣。"]],
@@ -23451,6 +23470,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u892', d:'11/26', items:[['🏠','各有自己的家：進房子按「擺家具」→「🏠 當我的家」，一個人一棟，裡面的家具只有你能動，門口會立一塊「誰的家」名牌；人搬走了，他的家會變回大家的','island']] },
   { id:'u891', d:'11/26', items:[['🪑','阿木做家具多了一種新花樣「菱格紋」：一格一格斜斜的菱形，之後做的家具有機會用上']] },
   { id:'u890', d:'11/26', items:[['🧸','床上可以放娃娃了：擺家具時點床，按「🧸 娃娃」，從釣過的魚、養過的寵物挑，最多 3 隻；躺下來會抱著第一隻，其他的會讓到旁邊','island']] },
   { id:'u889', d:'11/26', items:[['🧱','村民不會再卡進牆裡了：阿木站在木工坊的牆裡、大家聚在一起時排進牆或水裡的，都會自己站到旁邊空的地方']] },
