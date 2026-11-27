@@ -7302,6 +7302,7 @@ function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.e
 const Jump = { vy:0, air:0, gy:0, land:0 };
 function canJump(){ return !Dive.on && !uiBlocked && !myBoat && !Photo.on && F.phase === 'idle' && Jump.air <= 0 && Jump.land <= 0.05; }
 function jump(){ if (mySeat && mySeat.train){ w2TrainOff(); return; } if (mySeat){ standUp(); return; }
+  { const T = W2 && !myBoat && W2.near(me.pos.x, me.pos.z) ? w2Train() : null, mv = T && w2TrainBeside(T); if (mv){ w2TrainBoard(mv); if (mySeat) return; } }   /* v938 在開的小火車旁邊按「跳」也會跳上車 */
   if (!canJump()) return;
   ensureAudio();
   Jump.gy = me.baseY - (Bike.on ? BIKE_SEAT : 0); Jump.vy = 7.6; Jump.air = 0.001;
@@ -18278,14 +18279,18 @@ function w2NearDoor(){ if (!W2 || !W2.doors || !W2.near(me.pos.x, me.pos.z)) ret
    我坐哪一班、哪個位子放在 presence 的 tr，別人的畫面把我放在「他那邊同一班車的同一個位子」，所以不會抖、也不會落後。 */
 const Ride = { on: false, k: 0, i: 0, hop: null, out: null, head: 0, lastAt: -2, tip: -9 };
 function w2Train(){ return W2 && W2.train ? W2.train : null; }
-function w2NearStop(){ const T = w2Train(); if (!T || mySeat || myBoat || !W2.near(me.pos.x, me.pos.z)) return null;   /* v924 剛下車跨到月台的那半秒也照樣顯示（以前那半秒按鈕會閃成「拋竿」——港口、中央市場的月台離海很近） */ let best = -1, bd = 3.4; for (let i = 0; i < T.stops.length; i++){ const q = T.stops[i], d = Math.hypot(me.pos.x - q.x, me.pos.z - q.z); if (d < bd){ bd = d; best = i; } } if (best < 0) return null;
-  const at = T.atStop(best), nx = T.stops[(best + 1) % T.stops.length].name; if (at && at.leave > 0.7) return { id: 'w2train', label: '上車', mode: 'w2train', st: best, sub: `🚃 往${nx}・${Math.ceil(at.leave)} 秒後開` };
+function w2NearStop(){ const T = w2Train(); if (!T || mySeat || myBoat || !W2.near(me.pos.x, me.pos.z)) return null;   /* v924 剛下車跨到月台的那半秒也照樣顯示（以前那半秒按鈕會閃成「拋竿」——港口、中央市場的月台離海很近） */ let best = -1, bd = 3.4; for (let i = 0; i < T.stops.length; i++){ const q = T.stops[i], d = Math.hypot(me.pos.x - q.x, me.pos.z - q.z); if (d < bd){ bd = d; best = i; } }
+  const at = best >= 0 ? T.atStop(best) : null, nx = best >= 0 ? T.stops[(best + 1) % T.stops.length].name : ''; if (at && at.leave > 0.7) return { id: 'w2train', label: '上車', mode: 'w2train', st: best, sub: `🚃 往${nx}・${Math.ceil(at.leave)} 秒後開` };
+  { const mv = w2TrainBeside(T); if (mv) return mv; } if (best < 0) return null;
   return { id: 'w2train', label: '等小火車', mode: 'w2train', st: best, sub: `🚃 往${nx}・${Math.ceil(T.arrive(best))} 秒後到` }; }
-function w2TrainBoard(sh){ const T = w2Train(); if (!T || mySeat || Ride.out || F.phase !== 'idle') return; const at = T.atStop(sh.st); if (!at || at.leave < 0.7){ toast(`小火車再 ${Math.ceil(T.arrive(sh.st))} 秒到站，車停好就可以上車`); return; }
+/* v938 作者：「沒停站前火車都沒辦法跳上去」→ 車在開、走到車廂旁邊 2.4 公尺內（車太快時不行），大按鈕變「跳上車」 */
+function w2TrainBeside(T){ if (F.phase !== 'idle' || Ride.out) return null; let bk = -1, bd = 2.4; for (let k = 0; k < T.n; k++){ const st = T.state(k); if (!st || st.at >= 0 || st.v > 6.5) continue; for (let i = 0; i < T.seats; i++){ const q = T.seat(k, i); if (!q) continue; const d = Math.hypot(q.x - me.pos.x, q.z - me.pos.z); if (d < bd && Math.abs(q.y - 1.1 - me.pos.y) < 2.5){ bd = d; bk = k; } } }
+  if (bk < 0) return null; const st = T.state(bk); return { id: 'w2train', label: '跳上車', mode: 'w2train', k: bk, sub: `🚃 往${T.stops[st.next].name}・下一站 ${Math.ceil(st.eta)} 秒` }; }
+function w2TrainBoard(sh){ const T = w2Train(); if (!T || mySeat || Ride.out || F.phase !== 'idle') return; const at = sh.k != null ? (T.state(sh.k) ? { k: sh.k, leave: 9 } : null) : T.atStop(sh.st); if (!at || at.leave < 0.7){ toast(`小火車再 ${Math.ceil(T.arrive(sh.st))} 秒到站，車停好就可以上車`); return; }
   const taken = new Set(); for (const p of peers.values()) if (p.tr && p.tr[0] === at.k) taken.add(p.tr[1]);   /* 別人坐的位子不坐 */
   let best = -1, bd = 1e9; for (let i = 0; i < T.seats; i++){ if (taken.has(i)) continue; const q = T.seat(at.k, i), d = Math.hypot(q.x - me.pos.x, q.z - me.pos.z); if (d < bd){ bd = d; best = i; } } if (best < 0){ toast('這班車坐滿了，等下一班'); return; }
   const q = T.seat(at.k, best), c = { x: q.x, z: q.z, y: q.y, face: q.face, train: 1, k: at.k, i: best, ret: [me.pos.x, me.pos.z] }; if (Bike.on) bikeOff();
-  Ride.on = true; Ride.k = at.k; Ride.i = best; Ride.hop = { t: 0, x: me.pos.x, z: me.pos.z, y: me.baseY }; Ride.head = q.face; Ride.lastAt = sh.st; Ride.out = null;
+  Ride.on = true; Ride.k = at.k; Ride.i = best; Ride.hop = { t: 0, x: me.pos.x, z: me.pos.z, y: me.baseY }; Ride.head = q.face; Ride.lastAt = sh.k != null ? -1 : sh.st; Ride.out = null;
   sitDown(c); if (mySeat !== c){ Ride.on = false; Ride.hop = null; return; } me.sitting = false; { const a = $('#act'); if (a) a._h = ''; }   /* 跳上車的那半秒先站著，坐定了才坐下 */ try { SFX.door(); } catch(e){}
   if (!LS.get('tide.hintTrain', 0)){ LS.set('tide.hintTrain', 1); toast('🚃 上車了！到站再按「下車」；拖畫面可以看風景'); } }
 function w2RideSeat(){ const T = w2Train(), c = mySeat; if (!T || !c) return; const q = T.seat(c.k, c.i), st = T.state(c.k); if (!q || !st) return; c.x = q.x; c.z = q.z; c.y = q.y; c.face = q.face;
@@ -24353,7 +24358,7 @@ function frame(){
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
-  if (W2 && W2.trainStep){ try { W2.trainStep(bossNow() / 1000, dt); } catch(e){ if (!W2.terr){ W2.terr = 1; console.warn('w2train', e); } } }   /* v923 新主島的小火車：位置只看共用的時間（跟伺服器對過的），所以每個人畫面上的車都在同一個地方；要在移動玩家之前算，坐車的人才不會慢車子一格 */
+  if (W2 && W2.trainStep){ try { const tt = bossNow() / 1000; if (Ride.clk == null || Math.abs(tt - Ride.clk) > 3) Ride.clk = tt; else { Ride.clk += dt; Ride.clk += (tt - Ride.clk) * Math.min(1, dt * 0.6); } W2.trainStep(Ride.clk, dt); }   /* v938 作者：「火車運行起來看起來不順暢」→ 小火車用自己的時鐘一格一格往前走，跟伺服器對時的小跳動慢慢追上，不會一下跳過去 */ catch(e){ if (!W2.terr){ W2.terr = 1; console.warn('w2train', e); } } }   /* v923 新主島的小火車：位置只看共用的時間（跟伺服器對過的），所以每個人畫面上的車都在同一個地方；要在移動玩家之前算，坐車的人才不會慢車子一格 */
   updatePlayer(dt); try { fishStandTick(); } catch(e){} try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
   updatePeers(dt, t); try { bbTick(dt); } catch(e){} try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); try { updateBuildLots(); } catch(e){ if (!updateBuildLots.e){ updateBuildLots.e = 1; console.warn('lots', e); } } updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water

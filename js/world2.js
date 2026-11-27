@@ -73,8 +73,10 @@ export function init(A){
 
   /* ---------- 畫進資料格 ---------- */
   const fillL = polys => { const L = layer(); for (const p of polys){ closed(L.g, p); L.g.fill(); } return L; };
-  const landL = fillL([IS, ISLET, ...SHOALS]), sdLand = sdf(bits(landL));
-  const sdMain = sdf(bits(fillL([IS])));
+  /* v937 作者圈了東北角和市場南邊：鐵軌又跑到水上（跟西南邊一樣）→ 鐵軌兩邊各 7 公尺一定是陸地，整圈都不會再泡水 */
+  const railLand = L => { const g = L.g; open(g, RAIL.concat([RAIL[0]])); g.lineWidth = 70; g.lineJoin = 'round'; g.stroke(); return L; };
+  const landL = railLand(fillL([IS, ISLET, ...SHOALS])), sdLand = sdf(bits(landL));
+  const sdMain = sdf(bits(railLand(fillL([IS]))));
   const sdFor = sdf(bits(fillL([FO]))), sdSand = sdf(bits(fillL([SAND]))), sdMang = sdf(bits(fillL([MF])));
   const POOLC = [785, 206], POOLR = 21;   /* v929 瀑布下面沖出來的深潭（規劃圖的像素；21 像素＝4.2 公尺） */
   const watL = fillL([LAKE]); { const g = watL.g; open(g, RIV); g.lineWidth = 17; g.stroke(); g.beginPath(); g.arc(POOLC[0], POOLC[1], POOLR, 0, 7); g.fill(); } const sdWat = sdf(bits(watL));
@@ -469,7 +471,7 @@ export function init(A){
     let pNext = 0, pAcc = [0, 0, 0], now = 0;
     const step = (t, dt) => { now = t; let smoke = false;
       for (let k = 0; k < NT; k++){ const st = cur[k] = state(t + k * TC / NT), cars = trains[k], run = st.v / V;
-        for (let c = 0; c < 3; c++){ const [x, z, a] = railAt(st.s + GAP * 1.5 - c * GAP), m = cars[c], y = Math.max(0.2, hAt(x, z)) + 0.08; m.position.set(x, y + Math.sin(t * 9 + c * 1.7 + k) * 0.012 * run, z); m.rotation.set(0, a, Math.sin(t * 5.3 + c * 2.1 + k) * 0.012 * run);
+        for (let c = 0; c < 3; c++){ const s0 = st.s + GAP * 1.5 - c * GAP, [x, z] = railAt(s0), pf = railAt(s0 + 1.6), pb = railAt(s0 - 1.6), a = Math.atan2(pf[0] - pb[0], pf[1] - pb[1]), m = cars[c],   /* v938 車頭方向看前後 1.6 公尺：轉彎時慢慢轉，不會一格一格跳 */ y = Math.max(0.2, hAt(x, z)) + 0.08; m.position.set(x, y + Math.sin(t * 9 + c * 1.7 + k) * 0.012 * run, z); m.rotation.set(0, a, Math.sin(t * 5.3 + c * 2.1 + k) * 0.012 * run);
           if (c){ const ca = Math.cos(a), sa = Math.sin(a); for (let j = 0; j < 4; j++){ const lx = j % 2 ? 0.36 : -0.36, lz = BENCH_Z[j >> 1], q = seatPos[k * SEATS + (c - 1) * 4 + j]; q.x = OX + x + lx * ca + lz * sa; q.z = OZ + z - lx * sa + lz * ca; q.y = y + SEAT_H; q.face = a; } }
           else if (st.v > 0.4 && dt > 0){ pAcc[k] += dt * (1.6 + run * 4.5); if (pAcc[k] >= 1){ pAcc[k] = 0; const i = pNext; pNext = (pNext + 1) % NP; pAge[i] = 0; pPos[i * 3] = x + Math.sin(a) * 1.12; pPos[i * 3 + 1] = y + 2.5; pPos[i * 3 + 2] = z + Math.cos(a) * 1.12; pVel[i * 3] = (Math.random() - 0.5) * 0.3; pVel[i * 3 + 1] = 1.1 + Math.random() * 0.5; pVel[i * 3 + 2] = (Math.random() - 0.5) * 0.3; } } } }
       for (let i = 0; i < NP; i++){ if (pAge[i] > 2.4){ if (pCol[i * 4 + 3] !== 0){ pCol[i * 4 + 3] = 0; smoke = true; } continue; } pAge[i] += dt; pPos[i * 3] += pVel[i * 3] * dt; pPos[i * 3 + 1] += pVel[i * 3 + 1] * dt; pPos[i * 3 + 2] += pVel[i * 3 + 2] * dt; pVel[i * 3 + 1] *= 1 - 0.5 * dt; pCol[i * 4 + 3] = Math.max(0, 0.75 * (1 - pAge[i] / 2.4)); smoke = true; }
