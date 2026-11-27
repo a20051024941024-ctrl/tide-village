@@ -1277,7 +1277,7 @@ const CLASSIC = false;   // 新地圖只有新版畫面
 let waterfall = null;
 var houseBuilder = null;
 /* v918 新主島（預覽，js/world2.js）：網址帶 #map2 才會載入。W2 有值的時候，那一塊海域的地面高度、能不能走由它回答 */
-var W2 = null, W2ing = false; const MAP2 = /[#&]map2\b/.test(location.hash);
+var W2 = null, W2ing = false; const MAP2 = !/[#&]oldmap\b/.test(location.hash);   /* v960 換島（作者 11/28 02:3x 確定換）：新主島變成大家的主島，每個人都會載入。網址帶 #oldmap 才是舊村子（只給除錯用） */
 var CHAIRS = [], cafeSeats = [], mySeat = null;
 /* v356 玩家說坐長椅很奇怪：3D 人物坐下的姿勢屁股在座位中心後面 0.14 公尺，有椅背的長椅身體會陷進椅背裡。有椅背的（back）往前坐一點 */
 function seatX(c){ return c.x + (c.back ? Math.sin(c.face) * 0.15 : 0); } function seatZ(c){ return c.z + (c.back ? Math.cos(c.face) * 0.15 : 0); }   // 可以坐的椅子；cafeSeats 是食堂露台給客人坐的位置
@@ -16523,7 +16523,7 @@ function renderFerry(body){
     for (const [id, ic, nm, ds] of [['wilddock', '🏝️', '遠方荒島・漂流島（求生）', '東南外海一座沒有人住的大島，什麼都要自己來：撿材料、做竹竿、生火、蓋遮雨棚和小木屋。島上會餓、會累，天黑要烤火、下雨要躲雨。有沙灘、竹林、小山、岩岸潮池，還有一艘破船'], ['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰，南邊是雪松山滑雪場（坐纜車上山、滑下來比誰快）。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜'], ['greendock', '🌲', '苔森之島', '很大的森林島：長滿青苔的巨木、北邊的瀑布、中間的湖、流進海裡的溪，南邊是沙灘。地方很大，到處有長椅，適合找個角落慢慢釣、跟朋友聊天。有鹿和猴子']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
       const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); voyStart(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
-    if (W2S.on){ for (const [id, ic, nm, ds] of [['greendock', '🧺', '苔森之島・阿嬤', '阿嬤搬到苔森之島了，就在碼頭上岸的地方擺攤收魚。跑船生意：新主島的魚載去給阿嬤收，多三成'], ['harborsq', '🏘️', '以前的潮汐釣魚村', '回原本的村子看看（之後全部搬到新主島）']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
+    if (W2S.on){ for (const [id, ic, nm, ds] of [['greendock', '🧺', '苔森之島・阿嬤', '阿嬤搬到苔森之島了，就在碼頭上岸的地方擺攤收魚。跑船生意：新主島的魚載去給阿嬤收，多三成']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
         const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); if (id === 'harborsq') W2S.home = false; const tp = TRAVEL.find(t => t.id === id); if (tp) travelTo(tp); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } }   /* v933 新主島預覽：阿海也載你去阿嬤那裡、回舊村子 */
     body.appendChild(ul); }
   { body.appendChild(el('div', 'dexhead', `🤿 潛水（進階）${hasDive('dive_suit') ? `・氧氣 ${diveO2()} 秒` : ''}`)); const ul = el('ul', 'shoplist');
@@ -18543,7 +18543,7 @@ function w2mCard(list){ const c = W2M.el.querySelector('.w2mcard'); SFX.click();
   const tp = el('button', 'tp', '✨ 傳送'); tp.addEventListener('click', e => { e.stopPropagation(); let t = o.to; if (o.cat === 'ppl'){ const n = o.n, f = n.rot; t = [n.pos.x + Math.sin(f) * 1.8, n.pos.z + Math.cos(f) * 1.8, f + Math.PI]; } if (!t) return; w2MapClose(); try { W2.warm(t[0], t[1]); } catch(err){} travelTo({ id: 'w2m:' + o.key, label: o.name, x: t[0], z: t[1], rot: t[2] }); }); bt.appendChild(tp);
   const x = el('button', 'w2mcx', '✕'); x.addEventListener('click', e => { e.stopPropagation(); w2mCardClose(); }); c.appendChild(x);
   c.addEventListener('click', e => e.stopPropagation()); }
-function w2SiteTick(){ if (!W2 || !W2.posts || frameNo % 10) return; if (W2.near(me.pos.x, me.pos.z)) W2S.home = true; else if (Math.hypot(me.pos.x, me.pos.z) < 75 && !inIndoor() && !inHall() && !inStad() && !Dive.on && !Voy.on) W2S.home = false;   /* 回到舊村子本島：之後就照舊回舊港口 */ const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
+function w2SiteTick(){ if (!W2 || !W2.posts || frameNo % 10) return; if (W2.near(me.pos.x, me.pos.z)) W2S.home = true; else if (!MAP2 && Math.hypot(me.pos.x, me.pos.z) < 75 && !inIndoor() && !inHall() && !inStad() && !Dive.on && !Voy.on) W2S.home = false;   /* 回到舊村子本島：之後就照舊回舊港口 */ const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
 function w2Back(){ if (inIndoor() || inHall() || inStad()) return;   /* 還在裡面（例如正在煮菜不能走）：先不動，下次真的出去再回新主島 */ const b = Venue.back; Venue.back = null; if (!b || !W2) return; const fx = Math.sin(b.face), fz = Math.cos(b.face); me.pos.x = b.x + fx * 0.5; me.pos.z = b.z + fz * 0.5; try { W2.warm(me.pos.x, me.pos.z); } catch(e){} me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = b.face; cam.yaw = b.face + Math.PI; pushPresence(true); }
 function nearShop(){
   if (myBoat) return null;
@@ -22043,10 +22043,12 @@ function renderOrders(body){
   body.appendChild(el('p', 'sub', '收藏⭐的、放在我的海展示的、取了名字的魚不會被拿去交。菜要先在島上的田收成，才會留一顆在菜籃。'));
 }
 function w2SetWaterMask(tex, cx, cz, w, h){ const U = waterSurface.material.uniforms; if (tex){ U.uMask.value = tex; U.uMC.value.set(cx, cz); U.uMS.value.set(w, h); } else { U.uMask.value = waterSurface.userData.mask0; U.uMC.value.set(0, 0); U.uMS.value.set(150, 150); waterSurface.position.x = 0; waterSurface.position.z = 0; } }
-function w2Boot(){ if (W2 || W2ing) return; W2ing = true;
+function w2Boot(){ if (W2 || W2ing) return; W2ing = true; if (Math.hypot(me.pos.x, me.pos.z) < 260) w2Fade(true);
   import('./world2.js').then(m => { W2 = m.init({ THREE, scene, camera, me, colliders, mat, Quality, DayNight, waterSurface, mergeGeometries, setWaterMask: w2SetWaterMask,
       tw: ART2 ? { house: twHouse, cottage: twCottage, office: twOffice, museum: twMuseum, market: twMarket, merge: twMerge, boat: () => twBoatGeo().clone() } : null, art2Add: ART2 ? art2Add : null, sign: art2Sign, loadGLB: url => new GLTFLoader().loadAsync(url) });   /* v919 村子現有的街屋做法和模型也給新主島用 */
-    const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; w2Nav(); for (const st of W2.seats || []) CHAIRS.push(Object.assign({}, st));   /* v936 作者：「坐在這裡看螢幕頭不要抬起來，而且看的也很奇怪歪歪的」→ 看板前的長椅不再用抬頭看的鏡頭，坐下跟一般長椅一樣 */ for (const st of W2.benches || []) CHAIRS.push(Object.assign({}, st));   /* v929 森林裡的長椅（護林員小屋的走廊） */   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ toast('🚧 新主島預覽：還在施工，只有帶 #map2 的網址看得到'); }).catch(e => { console.warn('world2', e); W2ing = false; toast('新主島預覽載入失敗'); }); }
+    W2S.home = true; if (Math.hypot(me.pos.x, me.pos.z) < 260 || W2.near(me.pos.x, me.pos.z)){ const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; Jump.gy = me.baseY; pushPresence(true); }   /* v960 在舊村子（或剛進遊戲）的人都到新主島；在外島的人留在外島，回來時回新主島 */ w2Fade(false); for (const st of W2.seats || []) CHAIRS.push(Object.assign({}, st));   /* v936 作者：「坐在這裡看螢幕頭不要抬起來，而且看的也很奇怪歪歪的」→ 看板前的長椅不再用抬頭看的鏡頭，坐下跟一般長椅一樣 */ for (const st of W2.benches || []) CHAIRS.push(Object.assign({}, st));   /* v929 森林裡的長椅（護林員小屋的走廊） */   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ }).catch(e => { console.warn('world2', e); W2ing = false; w2Fade(false); }); }
+/* v960 新主島載入前先蓋一層淡出，不會先看到舊村子再跳過去 */
+function w2Fade(on){ const fx = $('#fadeFx'); if (!fx) return; if (on){ fx.classList.add('on'); w2Fade.t = setTimeout(() => fx.classList.remove('on'), 20000); } else { clearTimeout(w2Fade.t); setTimeout(() => fx.classList.remove('on'), 300); } }
 /* 預覽用：上面一排「直接過去」的按鈕。島很大，用走的要好幾分鐘，作者要能一區一區點過去看（只有 #map2 才有，正式換島時拿掉） */
 function w2Nav(){ if (!W2 || !W2.spots || document.getElementById('w2nav')) return; const box = document.createElement('div'); box.id = 'w2nav';
   box.style.cssText = 'position:fixed;left:var(--gl);top:calc(var(--gt) + 58px);z-index:40;display:flex;gap:6px;align-items:center;max-width:max(210px,calc(100vw - var(--gl) - 262px));overflow-x:auto;padding:6px 10px;background:rgba(24,51,74,.8);border-radius:14px;-webkit-overflow-scrolling:touch;scrollbar-width:none';   /* 右邊留給地圖、背包、手機和天氣那一塊 */
@@ -24734,6 +24736,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u960', d:'11/28', items:[['🏝️','搬到新主島了！大家一進遊戲就在新的主島：主城廣場、大看板、噴水池、商店街、中央市場、水族館、博物館、遊樂園、體育場、森林、紅樹林和珊瑚礁，原本村子裡的店和人都搬過來了'], ['⛲','主城廣場的噴水池換新：海浪柱子、貝殼出水口，每 30 秒會大噴一次，晚上池子會亮'], ['🛣️','大路變成雙向車道，有人行道和斑馬線']] },
   { id:'u949', d:'11/27', items:[['📌','活動頁變成港邊的公告欄：上面是今天的時刻表，活動是插在時間上的小旗子；每個活動是一張夾著的紙條，點了放大看要做什麼', 'events']] },
   { id:'u948', d:'11/27', items:[['🎪','每個活動都有一件限定的衣服或帽子：完成那個活動幾次就能在活動頁領，商店買不到。新做了三頂帽子：龍蝦毛帽、傳說漁夫帽、祭典頭巾', 'events']] },
   { id:'u947', d:'11/27', items:[['🖼️','活動頁每個活動都有一張大圖，是在村子裡拍的', 'events']] },
