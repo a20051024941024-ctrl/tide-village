@@ -2626,7 +2626,8 @@ function npcTideComb(n, dt, t){ if (!n.tc) n.tc = { hx: n.pos.x, hz: n.pos.z, hr
 function castPoint(x, z, dx, dz, dist){
   const ok = d => waterAt(x + dx * d, z + dz * d) && !seaDry(x + dx * d, z + dz * d);
   if (ok(dist)) return [x + dx * dist, z + dz * dist];
-  for (let k = 0.4; k < 8; k += 0.4){ if (dist - k > 1.2 && ok(dist - k)) return [x + dx * (dist - k), z + dz * (dist - k)]; if (ok(dist + k)) return [x + dx * (dist + k), z + dz * (dist + k)]; }
+  /* v922 拋過頭（落點在對岸、在沙灘上）：收到最近的水面以後，再往水裡多收 0.8 公尺。以前剛好壓在水邊，窄的河會看到浮標躺在對岸的草地上 */
+  for (let k = 0.4; k < 8; k += 0.4){ if (dist - k > 1.2 && ok(dist - k)){ const d = dist - k - 0.8 > 1.2 && ok(dist - k - 0.8) ? dist - k - 0.8 : dist - k; return [x + dx * d, z + dz * d]; } if (ok(dist + k)){ const d = ok(dist + k + 0.8) ? dist + k + 0.8 : dist + k; return [x + dx * d, z + dz * d]; } }
   return [x + dx * dist, z + dz * dist];
 }
 (function buildWorld(){
@@ -7683,7 +7684,7 @@ function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a'
   const rt = s.wild ? 'pole' : rodType(curRod()), dist = s.id === 'shrimp' ? 1.4 + c * 1.6 : (3.5 + c * 8) *   /* v516 作者：「釣竿的線丟不遠」→ 滿力從 7.5 公尺拉到 11.5 公尺 */ (Rig.rig === 'lure' ? 1.25 : 1) * (rt === 'pole' ? 0.55 : rt === 'surf' ? 1.45 : rt === 'iso' ? 1.1 : 1) + (s.id !== 'shrimp' && mySeat && mySeat.gear && FK.set && (FK.set.mask & 2) ? 3 : 0);   /* v618 小釣台：多拋 3 公尺 */   /* 手竿拋不遠、遠投竿拋很遠 */   /* 蝦竿很短，拋近近的 */
   const hole = s.id === 'icelake' ? (s.hole || FROST.holes.slice().sort((a, b) => Math.hypot(me.pos.x - a[0], me.pos.z - a[1]) - Math.hypot(me.pos.x - b[0], me.pos.z - b[1]))[0]) : null;   /* 冰洞：直接放進洞裡 */
   const cp = hole ? hole : castPoint(s.pos.x, s.pos.z, ...aimDir(s), dist);
-  const to = new THREE.Vector3(cp[0] + (hole ? 0 : rand(-0.3,0.3)), 0.12, cp[1] + (hole ? 0 : rand(-0.3,0.3)));
+  const to = new THREE.Vector3(cp[0] + (hole ? 0 : rand(-0.3,0.3)), 0.12, cp[1] + (hole ? 0 : rand(-0.3,0.3))); if (!hole && !waterAt(to.x, to.z)){ to.x = cp[0]; to.z = cp[1]; }   /* v922 落點左右隨機偏 30 公分，偏到岸上就不偏 */
   const from = new THREE.Vector3(); me.av.tip.getWorldPosition(from);
   me.bobPos.copy(to); me.bobState = 'fly';
   F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了。要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
