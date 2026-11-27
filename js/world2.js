@@ -441,18 +441,23 @@ export function init(A){
         const [ax, az] = P(px, py); let best = null;   /* 在鋪了地磚的地方（廣場、人行道）找一塊 2.6×4.4 公尺的空地，方向跟最近的大路平行；不壓到大路、不靠鐵軌、不壓到房子 */
         for (let gx = -30; gx <= 30; gx += 1.5) for (let gz = -30; gz <= 30; gz += 1.5){ const x = ax + gx, z = az + gz, dd = Math.hypot(gx, gz); if (dd > 30 || (best && dd >= best.sc)) continue;
           if (samp(sdPave, x, z) < 2.2 || hAt(x, z) < 0.25 || railDist(x, z) < 5 || hit(x, z, 2.6) || stands.some(s => Math.hypot(s.x - x, s.z - z) < 25)) continue;
-          let rd = 1e9, rdx = 1, rdz = 0, onRoad = false; segs.forEach(sg => { for (let i = 0; i < sg.L.length; i += 3){ const q = sg.L[i], dq = Math.hypot(q[0] - x, q[1] - z); if (dq < sg.w / 2 + 1.6) onRoad = true; if (dq < rd){ rd = dq; [rdx, rdz] = dirAt(sg.L, i); } } });
-          if (onRoad || rd > 14) continue; const cs = [[1.3, 2.2], [-1.3, 2.2], [1.3, -2.2], [-1.3, -2.2]].every(([a, bb]) => samp(sdPave, x - rdz * a + rdx * bb, z + rdx * a + rdz * bb) > 0.4); if (!cs) continue;
+          let rd = 1e9, rdx = 1, rdz = 0, onRoad = false; segs.forEach(sg => { for (let i = 0; i < sg.L.length; i += 3){ const q = sg.L[i], dq = Math.hypot(q[0] - x, q[1] - z); if (dq < sg.w / 2 + 1.6) onRoad = true; if (sg.car && dq < rd){ rd = dq; [rdx, rdz] = dirAt(sg.L, i); } } });
+          if (onRoad || rd > 8.5) continue;   /* v962 上車處要在車道旁邊（車子才不會開過草地） */ const cs = [[1.3, 2.2], [-1.3, 2.2], [1.3, -2.2], [-1.3, -2.2]].every(([a, bb]) => samp(sdPave, x - rdz * a + rdx * bb, z + rdx * a + rdz * bb) > 0.4); if (!cs) continue;
           const sd = ((ax - x) * -rdz + (az - z) * rdx) > 0 ? 1 : -1; best = { sc: dd, x, z, dx: rdx, dz: rdz, sd: -sd, nm }; }
+        if (!best){ for (let gx = -45; gx <= 45; gx += 1.5) for (let gz = -45; gz <= 45; gz += 1.5){ const x = ax + gx, z = az + gz, dd = Math.hypot(gx, gz); if (dd > 45 || dd <= 30 || (best && dd >= best.sc)) continue;   /* 30 公尺內找不到，放寬到 45 公尺 */
+          if (samp(sdPave, x, z) < 2.2 || hAt(x, z) < 0.25 || railDist(x, z) < 5 || hit(x, z, 2.6) || stands.some(s => Math.hypot(s.x - x, s.z - z) < 25)) continue;
+          let rd = 1e9, rdx = 1, rdz = 0, onRoad = false; segs.forEach(sg => { for (let i = 0; i < sg.L.length; i += 3){ const q = sg.L[i], dq = Math.hypot(q[0] - x, q[1] - z); if (dq < sg.w / 2 + 1.6) onRoad = true; if (sg.car && dq < rd){ rd = dq; [rdx, rdz] = dirAt(sg.L, i); } } });
+          if (onRoad || rd > 8.5) continue; const cs = [[1.3, 2.2], [-1.3, 2.2], [1.3, -2.2], [-1.3, -2.2]].every(([a, bb]) => samp(sdPave, x - rdz * a + rdx * bb, z + rdx * a + rdz * bb) > 0.4); if (!cs) continue;
+          const sd = ((ax - x) * -rdz + (az - z) * rdx) > 0 ? 1 : -1; best = { sc: dd, x, z, dx: rdx, dz: rdz, sd: -sd, nm }; } }
         if (!best) continue; stands.push(best); const { x, z, dx, dz } = best, ry = Math.atan2(dx, dz);
         for (const [a, bb, w2, l2] of [[1.25, 0, 0.1, 4.4], [-1.25, 0, 0.1, 4.4], [0, 2.15, 2.6, 0.1], [0, -2.15, 2.6, 0.1]]) B(parts, LINE, w2, 0.02, l2, x - dz * a + dx * bb, PAVE_Y + 0.07, z + dx * a + dz * bb, ry);   // 白框
         { const g = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.0).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: logoTex, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -3 })); g.position.set(x, PAVE_Y + 0.08, z); g.rotation.y = ry + Math.PI / 2; town.add(g); }   // 地上寫「潮搭Go 上車處」
         { const sx = x - dz * best.sd * 1.7, sz = z + dx * best.sd * 1.7, y0 = Math.max(0.2, hAt(sx, sz)); B(parts, '#6c7680', 0.08, 2.3, 0.08, sx, y0 + 1.15, sz); const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshBasicMaterial({ map: logoTex, side: THREE.DoubleSide })); pl.position.set(sx, y0 + 2.1, sz); pl.rotation.y = ry + Math.PI / 2; town.add(pl); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz, r: 0.15 }); }   // 站牌
         RSV.push([x, z, 3.5]); }
       W2X.stands = stands.map(s => ({ name: s.nm, x: OX + s.x, z: OZ + s.z, face: Math.atan2(s.dx, s.dz) }));
-      /* 停一台潮搭Go 在上車處（模型另外下載，載好才出現） */
+      /* 潮搭Go 的車子模型（模型另外下載，載好才能叫車） */
       if (A.loadGLB) A.loadGLB('models/ride/tidego_car.glb').then(gl => { const src = gl.scene; src.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; if (o.material) o.material.side = THREE.FrontSide; } });
-        W2X.car = src; for (const s of stands.slice(0, 4)){ const c = src.clone(); c.scale.setScalar(2.0); const g = new THREE.Group(); g.add(c); c.rotation.y = Math.PI / 2; c.position.y = 0.45 * 2.0; g.position.set(s.x, PAVE_Y + 0.01, s.z); g.rotation.y = Math.atan2(s.dx, s.dz); town.add(g);
+        W2X.car = src; for (const s of stands.slice(0, 0)){   /* v962 上車處不再停車：叫車的時候車會自己開過來 */ const c = src.clone(); c.scale.setScalar(2.0); const g = new THREE.Group(); g.add(c); c.rotation.y = Math.PI / 2; c.position.y = 0.45 * 2.0; g.position.set(s.x, PAVE_Y + 0.01, s.z); g.rotation.y = Math.atan2(s.dx, s.dz); town.add(g);
           colliders.push({ t: 'c', x: OX + s.x + s.dx * 1.0, z: OZ + s.z + s.dz * 1.0, r: 0.95 }, { t: 'c', x: OX + s.x - s.dx * 1.0, z: OZ + s.z - s.dz * 1.0, r: 0.95 }); } }).catch(e => console.warn('tidego car', e));
       /* 平交道：大路跟鐵軌交叉的地方 */
       const xings = [], NR = railLine.length;
