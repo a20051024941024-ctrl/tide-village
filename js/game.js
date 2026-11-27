@@ -18239,10 +18239,10 @@ function w2NearDoor(){ if (!W2 || !W2.doors || !W2.near(me.pos.x, me.pos.z)) ret
    我坐哪一班、哪個位子放在 presence 的 tr，別人的畫面把我放在「他那邊同一班車的同一個位子」，所以不會抖、也不會落後。 */
 const Ride = { on: false, k: 0, i: 0, hop: null, out: null, head: 0, lastAt: -2, tip: -9 };
 function w2Train(){ return W2 && W2.train ? W2.train : null; }
-function w2NearStop(){ const T = w2Train(); if (!T || mySeat || myBoat || Ride.out || !W2.near(me.pos.x, me.pos.z)) return null; let best = -1, bd = 3.4; for (let i = 0; i < T.stops.length; i++){ const q = T.stops[i], d = Math.hypot(me.pos.x - q.x, me.pos.z - q.z); if (d < bd){ bd = d; best = i; } } if (best < 0) return null;
+function w2NearStop(){ const T = w2Train(); if (!T || mySeat || myBoat || !W2.near(me.pos.x, me.pos.z)) return null;   /* v924 剛下車跨到月台的那半秒也照樣顯示（以前那半秒按鈕會閃成「拋竿」——港口、中央市場的月台離海很近） */ let best = -1, bd = 3.4; for (let i = 0; i < T.stops.length; i++){ const q = T.stops[i], d = Math.hypot(me.pos.x - q.x, me.pos.z - q.z); if (d < bd){ bd = d; best = i; } } if (best < 0) return null;
   const at = T.atStop(best), nx = T.stops[(best + 1) % T.stops.length].name; if (at && at.leave > 0.7) return { id: 'w2train', label: '上車', mode: 'w2train', st: best, sub: `🚃 往${nx}・${Math.ceil(at.leave)} 秒後開` };
   return { id: 'w2train', label: '等小火車', mode: 'w2train', st: best, sub: `🚃 往${nx}・${Math.ceil(T.arrive(best))} 秒後到` }; }
-function w2TrainBoard(sh){ const T = w2Train(); if (!T || mySeat || F.phase !== 'idle') return; const at = T.atStop(sh.st); if (!at || at.leave < 0.7){ toast(`小火車再 ${Math.ceil(T.arrive(sh.st))} 秒到站，車停好就可以上車`); return; }
+function w2TrainBoard(sh){ const T = w2Train(); if (!T || mySeat || Ride.out || F.phase !== 'idle') return; const at = T.atStop(sh.st); if (!at || at.leave < 0.7){ toast(`小火車再 ${Math.ceil(T.arrive(sh.st))} 秒到站，車停好就可以上車`); return; }
   const taken = new Set(); for (const p of peers.values()) if (p.tr && p.tr[0] === at.k) taken.add(p.tr[1]);   /* 別人坐的位子不坐 */
   let best = -1, bd = 1e9; for (let i = 0; i < T.seats; i++){ if (taken.has(i)) continue; const q = T.seat(at.k, i), d = Math.hypot(q.x - me.pos.x, q.z - me.pos.z); if (d < bd){ bd = d; best = i; } } if (best < 0){ toast('這班車坐滿了，等下一班'); return; }
   const q = T.seat(at.k, best), c = { x: q.x, z: q.z, y: q.y, face: q.face, train: 1, k: at.k, i: best, ret: [me.pos.x, me.pos.z] }; if (Bike.on) bikeOff();
