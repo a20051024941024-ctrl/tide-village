@@ -192,6 +192,10 @@ export function init(A){
   const boardLine = dense(curve(TRAILS[2]), 1.2); ribbon('wood', boardLine, 1.7, (x, z, cx, cz) => boardY(cx, cz), false, 1.6);   // 紅樹林木棧道：架在水上
   for (const i of [0, 1, 3, 4]) ribbon('dirt', dense(curve(TRAILS[i]), 1.1), 1.6, (x, z) => Math.max(0.2, hAt(x, z)) + 0.05, false, 2.2);   // 泥土步道：貼著山坡
   const railLine = curve(RAIL, true); ribbon('rail', railLine, 2.0, (x, z, cx, cz) => Math.max(0.2, hAt(cx, cz)) + 0.075, true, 1.0);                          // 環島小火車的軌道
+  /* v923 軌道的里程表（公尺）：railAt(s) → [x, z, 朝向]。小火車、車站共用。railStops：每一站在第幾公尺、月台在哪（蓋車站的時候填） */
+  const railCum = [0]; for (let i = 1; i <= railLine.length; i++){ const a = railLine[i - 1], b = railLine[i % railLine.length]; railCum.push(railCum[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); }
+  const railLen = railCum[railCum.length - 1], railStops = [];
+  const railAt = s => { s = ((s % railLen) + railLen) % railLen; let lo = 0, hi = railCum.length - 1; while (hi - lo > 1){ const m = (lo + hi) >> 1; if (railCum[m] <= s) lo = m; else hi = m; } const a = railLine[lo], b = railLine[(lo + 1) % railLine.length], k = (s - railCum[lo]) / Math.max(1e-6, railCum[lo + 1] - railCum[lo]); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, Math.atan2(b[0] - a[0], b[1] - a[1])]; };
   for (const k in paveParts){ if (!paveParts[k].length) continue; const m = new THREE.Mesh(mergeGeometries(paveParts[k], false), MAT[k]); m.receiveShadow = true; root.add(m); }
 
   /* ---------- 大建築（先用簡單的樣子佔位置，看大小和位置對不對；之後一棟一棟換成真的） ---------- */
@@ -324,7 +328,8 @@ export function init(A){
     for (const [sx, sy, nm] of STA){ const [px, pz] = P(sx, sy), NR = railLine.length; let bi = 0, bd = 1e9; railLine.forEach((q, i) => { const d = Math.hypot(q[0] - px, q[1] - pz); if (d < bd){ bd = d; bi = i; } });
       const a = railLine[(bi - 1 + NR) % NR], b = railLine[(bi + 1) % NR], q = railLine[bi], tl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, tx = (b[0] - a[0]) / tl, tz = (b[1] - a[1]) / tl; let best = null;
       for (const sg of [1, -1]){ const x = q[0] - tz * sg * 2.5, z = q[1] + tx * sg * 2.5, ox = q[0] - tz * sg * 4.4, oz = q[1] + tx * sg * 4.4; let sc = -Math.hypot(ox, oz) * 0.01; if (hAt(ox, oz) < 0.25 || hAt(x, z) < 0.25) sc -= 10; if (samp(sdWat, ox, oz) > -1.5) sc -= 10; if (hit(x, z, 1.7) || hit(ox, oz, 0.9)) sc -= 5; if (!best || sc > best.sc) best = { x, z, sg, sc }; }
-      const { x, z, sg } = best, y = Math.max(0.2, hAt(x, z)), ry = Math.atan2(-tz, tx); B(parts, '#fff6e0', 5.4, 0.35, 2.6, x, y + 0.2, z, ry); B(parts, RED, 5.8, 0.25, 3, x, y + 3.1, z, ry);
+      const { x, z, sg } = best, y = Math.max(0.2, hAt(x, z)), ry = Math.atan2(-tz, tx); B(parts, '#fff6e0', 5.4, 0.3, 2.6, x, y + 0.15, z, ry); B(parts, '#f2c230', 5.4, 0.31, 0.14, x + tz * sg * 1.2, y + 0.15, z - tx * sg * 1.2, ry); B(parts, RED, 5.8, 0.25, 3, x, y + 3.1, z, ry);   /* v923 月台從 37 公分降到 30 公分：一步跨得上去（遊戲一步最多上 34 公分）；靠軌道那一邊畫一條黃線 */
+      railStops.push({ name: nm, s: railCum[bi], x, z, y: y + 0.3, tx, tz, nx: -tz * sg, nz: tx * sg });
       for (const k of [-2.4, 2.4]) B(parts, '#8a6038', 0.22, 2.8, 0.22, x + tx * k - tz * sg * 1.0, y + 1.6, z + tz * k + tx * sg * 1.0); B(parts, '#8a6038', 2.2, 0.12, 0.5, x - tz * sg * 0.8, y + 0.75, z + tx * sg * 0.8, ry);   /* 兩根柱子、一張長椅 */
       label(nm + '站', x, y + 5, z, 0.6).userData.st = 1; RSV.push([x, z, 4.5]); }
     /* 過河的小木橋（森林步道 → 水族館） */
@@ -361,12 +366,59 @@ export function init(A){
     for (const [dx, dz, c1] of [[13, 4.5, '#f2c230'], [20.5, -4, '#4ec1ff']]){ G(parts, c1, new THREE.ConeGeometry(3.4, 2.4, 10), x + dx, 4.4, z + dz); G(parts, '#ffffff', new THREE.CylinderGeometry(3.1, 3.1, 0.3, 10), x + dx, 3.1, z + dz); G(parts, '#f7efe1', new THREE.CylinderGeometry(0.3, 0.3, 3, 8), x + dx, 1.6, z + dz); colliders.push({ t: 'c', x: OX + x + dx, z: OZ + z + dz, r: 3.2, big: true }); RSV.push([x + dx, z + dz, 5]); }
     flush(parts, town); colliders.push({ t: 'b', x: OX + x, z: OZ + z, hw: 1.8, hd: 1.6, big: true }); RSV.push([x, z, 11]); label('遊樂園', x, 25, z);
     tickers.push((dt, t) => { wheel.rotation.z = t * 0.18; for (let i = 0; i < 12; i++){ const a = t * 0.18 + i / 12 * 6.2832; cars[i].position.set(x + Math.cos(a) * 9.6, 12.3 + Math.sin(a) * 9.6 - 0.9, z); } }); }
-  /* 環島小火車：三節車廂沿著軌道跑 */
-  { const cum = [0]; for (let i = 1; i <= railLine.length; i++){ const a = railLine[i - 1], b = railLine[i % railLine.length]; cum.push(cum[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); } const LEN = cum[cum.length - 1];
-    const at = s => { s = ((s % LEN) + LEN) % LEN; let lo = 0, hi = cum.length - 1; while (hi - lo > 1){ const m = (lo + hi) >> 1; if (cum[m] <= s) lo = m; else hi = m; } const a = railLine[lo], b = railLine[(lo + 1) % railLine.length], k = (s - cum[lo]) / Math.max(1e-6, cum[lo + 1] - cum[lo]); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, Math.atan2(b[0] - a[0], b[1] - a[1])]; };
-    const cars = []; for (let k = 0; k < 3; k++){ const g = new THREE.Group(), parts = {}; B(parts, k ? '#3c8fd8' : '#d9393b', 1.7, 1.5, 3.4, 0, 1.25, 0); B(parts, '#fff6e0', 1.8, 0.16, 3.6, 0, 2.08, 0); B(parts, '#f7efe1', 1.72, 0.5, 2.2, 0, 1.5, 0); if (!k){ G(parts, '#333a44', new THREE.CylinderGeometry(0.22, 0.3, 0.9, 8), 0, 2.5, 1.0); } for (const [dx, dz] of [[-0.8, -1.1], [0.8, -1.1], [-0.8, 1.1], [0.8, 1.1]]) G(parts, '#333a44', new THREE.CylinderGeometry(0.36, 0.36, 0.2, 10).rotateZ(Math.PI / 2), dx, 0.42, dz); flush(parts, g); root.add(g); cars.push(g); }
-    W2rail = { at, LEN }; tickers.push((dt, t) => { const s0 = t * 5.5; cars.forEach((g, k) => { const [x, z, a] = at(s0 - k * 3.9); g.position.set(x, Math.max(0.2, hAt(x, z)) + 0.08, z); g.rotation.y = a; }); }); }
-  var W2rail;
+  /* 環島小火車（v923 可以坐）：三班車照時刻表繞島一圈，每一站停 9 秒。
+     車在哪裡只看「大家共用的時間」（game.js 每一幀把時間傳進 trainStep），所以每個人畫面上的車都在同一個位置，坐在車上的人別人也看得到在同一個位子。
+     一班車＝火車頭＋兩節沒有車頂的車廂，每節 4 個位子（兩排長椅，都面向前）。一節車廂是一個 Mesh（顏色寫在頂點上），三班車總共 9 個。 */
+  const TRAIN = (() => { const NS = railStops.length; if (!NS) return null; const V = 8, ACC = 1.6, DWELL = 9, NT = 3, GAP = 3.9, SEATS = 8;
+    railStops.sort((a, b) => a.s - b.s);
+    /* 時刻表：在第 i 站停 DWELL 秒，再開 seg[i].tr 秒到下一站（慢慢加速、等速、慢慢減速） */
+    let TC = 0; const seg = railStops.map((q, i) => { const n = railStops[(i + 1) % NS], L = ((((n.s - q.s) % railLen) + railLen) % railLen) || railLen, tr = L >= V * V / ACC ? L / V + V / ACC : 2 * Math.sqrt(L / ACC), o = { L, tr, t0: TC }; TC += DWELL + tr; return o; });
+    const state = tau => { tau = ((tau % TC) + TC) % TC; let i = NS - 1; for (let k = 0; k < NS; k++) if (tau < seg[k].t0 + DWELL + seg[k].tr){ i = k; break; } const g = seg[i], u = tau - g.t0, nx = (i + 1) % NS;
+      if (u < DWELL) return { s: railStops[i].s, v: 0, at: i, next: nx, leave: DWELL - u, eta: DWELL - u + g.tr };
+      const x = u - DWELL, ta = Math.min(V / ACC, g.tr / 2), vp = ACC * ta; let d, v; if (x < ta){ d = 0.5 * ACC * x * x; v = ACC * x; } else if (x < g.tr - ta){ d = 0.5 * ACC * ta * ta + vp * (x - ta); v = vp; } else { const r = g.tr - x; d = g.L - 0.5 * ACC * r * r; v = ACC * r; }
+      return { s: railStops[i].s + d, v, at: -1, next: nx, leave: 0, eta: g.tr - x }; };
+    /* 車廂的樣子 */
+    const trainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0.05 });
+    const vc = (L, hex, g, x, y, z) => { const q = g.index ? g.toNonIndexed() : g; q.translate(x || 0, y || 0, z || 0); const n = q.attributes.position.count, c = new Float32Array(n * 3); col2.set(hex); for (let i = 0; i < n; i++){ c[i * 3] = col2.r; c[i * 3 + 1] = col2.g; c[i * 3 + 2] = col2.b; } q.setAttribute('color', new THREE.BufferAttribute(c, 3)); L.push(q); };
+    const bx = (L, hex, w, h, d, x, y, z) => vc(L, hex, new THREE.BoxGeometry(w, h, d), x, y, z);
+    const wheel = (L, r, x, z) => { vc(L, '#30353d', new THREE.CylinderGeometry(r, r, 0.16, 14).rotateZ(Math.PI / 2), x, r + 0.06, z); vc(L, '#f2c230', new THREE.CylinderGeometry(r * 0.42, r * 0.42, 0.19, 8).rotateZ(Math.PI / 2), x, r + 0.06, z); };
+    const DARK = '#3a3f47', CREAM = '#fff6e0', GOLD = '#f2c230', WOOD = '#c99a66', RED = '#d9393b', BENCH_Z = [0.75, -0.75], SEAT_H = 1.11;
+    const engine = () => { const L = []; bx(L, DARK, 1.5, 0.2, 3.3, 0, 0.58, 0);
+      vc(L, RED, new THREE.CylinderGeometry(0.52, 0.52, 1.85, 16).rotateX(Math.PI / 2), 0, 1.2, 0.62); vc(L, DARK, new THREE.CylinderGeometry(0.56, 0.56, 0.12, 16).rotateX(Math.PI / 2), 0, 1.2, 1.58);
+      for (const z of [0.15, 1.05]) vc(L, GOLD, new THREE.CylinderGeometry(0.545, 0.545, 0.07, 16).rotateX(Math.PI / 2), 0, 1.2, z);
+      vc(L, DARK, new THREE.CylinderGeometry(0.27, 0.17, 0.72, 10), 0, 2.02, 1.12); vc(L, GOLD, new THREE.CylinderGeometry(0.31, 0.31, 0.07, 10), 0, 2.4, 1.12); vc(L, GOLD, new THREE.SphereGeometry(0.24, 10, 8), 0, 1.72, 0.42);
+      vc(L, '#fff2b0', new THREE.CylinderGeometry(0.15, 0.15, 0.14, 10).rotateX(Math.PI / 2), 0, 1.86, 1.6); bx(L, GOLD, 1.36, 0.26, 0.3, 0, 0.52, 1.78); bx(L, DARK, 1.1, 0.12, 0.2, 0, 0.36, 1.92);
+      bx(L, RED, 1.6, 1.3, 1.2, 0, 1.33, -0.95); bx(L, CREAM, 1.84, 0.12, 1.5, 0, 2.05, -0.95); for (const sx of [-1, 1]) bx(L, '#bfe3f7', 0.05, 0.46, 0.62, sx * 0.81, 1.56, -0.95); bx(L, '#bfe3f7', 1.0, 0.36, 0.05, 0, 1.66, -0.345); bx(L, GOLD, 1.64, 0.07, 1.24, 0, 0.72, -0.95);
+      for (const sx of [-1, 1]){ wheel(L, 0.4, sx * 0.78, -1.05); wheel(L, 0.4, sx * 0.78, -0.2); wheel(L, 0.28, sx * 0.78, 1.0); bx(L, '#9aa3ad', 0.05, 0.08, 0.95, sx * 0.88, 0.46, -0.62); }
+      bx(L, DARK, 0.12, 0.1, 0.5, 0, 0.5, -1.85); return mergeGeometries(L, false); };
+    const coach = hex => { const L = []; bx(L, DARK, 1.6, 0.18, 3.4, 0, 0.6, 0); bx(L, '#b98a5a', 1.7, 0.08, 3.4, 0, 0.73, 0);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]){ bx(L, hex, 0.08, 0.5, 1.12, sx * 0.83, 1.02, sz * 1.12); bx(L, CREAM, 0.11, 0.06, 1.12, sx * 0.83, 1.3, sz * 1.12); bx(L, CREAM, 0.1, 0.72, 0.1, sx * 0.81, 1.12, sz * 1.63); vc(L, GOLD, new THREE.SphereGeometry(0.09, 8, 6), sx * 0.81, 1.53, sz * 1.63); }
+      for (const sz of [-1, 1]){ bx(L, hex, 1.7, 0.56, 0.08, 0, 1.05, sz * 1.66); bx(L, CREAM, 1.74, 0.06, 0.11, 0, 1.36, sz * 1.66); }
+      for (const zb of BENCH_Z){ bx(L, WOOD, 1.34, 0.08, 0.42, 0, SEAT_H - 0.04, zb); bx(L, WOOD, 1.34, 0.42, 0.07, 0, SEAT_H + 0.23, zb - 0.235); for (const sx of [-1, 1]) bx(L, DARK, 0.08, 0.3, 0.36, sx * 0.56, 0.92, zb); }
+      /* 沒有車頂：鏡頭從後上方看下來才看得到坐在裡面的人 */ for (const sx of [-1, 1]) for (const sz of [-1, 1]) wheel(L, 0.34, sx * 0.78, sz * 1.05); bx(L, DARK, 0.12, 0.1, 0.5, 0, 0.5, -1.85);
+      return mergeGeometries(L, false); };
+    const COLS = ['#3c8fd8', '#3fae7a', '#f0a02a'], engGeo = engine(), trains = [], cur = [], seatPos = [];
+    for (let k = 0; k < NT; k++){ const coachGeo = coach(COLS[k % COLS.length]), cars = []; for (let c = 0; c < 3; c++){ const m = new THREE.Mesh(c ? coachGeo : engGeo, trainMat); m.castShadow = true; m.receiveShadow = true; root.add(m); cars.push(m); } trains.push(cars); cur.push(null); for (let i = 0; i < SEATS; i++) seatPos.push({ x: 0, y: 0, z: 0, face: 0 }); }
+    /* 煙：火車頭在動的時候煙囪冒白煙（所有的煙是同一個 Points，一次畫完） */
+    const NP = 30, pPos = new Float32Array(NP * 3), pCol = new Float32Array(NP * 4), pAge = new Float32Array(NP).fill(9), pVel = new Float32Array(NP * 3), pGeo = new THREE.BufferGeometry(); for (let i = 0; i < NP; i++){ pPos[i * 3 + 1] = -50; pCol[i * 4] = pCol[i * 4 + 1] = pCol[i * 4 + 2] = 1; }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 4));
+    const pTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+    const puffs = new THREE.Points(pGeo, new THREE.PointsMaterial({ map: pTex, size: 1.5, sizeAttenuation: true, transparent: true, depthWrite: false, vertexColors: true })); puffs.frustumCulled = false; root.add(puffs);
+    let pNext = 0, pAcc = [0, 0, 0], now = 0;
+    const step = (t, dt) => { now = t; let smoke = false;
+      for (let k = 0; k < NT; k++){ const st = cur[k] = state(t + k * TC / NT), cars = trains[k], run = st.v / V;
+        for (let c = 0; c < 3; c++){ const [x, z, a] = railAt(st.s + GAP * 1.5 - c * GAP), m = cars[c], y = Math.max(0.2, hAt(x, z)) + 0.08; m.position.set(x, y + Math.sin(t * 9 + c * 1.7 + k) * 0.012 * run, z); m.rotation.set(0, a, Math.sin(t * 5.3 + c * 2.1 + k) * 0.012 * run);
+          if (c){ const ca = Math.cos(a), sa = Math.sin(a); for (let j = 0; j < 4; j++){ const lx = j % 2 ? 0.36 : -0.36, lz = BENCH_Z[j >> 1], q = seatPos[k * SEATS + (c - 1) * 4 + j]; q.x = OX + x + lx * ca + lz * sa; q.z = OZ + z - lx * sa + lz * ca; q.y = y + SEAT_H; q.face = a; } }
+          else if (st.v > 0.4 && dt > 0){ pAcc[k] += dt * (1.6 + run * 4.5); if (pAcc[k] >= 1){ pAcc[k] = 0; const i = pNext; pNext = (pNext + 1) % NP; pAge[i] = 0; pPos[i * 3] = x + Math.sin(a) * 1.12; pPos[i * 3 + 1] = y + 2.5; pPos[i * 3 + 2] = z + Math.cos(a) * 1.12; pVel[i * 3] = (Math.random() - 0.5) * 0.3; pVel[i * 3 + 1] = 1.1 + Math.random() * 0.5; pVel[i * 3 + 2] = (Math.random() - 0.5) * 0.3; } } } }
+      for (let i = 0; i < NP; i++){ if (pAge[i] > 2.4){ if (pCol[i * 4 + 3] !== 0){ pCol[i * 4 + 3] = 0; smoke = true; } continue; } pAge[i] += dt; pPos[i * 3] += pVel[i * 3] * dt; pPos[i * 3 + 1] += pVel[i * 3 + 1] * dt; pPos[i * 3 + 2] += pVel[i * 3 + 2] * dt; pVel[i * 3 + 1] *= 1 - 0.5 * dt; pCol[i * 4 + 3] = Math.max(0, 0.75 * (1 - pAge[i] / 2.4)); smoke = true; }
+      if (smoke){ pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true; } };
+    step(0, 0);
+    return { step, api: { n: NT, seats: SEATS, cycle: TC, dwell: DWELL, len: railLen, stops: railStops.map(q => ({ name: q.name, x: OX + q.x, z: OZ + q.z, y: q.y, tx: q.tx, tz: q.tz, nx: q.nx, nz: q.nz })),
+      state: k => cur[k], seat: (k, i) => seatPos[k * SEATS + i] || null,
+      atStop: i => { for (let k = 0; k < NT; k++) if (cur[k] && cur[k].at === i) return { k, leave: cur[k].leave }; return null; },
+      arrive: i => { let best = 1e9; for (let k = 0; k < NT; k++){ const tau = (((now + k * TC / NT) % TC) + TC) % TC; let d = seg[i].t0 - tau; if (d < 0) d += TC; if (d < best) best = d; } return best; } } }; })();
+  /* 月台：站得上去（順著軌道方向的長方形，5.4 × 2.6 公尺） */
+  const platAt = (lx, lz) => { for (const q of railStops){ const dx = lx - q.x, dz = lz - q.z; if (Math.abs(dx) > 3.2 || Math.abs(dz) > 3.2) continue; if (Math.abs(dx * q.tx + dz * q.tz) < 2.7 && Math.abs(-dx * q.tz + dz * q.tx) < 1.3) return q; } return null; };
   /* 港口的船：五艘停在棧橋邊跟著浪晃，兩艘在外面的航道上慢慢開（作者：「看著船開來開去也很療癒」） */
   { const boat = (hex, s) => { if (TWB && TWB.boat){ const g = new THREE.Group(); g.add(TWB.boat()); g.scale.setScalar(s * 0.8); root.add(g); return g; }   /* 村子的漁船 */ const g = new THREE.Group(), parts = {}; G(parts, '#ffffff', new THREE.CylinderGeometry(1, 0.72, 0.9, 10, 1).scale(1, 1, 2.6), 0, 0.25, 0); G(parts, hex, new THREE.CylinderGeometry(1.04, 1.04, 0.18, 10, 1).scale(1, 1, 2.62), 0, 0.72, 0); B(parts, '#f7efe1', 1.3, 0.9, 1.6, 0, 1.2, -0.5); B(parts, hex, 1.5, 0.14, 1.8, 0, 1.72, -0.5); B(parts, '#8bb6e6', 1.32, 0.4, 0.06, 0, 1.28, 0.31); flush(parts, g); g.scale.setScalar(s); root.add(g); return g; };
     const moored = [[-170, 60, '#2c6fb5', 1.0], [-90, 95, '#c0392b', 1.25], [0, 118, '#2c6fb5', 1.15], [90, 95, '#f0a02a', 1.2], [170, 62, '#3fbf9d', 0.95]].map(([dx, dy, hex, s], i) => { const [x, z] = P(990 + dx + (i % 2 ? 22 : -22), 835 + dy), g = boat(hex, s); g.position.set(x, WL, z); g.rotation.y = i % 2 ? 0.08 : -0.06; return { g, x, z, ph: i * 1.7 }; });
@@ -394,7 +446,7 @@ export function init(A){
   const W2 = {
     ox: OX, oz: OZ, spawn: [OX + P(975, 560)[0], OZ + P(975, 560)[1]],
     near: (x, z) => z > OZ + Z0 - 30 && z < OZ + Z0 + GH + 30 && x > OX + X0 - 30 && x < OX + X0 + GW + 30,
-    h: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return -3.2; const d = deck(lx, lz); if (d) return d[5] ? lerp(Math.max(0.2, samp(HG, lx, lz)), d[4], clamp(Math.min(lz - d[2], d[3] - lz) / d[5], 0, 1)) : d[4]; if (onBoard(lx, lz)) return boardY(lx, lz) + 0.02; const h = samp(HG, lx, lz); return paved(lx, lz, 0.2) && h > 0.2 ? Math.max(h, PAVE_Y + 0.02) : h; },
+    h: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return -3.2; const d = deck(lx, lz); if (d) return d[5] ? lerp(Math.max(0.2, samp(HG, lx, lz)), d[4], clamp(Math.min(lz - d[2], d[3] - lz) / d[5], 0, 1)) : d[4]; if (onBoard(lx, lz)) return boardY(lx, lz) + 0.02; { const pf = platAt(lx, lz); if (pf) return pf.y; } const h = samp(HG, lx, lz); return paved(lx, lz, 0.2) && h > 0.2 ? Math.max(h, PAVE_Y + 0.02) : h; },
     land: (x, z) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (samp(HG, lx, lz) > WL - 0.02 || !!deck(lx, lz) || onBoard(lx, lz)); },
     walk: (x, z) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (samp(HG, lx, lz) > WL - 0.05 || !!deck(lx, lz) || onBoard(lx, lz) || dryAt(lx, lz)); },   /* v922 退潮露出來的濕沙可以走上去（漲回來，遊戲原本的檢查會把人推回岸上） */
     dry: (x, z) => dryAt(x - OX, z - OZ),
@@ -424,6 +476,8 @@ export function init(A){
     labels: on => { labelsOn = on; for (const sp of labels) sp.visible = on; },
     view: v => { VIEW = v; },   /* 拍全島的時候用：多遠以內的地都蓋 */
     board: boardLine, rail: railLine,   /* 測試用：木棧道、鐵軌的中心線（島上的公尺） */
+    /* v923 小火車：train 是給 game.js 問的（有幾站、哪一班停在哪一站、座位現在在哪）；trainStep(共用時間的秒數, dt) 每一幀在移動玩家之前叫一次 */
+    train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
     bb: bbInfo, seats, doors,   /* 高看板（螢幕、字幕條的 Mesh，中心高度）和它前面的座位：game.js 接節目、接坐下 */
     /* 這一點是什麼地：0 不是主島、1 水和紅樹林、2 路和廣場、3 森林、4 沙灘、5 蓋了東西、6 海岸邊、7 空草地（量「還有多少地沒用」用的） */
     kind: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz) || samp(sdMain, lx, lz) <= 0) return 0; if (samp(HG, lx, lz) < WL || samp(sdMang, lx, lz) > -3) return 1; if (paved(lx, lz, 0.5)) return 2; if (samp(sdFor, lx, lz) > -4) return 3; if (samp(sdSand, lx, lz) > -3) return 4; if (reserved(lx, lz)) return 5; if (samp(sdLand, lx, lz) < 6) return 6; return 7; },
