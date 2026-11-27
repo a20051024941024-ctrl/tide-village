@@ -9410,5 +9410,7 @@
  "現在讀不到訂單，可能是網路不穩，等一下會再試。": "Cannot load orders right now — the connection may be unstable. Will try again shortly.",
  " 小時 ": " h ",
  " 分鐘後換一批": " min until the next batch",
- " 分鐘後換新的": " min until new ones"
+ " 分鐘後換新的": " min until new ones",
+ "旁邊的人在等魚的時候，看得到他的浮標和釣線了，浮標被咬下去也看得到（之前要等他開始拉魚才會出現）": "You can now see the float and line of anglers next to you while they wait for a bite, and see the float get pulled under (before, it only appeared once they started reeling in)",
+ "往窄的河拋過頭的時候，浮標會落在水裡，不會跑到對岸的草地上": "When you overcast across a narrow river, the float now lands in the water instead of on the grass of the far bank"
 }
