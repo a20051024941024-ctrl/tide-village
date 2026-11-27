@@ -5507,6 +5507,8 @@ K3.npc = (nm, shirt) => { const c = K3.rand('npc:' + nm), r = K3.rand('npc2:' + 
 { const npc0 = K3.npc; K3.npc = (nm, shirt) => { const r = npc0(nm, shirt); if (/阿穎/.test(nm)){ Object.assign(r, { sex: 'b', top: 'hoodie', bot: 'pants', shoes: 'sneak', hat: 'none', mask: 'none', ear: 'none', hair: 'shave', eye: 'a0', brow: 'thick', mouth: 'grin', blush: 'soft', glasses: true, watch: true, old: false, cane: false }); r.c = Object.assign({}, r.c, { top: '#f48fb1', bot: '#f8bbd0', shoes: '#ec407a', hair: '#55565e' }); } return r; }; }
 /* 阿默（作者的朋友）：全身黑、黑口罩永遠不拿下來、戴黑帽；之後有「帽子戴在頭上的連帽衣」再換上 */
 { const npc0 = K3.npc; K3.npc = (nm, shirt) => { const r = npc0(nm, shirt); if (/阿默/.test(nm)){ const B = '#1c1c20'; Object.assign(r, { top: K3.OPT && K3.OPT.top && K3.OPT.top.includes && K3.OPT.top.includes('hoodup') ? 'hoodup' : 'hoodie', bot: 'pants', shoes: 'sneak', hat: 'cap', mask: 'mask', ear: 'none', hair: 'short', brow: 'down', mouth: 'flat', blush: 'none' }); r.c = Object.assign({}, r.c, { top: B, bot: B, shoes: '#141416', hat: B, mask: '#141416', hair: '#141418' }); } return r; }; }
+/* v955 潮搭Go 司機阿速（作者 11/27：叫車、機車＋駕艙三輪車）：漁夫的女兒，嫌釣魚慢改開車。綁馬尾、日落橘鴨舌帽、海洋藍背心 */
+{ const npc0 = K3.npc; K3.npc = (nm, shirt) => { const r = npc0(nm, shirt); if (/阿速/.test(nm)){ Object.assign(r, { sex: 'g', top: 'vest', bot: 'shorts', shoes: 'sneak', hat: 'cap', mask: 'none', ear: 'none', hair: 'pony', eye: 'b1', brow: 'soft', mouth: 'grin', blush: 'soft', old: false, cane: false }); r.c = Object.assign({}, r.c, { top: '#087F9B', bot: '#26445c', shoes: '#f5f8f7', hat: '#FFAB68', hair: '#3a2a22' }); } return r; }; }
 /* v860 第一次玩的人從免費的基本款開始（白T、短褲或長褲、運動鞋、長捲髮或刺刺短髮、原色），臉隨機配 */
 K3.free0 = r => { const P = a => a[Math.floor(Math.random() * a.length)]; return Object.assign(r, { top: 'tee', shoes: 'sneak', hair: r.hair === 'long' ? 'long' : 'short', hat: 'none', mask: 'none', ear: 'none', c: {},
   eye: P(['a0', 'b0', 'b4', 'a1', 'b1', 'b2']), brow: P(['thin', 'soft', 'thick']), mouth: P(['small', 'smile', 'grin', 'cat']), blush: P(['none', 'soft', 'line']) }); };
@@ -18422,6 +18424,55 @@ function w2NavList(){ const L = [], PO = W2.posts;
   for (const d of W2.doors || []) L.push([W2_DOOR_IC[d.k] || '🚪', d.label, [d.x, d.z]]);
   for (const [k, ic, lab] of [['craft', '🔧', '阿鐵（做魚餌、釣竿造型）'], ['gang', '⚓', '老港（每週限量）'], ['news', '📰', '阿報（村報）'], ['sci', '🔬', '蔚博士（潛水艇、每日調查）'], ['salon', '💇', '阿萍美髮沙龍']]){ const n = PO[k] && npcs.find(W2_NPC[k]); if (n && !n.wHide) L.push([ic, lab, [n.pos.x, n.pos.z]]); }
   return L; }
+/* ===== v955 潮搭Go 的車（先做樣子給作者看）：一個人＝機車、兩三個人＝駕艙三輪車。全部用程式做，配色：海洋藍 #087F9B、青綠 #42C6B5、日落橘 #FFAB68、霧白 #F5F8F7 =====
+   車頭燈做成圓圓的魚眼睛，車尾掛一條魚形風幡（跟阿嬤的攤子同一套），貼紙是自己畫的「浪＋往前的箭頭」 */
+function rideLogoTex(){ if (rideLogoTex.t) return rideLogoTex.t; const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256; const c = cv.getContext('2d');
+  c.fillStyle = '#087F9B'; c.beginPath(); c.roundRect(8, 8, 240, 240, 48); c.fill();
+  c.strokeStyle = '#ffffff'; c.lineWidth = 18; c.lineCap = 'round'; c.beginPath(); c.moveTo(40, 150); c.bezierCurveTo(80, 100, 110, 200, 150, 150); c.bezierCurveTo(170, 125, 190, 130, 210, 142); c.stroke();
+  c.fillStyle = '#FFAB68'; c.beginPath(); c.moveTo(150, 60); c.lineTo(215, 92); c.lineTo(150, 124); c.lineTo(165, 92); c.closePath(); c.fill();
+  c.fillStyle = '#ffffff'; c.font = 'bold 44px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.fillText('潮搭Go', 128, 222);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return (rideLogoTex.t = t); }
+function rideBuild(kind){ const g = new THREE.Group(), L = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.55, metalness: 0.05 }, o || {})), add = (geo, m, x, y, z, rx, ry, rz) => { const k = new THREE.Mesh(geo, m); k.position.set(x, y, z); k.rotation.set(rx || 0, ry || 0, rz || 0); k.castShadow = true; g.add(k); return k; };
+  const BLUE = L('#087F9B'), TEAL = L('#42C6B5'), ORG = L('#FFAB68'), WHITE = L('#F5F8F7'), DARK = L('#2a2f36', { roughness: 0.8 }), TIRE = L('#1d1f22', { roughness: 0.9 }), CHROME = L('#d8dde2', { metalness: 0.6, roughness: 0.25 }), SEAT = L('#5a3a2a', { roughness: 0.7 });
+  const wheel = (x, y, z, r, w) => { add(new THREE.TorusGeometry(r * 0.72, r * 0.28, 10, 22), TIRE, x, y, z, 0, Math.PI / 2, 0); add(new THREE.CylinderGeometry(r * 0.5, r * 0.5, w, 16), WHITE, x, y, z, 0, 0, Math.PI / 2); };
+  const fishEye = (x, y, z, s, ry) => { const e = new THREE.Group(); e.position.set(x, y, z); e.rotation.y = ry || 0; g.add(e); const a = new THREE.Mesh(new THREE.SphereGeometry(s, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(Math.PI / 2), L('#fff8d8', { emissive: '#fff3b0', emissiveIntensity: 0.6 })); e.add(a); const p = new THREE.Mesh(new THREE.SphereGeometry(s * 0.42, 12, 8), L('#18334a')); p.position.set(s * 0.15, s * 0.1, s * 0.75); e.add(p); const r = new THREE.Mesh(new THREE.TorusGeometry(s, s * 0.14, 8, 20), CHROME); e.add(r); return e; };
+  const flag = (x, y, z) => { const pole = add(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 6), DARK, x, y + 0.45, z); const f = new THREE.Group(); f.position.set(x, y + 0.85, z); g.add(f); const b = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.42, 8).rotateX(-Math.PI / 2), ORG); b.position.z = -0.22; f.add(b); const t = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.11, 4).rotateX(Math.PI / 2), TEAL); t.position.z = -0.47; f.add(t); g.userData.flag = f; };
+  const sticker = (x, y, z, s, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(s, s), new THREE.MeshBasicMaterial({ map: rideLogoTex(), transparent: true })); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); };
+  if (kind === 'moto'){   /* 機車：長 1.8 公尺，車頭朝 +z */
+    wheel(0, 0.26, 0.62, 0.26, 0.12); wheel(0, 0.26, -0.6, 0.26, 0.14);
+    add(new THREE.BoxGeometry(0.42, 0.08, 0.7), BLUE, 0, 0.36, 0.02);   // 踏板
+    { const sh = add(new THREE.CylinderGeometry(0.24, 0.3, 0.75, 16, 1, false, -Math.PI * 0.55, Math.PI * 1.1), BLUE, 0, 0.73, 0.42, -0.22, 0, 0); sh.scale.set(1, 1, 0.6); }   // 前面擋腳的那片
+    add(new THREE.SphereGeometry(0.34, 18, 12).scale(0.85, 0.62, 1.45), BLUE, 0, 0.6, -0.42);   // 圓圓的後車身
+    add(new THREE.TorusGeometry(0.33, 0.035, 6, 24, Math.PI).rotateY(Math.PI / 2), TEAL, 0.26, 0.58, -0.42, 0, 0, 0);   // 側邊一道青綠浪線
+    add(new THREE.TorusGeometry(0.33, 0.035, 6, 24, Math.PI).rotateY(Math.PI / 2), TEAL, -0.26, 0.58, -0.42, 0, 0, 0);
+    add(new THREE.CapsuleGeometry(0.15, 0.5, 6, 12).rotateX(Math.PI / 2).scale(1.1, 0.6, 1), SEAT, 0, 0.88, -0.3);   // 長座墊（兩個人坐）
+    add(new THREE.CylinderGeometry(0.035, 0.035, 0.55, 8), CHROME, 0, 0.9, 0.58, -0.25, 0, 0);   // 龍頭柱
+    add(new THREE.CylinderGeometry(0.022, 0.022, 0.62, 8), CHROME, 0, 1.16, 0.64, 0, 0, Math.PI / 2);   // 把手
+    for (const sx of [-0.31, 0.31]) add(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 8), DARK, sx, 1.16, 0.64, 0, 0, Math.PI / 2);
+    fishEye(0, 1.06, 0.74, 0.11);   // 魚眼睛車燈
+    add(new THREE.SphereGeometry(0.3, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.55, 0.45, 1), BLUE, 0, 0.44, 0.68);   // 前輪擋泥板
+    add(new THREE.BoxGeometry(0.42, 0.05, 0.36), DARK, 0, 0.95, -0.82);   // 後貨架
+    add(new THREE.BoxGeometry(0.4, 0.32, 0.34), ORG, 0, 1.13, -0.84); add(new THREE.BoxGeometry(0.42, 0.05, 0.36), WHITE, 0, 1.31, -0.84);   // 保溫箱
+    sticker(0, 1.13, -1.015, 0.24, Math.PI); sticker(0.205, 1.13, -0.84, 0.24, Math.PI / 2); sticker(-0.205, 1.13, -0.84, 0.24, -Math.PI / 2);
+    add(new THREE.CylinderGeometry(0.03, 0.03, 0.25, 8), CHROME, 0.14, 0.32, -0.75, Math.PI / 2.4, 0, 0);   // 排氣管
+    flag(-0.17, 1.3, -0.98);
+    g.userData.seats = [{ x: 0, y: 0.92, z: -0.12 }, { x: 0, y: 0.95, z: -0.55 }]; }
+  else {   /* 駕艙三輪車：水滴形的殼（車頭圓、車尾收尖），前兩輪、後一輪，坐三個人（司機在前、後面兩個） */
+    const prof = [[0, -1.25], [0.22, -1.18], [0.42, -0.95], [0.6, -0.55], [0.74, -0.1], [0.78, 0.25], [0.72, 0.6], [0.56, 0.9], [0.32, 1.08], [0, 1.15]].map(([r, z]) => new THREE.Vector2(r, z));
+    const shell = () => new THREE.LatheGeometry(prof, 28).rotateX(Math.PI / 2);
+    add(shell().scale(0.92, 0.7, 1), BLUE, 0, 0.9, 0);   // 海洋藍的殼（像一條胖胖的魚）
+    add(shell().scale(0.95, 0.55, 1.02), WHITE, 0, 0.78, 0);   // 下面一圈霧白
+    add(new THREE.SphereGeometry(0.62, 22, 14, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.98, 0.82, 1.2), L('#1f4f63', { transparent: true, opacity: 0.7, roughness: 0.08, metalness: 0.3 }), 0, 1.12, 0.1);   // 上面一個透明的大玻璃罩，看得到裡面坐的人
+    add(new THREE.ConeGeometry(0.28, 0.5, 4).scale(0.25, 1, 1).rotateX(-0.5), TEAL, 0, 1.25, -0.95);   // 車尾一片小魚鰭
+    add(new THREE.TorusGeometry(0.67, 0.04, 6, 30, Math.PI).rotateY(Math.PI / 2).scale(1, 0.72, 1), ORG, 0, 0.9, -0.35);   // 一條日落橘的線繞過車身
+    for (const sx of [-0.3, 0.3]) fishEye(sx, 0.92, 1.0, 0.1, 0);   // 兩顆魚眼睛車燈
+    wheel(0.66, 0.3, 0.62, 0.3, 0.16); wheel(-0.66, 0.3, 0.62, 0.3, 0.16); wheel(0, 0.3, -0.85, 0.3, 0.18);
+    for (const sx of [-0.66, 0.66]) add(new THREE.SphereGeometry(0.34, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.5, 0.5, 1), BLUE, sx, 0.5, 0.62);   // 前輪擋泥板
+    sticker(0.73, 0.82, -0.45, 0.34, Math.PI / 2); sticker(-0.73, 0.82, -0.45, 0.34, -Math.PI / 2); sticker(0, 1.05, -1.05, 0.28, Math.PI);
+    flag(0.3, 1.2, -0.75);
+    g.userData.seats = [{ x: 0, y: 0.62, z: 0.25 }, { x: -0.28, y: 0.62, z: -0.4 }, { x: 0.28, y: 0.62, z: -0.4 }]; }
+  return g; }
+function rideFlagTick(g, t){ const f = g && g.userData.flag; if (f){ f.rotation.y = Math.sin(t * 1.9) * 0.45 + Math.sin(t * 4.7) * 0.1; f.rotation.x = Math.sin(t * 2.6) * 0.12; } }
 /* ===== v954 新主島的新地圖（作者 11/27：「地圖能參考他們，但不要抄襲」→ 選了明亮扁平那一張）=====
    全螢幕、可以拖、兩隻手指放大縮小。上面的東西：好釣點（小魚圓章，水紋往外擴）、店和板子（白色膠囊牌）、村民（橘色名字章，跟著人走）、車站和跑動的小火車、你自己（紅色箭頭）。
    字不會疊：重要的先放（你 → 村民 → 釣點 → 店 → 地名），被擋住就換個方向擺（拉一條細線指回去），再擠只留圖示，還是擠就跟旁邊的合成「×2」（點了列出來）。
