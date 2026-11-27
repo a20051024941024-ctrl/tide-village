@@ -7262,7 +7262,15 @@ function nearChair(){
   for (const c of allChairs()){ const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z) - (c.reach ? c.reach - 1.1 : 0); if (d < bd && !customers.some(k => k.st === c && k.state !== 'out') && ![...peers.values()].some(p => p.fisher.sitting && Math.hypot(p.target.x - c.x, p.target.z - c.z) < 0.3)){ bd = d; best = c; } }
   return best;
 }
-function sitDown(c){ if (F.held && c && c.gear) fkUnhold(); else if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
+function sitDown(c){ if (F.held && c && c.gear) fkUnhold(); else if (F.phase !== 'idle') return; mySeat = c; me.aspd = 0; me.sitting = true; me.pos.x = seatX(c); me.pos.z = seatZ(c); me.baseY = c.y; if (c.nook){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.5; cam.pitch = 0.4; cam.dist = 5; toast('坐著也能釣魚：按「拋竿」，按「跳」站起來'); } if (c.shrimp){ me.rot = c.face; cam.yaw = c.face + Math.PI + 0.6; cam.pitch = 0.55; cam.dist = 3.2; } if (c.watch){ me.rot = c.face; cam.yaw = c.face + Math.PI; WatchCam.y0 = cam.yaw; WatchCam.p0 = cam.pitch; if (!LS.get('tide.hintWatch', 0)){ LS.set('tide.hintWatch', 1); toast('坐著抬頭看大看板；拖畫面可以左右看，搖桿一動就站起來'); } } pushPresence(true); }   /* 釣蝦場：坐下後鏡頭從背後看著池子 */
+/* v919 坐在大看板前面的長椅（座位有 watch）：鏡頭移到身後低低的地方、抬頭看螢幕，旁邊是一起看的人——像坐著看煙火。
+   拖畫面可以左右繞一點、上下調一點；站起來就回到平常的鏡頭 */
+const WatchCam = { y0: 0, p0: 0, pos: new THREE.Vector3(), look: new THREE.Vector3() };
+function watchCam(dt){ const c = mySeat; if (!c || !c.watch || Photo.on) return false; const W = c.watch, dx = W.x - c.x, dz = W.z - c.z, L = Math.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L;
+  let oy = cam.yaw - WatchCam.y0; oy = clamp(Math.atan2(Math.sin(oy), Math.cos(oy)), -0.7, 0.7); const op = clamp(cam.pitch - WatchCam.p0, -0.3, 0.3), co = Math.cos(oy), so = Math.sin(oy), bx = -(ux * co + uz * so), bz = -(uz * co - ux * so), D = 3.4;   /* 排跟排之間 4.5 公尺：鏡頭在自己後面 3.4 公尺、比坐著的頭高，才不會塞在後面那個人的頭裡 */
+  /* 往上看多少：螢幕最上面剛好貼著畫面上緣。坐越後面看得越平，前面幾排的人的頭就會出現在畫面下面 */
+  const camY = c.y + 1.75 + op * 4, p = WatchCam.pos.set(c.x + bx * D, camY, c.z + bz * D), half = camera.fov * Math.PI / 360, topA = Math.atan2(W.y + (W.h || 11) / 2 + 3.0 - camY, L + D), l = WatchCam.look.set(W.x, camY + Math.tan(topA - half + 0.05) * (L + D), W.z), e = 1 - Math.exp(-4 * dt);
+  camera.position.lerp(p, e); camLook.lerp(l, e); camera.lookAt(camLook); return true; }
 function standUp(){ if (!mySeat) return; if (mySeat.furnLie || mySeat.bed){ me.emote = null; myEmote = null; } if (fkHoldOk(mySeat)) fkHold(); else if (F.phase !== 'idle' && F.phase !== 'result') cancelFishing(); const c = mySeat; mySeat = null; me.sitting = false; { const F2 = chairFront(c); me.pos.x = F2[0]; me.pos.z = F2[1]; } if (c.ret){ me.pos.x = c.ret[0]; me.pos.z = c.ret[1]; }   /* v618 釣魚裝備的椅子：站起來回到岸上（釣台在水上） */ Jump.gy = groundHeight(me.pos.x, me.pos.z); pushPresence(true); }
 /* ---- 跳躍 ---- */
 const Jump = { vy:0, air:0, gy:0, land:0 };
@@ -7442,7 +7450,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (FB.on && FB.top && House.on && furnCam(dt)) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (FB.on && FB.top && House.on && furnCam(dt)) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (watchCam(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 /* v608 作者：「很多地方其實都會被樹擋視野，就算換了方向還是會被房子擋」→ 擋在鏡頭和你中間的樹、房子、牆變半透明（像很多第三人稱遊戲）。
@@ -18173,7 +18181,10 @@ function bbCardTex(it){ const c = document.createElement('canvas'); c.width = 12
   if (it.soon){ x.font = 'bold 30px sans-serif'; x.fillStyle = '#ffd34a'; x.fillText('✨ ' + i18nT('即將推出'), 320, 318); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
 function bbCapDraw(){ const c = BB.capCv, x = c.getContext('2d'), it = BB_LIST[BB.i]; x.setTransform(2, 0, 0, 2, 0, 0); x.fillStyle = '#10161e'; x.fillRect(0, 0, 640, 64); x.fillStyle = '#ffd34a'; x.font = 'bold 30px sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText('📺', 14, 33);
-  x.fillStyle = '#ffffff'; x.font = 'bold 32px sans-serif'; x.fillText(it.ic + ' ' + i18nT(it.t), 64, 33, 520); for (let k = 0; k < BB_LIST.length; k++){ x.fillStyle = k === BB.i ? '#ffd34a' : '#3d4a5a'; x.fillRect(640 - 14 - (BB_LIST.length - k) * 9, 54, 6, 6); } BB.cap.material.map.needsUpdate = true; }
+  x.fillStyle = '#ffffff'; x.font = 'bold 32px sans-serif'; x.fillText(it.ic + ' ' + i18nT(it.t), 64, 33, 520); for (let k = 0; k < BB_LIST.length; k++){ x.fillStyle = k === BB.i ? '#ffd34a' : '#3d4a5a'; x.fillRect(640 - 14 - (BB_LIST.length - k) * 9, 54, 6, 6); } BB.capTex.needsUpdate = true; }
+/* v919 新主島的高看板（world2）播同一份節目：字幕條共用一張貼圖，換畫面時兩面螢幕一起換 */
+function bbCapInit(){ if (BB.capTex) return; BB.capCv = document.createElement('canvas'); BB.capCv.width = 1280; BB.capCv.height = 128; BB.capTex = new THREE.CanvasTexture(BB.capCv); BB.capTex.colorSpace = THREE.SRGBColorSpace; }
+function bbMap(t){ if (BB.scr){ BB.scr.material.map = t; BB.scr.material.needsUpdate = true; } const w = W2 && W2.bb; if (w && w.live){ w.scr.material.map = t; w.scr.material.needsUpdate = true; } }
 function bbBuild(){ if (BB.g) return; const P = window.__bbAt || BB_AT, a = P.a * Math.PI / 180, x = P.cx + Math.cos(a) * P.R, z = P.cz + Math.sin(a) * P.R, r = Math.atan2(P.cx - x, P.cz - z) + (P.turn || 0);
   const g = BB.g = new THREE.Group(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; g.userData.keep = true; scene.add(g);
   /* v902 作者：「放在那裡不合適」→ 不放在釣具店屋頂，改成廣場邊自己一座：兩根柱子撐著的大螢幕，下面可以走過去 */
@@ -18183,22 +18194,23 @@ function bbBuild(){ if (BB.g) return; const P = window.__bbAt || BB_AT, a = P.a 
   g.add(box([W * 0.7, 0.18, 0.5], '#3a3f47', [0, y0 + H / 2 + 0.3, cz - 0.1]));
   try { colliders.push({ t:'c', x: x + Math.cos(r) * W * 0.32, z: z - Math.sin(r) * W * 0.32, r: 0.4 }, { t:'c', x: x - Math.cos(r) * W * 0.32, z: z + Math.sin(r) * W * 0.32, r: 0.4 }); } catch(e){}
   const scr = BB.scr = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false })); scr.position.set(0, y0, cz); g.add(scr);
-  BB.capCv = document.createElement('canvas'); BB.capCv.width = 1280; BB.capCv.height = 128; const ct = new THREE.CanvasTexture(BB.capCv); ct.colorSpace = THREE.SRGBColorSpace;
+  bbCapInit(); const ct = BB.capTex;
   const cap = BB.cap = new THREE.Mesh(new THREE.PlaneGeometry(W, W * 0.1), new THREE.MeshBasicMaterial({ map: ct, toneMapped: false })); cap.position.set(0, y0 - H / 2 - W * 0.05 - 0.02, cz + 0.001); g.add(cap);
   const glow = new THREE.PointLight('#8fd3ff', 0, 14); glow.position.set(0, y0, cz + 1.8); g.add(glow); BB.glow = glow;
   g.traverse(o => { o.userData.keep = true; }); bbShow(0); }
 function bbShow(i){ BB.i = (i + BB_LIST.length) % BB_LIST.length; const it = BB_LIST[BB.i]; BB.t = 0; if (BB.capCv) bbCapDraw();
-  if (BB.card){ BB.card.dispose(); BB.card = null; } if (it.soon || !it.k || !BB.on){ BB.card = bbCardTex(it); if (BB.scr){ BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; } return; }
-  if (!BB.blobs[it.k] && BB.scr){ BB.card = bbCardTex(it); BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; }   /* 影片還在下載：先放這段的字卡，不會字幕跟畫面對不上 */
-  bbBlob(it.k).then(u => { if (BB_LIST[BB.i] !== it) return; if (!u){ BB.card = bbCardTex(it); BB.scr.material.map = BB.card; BB.scr.material.needsUpdate = true; return; }
+  if (BB.card){ BB.card.dispose(); BB.card = null; } if (it.soon || !it.k || !BB.on){ BB.card = bbCardTex(it); bbMap(BB.card); return; }
+  if (!BB.blobs[it.k]){ BB.card = bbCardTex(it); bbMap(BB.card); }   /* 影片還在下載：先放這段的字卡，不會字幕跟畫面對不上 */
+  bbBlob(it.k).then(u => { if (BB_LIST[BB.i] !== it) return; if (!u){ BB.card = bbCardTex(it); bbMap(BB.card); return; }
     if (!BB.vid){ const v = BB.vid = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.crossOrigin = 'anonymous'; v.addEventListener('ended', () => bbShow(BB.i + 1)); BB.tex = new THREE.VideoTexture(v); BB.tex.colorSpace = THREE.SRGBColorSpace; BB.tex.minFilter = THREE.LinearFilter; BB.tex.generateMipmaps = false; try { BB.tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); } catch(e){} }
-    BB.vid.src = u; BB.vid.currentTime = 0; const pr = BB.vid.play(); if (pr && pr.catch) pr.catch(() => {}); BB.scr.material.map = BB.tex; BB.scr.material.needsUpdate = true; }); }
+    BB.vid.src = u; BB.vid.currentTime = 0; const pr = BB.vid.play(); if (pr && pr.catch) pr.catch(() => {}); bbMap(BB.tex); }); }
 function bbTick(dt){ if (/nobb/.test(location.hash)) return; if (onIsle || Dive.on || House.on){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
-  const d = Math.hypot(me.pos.x - BB_AT.cx, me.pos.z - BB_AT.cz); if (d > 75){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
-  if (!BB.g){ bbBuild(); if (!BB.g) return; }
+  const w2 = W2 && W2.bb, d = Math.hypot(me.pos.x - BB_AT.cx, me.pos.z - BB_AT.cz), d2 = w2 ? Math.hypot(me.pos.x - w2.x, me.pos.z - w2.z) : 1e9; if (d > 75 && d2 > 120){ if (BB.on && BB.vid) BB.vid.pause(); BB.on = false; return; }
+  if (d <= 75 && !BB.g){ bbBuild(); if (!BB.g) return; }
+  if (w2 && d2 <= 120 && !w2.live){ bbCapInit(); w2.live = true; w2.cap.material.map = BB.capTex; w2.cap.material.needsUpdate = true; BB.on = false; }   /* 第一次走近新主島的高看板：把節目接上去（下一行會從現在這一段重新播） */
   if (!BB.on){ BB.on = true; bbShow(BB.i); } BB.t += dt; const it = BB_LIST[BB.i]; if ((it.soon || !it.k) && BB.t > 4.5) bbShow(BB.i + 1); else if (!it.soon && BB.t > 14 && (!BB.vid || BB.vid.paused)) bbShow(BB.i + 1);
   if (BB.glow) BB.glow.intensity = DayNight.lamp ? 0.6 : 0; }
-function nearBB(){ if (onIsle || House.on || myBoat || !BB.g) return false; const g = BB.g, fx = g.position.x + Math.sin(g.rotation.y) * 3, fz = g.position.z + Math.cos(g.rotation.y) * 3; return Math.hypot(me.pos.x - fx, me.pos.z - fz) < 2.6; }
+function nearBB(){ if (onIsle || House.on || myBoat) return false; { const w = W2 && W2.bb; if (w && w.live && Math.hypot(me.pos.x - w.x, me.pos.z - w.z - 6) < 7) return true; }   /* 新主島：站在高看板下面 */ if (!BB.g) return false; const g = BB.g, fx = g.position.x + Math.sin(g.rotation.y) * 3, fz = g.position.z + Math.cos(g.rotation.y) * 3; return Math.hypot(me.pos.x - fx, me.pos.z - fz) < 2.6; }
 /* 全螢幕看大看板（左右換段） */
 function bbOpen(start){ let i = start == null ? BB.i : start; const ov = document.createElement('div'); ov.className = 'bbview'; document.body.appendChild(ov);
   const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.autoplay = true; const card = el('div', 'bbcard'), cap = el('div', 'bbcap'), dots = el('div', 'bbdots');
@@ -20126,7 +20138,7 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){} try { if (!isBlockedPeer(pp.peer)) syncPeerSecret(pp.peer, pr.sc || [], pr.n); } catch(e){}
-  if (pos){ p.target.set(clamp(+pos[0]||0, -400, 400), 0, clamp(+pos[1]||0, -400, 400));   /* v619 撞球館在 z 199.5～212.5，以前別人的位置被切在 200 → 在你畫面上全部擠在北邊牆、果汁吧那裡，進門也不是從門口出現，站在球桌旁也算「太遠」不能邀請 */   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, 8); }
+  if (pos){ if (W2 && W2.near(+pos[0]||0, +pos[1]||0)) p.target.set(+pos[0], 0, +pos[1]);   /* v919 新主島在 z 1500 那一帶：位置不要被切回 ±400（不然在那裡看不到別人，沒辦法一起看大看板） */ else p.target.set(clamp(+pos[0]||0, -400, 400), 0, clamp(+pos[1]||0, -400, 400));   /* v619 撞球館在 z 199.5～212.5，以前別人的位置被切在 200 → 在你畫面上全部擠在北邊牆、果汁吧那裡，進門也不是從門口出現，站在球桌旁也算「太遠」不能邀請 */   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, W2 ? 16 : 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
@@ -21616,8 +21628,9 @@ function renderOrders(body){
 }
 function w2SetWaterMask(tex, cx, cz, w, h){ const U = waterSurface.material.uniforms; if (tex){ U.uMask.value = tex; U.uMC.value.set(cx, cz); U.uMS.value.set(w, h); } else { U.uMask.value = waterSurface.userData.mask0; U.uMC.value.set(0, 0); U.uMS.value.set(150, 150); waterSurface.position.x = 0; waterSurface.position.z = 0; } }
 function w2Boot(){ if (W2 || W2ing) return; W2ing = true;
-  import('./world2.js').then(m => { W2 = m.init({ THREE, scene, camera, me, colliders, mat, Quality, DayNight, waterSurface, mergeGeometries, setWaterMask: w2SetWaterMask });
-    const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; w2Nav(); toast('🚧 新主島預覽：還在施工，只有帶 #map2 的網址看得到'); }).catch(e => { console.warn('world2', e); W2ing = false; toast('新主島預覽載入失敗'); }); }
+  import('./world2.js').then(m => { W2 = m.init({ THREE, scene, camera, me, colliders, mat, Quality, DayNight, waterSurface, mergeGeometries, setWaterMask: w2SetWaterMask,
+      tw: ART2 ? { house: twHouse, cottage: twCottage, office: twOffice, museum: twMuseum, market: twMarket, merge: twMerge, boat: () => twBoatGeo().clone() } : null, art2Add: ART2 ? art2Add : null });   /* v919 村子現有的街屋做法和模型也給新主島用 */
+    const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; w2Nav(); for (const st of W2.seats || []) CHAIRS.push(Object.assign({ watch: W2.bb }, st));   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ toast('🚧 新主島預覽：還在施工，只有帶 #map2 的網址看得到'); }).catch(e => { console.warn('world2', e); W2ing = false; toast('新主島預覽載入失敗'); }); }
 /* 預覽用：上面一排「直接過去」的按鈕。島很大，用走的要好幾分鐘，作者要能一區一區點過去看（只有 #map2 才有，正式換島時拿掉） */
 function w2Nav(){ if (!W2 || !W2.spots || document.getElementById('w2nav')) return; const box = document.createElement('div'); box.id = 'w2nav';
   box.style.cssText = 'position:fixed;left:var(--gl);top:calc(var(--gt) + 58px);z-index:40;display:flex;gap:6px;align-items:center;max-width:max(210px,calc(100vw - var(--gl) - 262px));overflow-x:auto;padding:6px 10px;background:rgba(24,51,74,.8);border-radius:14px;-webkit-overflow-scrolling:touch;scrollbar-width:none';   /* 右邊留給地圖、背包、手機和天氣那一塊 */
