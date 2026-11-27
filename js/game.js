@@ -7573,7 +7573,7 @@ function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bi
 
 /* v341 玩家說不要自動走、也不要箭頭：大按鈕只用一句話說最近的釣點在哪個方向、多遠（AW 自動走已經停用） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
-function goFishing(){ if (W2 && W2.near(me.pos.x, me.pos.z)){ const s = W2.shore(me.pos.x, me.pos.z, (x, z) => !blocked(x, z, 0.45)); if (!s){ toast('附近找不到可以釣魚的水邊'); return; } navTo({ sea:'海邊', harbor:'碼頭', river:'河邊', lake:'湖邊', creek:'森林的溪邊', mangrove:'紅樹林' }[s.id] || '水邊', s.x, s.z); return; }   /* v922 新主島：發光的固定釣點還在舊島（1400 多公尺外），在這裡改成帶你走到最近的水邊，面向水就能拋竿 */ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
+function goFishing(){ if (W2 && W2.near(me.pos.x, me.pos.z)){ const s = W2.shore(me.pos.x, me.pos.z, (x, z) => !blocked(x, z, 0.45)); if (!s){ toast('附近找不到可以釣魚的水邊'); return; } navTo({ sea:'海邊', harbor:'碼頭', river:'河邊', lake:'湖邊', creek:'森林的溪邊', mangrove:'紅樹林' }[s.id] || '水邊', s.x, s.z, 1.2, () => F.phase === 'idle' && !!shoreSpot()); return; }   /* 走到可以拋竿的地方就算到了（按鈕會變成「拋竿」） */   /* v922 新主島：發光的固定釣點還在舊島（1400 多公尺外），在這裡改成帶你走到最近的水邊，面向水就能拋竿 */ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
 function awStop(msg){ if (!AW.on) return; AW.on = false; joy.x = joy.z = 0; if (msg) toast(msg); }
 function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ awStop(); return; } if (F.phase !== 'idle' || uiBlocked || Dive.on || onIsle){ awStop(); return; } const dx = AW.x - me.pos.x, dz = AW.z - me.pos.z, d = Math.hypot(dx, dz), t = now();
   if (d < 1.4){ awStop(`🎣 到了「${esc(AW.label)}」，按「拋竿」開始釣魚`); return; }
@@ -19731,7 +19731,7 @@ const GUIDE = [
 const Guide = { i: null, el: null, beacon: null, fin: null, hide: false, bye: 0, pop: 0 }, GUIDE_BYE = { t:'教完了', h:'行了，沒什麼好教的了。海很大，自己去。', at:() => null, bye:true };
 /* v337 玩家找不到阿海、理髮店：地圖可以選「帶我去」，左上角出現箭頭和距離、地上有光柱，走到了自動結束 */
 const Nav = { t: null };
-function navTo(label, x, z){ Nav.t = { label, x, z }; if (!$('#sheet').hidden) closeSheet(); if (Guide.el) Guide.el._k = ''; toast(`往「${label}」，跟著箭頭走`); }
+function navTo(label, x, z, r, done){ Nav.t = { label, x, z, r, done };   /* r：離多近才算到了（沒給就是 3.4 公尺）；done()：回傳 true 也算到了 */ if (!$('#sheet').hidden) closeSheet(); if (Guide.el) Guide.el._k = ''; toast(`往「${label}」，跟著箭頭走`); }
 function navList(){ const L = [], byName = p => { const n = npcs.find(n => n.shopNpc === p && !n.wHide); return n && n.pos ? [n.pos.x, n.pos.z] : null; };
   L.push(['🚤', '阿海（坐船、潛水、去別的島）', FERRY.at]);
   const ICON = { orders:'📋', aquarium:'🐠', chat:'💬', tackle:'🎣', shop:'🏪', cook:'🍲', museum:'🏛️', tailor:'👗', mu:'🪚', market:'🐟', salon:'💇', cai:'🎨', fu:'🦐' };
@@ -19748,7 +19748,7 @@ function guideInit(){ let v = LS.get('tide.guide2', null);
   Guide.i = v; Guide.hide = !!LS.get('tide.guideHide', false); }
 function guideTick(){ if (Guide.i == null) guideInit(); if (onIsle && onIsle.owner === myIdOrMe()) guideMark('isle'); if (Dive.on) guideMark('dive');
   fingerTip();
-  if (Nav.t){ const d = Math.hypot(Nav.t.x - me.pos.x, Nav.t.z - me.pos.z); if (d < 3.4){ const lab = Nav.t.label; Nav.t = null; if (Guide.el) Guide.el._k = ''; flash(`${lab}到了`, 1.8); try { SFX.catch(); } catch(e){} }
+  if (Nav.t){ const d = Math.hypot(Nav.t.x - me.pos.x, Nav.t.z - me.pos.z); if (d < (Nav.t.r || 3.4) || (Nav.t.done && Nav.t.done())){ const lab = Nav.t.label; Nav.t = null; if (Guide.el) Guide.el._k = ''; flash(`${lab}到了`, 1.8); try { SFX.catch(); } catch(e){} }
     else { const T = Nav.t; return guideShow({ nav: true, t: '往' + T.label, h: '跟著箭頭和地上的光柱走。', at: () => new THREE.Vector3(T.x, 0, T.z) }); } }
   if (Guide.i === 'done'){ guideShow(Guide.bye > now() ? GUIDE_BYE : null); document.body.classList.toggle('guideOn', !!(Guide.el && !Guide.el.hidden)); return; }
   while (Guide.i !== 'done' && GUIDE[Guide.i].ok()){ Guide.i++; SFX.catch(); if (Guide.i >= GUIDE.length){ Guide.i = 'done'; LS.set('tide.guide2', 'done'); LS.set('tide.guide', 'done'); Guide.bye = now() + 5; Guide.pop = now(); guideReward(); setTimeout(guideFree, 5200); break; }   /* 最後一句也是老港在卡片裡講，不用大字 */ LS.set('tide.guide2', Guide.i); Guide.pop = now(); }   /* v752 作者：「遊戲全面不要有ai味…然後新手教學」→ 不跳「完成！下一個」，老港直接講下一句，卡片跳一下 */

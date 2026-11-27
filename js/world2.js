@@ -393,7 +393,9 @@ export function init(A){
     /* v922 釣魚用。water：這一點可不可以下竿（水夠深；棧橋、木棧道、橋的底下不算；格子外面全是外海）
        spot：這片水算哪一個釣點——山上的湖、森林裡的溪（橋的上游）、平地的河、紅樹林、岸邊的海、離岸 6 公尺以上的外海（碼頭走到底）
        tinfo：跟舊島的 terrainInfo 一樣的格式（高度、是不是水、哪一種水 1 河 2 溪 3 湖），水裡的魚影、魚跳出水面要用 */
-    water: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return true; return samp(HG, lx, lz) < WL - 0.2 && !deck(lx, lz) && !onBoard(lx, lz); },
+    water: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return true; const h = samp(HG, lx, lz); if (h >= WL - 0.2 || deck(lx, lz) || onBoard(lx, lz)) return false;
+      /* 退潮：海水退掉的那一圈（最多離岸 3 公尺）畫面上是露出來的濕沙，不能算水——跟水面著色器同一條算式（海才退，河、湖、紅樹林不退） */
+      const U = waterSurface.material.uniforms.uTideD, td = U ? U.value : 0; return !(td > 0.01 && -h < td + 0.09 && samp(sdLand, lx, lz) <= 0 && samp(sdMang, lx, lz) < -3.2); },
     spot: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return 'harbor'; if (samp(sdLake, lx, lz) > -1.5) return 'lake'; if (samp(sdMang, lx, lz) > -2.5) return 'mangrove';
       if (samp(sdMain, lx, lz) > 0 && samp(sdWat, lx, lz) > -2) return samp(sdFor, lx, lz) > 3 ? 'creek' : 'river'; return samp(sdLand, lx, lz) < -6 ? 'harbor' : 'sea'; },
     /* 最近可以站著釣魚的水邊（「找釣點」按鈕帶路用）：從腳邊一圈一圈往外找，站的地方要在主島或棧橋上、ok() 說沒被東西擋住，而且往某一邊 1.6 和 3.1 公尺都是水 */
