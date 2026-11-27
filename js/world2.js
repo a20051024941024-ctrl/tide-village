@@ -361,13 +361,7 @@ export function init(A){
       for (const sd2 of side) for (let i = 1; i < sd2.length; i++){ const a = sd2[i - 1], b = sd2[i]; if (!a || !b) continue; const dx = b[0] - a[0], dz = b[2] - a[2]; B(parts, '#8a6038', Math.hypot(dx, dz) + 0.05, 0.08, 0.08, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 0.82, (a[2] + b[2]) / 2, Math.atan2(-dz, dx)); } }
     /* 村子的模型（models/art2）：石燈籠、攤子、推車、木桶、水井、牌樓、小船、漁網。模型是另外下載的，載好才會出現 */
     const prop = (name, px, py, sc, ry, col) => { const [x, z] = P(px, py); if (name === 'stand') stands.push({ x, z, ry: ry || 0 }); if (!A.art2Add) return; const g = new THREE.Group(); g.position.set(x, Math.max(0.2, hAt(x, z)), z); g.rotation.y = ry || 0; town.add(g); A.art2Add(g, name, { s: sc }); if (col) colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: col }); RSV.push([x, z, 1.6]); };
-    for (const n of Object.values(NODES)){ const b = edgeP(n, PL), dx = b[0] - PL[0], dy = b[1] - PL[1], l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l; for (const k of [118, 168]) for (const sd2 of [-1, 1]) prop('lamp', PL[0] + ux * k - uy * sd2 * 19, PL[1] + uy * k + ux * sd2 * 19, 1.7, 0, 0.4); }   /* 每條大道兩旁的石燈籠 */
-    for (const py of [600, 664, 728, 792]) for (const sd2 of [-1, 1]) prop('lamp', 981 + (py - 600) * 0.06 + sd2 * 19, py, 1.7, 0, 0.4);                                              /* 商店街 */
-    for (const i of [0, 7, 14, 21]){ const q = EVT[i % EVT.length]; prop('lamp', q[0], q[1], 1.7, 0, 0.4); }                                                                           /* 活動場地四個角 */
-    prop('arch_2', 970, 588, 2.1, 0);                                                                                                                                              /* 商店街入口的牌樓 */
-    for (const [px, py, ry] of [[1158, 592, 0.25], [1193, 584, 0.05], [1228, 584, -0.05], [1262, 593, -0.25], [884, 797, 0.2], [1066, 802, -0.15], [1122, 786, -0.3]]) prop('stand', px, py, 1.5, ry, 1.2);   /* 市場前面、港邊的攤子 */
-    prop('cart', 1042, 818, 1.3, 0.4, 0.9); prop('barrel_1', 930, 822, 1.2, 0, 0.5); prop('barrel_2', 938, 825, 1.2, 1, 0.5); prop('barrel_1', 1050, 813, 1.2, 0.6, 0.5); prop('pot_1', 1140, 612, 1.3, 0, 0.4); prop('pot_1', 1280, 612, 1.3, 0, 0.4);
-    prop('well', 706, 628, 1.4, 0, 1.1); prop('f_net', 846, 792, 1.5, 0.25, 0.6); prop('f_net', 1100, 790, 1.5, -0.3, 0.6); prop('f_boat', 1410, 752, 1.5, 0.9, 1.0); prop('f_boat3', 1455, 772, 1.5, -0.5, 1.0);
+    /* v936 作者：「裡面有很多我們很早就不要的模型，那些我都不要」→ 舊素材包（WizP）的石燈籠、牌樓、木攤子、木推車、木桶、甕、水井、漁網架、木船全部拿掉（村子在 v464、v480 就撤掉了）。prop() 留著備用 */
     /* v926 村子戶外的人和板子在新主島的位置（作者 11/27：把村子戶外的人和攤子搬過來）。
        這裡只決定「站哪裡、面朝哪」（世界座標；face 0＝朝南、π/2＝朝東）；人和板子本身還是 game.js 原本那一份——你人在新主島，game.js 就把他們放到這裡（見 game.js 的 w2Site）。
        位置附近不長樹（RSV）。 */
