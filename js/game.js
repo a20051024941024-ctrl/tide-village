@@ -21581,19 +21581,45 @@ function renderStory(body){ body.appendChild(el('div', 'shophead')).innerHTML = 
     li.appendChild(d); ul.appendChild(li); }
   body.appendChild(ul); }
 const STORY_HI = { chief:'今天也來釣魚啊？村子有你真熱鬧！', ling:'嗨～今天的衣服很好看喔！', mu:'來來，坐一下，這張椅子剛做好的', fu:'今天有釣到什麼好魚嗎？', gang:'海很平靜，是釣魚的好日子' };
-function renderEvents(body){ const ms = bossNow(), s = Math.floor(ms / 1000), m = evtMig(ms), b = evtBounty(ms), st = Evt.st;
-  body.appendChild(el('p', 'sub', '村子裡每天都有活動，時間都是台灣時間。金幣由伺服器發，每次活動一個人拿一次。'));
-  const ul = el('ul', 'shoplist'), item = (ic, title, sub, on) => { const li = el('li', on ? 'on' : ''); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', title)); d.appendChild(el('div', 'sub2', sub)); li.appendChild(d); ul.appendChild(li); };
-  { const nx = m.active ? m : evtMig((m.st + 10800 + 60) * 1000), n = st && st.mig && st.mig.id === m.id ? st.mig.n : 0, done = st && st.mig && st.mig.id === m.id && st.mig.done;
-    item('🐟', '魚群洄游' + (m.active ? '（進行中）' : ''), m.active ? `${(SPOT_BY_ID[m.spot] || {}).label}：一大群${(FISH_BY_ID[m.fish] || {}).name}（到 ${evtHM(m.en)}）。在那裡釣到 4 條送 🪙200 ── 你：${done ? '已完成 ✅' : Math.min(5, n) + '/5'}` : `下一次 ${evtHM(nx.st)}：${(SPOT_BY_ID[nx.spot] || {}).label}的${(FISH_BY_ID[nx.fish] || {}).name}。每 3 小時一次，每次 25 分鐘。`, m.active); }
-  { const done = st && st.bounty && st.bounty.id === b.id && st.bounty.done; item('🎯', '懸賞魚', `${(FISH_BY_ID[b.fish] || {}).name} ${b.minw} 公斤以上（到 ${evtHM(b.en)}）送 🪙300 ── ${done ? '你已經領了 ✅' : '還沒達成'}`, !done); }
-  rumorItem(item); if (!Rumor.st) rumorLoad(true).then(() => { if (curTab === 'events' && Rumor.st) renderTab(); });
-  item('🌠', '流星雨夜釣' + (evtMeteor(ms) ? '（進行中）' : ''), '每天 23:00～23:30，所有釣點傳說魚比較好釣，天上一直有流星。', evtMeteor(ms));
-  item('🏆', '釣魚大賽', '每天 12:00、19:00、21:00，各 10 分鐘，比總重量，前三名有獎。');
-  item('🐋', '全服大魚', '每天 20:30（週六日 14:00 也有），港口外海大家一起拉。');
-  item('🐳', '神秘島藍鯨', '每小時浮上來一次，那一分半鐘在神秘島礁岩比較容易釣到藍鯨。');
-  item('🦞', '釣蝦場放生', '每天 12～21 點之間的某個時間，老闆放一隻全服唯一的藍色龍蝦。');
-  body.appendChild(ul); }
+/* v941 作者給的參考：「活動介面看就很舒服而且會知道要幹嘛分的也很清楚」→ 活動頁改成：上面「今天／長期」兩個分頁，左邊一排活動卡片（進行中的有紅點、寫還剩多久／幾點開始），
+   右邊是選到的那個活動：大圖、要做什麼、獎勵一格一格排、「帶我去」。活動本身（時間、獎勵、伺服器）都沒變 */
+function evtNext(ms, list, dur){ const s = Math.floor(ms / 1000), d0 = Math.floor((s + 28800) / 86400) * 86400 - 28800; let best = null;   /* 台灣時間每天固定的幾個時間：現在是不是在進行、下一次幾點 */
+  for (let k = -1; k <= 1; k++) for (const [h, m2, wk] of list){ const st = d0 + k * 86400 + h * 3600 + m2 * 60; if (wk){ const wd = new Date((st + 28800) * 1000).getUTCDay(); if (wd !== 0 && wd !== 6) continue; } if (s >= st && s < st + dur) return { on: true, st, en: st + dur }; if (st > s && (!best || st < best.st)) best = { on: false, st, en: st + dur }; }
+  return best || { on: false, st: s, en: s }; }
+function renderEvents(body){ const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), st = Evt.st, L = [];
+  const fname = f => (FISH_BY_ID[f] || {}).name || '', sname = sp => (SPOT_BY_ID[sp] || {}).label || '';
+  { const nx = m.active ? m : evtMig((m.st + 10800 + 60) * 1000), n = st && st.mig && st.mig.id === m.id ? st.mig.n : 0, done = !!(st && st.mig && st.mig.id === m.id && st.mig.done), sp = SPOT_BY_ID[m.spot];
+    L.push({ id: 'mig', tab: 'day', ic: '🐟', t: '魚群洄游', col: ['#2f89c7', '#7fd3ef'], on: m.active, done, chip: m.active ? `到 ${evtHM(m.en)}` : `${evtHM(nx.st)} 開始`,
+      what: m.active ? `${sname(m.spot)}來了一大群${fname(m.fish)}。在那裡釣到 4 條就有獎勵。` : `下一次 ${evtHM(nx.st)}：${sname(nx.spot)}的${fname(nx.fish)}。每 3 小時一次，每次 25 分鐘。`,
+      prog: m.active ? (done ? '你已經完成了 ✅' : `你：${Math.min(5, n)}/5`) : '', rw: [['🪙', '200']], go: m.active && sp && sp.pos ? ['帶我去' + sname(m.spot), sp.pos.x, sp.pos.z] : null }); }
+  { const done = !!(st && st.bounty && st.bounty.id === b.id && st.bounty.done);
+    L.push({ id: 'bounty', tab: 'day', ic: '🎯', t: '懸賞魚', col: ['#e0663f', '#ffb36b'], on: !done, done, chip: `到 ${evtHM(b.en)}`, what: `釣到 ${b.minw} 公斤以上的${fname(b.fish)}，在哪裡釣都算。每 2 小時換一種魚。`, prog: done ? '你已經領了 ✅' : '還沒達成', rw: [['🪙', '300']] }); }
+  { const R = []; rumorItem((ic, title, sub, on) => R.push({ ic, title, sub, on })); const q = R[0];
+    if (q) L.push({ id: 'rumor', tab: 'day', ic: '🔍', t: '本週傳聞', col: ['#5a4a8c', '#a48be0'], on: !!q.on, done: !q.on, chip: '每週一換', what: q.sub, rw: [['🪙', '500（第一個）'], ['🪙', '150']] });
+    else if (!Rumor.st) rumorLoad(true).then(() => { if (curTab === 'events' && Rumor.st) renderTab(); }); }
+  { const on = evtMeteor(ms), nx = evtNext(ms, [[23, 0]], 1800); L.push({ id: 'meteor', tab: 'day', ic: '🌠', t: '流星雨夜釣', col: ['#1d2b5a', '#5b6fc0'], on, chip: on ? `到 ${evtHM(nx.en)}` : `${evtHM(nx.st)} 開始`, what: '每天 23:00～23:30，所有釣點的傳說魚比較好釣，天上一直有流星。' }); }
+  { const nx = evtNext(ms, [[12, 0], [19, 0], [21, 0]], 600); L.push({ id: 'tny', tab: 'day', ic: '🏆', t: '釣魚大賽', col: ['#c99a2e', '#f6d77a'], on: nx.on, chip: nx.on ? `到 ${evtHM(nx.en)}` : `${evtHM(nx.st)} 開始`, what: '每天 12:00、19:00、21:00，各 10 分鐘，比釣到的總重量，前三名有獎。在哪裡釣都算。', rw: [['🥇', '第 1 名'], ['🥈', '第 2 名'], ['🥉', '第 3 名']] }); }
+  { const nx = evtNext(ms, [[20, 30], [14, 0, 1]], 900), hb = SPOT_BY_ID.harbor; L.push({ id: 'boss', tab: 'day', ic: '🐋', t: '全服大魚', col: ['#16627a', '#4fb3c9'], on: nx.on, chip: nx.on ? '進行中' : `${evtHM(nx.st)} 開始`, what: '每天 20:30（週六日 14:00 也有），港口外海出現一條超大的魚，大家一起拉。', go: hb && hb.pos ? ['帶我去港口外海', hb.pos.x, hb.pos.z] : null }); }
+  L.push({ id: 'whale', tab: 'day', ic: '🐳', t: '神秘島藍鯨', col: ['#2a5f9e', '#79b6f0'], chip: '每小時', what: '每小時浮上來一次，那一分半鐘在神秘島礁岩比較容易釣到藍鯨。坐阿海的船去神秘島。' });
+  L.push({ id: 'lob', tab: 'day', ic: '🦞', t: '釣蝦場放生', col: ['#1f6fb0', '#62a8e8'], chip: '每天一次', what: '每天 12～21 點之間的某個時間，釣蝦場老闆放一隻全服只有一隻的藍色龍蝦。', go: typeof SHRIMP_DOOR !== 'undefined' ? ['帶我去釣蝦場', SHRIMP_DOOR.x, SHRIMP_DOOR.z] : null });
+  { const s2 = Stamp.st; L.push({ id: 'stamp', tab: 'long', ic: '📮', t: '村長的集章卡', col: ['#c0603a', '#f2a66b'], on: !!(Cloud.on && s2 && !s2.today), chip: '每天', what: '每天進來蓋一個章，漏掉一天也不會歸零。蓋滿 28 個送一套限定造型。', panel: d => renderStampPanel(d) }); }
+  L.push({ id: 'quest', tab: 'long', ic: '📅', t: '每日任務', col: ['#3f8f5a', '#8fd39e'], chip: '每天換', what: '村民每天會拜託你幾件小事，做完有金幣和經驗。', open: ['打開今天的任務', 'quest'] });
+  L.push({ id: 'fest', tab: 'long', ic: '🏮', t: '節慶', col: ['#b8323a', '#f07a6a'], chip: '照季節', what: '跟著季節辦的節慶，期間有限定的魚、擺設和獎勵。', open: ['打開節慶', 'fest'] });
+  if (!Evt.tab) Evt.tab = 'day'; const shown = L.filter(e => e.tab === Evt.tab); let sel = shown.find(e => e.id === Evt.sel) || shown.find(e => e.on && !e.done) || shown[0];
+  const wrap = el('div', 'evwrap'), left = el('div', 'evleft'), right = el('div', 'evright'); wrap.append(left, right); body.appendChild(wrap);
+  { const tb = el('div', 'evtabs'); for (const [k, l] of [['day', '今天'], ['long', '長期']]){ const t = el('button', 'evtab' + (Evt.tab === k ? ' on' : ''), l); if (L.some(e => e.tab === k && e.on && !e.done)) t.appendChild(el('i', 'evdot')); t.addEventListener('click', () => { Evt.tab = k; Evt.sel = null; renderTab(); }); tb.appendChild(t); } left.appendChild(tb); }
+  const list = el('div', 'evlist'); left.appendChild(list);
+  for (const e of shown){ const c = el('button', 'evcard' + (e === sel ? ' sel' : '')); c.style.background = `linear-gradient(135deg, ${e.col[0]}, ${e.col[1]})`;
+    c.appendChild(el('span', 'evic', e.ic)); c.appendChild(el('span', 'evt', e.t)); c.appendChild(el('span', 'evchip' + (e.on ? ' on' : ''), (e.on && !e.done && e.id !== 'stamp' ? '進行中・' : '') + e.chip)); if (e.on && !e.done) c.appendChild(el('i', 'evdot'));
+    c.addEventListener('click', () => { Evt.sel = e.id; renderTab(); }); list.appendChild(c); }
+  if (!sel) return;
+  { const bn = el('div', 'evban'); bn.style.background = `linear-gradient(135deg, ${sel.col[0]}, ${sel.col[1]})`; bn.appendChild(el('span', 'evbig', sel.ic)); bn.appendChild(el('div', 'evbt', sel.t)); bn.appendChild(el('span', 'evchip big' + (sel.on ? ' on' : ''), '🕒 ' + sel.chip)); right.appendChild(bn); }
+  right.appendChild(el('p', 'evwhat', sel.what)); if (sel.prog) right.appendChild(el('p', 'evprog', sel.prog));
+  if (sel.rw){ const r = el('div', 'evrw'); for (const [ic, t] of sel.rw){ const c = el('div', 'evrc'); c.appendChild(el('span', 'evri', ic)); c.appendChild(el('span', 'evrt', t)); r.appendChild(c); } right.appendChild(el('div', 'evrh', '獎勵')); right.appendChild(r); }
+  if (sel.panel){ try { sel.panel(right); } catch(e){} if (!Cloud.on) right.appendChild(el('p', 'sub', '要連上線才能蓋章。')); }
+  if (sel.go){ const g = el('button', 'tbtn evgo', '🧭 ' + sel.go[0]); g.addEventListener('click', () => navTo(sel.go[0].replace(/^帶我去/, ''), sel.go[1], sel.go[2])); right.appendChild(g); }
+  if (sel.open){ const g = el('button', 'tbtn evgo', sel.open[0]); g.addEventListener('click', () => { try { ui3Open(sel.open[1]); } catch(e){} openSheet(sel.open[1]); }); right.appendChild(g); }
+  right.appendChild(el('p', 'sub evnote', '時間都是台灣時間。金幣由伺服器發，每次活動一個人拿一次。')); }
 /* ===== v288 兒童安全模式（116）：第一次進遊戲問出生年份，未滿 13 歲就開 =====
    聊天只能用下面的快速句子、看不到別人自己打的字；不能在留言板留言；名字從「形容詞＋動物」選；好友只能用好友代碼加；深海驚嚇預設關。 */
 const KID_Q = ['你好！', '一起釣魚吧！', '好厲害！', '謝謝你～', '我釣到了！', '等等我！', '要去哪裡？', '掰掰～', '加油！', '哈哈哈', '好可愛！', '晚安～'];
@@ -23060,7 +23086,7 @@ function renderTab0(){
         ["送魚一天 10 條，金幣不能送。帳號要滿 3 天或綁 Email，而且釣過 30 條。", "私訊一則最多 120 字，伺服器留 30 天。", "排位賽跟同一個人一天只有前 3 局算。每個月一季，換季星星留一半。每天第一場排位勝利送亮光餌 5 個。", "釣友隊要釣過 20 條才能建。每週目標：合力釣 120 條乘人數，湊齊 15 加 5 乘人數種。達成後釣過 5 條的隊員各領 600 金幣。", "地圖記號 24 小時後消失，同時最多 3 個，一天最多 10 個，要釣過 5 條。", "留言一則最多 60 字，一天最多 5 則，要釣過 5 條。", "附近聊天是 28 公尺內。", "鬼抓人 2 個人以上，3 分鐘後還是鬼的人輸。"]],
       ["等級、成就", "social", ["釣魚、放流、拍水下照片都有經驗。點左上角的等級看進度。", "每升一級有金幣。", "成就有 " + (ACH.length) + " 個。有些會給稱號，選一個掛在名字上。", "點左上角的等級打開「成就」，最上面可以改名字。"],
         ["經驗：常見魚 10、稀有魚 40、傳說魚 250、放流 5、水下照片每種 30。", "升級獎金是等級乘 50。", "在同一個釣點放流、撿垃圾、釣魚，那裡會越來越熟，魚咬得比較快。"]],
-      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "字太小：設定的「字體大小」選大或特大。", "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
+      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "活動：手機的「🎪 活動」，分「今天」和「長期」，點左邊的卡片看要做什麼、有什麼獎勵。", "字太小：設定的「字體大小」選大或特大。", "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
         ["未滿 13 歲會自動開兒童安全模式，不能自己關：聊天只能用固定句子，名字從名單裡選，好友只能用代碼加。", "訪客帳號玩到第 3 天或 10 級會提醒綁 Email。", "聊天不會存在伺服器，只有被檢舉的內容保存 30 天。", "兌換碼可以拿 300 金幣、5 愛海點數和一面版畫小旗，同一組碼每人只能用一次。", "有問題可以寫信到 chaoxi.fishing@gmail.com。"]]
     ];
     HELP2.forEach(([title, c, lines, nums], hi) => { if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (hi === 0 || cur !== 'all') d.open = true; d._open0 = d.open; d.appendChild(el('summary', '', title));
@@ -24470,6 +24496,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u941', d:'11/27', items:[['🎪','活動頁換新：上面分「今天」「長期」，左邊一排活動卡片寫著幾點開始、還剩多久，正在進行的有紅點；點一張，右邊看要做什麼、有什麼獎勵，還能直接帶路', 'events']] },
   { id:'u940', d:'11/27', items:[['⚙️','設定頁換成左右兩欄：左邊聲音、畫面，右邊帳號、語言聊天、其他；開關一眼就看得到，長的說明點 ⓘ 才打開']] },
   { id:'u939', d:'11/27', items:[['🎥','鏡頭可以拉得更近，近到看得清楚自己的臉；往下拖可以抬頭看整片天空，人會留在畫面下面'], ['🌀','拖畫面甩一下放開，鏡頭會再轉一小段慢慢停'], ['🎞️','手機畫面更順：以前限制每秒畫的張數時是畫一張跳一張，看起來會一頓一頓，現在間隔平均']] },
   { id:'u922', d:'11/27', items:[['🎣','旁邊的人在等魚的時候，看得到他的浮標和釣線了，浮標被咬下去也看得到（之前要等他開始拉魚才會出現）'], ['🌊','往窄的河拋過頭的時候，浮標會落在水裡，不會跑到對岸的草地上']] },
