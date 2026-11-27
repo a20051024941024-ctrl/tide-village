@@ -7597,7 +7597,7 @@ function updateCamera2(dt){
 const F = { phase:'idle', spot:null, charge:0, chargeT:0, waitUntil:0, nibbleAt:0, biteUntil:0, fish:null, weight:0, T:0.3, P:0.3, hold:false, surge:0, seed:0, castCharge:0 };
 const bigMsg = $('#bigMsg');
 let bigTimer = 0;
-function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bigMsg.classList.toggle('long', [...String(text)].length > 9); document.body.classList.toggle('diving', !!(typeof Dive !== 'undefined' && Dive.on)); bigMsg.classList.remove('pop'); void bigMsg.offsetWidth; bigMsg.classList.add('pop'); clearTimeout(bigTimer); bigTimer = setTimeout(() => bigMsg.hidden = true, (secs || 1.2) * 1000); }
+function flash(text, secs){ text = w2T(text); bigMsg.textContent = text; bigMsg.hidden = false; bigMsg.classList.toggle('long', [...String(text)].length > 9); document.body.classList.toggle('diving', !!(typeof Dive !== 'undefined' && Dive.on)); bigMsg.classList.remove('pop'); void bigMsg.offsetWidth; bigMsg.classList.add('pop'); clearTimeout(bigTimer); bigTimer = setTimeout(() => bigMsg.hidden = true, (secs || 1.2) * 1000); }
 
 /* v341 玩家說不要自動走、也不要箭頭：大按鈕只用一句話說最近的釣點在哪個方向、多遠（AW 自動走已經停用） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
@@ -18370,7 +18370,7 @@ function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder || !questNpcs.l
     if (sp.ring){ sp.ring.position.x = x; sp.ring.position.z = z; sp.ring.position.y = groundHeight(x, z) + 0.06; }
     if (sp.marker){ if (on){ const sx = -sp.dir.y, sz = sp.dir.x; let mx = x - sp.dir.x * 1.4 + sx * 1.5, mz = z - sp.dir.y * 1.4 + sz * 1.5; if (!walkable(mx, mz) || blocked(mx, mz, 0.2)){ mx = x - sp.dir.x * 1.4 - sx * 1.5; mz = z - sp.dir.y * 1.4 - sz * 1.5; } sp.marker.position.set(mx, groundHeight(mx, mz), mz); } else if (sp.w2v.mk) sp.marker.position.copy(sp.w2v.mk); } }
   if (signsAt.c) signsAt.c = {};   /* 魚訊照新的位置重算 */
-  W2S.on = on; return true; }
+  W2S.on = on; W2TXT_ON = on; return true; }
 /* v933 從新主島出海的人，回來的時候回新主島：W2S.home＝最後是在新主島（不是舊村子）。
    在外島按「回港口」「回村子」、潛水上來、用地圖傳回村子裡的地點，都改送到新主島阿海那條棧橋 */
 const W2_VILLAGE_TP = new Set(['plaza', 'harborsq', 'hill', 'lighthouse', 'harbor', 'sea', 'river', 'lake', 'pool', 'mangrove', 'mudflat', 'canal', 'shrimp', 'creek', 'reef', 'weir']);
@@ -20059,7 +20059,7 @@ function runTicker(){
   Ticker.nextAt = performance.now() + (w + 60) / Ticker.speed * 1000;   // 前一則完全進場、留一點空隙後，下一則才出發
   if (Ticker.q.length) runTicker();
 }
-function toast(html){ const t = document.createElement('div'); t.className = 'toast panel'; t.innerHTML = html; $('#toasts').appendChild(t); setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 500); }, 5200); while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove(); }
+function toast(html){ const t = document.createElement('div'); t.className = 'toast panel'; t.innerHTML = w2T(html); $('#toasts').appendChild(t); setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 500); }, 5200); while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove(); }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 let chatAllowed = true;
@@ -22667,7 +22667,14 @@ function renderWorldGift(body){ const k = World.giftTo; body.appendChild(el('div
     li.addEventListener('click', () => { if (!worldNear(k)){ toast(`走到${WORLD_WHO[k]}旁邊才能送喔`); return; } closeSheet(); worldGift(k, x.t); }); ul.appendChild(li); }
   body.appendChild(ul); const bk = el('button', 'tbtn ghost', '返回'); bk.addEventListener('click', () => { curTab = 'map'; renderTab(); }); body.appendChild(bk); }
 // 地圖、看板用：每個村民現在在做什麼
-function worldSummary(){ if (!World.rows || !World.places) return []; return Object.keys(WORLD_WHO).filter(k => World.rows[k]).map(k => { const wp = worldPose(k), r = World.rows[k], pl = World.places[r.place] || {}; return { id:k, name:WORLD_WHO[k], icon: wp && wp.walk ? '🚶' : (WORLD_ACT[r.act] || ['❔'])[0], text: wp && wp.walk ? `正在走去${pl.name || ''}（要${(WORLD_ACT[r.act] || ['', ''])[1]}）` : `在${pl.name || ''}${(WORLD_ACT[r.act] || ['', ''])[1]}`, x: wp ? wp.x : pl.x, z: wp ? wp.z : pl.z }; }); }
+/* v944 新主島預覽：「村民現在在做什麼」照新主島上真的看到的寫（以前寫的是舊村子的作息，對不上） */
+function w2WorldSummary(){ const out = [], door = k => (W2.doors || []).find(q => q.k === k), NM = { sea:'海邊', harbor:'港口棧橋', river:'河邊', lake:'湖邊', creek:'森林的溪邊', mangrove:'紅樹林', pool:'清溪潭' };
+  { const p = W2.posts.chief; if (p) out.push({ id: 'chief', name: WORLD_WHO.chief, icon: '🏛️', text: '在村公所裡面（走到門口可以跟他講話）', x: p.x, z: p.z }); }
+  { const n = npcs.find(W2_NPC.gang), p = W2.posts.gang; if (n && p){ const st = n.w2mealSt, txt = n.wHide ? '下雨了，回家躲雨' : st === 'go' ? '正在走去食堂吃飯' : st === 'eat' ? '在食堂門口吃飯' : st === 'back' ? '吃飽了，走回棧橋' : n.fishing ? `在${NM[W2.spot(p.x + Math.sin(p.face) * 2, p.z + Math.cos(p.face) * 2)] || '港口棧橋'}釣魚` : '在港口棧橋休息';
+    out.push({ id: 'gang', name: WORLD_WHO.gang, icon: n.wHide ? '🏠' : st === 'eat' ? '🍚' : st ? '🚶' : '🎣', text: txt, x: n.pos.x, z: n.pos.z }); } }
+  for (const [id, k, lab] of [['ling', 'tailor', '阿綾服裝店'], ['mu', 'mu', '阿木木工坊'], ['fu', 'fu', '阿福海產']]){ const d = door(k); out.push({ id, name: WORLD_WHO[id], icon: '🏪', text: `在${lab}裡面顧店${d ? '' : '（新主島還沒有這間店的門）'}`, x: d ? d.x : 0, z: d ? d.z : 0 }); }
+  return out; }
+function worldSummary(){ if (W2TXT_ON && W2 && W2.posts && W2.near(me.pos.x, me.pos.z)) return w2WorldSummary(); if (!World.rows || !World.places) return []; return Object.keys(WORLD_WHO).filter(k => World.rows[k]).map(k => { const wp = worldPose(k), r = World.rows[k], pl = World.places[r.place] || {}; return { id:k, name:WORLD_WHO[k], icon: wp && wp.walk ? '🚶' : (WORLD_ACT[r.act] || ['❔'])[0], text: wp && wp.walk ? `正在走去${pl.name || ''}（要${(WORLD_ACT[r.act] || ['', ''])[1]}）` : `在${pl.name || ''}${(WORLD_ACT[r.act] || ['', ''])[1]}`, x: wp ? wp.x : pl.x, z: wp ? wp.z : pl.z }; }); }
 
 // 手機效能：畫質「低／中」時，離鏡頭太遠的 NPC 和客人先不畫（每個角色有 20～40 個零件，很吃效能）
 const AV_CULL = { low: 40, mid: 62, high: 85 };   /* v908 最高畫質也要：每個新人物有 4～6 萬個三角形，太遠的先不畫 */
@@ -22708,7 +22715,10 @@ function coinify(root){ if (!root || !root.ownerDocument && root !== document) r
 try { let pend = new Set(), qd = false; const has = s => !!s && EMO_RE2.test(s); new MutationObserver(ms => { for (const m of ms){ if (m.type === 'characterData'){ if (has(m.target.nodeValue)) pend.add(m.target.parentNode); } else for (const n of m.addedNodes){ if (n.nodeType === 3 ? has(n.nodeValue) : n.nodeType === 1 && has(n.textContent || '')) pend.add(n.nodeType === 3 ? n.parentNode : n); } }
     if (pend.size && !qd){ qd = true; queueMicrotask(() => { qd = false; const L = [...pend]; pend.clear(); for (const r of L) if (r && r.isConnected) coinify(r); }); } }).observe(document.body, { childList:true, subtree:true, characterData:true }); coinify(document.body); } catch(e){}
 /* v553 玩法說明每一段的重點（兩三句）。原本的長說明還在，收在「看詳細規則」裡 */
-function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+/* v944 新主島預覽：人在新主島的時候，畫面上的字把舊村子的地名換成新主島的（訂單板、魚市場在中央市場；集合的廣場是主城廣場）。舊村子、一般玩家不變 */
+var W2TXT_ON = false; const W2_TXT = [['港邊廣場的訂單板', '中央市場的訂單板'], ['港邊廣場西北角有一面', '中央市場旁邊有一面'], ['潮汐魚市場在港邊廣場', '潮汐魚市場在中央市場旁邊'], ['港邊的魚市場', '中央市場旁邊的魚市場'], ['在港邊廣場，走到板子前', '在中央市場，走到板子前'], ['島中央的潮汐廣場', '主城廣場'], ['潮汐廣場', '主城廣場'], ['港邊廣場', '主城廣場']];
+function w2T(s){ if (!W2TXT_ON || typeof s !== 'string' || !/廣場|港邊的魚市場/.test(s)) return s; for (const [a, b] of W2_TXT) if (s.includes(a)) s = s.split(a).join(b); return s; }
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = w2T(text); return e; }
 /* v256 面板最上面只顯示這一頁的標題（不再出現整排分頁；要換頁就關掉再點右上角另一顆按鈕） */
 /* v639 標題、分頁、段落標題不放表情符號（作者：太 AI）。只拿掉這幾個地方的，內容裡的照舊 */
 const EMO_RE = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D\u20E3]/gu;
