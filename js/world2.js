@@ -55,10 +55,11 @@ export function init(A){
   const NODES = { hall:[965,320,240,120], aqua:[640,410,210,130], mus:[775,662,170,100], amuse:[1255,325,270,160], stad:[1480,430,240,130], mkt:[1210,640,230,140] };   /* v919 水族館往南 2 公尺（圓頂放正中間還要離鐵軌遠一點）、市場的廣場放大（建築放正中間四周才有地方走） */
   const edgeP = (n, t) => { const [x, y, w, h] = n, dx = t[0] - x, dy = t[1] - y, k = Math.min((w / 2) / Math.abs(dx || 1e-6), (h / 2) / Math.abs(dy || 1e-6)); return [x + dx * k, y + dy * k]; };
   /* 路：[點, 寬（圖上的像素）, 種類]。stone＝石板大道、lane＝巷子、wood＝港邊木棧道 */
+  const CARWAY = new Set(['aqua']);   /* v956 作者 11/28 選 A「完整的雙向車道＋人行道」：先做主城廣場 → 水族館這一段給作者看 */
   const ROADS = [
     [[[965,545],[975,600],[985,700],[990,800]], 26, 'stone'],                                      // 廣場 → 商店街 → 港口
     [[[640,760],[800,820],[990,830],[1160,790]], 22, 'wood'],                                      // 港邊
-    ...Object.values(NODES).map(n => [[PL, edgeP(n, PL), [lerp(edgeP(n, PL)[0], n[0], 0.35), lerp(edgeP(n, PL)[1], n[1], 0.35)]], 24, 'stone']),   // 圓環 → 每棟大建築的前廣場（直直的大道）；v936 多伸進前廣場一點（遊樂園以前差一點沒接上）
+    ...Object.entries(NODES).map(([k, n]) => [[PL, edgeP(n, PL), [lerp(edgeP(n, PL)[0], n[0], 0.35), lerp(edgeP(n, PL)[1], n[1], 0.35)]], CARWAY.has(k) ? 46 : 24, 'stone', CARWAY.has(k) ? k : null]),   /* v956 車道：雙向兩線＋兩邊人行道，路加寬到 9 公尺 */   // 圓環 → 每棟大建築的前廣場（直直的大道）；v936 多伸進前廣場一點（遊樂園以前差一點沒接上）
     /* v936 作者：「路可以參考那張圖嗎，路還有很多接不上」→ 照規劃圖加外環大路：水族館 → 居民區北邊 → 居民區西邊；港邊 → 沙灘北邊 → 體育場；體育場 ↔ 遊樂園 ↔ 村公所前廣場 */
     [[[575,462],[500,478],[420,494],[345,512],[298,548],[286,580]], 18, 'stone'],
     [[[1160,790],[1262,760],[1340,700],[1420,612],[1490,548],[1530,500]], 18, 'stone'],
@@ -196,8 +197,9 @@ export function init(A){
   const railTex = (() => { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = '#b9ae98'; c.fillRect(0, 0, 64, 64); c.fillStyle = '#6e4a2f'; c.fillRect(4, 8, 56, 14); c.fillRect(4, 40, 56, 14); c.fillStyle = '#5a5f66'; c.fillRect(14, 0, 5, 64); c.fillRect(45, 0, 5, 64); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
   const pm = (tex, o) => new THREE.MeshStandardMaterial(Object.assign({ map: tex, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }, o || {}));
   const dirtTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.fillStyle = '#c9ad7c'; c.fillRect(0, 0, 64, 64); let s0 = 21; const r = () => { s0 = (s0 * 16807) % 2147483647; return s0 / 2147483647; }; for (let i = 0; i < 90; i++){ c.fillStyle = ['#b89a68', '#d6bc8e', '#a98b5c'][i % 3]; c.fillRect(r() * 64, r() * 64, 2 + r() * 4, 2 + r() * 3); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
-  const MAT = { stone: pm(stoneTex), lane: pm(stoneTex, { color: '#e2d6bd' }), wood: pm(woodTex), rail: pm(railTex), dirt: pm(dirtTex, { roughness: 1 }) };
-  const paveParts = { stone: [], lane: [], wood: [], rail: [], dirt: [] };
+  const asphaltTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#5b6066'; c.fillRect(0, 0, 128, 128); let s0 = 41; const r = () => { s0 = (s0 * 16807) % 2147483647; return s0 / 2147483647; }; for (let i = 0; i < 700; i++){ c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.08)'; c.fillRect(r() * 128, r() * 128, 1 + r() * 2, 1 + r() * 2); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })();   /* v956 柏油：深灰帶一點顆粒 */
+  const MAT = { car: pm(asphaltTex, { roughness: 0.95 }), stone: pm(stoneTex), lane: pm(stoneTex, { color: '#e2d6bd' }), wood: pm(woodTex), rail: pm(railTex), dirt: pm(dirtTex, { roughness: 1 }) };
+  const paveParts = { car: [], stone: [], lane: [], wood: [], rail: [], dirt: [] };
   const dense = (L, st) => { const o = [L[0]]; for (let i = 1; i < L.length; i++){ const a = L[i - 1], b = L[i], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / st)); for (let k = 1; k <= n; k++) o.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]); } return o; };
   function ribbon(kind, line, w, y, loop, tile){ const n = line.length, pos = [], uv = [], idx = []; let len = 0;
     for (let i = 0; i < n; i++){ const a = line[loop ? (i - 1 + n) % n : Math.max(0, i - 1)], b = line[loop ? (i + 1) % n : Math.min(n - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l; if (i) len += Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]);
@@ -375,13 +377,21 @@ export function init(A){
        ・主要地方旁邊的路邊畫一格「潮搭Go 上車處」，叫車的時候車從這裡出發、到了停這裡（現在先放一台車停著） */
     { const railDist = (lx, lz) => { let bd = 1e9; const n = railLine.length; for (let i = 0; i < n; i++){ const a = railLine[i], b = railLine[(i + 1) % n], dx = b[0] - a[0], dz = b[1] - a[1], u = clamp(((lx - a[0]) * dx + (lz - a[1]) * dz) / ((dx * dx + dz * dz) || 1), 0, 1), d = Math.hypot(lx - a[0] - dx * u, lz - a[1] - dz * u); if (d < bd) bd = d; } return bd; };
       const LINE = '#ffffff', bigRoads = [[ell(PL[0], PL[1], RING[0], RING[1], 96), 4.6, PAVE_Y, true]];
-      for (const [pts, w, kind] of ROADS) if (kind === 'stone' && w >= 16) bigRoads.push([curve(pts), w * S, PAVE_Y + 0.008, false]);
+      for (const [pts, w, kind, car] of ROADS) if (kind === 'stone' && w >= 16) bigRoads.push([curve(pts), w * S, PAVE_Y + 0.008, false, car]);
       const toPx = (x, z) => [PX0 + x / S, PY0 + z / S], inPlaza = (x, z) => { const [px, py] = toPx(x, z); if (inPoly(PLAZA, px, py)) return true; for (const k in NODES){ const [nx, ny, nw, nh] = NODES[k]; if (((px - nx) / (nw / 2 + 6)) ** 2 + ((py - ny) / (nh / 2 + 6)) ** 2 < 1) return true; } return false; };
       const nearOther = (x, z, me2) => bigRoads.some((r, i) => i !== me2 && r[0].some(q => Math.hypot(q[0] - x, q[1] - z) < r[1] / 2 + 0.9));
-      const segs = bigRoads.map(([line, w, y, loop]) => { const L = dense(loop ? line.concat([line[0]]) : line, 0.25), cum = [0]; for (let i = 1; i < L.length; i++) cum.push(cum[i - 1] + Math.hypot(L[i][0] - L[i - 1][0], L[i][1] - L[i - 1][1])); return { L, cum, w, y, loop }; });
+      const segs = bigRoads.map(([line, w, y, loop, car]) => { const L = dense(loop ? line.concat([line[0]]) : line, 0.25), cum = [0]; for (let i = 1; i < L.length; i++) cum.push(cum[i - 1] + Math.hypot(L[i][0] - L[i - 1][0], L[i][1] - L[i - 1][1])); return { L, cum, w, y, loop, car }; });
       const dirAt = (L, i) => { const a = L[Math.max(0, i - 1)], b = L[Math.min(L.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
       /* 中線虛線：1.3 公尺畫、1.3 公尺空 */
-      segs.forEach((sg, ri) => { const { L, cum, y, loop } = sg, tot = cum[cum.length - 1]; let st = -1;
+      /* v956 車道：路中間 6.2 公尺鋪柏油（雙向兩線），兩邊剩下的是人行道（原本的地磚）；黃色雙線分隔、白色邊線、路緣石。廣場和前廣場裡面不鋪（那裡是走路的） */
+      segs.forEach((sg, ri) => { if (!sg.car) return; const { L, y } = sg; let runs = [], cur = null;
+        for (let i = 0; i < L.length; i++){ const out = !inPlaza(L[i][0], L[i][1]); if (out){ if (!cur) cur = []; cur.push(L[i]); } else if (cur){ runs.push(cur); cur = null; } } if (cur) runs.push(cur);
+        for (const R of runs){ if (R.length < 6) continue; const yy = y + 0.03; paveParts.car.length = 0; ribbon('car', R, 6.2, yy, false, 3); const gm = new THREE.Mesh(mergeGeometries(paveParts.car, false), MAT.car); gm.receiveShadow = true; root.add(gm); paveParts.car.length = 0;
+          const stroke = (off, col, wd, h) => { for (let i = 1; i < R.length; i += 1){ const a = R[i - 1], b = R[i], [dx, dz] = dirAt(R, i), ax = a[0] - dz * off, az = a[1] + dx * off, bx = b[0] - dz * off, bz = b[1] + dx * off, len = Math.hypot(bx - ax, bz - az); if (len < 0.01) continue; B(parts, col, wd, h, len + 0.02, (ax + bx) / 2, yy + h / 2 + 0.045, (az + bz) / 2, Math.atan2(bx - ax, bz - az)); } };
+          stroke(0.11, '#f2c230', 0.1, 0.015); stroke(-0.11, '#f2c230', 0.1, 0.015);   // 黃色雙線
+          stroke(2.85, '#ffffff', 0.13, 0.015); stroke(-2.85, '#ffffff', 0.13, 0.015);   // 白色邊線
+          stroke(3.18, '#cfc6b5', 0.2, 0.12); stroke(-3.18, '#cfc6b5', 0.2, 0.12); } });   // 路緣石
+      segs.forEach((sg, ri) => { if (sg.car) return; const { L, cum, y, loop } = sg, tot = cum[cum.length - 1]; let st = -1;
         for (let i = 0; i < L.length; i++){ const on = (cum[i] % 2.6) < 1.3 && (loop || (cum[i] > 3 && cum[i] < tot - 3)) && !inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri) && railDist(L[i][0], L[i][1]) > 4;
           if (on && st < 0) st = i; if ((!on || i === L.length - 1) && st >= 0){ const e = on ? i : i - 1; if (e > st){ const a = L[st], b = L[e], len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (len > 0.5) B(parts, LINE, 0.18, 0.02, len, (a[0] + b[0]) / 2, y + 0.05, (a[1] + b[1]) / 2, Math.atan2(b[0] - a[0], b[1] - a[1])); } st = -1; } } });
       /* 斑馬線：從廣場（或前廣場）走出來 2.5 公尺的地方，橫跨整條路 */
@@ -390,7 +400,7 @@ export function init(A){
         for (const fwd of [true, false]){ let found = -1, out = -1;
           for (let k = 0; k < L.length; k++){ const i = fwd ? k : L.length - 1 - k; if (!inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri)){ if (out < 0) out = i; if (Math.abs(cum[i] - cum[out]) >= 2.5){ found = i; break; } } else out = -1; }
           if (found < 0 || zebras.some(z => Math.hypot(z[0] - L[found][0], z[1] - L[found][1]) < 8)) continue; const [dx, dz] = dirAt(L, found), [cx, cz] = L[found]; zebras.push([cx, cz]);
-          for (let s = -w / 2 + 0.35; s <= w / 2 - 0.3; s += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, cx - dz * s, y + 0.05, cz + dx * s, Math.atan2(dx, dz)); } });
+          const zw = sg.car ? 6.2 : w; for (let s = -zw / 2 + 0.35; s <= zw / 2 - 0.3; s += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, cx - dz * s, y + 0.05, cz + dx * s, Math.atan2(dx, dz)); } });
       /* 潮搭Go 上車處：主要地方旁邊的大路邊 */
       const stands = [], logoTex = (() => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#ffffff'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#8fd3f4'; c.beginPath(); c.moveTo(0, 86); for (let x = 0; x <= 256; x += 8) c.lineTo(x, 86 + Math.sin(x / 22) * 7); c.lineTo(256, 128); c.lineTo(0, 128); c.fill();
         c.fillStyle = '#26445c'; c.font = 'bold 46px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.fillText('潮搭Go', 128, 62); c.font = 'bold 20px "Huninn","Noto Sans TC",sans-serif'; c.fillText('上車處', 128, 112); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
