@@ -44,6 +44,9 @@ export function init(A){
   const RIV = [[855,240],[800,215],[785,195],[770,250],[730,296],[660,308],[580,308],[500,316],[430,338],[360,365],[300,385],[262,392]];   // 中段比規劃圖往北挪 3～4 公尺：原本跟鐵軌、水族館站疊在一起
   const MF = rough([[270,350],[340,320],[420,330],[440,380],[380,415],[300,420],[255,395]], 3, 0.4, 91);          // 紅樹林
   const SAND = rough([[1300,700],[1420,660],[1560,640],[1660,680],[1690,760],[1580,800],[1430,795],[1300,780]], 2, 0.2, 77);   // 陽光沙灘
+  /* v950 作者：「要做」→ 新主島自己的珊瑚礁：陽光沙灘外面一片淺水（底下是珊瑚），沙灘踩著幾塊礁岩走出去，站在礁岩上釣。原本珊瑚礁岸的魚在這裡釣（釣點代號 reef） */
+  const REEF = rough([[1520,818],[1625,806],[1730,826],[1760,900],[1680,965],[1560,955],[1505,890]], 3, 0.28, 61), REEF_C = [1630, 880];
+  const REEF_ROCKS = [[1598,812,13],[1612,836,11],[1630,858,12],[1652,878,13],[1676,866,9],[1700,892,11],[1578,872,10],[1612,915,9],[1720,846,8]];   /* 礁岩：[x, y, 半徑]（規劃圖的像素） */
   const PLAZA = [[860,430],[940,400],[1060,410],[1090,480],[1060,560],[960,580],[870,560],[845,495]];
   /* v920 固定的活動場地（作者 11/27：「就先固定」）：商店街東邊、市場南邊、港口北邊那一塊，不蓋房子，辦活動用。北邊跟市場的前廣場連在一起，南邊接港邊木棧道 */
   const EVT = rough([[1040,702],[1076,672],[1150,676],[1190,712],[1182,764],[1120,790],[1054,772]], 2, 0.12, 733), EVT_C = [1112, 730];
@@ -75,7 +78,9 @@ export function init(A){
   const fillL = polys => { const L = layer(); for (const p of polys){ closed(L.g, p); L.g.fill(); } return L; };
   /* v937 作者圈了東北角和市場南邊：鐵軌又跑到水上（跟西南邊一樣）→ 鐵軌兩邊各 7 公尺一定是陸地，整圈都不會再泡水 */
   const railLand = L => { const g = L.g; open(g, RAIL.concat([RAIL[0]])); g.lineWidth = 70; g.lineJoin = 'round'; g.stroke(); return L; };
-  const landL = railLand(fillL([IS, ISLET, ...SHOALS])), sdLand = sdf(bits(landL));
+  const rocksTo = L => { for (const [x, y, r] of REEF_ROCKS){ L.g.beginPath(); for (let k = 0; k <= 12; k++){ const a = k / 12 * 6.2832, rr = r * (0.8 + 0.25 * Math.sin(a * 3 + x)); L.g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.85); } L.g.fill(); } return L; };
+  const landL = rocksTo(railLand(fillL([IS, ISLET, ...SHOALS]))), sdLand = sdf(bits(landL));
+  const sdReef = sdf(bits(fillL([REEF]))), sdRock = sdf(bits(rocksTo(layer())));
   const sdMain = sdf(bits(railLand(fillL([IS]))));
   const sdFor = sdf(bits(fillL([FO]))), sdSand = sdf(bits(fillL([SAND]))), sdMang = sdf(bits(fillL([MF])));
   const POOLC = [785, 206], POOLR = 21;   /* v929 瀑布下面沖出來的深潭（規劃圖的像素；21 像素＝4.2 公尺） */
@@ -97,9 +102,10 @@ export function init(A){
   /* 紅樹林：一片淺淺的水（樹站在水裡），中間幾塊露出來的泥灘 */
   const lagoon = (lx, lz, mg) => { const n = Math.sin(lx * 0.42 + 1.7) * Math.cos(lz * 0.47 - 0.4) + 0.45 * Math.sin(lx * 0.93 - lz * 0.71); return lerp(-0.4, 0.2, s01((n - 0.5) / 0.3) * s01((mg - 0.5) / 2)); };
   function height(lx, lz){ const dl = samp(sdLand, lx, lz), mg = samp(sdMang, lx, lz);
-    if (dl < 0){ const d = -dl; let h = d <= 3 ? -0.03 - d * 0.1 : Math.max(-3.2, -0.33 - (d - 3) * 0.42); if (mg > -5) h = lerp(h, lagoon(lx, lz, mg), s01((mg + 5) / 5)); return h; }
+    if (dl < 0){ const d = -dl; let h = d <= 3 ? -0.03 - d * 0.1 : Math.max(-3.2, -0.33 - (d - 3) * 0.42); if (mg > -5) h = lerp(h, lagoon(lx, lz, mg), s01((mg + 5) / 5)); { const rf = samp(sdReef, lx, lz); if (rf > -5) h = lerp(h, -0.46 - 0.22 * (Math.sin(lx * 0.8 + 1.3) * Math.cos(lz * 0.7) * 0.5 + 0.5), s01((rf + 5) / 5)); }   /* v950 珊瑚礁：淺淺的一片 */ return h; }
     const dw = samp(sdWat, lx, lz), dm = samp(sdMain, lx, lz), flat = s01((samp(sdPave, lx, lz) + 3) / 3);
     let h = 0.1 + s01(dl / 4) * (PAVE_Y - 0.1);
+    { const rk = samp(sdRock, lx, lz); if (rk > -0.5 && samp(sdMain, lx, lz) < 0){ return Math.max(h, 0.3 + 0.32 * s01(rk / 1.6) + Math.sin(lx * 1.7) * Math.cos(lz * 1.9) * 0.06); } }   /* v950 礁岩：比水面高一點、中間凸起 */
     h += (Math.sin(lx * 0.11 + 1.3) * Math.cos(lz * 0.13) * 0.22 + Math.sin((lx + lz) * 0.31) * 0.07 + 0.12) * s01((dl - 5) / 8) * (1 - flat);
     const df = samp(sdFor, lx, lz); if (df > -14 && dm > 0){ const k = s01((df + 14) / 34) * s01((-dw - 1.5) / 9) * s01(dm / 10) * (1 - flat), a = Math.max(0, 1 - Math.hypot(lx - PEAK[0], lz - PEAK[1]) / 36), b = Math.max(0, 1 - Math.hypot(lx - PEAK2[0], lz - PEAK2[1]) / 26);
       h += k * (0.9 + Math.pow(a, 1.5) * 13.5 + Math.pow(b, 1.6) * 5.5 + (Math.sin(lx * 0.37) * Math.cos(lz * 0.33) + 1) * 0.35); }
@@ -118,7 +124,7 @@ export function init(A){
   { const data = new Uint8Array(NN * 4);
     for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++){ const o = j * NX + i, lx = X0 + (i + 0.5) / RES, lz = Z0 + (j + 0.5) / RES, h = HG[o], dl = sdLand[o], wet = h < WL - 0.02, lk0 = s01((sdMang[o] + 3.5) / 2), inland = (dl > 0 && wet) || lk0 > 0.3, lake = inland && sdLake[o] > -1;   /* lk0：紅樹林（水和泥灘那幾格都算，水邊才不會被當成海邊） */
       let shore = -dl; if (shore < 0 && !(h < 0.2 && samp(sdSand, lx, lz) > -4 && !paved(lx, lz, 2))) shore = -8; if (inland) shore = Math.max(shore, 6);
-      data[o * 4] = Math.round(Math.max(clamp(-h / 2, 0, 1) * 255, 36 * lk0));   /* 紅樹林裡（連泥灘那幾格）水深都算 28 公分以上：水邊才不會冒一圈白泡沫 */ data[o * 4 + 1] = wet ? 255 : 0; data[o * 4 + 2] = Math.round(Math.max(dl > 0 && wet ? (lake ? 180 : 60) : 0, 95 * lk0)); data[o * 4 + 3] = Math.round(clamp((shore + 8) / 32, 0, 1) * 255); }
+      data[o * 4] = Math.round(Math.max(clamp((sdReef[o] > -3 ? Math.min(-h, lerp(-h, 0.44, s01((sdReef[o] + 3) / 3))) : -h) / 2, 0, 1) * 255, 36 * lk0));   /* v950 珊瑚礁上的水當成很淺（44 公分）：水比較透明、顏色比較淺，看得到底下的珊瑚；退潮最多退 36 公分，不會整片乾掉 */   /* 紅樹林裡（連泥灘那幾格）水深都算 28 公分以上：水邊才不會冒一圈白泡沫 */ data[o * 4 + 1] = wet ? 255 : 0; data[o * 4 + 2] = Math.round(Math.max(dl > 0 && wet ? (lake ? 180 : 60) : 0, 95 * lk0)); data[o * 4 + 3] = Math.round(clamp((shore + 8) / 32, 0, 1) * 255); }
     maskTex = new THREE.DataTexture(data, NX, NZ, THREE.RGBAFormat); maskTex.magFilter = maskTex.minFilter = THREE.LinearFilter; maskTex.wrapS = maskTex.wrapT = THREE.ClampToEdgeWrapping; maskTex.needsUpdate = true; }
 
   /* ---------- 地形：一塊 48 公尺，走近才蓋 ---------- */
@@ -127,8 +133,9 @@ export function init(A){
   const C = new THREE.Color(), col = (hex, k) => { C.set(hex); if (k != null) C.multiplyScalar(k); return C; };
   const GRASS = ['#8fcf6a', '#7cc25f', '#9ad873'], WOODS = ['#5fae55', '#4f9a4a'], SANDC = '#efe0ae', BEACH = '#fbf3da', MUD = '#8f8a6a', ROCK = '#8f8878', SEAB = '#e9dcae';
   function groundCol(lx, lz, h, out){ const dl = samp(sdLand, lx, lz), n = hash(Math.floor(lx * 0.7), Math.floor(lz * 0.7)), n2 = Math.sin(lx * 0.09 + 0.7) * Math.cos(lz * 0.11) * 0.5 + 0.5;
-    if (h < WL - 0.02 && dl > 0){ col('#6f8f72', 0.9); }                                                    // 河床、湖底
-    else if (dl < 0.4){ col(SEAB, 1 - clamp(-h / 5, 0, 0.35)); C.lerp(col2.set(DEEPF), s01((-h - 1.4) / 1.6)); }
+    if (samp(sdRock, lx, lz) > -0.3 && dl > 0){ col(ROCK, 0.82 + n * 0.25); }   /* v950 礁岩 */
+    else if (h < WL - 0.02 && dl > 0){ col('#6f8f72', 0.9); }                                                    // 河床、湖底
+    else if (dl < 0.4){ col(SEAB, 1 - clamp(-h / 5, 0, 0.35)); C.lerp(col2.set(DEEPF), s01((-h - 1.4) / 1.6)); { const rf = samp(sdReef, lx, lz); if (rf > -2){ const q = hash(Math.floor(lx * 0.5) + 7, Math.floor(lz * 0.5) + 3), cc = ['#f29a9a', '#f2b56a', '#b99ae0', '#6fc9b8', '#f4e2b8', '#f4e2b8']; C.lerp(col2.set(cc[Math.floor(q * cc.length) % cc.length]), s01((rf + 2) / 3) * 0.7); } } }   /* v950 珊瑚礁的底：一塊一塊粉紅、橘、紫、青綠的珊瑚 */
     else { const bs = samp(sdSand, lx, lz), sandW = 3.2 + Math.sin(lx * 0.07) * 1.1 + Math.cos(lz * 0.09) * 0.9;
       if (dl < sandW){ col(SANDC, 0.96 + n * 0.06); }
       else { const df = samp(sdFor, lx, lz), mg = samp(sdMang, lx, lz), dw = samp(sdWat, lx, lz);
@@ -494,6 +501,23 @@ export function init(A){
     tickers.push((dt, t) => { for (const m of moored){ m.g.position.y = WL - 0.12 + Math.sin(t * 1.1 + m.ph) * 0.06; m.g.rotation.z = Math.sin(t * 0.9 + m.ph) * 0.04; m.g.rotation.x = Math.sin(t * 0.7 + m.ph * 2) * 0.025; }
       for (const b of sail){ const LEN = b.cum[b.cum.length - 1], s = (t * b.sp) % LEN; let lo = 0, hi = b.cum.length - 1; while (hi - lo > 1){ const m = (lo + hi) >> 1; if (b.cum[m] <= s) lo = m; else hi = m; } const p0 = b.L[lo], p1 = b.L[(lo + 1) % b.L.length], k = (s - b.cum[lo]) / Math.max(1e-6, b.cum[lo + 1] - b.cum[lo]);
         b.g.position.set(p0[0] + (p1[0] - p0[0]) * k, WL - 0.1 + Math.sin(t * 1.3) * 0.05, p0[1] + (p1[1] - p0[1]) * k); const a = Math.atan2(p1[0] - p0[0], p1[1] - p0[1]); let d = a - b.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); b.g.rotation.y += d * Math.min(1, dt * 1.5); b.g.rotation.z = Math.sin(t * 1.1) * 0.03; } }); }
+  /* v950 珊瑚礁的樣子：水底的珊瑚（樹枝、腦紋、扇子、管子）、礁岩上的石頭、一群熱帶小魚繞著游 */
+  { const parts = {}, rg = new THREE.Group(); root.add(rg); let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const CC = ['#ff6f6a', '#ff9a2e', '#b27cff', '#2fd6b0', '#ffd84a', '#ff5fa8'], cparts = {};
+    for (let k = 0; k < 420; k++){ const px = 1505 + rnd() * 255, py = 806 + rnd() * 160, [x, z] = P(px, py); if (samp(sdReef, x, z) < 0.3 || samp(sdRock, x, z) > -0.6 || samp(sdLand, x, z) > -0.3) continue;
+      const y = hAt(x, z), c = CC[Math.floor(rnd() * CC.length)], t = rnd(), room = WL - 0.12 - y; if (room < 0.15) continue;
+      if (t < 0.35){ for (let b = 0; b < 4; b++){ const a = rnd() * 6.28, tilt = 0.25 + rnd() * 0.45, L = Math.min(room, 0.35 + rnd() * 0.3), g = new THREE.CylinderGeometry(0.05, 0.08, L, 5); g.translate(0, L / 2, 0); g.rotateZ(tilt); g.rotateY(a); G(cparts, c, g, x, y, z); } }   /* 樹枝珊瑚 */
+      else if (t < 0.6){ const r = 0.3 + rnd() * 0.3; G(cparts, c, new THREE.SphereGeometry(r, 9, 6, 0, 6.2832, 0, Math.PI / 2).scale(1, Math.min(0.7, room * 0.9 / r), 1), x, y, z); }   /* 腦紋珊瑚 */
+      else if (t < 0.8){ const r = Math.min(room, 0.32 + rnd() * 0.2), g = new THREE.CircleGeometry(r, 9, 0, Math.PI); g.rotateY(rnd() * 6.28); G(cparts, c, g, x, y, z); }   /* 扇子 */
+      else { for (let b = 0; b < 5; b++){ const L = Math.min(room, 0.12 + rnd() * 0.22), g = new THREE.CylinderGeometry(0.035, 0.035, L, 6, 1, true); g.translate((rnd() - 0.5) * 0.18, L / 2, (rnd() - 0.5) * 0.18); G(cparts, c, g, x, y, z); } } }   /* 管子 */
+    for (const [px, py, r] of REEF_ROCKS){ const [x, z] = P(px, py), R = r * S; for (let b = 0; b < 3; b++){ const g = new THREE.DodecahedronGeometry(R * (0.35 + rnd() * 0.2), 0); g.scale(1, 0.45, 1); G(parts, b ? '#8f8878' : '#7d776a', g, x + (rnd() - 0.5) * R * 0.8, hAt(x, z) - 0.02, z + (rnd() - 0.5) * R * 0.6); } }
+    flush(parts, rg);
+    for (const hex in cparts){ const m = new THREE.Mesh(mergeGeometries(cparts[hex], false), new THREE.MeshLambertMaterial({ color: hex, emissive: new THREE.Color(hex).multiplyScalar(0.35), side: THREE.DoubleSide })); m.receiveShadow = true; rg.add(m); }   /* 珊瑚自己帶一點亮，隔著水也看得出粉紅、橘、紫 */
+    const fishG = new THREE.Group(); rg.add(fishG); const FC = ['#ffd23f', '#3fb8ff', '#ff7a4a', '#ffffff', '#7fe08a'], school = [];
+    for (let k = 0; k < 18; k++){ const f = new THREE.Group(), c = FC[k % FC.length], m = new THREE.MeshLambertMaterial({ color: c }); const body = new THREE.Mesh(new THREE.SphereGeometry(0.07, 7, 5).scale(1, 0.75, 1.9), m), tail = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.08, 4).rotateX(-Math.PI / 2), m); tail.position.z = -0.15; f.add(body, tail); fishG.add(f);
+      const [cx, cz] = P(1560 + rnd() * 160, 840 + rnd() * 100); school.push({ f, tail, cx, cz, r: 0.6 + rnd() * 1.4, sp: (0.5 + rnd() * 0.6) * (rnd() < 0.5 ? 1 : -1), ph: rnd() * 6.28, y: Math.min(WL - 0.18, hAt(cx, cz) + 0.3) }); }
+    tickers.push((dt, t) => { for (const q of school){ const a = q.ph + t * q.sp, x = q.cx + Math.cos(a) * q.r, z = q.cz + Math.sin(a) * q.r; q.f.position.set(x, q.y + Math.sin(t * 2 + q.ph) * 0.04, z); q.f.rotation.y = Math.atan2(-Math.sin(a) * Math.sign(q.sp), Math.cos(a) * Math.sign(q.sp)) ; q.tail.rotation.y = Math.sin(t * 12 + q.ph) * 0.5; } }); }
+  { const [x, z] = P(1660, 930); label('珊瑚礁', x, 6, z); }
   /* v945 外島照規劃圖排在新主島四周的海平線上（作者 11/27：外島要放遠）：從新主島看出去，每個方向有一座看得到的島，坐阿海的船出海就往那個方向開。
      島本身（釣點、伺服器）沒有搬，這裡只是遠景：一直保持在鏡頭外 185 公尺、不受霧影響，看起來像在很遠的海上 */
   const HORIZON = { old: [0, -1], frostdock: [-0.8, -0.6], greendock: [0.45, -0.89], wilddock: [0.99, 0.12], mystdock: [0.66, 0.75], abyssdock: [-0.08, 1], reef: [-0.94, 0.33] };
@@ -684,7 +708,7 @@ export function init(A){
        spot：這片水算哪一個釣點——山上的湖、森林裡的溪（橋的上游）、平地的河、紅樹林、岸邊的海、離岸 6 公尺以上的外海（碼頭走到底）
        tinfo：跟舊島的 terrainInfo 一樣的格式（高度、是不是水、哪一種水 1 河 2 溪 3 湖），水裡的魚影、魚跳出水面要用 */
     water: (x, z) => wetAt(x - OX, z - OZ),
-    spot: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return 'harbor'; { const [px, pz] = P(POOLC[0], POOLC[1]); if (Math.hypot(lx - px, lz - pz) < POOLR * S + 1.2) return 'pool'; } if (samp(sdLake, lx, lz) > -1.5) return 'lake';   /* v929 瀑布下的深潭＝清溪潭 */ if (samp(sdMang, lx, lz) > -2.5) return 'mangrove';
+    spot: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return 'harbor'; { const [px, pz] = P(POOLC[0], POOLC[1]); if (Math.hypot(lx - px, lz - pz) < POOLR * S + 1.2) return 'pool'; } if (samp(sdLake, lx, lz) > -1.5) return 'lake';   /* v929 瀑布下的深潭＝清溪潭 */ if (samp(sdMang, lx, lz) > -2.5) return 'mangrove'; if (samp(sdReef, lx, lz) > -1.5) return 'reef';   /* v950 */
       if (samp(sdMain, lx, lz) > 0 && samp(sdWat, lx, lz) > -2) return samp(sdFor, lx, lz) > 3 ? 'creek' : 'river'; return samp(sdLand, lx, lz) < -6 ? 'harbor' : 'sea'; },
     /* 最近可以站著釣魚的水邊（「找釣點」按鈕帶路用）：從腳邊一圈一圈往外找，站的地方要在主島或棧橋上、ok() 說沒被東西擋住，而且往某一邊 1.6 和 3.1 公尺都是水 */
     shore: (x, z, ok) => { const lx0 = x - OX, lz0 = z - OZ, wat = wetAt;
@@ -709,10 +733,11 @@ export function init(A){
     /* v935 新主島的地圖：從上面往下看的小圖（1 公尺 2 格），第一次要用才畫，畫一次就留著 */
     mapImg: () => { if (W2._mi) return W2._mi; const K = 2, cv = document.createElement('canvas'); cv.width = GW * K; cv.height = GH * K; const c = cv.getContext('2d'), im = c.createImageData(cv.width, cv.height), D = im.data;
       const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-      const C = { sea: hex('#3d8fcc'), deep: hex('#2f78b4'), lake: hex('#5fb3dc'), mang: hex('#4f8f86'), sand: hex('#ecd9a6'), grass: hex('#8cc46a'), forest: hex('#4f8f4a'), pave: hex('#d9d2c4'), dirt: hex('#c9ad7c'), wood: hex('#b98a5a'), hill: hex('#7aa860') };
+      const C = { sea: hex('#3d8fcc'), deep: hex('#2f78b4'), lake: hex('#5fb3dc'), reef: hex('#5fd0c8'), rock: hex('#9a9282'), mang: hex('#4f8f86'), sand: hex('#ecd9a6'), grass: hex('#8cc46a'), forest: hex('#4f8f4a'), pave: hex('#d9d2c4'), dirt: hex('#c9ad7c'), wood: hex('#b98a5a'), hill: hex('#7aa860') };
       for (let j = 0; j < cv.height; j++) for (let i = 0; i < cv.width; i++){ const lx = X0 + (i + 0.5) / K, lz = Z0 + (j + 0.5) / K, h = samp(HG, lx, lz); let col, sh = 1;
         if (deck(lx, lz) || samp(sdBoard, lx, lz) > 0) col = C.wood;
-        else if (h < WL - 0.02){ if (samp(sdMang, lx, lz) > -2.5) col = C.mang; else if (samp(sdMain, lx, lz) > 0 && samp(sdLake, lx, lz) > -1.5) col = C.lake; else if (samp(sdMain, lx, lz) > 0) col = C.lake; else { col = samp(sdMain, lx, lz) < -14 ? C.deep : C.sea; } }
+        else if (samp(sdRock, lx, lz) > 0) col = C.rock;
+        else if (h < WL - 0.02){ if (samp(sdMang, lx, lz) > -2.5) col = C.mang; else if (samp(sdReef, lx, lz) > 0) col = C.reef; else if (samp(sdMain, lx, lz) > 0 && samp(sdLake, lx, lz) > -1.5) col = C.lake; else if (samp(sdMain, lx, lz) > 0) col = C.lake; else { col = samp(sdMain, lx, lz) < -14 ? C.deep : C.sea; } }
         else { if (paved(lx, lz, 0)) col = C.pave; else if (samp(sdTrail, lx, lz) > 0) col = C.dirt; else if (samp(sdSand, lx, lz) > 0 && h < 1.4) col = C.sand; else if (samp(sdFor, lx, lz) > 0) col = C.forest; else col = h > 6 ? C.hill : C.grass; sh = 0.92 + Math.min(0.16, h * 0.012); }
         const o = (j * cv.width + i) * 4; D[o] = Math.min(255, col[0] * sh); D[o + 1] = Math.min(255, col[1] * sh); D[o + 2] = Math.min(255, col[2] * sh); D[o + 3] = 255; }
       c.putImageData(im, 0, 0);
@@ -742,7 +767,7 @@ export function init(A){
     /* v935 發光的好釣點（村子的釣點搬過來，釣點代號不變）：每一種水挑一個好站的岸邊，離村民釣魚的位置 4 公尺以上 */
     try { const W = (px, py) => { const q = P(px, py); return [OX + q[0], OZ + q[1]]; }, busy = (x, z) => Object.values(posts).some(q => q && q.x != null && Math.hypot(q.x - x, q.z - z) < 4);
       const pr = PIERS[2]; if (pr) spotsAt.harbor = { x: OX + pr.x, z: OZ + pr.z0 + pr.L - 1.4, face: 0 };   /* 外海：港口中間那條棧橋的最尾端 */
-      for (const [id, px, py] of [['sea', 1420, 790], ['river', 640, 330], ['creek', 760, 262], ['lake', 905, 250], ['pool', 806, 222], ['mangrove', 430, 386]]){ let [ax, az] = W(px, py), got = null;
+      for (const [id, px, py] of [['sea', 1420, 790], ['river', 640, 330], ['creek', 760, 262], ['lake', 905, 250], ['pool', 806, 222], ['mangrove', 430, 386], ['reef', 1650, 890]]){ let [ax, az] = W(px, py), got = null;
         for (let k = 0; k < 4 && !got; k++){ const s2 = W2.shore(ax, az, (x, z) => ok(x, z) && !busy(x, z)); if (s2 && s2.id === id && Math.hypot(s2.x - ax, s2.z - az) < 45) got = s2; else { ax += 6; az += 3; } }
         if (got){ spotsAt[id] = { x: got.x, z: got.z, face: got.face }; RSV.push([got.x - OX, got.z - OZ, 2.6]); } } } catch(e){ console.warn('world2 spots', e); }
     tideFix = null; }
