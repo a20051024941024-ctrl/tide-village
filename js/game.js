@@ -2536,7 +2536,7 @@ function i18nT(s){ try { return typeof tr === 'function' ? tr(s) : s; } catch(e)
 const Voy = { on:false, m:null, btn:null };
 function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
   closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true); if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } if (F.phase !== 'idle') cancelFishing(); try { if (Bike.on) bikeOff(); } catch(e){} if (mySeat) try { standUp(); } catch(e){}
-  const W2V = W2S.on && W2 && W2.posts && W2.posts.voy && W2.near(me.pos.x, me.pos.z) ? w2VoyPath(lane) : null;   /* v933 從新主島出發：先開出新主島的港口，再接到外島的航道 */
+  const W2V = W2S.on && W2 && W2.posts && W2.posts.voy && W2.near(me.pos.x, me.pos.z) ? w2VoyPath(lane, tp.id) : null;   /* v933 從新主島出發：先開出新主島的港口，再接到外島的航道 */
   const P = W2V ? W2V.P : [VOY_DOCK.slice(0, 2), [40, -30.5], [52, -30], [56, -50]].concat(lane), cum = [0];   /* 沿著出港的水道，不壓過碼頭 */ for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + (W2V && i === W2V.jump ? 0 : Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]))); const len = cum[cum.length - 1];   /* 中間那一大段海算 0 公尺：開到那裡畫面一暗就接過去 */
   if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 1.7); Voy.m.visible = false; }   /* v596 作者：「船的比例不對」→ 0.82 倍的船比人還小，放大到 1.7 倍（船長大約 10 公尺、駕駛艙比人高） */
   if (!Voy.btn){ const b = el('button', 'tbtn', '跳過 ▶'); b.id = 'voySkip'; b.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; b.addEventListener('click', () => voyEnd(true)); document.body.appendChild(b); Voy.btn = b; }
@@ -18376,7 +18376,9 @@ function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder || !questNpcs.l
 const W2_VILLAGE_TP = new Set(['plaza', 'harborsq', 'hill', 'lighthouse', 'harbor', 'sea', 'river', 'lake', 'pool', 'mangrove', 'mudflat', 'canal', 'shrimp', 'creek', 'reef', 'weir']);
 function w2Redirect(tp){ if (!tp || !W2 || !W2S.home || !W2.posts || !W2.posts.voy || !W2_VILLAGE_TP.has(tp.id) || tp.id === 'reef' || tp.id === 'weir') return tp; const A = W2.posts.voy.arrive; return { id: 'w2harbor', label: '新主島港口', x: A.x, z: A.z, rot: A.rot, color: '#2f89c7' }; }
 /* 新主島的人坐船去外島：先從新主島的港口開出去一段，畫面一暗、接到外島的航道（中間 1500 公尺的海不畫） */
-function w2VoyPath(lane){ const V = W2.posts.voy; return { P: [V.dock.slice(0, 2)].concat(V.out.map(q => q.slice()), [[56, -50]], lane), jump: V.out.length + 1 }; }
+function w2VoyPath(lane, id){ const V = W2.posts.voy, P = [V.dock.slice(0, 2)].concat(V.out.map(q => q.slice())), d = W2.horizon && W2.horizon[id];
+  if (d){ const m = P[P.length - 1]; if (d[1] < 0.3){ const sx = d[0] >= 0 ? 1 : -1, wx = W2.ox + sx * 245; P.push([wx, m[1] + 20]); P.push([wx + d[0] * 60, m[1] + 20 + d[1] * 140]); } else P.push([m[0] + d[0] * 150, m[1] + d[1] * 150]); }   /* v945 往海平線上那座島的方向開（往北的先繞過島的東邊或西邊），開到外海畫面一暗再接到原本的航道 */
+  return { P: P.concat([[56, -50]], lane), jump: P.length }; }
 /* 新主島的蔚博士：平常在水族館入口旁邊；今天調查的那一種水新主島也有（海邊、外海、河、溪、湖、紅樹林）就站到那一種水的岸邊（位置 world2.js 排好了）。
    水下攝影機、保冷箱、調查旗跟著放在她旁邊。今天調查的地方換了（過了一天、資料剛到）會再換位置。 */
 function w2SciKey(){ const T = Sci.list && Sci.list[0], Q = sciQuest(), S = Q ? Q.S : T && SPOT_BY_ID[T.spot]; return S ? S.id : ''; }
