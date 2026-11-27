@@ -21612,7 +21612,7 @@ function ordWants(fid, w){ if (!Ord.d || ordLeft() <= 0) return null; for (const
 async function ordDeliver(o){
   if (Ord.sending || !Ord.d || o.done) return; const P = ordPick(o);
   if (!P.ok){ toast('東西還不夠，湊齊了再來'); Ord.sure = -1; renderTabIf('orders'); return; }
-  if (!ordNear()){ toast(W2S.on ? '走到主城廣場的訂單板前面才能交貨' : '走到港邊廣場的訂單板前面才能交貨'); return; }
+  if (!ordNear()){ toast(W2S.on ? '走到中央市場的訂單板前面才能交貨' : '走到港邊廣場的訂單板前面才能交貨'); return; }
   Ord.sending = true; renderTabIf('orders'); let row = null;
   try { row = await cloudCall('order_deliver', { p_slot: Ord.d.slot, p_idx: o.i, p_fish: P.fish, p_dish: P.dish }); } catch(e){ console.warn('order', e); } Ord.sending = false; Ord.sure = -1;
   if (!row){ ordLoad(true); renderTabIf('orders'); return; }   /* 錯誤訊息 cloudCall 已經跳過了 */
@@ -21702,7 +21702,7 @@ function renderOrders(body){
   const D = Ord.d, near = ordNear();
   body.appendChild(el('p', 'sub', '村子裡的人把要的東西貼在這裡，交貨比直接賣掉多賺。每 4 小時換一批。'));
   { const w = el('div', 'ordme'); w.innerHTML = `<span>⏳ ${ordLeftTxt()}後換一批</span><span>🪙 <b>${rec.coins.toLocaleString()}</b></span><span>⭐ 我的村子貢獻 <b>${(D.pts || 0).toLocaleString()}</b>（交過 ${(D.n || 0).toLocaleString()} 張）</span><span>🏘️ 全村 <b>${(D.vpts || 0).toLocaleString()}</b></span>`; body.appendChild(w); }
-  if (!near){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', '🧭 帶我去訂單板'); b.addEventListener('click', () => navTo('訂單板', ORDB.x, ORDB.z)); r.appendChild(b); r.appendChild(el('span', 'sub2', W2S.on ? '在主城廣場出生點旁邊，走到板子前面才能交貨' : '在港邊廣場，走到板子前面才能交貨')); body.appendChild(r); }
+  if (!near){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', '🧭 帶我去訂單板'); b.addEventListener('click', () => navTo('訂單板', ORDB.x, ORDB.z)); r.appendChild(b); r.appendChild(el('span', 'sub2', W2S.on ? '在中央市場西邊，走到板子前面才能交貨' : '在港邊廣場，走到板子前面才能交貨')); body.appendChild(r); }
   const ul = el('ul', 'ordlist');
   for (const o of D.list){ const who = ORD_WHO[o.who] || ORD_NOBODY, P = ordPick(o), li = el('li', 'ord t' + o.tier + (o.done ? ' done' : '') + (P.ok && !o.done ? ' ready' : ''));
     const hd = el('div', 'ordhd'); hd.appendChild(el('span', 'ordic', who[0])); hd.appendChild(el('b', '', who[1])); hd.appendChild(el('i', 'ordtier', ORD_TIER[o.tier] || '')); li.appendChild(hd);
