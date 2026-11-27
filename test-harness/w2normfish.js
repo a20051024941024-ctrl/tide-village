@@ -10,8 +10,8 @@ const K3=JSON.stringify({on:true,sex:'b',hair:'short',top:'tee',bot:'shorts',sho
  if(process.env.WAITW2){for(let i=0;i<40;i++){await go(31);await p.waitForTimeout(400);if(await ev('!!W2'))break;}}
  console.log('mode',await ev(`JSON.stringify({W2:!!W2,MAP2:MAP2})`),'world2 requests',reqs.length);
  // 舊世界整片量一次，算一個指紋（跟上一版、跟 #map2 模式比）
- console.log('hash',await p.evaluate(()=>{const E=__T.ev,waterAt=E('waterAt'),sid=E('waterSpotId'),ti=E('terrainInfo'),isLand=E('isLand');let h=2166136261>>>0,n=0,w=0;const add=v=>{h^=v&255;h=Math.imul(h,16777619)>>>0;h^=(v>>8)&255;h=Math.imul(h,16777619)>>>0};
-  for(let z=-210;z<=210;z+=2.5)for(let x=-210;x<=210;x+=2.5){const a=waterAt(x,z),q=ti(x,z);add(a?1:0);add(isLand(x,z)?1:0);add(Math.round((q.h+5)*100));add(q.region|0);add(q.water?1:0);if(a){w++;const s=sid(x,z);for(let i=0;i<s.length;i++)add(s.charCodeAt(i));}n++;}return JSON.stringify({h,n,w})}));
+ console.log('hash',await p.evaluate(()=>{const E=__T.ev,waterAt=E('waterAt'),sid=E('waterSpotId'),ti=E('terrainInfo'),isLand=E('isLand');const Tide=E('Env').tide,lv0=Tide.lv;Tide.lv=0.5;/* 舊島紅樹林的泥灘跟著潮汐露出來，量的時候固定在漲潮，不然每次跑的結果不一樣 */let h=2166136261>>>0,n=0,w=0;const add=v=>{h^=v&255;h=Math.imul(h,16777619)>>>0;h^=(v>>8)&255;h=Math.imul(h,16777619)>>>0};
+  for(let z=-210;z<=210;z+=2.5)for(let x=-210;x<=210;x+=2.5){const a=waterAt(x,z),q=ti(x,z);add(a?1:0);add(isLand(x,z)?1:0);add(Math.round((q.h+5)*100));add(q.region|0);add(q.water?1:0);if(a){w++;const s=sid(x,z);for(let i=0;i<s.length;i++)add(s.charCodeAt(i));}n++;}Tide.lv=lv0;return JSON.stringify({h,n,w,lv0:+lv0.toFixed(2)})}));
  if(process.env.HASHONLY){console.log('errs',JSON.stringify(errs.slice(0,8)));await b.close();process.exit(0);}
  await p.evaluate(()=>{__T.DayNight.fixed=10;});
  // 「找釣點」：舊島照舊（講最近的釣點在哪個方向，不會開帶路）
