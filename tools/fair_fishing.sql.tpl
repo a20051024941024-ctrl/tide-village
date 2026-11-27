@@ -80,6 +80,9 @@ declare cfg jsonb := public._fishcfg(); sp jsonb := cfg->'spots'->p_spot; kinds 
 begin
   if sp is null or sp->>'dx' is null or p_bx is null or p_bz is null or p_spot in ('shrimp', 'icelake', 'mudflat') then return null; end if;
   sx := (sp->>'x')::float8; sz := (sp->>'z')::float8; dx := (sp->>'dx')::float8; dz := (sp->>'dz')::float8;
+  -- 258：新主島上同一個釣點的第二個位置（x2、z2）：浮標離哪一個近就用哪一個（舊村子、新主島兩邊的魚訊都算）
+  if sp->>'x2' is not null and sqrt(power(p_bx::float8 - (sp->>'x2')::float8, 2) + power(p_bz::float8 - (sp->>'z2')::float8, 2)) < sqrt(power(p_bx::float8 - sx, 2) + power(p_bz::float8 - sz, 2)) then
+    sx := (sp->>'x2')::float8; sz := (sp->>'z2')::float8; dx := (sp->>'dx2')::float8; dz := (sp->>'dz2')::float8; end if;
   if sqrt(power(p_bx::float8 - sx, 2) + power(p_bz::float8 - sz, 2)) > 16 then return null; end if;
   select array_agg(v.k0 order by v.o0) into kinds from (values ('school', 1), ('shadow', 2), ('pred', 3), ('bottom', 4)) v(k0, o0)
     where exists (select 1 from jsonb_array_elements_text(sp->'fish') x where cfg->'fish'->x->>'k' = v.k0 and not coalesce((cfg->'fish'->x->>'v')::boolean, false));
@@ -184,7 +187,8 @@ begin
   end if;
   rainy := w->>'k' in ('rain', 'storm');
   -- 發光圈（好釣點）：站在圈圈旁邊（不是在船上）
-  if not coalesce(p_boat, false) and p_x is not null and p_z is not null and sqrt(power(p_x - (sp->>'x')::numeric, 2) + power(p_z - (sp->>'z')::numeric, 2)) < 2.2 then
+  if not coalesce(p_boat, false) and p_x is not null and p_z is not null and (sqrt(power(p_x - (sp->>'x')::numeric, 2) + power(p_z - (sp->>'z')::numeric, 2)) < 2.2
+      or (sp->>'x2' is not null and sqrt(power(p_x - (sp->>'x2')::numeric, 2) + power(p_z - (sp->>'z2')::numeric, 2)) < 2.2)) then   -- 258：新主島的光圈也算
     ring := 1.3; lb := (sp->>'lb')::numeric; end if;
   -- 遊戲裡的時間（一天 36 分鐘）
   gh := mod((mod(ms / 1000.0, (cfg->>'dayLen')::numeric) / (cfg->>'dayLen')::numeric * 24 + 8)::numeric, 24);
