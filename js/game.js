@@ -7097,7 +7097,12 @@ function renderMap(body){
   requestAnimationFrame(draw);
   const list = el('div', 'tplist');
   const WS = worldSummary();
-  let nLock = 0; for (const tp of TRAVEL){ const on = visited.has(tp.id); if (!on){ nLock++; continue; } const b = el('button', 'tpbtn', tp.label); b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
+  /* v953 換新島準備（清單第 7 項）：人在新主島那一邊（W2S.on）時，傳送按鈕只有新主島的地方和外島，舊村子的地點不列出來 */
+  const W2TP = !!(W2S.on && W2 && W2.spots);
+  if (W2TP){ list.appendChild(Object.assign(el('div', 'dexhead', '🏝️ 新主島'), { style: 'grid-column:1/-1' }));
+    for (const [nm, lx, lz] of W2.spots){ if (nm === '玩家建地') continue; const b = el('button', 'tpbtn', nm); b.addEventListener('click', () => { const x = W2.ox + lx, z = W2.oz + lz; try { W2.warm(x, z); } catch(e){} travelTo({ id: 'w2:' + nm, label: nm, x, z, rot: me.rot }); }); list.appendChild(b); }
+    list.appendChild(Object.assign(el('div', 'dexhead', '⛵ 外島（去過的）'), { style: 'grid-column:1/-1' })); }
+  let nLock = 0; for (const tp of TRAVEL){ if (W2TP && W2_VILLAGE_TP.has(tp.id)) continue; const on = visited.has(tp.id); if (!on){ nLock++; continue; } const b = el('button', 'tpbtn', tp.label); b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
   if (nLock){ const c = el('span', 'tpbtn lock', `❔ 還有 ${nLock} 個地點沒去過`); c.style.gridColumn = '1 / -1'; list.appendChild(c); }
   body.appendChild(list);
   { body.appendChild(el('div', 'dexhead', '🧭 找人、找店（點了會帶路）')); const nl = el('div', 'tplist');
