@@ -21605,6 +21605,8 @@ const STORY_HI = { chief:'今天也來釣魚啊？村子有你真熱鬧！', lin
 function evtNext(ms, list, dur){ const s = Math.floor(ms / 1000), d0 = Math.floor((s + 28800) / 86400) * 86400 - 28800; let best = null;   /* 台灣時間每天固定的幾個時間：現在是不是在進行、下一次幾點 */
   for (let k = -1; k <= 1; k++) for (const [h, m2, wk] of list){ const st = d0 + k * 86400 + h * 3600 + m2 * 60; if (wk){ const wd = new Date((st + 28800) * 1000).getUTCDay(); if (wd !== 0 && wd !== 6) continue; } if (s >= st && s < st + dur) return { on: true, st, en: st + dur }; if (st > s && (!best || st < best.st)) best = { on: false, st, en: st + dur }; }
   return best || { on: false, st: s, en: s }; }
+/* v947 作者：「ChatGPT 生的完全不行，一看就知道不是遊戲裡的角色」→ 活動的大圖用遊戲自己的人物和場景拍（icons/ev/<活動>.jpg），沒有圖的活動照舊用大圖示 */
+const EV_IMG = new Set(['mig', 'bounty', 'rumor', 'meteor', 'tny', 'boss', 'whale', 'lob', 'stamp', 'quest', 'fest']);
 function renderEvents(body){ const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), st = Evt.st, L = [];
   const fname = f => (FISH_BY_ID[f] || {}).name || '', sname = sp => (SPOT_BY_ID[sp] || {}).label || '';
   { const nx = m.active ? m : evtMig((m.st + 10800 + 60) * 1000), n = st && st.mig && st.mig.id === m.id ? st.mig.n : 0, done = !!(st && st.mig && st.mig.id === m.id && st.mig.done), sp = SPOT_BY_ID[m.spot];
@@ -21628,11 +21630,11 @@ function renderEvents(body){ const ms = bossNow(), m = evtMig(ms), b = evtBounty
   const wrap = el('div', 'evwrap'), left = el('div', 'evleft'), right = el('div', 'evright'); wrap.append(left, right); body.appendChild(wrap);
   { const tb = el('div', 'evtabs'); for (const [k, l] of [['day', '今天'], ['long', '長期']]){ const t = el('button', 'evtab' + (Evt.tab === k ? ' on' : ''), l); if (L.some(e => e.tab === k && e.on && !e.done)) t.appendChild(el('i', 'evdot')); t.addEventListener('click', () => { Evt.tab = k; Evt.sel = null; renderTab(); }); tb.appendChild(t); } left.appendChild(tb); }
   const list = el('div', 'evlist'); left.appendChild(list);
-  for (const e of shown){ const c = el('button', 'evcard' + (e === sel ? ' sel' : '')); c.style.background = `linear-gradient(135deg, ${e.col[0]}, ${e.col[1]})`;
+  for (const e of shown){ const c = el('button', 'evcard' + (e === sel ? ' sel' : '')); c.style.background = EV_IMG.has(e.id) ? `linear-gradient(90deg, ${e.col[0]}ee 0%, ${e.col[0]}99 45%, ${e.col[0]}00 75%), url(icons/ev/${e.id}.jpg) 70% 40%/cover` : `linear-gradient(135deg, ${e.col[0]}, ${e.col[1]})`;
     c.appendChild(el('span', 'evic', e.ic)); c.appendChild(el('span', 'evt', e.t)); c.appendChild(el('span', 'evchip' + (e.on ? ' on' : ''), (e.on && !e.done && e.id !== 'stamp' ? '進行中・' : '') + e.chip)); if (e.on && !e.done) c.appendChild(el('i', 'evdot'));
     c.addEventListener('click', () => { Evt.sel = e.id; renderTab(); }); list.appendChild(c); }
   if (!sel) return;
-  { const bn = el('div', 'evban'); bn.style.background = `linear-gradient(135deg, ${sel.col[0]}, ${sel.col[1]})`; bn.appendChild(el('span', 'evbig', sel.ic)); bn.appendChild(el('div', 'evbt', sel.t)); bn.appendChild(el('span', 'evchip big' + (sel.on ? ' on' : ''), '🕒 ' + sel.chip)); right.appendChild(bn); }
+  { const bn = el('div', 'evban' + (EV_IMG.has(sel.id) ? ' img' : '')); bn.style.background = EV_IMG.has(sel.id) ? `linear-gradient(90deg, ${sel.col[0]}dd 0%, ${sel.col[0]}55 40%, ${sel.col[0]}00 65%), url(icons/ev/${sel.id}.jpg) center/cover` : `linear-gradient(135deg, ${sel.col[0]}, ${sel.col[1]})`; if (!EV_IMG.has(sel.id)) bn.appendChild(el('span', 'evbig', sel.ic)); bn.appendChild(el('div', 'evbt', sel.t)); bn.appendChild(el('span', 'evchip big' + (sel.on ? ' on' : ''), '🕒 ' + sel.chip)); right.appendChild(bn); }
   right.appendChild(el('p', 'evwhat', sel.what)); if (sel.prog) right.appendChild(el('p', 'evprog', sel.prog));
   if (sel.rw){ const r = el('div', 'evrw'); for (const [ic, t] of sel.rw){ const c = el('div', 'evrc'); c.appendChild(el('span', 'evri', ic)); c.appendChild(el('span', 'evrt', t)); r.appendChild(c); } right.appendChild(el('div', 'evrh', '獎勵')); right.appendChild(r); }
   if (sel.panel){ try { sel.panel(right); } catch(e){} if (!Cloud.on) right.appendChild(el('p', 'sub', '要連上線才能蓋章。')); }
@@ -24537,6 +24539,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u947', d:'11/27', items:[['🖼️','活動頁每個活動都有一張大圖，是在村子裡拍的', 'events']] },
   { id:'u943', d:'11/27', items:[['🎒','背包換成左邊分類、右邊一格一格的大卡片；釣組、圖鑑、成就、荒島、坐船這些很長的頁面，也變成左邊選一段、右邊只看那一段，不用一直往下滑', 'bag']] },
   { id:'u941', d:'11/27', items:[['🎪','活動頁換新：上面分「今天」「長期」，左邊一排活動卡片寫著幾點開始、還剩多久，正在進行的有紅點；點一張，右邊看要做什麼、有什麼獎勵，還能直接帶路', 'events']] },
   { id:'u940', d:'11/27', items:[['⚙️','設定頁換成左右兩欄：左邊聲音、畫面，右邊帳號、語言聊天、其他；開關一眼就看得到，長的說明點 ⓘ 才打開']] },
