@@ -18457,20 +18457,22 @@ function rideBuild(kind){ const g = new THREE.Group(), L = (c, o) => new THREE.M
     add(new THREE.CylinderGeometry(0.03, 0.03, 0.25, 8), CHROME, 0.14, 0.32, -0.75, Math.PI / 2.4, 0, 0);   // 排氣管
     flag(-0.17, 1.3, -0.98);
     g.userData.seats = [{ x: 0, y: 0.92, z: -0.12 }, { x: 0, y: 0.95, z: -0.55 }]; }
-  else {   /* 駕艙三輪車：水滴形的殼（車頭圓、車尾收尖），前兩輪、後一輪，坐三個人（司機在前、後面兩個） */
-    const prof = [[0, -1.25], [0.22, -1.18], [0.42, -0.95], [0.6, -0.55], [0.74, -0.1], [0.78, 0.25], [0.72, 0.6], [0.56, 0.9], [0.32, 1.08], [0, 1.15]].map(([r, z]) => new THREE.Vector2(r, z));
-    const shell = () => new THREE.LatheGeometry(prof, 28).rotateX(Math.PI / 2);
-    add(shell().scale(0.92, 0.7, 1), BLUE, 0, 0.9, 0);   // 海洋藍的殼（像一條胖胖的魚）
-    add(shell().scale(0.95, 0.55, 1.02), WHITE, 0, 0.78, 0);   // 下面一圈霧白
-    add(new THREE.SphereGeometry(0.62, 22, 14, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.98, 0.82, 1.2), L('#1f4f63', { transparent: true, opacity: 0.7, roughness: 0.08, metalness: 0.3 }), 0, 1.12, 0.1);   // 上面一個透明的大玻璃罩，看得到裡面坐的人
-    add(new THREE.ConeGeometry(0.28, 0.5, 4).scale(0.25, 1, 1).rotateX(-0.5), TEAL, 0, 1.25, -0.95);   // 車尾一片小魚鰭
-    add(new THREE.TorusGeometry(0.67, 0.04, 6, 30, Math.PI).rotateY(Math.PI / 2).scale(1, 0.72, 1), ORG, 0, 0.9, -0.35);   // 一條日落橘的線繞過車身
-    for (const sx of [-0.3, 0.3]) fishEye(sx, 0.92, 1.0, 0.1, 0);   // 兩顆魚眼睛車燈
-    wheel(0.66, 0.3, 0.62, 0.3, 0.16); wheel(-0.66, 0.3, 0.62, 0.3, 0.16); wheel(0, 0.3, -0.85, 0.3, 0.18);
-    for (const sx of [-0.66, 0.66]) add(new THREE.SphereGeometry(0.34, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.5, 0.5, 1), BLUE, sx, 0.5, 0.62);   // 前輪擋泥板
-    sticker(0.73, 0.82, -0.45, 0.34, Math.PI / 2); sticker(-0.73, 0.82, -0.45, 0.34, -Math.PI / 2); sticker(0, 1.05, -1.05, 0.28, Math.PI);
-    flag(0.3, 1.2, -0.75);
-    g.userData.seats = [{ x: 0, y: 0.62, z: 0.25 }, { x: -0.28, y: 0.62, z: -0.4 }, { x: 0.28, y: 0.62, z: -0.4 }]; }
+  else {   /* 駕艙三輪車（作者 11/27 選 2：「還是魚的感覺，但更像車」）：高高窄窄的蛋形車殼、前面一大片擋風玻璃、兩邊車窗和車門線、小後照鏡；前兩輪後一輪。魚眼睛車燈＋車尾小魚鰭留著 */
+    const GLASS = L('#24566b', { transparent: true, opacity: 0.72, roughness: 0.06, metalness: 0.35 }), SX = 0.56, SY = 0.78, SZ = 1.12, CY = 0.98;
+    add(new THREE.SphereGeometry(1, 30, 20).scale(SX, SY, SZ), BLUE, 0, CY, 0);   // 海洋藍的蛋形車殼
+    add(new THREE.SphereGeometry(1, 30, 12, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45).scale(SX + 0.02, SY + 0.02, SZ + 0.02), WHITE, 0, CY, 0);   // 下面霧白的肚子
+    add(new THREE.SphereGeometry(1, 24, 14, Math.PI / 2 - 0.78, 1.56, 0.32, 0.72).scale(SX + 0.012, SY + 0.012, SZ + 0.012), GLASS, 0, CY, 0);   // 前面一大片擋風玻璃
+    for (const ph of [0, Math.PI]) add(new THREE.SphereGeometry(1, 16, 10, ph - 0.42, 0.84, 0.42, 0.62).scale(SX + 0.012, SY + 0.012, SZ + 0.012), GLASS, 0, CY, -0.12);   // 兩邊車窗
+    for (const sx of [-1, 1]){ add(new THREE.BoxGeometry(0.012, 0.62, 0.025), DARK, sx * 0.565, 0.95, -0.42); add(new THREE.BoxGeometry(0.012, 0.62, 0.025), DARK, sx * 0.56, 0.95, 0.3); add(new THREE.BoxGeometry(0.03, 0.03, 0.12), CHROME, sx * 0.57, 0.88, -0.28);   // 車門線、門把
+      add(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6), DARK, sx * 0.52, 1.2, 0.62, 0, 0, sx * 1.1); add(new THREE.SphereGeometry(0.06, 10, 8).scale(1, 0.75, 0.5), BLUE, sx * 0.62, 1.25, 0.6); }   // 小後照鏡
+    add(new THREE.TorusGeometry(1, 0.022, 6, 48).rotateX(Math.PI / 2).scale(SX + 0.015, 1, SZ + 0.015), ORG, 0, 0.84, 0);   // 腰上一圈日落橘
+    for (const sx of [-0.27, 0.27]) fishEye(sx, 0.78, 1.0, 0.1, sx * 0.4);   // 兩顆魚眼睛車燈
+    add(new THREE.ConeGeometry(0.26, 0.46, 4).scale(0.22, 1, 1).rotateX(-0.55), TEAL, 0, 1.62, -0.72);   // 車尾一片小魚鰭
+    wheel(0.5, 0.28, 0.68, 0.28, 0.15); wheel(-0.5, 0.28, 0.68, 0.28, 0.15); wheel(0, 0.28, -0.82, 0.28, 0.17);
+    for (const sx of [-0.5, 0.5]) add(new THREE.SphereGeometry(0.32, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.45, 0.5, 1), BLUE, sx, 0.48, 0.68);   // 前輪擋泥板
+    sticker(0.585, 0.7, -0.08, 0.26, Math.PI / 2); sticker(-0.585, 0.7, -0.08, 0.26, -Math.PI / 2); sticker(0, 1.0, -1.13, 0.26, Math.PI);
+    flag(0.22, 1.35, -0.85);
+    g.userData.seats = [{ x: 0, y: 0.62, z: 0.25 }, { x: -0.2, y: 0.62, z: -0.38 }, { x: 0.2, y: 0.62, z: -0.38 }]; }
   return g; }
 function rideFlagTick(g, t){ const f = g && g.userData.flag; if (f){ f.rotation.y = Math.sin(t * 1.9) * 0.45 + Math.sin(t * 4.7) * 0.1; f.rotation.x = Math.sin(t * 2.6) * 0.12; } }
 /* ===== v954 新主島的新地圖（作者 11/27：「地圖能參考他們，但不要抄襲」→ 選了明亮扁平那一張）=====
