@@ -1229,7 +1229,7 @@ function hillH(x, z){
 // 回傳 { h: 地面高度, water: 是否為水面, region }
 const SHELF_W = 3, SHELF_S = 0.1;
 function terrainInfo(x, z){
-  if (W2 && W2.near(x, z)) return W2.tinfo(x, z);   /* v922 新主島：水有多深、是河是湖，問新主島（水裡的魚影、魚跳出水面都靠這個） */
+  if (W2 && W2.near(x, z) && !blOn(x, z, 0.6)) return W2.tinfo(x, z);   /* v922 新主島：水有多深、是河是湖，問新主島（水裡的魚影、魚跳出水面都靠這個） */
   let h = 0, water = false, region = 0;
   const e = islandEdge(x, z);
   if (e < 2){ const sd = 2 - e; h = Math.max(-3, sd <= SHELF_W ? -sd * SHELF_S : -(SHELF_W * SHELF_S + (sd - SHELF_W) * 0.42)); if (h < -0.02) water = true; }   /* v427 海岸前 3 公尺是緩緩的淺灘（以前一離岸就每公尺深 0.32），乾潮才退得遠 */
@@ -1251,7 +1251,7 @@ function terrainInfo(x, z){
   return { h, water, region };
 }
 function terrainH(x, z){ return terrainInfo(x, z).h; }
-function isLand(x, z){ if (W2 && W2.near(x, z)) return W2.land(x, z); return blOn(x, z, 0.2) || !terrainInfo(x, z).water; }   /* v853 建地島也算陸地（不然站在島上到處都會跳「拋竿」） */
+function isLand(x, z){ if (W2 && W2.near(x, z) && !blOn(x, z, 0.6)) return W2.land(x, z); return blOn(x, z, 0.2) || !terrainInfo(x, z).water; }   /* v853 建地島也算陸地（不然站在島上到處都會跳「拋竿」） */
 function trailDist(x, z){ let d = 1e9; for (const p of MAP.trails || []) d = Math.min(d, lineDist(x, z, p)); return d; }
 function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); for (const S of [SPORT, SPORT2]){ const dx = Math.max(S.x0 - x, 0, x - S.x1), dz = Math.max(S.z0 - z, 0, z - S.z1); d = Math.min(d, dx || dz ? Math.hypot(dx, dz) : -Math.min(x - S.x0, S.x1 - x, z - S.z0, S.z1 - z)); } return d; }
 function inSand(x, z){ const e = islandEdge(x, z); return e < 4.5 + wobble(x + z, 2) * 1.2; }
@@ -2378,7 +2378,7 @@ function buildTrees(trees, PX, PZ){
 }
 
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
-function waterAt(px, pz){ if (W2 && W2.near(px, pz)) return W2.water(px, pz);   /* v922 新主島可以釣魚：以前這裡用舊島的地形算，整座新主島都被當成外海（站在廣場上也會跳「拋竿」） */ if (blOn(px, pz, 0.2)) return false;   /* v853 建地島上不是水 */ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (wildNear(px, pz, 10)) return wildWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); { const sh = mtnH(px, pz); if (sh !== null && sh > -0.12) return false; } if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
+function waterAt(px, pz){ if (W2 && W2.near(px, pz) && !blOn(px, pz, 0.6)) return W2.water(px, pz);   /* v922 新主島可以釣魚：以前這裡用舊島的地形算，整座新主島都被當成外海（站在廣場上也會跳「拋竿」） */ if (blOn(px, pz, 0.2)) return false;   /* v853 建地島上不是水 */ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (wildNear(px, pz, 10)) return wildWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); { const sh = mtnH(px, pz); if (sh !== null && sh > -0.12) return false; } if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castBlocked(x, z, px, pz){
   const L = Math.hypot(px - x, pz - z); if (L < 2.2) return false;
   let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
@@ -3381,8 +3381,8 @@ function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of wate
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
 function isleH(x, z){ if (Math.abs(x - GARDEN.x) <= GARDEN.hx && Math.abs(z - GARDEN.z) <= GARDEN.hz) return ISLE.y; const dx = x - ISLE.x, dz = z - ISLE.z; if (Math.abs(dx) > ISL2.R + 4 || Math.abs(dz) > ISL2.R + 4) return null; const d = isl2In(dx, dz); if (d < -2.5) return null; return d >= 2 ? ISLE.y : ISLE.y - (2 - d) / 4.5 * 0.62; }   /* v873 自然形狀的小島 */
 function frostH(x, z){ const d = Math.hypot(x - FROST.x, z - FROST.z); if (d > FROST.r + 2.2) return null; if (Math.hypot(x - FROST.lake.x, z - FROST.lake.z) < FROST.lake.r) return FROST.lake.y; return d <= FROST.r ? FROST.y : FROST.y - (d - FROST.r) / 2.2 * 0.3; }
-function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (W2 && W2.near(x, z)){ const wh = W2.h(x, z); return wh < 0 && W2.dry(x, z) ? wh : Math.max(0, wh); }   /* v922 新主島退潮露出來的濕沙：站在真正的沙面上（比水面低一點），跟舊島一樣 */ { const bh = blH(x, z); if (bh !== null) return bh; } if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } if (wildNear(x, z, 10)){ const wh = wildH(x, z); if (wh !== null) return Math.max(0, wh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } { const th = terrainH(x, z); return th < 0 && seaDry(x, z) ? th : Math.max(0, th); } }
-function walkable(x, z){ if (deckAt(x, z)) return true; if (W2 && W2.near(x, z)) return W2.walk(x, z); if (blOn(x, z, 0.3)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (wildNear(x, z, 4)) return !wildWater(x, z); if (Math.abs(x - ISLE.x) < ISL2.R + 2 && Math.abs(z - ISLE.z) < ISL2.R + 2 && isl2In(x - ISLE.x, z - ISLE.z) > -1.4) return isl2Walk(x, z); if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && (isLand(x, z) || seaDry(x, z))   /* v562 作者：乾潮露出來的沙灘「走不過去」→ 退潮時水退掉的濕沙可以走上去；漲回來會被推回岸上（5505 那段） */; }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (W2 && W2.near(x, z) && !blOn(x, z, 0.6)){ const wh = W2.h(x, z); return wh < 0 && W2.dry(x, z) ? wh : Math.max(0, wh); }   /* v922 新主島退潮露出來的濕沙：站在真正的沙面上（比水面低一點），跟舊島一樣 */ { const bh = blH(x, z); if (bh !== null) return bh; } if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } if (wildNear(x, z, 10)){ const wh = wildH(x, z); if (wh !== null) return Math.max(0, wh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } { const th = terrainH(x, z); return th < 0 && seaDry(x, z) ? th : Math.max(0, th); } }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (W2 && W2.near(x, z) && !blOn(x, z, 0.3)) return W2.walk(x, z); if (blOn(x, z, 0.3)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (wildNear(x, z, 4)) return !wildWater(x, z); if (Math.abs(x - ISLE.x) < ISL2.R + 2 && Math.abs(z - ISLE.z) < ISL2.R + 2 && isl2In(x - ISLE.x, z - ISLE.z) > -1.4) return isl2Walk(x, z); if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && (isLand(x, z) || seaDry(x, z))   /* v562 作者：乾潮露出來的沙灘「走不過去」→ 退潮時水退掉的濕沙可以走上去；漲回來會被推回岸上（5505 那段） */; }
 /* ===== v644 作者：「擋路的小東西直接移掉吧」=====
    村子蓋好以後掃一遍：小的、會擋人的東西（燈柱、木桶、柱子、小招牌、盆栽…）如果站在路或廣場上，而且四周都是空地（站在路中間，不是靠牆、靠水邊），
    就整個拿掉（碰撞和樣子都拿掉）。靠牆、靠水邊的照留。人物、寵物不會被拿掉。之後作者可以用「擺設村子」自己調 */
@@ -7078,7 +7078,7 @@ function renderMap(body){
 
 // 岸邊釣魚：不在發光圈裡也可以，只要面前（或旁邊）幾公尺內有水
 function waterSpotId(x, z){
-  if (W2 && W2.near(x, z)) return W2.spot(x, z);   /* v922 新主島：湖、森林的溪、河、紅樹林、岸邊、外海 */
+  if (W2 && W2.near(x, z) && !blOn(x, z, 0.6)) return W2.spot(x, z);   /* v922 新主島：湖、森林的溪、河、紅樹林、岸邊、外海 */
   if (inShrimpHall(x, z, 5)) return 'shrimp';
   if (Math.hypot(x - ISLE.x, z - ISLE.z) < 55) return 'isle';
   if (Math.hypot(x - FROST.x, z - FROST.z) < 50) return frostHole(x, z, 1) ? 'icelake' : 'icesea';
@@ -17695,7 +17695,7 @@ function addChumZone(x, z, type, owner, left){   /* left：別人打的窩還剩
 /* v431 玩家回報「打窩別的玩家看不到」：以前打窩只在丟下去的那一刻通知一次，晚一點才走過來、才上線、或那一下剛好沒收到的人就永遠看不到。
    現在自己打的窩也放進「我的狀態」裡一直帶著（位置、種類、幾點結束），別人不管什麼時候看到我，都會把我還沒結束的窩補畫出來 */
 function myChumState(){ const L = []; for (const zn of chumZones) if (zn.owner === 'me' && zn.until - now() > 3) L.push([+zn.x.toFixed(2), +zn.z.toFixed(2), CHUMS.findIndex(c => c.id === zn.type), zn.exp]); return L.slice(-3); }
-function inWorldXZ(x, z){ return (Math.abs(x) <= 400 && Math.abs(z) <= 400) || !!(W2 && W2.near(x, z)); }   /* v922 別人傳來的座標合不合理：舊世界 ±400，加上新主島（z 1500 那一帶） */
+function inWorldXZ(x, z){ return (Math.abs(x) <= 400 && Math.abs(z) <= 400) || !!(W2 && W2.near(x, z)) || blOn(x, z, 4); }   /* v922 別人傳來的座標合不合理：舊世界 ±400，加上新主島（z 1500 那一帶） */
 function syncPeerChum(peer, cz){ if (!Array.isArray(cz)) return; for (const q of cz.slice(0, 3)){ if (!Array.isArray(q)) continue; const x = +q[0], z = +q[1], C = CHUMS[+q[2]], left = +q[3] - Date.now() / 1000; if (!C || !isFinite(x) || !isFinite(z) || !(left > 3) || !inWorldXZ(x, z)) continue;
     if (chumZones.some(zn => zn.owner === peer && Math.hypot(zn.x - x, zn.z - z) < 0.6)) continue; if (chumZones.length >= 12) break; addChumZone(x, z, C.id, peer, Math.min(left, C.dur)); } }
 function removeChumZone(zn){ const i = chumZones.indexOf(zn); if (i >= 0) chumZones.splice(i, 1); scene.remove(zn.g); }
@@ -20246,7 +20246,7 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){} try { if (!isBlockedPeer(pp.peer)) syncPeerSecret(pp.peer, pr.sc || [], pr.n); } catch(e){}
-  if (pos){ if (W2 && W2.near(+pos[0]||0, +pos[1]||0)) p.target.set(+pos[0], 0, +pos[1]);   /* v919 新主島在 z 1500 那一帶：位置不要被切回 ±400（不然在那裡看不到別人，沒辦法一起看大看板） */ else p.target.set(clamp(+pos[0]||0, -400, 400), 0, clamp(+pos[1]||0, -400, 400));   /* v619 撞球館在 z 199.5～212.5，以前別人的位置被切在 200 → 在你畫面上全部擠在北邊牆、果汁吧那裡，進門也不是從門口出現，站在球桌旁也算「太遠」不能邀請 */   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, W2 ? 16 : 8); }
+  if (pos){ if ((W2 && W2.near(+pos[0]||0, +pos[1]||0)) || blOn(+pos[0]||0, +pos[1]||0, 4)) p.target.set(+pos[0], 0, +pos[1]);   /* v919 新主島在 z 1500 那一帶：位置不要被切回 ±400（不然在那裡看不到別人，沒辦法一起看大看板） */ else p.target.set(clamp(+pos[0]||0, -400, 400), 0, clamp(+pos[1]||0, -400, 400));   /* v619 撞球館在 z 199.5～212.5，以前別人的位置被切在 200 → 在你畫面上全部擠在北邊牆、果汁吧那裡，進門也不是從門口出現，站在球桌旁也算「太遠」不能邀請 */   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, W2 ? 16 : 8); }
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
@@ -21738,11 +21738,18 @@ function renderOrders(body){
   body.appendChild(ul);
   body.appendChild(el('p', 'sub', '收藏⭐的、放在我的海展示的、取了名字的魚不會被拿去交。菜要先在島上的田收成，才會留一顆在菜籃。'));
 }
+/* ===== v931 建地島搬到新主島的左下角外海（作者 11/27 選的）=====
+   建地島的程式（BLI、blBuild、買地、蓋方塊、伺服器 230）全部照舊，只是把島的位置改到新主島西南邊的外海：
+   居民區最南邊那條巷子走到海邊，接一座 18 公尺的木橋過去。一格 20×20、一條街 9 格不變，大家以前蓋的東西照原樣出現。
+   建地島在新主島的資料格範圍裡，所以地面高度、能不能走、是不是水這幾個問題，站在建地島上時先問建地島（blOn），不問新主島。
+   只有預覽（#map2）才開；一般玩家的建地島照舊收著（BLI.off）。 */
+function w2Lots(){ if (!W2 || !W2.lots) return; const L = W2.lots; BLI.bx = L.bx; BLI.bz0 = L.bz0; BLI.bz1 = L.bz0 + 18; BLI.x = L.bx - 25; BLI.z = BLI.bz1 + BLI.half - 0.8; BLI.by = 0.45; BLI.off = false;
+  for (let k = 0; k < 8; k++) decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + k * 0.5, z1: BLI.bz0 + (k + 1) * 0.5, y: 0.2 + (BLI.by - 0.2) * (k + 1) / 8 }); decks.push({ x0: BLI.bx - 1.5, x1: BLI.bx + 1.5, z0: BLI.bz0 + 4, z1: BLI.bz1 + 1, y: BLI.by }); }   /* 木橋：岸邊那頭 4 公尺慢慢斜上去 */
 function w2SetWaterMask(tex, cx, cz, w, h){ const U = waterSurface.material.uniforms; if (tex){ U.uMask.value = tex; U.uMC.value.set(cx, cz); U.uMS.value.set(w, h); } else { U.uMask.value = waterSurface.userData.mask0; U.uMC.value.set(0, 0); U.uMS.value.set(150, 150); waterSurface.position.x = 0; waterSurface.position.z = 0; } }
 function w2Boot(){ if (W2 || W2ing) return; W2ing = true;
   import('./world2.js').then(m => { W2 = m.init({ THREE, scene, camera, me, colliders, mat, Quality, DayNight, waterSurface, mergeGeometries, setWaterMask: w2SetWaterMask,
       tw: ART2 ? { house: twHouse, cottage: twCottage, office: twOffice, museum: twMuseum, market: twMarket, merge: twMerge, boat: () => twBoatGeo().clone() } : null, art2Add: ART2 ? art2Add : null, sign: art2Sign });   /* v919 村子現有的街屋做法和模型也給新主島用 */
-    const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; w2Nav(); for (const st of W2.seats || []) CHAIRS.push(Object.assign({ watch: W2.bb }, st)); for (const st of W2.benches || []) CHAIRS.push(Object.assign({}, st));   /* v929 森林裡的長椅（護林員小屋的走廊） */   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ toast('🚧 新主島預覽：還在施工，只有帶 #map2 的網址看得到'); }).catch(e => { console.warn('world2', e); W2ing = false; toast('新主島預覽載入失敗'); }); }
+    const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; w2Nav(); for (const st of W2.seats || []) CHAIRS.push(Object.assign({ watch: W2.bb }, st)); for (const st of W2.benches || []) CHAIRS.push(Object.assign({}, st)); try { w2Lots(); } catch(e){ console.warn('w2lots', e); }   /* v929 森林裡的長椅（護林員小屋的走廊） */   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ toast('🚧 新主島預覽：還在施工，只有帶 #map2 的網址看得到'); }).catch(e => { console.warn('world2', e); W2ing = false; toast('新主島預覽載入失敗'); }); }
 /* 預覽用：上面一排「直接過去」的按鈕。島很大，用走的要好幾分鐘，作者要能一區一區點過去看（只有 #map2 才有，正式換島時拿掉） */
 function w2Nav(){ if (!W2 || !W2.spots || document.getElementById('w2nav')) return; const box = document.createElement('div'); box.id = 'w2nav';
   box.style.cssText = 'position:fixed;left:var(--gl);top:calc(var(--gt) + 58px);z-index:40;display:flex;gap:6px;align-items:center;max-width:max(210px,calc(100vw - var(--gl) - 262px));overflow-x:auto;padding:6px 10px;background:rgba(24,51,74,.8);border-radius:14px;-webkit-overflow-scrolling:touch;scrollbar-width:none';   /* 右邊留給地圖、背包、手機和天氣那一塊 */
