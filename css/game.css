@@ -2705,3 +2705,10 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .sidepane > .dexhead:first-child{margin-top:0}
 .sidepane > .dexhead:first-child{display:block;font-size:15px}
 .sidepane > .dexhead:first-child small{display:block;margin:3px 0 0;font-weight:400}
+.bagcats{position:sticky;top:0}
+.bagsearch{width:100%;margin:0 0 8px;padding:8px 12px;border-radius:12px;border:2px solid var(--paper-2);font:inherit;font-size:13px}
+.baggrid.many{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.baggrid.many .bagitem{padding:8px 6px}
+.baggrid.many .biic{font-size:28px}
+.baggrid.many .bim{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:10.5px}
+.baggrid.many .tbtn{padding:5px 4px;font-size:11.5px}

@@ -19688,9 +19688,14 @@ function renderBag(body){ const SECS = [];
     b.addEventListener('click', () => { renderBag.sel = S.title; renderTab(); }); cats.appendChild(b); }
   { const mo = el('div', 'bagcatmore'); for (const [l, tab] of [['🐟 魚缸', 'tank'], ['👕 造型', 'style']]){ const t = el('button', 'bagcat ghost', l); t.addEventListener('click', () => { curTab = tab; renderTab(); }); mo.appendChild(t); } cats.appendChild(mo); }
   if (!cur){ pane.appendChild(el('p', 'sub', '背包裡還沒有東西。釣魚、種田、做料理拿到的東西會放在這裡。')); return; }
-  if (cur.sub) pane.appendChild(el('p', 'sub bagsub', cur.sub));
-  const g = el('div', 'baggrid'); pane.appendChild(g);
-  for (const it of cur.items){ const c = el('div', 'bagitem' + (it.on ? ' on' : '')); c.appendChild(el('div', 'biic', it.ic)); c.appendChild(el('div', 'bin', it.name)); if (it.meta) c.appendChild(el('div', 'bim', it.meta));
+  /* v943 作者：「東西太多時怎麼辦？越來越多時」→ 背包裡超過 10 樣就出現搜尋框（打字會找全部分類）；一類超過 6 樣卡片變小一點、一排放更多；左邊分類固定不動，只有右邊捲 */
+  const total = SECS.reduce((n, S) => n + S.items.length, 0), q = (renderBag.q || '').trim();
+  if (total > 10){ const sb = el('input', 'txt bagsearch'); sb.type = 'search'; sb.placeholder = '🔍 找東西（打名字）'; sb.value = renderBag.q || ''; sb.addEventListener('input', () => { renderBag.q = sb.value; clearTimeout(renderBag.qt); renderBag.qt = setTimeout(() => { renderTab(); const x = document.querySelector('#sheetBody .bagsearch'); if (x){ x.focus(); x.setSelectionRange(x.value.length, x.value.length); } }, 250); }); pane.appendChild(sb); }
+  const items = q ? SECS.flatMap(S => S.items.filter(it => (it.name + ' ' + (it.meta || '')).includes(q))) : cur.items;
+  if (!q && cur.sub) pane.appendChild(el('p', 'sub bagsub', cur.sub));
+  if (q && !items.length) pane.appendChild(el('p', 'sub', `找不到「${q}」`));
+  const g = el('div', 'baggrid' + (items.length > 6 ? ' many' : '')); pane.appendChild(g);
+  for (const it of items){ const c = el('div', 'bagitem' + (it.on ? ' on' : '')); c.appendChild(el('div', 'biic', it.ic)); c.appendChild(el('div', 'bin', it.name)); if (it.meta) c.appendChild(el('div', 'bim', it.meta));
     if (it.btnTxt){ const b = el('button', 'tbtn' + (it.on ? ' ghost' : ''), it.btnTxt); b.disabled = !it.fn; if (it.fn) b.addEventListener('click', () => { b.disabled = true; it.fn(); }); c.appendChild(b); } g.appendChild(c); } }
 
 /* ===== v635 釣具改版第一次（作者的「釣具大改版計畫」）：會影響釣魚的放「🎣 釣組」，只是好看的放「🎨 外觀」，不再散在商店、工坊、包包三個地方 ===== */
