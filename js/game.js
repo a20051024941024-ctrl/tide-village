@@ -18303,7 +18303,7 @@ function w2SiteWant(){ if (!W2 || !W2.posts) return false; if (W2.near(me.pos.x,
 /* 把一個村民放到某個位置重新開始：散步的去處、躲雨的路、讓位的原點都跟舊位置有關，全部忘掉重算；手上的魚收起來。fishing：站好就甩竿（bob 有給＝浮標已經在水裡） */
 function w2NpcPut(n, x, z, rot, fishing, bob, y){ const gy = y != null ? y : groundHeight(x, z);
   n.pos.set(x, gy, z); n.baseY = gy; n.rot = rot; n.speed = 0; n.aspd = 0;
-  n.roam = undefined; n.rh = null; n.rhSt = null; n.rhTry = 0; n.avA = null; n.post = null; n.wMode = null; n.wBack = false; n.wSkip = 0; n.meetFace = null; n.tc = null; n.wetOk = false; try { RH.in.delete(n.npcName); } catch(e){}
+  n.roam = undefined; n.rh = null; n.rhSt = null; n.rhTry = 0; n.w2meal = undefined; n.w2mealSt = null; if (n.wSign){ const S2 = n.wSign; scene.remove(S2.g); S2.L.off = true; try { S2.L.el.remove(); const k = placeLabels.indexOf(S2.L); if (k >= 0) placeLabels.splice(k, 1); } catch(e){} n.wSign = null; }   /* 「去吃飯了」的牌子：換島就拆掉，之後在新的攤位旁重立 */ n.avA = null; n.post = null; n.wMode = null; n.wBack = false; n.wSkip = 0; n.meetFace = null; n.tc = null; n.wetOk = false; try { RH.in.delete(n.npcName); } catch(e){}
   n.wHide = false; n.wPre = false; n.av.g.visible = !onIsle; n._culled = false; if (n.blob) n.blob.visible = true; if (n.nm && n.nm.dataset.st) delete n.nm.dataset.st;
   if (n.held){ n.av.g.remove(n.held.o); n.held = null; } n.sitting = false; n.emote = null; n.flying = null; n.dip = 0; n.bend = 0; n.windup = 0; n.castT = -1;
   if (fishing){ n.fishing = true; if (bob){ n.bobPos.copy(bob); n.bobState = 'water'; n.st = 'wait'; n.next = now() + rand(3, 8); } else { n.bobState = 'none'; n.st = 'windup'; n.stT = 0; } }
@@ -22149,8 +22149,8 @@ function roamGrow(n){ const R = n.roam, K = ROAM_K[R.kind], P = R.post, i = R.tr
   if (i < hang.length){ const a = ((R.h >>> 3) % 628) / 100; x = hang[i][0] + Math.cos(a) * 0.9; z = hang[i][1] + Math.sin(a) * 0.9; }
   else { const a = (R.h % 628) / 100 + i * 2.39996, d = K.ring[0] + (K.ring[1] - K.ring[0]) * (((R.h >>> 8) + i * 37) % 100) / 100; x = P.x + Math.cos(a) * d; z = P.z + Math.sin(a) * d; }
   if (!walkable(x, z) || blocked(x, z, 0.5) || deckAt(x, z) || groundHeight(x, z) > 6) return; if (R.c.some(c => Math.hypot(c.x - x, c.z - z) < 1.5)) return;
-  const w2 = !!(W2 && W2.stroll && W2.near(P.x, P.z)); if (w2 && !W2.stroll(x, z, R.kind === 'shop')) return;   /* v926 新主島：去處要在鋪了路的地方（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋；顧攤的只在攤位旁邊幾步，草地也行。路上也不能橫過鐵軌（小火車不會停下來等人） */
-  let pts = w2 ? null : navFind(P.x, P.z, x, z); if (!pts){ pts = [[P.x, P.z], [x, z]]; const L = Math.hypot(x - P.x, z - P.z); for (let d = 0.6; d < L; d += 0.3){ const qx = P.x + (x - P.x) * d / L, qz = P.z + (z - P.z) * d / L; if (!walkable(qx, qz) || Math.abs(groundHeight(qx, qz) - P.y) > 1.2 || (w2 && W2.railNear(qx, qz, 1.8))) return; } }   /* 尋路的地圖只涵蓋主島中間；外圍的人（阿蘭、阿嬤）改用「直線走得通才去」 */
+  const w2 = !!(W2 && W2.stroll && W2.near(P.x, P.z)); if (w2 && !W2.stroll(x, z, R.kind !== 'stand')) return;   /* v926 新主島：去處要在鋪了路的地方（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋；顧攤的只在攤位旁邊幾步，草地也行。路上也不能橫過鐵軌（小火車不會停下來等人） */
+  let pts = w2 ? (R.kind === 'fish' ? (w2Path(P.x, P.z, x, z) || {}).pts || null : null) : navFind(P.x, P.z, x, z); if (!pts && w2 && R.kind === 'fish') return; if (!pts){   /* v934 新主島釣魚的村民：用新主島的尋路走去附近走走 */ pts = [[P.x, P.z], [x, z]]; const L = Math.hypot(x - P.x, z - P.z); for (let d = 0.6; d < L; d += 0.3){ const qx = P.x + (x - P.x) * d / L, qz = P.z + (z - P.z) * d / L; if (!walkable(qx, qz) || Math.abs(groundHeight(qx, qz) - P.y) > 1.2 || (w2 && W2.railNear(qx, qz, 1.8))) return; } }   /* 尋路的地圖只涵蓋主島中間；外圍的人（阿蘭、阿嬤）改用「直線走得通才去」 */
   const cum = [0]; for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
   const len = cum[cum.length - 1], str = Math.hypot(x - P.x, z - P.z); if (len < 1.2 || len > str * 2.4 + 4 || len > 60) return;
   for (let d = 0.5; d < len; d += 0.3){ let k = 1; while (k < cum.length - 1 && cum[k] < d) k++; const u = (d - cum[k - 1]) / ((cum[k] - cum[k - 1]) || 1), qx = pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * u, qz = pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * u; if (blocked(qx, qz, 0.22)) return; }   /* 路上會穿過櫃台、牆的不要（站在櫃台後面的人，第一步常常是直接穿過櫃台） */
@@ -22225,7 +22225,44 @@ function rhSpell(ms){ const k = Math.floor(ms / 60000); if (RH.k === k) return R
   for (let i = 0; i <= 6; i++){ if (rhWet(ms - i * 60000)){ m0 = ms - i * 60000; break; } }
   if (m0 != null){ let S = m0, E = m0; for (let i = 0; i < 300 && rhWet(S - 30000); i++) S -= 30000; for (let i = 0; i < 300 && rhWet(E + 30000); i++) E += 30000; sp = [Math.floor(S / 30000) * 30000, Math.floor(E / 30000) * 30000 + 30000]; }
   return (RH.sp = sp); }
+/* ===== v934 新主島的村民也過日子：找路、下雨回家、中午傍晚去食堂吃飯 =====
+   新主島自己的尋路（舊島那張 NAV 只涵蓋舊村子）：1 公尺一格，能走、沒被擋住的地方才算（第一次問到才算、算過記住）。鐵軌可以橫過去（人會過平交道）。 */
+const W2NAV = { c: 1, m: null, x0: 0, z0: 0, nx: 0, nz: 0, paths: new Map() };
+function w2NavOk(i, j){ const N = W2NAV; if (i < 0 || j < 0 || i >= N.nx || j >= N.nz) return false; const k = j * N.nx + i; let v = N.m[k];
+  if (!v){ const x = N.x0 + (i + 0.5) * N.c, z = N.z0 + (j + 0.5) * N.c; v = walkable(x, z) && !waterAt(x, z) && !blocked(x, z, 0.35) && groundHeight(x, z) < 6 ? 1 : 2; N.m[k] = v; } return v === 1; }
+function w2Path(ax, az, bx, bz){ const N = W2NAV; if (!N.m){ N.x0 = W2.ox - 200; N.z0 = W2.oz - 116; N.nx = 400; N.nz = 224; N.m = new Int8Array(N.nx * N.nz); }
+  const key0 = Math.round(ax) + ',' + Math.round(az) + '>' + Math.round(bx) + ',' + Math.round(bz); if (N.paths.has(key0)) return N.paths.get(key0);
+  const cell = (x, z) => [Math.floor((x - N.x0) / N.c), Math.floor((z - N.z0) / N.c)], near = (x, z) => { const [i0, j0] = cell(x, z); for (let r = 0; r < 5; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++){ if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue; if (w2NavOk(i0 + di, j0 + dj)) return [i0 + di, j0 + dj]; } return null; };
+  const s = near(ax, az), g = near(bx, bz); let out = null;
+  if (s && g){ const W = N.nx, key = (i, j) => j * W + i, gk = key(g[0], g[1]), h = (i, j) => Math.hypot(i - g[0], j - g[1]), G = new Map(), from = new Map(), heap = [[h(s[0], s[1]), s[0], s[1]]]; G.set(key(s[0], s[1]), 0);
+    const push = e => { heap.push(e); let i = heap.length - 1; while (i > 0){ const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length){ heap[0] = last; let i = 0; for (;;){ const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    let found = false, guard = 0; while (heap.length && guard++ < 40000){ const [, i, j] = pop(), k = key(i, j); if (k === gk){ found = true; break; } const gc = G.get(k);
+      for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++){ if (!di && !dj) continue; const ni = i + di, nj = j + dj; if (!w2NavOk(ni, nj)) continue; if (di && dj && (!w2NavOk(i + di, j) || !w2NavOk(i, j + dj))) continue; const nk = key(ni, nj), ng = gc + (di && dj ? 1.414 : 1); if (G.has(nk) && G.get(nk) <= ng) continue; G.set(nk, ng); from.set(nk, k); push([ng + h(ni, nj), ni, nj]); } }
+    if (found){ const cells = []; for (let k = gk; k != null; k = from.get(k)) cells.push([N.x0 + ((k % W) + 0.5) * N.c, N.z0 + (Math.floor(k / W) + 0.5) * N.c]); cells.reverse();
+      const clear = (x0, z0, x1, z1) => { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.4); for (let k = 1; k < n; k++){ const u = k / n, [i, j] = cell(x0 + (x1 - x0) * u, z0 + (z1 - z0) * u); if (!w2NavOk(i, j)) return false; } return true; };
+      const pts = [[ax, az]]; let a2 = cells[0]; pts.push(a2); for (let k = 1; k < cells.length; k++){ if (k === cells.length - 1 || !clear(a2[0], a2[1], cells[k + 1][0], cells[k + 1][1])){ a2 = cells[k]; pts.push(a2); } } pts.push([bx, bz]);   /* 拉直：看得到下一個轉角就直接走過去 */
+      const cum = [0]; for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1])); out = { pts, cum, len: cum[cum.length - 1] }; } }
+  N.paths.set(key0, out); return out; }
+/* 去食堂吃飯（顧攤的阿鐵、阿報、阿萍和老港）：遊戲時間中午 11:30、傍晚 18:00 前後各一頓，每個人出門的時間差幾分鐘。
+   走到新主島潮汐食堂的門口旁邊（站一排，不擋門），待一陣子再走回去。攤子立「去吃飯了・店照常營業」的牌子。只看時間算，每支手機看到的一樣 */
+const W2_MEAL = { who: ['craft', 'news', 'salon', 'gang'], at: [11.5, 18.0] };
+function w2MealDrive(n, dt, t){ if (!n.w2on || !W2 || !W2.doors) return false; const k = W2_MEAL.who.find(q => W2_NPC[q](n)); if (!k) return false; const D = W2.doors.find(q => q.k === 'cafe'), P = W2.posts[k]; if (!D || !P) return false;
+  const HR = DAY_LEN / 24, sec = (Date.now() / 1000) % DAY_LEN, hNow = (sec / DAY_LEN * 24 + 8) % 24, idx = W2_MEAL.who.indexOf(k);
+  if (!n.w2meal){ const fx = Math.sin(D.face), fz = Math.cos(D.face), sx = Math.cos(D.face), sz = -Math.sin(D.face), side = idx % 2 ? 1 : -1, off = 2.4 + Math.floor(idx / 2) * 1.0, tx = D.x + fx * 1.2 + sx * side * off, tz = D.z + fz * 1.2 + sz * side * off;
+    const c = w2Path(P.x, P.z, tx, tz); n.w2meal = c ? { c, face: Math.atan2(-sx * side, -sz * side) } : 0; }
+  const M = n.w2meal; if (!M) return false; const walkS = M.c.len / 1.45, stayS = HR * 0.9;
+  let st = null, a = 0; for (const h0 of W2_MEAL.at){ const start = h0 + idx * 0.12, el = ((hNow - start + 24) % 24) * HR; if (el < walkS){ st = 'go'; a = el * 1.45; } else if (el < walkS + stayS){ st = 'eat'; } else if (el < walkS * 2 + stayS){ st = 'back'; a = M.c.len - (el - walkS - stayS) * 1.45; } if (st) break; }
+  if (!st){ if (n.w2mealSt){ n.w2mealSt = null; worldSign(n, false); const p = W2.posts[k]; n.pos.set(p.x, groundHeight(p.x, p.z), p.z); n.baseY = n.pos.y; n.rot = p.face; n.speed = 0; if (p.fishing){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } } return false; }
+  if (!n.w2mealSt){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.sitting = false; if (n.held){ n.av.g.remove(n.held.o); n.held = null; } if (n.roam) n.roam.away = false; if (camera.position.distanceTo(n.pos) < 25) n.say(pick2(['肚子餓了，去食堂吃飯', '吃飯時間到了！', '美雲姨今天煮什麼呢']), '', 3.5); }
+  n.w2mealSt = st; if (!n.post) n.post = { x: P.x, y: groundHeight(P.x, P.z), z: P.z, rot: P.face }; worldSign(n, true, 'eat');
+
+  if (st === 'eat'){ const [x, z] = M.c.pts[M.c.pts.length - 1]; n.pos.x = x; n.pos.z = z; n.speed = 0; const pd = Math.hypot(me.pos.x - x, me.pos.z - z); n.rot = lerpAngle(n.rot, pd < 6 ? Math.atan2(me.pos.x - x, me.pos.z - z) : M.face, 1 - Math.exp(-3 * dt)); try { npcMeet(n, t, false); } catch(e){} }
+  else { const [x, z, hd] = navAt(M.c, a); n.pos.x = x; n.pos.z = z; n.rot = lerpAngle(n.rot, hd + (st === 'back' ? Math.PI : 0), 1 - Math.exp(-8 * dt)); n.speed = 1.45; try { npcMeet(n, t, true); } catch(e){} }
+  n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY; n.update(dt, t); n.placeTag(); return true; }
 function rhPlan(n){ if (n.rh) return n.rh; if (frameNo < (n.rhTry || 0)) return null; n.rhTry = frameNo + 300; const who = RAIN_HOME[npcShort(n)]; if (!who || !n.roam || !n.roam.post) return null;
+  if (n.w2on && W2 && W2.homes && W2.homes.length){ const h = hash32('rh2' + n.npcName), H0 = W2.homes[h % W2.homes.length], P = n.roam.post, c = w2Path(P.x, P.z, H0.x, H0.z); if (!c) return null;   /* v934 新主島：回居民區的一間民宅 */
+    return (n.rh = { H: { name: '家', w2: true }, c, d1: 6 + h % 30, d2: 4 + (h >>> 8) % 25 }); }
   if (typeof who === 'object'){ const P = n.roam.post, pts = [[P.x, P.z]].concat(who.via), cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));   /* 自己的家就在旁邊：照固定路線走 */
     const h = hash32('rh' + n.npcName); return (n.rh = { H: who, c: { pts, cum, len: cum[cum.length - 1] }, d1: 6 + h % 30, d2: 4 + (h >>> 8) % 25 }); }
   const H = RES_HOMES.find(q => q.who === who); if (!H) return null; const P = n.roam.post, sd = H.x < -47 ? 1 : -1, dx = H.x + sd * 3.3, dz = H.z + (hash32('rh' + n.npcName) % 3 - 1) * 0.7;
@@ -22294,7 +22331,8 @@ function updateNpcs(dt, t){
   for (const n of npcs){
     if (n.wid === 'gang' && Cloud.on && (!Gang.at || Date.now() - Gang.at > 10 * 60000) && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 30) loadGang();
     if (!n.w2on && worldDrive(n, dt, t)){ worldShopLoad(n); continue; }   /* v926 搬到新主島的（w2on）：不照舊島的作息到處走、下雨不回舊島的家 */
-    try { if (!n.w2on && rainHomeDrive(n, dt, t)) continue; } catch(e){ if (!rainHomeDrive.w){ rainHomeDrive.w = 1; console.warn('rainhome', e); } }   /* v893 下雨回家 */
+    try { if (w2MealDrive(n, dt, t)) continue; } catch(e){ if (!w2MealDrive.w){ w2MealDrive.w = 1; console.warn('w2meal', e); } }   /* v934 新主島：去食堂吃飯 */
+    try { if (rainHomeDrive(n, dt, t)) continue; } catch(e){ if (!rainHomeDrive.w){ rainHomeDrive.w = 1; console.warn('rainhome', e); } }   /* v893 下雨回家 */
     try { if (roamDrive(n, dt, t)) continue; } catch(e){ if (!roamDrive.w){ roamDrive.w = 1; console.warn('roam', e); } }   /* v450 其他村民也會自己走動 */
     if (n.tailor){ updateLing(n, dt, t); continue; }
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
