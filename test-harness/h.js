@@ -19,8 +19,8 @@ module.exports=async function open(opts={}){
   const raf=window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame=cb=>{if(virt){q.push(cb);return q.length}return raf(t=>cb(virt?T:t))};
   window.__virt=()=>{T=pn();T0=T;D0=dn();virt=true};window.__setDate=d=>{D0=d;T0=T};
-  window.__step=(n=1,ms=1000/30)=>{for(let i=0;i<n;i++){T+=ms;const c=q.splice(0);for(const f of c){try{f(T)}catch(e){console.error('raf',e.message)}}}};
+  window.__step=(n=1,ms=1000/30)=>{for(let i=0;i<n;i++){T+=ms;const c=q.splice(0);for(const f of c){try{f(T)}catch(e){console.error('raf',e.message,String(e.stack||'').split('\n').slice(1,4).map(x=>x.trim().replace(/http:\/\/localhost:8131\//,'')).join(' | '))}}}};
  },{ls:opts.ls||{}});
- const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push((e.stack||e.message).slice(0,400)));p.on('console',m=>{if(m.type()==='error'&&!/Failed to load|ERR_/.test(m.text()))errs.push('c: '+m.text().slice(0,150))});
+ const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push((e.stack||e.message).slice(0,400)));p.on('console',m=>{if(m.type()==='error'&&!/Failed to load|ERR_/.test(m.text()))errs.push('c: '+m.text().slice(0,420))});
  await p.goto('http://localhost:8131/#wx=sunny'+(process.env.HASH||''),{timeout:120000});return {b,ctx,p,errs};
 };
