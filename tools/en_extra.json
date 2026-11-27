@@ -9474,5 +9474,6 @@
  "背包換成左邊分類、右邊一格一格的大卡片；釣組、圖鑑、成就、荒島、坐船這些很長的頁面，也變成左邊選一段、右邊只看那一段，不用一直往下滑": "The bag now has categories on the left and big item cards on the right. Long pages like rigs, the fish guide, achievements, the wild island and the boat menu also show sections on the left and just the chosen one on the right, so you don't have to keep scrolling",
  "背包、圖鑑、釣組、成就這些頁面：左邊點分類，右邊看那一類的東西。": "Bag, fish guide, rigs, achievements: tap a category on the left to see its items on the right.",
  "🔍 找東西（打名字）": "🔍 Find (type a name)",
- "找不到「": "Nothing found for \""
+ "找不到「": "Nothing found for \"",
+ "活動頁每個活動都有一張大圖，是在村子裡拍的": "Every event on the events page now has a big picture taken around the village"
 }
