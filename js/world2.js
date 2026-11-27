@@ -492,6 +492,23 @@ export function init(A){
     tickers.push((dt, t) => { for (const m of moored){ m.g.position.y = WL - 0.12 + Math.sin(t * 1.1 + m.ph) * 0.06; m.g.rotation.z = Math.sin(t * 0.9 + m.ph) * 0.04; m.g.rotation.x = Math.sin(t * 0.7 + m.ph * 2) * 0.025; }
       for (const b of sail){ const LEN = b.cum[b.cum.length - 1], s = (t * b.sp) % LEN; let lo = 0, hi = b.cum.length - 1; while (hi - lo > 1){ const m = (lo + hi) >> 1; if (b.cum[m] <= s) lo = m; else hi = m; } const p0 = b.L[lo], p1 = b.L[(lo + 1) % b.L.length], k = (s - b.cum[lo]) / Math.max(1e-6, b.cum[lo + 1] - b.cum[lo]);
         b.g.position.set(p0[0] + (p1[0] - p0[0]) * k, WL - 0.1 + Math.sin(t * 1.3) * 0.05, p0[1] + (p1[1] - p0[1]) * k); const a = Math.atan2(p1[0] - p0[0], p1[1] - p0[1]); let d = a - b.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); b.g.rotation.y += d * Math.min(1, dt * 1.5); b.g.rotation.z = Math.sin(t * 1.1) * 0.03; } }); }
+  /* v945 外島照規劃圖排在新主島四周的海平線上（作者 11/27：外島要放遠）：從新主島看出去，每個方向有一座看得到的島，坐阿海的船出海就往那個方向開。
+     島本身（釣點、伺服器）沒有搬，這裡只是遠景：一直保持在鏡頭外 185 公尺、不受霧影響，看起來像在很遠的海上 */
+  const HORIZON = { old: [0, -1], frostdock: [-0.8, -0.6], greendock: [0.45, -0.89], wilddock: [0.99, 0.12], mystdock: [0.66, 0.75], abyssdock: [-0.08, 1], reef: [-0.94, 0.33] };
+  { const hz = new THREE.Group(); root.add(hz); const FOGC = new THREE.Color('#b7e5df'), mats = {}, M = (hex, k) => { const key = hex + (k || 0.38); if (!mats[key]){ const c = new THREE.Color(hex).lerp(FOGC, k == null ? 0.38 : k); mats[key] = new THREE.MeshLambertMaterial({ color: c, fog: false }); } return mats[key]; };
+    const add = (g, geo, hex, x, y, z, k) => { const m = new THREE.Mesh(geo, M(hex, k)); m.position.set(x, y, z); g.add(m); return m; };
+    const cone = (r, h, n) => new THREE.ConeGeometry(r, h, n || 7), hill = (r, h) => new THREE.SphereGeometry(r, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, h / r, 1);
+    const isl = {}, smoke = [];
+    for (const id in HORIZON){ const g = new THREE.Group(); hz.add(g); isl[id] = g;
+      if (id === 'old'){ add(g, hill(26, 9), '#7fae66', 0, 0, 0); add(g, hill(14, 7), '#6f9e5a', -16, 0, 4); for (let i = 0; i < 9; i++) add(g, new THREE.BoxGeometry(3, 2.6, 3), ['#f2b6c0', '#f4d9a0', '#b9d9ee', '#fff6e0'][i % 4], -14 + i * 3.6, 2 + Math.sin(i) * 1.5, 14 - (i % 3) * 3); add(g, new THREE.CylinderGeometry(0.9, 1.2, 9, 8), '#ffffff', 22, 4.5, 10); }
+      else if (id === 'frostdock'){ add(g, hill(24, 5), '#dfeef5', 0, 0, 0, 0.3); for (const [x, h, r] of [[-8, 22, 9], [6, 28, 10], [16, 16, 7], [-18, 13, 6]]) add(g, cone(r, h, 6), '#f4fbff', x, h / 2, -2, 0.25); add(g, cone(10, 4, 6), '#bfe0ee', 6, 26, -2, 0.25); }
+      else if (id === 'greendock'){ add(g, hill(22, 14), '#3f7d4a', 0, 0, 0); for (let i = 0; i < 8; i++) add(g, cone(2.6, 9, 6), '#2f6a3c', -15 + i * 4.2, 9 + Math.sin(i * 1.7) * 3, 3); }
+      else if (id === 'wilddock'){ add(g, hill(20, 6), '#e8d6a2', 0, 0, 0, 0.3); add(g, hill(14, 9), '#5f9b55', -3, 0, -2); for (let i = 0; i < 5; i++){ add(g, new THREE.CylinderGeometry(0.35, 0.45, 9, 5), '#8a6a44', -9 + i * 4.5, 7.5, 6); add(g, cone(3.4, 2, 6), '#4c8f47', -9 + i * 4.5, 12, 6); } }
+      else if (id === 'mystdock'){ add(g, hill(24, 5), '#5a5148', 0, 0, 0); add(g, new THREE.CylinderGeometry(6, 20, 26, 9, 1, true), '#4a4038', 0, 13, 0); add(g, new THREE.CylinderGeometry(6.2, 6.2, 0.8, 9), '#ff7a3a', 0, 26, 0, 0.15); for (let i = 0; i < 4; i++){ const m = add(g, new THREE.SphereGeometry(3.6, 7, 5), '#d8d2cc', 0, 30 + i * 6, 0, 0.3); smoke.push([m, i]); } }
+      else if (id === 'abyssdock'){ for (const [x, z] of [[-6, -6], [6, -6], [-6, 6], [6, 6]]) add(g, new THREE.CylinderGeometry(0.8, 0.8, 9, 6), '#6c7a86', x, 4.5, z); add(g, new THREE.BoxGeometry(18, 1.6, 18), '#e7eef2', 0, 9, 0); add(g, new THREE.BoxGeometry(7, 6, 7), '#ffcf3f', -3, 13, 0); add(g, new THREE.CylinderGeometry(0.5, 0.5, 14, 6), '#d9393b', 6, 16, 4); }
+      else if (id === 'reef'){ add(g, hill(18, 3.5), '#efe2b8', 0, 0, 0, 0.3); add(g, new THREE.BoxGeometry(6, 4, 5), '#f2b6c0', -2, 3.5, 0); add(g, new THREE.ConeGeometry(4.6, 2.6, 4).rotateY(Math.PI / 4), '#c0503a', -2, 6.8, 0); add(g, hill(8, 6), '#6fae5f', 9, 0, -3); } }
+    tickers.push((dt, t) => { const cx = camera.position.x - OX, cz = camera.position.z - OZ; for (const id in isl){ const d = HORIZON[id], g = isl[id]; g.position.set(cx + d[0] * 185, WL - 0.6, cz + d[1] * 185); g.rotation.y = Math.atan2(-d[0], -d[1]); g.scale.setScalar(1.5); }
+      for (const [m, i] of smoke){ const k = ((t * 0.12 + i / 4) % 1); m.position.y = 28 + k * 26; m.position.x = k * 6; m.scale.setScalar(0.6 + k * 1.4); } }); }
   /* 瀑布：從山上流進湖裡，水一直往下流 */
   { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#bfeaf6'; c.fillRect(0, 0, 64, 128); let s0 = 9; const r = () => { s0 = (s0 * 16807) % 2147483647; return s0 / 2147483647; }; for (let i = 0; i < 70; i++){ c.fillStyle = `rgba(255,255,255,${0.35 + r() * 0.5})`; c.fillRect(r() * 64, r() * 128, 2 + r() * 3, 14 + r() * 26); }
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
@@ -701,6 +718,7 @@ export function init(A){
       c.strokeStyle = '#6e4a2f'; c.lineWidth = 2; c.setLineDash([4, 3]); c.beginPath(); railLine.forEach((q, n) => { const x = (q[0] - X0) * K, y = (q[1] - Z0) * K; if (n) c.lineTo(x, y); else c.moveTo(x, y); }); c.closePath(); c.stroke(); c.setLineDash([]);
       return (W2._mi = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH }); },
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
+    horizon: HORIZON,   /* v945 外島在新主島海平線上的方向：坐船往那邊開 */
     bb: bbInfo, seats, doors, posts, benches, cave: caveInfo, mud: mudPts, homes, spotsAt,   /* v935 spotsAt：村子的發光釣點在新主島的位置（釣點代號不變） */   /* v934 homes：居民區民宅的門口 */   /* v930 mud：紅樹林泥灘上小動物住的地方 */   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
     /* v926 村民散步用。railNear：這一點是不是在鐵軌旁邊（m 公尺內）或月台上；stroll：可不可以當散步的去處——鋪了路的地（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋 */
     railNear: (x, z, m) => { const lx = x - OX, lz = z - OZ; return railDist(lx, lz) < (m || 1.6) || !!platAt(lx, lz); },
