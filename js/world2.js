@@ -272,12 +272,46 @@ export function init(A){
       { const sc = document.createElement('canvas'); sc.width = 512; sc.height = 112; const c = sc.getContext('2d'); c.fillStyle = '#fff6e0'; c.fillRect(0, 0, 512, 112); c.strokeStyle = '#3b5fb3'; c.lineWidth = 10; c.strokeRect(5, 5, 502, 102); c.fillStyle = '#18334a'; c.font = 'bold 68px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('潮汐大看板', 256, 60);
         const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace; const sign = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.75), new THREE.MeshBasicMaterial({ map: st, toneMapped: false })); sign.position.set(x, Y0 + SH + 2.0, z + 0.06); town.add(sign); B(parts, BLUE, 8.5, 2.2, 0.4, x, Y0 + SH + 2.0, zb); }
       RSV.push([x - PX, z, 5], [x + PX, z, 5], [x, z, 7]); label('主城廣場・大看板', x, 30, z);
-      /* 噴水池：中間一道、旁邊六道水柱，高高低低地噴 */
-      const [fx, fz] = P(975, 520); G(parts, '#dfe7ee', new THREE.CylinderGeometry(3.4, 3.6, 0.5, 24), fx, 0.55, fz); G(parts, '#7fd3ef66', new THREE.CylinderGeometry(3.1, 3.1, 0.12, 24), fx, 0.78, fz); G(parts, '#dfe7ee', new THREE.CylinderGeometry(0.35, 0.5, 1.5, 10), fx, 1.3, fz); G(parts, '#dfe7ee', new THREE.CylinderGeometry(1.1, 0.5, 0.25, 14), fx, 2.1, fz);
-      { const jm = new THREE.MeshBasicMaterial({ color: '#e8fbff', transparent: true, opacity: 0.72, depthWrite: false }), mid = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.17, 2.4, 6).translate(0, 1.2, 0), jm); mid.position.set(fx, 2.2, fz); town.add(mid);
-        const ring = new THREE.Mesh(mergeGeometries([0, 1, 2, 3, 4, 5].map(i => new THREE.CylinderGeometry(0.03, 0.1, 1.3, 5).translate(0, 0.65, 0).rotateZ(-0.35).translate(2.2, 0, 0).rotateY(i * 1.0472).toNonIndexed()), false), jm); ring.position.set(fx, 0.82, fz); town.add(ring);
-        tickers.push((dt, t) => { mid.scale.y = 0.75 + Math.sin(t * 1.3) * 0.25 + Math.sin(t * 7.1) * 0.03; ring.scale.y = 0.8 + Math.sin(t * 1.3 + 2.1) * 0.3; }); }
-      colliders.push({ t: 'c', x: OX + fx, z: OZ + fz, r: 3.6, big: true }); RSV.push([fx, fz, 6]);
+      /* 噴水池（v958）：模型是作者請幫手用 Meshy 做的（兩層磁磚池、海浪柱、貝殼出水口），水用程式做才會動。
+         模型座標：底在 y=-0.71、半徑 0.95；外圈坐牆的缺口在 +x、貝殼開口朝 +x → 轉到朝南（商店街走進來的那條路）。 */
+      const [fx, fz] = P(975, 520), FK = 4.0;
+      { const fg = new THREE.Group(); fg.position.set(fx, PAVE_Y + 0.71 * FK - 0.04, fz); fg.rotation.y = -Math.PI / 2; fg.scale.setScalar(FK); town.add(fg);
+        if (A.loadGLB) A.loadGLB('models/plaza/fountain.glb').then(gl => { gl.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); fg.add(gl.scene); }).catch(() => {});
+        const hr = () => A.DayNight && A.DayNight.hour != null ? A.DayNight.hour : 12;
+        /* 一條一條往下流的水紋（畫布），三種水共用，捲動 offset 讓水看起來在流 */
+        const stripe = (() => { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#bfefff'; c.fillRect(0, 0, 64, 128);
+          let sd = 7; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647; for (let k = 0; k < 40; k++){ c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.85)' : 'rgba(120,200,235,0.6)'; c.fillRect(r() * 64, r() * 128, 1 + r() * 3, 10 + r() * 40); }
+          const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })();
+        const fall = new THREE.MeshStandardMaterial({ map: stripe, color: '#ffffff', emissive: '#4fc8ff', emissiveIntensity: 0, transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide, roughness: 0.2 });
+        const pool = new THREE.MeshStandardMaterial({ color: '#6fcbe8', emissive: '#3ec2ff', emissiveIntensity: 0, transparent: true, opacity: 0.8, depthWrite: false, roughness: 0.15, metalness: 0.1 });
+        /* 下層、上層的水面 */
+        const low = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.645, 56).rotateX(-Math.PI / 2), pool); low.position.y = -0.4; fg.add(low);
+        const up = new THREE.Mesh(new THREE.CircleGeometry(0.3, 40).rotateX(-Math.PI / 2), pool); up.position.y = 0.295; fg.add(up);
+        /* 上層滿出來，一道一道流到下層 */
+        const curtain = new THREE.Mesh(mergeGeometries([...Array(14)].map((_, k) => new THREE.CylinderGeometry(0.43, 0.47, 0.7, 4, 1, true, k * 0.4488, 0.16).toNonIndexed()), false), fall); curtain.position.y = -0.045; stripe.repeat.set(3, 1); fg.add(curtain);   /* 14 道細細的水從上層邊緣流下來，中間看得到海浪柱 */
+        /* 貝殼吐出來的那道水：弧線落進上層 */
+        const arcG = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(-0.05, 0.47, 0), new THREE.Vector3(0.1, 0.62, 0), new THREE.Vector3(0.2, 0.3, 0)), 20, 0.022, 6, false);
+        const fall2 = fall.clone(); fall2.map = stripe.clone(); fall2.map.needsUpdate = true; fall2.map.repeat.set(1, 3); const arc = new THREE.Mesh(arcG, fall2); fg.add(arc);
+        /* 下層水面的波紋：從水簾落下的地方往外擴散 */
+        const rippleM = [], ripples = [0, 1, 2, 3].map(k => { const m = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false }); rippleM.push(m); const r = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 48).rotateX(-Math.PI / 2), m); r.position.y = -0.395; fg.add(r); return r; });
+        /* 大噴水：每 30 秒（照大家共用的時鐘）從貝殼往上噴一次，噴 5 秒 */
+        const jetM = new THREE.MeshBasicMaterial({ color: '#eafaff', transparent: true, opacity: 0.75, depthWrite: false });
+        const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.06, 1, 8).translate(0, 0.5, 0), jetM); jet.position.set(0.02, 0.5, 0); fg.add(jet);
+        const NSP = 60, spG = new THREE.BufferGeometry(), spP = new Float32Array(NSP * 3), spV = new Float32Array(NSP * 3), spL = new Float32Array(NSP).fill(-1); spG.setAttribute('position', new THREE.BufferAttribute(spP, 3));
+        const spray = new THREE.Points(spG, new THREE.PointsMaterial({ color: '#ffffff', size: 0.09, transparent: true, opacity: 0.85, depthWrite: false })); spray.frustumCulled = false; fg.add(spray);
+        let jetH = 0;
+        tickers.push((dt, t) => {
+          stripe.offset.y = (stripe.offset.y + dt * 0.9) % 1; fall2.map.offset.y = (fall2.map.offset.y - dt * 1.6) % 1;
+          const night = hr() < 6 || hr() >= 18 ? 1 : 0; pool.emissiveIntensity += (night * 0.9 - pool.emissiveIntensity) * Math.min(1, dt); fall.emissiveIntensity = fall2.emissiveIntensity = pool.emissiveIntensity * 0.8;
+          ripples.forEach((r, k) => { const ph = (t * 0.45 + k / 4) % 1, R = 0.47 + ph * 0.17; r.scale.set(R, 1, R); rippleM[k].opacity = 0.45 * (1 - ph); });
+          arc.scale.y = 1 + Math.sin(t * 2.3) * 0.04;
+          const ph = (Date.now() / 1000) % 30, want = ph < 5 ? (ph < 0.6 ? ph / 0.6 : ph > 4.2 ? (5 - ph) / 0.8 : 1) * (0.85 + Math.sin(t * 9) * 0.05) : 0;
+          jetH += (want - jetH) * Math.min(1, dt * 6); jet.visible = jetH > 0.02; jet.scale.y = Math.max(0.001, jetH);
+          for (let k = 0; k < NSP; k++){
+            if (spL[k] < 0){ if (jetH > 0.3 && Math.random() < dt * 25){ spL[k] = 1.6; spP[k * 3] = 0.02; spP[k * 3 + 1] = 0.5 + jetH; spP[k * 3 + 2] = 0; const a = Math.random() * 6.283, sp = 0.08 + Math.random() * 0.12; spV[k * 3] = Math.cos(a) * sp; spV[k * 3 + 1] = Math.random() * 0.15; spV[k * 3 + 2] = Math.sin(a) * sp; } else { spP[k * 3 + 1] = -9; continue; } }
+            spL[k] -= dt; spV[k * 3 + 1] -= dt * 0.9; spP[k * 3] += spV[k * 3] * dt; spP[k * 3 + 1] += spV[k * 3 + 1] * dt; spP[k * 3 + 2] += spV[k * 3 + 2] * dt; if (spP[k * 3 + 1] < -0.4) spL[k] = -1; }
+          spG.attributes.position.needsUpdate = true; }); }
+      colliders.push({ t: 'c', x: OX + fx, z: OZ + fz, r: 3.9, big: true }); RSV.push([fx, fz, 6]);
       /* 看板前面的長椅：三排弧形，中間留給噴水池和大道。坐下去鏡頭會抬頭看螢幕 */
       const SEAT_Y = PAVE_Y + 0.34;
       for (const [R0, a0, a1] of [[15, 0.37, 0.62], [19.5, 0.26, 0.66], [24, 0.27, 0.62]]) for (const sg of [-1, 1]){ const arc = R0 * (a1 - a0), nb = Math.max(1, Math.round(arc / 3.5));
