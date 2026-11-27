@@ -11,7 +11,7 @@ create or replace function public._ev_wear() returns jsonb language sql immutabl
     "bounty":{"items":["k3_top_vest","k3v_top_vest_ebty"],"need":3},
     "tny":{"items":["k3_top_wave","k3v_top_wave_etny"],"need":1},
     "boss":{"items":["k3v_top_tee_eboss"],"need":3},
-    "whale":{"items":["k3_top_rain","k3v_top_rain_ewhl"],"need":1},
+    "whale":{"items":["k3v_top_tee_ewhl"],"need":1},
     "rumor":{"items":["k3_hat_bucket"],"need":1},
     "lob":{"items":["k3_hat_beanie"],"need":1},
     "fest":{"items":["k3_hat_band"],"need":5}}'::jsonb $$;

@@ -5961,7 +5961,7 @@ for (const [st, k, n, a, b, pt, pc, ps] of K3.GANGD) K3.DES.top[st][k] = [n, a, 
 /* v948 活動限定的設計款（作者：「配衣服，然後活動完成可以得到」）：只有完成那個活動才拿得到，商店不賣（伺服器 257 的 _ev_wear 同一份）。最後一格 2＝活動限定，衣服名字後面有 🎪 */
 K3.EVD = [['mig', 'top', 'hoodie', 'emig', '魚群連帽衣', '#2f7fb8', '#e8f4fb', 'wave', '#5fb3e0', 9], ['bounty', 'top', 'vest', 'ebty', '懸賞獵人背心', '#4f5a3a', '#f2a03a', 'check', '#5f6b45', 8],
   ['tny', 'top', 'wave', 'etny', '冠軍外套', '#1e2a55', '#f3d27a', 'stripe', '#f3d27a', 12], ['boss', 'top', 'tee', 'eboss', '大魚出動T', '#e8eef2', '#16324a', 'wave', '#2c4f73', 10],
-  ['whale', 'top', 'rain', 'ewhl', '藍鯨雨衣', '#3d5f8f', '#e8f1ff', 'dot', '#c8dcf5', 10], ['meteor', 'top', 'hoodie', 'emet', '流星夜連帽衣', '#1b2346', '#f3d27a', 'dot', '#f3d27a', 13]];
+  ['whale', 'top', 'tee', 'ewhl', '藍鯨T', '#3d5f8f', '#e8f1ff', 'dot', '#c8dcf5', 10], ['meteor', 'top', 'hoodie', 'emet', '流星夜連帽衣', '#1b2346', '#f3d27a', 'dot', '#f3d27a', 13]];
 for (const [, part, st, k, n, a, b, pt, pc, ps] of K3.EVD) K3.DES[part][st][k] = [n, a, b, pt, pc, ps, 2];
 K3.EVH = { rumor: 'bucket', lob: 'beanie', fest: 'band' };   /* 活動限定的帽子（新款式） */
 K3.des = (part, style, key) => { const D = K3.DES[part] && K3.DES[part][style]; return (D && key && D[key]) || null; };
