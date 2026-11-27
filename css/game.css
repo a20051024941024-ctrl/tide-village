@@ -2819,3 +2819,8 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 #w2map .w2mcard.many{flex-direction:column;gap:6px;width:min(300px,calc(100vw - 40px))}
 #w2map .w2mrow{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:12px;border:0;background:#eef5fa;color:#26445c;font-family:inherit;font-size:14px;font-weight:700}
 #w2map:not(.near) .w2m-sta .nm{display:none}
+/* v962 潮搭Go 叫車的狀態列：畫面上方中間，不佔下面那排按鈕 */
+.taxibar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 90px);transform:translateX(-50%);z-index:35;display:flex;align-items:center;gap:8px;max-width:min(92vw,560px);padding:8px 10px 8px 14px;border-radius:16px;background:rgba(255,255,255,.96);box-shadow:0 4px 14px rgba(24,51,74,.22);border:2px solid #8fd3f4;animation:taxiIn .35s ease-out}
+.taxibar .tx{font-weight:700;color:#26445c;font-size:14px;line-height:1.35}
+.taxibar .tbtn{flex:none;white-space:nowrap}
+@keyframes taxiIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}

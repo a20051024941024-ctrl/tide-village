@@ -434,6 +434,31 @@ export function init(A){
           if (found < 0 || zebras.some(z => Math.hypot(z[0] - L[found][0], z[1] - L[found][1]) < 8)) continue; const [dx, dz] = dirAt(L, found), [cx, cz] = L[found]; zebras.push([cx, cz]);
           const zw = sg.car ? 6.2 : w; for (let s = -zw / 2 + 0.35; s <= zw / 2 - 0.3; s += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, cx - dz * s, y + 0.05, cz + dx * s, Math.atan2(dx, dz)); } });
       W2X.zebras = zebras;
+      /* v963 紅綠燈（作者 11/28：「還是紅綠燈」「NPC 會等紅燈嗎」）：六條大道接到圓環的路口各一組。
+         燈號照大家共用的時鐘換（Date.now），每個人看到的一樣：一輪 32 秒——大道綠 13、黃 3、紅 16；圓環反過來；行人（過大道的斑馬線）在大道紅燈時走 */
+      { const lights = [], mk = c => new THREE.MeshBasicMaterial({ color: c, toneMapped: false }), OFF = '#2b3138';
+        const LM = { aR: mk(OFF), aY: mk(OFF), aG: mk(OFF), rR: mk(OFF), rY: mk(OFF), rG: mk(OFF), pR: mk(OFF), pG: mk(OFF) };
+        const head = (x, y, z, ry, R, Y, Gm) => { const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; town.add(g);
+          g.add(new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.12, 0.3), mat('#20262d', 0.6))); g.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.36).translate(0, 0.58, 0), mat('#20262d', 0.6)));
+          [[R, 0.35], [Y, 0], [Gm, -0.35]].forEach(([m, yy]) => { const c = new THREE.Mesh(new THREE.CircleGeometry(0.13, 14), m); c.position.set(0, yy, 0.155); g.add(c); const v = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.04, 0.12), mat('#20262d', 0.6)); v.position.set(0, yy + 0.15, 0.2); g.add(v); }); return g; };
+        const pedHead = (x, y, z, ry) => { const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; town.add(g); g.add(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.7, 0.22), mat('#20262d', 0.6)));
+          const man = (m, yy, walk) => { const s0 = new THREE.Group(); s0.position.set(0, yy, 0.115); const b = (w, h, px, py, rz) => { const q = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); q.position.set(px, py, 0); q.rotation.z = rz || 0; s0.add(q); }; b(0.06, 0.06, 0, 0.09); b(0.05, 0.1, 0, 0.02); b(0.03, 0.09, walk ? -0.03 : -0.015, -0.07, walk ? -0.4 : 0); b(0.03, 0.09, walk ? 0.03 : 0.015, -0.07, walk ? 0.4 : 0); g.add(s0); };
+          man(LM.pR, 0.16, false); man(LM.pG, -0.16, true); return g; };
+        segs.forEach(sg => { if (!NODES[sg.car] || sg.loop) return; const { L } = sg; let i = 0; for (; i < L.length; i++){ const [qx, qy] = toPx(L[i][0], L[i][1]); if (((qx - PL[0]) / RING[0]) ** 2 + ((qy - PL[1]) / RING[1]) ** 2 >= 1) break; } if (i >= L.length - 4) return;
+          const [jx, jz] = L[i], [dx, dz] = dirAt(L, i + 2), px = -dz, pz = dx, y0 = PAVE_Y, J = { x: OX + jx, z: OZ + jz, dx, dz };
+          /* 停止線＋斑馬線：離圓環中線 6.2 公尺 */
+          const sx = jx + dx * 6.2, sz = jz + dz * 6.2; for (let k = -2.9; k <= 2.9; k += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, sx + px * k, y0 + 0.08, sz + pz * k, Math.atan2(dx, dz)); B(parts, LINE, 3.0, 0.02, 0.3, sx + dx * 1.3 + px * 1.5, y0 + 0.08, sz + dz * 1.3 + pz * 1.5, Math.atan2(dx, dz));
+          for (const side of [1, -1]){ const lx = sx + dx * 1.6 + px * side * 4.1, lz = sz + dz * 1.6 + pz * side * 4.1; G(parts, '#5c656e', new THREE.CylinderGeometry(0.09, 0.11, 3.4, 8), lx, y0 + 1.7, lz); colliders.push({ t: 'c', x: OX + lx, z: OZ + lz, r: 0.2 });
+            if (side === 1){ head(lx, y0 + 3.0, lz, Math.atan2(dx, dz), LM.aR, LM.aY, LM.aG);   /* 給大道往圓環開的車看（燈面朝外） */ head(lx - dx * 0.3, y0 + 3.0, lz - dz * 0.3, Math.atan2(-pz, -px), LM.rR, LM.rY, LM.rG); }   /* 給圓環上的車看 */
+            pedHead(lx + px * -side * 0.25, y0 + 2.0, lz + pz * -side * 0.25, Math.atan2(-px * side, -pz * side)); }   /* 行人燈：對著斑馬線另一邊 */
+          lights.push(J); });
+        const phase = ms => { const t = (ms / 1000) % 32; return { ave: t < 13 ? 'g' : t < 16 ? 'y' : 'r', ring: t < 16 ? 'r' : t < 29 ? 'g' : 'y', ped: t >= 16 && t < 27 ? 'g' : t >= 16 && t < 29 ? 'b' : 'r', left: t < 16 ? 16 - t : 32 - t }; };
+        W2X.lights = { list: lights, phase, stop: 6.2 };
+        let last = '';
+        tickers.push((dt, t) => { const P = phase(Date.now()), blink = P.ped === 'b' && (Math.floor(t * 3) % 2 === 0), k = P.ave + P.ring + P.ped + (blink ? 1 : 0); if (k === last) return; last = k;
+          LM.aR.color.set(P.ave === 'r' ? '#ff3b30' : OFF); LM.aY.color.set(P.ave === 'y' ? '#ffcc00' : OFF); LM.aG.color.set(P.ave === 'g' ? '#34e07a' : OFF);
+          LM.rR.color.set(P.ring === 'r' ? '#ff3b30' : OFF); LM.rY.color.set(P.ring === 'y' ? '#ffcc00' : OFF); LM.rG.color.set(P.ring === 'g' ? '#34e07a' : OFF);
+          LM.pR.color.set(P.ped === 'r' ? '#ff3b30' : OFF); LM.pG.color.set(P.ped === 'g' || (P.ped === 'b' && !blink) ? '#34e07a' : OFF); }); }
       /* 潮搭Go 上車處：主要地方旁邊的大路邊 */
       const stands = [], logoTex = (() => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#ffffff'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#8fd3f4'; c.beginPath(); c.moveTo(0, 86); for (let x = 0; x <= 256; x += 8) c.lineTo(x, 86 + Math.sin(x / 22) * 7); c.lineTo(256, 128); c.lineTo(0, 128); c.fill();
         c.fillStyle = '#26445c'; c.font = 'bold 46px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.fillText('潮搭Go', 128, 62); c.font = 'bold 20px "Huninn","Noto Sans TC",sans-serif'; c.fillText('上車處', 128, 112); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
@@ -441,18 +466,23 @@ export function init(A){
         const [ax, az] = P(px, py); let best = null;   /* 在鋪了地磚的地方（廣場、人行道）找一塊 2.6×4.4 公尺的空地，方向跟最近的大路平行；不壓到大路、不靠鐵軌、不壓到房子 */
         for (let gx = -30; gx <= 30; gx += 1.5) for (let gz = -30; gz <= 30; gz += 1.5){ const x = ax + gx, z = az + gz, dd = Math.hypot(gx, gz); if (dd > 30 || (best && dd >= best.sc)) continue;
           if (samp(sdPave, x, z) < 2.2 || hAt(x, z) < 0.25 || railDist(x, z) < 5 || hit(x, z, 2.6) || stands.some(s => Math.hypot(s.x - x, s.z - z) < 25)) continue;
-          let rd = 1e9, rdx = 1, rdz = 0, onRoad = false; segs.forEach(sg => { for (let i = 0; i < sg.L.length; i += 3){ const q = sg.L[i], dq = Math.hypot(q[0] - x, q[1] - z); if (dq < sg.w / 2 + 1.6) onRoad = true; if (dq < rd){ rd = dq; [rdx, rdz] = dirAt(sg.L, i); } } });
-          if (onRoad || rd > 14) continue; const cs = [[1.3, 2.2], [-1.3, 2.2], [1.3, -2.2], [-1.3, -2.2]].every(([a, bb]) => samp(sdPave, x - rdz * a + rdx * bb, z + rdx * a + rdz * bb) > 0.4); if (!cs) continue;
+          let rd = 1e9, rdx = 1, rdz = 0, onRoad = false; segs.forEach(sg => { for (let i = 0; i < sg.L.length; i += 3){ const q = sg.L[i], dq = Math.hypot(q[0] - x, q[1] - z); if (dq < sg.w / 2 + 1.6) onRoad = true; if (sg.car && dq < rd){ rd = dq; [rdx, rdz] = dirAt(sg.L, i); } } });
+          if (onRoad || rd > 8.5) continue;   /* v962 上車處要在車道旁邊（車子才不會開過草地） */ const cs = [[1.3, 2.2], [-1.3, 2.2], [1.3, -2.2], [-1.3, -2.2]].every(([a, bb]) => samp(sdPave, x - rdz * a + rdx * bb, z + rdx * a + rdz * bb) > 0.4); if (!cs) continue;
           const sd = ((ax - x) * -rdz + (az - z) * rdx) > 0 ? 1 : -1; best = { sc: dd, x, z, dx: rdx, dz: rdz, sd: -sd, nm }; }
+        if (!best){ for (let gx = -45; gx <= 45; gx += 1.5) for (let gz = -45; gz <= 45; gz += 1.5){ const x = ax + gx, z = az + gz, dd = Math.hypot(gx, gz); if (dd > 45 || dd <= 30 || (best && dd >= best.sc)) continue;   /* 30 公尺內找不到，放寬到 45 公尺 */
+          if (samp(sdPave, x, z) < 2.2 || hAt(x, z) < 0.25 || railDist(x, z) < 5 || hit(x, z, 2.6) || stands.some(s => Math.hypot(s.x - x, s.z - z) < 25)) continue;
+          let rd = 1e9, rdx = 1, rdz = 0, onRoad = false; segs.forEach(sg => { for (let i = 0; i < sg.L.length; i += 3){ const q = sg.L[i], dq = Math.hypot(q[0] - x, q[1] - z); if (dq < sg.w / 2 + 1.6) onRoad = true; if (sg.car && dq < rd){ rd = dq; [rdx, rdz] = dirAt(sg.L, i); } } });
+          if (onRoad || rd > 8.5) continue; const cs = [[1.3, 2.2], [-1.3, 2.2], [1.3, -2.2], [-1.3, -2.2]].every(([a, bb]) => samp(sdPave, x - rdz * a + rdx * bb, z + rdx * a + rdz * bb) > 0.4); if (!cs) continue;
+          const sd = ((ax - x) * -rdz + (az - z) * rdx) > 0 ? 1 : -1; best = { sc: dd, x, z, dx: rdx, dz: rdz, sd: -sd, nm }; } }
         if (!best) continue; stands.push(best); const { x, z, dx, dz } = best, ry = Math.atan2(dx, dz);
         for (const [a, bb, w2, l2] of [[1.25, 0, 0.1, 4.4], [-1.25, 0, 0.1, 4.4], [0, 2.15, 2.6, 0.1], [0, -2.15, 2.6, 0.1]]) B(parts, LINE, w2, 0.02, l2, x - dz * a + dx * bb, PAVE_Y + 0.07, z + dx * a + dz * bb, ry);   // 白框
         { const g = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.0).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: logoTex, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -3 })); g.position.set(x, PAVE_Y + 0.08, z); g.rotation.y = ry + Math.PI / 2; town.add(g); }   // 地上寫「潮搭Go 上車處」
         { const sx = x - dz * best.sd * 1.7, sz = z + dx * best.sd * 1.7, y0 = Math.max(0.2, hAt(sx, sz)); B(parts, '#6c7680', 0.08, 2.3, 0.08, sx, y0 + 1.15, sz); const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshBasicMaterial({ map: logoTex, side: THREE.DoubleSide })); pl.position.set(sx, y0 + 2.1, sz); pl.rotation.y = ry + Math.PI / 2; town.add(pl); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz, r: 0.15 }); }   // 站牌
         RSV.push([x, z, 3.5]); }
       W2X.stands = stands.map(s => ({ name: s.nm, x: OX + s.x, z: OZ + s.z, face: Math.atan2(s.dx, s.dz) }));
-      /* 停一台潮搭Go 在上車處（模型另外下載，載好才出現） */
+      /* 潮搭Go 的車子模型（模型另外下載，載好才能叫車） */
       if (A.loadGLB) A.loadGLB('models/ride/tidego_car.glb').then(gl => { const src = gl.scene; src.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; if (o.material) o.material.side = THREE.FrontSide; } });
-        W2X.car = src; for (const s of stands.slice(0, 4)){ const c = src.clone(); c.scale.setScalar(2.0); const g = new THREE.Group(); g.add(c); c.rotation.y = Math.PI / 2; c.position.y = 0.45 * 2.0; g.position.set(s.x, PAVE_Y + 0.01, s.z); g.rotation.y = Math.atan2(s.dx, s.dz); town.add(g);
+        W2X.car = src; for (const s of stands.slice(0, 0)){   /* v962 上車處不再停車：叫車的時候車會自己開過來 */ const c = src.clone(); c.scale.setScalar(2.0); const g = new THREE.Group(); g.add(c); c.rotation.y = Math.PI / 2; c.position.y = 0.45 * 2.0; g.position.set(s.x, PAVE_Y + 0.01, s.z); g.rotation.y = Math.atan2(s.dx, s.dz); town.add(g);
           colliders.push({ t: 'c', x: OX + s.x + s.dx * 1.0, z: OZ + s.z + s.dz * 1.0, r: 0.95 }, { t: 'c', x: OX + s.x - s.dx * 1.0, z: OZ + s.z - s.dz * 1.0, r: 0.95 }); } }).catch(e => console.warn('tidego car', e));
       /* 平交道：大路跟鐵軌交叉的地方 */
       const xings = [], NR = railLine.length;
