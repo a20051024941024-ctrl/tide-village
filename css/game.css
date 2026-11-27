@@ -2603,3 +2603,40 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .ordft.sure{justify-content:flex-end}.ordft.sure .ordrw{flex-basis:100%}
 .orddone{font-family:var(--f-display);color:#d63428;border:3px solid #d63428;border-radius:4px;padding:1px 10px;transform:rotate(-8deg);font-size:17px;letter-spacing:.2em}
 .ordgive{margin-top:8px;font-size:12.5px;line-height:1.5;padding:7px 9px;border-radius:6px;background:#fff;border:1.5px dashed #c8553d;color:#7a2e1f}
+/* v940 設定頁：左右兩欄的卡片，一行一項（名字在左、開關在右），長說明收起來 */
+.setgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+@media (max-width:620px){.setgrid{grid-template-columns:1fr}}
+.setcol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.setcard{background:var(--paper-2);border-radius:14px;padding:4px 12px 6px}
+.sethead{font-weight:800;font-size:13px;opacity:.6;padding:6px 0 2px}
+.setcard .field{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px;margin:0;padding:6px 0;border-top:1px solid rgba(24,51,74,.08)}
+.setcard .field > label{font-size:13px}
+.setcard .sethead + .field{border-top:0}
+.setcard .field > label{flex:1 1 auto;min-width:5.5em;display:flex;align-items:center;gap:5px}
+.setcard .field.vol > label{flex:0 0 auto;min-width:0}
+.setcard .field > .seg{margin-bottom:0;flex-wrap:wrap;background:rgba(255,255,255,.55);order:1}
+.setcard .field > .seg button{padding:5px 9px;font-size:12px;border:0;box-shadow:none;background:transparent;color:var(--ink);border-radius:8px}
+.setcard .field > .seg button[aria-pressed="true"]{background:#fff;box-shadow:0 1px 3px rgba(24,51,74,.18)}
+.setcard .field > .tbtn{order:1;padding:6px 12px;font-size:12px}
+.setcard .field > .volrow{flex:1 1 50px;order:1;margin:0;gap:6px;min-width:0}
+.setcard .field > .volrow input{min-width:0;flex:1 1 auto}
+.setcard .field > .volrow .volpct{font-size:11px;min-width:3em}
+.setcard .field > .tgl{order:2}
+.setcard .field > label{order:0}
+.setcard .field > p.sub{display:none;flex:1 1 100%;margin:0;font-size:12px}
+.setcard .field.open > p.sub,.setcard .field.cloudbox > p.sub{display:block}
+.setcard .field.cloudbox{flex-direction:column;align-items:stretch}
+.setcard .field > details{flex:1 1 100%}
+.setinfo{width:22px;height:22px;border-radius:50%;font-size:13px;line-height:22px;padding:0;background:rgba(24,51,74,.08);color:var(--ink);flex:0 0 auto}
+.setcard .field.open .setinfo{background:var(--sea);color:#fff}
+.tgl{position:relative;min-width:74px;height:28px;border-radius:14px;padding:0 32px 0 12px;font-weight:800;font-size:12px;background:#c9d3d8;color:#fff;text-align:left;transition:background .2s}
+.tgl::after{content:'';position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:right .2s}
+.tgl.on{background:#f2a53a}
+.tgl:not(.on){padding:0 12px 0 32px;text-align:right}
+.tgl:not(.on)::after{right:auto;left:3px}
+.setid .setidv{font-weight:800;letter-spacing:.08em;opacity:.75}
+.setbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0 6px}
+.setbtns .tbtn{background:var(--sea);padding:10px 8px;border-radius:12px}
+.setcard .field .tbtn:not(.ghost):not(.danger){background:var(--sea)}
+.setdanger > label{color:var(--coral)}
+.setver{text-align:right;font-size:11px;opacity:.5;margin:10px 4px 0}

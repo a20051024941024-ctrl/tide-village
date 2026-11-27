@@ -15870,20 +15870,30 @@ function renderPets(body){
 // ===== ⚙️ 設定：語言、音效、背景音樂、畫質、聊天過濾 =====
 function applyFontSize(){ const k = LS.get('tide.fs', 0); document.body.classList.toggle('fs-l', k === 1); document.body.classList.toggle('fs-xl', k === 2); }
 applyFontSize();
+/* v940 作者給的參考：「一目瞭然的樣子」→ 設定分成左右兩欄的卡片：左邊聲音、畫面；右邊帳號、語言聊天、其他（窄的手機變一欄）。每一行左邊是名字、右邊是開關或選項；
+   長的說明收起來，點名字旁邊的 ⓘ 才打開。設定項目和作用都沒變，只是換位置和樣子 */
 function renderSettings(body){
-  body.appendChild(el('div', 'shophead')).innerHTML = '<b>⚙️ 設定</b>';
-  const field = (title, sub) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); body.appendChild(f); if (sub) f._sub = sub; return f; };
+  const grid = el('div', 'setgrid'), colL = el('div', 'setcol'), colR = el('div', 'setcol'); grid.append(colL, colR); body.appendChild(grid);
+  const card = (col, t) => { const c = el('div', 'setcard'); c.appendChild(el('div', 'sethead', t)); col.appendChild(c); return c; };
+  const C = { snd: card(colL, '🔊 聲音'), acc: card(colR, '👤 帳號'), scr: card(colL, '🖥️ 畫面'), soc: card(colR, '🌐 語言、聊天'), etc: card(colR, '📎 其他') };
+  const WHERE = { '🌐 語言':'soc', '🔊 音效':'snd', '🎵 背景音樂':'snd', '🎨 設計我的環保袋':'etc', '🎁 兌換碼':'etc', '📳 震動':'snd', '🔠 字體大小':'scr', '🔭 鏡頭遠近':'scr', '🎣 釣魚視角':'scr', '🧒 人物樣子':'etc', '📱 iPhone 直向鎖定時':'scr', '🖥️ 畫質':'scr', '🔋 省電（每秒最多畫幾張）':'scr', '🚢 深海驚嚇效果':'snd', '👋 陌生人':'soc', '💬 聊天':'soc', '🔔 通知':'soc', '📜 素材來源與授權':'etc', '📄 隱私權政策':'etc', '🗑️ 刪除我的帳號':'etc' };
+  const field = (title, sub) => { const f = el('div', 'field'); f.appendChild(el('label', '', title)); (C[WHERE[title]] || C.etc).appendChild(f); if (sub) f._sub = sub; return f; };
+  const tgl = (on, fn) => { const b = el('button', 'tgl' + (on ? ' on' : ''), on ? '開啟' : '關閉'); b.setAttribute('aria-pressed', String(!!on)); b.addEventListener('click', fn); return b; };
+  { const id = Cloud.userId || myId || ''; const r = el('div', 'field setid'); r.appendChild(el('label', '', 'ID')); const v = el('span', 'setidv ignore-opencc', id ? id.slice(0, 8).toUpperCase() : '—'); r.appendChild(v);
+    if (id){ const b = el('button', 'tbtn', '複製'); b.addEventListener('click', () => { try { navigator.clipboard.writeText(id.slice(0, 8).toUpperCase()); toast('ID 複製好了'); } catch(e){ toast('沒辦法複製，請自己記下來'); } }); r.appendChild(b); }
+    C.acc.appendChild(r); try { renderCloudBox(C.acc); } catch(e){} }
+  { const g = el('div', 'setbtns'); for (const [l, fn] of [['❓ 玩法說明', () => openSheet('help')], ['👕 人物造型', () => { try { openSheet('closet'); } catch(e){} }]]){ const b = el('button', 'tbtn', l); b.addEventListener('click', fn); g.appendChild(b); } C.etc.appendChild(g); }
   { const f = field('🌐 語言'), seg = el('div', 'seg'), cur = LS.get('tide.lang', 'tw');
     [['tw', '繁體中文'], ['cn', '简体中文'], ['en', 'English (beta)'], ['id', 'Bahasa Indonesia (beta)']].forEach(([k, l]) => { const b = el('button', 'ignore-opencc', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { if (cur === k) return; LS.set('tide.lang', k); toast(k === 'cn' ? '切换成简体中文，马上重新载入…' : k === 'en' ? 'Switching to English (beta), reloading…' : k === 'id' ? 'Beralih ke Bahasa Indonesia (beta), memuat ulang…' : '切換成繁體中文，馬上重新載入…'); setTimeout(() => location.reload(), 700); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '換語言會重新載入遊戲（紀錄都在，不會不見）。English、Bahasa Indonesia 是測試版：遊戲裡的字幾乎都翻好了，看到奇怪的翻譯請告訴作者。' + ((cur === 'cn' || cur === 'en' || cur === 'id') && !OCC ? '簡體字轉換沒有載入成功，請檢查網路後重新整理。' : ''))); }
-  const vol = (title, on, v, setOn, setV) => { const f = field(title), row = el('div', 'volrow'), tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { setOn(!on); renderTab(); });
+  const vol = (title, on, v, setOn, setV) => { const f = field(title); f.classList.add('vol'); const row = el('div', 'volrow'), tg = tgl(on, () => { setOn(!on); renderTab(); });
     const sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 100; sl.value = Math.round(v * 100); sl.disabled = !on; const pct = el('span', 'volpct', Math.round(v * 100) + '%');
-    sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); row.append(tg, sl, pct); f.appendChild(row); };
+    sl.addEventListener('input', () => { pct.textContent = sl.value + '%'; setV(+sl.value / 100); }); f.appendChild(tg); row.append(sl, pct); f.appendChild(row); };
   vol('🔊 音效', soundOn, sfxVol, on => { soundOn = on; LS.set('tide.sound', on); if (on) ensureAudio(); renderSoundIcon(); }, v => { sfxVol = v; LS.set('tide.sfxVol', v); clearTimeout(renderSettings.t); renderSettings.t = setTimeout(() => SFX.coin(), 120); });
   vol('🎵 背景音樂', musicOn, musicVol, on => { musicOn = on; LS.set('tide.music', on); if (on){ ensureAudio(); MUSIC.start(); } else MUSIC.stop(); renderMusicIcon(); }, v => { musicVol = v; LS.set('tide.musicVol', v); MUSIC.vol(); });
   { const f = field('🎨 設計我的環保袋'), b = el('button', 'tbtn', '打開設計畫面'); b.addEventListener('click', () => openSheet('tote')); f.appendChild(b); f.appendChild(el('p', 'sub', '用遊戲裡的魚和自己的名字，排出一個環保袋的圖案，可以下載成圖片，帶到實體的版畫體驗照著印。')); }
   { const f = field('🎁 兌換碼'), inp = el('input'); inp.type = 'text'; inp.maxLength = 16; inp.placeholder = '輸入小卡上的兌換碼'; inp.autocapitalize = 'characters'; inp.autocomplete = 'off'; inp.style.cssText = 'width:60%;max-width:220px;padding:8px 10px;border-radius:10px;border:1px solid #c9c2b4;font:inherit;text-transform:uppercase'; const b = el('button', 'tbtn', '兌換'); b.style.marginLeft = '8px'; b.addEventListener('click', () => redeemCode(inp, b)); inp.addEventListener('keydown', e => { if (e.key === 'Enter') redeemCode(inp, b); }); f.appendChild(inp); f.appendChild(b); f.appendChild(el('p', 'sub', '參加實體活動拿到的小卡上有兌換碼（例如環保袋版畫體驗）。輸入後可以拿到 🪙300、💙5 和一面只有這裡拿得到的「版畫小旗」，可以插在自己小島的海底。')); }
-  { const f = field('📳 震動'), on = LS.get('tide.vib', true) !== false, tg = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '開' : '關'); tg.addEventListener('click', () => { LS.set('tide.vib', !on); if (!on) buzz(60); renderTab(); }); f.appendChild(tg); f.appendChild(el('p', 'sub', '魚咬餌、魚往外衝、魚跳起來、線斷掉、釣到魚的時候手機會震一下。電腦和 iPhone 的瀏覽器不支援震動。')); }
+  { const f = field('📳 震動'), on = LS.get('tide.vib', true) !== false, tg = tgl(on, () => { LS.set('tide.vib', !on); if (!on) buzz(60); renderTab(); }); f.appendChild(tg); f.appendChild(el('p', 'sub', '魚咬餌、魚往外衝、魚跳起來、線斷掉、釣到魚的時候手機會震一下。電腦和 iPhone 的瀏覽器不支援震動。')); }
   /* v311 上架（34）：字體大小。標準／大／特大，選單、聊天、提示、釣到魚的卡片一起放大 */
   { const f = field('🔠 字體大小'), seg = el('div', 'seg'), cur = LS.get('tide.fs', 0); [[0, '標準'], [1, '大'], [2, '特大']].forEach(([k, l]) => { const b = el('button', '', l); b.style.fontSize = [14, 16, 18][k] + 'px'; b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.fs', k); applyFontSize(); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '字太小看不清楚的話選「大」或「特大」。選單、聊天、提示文字和釣到魚的卡片都會變大。')); }
@@ -15895,7 +15905,7 @@ function renderSettings(body){
   { const f = field('🎣 釣魚視角'), seg = el('div', 'seg'); [[false, '背後（預設）'], [true, '第一人稱']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(FP.pref === k)); b.addEventListener('click', () => { fpSet(k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '第一人稱：從拋竿到看完魚，都是從自己的眼睛看出去——看到自己的手握著竿子伸向水面；釣到時魚掛在線上被拉出水，再用手拿起來看（小魚單手、大魚雙手）。別人看到的你不會變。打大魚王的時候會自動換回背後視角。')); }
   { const f = field('🧒 人物樣子'), c = K3.cfg, seg = el('div', 'seg');   /* v690 */
-    if (c.on){ const go = el('button', 'tbtn', '👕 去造型頁換衣服、髮型'); go.style.marginTop = '8px'; go.addEventListener('click', () => { try { openSheet('closet'); } catch(e){} }); f.appendChild(go); }   /* v730 作者：「設定這裡可以去除掉了」→ 臉、髮型、衣服、顏色只在造型頁換，設定只留新舊人物切換 */
+    if (false && c.on){ /* v940 上面「其他」已經有「👕 人物造型」按鈕 */ const go = el('button', 'tbtn', '👕 去造型頁換衣服、髮型'); go.style.marginTop = '8px'; go.addEventListener('click', () => { try { openSheet('closet'); } catch(e){} }); f.appendChild(go); }   /* v730 作者：「設定這裡可以去除掉了」→ 臉、髮型、衣服、顏色只在造型頁換，設定只留新舊人物切換 */
     f.appendChild(el('p', 'sub', '人物版本 ' + K3.V));   /* v723 作者截圖時看得出手機上是哪一版 */
     f.appendChild(el('p', 'sub', '臉、髮型、衣服、配件和顏色都在造型頁換，別的玩家看到的你也會一起變。' + (K3.err ? '（新人物沒有載入成功，請檢查網路後重新整理）' : c.on && !K3.asset ? '（第一次打開要下載一下，約 5 MB）' : ''))); }
   if (FL.ios && isTouch){ const f = field('📱 iPhone 直向鎖定時'), seg = el('div', 'seg');   /* v682 */
@@ -15906,14 +15916,14 @@ function renderSettings(body){
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
   { const f = field('🔋 省電（每秒最多畫幾張）'), seg = el('div', 'seg');
-    [[30, '30（最省電）'], [45, '45'], [60, '60'], [0, '不限']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Power.cap === k)); b.addEventListener('click', () => { Power.cap = k; LS.set('tide.fpsCap', k); renderTab(); }); seg.appendChild(b); });
-    f.appendChild(seg); f.appendChild(el('p', 'sub', '手機會發燙，多半是畫面每秒畫太多張。手機預設 45 張；超過 30 秒沒碰畫面（不在釣魚）會自動降到 30 張。')); }
-  { const f = field('🚢 深海驚嚇效果'), seg = el('div', 'seg'); [[true, '開'], [false, '關']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(subScareOn() === k)); b.addEventListener('click', () => { LS.set('tide.subScare', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); f.appendChild(el('p', 'sub', '開潛水艇到午夜層時，黑暗裡會有嚇人的東西（黑暗中的眼睛、那盞燈）。關掉就不會出現，其他的相遇照常。')); }
+    [[30, '30（最省電）'], [45, '一般'], [0, '不限']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Power.cap === k || (k === 45 && Power.cap === 60))); b.addEventListener('click', () => { Power.cap = k; LS.set('tide.fpsCap', k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '手機會發燙，多半是畫面每秒畫太多張。「一般」：照螢幕平均地畫（一般手機每秒 60 張），超過 30 秒沒碰畫面（不在釣魚）會自動降到 30 張。')); }
+  { const f = field('🚢 深海驚嚇效果'), on = subScareOn(); f.appendChild(tgl(on, () => { LS.set('tide.subScare', !on); renderTab(); })); f.appendChild(el('p', 'sub', '開潛水艇到午夜層時，黑暗裡會有嚇人的東西（黑暗中的眼睛、那盞燈）。關掉就不會出現，其他的相遇照常。')); }
   { const f = field('👋 陌生人'), seg = el('div', 'seg'), cur = strangerSafe(); [[false, '看得到大家打的字'], [true, '只看認識的人打的字']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.strangerChat', k ? 'met' : 'all'); renderTab(); }); seg.appendChild(b); });
     if (Kid.on) f.appendChild(el('p', 'sub', '🧒 兒童安全模式：只看得到大家的快速聊天句子。')); else f.appendChild(seg);
     const n = Object.keys(Meet.list).length; f.appendChild(el('p', 'sub', `走到別人旁邊按「👋 揮手」，對方 1 分鐘內也對你揮手，就會變成「認識的人」。選「只看認識的人打的字」時，陌生人打的字只會顯示 💬（兒童模式的快速句子還是看得到）。你已經認識 ${n} 個人。`)); }
   { const f = field('💬 聊天'), seg = el('div', 'seg'); [[true, '過濾不雅文字'], [false, '不過濾']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(filterOn === k)); b.addEventListener('click', () => { filterOn = k; LS.set('tide.filter', k); renderTab(); }); seg.appendChild(b); }); f.appendChild(seg); }
-  { const f = field('🔔 通知'); const b = el('button', 'tbtn ghost', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
+  { const f = field('🔔 通知'); const b = el('button', 'tbtn', '推播開關（在造型分頁）'); b.addEventListener('click', () => { curTab = 'style'; renderTab(); setTimeout(() => { const x = document.querySelector('#sheet .pushbox, #sheet [class*=push]'); if (x) x.scrollIntoView({ block:'center' }); }, 120); }); f.appendChild(b); }
   /* v288 上架 Google Play 必備：隱私權政策、刪除帳號（115） */
   /* v404 素材來源與授權（完整版在 CREDITS.md）。v407 深藍旗魚已換成付費方案生成的模型，不再有 CC BY 的素材 */
   { const f = field('📜 素材來源與授權'); const d = document.createElement('details'); d.appendChild(el('summary', 'sub', '點開看這個遊戲用了哪些素材'));
@@ -15934,7 +15944,10 @@ function renderSettings(body){
         try { await Cloud.sb.auth.signOut(); } catch(e){} try { for (const k of Object.keys(localStorage)) if (k.startsWith('tide.') || k.startsWith('sb-')) localStorage.removeItem(k); } catch(e){}
         flash('帳號已經刪除了。謝謝你來玩潮汐釣魚村。', 2.5); setTimeout(() => location.reload(), 2600); } catch(e){ ok.disabled = false; ok.textContent = '確認刪除'; toast('刪除失敗：' + ((e && e.message) || '請稍後再試')); } });
     row.append(inp, ok); f.appendChild(row); }
-}
+  for (const f of grid.querySelectorAll('.setcard .field')){ const subs = [...f.querySelectorAll(':scope > p.sub')]; if (!subs.length || f.classList.contains('cloudbox')) continue; const lab = f.querySelector(':scope > label'); if (!lab) continue;   /* 長的說明收起來，點 ⓘ 打開 */
+    const i = el('button', 'setinfo', 'ⓘ'); i.setAttribute('aria-label', '說明'); i.addEventListener('click', () => f.classList.toggle('open')); lab.appendChild(i); f.classList.add('hasinfo'); }
+  for (const f of C.etc.querySelectorAll('.field')){ const l = f.querySelector(':scope > label'); if (l && l.textContent.startsWith('🗑️')) f.classList.add('setdanger'); }
+  body.appendChild(el('p', 'setver ignore-opencc', (UPD[0] ? UPD[0].id.replace('u', 'v') : '') + '・' + K3.V)); }
 // ===== 🪑 釣魚小角落（v189）：沿著河、湖、海邊放長椅、路燈、小營火，坐在長椅上就能直接拋竿，旁邊的人一起聊天 =====
 // 位置是照地形自動找的（每次都一樣）：岸邊、前面是夠深的水、地面平、不擋路，彼此至少隔 16 公尺
 const NOOKS = [];
@@ -23047,7 +23060,7 @@ function renderTab0(){
         ["送魚一天 10 條，金幣不能送。帳號要滿 3 天或綁 Email，而且釣過 30 條。", "私訊一則最多 120 字，伺服器留 30 天。", "排位賽跟同一個人一天只有前 3 局算。每個月一季，換季星星留一半。每天第一場排位勝利送亮光餌 5 個。", "釣友隊要釣過 20 條才能建。每週目標：合力釣 120 條乘人數，湊齊 15 加 5 乘人數種。達成後釣過 5 條的隊員各領 600 金幣。", "地圖記號 24 小時後消失，同時最多 3 個，一天最多 10 個，要釣過 5 條。", "留言一則最多 60 字，一天最多 5 則，要釣過 5 條。", "附近聊天是 28 公尺內。", "鬼抓人 2 個人以上，3 分鐘後還是鬼的人輸。"]],
       ["等級、成就", "social", ["釣魚、放流、拍水下照片都有經驗。點左上角的等級看進度。", "每升一級有金幣。", "成就有 " + (ACH.length) + " 個。有些會給稱號，選一個掛在名字上。", "點左上角的等級打開「成就」，最上面可以改名字。"],
         ["經驗：常見魚 10、稀有魚 40、傳說魚 250、放流 5、水下照片每種 30。", "升級獎金是等級乘 50。", "在同一個釣點放流、撿垃圾、釣魚，那裡會越來越熟，魚咬得比較快。"]],
-      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "字太小：設定的「字體大小」選大或特大。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
+      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "字太小：設定的「字體大小」選大或特大。", "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
         ["未滿 13 歲會自動開兒童安全模式，不能自己關：聊天只能用固定句子，名字從名單裡選，好友只能用代碼加。", "訪客帳號玩到第 3 天或 10 級會提醒綁 Email。", "聊天不會存在伺服器，只有被檢舉的內容保存 30 天。", "兌換碼可以拿 300 金幣、5 愛海點數和一面版畫小旗，同一組碼每人只能用一次。", "有問題可以寫信到 chaoxi.fishing@gmail.com。"]]
     ];
     HELP2.forEach(([title, c, lines, nums], hi) => { if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (hi === 0 || cur !== 'all') d.open = true; d._open0 = d.open; d.appendChild(el('summary', '', title));
@@ -24457,6 +24470,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u940', d:'11/27', items:[['⚙️','設定頁換成左右兩欄：左邊聲音、畫面，右邊帳號、語言聊天、其他；開關一眼就看得到，長的說明點 ⓘ 才打開']] },
   { id:'u939', d:'11/27', items:[['🎥','鏡頭可以拉得更近，近到看得清楚自己的臉；往下拖可以抬頭看整片天空，人會留在畫面下面'], ['🌀','拖畫面甩一下放開，鏡頭會再轉一小段慢慢停'], ['🎞️','手機畫面更順：以前限制每秒畫的張數時是畫一張跳一張，看起來會一頓一頓，現在間隔平均']] },
   { id:'u922', d:'11/27', items:[['🎣','旁邊的人在等魚的時候，看得到他的浮標和釣線了，浮標被咬下去也看得到（之前要等他開始拉魚才會出現）'], ['🌊','往窄的河拋過頭的時候，浮標會落在水裡，不會跑到對岸的草地上']] },
   { id:'u917', d:'11/27', items:[['📋','港邊廣場多了一面訂單板：村子裡的人把要的魚、料理、材料、菜貼在上面，每 4 小時換一批。湊齊了走到板子前面交貨，比直接賣掉多賺，還有經驗和村子貢獻'], ['🧺','島上的田收成時，金幣照拿，另外留一顆在背包的菜籃，可以拿去交訂單'], ['🐟','釣到訂單要的魚，卡片上會寫「訂單要的」；手機的「今天」也看得到這一批訂單']] },
