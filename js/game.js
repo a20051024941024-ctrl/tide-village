@@ -6822,7 +6822,8 @@ $('#photoView').addEventListener('click', e => { if (e.target.id === 'photoView'
 const boats = BOAT_DOCKS.map((d, i) => { const m = makeKayakMesh(i); m.position.set(d.x, WATER_LEVEL, d.z); m.rotation.y = d.rot; scene.add(m); return { dock: d, m }; });
 let myBoat = null;
 function nearBoat(){ for (const b of boats){ if (b === myBoat) continue; if (Math.hypot(me.pos.x - b.m.position.x, me.pos.z - b.m.position.z) < 3.4) return b; } return null; }
-function boatWater(x, z){ if (Math.abs(x) > 192 || Math.abs(z) > 192) return false; if (seaBlock(x, z)) return false;   /* v579 海上的岩石、沙洲、箱網會擋船 */   /* v258 小船可以一路划到冰封群島、深海浮台、神秘島、苔森之島（以前只能在本島附近 85 公尺內） */
+function boatWater(x, z){ if (W2 && W2TXT_ON && W2.near(x, z)){ const h = W2.h(x, z); if (!(h < -0.3) || !W2.water(x, z)) return false; for (let k = 0; k < 8; k++){ const q = k * Math.PI / 4, hx = W2.h(x + Math.cos(q) * 0.8, z + Math.sin(q) * 0.8); if (hx > 0.3) return false; } return true; }   /* v946 新主島：水夠深、不靠棧橋和岸邊就能划（出了新主島附近就到邊了） */
+  if (Math.abs(x) > 192 || Math.abs(z) > 192) return false; if (seaBlock(x, z)) return false;   /* v579 海上的岩石、沙洲、箱網會擋船 */   /* v258 小船可以一路划到冰封群島、深海浮台、神秘島、苔森之島（以前只能在本島附近 85 公尺內） */
   if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISL2.R + 16) return false;   /* 大家的小島是另外進去的，船不能划過去 */
   if (greenNear(x, z, 6)){ const lx = x - GREEN.x, lz = z - GREEN.z; return Math.hypot(lx, lz) > greenEdge(lx, lz) + 1.2; }
   if (wildNear(x, z, 6)){ const lx = x - WILD.x, lz = z - WILD.z; return Math.hypot(lx, lz) > wildEdge(lx, lz) + 1.2 && !deckAt(x, z); }   /* v590 漂流島 */
@@ -6866,7 +6867,7 @@ function updateBoat(dt, ix, iz, L, locked){
     if (F.phase !== 'idle') cancelFishing('收竿了');
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const mx = fx * -iz + rx * ix, mz = fz * -iz + rz * ix, ml = Math.max(1e-6, Math.hypot(mx, mz));
-    speed = 4.2 * Math.min(1, L) * (Math.hypot(me.pos.x, me.pos.z) > 72 ? 1.9 : 1);   /* v258 離開本島到了遠洋，船划得快一點（不然到別的島要划一分鐘） */
+    speed = 4.2 * Math.min(1, L) * (W2TXT_ON && W2 && W2.near(me.pos.x, me.pos.z) ? 1.2 : Math.hypot(me.pos.x, me.pos.z) > 72 ? 1.9 : 1);   /* v258 離開本島到了遠洋，船划得快一點（不然到別的島要划一分鐘） */
     const nx = me.pos.x + mx / ml * speed * dt, nz = me.pos.z + mz / ml * speed * dt;
     if (boatWater(nx, me.pos.z)) me.pos.x = nx;
     if (boatWater(me.pos.x, nz)) me.pos.z = nz;
@@ -18370,6 +18371,8 @@ function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder || !questNpcs.l
     if (sp.ring){ sp.ring.position.x = x; sp.ring.position.z = z; sp.ring.position.y = groundHeight(x, z) + 0.06; }
     if (sp.marker){ if (on){ const sx = -sp.dir.y, sz = sp.dir.x; let mx = x - sp.dir.x * 1.4 + sx * 1.5, mz = z - sp.dir.y * 1.4 + sz * 1.5; if (!walkable(mx, mz) || blocked(mx, mz, 0.2)){ mx = x - sp.dir.x * 1.4 - sx * 1.5; mz = z - sp.dir.y * 1.4 - sz * 1.5; } sp.marker.position.set(mx, groundHeight(mx, mz), mz); } else if (sp.w2v.mk) sp.marker.position.copy(sp.w2v.mk); } }
   if (signsAt.c) signsAt.c = {};   /* 魚訊照新的位置重算 */
+  /* v946 自己的小船：人在新主島時，兩艘平台舟停到新主島的棧橋旁邊（有人正在划的那艘不動） */
+  { const K = W2.posts.kayak || []; boats.forEach((b, i) => { if (!b.d0) b.d0 = b.dock; const q = K[i]; b.dock = on && q ? { id: b.d0.id, x: q.x, z: q.z, rot: q.rot } : b.d0; if (b !== myBoat){ b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } }); }
   W2S.on = on; W2TXT_ON = on; return true; }
 /* v933 從新主島出海的人，回來的時候回新主島：W2S.home＝最後是在新主島（不是舊村子）。
    在外島按「回港口」「回村子」、潛水上來、用地圖傳回村子裡的地點，都改送到新主島阿海那條棧橋 */

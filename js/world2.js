@@ -393,6 +393,8 @@ export function init(A){
        voy：dock＝船的位置和船頭方向、edge＝從棧橋跳上船的那一點、out＝開出港的路（之後接到外島的航道） */
     { const pr = piers[1]; if (pr){ const bz = pr.z0 + pr.L * 0.5, dx2 = pr.x - 4.2; post('ferry', pr.x - 0.6, bz - 3.2, -Math.PI / 2);
         posts.voy = { dock: [OX + dx2, OZ + bz, 0], edge: [OX + pr.x - 1.35, OZ + bz], out: [[OX + dx2, OZ + bz + 22], [OX + dx2 - 14, OZ + bz + 70]], arrive: { x: OX + pr.x, z: OZ + pr.z0 + 3, rot: Math.PI } }; } }
+    /* v946 自己的小船（平台舟）：新主島港口最西、最東兩條棧橋的外側各停一艘，在水深的地方 */
+    posts.kayak = []; for (const [pi, sg] of [[0, -1], [4, 1]]){ const pr = PIERS[pi]; if (!pr) continue; for (const f of [0.7, 0.8, 0.6, 0.9]){ const x = pr.x + sg * 3.4, z = pr.z0 + pr.L * f; if (samp(HG, x, z) < WL - 0.6 && !deck(x, z)){ posts.kayak.push({ x: OX + x, z: OZ + z, rot: 0 }); break; } } }
     /* v933 阿默、阿穎：港口東邊第二條棧橋的尾巴，兩個人一起釣（阿默的船和出海找紅鯊，等外海做好再接） */
     { const pr = piers[3]; if (pr){ post('amo', pr.x + 1.05, pr.z0 + pr.L - 4, Math.PI / 2, { fishing: true }); post('yin', pr.x - 1.05, pr.z0 + pr.L - 5.5, -Math.PI / 2, { fishing: true }); } }
     /* ⚓ 老港：港口中間那條棧橋上，面朝東邊的海釣魚（走棧橋的人從他左邊過）。腳邊一個保冷箱、一個水桶 */
