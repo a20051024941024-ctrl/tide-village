@@ -8097,7 +8097,7 @@ function updateFishing(dt, t){
     else if (nearCage()){ label = '箱網'; sub = `🐟 ${(rec.cage || []).length}/${CAGE.max} 條${rec.cageFed === taipeiDate() ? '' : '・還沒餵'}`; cls = 'shop'; }
     else if (shoreS && shoreS.wild){ label = '拋竿'; sub = '🎣 手作竹竿・荒島岸邊'; }
     else if (near.d < 1.7 || shoreS){ label = '拋竿'; const fb = curBuff(); sub = (Rig.rig !== 'float' ? RIGS[Rig.rig].icon + ' ' : '') + (bt && Rig.rig !== 'lure' ? `${bt.name} ×${rec.bait[bt.id]}` : fb ? `${RECIPES[fb.r].icon} 加成 ×${fb.left}` : near.d < 1.7 && !myBoat ? '✨ 好釣點' : shoreS ? SPOT_BY_ID[shoreS.id].short + '・岸邊' : isTouch ? '按住蓄力' : '按住空白鍵'); }
-    else if (sh){ label = sh.label; sub = sh.sub ? sh.sub : /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'board' ? '📝 看留言・寫留言' : sh.mode === 'tboard' ? '👀 看誰領先・釣友隊' : sh.mode === 'cargo' ? '🚢 賣船上的魚・裝魚' : sh.mode === 'salon' ? '✂️ 剪髮・染髮' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
+    else if (sh){ label = sh.label; sub = sh.sub ? sh.sub : /exit$/.test(sh.mode) ? '🚪 離開' : sh.mode === 'sub' ? '⬇ 開潛水艇去深海' : sh.mode === 'board' ? '📝 看留言・寫留言' : sh.mode === 'orders' ? '👀 看今天的單子' : sh.mode === 'tboard' ? '👀 看誰領先・釣友隊' : sh.mode === 'cargo' ? '🚢 賣船上的魚・裝魚' : sh.mode === 'salon' ? '✂️ 剪髮・染髮' : sh.mode === 'craft' ? '🔧 做竿子造型・釣線' : sh.mode === 'petshop' ? '🐾 領養寵物' : sh.mode === 'museum' ? '🏛️ 捐魚・看展覽' : sh.mode === 'museumdoor' ? '🏛️ 進去參觀' : sh.mode === 'cafedoor' ? '🏮 進去吃飯' : sh.mode === 'tailor' ? '👗 逛衣服' : sh.mode === 'mu' ? '🪑 逛家具' : sh.mode === 'fu' ? '🐟 今日收購' : sh.mode === 'gang' ? '⚓ 每週限定手作' : sh.mode === 'news' ? '📰 看今天的村報' : sh.mode === 'sci' ? '🔬 今天的新發現' : sh.mode === 'cai' ? '🎨 逛畫廊' : sh.mode === 'market' ? '🐟 買賣魚' : sh.mode === 'shrimpdoor' ? '🦐 進去釣蝦' : sh.mode === 'shrimpexit' ? '回到村子' : sh.mode === 'shrimpdesk' ? '🎫 跟老闆買' : sh.id === 'grill' ? '免費烤蝦' : sh.mode === 'ferry' ? '🚤 渡船' : sh.mode === 'quest' ? '📜 任務' : sh.mode === 'sell' ? '賣魚' : sh.mode === 'cook' ? (waitingCustomers().length ? '🔔 客人點餐' : '做料理') : '買釣具'; cls = 'shop'; }
     else if (nearStairs()){ const st = nearStairs(); label = st.d > 0 ? '上樓' : '下樓'; sub = `${House.floor + 1 + st.d} 樓`; cls = 'shop'; }
     else if (nearExit()){ label = '出去'; sub = '離開房子'; cls = 'shop'; }
     else if (nearDoor()){ label = '進屋'; sub = ISLE_ITEMS[nearDoor().it.t].name; cls = 'shop'; }
@@ -16400,7 +16400,7 @@ let ferryNpc = null; const Ferry = { on:false };
 function updateFerry(dt, t){
   if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
   if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
-  if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){} try { teamTick(); } catch(e){} try { ordTick(dt, t); } catch(e){} if (W2){ try { W2.tick(dt, t); } catch(e){ if (!W2.err){ W2.err = 1; console.warn('w2', e); } } } else if (MAP2 && !W2ing && frameNo % 30 === 0 && houseBuilder && !onIsle) w2Boot();
+  if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){} try { teamTick(); } catch(e){} try { ordTick(dt, t); } catch(e){} if (W2){ try { W2.tick(dt, t); } catch(e){ if (!W2.err){ W2.err = 1; console.warn('w2', e); } } w2SiteTick(); } else if (MAP2 && !W2ing && frameNo % 30 === 0 && houseBuilder && !onIsle) w2Boot();
   if (frameNo % 30 === 0) try { sbTick(); } catch(e){ console.warn('sb', e); SB.state = 'off'; }
   if (frameNo % 15 === 7) try { clodTick(); } catch(e){}
   if (frameNo % 60 === 31) try { shadowTrim(); } catch(e){}
@@ -18257,6 +18257,47 @@ function w2TrainOff(){ const T = w2Train(), c = mySeat; if (!c || !c.train) retu
   if (!st || st.at < 0 || Ride.hop){ if (now() - Ride.tip > 2.5 && st){ Ride.tip = now(); toast(`到站才能下車。下一站：${T.stops[st.next].name}（${Math.ceil(st.eta)} 秒）`); } return; }
   const sp = T.stops[st.at], a = (Math.random() - 0.5) * 3.2, b = 0.25 + Math.random() * 0.5, to = [sp.x + sp.tx * a + sp.nx * b, sp.z + sp.tz * a + sp.nz * b];   /* 月台上隨機一點，大家下車才不會疊在一起 */
   const from = { x: me.pos.x, z: me.pos.z, y: me.baseY }; c.ret = to; standUp(); Ride.on = false; Ride.hop = null; Ride.out = { t: 0, x: from.x, z: from.z, y: from.y, tx: to[0], tz: to[1] }; { const a = $('#act'); if (a) a._h = ''; } try { SFX.door(); } catch(e){} }
+/* ===== v926 新主島：村子戶外的人和板子搬過來（還在預覽，#map2 才有）=====
+   作者 11/27 說「好」：把村子戶外的人和攤子搬到新主島，新主島才不是空城。
+   做法：人和板子都只有一份，不另外做一套。新主島（world2.js 的 posts）幫每一個排了位置；你人在新主島，他們就站到那個位置，
+   你回到舊村子（例如從地圖傳送回去），他們就回原位。所以走到阿鐵旁邊開的是原本的工坊、訂單板是原本那一塊（單子被風吹、交貨的特效、「帶我去」都跟著位置走）。
+   搬過去以後照原本的方式過日子：顧攤的在攤位附近走動、釣魚的照樣甩竿、走近會轉頭講話。
+   只有兩件事先不做：照舊村子的作息到處走（回家、去食堂的路都在舊島上）、下雨回舊島的家。
+   正式換島的時候就是這個開關一直開著。 */
+const W2S = { on: false };
+/* 固定在地上的東西（板子）：get 現在的位置、set 換位置、g 它的模型、build 還沒蓋就蓋、cols 在新主島的位置補一份碰撞（舊村子那一份留著） */
+const W2_FIX = [
+  { k: 'board', get: () => [BOARD.x, BOARD.z, BOARD.rot], set: (x, z, r) => { BOARD.x = x; BOARD.z = z; BOARD.rot = r; }, g: () => Board.g, build: () => buildBoard(), cols: (x, z, r) => addOBoxCol(x, z, 2.6, 0.4, r) },
+  { k: 'orders', get: () => [ORDB.x, ORDB.z, ORDB.rot], set: (x, z, r) => { ORDB.x = x; ORDB.z = z; ORDB.rot = r; }, g: () => Ord.g, build: () => { if (!onIsle) ordBuild(); },
+    cols: (x, z, r) => { const c = Math.cos(r), s0 = Math.sin(r); addOBoxCol(x, z, 3.2, 0.5, r); addOBoxCol(x + s0 * 0.27, z + c * 0.27, 3.0, 0.5, r); for (const [lx, lz, rr] of [[1.05, 0.62, 0.36], [-1.02, 0.64, 0.34]]) colliders.push({ t:'c', x: x + c * lx + s0 * lz, z: z - s0 * lx + c * lz, r: rr, keepWalk: true }); } },
+];
+/* 會搬的村民：新主島的位置名字 → 是哪一個村民 */
+const W2_NPC = { craft: n => n.shopNpc === 'craft', gang: n => n.wid === 'gang' };
+function w2SiteWant(){ if (!W2 || !W2.posts) return false; if (W2.near(me.pos.x, me.pos.z)) return true; return W2S.on && (inIndoor() || inHall() || inStad()); }   /* 從新主島的門走進店裡（店的裡面在舊島那邊）：先不動，出來還在新主島 */
+/* 把一個村民放到某個位置重新開始：散步的去處、躲雨的路、讓位的原點都跟舊位置有關，全部忘掉重算；手上的魚收起來。fishing：站好就甩竿（bob 有給＝浮標已經在水裡） */
+function w2NpcPut(n, x, z, rot, fishing, bob, y){ const gy = y != null ? y : groundHeight(x, z);
+  n.pos.set(x, gy, z); n.baseY = gy; n.rot = rot; n.speed = 0; n.aspd = 0;
+  n.roam = undefined; n.rh = null; n.rhSt = null; n.rhTry = 0; n.avA = null; n.post = null; n.wMode = null; n.wBack = false; n.wSkip = 0; n.meetFace = null; n.tc = null; n.wetOk = false; try { RH.in.delete(n.npcName); } catch(e){}
+  n.wHide = false; n.wPre = false; n.av.g.visible = !onIsle; n._culled = false; if (n.blob) n.blob.visible = true; if (n.nm && n.nm.dataset.st) delete n.nm.dataset.st;
+  if (n.held){ n.av.g.remove(n.held.o); n.held = null; } n.sitting = false; n.emote = null; n.flying = null; n.dip = 0; n.bend = 0; n.windup = 0; n.castT = -1;
+  if (fishing){ n.fishing = true; if (bob){ n.bobPos.copy(bob); n.bobState = 'water'; n.st = 'wait'; n.next = now() + rand(3, 8); } else { n.bobState = 'none'; n.st = 'windup'; n.stT = 0; } }
+  else { n.fishing = false; n.bobState = 'none'; n.st = 'wait'; n.next = now() + 5; } }
+function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder) return false;
+  for (const F of W2_FIX){ if (!PO[F.k]) continue; if (!F.g()){ try { F.build(); } catch(e){} if (!F.g()) return false; } }   /* 板子還沒蓋：先照舊村子的位置蓋好（那邊的碰撞才會在），蓋不出來就下次再搬 */
+  for (const F of W2_FIX){ const p = PO[F.k]; if (!p) continue; if (!F.v){ F.v = F.get(); F.cols(p.x, p.z, p.face); }
+    const [x, z, r] = on ? [p.x, p.z, p.face] : F.v; F.set(x, z, r); const g = F.g(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; }
+  for (const k in W2_NPC){ const p = PO[k], n = npcs.find(W2_NPC[k]); if (!p || !n || !n.v0) continue;
+    if (on) w2NpcPut(n, p.x, p.z, p.face, !!p.fishing, null); else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); n.w2on = on; }
+  W2S.on = on; return true; }
+/* 新主島的「找人、找店」（地圖下面那一排，點了會帶路）：新主島的板子、店門、搬過來的人。人在新主島的時候用這一份，回舊村子用原本那一份 */
+const W2_DOOR_IC = { cafe: '🍲', cai: '🎨', mu: '🪚', pet: '🐾', pool: '🎱', shrimp: '🦐', tackle: '🎣', market: '🐟', museum: '🏛️', stad: '🏟️' };
+function w2NavList(){ const L = [], PO = W2.posts;
+  for (const [k, ic, lab] of [['orders', '📋', '訂單板'], ['board', '📌', '廣場留言板']]) if (PO[k]) L.push([ic, lab, [PO[k].x, PO[k].z]]);
+  if (W2.bb) L.push(['📺', '潮汐大看板', [W2.bb.x, W2.bb.z + 14]]);
+  for (const d of W2.doors || []) L.push([W2_DOOR_IC[d.k] || '🚪', d.label, [d.x, d.z]]);
+  for (const [k, ic, lab] of [['craft', '🔧', '阿鐵（做魚餌、釣竿造型）'], ['gang', '⚓', '老港（每週限量）']]){ const n = PO[k] && npcs.find(W2_NPC[k]); if (n && !n.wHide) L.push([ic, lab, [n.pos.x, n.pos.z]]); }
+  return L; }
+function w2SiteTick(){ if (!W2 || !W2.posts || frameNo % 10) return; const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
 function w2Back(){ if (inIndoor() || inHall() || inStad()) return;   /* 還在裡面（例如正在煮菜不能走）：先不動，下次真的出去再回新主島 */ const b = Venue.back; Venue.back = null; if (!b || !W2) return; const fx = Math.sin(b.face), fz = Math.cos(b.face); me.pos.x = b.x + fx * 0.5; me.pos.z = b.z + fz * 0.5; try { W2.warm(me.pos.x, me.pos.z); } catch(e){} me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = b.face; cam.yaw = b.face + Math.PI; pushPresence(true); }
 function nearShop(){
   if (myBoat) return null;
@@ -19758,7 +19799,7 @@ const Guide = { i: null, el: null, beacon: null, fin: null, hide: false, bye: 0,
 /* v337 玩家找不到阿海、理髮店：地圖可以選「帶我去」，左上角出現箭頭和距離、地上有光柱，走到了自動結束 */
 const Nav = { t: null };
 function navTo(label, x, z, r, done){ Nav.t = { label, x, z, r, done };   /* r：離多近才算到了（沒給就是 3.4 公尺）；done()：回傳 true 也算到了 */ if (!$('#sheet').hidden) closeSheet(); if (Guide.el) Guide.el._k = ''; toast(`往「${label}」，跟著箭頭走`); }
-function navList(){ const L = [], byName = p => { const n = npcs.find(n => n.shopNpc === p && !n.wHide); return n && n.pos ? [n.pos.x, n.pos.z] : null; };
+function navList(){ if (W2S.on && W2 && W2.near(me.pos.x, me.pos.z)) return w2NavList(); const L = [], byName = p => { const n = npcs.find(n => n.shopNpc === p && !n.wHide); return n && n.pos ? [n.pos.x, n.pos.z] : null; };
   L.push(['🚤', '阿海（坐船、潛水、去別的島）', FERRY.at]);
   const ICON = { orders:'📋', aquarium:'🐠', chat:'💬', tackle:'🎣', shop:'🏪', cook:'🍲', museum:'🏛️', tailor:'👗', mu:'🪚', market:'🐟', salon:'💇', cai:'🎨', fu:'🦐' };
   for (const l of LANDMARKS) if (ICON[l.id]) L.push([ICON[l.id], l.label, [l.pos.x, l.pos.z]]);
@@ -20850,6 +20891,7 @@ const npcs = [
   { name:'阿伯・老校工', shirt:'#c8b48a', hat:'#5a6a3a', x:21.6, z:-41.0, y:0.02, dir:new THREE.Vector2(-0.2, 1).normalize(), lines:['這個池子比我年紀還大，學校一百多年前就有了', '以前的學生下課都蹲在池邊看魚', '琵琶鼠魚是有人亂放生的，現在池子裡到處都是', '大肚魚是以前放來吃孑孓的', '紅色的拱橋走上去看魚最清楚', '看到垃圾就順手撿一下啦', '假山上的蕨類是老師們一棵一棵種的'] },
 ].map(n => { const f = new Fisher({ shirt:n.shirt, hat:n.hat, name:n.name, kind:'npc' }); f.pos.set(n.x, n.y, n.z); f.baseY = n.y; f.rot = Math.atan2(n.dir.x, n.dir.y); f.fishing = true; f.bobState = 'water'; { const cp = castPoint(n.x, n.z, n.dir.x, n.dir.y, 4.5); f.bobPos.set(cp[0], 0.12, cp[1]); } f.next = now() + rand(4, 12); f.amo = !!n.amo; f.yin = !!n.yin; f.tailor = !!n.tailor; f.shopNpc = n.shopNpc || null; if (n.tailor || n.shopNpc){ f.fishing = false; f.bobState = 'none'; f.baseY = groundHeight(n.x, n.z); f.pos.y = f.baseY; f.setGear({ hat:'hat_bucket', acc:'acc_glasses', face:'face_happy' }); } f.catchLines = n.catchLines || null; f.lines = n.lines || ['今天的浪很溫柔呢', '聽說溪裡有會發光的魚…', '慢慢來，魚會來的', '燈塔亮的時候，月光鯛最多']; return f; });
 for (const n of npcs){ const nm = n.nm.textContent; n.wid = nm.startsWith('阿綾') ? 'ling' : nm.startsWith('阿木') ? 'mu' : nm.startsWith('阿福') ? 'fu' : nm.startsWith('老港') ? 'gang' : null; }
+for (const n of npcs) n.v0 = { x: n.pos.x, y: n.baseY, z: n.pos.z, rot: n.rot, fishing: !!n.fishing, bob: n.bobPos.clone() };   /* v926 每個村民在舊村子的原位（搬去新主島再回來的時候放回這裡，見 w2Site） */
 // 老闆不在店裡的時候，店裡的東西照樣要更新（店一直都開著，可以自己逛）
 function worldShopLoad(n){ if (!Cloud.on || !n.post || Math.hypot(me.pos.x - n.post.x, me.pos.z - n.post.z) > 40) return;
   if (n.tailor && (!Ling.at || Date.now() - Ling.at > 10 * 60000)) loadLing(); else if (n.shopNpc === 'mu' && (!FZ.at || Date.now() - FZ.at > 10 * 60000)) loadMu(); else if (n.shopNpc === 'fu' && (!Fu.at || Date.now() - Fu.at > 5 * 60000)) loadFu(); }
@@ -21552,7 +21594,7 @@ function ordWants(fid, w){ if (!Ord.d || ordLeft() <= 0) return null; for (const
 async function ordDeliver(o){
   if (Ord.sending || !Ord.d || o.done) return; const P = ordPick(o);
   if (!P.ok){ toast('東西還不夠，湊齊了再來'); Ord.sure = -1; renderTabIf('orders'); return; }
-  if (!ordNear()){ toast('走到港邊廣場的訂單板前面才能交貨'); return; }
+  if (!ordNear()){ toast(W2S.on ? '走到主城廣場的訂單板前面才能交貨' : '走到港邊廣場的訂單板前面才能交貨'); return; }
   Ord.sending = true; renderTabIf('orders'); let row = null;
   try { row = await cloudCall('order_deliver', { p_slot: Ord.d.slot, p_idx: o.i, p_fish: P.fish, p_dish: P.dish }); } catch(e){ console.warn('order', e); } Ord.sending = false; Ord.sure = -1;
   if (!row){ ordLoad(true); renderTabIf('orders'); return; }   /* 錯誤訊息 cloudCall 已經跳過了 */
@@ -21642,7 +21684,7 @@ function renderOrders(body){
   const D = Ord.d, near = ordNear();
   body.appendChild(el('p', 'sub', '村子裡的人把要的東西貼在這裡，交貨比直接賣掉多賺。每 4 小時換一批。'));
   { const w = el('div', 'ordme'); w.innerHTML = `<span>⏳ ${ordLeftTxt()}後換一批</span><span>🪙 <b>${rec.coins.toLocaleString()}</b></span><span>⭐ 我的村子貢獻 <b>${(D.pts || 0).toLocaleString()}</b>（交過 ${(D.n || 0).toLocaleString()} 張）</span><span>🏘️ 全村 <b>${(D.vpts || 0).toLocaleString()}</b></span>`; body.appendChild(w); }
-  if (!near){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', '🧭 帶我去訂單板'); b.addEventListener('click', () => navTo('訂單板', ORDB.x, ORDB.z)); r.appendChild(b); r.appendChild(el('span', 'sub2', '在港邊廣場，走到板子前面才能交貨')); body.appendChild(r); }
+  if (!near){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', '🧭 帶我去訂單板'); b.addEventListener('click', () => navTo('訂單板', ORDB.x, ORDB.z)); r.appendChild(b); r.appendChild(el('span', 'sub2', W2S.on ? '在主城廣場出生點旁邊，走到板子前面才能交貨' : '在港邊廣場，走到板子前面才能交貨')); body.appendChild(r); }
   const ul = el('ul', 'ordlist');
   for (const o of D.list){ const who = ORD_WHO[o.who] || ORD_NOBODY, P = ordPick(o), li = el('li', 'ord t' + o.tier + (o.done ? ' done' : '') + (P.ok && !o.done ? ' ready' : ''));
     const hd = el('div', 'ordhd'); hd.appendChild(el('span', 'ordic', who[0])); hd.appendChild(el('b', '', who[1])); hd.appendChild(el('i', 'ordtier', ORD_TIER[o.tier] || '')); li.appendChild(hd);
@@ -22057,7 +22099,8 @@ function roamGrow(n){ const R = n.roam, K = ROAM_K[R.kind], P = R.post, i = R.tr
   if (i < hang.length){ const a = ((R.h >>> 3) % 628) / 100; x = hang[i][0] + Math.cos(a) * 0.9; z = hang[i][1] + Math.sin(a) * 0.9; }
   else { const a = (R.h % 628) / 100 + i * 2.39996, d = K.ring[0] + (K.ring[1] - K.ring[0]) * (((R.h >>> 8) + i * 37) % 100) / 100; x = P.x + Math.cos(a) * d; z = P.z + Math.sin(a) * d; }
   if (!walkable(x, z) || blocked(x, z, 0.5) || deckAt(x, z) || groundHeight(x, z) > 6) return; if (R.c.some(c => Math.hypot(c.x - x, c.z - z) < 1.5)) return;
-  let pts = navFind(P.x, P.z, x, z); if (!pts){ pts = [[P.x, P.z], [x, z]]; const L = Math.hypot(x - P.x, z - P.z); for (let d = 0.6; d < L; d += 0.3){ const qx = P.x + (x - P.x) * d / L, qz = P.z + (z - P.z) * d / L; if (!walkable(qx, qz) || Math.abs(groundHeight(qx, qz) - P.y) > 1.2) return; } }   /* 尋路的地圖只涵蓋主島中間；外圍的人（阿蘭、阿嬤）改用「直線走得通才去」 */
+  const w2 = !!(W2 && W2.stroll && W2.near(P.x, P.z)); if (w2 && !W2.stroll(x, z, R.kind === 'shop')) return;   /* v926 新主島：去處要在鋪了路的地方（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋；顧攤的只在攤位旁邊幾步，草地也行。路上也不能橫過鐵軌（小火車不會停下來等人） */
+  let pts = w2 ? null : navFind(P.x, P.z, x, z); if (!pts){ pts = [[P.x, P.z], [x, z]]; const L = Math.hypot(x - P.x, z - P.z); for (let d = 0.6; d < L; d += 0.3){ const qx = P.x + (x - P.x) * d / L, qz = P.z + (z - P.z) * d / L; if (!walkable(qx, qz) || Math.abs(groundHeight(qx, qz) - P.y) > 1.2 || (w2 && W2.rail(qx, qz, 1.8))) return; } }   /* 尋路的地圖只涵蓋主島中間；外圍的人（阿蘭、阿嬤）改用「直線走得通才去」 */
   const cum = [0]; for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
   const len = cum[cum.length - 1], str = Math.hypot(x - P.x, z - P.z); if (len < 1.2 || len > str * 2.4 + 4 || len > 60) return;
   for (let d = 0.5; d < len; d += 0.3){ let k = 1; while (k < cum.length - 1 && cum[k] < d) k++; const u = (d - cum[k - 1]) / ((cum[k] - cum[k - 1]) || 1), qx = pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * u, qz = pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * u; if (blocked(qx, qz, 0.22)) return; }   /* 路上會穿過櫃台、牆的不要（站在櫃台後面的人，第一步常常是直接穿過櫃台） */
@@ -22195,8 +22238,8 @@ function updateNpcs(dt, t){
   try { rainWearTick(); } catch(e){}
   for (const n of npcs){
     if (n.wid === 'gang' && Cloud.on && (!Gang.at || Date.now() - Gang.at > 10 * 60000) && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 30) loadGang();
-    if (worldDrive(n, dt, t)){ worldShopLoad(n); continue; }
-    try { if (rainHomeDrive(n, dt, t)) continue; } catch(e){ if (!rainHomeDrive.w){ rainHomeDrive.w = 1; console.warn('rainhome', e); } }   /* v893 下雨回家 */
+    if (!n.w2on && worldDrive(n, dt, t)){ worldShopLoad(n); continue; }   /* v926 搬到新主島的（w2on）：不照舊島的作息到處走、下雨不回舊島的家 */
+    try { if (!n.w2on && rainHomeDrive(n, dt, t)) continue; } catch(e){ if (!rainHomeDrive.w){ rainHomeDrive.w = 1; console.warn('rainhome', e); } }   /* v893 下雨回家 */
     try { if (roamDrive(n, dt, t)) continue; } catch(e){ if (!roamDrive.w){ roamDrive.w = 1; console.warn('roam', e); } }   /* v450 其他村民也會自己走動 */
     if (n.tailor){ updateLing(n, dt, t); continue; }
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
