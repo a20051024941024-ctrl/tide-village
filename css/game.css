@@ -2696,3 +2696,12 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .bagitem .bim{font-size:11px;opacity:.7;line-height:1.35}
 .bagitem .tbtn{margin-top:auto;width:100%;padding:7px 6px;font-size:12px}
 .bagitem .tbtn:not(.ghost){background:var(--sea)}
+/* v943 長頁面自動分段：左邊段落、右邊內容 */
+.sidewrap{display:grid;grid-template-columns:minmax(120px,28%) 1fr;gap:12px;align-items:start}
+@media (max-width:520px){.sidewrap{grid-template-columns:1fr}.sidecats{flex-direction:row!important;flex-wrap:wrap;position:static!important;max-height:none!important}}
+.sidecats{display:flex;flex-direction:column;gap:6px;min-width:0;position:sticky;top:0;max-height:calc(100vh - 140px);overflow-y:auto;padding-bottom:4px}
+.sidecats .bagcat{font-size:12.5px;padding:8px 10px}
+.sidepane{min-width:0}
+.sidepane > .dexhead:first-child{margin-top:0}
+.sidepane > .dexhead:first-child{display:block;font-size:15px}
+.sidepane > .dexhead:first-child small{display:block;margin:3px 0 0;font-weight:400}
