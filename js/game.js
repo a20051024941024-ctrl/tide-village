@@ -1250,7 +1250,7 @@ function terrainInfo(x, z){
   return { h, water, region };
 }
 function terrainH(x, z){ return terrainInfo(x, z).h; }
-function isLand(x, z){ return blOn(x, z, 0.2) || !terrainInfo(x, z).water; }   /* v853 建地島也算陸地（不然站在島上到處都會跳「拋竿」） */
+function isLand(x, z){ if (W2 && W2.near(x, z)) return W2.land(x, z); return blOn(x, z, 0.2) || !terrainInfo(x, z).water; }   /* v853 建地島也算陸地（不然站在島上到處都會跳「拋竿」） */
 function trailDist(x, z){ let d = 1e9; for (const p of MAP.trails || []) d = Math.min(d, lineDist(x, z, p)); return d; }
 function pathDist(x, z){ let d = 1e9; for (const p of MAP.paths) d = Math.min(d, lineDist(x, z, p)); for (const q of MAP.squares || []) d = Math.min(d, Math.hypot(x - q[0], z - q[1]) - q[2]); for (const S of [SPORT, SPORT2]){ const dx = Math.max(S.x0 - x, 0, x - S.x1), dz = Math.max(S.z0 - z, 0, z - S.z1); d = Math.min(d, dx || dz ? Math.hypot(dx, dz) : -Math.min(x - S.x0, S.x1 - x, z - S.z0, S.z1 - z)); } return d; }
 function inSand(x, z){ const e = islandEdge(x, z); return e < 4.5 + wobble(x + z, 2) * 1.2; }
@@ -1275,6 +1275,8 @@ function terrainColor(x, z, info, out){
 const CLASSIC = false;   // 新地圖只有新版畫面
 let waterfall = null;
 var houseBuilder = null;
+/* v918 新主島（預覽，js/world2.js）：網址帶 #map2 才會載入。W2 有值的時候，那一塊海域的地面高度、能不能走由它回答 */
+var W2 = null, W2ing = false; const MAP2 = /[#&]map2\b/.test(location.hash);
 var CHAIRS = [], cafeSeats = [], mySeat = null;
 /* v356 玩家說坐長椅很奇怪：3D 人物坐下的姿勢屁股在座位中心後面 0.14 公尺，有椅背的長椅身體會陷進椅背裡。有椅背的（back）往前坐一點 */
 function seatX(c){ return c.x + (c.back ? Math.sin(c.face) * 0.15 : 0); } function seatZ(c){ return c.z + (c.back ? Math.cos(c.face) * 0.15 : 0); }   // 可以坐的椅子；cafeSeats 是食堂露台給客人坐的位置
@@ -3377,8 +3379,8 @@ function inWater(x, z){ if (!CLASSIC) return !isLand(x, z); for (const w of wate
 function deckAt(x, z){ for (const d of decks) if (x > d.x0 && x < d.x1 && z > d.z0 && z < d.z1) return d; return null; }
 function isleH(x, z){ if (Math.abs(x - GARDEN.x) <= GARDEN.hx && Math.abs(z - GARDEN.z) <= GARDEN.hz) return ISLE.y; const dx = x - ISLE.x, dz = z - ISLE.z; if (Math.abs(dx) > ISL2.R + 4 || Math.abs(dz) > ISL2.R + 4) return null; const d = isl2In(dx, dz); if (d < -2.5) return null; return d >= 2 ? ISLE.y : ISLE.y - (2 - d) / 4.5 * 0.62; }   /* v873 自然形狀的小島 */
 function frostH(x, z){ const d = Math.hypot(x - FROST.x, z - FROST.z); if (d > FROST.r + 2.2) return null; if (Math.hypot(x - FROST.lake.x, z - FROST.lake.z) < FROST.lake.r) return FROST.lake.y; return d <= FROST.r ? FROST.y : FROST.y - (d - FROST.r) / 2.2 * 0.3; }
-function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; { const bh = blH(x, z); if (bh !== null) return bh; } if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } if (wildNear(x, z, 10)){ const wh = wildH(x, z); if (wh !== null) return Math.max(0, wh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } { const th = terrainH(x, z); return th < 0 && seaDry(x, z) ? th : Math.max(0, th); } }
-function walkable(x, z){ if (deckAt(x, z)) return true; if (blOn(x, z, 0.3)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (wildNear(x, z, 4)) return !wildWater(x, z); if (Math.abs(x - ISLE.x) < ISL2.R + 2 && Math.abs(z - ISLE.z) < ISL2.R + 2 && isl2In(x - ISLE.x, z - ISLE.z) > -1.4) return isl2Walk(x, z); if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && (isLand(x, z) || seaDry(x, z))   /* v562 作者：乾潮露出來的沙灘「走不過去」→ 退潮時水退掉的濕沙可以走上去；漲回來會被推回岸上（5505 那段） */; }
+function groundHeight(x, z){ const d = deckAt(x, z); if (d) return d.y; if (W2 && W2.near(x, z)) return Math.max(0, W2.h(x, z)); { const bh = blH(x, z); if (bh !== null) return bh; } if (greenNear(x, z, 10)){ const gh = greenH(x, z); if (gh !== null) return Math.max(0, gh); } if (wildNear(x, z, 10)){ const wh = wildH(x, z); if (wh !== null) return Math.max(0, wh); } const ih = isleH(x, z); if (ih !== null) return Math.max(0, ih); { const fh = frostH(x, z), sh = mtnH(x, z); if (sh !== null) return Math.max(0, fh !== null ? Math.max(fh, sh) : sh); if (fh !== null) return Math.max(0, fh); } { const mh = mystH(x, z); if (mh !== null) return Math.max(0, mh); } if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20){ const mh = mangH(x, z); if (mh !== null) return mh; } if (nearReef(x, z)){ const rh = reefH(x, z); if (rh !== null) return rh; } { const th = terrainH(x, z); return th < 0 && seaDry(x, z) ? th : Math.max(0, th); } }
+function walkable(x, z){ if (deckAt(x, z)) return true; if (W2 && W2.near(x, z)) return W2.walk(x, z); if (blOn(x, z, 0.3)) return true; if (Math.abs(x - GARDEN.x) <= GARDEN.hx - 0.15 && Math.abs(z - GARDEN.z) <= GARDEN.hz - 0.3) return true; if (greenNear(x, z, 4)) return !greenWater(x, z); if (wildNear(x, z, 4)) return !wildWater(x, z); if (Math.abs(x - ISLE.x) < ISL2.R + 2 && Math.abs(z - ISLE.z) < ISL2.R + 2 && isl2In(x - ISLE.x, z - ISLE.z) > -1.4) return isl2Walk(x, z); if (mtnOn(x, z, 0)) return true; if (Math.hypot(x - FROST.x, z - FROST.z) < FROST.r + 1.6) return !frostHole(x, z, 0.4); if (Math.hypot(x - MYST.x, z - MYST.z) < MYST.r + 1.2) return true; if (MANG && Math.abs(x - MANG.x) < 20 && Math.abs(z - MANG.z) < 20 && mangWalk(x, z)) return true; if (nearReef(x, z) && reefE(x, z) > -0.45) return true; return Math.abs(x) < MAP_HALF && Math.abs(z) < MAP_HALF && (isLand(x, z) || seaDry(x, z))   /* v562 作者：乾潮露出來的沙灘「走不過去」→ 退潮時水退掉的濕沙可以走上去；漲回來會被推回岸上（5505 那段） */; }
 /* ===== v644 作者：「擋路的小東西直接移掉吧」=====
    村子蓋好以後掃一遍：小的、會擋人的東西（燈柱、木桶、柱子、小招牌、盆栽…）如果站在路或廣場上，而且四周都是空地（站在路中間，不是靠牆、靠水邊），
    就整個拿掉（碰撞和樣子都拿掉）。靠牆、靠水邊的照留。人物、寵物不會被拿掉。之後作者可以用「擺設村子」自己調 */
@@ -4987,6 +4989,7 @@ function buildNewEnvironment(){
       cDeep: { value: new THREE.Color('#1c5d8c') }, uFoam: { value: Quality.tier === 'low' ? 0.6 : 1.0 },
       uWaves: { value: WAVES.map(() => new THREE.Vector4(0, 0, -99, 0)) }, uWT: { value: 0 }, uWOn: { value: 0 }, uTideD: { value: 0 }, uTideUp: { value: 0 }, uSurf: { value: 1 }, uIsl: { value: Array.from({ length: 8 }, () => new THREE.Vector3(0, 0, -1)) },   /* v427 外島（圓形近似）：x、z、岸線半徑；半徑 <0 = 沒用到 */   /* v424 活的海：uTideD 退潮退到多深的地方（公尺），uSurf 浪多大（跟天氣） */
       uLight: { value: new THREE.Color(1, 1, 1) }, uGlint: { value: new THREE.Color(1.0, 0.96, 0.85) },
+      uMC: { value: new THREE.Vector2(0, 0) }, uMS: { value: new THREE.Vector2(150, 150) },   /* v918 遮罩蓋住哪一塊海（中心、大小）：平常是村子，到新主島換成它的 */
     }),
     vertexShader: `varying vec3 vW;
       #include <fog_pars_vertex>
@@ -4994,7 +4997,7 @@ function buildNewEnvironment(){
       #include <fog_vertex>
       }`,
     fragmentShader: `uniform sampler2D uMask; uniform float uTime; uniform vec3 uSun; uniform vec3 uSkyTop; uniform vec3 uSkyHor;
-      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint; uniform vec4 uWaves[4]; uniform float uWT; uniform float uWOn; uniform float uTideD; uniform float uTideUp; uniform float uSurf; uniform vec3 uIsl[8];
+      uniform vec3 cSea; uniform vec3 cRiver; uniform vec3 cCreek; uniform vec3 cLake; uniform vec3 cPool; uniform vec3 cDeep; uniform float uFoam; uniform vec3 uLight; uniform vec3 uGlint; uniform vec4 uWaves[4]; uniform float uWT; uniform float uWOn; uniform float uTideD; uniform float uTideUp; uniform float uSurf; uniform vec3 uIsl[8]; uniform vec2 uMC; uniform vec2 uMS;
       varying vec3 vW;
       #include <common>
       #include <fog_pars_fragment>
@@ -5007,7 +5010,7 @@ function buildNewEnvironment(){
         return normalize(vec3(-g.x, 1.0, -g.y));
       }
       void main(){
-        vec2 uv = (vW.xz + 75.0) / 150.0;
+        vec2 uv = (vW.xz - uMC) / uMS + 0.5;
         vec4 m = (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ? vec4(1.0, 1.0, 0.0, 1.0) : texture2D(uMask, uv);
         /* v424 活的海（只有海，河和湖不動）。水面是一整片平的、不能真的升降，所以：
            漲潮＝海水多畫到沙灘上（沙灘比水面低 11 公分，剛好是一層淺淺的水）；退潮＝水深不到 uTideD 的地方不畫，露出濕沙；
@@ -5072,7 +5075,7 @@ function buildNewEnvironment(){
     transparent: true, depthWrite: false, fog: true,
   });
   waterSurface = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), wmat);
-  waterSurface.rotation.x = -Math.PI / 2; waterSurface.position.y = WATER_LEVEL; waterSurface.renderOrder = -1; waterSurface.frustumCulled = false; waterSurface.userData.keep = true;
+  waterSurface.rotation.x = -Math.PI / 2; waterSurface.position.y = WATER_LEVEL; waterSurface.renderOrder = -1; waterSurface.frustumCulled = false; waterSurface.userData.keep = true; waterSurface.userData.mask0 = mask;
   scene.add(waterSurface);
 
   // ---- 天空：上深下淺的漸層＋太陽周圍的光暈 ----
@@ -16383,7 +16386,7 @@ let ferryNpc = null; const Ferry = { on:false };
 function updateFerry(dt, t){
   if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
   if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
-  if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){} try { teamTick(); } catch(e){} try { ordTick(dt, t); } catch(e){}
+  if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){} try { teamTick(); } catch(e){} try { ordTick(dt, t); } catch(e){} if (W2){ try { W2.tick(dt, t); } catch(e){ if (!W2.err){ W2.err = 1; console.warn('w2', e); } } } else if (MAP2 && !W2ing && frameNo % 30 === 0 && houseBuilder && !onIsle) w2Boot();
   if (frameNo % 30 === 0) try { sbTick(); } catch(e){ console.warn('sb', e); SB.state = 'off'; }
   if (frameNo % 15 === 7) try { clodTick(); } catch(e){}
   if (frameNo % 60 === 31) try { shadowTrim(); } catch(e){}
@@ -21611,6 +21614,17 @@ function renderOrders(body){
   body.appendChild(ul);
   body.appendChild(el('p', 'sub', '收藏⭐的、放在我的海展示的、取了名字的魚不會被拿去交。菜要先在島上的田收成，才會留一顆在菜籃。'));
 }
+function w2SetWaterMask(tex, cx, cz, w, h){ const U = waterSurface.material.uniforms; if (tex){ U.uMask.value = tex; U.uMC.value.set(cx, cz); U.uMS.value.set(w, h); } else { U.uMask.value = waterSurface.userData.mask0; U.uMC.value.set(0, 0); U.uMS.value.set(150, 150); waterSurface.position.x = 0; waterSurface.position.z = 0; } }
+function w2Boot(){ if (W2 || W2ing) return; W2ing = true;
+  import('./world2.js').then(m => { W2 = m.init({ THREE, scene, camera, me, colliders, mat, Quality, DayNight, waterSurface, mergeGeometries, setWaterMask: w2SetWaterMask });
+    const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; w2Nav(); toast('🚧 新主島預覽：還在施工，只有帶 #map2 的網址看得到'); }).catch(e => { console.warn('world2', e); W2ing = false; toast('新主島預覽載入失敗'); }); }
+/* 預覽用：上面一排「直接過去」的按鈕。島很大，用走的要好幾分鐘，作者要能一區一區點過去看（只有 #map2 才有，正式換島時拿掉） */
+function w2Nav(){ if (!W2 || !W2.spots || document.getElementById('w2nav')) return; const box = document.createElement('div'); box.id = 'w2nav';
+  box.style.cssText = 'position:fixed;left:var(--gl);top:calc(var(--gt) + 58px);z-index:40;display:flex;gap:6px;align-items:center;max-width:max(210px,calc(100vw - var(--gl) - 262px));overflow-x:auto;padding:6px 10px;background:rgba(24,51,74,.8);border-radius:14px;-webkit-overflow-scrolling:touch;scrollbar-width:none';   /* 右邊留給地圖、背包、手機和天氣那一塊 */
+  const tag = document.createElement('span'); tag.textContent = '🚧 預覽'; tag.style.cssText = 'color:#ffe9a8;font-weight:700;font-size:13px;white-space:nowrap;flex:none'; box.appendChild(tag);
+  W2.spots.forEach(([name, lx, lz]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = name; b.style.cssText = 'flex:none;border:0;border-radius:10px;padding:7px 11px;font:inherit;font-size:13px;font-weight:700;color:#18334a;background:#fff6e0;white-space:nowrap';
+    b.addEventListener('click', () => { if (myBoat || mySeat || Dive.on || House.on || F.phase !== 'idle') return; const x = W2.ox + lx, z = W2.oz + lz; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; Jump.gy = me.baseY; Jump.air = 0; pushPresence(true); }); box.appendChild(b); });
+  document.body.appendChild(box); }
 function renderNews(body){
   const head = el('div', 'shophead'); head.innerHTML = '<b>📰 潮汐村報</b>'; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能看村報。')); return; }
