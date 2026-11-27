@@ -246,32 +246,23 @@ export function init(A){
   { const parts = {}, WALL = '#f3ecdc', BLUE = '#3b5fb3', RED = '#d9393b';
     /* 主城廣場：高高的大看板（作者：「看板能做高然後玩家們能聚在那裡看，就像看煙火一樣」）。
        兩座小燈塔撐著一面 20 公尺寬的螢幕，螢幕底離地 10 公尺，下面可以走過去；節目跟村子的潮汐大看板是同一份（game.js 的 BB） */
-    { const [x, z] = P(975, 440), SW = 20, SH = SW * 9 / 16, CH = SW * 0.1, Y0 = 10.2, YC = Y0 + SH / 2, NAVY = '#1f2a3a', PX = SW / 2 + 1.7, zb = z - 0.3;
-      B(parts, NAVY, SW + 0.9, SH + CH + 0.9, 0.5, x, Y0 - CH + (SH + CH) / 2, zb);                                           // 螢幕背板
-      B(parts, BLUE, PX * 2 + 0.6, 0.55, 0.7, x, Y0 - CH - 0.75, zb); B(parts, BLUE, PX * 2 + 0.6, 0.45, 0.7, x, Y0 + SH + 0.7, zb);   // 上下兩根橫樑
-      for (const sg of [-1, 1]){ const px = x + sg * PX;                                                                     // 兩座小燈塔
-        B(parts, '#d9cfb8', 2.6, 1.2, 2.6, px, 0.6, zb); G(parts, '#f7f1e3', new THREE.CylinderGeometry(0.78, 1.08, 21.4, 10), px, 11.9, zb);
-        for (const by of [5.2, 11.4, 17.6]){ const r = 0.78 + (22.6 - by) * 0.014 + 0.05; G(parts, BLUE, new THREE.CylinderGeometry(r - 0.008, r + 0.008, 1.1, 10), px, by, zb); }
-        G(parts, '#333a44', new THREE.CylinderGeometry(1.25, 1.25, 0.28, 10), px, 22.74, zb); G(parts, '#ffe5a4', new THREE.CylinderGeometry(0.72, 0.72, 1.3, 10), px, 23.5, zb); G(parts, BLUE, new THREE.ConeGeometry(1.2, 1.5, 10), px, 24.9, zb); G(parts, '#f7f1e3', new THREE.CylinderGeometry(0.05, 0.05, 2.4, 5), px, 26.8, zb);
-        G(parts, '#3a4658', new THREE.BoxGeometry(4.4, 0.3, 0.3).rotateZ(-sg * 0.78), px - sg * 2.3, Y0 - CH - 2.6, zb);     // 橫樑下面的斜撐
-        colliders.push({ t: 'c', x: OX + px, z: OZ + zb, r: 1.5, big: true });
-        const fl = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 0.04).translate(0.75, 0, 0), mat(sg < 0 ? '#e2574c' : '#f2c230', 0.8)); fl.position.set(px, 27.5, zb); town.add(fl); tickers.push((dt, t) => { fl.rotation.y = 0.6 + Math.sin(t * 2.1 + sg) * 0.35 + Math.sin(t * 5.3 + sg * 2) * 0.08; }); }   // 塔頂的旗子會飄
+    /* v961 大看板換成 Meshy 模型（作者請幫手做的：兩座藍白燈塔、燈泡框、上面空白招牌）。模型座標：寬 ±0.95、高 ±0.95、螢幕在 z=+0.031 那一面，
+       螢幕框 y -0.47～0.54、x ±0.58。放大 15 倍：總高約 28.5 公尺、螢幕底離地 7 公尺。節目螢幕（16:9）和字幕條貼在模型螢幕上 */
+    { const [x, z] = P(975, 440), BK = 15, SW = 1.06 * BK, SH = SW * 9 / 16, CH = SW * 0.1, GY = PAVE_Y, MY = GY + 0.952 * BK, YC = MY + 0.06 * BK, Y0 = YC - SH / 2, PX = 0.775 * BK, zb = z - 0.3;
+      { const bg = new THREE.Group(); bg.position.set(x, MY, zb); bg.scale.setScalar(BK); town.add(bg);
+        if (A.loadGLB) A.loadGLB('models/plaza/board.glb').then(gl => { gl.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); bg.add(gl.scene); }).catch(() => {}); }
+      for (const sg of [-1, 1]) colliders.push({ t: 'c', x: OX + x + sg * PX, z: OZ + zb, r: 1.6, big: true });
+      const z0 = z; { const z = zb + 0.032 * BK + 0.06;
       /* 螢幕和字幕條：平常是這張字卡；走近以後 game.js 會把節目接上來 */
       const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 576; { const c = cv.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 576); gr.addColorStop(0, '#1d6aa8'); gr.addColorStop(1, '#0f2a44'); c.fillStyle = gr; c.fillRect(0, 0, 1024, 576); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = 'bold 110px sans-serif'; c.fillText('潮汐大看板', 512, 250); c.font = 'bold 44px sans-serif'; c.fillStyle = '#ffd34a'; c.fillText('大家坐下來一起看', 512, 380); }
       const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const scr = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tx, toneMapped: false })); scr.position.set(x, YC, z); town.add(scr);
       const cc = document.createElement('canvas'); cc.width = 640; cc.height = 64; { const c = cc.getContext('2d'); c.fillStyle = '#10161e'; c.fillRect(0, 0, 640, 64); c.fillStyle = '#ffd34a'; c.font = 'bold 30px sans-serif'; c.textBaseline = 'middle'; c.fillText('📺 潮汐大看板', 16, 33); }
       const ct = new THREE.CanvasTexture(cc); ct.colorSpace = THREE.SRGBColorSpace; const cap = new THREE.Mesh(new THREE.PlaneGeometry(SW, CH), new THREE.MeshBasicMaterial({ map: ct, toneMapped: false })); cap.position.set(x, Y0 - CH / 2 - 0.02, z + 0.001); town.add(cap);
       bbInfo = { x: OX + x, z: OZ + z, y: YC, h: SH, scr, cap, live: false };
-      /* 螢幕四周一圈燈泡，兩組輪流亮（跑馬燈） */
-      { const bulbs = [[], []], g0 = new THREE.SphereGeometry(0.17, 6, 4), xl = x - SW / 2 - 0.25, xr = x + SW / 2 + 0.25, yb = Y0 - CH - 0.25, yt = Y0 + SH + 0.25; let n = 0;
-        const put = (bx, by) => { bulbs[n++ % 2].push(g0.clone().translate(bx, by, z + 0.06)); };
-        for (let i = 0; i <= 20; i++){ put(xl + (xr - xl) * i / 20, yt); put(xl + (xr - xl) * i / 20, yb); } for (let i = 1; i < 13; i++){ put(xl, yb + (yt - yb) * i / 13); put(xr, yb + (yt - yb) * i / 13); }
-        const ms = bulbs.map(L => { const m = new THREE.Mesh(mergeGeometries(L.map(g => g.index ? g.toNonIndexed() : g), false), new THREE.MeshBasicMaterial({ color: '#ffe9a8', toneMapped: false })); town.add(m); return m; });
-        tickers.push((dt, t) => { const k = Math.floor(t * 1.6) % 2; ms[0].material.color.set(k ? '#fff3c4' : '#8a6a2c'); ms[1].material.color.set(k ? '#8a6a2c' : '#fff3c4'); }); }
       /* 最上面的招牌 */
       { const sc = document.createElement('canvas'); sc.width = 512; sc.height = 112; const c = sc.getContext('2d'); c.fillStyle = '#fff6e0'; c.fillRect(0, 0, 512, 112); c.strokeStyle = '#3b5fb3'; c.lineWidth = 10; c.strokeRect(5, 5, 502, 102); c.fillStyle = '#18334a'; c.font = 'bold 68px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('潮汐大看板', 256, 60);
-        const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace; const sign = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.75), new THREE.MeshBasicMaterial({ map: st, toneMapped: false })); sign.position.set(x, Y0 + SH + 2.0, z + 0.06); town.add(sign); B(parts, BLUE, 8.5, 2.2, 0.4, x, Y0 + SH + 2.0, zb); }
-      RSV.push([x - PX, z, 5], [x + PX, z, 5], [x, z, 7]); label('主城廣場・大看板', x, 30, z);
+        const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace; const sign = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.75), new THREE.MeshBasicMaterial({ map: st, toneMapped: false })); sign.scale.setScalar(0.62); sign.position.set(x, MY + 0.625 * BK, zb + 0.036 * BK + 0.05); town.add(sign); } }
+      RSV.push([x - PX, z0, 5], [x + PX, z0, 5], [x, z0, 7]); label('主城廣場・大看板', x, 30, z0);
       /* 噴水池（v958）：模型是作者請幫手用 Meshy 做的（兩層磁磚池、海浪柱、貝殼出水口），水用程式做才會動。
          模型座標：底在 y=-0.71、半徑 0.95；外圈坐牆的缺口在 +x、貝殼開口朝 +x → 轉到朝南（商店街走進來的那條路）。 */
       const [fx, fz] = P(975, 520), FK = 4.0;
@@ -432,7 +423,7 @@ export function init(A){
           stroke(0.11, '#f2c230', 0.1, 0.015); stroke(-0.11, '#f2c230', 0.1, 0.015);   // 黃色雙線
           stroke(2.85, '#ffffff', 0.13, 0.015); stroke(-2.85, '#ffffff', 0.13, 0.015);   // 白色邊線
           stroke(3.18, '#cfc6b5', 0.2, 0.12); stroke(-3.18, '#cfc6b5', 0.2, 0.12); } });   // 路緣石
-      segs.forEach((sg, ri) => { if (sg.car) return; const { L, cum, y, loop } = sg, tot = cum[cum.length - 1]; let st = -1;
+      segs.forEach((sg, ri) => { if (sg.car || !sg.car) return;   /* v961 走路的石板路不畫白色虛線（車道有自己的線） */ const { L, cum, y, loop } = sg, tot = cum[cum.length - 1]; let st = -1;
         for (let i = 0; i < L.length; i++){ const on = (cum[i] % 2.6) < 1.3 && (loop || (cum[i] > 3 && cum[i] < tot - 3)) && !inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri) && railDist(L[i][0], L[i][1]) > 4;
           if (on && st < 0) st = i; if ((!on || i === L.length - 1) && st >= 0){ const e = on ? i : i - 1; if (e > st){ const a = L[st], b = L[e], len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (len > 0.5) B(parts, LINE, 0.18, 0.02, len, (a[0] + b[0]) / 2, y + 0.05, (a[1] + b[1]) / 2, Math.atan2(b[0] - a[0], b[1] - a[1])); } st = -1; } } });
       /* 斑馬線：從廣場（或前廣場）走出來 2.5 公尺的地方，橫跨整條路 */
