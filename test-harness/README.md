@@ -19,6 +19,8 @@
 - `w2fish.js`：新主島釣魚（v922）。
 - `w2normfish.js`：一般玩家（沒有 #map2，`HASH='&nobb'`）釣魚不受影響、別人等魚時看得到浮標。`HASHONLY=1 GAMEJS=舊版game.js` 可以算舊版的地形指紋來比。
 - `w2walk.js`：新主島走路（木棧道、棧橋、小橋、步道），`TIDES=0,-1` 中潮和乾潮各跑一次。
+- `w2train.js`：新主島小火車（v923）。`PARTS=sched,plat,ride,peer,all`：時刻表、月台、上車坐一站下車、別人坐車、11 站全部跑一次。
+- `w2trainvid.js`：錄小火車的影片（一格一格拍成 JPG，再用 ffmpeg 接起來；`FROM=港口` 選哪一站上車）。
 - `w2probe.js`：開新主島後跑一段 `CODE='...'`，印出結果（查東西用）。
 
 `w2fish.js` 的 `PARTS`：map（整座島哪裡是水、哪種水，畫成 w2/fish/map.png）、dry（陸地上不能出現拋竿）、fish（六種水邊完整釣一次）、rep（重複拋竿，浮標都要在水裡）、tide（乾潮：濕沙能走、不能把浮標拋在沙上、漲潮被推回岸）、fai（水裡的魚影）、peer（別人看得到浮標、打窩同步）、nav（找釣點帶路）、old（舊島不受影響）。一次跑太多會超過十分鐘，分兩三次跑。
