@@ -5463,7 +5463,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
         f.appendChild(el('p', 'sub k3lab', lab)); const grid = el('div', 'cl-grid k3grid'), cur = K3.isKey((c.c || {})[key]) && D[c.c[key]] ? c.c[key] : '';
         ks.forEach(k => { const on = cur === k, d = k ? D[k] : null, pid = k ? 'k3v_' + key + '_' + st + '_' + k : K3.idOf(key, st), mine = K3.owns(pid), b = el('button', 'cl-it' + (on ? ' on' : '')); b.setAttribute('aria-pressed', String(on));
           const cf = Object.assign({}, c, { c: Object.assign({}, c.c, { [key]: k || undefined }) }); if (!k) delete cf.c[key]; if (key === 'ear') cf.hair = 'short';
-          b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', d ? d[0] : '原本')); b.appendChild(el('span', 'n', d ? d[0] + (d[6] ? '⚓' : '') : '原本的')); if (on) b.appendChild(el('span', 'b', mine ? '穿著' : '試穿')); else if (!mine) b.appendChild(el('span', 'b k3pr', '🪙' + K3.cost(pid)));
+          b.appendChild(k3ShotImg(cf, K3.VIEW[key] || 'full', d ? d[0] : '原本')); b.appendChild(el('span', 'n', d ? d[0] + (d[6] === 2 ? '🎪' : d[6] ? '⚓' : '') : '原本的')); if (on) b.appendChild(el('span', 'b', mine ? '穿著' : '試穿')); else if (!mine) b.appendChild(el('span', 'b k3pr', '🪙' + K3.cost(pid)));
           b.addEventListener('click', () => { const fn = x => { x.c = x.c || {}; if (k) x.c[key] = k; else delete x.c[key]; }; if (K3.real || !mine) K3.tryOn(fn); else { fn(K3.cfg); K3.set({}); } renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
       /* v741 作者：「我一開始不是說，中性沒有分男生女生」→ 不再有男生臉、女生臉。眼睛、眉毛、嘴巴、腮紅各自選，誰都可以選任何一種 */
       row('眼睛', 'eye', [['a0', '圓眼'], ['b0', '星星眼'], ['b4', '水汪汪'], ['a1', '下垂眼'], ['b1', '溫柔眼'], ['a2', '鳳眼'], ['b2', '貓眼'], ['b5', '丹鳳眼'], ['a4', '三白眼'], ['a3', '睏睏眼'], ['b3', '慵懶眼'], ['a5', '瞇瞇眼']]);
@@ -5478,7 +5478,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
       if (c.top !== 'maid') dsw('褲子設計', 'bot');
       row('鞋子', 'shoes', [['sneak', '運動鞋'], ['mary', '瑪莉珍鞋']]);
       dsw('鞋子設計', 'shoes');
-      row('帽子', 'hat', [['none', '不戴'], ['cap', '棒球帽'], ['straw', '草帽']]);
+      row('帽子', 'hat', [['none', '不戴'], ['cap', '棒球帽'], ['straw', '草帽']].concat([['beanie', '龍蝦毛帽'], ['bucket', '傳說漁夫帽'], ['band', '祭典頭巾']].filter(([k]) => K3.owns(K3.idOf('hat', k)) || c.hat === k)));   /* v948 活動限定的帽子：拿到了才出現 */
       if (c.hat !== 'none') dsw(c.hat === 'straw' ? '緞帶' : '帽子設計', 'hat');
       row('口罩', 'mask', [['none', '不戴'], ['mask', '口罩']]);
       if (c.mask === 'mask') dsw('口罩設計', 'mask');
@@ -5726,7 +5726,7 @@ K3.glasses = (k, c) => { const on = !!c.glasses; if (!!k.glsOn === on) return; k
 /* v731 帽子：作者用 ChatGPT 生「光頭戴帽子」三視圖 → Meshy → 切出帽子（座標跟身體一樣），黏在頭的骨頭上。
    戴帽子時，被帽子蓋住的那一圈頭髮往內壓（每個方向量帽子內側多遠，頭髮超過就縮進去），露在外面的長髮、瀏海照常 */
 K3.RUNSW = 0; K3.RUNOUT = 0.15; K3.RUNTW = 0; K3.RUNEL = 0.45;   /* v738 只對厚衣服：手臂往外 0.15、手肘少彎 45%（不然手會陷進胸口）；擺幅不再放大 */
-K3.HATS = { cap: 1, straw: 1 }; K3.hatA = {}; K3.HC = new THREE.Vector3(0, 0.6, 0.02); K3.HS = 1;
+K3.HATS = { cap: 1, straw: 1, beanie: 1, bucket: 1, band: 1 };   /* v948 beanie 毛帽、bucket 漁夫帽、band 頭巾：活動限定，完成活動才拿得到 */ K3.hatA = {}; K3.HC = new THREE.Vector3(0, 0.6, 0.02); K3.HS = 1;
 /* v734 作者：「就不能做的乾乾淨淨完完整整的嗎」→ 帽子不再用 Meshy 切下來的（邊緣是碎的、緞帶跟帽子中間有縫）。
    改成程式照頭的大小做：帽冠、帽簷、緞帶都是一整圈平滑的面，邊緣是一條乾淨的線。座標：以頭的中心為原點，做好再往後仰一點 */
 K3.hatSurf = (nu, nv, closed, fn, tilt, flip) => { const P = [], Cc = [], I = [], ca = Math.cos(tilt), sa = Math.sin(tilt), c = K3.HC, W = nu + (closed ? 0 : 1);
@@ -5734,7 +5734,19 @@ K3.hatSurf = (nu, nv, closed, fn, tilt, flip) => { const P = [], Cc = [], I = []
   for (let j = 0; j < nv; j++) for (let i = 0; i < (closed ? nu : nu); i++){ const a = j * W + i, b = j * W + (i + 1) % W, d = a + W, e = b + W; if (!closed && i + 1 >= W) continue; if (flip) I.push(a, d, b, b, d, e); else I.push(a, b, d, b, e, d); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(Cc, 3)); g.setIndex(I); g.computeVertexNormals(); return g; };
 K3.hatMake = t => { const TAU = Math.PI * 2, mat = col => new THREE.MeshStandardMaterial({ color: col, roughness: 0.85, metalness: 0 }), parts = [], add = (geo, col, tint) => parts.push({ geo, mat: mat(col), base: new THREE.Color(col), tint: !!tint });
-  if (t === 'straw'){ const R = 0.392, H0 = 0.05, HC = 0.37, BR = 0.6, tl = 0.24, cr = tt => R * Math.pow(Math.cos(tt), 0.7);
+  if (t === 'beanie'){ const R = 0.398, H0 = 0.02, HC = 0.42, tl = 0.12, cr = tt => R * Math.pow(Math.cos(tt), 0.62);   /* v948 毛帽：一條一條的針織紋、下緣反摺一圈、頂上一顆毛球 */
+    add(K3.hatSurf(64, 16, true, (u, v, i) => { const tt = v * Math.PI / 2, r = Math.max(0.0005, cr(tt)); return [Math.sin(u * TAU) * r, H0 + 0.06 + HC * Math.sin(tt), Math.cos(u * TAU) * r, i % 2 ? 0.9 : 1.05]; }, tl, false), '#d8452f', true);
+    add(K3.hatSurf(64, 4, true, (u, v, i) => { const r = R + 0.018 + 0.006 * Math.sin(v * Math.PI); return [Math.sin(u * TAU) * r, H0 + 0.1 * v, Math.cos(u * TAU) * r, (i % 2 ? 0.86 : 0.98)]; }, tl, false), '#d8452f', true);
+    add(K3.hatSurf(18, 10, true, (u, v) => { const a = v * Math.PI, r = 0.075 * Math.sin(a); return [Math.sin(u * TAU) * r, H0 + 0.06 + HC + 0.06 - 0.075 * Math.cos(a), Math.cos(u * TAU) * r, 0.95 + 0.08 * Math.sin(u * 37)]; }, tl, false), '#fff3ea');
+  } else if (t === 'bucket'){ const R = 0.397, H0 = 0.035, HC = 0.3, tl = 0.16;   /* v948 漁夫帽：直直的帽身、平頂、往下斜的軟帽簷，車線一圈一圈 */
+    add(K3.hatSurf(56, 10, true, (u, v, i, j) => { const r = R - 0.06 * v * v; return [Math.sin(u * TAU) * r, H0 + HC * v, Math.cos(u * TAU) * r, j % 3 === 0 ? 0.9 : 1]; }, tl, false), '#6b7a52', true);
+    add(K3.hatSurf(56, 6, true, (u, v) => { const r = (R - 0.06) * (1 - v); return [Math.sin(u * TAU) * r, H0 + HC + 0.015 * (1 - v * v), Math.cos(u * TAU) * r, 1]; }, tl, false), '#6b7a52', true);
+    add(K3.hatSurf(56, 6, true, (u, v, i, j) => { const r = R + 0.19 * v; return [Math.sin(u * TAU) * r, H0 + 0.01 - 0.11 * v, Math.cos(u * TAU) * r, j === 2 || j === 4 ? 0.86 : 1]; }, tl, true), '#6b7a52', true);
+  } else if (t === 'band'){ const R = 0.405, H0 = 0.06, tl = 0.05;   /* v948 頭巾：額頭一圈布、後面打結垂下兩條 */
+    add(K3.hatSurf(64, 3, true, (u, v) => { const r = R + 0.004 * Math.sin(v * Math.PI); return [Math.sin(u * TAU) * r, H0 + 0.085 * v, Math.cos(u * TAU) * r, 1 - 0.08 * Math.abs(v - 0.5)]; }, tl, false), '#e0443a', true);
+    add(K3.hatSurf(10, 8, true, (u, v) => { const a = v * Math.PI, r = 0.042 * Math.sin(a) + 0.002; return [Math.sin(u * TAU) * r * 1.3, H0 + 0.043 + Math.cos(u * TAU) * r, -R - 0.03 - 0.06 * v + 0.03, 1]; }, tl, false), '#e0443a', true);
+    for (const sg of [-1, 1]) add(K3.hatSurf(1, 8, false, (u, v) => [sg * (0.02 + 0.07 * v) + (u - 0.5) * 0.05, H0 + 0.03 - 0.2 * v, -R - 0.05 - 0.03 * v, 0.95], tl, sg < 0), '#e0443a', true);
+  } else if (t === 'straw'){ const R = 0.392, H0 = 0.05, HC = 0.37, BR = 0.6, tl = 0.24, cr = tt => R * Math.pow(Math.cos(tt), 0.7);
     add(K3.hatSurf(56, 14, true, (u, v, i, j) => { const tt = v * Math.PI / 2, r = Math.max(0.0005, cr(tt)); return [Math.sin(u * TAU) * r, H0 + HC * Math.sin(tt), Math.cos(u * TAU) * r, j % 2 ? 0.93 : 1.04]; }, tl, false), '#e2c184');   /* 帽冠：一圈一圈深淺交錯，像草編 */
     add(K3.hatSurf(56, 7, true, (u, v, i, j) => { const r = R + (BR - R) * v; return [Math.sin(u * TAU) * r, H0 - 0.05 * v * v, Math.cos(u * TAU) * r, j % 2 ? 0.94 : 1.04]; }, tl, true), '#e2c184');   /* 帽簷 */
     add(K3.hatSurf(56, 3, true, (u, v) => { const tt = Math.asin((0.012 + 0.1 * v) / HC), r = cr(tt) + 0.008; return [Math.sin(u * TAU) * r, H0 + 0.012 + 0.1 * v, Math.cos(u * TAU) * r, 1 - 0.1 * Math.abs(v - 0.5)]; }, tl, false), '#c8362e', true);   /* 緞帶：貼著帽冠的一整圈 */
@@ -5911,7 +5923,7 @@ K3.frame = () => { if (typeof me === 'undefined' || !me) return; K3.built = 0;
     for (const [, f] of L.slice(cap)) if (f.av.k3){ K3.detach(f.av); f._lod = -1; } }
   for (const f of CLOD.all){ if (f === me || ((f.k3c || (f.av && f.av.k3)) && (!K3.allow || K3.allow.has(f)))) K3.tick(f); } K3.diag(); };
 /* 傳給別人的一小段：[臉, 髮型, 上衣, 褲子, 鞋子, 髮色, 上衣色, 褲子色, 鞋子色]；收到的時候每一格都檢查，不認得的就用預設 */
-K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin', 'bob', 'lowpony', 'bun', 'buzz', 'bowl', 'mid', 'curly', 'braid', 'straight', 'shave'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest', 'wave'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
+K3.OPT = { sex: ['g', 'b'], hair: ['long', 'short', 'short2', 'pony', 'twin', 'bob', 'lowpony', 'bun', 'buzz', 'bowl', 'mid', 'curly', 'braid', 'straight', 'shave'], top: ['tee', 'hoodie', 'maid', 'rain', 'vest', 'wave'], bot: ['shorts', 'pants'], shoes: ['sneak', 'mary'], mask: ['none', 'mask'], ear: ['none', 'pearl', 'star', 'hoop', 'drop'], hat: ['none', 'cap', 'straw', 'beanie', 'bucket', 'band'], eye: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'b0', 'b1', 'b2', 'b3', 'b4', 'b5'], brow: ['thin', 'soft', 'thick', 'up', 'down'], mouth: ['small', 'smile', 'grin', 'cat', 'flat', 'pout', 'tooth'], blush: ['none', 'soft', 'line'] };
 K3.enc = c => [/^b/.test(c.eye || '') ? 'g' : 'b', c.hair, c.top, c.bot, c.shoes, (c.c || {}).hair || '', (c.c || {}).top || '', (c.c || {}).bot || '', (c.c || {}).shoes || '', c.mask || 'none', c.ear || 'none', (c.c || {}).mask || '', (c.c || {}).ear || '', c.hat || 'none', (c.c || {}).hat || '', c.eye || '', c.brow || '', c.mouth || '', c.blush || '', (c.c || {}).eye || ''].join('|');   /* v741 再多五格：眼睛、眉毛、嘴巴、腮紅、眼睛顏色。第一格（以前的男女臉）留給舊版看：有睫毛的眼睛送 g、沒有的送 b */ //   /* v729 後面多四格：口罩、耳環、口罩顏色、耳環顏色（舊版只讀前九格，不會壞） */
 K3.dec = s => { if (typeof s !== 'string' || s.length > 220) return null; const p = s.split('|'), O = K3.OPT, ok = (k, v) => O[k].includes(v) ? v : K3.DEF[k], hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined;
   const c = { sex: ok('sex', p[0]), hair: ok('hair', p[1]), top: ok('top', p[2]), bot: ok('bot', p[3]), shoes: ok('shoes', p[4]), c: {} };
@@ -5946,6 +5958,12 @@ K3.GANGD = [['rain', 'g1', '浮球點點雨衣', '#ff8a3d', '#1e2a55', 'dot', '#
   ['tee', 'g4', '燈塔條紋T', '#f3f0e6', '#b8372e', 'stripe', '#b8372e', 12], ['vest', 'g5', '黑潮背心', '#16324a', '#a9b3b8', 'net', '#24476a', 7], ['rain', 'g6', '鹹魚銀雨衣', '#a9b3b8', '#2c4f73', 'stripe', '#e8eef2', 8],
   ['wave', 'g7', '退潮沙海浪外套', '#d9c49a', '#ffffff', 'wave', '#c4ad7e', 9], ['hoodie', 'g8', '船纜紅連帽衣', '#b8372e', '#f2e6d4', 'vstripe', '#8a2620', 14]];
 for (const [st, k, n, a, b, pt, pc, ps] of K3.GANGD) K3.DES.top[st][k] = [n, a, b, pt, pc, ps, 1];
+/* v948 活動限定的設計款（作者：「配衣服，然後活動完成可以得到」）：只有完成那個活動才拿得到，商店不賣（伺服器 257 的 _ev_wear 同一份）。最後一格 2＝活動限定，衣服名字後面有 🎪 */
+K3.EVD = [['mig', 'top', 'hoodie', 'emig', '魚群連帽衣', '#2f7fb8', '#e8f4fb', 'wave', '#5fb3e0', 9], ['bounty', 'top', 'vest', 'ebty', '懸賞獵人背心', '#4f5a3a', '#f2a03a', 'check', '#5f6b45', 8],
+  ['tny', 'top', 'wave', 'etny', '冠軍外套', '#1e2a55', '#f3d27a', 'stripe', '#f3d27a', 12], ['boss', 'top', 'tee', 'eboss', '大魚出動T', '#e8eef2', '#16324a', 'wave', '#2c4f73', 10],
+  ['whale', 'top', 'tee', 'ewhl', '藍鯨T', '#3d5f8f', '#e8f1ff', 'dot', '#c8dcf5', 10], ['meteor', 'top', 'hoodie', 'emet', '流星夜連帽衣', '#1b2346', '#f3d27a', 'dot', '#f3d27a', 13]];
+for (const [, part, st, k, n, a, b, pt, pc, ps] of K3.EVD) K3.DES[part][st][k] = [n, a, b, pt, pc, ps, 2];
+K3.EVH = { rumor: 'bucket', lob: 'beanie', fest: 'band' };   /* 活動限定的帽子（新款式） */
 K3.des = (part, style, key) => { const D = K3.DES[part] && K3.DES[part][style]; return (D && key && D[key]) || null; };
 K3.isKey = v => typeof v === 'string' && /^[a-z][a-z0-9]{0,9}$/.test(v);
 K3.PRICE = { hair:600, top:800, bot:500, shoes:400, hat:500, mask:500, ear:500, color:150 };
@@ -21606,6 +21624,22 @@ function evtNext(ms, list, dur){ const s = Math.floor(ms / 1000), d0 = Math.floo
   for (let k = -1; k <= 1; k++) for (const [h, m2, wk] of list){ const st = d0 + k * 86400 + h * 3600 + m2 * 60; if (wk){ const wd = new Date((st + 28800) * 1000).getUTCDay(); if (wd !== 0 && wd !== 6) continue; } if (s >= st && s < st + dur) return { on: true, st, en: st + dur }; if (st > s && (!best || st < best.st)) best = { on: false, st, en: st + dur }; }
   return best || { on: false, st: s, en: s }; }
 /* v947 作者：「ChatGPT 生的完全不行，一看就知道不是遊戲裡的角色」→ 活動的大圖用遊戲自己的人物和場景拍（icons/ev/<活動>.jpg），沒有圖的活動照舊用大圖示 */
+/* v948 活動限定衣服：伺服器 257 的 ev_wear_status 告訴我每個活動完成幾次、領過沒；還沒貼 257 的時候顯示「即將推出」 */
+const EvWear = { st: null, na: false, busy: false, at: 0 };
+async function evWearLoad(force){ if (!Cloud.on || !Cloud.sb || EvWear.busy || (!force && EvWear.at && Date.now() - EvWear.at < 60000)) return; EvWear.busy = true;
+  try { const { data, error } = await Cloud.sb.rpc('ev_wear_status'); if (error) throw error; EvWear.st = data || {}; EvWear.na = false; } catch(e){ EvWear.na = true; } EvWear.busy = false; EvWear.at = Date.now(); renderTabIf('events'); }
+function evWearOf(kind){ const d = K3.EVD.find(q => q[0] === kind); if (d) return { kind, part: d[1], style: d[2], key: d[3], name: d[4] }; const h = K3.EVH[kind]; if (h) return { kind, part: 'hat', style: h, key: '', name: { bucket: '傳說漁夫帽', beanie: '龍蝦毛帽', band: '祭典頭巾' }[h] }; return null; }
+function evWearCfg(w){ const c = JSON.parse(JSON.stringify(K3.cfg || K3.DEF)); c.c = c.c || {}; c[w.part] = w.style; if (w.key) c.c[w.part] = w.key; else delete c.c[w.part]; return c; }
+const EV_WEAR_HOW = { mig: n => `魚群洄游完成 ${n} 次`, bounty: n => `懸賞魚完成 ${n} 次`, tny: () => '釣魚大賽拿到前三名', boss: n => `參加全服大魚 ${n} 場`, whale: () => '釣到藍鯨', rumor: () => '釣到本週傳聞的傳說魚', lob: () => '釣到釣蝦場的藍色龍蝦', fest: n => `玩節慶遊戲 ${n} 次`, meteor: () => '即將推出' };
+function evWearBlock(sel){ const w = evWearOf(sel.id); if (!w) return null; const box = el('div', 'evwear'), S = EvWear.st && EvWear.st[sel.id], need = S ? S.need : ({ mig: 3, bounty: 3, boss: 3, fest: 5 }[sel.id] || 1);
+  box.appendChild(k3ShotImg(evWearCfg(w), w.part === 'hat' ? 'hat' : 'top', w.name));
+  const d = el('div', 'evwt'); d.appendChild(el('div', 'evwn', '🎪 ' + w.name)); d.appendChild(el('div', 'evwh', '限定：' + EV_WEAR_HOW[sel.id](need)));
+  if (sel.id === 'meteor' || EvWear.na || !Cloud.on){ d.appendChild(el('div', 'evwp', !Cloud.on ? '連上線才看得到進度' : '即將推出')); }
+  else if (!S){ d.appendChild(el('div', 'evwp', '讀取中…')); evWearLoad(); }
+  else if (S.got){ d.appendChild(el('div', 'evwp got', '已經拿到了，去「造型」穿上')); }
+  else { const n = Math.min(S.n, S.need), bar = el('div', 'evwbar'), f = el('i'); f.style.width = (n / S.need * 100) + '%'; bar.appendChild(f); d.appendChild(bar); d.appendChild(el('div', 'evwp', `${n} / ${S.need}`));
+    if (S.n >= S.need){ const b = el('button', 'tbtn evgo', '領取'); b.addEventListener('click', async () => { b.disabled = true; try { const { data, error } = await Cloud.sb.rpc('ev_wear_claim', { p_kind: sel.id }); if (error) throw error; adoptRow(data); SFX.catch(); flash(`拿到「${w.name}」了！去「造型」穿穿看`, 2.4); } catch(e){ toast(cloudErrMsg(e)); } evWearLoad(true); }); d.appendChild(b); } }
+  box.appendChild(d); return box; }
 const EV_IMG = new Set(['mig', 'bounty', 'rumor', 'meteor', 'tny', 'boss', 'whale', 'lob', 'stamp', 'quest', 'fest']);
 function renderEvents(body){ const ms = bossNow(), m = evtMig(ms), b = evtBounty(ms), st = Evt.st, L = [];
   const fname = f => (FISH_BY_ID[f] || {}).name || '', sname = sp => (SPOT_BY_ID[sp] || {}).label || '';
@@ -21626,21 +21660,34 @@ function renderEvents(body){ const ms = bossNow(), m = evtMig(ms), b = evtBounty
   { const s2 = Stamp.st; L.push({ id: 'stamp', tab: 'long', ic: '📮', t: '村長的集章卡', col: ['#c0603a', '#f2a66b'], on: !!(Cloud.on && s2 && !s2.today), chip: '每天', what: '每天進來蓋一個章，漏掉一天也不會歸零。蓋滿 28 個送一套限定造型。', panel: d => renderStampPanel(d) }); }
   L.push({ id: 'quest', tab: 'long', ic: '📅', t: '每日任務', col: ['#3f8f5a', '#8fd39e'], chip: '每天換', what: '村民每天會拜託你幾件小事，做完有金幣和經驗。', open: ['打開今天的任務', 'quest'] });
   L.push({ id: 'fest', tab: 'long', ic: '🏮', t: '節慶', col: ['#b8323a', '#f07a6a'], chip: '照季節', what: '跟著季節辦的節慶，期間有限定的魚、擺設和獎勵。', open: ['打開節慶', 'fest'] });
-  if (!Evt.tab) Evt.tab = 'day'; const shown = L.filter(e => e.tab === Evt.tab); let sel = shown.find(e => e.id === Evt.sel) || shown.find(e => e.on && !e.done) || shown[0];
-  const wrap = el('div', 'evwrap'), left = el('div', 'evleft'), right = el('div', 'evright'); wrap.append(left, right); body.appendChild(wrap);
-  { const tb = el('div', 'evtabs'); for (const [k, l] of [['day', '今天'], ['long', '長期']]){ const t = el('button', 'evtab' + (Evt.tab === k ? ' on' : ''), l); if (L.some(e => e.tab === k && e.on && !e.done)) t.appendChild(el('i', 'evdot')); t.addEventListener('click', () => { Evt.tab = k; Evt.sel = null; renderTab(); }); tb.appendChild(t); } left.appendChild(tb); }
-  const list = el('div', 'evlist'); left.appendChild(list);
-  for (const e of shown){ const c = el('button', 'evcard' + (e === sel ? ' sel' : '')); c.style.background = EV_IMG.has(e.id) ? `linear-gradient(90deg, ${e.col[0]}ee 0%, ${e.col[0]}99 45%, ${e.col[0]}00 75%), url(icons/ev/${e.id}.jpg) 70% 40%/cover` : `linear-gradient(135deg, ${e.col[0]}, ${e.col[1]})`;
-    c.appendChild(el('span', 'evic', e.ic)); c.appendChild(el('span', 'evt', e.t)); c.appendChild(el('span', 'evchip' + (e.on ? ' on' : ''), (e.on && !e.done && e.id !== 'stamp' ? '進行中・' : '') + e.chip)); if (e.on && !e.done) c.appendChild(el('i', 'evdot'));
-    c.addEventListener('click', () => { Evt.sel = e.id; renderTab(); }); list.appendChild(c); }
-  if (!sel) return;
-  { const bn = el('div', 'evban' + (EV_IMG.has(sel.id) ? ' img' : '')); bn.style.background = EV_IMG.has(sel.id) ? `linear-gradient(90deg, ${sel.col[0]}dd 0%, ${sel.col[0]}55 40%, ${sel.col[0]}00 65%), url(icons/ev/${sel.id}.jpg) center/cover` : `linear-gradient(135deg, ${sel.col[0]}, ${sel.col[1]})`; if (!EV_IMG.has(sel.id)) bn.appendChild(el('span', 'evbig', sel.ic)); bn.appendChild(el('div', 'evbt', sel.t)); bn.appendChild(el('span', 'evchip big' + (sel.on ? ' on' : ''), '🕒 ' + sel.chip)); right.appendChild(bn); }
-  right.appendChild(el('p', 'evwhat', sel.what)); if (sel.prog) right.appendChild(el('p', 'evprog', sel.prog));
-  if (sel.rw){ const r = el('div', 'evrw'); for (const [ic, t] of sel.rw){ const c = el('div', 'evrc'); c.appendChild(el('span', 'evri', ic)); c.appendChild(el('span', 'evrt', t)); r.appendChild(c); } right.appendChild(el('div', 'evrh', '獎勵')); right.appendChild(r); }
-  if (sel.panel){ try { sel.panel(right); } catch(e){} if (!Cloud.on) right.appendChild(el('p', 'sub', '要連上線才能蓋章。')); }
-  if (sel.go){ const g = el('button', 'tbtn evgo', '🧭 ' + sel.go[0]); g.addEventListener('click', () => navTo(sel.go[0].replace(/^帶我去/, ''), sel.go[1], sel.go[2])); right.appendChild(g); }
-  if (sel.open){ const g = el('button', 'tbtn evgo', sel.open[0]); g.addEventListener('click', () => { try { ui3Open(sel.open[1]); } catch(e){} openSheet(sel.open[1]); }); right.appendChild(g); }
-  right.appendChild(el('p', 'sub evnote', '時間都是台灣時間。金幣由伺服器發，每次活動一個人拿一次。')); }
+  /* v949 作者：「今天跟長期就感覺是抄襲」「我們必須做屬於自己的風格」→ 不用分頁和卡片：整頁是港邊的木頭公告欄。
+     上面一條今天的時刻表（台灣時間 0～24 點，底下一道潮水），活動是插在時間上的小旗子，紅線是現在；下面每個活動是一張用木夾子夾著的紙條（拍立得照片、蓋章）。
+     點紙條或旗子，紙條放大：要做什麼、獎勵、限定衣服、帶我去 */
+  const tw = new Date(ms + 8 * 3600000), nowH = tw.getUTCHours() + tw.getUTCMinutes() / 60, wkend = tw.getUTCDay() === 0 || tw.getUTCDay() === 6;
+  const TIMES = { mig: [0.5, 3.5, 6.5, 9.5, 12.5, 15.5, 18.5, 21.5], tny: [12, 19, 21], boss: wkend ? [14, 20.5] : [20.5], meteor: [23] };
+  const sel = L.find(e => e.id === Evt.sel) || null;
+  const board = el('div', 'evboard'); body.appendChild(board);
+  if (!sel){ const tl = el('div', 'evtl'), track = el('div', 'evtrack'); tl.appendChild(el('div', 'evtlh', '🕰️ 今天的時刻表'));
+    track.innerHTML = '<svg class="evtide" viewBox="0 0 240 20" preserveAspectRatio="none"><path d="M0 12 Q15 4 30 12 T60 12 T90 12 T120 12 T150 12 T180 12 T210 12 T240 12 V20 H0Z"/></svg>';
+    for (let h = 0; h <= 24; h += 3){ const tk = el('span', 'evtick', h + ''); tk.style.left = (h / 24 * 100) + '%'; track.appendChild(tk); }
+    { const band = el('span', 'evband'); band.style.left = (12 / 24 * 100) + '%'; band.style.width = (9 / 24 * 100) + '%'; band.title = '釣蝦場放生'; track.appendChild(band); }
+    for (const id in TIMES){ const e = L.find(q => q.id === id); if (!e) continue; for (const h of TIMES[id]){ const f = el('button', 'evflag' + (id === 'mig' ? ' mini' : '') + (Math.abs(nowH - h) < 0.4 || (nowH >= h && nowH < h + (id === 'mig' ? 0.42 : id === 'meteor' ? 0.5 : 0.17)) ? ' live' : nowH > h ? ' past' : ''), e.ic); f.style.left = (h / 24 * 100) + '%'; f.title = e.t + ' ' + String(Math.floor(h)).padStart(2, '0') + ':' + (h % 1 ? '30' : '00'); f.addEventListener('click', () => { Evt.sel = id; renderTab(); }); track.appendChild(f); } }
+    { const nl = el('span', 'evnow'); nl.style.left = (nowH / 24 * 100) + '%'; nl.appendChild(el('b', '', '現在')); track.appendChild(nl); }
+    tl.appendChild(track); board.appendChild(tl); }
+  const note = (e, i, big) => { const n = el(big ? 'div' : 'button', 'evpaper' + (e.tab === 'long' ? ' lined' : '') + (big ? ' big' : '')); if (!big) n.style.setProperty('--r', (((i * 37) % 7) - 3) * 0.6 + 'deg');
+    n.appendChild(el('i', 'evpin')); if (EV_IMG.has(e.id)){ const ph = el('div', 'evphoto'); ph.style.backgroundImage = `url(icons/ev/${e.id}.jpg)`; n.appendChild(ph); } else n.appendChild(el('div', 'evicon', e.ic));
+    n.appendChild(el('div', 'evtt', e.t)); n.appendChild(el('div', 'evwhen', '🕒 ' + e.chip)); if (e.on && !e.done && e.id !== 'stamp') n.appendChild(el('span', 'evstamp', '進行中')); if (e.done) n.appendChild(el('span', 'evstamp ok', '完成'));
+    if (!big) n.addEventListener('click', () => { Evt.sel = e.id; renderTab(); }); return n; };
+  if (sel){ const back = el('button', 'evback', '← 回到公告欄'); back.style.marginTop = '0'; back.addEventListener('click', () => { Evt.sel = null; renderTab(); }); board.appendChild(back);
+    const n = note(sel, 0, true), side = el('div', 'evside'); { const kids = [...n.children].filter(k => !k.classList.contains('evpin') && !k.classList.contains('evphoto') && !k.classList.contains('evicon')); for (const k of kids) side.appendChild(k); n.appendChild(side); } const n0 = n; { const n = side; n.appendChild(el('p', 'evwhat', sel.what)); if (sel.prog) n.appendChild(el('p', 'evprog', sel.prog));
+    if (sel.rw){ const r = el('div', 'evrw'); for (const [ic, t] of sel.rw){ const c = el('div', 'evrc'); c.appendChild(el('span', 'evri', ic)); c.appendChild(el('span', 'evrt', t)); r.appendChild(c); } n.appendChild(el('div', 'evrh', '獎勵')); n.appendChild(r); }
+    { const wb = evWearBlock(sel); if (wb) n.appendChild(wb); }
+    if (sel.panel){ try { sel.panel(n); } catch(e){} if (!Cloud.on) n.appendChild(el('p', 'sub', '要連上線才能蓋章。')); }
+    if (sel.go){ const g = el('button', 'tbtn evgo', '🧭 ' + sel.go[0]); g.addEventListener('click', () => navTo(sel.go[0].replace(/^帶我去/, ''), sel.go[1], sel.go[2])); n.appendChild(g); }
+    if (sel.open){ const g = el('button', 'tbtn evgo', sel.open[0]); g.addEventListener('click', () => { try { ui3Open(sel.open[1]); } catch(e){} openSheet(sel.open[1]); }); n.appendChild(g); } }
+    board.appendChild(n0); }
+  else { const grid = el('div', 'evnotes'); [...L.filter(e => e.on && !e.done), ...L.filter(e => !(e.on && !e.done))].forEach((e, i) => grid.appendChild(note(e, i))); board.appendChild(grid); }
+  board.appendChild(el('p', 'evfoot', '時間都是台灣時間。金幣由伺服器發，每次活動一個人拿一次。')); }
 /* ===== v288 兒童安全模式（116）：第一次進遊戲問出生年份，未滿 13 歲就開 =====
    聊天只能用下面的快速句子、看不到別人自己打的字；不能在留言板留言；名字從「形容詞＋動物」選；好友只能用好友代碼加；深海驚嚇預設關。 */
 const KID_Q = ['你好！', '一起釣魚吧！', '好厲害！', '謝謝你～', '我釣到了！', '等等我！', '要去哪裡？', '掰掰～', '加油！', '哈哈哈', '好可愛！', '晚安～'];
@@ -23129,7 +23176,7 @@ function renderTab0(){
         ["送魚一天 10 條，金幣不能送。帳號要滿 3 天或綁 Email，而且釣過 30 條。", "私訊一則最多 120 字，伺服器留 30 天。", "排位賽跟同一個人一天只有前 3 局算。每個月一季，換季星星留一半。每天第一場排位勝利送亮光餌 5 個。", "釣友隊要釣過 20 條才能建。每週目標：合力釣 120 條乘人數，湊齊 15 加 5 乘人數種。達成後釣過 5 條的隊員各領 600 金幣。", "地圖記號 24 小時後消失，同時最多 3 個，一天最多 10 個，要釣過 5 條。", "留言一則最多 60 字，一天最多 5 則，要釣過 5 條。", "附近聊天是 28 公尺內。", "鬼抓人 2 個人以上，3 分鐘後還是鬼的人輸。"]],
       ["等級、成就", "social", ["釣魚、放流、拍水下照片都有經驗。點左上角的等級看進度。", "每升一級有金幣。", "成就有 " + (ACH.length) + " 個。有些會給稱號，選一個掛在名字上。", "點左上角的等級打開「成就」，最上面可以改名字。"],
         ["經驗：常見魚 10、稀有魚 40、傳說魚 250、放流 5、水下照片每種 30。", "升級獎金是等級乘 50。", "在同一個釣點放流、撿垃圾、釣魚，那裡會越來越熟，魚咬得比較快。"]],
-      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "背包、圖鑑、釣組、成就這些頁面：左邊點分類，右邊看那一類的東西。", "活動：手機的「🎪 活動」，分「今天」和「長期」，點左邊的卡片看要做什麼、有什麼獎勵。", "字太小：設定的「字體大小」選大或特大。", "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
+      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "背包、圖鑑、釣組、成就這些頁面：左邊點分類，右邊看那一類的東西。", "活動：手機的「🎪 活動」是港邊的公告欄，點紙條或時刻表上的小旗子看要做什麼、有什麼獎勵。", "活動限定的衣服：在活動頁看要完成幾次，完成了按「領取」，衣服名字後面有 🎪。", "字太小：設定的「字體大小」選大或特大。", "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
         ["未滿 13 歲會自動開兒童安全模式，不能自己關：聊天只能用固定句子，名字從名單裡選，好友只能用代碼加。", "訪客帳號玩到第 3 天或 10 級會提醒綁 Email。", "聊天不會存在伺服器，只有被檢舉的內容保存 30 天。", "兌換碼可以拿 300 金幣、5 愛海點數和一面版畫小旗，同一組碼每人只能用一次。", "有問題可以寫信到 chaoxi.fishing@gmail.com。"]]
     ];
     HELP2.forEach(([title, c, lines, nums], hi) => { if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (hi === 0 || cur !== 'all') d.open = true; d._open0 = d.open; d.appendChild(el('summary', '', title));
@@ -24539,6 +24586,8 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u949', d:'11/27', items:[['📌','活動頁變成港邊的公告欄：上面是今天的時刻表，活動是插在時間上的小旗子；每個活動是一張夾著的紙條，點了放大看要做什麼', 'events']] },
+  { id:'u948', d:'11/27', items:[['🎪','每個活動都有一件限定的衣服或帽子：完成那個活動幾次就能在活動頁領，商店買不到。新做了三頂帽子：龍蝦毛帽、傳說漁夫帽、祭典頭巾', 'events']] },
   { id:'u947', d:'11/27', items:[['🖼️','活動頁每個活動都有一張大圖，是在村子裡拍的', 'events']] },
   { id:'u943', d:'11/27', items:[['🎒','背包換成左邊分類、右邊一格一格的大卡片；釣組、圖鑑、成就、荒島、坐船這些很長的頁面，也變成左邊選一段、右邊只看那一段，不用一直往下滑', 'bag']] },
   { id:'u941', d:'11/27', items:[['🎪','活動頁換新：上面分「今天」「長期」，左邊一排活動卡片寫著幾點開始、還剩多久，正在進行的有紅點；點一張，右邊看要做什麼、有什麼獎勵，還能直接帶路', 'events']] },
