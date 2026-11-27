@@ -2672,3 +2672,43 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .evrt{font-size:12px;font-weight:800}
 .evgo{align-self:flex-start;background:var(--sea);padding:10px 16px;border-radius:12px;font-size:14px}
 .evnote{margin:6px 2px 0;opacity:.7}
+/* v943 背包：左邊分類、右邊卡片 */
+.bagwrap{display:grid;grid-template-columns:minmax(120px,30%) 1fr;gap:12px;align-items:start}
+@media (max-width:520px){.bagwrap{grid-template-columns:1fr}.bagcats{flex-direction:row;flex-wrap:wrap}}
+.bagcats{display:flex;flex-direction:column;gap:6px;min-width:0}
+.bagcat{position:relative;display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:var(--paper-2);color:var(--ink);font-weight:800;font-size:13px;text-align:left}
+.bagcat .bcic{font-size:20px;line-height:1}
+.bagcat .bct{flex:1;min-width:0}
+.bagcat .bcn{font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(24,51,74,.12)}
+.bagcat.sel{background:var(--sea);color:#fff;box-shadow:0 2px 6px rgba(24,51,74,.2)}
+.bagcat.sel .bcn{background:rgba(255,255,255,.25)}
+.bagcat.using::after{content:'';position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#f2a53a}
+.bagcat.ghost{background:transparent;box-shadow:inset 0 0 0 2px var(--paper-2);font-size:12px}
+.bagcatmore{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.bagcatmore .bagcat{flex:1 1 auto;justify-content:center}
+.bagpane{min-width:0}
+.bagsub{margin:0 2px 8px}
+.baggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.bagitem{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:12px 8px 10px;border-radius:14px;background:var(--paper-2);box-shadow:inset 0 0 0 2px rgba(24,51,74,.05)}
+.bagitem.on{box-shadow:inset 0 0 0 3px #f2a53a;background:#fff6e6}
+.bagitem .biic{font-size:38px;line-height:1.1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.15))}
+.bagitem .bin{font-weight:800;font-size:13px}
+.bagitem .bim{font-size:11px;opacity:.7;line-height:1.35}
+.bagitem .tbtn{margin-top:auto;width:100%;padding:7px 6px;font-size:12px}
+.bagitem .tbtn:not(.ghost){background:var(--sea)}
+/* v943 長頁面自動分段：左邊段落、右邊內容 */
+.sidewrap{display:grid;grid-template-columns:minmax(120px,28%) 1fr;gap:12px;align-items:start}
+@media (max-width:520px){.sidewrap{grid-template-columns:1fr}.sidecats{flex-direction:row!important;flex-wrap:wrap;position:static!important;max-height:none!important}}
+.sidecats{display:flex;flex-direction:column;gap:6px;min-width:0;position:sticky;top:0;max-height:calc(100vh - 140px);overflow-y:auto;padding-bottom:4px}
+.sidecats .bagcat{font-size:12.5px;padding:8px 10px}
+.sidepane{min-width:0}
+.sidepane > .dexhead:first-child{margin-top:0}
+.sidepane > .dexhead:first-child{display:block;font-size:15px}
+.sidepane > .dexhead:first-child small{display:block;margin:3px 0 0;font-weight:400}
+.bagcats{position:sticky;top:0}
+.bagsearch{width:100%;margin:0 0 8px;padding:8px 12px;border-radius:12px;border:2px solid var(--paper-2);font:inherit;font-size:13px}
+.baggrid.many{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.baggrid.many .bagitem{padding:8px 6px}
+.baggrid.many .biic{font-size:28px}
+.baggrid.many .bim{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:10.5px}
+.baggrid.many .tbtn{padding:5px 4px;font-size:11.5px}

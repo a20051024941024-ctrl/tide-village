@@ -19659,10 +19659,10 @@ function ui2Tick(){
 setInterval(ui2Tick, 2000); setTimeout(ui2Tick, 1200);
 
 /* ================= 包包：身上帶的東西（釣竿、魚餌、窩料、料理、潛水用品、蝦竿…）================= */
-function renderBag(body){
-  const sec = (title, sub) => { const h = el('div', 'dexhead', title); if (sub) h.appendChild(el('small', '', sub)); body.appendChild(h); const ul = el('ul', 'shoplist bag'); body.appendChild(ul); return ul; };
-  const row = (ul, ic, name, meta, btnTxt, fn, on) => { const li = el('li', on ? 'on' : ''); const i = el('span', 'dishic', ic); li.appendChild(i); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', name)); if (meta) d.appendChild(el('div', 'meta', meta)); li.appendChild(d);
-    if (btnTxt){ const b = el('button', 'tbtn' + (on ? ' ghost' : ''), btnTxt); b.disabled = !fn; if (fn) b.addEventListener('click', () => { b.disabled = true; fn(); }); li.appendChild(b); } ul.appendChild(li); return li; };
+/* v943 作者：「左邊選、右邊看」→ 背包左邊一排分類（交通、對決、寵物、種子、菜籃、料理、潛水），右邊是那一類的東西，一格一格大圖示卡片，按鈕在卡片下面。東西和按鈕的作用都沒變 */
+function renderBag(body){ const SECS = [];
+  const sec = (title, sub) => { const S = { title, sub, items: [] }; SECS.push(S); return S; };
+  const row = (S, ic, name, meta, btnTxt, fn, on) => { S.items.push({ ic, name, meta, btnTxt, fn, on }); };
   { const w = el('div', 'bagwallet'); w.innerHTML = `<span>🪙 <b>${rec.coins.toLocaleString()}</b> 金幣</span><span>💙 <b>${rec.love || 0}</b> 愛海點數</span>${shrimpLeft() ? `<span>🎫 釣蝦 <b>${mmss(shrimpLeft())}</b></span>` : ''}<span>🐟 魚缸 <b>${rec.tank.length}</b> 條</span>`; body.appendChild(w); }
   /* v440 腳踏車收在背包裡：拿出來就騎上去；騎著的時候可以收起來 */
   { const ul = sec('🚲 交通工具', '拿出來就能騎；下車以後車會停在原地，走回去按「騎車」'); const ok = Bike.on || canRide();
@@ -19682,8 +19682,21 @@ function renderBag(body){
       for (const [, list] of by){ const d = list[0], rc = RECIPES[d.r]; if (!rc) continue; row(ul, rc.icon, `${rc.name} ${'★'.repeat(d.q || 1)} ×${list.length}`, rc.desc, '吃', () => { eatDish(d.t); renderTab(); }); } } }
   // 潛水用品、蝦竿
   { const dv = DIVE_GEAR.filter(g => hasDive(g.id)); if (dv.length){ const ul = sec('🤿 潛水用品'); for (const g of dv) row(ul, g.icon, g.name, g.desc); } }
-  { const b = el('div', 'bagmore'); const t = el('button', 'tbtn ghost', '🐟 打開魚缸'); t.addEventListener('click', () => { curTab = 'tank'; renderTab(); }); const st = el('button', 'tbtn ghost', '👕 打開造型（衣服、帽子）'); st.addEventListener('click', () => { curTab = 'style'; renderTab(); }); b.append(t, st); body.appendChild(b); }
-}
+  const wrap = el('div', 'bagwrap'), cats = el('div', 'bagcats'), pane = el('div', 'bagpane'); wrap.append(cats, pane); body.appendChild(wrap);
+  let cur = SECS.find(S => S.title === renderBag.sel) || SECS[0];
+  for (const S of SECS){ const m = /^(\S+)\s+(.*)$/.exec(S.title) || [0, '🎒', S.title], b = el('button', 'bagcat' + (S === cur ? ' sel' : '')); b.appendChild(el('span', 'bcic', m[1])); b.appendChild(el('span', 'bct', m[2])); if (S.items.length > 1) b.appendChild(el('span', 'bcn', String(S.items.length))); if (S.items.some(it => it.on)) b.classList.add('using');
+    b.addEventListener('click', () => { renderBag.sel = S.title; renderTab(); }); cats.appendChild(b); }
+  { const mo = el('div', 'bagcatmore'); for (const [l, tab] of [['🐟 魚缸', 'tank'], ['👕 造型', 'style']]){ const t = el('button', 'bagcat ghost', l); t.addEventListener('click', () => { curTab = tab; renderTab(); }); mo.appendChild(t); } cats.appendChild(mo); }
+  if (!cur){ pane.appendChild(el('p', 'sub', '背包裡還沒有東西。釣魚、種田、做料理拿到的東西會放在這裡。')); return; }
+  /* v943 作者：「東西太多時怎麼辦？越來越多時」→ 背包裡超過 10 樣就出現搜尋框（打字會找全部分類）；一類超過 6 樣卡片變小一點、一排放更多；左邊分類固定不動，只有右邊捲 */
+  const total = SECS.reduce((n, S) => n + S.items.length, 0), q = (renderBag.q || '').trim();
+  if (total > 10){ const sb = el('input', 'txt bagsearch'); sb.type = 'search'; sb.placeholder = '🔍 找東西（打名字）'; sb.value = renderBag.q || ''; sb.addEventListener('input', () => { renderBag.q = sb.value; clearTimeout(renderBag.qt); renderBag.qt = setTimeout(() => { renderTab(); const x = document.querySelector('#sheetBody .bagsearch'); if (x){ x.focus(); x.setSelectionRange(x.value.length, x.value.length); } }, 250); }); pane.appendChild(sb); }
+  const items = q ? SECS.flatMap(S => S.items.filter(it => (it.name + ' ' + (it.meta || '')).includes(q))) : cur.items;
+  if (!q && cur.sub) pane.appendChild(el('p', 'sub bagsub', cur.sub));
+  if (q && !items.length) pane.appendChild(el('p', 'sub', `找不到「${q}」`));
+  const g = el('div', 'baggrid' + (items.length > 6 ? ' many' : '')); pane.appendChild(g);
+  for (const it of items){ const c = el('div', 'bagitem' + (it.on ? ' on' : '')); c.appendChild(el('div', 'biic', it.ic)); c.appendChild(el('div', 'bin', it.name)); if (it.meta) c.appendChild(el('div', 'bim', it.meta));
+    if (it.btnTxt){ const b = el('button', 'tbtn' + (it.on ? ' ghost' : ''), it.btnTxt); b.disabled = !it.fn; if (it.fn) b.addEventListener('click', () => { b.disabled = true; it.fn(); }); c.appendChild(b); } g.appendChild(c); } }
 
 /* ===== v635 釣具改版第一次（作者的「釣具大改版計畫」）：會影響釣魚的放「🎣 釣組」，只是好看的放「🎨 外觀」，不再散在商店、工坊、包包三個地方 ===== */
 function renderRig2(body){
@@ -22713,8 +22726,20 @@ const Pop = { d:{}, at:0, busy:false };
 function popFetch(){ if (Pop.busy || !Cloud.on || !Cloud.sb || Date.now() - Pop.at < 300000) return; Pop.busy = true; Pop.at = Date.now();
   Cloud.sb.rpc('fish_pop_list').then(({ data }) => { Pop.busy = false; if (data && typeof data === 'object'){ Pop.d = data; if (!$('#sheet').hidden && curTab === 'dex') renderTab(); } }, () => { Pop.busy = false; }); }
 /* v685 同一頁重畫時（例如玩家頁有人進出、好友清單載好）保持原本捲到的位置（作者 11/22：「點玩家的時候，畫面會一點一點往上」） */
+/* v943 作者：「左邊選、右邊看」「都要改」→ 很長、分好幾段的頁面（釣組、荒島、圖鑑、成就……）自動變成：左邊一排段落名字，右邊只顯示選到的那一段。
+   段落是頁面裡的 .dexhead 標題（3 段以上才換；地圖不換）。選到哪一段每一頁各自記住；頁面本身的內容和按鈕都沒動 */
+const SideNav = {}, SIDE_SKIP = new Set(['map', 'help', 'upd', 'settings', 'events', 'bag']);
+function sideNav(body, tab){ if (!body || SIDE_SKIP.has(tab)) return; const kids = [...body.children], heads = kids.filter(k => k.classList && k.classList.contains('dexhead')); if (heads.length < 3) return;
+  const top = [], groups = []; let g = null; for (const k of kids){ if (k.classList && k.classList.contains('dexhead')){ g = { h: k, els: [] }; groups.push(g); } else if (g) g.els.push(k); else top.push(k); }
+  const name = h => { const c = h.cloneNode(true); for (const s2 of c.querySelectorAll('small')) s2.remove(); return [...c.childNodes].map(n => n.textContent.trim()).filter(Boolean).join(' '); };
+  let cur = groups.find(q => name(q.h) === SideNav[tab]) || groups[0];
+  body.innerHTML = ''; for (const k of top) body.appendChild(k);
+  const wrap = el('div', 'sidewrap'), cats = el('div', 'sidecats'), pane = el('div', 'sidepane'); wrap.append(cats, pane); body.appendChild(wrap);
+  for (const q of groups){ const t = name(q.h), m = /^(\S+)\s+(.+)$/.exec(t), ic = m && !/[\u4e00-\u9fff A-Za-z0-9]/.test(m[1]) ? m[1] : '', b = el('button', 'bagcat' + (q === cur ? ' sel' : '')); if (ic) b.appendChild(el('span', 'bcic', ic)); b.appendChild(el('span', 'bct', ic ? m[2] : t));
+    b.addEventListener('click', () => { SideNav[tab] = t; renderTab(); const bb = $('#sheetBody'); if (bb) bb.scrollTop = 0; }); cats.appendChild(b); }
+  pane.appendChild(cur.h); for (const k of cur.els) pane.appendChild(k); }
 function renderTab(){ const same = renderTab.last === curTab, b = $('#sheetBody'), bx = $('#sheet .box'), s0 = same && b ? b.scrollTop : 0, s1 = same && bx ? bx.scrollTop : 0;
-  try { renderTab0(); } finally { if (same && (s0 || s1)){ const fix = () => { if (renderTab.last !== curTab) return; if (b && s0) b.scrollTop = s0; if (bx && s1) bx.scrollTop = s1; }; fix(); requestAnimationFrame(fix); } } }
+  try { renderTab0(); try { sideNav(b, curTab); } catch(e){ console.warn('sidenav', e); } } finally { if (same && (s0 || s1)){ const fix = () => { if (renderTab.last !== curTab) return; if (b && s0) b.scrollTop = s0; if (bx && s1) bx.scrollTop = s1; }; fix(); requestAnimationFrame(fix); } } }
 function renderTab0(){
   try { ui3Tabs(); } catch(e){}
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
@@ -23087,7 +23112,7 @@ function renderTab0(){
         ["送魚一天 10 條，金幣不能送。帳號要滿 3 天或綁 Email，而且釣過 30 條。", "私訊一則最多 120 字，伺服器留 30 天。", "排位賽跟同一個人一天只有前 3 局算。每個月一季，換季星星留一半。每天第一場排位勝利送亮光餌 5 個。", "釣友隊要釣過 20 條才能建。每週目標：合力釣 120 條乘人數，湊齊 15 加 5 乘人數種。達成後釣過 5 條的隊員各領 600 金幣。", "地圖記號 24 小時後消失，同時最多 3 個，一天最多 10 個，要釣過 5 條。", "留言一則最多 60 字，一天最多 5 則，要釣過 5 條。", "附近聊天是 28 公尺內。", "鬼抓人 2 個人以上，3 分鐘後還是鬼的人輸。"]],
       ["等級、成就", "social", ["釣魚、放流、拍水下照片都有經驗。點左上角的等級看進度。", "每升一級有金幣。", "成就有 " + (ACH.length) + " 個。有些會給稱號，選一個掛在名字上。", "點左上角的等級打開「成就」，最上面可以改名字。"],
         ["經驗：常見魚 10、稀有魚 40、傳說魚 250、放流 5、水下照片每種 30。", "升級獎金是等級乘 50。", "在同一個釣點放流、撿垃圾、釣魚，那裡會越來越熟，魚咬得比較快。"]],
-      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "活動：手機的「🎪 活動」，分「今天」和「長期」，點左邊的卡片看要做什麼、有什麼獎勵。", "字太小：設定的「字體大小」選大或特大。", "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
+      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "背包、圖鑑、釣組、成就這些頁面：左邊點分類，右邊看那一類的東西。", "活動：手機的「🎪 活動」，分「今天」和「長期」，點左邊的卡片看要做什麼、有什麼獎勵。", "字太小：設定的「字體大小」選大或特大。", "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
         ["未滿 13 歲會自動開兒童安全模式，不能自己關：聊天只能用固定句子，名字從名單裡選，好友只能用代碼加。", "訪客帳號玩到第 3 天或 10 級會提醒綁 Email。", "聊天不會存在伺服器，只有被檢舉的內容保存 30 天。", "兌換碼可以拿 300 金幣、5 愛海點數和一面版畫小旗，同一組碼每人只能用一次。", "有問題可以寫信到 chaoxi.fishing@gmail.com。"]]
     ];
     HELP2.forEach(([title, c, lines, nums], hi) => { if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (hi === 0 || cur !== 'all') d.open = true; d._open0 = d.open; d.appendChild(el('summary', '', title));
@@ -24497,6 +24522,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u943', d:'11/27', items:[['🎒','背包換成左邊分類、右邊一格一格的大卡片；釣組、圖鑑、成就、荒島、坐船這些很長的頁面，也變成左邊選一段、右邊只看那一段，不用一直往下滑', 'bag']] },
   { id:'u941', d:'11/27', items:[['🎪','活動頁換新：上面分「今天」「長期」，左邊一排活動卡片寫著幾點開始、還剩多久，正在進行的有紅點；點一張，右邊看要做什麼、有什麼獎勵，還能直接帶路', 'events']] },
   { id:'u940', d:'11/27', items:[['⚙️','設定頁換成左右兩欄：左邊聲音、畫面，右邊帳號、語言聊天、其他；開關一眼就看得到，長的說明點 ⓘ 才打開']] },
   { id:'u939', d:'11/27', items:[['🎥','鏡頭可以拉得更近，近到看得清楚自己的臉；往下拖可以抬頭看整片天空，人會留在畫面下面'], ['🌀','拖畫面甩一下放開，鏡頭會再轉一小段慢慢停'], ['🎞️','手機畫面更順：以前限制每秒畫的張數時是畫一張跳一張，看起來會一頓一頓，現在間隔平均']] },
