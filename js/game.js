@@ -18310,7 +18310,7 @@ function bbOpen(start){ let i = start == null ? BB.i : start; const ov = documen
   let sx = null; ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true }); ov.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1)); sx = null; });
   try { SFX.click(); } catch(e){} show(i); }
 /* v921 新主島的店門：店的裡面跟村子共用，這裡只是另一個入口。進去之前記住從哪個門進來（Venue.back），出來回到那個門 */
-const W2_DOOR = { tackle: ['shdoor', '🚪 進去看看'], mu: ['shdoor', '🚪 進去看看'], cai: ['shdoor', '🚪 進去看看'], market: ['shdoor', '🚪 進去逛'], pet: ['petdoor', '🐾 進去看看'], cafe: ['cafedoor', ''], museum: ['museumdoor', ''], stad: ['staddoor', ''], pool: ['pooldoor', '🎱 進去打撞球'], shrimp: ['shrimpdoor', ''] };
+const W2_DOOR = { tackle: ['shdoor', '🚪 進去看看'], mu: ['shdoor', '🚪 進去看看'], cai: ['shdoor', '🚪 進去看看'], market: ['shdoor', '🚪 進去逛'], pet: ['petdoor', '🐾 進去看看'], cafe: ['cafedoor', ''], museum: ['museumdoor', ''], stad: ['staddoor', ''], pool: ['pooldoor', '🎱 進去打撞球'], shrimp: ['shrimpdoor', ''], tailor: ['tailor', '👗 看衣服'] };   /* v951 阿綾服裝店：跟村子一樣在門口就能逛，不用進去 */
 function w2NearDoor(){ if (!W2 || !W2.doors || !W2.near(me.pos.x, me.pos.z)) return null; let best = null, bd = 1.9; for (const d of W2.doors){ const q = Math.hypot(me.pos.x - d.x, me.pos.z - d.z); if (q < bd){ bd = q; best = d; } } if (!best) return null; const M = W2_DOOR[best.k]; return M ? { id: 'w2door' + best.k, label: best.label, mode: M[0], hall: best.k, sub: M[1] || undefined, w2: best } : null; }
 /* ===== v923 新主島的環島小火車：可以坐 =====
    車停在站裡的時候，站在月台上按右下角的大按鈕「上車」；坐在車廂的位子上跟著車走；到站再按「下車」（開車中不能下）。
@@ -18408,7 +18408,7 @@ function w2SciPlace(n){ const p = W2.posts.sci, q = (p.at && p.at[w2SciKey()]) |
   for (const [a, b] of [[0.9, 0.9], [0.9, -0.9], [0, 1.0], [0, -1.0], [-0.9, 0.9], [-0.9, -0.9]]){ const x = q.x + dx * a + sx * b, z = q.z + dz * a + sz * b; if (walkable(x, z) && !waterAt(x, z) && !blocked(x, z, 0.3) && Math.abs(groundHeight(x, z) - groundHeight(q.x, q.z)) < 0.3){ fx = x; fz = z; break; } }   /* 器材放在她旁邊的乾地上：先試前面靠水那一側，不行就旁邊、後面 */
   g.position.set(fx, groundHeight(fx, fz), fz); g.rotation.y = rot; }
 /* 新主島的「找人、找店」（地圖下面那一排，點了會帶路）：新主島的板子、店門、搬過來的人。人在新主島的時候用這一份，回舊村子用原本那一份 */
-const W2_DOOR_IC = { cafe: '🍲', cai: '🎨', mu: '🪚', pet: '🐾', pool: '🎱', shrimp: '🦐', tackle: '🎣', market: '🐟', museum: '🏛️', stad: '🏟️' };
+const W2_DOOR_IC = { cafe: '🍲', cai: '🎨', mu: '🪚', pet: '🐾', pool: '🎱', shrimp: '🦐', tackle: '🎣', market: '🐟', museum: '🏛️', stad: '🏟️', tailor: '👗' };
 function w2NavList(){ const L = [], PO = W2.posts;
   for (const [k, ic, lab] of [['orders', '📋', '訂單板'], ['board', '📌', '廣場留言板'], ['tboard', '🏆', '村子大看板'], ['zc', '🏰', '築城守土']]) if (PO[k]) L.push([ic, lab, [PO[k].x, PO[k].z]]);
   if (W2.bb) L.push(['📺', '潮汐大看板', [W2.bb.x, W2.bb.z + 14]]);
@@ -22726,7 +22726,7 @@ function w2WorldSummary(){ const out = [], door = k => (W2.doors || []).find(q =
   { const p = W2.posts.chief; if (p) out.push({ id: 'chief', name: WORLD_WHO.chief, icon: '🏛️', text: '在村公所裡面（走到門口可以跟他講話）', x: p.x, z: p.z }); }
   { const n = npcs.find(W2_NPC.gang), p = W2.posts.gang; if (n && p){ const st = n.w2mealSt, txt = n.wHide ? '下雨了，回家躲雨' : st === 'go' ? '正在走去食堂吃飯' : st === 'eat' ? '在食堂門口吃飯' : st === 'back' ? '吃飽了，走回棧橋' : n.fishing ? `在${NM[W2.spot(p.x + Math.sin(p.face) * 2, p.z + Math.cos(p.face) * 2)] || '港口棧橋'}釣魚` : '在港口棧橋休息';
     out.push({ id: 'gang', name: WORLD_WHO.gang, icon: n.wHide ? '🏠' : st === 'eat' ? '🍚' : st ? '🚶' : '🎣', text: txt, x: n.pos.x, z: n.pos.z }); } }
-  for (const [id, k, lab] of [['ling', 'tailor', '阿綾服裝店'], ['mu', 'mu', '阿木木工坊'], ['fu', 'fu', '阿福海產']]){ const d = door(k); out.push({ id, name: WORLD_WHO[id], icon: '🏪', text: `在${lab}裡面顧店${d ? '' : '（新主島還沒有這間店的門）'}`, x: d ? d.x : 0, z: d ? d.z : 0 }); }
+  for (const [id, k, lab] of [['ling', 'tailor', '阿綾服裝店'], ['mu', 'mu', '阿木木工坊'], ['fu', 'fu', '阿福海產']]){ const d = door(k === 'fu' ? 'market' : k); out.push({ id, name: WORLD_WHO[id], icon: '🏪', text: (k === 'fu' ? '在魚市場裡面的阿福海產櫃位顧店' : `在${lab}裡面顧店`) + (d ? '' : '（新主島還沒有這間店的門）'), x: d ? d.x : 0, z: d ? d.z : 0 }); }
   return out; }
 function worldSummary(){ if (W2TXT_ON && W2 && W2.posts && W2.near(me.pos.x, me.pos.z)) return w2WorldSummary(); if (!World.rows || !World.places) return []; return Object.keys(WORLD_WHO).filter(k => World.rows[k]).map(k => { const wp = worldPose(k), r = World.rows[k], pl = World.places[r.place] || {}; return { id:k, name:WORLD_WHO[k], icon: wp && wp.walk ? '🚶' : (WORLD_ACT[r.act] || ['❔'])[0], text: wp && wp.walk ? `正在走去${pl.name || ''}（要${(WORLD_ACT[r.act] || ['', ''])[1]}）` : `在${pl.name || ''}${(WORLD_ACT[r.act] || ['', ''])[1]}`, x: wp ? wp.x : pl.x, z: wp ? wp.z : pl.z }; }); }
 
