@@ -388,7 +388,7 @@ export function init(A){
   const tideD = () => { const U = waterSurface.material.uniforms.uTideD; return U ? U.value : 0; };
   const seaAt = (lx, lz) => samp(sdLand, lx, lz) <= 0 && samp(sdMang, lx, lz) < -3.2;
   const deckNear = (lx, lz, m) => { for (const d of DECKS) if (lx > d[0] - m && lx < d[1] + m && lz > d[2] - m && lz < d[3] + m) return true; return false; };
-  const dryAt = (lx, lz) => { const td = tideD(); if (td < 0.02 || !inBox(lx, lz)) return false; const h = samp(HG, lx, lz); return h < WL - 0.02 && -h <= td - 0.01 && seaAt(lx, lz) && !deckNear(lx, lz, 2.5); };   /* 棧橋旁邊 2.5 公尺不算（不然會從棧橋邊掉到沙上，或從沙上卡在橋樁旁邊） */
+  const dryAt = (lx, lz) => { const td = tideD(); if (td < 0.02 || !inBox(lx, lz)) return false; const h = samp(HG, lx, lz); return h < WL - 0.02 && -h <= td - 0.01 && samp(sdLand, lx, lz) <= 0.75 && samp(sdMang, lx, lz) < -3.2 && !deckNear(lx, lz, 2.5); };   /* 棧橋旁邊 2.5 公尺不算（不然會從棧橋邊掉到沙上，或從沙上卡在橋樁旁邊） */
   const wetAt = (lx, lz) => { if (!inBox(lx, lz)) return true; const h = samp(HG, lx, lz); if (h >= WL - 0.2 || deck(lx, lz) || onBoard(lx, lz)) return false; const td = tideD(); return !(td > 0.01 && -h < td + 0.09 && seaAt(lx, lz)); };
   /* ---------- 給遊戲用的接口 ---------- */
   const W2 = {
