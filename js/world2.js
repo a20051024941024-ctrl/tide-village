@@ -751,6 +751,36 @@ export function init(A){
       c.fillStyle = 'rgba(120,92,70,.85)'; for (let i = COL0; i < colliders.length; i++){ const q = colliders[i]; if (q.t === 'c' || !inBox(q.x - OX, q.z - OZ)) continue; const w = (q.bw || q.hw || 0) * 2, d = (q.bd || q.hd || 0) * 2; if (w * d < 9) continue; c.fillRect((q.x - OX - X0 - w / 2) * K, (q.z - OZ - Z0 - d / 2) * K, w * K, d * K); }
       c.strokeStyle = '#6e4a2f'; c.lineWidth = 2; c.setLineDash([4, 3]); c.beginPath(); railLine.forEach((q, n) => { const x = (q[0] - X0) * K, y = (q[1] - Z0) * K; if (n) c.lineTo(x, y); else c.moveTo(x, y); }); c.closePath(); c.stroke(); c.setLineDash([]);
       return (W2._mi = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH }); },
+    /* v954 新地圖（作者 11/27：「地圖能參考他們，但不要抄襲」→ 我們自己的樣子：漁夫畫在紙上的海圖）。米色紙、墨線海岸、水彩色塊、海裡一圈圈水深線、森林畫小樹、房子描邊 */
+    mapPaper: () => { if (W2._mp) return W2._mp; const K = 3, W = GW * K, H = GH * K, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), im = c.createImageData(W, H), D = im.data;
+      const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+      const PAL = [hex('#9cc3c6'), hex('#b4d4d1'), hex('#9fd8c9'), hex('#b8ab92'), hex('#a7cfd6'), hex('#a9c39a'), hex('#f1dca2'), hex('#d4dc9e'), hex('#9fbf86'), hex('#ece0c6'), hex('#dcc499'), hex('#c99d6c'), hex('#bccf8e')];   /* 0 深海 1 海 2 珊瑚礁 3 礁岩 4 河湖 5 紅樹林 6 沙灘 7 草地 8 森林 9 鋪面 10 步道 11 木棧道 12 山坡 */
+      const cls = new Uint8Array(W * H), dsea = new Float32Array(W * H), hh = new Float32Array(W * H);
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++){ const lx = X0 + (i + 0.5) / K, lz = Z0 + (j + 0.5) / K, h = samp(HG, lx, lz), o = j * W + i; let k; hh[o] = h;
+        if (deck(lx, lz) || samp(sdBoard, lx, lz) > 0) k = 11; else if (samp(sdRock, lx, lz) > 0) k = 3;
+        else if (h < WL - 0.02){ const dm = samp(sdMain, lx, lz); if (samp(sdMang, lx, lz) > -2.5) k = 5; else if (samp(sdReef, lx, lz) > 0) k = 2; else if (dm > 0) k = 4; else { k = dm < -14 ? 0 : 1; dsea[o] = dm; } }
+        else if (paved(lx, lz, 0)) k = 9; else if (samp(sdTrail, lx, lz) > 0) k = 10; else if (samp(sdSand, lx, lz) > 0 && h < 1.4) k = 6; else if (samp(sdFor, lx, lz) > 0) k = 8; else k = h > 6 ? 12 : 7;
+        cls[o] = k; }
+      const wet = k => k <= 2 || k === 4 || k === 5;
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++){ const o = j * W + i, k = cls[o], col = PAL[k];
+        const n = (Math.sin(i * 0.071 + j * 0.033) * Math.cos(j * 0.057 - i * 0.021) + Math.sin(i * 0.013 + j * 0.019) * 0.8) * 0.035 + (((i * 7919 + j * 104729) % 97) / 97 - 0.5) * 0.04;   /* 水彩的深淺、紙的顆粒 */
+        let edge = 0; for (const [a, b] of [[2, 0], [-2, 0], [0, 2], [0, -2]]){ const q = (j + b) * W + (i + a); if (i + a < 0 || i + a >= W || j + b < 0 || j + b >= H) continue; if (cls[q] !== k) edge = 1; }
+        let m = 1 + n - edge * 0.09; let r = col[0] * m, g = col[1] * m, bl = col[2] * m;
+        if (k <= 1){ const d = dsea[o]; for (const cd of [-4, -9, -16, -26, -40]) if (Math.abs(d - cd) < 0.22){ r = r * 0.78; g = g * 0.84; bl = bl * 0.88; } }   /* 水深線 */
+        if (k === 8 || k === 12 || k === 7){ const hv = hh[o]; if (hv > 2.5 && Math.abs(hv / 3 - Math.round(hv / 3)) < 0.03){ r *= 0.88; g *= 0.9; bl *= 0.86; } }   /* 山的等高線 */
+        { const lw = wet(k); let coast = false; for (const [a, b] of [[1, 0], [0, 1], [-1, 0], [0, -1], [2, 0], [0, 2]]){ const q = (j + b) * W + (i + a); if (i + a < 0 || i + a >= W || j + b < 0 || j + b >= H) continue; if (wet(cls[q]) !== lw && cls[q] !== 11 && k !== 11 && cls[q] !== 3 && k !== 3){ coast = true; break; } } if (coast){ r = 92; g = 72; bl = 52; } }   /* 墨線海岸 */
+        D[o * 4] = Math.max(0, Math.min(255, r)); D[o * 4 + 1] = Math.max(0, Math.min(255, g)); D[o * 4 + 2] = Math.max(0, Math.min(255, bl)); D[o * 4 + 3] = 255; }
+      c.putImageData(im, 0, 0);
+      /* 森林裡的小樹（墨線三角形） */
+      c.strokeStyle = 'rgba(70,92,58,.75)'; c.fillStyle = 'rgba(120,160,98,.55)'; c.lineWidth = 1.2; let sd = 5; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+      for (let j = 6; j < H; j += 15) for (let i = 6; i < W; i += 15){ const x = i + (R() - 0.5) * 9, y = j + (R() - 0.5) * 9, o = Math.floor(y) * W + Math.floor(x); if (cls[o] !== 8) continue; const lx = X0 + x / K, lz = Z0 + y / K; if (samp(sdFor, lx, lz) < 2.5) continue; const s = 4 + R() * 3; c.beginPath(); c.moveTo(x, y - s * 1.6); c.lineTo(x - s, y + s * 0.4); c.lineTo(x + s, y + s * 0.4); c.closePath(); c.fill(); c.stroke(); c.beginPath(); c.moveTo(x, y + s * 0.4); c.lineTo(x, y + s * 0.9); c.stroke(); }
+      /* 房子：淡淡的磚紅色塊、墨線描邊 */
+      c.lineWidth = 1.4; c.strokeStyle = 'rgba(92,72,52,.9)'; c.fillStyle = 'rgba(226,170,140,.85)';
+      for (let i = COL0; i < colliders.length; i++){ const q = colliders[i]; if (q.t === 'c' || !inBox(q.x - OX, q.z - OZ)) continue; const w = (q.bw || q.hw || 0) * 2, d = (q.bd || q.hd || 0) * 2; if (w * d < 9) continue; const x = (q.x - OX - X0 - w / 2) * K, y = (q.z - OZ - Z0 - d / 2) * K; c.fillRect(x, y, w * K, d * K); c.strokeRect(x + 0.5, y + 0.5, w * K - 1, d * K - 1); }
+      /* 小火車：墨線加枕木 */
+      c.strokeStyle = 'rgba(92,72,52,.85)'; c.lineWidth = 1.2; c.beginPath(); railLine.forEach((q, n) => { const x = (q[0] - X0) * K, y = (q[1] - Z0) * K; if (n) c.lineTo(x, y); else c.moveTo(x, y); }); c.closePath(); c.stroke();
+      for (let n = 0; n < railLine.length; n += 2){ const a = railLine[n], b = railLine[(n + 1) % railLine.length], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, x = (a[0] - X0) * K, y = (a[1] - Z0) * K; c.beginPath(); c.moveTo(x - dz / l * 3, y + dx / l * 3); c.lineTo(x + dz / l * 3, y - dx / l * 3); c.stroke(); }
+      return (W2._mp = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH, k: K }); },
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
     horizon: HORIZON,   /* v945 外島在新主島海平線上的方向：坐船往那邊開 */
     bb: bbInfo, seats, doors, posts, benches, cave: caveInfo, mud: mudPts, homes, spotsAt,   /* v935 spotsAt：村子的發光釣點在新主島的位置（釣點代號不變） */   /* v934 homes：居民區民宅的門口 */   /* v930 mud：紅樹林泥灘上小動物住的地方 */   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
