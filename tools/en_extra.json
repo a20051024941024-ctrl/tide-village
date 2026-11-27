@@ -9418,5 +9418,20 @@
  "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。": "Drag with one finger to turn the camera; flick it and it keeps turning a little. Drag down to look up at the sky, and pinch with two fingers to zoom in close enough to see your own face.",
  "鏡頭可以拉得更近，近到看得清楚自己的臉；往下拖可以抬頭看整片天空，人會留在畫面下面": "The camera can now zoom in close enough to see your own face clearly; drag down to look up at the whole sky, with your character staying at the bottom of the screen",
  "拖畫面甩一下放開，鏡頭會再轉一小段慢慢停": "Flick the screen and let go: the camera keeps turning a little and slowly stops",
- "手機畫面更順：以前限制每秒畫的張數時是畫一張跳一張，看起來會一頓一頓，現在間隔平均": "Smoother on phones: the frame-rate limit used to draw one frame and skip the next, which looked choppy; frames are now evenly spaced"
+ "手機畫面更順：以前限制每秒畫的張數時是畫一張跳一張，看起來會一頓一頓，現在間隔平均": "Smoother on phones: the frame-rate limit used to draw one frame and skip the next, which looked choppy; frames are now evenly spaced",
+ "🔊 聲音": "🔊 Sound",
+ "🖥️ 畫面": "🖥️ Display",
+ "🌐 語言、聊天": "🌐 Language & chat",
+ "📎 其他": "📎 Other",
+ "開啟": "On",
+ "關閉": "Off",
+ "一般": "Normal",
+ "說明": "Info",
+ "ID 複製好了": "ID copied",
+ "沒辦法複製，請自己記下來": "Couldn't copy, please write it down",
+ "❓ 玩法說明": "❓ How to play",
+ "👕 人物造型": "👕 Character style",
+ "手機會發燙，多半是畫面每秒畫太多張。「一般」：照螢幕平均地畫（一般手機每秒 60 張），超過 30 秒沒碰畫面（不在釣魚）會自動降到 30 張。": "Phones usually get hot because the screen draws too many frames per second. \"Normal\" draws evenly with your screen (60 per second on most phones) and drops to 30 after 30 seconds without touching the screen (when not fishing).",
+ "設定頁換成左右兩欄：左邊聲音、畫面，右邊帳號、語言聊天、其他；開關一眼就看得到，長的說明點 ⓘ 才打開": "The settings page now has two columns: sound and display on the left, account, language & chat and other on the right. Switches are visible at a glance; tap ⓘ to read the longer explanations",
+ "設定頁的「🖥️ 畫面」可以調畫質、省電、字體大小、鏡頭遠近；「👤 帳號」有你的 ID 和雲端存檔。": "In Settings, \"🖥️ Display\" has quality, battery saving, font size and camera distance; \"👤 Account\" shows your ID and cloud save."
 }
