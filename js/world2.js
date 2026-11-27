@@ -390,11 +390,25 @@ export function init(A){
     h: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return -3.2; const d = deck(lx, lz); if (d) return d[5] ? lerp(Math.max(0.2, samp(HG, lx, lz)), d[4], clamp(Math.min(lz - d[2], d[3] - lz) / d[5], 0, 1)) : d[4]; if (onBoard(lx, lz)) return boardY(lx, lz) + 0.02; const h = samp(HG, lx, lz); return paved(lx, lz, 0.2) && h > 0.2 ? Math.max(h, PAVE_Y + 0.02) : h; },
     land: (x, z) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (samp(HG, lx, lz) > WL - 0.02 || !!deck(lx, lz) || onBoard(lx, lz)); },
     walk: (x, z) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (samp(HG, lx, lz) > WL - 0.05 || !!deck(lx, lz) || onBoard(lx, lz)); },
+    /* v922 釣魚用。water：這一點可不可以下竿（水夠深；棧橋、木棧道、橋的底下不算；格子外面全是外海）
+       spot：這片水算哪一個釣點——山上的湖、森林裡的溪（橋的上游）、平地的河、紅樹林、岸邊的海、離岸 6 公尺以上的外海（碼頭走到底）
+       tinfo：跟舊島的 terrainInfo 一樣的格式（高度、是不是水、哪一種水 1 河 2 溪 3 湖），水裡的魚影、魚跳出水面要用 */
+    water: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return true; return samp(HG, lx, lz) < WL - 0.2 && !deck(lx, lz) && !onBoard(lx, lz); },
+    spot: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return 'harbor'; if (samp(sdLake, lx, lz) > -1.5) return 'lake'; if (samp(sdMang, lx, lz) > -2.5) return 'mangrove';
+      if (samp(sdMain, lx, lz) > 0 && samp(sdWat, lx, lz) > -2) return samp(sdFor, lx, lz) > 3 ? 'creek' : 'river'; return samp(sdLand, lx, lz) < -6 ? 'harbor' : 'sea'; },
+    /* 最近可以站著釣魚的水邊（「找釣點」按鈕帶路用）：從腳邊一圈一圈往外找，站的地方要在主島或棧橋上、ok() 說沒被東西擋住，而且往某一邊 1.6 和 3.1 公尺都是水 */
+    shore: (x, z, ok) => { const lx0 = x - OX, lz0 = z - OZ, wat = (lx, lz) => inBox(lx, lz) ? samp(HG, lx, lz) < WL - 0.2 && !deck(lx, lz) && !onBoard(lx, lz) : true;
+      for (let r = 0; r < 170; r += 1.5){ const n = Math.max(1, Math.round(r * 2.1)); for (let k = 0; k < n; k++){ const a = k / n * 6.2832 + r * 0.37, lx = lx0 + Math.sin(a) * r, lz = lz0 + Math.cos(a) * r; if (!inBox(lx, lz)) continue;
+          if (!(deck(lx, lz) || onBoard(lx, lz) || (samp(sdMain, lx, lz) > 0 && samp(HG, lx, lz) > WL - 0.02))) continue; if (ok && !ok(OX + lx, OZ + lz)) continue;
+          for (let j = 0; j < 12; j++){ const b = j / 12 * 6.2832, dx = Math.sin(b), dz = Math.cos(b); if (wat(lx + dx * 1.6, lz + dz * 1.6) && wat(lx + dx * 3.1, lz + dz * 3.1)) return { x: OX + lx, z: OZ + lz, face: b, id: W2.spot(OX + lx + dx * 1.6, OZ + lz + dz * 1.6) }; } } }
+      return null; },
+    tinfo: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return { h: -3.2, water: true, region: 0 }; const h = samp(HG, lx, lz), water = h < WL - 0.02; let region = 0;
+      if (water && samp(sdMain, lx, lz) > 0 && samp(sdMang, lx, lz) <= -2.5){ if (samp(sdLake, lx, lz) > -1.5) region = 3; else if (samp(sdWat, lx, lz) > -2) region = samp(sdFor, lx, lz) > 3 ? 2 : 1; } return { h, water, region }; },
     tick: (dt, t) => { const here = W2.near(me.pos.x, me.pos.z) || W2.near(camera.position.x, camera.position.z);
       if (here !== inside){ inside = here; root.visible = here; if (here) A.setWaterMask(maskTex, OX + X0 + GW / 2, OZ + Z0 + GH / 2, GW, GH); else { A.setWaterMask(null); for (const k of [...chunks.keys()]) dropChunk(k); } }
       if (!here) return;
       chunkTick(camera.position.x - OX, camera.position.z - OZ, false); waterSurface.position.x = Math.round(camera.position.x / 16) * 16; waterSurface.position.z = Math.round(camera.position.z / 16) * 16;
-      if (labelsOn) for (const sp of labels){ const u = sp.userData, d = Math.hypot(camera.position.x - OX - sp.position.x, camera.position.y - sp.position.y, camera.position.z - OZ - sp.position.z), k = clamp(d / 55, 1, 4.2); sp.visible = !(u.st && d > 150); sp.scale.set(u.w * k, u.h * k, 1); }
+      if (labelsOn) for (const sp of labels){ const u = sp.userData, d = Math.hypot(camera.position.x - OX - sp.position.x, camera.position.y - sp.position.y, camera.position.z - OZ - sp.position.z), k = clamp(d / 55, 1, 4.2); sp.visible = d > 9 && !(u.st && d > 150); sp.scale.set(u.w * k, u.h * k, 1); }
       for (const f of tickers) f(dt, t); },
     warm: (x, z) => chunkTick(x - OX, z - OZ, true),
     info: () => ({ chunks: chunks.size, tris: (() => { let n = 0; root.traverse(o => { if (o.isMesh && o.geometry){ const g = o.geometry, c = (g.index ? g.index.count : g.attributes.position.count) / 3; n += o.isInstancedMesh ? c * o.count : c; } }); return Math.round(n); })(), labels: labels.length, cols: colliders.length }),

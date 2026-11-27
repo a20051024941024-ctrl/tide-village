@@ -1229,6 +1229,7 @@ function hillH(x, z){
 // 回傳 { h: 地面高度, water: 是否為水面, region }
 const SHELF_W = 3, SHELF_S = 0.1;
 function terrainInfo(x, z){
+  if (W2 && W2.near(x, z)) return W2.tinfo(x, z);   /* v922 新主島：水有多深、是河是湖，問新主島（水裡的魚影、魚跳出水面都靠這個） */
   let h = 0, water = false, region = 0;
   const e = islandEdge(x, z);
   if (e < 2){ const sd = 2 - e; h = Math.max(-3, sd <= SHELF_W ? -sd * SHELF_S : -(SHELF_W * SHELF_S + (sd - SHELF_W) * 0.42)); if (h < -0.02) water = true; }   /* v427 海岸前 3 公尺是緩緩的淺灘（以前一離岸就每公尺深 0.32），乾潮才退得遠 */
@@ -2377,7 +2378,7 @@ function buildTrees(trees, PX, PZ){
 }
 
 // 這一點是不是可以下竿的水面（不是碼頭、也不是小島的陸地）
-function waterAt(px, pz){ if (blOn(px, pz, 0.2)) return false;   /* v853 建地島上不是水 */ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (wildNear(px, pz, 10)) return wildWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); { const sh = mtnH(px, pz); if (sh !== null && sh > -0.12) return false; } if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
+function waterAt(px, pz){ if (W2 && W2.near(px, pz)) return W2.water(px, pz);   /* v922 新主島可以釣魚：以前這裡用舊島的地形算，整座新主島都被當成外海（站在廣場上也會跳「拋竿」） */ if (blOn(px, pz, 0.2)) return false;   /* v853 建地島上不是水 */ if (inShrimpHall(px, pz, 5)) return inShrimpPool(px, pz); if (greenNear(px, pz, 10)) return greenWater(px, pz) && !deckAt(px, pz); if (wildNear(px, pz, 10)) return wildWater(px, pz) && !deckAt(px, pz); if (Math.hypot(px - FROST.x, pz - FROST.z) < FROST.r + 1.2) return !!frostHole(px, pz, 0.5); { const sh = mtnH(px, pz); if (sh !== null && sh > -0.12) return false; } if (Math.hypot(px - MYST.x, pz - MYST.z) < MYST.r + 0.6) return false; if (nearReef(px, pz) && reefE(px, pz) > -0.3) return false; { const e = mangE(px, pz); if (e > 0 || (e > -4.6 && mudOut())) return false; } const i = terrainInfo(px, pz); return i.water && i.h < -0.15 && !deckAt(px, pz) && isleH(px, pz) === null; }
 function castBlocked(x, z, px, pz){
   const L = Math.hypot(px - x, pz - z); if (L < 2.2) return false;
   let wet = !!deckAt(x, z); for (let d = 0.8; d < L - 0.4; d += 0.3){ const k = d / L, qx = x + (px - x) * k, qz = z + (pz - z) * k; if (deckAt(qx, qz)) continue; if (waterAt(qx, qz) || groundHeight(qx, qz) <= WATER_LEVEL + 0.02){ wet = true; continue; } if (wet) return true; }   /* 先經過水、後面又碰到陸地＝線拉過對岸或小島（站在岸上往水裡拋是可以的） */
@@ -7076,6 +7077,7 @@ function renderMap(body){
 
 // 岸邊釣魚：不在發光圈裡也可以，只要面前（或旁邊）幾公尺內有水
 function waterSpotId(x, z){
+  if (W2 && W2.near(x, z)) return W2.spot(x, z);   /* v922 新主島：湖、森林的溪、河、紅樹林、岸邊、外海 */
   if (inShrimpHall(x, z, 5)) return 'shrimp';
   if (Math.hypot(x - ISLE.x, z - ISLE.z) < 55) return 'isle';
   if (Math.hypot(x - FROST.x, z - FROST.z) < 50) return frostHole(x, z, 1) ? 'icelake' : 'icesea';
@@ -7570,7 +7572,7 @@ function flash(text, secs){ bigMsg.textContent = text; bigMsg.hidden = false; bi
 
 /* v341 玩家說不要自動走、也不要箭頭：大按鈕只用一句話說最近的釣點在哪個方向、多遠（AW 自動走已經停用） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
-function goFishing(){ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
+function goFishing(){ if (W2 && W2.near(me.pos.x, me.pos.z)){ const s = W2.shore(me.pos.x, me.pos.z, (x, z) => !blocked(x, z, 0.45)); if (!s){ toast('附近找不到可以釣魚的水邊'); return; } navTo({ sea:'海邊', harbor:'碼頭', river:'河邊', lake:'湖邊', creek:'森林的溪邊', mangrove:'紅樹林' }[s.id] || '水邊', s.x, s.z); return; }   /* v922 新主島：發光的固定釣點還在舊島（1400 多公尺外），在這裡改成帶你走到最近的水邊，面向水就能拋竿 */ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
 function awStop(msg){ if (!AW.on) return; AW.on = false; joy.x = joy.z = 0; if (msg) toast(msg); }
 function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ awStop(); return; } if (F.phase !== 'idle' || uiBlocked || Dive.on || onIsle){ awStop(); return; } const dx = AW.x - me.pos.x, dz = AW.z - me.pos.z, d = Math.hypot(dx, dz), t = now();
   if (d < 1.4){ awStop(`🎣 到了「${esc(AW.label)}」，按「拋竿」開始釣魚`); return; }
@@ -17673,7 +17675,8 @@ function addChumZone(x, z, type, owner, left){   /* left：別人打的窩還剩
 /* v431 玩家回報「打窩別的玩家看不到」：以前打窩只在丟下去的那一刻通知一次，晚一點才走過來、才上線、或那一下剛好沒收到的人就永遠看不到。
    現在自己打的窩也放進「我的狀態」裡一直帶著（位置、種類、幾點結束），別人不管什麼時候看到我，都會把我還沒結束的窩補畫出來 */
 function myChumState(){ const L = []; for (const zn of chumZones) if (zn.owner === 'me' && zn.until - now() > 3) L.push([+zn.x.toFixed(2), +zn.z.toFixed(2), CHUMS.findIndex(c => c.id === zn.type), zn.exp]); return L.slice(-3); }
-function syncPeerChum(peer, cz){ if (!Array.isArray(cz)) return; for (const q of cz.slice(0, 3)){ if (!Array.isArray(q)) continue; const x = +q[0], z = +q[1], C = CHUMS[+q[2]], left = +q[3] - Date.now() / 1000; if (!C || !isFinite(x) || !isFinite(z) || !(left > 3) || Math.abs(x) > 400 || Math.abs(z) > 400) continue;
+function inWorldXZ(x, z){ return (Math.abs(x) <= 400 && Math.abs(z) <= 400) || !!(W2 && W2.near(x, z)); }   /* v922 別人傳來的座標合不合理：舊世界 ±400，加上新主島（z 1500 那一帶） */
+function syncPeerChum(peer, cz){ if (!Array.isArray(cz)) return; for (const q of cz.slice(0, 3)){ if (!Array.isArray(q)) continue; const x = +q[0], z = +q[1], C = CHUMS[+q[2]], left = +q[3] - Date.now() / 1000; if (!C || !isFinite(x) || !isFinite(z) || !(left > 3) || !inWorldXZ(x, z)) continue;
     if (chumZones.some(zn => zn.owner === peer && Math.hypot(zn.x - x, zn.z - z) < 0.6)) continue; if (chumZones.length >= 12) break; addChumZone(x, z, C.id, peer, Math.min(left, C.dur)); } }
 function removeChumZone(zn){ const i = chumZones.indexOf(zn); if (i >= 0) chumZones.splice(i, 1); scene.remove(zn.g); }
 function updateChum(dt, t){
@@ -17739,7 +17742,7 @@ var OtherSecret = { list: [], at: 0, busy: false, marks: new Map(), live: new Ma
 function mySecretState(){ return secretSpots.filter(sp => secretPower(sp) > 0).slice(-SECRET_MAX).map(sp => [sp.x, sp.z, CHUMS.findIndex(c => c.id === sp.type), sp.at]); }
 function syncPeerSecret(peer, sc, nick){ if (!Array.isArray(sc)) return; const mineIds = new Set(secretSpots.map(x => x.id));
   for (const [id, v] of OtherSecret.live) if (v.peer === peer && !sc.some(q => Array.isArray(q) && +q[3] === id)){ OtherSecret.live.delete(id); OtherSecret.list = OtherSecret.list.filter(x => x.id !== id); }   /* 他把舊的換掉了 */
-  for (const q of sc.slice(0, SECRET_MAX)){ if (!Array.isArray(q)) continue; const x = +q[0], z = +q[1], C = CHUMS[+q[2]], at = +q[3]; if (!C || !isFinite(x) || !isFinite(z) || !isFinite(at) || Math.abs(x) > 400 || Math.abs(z) > 400 || at > Date.now() + 120000 || mineIds.has(at)) continue;
+  for (const q of sc.slice(0, SECRET_MAX)){ if (!Array.isArray(q)) continue; const x = +q[0], z = +q[1], C = CHUMS[+q[2]], at = +q[3]; if (!C || !isFinite(x) || !isFinite(z) || !isFinite(at) || !inWorldXZ(x, z) || at > Date.now() + 120000 || mineIds.has(at)) continue;
     const sp = { id: at, x, z, type: C.id, at, where: '', nick: String(nick || '釣客').slice(0, 16), other: true, peer }; if (secretPower(sp) <= 0) continue; OtherSecret.live.set(at, sp); if (!OtherSecret.list.some(o => o.id === at)) OtherSecret.list.push(sp); } }
 async function loadOtherSecrets(){ if (OtherSecret.busy || !Cloud.on || !Cloud.sb) return; OtherSecret.busy = true; OtherSecret.at = Date.now();
   try { const { data } = await Cloud.sb.rpc('secret_chum_all'); if (Array.isArray(data)){ OtherSecret.list = data.filter(x => x && !x.mine && CHUM_BY_ID[x.type]).map(x => ({ id:+x.id, x:+x.x, z:+x.z, type:x.type, at:+x.at, where:x.where, nick:x.nick, other:true })); for (const [id, v] of OtherSecret.live){ if (secretPower(v) <= 0){ OtherSecret.live.delete(id); continue; } if (!OtherSecret.list.some(o => o.id === id)) OtherSecret.list.push(v); } } } catch(e){}
@@ -20106,7 +20109,7 @@ function presenceObj(){
   if ((rec.rods || []).includes('king')) o.kc = 1;   /* v637 王者竿的人名字旁邊有 👑 */
   if (FK.set) o.fk = [+FK.set.x.toFixed(2), +FK.set.z.toFixed(2), +FK.set.face.toFixed(2), +FK.set.y.toFixed(2), FK.set.mask, +(FK.set.y0 - FK.set.y).toFixed(2), +(FK.set.nz || 1.4).toFixed(2)].concat(FK.net.slice(-6));   /* v618 釣魚裝備 */
   if (F.held && me.bobState === 'water') o.f = { ph:'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)], h:1 };
-  else if (me.fishing && me.bobState !== 'none') o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id;   /* 旁邊的人看得到你在拉什麼魚 */
+  else if (me.fishing && me.bobState !== 'none'){ o.f = { ph: F.phase === 'bite' ? 'bite' : F.phase === 'reeling' || (BossW.rod && BossW.hold) ? 'reel' : 'wait', b:[+me.bobPos.x.toFixed(2), +me.bobPos.z.toFixed(2)] }; if (F.phase === 'reeling' && F.fish && !F.fish.rs) o.f.fi = F.fish.id; }   /* 旁邊的人看得到你在拉什麼魚 */   /* v922 修：11/4 加「正在拉什麼魚」那一行的時候沒包大括號，下面的 else 變成接在它後面——只要不是在拉魚，浮標的位置就被蓋成 { ph:'cast' }，所以別人等魚的時候看不到你的浮標和線、也看不到浮標被咬下去，要到你開始拉才突然出現 */
   else if (me.fishing) o.f = { ph:'cast' };
   if (myEmote && (Date.now() - myEmote.at < 4000 || (me.emote && me.emote.k === myEmote.k))) o.e = myEmote;
   if (myFx && Date.now() - myFx.at < 3000) o.fx = myFx;
