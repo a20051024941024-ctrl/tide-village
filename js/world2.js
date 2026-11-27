@@ -494,7 +494,7 @@ export function init(A){
       if (smoke){ pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true; } };
     step(0, 0);
     return { step, api: { n: NT, seats: SEATS, cycle: TC, dwell: DWELL, len: railLen, stops: railStops.map(q => ({ name: q.name, x: OX + q.x, z: OZ + q.z, y: q.y, tx: q.tx, tz: q.tz, nx: q.nx, nz: q.nz })),
-      state: k => cur[k], seat: (k, i) => seatPos[k * SEATS + i] || null,
+      state: k => cur[k], seat: (k, i) => seatPos[k * SEATS + i] || null, railXZ: sv => { const [x, z] = railAt(sv); return [OX + x, OZ + z]; },   /* v954 新地圖上畫跑動的小火車 */
       atStop: i => { for (let k = 0; k < NT; k++) if (cur[k] && cur[k].at === i) return { k, leave: cur[k].leave }; return null; },
       arrive: i => { let best = 1e9; for (let k = 0; k < NT; k++){ const tau = (((now + k * TC / NT) % TC) + TC) % TC; let d = seg[i].t0 - tau; if (d < 0) d += TC; if (d < best) best = d; } return best; } } }; })();
   /* 月台：站得上去（順著軌道方向的長方形，5.4 × 2.6 公尺） */
@@ -781,6 +781,7 @@ export function init(A){
           if (coast){ const wob = st === 'crayon' ? 0.75 + 0.25 * Math.sin(i * 0.4 + j * 0.3) : 1; r = r + (COAST[0] - r) * wob; g = g + (COAST[1] - g) * wob; bl = bl + (COAST[2] - bl) * wob; } }
         D[o * 4] = Math.max(0, Math.min(255, r)); D[o * 4 + 1] = Math.max(0, Math.min(255, g)); D[o * 4 + 2] = Math.max(0, Math.min(255, bl)); D[o * 4 + 3] = 255; }
       c.putImageData(im, 0, 0);
+      if (st === 'bright'){ const t = document.createElement('canvas'); t.width = W; t.height = H; t.getContext('2d').putImageData(im, 0, 0); c.filter = 'blur(1.3px)'; c.drawImage(t, 0, 0); c.filter = 'none'; }   /* 明亮版：邊緣磨圓，放大看不會一格一格 */
       let sd = 5; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
       /* 森林：手繪海圖畫墨線小三角樹；明亮版畫圓圓的樹冠；蠟筆版畫塗鴉圈圈 */
       for (let j = 6; j < H; j += 15) for (let i = 6; i < W; i += 15){ const x = i + (R() - 0.5) * 9, y = j + (R() - 0.5) * 9, o = Math.floor(y) * W + Math.floor(x); if (cls[o] !== 8) continue; const lx = X0 + x / K, lz = Z0 + y / K; if (samp(sdFor, lx, lz) < 2.5) continue; const s = 4 + R() * 3;
