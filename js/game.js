@@ -6707,7 +6707,7 @@ function camDistSave(){ if (!camLimits().out || (typeof SKI !== 'undefined' && S
 try { const v = parseFloat(localStorage.getItem('tide.camDist')); if (v >= 2.4 && v <= CAM_FAR) cam.dist = v; } catch(e){}
 setTimeout(() => { try { if (!LS.get('tide.camFarTold', 0)){ LS.set('tide.camFarTold', 1); toast(isTouch ? '🔭 鏡頭可以拉得更遠了：在畫面上用兩隻手指捏合，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住' : '🔭 鏡頭可以拉得更遠了：滾輪，或到「設定 → 🔭 鏡頭遠近」拉拉桿，調好會記住', 9); } } catch(e){} }, 9000);
 const pinch = new Map(); let pinchDist = 0;
-const camLimits = () => (typeof Dive !== 'undefined' && Dive.on && Dive.fp && !Photo.on) ? { pmin: -1.2, pmax: 1.2, dmin: 4.5, dmax: 18 } : Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: -0.6, pmax: 1.15, dmin: 2.4, dmax: CAM_FAR, out: true };   /* v597 作者：「頭不能往上看」→ 外面也可以往上拖到看天空（以前最低 0.12） */   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
+const camLimits = () => (typeof Dive !== 'undefined' && Dive.on && Dive.fp && !Photo.on) ? { pmin: -1.2, pmax: 1.2, dmin: 4.5, dmax: 18 } : Photo.on ? { pmin: -0.12, pmax: 1.45, dmin: 2, dmax: 30 } : (typeof inIndoor === 'function' && inIndoor()) || House.on ? { pmin: -0.7, pmax: 1.15, dmin: 2.5, dmax: 18 } : { pmin: -1.25, pmax: 1.15, dmin: 1.1, dmax: CAM_FAR, out: true };   /* v939 作者給的參考：鏡頭可以拉到快貼臉（1.1 公尺）、往上拖可以看到整片天空 */   /* v597 作者：「頭不能往上看」→ 外面也可以往上拖到看天空（以前最低 0.12） */   /* 室內可以往上看（博物館的鯨魚骨架、天花板） */
 /* v314 玩家回報：快速點畫面時會一下放大一下縮小。兩隻手指輪流快點會被當成「兩指縮放」，或手指放開的訊號漏掉、留下一隻「幽靈手指」。
    現在：手指放開在任何地方都會清掉；兩指距離要先變超過 14px 才開始縮放（快點的小抖動不算） */
 let pinchArm = 0;
@@ -6717,8 +6717,11 @@ canvas.addEventListener('pointerdown', e => { ensureAudio(); if (F.phase === 'id
    現在要「兩隻手指都有移動」（真的在捏）才縮放；只有一隻在動就不縮放 */
 canvas.addEventListener('pointermove', e => { if (!pinch.has(e.pointerId)) return; const pv = pinch.get(e.pointerId); pinch.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: pv.sx ?? e.clientX, sy: pv.sy ?? e.clientY }); if (pinch.size === 2){ const [a, b] = [...pinch.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchArm){ const ma = Math.hypot(a.x - (a.sx ?? a.x), a.y - (a.sy ?? a.y)), mb = Math.hypot(b.x - (b.sx ?? b.x), b.y - (b.sy ?? b.y)); if (Math.abs(d - pinchArm) < 14 || ma < 10 || mb < 10) return; pinchArm = 0; pinchDist = d; return; } const L = camLimits(); if (pinchDist > 0){ cam.dist = clamp(cam.dist * pinchDist / d, L.dmin, L.dmax); camDistSave(); } pinchDist = d; } });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, e => { pinch.delete(e.pointerId); if (pinch.size < 2) pinchDist = 0; }));
-canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; if (FB.on && FB.top) return; if (typeof Blk !== 'undefined' && (Blk.paint || Blk.rect)) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
-const endDrag = e => { if (drag && drag.id === e.pointerId) drag = null; };
+canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; if (FB.on && FB.top) return; if (typeof Blk !== 'undefined' && (Blk.paint || Blk.rect)) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; cam.yaw -= dx * 0.006; { const tm = performance.now(), de = Math.max(8, tm - (drag.mt || tm - 16)) / 1000; drag.mt = tm; const vy = -dx * 0.006 / de, vp = dy * 0.004 / de; CamIn.vy = clamp(CamIn.vy * 0.5 + vy * 0.5, -9, 9); CamIn.vp = clamp(CamIn.vp * 0.5 + vp * 0.5, -6, 6); } if (typeof Sub !== 'undefined' && Sub.on) Sub.dragAt = now(); const L = camLimits(); cam.pitch = clamp(cam.pitch + dy * 0.004, L.pmin, L.pmax); });
+const endDrag = e => { if (drag && drag.id === e.pointerId){ const age = performance.now() - (drag.mt || 0); if (age > 90) CamIn.vy = CamIn.vp = 0; drag = null; } };
+/* v939 鏡頭慣性：手指甩一下放開，鏡頭會再轉一小段慢慢停（看起來比較順） */
+const CamIn = { vy: 0, vp: 0 };
+function camInertia(dt){ if (drag || (!CamIn.vy && !CamIn.vp)) return; const L = camLimits(); cam.yaw += CamIn.vy * dt; cam.pitch = clamp(cam.pitch + CamIn.vp * dt, L.pmin, L.pmax); const k = Math.exp(-5.5 * dt); CamIn.vy *= k; CamIn.vp *= k; if (Math.abs(CamIn.vy) < 0.02 && Math.abs(CamIn.vp) < 0.02) CamIn.vy = CamIn.vp = 0; }
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('wheel', e => { e.preventDefault(); const L = camLimits(); cam.dist = clamp(cam.dist + e.deltaY * 0.01, L.dmin, L.dmax); camDistSave(); }, { passive:false });
 
@@ -7477,7 +7480,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (FB.on && FB.top && House.on && furnCam(dt)) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (watchCam(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ camInertia(dt); if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (FB.on && FB.top && House.on && furnCam(dt)) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (watchCam(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 /* v608 作者：「很多地方其實都會被樹擋視野，就算換了方向還是會被房子擋」→ 擋在鏡頭和你中間的樹、房子、牆變半透明（像很多第三人稱遊戲）。
@@ -7563,7 +7566,7 @@ function updateCamera2(dt){
     return;
   }
   const target = tmpV.set(me.pos.x, me.baseY + 1.3, me.pos.z);   // 用地面高度，不跟著走路的上下晃動（不然鏡頭會一直震）
-  { const own0 = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on); if (!own0 && cam.dist < 4.5) target.y -= (4.5 - cam.dist) / 2.1 * 0.8; }   /* v850 作者：「我不能拉很近看我的小烏龜」→ 戶外鏡頭可以拉到 2.4 公尺（原本 4.5）；越近，看的點越往腳邊移（不然只看到後腦勺） */
+  { const own0 = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on); if (!own0 && cam.dist < 4.5) target.y -= Math.min(0.8, (4.5 - cam.dist) / 2.1 * 0.8) * (cam.dist < 2.4 ? Math.max(0, (cam.dist - 1.1) / 1.3) : 1); }   /* v939 拉到 2.4 公尺以內：看的點慢慢回到臉的高度（拉近看得到臉） */   /* v850 作者：「我不能拉很近看我的小烏龜」→ 戶外鏡頭可以拉到 2.4 公尺（原本 4.5）；越近，看的點越往腳邊移（不然只看到後腦勺） */
   const own = Dive.on || House.on || inIndoor() || Photo.on || (typeof Sub !== 'undefined' && Sub.on);   /* 有自己鏡頭的地方不改 */
   { const bf = own ? 55 : camBaseFov() + (Bike.on ? Math.min(11, Bike.sp * 1.25) : 0); if (!Photo.on && Math.abs(camera.fov - bf) > 0.05){ camera.fov += (bf - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); } }
   /* v291 俯瞰視角釣魚時：鏡頭對準角色和浮標中間，拋得遠就稍微拉遠，浮標不會跑出畫面 */
@@ -7572,13 +7575,13 @@ function updateCamera2(dt){
   const fishOn = fishNow || (CAMV.fkAt && now() - CAMV.fkAt < 3 && CAMV.bob && F.phase !== 'charging'); CAMV.fk += ((fishOn ? 1 : 0) - CAMV.fk) * Math.min(1, dt * (fishOn ? 1.6 : 0.8));
   let dist = cam.dist; const bob = me.bobPos || CAMV.bob; if (CAMV.fk > 0.001 && bob){ const bx = bob.x - me.pos.x, bz = bob.z - me.pos.z, bl = Math.min(30, Math.hypot(bx, bz)), nk = CAMV.fk * clamp((dist - 6) / 7, 0, 1); target.x += bx * 0.42 * nk; target.z += bz * 0.42 * nk; target.y -= 0.5 * nk; }   /* v667 作者截圖：「按收竿之後畫面會跑掉」→ 鏡頭拉得很近的時候還把畫面中心移到人和浮標中間，人就跑到畫面最左邊、鏡頭貼在臉旁邊，收竿後還要好幾秒才回來。現在鏡頭越近移得越少，近到 6 公尺以內就不移 */
   /* v597 往上看：鏡頭往下拖過水平以後，鏡頭不再往地下鑽，而是停在角色後面、差不多頭的高度，改成抬頭往上看（像 GTA）；拖越多看越高，最多大約 45 度 */
-  const up = (!Dive.on && !House.on && !inIndoor() && !Photo.on) ? Math.max(0, -cam.pitch) : 0, pit = up > 0 ? 0.03 : cam.pitch;
+  const up = (!Dive.on && !House.on && !inIndoor() && !Photo.on) ? Math.max(0, -cam.pitch) : 0, pit = up > 0 ? 0.03 - Math.min(0.95, up * 0.8) : cam.pitch;   /* v939 往上看越多，鏡頭壓得越低（從下面往上看，頭留在畫面下面） */
   const cp = Math.cos(pit), sp = Math.sin(pit);
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*dist, target.y + sp*dist, target.z + Math.cos(cam.yaw)*cp*dist);
-  want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8);
+  want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8, up > 0 && !inIndoor() ? groundHeight(want.x, want.z) + 0.45 : -99);   /* v939 鏡頭壓低往上看：不鑽到地底下（山坡上也是） */
   if (!Dive.on && !House.on && !inIndoor()) camClear(target, want, dt); else CamK.k = 1;
   camera.position.lerp(want, 1 - Math.exp(-10 * dt));
-  const lookT = up > 0 ? target.clone().add(new THREE.Vector3(0, up * dist * 1.6, 0)) : target;
+  let lookT = target; if (up > 0){ const hd = Math.max(0.3, Math.hypot(want.x - target.x, want.z - target.z)), a0 = Math.atan2(target.y - want.y, hd), la = Math.min(1.4, a0 + Math.min(0.42, up * 0.6)); lookT = new THREE.Vector3(target.x, want.y + Math.tan(la) * hd, target.z); }   /* v939 往上看：頭留在畫面下緣，上面是整片天空（以前最多 45 度、拖多了人會跑出畫面） */
   camera.lookAt(lookT); camLook.copy(lookT);
   try { camFadeTick(target); } catch(e){}
   /* v468 潛水第一人稱（玩家要求）：鏡頭放在自己眼睛的位置，看不到自己的身體，拖畫面可以上下左右看；搖桿往前推會朝你看的方向游（看上面就往上、看下面就往下）。
@@ -23044,7 +23047,7 @@ function renderTab0(){
         ["送魚一天 10 條，金幣不能送。帳號要滿 3 天或綁 Email，而且釣過 30 條。", "私訊一則最多 120 字，伺服器留 30 天。", "排位賽跟同一個人一天只有前 3 局算。每個月一季，換季星星留一半。每天第一場排位勝利送亮光餌 5 個。", "釣友隊要釣過 20 條才能建。每週目標：合力釣 120 條乘人數，湊齊 15 加 5 乘人數種。達成後釣過 5 條的隊員各領 600 金幣。", "地圖記號 24 小時後消失，同時最多 3 個，一天最多 10 個，要釣過 5 條。", "留言一則最多 60 字，一天最多 5 則，要釣過 5 條。", "附近聊天是 28 公尺內。", "鬼抓人 2 個人以上，3 分鐘後還是鬼的人輸。"]],
       ["等級、成就", "social", ["釣魚、放流、拍水下照片都有經驗。點左上角的等級看進度。", "每升一級有金幣。", "成就有 " + (ACH.length) + " 個。有些會給稱號，選一個掛在名字上。", "點左上角的等級打開「成就」，最上面可以改名字。"],
         ["經驗：常見魚 10、稀有魚 40、傳說魚 250、放流 5、水下照片每種 30。", "升級獎金是等級乘 50。", "在同一個釣點放流、撿垃圾、釣魚，那裡會越來越熟，魚咬得比較快。"]],
-      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "字太小：設定的「字體大小」選大或特大。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
+      ["設定、帳號", "other", ["右上角三顆按鈕：地圖、背包、手機。其他頁面都在手機裡。", "設定在手機的「我的」裡面。", "字太小：設定的「字體大小」選大或特大。", "手機很燙或很卡：設定把畫質調低。", "鏡頭：設定的「視角」可以換，釣魚視角可以選第一人稱。", "一根手指拖畫面轉鏡頭，甩一下會自己再轉一點；往下拖可以抬頭看天空，兩根手指捏合可以拉到很近看自己的臉。", "綁定 Email 以後，換手機用同一個 Email 登入就找得回角色。", "右上角相機是拍照模式。", "設定的「設計我的環保袋」可以用遊戲裡的魚排圖案，下載後拿去實體活動印。", "實體活動拿到的兌換碼在設定的「兌換碼」輸入。", "設定最下面有隱私權政策和刪除帳號。"],
         ["未滿 13 歲會自動開兒童安全模式，不能自己關：聊天只能用固定句子，名字從名單裡選，好友只能用代碼加。", "訪客帳號玩到第 3 天或 10 級會提醒綁 Email。", "聊天不會存在伺服器，只有被檢舉的內容保存 30 天。", "兌換碼可以拿 300 金幣、5 愛海點數和一面版畫小旗，同一組碼每人只能用一次。", "有問題可以寫信到 chaoxi.fishing@gmail.com。"]]
     ];
     HELP2.forEach(([title, c, lines, nums], hi) => { if (cur !== 'all' && c !== cur) return; const d = el('details', 'help'); if (hi === 0 || cur !== 'all') d.open = true; d._open0 = d.open; d.appendChild(el('summary', '', title));
@@ -24354,7 +24357,8 @@ try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 try { buildSubDock(); } catch(e){ console.warn('subdock', e); }
 camera.position.set(4, 5, 18);
 function frame(){
-  { const cap = Power.want(); if (cap){ const ms = performance.now(); if (ms - Power.last < 1000 / cap - 3){ requestAnimationFrame(frame); return; } Power.last = ms; } }   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因） */
+  { const ms = performance.now(), d0 = ms - (Power.raw || ms); Power.raw = ms; if (d0 > 4 && d0 < 50) Power.iv = Power.iv ? Power.iv + (d0 - Power.iv) * 0.05 : d0;
+    const cap = Power.want(); if (cap){ const n = Math.max(1, Math.round(1000 / (Power.iv || 16.7) / cap)); Power.k = (Power.k || 0) + 1; if (Power.k < n){ requestAnimationFrame(frame); return; } Power.k = 0; Power.last = ms; } }   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因）。v939 作者：「完全不會卡超順的」→ 以前 60Hz 螢幕限 45 張是「畫一張、跳一張」不平均，看起來一頓一頓；現在照螢幕的更新率每 n 格畫一格，間隔一樣（60Hz：平常 60 張、閒置 30 張） */   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因） */
   const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
@@ -24453,6 +24457,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u939', d:'11/27', items:[['🎥','鏡頭可以拉得更近，近到看得清楚自己的臉；往下拖可以抬頭看整片天空，人會留在畫面下面'], ['🌀','拖畫面甩一下放開，鏡頭會再轉一小段慢慢停'], ['🎞️','手機畫面更順：以前限制每秒畫的張數時是畫一張跳一張，看起來會一頓一頓，現在間隔平均']] },
   { id:'u922', d:'11/27', items:[['🎣','旁邊的人在等魚的時候，看得到他的浮標和釣線了，浮標被咬下去也看得到（之前要等他開始拉魚才會出現）'], ['🌊','往窄的河拋過頭的時候，浮標會落在水裡，不會跑到對岸的草地上']] },
   { id:'u917', d:'11/27', items:[['📋','港邊廣場多了一面訂單板：村子裡的人把要的魚、料理、材料、菜貼在上面，每 4 小時換一批。湊齊了走到板子前面交貨，比直接賣掉多賺，還有經驗和村子貢獻'], ['🧺','島上的田收成時，金幣照拿，另外留一顆在背包的菜籃，可以拿去交訂單'], ['🐟','釣到訂單要的魚，卡片上會寫「訂單要的」；手機的「今天」也看得到這一批訂單']] },
   { id:'u916', d:'11/27', items:[['🪨','深海的海底多了長著白色海葵的大石頭、長柄的海綿和橘色的海鰓；岩壁看得出一層一層的岩層和裂縫，東邊多了一段很窄的峽谷'], ['🍖','潛水艇可以放餌：700 公尺以下貼近海底按「放餌」，小蝦蟲越聚越多，深海魚也過來繞；在餌旁邊放線比較快咬（一趟 2 份，一起潛的人也看得到）'], ['🔦','潛水艇的燈重新調過：靠近的東西不會整片死白，看得到細節。關燈、放餌、艙內移到按鈕上面一排']] },
