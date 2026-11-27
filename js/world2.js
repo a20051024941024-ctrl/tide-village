@@ -752,9 +752,13 @@ export function init(A){
       c.strokeStyle = '#6e4a2f'; c.lineWidth = 2; c.setLineDash([4, 3]); c.beginPath(); railLine.forEach((q, n) => { const x = (q[0] - X0) * K, y = (q[1] - Z0) * K; if (n) c.lineTo(x, y); else c.moveTo(x, y); }); c.closePath(); c.stroke(); c.setLineDash([]);
       return (W2._mi = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH }); },
     /* v954 新地圖（作者 11/27：「地圖能參考他們，但不要抄襲」→ 我們自己的樣子：漁夫畫在紙上的海圖）。米色紙、墨線海岸、水彩色塊、海裡一圈圈水深線、森林畫小樹、房子描邊 */
-    mapPaper: () => { if (W2._mp) return W2._mp; const K = 3, W = GW * K, H = GH * K, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), im = c.createImageData(W, H), D = im.data;
+    /* v954 新地圖（作者 11/27：「地圖能參考他們，但不要抄襲」「可以換風格嗎」）：同一份地形，三種畫法——paper 漁夫手繪海圖、bright 明亮扁平、crayon 蠟筆繪本 */
+    mapPaper: (st) => { st = st || 'paper'; W2._mp = W2._mp || {}; if (W2._mp[st]) return W2._mp[st]; const K = 3, W = GW * K, H = GH * K, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), im = c.createImageData(W, H), D = im.data;
       const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-      const PAL = [hex('#9cc3c6'), hex('#b4d4d1'), hex('#9fd8c9'), hex('#b8ab92'), hex('#a7cfd6'), hex('#a9c39a'), hex('#f1dca2'), hex('#d4dc9e'), hex('#9fbf86'), hex('#ece0c6'), hex('#dcc499'), hex('#c99d6c'), hex('#bccf8e')];   /* 0 深海 1 海 2 珊瑚礁 3 礁岩 4 河湖 5 紅樹林 6 沙灘 7 草地 8 森林 9 鋪面 10 步道 11 木棧道 12 山坡 */
+      const PALS = { paper: ['#9cc3c6', '#b4d4d1', '#9fd8c9', '#b8ab92', '#a7cfd6', '#a9c39a', '#f1dca2', '#d4dc9e', '#9fbf86', '#ece0c6', '#dcc499', '#c99d6c', '#bccf8e'],
+        bright: ['#3fa9de', '#62c4ec', '#5fe0cf', '#a9a39b', '#6cc9f0', '#79bd8a', '#ffe39a', '#9ad96a', '#5fb85a', '#fff4de', '#f1d39a', '#d99f62', '#8bcf5a'],
+        crayon: ['#7fb2d9', '#a3cde8', '#9fe0d2', '#b9ad9c', '#9fd3ea', '#a3c79a', '#fbe3a8', '#c4e39a', '#8cc47a', '#f5ecd8', '#e8cf9c', '#d4a774', '#b2d68c'] };
+      const PAL = PALS[st].map(hex), COAST = { paper: [92, 72, 52], bright: [255, 255, 255], crayon: [58, 92, 140] }[st];   /* 0 深海 1 海 2 珊瑚礁 3 礁岩 4 河湖 5 紅樹林 6 沙灘 7 草地 8 森林 9 鋪面 10 步道 11 木棧道 12 山坡 */
       const cls = new Uint8Array(W * H), dsea = new Float32Array(W * H), hh = new Float32Array(W * H);
       for (let j = 0; j < H; j++) for (let i = 0; i < W; i++){ const lx = X0 + (i + 0.5) / K, lz = Z0 + (j + 0.5) / K, h = samp(HG, lx, lz), o = j * W + i; let k; hh[o] = h;
         if (deck(lx, lz) || samp(sdBoard, lx, lz) > 0) k = 11; else if (samp(sdRock, lx, lz) > 0) k = 3;
@@ -763,24 +767,35 @@ export function init(A){
         cls[o] = k; }
       const wet = k => k <= 2 || k === 4 || k === 5;
       for (let j = 0; j < H; j++) for (let i = 0; i < W; i++){ const o = j * W + i, k = cls[o], col = PAL[k];
-        const n = (Math.sin(i * 0.071 + j * 0.033) * Math.cos(j * 0.057 - i * 0.021) + Math.sin(i * 0.013 + j * 0.019) * 0.8) * 0.035 + (((i * 7919 + j * 104729) % 97) / 97 - 0.5) * 0.04;   /* 水彩的深淺、紙的顆粒 */
-        let edge = 0; for (const [a, b] of [[2, 0], [-2, 0], [0, 2], [0, -2]]){ const q = (j + b) * W + (i + a); if (i + a < 0 || i + a >= W || j + b < 0 || j + b >= H) continue; if (cls[q] !== k) edge = 1; }
-        let m = 1 + n - edge * 0.09; let r = col[0] * m, g = col[1] * m, bl = col[2] * m;
-        if (k <= 1){ const d = dsea[o]; for (const cd of [-4, -9, -16, -26, -40]) if (Math.abs(d - cd) < 0.22){ r = r * 0.78; g = g * 0.84; bl = bl * 0.88; } }   /* 水深線 */
-        if (k === 8 || k === 12 || k === 7){ const hv = hh[o]; if (hv > 2.5 && Math.abs(hv / 3 - Math.round(hv / 3)) < 0.03){ r *= 0.88; g *= 0.9; bl *= 0.86; } }   /* 山的等高線 */
-        { const lw = wet(k); let coast = false; for (const [a, b] of [[1, 0], [0, 1], [-1, 0], [0, -1], [2, 0], [0, 2]]){ const q = (j + b) * W + (i + a); if (i + a < 0 || i + a >= W || j + b < 0 || j + b >= H) continue; if (wet(cls[q]) !== lw && cls[q] !== 11 && k !== 11 && cls[q] !== 3 && k !== 3){ coast = true; break; } } if (coast){ r = 92; g = 72; bl = 52; } }   /* 墨線海岸 */
+        let n = 0, edge = 0; for (const [a, b] of [[2, 0], [-2, 0], [0, 2], [0, -2]]){ const q = (j + b) * W + (i + a); if (i + a < 0 || i + a >= W || j + b < 0 || j + b >= H) continue; if (cls[q] !== k) edge = 1; }
+        if (st === 'paper') n = (Math.sin(i * 0.071 + j * 0.033) * Math.cos(j * 0.057 - i * 0.021) + Math.sin(i * 0.013 + j * 0.019) * 0.8) * 0.035 + (((i * 7919 + j * 104729) % 97) / 97 - 0.5) * 0.04 - edge * 0.09;   /* 水彩、紙的顆粒 */
+        else if (st === 'crayon') n = Math.sin((i + j) * 1.1 + Math.sin(i * 0.05) * 3) * 0.05 + (((i * 7919 + j * 104729) % 89) / 89 - 0.5) * 0.12 - edge * 0.12;   /* 蠟筆斜斜的筆觸、粗粗的顆粒 */
+        else n = edge * 0.0;
+        let r = col[0] * (1 + n), g = col[1] * (1 + n), bl = col[2] * (1 + n);
+        if (k <= 1){ const d = dsea[o];
+          if (st === 'paper'){ for (const cd of [-4, -9, -16, -26, -40]) if (Math.abs(d - cd) < 0.22){ r *= 0.78; g *= 0.84; bl *= 0.88; } }   /* 水深線 */
+          else if (st === 'bright'){ if (d > -3.2){ r += (255 - r) * 0.45; g += (255 - g) * 0.45; bl += (255 - bl) * 0.45; } else if (d > -5.5 && Math.sin(i * 0.08 + j * 0.02) > 0.6){ r += 18; g += 18; bl += 18; } }   /* 岸邊淺淺的一圈、海面上幾條亮亮的浪 */
+          else { if (Math.abs(((d % 7) + 7) % 7 - 3.5) < 0.35 && d < -2) { r *= 0.86; g *= 0.9; bl *= 0.94; } } }
+        if (st === 'paper' && (k === 8 || k === 12 || k === 7)){ const hv = hh[o]; if (hv > 2.5 && Math.abs(hv / 3 - Math.round(hv / 3)) < 0.03){ r *= 0.88; g *= 0.9; bl *= 0.86; } }   /* 山的等高線 */
+        { const lw = wet(k), w2 = st === 'bright' ? 3 : st === 'crayon' ? 2 : 1; let coast = false; for (let a = -w2; a <= w2 && !coast; a++) for (let b = -w2; b <= w2; b++){ if (a * a + b * b > w2 * w2) continue; const q = (j + b) * W + (i + a); if (i + a < 0 || i + a >= W || j + b < 0 || j + b >= H) continue; if (wet(cls[q]) !== lw && cls[q] !== 11 && k !== 11 && cls[q] !== 3 && k !== 3 && (st !== 'bright' || lw)){ coast = true; break; } }
+          if (coast){ const wob = st === 'crayon' ? 0.75 + 0.25 * Math.sin(i * 0.4 + j * 0.3) : 1; r = r + (COAST[0] - r) * wob; g = g + (COAST[1] - g) * wob; bl = bl + (COAST[2] - bl) * wob; } }
         D[o * 4] = Math.max(0, Math.min(255, r)); D[o * 4 + 1] = Math.max(0, Math.min(255, g)); D[o * 4 + 2] = Math.max(0, Math.min(255, bl)); D[o * 4 + 3] = 255; }
       c.putImageData(im, 0, 0);
-      /* 森林裡的小樹（墨線三角形） */
-      c.strokeStyle = 'rgba(70,92,58,.75)'; c.fillStyle = 'rgba(120,160,98,.55)'; c.lineWidth = 1.2; let sd = 5; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-      for (let j = 6; j < H; j += 15) for (let i = 6; i < W; i += 15){ const x = i + (R() - 0.5) * 9, y = j + (R() - 0.5) * 9, o = Math.floor(y) * W + Math.floor(x); if (cls[o] !== 8) continue; const lx = X0 + x / K, lz = Z0 + y / K; if (samp(sdFor, lx, lz) < 2.5) continue; const s = 4 + R() * 3; c.beginPath(); c.moveTo(x, y - s * 1.6); c.lineTo(x - s, y + s * 0.4); c.lineTo(x + s, y + s * 0.4); c.closePath(); c.fill(); c.stroke(); c.beginPath(); c.moveTo(x, y + s * 0.4); c.lineTo(x, y + s * 0.9); c.stroke(); }
-      /* 房子：淡淡的磚紅色塊、墨線描邊 */
-      c.lineWidth = 1.4; c.strokeStyle = 'rgba(92,72,52,.9)'; c.fillStyle = 'rgba(226,170,140,.85)';
-      for (let i = COL0; i < colliders.length; i++){ const q = colliders[i]; if (q.t === 'c' || !inBox(q.x - OX, q.z - OZ)) continue; const w = (q.bw || q.hw || 0) * 2, d = (q.bd || q.hd || 0) * 2; if (w * d < 9) continue; const x = (q.x - OX - X0 - w / 2) * K, y = (q.z - OZ - Z0 - d / 2) * K; c.fillRect(x, y, w * K, d * K); c.strokeRect(x + 0.5, y + 0.5, w * K - 1, d * K - 1); }
-      /* 小火車：墨線加枕木 */
-      c.strokeStyle = 'rgba(92,72,52,.85)'; c.lineWidth = 1.2; c.beginPath(); railLine.forEach((q, n) => { const x = (q[0] - X0) * K, y = (q[1] - Z0) * K; if (n) c.lineTo(x, y); else c.moveTo(x, y); }); c.closePath(); c.stroke();
-      for (let n = 0; n < railLine.length; n += 2){ const a = railLine[n], b = railLine[(n + 1) % railLine.length], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, x = (a[0] - X0) * K, y = (a[1] - Z0) * K; c.beginPath(); c.moveTo(x - dz / l * 3, y + dx / l * 3); c.lineTo(x + dz / l * 3, y - dx / l * 3); c.stroke(); }
-      return (W2._mp = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH, k: K }); },
+      let sd = 5; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+      /* 森林：手繪海圖畫墨線小三角樹；明亮版畫圓圓的樹冠；蠟筆版畫塗鴉圈圈 */
+      for (let j = 6; j < H; j += 15) for (let i = 6; i < W; i += 15){ const x = i + (R() - 0.5) * 9, y = j + (R() - 0.5) * 9, o = Math.floor(y) * W + Math.floor(x); if (cls[o] !== 8) continue; const lx = X0 + x / K, lz = Z0 + y / K; if (samp(sdFor, lx, lz) < 2.5) continue; const s = 4 + R() * 3;
+        if (st === 'paper'){ c.strokeStyle = 'rgba(70,92,58,.75)'; c.fillStyle = 'rgba(120,160,98,.55)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, y - s * 1.6); c.lineTo(x - s, y + s * 0.4); c.lineTo(x + s, y + s * 0.4); c.closePath(); c.fill(); c.stroke(); c.beginPath(); c.moveTo(x, y + s * 0.4); c.lineTo(x, y + s * 0.9); c.stroke(); }
+        else if (st === 'bright'){ c.fillStyle = 'rgba(40,110,50,.35)'; c.beginPath(); c.arc(x + 1.5, y + 2, s * 1.1, 0, 6.28); c.fill(); c.fillStyle = '#4aa84a'; c.beginPath(); c.arc(x, y, s * 1.1, 0, 6.28); c.fill(); c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(x - s * 0.35, y - s * 0.35, s * 0.4, 0, 6.28); c.fill(); }
+        else { c.strokeStyle = 'rgba(60,120,60,.7)'; c.lineWidth = 1.6; c.beginPath(); for (let a = 0; a < 9; a++){ const t = a * 0.9, rr = s * (0.7 + 0.3 * Math.sin(a * 2.1)); c.lineTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr); } c.stroke(); } }
+      /* 房子 */
+      for (let i = COL0; i < colliders.length; i++){ const q = colliders[i]; if (q.t === 'c' || !inBox(q.x - OX, q.z - OZ)) continue; const w = (q.bw || q.hw || 0) * 2, d = (q.bd || q.hd || 0) * 2; if (w * d < 9) continue; const x = (q.x - OX - X0 - w / 2) * K, y = (q.z - OZ - Z0 - d / 2) * K;
+        if (st === 'paper'){ c.lineWidth = 1.4; c.strokeStyle = 'rgba(92,72,52,.9)'; c.fillStyle = 'rgba(226,170,140,.85)'; c.fillRect(x, y, w * K, d * K); c.strokeRect(x + 0.5, y + 0.5, w * K - 1, d * K - 1); }
+        else if (st === 'bright'){ const rr = Math.min(5, w * K / 4); c.fillStyle = 'rgba(60,80,90,.22)'; c.beginPath(); c.roundRect(x + 2, y + 3, w * K, d * K, rr); c.fill(); c.fillStyle = '#ffffff'; c.beginPath(); c.roundRect(x, y, w * K, d * K, rr); c.fill(); c.fillStyle = '#ff9f7a'; c.beginPath(); c.roundRect(x, y, w * K, Math.min(d * K, 6), [rr, rr, 0, 0]); c.fill(); }
+        else { c.fillStyle = 'rgba(240,150,120,.8)'; c.fillRect(x, y, w * K, d * K); c.strokeStyle = 'rgba(150,70,50,.8)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x + R(), y + R()); c.lineTo(x + w * K + R(), y + R()); c.lineTo(x + w * K - R(), y + d * K + R()); c.lineTo(x + R(), y + d * K - R()); c.closePath(); c.stroke(); } }
+      /* 小火車 */
+      { const RC = { paper: 'rgba(92,72,52,.85)', bright: '#7a6a5a', crayon: 'rgba(110,80,60,.8)' }[st]; c.strokeStyle = RC; c.lineWidth = st === 'bright' ? 2.4 : 1.2; c.beginPath(); railLine.forEach((q, n) => { const x = (q[0] - X0) * K, y = (q[1] - Z0) * K; if (n) c.lineTo(x, y); else c.moveTo(x, y); }); c.closePath(); c.stroke(); c.lineWidth = 1.2;
+        for (let n = 0; n < railLine.length; n += 2){ const a = railLine[n], b = railLine[(n + 1) % railLine.length], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, x = (a[0] - X0) * K, y = (a[1] - Z0) * K; c.beginPath(); c.moveTo(x - dz / l * 3, y + dx / l * 3); c.lineTo(x + dz / l * 3, y - dx / l * 3); c.stroke(); } }
+      return (W2._mp[st] = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH, k: K }); },
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
     horizon: HORIZON,   /* v945 外島在新主島海平線上的方向：坐船往那邊開 */
     bb: bbInfo, seats, doors, posts, benches, cave: caveInfo, mud: mudPts, homes, spotsAt,   /* v935 spotsAt：村子的發光釣點在新主島的位置（釣點代號不變） */   /* v934 homes：居民區民宅的門口 */   /* v930 mud：紅樹林泥灘上小動物住的地方 */   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
