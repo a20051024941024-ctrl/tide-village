@@ -233,6 +233,7 @@ export function init(A){
   const B = (parts, hex, w, h, d, x, y, z, ry) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.toNonIndexed()); };
   const G = (parts, hex, g, x, y, z) => { g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.index ? g.toNonIndexed() : g); };
   const flush = (parts, grp) => { for (const hex in parts){ const m = new THREE.Mesh(mergeGeometries(parts[hex], false), mat(hex.slice(0, 7), hex.length > 7 ? 0.35 : 0.85)); m.castShadow = true; m.receiveShadow = true; grp.add(m); } };
+  const W2X = {};   /* v955 潮搭Go 上車處、平交道 */
   const tickers = [], labels = []; let labelsOn = true; const seats = [], doors = [], posts = {}, homes = [], spotsAt = {}, PIERS = []; let bbInfo = null, caveInfo = null;   /* seats：看板前面可以坐的位置（世界座標）；bbInfo：高看板的螢幕 */
   function label(txt, lx, y, lz, s){ const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.font = 'bold 64px sans-serif'; const tw = Math.min(480, c.measureText(txt).width + 56); c.fillStyle = 'rgba(24,51,74,.88)'; c.beginPath(); c.roundRect(256 - tw / 2, 16, tw, 96, 26); c.fill(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 256, 66, 440);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true })); sp.material.map.colorSpace = THREE.SRGBColorSpace; sp.userData.w = 10 * (s || 1); sp.userData.h = 2.5 * (s || 1); sp.scale.set(sp.userData.w, sp.userData.h, 1); sp.position.set(lx, y, lz); sp.renderOrder = 9; root.add(sp); labels.push(sp); return sp; }
@@ -367,6 +368,78 @@ export function init(A){
       railStops.push({ name: nm, s: railCum[bi], x, z, y: y + 0.3, tx, tz, nx: -tz * sg, nz: tx * sg });
       for (const k of [-2.4, 2.4]) B(parts, '#8a6038', 0.22, 2.8, 0.22, x + tx * k - tz * sg * 1.0, y + 1.6, z + tz * k + tx * sg * 1.0); B(parts, '#8a6038', 2.2, 0.12, 0.5, x - tz * sg * 0.8, y + 0.75, z + tx * sg * 0.8, ry);   /* 兩根柱子、一張長椅 */
       label(nm + '站', x, y + 5, z, 0.6).userData.st = 1; RSV.push([x, z, 4.5]); }
+    /* v955 路面標線、斑馬線、平交道、潮搭Go 的上車處（作者 11/28：「道路那些你也可以做了」）
+       ・大路（石板路、圓環）中間一條白色虛線；路口、廣場裡、前廣場裡不畫
+       ・路從廣場、前廣場出來的地方畫斑馬線
+       ・大路跟鐵軌交叉的地方是平交道：兩邊各一根柱子（交叉的白底紅邊牌子、兩顆紅燈、紅白相間的柵欄），火車快到的時候紅燈輪流閃、柵欄放下，過了再升起來
+       ・主要地方旁邊的路邊畫一格「潮搭Go 上車處」，叫車的時候車從這裡出發、到了停這裡（現在先放一台車停著） */
+    { const railDist = (lx, lz) => { let bd = 1e9; const n = railLine.length; for (let i = 0; i < n; i++){ const a = railLine[i], b = railLine[(i + 1) % n], dx = b[0] - a[0], dz = b[1] - a[1], u = clamp(((lx - a[0]) * dx + (lz - a[1]) * dz) / ((dx * dx + dz * dz) || 1), 0, 1), d = Math.hypot(lx - a[0] - dx * u, lz - a[1] - dz * u); if (d < bd) bd = d; } return bd; };
+      const LINE = '#ffffff', bigRoads = [[ell(PL[0], PL[1], RING[0], RING[1], 96), 4.6, PAVE_Y, true]];
+      for (const [pts, w, kind] of ROADS) if (kind === 'stone' && w >= 16) bigRoads.push([curve(pts), w * S, PAVE_Y + 0.008, false]);
+      const toPx = (x, z) => [PX0 + x / S, PY0 + z / S], inPlaza = (x, z) => { const [px, py] = toPx(x, z); if (inPoly(PLAZA, px, py)) return true; for (const k in NODES){ const [nx, ny, nw, nh] = NODES[k]; if (((px - nx) / (nw / 2 + 6)) ** 2 + ((py - ny) / (nh / 2 + 6)) ** 2 < 1) return true; } return false; };
+      const nearOther = (x, z, me2) => bigRoads.some((r, i) => i !== me2 && r[0].some(q => Math.hypot(q[0] - x, q[1] - z) < r[1] / 2 + 0.9));
+      const segs = bigRoads.map(([line, w, y, loop]) => { const L = dense(loop ? line.concat([line[0]]) : line, 0.25), cum = [0]; for (let i = 1; i < L.length; i++) cum.push(cum[i - 1] + Math.hypot(L[i][0] - L[i - 1][0], L[i][1] - L[i - 1][1])); return { L, cum, w, y, loop }; });
+      const dirAt = (L, i) => { const a = L[Math.max(0, i - 1)], b = L[Math.min(L.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+      /* 中線虛線：1.3 公尺畫、1.3 公尺空 */
+      segs.forEach((sg, ri) => { const { L, cum, y, loop } = sg, tot = cum[cum.length - 1]; let st = -1;
+        for (let i = 0; i < L.length; i++){ const on = (cum[i] % 2.6) < 1.3 && (loop || (cum[i] > 3 && cum[i] < tot - 3)) && !inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri) && railDist(L[i][0], L[i][1]) > 4;
+          if (on && st < 0) st = i; if ((!on || i === L.length - 1) && st >= 0){ const e = on ? i : i - 1; if (e > st){ const a = L[st], b = L[e], len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (len > 0.5) B(parts, LINE, 0.18, 0.02, len, (a[0] + b[0]) / 2, y + 0.05, (a[1] + b[1]) / 2, Math.atan2(b[0] - a[0], b[1] - a[1])); } st = -1; } } });
+      /* 斑馬線：從廣場（或前廣場）走出來 2.5 公尺的地方，橫跨整條路 */
+      const zebras = [];
+      segs.forEach((sg, ri) => { if (sg.loop) return; const { L, cum, w, y } = sg, tot = cum[cum.length - 1];
+        for (const fwd of [true, false]){ let found = -1, out = -1;
+          for (let k = 0; k < L.length; k++){ const i = fwd ? k : L.length - 1 - k; if (!inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri)){ if (out < 0) out = i; if (Math.abs(cum[i] - cum[out]) >= 2.5){ found = i; break; } } else out = -1; }
+          if (found < 0 || zebras.some(z => Math.hypot(z[0] - L[found][0], z[1] - L[found][1]) < 8)) continue; const [dx, dz] = dirAt(L, found), [cx, cz] = L[found]; zebras.push([cx, cz]);
+          for (let s = -w / 2 + 0.35; s <= w / 2 - 0.3; s += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, cx - dz * s, y + 0.05, cz + dx * s, Math.atan2(dx, dz)); } });
+      /* 潮搭Go 上車處：主要地方旁邊的大路邊 */
+      const stands = [], logoTex = (() => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#ffffff'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#8fd3f4'; c.beginPath(); c.moveTo(0, 86); for (let x = 0; x <= 256; x += 8) c.lineTo(x, 86 + Math.sin(x / 22) * 7); c.lineTo(256, 128); c.lineTo(0, 128); c.fill();
+        c.fillStyle = '#26445c'; c.font = 'bold 46px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.fillText('潮搭Go', 128, 62); c.font = 'bold 20px "Huninn","Noto Sans TC",sans-serif'; c.fillText('上車處', 128, 112); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+      for (const [px, py, nm] of [[975, 560, '主城廣場'], [990, 790, '港口'], [985, 690, '商店街'], [1105, 600, '中央市場'], [735, 430, '水族館'], [965, 372, '村公所'], [482, 580, '居民區'], [1112, 730, '活動場地'], [1255, 372, '遊樂園'], [1460, 470, '體育場'], [1460, 640, '沙灘'], [800, 640, '博物館']]){
+        const [ax, az] = P(px, py); let best = null;   /* 在鋪了地磚的地方（廣場、人行道）找一塊 2.6×4.4 公尺的空地，方向跟最近的大路平行；不壓到大路、不靠鐵軌、不壓到房子 */
+        for (let gx = -30; gx <= 30; gx += 1.5) for (let gz = -30; gz <= 30; gz += 1.5){ const x = ax + gx, z = az + gz, dd = Math.hypot(gx, gz); if (dd > 30 || (best && dd >= best.sc)) continue;
+          if (samp(sdPave, x, z) < 2.2 || hAt(x, z) < 0.25 || railDist(x, z) < 5 || hit(x, z, 2.6) || stands.some(s => Math.hypot(s.x - x, s.z - z) < 25)) continue;
+          let rd = 1e9, rdx = 1, rdz = 0, onRoad = false; segs.forEach(sg => { for (let i = 0; i < sg.L.length; i += 3){ const q = sg.L[i], dq = Math.hypot(q[0] - x, q[1] - z); if (dq < sg.w / 2 + 1.6) onRoad = true; if (dq < rd){ rd = dq; [rdx, rdz] = dirAt(sg.L, i); } } });
+          if (onRoad || rd > 14) continue; const cs = [[1.3, 2.2], [-1.3, 2.2], [1.3, -2.2], [-1.3, -2.2]].every(([a, bb]) => samp(sdPave, x - rdz * a + rdx * bb, z + rdx * a + rdz * bb) > 0.4); if (!cs) continue;
+          const sd = ((ax - x) * -rdz + (az - z) * rdx) > 0 ? 1 : -1; best = { sc: dd, x, z, dx: rdx, dz: rdz, sd: -sd, nm }; }
+        if (!best) continue; stands.push(best); const { x, z, dx, dz } = best, ry = Math.atan2(dx, dz);
+        for (const [a, bb, w2, l2] of [[1.25, 0, 0.1, 4.4], [-1.25, 0, 0.1, 4.4], [0, 2.15, 2.6, 0.1], [0, -2.15, 2.6, 0.1]]) B(parts, LINE, w2, 0.02, l2, x - dz * a + dx * bb, PAVE_Y + 0.07, z + dx * a + dz * bb, ry);   // 白框
+        { const g = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.0).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: logoTex, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -3 })); g.position.set(x, PAVE_Y + 0.08, z); g.rotation.y = ry + Math.PI / 2; town.add(g); }   // 地上寫「潮搭Go 上車處」
+        { const sx = x - dz * best.sd * 1.7, sz = z + dx * best.sd * 1.7, y0 = Math.max(0.2, hAt(sx, sz)); B(parts, '#6c7680', 0.08, 2.3, 0.08, sx, y0 + 1.15, sz); const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshBasicMaterial({ map: logoTex, side: THREE.DoubleSide })); pl.position.set(sx, y0 + 2.1, sz); pl.rotation.y = ry + Math.PI / 2; town.add(pl); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz, r: 0.15 }); }   // 站牌
+        RSV.push([x, z, 3.5]); }
+      W2X.stands = stands.map(s => ({ name: s.nm, x: OX + s.x, z: OZ + s.z, face: Math.atan2(s.dx, s.dz) }));
+      /* 停一台潮搭Go 在上車處（模型另外下載，載好才出現） */
+      if (A.loadGLB) A.loadGLB('models/ride/tidego_car.glb').then(gl => { const src = gl.scene; src.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; if (o.material) o.material.side = THREE.FrontSide; } });
+        W2X.car = src; for (const s of stands.slice(0, 4)){ const c = src.clone(); c.scale.setScalar(2.0); const g = new THREE.Group(); g.add(c); c.rotation.y = Math.PI / 2; c.position.y = 0.45 * 2.0; g.position.set(s.x, PAVE_Y + 0.01, s.z); g.rotation.y = Math.atan2(s.dx, s.dz); town.add(g);
+          colliders.push({ t: 'c', x: OX + s.x + s.dx * 1.0, z: OZ + s.z + s.dz * 1.0, r: 0.95 }, { t: 'c', x: OX + s.x - s.dx * 1.0, z: OZ + s.z - s.dz * 1.0, r: 0.95 }); } }).catch(e => console.warn('tidego car', e));
+      /* 平交道：大路跟鐵軌交叉的地方 */
+      const xings = [], NR = railLine.length;
+      const allSegs = segs.concat(ROADS.filter(r => !(r[2] === 'stone' && r[1] >= 16)).map(([pts, w2]) => ({ L: dense(curve(pts), 0.25), w: w2 * S, loop: false })));   /* 小巷子、港邊木棧道跨過鐵軌的地方也要 */
+      allSegs.forEach(sg => { const { L, w, loop } = sg; for (let i = 1; i < L.length; i++){ const a = L[i - 1], b = L[i];
+        for (let j = 0; j < NR; j++){ const c = railLine[j], d = railLine[(j + 1) % NR], r = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]); if (Math.abs(r) < 1e-9) continue;
+          const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r;
+          if (t < 0 || t > 1 || u < 0 || u > 1) continue; const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t; if (xings.some(q => Math.hypot(q.x - x, q.z - z) < 10)) continue;
+          const [dx, dz] = dirAt(L, i); xings.push({ x, z, dx, dz, w, s: railCum[j] + Math.hypot(x - c[0], z - c[1]) }); } } });
+      const XMAT = { post: mat('#f4f4f2', 0.6), red: new THREE.MeshStandardMaterial({ color: '#c8322c', roughness: 0.5 }) };
+      const stripeTex = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 16; const c = cv.getContext('2d'); for (let i = 0; i < 8; i++){ c.fillStyle = i % 2 ? '#ffffff' : '#d8322b'; c.fillRect(i * 16, 0, 16, 16); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+      const xb = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 24; const c = cv.getContext('2d'); c.fillStyle = '#c8322c'; c.fillRect(0, 0, 128, 24); c.fillStyle = '#ffffff'; c.fillRect(4, 4, 120, 16); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide }); })();
+      const gates = [];
+      for (const X of xings){ const { x, z, dx, dz, w } = X, ry = Math.atan2(dx, dz);
+        for (const sg of [1, -1]){   // 鐵軌兩邊：路的右手邊各一組（面向鐵軌）
+          const along = sg * 3.2, side = sg * (w / 2 + 0.45), px = x + dx * along - dz * side, pz = z + dz * along + dx * side, y0 = Math.max(0.2, hAt(px, pz)), g = new THREE.Group(); g.position.set(px, y0, pz); g.rotation.y = ry + (sg < 0 ? Math.PI : 0); town.add(g);
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.6, 8), XMAT.post); post.position.y = 1.3; g.add(post);
+          for (const a of [0.6, -0.6]){ const bd = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.18), xb); bd.position.set(0, 2.45, 0.08); bd.rotation.z = a; g.add(bd); }   // 交叉的牌子
+          const box = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.22, 0.12), mat('#22262b', 0.6)); box.position.set(0, 1.95, 0.09); g.add(box);
+          const lamps = [-0.19, 0.19].map(lx => { const m = new THREE.Mesh(new THREE.CircleGeometry(0.08, 14), new THREE.MeshBasicMaterial({ color: '#4a1512' })); m.position.set(lx, 1.95, 0.16); g.add(m); return m; });
+          const pv = new THREE.Group(); pv.position.set(0, 0.95, 0.12); g.add(pv); const arm = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, 0.09, 0.06).translate(-(w * 0.92) / 2 - 0.05, 0, 0), new THREE.MeshBasicMaterial({ map: stripeTex })); arm.material.map = stripeTex.clone(); arm.material.map.repeat.set(Math.max(1, w * 0.92 / 1.6), 1); arm.material.map.wrapS = THREE.RepeatWrapping; arm.material.map.needsUpdate = true; pv.add(arm);
+          if (sg < 0) pv.scale.x = -1;
+          colliders.push({ t: 'c', x: OX + px, z: OZ + pz, r: 0.15 });
+          gates.push({ X, pv, lamps, ang: Math.PI / 2 - 0.05, sg }); } }
+      W2X.xings = xings.map(q => ({ x: OX + q.x, z: OZ + q.z, s: q.s }));
+      tickers.push((dt, t) => { if (!gates.length || !TRAIN || !inside) return; const api = TRAIN.api, L = railLen;
+        for (const X of xings){ let down = false; for (let k = 0; k < api.n; k++){ const st = api.state(k); if (!st) continue; const front = st.s + 3.9 * 1.5, rear = st.s - 3.9 * 1.5 - 2; let ahead = ((X.s - front) % L + L) % L, behind = ((rear - X.s) % L + L) % L; if (ahead < 26 || ((X.s - rear) % L + L) % L < front - rear + 3) down = true; } X.down = down; }
+        for (const G2 of gates){ const want = G2.X.down ? 0 : Math.PI / 2 - 0.05; G2.ang += (want - G2.ang) * Math.min(1, dt * 2.2); G2.pv.rotation.z = G2.sg > 0 ? -G2.ang : G2.ang;
+          const blink = G2.X.down ? Math.floor(t * 2.4) % 2 : -1; G2.lamps[0].material.color.set(blink === 0 ? '#ff3a2e' : '#4a1512'); G2.lamps[1].material.color.set(blink === 1 ? '#ff3a2e' : '#4a1512'); } });
+    }
     /* 過河的小木橋（森林步道 → 水族館） */
     { const [x, z0] = P(700, 281), z1 = P(700, 321)[1], zc = (z0 + z1) / 2, L = z1 - z0 + 0.4, TOP = 0.62; B(parts, '#b98a5a', 2.2, 0.2, L, x, TOP - 0.1, zc); DECKS.push([x - 1.1, x + 1.1, z0 - 1.3, z1 + 1.3, TOP, 1.1]);
       G(parts, '#b98a5a', new THREE.BoxGeometry(2.2, 0.1, 1.2).rotateX(-0.22), x, TOP - 0.17, z0 - 0.72); G(parts, '#b98a5a', new THREE.BoxGeometry(2.2, 0.1, 1.2).rotateX(0.22), x, TOP - 0.17, z1 + 0.72);   /* 兩頭的斜坡 */
@@ -799,6 +872,7 @@ export function init(A){
       return (W2._mp[st] = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH, k: K }); },
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
     horizon: HORIZON,   /* v945 外島在新主島海平線上的方向：坐船往那邊開 */
+    ride: W2X,   /* v955 潮搭Go：stands 上車處、xings 平交道、car 車子模型 */
     bb: bbInfo, seats, doors, posts, benches, cave: caveInfo, mud: mudPts, homes, spotsAt,   /* v935 spotsAt：村子的發光釣點在新主島的位置（釣點代號不變） */   /* v934 homes：居民區民宅的門口 */   /* v930 mud：紅樹林泥灘上小動物住的地方 */   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
     /* v926 村民散步用。railNear：這一點是不是在鐵軌旁邊（m 公尺內）或月台上；stroll：可不可以當散步的去處——鋪了路的地（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋 */
     railNear: (x, z, m) => { const lx = x - OX, lz = z - OZ; return railDist(lx, lz) < (m || 1.6) || !!platAt(lx, lz); },
