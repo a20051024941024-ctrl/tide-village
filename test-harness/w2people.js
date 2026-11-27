@@ -1,7 +1,7 @@
 // 新主島預覽：村子戶外的人和板子搬過來（站位、按鈕、開的畫面、釣魚、散步、回舊村子再回來、進店再出來）
 // HASH='&nobb&map2' node w2people.js   PARTS=site,open,gang,roam,hop,indoor（預設全部）   Q=low|mid
 const fs=require('fs');const path=require('path');const lib=require('./lib.js');const Q=process.env.Q||'low';
-const PARTS=(process.env.PARTS||'site,open,gang,roam,hop,nav,indoor').split(',');const has=k=>PARTS.includes(k);
+const PARTS=(process.env.PARTS||'site,open,fish,sci,hop,nav,indoor').split(',');const has=k=>PARTS.includes(k);
 const K3=JSON.stringify({on:true,sex:'b',hair:'short',top:'tee',bot:'shorts',shoes:'sneak',mask:'none',ear:'none',hat:'none',eye:'b2',brow:'thick',mouth:'smile',blush:'line',c:{},v:2});
 (async()=>{const r=await lib({vp:{width:960,height:540},dsf:1,ls:{'tide.quality':JSON.stringify(Q),'tide.welcomed':'1','tide.ageY':'"1990"','tide.tutDone':'1','tide.k3':K3,'tide.hintTrain':'1','tide.guideHide':'true'}});const {p,b,go,errs,snap}=r;
  const T0=Date.now(),lg=m=>console.log('  t'+((Date.now()-T0)/1000).toFixed(0),m);
@@ -19,31 +19,49 @@ const K3=JSON.stringify({on:true,sex:'b',hair:'short',top:'tee',bot:'shorts',sho
    front:(p,d)=>[p.x+Math.sin(p.face)*d,p.z+Math.cos(p.face)*d] };});
  console.log('posts',await ev(`JSON.stringify(Object.fromEntries(Object.entries(W2.posts).map(([k,q])=>[k,[+((q.x-W2.ox)/0.2+965).toFixed(0),+((q.z-W2.oz)/0.2+505).toFixed(0),+q.face.toFixed(2)]])))`));
  // 1) 站位：人在新主島 → 開關開著；板子、村民都在排好的位置；板子有碰撞；走到前面會出現對的按鈕
- if(has('site')){console.log('site',await p.evaluate(()=>{const T=__T,E=T.ev,W=E('W2'),PO=W.posts,S=E('W2S'),me=E('me'),gh=E('groundHeight'),o={on:S.on,fix:{},npc:{},btn:{},bad:[]};
-   for(const F of E('W2_FIX')){const q=PO[F.k];if(!q)continue;const g=F.g(),[x,z,r]=F.get();o.fix[F.k]={mesh:!!g,at:g?+Math.hypot(g.position.x-q.x,g.position.z-q.z).toFixed(3):-1,c:+Math.hypot(x-q.x,z-q.z).toFixed(3),y:g?+g.position.y.toFixed(2):0,gy:+gh(q.x,q.z).toFixed(2),rot:g?+g.rotation.y.toFixed(2):0,vis:g?g.visible:false,col:E('blocked')(q.x,q.z,0.2),walk:E('walkable')(q.x,q.z),kind:W.kind(q.x,q.z)};
-    // 站到板子正前面 1.6 公尺
-    const [fx,fz]=__pp.front(q,1.6);__pp.tp(fx,fz,q.face+Math.PI);for(let k=0;k<30;k++)__step(1,50);const ns=E('nearShop')();o.btn[F.k]={mode:ns&&ns.mode,label:ns&&ns.label,free:!E('blocked')(fx,fz,0.3),land:E('walkable')(fx,fz),txt:document.getElementById('act').innerText.replace(/\s+/g,' ').trim()};}
+ const WANT={board:'board',orders:'orders',tboard:'tboard',zc:'zc',craft:'craft',gang:'gang',news:'news',salon:'salon',sci:'sci',chief:'quest',wang:'quest'};
+ if(has('site')){const o=await p.evaluate(()=>{const T=__T,E=T.ev,W=E('W2'),PO=W.posts,S=E('W2S'),me=E('me'),gh=E('groundHeight'),o={on:S.on,fix:{},npc:{},q:{},bad:[]};
+   for(const F of E('W2_FIX')){const q=PO[F.k];if(!q)continue;const g=F.g(),[x,z,r]=F.get();const [fx,fz]=__pp.front(q,1.6);__pp.tp(fx,fz,q.face+Math.PI);for(let k=0;k<30;k++)__step(1,50);const ns=E('nearShop')();
+    o.fix[F.k]={mesh:!!g,at:g?+Math.hypot(g.position.x-q.x,g.position.z-q.z).toFixed(3):-1,c:+Math.hypot(x-q.x,z-q.z).toFixed(3),dy:g?+(g.position.y-gh(q.x,q.z)).toFixed(2):9,vis:g?g.visible:false,col:F.k==='tboard'?E('blocked')(q.x+Math.cos(q.face)*2.25,q.z-Math.sin(q.face)*2.25,0.1)&&E('blocked')(q.x-Math.cos(q.face)*2.25,q.z+Math.sin(q.face)*2.25,0.1):E('blocked')(q.x,q.z,0.2),kind:W.kind(q.x,q.z),mode:ns&&ns.mode,free:!E('blocked')(fx,fz,0.3),land:E('walkable')(fx,fz),txt:document.getElementById('act').innerText.replace(/\s+/g,' ').trim()};}
    for(const k in E('W2_NPC')){const q=PO[k],n=__pp.npc(k);if(!q||!n){o.bad.push([k,'missing',!!q,!!n]);continue;}
-    __pp.tp(q.x+Math.sin(q.face)*1.5+Math.cos(q.face)*0.6,q.z+Math.cos(q.face)*1.5-Math.sin(q.face)*0.6,q.face+Math.PI);for(let k2=0;k2<30;k2++)__step(1,50);const ns=E('nearShop')();
-    o.npc[k]={d:+Math.hypot(n.pos.x-q.x,n.pos.z-q.z).toFixed(2),y:+n.pos.y.toFixed(2),gy:+gh(q.x,q.z).toFixed(2),vis:n.av.g.visible,w2on:!!n.w2on,fishing:!!n.fishing,name:n.npcName,mode:ns&&ns.mode,label:ns&&ns.label,txt:document.getElementById('act').innerText.replace(/\s+/g,' ').trim(),inWall:E('blocked')(n.pos.x,n.pos.z,0.2)};}
-   return JSON.stringify(o)}));lg('site done');}
+    __pp.tp(n.pos.x+Math.sin(q.face+2.4)*1.5,n.pos.z+Math.cos(q.face+2.4)*1.5,q.face+Math.PI);for(let k2=0;k2<30;k2++)__step(1,50);const ns=E('nearShop')();
+    o.npc[k]={d:+Math.hypot(n.pos.x-q.x,n.pos.z-q.z).toFixed(2),dy:+(n.pos.y-gh(n.pos.x,n.pos.z)).toFixed(2),vis:n.av.g.visible,w2on:!!n.w2on,fishing:!!n.fishing,name:n.npcName,mode:ns&&ns.mode,txt:document.getElementById('act').innerText.replace(/\s+/g,' ').trim(),inWall:E('blocked')(n.pos.x,n.pos.z,0.2),land:E('walkable')(n.pos.x,n.pos.z),rail:W.railNear(n.pos.x,n.pos.z,2)};}
+   for(const k of E('W2_QNPC')){const q=PO[k],Q=E('questNpcs').find(x=>x.who===k);if(!q||!Q){o.bad.push([k,'missing']);continue;}const f=Q.f;__pp.tp(q.x+Math.sin(q.face)*1.5,q.z+Math.cos(q.face)*1.5,q.face+Math.PI);for(let k2=0;k2<30;k2++)__step(1,50);const ns=E('nearShop')();
+    o.q[k]={d:+Math.hypot(f.pos.x-q.x,f.pos.z-q.z).toFixed(2),dy:+(f.pos.y-gh(q.x,q.z)).toFixed(2),vis:f.av.g.visible,mode:ns&&ns.mode,who:ns&&ns.who,label:ns&&ns.label,inWall:E('blocked')(f.pos.x,f.pos.z,0.2)};}
+   return o});
+  const bad=o.bad.slice();for(const k in o.fix){const f=o.fix[k];if(!(f.mesh&&f.at<0.01&&f.c<0.01&&Math.abs(f.dy)<0.05&&f.vis&&f.col&&f.mode===WANT[k]&&f.free&&f.land))bad.push(['fix',k,f]);}
+  for(const k in o.npc){const f=o.npc[k];const mustStay=!['craft','news','salon'].includes(k);if(!((mustStay?f.d<0.05:f.d<4)&&Math.abs(f.dy)<0.06&&f.vis&&f.w2on&&!f.inWall&&f.land&&!f.rail&&(WANT[k]?f.mode===WANT[k]:true)))bad.push(['npc',k,f]);}
+  for(const k in o.q){const f=o.q[k];if(!(f.d<0.05&&Math.abs(f.dy)<0.06&&f.vis&&f.mode==='quest'&&f.who===k&&!f.inWall))bad.push(['q',k,f]);}
+  console.log('site',JSON.stringify({on:o.on,fix:Object.keys(o.fix).length,npc:Object.keys(o.npc).length,q:Object.keys(o.q).length,txt:Object.fromEntries([...Object.entries(o.fix),...Object.entries(o.npc)].map(([k,f])=>[k,f.txt])),qlab:Object.fromEntries(Object.entries(o.q).map(([k,f])=>[k,f.label])),bad}));lg('site done');}
  // 2) 按下去開的是原本的畫面
  if(has('open')){console.log('open',await p.evaluate(async()=>{const T=__T,E=T.ev,W=E('W2'),PO=W.posts,o={};
-   const run=(k,x,z,rot)=>{__pp.tp(x,z,rot);for(let i=0;i<30;i++)__step(1,50);const ns=E('nearShop')();if(!ns){o[k]='no shop';return;}E('openShop')(ns);for(let i=0;i<10;i++)__step(1,50);const sh=document.getElementById('sheet');o[k]={mode:ns.mode,open:!sh.hidden,tab:E('curTab'),title:(sh.querySelector('.shophead b,.dexhead,h2,h3,.wstop')||{}).textContent||'',txt:sh.innerText.replace(/\s+/g,' ').slice(0,60)};try{E('closeSheet')()}catch(e){};for(let i=0;i<6;i++)__step(1,50);};
+   const run=(k,x,z,rot)=>{__pp.tp(x,z,rot);for(let i=0;i<30;i++)__step(1,50);const ns=E('nearShop')();if(!ns){o[k]='no shop';return;}for(const e of document.querySelectorAll('#toasts > *'))e.remove();E('openShop')(ns);for(let i=0;i<10;i++)__step(1,50);const sh=document.getElementById('sheet');
+    if(ns.mode==='zc'){o[k]={mode:'zc',on:E('ZC').on,frame:!!document.querySelector('#zcWrap iframe')};E('zcClose')();return;}
+    if(ns.mode==='salon'&&sh.hidden){o[k]={mode:'salon',toast:(document.querySelector('#toasts')||{}).innerText||''};return;}
+    o[k]={mode:ns.mode,open:!sh.hidden,tab:E('curTab'),txt:sh.innerText.replace(/\s+/g,' ').slice(0,34)};try{E('closeSheet')()}catch(e){};for(let i=0;i<6;i++)__step(1,50);};
    for(const F of E('W2_FIX')){const q=PO[F.k];if(!q)continue;const [fx,fz]=__pp.front(q,1.6);run(F.k,fx,fz,q.face+Math.PI);}
-   for(const k in E('W2_NPC')){const q=PO[k];if(!q)continue;run(k,q.x+Math.sin(q.face)*1.5+Math.cos(q.face)*0.6,q.z+Math.cos(q.face)*1.5-Math.sin(q.face)*0.6,q.face+Math.PI);}
+   for(const k in E('W2_NPC')){const q=PO[k],n=__pp.npc(k);if(!q||!n||q.shore)continue;run(k,n.pos.x+Math.sin(q.face+2.4)*1.5,n.pos.z+Math.cos(q.face+2.4)*1.5,q.face+Math.PI);}
+   for(const k of E('W2_QNPC')){const q=PO[k];if(!q)continue;run(k,q.x+Math.sin(q.face)*1.5,q.z+Math.cos(q.face)*1.5,q.face+Math.PI);}
    return JSON.stringify(o)}));lg('open done');}
- // 3) 老港釣魚：浮標在水裡、會咬、會拉上來
- if(has('gang')){console.log('gang',await p.evaluate(()=>{const T=__T,E=T.ev,W=E('W2'),q=W.posts.gang,n=__pp.npc('gang'),o={st:{},bobWater:0,bobN:0,moved:0,maxD:0};if(!q||!n)return 'none';
-   __pp.tp(q.x-2.2,q.z+3,0);for(let i=0;i<1800;i++){__step(1,50);o.st[n.st||'wait']=(o.st[n.st||'wait']||0)+1;if(n.bobState==='water'){o.bobN++;if(E('waterAt')(n.bobPos.x,n.bobPos.z))o.bobWater++;}o.maxD=Math.max(o.maxD,Math.hypot(n.pos.x-q.x,n.pos.z-q.z));}
-   o.maxD=+o.maxD.toFixed(2);o.rot=+n.rot.toFixed(2);o.fishing=n.fishing;o.bob=[+((n.bobPos.x-W.ox)/0.2+965).toFixed(0),+((n.bobPos.z-W.oz)/0.2+505).toFixed(0)];o.spot=E('waterSpotId')(n.bobPos.x,n.bobPos.z);o.onDeck=+E('groundHeight')(n.pos.x,n.pos.z).toFixed(2);return JSON.stringify(o)}));lg('gang done');}
+ // 3) 釣魚的村民（老港、阿潮、小溪、阿蘭）：浮標在水裡、會咬、會拉上來；人站在陸地／棧橋上
+ if(has('gang')||has('fish')){const keys=(process.env.ONLY||'gang,chao,xi,lan').split(',');const out={};
+  for(const k of keys){const pre=await p.evaluate(k=>{const E=__T.ev,W=E('W2'),q=W.posts[k],n=__pp.npc(k);if(!q||!n)return null;__pp.tp(q.x-Math.sin(q.face)*2.6+Math.cos(q.face)*1.2,q.z-Math.cos(q.face)*2.6-Math.sin(q.face)*1.2,q.face);window.__fs={st:{},bobWater:0,bobN:0,maxD:0};return 1},k);if(!pre){out[k]='none';continue;}
+   for(let g=0;g<4;g++){await p.evaluate(k=>{const E=__T.ev,W=E("W2"),q=W.posts[k],n=__pp.npc(k),o=__fs;for(let i=0;i<200;i++){__step(1,50);o.st[n.st||'wait']=(o.st[n.st||'wait']||0)+1;if(n.bobState==='water'){o.bobN++;if(E('waterAt')(n.bobPos.x,n.bobPos.z))o.bobWater++;}o.maxD=Math.max(o.maxD,Math.hypot(n.pos.x-q.x,n.pos.z-q.z));}},k);await p.waitForTimeout(40);}
+   out[k]=await p.evaluate(k=>{const E=__T.ev,W=E('W2'),n=__pp.npc(k),o=__fs;o.maxD=+o.maxD.toFixed(2);o.fishing=n.fishing;o.spot=E('waterSpotId')(n.bobPos.x,n.bobPos.z);o.land=E('walkable')(n.pos.x,n.pos.z)&&!E('waterAt')(n.pos.x,n.pos.z);o.roam=n.roam?[n.roam.kind,n.roam.c.length]:n.roam;return o},k);}
+  console.log('fish',JSON.stringify(out));lg('fish done');}
+ // 3b) 蔚博士：今天調查的那一種水新主島有 → 站到那一種水的岸邊（器材在旁邊、人在陸地上）；沒有 → 水族館入口
+ if(has('sci')){console.log('sci',await p.evaluate(()=>{const E=__T.ev,W=E('W2'),PO=W.posts,n=__pp.npc('sci'),S=E('Sci'),o={at:Object.keys(PO.sci.at||{})};const day=E('sciToday')();
+   const tryId=id=>{S.list=[{spot:id,day,name:'測試魚',base:null,story:''}];S.quest=null;n.w2sk=null;for(let i=0;i<50;i++)__step(1,50);const q=(PO.sci.at&&PO.sci.at[id])||PO.sci,g=S.gear;
+    return {d:+Math.hypot(n.pos.x-q.x,n.pos.z-q.z).toFixed(2),land:E('walkable')(n.pos.x,n.pos.z)&&!E('waterAt')(n.pos.x,n.pos.z),blk:E('blocked')(n.pos.x,n.pos.z,0.2),vis:n.av.g.visible,gear:g?+Math.hypot(g.position.x-n.pos.x,g.position.z-n.pos.z).toFixed(2):-1,gearLand:g?!E('waterAt')(g.position.x,g.position.z):false,water:[1.5,2.5,3.5,4.5].some(d=>E('waterAt')(n.pos.x+Math.sin(n.rot)*d,n.pos.z+Math.cos(n.rot)*d)),home:+Math.hypot(n.pos.x-PO.sci.x,n.pos.z-PO.sci.z).toFixed(1)};};
+   __pp.tp(PO.sci.x+3,PO.sci.z+3,0);for(const id of ['sea','harbor','river','creek','lake','mangrove','reef','pond'])o[id]=tryId(id);
+   S.list=null;return JSON.stringify(o)}));lg('sci done');}
  // 4) 阿鐵在攤位附近走動：去處都在鋪了路的地方、不靠鐵軌、沒被擋住；走 6 分鐘都離攤位不遠、不會瞬移
- if(has('roam')){const out={};const keys=await p.evaluate(()=>Object.keys(__T.ev('W2_NPC')).filter(k=>__T.ev('W2').posts[k]));
+ if(has('roam')){const out={};const keys=process.env.ONLY?process.env.ONLY.split(','):await p.evaluate(()=>Object.keys(__T.ev('W2_NPC')).filter(k=>__T.ev('W2').posts[k]&&__T.ev('roamKind')(__pp.npc(k))));
   for(const k of keys){const r0=await p.evaluate(k=>{const E=__T.ev,W=E('W2'),q=W.posts[k],n=__pp.npc(k),kind=E('roamKind')(n);if(!kind)return {kind:null};__pp.tp(q.x+Math.sin(q.face)*6,q.z+Math.cos(q.face)*6,q.face+Math.PI);window.__rm={k,px:n.pos.x,pz:n.pos.z,r:{kind,ready:false,c:0,bad:0,maxD:0,jump:0,rail:0,blk:0,walked:0,away:0}};return {kind}},k);
    if(!r0.kind){out[k]=r0;continue;}
    for(let g=0;g<40;g++){const rd=await p.evaluate(k=>{const n=__pp.npc(k);for(let i=0;i<150&&!(n.roam&&n.roam.ready);i++)__step(1,33);return !!(n.roam&&n.roam.ready)},k);if(rd)break;await p.waitForTimeout(60);}
    await p.evaluate(k=>{const E=__T.ev,W=E('W2'),n=__pp.npc(k),R=n.roam,r=__rm.r;r.ready=!!(R&&R.ready);r.c=R?R.c.length:0;if(R)for(const c of R.c){if(!W.stroll(c.x,c.z,r.kind==='shop')||E('blocked')(c.x,c.z,0.3))r.bad++;}},k);
-   for(let g=0;g<20;g++){if(g%5===0)lg("roam "+k+" "+g);await p.evaluate(k=>{const E=__T.ev,W=E("W2"),q=W.posts[k],n=__pp.npc(k),R=n.roam,r=__rm.r;for(let i=0;i<200;i++){__step(1,50);const d=Math.hypot(n.pos.x-q.x,n.pos.z-q.z),st=Math.hypot(n.pos.x-__rm.px,n.pos.z-__rm.pz);r.maxD=Math.max(r.maxD,d);r.jump=Math.max(r.jump,st);if(st>0.01)r.walked++;if(R&&R.away)r.away++;if(W.rail(n.pos.x,n.pos.z,1.2))r.rail++;if(E('blocked')(n.pos.x,n.pos.z,0.05))r.blk++;__rm.px=n.pos.x;__rm.pz=n.pos.z;}},k);await p.waitForTimeout(40);}
+   for(let g=0;g<12;g++){if(g%6===0)lg("roam "+k+" "+g);await p.evaluate(k=>{const E=__T.ev,W=E("W2"),q=W.posts[k],n=__pp.npc(k),R=n.roam,r=__rm.r;for(let i=0;i<200;i++){__step(1,50);const d=Math.hypot(n.pos.x-q.x,n.pos.z-q.z),st=Math.hypot(n.pos.x-__rm.px,n.pos.z-__rm.pz);r.maxD=Math.max(r.maxD,d);r.jump=Math.max(r.jump,st);if(st>0.01)r.walked++;if(R&&R.away)r.away++;if(W.railNear(n.pos.x,n.pos.z,1.2))r.rail++;if(E('blocked')(n.pos.x,n.pos.z,0.05))r.blk++;__rm.px=n.pos.x;__rm.pz=n.pos.z;}},k);await p.waitForTimeout(40);}
    out[k]=await p.evaluate(()=>{const r=__rm.r;r.maxD=+r.maxD.toFixed(2);r.jump=+r.jump.toFixed(2);return r});}
   console.log('roam',JSON.stringify(out),'lost',await p.evaluate(()=>__T.ev('renderer').getContext().isContextLost()));lg('roam done');}
  // 5) 回舊村子：板子、村民回原位；再回新主島：又搬過來

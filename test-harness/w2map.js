@@ -29,7 +29,7 @@ const OUT=path.resolve(__dirname,'..')+'/w2/map_'+(process.env.OUT||'a')+'.png';
   for(const d of W.doors)dot(d.x,d.z,'#e33',d.k,d.face);
   for(const s of W.train.stops)dot(s.x,s.z,'#000','站:'+s.name);
   const PO=W.posts||{};for(const q of PO._cots||[])dot(W.ox+q.x,W.oz+q.z,'#a3f','屋:'+q.k,q.face);for(const q of PO._stands||[])dot(W.ox+q.x,W.oz+q.z,'#f80','攤',q.ry);
-  for(const k in PO){if(k[0]==='_')continue;const q=PO[k];dot(q.x,q.z,'#0cf',k,q.face);}
+  for(const k in PO){if(k[0]==='_')continue;const q=PO[k];dot(q.x,q.z,'#0cf',k,q.face);if(q.at)for(const id in q.at)dot(q.at[id].x,q.at[id].z,'#f0f',k+':'+id,q.at[id].face);}
   if(W.bb)dot(W.bb.x,W.bb.z,'#ff0','看板');dot(W.spawn[0],W.spawn[1],'#fff','出生');
   return {url:cv.toDataURL('image/png'),w,h,cots:(PO._cots||[]).map(q=>[q.k,Math.round(q.x/0.2+965),Math.round(q.z/0.2+505),+q.face.toFixed(2)]),stands:(PO._stands||[]).map(q=>[Math.round(q.x/0.2+965),Math.round(q.z/0.2+505)]),doors:W.doors.map(d=>[d.k,Math.round((d.x-W.ox)/0.2+965),Math.round((d.z-W.oz)/0.2+505),+d.face.toFixed(2)])};
  },[x0,y0,x1,y1,SC]);

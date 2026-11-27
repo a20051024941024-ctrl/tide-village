@@ -51,3 +51,11 @@
   v925 也一樣，跟遊戲無關。長的迴圈要切成小段（一段 ≤200 格），段跟段之間 `waitForTimeout` 一下。
 - 進店、出店是用真的計時器（setTimeout 260 毫秒），假時間推不動它：要 `waitForTimeout` 等真的時間。
 - `h.js` 的錯誤訊息現在會帶出錯的位置（前三層）。
+
+## 11/27 傍晚加的（v927–v928）
+
+- `w2people.js` 現在的段落：`PARTS=site,open,fish,sci,roam,hop,nav,indoor`。
+  `fish`（釣魚的四位，約 5 分鐘）和 `roam`（顧攤的在攤位旁走動，一位約 3 分鐘，`ONLY=news,salon` 挑人）很慢，各自單獨跑、`timeout 560`。
+  其他幾段一起跑約 2 分鐘。
+- `npcstep.js`：村民每一格移動多少（有沒有平移、瞬移、沒走路動作卻在動）。`HASH='&nobb'` 是舊村子；加 `&map2` 和 `AT='x,z'` 可以看新主島。
+- `W2.rail` 是鐵軌中心線（陣列，給測試畫圖用）；村民用的是 `W2.railNear(x, z, 幾公尺)`。
