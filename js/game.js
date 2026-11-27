@@ -19659,10 +19659,10 @@ function ui2Tick(){
 setInterval(ui2Tick, 2000); setTimeout(ui2Tick, 1200);
 
 /* ================= 包包：身上帶的東西（釣竿、魚餌、窩料、料理、潛水用品、蝦竿…）================= */
-function renderBag(body){
-  const sec = (title, sub) => { const h = el('div', 'dexhead', title); if (sub) h.appendChild(el('small', '', sub)); body.appendChild(h); const ul = el('ul', 'shoplist bag'); body.appendChild(ul); return ul; };
-  const row = (ul, ic, name, meta, btnTxt, fn, on) => { const li = el('li', on ? 'on' : ''); const i = el('span', 'dishic', ic); li.appendChild(i); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', name)); if (meta) d.appendChild(el('div', 'meta', meta)); li.appendChild(d);
-    if (btnTxt){ const b = el('button', 'tbtn' + (on ? ' ghost' : ''), btnTxt); b.disabled = !fn; if (fn) b.addEventListener('click', () => { b.disabled = true; fn(); }); li.appendChild(b); } ul.appendChild(li); return li; };
+/* v943 作者：「左邊選、右邊看」→ 背包左邊一排分類（交通、對決、寵物、種子、菜籃、料理、潛水），右邊是那一類的東西，一格一格大圖示卡片，按鈕在卡片下面。東西和按鈕的作用都沒變 */
+function renderBag(body){ const SECS = [];
+  const sec = (title, sub) => { const S = { title, sub, items: [] }; SECS.push(S); return S; };
+  const row = (S, ic, name, meta, btnTxt, fn, on) => { S.items.push({ ic, name, meta, btnTxt, fn, on }); };
   { const w = el('div', 'bagwallet'); w.innerHTML = `<span>🪙 <b>${rec.coins.toLocaleString()}</b> 金幣</span><span>💙 <b>${rec.love || 0}</b> 愛海點數</span>${shrimpLeft() ? `<span>🎫 釣蝦 <b>${mmss(shrimpLeft())}</b></span>` : ''}<span>🐟 魚缸 <b>${rec.tank.length}</b> 條</span>`; body.appendChild(w); }
   /* v440 腳踏車收在背包裡：拿出來就騎上去；騎著的時候可以收起來 */
   { const ul = sec('🚲 交通工具', '拿出來就能騎；下車以後車會停在原地，走回去按「騎車」'); const ok = Bike.on || canRide();
@@ -19682,8 +19682,16 @@ function renderBag(body){
       for (const [, list] of by){ const d = list[0], rc = RECIPES[d.r]; if (!rc) continue; row(ul, rc.icon, `${rc.name} ${'★'.repeat(d.q || 1)} ×${list.length}`, rc.desc, '吃', () => { eatDish(d.t); renderTab(); }); } } }
   // 潛水用品、蝦竿
   { const dv = DIVE_GEAR.filter(g => hasDive(g.id)); if (dv.length){ const ul = sec('🤿 潛水用品'); for (const g of dv) row(ul, g.icon, g.name, g.desc); } }
-  { const b = el('div', 'bagmore'); const t = el('button', 'tbtn ghost', '🐟 打開魚缸'); t.addEventListener('click', () => { curTab = 'tank'; renderTab(); }); const st = el('button', 'tbtn ghost', '👕 打開造型（衣服、帽子）'); st.addEventListener('click', () => { curTab = 'style'; renderTab(); }); b.append(t, st); body.appendChild(b); }
-}
+  const wrap = el('div', 'bagwrap'), cats = el('div', 'bagcats'), pane = el('div', 'bagpane'); wrap.append(cats, pane); body.appendChild(wrap);
+  let cur = SECS.find(S => S.title === renderBag.sel) || SECS[0];
+  for (const S of SECS){ const m = /^(\S+)\s+(.*)$/.exec(S.title) || [0, '🎒', S.title], b = el('button', 'bagcat' + (S === cur ? ' sel' : '')); b.appendChild(el('span', 'bcic', m[1])); b.appendChild(el('span', 'bct', m[2])); if (S.items.length > 1) b.appendChild(el('span', 'bcn', String(S.items.length))); if (S.items.some(it => it.on)) b.classList.add('using');
+    b.addEventListener('click', () => { renderBag.sel = S.title; renderTab(); }); cats.appendChild(b); }
+  { const mo = el('div', 'bagcatmore'); for (const [l, tab] of [['🐟 魚缸', 'tank'], ['👕 造型', 'style']]){ const t = el('button', 'bagcat ghost', l); t.addEventListener('click', () => { curTab = tab; renderTab(); }); mo.appendChild(t); } cats.appendChild(mo); }
+  if (!cur){ pane.appendChild(el('p', 'sub', '背包裡還沒有東西。釣魚、種田、做料理拿到的東西會放在這裡。')); return; }
+  if (cur.sub) pane.appendChild(el('p', 'sub bagsub', cur.sub));
+  const g = el('div', 'baggrid'); pane.appendChild(g);
+  for (const it of cur.items){ const c = el('div', 'bagitem' + (it.on ? ' on' : '')); c.appendChild(el('div', 'biic', it.ic)); c.appendChild(el('div', 'bin', it.name)); if (it.meta) c.appendChild(el('div', 'bim', it.meta));
+    if (it.btnTxt){ const b = el('button', 'tbtn' + (it.on ? ' ghost' : ''), it.btnTxt); b.disabled = !it.fn; if (it.fn) b.addEventListener('click', () => { b.disabled = true; it.fn(); }); c.appendChild(b); } g.appendChild(c); } }
 
 /* ===== v635 釣具改版第一次（作者的「釣具大改版計畫」）：會影響釣魚的放「🎣 釣組」，只是好看的放「🎨 外觀」，不再散在商店、工坊、包包三個地方 ===== */
 function renderRig2(body){
