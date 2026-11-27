@@ -336,7 +336,7 @@ export function init(A){
       put(Wc[0], 'cafe', '潮汐食堂', '🍱'); put(Ec[0], 'cai', '阿彩畫廊', '🎨'); put(Wc[1], 'mu', '阿木木工坊', '🪑'); put(Ec[1], 'pet', '小花寵物店', '🐾'); put(Wc[2], 'pool', '潮汐撞球館', '🎱'); put(Ec[2], 'shrimp', '釣蝦場', '🦐'); put(Wc.length > 3 ? Wc[Wc.length - 1] : null, 'tackle', '釣具店', '🎣');
       for (const [k, label, icon] of free){ const h = street.find(q => !q.used); if (h){ h.used = 1; door(k, label, icon, h.x + Math.sin(h.face) * (h.d / 2 + 0.9), h.z + Math.cos(h.face) * (h.d / 2 + 0.9), h.face); } }
       { const [x, z] = P(1210, 640); door('market', '潮汐魚市場', '🐟', x, z - 7.2, Math.PI); } { const [x, z] = P(775, 650); door('museum', '海洋博物館', '🏛️', x, z - 7.4, Math.PI); } { const [x, z] = P(1480, 430); door('stad', '潮汐體育場', '🏟️', x - 25.5, z + 3, -Math.PI / 2); } }
-    { const [x, z] = P(470, 585); label('居民區', x, 9, z); } { const [x, z] = P(985, 700); label('商店街', x, 9, z, 0.8); } { const [x, z] = P(1320, 545); label('玩家建地區', x, 9, z); }
+    { const [x, z] = P(470, 585); label('居民區', x, 9, z); } { const [x, z] = P(985, 700); label('商店街', x, 9, z, 0.8); }
     /* 預留的空地：照規劃圖把房子放滿以後，還空著的大塊草地剩這兩塊（西邊海岸、水族館和村公所中間）；全島空草地約 25% */
     for (const [px, py, t] of [[221, 556, '預留・以後擴建'], [783, 355, '預留']]){ const [x, z] = P(px, py); label(t, x, 6, z, 0.75); }
     { const [x, z] = P(EVT_C[0], EVT_C[1]); label('活動場地', x, 7, z); }
@@ -369,7 +369,7 @@ export function init(A){
        位置附近不長樹（RSV）。 */
     const post = (k, x, z, face, o) => { posts[k] = Object.assign({ x: OX + x, z: OZ + z, face }, o || {}); RSV.push([x, z, (o && o.r) || 2.6]); };   /* relax：顧攤的人就在攤位旁邊幾步走動，草地也可以（附近 r 公尺不長樹） */
     { const [x, z] = P(1143, 640); post('orders', x, z, -Math.PI / 2); }                        /* 📋 訂單板：中央市場西邊的牆外，面向西邊的廣場（從圓環大道、活動場地走過來都看得到正面）。v928 從主城廣場搬過來——總規劃寫的是「中央市場（交易、跑商、訂單板）」，v926 我放錯地方 */
-    { const [x, z] = P(950, 568); post('board', x, z, 2.0); }                                   /* 📌 留言板：主城廣場南邊、出生點的西南，斜斜朝著噴水池和出生點 */
+    { const [x, z] = P(1044, 580); post('board', x, z, Math.PI); }   /* v942 作者截圖指定：廣場東南邊長椅後面那塊空地，面向廣場 */                                   /* 📌 留言板：主城廣場南邊、出生點的西南，斜斜朝著噴水池和出生點 */
     /* 🔧 阿鐵：釣具店旁邊擺攤（村子裡他也是在釣具店旁邊）。釣具店是商店街最靠港口的那一間，攤子擺在它靠港口那一側的轉角：
        一張工作台（工具箱、虎鉗、線軸、捲線器、幾個假餌）、後面一座竿架靠著四支竿子、一塊掛牌；阿鐵站在工作台後面，面對巷子。竿架上的小旗子會飄 */
     { const d = doors.find(q => q.k === 'tackle'); if (d){ const f = d.face, fx = Math.sin(f), fz = Math.cos(f), lx = Math.cos(f), lz = -Math.sin(f);
@@ -679,7 +679,7 @@ export function init(A){
       if (here !== inside){ inside = here; root.visible = here; if (here) A.setWaterMask(maskTex, OX + X0 + GW / 2, OZ + Z0 + GH / 2, GW, GH); else { A.setWaterMask(null); for (const k of [...chunks.keys()]) dropChunk(k); } }
       if (!here) return;
       chunkTick(camera.position.x - OX, camera.position.z - OZ, false); waterSurface.position.x = Math.round(camera.position.x / 16) * 16; waterSurface.position.z = Math.round(camera.position.z / 16) * 16;
-      if (labelsOn) for (const sp of labels){ const u = sp.userData, d = Math.hypot(camera.position.x - OX - sp.position.x, camera.position.y - sp.position.y, camera.position.z - OZ - sp.position.z), k = clamp(d / 55, 1, 4.2); sp.visible = d > 9 && !(u.st && d > 150); sp.scale.set(u.w * k, u.h * k, 1); }
+      if (labelsOn) for (const sp of labels){ const u = sp.userData, d = Math.hypot(camera.position.x - OX - sp.position.x, camera.position.y - sp.position.y, camera.position.z - OZ - sp.position.z), k = clamp(d / 55, 1, 4.2); sp.visible = u.st ? d > 5 && d < 32 : d > 70 && camera.position.y > 22; if (u.st && sp.material.depthTest === false){ sp.material.depthTest = true; } sp.scale.set(u.w * k, u.h * k, 1); }   /* v942 作者：「村公所、森林冒險區的字都擋到了」→ 地區的名字只有鏡頭在高空、很遠（70 公尺以上）才出現；車站的牌子只在附近 5～32 公尺出現，而且會被房子擋住 */
       for (const f of tickers) f(dt, t); },
     warm: (x, z) => chunkTick(x - OX, z - OZ, true),
     info: () => ({ chunks: chunks.size, tris: (() => { let n = 0; root.traverse(o => { if (o.isMesh && o.geometry){ const g = o.geometry, c = (g.index ? g.index.count : g.attributes.position.count) / 3; n += o.isInstancedMesh ? c * o.count : c; } }); return Math.round(n); })(), labels: labels.length, cols: colliders.length }),

@@ -17168,6 +17168,7 @@ function updateQuestNpcs(dt, t){
     const d = Math.hypot(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z);
     const wd = q.who === 'chief' ? false : worldDrive(q.f, dt, t);   /* v250 村長要發任務，一直待在廣場（不跟著村民作息到處走、回家睡覺） */
     if (wd){}
+    else if (q.who === 'chief' && W2S.on){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; q.f.tag.style.display = 'none'; }   /* v942 作者：「如果要村長長這樣還不如不要畫，不然就讓他在裡面」→ 新主島的村長待在村公所裡面：看不到人，走到門口一樣可以跟他講話、領任務 */
     else if (d < 62 && inCafe(q.f.pos.x, q.f.pos.z) && !inCafe()){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; q.f.tag.style.display = 'none'; }   /* v857 食堂裡的人（美雲姨）只有走進食堂才看得到，不會從外面看到站在海上 */
     else if (d < 62){ q.f.av.g.visible = !onIsle; if (d < 6) q.f.rot = lerpAngle(q.f.rot, Math.atan2(me.pos.x - q.f.pos.x, me.pos.z - q.f.pos.z), 1 - Math.exp(-3 * dt)); q.f.update(dt, t); q.f.placeTag(); }
     else q.f.tag.style.display = 'none';
