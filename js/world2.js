@@ -213,7 +213,7 @@ export function init(A){
   const B = (parts, hex, w, h, d, x, y, z, ry) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.toNonIndexed()); };
   const G = (parts, hex, g, x, y, z) => { g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.index ? g.toNonIndexed() : g); };
   const flush = (parts, grp) => { for (const hex in parts){ const m = new THREE.Mesh(mergeGeometries(parts[hex], false), mat(hex.slice(0, 7), hex.length > 7 ? 0.35 : 0.85)); m.castShadow = true; m.receiveShadow = true; grp.add(m); } };
-  const tickers = [], labels = []; let labelsOn = true; const seats = [], doors = [], posts = {}, homes = []; let bbInfo = null, caveInfo = null;   /* seats：看板前面可以坐的位置（世界座標）；bbInfo：高看板的螢幕 */
+  const tickers = [], labels = []; let labelsOn = true; const seats = [], doors = [], posts = {}, homes = [], spotsAt = {}, PIERS = []; let bbInfo = null, caveInfo = null;   /* seats：看板前面可以坐的位置（世界座標）；bbInfo：高看板的螢幕 */
   function label(txt, lx, y, lz, s){ const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.font = 'bold 64px sans-serif'; const tw = Math.min(480, c.measureText(txt).width + 56); c.fillStyle = 'rgba(24,51,74,.88)'; c.beginPath(); c.roundRect(256 - tw / 2, 16, tw, 96, 26); c.fill(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 256, 66, 440);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true })); sp.material.map.colorSpace = THREE.SRGBColorSpace; sp.userData.w = 10 * (s || 1); sp.userData.h = 2.5 * (s || 1); sp.scale.set(sp.userData.w, sp.userData.h, 1); sp.position.set(lx, y, lz); sp.renderOrder = 9; root.add(sp); labels.push(sp); return sp; }
   const town = new THREE.Group(); root.add(town);
@@ -294,7 +294,7 @@ export function init(A){
     /* 燈塔（港口外的小岩島） */
     { const [x, z] = P(655, 815), y = Math.max(0.3, hAt(x, z)); G(parts, '#ffffff', new THREE.CylinderGeometry(1.5, 2.3, 11, 14), x, y + 5.5, z); for (let i = 0; i < 3; i++) G(parts, RED, new THREE.CylinderGeometry(1.62 + (2 - i) * 0.25, 1.78 + (2 - i) * 0.25, 1.5, 14), x, y + 2.6 + i * 3.1, z); G(parts, '#333a44', new THREE.CylinderGeometry(1.9, 1.9, 0.3, 14), x, y + 11.1, z); G(parts, '#ffe5a4', new THREE.CylinderGeometry(1.1, 1.1, 1.5, 10), x, y + 12, z); G(parts, RED, new THREE.ConeGeometry(1.7, 1.6, 12), x, y + 13.5, z); colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: 2.4, big: true }); RSV.push([x, z, 5]); label('燈塔', x, 17.5, z, 0.8); }
     /* 港口碼頭：五條棧橋 */
-    const piers = [];
+    const piers = PIERS;
     for (const [dx, len] of [[-170, 90], [-90, 120], [0, 140], [90, 120], [170, 90]]){ const [x, z00] = P(990 + dx, 835), z1 = z00 + len * S; let zr = -1e9; for (const q of railLine) if (Math.abs(q[0] - x) < 2.4 && Math.abs(q[1] - z00) < 12) zr = Math.max(zr, q[1]); const z0 = zr > -1e8 ? Math.max(z00, zr + 1.3) : z00, L = z1 - z0;   /* v925 棧橋以前從岸上蓋出去、橫在鐵軌上，小火車會從橋板中間穿過去；現在從鐵軌靠海那一側才開始 */
       B(parts, '#b98a5a', 3.4, 0.3, L, x, 0.5, z0 + L / 2); DECKS.push([x - 1.7, x + 1.7, z0 - 0.2, z0 + L, 0.65]); piers.push({ x, z0, L }); for (let k = 0; k <= L; k += 4){ B(parts, '#7a5530', 0.4, 2.4, 0.4, x - 1.5, -0.5, z0 + k); B(parts, '#7a5530', 0.4, 2.4, 0.4, x + 1.5, -0.5, z0 + k); } }
     { const [x, z] = P(990, 880); label('港口碼頭', x, 8, z); }
@@ -686,8 +686,21 @@ export function init(A){
     view: v => { VIEW = v; },   /* 拍全島的時候用：多遠以內的地都蓋 */
     board: boardLine, rail: railLine,   /* 測試用：木棧道、鐵軌的中心線（島上的公尺） */
     /* v923 小火車：train 是給 game.js 問的（有幾站、哪一班停在哪一站、座位現在在哪）；trainStep(共用時間的秒數, dt) 每一幀在移動玩家之前叫一次 */
+    /* v935 新主島的地圖：從上面往下看的小圖（1 公尺 2 格），第一次要用才畫，畫一次就留著 */
+    mapImg: () => { if (W2._mi) return W2._mi; const K = 2, cv = document.createElement('canvas'); cv.width = GW * K; cv.height = GH * K; const c = cv.getContext('2d'), im = c.createImageData(cv.width, cv.height), D = im.data;
+      const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+      const C = { sea: hex('#3d8fcc'), deep: hex('#2f78b4'), lake: hex('#5fb3dc'), mang: hex('#4f8f86'), sand: hex('#ecd9a6'), grass: hex('#8cc46a'), forest: hex('#4f8f4a'), pave: hex('#d9d2c4'), dirt: hex('#c9ad7c'), wood: hex('#b98a5a'), hill: hex('#7aa860') };
+      for (let j = 0; j < cv.height; j++) for (let i = 0; i < cv.width; i++){ const lx = X0 + (i + 0.5) / K, lz = Z0 + (j + 0.5) / K, h = samp(HG, lx, lz); let col, sh = 1;
+        if (deck(lx, lz) || samp(sdBoard, lx, lz) > 0) col = C.wood;
+        else if (h < WL - 0.02){ if (samp(sdMang, lx, lz) > -2.5) col = C.mang; else if (samp(sdMain, lx, lz) > 0 && samp(sdLake, lx, lz) > -1.5) col = C.lake; else if (samp(sdMain, lx, lz) > 0) col = C.lake; else { col = samp(sdMain, lx, lz) < -14 ? C.deep : C.sea; } }
+        else { if (paved(lx, lz, 0)) col = C.pave; else if (samp(sdTrail, lx, lz) > 0) col = C.dirt; else if (samp(sdSand, lx, lz) > 0 && h < 1.4) col = C.sand; else if (samp(sdFor, lx, lz) > 0) col = C.forest; else col = h > 6 ? C.hill : C.grass; sh = 0.92 + Math.min(0.16, h * 0.012); }
+        const o = (j * cv.width + i) * 4; D[o] = Math.min(255, col[0] * sh); D[o + 1] = Math.min(255, col[1] * sh); D[o + 2] = Math.min(255, col[2] * sh); D[o + 3] = 255; }
+      c.putImageData(im, 0, 0);
+      c.fillStyle = 'rgba(120,92,70,.85)'; for (let i = COL0; i < colliders.length; i++){ const q = colliders[i]; if (q.t === 'c' || !inBox(q.x - OX, q.z - OZ)) continue; const w = (q.bw || q.hw || 0) * 2, d = (q.bd || q.hd || 0) * 2; if (w * d < 9) continue; c.fillRect((q.x - OX - X0 - w / 2) * K, (q.z - OZ - Z0 - d / 2) * K, w * K, d * K); }
+      c.strokeStyle = '#6e4a2f'; c.lineWidth = 2; c.setLineDash([4, 3]); c.beginPath(); railLine.forEach((q, n) => { const x = (q[0] - X0) * K, y = (q[1] - Z0) * K; if (n) c.lineTo(x, y); else c.moveTo(x, y); }); c.closePath(); c.stroke(); c.setLineDash([]);
+      return (W2._mi = { cv, x0: OX + X0, z0: OZ + Z0, w: GW, h: GH }); },
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
-    bb: bbInfo, seats, doors, posts, benches, cave: caveInfo, mud: mudPts, homes,   /* v934 homes：居民區民宅的門口 */   /* v930 mud：紅樹林泥灘上小動物住的地方 */   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
+    bb: bbInfo, seats, doors, posts, benches, cave: caveInfo, mud: mudPts, homes, spotsAt,   /* v935 spotsAt：村子的發光釣點在新主島的位置（釣點代號不變） */   /* v934 homes：居民區民宅的門口 */   /* v930 mud：紅樹林泥灘上小動物住的地方 */   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
     /* v926 村民散步用。railNear：這一點是不是在鐵軌旁邊（m 公尺內）或月台上；stroll：可不可以當散步的去處——鋪了路的地（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋 */
     railNear: (x, z, m) => { const lx = x - OX, lz = z - OZ; return railDist(lx, lz) < (m || 1.6) || !!platAt(lx, lz); },
     stroll: (x, z, near) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (near ? samp(sdMain, lx, lz) > 1.5 && samp(sdFor, lx, lz) < -4 : samp(sdPave, lx, lz) > 0.3) && samp(HG, lx, lz) > 0.2 && !deck(lx, lz) && !platAt(lx, lz) && railDist(lx, lz) > 2.2; },   /* near：攤位旁邊幾步，不一定要鋪路，草地也行（不進森林、不下水） */   /* 高看板（螢幕、字幕條的 Mesh，中心高度）和它前面的座位：game.js 接節目、接坐下 */
@@ -705,6 +718,12 @@ export function init(A){
         if (p.at) for (const id in p.at){ const A = p.at[id], s = W2.shore(A[0], A[1], ok); if (!s || s.id !== id || Math.hypot(s.x - A[0], s.z - A[1]) > 45){ delete p.at[id]; continue; }
             const bx = s.x - Math.sin(s.face) * 1.6, bz = s.z - Math.cos(s.face) * 1.6, back = W2.walk(bx, bz) && !W2.water(bx, bz) && ok(bx, bz) && Math.abs(W2.h(bx, bz) - W2.h(s.x, s.z)) < 0.4;
             p.at[id] = { x: back ? bx : s.x, z: back ? bz : s.z, face: s.face }; RSV.push([p.at[id].x - OX, p.at[id].z - OZ, 2.6]); } } } catch(e){ console.warn('world2 posts', e); }
+    /* v935 發光的好釣點（村子的釣點搬過來，釣點代號不變）：每一種水挑一個好站的岸邊，離村民釣魚的位置 4 公尺以上 */
+    try { const W = (px, py) => { const q = P(px, py); return [OX + q[0], OZ + q[1]]; }, busy = (x, z) => Object.values(posts).some(q => q && q.x != null && Math.hypot(q.x - x, q.z - z) < 4);
+      const pr = PIERS[2]; if (pr) spotsAt.harbor = { x: OX + pr.x, z: OZ + pr.z0 + pr.L - 1.4, face: 0 };   /* 外海：港口中間那條棧橋的最尾端 */
+      for (const [id, px, py] of [['sea', 1420, 790], ['river', 640, 330], ['creek', 760, 262], ['lake', 905, 250], ['pool', 806, 222], ['mangrove', 430, 386]]){ let [ax, az] = W(px, py), got = null;
+        for (let k = 0; k < 4 && !got; k++){ const s2 = W2.shore(ax, az, (x, z) => ok(x, z) && !busy(x, z)); if (s2 && s2.id === id && Math.hypot(s2.x - ax, s2.z - az) < 45) got = s2; else { ax += 6; az += 3; } }
+        if (got){ spotsAt[id] = { x: got.x, z: got.z, face: got.face }; RSV.push([got.x - OX, got.z - OZ, 2.6]); } } } catch(e){ console.warn('world2 spots', e); }
     tideFix = null; }
   root.visible = false;
   return W2;

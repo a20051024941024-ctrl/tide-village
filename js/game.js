@@ -3252,7 +3252,7 @@ function castPoint(x, z, dx, dz, dist){
     const side = [sp.dir.y, -sp.dir.x];
     let mx = sp.pos.x - sp.dir.x*1.4 + side[0]*1.5, mz = sp.pos.z - sp.dir.y*1.4 + side[1]*1.5;
     if (!walkable(mx, mz)){ mx = sp.pos.x - sp.dir.x*1.4 - side[0]*1.5; mz = sp.pos.z - sp.dir.y*1.4 - side[1]*1.5; }
-    if (sp.id !== 'shrimp'){ const m = labelMarker(sp.color); m.position.set(mx, groundHeight(mx, mz), mz); scene.add(m); }   /* 釣蝦場裡面不要立一根標示柱（擋在走道中間） */
+    if (sp.id !== 'shrimp'){ const m = labelMarker(sp.color); m.position.set(mx, groundHeight(mx, mz), mz); scene.add(m); sp.marker = m; }   /* 釣蝦場裡面不要立一根標示柱（擋在走道中間） */
     // 魚群：在釣點前方找一處夠深的水
     const p = castPoint(sp.pos.x, sp.pos.z, sp.dir.x, sp.dir.y, 5);
     const g = new THREE.Group(); g.position.set(p[0], Math.max(terrainH(p[0], p[1]) + 0.25, -0.12), p[1]);
@@ -6969,13 +6969,15 @@ function seaPinsCall(fn, args, okMsg){ if (!Cloud.on || !Cloud.sb){ toast('連�
   return Cloud.sb.rpc(fn, args || {}).then(({ data, error }) => { SeaPins.busy = false; if (error){ toast(String(error.message || '現在連不上，等一下再試').slice(0, 60)); return false; } seaPinsSet(data); if (okMsg) toast(okMsg); return true; }, () => { SeaPins.busy = false; toast('現在連不上，等一下再試'); return false; }); }
 function seaPinsLoad(force){ if (!Cloud.on || !Cloud.sb) return Promise.resolve(false); if (!force && Date.now() - SeaPins.at < 60000) return Promise.resolve(true); return seaPinsCall('sea_pins_list'); }
 function renderMap(body){
-  body.appendChild(el('p', 'sub', '走到新的地點就會解鎖。點地圖上的地點，或下面的按鈕，就能直接傳送過去。'));
+  const W2V = !!(W2S.on && W2 && W2.mapImg && W2.near(me.pos.x, me.pos.z)), W2M = W2V ? W2.mapImg() : null;   /* v935 人在新主島：地圖畫新主島 */
+  body.appendChild(el('p', 'sub', W2V ? '這是新主島的地圖。點地圖上的店、人、釣點，會有箭頭帶你走過去；下面的按鈕可以傳送到別的地方。' : '走到新的地點就會解鎖。點地圖上的地點，或下面的按鈕，就能直接傳送過去。'));
   /* v294 玩家說地圖太亂：還沒去過的只畫「？」小點、標籤不重疊、可以放大拖動、外島放在四邊的小箭頭、上面可以只看釣點／商店／村民 */
   const MU = renderMap.st || (renderMap.st = { z: 1, ox: 0, oy: 0, show: { spot: true, shop: true, npc: true, pin: true } }); if (MU.show.pin == null) MU.show.pin = true;
   const bar = el('div', 'mapbar'); [['spot', '🎣 釣點'], ['shop', '🏪 商店'], ['npc', '🧑 村民'], ['pin', '📍 海圖']].forEach(([k, l]) => { const b = el('button', 'mapchip', l); b.setAttribute('aria-pressed', String(MU.show[k])); b.addEventListener('click', () => { MU.show[k] = !MU.show[k]; b.setAttribute('aria-pressed', String(MU.show[k])); draw(); }); bar.appendChild(b); });
   const zin = el('button', 'mapchip mz', '＋'), zout = el('button', 'mapchip mz', '－'), zre = el('button', 'mapchip mz', '⟲'); bar.append(zin, zout, zre); body.appendChild(bar);
   const wrap = el('div', 'mapwrap'); const cv = el('canvas', 'mapcv'); wrap.appendChild(cv); body.appendChild(wrap);
-  const tipEl = el('p', 'sub maptip', '用兩根手指放大縮小、一根手指拖動；點釣點可以傳送，點商店圖示會帶路。'); body.appendChild(tipEl);
+  const tipEl = el('p', 'sub maptip', W2M ? '用兩根手指放大縮小、一根手指拖動；點圖示會有箭頭帶你走過去。' : '用兩根手指放大縮小、一根手指拖動；點釣點可以傳送，點商店圖示會帶路。'); body.appendChild(tipEl);
+  if (W2M && !MU.w2){ MU.w2 = 1; MU.z = 1.5; MU.ox = MU.oy = 0; }   /* 新主島第一次打開：放大一點，看得到名字 */
   /* 共同海圖：選到的記號、做記號的按鈕 */
   const pinBar = el('div', 'tplist'); body.appendChild(pinBar);
   const pinUI = () => { pinBar.innerHTML = ''; const q = SeaPins.sel;
@@ -6988,7 +6990,7 @@ function renderMap(body){
         seaPinsCall('sea_pin_add', { p_kind: k, p_x: Math.round(me.pos.x * 10) / 10, p_z: Math.round(me.pos.z * 10) / 10 }, `📍 做好記號了：${PIN_K[k][1]}`).then(ok => { if (ok){ SeaPins.sel = SeaPins.list.find(x => x.mine) || null; pinUI(); draw(); } }); }); pinBar.appendChild(b); } };
   pinUI(); seaPinsLoad().then(() => { pinUI(); try { draw(); } catch(e){} });
   const dpr = Math.min(2, devicePixelRatio || 1); let S = 480, k = 1; const ctx = cv.getContext('2d'); const font = getComputedStyle(document.body).fontFamily;
-  const toB = (x, z) => [(-z + MAP_VIEW) / (MAP_VIEW * 2) * S, (x + MAP_VIEW) / (MAP_VIEW * 2) * S];   /* 上北下南、左西右東（放大前） */
+  const toB = (x, z) => W2M ? [(x - W2M.x0) * S / W2M.w, S / 2 + (z - W2M.z0 - W2M.h / 2) * S / W2M.w] : [(-z + MAP_VIEW) / (MAP_VIEW * 2) * S, (x + MAP_VIEW) / (MAP_VIEW * 2) * S];   /* 上北下南、左西右東（放大前）；新主島照規劃圖的方向 */
   const toPx = (x, z) => { const [bx, by] = toB(x, z); return [(bx - S / 2) * MU.z + S / 2 + MU.ox, (by - S / 2) * MU.z + S / 2 + MU.oy]; };
   const SHOP_ICON = { orders:'📋', aquarium:'🐠', chat:'💬', tackle:'🎣', shop:'🏪', cook:'🍲', museum:'🏛️', tailor:'👗', mu:'🪚', market:'🐟', salon:'💇', cai:'🎨', fu:'🦐' };
   const short = t => t.replace(/（[^）]*）/g, '').trim(), howOf = t => { const m = /（([^）]*)）/.exec(t); if (!m) return ''; return /阿海/.test(m[1]) ? '坐船：到港口找阿海' : m[1]; };
@@ -6996,7 +6998,8 @@ function renderMap(body){
   function clampView(){ const m = (MU.z - 1) * S / 2 + 20; MU.ox = clamp(MU.ox, -m, m); MU.oy = clamp(MU.oy, -m, m); if (MU.z <= 1){ MU.ox = 0; MU.oy = 0; } }
   function draw(){
     const cw = cv.clientWidth || 300; S = Math.round(cw * dpr); if (cv.width !== S){ cv.width = cv.height = S; } k = S / cw; clampView(); hits = [];
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#2f89c7'; ctx.fillRect(0, 0, S, S); ctx.imageSmoothingEnabled = true;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = W2M ? '#2f78b4' : '#2f89c7'; ctx.fillRect(0, 0, S, S); ctx.imageSmoothingEnabled = true;
+    if (W2M){ drawW2(); return; }
     ctx.drawImage(getMapImage(), S / 2 - S / 2 * MU.z + MU.ox, S / 2 - S / 2 * MU.z + MU.oy, S * MU.z, S * MU.z);
     const occ = [], fits = r => r[0] >= 2 && r[1] >= 2 && r[2] <= S - 2 && r[3] <= S - 2 && !occ.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
     const label = (txt, px, py, off, opt) => { opt = opt || {}; ctx.font = `bold ${Math.round((opt.fs || 12) * k)}px ${font}`; const w = ctx.measureText(txt).width + 10 * k, h = (opt.fs || 12) * k + 7 * k;
@@ -7039,6 +7042,21 @@ function renderMap(body){
     /* 指北針 */
     ctx.save(); ctx.translate(S - 22 * k, S - 22 * k); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(0, 0, 14 * k, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(0, -11 * k); ctx.lineTo(5 * k, 1 * k); ctx.lineTo(-5 * k, 1 * k); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#18334a'; ctx.font = `bold ${Math.round(9 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('北', 0, 7 * k); ctx.restore();
   }
+  /* v935 新主島的地圖：底圖＋釣點、店門、搬過來的人、小火車站、自己（點了帶路） */
+  function drawW2(){ const [ax, ay] = toPx(W2M.x0, W2M.z0), [bx, by] = toPx(W2M.x0 + W2M.w, W2M.z0 + W2M.h); ctx.drawImage(W2M.cv, ax, ay, bx - ax, by - ay);
+    const occ = [], fits = r => r[0] >= 2 && r[1] >= 2 && r[2] <= S - 2 && r[3] <= S - 2 && !occ.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
+    const lab = (t, px, py, o) => { const fs = Math.round((o.fs || 11) * k); ctx.font = `bold ${fs}px ${font}`; const w = ctx.measureText(t).width + 8 * k, h = fs + 6 * k;
+      for (const [dx, dy] of [[0, -1], [0, 1], [1, 0], [-1, 0]]){ const x = dx ? px + dx * (w / 2 + 10 * k) - w / 2 : px - w / 2, y = dy ? py + dy * (h / 2 + 10 * k) - h / 2 : py - h / 2, r = [x, y, x + w, y + h]; if (!fits(r)) continue;
+        occ.push(r); ctx.fillStyle = o.bg || 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, 5 * k) : ctx.rect(x, y, w, h); ctx.fill(); ctx.fillStyle = o.fg || '#18334a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t, x + w / 2, y + h / 2 + 0.5 * k); return; } };
+    const icon = (ic, px, py, r, bg) => { ctx.fillStyle = bg || 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(px, py, r, 0, 7); ctx.fill(); ctx.font = `${Math.round(r * 1.2)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ic, px, py + 0.5 * k); occ.push([px - r, py - r, px + r, py + r]); };
+    const meP = toPx(me.pos.x, me.pos.z), LQ = [];
+    { const T = W2.train; if (T && T.stops) for (const q of T.stops){ const [px, py] = toPx(q.x, q.z); icon('🚉', px, py, 8 * k, 'rgba(255,240,210,.95)'); hits.push({ c: [px, py], tip: q.name, nav: [q.name, q.x, q.z] }); if (MU.z >= 1.5) LQ.push([q.name, px, py, { fs: 10, bg: 'rgba(255,240,210,.92)' }]); } }
+    if (MU.show.spot){ const NM = { sea:'海邊', harbor:'碼頭', river:'河邊', lake:'湖邊', creek:'森林的溪邊', mangrove:'紅樹林', pool:'清溪潭' }; for (const id in (W2.spotsAt || {})){ const sp = SPOT_BY_ID[id]; if (!sp) continue; const [px, py] = toPx(sp.pos.x, sp.pos.z), nm = '🎣 ' + (NM[id] || sp.short);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * k; ctx.fillStyle = sp.color; ctx.beginPath(); ctx.arc(px, py, 7 * k, 0, 7); ctx.fill(); ctx.stroke(); occ.push([px - 8 * k, py - 8 * k, px + 8 * k, py + 8 * k]); hits.push({ c: [px, py], tip: nm, nav: [nm.slice(3) + '的好釣點', sp.pos.x, sp.pos.z, 1.4] }); LQ.unshift([nm, px, py, { fs: 11, bg: 'rgba(255,255,255,.95)' }]); } }
+    if (MU.show.shop || MU.show.npc) for (const [ic, l, q] of w2NavList()){ const [px, py] = toPx(q[0], q[1]); icon(ic, px, py, 9 * k); const t = l.replace(/（.*$/, ''); hits.push({ c: [px, py], tip: t, nav: [t, q[0], q[1]] }); if (MU.z >= 1.6) LQ.push([t, px, py, { fs: 10 }]); }
+    ctx.save(); ctx.translate(meP[0], meP[1]); ctx.rotate(-me.rot + Math.PI); ctx.fillStyle = PALETTE.coral; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5 * k; ctx.beginPath(); ctx.moveTo(0, -11 * k); ctx.lineTo(7 * k, 7 * k); ctx.lineTo(0, 3 * k); ctx.lineTo(-7 * k, 7 * k); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore(); occ.push([meP[0] - 12 * k, meP[1] - 12 * k, meP[0] + 12 * k, meP[1] + 12 * k]);
+    lab('你在這裡', meP[0], meP[1], { fs: 11, bg: PALETTE.coral, fg: '#fff' });
+    for (const q of LQ) lab(q[0], q[1], q[2], q[3]); }
   const zoomAt = (f, cx, cy) => { const z0 = MU.z, z1 = clamp(z0 * f, 1, 4); if (z1 === z0) return; cx = cx == null ? S / 2 : cx; cy = cy == null ? S / 2 : cy; MU.ox = cx - S / 2 - (cx - S / 2 - MU.ox) * z1 / z0; MU.oy = cy - S / 2 - (cy - S / 2 - MU.oy) * z1 / z0; MU.z = z1; draw(); };
   const meAt = () => { const [x, y] = toPx(me.pos.x, me.pos.z); return [clamp(x, 0, S), clamp(y, 0, S)]; }; zin.addEventListener('click', () => zoomAt(1.5, ...meAt())); zout.addEventListener('click', () => zoomAt(1 / 1.5, ...meAt()));   /* 按＋以自己的位置為中心放大 */ zre.addEventListener('click', () => { MU.z = 1; MU.ox = MU.oy = 0; draw(); });
   const ptr = new Map(); let moved = 0, pd0 = 0;
@@ -18322,6 +18340,12 @@ function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder || !questNpcs.l
     const p = PO.ferry, x = on ? p.x : W2S.fv.x, z = on ? p.z : W2S.fv.z; f.pos.set(x, groundHeight(x, z), z); f.baseY = f.pos.y; f.rot = on ? p.face : W2S.fv.rot; FERRY.at[0] = on ? p.x : W2S.fv.at[0]; FERRY.at[1] = on ? p.z : W2S.fv.at[1]; }
   if (PO.voy){ if (!W2S.vv) W2S.vv = { d: VOY_DOCK.slice(), e: VOY_EDGE.slice() }; const d = on ? PO.voy.dock : W2S.vv.d, e = on ? PO.voy.edge : W2S.vv.e; for (let i = 0; i < 3; i++) VOY_DOCK[i] = d[i]; VOY_EDGE[0] = e[0]; VOY_EDGE[1] = e[1]; }
   { const md = (W2.doors || []).find(q => q.k === 'market'); if (md){ if (!W2S.cv) W2S.cv = { x: CARGO_AT.village.x, z: CARGO_AT.village.z }; CARGO_AT.village.x = on ? md.x : W2S.cv.x; CARGO_AT.village.z = on ? md.z : W2S.cv.z; CARGO_AT.village.name = on ? '新主島・中央市場' : '村子・潮汐魚市場'; } }
+  /* v935 發光的好釣點：人在新主島時，村子的釣點（同一個代號）搬到新主島那一種水的岸邊；光圈、旁邊的標示柱、魚訊跟著搬 */
+  for (const id in (W2.spotsAt || {})){ const sp = SPOT_BY_ID[id]; if (!sp || !sp.pos || !sp.dir) continue; if (!sp.w2v) sp.w2v = { x: sp.pos.x, z: sp.pos.z, dx: sp.dir.x, dz: sp.dir.y, mk: sp.marker ? sp.marker.position.clone() : null };
+    const q = W2.spotsAt[id], x = on ? q.x : sp.w2v.x, z = on ? q.z : sp.w2v.z; sp.pos.x = x; sp.pos.z = z; if (on){ sp.dir.x = Math.sin(q.face); sp.dir.y = Math.cos(q.face); } else { sp.dir.x = sp.w2v.dx; sp.dir.y = sp.w2v.dz; }
+    if (sp.ring){ sp.ring.position.x = x; sp.ring.position.z = z; sp.ring.position.y = groundHeight(x, z) + 0.06; }
+    if (sp.marker){ if (on){ const sx = -sp.dir.y, sz = sp.dir.x; let mx = x - sp.dir.x * 1.4 + sx * 1.5, mz = z - sp.dir.y * 1.4 + sz * 1.5; if (!walkable(mx, mz) || blocked(mx, mz, 0.2)){ mx = x - sp.dir.x * 1.4 - sx * 1.5; mz = z - sp.dir.y * 1.4 - sz * 1.5; } sp.marker.position.set(mx, groundHeight(mx, mz), mz); } else if (sp.w2v.mk) sp.marker.position.copy(sp.w2v.mk); } }
+  if (signsAt.c) signsAt.c = {};   /* 魚訊照新的位置重算 */
   W2S.on = on; return true; }
 /* v933 從新主島出海的人，回來的時候回新主島：W2S.home＝最後是在新主島（不是舊村子）。
    在外島按「回港口」「回村子」、潛水上來、用地圖傳回村子裡的地點，都改送到新主島阿海那條棧橋 */
@@ -19839,7 +19863,7 @@ $('#ccShow').addEventListener('click', () => { if (ccEarly()) return;   // 釣�
 const GUIDE = [
   { t:'釣一條魚', h:() => { const n = nearestSpot(), can = n && (n.d < 1.7 || shoreSpot()); return can ? '到了！按住右下的「拋竿」，放開就甩出去。' : (isTouch ? '用左下的搖桿，走到地上發光的地方。' : '用 WASD 走到地上發光的地方。'); }, at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 1 },
   { t:'用手機看圖鑑', h:'不錯嘛。右上角的手機拿出來，點「圖鑑」，看看剛剛那條叫什麼。', at:() => null, ok:() => !!LS.get('tide.guideDex', false), ph:true },
-  { t:'把魚賣掉', h:'魚放久了不新鮮。拿去港邊的魚市場賣掉，捨不得的先養在魚缸。', at:() => LANDMARKS.find(l => l.id === 'shop').pos, ok:() => !!LS.get('tide.guideSold', false) },
+  { t:'把魚賣掉', h:() => W2S.on ? '魚放久了不新鮮。拿去中央市場旁邊的魚市場賣掉，捨不得的先養在魚缸。' : '魚放久了不新鮮。拿去港邊的魚市場賣掉，捨不得的先養在魚缸。', at:() => { const d = W2S.on && W2 && (W2.doors || []).find(q => q.k === 'market'); return d ? new THREE.Vector3(d.x, 0, d.z) : LANDMARKS.find(l => l.id === 'shop').pos; },   /* v935 新主島：帶去新主島的魚市場門口 */ ok:() => !!LS.get('tide.guideSold', false) },
   { t:'坐船出海', h:'村子邊就這幾種魚。去港口找阿海，叫他載你出去，不用錢。', at:() => new THREE.Vector3(FERRY.at[0], 0, FERRY.at[1]), ok:() => !!LS.get('tide.guideVoy', false) },
   { t:'在島上釣滿 5 條魚', h:() => '每個地方的魚不一樣，多釣幾條再說。' + `（${Math.min(5, rec.total)}/5）`, at:() => { const n = nearestSpot(); return n && n.spot && n.d > 1.5 ? n.spot.pos : null; }, ok:() => rec.total >= 5 },
 ];
