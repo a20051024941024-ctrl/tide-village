@@ -15555,6 +15555,8 @@ function updatePetFor(f, want, dt, t){
     if (t > w.at || Math.hypot(w.x - pt.pos.x, w.z - pt.pos.z) < 0.3){ w.at = t + rand(1.5, 3.5); const a = Math.random() * 6.283, r = Math.random() * (PETPARK[2] - 0.9); w.x = PETPARK[0] + Math.cos(a) * r; w.z = PETPARK[1] + Math.sin(a) * r; }
     petStep(pt, dt, t, w.x, w.z, groundHeight(pt.pos.x, pt.pos.z), true, Math.atan2(w.x - pt.pos.x, w.z - pt.pos.z)); return; }
   if (pt.park) pt.park = null;
+  if (f === me ? !!(mySeat && mySeat.train) : !!f.onTr){ const fx = Math.sin(f.rot), fz = Math.cos(f.rot);   /* v938 作者：「坐火車時寵物會懸在空中」→ 主人坐小火車，寵物蹲在主人腳邊的車廂地板上，跟著車走 */
+    pt.pos.set(f.pos.x + fx * 0.42, f.baseY - 0.34, f.pos.z + fz * 0.42); pt.vel = 0; petStep(pt, dt, t, pt.pos.x, pt.pos.z, f.baseY - 0.34, false, f.rot); return; }
   const c = Math.cos(f.rot), s = Math.sin(f.rot), ox = 0.75, oz = -0.85, tx = f.pos.x + c * ox + s * oz, tz = f.pos.z - s * ox + c * oz;
   petStep(pt, dt, t, tx, tz, f.baseY + (f.sitting ? 0 : 0), (f.speed || 0) > 0.3, Math.atan2(f.pos.x - pt.pos.x, f.pos.z - pt.pos.z));
 }
@@ -20341,7 +20343,7 @@ function updatePeers(dt, t){
     f.speed += ((d > 0.05 ? Math.min(6, d*8) : 0) - f.speed) * Math.min(1, dt*8);
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
-    if (p.tr && W2 && W2.train){ const q = W2.train.seat(p.tr[0], p.tr[1]); if (q && Math.hypot(q.x - p.target.x, q.z - p.target.z) < 40){ f.pos.x = q.x; f.pos.z = q.z; f.baseY = q.y; f.rot = q.face; f.speed = 0; } }   /* v923 坐小火車的人：直接放在我這邊同一班車的同一個位子（車的位置大家算出來一樣），不用等他一直傳位置過來 */
+    if (p.tr && W2 && W2.train){ const q = W2.train.seat(p.tr[0], p.tr[1]); if (q && Math.hypot(q.x - p.target.x, q.z - p.target.z) < 40){ f.pos.x = q.x; f.pos.z = q.z; f.baseY = q.y; f.rot = q.face; f.speed = 0; f.onTr = 1; } } else f.onTr = 0;   /* v923 坐小火車的人：直接放在我這邊同一班車的同一個位子（車的位置大家算出來一樣），不用等他一直傳位置過來 */
     { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on && !p.sub && !poolHides(f.pos.x, f.pos.z); if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04 + (WAVES.on ? waveH(f.pos.x, f.pos.z, now()) : 0), f.pos.z); f.boatMesh.rotation.y = f.rot; }   /* 別人的船也被同一圈浪晃 */
     f.dip = p.ph === 'bite' ? 3 + Math.sin(t*30)*0.15 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
