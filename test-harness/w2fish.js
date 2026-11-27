@@ -11,6 +11,7 @@ const K3=JSON.stringify({on:true,sex:'b',hair:'short',top:'tee',bot:'shorts',sho
  if(!ok){console.log('NO W2',JSON.stringify(errs.slice(0,6)));await b.close();process.exit(1);}
  await go(20);
  await p.evaluate(()=>{const T=__T;T.DayNight.fixed=10;for(const e of document.querySelectorAll('#toasts > *'))e.remove();});
+ await p.evaluate(lv=>{__T.ev('Env').tideTest=lv;for(let i=0;i<6;i++)__step(1,50)},+(process.env.TIDE||0));
  console.log('wl',await ev(`JSON.stringify({WL:waterSurface.position.y,WATER_LEVEL,cloud:!!Cloud.on,total:rec.total})`));
  const P=(x,y)=>[(x-965)*0.2,(y-505)*0.2];
  const tp=async(lx,lz,rot)=>p.evaluate(([lx,lz,rot])=>{const T=__T,E=T.ev,W=E('W2'),me=E('me'),x=W.ox+lx,z=W.oz+lz;try{E('cancelFishing')()}catch(e){};try{E('closeCatch')()}catch(e){};me.pos.x=x;me.pos.z=z;try{W.warm(x,z)}catch(e){};me.baseY=E('groundHeight')(x,z);me.pos.y=me.baseY;E('Jump').gy=me.baseY;me.rot=rot||0;E('cam').yaw=(rot||0)+Math.PI;E('Shore').at=0;for(let i=0;i<6;i++)__step(1,50);E('Shore').at=0;},[lx,lz,rot]);
@@ -69,6 +70,41 @@ const K3=JSON.stringify({on:true,sex:'b',hair:'short',top:'tee',bot:'shorts',sho
   } else await p.evaluate(()=>{try{__T.ev('cancelFishing')()}catch(e){};__step(6,50)});
   console.log('fish',id,JSON.stringify(o));lg(id+' done');
  }
+ // 3b) 每一種水邊挑 5 個位置、各用四種力道拋：浮標一定要落在水裡（窄的河以前會落在對岸草地上）
+ if(has('rep')){const rep={};for(const id of ['river','creek','mangrove','lake','sea','harbor']){const L=cand[id]||[];const o={n:0,dry:0,idle:0,bad:[]};const NJ=/river|creek|mangrove/.test(id)?4:2;for(let j=0;j<NJ;j++){const c=L[Math.floor((j+0.5)/NJ*L.length)];if(!c)continue;for(const fr of (/river|creek|mangrove/.test(id)?[5,14,26]:[8,24])){await tp(c[0],c[1],c[2]);
+    const st=await p.evaluate(fr=>{const T=__T,E=T.ev,me=E('me'),F=E('F'),W=E('W2');T.actionDown();for(let i=0;i<fr;i++)__step(1,50);T.actionUp();for(let i=0;i<40&&me.bobState!=='water'&&F.phase!=='idle';i++)__step(1,80);const r={ph:F.phase,bob:me.bobState,w:E('waterAt')(me.bobPos.x,me.bobPos.z),d:+Math.hypot(me.bobPos.x-me.pos.x,me.bobPos.z-me.pos.z).toFixed(1),l:[+(me.bobPos.x-W.ox).toFixed(1),+(me.bobPos.z-W.oz).toFixed(1)],sp:F.spot&&F.spot.id};try{E('cancelFishing')()}catch(e){};for(let i=0;i<4;i++)__step(1,50);return r},fr);
+    o.n++;if(st.ph==='idle'||st.bob!=='water')o.idle++;else if(!st.w){o.dry++;if(o.bad.length<4)o.bad.push([c[0],c[1],fr,st.l,st.d]);}}}rep[id]=o;console.log('rep1',id,JSON.stringify(o));}
+  console.log('rep',JSON.stringify(rep));lg('rep done');}
+ // 3c) 退潮：海水退掉的那一圈不算水（浮標不會落在露出來的沙上）；露出來的沙可以走上去、在上面拋竿；漲回來會被推回岸上
+ if(has('tide')&&pick.sea){const c=pick.sea;const setT=lv=>p.evaluate(lv=>{__T.ev('Env').tideTest=lv;for(let i=0;i<8;i++)__step(1,50)},lv);
+  const prof=async lv=>{await setT(lv);await tp(c[0],c[1],c[2]);return p.evaluate(()=>{const E=__T.ev,me=E('me'),W=E('W2'),dx=Math.sin(me.rot),dz=Math.cos(me.rot),U=E('waterSurface').material.uniforms;let first=null,walkTo=0;for(let d=0.2;d<8;d+=0.2){const x=me.pos.x+dx*d,z=me.pos.z+dz*d;if(first==null&&E('waterAt')(x,z))first=+d.toFixed(1);if(E('walkable')(x,z)&&walkTo>=d-0.21)walkTo=+d.toFixed(1);}E('Shore').at=0;const s=E('shoreSpot')();return {tideD:+U.uTideD.value.toFixed(2),up:+U.uTideUp.value.toFixed(2),firstWater:first,walkTo,shore:s?s.id:null}})};
+  const o={pick:c,mid:await prof(0),high:await prof(1),low:await prof(-1)};
+  // 乾潮：用搖桿往海裡走，走到走不動（應該停在水邊的濕沙上），在那裡拋竿
+  await tp(c[0],c[1],c[2]);
+  o.walk=await p.evaluate(()=>{const T=__T,E=T.ev,me=E('me'),cam=E('cam'),joy=E('joy'),x0=me.pos.x,z0=me.pos.z,r0=me.rot;cam.yaw=r0+Math.PI;joy.x=0;joy.z=-1;for(let i=0;i<120;i++)__step(1,50);joy.z=0;for(let i=0;i<6;i++)__step(1,50);E('Shore').at=0;const s=E('shoreSpot')();return {moved:+Math.hypot(me.pos.x-x0,me.pos.z-z0).toFixed(1),y:+me.pos.y.toFixed(2),dry:E('W2').dry(me.pos.x,me.pos.z),walk:E('walkable')(me.pos.x,me.pos.z),shore:s?s.id:null}});
+  // 慢慢走（搖桿只推一點點）也要走得下去：岸邊和濕沙中間不能有一條走不過去的縫；沿著整條海岸抽 40 個點看有沒有縫
+  await tp(c[0],c[1],c[2]);
+  o.slow=await p.evaluate(()=>{const T=__T,E=T.ev,me=E('me'),cam=E('cam'),joy=E('joy'),x0=me.pos.x,z0=me.pos.z;cam.yaw=me.rot+Math.PI;joy.x=0;joy.z=-0.22;for(let i=0;i<400;i++)__step(1,50);joy.z=0;return {moved:+Math.hypot(me.pos.x-x0,me.pos.z-z0).toFixed(1),y:+me.pos.y.toFixed(2),dry:E('W2').dry(me.pos.x,me.pos.z)}});
+  o.gap=await p.evaluate(()=>{const E=__T.ev,W=E('W2'),walkable=E('walkable');let n=0,gaps=0,maxGap=0;const bad=[];for(let k=0;k<400&&n<40;k++){const a=k*0.61803*6.2832,r0=40+((k*37)%160);let x=W.ox+Math.sin(a)*r0*0.9,z=W.oz+Math.cos(a)*r0*0.5;if(W.kind(x,z)!==6&&W.kind(x,z)!==4)continue;
+    /* 從這個岸邊的點往外找最近的海，沿著那條線每 2 公分量一次 */ let best=null;for(let j=0;j<24;j++){const b=j/24*6.2832;for(let d=0.5;d<9;d+=0.5)if(W.water(x+Math.sin(b)*d,z+Math.cos(b)*d)&&W.spot(x+Math.sin(b)*d,z+Math.cos(b)*d)==='sea'){if(!best||d<best[1])best=[b,d];break;}}if(!best)continue;n++;
+    const dx=Math.sin(best[0]),dz=Math.cos(best[0]);let run=0,worst=0,seenDry=false;for(let d=0;d<best[1];d+=0.02){const px=x+dx*d,pz=z+dz*d;if(walkable(px,pz)){if(run>0&&seenDry===false&&W.dry(px,pz)){}run=0;if(W.dry(px,pz))seenDry=true;}else{run+=0.02;worst=Math.max(worst,run);if(!seenDry){}}}
+    /* 只算「後面還有可以走的濕沙」的縫 */ let gap=0,cur=0;const flags=[];for(let d=0;d<best[1];d+=0.02)flags.push(walkable(x+dx*d,z+dz*d));const last=flags.lastIndexOf(true);for(let i=0;i<=last;i++){if(!flags[i]){cur+=0.02;gap=Math.max(gap,cur);}else cur=0;}
+    if(gap>0.001){gaps++;maxGap=Math.max(maxGap,gap);if(bad.length<4)bad.push([+(x-W.ox).toFixed(1),+(z-W.oz).toFixed(1),+gap.toFixed(2)]);}}
+   return {n,gaps,maxGap:+maxGap.toFixed(2),bad}});
+  await tp(c[0],c[1],c[2]);await p.evaluate(()=>{const T=__T,E=T.ev,me=E('me'),cam=E('cam'),joy=E('joy');cam.yaw=me.rot+Math.PI;joy.x=0;joy.z=-1;for(let i=0;i<120;i++)__step(1,50);joy.z=0;for(let i=0;i<6;i++)__step(1,50);});
+  await p.evaluate(()=>{for(let i=0;i<24;i++)__step(1,50)});await go(2);o.btn=await btn();await snap(D+'tide_low_sand.jpg');
+  o.casts=[];for(const fr of [4,12,26]){o.casts.push(await p.evaluate(fr=>{const T=__T,E=T.ev,me=E('me'),F=E('F'),W=E('W2'),U=E('waterSurface').material.uniforms;T.actionDown();for(let i=0;i<fr;i++)__step(1,50);T.actionUp();for(let i=0;i<40&&me.bobState!=='water'&&F.phase!=='idle';i++)__step(1,80);const h=W.tinfo(me.bobPos.x,me.bobPos.z).h;return {ph:F.phase,w:E('waterAt')(me.bobPos.x,me.bobPos.z),depth:+(-h).toFixed(2),wet:-h>U.uTideD.value+0.06,d:+Math.hypot(me.bobPos.x-me.pos.x,me.bobPos.z-me.pos.z).toFixed(1)}},fr));
+   if(fr===12){await go(4);await snap(D+'tide_low_cast.jpg');} await p.evaluate(()=>{try{__T.ev('cancelFishing')()}catch(e){};for(let i=0;i<4;i++)__step(1,50)});}
+  // 漲回來：站在濕沙上的人要被推回岸上
+  const before=await p.evaluate(()=>{const me=__T.ev('me');return [me.pos.x,me.pos.z]});await setT(1);
+  o.flood=await p.evaluate(b=>{const E=__T.ev,me=E('me');for(let i=0;i<70;i++)__step(1,50);return {pushed:+Math.hypot(me.pos.x-b[0],me.pos.z-b[1]).toFixed(1),walk:E('walkable')(me.pos.x,me.pos.z),dry:E('W2').dry(me.pos.x,me.pos.z),y:+me.pos.y.toFixed(2)}},before);
+  // 乾潮時按「找釣點」：帶到水邊（可能在濕沙上），到了要能拋竿
+  await setT(-1);o.nav=[];for(const [nm,lx,lz] of [['活動場地',...P(1112,730)],['主城廣場',...P(975,560)]]){await tp(lx,lz,0);
+   const nav=await p.evaluate(()=>{const T=__T,E=T.ev,W=E('W2'),me=E('me');E('goFishing')();const t=E('Nav').t;return t?{label:t.label,l:[+(t.x-W.ox).toFixed(1),+(t.z-W.oz).toFixed(1)],d:+Math.hypot(t.x-me.pos.x,t.z-me.pos.z).toFixed(1),dry:W.dry(t.x,t.z)}:null});
+   let w=null;if(nav){for(let f=0;f<1500;f++){w=await p.evaluate(()=>{const T=__T,E=T.ev,me=E('me'),cam=E('cam'),joy=E('joy'),t=E('Nav').t;if(!t){joy.x=0;joy.z=0;__step(1,50);E('Shore').at=0;const s=E('shoreSpot')();return {done:1,s:s?s.id:null,y:+me.pos.y.toFixed(2)}}const dx=t.x-me.pos.x,dz=t.z-me.pos.z;cam.yaw=Math.atan2(-dx,-dz);joy.x=0;joy.z=-1;__step(1,50);return {d:+Math.hypot(dx,dz).toFixed(1)}});if(w.done)break;}}
+   await p.evaluate(()=>{const E=__T.ev;E('joy').z=0;E('Nav').t=null;for(let i=0;i<6;i++)__step(1,50)});o.nav.push([nm,nav,w]);}
+  await setT(+(process.env.TIDE||0));
+  console.log('tide',JSON.stringify(o));lg('tide done');}
  // 4) 水裡的魚影：站在港口棧橋上一下子，數一數在新主島水裡游的魚
  if(has('fai')&&pick.harbor){await tp(pick.harbor[0],pick.harbor[1],pick.harbor[2]);const fai=await p.evaluate(()=>{const T=__T,E=T.ev,W=E('W2');for(let i=0;i<400;i++)__step(1,50);const A=E('FAI').agents.filter(a=>!a.dead);return {n:A.length,inW2:A.filter(a=>W.near(a.pos.x,a.pos.z)&&E('waterAt')(a.pos.x,a.pos.z)).length,ids:[...new Set(A.map(a=>a.f.id))].slice(0,8),y:A.slice(0,4).map(a=>+a.pos.y.toFixed(2))}});console.log('fai',JSON.stringify(fai));lg('fai done');}
  // 5) 別人看我釣魚：把我現在的狀態當成另一個玩家送進來，浮標要在新主島；打窩同步給晚到的人
