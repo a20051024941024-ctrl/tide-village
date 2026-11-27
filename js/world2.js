@@ -295,10 +295,10 @@ export function init(A){
     const ROOF = ['#c0583a', '#4a6fb5', '#7a5aa0', '#d08a2a', '#3e8f86', '#e2574c', '#3c8fd8', '#4bb57b'];
     /* 民宅＝三層樓透天和兩層街屋輪流；商店街＝一樓是店面的街屋，每四間一間小木屋店。門都朝著路 */
     const PASTEL = ['#f2b6c0', '#f4d9a0', '#c7e3c0', '#f6c9a8', '#b9d9ee'], COTK = ['cloth', 'hair', 'wood', 'art'], cots = [], stands = []; let hN = 0;   /* cots：小木屋店（哪一種、在哪、門朝哪）；stands：攤子模型放在哪——村民擺攤、站崗的位置從這裡來 */
-    const house = (px, py, w, d, roof, ry, kind) => { const [x, z] = P(px, py); if (paved(x, z, 1.2) || samp(sdLand, x, z) < 4 || hAt(x, z) < 0.2) return; const q = Math.abs(Math.sin(ry || 0)) > 0.7;
+    const house = (px, py, w, d, roof, ry, kind, ck) => { const [x, z] = P(px, py); if (paved(x, z, 1.2) || samp(sdLand, x, z) < 4 || hAt(x, z) < 0.2) return; const q = Math.abs(Math.sin(ry || 0)) > 0.7;
       /* 作者 11/27：「其實原本的房子還可以」→ 民宅和店面用村子現在那一套街屋（民宅＝三層樓透天和兩層街屋輪流；商店街一樓是店面，每四間一間小木屋店） */
       if (TWB){ const g = new THREE.Group(), sd = hN++; g.position.set(x, Math.max(0.2, hAt(x, z)), z); g.rotation.y = ry || 0; twRoot.add(g);
-        if (kind === 'shop' && sd % 4 === 1){ TWB.cottage(g, { w: w - 0.4, d, front: d / 2, kind: COTK[(sd >> 2) % 4] }); cots.push({ k: COTK[(sd >> 2) % 4], x, z, face: ry || 0, d }); }
+        if (kind === 'shop' && (ck || sd % 4 === 1)){ const kk = ck || COTK[(sd >> 2) % 4]; TWB.cottage(g, { w: w - 0.4, d, front: d / 2, kind: kk }); cots.push({ k: kk, x, z, face: ry || 0, d }); }
         else { const sub = new THREE.Group(), S = 1.34; sub.scale.setScalar(S); g.add(sub); TWB.house(sub, kind === 'shop' ? { w: w / S, d: d / S, fl: 2 + (sd % 3 === 0 ? 1 : 0), front: d / 2 / S, seed: sd * 7 + 1, kind: 'shop' } : { w: w / S, d: d / S, fl: sd % 2 ? 3 : 2, front: d / 2 / S, seed: sd * 5 + 2, kind: 'home', wall: HWALL[roof] || PASTEL[sd % 5] }); } }
       else { B(parts, '#f7efe1', w, 2.9, d, x, 1.75, z, ry); const g = roofG(w + 0.5, d + 0.7, 1.7); if (ry) g.rotateY(ry); G(parts, roof, g, x, 3.2, z); }
       colliders.push({ t: 'b', x: OX + x, z: OZ + z, hw: (q ? d : w) / 2 + 0.1, hd: (q ? w : d) / 2 + 0.1 }); RSV.push([x, z, Math.max(w, d) * 0.75]); };
@@ -308,10 +308,14 @@ export function init(A){
     const EVTG = grow(EVT, 16), street = [];
     const faceRoad = (x, z) => { let best = 0, bv = -1e9; for (let k = 0; k < 4; k++){ const a = k * Math.PI / 2, v = samp(sdPave, x + Math.sin(a) * 4, z + Math.cos(a) * 4); if (v > bv){ bv = v; best = a; } } return best; };
     for (const [cx, cy, sz, ci, shop] of HS){ const [hx, hz] = P(cx, cy), wd = [[5.4, 4.4], [5.2, 4.2], [4.6, 3.8]][sz]; if (inPoly(EVTG, cx, cy)) continue;   /* 活動場地上的房子拿掉 */ if (RSV.some(([rx, rz, rr]) => rr >= 5 && Math.hypot(hx - rx, hz - rz) < rr + 1.5)) continue; const col = Math.abs(cx - 949) < 4 ? 0 : Math.abs(cx - 1021) < 4 ? 1 : -1, onSt = col >= 0 && cy > 600 && cy < 790, fr = onSt ? (col ? -Math.PI / 2 : Math.PI / 2) : faceRoad(hx, hz);   /* 商店街兩排一定面對大道（不然靠近別條路的會轉過去） */
-      house(cx, cy, wd[0], wd[1], HCOL[ci], fr, shop || onSt ? 'shop' : 'home'); if (onSt) street.push({ col, row: Math.round((cy - 611) / 32), x: hx, z: hz, face: fr, d: wd[1] }); }
+      /* v927 商店街東排那三間小木屋店，裡面擺的東西要跟招牌對得上：最北那間掛的是「阿彩畫廊」→ 擺畫（以前剛好排到理髮店的擺設，畫廊的招牌掛在理髮店上）；
+         中間那間是阿萍的美髮沙龍；最靠港口那間留給阿綾的服裝店 */
+      const row = Math.round((cy - 611) / 32), ck = onSt && col === 1 ? { 0: 'art', 3: 'hair', 5: 'cloth' }[row] : null;
+      house(cx, cy, wd[0], wd[1], HCOL[ci], fr, shop || onSt ? 'shop' : 'home', ck); if (onSt) street.push({ col, row, x: hx, z: hz, face: fr, d: wd[1] }); }
     /* v921 可以走進去的店（作者 11/27：「可以開始改了」→ 港口和商店街先接上）：店的裡面是村子現在那幾間（釣具店、木工坊、畫廊、寵物店、食堂、撞球館、釣蝦場、魚市場、博物館、體育場），
        新主島這邊只是多一個門：走到門口按「進去看看」，出來回到這個門。門牌用村子的直式掛牌 */
-    const door = (k, label, icon, x, z, face) => { const fx = Math.sin(face), fz = Math.cos(face); doors.push({ k, label, x: OX + x, z: OZ + z, face }); if (A.sign){ const g = new THREE.Group(), sx = x + fz * 1.9 - fx * 0.5, sz2 = z - fx * 1.9 - fz * 0.5; g.position.set(sx, Math.max(0.2, hAt(sx, sz2)), sz2); town.add(g); A.sign(g, label, icon, 0, 0); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz2, r: 0.2 }); } };
+    const plate = (label, icon, x, z, face) => { if (!A.sign) return; const fx = Math.sin(face), fz = Math.cos(face), g = new THREE.Group(), sx = x + fz * 1.9 - fx * 0.5, sz2 = z - fx * 1.9 - fz * 0.5; g.position.set(sx, Math.max(0.2, hAt(sx, sz2)), sz2); town.add(g); A.sign(g, label, icon, 0, 0); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz2, r: 0.2 }); };   /* 門口旁邊的直式掛牌 */
+    const door = (k, label, icon, x, z, face) => { doors.push({ k, label, x: OX + x, z: OZ + z, face }); plate(label, icon, x, z, face); };
     { const Wc = street.filter(q => q.col === 0).sort((a, b) => a.row - b.row), Ec = street.filter(q => q.col === 1).sort((a, b) => a.row - b.row), free = [], put = (h, k, label, icon) => { if (h){ h.used = 1; door(k, label, icon, h.x + Math.sin(h.face) * (h.d / 2 + 0.9), h.z + Math.cos(h.face) * (h.d / 2 + 0.9), h.face); } else free.push([k, label, icon]); };
       /* 西排由北到南：食堂、木工坊、撞球館；東排：畫廊、寵物店、釣蝦場；最靠港口那一間是釣具店。哪一間房子被拿掉了（例如讓給活動場地）就排到還空著的房子 */
       put(Wc[0], 'cafe', '潮汐食堂', '🍱'); put(Ec[0], 'cai', '阿彩畫廊', '🎨'); put(Wc[1], 'mu', '阿木木工坊', '🪑'); put(Ec[1], 'pet', '小花寵物店', '🐾'); put(Wc[2], 'pool', '潮汐撞球館', '🎱'); put(Ec[2], 'shrimp', '釣蝦場', '🦐'); put(Wc.length > 3 ? Wc[Wc.length - 1] : null, 'tackle', '釣具店', '🎣');
@@ -381,6 +385,19 @@ export function init(A){
         B(parts, '#2f7fa8', 0.52, 0.3, 0.36, x + 0.2, 0.8, z - 1.0); B(parts, '#f4f6f8', 0.54, 0.07, 0.38, x + 0.2, 0.985, z - 1.0); B(parts, '#c8ced6', 0.2, 0.03, 0.04, x + 0.2, 1.035, z - 1.0);
         G(parts, '#8a6038', new THREE.CylinderGeometry(0.17, 0.14, 0.3, 10), x + 0.25, 0.8, z + 0.9); G(parts, '#5fb3d9', new THREE.CylinderGeometry(0.15, 0.15, 0.02, 10), x + 0.25, 0.93, z + 0.9);
         colliders.push({ t: 'c', x: OX + x + 0.2, z: OZ + z - 1.0, r: 0.3 }, { t: 'c', x: OX + x + 0.25, z: OZ + z + 0.9, r: 0.2 }); } }
+    /* ---- v927 第二批：阿報、村子大看板、村長、築城守土、老王、阿萍、蔚博士，還有三位釣魚的村民 ---- */
+    { const [x, z] = P(990, 547); post('news', x, z, -0.86, { r: 4.2 }); }                     /* 📰 阿報：噴水池和出生點中間偏東，一出生就看得到他（村子裡他也是站在廣場上喊號外） */
+    { const [x, z] = P(884, 512); post('tboard', x, z, Math.PI / 2); }                         /* 🏆 村子大看板：廣場西邊，往水族館和往博物館兩條大道的中間，面向噴水池 */
+    { const [x, z] = P(948, 359); post('chief', x, z, 0); }                                    /* 村長 阿土伯：村公所門口的左邊，面向廣場（村子裡他也站在村長辦公室門口） */
+    { const [x, z] = P(994, 366); post('zc', x, z, 0); }                                       /* 🏰 築城守土的沙盤桌：村公所門口的右邊 */
+    { const [x, z] = P(944, 818); post('wang', x, z, 0.5); }                                   /* 漁夫 老王：港邊木棧道上，木桶旁邊，看著海 */
+    { const h = street.find(q => q.col === 1 && q.row === 3); if (h){ const f = h.face, fx = Math.sin(f), fz = Math.cos(f), lx = Math.cos(f), lz = -Math.sin(f);   /* 💇 阿萍：商店街東排中間那間美髮沙龍的門口（掛牌在門的另一邊） */
+        post('salon', h.x + fx * 2.8 - lx * 1.8, h.z + fz * 2.8 - lz * 1.8, f, { r: 4.2 }); plate('阿萍美髮沙龍', '💇', h.x + fx * (h.d / 2 + 0.9), h.z + fz * (h.d / 2 + 0.9), f); } }
+    /* 🔬 蔚博士：平常在水族館入口旁邊。村子裡她每天站在「今天調查的釣點」旁邊——新主島有同一種水的話（海邊、外海、河、溪、湖、紅樹林），game.js 會把她放到 at 裡那一種水最近的岸邊 */
+    { const [x, z] = P(640, 410), W = (px, py) => { const q = P(px, py); return [OX + q[0], OZ + q[1]]; }, pe = piers[4];
+      post('sci', x + 15.8, z + 2.2, Math.PI / 2, { r: 3.4, at: { sea: W(1440, 794), harbor: pe ? [OX + pe.x, OZ + pe.z0 + pe.L - 1.5] : W(1160, 940), river: W(655, 322), creek: W(775, 258), lake: W(900, 228), mangrove: W(385, 400) } }); }
+    /* 釣魚的村民：shore＝站到這附近最近的水邊、面朝水（game.js 用 W2.shore 找）。阿潮在陽光沙灘、小溪在水族館北邊的河岸（靠鎮上這一邊）、阿蘭（紅樹林巡守員）在紅樹林的木棧道上 */
+    { const [x, z] = P(1560, 786); post('chao', x, z, 0, { shore: true }); } { const [x, z] = P(600, 325); post('xi', x, z, 0, { shore: true }); } { const [x, z] = P(300, 396); post('lan', x, z, 0, { shore: true }); }
     if (TWB) try { TWB.merge(twRoot); } catch(e){ console.warn('world2 merge', e); }   /* 幾十棟房子同一種材質的零件併成一塊，畫面負擔才不會隨房子數量增加 */
     flush(parts, town); }
   /* 遊樂園：摩天輪會轉（先這一樣會動，其他設施之後補） */
@@ -470,7 +487,8 @@ export function init(A){
 
   /* v922 潮汐（跟舊島一樣）：海水退掉多少（公尺，0～0.3）。海岸前 3 公尺是緩緩的淺灘，乾潮時水深不到這個數字的地方，水面著色器不畫水、露出濕沙。
      seaAt：這一格是海（不是河、湖、紅樹林——那些不退潮）；dryAt：露出來、可以走上去的濕沙；wetAt：可以下竿的水（退潮時要再深 9 公分才算，浮標才不會落在濕沙上） */
-  const tideD = () => { const U = waterSurface.material.uniforms.uTideD; return U ? U.value : 0; };
+  let tideFix = null;   /* 排位置的時候用：當成滿潮來算（不然剛好退潮進遊戲，「水邊」會排到退潮才露出來的沙地上） */
+  const tideD = () => { if (tideFix != null) return tideFix; const U = waterSurface.material.uniforms.uTideD; return U ? U.value : 0; };
   const seaAt = (lx, lz) => samp(sdLand, lx, lz) <= 0 && samp(sdMang, lx, lz) < -3.2;
   const deckNear = (lx, lz, m) => { for (const d of DECKS) if (lx > d[0] - m && lx < d[1] + m && lz > d[2] - m && lz < d[3] + m) return true; return false; };
   const dryAt = (lx, lz) => { const td = tideD(); if (td < 0.02 || !inBox(lx, lz)) return false; const h = samp(HG, lx, lz); return h < WL - 0.02 && -h <= td - 0.01 && samp(sdLand, lx, lz) <= 0.75 && samp(sdMang, lx, lz) < -3.2 && !deckNear(lx, lz, 2.5); };   /* 棧橋旁邊 2.5 公尺不算（不然會從棧橋邊掉到沙上，或從沙上卡在橋樁旁邊） */
@@ -512,14 +530,24 @@ export function init(A){
     /* v923 小火車：train 是給 game.js 問的（有幾站、哪一班停在哪一站、座位現在在哪）；trainStep(共用時間的秒數, dt) 每一幀在移動玩家之前叫一次 */
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
     bb: bbInfo, seats, doors, posts,
-    /* v926 村民散步用。rail：這一點是不是在鐵軌旁邊（m 公尺內）或月台上；stroll：可不可以當散步的去處——鋪了路的地（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋 */
-    rail: (x, z, m) => { const lx = x - OX, lz = z - OZ; return railDist(lx, lz) < (m || 1.6) || !!platAt(lx, lz); },
+    /* v926 村民散步用。railNear：這一點是不是在鐵軌旁邊（m 公尺內）或月台上；stroll：可不可以當散步的去處——鋪了路的地（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋 */
+    railNear: (x, z, m) => { const lx = x - OX, lz = z - OZ; return railDist(lx, lz) < (m || 1.6) || !!platAt(lx, lz); },
     stroll: (x, z, near) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (near ? samp(sdMain, lx, lz) > 1.5 && samp(sdFor, lx, lz) < -4 : samp(sdPave, lx, lz) > 0.3) && samp(HG, lx, lz) > 0.2 && !deck(lx, lz) && !platAt(lx, lz) && railDist(lx, lz) > 2.2; },   /* near：攤位旁邊幾步，不一定要鋪路，草地也行（不進森林、不下水） */   /* 高看板（螢幕、字幕條的 Mesh，中心高度）和它前面的座位：game.js 接節目、接坐下 */
     /* 這一點是什麼地：0 不是主島、1 水和紅樹林、2 路和廣場、3 森林、4 沙灘、5 蓋了東西、6 海岸邊、7 空草地（量「還有多少地沒用」用的） */
     kind: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz) || samp(sdMain, lx, lz) <= 0) return 0; if (samp(HG, lx, lz) < WL || samp(sdMang, lx, lz) > -3) return 1; if (paved(lx, lz, 0.5)) return 2; if (samp(sdFor, lx, lz) > -4) return 3; if (samp(sdSand, lx, lz) > -3) return 4; if (reserved(lx, lz)) return 5; if (samp(sdLand, lx, lz) < 6) return 6; return 7; },
     /* 預覽用：一按就過去的地點（島上的公尺） */
     spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 822, 190], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
   };
+  /* v927 要站在水邊的位置（釣魚的村民、蔚博士調查的岸邊）：從排好的那一點找最近的水邊（當成滿潮），站好、面朝水；不靠鐵軌、不站在東西裡面；那裡不長樹。
+     蔚博士的往後退一步半（不擋到在那裡釣魚的人）。找不到同一種水的就拿掉，她留在水族館入口。 */
+  { const hitC = (x, z, m) => { for (let i = COL0; i < colliders.length; i++){ const c = colliders[i], dx = x - c.x, dz = z - c.z; if (c.t === 'c' ? Math.hypot(dx, dz) < c.r + m : Math.abs(dx) < (c.bw || c.hw) + m && Math.abs(dz) < (c.bd || c.hd) + m) return true; } return false; };
+    const ok = (x, z) => !hitC(x, z, 0.45) && railDist(x - OX, z - OZ) > 2.4; tideFix = 0;
+    try { for (const k in posts){ const p = posts[k];
+        if (p.shore){ const s = W2.shore(p.x, p.z, ok); if (s && Math.hypot(s.x - p.x, s.z - p.z) < 45){ p.x = s.x; p.z = s.z; p.face = s.face; p.fishing = true; RSV.push([s.x - OX, s.z - OZ, 2.6]); } else p.fishing = false; }
+        if (p.at) for (const id in p.at){ const A = p.at[id], s = W2.shore(A[0], A[1], ok); if (!s || s.id !== id || Math.hypot(s.x - A[0], s.z - A[1]) > 45){ delete p.at[id]; continue; }
+            const bx = s.x - Math.sin(s.face) * 1.6, bz = s.z - Math.cos(s.face) * 1.6, back = W2.walk(bx, bz) && !W2.water(bx, bz) && ok(bx, bz) && Math.abs(W2.h(bx, bz) - W2.h(s.x, s.z)) < 0.4;
+            p.at[id] = { x: back ? bx : s.x, z: back ? bz : s.z, face: s.face }; RSV.push([p.at[id].x - OX, p.at[id].z - OZ, 2.6]); } } } catch(e){ console.warn('world2 posts', e); }
+    tideFix = null; }
   root.visible = false;
   return W2;
 }

@@ -18270,9 +18270,14 @@ const W2_FIX = [
   { k: 'board', get: () => [BOARD.x, BOARD.z, BOARD.rot], set: (x, z, r) => { BOARD.x = x; BOARD.z = z; BOARD.rot = r; }, g: () => Board.g, build: () => buildBoard(), cols: (x, z, r) => addOBoxCol(x, z, 2.6, 0.4, r) },
   { k: 'orders', get: () => [ORDB.x, ORDB.z, ORDB.rot], set: (x, z, r) => { ORDB.x = x; ORDB.z = z; ORDB.rot = r; }, g: () => Ord.g, build: () => { if (!onIsle) ordBuild(); },
     cols: (x, z, r) => { const c = Math.cos(r), s0 = Math.sin(r); addOBoxCol(x, z, 3.2, 0.5, r); addOBoxCol(x + s0 * 0.27, z + c * 0.27, 3.0, 0.5, r); for (const [lx, lz, rr] of [[1.05, 0.62, 0.36], [-1.02, 0.64, 0.34]]) colliders.push({ t:'c', x: x + c * lx + s0 * lz, z: z - s0 * lx + c * lz, r: rr, keepWalk: true }); } },
+  { k: 'tboard', get: () => [TBOARD.x, TBOARD.z, TBOARD.rot], set: (x, z, r) => { TBOARD.x = x; TBOARD.z = z; TBOARD.rot = r; }, g: () => Team.g, build: () => { if (!CLASSIC) buildTeamBoard(); }, skip: () => CLASSIC,
+    cols: (x, z, r) => { const c = Math.cos(r), s0 = Math.sin(r); for (const sx of [-2.25, 2.25]) colliders.push({ t:'c', x: x + c * sx, z: z - s0 * sx, r: 0.22 }); } },
+  { k: 'zc', get: () => ZC.at.slice(), set: (x, z, r) => { ZC.at[0] = x; ZC.at[1] = z; ZC.at[2] = r; }, g: () => ZC.g, build: () => {}, cols: (x, z, r) => addOBoxCol(x, z, 1.8, 1.25, r) },
 ];
 /* 會搬的村民：新主島的位置名字 → 是哪一個村民 */
-const W2_NPC = { craft: n => n.shopNpc === 'craft', gang: n => n.wid === 'gang' };
+const W2_NPC = { craft: n => n.shopNpc === 'craft', gang: n => n.wid === 'gang', news: n => n.shopNpc === 'news', salon: n => n.shopNpc === 'salon', sci: n => n.shopNpc === 'sci',
+  chao: n => n.npcName.startsWith('阿潮'), xi: n => n.npcName.startsWith('小溪'), lan: n => n.npcName.startsWith('阿蘭') };
+const W2_QNPC = ['chief', 'wang'];   /* 發任務的村長、老王也搬（美雲姨在食堂裡面，從新主島的食堂門進去就看得到）*/
 function w2SiteWant(){ if (!W2 || !W2.posts) return false; if (W2.near(me.pos.x, me.pos.z)) return true; return W2S.on && (inIndoor() || inHall() || inStad()); }   /* 從新主島的門走進店裡（店的裡面在舊島那邊）：先不動，出來還在新主島 */
 /* 把一個村民放到某個位置重新開始：散步的去處、躲雨的路、讓位的原點都跟舊位置有關，全部忘掉重算；手上的魚收起來。fishing：站好就甩竿（bob 有給＝浮標已經在水裡） */
 function w2NpcPut(n, x, z, rot, fishing, bob, y){ const gy = y != null ? y : groundHeight(x, z);
@@ -18282,20 +18287,31 @@ function w2NpcPut(n, x, z, rot, fishing, bob, y){ const gy = y != null ? y : gro
   if (n.held){ n.av.g.remove(n.held.o); n.held = null; } n.sitting = false; n.emote = null; n.flying = null; n.dip = 0; n.bend = 0; n.windup = 0; n.castT = -1;
   if (fishing){ n.fishing = true; if (bob){ n.bobPos.copy(bob); n.bobState = 'water'; n.st = 'wait'; n.next = now() + rand(3, 8); } else { n.bobState = 'none'; n.st = 'windup'; n.stT = 0; } }
   else { n.fishing = false; n.bobState = 'none'; n.st = 'wait'; n.next = now() + 5; } }
-function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder) return false;
-  for (const F of W2_FIX){ if (!PO[F.k]) continue; if (!F.g()){ try { F.build(); } catch(e){} if (!F.g()) return false; } }   /* 板子還沒蓋：先照舊村子的位置蓋好（那邊的碰撞才會在），蓋不出來就下次再搬 */
-  for (const F of W2_FIX){ const p = PO[F.k]; if (!p) continue; if (!F.v){ F.v = F.get(); F.cols(p.x, p.z, p.face); }
+function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder || !questNpcs.length) return false;
+  for (const F of W2_FIX){ if (!PO[F.k] || (F.skip && F.skip())) continue; if (!F.g()){ try { F.build(); } catch(e){} if (!F.g()) return false; } }   /* 板子還沒蓋：先照舊村子的位置蓋好（那邊的碰撞才會在），蓋不出來就下次再搬 */
+  for (const F of W2_FIX){ const p = PO[F.k]; if (!p || (F.skip && F.skip())) continue; if (!F.v){ F.v = F.get(); F.cols(p.x, p.z, p.face); }
     const [x, z, r] = on ? [p.x, p.z, p.face] : F.v; F.set(x, z, r); const g = F.g(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; }
-  for (const k in W2_NPC){ const p = PO[k], n = npcs.find(W2_NPC[k]); if (!p || !n || !n.v0) continue;
-    if (on) w2NpcPut(n, p.x, p.z, p.face, !!p.fishing, null); else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); n.w2on = on; }
+  for (const k in W2_NPC){ const p = PO[k], n = npcs.find(W2_NPC[k]); if (!p || !n || !n.v0) continue; n.w2on = on;
+    if (k === 'sci'){ if (on){ n.w2sk = w2SciKey(); w2SciPlace(n); } else { w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, false, null, n.v0.y); if (Sci.list){ Sci.ok = false; try { sciPlace(); } catch(e){} } } continue; }   /* 蔚博士：兩邊都是「今天調查的地方」，各自重新找 */
+    if (on) w2NpcPut(n, p.x, p.z, p.face, !!p.fishing, null); else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); }
+  for (const k of W2_QNPC){ const p = PO[k], q = questNpcs.find(q => q.who === k); if (!p || !q) continue; const f = q.f; if (!q.v0) q.v0 = { x: f.pos.x, z: f.pos.z, y: f.baseY, rot: f.rot };
+    const x = on ? p.x : q.v0.x, z = on ? p.z : q.v0.z, y = on ? groundHeight(p.x, p.z) : q.v0.y; f.pos.set(x, y, z); f.baseY = y; f.rot = on ? p.face : q.v0.rot; f.speed = 0; f.av.g.visible = !onIsle; f._culled = false; if (f.blob) f.blob.visible = true; }
   W2S.on = on; return true; }
+/* 新主島的蔚博士：平常在水族館入口旁邊；今天調查的那一種水新主島也有（海邊、外海、河、溪、湖、紅樹林）就站到那一種水的岸邊（位置 world2.js 排好了）。
+   水下攝影機、保冷箱、調查旗跟著放在她旁邊。今天調查的地方換了（過了一天、資料剛到）會再換位置。 */
+function w2SciKey(){ const T = Sci.list && Sci.list[0], Q = sciQuest(), S = Q ? Q.S : T && SPOT_BY_ID[T.spot]; return S ? S.id : ''; }
+function w2SciPlace(n){ const p = W2.posts.sci, q = (p.at && p.at[w2SciKey()]) || p, rot = q.face; w2NpcPut(n, q.x, q.z, rot, false, null);
+  const g = sciGear(), dx = Math.sin(rot), dz = Math.cos(rot), sx = dz, sz = -dx; let fx = q.x + sx, fz = q.z + sz;
+  for (const [a, b] of [[0.9, 0.9], [0.9, -0.9], [0, 1.0], [0, -1.0], [-0.9, 0.9], [-0.9, -0.9]]){ const x = q.x + dx * a + sx * b, z = q.z + dz * a + sz * b; if (walkable(x, z) && !waterAt(x, z) && !blocked(x, z, 0.3) && Math.abs(groundHeight(x, z) - groundHeight(q.x, q.z)) < 0.3){ fx = x; fz = z; break; } }   /* 器材放在她旁邊的乾地上：先試前面靠水那一側，不行就旁邊、後面 */
+  g.position.set(fx, groundHeight(fx, fz), fz); g.rotation.y = rot; }
 /* 新主島的「找人、找店」（地圖下面那一排，點了會帶路）：新主島的板子、店門、搬過來的人。人在新主島的時候用這一份，回舊村子用原本那一份 */
 const W2_DOOR_IC = { cafe: '🍲', cai: '🎨', mu: '🪚', pet: '🐾', pool: '🎱', shrimp: '🦐', tackle: '🎣', market: '🐟', museum: '🏛️', stad: '🏟️' };
 function w2NavList(){ const L = [], PO = W2.posts;
-  for (const [k, ic, lab] of [['orders', '📋', '訂單板'], ['board', '📌', '廣場留言板']]) if (PO[k]) L.push([ic, lab, [PO[k].x, PO[k].z]]);
+  for (const [k, ic, lab] of [['orders', '📋', '訂單板'], ['board', '📌', '廣場留言板'], ['tboard', '🏆', '村子大看板'], ['zc', '🏰', '築城守土']]) if (PO[k]) L.push([ic, lab, [PO[k].x, PO[k].z]]);
   if (W2.bb) L.push(['📺', '潮汐大看板', [W2.bb.x, W2.bb.z + 14]]);
+  for (const k of W2_QNPC){ const q = PO[k] && questNpcs.find(q => q.who === k); if (q) L.push(['📜', q.name + '（每日任務）', [q.f.pos.x, q.f.pos.z]]); }
   for (const d of W2.doors || []) L.push([W2_DOOR_IC[d.k] || '🚪', d.label, [d.x, d.z]]);
-  for (const [k, ic, lab] of [['craft', '🔧', '阿鐵（做魚餌、釣竿造型）'], ['gang', '⚓', '老港（每週限量）']]){ const n = PO[k] && npcs.find(W2_NPC[k]); if (n && !n.wHide) L.push([ic, lab, [n.pos.x, n.pos.z]]); }
+  for (const [k, ic, lab] of [['craft', '🔧', '阿鐵（做魚餌、釣竿造型）'], ['gang', '⚓', '老港（每週限量）'], ['news', '📰', '阿報（村報）'], ['sci', '🔬', '蔚博士（潛水艇、每日調查）'], ['salon', '💇', '阿萍美髮沙龍']]){ const n = PO[k] && npcs.find(W2_NPC[k]); if (n && !n.wHide) L.push([ic, lab, [n.pos.x, n.pos.z]]); }
   return L; }
 function w2SiteTick(){ if (!W2 || !W2.posts || frameNo % 10) return; const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
 function w2Back(){ if (inIndoor() || inHall() || inStad()) return;   /* 還在裡面（例如正在煮菜不能走）：先不動，下次真的出去再回新主島 */ const b = Venue.back; Venue.back = null; if (!b || !W2) return; const fx = Math.sin(b.face), fz = Math.cos(b.face); me.pos.x = b.x + fx * 0.5; me.pos.z = b.z + fz * 0.5; try { W2.warm(me.pos.x, me.pos.z); } catch(e){} me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = b.face; cam.yaw = b.face + Math.PI; pushPresence(true); }
@@ -21043,18 +21059,20 @@ function loadSci(force){ if (Sci.busy) return Sci.busy; if (!Cloud.on || !Cloud.
     Sci.busy = null; if (!$('#sheet').hidden && (curTab === 'sci' || curTab === 'dex')) renderTab(); })();
   return Sci.busy; }
 // 蔚博士站在今天調查的釣點旁邊，身邊放著水下攝影機、保冷箱和調查旗
-function sciPlace(){ const n = npcs.find(x => x.shopNpc === 'sci'), T = Sci.list && Sci.list[0], Q = sciQuest(), S = Q ? Q.S : T && SPOT_BY_ID[T.spot]; if (!n || !S) return;
+function sciPlace(){ const n = npcs.find(x => x.shopNpc === 'sci'), T = Sci.list && Sci.list[0], Q = sciQuest(), S = Q ? Q.S : T && SPOT_BY_ID[T.spot]; if (!n || !S) return; if (n.w2on) return;   /* v927 人在新主島的時候她站新主島的位置（w2SciPlace），不要被拉回舊島的釣點 */
   const dx = S.dir.x, dz = S.dir.y, sx = dz, sz = -dx; let best = null;
   for (const [a, b] of [[-2.2, 2.0], [-2.2, -2.0], [-1.4, 2.6], [-1.4, -2.6], [-3.2, 0.8], [-3.2, -0.8], [-1, 1.6], [-1, -1.6]]){ const x = S.pos.x + dx * a + sx * b, z = S.pos.z + dz * a + sz * b; if (walkable(x, z) && !waterAt(x, z)){ best = [x, z]; break; } }
   Sci.ok = !!best; if (!best) best = [S.pos.x - dx * 1.6, S.pos.z - dz * 1.6];   /* 遠方的浮台、島要玩家靠近才蓋出來：先站釣點旁邊，玩家靠近時再重新找位置 */
   const y = groundHeight(best[0], best[1]); n.pos.set(best[0], y, best[1]); n.baseY = y; n.fishing = false; n.bobState = 'none'; n.rot = Math.atan2(dx, dz);
-  if (!Sci.gear){ const g = new THREE.Group(), m = (c, r) => mat(c, r == null ? 0.7 : r);
+  sciGear();
+  const fx = best[0] + dx * 0.9 + sx * 0.9, fz = best[1] + dz * 0.9 + sz * 0.9; Sci.gear.position.set(fx, groundHeight(fx, fz), fz); Sci.gear.rotation.y = Math.atan2(dx, dz); }
+function sciGear(){ if (!Sci.gear){ const g = new THREE.Group(), m = (c, r) => mat(c, r == null ? 0.7 : r);   /* 水下攝影機（三腳架）、保冷箱、調查旗；v927 拆出來，新主島的位置也要用 */
     for (let i = 0; i < 3; i++){ const a = i / 3 * Math.PI * 2, l = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.0, 5), m('#3a3f46')); l.position.set(Math.cos(a) * 0.18, 0.48, Math.sin(a) * 0.18); l.rotation.set(Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35); g.add(l); }
     g.add(box([0.26, 0.18, 0.2], null, [0, 1.0, 0], m('#2b2f36', 0.5))); const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.14, 12), m('#5ac8e8', 0.3)); lens.rotation.x = Math.PI / 2; lens.position.set(0, 1.0, 0.16); g.add(lens);
     g.add(box([0.55, 0.36, 0.36], null, [0.75, 0.18, -0.15], m('#2f7fa8'))); g.add(box([0.57, 0.08, 0.38], null, [0.75, 0.4, -0.15], m('#f4f6f8')));
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.6, 6), m('#d8dde2')); pole.position.set(-0.7, 0.8, -0.3); g.add(pole); g.add(box([0.45, 0.28, 0.02], null, [-0.47, 1.45, -0.3], m('#4fb8d8')));
     g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g); Sci.gear = g; }
-  const fx = best[0] + dx * 0.9 + sx * 0.9, fz = best[1] + dz * 0.9 + sz * 0.9; Sci.gear.position.set(fx, groundHeight(fx, fz), fz); Sci.gear.rotation.y = Math.atan2(dx, dz); }
+  return Sci.gear; }
 function sciLines(){ const Q = sciQuest(); if (Q){ const out = [`今天我在${Q.S.label}調查「${Q.f.name}」`], tn = sciTideNote(Q.f); if (Q.f.desc) out.push(Q.f.desc); if (tn) out.push(`「${Q.f.name}」${tn}，先看潮汐表`);
     out.push(Q.done ? '謝謝你今天帶來的魚，資料很有幫助！明天我會換一個地方' : `你釣到「${Q.f.name}」的話放在魚缸裡拿來給我看，我送你夜光蟲餌`);
     const N = SCI_NEW[0]; if (N) out.push(`我最近在${SPOT_BY_ID[N.spot].label}確認的新魚：${N.ids.map(id => FISH_BY_ID[id].name).join('、')}`); return out; }
@@ -22100,7 +22118,7 @@ function roamGrow(n){ const R = n.roam, K = ROAM_K[R.kind], P = R.post, i = R.tr
   else { const a = (R.h % 628) / 100 + i * 2.39996, d = K.ring[0] + (K.ring[1] - K.ring[0]) * (((R.h >>> 8) + i * 37) % 100) / 100; x = P.x + Math.cos(a) * d; z = P.z + Math.sin(a) * d; }
   if (!walkable(x, z) || blocked(x, z, 0.5) || deckAt(x, z) || groundHeight(x, z) > 6) return; if (R.c.some(c => Math.hypot(c.x - x, c.z - z) < 1.5)) return;
   const w2 = !!(W2 && W2.stroll && W2.near(P.x, P.z)); if (w2 && !W2.stroll(x, z, R.kind === 'shop')) return;   /* v926 新主島：去處要在鋪了路的地方（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋；顧攤的只在攤位旁邊幾步，草地也行。路上也不能橫過鐵軌（小火車不會停下來等人） */
-  let pts = w2 ? null : navFind(P.x, P.z, x, z); if (!pts){ pts = [[P.x, P.z], [x, z]]; const L = Math.hypot(x - P.x, z - P.z); for (let d = 0.6; d < L; d += 0.3){ const qx = P.x + (x - P.x) * d / L, qz = P.z + (z - P.z) * d / L; if (!walkable(qx, qz) || Math.abs(groundHeight(qx, qz) - P.y) > 1.2 || (w2 && W2.rail(qx, qz, 1.8))) return; } }   /* 尋路的地圖只涵蓋主島中間；外圍的人（阿蘭、阿嬤）改用「直線走得通才去」 */
+  let pts = w2 ? null : navFind(P.x, P.z, x, z); if (!pts){ pts = [[P.x, P.z], [x, z]]; const L = Math.hypot(x - P.x, z - P.z); for (let d = 0.6; d < L; d += 0.3){ const qx = P.x + (x - P.x) * d / L, qz = P.z + (z - P.z) * d / L; if (!walkable(qx, qz) || Math.abs(groundHeight(qx, qz) - P.y) > 1.2 || (w2 && W2.railNear(qx, qz, 1.8))) return; } }   /* 尋路的地圖只涵蓋主島中間；外圍的人（阿蘭、阿嬤）改用「直線走得通才去」 */
   const cum = [0]; for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
   const len = cum[cum.length - 1], str = Math.hypot(x - P.x, z - P.z); if (len < 1.2 || len > str * 2.4 + 4 || len > 60) return;
   for (let d = 0.5; d < len; d += 0.3){ let k = 1; while (k < cum.length - 1 && cum[k] < d) k++; const u = (d - cum[k - 1]) / ((cum[k] - cum[k - 1]) || 1), qx = pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * u, qz = pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * u; if (blocked(qx, qz, 0.22)) return; }   /* 路上會穿過櫃台、牆的不要（站在櫃台後面的人，第一步常常是直接穿過櫃台） */
@@ -22212,12 +22230,17 @@ function roamDrive(n, dt, t){ if (!n.roam){ if (n.roam === 0) return false; cons
   if (!ps && R.away){ const d = Math.hypot(n.pos.x - P.x, n.pos.z - P.z); if (d > 0.12 && d < 12){ if (n.fishing){ n.fishing = false; n.bobState = 'none'; n.flying = null; } npcStepTo(n, P.x, P.z, dt); n.update(dt, t); n.placeTag(); return true; } }   /* v863 走回原位，不要瞬移 */
   if (!ps){ if (R.away){ R.away = false; n.pos.set(P.x, P.y, P.z); n.baseY = P.y; n.rot = P.rot; n.speed = 0; if (P.fishing){ n.fishing = true; n.windup = 0; n.st = 'windup'; n.stT = t + 0.7; } } return false; }   /* 回到原位：重新拋竿 */
   if (!R.away){ R.away = true; n.fishing = false; n.bobState = 'none'; n.flying = null; n.dip = 0; n.bend = 0; n.st = 'wait'; n.next = t + 5; n.windup = 0; n.castT = -1; if (n.held){ n.av.g.remove(n.held.o); n.held = null; } }
-  const far = Math.hypot(n.pos.x - ps.x, n.pos.z - ps.z) > 6; if (far){ n.pos.x = ps.x; n.pos.z = ps.z; } else { const k = Math.min(1, dt * 8); n.pos.x += (ps.x - n.pos.x) * k; n.pos.z += (ps.z - n.pos.z) * k; }
+  /* v927 散步到一半才「接上」的（剛進遊戲、剛換島，他照時間算應該已經走到半路）：以前 0.3 秒內整個人滑過去，站在旁邊看得到他平移。
+     現在最快每秒 2.8 公尺，用小跑的追上去（平常跟著走的時候差距很小，速度跟以前一樣）；差 6 公尺以上照舊直接放過去 */
+  const gx = ps.x - n.pos.x, gz = ps.z - n.pos.z, gap = Math.hypot(gx, gz), hurry = gap > 0.6 && gap <= 6;
+  if (gap > 6){ n.pos.x = ps.x; n.pos.z = ps.z; } else if (gap > 1e-5){ const stp = Math.min(gap, Math.min(gap * 8, 2.8) * dt); n.pos.x += gx / gap * stp; n.pos.z += gz / gap * stp; }
   n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY;
   const pd = Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z);
-  if (ps.walk){ n.rot = lerpAngle(n.rot, ps.rot, 1 - Math.exp(-8 * dt)); n.speed = 1.45; }
+  if (hurry){ n.rot = lerpAngle(n.rot, Math.atan2(gx, gz), 1 - Math.exp(-10 * dt)); n.speed = 2.4; }
+  else if (ps.walk){ n.rot = lerpAngle(n.rot, ps.rot, 1 - Math.exp(-8 * dt)); n.speed = 1.45; }
   try { npcMeet(n, t, !!ps.walk); } catch(e){}
-  if (!ps.walk && meetTurn(n, dt, t)) n.speed = 0;
+  if (hurry){}
+  else if (!ps.walk && meetTurn(n, dt, t)) n.speed = 0;
   else if (!ps.walk){ n.speed = 0; n.rot = lerpAngle(n.rot, pd < 7 ? Math.atan2(me.pos.x - n.pos.x, me.pos.z - n.pos.z) : ps.rot, 1 - Math.exp(-3 * dt)); }
   if (pd < 9 && t > (n.talkAt || 0) && !(n.replyUntil > now()) && !Dive.on && !House.on){ n.say(Math.random() < 0.5 ? ROAM_LINES[Math.floor(Math.random() * ROAM_LINES.length)] : npcLine(n), '', 5); n.talkAt = t + rand(18, 34); } else if (pd > 18 && n.talkAt) n.talkAt = Math.min(n.talkAt, t + 5);
   n.update(dt, t); n.placeTag(); return true; }
@@ -22248,7 +22271,8 @@ function updateNpcs(dt, t){
     if (n.shopNpc === 'sci'){ const hid = Cloud.status === 'connecting' || (Cloud.on && !Sci.list);   /* 還不知道今天在哪個釣點：先不出現（不然會先站在廣場、資料來了又突然消失） */
       if (hid){ n.wHide = true; n.av.g.visible = false; n.tag.style.display = 'none'; if (n.blob) n.blob.visible = false; if (Cloud.on && !Sci.busy && (!Sci.at || Date.now() - Sci.at > 15000)) loadSci(true); continue; }
       if (n.wHide){ n.wHide = false; n.av.g.visible = true; n._culled = false; }
-      if (!Sci.ok && Sci.list && frameNo % 45 === 0 && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 70) sciPlace(); updateShopNpc(n, dt, t, () => (!Sci.at || Date.now() - Sci.at > 10 * 60000) && loadSci()); continue; }
+      if (n.w2on){ if (frameNo % 45 === 0){ const k = w2SciKey(); if (k !== n.w2sk){ n.w2sk = k; w2SciPlace(n); } } }   /* v927 新主島：今天調查的地方換了才換位置 */
+      else if (!Sci.ok && Sci.list && frameNo % 45 === 0 && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 70) sciPlace(); updateShopNpc(n, dt, t, () => (!Sci.at || Date.now() - Sci.at > 10 * 60000) && loadSci()); continue; }
     if (n.shopNpc === 'fu'){ updateShopNpc(n, dt, t, () => (!Fu.at || Date.now() - Fu.at > 5 * 60000) && loadFu()); continue; }
     if (n.shopNpc === 'salon'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); if (Salon.poleTex) Salon.poleTex.offset.y = (t * 0.35) % 1; continue; }   /* 阿萍站在店門口顧店；理髮燈一直轉 */
     if (n.shopNpc === 'craft'){ n.fishing = false; n.bobState = 'none'; if (n.av.rod.visible) n.av.rod.visible = false; updateShopNpc(n, dt, t, () => {}); continue; }   /* v255 阿鐵師傅站著顧攤，不釣魚 */
