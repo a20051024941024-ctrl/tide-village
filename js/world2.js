@@ -102,7 +102,7 @@ export function init(A){
   /* 紅樹林：一片淺淺的水（樹站在水裡），中間幾塊露出來的泥灘 */
   const lagoon = (lx, lz, mg) => { const n = Math.sin(lx * 0.42 + 1.7) * Math.cos(lz * 0.47 - 0.4) + 0.45 * Math.sin(lx * 0.93 - lz * 0.71); return lerp(-0.4, 0.2, s01((n - 0.5) / 0.3) * s01((mg - 0.5) / 2)); };
   function height(lx, lz){ const dl = samp(sdLand, lx, lz), mg = samp(sdMang, lx, lz);
-    if (dl < 0){ const d = -dl; let h = d <= 3 ? -0.03 - d * 0.1 : Math.max(-3.2, -0.33 - (d - 3) * 0.42); if (mg > -5) h = lerp(h, lagoon(lx, lz, mg), s01((mg + 5) / 5)); { const rf = samp(sdReef, lx, lz); if (rf > -5) h = lerp(h, -0.55 - 0.28 * (Math.sin(lx * 0.8 + 1.3) * Math.cos(lz * 0.7) * 0.5 + 0.5), s01((rf + 5) / 5)); }   /* v950 珊瑚礁：淺淺的一片 */ return h; }
+    if (dl < 0){ const d = -dl; let h = d <= 3 ? -0.03 - d * 0.1 : Math.max(-3.2, -0.33 - (d - 3) * 0.42); if (mg > -5) h = lerp(h, lagoon(lx, lz, mg), s01((mg + 5) / 5)); { const rf = samp(sdReef, lx, lz); if (rf > -5) h = lerp(h, -0.46 - 0.22 * (Math.sin(lx * 0.8 + 1.3) * Math.cos(lz * 0.7) * 0.5 + 0.5), s01((rf + 5) / 5)); }   /* v950 珊瑚礁：淺淺的一片 */ return h; }
     const dw = samp(sdWat, lx, lz), dm = samp(sdMain, lx, lz), flat = s01((samp(sdPave, lx, lz) + 3) / 3);
     let h = 0.1 + s01(dl / 4) * (PAVE_Y - 0.1);
     { const rk = samp(sdRock, lx, lz); if (rk > -0.5 && samp(sdMain, lx, lz) < 0){ return Math.max(h, 0.3 + 0.32 * s01(rk / 1.6) + Math.sin(lx * 1.7) * Math.cos(lz * 1.9) * 0.06); } }   /* v950 礁岩：比水面高一點、中間凸起 */
@@ -124,7 +124,7 @@ export function init(A){
   { const data = new Uint8Array(NN * 4);
     for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++){ const o = j * NX + i, lx = X0 + (i + 0.5) / RES, lz = Z0 + (j + 0.5) / RES, h = HG[o], dl = sdLand[o], wet = h < WL - 0.02, lk0 = s01((sdMang[o] + 3.5) / 2), inland = (dl > 0 && wet) || lk0 > 0.3, lake = inland && sdLake[o] > -1;   /* lk0：紅樹林（水和泥灘那幾格都算，水邊才不會被當成海邊） */
       let shore = -dl; if (shore < 0 && !(h < 0.2 && samp(sdSand, lx, lz) > -4 && !paved(lx, lz, 2))) shore = -8; if (inland) shore = Math.max(shore, 6);
-      data[o * 4] = Math.round(Math.max(clamp(-h / 2, 0, 1) * 255, 36 * lk0));   /* 紅樹林裡（連泥灘那幾格）水深都算 28 公分以上：水邊才不會冒一圈白泡沫 */ data[o * 4 + 1] = wet ? 255 : 0; data[o * 4 + 2] = Math.round(Math.max(dl > 0 && wet ? (lake ? 180 : 60) : 0, 95 * lk0)); data[o * 4 + 3] = Math.round(clamp((shore + 8) / 32, 0, 1) * 255); }
+      data[o * 4] = Math.round(Math.max(clamp((sdReef[o] > -3 ? Math.min(-h, lerp(-h, 0.44, s01((sdReef[o] + 3) / 3))) : -h) / 2, 0, 1) * 255, 36 * lk0));   /* v950 珊瑚礁上的水當成很淺（44 公分）：水比較透明、顏色比較淺，看得到底下的珊瑚；退潮最多退 36 公分，不會整片乾掉 */   /* 紅樹林裡（連泥灘那幾格）水深都算 28 公分以上：水邊才不會冒一圈白泡沫 */ data[o * 4 + 1] = wet ? 255 : 0; data[o * 4 + 2] = Math.round(Math.max(dl > 0 && wet ? (lake ? 180 : 60) : 0, 95 * lk0)); data[o * 4 + 3] = Math.round(clamp((shore + 8) / 32, 0, 1) * 255); }
     maskTex = new THREE.DataTexture(data, NX, NZ, THREE.RGBAFormat); maskTex.magFilter = maskTex.minFilter = THREE.LinearFilter; maskTex.wrapS = maskTex.wrapT = THREE.ClampToEdgeWrapping; maskTex.needsUpdate = true; }
 
   /* ---------- 地形：一塊 48 公尺，走近才蓋 ---------- */
@@ -503,15 +503,16 @@ export function init(A){
         b.g.position.set(p0[0] + (p1[0] - p0[0]) * k, WL - 0.1 + Math.sin(t * 1.3) * 0.05, p0[1] + (p1[1] - p0[1]) * k); const a = Math.atan2(p1[0] - p0[0], p1[1] - p0[1]); let d = a - b.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); b.g.rotation.y += d * Math.min(1, dt * 1.5); b.g.rotation.z = Math.sin(t * 1.1) * 0.03; } }); }
   /* v950 珊瑚礁的樣子：水底的珊瑚（樹枝、腦紋、扇子、管子）、礁岩上的石頭、一群熱帶小魚繞著游 */
   { const parts = {}, rg = new THREE.Group(); root.add(rg); let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const CC = ['#f2857f', '#f2a64a', '#a98ae0', '#4fbfa8', '#f6d36a', '#e86aa0'];
+    const CC = ['#ff6f6a', '#ff9a2e', '#b27cff', '#2fd6b0', '#ffd84a', '#ff5fa8'], cparts = {};
     for (let k = 0; k < 420; k++){ const px = 1505 + rnd() * 255, py = 806 + rnd() * 160, [x, z] = P(px, py); if (samp(sdReef, x, z) < 0.3 || samp(sdRock, x, z) > -0.6 || samp(sdLand, x, z) > -0.3) continue;
       const y = hAt(x, z), c = CC[Math.floor(rnd() * CC.length)], t = rnd(), room = WL - 0.12 - y; if (room < 0.15) continue;
-      if (t < 0.35){ for (let b = 0; b < 4; b++){ const a = rnd() * 6.28, tilt = 0.25 + rnd() * 0.45, L = Math.min(room, 0.35 + rnd() * 0.3), g = new THREE.CylinderGeometry(0.05, 0.08, L, 5); g.translate(0, L / 2, 0); g.rotateZ(tilt); g.rotateY(a); G(parts, c, g, x, y, z); } }   /* 樹枝珊瑚 */
-      else if (t < 0.6){ const r = 0.3 + rnd() * 0.3; G(parts, c, new THREE.SphereGeometry(r, 9, 6, 0, 6.2832, 0, Math.PI / 2).scale(1, Math.min(0.7, room * 0.9 / r), 1), x, y, z); }   /* 腦紋珊瑚 */
-      else if (t < 0.8){ const r = Math.min(room, 0.32 + rnd() * 0.2), g = new THREE.CircleGeometry(r, 9, 0, Math.PI); g.rotateY(rnd() * 6.28); G(parts, c, g, x, y, z); }   /* 扇子 */
-      else { for (let b = 0; b < 5; b++){ const L = Math.min(room, 0.12 + rnd() * 0.22), g = new THREE.CylinderGeometry(0.035, 0.035, L, 6, 1, true); g.translate((rnd() - 0.5) * 0.18, L / 2, (rnd() - 0.5) * 0.18); G(parts, c, g, x, y, z); } } }   /* 管子 */
+      if (t < 0.35){ for (let b = 0; b < 4; b++){ const a = rnd() * 6.28, tilt = 0.25 + rnd() * 0.45, L = Math.min(room, 0.35 + rnd() * 0.3), g = new THREE.CylinderGeometry(0.05, 0.08, L, 5); g.translate(0, L / 2, 0); g.rotateZ(tilt); g.rotateY(a); G(cparts, c, g, x, y, z); } }   /* 樹枝珊瑚 */
+      else if (t < 0.6){ const r = 0.3 + rnd() * 0.3; G(cparts, c, new THREE.SphereGeometry(r, 9, 6, 0, 6.2832, 0, Math.PI / 2).scale(1, Math.min(0.7, room * 0.9 / r), 1), x, y, z); }   /* 腦紋珊瑚 */
+      else if (t < 0.8){ const r = Math.min(room, 0.32 + rnd() * 0.2), g = new THREE.CircleGeometry(r, 9, 0, Math.PI); g.rotateY(rnd() * 6.28); G(cparts, c, g, x, y, z); }   /* 扇子 */
+      else { for (let b = 0; b < 5; b++){ const L = Math.min(room, 0.12 + rnd() * 0.22), g = new THREE.CylinderGeometry(0.035, 0.035, L, 6, 1, true); g.translate((rnd() - 0.5) * 0.18, L / 2, (rnd() - 0.5) * 0.18); G(cparts, c, g, x, y, z); } } }   /* 管子 */
     for (const [px, py, r] of REEF_ROCKS){ const [x, z] = P(px, py), R = r * S; for (let b = 0; b < 3; b++){ const g = new THREE.DodecahedronGeometry(R * (0.35 + rnd() * 0.2), 0); g.scale(1, 0.45, 1); G(parts, b ? '#8f8878' : '#7d776a', g, x + (rnd() - 0.5) * R * 0.8, hAt(x, z) - 0.02, z + (rnd() - 0.5) * R * 0.6); } }
     flush(parts, rg);
+    for (const hex in cparts){ const m = new THREE.Mesh(mergeGeometries(cparts[hex], false), new THREE.MeshLambertMaterial({ color: hex, emissive: new THREE.Color(hex).multiplyScalar(0.35), side: THREE.DoubleSide })); m.receiveShadow = true; rg.add(m); }   /* 珊瑚自己帶一點亮，隔著水也看得出粉紅、橘、紫 */
     const fishG = new THREE.Group(); rg.add(fishG); const FC = ['#ffd23f', '#3fb8ff', '#ff7a4a', '#ffffff', '#7fe08a'], school = [];
     for (let k = 0; k < 18; k++){ const f = new THREE.Group(), c = FC[k % FC.length], m = new THREE.MeshLambertMaterial({ color: c }); const body = new THREE.Mesh(new THREE.SphereGeometry(0.07, 7, 5).scale(1, 0.75, 1.9), m), tail = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.08, 4).rotateX(-Math.PI / 2), m); tail.position.z = -0.15; f.add(body, tail); fishG.add(f);
       const [cx, cz] = P(1560 + rnd() * 160, 840 + rnd() * 100); school.push({ f, tail, cx, cz, r: 0.6 + rnd() * 1.4, sp: (0.5 + rnd() * 0.6) * (rnd() < 0.5 ? 1 : -1), ph: rnd() * 6.28, y: Math.min(WL - 0.18, hAt(cx, cz) + 0.3) }); }
