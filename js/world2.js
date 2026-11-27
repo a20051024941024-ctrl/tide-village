@@ -383,25 +383,32 @@ export function init(A){
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tx, transparent: true, opacity: 0.92, side: THREE.DoubleSide })); root.add(m); tickers.push((dt, t) => { tx.offset.y = t * 0.9; }); }
 
+  /* v922 潮汐（跟舊島一樣）：海水退掉多少（公尺，0～0.3）。海岸前 3 公尺是緩緩的淺灘，乾潮時水深不到這個數字的地方，水面著色器不畫水、露出濕沙。
+     seaAt：這一格是海（不是河、湖、紅樹林——那些不退潮）；dryAt：露出來、可以走上去的濕沙；wetAt：可以下竿的水（退潮時要再深 9 公分才算，浮標才不會落在濕沙上） */
+  const tideD = () => { const U = waterSurface.material.uniforms.uTideD; return U ? U.value : 0; };
+  const seaAt = (lx, lz) => samp(sdLand, lx, lz) <= 0 && samp(sdMang, lx, lz) < -3.2;
+  const deckNear = (lx, lz, m) => { for (const d of DECKS) if (lx > d[0] - m && lx < d[1] + m && lz > d[2] - m && lz < d[3] + m) return true; return false; };
+  const dryAt = (lx, lz) => { const td = tideD(); if (td < 0.02 || !inBox(lx, lz)) return false; const h = samp(HG, lx, lz); return h < WL - 0.02 && -h <= td - 0.01 && seaAt(lx, lz) && !deckNear(lx, lz, 2.5); };   /* 棧橋旁邊 2.5 公尺不算（不然會從棧橋邊掉到沙上，或從沙上卡在橋樁旁邊） */
+  const wetAt = (lx, lz) => { if (!inBox(lx, lz)) return true; const h = samp(HG, lx, lz); if (h >= WL - 0.2 || deck(lx, lz) || onBoard(lx, lz)) return false; const td = tideD(); return !(td > 0.01 && -h < td + 0.09 && seaAt(lx, lz)); };
   /* ---------- 給遊戲用的接口 ---------- */
   const W2 = {
     ox: OX, oz: OZ, spawn: [OX + P(975, 560)[0], OZ + P(975, 560)[1]],
     near: (x, z) => z > OZ + Z0 - 30 && z < OZ + Z0 + GH + 30 && x > OX + X0 - 30 && x < OX + X0 + GW + 30,
     h: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return -3.2; const d = deck(lx, lz); if (d) return d[5] ? lerp(Math.max(0.2, samp(HG, lx, lz)), d[4], clamp(Math.min(lz - d[2], d[3] - lz) / d[5], 0, 1)) : d[4]; if (onBoard(lx, lz)) return boardY(lx, lz) + 0.02; const h = samp(HG, lx, lz); return paved(lx, lz, 0.2) && h > 0.2 ? Math.max(h, PAVE_Y + 0.02) : h; },
     land: (x, z) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (samp(HG, lx, lz) > WL - 0.02 || !!deck(lx, lz) || onBoard(lx, lz)); },
-    walk: (x, z) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (samp(HG, lx, lz) > WL - 0.05 || !!deck(lx, lz) || onBoard(lx, lz)); },
+    walk: (x, z) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (samp(HG, lx, lz) > WL - 0.05 || !!deck(lx, lz) || onBoard(lx, lz) || dryAt(lx, lz)); },   /* v922 退潮露出來的濕沙可以走上去（漲回來，遊戲原本的檢查會把人推回岸上） */
+    dry: (x, z) => dryAt(x - OX, z - OZ),
     /* v922 釣魚用。water：這一點可不可以下竿（水夠深；棧橋、木棧道、橋的底下不算；格子外面全是外海）
+       （water 的算式在上面的 wetAt）
        spot：這片水算哪一個釣點——山上的湖、森林裡的溪（橋的上游）、平地的河、紅樹林、岸邊的海、離岸 6 公尺以上的外海（碼頭走到底）
        tinfo：跟舊島的 terrainInfo 一樣的格式（高度、是不是水、哪一種水 1 河 2 溪 3 湖），水裡的魚影、魚跳出水面要用 */
-    water: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return true; const h = samp(HG, lx, lz); if (h >= WL - 0.2 || deck(lx, lz) || onBoard(lx, lz)) return false;
-      /* 退潮：海水退掉的那一圈（最多離岸 3 公尺）畫面上是露出來的濕沙，不能算水——跟水面著色器同一條算式（海才退，河、湖、紅樹林不退） */
-      const U = waterSurface.material.uniforms.uTideD, td = U ? U.value : 0; return !(td > 0.01 && -h < td + 0.09 && samp(sdLand, lx, lz) <= 0 && samp(sdMang, lx, lz) < -3.2); },
+    water: (x, z) => wetAt(x - OX, z - OZ),
     spot: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return 'harbor'; if (samp(sdLake, lx, lz) > -1.5) return 'lake'; if (samp(sdMang, lx, lz) > -2.5) return 'mangrove';
       if (samp(sdMain, lx, lz) > 0 && samp(sdWat, lx, lz) > -2) return samp(sdFor, lx, lz) > 3 ? 'creek' : 'river'; return samp(sdLand, lx, lz) < -6 ? 'harbor' : 'sea'; },
     /* 最近可以站著釣魚的水邊（「找釣點」按鈕帶路用）：從腳邊一圈一圈往外找，站的地方要在主島或棧橋上、ok() 說沒被東西擋住，而且往某一邊 1.6 和 3.1 公尺都是水 */
-    shore: (x, z, ok) => { const lx0 = x - OX, lz0 = z - OZ, wat = (lx, lz) => inBox(lx, lz) ? samp(HG, lx, lz) < WL - 0.2 && !deck(lx, lz) && !onBoard(lx, lz) : true;
+    shore: (x, z, ok) => { const lx0 = x - OX, lz0 = z - OZ, wat = wetAt;
       for (let r = 0; r < 170; r += 1.5){ const n = Math.max(1, Math.round(r * 2.1)); for (let k = 0; k < n; k++){ const a = k / n * 6.2832 + r * 0.37, lx = lx0 + Math.sin(a) * r, lz = lz0 + Math.cos(a) * r; if (!inBox(lx, lz)) continue;
-          if (!(deck(lx, lz) || onBoard(lx, lz) || (samp(sdMain, lx, lz) > 0 && samp(HG, lx, lz) > WL - 0.02))) continue; if (ok && !ok(OX + lx, OZ + lz)) continue;
+          if (!(deck(lx, lz) || onBoard(lx, lz) || (samp(sdMain, lx, lz) > 0 && samp(HG, lx, lz) > WL - 0.02) || (dryAt(lx, lz) && samp(sdMain, lx, lz) > -3.6))) continue; if (ok && !ok(OX + lx, OZ + lz)) continue;
           for (let j = 0; j < 12; j++){ const b = j / 12 * 6.2832, dx = Math.sin(b), dz = Math.cos(b); if (wat(lx + dx * 1.6, lz + dz * 1.6) && wat(lx + dx * 3.1, lz + dz * 3.1)) return { x: OX + lx, z: OZ + lz, face: b, id: W2.spot(OX + lx + dx * 1.6, OZ + lz + dz * 1.6) }; } } }
       return null; },
     tinfo: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return { h: -3.2, water: true, region: 0 }; const h = samp(HG, lx, lz), water = h < WL - 0.02; let region = 0;
