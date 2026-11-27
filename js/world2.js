@@ -437,11 +437,12 @@ export function init(A){
           if (on && st < 0) st = i; if ((!on || i === L.length - 1) && st >= 0){ const e = on ? i : i - 1; if (e > st){ const a = L[st], b = L[e], len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (len > 0.5) B(parts, LINE, 0.18, 0.02, len, (a[0] + b[0]) / 2, y + 0.05, (a[1] + b[1]) / 2, Math.atan2(b[0] - a[0], b[1] - a[1])); } st = -1; } } });
       /* 斑馬線：從廣場（或前廣場）走出來 2.5 公尺的地方，橫跨整條路 */
       const zebras = [];
-      segs.forEach((sg, ri) => { if (sg.loop) return; const { L, cum, w, y } = sg, tot = cum[cum.length - 1];
+      segs.forEach((sg, ri) => { if (sg.loop || !sg.car) return; const { L, cum, w, y } = sg, tot = cum[cum.length - 1];   /* v959 只畫在車道上（作者：沒有馬路的地方做斑馬線沒用） */
         for (const fwd of [true, false]){ let found = -1, out = -1;
           for (let k = 0; k < L.length; k++){ const i = fwd ? k : L.length - 1 - k; if (!inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri)){ if (out < 0) out = i; if (Math.abs(cum[i] - cum[out]) >= 2.5){ found = i; break; } } else out = -1; }
           if (found < 0 || zebras.some(z => Math.hypot(z[0] - L[found][0], z[1] - L[found][1]) < 8)) continue; const [dx, dz] = dirAt(L, found), [cx, cz] = L[found]; zebras.push([cx, cz]);
           const zw = sg.car ? 6.2 : w; for (let s = -zw / 2 + 0.35; s <= zw / 2 - 0.3; s += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, cx - dz * s, y + 0.05, cz + dx * s, Math.atan2(dx, dz)); } });
+      W2X.zebras = zebras;
       /* 潮搭Go 上車處：主要地方旁邊的大路邊 */
       const stands = [], logoTex = (() => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#ffffff'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#8fd3f4'; c.beginPath(); c.moveTo(0, 86); for (let x = 0; x <= 256; x += 8) c.lineTo(x, 86 + Math.sin(x / 22) * 7); c.lineTo(256, 128); c.lineTo(0, 128); c.fill();
         c.fillStyle = '#26445c'; c.font = 'bold 46px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.fillText('潮搭Go', 128, 62); c.font = 'bold 20px "Huninn","Noto Sans TC",sans-serif'; c.fillText('上車處', 128, 112); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
