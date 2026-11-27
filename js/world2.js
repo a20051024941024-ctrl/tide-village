@@ -589,6 +589,53 @@ export function init(A){
       { const [x, z] = at(0, 0); RSV.push([x, z, 5.5]); const [x2, z2] = at(3.5, -1); RSV.push([x2, z2, 2.5]); }
       label('護林員小屋', hx, y + 6, hz, 0.7); }
     flush(parts, fg); }
+  /* ===== v930 紅樹林的內容：泥灘上的小動物（game.js 放、徒手抓）、巡守站、螢火蟲、白鷺 ===== */
+  const mudPts = [];   /* 泥灘上小動物住的地方（世界座標）：紅樹林裡、從岸上走得到、露出水面的泥地 */
+  { const parts = {}, mg = new THREE.Group(); root.add(mg);
+    /* --- 找泥灘：0.5 公尺一格，從岸上（水族館往木棧道那條步道）開始往外走，走得到又是紅樹林裡露出水面的泥地才算 --- */
+    { const [ax, az] = P(200, 320), [bx, bz] = P(480, 450), St = 0.5, NX2 = Math.round((bx - ax) / St), NZ2 = Math.round((bz - az) / St), ok = new Uint8Array(NX2 * NZ2), seen = new Uint8Array(NX2 * NZ2), cand = [];
+      const cx = i => ax + (i + 0.5) * St, cz = j => az + (j + 0.5) * St;
+      for (let j = 0; j < NZ2; j++) for (let i = 0; i < NX2; i++){ const x = cx(i), z = cz(j), h = samp(HG, x, z); ok[j * NX2 + i] = (h > WL - 0.05 || onBoard(x, z) || !!deck(x, z)) ? 1 : 0; }
+      const [sx, sz] = P(470, 395); let start = -1, bd = 1e9; for (let j = 0; j < NZ2; j++) for (let i = 0; i < NX2; i++){ if (!ok[j * NX2 + i]) continue; const d = Math.hypot(cx(i) - sx, cz(j) - sz); if (d < bd){ bd = d; start = j * NX2 + i; } }
+      const q = start >= 0 ? [start] : []; if (start >= 0) seen[start] = 1;
+      while (q.length){ const k = q.pop(), i = k % NX2, j = (k / NX2) | 0, x = cx(i), z = cz(j), h = samp(HG, x, z);
+        if (!onBoard(x, z) && samp(sdMang, x, z) > -2.5 && h < 0.32 && h > WL - 0.02 && samp(sdBoard, x, z) < -1.0 && railDist(x, z) > 4) cand.push([x, z, h]);
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= NX2 || b >= NZ2) continue; const kk = b * NX2 + a; if (ok[kk] && !seen[kk]){ seen[kk] = 1; q.push(kk); } } }
+      let sd3 = 930; const rr = () => (sd3 = (sd3 * 16807) % 2147483647) / 2147483647;
+      for (let t = 0; t < 400 && mudPts.length < 14 && cand.length; t++){ const c = cand[Math.floor(rr() * cand.length)]; if (mudPts.some(m => Math.hypot(m.x - OX - c[0], m.z - OZ - c[1]) < 2.2)) continue; mudPts.push({ x: OX + c[0], z: OZ + c[1], y: c[2], kind: mudPts.length % 3 === 0 ? 'crab' : 'skipper' }); RSV.push([c[0], c[1], 1.2]); } }
+    /* --- 巡守站：木棧道西邊的盡頭，架高的平台上一間小木屋（門朝木棧道），平台可以走上去、站在邊邊看海 --- */
+    { const L = boardLine, E = L[L.length - 1], E0 = L[Math.max(0, L.length - 4)], dl = Math.hypot(E[0] - E0[0], E[1] - E0[1]) || 1, dx = (E[0] - E0[0]) / dl, dz = (E[1] - E0[1]) / dl;
+      const cx = E[0] + dx * 2.0, cz = E[1] + dz * 2.0, Y = BOARD_Y, HW = 2.3;
+      B(parts, '#b98a5a', HW * 2, 0.18, HW * 2, cx, Y - 0.09, cz); DECKS.push([cx - HW, cx + HW, cz - HW, cz + HW, Y]);
+      for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) B(parts, '#6e4a2f', 0.22, 2.4, 0.22, cx + sx * (HW - 0.2), Y - 1.25, cz + sz2 * (HW - 0.2));   /* 高腳 */
+      const f = Math.atan2(-dx, -dz), hx = cx + dx * 1.0, hz = cz + dz * 1.0;   /* 小屋在平台靠海那一半，門朝木棧道 */
+      B(parts, '#4f7f44', 2.6, 1.9, 2.0, hx, Y + 0.95, hz, f); { const g = roofG(3.0, 2.5, 0.9); g.rotateY(f); G(parts, '#6b4a32', g, hx, Y + 1.9, hz); }
+      { const sxd = Math.sin(f), szd = Math.cos(f); B(parts, '#3d2a1a', 0.8, 1.4, 0.06, hx + sxd * 1.02, Y + 0.7, hz + szd * 1.02, f); }
+      const c0 = Math.cos(f), s0 = Math.sin(f); colliders.push({ t: 'o', x: OX + hx, z: OZ + hz, hw: 1.35, hd: 1.05, c: c0, s: s0, bw: Math.abs(c0) * 1.35 + Math.abs(s0) * 1.05, bd: Math.abs(s0) * 1.35 + Math.abs(c0) * 1.05 });
+      /* 平台三邊的欄杆（靠木棧道那邊開著） */
+      for (const [ax2, az2, w, d] of [[0, -HW, HW * 2, 0.08], [0, HW, HW * 2, 0.08], [-HW, 0, 0.08, HW * 2], [HW, 0, 0.08, HW * 2]]){ const side = Math.abs(ax2) > 0 ? Math.sign(ax2) * dx : Math.sign(az2) * dz; if (side < -0.5) continue;
+        B(parts, '#8a6038', w, 0.08, d, cx + ax2, Y + 0.85, cz + az2); colliders.push({ t: 'b', x: OX + cx + ax2, z: OZ + cz + az2, hw: Math.max(w, 0.2) / 2, hd: Math.max(d, 0.2) / 2 }); }
+      if (A.sign){ const g = new THREE.Group(), sx = cx - dx * 1.6 + dz * 1.9, sz2 = cz - dz * 1.6 - dx * 1.9; g.position.set(sx, Y, sz2); mg.add(g); A.sign(g, '紅樹林巡守站', '🌿', 0, 0); }
+      label('紅樹林巡守站', cx, Y + 5, cz, 0.65); }
+    /* --- 木棧道入口的告示牌（跟村子那塊一樣的話）--- */
+    { const [x, z] = P(452, 396), cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#6e4a2f'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#fff4d6'; c.fillRect(8, 8, 240, 112); c.fillStyle = '#3f6b3a'; c.textAlign = 'center';
+      c.font = 'bold 40px sans-serif'; c.fillText('紅樹林', 128, 56); c.font = '22px sans-serif'; c.fillStyle = '#5a3d2b'; c.fillText('退潮時泥灘上可以抓', 128, 96);
+      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const y = Math.max(0.3, hAt(x, z)); for (const ry of [0, Math.PI]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), new THREE.MeshBasicMaterial({ map: tx })); sg.position.set(x, y + 1.4, z); sg.rotation.y = Math.PI / 2 + ry + 0.25; mg.add(sg); }
+      B(parts, '#6e4a2f', 0.1, 1.5, 0.1, x, y + 0.7, z); colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: 0.25 }); }
+    /* --- 白鷺：兩隻站在淺水裡，偶爾低頭啄一下水 --- */
+    { const herons = [], put = (px, py, ry) => { const [x, z] = P(px, py), g = new THREE.Group(), hp = {}; B(hp, '#ffffff', 0.26, 0.24, 0.5, 0, 0.78, 0); B(hp, '#ffffff', 0.2, 0.14, 0.24, 0, 0.72, -0.32, 0.3); for (const s2 of [-0.06, 0.06]) B(hp, '#2b2b2b', 0.03, 0.66, 0.03, s2, 0.33, 0.05); flush(hp, g);
+        const neck = new THREE.Group(); neck.position.set(0, 0.86, 0.22); g.add(neck); const nm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.42, 6).translate(0, 0.21, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 })); neck.add(nm);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), nm.material); head.position.set(0, 0.44, 0.03); neck.add(head); const bk = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.2, 6).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#f0c030', roughness: 0.6 })); bk.position.set(0, 0.44, 0.17); neck.add(bk);
+        g.position.set(x, Math.max(hAt(x, z), WL - 0.3), z); g.rotation.y = ry; mg.add(g); herons.push({ neck, ph: herons.length * 3.1 }); };
+      put(330, 372, 0.8); put(262, 408, -2.2);
+      tickers.push((dt, t) => { for (const h of herons){ const u = (t + h.ph) % 9; h.neck.rotation.x = u < 1.2 ? Math.sin(u / 1.2 * Math.PI) * 1.3 : Math.sin(t * 0.7 + h.ph) * 0.06; } }); }
+    /* --- 螢火蟲：晚上才亮，在紅樹林上面慢慢飄 --- */
+    { const N = 80, fgeo = new THREE.BufferGeometry(), fp = new Float32Array(N * 3), base = []; let sd4 = 77; const rr = () => (sd4 = (sd4 * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < N; i++){ const [x, z] = P(250 + rr() * 200, 345 + rr() * 80); base.push([x, 0.8 + rr() * 2.4, z, rr() * 6.28]); } fgeo.setAttribute('position', new THREE.BufferAttribute(fp, 3));
+      const flies = new THREE.Points(fgeo, new THREE.PointsMaterial({ color: '#d8ff7a', size: 0.18, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); mg.add(flies);
+      tickers.push((dt, t) => { const hr = A.DayNight && A.DayNight.hour != null ? A.DayNight.hour : 12, want = hr < 5 || hr >= 18.5 ? 0.9 : 0; flies.material.opacity += (want - flies.material.opacity) * Math.min(1, dt * 0.8); flies.visible = flies.material.opacity > 0.02; if (!flies.visible) return;
+        const a = fgeo.attributes.position.array; for (let i = 0; i < N; i++){ const [x, y, z, ph] = base[i]; a[i * 3] = x + Math.sin(t * 0.5 + ph) * 0.6; a[i * 3 + 1] = y + Math.sin(t * 0.8 + ph * 2) * 0.3; a[i * 3 + 2] = z + Math.cos(t * 0.4 + ph) * 0.6; } fgeo.attributes.position.needsUpdate = true; }); }
+    flush(parts, mg); }
   /* v922 潮汐（跟舊島一樣）：海水退掉多少（公尺，0～0.3）。海岸前 3 公尺是緩緩的淺灘，乾潮時水深不到這個數字的地方，水面著色器不畫水、露出濕沙。
      seaAt：這一格是海（不是河、湖、紅樹林——那些不退潮）；dryAt：露出來、可以走上去的濕沙；wetAt：可以下竿的水（退潮時要再深 9 公分才算，浮標才不會落在濕沙上） */
   let tideFix = null;   /* 排位置的時候用：當成滿潮來算（不然剛好退潮進遊戲，「水邊」會排到退潮才露出來的沙地上） */
@@ -633,14 +680,14 @@ export function init(A){
     board: boardLine, rail: railLine,   /* 測試用：木棧道、鐵軌的中心線（島上的公尺） */
     /* v923 小火車：train 是給 game.js 問的（有幾站、哪一班停在哪一站、座位現在在哪）；trainStep(共用時間的秒數, dt) 每一幀在移動玩家之前叫一次 */
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
-    bb: bbInfo, seats, doors, posts, benches, cave: caveInfo,   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
+    bb: bbInfo, seats, doors, posts, benches, cave: caveInfo, mud: mudPts,   /* v930 mud：紅樹林泥灘上小動物住的地方 */   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
     /* v926 村民散步用。railNear：這一點是不是在鐵軌旁邊（m 公尺內）或月台上；stroll：可不可以當散步的去處——鋪了路的地（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋 */
     railNear: (x, z, m) => { const lx = x - OX, lz = z - OZ; return railDist(lx, lz) < (m || 1.6) || !!platAt(lx, lz); },
     stroll: (x, z, near) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (near ? samp(sdMain, lx, lz) > 1.5 && samp(sdFor, lx, lz) < -4 : samp(sdPave, lx, lz) > 0.3) && samp(HG, lx, lz) > 0.2 && !deck(lx, lz) && !platAt(lx, lz) && railDist(lx, lz) > 2.2; },   /* near：攤位旁邊幾步，不一定要鋪路，草地也行（不進森林、不下水） */   /* 高看板（螢幕、字幕條的 Mesh，中心高度）和它前面的座位：game.js 接節目、接坐下 */
     /* 這一點是什麼地：0 不是主島、1 水和紅樹林、2 路和廣場、3 森林、4 沙灘、5 蓋了東西、6 海岸邊、7 空草地（量「還有多少地沒用」用的） */
     kind: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz) || samp(sdMain, lx, lz) <= 0) return 0; if (samp(HG, lx, lz) < WL || samp(sdMang, lx, lz) > -3) return 1; if (paved(lx, lz, 0.5)) return 2; if (samp(sdFor, lx, lz) > -4) return 3; if (samp(sdSand, lx, lz) > -3) return 4; if (reserved(lx, lz)) return 5; if (samp(sdLand, lx, lz) < 6) return 6; return 7; },
     /* 預覽用：一按就過去的地點（島上的公尺） */
-    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 805, 196], ['山洞', 694, 226], ['護林員小屋', 925, 246], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
+    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['巡守站', 222, 356], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 805, 196], ['山洞', 694, 226], ['護林員小屋', 925, 246], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
   };
   /* v927 要站在水邊的位置（釣魚的村民、蔚博士調查的岸邊）：從排好的那一點找最近的水邊（當成滿潮），站好、面朝水；不靠鐵軌、不站在東西裡面；那裡不長樹。
      蔚博士的往後退一步半（不擋到在那裡釣魚的人）。找不到同一種水的就拿掉，她留在水族館入口。 */

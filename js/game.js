@@ -11879,12 +11879,27 @@ function updateMangrove(dt, t){
     c.m.position.x = c.x; c.m.position.z = c.z; c.m.rotation.y = c.kind === 'crab' ? c.ph + Math.sin(t * 3 + c.ph) * 0.15 : Math.atan2(me.pos.x - c.x, me.pos.z - c.z) + Math.PI / 2 + Math.sin(t + c.ph) * 0.3;
   }
 }
-function nearCritter(){ if (!Mang || !Mang.g || !mudOut() || myBoat || mySeat || F.phase !== 'idle' || Grab.busy) return null; let best = null, bd = 1.3; for (const c of Mang.critters){ if (!c.m.visible) continue; const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd){ bd = d; best = c; } } return best; }
+/* v930 新主島紅樹林泥灘上的小動物（招潮蟹、彈塗魚）：位置是 world2.js 找好的（W2.mud，從岸上走得到的泥地）。
+   跟村子的一樣：退潮才出來、走太快會躲起來、彈塗魚會跳、按「抓！」徒手抓（伺服器的泥灘釣點抽魚）。只在新主島的紅樹林附近才更新 */
+const W2C = { list: null };
+function w2CritTick(dt, t){ if (!W2 || !W2.mud || !W2.mud.length) return; const M = W2.mud[0]; if (Math.hypot(me.pos.x - M.x, me.pos.z - M.z) > 110){ if (W2C.list) for (const c of W2C.list) c.m.visible = false; return; }
+  if (!W2C.list){ W2C.list = []; for (const p of W2.mud){ let m; try { m = fishModel(FISH_BY_ID[p.kind === 'crab' ? 'fiddler' : 'mudskipper'], p.kind === 'crab' ? 0.32 : 0.36); } catch(e){ continue; } m.visible = false; m.userData.dyn = true; scene.add(m); W2C.list.push({ kind: p.kind, m, hx: p.x, hz: p.z, y: p.y, x: p.x, z: p.z, hide: 0, hop: Math.random() * 3, ph: Math.random() * 6, gone: 0, w2: true }); } }
+  const out = mudOut() && !onIsle && !House.on && !inIndoor(); for (const c of W2C.list){
+    const show = out && t > c.hide && !c.gone; c.m.visible = show; if (!show){ if (c.gone && t > c.gone){ c.gone = 0; c.x = c.hx; c.z = c.hz; } continue; }
+    const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z);
+    if (d < 2.6 && me.speed > 2.2){ c.hide = t + 8 + Math.random() * 6; if (!Mang.scared || t - Mang.scared > 10){ Mang.scared = t; toast(c.kind === 'crab' ? '招潮蟹躲回洞裡了…走慢一點' : '彈塗魚跳走了…走慢一點'); } continue; }
+    c.hop -= dt; if (c.kind === 'skipper' && c.hop < 0){ c.hop = 1.5 + Math.random() * 3; const a = Math.random() * Math.PI * 2, tx = c.hx + Math.cos(a) * 0.6, tz = c.hz + Math.sin(a) * 0.6; if (walkable(tx, tz) && !waterAt(tx, tz)){ c.tx = tx; c.tz = tz; c.ht = t; } }
+    const gy = groundHeight(c.x, c.z);
+    if (c.ht && t - c.ht < 0.45){ const k = (t - c.ht) / 0.45; c.x += (c.tx - c.x) * Math.min(1, dt * 6); c.z += (c.tz - c.z) * Math.min(1, dt * 6); c.m.position.y = gy + 0.02 + Math.sin(k * Math.PI) * 0.25; } else c.m.position.y = gy + 0.02;
+    if (c.kind === 'crab'){ c.x = c.hx + Math.sin(t * 0.6 + c.ph) * 0.3; }
+    c.y = gy; c.m.position.x = c.x; c.m.position.z = c.z; c.m.rotation.y = c.kind === 'crab' ? c.ph + Math.sin(t * 3 + c.ph) * 0.15 : Math.atan2(me.pos.x - c.x, me.pos.z - c.z) + Math.PI / 2 + Math.sin(t + c.ph) * 0.3; } }
+function nearCritter(){ if (W2C.list && mudOut() && !myBoat && !mySeat && F.phase === 'idle' && !Grab.busy){ let best = null, bd = 1.3; for (const c of W2C.list){ if (!c.m.visible) continue; const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd){ bd = d; best = c; } } if (best) return best; }
+  if (!Mang || !Mang.g || !mudOut() || myBoat || mySeat || F.phase !== 'idle' || Grab.busy) return null; let best = null, bd = 1.3; for (const c of Mang.critters){ if (!c.m.visible) continue; const d = Math.hypot(me.pos.x - c.x, me.pos.z - c.z); if (d < bd){ bd = d; best = c; } } return best; }
 // 徒手抓：跟釣魚一樣由伺服器抽（mudflat），只是不用竿子
 var Grab = { busy:false };
 async function grabCritter(c){
   if (Grab.busy) return; if (!mudGrabOk()){ toast('水快漲上來了，小動物都躲起來了'); return; }
-  Grab.busy = true; me.rot = Math.atan2(c.x - me.pos.x, c.z - me.pos.z); me.say('嘿！', 'alert', 0.8); camShake = Math.max(camShake, 0.08); puff(c.x, Mang.mudY, c.z);
+  Grab.busy = true; me.rot = Math.atan2(c.x - me.pos.x, c.z - me.pos.z); me.say('嘿！', 'alert', 0.8); camShake = Math.max(camShake, 0.08); puff(c.x, c.w2 ? c.y : Mang.mudY, c.z);
   const kindRig = c.kind === 'crab' ? 'bottom' : 'float', sp = SPOT_BY_ID.mudflat; let f = null, w = 0;
   try {
     if (Cloud.on && Cloud.sb){ const { data, error } = await Cloud.sb.rpc('roll_fish', { p_spot:'mudflat', p_charge:0, p_x:+me.pos.x.toFixed(2), p_z:+me.pos.z.toFixed(2), p_rig:kindRig, p_line:'normal', p_bait:null, p_chum:null, p_boat:false }); if (error) throw error; const hk = await Cloud.sb.rpc('hook_fish'); if (hk.error) throw hk.error; const hd = hk.data || {}; f = FISH_BY_ID[hd.cast_fish]; w = Number(hd.cast_w); F.sex = hd.cast_sex || null; F.brood = !!hd.cast_brood; if (!f) throw new Error('這條魚對不上伺服器，請重新整理遊戲'); F.rsTag = null; }
@@ -16401,7 +16416,7 @@ let ferryNpc = null; const Ferry = { on:false };
 function updateFerry(dt, t){
   if (!ferryNpc && houseBuilder){ const [x, z] = freeSpot(FERRY.at[0], FERRY.at[1]), f = new Fisher({ shirt:'#2f89c7', hat:'#f6f0dd', name:FERRY.name, kind:'npc' }); f.pos.set(x, 0, z); f.baseY = groundHeight(x, z); f.rot = Math.PI / 2; f.setGear({ hat:'hat_pirate', top:'top_stripe', shoes:'shoes_rain' }); f.nm.classList.add('quest'); ferryNpc = { f, name:FERRY.name }; f.say('🚤', 'emote', 99999); }
   if (ferryNpc){ const d = Math.hypot(me.pos.x - ferryNpc.f.pos.x, me.pos.z - ferryNpc.f.pos.z); if (d < 40){ ferryNpc.f.av.g.visible = !onIsle && !House.on; ferryNpc.f.update(0.016, now()); ferryNpc.f.placeTag(); } else ferryNpc.f.tag.style.display = 'none'; }
-  if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){} try { teamTick(); } catch(e){} try { ordTick(dt, t); } catch(e){} if (W2){ try { W2.tick(dt, t); } catch(e){ if (!W2.err){ W2.err = 1; console.warn('w2', e); } } w2SiteTick(); } else if (MAP2 && !W2ing && frameNo % 30 === 0 && houseBuilder && !onIsle) w2Boot();
+  if (frameNo % 30 === 0) try { boardTick(); evtTick(t); } catch(e){} try { teamTick(); } catch(e){} try { ordTick(dt, t); } catch(e){} if (W2){ try { W2.tick(dt, t); } catch(e){ if (!W2.err){ W2.err = 1; console.warn('w2', e); } } w2SiteTick(); try { w2CritTick(dt, t); } catch(e){ if (!W2C.err){ W2C.err = 1; console.warn('w2crit', e); } } } else if (MAP2 && !W2ing && frameNo % 30 === 0 && houseBuilder && !onIsle) w2Boot();
   if (frameNo % 30 === 0) try { sbTick(); } catch(e){ console.warn('sb', e); SB.state = 'off'; }
   if (frameNo % 15 === 7) try { clodTick(); } catch(e){}
   if (frameNo % 60 === 31) try { shadowTrim(); } catch(e){}
