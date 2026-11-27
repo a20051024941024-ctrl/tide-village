@@ -101,11 +101,17 @@ export function init(A){
   const caveFloor = u => CAVE.y0 + (CAVE.y1 - CAVE.y0) * clamp(u, 0, CAVE.LEN) / CAVE.LEN;
   /* 紅樹林：一片淺淺的水（樹站在水裡），中間幾塊露出來的泥灘 */
   const lagoon = (lx, lz, mg) => { const n = Math.sin(lx * 0.42 + 1.7) * Math.cos(lz * 0.47 - 0.4) + 0.45 * Math.sin(lx * 0.93 - lz * 0.71); return lerp(-0.4, 0.2, s01((n - 0.5) / 0.3) * s01((mg - 0.5) / 2)); };
-  function height(lx, lz){ const dl = samp(sdLand, lx, lz), mg = samp(sdMang, lx, lz);
+  /* v951 礁岩上的大石頭：位置先決定好，地面高度和石頭的樣子用同一份，人才會站在石頭上面 */
+  const rockBase = (lx, lz, rk) => 0.3 + 0.32 * s01(rk / 1.6) + Math.sin(lx * 1.7) * Math.cos(lz * 1.9) * 0.06;
+  const BOULDERS = (() => { let sd = 11; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647, out = [];
+    for (const [px, py, r] of REEF_ROCKS){ const [x, z] = P(px, py), R = r * S; for (let b = 0; b < 3; b++){ const bx = x + (rnd() - 0.5) * R * 0.8, bz = z + (rnd() - 0.5) * R * 0.6, br = R * (0.35 + rnd() * 0.2); out.push({ x: bx, z: bz, r: br, dark: !b, y: rockBase(bx, bz, samp(sdRock, bx, bz)) - 0.04 }); } }
+    return out; })();
+  function height(lx, lz){ const h0 = height0(lx, lz); let hb = -9; for (const B of BOULDERS){ const dx = lx - B.x, dz = lz - B.z, R = B.r; if (dx * dx + dz * dz < R * R) hb = Math.max(hb, B.y + B.r * 0.45 * Math.sqrt(1 - (dx * dx + dz * dz) / (R * R))); } return Math.max(h0, hb); }   /* v951 礁岩上的大石頭踩得上去，石頭伸到水上的那一塊也算 */
+  function height0(lx, lz){ const dl = samp(sdLand, lx, lz), mg = samp(sdMang, lx, lz);
     if (dl < 0){ const d = -dl; let h = d <= 3 ? -0.03 - d * 0.1 : Math.max(-3.2, -0.33 - (d - 3) * 0.42); if (mg > -5) h = lerp(h, lagoon(lx, lz, mg), s01((mg + 5) / 5)); { const rf = samp(sdReef, lx, lz); if (rf > -5) h = lerp(h, -0.46 - 0.22 * (Math.sin(lx * 0.8 + 1.3) * Math.cos(lz * 0.7) * 0.5 + 0.5), s01((rf + 5) / 5)); }   /* v950 珊瑚礁：淺淺的一片 */ return h; }
     const dw = samp(sdWat, lx, lz), dm = samp(sdMain, lx, lz), flat = s01((samp(sdPave, lx, lz) + 3) / 3);
     let h = 0.1 + s01(dl / 4) * (PAVE_Y - 0.1);
-    { const rk = samp(sdRock, lx, lz); if (rk > -0.5 && samp(sdMain, lx, lz) < 0){ return Math.max(h, 0.3 + 0.32 * s01(rk / 1.6) + Math.sin(lx * 1.7) * Math.cos(lz * 1.9) * 0.06); } }   /* v950 礁岩：比水面高一點、中間凸起 */
+    { const rk = samp(sdRock, lx, lz); if (rk > -0.5 && samp(sdMain, lx, lz) < 0){ return Math.max(h, rockBase(lx, lz, rk)); } }   /* v950 礁岩：比水面高一點、中間凸起；v951 上面的大石頭也踩得上去（腳不會陷進石頭裡） */   /* v950 礁岩：比水面高一點、中間凸起 */
     h += (Math.sin(lx * 0.11 + 1.3) * Math.cos(lz * 0.13) * 0.22 + Math.sin((lx + lz) * 0.31) * 0.07 + 0.12) * s01((dl - 5) / 8) * (1 - flat);
     const df = samp(sdFor, lx, lz); if (df > -14 && dm > 0){ const k = s01((df + 14) / 34) * s01((-dw - 1.5) / 9) * s01(dm / 10) * (1 - flat), a = Math.max(0, 1 - Math.hypot(lx - PEAK[0], lz - PEAK[1]) / 36), b = Math.max(0, 1 - Math.hypot(lx - PEAK2[0], lz - PEAK2[1]) / 26);
       h += k * (0.9 + Math.pow(a, 1.5) * 13.5 + Math.pow(b, 1.6) * 5.5 + (Math.sin(lx * 0.37) * Math.cos(lz * 0.33) + 1) * 0.35); }
@@ -510,7 +516,7 @@ export function init(A){
       else if (t < 0.6){ const r = 0.3 + rnd() * 0.3; G(cparts, c, new THREE.SphereGeometry(r, 9, 6, 0, 6.2832, 0, Math.PI / 2).scale(1, Math.min(0.7, room * 0.9 / r), 1), x, y, z); }   /* 腦紋珊瑚 */
       else if (t < 0.8){ const r = Math.min(room, 0.32 + rnd() * 0.2), g = new THREE.CircleGeometry(r, 9, 0, Math.PI); g.rotateY(rnd() * 6.28); G(cparts, c, g, x, y, z); }   /* 扇子 */
       else { for (let b = 0; b < 5; b++){ const L = Math.min(room, 0.12 + rnd() * 0.22), g = new THREE.CylinderGeometry(0.035, 0.035, L, 6, 1, true); g.translate((rnd() - 0.5) * 0.18, L / 2, (rnd() - 0.5) * 0.18); G(cparts, c, g, x, y, z); } } }   /* 管子 */
-    for (const [px, py, r] of REEF_ROCKS){ const [x, z] = P(px, py), R = r * S; for (let b = 0; b < 3; b++){ const g = new THREE.DodecahedronGeometry(R * (0.35 + rnd() * 0.2), 0); g.scale(1, 0.45, 1); G(parts, b ? '#8f8878' : '#7d776a', g, x + (rnd() - 0.5) * R * 0.8, hAt(x, z) - 0.02, z + (rnd() - 0.5) * R * 0.6); } }
+    for (const B of BOULDERS){ const g = new THREE.DodecahedronGeometry(B.r, 0); g.scale(1, 0.45, 1); G(parts, B.dark ? '#7d776a' : '#8f8878', g, B.x, B.y, B.z); }   /* v951 跟地面高度同一份 */
     flush(parts, rg);
     for (const hex in cparts){ const m = new THREE.Mesh(mergeGeometries(cparts[hex], false), new THREE.MeshLambertMaterial({ color: hex, emissive: new THREE.Color(hex).multiplyScalar(0.35), side: THREE.DoubleSide })); m.receiveShadow = true; rg.add(m); }   /* 珊瑚自己帶一點亮，隔著水也看得出粉紅、橘、紫 */
     const fishG = new THREE.Group(); rg.add(fishG); const FC = ['#ffd23f', '#3fb8ff', '#ff7a4a', '#ffffff', '#7fe08a'], school = [];
