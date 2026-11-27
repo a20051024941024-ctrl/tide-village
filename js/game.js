@@ -18422,6 +18422,127 @@ function w2NavList(){ const L = [], PO = W2.posts;
   for (const d of W2.doors || []) L.push([W2_DOOR_IC[d.k] || '🚪', d.label, [d.x, d.z]]);
   for (const [k, ic, lab] of [['craft', '🔧', '阿鐵（做魚餌、釣竿造型）'], ['gang', '⚓', '老港（每週限量）'], ['news', '📰', '阿報（村報）'], ['sci', '🔬', '蔚博士（潛水艇、每日調查）'], ['salon', '💇', '阿萍美髮沙龍']]){ const n = PO[k] && npcs.find(W2_NPC[k]); if (n && !n.wHide) L.push([ic, lab, [n.pos.x, n.pos.z]]); }
   return L; }
+/* ===== v954 新主島的新地圖（作者 11/27：「地圖能參考他們，但不要抄襲」→ 選了明亮扁平那一張）=====
+   全螢幕、可以拖、兩隻手指放大縮小。上面的東西：好釣點（小魚圓章，水紋往外擴）、店和板子（白色膠囊牌）、村民（橘色名字章，跟著人走）、車站和跑動的小火車、你自己（紅色箭頭）。
+   字不會疊：重要的先放（你 → 村民 → 釣點 → 店 → 地名），被擋住就換個方向擺（拉一條細線指回去），再擠只留圖示，還是擠就跟旁邊的合成「×2」（點了列出來）。
+   點任何一個 → 一張卡片：遊戲裡拍的照片（icons/map/）、一句介紹、現在誰在那裡，「🧭 帶我去」「✨ 傳送」。只在新主島用；舊村子還是原本的地圖。 */
+const W2MAP_TXT = {
+  '主城廣場': ['⛲', '噴水池和大家出生的地方。留言板、訂單板、大看板都在附近。'],
+  '村公所': ['🏛️', '村長在裡面辦公。每日任務找村長、找老王。'],
+  '港口': ['⚓', '五條棧橋。找阿海坐船出海、去外島；棧橋尾端是好釣點。'],
+  '商店街': ['🛍️', '食堂、畫廊、木工坊、寵物店、撞球館、釣蝦場、釣具店、服裝店都在這條街。'],
+  '水族館': ['🐠', '森林步道下來、過了小木橋就到。蔚博士常在門口。'],
+  '活動場地': ['🎪', '節慶、比賽、全服活動都在這裡辦。'],
+  '紅樹林': ['🌿', '一片淺淺的水，泥灘上有彈塗魚和招潮蟹。走木棧道進去。'],
+  '巡守站': ['🔭', '紅樹林最裡面，阿蘭巡守的地方。'],
+  '居民區': ['🏘️', '大家住的地方，下雨的時候村民會回家躲雨。'],
+  '森林步道': ['🌲', '從村公所後面走進森林，有溪、有湖、有長椅可以坐。'],
+  '瀑布': ['💦', '森林深處，瀑布下的清溪潭。'],
+  '山洞': ['🕳️', '大山西南邊的山坡上，裡面有發光的水晶。'],
+  '護林員小屋': ['🛖', '森林東邊的小木屋。'],
+  '遊樂園': ['🎡', '摩天輪、旋轉木馬，晚上會亮燈。'],
+  '沙灘': ['🏖️', '陽光沙灘，東南外海有一片珊瑚礁。'],
+  cafe: '吃飯、煮料理，美雲姨在裡面。中午和晚上村民會來吃飯。', cai: '阿彩畫的畫，可以買回家掛。', mu: '阿木做的家具，擺在自己的小島上。', pet: '小花的寵物店，帶一隻回家陪你。',
+  pool: '打撞球，跟阿喆比一局。', shrimp: '室內釣蝦場，買時段、釣蝦、烤蝦。', tackle: '買竿子、魚餌、線。', tailor: '阿綾的服裝店（整修中，換衣服先去造型）。',
+  market: '賣魚的地方，裡面有阿福海產的櫃位。', museum: '海洋博物館，捐魚、看化石和骨骼標本。', stad: '潮汐體育場，比賽和運動會。',
+  orders: '今天村民要的魚和菜，交了拿獎勵。', board: '寫留言給大家看。', tboard: '村子的排行和紀錄。', bb: '大螢幕播村子的大小事。', zc: '築城守土：坐下來玩一局。'
+};
+const W2MAP_PPL = { craft: ['鐵', '阿鐵', '做魚餌、釣竿造型'], gang: ['港', '老港', '每週限量的好東西'], news: ['報', '阿報', '村報、今天的消息'], sci: ['蔚', '蔚博士', '潛水艇、每日調查'], salon: ['萍', '阿萍', '美髮沙龍'] };
+const W2M = { el: null, s: 1, s0: 1, ox: 0, oy: 0, mk: [], lay: { fish: true, shop: true, ppl: true, sta: false }, iv: 0, skip: 0, P: null, dc: 0 };
+function w2MapOn(){ return !!(!W2M.skip && W2S.on && W2 && W2.mapPaper && W2.near(me.pos.x, me.pos.z)); }
+function w2mItems(){ const L = [], PO = W2.posts, M = W2.mapPaper('bright');
+  const add = o => { o.p = [(o.x - M.x0) * M.k, (o.z - M.z0) * M.k]; L.push(o); return o; };
+  for (const id in (W2.spotsAt || {})){ const sp = SPOT_BY_ID[id]; if (!sp) continue; add({ cat: 'fish', key: 'spot_' + id, ic: '🐟', name: sp.short || sp.label, x: sp.pos.x, z: sp.pos.z, col: sp.color || '#2f89c7', spot: sp, to: [sp.pos.x - sp.dir.x * 0.6, sp.pos.z - sp.dir.y * 0.6, Math.atan2(sp.dir.x, sp.dir.y)] }); }
+  for (const d of W2.doors || []){ const fx = Math.sin(d.face), fz = Math.cos(d.face); add({ cat: 'shop', key: 'door_' + d.k, ic: W2_DOOR_IC[d.k] || '🚪', name: d.label, x: d.x, z: d.z, desc: W2MAP_TXT[d.k], to: [d.x + fx * 1.6, d.z + fz * 1.6, d.face + Math.PI] }); }
+  for (const [k, ic, nm] of [['orders', '📋', '訂單板'], ['board', '📌', '留言板'], ['tboard', '🏆', '村子大看板'], ['zc', '🏰', '築城守土']]){ const p = PO[k]; if (!p) continue; add({ cat: 'shop', key: 'post_' + k, ic, name: nm, x: p.x, z: p.z, desc: W2MAP_TXT[k], to: [p.x + Math.sin(p.face) * 2, p.z + Math.cos(p.face) * 2, p.face + Math.PI] }); }
+  if (PO.ferry){ const p = PO.ferry; add({ cat: 'shop', key: 'post_ferry', ic: '⛵', name: '阿海・坐船', x: p.x, z: p.z, desc: '坐船出海、去外島、去阿嬤那裡。', to: [p.x + Math.sin(p.face) * 1.8, p.z + Math.cos(p.face) * 1.8, p.face + Math.PI] }); }
+  for (const k in W2MAP_PPL){ const n = PO[k] && npcs.find(W2_NPC[k]); if (!n) continue; const [c, nm, what] = W2MAP_PPL[k]; add({ cat: 'ppl', key: 'ppl_' + k, ic: c, name: nm, what, n, x: n.pos.x, z: n.pos.z }); }
+  { const T = w2Train(); if (T) T.stops.forEach((q, i) => add({ cat: 'sta', key: 'sta_' + i, ic: '🚉', name: q.name + '站', x: q.x, z: q.z, st: i, to: [q.x + q.nx * 0.5, q.z + q.nz * 0.5, Math.atan2(q.nx, q.nz)] })); }
+  const shopNames = new Set(L.map(o => o.name));
+  for (const [nm, lx, lz] of W2.spots || []){ if (nm === '玩家建地' || !W2MAP_TXT[nm] || ['博物館', '體育場', '中央市場'].includes(nm)) continue; const x = W2.ox + lx, z = W2.oz + lz, T = W2MAP_TXT[nm]; add({ cat: 'area', key: 'area_' + nm, ic: T[0], name: nm, x, z, desc: T[1], to: [x, z, me.rot] }); }
+  return L; }
+function w2MapOpen(){ if (W2M.el) return; SFX.click(); closeSheet(); const M = W2.mapPaper('bright'), V = document.createElement('div'); V.id = 'w2map'; V.className = 'bright';
+  V.innerHTML = `<div class="w2mv"><div class="w2mw"><div class="w2mimg"></div><svg class="w2ml"></svg><div class="w2mk"></div></div></div>
+    <div class="w2mt">🏝️ 潮汐島<small>點地方看看・帶你過去</small></div><div class="w2mtide"></div><button class="w2mx" aria-label="關閉">✕</button>
+    <div class="w2mz"><button data-z="1.4">＋</button><button data-z="0.7">－</button><button data-z="me">◎</button></div>
+    <div class="w2mlay"><button data-l="fish">🐟 釣點</button><button data-l="shop">🏪 店</button><button data-l="ppl">🧑 村民</button><button data-l="sta">🚉 車站</button><button class="w2mlist">📋 清單</button></div>
+    <svg class="w2mc" viewBox="-50 -50 100 100"><circle r="40" fill="#fff"/><path d="M0-32 L8 0 L0 32 L-8 0Z" fill="#ff7a59"/><path d="M0 0 L8 0 L0 32 L-8 0Z" fill="#cfd8e0"/><text y="-36" text-anchor="middle" font-size="16" font-weight="900" fill="#26445c">N</text></svg>
+    <div class="w2mcard" hidden></div>`;
+  document.body.appendChild(V); W2M.el = V; uiBlocked = true; { const wn = document.getElementById('w2nav'); if (wn) wn.style.visibility = 'hidden'; }   /* 預覽那一排按鈕先藏起來 */ for (const k in keys) keys[k] = false;
+  const img = V.querySelector('.w2mimg'); M.cv.className = 'w2mcv'; img.appendChild(M.cv);
+  W2M.mk = w2mItems().map(o => { const e = document.createElement('div'); e.className = 'w2m-' + o.cat; o.el = e;
+    if (o.cat === 'fish'){ e.style.background = o.col; e.style.color = o.col; e.innerHTML = '<i>🐟</i><span class="fn">' + esc(o.name) + '</span>'; }
+    else if (o.cat === 'ppl') e.textContent = o.ic; else if (o.cat === 'area') e.textContent = o.name;
+    else e.innerHTML = `<b>${o.ic}</b><span class="nm">${esc(o.name)}</span>`;
+    e.addEventListener('click', ev => { ev.stopPropagation(); if (W2M.moved) return; w2mCard(o.grp && o.grp.length ? [o, ...o.grp] : [o]); }); V.querySelector('.w2mk').appendChild(e); return o; });
+  { const T = w2Train(); W2M.trains = []; if (T) for (let k = 0; k < T.n; k++){ const e = document.createElement('div'); e.className = 'w2m-train'; e.textContent = '🚃'; V.querySelector('.w2mk').appendChild(e); W2M.trains.push(e); } }
+  W2M.meEl = document.createElement('div'); W2M.meEl.className = 'w2m-me'; V.querySelector('.w2mk').appendChild(W2M.meEl);
+  const vw = V.clientWidth, vh = V.clientHeight; W2M.vw = vw; W2M.vh = vh; W2M.W = M.cv.width; W2M.H = M.cv.height; W2M.s0 = Math.max(vw / W2M.W, vh / W2M.H); W2M.s = W2M.s0 * 1.25; W2M.M = M;
+  w2mCenterMe(); w2mLayout(true);
+  V.querySelector('.w2mx').addEventListener('click', w2MapClose);
+  V.querySelector('.w2mlist').addEventListener('click', () => { w2MapClose(); W2M.skip = 1; try { openSheet('map'); } finally { W2M.skip = 0; } });
+  V.querySelectorAll('.w2mz button').forEach(b => b.addEventListener('click', () => { SFX.click(); if (b.dataset.z === 'me'){ w2mCenterMe(); w2mLayout(false); return; } w2mZoom(W2M.s * +b.dataset.z, vw / 2, vh / 2); }));
+  V.querySelectorAll('.w2mlay button[data-l]').forEach(b => { b.classList.toggle('off', !W2M.lay[b.dataset.l]); b.addEventListener('click', () => { SFX.click(); W2M.lay[b.dataset.l] = !W2M.lay[b.dataset.l]; b.classList.toggle('off', !W2M.lay[b.dataset.l]); w2mDeclutter(); }); });
+  /* 拖、捏 */
+  const view = V.querySelector('.w2mv'), pts = new Map(); let last = null, pinch = null;
+  view.addEventListener('pointerdown', e => { pts.set(e.pointerId, [e.clientX, e.clientY]); W2M.moved = false; W2M.down = [e.clientX, e.clientY]; if (pts.size === 2){ const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: W2M.s }; } last = [e.clientX, e.clientY]; });
+  W2M.onMove = e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]); const r = V.getBoundingClientRect();
+    if (pts.size >= 2 && pinch){ const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); W2M.moved = true; w2mZoom(pinch.s * d / Math.max(1, pinch.d), (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top, true); return; }
+    if (Math.hypot(e.clientX - W2M.down[0], e.clientY - W2M.down[1]) > 6) W2M.moved = true; if (!W2M.moved) return; W2M.ox += e.clientX - last[0]; W2M.oy += e.clientY - last[1]; last = [e.clientX, e.clientY]; w2mClamp(); w2mPan(); };
+  W2M.onUp = e => { pts.delete(e.pointerId); if (pts.size < 2 && pinch){ pinch = null; w2mDeclutter(); } if (pts.size === 1) last = [...pts.values()][0]; };
+  window.addEventListener('pointermove', W2M.onMove); window.addEventListener('pointerup', W2M.onUp); window.addEventListener('pointercancel', W2M.onUp);
+  view.addEventListener('wheel', e => { e.preventDefault(); const r = V.getBoundingClientRect(); w2mZoom(W2M.s * (e.deltaY < 0 ? 1.15 : 0.87), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  view.addEventListener('click', () => { if (!W2M.moved) w2mCardClose(); });
+  w2mTick(); W2M.iv = setInterval(w2mTick, 400); }
+function w2MapClose(){ const V = W2M.el; if (!V) return; clearInterval(W2M.iv); window.removeEventListener('pointermove', W2M.onMove); window.removeEventListener('pointerup', W2M.onUp); window.removeEventListener('pointercancel', W2M.onUp);
+  V.remove(); W2M.el = null; if ($('#sheet').hidden) uiBlocked = false; { const wn = document.getElementById('w2nav'); if (wn) wn.style.visibility = ''; } }
+function w2mClamp(){ const mw = W2M.W * W2M.s, mh = W2M.H * W2M.s; W2M.ox = Math.min(0, Math.max(W2M.vw - mw, W2M.ox)); W2M.oy = Math.min(0, Math.max(W2M.vh - mh, W2M.oy)); }
+function w2mCenterMe(){ const M = W2M.M, px = (me.pos.x - M.x0) * M.k, pz = (me.pos.z - M.z0) * M.k; W2M.ox = W2M.vw / 2 - px * W2M.s; W2M.oy = W2M.vh / 2 - pz * W2M.s; w2mClamp(); }
+function w2mPan(){ W2M.el.querySelector('.w2mw').style.transform = `translate(${W2M.ox}px,${W2M.oy}px)`; }
+function w2mZoom(ns, cx, cy, live){ ns = clamp(ns, W2M.s0, W2M.s0 * 3.2); const k = ns / W2M.s; W2M.ox = cx - (cx - W2M.ox) * k; W2M.oy = cy - (cy - W2M.oy) * k; W2M.s = ns; w2mClamp(); w2mLayout(!live); }
+function w2mLayout(dc){ const V = W2M.el, s = W2M.s; V.querySelector('.w2mcv').style.width = W2M.W * s + 'px'; V.querySelector('.w2mcv').style.height = W2M.H * s + 'px'; const ln = V.querySelector('.w2ml'); ln.setAttribute('width', W2M.W * s); ln.setAttribute('height', W2M.H * s);
+  for (const o of W2M.mk){ o.el.style.left = o.p[0] * s + 'px'; o.el.style.top = o.p[1] * s + 'px'; } w2mPan(); w2mTick(); if (dc) w2mDeclutter(); else { clearTimeout(W2M.dc); W2M.dc = setTimeout(w2mDeclutter, 150); } }
+/* 字不會疊在一起 */
+function w2mDeclutter(){ const V = W2M.el; if (!V) return; const s = W2M.s, near = s > W2M.s0 * 1.45, ln = V.querySelector('.w2ml'); ln.innerHTML = ''; V.classList.toggle('near', near);
+  const placed = [], R = e => { const r = e.getBoundingClientRect(); return { l: r.left - 2, t: r.top - 2, r: r.right + 2, b: r.bottom + 2 }; }, hit = a => placed.some(b => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t);
+  placed.push(R(W2M.meEl)); const shops = [];
+  const order = ['ppl', 'fish', 'sta', 'shop', 'area'];
+  for (const cat of order) for (const o of W2M.mk.filter(q => q.cat === cat)){ const e = o.el; o.grp = []; e.style.left = o.p[0] * s + 'px'; e.style.top = o.p[1] * s + 'px'; e.classList.remove('hide', 'bare'); const c0 = e.querySelector('.cnt'); if (c0) c0.remove();
+    const on = cat === 'area' ? true : W2M.lay[cat]; if (!on){ e.classList.add('hide'); continue; }
+    if (cat === 'ppl'){ placed.push(R(e)); continue; }
+    if (cat === 'fish'){ const r = R(e); placed.push({ l: r.l + 6, t: r.t + 6, r: r.r - 6, b: r.b - 6 }); const fn = e.querySelector('.fn'); fn.classList.toggle('hide', !near); if (near){ if (hit(R(fn))) fn.classList.add('hide'); else placed.push(R(fn)); } continue; }
+    if (cat === 'area'){ if (hit(R(e))) e.classList.add('hide'); else placed.push(R(e)); continue; }
+    if (!near) e.classList.add('bare');
+    const bx = o.p[0] * s, by = o.p[1] * s, w = e.offsetWidth, h = e.offsetHeight, line = (dx, dy) => { if (dx || dy) ln.insertAdjacentHTML('beforeend', `<line x1="${bx}" y1="${by}" x2="${bx + dx}" y2="${by + dy}"/>`); };
+    const tryAt = list => { for (const [dx, dy] of list){ e.style.left = bx + dx + 'px'; e.style.top = by + dy + 'px'; if (!hit(R(e))){ line(dx, dy); return true; } } return false; };
+    let ok = tryAt([[0, 0], [0, -(h + 3)], [0, h + 3], [w / 2 + 14, 0], [-(w / 2 + 14), 0], [w / 2 + 8, -(h + 3)], [-(w / 2 + 8), -(h + 3)], [w / 2 + 8, h + 3], [-(w / 2 + 8), h + 3]]);
+    if (!ok && near){ e.classList.add('bare'); const w2 = e.offsetWidth; ok = tryAt([[0, 0], [0, -24], [0, 24], [w2 + 4, 0], [-(w2 + 4), 0]]); }
+    if (!ok){ let best = null, bd = 1e9; for (const t of shops){ const dd = Math.hypot(t.p[0] - o.p[0], t.p[1] - o.p[1]); if (dd < bd){ bd = dd; best = t; } } e.classList.add('hide'); if (best){ best.grp.push(o); let c = best.el.querySelector('.cnt'); if (!c){ c = document.createElement('span'); c.className = 'cnt'; best.el.appendChild(c); } c.textContent = '×' + (best.grp.length + 1); } continue; }
+    placed.push(R(e)); shops.push(o); } }
+/* 每 0.4 秒：你、村民、小火車跟著動；潮水和時間 */
+function w2mTick(){ const V = W2M.el; if (!V) return; const M = W2M.M, s = W2M.s, P = (x, z) => [(x - M.x0) * M.k * s, (z - M.z0) * M.k * s];
+  { const [x, y] = P(me.pos.x, me.pos.z); W2M.meEl.style.left = x + 'px'; W2M.meEl.style.top = y + 'px'; W2M.meEl.style.transform = `translate(-50%,-50%) rotate(${Math.PI - me.rot}rad)`; }
+  for (const o of W2M.mk) if (o.cat === 'ppl' && o.n){ o.x = o.n.pos.x; o.z = o.n.pos.z; o.p = [(o.x - M.x0) * M.k, (o.z - M.z0) * M.k]; if (!o.el.classList.contains('hide')){ o.el.style.left = o.p[0] * s + 'px'; o.el.style.top = o.p[1] * s + 'px'; } }
+  { const T = w2Train(); if (T && T.railXZ) W2M.trains.forEach((e, k) => { const st = T.state(k); e.classList.toggle('hide', !st || !W2M.lay.sta); if (!st) return; const [x, y] = P(...T.railXZ(st.s)); e.style.left = x + 'px'; e.style.top = y + 'px'; }); }
+  { const td = tideNow(), h = gameHour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60); V.querySelector('.w2mtide').textContent = `${td.icon} ${td.name}・${hh < 12 ? '上午' : '下午'} ${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')}`; } }
+/* 卡片 */
+function w2mCardClose(){ const c = W2M.el && W2M.el.querySelector('.w2mcard'); if (c) c.hidden = true; }
+function w2mCard(list){ const c = W2M.el.querySelector('.w2mcard'); SFX.click(); c.hidden = false; c.innerHTML = '';
+  if (list.length > 1){ c.className = 'w2mcard many'; c.appendChild(el('h3', '', '這裡有 ' + list.length + ' 個地方')); for (const o of list){ const b = el('button', 'w2mrow', `${o.ic} ${o.name}`); b.addEventListener('click', e => { e.stopPropagation(); w2mCard([o]); }); c.appendChild(b); } const x = el('button', 'w2mcx', '✕'); x.addEventListener('click', e => { e.stopPropagation(); w2mCardClose(); }); c.appendChild(x); return; }
+  const o = list[0]; c.className = 'w2mcard';
+  { const pol = el('div', 'pol'), im = document.createElement('img'); im.alt = ''; im.src = 'icons/map/' + [...o.key].map(ch => ch.charCodeAt(0) < 128 ? ch : ch.charCodeAt(0).toString(16)).join('') + '.jpg';   /* 中文的地名換成編碼，檔名都是英數 */ im.onerror = () => pol.remove(); pol.appendChild(im); pol.appendChild(el('em', '', o.name)); c.appendChild(pol); }
+  const d = el('div', 'w2mtx'); c.appendChild(d); d.appendChild(el('h3', '', (o.cat === 'ppl' ? '🧑' : o.cat === 'fish' ? '🎣' : o.ic) + ' ' + o.name));
+  let desc = o.desc || '', extra = '';
+  if (o.cat === 'fish'){ const sp = o.spot, fs = (sp.fish || []).map(id => FISH_BY_ID[id]).filter(f => f && f.rarity === '常見').slice(0, 4).map(f => rec.count && rec.count[f.id] ? f.name : '？？'); desc = `發光的好釣點，站在圈圈裡釣比較容易有好魚。這裡常見：${fs.join('、')}${fs.length ? '……' : ''}`; }
+  if (o.cat === 'ppl') desc = `${o.name}：${o.what}。`;
+  if (o.cat === 'sta'){ const T = w2Train(); let eta = null; if (T) for (let k = 0; k < T.n; k++){ const st = T.state(k); if (!st) continue; const e = st.at === o.st ? 0 : st.next === o.st ? st.eta : null; if (e != null && (eta == null || e < eta)) eta = e; } desc = '小火車的車站，站在月台上等車。'; extra = eta == null ? '' : eta < 1 ? '🚃 車子正在這一站' : `🚃 下一班大約 ${Math.ceil(eta)} 秒後到`; }
+  if (o.key === 'door_market' || o.key === 'area_水族館'){ const n = npcs.find(q => q.shopNpc === 'sci'); if (o.key === 'area_水族館' && n) extra = '🔬 蔚博士今天在' + ((SPOT_BY_ID[(Sci.list && Sci.list[0] && Sci.list[0].spot) || ''] || {}).short || '島上') + '調查'; }
+  if (desc) d.appendChild(el('p', '', desc)); if (extra) d.appendChild(el('p', 'who', extra));
+  const bt = el('div', 'btns'); d.appendChild(bt);
+  const go = el('button', 'go', '🧭 帶我去'); go.addEventListener('click', e => { e.stopPropagation(); const x = o.cat === 'ppl' ? o.n.pos.x : o.x, z = o.cat === 'ppl' ? o.n.pos.z : o.z; w2MapClose(); navTo(o.name, x, z); }); bt.appendChild(go);
+  const tp = el('button', 'tp', '✨ 傳送'); tp.addEventListener('click', e => { e.stopPropagation(); let t = o.to; if (o.cat === 'ppl'){ const n = o.n, f = n.rot; t = [n.pos.x + Math.sin(f) * 1.8, n.pos.z + Math.cos(f) * 1.8, f + Math.PI]; } if (!t) return; w2MapClose(); try { W2.warm(t[0], t[1]); } catch(err){} travelTo({ id: 'w2m:' + o.key, label: o.name, x: t[0], z: t[1], rot: t[2] }); }); bt.appendChild(tp);
+  const x = el('button', 'w2mcx', '✕'); x.addEventListener('click', e => { e.stopPropagation(); w2mCardClose(); }); c.appendChild(x);
+  c.addEventListener('click', e => e.stopPropagation()); }
 function w2SiteTick(){ if (!W2 || !W2.posts || frameNo % 10) return; if (W2.near(me.pos.x, me.pos.z)) W2S.home = true; else if (Math.hypot(me.pos.x, me.pos.z) < 75 && !inIndoor() && !inHall() && !inStad() && !Dive.on && !Voy.on) W2S.home = false;   /* 回到舊村子本島：之後就照舊回舊港口 */ const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
 function w2Back(){ if (inIndoor() || inHall() || inStad()) return;   /* 還在裡面（例如正在煮菜不能走）：先不動，下次真的出去再回新主島 */ const b = Venue.back; Venue.back = null; if (!b || !W2) return; const fx = Math.sin(b.face), fz = Math.cos(b.face); me.pos.x = b.x + fx * 0.5; me.pos.z = b.z + fz * 0.5; try { W2.warm(me.pos.x, me.pos.z); } catch(e){} me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = b.face; cam.yaw = b.face + Math.PI; pushPresence(true); }
 function nearShop(){
@@ -22774,7 +22895,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
     if (!f || !f.av || f.av.g.visible || (f === me && FP.act)) continue; if (f.line && f.line.visible) f.line.visible = false; if (f.bob && f.bob.visible) f.bob.visible = false; if (f.tag && f.tag.style.display !== 'none') f.tag.style.display = 'none'; } }
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
-function openSheet(tab){ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
+function openSheet(tab){ if (tab === 'map' && w2MapOn()){ w2MapOpen(); return; }   /* v954 人在新主島：開新地圖 */ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
 function closeSheet(){ closeModelView(); { const wp = $('#wsPick'), wo = $('#wsPop'); if (wp) wp.remove(); if (wo) wo.remove(); } try { if (K3.real){ K3.tryEnd(); toast('沒買的造型換回原本的了'); } } catch(e){} if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
@@ -24859,7 +24980,7 @@ SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.wild = '🏝️ 荒島背包'; SH
 function phoneOpen(){ Phone.via = true; openSheet('phone'); }
 function phoneGo(tab){ Phone.via = true;
   if (tab === 'photo'){ closeSheet(); setTimeout(() => { try { enterPhoto(); } catch(e){} }, 80); return; }   /* v628 作者：「拍照功能去哪了」→ 頭像選單裡的📷被「今天」擋住看不到，手機也放一個 */
-  if (tab === 'seachart'){ openSheet('map'); setTimeout(() => { const h = [...$$('#sheetBody .dexhead')].find(x => /航海圖/.test(x.textContent)); if (h) h.scrollIntoView({ block:'start', behavior:'smooth' }); }, 60); return; }
+  if (tab === 'seachart'){ W2M.skip = 1; try { openSheet('map'); } finally { W2M.skip = 0; } setTimeout(() => { const h = [...$$('#sheetBody .dexhead')].find(x => /航海圖/.test(x.textContent)); if (h) h.scrollIntoView({ block:'start', behavior:'smooth' }); }, 60); return; }
   try { ui3Open(tab); } catch(e){}
   if (tab === 'news'){ News.pick = 0; loadNews(); } if (tab === 'board') loadBoard(); if (tab === 'tboard'){ Team.view = 'team'; loadTeam(); loadTeamBoard(); } if (tab === 'duelhub') duelHubLoad();
   if (tab === 'phfeed'){ Phone.seen = Date.now(); LS.set('tide.phSeen', Phone.seen); }
