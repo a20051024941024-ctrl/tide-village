@@ -45,6 +45,9 @@ export function init(A){
   const MF = rough([[270,350],[340,320],[420,330],[440,380],[380,415],[300,420],[255,395]], 3, 0.4, 91);          // 紅樹林
   const SAND = rough([[1300,700],[1420,660],[1560,640],[1660,680],[1690,760],[1580,800],[1430,795],[1300,780]], 2, 0.2, 77);   // 陽光沙灘
   const PLAZA = [[860,430],[940,400],[1060,410],[1090,480],[1060,560],[960,580],[870,560],[845,495]];
+  /* v920 固定的活動場地（作者 11/27：「就先固定」）：商店街東邊、市場南邊、港口北邊那一塊，不蓋房子，辦活動用。北邊跟市場的前廣場連在一起，南邊接港邊木棧道 */
+  const EVT = rough([[1040,702],[1076,672],[1150,676],[1190,712],[1182,764],[1120,790],[1054,772]], 2, 0.12, 733), EVT_C = [1112, 730];
+  const inPoly = (pts, x, y) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++){ const a = pts[i], b = pts[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
   const PL = [965, 505], RING = [215, 150];
   const NODES = { hall:[965,320,240,120], aqua:[640,410,210,130], mus:[775,662,170,100], amuse:[1255,325,270,160], stad:[1480,430,240,130], mkt:[1210,640,230,140] };   /* v919 水族館往南 2 公尺（圓頂放正中間還要離鐵軌遠一點）、市場的廣場放大（建築放正中間四周才有地方走） */
   const edgeP = (n, t) => { const [x, y, w, h] = n, dx = t[0] - x, dy = t[1] - y, k = Math.min((w / 2) / Math.abs(dx || 1e-6), (h / 2) / Math.abs(dy || 1e-6)); return [x + dx * k, y + dy * k]; };
@@ -69,7 +72,7 @@ export function init(A){
   const sdMain = sdf(bits(fillL([IS])));
   const sdFor = sdf(bits(fillL([FO]))), sdSand = sdf(bits(fillL([SAND]))), sdMang = sdf(bits(fillL([MF])));
   const watL = fillL([LAKE]); { const g = watL.g; open(g, RIV); g.lineWidth = 17; g.stroke(); } const sdWat = sdf(bits(watL));
-  const paveL = layer(); { const g = paveL.g; closed(g, PLAZA); g.fill(); g.beginPath(); g.ellipse(PL[0], PL[1], RING[0], RING[1], 0, 0, 7); g.lineWidth = 24; g.stroke();
+  const paveL = layer(); { const g = paveL.g; closed(g, PLAZA); g.fill(); closed(g, EVT); g.fill(); g.beginPath(); g.ellipse(PL[0], PL[1], RING[0], RING[1], 0, 0, 7); g.lineWidth = 24; g.stroke();
     for (const [pts, w] of ROADS){ open(g, pts); g.lineWidth = w + 4; g.stroke(); }
     for (const k in NODES){ const [x, y, w, h] = NODES[k]; g.beginPath(); g.ellipse(x, y, w / 2 + 4, h / 2 + 4, 0, 0, 7); g.fill(); }
     { open(g, RAIL.concat([RAIL[0]])); g.lineWidth = 16; g.stroke(); } }
@@ -179,6 +182,7 @@ export function init(A){
   const ell = (cx, cy, rx, ry, n, a0, a1) => Array.from({ length: n }, (_, i) => { const a = (a0 || 0) + ((a1 != null ? a1 : 6.2832) - (a0 || 0)) * i / (a1 != null ? n - 1 : n); return P(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry); });
   ribbon('stone', ell(PL[0], PL[1], RING[0], RING[1], 96), 4.6, PAVE_Y, true);                                  // 圓環大道
   flatShape('stone', curve(PLAZA.map((p, i, L) => p), true), PAVE_Y + 0.012);                                  // 主城廣場
+  flatShape('lane', curve(EVT, true), PAVE_Y + 0.006);                                                         // 活動場地
   for (const [pts, w, kind] of ROADS) ribbon(kind, curve(pts), w * S, PAVE_Y + (kind === 'lane' ? 0.004 : 0.008), false, kind === 'wood' ? 1.6 : 3);
   /* 前廣場：照建築換形狀（村公所半圓台階、水族館波浪、博物館拱形、遊樂園和市場圓、體育場橢圓） */
   { let [x, y, w, h] = NODES.hall; const a = [[x - w / 2, y - h / 2 + 10], [x + w / 2, y - h / 2 + 10], [x + w / 2 - 20, y + h / 2 - 20]]; for (let i = 1; i < 8; i++){ const t = i / 8, u = 1 - t; a.push([u * u * (x + w / 2 - 20) + 2 * u * t * x + t * t * (x - w / 2 + 20), u * u * (y + h / 2 - 20) + 2 * u * t * (y + h / 2 + 18) + t * t * (y + h / 2 - 20)]); } a.push([x - w / 2 + 20, y + h / 2 - 20]); flatShape('stone', a.map(p => P(p[0], p[1])), PAVE_Y + 0.016);
@@ -295,11 +299,13 @@ export function init(A){
     /* 規劃圖上的每一棟房子（作者 11/27 說規劃圖「就很好」→ 位置照圖，一棟不少）：[中心 x, 中心 y, 大小, 屋頂顏色, 是不是店]。門朝最近的路 */
     const HS = [[315,531,0,6,0],[367,535,0,2,0],[419,539,0,4,0],[523,547,0,1,0],[575,551,0,6,0],[627,555,0,2,0],[335,576,0,2,0],[387,580,0,4,0],[439,584,0,7,0],[543,592,0,6,0],[595,596,0,2,0],[647,600,0,4,0],[355,621,0,4,0],[407,625,0,7,0],[459,629,0,1,0],[511,633,0,6,0],[563,637,0,2,0],[615,641,0,4,0],[667,645,0,7,0],[1159,655,0,3,1],[1193,609,0,9,1],[1193,669,0,5,1],[1227,623,0,3,1],[1227,683,0,8,1],[1261,637,0,5,1],[1261,697,0,0,1],[1295,711,0,9,1],[949,611,0,0,1],[1021,611,0,0,1],[949,643,0,9,1],[1021,643,0,9,1],[949,675,0,3,1],[1021,675,0,3,1],[949,707,0,5,1],[1021,707,0,5,1],[949,739,0,8,1],[1021,739,0,8,1],[949,771,0,0,1],[1021,771,0,0,1],[1238,510,2,8,0],[1268,510,2,0,0],[1238,568,2,3,0],[1268,568,2,9,0],[1348,502,2,5,0],[468,456,1,8,1],[501,456,1,0,1],[463,495,1,8,0],[507,494,1,5,0],[540,490,1,9,0],[582,495,1,6,0],[618,491,1,2,1],[655,495,1,2,0],[694,493,1,5,1],[656,525,1,8,1],[692,527,1,9,0],[809,524,1,9,1],[1494,526,1,8,1],[1488,560,1,8,1],[695,626,1,2,0],[508,695,1,9,0],[578,698,1,0,0],[618,694,1,5,1],[653,698,1,5,0],[923,696,1,3,0],[658,729,1,3,0],[696,729,1,3,0],[886,728,1,3,0],[1076,730,1,0,0],[1111,728,1,0,0],[1147,728,1,9,0],[1226,728,1,8,1],[1265,732,1,7,1],[810,764,1,6,0],[846,766,1,5,0],[880,765,1,3,0],[922,764,1,2,1],[1070,763,1,3,1],[1110,765,1,0,1],[1185,763,1,9,1],[1226,763,1,7,0]];
     const HCOL = ["#3c8fd8", "#3e8f86", "#4a6fb5", "#4bb57b", "#7a5aa0", "#a46ad8", "#c0583a", "#d08a2a", "#e2574c", "#f0a02a"], HWALL = { '#e2574c': '#f2b3a6', '#3c8fd8': '#b9d9ee', '#f0a02a': '#f4d9a0', '#4bb57b': '#c7e3c0', '#a46ad8': '#d9c7ee', '#c0583a': '#f6c9a8', '#4a6fb5': '#bcd0f0', '#d08a2a': '#f3d98a', '#7a5aa0': '#dccbee', '#3e8f86': '#bfe0d8' };
+    const EVTG = grow(EVT, 16);
     const faceRoad = (x, z) => { let best = 0, bv = -1e9; for (let k = 0; k < 4; k++){ const a = k * Math.PI / 2, v = samp(sdPave, x + Math.sin(a) * 4, z + Math.cos(a) * 4); if (v > bv){ bv = v; best = a; } } return best; };
-    for (const [cx, cy, sz, ci, shop] of HS){ const [hx, hz] = P(cx, cy), wd = [[5.4, 4.4], [5.2, 4.2], [4.6, 3.8]][sz]; if (RSV.some(([rx, rz, rr]) => rr >= 5 && Math.hypot(hx - rx, hz - rz) < rr + 1.5)) continue; house(cx, cy, wd[0], wd[1], HCOL[ci], faceRoad(hx, hz), shop ? 'shop' : 'home'); }
+    for (const [cx, cy, sz, ci, shop] of HS){ const [hx, hz] = P(cx, cy), wd = [[5.4, 4.4], [5.2, 4.2], [4.6, 3.8]][sz]; if (inPoly(EVTG, cx, cy)) continue;   /* 活動場地上的房子拿掉 */ if (RSV.some(([rx, rz, rr]) => rr >= 5 && Math.hypot(hx - rx, hz - rz) < rr + 1.5)) continue; house(cx, cy, wd[0], wd[1], HCOL[ci], faceRoad(hx, hz), shop ? 'shop' : 'home'); }
     { const [x, z] = P(470, 585); label('居民區', x, 9, z); } { const [x, z] = P(985, 700); label('商店街', x, 9, z, 0.8); } { const [x, z] = P(1320, 545); label('玩家建地區', x, 9, z); }
     /* 預留的空地：照規劃圖把房子放滿以後，還空著的大塊草地剩這兩塊（西邊海岸、水族館和村公所中間）；全島空草地約 25% */
     for (const [px, py, t] of [[221, 556, '預留・以後擴建'], [783, 355, '預留']]){ const [x, z] = P(px, py); label(t, x, 6, z, 0.75); }
+    { const [x, z] = P(EVT_C[0], EVT_C[1]); label('活動場地', x, 7, z); }
     { const [x, z] = P(1490, 720); label('陽光沙灘', x, 8, z); } { const [x, z] = P(780, 215); label('森林冒險區', x, 22, z); } { const [x, z] = P(345, 372); label('紅樹林', x, 8, z); }
     /* 陽傘 */
     sd = 75; for (let i = 0; i < 16; i++){ const [x, z] = P(1330 + R() * 330, 690 + R() * 90), y = hAt(x, z); if (y < 0.15) continue; G(parts, ['#2c8fd6', '#e46a4a', '#f2c230', '#ff8fb0'][i % 4], new THREE.ConeGeometry(1.5, 0.6, 8), x, y + 2.2, z); G(parts, '#f7efe1', new THREE.CylinderGeometry(0.05, 0.05, 2.2, 5), x, y + 1.1, z); }
@@ -324,6 +330,7 @@ export function init(A){
     const prop = (name, px, py, sc, ry, col) => { if (!A.art2Add) return; const [x, z] = P(px, py), g = new THREE.Group(); g.position.set(x, Math.max(0.2, hAt(x, z)), z); g.rotation.y = ry || 0; town.add(g); A.art2Add(g, name, { s: sc }); if (col) colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: col }); RSV.push([x, z, 1.6]); };
     for (const n of Object.values(NODES)){ const b = edgeP(n, PL), dx = b[0] - PL[0], dy = b[1] - PL[1], l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l; for (const k of [118, 168]) for (const sd2 of [-1, 1]) prop('lamp', PL[0] + ux * k - uy * sd2 * 19, PL[1] + uy * k + ux * sd2 * 19, 1.7, 0, 0.4); }   /* 每條大道兩旁的石燈籠 */
     for (const py of [600, 664, 728, 792]) for (const sd2 of [-1, 1]) prop('lamp', 981 + (py - 600) * 0.06 + sd2 * 19, py, 1.7, 0, 0.4);                                              /* 商店街 */
+    for (const i of [0, 7, 14, 21]){ const q = EVT[i % EVT.length]; prop('lamp', q[0], q[1], 1.7, 0, 0.4); }                                                                           /* 活動場地四個角 */
     prop('arch_2', 970, 588, 2.1, 0);                                                                                                                                              /* 商店街入口的牌樓 */
     for (const [px, py, ry] of [[1158, 592, 0.25], [1193, 584, 0.05], [1228, 584, -0.05], [1262, 593, -0.25], [884, 797, 0.2], [1066, 802, -0.15], [1122, 786, -0.3]]) prop('stand', px, py, 1.5, ry, 1.2);   /* 市場前面、港邊的攤子 */
     prop('cart', 1042, 818, 1.3, 0.4, 0.9); prop('barrel_1', 930, 822, 1.2, 0, 0.5); prop('barrel_2', 938, 825, 1.2, 1, 0.5); prop('barrel_1', 1050, 813, 1.2, 0.6, 0.5); prop('pot_1', 1140, 612, 1.3, 0, 0.4); prop('pot_1', 1280, 612, 1.3, 0, 0.4);
@@ -389,7 +396,7 @@ export function init(A){
     /* 這一點是什麼地：0 不是主島、1 水和紅樹林、2 路和廣場、3 森林、4 沙灘、5 蓋了東西、6 海岸邊、7 空草地（量「還有多少地沒用」用的） */
     kind: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz) || samp(sdMain, lx, lz) <= 0) return 0; if (samp(HG, lx, lz) < WL || samp(sdMang, lx, lz) > -3) return 1; if (paved(lx, lz, 0.5)) return 2; if (samp(sdFor, lx, lz) > -4) return 3; if (samp(sdSand, lx, lz) > -3) return 4; if (reserved(lx, lz)) return 5; if (samp(sdLand, lx, lz) < 6) return 6; return 7; },
     /* 預覽用：一按就過去的地點（島上的公尺） */
-    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['紅樹林', 446, 390], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 822, 190], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
+    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 822, 190], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
   };
   root.visible = false;
   return W2;
