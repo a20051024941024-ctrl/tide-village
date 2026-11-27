@@ -8,7 +8,7 @@ const OUT=path.resolve(__dirname,'..')+'/w2/map_'+(process.env.OUT||'a')+'.png';
  let ok=false;for(let i=0;i<40;i++){await go(31);await p.waitForTimeout(400);if(await ev('!!W2')){ok=true;break;}}
  if(!ok){console.log('NO W2');await b.close();process.exit(1);}
  await go(40);
- const SC=+(process.env.SC||4);
+ const SC=+(process.env.SC||4); if(process.env.HSH)await p.evaluate(()=>{window.__HSH=1});
  for(const rg of (process.env.REGS||('a:'+(process.env.REG||'820,380,1260,900'))).split(';')){const [nm,cs]=rg.split(':'),[x0,y0,x1,y1]=cs.split(',').map(Number),OUT2=path.resolve(__dirname,'..')+'/w2/map_'+nm+'.png';
  const res=await p.evaluate(async([x0,y0,x1,y1,SC])=>{const E=__T.ev,W=E('W2'),blocked=E('blocked'),gh=E('groundHeight'),walkable=E('walkable'),waterAt=E('waterAt');
   const P=(x,y)=>[(x-965)*0.2,(y-505)*0.2],[ax,az]=P(x0,y0),[bx,bz]=P(x1,y1),w=Math.round((bx-ax)*SC),h=Math.round((bz-az)*SC);
@@ -17,7 +17,7 @@ const OUT=path.resolve(__dirname,'..')+'/w2/map_'+(process.env.OUT||'a')+'.png';
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;const c=cv.getContext('2d');const im=c.createImageData(w,h);
   const KC=[[40,90,150],[60,130,190],[226,214,189],[70,140,80],[240,225,170],[200,170,140],[150,200,120],[160,215,120]];
   for(let j=0;j<h;j++)for(let i=0;i<w;i++){const lx=ax+(i+0.5)/SC,lz=az+(j+0.5)/SC,X=W.ox+lx,Z=W.oz+lz;let k=W.kind(X,Z),col=KC[k]||[0,0,0];if(k<=1&&!waterAt(X,Z)&&walkable(X,Z))col=[185,138,90];
-   if(blocked(X,Z,0.05))col=[70,60,60];const o=(j*w+i)*4;im.data[o]=col[0];im.data[o+1]=col[1];im.data[o+2]=col[2];im.data[o+3]=255;}
+   if(window.__HSH&&k===3){const hh=__T.ev('groundHeight')(X,Z);const f=Math.max(0.35,1-hh/16);col=[col[0]*f,col[1]*f+40*(1-f),col[2]*f];if(Math.abs(hh%2)<0.12)col=[30,60,30];}if(blocked(X,Z,0.05))col=[70,60,60];const o=(j*w+i)*4;im.data[o]=col[0];im.data[o+1]=col[1];im.data[o+2]=col[2];im.data[o+3]=255;}
   c.putImageData(im,0,0);
   const T=(lx,lz)=>[(lx-ax)*SC,(lz-az)*SC];
   // 鐵軌
