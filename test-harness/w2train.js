@@ -34,7 +34,7 @@ const K3=JSON.stringify({on:true,sex:'b',hair:'short',top:'tee',bot:'shorts',sho
  // 等某一站有車進站（一格一格走，最多等一整圈）
  const waitTrain=async(i,maxS)=>{let st=null;for(let f=0;f<(maxS||120)*10;f++){st=await p.evaluate(i=>{const E=__T.ev,T=E('W2').train;__step(1,100);const a=T.atStop(i);return a?{k:a.k,leave:+a.leave.toFixed(1)}:{eta:+T.arrive(i).toFixed(1)}},i);if(st.k!=null&&st.leave>3)return st;}return st;};
  // 3) 上車 → 坐一站 → 下車
- if(has('ride')){const o={};const i0=await p.evaluate(()=>__T.ev('W2').train.stops.findIndex(s=>s.name==='村公所'));await tpStop(i0);
+ if(has('ride')){const o={};const i0=await p.evaluate(()=>__T.ev('W2').train.stops.findIndex(s=>s.name.startsWith('村公所')));await tpStop(i0);
   await p.evaluate(()=>{for(let k=0;k<20;k++)__step(1,50)});o.waitBtn=await btn();await snap(D+'1_wait.jpg');
   // 車快進站的時候拍一張
   for(let f=0;f<1200;f++){const e=await p.evaluate(i=>{__step(1,100);const T=__T.ev('W2').train;return T.atStop(i)?0:T.arrive(i)},i0);if(e<2.2)break;}
@@ -58,7 +58,7 @@ const K3=JSON.stringify({on:true,sex:'b',hair:'short',top:'tee',bot:'shorts',sho
   await go(3);await snap(D+'7_off.jpg');
   console.log('ride',JSON.stringify(o));lg('ride done');}
  // 4) 別人坐車：假的另一個玩家帶著 tr，他要一路貼在我這邊那班車的位子上；我上車時不會坐到他的位子
- if(has('peer')){const i0=await p.evaluate(()=>__T.ev('W2').train.stops.findIndex(s=>s.name==='水族館'));await tpStop(i0);const tr=await waitTrain(i0,140);
+ if(has('peer')){const i0=await p.evaluate(()=>__T.ev('W2').train.stops.findIndex(s=>s.name.startsWith('水族館')));await tpStop(i0);const tr=await waitTrain(i0,140);
   const o=await p.evaluate(k=>{const T=__T,E=T.ev,W=E('W2'),Tr=W.train,me=E('me');const mk=(id,seat)=>{const q=Tr.seat(k,seat);E('applyPeer')({peer:id,kind:'viewer',by:'u_'+id,presence:{p:[+q.x.toFixed(2),+q.z.toFixed(2),+q.y.toFixed(2)],r:0,st:1,tr:[k,seat],sh:'#e06a8a',ht:'#ffd36a'}});};
    // 把離我最近的四個位子都給假玩家坐
    const order=[...Array(Tr.seats).keys()].sort((a,b)=>{const A=Tr.seat(k,a),B=Tr.seat(k,b);return Math.hypot(A.x-me.pos.x,A.z-me.pos.z)-Math.hypot(B.x-me.pos.x,B.z-me.pos.z)});const taken=order.slice(0,4);taken.forEach((s,j)=>mk('tp'+j,s));for(let f=0;f<10;f++)__step(1,50);
