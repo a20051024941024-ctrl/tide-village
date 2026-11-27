@@ -18588,13 +18588,23 @@ function taxiGetOff(){ const st = Taxi.to, d = Taxi.dest, [fx, fz] = [Math.sin(T
   Taxi.st = 'leave'; Taxi.path = taxiPath(st, 'out', 45); Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; pushPresence(true); taxiUi();
   if (d && Math.hypot(d.x - x, d.z - z) > 14) setTimeout(() => navTo(d.name, d.x, d.z), 600); else toast(`到「${d ? d.name : ''}」了`); }
 function taxiTick(dt){ if (Taxi.st === 'idle') return; if (!W2 || !Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
-  const P = Taxi.path, drive = (vmax) => { if (!P) return true; const left = P.len - Taxi.s, want = Math.min(vmax, Math.sqrt(2 * 3.2 * Math.max(0, left)) + 0.6); Taxi.v += (want - Taxi.v) * Math.min(1, dt * 2.2); Taxi.s = Math.min(P.len, Taxi.s + Taxi.v * dt); taxiPlace(); return left < 0.05; };
+  const P = Taxi.path, drive = (vmax) => { if (!P) return true; const left = P.len - Taxi.s, want = Math.min(vmax, Math.sqrt(2 * 3.2 * Math.max(0, left)) + 0.6, taxiRed()); Taxi.v += (want - Taxi.v) * Math.min(1, dt * 2.2); Taxi.s = Math.min(P.len, Taxi.s + Taxi.v * dt); taxiPlace(); return left < 0.05; };
   if (Taxi.st === 'come'){ if (drive(9)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } }
   else if (Taxi.st === 'wait'){ const c = Taxi.car; if (Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z) < 4.2 && !myBoat && !Dive.on && F.phase === 'idle'){ Nav.t = null; if (mySeat && !mySeat.train) standUp(); poolMeVis(false); Taxi.st = 'ride1'; Taxi.path = taxiPath(Taxi.from, 'out', 40); Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; SFX.click(); pushPresence(true); taxiUi(); }
     else if (Taxi.t > 90){ toast('阿速等太久先走了，要坐再叫一次'); taxiEnd(true); } }
   else if (Taxi.st === 'ride1'){ if (drive(10) || Taxi.t > 7){ const fx = $('#fadeFx'); fx.classList.add('on'); Taxi.st = 'ride2'; Taxi.hold = 0.45; const P2 = taxiPath(Taxi.to, 'in', 60); try { W2.warm(Taxi.to.x, Taxi.to.z); } catch(e){} Taxi.next = P2; Taxi.t = 0; } }
   else if (Taxi.st === 'ride2'){ if (Taxi.hold > 0){ Taxi.hold -= dt; if (Taxi.hold <= 0){ Taxi.path = Taxi.next; Taxi.next = null; Taxi.s = 0; Taxi.v = 8; taxiPlace(); pushPresence(true); setTimeout(() => $('#fadeFx').classList.remove('on'), 120); } return; } if (!Taxi.path){ taxiSkip(); return; } if (drive(10)) taxiGetOff(); }
   else if (Taxi.st === 'leave'){ if (Taxi.t > 1.2 && drive(10)) taxiEnd(true); else if (Taxi.t > 14) taxiEnd(true); } }
+/* v963 紅綠燈：車子開到路口前面，燈不是綠的就停在停止線前（大道上往圓環開看大道的燈；圓環上快到路口看圓環的燈） */
+function taxiRed(){ const LT = W2 && W2.ride && W2.ride.lights, c = Taxi.car; if (!LT || !c || !LT.list.length) return 99; const P = LT.phase(Date.now()), hx = Math.sin(c.rotation.y), hz = Math.cos(c.rotation.y); let lim = 99;
+  for (const J of LT.list){ const rx = c.position.x - J.x, rz = c.position.z - J.z, d = Math.hypot(rx, rz); if (d > 22) continue; const along = rx * J.dx + rz * J.dz, lat = Math.abs(rx * -J.dz + rz * J.dx), hd = hx * J.dx + hz * J.dz;
+    if (lat < 3.4 && hd < -0.6 && along > LT.stop - 0.5){ if (P.ave !== 'g'){ const gap = along - LT.stop - 2.2; if (gap > -1.5) lim = Math.min(lim, Math.sqrt(2 * 3.2 * Math.max(0, gap))); } }   /* 大道上，往圓環開 */
+    else if (Math.abs(hd) < 0.5 && P.ring !== 'g'){ const toJ = -(rx * hx + rz * hz); if (toJ > 0 && d > 6.5 && d < 18){ lim = Math.min(lim, Math.sqrt(2 * 3.2 * Math.max(0, d - 8.5))); } } }   /* 圓環上，快到路口 */
+  return lim; }
+/* 村民走路：要踏上路口的車道、行人燈又不是綠的，就停在路邊等 */
+function w2RedHold(n, ox, oz){ const LT = W2 && W2.ride && W2.ride.lights; if (!LT || !n.w2on) return; const P = LT.phase(Date.now()); if (P.ped === 'g') return;
+  const on = (x, z) => LT.list.some(J => { const rx = x - J.x, rz = z - J.z, along = rx * J.dx + rz * J.dz, lat = Math.abs(rx * -J.dz + rz * J.dx); return along > 3 && along < 9.5 && lat < 3.3; });
+  if (on(n.pos.x, n.pos.z) && !on(ox, oz)){ n.pos.x = ox; n.pos.z = oz; n.speed = 0; n.redWait = 1; } }
 function taxiRiding(){ return Taxi.st === 'ride1' || Taxi.st === 'ride2'; }
 function w2SiteTick(){ if (!W2 || !W2.posts || frameNo % 10) return; if (W2.near(me.pos.x, me.pos.z)) W2S.home = true; else if (!MAP2 && Math.hypot(me.pos.x, me.pos.z) < 75 && !inIndoor() && !inHall() && !inStad() && !Dive.on && !Voy.on) W2S.home = false;   /* 回到舊村子本島：之後就照舊回舊港口 */ const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
 function w2Back(){ if (inIndoor() || inHall() || inStad()) return;   /* 還在裡面（例如正在煮菜不能走）：先不動，下次真的出去再回新主島 */ const b = Venue.back; Venue.back = null; if (!b || !W2) return; const fx = Math.sin(b.face), fz = Math.cos(b.face); me.pos.x = b.x + fx * 0.5; me.pos.z = b.z + fz * 0.5; try { W2.warm(me.pos.x, me.pos.z); } catch(e){} me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = b.face; cam.yaw = b.face + Math.PI; pushPresence(true); }
@@ -22677,9 +22687,9 @@ function updateNpcs(dt, t){
   for (const n of npcs){
     if (n.wid === 'gang' && Cloud.on && (!Gang.at || Date.now() - Gang.at > 10 * 60000) && Math.hypot(me.pos.x - n.pos.x, me.pos.z - n.pos.z) < 30) loadGang();
     if (!n.w2on && worldDrive(n, dt, t)){ worldShopLoad(n); continue; }   /* v926 搬到新主島的（w2on）：不照舊島的作息到處走、下雨不回舊島的家 */
-    try { if (w2MealDrive(n, dt, t)) continue; } catch(e){ if (!w2MealDrive.w){ w2MealDrive.w = 1; console.warn('w2meal', e); } }   /* v934 新主島：去食堂吃飯 */
+    try { const ox = n.pos.x, oz = n.pos.z; if (w2MealDrive(n, dt, t)){ w2RedHold(n, ox, oz); continue; } } catch(e){ if (!w2MealDrive.w){ w2MealDrive.w = 1; console.warn('w2meal', e); } }   /* v934 新主島：去食堂吃飯 */
     try { if (rainHomeDrive(n, dt, t)) continue; } catch(e){ if (!rainHomeDrive.w){ rainHomeDrive.w = 1; console.warn('rainhome', e); } }   /* v893 下雨回家 */
-    try { if (roamDrive(n, dt, t)) continue; } catch(e){ if (!roamDrive.w){ roamDrive.w = 1; console.warn('roam', e); } }   /* v450 其他村民也會自己走動 */
+    try { const ox = n.pos.x, oz = n.pos.z; if (roamDrive(n, dt, t)){ w2RedHold(n, ox, oz); continue; } } catch(e){ if (!roamDrive.w){ roamDrive.w = 1; console.warn('roam', e); } }   /* v450 其他村民也會自己走動 */
     if (n.tailor){ updateLing(n, dt, t); continue; }
     if (n.shopNpc === 'mu'){ updateMu(n, dt, t); continue; }
     if (n.shopNpc === 'cai'){ updateShopNpc(n, dt, t, () => (!Cai.at || Date.now() - Cai.at > 10 * 60000) && loadCai()); continue; }
