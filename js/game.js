@@ -18551,7 +18551,27 @@ function w2mCard(list){ const c = W2M.el.querySelector('.w2mcard'); SFX.click();
 var Taxi = { st: 'idle', car: null, path: null, s: 0, v: 0, t: 0, dest: null, from: null, to: null, el: null, hold: 0 };
 function taxiOn(){ return !!(W2 && W2.ride && W2.ride.stands && W2.ride.stands.length && W2.ride.carRuns && W2.ride.car && W2S.on && W2.near(me.pos.x, me.pos.z)); }
 function taxiNear(x, z){ let b = null, bd = 1e9; for (const s of W2.ride.stands){ const d = Math.hypot(s.x - x, s.z - z); if (d < bd){ bd = d; b = s; } } return b; }
-function taxiCar(){ const src = W2 && W2.ride && W2.ride.car; if (!src) return null; const g = new THREE.Group(), c = src.clone(); c.scale.setScalar(2.0); c.rotation.y = Math.PI / 2; c.position.y = 0.9; g.add(c); scene.add(g); return g; }
+/* v964 車子細節（模型座標：車頭在 -x、車尾 +x，車寬 ±0.38，輪子半徑約 0.2）：兩側門上貼潮搭Go 貼紙、四個輪子的輪蓋會轉、車頭燈和車尾燈，晚上車頭燈照在地上 */
+const TAXI_LOOK = {};
+function taxiLookInit(){ if (TAXI_LOOK.ok) return; TAXI_LOOK.ok = 1;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160; const c = cv.getContext('2d'); c.clearRect(0, 0, 512, 160);
+  c.fillStyle = '#8fd3f4'; c.beginPath(); c.moveTo(20, 120); for (let x = 20; x <= 492; x += 8) c.lineTo(x, 118 + Math.sin(x / 26) * 9); c.lineTo(492, 150); c.lineTo(20, 150); c.closePath(); c.fill();
+  c.fillStyle = '#26445c'; c.font = 'bold 82px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('潮搭Go', 256, 62);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; TAXI_LOOK.logo = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const hv = document.createElement('canvas'); hv.width = 128; hv.height = 128; const h = hv.getContext('2d'); h.fillStyle = '#c9d3dc'; h.beginPath(); h.arc(64, 64, 62, 0, 7); h.fill(); h.fillStyle = '#7d8a96'; for (let k = 0; k < 5; k++){ h.save(); h.translate(64, 64); h.rotate(k * 1.2566); h.fillRect(-9, -58, 18, 44); h.restore(); } h.fillStyle = '#eef3f7'; h.beginPath(); h.arc(64, 64, 16, 0, 7); h.fill(); h.fillStyle = '#8fd3f4'; h.beginPath(); h.arc(64, 64, 8, 0, 7); h.fill();
+  const ht = new THREE.CanvasTexture(hv); ht.colorSpace = THREE.SRGBColorSpace; TAXI_LOOK.hub = new THREE.MeshLambertMaterial({ map: ht, transparent: true, polygonOffset: true, polygonOffsetFactor: -2 });
+  TAXI_LOOK.head = new THREE.MeshBasicMaterial({ color: '#fff7d6', toneMapped: false }); TAXI_LOOK.tail = new THREE.MeshBasicMaterial({ color: '#d8343a', toneMapped: false });
+  const gv = document.createElement('canvas'); gv.width = 64; gv.height = 128; const gg = gv.getContext('2d'), gr = gg.createRadialGradient(32, 18, 2, 32, 40, 70); gr.addColorStop(0, 'rgba(255,246,210,0.85)'); gr.addColorStop(0.5, 'rgba(255,240,190,0.35)'); gr.addColorStop(1, 'rgba(255,240,190,0)'); gg.fillStyle = gr; gg.fillRect(0, 0, 64, 128); gg.globalCompositeOperation = 'destination-in'; const hz = gg.createLinearGradient(0, 0, 64, 0); hz.addColorStop(0, 'rgba(0,0,0,0)'); hz.addColorStop(0.3, 'rgba(0,0,0,1)'); hz.addColorStop(0.7, 'rgba(0,0,0,1)'); hz.addColorStop(1, 'rgba(0,0,0,0)'); gg.fillStyle = hz; gg.fillRect(0, 0, 64, 128);   /* 兩邊也淡掉，不會是一塊方方的 */
+  const gt = new THREE.CanvasTexture(gv); TAXI_LOOK.beam = new THREE.MeshBasicMaterial({ map: gt, transparent: true, depthWrite: false, opacity: 0, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4 }); }
+function taxiCar(){ const src = W2 && W2.ride && W2.ride.car; if (!src) return null; taxiLookInit(); const L = TAXI_LOOK, g = new THREE.Group(), c = src.clone(); c.scale.setScalar(2.0); c.rotation.y = Math.PI / 2; c.position.y = 0.9; g.add(c);
+  for (const sd of [1, -1]){ const lg = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.194), L.logo); lg.position.set(0.0, -0.07, sd * 0.392); if (sd < 0) lg.rotation.y = Math.PI; c.add(lg); }   /* 兩側車門的貼紙 */
+  const hubs = []; for (const [hx, hz] of [[-0.77, 0.335], [0.61, 0.35]]) for (const sd of [1, -1]){ const hb = new THREE.Mesh(new THREE.CircleGeometry(0.105, 20), L.hub); hb.position.set(hx, -0.25, sd * hz); if (sd < 0) hb.rotation.y = Math.PI; hb.userData.sd = sd; c.add(hb); hubs.push(hb); }
+  for (const sd of [1, -1]){ const hl = new THREE.Mesh(new THREE.CircleGeometry(0.06, 14), L.head); hl.position.set(-0.955, -0.03, sd * 0.24); hl.rotation.y = -Math.PI / 2; c.add(hl); const tl = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 0.07), L.tail); tl.position.set(0.925, 0.12, sd * 0.27); tl.rotation.y = Math.PI / 2; c.add(tl); }
+  const beam = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 6.5).rotateX(-Math.PI / 2), L.beam); beam.position.set(0, 0.12, 4.4); g.add(beam);   /* 車頭燈照在前面的地上（晚上才看得到） */
+  g.userData.hubs = hubs; g.userData.last = null; scene.add(g); return g; }
+/* 輪蓋跟著走的距離轉；晚上車頭燈亮 */
+function taxiLookTick(g){ if (!g) return; const u = g.userData, p = g.position; if (u.last){ const d = Math.hypot(p.x - u.last.x, p.z - u.last.z); if (d > 0 && d < 5){ const a = d / 0.42; for (const hb of u.hubs) hb.rotation.z -= a * hb.userData.sd; } } u.last = { x: p.x, z: p.z };
+  if (TAXI_LOOK.beam){ const hr = DayNight && DayNight.hour != null ? DayNight.hour : 12, night = hr < 6 || hr >= 18; TAXI_LOOK.beam.opacity = night ? 0.9 : 0; TAXI_LOOK.head.color.set(night ? '#ffffff' : '#fff1c2'); } }
 /* 從車道走到上車處（in），或從上車處開回車道再往前（out）。車道是右駕：上車處要在車子的右手邊 */
 function taxiPath(st, mode, len){ const RS = W2.ride.carRuns, ox = W2.ox, oz = W2.oz; let R = null, qi = 0, qd = 1e9;
   for (const L of RS) for (let i = 0; i < L.length; i += 2){ const d = Math.hypot(ox + L[i][0] - st.x, oz + L[i][1] - st.z); if (d < qd){ qd = d; R = L; qi = i; } }
@@ -18566,7 +18586,7 @@ function taxiPath(st, mode, len){ const RS = W2.ride.carRuns, ox = W2.ox, oz = W
     let d = 0; for (let i = i0 + step; i >= 0 && i < n && d < len; i += step){ const q = lane(i), a = pts[pts.length - 1]; d += Math.hypot(q[0] - a[0], q[1] - a[1]); pts.push(q); } }
   const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, len: cum[cum.length - 1] }; }
 function taxiAt(P, s){ const { pts, cum } = P; let i = 1; while (i < cum.length - 1 && cum[i] < s) i++; const a = pts[i - 1], b = pts[i], u = Math.max(0, Math.min(1, (s - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1))); return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
-function taxiPlace(){ const c = Taxi.car, P = Taxi.path; if (!c || !P) return; const [x, z, h] = taxiAt(P, Taxi.s); c.position.set(x, groundHeight(x, z) + 0.02, z); c.rotation.y = lerpAngle(c.rotation.y, h, Taxi.s < 0.01 ? 1 : 0.25); }
+function taxiPlace(){ const c = Taxi.car, P = Taxi.path; if (!c || !P) return; const [x, z, h] = taxiAt(P, Taxi.s); c.position.set(x, groundHeight(x, z) + 0.02, z); c.rotation.y = lerpAngle(c.rotation.y, h, Taxi.s < 0.01 ? 1 : 0.25); taxiLookTick(c); }
 function taxiDrop(){ if (Taxi.car){ scene.remove(Taxi.car); Taxi.car = null; } Taxi.path = null; }
 function taxiUi(){ let e = Taxi.el; if (Taxi.st === 'idle'){ if (e) e.remove(); Taxi.el = null; return; }
   if (!e){ e = Taxi.el = el('div', 'taxibar'); document.body.appendChild(e); }
@@ -20589,7 +20609,7 @@ function updatePeers(dt, t){
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
     if (p.tr && W2 && W2.train){ const q = W2.train.seat(p.tr[0], p.tr[1]); if (q && Math.hypot(q.x - p.target.x, q.z - p.target.z) < 40){ f.pos.x = q.x; f.pos.z = q.z; f.baseY = q.y; f.rot = q.face; f.speed = 0; f.onTr = 1; } } else f.onTr = 0;   /* v923 坐小火車的人：直接放在我這邊同一班車的同一個位子（車的位置大家算出來一樣），不用等他一直傳位置過來 */
     { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on && !p.sub && !poolHides(f.pos.x, f.pos.z); if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
-    if (p.pres && p.pres.cr && W2 && W2.ride && W2.ride.car){ if (!f.carMesh) f.carMesh = taxiCar(); if (f.carMesh){ f.carMesh.position.set(f.pos.x, f.baseY, f.pos.z); f.carMesh.rotation.y = f.rot; f.av.g.visible = false; if (f.blob) f.blob.visible = false; } } else if (f.carMesh){ scene.remove(f.carMesh); f.carMesh = null; }   /* v962 別人坐潮搭Go */
+    if (p.pres && p.pres.cr && W2 && W2.ride && W2.ride.car){ if (!f.carMesh) f.carMesh = taxiCar(); if (f.carMesh){ f.carMesh.position.set(f.pos.x, f.baseY, f.pos.z); f.carMesh.rotation.y = f.rot; taxiLookTick(f.carMesh); f.av.g.visible = false; if (f.blob) f.blob.visible = false; } } else if (f.carMesh){ scene.remove(f.carMesh); f.carMesh = null; }   /* v962 別人坐潮搭Go */
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04 + (WAVES.on ? waveH(f.pos.x, f.pos.z, now()) : 0), f.pos.z); f.boatMesh.rotation.y = f.rot; }   /* 別人的船也被同一圈浪晃 */
     f.dip = p.ph === 'bite' ? 3 + Math.sin(t*30)*0.15 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9; f.tug = (f.tug || 0) + ((p.ph === 'reel' ? 0.7 + Math.sin(t * 2.3) * 0.25 : 0) - (f.tug || 0)) * Math.min(1, dt * 5);   /* v508 別人在拉魚／拉大魚：往後仰 */
@@ -24801,7 +24821,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
-  { id:'u960', d:'11/28', items:[['🏝️','搬到新主島了！大家一進遊戲就在新的主島：主城廣場、大看板、噴水池、商店街、中央市場、水族館、博物館、遊樂園、體育場、森林、紅樹林和珊瑚礁，原本村子裡的店和人都搬過來了'], ['⛲','主城廣場的噴水池換新：海浪柱子、貝殼出水口，每 30 秒會大噴一次，晚上池子會亮'], ['🛣️','大路變成雙向車道，有人行道和斑馬線'], ['📺','主城廣場的大看板換新：兩座藍白燈塔撐著螢幕，一樣可以坐在前面一起看節目'], ['🚕','地圖點地方可以叫潮搭Go：司機阿速沿著車道開到你附近的上車處，載你過去；不想等可以按「直接到」'], ['🚦','四個大路口有紅綠燈，車子和村民都會等紅燈']] },
+  { id:'u960', d:'11/28', items:[['🏝️','搬到新主島了！大家一進遊戲就在新的主島：主城廣場、大看板、噴水池、商店街、中央市場、水族館、博物館、遊樂園、體育場、森林、紅樹林和珊瑚礁，原本村子裡的店和人都搬過來了'], ['⛲','主城廣場的噴水池換新：海浪柱子、貝殼出水口，每 30 秒會大噴一次，晚上池子會亮'], ['🛣️','大路變成雙向車道，有人行道和斑馬線'], ['📺','主城廣場的大看板換新：兩座藍白燈塔撐著螢幕，一樣可以坐在前面一起看節目'], ['🚕','地圖點地方可以叫潮搭Go：司機阿速沿著車道開到你附近的上車處，載你過去；不想等可以按「直接到」'], ['🚦','四個大路口有紅綠燈，車子和村民都會等紅燈'], ['🚗','潮搭Go 的車兩側貼著貼紙，輪子會轉，晚上會開車頭燈']] },
   { id:'u949', d:'11/27', items:[['📌','活動頁變成港邊的公告欄：上面是今天的時刻表，活動是插在時間上的小旗子；每個活動是一張夾著的紙條，點了放大看要做什麼', 'events']] },
   { id:'u948', d:'11/27', items:[['🎪','每個活動都有一件限定的衣服或帽子：完成那個活動幾次就能在活動頁領，商店買不到。新做了三頂帽子：龍蝦毛帽、傳說漁夫帽、祭典頭巾', 'events']] },
   { id:'u947', d:'11/27', items:[['🖼️','活動頁每個活動都有一張大圖，是在村子裡拍的', 'events']] },
