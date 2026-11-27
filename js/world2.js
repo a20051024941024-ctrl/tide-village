@@ -387,6 +387,12 @@ export function init(A){
           colliders.push({ t: 'c', x: OX + rx, z: OZ + rz, r: 0.75 }); }
         if (A.sign){ const [sx, sz2] = at(0.95, 1.25 * sd2), g = new THREE.Group(); g.position.set(sx, y, sz2); town.add(g); A.sign(g, '阿鐵工坊', '🔧', 0, 0); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz2, r: 0.2 }); }
         post('craft', x, z, f, { r: 4.2, relax: true }); } }
+    /* v933 🚤 阿海和他的船：港口西邊第二條棧橋。船停在棧橋西邊（船頭朝外海），阿海站在棧橋上船邊；從這裡坐船去外島。
+       voy：dock＝船的位置和船頭方向、edge＝從棧橋跳上船的那一點、out＝開出港的路（之後接到外島的航道） */
+    { const pr = piers[1]; if (pr){ const bz = pr.z0 + pr.L * 0.5, dx2 = pr.x - 4.2; post('ferry', pr.x - 0.6, bz - 3.2, -Math.PI / 2);
+        posts.voy = { dock: [OX + dx2, OZ + bz, 0], edge: [OX + pr.x - 1.35, OZ + bz], out: [[OX + dx2, OZ + bz + 22], [OX + dx2 - 14, OZ + bz + 70]], arrive: { x: OX + pr.x, z: OZ + pr.z0 + 3, rot: Math.PI } }; } }
+    /* v933 阿默、阿穎：港口東邊第二條棧橋的尾巴，兩個人一起釣（阿默的船和出海找紅鯊，等外海做好再接） */
+    { const pr = piers[3]; if (pr){ post('amo', pr.x + 1.05, pr.z0 + pr.L - 4, Math.PI / 2, { fishing: true }); post('yin', pr.x - 1.05, pr.z0 + pr.L - 5.5, -Math.PI / 2, { fishing: true }); } }
     /* ⚓ 老港：港口中間那條棧橋上，面朝東邊的海釣魚（走棧橋的人從他左邊過）。腳邊一個保冷箱、一個水桶 */
     { const pr = piers[2]; if (pr){ const x = pr.x + 1.05, z = pr.z0 + 7.5; post('gang', x, z, Math.PI / 2, { fishing: true });
         B(parts, '#2f7fa8', 0.52, 0.3, 0.36, x + 0.2, 0.8, z - 1.0); B(parts, '#f4f6f8', 0.54, 0.07, 0.38, x + 0.2, 0.985, z - 1.0); B(parts, '#c8ced6', 0.2, 0.03, 0.04, x + 0.2, 1.035, z - 1.0);
