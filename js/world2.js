@@ -62,7 +62,7 @@ export function init(A){
     ...[[[280,556],[700,588]], [[290,601],[710,633]], [[280,556],[300,690]], [[480,568],[488,690]], [[690,588],[695,660]]].map(L => [L, 11, 'lane']),   // 居民區的巷子
     [[[1205,540],[1310,535],[1430,575]], 12, 'lane'], [[[1300,470],[1310,535],[1320,625]], 12, 'lane'],                                              // 玩家建地區的十字巷
   ];
-  const TRAILS = [[[700,283],[684,240],[640,205]], [[934,272],[930,244],[918,210],[870,186],[822,190]], [[440,390],[380,400],[300,395],[240,370],[200,345]], [[700,319],[700,362]], [[540,402],[490,398],[440,390]]];   // 0、1 森林步道；2 紅樹林木棧道；3 過河小橋接到水族館；4 水族館接到木棧道
+  const TRAILS = [[[700,283],[684,240],[640,205]], [[934,272],[930,244],[918,210],[870,186],[822,190]], [[440,390],[380,400],[300,395],[240,370],[200,345]], [[700,319],[700,362]], [[540,402],[490,398],[440,390]], [[684,240],[697,224],[706,212]]];   // 0、1 森林步道；5 步道岔出去到山洞；2 紅樹林木棧道；3 過河小橋接到水族館；4 水族館接到木棧道
   const RAIL = [[1160,810],[1300,780],[1420,640],[1560,560],[1610,470],[1620,380],[1500,300],[1360,235],[1250,222],[1080,230],[900,270],[700,330],[560,330],[430,430],[320,470],[260,560],[330,700],[480,740],[640,780],[820,830],[1000,840]];
   const STA = [[1300,780,'沙灘'],[1440,640,'玩家建地'],[1618,470,'體育場'],[1250,222,'遊樂園'],[1080,230,'森林'],[965,256,'村公所'],[560,330,'水族館'],[300,520,'紅樹林・居民區'],[760,808,'博物館'],[990,840,'港口'],[1215,800,'中央市場']];
 
@@ -71,17 +71,22 @@ export function init(A){
   const landL = fillL([IS, ISLET, ...SHOALS]), sdLand = sdf(bits(landL));
   const sdMain = sdf(bits(fillL([IS])));
   const sdFor = sdf(bits(fillL([FO]))), sdSand = sdf(bits(fillL([SAND]))), sdMang = sdf(bits(fillL([MF])));
-  const watL = fillL([LAKE]); { const g = watL.g; open(g, RIV); g.lineWidth = 17; g.stroke(); } const sdWat = sdf(bits(watL));
+  const POOLC = [785, 206], POOLR = 21;   /* v929 瀑布下面沖出來的深潭（規劃圖的像素；21 像素＝4.2 公尺） */
+  const watL = fillL([LAKE]); { const g = watL.g; open(g, RIV); g.lineWidth = 17; g.stroke(); g.beginPath(); g.arc(POOLC[0], POOLC[1], POOLR, 0, 7); g.fill(); } const sdWat = sdf(bits(watL));
   const paveL = layer(); { const g = paveL.g; closed(g, PLAZA); g.fill(); closed(g, EVT); g.fill(); g.beginPath(); g.ellipse(PL[0], PL[1], RING[0], RING[1], 0, 0, 7); g.lineWidth = 24; g.stroke();
     for (const [pts, w] of ROADS){ open(g, pts); g.lineWidth = w + 4; g.stroke(); }
     for (const k in NODES){ const [x, y, w, h] = NODES[k]; g.beginPath(); g.ellipse(x, y, w / 2 + 4, h / 2 + 4, 0, 0, 7); g.fill(); }
     { open(g, RAIL.concat([RAIL[0]])); g.lineWidth = 16; g.stroke(); } }
   const sdPave = sdf(bits(paveL)), sdLake = sdf(bits(fillL([LAKE])));
   const boardL = layer(); { const g = boardL.g; open(g, TRAILS[2]); g.lineWidth = 8.5; g.stroke(); } const sdBoard = sdf(bits(boardL));                       // 紅樹林木棧道：架在水上，可以走
-  const trailL = layer(); { const g = trailL.g; for (const i of [0, 1, 3, 4]){ open(g, TRAILS[i]); g.lineWidth = 8; g.stroke(); } } const sdTrail = sdf(bits(trailL));   // 泥土步道：不長樹
+  const trailL = layer(); { const g = trailL.g; for (const i of [0, 1, 3, 4, 5]){ open(g, TRAILS[i]); g.lineWidth = 8; g.stroke(); } } const sdTrail = sdf(bits(trailL));   // 泥土步道：不長樹
   const BOARD_Y = 0.46, boardY = (lx, lz) => Math.max(hAt(lx, lz) + 0.07, BOARD_Y), onBoard = (lx, lz) => samp(sdBoard, lx, lz) > -0.1;
   /* 高度：海岸前 3 公尺是淺灘；陸地平平的（之後要蓋房子），北邊森林是一座山；河和湖往下挖到海平面以下 */
   const PEAK = P(785, 122), PEAK2 = P(640, 190);
+  /* v929 山洞：洞口在大山西南邊的山坡，朝外（背對山頂）。洞裡的地要平：那一塊山坡照洞的中線削平／墊高（左右兩邊原本高低差一公尺半） */
+  const CAVE = (() => { const [ex, ez] = P(708, 210), face = Math.atan2(ex - PEAK[0], ez - PEAK[1]); return { ex, ez, face, fx: Math.sin(face), fz: Math.cos(face), rx: Math.cos(face), rz: -Math.sin(face), LEN: 9, W: 1.7, HT: 2.9, on: false, y0: 0, y1: 0 }; })();
+  const caveUV = (lx, lz) => { const dx = lx - CAVE.ex, dz = lz - CAVE.ez; return [-(dx * CAVE.fx + dz * CAVE.fz), dx * CAVE.rx + dz * CAVE.rz]; };
+  const caveFloor = u => CAVE.y0 + (CAVE.y1 - CAVE.y0) * clamp(u, 0, CAVE.LEN) / CAVE.LEN;
   /* 紅樹林：一片淺淺的水（樹站在水裡），中間幾塊露出來的泥灘 */
   const lagoon = (lx, lz, mg) => { const n = Math.sin(lx * 0.42 + 1.7) * Math.cos(lz * 0.47 - 0.4) + 0.45 * Math.sin(lx * 0.93 - lz * 0.71); return lerp(-0.4, 0.2, s01((n - 0.5) / 0.3) * s01((mg - 0.5) / 2)); };
   function height(lx, lz){ const dl = samp(sdLand, lx, lz), mg = samp(sdMang, lx, lz);
@@ -93,7 +98,9 @@ export function init(A){
       h += k * (0.9 + Math.pow(a, 1.5) * 13.5 + Math.pow(b, 1.6) * 5.5 + (Math.sin(lx * 0.37) * Math.cos(lz * 0.33) + 1) * 0.35); }
     if (dw > -2.2 && dm > 0) h = Math.min(h, dw > 0 ? WL - 0.16 - Math.min(0.85, dw * 0.55) : WL + 0.06 + (-dw) * (-dw) * 0.11);
     if (mg > -3) h = Math.min(h, lerp(h, lagoon(lx, lz, mg), s01((mg + 3) / 4) * (1 - flat)));
+    if (CAVE.on){ const [u, v] = caveUV(lx, lz); if (u > -4 && u < CAVE.LEN + 3 && Math.abs(v) < CAVE.W + 3.5){ const k = Math.max(s01((Math.abs(v) - CAVE.W - 0.3) / 3), s01((-1.2 - u) / 2.5), s01((u - CAVE.LEN - 0.6) / 2.2)); h = lerp(caveFloor(u), h, k); } }   /* 洞裡（和洞口前一公尺）是平的，往外三公尺慢慢接回原本的山坡 */
     return h; }
+  { const [ax, az] = [CAVE.ex, CAVE.ez]; CAVE.y0 = height(ax + CAVE.fx * 0.6, az + CAVE.fz * 0.6); CAVE.y1 = Math.max(CAVE.y0, height(ax - CAVE.fx * CAVE.LEN, az - CAVE.fz * CAVE.LEN) - 0.6); CAVE.on = true; }   /* 洞口的高度取洞口外一點點（步道接上來的地方）；最裡面比原本的山坡低一點 */
   const HG = new Float32Array(NN); for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) HG[j * NX + i] = height(X0 + (i + 0.5) / RES, Z0 + (j + 0.5) / RES);
   const inBox = (lx, lz, m) => lx > X0 - (m || 0) && lx < X0 + GW + (m || 0) && lz > Z0 - (m || 0) && lz < Z0 + GH + (m || 0);
   const hAt = (lx, lz) => inBox(lx, lz) ? samp(HG, lx, lz) : -3.2;
@@ -190,7 +197,7 @@ export function init(A){
     [x, y, w, h] = NODES.mus; { const b = [[x - w / 2, y + h / 2], [x - w / 2, y - h / 6]]; for (let i = 1; i <= 12; i++){ const t = Math.PI - i / 12 * Math.PI; b.push([x + Math.cos(t) * w / 2, y - h / 6 - Math.sin(t) * (h / 3 + 20)]); } b.push([x + w / 2, y + h / 2]); flatShape('stone', b.map(p => P(p[0], p[1])), PAVE_Y + 0.016); }
     for (const k of ['amuse', 'stad', 'mkt']){ [x, y, w, h] = NODES[k]; flatShape(k === 'amuse' ? 'lane' : 'stone', ell(x, y, w / 2, h / 2, 40), PAVE_Y + 0.016); } }
   const boardLine = dense(curve(TRAILS[2]), 1.2); ribbon('wood', boardLine, 1.7, (x, z, cx, cz) => boardY(cx, cz), false, 1.6);   // 紅樹林木棧道：架在水上
-  for (const i of [0, 1, 3, 4]) ribbon('dirt', dense(curve(TRAILS[i]), 1.1), 1.6, (x, z) => Math.max(0.2, hAt(x, z)) + 0.05, false, 2.2);   // 泥土步道：貼著山坡
+  for (const i of [0, 1, 3, 4, 5]) ribbon('dirt', dense(curve(TRAILS[i]), 1.1), 1.6, (x, z) => Math.max(0.2, hAt(x, z)) + 0.05, false, 2.2);   // 泥土步道：貼著山坡
   const railLine = curve(RAIL, true); ribbon('rail', railLine, 2.0, (x, z, cx, cz) => Math.max(0.2, hAt(cx, cz)) + 0.075, true, 1.0);                          // 環島小火車的軌道
   /* v923 軌道的里程表（公尺）：railAt(s) → [x, z, 朝向]。小火車、車站共用。railStops：每一站在第幾公尺、月台在哪（蓋車站的時候填） */
   const railCum = [0]; for (let i = 1; i <= railLine.length; i++){ const a = railLine[i - 1], b = railLine[i % railLine.length]; railCum.push(railCum[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); }
@@ -206,7 +213,7 @@ export function init(A){
   const B = (parts, hex, w, h, d, x, y, z, ry) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.toNonIndexed()); };
   const G = (parts, hex, g, x, y, z) => { g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.index ? g.toNonIndexed() : g); };
   const flush = (parts, grp) => { for (const hex in parts){ const m = new THREE.Mesh(mergeGeometries(parts[hex], false), mat(hex.slice(0, 7), hex.length > 7 ? 0.35 : 0.85)); m.castShadow = true; m.receiveShadow = true; grp.add(m); } };
-  const tickers = [], labels = []; let labelsOn = true; const seats = [], doors = [], posts = {}; let bbInfo = null;   /* seats：看板前面可以坐的位置（世界座標）；bbInfo：高看板的螢幕 */
+  const tickers = [], labels = []; let labelsOn = true; const seats = [], doors = [], posts = {}; let bbInfo = null, caveInfo = null;   /* seats：看板前面可以坐的位置（世界座標）；bbInfo：高看板的螢幕 */
   function label(txt, lx, y, lz, s){ const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d'); c.font = 'bold 64px sans-serif'; const tw = Math.min(480, c.measureText(txt).width + 56); c.fillStyle = 'rgba(24,51,74,.88)'; c.beginPath(); c.roundRect(256 - tw / 2, 16, tw, 96, 26); c.fill(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 256, 66, 440);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true })); sp.material.map.colorSpace = THREE.SRGBColorSpace; sp.userData.w = 10 * (s || 1); sp.userData.h = 2.5 * (s || 1); sp.scale.set(sp.userData.w, sp.userData.h, 1); sp.position.set(lx, y, lz); sp.renderOrder = 9; root.add(sp); labels.push(sp); return sp; }
   const town = new THREE.Group(); root.add(town);
@@ -485,6 +492,103 @@ export function init(A){
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tx, transparent: true, opacity: 0.92, side: THREE.DoubleSide })); root.add(m); tickers.push((dt, t) => { tx.offset.y = t * 0.9; }); }
 
+  /* ===== v929 森林冒險區的內容（作者 11/27 說「好」）：瀑布下的深潭、山洞、護林員小屋 ===== */
+  const benches = [];   /* 可以坐的長椅（世界座標）：game.js 接到 CHAIRS */
+  { const parts = {}, ROCK = ['#7d7a70', '#8f8a7c', '#6e6b62'], fg = new THREE.Group(); root.add(fg);
+    const rock = (x, y, z, r, k, sy) => { const g = new THREE.DodecahedronGeometry(r, 0); g.scale(1, sy || 0.7, 1); g.rotateY(k * 1.7); G(parts, ROCK[k % 3], g, x, y, z); };
+    /* --- 瀑布下的深潭：一圈大石頭、水花和水霧往上冒、潭面一圈一圈的波紋 --- */
+    { const [cx, cz] = P(POOLC[0], POOLC[1]), R0 = POOLR * S;
+      for (let i = 0; i < 15; i++){ const a = i / 15 * 6.2832 + 0.3; if (Math.cos(a) > 0.55 && Math.sin(a) > -0.2) continue;   /* 東南邊留一個缺口（往河流出去） */ const r = R0 + 0.5 + (i % 3) * 0.3, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; rock(x, Math.max(WL, hAt(x, z)) + 0.15, z, 0.55 + (i % 4) * 0.18, i, 0.65); }
+      const [wx, wz] = P(785, 192), wy = Math.max(WL, hAt(wx, wz));
+      /* 水花：瀑布落下的地方一直有白色的小水珠往上噴、落下 */
+      const N = 46, pg = new THREE.BufferGeometry(), pp = new Float32Array(N * 3), seed = []; for (let i = 0; i < N; i++){ seed.push([Math.random() * 6.28, 0.6 + Math.random() * 1.4, Math.random()]); }
+      pg.setAttribute('position', new THREE.BufferAttribute(pp, 3)); const mist = new THREE.Points(pg, new THREE.PointsMaterial({ color: '#ffffff', size: 0.22, transparent: true, opacity: 0.75, depthWrite: false })); fg.add(mist);
+      const foam = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.0, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false })); foam.position.set(wx, WL + 0.03, wz + 0.8); fg.add(foam);
+      const foam2 = foam.clone(); foam2.material = foam.material.clone(); fg.add(foam2);
+      tickers.push((dt, t) => { const a = pg.attributes.position.array; for (let i = 0; i < N; i++){ const [ang, sp, ph] = seed[i], u = (t * 0.9 + ph) % 1, r = 0.3 + u * sp; a[i * 3] = wx + Math.cos(ang) * r; a[i * 3 + 1] = WL + 0.1 + Math.sin(u * Math.PI) * (0.8 + sp * 0.5); a[i * 3 + 2] = wz + 0.8 + Math.sin(ang) * r * 0.8; } pg.attributes.position.needsUpdate = true;
+        const u1 = (t * 0.45) % 1, u2 = (t * 0.45 + 0.5) % 1; foam.scale.setScalar(1 + u1 * 2.6); foam.material.opacity = 0.55 * (1 - u1); foam2.scale.setScalar(1 + u2 * 2.6); foam2.material.opacity = 0.55 * (1 - u2); });
+      label('清溪潭', cx, wy + 6.5, cz, 0.7); }
+    /* --- 山洞：大山西南邊的山坡上，從西邊的森林步道岔一條小路過去。洞口朝西南（對著步道），往山裡走 9 公尺；
+           裡面暗暗的，石壁上長著會發光的水晶和小蘑菇（一明一暗慢慢呼吸）、洞頂有水一滴一滴滴下來、空中飄著發光的孢子 --- */
+    { const { ex, ez, face, fx, fz, rx, rz, LEN, W, HT } = CAVE;   /* face：洞口朝外的方向（背對山頂） */
+      const at = (u, v) => [ex - fx * u + rx * v, ez - fz * u + rz * v], fl = u => { const [x, z] = at(u, 0); return hAt(x, z); };   /* u：往洞裡幾公尺；v：往右幾公尺 */
+      const y0 = CAVE.y0, y1 = CAVE.y1, pitch = Math.atan2(y1 - y0, LEN);
+      const cave = new THREE.Group(); cave.position.set(ex, y0, ez); cave.rotation.order = 'YXZ'; cave.rotation.y = face + Math.PI; cave.rotation.x = -pitch; fg.add(cave);   /* 洞的自己座標：+z 往洞裡 */
+      const cp = {}, CB = (hex, w, h, d, x, y, z, rx2, ry, rz2) => { const g = new THREE.BoxGeometry(w, h, d); if (rx2 || ry || rz2) g.rotateX(rx2 || 0).rotateY(ry || 0).rotateZ(rz2 || 0); g.translate(x, y, z); (cp[hex] = cp[hex] || []).push(g.toNonIndexed()); };
+      /* 洞壁：半個圓筒（裡面那一面），外面再蓋一層凹凸的大石頭，看起來像山長出來的 */
+      for (const v of [-1, 1]) CB('#4a4740', 0.3, HT + 0.6, LEN + 0.2, v * (W + 0.15), (HT + 0.6) / 2 - 0.3, LEN / 2 + 0.6);   /* 兩邊石壁、洞頂（從洞口往裡 0.5 公尺開始，洞口留給外面的大石頭） */
+      CB('#3f3c36', 2 * W + 0.6, 0.3, LEN + 0.2, 0, HT + 0.15, LEN / 2 + 0.6);
+      CB('#3d3a34', 2 * W + 0.6, HT + 0.4, 0.5, 0, (HT + 0.4) / 2 - 0.2, LEN + 0.1);   /* 最裡面的石壁 */
+      const cm = new THREE.Group(); cave.add(cm);
+      for (const hex in cp){ const m = new THREE.Mesh(mergeGeometries(cp[hex], false), new THREE.MeshStandardMaterial({ color: hex, roughness: 1, side: THREE.DoubleSide })); m.castShadow = true; m.receiveShadow = true; cm.add(m); }
+      { const op = {}; let k = 0; for (let u = -0.2; u <= LEN + 0.4; u += 1.5) for (const v of [-1, 1]){ const g = new THREE.DodecahedronGeometry(1.25 + (k % 3) * 0.35, 0).scale(1, 0.9, 1.1).rotateY(k * 1.3); g.translate(v * (W + 0.9 + (k % 2) * 0.3), 0.9 + (k % 3) * 0.4, u); (op[ROCK[k % 3]] = op[ROCK[k % 3]] || []).push(g.toNonIndexed()); k++; }
+        for (let u = 1.4; u <= LEN + 0.4; u += 1.6){ const g = new THREE.DodecahedronGeometry(1.5 + (k % 3) * 0.3, 0).scale(1.3, 0.55, 1).rotateY(k); g.translate(((k % 3) - 1) * 0.6, HT + 0.35, u); (op[ROCK[k % 3]] = op[ROCK[k % 3]] || []).push(g.toNonIndexed()); k++; }   /* 洞頂 */
+        for (const v of [-1, 1]){ const g = new THREE.DodecahedronGeometry(1.1, 0).scale(0.8, 1.6, 0.8).rotateY(v); g.translate(v * (W + 0.35), 1.3, -0.25); (op[ROCK[1]] = op[ROCK[1]] || []).push(g.toNonIndexed()); }   /* 洞口兩邊的大石柱 */
+        for (const hex in op){ const m = new THREE.Mesh(mergeGeometries(op[hex], false), new THREE.MeshStandardMaterial({ color: hex, roughness: 1, flatShading: true })); m.castShadow = true; m.receiveShadow = true; cm.add(m); } }
+      /* 會發光的水晶、蘑菇：一明一暗慢慢呼吸（不用燈，用自己發光的材質） */
+      const glow = [];
+      const crystal = (u, v, y, h, col, tilt) => { h *= 1.6; const m = new THREE.Mesh(new THREE.ConeGeometry(0.14 + h * 0.1, h, 5), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.2, roughness: 0.3, transparent: true, opacity: 0.9 })); m.position.set(v, y + h / 2, u); m.rotation.z = tilt; cave.add(m); glow.push(m.material); };
+      [[2.2, -1.35, 0.05, 0.6, '#6fe3ff', 0.35], [2.5, -1.3, 0.05, 0.38, '#6fe3ff', 0.2], [4.6, 1.3, 0.05, 0.7, '#b08cff', -0.35], [4.9, 1.38, 0.05, 0.42, '#b08cff', -0.15], [7.2, -1.2, 0.05, 0.55, '#6fe3ff', 0.3], [8.3, 0.9, 0.05, 0.8, '#b08cff', -0.25], [8.6, 0.5, 0.05, 0.45, '#6fe3ff', -0.1], [6.0, -1.0, 2.25, 0.4, '#6fe3ff', 2.6], [3.5, 0.9, 2.35, 0.35, '#b08cff', 3.6]].forEach(c => crystal(...c));
+      { const stem = new THREE.MeshStandardMaterial({ color: '#e8e2cf', roughness: 0.9 }); [[1.6, 1.4], [3.2, -1.45], [5.6, 1.4], [6.4, 1.3], [7.8, -1.35]].forEach(([u, v], i) => { const cap = new THREE.MeshStandardMaterial({ color: '#9dffb0', emissive: '#59ff8a', emissiveIntensity: 0.9, roughness: 0.6 }); for (let k = 0; k < 3; k++){ const s2 = 0.6 + k * 0.25, st = new THREE.Mesh(new THREE.CylinderGeometry(0.025 * s2, 0.03 * s2, 0.18 * s2, 5), stem), cp2 = new THREE.Mesh(new THREE.SphereGeometry(0.09 * s2, 8, 5, 0, 6.29, 0, 1.6), cap); const ox = (k - 1) * 0.13, oz = (k % 2) * 0.1; st.position.set(v + ox, 0.09 * s2, u + oz); cp2.position.set(v + ox, 0.18 * s2, u + oz); cave.add(st, cp2); } glow.push(cap); }); }
+      /* 洞頂滴水：三個地方輪流滴，落到地上濺一下 */
+      const drops = [[3.0, 0.4], [5.8, -0.5], [7.6, 0.3]].map(([u, v], i) => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4).scale(1, 1.6, 1), new THREE.MeshBasicMaterial({ color: '#cfefff' })); d.position.set(v, HT - 0.4, u); cave.add(d); const pud = new THREE.Mesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#7fb8d8', transparent: true, opacity: 0.45, depthWrite: false })); pud.position.set(v, 0.03, u); cave.add(pud); const rp = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.08, 14).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false })); rp.position.set(v, 0.04, u); cave.add(rp); return { d, rp, ph: i * 0.9, top: HT - 0.4 }; });
+      /* 空中飄的發光孢子 */
+      const NS = 26, sg = new THREE.BufferGeometry(), sp = new Float32Array(NS * 3), sb = []; for (let i = 0; i < NS; i++){ sb.push([(Math.random() - 0.5) * 2.6, 0.4 + Math.random() * 2, 0.8 + Math.random() * (LEN - 1.2), Math.random() * 6.28]); } sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+      const spores = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#b8ffd0', size: 0.09, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending })); cave.add(spores);
+      tickers.push((dt, t) => { for (let i = 0; i < glow.length; i++) glow[i].emissiveIntensity = 0.7 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.3 + i * 1.7));
+        for (const q of drops){ const u = ((t + q.ph) % 2.7) / 2.7; if (u < 0.75){ q.d.visible = u > 0.15; q.d.position.y = q.top - Math.max(0, (u - 0.15) / 0.6) ** 2 * (q.top - 0.05); q.rp.material.opacity = 0; } else { q.d.visible = false; const k = (u - 0.75) / 0.25; q.rp.scale.setScalar(1 + k * 4); q.rp.material.opacity = 0.7 * (1 - k); } }
+        const a = sg.attributes.position.array; for (let i = 0; i < NS; i++){ const [v, y, u, ph] = sb[i]; a[i * 3] = v + Math.sin(t * 0.4 + ph) * 0.3; a[i * 3 + 1] = y + Math.sin(t * 0.6 + ph * 2) * 0.25; a[i * 3 + 2] = u + Math.cos(t * 0.3 + ph) * 0.3; } sg.attributes.position.needsUpdate = true; });
+      /* 碰撞：兩邊石壁、最裡面；洞口外面兩根石柱。洞外的山坡不能從旁邊爬到洞頂上 */
+      const oc = (u, v, hw, hd) => { const [x, z] = at(u, v), c = Math.cos(face), sn = Math.sin(face); colliders.push({ t: 'o', x: OX + x, z: OZ + z, hw, hd, c, s: sn, bw: Math.abs(c) * hw + Math.abs(sn) * hd, bd: Math.abs(sn) * hw + Math.abs(c) * hd, big: true }); };
+      oc(LEN / 2, -(W + 0.35), 0.35, LEN / 2 + 0.6); oc(LEN / 2, W + 0.35, 0.35, LEN / 2 + 0.6); oc(LEN + 0.35, 0, W + 0.7, 0.3); oc(LEN / 2, -(W + 2.6), 1.9, LEN / 2 + 0.8); oc(LEN / 2, W + 2.6, 1.9, LEN / 2 + 0.8);
+      { const [cx, cz] = at(LEN / 2, 0); RSV.push([cx, cz, 7.5]); const [lx2, lz2] = at(-1.2, 0); RSV.push([lx2, lz2, 3]); }
+      label('山洞', ex, y0 + 5.2, ez, 0.75);
+      /* 洞裡的地面：一段一段貼著山坡鋪石頭地（不然看起來是草地），再撒幾顆小石頭 */
+      { const fp = {}; for (let u = -0.3; u < LEN; u += 1.0){ const [x, z] = at(u + 0.5, 0); G(fp, '#4f4a42', new THREE.BoxGeometry(2 * W - 0.1, 0.06, 1.06).rotateY(face), x, Math.max(fl(u), fl(u + 1)) + 0.09, z); }
+        for (let i = 0; i < 14; i++){ const u = 0.6 + (i * 0.618 % 1) * (LEN - 1), v = ((i * 0.37) % 1 - 0.5) * 2 * (W - 0.4), [x, z] = at(u, v); G(fp, ROCK[i % 3], new THREE.DodecahedronGeometry(0.1 + (i % 3) * 0.05, 0).scale(1, 0.6, 1), x, fl(u) + 0.08, z); }
+        flush(fp, fg); }
+      const uv = (x, z) => { const dx = x - OX - ex, dz = z - OZ - ez; return [-(dx * fx + dz * fz), dx * rx + dz * rz]; }, roofY = u => y0 + (y1 - y0) * u / LEN + HT - 1.0;
+      caveInfo = { x: OX + ex, z: OZ + ez, face, len: LEN, w: W, inside: (x, z) => { const [u, v] = uv(x, z); return u > 0.3 && u < LEN && Math.abs(v) < W; },
+        /* 鏡頭：人在洞裡（或剛走到洞口）時，鏡頭只能在洞的中線上、在人的前面或後面，而且不高過洞頂；不然會鑽進石頭裡，畫面整片灰 */
+        cam: (T, want) => { const [ut, vt] = uv(T.x, T.z); if (!(ut > -0.8 && ut < LEN + 0.2 && Math.abs(vt) < W + 0.3)) return false;
+          let [uw] = uv(want.x, want.z); const L = Math.max(2.2, Math.min(3.4, Math.hypot(want.x - T.x, want.z - T.z))); uw = uw < ut ? ut - L : ut + L; if (uw > LEN - 0.4) uw = ut - L;   /* 鏡頭在人的哪一邊就留在哪一邊（往裡面看還是往外看） */
+          const vw = vt * 0.5; want.x = OX + ex - fx * uw + rx * vw; want.z = OZ + ez - fz * uw + rz * vw; want.y = Math.min(want.y, roofY(Math.max(0, uw)) + (uw < -1.5 ? 0.8 : 0)); return true; } }; }
+    /* --- 護林員小屋：湖東邊的步道旁，木頭小屋、門前有走廊和一張長椅（可以坐）、煙囪冒煙、晚上窗戶會亮、門口一塊「森林步道」的地圖看板 --- */
+    { const [hx, hz] = P(953, 236), f = -Math.PI / 2 - 0.15, fx = Math.sin(f), fz = Math.cos(f), lx = Math.cos(f), lz = -Math.sin(f), y = Math.max(0.3, hAt(hx, hz)) + 0.12, at = (fw, rt) => [hx + fx * fw + lx * rt, hz + fz * fw + lz * rt];
+      const LOG = '#8a5a34', LOGD = '#6b4426', ROOFC = '#4f6f3a', hp = {};
+      const HB = (hex, w, h, d, fw, rt, yy, rot) => { const [x, z] = at(fw, rt); B(hp, hex, w, h, d, x, y + yy, z, (rot || 0) + f); };
+      HB('#9a8a6a', 4.8, 0.24, 4.6, -0.2, 0, -0.06);   /* 石頭地基 */
+      for (let k = 0; k < 9; k++){ const yy = 0.2 + k * 0.27, c = k % 2 ? LOG : LOGD; HB(c, 4.2, 0.26, 0.26, -1.8, 0, yy); HB(c, 4.2, 0.26, 0.26, 1.6, 0, yy); HB(c, 0.26, 0.26, 3.6, -0.1, -2.0, yy); HB(c, 0.26, 0.26, 3.6, -0.1, 2.0, yy); }   /* 一根一根疊起來的原木牆（前面那一面在 fw=1.6） */
+      { const g = roofG(4.9, 4.6, 1.5); g.rotateY(f); const [x, z] = at(-0.1, 0); G(hp, ROOFC, g, x, y + 2.65, z); }
+      HB('#8a8a84', 0.55, 1.6, 0.55, -1.0, 1.2, 3.4);   /* 煙囪 */
+      HB('#5a3a22', 0.95, 1.7, 0.08, 1.75, 0.4, 0.95);   /* 門 */
+      HB('#b98a5a', 4.4, 0.12, 1.5, 2.5, 0, 0.1); for (const rt of [-2.05, 2.05]) HB(LOGD, 0.14, 2.3, 0.14, 3.15, rt, 1.2); HB(ROOFC, 4.6, 0.12, 1.7, 2.55, 0, 2.38, 0);   /* 走廊、柱子、走廊的小屋簷 */
+      HB('#a77b4c', 1.7, 0.08, 0.42, 2.6, -1.1, 0.55); HB(LOGD, 0.08, 0.4, 0.38, 2.6, -1.85, 0.33); HB(LOGD, 0.08, 0.4, 0.38, 2.6, -0.35, 0.33); HB('#a77b4c', 1.7, 0.4, 0.06, 2.42, -1.1, 0.8);   /* 長椅（面向步道） */
+      HB('#6e4a2f', 0.5, 0.5, 0.5, 2.7, 1.5, 0.37); HB('#6e4a2f', 0.4, 0.35, 0.4, 2.6, 1.0, 0.3);   /* 木箱 */
+      { const [x, z] = at(2.6, 1.5); G(hp, '#c94a2e', new THREE.CylinderGeometry(0.05, 0.05, 0.35, 6).rotateZ(1.2), x, y + 0.7, z); }   /* 箱子上的斧頭柄 */
+      flush(hp, fg);
+      /* 窗戶：晚上亮 */
+      const win = new THREE.MeshStandardMaterial({ color: '#ffe9a8', emissive: '#ffcf6a', emissiveIntensity: 0, roughness: 0.5 });
+      for (const rt of [-1.1, 1.3]){ const m = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.6), win); const [x, z] = at(1.75, rt); m.position.set(x, y + 1.35, z); m.rotation.y = f; fg.add(m); }
+      { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.6), win); const [x, z] = at(-0.1, 2.15); m.position.set(x, y + 1.35, z); m.rotation.y = f + Math.PI / 2; fg.add(m); }
+      /* 煙囪的煙：一團一團往上飄、慢慢散開 */
+      const smk = []; for (let i = 0; i < 6; i++){ const m = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 6), new THREE.MeshBasicMaterial({ color: '#e8e8e8', transparent: true, opacity: 0.5, depthWrite: false })); fg.add(m); smk.push(m); }
+      const [cx0, cz0] = at(-1.0, 1.2);
+      tickers.push((dt, t) => { for (let i = 0; i < smk.length; i++){ const u = ((t * 0.22) + i / smk.length) % 1, m = smk[i]; m.position.set(cx0 + u * 1.2 + Math.sin(t + i) * 0.15, y + 4.3 + u * 3.2, cz0 + u * 0.4); m.scale.setScalar(0.6 + u * 1.8); m.material.opacity = 0.55 * (1 - u); }
+        const hr = A.DayNight && A.DayNight.hour != null ? A.DayNight.hour : 12; win.emissiveIntensity = hr < 6 || hr >= 18 ? 1.4 : 0.05; });
+      /* 地圖看板：「森林步道」——清溪潭、山洞、湖、護林員小屋在哪 */
+      { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 340; const c = cv.getContext('2d'); c.fillStyle = '#f4ecd8'; c.fillRect(0, 0, 512, 340); c.strokeStyle = '#6b4426'; c.lineWidth = 12; c.strokeRect(6, 6, 500, 328);
+        c.fillStyle = '#3f6b3a'; c.font = 'bold 46px sans-serif'; c.textAlign = 'center'; c.fillText('🌲 森林步道', 256, 62);
+        c.fillStyle = '#5a3d2b'; c.font = '30px sans-serif'; c.textAlign = 'left'; ['💧 瀑布和清溪潭：往西', '🪨 山洞：大山的西南邊', '🐟 湖、溪可以釣魚', '🛖 你在這裡：護林員小屋'].forEach((tx2, i) => c.fillText(tx2, 40, 122 + i * 54));
+        const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.06), new THREE.MeshBasicMaterial({ map: tx })); const [x, z] = at(3.9, -2.9); pl.position.set(x, y + 1.25, z); pl.rotation.y = f; fg.add(pl);
+        const bk = new THREE.Mesh(new THREE.BoxGeometry(1.72, 1.18, 0.08), new THREE.MeshStandardMaterial({ color: LOGD, roughness: 0.9 })); bk.position.set(x - fx * 0.05, y + 1.25, z - fz * 0.05); bk.rotation.y = f; fg.add(bk);
+        for (const sd2 of [-0.8, 0.8]){ const ps = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.8, 0.1), bk.material); ps.position.set(x + lx * sd2 - fx * 0.05, y + 0.9 - 0.12, z + lz * sd2 - fz * 0.05); fg.add(ps); }
+        colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: 0.5 }); }
+      { const c = Math.cos(f), sn = Math.sin(f), [x, z] = at(-0.1, 0); colliders.push({ t: 'o', x: OX + x, z: OZ + z, hw: 2.25, hd: 2.0, c, s: sn, bw: Math.abs(c) * 2.25 + Math.abs(sn) * 2.0, bd: Math.abs(sn) * 2.25 + Math.abs(c) * 2.0, big: true }); }
+      for (const o of [-1.5, -0.7]){ const [x, z] = at(2.78, o - 0.0); benches.push({ x: OX + x, z: OZ + z, y: y + 0.6, face: f }); }
+      { const [x, z] = at(0, 0); RSV.push([x, z, 5.5]); const [x2, z2] = at(3.5, -1); RSV.push([x2, z2, 2.5]); }
+      label('護林員小屋', hx, y + 6, hz, 0.7); }
+    flush(parts, fg); }
   /* v922 潮汐（跟舊島一樣）：海水退掉多少（公尺，0～0.3）。海岸前 3 公尺是緩緩的淺灘，乾潮時水深不到這個數字的地方，水面著色器不畫水、露出濕沙。
      seaAt：這一格是海（不是河、湖、紅樹林——那些不退潮）；dryAt：露出來、可以走上去的濕沙；wetAt：可以下竿的水（退潮時要再深 9 公分才算，浮標才不會落在濕沙上） */
   let tideFix = null;   /* 排位置的時候用：當成滿潮來算（不然剛好退潮進遊戲，「水邊」會排到退潮才露出來的沙地上） */
@@ -506,7 +610,7 @@ export function init(A){
        spot：這片水算哪一個釣點——山上的湖、森林裡的溪（橋的上游）、平地的河、紅樹林、岸邊的海、離岸 6 公尺以上的外海（碼頭走到底）
        tinfo：跟舊島的 terrainInfo 一樣的格式（高度、是不是水、哪一種水 1 河 2 溪 3 湖），水裡的魚影、魚跳出水面要用 */
     water: (x, z) => wetAt(x - OX, z - OZ),
-    spot: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return 'harbor'; if (samp(sdLake, lx, lz) > -1.5) return 'lake'; if (samp(sdMang, lx, lz) > -2.5) return 'mangrove';
+    spot: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz)) return 'harbor'; { const [px, pz] = P(POOLC[0], POOLC[1]); if (Math.hypot(lx - px, lz - pz) < POOLR * S + 1.2) return 'pool'; } if (samp(sdLake, lx, lz) > -1.5) return 'lake';   /* v929 瀑布下的深潭＝清溪潭 */ if (samp(sdMang, lx, lz) > -2.5) return 'mangrove';
       if (samp(sdMain, lx, lz) > 0 && samp(sdWat, lx, lz) > -2) return samp(sdFor, lx, lz) > 3 ? 'creek' : 'river'; return samp(sdLand, lx, lz) < -6 ? 'harbor' : 'sea'; },
     /* 最近可以站著釣魚的水邊（「找釣點」按鈕帶路用）：從腳邊一圈一圈往外找，站的地方要在主島或棧橋上、ok() 說沒被東西擋住，而且往某一邊 1.6 和 3.1 公尺都是水 */
     shore: (x, z, ok) => { const lx0 = x - OX, lz0 = z - OZ, wat = wetAt;
@@ -529,14 +633,14 @@ export function init(A){
     board: boardLine, rail: railLine,   /* 測試用：木棧道、鐵軌的中心線（島上的公尺） */
     /* v923 小火車：train 是給 game.js 問的（有幾站、哪一班停在哪一站、座位現在在哪）；trainStep(共用時間的秒數, dt) 每一幀在移動玩家之前叫一次 */
     train: TRAIN ? TRAIN.api : null, trainStep: (t, dt) => { if (TRAIN && inside) TRAIN.step(t, dt); },
-    bb: bbInfo, seats, doors, posts,
+    bb: bbInfo, seats, doors, posts, benches, cave: caveInfo,   /* v929 benches：森林裡可以坐的長椅；cave：山洞（inside(x,z) 人是不是在洞裡） */
     /* v926 村民散步用。railNear：這一點是不是在鐵軌旁邊（m 公尺內）或月台上；stroll：可不可以當散步的去處——鋪了路的地（廣場、大道、巷子、港邊木棧道），不靠鐵軌、不上月台和棧橋 */
     railNear: (x, z, m) => { const lx = x - OX, lz = z - OZ; return railDist(lx, lz) < (m || 1.6) || !!platAt(lx, lz); },
     stroll: (x, z, near) => { const lx = x - OX, lz = z - OZ; return inBox(lx, lz) && (near ? samp(sdMain, lx, lz) > 1.5 && samp(sdFor, lx, lz) < -4 : samp(sdPave, lx, lz) > 0.3) && samp(HG, lx, lz) > 0.2 && !deck(lx, lz) && !platAt(lx, lz) && railDist(lx, lz) > 2.2; },   /* near：攤位旁邊幾步，不一定要鋪路，草地也行（不進森林、不下水） */   /* 高看板（螢幕、字幕條的 Mesh，中心高度）和它前面的座位：game.js 接節目、接坐下 */
     /* 這一點是什麼地：0 不是主島、1 水和紅樹林、2 路和廣場、3 森林、4 沙灘、5 蓋了東西、6 海岸邊、7 空草地（量「還有多少地沒用」用的） */
     kind: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz) || samp(sdMain, lx, lz) <= 0) return 0; if (samp(HG, lx, lz) < WL || samp(sdMang, lx, lz) > -3) return 1; if (paved(lx, lz, 0.5)) return 2; if (samp(sdFor, lx, lz) > -4) return 3; if (samp(sdSand, lx, lz) > -3) return 4; if (reserved(lx, lz)) return 5; if (samp(sdLand, lx, lz) < 6) return 6; return 7; },
     /* 預覽用：一按就過去的地點（島上的公尺） */
-    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 822, 190], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
+    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 805, 196], ['山洞', 694, 226], ['護林員小屋', 925, 246], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
   };
   /* v927 要站在水邊的位置（釣魚的村民、蔚博士調查的岸邊）：從排好的那一點找最近的水邊（當成滿潮），站好、面朝水；不靠鐵軌、不站在東西裡面；那裡不長樹。
      蔚博士的往後退一步半（不擋到在那裡釣魚的人）。找不到同一種水的就拿掉，她留在水族館入口。 */
