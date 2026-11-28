@@ -9909,5 +9909,9 @@
  "名片的「穿搭」頁改成拍新人物、列新人物身上的衣服（以前是舊人物的海龜帽、披風）": "The \"Outfit\" page on profile cards now shows the new character and the clothes they actually wear (it used to show old-style items)",
  "阿鐵搬進新主島的釣具店裡，在右前角自己的工作台": "Tie moved into the tackle shop on the new main island, at his own workbench in the front-right corner",
  "釣具店裡塞滿東西：左牆一整排竿袋、後牆洞洞板掛滿小包裝、中間一座兩面掛滿的鐵網架": "The tackle shop is packed: a wall of rod bags, a pegboard full of small packs and a double-sided wire rack in the middle",
- "潮搭Go 的車子照原本的上白下藍，車身上的黑點點不見了": "TideGo cars keep their white-top, blue-bottom look, without the black specks"
+ "潮搭Go 的車子照原本的上白下藍，車身上的黑點點不見了": "TideGo cars keep their white-top, blue-bottom look, without the black specks",
+ "釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光（稀有藍、傳說金）。卡片上會寫「這裡大約每幾條才 1 條」，是照你現在的竿子、魚餌、時間、潮水算的。": "Rare and legendary catches: the moment the fish leaves the water goes slow-motion, the camera pushes in and a ring of light bursts on the water (blue for rare, gold for legendary). The card shows \"About 1 in N here\", based on your current rod, bait, time and tide.",
+ "釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光，稀有是藍色還有一道光柱，傳說是金色": "Rare and legendary catches: slow-motion as the fish leaves the water, the camera pushes in and a ring of light bursts — blue with a light beam for rare, gold for legendary",
+ "卡片上多一行「這裡大約每幾條才 1 條」，看得出這條有多難得": "The catch card now shows \"About 1 in N here\" so you can see how lucky you got",
+ "拿著魚的時候頭上會寫「💎 稀有」「🌟 傳說」，旁邊的人一看就知道": "While holding the fish, \"💎 Rare\" or \"🌟 Legendary\" shows above your head for everyone nearby"
 }
