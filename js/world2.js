@@ -344,6 +344,26 @@ export function init(A){
       if (A.loadGLB) A.loadGLB(Quality.tier === 'low' ? 'models/plaza/aquarium_lo.glb' : 'models/plaza/aquarium.glb').then(gl => { gl.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); ag.add(gl.scene); }).catch(() => {});
       { const sc = document.createElement('canvas'); sc.width = 512; sc.height = 150; const c = sc.getContext('2d'); c.fillStyle = '#f7fbff'; c.fillRect(0, 0, 512, 150); c.strokeStyle = '#2f7fc4'; c.lineWidth = 12; c.strokeRect(6, 6, 500, 138); c.fillStyle = '#1d4f86'; c.font = 'bold 84px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('潮汐水族館', 256, 80);
         const t = new THREE.CanvasTexture(sc); t.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.066), new THREE.MeshBasicMaterial({ map: t, toneMapped: false })); sg.position.set(0, -0.725, 0.401); ag.add(sg); }   /* 大門上面那塊空白招牌 */
+      /* v973 作者：「整個看起來好假」→ 模型玻璃上的魚是畫上去的、不會動。每一層玻璃外面貼一層「活的水」：深淺藍的水、斜斜的光、兩層魚群剪影繞著塔游（近的大、遠的小，速度不一樣）、
+         白色窗框。一樓避開大門。量過模型：二到四樓是圓心在 (0, -0.068) 的圓，半徑 0.382／0.312／0.256；一樓半徑約 0.405 */
+      { const fc = document.createElement('canvas'); fc.width = 1024; fc.height = 256; const c = fc.getContext('2d'); let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+        c.fillStyle = '#fff'; for (let i = 0; i < 26; i++){ const x = rnd() * 1024, y = 30 + rnd() * 196, L = 14 + rnd() * 30, H = L * (0.32 + rnd() * 0.16), dir = rnd() < 0.5 ? 1 : -1; c.beginPath(); c.ellipse(x, y, L / 2, H / 2, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(x - dir * L * 0.42, y); c.lineTo(x - dir * L * 0.8, y - H * 0.55); c.lineTo(x - dir * L * 0.8, y + H * 0.55); c.closePath(); c.fill(); }
+        { const x = 700, y = 150; c.beginPath(); c.moveTo(x - 60, y); c.quadraticCurveTo(x, y - 40, x + 60, y); c.quadraticCurveTo(x, y + 14, x - 60, y); c.fill(); c.fillRect(x - 90, y - 1, 32, 3); }   /* 魟魚 */
+        { const x = 300, y = 90; c.beginPath(); c.ellipse(x, y, 26, 18, 0, 0, 7); c.fill(); c.beginPath(); c.ellipse(x + 32, y - 2, 9, 7, 0, 0, 7); c.fill(); for (const [dx, dy] of [[-18, -18], [16, -18], [-18, 18], [16, 18]]){ c.beginPath(); c.ellipse(x + dx, y + dy, 11, 5, dx * dy > 0 ? 0.6 : -0.6, 0, 7); c.fill(); } }   /* 海龜 */
+        const ft = new THREE.CanvasTexture(fc); ft.wrapS = THREE.RepeatWrapping; ft.wrapT = THREE.ClampToEdgeWrapping;
+        const U = { t: { value: 0 }, fish: { value: ft } }, mat = new THREE.ShaderMaterial({ uniforms: U, side: THREE.FrontSide,
+          vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+          fragmentShader: `uniform float t; uniform sampler2D fish; varying vec2 vUv;
+            void main(){ vec2 u = vUv; vec3 deep = vec3(0.03, 0.20, 0.42), lite = vec3(0.16, 0.55, 0.82); vec3 col = mix(deep, lite, smoothstep(0.0, 1.0, u.y));
+              float ray = max(0.0, sin(u.x * 46.0 + u.y * 5.0 - t * 0.35)) * max(0.0, sin(u.x * 17.0 - t * 0.21)); col += vec3(0.10, 0.18, 0.22) * ray * u.y;
+              float ca = sin(u.x * 140.0 + sin(u.y * 9.0 + t * 1.3) * 2.0 + t * 0.8) * sin(u.y * 26.0 - t * 1.1 + sin(u.x * 60.0)); col += vec3(0.05, 0.09, 0.11) * smoothstep(0.55, 1.0, ca);
+              float f2 = texture2D(fish, vec2(u.x * 5.0 - t * 0.012, u.y * 0.8 + 0.12)).a; col = mix(col, deep * 0.85, f2 * 0.35);
+              float f1 = texture2D(fish, vec2(u.x * 3.0 + t * 0.022 + 0.37, u.y)).a; col = mix(col, vec3(0.02, 0.08, 0.18), f1 * 0.72);
+              float fr = step(fract(u.x * 14.0), 0.035) + step(u.y, 0.03) + step(0.97, u.y); col = mix(col, vec3(0.92, 0.95, 0.97), clamp(fr, 0.0, 1.0));
+              gl_FragColor = vec4(col, 1.0); }` });
+        for (const [y0, y1, r, cz, open] of [[-0.88, -0.70, 0.407, -0.01, 0.33], [-0.49, -0.33, 0.386, -0.068, 0], [-0.17, -0.04, 0.316, -0.068, 0], [0.15, 0.27, 0.26, -0.068, 0]]){
+          const g = new THREE.CylinderGeometry(r, r, y1 - y0, 48, 1, true, open, Math.PI * 2 - open * 2), m = new THREE.Mesh(g, mat); m.position.set(0, (y0 + y1) / 2, cz); ag.add(m); }
+        tickers.push((dt, tt) => { U.t.value = tt; }); }
       colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: 8.6, big: true }); RSV.push([x, z, 14]); label('潮汐水族館', x, 33, z); }
     /* 博物館 */
     { const [x, z] = P(764, 663);   /* 放在拱形前廣場的正中間；v967 往西南挪 3 公尺（作者：博物館門口的錨和台階壓到圓環） */
