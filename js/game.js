@@ -1133,7 +1133,7 @@ function makeReal3(f, scale){ const R = REAL3[f.id];
 /* v245 省電：手機預設每秒最多 45 張，閒置 30 秒（沒碰畫面、沒在釣魚、沒開潛水艇）降到 30 張 */
 var Power = { cap: (() => { try { const v = localStorage.getItem('tide.fpsCap'); if (v !== null) return +JSON.parse(v) || 0; } catch(e){} return (matchMedia && matchMedia('(pointer:coarse)').matches) ? 45 : 0; })(), last:0, input:0,
   want(){ let c = this.cap; try { if (typeof ZC !== 'undefined' && ZC.on) return 4; const busy = (typeof F !== 'undefined' && F.phase && F.phase !== 'idle') || (typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) || Dive.on; if (!busy && performance.now() - this.input > 30000) c = c ? Math.min(c, 30) : 30; } catch(e){} return c; } };
-for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { Power.input = performance.now(); }, { passive:true, capture:true });
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { Power.input = performance.now(); try { if (typeof ensureAudio === 'function' && (!actx || actx.state !== 'running' || (musicOn && typeof MUSIC !== 'undefined' && !MUSIC.playing()))) ensureAudio(); } catch(e){} }, { passive:true, capture:true });   /* v998 作者：「音樂都要人物動才放」→ 碰到畫面任何地方（按鈕、選單也算）就開始放音樂 */
 const TIERS = {
   low:  { label:'低', dpr:1.0, shadow:0,    tufts:0.25, waterEvery:2, aa:false },
   mid:  { label:'中', dpr:1.5, shadow:1024, tufts:0.5,  waterEvery:1, aa:false },
@@ -16239,6 +16239,7 @@ function renderSettings(body){
   { const f = field('🔋 省電（每秒最多畫幾張）'), seg = el('div', 'seg');
     [[30, '30（最省電）'], [45, '一般'], [0, '不限']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Power.cap === k || (k === 45 && Power.cap === 60))); b.addEventListener('click', () => { Power.cap = k; LS.set('tide.fpsCap', k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', '手機會發燙，多半是畫面每秒畫太多張。「一般」：照螢幕平均地畫（一般手機每秒 60 張），超過 30 秒沒碰畫面（不在釣魚）會自動降到 30 張。')); }
+  { const f = field('📊 畫面順不順'), on = !!Perf.on; f.appendChild(tgl(on, () => { Perf.on = !on; LS.set('tide.perfHud', !on); renderTab(); })); f.appendChild(el('p', 'sub', '打開後左下角會有一個小框：每秒畫幾張、最慢一張多久、卡了幾次。覺得卡的時候截圖給作者看。')); }
   { const f = field('🚢 深海驚嚇效果'), on = subScareOn(); f.appendChild(tgl(on, () => { LS.set('tide.subScare', !on); renderTab(); })); f.appendChild(el('p', 'sub', '開潛水艇到午夜層時，黑暗裡會有嚇人的東西（黑暗中的眼睛、那盞燈）。關掉就不會出現，其他的相遇照常。')); }
   { const f = field('👋 陌生人'), seg = el('div', 'seg'), cur = strangerSafe(); [[false, '看得到大家打的字'], [true, '只看認識的人打的字']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.strangerChat', k ? 'met' : 'all'); renderTab(); }); seg.appendChild(b); });
     if (Kid.on) f.appendChild(el('p', 'sub', '🧒 兒童安全模式：只看得到大家的快速聊天句子。')); else f.appendChild(seg);
@@ -25186,10 +25187,22 @@ try { buildCafeTerrace(); } catch(e){ console.warn('cafeTerrace', e); }
 try { buildReef(); } catch(e){ console.warn('mangrove', e); }
 try { buildSubDock(); } catch(e){ console.warn('subdock', e); }
 camera.position.set(4, 5, 18);
+/* v998 作者：「我換 ROG 就是有點卡」→ ①畫質「自動」時邊玩邊量：每 2 秒算一次平均一張畫多久，太慢就把解析度往下降一點（最低 1 倍），很順又慢慢加回去；
+   ②設定裡可以打開「畫面順不順」小視窗：每秒幾張、最慢那張幾毫秒、卡一下的次數、畫幾個物件，截圖給作者看就知道卡在哪 */
+const Perf = { on: LS.get('tide.perfHud', false), last: 0, n: 0, acc: 0, worst: 0, hitch: 0, t0: 0, slow: 0, fast: 0, el: null };
+function perfTick(){ const ms = performance.now(), g = Perf.last ? ms - Perf.last : 0; Perf.last = ms; if (!Perf.t0) Perf.t0 = ms; if (!g || g > 1000){ Perf.t0 = ms; Perf.n = Perf.acc = Perf.worst = 0; return; }
+  Perf.n++; Perf.acc += g; if (g > Perf.worst) Perf.worst = g; if (g > 120) Perf.hitch++; if (ms - Perf.t0 < 2000) return;
+  const avg = Perf.acc / Perf.n, cap = Power.want() || 60, tgt = 1000 / Math.min(cap, 60);
+  if (Quality.setting === 'auto' && !document.hidden){ const base = Math.min(TIERS[Quality.tier].dpr, devicePixelRatio || 1), cur = renderer.getPixelRatio();
+    if (avg > tgt * 1.35){ Perf.fast = 0; if (++Perf.slow >= 2 && cur > 1.01){ renderer.setPixelRatio(Math.max(1, cur - 0.15)); try { resize(); } catch(e){} Perf.slow = 0; } }
+    else if (avg < tgt * 1.12){ Perf.slow = 0; if (++Perf.fast >= 8 && cur < base - 0.01){ renderer.setPixelRatio(Math.min(base, cur + 0.1)); try { resize(); } catch(e){} Perf.fast = 0; } } else Perf.slow = Perf.fast = 0; }
+  if (Perf.on){ let e = Perf.el; if (!e){ e = Perf.el = el('div', 'perfhud'); document.body.appendChild(e); } const I = renderer.info.render; e.textContent = `${(1000 / avg).toFixed(0)} 張/秒・最慢 ${Perf.worst.toFixed(0)}ms・卡 ${Perf.hitch} 次\n物件 ${I.calls}・三角形 ${(I.triangles / 1000).toFixed(0)}k・解析度 ${renderer.getPixelRatio().toFixed(2)}・${TIERS[Quality.tier].label}`; }
+  else if (Perf.el){ Perf.el.remove(); Perf.el = null; }
+  Perf.t0 = ms; Perf.n = Perf.acc = Perf.worst = 0; }
 function frame(){
   { const ms = performance.now(), d0 = ms - (Power.raw || ms); Power.raw = ms; if (d0 > 4 && d0 < 50) Power.iv = Power.iv ? Power.iv + (d0 - Power.iv) * 0.05 : d0;
     const cap = Power.want(); if (cap){ const n = Math.max(1, Math.round(1000 / (Power.iv || 16.7) / cap)); Power.k = (Power.k || 0) + 1; if (Power.k < n){ requestAnimationFrame(frame); return; } Power.k = 0; Power.last = ms; } }   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因）。v939 作者：「完全不會卡超順的」→ 以前 60Hz 螢幕限 45 張是「畫一張、跳一張」不平均，看起來一頓一頓；現在照螢幕的更新率每 n 格畫一格，間隔一樣（60Hz：平常 60 張、閒置 30 張） */   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因） */
-  const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++;
+  const t = now(); const dt = Math.min(0.05, t - last); last = t; frameNo++; try { perfTick(); } catch(e){}
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
@@ -25288,6 +25301,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u998', d:'11/28', items:[['🎵','一碰畫面（按鈕、選單都算）就開始放音樂，不用先走路'], ['📱','畫質「自動」時會邊玩邊調解析度：太卡就自動降一點，很順再加回去'], ['📊','設定 →「畫面順不順」可以打開小框，看每秒幾張、卡了幾次']] },
   { id:'u997', d:'11/28', items:[['🏟️','體育場和遠方荒島（漂流島）先收起來了，新主島體育場那塊地先空著'], ['🔒','潛水 Lv.8、冰封群島 Lv.12 才開放，新玩家先專心釣魚']] },
   { id:'u996', d:'11/28', items:[['👫','好友頁重新整理：左邊分「好友／周圍／封鎖」，好友頁只列好友；在線的好友旁邊有「去找他」「呼叫」，私訊、送禮、小島收在「⋯」'], ['📞','語音不用一直按著了：接通就能講，不想講話點 🎤 關麥克風'], ['📱','手機主畫面換新：海的桌布、彩色的圖示、最下面一排常用的（潮搭Go、地圖、訊息、好友）']] },
   { id:'u995', d:'11/28', items:[['🔥','聯名套裝：造型 → 衣櫃 → 上衣，最上面三套「阿萬・夜騎」「阿默・黑影」「阿穎・金浪」，整套 🪙2,500'], ['✨','穿整套身上會一直冒那一套顏色的光點，別人也看得到；點了可以先試穿，喜歡再整套買']] },

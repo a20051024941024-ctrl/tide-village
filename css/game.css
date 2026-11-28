@@ -2881,3 +2881,5 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .ph2 .ph-lab{color:#fff;font-size:12.5px;text-shadow:0 1px 2px rgba(0,0,0,.55)}
 .ph2 .ph-dock{position:sticky;bottom:0;z-index:2;display:flex;justify-content:space-around;margin:4px 2px 0;padding:10px 6px 8px;border-radius:22px;background:rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 @media (orientation:landscape){.ph2 .ph-grid{grid-template-columns:repeat(7,1fr)}}
+/* v998 畫面順不順小框 */
+.perfhud{position:fixed;left:calc(env(safe-area-inset-left,0px) + 8px);bottom:8px;z-index:60;white-space:pre;font:700 11px/1.4 ui-monospace,monospace;color:#d9ffe8;background:rgba(10,20,30,.72);padding:4px 7px;border-radius:8px;pointer-events:none}

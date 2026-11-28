@@ -9848,5 +9848,10 @@
  "新主島": "New main island",
  "體育場和遠方荒島（漂流島）先收起來了，新主島體育場那塊地先空著": "The stadium and the far-off Drift Island are closed for now; the stadium lot on the new main island is empty for the moment",
  "潛水 Lv.8、冰封群島 Lv.12 才開放，新玩家先專心釣魚": "Diving opens at Lv.8 and the Frozen Isles at Lv.12, so new players can focus on fishing first",
- "那座島現在去不了了": "That island can't be visited right now"
+ "那座島現在去不了了": "That island can't be visited right now",
+ "一碰畫面（按鈕、選單都算）就開始放音樂，不用先走路": "Music starts as soon as you touch the screen (buttons and menus count too), no need to walk first",
+ "畫質「自動」時會邊玩邊調解析度：太卡就自動降一點，很順再加回去": "With quality on \"Auto\", resolution adjusts as you play: it drops a bit when things lag and goes back up when smooth",
+ "設定 →「畫面順不順」可以打開小框，看每秒幾張、卡了幾次": "Settings → \"Smoothness\" shows a small box with frames per second and how many times it stuttered",
+ "📊 畫面順不順": "📊 Smoothness",
+ "打開後左下角會有一個小框：每秒畫幾張、最慢一張多久、卡了幾次。覺得卡的時候截圖給作者看。": "Shows a small box with frames per second, the slowest frame and how many stutters. Take a screenshot when it feels laggy and send it to the developer."
 }
