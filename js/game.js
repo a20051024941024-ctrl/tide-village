@@ -4851,8 +4851,14 @@ function seasonRodDraw(c, W, H, k){ const S = seasonOf(k); if (!S) return false;
   for (let i = 0; i < 8; i++) seasonMotif(c, T[3], i % 2 ? W * 0.68 : W * 0.32, 16 + i * 31, leg ? 11 : 10, T[2]);
   if (leg){ c.fillStyle = '#ffd86a'; for (const y of [3, H - 6]) c.fillRect(0, y, W, 3); c.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 30; i++) c.fillRect((i * 29) % W, (i * 53) % H, 2, 2); }
   return true; }
-function myFrame(){ if (LS.get('tide.nfOff', false)) return null; const L = (rec.owned || []).filter(x => /^nf_\d{6}$/.test(x)).sort(); return L.length ? L[L.length - 1] : null; }
-function nameFrame(nm, id){ if (!nm) return; const S = id && seasonOf(id); if (nm.dataset.nf === (id || '')) return; nm.dataset.nf = id || '';
+/* v990 阿穎：「最想要的就是可以裝逼，帥可以讓別人看到不一樣」→ 靠真的釣到、升級拿到的名牌框，會動、大家都看得到（presence nf） */
+const NFA = [['nfa_bronze', '🥉 銅浪名牌', '到 Lv.10', () => lvOf(calcXP()) >= 10], ['nfa_silver', '🥈 銀浪名牌', '到 Lv.20', () => lvOf(calcXP()) >= 20], ['nfa_gold', '🥇 金浪名牌', '到 Lv.30', () => lvOf(calcXP()) >= 30],
+  ['nfa_legend', '👑 傳說名牌', '釣到任何一條「傳說」的魚', () => Object.keys(rec.count || {}).some(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k] && FISH_BY_ID[k].rarity === '傳說')], ['nfa_rainbow', '🌈 虹彩名牌', '到 Lv.50', () => lvOf(calcXP()) >= 50]];
+const NFA_RE = /^nfa_(bronze|silver|gold|legend|rainbow)$/;
+function nfaHas(id){ const a = NFA.find(x => x[0] === id); try { return !!(a && a[3]()); } catch(e){ return false; } }
+function myFrames(){ return (rec.owned || []).filter(x => /^nf_\d{6}$/.test(x)).sort().concat(NFA.filter(a => nfaHas(a[0])).map(a => a[0])); }
+function myFrame(){ if (LS.get('tide.nfOff', false)) return null; const pk = LS.get('tide.nfPick', ''); if (pk === 'off') return null; const L = myFrames(); if (pk && L.includes(pk)) return pk; const S = L.filter(x => x.startsWith('nf_')); return S.length ? S[S.length - 1] : null; }
+function nameFrame(nm, id){ if (!nm) return; if (nm.dataset.nf === (id || '')) return; nm.dataset.nf = id || ''; for (const c of [...nm.classList]) if (c.startsWith('nfx')) nm.classList.remove(c); if (id && NFA_RE.test(id)){ nm.classList.remove('nframe'); nm.classList.add('nfx', 'nfx-' + id.slice(4)); return; } const S = id && seasonOf(id);
   if (!S){ nm.style.boxShadow = ''; nm.style.outline = ''; nm.classList.remove('nframe'); return; } nm.classList.add('nframe'); nm.style.setProperty('--nf1', S.T[1]); nm.style.setProperty('--nf2', S.T[2] === '#ffffff' ? '#e8f4ff' : S.T[2]); }
 function shadeHex(h, k){ return '#' + new THREE.Color(h).offsetHSL(0, 0, k).getHexString(); }
 const RSKIN_TEX = {};
@@ -12891,6 +12897,11 @@ function renderAch(body){
   const none = el('button', 'tbtn' + (cur ? ' ghost' : ''), '不顯示'); none.addEventListener('click', () => { Lv.title = ''; Lv.cur = ''; LS.set('tide.title', ''); refreshMyName(); renderLvChip(); pushPresence(true); renderTab(); }); tl.appendChild(none);
   for (const t of myTitles()){ const b = el('button', 'tbtn' + (cur === t.name ? '' : ' ghost'), t.name); b.title = t.how; b.addEventListener('click', () => { Lv.title = t.name; Lv.cur = t.name; LS.set('tide.title', t.name); refreshMyName(); renderLvChip(); pushPresence(true); renderTab(); toast(`稱號「${t.name}」顯示在你的名字上面了`); }); tl.appendChild(b); }
   body.appendChild(tl);
+  { body.appendChild(el('div', 'dexhead', '🪪 名牌框（大家都看得到）')); const fl = el('div', 'titles'), cf = myFrame(), set = v => { LS.set('tide.nfPick', v); LS.set('tide.nfOff', false); refreshMyName(); pushPresence(true); renderTab(); };
+    const nb = el('button', 'tbtn' + (cf ? ' ghost' : ''), '不顯示'); nb.addEventListener('click', () => set('off')); fl.appendChild(nb);
+    for (const id of myFrames()){ const a = NFA.find(x => x[0] === id), nm = a ? a[1] : (() => { const S = seasonOf(id); return '🏆 ' + (S ? `${S.y}/${S.m} 賽季` : '賽季') + '名牌'; })(); const b = el('button', 'tbtn' + (cf === id ? '' : ' ghost'), nm); b.addEventListener('click', () => { set(id); toast(`${nm}戴上了，大家都看得到`); }); fl.appendChild(b); }
+    for (const a of NFA) if (!nfaHas(a[0])){ const b = el('button', 'tbtn ghost lockd', `🔒 ${a[1].slice(2)}`); b.addEventListener('click', () => toast(`${a[1]}：${a[2]}就拿得到`)); fl.appendChild(b); }
+    body.appendChild(fl); }
   const done = ACH.filter(achDone).length; body.appendChild(el('div', 'dexhead', `🏅 成就（${done} / ${ACH.length}）`));
   const ul = el('ul', 'shoplist cols ach');
   for (const a of ACH.slice().sort((x, y) => achDone(y) - achDone(x))){ const ok = achDone(a), g = goalOf(a), c = Math.min(a.cur(), g), li = el('li', ok ? 'on' : 'lock'); li.appendChild(el('span', 'dishic', ok ? a.icon : '🔒'));
@@ -20839,7 +20850,7 @@ function applyPeer(pp){
   { const kc = pr.k3 ? K3.dec(pr.k3) : null, ks = kc ? K3.enc(kc) : ''; if ((p.fisher.k3s || '') !== ks){ p.fisher.k3s = ks; p.fisher.k3c = kc; } }   /* v710 別人的新人物 */
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { const st = pr.dr; if (Number.isInteger(st) && st >= 0 && st <= 999){ const tt = duelTierOf(st); p.fisher.nm.dataset.duel = tt[2] + tt[1]; } else delete p.fisher.nm.dataset.duel; }
-  nameFrame(p.fisher.nm, typeof pr.nf === 'string' && /^nf_\d{6}$/.test(pr.nf) ? pr.nf : null);
+  nameFrame(p.fisher.nm, typeof pr.nf === 'string' && (/^nf_\d{6}$/.test(pr.nf) || NFA_RE.test(pr.nf)) ? pr.nf : null);
   { const tb = Number.isInteger(pr.tb) ? TEAM_BADGE[pr.tb] : null; if ((p.fisher.nm.dataset.team || '') !== (tb || '')){ if (tb) p.fisher.nm.dataset.team = tb; else delete p.fisher.nm.dataset.team; } }
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk || !!pr.bp; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph; p.tr = Array.isArray(pr.tr) && pr.tr.length === 2 && Number.isFinite(+pr.tr[0]) && Number.isFinite(+pr.tr[1]) ? [clamp(pr.tr[0] | 0, 0, 7), clamp(pr.tr[1] | 0, 0, 31)] : null;   /* v923 坐小火車 */
@@ -23726,7 +23737,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -25160,6 +25171,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u990', d:'11/28', items:[['🪪','新的名牌框：名字外面一圈會流動、會發光，大家都看得到。銅浪 Lv.10、銀浪 Lv.20、金浪 Lv.30、虹彩 Lv.50，釣到傳說魚拿「傳說名牌」'], ['🏅','點左上角等級 →「名牌框」換框；還沒拿到的會寫要怎麼拿']] },
   { id:'u989', d:'11/28', items:[['📺','大看板的釣魚、開船、寵物三段短片改在新主島重拍：港口棧橋甩竿、四人船開出碼頭、寵物店裡貓狗在跑'], ['🐢','龜博士只留一個：在慢慢烏龜屋的櫃台，門口不會再站一個']] },
   { id:'u988', d:'11/28', items:[['🐢','慢慢烏龜屋可以走進去了：龜博士在櫃台，左邊一排烏龜缸，中間小水池有兩隻烏龜在游'], ['☀️','店裡的曬背燈台下雨天也能幫小烏龜曬背，跟曬太陽一樣有效（一天一次）'], ['🩺','照顧小烏龜時多了「健康檢查」：龜博士看殼的光澤和今天照顧了沒，跟你說下一步怎麼做'], ['🪑','擺家具多兩樣：曬背燈台 🪙400（在家也能幫烏龜曬背）、烏龜造景石 🪙250']] },
   { id:'u987', d:'11/28', items:[['📺','大看板多了四段新短片：五層樓水族館、潮搭Go 坐車、慢慢烏龜屋、潮汐船行的雙人四人船'], ['✅','「主島新樣子」已經做好，從「即將推出」拿掉了']] },
