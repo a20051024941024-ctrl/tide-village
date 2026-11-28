@@ -18573,7 +18573,7 @@ function w2NpcPut(n, x, z, rot, fishing, bob, y){ const gy = y != null ? y : gro
   else { n.fishing = false; n.bobState = 'none'; n.st = 'wait'; n.next = now() + 5; } }
 /* v968 檢查報告：剛進遊戲頭 50 秒新主島沒有村民（看板、攤子還沒蓋好，整個搬家就一直重試）→ 村民先搬，不用等板子 */
 function w2NpcMove(on){ const PO = W2.posts; W2S.npcMoved = on;
-  for (const k in W2_NPC){ const p = PO[k], n = npcs.find(W2_NPC[k]); if (!p || !n || !n.v0) continue; n.w2on = on;
+  for (const k in W2_NPC){ const p = PO[k], n = npcs.find(W2_NPC[k]); if (!p || !n || !n.v0) continue; n.w2on = on; if (k === 'gui') n.inShop = on;   /* v989 作者：「只留一個」→ 龜博士在店裡櫃台，門口那個不出現 */
     if (W2_LINES[k]){ if (!n.v0lines) n.v0lines = n.lines; n.lines = on ? W2_LINES[k] : n.v0lines; }
     if (k === 'sci'){ if (on){ n.w2sk = w2SciKey(); w2SciPlace(n); } else { w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, false, null, n.v0.y); if (Sci.list){ Sci.ok = false; try { sciPlace(); } catch(e){} } } continue; }   /* 蔚博士：兩邊都是「今天調查的地方」，各自重新找 */
     if (on) w2NpcPut(n, p.x, p.z, p.face, !!p.fishing, null); else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); }
@@ -23307,7 +23307,7 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 function cullAvatars(){
   const R = AV_CULL[Quality.tier]; if (!R) return; const cx = camera.position.x, cz = camera.position.z, R2 = R * R;
   const R2o = (R + 8) * (R + 8), far = f => { const dx = f.pos.x - cx, dz = f.pos.z - cz, d2 = dx * dx + dz * dz; return f._culled ? d2 > R2 : d2 > R2o; };
-  const own = f => { if (f.wHide){ f.av.g.visible = false; if (f.blob) f.blob.visible = false; return; } const fr = far(f); if (fr && f.av.g.visible){ f.av.g.visible = false; f._culled = true; } else if (!fr && f._culled){ f.av.g.visible = true; f._culled = false; } if (f.blob) f.blob.visible = f.av.g.visible; };
+  const own = f => { if (f.wHide || (f.inShop && W2S.on)){ if (f.tag) f.tag.style.display = 'none'; f.av.g.visible = false; if (f.blob) f.blob.visible = false; return; } const fr = far(f); if (fr && f.av.g.visible){ f.av.g.visible = false; f._culled = true; } else if (!fr && f._culled){ f.av.g.visible = true; f._culled = false; } if (f.blob) f.blob.visible = f.av.g.visible; };
   for (const n of npcs) own(n); for (const c of customers) if (c.f) own(c.f);
   for (const q of questNpcs) if (q.f.av.g.visible && far(q.f)){ q.f.av.g.visible = false; if (q.f.blob) q.f.blob.visible = false; }
   if (ferryNpc && ferryNpc.f.av.g.visible && far(ferryNpc.f)){ ferryNpc.f.av.g.visible = false; if (ferryNpc.f.blob) ferryNpc.f.blob.visible = false; }
@@ -25160,6 +25160,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u989', d:'11/28', items:[['📺','大看板的釣魚、開船、寵物三段短片改在新主島重拍：港口棧橋甩竿、四人船開出碼頭、寵物店裡貓狗在跑'], ['🐢','龜博士只留一個：在慢慢烏龜屋的櫃台，門口不會再站一個']] },
   { id:'u988', d:'11/28', items:[['🐢','慢慢烏龜屋可以走進去了：龜博士在櫃台，左邊一排烏龜缸，中間小水池有兩隻烏龜在游'], ['☀️','店裡的曬背燈台下雨天也能幫小烏龜曬背，跟曬太陽一樣有效（一天一次）'], ['🩺','照顧小烏龜時多了「健康檢查」：龜博士看殼的光澤和今天照顧了沒，跟你說下一步怎麼做'], ['🪑','擺家具多兩樣：曬背燈台 🪙400（在家也能幫烏龜曬背）、烏龜造景石 🪙250']] },
   { id:'u987', d:'11/28', items:[['📺','大看板多了四段新短片：五層樓水族館、潮搭Go 坐車、慢慢烏龜屋、潮汐船行的雙人四人船'], ['✅','「主島新樣子」已經做好，從「即將推出」拿掉了']] },
   { id:'u986', d:'11/28', items:[['🚕','潮搭Go 車門上的貼紙和輪框修好了（上一版變成一片亂碼）'], ['🛞','坐車時不會一頓一頓的'], ['🚪','新主島的店：朝門口走過去就直接進去，不用按按鈕；店門上面不再浮圖示'], ['🪑','一張長椅只浮一個圖示，點了走到最近的位子坐下'], ['🎥','進店、出店、傳送時，畫面直接到位，不會一路飄過去'], ['🐢','慢慢烏龜屋的畫面拿掉最上面那排背包分頁'], ['🍽️','食堂裡站著的「點餐」小按鈕拿掉，右下大按鈕一次只做一件事']] },
