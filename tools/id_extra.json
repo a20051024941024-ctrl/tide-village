@@ -9592,5 +9592,15 @@
  "來來來，聽一首漁港的歌！": "Ayo, ayo, dengarkan lagu pelabuhan!",
  "今天船都回來了，大家開心一下": "Semua perahu sudah kembali hari ini, ayo bergembira",
  "釣到大魚的，我幫你拉一首慶祝！": "Dapat ikan besar? Aku mainkan lagu perayaan untukmu!",
- "手風琴是我阿公留下來的": "Akordeon ini peninggalan kakekku"
+ "手風琴是我阿公留下來的": "Akordeon ini peninggalan kakekku",
+ "掛著釣：甩竿後右邊會出現「掛著釣」，打開後常見的魚會自己拉上來、自己再甩一竿，雙手可以拿去聊天": "Memancing santai: setelah melempar, tombol \"Memancing santai\" muncul di kanan. Nyalakan dan ikan biasa tertarik sendiri lalu otomatis melempar lagi, jadi tanganmu bebas untuk mengobrol",
+ "掛著釣時稀有、傳說的魚咬了會響鈴叫你，要自己拉；走開就自動停": "Saat memancing santai, lonceng berbunyi jika ikan langka atau legendaris menggigit agar kamu menariknya sendiri; berjalan pergi akan menghentikannya",
+ "村民不會莫名其妙歡呼了：附近有人釣到稀有、傳說的魚，旁邊的村民才拍手": "Penduduk tidak lagi bersorak tanpa alasan; mereka bertepuk tangan hanya saat seseorang di dekatnya menangkap ikan langka atau legendaris",
+ "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。": "Memancing santai: setelah melempar, ketuk \"🛋️ Memancing santai\" di kanan. Ikan biasa tertarik otomatis dan kamu melempar lagi; lonceng memanggilmu untuk ikan langka. Berhenti saat kamu pergi.",
+ "🛋️ 掛著釣": "🛋️ Memancing santai",
+ "🛋️ 掛著釣中": "🛋️ Memancing santai aktif",
+ "🛋️ 掛著釣：常見的魚會自己拉上來，稀有的魚會叫你。可以放心聊天了": "🛋️ Memancing santai: ikan biasa tertarik sendiri dan ikan langka akan memanggilmu. Silakan mengobrol!",
+ "掛著釣關掉了": "Memancing santai mati",
+ "走開了，掛著釣先停": "Kamu pergi, memancing santai berhenti",
+ "這裡不能掛著釣，先站到水邊甩一竿": "Tidak bisa memancing santai di sini; berdiri di tepi air dan lempar dulu"
 }

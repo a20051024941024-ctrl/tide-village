@@ -2883,3 +2883,7 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 @media (orientation:landscape){.ph2 .ph-grid{grid-template-columns:repeat(7,1fr)}}
 /* v998 畫面順不順小框 */
 .perfhud{position:fixed;left:calc(env(safe-area-inset-left,0px) + 8px);bottom:8px;z-index:60;white-space:pre;font:700 11px/1.4 ui-monospace,monospace;color:#d9ffe8;background:rgba(10,20,30,.72);padding:4px 7px;border-radius:8px;pointer-events:none}
+/* v1002 掛著釣的小開關：在右下大按鈕的上面 */
+.autofish{position:fixed;right:calc(env(safe-area-inset-right,0px) + 22px);bottom:calc(env(safe-area-inset-bottom,0px) + 168px);z-index:30;border:0;border-radius:999px;padding:7px 12px;font:inherit;font-weight:900;font-size:13px;color:#18334a;background:rgba(255,255,255,.92);box-shadow:0 2px 6px rgba(0,0,0,.18);cursor:pointer}
+.autofish.on{background:#3fae4f;color:#fff;animation:afPulse 2.4s ease-in-out infinite}
+@keyframes afPulse{50%{box-shadow:0 0 0 6px rgba(63,174,79,.25)}}

@@ -9868,5 +9868,15 @@
  "來來來，聽一首漁港的歌！": "Come, come, listen to a harbor song!",
  "今天船都回來了，大家開心一下": "All the boats are back today, let's celebrate",
  "釣到大魚的，我幫你拉一首慶祝！": "Caught a big one? I'll play you a celebration tune!",
- "手風琴是我阿公留下來的": "This accordion was my grandpa's"
+ "手風琴是我阿公留下來的": "This accordion was my grandpa's",
+ "掛著釣：甩竿後右邊會出現「掛著釣」，打開後常見的魚會自己拉上來、自己再甩一竿，雙手可以拿去聊天": "Idle fishing: after casting, an \"Idle fishing\" button appears on the right. Turn it on and common fish reel themselves in and you recast automatically, so your hands are free to chat",
+ "掛著釣時稀有、傳說的魚咬了會響鈴叫你，要自己拉；走開就自動停": "While idle fishing, a bell rings when a rare or legendary fish bites so you can reel it in yourself; walking away stops it",
+ "村民不會莫名其妙歡呼了：附近有人釣到稀有、傳說的魚，旁邊的村民才拍手": "Villagers no longer cheer for no reason; they clap only when someone nearby catches a rare or legendary fish",
+ "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。": "Idle fishing: after casting, tap \"🛋️ Idle fishing\" on the right. Common fish reel in and you recast automatically; a bell calls you for rare fish. It stops when you walk away.",
+ "🛋️ 掛著釣": "🛋️ Idle fishing",
+ "🛋️ 掛著釣中": "🛋️ Idle fishing on",
+ "🛋️ 掛著釣：常見的魚會自己拉上來，稀有的魚會叫你。可以放心聊天了": "🛋️ Idle fishing: common fish reel themselves in and rare fish will call you. Chat away!",
+ "掛著釣關掉了": "Idle fishing off",
+ "走開了，掛著釣先停": "You walked away, idle fishing paused",
+ "這裡不能掛著釣，先站到水邊甩一竿": "Can't idle fish here; stand by the water and cast first"
 }
