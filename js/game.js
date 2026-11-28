@@ -6188,6 +6188,7 @@ const NPC_STYLE = [
   ['阿萍', { look:'h16c13s1e6', sc:[0.93, 0.98], gear:{ hat:'hat_none', top:'top_suit', face:'face_normal' } }],
   ['阿報', { look:'h1c2s1e2', sc:[0.9, 0.85], gear:{ hat:'hat_cap', top:'top_stripe', pants:'pants_shorts', back:'back_bag', face:'face_normal' } }],
   ['蔚博士', { look:'h21c0s0e2', sc:[0.97, 1.07], gear:{ hat:'hat_none', acc:'acc_glasses', top:'top_long', pants:'pants_khaki', face:'face_normal' } }],
+  ['龜博士', { look:'h16c6s1e4', sc:[0.94, 0.97], gear:{ hat:'hat_none', acc:'acc_glasses', top:'top_long', pants:'pants_khaki', face:'face_happy' } }],
   ['阿伯', { look:'h0c10s3e1', sc:[1.0, 0.93], fh:'mus', gear:{ hat:'hat_beanie', acc:'acc_glasses', top:'top_polo', face:'face_normal' } }],
   ['村長', { look:'h20c23s2e1', sc:[1.06, 0.95], fh:'full', gear:{ hat:'hat_none', acc:'acc_glasses', top:'top_suit', face:'face_happy' } }],
   ['漁夫 老王', { look:'h0c1s4e0', sc:[1.08, 1.02], fh:'stub' }],
@@ -15836,20 +15837,30 @@ async function turtleCare(p, act, food, t){ if (!Cloud.on || !Cloud.sb){ toast('
     const pt = (me.pet && petMine() && petMine().id === p.id) ? me.pet : Pets.home.find(h => h.name === p.name); if (pt && act === 'treat' && data.add > 0) pt.spinUntil = now() + 1.6;
     if (data.add > 0){ SFX.catch(); flash(`光澤度 +${data.add}（${data.pet.shine}）`, 1.6); } else SFX.tick(); setTimeout(() => toast(`🐢 ${data.msg}`), 400); renderTab(); }
   catch(e){ toast(cloudErrMsg(e)); } }
-function turtleCareBox(p){ const box = el('li', 'turtlecare'), atIsle = !!onIsle && onIsle.owner === myIdOrMe();
+function turtleCareBox(p){ const box = el('li', 'turtlecare'), inShop = !!Pets.turtle, atIsle = inShop || (!!onIsle && onIsle.owner === myIdOrMe());
   const row = (ic, title, note, btn, done, fn) => { const r = el('div', 'tcrow'); r.appendChild(el('span', 'tci', ic)); const t = el('div', 'tct'); t.appendChild(el('b', '', title)); t.appendChild(el('div', 'sub2', note)); r.appendChild(t); const b = el('button', 'tbtn' + (done ? ' ghost' : ''), done ? '今天做過了' : btn); b.disabled = !!done; b.addEventListener('click', () => { b.disabled = true; fn(); }); r.appendChild(b); box.appendChild(r); return r; };
   box.appendChild(el('div', 'sub2', '真的養烏龜：龜殼漂亮靠「曬太陽、鈣質、均衡飲食、乾淨的水」。點心和保養偶爾就好。三天沒照顧殼會慢慢變暗（不會生病）。'));
-  row('☀️', '曬太陽（效果最好）', atIsle ? '晴天時讓牠在小島的石頭上曬一曬，一天一次。' : '要在自己的小島上、晴天才能曬（一天一次）。', '曬太陽', p.sun, () => { if (!atIsle){ toast('回到自己的小島，在石頭上曬太陽'); renderTab(); return; } turtleCare(p, 'sun'); });
+  row('☀️', '曬太陽（效果最好）', inShop ? '在店裡的曬背燈下曬一曬，晴天雨天都可以，一天一次。' : atIsle ? '晴天時讓牠在小島的石頭上曬一曬，一天一次。' : '要在自己的小島上、晴天才能曬（一天一次）。', '曬太陽', p.sun, () => { if (!atIsle){ toast('回到自己的小島，在石頭上曬太陽'); renderTab(); return; } turtleCare(p, 'sun'); });
   { const r = row('🥬', '均衡飲食', `一天一次，換著吃效果比較好${p.food ? `（上次吃的是${{ pellet:'飼料', greens:'葉菜', fish:'小魚' }[p.food]}）` : ''}。`, '', p.feed, () => {}); const b = r.querySelector('button'); b.remove();
     if (!p.feed){ const ch = el('div', 'chipline'); [['pellet', '🟤 飼料'], ['greens', '🥬 葉菜']].forEach(([k, l]) => { const c = el('button', 'chip', l); c.addEventListener('click', () => turtleCare(p, 'feed', k)); ch.appendChild(c); });
       const fishes = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && FISH_BY_ID[x.f].rarity === '常見' && !FISH_BY_ID[x.f].of && +x.w <= 1.5 && !x.k).sort((a, b2) => a.w - b2.w).slice(0, 1);
       if (fishes.length){ const x = fishes[0], c = el('button', 'chip', `🐟 小魚（${FISH_BY_ID[x.f].name} ${(+x.w).toFixed(2)}kg）`); c.addEventListener('click', () => turtleCare(p, 'feed', 'fish', x.t)); ch.appendChild(c); }
       r.querySelector('.tct').appendChild(ch); } else r.appendChild(el('span', 'sub2', '今天吃過了')); }
   row('🥚', '點心：蛋黃', p.treatDays != null && p.treatDays < 7 ? `點心偶爾給就好（${p.treatDays} 天前才吃過，一週一次才有效）。` : '一週一次就好，牠會開心地轉圈。', '給蛋黃', false, () => turtleCare(p, 'treat'));
-  row('🧽', '換水、刷殼', atIsle ? '用小島的水盆換水，軟刷輕輕刷殼。一天一次，保持光澤。' : '要在自己的小島上用水盆（一天一次）。', '清潔', p.clean, () => { if (!atIsle){ toast('回到自己的小島用水盆換水'); renderTab(); return; } turtleCare(p, 'clean'); });
+  row('🧽', '換水、刷殼', inShop ? '用店裡的水槽換水，龜博士借你軟刷輕輕刷殼。一天一次。' : atIsle ? '用小島的水盆換水，軟刷輕輕刷殼。一天一次，保持光澤。' : '要在自己的小島上用水盆（一天一次）。', '清潔', p.clean, () => { if (!atIsle){ toast('回到自己的小島用水盆換水'); renderTab(); return; } turtleCare(p, 'clean'); });
   row('🧴', '龜殼保養（🪙120）', p.oilDays != null && p.oilDays < 30 ? `一個月最多一次（${p.oilDays} 天前保養過）。太常塗反而會悶住龜殼。` : '偶爾保養就好，一個月最多一次。', '保養', p.oilDays != null && p.oilDays < 30, () => turtleCare(p, 'oil'));
   return box; }
-function renderPets(body){
+function renderTurtleShop(body){   /* v974 慢慢烏龜屋：龜博士的店。照顧小烏龜的事都在這裡做；店裡有曬背燈和換水的水槽，不用回小島也能曬太陽、換水 */
+  const head = el('div', 'shophead'); head.innerHTML = `<b>🐢 慢慢烏龜屋</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  body.appendChild(el('p', 'sub', '龜博士：「慢慢來，烏龜都不急。殼要漂亮，靠的是曬太陽、吃得均衡、水乾淨。店裡有曬背燈和水槽，下雨天、沒回小島也可以照顧。」'));
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能照顧小烏龜。')); return; }
+  if (!Pets.list){ body.appendChild(el('div', 'empty', '載入中…')); loadPets(true); return; }
+  const T = Pets.list.filter(p => p.kind === 'pondturtle'), ul = el('ul', 'shoplist');
+  for (const p of T){ const li = el('li', ''); li.appendChild(petShotEl(p.kind, PET_KINDS[p.kind].icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}`));
+    const sh = p.shine == null ? 40 : p.shine; d.appendChild(el('div', 'sub2', `✨ 龜殼光澤度 ${sh} / 100${sh >= 100 ? '　🏅 金色殼邊！' : sh >= 80 ? '　殼上出現漂亮的花紋' : ''}`)); const bar = el('div', 'shinebar'); const fill = el('i'); fill.style.width = sh + '%'; bar.appendChild(fill); d.appendChild(bar); li.appendChild(d); ul.appendChild(li); ul.appendChild(turtleCareBox(p)); }
+  if (T.length) body.appendChild(ul); else body.appendChild(el('div', 'empty', '你還沒有小烏龜。河邊、池塘釣魚偶爾會撿到被棄養的小烏龜，撿到了帶來給我看看。'));
+  body.appendChild(el('p', 'sub', '🏠 烏龜的家：小島上的「烏龜缸」、家裡的「室內烏龜缸」在擺家具的地方買，一個住 5 隻。烏龜可以活幾十年，養了就要一直照顧喔。')); }
+function renderPets(body){ if (Pets.turtle){ renderTurtleShop(body); return; }
   const head = el('div', 'shophead'); head.innerHTML = `<b>🐾 ${Pets.atShop ? '寵物店' : '我的寵物'}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能養寵物。')); return; }
   if (!Pets.list){ body.appendChild(el('div', 'empty', '載入中…')); loadPets(true); return; }
@@ -18316,7 +18327,7 @@ function bbOpen(start){ let i = start == null ? BB.i : start; const ov = documen
   let sx = null; ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true }); ov.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1)); sx = null; });
   try { SFX.click(); } catch(e){} show(i); }
 /* v921 新主島的店門：店的裡面跟村子共用，這裡只是另一個入口。進去之前記住從哪個門進來（Venue.back），出來回到那個門 */
-const W2_DOOR = { tackle: ['shdoor', '🚪 進去看看'], mu: ['shdoor', '🚪 進去看看'], cai: ['shdoor', '🚪 進去看看'], market: ['shdoor', '🚪 進去逛'], pet: ['petdoor', '🐾 進去看看'], cafe: ['cafedoor', ''], museum: ['museumdoor', ''], stad: ['staddoor', ''], pool: ['pooldoor', '🎱 進去打撞球'], shrimp: ['shrimpdoor', ''], tailor: ['tailor', '👗 看衣服'] };   /* v951 阿綾服裝店：跟村子一樣在門口就能逛，不用進去 */
+const W2_DOOR = { tackle: ['shdoor', '🚪 進去看看'], mu: ['shdoor', '🚪 進去看看'], cai: ['shdoor', '🚪 進去看看'], market: ['shdoor', '🚪 進去逛'], pet: ['petdoor', '🐾 進去看看'], cafe: ['cafedoor', ''], museum: ['museumdoor', ''], stad: ['staddoor', ''], pool: ['pooldoor', '🎱 進去打撞球'], turtle: ['turtleshop', '🐢 進去看看'], shrimp: ['shrimpdoor', ''], tailor: ['tailor', '👗 看衣服'] };   /* v951 阿綾服裝店：跟村子一樣在門口就能逛，不用進去 */
 function w2NearDoor(){ if (!W2 || !W2.doors || !W2.near(me.pos.x, me.pos.z)) return null; let best = null, bd = 1.9; for (const d of W2.doors){ const q = Math.hypot(me.pos.x - d.x, me.pos.z - d.z); if (q < bd){ bd = q; best = d; } } if (!best) return null; const M = W2_DOOR[best.k]; return M ? { id: 'w2door' + best.k, label: best.label, mode: M[0], hall: best.k, sub: M[1] || undefined, w2: best } : null; }
 /* ===== v923 新主島的環島小火車：可以坐 =====
    車停在站裡的時候，站在月台上按右下角的大按鈕「上車」；坐在車廂的位子上跟著車走；到站再按「下車」（開車中不能下）。
@@ -18364,7 +18375,7 @@ const W2_FIX = [
 ];
 /* 會搬的村民：新主島的位置名字 → 是哪一個村民 */
 const W2_NPC = { craft: n => n.shopNpc === 'craft', gang: n => n.wid === 'gang', news: n => n.shopNpc === 'news', salon: n => n.shopNpc === 'salon', sci: n => n.shopNpc === 'sci',
-  chao: n => n.npcName.startsWith('阿潮'), xi: n => n.npcName.startsWith('小溪'), lan: n => n.npcName.startsWith('阿蘭'), bo: n => n.npcName.startsWith('阿伯'), amo: n => n.amo, yin: n => n.yin };
+  chao: n => n.npcName.startsWith('阿潮'), xi: n => n.npcName.startsWith('小溪'), lan: n => n.npcName.startsWith('阿蘭'), gui: n => n.npcName.startsWith('龜博士'), bo: n => n.npcName.startsWith('阿伯'), amo: n => n.amo, yin: n => n.yin };
 /* v969 搬到新主島後講的話（原本的話在講舊島的地方） */
 const W2_LINES = { bo: ['學校的池子搬不過來，我就換到這個池子邊釣了', '這個池子比較新，魚還不太怕人', '琵琶鼠魚現在跑到河裡去了，一樣到處都是', '下雨天去紅樹林看看，會有攀鱸爬上岸喔', '大肚魚現在住在紅樹林那邊的水裡', '看到垃圾就順手撿一下啦'] };
 const W2_QNPC = ['chief', 'wang'];   /* 發任務的村長、老王也搬（美雲姨在食堂裡面，從新主島的食堂門進去就看得到）*/
@@ -18423,7 +18434,7 @@ function w2SciPlace(n){ const p = W2.posts.sci, q = (p.at && p.at[w2SciKey()]) |
   for (const [a, b] of [[0.9, 0.9], [0.9, -0.9], [0, 1.0], [0, -1.0], [-0.9, 0.9], [-0.9, -0.9]]){ const x = q.x + dx * a + sx * b, z = q.z + dz * a + sz * b; if (walkable(x, z) && !waterAt(x, z) && !blocked(x, z, 0.3) && Math.abs(groundHeight(x, z) - groundHeight(q.x, q.z)) < 0.3){ fx = x; fz = z; break; } }   /* 器材放在她旁邊的乾地上：先試前面靠水那一側，不行就旁邊、後面 */
   g.position.set(fx, groundHeight(fx, fz), fz); g.rotation.y = rot; }
 /* 新主島的「找人、找店」（地圖下面那一排，點了會帶路）：新主島的板子、店門、搬過來的人。人在新主島的時候用這一份，回舊村子用原本那一份 */
-const W2_DOOR_IC = { cafe: '🍲', cai: '🎨', mu: '🪚', pet: '🐾', pool: '🎱', shrimp: '🦐', tackle: '🎣', market: '🐟', museum: '🏛️', stad: '🏟️', tailor: '👗' };
+const W2_DOOR_IC = { turtle: '🐢', cafe: '🍲', cai: '🎨', mu: '🪚', pet: '🐾', pool: '🎱', shrimp: '🦐', tackle: '🎣', market: '🐟', museum: '🏛️', stad: '🏟️', tailor: '👗' };
 function w2NavList(){ const L = [], PO = W2.posts;
   for (const [k, ic, lab] of [['orders', '📋', '訂單板'], ['board', '📌', '廣場留言板'], ['tboard', '🏆', '村子大看板'], ['zc', '🏰', '築城守土']]) if (PO[k]) L.push([ic, lab, [PO[k].x, PO[k].z]]);
   if (W2.bb) L.push(['📺', '潮汐大看板', [W2.bb.x, W2.bb.z + 14]]);
@@ -18435,7 +18446,7 @@ function w2NavList(){ const L = [], PO = W2.posts;
    全螢幕、可以拖、兩隻手指放大縮小。上面的東西：好釣點（小魚圓章，水紋往外擴）、店和板子（白色膠囊牌）、村民（橘色名字章，跟著人走）、車站和跑動的小火車、你自己（紅色箭頭）。
    字不會疊：重要的先放（你 → 村民 → 釣點 → 店 → 地名），被擋住就換個方向擺（拉一條細線指回去），再擠只留圖示，還是擠就跟旁邊的合成「×2」（點了列出來）。
    點任何一個 → 一張卡片：遊戲裡拍的照片（icons/map/）、一句介紹、現在誰在那裡，「🧭 帶我去」「✨ 傳送」。只在新主島用；舊村子還是原本的地圖。 */
-const W2MAP_TXT = {
+const W2MAP_TXT = { turtle: ['🐢', '龜博士的烏龜店：照顧小烏龜的事都在這裡做，店裡有曬背燈和水槽，下雨天也能曬太陽、換水。'],
   '主城廣場': ['⛲', '噴水池和大家出生的地方。留言板、訂單板、大看板都在附近。'],
   '村公所': ['🏛️', '村長在裡面辦公。每日任務找村長、找老王。'],
   '港口': ['⚓', '五條棧橋。找阿海坐船出海、去外島；棧橋尾端是好釣點。'],
@@ -18724,7 +18735,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '魚市場・賣魚';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'w2train'){ w2TrainBoard(sh); return; } if (/door$/.test(sh.mode)) Venue.back = sh.w2 || null; else if (/exit$/.test(sh.mode) && Venue.back) setTimeout(w2Back, 300);   /* v921 各場館的「出去」都是 260 毫秒後把人放回村子的門口；從新主島進來的再晚一點點改放回新主島的門（畫面還是黑的，看不到中間那一下） */ if (K3.on && (sh.mode === 'tailor' || sh.mode === 'salon')){ toast(sh.mode === 'tailor' ? '🚧 阿綾服裝店整修中：阿綾正在幫新人物做新衣服，做好就重新開張。現在換衣服請到「造型」' : '🚧 阿萍美髮沙龍整修中：阿萍正在幫新人物設計新髮型，做好就重新開張。現在換髮型請到「造型」'); return; }   /* v743 作者：「這兩個應該沒用了吧」「先掛整修中」→ 兩間店賣的是舊人物的東西，新人物用不到；買過的東西都還留著 */
+function openShop(sh){ ensureAudio(); if (sh.mode === 'turtleshop'){ Pets.atShop = false; Pets.turtle = true; Pets.turtleNow = true; Pets.tab = 'mine'; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'w2train'){ w2TrainBoard(sh); return; } if (/door$/.test(sh.mode)) Venue.back = sh.w2 || null; else if (/exit$/.test(sh.mode) && Venue.back) setTimeout(w2Back, 300);   /* v921 各場館的「出去」都是 260 毫秒後把人放回村子的門口；從新主島進來的再晚一點點改放回新主島的門（畫面還是黑的，看不到中間那一下） */ if (K3.on && (sh.mode === 'tailor' || sh.mode === 'salon')){ toast(sh.mode === 'tailor' ? '🚧 阿綾服裝店整修中：阿綾正在幫新人物做新衣服，做好就重新開張。現在換衣服請到「造型」' : '🚧 阿萍美髮沙龍整修中：阿萍正在幫新人物設計新髮型，做好就重新開張。現在換髮型請到「造型」'); return; }   /* v743 作者：「這兩個應該沒用了吧」「先掛整修中」→ 兩間店賣的是舊人物的東西，新人物用不到；買過的東西都還留著 */
 if (sh.mode === 'bb'){ bbOpen(); return; } if (sh.mode === 'orders'){ Ord.sure = -1; openSheet('orders'); ordLoad(); return; } if (sh.mode === 'racego'){ raceCall(sh.kind); return; } if (sh.mode === 'skicoach'){ raceCard('ski'); return; } if (sh.mode === 'skilift'){ skiLiftGo(); return; } if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'land'){ landBuy(sh.t); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'zc'){ zcOpen(); return; } if (sh.mode === 'petdoor'){ enterPetHall(); return; } if (sh.mode === 'shdoor'){ enterShopHall(sh.hall); return; } if (sh.mode === 'shexit'){ exitShopHall(sh.hall); return; } if (sh.mode === 'petexit'){ exitPetHall(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'poolzhe'){ poolZheGo(); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
@@ -20398,7 +20409,7 @@ $$('#emotes [data-emote]').forEach(b => b.addEventListener('click', () => emote(
   mk('bqId', '🆔', async () => { const c = friendCode(); if (!c){ toast('連上雲端以後才有好友代碼'); return; } try { await navigator.clipboard.writeText(c); toast(`好友代碼 ${c} 已經複製了，貼給朋友就能加好友`); } catch(e){ toast(`你的好友代碼：${c}`); } openSheet('people'); }, '好友代碼：點一下複製，打開加好友');
   mk('bqSet', '⚙️ 設定', () => openSheet('settings'));
   mk('bqFest', '🏮 節慶', () => { openSheet('fest'); loadFest(true); });
-  mk('bqPet', '🐾 寵物', () => { Pets.atShop = false; openSheet('pets'); loadPets(true); });
+  mk('bqPet', '🐾 寵物', () => { Pets.atShop = false; Pets.turtle = false; openSheet('pets'); loadPets(true); });
   mk('bqQuest', '📜 任務', () => openSheet('quest')); mk('bqAch', '🏅 成就', () => openSheet('ach')); mk('bqHelp', '❓ 玩法', () => openSheet('help'));
   mk('bqLogin', '🔑 登入', () => { if (Cloud.isAnon && Cloud.ui){ Cloud.ui.step = 'idle'; } openSheet('style'); setTimeout(() => { const cb = document.querySelector('#sheet .cloudbox'); if (cb) cb.scrollIntoView({ block:'center' }); }, 150); }, '登入、綁定 Email、換裝置');
   const upd = () => { const c = friendCode(), id = $('#bqId'), lg = $('#bqLogin'); if (id){ id.textContent = c ? '🆔 ' + c : '🆔 ———'; id.classList.toggle('off', !c); }
@@ -21236,6 +21247,7 @@ const lb = { best: [], total: [] }; let lbLoading = false, lbSlow = false, lbMod
 
 /* ================= NPC villagers ================= */
 const npcs = [
+  { name:'龜博士・慢慢烏龜屋', shirt:'#6fbf73', hat:'#f6f0dd', x:-3.4, z:23.6, y:0.28, dir:new THREE.Vector2(0, 1).normalize(), lines:['慢慢來，烏龜都不急，你也不用急', '殼要漂亮，靠曬太陽、吃得均衡、水要乾淨', '下雨天就來店裡，曬背燈借你用', '撿到被丟掉的小烏龜，記得好好照顧牠', '烏龜可以活幾十年，養了就要一直養喔', '牠伸長脖子看你，就是在跟你打招呼'] },
   { name:'阿潮・村民', shirt:'#7db7d7', hat:'#f6f0dd', x:1.1, z:-49.2, y:0.28, dir:new THREE.Vector2(0.15,-1).normalize() },
   { name:'小溪・村民', shirt:'#d896c3', hat:'#3fbf9d', x:-19.4, z:-10.2, y:0.28, dir:new THREE.Vector2(-1,0.1).normalize() },
   { name:'老港・漁夫', shirt:'#5b6b7a', hat:'#ffd36a', x:31.4, z:-34.4, y:0.3, dir:new THREE.Vector2(1,-0.1).normalize() },
@@ -24839,7 +24851,7 @@ const UI_GROUPS = [
   { k:'style', ic:'👕', lab:'造型',  tabs:[['closet', '衣櫃'], ['style', '頭像・帳號']] },
   { k:'set',   ic:'⚙️', lab:'設定',  tabs:[['settings', '設定'], ['help', '玩法']] } ];
 function ui3Group(tab){ return UI_GROUPS.find(g => g.tabs.some(t => t[0] === tab)); }
-function ui3Open(tab){ if (tab === 'pets'){ Pets.atShop = false; loadPets(true); } if (tab === 'fest') loadFest(true); if (tab === 'story') storyLoad(true); if (tab === 'gyotaku') gkLoad(true); if (tab === 'events') evtLoad().then(() => { if (curTab === 'events') renderTab(); }); }
+function ui3Open(tab){ if (tab === 'pets'){ Pets.atShop = false; if (!Pets.turtleNow) Pets.turtle = false; Pets.turtleNow = false; loadPets(true); } if (tab === 'fest') loadFest(true); if (tab === 'story') storyLoad(true); if (tab === 'gyotaku') gkLoad(true); if (tab === 'events') evtLoad().then(() => { if (curTab === 'events') renderTab(); }); }
 function ui3OpenGroup(k){ const g = UI_GROUPS.find(x => x.k === k); if (!g) return; const tab = UI3.last[k] || g.tabs[0][0]; ui3Open(tab); openSheet(tab); }
 function ui3Tabs(){ if (!UI3.on) return; const T = $('#tabs'); if (!T) return; const g = ui3Group(curTab), key = g ? g.k : '';
   if (g) UI3.last[g.k] = curTab;
@@ -24862,6 +24874,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u974', d:'11/28', items:[['🐢','商店街新開一間「慢慢烏龜屋」，老闆是龜博士：照顧小烏龜的事都在這裡做。店裡有曬背燈和水槽，下雨天、沒回小島也能曬太陽、換水；門口的小缸裡有三隻烏龜在曬太陽']] },
   { id:'u973', d:'11/28', items:[['🐠','水族館的玻璃變成活的：水會有光在晃，魚群和海龜、魟魚的影子會繞著塔慢慢游'], ['⛲','水族館門口的兩個小噴水池拿掉了，不會再走進水池裡']] },
   { id:'u972', d:'11/28', items:[['🚕','潮搭Go 有自己的乘車處了：在圓環邊、商店街路口旁，有遮雨棚和三個停車格。叫車時阿速從這裡開出去，載完人再開回來停好，不會憑空出現或消失'], ['🛣️','坐車整趟都在路上開，會轉彎、停紅燈，中間不會黑畫面，可以轉動畫面看風景；人在乘車處旁邊就直接走過去上車'], ['🚉','小火車的站名改成掛在候車亭屋簷下的站名牌，不會再浮在空中跟著鏡頭轉'], ['🚧','沒有車道的地方拿掉平交道的柵欄和警示燈；步道跨過鐵軌只鋪水泥板'], ['🗺️','地圖上森林那一區不再畫房子、不寫山洞和瀑布的字；地圖多了「潮搭Go 乘車處」']] },
   { id:'u971', d:'11/28', items:[['🐋','水族館換成新的五層玻璃塔：一圈一圈的魚缸樓層，最上面是裝滿水的大玻璃球和鯨魚尾巴，從整座島都看得到'], ['🍱','食堂的直式招牌移到房子旁邊，不再擋住店面'], ['🗺️','地圖用手指放大縮小時，連到店名的白線先收起來，停下來再畫，不會亂飄']] },
