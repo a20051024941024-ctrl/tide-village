@@ -243,6 +243,10 @@ export function init(A){
   const deck = (lx, lz) => { for (const d of DECKS) if (lx > d[0] && lx < d[1] && lz > d[2] && lz < d[3]) return d; return null; };
   const reserved = (lx, lz) => RSV.some(([x, z, r]) => Math.hypot(lx - x, lz - z) < r);
   const roofG = (len, depth, h) => new THREE.CylinderGeometry(1, 1, len, 3, 1, false, Math.PI / 2).rotateZ(Math.PI / 2).translate(0, 0.5, 0).scale(1, h / 1.5, depth / 1.732);   /* 沿著 x 的三角柱屋頂 */
+  /* v968 平的線（車道標線、斑馬線）用兩個三角形的平面就好，不用方塊（檢查報告：低畫質三角形太多） */
+  const Q = (parts, hex, w, d, x, y, z, ry) => { const g = new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2); if (ry) g.rotateY(ry); g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.toNonIndexed()); };
+  /* 路緣石：只要上面和兩側（底面、兩頭看不到），6 個三角形 */
+  const C3 = (parts, hex, w, h, d, x, y, z, ry) => { const L = (parts[hex] = parts[hex] || []); const top = new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2).translate(0, h / 2, 0); const s1 = new THREE.PlaneGeometry(d, h).rotateY(Math.PI / 2).translate(w / 2, 0, 0), s2 = new THREE.PlaneGeometry(d, h).rotateY(-Math.PI / 2).translate(-w / 2, 0, 0); for (const g of [top, s1, s2]){ if (ry) g.rotateY(ry); g.translate(x, y, z); L.push(g.toNonIndexed()); } };
   const B = (parts, hex, w, h, d, x, y, z, ry) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.toNonIndexed()); };
   const G = (parts, hex, g, x, y, z) => { g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.index ? g.toNonIndexed() : g); };
   const flush = (parts, grp) => { for (const hex in parts){ const m = new THREE.Mesh(mergeGeometries(parts[hex], false), mat(hex.slice(0, 7), hex.length > 7 ? 0.35 : 0.85)); m.castShadow = true; m.receiveShadow = true; grp.add(m); } };
@@ -261,7 +265,7 @@ export function init(A){
        螢幕框 y -0.47～0.54、x ±0.58。放大 15 倍：總高約 28.5 公尺、螢幕底離地 7 公尺。節目螢幕（16:9）和字幕條貼在模型螢幕上 */
     { const [x, z] = P(975, 440), BK = 15, SW = 1.06 * BK, SH = SW * 9 / 16, CH = SW * 0.1, GY = PAVE_Y, MY = GY + 0.952 * BK, YC = MY + 0.06 * BK, Y0 = YC - SH / 2, PX = 0.775 * BK, zb = z - 0.3;
       { const bg = new THREE.Group(); bg.position.set(x, MY, zb); bg.scale.setScalar(BK); town.add(bg);
-        if (A.loadGLB) A.loadGLB('models/plaza/board.glb').then(gl => { gl.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); bg.add(gl.scene); }).catch(() => {}); }
+        if (A.loadGLB) A.loadGLB(Quality.tier === 'low' ? 'models/plaza/board_lo.glb' : 'models/plaza/board.glb').then(gl => { gl.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; for (const m of [].concat(o.material)) m.side = THREE.FrontSide; } }); bg.add(gl.scene); })   /* v968 只畫正面：鏡頭跑進看板裡面不會整個畫面變深藍色（檢查報告第 1 項） */.catch(() => {}); }
       for (const sg of [-1, 1]) colliders.push({ t: 'c', x: OX + x + sg * PX, z: OZ + zb, r: 1.6, big: true });
       const z0 = z; { const z = zb + 0.032 * BK + 0.06;
       /* 螢幕和字幕條：平常是這張字卡；走近以後 game.js 會把節目接上來 */
@@ -278,7 +282,7 @@ export function init(A){
          模型座標：底在 y=-0.71、半徑 0.95；外圈坐牆的缺口在 +x、貝殼開口朝 +x → 轉到朝南（商店街走進來的那條路）。 */
       const [fx, fz] = P(975, 520), FK = 4.0;
       { const fg = new THREE.Group(); fg.position.set(fx, PAVE_Y + 0.71 * FK - 0.04, fz); fg.rotation.y = -Math.PI / 2; fg.scale.setScalar(FK); town.add(fg);
-        if (A.loadGLB) A.loadGLB('models/plaza/fountain.glb').then(gl => { gl.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); fg.add(gl.scene); }).catch(() => {});
+        if (A.loadGLB) A.loadGLB(Quality.tier === 'low' ? 'models/plaza/fountain_lo.glb' : 'models/plaza/fountain.glb').then(gl => { gl.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); fg.add(gl.scene); }).catch(() => {});
         const hr = () => A.DayNight && A.DayNight.hour != null ? A.DayNight.hour : 12;
         /* 一條一條往下流的水紋（畫布），三種水共用，捲動 offset 讓水看起來在流 */
         const stripe = (() => { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#bfefff'; c.fillRect(0, 0, 64, 128);
@@ -343,7 +347,9 @@ export function init(A){
       else { B(parts, '#e9e1cf', 24, 6.4, 12, x, 3.5, z); G(parts, '#7c8fb0', roofG(26, 13.4, 3.6), x, 6.7, z); for (let i = 0; i < 6; i++) G(parts, '#ffffff', new THREE.CylinderGeometry(0.5, 0.56, 5.6, 10), x - 10 + i * 4, 3.1, z + 6.7); B(parts, '#d9cfb8', 25, 0.5, 3.4, x, 0.55, z + 7.2);
         colliders.push({ t: 'b', x: OX + x, z: OZ + z + 0.6, hw: 12.2, hd: 7.4, big: true }); RSV.push([x - 6, z, 11], [x + 6, z, 11]); label('博物館', x, 14, z); } }
     /* 體育場 */
-    { const [x, z] = P(1480, 430), n = 28; for (let i = 0; i < n; i++){ const a = i / n * 6.2832, ca = Math.cos(a), sa = Math.sin(a); for (let k = 0; k < 3; k++) B(parts, k === 2 ? '#dfe6ef' : '#3d66b5', 4.6, 1.3 + k * 1.3, 2.1, x + ca * (19 + k * 2.1), 0.9 + k * 0.65, z + sa * (9.5 + k * 2.1), Math.atan2(-9.5 * ca, -19 * sa)); }
+    { const [x, z] = P(1480, 430), n = 28; for (let i = 0; i < n; i++){ const a = i / n * 6.2832, ca = Math.cos(a), sa = Math.sin(a); for (let k = 0; k < 3; k++) B(parts, ['#3d66b5', '#f2c230', '#e2574c'][k], 4.6, 1.3 + k * 1.3, 2.1, x + ca * (19 + k * 2.1), 0.9 + k * 0.65, z + sa * (9.5 + k * 2.1), Math.atan2(-9.5 * ca, -19 * sa)); }   /* v968 三排座位換成藍、黃、紅（原本最外圈是灰色方塊，檢查報告第 2 項） */
+      G(parts, '#f3ede2', new THREE.CylinderGeometry(1, 1, 4.3, 48, 1, true).scale(24.6, 1, 15.0), x, 2.35, z); G(parts, '#2c6fb5', new THREE.CylinderGeometry(1, 1, 0.5, 48, 1, true).scale(24.7, 1, 15.1), x, 4.3, z);   /* 外牆：米白色加一圈藍色 */
+      for (let i = 0; i < 24; i++){ const a = i / 24 * 6.2832; if (Math.abs(Math.cos(a) + 1) < 0.08) continue; B(parts, '#8fd3f4', 1.6, 1.2, 0.12, x + Math.cos(a) * 24.75, 2.6, z + Math.sin(a) * 15.15, Math.atan2(Math.cos(a) * 15.15, Math.sin(a) * 24.75)); }
       G(parts, '#d8584a', new THREE.CylinderGeometry(1, 1, 0.1, 36).scale(16.5, 1, 7.4), x, 0.5, z); G(parts, '#4fae55', new THREE.CylinderGeometry(1, 1, 0.1, 36).scale(12.5, 1, 4.6), x, 0.56, z); colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: 9, big: true }, { t: 'c', x: OX + x - 13, z: OZ + z, r: 9.5, big: true }, { t: 'c', x: OX + x + 13, z: OZ + z, r: 9.5, big: true });
       for (let i = 0; i < 36; i++){ const a = i / 36 * 6.2832; colliders.push({ t: 'c', x: OX + x + Math.cos(a) * 22.6, z: OZ + z + Math.sin(a) * 13.1, r: 3.0, big: true }); }   /* v966 看台一圈擋起來（作者：人可以走進牆裡） */ RSV.push([x - 12, z, 14], [x + 12, z, 14], [x, z, 14]); label('體育場', x, 11, z); }
     /* 中央市場 */
@@ -459,7 +465,7 @@ export function init(A){
         for (const fwd of [true, false]){ let found = -1, out = -1;
           for (let k = 0; k < L.length; k++){ const i = fwd ? k : L.length - 1 - k; if (!inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri)){ if (out < 0) out = i; if (Math.abs(cum[i] - cum[out]) >= 2.5){ found = i; break; } } else out = -1; }
           if (found < 0 || zebras.some(z => Math.hypot(z[0] - L[found][0], z[1] - L[found][1]) < 8) || turns.some(q => Math.hypot(q[0] - L[found][0], q[1] - L[found][1]) < q[2] + 6) || !laneAt(L[found][0], L[found][1], 1.0, -1) || laneAt(L[found][0], L[found][1], 6.0, laneAt(L[found][0], L[found][1], 1.0, -1).id)) continue;   /* v966 只在有柏油的地方、而且不在路口裡 */ const [dx, dz] = dirAt(L, found), [cx, cz] = L[found]; zebras.push([cx, cz]);
-          const zw = sg.car ? 6.2 : w; for (let s = -zw / 2 + 0.35; s <= zw / 2 - 0.3; s += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, cx - dz * s, y + 0.05, cz + dx * s, Math.atan2(dx, dz)); } });
+          const zw = sg.car ? 6.2 : w; for (let s = -zw / 2 + 0.35; s <= zw / 2 - 0.3; s += 0.62) Q(parts, LINE, 0.36, 1.7, cx - dz * s, y + 0.07, cz + dx * s, Math.atan2(dx, dz)); } });
       W2X.zebras = zebras;
       /* v963 紅綠燈（作者 11/28：「還是紅綠燈」「NPC 會等紅燈嗎」）：六條大道接到圓環的路口各一組。
          燈號照大家共用的時鐘換（Date.now），每個人看到的一樣：一輪 32 秒——大道綠 13、黃 3、紅 16；圓環反過來；行人（過大道的斑馬線）在大道紅燈時走 */
@@ -474,7 +480,7 @@ export function init(A){
         segs.forEach(sg => { if (!NODES[sg.car] || sg.loop) return; const { L } = sg; let i = 0; for (; i < L.length; i++){ const [qx, qy] = toPx(L[i][0], L[i][1]); if (((qx - PL[0]) / RING[0]) ** 2 + ((qy - PL[1]) / RING[1]) ** 2 >= 1) break; } if (i >= L.length - 4) return;
           const [jx, jz] = L[i], [dx, dz] = dirAt(L, i + 2), px = -dz, pz = dx, y0 = PAVE_Y, J = { x: OX + jx, z: OZ + jz, dx, dz };
           /* 停止線＋斑馬線：離圓環中線 6.2 公尺 */
-          const sx = jx + dx * 6.2, sz = jz + dz * 6.2; zebras.push([sx, sz]); for (let k = -2.9; k <= 2.9; k += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, sx + px * k, y0 + 0.08, sz + pz * k, Math.atan2(dx, dz)); B(parts, LINE, 3.0, 0.02, 0.3, sx + dx * 1.3 + px * 1.5, y0 + 0.08, sz + dz * 1.3 + pz * 1.5, Math.atan2(dx, dz));
+          const sx = jx + dx * 6.2, sz = jz + dz * 6.2; zebras.push([sx, sz]); for (let k = -2.9; k <= 2.9; k += 0.62) Q(parts, LINE, 0.36, 1.7, sx + px * k, y0 + 0.09, sz + pz * k, Math.atan2(dx, dz)); Q(parts, LINE, 3.0, 0.3, sx + dx * 1.3 + px * 1.5, y0 + 0.08, sz + dz * 1.3 + pz * 1.5, Math.atan2(dx, dz));
           for (const side of [1, -1]){ const lx = sx + dx * 1.6 + px * side * 4.1, lz = sz + dz * 1.6 + pz * side * 4.1; G(parts, '#5c656e', new THREE.CylinderGeometry(0.09, 0.11, 3.4, 8), lx, y0 + 1.7, lz); colliders.push({ t: 'c', x: OX + lx, z: OZ + lz, r: 0.2 });
             if (side === 1){ head(lx, y0 + 3.0, lz, Math.atan2(dx, dz), LM.aR, LM.aY, LM.aG);   /* 給大道往圓環開的車看（燈面朝外） */ head(lx - dx * 0.3, y0 + 3.0, lz - dz * 0.3, Math.atan2(-pz, -px), LM.rR, LM.rY, LM.rG); }   /* 給圓環上的車看 */
             pedHead(lx + px * -side * 0.25, y0 + 2.0, lz + pz * -side * 0.25, Math.atan2(-px * side, -pz * side)); }   /* 行人燈：對著斑馬線另一邊 */
@@ -490,9 +496,12 @@ export function init(A){
          黃線在斑馬線前後斷開；白邊線、路緣石在路口（別條路接進來的地方）斷開 */
       { const zb = (x, z, r) => zebras.some(q => Math.hypot(q[0] - x, q[1] - z) < r) || turns.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] - 0.6);
         for (const o of laneRuns){ const { R, yy, id, arc } = o;
-          const stroke = (off, col, wd, h, zr, jr) => { let run = [], rl = 0; const flush = () => { if (rl >= 2.0) for (const q of run) B(parts, col, wd, h, q[0] + 0.02, q[1], yy + h / 2 + 0.045, q[2], q[3]); run = []; rl = 0; };   /* 斷剩不到 2 公尺的小段不畫（路口裡零碎的線頭） */
+          const stroke = (off, col, wd, h, zr, jr) => { let run = [], rl = 0;
+            const flush = () => { if (rl >= 2.0){ let k = 0; while (k < run.length){ const s0 = run[k]; let e = k, L = run[k][4]; while (e + 1 < run.length && L < 1.8 && Math.abs(run[e + 1][5] - s0[5]) < 0.06) { e++; L += run[e][4]; }   /* 一小段一小段併成 1.8 公尺左右的一條（彎的地方短一點） */
+                const ax = s0[0], az = s0[1], bx = run[e][2], bz = run[e][3], ln = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bx - ax, bz - az), cx = (ax + bx) / 2, cz = (az + bz) / 2;
+                if (h > 0.05) C3(parts, col, wd, h, ln + 0.03, cx, yy + h / 2 + 0.045, cz, ang); else Q(parts, col, wd, ln + 0.03, cx, yy + h + 0.045, cz, ang); k = e + 1; } } run = []; rl = 0; };   /* 斷剩不到 2 公尺的小段不畫（路口裡零碎的線頭） */
             for (let i = 1; i < R.length; i += 1){ const a = R[i - 1], b = R[i], [dx, dz] = dirAt(R, i), ax = a[0] - dz * off, az = a[1] + dx * off, bx = b[0] - dz * off, bz = b[1] + dx * off, mx = (ax + bx) / 2, mz = (az + bz) / 2, len = Math.hypot(bx - ax, bz - az);
-              if (len < 0.01 || laneAt(mx, mz, jr, id, dx, dz) || zb(mx, mz, zr) || (!arc && inBldg(mx, mz))){ flush(); continue; } run.push([len, mx, mz, Math.atan2(bx - ax, bz - az)]); rl += len; } flush(); };
+              if (len < 0.01 || laneAt(mx, mz, jr, id, dx, dz) || zb(mx, mz, zr) || (!arc && inBldg(mx, mz))){ flush(); continue; } run.push([ax, az, bx, bz, len, Math.atan2(bx - ax, bz - az)]); rl += len; } flush(); };
           stroke(0.11, '#f2c230', 0.1, 0.015, 1.7, 3.9); stroke(-0.11, '#f2c230', 0.1, 0.015, 1.7, 3.9);   // 黃色雙線：離別條路的中線 3.9 公尺內不畫（路口裡）
           stroke(2.85, '#ffffff', 0.13, 0.015, 3.25, 3.4); stroke(-2.85, '#ffffff', 0.13, 0.015, 3.25, 3.4);   // 白色邊線：在別條路的柏油裡（3.1 公尺）就斷
           stroke(3.18, '#cfc6b5', 0.2, 0.12, 3.6, 3.6); stroke(-3.18, '#cfc6b5', 0.2, 0.12, 3.6, 3.6); } }   // 路緣石
