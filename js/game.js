@@ -1133,7 +1133,8 @@ function makeReal3(f, scale){ const R = REAL3[f.id];
 /* v245 省電：手機預設每秒最多 45 張，閒置 30 秒（沒碰畫面、沒在釣魚、沒開潛水艇）降到 30 張 */
 var Power = { cap: (() => { try { const v = localStorage.getItem('tide.fpsCap'); if (v !== null){ const n = +JSON.parse(v) || 0; return n === 45 ? 60 : n; } } catch(e){} return (matchMedia && matchMedia('(pointer:coarse)').matches) ? 60 : 0; })(),   /* v1010 作者：「換 ROG 就有點卡」→ 以前手機預設 45：60Hz 螢幕剛好畫 60 張，但 120Hz 的電競手機會被除成每秒 40 張。改成 60，120Hz 一樣畫 60 張 */ last:0, input:0,
   want(){ let c = this.cap; try { if (typeof ZC !== 'undefined' && ZC.on) return 4; const busy = (typeof F !== 'undefined' && F.phase && F.phase !== 'idle') || (typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) || Dive.on; const moving = typeof joy !== 'undefined' && (Math.abs(joy.x) + Math.abs(joy.z) > 0.05); if (moving) this.input = performance.now(); if (!busy && performance.now() - this.input > 45000) c = c ? Math.min(c, 30) : 30;   /* v1010 一直推著搖桿走路不算閒置（以前只算「按下去」那一下，走 30 秒就掉到 30 張） */ } catch(e){} return c; } };
-for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { Power.input = performance.now(); try { if (typeof ensureAudio === 'function' && (!actx || actx.state !== 'running' || (musicOn && typeof MUSIC !== 'undefined' && !MUSIC.playing()))) ensureAudio(); } catch(e){} }, { passive:true, capture:true });   /* v998 作者：「音樂都要人物動才放」→ 碰到畫面任何地方（按鈕、選單也算）就開始放音樂 */
+for (const ev of ['pointerdown', 'keydown', 'touchstart', 'pointerup', 'touchend', 'click']) addEventListener(ev, () => { Power.input = performance.now(); try { if (typeof ensureAudio === 'function' && (!actx || actx.state !== 'running' || (musicOn && typeof MUSIC !== 'undefined' && !MUSIC.playing()))) ensureAudio(); if (actx && !audioUnlocked && (ev === 'touchend' || ev === 'pointerup' || ev === 'click' || ev === 'keydown')){ audioUnlocked = true; const b = actx.createBuffer(1, 1, 22050), sN = actx.createBufferSource(); sN.buffer = b; sN.connect(actx.destination); sN.start(0); } if (typeof MUSIC !== 'undefined' && MUSIC.kick) MUSIC.kick(); } catch(e){} }, { passive:true, capture:true });   /* v1015 iPhone 只認「手指放開」那一下才准出聲音：加上 touchend、pointerup、click，第一次放開時放一段無聲的聲音把喇叭打開；音樂檔被擋掉的話這時候再放一次 */
+var audioUnlocked = false;   /* v998 作者：「音樂都要人物動才放」→ 碰到畫面任何地方（按鈕、選單也算）就開始放音樂 */
 const TIERS = {
   low:  { label:'低', dpr:1.0, shadow:0,    tufts:0.25, waterEvery:2, aa:false },
   mid:  { label:'中', dpr:1.5, shadow:1024, tufts:0.5,  waterEvery:1, aa:false },
@@ -5974,7 +5975,7 @@ K3.gangCols = key => (rec.owned || []).filter(id => id.startsWith('k3c_' + key +
    d: [名字, 主色, 邊條色, 圖案, 圖案色, 圖案密度] */
 K3.DES = {
   top: { tee: { mar: ['海軍條紋', '#f2f0ea', '#1e2a55', 'stripe', '#2a3f78', 14], buoy: ['浮球點點', '#fff3dc', '#e86a2a', 'dot', '#ff8a3d', 11], sun: ['夕陽橘', '#f2a24a', '#8a3a1a'], ink: ['墨黑', '#2b2b2e', '#e8e4da'] },
-    hoodie: { kuro: ['黑潮藍', '#16324a', '#e8eef2'], net: ['漁網綠', '#6b7a52', '#2d3524', 'net', '#3a4530', 9], shell: ['櫻貝粉', '#f2b8c8', '#ffffff'], ash: ['礁岩灰', '#7a7f86', '#2b2b2e'] },
+    hoodie: { snow: ['雪白', '#f7f6f2', '#d6d2ca'], kuro: ['黑潮藍', '#16324a', '#e8eef2'], net: ['漁網綠', '#6b7a52', '#2d3524', 'net', '#3a4530', 9], shell: ['櫻貝粉', '#f2b8c8', '#ffffff'], ash: ['礁岩灰', '#7a7f86', '#2b2b2e'] },
     rain: { buoy: ['浮球橘', '#ff8a3d', '#1e2a55'], ship: ['老船藍條紋', '#2c4f73', '#e8eef2', 'stripe', '#e8eef2', 9], glass: ['海玻璃綠', '#8fd3c0', '#2c4f73'], red: ['救生紅', '#d8443a', '#ffffff'] },
     vest: { sand: ['退潮沙', '#c9b48a', '#6a5a3a'], navy: ['港口藍', '#1e2a55', '#c9a227'], red: ['船纜紅', '#b8372e', '#f2e6d4'], camo: ['紅樹林', '#4f6a3a', '#2d3524', 'check', '#3e5530', 7] },
     wave: { night: ['夜潮', '#16243f', '#d8e2f2'], coral: ['珊瑚', '#ff8f7a', '#fff3ea'], mint: ['薄荷浪', '#7fcfb8', '#f2fffb', 'wave', '#5fb8a0', 8], sand: ['沙灘', '#e8d6aa', '#ffffff', 'dot', '#d4bd88', 12] },
@@ -6708,12 +6709,14 @@ const BGM = { url: {}, loading: {} };
 async function bgmUrl(k){ if (BGM.url[k]) return BGM.url[k]; if (BGM.loading[k]) return null; BGM.loading[k] = 1; try { const r = await fetch(BGM_FILES[k]); if (!r.ok) throw 0; BGM.url[k] = URL.createObjectURL(await r.blob()); return BGM.url[k]; } catch(e){ return null; } finally { BGM.loading[k] = 0; } }
 const MUSIC = (() => {
   let master = null, timer = null, sea = null, E = null, bus = null, trk = null;
+  function trkKick(){ try { if (trk && trk.el.paused) trk.el.play().catch(() => {}); } catch(e){} }
   function trkTick(w){ const want = bgmZone(w), tense = w === 'reel' || w === 'boss';
     if (trk && trk.key !== want && !(tense && trk.key)){ const old = trk; trk = null; old.g.gain.setTargetAtTime(0.0001, actx.currentTime, 0.8); setTimeout(() => { try { old.el.pause(); old.src.disconnect(); } catch(e){} }, 3500); }
     if (want && !trk){ const u = BGM.url[want]; if (!u){ bgmUrl(want); } else { try { const el = new Audio(u); el.loop = true; const src = actx.createMediaElementSource(el), g = actx.createGain(); g.gain.value = 0.0001; src.connect(g); g.connect(master); el.play().catch(() => {}); g.gain.setTargetAtTime(0.95, actx.currentTime + 0.1, 1.0); trk = { key: want, el, src, g }; } catch(e){} } }
     if (trk) trk.g.gain.setTargetAtTime(tense ? 0.25 : 0.95, actx.currentTime, 0.5);
-    if (bus) bus.gain.setTargetAtTime(trk && !tense ? 0.0001 : 0.62, actx.currentTime, 0.6);   /* 有音樂檔就把原本合成的音樂關小，拉魚時才出來 */
-    if (sea) sea.g.gain.setTargetAtTime(trk && !tense ? 0.05 : (SEA[w] || 0.2), actx.currentTime, 1.2); }
+    const trkOn = !!(trk && !trk.el.paused && trk.el.currentTime > 0);   /* v1015 作者：「iPhone 更新完就聽不到聲音」→ iPhone 不讓音樂檔自己開始放（要碰一下畫面），放不出來時原本的合成音樂不能跟著關掉 */
+    if (bus) bus.gain.setTargetAtTime(trkOn && !tense ? 0.0001 : 0.62, actx.currentTime, 0.6);   /* 有音樂檔就把原本合成的音樂關小，拉魚時才出來 */
+    if (sea) sea.g.gain.setTargetAtTime(trkOn && !tense ? 0.05 : (SEA[w] || 0.2), actx.currentTime, 1.2); }
   function pick(){
     if (F.phase === 'reeling') return F.boss ? 'boss' : 'reel';
     if (Dive.on) return 'dive';
@@ -6747,7 +6750,7 @@ const MUSIC = (() => {
       const mb = bus = actx.createGain(); mb.gain.value = 0.62; mb.connect(master); E = MusicEngine(actx, mb); let w = 'day'; try { w = pick(); } catch(e){} E.set(w); E.start(actx.currentTime + 0.15); seaStart(); timer = setInterval(tick, 100); },
     vol(){ if (master && actx) master.gain.setTargetAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime, 0.1); },
     stop(){ if (!master) return; clearInterval(timer); if (trk){ const t0 = trk; trk = null; setTimeout(() => { try { t0.el.pause(); t0.src.disconnect(); } catch(e){} }, 1500); } bus = null; const m = master, s = sea; m.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(() => { try { s && s.src.stop(); s && s.lfo.stop(); m.disconnect(); } catch(e){} }, 1500); master = null; sea = null; E = null; },
-    playing(){ return !!master; }
+    playing(){ return !!master; }, kick(){ trkKick(); },
   };
 })();
 function renderMusicIcon(){ $('#musicBtn').classList.toggle('off', !musicOn); $('#musicBtn').setAttribute('aria-pressed', String(musicOn)); }
@@ -25629,6 +25632,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1015', d:'11/29', items:[['🤍','連帽衣多一款「雪白」設計（造型 → 衣櫃 → 上衣 → 連帽衣）'], ['🔈','修 iPhone 沒聲音：手指放開那一下才能開聲音，現在放開就會打開；音樂檔被手機擋住時，原本的音樂照樣放']] },
   { id:'u1014', d:'11/28', items:[['📞','好友旁邊的「呼叫」改成「📞 打電話」'], ['🔊','講電話對方的聲音放大很多，背景音樂會自動變小聲；喇叭按鈕可以換「一般 → 大聲 → 聽不到」'], ['🚩','檢舉按鈕寫出字、改成紅色；好友的「⋯」裡也可以檢舉'], ['📱','手機桌面的背景換成不刺眼的深色']] },
   { id:'u1013', d:'11/28', items:[['🎣','掛著釣不再每條都中：常見的魚也會脫鉤跑掉，沒裝鉤子大約 4 條跑 1 條'], ['🪝','阿鐵做的鉤子越好越少跑：倒刺鉤 18%、圓形鉤和鍛造重鉤 13%、金鉤 8%；釣竿磨損完多跑 10%'], ['💪','自己拉魚照舊，不受影響']] },
   { id:'u1012', d:'11/28', items:[['👴','新手教學換新：老港帶你釣魚、賣魚、叫潮搭Go、跟人打招呼、換地方釣到 4 種魚'], ['🎯','教完的「接下來隨你」改成：蓋小島、買釣組試掛著釣、買望遠鏡、去潮汐娛樂館'], ['🗺️','教你叫車時，右上角的地圖會一閃一閃']] },

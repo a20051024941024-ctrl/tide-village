@@ -10001,5 +10001,8 @@
  "好友旁邊的「呼叫」改成「📞 打電話」": "The \"Call out\" button next to friends is now \"📞 Call\"",
  "講電話對方的聲音放大很多，背景音樂會自動變小聲；喇叭按鈕可以換「一般 → 大聲 → 聽不到」": "Your friend's voice is much louder on calls and background music lowers automatically; the speaker button cycles Normal → Loud → Muted",
  "檢舉按鈕寫出字、改成紅色；好友的「⋯」裡也可以檢舉": "The report button now has a label and is red; you can also report from a friend's \"⋯\" menu",
- "手機桌面的背景換成不刺眼的深色": "The phone home screen background is now a softer dark color"
+ "手機桌面的背景換成不刺眼的深色": "The phone home screen background is now a softer dark color",
+ "雪白": "Snow white",
+ "連帽衣多一款「雪白」設計（造型 → 衣櫃 → 上衣 → 連帽衣）": "The hoodie has a new \"Snow white\" design (Style → Closet → Tops → Hoodie)",
+ "修 iPhone 沒聲音：手指放開那一下才能開聲音，現在放開就會打開；音樂檔被手機擋住時，原本的音樂照樣放": "Fixed no sound on iPhone: iPhone only allows sound when you lift your finger, which now turns it on; if the music file is blocked, the built-in music still plays"
 }
