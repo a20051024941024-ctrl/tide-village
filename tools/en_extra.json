@@ -9558,5 +9558,16 @@
  "水族館換成新的五層玻璃塔：一圈一圈的魚缸樓層，最上面是裝滿水的大玻璃球和鯨魚尾巴，從整座島都看得到": "The aquarium is now a five-level glass tower: ring after ring of fish-tank floors, topped by a water-filled glass globe and a whale tail. You can see it from anywhere on the island",
  "食堂的直式招牌移到房子旁邊，不再擋住店面": "The canteen's hanging sign has moved to the side of the building so it no longer blocks the shopfront",
  "地圖用手指放大縮小時，連到店名的白線先收起來，停下來再畫，不會亂飄": "When you pinch to zoom the map, the white lines to shop names are hidden and redrawn once you stop, so they no longer drift",
- "潮汐水族館": "Tide Aquarium"
+ "潮汐水族館": "Tide Aquarium",
+ "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿速的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿速會自己開回乘車處。不想等就按「⚡ 直接到」。": "To go somewhere farther, open the map, tap the place and press \"🚕 Call a ride\". Su's cars wait at the TIDEGO taxi stand by the ring road. When you call, one drives along the roads to the curb next to you, so just wait where you are. If you're right by the stand, walk over and get in. The car drives the whole way on the roads, turning and stopping at red lights, so you can turn the camera and enjoy the view. After dropping you off, Su drives back to the stand. Don't want to wait? Press \"⚡ Go now\".",
+ "潮搭Go 有自己的乘車處了：在圓環邊、商店街路口旁，有遮雨棚和三個停車格。叫車時阿速從這裡開出去，載完人再開回來停好，不會憑空出現或消失": "TIDEGO now has its own taxi stand by the ring road, next to the shop street junction, with a canopy and three parking spaces. When you call, Su drives out from here and parks back after the ride. Cars no longer pop in or out of nowhere",
+ "坐車整趟都在路上開，會轉彎、停紅燈，中間不會黑畫面，可以轉動畫面看風景；人在乘車處旁邊就直接走過去上車": "Rides now stay on the road the whole way, turning and stopping at red lights, with no fade to black, so you can turn the camera and enjoy the view. If you're next to the stand, just walk over and get in",
+ "小火車的站名改成掛在候車亭屋簷下的站名牌，不會再浮在空中跟著鏡頭轉": "Train station names now hang as signs under the shelter roofs instead of floating in the air and turning with the camera",
+ "沒有車道的地方拿掉平交道的柵欄和警示燈；步道跨過鐵軌只鋪水泥板": "Crossing barriers and warning lights are gone where no road crosses the railway. Footpaths over the tracks just have concrete pads now",
+ "地圖上森林那一區不再畫房子、不寫山洞和瀑布的字；地圖多了「潮搭Go 乘車處」": "The forest on the map no longer shows buildings or the cave and waterfall labels. The TIDEGO taxi stand is now on the map",
+ "潮搭Go 乘車處": "TIDEGO taxi stand",
+ "阿速的車停在這裡。叫車的時候車從這裡開出去，載完人會開回來；人在旁邊的話直接走過來上車。": "Su's cars park here. When you call a ride, a car leaves from here and comes back after the trip. If you're nearby, just walk over and get in.",
+ "🚕 乘車處就在旁邊，走過去上車（跟著箭頭）": "🚕 The taxi stand is right here. Walk over and get in (follow the arrows)",
+ "🚕 阿速：「到了！下次再叫我～」": "🚕 Su: \"Here we are! Call me again sometime~\"",
+ "阿速等太久先回乘車處了，要坐再叫一次": "Su waited too long and went back to the stand. Call again if you still need a ride"
 }
