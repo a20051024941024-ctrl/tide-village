@@ -15674,7 +15674,7 @@ async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.for
     const i = free++, x = ISLE.x + 3 + (i % 3) * 1.5, z = ISLE.z + 4 + Math.floor(i / 3) * 1.2; pt.pos.set(x, groundHeight(x, z), z); pt.wander = { x, z, at: 0 }; return pt; }); }
 function penSpot(it){ const A = PEN_AREA[it.t], u = (Math.random() * 2 - 1) * A.hx, v = (Math.random() * 2 - 1) * A.hz, c = Math.cos(it.r), s = Math.sin(it.r);
   return { x: ISLE.x + it.x + u * c + v * s, z: ISLE.z + it.z - u * s + v * c, y: ISLE.y + A.y }; }
-function updatePets(dt, t){ try { shopHallTick(dt, t); } catch(e){ if (!shopHallTick.w){ shopHallTick.w = 1; console.warn('shophall', e); } }
+function updatePets(dt, t){ try { if (Pillars.length) pillarTick(dt); } catch(e){} try { shopHallTick(dt, t); } catch(e){ if (!shopHallTick.w){ shopHallTick.w = 1; console.warn('shophall', e); } }
   updatePetFor(me, petMine(), dt, t);
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
@@ -20970,6 +20970,7 @@ function useRoom(r){
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
       if (f.rs){ setTimeout(rsPoll, 1500); }   /* 紅鯊的公告由伺服器紀錄發（每個大廳都看得到，不會重複） */
       else if (f.sev){ ticker(`🎉 <b>${esc(name)}</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`); if (Sev.ev && Sev.ev.fish === f.id){ Sev.ev.caught = name; Sev.told['got' + Sev.ev.id] = 1; } }
+      if (f.rarity === '傳說' && !f.rs && p && p.fisher){ legendPillar(p.fisher.pos.x, p.fisher.pos.z); const d = Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z); if (d < 400) flash(`✨ ${name} 釣到傳說魚了！看那道光`, 2.2); }
       if (f.rarity !== '常見' && !f.rs) Talk.recent.unshift({ who: name, name: f.name, at: Date.now() });
       { const uid = peerUid.get(msg.peer); if (uid && p && Array.isArray(Fr.list) && Fr.list.some(x => x.id === uid) && (f.rarity !== '常見' || f.of || msg.data.b)) frNotice(name, f, w, !!msg.data.b, msg.peer); }   /* v831 朋友釣到好東西：跳一張卡，可以直接過去看 */
       if (f.rarity !== '常見' && !f.rs) ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>${esc(name)}</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);
@@ -21476,7 +21477,18 @@ function frNotice(name, f, w, best, peer){ const t = document.createElement('div
   t.innerHTML = `<b>${esc(name)}</b> ${best ? '破自己的紀錄了：' : '釣到了'} <span class="chip r-${f.rarity}">${f.of ? '變種' : f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`;
   const b = document.createElement('button'); b.className = 'tbtn'; b.textContent = '👀 過去看'; b.addEventListener('click', () => { const q = peers.get(peer); t.remove(); if (!q){ toast('他已經離開了'); return; } const P = q.fisher.pos, a = q.fisher.rot + Math.PI * 0.75; travelTo({ id: 'friend', label: name, x: P.x + Math.sin(a) * 1.6, z: P.z + Math.cos(a) * 1.6, rot: q.fisher.rot + Math.PI, color: '#f6b04a' }); });
   t.appendChild(b); $('#toasts').appendChild(t); try { SFX.chat(); } catch(e){} setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 600); }, 9000); }
-function announceCatch(f, w, spot){ if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot, b: F.lastBest ? 1 : 0 }).catch(() => {});
+/* v991 傳說魚光柱（阿穎：「特效」「讓別人看到」）：有人釣到傳說魚，那個人身上衝出一道金紫色光柱，8 秒慢慢散掉；整座島都看得到 */
+const Pillars = [];
+function legendPillar(x, z){ try { const g = new THREE.Group(), H = 70, y0 = groundHeight(x, z);
+    const mk = (r, c, o) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.15, H, 24, 1, true), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })); m.position.y = H / 2; g.add(m); return m; };
+    const core = mk(0.45, '#fff6c8', 0.9), mid = mk(1.1, '#ffb800', 0.6), out = mk(2.4, '#9a3cff', 0.32);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.0, 40), new THREE.MeshBasicMaterial({ color: '#ffe9a8', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.15; g.add(ring);
+    g.position.set(x, y0, z); g.userData.dyn = true; scene.add(g); Pillars.push({ g, core, mid, out, ring, t: 0 }); try { FX.emit(x, y0 + 1, z, 30, '#ffd34a', 1.2, 4, 1.6); } catch(e){} } catch(e){} }
+function pillarTick(dt){ for (let i = Pillars.length - 1; i >= 0; i--){ const P = Pillars[i]; P.t += dt; const t = P.t, k = t < 0.5 ? t / 0.5 : t > 6 ? Math.max(0, 1 - (t - 6) / 2) : 1;
+    P.g.scale.set(1 + Math.sin(t * 6) * 0.06, Math.min(1, t / 0.6), 1 + Math.sin(t * 6) * 0.06); P.core.material.opacity = 0.9 * k; P.mid.material.opacity = 0.6 * k; P.out.material.opacity = (0.28 + Math.sin(t * 3) * 0.08) * k; P.out.rotation.y += dt * 0.8;
+    const rs = 1 + (t % 1.5) * 6; P.ring.scale.set(rs, rs, rs); P.ring.material.opacity = 0.9 * (1 - (t % 1.5) / 1.5) * k;
+    if (t > 8){ scene.remove(P.g); P.g.traverse(o => { if (o.isMesh){ o.geometry.dispose(); o.material.dispose(); } }); Pillars.splice(i, 1); } } }
+function announceCatch(f, w, spot){ if (f.rarity === '傳說' && !f.rs) legendPillar(me.pos.x, me.pos.z); if (room && room.connected() && chatAllowed) room.emit('catch', { f: f.id, w, s: spot, b: F.lastBest ? 1 : 0 }).catch(() => {});
   if (f.rarity !== '常見') ticker(`${f.rarity === '傳說' ? '🎉' : '🎣'} <b>你</b> 在${esc(SPOT_BY_ID[f.spot].short)}釣到 <span class="chip r-${f.rarity}">${f.rarity}</span> <b>${esc(f.name)}</b> ${fmtKg(w)}`);   /* 跑馬燈只報稀有和傳說，自己的也會出現 */ logMsg('', `你釣到了 ${f.name} ${w.toFixed(2)}kg`, true); }
 const Rare = { rows: null, at: 0 };
 const lb = { best: [], total: [] }; let lbLoading = false, lbSlow = false, lbMode = 'best';
@@ -25171,6 +25183,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u991', d:'11/28', items:[['✨','有人釣到傳說魚，他身上會衝出一道金紫色的光柱，整座島都看得到，大概 8 秒後慢慢散掉'], ['📣','附近的人畫面上會跳「XX 釣到傳說魚了！看那道光」']] },
   { id:'u990', d:'11/28', items:[['🪪','新的名牌框：名字外面一圈會流動、會發光，大家都看得到。銅浪 Lv.10、銀浪 Lv.20、金浪 Lv.30、虹彩 Lv.50，釣到傳說魚拿「傳說名牌」'], ['🏅','點左上角等級 →「名牌框」換框；還沒拿到的會寫要怎麼拿']] },
   { id:'u989', d:'11/28', items:[['📺','大看板的釣魚、開船、寵物三段短片改在新主島重拍：港口棧橋甩竿、四人船開出碼頭、寵物店裡貓狗在跑'], ['🐢','龜博士只留一個：在慢慢烏龜屋的櫃台，門口不會再站一個']] },
   { id:'u988', d:'11/28', items:[['🐢','慢慢烏龜屋可以走進去了：龜博士在櫃台，左邊一排烏龜缸，中間小水池有兩隻烏龜在游'], ['☀️','店裡的曬背燈台下雨天也能幫小烏龜曬背，跟曬太陽一樣有效（一天一次）'], ['🩺','照顧小烏龜時多了「健康檢查」：龜博士看殼的光澤和今天照顧了沒，跟你說下一步怎麼做'], ['🪑','擺家具多兩樣：曬背燈台 🪙400（在家也能幫烏龜曬背）、烏龜造景石 🪙250']] },

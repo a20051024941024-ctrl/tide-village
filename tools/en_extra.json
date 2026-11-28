@@ -9760,5 +9760,7 @@
  "🔒 銀浪名牌": "🔒 Silver Wave plate",
  "🔒 金浪名牌": "🔒 Gold Wave plate",
  "🔒 傳說名牌": "🔒 Legend plate",
- "🔒 虹彩名牌": "🔒 Rainbow plate"
+ "🔒 虹彩名牌": "🔒 Rainbow plate",
+ "有人釣到傳說魚，他身上會衝出一道金紫色的光柱，整座島都看得到，大概 8 秒後慢慢散掉": "When someone catches a legendary fish, a gold-and-purple pillar of light shoots up from them. The whole island can see it, and it fades after about 8 seconds",
+ "附近的人畫面上會跳「XX 釣到傳說魚了！看那道光」": "Players nearby get a message: \"XX caught a legendary fish! Look at that light\""
 }
