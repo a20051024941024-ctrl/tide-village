@@ -390,6 +390,15 @@ export function init(A){
     for (const [dx, len] of [[-170, 90], [-90, 120], [0, 140], [90, 120], [170, 90]]){ const [x, z00] = P(990 + dx, 835), z1 = z00 + len * S; let zr = -1e9; for (const q of railLine) if (Math.abs(q[0] - x) < 2.4 && Math.abs(q[1] - z00) < 12) zr = Math.max(zr, q[1]); const z0 = zr > -1e8 ? Math.max(z00, zr + 1.3) : z00, L = z1 - z0;   /* v925 棧橋以前從岸上蓋出去、橫在鐵軌上，小火車會從橋板中間穿過去；現在從鐵軌靠海那一側才開始 */
       B(parts, '#b98a5a', 3.4, 0.3, L, x, 0.5, z0 + L / 2); DECKS.push([x - 1.7, x + 1.7, z0 - 0.2, z0 + L, 0.65]); piers.push({ x, z0, L }); for (let k = 0; k <= L; k += 4){ B(parts, '#7a5530', 0.4, 2.4, 0.4, x - 1.5, -0.5, z0 + k); B(parts, '#7a5530', 0.4, 2.4, 0.4, x + 1.5, -0.5, z0 + k); } }
     { const [x, z] = P(990, 880); label('港口碼頭', x, 8, z); }
+    /* v1001 作者：「如果要放港口（那首歡樂的音樂），大家要看起來很歡樂」→ 每條棧橋口立一根旗桿，桿子之間掛彩色三角小旗，被風吹著一直晃 */
+    { const FC = ['#e2574c', '#f2c230', '#3c8fd8', '#4bb57b', '#ff8fb1', '#ffffff'], fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute([-0.22, 0, 0, 0.22, 0, 0, 0, -0.5, 0], 3)); fg.computeVertexNormals();
+      const fm = FC.map(c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide })), pm = new THREE.MeshLambertMaterial({ color: '#f4efe4' }), H = 4.6, tops = [];
+      for (const pr of piers){ const x = pr.x, z = pr.z0 + 0.8, pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, H, 8), pm); pole.position.set(x, 0.65 + H / 2, z); town.add(pole); const ball = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), fm[1]); ball.position.set(x, 0.65 + H + 0.1, z); town.add(ball); tops.push([x, 0.65 + H - 0.15, z]); }
+      tops.sort((a, b) => a[0] - b[0]);
+      for (let i = 0; i + 1 < tops.length; i++){ const [x0, y0, z0] = tops[i], [x1, , z1] = tops[i + 1], L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(6, Math.round(L / 0.75)), g = new THREE.Group(); g.position.set(x0, y0, z0); g.rotation.y = Math.atan2(-(z1 - z0), x1 - x0); town.add(g);
+        const pts = []; for (let k = 0; k <= 24; k++){ const u = k / 24; pts.push(new THREE.Vector3(u * L, -Math.sin(u * Math.PI) * 0.9, 0)); } g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#5a4a3a' })));
+        const fl = []; for (let k = 1; k < n; k++){ const u = k / n, m = new THREE.Mesh(fg, fm[(k + i) % FC.length]); m.position.set(u * L, -Math.sin(u * Math.PI) * 0.9, 0); g.add(m); fl.push(m); }
+        tickers.push((dt, t) => { for (let k = 0; k < fl.length; k++) fl[k].rotation.x = Math.sin(t * 2.6 + k * 0.7 + i) * 0.35; }); } }
     /* 居民區、商店街、玩家建地：小房子（之後換成真的房子模型） */
     const ROOF = ['#c0583a', '#4a6fb5', '#7a5aa0', '#d08a2a', '#3e8f86', '#e2574c', '#3c8fd8', '#4bb57b'];
     /* 民宅＝三層樓透天和兩層街屋輪流；商店街＝一樓是店面的街屋，每四間一間小木屋店。門都朝著路 */

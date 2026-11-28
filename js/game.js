@@ -18984,7 +18984,20 @@ function drvTick(dt, t){ const S = taxiStand(); if (!S) return; if (!Drv.f){ try
   f.av.g.visible = vis; if (f.tag) f.tag.style.display = vis ? '' : 'none'; if (f.blob) f.blob.visible = vis; if (!vis) return;
   if (off && Math.hypot(me.pos.x - x, me.pos.z - z) < 12 && Math.random() < dt / 25) f.say(['今天潮水不錯欸', '以前都跟朋友一起釣到很晚', '你也來釣啊，旁邊有位子', '有咬！……啊跑掉了'][Math.floor(Math.random() * 4)], '', 5);
   f.pos.x = x; f.pos.z = z; f.baseY = groundHeight(x, z); f.pos.y = f.baseY; f.rot = off ? r : lerpAngle(f.rot, r, 1 - Math.exp(-6 * dt)); f.speed = 0; f.update(dt, t); f.placeTag(); }
-function taxiTick(dt){ if (!W2) return; try { if (W2S.on) drvTick(dt, now()); else if (Drv.f){ Drv.f.av.g.visible = false; if (Drv.f.tag) Drv.f.tag.style.display = 'none'; } } catch(e){ if (!drvTick.w){ drvTick.w = 1; console.warn('drv', e); } } try { if (frameNo % 60 === 7) vcTick(); } catch(e){} try { k3SetGlowTick(); } catch(e){} try { bdayTick(); paxTick(); bpxTick(); if (frameNo % 30 === 3) ownBoatSync(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
+/* v1001 作者：「如果要放港口（那首歡樂的音樂），大家要看起來很歡樂」→ 魚市場門口一位拉手風琴的街頭樂手（風琴伯），一直搖、頭上冒音符；港口一帶的村民不時揮手、歡呼 */
+const Busk = { f: null, acc: null, t: 0, ch: 0 };
+function buskTick(dt, t){ const d = W2.doors && W2.doors.find(q => q.k === 'market'); if (!d) return;
+  if (!Busk.f){ const f = new Fisher({ shirt: '#c8463a', hat: '#2b3a55', name: '風琴伯・街頭樂手', kind: 'npc' }); f.lines = ['來來來，聽一首漁港的歌！', '今天船都回來了，大家開心一下', '釣到大魚的，我幫你拉一首慶祝！', '手風琴是我阿公留下來的']; Busk.f = f;
+    const acc = new THREE.Group(), red = new THREE.MeshLambertMaterial({ color: '#c8262c' }), wh = new THREE.MeshLambertMaterial({ color: '#f4efe4' }); for (const sx of [-1, 1]){ const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.26, 0.2), red); b.position.x = sx * 0.15; acc.add(b); } const bel = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.24, 0.18), wh); acc.add(bel); acc.userData.bel = bel; acc.position.set(0, 0.62, 0.24); f.av.g.add(acc); Busk.acc = acc; }
+  const f = Busk.f, fx = Math.sin(d.face), fz = Math.cos(d.face), x = d.x + fx * 3.2 + fz * 3.5, z = d.z + fz * 3.2 - fx * 3.5, near = Math.hypot(me.pos.x - x, me.pos.z - z);
+  const vis = near < 70 && !inIndoor(); f.av.g.visible = vis; if (f.tag) f.tag.style.display = vis ? '' : 'none'; if (f.blob) f.blob.visible = vis; if (!vis) return;
+  f.pos.x = x; f.pos.z = z; f.baseY = groundHeight(x, z); f.pos.y = f.baseY + Math.abs(Math.sin(t * 3.4)) * 0.05; f.rot = d.face + Math.sin(t * 1.7) * 0.35; f.speed = 0;
+  const k = 1 + Math.sin(t * 3.4) * 0.45; Busk.acc.userData.bel.scale.x = k; Busk.acc.children[0].position.x = -0.1 - k * 0.05; Busk.acc.children[1].position.x = 0.1 + k * 0.05; Busk.acc.rotation.z = Math.sin(t * 1.7) * 0.2;
+  f.update(dt, t); f.placeTag();
+  if (near < 30 && (Busk.t -= dt) < 0){ Busk.t = 0.55 + Math.random() * 0.4; try { FX.emit(x + (Math.random() - 0.5) * 0.4, f.baseY + 1.5, z + (Math.random() - 0.5) * 0.4, 1, ['#ffd34a', '#ff8fb1', '#7ad0ff', '#9ee07a'][Math.floor(Math.random() * 4)], 0.25, 1.2, 1.6); } catch(e){} }
+  /* 港口一帶的村民：不時揮手、歡呼 */
+  if ((Busk.ch -= dt) < 0){ Busk.ch = 4 + Math.random() * 5; try { const L = npcs.filter(n => n.av && n.av.g.visible && !n.emote && !n.fishing && !n.sitting && n.pos.z - W2.oz > 40 && Math.hypot(n.pos.x - me.pos.x, n.pos.z - me.pos.z) < 40); if (L.length){ const n = L[Math.floor(Math.random() * L.length)]; startEmote(n, Math.random() < 0.5 ? 'wave' : 'cheer'); } } catch(e){} } }
+function taxiTick(dt){ if (!W2) return; try { if (W2S.on) drvTick(dt, now()); else if (Drv.f){ Drv.f.av.g.visible = false; if (Drv.f.tag) Drv.f.tag.style.display = 'none'; } } catch(e){ if (!drvTick.w){ drvTick.w = 1; console.warn('drv', e); } } try { if (frameNo % 60 === 7) vcTick(); } catch(e){} try { if (W2S.on) buskTick(dt, now()); else if (Busk.f){ Busk.f.av.g.visible = false; if (Busk.f.tag) Busk.f.tag.style.display = 'none'; } } catch(e){ if (!buskTick.w){ buskTick.w = 1; console.warn('busk', e); } } try { k3SetGlowTick(); } catch(e){} try { bdayTick(); paxTick(); bpxTick(); if (frameNo % 30 === 3) ownBoatSync(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
   const T = { car: Taxi.car, path: Taxi.path, s: Taxi.s, v: Taxi.v }, drive = vmax => { const r = taxiDrive(T, dt, vmax); Taxi.s = T.s; Taxi.v = T.v; return r; };
   if (Taxi.st === 'come'){ if (drive(10)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } else if (frameNo % 30 === 0) taxiUi(); }
   else if (Taxi.st === 'wait'){ const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3);
@@ -25315,6 +25328,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1001', d:'11/28', items:[['🎏','港口熱鬧起來了：每條棧橋口立旗桿，中間掛彩色小旗，被風吹著一直晃'], ['🪗','魚市場門口多了街頭樂手風琴伯，一直拉手風琴、頭上冒音符'], ['👋','港口一帶的村民會不時揮手、歡呼']] },
   { id:'u1000', d:'11/28', items:[['🎵','背景音樂換成真的樂器演奏：港口那首手風琴、小提琴的海港民謠先上，其他地方的歌做好會陸續換上'], ['🎣','拉魚的時候還是會換成緊張的音樂，拉完再回來']] },
   { id:'u999', d:'11/28', items:[['🗺️','地圖整理：圖示疊在一起的先不畫（放大才出現），拿掉右邊一長串「找人找店」、海況和村民清單，只留「去哪裡」'], ['🧭','航海圖重畫：島是圓滑的、中間是新主島，沒找到的地標不再畫一堆問號，航海圖變成手機裡自己一個 App']] },
   { id:'u998', d:'11/28', items:[['🎵','一碰畫面（按鈕、選單都算）就開始放音樂，不用先走路'], ['📱','畫質「自動」時會邊玩邊調解析度：太卡就自動降一點，很順再加回去'], ['📊','設定 →「畫面順不順」可以打開小框，看每秒幾張、卡了幾次']] },
