@@ -6233,7 +6233,7 @@ class Fisher {
     if (this.isNpc){ const st = npcStyle(opts.name); if (st){ this.npcSt = st; this.av.npcFh = st.fh || null; if (st.sc) this.av.g.scale.set(st.sc[0], st.sc[1], st.sc[0]); kidHeadFix(this.av); this.setGear({}); } }
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
-  setGear(gear){ if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, { look: this.npcSt.look }); const k = JSON.stringify(gear || {}), rw = !!(this.isNpc && this.rainWear); if (k === this.gearKey && rw === !!this.av.rainWear) return; this.gearKey = k;
+  setGear(gear){ this.gearIn = gear; if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, this.ecoGear || {}, this.bdayGear || {}, { look: this.npcSt.look }); else if (this.ecoGear || this.bdayGear) gear = Object.assign({}, gear || {}, this.ecoGear || {}, this.bdayGear || {});   /* v976 村民自己買的衣服、生日的派對帽蓋在原本的造型上 */ const k = JSON.stringify(gear || {}), rw = !!(this.isNpc && this.rainWear); if (k === this.gearKey && rw === !!this.av.rainWear) return; this.gearKey = k;
     this.av.rainWear = rw; if (rw && !this.av.rainCol){ let h = 0; for (const ch of String(this.npcName || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; this.av.rainCol = RAIN_COATS[h % RAIN_COATS.length]; } applyGear(this.av, gear || {}); }
   setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); if (!this.isNpc){ try { rodHD(this.av, this.rodType, r.color, this.rodSkin); } catch(e){ console.warn('rodHD', e); } } applyRodShape(this.av, this.rodType, false); } }
   setRodLook(skin, lc){ skin = CRAFT_BY[skin] ? skin : null; lc = CRAFT_BY[lc] ? lc : null; if (lc !== this.lineCol){ this.lineCol = lc; this.line.material.color.set(lc ? CRAFT_BY[lc].col : '#fbf8ef'); this.line.material.opacity = lc ? 0.95 : 0.85; }   /* v253 工坊做的竿子造型、釣線顏色 */
@@ -18635,7 +18635,7 @@ function taxiRetTick(dt){ for (let i = Taxi.rets.length - 1; i >= 0; i--){ const
 function taxiDrop(){ if (Taxi.car){ const pk = Taxi.atSlot && Taxi.park && Taxi.park[Taxi.slot]; if (pk && !pk.car){ pk.car = Taxi.car; Taxi.car.userData.parked = 1; } else taxiSendBack(Taxi.car, Taxi.slot); Taxi.car = null; } Taxi.atSlot = false; Taxi.path = null; }
 function taxiUi(){ let e = Taxi.el; if (Taxi.st === 'idle'){ if (e) e.remove(); Taxi.el = null; return; }
   if (!e){ e = Taxi.el = el('div', 'taxibar'); document.body.appendChild(e); }
-  const d = Taxi.dest, eta = Taxi.path ? Math.max(1, Math.round((Taxi.path.len - Taxi.s) / 7.5)) : 0, w = Taxi.st === 'come' ? `🚕 阿萬從乘車處開過來了，大約 ${eta} 秒，在原地等就好` : Taxi.st === 'wait' ? (Taxi.atSlot ? '🚕 乘車處就在旁邊，走過去上車（跟著箭頭）' : '🚕 車到了！走到車子旁邊就會上車') : `🚕 坐車去「${d.name}」・轉動畫面看看風景`;
+  const d = Taxi.dest, eta = Taxi.path ? Math.max(1, Math.round((Taxi.path.len - Taxi.s) / 7.5)) : 0, w = Taxi.st === 'come' ? `🚕 阿萬從乘車處開過來了，大約 ${eta} 秒，在原地等就好` : Taxi.st === 'wait' ? (Taxi.atSlot ? '🚕 乘車處就在旁邊，走過去上車（跟著箭頭）' : '🚕 車到了！走到車子旁邊就會上車') : (bdayIs('wan') ? '🎂 阿萬：「今天是我生日，載你特別開心！」・' : '') + `🚕 坐車去「${d.name}」・轉動畫面看看風景`;
   const k = Taxi.st + '|' + (Taxi.st === 'come' ? Math.ceil(eta / 5) : '') + w.length; if (e._k === k) return; e._k = k; e.innerHTML = ''; e.appendChild(el('span', 'tx', w));
   { const go = el('button', 'tbtn', '⚡ 直接到'); go.addEventListener('click', () => taxiSkip()); e.appendChild(go); }
   if (Taxi.st === 'come' || Taxi.st === 'wait'){ const x = el('button', 'tbtn ghost', '不坐了'); x.addEventListener('click', () => taxiEnd(true)); e.appendChild(x); } }
@@ -18661,7 +18661,7 @@ function taxiGetOff(){ const d = Taxi.dest, c = Taxi.car, fx = Math.sin(c.rotati
   me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = c.rotation.y; poolMeVis(true);
   Taxi.st = 'idle'; taxiDrop(); Taxi.dest = null; pushPresence(true); taxiUi(); toast('🚕 阿萬：「到了！下次再叫我～」');
   if (d && Math.hypot(d.x - x, d.z - z) > 14) setTimeout(() => navTo(d.name, d.x, d.z), 600); else if (d) toast(`到「${d.name}」了`); }
-function taxiTick(dt){ if (!W2) return; taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
+function taxiTick(dt){ if (!W2) return; try { bdayTick(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
   const T = { car: Taxi.car, path: Taxi.path, s: Taxi.s, v: Taxi.v }, drive = vmax => { const r = taxiDrive(T, dt, vmax); Taxi.s = T.s; Taxi.v = T.v; return r; };
   if (Taxi.st === 'come'){ if (drive(10)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } else if (frameNo % 30 === 0) taxiUi(); }
   else if (Taxi.st === 'wait'){ const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3);
@@ -22676,6 +22676,13 @@ function w2Path(ax, az, bx, bz){ const N = W2NAV; if (!N.m){ N.x0 = W2.ox - 200;
   N.paths.set(key0, out); return out; }
 /* 去食堂吃飯（顧攤的阿鐵、阿報、阿萍和老港）：遊戲時間中午 11:30、傍晚 18:00 前後各一頓，每個人出門的時間差幾分鐘。
    走到新主島潮汐食堂的門口旁邊（站一排，不擋門），待一陣子再走回去。攤子立「去吃飯了・店照常營業」的牌子。只看時間算，每支手機看到的一樣 */
+/* v976 生日（作者 11/28 給的；都是作者的朋友，作者說可以放）：阿萬 5/31（雙子座）、阿默 11/26、阿穎 9/10。台灣時間那一天：本人戴派對帽、講話會說今天生日；進遊戲跳一則通知；坐阿萬的車那天他會跟你說 */
+const BDAY = { amo: [11, 26, '阿默'], yin: [9, 10, '阿穎'], wan: [5, 31, '阿萬'] };
+function bdayIs(k){ const B = BDAY[k]; if (!B) return false; const d = new Date(Date.now() + 8 * 3600e3); return d.getUTCMonth() + 1 === B[0] && d.getUTCDate() === B[1]; }
+function bdayTick(){ if (frameNo % 300 !== 7) return; for (const k of ['amo', 'yin']){ const n = npcs.find(W2_NPC[k]); if (!n) continue; const on = bdayIs(k);
+    if (on && !n.bday){ n.bday = { lines: n.lines }; n.bdayGear = { hat: 'hat_party' }; try { n.setGear(n.gearIn || {}); } catch(e){} n.lines = ['今天是我生日！🎂', '謝謝你來跟我說生日快樂', '生日這天釣到的魚特別好吃'].concat(n.lines || []); }
+    else if (!on && n.bday){ n.bdayGear = null; try { n.setGear(n.gearIn || {}); } catch(e){} n.lines = n.bday.lines; n.bday = null; } }
+  if (!bdayTick.told && W2S.on){ bdayTick.told = 1; for (const k in BDAY) if (bdayIs(k)) ticker(k === 'wan' ? '🎂 今天是潮搭Go 司機阿萬的生日！叫車的時候跟他說聲生日快樂' : `🎂 今天是${BDAY[k][2]}的生日！去東邊棧橋跟${BDAY[k][2]}說生日快樂`); } }
 /* ===== v975 村民真的賺錢（作者 11/28：「NPC 也能自己賺錢，自己買裝備、買衣服，更像真的人一樣，也能打車、自己買釣組、自己打窩」「但錢不是憑空變的，是真的在賺錢」）=====
    阿潮（海邊）、小溪（河邊）、阿蘭（紅樹林）每天三趟（遊戲時間 10:00、15:00、20:00）：把上一趟之後釣到的魚拿去中央市場的魚市場賣，價錢跟玩家賣魚一樣（fishPrice）。
    錢只從賣魚來。花錢：每趟出門前買一包誘餌打窩（下一趟多釣一條）、存夠了去釣具店換下一支竿子（照玩家的價錢）、去阿綾服裝店買新衣服、偶爾叫潮搭Go 去吃東西。
@@ -22703,7 +22710,7 @@ function ecoBook(k){ const W = ECO.who[k]; if (!W) return null; const gNow = eco
 function ecoKey(n){ for (const k in ECO.who) if (W2_NPC[k] && W2_NPC[k](n)) return k; return null; }
 /* 村民身上的竿子、衣服跟著帳本換；講話的時候會說今天賺多少、在存錢買什麼 */
 function ecoApply(n){ const k = ecoKey(n); if (!k) return; const st = ecoBook(k), W = ECO.who[k]; if (!st) return; const rod = W.rods[st.rod];
-  if (n.ecoRod !== rod){ n.ecoRod = rod; try { n.setRod(rod); } catch(e){} } if (n.ecoFit !== st.fit){ n.ecoFit = st.fit; try { n.setGear(Object.assign({}, n.gear || {}, W.fits[st.fit])); } catch(e){} }
+  if (n.ecoRod !== rod){ n.ecoRod = rod; try { n.setRod(rod); } catch(e){} } if (n.ecoFit !== st.fit){ n.ecoFit = st.fit; n.ecoGear = st.fit ? W.fits[st.fit] : null; try { n.setGear(n.gearIn || {}); } catch(e){} }
   const dn = Math.floor(ecoGH(Date.now()) / 24), td = st.day[dn], nr = W.rods[st.rod + 1], R = nr && RODS.find(q => q.id === nr), last = [...st.log].reverse().find(e => e.buy);
   const L = [td ? `今天釣了 ${td.n} 條，賣了 🪙${td.earn.toLocaleString()}` : '今天還沒去市場賣魚', `我存了 🪙${Math.round(st.cash).toLocaleString()}`];
   if (R) L.push(`在存錢買「${R.name}」（🪙${R.price.toLocaleString()}），還差 🪙${Math.max(0, R.price + 300 - Math.round(st.cash)).toLocaleString()}`); else L.push('最好的竿子已經買到了，現在專心釣大魚');
@@ -24927,6 +24934,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u976', d:'11/28', items:[['🎂','阿萬（5/31）、阿默（11/26）、阿穎（9/10）生日那天會戴派對帽、跟你說今天生日，進遊戲也會提醒你']] },
   { id:'u975', d:'11/28', items:[['🌙','畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息，老闆回家了；釣具店、魚市場、食堂、博物館照常開'], ['💰','阿潮、小溪、阿蘭會真的賺錢了：每天三趟把釣到的魚走去魚市場賣，錢存起來換新釣竿、買新衣服、買誘餌打窩，偶爾坐潮搭Go 去吃宵夜。錢只從賣魚來，跟他們聊天會說今天賺多少、在存錢買什麼'], ['🚕','潮搭Go 的司機改名叫阿萬']] },
   { id:'u974', d:'11/28', items:[['🐢','商店街新開一間「慢慢烏龜屋」，老闆是龜博士：照顧小烏龜的事都在這裡做。店裡有曬背燈和水槽，下雨天、沒回小島也能曬太陽、換水；門口的小缸裡有三隻烏龜在曬太陽']] },
   { id:'u973', d:'11/28', items:[['🐠','水族館的玻璃變成活的：水會有光在晃，魚群和海龜、魟魚的影子會繞著塔慢慢游'], ['⛲','水族館門口的兩個小噴水池拿掉了，不會再走進水池裡']] },
