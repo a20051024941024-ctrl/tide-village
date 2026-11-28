@@ -2922,3 +2922,15 @@ body.scoping #labels,body.scoping #photoUI{display:none!important}
 /* v1014 檢舉按鈕看得出來；手機背景不要那麼藍 */
 .tbtn.vcrep,.tbtn.rpbtn{background:#fff1ee;color:#c8322a;border:1.5px solid #e8857a;font-weight:700}
 .ph-home.ph2{background:radial-gradient(120% 70% at 50% 0%,#5d5a73 0%,rgba(93,90,115,0) 70%),linear-gradient(180deg,#46435a 0%,#34313f 55%,#26242e 100%)}
+/* v1018 聯名活動週 */
+.cbtiers{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.cbrow{display:grid;grid-template-columns:52px 1fr auto;grid-template-rows:auto auto;align-items:center;gap:2px 8px;background:rgba(255,255,255,.55);border-radius:10px;padding:6px 8px}
+.cbrow .cbn{grid-row:1/3;font-weight:800;font-size:14px;color:#6a4a2a}
+.cbrow .cbl{font-size:13px;font-weight:700}
+.cbrow .tbtn{grid-row:1/3;grid-column:3;min-width:62px}
+.cbrow .cbbar{height:6px;border-radius:4px;background:rgba(0,0,0,.1);overflow:hidden}
+.cbrow .cbbar i{display:block;height:100%;background:linear-gradient(90deg,#ff7fb0,#ffd1e3)}
+.cbrow.got{opacity:.6}.cbrow.ok{box-shadow:0 0 0 2px #f2a6c2}
+.tag .nm.nfx-cying{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,#ff7fb0,#ffffff,#ffb3cf,#ffffff,#ff7fb0);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px #ff9ac4;background-size:100% 100%,200% 100%;animation:nfxSky 4s linear infinite}
+.tag .nm.nfx-cmo{background-image:linear-gradient(rgba(14,10,24,.92),rgba(14,10,24,.92)),linear-gradient(90deg,#3a1f7a,#8a5cff,#c7a8ff,#8a5cff,#3a1f7a);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px #8a5cff;background-size:100% 100%,200% 100%;animation:nfxSky 5s linear infinite}
+.tag .nm.nfx-cwan{background-image:linear-gradient(rgba(10,14,18,.92),rgba(10,14,18,.92)),linear-gradient(90deg,#16161a,#3ff0e0,#9ffcf2,#3ff0e0,#16161a);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px #3ff0e0;background-size:100% 100%,200% 100%;animation:nfxSky 3s linear infinite}
