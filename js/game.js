@@ -4864,8 +4864,8 @@ function seasonRodDraw(c, W, H, k){ const S = seasonOf(k); if (!S) return false;
   return true; }
 /* v990 阿穎：「最想要的就是可以裝逼，帥可以讓別人看到不一樣」→ 靠真的釣到、升級拿到的名牌框，會動、大家都看得到（presence nf） */
 const NFA = [['nfa_bronze', '🥉 銅浪名牌', '到 Lv.10', () => lvOf(calcXP()) >= 10], ['nfa_silver', '🥈 銀浪名牌', '到 Lv.20', () => lvOf(calcXP()) >= 20], ['nfa_gold', '🥇 金浪名牌', '到 Lv.30', () => lvOf(calcXP()) >= 30],
-  ['nfa_legend', '👑 傳說名牌', '釣到任何一條「傳說」的魚', () => Object.keys(rec.count || {}).some(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k] && FISH_BY_ID[k].rarity === '傳說')], ['nfa_rainbow', '🌈 虹彩名牌', '到 Lv.50', () => lvOf(calcXP()) >= 50]];
-const NFA_RE = /^nfa_(bronze|silver|gold|legend|rainbow)$/, NFF_RE = /^nfa_f_([a-z0-9_]{2,30})$/;   /* v992 作者：「名牌是要什麼魚就做什麼魚的嗎」→ 每一種傳說魚釣到都有自己顏色的名牌 */
+  ['nfa_legend', '👑 傳說名牌', '釣到任何一條「傳說」的魚', () => Object.keys(rec.count || {}).some(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k] && FISH_BY_ID[k].rarity === '傳說')], ['nfa_rainbow', '🌈 虹彩名牌', '到 Lv.50', () => lvOf(calcXP()) >= 50], ['nfa_sky', '🔭 天空名牌', '望遠鏡筆記集滿', () => SIGHT.every(x => scopeSeen()[x[0]])]];
+const NFA_RE = /^nfa_(bronze|silver|gold|legend|rainbow|sky)$/, NFF_RE = /^nfa_f_([a-z0-9_]{2,30})$/;   /* v992 作者：「名牌是要什麼魚就做什麼魚的嗎」→ 每一種傳說魚釣到都有自己顏色的名牌 */
 /* v993 甩竿特效（阿穎：「特效」）：浮標飛出去後面拖一道光，落水時炸開一圈。靠等級、傳說魚拿，大家都看得到（presence cf） */
 const CFX = { fx_spark: ['✨ 星光', '到 Lv.10', ['#fff6c8', '#ffe066'], () => lvOf(calcXP()) >= 10], fx_blue: ['💧 水光', '到 Lv.20', ['#9fe4ff', '#3fa9f5'], () => lvOf(calcXP()) >= 20], fx_gold: ['🌟 金光', '到 Lv.30', ['#ffd34a', '#ffb000'], () => lvOf(calcXP()) >= 30],
   fx_legend: ['💜 傳說紫焰', '釣到任何一條傳說魚', ['#d38cff', '#ff4fd8'], () => myFishPlates().length > 0], fx_rainbow: ['🌈 彩虹', '到 Lv.50', ['#ff5a5a', '#ffd34a', '#4fd88a', '#4fb3ff', '#b56bff'], () => lvOf(calcXP()) >= 50] };
@@ -7570,7 +7570,7 @@ function lerpAngle(a, b, k){ let d = ((b - a + Math.PI) % (Math.PI*2)); if (d < 
 
 const reelCam = { k:0, y0:null, pos:new THREE.Vector3(), look:new THREE.Vector3() };
 const camLook = new THREE.Vector3();
-function updateCamera(dt){ if (window.__camOv){ const o = window.__camOv; camera.position.set(o.p[0], o.p[1], o.p[2]); camLook.set(o.l[0], o.l[1], o.l[2]); camera.lookAt(camLook); return; }   /* 拍大看板短片用：鏡頭直接擺在指定位置 */ camInertia(dt); if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (FB.on && FB.top && House.on && furnCam(dt)) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (watchCam(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
+function updateCamera(dt){ if (window.__camOv){ const o = window.__camOv; camera.position.set(o.p[0], o.p[1], o.p[2]); camLook.set(o.l[0], o.l[1], o.l[2]); camera.lookAt(camLook); return; }   /* 拍大看板短片用：鏡頭直接擺在指定位置 */ if (Scope.on){ scopeCam(dt); return; } camInertia(dt); if (typeof Sub !== 'undefined' && Sub && Sub.cine && subCineCam()) return; if (Pool.on && poolCam()) return; if (FB.on && FB.top && House.on && furnCam(dt)) return; if (Pool.upDirty){ camera.up.set(0, 1, 0); Pool.upDirty = false; } if (fpTick(dt)) return; if (watchCam(dt)) return; if (cam.pitch < camLimits().pmin - 0.01 && !Photo.on && !House.on && !inIndoor() && !(Dive.on && Dive.fp)) cam.pitch = 0.3; updateCamera2(dt); if (SKI.built && (SKI.on || SKI.lift || mtnOn(me.pos.x, me.pos.z, 8))){ const c = camera.position, gh = mtnH(c.x, c.z); if (gh !== null && c.y < gh + 0.9){ c.y = gh + 0.9; camera.lookAt(camLook); } }   /* v548 雪松山：鏡頭在人的上坡那一邊，不要鑽進雪裡 */ if (inPoolHall()){ const c = camera.position; if (c.y < POOLH.y + 0.5){ c.y = POOLH.y + 0.5; camera.lookAt(camLook); } } else if (inHall()){ const S = SHRIMP, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.1); camera.lookAt(camLook); } else if (inCafe()){ const S = CAFE, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 3.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 5, camLook.z); } else if (inMuseum()){ const S = MUSEUM, c = camera.position; c.x = clamp(c.x, S.x - S.w / 2 + 0.4, S.x + S.w / 2 - 0.4); c.z = clamp(c.z, S.z - S.d / 2 + 0.4, S.z + S.d / 2 - 0.4); c.y = clamp(c.y, S.y + 0.6, S.y + 4.2); camera.lookAt(camLook.x, camLook.y + Math.max(0, -cam.pitch) * 7, camLook.z); } }   /* 被牆擋住拉回來以後要重新對準角色，不然手機上會一直抖 */
 /* v197：鏡頭不鑽進地形、不鑽進樹冠（苔森之島的山坡和杉樹會讓畫面整片綠）：從鏡頭位置往角色方向一步一步拉近，直到乾淨為止 */
 const CamK = { k:1 }, BigCols = [];   /* 鏡頭拉近的比例，慢慢變才不會忽遠忽近 */
 /* v608 作者：「很多地方其實都會被樹擋視野，就算換了方向還是會被房子擋」→ 擋在鏡頭和你中間的樹、房子、牆變半透明（像很多第三人稱遊戲）。
@@ -8343,6 +8343,120 @@ function landFish(){
   else if (fpc && FP.c && FP.c.fl) FP.c.fl.fin = fin;   /* v837 第一人稱也一樣：魚甩到地上跳，低頭看牠，跳完撿起來才跳卡片 */
   else setTimeout(fin, fpc ? 3600 : 900);   /* v638 釣到稀有、傳說或 20kg 以上的大魚：雙手把魚舉過頭歡呼；普通的小魚就只是拿著 */   /* 第一人稱多等一下：先看魚掛在線上、拿到手上，才跳卡片 */
 }
+/* ===== v1008 望遠鏡（作者 11/28：影片裡用望遠鏡看風景被嚇一跳 →「望遠鏡可以用，也可以變成要買」「固定的話也沒東西看」）=====
+   釣具店「🧰工具」買（🪙1,200，伺服器 264 buy_tool），走到哪都能從手機或背包拿出來看。畫面變成兩個圓的望遠鏡視野，拖曳轉方向、＋－拉近。
+   看的時候遠方會出現「稀奇的景象」（海豚跳水、鯨魚噴水、海鳥排隊回家、流星、霧裡的燈籠船…），出現的時間和天氣都不一樣；
+   對準看一下就記進「望遠鏡筆記」，第一次看到跳「📖 新發現」，十一種集滿拿「🔭 天空名牌」。偶爾會被嚇一跳：海鷗啪一聲貼上鏡頭、魚剛好跳起來擋住。
+   景象只有拿著望遠鏡的人自己看得到（別人看你就是拿著望遠鏡站著）。筆記存在這支手機。 */
+const SCOPE_ID = 'tool_scope', SCOPE_PRICE = 1200;
+const Scope = { on: false, yaw: 0, pitch: 0, fov: 22, fov0: 55, cur: null, nextAt: 0, hold: 0, ptrs: new Map(), pinch: 0, boo: null, booAt: 0, el: null, msg: null };
+function scopeHas(){ return (rec.owned || []).includes(SCOPE_ID); }
+function scopeSeen(){ return LS.get('tide.scopeSeen', {}) || {}; }
+const scWx = () => { try { return Env.wx; } catch(e){ return 'sunny'; } }, scH = () => gameHour(), scDay = () => scH() >= 6.5 && scH() < 17.8, scWet = () => { const W = WEATHERS[scWx()] || {}; return W.rain > 0 || !!W.storm; };
+const SIGHT = [
+  ['dolphin', '🐬', '海豚群跳出水面', '白天、天氣不壞的時候', () => scDay() && !scWet()],
+  ['whale', '🐋', '鯨魚噴水', '早上到傍晚', () => scH() >= 6 && scH() < 19.5 && scWx() !== 'storm'],
+  ['orca', '🖤', '虎鯨的背鰭', '白天，比較少見', () => scDay() && Math.random() < 0.6],
+  ['turtle', '🐢', '海龜浮上來換氣', '白天', () => scDay()],
+  ['flyingfish', '🐟', '飛魚滑過水面', '晴朗的白天', () => scDay() && !scWet()],
+  ['sunfish', '🌞', '翻車魚躺在海面曬太陽', '大晴天', () => scDay() && scWx() === 'sunny'],
+  ['birdline', '🐦', '海鳥排成一排飛回家', '傍晚 4 點半到 7 點半', () => scH() >= 16.5 && scH() < 19.5 && !scWet()],
+  ['fishboat', '🚤', '漁船亮燈出港', '晚上', () => scH() >= 18 || scH() < 4.5],
+  ['rainbow', '🌈', '海上的彩虹', '下雨天、多雲、颱風過後的白天', () => scDay() && ['rain', 'cloudy', 'typost'].includes(scWx())],
+  ['meteor', '🌠', '流星劃過去', '不下雨的晚上', () => (scH() >= 20 || scH() < 4.5) && !scWet() && scWx() !== 'fog'],
+  ['ghost', '🏮', '霧裡飄過的燈籠船', '起霧的時候，或半夜', () => scWx() === 'fog' || scH() >= 23 || scH() < 2.5] ];
+const SIGHT_BY = Object.fromEntries(SIGHT.map(s => [s[0], s]));
+function scopeOpen(){ if (!scopeHas()){ toast('釣具店「🧰工具」有賣 🔭 望遠鏡'); return; } if (Scope.on) return;
+  if (F.phase !== 'idle'){ toast('先把竿子收起來再看'); return; } if (Dive.on || inIndoor() || House.on || (typeof Sub !== 'undefined' && Sub.on)){ toast('這裡看不到外面'); return; }
+  try { closeSheet(); } catch(e){} ensureAudio(); Scope.on = true; Scope.yaw = me.rot; Scope.pitch = 0.03; Scope.fov = 22; Scope.fov0 = camera.fov; Scope.nextAt = now() + 2.2; Scope.hold = 0;
+  uiBlocked = true; for (const k in keys) keys[k] = false; joy.x = joy.z = 0; document.body.classList.add('photo', 'nonames', 'scoping');
+  Scope.booAt = Math.random() < 1 / 6 ? now() + rand(2.5, 6) : 0;
+  const E = el('div', 'scopev'); E.id = 'scopeV'; const cv = el('canvas', 'scope-mask'); E.appendChild(cv); Scope.msg = el('div', 'scope-msg'); E.appendChild(Scope.msg);
+  const bar = el('div', 'scope-bar'); const mk = (t, fn, cls) => { const b = el('button', 'tbtn' + (cls ? ' ' + cls : ''), t); b.addEventListener('pointerdown', e => e.stopPropagation()); b.addEventListener('click', e => { e.stopPropagation(); SFX.click(); fn(); }); bar.appendChild(b); return b; };
+  mk('－', () => { Scope.fov = clamp(Scope.fov * 1.4, 7, 40); }, 'ghost'); mk('＋', () => { Scope.fov = clamp(Scope.fov / 1.4, 7, 40); }, 'ghost'); mk('📖 筆記', () => scopeBook(), 'ghost'); mk('✕ 收起來', () => scopeClose());
+  E.appendChild(bar); E.appendChild(el('div', 'scope-hint', '手指拖曳看四周，＋ 拉近。遠方偶爾會出現稀奇的東西')); document.body.appendChild(E); Scope.el = E; scopeMask(cv);
+  E.addEventListener('pointerdown', e => { Scope.ptrs.set(e.pointerId, [e.clientX, e.clientY]); try { E.setPointerCapture(e.pointerId); } catch(_){} Scope.pinch = 0; });
+  E.addEventListener('pointermove', e => { const p = Scope.ptrs.get(e.pointerId); if (!p) return; const dx = e.clientX - p[0], dy = e.clientY - p[1]; Scope.ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (Scope.ptrs.size >= 2){ const [a, b] = [...Scope.ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (Scope.pinch) Scope.fov = clamp(Scope.fov * Scope.pinch / Math.max(20, d), 7, 40); Scope.pinch = d; return; }
+    const k = 0.0042 * Scope.fov / 22; Scope.yaw += dx * k; Scope.pitch = clamp(Scope.pitch + dy * k, -0.45, 0.6); });
+  const up = e => { Scope.ptrs.delete(e.pointerId); Scope.pinch = 0; }; E.addEventListener('pointerup', up); E.addEventListener('pointercancel', up);
+  E.addEventListener('wheel', e => { e.preventDefault(); Scope.fov = clamp(Scope.fov * (e.deltaY > 0 ? 1.15 : 1 / 1.15), 7, 40); }, { passive: false });
+  try { pushPresence(true); } catch(e){} }
+function scopeMask(cv){ const W = cv.width = innerWidth, H = cv.height = innerHeight, c = cv.getContext('2d'), r = Math.min(H * 0.47, W * 0.26), cx = W / 2, cy = H / 2, off = r * 0.78;
+  c.fillStyle = '#05080c'; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'destination-out';
+  for (const sx of [-1, 1]){ const g = c.createRadialGradient(cx + sx * off, cy, r * 0.82, cx + sx * off, cy, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.beginPath(); c.arc(cx + sx * off, cy, r, 0, Math.PI * 2); c.fill(); }
+  c.globalCompositeOperation = 'source-over'; }
+function scopeClose(){ if (!Scope.on) return; Scope.on = false; if (Scope.el){ Scope.el.remove(); Scope.el = null; } document.body.classList.remove('photo', 'nonames', 'scoping'); me.av.g.visible = true;
+  camera.fov = Scope.fov0 || 55; camera.updateProjectionMatrix(); scopeDrop(); if (Scope.boo){ scene.remove(Scope.boo.g); Scope.boo = null; } Scope.ptrs.clear();
+  uiBlocked = !$('#sheet').hidden || !$('#catchCard').hidden; cam.yaw = Scope.yaw + Math.PI; try { pushPresence(true); } catch(e){} }
+function scopeDir(){ const c = Math.cos(Scope.pitch); return new THREE.Vector3(Math.sin(Scope.yaw) * c, Math.sin(Scope.pitch), Math.cos(Scope.yaw) * c); }
+function scopeCam(dt){ const d = scopeDir(), e = new THREE.Vector3(me.pos.x + d.x * 0.45, me.pos.y + (me.av.kid ? 1.35 : 1.6), me.pos.z + d.z * 0.45);
+  camera.position.copy(e); camLook.copy(e).addScaledVector(d, 10); camera.lookAt(camLook); me.rot = Scope.yaw; me.av.g.rotation.y = Scope.yaw; me.av.g.visible = false;
+  const f = camera.fov + (Scope.fov - camera.fov) * Math.min(1, dt * 8); if (Math.abs(f - camera.fov) > 0.01){ camera.fov = f; camera.updateProjectionMatrix(); } }
+function scopeSay(html, secs){ if (!Scope.msg) return; Scope.msg.innerHTML = html; Scope.msg.classList.remove('on'); void Scope.msg.offsetWidth; Scope.msg.classList.add('on'); clearTimeout(scopeSay.t); scopeSay.t = setTimeout(() => Scope.msg && Scope.msg.classList.remove('on'), (secs || 3) * 1000); }
+/* 景象：放在你現在看的方向左右一點點，要自己轉一下才找得到 */
+function scopeSpot(water, dmin, dmax){ for (let i = 0; i < 16; i++){ const a = Scope.yaw + rand(-1.0, 1.0), d = rand(dmin, dmax), x = me.pos.x + Math.sin(a) * d, z = me.pos.z + Math.cos(a) * d; if (!water || (waterAt(x, z) && waterAt(x + 4, z) && waterAt(x - 4, z) && waterAt(x, z + 4) && waterAt(x, z - 4))) return { x, z, a }; } return null; }
+function scFish(id, sc){ try { const f = FISH_BY_ID[id]; if (f) return fishModel(f, sc); } catch(e){} return makeFish('#556677', sc); }
+function scDyn(g){ g.traverse(o => { o.userData.dyn = true; o.frustumCulled = false; }); return g; }
+function scopeBuild(id){ const W = WATER_LEVEL, g = new THREE.Group(); let p = null; const R = { id, g, t: 0, dur: 11, c: new THREE.Vector3(), tick: null };
+  const sea = (a, b) => (p = scopeSpot(true, a, b)), hd = rand(0, Math.PI * 2);
+  if (id === 'dolphin'){ if (!sea(45, 100)) return null; const L = []; for (let i = 0; i < 3; i++){ const m = scFish('dolphin', 1.6); const w = new THREE.Group(); w.add(m); w.position.set((i - 1) * 2.2, 0, i * 1.4); g.add(w); L.push(w); } g.rotation.y = hd;
+    R.tick = t => { L.forEach((w, i) => { const s = (t * 0.55 + i * 0.3) % 1.4; if (s < 1){ w.position.y = Math.sin(s * Math.PI) * 2.4 - 0.4; w.children[0].rotation.z = Math.cos(s * Math.PI) * 0.8; w.position.x = (i - 1) * 2.2 + (s - 0.5) * 6; w.visible = true; } else w.visible = false; }); R.c.set(p.x, W + 1, p.z); }; }
+  else if (id === 'whale'){ if (!sea(60, 110)) return null; const m = scFish('whale', 8); g.add(m); g.rotation.y = hd; const sp = new THREE.Mesh(new THREE.ConeGeometry(1.3, 5, 12), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85, depthWrite: false })); sp.rotation.x = Math.PI; sp.position.set(1.5, 2.5, 0); g.add(sp);
+    R.tick = t => { m.position.y = -1.6 + Math.min(1, t / 2) * 0.9 - Math.max(0, t - 9) * 0.6; const k = (t % 3.2) / 3.2; sp.scale.set(0.4 + k, Math.min(1, k * 3), 0.4 + k); sp.material.opacity = 0.8 * (1 - k); sp.position.y = 0.6 + k * 3.4; R.c.set(p.x, W + 1.5, p.z); }; R.dur = 12; }
+  else if (id === 'orca'){ if (!sea(45, 100)) return null; const L = []; for (let i = 0; i < 2; i++){ const w = new THREE.Group(); w.add(scFish('orca', 3.2)); w.position.z = i * 3; g.add(w); L.push(w); } g.rotation.y = hd;
+    R.tick = t => { L.forEach((w, i) => { const s = (t * 0.3 + i * 0.4) % 1.2; w.position.y = s < 1 ? Math.sin(s * Math.PI) * 0.9 - 0.8 : -2; w.children[0].rotation.z = s < 1 ? Math.cos(s * Math.PI) * 0.35 : 0; w.position.x = t * 1.2 - 6; }); R.c.set(p.x, W + 0.3, p.z); }; }
+  else if (id === 'turtle'){ if (!sea(35, 80)) return null; const m = scFish('turtle', 1.5); g.add(m); g.rotation.y = hd; R.tick = t => { m.position.y = -0.25 + Math.max(0, Math.sin(t * 0.9)) * 0.3; m.rotation.z = Math.sin(t * 0.9) * 0.25; R.c.set(p.x, W, p.z); }; }
+  else if (id === 'flyingfish'){ if (!sea(40, 90)) return null; const L = []; for (let i = 0; i < 4; i++){ const m = scFish('flyingfish', 1.0); m.position.set(-i * 1.3, 0, (i % 2 ? 1 : -1) * i * 0.7); g.add(m); L.push(m); } g.rotation.y = hd;
+    R.tick = t => { L.forEach((m, i) => { const s = (t * 0.4 + i * 0.12) % 1.3; m.visible = s < 1; m.position.x = -10 + s * 20 - i * 1.3; m.position.y = s < 1 ? Math.sin(s * Math.PI) * 1.1 + 0.1 : -1; }); R.c.set(p.x, W + 0.8, p.z); }; }
+  else if (id === 'sunfish'){ if (!sea(35, 80)) return null; const m = scFish('sunfish', 2.4); m.rotation.x = Math.PI / 2; g.add(m); g.rotation.y = hd; R.tick = t => { m.position.y = 0.05; m.rotation.y = Math.sin(t * 0.6) * 0.2; m.rotation.x = Math.PI / 2 + Math.sin(t * 1.3) * 0.08; R.c.set(p.x, W, p.z); }; R.dur = 14; }
+  else if (id === 'birdline'){ p = scopeSpot(false, 60, 90); if (!p) return null; const L = []; for (let i = 0; i < 9; i++){ const b = flkBird('#f4f4f2', 4); const r = Math.ceil(i / 2), sd = i % 2 ? 1 : -1; b.position.set(sd * r * 1.6, 0, -r * 1.6); g.add(b); L.push(b); } g.rotation.y = Scope.yaw + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1);
+    R.tick = t => { const d = new THREE.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y)); g.position.set(p.x + d.x * (t - 6) * 4, W + 14 + Math.sin(t * 0.5), p.z + d.z * (t - 6) * 4); L.forEach((b, i) => { const fl = Math.sin(t * 7 + i) * 0.6; if (b.children[1]) b.children[1].rotation.z = fl; if (b.children[2]) b.children[2].rotation.z = -fl; }); R.c.copy(g.position); return true; }; R.dur = 13; }
+  else if (id === 'fishboat'){ if (!sea(55, 110)) return null; const hm = new THREE.MeshLambertMaterial({ color: '#e8e4da' }), dk = new THREE.MeshLambertMaterial({ color: '#2c5a8a' });
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.9, 1.5), dk); hull.position.y = 0.3; g.add(hull); const cab = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 1.2), hm); cab.position.set(-0.6, 1.3, 0); g.add(cab);
+    const lt = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), new THREE.MeshBasicMaterial({ color: '#fff2a8' })); lt.position.set(-0.6, 2.2, 0); g.add(lt); const fr = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffd36a' })); fr.position.set(2, 0.9, 0); g.add(fr);
+    for (let i = 0; i < 5; i++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 5), new THREE.MeshBasicMaterial({ color: ['#ff6a5a', '#ffd34a', '#7ad8ff'][i % 3] })); b.position.set(-1.8 + i * 0.75, 1.9 - Math.abs(i - 2) * 0.25, 0); g.add(b); }
+    g.rotation.y = hd; R.tick = t => { const d = new THREE.Vector3(Math.cos(hd), 0, -Math.sin(hd)); g.position.set(p.x + d.x * (t - 6) * 1.6, W + Math.sin(t * 1.4) * 0.12, p.z + d.z * (t - 6) * 1.6); g.rotation.z = Math.sin(t * 1.1) * 0.05; lt.scale.setScalar(1 + Math.sin(t * 6) * 0.15); R.c.copy(g.position).y += 1; return true; }; R.dur = 13; }
+  else if (id === 'rainbow'){ p = scopeSpot(false, 150, 160); if (!p) return null; const C = ['#ff5a5a', '#ff9a3c', '#ffe04a', '#5fd86a', '#4fb3ff', '#5a6aff', '#b56bff'];
+    C.forEach((c, i) => { const m = new THREE.Mesh(new THREE.TorusGeometry(42 - i * 1.6, 0.85, 6, 48, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0, depthWrite: false, fog: false })); g.add(m); }); g.rotation.y = p.a;
+    R.tick = t => { const o = Math.min(1, t / 2.5, (R.dur - t) / 2.5) * 0.4; g.children.forEach(m => m.material.opacity = o); g.position.set(p.x, W - 4, p.z); R.c.set(p.x, W + 30, p.z); return true; }; R.dur = 16; }
+  else if (id === 'meteor'){ p = scopeSpot(false, 140, 150); if (!p) return null; const m = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.5, 18, 6, 1, true), new THREE.MeshBasicMaterial({ color: '#fffbe0', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.rotation.z = 1.1; g.add(m);
+    const side = new THREE.Vector3(Math.cos(p.a), 0, -Math.sin(p.a)); R.tick = t => { const s = (t % 3.4) / 1.1; m.visible = s < 1; const k = Math.min(s, 1); g.position.set(p.x + side.x * (k * 40 - 20), 70 - k * 22, p.z + side.z * (k * 40 - 20)); g.rotation.y = p.a; m.material.opacity = 0.9 * Math.sin(k * Math.PI); R.c.set(p.x, 60, p.z); return true; }; R.dur = 10; }
+  else if (id === 'ghost'){ if (!sea(40, 70)) return null; const gm = new THREE.MeshBasicMaterial({ color: '#cfe8e0', transparent: true, opacity: 0.35, depthWrite: false });
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(5, 1.2, 1.8), gm); hull.position.y = 0.5; g.add(hull); const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 5, 6), gm); mast.position.y = 3; g.add(mast);
+    const sail = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 3), new THREE.MeshBasicMaterial({ color: '#e8f4ee', transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false })); sail.position.set(0, 3.2, 0); sail.rotation.y = Math.PI / 2; g.add(sail);
+    const lans = []; for (let i = 0; i < 3; i++){ const l = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: '#ff7a3a', transparent: true })); l.position.set(-1.8 + i * 1.8, 1.6, 0.95); g.add(l); lans.push(l); }
+    g.rotation.y = hd; R.tick = t => { const d = new THREE.Vector3(Math.cos(hd), 0, -Math.sin(hd)); g.position.set(p.x + d.x * (t - 7) * 0.8, W + 0.1 + Math.sin(t) * 0.1, p.z + d.z * (t - 7) * 0.8); const o = Math.min(1, t / 3, (R.dur - t) / 3);
+      hull.material.opacity = 0.35 * o; sail.material.opacity = 0.25 * o; lans.forEach((l, i) => l.material.opacity = o * (0.6 + 0.4 * Math.sin(t * 5 + i * 2))); R.c.copy(g.position).y += 1.5; return true; }; R.dur = 14; }
+  if (!R.tick) return null; if (p) g.position.set(p.x, W, p.z); scene.add(scDyn(g)); return R; }
+function scopeDrop(){ const R = Scope.cur; if (!R) return; scene.remove(R.g); R.g.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); Scope.cur = null; }
+function scopePick(){ const seen = scopeSeen(), ok = SIGHT.filter(s => { try { return s[4](); } catch(e){ return false; } }); if (!ok.length) return null;
+  const fresh = ok.filter(s => !seen[s[0]]), L = fresh.length && Math.random() < 0.7 ? fresh : ok; return L[Math.floor(Math.random() * L.length)][0]; }
+function scopeTick(dt){ if (!Scope.on) return; const t = now(), R = Scope.cur;
+  if (!R && t > Scope.nextAt){ const id = scopePick(); Scope.cur = id ? scopeBuild(id) : null; Scope.nextAt = t + (Scope.cur ? 0 : 4); Scope.hold = 0; }
+  if (R){ R.t += dt; const own = R.tick(R.t); if (!own && R.t < 0.05) R.g.position.y = WATER_LEVEL;
+    if (R.t > R.dur){ scopeDrop(); Scope.nextAt = t + rand(3, 7); }
+    else { const v = R.c.clone().sub(camera.position), d = v.length(), dir = scopeDir(), ang = Math.acos(clamp(v.normalize().dot(dir), -1, 1)), lim = THREE.MathUtils.degToRad(Scope.fov) * 0.42;
+      if (ang < lim && d < 190){ Scope.hold += dt; if (Scope.hold > 0.6 && !R.done){ R.done = true; scopeGot(R.id); } } else Scope.hold = Math.max(0, Scope.hold - dt * 0.5); } }
+  if (Scope.booAt && t > Scope.booAt){ Scope.booAt = 0; scopeBoo(); }
+  if (Scope.boo){ const B = Scope.boo; B.t += dt; B.tick(B.t); if (B.t > B.dur){ scene.remove(B.g); Scope.boo = null; } } }
+function scopeGot(id){ const S = SIGHT_BY[id], seen = scopeSeen(), fresh = !seen[id]; seen[id] = (seen[id] || 0) + 1; LS.set('tide.scopeSeen', seen);
+  if (fresh){ SFX.fanfare && SFX.fanfare(2); buzz([40, 30, 90]); const n = SIGHT.filter(s => seen[s[0]]).length; scopeSay(`<b>📖 新發現！</b>${S[1]} ${esc(S[2])}<small>望遠鏡筆記 ${n} / ${SIGHT.length}</small>`, 4);
+    if (n === SIGHT.length){ setTimeout(() => scopeSay('<b>🔭 筆記集滿了！</b>拿到「天空名牌」，點左上角等級 →「名牌框」換上', 5), 4200); } }
+  else { SFX.click(); scopeSay(`${S[1]} 又看到${esc(S[2])}了（第 ${seen[id]} 次）`, 2.4); } }
+/* 嚇一跳：海鷗衝過來啪一聲貼在鏡頭上、或一條魚剛好在眼前跳起來 */
+function scopeBoo(){ const d = scopeDir(), g = new THREE.Group(), B = { g, t: 0, dur: 1.8 };
+  if (Math.random() < 0.6){ const b = flkBird('#f4f4f2', 1.4); g.add(b); const side = new THREE.Vector3(Math.cos(Scope.yaw), 0, -Math.sin(Scope.yaw));
+    B.tick = t => { const e = camera.position, k = Math.min(1, t / 0.35); g.position.copy(e).addScaledVector(d, 0.55 + (1 - k) * 6).addScaledVector(side, (1 - k) * 3).y += 0.02 - (t > 1.1 ? (t - 1.1) * 3 : 0); g.lookAt(e); const fl = Math.sin(t * 30) * (t < 0.35 ? 0.9 : 0.15); if (b.children[1]) b.children[1].rotation.z = fl; if (b.children[2]) b.children[2].rotation.z = -fl;
+      if (t > 0.35 && !B.hit){ B.hit = true; try { SFX.gull(); noise(0.08, 0.2, 1800, 500, 1.2); } catch(e){} buzz(60); scopeSay('啪！海鷗貼上來了', 1.6); } }; B.dur = 1.9; }
+  else { const ids = FISH.filter(f => f.rarity === '常見' && !f.of), f = ids[Math.floor(Math.random() * ids.length)], m = fishModel(f, 1.2); g.add(m); const at = camera.position.clone().addScaledVector(d, 2.6); at.y = WATER_LEVEL;
+    B.tick = t => { const s = Math.min(1, t / 1.1); g.position.set(at.x, WATER_LEVEL + Math.sin(s * Math.PI) * (camera.position.y - WATER_LEVEL + 0.2), at.z); m.rotation.z = Math.cos(s * Math.PI) * 1.2; g.rotation.y = Scope.yaw + Math.PI / 2; if (t > 0.45 && !B.hit){ B.hit = true; try { SFX.splash(true); } catch(e){} scopeSay(`嚇！${esc(f.name)}跳起來擋住了`, 1.6); } }; B.dur = 1.3; }
+  scene.add(scDyn(g)); Scope.boo = B; }
+function scopeBook(){ const seen = scopeSeen(), n = SIGHT.filter(s => seen[s[0]]).length; let P = $('#scopeBook'); if (P){ P.remove(); return; }
+  P = el('div', 'scopebook panel'); P.id = 'scopeBook'; P.addEventListener('pointerdown', e => e.stopPropagation()); P.appendChild(el('h3', '', `📖 望遠鏡筆記 ${n} / ${SIGHT.length}`));
+  const ul = el('ul', ''); for (const [id, ic, nm, when] of SIGHT){ const li = el('li', seen[id] ? 'on' : ''); li.appendChild(el('span', 'ic', seen[id] ? ic : '❔')); const d = el('div', ''); d.appendChild(el('b', '', seen[id] ? nm : '？？？')); d.appendChild(el('small', '', seen[id] ? `看過 ${seen[id]} 次` : `提示：${when}`)); li.appendChild(d); ul.appendChild(li); }
+  P.appendChild(ul); P.appendChild(el('p', 'sub', n >= SIGHT.length ? '🔭 集滿了！天空名牌已經可以用' : '全部看過一次，拿「🔭 天空名牌」')); const x = el('button', 'tbtn', '關掉'); x.addEventListener('click', e => { e.stopPropagation(); P.remove(); }); P.appendChild(x); (Scope.el || document.body).appendChild(P); }
+addEventListener('resize', () => { try { if (Scope.el) scopeMask(Scope.el.querySelector('canvas')); } catch(e){} });
 const jumpers = [];
 /* ===== v1006 釣到魚那一刻（研究清單第 1 項）=====
    稀有、傳說的魚拉出水：畫面慢動作一下、鏡頭往人和魚推近，落地的地方冒出一圈稀有度顏色的光（稀有藍、傳說金），稀有魚還有一道藍色光柱，配一串亮亮的音。
@@ -15791,7 +15905,7 @@ async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.for
     const i = free++, x = ISLE.x + 3 + (i % 3) * 1.5, z = ISLE.z + 4 + Math.floor(i / 3) * 1.2; pt.pos.set(x, groundHeight(x, z), z); pt.wander = { x, z, at: 0 }; return pt; }); }
 function penSpot(it){ const A = PEN_AREA[it.t], u = (Math.random() * 2 - 1) * A.hx, v = (Math.random() * 2 - 1) * A.hz, c = Math.cos(it.r), s = Math.sin(it.r);
   return { x: ISLE.x + it.x + u * c + v * s, z: ISLE.z + it.z - u * s + v * c, y: ISLE.y + A.y }; }
-function updatePets(dt, t){ try { if (Pillars.length) pillarTick(dt); } catch(e){} try { if (RarFx.length) rarFxTick(dt); } catch(e){ RarFx.length = 0; } try { if (Slap.list.length) slapTick(dt); } catch(e){ console.warn('slap', e); Slap.list.length = 0; } try { shopHallTick(dt, t); } catch(e){ if (!shopHallTick.w){ shopHallTick.w = 1; console.warn('shophall', e); } }
+function updatePets(dt, t){ try { if (Pillars.length) pillarTick(dt); } catch(e){} try { if (RarFx.length) rarFxTick(dt); } catch(e){ RarFx.length = 0; } try { if (Scope.on) scopeTick(dt); } catch(e){ if (!scopeTick.w){ scopeTick.w = 1; console.warn('scope', e); } } try { if (Slap.list.length) slapTick(dt); } catch(e){ console.warn('slap', e); Slap.list.length = 0; } try { shopHallTick(dt, t); } catch(e){ if (!shopHallTick.w){ shopHallTick.w = 1; console.warn('shophall', e); } }
   updatePetFor(me, petMine(), dt, t);
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
@@ -19911,6 +20025,7 @@ function fkPeersTick(t){ for (const p of peers.values()){ const g = p.fisher.fkG
 function fkRingG(g, t){ if (!g.userData.rod) return; const k = Math.sin(t * 38) * 0.06; g.userData.rod.rotation.z = k; }
 /* 背包「🎣 釣組」 */
 function renderFkit(body){ const own = FKIT.filter(k => fkHas(k.id));
+  if (scopeHas()){ const n = SIGHT.filter(x => scopeSeen()[x[0]]).length, r = el('div', 'tacts'); r.style.margin = '0 0 10px'; const b = el('button', 'tbtn', '🔭 拿出望遠鏡'); b.addEventListener('click', () => scopeOpen()); const bk = el('button', 'tbtn ghost', `📖 望遠鏡筆記 ${n}/${SIGHT.length}`); bk.addEventListener('click', () => { closeSheet(); scopeBook(); }); r.append(b, bk); body.appendChild(r); }
   body.appendChild(el('p', 'sub', '走到水邊、面向水按「擺出來」，就會擺在岸邊讓你坐下；走開 15 公尺會自己收起來。'));
   if (!own.length){ body.appendChild(el('div', 'empty', '還沒有釣魚裝備。到釣具店「🧰工具」先買一張 🪑 摺疊椅吧！')); return; }
   const ul = el('ul', 'shoplist'); for (const k of own){ const li = el('li', FK.set ? 'on' : ''); li.appendChild(el('span', 'dishic', k.icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', k.name)); d.appendChild(el('div', 'meta', k.desc)); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul);
@@ -19929,7 +20044,15 @@ function renderFkitShop(body){ body.appendChild(el('div', 'dexhead', '🎣 釣�
       if (Cloud.on){ b.disabled = true; const row = await cloudCall('buy_tool', { p_tool: k.id }); if (row) done(); renderTab(); return; }
       rec.owned.push(k.id); addCoins(-k.price); saveRecLocal(); done(); renderTab(); });
     li.appendChild(b); ul.appendChild(li); }
-  body.appendChild(ul); }
+  body.appendChild(ul);
+  { body.appendChild(el('div', 'dexhead', '🔭 望遠鏡（放在背包「🎣 釣組」，手機上也有）')); const ul2 = el('ul', 'shoplist'), own = scopeHas(), li = el('li', own ? 'on' : ''); li.appendChild(el('span', 'dishic', '🔭'));
+    const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', '望遠鏡')); d.appendChild(el('div', 'meta', '走到哪都能拿出來看遠方：拉近、轉方向。海豚、鯨魚、流星、霧裡的燈籠船…不同時間和天氣會看到不同的東西，看到就記進筆記。')); li.appendChild(d);
+    const b = el('button', 'tbtn' + (own ? ' ghost' : ''), own ? '已經有了' : `買 🪙${SCOPE_PRICE.toLocaleString()}`); b.disabled = own;
+    b.addEventListener('click', async () => { if (rec.coins < SCOPE_PRICE){ toast(`金幣不夠，還差 🪙${(SCOPE_PRICE - rec.coins).toLocaleString()}`); return; }
+      const done = () => { SFX.catch(); toast('買到了 🔭<b>望遠鏡</b>。手機或背包「🎣 釣組」都能拿出來看'); };
+      if (Cloud.on){ b.disabled = true; const row = await cloudCall('buy_tool', { p_tool: SCOPE_ID }); if (row) done(); renderTab(); return; }
+      rec.owned.push(SCOPE_ID); addCoins(-SCOPE_PRICE); saveRecLocal(); done(); renderTab(); });
+    li.appendChild(b); ul2.appendChild(li); body.appendChild(ul2); } }
 function renderShop(body){
   if (shopMode === 'sell' && shopName === '魚市場・賣魚') fishHallSeg(body, 'shop');
   if (shopName === '魚市場・賣魚' && !inShopHall() && !onIsle && !House.on){ const D = shDoor('market'); if (Math.hypot(me.pos.x - D.x, me.pos.z - D.z) < 8){ const b = el('button', 'tbtn ghost', '🚪 走進去逛（冰台上今天的魚）'); b.style.cssText = 'width:100%;margin:4px 0 8px'; b.addEventListener('click', () => { closeSheet(); enterShopHall('market'); }); body.appendChild(b); } }   /* v899 門口照樣直接賣，想看再進去 */
@@ -24014,7 +24137,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光（稀有藍、傳說金）。卡片上會寫「這裡大約每幾條才 1 條」，是照你現在的竿子、魚餌、時間、潮水算的。", "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。", "聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。", "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["望遠鏡：釣具店「🧰工具」🪙1,200。買了之後打開手機點「🔭 望遠鏡」，或背包「🎣 釣組」→「拿出望遠鏡」。手指拖曳看四周，＋ 拉近。遠方偶爾會出現海豚、鯨魚、流星、燈籠船這些稀奇的東西，對準看一下就記進「📖 望遠鏡筆記」，不同時間和天氣看到的不一樣。十一種集滿拿「🔭 天空名牌」。", "釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光（稀有藍、傳說金）。卡片上會寫「這裡大約每幾條才 1 條」，是照你現在的竿子、魚餌、時間、潮水算的。", "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。", "聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。", "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -25460,6 +25583,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1008', d:'11/28', items:[['🔭','釣具店「🧰工具」有賣望遠鏡（🪙1,200），買了走到哪都能從手機或背包拿出來看，拖曳轉方向、拉近'], ['📖','遠方會出現稀奇的東西：海豚跳水、鯨魚噴水、海鳥排隊回家、漁船亮燈、流星、霧裡的燈籠船…不同時間和天氣不一樣，看到就記進望遠鏡筆記'], ['🌟','十一種都看過拿「🔭 天空名牌」；偶爾會被海鷗嚇一跳']] },
   { id:'u1007', d:'11/28', items:[['🐟','釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光，稀有是藍色還有一道光柱，傳說是金色'], ['🎲','卡片上多一行「這裡大約每幾條才 1 條」，看得出這條有多難得'], ['💎','拿著魚的時候頭上會寫「💎 稀有」「🌟 傳說」，旁邊的人一看就知道']] },
   { id:'u1006', d:'11/28', items:[['🚕','潮搭Go 的車子照原本的上白下藍，車身上的黑點點不見了'], ['👕','名片的「穿搭」頁改成拍新人物、列新人物身上的衣服（以前是舊人物的海龜帽、披風）'], ['🔧','阿鐵搬進新主島的釣具店裡，在右前角自己的工作台'], ['🎣','釣具店裡塞滿東西：左牆一整排竿袋、後牆洞洞板掛滿小包裝、中間一座兩面掛滿的鐵網架'], ['🪑','從椅子站起來、跳起來會站在椅子前面；在長椅旁邊點圖示直接坐回去'], ['🏟️','體育場看台中間有樓梯，直接走上去；每一階座位都可以站'], ['⚽','足球門換成用細線拉的真網子，後面、上面、左右都有，會輕輕晃'], ['🛣️','往娛樂館那條路接大道的地方柏油連成一整塊，不會凸出黑色三角形'], ['🏛️','村公所往後退，台階和盆栽不會壓到路上'], ['🚪','體育場西邊的牆上開了一個藍框拱門，上面寫「潮汐體育場」']] },
   { id:'u1005', d:'11/28', items:[['🐟','好友互整：走到好友旁邊，好友分頁按他的「⋯」→「🐟 用魚拍一下」（或點他頭上的話，最右邊的 🐟），甩一條魚啪他一下'], ['💫','被拍的人頭上轉星星、往後退一步、喊一聲，不會少任何東西；畫面跳「拍回去」可以馬上還手'], ['🛡️','只有互相加好友的人能拍你，不是好友拍不到']] },
@@ -25859,7 +25983,7 @@ function phoneHdr(){ const hd = $('#sheet header'); if (!hd) return; let b = $('
   b.hidden = !Phone.via || curTab === 'phone'; }
 /* v996 作者：「手機圖示那邊你還是沒改好」→ 做成真的手機主畫面：海的桌布、彩色的圓角方塊圖示（整塊都是顏色）、白字，最下面一排常用的放在底座 */
 const PH_COL = { tidego: ['#ffd84a', '#f2a200'], map: ['#5fd0ff', '#1f7fd8'], phfeed: ['#ff8a6a', '#e2503a'], upd: ['#7ee0c0', '#17a07a'], quest: ['#ffffff', '#dfe6ee'], events: ['#ff9ad0', '#e04f9a'], news: ['#f3e9d2', '#c9b48a'], story: ['#ffc58a', '#e07a2a'], fest: ['#ff7a6a', '#c8262c'],
-  dm: ['#6ee07a', '#1fae3a'], chumhot: ['#ffe0a0', '#e8a83a'], people: ['#8ac8ff', '#3f7fe0'], duelhub: ['#ff7a7a', '#b8262c'], tboard: ['#7ad8ff', '#1f8fb8'], board: ['#ffd27a', '#e09a2a'], rank: ['#ffe066', '#e0a800'],
+  dm: ['#6ee07a', '#1fae3a'], scope: ['#9ad0ff', '#2f5f9a'], chumhot: ['#ffe0a0', '#e8a83a'], people: ['#8ac8ff', '#3f7fe0'], duelhub: ['#ff7a7a', '#b8262c'], tboard: ['#7ad8ff', '#1f8fb8'], board: ['#ffd27a', '#e09a2a'], rank: ['#ffe066', '#e0a800'],
   photo: ['#6a7480', '#2b313a'], dex: ['#c79a6b', '#8a5a2b'], gyotaku: ['#f2efe6', '#bfb6a0'], tank: ['#7ad0f0', '#1f6fb8'], pets: ['#ffb88a', '#e07a3a'], island: ['#9ee07a', '#3fa83a'], isleapp: ['#7ac8f0', '#2f8fd0'], closet: ['#d8a8ff', '#8a4fe0'], ach: ['#ffd84a', '#c88a00'], seachart: ['#5a8ac8', '#1f3f78'], help: ['#a8b8c8', '#5a6a7a'], settings: ['#c8ced6', '#6a7480'] };
 const PH_DOCK = ['tidego', 'map', 'dm', 'people'];
 function renderPhone(body){ const scr = el('div', 'ph-home ph2');
@@ -25867,8 +25991,8 @@ function renderPhone(body){ const scr = el('div', 'ph-home ph2');
   const un = phoneUnread(), fr = phoneFrN(), all = [].concat(...PHONE_APPS.map(x => x[1])), by = Object.fromEntries(all.map(a => [a[0], a]));
   const mk = ([tab, ic, lab]) => { const b = el('button', 'ph-app'), C = PH_COL[tab] || ['#9fb3c8', '#4a6a8a'], i = el('span', 'ph-ic', ic); i.style.background = `linear-gradient(160deg,${C[0]},${C[1]})`; b.append(i, el('span', 'ph-lab', lab));
     const n = tab === 'phfeed' ? un : tab === 'people' ? fr : tab === 'dm' ? dmUnreadN() : tab === 'isleapp' ? (IMail.unread | 0) : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
-    b.addEventListener('click', () => { SFX.click(); phoneGo(tab); }); return b; };
-  const g = el('div', 'ph-grid'); for (const a of all) if (!PH_DOCK.includes(a[0])) g.appendChild(mk(a)); scr.appendChild(g);
+    b.addEventListener('click', () => { SFX.click(); if (tab === 'scope'){ scopeOpen(); return; } phoneGo(tab); }); return b; };
+  const g = el('div', 'ph-grid'); for (const a of all) if (!PH_DOCK.includes(a[0])) g.appendChild(mk(a)); if (scopeHas()) g.appendChild(mk(['scope', '🔭', '望遠鏡']));   /* v1008 買了望遠鏡，手機多一個 */ scr.appendChild(g);
   const dk = el('div', 'ph-dock'); for (const k of PH_DOCK) if (by[k]) dk.appendChild(mk(by[k])); scr.appendChild(dk);
   body.appendChild(scr); }
 function phAgo(t){ const s = Math.max(0, (Date.now() - t) / 1000); return s < 60 ? '剛剛' : s < 3600 ? `${Math.floor(s / 60)} 分鐘前` : `${Math.floor(s / 3600)} 小時前`; }
