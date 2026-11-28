@@ -1131,8 +1131,8 @@ function makeReal3(f, scale){ const R = REAL3[f.id];
 /* ================= QUALITY（畫質分級：低 / 中 / 高） ================= */
 // 中 = 原本手機的設定，高 = 原本電腦的設定；低是給較舊的 Android 手機
 /* v245 省電：手機預設每秒最多 45 張，閒置 30 秒（沒碰畫面、沒在釣魚、沒開潛水艇）降到 30 張 */
-var Power = { cap: (() => { try { const v = localStorage.getItem('tide.fpsCap'); if (v !== null) return +JSON.parse(v) || 0; } catch(e){} return (matchMedia && matchMedia('(pointer:coarse)').matches) ? 45 : 0; })(), last:0, input:0,
-  want(){ let c = this.cap; try { if (typeof ZC !== 'undefined' && ZC.on) return 4; const busy = (typeof F !== 'undefined' && F.phase && F.phase !== 'idle') || (typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) || Dive.on; if (!busy && performance.now() - this.input > 30000) c = c ? Math.min(c, 30) : 30; } catch(e){} return c; } };
+var Power = { cap: (() => { try { const v = localStorage.getItem('tide.fpsCap'); if (v !== null){ const n = +JSON.parse(v) || 0; return n === 45 ? 60 : n; } } catch(e){} return (matchMedia && matchMedia('(pointer:coarse)').matches) ? 60 : 0; })(),   /* v1010 作者：「換 ROG 就有點卡」→ 以前手機預設 45：60Hz 螢幕剛好畫 60 張，但 120Hz 的電競手機會被除成每秒 40 張。改成 60，120Hz 一樣畫 60 張 */ last:0, input:0,
+  want(){ let c = this.cap; try { if (typeof ZC !== 'undefined' && ZC.on) return 4; const busy = (typeof F !== 'undefined' && F.phase && F.phase !== 'idle') || (typeof Sub !== 'undefined' && (Sub.on || Sub.cine)) || Dive.on; const moving = typeof joy !== 'undefined' && (Math.abs(joy.x) + Math.abs(joy.z) > 0.05); if (moving) this.input = performance.now(); if (!busy && performance.now() - this.input > 45000) c = c ? Math.min(c, 30) : 30;   /* v1010 一直推著搖桿走路不算閒置（以前只算「按下去」那一下，走 30 秒就掉到 30 張） */ } catch(e){} return c; } };
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { Power.input = performance.now(); try { if (typeof ensureAudio === 'function' && (!actx || actx.state !== 'running' || (musicOn && typeof MUSIC !== 'undefined' && !MUSIC.playing()))) ensureAudio(); } catch(e){} }, { passive:true, capture:true });   /* v998 作者：「音樂都要人物動才放」→ 碰到畫面任何地方（按鈕、選單也算）就開始放音樂 */
 const TIERS = {
   low:  { label:'低', dpr:1.0, shadow:0,    tufts:0.25, waterEvery:2, aa:false },
@@ -5943,7 +5943,7 @@ K3.tick = f => { const a = f.av; if (!a) return; const cfg = K3.cfgOf(f);
   if (!a.kid || !KID.ok) return; if (!K3.asset){ K3.fetch(); return; }
   if (K3.err){ if (a.k3 && K3.err !== 'retry') K3.detach(a); return; }
   if (f._k3bad && now() < f._k3bad) return;   /* v915 這個人換新人物出錯：先用舊的，20 秒後再試（不再因為一個人出錯，全部的人都變回舊人物） */
-  if (f !== me && !a.k3 && ((f._lod | 0) >= 3 || !a.g.parent || !a.g.visible || K3.built >= 1)) return;   /* v727 作者：「NPC 都改新的，不要再顯示舊的」→ 看得到的距離內都換（一格最多換一個） */   /* 別人和村民：走近（完整版的距離）才換，一格最多換一個，免得卡 */
+  if (f !== me && !a.k3 && (((f._lodR != null ? f._lodR : f._lod) | 0) >= 3 || !a.g.parent || !a.g.visible || K3.built >= 1)) return;   /* v727 作者：「NPC 都改新的，不要再顯示舊的」→ 看得到的距離內都換（一格最多換一個） */   /* 別人和村民：走近（完整版的距離）才換，一格最多換一個，免得卡 */
   if (f !== me && a.k3 && (f._lod | 0) >= 3) return;   /* 太遠（看不到）的不抄骨架 */
   if (!a.k3 || a.k3.kidRef !== a.kid){ if (a.k3) K3.detach(a); K3.built++; f._lod = -1; try { K3.build(a); a.k3.cfg = cfg; a.k3.ck = K3.enc(cfg); K3.apply(a); f._k3bad = 0; } catch(e){ f._k3bad = now() + 20; K3.bad(e); try { if (a.k3) K3.detach(a); } catch(_){} a.kid.m.visible = true; if (f === me) try { toast('新人物載入失敗，先用原本的樣子'); } catch(_){} return; } }   /* v691 建不起來就不要每一格重試（會整個卡住） */
   const k = a.k3; if (k.cfg !== cfg || (f === me && k.dirty)){ k.cfg = cfg; k.dirty = false; const ck = K3.enc(cfg); if (ck !== k.ck){ k.ck = ck; K3.apply(a); f._lod = -1; } }
@@ -16468,8 +16468,8 @@ function renderSettings(body){
     [['auto', '自動'], ['low', '低'], ['mid', '中'], ['high', '高']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Quality.setting === k)); b.addEventListener('click', () => { Quality.setting = k; LS.set('tide.quality', k); applyQuality(k === 'auto' ? Quality.detect() : k); renderTab(); }); seg.appendChild(b); });
     f.appendChild(seg); f.appendChild(el('p', 'sub', `目前：${TIERS[Quality.tier].label}。手機發燙或卡頓時選「低」。`)); }
   { const f = field('🔋 省電（每秒最多畫幾張）'), seg = el('div', 'seg');
-    [[30, '30（最省電）'], [45, '一般'], [0, '不限']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Power.cap === k || (k === 45 && Power.cap === 60))); b.addEventListener('click', () => { Power.cap = k; LS.set('tide.fpsCap', k); renderTab(); }); seg.appendChild(b); });
-    f.appendChild(seg); f.appendChild(el('p', 'sub', '手機會發燙，多半是畫面每秒畫太多張。「一般」：照螢幕平均地畫（一般手機每秒 60 張），超過 30 秒沒碰畫面（不在釣魚）會自動降到 30 張。')); }
+    [[30, '30（最省電）'], [60, '一般'], [0, '不限']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(Power.cap === k || (k === 60 && Power.cap === 45))); b.addEventListener('click', () => { Power.cap = k; LS.set('tide.fpsCap', k); renderTab(); }); seg.appendChild(b); });
+    f.appendChild(seg); f.appendChild(el('p', 'sub', '手機會發燙，多半是畫面每秒畫太多張。「一般」：照螢幕平均地畫（一般手機每秒 60 張），超過 45 秒沒碰畫面、沒走路（不在釣魚）會自動降到 30 張。螢幕是 120Hz 的電競手機想要更順，可以選「不限」。')); }
   { const f = field('📊 畫面順不順'), on = !!Perf.on; f.appendChild(tgl(on, () => { Perf.on = !on; LS.set('tide.perfHud', !on); renderTab(); })); f.appendChild(el('p', 'sub', '打開後左下角會有一個小框：每秒畫幾張、最慢一張多久、卡了幾次。覺得卡的時候截圖給作者看。')); }
   { const f = field('🚢 深海驚嚇效果'), on = subScareOn(); f.appendChild(tgl(on, () => { LS.set('tide.subScare', !on); renderTab(); })); f.appendChild(el('p', 'sub', '開潛水艇到午夜層時，黑暗裡會有嚇人的東西（黑暗中的眼睛、那盞燈）。關掉就不會出現，其他的相遇照常。')); }
   { const f = field('👋 陌生人'), seg = el('div', 'seg'), cur = strangerSafe(); [[false, '看得到大家打的字'], [true, '只看認識的人打的字']].forEach(([k, l]) => { const b = el('button', '', l); b.setAttribute('aria-pressed', String(cur === k)); b.addEventListener('click', () => { LS.set('tide.strangerChat', k ? 'met' : 'all'); renderTab(); }); seg.appendChild(b); });
@@ -22389,13 +22389,14 @@ function farcTick(){ const lim = ((typeof Sub !== 'undefined' && Sub.on) || Dive
 const CLOD_K = { low:0.7, mid:0.85, high:1 };
 function clodTick(){ const cp = camera.position;
   for (const f of CLOD.all){ const g = f.av && f.av.g; if (!g || !g.parent){ if (g && !g.parent && f !== me) CLOD.all.delete(f); continue; }
-    const d = Math.hypot(g.position.x - me.pos.x, g.position.z - me.pos.z) / CLOD_K[Quality.tier], lvl = f === me ? 0 : d > 44 ? 3 : d > 26 ? 2 : d > 11 ? 1 : 0;   /* v320 玩家說走路卡：俯瞰視角的鏡頭本來就離角色十幾公尺，以前從鏡頭算距離，廣場上的人全部都是完整版。改成從自己的角色算，低／中畫質提早換簡化版 */   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
+    const d = Math.hypot(g.position.x - me.pos.x, g.position.z - me.pos.z) / CLOD_K[Quality.tier]; let lvl = f === me ? 0 : d > 58 ? 3 : d > 26 ? 2 : d > 11 ? 1 : 0; f._lodR = lvl;   /* v1010 遠的人 44 → 58 公尺才不畫 */
+    if (f !== me && f.isNpc && !f.av.k3 && !K3.err && !f._k3bad && now() < 30) lvl = 4;   /* v1010 作者：「NPC 我是不想要當玩家看到時是簡單的樣子」→ 剛進遊戲、新人物還沒換好之前，村民先不畫（不再先看到舊的簡單樣子再變） */   /* v320 玩家說走路卡：俯瞰視角的鏡頭本來就離角色十幾公尺，以前從鏡頭算距離，廣場上的人全部都是完整版。改成從自己的角色算，低／中畫質提早換簡化版 */   /* v290 多一級：30 公尺外連眼睛、小飾品這種也先不畫 */
     if (lvl === f._lod && frameNo - (f._lodAt || 0) < 120) continue; f._lod = lvl; f._lodAt = frameNo;
-    const imp = lvl === 2 && f.av.k3 && f !== me ? clodImp(f) : null; if (f._imp) f._imp.traverse(o => o.layers.set(imp ? 0 : CLOD.L));   /* v909 遠的新人物換成簡單版 */
+    const imp = null;   /* v1010 作者不要看到簡單的樣子：遠的人不再換成方塊人，改用同一個身體的簡化版（clodProxy，形狀一樣） */ if (f._imp) f._imp.traverse(o => o.layers.set(imp ? 0 : CLOD.L));   /* v909 遠的新人物換成簡單版 */
     const px = !imp && (lvl === 1 || lvl === 2) ? clodProxy(f) : null; if (f._px) f._px.layers.set(px ? 0 : CLOD.L);
     g.traverse(o => { if (!o.isMesh && !o.isLine && !o.isPoints) return; if (o === f._px || o.userData.imp) return; if (imp){ o.layers.set(CLOD.L); return; } if (px && o.isSkinnedMesh && !o.userData.noProxy){ o.layers.set(CLOD.L); return; } let small = false; if (o.userData._face == null){ let fc = false; for (let q = o.parent; q && q !== g; q = q.parent) if (q.isBone && /head/i.test(q.name)){ fc = true; break; } o.userData._face = fc; }   /* v291 臉（眼睛、嘴巴）遠遠的也要畫，不然會沒眼睛 */
       if ((lvl === 1 || lvl === 2) && !o.isSkinnedMesh && !o.userData._face){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); small = gs && gs.radius * Math.max(sc.x, sc.y, sc.z) < (lvl === 2 ? 0.12 : 0.09); }
-      if (lvl === 3 || small) o.layers.set(CLOD.L); else o.layers.set(0);
+      if (lvl >= 3 || small) o.layers.set(CLOD.L); else o.layers.set(0);
       /* v346 影子：身體一定有；頭、頭髮這種大塊的近處才有；小配件（眼睛、扣子、小飾品）不投影子，26 公尺外只剩身體的影子 */
       if (o.isMesh){ if (o.userData._cs == null) o.userData._cs = !!o.castShadow; if (o.userData._cs){ let big = true; if (!o.isSkinnedMesh && o !== f._px){ const gs = o.geometry && (o.geometry.boundingSphere || (o.geometry.computeBoundingSphere(), o.geometry.boundingSphere)); const sc = o.getWorldScale(CLOD.v || (CLOD.v = new THREE.Vector3())); big = lvl <= 1 && !!gs && gs.radius * Math.max(sc.x, sc.y, sc.z) >= 0.15; } o.castShadow = big; } } }); } }
 /* v346 影子：地上的小東西（小石頭、花、小擺設，半徑 30 公分以下）不投影子——影子那一遍少畫很多東西，看起來幾乎沒差。每 20 秒看一次新蓋出來的。 */
@@ -25516,7 +25517,7 @@ function perfTick(){ const ms = performance.now(), g = Perf.last ? ms - Perf.las
   Perf.t0 = ms; Perf.n = Perf.acc = Perf.worst = 0; }
 function frame(){
   { const ms = performance.now(), d0 = ms - (Power.raw || ms); Power.raw = ms; if (d0 > 4 && d0 < 50) Power.iv = Power.iv ? Power.iv + (d0 - Power.iv) * 0.05 : d0;
-    const cap = Power.want(); if (cap){ const n = Math.max(1, Math.round(1000 / (Power.iv || 16.7) / cap)); Power.k = (Power.k || 0) + 1; if (Power.k < n){ requestAnimationFrame(frame); return; } Power.k = 0; Power.last = ms; } }   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因）。v939 作者：「完全不會卡超順的」→ 以前 60Hz 螢幕限 45 張是「畫一張、跳一張」不平均，看起來一頓一頓；現在照螢幕的更新率每 n 格畫一格，間隔一樣（60Hz：平常 60 張、閒置 30 張） */   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因） */
+    const cap = Power.want(); if (cap){ const n = Math.max(1, Math.floor(1000 / (Power.iv || 16.7) / cap + 0.15));   /* v1010 用無條件捨去：120Hz 限 60 → 每 2 格畫 1 格（60 張）；90Hz → 每格都畫 */ Power.k = (Power.k || 0) + 1; if (Power.k < n){ requestAnimationFrame(frame); return; } Power.k = 0; Power.last = ms; } }   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因）。v939 作者：「完全不會卡超順的」→ 以前 60Hz 螢幕限 45 張是「畫一張、跳一張」不平均，看起來一頓一頓；現在照螢幕的更新率每 n 格畫一格，間隔一樣（60Hz：平常 60 張、閒置 30 張） */   /* v245 省電：限制每秒畫幾張（手機發燙的主要原因） */
   const t = now(); const dt = Math.min(0.05, t - last) * (CatchMo.t0 ? catchMoK() : 1); last = t; frameNo++; try { perfTick(); } catch(e){}
   if (Sub.cine){ try { subCineTick(dt); } catch(e){ console.warn('subcine', e); Sub.cine = null; uiBlocked = false; document.body.classList.remove('subcine'); me.av.g.visible = true; } }
   if (Sub.on){ try { subFrame(dt, t); } catch(e){ console.warn('sub', e); } fishTime.value = t; finSpd.value += Math.min(dt, 0.1); try { FX.update(dt); } catch(e){} renderer.render(scene, camera); requestAnimationFrame(frame); return; }   /* v237 開潛水艇的時候只跑深海場景 */
@@ -25616,6 +25617,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1011', d:'11/28', items:[['⚡','120Hz 的電競手機（像 ROG）以前被限成每秒 40 張，現在一般模式每秒 60 張；一直推著搖桿走路也不會被當成閒置降到 30 張'], ['🧍','遠一點的村民和玩家不再變成方塊人，遠看也是本來的樣子；剛進遊戲時，村民換好新樣子才出現'], ['👀','58 公尺內的人都看得到（以前 44 公尺）']] },
   { id:'u1010', d:'11/28', items:[['🛣️','路口轉角的路緣石和白邊線沿著圓弧轉過去，轉角多出來的尖尖地磚角補成柏油；圓環接口那條地磚縫也補起來了']] },
   { id:'u1009', d:'11/28', items:[['🌿','新主島的水裡多了水草叢和礁石；連同棧橋的柱子底下、河口，每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚比較多'], ['📖','哪種魚在哪裡要自己釣出經驗：卡片會寫「在水草邊釣到的」，同一種魚在同一種地方釣到 3 次，圖鑑就記下「常在：水草邊」'], ['🌊','海面上的海鳥、漣漪、魚影、氣泡徵兆拿掉了'], ['🎲','連線的時候，稀有魚的卡片也會寫「這裡大約每幾條才 1 條」']] },
   { id:'u1008', d:'11/28', items:[['🔭','釣具店「🧰工具」有賣望遠鏡（🪙1,200），買了走到哪都能從手機或背包拿出來看，拖曳轉方向、拉近'], ['📖','遠方會出現稀奇的東西：海豚跳水、鯨魚噴水、海鳥排隊回家、漁船亮燈、流星、霧裡的燈籠船…不同時間和天氣不一樣，看到就記進望遠鏡筆記'], ['🌟','十一種都看過拿「🔭 天空名牌」；偶爾會被海鷗嚇一跳']] },

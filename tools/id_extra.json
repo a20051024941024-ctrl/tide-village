@@ -9691,5 +9691,9 @@
  "棧橋柱子底下": "di bawah dermaga",
  "河口": "muara sungai",
  "「掠食魚看到活的就追。」": "\"Ikan pemangsa mengejar apa pun yang hidup.\"",
- "路口轉角的路緣石和白邊線沿著圓弧轉過去，轉角多出來的尖尖地磚角補成柏油；圓環接口那條地磚縫也補起來了": "Trotoar dan garis tepi putih kini mengikuti sudut melengkung di persimpangan, sudut paving yang runcing ditutup aspal, dan celah di bundaran ditutup"
+ "路口轉角的路緣石和白邊線沿著圓弧轉過去，轉角多出來的尖尖地磚角補成柏油；圓環接口那條地磚縫也補起來了": "Trotoar dan garis tepi putih kini mengikuti sudut melengkung di persimpangan, sudut paving yang runcing ditutup aspal, dan celah di bundaran ditutup",
+ "120Hz 的電競手機（像 ROG）以前被限成每秒 40 張，現在一般模式每秒 60 張；一直推著搖桿走路也不會被當成閒置降到 30 張": "Ponsel gaming 120Hz sebelumnya dibatasi 40 fps; mode Normal kini 60 fps, dan berjalan dengan joystick tidak lagi dianggap diam (tidak turun ke 30 fps)",
+ "遠一點的村民和玩家不再變成方塊人，遠看也是本來的樣子；剛進遊戲時，村民換好新樣子才出現": "Penduduk dan pemain di kejauhan tidak lagi berubah jadi sosok kotak; saat baru masuk, penduduk muncul setelah tampilan lengkapnya siap",
+ "58 公尺內的人都看得到（以前 44 公尺）": "Orang terlihat sampai 58 m (sebelumnya 44 m)",
+ "手機會發燙，多半是畫面每秒畫太多張。「一般」：照螢幕平均地畫（一般手機每秒 60 張），超過 45 秒沒碰畫面、沒走路（不在釣魚）會自動降到 30 張。螢幕是 120Hz 的電競手機想要更順，可以選「不限」。": "Ponsel panas biasanya karena terlalu banyak frame. \"Normal\" menggambar rata 60 fps dan turun ke 30 setelah 45 detik tanpa sentuhan atau berjalan (saat tidak memancing). Di ponsel gaming 120Hz, pilih \"Tanpa batas\" agar lebih mulus."
 }
