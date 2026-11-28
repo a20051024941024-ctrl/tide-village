@@ -2831,7 +2831,7 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 #tapIcons .tapic[hidden]{display:none}
 @keyframes tapbob{0%,100%{margin-top:0}50%{margin-top:-4px}}
 /* v990 靠實力拿到的名牌框：框是一圈會流動的顏色（名字底色不變），會發光，大家都看得到 */
-.tag .nm.nfx{border:2px solid transparent;background-size:100% 100%,300% 100%;animation:nfxRun 3s linear infinite}
+.tag .nm.nfx{border:3px solid transparent;background-size:100% 100%,300% 100%;animation:nfxRun 3s linear infinite}
 .tag .nm.nfx-bronze{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,#8a5a2b,#e0a872,#8a5a2b,#e0a872);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 6px rgba(224,168,114,.6)}
 .tag .nm.nfx-silver{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,#8d99a6,#f4f8fc,#8d99a6,#f4f8fc);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 8px rgba(230,240,250,.7)}
 .tag .nm.nfx-gold{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,#b8860b,#fff3b0,#e0a800,#fff3b0,#b8860b);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 10px #ffd34a}
@@ -2841,3 +2841,6 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 @keyframes nfxRun{to{background-position:0 0,300% 0}}
 @keyframes nfxPulse{50%{box-shadow:0 0 22px #ff9bf0}}
 .titles .tbtn.lockd{opacity:.55}
+/* v992 每一種傳說魚自己的名牌：用那條魚的顏色，中間一道金光流過去 */
+.tag .nm.nfx-fish{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,var(--fc1),var(--fc2),#fff3b0,var(--fc2),var(--fc1));background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px var(--fc2);animation:nfxRun 2.4s linear infinite,nfxFish 1.8s ease-in-out infinite}
+@keyframes nfxFish{50%{box-shadow:0 0 20px var(--fc2)}}

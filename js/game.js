@@ -4854,11 +4854,13 @@ function seasonRodDraw(c, W, H, k){ const S = seasonOf(k); if (!S) return false;
 /* v990 阿穎：「最想要的就是可以裝逼，帥可以讓別人看到不一樣」→ 靠真的釣到、升級拿到的名牌框，會動、大家都看得到（presence nf） */
 const NFA = [['nfa_bronze', '🥉 銅浪名牌', '到 Lv.10', () => lvOf(calcXP()) >= 10], ['nfa_silver', '🥈 銀浪名牌', '到 Lv.20', () => lvOf(calcXP()) >= 20], ['nfa_gold', '🥇 金浪名牌', '到 Lv.30', () => lvOf(calcXP()) >= 30],
   ['nfa_legend', '👑 傳說名牌', '釣到任何一條「傳說」的魚', () => Object.keys(rec.count || {}).some(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k] && FISH_BY_ID[k].rarity === '傳說')], ['nfa_rainbow', '🌈 虹彩名牌', '到 Lv.50', () => lvOf(calcXP()) >= 50]];
-const NFA_RE = /^nfa_(bronze|silver|gold|legend|rainbow)$/;
+const NFA_RE = /^nfa_(bronze|silver|gold|legend|rainbow)$/, NFF_RE = /^nfa_f_([a-z0-9_]{2,30})$/;   /* v992 作者：「名牌是要什麼魚就做什麼魚的嗎」→ 每一種傳說魚釣到都有自己顏色的名牌 */
+function nffFish(id){ const m = NFF_RE.exec(id || ''), f = m && FISH_BY_ID[m[1]]; return f && f.rarity === '傳說' ? f : null; }
+function myFishPlates(){ return Object.keys(rec.count || {}).filter(k => (rec.count[k] || 0) > 0 && FISH_BY_ID[k] && FISH_BY_ID[k].rarity === '傳說' && !FISH_BY_ID[k].rs).map(k => 'nfa_f_' + k); }
 function nfaHas(id){ const a = NFA.find(x => x[0] === id); try { return !!(a && a[3]()); } catch(e){ return false; } }
-function myFrames(){ return (rec.owned || []).filter(x => /^nf_\d{6}$/.test(x)).sort().concat(NFA.filter(a => nfaHas(a[0])).map(a => a[0])); }
+function myFrames(){ return (rec.owned || []).filter(x => /^nf_\d{6}$/.test(x)).sort().concat(NFA.filter(a => nfaHas(a[0])).map(a => a[0]), myFishPlates()); }
 function myFrame(){ if (LS.get('tide.nfOff', false)) return null; const pk = LS.get('tide.nfPick', ''); if (pk === 'off') return null; const L = myFrames(); if (pk && L.includes(pk)) return pk; const S = L.filter(x => x.startsWith('nf_')); return S.length ? S[S.length - 1] : null; }
-function nameFrame(nm, id){ if (!nm) return; if (nm.dataset.nf === (id || '')) return; nm.dataset.nf = id || ''; for (const c of [...nm.classList]) if (c.startsWith('nfx')) nm.classList.remove(c); if (id && NFA_RE.test(id)){ nm.classList.remove('nframe'); nm.classList.add('nfx', 'nfx-' + id.slice(4)); return; } const S = id && seasonOf(id);
+function nameFrame(nm, id){ if (!nm) return; if (nm.dataset.nf === (id || '')) return; nm.dataset.nf = id || ''; for (const c of [...nm.classList]) if (c.startsWith('nfx')) nm.classList.remove(c); if (id && NFA_RE.test(id)){ nm.classList.remove('nframe'); nm.classList.add('nfx', 'nfx-' + id.slice(4)); return; } { const ff = nffFish(id); if (ff){ nm.classList.remove('nframe'); nm.classList.add('nfx', 'nfx-fish'); const c = new THREE.Color(ff.color), hsl = {}; c.getHSL(hsl); const c2 = new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s + 0.2), Math.min(0.85, hsl.l + 0.3)); nm.style.setProperty('--fc1', '#' + c.getHexString()); nm.style.setProperty('--fc2', '#' + c2.getHexString()); return; } } const S = id && seasonOf(id);
   if (!S){ nm.style.boxShadow = ''; nm.style.outline = ''; nm.classList.remove('nframe'); return; } nm.classList.add('nframe'); nm.style.setProperty('--nf1', S.T[1]); nm.style.setProperty('--nf2', S.T[2] === '#ffffff' ? '#e8f4ff' : S.T[2]); }
 function shadeHex(h, k){ return '#' + new THREE.Color(h).offsetHSL(0, 0, k).getHexString(); }
 const RSKIN_TEX = {};
@@ -12899,7 +12901,8 @@ function renderAch(body){
   body.appendChild(tl);
   { body.appendChild(el('div', 'dexhead', '🪪 名牌框（大家都看得到）')); const fl = el('div', 'titles'), cf = myFrame(), set = v => { LS.set('tide.nfPick', v); LS.set('tide.nfOff', false); refreshMyName(); pushPresence(true); renderTab(); };
     const nb = el('button', 'tbtn' + (cf ? ' ghost' : ''), '不顯示'); nb.addEventListener('click', () => set('off')); fl.appendChild(nb);
-    for (const id of myFrames()){ const a = NFA.find(x => x[0] === id), nm = a ? a[1] : (() => { const S = seasonOf(id); return '🏆 ' + (S ? `${S.y}/${S.m} 賽季` : '賽季') + '名牌'; })(); const b = el('button', 'tbtn' + (cf === id ? '' : ' ghost'), nm); b.addEventListener('click', () => { set(id); toast(`${nm}戴上了，大家都看得到`); }); fl.appendChild(b); }
+    for (const id of myFrames()){ const a = NFA.find(x => x[0] === id), ff = nffFish(id), nm = a ? a[1] : ff ? `🐟 ${ff.name}名牌` : (() => { const S = seasonOf(id); return '🏆 ' + (S ? `${S.y}/${S.m} 賽季` : '賽季') + '名牌'; })(); const b = el('button', 'tbtn' + (cf === id ? '' : ' ghost'), nm); b.addEventListener('click', () => { set(id); toast(`${nm}戴上了，大家都看得到`); }); fl.appendChild(b); }
+    if (!myFishPlates().length) fl.appendChild(el('span', 'sub2', '每一種傳說魚釣到，都會多一個那條魚顏色的名牌。'));
     for (const a of NFA) if (!nfaHas(a[0])){ const b = el('button', 'tbtn ghost lockd', `🔒 ${a[1].slice(2)}`); b.addEventListener('click', () => toast(`${a[1]}：${a[2]}就拿得到`)); fl.appendChild(b); }
     body.appendChild(fl); }
   const done = ACH.filter(achDone).length; body.appendChild(el('div', 'dexhead', `🏅 成就（${done} / ${ACH.length}）`));
@@ -20850,7 +20853,7 @@ function applyPeer(pp){
   { const kc = pr.k3 ? K3.dec(pr.k3) : null, ks = kc ? K3.enc(kc) : ''; if ((p.fisher.k3s || '') !== ks){ p.fisher.k3s = ks; p.fisher.k3c = kc; } }   /* v710 別人的新人物 */
   p.fisher.setName(peerName(p) + (pp.guest ? '・訪客' : ''));
   { const st = pr.dr; if (Number.isInteger(st) && st >= 0 && st <= 999){ const tt = duelTierOf(st); p.fisher.nm.dataset.duel = tt[2] + tt[1]; } else delete p.fisher.nm.dataset.duel; }
-  nameFrame(p.fisher.nm, typeof pr.nf === 'string' && (/^nf_\d{6}$/.test(pr.nf) || NFA_RE.test(pr.nf)) ? pr.nf : null);
+  nameFrame(p.fisher.nm, typeof pr.nf === 'string' && (/^nf_\d{6}$/.test(pr.nf) || NFA_RE.test(pr.nf) || !!nffFish(pr.nf)) ? pr.nf : null);
   { const tb = Number.isInteger(pr.tb) ? TEAM_BADGE[pr.tb] : null; if ((p.fisher.nm.dataset.team || '') !== (tb || '')){ if (tb) p.fisher.nm.dataset.team = tb; else delete p.fisher.nm.dataset.team; } }
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
   p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk || !!pr.bp; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph; p.tr = Array.isArray(pr.tr) && pr.tr.length === 2 && Number.isFinite(+pr.tr[0]) && Number.isFinite(+pr.tr[1]) ? [clamp(pr.tr[0] | 0, 0, 7), clamp(pr.tr[1] | 0, 0, 31)] : null;   /* v923 坐小火車 */
@@ -25183,6 +25186,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u992', d:'11/28', items:[['🐟','每一種傳說魚都有自己的名牌：釣到哪一種，就多一個那條魚顏色的名牌（深藍旗魚是藍的、朱紅錦鯉是紅的…），中間有金光流過去'], ['🪪','名牌框的邊加粗一點，遠一點也看得清楚']] },
   { id:'u991', d:'11/28', items:[['✨','有人釣到傳說魚，他身上會衝出一道金紫色的光柱，整座島都看得到，大概 8 秒後慢慢散掉'], ['📣','附近的人畫面上會跳「XX 釣到傳說魚了！看那道光」']] },
   { id:'u990', d:'11/28', items:[['🪪','新的名牌框：名字外面一圈會流動、會發光，大家都看得到。銅浪 Lv.10、銀浪 Lv.20、金浪 Lv.30、虹彩 Lv.50，釣到傳說魚拿「傳說名牌」'], ['🏅','點左上角等級 →「名牌框」換框；還沒拿到的會寫要怎麼拿']] },
   { id:'u989', d:'11/28', items:[['📺','大看板的釣魚、開船、寵物三段短片改在新主島重拍：港口棧橋甩竿、四人船開出碼頭、寵物店裡貓狗在跑'], ['🐢','龜博士只留一個：在慢慢烏龜屋的櫃台，門口不會再站一個']] },

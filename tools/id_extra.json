@@ -9487,5 +9487,8 @@
  "🔒 傳說名牌": "🔒 Papan Legenda",
  "🔒 虹彩名牌": "🔒 Papan Pelangi",
  "有人釣到傳說魚，他身上會衝出一道金紫色的光柱，整座島都看得到，大概 8 秒後慢慢散掉": "Saat seseorang menangkap ikan legendaris, pilar cahaya emas-ungu melesat dari tubuhnya. Seluruh pulau bisa melihatnya, dan memudar setelah sekitar 8 detik",
- "附近的人畫面上會跳「XX 釣到傳說魚了！看那道光」": "Pemain di dekatnya mendapat pesan: \"XX menangkap ikan legendaris! Lihat cahaya itu\""
+ "附近的人畫面上會跳「XX 釣到傳說魚了！看那道光」": "Pemain di dekatnya mendapat pesan: \"XX menangkap ikan legendaris! Lihat cahaya itu\"",
+ "每一種傳說魚都有自己的名牌：釣到哪一種，就多一個那條魚顏色的名牌（深藍旗魚是藍的、朱紅錦鯉是紅的…），中間有金光流過去": "Setiap ikan legendaris punya papan nama sendiri: tangkap satu dan dapatkan papan berwarna ikan itu (biru untuk marlin, merah untuk koi...) dengan cahaya emas yang mengalir",
+ "名牌框的邊加粗一點，遠一點也看得清楚": "Tepi papan nama sedikit lebih tebal agar terlihat dari jauh",
+ "每一種傳說魚釣到，都會多一個那條魚顏色的名牌。": "Setiap ikan legendaris yang kamu tangkap membuka papan nama berwarna ikan itu."
 }
