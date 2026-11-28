@@ -9878,5 +9878,8 @@
  "🛋️ 掛著釣：常見的魚會自己拉上來，稀有的魚會叫你。可以放心聊天了": "🛋️ Idle fishing: common fish reel themselves in and rare fish will call you. Chat away!",
  "掛著釣關掉了": "Idle fishing off",
  "走開了，掛著釣先停": "You walked away, idle fishing paused",
- "這裡不能掛著釣，先站到水邊甩一竿": "Can't idle fish here; stand by the water and cast first"
+ "這裡不能掛著釣，先站到水邊甩一竿": "Can't idle fish here; stand by the water and cast first",
+ "掛著釣的時候，下面的聊天列和聊天紀錄會一直顯示，可以邊釣邊聊": "While idle fishing, the chat bar and chat history stay on screen so you can fish and chat",
+ "有釣組的話：竿子插在竿架上、開掛著釣，人可以走開，常見的魚竿架自己收；稀有的魚還是響鈴叫你回去": "With a fishing set: put the rod in the holder and turn on idle fishing, then you can walk away; common fish are reeled in by the holder, and a bell still calls you back for rare ones",
+ "坐在釣組的椅子上掛著釣，魚會比較快上鉤": "Idle fishing while sitting in the fishing set's chair makes fish bite a little faster"
 }

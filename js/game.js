@@ -7854,6 +7854,7 @@ function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a'
   else if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
   if (Cloud.on && !s.wild){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending'; F.rollErr = ''; F.hookTry = 0;
     const args = { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat, p_bx: +to.x.toFixed(2), p_bz: +to.z.toFixed(2), p_sl: F.castSlot || signSlot() };
+    F.rollArgs = args; F.rollC = c;
     const roll = n => cloudCall('roll_fish', args).then(row => { if (F.castId !== id) return;
       if (!row && n === 0 && netErr(Cloud.lastErr)){ F.rollWait = 0; setTimeout(() => { if (F.castId === id && F.phase === 'waiting') roll(1); }, 2600); return; }   /* v320 網路問題就等 2.6 秒再試一次 */
       F.rollErr = row ? '' : Cloud.lastErr; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; });
@@ -8031,12 +8032,13 @@ function autoFishUi(){ const show = AutoF.on || (F.phase !== 'idle' && F.phase !
   e.hidden = false; const tx = AutoF.on ? '🛋️ 掛著釣中' : '🛋️ 掛著釣'; if (e.textContent !== tx) e.textContent = tx; e.classList.toggle('on', AutoF.on); }
 function autoFishTick(dt, t){ if (frameNo % 10 === 0) autoFishUi(); if (!AutoF.on) return;
   if (Dive.on){ AutoF.on = false; return; }
-  if (!AutoF.at || F.phase === 'waiting') AutoF.at = [me.pos.x, me.pos.z]; if (Math.hypot(me.pos.x - AutoF.at[0], me.pos.z - AutoF.at[1]) > 1.5 || Math.abs(joy.x) + Math.abs(joy.z) > 0.2 || mySeat && !F.held){ AutoF.on = false; AutoF.at = null; autoFishUi(); toast('走開了，掛著釣先停'); return; }
+  if (!AutoF.at || F.phase === 'waiting' || F.held) AutoF.at = [me.pos.x, me.pos.z]; if (!F.held && (Math.hypot(me.pos.x - AutoF.at[0], me.pos.z - AutoF.at[1]) > 1.5 || Math.abs(joy.x) + Math.abs(joy.z) > 0.2)){ AutoF.on = false; AutoF.at = null; autoFishUi(); toast('走開了，掛著釣先停'); return; }
   const easy = f => f && f.rarity === '常見' && !f.rs && !f.sev && !BIG_FISH.has(f.id);
   if (F.phase === 'bite' && F.fish){ if (easy(F.fish)){ if (t - F.biteAt > 0.25){ actionDown(); AutoF.p0 = 0; AutoF.t0 = t; setTimeout(() => { try { if (F.phase === 'reeling') F.hold = false; } catch(e){} }, 120); } }
     else if (t - (AutoF.rang || -99) > 6){ AutoF.rang = t; F.biteUntil = Math.max(F.biteUntil, t + 8); for (let i = 0; i < 3; i++) setTimeout(() => { try { SFX.bite(); buzz(80); } catch(e){} }, i * 260); flash(`🔔 ${F.fish.rarity === '傳說' ? '傳說' : '稀有'}的魚咬了！快按右下拉上來`, 2.6); } return; }
   if (F.phase === 'reeling' && F.fish && easy(F.fish) && AutoF.t0){ F.act = null; F.acts = false; F.mash = false; F.slack = 0; F.T = 0.45; F.P = Math.max(F.P, Math.min(1.01, (t - AutoF.t0) / 2.4)); me.bend = 0.55 + Math.sin(t * 9) * 0.08; return; }
   if (F.phase !== 'reeling') AutoF.t0 = 0;
+  if (F.phase === 'waiting' && AutoF.cid !== F.castId){ AutoF.cid = F.castId; if (mySeat && mySeat.gear) F.waitUntil = t + (F.waitUntil - t) * 0.85; }   /* 坐在釣組的椅子上掛著釣：魚快一點上鉤 */
   if (F.phase === 'result'){ if (!AutoF.st) AutoF.st = t; if (t - AutoF.st > 2.6){ AutoF.st = 0; try { closeCatch(); } catch(e){} } return; }
   if (F.phase === 'idle'){ if (!AutoF.st) AutoF.st = t; if (t - AutoF.st > 1.4){ AutoF.st = 0; const hasSpot = (() => { try { return !!nearShop() === false && !mySeat; } catch(e){ return false; } })(); if (hasSpot){ actionDown(); setTimeout(() => { try { if (F.phase === 'charging') actionUp(); } catch(e){} }, 450); setTimeout(() => { if (AutoF.on && F.phase === 'idle'){ AutoF.on = false; autoFishUi(); toast('這裡不能掛著釣，先站到水邊甩一竿'); } }, 1500); } } return; }
   AutoF.st = 0; }
@@ -8047,7 +8049,7 @@ function updateFishing(dt, t){
   try { signsTick(dt, t); } catch(e){}
   try { flkTick(dt, t); } catch(e){ if (!flkTick.err){ flkTick.err = 1; console.warn('flk', e); } }
   try { smTick(dt, t); } catch(e){ if (!smTick.err){ smTick.err = 1; console.warn('sea', e); } }
-  { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
+  { const inf = (F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing') && !AutoF.on; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
   fishStandTick();
   const act = $('#act');
   if (F.phase === 'charging'){
@@ -19820,7 +19822,15 @@ function fkHold(){ F.held = true; F.heldRing = 0; me.fishing = false; me.heldTip
 function fkUnhold(){ if (!F.held) return; F.held = false; me.heldTip = null; me.fishing = true; if (F.heldRing){ F.waitUntil = now() + 0.5; F.heldRing = 0; } pushPresence(true); }
 function fkBell(){ try { tone(2093, 0.35, 'sine', 0.07); setTimeout(() => tone(2637, 0.4, 'sine', 0.06), 120); } catch(e){} }
 /* 等魚的時候（竿子在竿架上）：輪到魚咬了 → 鈴鐺響、竿尖抖，25 秒內回來坐下；沒回來魚就跑了 */
-function fkHeldBite(t){ if (!F.heldRing){ F.heldRing = t; fkBell(); try { buzz([60, 60, 60]); } catch(e){} flash('竿架的鈴鐺響了！快回去坐下拉魚', 2); FK.ringAt = t; }
+/* v1003 有釣組＋掛著釣：竿子插在竿架上、人走開，常見的魚竿架自己收（鈴鐺輕輕響一聲、進魚缸），再自己放下一次餌；稀有的魚照舊響鈴叫你回去 */
+function fkAutoCatch(t){ if (!AutoF.on) return false; const f = F.roll && F.roll.f ? F.roll.f : F.pre, w = F.roll && F.roll.f ? F.roll.w : f ? +(f.min + (f.max - f.min) * Math.pow(Math.random(), 1.7)).toFixed(2) : 0;
+  if (!f || f.rarity !== '常見' || f.rs || f.sev || BIG_FISH.has(f.id)) return false;
+  F.fish = f; F.weight = w; try { recordCatch(f, w); } catch(e){ return false; } try { tone(1568, 0.18, 'sine', 0.05); } catch(e){} toast(`🎣 竿架自己釣到 ${f.name} ${fmtKg(w)}`); try { fkCaught(f); } catch(e){}
+  F.fish = null; F.heldRing = 0; F.pre = null; F.probe = null; F.lastNib = 0;
+  if (Cloud.on && F.rollArgs){ const id = F.castId = (F.castId || 0) + 1, args = F.rollArgs; F.roll = 'pending'; F.rollWait = 0; F.hookTry = 0; cloudCall('roll_fish', args).then(row => { if (F.castId !== id) return; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; }); }
+  else if (!Cloud.on && F.spot){ F.roll = null; F.pre = pickFish(F.spot, F.rollC || 0.5); }
+  F.waitUntil = now() + biteWait(F.rollC || 0.5) * 0.85; return true; }
+function fkHeldBite(t){ if (!F.heldRing && fkAutoCatch(t)) return; if (!F.heldRing){ F.heldRing = t; fkBell(); try { buzz([60, 60, 60]); } catch(e){} flash('竿架的鈴鐺響了！快回去坐下拉魚', 2); FK.ringAt = t; }
   if (t - FK.ringAt > 1.6){ FK.ringAt = t; fkBell(); }
   fkRing(t); F.waitUntil = t + 0.3;
   if (t - F.heldRing > 25){ cancelFishing(); flash('魚吃掉餌跑了…（鈴鐺響的時候要回去坐下）', 2); } }
@@ -25347,6 +25357,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1003', d:'11/28', items:[['💬','掛著釣的時候，下面的聊天列和聊天紀錄會一直顯示，可以邊釣邊聊'], ['🎣','有釣組的話：竿子插在竿架上、開掛著釣，人可以走開，常見的魚竿架自己收；稀有的魚還是響鈴叫你回去'], ['🪑','坐在釣組的椅子上掛著釣，魚會比較快上鉤']] },
   { id:'u1002', d:'11/28', items:[['🛋️','掛著釣：甩竿後右邊會出現「掛著釣」，打開後常見的魚會自己拉上來、自己再甩一竿，雙手可以拿去聊天'], ['🔔','掛著釣時稀有、傳說的魚咬了會響鈴叫你，要自己拉；走開就自動停'], ['👏','村民不會莫名其妙歡呼了：附近有人釣到稀有、傳說的魚，旁邊的村民才拍手']] },
   { id:'u1001', d:'11/28', items:[['🎏','港口熱鬧起來了：每條棧橋口立旗桿，中間掛彩色小旗，被風吹著一直晃'], ['🪗','魚市場門口多了街頭樂手風琴伯，一直拉手風琴、頭上冒音符'], ['👋','港口一帶的村民會不時揮手、歡呼']] },
   { id:'u1000', d:'11/28', items:[['🎵','背景音樂換成真的樂器演奏：港口那首手風琴、小提琴的海港民謠先上，其他地方的歌做好會陸續換上'], ['🎣','拉魚的時候還是會換成緊張的音樂，拉完再回來']] },
@@ -25922,7 +25933,7 @@ if (!NEWBIE) setTimeout(function nwait(){ if (!Boot.done) return setTimeout(nwai
 function ui3Init(){ if (!UI3.on) return; if (NEWBIE && !LS.get('tide.welcomed', false)){ const wt = () => { if (!Boot.done) return setTimeout(wt, 250); setTimeout(() => { if (!LS.get('tide.welcomed', false)) welcomeOpen(); }, 600); }; wt(); }   /* 進入畫面掀開以後才出現，背景才看得到村子 */ document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
-  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle'); document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length + phoneUnread() + dmUnreadN(); try { dmTick(); } catch(e){} const b = $('#menu .mbtn[data-group="ph"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
+  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle' && !(typeof AutoF !== 'undefined' && AutoF.on));   /* v1003 作者：「怎麼聊天？」→ 掛著釣的時候聊天列、聊天紀錄照樣顯示 */ document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length + phoneUnread() + dmUnreadN(); try { dmTick(); } catch(e){} const b = $('#menu .mbtn[data-group="ph"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
   (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); if (frameNo % 12 === 0) ui3ChatFit(); } catch(e){} requestAnimationFrame(loop); })(); }
 /* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
 function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
