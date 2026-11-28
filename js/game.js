@@ -18549,7 +18549,7 @@ function w2mCard(list){ const c = W2M.el.querySelector('.w2mcard'); SFX.click();
    不想等的人隨時可以按「直接到」（跟以前的傳送一樣快）。坐車的時候別人看到的是一台車在路上開（presence 的 cr）。
    Taxi.st：idle／come（開過來）／wait（停在上車處等你）／ride1（載你出發）／ride2（快到了）／leave（放你下車後開走） */
 var Taxi = { st: 'idle', car: null, path: null, s: 0, v: 0, t: 0, dest: null, from: null, to: null, el: null, hold: 0 };
-function taxiOn(){ return !!(W2 && W2.ride && W2.ride.stands && W2.ride.stands.length && W2.ride.carRuns && W2.ride.car && W2S.on && W2.near(me.pos.x, me.pos.z)); }
+function taxiOn(){ return !!(W2 && W2.ride && W2.ride.carRuns && W2.ride.carRuns.length && W2.ride.car && W2S.on && W2.near(me.pos.x, me.pos.z)); }
 function taxiNear(x, z){ let b = null, bd = 1e9; for (const s of W2.ride.stands){ const d = Math.hypot(s.x - x, s.z - z); if (d < bd){ bd = d; b = s; } } return b; }
 /* v964 車子細節（模型座標：車頭在 -x、車尾 +x，車寬 ±0.38，輪子半徑約 0.2）：兩側門上貼潮搭Go 貼紙、四個輪子的輪蓋會轉、車頭燈和車尾燈，晚上車頭燈照在地上 */
 const TAXI_LOOK = {};
@@ -18572,47 +18572,46 @@ function taxiCar(){ const src = W2 && W2.ride && W2.ride.car; if (!src) return n
 /* 輪蓋跟著走的距離轉；晚上車頭燈亮 */
 function taxiLookTick(g){ if (!g) return; const u = g.userData, p = g.position; if (u.last){ const d = Math.hypot(p.x - u.last.x, p.z - u.last.z); if (d > 0 && d < 5){ const a = d / 0.42; for (const hb of u.hubs) hb.rotation.z -= a * hb.userData.sd; } } u.last = { x: p.x, z: p.z };
   if (TAXI_LOOK.beam){ const hr = DayNight && DayNight.hour != null ? DayNight.hour : 12, night = hr < 6 || hr >= 18; TAXI_LOOK.beam.opacity = night ? 0.9 : 0; TAXI_LOOK.head.color.set(night ? '#ffffff' : '#fff1c2'); } }
-/* 從車道走到上車處（in），或從上車處開回車道再往前（out）。車道是右駕：上車處要在車子的右手邊 */
-function taxiPath(st, mode, len){ const RS = W2.ride.carRuns, ox = W2.ox, oz = W2.oz; let R = null, qi = 0, qd = 1e9;
-  for (const L of RS) for (let i = 0; i < L.length; i += 2){ const d = Math.hypot(ox + L[i][0] - st.x, oz + L[i][1] - st.z); if (d < qd){ qd = d; R = L; qi = i; } }
-  if (!R) return null; const n = R.length, P = i => [ox + R[i][0], oz + R[i][1]], dirAt = i => { const a = P(Math.max(0, i - 3)), b = P(Math.min(n - 1, i + 3)), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
-  const [dx0, dz0] = dirAt(qi), c0 = P(qi), fw = ((st.x - c0[0]) * -dz0 + (st.z - c0[1]) * dx0) > 0 ? 1 : -1;
+/* v966 車子沿著車道開到「離 (x,z) 最近的路邊」：in＝從後面開過來停在那裡，out＝從那裡開出去。右駕：人要在車子的右手邊（路邊那一側） */
+function taxiSpot(x, z){ const RS = W2.ride.carRuns, ox = W2.ox, oz = W2.oz; let R = null, qi = 0, qd = 1e9;
+  for (const L of RS) for (let i = 0; i < L.length; i += 2){ const d = Math.hypot(ox + L[i][0] - x, oz + L[i][1] - z); if (d < qd){ qd = d; R = L; qi = i; } }
+  return R ? { R, qi, d: qd, x, z } : null; }
+function taxiPath(sp, mode, len){ if (!sp) return null; const { R, qi } = sp, ox = W2.ox, oz = W2.oz, n = R.length, P = i => [ox + R[i][0], oz + R[i][1]], dirAt = i => { const a = P(Math.max(0, i - 3)), b = P(Math.min(n - 1, i + 3)), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+  const [dx0, dz0] = dirAt(qi), c0 = P(qi); let fw = sp.fw || (((sp.x - c0[0]) * -dz0 + (sp.z - c0[1]) * dx0) > 0 ? 1 : -1);
+  const room = fw > 0 ? qi : n - 1 - qi; if (mode === 'in' && !sp.fw && room < 40) fw = -fw;   /* 後面沒有路可以開過來（路的盡頭）就從另一邊來 */ sp.fw = fw;   /* 開出去的方向跟開進來的一樣，車子不會原地掉頭 */
   const lane = i => { const [ex, ez] = dirAt(i), q = P(i); return [q[0] - ez * fw * 1.55, q[1] + ex * fw * 1.55]; };
-  const pts = [], step = 4 * fw;   /* 車道點大約 0.25 公尺一個，4 個一公尺 */
-  const sx = st.x, sz = st.z, [fx, fz] = [Math.sin(st.face), Math.cos(st.face)], sd = (fx * dx0 + fz * dz0) * fw >= 0 ? 1 : -1, bx = fx * sd, bz = fz * sd;   /* 停進格子的方向跟車子前進的方向一樣 */
-  if (mode === 'in'){ const back = []; let d = 0; for (let i = qi - 16 * fw; i >= 0 && i < n && d < len; i -= step){ back.push(lane(i)); if (back.length > 1){ const a = back[back.length - 2], b = back[back.length - 1]; d += Math.hypot(b[0] - a[0], b[1] - a[1]); } } back.reverse(); pts.push(...back);
-    const lp = lane(Math.max(0, Math.min(n - 1, qi - 16 * fw))); for (let k = 1; k <= 6; k++){ const u = k / 6, ax = sx - bx * 2.6, az = sz - bz * 2.6; pts.push([lp[0] + (ax - lp[0]) * u, lp[1] + (az - lp[1]) * u]); } pts.push([sx, sz]); }
-  else { pts.push([sx, sz], [sx + bx * 2.6, sz + bz * 2.6]); const i0 = Math.max(0, Math.min(n - 1, qi + 16 * fw)), lp = lane(i0); for (let k = 1; k <= 5; k++){ const u = k / 5, ax = sx + bx * 2.6, az = sz + bz * 2.6; pts.push([ax + (lp[0] - ax) * u, az + (lp[1] - az) * u]); }
-    let d = 0; for (let i = i0 + step; i >= 0 && i < n && d < len; i += step){ const q = lane(i), a = pts[pts.length - 1]; d += Math.hypot(q[0] - a[0], q[1] - a[1]); pts.push(q); } }
-  const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, len: cum[cum.length - 1] }; }
+  const pts = [], step = 4 * fw; let d = 0;
+  if (mode === 'in'){ for (let i = qi; i >= 0 && i < n && d < len; i -= step){ const q = lane(i); if (pts.length){ const a = pts[pts.length - 1]; d += Math.hypot(q[0] - a[0], q[1] - a[1]); } pts.push(q); } pts.reverse(); }
+  else { for (let i = qi; i >= 0 && i < n && d < len; i += step){ const q = lane(i); if (pts.length){ const a = pts[pts.length - 1]; d += Math.hypot(q[0] - a[0], q[1] - a[1]); } pts.push(q); } }
+  if (pts.length < 2) return null; const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, len: cum[cum.length - 1] }; }
 function taxiAt(P, s){ const { pts, cum } = P; let i = 1; while (i < cum.length - 1 && cum[i] < s) i++; const a = pts[i - 1], b = pts[i], u = Math.max(0, Math.min(1, (s - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1))); return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, Math.atan2(b[0] - a[0], b[1] - a[1])]; }
 function taxiPlace(){ const c = Taxi.car, P = Taxi.path; if (!c || !P) return; const [x, z, h] = taxiAt(P, Taxi.s); c.position.set(x, groundHeight(x, z) + 0.02, z); c.rotation.y = lerpAngle(c.rotation.y, h, Taxi.s < 0.01 ? 1 : 0.25); taxiLookTick(c); }
 function taxiDrop(){ if (Taxi.car){ scene.remove(Taxi.car); Taxi.car = null; } Taxi.path = null; }
 function taxiUi(){ let e = Taxi.el; if (Taxi.st === 'idle'){ if (e) e.remove(); Taxi.el = null; return; }
   if (!e){ e = Taxi.el = el('div', 'taxibar'); document.body.appendChild(e); }
-  const d = Taxi.dest, f = Taxi.from, w = Taxi.st === 'come' ? `🚕 阿速開過來了，在「${f.name}」的上車處等你` : Taxi.st === 'wait' ? `🚕 車到了！走到「${f.name}」的上車處就會上車` : Taxi.st === 'leave' ? `🚕 到了，阿速：「下次再叫我！」` : `🚕 坐車去「${d.name}」`;
+  const d = Taxi.dest, w = Taxi.st === 'come' ? '🚕 阿速開過來了，在原地等一下就好' : Taxi.st === 'wait' ? '🚕 車到了！走到車子旁邊就會上車' : Taxi.st === 'leave' ? `🚕 到了，阿速：「下次再叫我！」` : `🚕 坐車去「${d.name}」`;
   const k = Taxi.st + '|' + w; if (e._k === k) return; e._k = k; e.innerHTML = ''; e.appendChild(el('span', 'tx', w));
   if (Taxi.st !== 'leave'){ const go = el('button', 'tbtn', '⚡ 直接到'); go.addEventListener('click', () => taxiSkip()); e.appendChild(go); }
   if (Taxi.st === 'come' || Taxi.st === 'wait'){ const x = el('button', 'tbtn ghost', '不坐了'); x.addEventListener('click', () => taxiEnd(true)); e.appendChild(x); } }
 function taxiCall(dest){ if (!dest) return; if (!taxiOn() || myBoat || Dive.on || House.on){ travelTo({ id: 'w2m:' + dest.name, label: dest.name, x: dest.x, z: dest.z, rot: dest.rot != null ? dest.rot : me.rot }); return; }
   if (Taxi.st === 'ride1' || Taxi.st === 'ride2') return; taxiDrop(); if (mySeat && !mySeat.train) standUp();
-  const from = taxiNear(me.pos.x, me.pos.z), to = taxiNear(dest.x, dest.z);
-  if (!from || !to || from === to || Math.hypot(dest.x - me.pos.x, dest.z - me.pos.z) < 45){ navTo(dest.name, dest.x, dest.z); toast('很近，走過去就到了'); return; }
-  const P = taxiPath(from, 'in', 55); if (!P || P.len < 8){ travelTo({ id: 'w2m:' + dest.name, label: dest.name, x: dest.x, z: dest.z, rot: dest.rot != null ? dest.rot : me.rot }); return; }
+  if (Math.hypot(dest.x - me.pos.x, dest.z - me.pos.z) < 45){ navTo(dest.name, dest.x, dest.z); toast('很近，走過去就到了'); return; }
+  const from = taxiSpot(me.pos.x, me.pos.z), to = taxiSpot(dest.x, dest.z), P = taxiPath(from, 'in', 55);
+  if (!from || !to || !P || P.len < 8){ travelTo({ id: 'w2m:' + dest.name, label: dest.name, x: dest.x, z: dest.z, rot: dest.rot != null ? dest.rot : me.rot }); return; }
   Taxi.dest = dest; Taxi.from = from; Taxi.to = to; Taxi.car = taxiCar(); Taxi.path = P; Taxi.s = 0; Taxi.v = 6; Taxi.t = 0; Taxi.st = 'come'; taxiPlace();
-  if (Math.hypot(from.x - me.pos.x, from.z - me.pos.z) > 5) navTo(from.name + '・潮搭Go 上車處', from.x, from.z, 2.5); SFX.click(); taxiUi(); }
+  SFX.click(); taxiUi(); }
 function taxiEnd(quiet){ if (Taxi.st === 'ride1' || Taxi.st === 'ride2') poolMeVis(true); taxiDrop(); Taxi.st = 'idle'; Taxi.dest = null; taxiUi(); pushPresence(true); if (!quiet) SFX.click(); }
 function taxiSkip(){ const d = Taxi.dest; taxiEnd(true); if (d) travelTo({ id: 'w2m:' + d.name, label: d.name, x: d.x, z: d.z, rot: d.rot != null ? d.rot : me.rot }); }
-function taxiGetOff(){ const st = Taxi.to, d = Taxi.dest, [fx, fz] = [Math.sin(Taxi.car.rotation.y), Math.cos(Taxi.car.rotation.y)], x = Taxi.car.position.x + fz * 2.0, z = Taxi.car.position.z - fx * 2.0;   /* 從右邊的車門下車（上車處那一邊） */
+function taxiGetOff(){ const sp = Taxi.to, d = Taxi.dest, [fx, fz] = [Math.sin(Taxi.car.rotation.y), Math.cos(Taxi.car.rotation.y)], x = Taxi.car.position.x + fz * 2.0, z = Taxi.car.position.z - fx * 2.0;   /* 從右邊的車門下車（上車處那一邊） */
   me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = Taxi.car.rotation.y; poolMeVis(true);
-  Taxi.st = 'leave'; Taxi.path = taxiPath(st, 'out', 45); Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; pushPresence(true); taxiUi();
+  Taxi.st = 'leave'; Taxi.path = taxiPath(sp, 'out', 45); Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; pushPresence(true); taxiUi();
   if (d && Math.hypot(d.x - x, d.z - z) > 14) setTimeout(() => navTo(d.name, d.x, d.z), 600); else toast(`到「${d ? d.name : ''}」了`); }
 function taxiTick(dt){ if (Taxi.st === 'idle') return; if (!W2 || !Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
   const P = Taxi.path, drive = (vmax) => { if (!P) return true; const left = P.len - Taxi.s, want = Math.min(vmax, Math.sqrt(2 * 3.2 * Math.max(0, left)) + 0.6, taxiRed()); Taxi.v += (want - Taxi.v) * Math.min(1, dt * 2.2); Taxi.s = Math.min(P.len, Taxi.s + Taxi.v * dt); taxiPlace(); return left < 0.05; };
   if (Taxi.st === 'come'){ if (drive(9)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } }
-  else if (Taxi.st === 'wait'){ const c = Taxi.car; if (Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z) < 4.2 && !myBoat && !Dive.on && F.phase === 'idle'){ Nav.t = null; if (mySeat && !mySeat.train) standUp(); poolMeVis(false); Taxi.st = 'ride1'; Taxi.path = taxiPath(Taxi.from, 'out', 40); Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; SFX.click(); pushPresence(true); taxiUi(); }
+  else if (Taxi.st === 'wait'){ const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3); if (dd < (Taxi.t < 0.1 ? 8 : 4.5) && !myBoat && !Dive.on && F.phase === 'idle'){ Nav.t = null; if (mySeat && !mySeat.train) standUp(); poolMeVis(false); Taxi.st = 'ride1'; Taxi.path = taxiPath(Taxi.from, 'out', 40); Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; SFX.click(); pushPresence(true); taxiUi(); }
     else if (Taxi.t > 90){ toast('阿速等太久先走了，要坐再叫一次'); taxiEnd(true); } }
-  else if (Taxi.st === 'ride1'){ if (drive(10) || Taxi.t > 7){ const fx = $('#fadeFx'); fx.classList.add('on'); Taxi.st = 'ride2'; Taxi.hold = 0.45; const P2 = taxiPath(Taxi.to, 'in', 60); try { W2.warm(Taxi.to.x, Taxi.to.z); } catch(e){} Taxi.next = P2; Taxi.t = 0; } }
+  else if (Taxi.st === 'ride1'){ if (Taxi.t < 0.05 && !Taxi.path) Taxi.path = taxiPath(Taxi.from, 'out', 40); if (drive(10) || Taxi.t > 7){ const fx = $('#fadeFx'); fx.classList.add('on'); Taxi.st = 'ride2'; Taxi.hold = 0.45; const P2 = taxiPath(Taxi.to, 'in', 60); try { W2.warm(Taxi.to.x, Taxi.to.z); } catch(e){} Taxi.next = P2; Taxi.t = 0; } }
   else if (Taxi.st === 'ride2'){ if (Taxi.hold > 0){ Taxi.hold -= dt; if (Taxi.hold <= 0){ Taxi.path = Taxi.next; Taxi.next = null; Taxi.s = 0; Taxi.v = 8; taxiPlace(); pushPresence(true); setTimeout(() => $('#fadeFx').classList.remove('on'), 120); } return; } if (!Taxi.path){ taxiSkip(); return; } if (drive(10)) taxiGetOff(); }
   else if (Taxi.st === 'leave'){ if (Taxi.t > 1.2 && drive(10)) taxiEnd(true); else if (Taxi.t > 14) taxiEnd(true); } }
 /* v963 紅綠燈：車子開到路口前面，燈不是綠的就停在停止線前（大道上往圓環開看大道的燈；圓環上快到路口看圓環的燈） */
@@ -23388,8 +23387,8 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是遊樂園，東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。司機阿速會開潮搭Go 到你附近的上車處，走過去就會上車，載你到目的地附近。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
-        ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "上車處在大路旁邊，地上有白框和「潮搭Go 上車處」。車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
+      ["村子怎麼走", "home", ["一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是遊樂園，東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。司機阿速會開潮搭Go 到你旁邊的路邊，站在原地等就好；離大路太遠的話，跟著箭頭走到車子旁邊就會上車。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+        ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
       ["漂流島", "event", ["找阿海選「遠方荒島・漂流島」。那是一座沒人住的島。", "左上角是飽足度和體力。餓了、晚上冷了、淋雨了都會掉體力。", "走到漂流木、石頭、草叢、竹子旁邊可以撿材料。", "從背包的「荒島」做東西：先做草繩和魚鉤，再做竹竿，就能釣魚吃。", "營火可以取暖和烤魚，遮雨棚和小木屋可以躲雨。", "村子的釣竿、魚餌在島上不能用。釣到的魚是食物，不會進魚缸。"],
@@ -24821,6 +24820,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u966', d:'11/28', items:[['🚕','叫潮搭Go 改成站在原地等：車子會開到你旁邊的路邊，不用再走去上車處'], ['🛣️','車道重新畫過：黃線和白線在路口、斑馬線前面會斷開；水族館和體育場外面多了一圈路，把路接起來，不會再穿過建築'], ['🏟️','體育場的看台擋起來了，不會再走進牆裡']] },
   { id:'u965', d:'11/28', items:[['🐟','百年生態池和石滬的魚搬到新主島了：河裡有琵琶鼠魚、革胡子鯰、泰國鱧、鱷雀鱔，紅樹林有攀鱸、食蚊魚，溪裡有白子孔雀魚，珊瑚礁有蘇眉魚']] },
   { id:'u960', d:'11/28', items:[['🏝️','搬到新主島了！大家一進遊戲就在新的主島：主城廣場、大看板、噴水池、商店街、中央市場、水族館、博物館、遊樂園、體育場、森林、紅樹林和珊瑚礁，原本村子裡的店和人都搬過來了'], ['⛲','主城廣場的噴水池換新：海浪柱子、貝殼出水口，每 30 秒會大噴一次，晚上池子會亮'], ['🛣️','大路變成雙向車道，有人行道和斑馬線'], ['📺','主城廣場的大看板換新：兩座藍白燈塔撐著螢幕，一樣可以坐在前面一起看節目'], ['🚕','地圖點地方可以叫潮搭Go：司機阿速沿著車道開到你附近的上車處，載你過去；不想等可以按「直接到」'], ['🚦','四個大路口有紅綠燈，車子和村民都會等紅燈'], ['🚗','潮搭Go 的車兩側貼著貼紙，輪子會轉，晚上會開車頭燈']] },
   { id:'u949', d:'11/27', items:[['📌','活動頁變成港邊的公告欄：上面是今天的時刻表，活動是插在時間上的小旗子；每個活動是一張夾著的紙條，點了放大看要做什麼', 'events']] },
