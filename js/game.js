@@ -454,7 +454,7 @@ async function deepQSync(){ if (!Cloud.on || !Cloud.sb) return; DeepQ.at = Date.
     const fresh = base.filter(id => !seen.includes(id)); if (fresh.length && seen.length) ticker('🔬 蔚博士在黑淵裂縫發現了新的深海生物！開潛水艇下去找找看');
     try { localStorage.setItem('tide.deepSeen', JSON.stringify(base)); } catch(e){} } catch(e){} }
 setInterval(() => { if (Cloud.on && Cloud.sb && (!DeepQ.at || Date.now() - DeepQ.at > 30 * 60000)) deepQSync(); }, 5000);
-setInterval(() => { try { if (Cloud.on && Cloud.sb && document.visibilityState === 'visible' && (!Home.at || Date.now() - Home.at > 90000)) loadHome(); } catch(e){} }, 15000);
+setInterval(() => { try { if (Cloud.on && Cloud.sb && document.visibilityState === 'visible' && (!Home.at || Date.now() - Home.at > 300000)) loadHome(); } catch(e){} }, 15000);   /* v977 90 秒 → 5 分鐘 */
 setInterval(() => { try { if (Cloud.on && Cloud.sb && !Pets.list && !Pets.busy) loadPets(true); } catch(e){} }, 3000);   /* v250 一連上雲端就讀寵物：帶出門的寵物重新進遊戲還在（以前要打開寵物頁才會出現） */   /* v245 每一分半鐘看一下有沒有人邀請你搬家（不在同一個大廳也收得到） */
 
 const V3 = (x, z) => new THREE.Vector3(x, 0, z), V2 = (x, z) => new THREE.Vector2(x, z).normalize();
@@ -12668,7 +12668,7 @@ async function sendGift(to, kind, val){
   SFX.chat(); toast(`送出去了。${esc(to.name || '朋友')} 打開就會收到`); if (room && room.connected()) room.emit('gift', { to: to.id }).catch(() => {});
   renderTab();
 }
-setInterval(() => { if (Cloud.on) loadFriends(); }, 60000);
+setInterval(() => { if (Cloud.on && !document.hidden) loadFriends(); }, 180000);   /* v977 1 分鐘 → 3 分鐘，背景不拿 */
 function renderFriends(body){
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端以後就能加好友、互相送禮。')); return; }
   { const b = el('button', 'tbtn', '🎣 釣友隊・大看板'); b.addEventListener('click', () => { Team.view = 'team'; openSheet('tboard'); loadTeam(); loadTeamBoard(); }); const r = el('div', 'tmrow'); r.appendChild(b); body.appendChild(r); }
@@ -12932,7 +12932,7 @@ async function sevRefresh(){
     if (e.caught && was && was.id === e.id && !was.caught && !Sev.told['got' + e.id]){ Sev.told['got' + e.id] = 1; if (e.caught !== '你') ticker(`🦐 今天的 <b>${esc(f.name)}</b> 已經被 <b>${esc(e.caught)}</b> 釣走了！明天再來碰碰運氣`); }
   } finally { Sev.busy = false; }
 }
-setInterval(() => { if (rec) sevRefresh(); }, 60000); setTimeout(() => sevRefresh(), 5000);
+setInterval(() => { if (rec && !document.hidden) sevRefresh(); }, 180000);   /* v977 */ setTimeout(() => sevRefresh(), 5000);
 // 放生藍色龍蝦：活動還沒結束的話，牠會回到池子裡，大家又有機會釣到
 function sevReleased(f){
   const e = Sev.ev; if (!e || e.fish !== f.id) return;
@@ -15850,6 +15850,16 @@ function turtleCareBox(p){ const box = el('li', 'turtlecare'), inShop = !!Pets.t
   row('🧽', '換水、刷殼', inShop ? '用店裡的水槽換水，龜博士借你軟刷輕輕刷殼。一天一次。' : atIsle ? '用小島的水盆換水，軟刷輕輕刷殼。一天一次，保持光澤。' : '要在自己的小島上用水盆（一天一次）。', '清潔', p.clean, () => { if (!atIsle){ toast('回到自己的小島用水盆換水'); renderTab(); return; } turtleCare(p, 'clean'); });
   row('🧴', '龜殼保養（🪙120）', p.oilDays != null && p.oilDays < 30 ? `一個月最多一次（${p.oilDays} 天前保養過）。太常塗反而會悶住龜殼。` : '偶爾保養就好，一個月最多一次。', '保養', p.oilDays != null && p.oilDays < 30, () => turtleCare(p, 'oil'));
   return box; }
+/* v977 手機上的「潮搭Go」App（作者 11/28：「我想設定是在手機上的 APP」）：選地方 → 叫車。坐車中、車子開過來的時候打開，會看到現在的狀態 */
+function renderTideGo(body){ const head = el('div', 'shophead'); head.innerHTML = '<b>🚕 潮搭Go</b><span class="coinpill">司機 阿萬</span>'; body.appendChild(head);
+  if (!taxiOn()){ body.appendChild(el('div', 'empty', '潮搭Go 只在主島上開。回到主島再叫車吧。')); return; }
+  if (Taxi.st !== 'idle'){ const w = Taxi.st === 'come' ? '阿萬正在開過來，在原地等就好' : Taxi.st === 'wait' ? (Taxi.atSlot ? '車在乘車處等你，走過去上車' : '車到了，走到車子旁邊就會上車') : `坐車去「${Taxi.dest ? Taxi.dest.name : ''}」中`; body.appendChild(el('p', 'sub', '🚕 ' + w)); const x = el('button', 'tbtn ghost', '不坐了'); x.addEventListener('click', () => { taxiEnd(true); renderTab(); }); if (Taxi.st !== 'ride') body.appendChild(x); return; }
+  body.appendChild(el('p', 'sub', '選一個地方，阿萬會從圓環邊的乘車處開到你旁邊的路邊。坐車的時候可以轉動畫面看風景。'));
+  const go = (name, x, z, rot) => { closeSheet(); try { W2.warm(x, z); } catch(e){} taxiCall({ name, x, z, rot }); };
+  const sec = (title, list) => { if (!list.length) return; body.appendChild(el('div', 'ph-sec', title)); const ul = el('ul', 'shoplist'); for (const o of list){ const li = el('li', ''); li.appendChild(el('span', 'tci', o.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', o.name)); const m = Math.round(Math.hypot(o.x - me.pos.x, o.z - me.pos.z)); d.appendChild(el('div', 'sub2', m < 45 ? `很近（${m} 公尺），走過去就到了` : `大約 ${m} 公尺`)); li.appendChild(d); const b = el('button', 'tbtn', m < 45 ? '帶我走' : '叫車'); b.addEventListener('click', () => go(o.name, o.x, o.z, o.rot)); li.appendChild(b); ul.appendChild(li); } body.appendChild(ul); };
+  sec('地方', (W2.spots || []).filter(([nm]) => nm !== '玩家建地').map(([nm, lx, lz]) => ({ ic: (W2MAP_TXT[nm] && W2MAP_TXT[nm][0]) || '📍', name: nm, x: W2.ox + lx, z: W2.oz + lz, rot: me.rot })));
+  sec('店', (W2.doors || []).map(d => ({ ic: W2_DOOR_IC[d.k] || '🚪', name: d.label, x: d.x + Math.sin(d.face) * 1.6, z: d.z + Math.cos(d.face) * 1.6, rot: d.face + Math.PI })));
+  body.appendChild(el('p', 'sub', '👥 跟朋友一起坐：快做好了，之後可以邀附近的朋友上同一台車。')); }
 function renderTurtleShop(body){   /* v974 慢慢烏龜屋：龜博士的店。照顧小烏龜的事都在這裡做；店裡有曬背燈和換水的水槽，不用回小島也能曬太陽、換水 */
   const head = el('div', 'shophead'); head.innerHTML = `<b>🐢 慢慢烏龜屋</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   body.appendChild(el('p', 'sub', '龜博士：「慢慢來，烏龜都不急。殼要漂亮，靠的是曬太陽、吃得均衡、水乾淨。店裡有曬背燈和水槽，下雨天、沒回小島也可以照顧。」'));
@@ -19645,7 +19655,7 @@ function trimTank(){ const keep = new Set(rec.show || []); let others = 0; rec.t
 const AquaWeek = { list:null, at:0 };
 function aquaList(){ if (AquaWeek.list && AquaWeek.list.length) return AquaWeek.list; return shownFish(); }
 async function aquaLoad(){ if (!Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('aqua_week'); if (error || !Array.isArray(data)) return; AquaWeek.at = Date.now(); AquaWeek.list = data.filter(r => FISH_BY_ID[r.f]).map((r, i) => ({ f: r.f, w: Number(r.w) || 0, t: -(i + 1), nick: r.n || '釣客' })); buildTank(); } catch(e){} }
-setInterval(() => { if (Cloud.sb && Date.now() - AquaWeek.at > 10 * 60000) aquaLoad(); }, 30000);
+setInterval(() => { if (Cloud.sb && !document.hidden && Date.now() - AquaWeek.at > 10 * 60000) aquaLoad(); }, 30000);
 function aquaChipTick(){ if (frameNo % 15) return; let chip = $('#aquaChip'); const near = !Dive.on && !onIsle && typeof AQUA !== 'undefined' && Math.hypot(me.pos.x - AQUA[0], me.pos.z - AQUA[1]) < 9 && AquaWeek.list && AquaWeek.list.length;
   if (!near){ if (chip && !chip.hidden) chip.hidden = true; return; } if (!chip){ chip = document.createElement('div'); chip.id = 'aquaChip'; chip.className = 'panel'; document.body.appendChild(chip); }
   const top = AquaWeek.list[0], tx = `這禮拜全村的大魚・${AquaWeek.list.length} 條・最厲害的：${top.nick} 的${FISH_BY_ID[top.f].name} ${top.w.toFixed(2)}kg`; chip.hidden = false; if (chip.textContent !== tx) chip.textContent = tx; }
@@ -20766,7 +20776,7 @@ function SBRoom(sb, name, key, myName){
   const pp = id => ({ peer:id, isMe:false, kind:'viewer', presence: pres[id] || {}, by: (pres[id] && pres[id].u) || id, guest:false });
   function send(force){
     if (!live || !myPres) return; const t = performance.now();
-    if (!force && t - lastAt < 380){ if (!flushT) flushT = setTimeout(() => { flushT = 0; send(); }, 390); return; }   /* 每秒最多送 2～3 次，省雲端流量 */
+    if (!force && t - lastAt < 560){ if (!flushT) flushT = setTimeout(() => { flushT = 0; send(); }, 570); return; }   /* v977 每秒最多送 1～2 次（作者 11/28 看 Supabase 用量：即時訊息 34%）；別人那邊本來就會平滑地走過去 */
     const sv = JSON.stringify(myPres); if (!force && sv === lastSent) return; lastSent = sv; lastAt = t;
     ch.send({ type:'broadcast', event:'p', payload:{ id:key, p:myPres } }).catch(() => {});
   }
@@ -20791,8 +20801,8 @@ function SBRoom(sb, name, key, myName){
     const drop = k => { if (pres[k]){ const x = pp(k); delete pres[k]; delete seen[k]; firePeers({ joined:[], updated:[], left:[x] }); } };
     ch.on('presence', { event:'leave' }, ({ key:k }) => drop(k));
     // 心跳：每 12 秒送一次自己的狀態；超過 40 秒沒消息、或已經不在大廳名單裡的人就拿掉（下線、手機鎖螢幕、斷線都會消失）
-    R._hb = setInterval(() => { if (!live) return; send(true); const nowMs = Date.now(); let st = null; try { st = ch.presenceState(); } catch(e){}
-      for (const k of Object.keys(pres)){ const gone = nowMs - (seen[k] || 0) > 40000 || (st && Object.keys(st).length && !st[k] && nowMs - (seen[k] || 0) > 15000); if (gone) drop(k); } }, 12000);
+    R._hb = setInterval(() => { if (!live) return; if (!document.hidden) send(true);   /* v977 手機切到背景就不送心跳（回來時馬上補送一次） */ const nowMs = Date.now(); let st = null; try { st = ch.presenceState(); } catch(e){}
+      for (const k of Object.keys(pres)){ const gone = nowMs - (seen[k] || 0) > 65000 || (st && Object.keys(st).length && !st[k] && nowMs - (seen[k] || 0) > 25000); if (gone) drop(k); } }, 22000);   /* v977 心跳 12 秒 → 22 秒 */
     let done = false;
     ch.subscribe(async st => {
       if (st === 'SUBSCRIBED'){ live = true; fireConn(); try { await ch.track({ n: myName || '' }); } catch(e){} send(true); if (!done){ done = true; res(R); } }
@@ -20802,6 +20812,7 @@ function SBRoom(sb, name, key, myName){
   return R;
 }
 // 關掉頁面時馬上離開大廳，別人那邊就不會留著你的角色
+addEventListener('visibilitychange', () => { try { if (!document.hidden && room && room.connected && room.connected()) pushPresence(true); } catch(e){} });
 addEventListener('pagehide', () => { try { if (room && room.isLobby){ room.leave(); Cloud.sb.rpc('lobby_leave').then(() => {}, () => {}); } } catch(e){} });
 addEventListener('pageshow', e => { if (e.persisted && room && room.isLobby && !room.connected()){ for (const p of peers.values()) p.fisher.dispose(); peers.clear(); room = null; joinLobby(); } });
 // 來訪紀錄：誰來過村子（存在這台裝置，最多 60 筆、保留 7 天）
@@ -20875,7 +20886,7 @@ async function joinLobby(want, isNew){
 }
 function leaveLobby(){ if (room && room.isLobby){ try { room.leave(); } catch(e){} clearInterval(roomTimer); clearPeers(); room = null; } }
 // 每 30 秒跟伺服器報到；斷線了自動回到原本的大廳
-function lobbyBeat(force){ if (!Cloud.on || !room || !room.isLobby || !room.lobbyNo) return; if (!force && Date.now() - Lobby.beat < 30000) return; Lobby.beat = Date.now(); LS.set('tide.lobby', { no: room.lobbyNo, at: Date.now() }); Cloud.sb.rpc('lobby_beat', { p_no: room.lobbyNo }).then(() => {}, () => {}); }
+function lobbyBeat(force){ if (!Cloud.on || !room || !room.isLobby || !room.lobbyNo) return; if (!force && Date.now() - Lobby.beat < 48000) return;   /* v977 30 秒 → 48 秒（伺服器 75 秒沒消息才算離開） */ Lobby.beat = Date.now(); LS.set('tide.lobby', { no: room.lobbyNo, at: Date.now() }); Cloud.sb.rpc('lobby_beat', { p_no: room.lobbyNo }).then(() => {}, () => {}); }
 setInterval(() => { try { if (Cloud.on && room && room.isLobby && room.connected() && room.lobbyNo > 1 && !Lobby.merged && F.phase === 'idle' && !lobbyJoining && !Dive.on && !myBoat){ Lobby.merged = true; switchLobby(0); } } catch(e){} }, 10000);   /* v851 還留在別的大廳的人，有空的時候搬到大家在的那一個（只搬一次） */
 setInterval(() => { try { lobbyBeat(false); if (Cloud.on && room && room.isLobby && !room.connected() && !lobbyJoining && Date.now() - roomJoinAt > 8000){ const no = room.lobbyNo; leaveLobby(); logMsg('系統', '連線斷了，正在重新連回村子…', true); joinLobby(no); } } catch(e){} }, 10000);
 function switchLobby(no, isNew){ if (room && room.isLobby && room.lobbyNo === no && !isNew) return; leaveLobby(); LS.set('tide.lobby', null); joinLobby(no, isNew).then(() => { Lobby.at = 0; if (!$('#sheet').hidden && curTab === 'people') renderTab(); }); }
@@ -23173,6 +23184,7 @@ function renderTab0(){
   if (curTab === 'settings'){ renderSettings(body); return; }
   if (curTab === 'dm'){ renderDM(body); return; }
   if (curTab === 'duelhub'){ renderDuelHub(body); return; }
+  if (curTab === 'tidego'){ renderTideGo(body); return; }
   if (curTab === 'upd'){ renderUpd(body); return; }
   if (curTab === 'chumhot'){ renderChumHot(body); return; }
   if (curTab === 'fkit') curTab = 'rig2';   /* v635 釣魚裝備搬進「🎣 釣組」 */
@@ -24927,6 +24939,7 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
    手機主畫面＝所有選單頁面的入口；新的「🔔 快訊」＝正在發生的事＋跑馬燈飄過去的消息（存在這支手機，留 24 小時）。
    從手機打開頁面時，角色會拿出手機低頭滑，別人也看得到（presence 的 ph）。 ===== */
 const PHONE_APPS = [
+  ['出門', [['tidego', '🚕', '潮搭Go'], ['map', '🗺️', '地圖']]],
   ['村子裡', [['phfeed', '🔔', '快訊'], ['upd', '🆕', '最近更新'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
   ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['duelhub', '⚔️', '對決'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
   ['我的', [['photo', '📷', '拍照'], ['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🛒', '小島商店'], ['isleapp', '⛵', '我的島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
@@ -24934,6 +24947,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u977', d:'11/28', items:[['📱','手機多了「潮搭Go」App：選一個地方就能叫車，很近的地方會帶你走過去；車子開過來、坐車中打開會看到現在的狀態'], ['⚡','跟伺服器講話的次數變少了（站著不動、手機切到背景時不一直送），玩的人多了也比較不會卡']] },
   { id:'u976', d:'11/28', items:[['🎂','阿萬（5/31）、阿默（11/26）、阿穎（9/10）生日那天會戴派對帽、跟你說今天生日，進遊戲也會提醒你']] },
   { id:'u975', d:'11/28', items:[['🌙','畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息，老闆回家了；釣具店、魚市場、食堂、博物館照常開'], ['💰','阿潮、小溪、阿蘭會真的賺錢了：每天三趟把釣到的魚走去魚市場賣，錢存起來換新釣竿、買新衣服、買誘餌打窩，偶爾坐潮搭Go 去吃宵夜。錢只從賣魚來，跟他們聊天會說今天賺多少、在存錢買什麼'], ['🚕','潮搭Go 的司機改名叫阿萬']] },
   { id:'u974', d:'11/28', items:[['🐢','商店街新開一間「慢慢烏龜屋」，老闆是龜博士：照顧小烏龜的事都在這裡做。店裡有曬背燈和水槽，下雨天、沒回小島也能曬太陽、換水；門口的小缸裡有三隻烏龜在曬太陽']] },
