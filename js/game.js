@@ -6239,7 +6239,10 @@ class Fisher {
   setRodLook(skin, lc){ skin = CRAFT_BY[skin] ? skin : null; lc = CRAFT_BY[lc] ? lc : null; if (lc !== this.lineCol){ this.lineCol = lc; this.line.material.color.set(lc ? CRAFT_BY[lc].col : '#fbf8ef'); this.line.material.opacity = lc ? 0.95 : 0.85; }   /* v253 工坊做的竿子造型、釣線顏色 */
     if (skin !== this.rodSkin){ this.rodSkin = skin; if (!this.isNpc && this.rodId){ const r = RODS.find(x => x.id === this.rodId) || RODS[0]; try { rodHD(this.av, this.rodType, r.color, skin); applyRodShape(this.av, this.rodType, false); } catch(e){} } } }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
-  say(text, cls, secs){ this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubUntil = now() + (secs || 5); }
+  say(text, cls, secs){ const t = now(), L = String(text || '').length;
+    if (this.isNpc){ if (!this.bub.hidden && this.bubAt && t - this.bubAt < 3.5 && this.bubUntil > t && text !== this.bub.textContent) return;   /* v978 作者：「NPC 講話太快，還沒看清楚就消失」→ 上一句至少留 3.5 秒才換下一句 */
+      secs = Math.min(14, Math.max(secs || 5, 3.5 + L * 0.28)); }   /* 字越多停越久：一個字大約 0.28 秒 */
+    this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubAt = t; this.bubUntil = t + (secs || 5); }
   // 炫耀魚：把魚舉在頭上幾秒
   // 潛水：身體趴平、背氧氣瓶、戴面鏡
   setSwim(on){
@@ -24947,6 +24950,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u978', d:'11/28', items:[['💬','村民講話會停久一點：字越多停越久，一句話至少留 3.5 秒才換下一句，來得及看完']] },
   { id:'u977', d:'11/28', items:[['📱','手機多了「潮搭Go」App：選一個地方就能叫車，很近的地方會帶你走過去；車子開過來、坐車中打開會看到現在的狀態'], ['⚡','跟伺服器講話的次數變少了（站著不動、手機切到背景時不一直送），玩的人多了也比較不會卡']] },
   { id:'u976', d:'11/28', items:[['🎂','阿萬（5/31）、阿默（11/26）、阿穎（9/10）生日那天會戴派對帽、跟你說今天生日，進遊戲也會提醒你']] },
   { id:'u975', d:'11/28', items:[['🌙','畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息，老闆回家了；釣具店、魚市場、食堂、博物館照常開'], ['💰','阿潮、小溪、阿蘭會真的賺錢了：每天三趟把釣到的魚走去魚市場賣，錢存起來換新釣竿、買新衣服、買誘餌打窩，偶爾坐潮搭Go 去吃宵夜。錢只從賣魚來，跟他們聊天會說今天賺多少、在存錢買什麼'], ['🚕','潮搭Go 的司機改名叫阿萬']] },
