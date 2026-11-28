@@ -84,7 +84,7 @@ export function init(A){
   const TRAILS = [[[700,283],[684,240],[640,205]], [[934,272],[930,244],[918,210],[870,186],[822,190]], [[440,390],[380,400],[300,395],[240,370],[200,345]], [[700,319],[700,362]], [[540,402],[490,398],[440,390]], [[684,240],[697,224],[706,212]]];   // 0、1 森林步道；5 步道岔出去到山洞；2 紅樹林木棧道；3 過河小橋接到水族館；4 水族館接到木棧道
   const RAIL = [[1160,810],[1300,780],[1420,640],[1560,560],[1610,470],[1620,380],[1500,300],[1360,235],[1250,222],[1080,230],[900,270],[700,330],[560,330],[430,430],[320,470],[260,560],[330,700],[480,740],[640,780],[820,830],[1000,840]];
   /* v936 作者：「火車太多站了而且好近，所以一直停車」→ 11 站剩 5 站，一站大約隔 100～170 公尺 */
-  const STA = [[1560,560,'體育場・沙灘'],[1080,230,'村公所・遊樂園'],[560,330,'水族館・森林'],[300,520,'居民區・紅樹林'],[990,840,'港口・商店街']];
+  const STA = [[1560,560,'體育場・沙灘'],[1080,230,'村公所・娛樂館'],[560,330,'水族館・森林'],[300,520,'居民區・紅樹林'],[990,840,'港口・商店街']];
 
   /* ---------- 畫進資料格 ---------- */
   const fillL = polys => { const L = layer(); for (const p of polys){ closed(L.g, p); L.g.fill(); } return L; };
@@ -228,7 +228,7 @@ export function init(A){
   { let [x, y, w, h] = NODES.hall; const a = [[x - w / 2, y - h / 2 + 10], [x + w / 2, y - h / 2 + 10], [x + w / 2 - 20, y + h / 2 - 20]]; for (let i = 1; i < 8; i++){ const t = i / 8, u = 1 - t; a.push([u * u * (x + w / 2 - 20) + 2 * u * t * x + t * t * (x - w / 2 + 20), u * u * (y + h / 2 - 20) + 2 * u * t * (y + h / 2 + 18) + t * t * (y + h / 2 - 20)]); } a.push([x - w / 2 + 20, y + h / 2 - 20]); flatShape('stone', a.map(p => P(p[0], p[1])), PAVE_Y + 0.016);
     [x, y, w, h] = NODES.aqua; flatShape('stone', curve(rough([[x - w / 2, y], [x - w / 3, y - h / 2], [x, y - h / 2 - 8], [x + w / 3, y - h / 2 + 4], [x + w / 2, y + 4], [x + w / 4, y + h / 2], [x - w / 6, y + h / 2 + 6], [x - w / 2 + 10, y + h / 3]], 2, 0.18, 301), true), PAVE_Y + 0.016);
     [x, y, w, h] = NODES.mus; { const b = [[x - w / 2, y + h / 2], [x - w / 2, y - h / 6]]; for (let i = 1; i <= 12; i++){ const t = Math.PI - i / 12 * Math.PI; b.push([x + Math.cos(t) * w / 2, y - h / 6 - Math.sin(t) * (h / 3 + 20)]); } b.push([x + w / 2, y + h / 2]); flatShape('stone', b.map(p => P(p[0], p[1])), PAVE_Y + 0.016); }
-    for (const k of ['amuse', 'stad', 'mkt']){ [x, y, w, h] = NODES[k]; flatShape(k === 'amuse' ? 'lane' : 'stone', ell(x, y, w / 2, h / 2, 40), PAVE_Y + 0.016); } }
+    for (const k of ['amuse', 'stad', 'mkt']){ [x, y, w, h] = NODES[k]; flatShape('stone', ell(x, y, w / 2, h / 2, 40), PAVE_Y + 0.016); } }
   const boardLine = dense(curve(TRAILS[2]), 1.2); ribbon('wood', boardLine, 1.7, (x, z, cx, cz) => boardY(cx, cz), false, 1.6);   // 紅樹林木棧道：架在水上
   for (const i of [0, 1, 3, 4, 5]) ribbon('dirt', dense(curve(TRAILS[i]), 1.1), 1.6, (x, z) => Math.max(0.2, hAt(x, z)) + 0.05, false, 2.2);   // 泥土步道：貼著山坡
   const railLine = curve(RAIL, true); ribbon('rail', railLine, 2.0, (x, z, cx, cz) => Math.max(0.2, hAt(cx, cz)) + 0.075, true, 1.0);                          // 環島小火車的軌道
@@ -386,10 +386,10 @@ export function init(A){
     const door = (k, label, icon, x, z, face) => { doors.push({ k, label, x: OX + x, z: OZ + z, face }); plate(label, icon, x, z, face); };
     { const Wc = street.filter(q => q.col === 0).sort((a, b) => a.row - b.row), Ec = street.filter(q => q.col === 1).sort((a, b) => a.row - b.row), free = [], put = (h, k, label, icon) => { if (h){ h.used = 1; door(k, label, icon, h.x + Math.sin(h.face) * (h.d / 2 + 0.9), h.z + Math.cos(h.face) * (h.d / 2 + 0.9), h.face); } else free.push([k, label, icon]); };
       /* 西排由北到南：食堂、木工坊、撞球館；東排：畫廊、寵物店、釣蝦場；最靠港口那一間是釣具店。哪一間房子被拿掉了（例如讓給活動場地）就排到還空著的房子 */
-      put(Wc[0], 'cafe', '潮汐食堂', '🍱'); put(Ec[0], 'cai', '阿彩畫廊', '🎨'); put(Wc[1], 'mu', '阿木木工坊', '🪑'); put(Ec[1], 'pet', '小花寵物店', '🐾'); put(Wc[2], 'pool', '潮汐撞球館', '🎱'); put(Ec[2], 'shrimp', '釣蝦場', '🦐'); put(Wc.length > 3 ? Wc[Wc.length - 1] : null, 'tackle', '釣具店', '🎣');
+      put(Wc[0], 'cafe', '潮汐食堂', '🍱'); put(Ec[0], 'cai', '阿彩畫廊', '🎨'); put(Wc[1], 'mu', '阿木木工坊', '🪑'); put(Ec[1], 'pet', '小花寵物店', '🐾');    /* v968 撞球館、釣蝦場搬到潮汐娛樂館 */ put(Wc.length > 3 ? Wc[Wc.length - 1] : null, 'tackle', '釣具店', '🎣');
       put(Ec.find(q => q.row === 5 && !q.used) || null, 'tailor', '阿綾服裝店', '👗');   /* v951 阿綾服裝店：商店街東排最靠港口那間（v927 就留給她，裡面擺衣架） */
       for (const [k, label, icon] of free){ const h = street.find(q => !q.used); if (h){ h.used = 1; door(k, label, icon, h.x + Math.sin(h.face) * (h.d / 2 + 0.9), h.z + Math.cos(h.face) * (h.d / 2 + 0.9), h.face); } }
-      { const [x, z] = P(1210, 640); door('market', '潮汐魚市場', '🐟', x, z - 7.2, Math.PI); } { const [x, z] = P(764, 663); door('museum', '海洋博物館', '🏛️', x, z - 7.4, Math.PI); } { const [x, z] = P(1480, 430); door('stad', '潮汐體育場', '🏟️', x - 25.5, z + 3, -Math.PI / 2); } }
+      { const [x, z] = P(1210, 640); door('market', '潮汐魚市場', '🐟', x, z - 7.2, Math.PI); } { const [x, z] = P(764, 663); door('museum', '海洋博物館', '🏛️', x, z - 7.4, Math.PI); } { const [x, z] = P(1255, 296); door('pool', '潮汐撞球館', '🎱', x - 8, z + 7.4, 0); door('shrimp', '釣蝦場', '🦐', x + 8, z + 7.4, 0); }   /* v968 潮汐娛樂館的兩個門 */ { const [x, z] = P(1480, 430); door('stad', '潮汐體育場', '🏟️', x - 25.5, z + 3, -Math.PI / 2); } }
     { const [x, z] = P(470, 585); label('居民區', x, 9, z); } { const [x, z] = P(985, 700); label('商店街', x, 9, z, 0.8); }
     /* 預留的空地：照規劃圖把房子放滿以後，還空著的大塊草地剩這兩塊（西邊海岸、水族館和村公所中間）；全島空草地約 25% */
     for (const [px, py, t] of [[221, 556, '預留・以後擴建'], [783, 355, '預留']]){ const [x, z] = P(px, py); label(t, x, 6, z, 0.75); }
@@ -530,15 +530,22 @@ export function init(A){
           const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r;
           if (t < 0 || t > 1 || u < 0 || u > 1) continue; const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t; if (xings.some(q => Math.hypot(q.x - x, q.z - z) < 10)) continue;
           const [dx, dz] = dirAt(L, i); xings.push({ x, z, dx, dz, w, s: railCum[j] + Math.hypot(x - c[0], z - c[1]) }); } } });
-      /* v967 作者 11/28：「這兩個都壓到了」→ 路、步道跨過鐵軌的地方鋪木板平交道（兩條鐵軌中間和兩邊都鋪），看起來是可以走過去的 */
-      { const decks = [], lines = allSegs.map(sg => [sg.L, sg.w]).concat([0, 1, 3, 4, 5].map(i => [dense(curve(TRAILS[i]), 0.5), 1.6]));
-        for (const [L, w] of lines) for (let i = 1; i < L.length; i++){ const a = L[i - 1], b = L[i];
+      /* v968 作者 11/28：「這些木頭的東西不要壓在鐵軌上，你可以做平交道，現在的平交道完全看不出來是什麼東西」
+         → 路、步道跨過鐵軌的地方做成真的平交道：跟鐵軌一樣高的水泥板（鐵軌從中間穿過去看得到），兩邊各一支「✕」平交道標誌和黃黑條紋的短柱 */
+      { const decks = [], lines = allSegs.map(sg => [sg.L, sg.w, !!sg.car]).concat([0, 1, 3, 4, 5].map(i => [dense(curve(TRAILS[i]), 0.5), 1.6, false]));
+        const xTex = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128; const c = cv.getContext('2d'); c.translate(64, 64); for (const a of [0.785, -0.785]){ c.save(); c.rotate(a); c.fillStyle = '#c8322c'; c.fillRect(-60, -13, 120, 26); c.fillStyle = '#ffffff'; c.fillRect(-56, -9, 112, 18); c.restore(); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide }); })();
+        for (const [L, w, isCar] of lines) for (let i = 1; i < L.length; i++){ const a = L[i - 1], b = L[i];
           for (let j = 0; j < NR; j++){ const c = railLine[j], d = railLine[(j + 1) % NR], r = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]); if (Math.abs(r) < 1e-9) continue;
             const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r; if (t < 0 || t > 1 || u < 0 || u > 1) continue;
-            const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t; if (decks.some(q => Math.hypot(q[0] - x, q[1] - z) < Math.max(3, w))) continue; decks.push([x, z]);
+            const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t; if (decks.some(q => Math.hypot(q[0] - x, q[1] - z) < Math.max(3, w))) continue; decks.push([x, z]); (W2X.decks = W2X.decks || []).push([OX + x, OZ + z, Math.atan2(-(d[1] - c[1]), d[0] - c[0])]);
             const rl = Math.hypot(d[0] - c[0], d[1] - c[1]) || 1, rx = (d[0] - c[0]) / rl, rz = (d[1] - c[1]) / rl, pl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, sn = Math.max(0.35, Math.abs(((b[0] - a[0]) * rz - (b[1] - a[1]) * rx) / pl));
-            const len = Math.min(10, w / sn + 0.6), y = Math.max(0.2, hAt(x, z)) + 0.075 + 0.07, ry = Math.atan2(rx, rz);
-            for (let k = -len / 2 + 0.2; k <= len / 2 - 0.15; k += 0.42) B(parts, k % 1.26 < 0.42 ? '#9a6c45' : '#a8794f', 2.5, 0.08, 0.36, x + rx * k, y, z + rz * k, ry); } } }
+            const len = Math.min(10, w / sn + 0.4), y0 = Math.max(0.2, hAt(x, z)) + 0.075, ry = Math.atan2(rx, rz), px = -rz, pz = rx;   /* p＝跨過鐵軌的方向 */
+            B(parts, '#bdb8ae', 2.6, 0.05, len, x, y0 + 0.03, z, ry);   /* 水泥板，跟鐵軌一樣高 */
+            for (const g of [-0.48, 0.48]) B(parts, '#7d838b', 0.09, 0.03, len + 0.02, x + px * g, y0 + 0.07, z + pz * g, ry);   /* 鐵軌從板子中間穿過去 */
+            if (isCar) continue;   /* 車道的平交道本來就有柵欄和燈 */
+            for (const sd of [-1, 1]){ const sx = x + px * sd * 2.0 + rx * (len / 2 + 0.35) * sd, sz = z + pz * sd * 2.0 + rz * (len / 2 + 0.35) * sd, gy = Math.max(0.2, hAt(sx, sz));
+              B(parts, '#6c7680', 0.09, 2.3, 0.09, sx, gy + 1.15, sz, 0); const xm = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), xTex); xm.position.set(sx, gy + 2.05, sz); xm.rotation.y = Math.atan2(px * sd, pz * sd); town.add(xm); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz, r: 0.15 });
+              for (const k of [-1, 1]){ const bx = x + px * sd * 1.75 + rx * k * (len / 2 - 0.2), bz = z + pz * sd * 1.75 + rz * k * (len / 2 - 0.2), by = Math.max(0.2, hAt(bx, bz)); for (let h = 0; h < 4; h++) B(parts, h % 2 ? '#222222' : '#f2c230', 0.16, 0.2, 0.16, bx, by + 0.1 + h * 0.2, bz, ry); } } } } }
       const XMAT = { post: mat('#f4f4f2', 0.6), red: new THREE.MeshStandardMaterial({ color: '#c8322c', roughness: 0.5 }) };
       const stripeTex = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 16; const c = cv.getContext('2d'); for (let i = 0; i < 8; i++){ c.fillStyle = i % 2 ? '#ffffff' : '#d8322b'; c.fillRect(i * 16, 0, 16, 16); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
       const xb = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 24; const c = cv.getContext('2d'); c.fillStyle = '#c8322c'; c.fillRect(0, 0, 128, 24); c.fillStyle = '#ffffff'; c.fillRect(4, 4, 120, 16); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide }); })();
@@ -624,21 +631,23 @@ export function init(A){
     { const [x, z] = P(1560, 786); post('chao', x, z, 0, { shore: true }); } { const [x, z] = P(600, 325); post('xi', x, z, 0, { shore: true }); } { const [x, z] = P(300, 396); post('lan', x, z, 0, { shore: true }); }
     if (TWB) try { TWB.merge(twRoot); } catch(e){ console.warn('world2 merge', e); }   /* 幾十棟房子同一種材質的零件併成一塊，畫面負擔才不會隨房子數量增加 */
     flush(parts, town); }
-  /* 遊樂園：摩天輪會轉（先這一樣會動，其他設施之後補） */
-  { const [x, z] = P(1255, 316), parts = {}, wheel = new THREE.Group(), wp = {};   /* 摩天輪在橢圓廣場的正中間，旋轉木馬和帳篷分在兩邊 */ for (const dz of [-1, 1]){ B(parts, '#e45a8a', 0.7, 12.3, 0.5, x, 6.15, z + dz * 1.1); B(parts, '#c94a78', 3.2, 0.5, 0.9, x, 0.5, z + dz * 1.1); } B(parts, '#c94a78', 0.6, 0.6, 2.8, x, 12.3, z);
-    G(wp, '#e45a8a', new THREE.TorusGeometry(9.6, 0.22, 6, 40), 0, 0, 0); for (let i = 0; i < 12; i++){ const a = i / 12 * 6.2832; const sp = new THREE.CylinderGeometry(0.07, 0.07, 9.6, 4).translate(0, 4.8, 0).rotateZ(a); G(wp, '#f7c6d8', sp, 0, 0, 0); }
-    flush(wp, wheel); wheel.position.set(x, 12.3, z); town.add(wheel); const cars = []; for (let i = 0; i < 12; i++){ const c = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.4, 1.2), mat(['#ffcc33', '#4ec1ff', '#ff6b6b', '#7bd389'][i % 4], 0.6)); c.castShadow = true; town.add(c); cars.push(c); }
-    /* 旋轉木馬：整座慢慢轉，馬一上一下 */
-    { const cx = x - 13, cz = z + 4.5, spin = new THREE.Group(), sp = {}, hA = new THREE.Group(), hB = new THREE.Group(), pa = {}, pb = {};
-      G(parts, '#e9dfc9', new THREE.CylinderGeometry(4.4, 4.6, 0.36, 20), cx, 0.52, cz);
-      G(sp, '#fff3d6', new THREE.CylinderGeometry(4.0, 4.0, 0.16, 20), 0, 0.78, 0); G(sp, '#fff3d6', new THREE.CylinderGeometry(4.7, 4.7, 0.3, 16), 0, 4.35, 0); G(sp, '#f2c230', new THREE.CylinderGeometry(0.45, 0.55, 3.6, 10), 0, 2.6, 0); G(sp, '#f2c230', new THREE.SphereGeometry(0.36, 8, 6), 0, 6.55, 0); G(sp, '#e2574c', new THREE.ConeGeometry(4.7, 2.0, 16), 0, 5.5, 0);
-      for (let i = 0; i < 8; i++){ const a = i / 8 * 6.2832, hx = Math.cos(a) * 3.0, hz = Math.sin(a) * 3.0, tg = i % 2 ? pb : pa, hc = i % 2 ? '#ffd9a8' : '#ffffff'; G(sp, '#fff3d6', new THREE.CylinderGeometry(0.05, 0.05, 3.5, 5), hx, 2.6, hz);
-        B(tg, hc, 0.38, 0.6, 1.0, hx, 1.75, hz, -a); B(tg, hc, 0.26, 0.5, 0.3, hx - Math.sin(a) * 0.5, 2.25, hz + Math.cos(a) * 0.5, -a); B(tg, '#e2574c', 0.42, 0.12, 0.4, hx, 2.08, hz, -a); }
-      flush(sp, spin); flush(pa, hA); flush(pb, hB); spin.add(hA, hB); spin.position.set(cx, 0, cz); town.add(spin); colliders.push({ t: 'c', x: OX + cx, z: OZ + cz, r: 4.6, big: true }); RSV.push([cx, cz, 6]);
-      tickers.push((dt, t) => { spin.rotation.y = -t * 0.45; hA.position.y = Math.sin(t * 2.2) * 0.2; hB.position.y = -Math.sin(t * 2.2) * 0.2; }); }
-    for (const [dx, dz, c1] of [[13, 4.5, '#f2c230'], [20.5, -4, '#4ec1ff']]){ G(parts, c1, new THREE.ConeGeometry(3.4, 2.4, 10), x + dx, 4.4, z + dz); G(parts, '#ffffff', new THREE.CylinderGeometry(3.1, 3.1, 0.3, 10), x + dx, 3.1, z + dz); G(parts, '#f7efe1', new THREE.CylinderGeometry(0.3, 0.3, 3, 8), x + dx, 1.6, z + dz); colliders.push({ t: 'c', x: OX + x + dx, z: OZ + z + dz, r: 3.2, big: true }); RSV.push([x + dx, z + dz, 5]); }
-    flush(parts, town); colliders.push({ t: 'b', x: OX + x, z: OZ + z, hw: 1.8, hd: 1.6, big: true }); RSV.push([x, z, 11]); label('遊樂園', x, 25, z);
-    tickers.push((dt, t) => { wheel.rotation.z = t * 0.18; for (let i = 0; i < 12; i++){ const a = t * 0.18 + i / 12 * 6.2832; cars[i].position.set(x + Math.cos(a) * 9.6, 12.3 + Math.sin(a) * 9.6 - 0.9, z); } }); }
+  /* v968 作者 11/28：「遊樂園可以不要」→ 拿掉遊樂園，改蓋「潮汐娛樂館」：撞球館和釣蝦場搬進來（室內玩的集中在一棟），正面朝南對著大道；招牌一圈燈泡輪流亮 */
+  { const [x, z] = P(1255, 296), parts = {}, gy = PAVE_Y, W = 30, D = 13, H = 7.6, fz = z + D / 2;   /* 往北放，前面留一塊廣場，不要貼著車道 */
+    B(parts, '#f4efe6', W, H, D, x, gy + H / 2, z); B(parts, '#2c6fb5', W + 1.2, 0.6, D + 1.2, x, gy + H + 0.3, z); B(parts, '#e9dfc8', W + 0.4, 0.5, D + 0.4, x, gy + 0.25, z);
+    for (const sx of [-1, 1]){ const dx = x + sx * 8;
+      B(parts, '#8fd3f4', 8.6, 3.4, 0.22, dx, gy + 2.3, fz + 0.06); B(parts, '#ffffff', 8.9, 0.22, 0.3, dx, gy + 4.05, fz + 0.1); B(parts, '#ffffff', 0.22, 3.6, 0.3, dx - 4.4, gy + 2.3, fz + 0.1); B(parts, '#ffffff', 0.22, 3.6, 0.3, dx + 4.4, gy + 2.3, fz + 0.1);
+      B(parts, '#3a4a5a', 2.0, 2.7, 0.12, dx, gy + 1.35, fz + 0.2);   /* 門 */
+      for (let k = 0; k < 6; k++) B(parts, k % 2 ? '#ffffff' : (sx < 0 ? '#2f9e6a' : '#e2574c'), 0.75, 0.16, 2.3, dx - 1.9 + k * 0.76, gy + 4.55, fz + 1.15, 0);   /* 條紋遮雨棚：撞球館綠、釣蝦場紅 */ }
+    B(parts, '#f4efe6', 3.4, 1.6, 0.3, x, gy + H + 1.3, fz - 0.4); B(parts, '#2c6fb5', 15.6, 3.0, 0.35, x, gy + 5.75, fz + 0.2);
+    { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 192; const c = cv.getContext('2d'); c.fillStyle = '#2c6fb5'; c.fillRect(0, 0, 1024, 192); c.fillStyle = '#ffffff'; c.font = 'bold 104px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('潮汐娛樂館', 512, 100);
+      c.font = '70px sans-serif'; c.fillText('🎱', 90, 100); c.fillText('🦐', 934, 100); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(14.4, 2.7), new THREE.MeshBasicMaterial({ map: t })); sg.position.set(x, gy + 5.75, fz + 0.39); town.add(sg); }
+    const bm = [new THREE.MeshBasicMaterial({ color: '#fff2b3', toneMapped: false }), new THREE.MeshBasicMaterial({ color: '#fff2b3', toneMapped: false })], bg = new THREE.SphereGeometry(0.11, 6, 4);
+    for (let k = 0; k < 44; k++){ const u = k / 44, per = 2 * (15.6 + 3.0), d = u * per; let bx, by; if (d < 15.6){ bx = -7.8 + d; by = 1.5; } else if (d < 18.6){ bx = 7.8; by = 1.5 - (d - 15.6); } else if (d < 34.2){ bx = 7.8 - (d - 18.6); by = -1.5; } else { bx = -7.8; by = -1.5 + (d - 34.2); }
+      const b = new THREE.Mesh(bg, bm[k % 2]); b.position.set(x + bx, gy + 5.75 + by, fz + 0.42); town.add(b); }
+    tickers.push((dt, t) => { const on = Math.floor(t * 2.5) % 2; bm[0].color.set(on ? '#fff2b3' : '#8a7a48'); bm[1].color.set(on ? '#8a7a48' : '#fff2b3'); });   /* 招牌燈泡兩組輪流亮 */
+    for (const sx of [-13.5, 13.5]){ G(parts, '#2f8f4e', new THREE.SphereGeometry(1.3, 8, 6), x + sx, gy + 1.3, fz + 2.2); B(parts, '#c9b89a', 2.2, 0.5, 2.2, x + sx, gy + 0.25, fz + 2.2); }   /* 門口兩盆樹 */
+    flush(parts, town); colliders.push({ t: 'b', x: OX + x, z: OZ + z, hw: W / 2 + 0.3, hd: D / 2 + 0.3, big: true }); RSV.push([x - 8, z, 10], [x + 8, z, 10]); label('潮汐娛樂館', x, 12, z); }
   /* 環島小火車（v923 可以坐）：三班車照時刻表繞島一圈，每一站停 9 秒。
      車在哪裡只看「大家共用的時間」（game.js 每一幀把時間傳進 trainStep），所以每個人畫面上的車都在同一個位置，坐在車上的人別人也看得到在同一個位子。
      一班車＝火車頭＋兩節沒有車頂的車廂，每節 4 個位子（兩排長椅，都面向前）。一節車廂是一個 Mesh（顏色寫在頂點上），三班車總共 9 個。 */
@@ -1002,7 +1011,7 @@ export function init(A){
     /* 這一點是什麼地：0 不是主島、1 水和紅樹林、2 路和廣場、3 森林、4 沙灘、5 蓋了東西、6 海岸邊、7 空草地（量「還有多少地沒用」用的） */
     kind: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz) || samp(sdMain, lx, lz) <= 0) return 0; if (samp(HG, lx, lz) < WL || samp(sdMang, lx, lz) > -3) return 1; if (paved(lx, lz, 0.5)) return 2; if (samp(sdFor, lx, lz) > -4) return 3; if (samp(sdSand, lx, lz) > -3) return 4; if (reserved(lx, lz)) return 5; if (samp(sdLand, lx, lz) < 6) return 6; return 7; },
     /* 預覽用：一按就過去的地點（島上的公尺） */
-    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['巡守站', 222, 356], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 805, 196], ['山洞', 694, 226], ['護林員小屋', 925, 246], ['遊樂園', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
+    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['巡守站', 222, 356], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 805, 196], ['山洞', 694, 226], ['護林員小屋', 925, 246], ['潮汐娛樂館', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
   };
   /* v927 要站在水邊的位置（釣魚的村民、蔚博士調查的岸邊）：從排好的那一點找最近的水邊（當成滿潮），站好、面朝水；不靠鐵軌、不站在東西裡面；那裡不長樹。
      蔚博士的往後退一步半（不擋到在那裡釣魚的人）。找不到同一種水的就拿掉，她留在水族館入口。 */
