@@ -2919,3 +2919,6 @@ body.scoping #labels,body.scoping #photoUI{display:none!important}
 .scopebook li small{font-size:11px;opacity:.75}
 .tag .nm.nfx-sky{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,#1f3f78,#9ad0ff,#ffe9a8,#9ad0ff,#1f3f78);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 10px #9ad0ff;background-size:100% 100%,200% 100%;animation:nfxSky 6s linear infinite}
 @keyframes nfxSky{to{background-position:0 0,200% 0}}
+/* v1014 檢舉按鈕看得出來；手機背景不要那麼藍 */
+.tbtn.vcrep,.tbtn.rpbtn{background:#fff1ee;color:#c8322a;border:1.5px solid #e8857a;font-weight:700}
+.ph-home.ph2{background:radial-gradient(120% 70% at 50% 0%,#5d5a73 0%,rgba(93,90,115,0) 70%),linear-gradient(180deg,#46435a 0%,#34313f 55%,#26242e 100%)}

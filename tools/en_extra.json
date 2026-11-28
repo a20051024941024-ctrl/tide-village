@@ -9992,5 +9992,14 @@
  "阿鐵做的鉤子越好越少跑：倒刺鉤 18%、圓形鉤和鍛造重鉤 13%、金鉤 8%；釣竿磨損完多跑 10%": "Better hooks from A-Tie lose fewer: barbed 18%, circle and forged 13%, gold 8%; a worn-out rod adds 10%",
  "自己拉魚照舊，不受影響": "Reeling by hand is unchanged",
  "魚脫鉤跑掉了…": "The fish slipped off the hook…",
- "竿架那邊的魚脫鉤跑掉了": "The fish on the rod holder slipped off"
+ "竿架那邊的魚脫鉤跑掉了": "The fish on the rod holder slipped off",
+ "📞 打電話": "📞 Call",
+ "🔉 一般": "🔉 Normal",
+ "🔊 大聲": "🔊 Loud",
+ "🔇 聽不到": "🔇 Muted",
+ "語音": "Voice",
+ "好友旁邊的「呼叫」改成「📞 打電話」": "The \"Call out\" button next to friends is now \"📞 Call\"",
+ "講電話對方的聲音放大很多，背景音樂會自動變小聲；喇叭按鈕可以換「一般 → 大聲 → 聽不到」": "Your friend's voice is much louder on calls and background music lowers automatically; the speaker button cycles Normal → Loud → Muted",
+ "檢舉按鈕寫出字、改成紅色；好友的「⋯」裡也可以檢舉": "The report button now has a label and is red; you can also report from a friend's \"⋯\" menu",
+ "手機桌面的背景換成不刺眼的深色": "The phone home screen background is now a softer dark color"
 }
