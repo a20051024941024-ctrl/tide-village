@@ -18364,7 +18364,9 @@ const W2_FIX = [
 ];
 /* 會搬的村民：新主島的位置名字 → 是哪一個村民 */
 const W2_NPC = { craft: n => n.shopNpc === 'craft', gang: n => n.wid === 'gang', news: n => n.shopNpc === 'news', salon: n => n.shopNpc === 'salon', sci: n => n.shopNpc === 'sci',
-  chao: n => n.npcName.startsWith('阿潮'), xi: n => n.npcName.startsWith('小溪'), lan: n => n.npcName.startsWith('阿蘭'), amo: n => n.amo, yin: n => n.yin };
+  chao: n => n.npcName.startsWith('阿潮'), xi: n => n.npcName.startsWith('小溪'), lan: n => n.npcName.startsWith('阿蘭'), bo: n => n.npcName.startsWith('阿伯'), amo: n => n.amo, yin: n => n.yin };
+/* v969 搬到新主島後講的話（原本的話在講舊島的地方） */
+const W2_LINES = { bo: ['學校的池子搬不過來，我就換到這個池子邊釣了', '這個池子比較新，魚還不太怕人', '琵琶鼠魚現在跑到河裡去了，一樣到處都是', '下雨天去紅樹林看看，會有攀鱸爬上岸喔', '大肚魚現在住在紅樹林那邊的水裡', '看到垃圾就順手撿一下啦'] };
 const W2_QNPC = ['chief', 'wang'];   /* 發任務的村長、老王也搬（美雲姨在食堂裡面，從新主島的食堂門進去就看得到）*/
 function w2SiteWant(){ if (!W2 || !W2.posts) return false; if (W2.near(me.pos.x, me.pos.z)) return true; return W2S.on && (inIndoor() || inHall() || inStad() || (W2S.home && Math.hypot(me.pos.x, me.pos.z) >= 75)); }   /* v952 從新主島坐船去外島（離舊村子 75 公尺外）：也算還在新主島那一邊，阿嬤才會在苔森之島 */   /* 從新主島的門走進店裡（店的裡面在舊島那邊）：先不動，出來還在新主島 */
 /* 把一個村民放到某個位置重新開始：散步的去處、躲雨的路、讓位的原點都跟舊位置有關，全部忘掉重算；手上的魚收起來。fishing：站好就甩竿（bob 有給＝浮標已經在水裡） */
@@ -18378,6 +18380,7 @@ function w2NpcPut(n, x, z, rot, fishing, bob, y){ const gy = y != null ? y : gro
 /* v968 檢查報告：剛進遊戲頭 50 秒新主島沒有村民（看板、攤子還沒蓋好，整個搬家就一直重試）→ 村民先搬，不用等板子 */
 function w2NpcMove(on){ const PO = W2.posts; W2S.npcMoved = on;
   for (const k in W2_NPC){ const p = PO[k], n = npcs.find(W2_NPC[k]); if (!p || !n || !n.v0) continue; n.w2on = on;
+    if (W2_LINES[k]){ if (!n.v0lines) n.v0lines = n.lines; n.lines = on ? W2_LINES[k] : n.v0lines; }
     if (k === 'sci'){ if (on){ n.w2sk = w2SciKey(); w2SciPlace(n); } else { w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, false, null, n.v0.y); if (Sci.list){ Sci.ok = false; try { sciPlace(); } catch(e){} } } continue; }   /* 蔚博士：兩邊都是「今天調查的地方」，各自重新找 */
     if (on) w2NpcPut(n, p.x, p.z, p.face, !!p.fishing, null); else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); }
   for (const k of W2_QNPC){ const p = PO[k], q = questNpcs.find(q => q.who === k); if (!p || !q) continue; const f = q.f; if (!q.v0) q.v0 = { x: f.pos.x, z: f.pos.z, y: f.baseY, rot: f.rot };
@@ -24825,6 +24828,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u969', d:'11/28', items:[['🧓','阿伯（老校工）也搬到新主島了：在村公所西邊的池子旁邊釣魚，走過去可以跟他聊天']] },
   { id:'u968', d:'11/28', items:[['🎱','東北邊的遊樂園拿掉，換成一棟「潮汐娛樂館」：撞球館和釣蝦場都在裡面，招牌晚上會一閃一閃'], ['🚧','鐵軌上的木板拿掉，改成真的平交道：水泥地面、鐵條、紅白叉叉的警告牌和黃黑柱子'], ['🏟️','體育場外面換成白色的牆和窗戶，看台座位有藍黃紅三種顏色'], ['👋','一進遊戲，村民就已經在新主島上了，不用等'], ['📱','手機橫拿時，左邊的「今天」先收成一行，點一下才打開；低畫質時噴水池和大看板用比較輕的模型，比較不會卡']] },
   { id:'u967', d:'11/28', items:[['🏛️','村公所和博物館往後挪，門口不再壓到圓環的車道；路和步道跨過鐵軌的地方鋪了木板平交道'], ['🔄','路的盡頭（西邊居民區、港口）做了圓形的迴車道；撞球館的門重新掛到一間真的房子上']] },
   { id:'u966', d:'11/28', items:[['🚕','叫潮搭Go 改成站在原地等：車子會開到你旁邊的路邊，不用再走去上車處'], ['🛣️','車道重新畫過：黃線和白線在路口、斑馬線前面會斷開；水族館和體育場外面多了一圈路，把路接起來，不會再穿過建築'], ['🏟️','體育場的看台擋起來了，不會再走進牆裡']] },

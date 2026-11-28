@@ -2678,7 +2678,7 @@
  "瀑布底下的深潭，水很冰": "A deep pool under the waterfall, ice-cold water",
  "現在看得到他打的字了。": "You can now see what they type.",
  "用你釣的魚，現點現做！": "Made to order with the fish you catch!",
- "看到垃圾就順手撿一下啦": "Pick up litter when you see it",
+ "看到垃圾就順手撿一下啦": "If you see litter, just pick it up",
  "租用潛水艇（4500）": "Rent submarine (4500)",
  "稀有、傳說魚 ×1.2": "Rare & legendary fish ×1.2",
  "稱呼（最多 6 個字）": "Nickname (max 6 characters)",
@@ -9543,5 +9543,11 @@
  "鐵軌上的木板拿掉，改成真的平交道：水泥地面、鐵條、紅白叉叉的警告牌和黃黑柱子": "The wooden planks on the railway are gone. Crossings are now real level crossings: concrete, steel strips, red-and-white X signs and yellow-black posts",
  "體育場外面換成白色的牆和窗戶，看台座位有藍黃紅三種顏色": "The stadium now has white outer walls with windows, and the seats come in blue, yellow and red",
  "一進遊戲，村民就已經在新主島上了，不用等": "Villagers are already on the new island as soon as you join. No waiting",
- "手機橫拿時，左邊的「今天」先收成一行，點一下才打開；低畫質時噴水池和大看板用比較輕的模型，比較不會卡": "On phones held sideways, the Today panel on the left starts as one line; tap to open it. On low quality the fountain and billboard use lighter models so the game runs smoother"
+ "手機橫拿時，左邊的「今天」先收成一行，點一下才打開；低畫質時噴水池和大看板用比較輕的模型，比較不會卡": "On phones held sideways, the Today panel on the left starts as one line; tap to open it. On low quality the fountain and billboard use lighter models so the game runs smoother",
+ "阿伯（老校工）也搬到新主島了：在村公所西邊的池子旁邊釣魚，走過去可以跟他聊天": "Uncle (the Old Janitor) has moved to the new island too. He fishes by the pond west of the Village Hall. Walk over to chat",
+ "學校的池子搬不過來，我就換到這個池子邊釣了": "The school pond couldn't come along, so I fish by this pond now",
+ "這個池子比較新，魚還不太怕人": "This pond is newer, so the fish aren't very shy yet",
+ "琵琶鼠魚現在跑到河裡去了，一樣到處都是": "The plecos have moved into the river now. They're everywhere there too",
+ "下雨天去紅樹林看看，會有攀鱸爬上岸喔": "Check the mangroves when it rains. Climbing perch crawl up onto the shore",
+ "大肚魚現在住在紅樹林那邊的水裡": "The mosquitofish live in the mangrove water now"
 }

@@ -637,7 +637,7 @@ export function init(A){
     { const [x, z] = P(640, 410), W = (px, py) => { const q = P(px, py); return [OX + q[0], OZ + q[1]]; }, pe = piers[4];
       post('sci', x + 15.8, z + 2.2, Math.PI / 2, { r: 3.4, at: { sea: W(1440, 794), harbor: pe ? [OX + pe.x, OZ + pe.z0 + pe.L - 1.5] : W(1160, 940), river: W(655, 322), creek: W(775, 258), lake: W(900, 228), mangrove: W(385, 400) } }); }
     /* 釣魚的村民：shore＝站到這附近最近的水邊、面朝水（game.js 用 W2.shore 找）。阿潮在陽光沙灘、小溪在水族館北邊的河岸（靠鎮上這一邊）、阿蘭（紅樹林巡守員）在紅樹林的木棧道上 */
-    { const [x, z] = P(1560, 786); post('chao', x, z, 0, { shore: true }); } { const [x, z] = P(600, 325); post('xi', x, z, 0, { shore: true }); } { const [x, z] = P(300, 396); post('lan', x, z, 0, { shore: true }); }
+    { const [x, z] = P(1560, 786); post('chao', x, z, 0, { shore: true }); } { const [x, z] = P(600, 325); post('xi', x, z, 0, { shore: true }); } { const [x, z] = P(300, 396); post('lan', x, z, 0, { shore: true }); } { const [x, z] = P(812, 214); post('bo', x, z, 0, { shore: true }); }   /* v969 阿伯（舊島生態池的老校工）搬到村公所西邊的池子旁邊釣 */
     if (TWB) try { TWB.merge(twRoot); } catch(e){ console.warn('world2 merge', e); }   /* 幾十棟房子同一種材質的零件併成一塊，畫面負擔才不會隨房子數量增加 */
     flush(parts, town); }
   /* v968 作者 11/28：「遊樂園可以不要」→ 拿掉遊樂園，改蓋「潮汐娛樂館」：撞球館和釣蝦場搬進來（室內玩的集中在一棟），正面朝南對著大道；招牌一圈燈泡輪流亮 */
