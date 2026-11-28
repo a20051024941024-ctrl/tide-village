@@ -55,7 +55,7 @@ export function init(A){
   const NODES = { hall:[965,320,240,120], aqua:[640,410,210,130], mus:[775,662,170,100], amuse:[1255,325,270,160], stad:[1480,430,240,130], mkt:[1210,640,230,140] };   /* v919 水族館往南 2 公尺（圓頂放正中間還要離鐵軌遠一點）、市場的廣場放大（建築放正中間四周才有地方走） */
   const edgeP = (n, t) => { const [x, y, w, h] = n, dx = t[0] - x, dy = t[1] - y, k = Math.min((w / 2) / Math.abs(dx || 1e-6), (h / 2) / Math.abs(dy || 1e-6)); return [x + dx * k, y + dy * k]; };
   /* 路：[點, 寬（圖上的像素）, 種類]。stone＝石板大道、lane＝巷子、wood＝港邊木棧道 */
-  const CARWAY = new Set(['aqua', 'mus', 'amuse', 'stad', 'mkt']);   /* v966 村公所的前廣場就貼著圓環，大道拿掉（原本那一小段跟接駁路在門口交叉成一團） */   /* v956 作者 11/28 選 A「完整的雙向車道＋人行道」；v957 作者看了試做的那段說「好」→ 每條大道、圓環、外環都是車道 */
+  const CARWAY = new Set(['aqua', 'amuse', 'stad', 'mkt']);   /* v967 博物館那條只剩圓環邊 3 公尺的一小截，拿掉 */   /* v966 村公所的前廣場就貼著圓環，大道拿掉（原本那一小段跟接駁路在門口交叉成一團） */   /* v956 作者 11/28 選 A「完整的雙向車道＋人行道」；v957 作者看了試做的那段說「好」→ 每條大道、圓環、外環都是車道 */
   const ROADS = [
     [[[965,545],[975,600],[985,700],[990,800]], 26, 'stone'],                                      // 廣場 → 商店街 → 港口
     [[[640,760],[800,820],[990,830],[1160,790]], 22, 'wood'],                                      // 港邊
@@ -63,7 +63,7 @@ export function init(A){
     /* v936 作者：「路可以參考那張圖嗎，路還有很多接不上」→ 照規劃圖加外環大路：水族館 → 居民區北邊 → 居民區西邊；港邊 → 沙灘北邊 → 體育場；體育場 ↔ 遊樂園 ↔ 村公所前廣場 */
     [[[575,462],[500,478],[420,494],[345,512],[298,548],[286,580]], 46, 'stone', 'ring2'],
     [[[1160,790],[1262,760],[1340,700],[1420,612],[1490,548],[1530,500]], 46, 'stone', 'ring2'],
-    [[[1395,402],[1360,380]], 46, 'stone', 'ring2'], [[[1054,369],[1080,333],[1130,330]], 46, 'stone', 'ring2'],
+    [[[1395,402],[1360,380]], 46, 'stone', 'ring2'],   /* v967 村公所 → 遊樂園那條拿掉（跟遊樂園大道在路口擠成一個三角形） */
     [[[752,535],[700,588]], 16, 'stone'], [[[1178,520],[1205,540]], 16, 'stone'],
     /* v919 作者：「有些路都沒連過去」→ 市場接到沙灘、每個車站接到最近的廣場或巷子、建地區的巷子接到市場和體育場大道 */
     ...[[[1308,668],[1332,722],[1340,700]], [[1430,575],[1438,612]], [[1545,555],[1500,540]], [[1080,240],[1080,272],[1095,330]], [[560,340],[578,364]], [[300,530],[290,560]], [[768,800],[772,716]], [[1213,790],[1210,712]], [[1320,625],[1360,680]], [[1300,470],[1298,452]]].map(L => [L, 11, 'lane']),   /* v936 火車站剩 5 站：留下的站接到最近的路，拿掉的站的小路改接外環 */
@@ -292,8 +292,8 @@ export function init(A){
         /* 上層滿出來，一道一道流到下層 */
         const curtain = new THREE.Mesh(mergeGeometries([...Array(14)].map((_, k) => new THREE.CylinderGeometry(0.43, 0.47, 0.7, 4, 1, true, k * 0.4488, 0.16).toNonIndexed()), false), fall); curtain.position.y = -0.045; stripe.repeat.set(3, 1); fg.add(curtain);   /* 14 道細細的水從上層邊緣流下來，中間看得到海浪柱 */
         /* 貝殼吐出來的那道水：弧線落進上層 */
-        const arcG = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(-0.05, 0.47, 0), new THREE.Vector3(0.1, 0.62, 0), new THREE.Vector3(0.2, 0.3, 0)), 20, 0.022, 6, false);
-        const fall2 = fall.clone(); fall2.map = stripe.clone(); fall2.map.needsUpdate = true; fall2.map.repeat.set(1, 3); const arc = new THREE.Mesh(arcG, fall2); fg.add(arc);
+        const arcG = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(-0.075, 0.445, 0), new THREE.Vector3(0.06, 0.56, 0), new THREE.Vector3(0.17, 0.3, 0)), 20, 0.013, 6, false);   /* v967 從貝殼嘴裡面流出來、細一點（作者：貝殼那裡看起來沒接好） */
+        const fall2 = fall.clone(); fall2.map = stripe.clone(); fall2.map.needsUpdate = true; fall2.map.repeat.set(1, 3); fall2.opacity = 0.42; const arc = new THREE.Mesh(arcG, fall2); fg.add(arc);
         /* 下層水面的波紋：從水簾落下的地方往外擴散 */
         const rippleM = [], ripples = [0, 1, 2, 3].map(k => { const m = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false }); rippleM.push(m); const r = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 48).rotateX(-Math.PI / 2), m); r.position.y = -0.395; fg.add(r); return r; });
         /* 大噴水：每 30 秒（照大家共用的時鐘）從貝殼往上噴一次，噴 5 秒 */
@@ -323,13 +323,13 @@ export function init(A){
           const ns = Math.max(1, Math.floor(len / 0.72)); for (let k = 0; k < ns; k++){ const o = (k - (ns - 1) / 2) * 0.72; seats.push({ x: OX + bx + c * o, z: OZ + bz - sn * o, y: SEAT_Y, face }); }
           colliders.push({ t: 'o', x: OX + bx, z: OZ + bz, hw: len / 2, hd: 0.26, c, s: sn, bw: Math.abs(c) * len / 2 + Math.abs(sn) * 0.26, bd: Math.abs(sn) * len / 2 + Math.abs(c) * 0.26 }); } } }
     /* 村公所・鐘樓 */
-    { const [x, z] = P(965, 314);
-      if (TWB){ const g = new THREE.Group(); g.position.set(x, PAVE_Y, z); g.scale.setScalar(2); twRoot.add(g); TWB.office(g, { w: 10, d: 5, front: 2.5 });   /* 村長辦公室那棟放大兩倍：20×10 公尺、兩層樓，前面有門廊 */
+    { const [x, z] = P(978, 314);   /* v967 門廊縮短、往東 2.6 公尺（作者：村公所的台階、盆栽壓到圓環的路；西北角原本壓到鐵軌） */
+      if (TWB){ const g = new THREE.Group(); g.position.set(x, PAVE_Y, z); g.scale.setScalar(2); twRoot.add(g); TWB.office(g, { w: 10, d: 5, front: 0.9 });   /* 村長辦公室那棟放大兩倍：20×10 公尺、兩層樓，前面有門廊 */
         B(parts, WALL, 4.6, 9, 4.6, x, 13, z - 1.6); B(parts, '#e9dfc8', 5.2, 0.5, 5.2, x, 17.4, z - 1.6); G(parts, BLUE, new THREE.ConeGeometry(4.0, 4.6, 4).rotateY(Math.PI / 4), x, 19.9, z - 1.6); G(parts, '#f2c230', new THREE.SphereGeometry(0.3, 8, 6), x, 22.4, z - 1.6);   /* 鐘樓從屋頂後面伸出來 */
         for (const sg of [1, -1]){ const fz = z - 1.6 + sg * 2.33; G(parts, '#ffffff', new THREE.CylinderGeometry(1.55, 1.55, 0.12, 24).rotateX(Math.PI / 2), x, 14.6, fz); G(parts, '#18334a', new THREE.TorusGeometry(1.55, 0.09, 6, 28), x, 14.6, fz + sg * 0.05);
           const hh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.85, 0.05).translate(0, 0.36, 0), mat('#18334a', 0.6)), mh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.25, 0.05).translate(0, 0.55, 0), mat('#18334a', 0.6)); for (const h of [hh, mh]){ h.position.set(x, 14.6, fz + sg * 0.1); town.add(h); }
           tickers.push(() => { const hr = A.DayNight && A.DayNight.hour != null ? A.DayNight.hour : 10; hh.rotation.z = -sg * (hr % 12) / 12 * 6.2832; mh.rotation.z = -sg * (hr % 1) * 6.2832; }); }   /* 鐘面的指針照遊戲時間走 */
-        colliders.push({ t: 'b', x: OX + x, z: OZ + z + 0.8, hw: 10.3, hd: 6.3, big: true }); RSV.push([x - 6, z, 9], [x + 6, z, 9]); label('村公所・鐘樓', x, 25, z); }
+        colliders.push({ t: 'b', x: OX + x, z: OZ + z, hw: 10.3, hd: 5.4, big: true }); RSV.push([x - 6, z, 9], [x + 6, z, 9]); label('村公所・鐘樓', x, 25, z); }
       else { B(parts, WALL, 34, 5.2, 9, x, 2.9, z); B(parts, BLUE, 35.4, 0.9, 10.4, x, 5.9, z); B(parts, WALL, 5, 13, 5, x, 6.8, z - 1.5); G(parts, BLUE, new THREE.ConeGeometry(4.3, 4.4, 4).rotateY(Math.PI / 4), x, 15.5, z - 1.5); G(parts, '#ffffff', new THREE.CylinderGeometry(1.5, 1.5, 0.2, 20).rotateX(Math.PI / 2), x, 11.2, z + 1.05);
         for (let i = 0; i < 6; i++) B(parts, '#8bb6e6', 2.4, 2.6, 0.2, x - 14 + i * 5.6, 3, z + 4.55); colliders.push({ t: 'b', x: OX + x, z: OZ + z, hw: 17.2, hd: 4.8, big: true }); RSV.push([x - 9, z, 12], [x + 9, z, 12]); label('村公所・鐘樓', x, 20, z); } }
     /* 水族館（圓頂） */
@@ -337,7 +337,7 @@ export function init(A){
       B(parts, '#bfe8f5', 5.2, 3.4, 2.4, x + 11.6, 2.0, z); B(parts, '#2f86c9', 5.8, 0.4, 3, x + 11.6, 3.9, z); B(parts, '#8bd0f0', 0.2, 2.4, 1.5, x + 14.25, 1.6, z);   /* 朝廣場那一面的入口 */
       colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: 11.7, big: true }, { t: 'b', x: OX + x + 11.6, z: OZ + z, hw: 2.7, hd: 1.3, big: true }); RSV.push([x, z, 14], [x + 12, z, 5]); label('水族館', x, 13, z); }
     /* 博物館 */
-    { const [x, z] = P(775, 650);   /* 放在拱形前廣場的正中間 */
+    { const [x, z] = P(764, 663);   /* 放在拱形前廣場的正中間；v967 往西南挪 3 公尺（作者：博物館門口的錨和台階壓到圓環） */
       if (TWB){ const g = new THREE.Group(); g.position.set(x, PAVE_Y, z); g.rotation.y = Math.PI; g.scale.setScalar(2.3); twRoot.add(g); TWB.museum(g);   /* 村子那棟博物館放大，正面朝北邊的前廣場 */
         colliders.push({ t: 'b', x: OX + x, z: OZ + z + 0.9, hw: 8.1, hd: 6.1, big: true }); RSV.push([x - 4, z + 1, 9], [x + 4, z + 1, 9]); label('博物館', x, 12, z + 1); }
       else { B(parts, '#e9e1cf', 24, 6.4, 12, x, 3.5, z); G(parts, '#7c8fb0', roofG(26, 13.4, 3.6), x, 6.7, z); for (let i = 0; i < 6; i++) G(parts, '#ffffff', new THREE.CylinderGeometry(0.5, 0.56, 5.6, 10), x - 10 + i * 4, 3.1, z + 6.7); B(parts, '#d9cfb8', 25, 0.5, 3.4, x, 0.55, z + 7.2);
@@ -362,7 +362,7 @@ export function init(A){
     const ROOF = ['#c0583a', '#4a6fb5', '#7a5aa0', '#d08a2a', '#3e8f86', '#e2574c', '#3c8fd8', '#4bb57b'];
     /* 民宅＝三層樓透天和兩層街屋輪流；商店街＝一樓是店面的街屋，每四間一間小木屋店。門都朝著路 */
     const PASTEL = ['#f2b6c0', '#f4d9a0', '#c7e3c0', '#f6c9a8', '#b9d9ee'], COTK = ['cloth', 'hair', 'wood', 'art'], cots = [], stands = []; let hN = 0;   /* cots：小木屋店（哪一種、在哪、門朝哪）；stands：攤子模型放在哪——村民擺攤、站崗的位置從這裡來 */
-    const house = (px, py, w, d, roof, ry, kind, ck) => { const [x, z] = P(px, py); if (paved(x, z, 1.2) || samp(sdLand, x, z) < 4 || hAt(x, z) < 0.2) return; const q = Math.abs(Math.sin(ry || 0)) > 0.7;
+    const house = (px, py, w, d, roof, ry, kind, ck) => { const [x, z] = P(px, py); if (paved(x, z, 1.2) || samp(sdLand, x, z) < 4 || hAt(x, z) < 0.2) return false; const q = Math.abs(Math.sin(ry || 0)) > 0.7;
       /* 作者 11/27：「其實原本的房子還可以」→ 民宅和店面用村子現在那一套街屋（民宅＝三層樓透天和兩層街屋輪流；商店街一樓是店面，每四間一間小木屋店） */
       if (TWB){ const g = new THREE.Group(), sd = hN++; g.position.set(x, Math.max(0.2, hAt(x, z)), z); g.rotation.y = ry || 0; twRoot.add(g);
         if (kind === 'shop' && (ck || sd % 4 === 1)){ const kk = ck || COTK[(sd >> 2) % 4]; TWB.cottage(g, { w: w - 0.4, d, front: d / 2, kind: kk }); cots.push({ k: kk, x, z, face: ry || 0, d }); }
@@ -379,7 +379,7 @@ export function init(A){
       /* v927 商店街東排那三間小木屋店，裡面擺的東西要跟招牌對得上：最北那間掛的是「阿彩畫廊」→ 擺畫（以前剛好排到理髮店的擺設，畫廊的招牌掛在理髮店上）；
          中間那間是阿萍的美髮沙龍；最靠港口那間留給阿綾的服裝店 */
       const row = Math.round((cy - 611) / 32), ck = onSt && col === 1 ? { 0: 'art', 3: 'hair', 5: 'cloth' }[row] : null;
-      house(cx, cy, wd[0], wd[1], HCOL[ci], fr, shop || onSt ? 'shop' : 'home', ck); if (onSt) street.push({ col, row, x: hx, z: hz, face: fr, d: wd[1] }); }
+      const built = house(cx, cy, wd[0], wd[1], HCOL[ci], fr, shop || onSt ? 'shop' : 'home', ck) !== false; if (onSt && built) street.push({ col, row, x: hx, z: hz, face: fr, d: wd[1] }); }
     /* v921 可以走進去的店（作者 11/27：「可以開始改了」→ 港口和商店街先接上）：店的裡面是村子現在那幾間（釣具店、木工坊、畫廊、寵物店、食堂、撞球館、釣蝦場、魚市場、博物館、體育場），
        新主島這邊只是多一個門：走到門口按「進去看看」，出來回到這個門。門牌用村子的直式掛牌 */
     const plate = (label, icon, x, z, face) => { if (!A.sign) return; const fx = Math.sin(face), fz = Math.cos(face), g = new THREE.Group(), sx = x + fz * 1.9 - fx * 0.5, sz2 = z - fx * 1.9 - fz * 0.5; g.position.set(sx, Math.max(0.2, hAt(sx, sz2)), sz2); town.add(g); A.sign(g, label, icon, 0, 0); colliders.push({ t: 'c', x: OX + sx, z: OZ + sz2, r: 0.2 }); };   /* 門口旁邊的直式掛牌 */
@@ -389,7 +389,7 @@ export function init(A){
       put(Wc[0], 'cafe', '潮汐食堂', '🍱'); put(Ec[0], 'cai', '阿彩畫廊', '🎨'); put(Wc[1], 'mu', '阿木木工坊', '🪑'); put(Ec[1], 'pet', '小花寵物店', '🐾'); put(Wc[2], 'pool', '潮汐撞球館', '🎱'); put(Ec[2], 'shrimp', '釣蝦場', '🦐'); put(Wc.length > 3 ? Wc[Wc.length - 1] : null, 'tackle', '釣具店', '🎣');
       put(Ec.find(q => q.row === 5 && !q.used) || null, 'tailor', '阿綾服裝店', '👗');   /* v951 阿綾服裝店：商店街東排最靠港口那間（v927 就留給她，裡面擺衣架） */
       for (const [k, label, icon] of free){ const h = street.find(q => !q.used); if (h){ h.used = 1; door(k, label, icon, h.x + Math.sin(h.face) * (h.d / 2 + 0.9), h.z + Math.cos(h.face) * (h.d / 2 + 0.9), h.face); } }
-      { const [x, z] = P(1210, 640); door('market', '潮汐魚市場', '🐟', x, z - 7.2, Math.PI); } { const [x, z] = P(775, 650); door('museum', '海洋博物館', '🏛️', x, z - 7.4, Math.PI); } { const [x, z] = P(1480, 430); door('stad', '潮汐體育場', '🏟️', x - 25.5, z + 3, -Math.PI / 2); } }
+      { const [x, z] = P(1210, 640); door('market', '潮汐魚市場', '🐟', x, z - 7.2, Math.PI); } { const [x, z] = P(764, 663); door('museum', '海洋博物館', '🏛️', x, z - 7.4, Math.PI); } { const [x, z] = P(1480, 430); door('stad', '潮汐體育場', '🏟️', x - 25.5, z + 3, -Math.PI / 2); } }
     { const [x, z] = P(470, 585); label('居民區', x, 9, z); } { const [x, z] = P(985, 700); label('商店街', x, 9, z, 0.8); }
     /* 預留的空地：照規劃圖把房子放滿以後，還空著的大塊草地剩這兩塊（西邊海岸、水族館和村公所中間）；全島空草地約 25% */
     for (const [px, py, t] of [[221, 556, '預留・以後擴建'], [783, 355, '預留']]){ const [x, z] = P(px, py); label(t, x, 6, z, 0.75); }
@@ -435,7 +435,8 @@ export function init(A){
       segs.forEach((sg, ri) => { if (!sg.car) return; const { L, y } = sg; let runs = [], cur = null;
         const inMain = (x, z) => { const [px, py] = toPx(x, z); return inPoly(PLAZA, px, py); };
         for (let i = 0; i < L.length; i++){ const [qx, qy] = toPx(L[i][0], L[i][1]), inRing = ((qx - PL[0]) / RING[0]) ** 2 + ((qy - PL[1]) / RING[1]) ** 2 < 1, out = !inMain(L[i][0], L[i][1]) && !(NODES[sg.car] && inRing) && (sg.car === 'arc' || !inBldg(L[i][0], L[i][1]));   /* v957 前廣場裡也鋪：車子要開得過去、接得到外環；大道從圓環開始鋪（圓環裡面是走路的） */ if (out){ if (!cur) cur = []; cur.push(L[i]); } else if (cur){ runs.push(cur); cur = null; } } if (cur) runs.push(cur);
-        for (const R of runs){ if (R.length < 6) continue; (W2X.carRuns = W2X.carRuns || []).push(R); const yy = y + 0.03; paveParts.car.length = 0; ribbon('car', R, 6.2, yy, false, 3); const gm = new THREE.Mesh(mergeGeometries(paveParts.car, false), MAT.car); gm.receiveShadow = true; root.add(gm); paveParts.car.length = 0;
+        for (const R0 of runs){ const R = R0.slice(); while (R.length > 6 && railDist(R[R.length - 1][0], R[R.length - 1][1]) < 10.5) R.pop(); while (R.length > 6 && railDist(R[0][0], R[0][1]) < 10.5) R.shift();   /* v967 路的盡頭不要壓到鐵軌（留位置給迴車道） */
+          if (R.length < 6) continue; (W2X.carRuns = W2X.carRuns || []).push(R); const yy = y + 0.03; paveParts.car.length = 0; ribbon('car', R, 6.2, yy, false, 3); const gm = new THREE.Mesh(mergeGeometries(paveParts.car, false), MAT.car); gm.receiveShadow = true; root.add(gm); paveParts.car.length = 0;
           laneRuns.push({ R, yy, id: laneRuns.length, arc: sg.car === 'arc' }); } });   /* v966 線等斑馬線、紅綠燈都放好以後再畫（drawLaneLines） */
       segs.forEach((sg, ri) => { if (sg.car || !sg.car) return;   /* v961 走路的石板路不畫白色虛線（車道有自己的線） */ const { L, cum, y, loop } = sg, tot = cum[cum.length - 1]; let st = -1;
         for (let i = 0; i < L.length; i++){ const on = (cum[i] % 2.6) < 1.3 && (loop || (cum[i] > 3 && cum[i] < tot - 3)) && !inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri) && railDist(L[i][0], L[i][1]) > 4;
@@ -444,11 +445,20 @@ export function init(A){
       /* v966 查附近有沒有車道：回傳離 (x,z) 在 r 以內、而且不是 skip 那一條的車道 */
       const LG = new Map(); laneRuns.forEach(o => { for (let k = 0; k < o.R.length; k += 2){ const q = o.R[k], key = Math.floor(q[0] / 4) + ',' + Math.floor(q[1] / 4), [ddx, ddz] = dirAt(o.R, k); if (!LG.has(key)) LG.set(key, []); LG.get(key).push([q[0], q[1], o, ddx, ddz]); } });
       const laneAt = (x, z, r, skip, dx, dz) => { const gx = Math.floor(x / 4), gz = Math.floor(z / 4), n = Math.ceil(r / 4); for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++){ const L = LG.get((gx + a) + ',' + (gz + b)); if (L) for (const q of L) if (q[2].id !== skip && Math.hypot(q[0] - x, q[1] - z) < r && (dx === undefined || Math.abs(q[3] * dx + q[4] * dz) < 0.9)) return q[2]; } return null; };   /* 有給方向的話：跟自己幾乎同方向的（接在後面的同一條路）不算路口 */
+      /* v967 作者 11/28：「斷口處都沒修好」→ 路的盡頭（西邊居民區、港口那兩條）做一個圓形的迴車道，車子可以在這裡掉頭，看起來是故意停在這裡的 */
+      const turns = [];
+      for (const o of laneRuns){ if (o.R.length < 20) continue; for (const end of [0, 1]){ const R = o.R, i = end ? R.length - 1 : 0, e = R[i], j = end ? R.length - 9 : 8, d0 = Math.hypot(e[0] - R[j][0], e[1] - R[j][1]) || 1, dx = (e[0] - R[j][0]) / d0, dz = (e[1] - R[j][1]) / d0;
+        if (laneAt(e[0], e[1], 4, o.id)) continue; let k = 4.0; const cx = e[0] + dx * k, cz = e[1] + dz * k, r = 6.2, y0 = Math.max(o.yy, hAt(cx, cz) + 0.03);
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(r, 40).rotateX(-Math.PI / 2), MAT.car); disc.position.set(cx, y0 + 0.001, cz); disc.receiveShadow = true; root.add(disc);
+        const open = Math.atan2(-dz, -dx); for (let a = 0; a < 40; a++){ const t = a / 40 * 6.2832, dd = Math.abs(((t - open + 9.4248) % 6.2832) - 3.1416); if (dd < 0.62) continue; const t2 = t + 6.2832 / 40;
+          for (const [rr, col, wd, h] of [[r - 0.3, '#ffffff', 0.13, 0.015], [r + 0.08, '#cfc6b5', 0.2, 0.12]]){ const ax = cx + Math.cos(t) * rr, az = cz + Math.sin(t) * rr, bx = cx + Math.cos(t2) * rr, bz = cz + Math.sin(t2) * rr; B(parts, col, wd, h, Math.hypot(bx - ax, bz - az) + 0.03, (ax + bx) / 2, y0 + h / 2 + 0.045, (az + bz) / 2, Math.atan2(bx - ax, bz - az)); } }
+        turns.push([cx, cz, r]); } }
+      W2X.turns = turns.map(([x, z, r]) => ({ x: OX + x, z: OZ + z, r }));
       const zebras = [];
       segs.forEach((sg, ri) => { if (sg.loop || !sg.car || sg.car === 'arc' || sg.car === 'link') return; const { L, cum, w, y } = sg, tot = cum[cum.length - 1];   /* v966 繞建築的弧形路、小接駁路接頭不畫；v959 只畫在車道上（作者：沒有馬路的地方做斑馬線沒用） */
         for (const fwd of [true, false]){ let found = -1, out = -1;
           for (let k = 0; k < L.length; k++){ const i = fwd ? k : L.length - 1 - k; if (!inPlaza(L[i][0], L[i][1]) && !nearOther(L[i][0], L[i][1], ri)){ if (out < 0) out = i; if (Math.abs(cum[i] - cum[out]) >= 2.5){ found = i; break; } } else out = -1; }
-          if (found < 0 || zebras.some(z => Math.hypot(z[0] - L[found][0], z[1] - L[found][1]) < 8) || !laneAt(L[found][0], L[found][1], 1.0, -1) || laneAt(L[found][0], L[found][1], 6.0, laneAt(L[found][0], L[found][1], 1.0, -1).id)) continue;   /* v966 只在有柏油的地方、而且不在路口裡 */ const [dx, dz] = dirAt(L, found), [cx, cz] = L[found]; zebras.push([cx, cz]);
+          if (found < 0 || zebras.some(z => Math.hypot(z[0] - L[found][0], z[1] - L[found][1]) < 8) || turns.some(q => Math.hypot(q[0] - L[found][0], q[1] - L[found][1]) < q[2] + 6) || !laneAt(L[found][0], L[found][1], 1.0, -1) || laneAt(L[found][0], L[found][1], 6.0, laneAt(L[found][0], L[found][1], 1.0, -1).id)) continue;   /* v966 只在有柏油的地方、而且不在路口裡 */ const [dx, dz] = dirAt(L, found), [cx, cz] = L[found]; zebras.push([cx, cz]);
           const zw = sg.car ? 6.2 : w; for (let s = -zw / 2 + 0.35; s <= zw / 2 - 0.3; s += 0.62) B(parts, LINE, 0.36, 0.02, 1.7, cx - dz * s, y + 0.05, cz + dx * s, Math.atan2(dx, dz)); } });
       W2X.zebras = zebras;
       /* v963 紅綠燈（作者 11/28：「還是紅綠燈」「NPC 會等紅燈嗎」）：六條大道接到圓環的路口各一組。
@@ -478,7 +488,7 @@ export function init(A){
           LM.pR.color.set(P.ped === 'r' ? '#ff3b30' : OFF); LM.pG.color.set(P.ped === 'g' || (P.ped === 'b' && !blink) ? '#34e07a' : OFF); }); }
       /* v966 車道的線（作者 11/28：「線都沒畫好」）：每一段只在「自己這條車道上、不在別條車道的柏油裡、不壓斑馬線」的地方畫。
          黃線在斑馬線前後斷開；白邊線、路緣石在路口（別條路接進來的地方）斷開 */
-      { const zb = (x, z, r) => zebras.some(q => Math.hypot(q[0] - x, q[1] - z) < r);
+      { const zb = (x, z, r) => zebras.some(q => Math.hypot(q[0] - x, q[1] - z) < r) || turns.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] - 0.6);
         for (const o of laneRuns){ const { R, yy, id, arc } = o;
           const stroke = (off, col, wd, h, zr, jr) => { let run = [], rl = 0; const flush = () => { if (rl >= 2.0) for (const q of run) B(parts, col, wd, h, q[0] + 0.02, q[1], yy + h / 2 + 0.045, q[2], q[3]); run = []; rl = 0; };   /* 斷剩不到 2 公尺的小段不畫（路口裡零碎的線頭） */
             for (let i = 1; i < R.length; i += 1){ const a = R[i - 1], b = R[i], [dx, dz] = dirAt(R, i), ax = a[0] - dz * off, az = a[1] + dx * off, bx = b[0] - dz * off, bz = b[1] + dx * off, mx = (ax + bx) / 2, mz = (az + bz) / 2, len = Math.hypot(bx - ax, bz - az);
@@ -520,6 +530,15 @@ export function init(A){
           const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r;
           if (t < 0 || t > 1 || u < 0 || u > 1) continue; const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t; if (xings.some(q => Math.hypot(q.x - x, q.z - z) < 10)) continue;
           const [dx, dz] = dirAt(L, i); xings.push({ x, z, dx, dz, w, s: railCum[j] + Math.hypot(x - c[0], z - c[1]) }); } } });
+      /* v967 作者 11/28：「這兩個都壓到了」→ 路、步道跨過鐵軌的地方鋪木板平交道（兩條鐵軌中間和兩邊都鋪），看起來是可以走過去的 */
+      { const decks = [], lines = allSegs.map(sg => [sg.L, sg.w]).concat([0, 1, 3, 4, 5].map(i => [dense(curve(TRAILS[i]), 0.5), 1.6]));
+        for (const [L, w] of lines) for (let i = 1; i < L.length; i++){ const a = L[i - 1], b = L[i];
+          for (let j = 0; j < NR; j++){ const c = railLine[j], d = railLine[(j + 1) % NR], r = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]); if (Math.abs(r) < 1e-9) continue;
+            const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / r, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / r; if (t < 0 || t > 1 || u < 0 || u > 1) continue;
+            const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t; if (decks.some(q => Math.hypot(q[0] - x, q[1] - z) < Math.max(3, w))) continue; decks.push([x, z]);
+            const rl = Math.hypot(d[0] - c[0], d[1] - c[1]) || 1, rx = (d[0] - c[0]) / rl, rz = (d[1] - c[1]) / rl, pl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, sn = Math.max(0.35, Math.abs(((b[0] - a[0]) * rz - (b[1] - a[1]) * rx) / pl));
+            const len = Math.min(10, w / sn + 0.6), y = Math.max(0.2, hAt(x, z)) + 0.075 + 0.07, ry = Math.atan2(rx, rz);
+            for (let k = -len / 2 + 0.2; k <= len / 2 - 0.15; k += 0.42) B(parts, k % 1.26 < 0.42 ? '#9a6c45' : '#a8794f', 2.5, 0.08, 0.36, x + rx * k, y, z + rz * k, ry); } } }
       const XMAT = { post: mat('#f4f4f2', 0.6), red: new THREE.MeshStandardMaterial({ color: '#c8322c', roughness: 0.5 }) };
       const stripeTex = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 16; const c = cv.getContext('2d'); for (let i = 0; i < 8; i++){ c.fillStyle = i % 2 ? '#ffffff' : '#d8322b'; c.fillRect(i * 16, 0, 16, 16); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
       const xb = (() => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 24; const c = cv.getContext('2d'); c.fillStyle = '#c8322c'; c.fillRect(0, 0, 128, 24); c.fillStyle = '#ffffff'; c.fillRect(4, 4, 120, 16); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide }); })();
@@ -593,8 +612,8 @@ export function init(A){
     /* ---- v927 第二批：阿報、村子大看板、村長、築城守土、老王、阿萍、蔚博士，還有三位釣魚的村民 ---- */
     { const [x, z] = P(990, 547); post('news', x, z, -0.86, { r: 4.2 }); }                     /* 📰 阿報：噴水池和出生點中間偏東，一出生就看得到他（村子裡他也是站在廣場上喊號外） */
     { const [x, z] = P(884, 512); post('tboard', x, z, Math.PI / 2); }                         /* 🏆 村子大看板：廣場西邊，往水族館和往博物館兩條大道的中間，面向噴水池 */
-    { const [x, z] = P(948, 359); post('chief', x, z, 0); }                                    /* 村長 阿土伯：村公所門口的左邊，面向廣場（村子裡他也站在村長辦公室門口） */
-    { const [x, z] = P(994, 366); post('zc', x, z, 0); }                                       /* 🏰 築城守土的沙盤桌：村公所門口的右邊 */
+    { const [x, z] = P(902, 334); post('chief', x, z, 0); }   /* v967 原本站在圓環的車道上，挪到村公所左邊的人行道 */                                    /* 村長 阿土伯：村公所門口的左邊，面向廣場（村子裡他也站在村長辦公室門口） */
+    { const [x, z] = P(1028, 334); post('zc', x, z, 0); }   /* v967 原本壓在車道上，挪到村公所右邊 */                                       /* 🏰 築城守土的沙盤桌：村公所門口的右邊 */
     { const [x, z] = P(944, 818); post('wang', x, z, 0.5); }                                   /* 漁夫 老王：港邊木棧道上，木桶旁邊，看著海 */
     { const h = street.find(q => q.col === 1 && q.row === 3); if (h){ const f = h.face, fx = Math.sin(f), fz = Math.cos(f), lx = Math.cos(f), lz = -Math.sin(f);   /* 💇 阿萍：商店街東排中間那間美髮沙龍的門口（掛牌在門的另一邊） */
         post('salon', h.x + fx * 2.8 - lx * 1.8, h.z + fz * 2.8 - lz * 1.8, f, { r: 4.2 }); plate('阿萍美髮沙龍', '💇', h.x + fx * (h.d / 2 + 0.9), h.z + fz * (h.d / 2 + 0.9), f); } }
