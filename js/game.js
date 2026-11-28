@@ -6694,8 +6694,25 @@ function MusicEngine(ctx, out){
     jump(k){ key = null; set(k); } };
 }
 
+/* v1000 真的音樂檔（作者用 AI 做的，Lo-fi 換成有樂器的歌）：走到哪一區放哪首，換區時慢慢淡出淡入。還沒做好的區先放有的那首。
+   拉魚、大魚的時候照舊放原本那段緊張的音樂（音樂檔先壓小聲）。檔案先整個下載再播（不會因為網路一頓一頓） */
+const BGM_FILES = { harbor: 'models/music/harbor.mp3' };
+const BGM_ORDER = ['harbor'];
+function bgmZone(w){ if (w === 'reel' || w === 'boss' || w === 'dive' || w === 'pool' || w === 'shrimp' || w === 'stad' || w === 'ski') return null;
+  let k = 'harbor';   /* 之後：廣場 plaza、沙灘 beach、出海 sea、森林 forest、室內 indoor、晚上 night */
+  try { if ((typeof Voy !== 'undefined' && Voy.on) || myBoat) k = 'sea'; else if (inIndoor()) k = 'indoor'; else if (DayNight.period === 'night') k = 'night';
+    else if (W2S.on && W2 && W2.near(me.pos.x, me.pos.z)){ const lx = me.pos.x - W2.ox, lz = me.pos.z - W2.oz; k = lz > 45 ? 'harbor' : lx > 60 ? 'beach' : lx < -45 || lz < -25 ? 'forest' : 'plaza'; } } catch(e){}
+  return BGM_FILES[k] ? k : BGM_ORDER.find(x => BGM_FILES[x]) || null; }
+const BGM = { url: {}, loading: {} };
+async function bgmUrl(k){ if (BGM.url[k]) return BGM.url[k]; if (BGM.loading[k]) return null; BGM.loading[k] = 1; try { const r = await fetch(BGM_FILES[k]); if (!r.ok) throw 0; BGM.url[k] = URL.createObjectURL(await r.blob()); return BGM.url[k]; } catch(e){ return null; } finally { BGM.loading[k] = 0; } }
 const MUSIC = (() => {
-  let master = null, timer = null, sea = null, E = null;
+  let master = null, timer = null, sea = null, E = null, bus = null, trk = null;
+  function trkTick(w){ const want = bgmZone(w), tense = w === 'reel' || w === 'boss';
+    if (trk && trk.key !== want && !(tense && trk.key)){ const old = trk; trk = null; old.g.gain.setTargetAtTime(0.0001, actx.currentTime, 0.8); setTimeout(() => { try { old.el.pause(); old.src.disconnect(); } catch(e){} }, 3500); }
+    if (want && !trk){ const u = BGM.url[want]; if (!u){ bgmUrl(want); } else { try { const el = new Audio(u); el.loop = true; const src = actx.createMediaElementSource(el), g = actx.createGain(); g.gain.value = 0.0001; src.connect(g); g.connect(master); el.play().catch(() => {}); g.gain.setTargetAtTime(0.95, actx.currentTime + 0.1, 1.0); trk = { key: want, el, src, g }; } catch(e){} } }
+    if (trk) trk.g.gain.setTargetAtTime(tense ? 0.25 : 0.95, actx.currentTime, 0.5);
+    if (bus) bus.gain.setTargetAtTime(trk && !tense ? 0.0001 : 0.62, actx.currentTime, 0.6);   /* 有音樂檔就把原本合成的音樂關小，拉魚時才出來 */
+    if (sea) sea.g.gain.setTargetAtTime(trk && !tense ? 0.05 : (SEA[w] || 0.2), actx.currentTime, 1.2); }
   function pick(){
     if (F.phase === 'reeling') return F.boss ? 'boss' : 'reel';
     if (Dive.on) return 'dive';
@@ -6721,14 +6738,14 @@ const MUSIC = (() => {
     if (!actx || !master || !E) return; let w = 'day'; try { w = pick(); } catch(e){}
     const k = E.key(), fast = w === 'reel' || w === 'boss' || k === 'reel' || k === 'boss';   /* 拉魚的音樂馬上換；其他的等這一小節彈完 */
     if (w !== k){ if (fast) E.jump(w); else E.set(w); if (sea) sea.g.gain.setTargetAtTime(SEA[w] || 0.2, actx.currentTime, 1.2); }
-    E.run(actx.currentTime + 0.35);
+    E.run(actx.currentTime + 0.35); try { trkTick(w); } catch(e){}
   }
   return {
     theme: () => E ? E.name() : '',
     start(){ if (!actx || master) return; master = actx.createGain(); master.gain.value = 0.0001; master.connect(actx.destination); master.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime + 2.5);
-      const mb = actx.createGain(); mb.gain.value = 0.62; mb.connect(master); E = MusicEngine(actx, mb); let w = 'day'; try { w = pick(); } catch(e){} E.set(w); E.start(actx.currentTime + 0.15); seaStart(); timer = setInterval(tick, 100); },
+      const mb = bus = actx.createGain(); mb.gain.value = 0.62; mb.connect(master); E = MusicEngine(actx, mb); let w = 'day'; try { w = pick(); } catch(e){} E.set(w); E.start(actx.currentTime + 0.15); seaStart(); timer = setInterval(tick, 100); },
     vol(){ if (master && actx) master.gain.setTargetAtTime(Math.max(0.0002, 0.4 * musicVol), actx.currentTime, 0.1); },
-    stop(){ if (!master) return; clearInterval(timer); const m = master, s = sea; m.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(() => { try { s && s.src.stop(); s && s.lfo.stop(); m.disconnect(); } catch(e){} }, 1500); master = null; sea = null; E = null; },
+    stop(){ if (!master) return; clearInterval(timer); if (trk){ const t0 = trk; trk = null; setTimeout(() => { try { t0.el.pause(); t0.src.disconnect(); } catch(e){} }, 1500); } bus = null; const m = master, s = sea; m.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(() => { try { s && s.src.stop(); s && s.lfo.stop(); m.disconnect(); } catch(e){} }, 1500); master = null; sea = null; E = null; },
     playing(){ return !!master; }
   };
 })();
@@ -25298,6 +25315,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1000', d:'11/28', items:[['🎵','背景音樂換成真的樂器演奏：港口那首手風琴、小提琴的海港民謠先上，其他地方的歌做好會陸續換上'], ['🎣','拉魚的時候還是會換成緊張的音樂，拉完再回來']] },
   { id:'u999', d:'11/28', items:[['🗺️','地圖整理：圖示疊在一起的先不畫（放大才出現），拿掉右邊一長串「找人找店」、海況和村民清單，只留「去哪裡」'], ['🧭','航海圖重畫：島是圓滑的、中間是新主島，沒找到的地標不再畫一堆問號，航海圖變成手機裡自己一個 App']] },
   { id:'u998', d:'11/28', items:[['🎵','一碰畫面（按鈕、選單都算）就開始放音樂，不用先走路'], ['📱','畫質「自動」時會邊玩邊調解析度：太卡就自動降一點，很順再加回去'], ['📊','設定 →「畫面順不順」可以打開小框，看每秒幾張、卡了幾次']] },
   { id:'u997', d:'11/28', items:[['🏟️','體育場和遠方荒島（漂流島）先收起來了，新主島體育場那塊地先空著'], ['🔒','潛水 Lv.8、冰封群島 Lv.12 才開放，新玩家先專心釣魚']] },
