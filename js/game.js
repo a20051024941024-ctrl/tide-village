@@ -5560,7 +5560,10 @@ K3.read = () => { let c = null; try { c = JSON.parse(localStorage.getItem('tide.
   if (c && !c.on){ c.on = true; try { localStorage.setItem('tide.k3', JSON.stringify(c)); } catch(e){} }   /* v746 作者：「自動換」→ 之前自己改回舊人物的人也換成新人物（不再有舊人物） */
   if (c && !c.eye) Object.assign(c, K3.faceOf(c.sex));   /* v741 以前選女生臉／男生臉的人，換成一樣長相的搭配 */
   K3.cfg = Object.assign({}, K3.DEF, c || {}); K3.cfg.c = Object.assign({}, (c && c.c) || {}); K3.on = !!K3.cfg.on || /k3=1/.test(location.hash); };
-K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} };
+K3.save = () => { try { localStorage.setItem('tide.k3', JSON.stringify(K3.cfg)); } catch(e){} setTimeout(k3Sync, 1500); };
+/* v1019 作者：好友列表「這個頭像改成玩家自己的頭像」→ 新人物的樣子存一份到伺服器（267），沒在線上的好友也看得到你的大頭照。一分鐘檢查一次，有變才送 */
+function k3Sync(){ try { if (!Cloud.on || !Cloud.sb || !K3.on || !K3.cfg) return; const v = K3.enc(K3.cfg); if (!v || v === k3Sync.last) return; k3Sync.last = v; Cloud.sb.rpc('set_my_k3', { p: v }).then(({ error }) => { if (error) k3Sync.last = null; }, () => { k3Sync.last = null; }); } catch(e){} }
+setInterval(k3Sync, 60000); setTimeout(k3Sync, 8000);
 K3.read();
 /* v736 領口的毛邊：衣服在領口那一圈的邊是一片一片尖尖的。把領口邊緣上的點沿著邊往左右鄰居拉平（做幾次），邊就變成一條順的線 */
 K3.rimSmooth = body => { body.scene.traverse(o => { if (!o.isMesh || !/^T\w+_(cloth|etc)$/.test(o.material.name)) return; const g = o.geometry, P = g.attributes.position, ix = g.index.array, E = new Map(), key = (a, b) => a < b ? a * 1e6 + b : b * 1e6 + a;
@@ -6312,8 +6315,8 @@ class Fisher {
     if (skin !== this.rodSkin){ this.rodSkin = skin; if (!this.isNpc && this.rodId){ const r = RODS.find(x => x.id === this.rodId) || RODS[0]; try { rodHD(this.av, this.rodType, r.color, skin); applyRodShape(this.av, this.rodType, false); } catch(e){} } } }
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ const t = now(), L = String(text || '').length;
-    if (this.isNpc){ if (!this.bub.hidden && this.bubAt && t - this.bubAt < 3.5 && this.bubUntil > t && text !== this.bub.textContent) return;   /* v978 作者：「NPC 講話太快，還沒看清楚就消失」→ 上一句至少留 3.5 秒才換下一句 */
-      secs = Math.min(14, Math.max(secs || 5, 3.5 + L * 0.28)); }
+    if (this.isNpc){ if (!this.bub.hidden && this.bubAt && t - this.bubAt < 6 && this.bubUntil > t && text !== this.bub.textContent) return;   /* v978 作者：「NPC 講話太快，還沒看清楚就消失」→ 上一句至少留 3.5 秒才換下一句 */
+      secs = Math.min(20, Math.max((secs || 5) * 1.6, 6 + L * 0.4)); }   /* v1019 作者：「NPC 的台詞可以講久一點嗎」→ 每句至少 6 秒、字越多越久（一個字多 0.4 秒，最多 20 秒），上一句至少留 6 秒才換 */
     else if (!cls || cls === 'chatb') secs = Math.min(15, Math.max(secs || 5, 4.5 + L * 0.3));   /* v1004 玩家說的話也照字數停久一點，看得清楚 */   /* 字越多停越久：一個字大約 0.28 秒 */
     this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubAt = t; this.bubUntil = t + (secs || 5); }
   // 炫耀魚：把魚舉在頭上幾秒
@@ -12319,6 +12322,7 @@ function itemShot(type, size){
   if (ItemShot.cache.has(type)) return ItemShot.cache.get(type);
   if (!ItemShot.kit){ const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#b8c8a0', 1.6)); const dl = new THREE.DirectionalLight('#ffffff', 2.0); dl.position.set(3, 5, 4); sc.add(dl);
     const rt = new THREE.WebGLRenderTarget(size, size, { samples:4 }); rt.texture.colorSpace = THREE.SRGBColorSpace; ItemShot.kit = { sc, cam: new THREE.PerspectiveCamera(32, 1, 0.05, 60), rt }; }
+  if (ItemShot.kit.rt.width !== size) ItemShot.kit.rt.setSize(size, size);   /* v1019 作者：小島商店「方塊是完全沒有」→ 畫布是第一次拍的大小（例如 256），之後拍 128 的小圖只讀到左下角四分之一，小圖變成一片空白；大小不同就先改畫布大小 */
   const K = ItemShot.kit, T = ISLE_ITEMS[type], g = itemMesh(type, { lite: !!T.house });   /* v305 小圖也畫出金魚雕像上的金魚 */ K.sc.add(g);
   const r = T.house ? 3.4 * (T.scale || 1) : Math.max(1.1, T.rad * 1.4), h = T.house ? 2.2 : ['palm', 'tree', 'flag', 'swing', 'parasol', 'lamp'].includes(type) ? 1.4 : 0.5;
   if (T.house){ K.cam.position.set(r * 1.6, h + r * 0.9, r * 2.0); K.cam.lookAt(0, h, 0); } else { const f = fitCam(K.cam, g), d = new THREE.Vector3(1.6, 1.0, 2.0).normalize().multiplyScalar(f.r * 3.3); K.cam.position.copy(f.c).add(d); K.cam.lookAt(f.c); }   /* v305 照整件東西的大小取景，高的東西不會被切掉 */
@@ -12331,7 +12335,7 @@ function itemShot(type, size){
 }
 /* v302 玩家說：家具、小島的東西要按了能看到模型，才知道適不適合 → 3D 預覽（手指拖動轉、兩指或滾輪放大），下面直接按「拿去擺」 */
 function fitCam(cam, obj, k){ const b = new THREE.Box3().setFromObject(obj), c = b.getCenter(new THREE.Vector3()), r = Math.max(0.3, b.getSize(new THREE.Vector3()).length() / 2); return { c, r: r * (k || 1) }; }
-function modelShot(key, make, size){ if (ItemShot.cache.has(key)) return ItemShot.cache.get(key); itemShot('bench', size); const K = ItemShot.kit, g = make(); K.sc.add(g);
+function modelShot(key, make, size){ if (ItemShot.cache.has(key)) return ItemShot.cache.get(key); itemShot('bench', size); const K = ItemShot.kit; if (K.rt.width !== size) K.rt.setSize(size, size); const g = make(); K.sc.add(g);
   const { c, r } = fitCam(K.cam, g); K.cam.position.copy(c).add(new THREE.Vector3(1.5, 1.1, 1.9).normalize().multiplyScalar(r * 3.3)); K.cam.lookAt(c);
   const prevT = renderer.getRenderTarget(), prevC = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
   renderer.setRenderTarget(K.rt); renderer.setClearColor('#f3ede4', 1); renderer.clear(); renderer.render(K.sc, K.cam);
@@ -12502,7 +12506,7 @@ function isleHouses2(body, CATS, items, nh){
   const lst = el('div', 'cl-list k3list'), bar = el('div', 'k3bar'); R2.append(lst, bar);
   lst.appendChild(el('p', 'sub k3note', `房子整棟買，買了就是那麼大，不用擴建、不用借錢。島上房子 ${nh} / ${ISLE_HOUSE_MAX} 棟。拆掉退一半。`));
   const grid = el('div', 'cl-grid k3grid');
-  for (const H of HOUSE_KITS){ const b = el('button', 'cl-it' + (H.k === sel ? ' on' : '')), M = MANSION_LV[H.lv]; b.appendChild(el('span', 'ish-hk', '🏠'.repeat(H.up + 1))); b.appendChild(el('span', 'n', H.n)); b.appendChild(el('span', 'b k3pr', '🪙' + H.price.toLocaleString()));
+  for (const H of HOUSE_KITS){ const b = el('button', 'cl-it' + (H.k === sel ? ' on' : '')), M = MANSION_LV[H.lv]; { const sw = el('i', 'blk-sw ish-sw'); try { const u = modelShot('house:' + H.k, () => itemMesh('mansion', { lite: true, it: { t: 'mansion', lv: H.lv, up: H.up, id: 3 } }), 128); if (u) sw.style.background = `url(${u}) center/cover, #f3ede4`; } catch(e){} b.appendChild(sw); }   /* v1019 作者：「第一張要有圖片」→ 房子清單以前只有 🏠 符號，改成每一棟的小圖 */ b.appendChild(el('span', 'n', H.n)); b.appendChild(el('span', 'b k3pr', '🪙' + H.price.toLocaleString()));
     b.title = `${M.hw * 2}×${M.hd * 2}`; b.addEventListener('click', () => { Isle2.sel.house = H.k; renderTab(); }); grid.appendChild(b); }
   lst.appendChild(grid);
   const tabs = el('div', 'cl-tabs'); for (const [k, i, l] of ISHOP_TABS){ const t = el('button', 'cl-tab' + (k === 'house' ? ' on' : '')); t.append(el('span', 'i', i), el('span', 'n', k === 'mine' ? `${l}(${items.length + Blk.b.length})` : l)); t.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); tabs.appendChild(t); } bar.appendChild(tabs);
@@ -13030,7 +13034,7 @@ function renderFriends(body){
   const ul = el('ul', 'frlist');
   for (const f of F.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || String(b.seen || '').localeCompare(String(a.seen || '')))){ const li = el('li', 'frrow' + (on.has(f.id) ? ' on' : ''));
     let pk = null, pp = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; pp = p; break; } } catch(e){}
-    { let gr = null, k3r = null; try { if (pp && pp.fisher.gearKey){ gr = JSON.parse(pp.fisher.gearKey); k3r = pp.fisher.k3c || null; } } catch(e){} const av = el('div', 'fr-av'), im = avatarImg(f.av, '', gr, k3r); if (im) av.appendChild(im); else av.textContent = '🙂'; li.appendChild(av); }
+    { let gr = null, k3r = null; try { if (pp && pp.fisher.gearKey){ gr = JSON.parse(pp.fisher.gearKey); k3r = pp.fisher.k3c || null; } } catch(e){} if (!k3r && f.k3) try { k3r = K3.dec(f.k3); } catch(e){} const av = el('div', 'fr-av'); let im = (f.av || '') === '' && k3r ? null : avatarImg(f.av, '', gr, k3r); if (!im && k3r){ im = k3ShotImg(Object.assign({}, k3r, { c: Object.assign({}, k3r.c || {}) }), 'face', ''); im.className = 'avimg'; } if (im) av.appendChild(im); else av.textContent = '🙂'; li.appendChild(av); }   /* v1019 沒在線上的好友：用伺服器存的新人物樣子拍大頭照 */
     const mid = el('div', 'fr-mid'); mid.appendChild(el('div', 'fr-n', f.name || '釣客'));
     const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null, where = pp ? (W2 && W2.near(pp.fisher.pos.x, pp.fisher.pos.z) ? '新主島' : '村子') : '';
     mid.appendChild(el('div', 'fr-st', on.has(f.id) ? `● 在${where || '線上'}` : seenM == null ? '● 很久沒上線' : `● 最後上線 ${seenM < 60 ? Math.max(1, seenM) + ' 分鐘前' : seenM < 1440 ? Math.round(seenM / 60) + ' 小時前' : Math.round(seenM / 1440) + ' 天前'}`)); li.appendChild(mid);
@@ -13040,7 +13044,7 @@ function renderFriends(body){
     { const ch = el('button', 'frb ic', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.appendChild(el('i', 'ph-dot', String(u.n))); ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); act.appendChild(ch); }
     { const mo = el('button', 'frb ic', '⋯'); mo.setAttribute('aria-label', '更多'); mo.addEventListener('click', e => { e.stopPropagation(); const nx = li.nextSibling; if (nx && nx.classList && nx.classList.contains('frmore')){ nx.remove(); return; } const m = el('li', 'frmore');
         const g2 = el('button', 'tbtn vbtn', '🎁 送禮'); g2.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); const vi = el('button', 'tbtn ghost vbtn', '🏝️ 小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); });
-        const rm = el('button', 'tbtn ghost vbtn bk', '刪除好友'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定刪除？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); m.append(g2, vi); if (pk && Cloud.on){ const rp = el('button', 'tbtn vbtn rpbtn', '🚩 檢舉'); rp.addEventListener('click', () => { const box = el('li', 'frmore rpbox'); box.appendChild(el('span', '', '檢舉原因：')); for (const r of ['罵人／不禮貌', '洗版', '取不雅的名字', '語音', '其他']){ const b = el('button', 'tbtn ghost vbtn', r); b.addEventListener('click', () => { reportPeer(pk, f.name || '好友', r); box.remove(); }); box.appendChild(b); } m.after(box); rp.disabled = true; }); m.appendChild(rp); }   /* v1014 好友的「⋯」也能檢舉 */ if (pk && !Kid.on){ const sl = el('button', 'tbtn ghost vbtn', '🐟 用魚拍一下'); sl.addEventListener('click', () => { closeSheet(); slapGo(pk, f.name || '好友'); }); m.appendChild(sl); } m.appendChild(rm); li.after(m); }); act.appendChild(mo); }
+        const rm = el('button', 'tbtn ghost vbtn bk', '刪除好友'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定刪除？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); m.append(g2, vi); if (pk && Cloud.on){ const rp = el('button', 'tbtn vbtn rpbtn', '🚩 檢舉'); rp.addEventListener('click', () => { const box = el('li', 'frmore rpbox'); box.appendChild(el('span', '', '檢舉原因：')); for (const r of ['罵人／不禮貌', '洗版', '取不雅的名字', '語音', '其他']){ const b = el('button', 'tbtn ghost vbtn', r); b.addEventListener('click', () => { reportPeer(pk, f.name || '好友', r); box.remove(); }); box.appendChild(b); } m.after(box); rp.disabled = true; }); m.appendChild(rp); }   /* v1019 好友的「⋯」也能檢舉 */ if (pk && !Kid.on){ const sl = el('button', 'tbtn ghost vbtn', '🐟 用魚拍一下'); sl.addEventListener('click', () => { closeSheet(); slapGo(pk, f.name || '好友'); }); m.appendChild(sl); } m.appendChild(rm); li.after(m); }); act.appendChild(mo); }
     li.appendChild(act); cardTap(li, f.id, f.name || '釣客', pk); ul.appendChild(li); }
   body.appendChild(ul);
   if (!Kid.on){ const row = el('div', 'titles frvc'), vo = vcAllowed(), b = el('button', 'tbtn' + (vo ? '' : ' ghost'), vo ? '📞 好友語音：開' : '📞 好友語音：關'); b.addEventListener('click', () => { LS.set('tide.voice', !vo); if (vo && VC.st) vcHang(); renderTab(); }); row.appendChild(b); row.appendChild(el('span', 'sub2', '只有互相加好友、都在線上的人能打給你。接通後麥克風是開的，可以按 🎤 關掉；不會錄音。')); body.appendChild(row); }
@@ -16048,7 +16052,7 @@ function shTackle(S, B, M){ const Y = S.y, g = S.g;
   { const ms = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.05, 8, 16), M('#2a2a30', 0.4)); ms.position.set(S.x + 4.4, Y + 1.6, S.z - S.d / 2 + 0.06); g.add(ms); const gl = new THREE.Mesh(new THREE.CircleGeometry(0.12, 16), M('#9fd8f0', 0.1)); gl.position.set(S.x + 4.4, Y + 1.6, S.z - S.d / 2 + 0.08); g.add(gl); }
   addBoxCol(S.x + 4.3, S.z - S.d / 2 + 0.6, 2.0, 1.0);
   /* 牆上掛一尾大旗魚（招牌） */
-  try { const fm = fishModel(FISH_BY_ID.marlin, 2.2); fm.position.set(S.x + 3.6, Y + 2.55, S.z - S.d / 2 + 0.25); fm.rotation.set(0, Math.PI / 2, 0); g.add(fm); } catch(e){}
+  try { const fm = fishModel(FISH_BY_ID.marlin, 2.2), sz = new THREE.Box3().setFromObject(fm).getSize(new THREE.Vector3()); if (sz.z > sz.x) fm.rotation.set(0, Math.PI / 2, 0); else fm.rotation.set(0, 0, 0); fm.position.set(S.x + 3.6, Y + 2.35, S.z - S.d / 2 + 0.35); g.add(fm); const pl = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.1, 0.06), M('#8c5d3b', 0.7)); pl.position.set(S.x + 3.6, Y + 2.35, S.z - S.d / 2 + 0.05); g.add(pl); } catch(e){}   /* v1019 作者：「釣具店這條魚也是很奇怪」→ 以前不管模型頭朝哪邊都轉 90 度，旗魚變成斜斜的翹起來；看模型長的那一邊擺正，身體平平地掛在牆上一塊木板前 */
   /* v1006 作者給的台灣釣具店照片：「整面牆塞滿一支一支包好的竿子」「洞洞板上掛滿一包一包的小東西」→
      ① 左牆竿子後面多一整排直立的竿袋（黑、銀、紅、藍、金，高高矮矮）；② 後牆左半邊換成洞洞板，掛滿彩色小包裝；③ 中間加一座兩面都掛滿小包裝的鐵網架。
      竿袋、小包裝都用 InstancedMesh（一種形狀一次畫完），便宜手機也不會慢 */
@@ -16321,7 +16325,7 @@ const Pax = { st: null, host: null, dest: '', name: '', el: null, at: 0 };
 function txEmit(d){ try { if (room && room.connected && room.connected()) room.emit('tx', d).catch(() => {}); } catch(e){} }
 function paxUi(){ let e = Pax.el; if (!Pax.st || Pax.st === 'ride'){ if (e){ e.remove(); Pax.el = null; } if (Pax.st === 'ride') toastOnce(); return; }
   if (!e){ e = Pax.el = el('div', 'taxibar pax'); document.body.appendChild(e); } e.innerHTML = '';
-  if (Pax.st === 'invited'){ e.appendChild(el('span', 'tx', `👥 ${Pax.name} 叫了潮搭Go 去「${Pax.dest}」，一起坐？`)); const y = el('button', 'tbtn', '一起坐'); y.addEventListener('click', () => { Pax.st = 'joined'; txEmit({ a: 'join', to: Pax.host }); SFX.click(); paxUi(); }); e.appendChild(y); const n = el('button', 'tbtn ghost', '不用'); n.addEventListener('click', () => paxEnd()); e.appendChild(n); }
+  if (Pax.st === 'invited'){ e.appendChild(el('span', 'tx', `👥 ${Pax.name} 邀你一起坐潮搭Go 去「${Pax.dest}」`)); const y = el('button', 'tbtn', '一起坐'); y.addEventListener('click', () => { Pax.st = 'joined'; txEmit({ a: 'join', to: Pax.host }); SFX.click(); paxUi(); }); e.appendChild(y); const n = el('button', 'tbtn ghost', '不用'); n.addEventListener('click', () => paxEnd()); e.appendChild(n); }
   else { e.appendChild(el('span', 'tx', `👥 等${Pax.name}上車，你就一起上車（待在車子附近）`)); const n = el('button', 'tbtn ghost', '不坐了'); n.addEventListener('click', () => { txEmit({ a: 'leave', to: Pax.host }); paxEnd(); }); e.appendChild(n); }
   function toastOnce(){} }
 function paxEnd(off){ const was = Pax.st; Pax.st = null; Pax.host = null; if (was === 'ride'){ poolMeVis(true); if (off){ const fx = Math.sin(off.h), fz = Math.cos(off.h), k = (off.i || 0) + 1, x = off.x + fz * 2.0 - fx * k * 1.1, z = off.z - fx * 2.0 - fz * k * 1.1; me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = off.h; } pushPresence(true); } paxUi(); }
@@ -16339,9 +16343,9 @@ function vcUi(){ let e = VC.el; if (!VC.st){ if (e){ e.remove(); VC.el = null; }
   e.appendChild(el('span', 'tx', `📞 ${VC.name}${VC.st === 'link' ? '（連線中…）' : ''}`));
   const t = el('button', 'tbtn vctalk' + (VC.talk ? ' on' : ''), VC.talk ? '🎤 麥克風開' : '🎤 麥克風關'); t.addEventListener('click', () => vcMicOn(!VC.talk)); e.appendChild(t);   /* v996 作者：「電話一定要一直按著嗎」→ 改成點一下開、再點一下關，接通時就是開的 */
   const m = el('button', 'tbtn ghost', VC.muted ? '🔇 聽不到' : (VC.vol || 2.8) > 3 ? '🔊 大聲' : '🔉 一般'); m.addEventListener('click', () => { if (VC.muted){ VC.muted = false; VC.vol = 2.8; } else if ((VC.vol || 2.8) <= 3) VC.vol = 4.5; else VC.muted = true; if (VC.gain) VC.gain.gain.value = VC.muted ? 0 : VC.vol; if (VC.au && !VC.boosted) VC.au.muted = VC.muted; vcUi(); }); e.appendChild(m);   /* 點一下換：一般 → 大聲 → 聽不到 */
-  const rp = el('button', 'tbtn vcrep', '🚩 檢舉'); rp.title = '檢舉';   /* v1014 作者：「檢舉按鈕完全看不出來」→ 寫出字、紅色 */ rp.addEventListener('click', () => { if (!confirmOnce(rp)) return; const pk = VC.peer, nm = VC.name; vcHang(); reportPeer(pk, nm, '語音'); }); e.appendChild(rp);
+  const rp = el('button', 'tbtn vcrep', '🚩 檢舉'); rp.title = '檢舉';   /* v1019 作者：「檢舉按鈕完全看不出來」→ 寫出字、紅色 */ rp.addEventListener('click', () => { if (!confirmOnce(rp)) return; const pk = VC.peer, nm = VC.name; vcHang(); reportPeer(pk, nm, '語音'); }); e.appendChild(rp);
   const h = el('button', 'tbtn ghost', '掛斷'); h.addEventListener('click', () => vcHang()); e.appendChild(h); }
-/* v1014 作者：「接通了但聲音非常小聲」→ 對方的聲音改走遊戲的聲音系統放大 2.8 倍（手機開麥克風時，網頁的 audio 會被當成講電話、用聽筒那種小音量）；
+/* v1019 作者：「接通了但聲音非常小聲」→ 對方的聲音改走遊戲的聲音系統放大 2.8 倍（手機開麥克風時，網頁的 audio 會被當成講電話、用聽筒那種小音量）；
    講電話的時候背景音樂壓到三成。原本的 audio 元件留著（Chrome 要有它，對方的聲音才會進來），但設成靜音避免重複。 */
 function vcBoost(st){ try { ensureAudio(); if (!actx || !st) return; if (VC.src){ try { VC.src.disconnect(); } catch(e){} } VC.src = actx.createMediaStreamSource(st); if (!VC.gain){ VC.gain = actx.createGain(); VC.gain.connect(actx.destination); } VC.gain.gain.value = VC.muted ? 0 : VC.vol || 2.8; VC.src.connect(VC.gain); if (VC.au){ VC.au.muted = true; VC.au.volume = 0; } VC.boosted = true;
     if (VC.duck == null){ VC.duck = musicVol; musicVol = musicVol * 0.3; try { MUSIC.vol(); } catch(e){} } } catch(e){ VC.boosted = false; if (VC.au){ VC.au.muted = VC.muted; VC.au.volume = 1; } } }
@@ -16375,7 +16379,7 @@ function vcTick(){ if (VC.st && VC.peer && !peers.has(VC.peer)){ toast('對方�
 function onTxMsg(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const d = m.data, mine = room && room.key, p = peers.get(m.peer);
   if (d.a === 'join' && d.to === mine && Taxi.st !== 'idle' && Taxi.st !== 'ride'){ Taxi.pax = Taxi.pax || []; if (!Taxi.pax.includes(m.peer) && Taxi.pax.length < 3){ Taxi.pax.push(m.peer); toast(`👥 ${p ? peerName(p) : '朋友'}要跟你一起坐`); taxiUi(); } return; }
   if (d.a === 'leave' && d.to === mine && Taxi.pax){ Taxi.pax = Taxi.pax.filter(k => k !== m.peer); return; }
-  if (d.a === 'call'){ if (Taxi.st !== 'idle' || Pax.st || !p || Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) > 25) return; Pax.st = 'invited'; Pax.host = m.peer; Pax.dest = String(d.dest || '').slice(0, 20); Pax.name = peerName(p); Pax.at = Date.now(); paxUi(); return; }
+  if (d.a === 'call'){ if (d.to !== mine || Taxi.st !== 'idle' || Pax.st || !p || Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) > 25) return; Pax.st = 'invited'; Pax.host = m.peer; Pax.dest = String(d.dest || '').slice(0, 20); Pax.name = peerName(p); Pax.at = Date.now(); SFX.click(); paxUi(); return; }
   if (m.peer !== Pax.host) return;
   if (d.a === 'cancel'){ if (Pax.st !== 'ride') { toast(`${Pax.name}不坐了`); paxEnd(); } return; }
   if (d.a === 'go' && Array.isArray(d.pax) && d.pax.includes(mine) && Pax.st === 'joined'){ if (!p || Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) > 35){ toast('離車子太遠，沒趕上這班車'); paxEnd(); return; } Pax.st = 'ride'; Pax.seat = d.pax.indexOf(mine); if (mySeat && !mySeat.train) standUp(); poolMeVis(false); SFX.click(); paxUi(); pushPresence(true); toast(`🚕 跟${Pax.name}一起坐車去「${Pax.dest}」`); return; }
@@ -19196,7 +19200,9 @@ function taxiUi(){ let e = Taxi.el; if (Taxi.st === 'idle'){ if (e) e.remove(); 
   if (!e){ e = Taxi.el = el('div', 'taxibar'); document.body.appendChild(e); }
   const d = Taxi.dest, eta = Taxi.path ? Math.max(1, Math.round((Taxi.path.len - Taxi.s) / 7.5)) : 0, w = Taxi.st === 'come' ? `🚕 阿萬從乘車處開過來了，大約 ${eta} 秒，在原地等就好` : Taxi.st === 'wait' ? (Taxi.atSlot ? '🚕 乘車處就在旁邊，走過去上車（跟著箭頭）' : '🚕 車到了！走到車子旁邊就會上車') : (bdayIs('wan') ? '🎂 阿萬：「今天是我生日，載你特別開心！」・' : '') + `🚕 坐車去「${d.name}」・轉動畫面看看風景`;
   const px = (Taxi.pax || []).map(k => { const p = peers.get(k); return p ? peerName(p) : ''; }).filter(Boolean), w2x = px.length ? `・👥 ${px.join('、')} 一起坐` : '';
-  const k = Taxi.st + '|' + (Taxi.st === 'come' ? Math.ceil(eta / 5) : '') + w.length + w2x; if (e._k === k) return; e._k = k; e.innerHTML = ''; e.appendChild(el('span', 'tx', w + w2x));
+  const near = (Taxi.st === 'come' || Taxi.st === 'wait') ? [...peers].filter(([pk, p]) => p.fisher && p.fisher.av.g.visible && Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < 25 && !(Taxi.pax || []).includes(pk)).slice(0, 3) : [];   /* v1019 作者：「一起搭這個應該是要我邀玩家然後一起搭」→ 以前一叫車，附近 25 公尺的人都會跳出「一起坐？」；現在由叫車的人在這裡點名邀請，被邀的人才會看到 */
+  const k = Taxi.st + '|' + (Taxi.st === 'come' ? Math.ceil(eta / 5) : '') + w.length + w2x + near.map(([pk]) => pk + ((Taxi.inv || []).includes(pk) ? '1' : '')).join(); if (e._k === k) return; e._k = k; e.innerHTML = ''; e.appendChild(el('span', 'tx', w + w2x));
+  for (const [pk, p] of near){ const sent = (Taxi.inv || []).includes(pk), b = el('button', 'tbtn ghost', sent ? `✉️ 已邀 ${peerName(p)}` : `👥 邀 ${peerName(p)}`); b.disabled = sent; b.addEventListener('click', () => { if ((Taxi.pax || []).length >= 3){ toast('車上最多再坐 3 個人'); return; } (Taxi.inv = Taxi.inv || []).push(pk); txEmit({ a: 'call', to: pk, dest: d.name }); SFX.click(); toast(`邀請${peerName(p)}一起坐了`); taxiUi(); }); e.appendChild(b); }
   { const go = el('button', 'tbtn', '⚡ 直接到'); go.addEventListener('click', () => taxiSkip()); e.appendChild(go); }
   if (Taxi.st === 'come' || Taxi.st === 'wait'){ const x = el('button', 'tbtn ghost', '不坐了'); x.addEventListener('click', () => taxiEnd(true)); e.appendChild(x); } }
 function taxiTake(){ /* 叫一台車：先找乘車處停著的，沒有就叫正在開回去的那台 */
@@ -19210,10 +19216,10 @@ function taxiCall(dest){ if (!dest) return; try { guideMark('taxi'); } catch(e){
   if (c && (Taxi.st === 'come' || Taxi.st === 'wait')){ const L = taxiRouteFwd(c.position.x, c.position.z, c.rotation.y, pick); P = L && taxiLane(L, [[c.position.x, c.position.z]]); }
   else { const tk = taxiTake(); if (!tk){ tp(); return; } c = tk.car; slot = tk.slot;
     if (tk.fromSlot){ const S = taxiStand(); if (Math.hypot(me.pos.x - S.x, me.pos.z - S.z) < 40){   /* 人就在乘車處旁邊：車在格子裡等你，走過去上車（不要繞一大圈開過來） */
-      Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = null; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; Taxi.atSlot = true; Taxi.st = 'wait'; Taxi.pax = []; txEmit({ a: 'call', dest: dest.name }); SFX.click(); taxiUi(); return; } }
+      Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = null; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; Taxi.atSlot = true; Taxi.st = 'wait'; Taxi.pax = []; Taxi.inv = []; SFX.click(); taxiUi(); return; } }
     Taxi.atSlot = false; if (tk.fromSlot) P = taxiOutPath(slot, pick); else { const L = taxiRouteFwd(c.position.x, c.position.z, c.rotation.y, pick); P = L && taxiLane(L, [[c.position.x, c.position.z]]); } }
   if (!P){ if (c && c !== Taxi.car) taxiSendBack(c, slot); tp(); return; }
-  Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = P; Taxi.s = 0; Taxi.v = Math.max(2, Taxi.v || 0); Taxi.t = 0; Taxi.st = 'come'; Taxi.pax = []; taxiPlace(); txEmit({ a: 'call', dest: dest.name });
+  Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = P; Taxi.s = 0; Taxi.v = Math.max(2, Taxi.v || 0); Taxi.t = 0; Taxi.st = 'come'; Taxi.pax = []; taxiPlace(); Taxi.inv = [];
   SFX.click(); taxiUi(); }
 function taxiEnd(quiet){ if (Taxi.st === 'ride') poolMeVis(true); if (Taxi.st !== 'idle' && Taxi.st !== 'ride') txEmit({ a: 'cancel' }); else if (Taxi.st === 'ride' && Taxi.car) txEmit({ a: 'off', x: Taxi.car.position.x, z: Taxi.car.position.z, h: Taxi.car.rotation.y }); taxiDrop(); Taxi.st = 'idle'; Taxi.dest = null; taxiUi(); pushPresence(true); if (!quiet) SFX.click(); }
 function taxiSkip(){ const d = Taxi.dest; taxiEnd(true); if (d) travelTo({ id: 'w2m:' + d.name, label: d.name, x: d.x, z: d.z, rot: d.rot != null ? d.rot : me.rot }); }
@@ -19251,7 +19257,7 @@ function buskTick(dt, t){ const d = W2.doors && W2.doors.find(q => q.k === 'mark
 function taxiTick(dt){ if (!W2) return; try { if (W2S.on) drvTick(dt, now()); else if (Drv.f){ Drv.f.av.g.visible = false; if (Drv.f.tag) Drv.f.tag.style.display = 'none'; } } catch(e){ if (!drvTick.w){ drvTick.w = 1; console.warn('drv', e); } } try { if (frameNo % 60 === 7) vcTick(); } catch(e){} try { if (W2S.on) buskTick(dt, now()); else if (Busk.f){ Busk.f.av.g.visible = false; if (Busk.f.tag) Busk.f.tag.style.display = 'none'; } } catch(e){ if (!buskTick.w){ buskTick.w = 1; console.warn('busk', e); } } try { k3SetGlowTick(); } catch(e){} try { bdayTick(); paxTick(); bpxTick(); if (frameNo % 30 === 3) ownBoatSync(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
   const T = { car: Taxi.car, path: Taxi.path, s: Taxi.s, v: Taxi.v }, drive = vmax => { const r = taxiDrive(T, dt, vmax); Taxi.s = T.s; Taxi.v = T.v; return r; };
   if (Taxi.st === 'come'){ if (drive(10)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } else if (frameNo % 30 === 0) taxiUi(); }
-  else if (Taxi.st === 'wait'){ const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3);
+  else if (Taxi.st === 'wait'){ if (frameNo % 30 === 0) taxiUi(); const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3);
     if (dd < (Taxi.t < 0.1 ? 8 : 4.5) && !myBoat && !Dive.on && F.phase === 'idle'){ let P = null; if (Taxi.atSlot){ P = taxiOutPath(Taxi.slot, Taxi.drop); Taxi.atSlot = false; } else { const L = taxiRouteFwd(c.position.x, c.position.z, c.rotation.y, Taxi.drop); P = L && taxiLane(L, [[c.position.x, c.position.z]]); } if (!P){ taxiSkip(); return; }
       Nav.t = null; if (mySeat && !mySeat.train) standUp(); poolMeVis(false); if (Taxi.pax && Taxi.pax.length) txEmit({ a: 'go', pax: Taxi.pax.slice(0, 3) }); Taxi.st = 'ride'; Taxi.path = P; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; SFX.click(); pushPresence(true); taxiUi(); }
     else if (Taxi.t > 90){ toast('阿萬等太久先回乘車處了，要坐再叫一次'); taxiEnd(true); } }
@@ -23429,7 +23435,7 @@ function ecoApply(n){ const k = ecoKey(n); if (!k) return; const st = ecoBook(k)
 function w2EcoDrive(n, dt, t){ if (!n.w2on || !W2 || !W2.doors) return false; const k = ecoKey(n); if (!k) return false; if (frameNo % 240 === (n.id || 0) % 240 || n.ecoRod === undefined) ecoApply(n);
   const P = W2.posts[k]; if (!P) return false; const HR = DAY_LEN / 24, g = ecoGH(Date.now()), hNow = g % 24, idx = Object.keys(ECO.who).indexOf(k);
   let trip = null, el = 0; for (const h0 of ECO.trips){ const s0 = h0 + 0.05 + idx * 0.1, e = ((hNow - s0 + 24) % 24) * HR; if (e < HR * 3.2){ trip = h0; el = e; break; } }
-  if (trip == null){ if (n.ecoSt){ n.ecoSt = null; n.ecoTrip = null; n.pos.set(P.x, groundHeight(P.x, P.z), P.z); n.baseY = n.pos.y; n.rot = P.face; n.speed = 0; if (P.fishing){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } ecoApply(n); } return false; }
+  if (trip == null){ if (n.ecoSt){ n.ecoSt = null; n.ecoTrip = null; n.pos.set(P.x, groundHeight(P.x, P.z), P.z); n.baseY = n.pos.y; n.rot = P.face; n.speed = 0; if (n.av.rod) n.av.rod.visible = true; if (P.fishing){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } ecoApply(n); } return false; }
   const st = ecoBook(k), dn = Math.floor(g / 24), ev = [...st.log].reverse().find(e => e.d === dn && e.h === trip), to = (ev && ev.to) || 'market', D = W2.doors.find(q => q.k === to) || W2.doors.find(q => q.k === 'market'); if (!D) return false;
   if (!n.ecoTrip || n.ecoTrip.key !== dn + ':' + trip){ const fx = Math.sin(D.face), fz = Math.cos(D.face), sx = Math.cos(D.face), sz = -Math.sin(D.face), side = idx - 1, tx = D.x + fx * 1.6 + sx * side * 1.2, tz = D.z + fz * 1.6 + sz * side * 1.2, c = w2Path(P.x, P.z, tx, tz);
     n.ecoTrip = c ? { key: dn + ':' + trip, c, face: D.face + Math.PI, ev } : { key: dn + ':' + trip, c: null }; }
@@ -23441,6 +23447,7 @@ function w2EcoDrive(n, dt, t){ if (!n.w2on || !W2 || !W2.doors) return false; co
   n.ecoSt = ph; if (!n.post) n.post = { x: P.x, y: groundHeight(P.x, P.z), z: P.z, rot: P.face };
   if (ph === 'stay'){ const [x, z] = M.c.pts[M.c.pts.length - 1]; n.pos.x = x; n.pos.z = z; n.speed = 0; n.rot = lerpAngle(n.rot, M.face, 1 - Math.exp(-3 * dt)); try { npcMeet(n, t, false); } catch(e){} }
   else { const [x, z, hd] = navAt(M.c, a); n.pos.x = x; n.pos.z = z; n.rot = lerpAngle(n.rot, hd + (ph === 'back' ? Math.PI : 0), 1 - Math.exp(-8 * dt)); n.speed = 1.45; try { npcMeet(n, t, true); } catch(e){} }
+  if (n.av.rod && n.av.rod.visible) n.av.rod.visible = false; n.fishing = false; n.st = 'wait'; n.bobState = 'none'; n.bend = 0; n.windup = 0; n.castT = -1; n.emote = null;   /* v1019 作者：「綠色衣服不應該在這裡平移」→ 阿蘭走去市場時手上還舉著釣竿、維持釣魚的姿勢，看起來像整個人滑過去；走路時把竿子收起來，用走路的動作 */
   n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY; n.update(dt, t); n.placeTag(); return true; }
 const W2_MEAL = { who: ['craft', 'news', 'salon', 'gang'], at: [11.5, 18.0] };
 function w2MealDrive(n, dt, t){ if (!n.w2on || !W2 || !W2.doors) return false; const k = W2_MEAL.who.find(q => W2_NPC[q](n)); if (!k) return false; const D = W2.doors.find(q => q.k === 'cafe'), P = W2.posts[k]; if (!D || !P) return false;
@@ -23449,12 +23456,13 @@ function w2MealDrive(n, dt, t){ if (!n.w2on || !W2 || !W2.doors) return false; c
     const c = w2Path(P.x, P.z, tx, tz); n.w2meal = c ? { c, face: Math.atan2(-sx * side, -sz * side) } : 0; }
   const M = n.w2meal; if (!M) return false; const walkS = M.c.len / 1.45, stayS = HR * 0.9;
   let st = null, a = 0; for (const h0 of W2_MEAL.at){ const start = h0 + idx * 0.12, el = ((hNow - start + 24) % 24) * HR; if (el < walkS){ st = 'go'; a = el * 1.45; } else if (el < walkS + stayS){ st = 'eat'; } else if (el < walkS * 2 + stayS){ st = 'back'; a = M.c.len - (el - walkS - stayS) * 1.45; } if (st) break; }
-  if (!st){ if (n.w2mealSt){ n.w2mealSt = null; worldSign(n, false); const p = W2.posts[k]; n.pos.set(p.x, groundHeight(p.x, p.z), p.z); n.baseY = n.pos.y; n.rot = p.face; n.speed = 0; if (p.fishing){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } } return false; }
+  if (!st){ if (n.w2mealSt){ n.w2mealSt = null; worldSign(n, false); const p = W2.posts[k]; n.pos.set(p.x, groundHeight(p.x, p.z), p.z); n.baseY = n.pos.y; n.rot = p.face; n.speed = 0; if (n.av.rod) n.av.rod.visible = true; if (p.fishing){ n.fishing = true; n.st = 'windup'; n.windup = 0; n.stT = t + 0.7; } } return false; }
   if (!n.w2mealSt){ n.fishing = false; n.bobState = 'none'; n.flying = null; n.st = 'wait'; n.sitting = false; if (n.held){ n.av.g.remove(n.held.o); n.held = null; } if (n.roam) n.roam.away = false; if (camera.position.distanceTo(n.pos) < 25) n.say(pick2(['肚子餓了，去食堂吃飯', '吃飯時間到了！', '美雲姨今天煮什麼呢']), '', 3.5); }
   n.w2mealSt = st; if (!n.post) n.post = { x: P.x, y: groundHeight(P.x, P.z), z: P.z, rot: P.face }; worldSign(n, true, 'eat');
 
   if (st === 'eat'){ const [x, z] = M.c.pts[M.c.pts.length - 1]; n.pos.x = x; n.pos.z = z; n.speed = 0; const pd = Math.hypot(me.pos.x - x, me.pos.z - z); n.rot = lerpAngle(n.rot, pd < 6 ? Math.atan2(me.pos.x - x, me.pos.z - z) : M.face, 1 - Math.exp(-3 * dt)); try { npcMeet(n, t, false); } catch(e){} }
   else { const [x, z, hd] = navAt(M.c, a); n.pos.x = x; n.pos.z = z; n.rot = lerpAngle(n.rot, hd + (st === 'back' ? Math.PI : 0), 1 - Math.exp(-8 * dt)); n.speed = 1.45; try { npcMeet(n, t, true); } catch(e){} }
+  if (n.av.rod && n.av.rod.visible) n.av.rod.visible = false; n.fishing = false; n.st = 'wait'; n.bobState = 'none'; n.bend = 0; n.windup = 0; n.castT = -1; n.emote = null;   /* v1019 去食堂吃飯的路上也把竿子收起來 */
   n.baseY = groundHeight(n.pos.x, n.pos.z); n.pos.y = n.baseY; n.update(dt, t); n.placeTag(); return true; }
 function rhPlan(n){ if (n.rh) return n.rh; if (frameNo < (n.rhTry || 0)) return null; n.rhTry = frameNo + 300; const who = RAIN_HOME[npcShort(n)]; if (!who || !n.roam || !n.roam.post) return null;
   if (n.w2on && W2 && W2.homes && W2.homes.length){ const h = hash32('rh2' + n.npcName), H0 = W2.homes[h % W2.homes.length], P = n.roam.post, c = w2Path(P.x, P.z, H0.x, H0.z); if (!c) return null;   /* v934 新主島：回居民區的一間民宅 */
@@ -25672,6 +25680,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1019', d:'11/29', items:[['🏝️','小島商店的房子和方塊都有小圖了（以前房子只有符號、方塊是空的）'], ['🐟','釣具店牆上的旗魚擺正，平平地掛在一塊木板前'], ['🎣','村民走去市場、食堂的路上會把釣竿收起來'], ['🪑','長椅上的位子隔開一點，兩個人坐隔壁不會擠在一起'], ['🚕','一起坐車改成叫車的人點名邀請：車子來的時候，叫車的人旁邊會出現「👥 邀 某某」，被邀的人才會看到「一起坐」'], ['🏛️','村公所改小一點、往東挪，前面不壓路、後面不壓鐵軌'], ['💬','村民講話停久一點：每句至少 6 秒，字多就更久'], ['🎣','停在棧橋中間的船放在正中間，阿默拋竿不會拋到船上'], ['🧑','好友列表顯示每個人自己的新人物大頭照（沒在線上的也看得到；對方要更新遊戲後進來一次）'], ['⛵','港口外面繞圈開的漁船改走外海那一圈，不會再穿過碼頭']] },
   { id:'u1018', d:'11/29', items:[['🌸','聯名活動週：阿穎週 → 阿默週 → 阿萬週輪流，每週日換。這週釣到 20 條名牌框、40 條眼睛顏色、80 條聯名釣竿（甩竿有特效）、150 條整套衣服（手機 → 活動）'], ['👕','聯名套裝不再用金幣買，要參加活動週才拿得到；已經買的人照樣是你的'], ['🎪','節慶收進「活動」裡，手機少一個圖示']] },
   { id:'u1017', d:'11/29', items:[['🌸','阿穎・櫻浪外套不再偏紫，是真的粉紅色'], ['👁️','眼睛顏色不再自己調，之後由活動送；已經選好的顏色照舊']] },
   { id:'u1016', d:'11/29', items:[['🌸','阿穎的聯名套裝改成他最愛的粉紅色「阿穎・櫻浪」，身上的光也變粉紅；已經買的人自動換成新顏色'], ['🐟','常見的小魚（3 公斤以下）釣起來不再摔在地上，直接順順地飛進手裡'], ['💬','掛著釣的時候，拉魚那一下聊天列會先收起來，不會擋住下面的張力條'], ['🏃','別人跑步不再一頓一頓：照他跑的速度順順地往前，跑步動作也不會一下跑一下停']] },

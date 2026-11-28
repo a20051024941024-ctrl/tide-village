@@ -9774,5 +9774,15 @@
  "活動還沒準備好（伺服器要先更新）。": "Event belum siap (server perlu diperbarui dulu).",
  "這週釣到的魚還不夠": "Ikan minggu ini belum cukup",
  "🎪 活動": "🎪 Event",
- "名牌框在左上角等級 →「名牌框」換；眼睛顏色在造型 → 臉；聯名釣竿在阿鐵工坊 → 竿子造型；甩竿特效在等級 →「甩竿特效」。拿到的東西一直是你的。": "Ganti bingkai nama dari level (kiri atas) → \"Bingkai nama\"; warna mata di Gaya → Wajah; joran kolaborasi di bengkel A-Tie → Motif joran; efek lemparan dari level → \"Efek lemparan\". Semua yang kamu dapat tetap milikmu."
+ "名牌框在左上角等級 →「名牌框」換；眼睛顏色在造型 → 臉；聯名釣竿在阿鐵工坊 → 竿子造型；甩竿特效在等級 →「甩竿特效」。拿到的東西一直是你的。": "Ganti bingkai nama dari level (kiri atas) → \"Bingkai nama\"; warna mata di Gaya → Wajah; joran kolaborasi di bengkel A-Tie → Motif joran; efek lemparan dari level → \"Efek lemparan\". Semua yang kamu dapat tetap milikmu.",
+ "港口外面繞圈開的漁船改走外海那一圈，不會再穿過碼頭": "Kapal nelayan yang berputar di luar pelabuhan kini berlayar lebih jauh dan tidak lagi menembus dermaga",
+ "好友列表顯示每個人自己的新人物大頭照（沒在線上的也看得到；對方要更新遊戲後進來一次）": "Daftar teman kini menampilkan potret karakter masing-masing teman, bahkan saat offline (mereka perlu membuka game versi baru sekali)",
+ "長椅上的位子隔開一點，兩個人坐隔壁不會擠在一起": "Kursi di bangku diberi jarak lebih jauh sehingga dua orang yang duduk bersebelahan tidak bertumpuk",
+ "一起坐車改成叫車的人點名邀請：車子來的時候，叫車的人旁邊會出現「👥 邀 某某」，被邀的人才會看到「一起坐」": "Naik taksi bersama kini hanya lewat undangan: saat taksi datang, pemanggil melihat tombol \"👥 Ajak …\" dan hanya pemain yang diundang yang melihat ajakan",
+ "村公所改小一點、往東挪，前面不壓路、後面不壓鐵軌": "Balai desa sedikit lebih kecil dan digeser ke timur sehingga tidak menutupi jalan di depan maupun rel di belakang",
+ "村民講話停久一點：每句至少 6 秒，字多就更久": "Gelembung bicara warga tampil lebih lama: minimal 6 detik, lebih lama untuk kalimat panjang",
+ "停在棧橋中間的船放在正中間，阿默拋竿不會拋到船上": "Kapal yang ditambatkan di antara dermaga kini berada di tengah, jadi Amo tidak lagi melempar kail ke kapal",
+ "小島商店的房子和方塊都有小圖了（以前房子只有符號、方塊是空的）": "Daftar rumah dan balok di toko pulau kini punya gambar kecil (sebelumnya rumah hanya simbol dan balok kosong)",
+ "釣具店牆上的旗魚擺正，平平地掛在一塊木板前": "Ikan marlin di dinding toko pancing kini terpasang rata di depan papan kayu",
+ "村民走去市場、食堂的路上會把釣竿收起來": "Warga menyimpan joran saat berjalan ke pasar atau kedai"
 }
