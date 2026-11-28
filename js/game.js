@@ -5499,7 +5499,7 @@ K3.ui = (f, tabHost) => { const c = K3.cfg, tab = K3.uiTab || (K3.uiTab = 'look'
           b.addEventListener('click', () => { const fn = x => { x.c = x.c || {}; if (k) x.c[key] = k; else delete x.c[key]; }; if (K3.real || !mine) K3.tryOn(fn); else { fn(K3.cfg); K3.set({}); } renderTab(); }); grid.appendChild(b); }); f.appendChild(grid); };
       /* v741 作者：「我一開始不是說，中性沒有分男生女生」→ 不再有男生臉、女生臉。眼睛、眉毛、嘴巴、腮紅各自選，誰都可以選任何一種 */
       row('眼睛', 'eye', [['a0', '圓眼'], ['b0', '星星眼'], ['b4', '水汪汪'], ['a1', '下垂眼'], ['b1', '溫柔眼'], ['a2', '鳳眼'], ['b2', '貓眼'], ['b5', '丹鳳眼'], ['a4', '三白眼'], ['a3', '睏睏眼'], ['b3', '慵懶眼'], ['a5', '瞇瞇眼']]);
-      sw('眼睛顏色', 'eye', ['#3f6fc0', '#3c8f5a', '#8a5fb5', '#b8404a', '#c99632', '#3a3a44', '#d9739a', '#3fa7b5']);
+      /* v1017 作者：「不要選顏色」「眼睛也是要活動出」→ 眼睛顏色不再自己選，之後由活動送 */
       row('眉毛', 'brow', [['thin', '細彎眉'], ['soft', '彎眉'], ['thick', '粗眉'], ['up', '八字眉'], ['down', '劍眉']]);
       row('嘴巴', 'mouth', [['small', '小嘴'], ['smile', '微笑'], ['grin', '露齒笑'], ['cat', '貓嘴'], ['flat', '一字嘴'], ['pout', '嘟嘴'], ['tooth', '小虎牙']]);
       row('腮紅', 'blush', [['none', '沒有'], ['soft', '淡淡的'], ['line', '斜線']]);
@@ -5818,10 +5818,15 @@ K3.hat = (k, c) => { const t = K3.HATS[c.hat] ? c.hat : 'none', C = c.c || {};
 /* v874 布上的圖案：在材質的顏色後面畫，用模型本來的座標（跟著衣服一起動，不會滑）。所有衣服共用同一份著色程式，只換參數 */
 K3.PATN = { stripe: 1, dot: 2, check: 3, net: 4, wave: 5, vstripe: 6 };
 K3.pat = (m, d) => { if (!m || !m.material) return; const mt = m.material, id = d && d[3] ? K3.PATN[d[3]] || 0 : 0;
-  if (!mt.userData.patU){ if (!id) return; const U = mt.userData.patU = { uPat: { value: 0 }, uPC: { value: new THREE.Color() }, uPS: { value: 10 } };
+  if (!mt.userData.patU){ if (!id) return; const U = mt.userData.patU = { uPat: { value: 0 }, uPC: { value: new THREE.Color() }, uPS: { value: 10 }, uMono: { value: 0 } };
     mt.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
       sh.vertexShader = 'varying vec3 vPObj;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvPObj = position;');
-      sh.fragmentShader = 'uniform int uPat; uniform vec3 uPC; uniform float uPS; varying vec3 vPObj;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      sh.fragmentShader = 'uniform int uPat; uniform vec3 uPC; uniform float uPS; uniform float uMono; varying vec3 vPObj;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        if (uMono > 0.5){ vec3 vv = vec3(1.0);
+          #ifdef USE_COLOR
+          vv = vColor.rgb;
+          #endif
+          float l = dot(vv, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = mix(diffuse * min(1.0, l * 1.25), vec3(l), smoothstep(0.8, 0.95, l)); }
         if (uPat > 0){ vec3 q = vPObj * uPS; float m = 0.0;
           if (uPat == 1) m = step(0.5, fract(q.y));
           else if (uPat == 2){ vec2 g = fract(vec2(q.x + q.z * 0.7, q.y)) - 0.5; m = 1.0 - smoothstep(0.17, 0.23, length(g)); }
@@ -5833,9 +5838,10 @@ K3.pat = (m, d) => { if (!m || !m.material) return; const mt = m.material, id = 
           #ifdef USE_COLOR
           vc = vColor.rgb;
           #endif
+          if (uMono > 0.5) vc = vec3(min(1.0, dot(vc, vec3(0.3, 0.59, 0.11)) * 1.25));
           diffuseColor.rgb = mix(diffuseColor.rgb, uPC * vc, m); }`); };
     mt.customProgramCacheKey = () => 'k3pat'; mt.needsUpdate = true; }
-  const U = mt.userData.patU; U.uPat.value = id; if (id){ U.uPC.value.set(d[4] || '#ffffff'); U.uPS.value = d[5] || 10; } };
+  const U = mt.userData.patU; U.uPat.value = id; U.uMono.value = d && d[7] ? 1 : 0; if (id){ U.uPC.value.set(d[4] || '#ffffff'); U.uPS.value = d[5] || 10; } };
 K3.apply = a => { const k = a.k3, c = (k && k.cfg) || K3.cfg, M = k.meshes, DS = {}, C = (() => { const o = {}, c0 = c.c || {}; for (const key in c0){ const v = c0[key]; if (K3.isKey(v)){ const d = K3.des(key, c[key], v); if (d){ o[key] = d[1]; DS[key] = d; } } else o[key] = v; } return o; })(); if (!k) return;   /* v874 設計款換成顏色，舊的色號（村民）照用 */ const v = { face: 1, facefill: 1, skin: 1, fist: 1 };   /* v696 拳頭（作者生的握拳版光頭，切下手腕以下換上去） */
   const inner = M.shirtin ? 'shirtin' : 'shirt';   /* v705 裡層的白T不要袖子、往內縮，不然袖子貼著手臂一條一條的（作者：「換手有一條一條的」） */
   if (c.top === 'maid'){ Object.assign(v, { dress: 1, apron: 1, ribbon: 1, petticoat: 1, socks: 1, pants: 1 }); v[inner] = 1; }
@@ -5994,7 +6000,7 @@ K3.SETS = {
 K3.SET_PRICE = 2500;
 K3.DES.top.tee.cwan = ['阿萬・夜騎T', '#16161a', '#3ff0e0', 'stripe', '#3ff0e0', 18, 3]; K3.DES.bot.shorts.cwan = ['阿萬・夜騎短褲', '#141418', '#f2f2f2', 'vstripe', '#f2f2f2', 22, 3]; K3.DES.shoes.sneak.cwan = ['夜騎藍', '#2f45a8', null, null, null, null, 3];
 K3.DES.top.hoodie.cmo = ['阿默・黑影連帽衣', '#121216', '#8a5cff', 'net', '#4a2f8a', 9, 3]; K3.DES.bot.pants.cmo = ['黑影長褲', '#101014', '#2a2a30', 'vstripe', '#5a3aa8', 18, 3]; K3.DES.shoes.sneak.cmo = ['黑影', '#141416', null, null, null, null, 3]; K3.DES.hat.cap.cmo = ['黑影帽', '#121216', null, null, null, null, 3]; K3.DES.mask.mask.cmo = ['黑影口罩', '#141416', null, null, null, null, 3];
-K3.DES.top.wave.cying = ['阿穎・櫻浪外套', '#f7b6cc', '#ffffff', 'wave', '#ff86ad', 9, 3]; K3.DES.bot.pants.cying = ['櫻浪長褲', '#f8f3f2', '#f08aa8', 'vstripe', '#f5a3bd', 16, 3]; K3.DES.shoes.sneak.cying = ['櫻粉', '#f28aac', null, null, null, null, 3]; K3.DES.hat.straw.cying = ['粉緞帶', '#f28aac', null, null, null, null, 3];
+K3.DES.top.wave.cying = ['阿穎・櫻浪外套', '#f7b6cc', '#ffffff', 'wave', '#ff86ad', 9, 3, 1];   /* v1017 最後一格 1：海浪外套本身的漸層是藍紫色，乘上粉紅會變紫 → 只拿明暗，顏色照設計的粉紅 */ K3.DES.bot.pants.cying = ['櫻浪長褲', '#f8f3f2', '#f08aa8', 'vstripe', '#f5a3bd', 16, 3]; K3.DES.shoes.sneak.cying = ['櫻粉', '#f28aac', null, null, null, null, 3]; K3.DES.hat.straw.cying = ['粉緞帶', '#f28aac', null, null, null, null, 3];
 K3.setOf = c => { if (!c || !c.c) return null; for (const [k, S] of Object.entries(K3.SETS)) if (c.top === S.cfg.top && c.c.top === S.des.top && c.c.bot === S.des.bot) return k; return null; };
 K3.setOwn = k => (rec.owned || []).includes('k3s_' + k);
 K3.setApply = (x, k) => { const S = K3.SETS[k]; Object.assign(x, S.cfg); x.c = Object.assign({}, x.c || {}); for (const p of ['top', 'bot', 'shoes', 'hat', 'mask']) delete x.c[p]; Object.assign(x.c, S.des); };
@@ -25639,6 +25645,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1017', d:'11/29', items:[['🌸','阿穎・櫻浪外套不再偏紫，是真的粉紅色'], ['👁️','眼睛顏色不再自己調，之後由活動送；已經選好的顏色照舊']] },
   { id:'u1016', d:'11/29', items:[['🌸','阿穎的聯名套裝改成他最愛的粉紅色「阿穎・櫻浪」，身上的光也變粉紅；已經買的人自動換成新顏色'], ['🐟','常見的小魚（3 公斤以下）釣起來不再摔在地上，直接順順地飛進手裡'], ['💬','掛著釣的時候，拉魚那一下聊天列會先收起來，不會擋住下面的張力條'], ['🏃','別人跑步不再一頓一頓：照他跑的速度順順地往前，跑步動作也不會一下跑一下停']] },
   { id:'u1015', d:'11/29', items:[['🤍','連帽衣多一款「雪白」設計（造型 → 衣櫃 → 上衣 → 連帽衣）'], ['🔈','修 iPhone 沒聲音：手指放開那一下才能開聲音，現在放開就會打開；音樂檔被手機擋住時，原本的音樂照樣放']] },
   { id:'u1014', d:'11/28', items:[['📞','好友旁邊的「呼叫」改成「📞 打電話」'], ['🔊','講電話對方的聲音放大很多，背景音樂會自動變小聲；喇叭按鈕可以換「一般 → 大聲 → 聽不到」'], ['🚩','檢舉按鈕寫出字、改成紅色；好友的「⋯」裡也可以檢舉'], ['📱','手機桌面的背景換成不刺眼的深色']] },
