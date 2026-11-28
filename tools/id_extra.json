@@ -9577,5 +9577,10 @@
  "畫質「自動」時會邊玩邊調解析度：太卡就自動降一點，很順再加回去": "Dengan kualitas \"Otomatis\", resolusi menyesuaikan saat bermain: turun sedikit saat lag dan naik lagi saat lancar",
  "設定 →「畫面順不順」可以打開小框，看每秒幾張、卡了幾次": "Pengaturan → \"Kelancaran\" menampilkan kotak kecil berisi frame per detik dan berapa kali tersendat",
  "📊 畫面順不順": "📊 Kelancaran",
- "打開後左下角會有一個小框：每秒畫幾張、最慢一張多久、卡了幾次。覺得卡的時候截圖給作者看。": "Menampilkan kotak kecil berisi frame per detik, frame paling lambat, dan jumlah tersendat. Ambil tangkapan layar saat terasa lag dan kirim ke pengembang."
+ "打開後左下角會有一個小框：每秒畫幾張、最慢一張多久、卡了幾次。覺得卡的時候截圖給作者看。": "Menampilkan kotak kecil berisi frame per detik, frame paling lambat, dan jumlah tersendat. Ambil tangkapan layar saat terasa lag dan kirim ke pengembang.",
+ "地圖整理：圖示疊在一起的先不畫（放大才出現），拿掉右邊一長串「找人找店」、海況和村民清單，只留「去哪裡」": "Peta dirapikan: ikon yang bertumpuk disembunyikan sampai diperbesar, dan daftar panjang orang/toko, kondisi laut, serta daftar penduduk dihapus; hanya \"Mau ke mana\" yang tersisa",
+ "航海圖重畫：島是圓滑的、中間是新主島，沒找到的地標不再畫一堆問號，航海圖變成手機裡自己一個 App": "Peta laut digambar ulang: pulau halus dengan pulau utama baru di tengah, tidak ada lagi tanda tanya untuk penanda yang belum ditemukan, dan kini jadi aplikasi sendiri di ponsel",
+ "潮汐主島": "Pulau Utama Pasang",
+ "🧭 航海圖": "🧭 Peta laut",
+ "📍 在這裡做記號給大家看": "📍 Tandai tempat ini untuk semua"
 }

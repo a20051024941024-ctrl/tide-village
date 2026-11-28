@@ -2520,17 +2520,25 @@ function smTick(dt, t){ const ok = !onIsle && !House.on && !inIndoor() && !Dive.
   /* 發現 */
   SeaMap.chk -= dt; if (SeaMap.chk <= 0){ SeaMap.chk = 0.3; for (const L of SEA_LM){ if (SeaMap.seen.has(L.id)) continue; const dx = L.x - px, dz = L.z - pz; if (dx * dx + dz * dz > 256) continue; SeaMap.seen.add(L.id); LS.set('tide.seaLm', [...SeaMap.seen]); SeaMap.chart = null; const n = seaSeenN(); try { SFX.coin(); } catch(e){} flash(`發現：${L.n}`, 2.4); toast(`${L.ic} ${L.n}：${L.d}（海上地標 ${n} / ${SEA_LM.length}，地圖最下面有航海圖）`, 9); if (n >= SEA_LM.length) setTimeout(() => { flash('八個海上地標都找到了', 2.6); }, 2800); } } }
 /* 航海圖（地圖分頁最下面）：上面是世界的 -x、右邊是世界的 -z（跟上面的村子地圖同一個方向） */
-function seaChart(body){ try { body.appendChild(el('div', 'dexhead', `🧭 航海圖（海上地標 ${seaSeenN()} / ${SEA_LM.length}）`)); body.appendChild(el('p', 'sub', '整片可以划船的海。紅綠浮標是航道，照著划就到得了。問號是還沒去過的地標，划船靠近就會記下來。找港口的阿海坐船，沿路也看得到。'));
-    const N = 560, cv = document.createElement('canvas'); cv.width = cv.height = N; cv.style.cssText = 'width:100%;max-width:560px;display:block;margin:6px auto 4px;border-radius:14px;border:2px solid #18334a'; const c = cv.getContext('2d'), W = 192, X = z => (W - z) / (2 * W) * N, Y = x => (x + W) / (2 * W) * N;
-    if (!SeaMap.land){ const G = 96, lc = document.createElement('canvas'); lc.width = lc.height = G; const lx = lc.getContext('2d'), im = lx.createImageData(G, G); for (let j = 0; j < G; j++) for (let i = 0; i < G; i++){ const z = W - (i + 0.5) / G * 2 * W, x = -W + (j + 0.5) / G * 2 * W, o = (j * G + i) * 4; let land = !boatWater(x, z) && !seaBlock(x, z); for (const V of [SHRIMP, CAFE, MUSEUM, STAD, POOLH]) if (Math.abs(x - V.x) < V.w / 2 + 4 && Math.abs(z - V.z) < V.d / 2 + 4) land = false;   /* 場館的平台在地圖外，不畫 */ if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISL2.R + 16) land = isl2In(x - ISLE.x, z - ISLE.z) > 0; const snow = x < -128 && z < 135; im.data[o] = land ? (snow ? 236 : 150) : 0; im.data[o + 1] = land ? (snow ? 242 : 196) : 0; im.data[o + 2] = land ? (snow ? 246 : 128) : 0; im.data[o + 3] = land ? 255 : 0; } lx.putImageData(im, 0, 0); SeaMap.land = lc; }
-    { const g = c.createLinearGradient(0, 0, 0, N); g.addColorStop(0, '#2f7fb8'); g.addColorStop(1, '#2a6ea8'); c.fillStyle = g; c.fillRect(0, 0, N, N); } c.imageSmoothingEnabled = true; c.drawImage(SeaMap.land, 0, 0, N, N);
-    c.setLineDash([5, 6]); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.75)'; for (const id in SEA_LANES){ const P = SEA_LANES[id]; c.beginPath(); P.forEach((q, i) => { if (i) c.lineTo(X(q[1]), Y(q[0])); else c.moveTo(X(q[1]), Y(q[0])); }); c.stroke(); } c.setLineDash([]);
-    const label = (tx, x, z, col, sz) => { c.font = `bold ${sz || 15}px sans-serif`; c.textAlign = 'center'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,30,50,.75)'; c.strokeText(tx, X(z), Y(x)); c.fillStyle = col || '#fff'; c.fillText(tx, X(z), Y(x)); };
-    label(i18nT('潮汐釣魚村'), 0, 0, '#fff', 17); label(i18nT('冰封群島'), FROST.x + 4, FROST.z + 40); label(i18nT('深海浮台'), ABYSS.x - 12, ABYSS.z); label(i18nT('神秘島'), MYST.x - 22, MYST.z); label(i18nT('苔森之島'), GREEN.x, GREEN.z); label(i18nT('小島'), ISLE.x, ISLE.z, '#fff', 13); /* v997 荒島拿掉：海圖不標 */
-    for (const L of SEA_LM){ const on = SeaMap.seen.has(L.id), x = X(L.z), y = Y(L.x); c.beginPath(); c.arc(x, y, on ? 7 : 9, 0, 6.283); c.fillStyle = on ? '#ffd23f' : 'rgba(255,255,255,.28)'; c.fill(); c.lineWidth = 2; c.strokeStyle = on ? '#18334a' : 'rgba(255,255,255,.6)'; c.stroke(); if (on) label(i18nT(L.n), L.x - 9, L.z, '#ffe9a0', 13); else { c.font = 'bold 13px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff'; c.fillText('?', x, y + 5); } }
-    if (!onIsle && Math.abs(me.pos.x) < W && Math.abs(me.pos.z) < W){ const x = X(me.pos.z), y = Y(me.pos.x); c.beginPath(); c.arc(x, y, 6, 0, 6.283); c.fillStyle = '#ff5a48'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.stroke(); label(i18nT('你'), me.pos.x - 8, me.pos.z, '#fff', 12); }
+function seaChart(body){ try {   /* v999 作者：「這些太亂了」「不應該出現的還在」→ 航海圖重畫：島畫成圓滑的（有沙灘邊），中間是新主島（不畫舊村子），還沒找到的地標不畫問號，拿掉的島不畫 */
+    const seen = SEA_LM.filter(L => SeaMap.seen.has(L.id)).length; body.appendChild(el('p', 'sub', `找港口的阿海坐船出海，或自己划船。海上地標找到 ${seen} / ${SEA_LM.length} 個，划船靠近就會記下來。`));
+    const N = 560, cv = document.createElement('canvas'); cv.width = cv.height = N; cv.style.cssText = 'width:100%;max-width:560px;display:block;margin:6px auto 4px;border-radius:18px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.18)'; const c = cv.getContext('2d'), W = 192, X = z => (W - z) / (2 * W) * N, Y = x => (x + W) / (2 * W) * N;
+    const home = (x, z) => Math.abs(x) < 64 && Math.abs(z) < 64 && Math.hypot(x - ISLE.x, z - ISLE.z) > ISL2.R + 16;   /* 舊村子那一塊：不畫，換成新主島 */
+    if (!SeaMap.land2){ const G = 192, mk = () => { const q = document.createElement('canvas'); q.width = q.height = G; return q; }, lc = mk(), sc = mk(), lx = lc.getContext('2d'), sx = sc.getContext('2d'), im = lx.createImageData(G, G), is = sx.createImageData(G, G);
+      for (let j = 0; j < G; j++) for (let i = 0; i < G; i++){ const z = W - (i + 0.5) / G * 2 * W, x = -W + (j + 0.5) / G * 2 * W, o = (j * G + i) * 4; let land = !boatWater(x, z) && !seaBlock(x, z); for (const V of [SHRIMP, CAFE, MUSEUM, STAD, POOLH]) if (Math.abs(x - V.x) < V.w / 2 + 4 && Math.abs(z - V.z) < V.d / 2 + 4) land = false; if (Math.hypot(x - ISLE.x, z - ISLE.z) < ISL2.R + 16) land = isl2In(x - ISLE.x, z - ISLE.z) > 0; if (home(x, z)) land = false; if (typeof WILD !== 'undefined' && Math.hypot(x - WILD.x, z - WILD.z) < WILD.r + 14) land = false;
+        const snow = x < -128 && z < 135; im.data[o] = snow ? 236 : 132; im.data[o + 1] = snow ? 244 : 196; im.data[o + 2] = snow ? 248 : 112; im.data[o + 3] = land ? 255 : 0; is.data[o] = 246; is.data[o + 1] = 226; is.data[o + 2] = 176; is.data[o + 3] = land ? 255 : 0; }
+      lx.putImageData(im, 0, 0); sx.putImageData(is, 0, 0); SeaMap.land2 = [lc, sc]; }
+    { const g = c.createRadialGradient(N / 2, N / 2, N * 0.1, N / 2, N / 2, N * 0.75); g.addColorStop(0, '#4fb0e0'); g.addColorStop(1, '#2a6ea8'); c.fillStyle = g; c.fillRect(0, 0, N, N); }
+    c.imageSmoothingEnabled = true; c.filter = 'blur(5px)'; c.drawImage(SeaMap.land2[1], -3, -3, N + 6, N + 6); c.filter = 'blur(1.5px)'; c.drawImage(SeaMap.land2[0], 0, 0, N, N); c.filter = 'none';
+    /* 新主島：放在中間，用新主島地圖的縮圖 */
+    try { const M = W2 && W2.mapImg && W2.mapImg(); if (M){ const S = 150 / M.w, w = M.w * S, h = M.h * S, cx = X(0), cy = Y(0); c.save(); c.beginPath(); c.ellipse(cx, cy, X(-w / 2) - cx, Y(h / 2) - cy, 0, 0, 7); c.clip(); c.drawImage(M.cv, cx - (X(-w / 2) - cx), cy - (Y(h / 2) - cy), 2 * (X(-w / 2) - cx), 2 * (Y(h / 2) - cy)); c.restore(); } } catch(e){}
+    c.setLineDash([2, 7]); c.lineCap = 'round'; c.lineWidth = 2.5; c.strokeStyle = 'rgba(255,255,255,.55)'; for (const id in SEA_LANES){ if (CUT_DOCK.has(id)) continue; const P = SEA_LANES[id]; c.beginPath(); P.forEach((q, i) => { if (i) c.lineTo(X(q[1]), Y(q[0])); else c.moveTo(X(q[1]), Y(q[0])); }); c.stroke(); } c.setLineDash([]);
+    const label = (tx, x, z, col, sz) => { c.font = `bold ${sz || 15}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; const w = c.measureText(tx).width + 14, h = (sz || 15) + 10, px = X(z), py = Y(x); c.fillStyle = 'rgba(255,255,255,.92)'; c.beginPath(); c.roundRect ? c.roundRect(px - w / 2, py - h / 2, w, h, h / 2) : c.rect(px - w / 2, py - h / 2, w, h); c.fill(); c.fillStyle = col || '#18334a'; c.fillText(tx, px, py + 1); };
+    label(i18nT('潮汐主島'), 0, 0, '#17696b', 16); { const g = lvGate('frostdock'); label(i18nT('冰封群島') + (g ? ` 🔒Lv.${g}` : ''), FROST.x + 4, FROST.z + 40); } label(i18nT('深海浮台'), ABYSS.x - 12, ABYSS.z); label(i18nT('神秘島'), MYST.x - 22, MYST.z); label(i18nT('苔森之島'), GREEN.x, GREEN.z); label(i18nT('小島'), ISLE.x, ISLE.z, '#18334a', 13);
+    for (const L of SEA_LM){ if (!SeaMap.seen.has(L.id)) continue; const x = X(L.z), y = Y(L.x); c.beginPath(); c.arc(x, y, 6, 0, 6.283); c.fillStyle = '#ffd23f'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#18334a'; c.stroke(); label(L.ic + ' ' + i18nT(L.n), L.x - 11, L.z, '#5a3a00', 12); }
+    if (!onIsle && Math.abs(me.pos.x) < W && Math.abs(me.pos.z) < W){ const x = X(me.pos.z), y = Y(me.pos.x); c.beginPath(); c.arc(x, y, 7, 0, 6.283); c.fillStyle = '#ff5a48'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.stroke(); }
     body.appendChild(cv);
-    const ul = el('ul', 'dish'); for (const L of SEA_LM){ const on = SeaMap.seen.has(L.id), li = el('li', on ? 'on' : 'lock'); li.appendChild(el('span', 'dishic', on ? L.ic : '❔')); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', on ? L.n : '還沒找到的地標')); d.appendChild(el('div', 'sub2', on ? L.d : '划船到海上找找看')); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul); } catch(e){ console.warn('seaChart', e); } }
+    const F = SEA_LM.filter(L => SeaMap.seen.has(L.id)); if (F.length){ const ul = el('ul', 'dish'); for (const L of F){ const li = el('li', 'on'); li.appendChild(el('span', 'dishic', L.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', L.n)); d.appendChild(el('div', 'sub2', L.d)); li.appendChild(d); ul.appendChild(li); } body.appendChild(ul); } } catch(e){ console.warn('seaChart', e); } }
 function i18nT(s){ try { return typeof tr === 'function' ? tr(s) : s; } catch(e){ return s; } }
 /* 坐阿海的船：真的坐一段 */
 const Voy = { on:false, m:null, btn:null };
@@ -7057,6 +7065,7 @@ function renderMap(body){
       const go = el('button', 'tpbtn', '🧭 帶我去'); go.addEventListener('click', () => navTo(`${K[1]}（${q.mine ? '你' : q.n || '釣客'}的記號）`, q.x, q.z)); pinBar.appendChild(go);
       if (q.mine){ const d = el('button', 'tpbtn', '🗑️ 拿掉這個記號'); d.addEventListener('click', () => seaPinsCall('sea_pin_del', { p_id: q.id }, '記號拿掉了').then(() => { SeaPins.sel = null; pinUI(); draw(); })); pinBar.appendChild(d); }
       else { const t = el('button', 'tpbtn', q.liked ? '👍 已經謝過了' : '👍 謝謝'); t.disabled = !!q.liked; t.addEventListener('click', () => seaPinsCall('sea_pin_like', { p_id: q.id }, '👍 已經跟他說謝謝了').then(() => { pinUI(); draw(); })); pinBar.appendChild(t); } }
+    if (!pinBar.dataset.open){ if (Cloud.on){ const ob = el('button', 'tpbtn', '📍 在這裡做記號給大家看'); ob.addEventListener('click', () => { pinBar.dataset.open = '1'; pinUI(); }); pinBar.appendChild(ob); } return; }
     const hd = el('span', 'tpbtn lock', Cloud.on ? '📍 在我現在站的地方做記號，給大家看（24 小時後消失，最多 3 個）：' : '📍 共同海圖：連上線才能看到大家做的記號'); hd.style.gridColumn = '1 / -1'; pinBar.appendChild(hd);
     if (Cloud.on) for (const k of Object.keys(PIN_K)){ const b = el('button', 'tpbtn', `${PIN_K[k][0]} ${PIN_K[k][1]}`); b.addEventListener('click', () => { if (House.on || Dive.on || Sub.on){ toast('在外面才能做記號'); return; }
         seaPinsCall('sea_pin_add', { p_kind: k, p_x: Math.round(me.pos.x * 10) / 10, p_z: Math.round(me.pos.z * 10) / 10 }, `📍 做好記號了：${PIN_K[k][1]}`).then(ok => { if (ok){ SeaPins.sel = SeaPins.list.find(x => x.mine) || null; pinUI(); draw(); } }); }); pinBar.appendChild(b); } };
@@ -7125,7 +7134,7 @@ function renderMap(body){
     { const T = W2.train; if (T && T.stops) for (const q of T.stops){ const [px, py] = toPx(q.x, q.z); icon('🚉', px, py, 8 * k, 'rgba(255,240,210,.95)'); hits.push({ c: [px, py], tip: q.name, nav: [q.name, q.x, q.z] }); if (MU.z >= 1.5) LQ.push([q.name, px, py, { fs: 10, bg: 'rgba(255,240,210,.92)' }]); } }
     if (MU.show.spot){ const NM = { sea:'海邊', harbor:'碼頭', river:'河邊', lake:'湖邊', creek:'森林的溪邊', mangrove:'紅樹林', pool:'清溪潭' }; for (const id in (W2.spotsAt || {})){ const sp = SPOT_BY_ID[id]; if (!sp) continue; const [px, py] = toPx(sp.pos.x, sp.pos.z), nm = '🎣 ' + (NM[id] || sp.short);
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * k; ctx.fillStyle = sp.color; ctx.beginPath(); ctx.arc(px, py, 7 * k, 0, 7); ctx.fill(); ctx.stroke(); occ.push([px - 8 * k, py - 8 * k, px + 8 * k, py + 8 * k]); hits.push({ c: [px, py], tip: nm, nav: [nm.slice(3) + '的好釣點', sp.pos.x, sp.pos.z, 1.4] }); LQ.unshift([nm, px, py, { fs: 11, bg: 'rgba(255,255,255,.95)' }]); } }
-    if (MU.show.shop || MU.show.npc) for (const [ic, l, q] of w2NavList()){ const [px, py] = toPx(q[0], q[1]); icon(ic, px, py, 9 * k); const t = l.replace(/（.*$/, ''); hits.push({ c: [px, py], tip: t, nav: [t, q[0], q[1]] }); if (MU.z >= 1.6) LQ.push([t, px, py, { fs: 10 }]); }
+    if (MU.show.shop || MU.show.npc) for (const [ic, l, q] of w2NavList()){ const [px, py] = toPx(q[0], q[1]); { const rr = 10 * k, r = [px - rr, py - rr, px + rr, py + rr]; if (!fits(r)) continue; occ.push(r); }   /* v999 圖示疊在一起就先不畫（放大才看得到），不會擠成一團 */ icon(ic, px, py, 9 * k); const t = l.replace(/（.*$/, ''); hits.push({ c: [px, py], tip: t, nav: [t, q[0], q[1]] }); if (MU.z >= 1.6) LQ.push([t, px, py, { fs: 10 }]); }
     ctx.save(); ctx.translate(meP[0], meP[1]); ctx.rotate(-me.rot + Math.PI); ctx.fillStyle = PALETTE.coral; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5 * k; ctx.beginPath(); ctx.moveTo(0, -11 * k); ctx.lineTo(7 * k, 7 * k); ctx.lineTo(0, 3 * k); ctx.lineTo(-7 * k, 7 * k); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore(); occ.push([meP[0] - 12 * k, meP[1] - 12 * k, meP[0] + 12 * k, meP[1] + 12 * k]);
     lab('你在這裡', meP[0], meP[1], { fs: 11, bg: PALETTE.coral, fg: '#fff' });
     for (const q of LQ) lab(q[0], q[1], q[2], q[3]); }
@@ -7152,23 +7161,9 @@ function renderMap(body){
   if (W2TP){ list.appendChild(Object.assign(el('div', 'dexhead', '🏝️ 新主島'), { style: 'grid-column:1/-1' }));
     for (const [nm, lx, lz] of W2.spots){ if (nm === '玩家建地') continue; const b = el('button', 'tpbtn', (taxiOn() ? '🚕 ' : '') + nm); b.addEventListener('click', () => { const x = W2.ox + lx, z = W2.oz + lz; try { W2.warm(x, z); } catch(e){} closeSheet(); taxiCall({ name: nm, x, z, rot: me.rot }); }); list.appendChild(b); }
     list.appendChild(Object.assign(el('div', 'dexhead', '⛵ 外島（去過的）'), { style: 'grid-column:1/-1' })); }
-  let nLock = 0; for (const tp of TRAVEL){ if (W2TP && W2_VILLAGE_TP.has(tp.id)) continue; const on = visited.has(tp.id); if (!on){ nLock++; continue; } const b = el('button', 'tpbtn', tp.label); b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
-  if (nLock){ const c = el('span', 'tpbtn lock', `❔ 還有 ${nLock} 個地點沒去過`); c.style.gridColumn = '1 / -1'; list.appendChild(c); }
+  let nLock = 0; for (const tp of TRAVEL){ if (W2TP && W2_VILLAGE_TP.has(tp.id)) continue; if (CUT_DOCK.has(tp.id)) continue; const on = visited.has(tp.id); if (!on){ nLock++; continue; } const b = el('button', 'tpbtn', tp.label); b.addEventListener('click', () => travelTo(tp)); list.appendChild(b); }
   body.appendChild(list);
-  { body.appendChild(el('div', 'dexhead', '🧭 找人、找店（點了會帶路）')); const nl = el('div', 'tplist');
-    for (const [ic, lab, q] of navList()){ const b = el('button', 'tpbtn', `${ic} ${lab}`); b.addEventListener('click', () => navTo(lab.replace(/（.*$/, ''), q[0], q[1])); nl.appendChild(b); }
-    body.appendChild(nl); }
-  renderOcean(body);
-  if (WS.length){ body.appendChild(el('div', 'dexhead', '🏘️ 村民現在在做什麼'));
-    const ul = el('ul', 'wlist'); for (const w of WS){ const li = el('li', '', `${w.icon} ${w.name}：${w.text}`), m = (World.me || {})[w.id];
-      li.appendChild(el('span', 'wme', m && m.talks ? `跟你：${m.score >= 60 ? '好朋友' : m.score >= 25 ? '朋友' : '認識'}（聊過 ${m.talks} 次${m.gifts ? `、收過你 ${m.gifts} 份禮物` : ''}）` : '跟你：還不認識'));
-      const b = el('button', 'tbtn wgift', m && m.giftToday ? '今天送過了' : '🎁 送魚'); b.disabled = !!(m && m.giftToday);
-      b.addEventListener('click', () => { if (!worldNear(w.id)){ toast(`走到${w.name}旁邊才能送喔`); return; } World.giftTo = w.id; curTab = 'wgift'; renderTab(); }); li.appendChild(b); ul.appendChild(li); }
-    body.appendChild(ul);
-    const R = (World.rel || []).slice().sort((a, b) => b.score - a.score); if (R.length){ body.appendChild(el('div', 'dexhead', '🤝 村民之間的關係')); const ur = el('ul', 'wlist old'); for (const r of R) ur.appendChild(el('li', '', `${WORLD_WHO[r.a]} ↔ ${WORLD_WHO[r.b]}：${r.label}（${r.score}）`)); body.appendChild(ur); }
-    const L = (World.log || []).slice(0, 8); if (L.length){ const ul2 = el('ul', 'wlist old'); for (const l of L){ const pl = (World.places && World.places[l.place]) || {}, d = new Date(l.at), hh = d.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Taipei' });
-      ul2.appendChild(el('li', '', `${hh}　${WORLD_WHO[l.npc] || l.npc}${l.why ? '（' + l.why + '）' : ''}→ 去${pl.name || ''}${(WORLD_ACT[l.act] || ['', ''])[1]}`)); } body.appendChild(ul2); } }
-  else if (Cloud.on && !World.rows) loadWorld();
+  /* v999 拿掉：找人找店的長清單（地圖上點圖示就會帶路）、海況、村民在做什麼（手機「村民」裡看） */
   /* v310 手機橫放：地圖放左邊（照螢幕高度），清單放右邊，不用往下滑 */
   { const kids = [...body.children], wrap = kids.find(k => k.classList && k.classList.contains('mapwrap')); if (wrap){ const L = el('div', 'mapleft'), R2 = el('div', 'mapright'), keepL = new Set([wrap, wrap.previousElementSibling, wrap.nextElementSibling]);
       for (const k of kids){ if (keepL.has(k)) L.appendChild(k); else R2.appendChild(k); } const sp = el('div', 'mapsplit'); sp.append(L, R2); body.appendChild(sp); } }
@@ -23474,7 +23469,7 @@ function sheetDeco(){ const sh = $('#sheet'); if (!sh || sh.hidden || !(sh.class
   sh.querySelectorAll('#sheetBody .tbtn:not(.buy)').forEach(b => { if (/^買\s/.test(b.textContent) || /^買 ?🪙/.test(b.textContent)) b.classList.add('buy'); }); }   /* v647 要花錢買的按鈕是橘色 */
 { let q = 0; const mo = new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { sheetDeco(); } catch(e){} }); }); const go = () => { const sh = document.getElementById('sheet'); if (sh) mo.observe(sh, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] }); else setTimeout(go, 200); }; go(); }
 const SHEET_WOOD = new Set(['orders', 'shop', 'shrimp', 'cook', 'cargo', 'salon', 'market', 'mu', 'fu', 'gang', 'cai', 'craft', 'ferry', 'board', 'tboard', 'tote', 'cage', 'museum', 'sci', 'news', 'fest', 'cldesign']);
-const SHEET_TITLE = { roomsign:'🚪 門的名牌', plush:'🧸 床上的娃娃', rig2:'🎣 釣組', look:'🎨 外觀', gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🛒 小島商店', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', orders:'📋 訂單板', tboard:'🏆 大看板・釣友隊', cargo:'🚢 跑船生意', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 田', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
+const SHEET_TITLE = { seachart:'🧭 航海圖', roomsign:'🚪 門的名牌', plush:'🧸 床上的娃娃', rig2:'🎣 釣組', look:'🎨 外觀', gyotaku:'🖋️ 魚拓', map:'🗺️ 地圖', dex:'📖 圖鑑', rank:'🏆 排行榜', tank:'🐟 魚缸', bag:'🎒 包包', island:'🛒 小島商店', quest:'📜 任務', people:'👥 玩家', style:'👕 造型', closet:'👕 造型', ach:'🏅 成就', help:'❓ 玩法', settings:'⚙️ 設定', pets:'🐾 寵物', board:'📌 廣場留言板', orders:'📋 訂單板', tboard:'🏆 大看板・釣友隊', cargo:'🚢 跑船生意', salon:'💇 阿萍美髮沙龍', events:'📅 今天的活動', farm:'🌱 田', tote:'🎨 設計我的環保袋' };   /* 商店類的頁面內容裡本來就有自己的標題，這裡不重複 */
 /* v586 全服共養的魚種族群（伺服器 199_fish_pop）：圖鑑打開時讀，5 分鐘更新一次 */
 const Pop = { d:{}, at:0, busy:false };
 function popFetch(){ if (Pop.busy || !Cloud.on || !Cloud.sb || Date.now() - Pop.at < 300000) return; Pop.busy = true; Pop.at = Date.now();
@@ -23767,7 +23762,9 @@ function renderTab0(){
     /* v515 作者：「誰來逛過」「最近來過村子的人」可以不要了，看起來很亂 → 玩家分頁不再列這兩段 */
     body.appendChild(el('p', 'sub', '有人講話不禮貌，按「封鎖」後就看不到他的角色、聊天和動態（只對你自己有效）。'));
   } else if (curTab === 'map'){
-    renderMap(body); seaChart(body);
+    renderMap(body);   /* v999 作者：「這些太亂了」→ 地圖頁只放島的地圖和「去哪裡」；航海圖是手機裡自己一個 App */
+  } else if (curTab === 'seachart'){
+    seaChart(body);
   } else if (curTab === 'style'){
     renderAvatarPick(body);
     renderCloudBox(body);
@@ -25301,6 +25298,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u999', d:'11/28', items:[['🗺️','地圖整理：圖示疊在一起的先不畫（放大才出現），拿掉右邊一長串「找人找店」、海況和村民清單，只留「去哪裡」'], ['🧭','航海圖重畫：島是圓滑的、中間是新主島，沒找到的地標不再畫一堆問號，航海圖變成手機裡自己一個 App']] },
   { id:'u998', d:'11/28', items:[['🎵','一碰畫面（按鈕、選單都算）就開始放音樂，不用先走路'], ['📱','畫質「自動」時會邊玩邊調解析度：太卡就自動降一點，很順再加回去'], ['📊','設定 →「畫面順不順」可以打開小框，看每秒幾張、卡了幾次']] },
   { id:'u997', d:'11/28', items:[['🏟️','體育場和遠方荒島（漂流島）先收起來了，新主島體育場那塊地先空著'], ['🔒','潛水 Lv.8、冰封群島 Lv.12 才開放，新玩家先專心釣魚']] },
   { id:'u996', d:'11/28', items:[['👫','好友頁重新整理：左邊分「好友／周圍／封鎖」，好友頁只列好友；在線的好友旁邊有「去找他」「呼叫」，私訊、送禮、小島收在「⋯」'], ['📞','語音不用一直按著了：接通就能講，不想講話點 🎤 關麥克風'], ['📱','手機主畫面換新：海的桌布、彩色的圖示、最下面一排常用的（潮搭Go、地圖、訊息、好友）']] },
@@ -25582,7 +25580,7 @@ SHEET_TITLE.phone = '📱 手機'; SHEET_TITLE.wild = '🏝️ 荒島背包'; SH
 function phoneOpen(){ Phone.via = true; openSheet('phone'); }
 function phoneGo(tab){ Phone.via = true;
   if (tab === 'photo'){ closeSheet(); setTimeout(() => { try { enterPhoto(); } catch(e){} }, 80); return; }   /* v628 作者：「拍照功能去哪了」→ 頭像選單裡的📷被「今天」擋住看不到，手機也放一個 */
-  if (tab === 'seachart'){ W2M.skip = 1; try { openSheet('map'); } finally { W2M.skip = 0; } setTimeout(() => { const h = [...$$('#sheetBody .dexhead')].find(x => /航海圖/.test(x.textContent)); if (h) h.scrollIntoView({ block:'start', behavior:'smooth' }); }, 60); return; }
+  if (tab === 'seachart'){ openSheet('seachart'); return; }
   try { ui3Open(tab); } catch(e){}
   if (tab === 'news'){ News.pick = 0; loadNews(); } if (tab === 'board') loadBoard(); if (tab === 'tboard'){ Team.view = 'team'; loadTeam(); loadTeamBoard(); } if (tab === 'duelhub') duelHubLoad();
   if (tab === 'phfeed'){ Phone.seen = Date.now(); LS.set('tide.phSeen', Phone.seen); }

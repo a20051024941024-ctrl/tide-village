@@ -9853,5 +9853,10 @@
  "畫質「自動」時會邊玩邊調解析度：太卡就自動降一點，很順再加回去": "With quality on \"Auto\", resolution adjusts as you play: it drops a bit when things lag and goes back up when smooth",
  "設定 →「畫面順不順」可以打開小框，看每秒幾張、卡了幾次": "Settings → \"Smoothness\" shows a small box with frames per second and how many times it stuttered",
  "📊 畫面順不順": "📊 Smoothness",
- "打開後左下角會有一個小框：每秒畫幾張、最慢一張多久、卡了幾次。覺得卡的時候截圖給作者看。": "Shows a small box with frames per second, the slowest frame and how many stutters. Take a screenshot when it feels laggy and send it to the developer."
+ "打開後左下角會有一個小框：每秒畫幾張、最慢一張多久、卡了幾次。覺得卡的時候截圖給作者看。": "Shows a small box with frames per second, the slowest frame and how many stutters. Take a screenshot when it feels laggy and send it to the developer.",
+ "地圖整理：圖示疊在一起的先不畫（放大才出現），拿掉右邊一長串「找人找店」、海況和村民清單，只留「去哪裡」": "Map cleanup: overlapping icons are hidden until you zoom in, and the long people/shop list, sea conditions and villager list are gone; only \"Where to go\" remains",
+ "航海圖重畫：島是圓滑的、中間是新主島，沒找到的地標不再畫一堆問號，航海圖變成手機裡自己一個 App": "Sea chart redrawn: smooth islands with the new main island in the middle, no more question marks for undiscovered landmarks, and it's now its own phone app",
+ "潮汐主島": "Tide Main Island",
+ "🧭 航海圖": "🧭 Sea chart",
+ "📍 在這裡做記號給大家看": "📍 Mark this spot for everyone"
 }
