@@ -2848,3 +2848,36 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .taxibar.vcbar{top:calc(var(--gt, 8px) + 92px)}
 .vcbar .vctalk{touch-action:none;user-select:none;-webkit-user-select:none}
 .vcbar .vctalk.on{background:#e8473a;color:#fff;box-shadow:0 0 0 3px rgba(232,71,58,.35)}
+/* v996 玩家頁：左邊三格（好友／周圍／封鎖），好友只列好友 */
+.ppl{display:flex;gap:10px;align-items:flex-start}
+.ppl-nav{position:sticky;top:0;display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
+.ppl-t{position:relative;width:64px;padding:8px 0 6px;border:0;border-radius:14px;background:#e9e1cf;color:#7a6a4e;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;font-weight:800;cursor:pointer}
+.ppl-t .i{font-size:24px;line-height:1}.ppl-t .n{font-size:12px}
+.ppl-t.on{background:#b89a6a;color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.ppl-t .ph-dot{top:-4px;left:auto;right:-4px}
+.ppl-main{flex:1;min-width:0}
+.frseg{display:flex;gap:8px;margin:0 0 8px}
+.frseg-b{flex:1;border:0;border-radius:999px;padding:9px 10px;background:#ece4d2;color:#9a8762;font:inherit;font-weight:900;font-size:15px;cursor:pointer}
+.frseg-b.on{background:#b89a6a;color:#fff}
+.frlist{list-style:none;margin:0;padding:0}
+.frrow{display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid #e6dcc8;cursor:pointer}
+.fr-av{flex:0 0 54px;width:54px;height:54px;border-radius:50%;overflow:hidden;background:#dfe9ee;display:grid;place-items:center;font-size:26px}
+.fr-av img{width:100%;height:100%;object-fit:cover}
+.fr-mid{flex:1;min-width:0}
+.fr-n{font-size:16px;font-weight:900;color:#3b3328;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-st{font-size:13px;color:#a8977a;margin-top:3px}
+.frrow.on .fr-st{color:#3fae4f;font-weight:800}
+.fr-act{display:flex;gap:6px;flex:0 0 auto;align-items:center}
+.frb{position:relative;border:0;border-radius:12px;padding:9px 14px;font:inherit;font-weight:900;font-size:14px;color:#fff;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.frb.go{background:#4cc552}.frb.call{background:#f0b030}.frb.ic{background:#ece4d2;color:#6b5d44;padding:9px 11px}
+.frb .ph-dot{top:-6px;left:auto;right:-6px}
+.frmore{list-style:none;display:flex;gap:6px;flex-wrap:wrap;padding:6px 6px 10px 72px;border-bottom:1px solid #e6dcc8}
+.frvc{margin-top:10px}
+/* v996 手機主畫面：海的桌布、整塊彩色的圖示、白字、底座 */
+.ph-home.ph2{background:linear-gradient(180deg,#5fc3e8 0%,#2f8fc8 45%,#1d5a8e 100%);border-radius:26px;padding:8px 10px 10px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.25)}
+.ph2 .ph-top{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.ph2 .ph-grid{gap:14px 4px;padding:10px 4px 12px}
+.ph2 .ph-ic{width:60px;height:60px;border-radius:18px;border:0;font-size:32px;box-shadow:0 3px 8px rgba(0,0,0,.22),inset 0 -3px 0 rgba(0,0,0,.12),inset 0 2px 0 rgba(255,255,255,.45)}
+.ph2 .ph-lab{color:#fff;font-size:12.5px;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+.ph2 .ph-dock{position:sticky;bottom:0;z-index:2;display:flex;justify-content:space-around;margin:4px 2px 0;padding:10px 6px 8px;border-radius:22px;background:rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+@media (orientation:landscape){.ph2 .ph-grid{grid-template-columns:repeat(7,1fr)}}

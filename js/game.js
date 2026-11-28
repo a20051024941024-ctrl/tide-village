@@ -12770,7 +12770,6 @@ async function sendGift(to, kind, val){
 setInterval(() => { if (Cloud.on && !document.hidden) loadFriends(); }, 180000);   /* v977 1 分鐘 → 3 分鐘，背景不拿 */
 function renderFriends(body){
   if (!Cloud.on){ body.appendChild(el('p', 'sub', '連上雲端以後就能加好友、互相送禮。')); return; }
-  { const b = el('button', 'tbtn', '🎣 釣友隊・大看板'); b.addEventListener('click', () => { Team.view = 'team'; openSheet('tboard'); loadTeam(); loadTeamBoard(); }); const r = el('div', 'tmrow'); r.appendChild(b); body.appendChild(r); }
   if (Date.now() - Fr.at > 15000 && !Fr.loading){ Fr.loading = true; loadFriends().finally(() => { Fr.loading = false; }); }
   // 送禮畫面
   if (Fr.giftTo){ const to = Fr.giftTo;
@@ -12784,6 +12783,9 @@ function renderFriends(body){
       const b = el('button', 'tbtn', '送這條'); b.addEventListener('click', () => { b.disabled = true; sendGift(to, 'fish', x.t); }); li.appendChild(b); ul.appendChild(li); }
     body.appendChild(ul); return true;
   }
+  { const reqN = Fr.req.length + (Fr.gifts || []).length, mut = Fr.list.filter(x => x.mutual).length, bar = el('div', 'frseg');
+    for (const [k, l] of [['list', `我的好友　${mut}`], ['add', '邀請好友' + (reqN ? `　🔴${reqN}` : '')]]){ const b = el('button', 'frseg-b' + ((Fr.sub || 'list') === k ? ' on' : ''), l); b.addEventListener('click', () => { Fr.sub = k; renderTab(); }); bar.appendChild(b); } body.appendChild(bar); }
+  if (Fr.sub === 'add'){
   const box = el('div', 'tipbox'); box.innerHTML = `<b>🤝 你的好友代碼：<span class="fcode">${esc(friendCode())}</span></b><span>把代碼給朋友，或在下面輸入朋友的代碼。在大廳裡的人也可以直接按「加好友」。互相加好友以後就能送禮。</span>`;
   const row = el('div', 'fadd'), inp = el('input'); inp.placeholder = '輸入朋友的 8 碼代碼'; inp.maxLength = 8; inp.autocapitalize = 'off'; const go = el('button', 'tbtn', '加好友');
   go.addEventListener('click', async () => { const c = inp.value.trim(); if (!/^[0-9a-fA-F]{8}$/.test(c)){ toast('好友代碼是 8 個英文或數字'); return; } go.disabled = true; const d = await frRpc('add_friend_code', { p_code: c }); go.disabled = false; if (d){ adoptFriends(d); inp.value = ''; toast('已經送出好友邀請'); } });
@@ -12797,22 +12799,28 @@ function renderFriends(body){
   if (Fr.req.length){ body.appendChild(el('div', 'dexhead', `👋 想加你好友（${Fr.req.length}）`)); const ul = el('ul', 'people');
     for (const r of Fr.req){ const li = el('li'); li.append(el('span', '', r.name || '釣客')); const a = el('button', 'tbtn vbtn', '加回去'); a.addEventListener('click', () => addFriend(r.id, r.name)); const n = el('button', 'tbtn ghost vbtn', '不要'); n.addEventListener('click', async () => { const d = await frRpc('remove_friend', { p_uid: r.id }); if (d) adoptFriends(d); }); li.append(a, n); ul.appendChild(li); }
     body.appendChild(ul); }
-  body.appendChild(el('div', 'dexhead', `⭐ 好友（${Fr.list.filter(f => f.mutual).length}）`));
-  if (!Kid.on){ const row = el('div', 'titles'), on = vcAllowed(), b = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '📞 好友語音：開' : '📞 好友語音：關'); b.addEventListener('click', () => { LS.set('tide.voice', !on); if (on && VC.st) vcHang(); renderTab(); }); row.appendChild(b); row.appendChild(el('span', 'sub2', '只有互相加好友、都在線上的人能打給你。按著🎤才會送出聲音，不會錄音。')); body.appendChild(row); }
-  if (!Fr.list.length) body.appendChild(el('p', 'sub', '還沒有好友。'));
-  const on = onlineUids(), ul = el('ul', 'people');
-  for (const f of Fr.list.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || (b.mutual - a.mutual))){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
-    const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null;
-    { let gr = null, k3r = null; try { for (const p of peers.values()) if (p.pres && p.pres.u === f.id && p.fisher.gearKey){ gr = JSON.parse(p.fisher.gearKey); k3r = p.fisher.k3c || null; break; } } catch(e){} const im = avatarImg(f.av, '', gr, k3r); if (im) sw.replaceWith && li.append(im); }
-    li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在村子裡' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
-    { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} cardTap(li, f.id, f.name || '釣客', pk); }
-    if (f.mutual){ const ch = el('button', 'tbtn vbtn', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.textContent = `💬 ${u.n}`; ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); li.appendChild(ch);
-      const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g);
-      { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} if (pk && !Kid.on){ const vb = el('button', 'tbtn vbtn', '📞'); vb.setAttribute('aria-label', '語音'); vb.addEventListener('click', e => { e.stopPropagation(); closeSheet(); vcCall(pk, f.name || '好友'); }); li.appendChild(vb); } } }
-    const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(vi);
-    const rm = el('button', 'tbtn ghost vbtn bk', '刪除'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); li.appendChild(rm);
-    ul.appendChild(li); }
+  { const P = Fr.list.filter(x => !x.mutual); if (P.length){ body.appendChild(el('div', 'dexhead', `⏳ 等對方加你（${P.length}）`)); const ul = el('ul', 'people'); for (const x of P){ const li = el('li'); li.append(el('span', '', x.name || '釣客')); const rm = el('button', 'tbtn ghost vbtn', '取消'); rm.addEventListener('click', async () => { const d = await frRpc('remove_friend', { p_uid: x.id }); if (d) adoptFriends(d); }); li.appendChild(rm); ul.appendChild(li); } body.appendChild(ul); } }
+  { const b = el('button', 'tbtn', '🎣 釣友隊・大看板'); b.addEventListener('click', () => { Team.view = 'team'; openSheet('tboard'); loadTeam(); loadTeamBoard(); }); const r = el('div', 'tmrow'); r.style.marginTop = '10px'; r.appendChild(b); body.appendChild(r); }
+  return; }
+  const F = Fr.list.filter(x => x.mutual), on = onlineUids();
+  if (!F.length){ body.appendChild(el('div', 'empty', '還沒有好友。到「邀請好友」把代碼給朋友，或在「周圍」按別人旁邊的「加好友」。')); }
+  const ul = el('ul', 'frlist');
+  for (const f of F.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || String(b.seen || '').localeCompare(String(a.seen || '')))){ const li = el('li', 'frrow' + (on.has(f.id) ? ' on' : ''));
+    let pk = null, pp = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; pp = p; break; } } catch(e){}
+    { let gr = null, k3r = null; try { if (pp && pp.fisher.gearKey){ gr = JSON.parse(pp.fisher.gearKey); k3r = pp.fisher.k3c || null; } } catch(e){} const av = el('div', 'fr-av'), im = avatarImg(f.av, '', gr, k3r); if (im) av.appendChild(im); else av.textContent = '🙂'; li.appendChild(av); }
+    const mid = el('div', 'fr-mid'); mid.appendChild(el('div', 'fr-n', f.name || '釣客'));
+    const seenM = f.seen ? Math.round((Date.now() - Date.parse(f.seen)) / 60000) : null, where = pp ? (W2 && W2.near(pp.fisher.pos.x, pp.fisher.pos.z) ? '新主島' : '村子') : '';
+    mid.appendChild(el('div', 'fr-st', on.has(f.id) ? `● 在${where || '線上'}` : seenM == null ? '● 很久沒上線' : `● 最後上線 ${seenM < 60 ? Math.max(1, seenM) + ' 分鐘前' : seenM < 1440 ? Math.round(seenM / 60) + ' 小時前' : Math.round(seenM / 1440) + ' 天前'}`)); li.appendChild(mid);
+    const act = el('div', 'fr-act');
+    if (pp){ const g = el('button', 'frb go', '去找他'); g.addEventListener('click', e => { e.stopPropagation(); closeSheet(); navTo(f.name || '好友', pp.fisher.pos.x, pp.fisher.pos.z); }); act.appendChild(g);
+      if (!Kid.on){ const c = el('button', 'frb call', '呼叫'); c.addEventListener('click', e => { e.stopPropagation(); closeSheet(); vcCall(pk, f.name || '好友'); }); act.appendChild(c); } }
+    { const ch = el('button', 'frb ic', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.appendChild(el('i', 'ph-dot', String(u.n))); ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); act.appendChild(ch); }
+    { const mo = el('button', 'frb ic', '⋯'); mo.setAttribute('aria-label', '更多'); mo.addEventListener('click', e => { e.stopPropagation(); const nx = li.nextSibling; if (nx && nx.classList && nx.classList.contains('frmore')){ nx.remove(); return; } const m = el('li', 'frmore');
+        const g2 = el('button', 'tbtn vbtn', '🎁 送禮'); g2.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); const vi = el('button', 'tbtn ghost vbtn', '🏝️ 小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); });
+        const rm = el('button', 'tbtn ghost vbtn bk', '刪除好友'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定刪除？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); m.append(g2, vi, rm); li.after(m); }); act.appendChild(mo); }
+    li.appendChild(act); cardTap(li, f.id, f.name || '釣客', pk); ul.appendChild(li); }
   body.appendChild(ul);
+  if (!Kid.on){ const row = el('div', 'titles frvc'), vo = vcAllowed(), b = el('button', 'tbtn' + (vo ? '' : ' ghost'), vo ? '📞 好友語音：開' : '📞 好友語音：關'); b.addEventListener('click', () => { LS.set('tide.voice', !vo); if (vo && VC.st) vcHang(); renderTab(); }); row.appendChild(b); row.appendChild(el('span', 'sub2', '只有互相加好友、都在線上的人能打給你。接通後麥克風是開的，可以按 🎤 關掉；不會錄音。')); body.appendChild(row); }
 }
 /* ---- 組隊出海：跟大家一起搭阿海的船出去；附近有別人也在船上釣魚，大家都有「船隊加成」---- */
 var Party = { team:false, inv:null, lead:null, leadName:'', joined:new Map() };
@@ -16061,6 +16069,7 @@ function paxEnd(off){ const was = Pax.st; Pax.st = null; Pax.host = null; if (wa
 /* ===== v994 好友語音（阿穎：「可以語音聊天」）=====
    只有互相加好友、又在同一個村子連線的人才打得通；兒童模式不能用，未滿 18 歲預設關（好友分頁可以打開）。
    按著「🎤 按著說話」才會送聲音，放開就停；對方隨時可以掛斷、靜音、檢舉。聲音是兩支手機直接連（WebRTC），不經過我們的伺服器、也不錄音。 */
+var Ppl = { tab: 'fr' };
 const VC = { st: null, peer: null, name: '', pc: null, mic: null, au: null, el: null, at: 0, muted: false, talk: false, q: [] };
 function vcAllowed(){ if (Kid.on) return false; const v = LS.get('tide.voice', null); return v == null ? !Kid.teen : !!v; }
 function vcFriendPeer(peer){ const u = peerUid.get(peer); return !!(u && Array.isArray(Fr.list) && Fr.list.some(f => f.id === u && f.mutual)); }
@@ -16069,8 +16078,7 @@ function vcUi(){ let e = VC.el; if (!VC.st){ if (e){ e.remove(); VC.el = null; }
   if (VC.st === 'ring'){ e.appendChild(el('span', 'tx', `📞 ${VC.name} 打語音給你`)); const y = el('button', 'tbtn', '接聽'); y.addEventListener('click', () => vcAccept()); const n = el('button', 'tbtn ghost', '不要'); n.addEventListener('click', () => { vcEmit({ a: 'no', to: VC.peer }); vcEnd(); }); e.append(y, n); return; }
   if (VC.st === 'call'){ e.appendChild(el('span', 'tx', `📞 打給 ${VC.name}…`)); const n = el('button', 'tbtn ghost', '取消'); n.addEventListener('click', () => vcHang()); e.appendChild(n); return; }
   e.appendChild(el('span', 'tx', `📞 ${VC.name}${VC.st === 'link' ? '（連線中…）' : ''}`));
-  const t = el('button', 'tbtn vctalk' + (VC.talk ? ' on' : ''), VC.talk ? '🎤 說話中' : '🎤 按著說話'); const on = v => { VC.talk = v; if (VC.mic) VC.mic.getAudioTracks().forEach(k => k.enabled = v); t.classList.toggle('on', v); t.textContent = v ? '🎤 說話中' : '🎤 按著說話'; };
-  t.addEventListener('pointerdown', ev => { ev.preventDefault(); on(true); }); for (const k of ['pointerup', 'pointerleave', 'pointercancel']) t.addEventListener(k, () => on(false)); e.appendChild(t);
+  const t = el('button', 'tbtn vctalk' + (VC.talk ? ' on' : ''), VC.talk ? '🎤 麥克風開' : '🎤 麥克風關'); t.addEventListener('click', () => vcMicOn(!VC.talk)); e.appendChild(t);   /* v996 作者：「電話一定要一直按著嗎」→ 改成點一下開、再點一下關，接通時就是開的 */
   const m = el('button', 'tbtn ghost', VC.muted ? '🔇' : '🔈'); m.addEventListener('click', () => { VC.muted = !VC.muted; if (VC.au) VC.au.muted = VC.muted; vcUi(); }); e.appendChild(m);
   const rp = el('button', 'tbtn ghost', '🚩'); rp.title = '檢舉'; rp.addEventListener('click', () => { if (!confirmOnce(rp)) return; const pk = VC.peer, nm = VC.name; vcHang(); reportPeer(pk, nm, '語音'); }); e.appendChild(rp);
   const h = el('button', 'tbtn ghost', '掛斷'); h.addEventListener('click', () => vcHang()); e.appendChild(h); }
@@ -16078,12 +16086,13 @@ async function vcMic(){ if (VC.mic) return VC.mic; if (!navigator.mediaDevices |
 function vcPc(){ const pc = VC.pc = new RTCPeerConnection({ iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] });
   pc.onicecandidate = ev => { if (ev.candidate) vcEmit({ a: 'ice', to: VC.peer, c: ev.candidate.toJSON() }); };
   pc.ontrack = ev => { if (!VC.au){ VC.au = document.createElement('audio'); VC.au.autoplay = true; VC.au.setAttribute('playsinline', ''); document.body.appendChild(VC.au); } VC.au.srcObject = ev.streams[0]; VC.au.muted = VC.muted; VC.au.play && VC.au.play().catch(() => {}); };
-  pc.onconnectionstatechange = () => { const s = pc.connectionState; if (s === 'connected'){ if (VC.st !== 'on'){ VC.st = 'on'; SFX.click(); toast('語音接通了，按著「🎤」說話'); vcUi(); } } else if (s === 'failed'){ toast('語音連不上（有些手機網路不能直接連），可以換 Wi-Fi 再試'); vcHang(); } else if (s === 'disconnected'){ setTimeout(() => { if (VC.pc === pc && pc.connectionState === 'disconnected') vcHang(); }, 6000); } };
+  pc.onconnectionstatechange = () => { const s = pc.connectionState; if (s === 'connected'){ if (VC.st !== 'on'){ VC.st = 'on'; SFX.click(); toast('語音接通了，直接講就好；不想講話按 🎤 關麥克風'); vcMicOn(true); } } else if (s === 'failed'){ toast('語音連不上（有些手機網路不能直接連），可以換 Wi-Fi 再試'); vcHang(); } else if (s === 'disconnected'){ setTimeout(() => { if (VC.pc === pc && pc.connectionState === 'disconnected') vcHang(); }, 6000); } };
   for (const k of VC.mic.getTracks()) pc.addTrack(k, VC.mic); return pc; }
 async function vcCall(peer, name){ if (!vcAllowed()){ toast(Kid.on ? '兒童安全模式不能用語音' : '好友語音關著，在好友分頁上面打開'); return; } if (VC.st){ toast('已經在講電話了'); return; } if (!vcFriendPeer(peer)){ toast('要互相加好友、而且他現在在線上，才能打語音'); return; }
   try { await vcMic(); } catch(e){ toast('要允許麥克風才能講話'); return; }
   Object.assign(VC, { st: 'call', peer, name, at: Date.now(), q: [] }); vcEmit({ a: 'ring', to: peer }); vcUi(); setTimeout(() => { if (VC.st === 'call' && VC.peer === peer){ toast(`${name} 沒有接`); vcHang(); } }, 30000); }
 async function vcAccept(){ try { await vcMic(); } catch(e){ toast('要允許麥克風才能講話'); vcEmit({ a: 'no', to: VC.peer }); vcEnd(); return; } VC.st = 'link'; vcUi(); vcEmit({ a: 'yes', to: VC.peer }); }
+function vcMicOn(v){ VC.talk = v; if (VC.mic) VC.mic.getAudioTracks().forEach(k => k.enabled = v); vcUi(); }
 function vcHang(){ if (VC.peer) vcEmit({ a: 'bye', to: VC.peer }); vcEnd(); }
 function vcEnd(){ try { if (VC.pc) VC.pc.close(); } catch(e){} try { if (VC.mic) VC.mic.getTracks().forEach(k => k.stop()); } catch(e){} if (VC.au){ VC.au.srcObject = null; VC.au.remove(); } Object.assign(VC, { st: null, peer: null, pc: null, mic: null, au: null, talk: false, q: [] }); vcUi(); }
 async function onVcMsg(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const d = m.data, mine = room && room.key; if (d.to !== mine) return;
@@ -23485,7 +23494,7 @@ function renderTab0(){
   try { ui3Tabs(); } catch(e){}
   $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === curTab)));
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
-  const body = $('#sheetBody'); body.textContent = '';
+  let body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
   $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('ishopm', curTab === 'island');   /* v884 小島商店跟造型頁一樣撐滿 */ $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
   { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
@@ -23704,7 +23713,15 @@ function renderTab0(){
   } else if (curTab === 'fu'){ renderFuShop(body);
   } else if (curTab === 'dzmarket'){ renderMarket(body);
   } else if (curTab === 'people'){
-    if (Cloud.on){ if (renderFriends(body)) return; body.appendChild(el('div', 'dexhead', '🏘️ 現在在村子裡的人')); }
+    /* v996 作者：「朋友就應該出現只有朋友而已」→ 左邊分三格：好友（只有好友）、周圍（現在在這裡的人）、封鎖 */
+    { const wrap = el('div', 'ppl'), nav = el('div', 'ppl-nav'), main = el('div', 'ppl-main'), tab = Ppl.tab;
+      for (const [k, ic, l] of [['fr', '👫', '好友'], ['near', '📍', '周圍'], ['block', '🚫', '封鎖']]){ const b = el('button', 'ppl-t' + (tab === k ? ' on' : '')); b.append(el('span', 'i', ic), el('span', 'n', l)); if (k === 'fr' && (Fr.req.length || (Fr.gifts || []).length)) b.appendChild(el('i', 'ph-dot', String(Fr.req.length + (Fr.gifts || []).length))); b.addEventListener('click', () => { Ppl.tab = k; renderTab(); }); nav.appendChild(b); }
+      wrap.append(nav, main); body.appendChild(wrap); body = main;
+      if (tab === 'fr'){ if (Cloud.on) renderFriends(body); else body.appendChild(el('p', 'sub', '連上雲端以後就能加好友、互相送禮、打語音。')); return; }
+      if (tab === 'block'){ const bl = Object.entries(blockList); body.appendChild(el('div', 'dexhead', `🚫 已封鎖（${bl.length}）`)); if (!bl.length) body.appendChild(el('div', 'empty', '沒有封鎖任何人。'));
+        else { const ub = el('ul', 'people'); for (const [u, n] of bl){ const li = el('li'); li.append(el('span', '', n)); const b = el('button', 'tbtn ghost vbtn', '解除封鎖'); b.addEventListener('click', () => { unblock(u); renderTab(); }); li.appendChild(b); ub.appendChild(li); } body.appendChild(ub); }
+        body.appendChild(el('p', 'sub', '有人講話不禮貌，在「周圍」按他旁邊的「封鎖」，就看不到他的角色、聊天和動態（只對你自己有效）。')); return; }
+      body.appendChild(el('div', 'dexhead', `📍 周圍・在線上 ${peers.size + 1} 人`)); }
     if (room && room.isLobby){ body.appendChild(el('p', 'sub', '現在在村子裡的人。想只跟朋友玩，可以開私人房間。')); body.appendChild(pjBox()); }   /* v851 先不分大廳：拿掉大廳清單、換大廳、開新大廳 */
     else if (room && !pjMode) body.appendChild(el('p', 'sub', '現在在村子裡的人。分享這個頁面的連結給朋友，就能一起釣魚、聊天。'));
     else if (pjAvailable()) body.appendChild(pjBox());
@@ -23717,24 +23734,26 @@ function renderTab0(){
     if (Cloud.on){ const ds = Duel.stats; body.appendChild(el('p', 'sub', '⚔️ 釣魚對決：按玩家旁邊的「對決」是友誼賽（不算星星）；按下面的「排位賽・找對手」（背包和廣場大看板的「對決排行」也有）是排位賽（贏輸會動星星和段位）。都是比 3 分鐘內誰釣到的魚加起來比較重。' + (ds ? `你的戰績 ${ds.wins || 0} 勝 ${ds.losses || 0} 敗・${duelTierTxt(ds)}${(ds.streak || 0) >= 2 ? `・${ds.streak} 連勝中 🔥` : ''}` : '')));
       { const qb = el('button', 'tbtn', duelLive() ? '正在對決中' : Duel.q ? '取消排隊' : '⚔️ 排位賽・找對手'); qb.disabled = duelLive(); qb.style.marginBottom = '8px'; qb.addEventListener('click', () => { if (Duel.q){ duelQueueStop('已經取消排隊'); renderTab(); } else { closeSheet(); duelQueueAsk(); } }); body.appendChild(qb); }
       if (!duelLive() && !Duel.q){ const tb = el('button', 'tbtn ghost', '👥 小組對決（2 對 2）'); tb.style.margin = '0 0 8px 6px'; tb.addEventListener('click', () => { closeSheet(); const P = lobbyPeople(); if (P.length >= 3) { const c = duelCardOpen('ask'); const X = el('button', 'pc-x', '✕'); X.addEventListener('click', () => duelCardClose('ask')); c.appendChild(X); c.appendChild(el('h3', '', '👥 小組對決（2 對 2）')); for (const [t, sb, fn] of [['📨 邀大廳裡的人', '選 1 個隊友、2 個對手', () => duelTeamPick(null)], ['🔍 小組找對手', '自己排，或跟朋友一起排，湊滿 4 人就開', () => duelTeamQueueAsk()]]){ const b = el('button', 'tbtn dq-pick'); b.appendChild(el('b', '', t)); b.appendChild(el('small', '', sb)); b.addEventListener('click', () => { duelCardClose('ask'); fn(); }); c.appendChild(b); } } else duelTeamQueueAsk(); }); body.appendChild(tb); } }   /* v522 作者：「只能在背包開排位賽嗎」→ 朋友分頁也放一顆；v668 加小組對決 */
-    const ul = el('ul', 'people');
-    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = color; { let gr = null; try { gr = isMe ? cleanGear(rec.gear) : peerId && peers.get(peerId) && peers.get(peerId).fisher.gearKey ? JSON.parse(peers.get(peerId).fisher.gearKey) : null; } catch(e){} let k3r = null; try { k3r = isMe ? myK3() : (peerId && peers.get(peerId) && peers.get(peerId).fisher.k3c) || null; } catch(e){} const im = avatarImg(av, '', gr, k3r); if (im) li.append(im); } li.append(sw, el('span', '', name + (isMe ? '（你）' : '')), el('span', 'st', st)); cardTap(li, isMe ? myId : uid, name, peerId);
-      if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'tbtn vbtn', '加好友'); af.addEventListener('click', () => { af.disabled = true; addFriend(uid, name); }); li.appendChild(af); }
-      if (uid && Cloud.on && !isMe){ const cb = el('button', 'tbtn vbtn', '🪪 資料'); cb.addEventListener('click', () => openCard(uid, name, peerId)); li.appendChild(cb); }   /* v544 作者：「我的名片移除」→ 自己那一列不放按鈕（點左上角頭像就是自己的資料頁） */   /* v534 */
-      if (uid && Cloud.on && !isMe && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); li.appendChild(dz); }
-      if (uid && Cloud.on && !isMe){ const v = el('button', 'tbtn ghost vbtn', '參觀小島'); v.addEventListener('click', () => visitAquarium(uid, name)); li.appendChild(v); const vi = el('button', 'tbtn ghost vbtn', '參觀小島'); vi.addEventListener('click', () => visitIsle(uid, name)); li.appendChild(vi); }
-      if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '檢舉'); rp.addEventListener('click', () => {
-          const box = el('div', 'rpbox'); box.appendChild(el('span', '', '檢舉原因：'));
-          for (const r of ['罵人／不禮貌', '洗版', '取不雅的名字', '其他']){ const b = el('button', 'tbtn ghost vbtn', r); b.addEventListener('click', () => { reportPeer(peerId, name, r); box.remove(); }); box.appendChild(b); }
-          li.after(box); rp.disabled = true; }); li.appendChild(rp); }
-      if (peerId){ const bk = el('button', 'tbtn ghost vbtn bk', '封鎖'); bk.addEventListener('click', () => { if (bk.dataset.sure !== '1'){ bk.dataset.sure = '1'; bk.textContent = '確定封鎖？'; bk.classList.add('warn'); return; } blockPeer(peerId, name); renderTab(); }); li.appendChild(bk); }
-      ul.appendChild(li); };
+    const ul = el('ul', 'frlist');
+    /* v996 周圍：照好友頁的樣子，一人一列：頭像、名字、在做什麼、「加好友」，其他（資料、對決、小島、檢舉、封鎖）收在「⋯」 */
+    const add = (name, color, st, isMe, uid, peerId, av) => { const li = el('li', 'frrow on'); { let gr = null, k3r = null; try { const pp = peerId && peers.get(peerId); gr = isMe ? cleanGear(rec.gear) : pp && pp.fisher.gearKey ? JSON.parse(pp.fisher.gearKey) : null; k3r = isMe ? (K3.on ? K3.cfg : null) : pp ? pp.fisher.k3c || null : null; } catch(e){} const a = el('div', 'fr-av'), im = avatarImg(av, '', gr, k3r); if (im) a.appendChild(im); else a.textContent = '🙂'; li.appendChild(a); }
+      const mid = el('div', 'fr-mid'); mid.appendChild(el('div', 'fr-n', name)); mid.appendChild(el('div', 'fr-st', '● ' + st)); li.appendChild(mid); const act = el('div', 'fr-act');
+      if (uid && Cloud.on && !Kid.on && !isMe && !isFriend(uid)){ const af = el('button', 'frb call', '加好友'); af.style.background = '#4a9ae8'; af.addEventListener('click', e => { e.stopPropagation(); af.disabled = true; af.textContent = '已送出'; addFriend(uid, name); }); act.appendChild(af); }
+      else if (uid && !isMe && isFriend(uid)) act.appendChild(el('span', 'fr-st', '⭐ 好友'));
+      if (!isMe && (uid || peerId)){ const mo = el('button', 'frb ic', '⋯'); mo.setAttribute('aria-label', '更多'); mo.addEventListener('click', e => { e.stopPropagation(); const nx = li.nextSibling; if (nx && nx.classList && nx.classList.contains('frmore')){ nx.remove(); return; } const m = el('li', 'frmore');
+          if (uid && Cloud.on){ const cb = el('button', 'tbtn vbtn', '🪪 資料'); cb.addEventListener('click', () => openCard(uid, name, peerId)); m.appendChild(cb); }
+          if (uid && Cloud.on && peerId){ const dz = el('button', 'tbtn vbtn', '⚔️ 對決'); dz.addEventListener('click', () => { closeSheet(); duelInvite(uid, name); }); m.appendChild(dz); }
+          if (uid && Cloud.on){ const vq = el('button', 'tbtn ghost vbtn', '🐠 水族箱'); vq.addEventListener('click', () => visitAquarium(uid, name)); const vi = el('button', 'tbtn ghost vbtn', '🏝️ 小島'); vi.addEventListener('click', () => visitIsle(uid, name)); m.append(vq, vi); }
+          if (peerId && Cloud.on){ const rp = el('button', 'tbtn ghost vbtn', '🚩 檢舉'); rp.addEventListener('click', () => { const box = el('li', 'frmore rpbox'); box.appendChild(el('span', '', '檢舉原因：')); for (const r of ['罵人／不禮貌', '洗版', '取不雅的名字', '其他']){ const b = el('button', 'tbtn ghost vbtn', r); b.addEventListener('click', () => { reportPeer(peerId, name, r); box.remove(); }); box.appendChild(b); } m.after(box); rp.disabled = true; }); m.appendChild(rp); }
+          if (peerId){ const bk = el('button', 'tbtn ghost vbtn bk', '🚫 封鎖'); bk.addEventListener('click', () => { if (bk.dataset.sure !== '1'){ bk.dataset.sure = '1'; bk.textContent = '確定封鎖？'; bk.classList.add('warn'); return; } blockPeer(peerId, name); renderTab(); }); m.appendChild(bk); }
+          li.after(m); }); act.appendChild(mo); }
+      li.appendChild(act); ul.appendChild(li); };
     const stOf = (ph, x, z) => { if (ph){ const s = SPOTS.reduce((a, b) => Math.hypot(x-a.pos.x, z-a.pos.z) < Math.hypot(x-b.pos.x, z-b.pos.z) ? a : b); return `在${s.short}釣魚中`; } return '散步中'; };
     add(myDisplayName() === '你' ? '你' : myDisplayName(), look.shirt, stOf(me.fishing, me.pos.x, me.pos.z), true, null, null, myAvatar());
     for (const p of peers.values()) add(peerName(p) + (p.guest ? '・訪客' : ''), isHex(p.pres.sh) ? p.pres.sh : '#9fb3bf', stOf(!!p.pres.f, p.target.x, p.target.z), false, typeof p.pres.u === 'string' ? p.pres.u : null, [...peers.entries()].find(([k, v]) => v === p)[0], typeof p.pres.av === 'string' ? p.pres.av : '');
     /* NPC 不列在玩家清單裡（這裡只放真人） */
-    body.appendChild(ul);
-    const bl = Object.entries(blockList);
+    body.insertBefore(ul, body.children[1] || null);   /* v996 人先列在最上面，鬼抓人、對決放下面 */
+    const bl = [];
     if (bl.length){
       const h = el('div', 'dexhead', `已封鎖（${bl.length}）`); body.appendChild(h);
       const ub = el('ul', 'people');
@@ -25260,12 +25279,13 @@ function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
 const PHONE_APPS = [
   ['出門', [['tidego', '🚕', '潮搭Go'], ['map', '🗺️', '地圖']]],
   ['村子裡', [['phfeed', '🔔', '快訊'], ['upd', '🆕', '最近更新'], ['quest', '📅', '今天'], ['events', '🎪', '活動'], ['news', '📰', '村報'], ['story', '🏘️', '村民'], ['fest', '🏮', '節慶']]],
-  ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👥', '玩家'], ['duelhub', '⚔️', '對決'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
+  ['大家', [['dm', '💬', '訊息'], ['chumhot', '🍚', '熱門窩點'], ['people', '👫', '好友'], ['duelhub', '⚔️', '對決'], ['tboard', '🎣', '釣友隊'], ['board', '📌', '留言板'], ['rank', '🏆', '排行榜']]],
   ['我的', [['photo', '📷', '拍照'], ['dex', '📖', '圖鑑'], ['gyotaku', '🖋️', '魚拓'], ['tank', '🐠', '魚缸'], ['pets', '🐾', '寵物'], ['island', '🛒', '小島商店'], ['isleapp', '⛵', '我的島'], ['closet', '👕', '造型'], ['ach', '🎖️', '成就'], ['seachart', '🧭', '航海圖'], ['help', '❓', '玩法'], ['settings', '⚙️', '設定']]] ];
 /* ===== v687 有新東西時提醒老玩家一次（作者 11/22：「每當有新東西，可以給原本在玩的玩家加一個小提醒，提醒一次」→ 同意設計）
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u996', d:'11/28', items:[['👫','好友頁重新整理：左邊分「好友／周圍／封鎖」，好友頁只列好友；在線的好友旁邊有「去找他」「呼叫」，私訊、送禮、小島收在「⋯」'], ['📞','語音不用一直按著了：接通就能講，不想講話點 🎤 關麥克風'], ['📱','手機主畫面換新：海的桌布、彩色的圖示、最下面一排常用的（潮搭Go、地圖、訊息、好友）']] },
   { id:'u995', d:'11/28', items:[['🔥','聯名套裝：造型 → 衣櫃 → 上衣，最上面三套「阿萬・夜騎」「阿默・黑影」「阿穎・金浪」，整套 🪙2,500'], ['✨','穿整套身上會一直冒那一套顏色的光點，別人也看得到；點了可以先試穿，喜歡再整套買']] },
   { id:'u994', d:'11/28', items:[['📞','好友語音：好友分頁裡，在線上的好友旁邊有 📞，按了打給他，他按「接聽」就能講話'], ['🎤','按著「🎤 按著說話」才會送出聲音，放開就停；可以靜音對方、檢舉、掛斷。聲音是兩支手機直接連，不錄音'], ['🛡️','只有互相加好友的人打得通；兒童模式不能用，未滿 18 歲預設關（好友分頁上面可以打開）']] },
   { id:'u993', d:'11/28', items:[['✨','甩竿特效：浮標飛出去後面拖一道光，落水時炸開一圈，大家都看得到。星光 Lv.10、水光 Lv.20、金光 Lv.30、彩虹 Lv.50，釣到傳說魚拿「傳說紫焰」'], ['🏅','點左上角等級 →「甩竿特效」換'], ['🐛','修好：新主島上的水花、煙火、閃光那些小粒子特效之前都看不到，現在回來了']] },
@@ -25651,14 +25671,19 @@ function dmTick(){ if (!Cloud.on) return; const T = Date.now(); if (dmViewing() 
 function phoneHdr(){ const hd = $('#sheet header'); if (!hd) return; let b = $('#phBack');
   if (!b){ b = document.createElement('button'); b.id = 'phBack'; b.innerHTML = '‹ 📱'; b.setAttribute('aria-label', '回手機'); b.addEventListener('click', () => { SFX.click(); Phone.via = true; curTab = 'phone'; renderTab(); }); hd.insertBefore(b, hd.firstChild); }
   b.hidden = !Phone.via || curTab === 'phone'; }
-function renderPhone(body){ const scr = el('div', 'ph-home');
+/* v996 作者：「手機圖示那邊你還是沒改好」→ 做成真的手機主畫面：海的桌布、彩色的圓角方塊圖示（整塊都是顏色）、白字，最下面一排常用的放在底座 */
+const PH_COL = { tidego: ['#ffd84a', '#f2a200'], map: ['#5fd0ff', '#1f7fd8'], phfeed: ['#ff8a6a', '#e2503a'], upd: ['#7ee0c0', '#17a07a'], quest: ['#ffffff', '#dfe6ee'], events: ['#ff9ad0', '#e04f9a'], news: ['#f3e9d2', '#c9b48a'], story: ['#ffc58a', '#e07a2a'], fest: ['#ff7a6a', '#c8262c'],
+  dm: ['#6ee07a', '#1fae3a'], chumhot: ['#ffe0a0', '#e8a83a'], people: ['#8ac8ff', '#3f7fe0'], duelhub: ['#ff7a7a', '#b8262c'], tboard: ['#7ad8ff', '#1f8fb8'], board: ['#ffd27a', '#e09a2a'], rank: ['#ffe066', '#e0a800'],
+  photo: ['#6a7480', '#2b313a'], dex: ['#c79a6b', '#8a5a2b'], gyotaku: ['#f2efe6', '#bfb6a0'], tank: ['#7ad0f0', '#1f6fb8'], pets: ['#ffb88a', '#e07a3a'], island: ['#9ee07a', '#3fa83a'], isleapp: ['#7ac8f0', '#2f8fd0'], closet: ['#d8a8ff', '#8a4fe0'], ach: ['#ffd84a', '#c88a00'], seachart: ['#5a8ac8', '#1f3f78'], help: ['#a8b8c8', '#5a6a7a'], settings: ['#c8ced6', '#6a7480'] };
+const PH_DOCK = ['tidego', 'map', 'dm', 'people'];
+function renderPhone(body){ const scr = el('div', 'ph-home ph2');
   { const top = el('div', 'ph-top'), ck = $('#clock'), wx = $('#wxChip'); top.appendChild(el('span', '', ((ck && ck.textContent) || '').trim())); top.appendChild(el('span', '', ((wx && wx.textContent) || '').trim())); scr.appendChild(top); }
-  const un = phoneUnread(), fr = phoneFrN();
-  for (const [sec, apps] of PHONE_APPS){ scr.appendChild(el('div', 'ph-sec', sec)); const g = el('div', 'ph-grid');
-    for (const [tab, ic, lab] of apps){ const b = el('button', 'ph-app' + (tab === 'phfeed' ? ' new' : '')); b.innerHTML = `<span class="ph-ic">${ic}</span><span class="ph-lab">${lab}</span>`;
-      const n = tab === 'phfeed' ? un : tab === 'people' ? fr : tab === 'dm' ? dmUnreadN() : tab === 'isleapp' ? (IMail.unread | 0) : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
-      b.addEventListener('click', () => { SFX.click(); phoneGo(tab); }); g.appendChild(b); }
-    scr.appendChild(g); }
+  const un = phoneUnread(), fr = phoneFrN(), all = [].concat(...PHONE_APPS.map(x => x[1])), by = Object.fromEntries(all.map(a => [a[0], a]));
+  const mk = ([tab, ic, lab]) => { const b = el('button', 'ph-app'), C = PH_COL[tab] || ['#9fb3c8', '#4a6a8a'], i = el('span', 'ph-ic', ic); i.style.background = `linear-gradient(160deg,${C[0]},${C[1]})`; b.append(i, el('span', 'ph-lab', lab));
+    const n = tab === 'phfeed' ? un : tab === 'people' ? fr : tab === 'dm' ? dmUnreadN() : tab === 'isleapp' ? (IMail.unread | 0) : 0; if (n) b.appendChild(el('i', 'ph-dot', n > 9 ? '9+' : String(n)));
+    b.addEventListener('click', () => { SFX.click(); phoneGo(tab); }); return b; };
+  const g = el('div', 'ph-grid'); for (const a of all) if (!PH_DOCK.includes(a[0])) g.appendChild(mk(a)); scr.appendChild(g);
+  const dk = el('div', 'ph-dock'); for (const k of PH_DOCK) if (by[k]) dk.appendChild(mk(by[k])); scr.appendChild(dk);
   body.appendChild(scr); }
 function phAgo(t){ const s = Math.max(0, (Date.now() - t) / 1000); return s < 60 ? '剛剛' : s < 3600 ? `${Math.floor(s / 60)} 分鐘前` : `${Math.floor(s / 3600)} 小時前`; }
 function phLive(){ const L = [], ms = bossNow(), s = Math.floor(ms / 1000), left = en => `還有 ${Math.max(1, Math.ceil((en - s) / 60))} 分鐘`;
