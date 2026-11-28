@@ -18510,7 +18510,7 @@ function w2mCenterMe(){ const M = W2M.M, px = (me.pos.x - M.x0) * M.k, pz = (me.
 function w2mPan(){ W2M.el.querySelector('.w2mw').style.transform = `translate(${W2M.ox}px,${W2M.oy}px)`; }
 function w2mZoom(ns, cx, cy, live){ ns = clamp(ns, W2M.s0, W2M.s0 * 3.2); const k = ns / W2M.s; W2M.ox = cx - (cx - W2M.ox) * k; W2M.oy = cy - (cy - W2M.oy) * k; W2M.s = ns; w2mClamp(); w2mLayout(!live); }
 function w2mLayout(dc){ const V = W2M.el, s = W2M.s; V.classList.add('nz'); clearTimeout(W2M.nzT); W2M.nzT = setTimeout(() => V.classList.remove('nz'), 600);   /* v970 作者：「橘色的字會隨放大縮小亂動」→ 放大縮小的時候村民、小火車直接跳到新位置，不要慢慢滑 */ V.querySelector('.w2mcv').style.width = W2M.W * s + 'px'; V.querySelector('.w2mcv').style.height = W2M.H * s + 'px'; const ln = V.querySelector('.w2ml'); ln.setAttribute('width', W2M.W * s); ln.setAttribute('height', W2M.H * s);
-  for (const o of W2M.mk){ o.el.style.left = o.p[0] * s + 'px'; o.el.style.top = o.p[1] * s + 'px'; } w2mPan(); w2mTick(); if (dc) w2mDeclutter(); else { clearTimeout(W2M.dc); W2M.dc = setTimeout(w2mDeclutter, 150); } }
+  for (const o of W2M.mk){ o.el.style.left = o.p[0] * s + 'px'; o.el.style.top = o.p[1] * s + 'px'; } w2mPan(); w2mTick(); if (dc) w2mDeclutter(); else { V.querySelector('.w2ml').innerHTML = ''; clearTimeout(W2M.dc); W2M.dc = setTimeout(w2mDeclutter, 150); } }   /* v971 作者：「白色的線也會亂飄」→ 手指放大縮小的時候先把連到字的白線收掉，停下來重新排字的時候再畫 */
 /* 字不會疊在一起 */
 function w2mDeclutter(){ const V = W2M.el; if (!V) return; const s = W2M.s, near = s > W2M.s0 * 1.45, ln = V.querySelector('.w2ml'); ln.innerHTML = ''; V.classList.toggle('near', near);
   const placed = [], R = e => { const r = e.getBoundingClientRect(); return { l: r.left - 2, t: r.top - 2, r: r.right + 2, b: r.bottom + 2 }; }, hit = a => placed.some(b => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t);
@@ -24828,6 +24828,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u971', d:'11/28', items:[['🐋','水族館換成新的五層玻璃塔：一圈一圈的魚缸樓層，最上面是裝滿水的大玻璃球和鯨魚尾巴，從整座島都看得到'], ['🍱','食堂的直式招牌移到房子旁邊，不再擋住店面'], ['🗺️','地圖用手指放大縮小時，連到店名的白線先收起來，停下來再畫，不會亂飄']] },
   { id:'u970', d:'11/28', items:[['🍱','潮汐食堂換成真的食堂門面：開放式店面、紅燈籠、圓桌紅凳、爐台冒蒸氣、活魚缸'], ['🌉','森林步道的小木橋改成在河岸落地，不再壓到鐵軌，後面接平交道；警告牌不會立在橋上'], ['🏛️','博物館門口的小漁船放回木架上，不再懸空；門口只留一塊直式招牌'], ['🛣️','路口轉角修成圓弧，人行道不會有尖角伸進路裡；水族館旁邊那條尖尖的草地鋪平了'], ['🗺️','地圖放大縮小時，村民和小火車的圖示不會再亂飄']] },
   { id:'u969', d:'11/28', items:[['🧓','阿伯（老校工）也搬到新主島了：在村公所西邊的池子旁邊釣魚，走過去可以跟他聊天']] },
   { id:'u968', d:'11/28', items:[['🎱','東北邊的遊樂園拿掉，換成一棟「潮汐娛樂館」：撞球館和釣蝦場都在裡面，招牌晚上會一閃一閃'], ['🚧','鐵軌上的木板拿掉，改成真的平交道：水泥地面、鐵條、紅白叉叉的警告牌和黃黑柱子'], ['🏟️','體育場外面換成白色的牆和窗戶，看台座位有藍黃紅三種顏色'], ['👋','一進遊戲，村民就已經在新主島上了，不用等'], ['📱','手機橫拿時，左邊的「今天」先收成一行，點一下才打開；低畫質時噴水池和大看板用比較輕的模型，比較不會卡']] },
