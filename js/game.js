@@ -2132,7 +2132,7 @@ function paveAll(){ if (Pave.done) return; Pave.done = true;
 function art2Pave(){ paveAll(); }
 function art2Props(){ try { twTemple(6.4, -28.4, Math.PI / 2); }   /* v493 廟往北挪 2 公尺，原本壓在往水族館區的路上 */ catch(e){ console.warn('twTemple', e); }
   try { art2Pave(); } catch(e){ console.warn('art2Pave', e); }
-  try { const [cx, cz] = HARBOR_SQ; let n = 0; for (let k = 0; k < 40 && n < 7; k++){ const a = k * 2.399 + 0.6, r = 12.5 + (k % 5) * 2.2, px = cx + Math.sin(a) * r, pz = cz + Math.cos(a) * r, ti = terrainInfo(px, pz); if (ti.water || ti.h < -0.01 || blocked(px, pz, 1.5) || deckAt(px, pz) || inSport(px, pz, 1.2)) continue; twPalm(px, pz, 0.95 + (k % 3) * 0.12, a + 1.2); n++; } } catch(e){ console.warn('twPalm', e); }   /* 港口周圍種七棵椰子樹（四周要有 1.5 公尺空地才種） */   /* v460 小廟：廣場西邊的空地，面向廣場 */
+  /* v968 舊港口種椰子樹那段拿掉（twPalm 早就不在了，每次載入都報錯；檢查報告第 4 項） */
   const sq = HARBOR_SQ, ok = (x, z, r) => isLand(x, z) && !blocked(x, z, r) && !inSport(x, z, 0.8), P = (name, x, z, s, ry, col) => { if (!ok(x, z, col ? col + 1.1 : 0.4)) return; art2World(name, x, z, { s, ry }); if (col) addCircleCol(x, z, col); };   /* 有碰撞的擺設四周要留 1.1 公尺以上的空地才放（玩家回報：大鼓擋住棚子的出口，走進去出不來） */
   const hs = HLOT.shop, c = Math.cos(hs[2]), sn = Math.sin(hs[2]), loc = (lx, lz) => [hs[0] + c * lx + sn * lz, hs[1] - sn * lx + c * lz];
   /* v474 換成台灣漁港的小東西；之前古風的石燈籠、水井、青蛙石像、木推車、木桶、木攤子撤掉，只留魚網架 */
@@ -18375,15 +18375,20 @@ function w2NpcPut(n, x, z, rot, fishing, bob, y){ const gy = y != null ? y : gro
   if (n.held){ n.av.g.remove(n.held.o); n.held = null; } n.sitting = false; n.emote = null; n.flying = null; n.dip = 0; n.bend = 0; n.windup = 0; n.castT = -1;
   if (fishing){ n.fishing = true; if (bob){ n.bobPos.copy(bob); n.bobState = 'water'; n.st = 'wait'; n.next = now() + rand(3, 8); } else { n.bobState = 'none'; n.st = 'windup'; n.stT = 0; } }
   else { n.fishing = false; n.bobState = 'none'; n.st = 'wait'; n.next = now() + 5; } }
-function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder || !questNpcs.length) return false;
-  for (const F of W2_FIX){ if (!PO[F.k] || (F.skip && F.skip())) continue; if (!F.g()){ try { F.build(); } catch(e){} if (!F.g()) return false; } }   /* 板子還沒蓋：先照舊村子的位置蓋好（那邊的碰撞才會在），蓋不出來就下次再搬 */
-  for (const F of W2_FIX){ const p = PO[F.k]; if (!p || (F.skip && F.skip())) continue; if (!F.v){ F.v = F.get(); F.cols(p.x, p.z, p.face); }
-    const [x, z, r] = on ? [p.x, p.z, p.face] : F.v; F.set(x, z, r); const g = F.g(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; }
+/* v968 檢查報告：剛進遊戲頭 50 秒新主島沒有村民（看板、攤子還沒蓋好，整個搬家就一直重試）→ 村民先搬，不用等板子 */
+function w2NpcMove(on){ const PO = W2.posts; W2S.npcMoved = on;
   for (const k in W2_NPC){ const p = PO[k], n = npcs.find(W2_NPC[k]); if (!p || !n || !n.v0) continue; n.w2on = on;
     if (k === 'sci'){ if (on){ n.w2sk = w2SciKey(); w2SciPlace(n); } else { w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, false, null, n.v0.y); if (Sci.list){ Sci.ok = false; try { sciPlace(); } catch(e){} } } continue; }   /* 蔚博士：兩邊都是「今天調查的地方」，各自重新找 */
     if (on) w2NpcPut(n, p.x, p.z, p.face, !!p.fishing, null); else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); }
   for (const k of W2_QNPC){ const p = PO[k], q = questNpcs.find(q => q.who === k); if (!p || !q) continue; const f = q.f; if (!q.v0) q.v0 = { x: f.pos.x, z: f.pos.z, y: f.baseY, rot: f.rot };
     const x = on ? p.x : q.v0.x, z = on ? p.z : q.v0.z, y = on ? groundHeight(p.x, p.z) : q.v0.y; f.pos.set(x, y, z); f.baseY = y; f.rot = on ? p.face : q.v0.rot; f.speed = 0; f.av.g.visible = !onIsle; f._culled = false; if (f.blob) f.blob.visible = true; }
+}
+function w2SiteApply(on){ const PO = W2.posts; if (!houseBuilder || !questNpcs.length) return false;
+  if (W2S.npcMoved !== on) w2NpcMove(on);
+  for (const F of W2_FIX){ if (!PO[F.k] || (F.skip && F.skip())) continue; if (!F.g()){ try { F.build(); } catch(e){} if (!F.g()) return false; } }   /* 板子還沒蓋：先照舊村子的位置蓋好（那邊的碰撞才會在），蓋不出來就下次再搬 */
+  for (const F of W2_FIX){ const p = PO[F.k]; if (!p || (F.skip && F.skip())) continue; if (!F.v){ F.v = F.get(); F.cols(p.x, p.z, p.face); }
+    const [x, z, r] = on ? [p.x, p.z, p.face] : F.v; F.set(x, z, r); const g = F.g(); g.position.set(x, groundHeight(x, z), z); g.rotation.y = r; }
+  if (W2S.npcMoved !== on) w2NpcMove(on);
   /* v933 阿海、他的船、坐船的上下船點、跑船生意在村子賣魚的地方 */
   if (ferryNpc && PO.ferry){ const f = ferryNpc.f; if (!W2S.fv) W2S.fv = { x: f.pos.x, z: f.pos.z, y: f.baseY, rot: f.rot, at: FERRY.at.slice() };
     const p = PO.ferry, x = on ? p.x : W2S.fv.x, z = on ? p.z : W2S.fv.z; f.pos.set(x, groundHeight(x, z), z); f.baseY = f.pos.y; f.rot = on ? p.face : W2S.fv.rot; FERRY.at[0] = on ? p.x : W2S.fv.at[0]; FERRY.at[1] = on ? p.z : W2S.fv.at[1]; }
@@ -18441,7 +18446,7 @@ const W2MAP_TXT = {
   '瀑布': ['💦', '森林深處，瀑布下的清溪潭。'],
   '山洞': ['🕳️', '大山西南邊的山坡上，裡面有發光的水晶。'],
   '護林員小屋': ['🛖', '森林東邊的小木屋。'],
-  '遊樂園': ['🎡', '摩天輪、旋轉木馬，晚上會亮燈。'],
+  '潮汐娛樂館': ['🎱', '撞球館和釣蝦場都在這棟，招牌晚上會一閃一閃。'],
   '沙灘': ['🏖️', '陽光沙灘，東南外海有一片珊瑚礁。'],
   cafe: '吃飯、煮料理，美雲姨在裡面。中午和晚上村民會來吃飯。', cai: '阿彩畫的畫，可以買回家掛。', mu: '阿木做的家具，擺在自己的小島上。', pet: '小花的寵物店，帶一隻回家陪你。',
   pool: '打撞球，跟阿喆比一局。', shrimp: '室內釣蝦場，買時段、釣蝦、烤蝦。', tackle: '買竿子、魚餌、線。', tailor: '阿綾的服裝店（整修中，換衣服先去造型）。',
@@ -23387,7 +23392,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是遊樂園，東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。司機阿速會開潮搭Go 到你旁邊的路邊，站在原地等就好；離大路太遠的話，跟著箭頭走到車子旁邊就會上車。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。司機阿速會開潮搭Go 到你旁邊的路邊，站在原地等就好；離大路太遠的話，跟著箭頭走到車子旁邊就會上車。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -24787,7 +24792,7 @@ initUpdateCheck();
 
 /* ===== v336 介面重排（58）：右上 6 個大按鈕＋分頁、右上小地圖（點了開大地圖）、左邊常駐「今天」、下面一條聊天列（表情收進 😀）、右下 🐾、
    左上頭像列多經驗條和愛海點數。只換位置，原本的功能都在。網址加 #ui2 可以看舊版 ===== */
-var UI3 = { on: !/ui2\b/.test(location.hash) && document.body.classList.contains('ui2'), last:{}, mini:null, todayOpen: LS.get('tide.todayOpen', true) };
+var UI3 = { on: !/ui2\b/.test(location.hash) && document.body.classList.contains('ui2'), last:{}, mini:null, todayOpen: LS.get('tide.todayOpen', Math.min(innerWidth, innerHeight) >= 500) };   /* v968 手機橫放（螢幕矮）預設收起來，只剩一行「📋 今天 N ▸」，點了才展開（檢查報告第 7 項：壓在搖桿上面） */
 const UI_GROUPS = [
   { k:'map',   ic:'🗺️', lab:'地圖',  tabs:[['map', '地圖']] },
   { k:'today', ic:'🎁', lab:'今天',  tabs:[['quest', '今天'], ['story', '村民'], ['events', '活動'], ['fest', '節慶']] },
@@ -24820,6 +24825,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u968', d:'11/28', items:[['🎱','東北邊的遊樂園拿掉，換成一棟「潮汐娛樂館」：撞球館和釣蝦場都在裡面，招牌晚上會一閃一閃'], ['🚧','鐵軌上的木板拿掉，改成真的平交道：水泥地面、鐵條、紅白叉叉的警告牌和黃黑柱子'], ['🏟️','體育場外面換成白色的牆和窗戶，看台座位有藍黃紅三種顏色'], ['👋','一進遊戲，村民就已經在新主島上了，不用等'], ['📱','手機橫拿時，左邊的「今天」先收成一行，點一下才打開；低畫質時噴水池和大看板用比較輕的模型，比較不會卡']] },
   { id:'u967', d:'11/28', items:[['🏛️','村公所和博物館往後挪，門口不再壓到圓環的車道；路和步道跨過鐵軌的地方鋪了木板平交道'], ['🔄','路的盡頭（西邊居民區、港口）做了圓形的迴車道；撞球館的門重新掛到一間真的房子上']] },
   { id:'u966', d:'11/28', items:[['🚕','叫潮搭Go 改成站在原地等：車子會開到你旁邊的路邊，不用再走去上車處'], ['🛣️','車道重新畫過：黃線和白線在路口、斑馬線前面會斷開；水族館和體育場外面多了一圈路，把路接起來，不會再穿過建築'], ['🏟️','體育場的看台擋起來了，不會再走進牆裡']] },
   { id:'u965', d:'11/28', items:[['🐟','百年生態池和石滬的魚搬到新主島了：河裡有琵琶鼠魚、革胡子鯰、泰國鱧、鱷雀鱔，紅樹林有攀鱸、食蚊魚，溪裡有白子孔雀魚，珊瑚礁有蘇眉魚']] },
