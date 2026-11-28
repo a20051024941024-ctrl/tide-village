@@ -9697,5 +9697,12 @@
  "今天潮水不錯欸": "Nice tide today",
  "以前都跟朋友一起釣到很晚": "I used to fish with a friend till late",
  "你也來釣啊，旁邊有位子": "Come fish too, there's room next to me",
- "有咬！……啊跑掉了": "A bite! ...aw, it got away"
+ "有咬！……啊跑掉了": "A bite! ...aw, it got away",
+ "潮搭Go 車門上的貼紙和輪框修好了（上一版變成一片亂碼）": "The TideGo door stickers and wheel hubs are fixed (they turned into garbled noise in the last update)",
+ "坐車時不會一頓一頓的": "Taxi rides no longer stutter",
+ "新主島的店：朝門口走過去就直接進去，不用按按鈕；店門上面不再浮圖示": "On the new main island, just walk into a shop door to go inside, no button needed; shop doors no longer show a floating icon",
+ "一張長椅只浮一個圖示，點了走到最近的位子坐下": "Each bench shows just one icon; tap it to walk to the nearest seat and sit",
+ "進店、出店、傳送時，畫面直接到位，不會一路飄過去": "When entering or leaving a shop or teleporting, the view jumps straight there instead of drifting across",
+ "慢慢烏龜屋的畫面拿掉最上面那排背包分頁": "The Slow Turtle House screen no longer shows the backpack tab row at the top",
+ "食堂裡站著的「點餐」小按鈕拿掉，右下大按鈕一次只做一件事": "Removed the extra \"Order\" button while standing in the diner; the big button does one thing at a time"
 }

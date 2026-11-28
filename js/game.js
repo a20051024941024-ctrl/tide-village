@@ -7613,7 +7613,7 @@ function updateCamera2(dt){
   const want = new THREE.Vector3(target.x + Math.sin(cam.yaw)*cp*dist, target.y + sp*dist, target.z + Math.cos(cam.yaw)*cp*dist);
   want.y = Dive.on ? clamp(want.y, diveBed(want.x, want.z) + 0.5, DIVE.y + DIVE.top - 0.3) : Math.max(want.y, House.on ? ROOM_Y + 0.8 : Photo.on ? 0.3 : 0.8, up > 0 && !inIndoor() ? groundHeight(want.x, want.z) + 0.45 : -99);   /* v939 鏡頭壓低往上看：不鑽到地底下（山坡上也是） */
   if (!Dive.on && !House.on && !inIndoor()) camClear(target, want, dt); else CamK.k = 1;
-  camera.position.lerp(want, 1 - Math.exp(-10 * dt));
+  if (camera.position.distanceToSquared(want) > 400) camera.position.copy(want); else camera.position.lerp(want, 1 - Math.exp(-10 * dt));   /* v986 作者：「點進去出去進來的畫面看起來會飄」→ 進店、出店、坐車、傳送一下子跳很遠時，鏡頭以前會從原地一路飛過去（進店要飛一千多公尺）；離太遠就直接跳到位 */
   let lookT = target; if (up > 0){ const hd = Math.max(0.3, Math.hypot(want.x - target.x, want.z - target.z)), a0 = Math.atan2(target.y - want.y, hd), la = Math.min(1.4, a0 + Math.min(0.42, up * 0.6)); lookT = new THREE.Vector3(target.x, want.y + Math.tan(la) * hd, target.z); }   /* v939 往上看：頭留在畫面下緣，上面是整片天空（以前最多 45 度、拖多了人會跑出畫面） */
   camera.lookAt(lookT); camLook.copy(lookT);
   try { camFadeTick(target); } catch(e){}
@@ -7640,12 +7640,16 @@ function goFishing(){ if (W2 && W2.near(me.pos.x, me.pos.z)){ const s = W2.shore
    右下的大按鈕照舊（站在旁邊時還是可以直接按）。 */
 const TapI = { el: null, map: new Map(), go: null, list: [], tick: 0 };
 function tapCands(){ const L = [], px = me.pos.x, pz = me.pos.z, R = 7;
-  for (const c of allChairs()){ const d = Math.hypot(c.x - px, c.z - pz); if (d < R && d > 0.5) { const f = c.face || 0, ax = c.x + Math.sin(f) * 0.7, az = c.z + Math.cos(f) * 0.7; L.push({ k: 'c' + c.x.toFixed(2) + ',' + c.z.toFixed(2), d, x: c.x, z: c.z, y: (c.y || groundHeight(c.x, c.z)) + 1.05, ax, az, ic: '🪑', face: f }); } }
-  if (W2 && W2.near(px, pz)){ for (const D of W2.doors || []){ const d = Math.hypot(D.x - px, D.z - pz); if (d < R && d > 1.2){ const fx = Math.sin(D.face), fz = Math.cos(D.face); L.push({ k: 'd' + D.k, d, x: D.x, z: D.z, y: groundHeight(D.x, D.z) + 2.4, ax: D.x + fx * 0.8, az: D.z + fz * 0.8, ic: W2_DOOR_IC[D.k] || '🚪', face: D.face + Math.PI }); } }
+  /* v986 作者：「就不能參考天天嗎」（畫了一張長椅上面只浮一個圖示）→ 同一張長椅的位子併成一個圖示，浮在長椅中間；點了走到離你最近的那個位子坐下 */
+  const near = allChairs().filter(c => { const d = Math.hypot(c.x - px, c.z - pz); return d < R && d > 0.5 && !c.bed; }), groups = [];
+  for (const c of near){ let g = groups.find(G => G.seats.some(q => Math.hypot(q.x - c.x, q.z - c.z) < 0.95)); if (!g){ g = { seats: [] }; groups.push(g); } g.seats.push(c); }
+  for (const g of groups){ const n = g.seats.length, cx = g.seats.reduce((a, q) => a + q.x, 0) / n, cz = g.seats.reduce((a, q) => a + q.z, 0) / n, c0 = g.seats[0], f = c0.face || 0, d = Math.min(...g.seats.map(q => Math.hypot(q.x - px, q.z - pz)));
+    L.push({ k: 'c' + cx.toFixed(1) + ',' + cz.toFixed(1), d, x: cx, z: cz, y: (c0.y || groundHeight(cx, cz)) + 1.05, ax: c0.x + Math.sin(f) * 0.7, az: c0.z + Math.cos(f) * 0.7, ic: '🪑', face: f, seats: g.seats }); }
+  if (W2 && W2.near(px, pz)){   /* v986 作者：「店不需要跳出那個」→ 店門不浮圖示，走進門就直接進去（見 w2DoorWalk） */
     const PO = W2.posts || {}; for (const [k, ic] of [['orders', '📋'], ['board', '📌'], ['tboard', '🏆'], ['zc', '🏰'], ['boatshop', '⛵']]){ const p = PO[k]; if (!p) continue; const d = Math.hypot(p.x - px, p.z - pz); if (d < R && d > 2.2){ const fx = Math.sin(p.face), fz = Math.cos(p.face); L.push({ k: 'p' + k, d, x: p.x, z: p.z, y: groundHeight(p.x, p.z) + 2.6, ax: p.x + fx * 1.6, az: p.z + fz * 1.6, ic, face: p.face + Math.PI }); } } }
-  return L.sort((a, b) => a.d - b.d).slice(0, 6); }
+  return L.sort((a, b) => a.d - b.d).slice(0, 4); }
 function tapHideAll(){ for (const e of TapI.map.values()) e.hidden = true; }
-function tapTick(dt){ if (!TapI.el){ TapI.el = document.createElement('div'); TapI.el.id = 'tapIcons'; document.body.appendChild(TapI.el); }
+function tapTick(dt){ try { w2DoorWalk(); } catch(e){ if (!DoorW.err){ DoorW.err = 1; console.warn('doorwalk', e); } } if (!TapI.el){ TapI.el = document.createElement('div'); TapI.el.id = 'tapIcons'; document.body.appendChild(TapI.el); }
   const busy = uiBlocked || !$('#sheet').hidden || F.phase !== 'idle' || mySeat || myBoat || (typeof Dive !== 'undefined' && Dive.on) || taxiRiding() || bpxRiding() || (typeof Ride !== 'undefined' && Ride.on) || House.on || inIndoor();
   if (TapI.go) tapGoTick(dt);
   if (busy){ tapHideAll(); TapI.list = []; return; }
@@ -7657,7 +7661,15 @@ function tapTick(dt){ if (!TapI.el){ TapI.el = document.createElement('div'); Ta
     if (!e){ e = document.createElement('button'); e.className = 'tapic'; e.innerHTML = `<span>${o.ic}</span>`; e.addEventListener('pointerdown', ev => { ev.preventDefault(); ev.stopPropagation(); const cur = TapI.list.find(q => q.k === e.dataset.k); if (cur) tapStart(cur); }); TapI.el.appendChild(e); TapI.map.set(o.k, e); }
     e.dataset.k = o.k; e.hidden = false; e.style.transform = `translate(${sx - 22}px, ${sy - 50}px)`; }
   for (const [k, e] of TapI.map) if (!seen.has(k)) e.hidden = true; }
-function tapStart(o){ SFX.click(); TapI.go = { o, t0: now(), lx: me.pos.x, lz: me.pos.z, lt: now() }; }
+function tapStart(o){ SFX.click(); if (o.seats){ const c = o.seats.slice().sort((p, q) => Math.hypot(p.x - me.pos.x, p.z - me.pos.z) - Math.hypot(q.x - me.pos.x, q.z - me.pos.z))[0], f = c.face || 0; o = Object.assign({}, o, { ax: c.x + Math.sin(f) * 0.7, az: c.z + Math.cos(f) * 0.7, face: f }); } TapI.go = { o, t0: now(), lx: me.pos.x, lz: me.pos.z, lt: now() }; }
+/* v986 作者：「店這種的還是要直接做一個路口靠近就走進去」→ 新主島的店門：用搖桿朝門走、走到門口 0.9 公尺內就直接進去（不用按按鈕）。剛出來的人要先離開門口 2.5 公尺，才不會一出來又被吸進去 */
+const DoorW = { lx: 0, lz: 0, away: true, k: '' };
+function w2DoorWalk(){ if (!W2 || !W2.doors || !W2.near(me.pos.x, me.pos.z) || F.phase !== 'idle' || mySeat || myBoat || uiBlocked || !$('#sheet').hidden || Dive.on || House.on || inIndoor()){ DoorW.lx = me.pos.x; DoorW.lz = me.pos.z; return; }
+  const mx = me.pos.x - DoorW.lx, mz = me.pos.z - DoorW.lz, mv = Math.hypot(mx, mz); DoorW.lx = me.pos.x; DoorW.lz = me.pos.z; let best = null, bd = 9;
+  for (const D of W2.doors){ const d = Math.hypot(me.pos.x - D.x, me.pos.z - D.z); if (d < bd){ bd = d; best = D; } }
+  if (!best || bd > 2.5){ DoorW.away = true; return; } if (!DoorW.away || bd > 0.9 || mv < 0.01) return; const M = W2_DOOR[best.k]; if (!M || !/door$/.test(M[0])) return;
+  const ix = -Math.sin(best.face), iz = -Math.cos(best.face); if ((mx * ix + mz * iz) / mv < 0.3) return;   /* 要是朝著門裡面走 */
+  const sh = w2NearDoor(); if (!sh) return; DoorW.away = false; openShop(sh); }
 function tapStop(){ if (!TapI.go) return; TapI.go = null; joy.x = joy.z = 0; }
 function tapGoTick(dt){ const G = TapI.go, o = G.o; if (Object.values(keys).some(Boolean) || F.phase !== 'idle' || uiBlocked || mySeat){ tapStop(); return; }
   const dx = o.ax - me.pos.x, dz = o.az - me.pos.z, d = Math.hypot(dx, dz), t = now();
@@ -8152,7 +8164,7 @@ function updateFishing(dt, t){
   if (mySeat && mySeat.furnLie && !me.emote) startEmote(me, mySeat.furnLie === 'bath' ? 'sitdown' : 'sleep');   /* v305 躺著的時候動作不見了就補回來 */
   { const cb = $('#chumBtn'), show = !Dive.on && !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
-  let label, sub = '', cls = ''; const ALT = [];
+  let label, sub = '', cls = '';
   const near = (myBoat || bpxRiding()) ? { spot: boatSpot(), d: 0 } : nearestSpot();
   const pkN = Dive.on ? nearPick() : null, seaL = pkN ? pickLabel(pkN) : Dive.on ? (seaLabel() || trapLabel()) : null;
   if (F.phase === 'idle' && !Dive.on && !myBoat && !mySeat && bossLive()){ if (BossW.joined === BossW.st.id){ label = BossW.st.struggle ? '放開！' : '拉！'; sub = BossW.st.struggle ? '大魚在掙扎' : BossW.hold ? (BossW.T >= 0.75 ? '太緊了' : BossW.T > 0.35 ? '就是現在！' : '撐住') : '按住'; cls = BossW.st.struggle ? 'bite' : ''; } else { label = '一起拉！'; sub = '🐋 ' + BossW.st.name; cls = 'shop'; } }
@@ -8207,9 +8219,6 @@ function updateFishing(dt, t){
   else if (F.phase === 'bite'){ label = '提竿！'; cls = 'bite'; }
   else if (F.phase === 'reeling'){ label = '拉線'; sub = '按住 / 放開'; }
   else { label = '…'; cls = 'idle'; }
-  /* v984 作者：「加一個點餐按鈕」（很常要點別的，卻點到太近的別的東西）→ 在食堂裡站著也有「🍽️ 點餐」：自動坐到最近的位子再打開菜單。其他東西靠很近的問題 v979 已經用頭上的小圖示解決 */
-  if (F.phase === 'idle' && !Dive.on && !mySeat && !myBoat && !House.on && inCafe()){ const cc = CHAIRS.filter(c => c.cafe).sort((p, q) => Math.hypot(p.x - me.pos.x, p.z - me.pos.z) - Math.hypot(q.x - me.pos.x, q.z - me.pos.z))[0]; if (cc) ALT.push({ k: 'order', ic: '🍽️', t: '點餐', fn: () => { me.pos.x = cc.x; me.pos.z = cc.z; sitDown(cc); setTimeout(() => { if (mySeat && mySeat.cafe) openOrder(); }, 350); } }); }
-  altBtns(ALT);
   const html = label + (sub ? `<small>${sub}</small>` : '');
   if (act._h !== html){ if (F.phase === 'idle' && act._h && !BossW.rod){ if (act._pend !== html){ act._pend = html; act._pendAt = now(); } if (now() - act._pendAt < 0.5) return; }   /* v336 大按鈕的字不要一直跳：走路經過店門口時，同一個狀態要維持 0.5 秒才換 */
     act.innerHTML = html; act._h = html; act._pend = null; }
@@ -18717,13 +18726,13 @@ function taxiLookInit(){ if (TAXI_LOOK.ok) return; TAXI_LOOK.ok = 1;
   const gv = document.createElement('canvas'); gv.width = 64; gv.height = 128; const gg = gv.getContext('2d'), gr = gg.createRadialGradient(32, 18, 2, 32, 40, 70); gr.addColorStop(0, 'rgba(255,246,210,0.85)'); gr.addColorStop(0.5, 'rgba(255,240,190,0.35)'); gr.addColorStop(1, 'rgba(255,240,190,0)'); gg.fillStyle = gr; gg.fillRect(0, 0, 64, 128); gg.globalCompositeOperation = 'destination-in'; const hz = gg.createLinearGradient(0, 0, 64, 0); hz.addColorStop(0, 'rgba(0,0,0,0)'); hz.addColorStop(0.3, 'rgba(0,0,0,1)'); hz.addColorStop(0.7, 'rgba(0,0,0,1)'); hz.addColorStop(1, 'rgba(0,0,0,0)'); gg.fillStyle = hz; gg.fillRect(0, 0, 64, 128);   /* 兩邊也淡掉，不會是一塊方方的 */
   const gt = new THREE.CanvasTexture(gv); TAXI_LOOK.beam = new THREE.MeshBasicMaterial({ map: gt, transparent: true, depthWrite: false, opacity: 0, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4 }); }
 function taxiCar(){ const src = W2 && W2.ride && W2.ride.car; if (!src) return null; taxiLookInit(); const L = TAXI_LOOK, g = new THREE.Group(), c = src.clone(); c.scale.setScalar(2.0); c.rotation.y = Math.PI / 2; c.position.y = 0.9; g.add(c);
-  for (const sd of [1, -1]){ const lg = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.194), L.logo); lg.position.set(0.0, -0.07, sd * 0.392); if (sd < 0) lg.rotation.y = Math.PI; c.add(lg); }   /* 兩側車門的貼紙 */
-  const hubs = []; for (const [hx, hz] of [[-0.77, 0.335], [0.61, 0.35]]) for (const sd of [1, -1]){ const hb = new THREE.Mesh(new THREE.CircleGeometry(0.105, 20), L.hub); hb.position.set(hx, -0.25, sd * hz); if (sd < 0) hb.rotation.y = Math.PI; hb.userData.sd = sd; c.add(hb); hubs.push(hb); }
-  /* v984 作者：「車燈只是貼上去而已」「車頭那個白白的其實是車燈」→ 不再貼兩片白圓（車頭是弧形，貼的圓片會浮在車身外面）。改成模型本身車頭那條白色燈條在晚上自己發亮 */
+  /* v986 先換車身材質、再貼車門貼紙和輪框（v984 順序反了，貼紙和輪框也被換成車身材質，變成一片亂碼）。v984 作者：「車燈只是貼上去而已」「車頭那個白白的其實是車燈」→ 不再貼兩片白圓（車頭是弧形，貼的圓片會浮在車身外面）。改成模型本身車頭那條白色燈條在晚上自己發亮 */
   c.traverse(o => { if (!o.isMesh || !o.material || o.material.userData.tgLamp) return; if (!L.body){ const m = o.material.clone(); m.userData.tgLamp = 1; L.lampU = { value: 0 }; m.onBeforeCompile = sh => { sh.uniforms.uLamp = L.lampU;
       sh.vertexShader = 'varying vec3 vTgP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvTgP = position;');
       sh.fragmentShader = 'uniform float uLamp; varying vec3 vTgP;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float lum = dot(diffuseColor.rgb, vec3(0.333)); float sat = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)); float front = smoothstep(-0.80, -0.88, vTgP.x) * step(-0.22, vTgP.y) * step(vTgP.y, 0.12); totalEmissiveRadiance += vec3(1.0, 0.97, 0.86) * uLamp * front * smoothstep(0.62, 0.8, lum) * (1.0 - smoothstep(0.08, 0.2, sat)); }'); };
       m.customProgramCacheKey = () => 'tgLamp'; L.body = m; } o.material = L.body; });
+  for (const sd of [1, -1]){ const lg = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.194), L.logo); lg.position.set(0.0, -0.07, sd * 0.392); if (sd < 0) lg.rotation.y = Math.PI; c.add(lg); }   /* 兩側車門的貼紙 */
+  const hubs = []; for (const [hx, hz] of [[-0.77, 0.335], [0.61, 0.35]]) for (const sd of [1, -1]){ const hb = new THREE.Mesh(new THREE.CircleGeometry(0.105, 20), L.hub); hb.position.set(hx, -0.25, sd * hz); if (sd < 0) hb.rotation.y = Math.PI; hb.userData.sd = sd; c.add(hb); hubs.push(hb); }
   const beam = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 6.5).rotateX(-Math.PI / 2), L.beam); beam.position.set(0, 0.12, 4.4); g.add(beam);   /* 車頭燈照在前面的地上（晚上才看得到） */
   g.userData.hubs = hubs; g.userData.last = null; scene.add(g); return g; }
 function taxiLookTick(g){ if (!g) return; const u = g.userData, p = g.position; if (u.last){ const d = Math.hypot(p.x - u.last.x, p.z - u.last.z); if (d > 0 && d < 5){ const a = d / 0.42; for (const hb of u.hubs) hb.rotation.z -= a * hb.userData.sd; } } u.last = { x: p.x, z: p.z };
@@ -18818,7 +18827,7 @@ function taxiTick(dt){ if (!W2) return; try { if (W2S.on) drvTick(dt, now()); el
     if (dd < (Taxi.t < 0.1 ? 8 : 4.5) && !myBoat && !Dive.on && F.phase === 'idle'){ let P = null; if (Taxi.atSlot){ P = taxiOutPath(Taxi.slot, Taxi.drop); Taxi.atSlot = false; } else { const L = taxiRouteFwd(c.position.x, c.position.z, c.rotation.y, Taxi.drop); P = L && taxiLane(L, [[c.position.x, c.position.z]]); } if (!P){ taxiSkip(); return; }
       Nav.t = null; if (mySeat && !mySeat.train) standUp(); poolMeVis(false); if (Taxi.pax && Taxi.pax.length) txEmit({ a: 'go', pax: Taxi.pax.slice(0, 3) }); Taxi.st = 'ride'; Taxi.path = P; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; SFX.click(); pushPresence(true); taxiUi(); }
     else if (Taxi.t > 90){ toast('阿萬等太久先回乘車處了，要坐再叫一次'); taxiEnd(true); } }
-  else if (Taxi.st === 'ride'){ if (frameNo % 20 === 0) try { W2.warm(Taxi.car.position.x, Taxi.car.position.z); } catch(e){} if (drive(11)) taxiGetOff(); } }
+  else if (Taxi.st === 'ride'){ if (drive(11)) taxiGetOff(); } }   /* v986 作者：坐車「一頓一頓的」→ 以前坐車時每 20 格就把車子附近還沒蓋的地一次全部蓋好（一次好幾塊，那一格就卡一下）；鏡頭跟著車，新主島本來就每格蓋一塊，夠用了 */
 /* v963 紅綠燈：車子開到路口前面，燈不是綠的就停在停止線前（大道上往圓環開看大道的燈；圓環上快到路口看圓環的燈） */
 function taxiRed(car){ const LT = W2 && W2.ride && W2.ride.lights, c = car || Taxi.car; if (!LT || !c || !LT.list.length) return 99; const P = LT.phase(Date.now()), hx = Math.sin(c.rotation.y), hz = Math.cos(c.rotation.y); let lim = 99;
   for (const J of LT.list){ const rx = c.position.x - J.x, rz = c.position.z - J.z, d = Math.hypot(rx, rz); if (d > 22) continue; const along = rx * J.dx + rz * J.dz, lat = Math.abs(rx * -J.dz + rz * J.dx), hd = hx * J.dx + hz * J.dz;
@@ -25085,7 +25094,7 @@ function ui3OpenGroup(k){ const g = UI_GROUPS.find(x => x.k === k); if (!g) retu
 function ui3Tabs(){ if (!UI3.on) return; const T = $('#tabs'); if (!T) return; const g = ui3Group(curTab), key = g ? g.k : '';
   if (g) UI3.last[g.k] = curTab;
   if (T._g !== key){ T._g = key; T.innerHTML = ''; if (g) for (const [tab, lab] of g.tabs){ const b = document.createElement('button'); b.setAttribute('role', 'tab'); b.dataset.tab = tab; b.textContent = lab; b.addEventListener('click', () => { ui3Open(tab); curTab = tab; renderTab(); }); T.appendChild(b); } }
-  T.hidden = !g || g.tabs.length < 2; }
+  T.hidden = !g || g.tabs.length < 2 || (curTab === 'pets' && Pets.turtle); }   /* v986 作者：烏龜屋「最上面那排不相干的直接不要」→ 從店裡打開時不顯示背包那排分頁 */
 function ui3Menu(){ const M = $('#menu'); if (!M) return; M.innerHTML = '';
   /* v581 作者：上面只留 地圖、背包、手機，其他都收進 📱 手機 */
   for (const g of [UI_GROUPS.find(x => x.k === 'map'), UI_GROUPS.find(x => x.k === 'bag'), { k:'ph', ic:'📱', lab:'手機', tabs:[] }]){ const b = document.createElement('button'); b.className = 'mbtn panel g3'; b.dataset.group = g.k; b.dataset.tabs = g.tabs.map(t => t[0]).join(' '); b.setAttribute('aria-label', g.lab);
@@ -25104,6 +25113,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u986', d:'11/28', items:[['🚕','潮搭Go 車門上的貼紙和輪框修好了（上一版變成一片亂碼）'], ['🛞','坐車時不會一頓一頓的'], ['🚪','新主島的店：朝門口走過去就直接進去，不用按按鈕；店門上面不再浮圖示'], ['🪑','一張長椅只浮一個圖示，點了走到最近的位子坐下'], ['🎥','進店、出店、傳送時，畫面直接到位，不會一路飄過去'], ['🐢','慢慢烏龜屋的畫面拿掉最上面那排背包分頁'], ['🍽️','食堂裡站著的「點餐」小按鈕拿掉，右下大按鈕一次只做一件事']] },
   { id:'u985', d:'11/28', items:[['🚕','潮搭Go 乘車處多了司機阿萬：戴細框眼鏡、黑T、藍拖鞋，車子停好時站在兩台車中間等你；車開來接你時，他會下車跟你確認要去哪'], ['🎣','晚上 7 點到 10 點阿萬收工，會去港口棧橋釣魚，走過去他會跟你聊天（有人叫車一樣會開過來）']] },
   { id:'u984', d:'11/28', items:[['🧑‍🤝‍🧑','一進新主島，村民就已經在自己的位置上，不會晚幾秒才冒出來'], ['👗','阿綾站到新主島服裝店的門口了'], ['💬','手機橫放時，老港的教學卡片看 8 秒後會自己縮成一行，點「打開」可以再看'], ['🪑','廣場的長椅加上椅背'], ['📱','在新主島時，看不到的舊村子會先收起來，便宜的手機會比較順'], ['🐠','水族館玻璃上的魚和海龜影子拿掉了，只留水和光'], ['🛣️','水族館旁邊被切斷的環島路接起來了，不會再有兩個看不懂的大圓圈'], ['🚸','水族館路口的斑馬線畫到柏油的邊'], ['🔬','蔚博士會去今天調查的釣點岸邊，不會一直站在廣場邊'], ['🌴','棧橋和碼頭旁邊不長樹了'], ['🚕','潮搭Go 的車燈是車頭那條白色燈條，晚上會亮；不再貼兩片白圓'], ['🏷️','在食堂坐著時，自己的名字不會一直跳'], ['🍽️','在食堂裡站著也有「點餐」按鈕，按了會自動坐下、打開菜單']] },
   { id:'u983', d:'11/28', items:[['🎣','坐在朋友的船上也可以拋竿釣魚了']] },
@@ -25603,11 +25613,6 @@ function ui3Pet(){ let pb = $('#pet3'); const row = $('#actRow'); if (!row) retu
 /* v397 潮汐食堂點餐：坐在食堂的椅子上會出現「🍽️ 點餐」，花金幣跟美雲姨點一道菜，菜端到你面前、吃完就有加成（伺服器 154_cafe_order.sql） */
 const CAFE_MENU = [['ayu', 45], ['tilapia', 45], ['suzuki', 55], ['saba', 60], ['sanbei', 85], ['ikayaki', 90], ['tako', 165], ['unadon', 225]];
 const CAFE_FOOD_COL = { ayu:'#d9a05a', tilapia:'#b5552f', suzuki:'#e8b25a', saba:'#e9eef2', sanbei:'#9a4a2a', ikayaki:'#c8783a', tako:'#c98a4a', unadon:'#7a3e1e' };
-/* v984 大按鈕旁邊的小按鈕（附近另外可以按的東西），樣子跟「點餐」一樣 */
-function altBtns(L){ const row = $('#actRow'); if (!row) return; for (let i = 0; i < 2; i++){ let b = document.getElementById('alt3_' + i); const it = L[i];
-    if (!b){ if (!it) continue; b = document.createElement('button'); b.id = 'alt3_' + i; b.className = 'panel alt3'; b.addEventListener('click', e => { e.stopPropagation(); if (b._fn) b._fn(); }); row.insertBefore(b, $('#jumpBtn')); }
-    if (!it){ if (!b.hidden) b.hidden = true; b._k = ''; b._fn = null; continue; }
-    if (b._k !== it.k){ b._k = it.k; b.innerHTML = `${it.ic}<small>${esc(it.t)}</small>`; } b._fn = it.fn; if (b.hidden) b.hidden = false; } }
 function orderBtn(){ const row = $('#actRow'); if (!row) return; let b = $('#order3');
   if (!b){ b = document.createElement('button'); b.id = 'order3'; b.className = 'panel'; b.innerHTML = '🍽️<small>點餐</small>'; b.addEventListener('click', e => { e.stopPropagation(); openOrder(); }); row.insertBefore(b, $('#jumpBtn')); }
   const want = !!(mySeat && mySeat.cafe) && F.phase === 'idle'; if (b.hidden === want) b.hidden = !want; if (!want){ const P = $('#orderPanel'); if (P && !P.hidden) P.hidden = true; } }
