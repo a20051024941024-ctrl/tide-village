@@ -10078,7 +10078,8 @@ const FURN = {
   cushion:{ name:'和室坐墊', price:80, rad:0.35, g:'live' },
   coffee:{ name:'茶几', price:350, rad:0.6, g:'live' },
   trophy:{ name:'魚標本牆', price:500, rad:0.45, g:'live' },
-  turtletank:{ name:'室內烏龜缸（小烏龜的家，一個住 5 隻）', price:1500, rad:1.3, g:'live' },   /* v396 放在屋子裡的烏龜缸（伺服器 153），名額算法跟島上的烏龜缸一樣 */
+  turtletank:{ name:'室內烏龜缸（小烏龜的家，一個住 5 隻）', price:1500, rad:1.3, g:'live' },
+  baskinglamp:{ name:'曬背燈台（石頭＋燈，下雨天也能幫烏龜曬）', price:400, rad:0.45, g:'live' }, turtlerock:{ name:'烏龜造景石（大石頭和水草）', price:250, rad:0.5, g:'live' },   /* v988 慢慢烏龜屋第二輪：龜博士推薦的兩樣家具（伺服器 262） */   /* v396 放在屋子裡的烏龜缸（伺服器 153），名額算法跟島上的烏龜缸一樣 */
   rodrack:{ name:'釣竿架', price:400, rad:0.5, g:'live' },
   globe:{ name:'地球儀', price:300, rad:0.3, g:'live' },
   radio:{ name:'收音機', price:250, rad:0.3, g:'live' },
@@ -10298,6 +10299,12 @@ function furnMesh(t){
     case 'fire': { B([1.4, 1.2, 0.5], '#b7b2a4', [0, 0.6, 0]); B([0.9, 0.6, 0.1], '#2a1a14', [0, 0.45, 0.21]); B([1.6, 0.12, 0.6], '#d8d2c4', [0, 1.26, 0]);
       const fl = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 6), new THREE.MeshStandardMaterial({ color:'#ffb040', emissive:'#ff7a1a', emissiveIntensity:1.8 })); fl.position.set(0, 0.42, 0.18); g.add(fl); g.userData.fire = fl; break; }
     case 'piano': B([1.5, 1.1, 0.6], '#1e1e22', [0, 0.75, -0.1], 0.3); B([1.4, 0.06, 0.3], '#f8f8f4', [0, 0.82, 0.3]); for (let i = 0; i < 10; i++) B([0.05, 0.03, 0.16], '#1e1e22', [-0.6 + i * 0.13, 0.86, 0.26]); for (const sx of [-0.65, 0.65]) B([0.08, 0.8, 0.08], '#1e1e22', [sx, 0.4, 0.3]); B([0.8, 0.45, 0.35], '#1e1e22', [0, 0.23, 0.85]); break;
+    case 'baskinglamp': { B([0.7, 0.22, 0.55], '#8d8a80', [0, 0.11, 0]); B([0.5, 0.12, 0.4], '#a5a196', [0.05, 0.27, 0]); B([0.05, 1.05, 0.05], '#3a3f47', [-0.3, 0.52, -0.22]); B([0.05, 0.05, 0.42], '#3a3f47', [-0.3, 1.04, -0.02]);
+      const sh = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.18, 14, 1, true), new THREE.MeshStandardMaterial({ color:'#3a3f47', side: THREE.DoubleSide })); sh.position.set(-0.3, 0.95, 0.18); g.add(sh);
+      const bl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 10), new THREE.MeshStandardMaterial({ color:'#fff2b0', emissive:'#ffcf5a', emissiveIntensity: 1.4 })); bl.position.set(-0.3, 0.9, 0.18); g.add(bl);
+      const gl = new THREE.Mesh(new THREE.CircleGeometry(0.32, 20), new THREE.MeshBasicMaterial({ color:'#ffd27a', transparent: true, opacity: 0.28, depthWrite: false })); gl.rotation.x = -Math.PI / 2; gl.position.set(0.02, 0.34, 0); g.add(gl); break; }
+    case 'turtlerock': { B([0.8, 0.3, 0.6], '#7d7a70', [0, 0.15, 0]); B([0.45, 0.25, 0.4], '#99958a', [0.15, 0.4, 0.05]); B([0.3, 0.16, 0.3], '#6e6b62', [-0.25, 0.38, -0.1]);
+      for (const [x, z, h] of [[-0.38, 0.22, 0.5], [-0.3, 0.3, 0.38], [0.36, -0.24, 0.45], [0.42, -0.16, 0.32]]){ const w = new THREE.Mesh(new THREE.ConeGeometry(0.05, h, 6), new THREE.MeshStandardMaterial({ color:'#4e9a52' })); w.position.set(x, h / 2, z); g.add(w); } break; }
     case 'turtletank': { /* v401 玩家說放 5 隻太擠：缸做大一倍（2.6×1.5 公尺） */ B([2.6, 0.1, 1.5], wood, [0, 0.05, 0]); for (const sx of [-1, 1]) B([0.08, 0.44, 1.5], lw, [sx * 1.26, 0.27, 0]); for (const sz of [-1, 1]) B([2.6, 0.44, 0.08], lw, [0, 0.27, sz * 0.71]);
       const wt = new THREE.Mesh(new THREE.BoxGeometry(2.44, 0.2, 1.34), new THREE.MeshStandardMaterial({ color:'#7fd0e8', transparent:true, opacity:0.55, emissive:'#2f89c7', emissiveIntensity:0.25, depthWrite:false })); wt.position.y = 0.2; g.add(wt);
       B([0.8, 0.16, 0.56], '#9a9488', [-0.7, 0.26, 0.1]); B([0.42, 0.12, 0.34], '#aaa498', [-0.15, 0.22, -0.25]); B([0.3, 0.1, 0.26], '#b4ae9f', [0.55, 0.21, 0.3]); C(0.025, 0.025, 0.42, '#4f9a55', [0.95, 0.42, -0.45], 6); B([0.24, 0.03, 0.12], '#5fb866', [0.95, 0.6, -0.4]); B([0.2, 0.03, 0.1], '#6fc878', [0.9, 0.54, -0.52]);
@@ -10590,7 +10597,7 @@ function exitHouse(instant){
 }
 /* v251 家具可以用：走近按按鈕。床躺下睡覺、電視開關、燈開關、壁爐生火、鋼琴彈一段、爐台做料理、冰箱和小魚缸看魚、衣櫃換衣服、書櫃看書、書桌翻圖鑑、時鐘看時間、浴缸泡澡、馬桶坐一下、流理台洗手、盆栽澆水 */
 const FURN_USE = { bed:['😴', '躺下睡覺'], dbed:['😴', '躺下睡覺'], bunk:['😴', '躺下睡覺'], tv:['📺', '開電視'], lamp:['💡', '開關燈'], fire:['🔥', '壁爐'], piano:['🎹', '彈鋼琴'],
-  stove:['🍳', '做料理'], fridge:['🧊', '打開冰箱'], tank:['🐟', '看魚'], ward:['👕', '換衣服'], shelf:['📚', '看書'], desk:['📔', '翻圖鑑'], clock:['🕰️', '看時間'], bath:['🛁', '泡澡'], toilet:['🚽', '坐一下'], sink:['🚰', '洗手'], plant:['💧', '澆水'], bigplant:['💧', '澆水'], turtletank:['🐢', '看烏龜缸'] };
+  stove:['🍳', '做料理'], fridge:['🧊', '打開冰箱'], tank:['🐟', '看魚'], baskinglamp:['☀️', '曬背燈'], turtlerock:['🪨', '看看'], ward:['👕', '換衣服'], shelf:['📚', '看書'], desk:['📔', '翻圖鑑'], clock:['🕰️', '看時間'], bath:['🛁', '泡澡'], toilet:['🚽', '坐一下'], sink:['🚰', '洗手'], plant:['💧', '澆水'], bigplant:['💧', '澆水'], turtletank:['🐢', '看烏龜缸'] };
 function furnBase(o){ const F0 = FURN[o.t]; return F0 ? (F0.base || o.t) : o.t; }
 function nearFurn(){ if (!House.on || !House.furnG || FB.on || mySeat) return null; let best = null, bd = 9;
   for (const m of House.furnG.values()){ const o = m.userData.furn; if (!o) continue; const b = furnBase(o), U = FURN_USE[b] || (FURN[o.t] && FURN[o.t].bed ? FURN_USE.bed : null); if (!U) continue; const r = Math.max(0.55, (FURN[o.t] || {}).rad || 0.6) + 0.9, d = Math.hypot(me.pos.x - m.position.x, me.pos.z - m.position.z); if (d < r && d < bd){ bd = d; best = { o, m, b: FURN[o.t] && FURN[o.t].bed ? 'bed' : b, U }; } }
@@ -10614,6 +10621,8 @@ async function ttMove(id, msg, o){ const r = Cloud.on && Cloud.sb ? await petRpc
 function useFurn(n){ const { o, m, b } = n, P = m.position, say = (x, s2) => me.say(x, 'emote', s2 || 3);
   /* v405 玩家想要：走到烏龜缸旁邊按一下，跳出一個畫面看缸裡有哪幾隻小烏龜，可以一隻一隻拿出來（帶出門），也可以把身邊的小烏龜放進去 */
   if (b === 'turtletank'){ openTurtleTank(o); return; }
+  if (b === 'baskinglamp'){ Pets.atShop = false; Pets.turtle = true; Pets.turtleNow = true; Pets.lampHome = true; Pets.tab = 'mine'; openSheet('pets'); loadPets(true); return; }   /* v988 家裡的曬背燈：打開照顧烏龜（可以用燈曬） */
+  if (b === 'turtlerock'){ say('🪨'); toast('大石頭和水草，烏龜最喜歡爬上去發呆'); return; }
   const lieOn = (y, kind) => { const c = { x: P.x, z: P.z, face: o.r, y, room: true, furnLie: kind }; sitDown(c); if (kind !== 'bath') me.sitting = false; startEmote(me, kind === 'bath' ? 'sitdown' : 'sleep');   /* 躺著要用躺下的動作，不是坐著 */ myEmote = { k: kind === 'bath' ? 'sitdown' : 'sleep', at: Date.now() }; pushPresence(true); };
   if (b === 'bed'){ lieOn(P.y + 0.42, 'bed'); say('💤', 4); toast('躺下來休息…（按「起來」或搖桿就起來）'); return; }
   if (b === 'bath'){ lieOn(P.y + 0.15, 'bath'); say('🛁', 4); for (let i = 0; i < 3; i++) setTimeout(() => FX.emit(P.x, P.y + 0.7, P.z, 10, '#ffffff', 0.5, 1.2, 1.2), i * 500); toast('好舒服～'); return; }
@@ -15692,10 +15701,11 @@ const SHOPH = {
   tackle: { name:'釣具店', x:-118, z:290, w:14, d:11, y:0.9, wall:'#f6dcb8', band:'#f6a96b', keep:'釣具店 老闆', shirt:'#f6a96b', sign:'🎣 釣具店' },
   mu:     { name:'阿木木工坊', x:-118, z:330, w:15, d:12, y:0.9, wall:'#efe0c8', band:'#c79a6b', keep:'阿木・家具木匠', npc:'mu', sign:'🪑 阿木木工坊' },
   cai:    { name:'阿彩畫廊', x:-118, z:370, w:15, d:11, y:0.9, wall:'#f7f2fb', band:'#9b7bff', keep:'阿彩・畫家', npc:'cai', sign:'🎨 阿彩畫廊' },
-  market: { name:'潮汐魚市場', x:-118, z:412, w:17, d:13, y:0.9, wall:'#eaf4fb', band:'#3f8fdc', keep:'阿福・海產店老闆', npc:'fu', sign:'🐟 潮汐魚市場' } };   /* v899 魚市場：門口照樣直接賣魚；賣魚的單子上多一個「走進去逛」，裡面冰台擺真的魚 */
+  market: { name:'潮汐魚市場', x:-118, z:412, w:17, d:13, y:0.9, wall:'#eaf4fb', band:'#3f8fdc', keep:'阿福・海產店老闆', npc:'fu', sign:'🐟 潮汐魚市場' },
+  turtle: { name:'慢慢烏龜屋', x:-118, z:454, w:14, d:11, y:0.9, wall:'#e8f4e4', band:'#4f9a6a', keep:'龜博士', npc:'gui', shirt:'#4f9a6a', sign:'🐢 慢慢烏龜屋' } };   /* v988 慢慢烏龜屋可以走進去：龜博士在櫃台，左邊一排烏龜缸、右邊曬背燈台、後面水槽和飼料架、中間小水池 */   /* v899 魚市場：門口照樣直接賣魚；賣魚的單子上多一個「走進去逛」，裡面冰台擺真的魚 */
 for (const S of Object.values(SHOPH)) addDeck(S.x, S.z, S.w, S.d, S.y);
 function inShopHall(x, z){ if (x == null){ x = me.pos.x; z = me.pos.z; } for (const [k, S] of Object.entries(SHOPH)) if (Math.abs(x - S.x) < S.w / 2 && Math.abs(z - S.z) < S.d / 2) return k; return null; }
-function shDoor(k){ if (k === 'market'){ const [x, z] = hlAt('shop', 0, 5.2); return { x, z, face: HLOT.shop[2] }; } if (k === 'tackle'){ const [x, z, r] = HLOT.tackle; return { x: x + Math.sin(r) * 2.8, z: z + Math.cos(r) * 2.8, face: r }; } const L = SHOPLOT[k]; return { x: L.x + Math.sin(L.r) * 3.2, z: L.z + Math.cos(L.r) * 3.2, face: L.r }; }
+function shDoor(k){ if (!SHOPLOT[k] && k !== 'market' && k !== 'tackle'){ const d = W2 && W2.doors && W2.doors.find(q => q.k === k); return d ? { x: d.x, z: d.z, face: d.face } : { x: me.pos.x, z: me.pos.z, face: 0 }; } if (k === 'market'){ const [x, z] = hlAt('shop', 0, 5.2); return { x, z, face: HLOT.shop[2] }; } if (k === 'tackle'){ const [x, z, r] = HLOT.tackle; return { x: x + Math.sin(r) * 2.8, z: z + Math.cos(r) * 2.8, face: r }; } const L = SHOPLOT[k]; return { x: L.x + Math.sin(L.r) * 3.2, z: L.z + Math.cos(L.r) * 3.2, face: L.r }; }
 function shBuild(k){ const S = SHOPH[k]; if (S.g) return S; const g = new THREE.Group(); scene.add(g); S.g = g; g.visible = false; g.userData.keep = g.userData.dyn = true; const Y = S.y, H = 3.6;
   const M = (c, r, ex) => mat(c, r == null ? 0.85 : r, Object.assign({ noWood: true }, ex || {}));
   const B = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof m === 'string' ? M(m) : m); o.position.set(S.x + x, y, S.z + z); g.add(o); return o; };
@@ -15717,6 +15727,7 @@ function shBuild(k){ const S = SHOPH[k]; if (S.g) return S; const g = new THREE.
   S.items = new THREE.Group(); g.add(S.items); S.ik = '';
   if (k === 'tackle') shTackle(S, B, M);
   if (k === 'market') shMarket(S, B, M);
+  if (k === 'turtle') shTurtle(S, B, M);
   if (k === 'mu') B(2.4, 0.85, 1.0, M('#a8794e', 0.85), -S.w / 2 + 1.6, Y + 0.43, -S.d / 2 + 1.0), B(1.2, 0.06, 0.3, M('#d8c49a'), -S.w / 2 + 1.4, Y + 0.9, -S.d / 2 + 0.9), addBoxCol(S.x - S.w / 2 + 1.6, S.z - S.d / 2 + 1.0, 2.4, 1.0);   /* 工作台、木板 */
   if (k === 'cai'){ const e = paintMesh({ main:'#ffffff', accent:'#8c5d3b', pat:'sea', fish:null }); e.position.set(S.x + 2.6, Y, S.z + 0.6); e.rotation.y = -0.6; g.add(e); addCircleCol(S.x + 2.6, S.z + 0.6, 0.5);
     for (const [i, c] of ['#e8473a', '#ffd36a', '#5fb6e3', '#3fbf9d', '#9b7bff'].entries()) B(0.09, 0.02, 0.09, M(c, 0.5), 3.4 + i * 0.12, Y + 0.72, 0.9); B(0.75, 0.7, 0.45, M('#c79a6b'), 3.6, Y + 0.35, 0.9); }   /* 畫架、調色盤 */
@@ -15745,6 +15756,26 @@ function shTackle(S, B, M){ const Y = S.y, g = S.g;
   B(1.8, 0.75, 0.9, M('#a8794e'), 0, Y + 0.38, 1.2); addBoxCol(S.x, S.z + 1.2, 1.9, 1.0);
   for (let i = 0; i < 3; i++){ const rl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.12, 14), M('#c9d6e3', 0.3, { metalness: 0.6 })); rl.rotation.x = Math.PI / 2; rl.position.set(S.x - 0.55 + i * 0.55, Y + 0.85, S.z + 1.05); g.add(rl); }
   for (let i = 0; i < 4; i++){ const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M(i % 2 ? '#e8473a' : '#ffd36a', 0.4)); fl.position.set(S.x - 0.6 + i * 0.4, Y + 0.82, S.z + 1.45); g.add(fl); } }
+function shTurtle(S, B, M){ const Y = S.y, g = S.g, glass = new THREE.MeshStandardMaterial({ color: '#bfe6f2', transparent: true, opacity: 0.28, depthWrite: false }), water = new THREE.MeshStandardMaterial({ color: '#6fc3de', transparent: true, opacity: 0.55, emissive: '#2f89c7', emissiveIntensity: 0.25, depthWrite: false });
+  const lbl = (t, x, y, z, ry, w) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w || 2.2, 0.36), new THREE.MeshBasicMaterial({ map: signTex(t, '#4f9a6a', '#ffffff', 512, 84) })); m.position.set(S.x + x, Y + y, S.z + z); m.rotation.y = ry || 0; g.add(m); };
+  S.turts = []; const turt = (v, x, y, z, r, sc) => { let m = null; try { m = petModel('pondturtle', 0, v, 70); } catch(e){ return; } m.scale.multiplyScalar(sc || 0.8); m.position.set(S.x + x, Y + y, S.z + z); m.rotation.y = r; g.add(m); S.turts.push({ m, x0: S.x + x, z0: S.z + z, r0: r, ph: S.turts.length * 1.7 }); };
+  /* 左牆三個烏龜缸（木架上的玻璃缸，裡面有水、沙、石頭和小烏龜） */
+  for (let i = 0; i < 3; i++){ const z = -2.6 + i * 2.4, x = -S.w / 2 + 0.85; B(1.1, 0.75, 2.0, M('#a8794e'), x, Y + 0.38, z); B(1.0, 0.06, 1.9, M('#e3d3a8'), x, Y + 0.8, z);
+    const gb = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 1.9), glass); gb.position.set(S.x + x, Y + 1.1, S.z + z); g.add(gb); const wb = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.32, 1.86), water); wb.position.set(S.x + x, Y + 0.98, S.z + z); g.add(wb);
+    B(0.4, 0.22, 0.4, M('#8d8a80'), x + 0.15, Y + 0.93, z - 0.5); turt(['a', 'b', 'c'][i], x + 0.15, 1.05, z - 0.5, 1.2, 0.55); turt(['c', 'a', 'b'][i], x - 0.1, 0.86, z + 0.45, -0.6, 0.5); addBoxCol(S.x + x, S.z + z, 1.2, 2.1); }
+  lbl('小烏龜的家', -S.w / 2 + 0.05, 2.4, 0, Math.PI / 2, 2.6);
+  /* 右邊：曬背燈台（大石頭＋兩盞燈，燈下有一圈暖光） */
+  { const x = S.w / 2 - 1.6, z = -0.6; B(1.8, 0.35, 1.4, M('#8d8a80'), x, Y + 0.18, z); B(1.1, 0.22, 0.9, M('#a5a196'), x + 0.1, Y + 0.46, z); turt('a', x + 0.1, 0.57, z, -1.4, 0.75); turt('b', x - 0.5, 0.36, z + 0.45, -2.4, 0.6);
+    for (const dz of [-0.35, 0.35]){ B(0.06, 2.0, 0.06, M('#3a3f47'), S.w / 2 - 0.4, Y + 1.0, z + dz); B(1.0, 0.06, 0.06, M('#3a3f47'), S.w / 2 - 0.9, Y + 2.0, z + dz); const sh = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.22, 14, 1, true), M('#3a3f47', 0.5, { side: THREE.DoubleSide })); sh.position.set(S.x + S.w / 2 - 1.4, Y + 1.9, S.z + z + dz); g.add(sh); const bl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), M('#fff2b0', 0.4, { emissive: '#ffcf5a', emissiveIntensity: 1.6 })); bl.position.set(S.x + S.w / 2 - 1.4, Y + 1.84, S.z + z + dz); g.add(bl); }
+    const gl = new THREE.Mesh(new THREE.CircleGeometry(0.85, 28), new THREE.MeshBasicMaterial({ color: '#ffd27a', transparent: true, opacity: 0.25, depthWrite: false })); gl.rotation.x = -Math.PI / 2; gl.position.set(S.x + x, Y + 0.59, S.z + z); g.add(gl); S.glow = gl;
+    addBoxCol(S.x + x, S.z + z, 1.9, 1.5); lbl('☀️ 曬背燈（下雨天也能曬）', S.w / 2 - 0.05, 2.5, z, -Math.PI / 2, 2.6); S.lamp = { x: S.x + x - 1.4, z: S.z + z }; }
+  /* 後面：水槽（換水刷殼）和飼料架 */
+  { const x = -3.6, z = -S.d / 2 + 0.55; B(1.6, 0.85, 0.7, M('#d8dde2', 0.4), x, Y + 0.43, z); const bs = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.05, 0.5), water); bs.position.set(S.x + x, Y + 0.84, S.z + z); g.add(bs); B(0.06, 0.4, 0.06, M('#b8c0c8', 0.3), x, Y + 1.05, z - 0.25); B(0.06, 0.06, 0.25, M('#b8c0c8', 0.3), x, Y + 1.24, z - 0.14); addBoxCol(S.x + x, S.z + z, 1.7, 0.8); lbl('🧽 換水、刷殼', x, 2.3, -S.d / 2 + 0.03, 0, 2.0); S.sink = { x: S.x + x, z: S.z + z + 1.0 }; }
+  { const x = 3.6; for (const yy of [0.9, 1.5, 2.1]) B(2.6, 0.05, 0.4, M('#8c5d3b'), x, Y + yy, -S.d / 2 + 0.22); const bc = ['#7a5a3a', '#4e9a52', '#e8c25a', '#d8784a']; for (let i = 0; i < 12; i++) B(0.36, 0.3, 0.26, M(bc[i % 4], 0.7), x - 1.05 + (i % 4) * 0.7, Y + 1.08 + Math.floor(i / 4) * 0.6, -S.d / 2 + 0.24); addBoxCol(S.x + x, S.z - S.d / 2 + 0.3, 2.7, 0.5); lbl('🥬 飼料・葉菜・鈣粉', x, 2.6, -S.d / 2 + 0.03, 0, 2.4); }
+  /* 中間：矮矮的小水池，兩隻烏龜慢慢游 */
+  { const x = 0, z = 1.6, R = 1.3; const rim = new THREE.Mesh(new THREE.TorusGeometry(R, 0.14, 8, 32), M('#a5a196', 0.8)); rim.rotation.x = Math.PI / 2; rim.position.set(S.x + x, Y + 0.18, S.z + z); g.add(rim); const wp = new THREE.Mesh(new THREE.CircleGeometry(R, 32), water); wp.rotation.x = -Math.PI / 2; wp.position.set(S.x + x, Y + 0.14, S.z + z); g.add(wp);
+    addCircleCol(S.x + x, S.z + z, R + 0.15); S.pond = { x: S.x + x, z: S.z + z, R: R * 0.6 }; for (const v of ['c', 'a']){ let m = null; try { m = petModel('pondturtle', 0, v, 80); } catch(e){ continue; } m.scale.multiplyScalar(0.6); g.add(m); (S.swim = S.swim || []).push(m); } }
+}
 /* 魚市場：三排鋪碎冰的檯子，上面擺真的魚（照這個季節、海邊和港口常見的魚，用圖鑑同一個模型）；藍色魚箱、吊燈；右邊是阿福海產的櫃位 */
 function shMarket(S, B, M){ const Y = S.y, g = S.g, ice = M('#eef7fb', 0.35, { emissive: '#eef7fb', emissiveIntensity: 0.08 });
   const ids = []; for (const sid of ['harbor', 'sea', 'river', 'lake']) if (SPOT_BY_ID[sid]) for (const id of SPOT_BY_ID[sid].fish){ const f = FISH_BY_ID[id]; if (f && !BIG_FISH.has(id) && !f.fest && f.rarity !== '傳說' && !ids.includes(id)) ids.push(id); }
@@ -15772,6 +15803,7 @@ function shFill(k){ const S = SHOPH[k]; if (!S || !S.g) return; const L = k === 
 function shopHallTick(dt, t){ const k0 = inShopHall();
   for (const [k, S] of Object.entries(SHOPH)){ if (!S.g) continue; const on = k === k0; if (S.g.visible !== on) S.g.visible = on; const N = S.npc; if (!on){ if (N.av.g.visible) N.av.g.visible = false; N.tag.style.display = 'none'; continue; }
     if (frameNo % 60 === 0) shFill(k);
+    if (S.swim){ const T = Date.now() / 1000; S.swim.forEach((m, i) => { const a = T * 0.18 + i * Math.PI; m.position.set(S.pond.x + Math.cos(a) * S.pond.R, S.y + 0.12 + Math.sin(T * 1.3 + i) * 0.015, S.pond.z + Math.sin(a) * S.pond.R); m.rotation.y = -a; }); if (S.glow) S.glow.material.opacity = 0.22 + Math.sin(T * 2) * 0.04; }
     const o = S.npc && SHOPH[k].npc ? npcs.find(n => n.shopNpc === SHOPH[k].npc) : null, away = !!(o && (o.wHide || (o.wMode && o.wMode !== 'post')));
     N.av.g.visible = !away; S.away.visible = away; if (away){ N.tag.style.display = 'none'; continue; }
     const d = Math.hypot(me.pos.x - N.pos.x, me.pos.z - N.pos.z); if (d < 6) N.rot = lerpAngle(N.rot, Math.atan2(me.pos.x - N.pos.x, me.pos.z - N.pos.z), 1 - Math.exp(-3 * dt)); N.update(dt, t); N.placeTag(); } }
@@ -15885,17 +15917,26 @@ async function turtleCare(p, act, food, t){ if (!Cloud.on || !Cloud.sb){ toast('
     if (data.player) adoptRow(data.player); const i = (Pets.list || []).findIndex(x => x.id === p.id); if (i >= 0) Pets.list[i] = data.pet; Pets.homeKey = ''; pushPresence(true);
     const pt = (me.pet && petMine() && petMine().id === p.id) ? me.pet : Pets.home.find(h => h.name === p.name); if (pt && act === 'treat' && data.add > 0) pt.spinUntil = now() + 1.6;
     if (data.add > 0){ SFX.catch(); flash(`光澤度 +${data.add}（${data.pet.shine}）`, 1.6); } else SFX.tick(); setTimeout(() => toast(`🐢 ${data.msg}`), 400); renderTab(); }
-  catch(e){ toast(cloudErrMsg(e)); } }
-function turtleCareBox(p){ const box = el('li', 'turtlecare'), inShop = !!Pets.turtle, atIsle = inShop || (!!onIsle && onIsle.owner === myIdOrMe());
+  catch(e){ toast(act === 'lamp' && /不知道要怎麼照顧/.test(String(e && e.message || e)) ? '曬背燈還在準備中，晚一點再來' : cloudErrMsg(e)); } }
+/* v988 龜博士的健康檢查：看光澤度和今天照顧了沒，給一句實在的建議（只是看，不改資料） */
+function turtleCheck(p){ const sh = p.shine == null ? 40 : p.shine, L = [], miss = [];
+  L.push(sh >= 100 ? '殼很健康，金色殼邊都出來了，照現在這樣養就好。' : sh >= 80 ? '殼很亮、花紋清楚，狀況很好。' : sh >= 50 ? '殼有光澤，再多曬一點會更硬更亮。' : '殼有點暗，多曬太陽、每天換不同的食物，慢慢就會亮回來。');
+  if (!p.sun) miss.push('曬太陽'); if (!p.feed) miss.push('吃東西'); if (!p.clean) miss.push('換水');
+  L.push(miss.length ? `今天還沒${miss.join('、')}。` : '今天該做的都做了，讓牠休息吧。');
+  if (p.treatDays != null && p.treatDays < 3) L.push('點心最近才吃過，這週先不要再給。'); else if (p.oilDays != null && p.oilDays < 7) L.push('龜殼剛保養過，不用再塗。');
+  return L; }
+function turtleCareBox(p){ const box = el('li', 'turtlecare'), inShop = !!Pets.turtle && !Pets.lampHome, lamp = inShop || !!Pets.lampHome, atIsle = inShop || (!!onIsle && onIsle.owner === myIdOrMe());
   const row = (ic, title, note, btn, done, fn) => { const r = el('div', 'tcrow'); r.appendChild(el('span', 'tci', ic)); const t = el('div', 'tct'); t.appendChild(el('b', '', title)); t.appendChild(el('div', 'sub2', note)); r.appendChild(t); const b = el('button', 'tbtn' + (done ? ' ghost' : ''), done ? '今天做過了' : btn); b.disabled = !!done; b.addEventListener('click', () => { b.disabled = true; fn(); }); r.appendChild(b); box.appendChild(r); return r; };
   box.appendChild(el('div', 'sub2', '真的養烏龜：龜殼漂亮靠「曬太陽、鈣質、均衡飲食、乾淨的水」。點心和保養偶爾就好。三天沒照顧殼會慢慢變暗（不會生病）。'));
-  row('☀️', '曬太陽（效果最好）', inShop ? '在店裡的曬背燈下曬一曬，晴天雨天都可以，一天一次。' : atIsle ? '晴天時讓牠在小島的石頭上曬一曬，一天一次。' : '要在自己的小島上、晴天才能曬（一天一次）。', '曬太陽', p.sun, () => { if (!atIsle){ toast('回到自己的小島，在石頭上曬太陽'); renderTab(); return; } turtleCare(p, 'sun'); });
+  if (lamp) row('☀️', '曬背燈（跟曬太陽一樣有效）', inShop ? '在店裡的曬背燈下曬一曬，晴天雨天都可以，一天一次。' : '在家裡的曬背燈台下曬一曬，晴天雨天都可以，一天一次。', '開燈曬', p.sun, () => turtleCare(p, 'lamp'));
+  else row('☀️', '曬太陽（效果最好）', atIsle ? '晴天時讓牠在小島的石頭上曬一曬，一天一次。下雨天可以用家裡的「曬背燈台」。' : '要在自己的小島上、晴天才能曬（一天一次）。家裡擺「曬背燈台」就不用等晴天。', '曬太陽', p.sun, () => { if (!atIsle){ toast('回到自己的小島，在石頭上曬太陽'); renderTab(); return; } turtleCare(p, 'sun'); });
   { const r = row('🥬', '均衡飲食', `一天一次，換著吃效果比較好${p.food ? `（上次吃的是${{ pellet:'飼料', greens:'葉菜', fish:'小魚' }[p.food]}）` : ''}。`, '', p.feed, () => {}); const b = r.querySelector('button'); b.remove();
     if (!p.feed){ const ch = el('div', 'chipline'); [['pellet', '🟤 飼料'], ['greens', '🥬 葉菜']].forEach(([k, l]) => { const c = el('button', 'chip', l); c.addEventListener('click', () => turtleCare(p, 'feed', k)); ch.appendChild(c); });
       const fishes = (rec.tank || []).filter(x => FISH_BY_ID[x.f] && FISH_BY_ID[x.f].rarity === '常見' && !FISH_BY_ID[x.f].of && +x.w <= 1.5 && !x.k).sort((a, b2) => a.w - b2.w).slice(0, 1);
       if (fishes.length){ const x = fishes[0], c = el('button', 'chip', `🐟 小魚（${FISH_BY_ID[x.f].name} ${(+x.w).toFixed(2)}kg）`); c.addEventListener('click', () => turtleCare(p, 'feed', 'fish', x.t)); ch.appendChild(c); }
       r.querySelector('.tct').appendChild(ch); } else r.appendChild(el('span', 'sub2', '今天吃過了')); }
   row('🥚', '點心：蛋黃', p.treatDays != null && p.treatDays < 7 ? `點心偶爾給就好（${p.treatDays} 天前才吃過，一週一次才有效）。` : '一週一次就好，牠會開心地轉圈。', '給蛋黃', false, () => turtleCare(p, 'treat'));
+  { const tips = turtleCheck(p); const r = el('div', 'tcrow'); r.appendChild(el('span', 'tci', '🩺')); const t = el('div', 'tct'); t.appendChild(el('b', '', inShop ? '龜博士的健康檢查（免費）' : '健康狀況')); for (const x of tips) t.appendChild(el('div', 'sub2', x)); r.appendChild(t); box.appendChild(r); }
   row('🧽', '換水、刷殼', inShop ? '用店裡的水槽換水，龜博士借你軟刷輕輕刷殼。一天一次。' : atIsle ? '用小島的水盆換水，軟刷輕輕刷殼。一天一次，保持光澤。' : '要在自己的小島上用水盆（一天一次）。', '清潔', p.clean, () => { if (!atIsle){ toast('回到自己的小島用水盆換水'); renderTab(); return; } turtleCare(p, 'clean'); });
   row('🧴', '龜殼保養（🪙120）', p.oilDays != null && p.oilDays < 30 ? `一個月最多一次（${p.oilDays} 天前保養過）。太常塗反而會悶住龜殼。` : '偶爾保養就好，一個月最多一次。', '保養', p.oilDays != null && p.oilDays < 30, () => turtleCare(p, 'oil'));
   return box; }
@@ -15986,15 +16027,19 @@ function renderTideGo(body){ const head = el('div', 'shophead'); head.innerHTML 
   sec('店', (W2.doors || []).map(d => ({ ic: W2_DOOR_IC[d.k] || '🚪', name: d.label, x: d.x + Math.sin(d.face) * 1.6, z: d.z + Math.cos(d.face) * 1.6, rot: d.face + Math.PI })));
   body.appendChild(el('p', 'sub', '👥 跟朋友一起坐：你叫車的時候，附近 25 公尺內的人會收到「一起坐？」，按了就跟你上同一台車（最多 3 個人），到了一起下車。')); }
 function renderTurtleShop(body){   /* v974 慢慢烏龜屋：龜博士的店。照顧小烏龜的事都在這裡做；店裡有曬背燈和換水的水槽，不用回小島也能曬太陽、換水 */
-  const head = el('div', 'shophead'); head.innerHTML = `<b>🐢 慢慢烏龜屋</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
-  body.appendChild(el('p', 'sub', '龜博士：「慢慢來，烏龜都不急。殼要漂亮，靠的是曬太陽、吃得均衡、水乾淨。店裡有曬背燈和水槽，下雨天、沒回小島也可以照顧。」'));
-  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能照顧小烏龜。')); return; }
+  const head = el('div', 'shophead'); head.innerHTML = `<b>${Pets.lampHome ? '☀️ 曬背燈台' : '🐢 慢慢烏龜屋'}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
+  if (!Pets.lampHome) body.appendChild(el('p', 'sub', '龜博士：「慢慢來，烏龜都不急。殼要漂亮，靠的是曬太陽、吃得均衡、水乾淨。店裡有曬背燈和水槽，下雨天、沒回小島也可以照顧。」'));
+  if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能照顧小烏龜。')); if (!Pets.lampHome) turtleRecs(body); return; }
   if (!Pets.list){ body.appendChild(el('div', 'empty', '載入中…')); loadPets(true); return; }
   const T = Pets.list.filter(p => p.kind === 'pondturtle'), ul = el('ul', 'shoplist');
   for (const p of T){ const li = el('li', ''); li.appendChild(petShotEl(p.kind, PET_KINDS[p.kind].icon)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${p.name}・${petFull(p.kind, p.var)}`));
     const sh = p.shine == null ? 40 : p.shine; d.appendChild(el('div', 'sub2', `✨ 龜殼光澤度 ${sh} / 100${sh >= 100 ? '　🏅 金色殼邊！' : sh >= 80 ? '　殼上出現漂亮的花紋' : ''}`)); const bar = el('div', 'shinebar'); const fill = el('i'); fill.style.width = sh + '%'; bar.appendChild(fill); d.appendChild(bar); li.appendChild(d); ul.appendChild(li); ul.appendChild(turtleCareBox(p)); }
   if (T.length) body.appendChild(ul); else body.appendChild(el('div', 'empty', '你還沒有小烏龜。河邊、池塘釣魚偶爾會撿到被棄養的小烏龜，撿到了帶來給我看看。'));
+  if (Pets.lampHome) return;
+  turtleRecs(body);
   body.appendChild(el('p', 'sub', '🏠 烏龜的家：小島上的「烏龜缸」、家裡的「室內烏龜缸」在擺家具的地方買，一個住 5 隻。烏龜可以活幾十年，養了就要一直照顧喔。')); }
+function turtleRecs(body){ body.appendChild(el('div', 'n', '🛒 龜博士推薦（回家「擺家具」裡就買得到）'));
+  { const ul2 = el('ul', 'shoplist'); for (const [k, ic, why] of [['turtletank', '🐢', '烏龜的家，一個住 5 隻。'], ['baskinglamp', '☀️', '下雨天、晚上也能在家幫烏龜曬背，效果跟曬太陽一樣。'], ['turtlerock', '🪨', '讓烏龜有地方爬上去休息，看起來也比較像溪邊。']]){ const F0 = FURN[k]; if (!F0) continue; const li = el('li', ''); li.appendChild(el('span', 'tci', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', F0.name)); d.appendChild(el('div', 'sub2', why)); li.appendChild(d); li.appendChild(el('span', 'coinpill', '🪙' + F0.price.toLocaleString())); ul2.appendChild(li); } body.appendChild(ul2); } }
 function renderPets(body){ if (Pets.turtle){ renderTurtleShop(body); return; }
   const head = el('div', 'shophead'); head.innerHTML = `<b>🐾 ${Pets.atShop ? '寵物店' : '我的寵物'}</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上雲端（登入）才能養寵物。')); return; }
@@ -18463,7 +18508,7 @@ function bbOpen(start){ let i = start == null ? BB.i : start; const ov = documen
   let sx = null; ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true }); ov.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1)); sx = null; });
   try { SFX.click(); } catch(e){} show(i); }
 /* v921 新主島的店門：店的裡面跟村子共用，這裡只是另一個入口。進去之前記住從哪個門進來（Venue.back），出來回到那個門 */
-const W2_DOOR = { tackle: ['shdoor', '🚪 進去看看'], mu: ['shdoor', '🚪 進去看看'], cai: ['shdoor', '🚪 進去看看'], market: ['shdoor', '🚪 進去逛'], pet: ['petdoor', '🐾 進去看看'], cafe: ['cafedoor', ''], museum: ['museumdoor', ''], stad: ['staddoor', ''], pool: ['pooldoor', '🎱 進去打撞球'], turtle: ['turtleshop', '🐢 進去看看'], shrimp: ['shrimpdoor', ''], tailor: ['tailor', '👗 看衣服'] };   /* v951 阿綾服裝店：跟村子一樣在門口就能逛，不用進去 */
+const W2_DOOR = { tackle: ['shdoor', '🚪 進去看看'], mu: ['shdoor', '🚪 進去看看'], cai: ['shdoor', '🚪 進去看看'], market: ['shdoor', '🚪 進去逛'], pet: ['petdoor', '🐾 進去看看'], cafe: ['cafedoor', ''], museum: ['museumdoor', ''], stad: ['staddoor', ''], pool: ['pooldoor', '🎱 進去打撞球'], turtle: ['shdoor', '🐢 進去看看'], shrimp: ['shrimpdoor', ''], tailor: ['tailor', '👗 看衣服'] };   /* v951 阿綾服裝店：跟村子一樣在門口就能逛，不用進去 */
 /* v975 顧店的老闆晚上回家（作者 11/28：「照你說的做」）：晚上 10 點到早上 6 點（遊戲時間）這幾間掛「休息中」。釣具店、魚市場、食堂、博物館、體育場、撞球館、釣蝦場不關 */
 const W2_NIGHT = new Set(['cai', 'mu', 'pet', 'tailor', 'turtle']);
 function w2NearDoor(){ if (!W2 || !W2.doors || !W2.near(me.pos.x, me.pos.z)) return null; { const q = W2.posts && W2.posts.boatshop; if (q && Math.hypot(me.pos.x - q.x, me.pos.z - q.z) < 2.0) return { id: 'boatshop', label: '潮汐船行', mode: 'boatshop', sub: '⛵ 買船、換船' }; } let best = null, bd = 1.9; for (const d of W2.doors){ const q = Math.hypot(me.pos.x - d.x, me.pos.z - d.z); if (q < bd){ bd = q; best = d; } } if (!best) return null; const M = W2_DOOR[best.k]; { const h = gameHour(); if (W2_NIGHT.has(best.k) && (h >= 22 || h < 6)) return { id: 'w2closed' + best.k, label: best.label, mode: 'w2closed', sub: '🌙 休息中・早上 6 點開門', w2: best }; } return M ? { id: 'w2door' + best.k, label: best.label, mode: M[0], hall: best.k, sub: M[1] || undefined, w2: best } : null; }
@@ -18899,6 +18944,7 @@ function nearShop(){
   if (!onIsle && ZC.g && Math.hypot(me.pos.x - ZC.at[0], me.pos.z - ZC.at[1]) < 2.1) return { id:'zc', label:'築城守土', mode:'zc', sub:'🏰 坐下來玩一局' };
   if (!onIsle && Math.hypot(me.pos.x - PET_DOOR.x, me.pos.z - PET_DOOR.z) < 1.7) return { id:'petdoor', label:'小花寵物店', mode:'petdoor', sub:'🐾 進去看看' };
   { const hk = inShopHall(); if (hk){ const S = SHOPH[hk]; if (S.exit && Math.hypot(me.pos.x - S.exit.x, me.pos.z - S.exit.z) < 1.3) return { id:'shexit', label:'出去', mode:'shexit', hall: hk };   /* v897 店裡：櫃台開原本的商店、門口出去 */
+      if (hk === 'turtle'){ for (const [q, sub] of [[S.lamp, '☀️ 曬背燈'], [S.sink, '🧽 換水、刷殼'], [S.npc && S.npc.pos, '🩺 照顧、健康檢查']]) if (q && Math.hypot(me.pos.x - q.x, me.pos.z - q.z) < (sub.startsWith('🩺') ? 3.0 : 1.8)) return { id: 'turtleshop', label: '慢慢烏龜屋', mode: 'turtleshop', sub }; return null; }
       if (hk === 'market' && S.fu && Math.hypot(me.pos.x - S.fu.x, me.pos.z - S.fu.z) < 1.8){ const sh = SHOPS.find(x => x.id === 'fu'); if (sh) return sh; }
       if (S.npc && Math.hypot(me.pos.x - S.npc.pos.x, me.pos.z - S.npc.pos.z) < 3.0){ const sh = SHOPS.find(x => x.id === (hk === 'market' ? 'shop' : hk)); if (sh) return sh; } return null; } }
   { /* v434 魚市場一棟裡有三個櫃位：站在哪個櫃位前面就開哪個（比最近的），不是照清單順序 */
@@ -18909,7 +18955,7 @@ function nearShop(){
   return null;
 }
 let shopMode = 'sell', sellConfirm = 0, shopName = '魚市場・賣魚';
-function openShop(sh){ ensureAudio(); if (sh.mode === 'boatshop'){ openSheet('boatshop'); return; } if (sh.mode === 'w2closed'){ toast(`「${sh.label}」晚上休息，老闆回家了。早上 6 點開門`); return; } if (sh.mode === 'turtleshop'){ Pets.atShop = false; Pets.turtle = true; Pets.turtleNow = true; Pets.tab = 'mine'; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'w2train'){ w2TrainBoard(sh); return; } if (/door$/.test(sh.mode)) Venue.back = sh.w2 || null; else if (/exit$/.test(sh.mode) && Venue.back) setTimeout(w2Back, 300);   /* v921 各場館的「出去」都是 260 毫秒後把人放回村子的門口；從新主島進來的再晚一點點改放回新主島的門（畫面還是黑的，看不到中間那一下） */ if (K3.on && (sh.mode === 'tailor' || sh.mode === 'salon')){ toast(sh.mode === 'tailor' ? '🚧 阿綾服裝店整修中：阿綾正在幫新人物做新衣服，做好就重新開張。現在換衣服請到「造型」' : '🚧 阿萍美髮沙龍整修中：阿萍正在幫新人物設計新髮型，做好就重新開張。現在換髮型請到「造型」'); return; }   /* v743 作者：「這兩個應該沒用了吧」「先掛整修中」→ 兩間店賣的是舊人物的東西，新人物用不到；買過的東西都還留著 */
+function openShop(sh){ ensureAudio(); if (sh.mode === 'boatshop'){ openSheet('boatshop'); return; } if (sh.mode === 'w2closed'){ toast(`「${sh.label}」晚上休息，老闆回家了。早上 6 點開門`); return; } if (sh.mode === 'turtleshop'){ Pets.lampHome = false; Pets.atShop = false; Pets.turtle = true; Pets.turtleNow = true; Pets.tab = 'mine'; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'w2train'){ w2TrainBoard(sh); return; } if (/door$/.test(sh.mode)) Venue.back = sh.w2 || null; else if (/exit$/.test(sh.mode) && Venue.back) setTimeout(w2Back, 300);   /* v921 各場館的「出去」都是 260 毫秒後把人放回村子的門口；從新主島進來的再晚一點點改放回新主島的門（畫面還是黑的，看不到中間那一下） */ if (K3.on && (sh.mode === 'tailor' || sh.mode === 'salon')){ toast(sh.mode === 'tailor' ? '🚧 阿綾服裝店整修中：阿綾正在幫新人物做新衣服，做好就重新開張。現在換衣服請到「造型」' : '🚧 阿萍美髮沙龍整修中：阿萍正在幫新人物設計新髮型，做好就重新開張。現在換髮型請到「造型」'); return; }   /* v743 作者：「這兩個應該沒用了吧」「先掛整修中」→ 兩間店賣的是舊人物的東西，新人物用不到；買過的東西都還留著 */
 if (sh.mode === 'bb'){ bbOpen(); return; } if (sh.mode === 'orders'){ Ord.sure = -1; openSheet('orders'); ordLoad(); return; } if (sh.mode === 'racego'){ raceCall(sh.kind); return; } if (sh.mode === 'skicoach'){ raceCard('ski'); return; } if (sh.mode === 'skilift'){ skiLiftGo(); return; } if (sh.mode === 'bdswing'){ bdSwing(); return; } if (sh.mode === 'bdinv'){ bdInvite(); return; } if (sh.mode === 'bkshoot'){ bkPress(); return; } if (sh.mode === 'bkinv'){ bkInvite(); return; } if (sh.mode === 'fbkick'){ fbShoot(); return; } if (sh.mode === 'fbstart'){ fbStart(); return; } if (sh.mode === 'salon'){ openSheet('salon'); return; } if (sh.mode === 'board'){ openSheet('board'); loadBoard(); return; } if (sh.mode === 'tboard'){ openSheet('tboard'); loadTeamBoard(); loadTeam(); return; } if (sh.mode === 'cargo'){ openSheet('cargo'); loadCargo(); return; } if (sh.mode === 'sub'){ openSubPanel(); return; } if (sh.mode === 'craft'){ openSheet('craft'); return; } if (sh.mode === 'land'){ landBuy(sh.t); return; } if (sh.mode === 'market'){ Mkt.sell = null; openSheet('market'); loadMarket(); return; } if (sh.mode === 'cai'){ openSheet('cai'); loadCai(); return; } if (sh.mode === 'news'){ News.pick = 0; openSheet('news'); loadNews(); return; } if (sh.mode === 'sci'){ openSheet('sci'); loadSci(); return; } if (sh.mode === 'gang'){ openSheet('gang'); loadGang(); return; } if (sh.mode === 'fu'){ Fu.pick = null; openSheet('fu'); loadFu(); return; } if (sh.mode === 'mu'){ openSheet('mu'); if (!FZ.list || Date.now() - FZ.at > 5 * 60000) loadMu(); return; } if (sh.mode === 'tailor'){ shopName = '阿綾服裝店'; shopMode = 'wear'; openSheet('shop'); return; } if (sh.mode === 'shrimpdoor'){ enterShrimp(); return; } if (sh.mode === 'cafedoor'){ enterCafe(); return; } if (sh.mode === 'staddoor'){ enterStadium(); return; } if (sh.mode === 'zc'){ zcOpen(); return; } if (sh.mode === 'petdoor'){ enterPetHall(); return; } if (sh.mode === 'shdoor'){ enterShopHall(sh.hall); return; } if (sh.mode === 'shexit'){ exitShopHall(sh.hall); return; } if (sh.mode === 'petexit'){ exitPetHall(); return; } if (sh.mode === 'pooldoor'){ enterPoolHall(); return; } if (sh.mode === 'poolexit'){ exitPoolHall(); return; } if (sh.mode === 'pooltable'){ poolSit(sh.ti); return; } if (sh.mode === 'poolzhe'){ poolZheGo(); return; } if (sh.mode === 'stadexit'){ exitStadium(); return; } if (sh.mode === 'museumdoor'){ enterMuseum(); return; } if (sh.mode === 'museumexit'){ exitMuseum(); return; } if (sh.mode === 'museum'){ openMuseum(sh.region); return; } if (sh.mode === 'petshop'){ Pets.atShop = true; openSheet('pets'); loadPets(true); return; } if (sh.mode === 'cafeexit'){ exitCafe(); return; } if (sh.mode === 'shrimpexit'){ exitShrimp(); return; } if (sh.mode === 'shrimpdesk'){ openSheet('shrimp'); return; } if (sh.mode === 'ferry'){ openSheet('ferry'); return; } if (sh.mode === 'quest'){ questWho = sh.who; openSheet('quest'); loadQuests(); return; } if (sh.mode === 'cook'){ cookMode = 'make'; openSheet('cook'); return; } shopMode = sh.mode; shopName = sh.label; sellConfirm = 0; openSheet('shop'); }
 // ---- 服飾預覽：用另一個小場景把角色畫成圖片（商品小圖、試穿預覽）----
 const AvShot = { kit:null, cache:new Map() };
@@ -23680,7 +23726,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -25114,6 +25160,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u988', d:'11/28', items:[['🐢','慢慢烏龜屋可以走進去了：龜博士在櫃台，左邊一排烏龜缸，中間小水池有兩隻烏龜在游'], ['☀️','店裡的曬背燈台下雨天也能幫小烏龜曬背，跟曬太陽一樣有效（一天一次）'], ['🩺','照顧小烏龜時多了「健康檢查」：龜博士看殼的光澤和今天照顧了沒，跟你說下一步怎麼做'], ['🪑','擺家具多兩樣：曬背燈台 🪙400（在家也能幫烏龜曬背）、烏龜造景石 🪙250']] },
   { id:'u987', d:'11/28', items:[['📺','大看板多了四段新短片：五層樓水族館、潮搭Go 坐車、慢慢烏龜屋、潮汐船行的雙人四人船'], ['✅','「主島新樣子」已經做好，從「即將推出」拿掉了']] },
   { id:'u986', d:'11/28', items:[['🚕','潮搭Go 車門上的貼紙和輪框修好了（上一版變成一片亂碼）'], ['🛞','坐車時不會一頓一頓的'], ['🚪','新主島的店：朝門口走過去就直接進去，不用按按鈕；店門上面不再浮圖示'], ['🪑','一張長椅只浮一個圖示，點了走到最近的位子坐下'], ['🎥','進店、出店、傳送時，畫面直接到位，不會一路飄過去'], ['🐢','慢慢烏龜屋的畫面拿掉最上面那排背包分頁'], ['🍽️','食堂裡站著的「點餐」小按鈕拿掉，右下大按鈕一次只做一件事']] },
   { id:'u985', d:'11/28', items:[['🚕','潮搭Go 乘車處多了司機阿萬：戴細框眼鏡、黑T、藍拖鞋，車子停好時站在兩台車中間等你；車開來接你時，他會下車跟你確認要去哪'], ['🎣','晚上 7 點到 10 點阿萬收工，會去港口棧橋釣魚，走過去他會跟你聊天（有人叫車一樣會開過來）']] },
