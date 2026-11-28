@@ -2825,3 +2825,8 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .taxibar .tbtn{flex:none;white-space:nowrap}
 @keyframes taxiIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
 #w2map.nz .w2m-ppl,#w2map.nz .w2m-train{transition:none}
+#tapIcons{position:fixed;left:0;top:0;width:0;height:0;z-index:6;pointer-events:none}
+#tapIcons .tapic{position:absolute;left:0;top:0;width:44px;height:44px;border-radius:50%;border:3px solid #26445c;background:#fff;box-shadow:0 3px 0 rgba(20,60,90,.3);display:grid;place-items:center;font-size:21px;pointer-events:auto;padding:0;animation:tapbob 2.4s ease-in-out infinite}
+#tapIcons .tapic::after{content:'';position:absolute;left:50%;bottom:-9px;margin-left:-7px;border:7px solid transparent;border-top-color:#26445c;border-bottom:0}
+#tapIcons .tapic[hidden]{display:none}
+@keyframes tapbob{0%,100%{margin-top:0}50%{margin-top:-4px}}

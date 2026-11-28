@@ -6752,7 +6752,7 @@ function joyFixed(){ return true; }   /* v850 作者：搖桿直接固定在左�
 (function(){
   const zone = $('#joyZone'), el = $('#joy'), knob = $('.knob', el); let id = null, cx = 0, cy = 0, M = 60, ox = 0, oy = 0;
   zone.addEventListener('pointerdown', e => { try { awStop(); } catch(_){}
-    if (id !== null) return; ensureAudio(); id = e.pointerId; try { zone.setPointerCapture(id); } catch(_){}
+    if (id !== null) return; ensureAudio(); id = e.pointerId; try { zone.setPointerCapture(id); } catch(_){} if (typeof TapI !== 'undefined' && TapI.go) TapI.go = null;   /* v979 碰搖桿就不自動走 */
     const R = el.offsetWidth / 2; M = R * 0.72;
     if (joyFixed()){ const r = el.getBoundingClientRect(); cx = r.left + R; cy = r.top + R; el.classList.add('active'); move(e); return; }   /* v314 固定搖桿：圈圈不動，按左半邊哪裡都從原本的位置推 */
     cx = clamp(e.clientX, R + 4, innerWidth - R - 4); cy = clamp(e.clientY, R + 4, innerHeight - R - 4);
@@ -7631,6 +7631,36 @@ function flash(text, secs){ text = w2T(text); bigMsg.textContent = text; bigMsg.
 /* v341 玩家說不要自動走、也不要箭頭：大按鈕只用一句話說最近的釣點在哪個方向、多遠（AW 自動走已經停用） */
 const AW = { on:false, x:0, z:0, t0:0, lx:0, lz:0, lt:0, label:'' };
 function goFishing(){ if (W2 && W2.near(me.pos.x, me.pos.z)){ const s = W2.shore(me.pos.x, me.pos.z, (x, z) => !blocked(x, z, 0.45)); if (!s){ toast('附近找不到可以釣魚的水邊'); return; } navTo({ sea:'海邊', harbor:'碼頭', river:'河邊', lake:'湖邊', creek:'森林的溪邊', mangrove:'紅樹林', pool:'瀑布下的清溪潭' }[s.id] || '水邊', s.x, s.z, 1.2, () => F.phase === 'idle' && !!shoreSpot()); return; }   /* 走到可以拋竿的地方就算到了（按鈕會變成「拋竿」） */   /* v922 新主島：發光的固定釣點還在舊島（1400 多公尺外），在這裡改成帶你走到最近的水邊，面向水就能拋竿 */ const ns = nearestSpot(); if (!ns || !ns.spot){ toast('附近沒有釣點'); return; } const sp = ns.spot; const d = Math.round(ns.d), a = Math.atan2(-(sp.pos.z - me.pos.z), -(sp.pos.x - me.pos.x)), dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];   /* 跟地圖一樣：上北（-x）、右東（-z） */ toast(`最近的釣點是「${esc(sp.label)}」，往${dirs[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]}大約 ${d} 公尺（地圖上也看得到）`); }
+/* ===== v979 東西頭上的小圖示（作者 11/28：「你看天天的做法，附近有其他東西太近的話不會互相疊到、按不了我原本想做的」）=====
+   附近 7 公尺內可以坐的位子、店門、板子，頭上各自浮一個圓圓的圖示。點哪個，人就自己走過去（最多走 7 公尺，碰到搖桿就停），到了直接坐下／進門／打開。
+   右下的大按鈕照舊（站在旁邊時還是可以直接按）。 */
+const TapI = { el: null, map: new Map(), go: null, list: [], tick: 0 };
+function tapCands(){ const L = [], px = me.pos.x, pz = me.pos.z, R = 7;
+  for (const c of allChairs()){ const d = Math.hypot(c.x - px, c.z - pz); if (d < R && d > 0.5) { const f = c.face || 0, ax = c.x + Math.sin(f) * 0.7, az = c.z + Math.cos(f) * 0.7; L.push({ k: 'c' + c.x.toFixed(2) + ',' + c.z.toFixed(2), d, x: c.x, z: c.z, y: (c.y || groundHeight(c.x, c.z)) + 1.05, ax, az, ic: '🪑', face: f }); } }
+  if (W2 && W2.near(px, pz)){ for (const D of W2.doors || []){ const d = Math.hypot(D.x - px, D.z - pz); if (d < R && d > 1.2){ const fx = Math.sin(D.face), fz = Math.cos(D.face); L.push({ k: 'd' + D.k, d, x: D.x, z: D.z, y: groundHeight(D.x, D.z) + 2.4, ax: D.x + fx * 0.8, az: D.z + fz * 0.8, ic: W2_DOOR_IC[D.k] || '🚪', face: D.face + Math.PI }); } }
+    const PO = W2.posts || {}; for (const [k, ic] of [['orders', '📋'], ['board', '📌'], ['tboard', '🏆'], ['zc', '🏰']]){ const p = PO[k]; if (!p) continue; const d = Math.hypot(p.x - px, p.z - pz); if (d < R && d > 2.2){ const fx = Math.sin(p.face), fz = Math.cos(p.face); L.push({ k: 'p' + k, d, x: p.x, z: p.z, y: groundHeight(p.x, p.z) + 2.6, ax: p.x + fx * 1.6, az: p.z + fz * 1.6, ic, face: p.face + Math.PI }); } } }
+  return L.sort((a, b) => a.d - b.d).slice(0, 6); }
+function tapHideAll(){ for (const e of TapI.map.values()) e.hidden = true; }
+function tapTick(dt){ if (!TapI.el){ TapI.el = document.createElement('div'); TapI.el.id = 'tapIcons'; document.body.appendChild(TapI.el); }
+  const busy = uiBlocked || !$('#sheet').hidden || F.phase !== 'idle' || mySeat || myBoat || (typeof Dive !== 'undefined' && Dive.on) || taxiRiding() || (typeof Ride !== 'undefined' && Ride.on) || House.on || inIndoor();
+  if (TapI.go) tapGoTick(dt);
+  if (busy){ tapHideAll(); TapI.list = []; return; }
+  if (++TapI.tick % 10 === 0) TapI.list = tapCands();
+  const W = innerWidth, H = innerHeight, v = new THREE.Vector3(), seen = new Set(), placed = [];
+  for (const o of TapI.list){ v.set(o.x, o.y, o.z).project(camera); if (v.z > 1 || v.x < -1.1 || v.x > 1.1 || v.y < -1.1 || v.y > 1.1) continue; let sx = (v.x + 1) / 2 * W, sy = (1 - v.y) / 2 * H;
+    for (let k = 0; k < 4 && placed.some(q => Math.hypot(q[0] - sx, q[1] - sy) < 46); k++) sx += 48;   /* 太近就往旁邊排開，不疊在一起 */
+    placed.push([sx, sy]); seen.add(o.k); let e = TapI.map.get(o.k);
+    if (!e){ e = document.createElement('button'); e.className = 'tapic'; e.innerHTML = `<span>${o.ic}</span>`; e.addEventListener('pointerdown', ev => { ev.preventDefault(); ev.stopPropagation(); const cur = TapI.list.find(q => q.k === e.dataset.k); if (cur) tapStart(cur); }); TapI.el.appendChild(e); TapI.map.set(o.k, e); }
+    e.dataset.k = o.k; e.hidden = false; e.style.transform = `translate(${sx - 22}px, ${sy - 50}px)`; }
+  for (const [k, e] of TapI.map) if (!seen.has(k)) e.hidden = true; }
+function tapStart(o){ SFX.click(); TapI.go = { o, t0: now(), lx: me.pos.x, lz: me.pos.z, lt: now() }; }
+function tapStop(){ if (!TapI.go) return; TapI.go = null; joy.x = joy.z = 0; }
+function tapGoTick(dt){ const G = TapI.go, o = G.o; if (Object.values(keys).some(Boolean) || F.phase !== 'idle' || uiBlocked || mySeat){ tapStop(); return; }
+  const dx = o.ax - me.pos.x, dz = o.az - me.pos.z, d = Math.hypot(dx, dz), t = now();
+  if (d < 0.35){ tapStop(); me.pos.x = o.ax; me.pos.z = o.az; if (o.face != null) me.rot = o.face; setTimeout(() => { try { actionDown(); setTimeout(() => { try { actionUp(); } catch(e){} }, 60); } catch(e){} }, 60); return; }
+  if (t - G.t0 > 9){ tapStop(); return; }
+  if (t - G.lt > 1.2){ if (Math.hypot(me.pos.x - G.lx, me.pos.z - G.lz) < 0.15){ tapStop(); toast('前面過不去，用搖桿走過去吧'); return; } G.lx = me.pos.x; G.lz = me.pos.z; G.lt = t; }
+  const ang = Math.atan2(dx, dz) - cam.yaw - Math.PI, k = Math.min(1, d / 0.8 + 0.25); joy.x = -Math.sin(ang) * k; joy.z = -Math.cos(ang) * k; }
 function awStop(msg){ if (!AW.on) return; AW.on = false; joy.x = joy.z = 0; if (msg) toast(msg); }
 function awTick(){ if (!AW.on) return; if (Object.values(keys).some(Boolean)){ awStop(); return; } if (F.phase !== 'idle' || uiBlocked || Dive.on || onIsle){ awStop(); return; } const dx = AW.x - me.pos.x, dz = AW.z - me.pos.z, d = Math.hypot(dx, dz), t = now();
   if (d < 1.4){ awStop(`🎣 到了「${esc(AW.label)}」，按「拋竿」開始釣魚`); return; }
@@ -23516,7 +23546,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -24858,7 +24888,7 @@ function frame(){
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
   if (W2 && W2.trainStep){ try { const tt = bossNow() / 1000; if (Ride.clk == null || Math.abs(tt - Ride.clk) > 3) Ride.clk = tt; else { Ride.clk += dt; Ride.clk += (tt - Ride.clk) * Math.min(1, dt * 0.6); } W2.trainStep(Ride.clk, dt); }   /* v938 作者：「火車運行起來看起來不順暢」→ 小火車用自己的時鐘一格一格往前走，跟伺服器對時的小跳動慢慢追上，不會一下跳過去 */ catch(e){ if (!W2.terr){ W2.terr = 1; console.warn('w2train', e); } } }   /* v923 新主島的小火車：位置只看共用的時間（跟伺服器對過的），所以每個人畫面上的車都在同一個地方；要在移動玩家之前算，坐車的人才不會慢車子一格 */
   updatePlayer(dt); try { fishStandTick(); } catch(e){} try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
-  updatePeers(dt, t); try { bbTick(dt); } catch(e){} try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); try { updateBuildLots(); } catch(e){ if (!updateBuildLots.e){ updateBuildLots.e = 1; console.warn('lots', e); } } updateTank(t); updateDive(dt, t); updateVenues(dt, t);
+  updatePeers(dt, t); try { tapTick(dt); } catch(e){ if (!tapTick.w){ tapTick.w = 1; console.warn('tap', e); } } try { bbTick(dt); } catch(e){} try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); try { updateBuildLots(); } catch(e){ if (!updateBuildLots.e){ updateBuildLots.e = 1; console.warn('lots', e); } } updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
   for (const s of schools){
@@ -24950,6 +24980,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u979', d:'11/28', items:[['👆','附近可以坐的位子、店門、板子頭上會浮一個小圖示：點哪個，人就自己走過去坐下、進門或打開，東西靠很近也不會按錯。碰一下搖桿就停']] },
   { id:'u978', d:'11/28', items:[['💬','村民講話會停久一點：字越多停越久，一句話至少留 3.5 秒才換下一句，來得及看完']] },
   { id:'u977', d:'11/28', items:[['📱','手機多了「潮搭Go」App：選一個地方就能叫車，很近的地方會帶你走過去；車子開過來、坐車中打開會看到現在的狀態'], ['⚡','跟伺服器講話的次數變少了（站著不動、手機切到背景時不一直送），玩的人多了也比較不會卡']] },
   { id:'u976', d:'11/28', items:[['🎂','阿萬（5/31）、阿默（11/26）、阿穎（9/10）生日那天會戴派對帽、跟你說今天生日，進遊戲也會提醒你']] },
