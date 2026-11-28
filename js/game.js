@@ -6233,7 +6233,7 @@ class Fisher {
     if (this.isNpc){ const st = npcStyle(opts.name); if (st){ this.npcSt = st; this.av.npcFh = st.fh || null; if (st.sc) this.av.g.scale.set(st.sc[0], st.sc[1], st.sc[0]); kidHeadFix(this.av); this.setGear({}); } }
   }
   setLook(shirt, hat){ this.av.shirtM.color.set(shirt); this.av.hatM.color.set(hat); }
-  setGear(gear){ this.gearIn = gear; if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, this.ecoGear || {}, this.bdayGear || {}, { look: this.npcSt.look }); else if (this.ecoGear || this.bdayGear) gear = Object.assign({}, gear || {}, this.ecoGear || {}, this.bdayGear || {});   /* v976 村民自己買的衣服、生日的派對帽蓋在原本的造型上 */ const k = JSON.stringify(gear || {}), rw = !!(this.isNpc && this.rainWear); if (k === this.gearKey && rw === !!this.av.rainWear) return; this.gearKey = k;
+  setGear(gear){ this.gearIn = gear; if (this.npcSt) gear = Object.assign({}, gear || {}, this.npcSt.gear || {}, this.ecoGear || {}, this.bdayGear || {}, { look: this.npcSt.look }); else if (this.ecoGear || this.bdayGear) gear = Object.assign({}, gear || {}, this.ecoGear || {}, this.bdayGear || {});   /* v980 村民自己買的衣服、生日的派對帽蓋在原本的造型上 */ const k = JSON.stringify(gear || {}), rw = !!(this.isNpc && this.rainWear); if (k === this.gearKey && rw === !!this.av.rainWear) return; this.gearKey = k;
     this.av.rainWear = rw; if (rw && !this.av.rainCol){ let h = 0; for (const ch of String(this.npcName || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; this.av.rainCol = RAIN_COATS[h % RAIN_COATS.length]; } applyGear(this.av, gear || {}); }
   setRod(id){ const r = RODS.find(r => r.id === id) || RODS[0]; if (this.rodId !== r.id){ this.rodId = r.id; this.rodType = rodType(r); this.av.pole.material.color.set(r.color); if (!this.isNpc){ try { rodHD(this.av, this.rodType, r.color, this.rodSkin); } catch(e){ console.warn('rodHD', e); } } applyRodShape(this.av, this.rodType, false); } }
   setRodLook(skin, lc){ skin = CRAFT_BY[skin] ? skin : null; lc = CRAFT_BY[lc] ? lc : null; if (lc !== this.lineCol){ this.lineCol = lc; this.line.material.color.set(lc ? CRAFT_BY[lc].col : '#fbf8ef'); this.line.material.opacity = lc ? 0.95 : 0.85; }   /* v253 工坊做的竿子造型、釣線顏色 */
@@ -8150,7 +8150,7 @@ function updateFishing(dt, t){
   if (mySeat && mySeat.furnLie && !me.emote) startEmote(me, mySeat.furnLie === 'bath' ? 'sitdown' : 'sleep');   /* v305 躺著的時候動作不見了就補回來 */
   { const cb = $('#chumBtn'), show = !Dive.on && !!myChums().length && !!chumSpot(); if (cb.hidden === show) cb.hidden = !show; if (!show && !$('#chumPick')?.hidden) { const pk = $('#chumPick'); if (pk && F.phase !== 'idle') pk.hidden = true; } }
   $('#fishHud').hidden = true; { const on = F.phase === 'reeling'; $('#fishMark').hidden = !on; $('#tenBar').hidden = !on; if (!on){ F.S0 = null; } } $('#tRing').classList.toggle('on', F.phase === 'reeling'); if (F.phase !== 'reeling') $('#fhDir').hidden = true;
-  let label, sub = '', cls = '';
+  let label, sub = '', cls = ''; const ALT = [];
   const near = (myBoat || bpxRiding()) ? { spot: boatSpot(), d: 0 } : nearestSpot();
   const pkN = Dive.on ? nearPick() : null, seaL = pkN ? pickLabel(pkN) : Dive.on ? (seaLabel() || trapLabel()) : null;
   if (F.phase === 'idle' && !Dive.on && !myBoat && !mySeat && bossLive()){ if (BossW.joined === BossW.st.id){ label = BossW.st.struggle ? '放開！' : '拉！'; sub = BossW.st.struggle ? '大魚在掙扎' : BossW.hold ? (BossW.T >= 0.75 ? '太緊了' : BossW.T > 0.35 ? '就是現在！' : '撐住') : '按住'; cls = BossW.st.struggle ? 'bite' : ''; } else { label = '一起拉！'; sub = '🐋 ' + BossW.st.name; cls = 'shop'; } }
@@ -8205,6 +8205,9 @@ function updateFishing(dt, t){
   else if (F.phase === 'bite'){ label = '提竿！'; cls = 'bite'; }
   else if (F.phase === 'reeling'){ label = '拉線'; sub = '按住 / 放開'; }
   else { label = '…'; cls = 'idle'; }
+  /* v984 作者：「加一個點餐按鈕」（很常要點別的，卻點到太近的別的東西）→ 在食堂裡站著也有「🍽️ 點餐」：自動坐到最近的位子再打開菜單。其他東西靠很近的問題 v979 已經用頭上的小圖示解決 */
+  if (F.phase === 'idle' && !Dive.on && !mySeat && !myBoat && !House.on && inCafe()){ const cc = CHAIRS.filter(c => c.cafe).sort((p, q) => Math.hypot(p.x - me.pos.x, p.z - me.pos.z) - Math.hypot(q.x - me.pos.x, q.z - me.pos.z))[0]; if (cc) ALT.push({ k: 'order', ic: '🍽️', t: '點餐', fn: () => { me.pos.x = cc.x; me.pos.z = cc.z; sitDown(cc); setTimeout(() => { if (mySeat && mySeat.cafe) openOrder(); }, 350); } }); }
+  altBtns(ALT);
   const html = label + (sub ? `<small>${sub}</small>` : '');
   if (act._h !== html){ if (F.phase === 'idle' && act._h && !BossW.rod){ if (act._pend !== html){ act._pend = html; act._pendAt = now(); } if (now() - act._pendAt < 0.5) return; }   /* v336 大按鈕的字不要一直跳：走路經過店門口時，同一個狀態要維持 0.5 秒才換 */
     act.innerHTML = html; act._h = html; act._pend = null; }
@@ -18517,6 +18520,9 @@ function w2NpcMove(on){ const PO = W2.posts; W2S.npcMoved = on;
     if (W2_LINES[k]){ if (!n.v0lines) n.v0lines = n.lines; n.lines = on ? W2_LINES[k] : n.v0lines; }
     if (k === 'sci'){ if (on){ n.w2sk = w2SciKey(); w2SciPlace(n); } else { w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, false, null, n.v0.y); if (Sci.list){ Sci.ok = false; try { sciPlace(); } catch(e){} } } continue; }   /* 蔚博士：兩邊都是「今天調查的地方」，各自重新找 */
     if (on) w2NpcPut(n, p.x, p.z, p.face, !!p.fishing, null); else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); }
+  { const td = (W2.doors || []).find(q => q.k === 'tailor'), n = npcs.find(q => q.tailor); if (td && n && n.v0){ n.w2on = on;   /* v974 阿綾：新主島只有服裝店的門，人還留在舊村子 → 站到門旁邊 */
+      if (on){ const f = td.face, ox = Math.cos(f) * 1.5, oz = -Math.sin(f) * 1.5; let x = td.x + ox, z = td.z + oz; if (blocked(x, z, 0.3)){ x = td.x - ox; z = td.z - oz; } w2NpcPut(n, x, z, f, false, null); }
+      else w2NpcPut(n, n.v0.x, n.v0.z, n.v0.rot, n.v0.fishing, n.v0.fishing ? n.v0.bob : null, n.v0.y); } }
   for (const k of W2_QNPC){ const p = PO[k], q = questNpcs.find(q => q.who === k); if (!p || !q) continue; const f = q.f; if (!q.v0) q.v0 = { x: f.pos.x, z: f.pos.z, y: f.baseY, rot: f.rot };
     const x = on ? p.x : q.v0.x, z = on ? p.z : q.v0.z, y = on ? groundHeight(p.x, p.z) : q.v0.y; f.pos.set(x, y, z); f.baseY = y; f.rot = on ? p.face : q.v0.rot; f.speed = 0; f.av.g.visible = !onIsle; f._culled = false; if (f.blob) f.blob.visible = true; }
 }
@@ -18551,8 +18557,11 @@ function w2VoyPath(lane, id){ const V = W2.posts.voy, P = [V.dock.slice(0, 2)].c
   return { P: P.concat([[56, -50]], lane), jump: P.length }; }
 /* 新主島的蔚博士：平常在水族館入口旁邊；今天調查的那一種水新主島也有（海邊、外海、河、溪、湖、紅樹林）就站到那一種水的岸邊（位置 world2.js 排好了）。
    水下攝影機、保冷箱、調查旗跟著放在她旁邊。今天調查的地方換了（過了一天、資料剛到）會再換位置。 */
-function w2SciKey(){ const T = Sci.list && Sci.list[0], Q = sciQuest(), S = Q ? Q.S : T && SPOT_BY_ID[T.spot]; return S ? S.id : ''; }
-function w2SciPlace(n){ const p = W2.posts.sci, q = (p.at && p.at[w2SciKey()]) || p, rot = q.face; w2NpcPut(n, q.x, q.z, rot, false, null);
+/* v984 作者：「蔚博士怎麼一直在這裡」→ 今天調查的釣點（礁岩、池子、外島…）在新主島沒有對應的站位時，她就一直站在廣場邊的預設位置。改成：先找新主島有的釣點（她自己的站位或發光釣點），都沒有才站預設位置 */
+const w2SciHas = id => !!(id && W2 && W2.posts && W2.posts.sci && ((W2.posts.sci.at && W2.posts.sci.at[id]) || (W2.spotsAt && W2.spotsAt[id])));
+function w2SciKey(){ const Q = sciQuest(); if (Q && w2SciHas(Q.S.id)) return Q.S.id; for (const T of Sci.list || []){ if (w2SciHas(T.spot)) return T.spot; } return ''; }
+function w2SciSpot(k){ const s = W2.spotsAt && W2.spotsAt[k]; if (!s) return null; for (const d of [1.6, 2.4, 3.2]){ const x = s.x - Math.sin(s.face) * d, z = s.z - Math.cos(s.face) * d; if (walkable(x, z) && !waterAt(x, z) && !blocked(x, z, 0.3)) return { x, z, face: s.face }; } return null; }   /* 發光釣點的站位往岸上退一點，器材才有地方放 */
+function w2SciPlace(n){ const p = W2.posts.sci, k = w2SciKey(), q = (p.at && p.at[k]) || w2SciSpot(k) || p, rot = q.face; w2NpcPut(n, q.x, q.z, rot, false, null);
   const g = sciGear(), dx = Math.sin(rot), dz = Math.cos(rot), sx = dz, sz = -dx; let fx = q.x + sx, fz = q.z + sz;
   for (const [a, b] of [[0.9, 0.9], [0.9, -0.9], [0, 1.0], [0, -1.0], [-0.9, 0.9], [-0.9, -0.9]]){ const x = q.x + dx * a + sx * b, z = q.z + dz * a + sz * b; if (walkable(x, z) && !waterAt(x, z) && !blocked(x, z, 0.3) && Math.abs(groundHeight(x, z) - groundHeight(q.x, q.z)) < 0.3){ fx = x; fz = z; break; } }   /* 器材放在她旁邊的乾地上：先試前面靠水那一側，不行就旁邊、後面 */
   g.position.set(fx, groundHeight(fx, fz), fz); g.rotation.y = rot; }
@@ -18708,11 +18717,15 @@ function taxiLookInit(){ if (TAXI_LOOK.ok) return; TAXI_LOOK.ok = 1;
 function taxiCar(){ const src = W2 && W2.ride && W2.ride.car; if (!src) return null; taxiLookInit(); const L = TAXI_LOOK, g = new THREE.Group(), c = src.clone(); c.scale.setScalar(2.0); c.rotation.y = Math.PI / 2; c.position.y = 0.9; g.add(c);
   for (const sd of [1, -1]){ const lg = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.194), L.logo); lg.position.set(0.0, -0.07, sd * 0.392); if (sd < 0) lg.rotation.y = Math.PI; c.add(lg); }   /* 兩側車門的貼紙 */
   const hubs = []; for (const [hx, hz] of [[-0.77, 0.335], [0.61, 0.35]]) for (const sd of [1, -1]){ const hb = new THREE.Mesh(new THREE.CircleGeometry(0.105, 20), L.hub); hb.position.set(hx, -0.25, sd * hz); if (sd < 0) hb.rotation.y = Math.PI; hb.userData.sd = sd; c.add(hb); hubs.push(hb); }
-  for (const sd of [1, -1]){ const hl = new THREE.Mesh(new THREE.CircleGeometry(0.06, 14), L.head); hl.position.set(-0.955, -0.03, sd * 0.24); hl.rotation.y = -Math.PI / 2; c.add(hl); const tl = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 0.07), L.tail); tl.position.set(0.925, 0.12, sd * 0.27); tl.rotation.y = Math.PI / 2; c.add(tl); }
+  /* v984 作者：「車燈只是貼上去而已」「車頭那個白白的其實是車燈」→ 不再貼兩片白圓（車頭是弧形，貼的圓片會浮在車身外面）。改成模型本身車頭那條白色燈條在晚上自己發亮 */
+  c.traverse(o => { if (!o.isMesh || !o.material || o.material.userData.tgLamp) return; if (!L.body){ const m = o.material.clone(); m.userData.tgLamp = 1; L.lampU = { value: 0 }; m.onBeforeCompile = sh => { sh.uniforms.uLamp = L.lampU;
+      sh.vertexShader = 'varying vec3 vTgP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvTgP = position;');
+      sh.fragmentShader = 'uniform float uLamp; varying vec3 vTgP;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float lum = dot(diffuseColor.rgb, vec3(0.333)); float sat = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)); float front = smoothstep(-0.80, -0.88, vTgP.x) * step(-0.22, vTgP.y) * step(vTgP.y, 0.12); totalEmissiveRadiance += vec3(1.0, 0.97, 0.86) * uLamp * front * smoothstep(0.62, 0.8, lum) * (1.0 - smoothstep(0.08, 0.2, sat)); }'); };
+      m.customProgramCacheKey = () => 'tgLamp'; L.body = m; } o.material = L.body; });
   const beam = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 6.5).rotateX(-Math.PI / 2), L.beam); beam.position.set(0, 0.12, 4.4); g.add(beam);   /* 車頭燈照在前面的地上（晚上才看得到） */
   g.userData.hubs = hubs; g.userData.last = null; scene.add(g); return g; }
 function taxiLookTick(g){ if (!g) return; const u = g.userData, p = g.position; if (u.last){ const d = Math.hypot(p.x - u.last.x, p.z - u.last.z); if (d > 0 && d < 5){ const a = d / 0.42; for (const hb of u.hubs) hb.rotation.z -= a * hb.userData.sd; } } u.last = { x: p.x, z: p.z };
-  if (TAXI_LOOK.beam){ const hr = DayNight && DayNight.hour != null ? DayNight.hour : 12, night = hr < 6 || hr >= 18; TAXI_LOOK.beam.opacity = night ? 0.9 : 0; TAXI_LOOK.head.color.set(night ? '#ffffff' : '#fff1c2'); } }
+  if (TAXI_LOOK.beam){ const hr = DayNight && DayNight.hour != null ? DayNight.hour : 12, night = hr < 6 || hr >= 18; TAXI_LOOK.beam.opacity = night ? 0.9 : 0; TAXI_LOOK.head.color.set(night ? '#ffffff' : '#fff1c2'); if (TAXI_LOOK.lampU) TAXI_LOOK.lampU.value = night ? 1.1 : 0; } }
 /* v972 作者 11/28：「坐車的時候就是想要看風景，車子在路上會轉彎那些」「做一個區域，阿萬會開過來，不要憑空出現憑空消失」「開進來開出去」
    → 路網：把每一條車道每 2 公尺取一個點，接上路口，找最短的路（能不掉頭就不掉頭）。車子從圓環邊的「潮搭Go 乘車處」開出來，整趟沿著路開、會轉彎、停紅燈，
    載完人（或你不坐了）就自己開回乘車處停好。中間不會黑畫面、不會憑空出現或消失。 */
@@ -18802,7 +18815,19 @@ function w2RedHold(n, ox, oz){ const LT = W2 && W2.ride && W2.ride.lights; if (!
   const on = (x, z) => LT.list.some(J => { const rx = x - J.x, rz = z - J.z, along = rx * J.dx + rz * J.dz, lat = Math.abs(rx * -J.dz + rz * J.dx); return along > 3 && along < 9.5 && lat < 3.3; });
   if (on(n.pos.x, n.pos.z) && !on(ox, oz)){ n.pos.x = ox; n.pos.z = oz; n.speed = 0; n.redWait = 1; } }
 function taxiRiding(){ return Taxi.st === 'ride'; }
-function w2SiteTick(){ if (!W2 || !W2.posts || frameNo % 10) return; if (W2.near(me.pos.x, me.pos.z)) W2S.home = true; else if (!MAP2 && Math.hypot(me.pos.x, me.pos.z) < 75 && !inIndoor() && !inHall() && !inStad() && !Dive.on && !Voy.on) W2S.home = false;   /* 回到舊村子本島：之後就照舊回舊港口 */ const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
+/* v984 檢查報告：換島後舊村子（約 1800 個物件）還一直掛在場景裡，每一格畫面都要逐個檢查要不要畫 → 人在新主島上時把整個在舊村子那一帶的東西先藏起來，離開新主島（坐船、潛水、上小島）就放回來。
+   會動的東西（自己、別的玩家、村民、船、新主島本身）不藏；每次要藏之前重新量一次位置，不會藏到已經走到新主島的東西 */
+const W2CULL = { on: false, list: [] };
+function w2FarCull(){ const want = !!(MAP2 && W2 && W2.near(me.pos.x, me.pos.z) && !Dive.on && !onIsle && !House.on && !inIndoor() && !inHall() && !inStad()); if (want === W2CULL.on) return;
+  if (want){ const skip = new Set([waterSurface, camera, me.av.g, me.bob, me.line, me.blob]); const fz = f => { if (!f) return; skip.add(f.av && f.av.g); skip.add(f.bob); skip.add(f.line); skip.add(f.blob); };
+    for (const n of npcs) fz(n); for (const q of questNpcs) fz(q.f); for (const p of peers.values()) fz(p.fisher); if (ferryNpc) fz(ferryNpc.f);
+    const bb = new THREE.Box3(); W2CULL.list = [];
+    for (const o of scene.children){ if (!o.visible || o.isLight || o.isCamera || skip.has(o) || (o.userData && (o.userData.dyn || o.userData.keep))) continue;
+      bb.setFromObject(o); if (bb.isEmpty() || !isFinite(bb.max.z) || bb.max.z > 1250 || bb.max.x - bb.min.x > 600 || bb.max.z - bb.min.z > 600) continue;
+      o.visible = false; W2CULL.list.push(o); }
+  } else { for (const o of W2CULL.list) o.visible = true; W2CULL.list = []; }
+  W2CULL.on = want; }
+function w2SiteTick(){ try { w2FarCull(); } catch(e){ if (!W2CULL.err){ W2CULL.err = 1; console.warn('w2cull', e); } } if (!W2 || !W2.posts || frameNo % 10) return; if (W2.near(me.pos.x, me.pos.z)) W2S.home = true; else if (!MAP2 && Math.hypot(me.pos.x, me.pos.z) < 75 && !inIndoor() && !inHall() && !inStad() && !Dive.on && !Voy.on) W2S.home = false;   /* 回到舊村子本島：之後就照舊回舊港口 */ const want = w2SiteWant(); if (want === W2S.on) return; try { w2SiteApply(want); } catch(e){ if (!W2S.err){ W2S.err = 1; console.warn('w2site', e); } } }
 function w2Back(){ if (inIndoor() || inHall() || inStad()) return;   /* 還在裡面（例如正在煮菜不能走）：先不動，下次真的出去再回新主島 */ const b = Venue.back; Venue.back = null; if (!b || !W2) return; const fx = Math.sin(b.face), fz = Math.cos(b.face); me.pos.x = b.x + fx * 0.5; me.pos.z = b.z + fz * 0.5; try { W2.warm(me.pos.x, me.pos.z); } catch(e){} me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; me.rot = b.face; cam.yaw = b.face + Math.PI; pushPresence(true); }
 function nearShop(){
   if (myBoat) return null;
@@ -20355,13 +20380,14 @@ function guideFree(){ if (LS.get('tide.guideFree', false)) return; LS.set('tide.
   const x = el('button', 'gf-x', '我自己逛'); x.addEventListener('click', () => { SFX.click(); shut(); }); c.appendChild(x);
   document.body.appendChild(w); try { SFX.catch(); } catch(e){} }
 async function guideReward(){ if (!Cloud.on || !Cloud.sb) return; try { const { data, error } = await Cloud.sb.rpc('guide_reward'); if (error) throw error; adoptRow(data); setTimeout(() => flash('老港塞給你 🪙300', 2.2), 2200); } catch(e){} }
-function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.createElement('div'); c.id = 'guideCard'; document.body.appendChild(c); c.addEventListener('click', e => { if (e.target.closest('.gnav')){ Nav.t = null; c._k = ''; guideTick(); return; } if (e.target.closest('.gx')){ Guide.hide = !Guide.hide; LS.set('tide.guideHide', Guide.hide); c._k = ''; guideTick(); } }); }
+function guideShow(G){ let c = Guide.el; if (!c){ c = Guide.el = document.createElement('div'); c.id = 'guideCard'; document.body.appendChild(c); c.addEventListener('click', e => { if (e.target.closest('.gnav')){ Nav.t = null; c._k = ''; guideTick(); return; } if (e.target.closest('.gx') && c.classList.contains('gauto')){ Guide.seenT = now(); c._k = ''; guideTick(); return; } if (e.target.closest('.gx')){ Guide.hide = !Guide.hide; LS.set('tide.guideHide', Guide.hide); c._k = ''; guideTick(); } }); }
   const busy = !G || !!onIsle || Dive.on || House.on || inIndoor() || F.phase === 'reeling' || F.phase === 'bite' || Photo.on || (typeof Sub !== 'undefined' && Sub.on) || (!G.nav && !G.bye && Guide.fin && !Guide.fin.hidden);   /* v850 手指提示出來的時候，新手卡片先收起來（同時只出現一個提示） */
   c.hidden = busy; let tgt = null;
   if (!busy){ const p = G.at(); if (p && !onIsle){ tgt = p; } const d = tgt ? Math.hypot(tgt.x - me.pos.x, tgt.z - me.pos.z) : 0;
     let dir = ''; if (tgt && d > 2){ const a = Math.atan2(tgt.x - camera.position.x, tgt.z - camera.position.z), cy = Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)), rel = ((a - cy + Math.PI * 3) % (Math.PI * 2)) - Math.PI; dir = `<span class="garr" style="transform:rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)">⬆</span> 大約 ${Math.round(d)} 公尺`; }
-    const gh = typeof G.h === 'function' ? G.h() : G.h, k = (G.nav ? 'nav' + G.t : Guide.i + '|' + Guide.hide + gh) + '|' + dir; if (c._k !== k){ c._k = k; c.classList.toggle('talk', !G.nav); const dots = G.nav ? '' : `<span class="gdots">${GUIDE.map((_, j) => `<i class="${G.bye || j < Guide.i ? 'on' : j === Guide.i ? 'now' : ''}"></i>`).join('')}</span>`;
-      c.innerHTML = G.nav ? `<div class="gt"><b>${esc(G.t)}</b><button class="gx gnav">取消</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}` : Guide.hide && !G.bye ? `<img class="gface" src="icons/ui/gang.jpg" alt=""><b>${G.t}</b> <button class="gx">打開</button>` : `<div class="grow"><img class="gface" src="icons/ui/gang.jpg" alt=""><div class="gsay"><div class="gt"><b>老港</b><button class="gx" aria-label="收起">－</button></div><div class="gh">${gh}</div></div></div><div class="gd"><span class="gnow">${G.t}</span>${dir ? ' ・ ' + dir : ''}${dots}</div>`;
+    if (Guide.seenI !== Guide.i){ Guide.seenI = Guide.i; Guide.seenT = now(); } const gAuto = !G.nav && !G.bye && !Guide.hide && innerHeight < 500 && now() - Guide.seenT > 8;   /* v984 檢查報告：手機橫放時卡片佔掉左邊快一半 → 看 8 秒後自己縮成一行，點「打開」再展開 8 秒 */
+    const gh = typeof G.h === 'function' ? G.h() : G.h, k = (G.nav ? 'nav' + G.t : Guide.i + '|' + Guide.hide + gAuto + gh) + '|' + dir; if (c._k !== k){ c._k = k; c.classList.toggle('talk', !G.nav && !gAuto); c.classList.toggle('gauto', gAuto); const dots = G.nav ? '' : `<span class="gdots">${GUIDE.map((_, j) => `<i class="${G.bye || j < Guide.i ? 'on' : j === Guide.i ? 'now' : ''}"></i>`).join('')}</span>`;
+      c.innerHTML = G.nav ? `<div class="gt"><b>${esc(G.t)}</b><button class="gx gnav">取消</button></div><div class="gh">${G.h}</div>${dir ? `<div class="gd">${dir}</div>` : ''}` : (Guide.hide || gAuto) && !G.bye ? `<img class="gface" src="icons/ui/gang.jpg" alt=""><b>${G.t}</b> <button class="gx">打開</button>` : `<div class="grow"><img class="gface" src="icons/ui/gang.jpg" alt=""><div class="gsay"><div class="gt"><b>老港</b><button class="gx" aria-label="收起">－</button></div><div class="gh">${gh}</div></div></div><div class="gd"><span class="gnow">${G.t}</span>${dir ? ' ・ ' + dir : ''}${dots}</div>`;
       if (Guide.pop && now() - Guide.pop < 1.5){ Guide.pop = 0; c.classList.remove('gpop'); void c.offsetWidth; c.classList.add('gpop'); } } }
   /* 地上的光柱指路 */
   if (!Guide.beacon){ const g = new THREE.Group(), m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 9, 18, 1, true), new THREE.MeshBasicMaterial({ color: '#ffd36a', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })); m.position.y = 4.5; g.add(m);
@@ -22312,7 +22338,7 @@ function w2SetWaterMask(tex, cx, cz, w, h){ const U = waterSurface.material.unif
 function w2Boot(){ if (W2 || W2ing) return; W2ing = true; if (Math.hypot(me.pos.x, me.pos.z) < 260) w2Fade(true);
   import('./world2.js').then(m => { W2 = m.init({ THREE, scene, camera, me, colliders, mat, Quality, DayNight, waterSurface, mergeGeometries, setWaterMask: w2SetWaterMask,
       tw: ART2 ? { house: twHouse, cottage: twCottage, office: twOffice, museum: twMuseum, canteen: twCanteen, market: twMarket, merge: twMerge, boat: () => twBoatGeo().clone() } : null, art2Add: ART2 ? art2Add : null, sign: art2Sign, loadGLB: url => new GLTFLoader().loadAsync(url) });   /* v919 村子現有的街屋做法和模型也給新主島用 */
-    W2S.home = true; if (Math.hypot(me.pos.x, me.pos.z) < 260 || W2.near(me.pos.x, me.pos.z)){ const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; Jump.gy = me.baseY; pushPresence(true); }   /* v960 在舊村子（或剛進遊戲）的人都到新主島；在外島的人留在外島，回來時回新主島 */ w2Fade(false); for (const st of W2.seats || []) CHAIRS.push(Object.assign({}, st));   /* v936 作者：「坐在這裡看螢幕頭不要抬起來，而且看的也很奇怪歪歪的」→ 看板前的長椅不再用抬頭看的鏡頭，坐下跟一般長椅一樣 */ for (const st of W2.benches || []) CHAIRS.push(Object.assign({}, st));   /* v929 森林裡的長椅（護林員小屋的走廊） */   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ }).catch(e => { console.warn('world2', e); W2ing = false; w2Fade(false); }); }
+    W2S.home = true; if (Math.hypot(me.pos.x, me.pos.z) < 260 || W2.near(me.pos.x, me.pos.z)){ const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; Jump.gy = me.baseY; pushPresence(true); }   /* v960 在舊村子（或剛進遊戲）的人都到新主島；在外島的人留在外島，回來時回新主島 */ try { if (!W2S.on && w2SiteWant()) w2SiteApply(true); } catch(e){ console.warn('w2site0', e); }   /* v984 檢查報告：淡出拿掉的時候村民還在舊村子，要再等幾秒才搬過來 → 島一蓋好就先搬 */ w2Fade(false); for (const st of W2.seats || []) CHAIRS.push(Object.assign({}, st));   /* v936 作者：「坐在這裡看螢幕頭不要抬起來，而且看的也很奇怪歪歪的」→ 看板前的長椅不再用抬頭看的鏡頭，坐下跟一般長椅一樣 */ for (const st of W2.benches || []) CHAIRS.push(Object.assign({}, st));   /* v929 森林裡的長椅（護林員小屋的走廊） */   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ }).catch(e => { console.warn('world2', e); W2ing = false; w2Fade(false); }); }
 /* v960 新主島載入前先蓋一層淡出，不會先看到舊村子再跳過去 */
 function w2Fade(on){ const fx = $('#fadeFx'); if (!fx) return; if (on){ fx.classList.add('on'); w2Fade.t = setTimeout(() => fx.classList.remove('on'), 20000); } else { clearTimeout(w2Fade.t); setTimeout(() => fx.classList.remove('on'), 300); } }
 /* 預覽用：上面一排「直接過去」的按鈕。島很大，用走的要好幾分鐘，作者要能一區一區點過去看（只有 #map2 才有，正式換島時拿掉） */
@@ -22802,7 +22828,7 @@ function w2Path(ax, az, bx, bz){ const N = W2NAV; if (!N.m){ N.x0 = W2.ox - 200;
   N.paths.set(key0, out); return out; }
 /* 去食堂吃飯（顧攤的阿鐵、阿報、阿萍和老港）：遊戲時間中午 11:30、傍晚 18:00 前後各一頓，每個人出門的時間差幾分鐘。
    走到新主島潮汐食堂的門口旁邊（站一排，不擋門），待一陣子再走回去。攤子立「去吃飯了・店照常營業」的牌子。只看時間算，每支手機看到的一樣 */
-/* v976 生日（作者 11/28 給的；都是作者的朋友，作者說可以放）：阿萬 5/31（雙子座）、阿默 11/26、阿穎 9/10。台灣時間那一天：本人戴派對帽、講話會說今天生日；進遊戲跳一則通知；坐阿萬的車那天他會跟你說 */
+/* v980 生日（作者 11/28 給的；都是作者的朋友，作者說可以放）：阿萬 5/31（雙子座）、阿默 11/26、阿穎 9/10。台灣時間那一天：本人戴派對帽、講話會說今天生日；進遊戲跳一則通知；坐阿萬的車那天他會跟你說 */
 const BDAY = { amo: [11, 26, '阿默'], yin: [9, 10, '阿穎'], wan: [5, 31, '阿萬'] };
 function bdayIs(k){ const B = BDAY[k]; if (!B) return false; const d = new Date(Date.now() + 8 * 3600e3); return d.getUTCMonth() + 1 === B[0] && d.getUTCDate() === B[1]; }
 function bdayTick(){ if (frameNo % 300 !== 7) return; for (const k of ['amo', 'yin']){ const n = npcs.find(W2_NPC[k]); if (!n) continue; const on = bdayIs(k);
@@ -24970,7 +24996,7 @@ function frame(){
   if (window.__sportFx && !inIndoor() && Math.abs(me.pos.x - 26) < 60 && Math.abs(me.pos.z + 4) < 60){ const t2 = performance.now() / 1000; for (const f of window.__sportFx) f(t2); }
   if (window.__quayLamp){ const nt = 0.35 + 0.65 * (DayNight.lamp || 0); window.__quayLamp.material.emissiveIntensity = (performance.now() % 2400 < 700 ? 2.6 : 0.25) * nt; }
   if (W2 && W2.trainStep){ try { const tt = bossNow() / 1000; if (Ride.clk == null || Math.abs(tt - Ride.clk) > 3) Ride.clk = tt; else { Ride.clk += dt; Ride.clk += (tt - Ride.clk) * Math.min(1, dt * 0.6); } W2.trainStep(Ride.clk, dt); }   /* v938 作者：「火車運行起來看起來不順暢」→ 小火車用自己的時鐘一格一格往前走，跟伺服器對時的小跳動慢慢追上，不會一下跳過去 */ catch(e){ if (!W2.terr){ W2.terr = 1; console.warn('w2train', e); } } }   /* v923 新主島的小火車：位置只看共用的時間（跟伺服器對過的），所以每個人畫面上的車都在同一個地方；要在移動玩家之前算，坐車的人才不會慢車子一格 */
-  updatePlayer(dt); try { fishStandTick(); } catch(e){} try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); me.placeTag();
+  updatePlayer(dt); try { fishStandTick(); } catch(e){} try { bikeTick(dt); kayakTick(dt); } catch(e){} try { toyTick(dt, t); if (ART2){ lwTick(dt, t); art2Tick(t); } try { chumHotTick(); chumHotPlace(); cafeTerTick(); } catch(e){} try { fkTick(dt); fkPeersTick(t); } catch(e){ if (!fkTick.err){ fkTick.err = 1; console.warn('fk', e); } } try { wildTick(dt, t); } catch(e){ if (!wildTick.e){ wildTick.e = 1; console.warn('wild', e); } } } catch(e){} try { if (FishActs.length) fishActTick(dt); } catch(e){} updateFishing(dt, t); try { updateBiteFish(dt, t); } catch(e){} me.update(dt, t); if (myBoat && !Dive.on){ try { KJ.ikR = kayakIK(me, myBoat.m); KJ.ml = frameNo; } catch(e){ KJ.err2 = String(e && e.stack || e); } try { } catch(e){} } updateCamera(dt); camera.updateMatrixWorld(); me.placeTag();   /* v984 作者：食堂坐著時「玩家名字那排」一直跳 → 名字用的是上一格的鏡頭角度，鏡頭被牆擋住重新對準的那幾格就會跳；先把這一格的鏡頭算好再放名字 */
   updatePeers(dt, t); try { tapTick(dt); } catch(e){ if (!tapTick.w){ tapTick.w = 1; console.warn('tap', e); } } try { bbTick(dt); } catch(e){} try { updatePets(dt, t); } catch(e){} try { updateBoss(dt, t); } catch(e){} try { updateFest(dt, t); } catch(e){} updateNpcs(dt, t); updateCustomers(dt, t); updateQuestNpcs(dt, t); updateChum(dt, t); updateSecrets(t); updateFerry(dt, t); updateIsle(t); updateIsleHelpers(dt, t); updateFrost(dt, t); updateFar(dt, t); try { updateFishAI(dt, t); } catch(e){ if (!FAI.err){ FAI.err = String(e && e.stack || e).slice(0, 300); console.warn('fishAI', e); } } updateMangrove(dt, t); updateCanal(dt, t); updateReef(dt, t); updateNests(t); checkIsle(); tagTick(); updateJumpers(dt, t); try { updateBuildLots(); } catch(e){ if (!updateBuildLots.e){ updateBuildLots.e = 1; console.warn('lots', e); } } updateTank(t); updateDive(dt, t); updateVenues(dt, t);
   // water
   if (frameNo % TIERS[Quality.tier].waterEvery === 0) for (const w of animWater){ const pos = w.m.geometry.attributes.position; const a = pos.array; const ox = w.m.position.x, oz = w.m.position.z; for (let i = 0; i < a.length; i += 3) a[i+1] = waterY(a[i] + ox, a[i+2] + oz, t) - 0.01; pos.needsUpdate = true; if (frameNo % 2 === 0) w.m.geometry.computeVertexNormals(); }
@@ -25063,6 +25089,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u984', d:'11/28', items:[['🧑‍🤝‍🧑','一進新主島，村民就已經在自己的位置上，不會晚幾秒才冒出來'], ['👗','阿綾站到新主島服裝店的門口了'], ['💬','手機橫放時，老港的教學卡片看 8 秒後會自己縮成一行，點「打開」可以再看'], ['🪑','廣場的長椅加上椅背'], ['📱','在新主島時，看不到的舊村子會先收起來，便宜的手機會比較順'], ['🐠','水族館玻璃上的魚和海龜影子拿掉了，只留水和光'], ['🛣️','水族館旁邊被切斷的環島路接起來了，不會再有兩個看不懂的大圓圈'], ['🚸','水族館路口的斑馬線畫到柏油的邊'], ['🔬','蔚博士會去今天調查的釣點岸邊，不會一直站在廣場邊'], ['🌴','棧橋和碼頭旁邊不長樹了'], ['🚕','潮搭Go 的車燈是車頭那條白色燈條，晚上會亮；不再貼兩片白圓'], ['🏷️','在食堂坐著時，自己的名字不會一直跳'], ['🍽️','在食堂裡站著也有「點餐」按鈕，按了會自動坐下、打開菜單']] },
   { id:'u983', d:'11/28', items:[['🎣','坐在朋友的船上也可以拋竿釣魚了']] },
   { id:'u982', d:'11/28', items:[['🚣','雙人划艇、四人釣魚小艇可以載朋友了：船長坐上船，附近 15 公尺內的人會跳出「一起上船？」，按了就坐到空位跟著船走；船長下船大家一起下']] },
   { id:'u981', d:'11/28', items:[['⛵','港口西邊棧橋口開了「潮汐船行」：可以買單人獨木舟、雙人划艇、四人釣魚小艇，買了停在你自己的碼頭位子。主島上原本大家共用的兩艘平台舟拿掉了']] },
@@ -25560,6 +25587,11 @@ function ui3Pet(){ let pb = $('#pet3'); const row = $('#actRow'); if (!row) retu
 /* v397 潮汐食堂點餐：坐在食堂的椅子上會出現「🍽️ 點餐」，花金幣跟美雲姨點一道菜，菜端到你面前、吃完就有加成（伺服器 154_cafe_order.sql） */
 const CAFE_MENU = [['ayu', 45], ['tilapia', 45], ['suzuki', 55], ['saba', 60], ['sanbei', 85], ['ikayaki', 90], ['tako', 165], ['unadon', 225]];
 const CAFE_FOOD_COL = { ayu:'#d9a05a', tilapia:'#b5552f', suzuki:'#e8b25a', saba:'#e9eef2', sanbei:'#9a4a2a', ikayaki:'#c8783a', tako:'#c98a4a', unadon:'#7a3e1e' };
+/* v984 大按鈕旁邊的小按鈕（附近另外可以按的東西），樣子跟「點餐」一樣 */
+function altBtns(L){ const row = $('#actRow'); if (!row) return; for (let i = 0; i < 2; i++){ let b = document.getElementById('alt3_' + i); const it = L[i];
+    if (!b){ if (!it) continue; b = document.createElement('button'); b.id = 'alt3_' + i; b.className = 'panel alt3'; b.addEventListener('click', e => { e.stopPropagation(); if (b._fn) b._fn(); }); row.insertBefore(b, $('#jumpBtn')); }
+    if (!it){ if (!b.hidden) b.hidden = true; b._k = ''; b._fn = null; continue; }
+    if (b._k !== it.k){ b._k = it.k; b.innerHTML = `${it.ic}<small>${esc(it.t)}</small>`; } b._fn = it.fn; if (b.hidden) b.hidden = false; } }
 function orderBtn(){ const row = $('#actRow'); if (!row) return; let b = $('#order3');
   if (!b){ b = document.createElement('button'); b.id = 'order3'; b.className = 'panel'; b.innerHTML = '🍽️<small>點餐</small>'; b.addEventListener('click', e => { e.stopPropagation(); openOrder(); }); row.insertBefore(b, $('#jumpBtn')); }
   const want = !!(mySeat && mySeat.cafe) && F.phase === 'idle'; if (b.hidden === want) b.hidden = !want; if (!want){ const P = $('#orderPanel'); if (P && !P.hidden) P.hidden = true; } }

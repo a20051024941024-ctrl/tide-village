@@ -186,7 +186,7 @@ export function init(A){
     /* 這一塊的樹 */
     const T = [[], [], [], []], cols = [];
     const cell = 2.6; for (let a = Math.floor(x0 / cell); a * cell < x0 + TILE; a++) for (let b = Math.floor(z0 / cell); b * cell < z0 + TILE; b++){ const r1 = hash(a, b), r2 = hash(a + 911, b - 57), r3 = hash(a - 333, b + 777), lx = (a + 0.15 + r1 * 0.7) * cell, lz = (b + 0.15 + r2 * 0.7) * cell;
-      if (lx < x0 || lx >= x0 + TILE || lz < z0 || lz >= z0 + TILE || !inBox(lx, lz)) continue; if (samp(sdBoard, lx, lz) > -1.3 || samp(sdTrail, lx, lz) > -1.1) continue; const mg = samp(sdMang, lx, lz);
+      if (lx < x0 || lx >= x0 + TILE || lz < z0 || lz >= z0 + TILE || !inBox(lx, lz)) continue; if (samp(sdBoard, lx, lz) > -1.3 || samp(sdTrail, lx, lz) > -1.1 || nearDeck(lx, lz, 2.5)) continue; const mg = samp(sdMang, lx, lz);
       if (mg > 0.3){ const hm = hAt(lx, lz); if (hm < -0.55 || paved(lx, lz, 1.6) || reserved(lx, lz) || hash(a * 7 + 3, b * 13 + 1) > 0.64 * (low ? 0.6 : 1)) continue;   /* 紅樹林：水裡、泥灘上都長 */
         const sm = 0.8 + r3 * 0.55; T[3].push([lx, Math.max(hm, -0.42) + 0.05, lz, sm, r1 * 6.283, 1]); if (hm > WL) cols.push({ t: 'c', x: OX + lx, z: OZ + lz, r: 0.3 * sm, tree: true }); continue; }
       const dl = samp(sdLand, lx, lz); if (dl < 2.2) continue; const h = hAt(lx, lz); if (h < 0.12) continue;
@@ -244,6 +244,7 @@ export function init(A){
   const RSV = [], DECKS = [];   /* 蓋了東西的地方：不長樹；DECKS：可以走上去的棧橋 [x0, x1, z0, z1, 高度] */
   const deck = (lx, lz) => { for (const d of DECKS) if (lx > d[0] && lx < d[1] && lz > d[2] && lz < d[3]) return d; return null; };
   const reserved = (lx, lz) => RSV.some(([x, z, r]) => Math.hypot(lx - x, lz - z) < r);
+  const nearDeck = (lx, lz, m) => { for (const d of DECKS) if (lx > d[0] - m && lx < d[1] + m && lz > d[2] - m && lz < d[3] + m) return true; return false; };   /* v984 作者：「這裡的樹不要」→ 樹長在棧橋上、碼頭旁邊，棧橋和碼頭 2.5 公尺內不長樹 */
   const roofG = (len, depth, h) => new THREE.CylinderGeometry(1, 1, len, 3, 1, false, Math.PI / 2).rotateZ(Math.PI / 2).translate(0, 0.5, 0).scale(1, h / 1.5, depth / 1.732);   /* 沿著 x 的三角柱屋頂 */
   /* v968 平的線（車道標線、斑馬線）用兩個三角形的平面就好，不用方塊（檢查報告：低畫質三角形太多） */
   const Q = (parts, hex, w, d, x, y, z, ry) => { const g = new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2); if (ry) g.rotateY(ry); g.translate(x, y, z); (parts[hex] = parts[hex] || []).push(g.toNonIndexed()); };
@@ -325,7 +326,8 @@ export function init(A){
       for (const [R0, a0, a1] of [[15, 0.37, 0.62], [19.5, 0.26, 0.66], [24, 0.27, 0.62]]) for (const sg of [-1, 1]){ const arc = R0 * (a1 - a0), nb = Math.max(1, Math.round(arc / 3.5));
         for (let i = 0; i < nb; i++){ const a = sg * (a0 + (i + 0.5) / nb * (a1 - a0)), bx = x + Math.sin(a) * R0, bz = z + Math.cos(a) * R0, face = Math.atan2(x - bx, z - bz), c = Math.cos(face), sn = Math.sin(face), len = Math.min(3.1, arc / nb - 0.5);
           if (!paved(bx, bz, -0.6)) continue;
-          B(parts, '#b98a5a', len, 0.1, 0.52, bx, SEAT_Y - 0.05, bz, face); B(parts, '#8a6038', len - 0.3, 0.08, 0.08, bx, SEAT_Y - 0.24, bz, face); for (const o of [-(len / 2 - 0.3), len / 2 - 0.3]) B(parts, '#3a3f47', 0.1, 0.3, 0.46, bx + c * o, PAVE_Y + 0.15, bz - sn * o, face);
+          B(parts, '#b98a5a', len, 0.1, 0.52, bx, SEAT_Y - 0.05, bz, face); B(parts, '#b98a5a', len, 0.42, 0.08, bx - sn * 0.25, SEAT_Y + 0.22, bz - c * 0.25, face);   /* v984 檢查報告：只有椅面像地上的木板 → 加椅背，一眼看得出朝哪邊 */
+          B(parts, '#8a6038', len - 0.3, 0.08, 0.08, bx, SEAT_Y - 0.24, bz, face); for (const o of [-(len / 2 - 0.3), len / 2 - 0.3]) B(parts, '#3a3f47', 0.1, 0.3, 0.46, bx + c * o, PAVE_Y + 0.15, bz - sn * o, face);
           const ns = Math.max(1, Math.floor(len / 0.72)); for (let k = 0; k < ns; k++){ const o = (k - (ns - 1) / 2) * 0.72; seats.push({ x: OX + bx + c * o, z: OZ + bz - sn * o, y: SEAT_Y, face }); }
           colliders.push({ t: 'o', x: OX + bx, z: OZ + bz, hw: len / 2, hd: 0.26, c, s: sn, bw: Math.abs(c) * len / 2 + Math.abs(sn) * 0.26, bd: Math.abs(sn) * len / 2 + Math.abs(c) * 0.26 }); } } }
     /* 村公所・鐘樓 */
@@ -357,8 +359,7 @@ export function init(A){
             void main(){ vec2 u = vUv; vec3 deep = vec3(0.03, 0.20, 0.42), lite = vec3(0.16, 0.55, 0.82); vec3 col = mix(deep, lite, smoothstep(0.0, 1.0, u.y));
               float ray = max(0.0, sin(u.x * 46.0 + u.y * 5.0 - t * 0.35)) * max(0.0, sin(u.x * 17.0 - t * 0.21)); col += vec3(0.10, 0.18, 0.22) * ray * u.y;
               float ca = sin(u.x * 140.0 + sin(u.y * 9.0 + t * 1.3) * 2.0 + t * 0.8) * sin(u.y * 26.0 - t * 1.1 + sin(u.x * 60.0)); col += vec3(0.05, 0.09, 0.11) * smoothstep(0.55, 1.0, ca);
-              float f2 = texture2D(fish, vec2(u.x * 5.0 - t * 0.012, u.y * 0.8 + 0.12)).a; col = mix(col, deep * 0.85, f2 * 0.35);
-              float f1 = texture2D(fish, vec2(u.x * 3.0 + t * 0.022 + 0.37, u.y)).a; col = mix(col, vec3(0.02, 0.08, 0.18), f1 * 0.72);
+              /* v984 作者：「那個烏龜影子那種的不要了」→ 魚群、海龜、魟魚的剪影拿掉，只留水和光 */
               float fr = step(fract(u.x * 14.0), 0.035) + step(u.y, 0.03) + step(0.97, u.y); col = mix(col, vec3(0.92, 0.95, 0.97), clamp(fr, 0.0, 1.0));
               gl_FragColor = vec4(col, 1.0); }` });
         for (const [y0, y1, r, cz, open] of [[-0.88, -0.70, 0.407, -0.01, 0.33], [-0.49, -0.33, 0.386, -0.068, 0], [-0.17, -0.04, 0.316, -0.068, 0], [0.15, 0.27, 0.26, -0.068, 0]]){
@@ -518,7 +519,12 @@ export function init(A){
       const laneAt = (x, z, r, skip, dx, dz) => { const gx = Math.floor(x / 4), gz = Math.floor(z / 4), n = Math.ceil(r / 4); for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++){ const L = LG.get((gx + a) + ',' + (gz + b)); if (L) for (const q of L) if (q[2].id !== skip && Math.hypot(q[0] - x, q[1] - z) < r && (dx === undefined || Math.abs(q[3] * dx + q[4] * dz) < 0.9)) return q[2]; } return null; };   /* 有給方向的話：跟自己幾乎同方向的（接在後面的同一條路）不算路口 */
       /* v967 作者 11/28：「斷口處都沒修好」→ 路的盡頭（西邊居民區、港口那兩條）做一個圓形的迴車道，車子可以在這裡掉頭，看起來是故意停在這裡的 */
       const turns = [];
-      for (const o of laneRuns){ if (o.R.length < 20) continue; for (const end of [0, 1]){ const R = o.R, i = end ? R.length - 1 : 0, e = R[i], j = end ? R.length - 9 : 8, d0 = Math.hypot(e[0] - R[j][0], e[1] - R[j][1]) || 1, dx = (e[0] - R[j][0]) / d0, dz = (e[1] - R[j][1]) / d0;
+      /* v984 作者：「只有圓圈那個是路，看起來完全不合邏輯」→ 兩條路的盡頭面對面、離不到 22 公尺（同一條路被切斷），就直接用柏油接起來，不畫兩個迴車圈 */
+      const ends = []; for (const o of laneRuns){ if (o.R.length < 20) continue; for (const end of [0, 1]){ const R = o.R, i = end ? R.length - 1 : 0, e = R[i], j = end ? R.length - 9 : 8, d0 = Math.hypot(e[0] - R[j][0], e[1] - R[j][1]) || 1; ends.push({ o, end, e, dx: (e[0] - R[j][0]) / d0, dz: (e[1] - R[j][1]) / d0 }); } }
+      const joined = new Set(); for (const A of ends) for (const B2 of ends){ if (A === B2 || joined.has(A) || joined.has(B2)) continue; const vx = B2.e[0] - A.e[0], vz = B2.e[1] - A.e[1], d = Math.hypot(vx, vz); if (d > 22 || A.dx * B2.dx + A.dz * B2.dz > -0.5 || (d > 1 && (vx * A.dx + vz * A.dz) / d < 0.5)) continue;
+        joined.add(A); joined.add(B2); const n = Math.max(2, Math.ceil(d / 1.5)), pts = []; for (let k = 0; k <= n; k++){ const t = k / n, u = 1 - t, c1 = [A.e[0] + A.dx * d / 3, A.e[1] + A.dz * d / 3], c2 = [B2.e[0] + B2.dx * d / 3, B2.e[1] + B2.dz * d / 3]; pts.push([u * u * u * A.e[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * B2.e[0], u * u * u * A.e[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * B2.e[1]]); }
+        paveParts.car.length = 0; ribbon('car', pts, 6.2, Math.max(A.o.yy, B2.o.yy), false, 3); const gm = new THREE.Mesh(mergeGeometries(paveParts.car, false), MAT.car); gm.receiveShadow = true; root.add(gm); paveParts.car.length = 0; }
+      for (const o of laneRuns){ if (o.R.length < 20) continue; for (const end of [0, 1]){ if (ends.some(q => q.o === o && q.end === end && joined.has(q))) continue; const R = o.R, i = end ? R.length - 1 : 0, e = R[i], j = end ? R.length - 9 : 8, d0 = Math.hypot(e[0] - R[j][0], e[1] - R[j][1]) || 1, dx = (e[0] - R[j][0]) / d0, dz = (e[1] - R[j][1]) / d0;
         if (laneAt(e[0], e[1], 4, o.id)) continue; let k = 4.0; const cx = e[0] + dx * k, cz = e[1] + dz * k, r = 6.2, y0 = Math.max(o.yy, hAt(cx, cz) + 0.03);
         const disc = new THREE.Mesh(new THREE.CircleGeometry(r, 40).rotateX(-Math.PI / 2), MAT.car); disc.position.set(cx, y0 + 0.001, cz); disc.receiveShadow = true; root.add(disc);
         const open = Math.atan2(-dz, -dx); for (let a = 0; a < 40; a++){ const t = a / 40 * 6.2832, dd = Math.abs(((t - open + 9.4248) % 6.2832) - 3.1416); if (dd < 0.62) continue; const t2 = t + 6.2832 / 40;
@@ -545,7 +551,7 @@ export function init(A){
         segs.forEach(sg => { if (!NODES[sg.car] || sg.loop) return; const { L } = sg; let i = 0; for (; i < L.length; i++){ const [qx, qy] = toPx(L[i][0], L[i][1]); if (((qx - PL[0]) / RING[0]) ** 2 + ((qy - PL[1]) / RING[1]) ** 2 >= 1) break; } if (i >= L.length - 4) return;
           const [jx, jz] = L[i], [dx, dz] = dirAt(L, i + 2), px = -dz, pz = dx, y0 = PAVE_Y, J = { x: OX + jx, z: OZ + jz, dx, dz };
           /* 停止線＋斑馬線：離圓環中線 6.2 公尺 */
-          const sx = jx + dx * 6.2, sz = jz + dz * 6.2; zebras.push([sx, sz]); for (let k = -2.9; k <= 2.9; k += 0.62) Q(parts, LINE, 0.36, 1.7, sx + px * k, y0 + 0.09, sz + pz * k, Math.atan2(dx, dz)); Q(parts, LINE, 3.0, 0.3, sx + dx * 1.3 + px * 1.5, y0 + 0.08, sz + dz * 1.3 + pz * 1.5, Math.atan2(dx, dz));
+          const sx = jx + dx * 6.2, sz = jz + dz * 6.2; zebras.push([sx, sz]); let kA = -2.9, kB = 2.9; while (kA > -9 && laneAt(sx + px * (kA - 0.62), sz + pz * (kA - 0.62), 3.0, -1)) kA -= 0.62; while (kB < 9 && laneAt(sx + px * (kB + 0.62), sz + pz * (kB + 0.62), 3.0, -1)) kB += 0.62;   /* v984 作者：「斑馬線在這裡沒接好」→ 路口旁邊接著別條路時，柏油比一條車道寬，斑馬線一路畫到柏油的邊 */ for (let k = kA; k <= kB + 0.01; k += 0.62) Q(parts, LINE, 0.36, 1.7, sx + px * k, y0 + 0.09, sz + pz * k, Math.atan2(dx, dz)); Q(parts, LINE, 3.0, 0.3, sx + dx * 1.3 + px * 1.5, y0 + 0.08, sz + dz * 1.3 + pz * 1.5, Math.atan2(dx, dz));
           for (const side of [1, -1]){ const lx = sx + dx * 1.6 + px * side * 4.1, lz = sz + dz * 1.6 + pz * side * 4.1; G(parts, '#5c656e', new THREE.CylinderGeometry(0.09, 0.11, 3.4, 8), lx, y0 + 1.7, lz); colliders.push({ t: 'c', x: OX + lx, z: OZ + lz, r: 0.2 });
             if (side === 1){ head(lx, y0 + 3.0, lz, Math.atan2(dx, dz), LM.aR, LM.aY, LM.aG);   /* 給大道往圓環開的車看（燈面朝外） */ head(lx - dx * 0.3, y0 + 3.0, lz - dz * 0.3, Math.atan2(-pz, -px), LM.rR, LM.rY, LM.rG); }   /* 給圓環上的車看 */
             pedHead(lx + px * -side * 0.25, y0 + 2.0, lz + pz * -side * 0.25, Math.atan2(-px * side, -pz * side)); }   /* 行人燈：對著斑馬線另一邊 */
