@@ -9647,5 +9647,14 @@
  "換這艘": "Use this one",
  "要連上雲端（登入）才能買船": "You need to be online (signed in) to buy a boat",
  "船行還在準備中，晚一點再來": "The boat shop is still getting ready. Come back a bit later",
- "買船失敗，等一下再試": "Couldn't buy the boat. Try again in a moment"
+ "買船失敗，等一下再試": "Couldn't buy the boat. Try again in a moment",
+ "雙人划艇、四人釣魚小艇可以載朋友了：船長坐上船，附近 15 公尺內的人會跳出「一起上船？」，按了就坐到空位跟著船走；船長下船大家一起下": "Two-person rowboats and four-person fishing boats can now carry friends: when the captain boards, people within 15 m get a \"Hop aboard?\" prompt. Accept to take an empty seat and ride along; everyone gets off when the captain does",
+ "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。": "When you board your own two- or four-person boat, people within 15 m get a \"Hop aboard?\" prompt. Tapping \"Board\" puts them in an empty seat, riding along with your boat. When you get off, everyone goes ashore with you; passengers can also tap \"Get off\" themselves near the shore.",
+ "買了的船會停在港口西邊棧橋旁邊你自己的位子，走過去就能上船。坐上雙人、四人的船，附近的朋友會收到「一起上船？」，按了就坐到你船上的空位。": "Boats you buy are moored at your own spot beside the west pier. Walk over to board. When you board a two- or four-person boat, nearby friends get a \"Hop aboard?\" prompt and can take an empty seat.",
+ "上船": "Board",
+ "下船": "Get off",
+ "等船長讓你上船…": "Waiting for the captain…",
+ "船上已經坐滿了": "The boat is full",
+ "要靠近岸邊或碼頭才能下船": "Get close to the shore or a pier to get off",
+ "下船了": "You got off"
 }

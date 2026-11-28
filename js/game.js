@@ -6854,7 +6854,7 @@ function boatWater(x, z){ if (W2 && W2TXT_ON && W2.near(x, z)){ const h = W2.h(x
 function boardBoat(b){ if (tyBlock('開船')) return;
   if (F.phase !== 'idle') cancelFishing();
   myBoat = b; me.pos.x = b.m.position.x; me.pos.z = b.m.position.z; me.rot = b.m.rotation.y; me.sitting = true; cam.yaw = me.rot + Math.PI;
-  toast('上船了。用搖桿划船，在水上任何地方都可以拋竿。'); pushPresence(true);
+  toast('上船了。用搖桿划船，在水上任何地方都可以拋竿。'); pushPresence(true); if (b.own){ b.crew = []; b.seatOf = {}; if ((BOAT_SEATS[b.kind] || []).length) setTimeout(() => bxEmit({ a: 'inv', kind: b.kind }), 400); }
 }
 function leaveBoat(){
   if (!myBoat) return;
@@ -6862,7 +6862,7 @@ function leaveBoat(){
   for (let r = 1.2; r <= 3.6 && !best; r += 0.6) for (let k = 0; k < 16; k++){ const a = k / 16 * Math.PI * 2, x = me.pos.x + Math.cos(a) * r, z = me.pos.z + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)){ best = [x, z]; break; } }
   if (!best){ toast('要靠近岸邊或碼頭才能下船。'); return; }
   if (F.phase !== 'idle') cancelFishing();
-  const b = myBoat; myBoat = null; me.sitting = false; me.pos.x = best[0]; me.pos.z = best[1];
+  const b = myBoat; if (b.own && b.crew && b.crew.length) bxEmit({ a: 'off', x: best[0], z: best[1] }); b.crew = []; b.seatOf = {}; myBoat = null; me.sitting = false; me.pos.x = best[0]; me.pos.z = best[1];
   b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0);   // 小船自己划回碼頭
   sailCompass();
   pushPresence(true);
@@ -7178,6 +7178,7 @@ function updatePlayer(dt){
   if (Voy.on){ voyDrive(dt); return; }   /* v579 坐阿海的船 */
   if (Voy.board && voyBoardTick(dt)) return; if (Voy.hop && voyHopTick(dt)) return;   /* v679 上船、下船 */
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
+  if (bpxRiding()){ const p = peers.get(Bpx.host); if (p){ const f = p.fisher, S = (BOAT_SEATS[Bpx.kind] || [[0, -1]])[Bpx.seat] || [0, -1], r = f.rot, fx = Math.sin(r), fz = Math.cos(r); me.pos.x = f.pos.x + fx * S[1] + fz * S[0]; me.pos.z = f.pos.z + fz * S[1] - fx * S[0]; me.baseY = WATER_LEVEL + 0.18; Jump.gy = me.baseY; me.rot = r; me.sitting = true; } me.speed = 0; return; }   /* v982 坐在朋友的船上 */
   if (paxRiding()){ const p = peers.get(Pax.host); if (p){ const f = p.fisher; me.pos.x = f.pos.x; me.pos.z = f.pos.z; me.baseY = f.baseY; Jump.gy = me.baseY; me.rot = f.rot; } me.speed = 0; return; }   /* v980 一起坐車：跟著叫車那個人的車走 */
   if (taxiRiding()){ const c = Taxi.car; if (c){ me.pos.x = c.position.x; me.pos.z = c.position.z; me.baseY = c.position.y; Jump.gy = me.baseY; me.rot = c.rotation.y; } me.speed = 0; return; }   /* v962 坐潮搭Go：人跟著車走（人藏起來） */
   if (Ride.out){ const h = Ride.out; h.t += dt; const k = Math.min(1, h.t / 0.42), e = k * k * (3 - 2 * k), gy = groundHeight(h.tx, h.tz); me.pos.x = h.x + (h.tx - h.x) * e; me.pos.z = h.z + (h.tz - h.z) * e; me.baseY = h.y + (gy - h.y) * e + Math.sin(k * Math.PI) * 0.32; Jump.gy = me.baseY; me.rot = lerpAngle(me.rot, Math.atan2(h.tx - h.x, h.tz - h.z), 1 - Math.exp(-14 * dt)); me.speed = 0; if (k >= 1){ Ride.out = null; me.baseY = gy; Jump.gy = gy; pushPresence(true); } return; }   /* v923 下小火車：從位子跨到月台上 */
@@ -7643,7 +7644,7 @@ function tapCands(){ const L = [], px = me.pos.x, pz = me.pos.z, R = 7;
   return L.sort((a, b) => a.d - b.d).slice(0, 6); }
 function tapHideAll(){ for (const e of TapI.map.values()) e.hidden = true; }
 function tapTick(dt){ if (!TapI.el){ TapI.el = document.createElement('div'); TapI.el.id = 'tapIcons'; document.body.appendChild(TapI.el); }
-  const busy = uiBlocked || !$('#sheet').hidden || F.phase !== 'idle' || mySeat || myBoat || (typeof Dive !== 'undefined' && Dive.on) || taxiRiding() || (typeof Ride !== 'undefined' && Ride.on) || House.on || inIndoor();
+  const busy = uiBlocked || !$('#sheet').hidden || F.phase !== 'idle' || mySeat || myBoat || (typeof Dive !== 'undefined' && Dive.on) || taxiRiding() || bpxRiding() || (typeof Ride !== 'undefined' && Ride.on) || House.on || inIndoor();
   if (TapI.go) tapGoTick(dt);
   if (busy){ tapHideAll(); TapI.list = []; return; }
   if (++TapI.tick % 10 === 0) TapI.list = tapCands();
@@ -15884,6 +15885,34 @@ function turtleCareBox(p){ const box = el('li', 'turtlecare'), inShop = !!Pets.t
   row('🧽', '換水、刷殼', inShop ? '用店裡的水槽換水，龜博士借你軟刷輕輕刷殼。一天一次。' : atIsle ? '用小島的水盆換水，軟刷輕輕刷殼。一天一次，保持光澤。' : '要在自己的小島上用水盆（一天一次）。', '清潔', p.clean, () => { if (!atIsle){ toast('回到自己的小島用水盆換水'); renderTab(); return; } turtleCare(p, 'clean'); });
   row('🧴', '龜殼保養（🪙120）', p.oilDays != null && p.oilDays < 30 ? `一個月最多一次（${p.oilDays} 天前保養過）。太常塗反而會悶住龜殼。` : '偶爾保養就好，一個月最多一次。', '保養', p.oilDays != null && p.oilDays < 30, () => turtleCare(p, 'oil'));
   return box; }
+/* ===== v982 雙人、四人船載朋友（作者 11/28：「也可以做雙人、四人的」）=====
+   你坐上自己的雙人／四人船，附近 15 公尺內的人會跳出「一起上船？」→ 按了就坐到你船上的空位，跟著你的船走（坐著）。你下船，大家跟著下到你旁邊。
+   一起坐的人隨時可以按「下船」（要在岸邊才下得去）。 */
+const BOAT_SEATS = { duo: [[0, -1.05]], quad: [[-0.45, -0.9], [0.45, -0.9], [0, -1.7]] };
+const Bpx = { st: null, host: null, name: '', kind: '', seat: 0, el: null, at: 0 };
+function bxEmit(d){ try { if (room && room.connected && room.connected()) room.emit('bx', d).catch(() => {}); } catch(e){} }
+function bpxUi(){ let e = Bpx.el; if (!Bpx.st){ if (e){ e.remove(); Bpx.el = null; } return; } if (!e){ e = Bpx.el = el('div', 'taxibar pax'); document.body.appendChild(e); } e.innerHTML = '';
+  if (Bpx.st === 'invited'){ e.appendChild(el('span', 'tx', `${(BOAT_KINDS[Bpx.kind] || {}).ic || '⛵'} ${Bpx.name} 的船還有空位，一起上船？`)); const y = el('button', 'tbtn', '上船'); y.addEventListener('click', () => { bxEmit({ a: 'join', to: Bpx.host }); Bpx.st = 'asked'; SFX.click(); bpxUi(); }); e.appendChild(y); const n = el('button', 'tbtn ghost', '不用'); n.addEventListener('click', () => bpxEnd()); e.appendChild(n); }
+  else if (Bpx.st === 'asked') e.appendChild(el('span', 'tx', '等船長讓你上船…'));
+  else { e.appendChild(el('span', 'tx', `⛵ 坐在${Bpx.name}的船上`)); const n = el('button', 'tbtn ghost', '下船'); n.addEventListener('click', () => bpxLeave()); e.appendChild(n); } }
+function bpxEnd(){ const was = Bpx.st; Bpx.st = null; Bpx.host = null; if (was === 'ride'){ me.sitting = false; pushPresence(true); } bpxUi(); }
+function bpxLand(x0, z0){ for (let r = 0.8; r <= 4.4; r += 0.6) for (let k = 0; k < 16; k++){ const a = k / 16 * Math.PI * 2, x = x0 + Math.cos(a) * r, z = z0 + Math.sin(a) * r; if (walkable(x, z) && !blocked(x, z, 0.35)) return [x, z]; } return null; }
+function bpxLeave(){ const L = bpxLand(me.pos.x, me.pos.z); if (!L){ toast('要靠近岸邊或碼頭才能下船'); return; } bxEmit({ a: 'leave', to: Bpx.host }); me.pos.x = L[0]; me.pos.z = L[1]; me.baseY = groundHeight(L[0], L[1]); Jump.gy = me.baseY; bpxEnd(); }
+function onBxMsg(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const d = m.data, mine = room && room.key, p = peers.get(m.peer);
+  if (d.to === mine && myBoat && myBoat.own){ const S = BOAT_SEATS[myBoat.kind] || []; myBoat.crew = myBoat.crew || [];
+    if (d.a === 'join'){ if (myBoat.crew.includes(m.peer)) return; const used = new Set(myBoat.crew.map((k, i) => myBoat.seatOf[k])); let i = -1; for (let j = 0; j < S.length; j++) if (![...Object.values(myBoat.seatOf || {})].includes(j)){ i = j; break; } if (i < 0){ bxEmit({ a: 'full', to: m.peer }); return; } myBoat.crew.push(m.peer); myBoat.seatOf = Object.assign(myBoat.seatOf || {}, { [m.peer]: i }); bxEmit({ a: 'seat', to: m.peer, i, kind: myBoat.kind }); toast(`⛵ ${p ? peerName(p) : '朋友'}上船了`); }
+    if (d.a === 'leave'){ myBoat.crew = myBoat.crew.filter(k => k !== m.peer); if (myBoat.seatOf) delete myBoat.seatOf[m.peer]; }
+    return; }
+  if (d.a === 'inv'){ if (Bpx.st || myBoat || taxiRiding() || paxRiding() || !p || Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) > 15) return; Bpx.st = 'invited'; Bpx.host = m.peer; Bpx.kind = d.kind; Bpx.name = peerName(p); Bpx.at = Date.now(); bpxUi(); return; }
+  if (m.peer !== Bpx.host) return;
+  if (d.a === 'full' && d.to === mine){ toast('船上已經坐滿了'); bpxEnd(); return; }
+  if (d.a === 'seat' && d.to === mine && Bpx.st === 'asked'){ Bpx.st = 'ride'; Bpx.seat = d.i | 0; Bpx.kind = d.kind; if (F.phase !== 'idle') cancelFishing(); if (mySeat && !mySeat.train) standUp(); me.sitting = true; SFX.click(); bpxUi(); pushPresence(true); toast(`⛵ 上了${Bpx.name}的船`); return; }
+  if (d.a === 'off' && Bpx.st === 'ride'){ const L = bpxLand(+d.x, +d.z) || [+d.x, +d.z]; me.pos.x = L[0]; me.pos.z = L[1]; me.baseY = groundHeight(L[0], L[1]); Jump.gy = me.baseY; bpxEnd(); toast('下船了'); return; }
+  if (d.a === 'off' && Bpx.st) bpxEnd(); }
+function bpxTick(){ if (Bpx.st === 'invited' && Date.now() - Bpx.at > 60000) bpxEnd();
+  if (myBoat && myBoat.own && (BOAT_SEATS[myBoat.kind] || []).length && frameNo % 600 === 11){ const free = (BOAT_SEATS[myBoat.kind] || []).length - (myBoat.crew || []).length; if (free > 0) bxEmit({ a: 'inv', kind: myBoat.kind }); }   /* 每 10 秒邀一次附近的人（剛走過來的人也看得到） */
+  if (Bpx.st === 'ride'){ const p = peers.get(Bpx.host); if (!p || !p.pres || !p.pres.bt){ bpxEnd(); } } }
+function bpxRiding(){ return Bpx.st === 'ride'; }
 /* ===== v981 潮汐船行（作者 11/28：「做一家賣船的店，原本的船不要」「也可以做雙人、四人的」）=====
    港口西邊棧橋口一間小船行：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000（伺服器 261_boats.sql 記你買了哪些）。
    買了的船停在港口西邊棧橋旁邊你自己的位子（只有你看得到停著的；你划出去別人看得到你的船）。新主島上原本大家共用的兩艘平台舟拿掉了。
@@ -15900,7 +15929,7 @@ function ownBoatSync(){ if (!W2 || !W2.posts) return; const on = !!W2S.on; for (
   if (OwnB.b && (OwnB.b.kind !== k || !d) && OwnB.b !== myBoat){ scene.remove(OwnB.b.m); const i = boats.indexOf(OwnB.b); if (i >= 0) boats.splice(i, 1); OwnB.b = null; }
   if (!OwnB.b && k && d){ const m = makeBoatMesh(k); m.position.set(d.x, WATER_LEVEL, d.z); m.rotation.y = d.rot; scene.add(m); OwnB.b = { m, dock: { id: 'own', x: d.x, z: d.z, rot: d.rot }, own: true, kind: k }; boats.push(OwnB.b); } }
 function renderBoatShop(body){ const head = el('div', 'shophead'); head.innerHTML = `<b>⛵ 潮汐船行</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
-  body.appendChild(el('p', 'sub', '買了的船會停在港口西邊棧橋旁邊你自己的位子，走過去就能上船。雙人、四人的船之後可以載朋友一起出海。'));
+  body.appendChild(el('p', 'sub', '買了的船會停在港口西邊棧橋旁邊你自己的位子，走過去就能上船。坐上雙人、四人的船，附近的朋友會收到「一起上船？」，按了就坐到你船上的空位。'));
   const own = rec.boats || [], sel = boatSel(), ul = el('ul', 'shoplist');
   for (const k of BOAT_ORDER){ const B = BOAT_KINDS[k], li = el('li', own.includes(k) ? 'on' : ''); li.appendChild(el('span', 'tci', B.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', `${B.name}・坐 ${B.seats} 人`)); d.appendChild(el('div', 'sub2', B.desc)); li.appendChild(d);
     let b; if (!own.includes(k)){ b = el('button', 'tbtn', `🪙${B.price.toLocaleString()}`); b.disabled = rec.coins < B.price; b.addEventListener('click', () => buyBoat(k)); }
@@ -18754,7 +18783,7 @@ function taxiGetOff(){ const d = Taxi.dest, c = Taxi.car, fx = Math.sin(c.rotati
   me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = c.rotation.y; poolMeVis(true); txEmit({ a: 'off', x: c.position.x, z: c.position.z, h: c.rotation.y });
   Taxi.st = 'idle'; taxiDrop(); Taxi.dest = null; pushPresence(true); taxiUi(); toast('🚕 阿萬：「到了！下次再叫我～」');
   if (d && Math.hypot(d.x - x, d.z - z) > 14) setTimeout(() => navTo(d.name, d.x, d.z), 600); else if (d) toast(`到「${d.name}」了`); }
-function taxiTick(dt){ if (!W2) return; try { bdayTick(); paxTick(); if (frameNo % 30 === 3) ownBoatSync(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
+function taxiTick(dt){ if (!W2) return; try { bdayTick(); paxTick(); bpxTick(); if (frameNo % 30 === 3) ownBoatSync(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
   const T = { car: Taxi.car, path: Taxi.path, s: Taxi.s, v: Taxi.v }, drive = vmax => { const r = taxiDrive(T, dt, vmax); Taxi.s = T.s; Taxi.v = T.v; return r; };
   if (Taxi.st === 'come'){ if (drive(10)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } else if (frameNo % 30 === 0) taxiUi(); }
   else if (Taxi.st === 'wait'){ const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3);
@@ -20652,7 +20681,8 @@ function presenceObj(){
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
   if (Bike.on) o.bk = 1;
   if (taxiRiding()) o.cr = 1;   /* v962 坐潮搭Go：別人看到一台車 */
-  else if (paxRiding()) o.cr = 2;   /* v980 一起坐的人：藏在別人的車裡 */
+  else if (paxRiding()) o.cr = 2;
+  if (bpxRiding()) o.bp = 1;   /* v982 坐在別人的船上（坐著，沒有自己的船） */   /* v980 一起坐的人：藏在別人的車裡 */
   if (phoneMine()) o.ph = 1;   /* v581 正在滑手機（別人看到你拿手機） */   /* v438 在騎腳踏車 */
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
@@ -20715,7 +20745,7 @@ function applyPeer(pp){
   nameFrame(p.fisher.nm, typeof pr.nf === 'string' && /^nf_\d{6}$/.test(pr.nf) ? pr.nf : null);
   { const tb = Number.isInteger(pr.tb) ? TEAM_BADGE[pr.tb] : null; if ((p.fisher.nm.dataset.team || '') !== (tb || '')){ if (tb) p.fisher.nm.dataset.team = tb; else delete p.fisher.nm.dataset.team; } }
   { let ok = false; try { ok = typeof pr.ti === 'string' && ALL_TITLES.has(pr.ti); } catch(e){} const t = ok ? pr.ti : ''; if (t) p.fisher.nm.dataset.title = t; else delete p.fisher.nm.dataset.title; }
-  p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph; p.tr = Array.isArray(pr.tr) && pr.tr.length === 2 && Number.isFinite(+pr.tr[0]) && Number.isFinite(+pr.tr[1]) ? [clamp(pr.tr[0] | 0, 0, 7), clamp(pr.tr[1] | 0, 0, 31)] : null;   /* v923 坐小火車 */
+  p.fisher.sitting = !!pr.bt || !!pr.st || !!pr.bk || !!pr.bp; p.fisher.bike = !!pr.bk; p.fisher.phone = !!pr.ph; p.tr = Array.isArray(pr.tr) && pr.tr.length === 2 && Number.isFinite(+pr.tr[0]) && Number.isFinite(+pr.tr[1]) ? [clamp(pr.tr[0] | 0, 0, 7), clamp(pr.tr[1] | 0, 0, 31)] : null;   /* v923 坐小火車 */
   if (pr.lie){ p.fisher.sitting = false; const lk = pr.lie === 2 ? 'sitdown' : 'sleep'; if (!p.fisher.emote || p.fisher.emote.k !== lk) startEmote(p.fisher, lk); p.wasLie = 1; } else if (p.wasLie){ p.wasLie = 0; if (p.fisher.emote && (p.fisher.emote.k === 'sleep' || p.fisher.emote.k === 'sitdown')) p.fisher.emote = null; }
   { const was = p.isle, now = typeof pr.is === 'string' ? pr.is : null; if (now && now !== was && Home.owner && now === Home.owner && homeMate(p.by) && onIsle && onIsle.owner === Home.owner && p.seenIsle) ticker(`🏠 <b>${esc(peerName(p))}</b> 回家了`); p.seenIsle = 1; }
   p.fisher.wsK = Array.isArray(pr.ws) && typeof pr.ws[0] === 'string' && pr.ws[0].length < 40 ? pr.ws[0] : null; p.fisher.wsM = p.fisher.wsK ? (+pr.ws[1] || 0) & 63 : 0;
@@ -20807,7 +20837,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {}); room.on('subbait', onSubBait, () => {}); room.on('orddone', onOrdDone, () => {});
-    room.on('pool', poolOnMsg, () => {}); room.on('tx', onTxMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
+    room.on('pool', poolOnMsg, () => {}); room.on('tx', onTxMsg, () => {}); room.on('bx', onBxMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -23599,7 +23629,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -25033,6 +25063,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u982', d:'11/28', items:[['🚣','雙人划艇、四人釣魚小艇可以載朋友了：船長坐上船，附近 15 公尺內的人會跳出「一起上船？」，按了就坐到空位跟著船走；船長下船大家一起下']] },
   { id:'u981', d:'11/28', items:[['⛵','港口西邊棧橋口開了「潮汐船行」：可以買單人獨木舟、雙人划艇、四人釣魚小艇，買了停在你自己的碼頭位子。主島上原本大家共用的兩艘平台舟拿掉了']] },
   { id:'u980', d:'11/28', items:[['👥','可以跟朋友一起坐潮搭Go 了：你叫車時，附近 25 公尺內的人會跳出「一起坐？」，按了就上同一台車（最多 3 個人），到了大家一起下車']] },
   { id:'u979', d:'11/28', items:[['👆','附近可以坐的位子、店門、板子頭上會浮一個小圖示：點哪個，人就自己走過去坐下、進門或打開，東西靠很近也不會按錯。碰一下搖桿就停']] },

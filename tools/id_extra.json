@@ -9372,5 +9372,14 @@
  "換這艘": "Pakai yang ini",
  "要連上雲端（登入）才能買船": "Kamu perlu online (masuk) untuk membeli perahu",
  "船行還在準備中，晚一點再來": "Toko perahu masih bersiap. Kembali lagi nanti",
- "買船失敗，等一下再試": "Gagal membeli perahu. Coba lagi sebentar lagi"
+ "買船失敗，等一下再試": "Gagal membeli perahu. Coba lagi sebentar lagi",
+ "雙人划艇、四人釣魚小艇可以載朋友了：船長坐上船，附近 15 公尺內的人會跳出「一起上船？」，按了就坐到空位跟著船走；船長下船大家一起下": "Perahu dayung dua orang dan perahu pancing empat orang kini bisa membawa teman: saat kapten naik, orang dalam jarak 15 m mendapat ajakan \"Ikut naik?\". Terima untuk duduk di kursi kosong dan ikut berlayar; semua turun saat kapten turun",
+ "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。": "Saat kamu naik perahu dua atau empat orang milikmu, orang dalam jarak 15 m mendapat ajakan \"Ikut naik?\". Mengetuk \"Naik\" membuat mereka duduk di kursi kosong dan ikut perahumu. Saat kamu turun, semua ikut turun ke darat; penumpang juga bisa mengetuk \"Turun\" sendiri di dekat pantai.",
+ "買了的船會停在港口西邊棧橋旁邊你自己的位子，走過去就能上船。坐上雙人、四人的船，附近的朋友會收到「一起上船？」，按了就坐到你船上的空位。": "Perahu yang kamu beli ditambatkan di tempatmu sendiri di samping dermaga barat. Jalan ke sana untuk naik. Saat kamu naik perahu dua atau empat orang, teman di dekatmu mendapat ajakan \"Ikut naik?\" dan bisa duduk di kursi kosong.",
+ "上船": "Naik",
+ "下船": "Turun",
+ "等船長讓你上船…": "Menunggu kapten…",
+ "船上已經坐滿了": "Perahu sudah penuh",
+ "要靠近岸邊或碼頭才能下船": "Mendekatlah ke pantai atau dermaga untuk turun",
+ "下船了": "Kamu sudah turun"
 }
